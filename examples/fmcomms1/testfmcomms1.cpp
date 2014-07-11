@@ -61,7 +61,7 @@ int main(int argc, const char **argv)
   unsigned int *dstBuffer = 0;
 
   FMComms1RequestProxy *device = 0;
-  DmaConfigProxy *dma = 0;
+  DmaConfigProxy *dmap = 0;
   
   FMComms1Indication *deviceIndication = 0;
   DmaIndication *dmaIndication = 0;
@@ -71,7 +71,8 @@ int main(int argc, const char **argv)
   poller = new PortalPoller();
 
   device = new FMComms1RequestProxy(IfcNames_FMComms1Request, poller);
-  dma = new DmaConfigProxy(IfcNames_DmaConfig);
+  dmap = new DmaConfigProxy(IfcNames_DmaConfig);
+  DmaManager *dma = new DmaManager(dmap);
 
   deviceIndication = new FMComms1Indication(IfcNames_FMComms1Indication);
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);

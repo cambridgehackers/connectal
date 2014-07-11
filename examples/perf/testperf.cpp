@@ -36,7 +36,7 @@
 sem_t copy_sem;
 
 PerfRequestProxy *device = 0;
-DmaConfigProxy *dma = 0;
+DmaConfigProxy *dmap = 0;
   
 PortalAlloc *srcAlloc;
 PortalAlloc *dstAlloc;
@@ -168,7 +168,8 @@ int main(int argc, const char **argv)
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
   device = new PerfRequestProxy(IfcNames_PerfRequest);
-  dma = new DmaConfigProxy(IfcNames_DmaConfig);
+  dmap = new DmaConfigProxy(IfcNames_DmaConfig);
+  DmaManager *dma = new DmaManager(dmap);
 
   deviceIndication = new PerfIndication(IfcNames_PerfIndication);
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);

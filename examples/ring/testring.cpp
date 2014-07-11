@@ -36,7 +36,7 @@
 #include "GeneratedTypes.h"
 
 RingRequestProxy *ring = 0;
-DmaConfigProxy *dma = 0;
+DmaConfigProxy *dmap = 0;
 
 PortalAlloc *cmdAlloc;
 PortalAlloc *statusAlloc;
@@ -477,7 +477,8 @@ int main(int argc, const char **argv)
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   completion_list_init();
   ring = new RingRequestProxy(IfcNames_RingRequest);
-  dma = new DmaConfigProxy(IfcNames_ObjectRequest);
+  dmap = new DmaConfigProxy(IfcNames_ObjectRequest);
+  DmaManager *dma = new DmaManager(dmap);
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
   ringIndication = new RingIndication(IfcNames_RingIndication);
 

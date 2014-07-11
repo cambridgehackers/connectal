@@ -62,7 +62,7 @@ public:
 int runtest(int argc, const char **argv)
 {
   MemcpyRequestProxy *device = 0;
-  DmaConfigProxy *dma = 0;
+  DmaConfigProxy *dmap = 0;
   
   MemcpyIndication *deviceIndication = 0;
   DmaIndication *dmaIndication = 0;
@@ -75,7 +75,8 @@ int runtest(int argc, const char **argv)
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
   device = new MemcpyRequestProxy(IfcNames_MemcpyRequest);
-  dma = new DmaConfigProxy(IfcNames_DmaConfig);
+  dmap = new DmaConfigProxy(IfcNames_DmaConfig);
+  DmaManager *dma = new DmaManager(dmap);
 
   deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndication);
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
@@ -120,10 +121,10 @@ int runtest(int argc, const char **argv)
   // for(int j = 0; j < 2; j++){
   //   unsigned int ref = refs[j];
   //   for(int i = 0; i < numWords; i = i+(numWords/4)){
-  //     dma->addrRequest(ref, i*sizeof(unsigned int));
+  //     dmap->addrRequest(ref, i*sizeof(unsigned int));
   //     sleep(1);
   //   }
-  //   dma->addrRequest(ref, (1<<16)*sizeof(unsigned int));
+  //   dmap->addrRequest(ref, (1<<16)*sizeof(unsigned int));
   //   sleep(1);
   // }
 

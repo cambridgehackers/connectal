@@ -66,7 +66,8 @@ struct gralloc_context_t {
     PortalPoller *poller;
     HdmiDisplayRequestProxy *hdmiDisplay;
     HdmiInternalRequestProxy *hdmiInternal;
-    DmaConfigProxy *dma;
+    DmaConfigProxy *dmap;
+    DmaManager *dma;
     DmaIndicationWrapper *dmaIndication;
     unsigned int ref_srcAlloc;
     uint32_t nextSegmentNumber;
@@ -358,7 +359,8 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 	dev->poller = new PortalPoller();
         dev->hdmiDisplay = new HdmiDisplayRequestProxy(IfcNames_HdmiDisplayRequest, dev->poller);
         dev->hdmiInternal = new HdmiInternalRequestProxy(IfcNames_HdmiInternalRequest, dev->poller);
-        dev->dma = new DmaConfigProxy(IfcNames_DmaConfig);
+        dev->dmap = new DmaConfigProxy(IfcNames_DmaConfig);
+        dev->dma = new DmaManager(dev->dmap);
         dev->dmaIndication = new DmaIndication(dev->dma, IfcNames_DmaIndication);
         dev->nextSegmentNumber = 0;
 

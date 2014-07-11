@@ -21,7 +21,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "PortalMemory.h"
+#include "dmaManager.h"
 #include "DmaIndicationWrapper.h"
 
 #define __STDC_FORMAT_MACROS
@@ -30,10 +30,10 @@
 static int error_limit = 20;
 class DmaIndication : public DmaIndicationWrapper
 {
-  PortalMemory *portalMemory;
+  DmaManager *portalMemory;
   int tag_mismatch_cnt;
  public:
-  DmaIndication(PortalMemory *pm, unsigned int  id) : DmaIndicationWrapper(id), portalMemory(pm), tag_mismatch_cnt(0) {}
+  DmaIndication(DmaManager *pm, unsigned int  id) : DmaIndicationWrapper(id), portalMemory(pm), tag_mismatch_cnt(0) {}
   virtual void configResp(uint32_t pointer, uint64_t msg){
     //fprintf(stderr, "configResp: %x, %"PRIx64"\n", pointer, msg);
     portalMemory->confResp(pointer);

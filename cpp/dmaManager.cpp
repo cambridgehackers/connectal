@@ -37,7 +37,7 @@
 #include <assert.h>
 #include <time.h>
 
-#include "PortalMemory.h"
+#include "dmaManager.h"
 #include "sock_utils.h"
 #include "sock_fd.h"
 
@@ -46,7 +46,7 @@
 
 static int trace_memory;// = 1;
 
-void PortalMemory::InitSemaphores()
+void DmaManager::InitSemaphores()
 {
   if (sem_init(&confSem, 1, 0)){
     fprintf(stderr, "failed to init confSem errno=%d:%s\n", errno, strerror(errno));
@@ -59,7 +59,7 @@ void PortalMemory::InitSemaphores()
   }
 }
 
-void PortalMemory::InitFds()
+void DmaManager::InitFds()
 {
 #ifndef MMAP_HW
   snprintf(p_fd.read.path, sizeof(p_fd.read.path), "fd_sock_rc");
@@ -69,9 +69,8 @@ void PortalMemory::InitFds()
 #endif
 }
 
-PortalMemory::PortalMemory(int id)
-  : PortalInternal(id),
-    handle(1)
+DmaManager::DmaManager(DmaConfigProxy *argDevice)
+  : handle(1), device(argDevice)
 {
   InitFds();
   const char* path = "/dev/portalmem";
@@ -82,13 +81,13 @@ PortalMemory::PortalMemory(int id)
   InitSemaphores();
 }
 
-void *PortalMemory::mmap(PortalAlloc *portalAlloc)
+void *DmaManager::mmap(PortalAlloc *portalAlloc)
 {
   void *virt = ::mmap(0, portalAlloc->header.size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, portalAlloc->header.fd, 0);
   return virt;
 }
 
-int PortalMemory::dCacheFlushInval(PortalAlloc *portalAlloc, void *__p)
+int DmaManager::dCacheFlushInval(PortalAlloc *portalAlloc, void *__p)
 {
 #if defined(__arm__)
   int rc = ioctl(this->pa_fd, PA_DCACHE_FLUSH_INVAL, portalAlloc);
@@ -111,16 +110,16 @@ int PortalMemory::dCacheFlushInval(PortalAlloc *portalAlloc, void *__p)
 
 }
 
-uint64_t PortalMemory::show_mem_stats(ChannelType rc)
+uint64_t DmaManager::show_mem_stats(ChannelType rc)
 {
   uint64_t rv = 0;
-  getMemoryTraffic(rc);
+  device->getMemoryTraffic(rc);
   sem_wait(&mtSem);
   rv += mtCnt;
   return rv;
 }
 
-int PortalMemory::reference(PortalAlloc* pa)
+int DmaManager::reference(PortalAlloc* pa)
 {
   const int PAGE_SHIFT0 = 12;
   const int PAGE_SHIFT4 = 16;
@@ -135,7 +134,7 @@ int PortalMemory::reference(PortalAlloc* pa)
   pa->entries[ne].length = 0;
   pa->header.numEntries++;
   if (trace_memory)
-    fprintf(stderr, "PortalMemory::reference id=%08x, numEntries:=%d len=%08lx)\n", id, ne, pa->header.size);
+    fprintf(stderr, "DmaManager::reference id=%08x, numEntries:=%d len=%08lx)\n", id, ne, pa->header.size);
 #ifndef MMAP_HW
   sock_fd_write(p_fd.write.s2, pa->header.fd);
 #endif
@@ -154,18 +153,16 @@ int PortalMemory::reference(PortalAlloc* pa)
     case (0):
       break;
     default:
-      fprintf(stderr, "PortalMemory::unsupported sglist size %x\n", e->length);
+      fprintf(stderr, "DmaManager::unsupported sglist size %x\n", e->length);
     }
 #ifdef MMAP_HW
-    if (trace_memory)
-      fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, e->dma_address, e->length);
-    sglist(id, e->dma_address, e->length);
+    dma_addr_t addr = e->dma_address;
 #else
     int addr = (e->length > 0) ? size_accum : 0;
-    if (trace_memory)
-      fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08x, len=%08x)\n", id, i, addr, e->length);
-    sglist(id, addr , e->length);
 #endif
+    if (trace_memory)
+      fprintf(stderr, "DmaManager::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, (long)addr, e->length);
+    device->sglist(id, addr, e->length);
     size_accum += e->length;
     // fprintf(stderr, "%s:%d sem_wait\n", __FILE__, __LINE__);
     sem_wait(&confSem);
@@ -197,7 +194,7 @@ int PortalMemory::reference(PortalAlloc* pa)
     fprintf(stderr, "regions %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,regions[0], regions[1], regions[2]);
     fprintf(stderr, "borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borders[0].border, borders[1].border, borders[2].border);
   }
-  region(id,
+  device->region(id,
 	 borders[0].border, borders[0].idxOffset,
 	 borders[1].border, borders[1].idxOffset,
 	 borders[2].border, borders[2].idxOffset);
@@ -206,26 +203,26 @@ int PortalMemory::reference(PortalAlloc* pa)
   return id;
 }
 
-void PortalMemory::mtResp(uint64_t words)
+void DmaManager::mtResp(uint64_t words)
 {
   mtCnt = words;
   sem_post(&mtSem);
 }
 
-void PortalMemory::dbgResp(const DmaDbgRec& rec)
+void DmaManager::dbgResp(const DmaDbgRec& rec)
 {
   dbgRec = rec;
   fprintf(stderr, "dbgResp: %08x %08x %08x %08x\n", dbgRec.x, dbgRec.y, dbgRec.z, dbgRec.w);
   sem_post(&dbgSem);
 }
 
-void PortalMemory::confResp(uint32_t channelId)
+void DmaManager::confResp(uint32_t channelId)
 {
   //fprintf(stderr, "configResp %d\n", channelId);
   sem_post(&confSem);
 }
 
-int PortalMemory::alloc(size_t size, PortalAlloc **ppa)
+int DmaManager::alloc(size_t size, PortalAlloc **ppa)
 {
   PortalAlloc *portalAlloc = (PortalAlloc *)malloc(sizeof(PortalAlloc));
   memset(portalAlloc, 0, sizeof(PortalAlloc));

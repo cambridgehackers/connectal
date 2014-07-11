@@ -66,14 +66,15 @@ public:
 int main(int argc, const char **argv)
 {
   SmithwatermanRequestProxy *device = 0;
-  DmaConfigProxy *dma = 0;
+  DmaConfigProxy *dmap = 0;
   
   SmithwatermanIndication *deviceIndication = 0;
   DmaIndication *dmaIndication = 0;
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   device = new SmithwatermanRequestProxy(IfcNames_SmithwatermanRequest);
-  dma = new DmaConfigProxy(IfcNames_DmaConfig);
+  dmap = new DmaConfigProxy(IfcNames_DmaConfig);
+  DmaManager *dma = new DmaManager(dmap);
 
   deviceIndication = new SmithwatermanIndication(IfcNames_SmithwatermanIndication);
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);

@@ -56,7 +56,7 @@ public:
 int runtest(int argc, const char **argv)
 {
   MemrwRequestProxy *device = 0;
-  DmaConfigProxy *dma = 0;
+  DmaConfigProxy *dmap = 0;
   
   MemrwIndication *deviceIndication = 0;
   DmaIndication *dmaIndication = 0;
@@ -73,7 +73,8 @@ int runtest(int argc, const char **argv)
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
   device = new MemrwRequestProxy(IfcNames_MemrwRequest);
-  dma = new DmaConfigProxy(IfcNames_DmaConfig);
+  dmap = new DmaConfigProxy(IfcNames_DmaConfig);
+  DmaManager *dma = new DmaManager(dmap);
 
   deviceIndication = new MemrwIndication(IfcNames_MemrwIndication);
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
@@ -111,9 +112,9 @@ int runtest(int argc, const char **argv)
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
   
   sleep(1);
-  dma->addrRequest(ref_srcAlloc, 1*sizeof(unsigned int));
+  dmap->addrRequest(ref_srcAlloc, 1*sizeof(unsigned int));
   sleep(1);
-  dma->addrRequest(ref_dstAlloc, 2*sizeof(unsigned int));
+  dmap->addrRequest(ref_dstAlloc, 2*sizeof(unsigned int));
   sleep(1);
   
   fprintf(stderr, "Main::starting mempcy numWords:%d\n", numWords);

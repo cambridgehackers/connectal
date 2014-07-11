@@ -67,7 +67,7 @@ int main(int argc, const char **argv)
   unsigned int srcGen = 0;
 
   Memread2RequestProxy *device = 0;
-  DmaConfigProxy *dma = 0;
+  DmaConfigProxy *dmap = 0;
   
   Memread2Indication *deviceIndication = 0;
   DmaIndication *dmaIndication = 0;
@@ -75,7 +75,8 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
   device = new Memread2RequestProxy(IfcNames_Memread2Request);
-  dma = new DmaConfigProxy(IfcNames_DmaConfig);
+  dmap = new DmaConfigProxy(IfcNames_DmaConfig);
+  DmaManager *dma = new DmaManager(dmap);
 
   deviceIndication = new Memread2Indication(IfcNames_Memread2Indication);
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);

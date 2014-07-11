@@ -43,7 +43,8 @@ public:
 int main(int argc, const char **argv)
 {
   MemreadRequestProxy *device = new MemreadRequestProxy(IfcNames_MemreadRequest);
-  DmaConfigProxy *dma = new DmaConfigProxy(IfcNames_DmaConfig);
+  DmaConfigProxy *dmap = new DmaConfigProxy(IfcNames_DmaConfig);
+  DmaManager *dma = new DmaManager(dmap);
   MemreadIndication *deviceIndication = new MemreadIndication(IfcNames_MemreadIndication);
   DmaIndication *dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 

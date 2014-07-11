@@ -129,7 +129,7 @@ int main(int argc, const char **argv)
 {
   MemcpyRequestProxy *device = 0;
   BlueScopeRequestProxy *bluescope = 0;
-  DmaConfigProxy *dma = 0;
+  DmaConfigProxy *dmap = 0;
   
   MemcpyIndication *deviceIndication = 0;
   BlueScopeIndication *bluescopeIndication = 0;
@@ -144,7 +144,8 @@ int main(int argc, const char **argv)
 
   device = new MemcpyRequestProxy(IfcNames_MemcpyRequest);
   bluescope = new BlueScopeRequestProxy(IfcNames_BluescopeRequest);
-  dma = new DmaConfigProxy(IfcNames_DmaConfig);
+  dmap = new DmaConfigProxy(IfcNames_DmaConfig);
+  DmaManager *dma = new DmaManager(dmap);
 
   deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndication);
   bluescopeIndication = new BlueScopeIndication(IfcNames_BluescopeIndication);
@@ -196,11 +197,11 @@ int main(int argc, const char **argv)
   bluescope->start(ref_bsAlloc, alloc_sz);
 
   sleep(1);
-  dma->addrRequest(ref_srcAlloc, 1*sizeof(unsigned int));
+  dmap->addrRequest(ref_srcAlloc, 1*sizeof(unsigned int));
   sleep(1);
-  dma->addrRequest(ref_dstAlloc, 2*sizeof(unsigned int));
+  dmap->addrRequest(ref_dstAlloc, 2*sizeof(unsigned int));
   sleep(1);
-  dma->addrRequest(ref_bsAlloc, 3*sizeof(unsigned int));
+  dmap->addrRequest(ref_bsAlloc, 3*sizeof(unsigned int));
   sleep(1);
   
   fprintf(stderr, "Main::starting mempcy numWords:%d\n", numWords);

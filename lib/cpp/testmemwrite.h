@@ -47,7 +47,7 @@ public:
 };
 
 MemwriteRequestProxy *device = 0;
-DmaConfigProxy *dma = 0;
+DmaConfigProxy *dmap = 0;
 
 MemwriteIndication *deviceIndication = 0;
 DmaIndication *dmaIndication = 0;
@@ -86,7 +86,8 @@ void parent(int rd_sock, int wr_sock)
   fprintf(stderr, "parent::%s %s\n", __DATE__, __TIME__);
 
   device = new MemwriteRequestProxy(IfcNames_MemwriteRequest);
-  dma = new DmaConfigProxy(IfcNames_DmaConfig);
+  dmap = new DmaConfigProxy(IfcNames_DmaConfig);
+  DmaManager *dma = new DmaManager(dmap);
 
   deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndication);
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
@@ -115,7 +116,7 @@ void parent(int rd_sock, int wr_sock)
   //   fprintf(stderr, "%lx %lx\n", dstAlloc->entries[i].dma_address, dstAlloc->entries[i].length);
 
   // sleep(1);
-  // dma->addrRequest(ref_dstAlloc, 2*sizeof(unsigned int));
+  // dmap->addrRequest(ref_dstAlloc, 2*sizeof(unsigned int));
   // sleep(1);
 
 

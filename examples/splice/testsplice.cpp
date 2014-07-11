@@ -72,14 +72,15 @@ public:
 int main(int argc, const char **argv)
 {
   SpliceRequestProxy *device = 0;
-  DmaConfigProxy *dma = 0;
+  DmaConfigProxy *dmap = 0;
   
   SpliceIndication *deviceIndication = 0;
   DmaIndication *dmaIndication = 0;
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   device = new SpliceRequestProxy(IfcNames_SpliceRequest);
-  dma = new DmaConfigProxy(IfcNames_DmaConfig);
+  dmap = new DmaConfigProxy(IfcNames_DmaConfig);
+  DmaManager *dma = new DmaManager(dmap);
 
   deviceIndication = new SpliceIndication(IfcNames_SpliceIndication);
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);

@@ -481,7 +481,7 @@ androidmk_template='''
 include $(CLEAR_VARS)
 LOCAL_ARM_MODE := arm
 APP_SRC_FILES := $(addprefix %(project_dir)s/jni/,  %(generatedCFiles)s) %(source)s
-PORTAL_SRC_FILES := $(addprefix %(xbsvdir)s/cpp/, portal.cpp PortalMemory.cpp sock_fd.cxx sock_utils.cxx)
+PORTAL_SRC_FILES := $(addprefix %(xbsvdir)s/cpp/, portal.cpp dmaManager.cpp sock_fd.cxx sock_utils.cxx)
 LOCAL_SRC_FILES := $(APP_SRC_FILES) $(PORTAL_SRC_FILES)
 
 LOCAL_PATH :=
@@ -498,7 +498,7 @@ linuxmakefile_template='''
 CFLAGS_COMMON = -O -g -I%(project_dir)s/jni -I%(xbsvdir)s -I%(xbsvdir)s/cpp -I%(xbsvdir)s/lib/cpp %(sourceincludes)s %(cincludes)s %(cdefines)s
 CFLAGS = -DMMAP_HW $(CFLAGS_COMMON)
 
-PORTAL_CPP_FILES = $(addprefix %(xbsvdir)s/cpp/, portal.cpp PortalMemory.cpp sock_fd.cxx sock_utils.cxx)
+PORTAL_CPP_FILES = $(addprefix %(xbsvdir)s/cpp/, portal.cpp dmaManager.cpp sock_fd.cxx sock_utils.cxx)
 SOURCES = $(addprefix %(project_dir)s/jni/,  %(generatedCFiles)s) %(source)s $(PORTAL_CPP_FILES)
 LDLIBS := %(clibdirs)s %(clibs)s -pthread 
 
@@ -668,12 +668,6 @@ if __name__=='__main__':
     #if needs_pcie_7x_gen1x8:
         #subprocess.call(['make', '-C', xbsvdir, 'xilinx/pcie_7x_gen1x8'])
         #namespace.xci.append(os.path.join(xbsvdir, 'xilinx', 'pcie_7x_gen1x8', 'pcie_7x_0.xci'))
-
-    # this is an ugly abuse of typeclassinstance
-    for v in syntax.globaldecls:
-        if (v.type == 'TypeclassInstance' and v.name == 'PortalMemory'):
-            assert (len(v.params) == 1)
-            syntax.globalvars[v.params[0].name].typeClassInstances.append(v.name)
 
     ## code generation pass
     swProxies = []

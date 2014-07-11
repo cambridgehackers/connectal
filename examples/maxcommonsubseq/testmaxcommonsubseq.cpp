@@ -70,14 +70,15 @@ public:
 int main(int argc, const char **argv)
 {
   MaxcommonsubseqRequestProxy *device = 0;
-  DmaConfigProxy *dma = 0;
+  DmaConfigProxy *dmap = 0;
   
   MaxcommonsubseqIndication *deviceIndication = 0;
   DmaIndication *dmaIndication = 0;
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   device = new MaxcommonsubseqRequestProxy(IfcNames_MaxcommonsubseqRequest);
-  dma = new DmaConfigProxy(IfcNames_DmaConfig);
+  dmap = new DmaConfigProxy(IfcNames_DmaConfig);
+  DmaManager *dma = new DmaManager(dmap);
 
   deviceIndication = new MaxcommonsubseqIndication(IfcNames_MaxcommonsubseqIndication);
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);

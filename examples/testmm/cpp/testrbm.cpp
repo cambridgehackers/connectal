@@ -45,7 +45,7 @@ static int verbose = 0;
 
 class RbmIndication;
 
-DmaConfigProxy *dma = 0;
+DmaConfigProxy *dmap = 0;
 DmaIndicationWrapper *dmaIndication = 0;
 MmIndication *mmdeviceIndication = 0;
 MmRequestProxy *mmdevice = 0;
@@ -96,7 +96,8 @@ int main(int argc, const char **argv)
   timerdevice = new TimerRequestProxy(IfcNames_TimerRequestPortal);
   timerdeviceIndication = new TimerIndication(IfcNames_TimerIndicationPortal);
 
-  dma = new DmaConfigProxy(IfcNames_DmaConfigPortal);
+  dmap = new DmaConfigProxy(IfcNames_DmaConfigPortal);
+  DmaManager *dma = new DmaManager(dmap);
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndicationPortal);
 
   if(sem_init(&mul_sem, 1, 0)){

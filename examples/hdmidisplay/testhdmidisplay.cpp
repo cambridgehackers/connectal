@@ -43,7 +43,7 @@
 
 static HdmiInternalRequestProxy *hdmiInternal;
 static HdmiDisplayRequestProxy *device;
-static DmaConfigProxy *dma;
+static DmaConfigProxy *dmap;
 static PortalAlloc *portalAlloc[FRAME_COUNT];
 static unsigned int ref_srcAlloc[FRAME_COUNT];
 static int *dataptr[FRAME_COUNT];
@@ -142,7 +142,8 @@ int main(int argc, const char **argv)
 
     poller = new PortalPoller();
     device = new HdmiDisplayRequestProxy(IfcNames_HdmiDisplayRequest, poller);
-    dma = new DmaConfigProxy(IfcNames_DmaConfig);
+    dmap = new DmaConfigProxy(IfcNames_DmaConfig);
+    DmaManager *dma = new DmaManager(dmap);
     dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
     HdmiInternalIndicationWrapper *hdmiIndication = new HdmiIndication(IfcNames_HdmiInternalIndication);
     HdmiDisplayIndicationWrapper *displayIndication = new DisplayIndication(IfcNames_HdmiDisplayIndication);

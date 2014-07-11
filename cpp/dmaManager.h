@@ -27,8 +27,9 @@
 #include <stdint.h>
 #include "portal.h"
 #include "GeneratedTypes.h"
+#include "DmaConfigProxy.h" // generated in project directory
 
-class PortalMemory : public PortalInternal 
+class DmaManager
 {
  private:
   int handle;
@@ -37,12 +38,12 @@ class PortalMemory : public PortalInternal
   sem_t dbgSem;
   uint64_t mtCnt;
   DmaDbgRec dbgRec;
+  DmaConfigProxy *device;
 #ifndef MMAP_HW
   portal p_fd;
 #endif
  public:
-  PortalMemory(int id);
-  PortalMemory(const char *devname, unsigned int addrbits);
+  DmaManager(DmaConfigProxy *argDevice);
   void InitSemaphores();
   void InitFds();
   int pa_fd;
@@ -54,10 +55,6 @@ class PortalMemory : public PortalInternal
   void confResp(uint32_t channelId);
   void mtResp(uint64_t words);
   void dbgResp(const DmaDbgRec& rec);
-  virtual void sglist(uint32_t pointer, uint64_t paddr, uint32_t len) = 0;
-  virtual void region(uint32_t pointer, uint64_t barr8, uint32_t off8, uint64_t barr4, uint32_t off4, uint64_t barr0, uint32_t off0) = 0;
-  virtual void getMemoryTraffic (const ChannelType &rc) = 0;
-  virtual void getStateDbg(const ChannelType& rc) = 0;
 };
 
 // ugly hack (mdk)

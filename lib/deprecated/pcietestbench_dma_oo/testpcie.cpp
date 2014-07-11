@@ -87,7 +87,8 @@ int main(int argc, const char **argv)
   PcieTestBenchRequestProxy *device = new PcieTestBenchRequestProxy(IfcNames_TestBenchRequest);
   PcieTestBenchIndication *deviceIndication = new PcieTestBenchIndication(IfcNames_TestBenchIndication);
 
-  DmaConfigProxy *dma = new DmaConfigProxy(IfcNames_DmaConfig);
+  DmaConfigProxy *dmap = new DmaConfigProxy(IfcNames_DmaConfig);
+  DmaManager *dma = new DmaManager(dmap);
   DmaIndication *dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   PortalAlloc *srcAlloc;

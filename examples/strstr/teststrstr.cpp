@@ -64,14 +64,15 @@ public:
 int main(int argc, const char **argv)
 {
   StrstrRequestProxy *device = 0;
-  DmaConfigProxy *dma = 0;
+  DmaConfigProxy *dmap = 0;
   
   StrstrIndication *deviceIndication = 0;
   DmaIndication *dmaIndication = 0;
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   device = new StrstrRequestProxy(IfcNames_StrstrRequest);
-  dma = new DmaConfigProxy(IfcNames_DmaConfig);
+  dmap = new DmaConfigProxy(IfcNames_DmaConfig);
+  DmaManager *dma = new DmaManager(dmap);
 
   deviceIndication = new StrstrIndication(IfcNames_StrstrIndication);
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
