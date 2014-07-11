@@ -37,38 +37,19 @@ public:
     printf( "Memread::readDone(mismatch = %x)\n", v);
     sem_post(&test_sem);
   }
-  virtual void started(uint32_t words){
-    printf( "Memread::started(%x)\n", words);
-  }
-  virtual void rData ( uint64_t v ){
-    printf( "rData(%08x): ", rDataCnt++);
-    dump("", (char*)&v, sizeof(v));
-  }
-  virtual void reportStateDbg(uint32_t streamRdCnt, uint32_t dataMismatch){
-    printf( "Memread::reportStateDbg(%08x, %d)\n", streamRdCnt, dataMismatch);
-  }  
   MemreadIndication(int id) : MemreadIndicationWrapper(id){}
 };
 
 int main(int argc, const char **argv)
 {
+  MemreadRequestProxy *device = new MemreadRequestProxy(IfcNames_MemreadRequest);
+  DmaConfigProxy *dma = new DmaConfigProxy(IfcNames_DmaConfig);
+  MemreadIndication *deviceIndication = new MemreadIndication(IfcNames_MemreadIndication);
+  DmaIndication *dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
+
   PortalAlloc *srcAlloc;
-  unsigned int *srcBuffer = 0;
-  MemreadRequestProxy *device = 0;
-  DmaConfigProxy *dma = 0;
-  MemreadIndication *deviceIndication = 0;
-  DmaIndication *dmaIndication = 0;
-
-  printf( "Main::%s %s\n", __DATE__, __TIME__);
-
-  device = new MemreadRequestProxy(IfcNames_MemreadRequest);
-  dma = new DmaConfigProxy(IfcNames_DmaConfig);
-  deviceIndication = new MemreadIndication(IfcNames_MemreadIndication);
-  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
-
-  printf( "Main::allocating memory...\n");
   dma->alloc(alloc_sz, &srcAlloc);
-  srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
+  unsigned int *srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
 
   pthread_t tid;
   printf( "Main::creating exec thread\n");
@@ -79,11 +60,7 @@ int main(int argc, const char **argv)
   for (int i = 0; i < numWords; i++)
     srcBuffer[i] = i;
   dma->dCacheFlushInval(srcAlloc, srcBuffer);
-  printf( "Main::flush and invalidate complete\n");
-  device->getStateDbg();
-  printf( "Main::after getStateDbg\n");
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
-  printf( "ref_srcAlloc=%d\n", ref_srcAlloc);
   printf( "Main::starting read %08x\n", numWords);
   device->startRead(ref_srcAlloc, numWords, burstLen, 1);
   sem_wait(&test_sem);
