@@ -722,6 +722,11 @@ if __name__=='__main__':
     generated_hpp = util.createDirAndOpen(hname, 'w')
     generated_hpp.write('#ifndef __GENERATED_TYPES__\n');
     generated_hpp.write('#define __GENERATED_TYPES__\n');
+    # global type declarations used by interface mthods
+    for v in syntax.globaldecls:
+        if (v.type == 'TypeDef'):
+            v.emitCDeclaration(generated_hpp)
+    generated_hpp.write('\n');
 
     for i in swProxies:
         cppname = '%sProxy.cpp' % i.name
@@ -756,10 +761,6 @@ if __name__=='__main__':
         cpp.close();
         generatedCFiles.append(cppname)
     
-    # global type declarations used by interface mthods
-    for v in syntax.globaldecls:
-        if (v.type == 'TypeDef'):
-            v.emitCDeclaration(generated_hpp)
     generated_hpp.write('#endif //__GENERATED_TYPES__\n');
     generated_hpp.close();
 
