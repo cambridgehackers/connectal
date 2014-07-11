@@ -116,6 +116,6 @@ int main(int argc, const char **argv)
     device->getStateDbg();
     uint64_t beats = dma->show_mem_stats(ChannelType_Read);
     fprintf(stderr, "   beats: %"PRIx64"\n", beats);
-    dma->getStateDbg(ChannelType_Read);
+    dmap->getStateDbg(ChannelType_Read);
   }
 }

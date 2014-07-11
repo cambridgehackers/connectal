@@ -73,8 +73,8 @@ void *dbgThread(void *)
 {
   while (1) {
     sleep(1);
-    if (dma) {
-      dma->getStateDbg(ChannelType_Read);
+    if (dmap) {
+      dmap->getStateDbg(ChannelType_Read);
       rbmdevice->dbg();
       sleep(5);
     }
