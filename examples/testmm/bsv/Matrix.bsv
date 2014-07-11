@@ -103,7 +103,7 @@ endmodule
 module mkRowSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSource#(TMul#(N,32), Vector#(N,Token)));
 `ifdef TAGGED_TOKENS
    Reg#(UInt#(32)) col <- mkReg(0);
-   FIFOF#(UInt#(32)) tagFifo <- mkFIFOF;
+   FIFOF#(UInt#(32)) tagFifo <- mkSizedFIFOF(4);
 `endif
    // perhaps memreadengine could do the labeling
    Reg#(Bit#(ObjectOffsetSize)) countReg <- mkReg(0);
@@ -167,7 +167,7 @@ endmodule
 module mkColSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSource#(TMul#(N,32), Vector#(N,Token)));
 `ifdef TAGGED_TOKENS
    Reg#(UInt#(32)) row <- mkReg(0);
-   FIFOF#(UInt#(32)) tagFifo <- mkFIFOF;
+   FIFOF#(UInt#(32)) tagFifo <- mkSizedFIFOF(4);
 `endif
    // perhaps memreadengine could do the labeling
    Reg#(Bit#(ObjectOffsetSize)) countReg <- mkReg(0);
@@ -238,7 +238,8 @@ module  mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServ
    
    let n = valueOf(N);
    Bool verbose = False; //label == 0;
-
+   Bool timing  = False; //label == 0;
+   
    Reg#(UInt#(20)) countReg     <- mkReg(0);
 
    FloatAlu mul   <- mkFloatMultiplier(defaultValue);
@@ -304,7 +305,7 @@ module  mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServ
 	 $display("****\n    Warning: a.first=%d != b.first=%d\n****", a.first, b.first);
       if (a.last != b.last)
 	 $display("****\n    Warning: a.last=%d != b.last=%d\n****", a.last, b.last);
-      if (verbose) $display("%08d label=%d mulin chan=%d first=%d last=%d", cycles-lastMulin, label, chan, first, last);
+      if (verbose || timing) $display("%08d label=%d mulin chan=%d first=%d last=%d", cycles-lastMulin, label, chan, first, last);
       mul.request.put(tuple2(a.v, b.v));
 `ifdef TAGGED_TOKENS
       tag_fifos[0].enq(tuple2(a.row,b.col));
@@ -395,7 +396,7 @@ module  mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServ
 	 if (last_chan) begin
 	    gatherCntA <= 0;
 	    lastCntA <= 0;
-	    if(verbose) $display("gatherA reset");
+	    if(verbose || timing) $display("gatherA reset");
 	 end
       end
    endrule
@@ -922,9 +923,10 @@ endinterface
 //(* synthesize *)
 module  mkDramMatrixMultiply(DramMatrixMultiply#(N,TMul#(N,32)));
    
-   MemreadEngineV#(TMul#(N,32), 2, J) rowReadEngine <- mkMemreadEngine();
-   MemreadEngineV#(TMul#(N,32), 2, K) colReadEngine <- mkMemreadEngine();
-   MemwriteEngineV#(TMul#(N,32),2, J)   writeEngine <- mkMemwriteEngine();
+   // I should investigate why this needs to be 3 instead of 2 in order to get full throughput...
+   MemreadEngineV#(TMul#(N,32), 3, J) rowReadEngine <- mkMemreadEngine();
+   MemreadEngineV#(TMul#(N,32), 3, K) colReadEngine <- mkMemreadEngine();
+   MemwriteEngineV#(TMul#(N,32),3, J)   writeEngine <- mkMemwriteEngine();
 
    Vector#(J, VectorSource#(DmaSz, Vector#(N,Float))) xvfsources <- mapM(uncurry(mkMemreadVectorSource), zip(rowReadEngine.readServers, rowReadEngine.dataPipes));
    Vector#(K, VectorSource#(DmaSz, Vector#(N,Float))) yvfsources <- mapM(uncurry(mkMemreadVectorSource), zip(colReadEngine.readServers, colReadEngine.dataPipes));

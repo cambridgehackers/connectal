@@ -128,10 +128,10 @@ int main(int argc, const char **argv)
 #ifdef LARGE_MAT
 #ifdef BSIM
   int A = 32;
-  int B = 64;
+  int B = 128;
 #else
   int A = 32;
-  int B = 64;
+  int B = 128;
 #endif
   if (argc > 1) {
     B = strtoul(argv[1], 0, 0);
