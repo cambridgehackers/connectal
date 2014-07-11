@@ -123,7 +123,7 @@ int main(int argc, const char **argv)
    exit(1);
   }
 
-  matAllocator = new PortalMatAllocator(dma);
+  matAllocator = new PortalMatAllocator(dmap, dma);
 
 #define LARGE_MAT
 #ifdef LARGE_MAT

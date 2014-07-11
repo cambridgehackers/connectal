@@ -3,11 +3,11 @@
 
 class RBM {
  public:
-  RBM(DmaConfigProxy *dma) : dma(dma) {}
+  RBM(DmaManager *dma) : dma(dma) {}
   void train(int numVisible, int numHidden, const cv::Mat &trainingData);
   void run();
  private:
-  DmaConfigProxy *dma;
+  DmaManager *dma;
 };
 
 #endif // _RBM_H_

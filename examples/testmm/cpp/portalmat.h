@@ -32,6 +32,7 @@
 #include <inttypes.h>
 
 #include <portal.h>
+#include "dmaManager.h"
 #include "DmaConfigProxy.h"
 #include "RbmRequestProxy.h"
 #include "RbmIndicationWrapper.h"
@@ -54,7 +55,7 @@ extern sem_t mul_sem;
 
 class PortalMatAllocator : public cv::MatAllocator {
 public:
- PortalMatAllocator(DmaConfigProxy *dma) : numarrays(1), dma(dma) {}
+ PortalMatAllocator(DmaConfigProxy *dmap, DmaManager *dma) : numarrays(1), dmap(dmap), dma(dma) {}
   virtual ~PortalMatAllocator() {}
   virtual void allocate(int dims, const int* sizes, int type, int*& refcount,
 			uchar*& datastart, uchar*& data, size_t* step);
@@ -63,7 +64,8 @@ public:
 private:
   PortalAlloc *portalAlloc[128];
   int numarrays;
-  DmaConfigProxy *dma;
+  DmaConfigProxy *dmap;
+  DmaManager *dma;
 };
 
 extern PortalMatAllocator *matAllocator;
