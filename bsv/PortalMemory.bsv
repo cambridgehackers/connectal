@@ -78,16 +78,3 @@ interface DmaConfig;
    method Action getStateDbg(ChannelType rc);
    method Action getMemoryTraffic(ChannelType rc);
 endinterface
-
-//
-// @brief Instances of type class PortalMemory implement the sglist method
-//
-typeclass PortalMemory#(type a);
-endtypeclass
-
-//
-// @brief DmaConfig implements sglist()
-//
-instance PortalMemory#(DmaConfig);
-endinstance
-
