@@ -278,7 +278,8 @@ class MethodMixin:
 		    continue
                 if off:
                     field = '%s>>%s' % (field, off)
-                field = '((%s)&0x%xul)' % (field, ((1 << e[3].bitWidth())-1))
+                if e[3].bitWidth() < 32:
+                    field = '((%s)&0x%xul)' % (field, ((1 << e[3].bitWidth())-1))
                 if e[2]:
                     field = '((%s)(%s)<<%s)' % (e[3].cName(),field, e[2])
 		word.append('        %s %s (%s)(%s);\n'%(e[0],ass,e[3].cName(),field))
