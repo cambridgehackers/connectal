@@ -33,7 +33,7 @@ typedef enum {
 //
 // @brief Channel Identifier
 //
-typedef Bit#(16) DmaChannelId;
+//typedef Bit#(16) DmaChannelId;
 
 typedef struct {
    Bit#(32) x;
@@ -46,13 +46,13 @@ typedef struct {
 // @brief Events sent from a Dma engine
 //
 interface DmaIndication;
-   method Action configResp(Bit#(32) pointer, Bit#(40) msg);
+   method Action configResp(Bit#(32) pointer, Bit#(64) msg);
    method Action addrResponse(Bit#(64) physAddr);
    method Action badPointer(Bit#(32) pointer);
-   method Action badAddrTrans(Bit#(32) pointer, Bit#(64) offset, Bit#(40) barrier);
+   method Action badAddrTrans(Bit#(32) pointer, Bit#(64) offset, Bit#(64) barrier);
    method Action badPageSize(Bit#(32) pointer, Bit#(32) sz);
    method Action badNumberEntries(Bit#(32) pointer, Bit#(32) sz, Bit#(32) idx);
-   method Action badAddr(Bit#(32) pointer, Bit#(40) offset, Bit#(64) physAddr);
+   method Action badAddr(Bit#(32) pointer, Bit#(64) offset, Bit#(64) physAddr);
    method Action reportStateDbg(DmaDbgRec rec);
    method Action reportMemoryTraffic(Bit#(64) words);
    method Action tagMismatch(ChannelType x, Bit#(32) a, Bit#(32) b);
@@ -69,8 +69,10 @@ interface DmaConfig;
    // @param addr Physical address of the segment
    // @param len Length of the segment
    //
-   method Action sglist(Bit#(32) pointer, Bit#(40) addr, Bit#(32) len);
-   method Action region(Bit#(32) pointer, Bit#(40) barr8, Bit#(8) off8, Bit#(40) barr4, Bit#(8) off4, Bit#(40) barr0, Bit#(8) off0);
+   method Action sglist(Bit#(32) pointer, Bit#(64) addr,  Bit#(32) len);
+   method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) off8,
+                                          Bit#(64) barr4, Bit#(32) off4,
+                                          Bit#(64) barr0, Bit#(32) off0);
    method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
    //
    // @brief Requests debug info for the specified channel type

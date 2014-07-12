@@ -263,7 +263,7 @@ module mkConfigMemServerRW#(DmaIndication dmaIndication,
 	 else 
 	    writer.request.getMemoryTraffic(rc);
       endmethod
-      method Action sglist(Bit#(32) pref, Bit#(ObjectOffsetSize) addr, Bit#(32) len);
+      method Action sglist(Bit#(32) pref, Bit#(64) addr, Bit#(32) len);
 	 if (bad_pointer(pref))
 	    dmaIndication.badPointer(pref);
 `ifdef BSIM
@@ -272,10 +272,10 @@ module mkConfigMemServerRW#(DmaIndication dmaIndication,
          addr[39:32] = truncate(pref);
 `endif
 `endif
-	 sgl.sglist(pref, addr, len);
+	 sgl.sglist(pref, truncate(addr), len);
       endmethod
-      method Action region(Bit#(32) pointer, Bit#(40) barr8, Bit#(8) off8, Bit#(40) barr4, Bit#(8) off4, Bit#(40) barr0, Bit#(8) off0);
-	 sgl.region(pointer,barr8,off8,barr4,off4,barr0,off0);
+      method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) off8, Bit#(64) barr4, Bit#(32) off4, Bit#(64) barr0, Bit#(32) off0);
+	 sgl.region(pointer,truncate(barr8),truncate(off8),truncate(barr4),truncate(off4),truncate(barr0),truncate(off0));
       endmethod
       method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
 	 writer.request.addrRequest(pointer,offset);
@@ -357,7 +357,7 @@ module mkConfigMemServerR#(DmaIndication dmaIndication,
 	 if (rc == Read)
 	    trafficFSM.start;
       endmethod
-      method Action sglist(Bit#(32) pref, Bit#(ObjectOffsetSize) addr, Bit#(32) len);
+      method Action sglist(Bit#(32) pref, Bit#(64) addr, Bit#(32) len);
 	 if (bad_pointer(pref))
 	    dmaIndication.badPointer(pref);
 `ifdef BSIM
@@ -366,10 +366,10 @@ module mkConfigMemServerR#(DmaIndication dmaIndication,
          addr[39:32] = truncate(pref);
 `endif
 `endif
-	 sgl.sglist(pref, addr, len);
+	 sgl.sglist(pref, truncate(addr), len);
       endmethod
-      method Action region(Bit#(32) pointer, Bit#(40) barr8, Bit#(8) off8, Bit#(40) barr4, Bit#(8) off4, Bit#(40) barr0, Bit#(8) off0);
-	 sgl.region(pointer,barr8,off8,barr4,off4,barr0,off0);
+      method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) off8, Bit#(64) barr4, Bit#(32) off4, Bit#(64) barr0, Bit#(32) off0);
+	 sgl.region(pointer,truncate(barr8),truncate(off8),truncate(barr4),truncate(off4),truncate(barr0),truncate(off0));
       endmethod
       method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
 	 addrReqFifo.enq(?);
@@ -450,7 +450,7 @@ module mkConfigMemServerW#(DmaIndication dmaIndication,
 	 if (rc == Write) 
 	    trafficFSM.start;
       endmethod
-      method Action sglist(Bit#(32) pref, Bit#(ObjectOffsetSize) addr, Bit#(32) len);
+      method Action sglist(Bit#(32) pref, Bit#(64) addr, Bit#(32) len);
 	 if (bad_pointer(pref))
 	    dmaIndication.badPointer(pref);
 `ifdef BSIM
@@ -459,10 +459,10 @@ module mkConfigMemServerW#(DmaIndication dmaIndication,
          addr[39:32] = truncate(pref);
 `endif
 `endif
-	 sgl.sglist(pref, addr, len);
+	 sgl.sglist(pref, truncate(addr), len);
       endmethod
-      method Action region(Bit#(32) pointer, Bit#(40) barr8, Bit#(8) off8, Bit#(40) barr4, Bit#(8) off4, Bit#(40) barr0, Bit#(8) off0);
-	 sgl.region(pointer,barr8,off8,barr4,off4,barr0,off0);
+      method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) off8, Bit#(64) barr4, Bit#(32) off4, Bit#(64) barr0, Bit#(32) off0);
+	 sgl.region(pointer,truncate(barr8),truncate(off8),truncate(barr4),truncate(off4),truncate(barr0),truncate(off0));
       endmethod
       method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
 	 addrReqFifo.enq(?);

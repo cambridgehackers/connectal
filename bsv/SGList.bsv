@@ -238,7 +238,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    FIFO#(Tuple2#(SGListId,Bit#(40))) configRespFifo <- mkFIFO;
    rule sendConfigResp;
       match { .ptr, .barr0 } <- toGet(configRespFifo).get();
-      dmaIndication.configResp(extend(ptr), barr0);
+      dmaIndication.configResp(extend(ptr), extend(barr0));
    endrule
 
    FIFO#(Tuple3#(SGListId,Bit#(40),Bit#(32))) sglistFifo <- mkFIFO();
