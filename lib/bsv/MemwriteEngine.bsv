@@ -234,7 +234,7 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
    rule load_ctxt_c;
       let idx <- toGet(loadf_a).get;
       let cmd <- toGet(loadf_b).get;
-      //$display("%d %d", buffCap[idx].read(), cmd.burstLen>>beat_shift);
+      //$display("%d %d %d", outs1[idx], buffCap[idx].read(), cmd.burstLen>>beat_shift);
       if (outs1[idx] > 0 && buffCap[idx].read() >= unpack(extend(cmd.burstLen>>beat_shift))) begin
 	 //$display("load_ctxt_b %h %d", cmd.base, idx);
 	 buffCap[idx].decrement(unpack(extend(cmd.burstLen>>beat_shift)));

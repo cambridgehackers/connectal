@@ -275,8 +275,8 @@ module  mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServ
    Reg#(Bit#(16)) gatherCntB <- mkReg(0);
    Vector#(K,FIFOF#(Token)) dotfifos   <- replicateM(mkFIFOF1);
    
-   Vector#(2,Reg#(Bit#(TLog#(K)))) chanRegs <- replicateM(mkReg(0));
-   Vector#(3,FIFO#(Bit#(TLog#(K)))) chanFifos <- replicateM(mkSizedFIFO(valueOf(TMul#(gatherSz,K))));
+   Vector#(2,Reg#(Bit#(TAdd#(1,TLog#(K))))) chanRegs <- replicateM(mkReg(0));
+   Vector#(3,FIFO#(Bit#(TAdd#(1,TLog#(K))))) chanFifos <- replicateM(mkSizedFIFO(valueOf(TMul#(gatherSz,K))));
 
    Reg#(Bit#(32)) cycles <- mkReg(0);
    rule countCycles;
@@ -352,7 +352,7 @@ module  mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServ
       macs <= macs + 1;
       lastAccout <= cycles;
       match {.acc,.*} <- adder.response.get();
-      if (verbose) $display("%08d label=%d accout chan=%d acc=%x last=%d macs=%d", cycles-lastAccout, label, chan, pack(acc), last, macs+1);
+      if (verbose || timing) $display("%08d label=%d accout chan=%d acc=%x last=%d macs=%d", cycles-lastAccout, label, chan, pack(acc), last, macs+1);
       accumFifos[chan][accumFifosEnqIdxs[chan]].enq(acc);
       accumFifosEnqIdxs[chan] <= accumFifosEnqIdxs[chan]+1;
 `ifdef TAGGED_TOKENS
@@ -376,12 +376,13 @@ module  mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServ
       chanRegs[1] <= chan+1;
       let last_chan = chan == fromInteger(valueOf(K)-1);
       let last_pass = gatherCntA+1 == fromInteger(valueOf(gatherSz));
+
       if (!last_pass) begin
 	 chanFifos[2].enq(chan);
 	 let x <- toGet(accumFifos[chan][gatherCntA+0]).get;
 	 let y <- toGet(accumFifos[chan][gatherCntA+1]).get;
 	 adder.request.put(tuple2(x,y));
-	 //if (verbose) $display("gatherA=%d chan=%d, gatherSz=%d", gatherCntA, chanReg, valueOf(gatherSz));
+	 if (verbose || timing) $display("gatherA=%d chan=%d, gatherSz=%d", gatherCntA, chan, valueOf(gatherSz));
 	 //if (verbose) $display("gatherA: accumFifos[%d][%d].deq", chan, gatherCntA+0);
 	 //if (verbose) $display("         accumFifos[%d][%d].deq", chan, gatherCntA+1);
 	 if (last_chan)
@@ -400,6 +401,9 @@ module  mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServ
 	    gatherCntA <= 0;
 	    lastCntA <= 0;
 	    if(verbose || timing) $display("gatherA reset");
+	 end 
+	 else begin
+	    if(verbose || timing) $display("gatherA else");
 	 end
       end
    endrule
@@ -423,7 +427,7 @@ module  mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServ
 	 end
 	 match {.acc, .*} <- adder.response.get;
 	 accumFifos[chan][gatherCntB+1].enq(acc);
-	 //if (verbose) $display("gatherB=%d chan=%d last_chan=%d last_pass=%d", gatherCntB, chan, last_chan, last_pass);
+	 if (verbose||timing) $display("gatherB=%d chan=%d last_chan=%d last_pass=%d K=%d", gatherCntB, chan, last_chan, last_pass, valueOf(K));
 	 //if (verbose) $display("gatherB: accumFifos[%d][%d].enq %d", chan, gatherCntB+1, last_pass);
       end
    endrule

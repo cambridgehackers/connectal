@@ -131,8 +131,10 @@ module  mkMemwriteVectorSink#(Server#(MemengineCmd,Bool) memwriteEngine, PipeIn#
    let ashift = valueOf(ashift);
    method Action start(ObjectPointer p, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
       if (verbose) $display("VectorSink.start h=%d a=%h l=%h ashift=%d", p, a, l, ashift);
-      // this is really shitty.  I set burstLen so that testmm works, but I'm not sure if this is generally usable anymore (mdk)
-      memwriteEngine.request.put(MemengineCmd { pointer: p, base: a << ashift, len: truncate(l << ashift), burstLen: fromInteger(valueOf(abytes)) });
+      // I set burstLen==1 so that testmm works for all J,K,N. If we want burst writes we will need to rethink this (mdk)
+      let cmd = MemengineCmd { pointer: p, base: a << ashift, len: truncate(l << ashift), burstLen: fromInteger(valueOf(abytes)) };
+      memwriteEngine.request.put(cmd);
+      //$display("%d %d %d %d", cmd.pointer, cmd.base, cmd.len, cmd.burstLen);
    endmethod
    method finish = memwriteEngine.response.get;
    interface PipeIn pipe = mapPipeIn(pack, pipeIn);

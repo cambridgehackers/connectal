@@ -78,7 +78,7 @@ void *dbgThread(void *)
   while (1) {
     sleep(2);
     if (dmap) {
-      dmap->getStateDbg(ChannelType_Read);
+      //dmap->getStateDbg(ChannelType_Read);
     }
     if (mmdebug) {
       fprintf(stderr, "Calling mmdebug->debug()\n");
