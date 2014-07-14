@@ -156,8 +156,11 @@ module mkAxi3Slave(Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))
    Reg#(Bit#(5))  writeLen <- mkReg(0);
    Reg#(Bit#(serverIdWidth)) writeId <- mkReg(0);
    
-   Bit#(64) readLatency = 128;
-   Bit#(64) writeLatency = 128;
+   let readLatency_I = 150;
+   let writeLatency_I = 150;
+
+   Bit#(64) readLatency = fromInteger(readLatency_I);
+   Bit#(64) writeLatency = fromInteger(writeLatency_I);
    
    Reg#(Bit#(64)) req_ar_b_ts <- mkReg(0);
    Reg#(Bit#(64)) req_aw_b_ts <- mkReg(0);
@@ -166,11 +169,10 @@ module mkAxi3Slave(Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))
    Reg#(Bit#(64)) last_read_eob <- mkReg(0);
    Reg#(Bit#(64)) last_write_eob <- mkReg(0);
 
-   FIFOF#(Tuple2#(Bit#(64), Axi3ReadRequest#(serverAddrWidth,serverIdWidth)))  readDelayFifo <- mkSizedFIFOF(16);
-   FIFOF#(Tuple2#(Bit#(64),Axi3WriteRequest#(serverAddrWidth,serverIdWidth))) writeDelayFifo <- mkSizedFIFOF(16);
+   FIFOF#(Tuple2#(Bit#(64), Axi3ReadRequest#(serverAddrWidth,serverIdWidth)))  readDelayFifo <- mkSizedFIFOF(readLatency_I/4);
+   FIFOF#(Tuple2#(Bit#(64),Axi3WriteRequest#(serverAddrWidth,serverIdWidth))) writeDelayFifo <- mkSizedFIFOF(writeLatency_I/4);
 
-   Vector#(4,FIFOF#(Tuple2#(Bit#(64), Axi3WriteResponse#(serverIdWidth)))) bFifos <- replicateM(mkSizedFIFOF(16));
-   let bFifo = (bFifos[3].notEmpty ? bFifos[3] : (bFifos[2].notEmpty ? bFifos[2] : (bFifos[1].notEmpty ? bFifos[1] : bFifos[0])));
+   FIFOF#(Tuple2#(Bit#(64), Axi3WriteResponse#(serverIdWidth))) bFifo <- mkSizedFIFOF(16);
   
    rule increment_cycle;
       cycle <= cycle+1;
@@ -256,7 +258,7 @@ module mkAxi3Slave(Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))
 	 writeLen <= write_len - 1;
 	 writeAddrr <= write_addr + fromInteger(valueOf(serverBusWidth)/8);
 	 if (write_len == 1) begin
-	    bFifos[write_id[1:0]].enq(tuple2(cycle,Axi3WriteResponse { id: write_id, resp: 0 }));
+	    bFifo.enq(tuple2(cycle,Axi3WriteResponse { id: write_id, resp: 0 }));
 	 end
       endmethod
    endinterface

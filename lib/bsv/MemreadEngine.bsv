@@ -45,7 +45,7 @@ module mkMemreadEngine(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
 	    ,Pipe::FunnelPipesPipelined#(1, numServers, Tuple2#(Bit#(dataWidth), Bool),TMin#(2, TLog#(numServers)))
 	    ,Add#(c__, TLog#(numServers), TLog#(TMul#(cmdQDepth, numServers)))
 	    );
-   let rv <- mkMemreadEngineBuff(512);
+   let rv <- mkMemreadEngineBuff(256);
    return rv;
 endmodule
 

@@ -110,7 +110,7 @@ module mkRowSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSourc
 `endif
    // perhaps memreadengine could do the labeling
    Reg#(Bit#(ObjectOffsetSize)) countReg <- mkReg(0);
-   FIFOF#(Bit#(ObjectOffsetSize)) cmdFifo <- mkFIFOF;
+   FIFOF#(Bit#(ObjectOffsetSize)) cmdFifo <- mkSizedFIFOF(4);
 
    method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
 `ifdef TAGGED_TOKENS
@@ -174,7 +174,7 @@ module mkColSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSourc
 `endif
    // perhaps memreadengine could do the labeling
    Reg#(Bit#(ObjectOffsetSize)) countReg <- mkReg(0);
-   FIFOF#(Bit#(ObjectOffsetSize)) cmdFifo <- mkFIFOF;
+   FIFOF#(Bit#(ObjectOffsetSize)) cmdFifo <- mkSizedFIFOF(4);
 
    method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
 `ifdef TAGGED_TOKENS
@@ -914,10 +914,9 @@ endinterface
 //(* synthesize *)
 module  mkDramMatrixMultiply(DramMatrixMultiply#(N,TMul#(N,32)));
    
-   // I should investigate why this needs to be 3 instead of 2 in order to get full throughput...
-   MemreadEngineV#(TMul#(N,32), 3, J) rowReadEngine <- mkMemreadEngine();
-   MemreadEngineV#(TMul#(N,32), 3, K) colReadEngine <- mkMemreadEngine();
-   MemwriteEngineV#(TMul#(N,32),3, J)   writeEngine <- mkMemwriteEngine();
+   MemreadEngineV#(TMul#(N,32), 2, J) rowReadEngine <- mkMemreadEngineBuff(512);
+   MemreadEngineV#(TMul#(N,32), 2, K) colReadEngine <- mkMemreadEngineBuff(512);
+   MemwriteEngineV#(TMul#(N,32),2, J)   writeEngine <- mkMemwriteEngine();
 
    Vector#(J, VectorSource#(DmaSz, Vector#(N,Float))) xvfsources <- mapM(uncurry(mkMemreadVectorSource), zip(rowReadEngine.readServers, rowReadEngine.dataPipes));
    Vector#(K, VectorSource#(DmaSz, Vector#(N,Float))) yvfsources <- mapM(uncurry(mkMemreadVectorSource), zip(colReadEngine.readServers, colReadEngine.dataPipes));

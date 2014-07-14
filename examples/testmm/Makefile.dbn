@@ -22,8 +22,11 @@ endif
 
 gen:: $(DBNDIR)/datasets
 
-prebuild::
+synth-ip.tcl:
 	ln -svf $(XBSVDIR)/examples/testmm/synth-ip.tcl .
+
+prebuild:: synth-ip.tcl
+
 
 include $(XBSVDIR)/Makefile.common
 
