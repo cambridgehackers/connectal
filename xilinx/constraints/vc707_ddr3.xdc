@@ -776,8 +776,8 @@ startgroup
 create_pblock pblock_ddr3
 resize_pblock pblock_ddr3 -add { SLICE_X120Y200:SLICE_X220Y360 DSP48_X13Y82:DSP48_X19Y137 RAMB18_X9Y82:RAMB18_X13Y137 RAMB36_X9Y41:RAMB36_X13Y68 }
 #resize_pblock pblock_ddr3 -add { SLICE_X146Y201:SLICE_X205Y348 DSP48_X13Y82:DSP48_X19Y137 RAMB18_X9Y82:RAMB18_X13Y137 RAMB36_X9Y41:RAMB36_X13Y68 }
-add_cells_to_pblock pblock_ddr3 [get_cells [list top_portalTop/top_ddr3* ]]
-#add_cells_to_pblock pblock_ddr3 [get_cells [list top_portalTop/top_dramController* ]]
+add_cells_to_pblock pblock_ddr3 [get_cells [list */top_ddr3* ]]
+#add_cells_to_pblock pblock_ddr3 [get_cells [list */top_dramController* ]]
 #add_cells_to_pblock pblock_ddr3 [get_cells [list ddr3* ]]
 endgroup
 
@@ -785,9 +785,9 @@ endgroup
 ######################################################################################################
 # TIMING CONSTRAINTS
 ######################################################################################################
-create_clock -name top_x7pcie_sys_clk_200mhz -period 5 [get_pins top_x7pcie_sys_clk_200mhz/O]
-create_generated_clock -name ddr3_refclk -source [get_pins top_x7pcie_sys_clk_200mhz_buf/O] -divide_by 1 [get_pins top_portalTop/top_clk_gen_pll/CLKOUT1]
-create_generated_clock -name ddr3_usrclk -source [get_pins top_x7pcie_sys_clk_200mhz_buf/O] -multiply_by 5 -divide_by 10 [get_pins top_portalTop/top_clk_gen_pll/CLKOUT0]
+create_clock -name top_x7pcie_sys_clk_200mhz -period 5 [get_pins *sys_clk_200mhz/O]
+create_generated_clock -name ddr3_refclk -source [get_pins *sys_clk_200mhz_buf/O] -divide_by 1 [get_pins */top_clk_gen_pll/CLKOUT1]
+create_generated_clock -name ddr3_usrclk -source [get_pins *sys_clk_200mhz_buf/O] -multiply_by 5 -divide_by 10 [get_pins */top_clk_gen_pll/CLKOUT0]
 #create_generated_clock -name ddr3_refclk -source [get_pins sys_clk/O] -divide_by 1 [get_pins clk_gen_pll/CLKOUT1]
 
 set_multicycle_path -from [get_cells -hier -filter {NAME =~ */mc0/mc_read_idle_r_reg}] \
