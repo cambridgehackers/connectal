@@ -667,10 +667,10 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
    let doubleReset = defaultReset;
 `else
    ClockGenerator7Params clockParams = defaultValue;
-   clockParams.clkfbout_mult_f    = 5.000;
+   clockParams.clkfbout_mult_f    = 6.000;
    clockParams.clkfbout_phase     = 0.0;
    clockParams.clkin1_period      = 5.000;
-   clockParams.clkout0_divide_f   = 2.500;
+   clockParams.clkout0_divide_f   = 3.000;
    clockParams.clkout0_duty_cycle = 0.5;
    clockParams.clkout0_phase      = 0.0000;
    clockParams.clkout0_buffer     = True;
