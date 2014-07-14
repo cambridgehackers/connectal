@@ -1,5 +1,8 @@
 #################################################################################################
 
+bozotarget:
+	@echo "Makefile.common: please invoke with make gen.boardname"
+
 ## use "make gen.board" to generate the build directory
 gen.%:
 	make BOARD=$* gentarget prebuild
