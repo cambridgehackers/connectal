@@ -374,7 +374,12 @@ module  mkBsimTop(Empty)
    provisos (SelectBsimRdmaReadWrite#(DataBusWidth));
    Clock defaultClock <- exposeCurrentClock();
    BsimHost#(32,32,12,40,DataBusWidth,6,NumberOfMasters) host <- mkBsimHost;
+`ifdef SYNTH_ARG
+   TopParam tparam <- mkTopParam(`SYNTH_ARG);
+   PortalTop#(40,DataBusWidth,PinType,NumberOfMasters) top <- mkPortalTop(tparam `CLOCK_ARG);
+`else
    PortalTop#(40,DataBusWidth,PinType,NumberOfMasters) top <- mkPortalTop(`CLOCK_ARG);
+`endif
    Vector#(NumberOfMasters,Axi3Master#(40,DataBusWidth,6)) m_axis <- mapM(mkAxiDmaMaster,top.masters);
    mkConnection(host.mem_client, top.slave);
    mapM(uncurry(mkConnection),zip(m_axis, host.axi_servers));

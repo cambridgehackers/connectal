@@ -108,7 +108,12 @@ module mkZynqTop(ZynqTop);
 
    BscanTop bscan <- mkBscanTop(3, clocked_by mainclock, reset_by mainreset); // Use USER3  (JTAG IDCODE address 0x22)
    BscanLocal lbscan <- mkBscanLocal(bscan, clocked_by bscan.tck, reset_by bscan.rst);
+`ifdef SYNTH_ARG
+   TopParam tparam <- mkTopParam(`SYNTH_ARG);
+   PortalTop#(32, 64, PinType, NumberOfMasters) top <- mkPortalTop(tparam, `CLOCK_ARG `BSCAN_ARG clocked_by mainclock, reset_by mainreset);
+`else
    PortalTop#(32, 64, PinType, NumberOfMasters) top <- mkPortalTop(`CLOCK_ARG `BSCAN_ARG clocked_by mainclock, reset_by mainreset);
+`endif
    mkConnectionWithTrace(ps7, top, lbscan.loc[1], clocked_by mainclock, reset_by mainreset);
 
    let intr_mux <- mkInterruptMux(top.interrupt);

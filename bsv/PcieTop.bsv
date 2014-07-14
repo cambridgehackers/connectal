@@ -50,6 +50,13 @@ import PcieEndpointX7    :: *;
 `ifndef PinType
 `define PinType Empty
 `endif
+`ifdef SYNTH_ARG
+`define TopFormal #(TopParam param)
+`define TopActual param
+`else
+`define TopFormal
+`define TopActual
+`endif
 `ifdef USES_FCLK1
 `define CLOCK_ARG  defaultClock
 `else
@@ -138,11 +145,13 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    interface BscanTop bscanif = lbscan.loc[0];
 endmodule: mkPcieHost
 
+`ifndef SYNTH_ARG
 (* synthesize *)
-module mkSynthesizeablePortalTop(PortalTop#(40, DataBusWidth, PinType, NumberOfMasters));
+`endif
+module mkSynthesizeablePortalTop `TopFormal (PortalTop#(40, DataBusWidth, PinType, NumberOfMasters));
    Clock defaultClock <- exposeCurrentClock();
    //BscanTop local_bscan <- mkBscanTop(3); // Use USER3  (JTAG IDCODE address 0x22)
-   let top <- mkPortalTop(`CLOCK_ARG `BSCAN_ARG);
+   let top <- mkPortalTop(`TopActual `CLOCK_ARG `BSCAN_ARG);
    interface masters = top.masters;
    interface slave = top.slave;
    interface interrupt = top.interrupt;
@@ -201,7 +210,12 @@ module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Cl
    mkConnection(ep7.tlp, pciehost.pci, clocked_by epClock125, reset_by epReset125);
 `endif
 
+`ifdef SYNTH_ARG
+   TopParam tparam <- mkTopParam(`SYNTH_ARG);
+   let portalTop <- mkSynthesizeablePortalTop(tparam, clocked_by epClock125, reset_by epReset125);
+`else
    let portalTop <- mkSynthesizeablePortalTop(clocked_by epClock125, reset_by epReset125);
+`endif
    mkConnection(pciehost.master, portalTop.slave, clocked_by epClock125, reset_by epReset125);
    if (valueOf(NumberOfMasters) > 0) begin
       mapM(uncurry(mkConnection),zip(portalTop.masters, pciehost.slave));
