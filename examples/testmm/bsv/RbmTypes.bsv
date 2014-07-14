@@ -43,6 +43,8 @@ typedef 1 K;
 typedef `K_VALUE K;
 `endif
 
+typedef `NumberOfMasters NumberOfMasters;
+
 typedef TMin#(4,J) RowsPerTile;
 typedef TDiv#(J,RowsPerTile) T;
 typedef TMul#(32,N) DmaSz;

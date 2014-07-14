@@ -12,6 +12,7 @@ import Portal::*;
 import Leds::*;
 import PortalMemory::*;
 import MemServer::*;
+import MemUtils::*;
 import PortalMemory::*;
 import MemTypes::*;
 import RbmTypes::*;
@@ -29,14 +30,7 @@ import MmDebugIndicationProxy::*;
 // defined by user
 import Matrix::*;
 
-//typedef TAdd#(K,J) NumMasters;
-`ifdef PCIE
-typedef 1 NumMasters;
-`else
-typedef 1 NumMasters;
-`endif
-
-module  mkPortalTop(PortalTop#(addrWidth,TMul#(32,N),Empty,NumMasters))
+module  mkPortalTop(PortalTop#(addrWidth,TMul#(32,N),Empty,NumberOfMasters))
    provisos (Add#(a__, addrWidth, 40),
 	     Add#(a__, b__, 40),
 	     Add#(addrWidth, c__, 52),
@@ -56,10 +50,13 @@ module  mkPortalTop(PortalTop#(addrWidth,TMul#(32,N),Empty,NumMasters))
    MmDebugRequestWrapper mmDebugRequestWrapper <- mkMmDebugRequestWrapper(MmDebugRequestPortal,mm.mmDebug);
    TimerRequestWrapper timerRequestWrapper <- mkTimerRequestWrapper(TimerRequestPortal,mm.timerRequest);
    
-   Vector#(2,ObjectReadClient#(TMul#(32,N))) readClients = mm.readClients;
-   Vector#(1,ObjectWriteClient#(TMul#(32,N))) writeClients = cons(mm.writeClient,nil);
+   // so we have the same number of readers and writers
+   let memWriter <- mkMemWriter;
 
-   MemServer#(addrWidth, TMul#(32,N), NumMasters) dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
+   Vector#(2,ObjectReadClient#(TMul#(32,N))) readClients = mm.readClients;
+   Vector#(2,ObjectWriteClient#(TMul#(32,N))) writeClients = cons(mm.writeClient,cons(memWriter.writeClient,nil));
+
+   MemServer#(addrWidth, TMul#(32,N), NumberOfMasters) dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
    DmaConfigWrapper dmaConfigWrapper <- mkDmaConfigWrapper(DmaConfigPortal,dma.request);
 
    Vector#(8,StdPortal) portals;
