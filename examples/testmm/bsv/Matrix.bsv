@@ -639,10 +639,9 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 				     Vector#(K, VectorSource#(dsz, Vector#(N, Float))) sB,
 				     Vector#(J, VectorSink#(dsz, Vector#(N,Float)))    ss
 				     )(DmaMatrixMultiplyIfc#(addrwidth, dsz))
-   provisos (// Add#(N,n__,K)
-	     //, Mul#(N,m__,K)
-	     //,
-                Add#(1,o__,J)
+   provisos (  Mul#(N,n__,K) // K must be an integer multiple of N
+	     , Mul#(N,m__,J) // J must be an integer multiple of N
+             , Add#(1,o__,J)
 	     , Log#(N,nshift)
 	     , FShow#(Float)
 	     , Arith#(Float)
