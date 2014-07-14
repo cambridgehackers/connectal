@@ -164,22 +164,36 @@ int main(int argc, const char **argv)
 
   FILE *octave_file = fopen("foo.m", "w");
 
+  start_timer(0);
+  fprintf(stderr, "OpenCV matmul\n");
   cv::Mat  m3 = m1 * m2;
+  uint64_t opencv_hw_cycles = lap_timer(0);
+
   PortalMat tm3;
+  fprintf(stderr, "Naive matmul\n");
+  start_timer(0);
   tm3.naive_mul(m1,m2, octave_file);
+  uint64_t naive_hw_cycles = lap_timer(0);
 
-  dumpMatOctave<float>("m1",  "%10.5f", m1,  octave_file);
-  dumpMatOctave<float>("m2",  "%10.5f", m2,  octave_file);
-  dumpMatOctave<float>("m3",  "%10.5f", m3,  octave_file);
-  dumpMatOctave<float>("tm3", "%10.5f", tm3, octave_file);
-  fclose(octave_file);
-  bool sane = tm3.compare(m3, 0, 0, 0.0001, 0, false);
-  fprintf(stderr, "sane=%d\n", sane);
+  bool sane = 1;
+  if (1) {
+    fprintf(stderr, "DumpMat\n");
+    dumpMatOctave<float>("m1",  "%10.5f", m1,  octave_file);
+    dumpMatOctave<float>("m2",  "%10.5f", m2,  octave_file);
+    dumpMatOctave<float>("m3",  "%10.5f", m3,  octave_file);
+    dumpMatOctave<float>("tm3", "%10.5f", tm3, octave_file);
+    fclose(octave_file);
+    sane = tm3.compare(m3, 0, 0, 0.0001, 0, false);
+    fprintf(stderr, "sane=%d\n", sane);
+    fflush(stdout);
+  }
 
-  fflush(stdout);
+  fprintf(stderr, "pm1\n");
   PortalMat pm1(m1);
+  fprintf(stderr, "pm2t\n");
   PortalMat pm2t(m2.t());
   PortalMat pm3;
+  fprintf(stderr, "HW matmul\n");
   start_timer(0);
   pm3.multf(pm1, pm2t, mmdeviceIndication);
   uint64_t hw_cycles = lap_timer(0); 
@@ -187,8 +201,11 @@ int main(int argc, const char **argv)
   uint64_t write_beats = dma->show_mem_stats(ChannelType_Write);
   float read_util = (float)read_beats/(float)mmdeviceIndication->ccnt;
   float write_util = (float)write_beats/(float)mmdeviceIndication->ccnt;
-  fprintf(stderr, "memory read beats %ld utilization (beats/cycle): %f\n", read_beats, read_util);
-  fprintf(stderr, "memory write beats %ld utilization (beats/cycle): %f\n", write_beats, write_util);
+  fprintf(stderr, "memory read beats %lld utilization (beats/cycle): %f\n", read_beats, read_util);
+  fprintf(stderr, "memory write beats %lld utilization (beats/cycle): %f\n", write_beats, write_util);
+  fprintf(stderr, "opencv matmul %ld cycles (speedup %5.2ff), naive matmul %ld cycles (speedup %5.2f)\n",
+	  opencv_hw_cycles, (float)opencv_hw_cycles/(float)hw_cycles,
+	  naive_hw_cycles, (float)naive_hw_cycles/(float)hw_cycles);
 
   if (0) {
     dumpMat<float>("pm3", "%5.1f", pm3);
