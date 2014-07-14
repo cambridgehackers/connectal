@@ -351,12 +351,12 @@ module  mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdWidth,
    endinterface
 endmodule
 
-`ifndef CLOCK_ARG
 `ifdef USES_FCLK1
+`define CLOCK_DECL Clock clk1
 `define CLOCK_ARG  defaultClock
 `else
+`define CLOCK_DECL
 `define CLOCK_ARG
-`endif
 `endif
 
 `ifndef DataBusWidth
