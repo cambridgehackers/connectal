@@ -42,7 +42,6 @@ memtests =  memread_manyclients  \
             memwrite_manyclients 
 
 matrixtests =testmm2.2.2         \
-	    testmm2.2.4          \
 	    testmm4.2.2          \
 	    testmm4.4.2          \
 	    testmm4.4.4          \
