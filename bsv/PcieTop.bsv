@@ -50,10 +50,12 @@ import PcieEndpointX7    :: *;
 `ifndef PinType
 `define PinType Empty
 `endif
+`ifndef CLOCK_ARG
 `ifdef USES_FCLK1
 `define CLOCK_ARG  defaultClock
 `else
 `define CLOCK_ARG
+`endif
 `endif
 
 `ifdef USES_BSCAN

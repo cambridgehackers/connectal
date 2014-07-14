@@ -38,10 +38,12 @@ import AxiMasterSlave    :: *;
 import AxiDma            :: *;
 import Bscan             :: *;
 
+`ifndef CLOCK_ARG
 `ifdef USES_FCLK1
 `define CLOCK_ARG  ps7.fclkclk[1],
 `else
 `define CLOCK_ARG
+`endif
 `endif
 
 `ifdef USES_BSCAN
