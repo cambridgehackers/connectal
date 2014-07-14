@@ -69,6 +69,20 @@ import PcieEndpointX7    :: *;
 `define BSCAN_ARG
 `endif
 
+interface PcieHostTop;
+   interface Clock tepClock125;
+   interface Reset tepReset125;
+   interface PcieHost#(DataBusWidth, NumberOfMasters) tpciehost;
+`ifndef BSIM
+   interface Clock tsys_clk_200mhz;
+   interface Clock tsys_clk_200mhz_buf;
+   interface Clock tpci_clk_100mhz_buf;
+   interface PcieEndpointX7#(PcieLanes) tep7;
+`endif
+endinterface
+
+typedef PcieHostTop HostType;
+
 // implemented in TlpReplay.cxx
 import "BDPI" function Action put_tlp(TLPData#(16) d);
 import "BDPI" function ActionValue#(TLPData#(16)) get_tlp();
@@ -170,11 +184,7 @@ interface PcieTop#(type ipins);
 `endif
 endinterface
 
-`ifndef BSIM
-(* no_default_clock, no_default_reset *)
-`endif
-module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)
-   (PcieTop#(PinType));
+module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)(PcieHostTop);
 
 `ifdef BSIM
    let dc <- exposeCurrentClock;
@@ -208,21 +218,36 @@ module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Cl
          PciId{ bus:  ep7.cfg.bus_number(), dev: ep7.cfg.device_number(), func: ep7.cfg.function_number()},
          clocked_by epClock125, reset_by epReset125);
    mkConnection(ep7.tlp, pciehost.pci, clocked_by epClock125, reset_by epReset125);
+   interface Clock tsys_clk_200mhz = sys_clk_200mhz;
+   interface Clock tsys_clk_200mhz_buf = sys_clk_200mhz_buf;
+   interface Clock tpci_clk_100mhz_buf = pci_clk_100mhz_buf;
+   interface PcieEndpointX7 tep7 = ep7;
 `endif
+   interface Clock tepClock125 = epClock125;
+   interface Reset tepReset125 = epReset125;
+   interface PcieHost tpciehost = pciehost;
+endmodule
+
+`ifndef BSIM
+(* no_default_clock, no_default_reset *)
+`endif
+module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)
+   (PcieTop#(PinType));
+PcieHostTop host <- mkPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n);
 
 `ifdef SYNTH_ARG
    TopParam tparam <- mkTopParam(`SYNTH_ARG);
-   let portalTop <- mkSynthesizeablePortalTop(tparam, clocked_by epClock125, reset_by epReset125);
+   let portalTop <- mkSynthesizeablePortalTop(tparam, clocked_by host.tepClock125, reset_by host.tepReset125);
 `else
-   let portalTop <- mkSynthesizeablePortalTop(clocked_by epClock125, reset_by epReset125);
+   let portalTop <- mkSynthesizeablePortalTop(clocked_by host.tepClock125, reset_by host.tepReset125);
 `endif
-   mkConnection(pciehost.master, portalTop.slave, clocked_by epClock125, reset_by epReset125);
+   mkConnection(host.tpciehost.master, portalTop.slave, clocked_by host.tepClock125, reset_by host.tepReset125);
    if (valueOf(NumberOfMasters) > 0) begin
-      mapM(uncurry(mkConnection),zip(portalTop.masters, pciehost.slave));
+      mapM(uncurry(mkConnection),zip(portalTop.masters, host.tpciehost.slave));
    end
 
    // going from level to edge-triggered interrupt
-   Vector#(15, Reg#(Bool)) interruptRequested <- replicateM(mkReg(False, clocked_by epClock125, reset_by epReset125));
+   Vector#(15, Reg#(Bool)) interruptRequested <- replicateM(mkReg(False, clocked_by host.tepClock125, reset_by host.tepReset125));
    rule interrupt_rule;
      Integer intr_num = 0;
      for (Integer i = 0; i < 15; i = i + 1) begin
@@ -231,15 +256,15 @@ module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Cl
 	 interruptRequested[i] <= portalTop.interrupt[i];
      end
      if (intr_num != 0) begin // i= 0 for the directory
-        MSIX_Entry msixEntry = pciehost.msixEntry[intr_num];
-        pciehost.interruptRequest.put(tuple2({msixEntry.addr_hi, msixEntry.addr_lo}, msixEntry.msg_data));
+        MSIX_Entry msixEntry = host.tpciehost.msixEntry[intr_num];
+        host.tpciehost.interruptRequest.put(tuple2({msixEntry.addr_hi, msixEntry.addr_lo}, msixEntry.msg_data));
      end
    endrule
 
 `ifndef BSIM
-   interface pcie = ep7.pcie;
+   interface pcie = host.tep7.pcie;
    method Bit#(NumLeds) leds();
-      return extend({ep7.user.lnk_up(),3'd2});
+      return extend({host.tep7.user.lnk_up(),3'd2});
    endmethod
    interface pins = portalTop.pins;
 `endif

@@ -56,6 +56,8 @@ import Bscan             :: *;
 typedef `PinType PinType;
 typedef `NumberOfMasters NumberOfMasters;
 
+typedef PS7 HostType;
+
 interface I2C_Pins;
    interface Inout#(Bit#(1)) scl;
    interface Inout#(Bit#(1)) sda;
