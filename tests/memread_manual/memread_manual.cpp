@@ -30,18 +30,169 @@ typedef int (*INDFUNC)(volatile unsigned int *map_base, unsigned int channel);
 
 static INDFUNC indfn[MAX_INDARRAY];
 
-void dump(const char *prefix, char *buf, size_t len)
+#if 0 // for now
+class DmaConfigProxysglistMSG : public PortalMessage
 {
-    printf( "%s ", prefix);
-    for (int i = 0; i < (len > 16 ? 16 : len) ; i++)
-	printf( "%02x", (unsigned char)buf[i]);
-    printf( "\n");
-}
+public:
+    struct {
+        uint32_t pointer:32;
+        uint64_t addr:64;
+        uint32_t len:32;
 
-  //virtual void parefResp(uint32_t pointer){
-    //fprintf(stderr, "DmaIndication::parefResp(pointer=%x)\n", pointer);
-  //}
-int DmaIndicationWrapper_handleMessage(volatile unsigned int *map_base, unsigned int channel)
+    } payload;
+    size_t size(){return 16;}
+    void marshall(unsigned int *buff) {
+        int i = 0;
+        buff[i++] = payload.len;
+        buff[i++] = payload.addr;
+        buff[i++] = (payload.addr>>32);
+        buff[i++] = payload.pointer;
+
+    }
+    void demarshall(unsigned int *buff){ printf("[%s:%d]\n", __FUNCTION__, __LINE__); exit(-1); }
+    void indicate(void *ind){ assert(false); }
+};
+void DmaConfigProxy::sglist ( const uint32_t pointer, const uint64_t addr, const uint32_t len )
+{
+    DmaConfigProxysglistMSG msg;
+    msg.channel = CHAN_NUM_DmaConfigProxy_sglist;
+    msg.payload.pointer = pointer;
+    msg.payload.addr = addr;
+    msg.payload.len = len;
+
+    sendMessage(&msg);
+};
+
+class DmaConfigProxyregionMSG : public PortalMessage
+{
+public:
+    struct {
+        uint32_t pointer:32;
+        uint64_t barr8:64;
+        uint32_t off8:32;
+        uint64_t barr4:64;
+        uint32_t off4:32;
+        uint64_t barr0:64;
+        uint32_t off0:32;
+
+    } payload;
+    size_t size(){return 40;}
+    void marshall(unsigned int *buff) {
+        int i = 0;
+        buff[i++] = payload.off0;
+        buff[i++] = payload.barr0;
+        buff[i++] = (payload.barr0>>32);
+        buff[i++] = payload.off4;
+        buff[i++] = payload.barr4;
+        buff[i++] = (payload.barr4>>32);
+        buff[i++] = payload.off8;
+        buff[i++] = payload.barr8;
+        buff[i++] = (payload.barr8>>32);
+        buff[i++] = payload.pointer;
+
+    }
+    void demarshall(unsigned int *buff){ printf("[%s:%d]\n", __FUNCTION__, __LINE__); exit(-1); }
+    void indicate(void *ind){ assert(false); }
+};
+
+void DmaConfigProxy::region ( const uint32_t pointer, const uint64_t barr8, const uint32_t off8, const uint64_t barr4, const uint32_t off4, const uint64_t barr0, const uint32_t off0 )
+{
+    DmaConfigProxyregionMSG msg;
+    msg.channel = CHAN_NUM_DmaConfigProxy_region;
+    msg.payload.pointer = pointer;
+    msg.payload.barr8 = barr8;
+    msg.payload.off8 = off8;
+    msg.payload.barr4 = barr4;
+    msg.payload.off4 = off4;
+    msg.payload.barr0 = barr0;
+    msg.payload.off0 = off0;
+
+    sendMessage(&msg);
+};
+
+class DmaConfigProxyaddrRequestMSG : public PortalMessage
+{
+public:
+    struct {
+        uint32_t pointer:32;
+        uint32_t offset:32;
+
+    } payload;
+    size_t size(){return 8;}
+    void marshall(unsigned int *buff) {
+        int i = 0;
+        buff[i++] = payload.offset;
+        buff[i++] = payload.pointer;
+
+    }
+    void demarshall(unsigned int *buff){ printf("[%s:%d]\n", __FUNCTION__, __LINE__); exit(-1); }
+    void indicate(void *ind){ assert(false); }
+};
+
+void DmaConfigProxy::addrRequest ( const uint32_t pointer, const uint32_t offset )
+{
+    DmaConfigProxyaddrRequestMSG msg;
+    msg.channel = CHAN_NUM_DmaConfigProxy_addrRequest;
+    msg.payload.pointer = pointer;
+    msg.payload.offset = offset;
+
+    sendMessage(&msg);
+};
+
+class DmaConfigProxygetStateDbgMSG : public PortalMessage
+{
+public:
+    struct {
+        ChannelType rc;
+
+    } payload;
+    size_t size(){return 4;}
+    void marshall(unsigned int *buff) {
+        int i = 0;
+        buff[i++] = payload.rc;
+
+    }
+    void demarshall(unsigned int *buff){ printf("[%s:%d]\n", __FUNCTION__, __LINE__); exit(-1); }
+    void indicate(void *ind){ assert(false); }
+};
+
+void DmaConfigProxy::getStateDbg ( const ChannelType& rc )
+{
+    DmaConfigProxygetStateDbgMSG msg;
+    msg.channel = CHAN_NUM_DmaConfigProxy_getStateDbg;
+    msg.payload.rc = rc;
+
+    sendMessage(&msg);
+};
+
+class DmaConfigProxygetMemoryTrafficMSG : public PortalMessage
+{
+public:
+    struct {
+        ChannelType rc;
+
+    } payload;
+    size_t size(){return 4;}
+    void marshall(unsigned int *buff) {
+        int i = 0;
+        buff[i++] = payload.rc;
+
+    }
+    void demarshall(unsigned int *buff){ printf("[%s:%d]\n", __FUNCTION__, __LINE__); exit(-1); }
+    void indicate(void *ind){ assert(false); }
+};
+
+void DmaConfigProxy::getMemoryTraffic ( const ChannelType& rc )
+{
+    DmaConfigProxygetMemoryTrafficMSG msg;
+    msg.channel = CHAN_NUM_DmaConfigProxy_getMemoryTraffic;
+    msg.payload.rc = rc;
+
+    sendMessage(&msg);
+};
+#endif //0 (for now)
+
+static int DmaIndicationWrapper_handleMessage(volatile unsigned int *map_base, unsigned int channel)
 {    
     unsigned int buf[1024];
     
@@ -256,7 +407,7 @@ int DmaIndicationWrapper_handleMessage(volatile unsigned int *map_base, unsigned
     return 0;
 }
 
-int MemreadIndicationWrapper_handleMessage(volatile unsigned int *map_base, unsigned int channel)
+static int MemreadIndicationWrapper_handleMessage(volatile unsigned int *map_base, unsigned int channel)
 {    
     unsigned int buf[1024];
     
@@ -284,7 +435,7 @@ int MemreadIndicationWrapper_handleMessage(volatile unsigned int *map_base, unsi
 }
 //zedboard/jni/DmaConfigProxy.cpp
 
-int DmaConfigProxyStatus_handleMessage(volatile unsigned int *map_base, unsigned int channel)
+static int DmaConfigProxyStatus_handleMessage(volatile unsigned int *map_base, unsigned int channel)
 {    
     unsigned int buf[1024];
     
@@ -309,169 +460,7 @@ int DmaConfigProxyStatus_handleMessage(volatile unsigned int *map_base, unsigned
     return 0;
 }
 
-#if 0 // for now
-class DmaConfigProxysglistMSG : public PortalMessage
-{
-public:
-    struct {
-        uint32_t pointer:32;
-        uint64_t addr:64;
-        uint32_t len:32;
-
-    } payload;
-    size_t size(){return 16;}
-    void marshall(unsigned int *buff) {
-        int i = 0;
-        buff[i++] = payload.len;
-        buff[i++] = payload.addr;
-        buff[i++] = (payload.addr>>32);
-        buff[i++] = payload.pointer;
-
-    }
-    void demarshall(unsigned int *buff){ printf("[%s:%d]\n", __FUNCTION__, __LINE__); exit(-1); }
-    void indicate(void *ind){ assert(false); }
-};
-void DmaConfigProxy::sglist ( const uint32_t pointer, const uint64_t addr, const uint32_t len )
-{
-    DmaConfigProxysglistMSG msg;
-    msg.channel = CHAN_NUM_DmaConfigProxy_sglist;
-    msg.payload.pointer = pointer;
-    msg.payload.addr = addr;
-    msg.payload.len = len;
-
-    sendMessage(&msg);
-};
-
-class DmaConfigProxyregionMSG : public PortalMessage
-{
-public:
-    struct {
-        uint32_t pointer:32;
-        uint64_t barr8:64;
-        uint32_t off8:32;
-        uint64_t barr4:64;
-        uint32_t off4:32;
-        uint64_t barr0:64;
-        uint32_t off0:32;
-
-    } payload;
-    size_t size(){return 40;}
-    void marshall(unsigned int *buff) {
-        int i = 0;
-        buff[i++] = payload.off0;
-        buff[i++] = payload.barr0;
-        buff[i++] = (payload.barr0>>32);
-        buff[i++] = payload.off4;
-        buff[i++] = payload.barr4;
-        buff[i++] = (payload.barr4>>32);
-        buff[i++] = payload.off8;
-        buff[i++] = payload.barr8;
-        buff[i++] = (payload.barr8>>32);
-        buff[i++] = payload.pointer;
-
-    }
-    void demarshall(unsigned int *buff){ printf("[%s:%d]\n", __FUNCTION__, __LINE__); exit(-1); }
-    void indicate(void *ind){ assert(false); }
-};
-
-void DmaConfigProxy::region ( const uint32_t pointer, const uint64_t barr8, const uint32_t off8, const uint64_t barr4, const uint32_t off4, const uint64_t barr0, const uint32_t off0 )
-{
-    DmaConfigProxyregionMSG msg;
-    msg.channel = CHAN_NUM_DmaConfigProxy_region;
-    msg.payload.pointer = pointer;
-    msg.payload.barr8 = barr8;
-    msg.payload.off8 = off8;
-    msg.payload.barr4 = barr4;
-    msg.payload.off4 = off4;
-    msg.payload.barr0 = barr0;
-    msg.payload.off0 = off0;
-
-    sendMessage(&msg);
-};
-
-class DmaConfigProxyaddrRequestMSG : public PortalMessage
-{
-public:
-    struct {
-        uint32_t pointer:32;
-        uint32_t offset:32;
-
-    } payload;
-    size_t size(){return 8;}
-    void marshall(unsigned int *buff) {
-        int i = 0;
-        buff[i++] = payload.offset;
-        buff[i++] = payload.pointer;
-
-    }
-    void demarshall(unsigned int *buff){ printf("[%s:%d]\n", __FUNCTION__, __LINE__); exit(-1); }
-    void indicate(void *ind){ assert(false); }
-};
-
-void DmaConfigProxy::addrRequest ( const uint32_t pointer, const uint32_t offset )
-{
-    DmaConfigProxyaddrRequestMSG msg;
-    msg.channel = CHAN_NUM_DmaConfigProxy_addrRequest;
-    msg.payload.pointer = pointer;
-    msg.payload.offset = offset;
-
-    sendMessage(&msg);
-};
-
-class DmaConfigProxygetStateDbgMSG : public PortalMessage
-{
-public:
-    struct {
-        ChannelType rc;
-
-    } payload;
-    size_t size(){return 4;}
-    void marshall(unsigned int *buff) {
-        int i = 0;
-        buff[i++] = payload.rc;
-
-    }
-    void demarshall(unsigned int *buff){ printf("[%s:%d]\n", __FUNCTION__, __LINE__); exit(-1); }
-    void indicate(void *ind){ assert(false); }
-};
-
-void DmaConfigProxy::getStateDbg ( const ChannelType& rc )
-{
-    DmaConfigProxygetStateDbgMSG msg;
-    msg.channel = CHAN_NUM_DmaConfigProxy_getStateDbg;
-    msg.payload.rc = rc;
-
-    sendMessage(&msg);
-};
-
-class DmaConfigProxygetMemoryTrafficMSG : public PortalMessage
-{
-public:
-    struct {
-        ChannelType rc;
-
-    } payload;
-    size_t size(){return 4;}
-    void marshall(unsigned int *buff) {
-        int i = 0;
-        buff[i++] = payload.rc;
-
-    }
-    void demarshall(unsigned int *buff){ printf("[%s:%d]\n", __FUNCTION__, __LINE__); exit(-1); }
-    void indicate(void *ind){ assert(false); }
-};
-
-void DmaConfigProxy::getMemoryTraffic ( const ChannelType& rc )
-{
-    DmaConfigProxygetMemoryTrafficMSG msg;
-    msg.channel = CHAN_NUM_DmaConfigProxy_getMemoryTraffic;
-    msg.payload.rc = rc;
-
-    sendMessage(&msg);
-};
-#endif //0 (for now)
-
-int MemreadRequestProxyStatus_handleMessage(volatile unsigned int *map_base, unsigned int channel)
+static int MemreadRequestProxyStatus_handleMessage(volatile unsigned int *map_base, unsigned int channel)
 {    
     unsigned int buf[1024];
     switch (channel) {
@@ -514,16 +503,13 @@ static void manual_event(void)
 static void *pthread_worker(void *p)
 {
     void *rc = NULL;
-printf("[%s:%d] start\n", __FUNCTION__, __LINE__);
     while (1) {
-printf("[%s:%d] loop\n", __FUNCTION__, __LINE__);
         struct timeval timeout;
         timeout.tv_sec = 0;
-        timeout.tv_usec = 500000;
+        timeout.tv_usec = 10000;
         manual_event();
         select(0, NULL, NULL, NULL, &timeout);
     }
-printf("[%s:%d] end\n", __FUNCTION__, __LINE__);
     return rc;
 }
 
@@ -541,7 +527,7 @@ int main(int argc, const char **argv)
   DmaConfigProxy *dmap = new DmaConfigProxy(IfcNames_DmaConfig);
   portalMemory = new DmaManager(dmap);
 
-  sem_init(&test_sem, 0, 0);
+  //sem_init(&test_sem, 0, 0);
   PortalAlloc *srcAlloc;
   portalMemory->alloc(alloc_sz, &srcAlloc);
   unsigned int *srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
@@ -557,7 +543,7 @@ int main(int argc, const char **argv)
   portalMemory->dCacheFlushInval(srcAlloc, srcBuffer);
   unsigned int ref_srcAlloc = portalMemory->reference(srcAlloc);
   printf( "Main::starting read %08x\n", numWords);
-{
+  {
     unsigned int buf[128];
     int i = 0;
     buf[i++] = 1; /* iterCnt */
@@ -567,7 +553,7 @@ int main(int argc, const char **argv)
     //sendMessage(&msg);
     for (int i = 16/4-1; i >= 0; i--)
       intarr[0]->map_base[PORTAL_REQ_FIFO(CHAN_NUM_MemreadRequestProxy_startRead)] = buf[i];
-};
+  };
   sem_wait(&test_sem);
   return 0;
 }
