@@ -47,11 +47,11 @@ class DmaIndication : public DmaIndicationWrapper
   virtual void badPointer (uint32_t pointer) {
     fprintf(stderr, "DmaIndication::badPointer(pointer=%x)\n", pointer);
   }
-  virtual void badPageSize (uint32_t pointer, uint32_t len) {
-    fprintf(stderr, "DmaIndication::badPageSize(pointer=%x, len=%x)\n", pointer, len);
+  virtual void badPageSize (uint32_t pointer, uint32_t sz) {
+    fprintf(stderr, "DmaIndication::badPageSize(pointer=%x, sz=%x)\n", pointer, sz);
   }
-  virtual void badNumberEntries (uint32_t pointer, uint32_t len, uint32_t idx) {
-    fprintf(stderr, "DmaIndication::badNumberEntries(pointer=%x, len=%x, idx=%x)\n", pointer, len, idx);
+  virtual void badNumberEntries (uint32_t pointer, uint32_t sz, uint32_t idx) {
+    fprintf(stderr, "DmaIndication::badNumberEntries(pointer=%x, sz=%x, idx=%x)\n", pointer, sz, idx);
   }
   virtual void badAddrTrans (uint32_t pointer, uint64_t offset, uint64_t barrier) {
     fprintf(stderr, "DmaIndication::badAddrTrans(pointer=%x, offset=%"PRIx64" barrier=%"PRIx64"\n", pointer, offset, barrier);
@@ -69,8 +69,8 @@ class DmaIndication : public DmaIndicationWrapper
     //fprintf(stderr, "reportMemoryTraffic: words=%"PRIx64"\n", words);
     portalMemory->mtResp(words);
   }
-  virtual void tagMismatch(const ChannelType& t, uint32_t a, uint32_t b){
+  virtual void tagMismatch(const ChannelType& x, uint32_t a, uint32_t b){
     //if (tag_mismatch_cnt++ < 10)
-    fprintf(stderr, "tagMismatch: %s %d %d\n", t==ChannelType_Read ? "Read" : "Write", a, b);
+    fprintf(stderr, "tagMismatch: %s %d %d\n", x==ChannelType_Read ? "Read" : "Write", a, b);
   }
 };
