@@ -36,14 +36,6 @@ import MemTypes          :: *;
 import AxiDma            :: *;
 import BsimHostTypeIF    :: *;
 
-`ifdef USES_FCLK1
-`define CLOCK_DECL Clock clk1
-`define CLOCK_ARG  defaultClock
-`else
-`define CLOCK_DECL
-`define CLOCK_ARG
-`endif
-
 `ifndef DataBusWidth
 `define DataBusWidth 64
 `endif
@@ -367,11 +359,10 @@ module  mkBsimTop(Empty)
    provisos (SelectBsimRdmaReadWrite#(DataBusWidth));
    Clock defaultClock <- exposeCurrentClock();
    BsimHost#(32,32,12,40,DataBusWidth,6,NumberOfMasters) host <- mkBsimHost;
-`ifdef SYNTH_ARG
-   TopParam tparam <- mkTopParam(`SYNTH_ARG);
-   PortalTop#(40,DataBusWidth,PinType,NumberOfMasters) top <- mkPortalTop(tparam `CLOCK_ARG);
+`ifdef IMPORT_HOSTIF
+   PortalTop#(40,DataBusWidth,PinType,NumberOfMasters) top <- mkPortalTop(host);
 `else
-   PortalTop#(40,DataBusWidth,PinType,NumberOfMasters) top <- mkPortalTop(`CLOCK_ARG);
+   PortalTop#(40,DataBusWidth,PinType,NumberOfMasters) top <- mkPortalTop();
 `endif
    Vector#(NumberOfMasters,Axi3Master#(40,DataBusWidth,6)) m_axis <- mapM(mkAxiDmaMaster,top.masters);
    mkConnection(host.mem_client, top.slave);

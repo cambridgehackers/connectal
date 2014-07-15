@@ -39,12 +39,6 @@ import Top               :: *;
 import Bscan             :: *;
 import ZynqHostTypeIF::*;
 
-`ifdef USES_FCLK1
-`define CLOCK_ARG  ps7.fclkclk[1],
-`else
-`define CLOCK_ARG
-`endif
-
 `ifdef USES_BSCAN
 `define BSCAN_ARG  lbscan.loc[0],
 `else
@@ -112,12 +106,7 @@ module mkZynqTop(ZynqTop);
 `ifdef IMPORT_HOSTIF
    PortalTop#(32, 64, PinType, NumberOfMasters) top <- mkPortalTop(ps7, clocked_by mainclock, reset_by mainreset);
 `else
-`ifdef SYNTH_ARG
-   TopParam tparam <- mkTopParam(`SYNTH_ARG);
-   PortalTop#(32, 64, PinType, NumberOfMasters) top <- mkPortalTop(tparam, `CLOCK_ARG `BSCAN_ARG clocked_by mainclock, reset_by mainreset);
-`else
-   PortalTop#(32, 64, PinType, NumberOfMasters) top <- mkPortalTop(`CLOCK_ARG `BSCAN_ARG clocked_by mainclock, reset_by mainreset);
-`endif
+   PortalTop#(32, 64, PinType, NumberOfMasters) top <- mkPortalTop(`BSCAN_ARG clocked_by mainclock, reset_by mainreset);
 `endif
    mkConnectionWithTrace(ps7, top, lbscan.loc[1], clocked_by mainclock, reset_by mainreset);
 
