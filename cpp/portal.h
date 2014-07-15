@@ -39,9 +39,9 @@
 typedef unsigned long dma_addr_t;
 #include "drivers/portalmem/portalmem.h"
 #include "drivers/zynqportal/zynqportal.h"
-#include "portal_offsets.h"
 
 #include "sock_utils.h"
+#include "portal_offsets.h"
 
 struct memrequest{
   bool write;
@@ -64,7 +64,7 @@ class PortalMessage
   // convert to bsv bit-representation
   virtual void marshall(PortalInternal *p) = 0;
   // convert from bsv bit representation
-  virtual void demarshall(unsigned int *buff) = 0;
+  virtual void demarshall(PortalInternal *p) = 0;
   // invoke the corresponding indication message
   virtual void indicate(void* ind) = 0;
   virtual ~PortalMessage() {};

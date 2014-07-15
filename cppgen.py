@@ -84,9 +84,8 @@ responseSzCaseTemplate='''
     case %(channelNumber)s: 
     { 
         %(msg)s msg;
-        for (int i = (msg.size()/4)-1; i >= 0; i--)
-            buf[i] = READL(this, &map_base[PORTAL_IND_FIFO(%(channelNumber)s)]);
-        msg.demarshall(buf);
+        msg.channel = %(channelNumber)s;
+        msg.demarshall(this);
         msg.indicate(this);
         break;
     }
@@ -95,7 +94,6 @@ responseSzCaseTemplate='''
 handleMessageTemplate='''
 int %(namespace)s%(className)s::handleMessage(unsigned int channel)
 {    
-    unsigned int buf[1024];
     static int runaway = 0;
     
     switch (channel) {
@@ -131,12 +129,12 @@ public:
     } payload;
     size_t size(){return %(payloadSize)s;}
     void marshall(PortalInternal *p) {
-        int i = 0;
         volatile unsigned int* addr = &(p->map_base[PORTAL_REQ_FIFO(channel)]);
 %(paramStructMarshall)s
     }
-    void demarshall(unsigned int *buff){
-        int i = 0;
+    void demarshall(PortalInternal *p){
+        unsigned int tmp;
+        volatile unsigned int* addr = &(p->map_base[PORTAL_IND_FIFO(channel)]);
 %(paramStructDemarshall)s
     }
     void indicate(void *ind){ %(responseCase)s }
@@ -220,15 +218,15 @@ class MethodMixin:
             aw = a[1].bitWidth();
             #print '%d %d %d' %(aw, pro, w)
             if (aw-pro+w == 32):
-                ns = s+[(a[0],aw,pro,a[1],pro==0)]
+                ns = s+[(a[0],aw,pro,a[1],True)]
                 #print '%s (0)'% (a[0])
                 return [ns]+accumWords([],0,atoms[1:])
             if (aw-pro+w < 32):
-                ns = s+[(a[0],aw,pro,a[1],pro==0)]
+                ns = s+[(a[0],aw,pro,a[1],True)]
                 #print '%s (1)'% (a[0])
                 return accumWords(ns,0,atoms[1:])
             else:
-                ns = s+[(a[0],pro+(32-w),pro,a[1],pro==0)]
+                ns = s+[(a[0],pro+(32-w),pro,a[1],False)]
                 #print '%s (2)'% (a[0])
                 return [ns]+accumWords([],pro+(32-w), atoms)
 
@@ -267,13 +265,17 @@ class MethodMixin:
                 off = off+e[1]-e[2]
             return '        WRITEL(p, addr, %s);\n' % (''.join(util.intersperse('|', word)))
 
+
+
+
         def demarshall(w):
             off = 0
             word = []
+            word.append('        tmp = READL(p, addr);\n');
             for e in w:
                 # print e[0]+' (d)'
                 ass = '=' if e[4] else '|='
-                field = 'buff[i]'
+                field = 'tmp'
 		if e[3].cName() == 'float':
 		    word.append('        %s = *(float*)&(%s);\n'%(e[0],field))
 		    continue
@@ -285,13 +287,17 @@ class MethodMixin:
                     field = '((%s)(%s)<<%s)' % (e[3].cName(),field, e[2])
 		word.append('        %s %s (%s)(%s);\n'%(e[0],ass,e[3].cName(),field))
                 off = off+e[1]-e[2]
-            word.append('        i++;\n');
             # print ''
             return ''.join(word)
 
-        paramStructMarshall = map(marshall, argWords)
-        paramStructMarshall.reverse();
-        paramStructDemarshall = map(demarshall, argWords)
+        if argWords == []:
+            paramStructMarshall = ['        WRITEL(p, addr, 0);\n']
+            paramStructDemarshall = ['        tmp = READL(p, addr);\n']
+        else:
+            paramStructMarshall = map(marshall, argWords)
+            paramStructMarshall.reverse();
+            paramStructDemarshall = map(demarshall, argWords)
+            paramStructDemarshall.reverse();
         
         if not params:
             paramStructDeclarations = ['        int padding;\n']
