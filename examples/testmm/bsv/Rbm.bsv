@@ -30,9 +30,8 @@ import Connectable::*;
 import FloatingPoint::*;
 import BRAM::*;
 
-import AxiDma::*;
 import PortalMemory::*;
-import Dma::*;
+import MemTypes::*;
 import DmaVector::*;
 import AxiMasterSlave::*;
 
@@ -42,6 +41,8 @@ import FloatOps::*;
 import Pipe::*;
 import Timer::*;
 import RbmTypes::*;
+
+function Float tokenValue(Token v) = v.v;
 
 function ObjectReadClient#(asz) getSourceReadClient(DmaVectorSource#(asz,a) s); return s.dmaClient; endfunction
 function ObjectWriteClient#(asz) getSinkWriteClient(DmaVectorSink#(asz,a) s); return s.dmaClient; endfunction
@@ -125,9 +126,9 @@ module  mkDmaUpdateWeights(DmaUpdateWeights#(N, DmaSz))
    Reg#(Float) learningRateOverNumExamples <- mkReg(defaultValue);
 
    FIFOF#(Vector#(N,Float)) wfifo <- mkFIFOF();
-   Vector#(N, FloatServer2#(Float)) adders <- replicateM(mkFloatAdder());
-   Vector#(N, FloatServer2#(Float)) adders2 <- replicateM(mkFloatAdder());
-   Vector#(N, FloatServer2#(Float)) multipliers <- replicateM(mkFloatMultiplier());
+   Vector#(N, FloatAlu) adders <- replicateM(mkFloatAdder(defaultValue));
+   Vector#(N, FloatAlu) adders2 <- replicateM(mkFloatAdder(defaultValue));
+   Vector#(N, FloatAlu) multipliers <- replicateM(mkFloatMultiplier(defaultValue));
    DmaVectorSink#(DmaSz, Vector#(N, Float)) sink <- mkDmaVectorSink(toPipeOut(wfifo));
 
 // weights += learningRate * (pos_associations - neg_associations) / num_examples;
@@ -137,13 +138,13 @@ module  mkDmaUpdateWeights(DmaUpdateWeights#(N, DmaSz))
       let na = sources[1].vector.pipe.first();
       sources[1].vector.pipe.deq();
       for (Integer i = 0; i < n; i = i+1) begin
-	 adders[i].request.put(tuple3(pa[i], -na[i], defaultValue));
+	 adders[i].request.put(tuple2(pa[i], -na[i]));
       end
    endrule
    rule mul;
       for (Integer i = 0; i < n; i = i+1) begin
 	 let sumexc <- adders[i].response.get();
-	 multipliers[i].request.put(tuple3(learningRateOverNumExamples, tpl_1(sumexc), defaultValue));
+	 multipliers[i].request.put(tuple2(learningRateOverNumExamples, tpl_1(sumexc)));
       end
    endrule
    rule add;
@@ -151,7 +152,7 @@ module  mkDmaUpdateWeights(DmaUpdateWeights#(N, DmaSz))
       sources[2].vector.pipe.deq();
       for (Integer i = 0; i < n; i = i+1) begin
 	 let resultexc <- multipliers[i].response.get();
-	 adders2[i].request.put(tuple3(weights[i], tpl_1(resultexc), defaultValue));
+	 adders2[i].request.put(tuple2(weights[i], tpl_1(resultexc)));
       end
    endrule
    rule result;
@@ -197,46 +198,21 @@ module  mkDmaSumOfErrorSquared(DmaSumOfErrorSquared#(N, DmaSz))
 
    let n = valueOf(N);
 
-   Reg#(Bit#(32)) resultCount <- mkReg(0);
-   Vector#(N, FloatServer2#(Float)) adders <- replicateM(mkFloatAdder());
-   Vector#(N, Server#(Tuple4#(Maybe#(Float), Float, Float, RoundMode), Tuple2#(Float,Exception))) macs <- replicateM(mkFloatMac());
-   FIFOF#(Vector#(N, Float)) accfifo <- mkFIFOF();
-   FIFOF#(Vector#(N, Float)) resultFifo <- mkFIFOF();
+   let dotprod <- mkSharedDotProdServer(0);
 
-   // compute sum((data - pred)^2)
-
-   rule sub;
-      let data = sources[0].vector.pipe.first();
-      sources[0].vector.pipe.deq();
-      let pred = sources[1].vector.pipe.first();
-      sources[1].vector.pipe.deq();
-      for (Integer i = 0; i < n; i = i+1) begin
-	 adders[i].request.put(tuple3(data[i], -pred[i], defaultValue));
-      end
+   FirstLastPipe#(Bit#(ObjectOffsetSize)) firstlastPipe <- mkFirstLastPipe();
+   PipeOut#(Float) aPipe <- mkFunnel1(sources[0].vector.pipe);
+   PipeOut#(Float) bPipe <- mkFunnel1(sources[1].vector.pipe);
+   let joinPipe <- mkJoin(tuple2, aPipe, bPipe);
+   let subPipe <- mkFloatSubPipe(joinPipe);
+   rule fromsub;
+      match {.first, .last} <- toGet(firstlastPipe.pipe).get();
+      let diff <- toGet(subPipe).get();
+      Token t = Token { v: diff, first: first, last: last };
+      dotprod.aInput.put(t);
+      dotprod.bInput.put(t);
    endrule
-   rule mac;
-      let sum = accfifo.first;
-      accfifo.deq;
-      for (Integer i = 0; i < n; i = i+1) begin
-	 let sumexc <- adders[i].response.get();
-	 macs[i].request.put(tuple4(tagged Valid sum[i], tpl_1(sumexc), tpl_1(sumexc), defaultValue));
-      end
-   endrule
-   rule acc if (resultCount > 0);
-      Vector#(N, Float) sum = replicate(defaultValue);
-      for (Integer i = 0; i < n; i = i+1) begin
-	 let resultexc <- macs[i].response.get();
-	 sum[i] = tpl_1(resultexc);
-      end
-      if (resultCount > 1)
-	 accfifo.enq(sum);
-      else
-	 resultFifo.enq(sum);
-      resultCount <= resultCount - 1;
-   endrule
-
-   PipeOut#(Vector#(N, Float)) sumPipe = toPipeOut(resultFifo);
-   PipeOut#(Float) foldedPipe <- mkReducePipe(mkFloatAddPipe, sumPipe);
+   
 
    for (Integer i = 0; i < 2; i = i + 1)
       rule finishSources;
@@ -245,27 +221,25 @@ module  mkDmaSumOfErrorSquared(DmaSumOfErrorSquared#(N, DmaSz))
 
    //interface Vector sources = cons(statesource, nil);
    interface Vector readClients = map(getSourceReadClient, sources);
-   interface PipeOut pipe = foldedPipe;
-   method Action start(Bit#(32) dataPointer, Bit#(32) predPointer, Bit#(32) numElts) if (resultCount == 0);
+   interface PipeOut pipe = mapPipe(tokenValue, dotprod.pipes[0]);
+   method Action start(Bit#(32) dataPointer, Bit#(32) predPointer, Bit#(32) numElts);
       sources[0].vector.start(dataPointer, 0, extend(numElts));
       sources[1].vector.start(predPointer, 0, extend(numElts));
-      Vector#(N, Float) sum = replicate(fromReal(0.0));
-      accfifo.enq(sum);
-
-      resultCount <= numElts;
+      firstlastPipe.start(extend(numElts));
    endmethod
-endmodule
+endmodule: mkDmaSumOfErrorSquared
 
 interface Rbm#(numeric type n);
    interface RbmRequest rbmRequest;
    interface MmRequest mmRequest;
+   interface MmDebugRequest mmDebugRequest;
    interface SigmoidRequest sigmoidRequest;
    interface TimerRequest timerRequest;
-   interface Vector#(TAdd#(11,N), ObjectReadClient#(TMul#(32,n))) readClients;
+   interface Vector#(12, ObjectReadClient#(TMul#(32,n))) readClients;
    interface Vector#(5, ObjectWriteClient#(TMul#(32,n))) writeClients;
 endinterface
 
-module  mkRbm#(RbmIndication rbmInd, MmIndication mmInd, SigmoidIndication sigmoidInd, TimerIndication timerInd)(Rbm#(N))
+module  mkRbm#(RbmIndication rbmInd, MmIndication mmInd, MmDebugIndication mmDebugInd, SigmoidIndication sigmoidInd, TimerIndication timerInd)(Rbm#(N))
    provisos (Add#(1,a__,N),
 	     Add#(N,0,n),
 	     Mul#(N,32,DmaSz)
@@ -273,8 +247,7 @@ module  mkRbm#(RbmIndication rbmInd, MmIndication mmInd, SigmoidIndication sigmo
 
    let n = valueOf(n);
 
-   DramMatrixMultiply#(N, TMul#(N,32)) dmaMMF <- mkDramMatrixMultiply();
-   //DramBramMatrixMultiply#(N, TMul#(N,32)) bramMMF <- mkDramBramMatrixMultiply();
+   Mm#(N) mm <- mkMm(mmInd, timerInd, mmDebugInd);
 
    DmaSigmoidIfc#(TMul#(32,n)) dmaSigmoid <- mkDmaSigmoid();
    Vector#(2,ObjectReadClient#(TMul#(32,n))) sigmoidsources = dmaSigmoid.readClients;
@@ -286,12 +259,6 @@ module  mkRbm#(RbmIndication rbmInd, MmIndication mmInd, SigmoidIndication sigmo
    DmaSumOfErrorSquared#(N, DmaSz) dmaSumOfErrorSquared <- mkDmaSumOfErrorSquared();
 
    FIFOF#(Bool) busyFifo <- mkFIFOF();
-   rule mmfDone;
-      $display("mmfDone");
-      let d <- dmaMMF.finish();
-      busyFifo.deq();
-      mmInd.mmfDone();
-   endrule
    rule sigmoidDone;
       $display("sigmoidDone");
       let d <- dmaSigmoid.finish();
@@ -352,16 +319,8 @@ module  mkRbm#(RbmIndication rbmInd, MmIndication mmInd, SigmoidIndication sigmo
       endmethod
    endinterface
 
-   interface MmRequest mmRequest;
-      method Action mmf(Bit#(32) h1, Bit#(32) r1, Bit#(32) c1,
-			Bit#(32) h2, Bit#(32) r2, Bit#(32) c2,
-			Bit#(32) h3);
-	 dmaMMF.start(h1, unpack(extend(r1)), unpack(extend(c1)),
-		      h2, unpack(extend(r2)), unpack(extend(c2)),
-		      h3);
-	 busyFifo.enq(True);
-      endmethod
-   endinterface
+   interface MmRequest mmRequest = mm.mmRequest;
+   interface MmDebugRequest mmDebugRequest = mm.mmDebug;
    
    interface SigmoidRequest sigmoidRequest;
       method Action sigmoid(Bit#(32) readPointer, Bit#(32) readOffset,
@@ -444,7 +403,7 @@ module  mkRbm#(RbmIndication rbmInd, MmIndication mmInd, SigmoidIndication sigmo
 
    interface Vector readClients = append(
 					 //append(
-					    dmaMMF.readClients,
+					    mm.readClients,
 					    //bramMMF.readClients
 					    //),
 					 append(
@@ -457,10 +416,8 @@ module  mkRbm#(RbmIndication rbmInd, MmIndication mmInd, SigmoidIndication sigmo
 						      dmaStates2.sources)
 						   )));
 
-   interface Vector writeClients = append(
+   interface Vector writeClients =
       append(dmaUpdateWeights.writeClients,
-	     cons(dmaSigmoid.dmaClient, cons(dmaStates.sinks[0], cons(dmaStates2.sinks[0], nil)))),
-//      append(
-	 dmaMMF.writeClients //,	     bramMMF.writeClients)
-      );
+	     cons(dmaSigmoid.dmaClient, cons(dmaStates.sinks[0], cons(dmaStates2.sinks[0],
+								      cons(mm.writeClient, nil)))));
 endmodule
