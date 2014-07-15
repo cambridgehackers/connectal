@@ -24,19 +24,9 @@ static uint64_t localmanager_mtCnt;
 static DmaDbgRec localmanager_dbgRec;
 static int localmanager_pa_fd;
 
-static void local_manager_localDmaManager();
-static void local_manager_InitSemaphores();
-static void *local_manager_mmap(PortalAlloc *portalAlloc);
-static int local_manager_dCacheFlushInval(PortalAlloc *portalAlloc, void *__p);
-static int local_manager_alloc(size_t size, PortalAlloc **portalAlloc);
-static int local_manager_reference(PortalAlloc* pa);
-static uint64_t local_manager_show_mem_stats(ChannelType rc);
-static void local_manager_confResp(uint32_t channelId);
-static void local_manager_mtResp(uint64_t words);
-static void local_manager_dbgResp(const DmaDbgRec& rec);
-
 // ugly hack (mdk)
 typedef int SGListId;
+static int trace_memory;// = 1;
 
 #define MAX_INDARRAY 4
 sem_t test_sem;
@@ -52,35 +42,6 @@ typedef int (*INDFUNC)(volatile unsigned int *map_base, unsigned int channel);
 
 static INDFUNC indfn[MAX_INDARRAY];
 
-//void local_addrRequest ( const uint32_t pointer, const uint32_t offset )
-//{
-    //unsigned int buf[128];
-    //struct {
-        //uint32_t pointer:32;
-        //uint32_t offset:32;
-    //} payload;
-    //payload.pointer = pointer;
-    //payload.offset = offset;
-    //int i = 0;
-    //buf[i++] = payload.offset;
-    //buf[i++] = payload.pointer;
-    //for (int i = 8/4-1; i >= 0; i--)
-      //intarr[2]->map_base[PORTAL_REQ_FIFO(CHAN_NUM_DmaConfigProxy_addrRequest)] = buf[i];
-//};
-
-//static void local_getStateDbg ( const ChannelType& rc )
-//{
-    //unsigned int buf[128];
-    //struct {
-        //ChannelType rc;
-    //} payload;
-    //payload.rc = rc;
-    //int i = 0;
-    //buf[i++] = payload.rc;
-    //for (int i = 4/4-1; i >= 0; i--)
-      //intarr[2]->map_base[PORTAL_REQ_FIFO(CHAN_NUM_DmaConfigProxy_getStateDbg)] = buf[i];
-//};
-
 static int DmaIndicationWrapper_handleMessage(volatile unsigned int *map_base, unsigned int channel)
 {    
     unsigned int buf[1024];
@@ -89,10 +50,10 @@ static int DmaIndicationWrapper_handleMessage(volatile unsigned int *map_base, u
 
     case CHAN_NUM_DmaIndicationWrapper_configResp: 
     { 
-    struct {
-        uint32_t pointer:32;
-        uint64_t msg:64;
-    } payload;
+        struct {
+            uint32_t pointer:32;
+            uint64_t msg:64;
+        } payload;
         for (int i = (12/4)-1; i >= 0; i--)
             buf[i] = READL(this, &map_base[PORTAL_IND_FIFO(CHAN_NUM_DmaIndicationWrapper_configResp)]);
         int i = 0;
@@ -102,17 +63,17 @@ static int DmaIndicationWrapper_handleMessage(volatile unsigned int *map_base, u
         i++;
         payload.pointer = (uint32_t)(buf[i]);
         i++;
-    //fprintf(stderr, "configResp: %x, %"PRIx64"\n", payload.pointer, payload.msg);
-    local_manager_confResp(payload.pointer);
+        //fprintf(stderr, "configResp: %x, %"PRIx64"\n", payload.pointer, payload.msg);
+        //fprintf(stderr, "configResp %d\n", payload.pointer);
+        sem_post(&localmanager_confSem);
         break;
     }
 
     case CHAN_NUM_DmaIndicationWrapper_addrResponse: 
     { 
-    struct {
-        uint64_t physAddr:64;
-
-    } payload;
+        struct {
+            uint64_t physAddr:64;
+        } payload;
         for (int i = (8/4)-1; i >= 0; i--)
             buf[i] = READL(this, &map_base[PORTAL_IND_FIFO(CHAN_NUM_DmaIndicationWrapper_addrResponse)]);
         int i = 0;
@@ -120,16 +81,15 @@ static int DmaIndicationWrapper_handleMessage(volatile unsigned int *map_base, u
         i++;
         payload.physAddr |= (uint64_t)(((uint64_t)(buf[i])<<32));
         i++;
-    fprintf(stderr, "DmaIndication::addrResponse(physAddr=%"PRIx64")\n", payload.physAddr);
+        fprintf(stderr, "DmaIndication::addrResponse(physAddr=%"PRIx64")\n", payload.physAddr);
         break;
     }
 
     case CHAN_NUM_DmaIndicationWrapper_badPointer: 
     { 
-    struct {
-        uint32_t pointer:32;
-
-    } payload;
+        struct {
+            uint32_t pointer:32;
+        } payload;
         for (int i = (4/4)-1; i >= 0; i--)
             buf[i] = READL(this, &map_base[PORTAL_IND_FIFO(CHAN_NUM_DmaIndicationWrapper_badPointer)]);
         int i = 0;
@@ -141,12 +101,11 @@ static int DmaIndicationWrapper_handleMessage(volatile unsigned int *map_base, u
 
     case CHAN_NUM_DmaIndicationWrapper_badAddrTrans: 
     { 
-    struct {
-        uint32_t pointer:32;
-        uint64_t offset:64;
-        uint64_t barrier:64;
-
-    } payload;
+        struct {
+            uint32_t pointer:32;
+            uint64_t offset:64;
+            uint64_t barrier:64;
+        } payload;
         for (int i = (20/4)-1; i >= 0; i--)
             buf[i] = READL(this, &map_base[PORTAL_IND_FIFO(CHAN_NUM_DmaIndicationWrapper_badAddrTrans)]);
         int i = 0;
@@ -166,11 +125,10 @@ static int DmaIndicationWrapper_handleMessage(volatile unsigned int *map_base, u
 
     case CHAN_NUM_DmaIndicationWrapper_badPageSize: 
     { 
-    struct {
-        uint32_t pointer:32;
-        uint32_t sz:32;
-
-    } payload;
+        struct {
+            uint32_t pointer:32;
+            uint32_t sz:32;
+        } payload;
         for (int i = (8/4)-1; i >= 0; i--)
             buf[i] = READL(this, &map_base[PORTAL_IND_FIFO(CHAN_NUM_DmaIndicationWrapper_badPageSize)]);
         int i = 0;
@@ -184,12 +142,11 @@ static int DmaIndicationWrapper_handleMessage(volatile unsigned int *map_base, u
 
     case CHAN_NUM_DmaIndicationWrapper_badNumberEntries: 
     { 
-    struct {
-        uint32_t pointer:32;
-        uint32_t sz:32;
-        uint32_t idx:32;
-
-    } payload;
+        struct {
+            uint32_t pointer:32;
+            uint32_t sz:32;
+            uint32_t idx:32;
+        } payload;
         for (int i = (12/4)-1; i >= 0; i--)
             buf[i] = READL(this, &map_base[PORTAL_IND_FIFO(CHAN_NUM_DmaIndicationWrapper_badNumberEntries)]);
         int i = 0;
@@ -205,12 +162,11 @@ static int DmaIndicationWrapper_handleMessage(volatile unsigned int *map_base, u
 
     case CHAN_NUM_DmaIndicationWrapper_badAddr: 
     { 
-    struct {
-        uint32_t pointer:32;
-        uint64_t offset:64;
-        uint64_t physAddr:64;
-
-    } payload;
+        struct {
+            uint32_t pointer:32;
+            uint64_t offset:64;
+            uint64_t physAddr:64;
+        } payload;
         for (int i = (20/4)-1; i >= 0; i--)
             buf[i] = READL(this, &map_base[PORTAL_IND_FIFO(CHAN_NUM_DmaIndicationWrapper_badAddr)]);
         int i = 0;
@@ -230,10 +186,9 @@ static int DmaIndicationWrapper_handleMessage(volatile unsigned int *map_base, u
 
     case CHAN_NUM_DmaIndicationWrapper_reportStateDbg: 
     { 
-    struct {
-        DmaDbgRec rec;
-
-    } payload;
+        struct {
+            DmaDbgRec rec;
+        } payload;
         for (int i = (16/4)-1; i >= 0; i--)
             buf[i] = READL(this, &map_base[PORTAL_IND_FIFO(CHAN_NUM_DmaIndicationWrapper_reportStateDbg)]);
         int i = 0;
@@ -246,16 +201,17 @@ static int DmaIndicationWrapper_handleMessage(volatile unsigned int *map_base, u
         payload.rec.x = (uint32_t)(buf[i]);
         i++;
         //fprintf(stderr, "reportStateDbg: {x:%08x y:%08x z:%08x w:%08x}\n", payload.rec.x,payload.rec.y,payload.rec.z,payload.rec.w);
-        local_manager_dbgResp(payload.rec);
+        localmanager_dbgRec = payload.rec;
+        fprintf(stderr, "dbgResp: %08x %08x %08x %08x\n", localmanager_dbgRec.x, localmanager_dbgRec.y, localmanager_dbgRec.z, localmanager_dbgRec.w);
+        sem_post(&localmanager_dbgSem);
         break;
     }
 
     case CHAN_NUM_DmaIndicationWrapper_reportMemoryTraffic: 
     { 
-    struct {
-        uint64_t words:64;
-
-    } payload;
+        struct {
+            uint64_t words:64;
+        } payload;
         for (int i = (8/4)-1; i >= 0; i--)
             buf[i] = READL(this, &map_base[PORTAL_IND_FIFO(CHAN_NUM_DmaIndicationWrapper_reportMemoryTraffic)]);
         int i = 0;
@@ -264,17 +220,18 @@ static int DmaIndicationWrapper_handleMessage(volatile unsigned int *map_base, u
         payload.words |= (uint64_t)(((uint64_t)(buf[i])<<32));
         i++;
         //fprintf(stderr, "reportMemoryTraffic: words=%"PRIx64"\n", payload.words);
-        local_manager_mtResp(payload.words);
+        localmanager_mtCnt = payload.words;
+        sem_post(&localmanager_mtSem);
         break;
     }
 
     case CHAN_NUM_DmaIndicationWrapper_tagMismatch: 
     { 
-    struct {
-        ChannelType x;
-        uint32_t a:32;
-        uint32_t b:32;
-    } payload;
+        struct {
+            ChannelType x;
+            uint32_t a:32;
+            uint32_t b:32;
+        } payload;
         for (int i = (12/4)-1; i >= 0; i--)
             buf[i] = READL(this, &map_base[PORTAL_IND_FIFO(CHAN_NUM_DmaIndicationWrapper_tagMismatch)]);
         int i = 0;
@@ -401,11 +358,14 @@ static void *pthread_worker(void *p)
     return rc;
 }
 
-
-static int trace_memory;// = 1;
-
-void local_manager_InitSemaphores()
+static void local_manager_localDmaManager()
 {
+  const char* path = "/dev/portalmem";
+  local_manager_handle = 1;
+  localmanager_pa_fd = ::open(path, O_RDWR);
+  if (localmanager_pa_fd < 0){
+    fprintf(stderr, "Failed to open %s localmanager_pa_fd=%d errno=%d\n", path, localmanager_pa_fd, errno);
+  }
   if (sem_init(&localmanager_confSem, 1, 0)){
     fprintf(stderr, "failed to init localmanager_confSem errno=%d:%s\n", errno, strerror(errno));
   }
@@ -417,24 +377,13 @@ void local_manager_InitSemaphores()
   }
 }
 
-void local_manager_localDmaManager()
-{
-  const char* path = "/dev/portalmem";
-  local_manager_handle = 1;
-  localmanager_pa_fd = ::open(path, O_RDWR);
-  if (localmanager_pa_fd < 0){
-    fprintf(stderr, "Failed to open %s localmanager_pa_fd=%d errno=%d\n", path, localmanager_pa_fd, errno);
-  }
-  local_manager_InitSemaphores();
-}
+//void *local_manager_mmap(PortalAlloc *portalAlloc)
+//{
+  //void *virt = ::mmap(0, portalAlloc->header.size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, portalAlloc->header.fd, 0);
+  //return virt;
+//}
 
-void *local_manager_mmap(PortalAlloc *portalAlloc)
-{
-  void *virt = ::mmap(0, portalAlloc->header.size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, portalAlloc->header.fd, 0);
-  return virt;
-}
-
-int local_manager_dCacheFlushInval(PortalAlloc *portalAlloc, void *__p)
+static int local_manager_dCacheFlushInval(PortalAlloc *portalAlloc, void *__p)
 {
 #if defined(__arm__)
   int rc = ioctl(localmanager_pa_fd, PA_DCACHE_FLUSH_INVAL, portalAlloc);
@@ -457,11 +406,9 @@ int local_manager_dCacheFlushInval(PortalAlloc *portalAlloc, void *__p)
 
 }
 
-uint64_t local_manager_show_mem_stats(ChannelType rc)
+static uint64_t local_manager_show_mem_stats(ChannelType rc)
 {
   uint64_t rv = 0;
-//  local_getMemoryTraffic(rc);
-//void local_getMemoryTraffic ( const ChannelType& rc )
 {
     unsigned int buf[128];
     struct {
@@ -478,7 +425,7 @@ uint64_t local_manager_show_mem_stats(ChannelType rc)
   return rv;
 }
 
-int local_manager_reference(PortalAlloc* pa)
+static int local_manager_reference(PortalAlloc* pa)
 {
   const int PAGE_SHIFT0 = 12;
   const int PAGE_SHIFT4 = 16;
@@ -514,8 +461,6 @@ int local_manager_reference(PortalAlloc* pa)
     dma_addr_t addr = e->dma_address;
     if (trace_memory)
       fprintf(stderr, "local_manager_sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, (long)addr, e->length);
-//    local_sglist(id, addr, e->length);
-//void local_sglist ( const uint32_t pointer, const uint64_t addr, const uint32_t len )
 {
     unsigned int buf[128];
     struct {
@@ -547,13 +492,6 @@ int local_manager_reference(PortalAlloc* pa)
     unsigned char idxOffset;
   } borders[3];
   for(int i = 0; i < 3; i++){
-    
-
-    // fprintf(stderr, "i=%d entryCount=%d border=%zx shifts=%zd shifted=%zx masked=%zx idxOffset=%zx added=%zx\n",
-    // 	    i, entryCount, border, shifts[i], border >> shifts[i], (border >> shifts[i]) &0xFF,
-    // 	    (entryCount - ((border >> shifts[i])&0xff)) & 0xff,
-    // 	    (((border >> shifts[i])&0xff) + (entryCount - ((border >> shifts[i])&0xff)) & 0xff) & 0xff);
-
     if (i == 0)
       borders[i].idxOffset = 0;
     else
@@ -567,11 +505,6 @@ int local_manager_reference(PortalAlloc* pa)
     fprintf(stderr, "regions %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,regions[0], regions[1], regions[2]);
     fprintf(stderr, "borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borders[0].border, borders[1].border, borders[2].border);
   }
-  //local_region(id,
-	 //borders[0].border, borders[0].idxOffset,
-	 //borders[1].border, borders[1].idxOffset,
-	 //borders[2].border, borders[2].idxOffset);
-//void local_region ( const uint32_t pointer, const uint64_t barr8, const uint32_t off8, const uint64_t barr4, const uint32_t off4, const uint64_t barr0, const uint32_t off0 )
 {
     unsigned int buf[128];
     struct {
@@ -605,31 +538,11 @@ int local_manager_reference(PortalAlloc* pa)
     for (int i = 40/4-1; i >= 0; i--)
       intarr[2]->map_base[PORTAL_REQ_FIFO(CHAN_NUM_DmaConfigProxy_region)] = buf[i];
 };
-  //fprintf(stderr, "%s:%d sem_wait\n", __FILE__, __LINE__);
   sem_wait(&localmanager_confSem);
   return id;
 }
 
-void local_manager_mtResp(uint64_t words)
-{
-  localmanager_mtCnt = words;
-  sem_post(&localmanager_mtSem);
-}
-
-void local_manager_dbgResp(const DmaDbgRec& rec)
-{
-  localmanager_dbgRec = rec;
-  fprintf(stderr, "dbgResp: %08x %08x %08x %08x\n", localmanager_dbgRec.x, localmanager_dbgRec.y, localmanager_dbgRec.z, localmanager_dbgRec.w);
-  sem_post(&localmanager_dbgSem);
-}
-
-void local_manager_confResp(uint32_t channelId)
-{
-  //fprintf(stderr, "configResp %d\n", channelId);
-  sem_post(&localmanager_confSem);
-}
-
-int local_manager_alloc(size_t size, PortalAlloc **ppa)
+static int local_manager_alloc(size_t size, PortalAlloc **ppa)
 {
   PortalAlloc *portalAlloc = (PortalAlloc *)malloc(sizeof(PortalAlloc));
   memset(portalAlloc, 0, sizeof(PortalAlloc));
