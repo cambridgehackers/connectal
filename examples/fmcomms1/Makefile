@@ -4,9 +4,8 @@ H2S = FMComms1Indication
 BSVFILES = FMComms1ADC.bsv FMComms1DAC.bsv FMComms1.bsv Top.bsv
 CPPFILES=testfmcomms1.cpp
 XBSVFLAGS = -C fmcomms1-$(BOARD).xdc --tcl clock.tcl
-NUMBER_OF_MASTERS =0
 #XBSVFLAGS += --bscflags " -D TRACE_AXI"
-XBSVFLAGS += --bscflags " -D USE_I2C1 -D USES_FCLK1 -D PinType=FMComms1Pins"
+XBSVFLAGS += --bscflags " -D USE_I2C1 -D IMPORT_HOSTIF -D PinType=FMComms1Pins"
 
 ifeq ($(BOARD),zedboard)
 HAS_PS7=true
