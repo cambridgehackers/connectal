@@ -41,38 +41,47 @@ ifeq ($(origin TOP),undefined)
     ifeq ($(BOARD),bluesim)
     TOP=$(XBSVDIR)/bsv/BsimTop.bsv
     MKTOP=mkBsimTop
+    XBSVFLAGS += -D HostTopInterface=BsimHostTypeIF
     endif
     ifeq ($(BOARD),ac701)
     TOP=$(XBSVDIR)/bsv/PcieTop.bsv
     MKTOP=mkPcieTop
+    XBSVFLAGS += -D HostTopInterface=PcieHostTypeIF
     endif
     ifeq ($(BOARD),kc705)
     TOP=$(XBSVDIR)/bsv/PcieTop.bsv
     MKTOP=mkPcieTop
+    XBSVFLAGS += -D HostTopInterface=PcieHostTypeIF
     endif
     ifeq ($(BOARD),vc707)
     TOP=$(XBSVDIR)/bsv/PcieTop.bsv
     MKTOP=mkPcieTop
+    XBSVFLAGS += -D HostTopInterface=PcieHostTypeIF
     endif
     ifeq ($(BOARD),v2000t)
     TOP=$(XBSVDIR)/bsv/PcieTop.bsv
     MKTOP=mkPcieTop
+    XBSVFLAGS += -D HostTopInterface=PcieHostTypeIF
     endif
     ifeq ($(BOARD),zedboard)
     TOP=$(XBSVDIR)/bsv/ZynqTop.bsv
     MKTOP=mkZynqTop
+    XBSVFLAGS += -D HostTopInterface=ZynqHostTypeIF
     endif
     ifeq ($(BOARD),zc702)
     TOP=$(XBSVDIR)/bsv/ZynqTop.bsv
     MKTOP=mkZynqTop
+    XBSVFLAGS += -D HostTopInterface=ZynqHostTypeIF
     endif
     ifeq ($(BOARD),zc706)
     TOP=$(XBSVDIR)/bsv/ZynqTop.bsv
     MKTOP=mkZynqTop
+    XBSVFLAGS += -D HostTopInterface=ZynqHostTypeIF
     endif
     ifeq ($(BOARD),zynq100)
     TOP=$(XBSVDIR)/bsv/ZynqTop.bsv
     MKTOP=mkZynqTop
+    XBSVFLAGS += -D HostTopInterface=ZynqHostTypeIF
     endif
 endif
 
