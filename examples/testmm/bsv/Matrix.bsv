@@ -279,9 +279,10 @@ module  mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServ
    Vector#(3,FIFO#(Bit#(TAdd#(1,TLog#(K))))) chanFifos <- replicateM(mkSizedFIFO(valueOf(TMul#(gatherSz,K))));
 
    Reg#(Bit#(32)) cycles <- mkReg(0);
-   rule countCycles;
-      cycles <= cycles + 1;
-   endrule
+   if (verbose || timing)
+      rule countCycles;
+	 cycles <= cycles + 1;
+      endrule
 
    Reg#(Bit#(32)) lastMulin <- mkReg(0);
    Reg#(Bit#(32)) lastAccin <- mkReg(0);
@@ -292,7 +293,8 @@ module  mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServ
    let gather_phaseB = lastCntB == fromInteger(valueOf(K));
       
    rule mulin;
-      lastMulin <= cycles;
+      if (verbose || timing)
+	 lastMulin <= cycles;
 
       let chan = chanRegs[0];
       chanFifos[0].enq(chan);
@@ -321,7 +323,8 @@ module  mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServ
       let last <- toGet(lastFifoA).get;
       lastFifoB.enq(last);
       chanFifos[1].enq(chan);
-      lastAccin <= cycles;
+      if (verbose || timing)
+	 lastAccin <= cycles;
       if (verbose) $display("%08d label=%d mulout chan=%d first=%d", cycles-lastAccin, label, chan, first);
       match {.resp,.*} <- mul.response.get();
       let acc = unpack(0);
@@ -350,7 +353,8 @@ module  mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServ
       let chan <- toGet(chanFifos[1]).get();
       let last <- toGet(lastFifoB).get;
       macs <= macs + 1;
-      lastAccout <= cycles;
+      if (verbose || timing)
+	 lastAccout <= cycles;
       match {.acc,.*} <- adder.response.get();
       if (verbose || timing) $display("%08d label=%d accout chan=%d acc=%x last=%d macs=%d", cycles-lastAccout, label, chan, pack(acc), last, macs+1);
       accumFifos[chan][accumFifosEnqIdxs[chan]].enq(acc);
@@ -938,7 +942,7 @@ interface Mm#(numeric type n);
    interface MmRequest mmRequest;
    interface MmDebugRequest mmDebug;
    interface TimerRequest timerRequest;
-   interface Vector#(2, ObjectReadClient#(TMul#(32,N))) readClients;
+   interface Vector#(2, ObjectReadClient#(TMul#(32,n))) readClients;
    interface ObjectWriteClient#(TMul#(32,n)) writeClient;
 endinterface
 
