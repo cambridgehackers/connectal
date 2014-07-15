@@ -83,10 +83,7 @@ void %(namespace)s%(className)s::%(putFailedMethodName)s(uint32_t v){
 responseSzCaseTemplate='''
     case %(channelNumber)s: 
     { 
-        %(msg)s msg;
-        msg.channel = %(channelNumber)s;
-        msg.demarshall(this);
-        msg.indicate(this);
+        %(className)s%(methodName)sdemarshall(this);
         break;
     }
 '''
@@ -113,32 +110,29 @@ int %(namespace)s%(className)s::handleMessage(unsigned int channel)
 proxyMethodTemplate='''
 void %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
 {
-    %(className)s%(methodName)sMSG msg;
-    msg.channel = %(methodChannelOffset)s;
+    //%(className)s%(methodName)sMSG msg;
+    %(className)s%(methodName)sPayload payload;
 %(paramSetters)s
-    msg.marshall(this);
+    %(className)s%(methodName)smarshall(this, payload);
 };
 '''
 
 msgTemplate='''
-class %(className)s%(methodName)sMSG : public PortalMessage
-{
-public:
-    struct {
-%(paramStructDeclarations)s
-    } payload;
-    size_t size(){return %(payloadSize)s;}
-    void marshall(PortalInternal *p) {
-        volatile unsigned int* addr = &(p->map_base[PORTAL_REQ_FIFO(channel)]);
+typedef struct {
+    %(paramStructDeclarations)s
+} %(className)s%(methodName)sPayload;
+
+void %(className)s%(methodName)smarshall(PortalInternal *p, %(className)s%(methodName)sPayload &payload) {
+    volatile unsigned int* addr = &(p->map_base[PORTAL_REQ_FIFO(%(methodChannelOffset)s)]);
 %(paramStructMarshall)s
-    }
-    void demarshall(PortalInternal *p){
-        unsigned int tmp;
-        volatile unsigned int* addr = &(p->map_base[PORTAL_IND_FIFO(channel)]);
+}
+void %(className)s%(methodName)sdemarshall(PortalInternal *p){
+    %(className)s%(methodName)sPayload payload;
+    unsigned int tmp;
+    volatile unsigned int* addr = &(p->map_base[PORTAL_IND_FIFO(%(methodChannelOffset)s)]);
 %(paramStructDemarshall)s
-    }
-    void indicate(void *ind){ %(responseCase)s }
-};
+    %(responseCase)s
+}
 '''
 
 def indent(f, indentation):
@@ -301,7 +295,7 @@ class MethodMixin:
         
         if not params:
             paramStructDeclarations = ['        int padding;\n']
-        paramSetters = [ '    msg.payload.%s = %s;\n' % (p.name, p.name) for p in params]
+        paramSetters = [ '    payload.%s = %s;\n' % (p.name, p.name) for p in params]
         resultTypeName = self.resultTypeName()
         substs = {
             'namespace': namespace,
@@ -320,13 +314,13 @@ class MethodMixin:
             'payloadSize' : max(4, 4*((sum([p.numBitsBSV() for p in self.params])+31)/32)) 
             }
         if (not proxy):
-            substs['responseCase'] = ('((%(className)s *)ind)->%(name)s(%(params)s);\n'
+            substs['responseCase'] = ('((%(className)s *)p)->%(name)s(%(params)s);\n'
                                       % { 'name': self.name,
                                           'className' : className,
                                           'params': ', '.join(['payload.%s' % (p.name) for p in self.params])})
             f.write(msgTemplate % substs)
         else:
-            substs['responseCase'] = 'assert(false);'
+            substs['responseCase'] = ''
             f.write(msgTemplate % substs)
             f.write(proxyMethodTemplate % substs)
 
@@ -469,6 +463,8 @@ class InterfaceMixin:
 			 'putFailedMethodName' : putFailedMethodName,
                          'parentClass': self.parentClass('Portal'),
                          'responseSzCases': ''.join([responseSzCaseTemplate % { 'channelNumber': 'CHAN_NUM_%s' % self.global_name(cName(d.name), suffix),
+                                                                                'className': className,
+                                                                                'methodName': cName(d.name),
                                                                                 'msg': '%s%sMSG' % (className, d.name)}
                                                      for d in self.decls 
                                                      if d.type == 'Method' and d.return_type.name == 'Action']),

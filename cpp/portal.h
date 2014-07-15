@@ -54,22 +54,6 @@ typedef struct {
     uint64_t total, min, max, over;
 } TIMETYPE;
 
-class PortalInternal;
-class PortalMessage 
-{
- public:
-  size_t channel;
-  // size of bsv bit-representation in bytes
-  virtual size_t size() = 0; 
-  // convert to bsv bit-representation
-  virtual void marshall(PortalInternal *p) = 0;
-  // convert from bsv bit representation
-  virtual void demarshall(PortalInternal *p) = 0;
-  // invoke the corresponding indication message
-  virtual void indicate(void* ind) = 0;
-  virtual ~PortalMessage() {};
-}; 
-
 class PortalPoller;
 class PortalInternal
 {
