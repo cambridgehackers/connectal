@@ -20,6 +20,10 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import Vector            :: *;
+import AxiMasterSlave    :: *;
+import MemTypes          :: *;
+
 `ifndef DataBusWidth
 `define DataBusWidth 64
 `endif
