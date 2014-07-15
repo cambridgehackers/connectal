@@ -118,7 +118,7 @@ void %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
     %(className)s%(methodName)sMSG msg;
     msg.channel = %(methodChannelOffset)s;
 %(paramSetters)s
-    sendMessage(&msg);
+    msg.marshall(this);
 };
 '''
 
@@ -130,8 +130,9 @@ public:
 %(paramStructDeclarations)s
     } payload;
     size_t size(){return %(payloadSize)s;}
-    void marshall(unsigned int *buff) {
+    void marshall(PortalInternal *p) {
         int i = 0;
+        volatile unsigned int* addr = &(p->map_base[PORTAL_REQ_FIFO(channel)]);
 %(paramStructMarshall)s
     }
     void demarshall(unsigned int *buff){
@@ -255,7 +256,7 @@ class MethodMixin:
             for e in w:
                 field = e[0];
 		if e[3].cName() == 'float':
-		    return '        buff[i++] = *(int*)&%s;\n' % e[0];
+		    return '        WRITEL(p, addr, *(int*)&%s; *dest_addr=tmp);\n' % e[0];
                 if e[2]:
                     field = '(%s>>%s)' % (field, e[2])
                 if off:
@@ -264,7 +265,7 @@ class MethodMixin:
                     field = '(const %s & std::bitset<%d>(0xFFFFFFFF)).to_ulong()' % (field, e[3].bitWidth())
                 word.append(field)
                 off = off+e[1]-e[2]
-            return '        buff[i++] = %s;\n' % (''.join(util.intersperse('|', word)))
+            return '        WRITEL(p, addr, %s);\n' % (''.join(util.intersperse('|', word)))
 
         def demarshall(w):
             off = 0
@@ -289,8 +290,9 @@ class MethodMixin:
             return ''.join(word)
 
         paramStructMarshall = map(marshall, argWords)
+        paramStructMarshall.reverse();
         paramStructDemarshall = map(demarshall, argWords)
-
+        
         if not params:
             paramStructDeclarations = ['        int padding;\n']
         paramSetters = [ '    msg.payload.%s = %s;\n' % (p.name, p.name) for p in params]

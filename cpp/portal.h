@@ -54,6 +54,7 @@ typedef struct {
     uint64_t total, min, max, over;
 } TIMETYPE;
 
+class PortalInternal;
 class PortalMessage 
 {
  public:
@@ -61,7 +62,7 @@ class PortalMessage
   // size of bsv bit-representation in bytes
   virtual size_t size() = 0; 
   // convert to bsv bit-representation
-  virtual void marshall(unsigned int *buff) = 0;
+  virtual void marshall(PortalInternal *p) = 0;
   // convert from bsv bit representation
   virtual void demarshall(unsigned int *buff) = 0;
   // invoke the corresponding indication message
@@ -83,7 +84,6 @@ class PortalInternal
   struct portal *p;
   char *name;
   volatile unsigned int *map_base;
-  int sendMessage(PortalMessage *msg);
   friend class Directory;
 };
 

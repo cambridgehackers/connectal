@@ -246,18 +246,6 @@ PortalInternal::~PortalInternal()
   free(name);
 }
 
-int PortalInternal::sendMessage(PortalMessage *msg)
-{
-  // this intermediate buffering is required because we 
-  // can't do partial-word writes to the hardware fifos.  
-  unsigned int buf[128];
-  assert(msg->size()/4 <= 128);
-  msg->marshall(buf);
-  for (int i = msg->size()/4-1; i >= 0; i--)
-    WRITEL(this, &map_base[PORTAL_REQ_FIFO(msg->channel)], buf[i]);
-  return 0;
-}
-
 Portal::Portal(int id, PortalPoller *poller)
   : PortalInternal(id)
 {

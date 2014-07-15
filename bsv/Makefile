@@ -16,7 +16,7 @@ mkGearboxTb.v: GearboxTb.bsv
 	bsc -verilog -u -g mkGearboxTb GearboxTb.bsv
 
 testAdapter: Adapter.bsv
-	bsc -check-assert -sim -u -g mkAdapterTb Adapter.bsv
+	bsc -p +:../lib/bsv -check-assert -sim -u -g mkAdapterTb Adapter.bsv
 	bsc -check-assert -sim -u -e mkAdapterTb -o testAdapter mkAdapterTb.ba
 	./testAdapter
 
