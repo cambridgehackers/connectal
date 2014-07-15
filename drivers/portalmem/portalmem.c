@@ -252,7 +252,7 @@ static struct dma_buf_ops dma_buf_ops = {
   .kunmap           = pa_dma_buf_kunmap,
 };
 
-static struct dma_buf *dmabuffer_create(unsigned long len,
+static struct dma_buf *portalmem_dmabuffer_create(unsigned long len,
 					  unsigned long align)
 {
   static unsigned int high_order_gfp_flags = (GFP_HIGHUSER | __GFP_ZERO |
@@ -401,7 +401,7 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
       return -EFAULT;
     printk("%s, header.size=%zd\n", __FUNCTION__, header.size);
     header.size = PAGE_ALIGN(round_up(header.size, align));
-    dmabuf = dmabuffer_create(header.size, align);
+    dmabuf = portalmem_dmabuffer_create(header.size, align);
     if (IS_ERR(dmabuf))
       return PTR_ERR(dmabuf);
     printk("pa_get_dma_buf %p %zd\n", dmabuf->file, dmabuf->file->f_count.counter);
@@ -468,6 +468,7 @@ static void __exit pa_exit(void)
   misc_deregister(md);
 }
  
+EXPORT_SYMBOL(portalmem_dmabuffer_create);
 module_init(pa_init);
 module_exit(pa_exit);
 
