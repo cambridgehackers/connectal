@@ -16,38 +16,31 @@
 #include "GeneratedTypes.h" 
 #include "DmaIndicationWrapper.h"
 
-static int local_manager_handle;
+static int trace_memory;// = 1;
+
+static int local_manager_handle = 1;
 static sem_t localmanager_confSem;
 static sem_t localmanager_mtSem;
 static sem_t localmanager_dbgSem;
 static uint64_t localmanager_mtCnt;
 static DmaDbgRec localmanager_dbgRec;
-static int portalmem_fd;
-
-// ugly hack (mdk)
-typedef int SGListId;
-static int trace_memory;// = 1;
 
 #define MAX_INDARRAY 4
-sem_t test_sem;
-
-int burstLen = 16;
-
-int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
-
-size_t test_sz  = numWords*sizeof(unsigned int);
-size_t alloc_sz = test_sz;
-static PortalInternal *intarr[MAX_INDARRAY];
 typedef int (*INDFUNC)(volatile unsigned int *map_base, unsigned int channel);
-
+static PortalInternal *intarr[MAX_INDARRAY];
 static INDFUNC indfn[MAX_INDARRAY];
+
+static sem_t test_sem;
+static int burstLen = 16;
+static int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
+static size_t test_sz  = numWords*sizeof(unsigned int);
+static size_t alloc_sz = test_sz;
 
 static int DmaIndicationWrapper_handleMessage(volatile unsigned int *map_base, unsigned int channel)
 {    
     unsigned int buf[1024];
     
-    switch (channel) {
-
+    switch (channel) { 
     case CHAN_NUM_DmaIndicationWrapper_configResp: 
     { 
         struct {
@@ -283,8 +276,7 @@ static int DmaConfigProxyStatus_handleMessage(volatile unsigned int *map_base, u
 {    
     unsigned int buf[1024];
     
-    switch (channel) {
-
+    switch (channel) { 
     case CHAN_NUM_DmaConfigProxyStatus_putFailed: 
     { 
         struct {
@@ -308,7 +300,6 @@ static int MemreadRequestProxyStatus_handleMessage(volatile unsigned int *map_ba
 {    
     unsigned int buf[1024];
     switch (channel) {
-
     case CHAN_NUM_MemreadRequestProxyStatus_putFailed: 
     { 
         struct {
@@ -355,25 +346,6 @@ static void *pthread_worker(void *p)
         select(0, NULL, NULL, NULL, &timeout);
     }
     return rc;
-}
-
-static void local_manager_localDmaManager()
-{
-  const char* path = "/dev/portalmem";
-  local_manager_handle = 1;
-  portalmem_fd = open(path, O_RDWR);
-  if (portalmem_fd < 0){
-    fprintf(stderr, "Failed to open %s portalmem_fd=%d errno=%d\n", path, portalmem_fd, errno);
-  }
-  if (sem_init(&localmanager_confSem, 1, 0)){
-    fprintf(stderr, "failed to init localmanager_confSem errno=%d:%s\n", errno, strerror(errno));
-  }
-  if (sem_init(&localmanager_mtSem, 0, 0)){
-    fprintf(stderr, "failed to init localmanager_mtSem errno=%d:%s\n", errno, strerror(errno));
-  }
-  if (sem_init(&localmanager_dbgSem, 0, 0)){
-    fprintf(stderr, "failed to init localmanager_dbgSem errno=%d:%s\n", errno, strerror(errno));
-  }
 }
 
 static int local_manager_reference(PortalAlloc* pa)
@@ -501,29 +473,27 @@ int main(int argc, const char **argv)
   indfn[2] = DmaConfigProxyStatus_handleMessage;
   indfn[3] = DmaIndicationWrapper_handleMessage;
 
-  local_manager_localDmaManager();
-
-  //sem_init(&test_sem, 0, 0);
-  PortalAlloc *srcAlloc;
-  //local_manager_alloc(alloc_sz, &srcAlloc);
-//static int local_manager_alloc(size_t size, PortalAlloc **ppa)
-  srcAlloc = (PortalAlloc *)malloc(sizeof(PortalAlloc));
+  PortalAlloc *srcAlloc = (PortalAlloc *)malloc(sizeof(PortalAlloc));
   memset(srcAlloc, 0, sizeof(PortalAlloc));
   srcAlloc->header.size = alloc_sz;
-#if 1 ////////////// userspace version
+
+#if 1 ///////////////////////// userspace version
+  int portalmem_fd = open("/dev/portalmem", O_RDWR);
+  if (portalmem_fd < 0)
+    fprintf(stderr, "Failed to open /dev/portalmem portalmem_fd=%d errno=%d\n", portalmem_fd, errno);
   int rc = ioctl(portalmem_fd, PA_ALLOC, srcAlloc);
   if (!rc){
-      float mb = (float)srcAlloc->header.size/(float)(1<<20);
-      fprintf(stderr, "alloc size=%fMB rc=%d fd=%d numEntries=%d\n", mb, rc, srcAlloc->header.fd, srcAlloc->header.numEntries);
+      long mb = ((long)srcAlloc->header.size)/(long)(1<<20);
+      fprintf(stderr, "alloc size=%lxMB rc=%d fd=%d numEntries=%d\n", mb, rc, srcAlloc->header.fd, srcAlloc->header.numEntries);
       srcAlloc = (PortalAlloc *)realloc(srcAlloc, sizeof(PortalAlloc)+((srcAlloc->header.numEntries+1)*sizeof(DmaEntry)));
       rc = ioctl(portalmem_fd, PA_DMA_ADDRESSES, srcAlloc);
   }
-#endif /////////////////////
+  unsigned int *srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
+#endif ////////////////////////////////
   if (rc){
     fprintf(stderr, "portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
     return rc;
   }
-  unsigned int *srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
 
   pthread_t tid;
   printf( "Main: creating exec thread\n");
@@ -533,8 +503,7 @@ int main(int argc, const char **argv)
   }
   for (int i = 0; i < numWords; i++)
     srcBuffer[i] = i;
-  //local_manager_dCacheFlushInval(srcAlloc, srcBuffer);
-//static int local_manager_dCacheFlushInval(PortalAlloc *srcAlloc, void *srcBuffer)
+#if 1   //////////////// userspace code for flushing dcache for srcAlloc
   {
 #if defined(__arm__)
     int rc = ioctl(portalmem_fd, PA_DCACHE_FLUSH_INVAL, srcAlloc);
@@ -554,6 +523,7 @@ int main(int argc, const char **argv)
 #endif
   //fprintf(stderr, "dcache flush\n");
   }
+#endif /////////////////////
   unsigned int ref_srcAlloc = local_manager_reference(srcAlloc);
   printf( "Main: starting read %08x\n", numWords);
   {
