@@ -16,12 +16,6 @@
 #include "GeneratedTypes.h" 
 #include "DmaIndicationWrapper.h"
 
-static void local_sglist ( const uint32_t pointer, const uint64_t addr, const uint32_t len );
-static void local_region ( const uint32_t pointer, const uint64_t barr8, const uint32_t off8, const uint64_t barr4, const uint32_t off4, const uint64_t barr0, const uint32_t off0 );
-static void local_addrRequest ( const uint32_t pointer, const uint32_t offset );
-static void local_getStateDbg ( const ChannelType& rc );
-static void local_getMemoryTraffic ( const ChannelType& rc );
-
 static int local_manager_handle;
 static sem_t localmanager_confSem;
 static sem_t localmanager_mtSem;
@@ -58,108 +52,34 @@ typedef int (*INDFUNC)(volatile unsigned int *map_base, unsigned int channel);
 
 static INDFUNC indfn[MAX_INDARRAY];
 
-void local_sglist ( const uint32_t pointer, const uint64_t addr, const uint32_t len )
-{
-    unsigned int buf[128];
-    struct {
-        uint32_t pointer:32;
-        uint64_t addr:64;
-        uint32_t len:32;
+//void local_addrRequest ( const uint32_t pointer, const uint32_t offset )
+//{
+    //unsigned int buf[128];
+    //struct {
+        //uint32_t pointer:32;
+        //uint32_t offset:32;
+    //} payload;
+    //payload.pointer = pointer;
+    //payload.offset = offset;
+    //int i = 0;
+    //buf[i++] = payload.offset;
+    //buf[i++] = payload.pointer;
+    //for (int i = 8/4-1; i >= 0; i--)
+      //intarr[2]->map_base[PORTAL_REQ_FIFO(CHAN_NUM_DmaConfigProxy_addrRequest)] = buf[i];
+//};
 
-    } payload;
-    payload.pointer = pointer;
-    payload.addr = addr;
-    payload.len = len;
-    int i = 0;
-    buf[i++] = payload.len;
-    buf[i++] = payload.addr;
-    buf[i++] = (payload.addr>>32);
-    buf[i++] = payload.pointer;
-    for (int i = 16/4-1; i >= 0; i--)
-      intarr[2]->map_base[PORTAL_REQ_FIFO(CHAN_NUM_DmaConfigProxy_sglist)] = buf[i];
-};
-
-
-void local_region ( const uint32_t pointer, const uint64_t barr8, const uint32_t off8, const uint64_t barr4, const uint32_t off4, const uint64_t barr0, const uint32_t off0 )
-{
-    unsigned int buf[128];
-    struct {
-        uint32_t pointer:32;
-        uint64_t barr8:64;
-        uint32_t off8:32;
-        uint64_t barr4:64;
-        uint32_t off4:32;
-        uint64_t barr0:64;
-        uint32_t off0:32;
-
-    } payload;
-    payload.pointer = pointer;
-    payload.barr8 = barr8;
-    payload.off8 = off8;
-    payload.barr4 = barr4;
-    payload.off4 = off4;
-    payload.barr0 = barr0;
-    payload.off0 = off0;
-    int i = 0;
-    buf[i++] = payload.off0;
-    buf[i++] = payload.barr0;
-    buf[i++] = (payload.barr0>>32);
-    buf[i++] = payload.off4;
-    buf[i++] = payload.barr4;
-    buf[i++] = (payload.barr4>>32);
-    buf[i++] = payload.off8;
-    buf[i++] = payload.barr8;
-    buf[i++] = (payload.barr8>>32);
-    buf[i++] = payload.pointer;
-    for (int i = 40/4-1; i >= 0; i--)
-      intarr[2]->map_base[PORTAL_REQ_FIFO(CHAN_NUM_DmaConfigProxy_region)] = buf[i];
-};
-
-
-void local_addrRequest ( const uint32_t pointer, const uint32_t offset )
-{
-    unsigned int buf[128];
-    struct {
-        uint32_t pointer:32;
-        uint32_t offset:32;
-
-    } payload;
-    payload.pointer = pointer;
-    payload.offset = offset;
-    int i = 0;
-    buf[i++] = payload.offset;
-    buf[i++] = payload.pointer;
-    for (int i = 8/4-1; i >= 0; i--)
-      intarr[2]->map_base[PORTAL_REQ_FIFO(CHAN_NUM_DmaConfigProxy_addrRequest)] = buf[i];
-};
-
-
-void local_getStateDbg ( const ChannelType& rc )
-{
-    unsigned int buf[128];
-    struct {
-        ChannelType rc;
-    } payload;
-    payload.rc = rc;
-    int i = 0;
-    buf[i++] = payload.rc;
-    for (int i = 4/4-1; i >= 0; i--)
-      intarr[2]->map_base[PORTAL_REQ_FIFO(CHAN_NUM_DmaConfigProxy_getStateDbg)] = buf[i];
-};
-
-
-void local_getMemoryTraffic ( const ChannelType& rc )
-{
-    unsigned int buf[128];
-    struct {
-        ChannelType rc;
-    } payload;
-    payload.rc = rc;
-    int i = 0;
-    buf[i++] = payload.rc;
-    for (int i = 4/4-1; i >= 0; i--)
-      intarr[2]->map_base[PORTAL_REQ_FIFO(CHAN_NUM_DmaConfigProxy_getMemoryTraffic)] = buf[i];
-};
+//static void local_getStateDbg ( const ChannelType& rc )
+//{
+    //unsigned int buf[128];
+    //struct {
+        //ChannelType rc;
+    //} payload;
+    //payload.rc = rc;
+    //int i = 0;
+    //buf[i++] = payload.rc;
+    //for (int i = 4/4-1; i >= 0; i--)
+      //intarr[2]->map_base[PORTAL_REQ_FIFO(CHAN_NUM_DmaConfigProxy_getStateDbg)] = buf[i];
+//};
 
 static int DmaIndicationWrapper_handleMessage(volatile unsigned int *map_base, unsigned int channel)
 {    
@@ -540,7 +460,19 @@ int local_manager_dCacheFlushInval(PortalAlloc *portalAlloc, void *__p)
 uint64_t local_manager_show_mem_stats(ChannelType rc)
 {
   uint64_t rv = 0;
-  local_getMemoryTraffic(rc);
+//  local_getMemoryTraffic(rc);
+//void local_getMemoryTraffic ( const ChannelType& rc )
+{
+    unsigned int buf[128];
+    struct {
+        ChannelType rc;
+    } payload;
+    payload.rc = rc;
+    int i = 0;
+    buf[i++] = payload.rc;
+    for (int i = 4/4-1; i >= 0; i--)
+      intarr[2]->map_base[PORTAL_REQ_FIFO(CHAN_NUM_DmaConfigProxy_getMemoryTraffic)] = buf[i];
+};
   sem_wait(&localmanager_mtSem);
   rv += localmanager_mtCnt;
   return rv;
@@ -582,7 +514,28 @@ int local_manager_reference(PortalAlloc* pa)
     dma_addr_t addr = e->dma_address;
     if (trace_memory)
       fprintf(stderr, "local_manager_sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, (long)addr, e->length);
-    local_sglist(id, addr, e->length);
+//    local_sglist(id, addr, e->length);
+//void local_sglist ( const uint32_t pointer, const uint64_t addr, const uint32_t len )
+{
+    unsigned int buf[128];
+    struct {
+        uint32_t pointer:32;
+        uint64_t addr:64;
+        uint32_t len:32;
+
+    } payload;
+    payload.pointer = id;
+    payload.addr = addr;
+    payload.len = e->length;
+    int i = 0;
+    buf[i++] = payload.len;
+    buf[i++] = payload.addr;
+    buf[i++] = (payload.addr>>32);
+    buf[i++] = payload.pointer;
+    for (int i = 16/4-1; i >= 0; i--)
+      intarr[2]->map_base[PORTAL_REQ_FIFO(CHAN_NUM_DmaConfigProxy_sglist)] = buf[i];
+};
+
     size_accum += e->length;
     // fprintf(stderr, "%s:%d sem_wait\n", __FILE__, __LINE__);
     sem_wait(&localmanager_confSem);
@@ -614,10 +567,44 @@ int local_manager_reference(PortalAlloc* pa)
     fprintf(stderr, "regions %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,regions[0], regions[1], regions[2]);
     fprintf(stderr, "borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borders[0].border, borders[1].border, borders[2].border);
   }
-  local_region(id,
-	 borders[0].border, borders[0].idxOffset,
-	 borders[1].border, borders[1].idxOffset,
-	 borders[2].border, borders[2].idxOffset);
+  //local_region(id,
+	 //borders[0].border, borders[0].idxOffset,
+	 //borders[1].border, borders[1].idxOffset,
+	 //borders[2].border, borders[2].idxOffset);
+//void local_region ( const uint32_t pointer, const uint64_t barr8, const uint32_t off8, const uint64_t barr4, const uint32_t off4, const uint64_t barr0, const uint32_t off0 )
+{
+    unsigned int buf[128];
+    struct {
+        uint32_t pointer:32;
+        uint64_t barr8:64;
+        uint32_t off8:32;
+        uint64_t barr4:64;
+        uint32_t off4:32;
+        uint64_t barr0:64;
+        uint32_t off0:32;
+
+    } payload;
+    payload.pointer = id;
+    payload.barr8 = borders[0].border;
+    payload.off8 = borders[0].idxOffset;
+    payload.barr4 = borders[1].border;
+    payload.off4 = borders[1].idxOffset;
+    payload.barr0 = borders[2].border;
+    payload.off0 = borders[2].idxOffset;
+    int i = 0;
+    buf[i++] = payload.off0;
+    buf[i++] = payload.barr0;
+    buf[i++] = (payload.barr0>>32);
+    buf[i++] = payload.off4;
+    buf[i++] = payload.barr4;
+    buf[i++] = (payload.barr4>>32);
+    buf[i++] = payload.off8;
+    buf[i++] = payload.barr8;
+    buf[i++] = (payload.barr8>>32);
+    buf[i++] = payload.pointer;
+    for (int i = 40/4-1; i >= 0; i--)
+      intarr[2]->map_base[PORTAL_REQ_FIFO(CHAN_NUM_DmaConfigProxy_region)] = buf[i];
+};
   //fprintf(stderr, "%s:%d sem_wait\n", __FILE__, __LINE__);
   sem_wait(&localmanager_confSem);
   return id;
