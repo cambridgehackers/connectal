@@ -2,7 +2,6 @@ import RegFile::*;
 import FIFO::*;
 import FIFOF::*;
 import Vector::*;
-import FIFOF::*;
 import Connectable::*;
 import ClientServer::*;
 import Memory::*;
@@ -10,7 +9,8 @@ import BRAM::*;
 import DefaultValue::*;
 import FloatingPoint::*;
 import Real::*;
-import Dma::*;
+import PortalMemory::*;
+import MemTypes::*;
 import DmaVector::*;
 import Pipe::*;
 import FloatOps::*;
@@ -71,9 +71,9 @@ module mkSigmoidServer#(SigmoidTable#(tsz) sigmoidTable)(Server#(Float,Float))
    Bool verbose = False;
    FIFOF#(Float) angleFifo2 <- mkFIFOF();
    FIFOF#(Float) angleFifo <- mkFIFOF();
-   let multiplier <- mkFloatMultiplier();
-   let adder <- mkFloatAdder();
-   let mac <- mkFloatMac();
+   let multiplier <- mkFloatMultiplier(defaultValue);
+   let adder <- mkFloatAdder(defaultValue);
+   let mac <- mkFloatMac(defaultValue);
 
    rule lookupEntry;
       Float angle = 0;
@@ -103,7 +103,7 @@ module mkSigmoidServer#(SigmoidTable#(tsz) sigmoidTable)(Server#(Float,Float))
       let angle = angleFifo.first();
       angleFifo.deq();
       if (verbose) $display("computeDelta angle=%h vs[0]=%h", pack(angle), pack(vs[0]));
-      adder.request.put(tuple3(angle, vs[0], defaultValue));
+      adder.request.put(tuple2(angle, vs[0]));
       vFifo.enq(vs);
    endrule
 
@@ -115,7 +115,7 @@ module mkSigmoidServer#(SigmoidTable#(tsz) sigmoidTable)(Server#(Float,Float))
       Exception e = tpl_2(result);
       if (pack(e) != 0) $display("interpolate.exception e=%h delta=%h", e, pack(delta));
       if (verbose) $display("sigmoid interpolate delta=%h vs[1]=%h vs[2]", pack(delta), pack(vs[1]), pack(vs[2]));
-      mac.request.put(tuple4(tagged Valid vs[1], vs[2], delta, defaultValue));
+      mac.request.put(tuple3(tagged Valid vs[1], vs[2], delta));
    endrule
 
    interface Put request;
@@ -129,7 +129,7 @@ module mkSigmoidServer#(SigmoidTable#(tsz) sigmoidTable)(Server#(Float,Float))
 	 if (verbose)
 	    angleFifo2.enq(angle);
 	 angleFifo.enq(angle);
-	 multiplier.request.put(tuple3(angle, sigmoidTable.rscale, defaultValue));
+	 multiplier.request.put(tuple2(angle, sigmoidTable.rscale));
       endmethod
    endinterface
    interface Get response;
@@ -175,7 +175,6 @@ module  mkDmaSigmoid(DmaSigmoidIfc#(dsz))
 	     , Add#(N,0,n)
 	     , Mul#(fsz,N,dmasz)
 	     , Bits#(Vector#(2,Float), dsz)
-	     , PipeInOut#(Vector#(2,Float), FIFOF#(Vector#(2,Float)))
 	     , Mul#(dbytes, 8, dsz)
 	     , Div#(dsz, 8, dbytes)
 	     );
