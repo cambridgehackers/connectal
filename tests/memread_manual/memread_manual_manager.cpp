@@ -16,15 +16,11 @@
 #include "GeneratedTypes.h" 
 #include "DmaIndicationWrapper.h"
 
-class localDmaConfigProxy
-{
-public:
-    void sglist ( const uint32_t pointer, const uint64_t addr, const uint32_t len );
-    void region ( const uint32_t pointer, const uint64_t barr8, const uint32_t off8, const uint64_t barr4, const uint32_t off4, const uint64_t barr0, const uint32_t off0 );
-    void addrRequest ( const uint32_t pointer, const uint32_t offset );
-    void getStateDbg ( const ChannelType& rc );
-    void getMemoryTraffic ( const ChannelType& rc );
-};
+static void local_sglist ( const uint32_t pointer, const uint64_t addr, const uint32_t len );
+static void local_region ( const uint32_t pointer, const uint64_t barr8, const uint32_t off8, const uint64_t barr4, const uint32_t off4, const uint64_t barr0, const uint32_t off0 );
+static void local_addrRequest ( const uint32_t pointer, const uint32_t offset );
+static void local_getStateDbg ( const ChannelType& rc );
+static void local_getMemoryTraffic ( const ChannelType& rc );
 
 class localDmaManager
 {
@@ -35,14 +31,9 @@ class localDmaManager
   sem_t dbgSem;
   uint64_t mtCnt;
   DmaDbgRec dbgRec;
-  localDmaConfigProxy *device;
-#ifndef MMAP_HW
-  portal p_fd;
-#endif
  public:
-  localDmaManager(localDmaConfigProxy *argDevice);
+  localDmaManager();
   void InitSemaphores();
-  void InitFds();
   int pa_fd;
   void *mmap(PortalAlloc *portalAlloc);
   int dCacheFlushInval(PortalAlloc *portalAlloc, void *__p);
@@ -56,7 +47,6 @@ class localDmaManager
 
 // ugly hack (mdk)
 typedef int SGListId;
-
 
 #define MAX_INDARRAY 4
 sem_t test_sem;
@@ -73,7 +63,7 @@ typedef int (*INDFUNC)(volatile unsigned int *map_base, unsigned int channel);
 
 static INDFUNC indfn[MAX_INDARRAY];
 
-void localDmaConfigProxy::sglist ( const uint32_t pointer, const uint64_t addr, const uint32_t len )
+void local_sglist ( const uint32_t pointer, const uint64_t addr, const uint32_t len )
 {
     unsigned int buf[128];
     struct {
@@ -95,7 +85,7 @@ void localDmaConfigProxy::sglist ( const uint32_t pointer, const uint64_t addr, 
 };
 
 
-void localDmaConfigProxy::region ( const uint32_t pointer, const uint64_t barr8, const uint32_t off8, const uint64_t barr4, const uint32_t off4, const uint64_t barr0, const uint32_t off0 )
+void local_region ( const uint32_t pointer, const uint64_t barr8, const uint32_t off8, const uint64_t barr4, const uint32_t off4, const uint64_t barr0, const uint32_t off0 )
 {
     unsigned int buf[128];
     struct {
@@ -131,7 +121,7 @@ void localDmaConfigProxy::region ( const uint32_t pointer, const uint64_t barr8,
 };
 
 
-void localDmaConfigProxy::addrRequest ( const uint32_t pointer, const uint32_t offset )
+void local_addrRequest ( const uint32_t pointer, const uint32_t offset )
 {
     unsigned int buf[128];
     struct {
@@ -149,7 +139,7 @@ void localDmaConfigProxy::addrRequest ( const uint32_t pointer, const uint32_t o
 };
 
 
-void localDmaConfigProxy::getStateDbg ( const ChannelType& rc )
+void local_getStateDbg ( const ChannelType& rc )
 {
     unsigned int buf[128];
     struct {
@@ -163,7 +153,7 @@ void localDmaConfigProxy::getStateDbg ( const ChannelType& rc )
 };
 
 
-void localDmaConfigProxy::getMemoryTraffic ( const ChannelType& rc )
+void local_getMemoryTraffic ( const ChannelType& rc )
 {
     unsigned int buf[128];
     struct {
@@ -512,20 +502,8 @@ void localDmaManager::InitSemaphores()
   }
 }
 
-void localDmaManager::InitFds()
+localDmaManager::localDmaManager() : handle(1)
 {
-#ifndef MMAP_HW
-  snprintf(p_fd.read.path, sizeof(p_fd.read.path), "fd_sock_rc");
-  connect_socket(&(p_fd.read));
-  snprintf(p_fd.write.path, sizeof(p_fd.write.path), "fd_sock_wc");
-  connect_socket(&(p_fd.write));
-#endif
-}
-
-localDmaManager::localDmaManager(localDmaConfigProxy *argDevice)
-  : handle(1), device(argDevice)
-{
-  InitFds();
   const char* path = "/dev/portalmem";
   this->pa_fd = ::open(path, O_RDWR);
   if (this->pa_fd < 0){
@@ -566,7 +544,7 @@ int localDmaManager::dCacheFlushInval(PortalAlloc *portalAlloc, void *__p)
 uint64_t localDmaManager::show_mem_stats(ChannelType rc)
 {
   uint64_t rv = 0;
-  device->getMemoryTraffic(rc);
+  local_getMemoryTraffic(rc);
   sem_wait(&mtSem);
   rv += mtCnt;
   return rv;
@@ -588,9 +566,6 @@ int localDmaManager::reference(PortalAlloc* pa)
   pa->header.numEntries++;
   if (trace_memory)
     fprintf(stderr, "localDmaManager::reference id=%08x, numEntries:=%d len=%08lx)\n", id, ne, pa->header.size);
-#ifndef MMAP_HW
-  sock_fd_write(p_fd.write.s2, pa->header.fd);
-#endif
   for(int i = 0; i < pa->header.numEntries; i++){
     DmaEntry *e = &(pa->entries[i]);
     switch (e->length) {
@@ -615,7 +590,7 @@ int localDmaManager::reference(PortalAlloc* pa)
 #endif
     if (trace_memory)
       fprintf(stderr, "localDmaManager::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, (long)addr, e->length);
-    device->sglist(id, addr, e->length);
+    local_sglist(id, addr, e->length);
     size_accum += e->length;
     // fprintf(stderr, "%s:%d sem_wait\n", __FILE__, __LINE__);
     sem_wait(&confSem);
@@ -647,7 +622,7 @@ int localDmaManager::reference(PortalAlloc* pa)
     fprintf(stderr, "regions %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,regions[0], regions[1], regions[2]);
     fprintf(stderr, "borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borders[0].border, borders[1].border, borders[2].border);
   }
-  device->region(id,
+  local_region(id,
 	 borders[0].border, borders[0].idxOffset,
 	 borders[1].border, borders[1].idxOffset,
 	 borders[2].border, borders[2].idxOffset);
@@ -709,8 +684,7 @@ int main(int argc, const char **argv)
   indfn[2] = DmaConfigProxyStatus_handleMessage;
   indfn[3] = DmaIndicationWrapper_handleMessage;
 
-  localDmaConfigProxy *dmap = new localDmaConfigProxy();
-  portalMemory = new localDmaManager(dmap);
+  portalMemory = new localDmaManager();
 
   //sem_init(&test_sem, 0, 0);
   PortalAlloc *srcAlloc;
