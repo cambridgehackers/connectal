@@ -41,9 +41,9 @@ class DmaIndication : public DmaIndicationWrapper
   virtual void addrResponse(uint64_t physAddr){
     fprintf(stderr, "DmaIndication::addrResponse(physAddr=%"PRIx64")\n", physAddr);
   }
-  virtual void parefResp(uint32_t pointer){
-    fprintf(stderr, "DmaIndication::parefResp(pointer=%x)\n", pointer);
-  }
+  //unused virtual void parefResp(uint32_t pointer){
+    //unused fprintf(stderr, "DmaIndication::parefResp(pointer=%x)\n", pointer);
+  //unused }
   virtual void badPointer (uint32_t pointer) {
     fprintf(stderr, "DmaIndication::badPointer(pointer=%x)\n", pointer);
   }
