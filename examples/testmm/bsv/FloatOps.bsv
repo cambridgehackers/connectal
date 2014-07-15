@@ -53,6 +53,43 @@ module mkFloatAddPipe#(PipeOut#(Tuple2#(Float,Float)) xypipe)(PipeOut#(Float));
 endmodule
 
 (* synthesize *)
+module mkFloatSubtracter#(RoundMode rmode)(FloatAlu);
+`ifdef BSIM
+   let adder <- mkFPAdder(rmode);
+`else
+   let adder <- mkXilinxFPAdder(rmode);
+`endif
+   interface Put request;
+      method Action put(Tuple2#(Float,Float) req);
+	 match { .a, .b } = req;
+	 let tpl3 = tuple3(a, negate(b), rmode);
+         adder.request.put(req);
+      endmethod
+   endinterface
+   interface Get response;
+      method ActionValue#(Tuple2#(Float,Exception)) get();
+	 let resp <- adder.response.get();
+	 return resp;
+      endmethod
+   endinterface
+endmodule
+
+module mkFloatSubPipe#(PipeOut#(Tuple2#(Float,Float)) xypipe)(PipeOut#(Float));
+   let subtracter <- mkFloatSubtracter(defaultValue);
+   FIFOF#(Float) fifo <- mkFIFOF();
+   rule consumexy;
+      let xy = xypipe.first();
+      xypipe.deq;
+      subtracter.request.put(tuple2(tpl_1(xy),tpl_2(xy)));
+   endrule
+   rule enqout;
+      let resp <- subtracter.response.get();
+      fifo.enq(tpl_1(resp));
+   endrule
+   return toPipeOut(fifo);
+endmodule
+
+(* synthesize *)
 module mkFloatMultiplier#(RoundMode rmode)(FloatAlu);
 `ifdef BSIM
    let multiplier <- mkFPMultiplier(rmode);
