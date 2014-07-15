@@ -26,7 +26,6 @@ import Connectable       :: *;
 import ConnectableWithTrace::*;
 import Portal            :: *;
 import Leds              :: *;
-import Top               :: *;
 import AxiMasterSlave    :: *;
 import XilinxCells       :: *;
 import XbsvXilinxCells   :: *;
@@ -36,7 +35,9 @@ import XADC::*;
 import CtrlMux::*;
 import AxiMasterSlave    :: *;
 import AxiDma            :: *;
+import Top               :: *;
 import Bscan             :: *;
+import ZynqHostTypeIF::*;
 
 `ifdef USES_FCLK1
 `define CLOCK_ARG  ps7.fclkclk[1],
@@ -55,8 +56,6 @@ import Bscan             :: *;
 
 typedef `PinType PinType;
 typedef `NumberOfMasters NumberOfMasters;
-
-typedef PS7 HostType;
 
 interface I2C_Pins;
    interface Inout#(Bit#(1)) scl;
@@ -110,11 +109,15 @@ module mkZynqTop(ZynqTop);
 
    BscanTop bscan <- mkBscanTop(3, clocked_by mainclock, reset_by mainreset); // Use USER3  (JTAG IDCODE address 0x22)
    BscanLocal lbscan <- mkBscanLocal(bscan, clocked_by bscan.tck, reset_by bscan.rst);
+`ifdef IMPORT_HOSTIF
+   PortalTop#(32, 64, PinType, NumberOfMasters) top <- mkPortalTop(ps7, clocked_by mainclock, reset_by mainreset);
+`else
 `ifdef SYNTH_ARG
    TopParam tparam <- mkTopParam(`SYNTH_ARG);
    PortalTop#(32, 64, PinType, NumberOfMasters) top <- mkPortalTop(tparam, `CLOCK_ARG `BSCAN_ARG clocked_by mainclock, reset_by mainreset);
 `else
    PortalTop#(32, 64, PinType, NumberOfMasters) top <- mkPortalTop(`CLOCK_ARG `BSCAN_ARG clocked_by mainclock, reset_by mainreset);
+`endif
 `endif
    mkConnectionWithTrace(ps7, top, lbscan.loc[1], clocked_by mainclock, reset_by mainreset);
 

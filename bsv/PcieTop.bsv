@@ -43,6 +43,7 @@ import Bscan             :: *;
 `ifndef BSIM
 import PcieEndpointX7    :: *;
 `endif
+import PcieHostTypeIF    :: *;
 
 `ifndef DataBusWidth
 `define DataBusWidth 64
@@ -69,38 +70,11 @@ import PcieEndpointX7    :: *;
 `define BSCAN_ARG
 `endif
 
-interface PcieHostTop;
-   interface Clock tepClock125;
-   interface Reset tepReset125;
-   interface PcieHost#(DataBusWidth, NumberOfMasters) tpciehost;
-`ifndef BSIM
-   interface Clock tsys_clk_200mhz;
-   interface Clock tsys_clk_200mhz_buf;
-   interface Clock tpci_clk_100mhz_buf;
-   interface PcieEndpointX7#(PcieLanes) tep7;
-`endif
-endinterface
-
-typedef PcieHostTop HostType;
-
 // implemented in TlpReplay.cxx
 import "BDPI" function Action put_tlp(TLPData#(16) d);
 import "BDPI" function ActionValue#(TLPData#(16)) get_tlp();
 import "BDPI" function Bool can_put_tlp();
 import "BDPI" function Bool can_get_tlp();
-
-typedef `DataBusWidth DataBusWidth;
-typedef `NumberOfMasters NumberOfMasters;
-typedef `PinType PinType;
-
-interface PcieHost#(numeric type dsz, numeric type nSlaves);
-   interface Vector#(16,MSIX_Entry)              msixEntry;
-   interface MemMaster#(32,32)                   master;
-   interface Vector#(nSlaves,MemSlave#(40,dsz))  slave;
-   interface Put#(Tuple2#(Bit#(64),Bit#(32)))    interruptRequest;
-   interface Client#(TLPData#(16), TLPData#(16)) pci;
-   interface BscanTop bscanif;
-endinterface
 
 (* synthesize *)
 module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
@@ -159,13 +133,22 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    interface BscanTop bscanif = lbscan.loc[0];
 endmodule: mkPcieHost
 
+`ifdef IMPORT_HOSTIF
+`define TopFormal #(HostType host)
+`endif
 `ifndef SYNTH_ARG
+`ifndef IMPORT_HOSTIF
 (* synthesize *)
+`endif
 `endif
 module mkSynthesizeablePortalTop `TopFormal (PortalTop#(40, DataBusWidth, PinType, NumberOfMasters));
    Clock defaultClock <- exposeCurrentClock();
    //BscanTop local_bscan <- mkBscanTop(3); // Use USER3  (JTAG IDCODE address 0x22)
+`ifdef IMPORT_HOSTIF
+   let top <- mkPortalTop(host);
+`else
    let top <- mkPortalTop(`TopActual `CLOCK_ARG `BSCAN_ARG);
+`endif
    interface masters = top.masters;
    interface slave = top.slave;
    interface interrupt = top.interrupt;
@@ -235,11 +218,15 @@ module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Cl
    (PcieTop#(PinType));
 PcieHostTop host <- mkPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n);
 
+`ifdef IMPORT_HOSTIF
+   let portalTop <- mkSynthesizeablePortalTop(host, clocked_by host.tepClock125, reset_by host.tepReset125);
+`else
 `ifdef SYNTH_ARG
    TopParam tparam <- mkTopParam(`SYNTH_ARG);
    let portalTop <- mkSynthesizeablePortalTop(tparam, clocked_by host.tepClock125, reset_by host.tepReset125);
 `else
    let portalTop <- mkSynthesizeablePortalTop(clocked_by host.tepClock125, reset_by host.tepReset125);
+`endif
 `endif
    mkConnection(host.tpciehost.master, portalTop.slave, clocked_by host.tepClock125, reset_by host.tepReset125);
    if (valueOf(NumberOfMasters) > 0) begin

@@ -34,6 +34,7 @@ import Top               :: *;
 import AxiMasterSlave    :: *;
 import MemTypes          :: *;
 import AxiDma            :: *;
+import BsimHostTypeIF    :: *;
 
 `ifdef USES_FCLK1
 `define CLOCK_DECL Clock clk1
@@ -53,16 +54,6 @@ import AxiDma            :: *;
 typedef `PinType PinType;
 typedef `NumberOfMasters NumberOfMasters;
 typedef `DataBusWidth DataBusWidth;
-
-// this interface should allow for different master and slave bus paraters;		 
-interface BsimHost#(numeric type clientAddrWidth, numeric type clientBusWidth, numeric type clientIdWidth,  
-		    numeric type serverAddrWidth, numeric type serverBusWidth, numeric type serverIdWidth,
-		    numeric type nSlaves);
-   interface MemMaster#(clientAddrWidth, clientBusWidth)  mem_client;
-   interface Vector#(nSlaves,Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))  axi_servers;
-endinterface
-
-typedef BsimHost#(32,32,12,40,DataBusWidth,6,NumberOfMasters) HostType;
 
 // implemented in BsimCtrl.cxx
 import "BDPI" function Action      initPortal(Bit#(32) d);
