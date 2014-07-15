@@ -123,7 +123,7 @@ void print_timer(int loops)
     }
 }
 
-unsigned int read_portal(portal *p, volatile unsigned int *addr, char *name)
+unsigned int read_portal_bsim(portal *p, volatile unsigned int *addr, char *name)
 {
   unsigned int rv;
   struct memrequest foo = {false,addr,0};
@@ -132,7 +132,6 @@ unsigned int read_portal(portal *p, volatile unsigned int *addr, char *name)
     fprintf(stderr, "%s (%s) send error, errno=%s\n",__FUNCTION__, name, strerror(errno));
     exit(1);
   }
-  //fprintf(stderr, "read_portal: %s %x\n", p->read.path, addr);
   if(recv(p->read.s2, &rv, sizeof(rv), 0) == -1){
     fprintf(stderr, "%s (%s) recv error\n",__FUNCTION__, name);
     exit(1);	  
@@ -140,7 +139,7 @@ unsigned int read_portal(portal *p, volatile unsigned int *addr, char *name)
   return rv;
 }
 
-void write_portal(portal *p, volatile unsigned int *addr, unsigned int v, char *name)
+void write_portal_bsim(portal *p, volatile unsigned int *addr, unsigned int v, char *name)
 {
   struct memrequest foo = {true,addr,v};
 
@@ -249,8 +248,10 @@ PortalInternal::~PortalInternal()
 
 int PortalInternal::sendMessage(PortalMessage *msg)
 {
-  // TODO: this intermediate buffer (and associated copy) should be removed (mdk)
+  // this intermediate buffering is required because we 
+  // can't do partial-word writes to the hardware fifos.  
   unsigned int buf[128];
+  assert(msg->size()/4 <= 128);
   msg->marshall(buf);
   for (int i = msg->size()/4-1; i >= 0; i--)
     WRITEL(this, &map_base[PORTAL_REQ_FIFO(msg->channel)], buf[i]);
