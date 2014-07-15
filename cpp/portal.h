@@ -140,16 +140,6 @@ class Directory : public PortalInternal
   void traceStop();
 };
 
-#ifdef MMAP_HW
-#define READL(CITEM, A)     (*(A))
-#define WRITEL(CITEM, A, B) (*(A) = (B))
-#else
-unsigned int read_portal_bsim(portal *p, volatile unsigned int *addr, char *name);
-void write_portal_bsim(portal *p, volatile unsigned int *addr, unsigned int v, char *name);
-#define READL(CITEM, A) read_portal_bsim((CITEM)->p, (A), (CITEM)->name)
-#define WRITEL(CITEM, A, B) write_portal_bsim((CITEM)->p, (A), (B), (CITEM)->name)
-#endif
-
 void start_timer(unsigned int i);
 uint64_t lap_timer(unsigned int i);
 void print_dbg_request_intervals();
