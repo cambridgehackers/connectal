@@ -26,7 +26,7 @@
 
 #include <stdint.h>
 #include "portal.h"
-#include "GeneratedTypes.h"
+//#include "GeneratedTypes.h"
 #include "DmaConfigProxy.h" // generated in project directory
 
 class DmaManager
@@ -43,11 +43,8 @@ class DmaManager
   portal p_fd;
 #endif
  public:
-  DmaManager(DmaConfigProxy *argDevice);
-  void InitSemaphores();
-  void InitFds();
   int pa_fd;
-  void *mmap(PortalAlloc *portalAlloc);
+  DmaManager(DmaConfigProxy *argDevice);
   int dCacheFlushInval(PortalAlloc *portalAlloc, void *__p);
   int alloc(size_t size, PortalAlloc **portalAlloc);
   int reference(PortalAlloc* pa);
@@ -56,8 +53,4 @@ class DmaManager
   void mtResp(uint64_t words);
   void dbgResp(const DmaDbgRec& rec);
 };
-
-// ugly hack (mdk)
-typedef int SGListId;
-
 #endif // _PORTAL_MEMORY_H_

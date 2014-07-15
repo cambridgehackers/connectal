@@ -46,8 +46,20 @@
 
 static int trace_memory;// = 1;
 
-void DmaManager::InitSemaphores()
+DmaManager::DmaManager(DmaConfigProxy *argDevice)
+  : handle(1), device(argDevice)
 {
+#ifndef MMAP_HW
+  snprintf(p_fd.read.path, sizeof(p_fd.read.path), "fd_sock_rc");
+  connect_socket(&(p_fd.read));
+  snprintf(p_fd.write.path, sizeof(p_fd.write.path), "fd_sock_wc");
+  connect_socket(&(p_fd.write));
+#endif
+  const char* path = "/dev/portalmem";
+  this->pa_fd = ::open(path, O_RDWR);
+  if (this->pa_fd < 0){
+    fprintf(stderr, "Failed to open %s pa_fd=%d errno=%d\n", path, this->pa_fd, errno);
+  }
   if (sem_init(&confSem, 1, 0)){
     fprintf(stderr, "failed to init confSem errno=%d:%s\n", errno, strerror(errno));
   }
@@ -57,34 +69,6 @@ void DmaManager::InitSemaphores()
   if (sem_init(&dbgSem, 0, 0)){
     fprintf(stderr, "failed to init dbgSem errno=%d:%s\n", errno, strerror(errno));
   }
-}
-
-void DmaManager::InitFds()
-{
-#ifndef MMAP_HW
-  snprintf(p_fd.read.path, sizeof(p_fd.read.path), "fd_sock_rc");
-  connect_socket(&(p_fd.read));
-  snprintf(p_fd.write.path, sizeof(p_fd.write.path), "fd_sock_wc");
-  connect_socket(&(p_fd.write));
-#endif
-}
-
-DmaManager::DmaManager(DmaConfigProxy *argDevice)
-  : handle(1), device(argDevice)
-{
-  InitFds();
-  const char* path = "/dev/portalmem";
-  this->pa_fd = ::open(path, O_RDWR);
-  if (this->pa_fd < 0){
-    fprintf(stderr, "Failed to open %s pa_fd=%d errno=%d\n", path, this->pa_fd, errno);
-  }
-  InitSemaphores();
-}
-
-void *DmaManager::mmap(PortalAlloc *portalAlloc)
-{
-  void *virt = ::mmap(0, portalAlloc->header.size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, portalAlloc->header.fd, 0);
-  return virt;
 }
 
 int DmaManager::dCacheFlushInval(PortalAlloc *portalAlloc, void *__p)
