@@ -4,7 +4,8 @@ S2H = MemreadRequest
 H2S = MemreadIndication
 BSVFILES = Memread.bsv Top.bsv
 #CPPFILES=testmemread.cpp
-CPPFILES=memread_manual.cpp
+#CPPFILES=memread_manual.cpp
+CPPFILES=memread_manual_manager.cpp
 #XBSVFLAGS=--bscflags " -D TRACE_AXI"
 
 include ../../Makefile.common
