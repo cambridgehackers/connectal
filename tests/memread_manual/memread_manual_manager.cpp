@@ -477,7 +477,7 @@ int main(int argc, const char **argv)
   memset(srcAlloc, 0, sizeof(PortalAlloc));
   srcAlloc->header.size = alloc_sz;
 
-#if 1 ///////////////////////// userspace version
+#ifndef __KERNEL__ ///////////////////////// userspace version
   int portalmem_fd = open("/dev/portalmem", O_RDWR);
   if (portalmem_fd < 0)
     fprintf(stderr, "Failed to open /dev/portalmem portalmem_fd=%d errno=%d\n", portalmem_fd, errno);
@@ -489,6 +489,33 @@ int main(int argc, const char **argv)
       rc = ioctl(portalmem_fd, PA_DMA_ADDRESSES, srcAlloc);
   }
   unsigned int *srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
+#else   /// kernel version
+  {
+    // code for PA_ALLOC
+    size_t align = 4096;
+    printk("%s, srcAlloc.size=%zd\n", __FUNCTION__, srcAlloc.size);
+    srcAlloc.size = PAGE_ALIGN(round_up(srcAlloc.size, align));
+    struct dma_buf *dmabuf = dmabuffer_create(srcAlloc.size, align);
+    if (IS_ERR(dmabuf))
+      return PTR_ERR(dmabuf);
+    printk("pa_get_dma_buf %p %zd\n", dmabuf->file, dmabuf->file->f_count.counter);
+    srcAlloc.numEntries = ((struct pa_buffer *)dmabuf->priv)->sg_table->nents;
+    srcAlloc.fd = dma_buf_fd(dmabuf, O_CLOEXEC);
+    if (srcAlloc.fd < 0)
+      dma_buf_put(dmabuf);
+  }
+  {
+    // code for PA_DMA_ADDRESSES
+    struct scatterlist *sg;
+    int i;
+    struct file *f = fget(srcAlloc.fd);
+    struct sg_table *sgtable = ((struct pa_buffer *)((struct dma_buf *)f->private_data)->priv)->sg_table;
+    for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
+      srcAlloc.entries[i].dma_address = sg_phys(sg);
+      srcAlloc.entries[i].length = sg->length;
+    }
+    fput(f);
+  }
 #endif ////////////////////////////////
   if (rc){
     fprintf(stderr, "portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
@@ -503,7 +530,7 @@ int main(int argc, const char **argv)
   }
   for (int i = 0; i < numWords; i++)
     srcBuffer[i] = i;
-#if 1   //////////////// userspace code for flushing dcache for srcAlloc
+#ifndef __KERNEL__   //////////////// userspace code for flushing dcache for srcAlloc
   {
 #if defined(__arm__)
     int rc = ioctl(portalmem_fd, PA_DCACHE_FLUSH_INVAL, srcAlloc);
