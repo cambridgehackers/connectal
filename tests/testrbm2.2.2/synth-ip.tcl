@@ -1,0 +1,1 @@
+../../examples/testmm/synth-ip.tcl
