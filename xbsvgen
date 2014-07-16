@@ -589,11 +589,13 @@ if __name__=='__main__':
 
     bscmajor = 0
     bscminor = 0
-    m = re.match('.*version (\d+).(\d+)', subprocess.check_output(['bsc', '-v']))
+    popen = subprocess.Popen(['bsc', '-v'], stdout=subprocess.PIPE)
+    m = re.match('.*version (\d+).(\d+)', popen.stdout.read())
     if m:
         bscmajor = int(m.group(1))
         bscminor = int(m.group(2))
         print "Using bsc %d.%d" % (bscmajor, bscminor)
+    popen.terminate()
 
     project_dir = os.path.expanduser(namespace.project_dir)
     namespace.bsvdefine.append('project_dir=%s' % os.path.abspath(project_dir))
