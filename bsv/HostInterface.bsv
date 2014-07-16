@@ -20,6 +20,38 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+////////////////////////////// Bsim /////////////////////////////////
+`ifdef BsimHostTypeIF
+
+import Vector            :: *;
+import AxiMasterSlave    :: *;
+import MemTypes          :: *;
+
+`ifndef DataBusWidth
+`define DataBusWidth 64
+`endif
+`ifndef PinType
+`define PinType Empty
+`endif
+
+typedef `PinType PinType;
+typedef `NumberOfMasters NumberOfMasters;
+typedef `DataBusWidth DataBusWidth;
+
+// this interface should allow for different master and slave bus paraters;		 
+interface BsimHost#(numeric type clientAddrWidth, numeric type clientBusWidth, numeric type clientIdWidth,  
+		    numeric type serverAddrWidth, numeric type serverBusWidth, numeric type serverIdWidth,
+		    numeric type nSlaves);
+   interface MemMaster#(clientAddrWidth, clientBusWidth)  mem_client;
+   interface Vector#(nSlaves,Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))  axi_servers;
+endinterface
+
+typedef BsimHost#(32,32,12,40,DataBusWidth,6,NumberOfMasters) HostType;
+`endif
+
+////////////////////////////// PciE /////////////////////////////////
+`ifdef PcieHostTypeIF
+
 import Vector            :: *;
 import GetPut            :: *;
 import ClientServer      :: *;
@@ -66,3 +98,11 @@ interface PcieHostTop;
 endinterface
 
 typedef PcieHostTop HostType;
+`endif
+
+////////////////////////////// Zynq /////////////////////////////////
+`ifdef ZynqHostTypeIF
+import PS7LIB::*;
+
+typedef PS7 HostType;
+`endif

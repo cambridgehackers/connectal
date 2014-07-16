@@ -37,7 +37,7 @@ import AxiMasterSlave    :: *;
 import AxiDma            :: *;
 import Top               :: *;
 import Bscan             :: *;
-import ZynqHostTypeIF::*;
+import HostInterface::*;
 
 `ifdef USES_BSCAN
 `define BSCAN_ARG  lbscan.loc[0],

@@ -34,7 +34,7 @@ import Top               :: *;
 import AxiMasterSlave    :: *;
 import MemTypes          :: *;
 import AxiDma            :: *;
-import BsimHostTypeIF    :: *;
+import HostInterface    :: *;
 
 `ifndef DataBusWidth
 `define DataBusWidth 64
