@@ -166,7 +166,7 @@ def capitalize(s):
     return '%s%s' % (s[0].upper(), s[1:])
 
 class NoCMixin:
-    def emitCDeclaration(self, f, indentation=0, namespace=''):
+    def emitCDeclaration(self, f, indentation, namespace):
         pass
     def emitCImplementation(self, f):
         pass
@@ -183,7 +183,7 @@ class MethodMixin:
             return int
     def formalParameters(self, params):
         return [ 'const %s%s %s' % (p.type.cName(), p.type.refParam(), p.name) for p in params]
-    def emitCDeclaration(self, f, proxy, indentation=0, namespace=''):
+    def emitCDeclaration(self, f, proxy, indentation, namespace):
         indent(f, indentation)
         resultTypeName = self.resultTypeName()
         if (not proxy):
@@ -196,6 +196,19 @@ class MethodMixin:
             f.write('= 0;\n')
         else:
             f.write(';\n')
+    def emitCStructDeclaration(self, f, of, namespace, className):
+        paramValues = ', '.join([p.name for p in self.params])
+        formalParams = self.formalParameters(self.params)
+        formalParams.insert(0, ' PortalInternal *p')
+        of.write('void %s%s_cb ( ' % (className, cName(self.name)))
+        of.write(', '.join(formalParams))
+        of.write(' );\n')
+        f.write('\nvoid %s%s_cb ( ' % (className, cName(self.name)))
+        f.write(', '.join(formalParams))
+        f.write(' ) {\n')
+        indent(f, 4)
+        f.write(('((%s *)p)->%s ( ' % (className, cName(self.name))) + paramValues + ');\n')
+        f.write('};\n')
     def emitCImplementation(self, f, className, namespace, proxy, doCpp):
 
         # resurse interface types and flattening all structs into a list of types
@@ -341,10 +354,12 @@ class MethodMixin:
         if (doCpp):
             f.write(proxyMethodTemplateCpp % substs)
         elif (not proxy):
-            substs['responseCase'] = ('((%(className)s *)p)->%(name)s(%(params)s);\n'
+            respParams = ['payload.%s' % (p.name) for p in self.params]
+            respParams.insert(0, 'p')
+            substs['responseCase'] = ('%(className)s%(name)s_cb(%(params)s);\n'
                                       % { 'name': self.name,
                                           'className' : className,
-                                          'params': ', '.join(['payload.%s' % (p.name) for p in self.params])})
+                                          'params': ', '.join(respParams)})
             f.write(msgTemplate % substs)
             f.write(msgDemarshallTemplate % substs)
         else:
@@ -355,7 +370,7 @@ class MethodMixin:
 
 
 class StructMemberMixin:
-    def emitCDeclaration(self, f, indentation=0, namespace=''):
+    def emitCDeclaration(self, f, indentation, namespace):
         indent(f, indentation)
         f.write('%s %s' % (self.type.cName(), self.name))
         if self.type.isBitField():
@@ -363,7 +378,7 @@ class StructMemberMixin:
         f.write(';\n')
 
 class TypeDefMixin:
-    def emitCDeclaration(self,f,indentation=0, namespace=''):
+    def emitCDeclaration(self,f,indentation, namespace):
         if self.tdtype.type == 'Struct' or self.tdtype.type == 'Enum':
             self.tdtype.emitCDeclaration(self.name,f,indentation,namespace)
 
@@ -372,13 +387,13 @@ class StructMixin:
         result = [self]
         result.append(self.elements)
         return result
-    def emitCDeclaration(self, name, f, indentation=0, namespace=''):
+    def emitCDeclaration(self, name, f, indentation, namespace):
         indent(f, indentation)
         if (indentation == 0):
             f.write('typedef ')
         f.write('struct %s {\n' % name)
         for e in self.elements:
-            e.emitCDeclaration(f, indentation+4)
+            e.emitCDeclaration(f, indentation+4, namespace)
         indent(f, indentation)
         f.write('}')
         if (indentation == 0):
@@ -397,7 +412,7 @@ class EnumMixin:
     def collectTypes(self):
         result = [self]
         return result
-    def emitCDeclaration(self, name, f, indentation=0, namespace=''):
+    def emitCDeclaration(self, name, f, indentation, namespace):
         indent(f, indentation)
         if (indentation == 0):
             f.write('typedef ')
@@ -454,12 +469,13 @@ class InterfaceMixin:
                 'namespace': namespace,
 		'statusDecl' : '' if self.hasPutFailed() else statusDecl,
                 'parentClass': self.parentClass('PortalInternal')}
+        f.write("\nclass %s%s;\n" % (cName(self.name), 'ProxyStatus'))
         f.write(proxyClassPrefixTemplate % subs)
         for d in self.decls:
             d.emitCDeclaration(f, True, indentation + 4, namespace)
         f.write(proxyClassSuffixTemplate % subs)
 	of.write('enum { ' + ','.join(reqChanNums) + '};\n')
-    def emitCWrapperDeclaration(self, f, of, suffix, indentation=0, namespace=''):
+    def emitCWrapperDeclaration(self, f, of, cppf, suffix, indentation=0, namespace=''):
         className = "%s%s" % (cName(self.name), suffix)
         indent(f, indentation)
 	indChanNums = []
@@ -472,6 +488,8 @@ class InterfaceMixin:
         for d in self.decls:
             d.emitCDeclaration(f, False, indentation + 4, namespace)
         f.write(wrapperClassSuffixTemplate % subs)
+        for d in self.decls:
+            d.emitCStructDeclaration(cppf, of, namespace, className)
 	of.write('enum { ' + ','.join(indChanNums) + '};\n')
     def emitCProxyImplementation(self, f,  suffix, namespace, doCpp):
         className = "%s%s" % (cName(self.name), suffix)
@@ -519,7 +537,7 @@ class InterfaceMixin:
 class ParamMixin:
     def cName(self):
         return self.name
-    def emitCDeclaration(self, f, indentation=0, namespace=''):
+    def emitCDeclaration(self, f, indentation, namespace):
         indent(f, indentation)
         f.write('s %s' % (self.type, self.name))
 
