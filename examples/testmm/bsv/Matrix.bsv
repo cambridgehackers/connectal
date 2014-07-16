@@ -448,8 +448,13 @@ module  mkMmTile#(Clock slowClock, Reset slowReset, UInt#(TLog#(T)) tile)(MmTile
 `endif
    Vector#(RowsPerTile, Gearbox#(1, N, Token)) gearboxes <- replicateM(mk1toNGearbox(fastClock, fastReset, slowClock, slowReset));
    Vector#(RowsPerTile, PipeIn#(Vector#(1,Token))) toGearboxes = map(toPipeIn, gearboxes);
+   Vector#(RowsPerTile, PipeOut#(Vector#(N, Token))) fromGearboxes = map(toPipeOut, gearboxes);
    mapM(uncurry(mkConnection), zip(fxPipes1, toGearboxes));
-   Vector#(RowsPerTile, PipeOut#(Vector#(N, Token))) fxPipesN = map(toPipeOut, gearboxes);
+   // introduce a buffer to help vivado meet timing on vc707
+   Vector#(RowsPerTile, FIFOF#(Vector#(N,Token)))    tokenfifos <- replicateM(mkFIFOF(clocked_by slowClock, reset_by slowReset));
+   Vector#(RowsPerTile, PipeIn#(Vector#(N,Token))) toTokenFifos = map(toPipeIn, tokenfifos);
+   mapM(uncurry(mkConnection), zip(fromGearboxes, toTokenFifos), clocked_by slowClock, reset_by slowReset);
+   Vector#(RowsPerTile, PipeOut#(Vector#(N, Token))) fxPipesN = map(toPipeOut, tokenfifos);
 
    FirstLastPipe#(UInt#(MMSize)) firstLastPipe          <- mkFirstLastPipe();
    Vector#(2, PipeOut#(Tuple2#(Bool,Bool))) firstLastPipes <- mkForkVector(firstLastPipe.pipe);
