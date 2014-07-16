@@ -79,6 +79,9 @@ void %(namespace)s%(className)s_%(putFailedMethodName)s(uint32_t v)
     fprintf(stderr, "putFailed: %%s\\n", methodNameStrings[v]);
     //exit(1);
 }
+'''
+
+putFailedTemplateCpp='''
 void %(namespace)s%(className)s::%(putFailedMethodName)s(uint32_t v)
 {
     %(namespace)s%(className)s_%(putFailedMethodName)s(v);
@@ -121,7 +124,9 @@ void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p %(paramSeparat
 %(paramSetters)s
     %(className)s%(methodName)s_marshall(p, payload);
 };
+'''
 
+proxyMethodTemplateCpp='''
 void %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
 {
     %(namespace)s%(className)s_%(methodName)s (this %(paramSeparator)s %(paramReferences)s );
@@ -188,7 +193,7 @@ class MethodMixin:
             f.write('= 0;\n')
         else:
             f.write(';\n')
-    def emitCImplementation(self, f, className, namespace, proxy):
+    def emitCImplementation(self, f, className, namespace, proxy, doCpp):
 
         # resurse interface types and flattening all structs into a list of types
         def collectMembers(scope, member):
@@ -330,7 +335,9 @@ class MethodMixin:
             # if message is empty, we still send an int of padding
             'payloadSize' : max(4, 4*((sum([p.numBitsBSV() for p in self.params])+31)/32)) 
             }
-        if (not proxy):
+        if (doCpp):
+            f.write(proxyMethodTemplateCpp % substs)
+        elif (not proxy):
             substs['responseCase'] = ('((%(className)s *)p)->%(name)s(%(params)s);\n'
                                       % { 'name': self.name,
                                           'className' : className,
@@ -374,7 +381,7 @@ class StructMixin:
         if (indentation == 0):
             f.write(' %s;' % name)
         f.write('\n')
-    def emitCImplementation(self, f, className='', namespace=''):
+    def emitCImplementation(self, f, className='', namespace='', doCpp=False):
         pass
 
 class EnumElementMixin:
@@ -399,7 +406,7 @@ class EnumMixin:
         if (indentation == 0):
             f.write(' %s;' % name)
         f.write('\n')
-    def emitCImplementation(self, f, className='', namespace=''):
+    def emitCImplementation(self, f, className='', namespace='', doCpp=False):
         pass
     def bitWidth(self):
         return int(math.ceil(math.log(len(self.elements))))
@@ -466,6 +473,8 @@ class InterfaceMixin:
     def emitCProxyImplementation(self, f,  suffix, namespace=''):
         className = "%s%s" % (cName(self.name), suffix)
 	statusName = "%s%s" % (cName(self.name), 'ProxyStatus')
+        for d in self.decls:
+            d.emitCImplementation(f, className, namespace,True, False)
 	statusInstantiate = '' if self.hasPutFailed() else 'proxyStatus = new %s(this, poller);\n' % statusName
         substitutions = {'namespace': namespace,
                          'className': className,
@@ -473,10 +482,13 @@ class InterfaceMixin:
                          'parentClass': self.parentClass('PortalInternal')}
         f.write(proxyConstructorTemplate % substitutions)
         for d in self.decls:
-            d.emitCImplementation(f, className, namespace,True)
-    def emitCWrapperImplementation (self, f,  suffix, namespace=''):
+            d.emitCImplementation(f, className, namespace,True, True)
+    def emitCWrapperImplementation (self, f,  suffix, namespace, doCpp):
         className = "%s%s" % (cName(self.name), suffix)
         emitPutFailed = self.hasPutFailed()
+        if not doCpp:
+            for d in self.decls:
+                d.emitCImplementation(f, className, namespace, False, False);
         substitutions = {'namespace': namespace,
                          'className': className,
 			 'putFailedMethodName' : putFailedMethodName,
@@ -488,12 +500,14 @@ class InterfaceMixin:
                                                      for d in self.decls 
                                                      if d.type == 'Method' and d.return_type.name == 'Action']),
                          'putFailedStrings': '' if (not emitPutFailed) else ', '.join('"%s"' % (d.name) for d in self.req.decls if d.__class__ == AST.Method )}
-        f.write(wrapperConstructorTemplate % substitutions)
-        for d in self.decls:
-            d.emitCImplementation(f, className, namespace, False);
-        if emitPutFailed:
-            f.write(putFailedTemplate % substitutions)
-        f.write(handleMessageTemplate % substitutions)
+        if not doCpp:
+            if emitPutFailed:
+                f.write(putFailedTemplate % substitutions)
+            f.write(handleMessageTemplate % substitutions)
+        else:
+            f.write(wrapperConstructorTemplate % substitutions)
+            if emitPutFailed:
+                f.write(putFailedTemplateCpp % substitutions)
 
 
 class ParamMixin:

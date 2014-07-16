@@ -739,8 +739,9 @@ if __name__=='__main__':
         hpp.write('#include "%s.h"' % i.parentClass("portal"))
         i.ind.emitCWrapperDeclaration(hpp, generated_hpp, "ProxyStatus")
         i.emitCProxyDeclaration(hpp, generated_hpp, "Proxy")
-        i.ind.emitCWrapperImplementation(cpp, "ProxyStatus")
+        i.ind.emitCWrapperImplementation(cpp, "ProxyStatus", '', False)
         i.emitCProxyImplementation(cpp, "Proxy")
+        i.ind.emitCWrapperImplementation(cpp, "ProxyStatus", '', True)
         hpp.write('#endif // _%(name)s_H_\n' % {'name': i.name.upper()})
         hpp.close();
         cpp.close();
@@ -756,7 +757,8 @@ if __name__=='__main__':
         i.ind.emitCProxyDeclaration(hpp, generated_hpp, "WrapperStatus")
         i.emitCWrapperDeclaration(hpp, generated_hpp, "Wrapper")
         i.ind.emitCProxyImplementation(cpp, "WrapperStatus")
-        i.emitCWrapperImplementation(cpp, "Wrapper")
+        i.emitCWrapperImplementation(cpp, "Wrapper", '', False)
+        i.emitCWrapperImplementation(cpp, "Wrapper", '', True)
         hpp.write('#endif // _%(name)s_H_\n' % {'name': i.name.upper()})
         hpp.close();
         cpp.close();
