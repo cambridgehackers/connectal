@@ -268,9 +268,16 @@ zmemexamples.bluesimrun: $(addprefix examples/, $(addsuffix .bluesimrun, $(zmeme
 
 tests.bluesim:  $(addprefix tests/, $(addsuffix .bluesim, $(tests)))
 tests.bluesimrun:  $(addprefix tests/, $(addsuffix .bluesimrun, $(tests)))
-
 tests.kc705:  $(addprefix tests/, $(addsuffix .kc705, $(tests)))
 tests.vc707:  $(addprefix tests/, $(addsuffix .vc707, $(tests)))
+
+#################################################################################################
+# matrixtests
+
+matrixtests.bluesim:  $(addprefix tests/, $(addsuffix .bluesim, $(matrixtests)))
+matrixtests.bluesimrun:  $(addprefix tests/, $(addsuffix .bluesimrun, $(matrixtests)))
+matrixtests.kc705:  $(addprefix tests/, $(addsuffix .kc705, $(matrixtests)))
+matrixtests.vc707:  $(addprefix tests/, $(addsuffix .vc707, $(matrixtests)))
 
 #################################################################################################
 # misc
