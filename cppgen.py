@@ -132,11 +132,15 @@ msgTemplate='''
 typedef struct {
 %(paramStructDeclarations)s
 } %(className)s%(methodName)sPayload;
+'''
 
+msgMarshallTemplate='''
 void %(className)s%(methodName)s_marshall(PortalInternal *p, %(className)s%(methodName)sPayload &payload) {
     volatile unsigned int* addr = &(p->map_base[PORTAL_REQ_FIFO(%(methodChannelOffset)s)]);
 %(paramStructMarshall)s
 }
+'''
+msgDemarshallTemplate='''
 void %(className)s%(methodName)s_demarshall(PortalInternal *p){
     %(className)s%(methodName)sPayload payload;
     unsigned int tmp;
@@ -332,9 +336,11 @@ class MethodMixin:
                                           'className' : className,
                                           'params': ', '.join(['payload.%s' % (p.name) for p in self.params])})
             f.write(msgTemplate % substs)
+            f.write(msgDemarshallTemplate % substs)
         else:
             substs['responseCase'] = ''
             f.write(msgTemplate % substs)
+            f.write(msgMarshallTemplate % substs)
             f.write(proxyMethodTemplate % substs)
 
 
