@@ -94,6 +94,10 @@ responseSzCaseTemplate='''
         break;
 '''
 
+handleMessageTemplateDecl='''
+int %(namespace)s%(className)s_handleMessage(struct PortalInternal *p, unsigned int channel);
+'''
+
 handleMessageTemplate='''
 int %(namespace)s%(className)s_handleMessage(PortalInternal *p, unsigned int channel)
 {    
@@ -118,6 +122,10 @@ int %(namespace)s%(className)s::handleMessage(unsigned int channel)
 {
     return %(namespace)s%(className)s_handleMessage(this, channel);
 }
+'''
+
+proxyMethodTemplateDecl='''
+void %(namespace)s%(className)s_%(methodName)s (struct PortalInternal *p %(paramSeparator)s %(paramDeclarations)s );
 '''
 
 proxyMethodTemplate='''
@@ -209,7 +217,7 @@ class MethodMixin:
         indent(f, 4)
         f.write(('((%s *)p)->%s ( ' % (className, cName(self.name))) + paramValues + ');\n')
         f.write('};\n')
-    def emitCImplementation(self, f, className, namespace, proxy, doCpp):
+    def emitCImplementation(self, f, hpp, className, namespace, proxy, doCpp):
 
         # resurse interface types and flattening all structs into a list of types
         def collectMembers(scope, member):
@@ -367,6 +375,7 @@ class MethodMixin:
             f.write(msgTemplate % substs)
             f.write(msgMarshallTemplate % substs)
             f.write(proxyMethodTemplate % substs)
+            hpp.write(proxyMethodTemplateDecl % substs)
 
 
 class StructMemberMixin:
@@ -399,7 +408,7 @@ class StructMixin:
         if (indentation == 0):
             f.write(' %s;' % name)
         f.write('\n')
-    def emitCImplementation(self, f, className='', namespace='', doCpp=False):
+    def emitCImplementation(self, f, hpp, className='', namespace='', doCpp=False):
         pass
 
 class EnumElementMixin:
@@ -424,7 +433,7 @@ class EnumMixin:
         if (indentation == 0):
             f.write(' %s;' % name)
         f.write('\n')
-    def emitCImplementation(self, f, className='', namespace='', doCpp=False):
+    def emitCImplementation(self, f, hpp, className='', namespace='', doCpp=False):
         pass
     def bitWidth(self):
         return int(math.ceil(math.log(len(self.elements))))
@@ -491,7 +500,7 @@ class InterfaceMixin:
         for d in self.decls:
             d.emitCStructDeclaration(cppf, of, namespace, className)
 	of.write('enum { ' + ','.join(indChanNums) + '};\n')
-    def emitCProxyImplementation(self, f,  suffix, namespace, doCpp):
+    def emitCProxyImplementation(self, f, hpp, suffix, namespace, doCpp):
         className = "%s%s" % (cName(self.name), suffix)
 	statusName = "%s%s" % (cName(self.name), 'ProxyStatus')
 	statusInstantiate = '' if self.hasPutFailed() else 'proxyStatus = new %s(this, poller);\n' % statusName
@@ -501,17 +510,17 @@ class InterfaceMixin:
                          'parentClass': self.parentClass('PortalInternal')}
         if not doCpp:
             for d in self.decls:
-                d.emitCImplementation(f, className, namespace,True, False)
+                d.emitCImplementation(f, hpp, className, namespace,True, False)
         else:
             f.write(proxyConstructorTemplate % substitutions)
             for d in self.decls:
-                d.emitCImplementation(f, className, namespace,True, True)
-    def emitCWrapperImplementation (self, f,  suffix, namespace, doCpp):
+                d.emitCImplementation(f, hpp, className, namespace,True, True)
+    def emitCWrapperImplementation (self, f, hpp, suffix, namespace, doCpp):
         className = "%s%s" % (cName(self.name), suffix)
         emitPutFailed = self.hasPutFailed()
         if not doCpp:
             for d in self.decls:
-                d.emitCImplementation(f, className, namespace, False, False);
+                d.emitCImplementation(f, hpp, className, namespace, False, False);
         substitutions = {'namespace': namespace,
                          'className': className,
 			 'putFailedMethodName' : putFailedMethodName,
@@ -527,6 +536,7 @@ class InterfaceMixin:
             if emitPutFailed:
                 f.write(putFailedTemplate % substitutions)
             f.write(handleMessageTemplate % substitutions)
+            hpp.write(handleMessageTemplateDecl % substitutions)
         else:
             f.write(wrapperConstructorTemplate % substitutions)
             if emitPutFailed:
