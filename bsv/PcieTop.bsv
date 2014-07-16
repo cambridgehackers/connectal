@@ -121,28 +121,6 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    interface BscanTop bscanif = lbscan.loc[0];
 endmodule: mkPcieHost
 
-`ifndef IMPORT_HOSTIF
-(* synthesize *)
-`endif
-module mkSynthesizeablePortalTop
-`ifdef IMPORT_HOSTIF
-     #(HostType host)
-`endif
-     (PortalTop#(40, DataBusWidth, PinType, NumberOfMasters));
-   Clock defaultClock <- exposeCurrentClock();
-   //BscanTop local_bscan <- mkBscanTop(3); // Use USER3  (JTAG IDCODE address 0x22)
-`ifdef IMPORT_HOSTIF
-   let top <- mkPortalTop(host);
-`else
-   let top <- mkPortalTop(`BSCAN_ARG);
-`endif
-   interface masters = top.masters;
-   interface slave = top.slave;
-   interface interrupt = top.interrupt;
-   interface leds = top.leds;
-   interface pins = top.pins;
-endmodule
-
 interface PcieTop#(type ipins);
 `ifndef BSIM
    (* prefix="PCIE" *)
@@ -198,6 +176,7 @@ module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p
    interface PcieHost tpciehost = pciehost;
 endmodule
 
+
 `ifndef BSIM
 (* no_default_clock, no_default_reset *)
 `endif
@@ -207,9 +186,9 @@ module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Cl
    PcieHostTop host <- mkPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n);
 
 `ifdef IMPORT_HOSTIF
-   let portalTop <- mkSynthesizeablePortalTop(host, clocked_by host.tepClock125, reset_by host.tepReset125);
+   PortalTop#(40, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkPortalTop(host, clocked_by host.tepClock125, reset_by host.tepReset125);
 `else
-   let portalTop <- mkSynthesizeablePortalTop(clocked_by host.tepClock125, reset_by host.tepReset125);
+   PortalTop#(40, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkPortalTop(clocked_by host.tepClock125, reset_by host.tepReset125);
 `endif
    mkConnection(host.tpciehost.master, portalTop.slave, clocked_by host.tepClock125, reset_by host.tepReset125);
    if (valueOf(NumberOfMasters) > 0) begin
