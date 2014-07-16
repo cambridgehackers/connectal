@@ -483,14 +483,14 @@ static int local_manager_reference(PortalAlloc* pa)
 
 int main(int argc, const char **argv)
 {
-  intarr[0] = new PortalInternal(IfcNames_MemreadRequest);
-  intarr[1] = new PortalInternal(IfcNames_MemreadIndication);
-  intarr[2] = new PortalInternal(IfcNames_DmaConfig);
-  intarr[3] = new PortalInternal(IfcNames_DmaIndication);
-  indfn[0] = MemreadRequestProxyStatus_handleMessage;
+  intarr[0] = new PortalInternal(IfcNames_DmaIndication);     // fpga1
+  intarr[1] = new PortalInternal(IfcNames_MemreadIndication); // fpga2
+  intarr[2] = new PortalInternal(IfcNames_DmaConfig);         // fpga3
+  intarr[3] = new PortalInternal(IfcNames_MemreadRequest);    // fpga4
+  indfn[0] = DmaIndicationWrapper_handleMessage;
   indfn[1] = MemreadIndicationWrapper_handleMessage;
   indfn[2] = DmaConfigProxyStatus_handleMessage;
-  indfn[3] = DmaIndicationWrapper_handleMessage;
+  indfn[3] = MemreadRequestProxyStatus_handleMessage;
 
   PortalAlloc *srcAlloc = (PortalAlloc *)malloc(sizeof(PortalAlloc));
   memset(srcAlloc, 0, sizeof(PortalAlloc));
@@ -581,7 +581,7 @@ int main(int argc, const char **argv)
     buf[i++] = ref_srcAlloc;
     //sendMessage(&msg);
     for (int i = 16/4-1; i >= 0; i--)
-      intarr[0]->map_base[PORTAL_REQ_FIFO(CHAN_NUM_MemreadRequestProxy_startRead)] = buf[i];
+      intarr[3]->map_base[PORTAL_REQ_FIFO(CHAN_NUM_MemreadRequestProxy_startRead)] = buf[i];
   };
   sem_wait(&test_sem);
   return 0;
