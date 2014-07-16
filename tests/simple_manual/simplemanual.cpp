@@ -50,7 +50,7 @@ void SimpleIndicationWrapperheard2_cb (  struct PortalInternal *p, const uint32_
 
 static void manual_event(void)
 {
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < MAX_INDARRAY; i++) {
       PortalInternal *instance = intarr[i];
       volatile unsigned int *map_base = instance->map_base;
       unsigned int queue_status;

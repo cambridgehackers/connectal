@@ -45,7 +45,7 @@ static uint64_t localmanager_mtCnt;
 static DmaDbgRec localmanager_dbgRec;
 
 #define MAX_INDARRAY 4
-typedef int (*INDFUNC)(volatile unsigned int *map_base, unsigned int channel);
+typedef int (*INDFUNC)(PortalInternal *p, unsigned int channel);
 static PortalInternal *intarr[MAX_INDARRAY];
 static INDFUNC indfn[MAX_INDARRAY];
 
@@ -54,302 +54,82 @@ static int burstLen = 16;
 static int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
 static size_t test_sz  = numWords*sizeof(unsigned int);
 static size_t alloc_sz = test_sz;
-
-static int DmaIndicationWrapper_handleMessage(volatile unsigned int *map_base, unsigned int channel)
-{    
-    unsigned int buf[1024];
-    
-    switch (channel) { 
-    case CHAN_NUM_DmaIndicationWrapper_configResp: 
-    { 
-        struct {
-            uint32_t pointer:32;
-            uint64_t msg:64;
-        } payload;
-        for (int i = (12/4)-1; i >= 0; i--)
-            buf[i] = READL(this, &map_base[PORTAL_IND_FIFO(CHAN_NUM_DmaIndicationWrapper_configResp)]);
-        int i = 0;
-        payload.msg = (uint64_t)(buf[i]);
-        i++;
-        payload.msg |= (uint64_t)(((uint64_t)(buf[i])<<32));
-        i++;
-        payload.pointer = (uint32_t)(buf[i]);
-        i++;
-        //fprintf(stderr, "configResp: %x, %"PRIx64"\n", payload.pointer, payload.msg);
-        //fprintf(stderr, "configResp %d\n", payload.pointer);
+void DmaConfigProxyStatusputFailed_cb (  struct PortalInternal *p, const uint32_t v )
+{
+        const char* methodNameStrings[] = {"sglist", "region", "addrRequest", "getStateDbg", "getMemoryTraffic"};
+        fprintf(stderr, "putFailed: %s\n", methodNameStrings[v]);
+}
+void MemreadRequestProxyStatusputFailed_cb (  struct PortalInternal *p, const uint32_t v )
+{
+        const char* methodNameStrings[] = {"startRead"};
+        fprintf(stderr, "putFailed: %s\n", methodNameStrings[v]);
+}
+void MemreadIndicationWrapperreadDone_cb (  struct PortalInternal *p, const uint32_t mismatchCount )
+{
+         printf( "Memread_readDone(mismatch = %x)\n", mismatchCount);
+         sem_post(&test_sem);
+}
+void DmaIndicationWrapperconfigResp_cb (  struct PortalInternal *p, const uint32_t pointer, const uint64_t msg )
+{
+        //fprintf(stderr, "configResp: %x, %"PRIx64"\n", pointer, msg);
+        //fprintf(stderr, "configResp %d\n", pointer);
         sem_post(&localmanager_confSem);
-        break;
-    }
-
-    case CHAN_NUM_DmaIndicationWrapper_addrResponse: 
-    { 
-        struct {
-            uint64_t physAddr:64;
-        } payload;
-        for (int i = (8/4)-1; i >= 0; i--)
-            buf[i] = READL(this, &map_base[PORTAL_IND_FIFO(CHAN_NUM_DmaIndicationWrapper_addrResponse)]);
-        int i = 0;
-        payload.physAddr = (uint64_t)(buf[i]);
-        i++;
-        payload.physAddr |= (uint64_t)(((uint64_t)(buf[i])<<32));
-        i++;
-        fprintf(stderr, "DmaIndication_addrResponse(physAddr=%"PRIx64")\n", payload.physAddr);
-        break;
-    }
-
-    case CHAN_NUM_DmaIndicationWrapper_badPointer: 
-    { 
-        struct {
-            uint32_t pointer:32;
-        } payload;
-        for (int i = (4/4)-1; i >= 0; i--)
-            buf[i] = READL(this, &map_base[PORTAL_IND_FIFO(CHAN_NUM_DmaIndicationWrapper_badPointer)]);
-        int i = 0;
-        payload.pointer = (uint32_t)(buf[i]);
-        i++;
-        fprintf(stderr, "DmaIndication_badPointer(pointer=%x)\n", payload.pointer);
-        break;
-    }
-
-    case CHAN_NUM_DmaIndicationWrapper_badAddrTrans: 
-    { 
-        struct {
-            uint32_t pointer:32;
-            uint64_t offset:64;
-            uint64_t barrier:64;
-        } payload;
-        for (int i = (20/4)-1; i >= 0; i--)
-            buf[i] = READL(this, &map_base[PORTAL_IND_FIFO(CHAN_NUM_DmaIndicationWrapper_badAddrTrans)]);
-        int i = 0;
-        payload.barrier = (uint64_t)(buf[i]);
-        i++;
-        payload.barrier |= (uint64_t)(((uint64_t)(buf[i])<<32));
-        i++;
-        payload.offset = (uint64_t)(buf[i]);
-        i++;
-        payload.offset |= (uint64_t)(((uint64_t)(buf[i])<<32));
-        i++;
-        payload.pointer = (uint32_t)(buf[i]);
-        i++;
-        fprintf(stderr, "DmaIndication_badAddrTrans(pointer=%x, offset=%"PRIx64" barrier=%"PRIx64"\n", payload.pointer, payload.offset, payload.barrier);
-        break;
-    }
-
-    case CHAN_NUM_DmaIndicationWrapper_badPageSize: 
-    { 
-        struct {
-            uint32_t pointer:32;
-            uint32_t sz:32;
-        } payload;
-        for (int i = (8/4)-1; i >= 0; i--)
-            buf[i] = READL(this, &map_base[PORTAL_IND_FIFO(CHAN_NUM_DmaIndicationWrapper_badPageSize)]);
-        int i = 0;
-        payload.sz = (uint32_t)(buf[i]);
-        i++;
-        payload.pointer = (uint32_t)(buf[i]);
-        i++;
-        fprintf(stderr, "DmaIndication_badPageSize(pointer=%x, len=%x)\n", payload.pointer, payload.sz);
-        break;
-    }
-
-    case CHAN_NUM_DmaIndicationWrapper_badNumberEntries: 
-    { 
-        struct {
-            uint32_t pointer:32;
-            uint32_t sz:32;
-            uint32_t idx:32;
-        } payload;
-        for (int i = (12/4)-1; i >= 0; i--)
-            buf[i] = READL(this, &map_base[PORTAL_IND_FIFO(CHAN_NUM_DmaIndicationWrapper_badNumberEntries)]);
-        int i = 0;
-        payload.idx = (uint32_t)(buf[i]);
-        i++;
-        payload.sz = (uint32_t)(buf[i]);
-        i++;
-        payload.pointer = (uint32_t)(buf[i]);
-        i++;
-        fprintf(stderr, "DmaIndication_badNumberEntries(pointer=%x, len=%x, idx=%x)\n", payload.pointer, payload.sz, payload.idx);
-        break;
-    }
-
-    case CHAN_NUM_DmaIndicationWrapper_badAddr: 
-    { 
-        struct {
-            uint32_t pointer:32;
-            uint64_t offset:64;
-            uint64_t physAddr:64;
-        } payload;
-        for (int i = (20/4)-1; i >= 0; i--)
-            buf[i] = READL(this, &map_base[PORTAL_IND_FIFO(CHAN_NUM_DmaIndicationWrapper_badAddr)]);
-        int i = 0;
-        payload.physAddr = (uint64_t)(buf[i]);
-        i++;
-        payload.physAddr |= (uint64_t)(((uint64_t)(buf[i])<<32));
-        i++;
-        payload.offset = (uint64_t)(buf[i]);
-        i++;
-        payload.offset |= (uint64_t)(((uint64_t)(buf[i])<<32));
-        i++;
-        payload.pointer = (uint32_t)(buf[i]);
-        i++;
-        fprintf(stderr, "DmaIndication_badAddr(pointer=%x offset=%"PRIx64" physAddr=%"PRIx64")\n", payload.pointer, payload.offset, payload.physAddr);
-        break;
-    }
-
-    case CHAN_NUM_DmaIndicationWrapper_reportStateDbg: 
-    { 
-        struct {
-            DmaDbgRec rec;
-        } payload;
-        for (int i = (16/4)-1; i >= 0; i--)
-            buf[i] = READL(this, &map_base[PORTAL_IND_FIFO(CHAN_NUM_DmaIndicationWrapper_reportStateDbg)]);
-        int i = 0;
-        payload.rec.w = (uint32_t)(buf[i]);
-        i++;
-        payload.rec.z = (uint32_t)(buf[i]);
-        i++;
-        payload.rec.y = (uint32_t)(buf[i]);
-        i++;
-        payload.rec.x = (uint32_t)(buf[i]);
-        i++;
-        //fprintf(stderr, "reportStateDbg: {x:%08x y:%08x z:%08x w:%08x}\n", payload.rec.x,payload.rec.y,payload.rec.z,payload.rec.w);
-        localmanager_dbgRec = payload.rec;
+}
+void DmaIndicationWrapperaddrResponse_cb (  struct PortalInternal *p, const uint64_t physAddr )
+{
+        fprintf(stderr, "DmaIndication_addrResponse(physAddr=%"PRIx64")\n", physAddr);
+}
+void DmaIndicationWrapperbadPointer_cb (  struct PortalInternal *p, const uint32_t pointer )
+{
+        fprintf(stderr, "DmaIndication_badPointer(pointer=%x)\n", pointer);
+}
+void DmaIndicationWrapperbadAddrTrans_cb (  struct PortalInternal *p, const uint32_t pointer, const uint64_t offset, const uint64_t barrier )
+{
+        fprintf(stderr, "DmaIndication_badAddrTrans(pointer=%x, offset=%"PRIx64" barrier=%"PRIx64"\n", pointer, offset, barrier);
+}
+void DmaIndicationWrapperbadPageSize_cb (  struct PortalInternal *p, const uint32_t pointer, const uint32_t sz )
+{
+        fprintf(stderr, "DmaIndication_badPageSize(pointer=%x, len=%x)\n", pointer, sz);
+}
+void DmaIndicationWrapperbadNumberEntries_cb (  struct PortalInternal *p, const uint32_t pointer, const uint32_t sz, const uint32_t idx )
+{
+        fprintf(stderr, "DmaIndication_badNumberEntries(pointer=%x, len=%x, idx=%x)\n", pointer, sz, idx);
+}
+void DmaIndicationWrapperbadAddr_cb (  struct PortalInternal *p, const uint32_t pointer, const uint64_t offset, const uint64_t physAddr )
+{
+        fprintf(stderr, "DmaIndication_badAddr(pointer=%x offset=%"PRIx64" physAddr=%"PRIx64")\n", pointer, offset, physAddr);
+}
+void DmaIndicationWrapperreportStateDbg_cb (  struct PortalInternal *p, const DmaDbgRec& rec )
+{
+        //fprintf(stderr, "reportStateDbg: {x:%08x y:%08x z:%08x w:%08x}\n", rec.x,rec.y,rec.z,rec.w);
+        localmanager_dbgRec = rec;
         fprintf(stderr, "dbgResp: %08x %08x %08x %08x\n", localmanager_dbgRec.x, localmanager_dbgRec.y, localmanager_dbgRec.z, localmanager_dbgRec.w);
         sem_post(&localmanager_dbgSem);
-        break;
-    }
-
-    case CHAN_NUM_DmaIndicationWrapper_reportMemoryTraffic: 
-    { 
-        struct {
-            uint64_t words:64;
-        } payload;
-        for (int i = (8/4)-1; i >= 0; i--)
-            buf[i] = READL(this, &map_base[PORTAL_IND_FIFO(CHAN_NUM_DmaIndicationWrapper_reportMemoryTraffic)]);
-        int i = 0;
-        payload.words = (uint64_t)(buf[i]);
-        i++;
-        payload.words |= (uint64_t)(((uint64_t)(buf[i])<<32));
-        i++;
-        //fprintf(stderr, "reportMemoryTraffic: words=%"PRIx64"\n", payload.words);
-        localmanager_mtCnt = payload.words;
+}
+void DmaIndicationWrapperreportMemoryTraffic_cb (  struct PortalInternal *p, const uint64_t words )
+{
+        //fprintf(stderr, "reportMemoryTraffic: words=%"PRIx64"\n", words);
+        localmanager_mtCnt = words;
         sem_post(&localmanager_mtSem);
-        break;
-    }
-
-    case CHAN_NUM_DmaIndicationWrapper_tagMismatch: 
-    { 
-        struct {
-            ChannelType x;
-            uint32_t a:32;
-            uint32_t b:32;
-        } payload;
-        for (int i = (12/4)-1; i >= 0; i--)
-            buf[i] = READL(this, &map_base[PORTAL_IND_FIFO(CHAN_NUM_DmaIndicationWrapper_tagMismatch)]);
-        int i = 0;
-        payload.b = (uint32_t)(buf[i]);
-        i++;
-        payload.a = (uint32_t)(buf[i]);
-        i++;
-        payload.x = (ChannelType)(((buf[i])&0x1ul));
-        i++;
-        fprintf(stderr, "tagMismatch: %s %d %d\n", payload.x==ChannelType_Read ? "Read" : "Write", payload.a, payload.b);
-        break;
-    }
-
-    default:
-        printf("DmaIndicationWrapper_handleMessage: unknown channel 0x%x\n", channel);
-        return 0;
-    }
-    return 0;
 }
-
-static int MemreadIndicationWrapper_handleMessage(volatile unsigned int *map_base, unsigned int channel)
-{    
-    unsigned int buf[1024];
-    
-    switch (channel) {
-    case CHAN_NUM_MemreadIndicationWrapper_readDone: 
-    { 
-        struct {
-            uint32_t mismatchCount:32;
-        } payload;
-        for (int i = (4/4)-1; i >= 0; i--)
-            buf[i] = READL(this, &map_base[PORTAL_IND_FIFO(CHAN_NUM_MemreadIndicationWrapper_readDone)]);
-        int i = 0;
-        payload.mismatchCount = (uint32_t)(buf[i]);
-        i++;
-         printf( "Memread_readDone(mismatch = %x)\n", payload.mismatchCount);
-         sem_post(&test_sem);
-        break;
-    }
-
-    default:
-        printf("MemreadIndicationWrapper_handleMessage: unknown channel 0x%x\n", channel);
-        return 0;
-    }
-    return 0;
-}
-
-static int DmaConfigProxyStatus_handleMessage(volatile unsigned int *map_base, unsigned int channel)
-{    
-    unsigned int buf[1024];
-    
-    switch (channel) { 
-    case CHAN_NUM_DmaConfigProxyStatus_putFailed: 
-    { 
-        struct {
-            uint32_t v:32;
-        } payload;
-        for (int i = (4/4)-1; i >= 0; i--)
-            buf[i] = READL(this, &map_base[PORTAL_IND_FIFO(CHAN_NUM_DmaConfigProxyStatus_putFailed)]);
-        const char* methodNameStrings[] = {"sglist", "region", "addrRequest", "getStateDbg", "getMemoryTraffic"};
-        fprintf(stderr, "putFailed: %s\n", methodNameStrings[payload.v]);
-        break;
-    }
-
-    default:
-        printf("DmaConfigProxyStatus_handleMessage: unknown channel 0x%x\n", channel);
-        return 0;
-    }
-    return 0;
-}
-
-static int MemreadRequestProxyStatus_handleMessage(volatile unsigned int *map_base, unsigned int channel)
-{    
-    unsigned int buf[1024];
-    switch (channel) {
-    case CHAN_NUM_MemreadRequestProxyStatus_putFailed: 
-    { 
-        struct {
-            uint32_t v:32;
-        } payload;
-        for (int i = (4/4)-1; i >= 0; i--)
-            buf[i] = READL(this, &map_base[PORTAL_IND_FIFO(CHAN_NUM_MemreadRequestProxyStatus_putFailed)]);
-        const char* methodNameStrings[] = {"startRead"};
-        fprintf(stderr, "putFailed: %s\n", methodNameStrings[payload.v]);
-        break;
-    }
-
-    default:
-        printf("MemreadRequestProxyStatus_handleMessage: unknown channel 0x%x\n", channel);
-        return 0;
-    }
-    return 0;
+void DmaIndicationWrappertagMismatch_cb (  struct PortalInternal *p, const ChannelType& x, const uint32_t a, const uint32_t b )
+{
+        fprintf(stderr, "tagMismatch: %s %d %d\n", x==ChannelType_Read ? "Read" : "Write", a, b);
 }
 
 static void manual_event(void)
 {
-    for (int i = 0; i < sizeof(intarr)/sizeof(intarr[i]); i++) {
+    for (int i = 0; i < MAX_INDARRAY; i++) {
       PortalInternal *instance = intarr[i];
+      volatile unsigned int *map_base = instance->map_base;
       unsigned int queue_status;
-      while ((queue_status= instance->map_base[IND_REG_QUEUE_STATUS])) {
-        unsigned int int_src = instance->map_base[IND_REG_INTERRUPT_FLAG];
-        unsigned int int_en  = instance->map_base[IND_REG_INTERRUPT_MASK];
-        unsigned int ind_count  = instance->map_base[IND_REG_INTERRUPT_COUNT];
-        fprintf(stderr, "(%d:%s) about to receive messages int=%08x en=%08x qs=%08x indfn %p\n", i, instance->name, int_src, int_en, queue_status, indfn[i]);
+      while ((queue_status= READL(instance, &map_base[IND_REG_QUEUE_STATUS]))) {
+        unsigned int int_src = READL(instance, &map_base[IND_REG_INTERRUPT_FLAG]);
+        unsigned int int_en  = READL(instance, &map_base[IND_REG_INTERRUPT_MASK]);
+        unsigned int ind_count  = READL(instance, &map_base[IND_REG_INTERRUPT_COUNT]);
+        fprintf(stderr, "(%d:%s) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->name, int_src, int_en, queue_status);
         if (indfn[i])
-            indfn[i](instance->map_base, queue_status-1);
+            indfn[i](instance, queue_status-1);
       }
     }
 }
@@ -403,24 +183,7 @@ static int local_manager_reference(PortalAlloc* pa)
     dma_addr_t addr = e->dma_address;
     if (trace_memory)
       fprintf(stderr, "local_manager_sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, (long)addr, e->length);
-    {
-    unsigned int buf[128];
-    struct {
-        uint32_t pointer:32;
-        uint64_t addr:64;
-        uint32_t len:32;
-    } payload;
-    payload.pointer = id;
-    payload.addr = addr;
-    payload.len = e->length;
-    int i = 0;
-    buf[i++] = payload.len;
-    buf[i++] = payload.addr;
-    buf[i++] = (payload.addr>>32);
-    buf[i++] = payload.pointer;
-    for (int i = 16/4-1; i >= 0; i--)
-      intarr[2]->map_base[PORTAL_REQ_FIFO(CHAN_NUM_DmaConfigProxy_sglist)] = buf[i];
-    };
+    DmaConfigProxy_sglist (intarr[2] , id, addr, e->length);
     size_accum += e->length;
     // fprintf(stderr, "%s:%d sem_wait\n", __FILE__, __LINE__);
     sem_wait(&localmanager_confSem);
@@ -445,38 +208,8 @@ static int local_manager_reference(PortalAlloc* pa)
     fprintf(stderr, "regions %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,regions[0], regions[1], regions[2]);
     fprintf(stderr, "borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borders[0].border, borders[1].border, borders[2].border);
   }
-  {
-    unsigned int buf[128];
-    struct {
-        uint32_t pointer:32;
-        uint64_t barr8:64;
-        uint32_t off8:32;
-        uint64_t barr4:64;
-        uint32_t off4:32;
-        uint64_t barr0:64;
-        uint32_t off0:32;
-    } payload;
-    payload.pointer = id;
-    payload.barr8 = borders[0].border;
-    payload.off8 = borders[0].idxOffset;
-    payload.barr4 = borders[1].border;
-    payload.off4 = borders[1].idxOffset;
-    payload.barr0 = borders[2].border;
-    payload.off0 = borders[2].idxOffset;
-    int i = 0;
-    buf[i++] = payload.off0;
-    buf[i++] = payload.barr0;
-    buf[i++] = (payload.barr0>>32);
-    buf[i++] = payload.off4;
-    buf[i++] = payload.barr4;
-    buf[i++] = (payload.barr4>>32);
-    buf[i++] = payload.off8;
-    buf[i++] = payload.barr8;
-    buf[i++] = (payload.barr8>>32);
-    buf[i++] = payload.pointer;
-    for (int i = 40/4-1; i >= 0; i--)
-      intarr[2]->map_base[PORTAL_REQ_FIFO(CHAN_NUM_DmaConfigProxy_region)] = buf[i];
-  };
+  DmaConfigProxy_region(intarr[2], id, borders[0].border, borders[0].idxOffset,
+       borders[1].border, borders[1].idxOffset, borders[2].border, borders[2].idxOffset);
   sem_wait(&localmanager_confSem);
   return id;
 }
@@ -572,17 +305,7 @@ int main(int argc, const char **argv)
 #endif /////////////////////
   unsigned int ref_srcAlloc = local_manager_reference(srcAlloc);
   printf( "Main: starting read %08x\n", numWords);
-  {
-    unsigned int buf[128];
-    int i = 0;
-    buf[i++] = 1; /* iterCnt */
-    buf[i++] = burstLen;
-    buf[i++] = numWords;
-    buf[i++] = ref_srcAlloc;
-    //sendMessage(&msg);
-    for (int i = 16/4-1; i >= 0; i--)
-      intarr[3]->map_base[PORTAL_REQ_FIFO(CHAN_NUM_MemreadRequestProxy_startRead)] = buf[i];
-  };
+  MemreadRequestProxy_startRead (intarr[3] , ref_srcAlloc, numWords, burstLen, 1);
   sem_wait(&test_sem);
   return 0;
 }
