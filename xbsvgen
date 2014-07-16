@@ -740,8 +740,10 @@ if __name__=='__main__':
         i.ind.emitCWrapperDeclaration(hpp, generated_hpp, "ProxyStatus")
         i.emitCProxyDeclaration(hpp, generated_hpp, "Proxy")
         i.ind.emitCWrapperImplementation(cpp, "ProxyStatus", '', False)
-        i.emitCProxyImplementation(cpp, "Proxy")
+        i.emitCProxyImplementation(cpp, "Proxy", "", False)
+        cpp.write('\n/************** Start of Proxy CPP ***********/\n')
         i.ind.emitCWrapperImplementation(cpp, "ProxyStatus", '', True)
+        i.emitCProxyImplementation(cpp, "Proxy", "", True)
         hpp.write('#endif // _%(name)s_H_\n' % {'name': i.name.upper()})
         hpp.close();
         cpp.close();
@@ -756,8 +758,10 @@ if __name__=='__main__':
         cpp.write('#include "%s"' % hppname)
         i.ind.emitCProxyDeclaration(hpp, generated_hpp, "WrapperStatus")
         i.emitCWrapperDeclaration(hpp, generated_hpp, "Wrapper")
-        i.ind.emitCProxyImplementation(cpp, "WrapperStatus")
+        i.ind.emitCProxyImplementation(cpp, "WrapperStatus", "", False)
         i.emitCWrapperImplementation(cpp, "Wrapper", '', False)
+        cpp.write('\n/************** Start of Wrapper CPP ***********/\n')
+        i.ind.emitCProxyImplementation(cpp, "WrapperStatus", "", True)
         i.emitCWrapperImplementation(cpp, "Wrapper", '', True)
         hpp.write('#endif // _%(name)s_H_\n' % {'name': i.name.upper()})
         hpp.close();

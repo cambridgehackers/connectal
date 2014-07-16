@@ -102,15 +102,18 @@ int %(namespace)s%(className)s_handleMessage(PortalInternal *p, unsigned int cha
     switch (channel) {
 %(responseSzCases)s
     default:
-        printf("%(namespace)s%(className)s::handleMessage: unknown channel 0x%%x\\n", channel);
+        printf("%(namespace)s%(className)s_handleMessage: unknown channel 0x%%x\\n", channel);
         if (runaway++ > 10) {
-            printf("%(namespace)s%(className)s::handleMessage: too many bogus indications, exiting\\n");
+            printf("%(namespace)s%(className)s_handleMessage: too many bogus indications, exiting\\n");
             exit(-1);
         }
         return 0;
     }
     return 0;
 }
+'''
+
+handleMessageTemplateCpp='''
 int %(namespace)s%(className)s::handleMessage(unsigned int channel)
 {
     return %(namespace)s%(className)s_handleMessage(this, channel);
@@ -470,19 +473,21 @@ class InterfaceMixin:
             d.emitCDeclaration(f, False, indentation + 4, namespace)
         f.write(wrapperClassSuffixTemplate % subs)
 	of.write('enum { ' + ','.join(indChanNums) + '};\n')
-    def emitCProxyImplementation(self, f,  suffix, namespace=''):
+    def emitCProxyImplementation(self, f,  suffix, namespace, doCpp):
         className = "%s%s" % (cName(self.name), suffix)
 	statusName = "%s%s" % (cName(self.name), 'ProxyStatus')
-        for d in self.decls:
-            d.emitCImplementation(f, className, namespace,True, False)
 	statusInstantiate = '' if self.hasPutFailed() else 'proxyStatus = new %s(this, poller);\n' % statusName
         substitutions = {'namespace': namespace,
                          'className': className,
 			 'statusInstantiate' : statusInstantiate,
                          'parentClass': self.parentClass('PortalInternal')}
-        f.write(proxyConstructorTemplate % substitutions)
-        for d in self.decls:
-            d.emitCImplementation(f, className, namespace,True, True)
+        if not doCpp:
+            for d in self.decls:
+                d.emitCImplementation(f, className, namespace,True, False)
+        else:
+            f.write(proxyConstructorTemplate % substitutions)
+            for d in self.decls:
+                d.emitCImplementation(f, className, namespace,True, True)
     def emitCWrapperImplementation (self, f,  suffix, namespace, doCpp):
         className = "%s%s" % (cName(self.name), suffix)
         emitPutFailed = self.hasPutFailed()
@@ -508,6 +513,7 @@ class InterfaceMixin:
             f.write(wrapperConstructorTemplate % substitutions)
             if emitPutFailed:
                 f.write(putFailedTemplateCpp % substitutions)
+            f.write(handleMessageTemplateCpp % substitutions)
 
 
 class ParamMixin:
