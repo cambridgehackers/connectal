@@ -203,7 +203,8 @@ endmodule
 `endif
 module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)
    (PcieTop#(PinType));
-PcieHostTop host <- mkPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n);
+
+   PcieHostTop host <- mkPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n);
 
 `ifdef IMPORT_HOSTIF
    let portalTop <- mkSynthesizeablePortalTop(host, clocked_by host.tepClock125, reset_by host.tepReset125);
