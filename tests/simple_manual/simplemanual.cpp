@@ -31,68 +31,18 @@ static int v2a = 2;
 static int v2b = 4;
 static PortalInternal *intarr[2];
 
-static int indication_handleMessage(volatile unsigned int* map_base, unsigned int channel)
-{    
-    unsigned int buf[1024];
-    switch (channel) {
-    case CHAN_NUM_SimpleIndicationWrapper_heard1: 
-    { 
-        struct {
-            uint32_t v:32;
-        } payload;
-        for (int i = (4/4)-1; i >= 0; i--)
-            buf[i] = map_base[PORTAL_IND_FIFO(CHAN_NUM_SimpleIndicationWrapper_heard1)];
-        int i = 0;
-        payload.v = (uint32_t)(((buf[i])&0xfffffffful));
-        i++;
-        fprintf(stderr, "heard1(%d)\n", payload.v);
-        break;
-    }
-    case CHAN_NUM_SimpleIndicationWrapper_heard2: 
-    { 
-        struct {
-            uint32_t a:32;
-            uint32_t b:32;
-        } payload;
-        for (int i = (8/4)-1; i >= 0; i--)
-            buf[i] = map_base[PORTAL_IND_FIFO(CHAN_NUM_SimpleIndicationWrapper_heard2)];
-        int i = 0;
-        payload.b = (uint32_t)(((buf[i])&0xfffffffful));
-        i++;
-        payload.a = (uint32_t)(((buf[i])&0xfffffffful));
-        i++;
-        fprintf(stderr, "heard2(%d %d)\n", payload.a, payload.b);
-        break;
-    }
-    default:
-        printf("SimpleIndicationWrapper::handleMessage: unknown channel 0x%x\n", channel);
-        return 0;
-    }
-    return 0;
+void SimpleRequestProxyStatusputFailed_cb (  struct PortalInternal *p, const uint32_t v )
+{
+    const char* methodNameStrings[] = {"say1", "say2"};
+    fprintf(stderr, "putFailed: %s\n", methodNameStrings[v]);
 }
-static int request_handleMessage(volatile unsigned int* map_base, unsigned int channel)
-{    
-    unsigned int buf[1024];
-    switch (channel) {
-    case CHAN_NUM_SimpleRequestProxyStatus_putFailed: 
-    { 
-        struct {
-            uint32_t v:32;
-        } payload;
-        for (int i = (4/4)-1; i >= 0; i--)
-            buf[i] = map_base[PORTAL_IND_FIFO(CHAN_NUM_SimpleRequestProxyStatus_putFailed)];
-        int i = 0;
-        payload.v = (uint32_t)(((buf[i])&0xfffffffful));
-        i++;
-        const char* methodNameStrings[] = {"say1", "say2"};
-        fprintf(stderr, "putFailed: %s\n", methodNameStrings[payload.v]);
-        break;
-    }
-    default:
-        printf("SimpleRequestProxyStatus::handleMessage: unknown channel 0x%x\n", channel);
-        return 0;
-    }
-    return 0;
+void SimpleIndicationWrapperheard1_cb (  struct PortalInternal *p, const uint32_t v )
+{
+    fprintf(stderr, "heard1(%d)\n", v);
+}
+void SimpleIndicationWrapperheard2_cb (  struct PortalInternal *p, const uint32_t a, const uint32_t b )
+{
+    fprintf(stderr, "heard2(%d %d)\n", a, b);
 }
 
 static void manual_event(void)
@@ -105,10 +55,10 @@ static void manual_event(void)
         unsigned int int_en  = instance->map_base[IND_REG_INTERRUPT_MASK];
         unsigned int ind_count  = instance->map_base[IND_REG_INTERRUPT_COUNT];
         fprintf(stderr, "(%d:%s) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->name, int_src, int_en, queue_status);
-        if (i == 1)
-            indication_handleMessage(instance->map_base, queue_status-1);
+        if (i == 0)
+            SimpleRequestProxyStatus_handleMessage(instance, queue_status-1);
         else
-            request_handleMessage(instance->map_base, queue_status-1);
+            SimpleIndicationWrapper_handleMessage(instance, queue_status-1);
       }
     }
 }
@@ -121,36 +71,11 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "Main::calling say1(%d)\n", v1a);
   //device->say1(v1a);  
-  {
-    struct {
-        uint32_t v:32;
-    } payload;
-    payload.v = v1a;
-    //device->sendMessage(&msg);
-    unsigned int buf[128];
-    int i = 0;
-    buf[i++] = payload.v;
-    for (int i = 4/4-1; i >= 0; i--)
-      intarr[0]->map_base[PORTAL_REQ_FIFO(CHAN_NUM_SimpleRequestProxy_say1)] = buf[i];
-  };
+  SimpleRequestProxy_say1 (intarr[0] , v1a);
   manual_event();
 
   fprintf(stderr, "Main::calling say2(%d, %d)\n", v2a,v2b);
   //device->say2(v2a,v2b);
-  {
-    struct {
-        uint32_t a:32;
-        uint32_t b:32;
-    } payload;
-    payload.a = v2a;
-    payload.b = v2b;
-    //device->sendMessage(&msg);
-    unsigned int buf[128];
-    int i = 0;
-    buf[i++] = payload.b;
-    buf[i++] = payload.a;
-    for (int i = 8/4-1; i >= 0; i--)
-      intarr[0]->map_base[PORTAL_REQ_FIFO(CHAN_NUM_SimpleRequestProxy_say2)] = buf[i];
-  };
+  SimpleRequestProxy_say2 (intarr[0], v2a, v2b);
   manual_event();
 }
