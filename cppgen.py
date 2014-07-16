@@ -73,23 +73,26 @@ wrapperConstructorTemplate='''
 putFailedMethodName = "putFailed"
 
 putFailedTemplate='''
-void %(namespace)s%(className)s::%(putFailedMethodName)s(uint32_t v){
+void %(namespace)s%(className)s_%(putFailedMethodName)s(uint32_t v)
+{
     const char* methodNameStrings[] = {%(putFailedStrings)s};
     fprintf(stderr, "putFailed: %%s\\n", methodNameStrings[v]);
     //exit(1);
-  }
+}
+void %(namespace)s%(className)s::%(putFailedMethodName)s(uint32_t v)
+{
+    %(namespace)s%(className)s_%(putFailedMethodName)s(v);
+}
 '''
 
 responseSzCaseTemplate='''
     case %(channelNumber)s: 
-    { 
-        %(className)s%(methodName)sdemarshall(this);
+        %(className)s%(methodName)s_demarshall(p);
         break;
-    }
 '''
 
 handleMessageTemplate='''
-int %(namespace)s%(className)s::handleMessage(unsigned int channel)
+int %(namespace)s%(className)s_handleMessage(PortalInternal *p, unsigned int channel)
 {    
     static int runaway = 0;
     
@@ -105,28 +108,36 @@ int %(namespace)s%(className)s::handleMessage(unsigned int channel)
     }
     return 0;
 }
+int %(namespace)s%(className)s::handleMessage(unsigned int channel)
+{
+    return %(namespace)s%(className)s_handleMessage(this, channel);
+}
 '''
 
 proxyMethodTemplate='''
-void %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
+void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p, %(paramDeclarations)s )
 {
-    //%(className)s%(methodName)sMSG msg;
     %(className)s%(methodName)sPayload payload;
 %(paramSetters)s
-    %(className)s%(methodName)smarshall(this, payload);
+    %(className)s%(methodName)s_marshall(p, payload);
+};
+
+void %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
+{
+    %(namespace)s%(className)s_%(methodName)s (this, %(paramReferences)s );
 };
 '''
 
 msgTemplate='''
 typedef struct {
-    %(paramStructDeclarations)s
+%(paramStructDeclarations)s
 } %(className)s%(methodName)sPayload;
 
-void %(className)s%(methodName)smarshall(PortalInternal *p, %(className)s%(methodName)sPayload &payload) {
+void %(className)s%(methodName)s_marshall(PortalInternal *p, %(className)s%(methodName)sPayload &payload) {
     volatile unsigned int* addr = &(p->map_base[PORTAL_REQ_FIFO(%(methodChannelOffset)s)]);
 %(paramStructMarshall)s
 }
-void %(className)s%(methodName)sdemarshall(PortalInternal *p){
+void %(className)s%(methodName)s_demarshall(PortalInternal *p){
     %(className)s%(methodName)sPayload payload;
     unsigned int tmp;
     volatile unsigned int* addr = &(p->map_base[PORTAL_IND_FIFO(%(methodChannelOffset)s)]);
@@ -303,6 +314,7 @@ class MethodMixin:
             'methodName': cName(self.name),
             'MethodName': capitalize(cName(self.name)),
             'paramDeclarations': ', '.join(paramDeclarations),
+            'paramReferences': ', '.join([p.name for p in params]),
             'paramStructDeclarations': ''.join(paramStructDeclarations),
             'paramStructMarshall': ''.join(paramStructMarshall),
             'paramStructDemarshall': ''.join(paramStructDemarshall),
