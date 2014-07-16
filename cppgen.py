@@ -115,7 +115,7 @@ int %(namespace)s%(className)s::handleMessage(unsigned int channel)
 '''
 
 proxyMethodTemplate='''
-void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p, %(paramDeclarations)s )
+void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p %(paramSeparator)s %(paramDeclarations)s )
 {
     %(className)s%(methodName)sPayload payload;
 %(paramSetters)s
@@ -124,7 +124,7 @@ void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p, %(paramDeclar
 
 void %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
 {
-    %(namespace)s%(className)s_%(methodName)s (this, %(paramReferences)s );
+    %(namespace)s%(className)s_%(methodName)s (this %(paramSeparator)s %(paramReferences)s );
 };
 '''
 
@@ -317,6 +317,7 @@ class MethodMixin:
             'paramReferences': ', '.join([p.name for p in params]),
             'paramStructDeclarations': ''.join(paramStructDeclarations),
             'paramStructMarshall': ''.join(paramStructMarshall),
+            'paramSeparator': ',' if params != [] else '',
             'paramStructDemarshall': ''.join(paramStructDemarshall),
             'paramSetters': ''.join(paramSetters),
             'paramNames': ', '.join(['msg->%s' % p.name for p in params]),
