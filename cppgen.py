@@ -199,7 +199,7 @@ class MethodMixin:
     def emitCStructDeclaration(self, f, of, namespace, className):
         paramValues = ', '.join([p.name for p in self.params])
         formalParams = self.formalParameters(self.params)
-        formalParams.insert(0, ' PortalInternal *p')
+        formalParams.insert(0, ' struct PortalInternal *p')
         of.write('void %s%s_cb ( ' % (className, cName(self.name)))
         of.write(', '.join(formalParams))
         of.write(' );\n')
