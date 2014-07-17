@@ -46,7 +46,7 @@
 
 static int trace_memory;// = 1;
 
-DmaManager::DmaManager(DmaConfigProxy *argDevice)
+DmaManager::DmaManager(PortalInternal *argDevice)
   : handle(1), device(argDevice)
 {
 #ifndef MMAP_HW
@@ -97,7 +97,7 @@ int DmaManager::dCacheFlushInval(PortalAlloc *portalAlloc, void *__p)
 uint64_t DmaManager::show_mem_stats(ChannelType rc)
 {
   uint64_t rv = 0;
-  device->getMemoryTraffic(rc);
+  DMAGetMemoryTraffic(device, rc);
   sem_wait(&mtSem);
   rv += mtCnt;
   return rv;
@@ -146,7 +146,7 @@ int DmaManager::reference(PortalAlloc* pa)
 #endif
     if (trace_memory)
       fprintf(stderr, "DmaManager::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, (long)addr, e->length);
-    device->sglist(id, addr, e->length);
+    DMAsglist(device, id, addr, e->length);
     size_accum += e->length;
     // fprintf(stderr, "%s:%d sem_wait\n", __FILE__, __LINE__);
     sem_wait(&confSem);
@@ -178,7 +178,7 @@ int DmaManager::reference(PortalAlloc* pa)
     fprintf(stderr, "regions %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,regions[0], regions[1], regions[2]);
     fprintf(stderr, "borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borders[0].border, borders[1].border, borders[2].border);
   }
-  device->region(id,
+  DMAregion(device, id,
 	 borders[0].border, borders[0].idxOffset,
 	 borders[1].border, borders[1].idxOffset,
 	 borders[2].border, borders[2].idxOffset);
@@ -208,18 +208,19 @@ void DmaManager::confResp(uint32_t channelId)
 
 int DmaManager::alloc(size_t size, PortalAlloc **ppa)
 {
-  PortalAlloc *portalAlloc = (PortalAlloc *)malloc(sizeof(PortalAlloc));
-  memset(portalAlloc, 0, sizeof(PortalAlloc));
-  portalAlloc->header.size = size;
-  int rc = ioctl(this->pa_fd, PA_ALLOC, portalAlloc);
+  PortalAlloc localPortalAlloc;
+  memset(&localPortalAlloc, 0, sizeof(localPortalAlloc));
+  localPortalAlloc.header.size = size;
+  int rc = ioctl(this->pa_fd, PA_ALLOC, &localPortalAlloc);
   if (rc){
     fprintf(stderr, "portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
     return rc;
   }
-  float mb = (float)portalAlloc->header.size/(float)(1<<20);
-  fprintf(stderr, "alloc size=%fMB rc=%d fd=%d numEntries=%d\n", 
-	  mb, rc, portalAlloc->header.fd, portalAlloc->header.numEntries);
-  portalAlloc = (PortalAlloc *)realloc(portalAlloc, sizeof(PortalAlloc)+((portalAlloc->header.numEntries+1)*sizeof(DmaEntry)));
+  long mb = localPortalAlloc.header.size/(1L<<20);
+  fprintf(stderr, "alloc size=%ldMB fd=%d numEntries=%d\n", 
+	  mb, localPortalAlloc.header.fd, localPortalAlloc.header.numEntries);
+  PortalAlloc *portalAlloc = (PortalAlloc *)malloc(sizeof(PortalAlloc)+((localPortalAlloc.header.numEntries+1)*sizeof(DmaEntry)));
+  memcpy(portalAlloc, &localPortalAlloc, sizeof(localPortalAlloc));
   rc = ioctl(this->pa_fd, PA_DMA_ADDRESSES, portalAlloc);
   if (rc){
     fprintf(stderr, "portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
