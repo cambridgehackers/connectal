@@ -20,3 +20,9 @@ void write_portal_bsim(portal *p, volatile unsigned int *addr, unsigned int v, c
 #define READL(CITEM, A) read_portal_bsim((CITEM)->p, (A), (CITEM)->name)
 #define WRITEL(CITEM, A, B) write_portal_bsim((CITEM)->p, (A), (B), (CITEM)->name)
 #endif
+
+#ifdef __KERNEL__
+typedef struct {
+    volatile unsigned int *map_base;
+} PortalInternal;
+#endif
