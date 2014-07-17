@@ -127,8 +127,13 @@ int main(int argc, const char **argv)
 
 #define LARGE_MAT
 #ifdef LARGE_MAT
+#ifdef BSIM
   int A = 32;
   int B = 512;
+#else
+  int A = 32;
+  int B = 512;
+#endif
   if (argc > 1) {
     B = strtoul(argv[1], 0, 0);
     A = 2*B;

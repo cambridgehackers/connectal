@@ -247,10 +247,8 @@ module  mkSharedInterleavedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(Shared
    let ub_MulLat = valueOf(UB_MulLat);
    let ub_AddLat = valueOf(UB_AddLat);
    let kk = valueOf(K);
-   
-   let n = valueOf(N);
+
    Bool verbose = False; //label == 0;
-   Bool timing  = False; //label == 0;
    
    Reg#(UInt#(20)) countReg     <- mkReg(0);
 
@@ -274,14 +272,14 @@ module  mkSharedInterleavedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(Shared
    FIFOF#(Token)                          bfifo <- mkFIFOF();
    PipeOut#(Token)                        bFunnel = toPipeOut(bfifo);
 
-   FIFOF#(Bool) firstFifo  <- mkSizedFIFOF(ub_MulLat);
-   FIFOF#(Bool) lastFifo   <- mkSizedFIFOF(ub_AddLat); 
-   Vector#(K,Reg#(Bit#(16))) firstCnts <- replicateM(mkReg(0));
-   Vector#(K,Reg#(Maybe#(Float))) gRegs <- replicateM(mkReg(Nothing));
-   Reg#(Bit#(16))   lastCnt <- mkReg(0);
-   Reg#(Bit#(16)) gatherCnt <- mkReg(0);
-   Vector#(K,FIFOF#(Token)) dotfifos   <- replicateM(mkFIFOF1);
-   
+   Reg#(Bit#(16)) firstCnt <- mkReg(0);
+   Reg#(Bool)         gReg <- mkReg(False);
+   FIFOF#(Float)     gFifo <- mkSizedFIFOF(kk);
+   Reg#(Bit#(16))  lastCnt <- mkReg(0);
+   Reg#(Bit#(16))gatherCnt <- mkReg(0);
+
+   FIFOF#(Tuple2#(Bool,Bool))    flFifo <- mkSizedFIFOF(ub_MulLat);
+   Vector#(K,FIFOF#(Token))    dotfifos <- replicateM(mkFIFOF1);
    Reg#(Bit#(TAdd#(1,TLog#(K)))) rowReg <- mkReg(0);
       
    Reg#(Bit#(32)) lastMul <- mkReg(0);
@@ -300,20 +298,16 @@ module  mkSharedInterleavedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(Shared
    
    (* fire_when_enabled *)
    rule multiply;
-      if (verbose || timing)
-	 lastMul <= cycles;
+      lastMul <= cycles;
       let a <- toGet(aFunnel).get();
       let b <- toGet(bFunnel).get();
-      let first = a.first;
-      let last = a.last;
-      firstFifo.enq(first);
-      lastFifo.enq(last);
+      flFifo.enq(tuple2(a.first,a.last));
       if (a.first != b.first) 
 	 $display("****\n    Warning: a.first=%d != b.first=%d\n****", a.first, b.first);
       if (a.last != b.last) 
 	 $display("****\n    Warning: a.last=%d != b.last=%d\n****", a.last, b.last);
-      if (verbose || timing) 
-	 $display("%08d multiply: label=%d mulin first=%d last=%d", cycles-lastMul, label, first, last);
+      if (verbose) 
+	 $display("%08d multiply: label=%d mulin first=%d last=%d", cycles-lastMul, label, a.first, a.last);
       mul.request.put(tuple2(a.v, b.v));
 `ifdef TAGGED_TOKENS
       tag_fifo.enq(tuple2(a.row,b.col));
@@ -332,25 +326,23 @@ module  mkSharedInterleavedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(Shared
    (* fire_when_enabled *)
    rule accumulate if (!gather_phase);
       incrementRowReg;
-      let row = rowReg;
-      let first <- toGet(firstFifo).get();
-      let last <- toGet(lastFifo).get;
-      if (verbose || timing)
-	 lastAcc <= cycles;
-      if (verbose) $display("%08d accumulate: label=%d mulout row=%d first=%d last=%d ", 
-			    cycles-lastAcc, label, row, first, last);
+      lastAcc <= cycles;
+      match {.first, .last} <- toGet(flFifo).get();
+      if (verbose) $display("%08d accumulate: label=%d mulout first=%d last=%d firstCnt=%d lastCnt=%d", 
+			    cycles-lastAcc, label, first, last, firstCnt, lastCnt);
       match {.resp,.*} <- mul.response.get;
       let acc = unpack(0);
-      if (firstCnts[row] == fromInteger(valueOf(gatherSz)))
+      if (firstCnt == fromInteger(valueOf(TMul#(K,gatherSz))))
 	 acc <- toGet(adder_buffer).get;
-      else 
-	 firstCnts[row] <= firstCnts[row]+1;
+      else begin
+	 firstCnt <= firstCnt+1;
+      end
       adder.request.put(tuple2(resp,acc));
       if(last) begin
 	 lastCnt <= lastCnt+1;
-	 if (verbose) $display("mulout lastCnt=%d, K=%d", lastCnt, kk);
       end
 `ifdef TAGGED_TOKENS
+      let row = rowReg;
       let t <- toGet(tag_fifo).get;
       tag_regs[row] <= t;
 `endif
@@ -360,25 +352,25 @@ module  mkSharedInterleavedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(Shared
    (* fire_when_enabled *)
    rule gather if (gather_phase);
       incrementRowReg;
+      lastGather <= cycles;
       let row = rowReg;
       let last_row = row == fromInteger(kk-1);
       let last_pass = gatherCnt+1 == fromInteger(valueOf(gatherSz));
-      if (verbose || timing)
-	 lastGather <= cycles;
-      if (verbose || timing)
-	 $display("%08d gather: gather=%d row=%d last_pass=%d", 
-		  cycles-lastGather, gatherCnt, row, last_pass);
+      if (verbose)
+	 $display("%08d gather: gather=%d row=%d last_pass=%d last_row=%d, gReg=%d", 
+		  cycles-lastGather, gatherCnt, row, last_pass, last_row, gReg);
       let x <- toGet(adder_buffer).get;
       if (!last_pass) begin
-	 if(isValid(gRegs[row])) begin
-	    let y = fromMaybe(?, gRegs[row]);
+	 if (last_row) begin
+	    if (gReg) gatherCnt <= gatherCnt+1;
+	    gReg <= !gReg;
+	 end
+	 if(gReg) begin
+	    let y <- toGet(gFifo).get;
 	    adder.request.put(tuple2(x,y));
-	    if (last_row)
-	       gatherCnt <= gatherCnt+1; 
-	    gRegs[row] <= tagged Invalid;
 	 end
 	 else begin
-	    gRegs[row] <= tagged Valid x;
+	    gFifo.enq(x);
 	 end
       end
       else begin
@@ -392,8 +384,7 @@ module  mkSharedInterleavedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(Shared
 	 if (last_row) begin
 	    gatherCnt <= 0;
 	    lastCnt <= 0;
-	    for(Integer i = 0; i < kk; i=i+1)
-	       firstCnts[i] <= 0;
+	    firstCnt <= 0;
 	 end 
       end
    endrule   
