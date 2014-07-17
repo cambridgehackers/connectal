@@ -38,20 +38,30 @@
 #define DMAGetMemoryTraffic(P,A) ((DmaConfigProxy *)(P))->getMemoryTraffic((A))
 #endif
 
-class DmaManager
-{
- private:
+typedef struct {
   sem_t confSem;
   sem_t mtSem;
   sem_t dbgSem;
   uint64_t mtCnt;
-  DmaDbgRec dbgRec;
   PortalInternal *device;
 #ifndef MMAP_HW
   portal p_fd;
 #endif
   int pa_fd;
   int handle;
+} DmaManagerPrivate;
+
+#ifdef NO_CPP_PORTAL_CODE
+void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *argDevice);
+int DmaManager_dCacheFlushInval(DmaManagerPrivate *priv, PortalAlloc *portalAlloc, void *__p);
+uint64_t DmaManager_show_mem_stats(DmaManagerPrivate *priv, ChannelType rc);
+int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa);
+int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa);
+#else
+class DmaManager
+{
+ private:
+  DmaManagerPrivate priv;
  public:
   DmaManager(PortalInternal *argDevice);
   int dCacheFlushInval(PortalAlloc *portalAlloc, void *__p);
@@ -62,4 +72,5 @@ class DmaManager
   void mtResp(uint64_t words);
   void dbgResp(const DmaDbgRec& rec);
 };
+#endif
 #endif // _PORTAL_MEMORY_H_
