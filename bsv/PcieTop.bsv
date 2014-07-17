@@ -132,9 +132,9 @@ interface PcieTop#(type ipins);
 `endif
 endinterface
 
-module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)(PcieHostTop);
 
 `ifdef BSIM
+module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)(PcieHostTop);
    let dc <- exposeCurrentClock;
    let dr <- exposeCurrentReset;
    Clock epClock125 = dc;
@@ -151,7 +151,13 @@ module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p
       put_tlp(foo);
       //$display("to_bdpi");
    endrule
-`else
+   interface Clock tepClock125 = epClock125;
+   interface Reset tepReset125 = epReset125;
+   interface PcieHost tpciehost = pciehost;
+endmodule
+`else // not BSIM
+(* synthesize, no_default_clock, no_default_reset *)
+module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)(PcieHostTop);
    Clock sys_clk_200mhz <- mkClockIBUFDS(sys_clk_p, sys_clk_n);
    Clock sys_clk_200mhz_buf <- mkClockBUFG(clocked_by sys_clk_200mhz);
    Clock pci_clk_100mhz_buf <- mkClockIBUFDS_GTE2(True, pci_sys_clk_p, pci_sys_clk_n);
@@ -170,7 +176,6 @@ module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p
    interface Clock tsys_clk_200mhz_buf = sys_clk_200mhz_buf;
    interface Clock tpci_clk_100mhz_buf = pci_clk_100mhz_buf;
    interface PcieEndpointX7 tep7 = ep7;
-`endif
    interface Clock tepClock125 = epClock125;
    interface Reset tepReset125 = epReset125;
    interface PcieHost tpciehost = pciehost;
@@ -180,7 +185,7 @@ module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p
    interface doubleReset = epReset125;
       
 endmodule
-
+`endif
 
 `ifndef BSIM
 (* no_default_clock, no_default_reset *)
