@@ -35,6 +35,9 @@
 #define     IND_REG_QUEUE_STATUS      (PORTAL_IND_REG_OFFSET_32 + 6)
 
 #ifdef __KERNEL__
+#include <linux/module.h>
+#include <linux/kernel.h>
+
 typedef struct {
     volatile unsigned int *map_base;
 } PortalInternal;
