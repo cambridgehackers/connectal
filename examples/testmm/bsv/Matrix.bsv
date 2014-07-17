@@ -59,12 +59,6 @@ typedef struct {
    Bool last;
    } Token deriving (Eq,Bits);
 
-`ifdef TAGGED_TOKENS
-Bool tagging = True;
-`else
-Bool tagging = False;
-`endif
-
 interface SharedDotProdServer#(numeric type k);
    interface Put#(Token)                 aInput;
    interface Put#(Token)                 bInput;
@@ -680,16 +674,12 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
    
    zipWithM(mkConnection, fxpipes, map(getRowColSinkPipe, sinks));
    
-   XYRangePipeIfc#(UInt#(addrwidth)) indexpipeifc;
+   XYRangePipeIfc#(UInt#(addrwidth)) indexpipeifc <- mkXYRangePipeOut();
    XYRangePipeIfc#(UInt#(addrwidth)) offsetpipeA <- mkXYRangePipeOut();
    XYRangePipeIfc#(UInt#(addrwidth)) offsetpipeB <- mkXYRangePipeOut();
    XYRangePipeIfc#(UInt#(addrwidth)) offsetpipeC <- mkXYRangePipeOut();
 
-   Vector#(TAdd#(J,K), PipeOut#(Tuple2#(UInt#(addrwidth),UInt#(addrwidth)))) indexpipes;
-   if (timing || verbose || tagging) begin
-      indexpipeifc <- mkXYRangePipeOut();
-      indexpipes <- mkForkVector(indexpipeifc.pipe);
-   end
+   Vector#(TAdd#(J,K), PipeOut#(Tuple2#(UInt#(addrwidth),UInt#(addrwidth)))) indexpipes <- mkForkVector(indexpipeifc.pipe);
    Vector#(J, PipeOut#(Tuple2#(UInt#(addrwidth),UInt#(addrwidth))))        offsetpipesA <- mkForkVector(offsetpipeA.pipe);
    Vector#(K, PipeOut#(Tuple2#(UInt#(addrwidth),UInt#(addrwidth))))        offsetpipesB <- mkForkVector(offsetpipeB.pipe);
    Vector#(J, PipeOut#(Tuple2#(UInt#(addrwidth),UInt#(addrwidth))))        offsetpipesC <- mkForkVector(offsetpipeC.pipe);
@@ -714,28 +704,24 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 	 if(k < kk-1)
 	    controlDependenceB[k].enq(?);
 
+	 Tuple2#(UInt#(addrwidth),UInt#(addrwidth)) index <- toGet(indexpipes[k]).get();
 	 match { .unusedB, .startBBase } <- toGet(offsetpipesB[k]).get();
 
 	 int kint = fromInteger(k);
+
+	 let row = tpl_1(index);
+	 let col = tpl_2(index)+fromInteger(k);
 
 	 let startB = startBBase + startBOffset[k];
 	 
 	 lastStartBs[k] <= cycles;
 	 let interval = cycles-lastStartBs[k];
 
-	 Tuple2#(UInt#(addrwidth),UInt#(addrwidth)) index = unpack(0);
-	 if (timing || verbose || tagging)
-	    index <- toGet(indexpipes[k]).get();
-	 let row = tpl_1(index);
-	 let col = tpl_2(index)+fromInteger(k);
-
-	 if (timing || verbose) begin
-
-	    $display($format(fshow(interval)+fshow("    startB index=")+fshow(tuple2(row,col))
+	 if (timing || verbose) $display($format(fshow(interval)+fshow("    startB index=")+fshow(tuple2(row,col))
 	    +fshow(" startB=")+fshow(startB)
 	    +fshow(" k=")+fshow(kint)));
-	    $display($format(fshow(cycles)+fshow("    sourceB[")+fshow(kint)+fshow("].start")+fshow(startB)));
-	 end
+
+	 if (verbose || verbose1) $display($format(fshow(cycles)+fshow("    sourceB[")+fshow(kint)+fshow("].start")+fshow(startB)));
 
 	 sourceB[k].start(descriptorB.pointer, pack(extend(startB>>nshift)), pack(extend(descriptorB.numColumns>>nshift)), extend(col));
 
@@ -759,26 +745,22 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 	 if(j < jj-1)
 	    controlDependenceA[j].enq(?);
 	 
+	 Tuple2#(UInt#(addrwidth),UInt#(addrwidth)) index <- toGet(indexpipes[j+kk]).get();
+	 
+	 let row = tpl_1(index)+fromInteger(j);
+	 let col = tpl_2(index);
+	 
 	 match { .startABase, .unusedA } <- toGet(offsetpipesA[j]).get();
 	 match { .startCBase, .offsetC } <- toGet(offsetpipesC[j]).get();
 	 let startA = startABase + startAOffset[j];
 	 let startC = startCBase + startCOffset[j] + offsetC;
 	 
 	 int jint = fromInteger(j);
-	 Tuple2#(UInt#(addrwidth),UInt#(addrwidth)) index = unpack(0);
-	 if (timing || verbose || tagging)
-	    index <- toGet(indexpipes[j+kk]).get();
-	 let row = tpl_1(index)+fromInteger(j);
-	 let col = tpl_2(index);
-
-	 if (timing || verbose) begin
+	 if (timing || verbose) $display($format(fshow(cycles)+fshow("    start A index=")+fshow(tuple2(row,col))
+						 +fshow(" startA=")+fshow(startA)
+						 +fshow(" startC=")+fshow(startC)
+						 +fshow(" j=")+fshow(jint)));
 	 
-	    $display($format(fshow(cycles)+fshow("    start A index=")+fshow(tuple2(row,col))
-			     +fshow(" startA=")+fshow(startA)
-			     +fshow(" startC=")+fshow(startC)
-			     +fshow(" j=")+fshow(jint)));
-	 end
-
 	 sourceA[j].start(descriptorA.pointer, pack(extend(startA>>nshift)), pack(extend(descriptorA.numColumns>>nshift)), extend(row));
 	 if (verbose || verbose1) $display($format(fshow(cycles)+fshow("    sourceA[")+fshow(jint)+fshow("].start")+fshow(startA)));
 	 sinks[j].start(descriptorC.pointer, pack(extend(startC>>nshift)), fromInteger(kk/n));
@@ -794,6 +776,7 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
       rule finishSink;
 	 $dumpoff();
 	 // each time we write a burst of k values via sinks
+	 //let index <- toGet(indexpipes[jj+kk+1]).get();
 	 let b <- sinks[j].finish();
 	 let c = dotprodCount-fromInteger(kk);
 	 int jint = fromInteger(j);
@@ -855,8 +838,7 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
       if (verbose) $display("mm pointerA=%d pointerB=%d pointerC=%d\n", pointerA, pointerB, pointerC);
       if (verbose) $display("mm.start ra=%d ca=%d rb=%d cb=%d dotprodCount=%d", numRowsA, numColumnsA, numRowsB, numColumnsB, dotprodCount);
       if (verbose) $display($format(fshow("mm.start ")+fshow(indexcfg)));
-      if (timing || verbose || tagging)
-	 indexpipeifc.start(indexcfg);
+      indexpipeifc.start(indexcfg);
       offsetpipeA.start(offsetcfgA);
       offsetpipeB.start(offsetcfgB);
       offsetpipeC.start(offsetcfgC);
