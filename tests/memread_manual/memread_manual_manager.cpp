@@ -20,17 +20,17 @@
  */
 
 #include <stdio.h>
-#include <sys/mman.h>
 #include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <pthread.h>
-#include <errno.h>
-#include <fcntl.h>
 #include <stdint.h>
-#include <sys/select.h>
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
+
+#ifndef __KERNEL__
+#include <sys/mman.h>
+#include <pthread.h>
+#include <fcntl.h>
+#include <sys/select.h>
+#endif
 
 #include "portal.h"
 #include "dmaManager.h"
@@ -134,6 +134,7 @@ static void manual_event(void)
     }
 }
 
+#ifndef __KERNEL__ ///////////////////////// userspace version
 static void *pthread_worker(void *p)
 {
     void *rc = NULL;
@@ -146,6 +147,7 @@ static void *pthread_worker(void *p)
     }
     return rc;
 }
+#endif
 
 int main(int argc, const char **argv)
 {
@@ -161,52 +163,30 @@ int main(int argc, const char **argv)
   PortalAlloc *srcAlloc;
   DmaManager_init(&priv, intarr[2]);
   int rc = DmaManager_alloc(&priv, alloc_sz, &srcAlloc);
-
-#ifndef __KERNEL__ ///////////////////////// userspace version
-  unsigned int *srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
-#else   /// kernel version
-  {
-    // code for PA_ALLOC
-    size_t align = 4096;
-    printk("%s, srcAlloc.size=%zd\n", __FUNCTION__, srcAlloc.size);
-    srcAlloc.size = PAGE_ALIGN(round_up(srcAlloc.size, align));
-    struct dma_buf *dmabuf = portalmem_dmabuffer_create(srcAlloc.size, align);
-    if (IS_ERR(dmabuf))
-      return PTR_ERR(dmabuf);
-    printk("pa_get_dma_buf %p %zd\n", dmabuf->file, dmabuf->file->f_count.counter);
-    srcAlloc.numEntries = ((struct pa_buffer *)dmabuf->priv)->sg_table->nents;
-    srcAlloc.fd = dma_buf_fd(dmabuf, O_CLOEXEC);
-    if (srcAlloc.fd < 0)
-      dma_buf_put(dmabuf);
-  }
-  {
-    // code for PA_DMA_ADDRESSES
-    struct scatterlist *sg;
-    int i;
-    struct file *f = fget(srcAlloc.fd);
-    struct sg_table *sgtable = ((struct pa_buffer *)((struct dma_buf *)f->private_data)->priv)->sg_table;
-    for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
-      srcAlloc.entries[i].dma_address = sg_phys(sg);
-      srcAlloc.entries[i].length = sg->length;
-    }
-    fput(f);
-  }
-#endif ////////////////////////////////
   if (rc){
-    fprintf(stderr, "portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
+    fprintf(stderr, "portal alloc failed rc=%d\n", rc);
     return rc;
   }
 
+#ifndef __KERNEL__ ///////////////////////// userspace version
   pthread_t tid;
   printf( "Main: creating exec thread\n");
   if(pthread_create(&tid, NULL,  pthread_worker, NULL)){
    printf( "error creating exec thread\n");
    exit(1);
   }
+  unsigned int *srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
+#else   /// kernel version
+//??????
+#endif ////////////////////////////////
+
   for (int i = 0; i < numWords; i++)
     srcBuffer[i] = i;
+
 #ifndef __KERNEL__   //////////////// userspace code for flushing dcache for srcAlloc
   DmaManager_dCacheFlushInval(&priv, srcAlloc, srcBuffer);
+#else   /// kernel version
+//??????
 #endif /////////////////////
   unsigned int ref_srcAlloc = DmaManager_reference(&priv, srcAlloc);
   printf( "Main: starting read %08x\n", numWords);
