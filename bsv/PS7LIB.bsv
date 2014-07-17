@@ -801,8 +801,9 @@ module mkPS7(PS7);
 
    // need the bufg here to reduce clock skew
    module mkBufferedClock#(Integer i)(Clock); let c <- mkClockBUFG(clocked_by b2c[i].c); return c; endmodule
+   module mkBufferedReset#(Integer i)(Reset); let r <- mkResetBUFG(clocked_by b2c[i].c, reset_by b2c[i].r); return r; endmodule
    Vector#(4, Clock) fclk <- genWithM(mkBufferedClock);
-   Vector#(4, Reset) freset;
+   Vector#(4, Reset) freset <- genWithM(mkBufferedReset);
 
    PS7LIB ps7 <- mkPS7LIB(fclk[0], b2c[0].r, clocked_by fclk[0], reset_by b2c[0].r);
 
