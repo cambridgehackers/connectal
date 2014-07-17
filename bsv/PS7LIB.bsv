@@ -805,25 +805,26 @@ module mkPS7(PS7);
    Vector#(4, Clock) fclk <- genWithM(mkBufferedClock);
    Vector#(4, Reset) freset <- genWithM(mkBufferedReset);
 
-   PS7LIB ps7 <- mkPS7LIB(fclk[0], b2c[0].r, clocked_by fclk[0], reset_by b2c[0].r);
+   let divider <- mkClockDivider(2, clocked_by fclk[0], reset_by freset[0]);
+   Clock double_clock = divider.fastClock;
+   Reset double_reset = freset[0];
+   Clock single_clock = divider.slowClock;
+   let single_reset <- mkAsyncReset(2, double_reset, single_clock);
+   fclk[0] = single_clock;
+   freset[0] = single_reset;
+
+   PS7LIB ps7 <- mkPS7LIB(single_clock, single_reset, clocked_by single_clock, reset_by single_reset);
 
    // this rule connects the fclkclk wires to the clock net via B2C
    for (Integer i = 0; i < 4; i = i + 1) begin
       ReadOnly#(Bit#(4)) fclkb;
       ReadOnly#(Bit#(4)) fclkresetnb;
-      if (i == 0) begin
-	 fclkb       = (interface ReadOnly; method Bit#(4) _read(); return ps7.fclkclk; endmethod endinterface);
-	 fclkresetnb = (interface ReadOnly; method Bit#(4) _read(); return ps7.fclkresetn; endmethod endinterface);
-      end
-      else begin
-	 fclkb       <- mkNullCrossingWire(b2c[i].c, ps7.fclkclk);
-	 fclkresetnb <- mkNullCrossingWire(b2c[i].c, ps7.fclkresetn);
-      end
-       rule b2c_rule1;
-	   b2c[i].inputclock(fclkb[i]);
-	   b2c[i].inputreset(fclkresetnb[i]);
-       endrule
-      freset[i] = b2c[i].r;
+      fclkb       <- mkNullCrossingWire(b2c[i].c, ps7.fclkclk);
+      fclkresetnb <- mkNullCrossingWire(b2c[i].c, ps7.fclkresetn);
+      rule b2c_rule1;
+	 b2c[i].inputclock(fclkb[i]);
+	 b2c[i].inputreset(fclkresetnb[i]);
+      endrule
    end
 
    IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by fclk[3], reset_by freset[0]);
@@ -858,6 +859,8 @@ module mkPS7(PS7);
     interface AxiSlaveHighSpeed s_axi_hp = ps7.s_axi_hp;
     interface fclkclk = fclk;
     interface fclkreset = freset;
+    interface doubleClock = double_clock;
+    interface doubleReset = double_reset;
     method Action interrupt(Bit#(1) v);
         ps7.irq.f2p({19'b0, v});
     endmethod
