@@ -820,7 +820,7 @@ module mkPS7(PS7);
    clockParams.clkout0_phase      = 0.0000;
    clockParams.clkout0_buffer     = True;
    clockParams.clkin_buffer = False;
-   ClockGenerator7   clockGen <- mkClockGenerator7(clockParams);
+   ClockGenerator7   clockGen <- mkClockGenerator7(clockParams, clocked_by single_clock, reset_by single_reset);
    let double_clock = clockGen.clkout0;
    let double_reset_unbuffered <- mkAsyncReset(2, single_reset, double_clock);
    let double_reset <- mkResetBUFG(clocked_by double_clock, reset_by double_reset_unbuffered);
