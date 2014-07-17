@@ -805,13 +805,25 @@ module mkPS7(PS7);
    Vector#(4, Clock) fclk <- genWithM(mkBufferedClock);
    Vector#(4, Reset) freset <- genWithM(mkBufferedReset);
 
-   let divider <- mkClockDivider(2, clocked_by fclk[0], reset_by freset[0]);
-   Clock double_clock = divider.fastClock;
-   Reset double_reset = freset[0];
-   Clock single_clock = divider.slowClock;
-   let single_reset <- mkAsyncReset(2, double_reset, single_clock);
-   fclk[0] = single_clock;
-   freset[0] = single_reset;
+   Clock single_clock = fclk[0];
+   let single_reset   = freset[0];
+
+   ClockGenerator7Params clockParams = defaultValue;
+   // input clock 200MHz for speed grade -2, 100MHz for speed grade -1
+   // Muliplying by 6.0 keeps the clock in the required range 600MHz - 1200MHz for either input clock
+   clockParams.clkfbout_mult_f       = 6.000;
+   clockParams.clkfbout_phase     = 0.0;
+   clockParams.clkfbout_phase     = 0.0;
+   clockParams.clkin1_period      = 5.000;
+   clockParams.clkout0_divide_f   = 3.000;
+   clockParams.clkout0_duty_cycle = 0.5;
+   clockParams.clkout0_phase      = 0.0000;
+   clockParams.clkout0_buffer     = True;
+   clockParams.clkin_buffer = False;
+   ClockGenerator7   clockGen <- mkClockGenerator7(clockParams);
+   let double_clock = clockGen.clkout0;
+   let double_reset_unbuffered <- mkAsyncReset(2, single_reset, double_clock);
+   let double_reset <- mkResetBUFG(clocked_by double_clock, reset_by double_reset_unbuffered);
 
    PS7LIB ps7 <- mkPS7LIB(single_clock, single_reset, clocked_by single_clock, reset_by single_reset);
 
