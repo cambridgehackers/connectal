@@ -259,7 +259,7 @@ module  mkSharedInterleavedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(Shared
    FIFOF#(Float) adder_buffer <- mkSizedFIFOF(valueOf(TMul#(K,gatherSz)));
    
 `ifdef TAGGED_TOKENS
-   FIFO#(Tuple2#(UInt#(32),UInt#(32))) tag_fifo <- mkSizedFIFO(max(ub_MulLat,ub_AddLat)); 
+   FIFO#(Tuple2#(UInt#(32),UInt#(32))) tag_fifo <- mkSizedFIFO(ub_MulLat); 
    Vector#(K,Reg#(Tuple2#(UInt#(32),UInt#(32)))) tag_regs <- replicateM(mkRegU);
 `endif   
    
