@@ -33,16 +33,10 @@
 #include <inttypes.h>
 
 #include "portal.h"
+#include "dmaManager.h"
 #include "GeneratedTypes.h" 
 
 static int trace_memory;// = 1;
-
-static int local_manager_handle = 1;
-static sem_t localmanager_confSem;
-static sem_t localmanager_mtSem;
-static sem_t localmanager_dbgSem;
-static uint64_t localmanager_mtCnt;
-static DmaDbgRec localmanager_dbgRec;
 
 #define MAX_INDARRAY 4
 typedef int (*INDFUNC)(PortalInternal *p, unsigned int channel);
@@ -51,9 +45,15 @@ static INDFUNC indfn[MAX_INDARRAY];
 
 static sem_t test_sem;
 static int burstLen = 16;
+#ifdef MMAP_HW
 static int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
+#else
+static int numWords = 0x124000/4;
+#endif
 static size_t test_sz  = numWords*sizeof(unsigned int);
 static size_t alloc_sz = test_sz;
+static DmaManagerPrivate priv;
+
 void DmaConfigProxyStatusputFailed_cb (  struct PortalInternal *p, const uint32_t v )
 {
         const char* methodNameStrings[] = {"sglist", "region", "addrRequest", "getStateDbg", "getMemoryTraffic"};
@@ -73,7 +73,7 @@ void DmaIndicationWrapperconfigResp_cb (  struct PortalInternal *p, const uint32
 {
         //fprintf(stderr, "configResp: %x, %"PRIx64"\n", pointer, msg);
         //fprintf(stderr, "configResp %d\n", pointer);
-        sem_post(&localmanager_confSem);
+        sem_post(&priv.confSem);
 }
 void DmaIndicationWrapperaddrResponse_cb (  struct PortalInternal *p, const uint64_t physAddr )
 {
@@ -102,15 +102,15 @@ void DmaIndicationWrapperbadAddr_cb (  struct PortalInternal *p, const uint32_t 
 void DmaIndicationWrapperreportStateDbg_cb (  struct PortalInternal *p, const DmaDbgRec& rec )
 {
         //fprintf(stderr, "reportStateDbg: {x:%08x y:%08x z:%08x w:%08x}\n", rec.x,rec.y,rec.z,rec.w);
-        localmanager_dbgRec = rec;
-        fprintf(stderr, "dbgResp: %08x %08x %08x %08x\n", localmanager_dbgRec.x, localmanager_dbgRec.y, localmanager_dbgRec.z, localmanager_dbgRec.w);
-        sem_post(&localmanager_dbgSem);
+        DmaDbgRec dbgRec = rec;
+        fprintf(stderr, "dbgResp: %08x %08x %08x %08x\n", dbgRec.x, dbgRec.y, dbgRec.z, dbgRec.w);
+        sem_post(&priv.dbgSem);
 }
 void DmaIndicationWrapperreportMemoryTraffic_cb (  struct PortalInternal *p, const uint64_t words )
 {
         //fprintf(stderr, "reportMemoryTraffic: words=%"PRIx64"\n", words);
-        localmanager_mtCnt = words;
-        sem_post(&localmanager_mtSem);
+        priv.mtCnt = words;
+        sem_post(&priv.mtSem);
 }
 void DmaIndicationWrappertagMismatch_cb (  struct PortalInternal *p, const ChannelType& x, const uint32_t a, const uint32_t b )
 {
@@ -147,73 +147,6 @@ static void *pthread_worker(void *p)
     return rc;
 }
 
-static int local_manager_reference(PortalAlloc* pa)
-{
-  const int PAGE_SHIFT0 = 12;
-  const int PAGE_SHIFT4 = 16;
-  const int PAGE_SHIFT8 = 20;
-  uint64_t regions[3] = {0,0,0};
-  uint64_t shifts[3] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0};
-  int id = local_manager_handle++;
-  int ne = pa->header.numEntries;
-  int size_accum = 0;
-  // HW interprets zeros as end of sglist
-  pa->entries[ne].dma_address = 0;
-  pa->entries[ne].length = 0;
-  pa->header.numEntries++;
-  if (trace_memory)
-    fprintf(stderr, "local_manager_reference id=%08x, numEntries:=%d len=%08lx)\n", id, ne, pa->header.size);
-  for(int i = 0; i < pa->header.numEntries; i++){
-    DmaEntry *e = &(pa->entries[i]);
-    switch (e->length) {
-    case (1<<PAGE_SHIFT0):
-      regions[2]++;
-      break;
-    case (1<<PAGE_SHIFT4):
-      regions[1]++;
-      break;
-    case (1<<PAGE_SHIFT8):
-      regions[0]++;
-      break;
-    case (0):
-      break;
-    default:
-      fprintf(stderr, "local_manager_unsupported sglist size %x\n", e->length);
-    }
-    dma_addr_t addr = e->dma_address;
-    if (trace_memory)
-      fprintf(stderr, "local_manager_sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, (long)addr, e->length);
-    DmaConfigProxy_sglist (intarr[2] , id, addr, e->length);
-    size_accum += e->length;
-    // fprintf(stderr, "%s:%d sem_wait\n", __FILE__, __LINE__);
-    sem_wait(&localmanager_confSem);
-  }
-  uint64_t border = 0;
-  unsigned char entryCount = 0;
-  struct {
-    uint64_t border;
-    unsigned char idxOffset;
-  } borders[3];
-  for(int i = 0; i < 3; i++){
-    if (i == 0)
-      borders[i].idxOffset = 0;
-    else
-      borders[i].idxOffset = entryCount - ((border >> shifts[i])&0xff);
-
-    border += regions[i]*(1<<shifts[i]);
-    borders[i].border = border;
-    entryCount += regions[i];
-  }
-  if (trace_memory) {
-    fprintf(stderr, "regions %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,regions[0], regions[1], regions[2]);
-    fprintf(stderr, "borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borders[0].border, borders[1].border, borders[2].border);
-  }
-  DmaConfigProxy_region(intarr[2], id, borders[0].border, borders[0].idxOffset,
-       borders[1].border, borders[1].idxOffset, borders[2].border, borders[2].idxOffset);
-  sem_wait(&localmanager_confSem);
-  return id;
-}
-
 int main(int argc, const char **argv)
 {
   intarr[0] = new PortalInternal(IfcNames_DmaIndication);     // fpga1
@@ -225,21 +158,11 @@ int main(int argc, const char **argv)
   indfn[2] = DmaConfigProxyStatus_handleMessage;
   indfn[3] = MemreadRequestProxyStatus_handleMessage;
 
-  PortalAlloc *srcAlloc = (PortalAlloc *)malloc(sizeof(PortalAlloc));
-  memset(srcAlloc, 0, sizeof(PortalAlloc));
-  srcAlloc->header.size = alloc_sz;
+  PortalAlloc *srcAlloc;
+  DmaManager_init(&priv, intarr[2]);
+  int rc = DmaManager_alloc(&priv, alloc_sz, &srcAlloc);
 
 #ifndef __KERNEL__ ///////////////////////// userspace version
-  int portalmem_fd = open("/dev/portalmem", O_RDWR);
-  if (portalmem_fd < 0)
-    fprintf(stderr, "Failed to open /dev/portalmem portalmem_fd=%d errno=%d\n", portalmem_fd, errno);
-  int rc = ioctl(portalmem_fd, PA_ALLOC, srcAlloc);
-  if (!rc){
-      long mb = ((long)srcAlloc->header.size)/(long)(1<<20);
-      fprintf(stderr, "alloc size=%lxMB rc=%d fd=%d numEntries=%d\n", mb, rc, srcAlloc->header.fd, srcAlloc->header.numEntries);
-      srcAlloc = (PortalAlloc *)realloc(srcAlloc, sizeof(PortalAlloc)+((srcAlloc->header.numEntries+1)*sizeof(DmaEntry)));
-      rc = ioctl(portalmem_fd, PA_DMA_ADDRESSES, srcAlloc);
-  }
   unsigned int *srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
 #else   /// kernel version
   {
@@ -283,27 +206,9 @@ int main(int argc, const char **argv)
   for (int i = 0; i < numWords; i++)
     srcBuffer[i] = i;
 #ifndef __KERNEL__   //////////////// userspace code for flushing dcache for srcAlloc
-  {
-#if defined(__arm__)
-    int rc = ioctl(portalmem_fd, PA_DCACHE_FLUSH_INVAL, srcAlloc);
-    if (rc){
-      fprintf(stderr, "portal dcache flush failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
-      return rc;
-    }
-#elif defined(__i386__) || defined(__x86_64__)
-    // not sure any of this is necessary (mdk)
-    for(int i = 0; i < srcAlloc->header.size; i++){
-      char foo = *(((volatile char *)srcBuffer)+i);
-      asm volatile("clflush %0" :: "m" (foo));
-    }
-    asm volatile("mfence");
-#else
-#error("dCAcheFlush not defined for unspecified architecture")
-#endif
-  //fprintf(stderr, "dcache flush\n");
-  }
+  DmaManager_dCacheFlushInval(&priv, srcAlloc, srcBuffer);
 #endif /////////////////////
-  unsigned int ref_srcAlloc = local_manager_reference(srcAlloc);
+  unsigned int ref_srcAlloc = DmaManager_reference(&priv, srcAlloc);
   printf( "Main: starting read %08x\n", numWords);
   MemreadRequestProxy_startRead (intarr[3] , ref_srcAlloc, numWords, burstLen, 1);
   sem_wait(&test_sem);
