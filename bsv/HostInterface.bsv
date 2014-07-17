@@ -109,4 +109,7 @@ typedef PcieHostTop HostType;
 import PS7LIB::*;
 
 typedef PS7 HostType;
+
+export PS7LIB::*;
+export HostType;
 `endif
