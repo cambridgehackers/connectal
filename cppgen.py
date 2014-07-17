@@ -76,7 +76,7 @@ putFailedTemplate='''
 void %(namespace)s%(className)s_%(putFailedMethodName)s(uint32_t v)
 {
     const char* methodNameStrings[] = {%(putFailedStrings)s};
-    fprintf(stderr, "putFailed: %%s\\n", methodNameStrings[v]);
+    PORTAL_PRINTF("putFailed: %%s\\n", methodNameStrings[v]);
     //exit(1);
 }
 '''
@@ -106,10 +106,12 @@ int %(namespace)s%(className)s_handleMessage(PortalInternal *p, unsigned int cha
     switch (channel) {
 %(responseSzCases)s
     default:
-        printf("%(namespace)s%(className)s_handleMessage: unknown channel 0x%%x\\n", channel);
+        PORTAL_PRINTF("%(namespace)s%(className)s_handleMessage: unknown channel 0x%%x\\n", channel);
         if (runaway++ > 10) {
-            printf("%(namespace)s%(className)s_handleMessage: too many bogus indications, exiting\\n");
+            PORTAL_PRINTF("%(namespace)s%(className)s_handleMessage: too many bogus indications, exiting\\n");
+#ifndef __KERNEL__
             exit(-1);
+#endif
         }
         return 0;
     }
@@ -133,7 +135,7 @@ void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p %(paramSeparat
 {
     %(className)s%(methodName)sPayload payload;
 %(paramSetters)s
-    %(className)s%(methodName)s_marshall(p, payload);
+    %(className)s%(methodName)s_marshall(p, &payload);
 };
 '''
 
@@ -151,7 +153,7 @@ typedef struct {
 '''
 
 msgMarshallTemplate='''
-void %(className)s%(methodName)s_marshall(PortalInternal *p, %(className)s%(methodName)sPayload &payload) {
+void %(className)s%(methodName)s_marshall(PortalInternal *p, %(className)s%(methodName)sPayload *payload) {
     volatile unsigned int* addr = &(p->map_base[PORTAL_REQ_FIFO(%(methodChannelOffset)s)]);
 %(paramStructMarshall)s
 }
@@ -224,22 +226,22 @@ class MethodMixin:
             t = member.type
             tn = member.type.name
             if tn == 'Bit':
-                return [('%s.%s'%(scope,member.name),t)]
+                return [('%s%s'%(scope,member.name),t)]
             elif tn == 'Int' or tn == 'UInt':
-                return [('%s.%s'%(scope,member.name),t)]
+                return [('%s%s'%(scope,member.name),t)]
             elif tn == 'Float':
-                return [('%s.%s'%(scope,member.name),t)]
+                return [('%s%s'%(scope,member.name),t)]
             elif tn == 'Vector':
-                return [('%s.%s'%(scope,member.name),t)]
+                return [('%s%s'%(scope,member.name),t)]
             else:
                 td = syntax.globalvars[tn]
                 tdtype = td.tdtype
                 if tdtype.type == 'Struct':
-                    ns = '%s.%s' % (scope,member.name)
+                    ns = '%s%s.' % (scope,member.name)
                     rv = map(functools.partial(collectMembers, ns), tdtype.elements)
                     return sum(rv,[])
                 elif tdtype.type == 'Enum':
-                    return [('%s.%s'%(scope,member.name),tdtype)]
+                    return [('%s%s'%(scope,member.name),tdtype)]
                 else:
                     return self.collectMembers(scope, tdtype.type)
 
@@ -272,7 +274,8 @@ class MethodMixin:
         paramDeclarations = self.formalParameters(params)
         paramStructDeclarations = [ '        %s %s%s;\n' % (p.type.cName(), p.name, p.type.bitSpec()) for p in params]
         
-        argAtoms = sum(map(functools.partial(collectMembers, 'payload'), params), [])
+        argAtoms = sum(map(functools.partial(collectMembers, 'payload.'), params), [])
+        argAtomsP = sum(map(functools.partial(collectMembers, 'payload->'), params), [])
 
         # for a in argAtoms:
         #     print a[0]
@@ -280,6 +283,8 @@ class MethodMixin:
 
         argAtoms.reverse();
         argWords  = accumWords([], 0, argAtoms)
+        argAtomsP.reverse();
+        argWordsP  = accumWords([], 0, argAtomsP)
 
         # for a in argWords:
         #     for b in a:
@@ -332,7 +337,7 @@ class MethodMixin:
             paramStructMarshall = ['        WRITEL(p, addr, 0);\n']
             paramStructDemarshall = ['        tmp = READL(p, addr);\n']
         else:
-            paramStructMarshall = map(marshall, argWords)
+            paramStructMarshall = map(marshall, argWordsP)
             paramStructMarshall.reverse();
             paramStructDemarshall = map(demarshall, argWords)
             paramStructDemarshall.reverse();

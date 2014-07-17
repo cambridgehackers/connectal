@@ -708,10 +708,7 @@ if __name__=='__main__':
         fname = os.path.join(project_dir, 'jni', name)
         f = util.createDirAndOpen(fname, 'w')
         print "Writing file ",fname
-        f.write('#include "portal.h"\n')
         f.write('#include "GeneratedTypes.h"\n');
-        f.write('#include <stdio.h>\n')
-        f.write('#include <stdlib.h>\n')
         return f
 
     def create_bare_file(name):
@@ -725,6 +722,7 @@ if __name__=='__main__':
     generated_hpp = util.createDirAndOpen(hname, 'w')
     generated_hpp.write('#ifndef __GENERATED_TYPES__\n');
     generated_hpp.write('#define __GENERATED_TYPES__\n');
+    generated_hpp.write('#include "portal.h"\n')
     # global type declarations used by interface mthods
     for v in syntax.globaldecls:
         if (v.type == 'TypeDef'):
