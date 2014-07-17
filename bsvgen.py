@@ -224,7 +224,7 @@ endmodule
 
 mkExposedProxyInterfaceTemplate='''
 (* synthesize *)
-module %(moduleContext)s mk%(Dut)sSynth#(Bit#(32) id) (%(Dut)sPortal);
+module %(moduleContext)s mk%(Dut)sPortalSynth#(Bit#(32) id) (%(Dut)sPortal);
     Vector#(0, PipeIn#(Bit#(32))) requestPipes = nil;
     Vector#(0, Bit#(32))          requestBits = nil;
     Vector#(%(channelCount)s, PipeOut#(Bit#(32))) indicationPipes = newVector();
@@ -237,18 +237,25 @@ endmodule
 module %(moduleContext)s mk%(Dut)sPortal#(idType id) (%(Dut)sPortal)
     provisos (Bits#(idType, __a), 
               Add#(a__, __a, 32));
-    let rv <- mk%(Dut)sSynth(extend(pack(id)));
+    let rv <- mk%(Dut)sPortalSynth(extend(pack(id)));
     return rv;
+endmodule
+
+// synthesizeable proxy MemPortal
+(* synthesize *)
+module mk%(Dut)sSynth#(Bit#(32) id)(%(Dut)s);
+  let dut <- mk%(Dut)sPortal(id);
+  let memSlave <- mkMemPortal(dut.portalIfc);
+  interface MemPortal portalIfc = memSlave;
+  interface %(Ifc)s ifc = dut.ifc;
 endmodule
 
 // exposed proxy MemPortal
 module mk%(Dut)s#(idType id)(%(Dut)s)
    provisos (Bits#(idType, a__),
 	     Add#(b__, a__, 32));
-  let dut <- mk%(Dut)sPortal(id);
-  let memSlave <- mkMemPortal(dut.portalIfc);
-  interface MemPortal portalIfc = memSlave;
-  interface %(Ifc)s ifc = dut.ifc;
+   let rv <- mk%(Dut)sSynth(extend(pack(id)));
+   return rv;
 endmodule
 '''
 
