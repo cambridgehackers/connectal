@@ -20,7 +20,7 @@
 #include <asm/uaccess.h>        /* copy_to_user, copy_from_user */
 
 #include "pcieportal.h"
-#include "portal_offsets.h"
+#include "portal.h"
 
 /* flag for adding 'direct call' interface to driver */
 //#define SUPPORT_MANUAL_INTERFACE
