@@ -174,6 +174,8 @@ interface PcieEndpointX7#(numeric type lanes);
    interface Server#(TLPData#(16), TLPData#(16)) tlp;
    interface Clock epClock125;
    interface Reset epReset125;
+   interface Clock epClock250;
+   interface Reset epReset250;
 endinterface
 
 typedef struct {
@@ -364,6 +366,8 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    interface PciewrapCfg cfg = pcie_ep.cfg;
    interface Clock epClock125 = clock125;
    interface Reset epReset125 = reset125;
+   interface Clock epClock250 = clock250;
+   interface Reset epReset250 = reset250;
 endmodule: mkPcieEndpointX7
 
 endpackage: PcieEndpointX7
