@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import Clocks            :: *;
 import Vector            :: *;
 import FIFOF             :: *;
 import FIFO              :: *;
@@ -276,9 +277,9 @@ module mkAxi3Slave(Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))
 endmodule
    
 		 
-module  mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdWidth,
-				      serverAddrWidth, serverBusWidth, serverIdWidth,
-				      nSlaves))
+module  mkBsimHost#(Clock double_clock, Reset double_reset)(BsimHost#(clientAddrWidth, clientBusWidth, clientIdWidth,
+			      serverAddrWidth, serverBusWidth, serverIdWidth,
+			      nSlaves))
    provisos (SelectBsimRdmaReadWrite#(serverBusWidth),
 	     SelectBsimCtrlReadWrite#(clientAddrWidth, clientBusWidth));
    
@@ -353,20 +354,27 @@ module  mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdWidth,
         endinterface
       endinterface
    endinterface
+   interface doubleClock = double_clock;
+   interface doubleReset = double_reset;
 endmodule
-
+		 
 module  mkBsimTop(Empty)
    provisos (SelectBsimRdmaReadWrite#(DataBusWidth));
-   Clock defaultClock <- exposeCurrentClock();
-   BsimHost#(32,32,12,40,DataBusWidth,6,NumberOfMasters) host <- mkBsimHost;
+   let divider <- mkClockDivider(2);
+   Clock doubleClock = divider.fastClock;
+   Clock singleClock = divider.slowClock;
+   Reset doubleReset <- exposeCurrentReset;
+   let single_reset <- mkReset(2, True, singleClock); 
+   Reset singleReset = single_reset.new_rst;
+   BsimHost#(32,32,12,40,DataBusWidth,6,NumberOfMasters) host <- mkBsimHost(clocked_by singleClock, reset_by singleReset, doubleClock, doubleReset);
 `ifdef IMPORT_HOSTIF
-   PortalTop#(40,DataBusWidth,PinType,NumberOfMasters) top <- mkPortalTop(host);
+   PortalTop#(40,DataBusWidth,PinType,NumberOfMasters) top <- mkPortalTop(clocked_by singleClock, reset_by singleReset, host);
 `else
-   PortalTop#(40,DataBusWidth,PinType,NumberOfMasters) top <- mkPortalTop();
+   PortalTop#(40,DataBusWidth,PinType,NumberOfMasters) top <- mkPortalTop(clocked_by singleClock, reset_by singleReset);
 `endif
-   Vector#(NumberOfMasters,Axi3Master#(40,DataBusWidth,6)) m_axis <- mapM(mkAxiDmaMaster,top.masters);
-   mkConnection(host.mem_client, top.slave);
-   mapM(uncurry(mkConnection),zip(m_axis, host.axi_servers));
+   Vector#(NumberOfMasters,Axi3Master#(40,DataBusWidth,6)) m_axis <- mapM(mkAxiDmaMaster,top.masters, clocked_by singleClock, reset_by singleReset);
+   mkConnection(host.mem_client, top.slave, clocked_by singleClock, reset_by singleReset);
+   mapM(uncurry(mkConnection),zip(m_axis, host.axi_servers), clocked_by singleClock, reset_by singleReset);
 
 `ifdef BSIMRESPONDER
    `BSIMRESPONDER (top.pins);

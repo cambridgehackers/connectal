@@ -174,6 +174,11 @@ module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p
    interface Clock tepClock125 = epClock125;
    interface Reset tepReset125 = epReset125;
    interface PcieHost tpciehost = pciehost;
+
+   //once the dot product server makes timing, replace epClock125 with ep7.epclock250
+   interface doubleClock = epClock125;
+   interface doubleReset = epReset125;
+      
 endmodule
 
 
@@ -218,3 +223,5 @@ module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Cl
    interface pins = portalTop.pins;
 `endif
 endmodule
+		 
+		 

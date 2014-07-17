@@ -44,6 +44,8 @@ interface BsimHost#(numeric type clientAddrWidth, numeric type clientBusWidth, n
 		    numeric type nSlaves);
    interface MemMaster#(clientAddrWidth, clientBusWidth)  mem_client;
    interface Vector#(nSlaves,Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))  axi_servers;
+   interface Clock doubleClock;
+   interface Reset doubleReset;
 endinterface
 
 typedef BsimHost#(32,32,12,40,DataBusWidth,6,NumberOfMasters) HostType;
@@ -95,6 +97,8 @@ interface PcieHostTop;
    interface Clock tpci_clk_100mhz_buf;
    interface PcieEndpointX7#(PcieLanes) tep7;
 `endif
+   interface Clock doubleClock;
+   interface Reset doubleReset;
 endinterface
 
 typedef PcieHostTop HostType;

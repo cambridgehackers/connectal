@@ -791,6 +791,8 @@ interface PS7;
     interface Vector#(4, Clock) fclkclk;
     interface Vector#(4, Reset) fclkreset;
     interface Vector#(2, Pps7Emioi2c)  i2c;
+    interface Clock doubleClock;
+    interface Reset doubleReset;
 endinterface
 
 module mkPS7(PS7);

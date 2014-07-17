@@ -42,6 +42,7 @@ import Connectable::*;
 import Clocks::*;
 import Gearbox::*;
 import XilinxCells::*;
+import HostInterface::*;
 
 interface SharedDotProdDebug#(numeric type k);
    interface PipeOut#(Bit#(32)) macCount;
@@ -591,9 +592,10 @@ typedef enum {
  *
  */
 module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) sA,
-				     Vector#(K, VectorSource#(dsz, Vector#(N, Float))) sB,
-				     Vector#(J, VectorSink#(dsz, Vector#(N,Float)))    ss
-				     )(DmaMatrixMultiplyIfc#(addrwidth, dsz))
+			     Vector#(K, VectorSource#(dsz, Vector#(N, Float))) sB,
+			     Vector#(J, VectorSink#(dsz, Vector#(N,Float)))    ss,
+			     HostType host
+			     )(DmaMatrixMultiplyIfc#(addrwidth, dsz))
    provisos (  Mul#(N,n__,K) // K must be an integer multiple of N
 	     , Mul#(N,m__,J) // J must be an integer multiple of N
              , Add#(1,o__,J)
@@ -620,24 +622,8 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
    let defaultClock <- exposeCurrentClock();
    let defaultReset <- exposeCurrentReset();
 
-`ifdef BSIM
-   let doubleClock = defaultClock;
-   let doubleReset = defaultReset;
-`else
-   ClockGenerator7Params clockParams = defaultValue;
-   clockParams.clkfbout_mult_f    = 6.000;
-   clockParams.clkfbout_phase     = 0.0;
-   clockParams.clkin1_period      = 5.000;
-   clockParams.clkout0_divide_f   = 3.000;
-   clockParams.clkout0_duty_cycle = 0.5;
-   clockParams.clkout0_phase      = 0.0000;
-   clockParams.clkout0_buffer     = True;
-   clockParams.clkin_buffer = False;
-   ClockGenerator7   clockGen <- mkClockGenerator7(clockParams);
-   let doubleClock = clockGen.clkout0;
-   let doubleResetUnbuffered <- mkAsyncReset(2, defaultReset, doubleClock);
-   let doubleReset <- mkResetBUFG(clocked_by doubleClock, reset_by doubleResetUnbuffered);
-`endif
+   let doubleClock = host.doubleClock;
+   let doubleReset = host.doubleReset;
 
    Reg#(UInt#(32)) cycles <- mkReg(0);
    Reg#(Bool) doneReg <- mkReg(False);
@@ -870,7 +856,7 @@ interface DramMatrixMultiply#(numeric type n, numeric type dmasz);
 endinterface
 
 //(* synthesize *)
-module  mkDramMatrixMultiply(DramMatrixMultiply#(N,TMul#(N,32)));
+module  mkDramMatrixMultiply#(HostType host)(DramMatrixMultiply#(N,TMul#(N,32)));
    
    MemreadEngineV#(TMul#(N,32), 2, J) rowReadEngine <- mkMemreadEngineBuff(512);
    MemreadEngineV#(TMul#(N,32), 2, K) colReadEngine <- mkMemreadEngineBuff(512);
@@ -880,7 +866,7 @@ module  mkDramMatrixMultiply(DramMatrixMultiply#(N,TMul#(N,32)));
    Vector#(K, VectorSource#(DmaSz, Vector#(N,Float))) yvfsources <- mapM(uncurry(mkMemreadVectorSource), zip(colReadEngine.readServers, colReadEngine.dataPipes));
    Vector#(J,   VectorSink#(DmaSz, Vector#(N,Float)))      sinks <- mapM(uncurry(mkMemwriteVectorSink),   zip(writeEngine.writeServers,   writeEngine.dataPipes));
 
-   DmaMatrixMultiplyIfc#(MMSize,DmaSz) dmaMMF <- mkDmaMatrixMultiply(xvfsources, yvfsources, sinks);
+   DmaMatrixMultiplyIfc#(MMSize,DmaSz) dmaMMF <- mkDmaMatrixMultiply(xvfsources, yvfsources, sinks, host);
    interface Vector readClients = cons(rowReadEngine.dmaClient, cons(colReadEngine.dmaClient, nil));
    interface writeClient = writeEngine.dmaClient;
    method start = dmaMMF.start;
@@ -897,7 +883,7 @@ interface Mm#(numeric type n);
    interface ObjectWriteClient#(TMul#(32,n)) writeClient;
 endinterface
 
-module  mkMm#(MmIndication ind, TimerIndication timerInd, MmDebugIndication mmDebugIndication)(Mm#(N))
+module  mkMm#(MmIndication ind, TimerIndication timerInd, MmDebugIndication mmDebugIndication, HostType host)(Mm#(N))
    provisos (Add#(1,a__,N),
 	     Add#(N,0,n),
 	     Mul#(N,32,DmaSz)
@@ -905,7 +891,7 @@ module  mkMm#(MmIndication ind, TimerIndication timerInd, MmDebugIndication mmDe
 
    let n = valueOf(n);
 
-   DramMatrixMultiply#(N, TMul#(N,32)) dmaMMF <- mkDramMatrixMultiply();
+   DramMatrixMultiply#(N, TMul#(N,32)) dmaMMF <- mkDramMatrixMultiply(host);
 
    Reg#(Bit#(64)) mmfCycles <- mkReg(0);
    rule countMmfCycles;

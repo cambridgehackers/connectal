@@ -47,7 +47,8 @@ matrixtests =testmm2.2.2         \
 	    testmm4.4.4          \
 	    testmm8.8.2          \
 	    testmm8.8.4          \
-	    testmm16.16.2        
+	    testmm16.16.2        \
+	    testmm16.16.4        
 
 tests    =  $(memtests)          \
 	    $(matrixtests)       \

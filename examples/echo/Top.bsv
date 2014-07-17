@@ -25,6 +25,14 @@ import Swallow::*;
 
 typedef enum {EchoIndication, EchoRequest, Swallow} IfcNames deriving (Eq,Bits);
 
+// module mkCntr#(Integer label)(Empty);
+//    Reg#(Bit#(32)) cycles <- mkReg(0);
+//    rule count;
+//       cycles <= cycles+1;
+//       $display("mkCntr(%d) %d",label, cycles);
+//    endrule
+// endmodule
+
 module mkPortalTop#(HostType host)(StdPortalTop#(addrWidth));
 
    // instantiate user portals
@@ -32,6 +40,9 @@ module mkPortalTop#(HostType host)(StdPortalTop#(addrWidth));
    EchoRequestInternal echoRequestInternal <- mkEchoRequestInternal(echoIndicationProxy.ifc);
    EchoRequestWrapper echoRequestWrapper <- mkEchoRequestWrapper(EchoRequest,echoRequestInternal.ifc);
    
+   // let cnt0 <- mkCntr(0);
+   // let cnt1 <- mkCntr(1, clocked_by host.doubleClock, reset_by host.doubleReset);
+
    Swallow swallow <- mkSwallow();
    SwallowWrapper swallowWrapper <- mkSwallowWrapper(Swallow, swallow);
    

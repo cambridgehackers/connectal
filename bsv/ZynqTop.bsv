@@ -138,4 +138,9 @@ module mkZynqTop(ZynqTop);
    interface pins = top.pins;
    interface deleteme_unused_clock = unused_clock;
    interface deleteme_unused_reset = unused_reset;
+   
+   // once a double clock is added to the PS7 Module, hook it up here 
+   interface doubleClock = mainclock;
+   interface doubleReset = mainreset;
+
 endmodule
