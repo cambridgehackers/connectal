@@ -255,7 +255,7 @@ class MethodMixin:
             for e in w:
                 field = e[0];
 		if e[3].cName() == 'float':
-		    return '        WRITEL(p, temp_working_addr, *(int*)&%s; *dest_addr=tmp);\n' % e[0];
+		    return '        WRITEL(p, temp_working_addr, *(int*)&%s);\n' % e[0];
                 if e[2]:
                     field = '(%s>>%s)' % (field, e[2])
                 if off:
