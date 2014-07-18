@@ -76,20 +76,37 @@ instance ToPut#(ToBit#(n,a),a);
 endinstance
 
 instance ToPipeIn#(Bit#(n), FromBit#(n,a));
-   function PipeIn#(Bit#(n)) toPipeIn(FromBit#(n,a) in);
+   function PipeIn#(Bit#(n)) toPipeIn(FromBit#(n,a) frombit);
       return (interface PipeIn#(Bit#(n));
-		 method enq = in.enq;
-		 method notFull = in.notFull;
+		 method enq = frombit.enq;
+		 method notFull = frombit.notFull;
+	      endinterface);
+   endfunction
+endinstance
+instance ToPipeOut#(a, FromBit#(n,a));
+   function PipeOut#(a) toPipeOut(FromBit#(n,a) frombit);
+      return (interface PipeOut#(a);
+		 method first = frombit.first;
+		 method deq = frombit.deq;
+		 method notEmpty = frombit.notEmpty;
 	      endinterface);
    endfunction
 endinstance
 
+instance ToPipeIn#(a, ToBit#(n,a));
+   function PipeIn#(a) toPipeIn(ToBit#(n,a) tobit);
+      return (interface PipeIn#(Bit#(n));
+		 method enq = tobit.enq;
+		 method notFull = tobit.notFull;
+	      endinterface);
+   endfunction
+endinstance
 instance ToPipeOut#(Bit#(n), ToBit#(n,a));
-   function PipeOut#(Bit#(n)) toPipeOut(ToBit#(n,a) in);
+   function PipeOut#(Bit#(n)) toPipeOut(ToBit#(n,a) tobit);
       return (interface PipeOut#(Bit#(n));
-		 method first = in.first;
-		 method deq = in.deq;
-		 method notEmpty = in.notEmpty;
+		 method first = tobit.first;
+		 method deq = tobit.deq;
+		 method notEmpty = tobit.notEmpty;
 	      endinterface);
    endfunction
 endinstance
