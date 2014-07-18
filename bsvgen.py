@@ -88,9 +88,17 @@ interface %(Dut)s;
 endinterface
 '''
 
+requestOutputPipeInterfaceTemplate='''\
+    interface PipeOut#(%(MethodName)s_Request) %(methodName)s_PipeOut;
+'''
 exposedWrapperInterfaceTemplate='''
 %(requestElements)s
 // exposed wrapper portal interface
+interface %(Dut)sPipes;
+    interface Vector#(%(requestChannelCount)s, PipeIn#(Bit#(32))) inputPipes;
+    interface Vector#(%(requestChannelCount)s, Bit#(32)) requestSizeBits;
+%(requestOutputPipeInterfaces)s
+endinterface
 interface %(Dut)sPortal;
     interface Portal#(%(requestChannelCount)s, %(indicationChannelCount)s, 32) portalIfc;
 endinterface
@@ -152,13 +160,14 @@ proxyCtrlTemplate='''
 
 requestRuleTemplate='''
     FromBit#(32,%(MethodName)s_Request) %(methodName)s_requestFifo <- mkFromBit();
-    requestPipes[%(channelNumber)s] = toPipeIn(%(methodName)s_requestFifo);
+    requestPipeIn[%(channelNumber)s] = toPipeIn(%(methodName)s_requestFifo);
     requestBits[%(channelNumber)s]  = fromInteger(valueOf(SizeOf#(%(MethodName)s_Request)));
+'''
+
+mkConnectionMethodTemplate='''
     rule handle_%(methodName)s_request;
-        let request = %(methodName)s_requestFifo.first;
-        %(methodName)s_requestFifo.deq;
+        let request <- toGet(pipes.%(methodName)s_PipeOut).get();
         %(invokeMethod)s
-        //$display("invoked request method %(methodName)s");
     endrule
 '''
 
@@ -189,25 +198,72 @@ endmodule
 '''
 
 mkExposedWrapperInterfaceTemplate='''
+instance Connectable#(%(Dut)sPipes,%(Ifc)s);
+   module mkConnection#(%(Dut)sPipes pipes, %(Ifc)s ifc)(Empty);
+%(mkConnectionMethodRules)s
+   endmodule
+endinstance
+
 // exposed wrapper Portal implementation
-module mk%(Dut)sPortal#(idType id, %(Ifc)s ifc)(%(Dut)sPortal)
-    provisos (Bits#(idType, __a), 
-              Add#(a__, __a, 32));
-    Vector#(%(requestChannelCount)s, PipeIn#(Bit#(32))) requestPipes = newVector();
+(* synthesize *)
+module mk%(Dut)sPipes#(Bit#(32) id)(%(Dut)sPipes);
+    Vector#(%(requestChannelCount)s, PipeIn#(Bit#(32))) requestPipeIn = newVector();
     Vector#(%(requestChannelCount)s, Bit#(32)) requestBits = newVector();
     Vector#(0, PipeOut#(Bit#(32))) indicationPipes = nil;
     Vector#(0, Bit#(32))           indicationBits = nil;
 %(wrapperCtrl)s
+    interface Vector inputPipes = requestPipeIn;
+    interface Vector requestSizeBits = requestBits;
+%(outputPipes)s
+endmodule
+
+module mk%(Dut)sPortal#(idType id, %(Ifc)s ifc)(%(Dut)sPortal)
+    provisos (Bits#(idType, __a),
+              Add#(a__, __a, 32));
+    let pipes <- mk%(Dut)sPipes(zeroExtend(pack(id)));
+    mkConnection(pipes, ifc);
+    let requestPipes = pipes.inputPipes;
+    let requestBits = pipes.requestSizeBits;
+    Vector#(0, PipeOut#(Bit#(32))) indicationPipes = nil;
+    Vector#(0, Bit#(32)) indicationBits = nil;
 %(portalIfc)s
+endmodule
+
+interface %(Dut)sMemPortalPipes;
+    interface %(Dut)sPipes pipes;
+    interface MemPortal#(16,32) portalIfc;
+endinterface
+
+(* synthesize *)
+module mk%(Dut)sMemPortalPipes#(Bit#(32) id)(%(Dut)sMemPortalPipes);
+
+  let p <- mk%(Dut)sPipes(zeroExtend(pack(id)));
+
+  Portal#(%(requestChannelCount)s, 0, 32) portalifc = (interface Portal;
+        method Bit#(32) ifcId;
+            return zeroExtend(pack(id));
+        endmethod
+        method Bit#(32) ifcType;
+            return %(ifcType)s;
+        endmethod
+        interface Vector requests = p.inputPipes;
+        interface Vector requestSizeBits = p.requestSizeBits;
+        interface Vector indications = nil;
+        interface Vector indicationSizeBits = nil;
+    endinterface);
+
+  let memPortal <- mkMemPortal(portalifc);
+  interface %(Dut)sPipes pipes = p;
+  interface MemPortal portalIfc = memPortal;
 endmodule
 
 // exposed wrapper MemPortal implementation
 module mk%(Dut)s#(idType id, %(Ifc)s ifc)(%(Dut)s)
    provisos (Bits#(idType, a__),
 	     Add#(b__, a__, 32));
-  let dut <- mk%(Dut)sPortal(id, ifc);
-  let memSlave <- mkMemPortal(dut.portalIfc);
-  interface MemPortal portalIfc = memSlave;
+  let dut <- mk%(Dut)sMemPortalPipes(zeroExtend(pack(id)));
+  mkConnection(dut.pipes, ifc);
+  interface MemPortal portalIfc = dut.portalIfc;
 endmodule
 '''
 
@@ -235,7 +291,7 @@ endmodule
 
 // exposed proxy implementation
 module %(moduleContext)s mk%(Dut)sPortal#(idType id) (%(Dut)sPortal)
-    provisos (Bits#(idType, __a), 
+    provisos (Bits#(idType, __a),
               Add#(a__, __a, 32));
     let rv <- mk%(Dut)sPortalSynth(extend(pack(id)));
     return rv;
@@ -245,8 +301,8 @@ endmodule
 (* synthesize *)
 module mk%(Dut)sSynth#(Bit#(32) id)(%(Dut)s);
   let dut <- mk%(Dut)sPortal(id);
-  let memSlave <- mkMemPortal(dut.portalIfc);
-  interface MemPortal portalIfc = memSlave;
+  let memPortal <- mkMemPortal(dut.portalIfc);
+  interface MemPortal portalIfc = memPortal;
   interface %(Ifc)s ifc = dut.ifc;
 endmodule
 
@@ -336,10 +392,6 @@ class MethodMixin:
     def collectMethodRule(self, outerTypeName, hidden=False):
         substs = self.substs(outerTypeName)
         if self.return_type.name == 'Action':
-            paramsForCall = ['request.%s' % p.name for p in self.params]
-            substs['paramsForCall'] = ', '.join(paramsForCall)
-            substs['putFailed'] = '' if hidden else 'p.putFailed(%(ord)s);' % substs
-            substs['invokeMethod'] = '' if hidden else 'ifc.%(methodName)s(%(paramsForCall)s);' % substs
             return requestRuleTemplate % substs
         else:
             return None
@@ -399,14 +451,15 @@ class InterfaceMixin:
         m.update(self.name)
 
         substs = {
+            'Ifc': self.name,
             'dut': dutName,
             'Dut': util.capitalize(name),
             'requestElements': ''.join(requestElements),
+            'methodNames': methodNames,
             'methodRules': ''.join(methodRules),
             'requestFailureRuleNames': "" if len(methodNames) == 0 else '(* descending_urgency = "'+', '.join(['handle_%s_requestFailure' % n for n in methodNames])+'"*)',
             'channelCount': self.channelCount,
             'writeChannelCount': self.channelCount,
-            'Ifc': self.name,
             'hiddenProxy' : "%sStatus" % name,
             'moduleContext': '',
 
@@ -431,8 +484,29 @@ class InterfaceMixin:
         substs['proxyCtrl'] = proxyCtrlTemplate % substs
         return substs
 
-    def emitBsvWrapper(self,f,suffix):
-        subs = self.substs(suffix,True,False)
+    def emitBsvWrapper(self,f):
+        subs = self.substs('Wrapper',True,False)
+        name = "%s%s"%(self.name,'Wrapper')
+        methodNames = self.collectMethodNames(name)
+        subs['requestOutputPipeInterfaces'] = ''.join([requestOutputPipeInterfaceTemplate % {'methodName': methodName,
+                                                                                             'MethodName': util.capitalize(methodName)}
+                                                       for methodName in methodNames])
+
+        hidden = False
+        mkConnectionMethodRules = []
+        outputPipes = []
+        for m in self.decls:
+            if m.type == 'Method' and m.return_type.name == 'Action':
+                paramsForCall = ['request.%s' % p.name for p in m.params]
+                msubs = {'methodName': m.name,
+                         'MethodName': util.capitalize(m.name),
+                         'paramsForCall': ', '.join(paramsForCall)}
+                msubs['invokeMethod'] = '' if hidden else 'ifc.%(methodName)s(%(paramsForCall)s);' % msubs
+                mkConnectionMethodRules.append(mkConnectionMethodTemplate % msubs)
+                outputPipes.append('    interface %(methodName)s_PipeOut = toPipeOut(%(methodName)s_requestFifo);' % msubs)
+
+        subs['mkConnectionMethodRules'] = ''.join(mkConnectionMethodRules)
+        subs['outputPipes'] = '\n'.join(outputPipes)
         f.write(exposedWrapperInterfaceTemplate % subs)
         f.write(mkExposedWrapperInterfaceTemplate % subs)
 
