@@ -34,8 +34,6 @@
 #include <pthread.h>
 
 #include <portal.h>
-
-#include "sock_fd.h"
 #include "sock_utils.h"
 
 static struct portal p_fd = iport;

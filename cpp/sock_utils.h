@@ -24,6 +24,8 @@
 #ifndef _SOCK_UTILS_H_
 #define _SOCK_UTILS_H_
 
+#include <sys/un.h>
+
 struct channel{
   int s1;
   int s2;
@@ -42,5 +44,7 @@ static struct portal iport = {{0,0,{0,""},false, ""},
 
 void connect_socket(channel *c);
 void thread_socket(struct channel* rc, const char *format, int id);
+ssize_t sock_fd_write(int sock, int fd);
+ssize_t sock_fd_read(int sock, int *fd);
 
 #endif //_SOCK_UTILS_H_

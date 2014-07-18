@@ -51,7 +51,6 @@
 
 #include "portal.h"
 #include "sock_utils.h"
-#include "sock_fd.h"
 
 #define MAX_TIMER_COUNT      16
 #define TIMING_INTERVAL_SIZE  6

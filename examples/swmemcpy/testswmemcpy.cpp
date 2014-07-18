@@ -7,7 +7,7 @@
 #include <semaphore.h>
 
 #include "portal.h"
-#include "sock_fd.h"
+#include "sock_utils.h"
 
 int numWords = 16;
 size_t test_sz  = numWords*sizeof(unsigned int);

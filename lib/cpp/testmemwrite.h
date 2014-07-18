@@ -3,7 +3,7 @@
 #ifndef _TESTMEMWRITE_H_
 #define _TESTMEMWRITE_H_
 
-#include "sock_fd.h"
+#include "sock_utils.h"
 #include "StdDmaIndication.h"
 #include "DmaConfigProxy.h"
 #include "GeneratedTypes.h" 

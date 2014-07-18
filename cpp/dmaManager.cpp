@@ -39,7 +39,6 @@
 
 #include "dmaManager.h"
 #include "sock_utils.h"
-#include "sock_fd.h"
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
