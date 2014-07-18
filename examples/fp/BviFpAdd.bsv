@@ -45,7 +45,7 @@ module mkBviFpAdd (BviFpAdd);
       ready (s_axis_operation_tready) enable (s_axis_operation_tvalid);
       
    method m_axis_result_tdata m_axis_result ()
-      ready (m_axis_result_tready) enable (m_axis_result_tvalid);
+      ready (m_axis_result_tvalid) enable (m_axis_result_tready);
       
       schedule (s_axis_a, s_axis_b, s_axis_operation, m_axis_result) CF
       (s_axis_a, s_axis_b, s_axis_operation, m_axis_result);
