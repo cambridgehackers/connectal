@@ -122,27 +122,27 @@ void print_timer(int loops)
     }
 }
 
-unsigned int read_portal_bsim(portal *p, volatile unsigned int *addr, char *name)
+unsigned int read_portal_bsim(int sockfd, volatile unsigned int *addr, char *name)
 {
   unsigned int rv;
   struct memrequest foo = {false,addr,0};
 
-  if (send(p->read.s2, &foo, sizeof(foo), 0) == -1) {
+  if (send(sockfd, &foo, sizeof(foo), 0) == -1) {
     fprintf(stderr, "%s (%s) send error, errno=%s\n",__FUNCTION__, name, strerror(errno));
     exit(1);
   }
-  if(recv(p->read.s2, &rv, sizeof(rv), 0) == -1){
+  if(recv(sockfd, &rv, sizeof(rv), 0) == -1){
     fprintf(stderr, "%s (%s) recv error\n",__FUNCTION__, name);
     exit(1);	  
   }
   return rv;
 }
 
-void write_portal_bsim(portal *p, volatile unsigned int *addr, unsigned int v, char *name)
+void write_portal_bsim(int sockfd, volatile unsigned int *addr, unsigned int v, char *name)
 {
   struct memrequest foo = {true,addr,v};
 
-  if (send(p->write.s2, &foo, sizeof(foo), 0) == -1) {
+  if (send(sockfd, &foo, sizeof(foo), 0) == -1) {
     fprintf(stderr, "%s (%s) send error\n",__FUNCTION__, name);
     //exit(1);
   }
@@ -158,7 +158,8 @@ void PortalInternal::portalClose()
 
 PortalInternal::PortalInternal(PortalInternal *p)
   : fd(p->fd),
-    p(p->p),
+    p_read(p->p_read),
+    p_write(p->p_write),
     name(strdup(p->name)),
     map_base(p->map_base)
 {
@@ -224,9 +225,8 @@ PortalInternal::PortalInternal(int id)
     }  
     map_base   = (volatile unsigned int*)dev_base;
 #else
-    p = (struct portal*)malloc(sizeof(struct portal));
-    connect_socket(&p->read, "%s_rc", name);
-    connect_socket(&p->write, "%s_wc", name);
+    connect_socket(&p_read, "%s_rc", name);
+    connect_socket(&p_write, "%s_wc", name);
 #endif
 
 errlab:

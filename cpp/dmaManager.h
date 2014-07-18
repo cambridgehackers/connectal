@@ -45,7 +45,7 @@ typedef struct {
   uint64_t mtCnt;
   PortalInternal *device;
 #ifndef MMAP_HW
-  portal p_fd;
+  struct channel write;
 #endif
   int pa_fd;
   int handle;

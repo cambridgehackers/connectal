@@ -64,7 +64,8 @@ class PortalInternal
   PortalInternal(PortalInternal* p);
   virtual ~PortalInternal();
   int fd;
-  struct portal *p;
+  struct channel p_read;
+  struct channel p_write;
   char *name;
   volatile unsigned int *map_base;
   friend class Directory;

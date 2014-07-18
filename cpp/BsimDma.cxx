@@ -36,18 +36,16 @@
 #include <portal.h>
 #include "sock_utils.h"
 
-static struct portal p_fd = iport;
+struct channel p_fd_write;
 static int fd[32];
 static unsigned char *buffer[32];
 static uint32_t buffer_len[32];
 static int size_accum[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 extern "C" {
-
   void init_pareff(){
     fprintf(stderr, "BsimDma::init_pareff()\n");
-    thread_socket(&p_fd.read, "fd_sock_rc", 0);
-    thread_socket(&p_fd.write, "fd_sock_wc", 0);
+    thread_socket(&p_fd_write, "fd_sock_wc", 0);
   }
 
   void write_pareff32(uint32_t pref, uint32_t offset, unsigned int data){
@@ -85,7 +83,7 @@ extern "C" {
     assert(pref < 32);
     size_accum[pref-1] += size;
     if(size == 0){
-      sock_fd_read(p_fd.write.s2, &(fd[pref-1]));
+      sock_fd_read(p_fd_write.sockfd, &(fd[pref-1]));
       buffer[pref-1] = (unsigned char *)mmap(0, size_accum[pref-1], PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd[pref-1], 0);
       buffer_len[pref-1] = size_accum[pref-1]/sizeof(unsigned char);
       // fprintf(stderr, "pareff %d %d\n", pref, size_accum[pref-1]);

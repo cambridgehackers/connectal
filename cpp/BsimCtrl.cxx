@@ -34,9 +34,11 @@
 
 #include "sock_utils.h"
 
-static struct portal portals[16] = {iport,iport,iport,iport,iport,iport,
-				    iport,iport,iport,iport,iport,iport,
-				    iport,iport,iport,iport};
+
+static struct {
+  struct channel read;
+  struct channel write;
+} portals[16];
 
 struct queuestatus{
   struct memrequest req;
@@ -54,8 +56,8 @@ static void recv_request(bool rr)
   if (!head->valid && !head->inflight){
     for(int i = 0; i < 16; i++){
       struct channel* chan = rr ? &(portals[i].read) : &(portals[i].write);
-      if(chan->connected){
-	int rv = recv(chan->s2, &(head->req), sizeof(memrequest), MSG_DONTWAIT);
+      if(1/*chan->connected*/){
+	int rv = recv(chan->sockfd, &(head->req), sizeof(memrequest), MSG_DONTWAIT);
 	if(rv > 0){
 	  //fprintf(stderr, "recv size %d\n", rv);
 	  assert(rv == sizeof(memrequest));
@@ -115,7 +117,7 @@ extern "C" {
     read_head.valid = false;
     read_head.inflight = false;
     int send_attempts = 0;
-    while(send(portals[read_head.pnum].read.s2, &x, sizeof(x), 0) == -1){
+    while(send(portals[read_head.pnum].read.sockfd, &x, sizeof(x), 0) == -1){
       if(send_attempts++ > 16){
 	fprintf(stderr, "(%d) send failure\n", read_head.pnum);
 	exit(1);

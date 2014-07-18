@@ -52,10 +52,10 @@ typedef struct {
 #define READL(CITEM, A)     (*(A))
 #define WRITEL(CITEM, A, B) (*(A) = (B))
 #else
-unsigned int read_portal_bsim(portal *p, volatile unsigned int *addr, char *name);
-void write_portal_bsim(portal *p, volatile unsigned int *addr, unsigned int v, char *name);
-#define READL(CITEM, A) read_portal_bsim((CITEM)->p, (A), (CITEM)->name)
-#define WRITEL(CITEM, A, B) write_portal_bsim((CITEM)->p, (A), (B), (CITEM)->name)
+unsigned int read_portal_bsim(int sockfd, volatile unsigned int *addr, char *name);
+void write_portal_bsim(int sockfd, volatile unsigned int *addr, unsigned int v, char *name);
+#define READL(CITEM, A) read_portal_bsim((CITEM)->p_read.sockfd, (A), (CITEM)->name)
+#define WRITEL(CITEM, A, B) write_portal_bsim((CITEM)->p_write.sockfd, (A), (B), (CITEM)->name)
 #endif
 
 #endif /* __PORTAL_OFFSETS_H__ */

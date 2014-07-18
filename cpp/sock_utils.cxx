@@ -49,17 +49,18 @@ void connect_socket(channel *c, const char *format, const char *name)
   int connect_attempts = 0;
 
   snprintf(c->path, sizeof(c->path), format, name);
-  if ((c->s2 = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+  if ((c->sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
     fprintf(stderr, "%s (%s) socket error %s\n",__FUNCTION__, c->path, strerror(errno));
     exit(1);
   }
 
   //fprintf(stderr, "%s (%s) trying to connect...\n",__FUNCTION__, c->path);
   
-  c->local.sun_family = AF_UNIX;
-  strcpy(c->local.sun_path, c->path);
-  len = strlen(c->local.sun_path) + sizeof(c->local.sun_family);
-  while (connect(c->s2, (struct sockaddr *)&(c->local), len) == -1) {
+  struct sockaddr_un local;
+  local.sun_family = AF_UNIX;
+  strcpy(local.sun_path, c->path);
+  len = strlen(local.sun_path) + sizeof(local.sun_family);
+  while (connect(c->sockfd, (struct sockaddr *)&local, len) == -1) {
     if(connect_attempts++ > 16){
       fprintf(stderr,"%s (%s) connect error %s\n",__FUNCTION__, c->path, strerror(errno));
       exit(1);
@@ -68,9 +69,9 @@ void connect_socket(channel *c, const char *format, const char *name)
     sleep(1);
   }
   // int sockbuffsz = sizeof(memrequest);
-  // setsockopt(c->s2, SOL_SOCKET, SO_SNDBUF, &sockbuffsz, sizeof(sockbuffsz));
+  // setsockopt(c->sockfd, SOL_SOCKET, SO_SNDBUF, &sockbuffsz, sizeof(sockbuffsz));
   // sockbuffsz = sizeof(unsigned int);
-  // setsockopt(c->s2, SOL_SOCKET, SO_RCVBUF, &sockbuffsz, sizeof(sockbuffsz));
+  // setsockopt(c->sockfd, SOL_SOCKET, SO_RCVBUF, &sockbuffsz, sizeof(sockbuffsz));
   fprintf(stderr, "%s (%s) connected\n",__FUNCTION__, c->path);
 }
 
@@ -183,34 +184,33 @@ sock_fd_read(int sock, int *fd)
 static void* init_socket(void *_xx)
 {
   struct channel *c = (struct channel *)_xx;
+  int listening_socket;
   //fprintf(stderr, "%s (%s)\n",__FUNCTION__,c->path);
-  if ((c->s1 = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+  if ((listening_socket = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
     fprintf(stderr, "%s (%s) socket error %s",__FUNCTION__, c->path, strerror(errno));
     exit(1);
   }
 
-  c->local.sun_family = AF_UNIX;
-  strcpy(c->local.sun_path, c->path);
-  unlink(c->local.sun_path);
-  int len = strlen(c->local.sun_path) + sizeof(c->local.sun_family);
-  if (bind(c->s1, (struct sockaddr *)&c->local, len) == -1) {
+  struct sockaddr_un local;
+  local.sun_family = AF_UNIX;
+  strcpy(local.sun_path, c->path);
+  unlink(local.sun_path);
+  int len = strlen(local.sun_path) + sizeof(local.sun_family);
+  if (bind(listening_socket, (struct sockaddr *)&local, len) == -1) {
     fprintf(stderr, "%s (%s) bind error %s\n",__FUNCTION__, c->path, strerror(errno));
     exit(1);
   }
   
-  if (listen(c->s1, 5) == -1) {
+  if (listen(listening_socket, 5) == -1) {
     fprintf(stderr, "%s (%s) listen error %s\n",__FUNCTION__, c->path, strerror(errno));
     exit(1);
   }
   
   //fprintf(stderr, "%s (%s) waiting for a connection...\n",__FUNCTION__, c->path);
-  if ((c->s2 = accept(c->s1, NULL, NULL)) == -1) {
+  if ((c->sockfd = accept(listening_socket, NULL, NULL)) == -1) {
     fprintf(stderr, "%s (%s) accept error %s\n",__FUNCTION__, c->path, strerror(errno));
     exit(1);
   }
-  
-  //fprintf(stderr, "%s (%s) connected\n",__FUNCTION__,c->path);
-  c->connected = true;
   return NULL;
 }
 
