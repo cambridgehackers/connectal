@@ -227,10 +227,10 @@ int main(int argc, const char **argv)
   float macs = m1.rows * m2.rows * m2.cols;
   fprintf(stderr, "memory read beats %lld utilization (beats/cycle): bandwidth %5.2f GB/s\n", read_beats, read_util, read_bw);
   fprintf(stderr, "memory write beats %lld utilization (beats/cycle): %f bandwidth %5.2f\n", write_beats, write_util, write_bw);
-  fprintf(stderr, "macs/cycle %5.2f dev %5.2f GFLOP/s %5.2f dev %5.2f\n",
+  fprintf(stderr, "Throughput %5.2f macs/cycle hw %5.2f macs/cycle %5.2f GFLOP/s hw %5.2f GFLOP/s\n",
 	  (float)macs / (float)hw_cycles, (float)macs / (float)mmdeviceIndication->ccnt,
 	  2.0 * (float)macs / (float)hw_cycles * freq / 1.0e9, 2.0 * (float)macs / (float)mmdeviceIndication->ccnt * freq / 1.0e9);
-  fprintf(stderr, "hw_cycles %5.1f dev cycles %5.1f opencv matmul %5.1f cycles (speedup %5.2f dev %5.2f), naive matmul %5.1f cycles (speedup %5.2f dev %5.2f)\n",
+  fprintf(stderr, "Time %5.1f cycles hw %5.1f cycles, opencv matmul %5.1f cycles (speedup %5.2f hw %5.2f), naive matmul %5.1f cycles (speedup %5.2f hw %5.2f)\n",
 	  (float)hw_cycles, (float)mmdeviceIndication->ccnt,
 	  (float)opencv_hw_cycles, (float)opencv_hw_cycles/(float)hw_cycles, (float)opencv_hw_cycles/(float)mmdeviceIndication->ccnt,
 	  (float)naive_hw_cycles, (float)naive_hw_cycles/(float)hw_cycles, (float)naive_hw_cycles/(float)mmdeviceIndication->ccnt);
