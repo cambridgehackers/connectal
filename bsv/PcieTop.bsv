@@ -57,6 +57,7 @@ import HostInterface    :: *;
 `else
 `define BSCAN_ARG
 `endif
+typedef `PinType PinType;
 
 // implemented in TlpReplay.cxx
 import "BDPI" function Action put_tlp(TLPData#(16) d);

@@ -34,7 +34,6 @@ import MemTypes          :: *;
 `define PinType Empty
 `endif
 
-typedef `PinType PinType;
 typedef `NumberOfMasters NumberOfMasters;
 typedef `DataBusWidth DataBusWidth;
 
@@ -76,7 +75,6 @@ import PcieEndpointX7    :: *;
 
 typedef `DataBusWidth DataBusWidth;
 typedef `NumberOfMasters NumberOfMasters;
-typedef `PinType PinType;
 
 interface PcieHost#(numeric type dsz, numeric type nSlaves);
    interface Vector#(16,MSIX_Entry)              msixEntry;
