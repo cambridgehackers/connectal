@@ -561,7 +561,7 @@ class TypeMixin:
         if (self.isBitField() and self.bitWidth() <= 64):
             return ''
         else:
-            return '&'
+            return ''
     def cName(self):
         cid = self.name
         cid = cid.replace(' ', '')

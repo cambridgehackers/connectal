@@ -99,7 +99,7 @@ void DmaIndicationWrapperbadAddr_cb (  struct PortalInternal *p, const uint32_t 
 {
         fprintf(stderr, "DmaIndication_badAddr(pointer=%x offset=%"PRIx64" physAddr=%"PRIx64")\n", pointer, offset, physAddr);
 }
-void DmaIndicationWrapperreportStateDbg_cb (  struct PortalInternal *p, const DmaDbgRec& rec )
+void DmaIndicationWrapperreportStateDbg_cb (  struct PortalInternal *p, const DmaDbgRec rec )
 {
         //fprintf(stderr, "reportStateDbg: {x:%08x y:%08x z:%08x w:%08x}\n", rec.x,rec.y,rec.z,rec.w);
         DmaDbgRec dbgRec = rec;
@@ -112,7 +112,7 @@ void DmaIndicationWrapperreportMemoryTraffic_cb (  struct PortalInternal *p, con
         priv.mtCnt = words;
         sem_post(&priv.mtSem);
 }
-void DmaIndicationWrappertagMismatch_cb (  struct PortalInternal *p, const ChannelType& x, const uint32_t a, const uint32_t b )
+void DmaIndicationWrappertagMismatch_cb (  struct PortalInternal *p, const ChannelType x, const uint32_t a, const uint32_t b )
 {
         fprintf(stderr, "tagMismatch: %s %d %d\n", x==ChannelType_Read ? "Read" : "Write", a, b);
 }
