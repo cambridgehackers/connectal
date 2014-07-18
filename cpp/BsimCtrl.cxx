@@ -34,29 +34,28 @@
 
 #include "sock_utils.h"
 
-
 static struct {
   struct channel read;
   struct channel write;
 } portals[16];
 
-struct queuestatus{
-  struct memrequest req;
-  unsigned int pnum;
-  bool valid;
-  bool inflight;
-};
+typedef struct {
+    struct memrequest req;
+    unsigned int pnum;
+    bool valid;
+    bool inflight;
+} HEAD_TYPE;
+static HEAD_TYPE read_head, write_head;
 
-static struct queuestatus  read_head = {{},0,false,false,};
-static struct queuestatus write_head = {{},0,false,false,};
-
+extern "C" {
 static void recv_request(bool rr)
 {
-  struct queuestatus* head = rr ? &read_head : &write_head;
+  HEAD_TYPE *head;
+
+  head = rr ? &read_head : &write_head;
   if (!head->valid && !head->inflight){
     for(int i = 0; i < 16; i++){
-      struct channel* chan = rr ? &(portals[i].read) : &(portals[i].write);
-      if(1/*chan->connected*/){
+	struct channel* chan = rr ? &(portals[i].read) : &(portals[i].write);
 	int rv = recv(chan->sockfd, &(head->req), sizeof(memrequest), MSG_DONTWAIT);
 	if(rv > 0){
 	  //fprintf(stderr, "recv size %d\n", rv);
@@ -70,16 +69,11 @@ static void recv_request(bool rr)
 		  i, rr, head->req.write, (long)head->req.addr, head->req.data);
 	  break;
 	}
-      }
     }
-  } else {
-    //fprintf(stderr, "blocked %d %d %d\n", head->pnum, head->valid, head->inflight);
   }
 }
 
-extern "C" {
   void initPortal(unsigned long id){
-    assert(id < 16);    
     thread_socket(&portals[id].read, "fpga%ld_rc", id);
     thread_socket(&portals[id].write, "fpga%ld_wc", id);
   }
