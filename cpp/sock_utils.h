@@ -40,7 +40,7 @@ struct portal{
 static struct portal iport = {{0,0,{0,""},false, ""},
 			      {0,0,{0,""},false, ""}};
 
-void* init_socket(void* _xx);
 void connect_socket(channel *c);
+void thread_socket(struct channel* rc, const char *format, int id);
 
 #endif //_SOCK_UTILS_H_

@@ -77,29 +77,9 @@ static void recv_request(bool rr)
 
 extern "C" {
   void initPortal(unsigned long id){
-
-
-    pthread_t tid;
-    struct channel* rc;
-    struct channel* wc;
-
     assert(id < 16);    
-
-    rc = &(portals[id].read);
-    wc = &(portals[id].write);
-    
-    snprintf(rc->path, sizeof(rc->path), "fpga%ld_rc", id);
-    snprintf(wc->path, sizeof(wc->path), "fpga%ld_wc", id);
-
-    if(pthread_create(&tid, NULL,  init_socket, (void*)rc)){
-      fprintf(stderr, "error creating init thread\n");
-      exit(1);
-    }
-
-    if(pthread_create(&tid, NULL,  init_socket, (void*)wc)){
-      fprintf(stderr, "error creating init thread\n");
-      exit(1);
-    }
+    thread_socket(&portals[id].read, "fpga%ld_rc", id);
+    thread_socket(&portals[id].write, "fpga%ld_wc", id);
   }
 
   bool writeReq32(){

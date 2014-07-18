@@ -29,14 +29,13 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <pthread.h>
 
 #include "sock_utils.h"
 
-void* init_socket(void* _xx)
+static void* init_socket(void *_xx)
 {
-
   struct channel *c = (struct channel *)_xx;
-
   //fprintf(stderr, "%s (%s)\n",__FUNCTION__,c->path);
   if ((c->s1 = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
     fprintf(stderr, "%s (%s) socket error %s",__FUNCTION__, c->path, strerror(errno));
@@ -65,9 +64,19 @@ void* init_socket(void* _xx)
   
   //fprintf(stderr, "%s (%s) connected\n",__FUNCTION__,c->path);
   c->connected = true;
-  return _xx;
+  return NULL;
 }
 
+void thread_socket(struct channel* rc, const char *format, int id)
+{
+   pthread_t tid;
+   snprintf(rc->path, sizeof(rc->path), format, id);
+
+   if(pthread_create(&tid, NULL, init_socket, (void*)rc)){
+      fprintf(stderr, "error creating init thread\n");
+      exit(1);
+   }
+}
 
 void connect_socket(channel *c)
 {

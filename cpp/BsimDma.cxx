@@ -47,30 +47,9 @@ static int size_accum[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 extern "C" {
 
   void init_pareff(){
-
-    pthread_t tid;
-
-    struct channel* rc;
-    struct channel* wc;
-
     fprintf(stderr, "BsimDma::init_pareff()\n");
-
-    rc = &(p_fd.read);
-    snprintf(rc->path, sizeof(rc->path), "fd_sock_rc");
-
-    wc = &(p_fd.write);
-    snprintf(wc->path, sizeof(wc->path), "fd_sock_wc");
-
-    if(pthread_create(&tid, NULL,  init_socket, (void*)rc)){
-      fprintf(stderr, "error creating init thread\n");
-      exit(1);
-    }
-
-    if(pthread_create(&tid, NULL,  init_socket, (void*)wc)){
-      fprintf(stderr, "error creating init thread\n");
-      exit(1);
-    }
-
+    thread_socket(&p_fd.read, "fd_sock_rc", 0);
+    thread_socket(&p_fd.write, "fd_sock_wc", 0);
   }
 
   void write_pareff32(uint32_t pref, uint32_t offset, unsigned int data){
