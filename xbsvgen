@@ -452,7 +452,7 @@ else
     ifeq ($(OS),android)
 
 run:
-	$(XBSVDIR)/scripts/run.zedboard bin/*.gz `find . -name android_exe | grep libs` $(RUN_ARGS)
+	$(XBSVDIR)/scripts/run.zedboard bin/mkTop.xdevcfg.bin.gz bin/android_exe $(RUN_ARGS)
 
     else
 
