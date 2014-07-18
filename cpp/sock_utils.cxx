@@ -35,7 +35,6 @@
 
 void connect_socket(channel *c, const char *format, int id)
 {
-  int len;
   int connect_attempts = 0;
 
   snprintf(c->path, sizeof(c->path), format, id);
@@ -48,8 +47,7 @@ void connect_socket(channel *c, const char *format, int id)
   struct sockaddr_un local;
   local.sun_family = AF_UNIX;
   strcpy(local.sun_path, c->path);
-  len = strlen(local.sun_path) + sizeof(local.sun_family);
-  while (connect(c->sockfd, (struct sockaddr *)&local, len) == -1) {
+  while (connect(c->sockfd, (struct sockaddr *)&local, strlen(local.sun_path) + sizeof(local.sun_family)) == -1) {
     if(connect_attempts++ > 16){
       fprintf(stderr,"%s (%s) connect error %s\n",__FUNCTION__, c->path, strerror(errno));
       exit(1);
@@ -59,112 +57,6 @@ void connect_socket(channel *c, const char *format, int id)
   }
   fprintf(stderr, "%s (%s) connected\n",__FUNCTION__, c->path);
 }
-
-/* Thanks to keithp.com for readable examples how to do this! */
-ssize_t
-sock_fd_write(int sock, int fd)
-{
-    char buf[] = "1";
-    ssize_t buflen = 1;
-    ssize_t     size;
-    struct msghdr   msg;
-    struct iovec    iov;
-    union {
-        struct cmsghdr  cmsghdr;
-        char        control[CMSG_SPACE(sizeof (int))];
-    } cmsgu;
-    struct cmsghdr  *cmsg;
-
-    iov.iov_base = buf;
-    iov.iov_len = buflen;
-
-    msg.msg_name = NULL;
-    msg.msg_namelen = 0;
-    msg.msg_iov = &iov;
-    msg.msg_iovlen = 1;
-
-    if (fd != -1) {
-        msg.msg_control = cmsgu.control;
-        msg.msg_controllen = sizeof(cmsgu.control);
-
-        cmsg = CMSG_FIRSTHDR(&msg);
-        cmsg->cmsg_len = CMSG_LEN(sizeof (int));
-        cmsg->cmsg_level = SOL_SOCKET;
-        cmsg->cmsg_type = SCM_RIGHTS;
-
-        //printf ("passing fd %d\n", fd);
-        *((int *) CMSG_DATA(cmsg)) = fd;
-    } else {
-        msg.msg_control = NULL;
-        msg.msg_controllen = 0;
-        //printf ("not passing fd\n");
-    }
-
-    size = sendmsg(sock, &msg, 0);
-
-    if (size < 0)
-        perror ("sendmsg");
-    return size;
-}
-
-ssize_t
-sock_fd_read(int sock, int *fd)
-{
-    char buf[16];
-    ssize_t buflen = 16;
-
-    ssize_t size;
-
-    if (fd) {
-        struct msghdr   msg;
-        struct iovec    iov;
-        union {
-            struct cmsghdr  cmsghdr;
-            char        control[CMSG_SPACE(sizeof (int))];
-        } cmsgu;
-        struct cmsghdr  *cmsg;
-
-        iov.iov_base = buf;
-        iov.iov_len = buflen;
-
-        msg.msg_name = NULL;
-        msg.msg_namelen = 0;
-        msg.msg_iov = &iov;
-        msg.msg_iovlen = 1;
-        msg.msg_control = cmsgu.control;
-        msg.msg_controllen = sizeof(cmsgu.control);
-        size = recvmsg (sock, &msg, 0);
-        if (size < 0) {
-            perror ("recvmsg");
-            exit(1);
-        }
-        cmsg = CMSG_FIRSTHDR(&msg);
-        if (cmsg && cmsg->cmsg_len == CMSG_LEN(sizeof(int))) {
-            if (cmsg->cmsg_level != SOL_SOCKET) {
-                fprintf (stderr, "invalid cmsg_level %d\n",
-                     cmsg->cmsg_level);
-                exit(1);
-            }
-            if (cmsg->cmsg_type != SCM_RIGHTS) {
-                fprintf (stderr, "invalid cmsg_type %d\n",
-                     cmsg->cmsg_type);
-                exit(1);
-            }
-
-            *fd = *((int *) CMSG_DATA(cmsg));
-            //fprintf(stderr, "received fd %d\n", *fd);
-        } else
-            *fd = -1;
-    } else {
-        size = read (sock, buf, buflen);
-        if (size < 0) {
-            perror("read");
-            exit(1);
-        }
-    }
-    return size;
-}
-
 
 static void* init_socket(void *_xx)
 {
@@ -208,4 +100,56 @@ void thread_socket(struct channel* rc, const char *format, int id)
       fprintf(stderr, "error creating init thread\n");
       exit(1);
    }
+}
+
+/* Thanks to keithp.com for readable examples how to do this! */
+
+#define COMMON_SOCK_FD \
+    ssize_t     size; \
+    struct msghdr   msg; \
+    struct iovec    iov; \
+    union { \
+        struct cmsghdr  cmsghdr; \
+        char        control[CMSG_SPACE(sizeof (int))]; \
+    } cmsgu; \
+    struct cmsghdr  *cmsg; \
+    \
+    iov.iov_base = buf; \
+    iov.iov_len = sizeof(buf); \
+    msg.msg_name = NULL; \
+    msg.msg_namelen = 0; \
+    msg.msg_iov = &iov; \
+    msg.msg_iovlen = 1; \
+    msg.msg_control = cmsgu.control; \
+    msg.msg_controllen = sizeof(cmsgu.control);
+
+ssize_t sock_fd_write(int sock, int fd)
+{
+    char buf[] = "1";
+    COMMON_SOCK_FD;
+    cmsg = CMSG_FIRSTHDR(&msg);
+    cmsg->cmsg_len = CMSG_LEN(sizeof (int));
+    cmsg->cmsg_level = SOL_SOCKET;
+    cmsg->cmsg_type = SCM_RIGHTS;
+    *((int *) CMSG_DATA(cmsg)) = fd;
+    return sendmsg(sock, &msg, 0);
+}
+
+ssize_t
+sock_fd_read(int sock, int *fd)
+{
+    char buf[16];
+
+    COMMON_SOCK_FD;
+    *fd = -1;
+    size = recvmsg (sock, &msg, 0);
+    cmsg = CMSG_FIRSTHDR(&msg);
+    if (size > 0 && cmsg && cmsg->cmsg_len == CMSG_LEN(sizeof(int))) {
+        if (cmsg->cmsg_level != SOL_SOCKET || cmsg->cmsg_type != SCM_RIGHTS) {
+            fprintf(stderr, "%s: invalid message\n", __FUNCTION__);
+            exit(1);
+        }
+        *fd = *((int *) CMSG_DATA(cmsg));
+    }
+    return size;
 }
