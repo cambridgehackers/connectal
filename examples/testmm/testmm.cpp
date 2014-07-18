@@ -48,6 +48,8 @@ class SigmoidIndication;
 class MmIndication;
 class MmDebugIndication;
 
+#define N 2
+
 RbmRequestProxy *rbmdevice = 0;
 MmRequestProxy *mmdevice = 0;
 MmDebugRequestProxy *mmdebug = 0;
@@ -92,12 +94,14 @@ int main(int argc, const char **argv)
 {
   unsigned int srcGen = 0;
 
+  PortalPoller *poller = new PortalPoller();
+
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   mmdevice = new MmRequestProxy(IfcNames_MmRequestPortal);
   mmdebug = new MmDebugRequestProxy(IfcNames_MmDebugRequestPortal);
   mmdeviceIndication = new MmIndication(IfcNames_MmIndicationPortal);
   mmDebugIndication = new MmDebugIndication(IfcNames_MmDebugIndicationPortal);
-  timerdevice = new TimerRequestProxy(IfcNames_TimerRequestPortal);
+  timerdevice = new TimerRequestProxy(IfcNames_TimerRequestPortal, poller);
   timerdeviceIndication = new TimerIndication(IfcNames_TimerIndicationPortal);
 
   dmap = new DmaConfigProxy(IfcNames_DmaConfigPortal);
@@ -116,12 +120,10 @@ int main(int argc, const char **argv)
    exit(1);
   }
 
-  pthread_t dbgtid;
-  fprintf(stderr, "creating debug thread\n");
-  if(pthread_create(&dbgtid, NULL,  dbgThread, NULL)){
-   fprintf(stderr, "error creating debug thread\n");
-   exit(1);
-  }
+  long req_freq = 100000000;
+  long freq = 0;
+  poller->setClockFrequency(0, req_freq, &freq);
+  fprintf(stderr, "Requested FCLK[0]=%d actually %d\n", req_freq, freq);
 
   matAllocator = new PortalMatAllocator(dmap, dma);
 
@@ -131,8 +133,8 @@ int main(int argc, const char **argv)
   int A = 32;
   int B = 512;
 #else
-  int A = 32;
-  int B = 512;
+  int A = 256;
+  int B = 2048;
 #endif
   if (argc > 1) {
     B = strtoul(argv[1], 0, 0);
@@ -169,8 +171,8 @@ int main(int argc, const char **argv)
 
   FILE *octave_file = fopen("foo.m", "w");
 
-  start_timer(0);
   fprintf(stderr, "OpenCV matmul\n");
+  start_timer(0);
   cv::Mat  m3 = m1 * m2;
   uint64_t opencv_hw_cycles = lap_timer(0);
 
@@ -198,6 +200,20 @@ int main(int argc, const char **argv)
   fprintf(stderr, "pm2t\n");
   PortalMat pm2t(m2.t());
   PortalMat pm3;
+
+  // now reference the matrices so we do not count that in the timer
+  pm1.reference();
+  pm2t.reference();
+  pm3.create(m1.rows, m2.cols, CV_32F);
+  pm3.reference();
+
+  pthread_t dbgtid;
+  fprintf(stderr, "creating debug thread\n");
+  if(pthread_create(&dbgtid, NULL,  dbgThread, NULL)){
+   fprintf(stderr, "error creating debug thread\n");
+   exit(1);
+  }
+
   fprintf(stderr, "HW matmul\n");
   start_timer(0);
   pm3.multf(pm1, pm2t, mmdeviceIndication);
@@ -206,11 +222,18 @@ int main(int argc, const char **argv)
   uint64_t write_beats = dma->show_mem_stats(ChannelType_Write);
   float read_util = (float)read_beats/(float)mmdeviceIndication->ccnt;
   float write_util = (float)write_beats/(float)mmdeviceIndication->ccnt;
-  fprintf(stderr, "memory read beats %lld utilization (beats/cycle): %f\n", read_beats, read_util);
-  fprintf(stderr, "memory write beats %lld utilization (beats/cycle): %f\n", write_beats, write_util);
-  fprintf(stderr, "opencv matmul %ld cycles (speedup %5.2ff), naive matmul %ld cycles (speedup %5.2f)\n",
-	  opencv_hw_cycles, (float)opencv_hw_cycles/(float)hw_cycles,
-	  naive_hw_cycles, (float)naive_hw_cycles/(float)hw_cycles);
+  float read_bw = read_util * N * 4 * freq / 1.0e9;
+  float write_bw = write_util * N * 4 * freq / 1.0e9;
+  float macs = m1.rows * m2.rows * m2.cols;
+  fprintf(stderr, "memory read beats %lld utilization (beats/cycle): bandwidth %5.2f GB/s\n", read_beats, read_util, read_bw);
+  fprintf(stderr, "memory write beats %lld utilization (beats/cycle): %f bandwidth %5.2f\n", write_beats, write_util, write_bw);
+  fprintf(stderr, "macs/cycle %5.2f dev %5.2f GFLOP/s %5.2f dev %5.2f\n",
+	  (float)macs / (float)hw_cycles, (float)macs / (float)mmdeviceIndication->ccnt,
+	  (float)macs / (float)hw_cycles * freq / 1.0e9, (float)macs / (float)mmdeviceIndication->ccnt * freq / 1.0e9);
+  fprintf(stderr, "hw_cycles %5.1f dev cycles %5.1f opencv matmul %5.1f cycles (speedup %5.2f dev %5.2f), naive matmul %5.1f cycles (speedup %5.2f dev %5.2f)\n",
+	  (float)hw_cycles, (float)mmdeviceIndication->ccnt,
+	  (float)opencv_hw_cycles, (float)opencv_hw_cycles/(float)hw_cycles, (float)opencv_hw_cycles/(float)mmdeviceIndication->ccnt,
+	  (float)naive_hw_cycles, (float)naive_hw_cycles/(float)hw_cycles, (float)naive_hw_cycles/(float)mmdeviceIndication->ccnt);
 
   if (0) {
     dumpMat<float>("pm3", "%5.1f", pm3);
