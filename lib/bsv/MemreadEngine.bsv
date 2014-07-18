@@ -71,11 +71,12 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
    Vector#(numServers, Reg#(Bit#(outCntSz)))     outs0 <- replicateM(mkReg(0));
    Vector#(numServers, Ratchet#(16))           buffCap <- replicateM(mkRatchet(fromInteger(bufferSizeBeats)));
    UGBramFifos#(numServers,cmdQDepth,MemengineCmd) cmdBuf <- mkUGBramFifos;
-
-   FIFO#(Bit#(serverIdxSz))                       loadf_a <- mkSizedFIFO(1);
-   FIFO#(MemengineCmd)                            loadf_b <- mkSizedFIFO(1);
+   
+   Reg#(Bool) load_in_progress <- mkReg(False);
+   FIFO#(Tuple2#(MemengineCmd,Bool))              loadf_b <- mkSizedFIFO(1);
    FIFO#(Tuple2#(Bit#(serverIdxSz),MemengineCmd)) loadf_c <- mkSizedFIFO(1);
    FIFO#(Tuple3#(Bit#(8),Bit#(serverIdxSz),Bool))   workf <- mkSizedFIFO(32); // isthis the right size?
+   
 
    Vector#(numServers, FIFO#(void))              outfs <- replicateM(mkSizedFIFO(1));
    Vector#(numServers, FIFOF#(Tuple2#(Bit#(serverIdxSz), MemengineCmd))) cmds_in <- replicateM(mkSizedFIFOF(1));
@@ -113,34 +114,37 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
       //$display("store_cmd %d", idx);
    endrule
    
-   rule load_ctxt_a;
-      loadIdx <= loadIdx+1;
+   rule load_ctxt_a (!load_in_progress);
       if (outs1[loadIdx] > 0) begin
+	 load_in_progress <= True;
 	 cmdBuf.first_req(loadIdx);
-	 loadf_a.enq(loadIdx);
-	 //$display("load_ctxt_a %d", loadIdx);
+      end
+      else begin
+	 loadIdx <= loadIdx+1;
       end
    endrule
 
    rule load_ctxt_b;
       let cmd <- cmdBuf.first_resp;
-      loadf_b.enq(cmd);
+      let cond = buffCap[loadIdx].read() >= unpack(extend(cmd.burstLen>>beat_shift));
+      loadf_b.enq(tuple2(cmd,cond));
    endrule
 
    rule load_ctxt_c;
-      let idx <- toGet(loadf_a).get;
-      let cmd <- toGet(loadf_b).get;
-      if (outs1[idx] > 0 && buffCap[idx].read() >= unpack(extend(cmd.burstLen>>beat_shift))) begin
+      load_in_progress <= False;
+      loadIdx <= loadIdx+1;
+      match {.cmd,.cond} <- toGet(loadf_b).get;
+      if  (cond) begin
 	 //$display("load_ctxt_b %h %d", cmd.base, idx);
-	 buffCap[idx].decrement(unpack(extend(cmd.burstLen>>beat_shift)));
-	 loadf_c.enq(tuple2(idx,cmd));
+	 buffCap[loadIdx].decrement(unpack(extend(cmd.burstLen>>beat_shift)));
+	 loadf_c.enq(tuple2(loadIdx,cmd));
 	 if (cmd.len <= extend(cmd.burstLen)) begin
-	    outs1[idx] <= outs1[idx]-1;
-	    cmdBuf.deq(idx);
+	    outs1[loadIdx] <= outs1[loadIdx]-1;
+	    cmdBuf.deq(loadIdx);
 	 end
 	 else begin
 	    let new_cmd = MemengineCmd{pointer:cmd.pointer, base:cmd.base+extend(cmd.burstLen), burstLen:cmd.burstLen, len:cmd.len-extend(cmd.burstLen)};
-	    cmdBuf.upd_head(idx,new_cmd);
+	    cmdBuf.upd_head(loadIdx,new_cmd);
 	 end
       end
    endrule
