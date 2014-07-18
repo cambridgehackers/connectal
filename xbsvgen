@@ -336,21 +336,21 @@ $(vfile): %(topbsvfile)s %(bsvfiles)s $(timestampefile)
 bsim_exe:
 	mkdir -p bin
 	git rev-parse HEAD > bin/githash
-	git diff > bin/gitdiff.patch
+	git diff | gzip -c > bin/gitdiff.patch.gz
 	cd jni; make -f Ubuntu.mk bsim_exe
 	cp -v jni/bsim_exe bin
 
 ubuntu_exe:
 	mkdir -p bin
 	git rev-parse HEAD > bin/githash
-	git diff > bin/gitdiff.patch
+	git diff | gzip -c > bin/gitdiff.patch.gz
 	cd jni; make -f Ubuntu.mk
 	cp -v jni/mk* bin
 
 bsim: $(timestampfile)
 	mkdir -p bin
 	git rev-parse HEAD > bin/githash
-	git diff > bin/gitdiff.patch
+	git diff | gzip -c > bin/gitdiff.patch.gz
 	mkdir -p $(DTOP)/obj
 	cd sources; bsc -D BSIM %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -u -g %(topbsvmod)s %(topbsvfile)s
 	export BSC_CXXFLAGS="-I$(XBSVDIR)/cpp -I$(XBSVDIR) -DBSIM" ; cd sources; bsc $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX)
@@ -405,7 +405,7 @@ bits: hw/mkTop.bit
 	mkdir -p bin
 	cp -f hw/*.rpt bin
 	git rev-parse HEAD > bin/githash
-	git diff > bin/gitdiff.patch
+	git diff | gzip -c > bin/gitdiff.patch.gz
 	xxd hw/mkTop.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r > bin/mkTop.xdevcfg.bin
 	gzip -f bin/mkTop.xdevcfg.bin
 	$(XBSVDIR)/scripts/check-timing.py bin/%(dut)s_post_route_timing_summary.rpt
@@ -416,7 +416,7 @@ bits: hw/mkTop.bit
 	mkdir -p bin
 	cp -f hw/*.rpt bin
 	git rev-parse HEAD > bin/githash
-	git diff > bin/gitdiff.patch
+	git diff | gzip -c > bin/gitdiff.patch.gz
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
 	$(XBSVDIR)/scripts/check-timing.py bin/%(dut)s_post_route_timing_summary.rpt
 
@@ -425,14 +425,14 @@ endif
 android_exe:
 	mkdir -p bin
 	git rev-parse HEAD > bin/githash
-	git diff > bin/gitdiff.patch
+	git diff | gzip -c > bin/gitdiff.patch.gz
 	ndk-build
 	cp -v libs/armeabi/android_exe bin
 
 android_exe_debug:
 	mkdir -p bin
 	git rev-parse HEAD > bin/githash
-	git diff > bin/gitdiff.patch
+	git diff | gzip -c > bin/gitdiff.patch.gz
 	ndk-build -B V=1 NDK_DEBUG=1
 	cp -v libs/armeabi/android_exe bin
 
