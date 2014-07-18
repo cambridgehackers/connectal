@@ -31,31 +31,20 @@
 #include <sys/un.h>
 #include <pthread.h>
 
-//#include <sys/types.h>
-//#include <sys/ioctl.h>
-//#include <linux/ioctl.h>
-//#include <linux/types.h>
-//#include <sys/socket.h>
-//#include <stdlib.h>
-//#include <stdio.h>
-//#include <unistd.h>
-//#include <errno.h>
-
 #include "sock_utils.h"
 
-void connect_socket(channel *c, const char *format, const char *name)
+void connect_socket(channel *c, const char *format, int id)
 {
   int len;
   int connect_attempts = 0;
 
-  snprintf(c->path, sizeof(c->path), format, name);
+  snprintf(c->path, sizeof(c->path), format, id);
   if ((c->sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
     fprintf(stderr, "%s (%s) socket error %s\n",__FUNCTION__, c->path, strerror(errno));
     exit(1);
   }
 
   //fprintf(stderr, "%s (%s) trying to connect...\n",__FUNCTION__, c->path);
-  
   struct sockaddr_un local;
   local.sun_family = AF_UNIX;
   strcpy(local.sun_path, c->path);
@@ -68,10 +57,6 @@ void connect_socket(channel *c, const char *format, const char *name)
     //fprintf(stderr, "%s (%s) retrying connection\n",__FUNCTION__, c->path);
     sleep(1);
   }
-  // int sockbuffsz = sizeof(memrequest);
-  // setsockopt(c->sockfd, SOL_SOCKET, SO_SNDBUF, &sockbuffsz, sizeof(sockbuffsz));
-  // sockbuffsz = sizeof(unsigned int);
-  // setsockopt(c->sockfd, SOL_SOCKET, SO_RCVBUF, &sockbuffsz, sizeof(sockbuffsz));
   fprintf(stderr, "%s (%s) connected\n",__FUNCTION__, c->path);
 }
 

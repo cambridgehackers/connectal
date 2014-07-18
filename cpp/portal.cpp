@@ -174,13 +174,13 @@ PortalInternal::PortalInternal(int id)
     char buff[128];
     unsigned int addrbits = 16;
     volatile unsigned int * dev_base = 0;
-    if (id == -1)     // opening Directory
-      name = strdup("fpga0");
-    else {
-      sprintf(buff, "fpga%d", dir.get_fpga(id));
+    int fpga_number = 0;
+    if (id != -1) {    // not Directory
+      fpga_number = dir.get_fpga(id);
       addrbits = dir.get_addrbits(id);
-      name = strdup(buff);
     }
+    sprintf(buff, "fpga%d", fpga_number);
+    name = strdup(buff);
 #ifdef ZYNQ
     PortalEnableInterrupt intsettings = {3 << 14, (3 << 14) + 4};
     FILE *pgfile = fopen("/sys/devices/amba.0/f8007000.devcfg/prog_done", "r");
@@ -225,8 +225,8 @@ PortalInternal::PortalInternal(int id)
     }  
     map_base   = (volatile unsigned int*)dev_base;
 #else
-    connect_socket(&p_read, "%s_rc", name);
-    connect_socket(&p_write, "%s_wc", name);
+    connect_socket(&p_read, "fpga%d_rc", fpga_number);
+    connect_socket(&p_write, "fpga%d_wc", fpga_number);
 #endif
 
 errlab:

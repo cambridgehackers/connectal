@@ -31,7 +31,7 @@ struct channel{
   char path[100];
 };
 
-void connect_socket(channel *c, const char *format, const char *name);
+void connect_socket(channel *c, const char *format, int id);
 void thread_socket(struct channel* rc, const char *format, int id);
 ssize_t sock_fd_write(int sock, int fd);
 ssize_t sock_fd_read(int sock, int *fd);
