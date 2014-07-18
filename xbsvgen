@@ -331,6 +331,7 @@ $(timestampfile): %(bsvfiles)s
 $(vfile): %(topbsvfile)s %(bsvfiles)s $(timestampefile)
 	mkdir -p verilog/portal $(DTOP)/obj
 	cd sources/%(dut)s; bsc %(bsvdefines)s $(BSCFLAGS) -remove-dollar -p +:$(DTOP)/generatedbsv:$(BSVPATH) -verilog -u -g %(topbsvmod)s %(topbsvfile)s
+	sed -i 's|// On .*|// timestamp removed|' verilog/*.v
 	for v in verilog/*.v; do $(XBSVDIR)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
 
 bsim_exe:
