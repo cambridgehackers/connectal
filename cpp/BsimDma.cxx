@@ -45,37 +45,23 @@ static struct {
 
 extern "C" {
   void init_pareff(){
-    fprintf(stderr, "BsimDma::init_pareff()\n");
     thread_socket(&dma_sockfd, "fd_sock_wc", 0);
   }
 
   void write_pareff32(uint32_t pref, uint32_t offset, unsigned int data){
-    if(dma_info[pref-1].buffer_len <= offset)
-      fprintf(stderr, "write_pareff32(pref=%08x, offset=%08x len=%x) going off the reservation \n", pref, offset, dma_info[pref-1].buffer_len);
     *(unsigned int *)&dma_info[pref-1].buffer[offset] = data;
   }
 
   unsigned int read_pareff32(uint32_t pref, uint32_t offset){
-    if(dma_info[pref-1].buffer_len <= offset)
-      fprintf(stderr, "read_pareff32(pref=%08x, offset=%08x len=%x) going off the reservation \n", pref, offset, dma_info[pref-1].buffer_len);
-    unsigned int rv = *(unsigned int *)&dma_info[pref-1].buffer[offset];
-    //fprintf(stderr, "read_pareff32(pref=%08x, offset=%08x)=%08x\n", pref, offset,rv);
-    return rv;
+    return *(unsigned int *)&dma_info[pref-1].buffer[offset];
   }
 
   void write_pareff64(uint32_t pref, uint32_t offset, uint64_t data){
-    if(dma_info[pref-1].buffer_len <= offset)
-      fprintf(stderr, "write_pareff64(pref=%08x, offset=%08x, len=%08x) going off the reservation \n", pref, offset, dma_info[pref-1].buffer_len);
     *(uint64_t *)&dma_info[pref-1].buffer[offset] = data;
-    //fprintf(stderr, "write_pareff64(pref=%08x, offset=%08x, data=%016llx)\n", pref, offset, data);
   }
 
   uint64_t read_pareff64(uint32_t pref, uint32_t offset){
-    if(dma_info[pref-1].buffer_len <= offset)
-      fprintf(stderr, "read_pareff64(pref=%08x, offset=%08x len=%x) going off the reservation \n", pref, offset, dma_info[pref-1].buffer_len);
-    uint64_t rv = *(uint64_t *)&dma_info[pref-1].buffer[offset];
-    //fprintf(stderr, "read_pareff64(pref=%08x, offset=%08x)=%016llx\n", pref, offset,rv);
-    return rv;
+    return *(uint64_t *)&dma_info[pref-1].buffer[offset];
   }
 
   void pareff(uint32_t pref, uint32_t size){

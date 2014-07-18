@@ -127,7 +127,7 @@ static void manual_event(void)
         unsigned int int_src = READL(instance, &map_base[IND_REG_INTERRUPT_FLAG]);
         unsigned int int_en  = READL(instance, &map_base[IND_REG_INTERRUPT_MASK]);
         unsigned int ind_count  = READL(instance, &map_base[IND_REG_INTERRUPT_COUNT]);
-        fprintf(stderr, "(%d:%s) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->name, int_src, int_en, queue_status);
+        fprintf(stderr, "(%d:fpga%d) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->fpga_number, int_src, int_en, queue_status);
         if (indfn[i])
             indfn[i](instance, queue_status-1);
       }

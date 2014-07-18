@@ -43,7 +43,7 @@ typedef unsigned long dma_addr_t;
 #include "sock_utils.h"
 
 struct memrequest{
-  bool write;
+  int write_flag;
   volatile unsigned int *addr;
   unsigned int data;
 };
@@ -66,7 +66,7 @@ class PortalInternal
   int fd;
   struct channel p_read;
   struct channel p_write;
-  char *name;
+  int fpga_number;
   volatile unsigned int *map_base;
   friend class Directory;
 };

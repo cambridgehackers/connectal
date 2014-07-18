@@ -50,11 +50,9 @@ typedef `DataBusWidth DataBusWidth;
 
 // implemented in BsimCtrl.cxx
 import "BDPI" function Action      initPortal(Bit#(32) d);
-import "BDPI" function Bool                    writeReq32();
-import "BDPI" function ActionValue#(Bit#(32)) writeAddr32();
+import "BDPI" function Bool                    processReq32(Bit#(32) v);
+import "BDPI" function ActionValue#(Bit#(32)) processAddr32(Bit#(32) v);
 import "BDPI" function ActionValue#(Bit#(32)) writeData32();
-import "BDPI" function Bool                     readReq32();
-import "BDPI" function ActionValue#(Bit#(32))  readAddr32();
 import "BDPI" function Action        readData32(Bit#(32) d);
 		 
 // implemented in BsimDma.cxx		 
@@ -81,17 +79,17 @@ endtypeclass
 instance SelectBsimCtrlReadWrite#(32,32);
    module selectBsimCtrlReadWrite(BsimCtrlReadWrite#(32,32) ifc);
       method ActionValue#(Bit#(32)) readAddr();
-	 let rv <- readAddr32();
+	 let rv <- processAddr32(0);
 	 return extend(rv);
       endmethod
       method Action readData(Bit#(32) d);		    
 	 readData32(d);
       endmethod
       method Bool readReq();
-	 return readReq32();
+	 return processReq32(0);
       endmethod
       method ActionValue#(Bit#(32)) writeAddr();
-	 let rv <- writeAddr32();
+	 let rv <- processAddr32(1);
 	 return extend(rv);
       endmethod
       method ActionValue#(Bit#(32)) writeData();
@@ -99,7 +97,7 @@ instance SelectBsimCtrlReadWrite#(32,32);
 	 return rv;
       endmethod
       method Bool writeReq();
-	 return writeReq32();
+	 return processReq32(1);
       endmethod
    endmodule
 endinstance

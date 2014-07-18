@@ -35,8 +35,8 @@
 #include "sock_utils.h"
 
 static struct {
-    struct channel read;
-    struct channel write;
+    struct channel p_read;
+    struct channel p_write;
 } portals[16];
 
 typedef struct {
@@ -45,15 +45,20 @@ typedef struct {
     int valid;
     int inflight;
 } HEAD_TYPE;
-static HEAD_TYPE headarr[2];
+static HEAD_TYPE headarr[2]; /* 0 -> read; 1 -> write */
 
-static int recv_request(int rr)
-{
-  HEAD_TYPE *head = &headarr[rr];
-  if (!head->valid && !head->inflight){
-    for(int i = 0; i < 16; i++){
-	struct channel* chan = rr ? &(portals[i].write) : &(portals[i].read);
-	int rv = recv(chan->sockfd, &(head->req), sizeof(memrequest), MSG_DONTWAIT);
+extern "C" {
+  void initPortal(unsigned long id){
+    thread_socket(&portals[id].p_read, "fpga%ld_rc", id);
+    thread_socket(&portals[id].p_write, "fpga%ld_wc", id);
+  }
+
+  bool processReq32(uint32_t rr){
+    HEAD_TYPE *head = &headarr[rr];
+    if (!head->valid && !head->inflight){
+      for(int i = 0; i < 16; i++){
+	struct channel* chan = rr ? &(portals[i].p_write) : &(portals[i].p_read);
+	int rv = recv(chan->sockfd, &head->req, sizeof(memrequest), MSG_DONTWAIT);
 	if(rv > 0){
 	  //fprintf(stderr, "recv size %d\n", rv);
 	  assert(rv == sizeof(memrequest));
@@ -62,29 +67,19 @@ static int recv_request(int rr)
 	  head->inflight = rr;
 	  head->req.addr = (unsigned int *)(((long) head->req.addr) | i << 16);
 	  if(0)
-	  fprintf(stderr, "recv_request(i=%d,rr=%d) {write=%d, addr=%08lx, data=%08x}\n", 
-		  i, rr, head->req.write, (long)head->req.addr, head->req.data);
+	  fprintf(stderr, "processReq32(i=%d,rr=%d) {write=%d, addr=%08lx, data=%08x}\n", 
+		  i, rr, head->req.write_flag, (long)head->req.addr, head->req.data);
 	  break;
 	}
+      }
     }
-  }
-  return head->valid && head->inflight == rr;
-}
-
-extern "C" {
-  void initPortal(unsigned long id){
-    thread_socket(&portals[id].read, "fpga%ld_rc", id);
-    thread_socket(&portals[id].write, "fpga%ld_wc", id);
+    return head->valid && head->inflight == rr && head->req.write_flag == rr;
   }
 
-  bool writeReq32(){
-    return recv_request(1) && headarr[1].req.write;
-  }
-  
-  long writeAddr32(){
-    //fprintf(stderr, "writeAddr32()\n");
-    headarr[1].inflight = 0;
-    return (long)headarr[1].req.addr;
+  long processAddr32(int v){
+    //fprintf(stderr, "processAddr32()\n");
+    headarr[v].inflight = 1 - v;
+    return (long)headarr[v].req.addr;
   }
   
   unsigned int writeData32(){
@@ -93,22 +88,12 @@ extern "C" {
     return headarr[1].req.data;
   }
   
-  bool readReq32(){
-    return recv_request(0) && !headarr[0].req.write;
-  }
-  
-  long readAddr32(){
-    //fprintf(stderr, "readAddr32()\n");
-    headarr[0].inflight = 1;
-    return (long)headarr[0].req.addr;
-  }
-  
   void readData32(unsigned int x){
     //fprintf(stderr, "readData()\n");
     headarr[0].valid = 0;
     headarr[0].inflight = 0;
     int send_attempts = 0;
-    while(send(portals[headarr[0].pnum].read.sockfd, &x, sizeof(x), 0) == -1){
+    while(send(portals[headarr[0].pnum].p_read.sockfd, &x, sizeof(x), 0) == -1){
       if(send_attempts++ > 16){
 	fprintf(stderr, "(%d) send failure\n", headarr[0].pnum);
 	exit(1);
