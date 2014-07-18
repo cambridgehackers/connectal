@@ -6,6 +6,5 @@ DBNDIR=../../examples/testmm
 DBNTOPBSV=    $(DBNDIR)/Top.bsv
 TESTCPPFILES= $(DBNDIR)/testmm.cpp
 XBSVFLAGS = -D J_VALUE=4 -D K_VALUE=4 -D N_VALUE=4 -D DataBusWidth=128
-XBSVFLAGS += -D IMPORT_HOSTIF
 
 include $(DBNDIR)/Makefile.dbn

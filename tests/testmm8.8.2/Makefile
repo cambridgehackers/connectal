@@ -6,7 +6,6 @@ DBNDIR=../../examples/testmm
 DBNTOPBSV=    $(DBNDIR)/Top.bsv
 TESTCPPFILES= $(DBNDIR)/testmm.cpp
 XBSVFLAGS = -D J_VALUE=8 -D K_VALUE=8 -D N_VALUE=2
-XBSVFLAGS += -D IMPORT_HOSTIF
 include $(DBNDIR)/Makefile.dbn
 
 FPGAMAKE=$(XBSVDIR)/../fpgamake/fpgamake
