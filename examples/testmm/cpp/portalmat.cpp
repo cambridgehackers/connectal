@@ -272,18 +272,22 @@ void PortalMat::multf(PortalMat &a, PortalMat &b_transpose,  MmIndication *mmind
 	return;
     }
     create(a.rows, b_transpose.rows, CV_32F);
+    long aref = a.reference();
+    long bref = b_transpose.reference();
+    long cref = reference();
+    if (0)
     fprintf(stderr, "mult: ref=%d rows=%d cols=%d a.ref=%d a.rows=%d a.cols=%d b.ref=%d b.rows=%d b.cols=%d\n",
-	    reference(), rows, cols,
-	    a.reference(), a.rows, a.cols,
-	    b_transpose.reference(), b_transpose.rows, b_transpose.cols);
-    fprintf(stderr, "device->mmf\n");
-    mmdevice->mmf(a.reference(), a.rows, a.cols,
-		  b_transpose.reference(), b_transpose.rows, b_transpose.cols,
-		  reference());
+	    cref, rows, cols,
+	    aref, a.rows, a.cols,
+	    bref, b_transpose.rows, b_transpose.cols);
+    mmdevice->mmf(aref, a.rows, a.cols,
+		  bref, b_transpose.rows, b_transpose.cols,
+		  cref);
     sem_wait(&mul_sem);
     if(mmind) {
       int macs = a.rows*a.cols*b_transpose.rows;
-      fprintf(stderr, "macs %d cycles %f macs/cycle: %f\n", macs, (float)mmind->ccnt, ((float)macs)/((float)mmind->ccnt));
+      if (0)
+	fprintf(stderr, "macs %d cycles %f lap_timer %f macs/cycle: %f\n", macs, (float)mmind->ccnt, (float)lap_timer(0), ((float)macs)/((float)mmind->ccnt));
     }
 }
 

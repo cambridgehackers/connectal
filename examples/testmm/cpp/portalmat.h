@@ -110,8 +110,8 @@ public:
   virtual ~MmIndication() {}
   virtual void mmfDone(uint64_t cycles) {
     ccnt = cycles;
+    //fprintf(stderr, "mmfDone cycles=%ld\n", (long)cycles);
     sem_post(&mul_sem);
-    fprintf(stderr, "mmfDone cycles=%ld\n", cycles);
   }
   void dpsVal(uint32_t v) {
     sem_post(&mul_sem);
