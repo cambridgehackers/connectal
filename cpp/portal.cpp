@@ -203,7 +203,7 @@ PortalInternal::PortalInternal(int id)
     fclose(pgfile);
 #endif
 #ifdef MMAP_HW
-    snprintf(buff, sizeof(buff), "/dev/fpga%s", fpga_number);
+    snprintf(buff, sizeof(buff), "/dev/fpga%d", fpga_number);
 #ifdef ZYNQ
     this->fd = ::open(buff, O_RDWR);
     ioctl(this->fd, PORTAL_ENABLE_INTERRUPT, &intsettings);
