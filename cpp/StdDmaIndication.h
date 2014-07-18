@@ -61,7 +61,7 @@ class DmaIndication : public DmaIndicationWrapper
   virtual void badAddr (uint32_t pointer, uint64_t offset , uint64_t physAddr) {
     fprintf(stderr, "DmaIndication::badAddr(pointer=%x offset=%"PRIx64" physAddr=%"PRIx64")\n", pointer, offset, physAddr);
   }
-  virtual void reportStateDbg(const DmaDbgRec& rec){
+  virtual void reportStateDbg(const DmaDbgRec rec){
     //fprintf(stderr, "reportStateDbg: {x:%08x y:%08x z:%08x w:%08x}\n", rec.x,rec.y,rec.z,rec.w);
     portalMemory->dbgResp(rec);
   }
@@ -69,7 +69,7 @@ class DmaIndication : public DmaIndicationWrapper
     //fprintf(stderr, "reportMemoryTraffic: words=%"PRIx64"\n", words);
     portalMemory->mtResp(words);
   }
-  virtual void tagMismatch(const ChannelType& x, uint32_t a, uint32_t b){
+  virtual void tagMismatch(const ChannelType x, uint32_t a, uint32_t b){
     //if (tag_mismatch_cnt++ < 10)
     fprintf(stderr, "tagMismatch: %s %d %d\n", x==ChannelType_Read ? "Read" : "Write", a, b);
   }
