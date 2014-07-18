@@ -16,7 +16,7 @@ public:
     if (++cnt == 1)
       exit(0);
   }
-  void added ( const float &a ) {
+  void added ( float a ) {
     fprintf(stderr, "Result=%f\n", a);
     incr_cnt();
   }
