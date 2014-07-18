@@ -50,10 +50,8 @@ void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *argDevice)
   priv->handle = 1;
   priv->device = argDevice;
 #ifndef MMAP_HW
-  snprintf(priv->p_fd.read.path, sizeof(priv->p_fd.read.path), "fd_sock_rc");
-  connect_socket(&(priv->p_fd.read));
-  snprintf(priv->p_fd.write.path, sizeof(priv->p_fd.write.path), "fd_sock_wc");
-  connect_socket(&(priv->p_fd.write));
+  connect_socket(&priv->p_fd.read, "fd_sock_rc", NULL);
+  connect_socket(&priv->p_fd.write, "fd_sock_wc", NULL);
 #endif
   const char* path = "/dev/portalmem";
   priv->pa_fd = ::open(path, O_RDWR);

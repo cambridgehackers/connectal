@@ -43,11 +43,12 @@
 
 #include "sock_utils.h"
 
-void connect_socket(channel *c)
+void connect_socket(channel *c, const char *format, const char *name)
 {
   int len;
   int connect_attempts = 0;
 
+  snprintf(c->path, sizeof(c->path), format, name);
   if ((c->s2 = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
     fprintf(stderr, "%s (%s) socket error %s\n",__FUNCTION__, c->path, strerror(errno));
     exit(1);

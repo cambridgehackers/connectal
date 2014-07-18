@@ -42,7 +42,7 @@ struct portal{
 static struct portal iport = {{0,0,{0,""},false, ""},
 			      {0,0,{0,""},false, ""}};
 
-void connect_socket(channel *c);
+void connect_socket(channel *c, const char *format, const char *name);
 void thread_socket(struct channel* rc, const char *format, int id);
 ssize_t sock_fd_write(int sock, int fd);
 ssize_t sock_fd_read(int sock, int *fd);

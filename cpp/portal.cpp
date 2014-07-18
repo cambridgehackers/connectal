@@ -225,10 +225,8 @@ PortalInternal::PortalInternal(int id)
     map_base   = (volatile unsigned int*)dev_base;
 #else
     p = (struct portal*)malloc(sizeof(struct portal));
-    snprintf(p->read.path, sizeof(p->read.path), "%s_rc", name);
-    connect_socket(&(p->read));
-    snprintf(p->write.path, sizeof(p->read.path), "%s_wc", name);
-    connect_socket(&(p->write));
+    connect_socket(&p->read, "%s_rc", name);
+    connect_socket(&p->write, "%s_wc", name);
 #endif
 
 errlab:
