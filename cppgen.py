@@ -73,18 +73,11 @@ wrapperConstructorTemplate='''
 putFailedMethodName = "putFailed"
 
 putFailedTemplate='''
-void %(namespace)s%(className)s_%(putFailedMethodName)s(uint32_t v)
+void %(namespace)s%(className)s%(putFailedMethodName)s_cb(struct PortalInternal *p, const uint32_t v)
 {
     const char* methodNameStrings[] = {%(putFailedStrings)s};
     PORTAL_PRINTF("putFailed: %%s\\n", methodNameStrings[v]);
     //exit(1);
-}
-'''
-
-putFailedTemplateCpp='''
-void %(namespace)s%(className)s::%(putFailedMethodName)s(uint32_t v)
-{
-    %(namespace)s%(className)s_%(putFailedMethodName)s(v);
 }
 '''
 
@@ -210,15 +203,17 @@ class MethodMixin:
         paramValues = ', '.join([p.name for p in self.params])
         formalParams = self.formalParameters(self.params)
         formalParams.insert(0, ' struct PortalInternal *p')
-        of.write('void %s%s_cb ( ' % (className, cName(self.name)))
+        methodName = cName(self.name)
+        of.write('void %s%s_cb ( ' % (className, methodName))
         of.write(', '.join(formalParams))
         of.write(' );\n')
-        f.write('\nvoid %s%s_cb ( ' % (className, cName(self.name)))
-        f.write(', '.join(formalParams))
-        f.write(' ) {\n')
-        indent(f, 4)
-        f.write(('((%s *)p)->%s ( ' % (className, cName(self.name))) + paramValues + ');\n')
-        f.write('};\n')
+        if methodName != putFailedMethodName:
+            f.write('\nvoid %s%s_cb ( ' % (className, methodName))
+            f.write(', '.join(formalParams))
+            f.write(' ) {\n')
+            indent(f, 4)
+            f.write(('((%s *)p)->%s ( ' % (className, methodName)) + paramValues + ');\n')
+            f.write('};\n')
     def emitCImplementation(self, f, hpp, className, namespace, proxy, doCpp):
 
         # resurse interface types and flattening all structs into a list of types
@@ -454,11 +449,6 @@ class InterfaceMixin:
         subinterface = syntax.globalvars[subinterfaceName]
         #print 'subinterface', subinterface, subinterface
         return subinterface
-    def insertPutFailedMethod(self):
-        meth_name = putFailedMethodName
-        meth_type = AST.Type("Action",[])
-        meth_formal_params = [AST.Param("v", AST.Type("Bit",[AST.Type(32,[])]))]
-        self.decls = self.decls + [AST.Method(meth_name, meth_type, meth_formal_params)]
     def assignRequestResponseChannels(self, channelNumber=0):
         for d in self.decls:
             if d.__class__ == AST.Method:
@@ -481,9 +471,10 @@ class InterfaceMixin:
             reqChanNums.append('CHAN_NUM_%s' % self.global_name(d.name, suffix))
         subs = {'className': className,
                 'namespace': namespace,
-		'statusDecl' : '' if self.hasPutFailed() else statusDecl,
+		'statusDecl' : '' if self.hasPutFailed() or suffix == 'WrapperStatus' else statusDecl,
                 'parentClass': self.parentClass('PortalInternal')}
-        f.write("\nclass %s%s;\n" % (cName(self.name), 'ProxyStatus'))
+        if suffix != "WrapperStatus":
+            f.write("\nclass %s%s;\n" % (cName(self.name), 'ProxyStatus'))
         f.write(proxyClassPrefixTemplate % subs)
         for d in self.decls:
             d.emitCDeclaration(f, True, indentation + 4, namespace)
@@ -508,7 +499,7 @@ class InterfaceMixin:
     def emitCProxyImplementation(self, f, hpp, suffix, namespace, doCpp):
         className = "%s%s" % (cName(self.name), suffix)
 	statusName = "%s%s" % (cName(self.name), 'ProxyStatus')
-	statusInstantiate = '' if self.hasPutFailed() else 'proxyStatus = new %s(this, poller);\n' % statusName
+	statusInstantiate = '' if self.hasPutFailed() or suffix == 'WrapperStatus' else 'proxyStatus = new %s(this, poller);\n' % statusName
         substitutions = {'namespace': namespace,
                          'className': className,
 			 'statusInstantiate' : statusInstantiate,
@@ -544,8 +535,6 @@ class InterfaceMixin:
             hpp.write(handleMessageTemplateDecl % substitutions)
         else:
             f.write(wrapperConstructorTemplate % substitutions)
-            if emitPutFailed:
-                f.write(putFailedTemplateCpp % substitutions)
             f.write(handleMessageTemplateCpp % substitutions)
 
 
