@@ -514,7 +514,8 @@ class InterfaceMixin:
                          'parentClass': self.parentClass('PortalInternal')}
         if not doCpp:
             for d in self.decls:
-                d.emitCImplementation(f, hpp, className, namespace,True, False)
+                if d.name != putFailedMethodName:
+                    d.emitCImplementation(f, hpp, className, namespace,True, False)
         else:
             f.write(proxyConstructorTemplate % substitutions)
             for d in self.decls:
