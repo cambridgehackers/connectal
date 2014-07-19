@@ -206,10 +206,10 @@ class MethodMixin:
         formalParams = self.formalParameters(self.params)
         formalParams.insert(0, ' struct PortalInternal *p')
         methodName = cName(self.name)
-        of.write('void %s%s_cb ( ' % (className, methodName))
-        of.write(', '.join(formalParams))
-        of.write(' );\n')
         if methodName != putFailedMethodName:
+            of.write('void %s%s_cb ( ' % (className, methodName))
+            of.write(', '.join(formalParams))
+            of.write(' );\n')
             f.write('\nvoid %s%s_cb ( ' % (className, methodName))
             f.write(', '.join(formalParams))
             f.write(' ) {\n')
@@ -523,9 +523,6 @@ class InterfaceMixin:
     def emitCWrapperImplementation (self, f, hpp, suffix, namespace, doCpp):
         className = "%s%s" % (cName(self.name), suffix)
         emitPutFailed = self.hasPutFailed()
-        if not doCpp:
-            for d in self.decls:
-                d.emitCImplementation(f, hpp, className, namespace, False, False);
         substitutions = {'namespace': namespace,
                          'className': className,
 			 'putFailedMethodName' : putFailedMethodName,
@@ -540,6 +537,8 @@ class InterfaceMixin:
         if not doCpp:
             if emitPutFailed:
                 f.write(putFailedTemplate % substitutions)
+            for d in self.decls:
+                d.emitCImplementation(f, hpp, className, namespace, False, False);
             f.write(handleMessageTemplate % substitutions)
             hpp.write(handleMessageTemplateDecl % substitutions)
         else:
