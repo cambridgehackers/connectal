@@ -187,6 +187,8 @@ class MethodMixin:
     def formalParameters(self, params):
         return [ 'const %s%s %s' % (p.type.cName(), p.type.refParam(), p.name) for p in params]
     def emitCDeclaration(self, f, proxy, indentation, namespace):
+        if self.name == putFailedMethodName:
+            return
         indent(f, indentation)
         resultTypeName = self.resultTypeName()
         if (not proxy):
@@ -360,7 +362,8 @@ class MethodMixin:
             'payloadSize' : max(4, 4*((sum([p.numBitsBSV() for p in self.params])+31)/32)) 
             }
         if (doCpp):
-            f.write(proxyMethodTemplateCpp % substs)
+            if self.name != putFailedMethodName:
+                f.write(proxyMethodTemplateCpp % substs)
         elif (not proxy):
             respParams = ['payload.%s' % (p.name) for p in self.params]
             respParams.insert(0, 'p')
@@ -449,6 +452,11 @@ class InterfaceMixin:
         subinterface = syntax.globalvars[subinterfaceName]
         #print 'subinterface', subinterface, subinterface
         return subinterface
+    def insertPutFailedMethod(self):
+        meth_name = putFailedMethodName
+        meth_type = AST.Type("Action",[])
+        meth_formal_params = [AST.Param("v", AST.Type("Bit",[AST.Type(32,[])]))]
+        self.decls = self.decls + [AST.Method(meth_name, meth_type, meth_formal_params)]
     def assignRequestResponseChannels(self, channelNumber=0):
         for d in self.decls:
             if d.__class__ == AST.Method:
