@@ -148,6 +148,24 @@ void write_portal_bsim(int sockfd, volatile unsigned int *addr, unsigned int v, 
   }
 }
 
+void PortalInternal::portalClose()
+{
+    if (fd > 0) {
+        ::close(fd);
+        fd = -1;
+    }    
+}
+
+PortalInternal::PortalInternal(PortalInternal *p)
+  : fd(p->fd),
+    p_read(p->p_read),
+    p_write(p->p_write),
+    fpga_number(p->fpga_number),
+    map_base(p->map_base)
+{
+}
+
+
 PortalInternal::PortalInternal(int id)
   : fd(-1),
     map_base(0x0)
@@ -220,14 +238,20 @@ errlab:
 
 PortalInternal::~PortalInternal()
 {
-    if (fd > 0) {
-        ::close(fd);
-        fd = -1;
-    }    
+  portalClose();
 }
 
 Portal::Portal(int id, PortalPoller *poller)
   : PortalInternal(id)
+{
+  if (poller == 0)
+    poller = defaultPoller;
+  this->poller = poller;
+  poller->registerInstance(this);
+}
+
+Portal::Portal(PortalInternal *p, PortalPoller *poller) 
+  : PortalInternal(p)
 {
   if (poller == 0)
     poller = defaultPoller;

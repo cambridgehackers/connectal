@@ -59,7 +59,9 @@ class PortalInternal
  public:
   PortalPoller *poller;
   int portalOpen(int length);
+  void portalClose();
   PortalInternal(int id);
+  PortalInternal(PortalInternal* p);
   virtual ~PortalInternal();
   int fd;
   struct channel p_read;
@@ -73,6 +75,7 @@ class Portal : public PortalInternal
 {
  public:
   virtual ~Portal();
+  Portal(PortalInternal *p, PortalPoller *poller = 0);
   Portal(int id, PortalPoller *poller = 0);
   virtual int handleMessage(unsigned int channel) { return 0; };
 };
