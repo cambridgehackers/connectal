@@ -58,24 +58,19 @@ class PortalInternal
 {
  public:
   PortalPoller *poller;
-  int portalOpen(int length);
-  void portalClose();
   PortalInternal(int id);
-  PortalInternal(PortalInternal* p);
   virtual ~PortalInternal();
-  int fd;
+  int fpga_fd;
   struct channel p_read;
   struct channel p_write;
   int fpga_number;
   volatile unsigned int *map_base;
-  friend class Directory;
 };
 
 class Portal : public PortalInternal
 {
  public:
   virtual ~Portal();
-  Portal(PortalInternal *p, PortalPoller *poller = 0);
   Portal(int id, PortalPoller *poller = 0);
   virtual int handleMessage(unsigned int channel) { return 0; };
 };

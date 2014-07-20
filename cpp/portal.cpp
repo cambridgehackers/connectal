@@ -148,26 +148,8 @@ void write_portal_bsim(int sockfd, volatile unsigned int *addr, unsigned int v, 
   }
 }
 
-void PortalInternal::portalClose()
-{
-    if (fd > 0) {
-        ::close(fd);
-        fd = -1;
-    }    
-}
-
-PortalInternal::PortalInternal(PortalInternal *p)
-  : fd(p->fd),
-    p_read(p->p_read),
-    p_write(p->p_write),
-    fpga_number(p->fpga_number),
-    map_base(p->map_base)
-{
-}
-
-
 PortalInternal::PortalInternal(int id)
-  : fd(-1),
+  : fpga_fd(-1),
     map_base(0x0)
 {
     int rc = 0;
@@ -205,20 +187,20 @@ PortalInternal::PortalInternal(int id)
 #ifdef MMAP_HW
     snprintf(buff, sizeof(buff), "/dev/fpga%d", fpga_number);
 #ifdef ZYNQ
-    this->fd = ::open(buff, O_RDWR);
-    ioctl(this->fd, PORTAL_ENABLE_INTERRUPT, &intsettings);
+    fpga_fd = ::open(buff, O_RDWR);
+    ioctl(fpga_fd, PORTAL_ENABLE_INTERRUPT, &intsettings);
 #else
     // FIXME: bluenoc driver only opens readonly for some reason
-    this->fd = ::open(buff, O_RDONLY);
+    fpga_fd = ::open(buff, O_RDONLY);
 #endif
-    if (this->fd < 0) {
-	ALOGE("Failed to open %s fd=%d errno=%d\n", buff, this->fd, errno);
+    if (fpga_fd < 0) {
+	ALOGE("Failed to open %s fd=%d errno=%d\n", buff, fpga_fd, errno);
 	rc = -errno;
 	goto errlab;
     }
-    dev_base = (volatile unsigned int*)mmap(NULL, 1<<addrbits, PROT_READ|PROT_WRITE, MAP_SHARED, this->fd, 0);
+    dev_base = (volatile unsigned int*)mmap(NULL, 1<<addrbits, PROT_READ|PROT_WRITE, MAP_SHARED, fpga_fd, 0);
     if (dev_base == MAP_FAILED) {
-        ALOGE("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", this->fd, errno);
+        ALOGE("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", fpga_fd, errno);
         rc = -errno;
 	goto errlab;
     }  
@@ -238,20 +220,14 @@ errlab:
 
 PortalInternal::~PortalInternal()
 {
-  portalClose();
+    if (fpga_fd > 0) {
+        ::close(fpga_fd);
+        fpga_fd = -1;
+    }    
 }
 
 Portal::Portal(int id, PortalPoller *poller)
   : PortalInternal(id)
-{
-  if (poller == 0)
-    poller = defaultPoller;
-  this->poller = poller;
-  poller->registerInstance(this);
-}
-
-Portal::Portal(PortalInternal *p, PortalPoller *poller) 
-  : PortalInternal(p)
 {
   if (poller == 0)
     poller = defaultPoller;
@@ -274,7 +250,7 @@ int PortalPoller::unregisterInstance(Portal *portal)
 {
   int i = 0;
   while(i < numFds)
-    if(portal_fds[i].fd == portal->fd)
+    if(portal_fds[i].fd == portal->fpga_fd)
       break;
     else
       i++;
@@ -298,7 +274,7 @@ int PortalPoller::registerInstance(Portal *portal)
     portal_wrappers[numFds-1] = portal;
     struct pollfd *pollfd = &portal_fds[numFds-1];
     memset(pollfd, 0, sizeof(struct pollfd));
-    pollfd->fd = portal->fd;
+    pollfd->fd = portal->fpga_fd;
     pollfd->events = POLLIN;
     fprintf(stderr, "Portal::registerInstance fpga%d\n", portal->fpga_number);
     return 0;
@@ -470,7 +446,7 @@ Directory::Directory()
   long reqF = 100000000; // 100 Mhz
   request.clknum = 0;
   request.requested_rate = reqF;
-  int status = ioctl(fd, PORTAL_SET_FCLK_RATE, (long)&request);
+  int status = ioctl(fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
   if (status < 0)
     fprintf(stderr, "Directory::Directory() error setting fclk0, errno=%d\n", errno);
   fprintf(stderr, "Directory::Directory() set fclk0 (%ld,%ld)\n", reqF, request.actual_rate);
@@ -560,7 +536,7 @@ void Directory::traceStart()
 #ifndef ZYNQ
   tTraceInfo traceInfo;
   traceInfo.trace = 1;
-  int res = ioctl(fd,BNOC_TRACE,&traceInfo);
+  int res = ioctl(fpga_fd,BNOC_TRACE,&traceInfo);
   if (res)
     fprintf(stderr, "Failed to start tracing. errno=%d\n", errno);
 #endif
@@ -571,7 +547,7 @@ void Directory::traceStop()
 #ifndef ZYNQ
   tTraceInfo traceInfo;
   traceInfo.trace = 0;
-  int res = ioctl(fd,BNOC_TRACE,&traceInfo);
+  int res = ioctl(fpga_fd,BNOC_TRACE,&traceInfo);
   if (res)
     fprintf(stderr, "Failed to stop tracing. errno=%d\n", errno);
 #endif
