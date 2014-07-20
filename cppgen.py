@@ -164,7 +164,8 @@ class MethodMixin:
             return
         indent(f, indentation)
         resultTypeName = self.resultTypeName()
-        paramValues = ', '.join([p.name for p in self.params])
+        paramValues = [p.name for p in self.params]
+        paramValues.insert(0, 'this')
         methodName = cName(self.name)
         if (not proxy):
             f.write('virtual ')
@@ -175,8 +176,8 @@ class MethodMixin:
         if ((not proxy) and (not (self.name == putFailedMethodName))):
             f.write('= 0;\n')
         else:
-            f.write('{ %s_%s ( this, ' % (className, methodName))
-            f.write(paramValues + '); };\n')
+            f.write('{ %s_%s (' % (className, methodName))
+            f.write(', '.join(paramValues) + '); };\n')
     def emitCStructDeclaration(self, f, of, namespace, className):
         paramValues = ', '.join([p.name for p in self.params])
         formalParams = self.formalParameters(self.params)
