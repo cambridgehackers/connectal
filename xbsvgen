@@ -728,6 +728,9 @@ if __name__=='__main__':
         if (v.type == 'TypeDef'):
             v.emitCDeclaration(generated_hpp, 0, '')
     generated_hpp.write('\n');
+    cppname = 'GeneratedCppCallbacks.cpp'
+    generated_cpp = create_cpp_file(cppname)
+    generatedCFiles.append(cppname)
 
     for i in swProxies:
         cppname = '%sProxy.cpp' % i.name
@@ -752,16 +755,16 @@ if __name__=='__main__':
         hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': i.name.upper()})
         i.ind.emitCProxyImplementation(cpp, generated_hpp, "WrapperStatus", "", False)
         i.emitCWrapperImplementation(cpp, generated_hpp, "Wrapper", '', False)
-        cpp.write('\n#ifndef NO_CPP_PORTAL_CODE\n/************** Start of Wrapper CPP ***********/\n')
-        cpp.write('#include "%s"' % hppname)
-        i.emitCWrapperDeclaration(hpp, generated_hpp, cpp, "Wrapper")
-        i.emitCWrapperImplementation(cpp, generated_hpp, "Wrapper", '', True)
+        generated_cpp.write('\n\n/************** Start of %sWrapper CPP ***********/\n' % i.name)
+        generated_cpp.write('#include "%s"' % hppname)
+        i.emitCWrapperDeclaration(hpp, generated_hpp, generated_cpp, "Wrapper")
+        i.emitCWrapperImplementation(generated_cpp, generated_hpp, "Wrapper", '', True)
         hpp.write('#endif // _%(name)s_H_\n' % {'name': i.name.upper()})
         hpp.close();
-        cpp.write('#endif //NO_CPP_PORTAL_CODE\n')
         cpp.close();
         generatedCFiles.append(cppname)
     
+    generated_cpp.close();
     generated_hpp.write('#endif //__GENERATED_TYPES__\n');
     generated_hpp.close();
 
