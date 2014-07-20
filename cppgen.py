@@ -32,12 +32,8 @@ import math
 proxyClassPrefixTemplate='''
 class %(namespace)s%(className)s : public %(parentClass)s {
 //proxyClass
-    %(statusDecl)s
 public:
     %(className)s(int id, PortalPoller *poller = 0);
-'''
-proxyClassSuffixTemplate='''
-};
 '''
 
 wrapperClassPrefixTemplate='''
@@ -55,19 +51,10 @@ protected:
 
 proxyConstructorTemplate='''
 %(namespace)s%(className)s::%(className)s(int id, PortalPoller *poller)
- : %(parentClass)s(id)
+ : %(parentClass)s(id, poller)
 {
     %(statusInstantiate)s
 }
-'''
-
-wrapperConstructorTemplate='''
-%(namespace)s%(className)s::%(className)s(PortalInternal *p, PortalPoller *poller)
- : %(parentClass)s(p, poller)
-{}
-%(namespace)s%(className)s::%(className)s(int id, PortalPoller *poller)
- : %(parentClass)s(id, poller)
-{}
 '''
 
 putFailedMethodName = "putFailed"
@@ -473,21 +460,21 @@ class InterfaceMixin:
         return '%s%s_%s' % (cName(self.name), suffix, s)
     def emitCProxyDeclaration(self, f, of, suffix, indentation=0, namespace=''):
         className = "%s%s" % (cName(self.name), suffix)
-        statusDecl = "%s%s *proxyStatus;" % (cName(self.name), 'ProxyStatus')
 	reqChanNums = []
         for d in self.decls:
             reqChanNums.append('CHAN_NUM_%s' % self.global_name(d.name, suffix))
         subs = {'className': className,
                 'namespace': namespace,
-		'statusDecl' : '' if self.hasPutFailed() or suffix == 'WrapperStatus' else statusDecl,
-                'parentClass': self.parentClass('PortalInternal')}
+                'parentClass': self.parentClass('Portal')}
         if suffix != "WrapperStatus":
             f.write("\nclass %s%s;\n" % (cName(self.name), 'ProxyStatus'))
         f.write(proxyClassPrefixTemplate % subs)
         for d in self.decls:
             d.emitCDeclaration(f, True, indentation + 4, namespace)
-        f.write(proxyClassSuffixTemplate % subs)
+        f.write(wrapperClassSuffixTemplate % subs)
 	of.write('enum { ' + ','.join(reqChanNums) + '};\n')
+        if suffix == 'Proxy':
+	    of.write('enum { CHAN_NUM_%s_putFailed };\n' % className)
     def emitCWrapperDeclaration(self, f, of, cppf, suffix, indentation=0, namespace=''):
         className = "%s%s" % (cName(self.name), suffix)
         indent(f, indentation)
@@ -507,11 +494,11 @@ class InterfaceMixin:
     def emitCProxyImplementation(self, f, hpp, suffix, namespace, doCpp):
         className = "%s%s" % (cName(self.name), suffix)
 	statusName = "%s%s" % (cName(self.name), 'ProxyStatus')
-	statusInstantiate = '' if self.hasPutFailed() or suffix == 'WrapperStatus' else 'proxyStatus = new %s(this, poller);\n' % statusName
+	statusInstantiate = ''
         substitutions = {'namespace': namespace,
                          'className': className,
 			 'statusInstantiate' : statusInstantiate,
-                         'parentClass': self.parentClass('PortalInternal')}
+                         'parentClass': self.parentClass('Portal')}
         if not doCpp:
             for d in self.decls:
                 if d.name != putFailedMethodName:
@@ -542,7 +529,8 @@ class InterfaceMixin:
             f.write(handleMessageTemplate % substitutions)
             hpp.write(handleMessageTemplateDecl % substitutions)
         else:
-            f.write(wrapperConstructorTemplate % substitutions)
+            if suffix == 'ProxyStatus':
+                substitutions['className'] = "%s%s" % (cName(self.name), 'Proxy')
             f.write(handleMessageTemplateCpp % substitutions)
 
 
