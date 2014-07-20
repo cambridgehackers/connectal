@@ -54,16 +54,6 @@ static size_t test_sz  = numWords*sizeof(unsigned int);
 static size_t alloc_sz = test_sz;
 static DmaManagerPrivate priv;
 
-void DmaConfigProxyStatusputFailed_cb (  struct PortalInternal *p, const uint32_t v )
-{
-        const char* methodNameStrings[] = {"sglist", "region", "addrRequest", "getStateDbg", "getMemoryTraffic"};
-        fprintf(stderr, "putFailed: %s\n", methodNameStrings[v]);
-}
-void MemreadRequestProxyStatusputFailed_cb (  struct PortalInternal *p, const uint32_t v )
-{
-        const char* methodNameStrings[] = {"startRead"};
-        fprintf(stderr, "putFailed: %s\n", methodNameStrings[v]);
-}
 void MemreadIndicationWrapperreadDone_cb (  struct PortalInternal *p, const uint32_t mismatchCount )
 {
          printf( "Memread_readDone(mismatch = %x)\n", mismatchCount);
