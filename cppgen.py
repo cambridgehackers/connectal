@@ -191,7 +191,7 @@ class MethodMixin:
             f.write(', '.join(formalParams))
             f.write(' ) {\n')
             indent(f, 4)
-            f.write(('((%s *)p)->%s ( ' % (className, methodName)) + paramValues + ');\n')
+            f.write(('((%s *)p->parent)->%s ( ' % (className, methodName)) + paramValues + ');\n')
             f.write('};\n')
     def emitCImplementation(self, f, hpp, className, namespace, proxy, doCpp):
 

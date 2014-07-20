@@ -43,6 +43,7 @@ typedef struct PortalInternal {
   struct channel p_write;
   int fpga_number;
   volatile unsigned int *map_base;
+  void *parent;
 } PortalInternal;
 
 #ifdef __KERNEL__

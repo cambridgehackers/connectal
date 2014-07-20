@@ -57,7 +57,7 @@
 
 #define USE_INTERRUPTS
 #ifdef USE_INTERRUPTS
-#define ENABLE_INTERRUPTS(A) WRITEL(A, &((A)->map_base[IND_REG_INTERRUPT_MASK]), 1)
+#define ENABLE_INTERRUPTS(A) WRITEL((A), &((A)->map_base[IND_REG_INTERRUPT_MASK]), 1)
 #else
 #define ENABLE_INTERRUPTS(A)
 #endif
@@ -157,6 +157,7 @@ PortalInternalCpp::PortalInternalCpp(int id)
     pint.fpga_number = 0;
     pint.fpga_fd = -1;
     pint.map_base = 0x0;
+    pint.parent = (void *)this;
     if (id != -1) {    // not Directory
       pint.fpga_number = dir.get_fpga(id);
       addrbits = dir.get_addrbits(id);
