@@ -22,6 +22,8 @@
 #ifndef __PORTAL_OFFSETS_H__
 #define __PORTAL_OFFSETS_H__
 
+#include <socket_channel.h>
+
 /* Offset of each /dev/fpgaxxx device in the address space */
 #define PORTAL_BASE_OFFSET         (1 << 16)
 
@@ -34,17 +36,29 @@
 #define     IND_REG_INTERRUPT_COUNT   (PORTAL_IND_REG_OFFSET_32 + 2)
 #define     IND_REG_QUEUE_STATUS      (PORTAL_IND_REG_OFFSET_32 + 6)
 
+typedef struct PortalInternal {
+  struct PortalPoller *poller;
+  int fpga_fd;
+  struct channel p_read;
+  struct channel p_write;
+  int fpga_number;
+  volatile unsigned int *map_base;
+} PortalInternal;
+
 #ifdef __KERNEL__
 #include <linux/module.h>
 #include <linux/kernel.h>
 
-typedef struct {
-    volatile unsigned int *map_base;
-} PortalInternal;
+//typedef struct {
+    //volatile unsigned int *map_base;
+//} PortalInternal;
 #define PORTAL_PRINTF printk
 #else
+#include <stdio.h>   // printf()
+#include <stdlib.h>  // exit()
+#ifdef __cplusplus
 #include "portal_internal.h"
-#include <stdio.h>
+#endif
 #define PORTAL_PRINTF printf
 #endif
 

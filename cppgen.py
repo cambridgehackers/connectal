@@ -45,7 +45,7 @@ public:
 wrapperClassSuffixTemplate='''
 protected:
     virtual int handleMessage(unsigned int channel) {
-        return %(namespace)s%(className)s_handleMessage(this, channel);
+        return %(namespace)s%(className)s_handleMessage(&pint, channel);
     }
 };
 '''
@@ -108,7 +108,7 @@ void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p %(paramSeparat
 proxyMethodTemplateCpp='''
 void %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
 {
-    %(namespace)s%(className)s_%(methodName)s (this %(paramSeparator)s %(paramReferences)s );
+    %(namespace)s%(className)s_%(methodName)s (&pint %(paramSeparator)s %(paramReferences)s );
 };
 '''
 
@@ -165,7 +165,7 @@ class MethodMixin:
         indent(f, indentation)
         resultTypeName = self.resultTypeName()
         paramValues = [p.name for p in self.params]
-        paramValues.insert(0, 'this')
+        paramValues.insert(0, '&pint')
         methodName = cName(self.name)
         if (not proxy):
             f.write('virtual ')

@@ -26,10 +26,7 @@
 
 #include <sys/un.h>
 
-struct channel{
-  int sockfd;
-  char path[100];
-};
+#include <socket_channel.h>
 
 void connect_socket(channel *c, const char *format, int id);
 void thread_socket(struct channel* rc, const char *format, int id);

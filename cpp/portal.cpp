@@ -148,20 +148,20 @@ void write_portal_bsim(int sockfd, volatile unsigned int *addr, unsigned int v, 
   }
 }
 
-PortalInternal::PortalInternal(int id)
-  : fpga_fd(-1),
-    map_base(0x0)
+PortalInternalCpp::PortalInternalCpp(int id)
 {
     int rc = 0;
     char buff[128];
     unsigned int addrbits = 16;
     volatile unsigned int * dev_base = 0;
-    fpga_number = 0;
+    pint.fpga_number = 0;
+    pint.fpga_fd = -1;
+    pint.map_base = 0x0;
     if (id != -1) {    // not Directory
-      fpga_number = dir.get_fpga(id);
+      pint.fpga_number = dir.get_fpga(id);
       addrbits = dir.get_addrbits(id);
     }
-    sprintf(buff, "fpga%d", fpga_number);
+    sprintf(buff, "fpga%d", pint.fpga_number);
 #ifdef ZYNQ
     PortalEnableInterrupt intsettings = {3 << 14, (3 << 14) + 4};
     FILE *pgfile = fopen("/sys/devices/amba.0/f8007000.devcfg/prog_done", "r");
@@ -185,59 +185,59 @@ PortalInternal::PortalInternal(int id)
     fclose(pgfile);
 #endif
 #ifdef MMAP_HW
-    snprintf(buff, sizeof(buff), "/dev/fpga%d", fpga_number);
+    snprintf(buff, sizeof(buff), "/dev/fpga%d", pint.fpga_number);
 #ifdef ZYNQ
-    fpga_fd = ::open(buff, O_RDWR);
-    ioctl(fpga_fd, PORTAL_ENABLE_INTERRUPT, &intsettings);
+    pint.fpga_fd = ::open(buff, O_RDWR);
+    ioctl(pint.fpga_fd, PORTAL_ENABLE_INTERRUPT, &intsettings);
 #else
     // FIXME: bluenoc driver only opens readonly for some reason
-    fpga_fd = ::open(buff, O_RDONLY);
+    pint.fpga_fd = ::open(buff, O_RDONLY);
 #endif
-    if (fpga_fd < 0) {
-	ALOGE("Failed to open %s fd=%d errno=%d\n", buff, fpga_fd, errno);
+    if (pint.fpga_fd < 0) {
+	ALOGE("Failed to open %s fd=%d errno=%d\n", buff, pint.fpga_fd, errno);
 	rc = -errno;
 	goto errlab;
     }
-    dev_base = (volatile unsigned int*)mmap(NULL, 1<<addrbits, PROT_READ|PROT_WRITE, MAP_SHARED, fpga_fd, 0);
+    dev_base = (volatile unsigned int*)mmap(NULL, 1<<addrbits, PROT_READ|PROT_WRITE, MAP_SHARED, pint.fpga_fd, 0);
     if (dev_base == MAP_FAILED) {
-        ALOGE("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", fpga_fd, errno);
+        ALOGE("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", pint.fpga_fd, errno);
         rc = -errno;
 	goto errlab;
     }  
-    map_base   = (volatile unsigned int*)dev_base;
+    pint.map_base   = (volatile unsigned int*)dev_base;
 #else
-    connect_socket(&p_read, "fpga%d_rc", fpga_number);
-    connect_socket(&p_write, "fpga%d_wc", fpga_number);
+    connect_socket(&pint.p_read, "fpga%d_rc", pint.fpga_number);
+    connect_socket(&pint.p_write, "fpga%d_wc", pint.fpga_number);
 #endif
 
 errlab:
     if (rc != 0) {
-      printf("[%s:%d] failed to open Portal fpga%d\n", __FUNCTION__, __LINE__, fpga_number);
-      ALOGD("PortalInternal::PortalInternal failure rc=%d\n", rc);
+      printf("[%s:%d] failed to open Portal fpga%d\n", __FUNCTION__, __LINE__, pint.fpga_number);
+      ALOGD("PortalInternalCpp::PortalInternalCpp failure rc=%d\n", rc);
       exit(1);
     }
 }
 
-PortalInternal::~PortalInternal()
+PortalInternalCpp::~PortalInternalCpp()
 {
-    if (fpga_fd > 0) {
-        ::close(fpga_fd);
-        fpga_fd = -1;
+    if (pint.fpga_fd > 0) {
+        ::close(pint.fpga_fd);
+        pint.fpga_fd = -1;
     }    
 }
 
 Portal::Portal(int id, PortalPoller *poller)
-  : PortalInternal(id)
+  : PortalInternalCpp(id)
 {
   if (poller == 0)
     poller = defaultPoller;
-  this->poller = poller;
-  poller->registerInstance(this);
+  pint.poller = poller;
+  pint.poller->registerInstance(this);
 }
 
 Portal::~Portal()
 {
-  poller->unregisterInstance(this);
+  pint.poller->unregisterInstance(this);
 }
 
 PortalPoller::PortalPoller()
@@ -250,7 +250,7 @@ int PortalPoller::unregisterInstance(Portal *portal)
 {
   int i = 0;
   while(i < numFds)
-    if(portal_fds[i].fd == portal->fpga_fd)
+    if(portal_fds[i].fd == portal->pint.fpga_fd)
       break;
     else
       i++;
@@ -274,9 +274,9 @@ int PortalPoller::registerInstance(Portal *portal)
     portal_wrappers[numFds-1] = portal;
     struct pollfd *pollfd = &portal_fds[numFds-1];
     memset(pollfd, 0, sizeof(struct pollfd));
-    pollfd->fd = portal->fpga_fd;
+    pollfd->fd = portal->pint.fpga_fd;
     pollfd->events = POLLIN;
-    fprintf(stderr, "Portal::registerInstance fpga%d\n", portal->fpga_number);
+    fprintf(stderr, "Portal::registerInstance fpga%d\n", portal->pint.fpga_number);
     return 0;
 }
 
@@ -310,8 +310,8 @@ void* PortalPoller::portalExec_init(void)
     }
     for (int i = 0; i < numFds; i++) {
       Portal *instance = portal_wrappers[i];
-      //fprintf(stderr, "portalExec::enabling interrupts portal %d fpga%d\n", i, instance->fpga_number);
-      ENABLE_INTERRUPTS(instance);
+      //fprintf(stderr, "portalExec::enabling interrupts portal %d fpga%d\n", i, instance->pint.fpga_number);
+      ENABLE_INTERRUPTS(&instance->pint);
     }
     fprintf(stderr, "portalExec::about to enter loop, numFds=%d\n", numFds);
     return NULL;
@@ -321,8 +321,8 @@ void PortalPoller::portalExec_end(void)
     stopping = 1;
     for (int i = 0; i < numFds; i++) {
       Portal *instance = portal_wrappers[i];
-      fprintf(stderr, "portalExec::disabling interrupts portal %d fpga%d\n", i, instance->fpga_number);
-      WRITEL(instance, &(instance->map_base)[IND_REG_INTERRUPT_MASK], 0);
+      fprintf(stderr, "portalExec::disabling interrupts portal %d fpga%d\n", i, instance->pint.fpga_number);
+      WRITEL(&instance->pint, &(instance->pint.map_base)[IND_REG_INTERRUPT_MASK], 0);
     }
 }
 
@@ -349,24 +349,24 @@ void* PortalPoller::portalExec_event(void)
         fprintf(stderr, "No portal_instances revents=%d\n", portal_fds[i].revents);
       }
       Portal *instance = portal_wrappers[i];
-      volatile unsigned int *map_base = instance->map_base;
+      volatile unsigned int *map_base = instance->pint.map_base;
     
       // sanity check, to see the status of interrupt source and enable
       unsigned int queue_status;
     
       // handle all messasges from this portal instance
-      while ((queue_status= READL(instance, &map_base[IND_REG_QUEUE_STATUS]))) {
+      while ((queue_status= READL(&instance->pint, &map_base[IND_REG_QUEUE_STATUS]))) {
         if(0) {
-          unsigned int int_src = READL(instance, &map_base[IND_REG_INTERRUPT_FLAG]);
-          unsigned int int_en  = READL(instance, &map_base[IND_REG_INTERRUPT_MASK]);
-          unsigned int ind_count  = READL(instance, &map_base[IND_REG_INTERRUPT_COUNT]);
-          fprintf(stderr, "(%d:fpga%d) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->fpga_number, int_src, int_en, queue_status);
+          unsigned int int_src = READL(&instance->pint, &map_base[IND_REG_INTERRUPT_FLAG]);
+          unsigned int int_en  = READL(&instance->pint, &map_base[IND_REG_INTERRUPT_MASK]);
+          unsigned int ind_count  = READL(&instance->pint, &map_base[IND_REG_INTERRUPT_COUNT]);
+          fprintf(stderr, "(%d:fpga%d) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->pint.fpga_number, int_src, int_en, queue_status);
         }
         instance->handleMessage(queue_status-1);
 	mcnt++;
       }
       // re-enable interrupt which was disabled by portal_isr
-      ENABLE_INTERRUPTS(instance);
+      ENABLE_INTERRUPTS(&instance->pint);
     }
     //if(timeout == -1 && !mcnt)
     //  fprintf(stderr, "poll returned even though no messages were detected\n");
@@ -429,7 +429,7 @@ void portalExec_start()
 }
 
 Directory::Directory() 
-  : PortalInternal(-1), //"fpga0", 16),
+  : PortalInternalCpp(-1), //"fpga0", 16),
     version(0),
     timestamp(0),
     addrbits(0),
@@ -446,7 +446,7 @@ Directory::Directory()
   long reqF = 100000000; // 100 Mhz
   request.clknum = 0;
   request.requested_rate = reqF;
-  int status = ioctl(fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
+  int status = ioctl(pint.fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
   if (status < 0)
     fprintf(stderr, "Directory::Directory() error setting fclk0, errno=%d\n", errno);
   fprintf(stderr, "Directory::Directory() set fclk0 (%ld,%ld)\n", reqF, request.actual_rate);
@@ -464,7 +464,7 @@ void Directory::printDbgRequestIntervals()
   for(j = 0; j < 2; j++){
     for(i = 0; i < TIMING_INTERVAL_SIZE; i++){
       volatile unsigned int *addr = intervals_offset+(j * TIMING_INTERVAL_SIZE + i);
-      c = READL(this, addr);
+      c = READL(&pint, addr);
       x[i] = (((uint64_t)c) << 32) | (x[i] >> 32);
     }
   }
@@ -484,8 +484,8 @@ void print_dbg_request_intervals()
 
 uint64_t Directory::cycle_count()
 {
-  unsigned int high_bits = READL(this, counter_offset+0);
-  unsigned int low_bits  = READL(this, counter_offset+1);
+  unsigned int high_bits = READL(&pint, counter_offset+0);
+  unsigned int low_bits  = READL(&pint, counter_offset+1);
   return (((uint64_t)high_bits)<<32) | ((uint64_t)low_bits);
 }
 unsigned int Directory::get_fpga(unsigned int id)
@@ -507,17 +507,17 @@ unsigned int Directory::get_addrbits(unsigned int id)
 void Directory::scan(int display)
 {
   unsigned int i;
-  if(display) fprintf(stderr, "Directory::scan(fpga%d)\n", fpga_number);
-  volatile unsigned int *ptr = &map_base[PORTAL_REQ_FIFO(0)+128];
-  version    = READL(this, ptr++);
-  timestamp  = READL(this, ptr++);
-  numportals = READL(this, ptr++);
-  addrbits   = READL(this, ptr++);
+  if(display) fprintf(stderr, "Directory::scan(fpga%d)\n", pint.fpga_number);
+  volatile unsigned int *ptr = &pint.map_base[PORTAL_REQ_FIFO(0)+128];
+  version    = READL(&pint, ptr++);
+  timestamp  = READL(&pint, ptr++);
+  numportals = READL(&pint, ptr++);
+  addrbits   = READL(&pint, ptr++);
   portal_ids   = (unsigned int *)malloc(sizeof(portal_ids[0])*numportals);
   portal_types = (unsigned int *)malloc(sizeof(portal_types[0])*numportals);
   for(i = 0; (i < numportals) && (i < 32); i++){
-    portal_ids[i] = READL(this, ptr++);
-    portal_types[i] = READL(this, ptr++);
+    portal_ids[i] = READL(&pint, ptr++);
+    portal_types[i] = READL(&pint, ptr++);
   }
   counter_offset = ptr;
   intervals_offset = ptr+2;
@@ -536,7 +536,7 @@ void Directory::traceStart()
 #ifndef ZYNQ
   tTraceInfo traceInfo;
   traceInfo.trace = 1;
-  int res = ioctl(fpga_fd,BNOC_TRACE,&traceInfo);
+  int res = ioctl(pint.fpga_fd,BNOC_TRACE,&traceInfo);
   if (res)
     fprintf(stderr, "Failed to start tracing. errno=%d\n", errno);
 #endif
@@ -547,7 +547,7 @@ void Directory::traceStop()
 #ifndef ZYNQ
   tTraceInfo traceInfo;
   traceInfo.trace = 0;
-  int res = ioctl(fpga_fd,BNOC_TRACE,&traceInfo);
+  int res = ioctl(pint.fpga_fd,BNOC_TRACE,&traceInfo);
   if (res)
     fprintf(stderr, "Failed to stop tracing. errno=%d\n", errno);
 #endif

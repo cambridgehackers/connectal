@@ -492,6 +492,7 @@ LOCAL_MODULE := android_exe
 LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS := -llog %(clibdirs)s %(clibs)s
 LOCAL_CPPFLAGS := "-march=armv7-a"
+LOCAL_CFLAGS := -DZYNQ -DMMAP_HW -I%(xbsvdir)s -I%(xbsvdir)s/cpp -I%(xbsvdir)s/lib/cpp -I%(xbsvdir)s/drivers/zynqportal -I%(project_dir)s/jni %(cincludes)s %(cdefines)s
 LOCAL_CXXFLAGS := -DZYNQ -DMMAP_HW -I%(xbsvdir)s -I%(xbsvdir)s/cpp -I%(xbsvdir)s/lib/cpp -I%(xbsvdir)s/drivers/zynqportal -I%(project_dir)s/jni %(cincludes)s %(cdefines)s
 
 include $(BUILD_EXECUTABLE)
@@ -723,6 +724,9 @@ if __name__=='__main__':
     generated_hpp.write('#ifndef __GENERATED_TYPES__\n');
     generated_hpp.write('#define __GENERATED_TYPES__\n');
     generated_hpp.write('#include "portal.h"\n')
+    generated_hpp.write('#ifdef __cplusplus\n')
+    generated_hpp.write('extern "C" {\n')
+    generated_hpp.write('#endif\n')
     # global type declarations used by interface mthods
     for v in syntax.globaldecls:
         if (v.type == 'TypeDef'):
@@ -733,7 +737,7 @@ if __name__=='__main__':
     generatedCFiles.append(cppname)
 
     for i in swProxies:
-        cppname = '%sProxy.cpp' % i.name
+        cppname = '%sProxy.c' % i.name
         hppname = '%sProxy.h' % i.name
         hpp = create_cpp_file(hppname)
         cpp = create_cpp_file(cppname)
@@ -748,7 +752,7 @@ if __name__=='__main__':
         generatedCFiles.append(cppname)
 
     for i in swWrappers:
-        cppname = '%sWrapper.cpp' % i.name
+        cppname = '%sWrapper.c' % i.name
         hppname = '%sWrapper.h' % i.name
         hpp = create_cpp_file(hppname)
         cpp = create_cpp_file(cppname)
@@ -765,6 +769,9 @@ if __name__=='__main__':
         generatedCFiles.append(cppname)
     
     generated_cpp.close();
+    generated_hpp.write('#ifdef __cplusplus\n')
+    generated_hpp.write('}\n')
+    generated_hpp.write('#endif\n')
     generated_hpp.write('#endif //__GENERATED_TYPES__\n');
     generated_hpp.close();
 

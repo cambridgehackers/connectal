@@ -53,21 +53,15 @@ typedef struct {
     uint64_t total, min, max, over;
 } TIMETYPE;
 
-class PortalPoller;
-class PortalInternal
+class PortalInternalCpp
 {
  public:
-  PortalPoller *poller;
-  PortalInternal(int id);
-  virtual ~PortalInternal();
-  int fpga_fd;
-  struct channel p_read;
-  struct channel p_write;
-  int fpga_number;
-  volatile unsigned int *map_base;
+  PortalInternal pint;
+  PortalInternalCpp(int id);
+  virtual ~PortalInternalCpp();
 };
 
-class Portal : public PortalInternal
+class Portal : public PortalInternalCpp
 {
  public:
   virtual ~Portal();
@@ -97,7 +91,7 @@ public:
   int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
 };
 
-class Directory : public PortalInternal
+class Directory : public PortalInternalCpp
 {
  private:
   unsigned int version;
