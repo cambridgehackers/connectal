@@ -33,28 +33,21 @@ proxyClassPrefixTemplate='''
 class %(namespace)s%(className)s : public %(parentClass)s {
 //proxyClass
 public:
-    %(className)s(int id, PortalPoller *poller = 0);
+    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, poller) { };
 '''
 
 wrapperClassPrefixTemplate='''
 class %(namespace)s%(className)s : public %(parentClass)s {
 //wrapperClass
 public:
-    %(className)s(PortalInternal *p, PortalPoller *poller = 0);
-    %(className)s(int id, PortalPoller *poller = 0);
+    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, poller) { };
 '''
 wrapperClassSuffixTemplate='''
 protected:
-    virtual int handleMessage(unsigned int channel);
+    virtual int handleMessage(unsigned int channel) {
+        return %(namespace)s%(className)s_handleMessage(this, channel);
+    }
 };
-'''
-
-proxyConstructorTemplate='''
-%(namespace)s%(className)s::%(className)s(int id, PortalPoller *poller)
- : %(parentClass)s(id, poller)
-{
-    %(statusInstantiate)s
-}
 '''
 
 putFailedMethodName = "putFailed"
@@ -96,13 +89,6 @@ int %(namespace)s%(className)s_handleMessage(PortalInternal *p, unsigned int cha
         return 0;
     }
     return 0;
-}
-'''
-
-handleMessageTemplateCpp='''
-int %(namespace)s%(className)s::handleMessage(unsigned int channel)
-{
-    return %(namespace)s%(className)s_handleMessage(this, channel);
 }
 '''
 
@@ -173,21 +159,24 @@ class MethodMixin:
             return int
     def formalParameters(self, params):
         return [ 'const %s%s %s' % (p.type.cName(), p.type.refParam(), p.name) for p in params]
-    def emitCDeclaration(self, f, proxy, indentation, namespace):
+    def emitCDeclaration(self, f, proxy, indentation, namespace, className):
         if self.name == putFailedMethodName:
             return
         indent(f, indentation)
         resultTypeName = self.resultTypeName()
+        paramValues = ', '.join([p.name for p in self.params])
+        methodName = cName(self.name)
         if (not proxy):
             f.write('virtual ')
-        f.write('void %s ( ' % cName(self.name))
+        f.write('void %s ( ' % methodName)
         f.write(', '.join(self.formalParameters(self.params)))
-        f.write(' )')
+        f.write(' ) ')
 	# ugly hack
         if ((not proxy) and (not (self.name == putFailedMethodName))):
             f.write('= 0;\n')
         else:
-            f.write(';\n')
+            f.write('{ %s_%s ( this, ' % (className, methodName))
+            f.write(paramValues + '); };\n')
     def emitCStructDeclaration(self, f, of, namespace, className):
         paramValues = ', '.join([p.name for p in self.params])
         formalParams = self.formalParameters(self.params)
@@ -470,7 +459,7 @@ class InterfaceMixin:
             f.write("\nclass %s%s;\n" % (cName(self.name), 'ProxyStatus'))
         f.write(proxyClassPrefixTemplate % subs)
         for d in self.decls:
-            d.emitCDeclaration(f, True, indentation + 4, namespace)
+            d.emitCDeclaration(f, True, indentation + 4, namespace, className)
         f.write(wrapperClassSuffixTemplate % subs)
 	of.write('enum { ' + ','.join(reqChanNums) + '};\n')
         if suffix == 'Proxy':
@@ -486,7 +475,7 @@ class InterfaceMixin:
                 'parentClass': self.parentClass('Portal')}
         f.write(wrapperClassPrefixTemplate % subs)
         for d in self.decls:
-            d.emitCDeclaration(f, False, indentation + 4, namespace)
+            d.emitCDeclaration(f, False, indentation + 4, namespace, className)
         f.write(wrapperClassSuffixTemplate % subs)
         for d in self.decls:
             d.emitCStructDeclaration(cppf, of, namespace, className)
@@ -504,7 +493,6 @@ class InterfaceMixin:
                 if d.name != putFailedMethodName:
                     d.emitCImplementation(f, hpp, className, namespace,True, False)
         else:
-            f.write(proxyConstructorTemplate % substitutions)
             for d in self.decls:
                 d.emitCImplementation(f, hpp, className, namespace,True, True)
     def emitCWrapperImplementation (self, f, hpp, suffix, namespace, doCpp):
@@ -531,7 +519,6 @@ class InterfaceMixin:
         else:
             if suffix == 'ProxyStatus':
                 substitutions['className'] = "%s%s" % (cName(self.name), 'Proxy')
-            f.write(handleMessageTemplateCpp % substitutions)
 
 
 class ParamMixin:
