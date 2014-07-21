@@ -52,10 +52,11 @@ module  mkPortalTop#(HostType host)(PortalTop#(addrWidth,TMul#(32,N),Empty,Numbe
    TimerRequestWrapper timerRequestWrapper <- mkTimerRequestWrapper(TimerRequestPortal,mm.timerRequest);
    
    // so we have the same number of readers and writers
-   let memWriter <- mkMemWriter;
+   Vector#(3, MemWriter#(TMul#(32,N))) memWriters <- replicateM(mkMemWriter);
+   function ObjectWriteClient#(dataWidth) getMemWriterWriteClient(MemWriter#(dataWidth) writer); return writer.writeClient; endfunction
 
-   Vector#(2,ObjectReadClient#(TMul#(32,N))) readClients = mm.readClients;
-   Vector#(2,ObjectWriteClient#(TMul#(32,N))) writeClients = cons(mm.writeClient,cons(memWriter.writeClient,nil));
+   Vector#(4,ObjectReadClient#(TMul#(32,N))) readClients = mm.readClients;
+   Vector#(4,ObjectWriteClient#(TMul#(32,N))) writeClients = cons(mm.writeClient,map(getMemWriterWriteClient, memWriters));
 
    MemServer#(addrWidth, TMul#(32,N), NumberOfMasters) dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
    DmaConfigWrapper dmaConfigWrapper <- mkDmaConfigWrapper(DmaConfigPortal,dma.request);
