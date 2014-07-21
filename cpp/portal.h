@@ -49,10 +49,6 @@ typedef struct PortalInternal {
 #ifdef __KERNEL__
 #include <linux/module.h>
 #include <linux/kernel.h>
-
-//typedef struct {
-    //volatile unsigned int *map_base;
-//} PortalInternal;
 #define PORTAL_PRINTF printk
 #else
 #include <stdio.h>   // printf()
