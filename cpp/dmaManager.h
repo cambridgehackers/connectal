@@ -33,9 +33,9 @@
 #define DMAGetMemoryTraffic(P,A) DmaConfigProxy_getMemoryTraffic((P), (A))
 #else
 #include "DmaConfigProxy.h" // generated in project directory
-#define DMAsglist(P, A, B, C) ((DmaConfigProxy *)(P))->sglist((A), (B), (C))
-#define DMAregion(P, PTR, B8, O8, B4, O4, B0, O0) ((DmaConfigProxy *)(P))->region((PTR), (B8), (O8), (B4), (O4), (B0), (O0))
-#define DMAGetMemoryTraffic(P,A) ((DmaConfigProxy *)(P))->getMemoryTraffic((A))
+#define DMAsglist(P, A, B, C) ((DmaConfigProxy *)((P)->parent))->sglist((A), (B), (C))
+#define DMAregion(P, PTR, B8, O8, B4, O4, B0, O0) ((DmaConfigProxy *)((P)->parent))->region((PTR), (B8), (O8), (B4), (O4), (B0), (O0))
+#define DMAGetMemoryTraffic(P,A) ((DmaConfigProxy *)((P)->parent))->getMemoryTraffic((A))
 #endif
 
 typedef struct {
@@ -63,7 +63,7 @@ class DmaManager
  private:
   DmaManagerPrivate priv;
  public:
-  DmaManager(PortalInternal *argDevice);
+  DmaManager(PortalInternalCpp *argDevice);
   int dCacheFlushInval(PortalAlloc *portalAlloc, void *__p);
   int alloc(size_t size, PortalAlloc **portalAlloc);
   int reference(PortalAlloc* pa);

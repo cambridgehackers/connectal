@@ -208,9 +208,9 @@ int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa)
 }
 
 #ifndef NO_CPP_PORTAL_CODE
-DmaManager::DmaManager(PortalInternal *argDevice)
+DmaManager::DmaManager(PortalInternalCpp *argDevice)
 {
-  DmaManager_init(&priv, argDevice);
+  DmaManager_init(&priv, &argDevice->pint);
 }
 int DmaManager::dCacheFlushInval(PortalAlloc *portalAlloc, void *__p)
 {
