@@ -31,7 +31,7 @@ static int v2a = 2;
 static int v2b = 4;
 #define MAX_INDARRAY 2
 typedef int (*INDFUNC)(PortalInternal *p, unsigned int channel);
-static PortalInternalCpp *intarr[MAX_INDARRAY];
+static PortalInternal *intarr[MAX_INDARRAY];
 static INDFUNC indfn[MAX_INDARRAY];
 
 void SimpleIndicationWrapperheard1_cb (  struct PortalInternal *p, const uint32_t v )
@@ -46,36 +46,39 @@ void SimpleIndicationWrapperheard2_cb (  struct PortalInternal *p, const uint32_
 static void manual_event(void)
 {
     for (int i = 0; i < MAX_INDARRAY; i++) {
-      PortalInternalCpp *instance = intarr[i];
-      volatile unsigned int *map_base = instance->pint.map_base;
+      PortalInternal *instance = intarr[i];
+      volatile unsigned int *map_base = instance->map_base;
       unsigned int queue_status;
-      while ((queue_status= READL(&instance->pint, &map_base[IND_REG_QUEUE_STATUS]))) {
-        unsigned int int_src = READL(&instance->pint, &map_base[IND_REG_INTERRUPT_FLAG]);
-        unsigned int int_en  = READL(&instance->pint, &map_base[IND_REG_INTERRUPT_MASK]);
-        unsigned int ind_count  = READL(&instance->pint, &map_base[IND_REG_INTERRUPT_COUNT]);
-        fprintf(stderr, "(%d:fpga%d) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->pint.fpga_number, int_src, int_en, queue_status);
+      while ((queue_status= READL(instance, &map_base[IND_REG_QUEUE_STATUS]))) {
+        unsigned int int_src = READL(instance, &map_base[IND_REG_INTERRUPT_FLAG]);
+        unsigned int int_en  = READL(instance, &map_base[IND_REG_INTERRUPT_MASK]);
+        unsigned int ind_count  = READL(instance, &map_base[IND_REG_INTERRUPT_COUNT]);
+        fprintf(stderr, "(%d:fpga%d) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->fpga_number, int_src, int_en, queue_status);
         if (indfn[i])
-            indfn[i](&instance->pint, queue_status-1);
+            indfn[i](instance, queue_status-1);
       }
     }
 }
 
 int main(int argc, const char **argv)
 {
-   intarr[0] = new PortalInternalCpp(IfcNames_SimpleRequest); // portal 1
-   intarr[1] = new PortalInternalCpp(IfcNames_SimpleIndication); // portal 2
+PortalInternalCpp *intarrtemp[MAX_INDARRAY];
+   intarrtemp[0] = new PortalInternalCpp(IfcNames_SimpleRequest); // portal 1
+   intarrtemp[1] = new PortalInternalCpp(IfcNames_SimpleIndication); // portal 2
+   intarr[0] = &intarrtemp[0]->pint;
+   intarr[1] = &intarrtemp[1]->pint;
    indfn[0] = SimpleRequestProxy_handleMessage;
    indfn[1] = SimpleIndicationWrapper_handleMessage;
 
-   WRITEL(&intarr[0]->pint, &intarr[0]->pint.map_base[IND_REG_INTERRUPT_MASK], 0);
-   WRITEL(&intarr[0]->pint, &intarr[1]->pint.map_base[IND_REG_INTERRUPT_MASK], 0);
+   WRITEL(intarr[0], &intarr[0]->map_base[IND_REG_INTERRUPT_MASK], 0);
+   WRITEL(intarr[0], &intarr[1]->map_base[IND_REG_INTERRUPT_MASK], 0);
   fprintf(stderr, "Main::calling say1(%d)\n", v1a);
   //device->say1(v1a);  
-  SimpleRequestProxy_say1 (&intarr[0]->pint , v1a);
+  SimpleRequestProxy_say1 (intarr[0], v1a);
   manual_event();
 
   fprintf(stderr, "Main::calling say2(%d, %d)\n", v2a,v2b);
   //device->say2(v2a,v2b);
-  SimpleRequestProxy_say2 (&intarr[0]->pint, v2a, v2b);
+  SimpleRequestProxy_say2 (intarr[0], v2a, v2b);
   manual_event();
 }
