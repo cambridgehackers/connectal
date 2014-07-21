@@ -40,7 +40,7 @@ static int trace_memory;// = 1;
 
 #define MAX_INDARRAY 4
 typedef int (*INDFUNC)(PortalInternal *p, unsigned int channel);
-static PortalInternalCpp *intarr[MAX_INDARRAY];
+static PortalInternal *intarr[MAX_INDARRAY];
 static INDFUNC indfn[MAX_INDARRAY];
 
 static sem_t test_sem;
@@ -110,7 +110,7 @@ void DmaIndicationWrappertagMismatch_cb (  struct PortalInternal *p, const Chann
 static void manual_event(void)
 {
     for (int i = 0; i < MAX_INDARRAY; i++) {
-      PortalInternal *instance = &intarr[i]->pint;
+      PortalInternal *instance = intarr[i];
       volatile unsigned int *map_base = instance->map_base;
       unsigned int queue_status;
       while ((queue_status= READL(instance, &map_base[IND_REG_QUEUE_STATUS]))) {
@@ -141,17 +141,21 @@ static void *pthread_worker(void *p)
 
 int main(int argc, const char **argv)
 {
-  intarr[0] = new PortalInternalCpp(IfcNames_DmaIndication);     // fpga1
-  intarr[1] = new PortalInternalCpp(IfcNames_MemreadIndication); // fpga2
-  intarr[2] = new PortalInternalCpp(IfcNames_DmaConfig);         // fpga3
-  intarr[3] = new PortalInternalCpp(IfcNames_MemreadRequest);    // fpga4
+PortalInternalCpp *intarrtemp[MAX_INDARRAY];
+int i;
+  intarrtemp[0] = new PortalInternalCpp(IfcNames_DmaIndication);     // fpga1
+  intarrtemp[1] = new PortalInternalCpp(IfcNames_MemreadIndication); // fpga2
+  intarrtemp[2] = new PortalInternalCpp(IfcNames_DmaConfig);         // fpga3
+  intarrtemp[3] = new PortalInternalCpp(IfcNames_MemreadRequest);    // fpga4
   indfn[0] = DmaIndicationWrapper_handleMessage;
   indfn[1] = MemreadIndicationWrapper_handleMessage;
   indfn[2] = DmaConfigProxy_handleMessage;
   indfn[3] = MemreadRequestProxy_handleMessage;
+  for (i = 0; i < 4; i++)
+      intarr[i] = &intarrtemp[i]->pint;
 
   PortalAlloc *srcAlloc;
-  DmaManager_init(&priv, &intarr[2]->pint);
+  DmaManager_init(&priv, intarr[2]);
   int rc = DmaManager_alloc(&priv, alloc_sz, &srcAlloc);
   if (rc){
     fprintf(stderr, "portal alloc failed rc=%d\n", rc);
@@ -180,7 +184,7 @@ int main(int argc, const char **argv)
 #endif /////////////////////
   unsigned int ref_srcAlloc = DmaManager_reference(&priv, srcAlloc);
   printf( "Main: starting read %08x\n", numWords);
-  MemreadRequestProxy_startRead (&intarr[3]->pint , ref_srcAlloc, numWords, burstLen, 1);
+  MemreadRequestProxy_startRead (intarr[3], ref_srcAlloc, numWords, burstLen, 1);
   sem_wait(&test_sem);
   return 0;
 }
