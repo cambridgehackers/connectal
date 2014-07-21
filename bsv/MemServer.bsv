@@ -269,7 +269,7 @@ module mkConfigMemServerRW#(DmaIndication dmaIndication,
 `ifdef BSIM
 `ifndef PCIE
 	 let va <- pareff(pref, len);
-         addr[39:32] = truncate(pref);
+         //moved to dmaManager.cpp addr[39:32] = truncate(pref);
 `endif
 `endif
 	 sgl.sglist(pref, truncate(addr), len);
@@ -363,7 +363,7 @@ module mkConfigMemServerR#(DmaIndication dmaIndication,
 `ifdef BSIM
 `ifndef PCIE
 	 let va <- pareff(pref, len);
-         addr[39:32] = truncate(pref);
+         //moved to dmaManager.cpp addr[39:32] = truncate(pref);
 `endif
 `endif
 	 sgl.sglist(pref, truncate(addr), len);
@@ -456,7 +456,7 @@ module mkConfigMemServerW#(DmaIndication dmaIndication,
 `ifdef BSIM
 `ifndef PCIE
 	 let va <- pareff(pref, len);
-         addr[39:32] = truncate(pref);
+         //moved to dmaManager.cpp addr[39:32] = truncate(pref);
 `endif
 `endif
 	 sgl.sglist(pref, truncate(addr), len);

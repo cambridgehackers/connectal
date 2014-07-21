@@ -255,13 +255,13 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 else begin
 	    idxReg <= idxReg+1;
 	    if (extend(len) == ord0) begin
-	       page = tagged POrd0 truncate(paddr>>page_shift0);
+	       page = tagged POrd0 truncate(paddr); //>>page_shift0);
 	    end
 	    else if (extend(len) == ord4) begin
-	       page = tagged POrd4 truncate(paddr>>page_shift4);
+	       page = tagged POrd4 truncate(paddr); //>>page_shift4);
 	    end
 	    else if (extend(len) == ord8) begin
-	       page = tagged POrd8 truncate(paddr>>page_shift8);
+	       page = tagged POrd8 truncate(paddr); //>>page_shift8);
 	    end
 	    else begin
 	       $display("mkSGListMMU::sglist unsupported length %h", len);

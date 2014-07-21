@@ -123,20 +123,24 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
 #ifdef MMAP_HW
     dma_addr_t addr = e->dma_address;
 #else
-    int addr = (e->length > 0) ? size_accum : 0;
+    long addr = (e->length > 0) ? size_accum : 0;
 #endif
+#ifdef BSIM
+    addr |= ((long)id) << 32; //[39:32] = truncate(pref);
+#endif
+
     switch (e->length) {
     case (1<<PAGE_SHIFT0):
       regions[2]++;
-      //addr >>= PAGE_SHIFT0;
+      addr >>= PAGE_SHIFT0;
       break;
     case (1<<PAGE_SHIFT4):
       regions[1]++;
-      //addr >>= PAGE_SHIFT4;
+      addr >>= PAGE_SHIFT4;
       break;
     case (1<<PAGE_SHIFT8):
       regions[0]++;
-      //addr >>= PAGE_SHIFT8;
+      addr >>= PAGE_SHIFT8;
       break;
     case (0):
       break;
