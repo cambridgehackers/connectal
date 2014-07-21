@@ -53,11 +53,7 @@ typedef union tagged{
    Bit#(SGListPageShift8) OOrd8;
 } Offset deriving (Eq,Bits,FShow);
 
-typedef union tagged{
-   Bit#(TSub#(ObjectOffsetSize,SGListPageShift0)) POrd0;
-   Bit#(TSub#(ObjectOffsetSize,SGListPageShift4)) POrd4;
-   Bit#(TSub#(ObjectOffsetSize,SGListPageShift8)) POrd8;
-} Page deriving (Eq,Bits,FShow);
+typedef Bit#(TSub#(ObjectOffsetSize,SGListPageShift0)) Page;
 
 typedef struct {
    Bit#(ObjectOffsetSize) barrier;
@@ -196,35 +192,11 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 Bit#(ObjectOffsetSize) rv = 0;
 	 case (offset) matches
 	    tagged OOrd0 .o:
-	       begin
-		  case (page) matches
-		     tagged POrd4 .p:
-			$display("OOrd0 vs POrd4");
-		     tagged POrd8 .p:
-			$display("OOrd0 vs POrd8");
-		  endcase
-		  rv = {page.POrd0,o};
-	       end
+		  rv = {truncate(page),o};
 	    tagged OOrd4 .o:
-	       begin
-		  case (page) matches
-		     tagged POrd0 .p:
-			$display("OOrd4 vs POrd0");
-		     tagged POrd8 .p:
-			$display("OOrd4 vs POrd8");
-		  endcase
-		  rv = {page.POrd4,o};
-	       end
+		  rv = {truncate(page),o};
 	    tagged OOrd8 .o:
-	       begin
-		  case (page) matches
-		     tagged POrd0 .p:
-			$display("OOrd8 vs POrd0");
-		     tagged POrd4 .p:
-			$display("OOrd8 vs POrd4");
-		  endcase
-		  rv = {page.POrd8,o};
-	       end
+		  rv = {truncate(page),o};
 	 endcase
 	 pageResponseFifos[i].enq(truncate(rv));
       endrule
@@ -248,29 +220,15 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 dmaIndication.dmaError(extend(pack(DmaErrorBadNumberEntries)), extend(ptr),extend(len), extend(idxReg));
       end
       else begin
-	 Page page = tagged POrd0 0;
 	 if (len == 0) begin
 	    idxReg <= 0;
 	 end
 	 else begin
 	    idxReg <= idxReg+1;
-	    if (extend(len) == ord0) begin
-	       page = tagged POrd0 truncate(paddr); //>>page_shift0);
-	    end
-	    else if (extend(len) == ord4) begin
-	       page = tagged POrd4 truncate(paddr); //>>page_shift4);
-	    end
-	    else if (extend(len) == ord8) begin
-	       page = tagged POrd8 truncate(paddr); //>>page_shift8);
-	    end
-	    else begin
-	       $display("mkSGListMMU::sglist unsupported length %h", len);
-	       dmaIndication.dmaError(extend(pack(DmaErrorBadPageSize)), extend(ptr), extend(len), 0);
-	    end
 	 end
 	 configRespFifo.enq(truncate(ptr));
 	 portsel(pages, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
-             address:{truncate(ptr-1),idxReg}, datain:page});
+             address:{truncate(ptr-1),idxReg}, datain:truncate(paddr)});
       end
    endrule
 
