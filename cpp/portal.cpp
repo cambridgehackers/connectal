@@ -71,7 +71,7 @@
 #endif
 
 static PortalPoller *defaultPoller = new PortalPoller();
-static Directory dir;
+Directory globalDirectory;
 static Directory *pdir;
 static uint64_t c_start[MAX_TIMER_COUNT];
 
@@ -148,21 +148,16 @@ void write_portal_bsim(int sockfd, volatile unsigned int *addr, unsigned int v, 
   }
 }
 
-PortalInternalCpp::PortalInternalCpp(int id)
+void init_portal_internal(PortalInternal *pint, int fpga_number, int addrbits)
 {
     int rc = 0;
     char buff[128];
-    unsigned int addrbits = 16;
     volatile unsigned int * dev_base = 0;
-    pint.fpga_number = 0;
-    pint.fpga_fd = -1;
-    pint.map_base = 0x0;
-    pint.parent = (void *)this;
-    if (id != -1) {    // not Directory
-      pint.fpga_number = dir.get_fpga(id);
-      addrbits = dir.get_addrbits(id);
-    }
-    sprintf(buff, "fpga%d", pint.fpga_number);
+    pint->fpga_number = fpga_number;
+    pint->fpga_fd = -1;
+    pint->map_base = 0x0;
+    pint->parent = NULL;
+    sprintf(buff, "fpga%d", pint->fpga_number);
 #ifdef ZYNQ
     PortalEnableInterrupt intsettings = {3 << 14, (3 << 14) + 4};
     FILE *pgfile = fopen("/sys/devices/amba.0/f8007000.devcfg/prog_done", "r");
@@ -186,37 +181,48 @@ PortalInternalCpp::PortalInternalCpp(int id)
     fclose(pgfile);
 #endif
 #ifdef MMAP_HW
-    snprintf(buff, sizeof(buff), "/dev/fpga%d", pint.fpga_number);
+    snprintf(buff, sizeof(buff), "/dev/fpga%d", pint->fpga_number);
 #ifdef ZYNQ
-    pint.fpga_fd = ::open(buff, O_RDWR);
-    ioctl(pint.fpga_fd, PORTAL_ENABLE_INTERRUPT, &intsettings);
+    pint->fpga_fd = ::open(buff, O_RDWR);
+    ioctl(pint->fpga_fd, PORTAL_ENABLE_INTERRUPT, &intsettings);
 #else
     // FIXME: bluenoc driver only opens readonly for some reason
-    pint.fpga_fd = ::open(buff, O_RDONLY);
+    pint->fpga_fd = ::open(buff, O_RDONLY);
 #endif
-    if (pint.fpga_fd < 0) {
-	ALOGE("Failed to open %s fd=%d errno=%d\n", buff, pint.fpga_fd, errno);
+    if (pint->fpga_fd < 0) {
+	ALOGE("Failed to open %s fd=%d errno=%d\n", buff, pint->fpga_fd, errno);
 	rc = -errno;
 	goto errlab;
     }
-    dev_base = (volatile unsigned int*)mmap(NULL, 1<<addrbits, PROT_READ|PROT_WRITE, MAP_SHARED, pint.fpga_fd, 0);
+    dev_base = (volatile unsigned int*)mmap(NULL, 1<<addrbits, PROT_READ|PROT_WRITE, MAP_SHARED, pint->fpga_fd, 0);
     if (dev_base == MAP_FAILED) {
-        ALOGE("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", pint.fpga_fd, errno);
+        ALOGE("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", pint->fpga_fd, errno);
         rc = -errno;
 	goto errlab;
     }  
-    pint.map_base   = (volatile unsigned int*)dev_base;
+    pint->map_base   = (volatile unsigned int*)dev_base;
 #else
-    connect_socket(&pint.p_read, "fpga%d_rc", pint.fpga_number);
-    connect_socket(&pint.p_write, "fpga%d_wc", pint.fpga_number);
+    connect_socket(&pint->p_read, "fpga%d_rc", pint->fpga_number);
+    connect_socket(&pint->p_write, "fpga%d_wc", pint->fpga_number);
 #endif
 
 errlab:
     if (rc != 0) {
-      printf("[%s:%d] failed to open Portal fpga%d\n", __FUNCTION__, __LINE__, pint.fpga_number);
+      printf("[%s:%d] failed to open Portal fpga%d\n", __FUNCTION__, __LINE__, pint->fpga_number);
       ALOGD("PortalInternalCpp::PortalInternalCpp failure rc=%d\n", rc);
       exit(1);
     }
+}
+
+PortalInternalCpp::PortalInternalCpp(int id)
+{
+    unsigned int addrbits = 16, fpga_number = 0;
+    if (id != -1) {    // not Directory
+      fpga_number = globalDirectory.get_fpga(id);
+      addrbits = globalDirectory.get_addrbits(id);
+    }
+    init_portal_internal(&pint, fpga_number, addrbits);
+    pint.parent = (void *)this; /* used for callback functions */
 }
 
 PortalInternalCpp::~PortalInternalCpp()

@@ -132,4 +132,6 @@ void portalTrace_start();
 void portalTrace_stop();
 extern int portalExec_timeout;
 
+extern Directory globalDirectory;
+
 #endif // _PORTAL_H_

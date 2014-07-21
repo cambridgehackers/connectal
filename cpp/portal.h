@@ -56,6 +56,7 @@ typedef struct PortalInternal {
 #ifdef __cplusplus
 #include "portal_internal.h"
 #endif
+void init_portal_internal(PortalInternal *pint, int fpga_number, int addrbits);
 #define PORTAL_PRINTF printf
 #endif
 
