@@ -437,8 +437,6 @@ void portalExec_start()
 
 Directory::Directory() 
   : PortalInternalCpp(-1), //"fpga0", 16),
-    version(0),
-    timestamp(0),
     addrbits(0),
     numportals(0),
     portal_ids(NULL),
@@ -463,31 +461,15 @@ Directory::Directory()
   scan(1);
 }
 
-void Directory::printDbgRequestIntervals()
-{
-  unsigned int i, c, j;
-  uint64_t x[TIMING_INTERVAL_SIZE] = {0,0,0,0,0,0};
-  fprintf(stderr, "Rd ");
-  for(j = 0; j < 2; j++){
-    for(i = 0; i < TIMING_INTERVAL_SIZE; i++){
-      volatile unsigned int *addr = intervals_offset+(j * TIMING_INTERVAL_SIZE + i);
-      c = READL(&pint, addr);
-      x[i] = (((uint64_t)c) << 32) | (x[i] >> 32);
-    }
-  }
-
-  for(i = 0; i < TIMING_INTERVAL_SIZE; i++){
-    fprintf(stderr, "%016zx ", x[i]);
-    if (i == 2)
-      fprintf(stderr, "\nWr ");
-  }
-  fprintf(stderr, "\n");
-}
-
-void print_dbg_request_intervals()
-{
-  pdir->printDbgRequestIntervals();
-}
+#define PORTAL_DIRECTORY_OFFSET(A)      &pint.map_base[PORTAL_REQ_FIFO(0)+128+(A)];
+#define PORTAL_DIRECTORY_VERSION        PORTAL_DIRECTORY_OFFSET(0)
+#define PORTAL_DIRECTORY_TIMESTAMP      PORTAL_DIRECTORY_OFFSET(1)
+#define PORTAL_DIRECTORY_NUMPORTALS     PORTAL_DIRECTORY_OFFSET(2)
+#define PORTAL_DIRECTORY_ADDRBITS       PORTAL_DIRECTORY_OFFSET(3)
+#define PORTAL_DIRECTORY_COUNTER_MSB    PORTAL_DIRECTORY_OFFSET(4)
+#define PORTAL_DIRECTORY_COUNTER_LSB    PORTAL_DIRECTORY_OFFSET(5)
+#define PORTAL_DIRECTORY_PORTAL_ID(A)   PORTAL_DIRECTORY_OFFSET(6 + 2 * (A))
+#define PORTAL_DIRECTORY_PORTAL_TYPE(A) PORTAL_DIRECTORY_OFFSET(6 + 2 * (A) + 1)
 
 uint64_t Directory::cycle_count()
 {
@@ -515,19 +497,19 @@ void Directory::scan(int display)
 {
   unsigned int i;
   if(display) fprintf(stderr, "Directory::scan(fpga%d)\n", pint.fpga_number);
-  volatile unsigned int *ptr = &pint.map_base[PORTAL_REQ_FIFO(0)+128];
-  version    = READL(&pint, ptr++);
-  timestamp  = READL(&pint, ptr++);
+  volatile unsigned int *ptr = PORTAL_DIRECTORY_OFFSET(0);
+  uint32_t version    = READL(&pint, ptr++);
+  time_t timestamp  = READL(&pint, ptr++);
   numportals = READL(&pint, ptr++);
   addrbits   = READL(&pint, ptr++);
+  counter_offset = ptr++;
+  ptr++;
   portal_ids   = (unsigned int *)malloc(sizeof(portal_ids[0])*numportals);
   portal_types = (unsigned int *)malloc(sizeof(portal_types[0])*numportals);
   for(i = 0; (i < numportals) && (i < 32); i++){
     portal_ids[i] = READL(&pint, ptr++);
     portal_types[i] = READL(&pint, ptr++);
   }
-  counter_offset = ptr;
-  intervals_offset = ptr+2;
   if(display){
     fprintf(stderr, "version=%d\n",  version);
     fprintf(stderr, "timestamp=%s",  ctime(&timestamp));

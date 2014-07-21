@@ -44,6 +44,8 @@ endinterface
 
 typedef Directory#(16,16,32) StdDirectory;
 
+typedef 6 StartDirectoryOffset;
+
 module mkStdDirectoryPortalIfc#(BRAMServer#(Bit#(16), Bit#(32)) br)(StdPortal);
    MemSlave#(16,32) ctrl <- mkCtrl2BRAM(br);
    method Bit#(32) ifcId();
@@ -66,9 +68,9 @@ module mkStdDirectory#(Vector#(n,StdPortal) portals) (StdDirectory);
    Reg#(Bit#(32))    snapshot <- mkReg(0);
    FIFOF#(Bit#(16))  addrFifo <- mkSizedFIFOF(1);
    FIFO#(Bit#(32))   dataFifo <- mkSizedFIFO(1);
+   let startDirectoryOffset=valueOf(StartDirectoryOffset);
    
    let base = 128;
-   let cco = fromInteger(valueOf(TAdd#(TMul#(2,n),4)))+base;
    
    rule count;
       cycle_count <= cycle_count+1;
@@ -78,7 +80,7 @@ module mkStdDirectory#(Vector#(n,StdPortal) portals) (StdDirectory);
    rule req1;
       let addr = addrFifo.first;
       addrFifo.deq;
-      let idx = (addr-4-base);
+      let idx = (addr-fromInteger(startDirectoryOffset)-base);
       if (idx[0] == 0)
 	 dataFifo.enq(portals[idx>>1].ifcId);
       else
@@ -97,14 +99,14 @@ module mkStdDirectory#(Vector#(n,StdPortal) portals) (StdDirectory);
 			    dataFifo.enq(fromInteger(valueOf(n)));
 			 else if (req.address == 3+base)
 			    dataFifo.enq(16); // portal Addr bits
-			 else if (req.address == cco) begin
+			 else if (req.address == 4+base) begin
 			    snapshot <= truncate(cycle_count);
 			    dataFifo.enq(cycle_count[63:32]);
 			 end
-			 else if (req.address == cco+1)
+			 else if (req.address == 5+base)
 			    dataFifo.enq(snapshot);
 			 else begin
-			    dynamicAssert((req.address < cco) && (req.address > base), "mkStdDirectory: invalid address");
+			    dynamicAssert((req.address > base), "mkStdDirectory: invalid address");
 			    addrFifo.enq(truncate(req.address));
 			 end
 		      end

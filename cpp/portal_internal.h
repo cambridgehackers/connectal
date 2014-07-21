@@ -94,28 +94,23 @@ public:
 class Directory : public PortalInternalCpp
 {
  private:
-  unsigned int version;
-  time_t timestamp;
   unsigned int addrbits;
   unsigned int numportals;
   unsigned int *portal_ids;
   unsigned int *portal_types;
   volatile unsigned int *counter_offset;
-  volatile unsigned int *intervals_offset;
  public:
   Directory();
   void scan(int display);
   unsigned int get_fpga(unsigned int id);
   unsigned int get_addrbits(unsigned int id);
   uint64_t cycle_count();
-  void printDbgRequestIntervals();
   void traceStart();
   void traceStop();
 };
 
 void start_timer(unsigned int i);
 uint64_t lap_timer(unsigned int i);
-void print_dbg_request_intervals();
 void init_timer(void);
 uint64_t catch_timer(unsigned int i);
 void print_timer(int loops);
