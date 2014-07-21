@@ -99,9 +99,7 @@ void %(namespace)s%(className)s_%(methodName)s (struct PortalInternal *p %(param
 proxyMethodTemplate='''
 void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p %(paramSeparator)s %(paramDeclarations)s )
 {
-    %(className)s%(methodName)sPayload payload;
     volatile unsigned int* temp_working_addr = &(p->map_base[PORTAL_REQ_FIFO(%(methodChannelOffset)s)]);
-%(paramSetters)s
 %(paramStructMarshall)s
 };
 '''
@@ -113,17 +111,11 @@ void %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
 };
 '''
 
-msgTemplate='''
-typedef struct {
-%(paramStructDeclarations)s
-} %(className)s%(methodName)sPayload;
-'''
-
 msgDemarshallTemplate='''
 void %(className)s%(methodName)s_demarshall(PortalInternal *p){
-    %(className)s%(methodName)sPayload payload;
     unsigned int tmp;
     volatile unsigned int* temp_working_addr = &(p->map_base[PORTAL_IND_FIFO(%(methodChannelOffset)s)]);
+%(paramStructDeclarations)s
 %(paramStructDemarshall)s
     %(responseCase)s
 }
@@ -241,9 +233,9 @@ class MethodMixin:
 
         params = self.params
         paramDeclarations = self.formalParameters(params)
-        paramStructDeclarations = [ '        %s %s%s;\n' % (p.type.cName(), p.name, p.type.bitSpec()) for p in params]
+        paramStructDeclarations = [ '        %s %s;\n' % (p.type.cName(), p.name) for p in params]
         
-        argAtoms = sum(map(functools.partial(collectMembers, 'payload.'), params), [])
+        argAtoms = sum(map(functools.partial(collectMembers, ''), params), [])
 
         # for a in argAtoms:
         #     print a[0]
@@ -307,7 +299,6 @@ class MethodMixin:
         
         if not params:
             paramStructDeclarations = ['        int padding;\n']
-        paramSetters = [ '    payload.%s = %s;\n' % (p.name, p.name) for p in params]
         resultTypeName = self.resultTypeName()
         substs = {
             'namespace': namespace,
@@ -320,7 +311,6 @@ class MethodMixin:
             'paramStructMarshall': ''.join(paramStructMarshall),
             'paramSeparator': ',' if params != [] else '',
             'paramStructDemarshall': ''.join(paramStructDemarshall),
-            'paramSetters': ''.join(paramSetters),
             'paramNames': ', '.join(['msg->%s' % p.name for p in params]),
             'resultType': resultTypeName,
             'methodChannelOffset': 'CHAN_NUM_%s_%s' % (className, cName(self.name)),
@@ -331,17 +321,15 @@ class MethodMixin:
             if self.name != putFailedMethodName:
                 f.write(proxyMethodTemplateCpp % substs)
         elif (not proxy):
-            respParams = ['payload.%s' % (p.name) for p in self.params]
+            respParams = [p.name for p in self.params]
             respParams.insert(0, 'p')
             substs['responseCase'] = ('%(className)s%(name)s_cb(%(params)s);\n'
                                       % { 'name': self.name,
                                           'className' : className,
                                           'params': ', '.join(respParams)})
-            f.write(msgTemplate % substs)
             f.write(msgDemarshallTemplate % substs)
         else:
             substs['responseCase'] = ''
-            f.write(msgTemplate % substs)
             f.write(proxyMethodTemplate % substs)
             hpp.write(proxyMethodTemplateDecl % substs)
 
@@ -565,15 +553,6 @@ class TypeMixin:
             return 32
         else:
             return 0
-    def bitSpec(self):
-        if self.isBitField():
-            bw = self.bitWidth()
-            if bw <= 64:
-                return ':%d' % bw
-            else:
-                ## not compatible with use of std::bitset
-                return ''
-        return ''
 
 def cName(x):
     if type(x) == str:
