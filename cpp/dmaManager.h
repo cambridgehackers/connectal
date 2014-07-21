@@ -24,7 +24,10 @@
 #ifndef _PORTAL_MEMORY_H_
 #define _PORTAL_MEMORY_H_
 
+#ifndef __KERNEL__
 #include <stdint.h>
+#endif
+
 #include "portal.h"
 #ifdef NO_CPP_PORTAL_CODE
 #include "GeneratedTypes.h" // generated in project directory
