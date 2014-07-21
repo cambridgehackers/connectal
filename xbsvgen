@@ -735,6 +735,7 @@ if __name__=='__main__':
     cppname = 'GeneratedCppCallbacks.cpp'
     generated_cpp = create_cpp_file(cppname)
     generatedCFiles.append(cppname)
+    generated_cpp.write('\n#ifndef NO_CPP_PORTAL_CODE\n\n')
 
     for i in swProxies:
         cppname = '%sProxy.c' % i.name
@@ -768,6 +769,7 @@ if __name__=='__main__':
         cpp.close();
         generatedCFiles.append(cppname)
     
+    generated_cpp.write('\n#endif //NO_CPP_PORTAL_CODE\n')
     generated_cpp.close();
     generated_hpp.write('#ifdef __cplusplus\n')
     generated_hpp.write('}\n')
