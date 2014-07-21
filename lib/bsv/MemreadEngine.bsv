@@ -28,7 +28,7 @@ import Assert::*;
 import ClientServer::*;
 import BRAM::*;
 import BRAMFIFO::*;
-import Ratchet::*;
+import ConfigCounter::*;
 import Connectable::*;
 
 import PortalMemory::*;
@@ -69,7 +69,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
    Integer bufferSizeBeats = bufferSizeBytes/valueOf(dataWidthBytes);
    Vector#(numServers, Reg#(Bit#(outCntSz)))     outs1 <- replicateM(mkReg(0));
    Vector#(numServers, Reg#(Bit#(outCntSz)))     outs0 <- replicateM(mkReg(0));
-   Vector#(numServers, Ratchet#(16))           buffCap <- replicateM(mkRatchet(fromInteger(bufferSizeBeats)));
+   Vector#(numServers, ConfigCounter#(16))           buffCap <- replicateM(mkConfigCounter(fromInteger(bufferSizeBeats)));
    UGBramFifos#(numServers,cmdQDepth,MemengineCmd) cmdBuf <- mkUGBramFifos;
    
    Reg#(Bool) load_in_progress <- mkReg(False);

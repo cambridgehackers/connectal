@@ -22,22 +22,22 @@
 
 import GetPut::*;
 
-interface Ratchet#(numeric type count_sz);
+interface ConfigCounter#(numeric type count_sz);
    method Action decrement(UInt#(count_sz) x);
    method Action increment(UInt#(count_sz) x);
    method UInt#(count_sz) read();
 endinterface
 
-module mkRatchet#(UInt#(count_sz) init_val)(Ratchet#(count_sz));
+module mkConfigCounter#(UInt#(count_sz) init_val)(ConfigCounter#(count_sz));
    Wire#(UInt#(count_sz)) inc_wire <- mkDWire(0);
    Wire#(UInt#(count_sz)) dec_wire <- mkDWire(0);
    Reg#(UInt#(count_sz)) cnt <- mkReg(init_val);
    (* fire_when_enabled *)
    rule react;
       if (inc_wire > dec_wire)
-	 cnt <= satPlus(Sat_Bound, cnt, (inc_wire - dec_wire));
+	 cnt <= cnt + (inc_wire - dec_wire);
       else
-	 cnt <= satMinus(Sat_Bound, cnt, (dec_wire - inc_wire));
+	 cnt <= cnt - (dec_wire - inc_wire);
    endrule
    method Action increment(UInt#(count_sz) x);
       inc_wire <= x;

@@ -28,7 +28,7 @@ import Gearbox::*;
 import FIFOF::*;
 import SpecialFIFOs::*;
 
-import Ratchet::*;
+import ConfigCounter::*;
 import BRAMFIFOFLevel::*;
 import GetPut::*;
 import MemTypes::*;
@@ -76,7 +76,7 @@ module mkDmaReadBuffer(DmaReadBuffer#(dataWidth, bufferDepth))
 
    FIFOFLevel#(ObjectData#(dataWidth),bufferDepth)  readBuffer <- mkBRAMFIFOFLevel;
    FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF();
-   Ratchet#(TAdd#(1,TLog#(bufferDepth))) unfulfilled <- mkRatchet(0);
+   ConfigCounter#(TAdd#(1,TLog#(bufferDepth))) unfulfilled <- mkConfigCounter(0);
    let beat_shift = fromInteger(valueOf(beatShift));
    
    // only issue the readRequest when sufficient buffering is available.  This includes the bufering we have already comitted.
@@ -118,7 +118,7 @@ module mkDmaWriteBuffer(DmaWriteBuffer#(dataWidth, bufferDepth))
    FIFOFLevel#(ObjectData#(dataWidth),bufferDepth) writeBuffer <- mkBRAMFIFOFLevel;
    FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF();
    FIFOF#(Bit#(6))                        doneTags <- mkFIFOF();
-   Ratchet#(TAdd#(1,TLog#(bufferDepth)))  unfulfilled <- mkRatchet(0);
+   ConfigCounter#(TAdd#(1,TLog#(bufferDepth)))  unfulfilled <- mkConfigCounter(0);
    let beat_shift = fromInteger(valueOf(beatShift));
    
    // only issue the writeRequest when sufficient data is available.  This includes the data we have already comitted.

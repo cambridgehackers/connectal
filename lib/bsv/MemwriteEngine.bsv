@@ -30,7 +30,7 @@ import BRAM::*;
 import BRAMFIFO::*;
 import Connectable::*;
 
-import Ratchet::*;
+import ConfigCounter::*;
 import PortalMemory::*;
 import MemTypes::*;
 import Pipe::*;
@@ -67,7 +67,7 @@ module mkBurstFunnel#(Integer maxBurstLen)(BurstFunnel#(k,w))
 
    Reg#(Bit#(2)) nameGen <- mkReg(0);
    UGBramFifos#(4,16,Tuple2#(Bit#(w),Bool)) complBuff <- mkUGBramFifos;
-   Vector#(4, Ratchet#(16)) compCnts <- replicateM(mkRatchet(0));
+   Vector#(4, ConfigCounter#(16)) compCnts <- replicateM(mkConfigCounter(0));
    Vector#(k,FIFOF#(Tuple3#(Bit#(2), Bit#(w), Bool))) data_in <- replicateM(mkFIFOF);
    Vector#(k,Reg#(Bit#(8))) burst_len <- replicateM(mkReg(0));
    Vector#(k,Reg#(Bit#(8))) drain_cnt <- replicateM(mkReg(0));
@@ -77,7 +77,6 @@ module mkBurstFunnel#(Integer maxBurstLen)(BurstFunnel#(k,w))
    FunnelPipe#(1, k, Tuple3#(Bit#(2),Bit#(w),Bool),bpc) data_in_funnel <- mkFunnelPipesPipelined(map(toPipeOut,data_in));
    Reg#(Bit#(8)) drainCnt <- mkReg(0);
    FIFOF#(Tuple2#(Bit#(TLog#(k)),Bit#(w))) exit_data <- mkFIFOF;
-   Reg#(Bit#(2)) newName <- mkReg(0);
    FIFO#(Bit#(logk)) drainRename <- mkFIFO;
    
    Reg#(Bit#(32)) cycle <- mkReg(0);
@@ -129,22 +128,19 @@ module mkBurstFunnel#(Integer maxBurstLen)(BurstFunnel#(k,w))
       
    
    rule drain_req (compCnts[tpl_2(inFlight.first)].read > 0);
-      let nn = newName;
+      match {.old_name, .new_name} = inFlight.first;
       let new_drainCnt = drainCnt-1;
       if (drainCnt == 0) begin
-	 match {.old_name, .new_name} = inFlight.first;
-	 newName <= new_name;
-	 nn = new_name;
 	 new_drainCnt = burst_len[old_name]-1;
 	 drainRename.enq(truncate(old_name));
       end
       if (new_drainCnt == 0) begin
 	 inFlight.deq;
       end
-      complBuff.first_req(nn);
+      complBuff.first_req(new_name);
       drainCnt <= new_drainCnt;
-      compCnts[newName].decrement(1);
-      complBuff.deq(nn);
+      compCnts[new_name].decrement(1);
+      complBuff.deq(new_name);
    endrule
       
    rule drain_resp;
@@ -188,7 +184,7 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
    Integer bufferSizeBeats = bufferSizeBytes/valueOf(dataWidthBytes);
    Vector#(numServers, Reg#(Bit#(outCntSz)))     outs1 <- replicateM(mkReg(0));
    Vector#(numServers, Reg#(Bit#(outCntSz)))     outs0 <- replicateM(mkReg(0));
-   Vector#(numServers, Ratchet#(16))           buffCap <- replicateM(mkRatchet(0));
+   Vector#(numServers, ConfigCounter#(16))           buffCap <- replicateM(mkConfigCounter(0));
    UGBramFifos#(numServers,cmdQDepth,MemengineCmd) cmdBuf <- mkUGBramFifos;
 
    FIFO#(Bit#(serverIdxSz))                       loadf_a <- mkSizedFIFO(1);
