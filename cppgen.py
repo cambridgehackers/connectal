@@ -100,8 +100,9 @@ proxyMethodTemplate='''
 void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p %(paramSeparator)s %(paramDeclarations)s )
 {
     %(className)s%(methodName)sPayload payload;
+    volatile unsigned int* temp_working_addr = &(p->map_base[PORTAL_REQ_FIFO(%(methodChannelOffset)s)]);
 %(paramSetters)s
-    %(className)s%(methodName)s_marshall(p, &payload);
+%(paramStructMarshall)s
 };
 '''
 
@@ -118,17 +119,11 @@ typedef struct {
 } %(className)s%(methodName)sPayload;
 '''
 
-msgMarshallTemplate='''
-void %(className)s%(methodName)s_marshall(PortalInternal *p, %(className)s%(methodName)sPayload *payload) {
-    volatile unsigned int* addr = &(p->map_base[PORTAL_REQ_FIFO(%(methodChannelOffset)s)]);
-%(paramStructMarshall)s
-}
-'''
 msgDemarshallTemplate='''
 void %(className)s%(methodName)s_demarshall(PortalInternal *p){
     %(className)s%(methodName)sPayload payload;
     unsigned int tmp;
-    volatile unsigned int* addr = &(p->map_base[PORTAL_IND_FIFO(%(methodChannelOffset)s)]);
+    volatile unsigned int* temp_working_addr = &(p->map_base[PORTAL_IND_FIFO(%(methodChannelOffset)s)]);
 %(paramStructDemarshall)s
     %(responseCase)s
 }
@@ -249,7 +244,6 @@ class MethodMixin:
         paramStructDeclarations = [ '        %s %s%s;\n' % (p.type.cName(), p.name, p.type.bitSpec()) for p in params]
         
         argAtoms = sum(map(functools.partial(collectMembers, 'payload.'), params), [])
-        argAtomsP = sum(map(functools.partial(collectMembers, 'payload->'), params), [])
 
         # for a in argAtoms:
         #     print a[0]
@@ -257,8 +251,6 @@ class MethodMixin:
 
         argAtoms.reverse();
         argWords  = accumWords([], 0, argAtoms)
-        argAtomsP.reverse();
-        argWordsP  = accumWords([], 0, argAtomsP)
 
         # for a in argWords:
         #     for b in a:
@@ -271,7 +263,7 @@ class MethodMixin:
             for e in w:
                 field = e[0];
 		if e[3].cName() == 'float':
-		    return '        WRITEL(p, addr, *(int*)&%s; *dest_addr=tmp);\n' % e[0];
+		    return '        WRITEL(p, temp_working_addr, *(int*)&%s; *dest_addr=tmp);\n' % e[0];
                 if e[2]:
                     field = '(%s>>%s)' % (field, e[2])
                 if off:
@@ -280,15 +272,12 @@ class MethodMixin:
                     field = '(const %s & std::bitset<%d>(0xFFFFFFFF)).to_ulong()' % (field, e[3].bitWidth())
                 word.append(field)
                 off = off+e[1]-e[2]
-            return '        WRITEL(p, addr, %s);\n' % (''.join(util.intersperse('|', word)))
-
-
-
+            return '        WRITEL(p, temp_working_addr, %s);\n' % (''.join(util.intersperse('|', word)))
 
         def demarshall(w):
             off = 0
             word = []
-            word.append('        tmp = READL(p, addr);\n');
+            word.append('        tmp = READL(p, temp_working_addr);\n');
             for e in w:
                 # print e[0]+' (d)'
                 ass = '=' if e[4] else '|='
@@ -308,10 +297,10 @@ class MethodMixin:
             return ''.join(word)
 
         if argWords == []:
-            paramStructMarshall = ['        WRITEL(p, addr, 0);\n']
-            paramStructDemarshall = ['        tmp = READL(p, addr);\n']
+            paramStructMarshall = ['        WRITEL(p, temp_working_addr, 0);\n']
+            paramStructDemarshall = ['        tmp = READL(p, temp_working_addr);\n']
         else:
-            paramStructMarshall = map(marshall, argWordsP)
+            paramStructMarshall = map(marshall, argWords)
             paramStructMarshall.reverse();
             paramStructDemarshall = map(demarshall, argWords)
             paramStructDemarshall.reverse();
@@ -353,7 +342,6 @@ class MethodMixin:
         else:
             substs['responseCase'] = ''
             f.write(msgTemplate % substs)
-            f.write(msgMarshallTemplate % substs)
             f.write(proxyMethodTemplate % substs)
             hpp.write(proxyMethodTemplateDecl % substs)
 
