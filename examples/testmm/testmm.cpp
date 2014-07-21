@@ -222,18 +222,19 @@ int main(int argc, const char **argv)
   uint64_t write_beats = dma->show_mem_stats(ChannelType_Write);
   float read_util = (float)read_beats/(float)mmdeviceIndication->ccnt;
   float write_util = (float)write_beats/(float)mmdeviceIndication->ccnt;
-  float read_bw = read_util * N * 4 * freq / 1.0e9;
-  float write_bw = write_util * N * 4 * freq / 1.0e9;
+  float read_bw = read_util * N * 4 * (float)freq / 1.0e9;
+  float write_bw = write_util * N * 4 * (float)freq / 1.0e9;
   float macs = m1.rows * m2.rows * m2.cols;
-  fprintf(stderr, "memory read  beats %lld utilization (beats/cycle): %f, bandwidth (GB/s): %f\n", read_beats, read_util, read_bw);
-  fprintf(stderr, "memory write beats %lld utilization (beats/cycle): %f, bandwidth (GB/s): %f\n", write_beats, write_util, write_bw);
-  fprintf(stderr, "Throughput %f macs/cycle hw %f macs/cycle %f GFLOP/s hw %f GFLOP/s\n",
-	  (float)macs / (float)hw_cycles, (float)macs / (float)mmdeviceIndication->ccnt,
-	  2.0 * (float)macs / (float)hw_cycles * freq / 1.0e9, 2.0 * (float)macs / (float)mmdeviceIndication->ccnt * freq / 1.0e9);
-  fprintf(stderr, "Time %f cycles hw %f cycles, opencv matmul %f cycles (speedup %f hw %f), naive matmul %f cycles (speedup %f hw %f)\n",
-	  (float)hw_cycles, (float)mmdeviceIndication->ccnt,
-	  (float)opencv_hw_cycles, (float)opencv_hw_cycles/(float)hw_cycles, (float)opencv_hw_cycles/(float)mmdeviceIndication->ccnt,
-	  (float)naive_hw_cycles, (float)naive_hw_cycles/(float)hw_cycles, (float)naive_hw_cycles/(float)mmdeviceIndication->ccnt);
+  fprintf(stderr, "Bus frequency %f MHz\n", (float)freq / 1.0e6);
+  fprintf(stderr, "memory read  beats %f utilization %f (beats/cycle), bandwidth %f (GB/s)\n", (float)read_beats, read_util, read_bw);
+  fprintf(stderr, "memory write beats %f utilization %f (beats/cycle), bandwidth %f (GB/s)\n", (float)write_beats, write_util, write_bw);
+  fprintf(stderr, "Throughput %f macs/cycle %f GFLOP/s\n",
+	  (float)macs / (float)mmdeviceIndication->ccnt,
+	  2.0 * (float)macs / (float)mmdeviceIndication->ccnt * freq / 1.0e9);
+  fprintf(stderr, "Time %f cycles, opencv matmul %f cycles (speedup %f), naive matmul %f cycles (speedup %f)\n",
+	  (float)mmdeviceIndication->ccnt,
+	  (float)opencv_hw_cycles, (float)opencv_hw_cycles/(float)mmdeviceIndication->ccnt,
+	  (float)naive_hw_cycles, (float)naive_hw_cycles/(float)mmdeviceIndication->ccnt);
 
   if (0) {
     dumpMat<float>("pm3", "%5.1f", pm3);
