@@ -59,10 +59,9 @@ void MemreadIndicationWrapperreadDone_cb (  struct PortalInternal *p, const uint
          printf( "Memread_readDone(mismatch = %x)\n", mismatchCount);
          sem_post(&test_sem);
 }
-void DmaIndicationWrapperconfigResp_cb (  struct PortalInternal *p, const uint32_t pointer, const uint64_t msg )
+void DmaIndicationWrapperconfigResp_cb (  struct PortalInternal *p, const uint32_t pointer)
 {
-        //fprintf(stderr, "configResp: %x, %"PRIx64"\n", pointer, msg);
-        //fprintf(stderr, "configResp %d\n", pointer);
+        //fprintf(stderr, "configResp %x\n", pointer);
         sem_post(&priv.confSem);
 }
 void DmaIndicationWrapperaddrResponse_cb (  struct PortalInternal *p, const uint64_t physAddr )

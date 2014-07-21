@@ -34,8 +34,8 @@ class DmaIndication : public DmaIndicationWrapper
   int tag_mismatch_cnt;
  public:
   DmaIndication(DmaManager *pm, unsigned int  id) : DmaIndicationWrapper(id), portalMemory(pm), tag_mismatch_cnt(0) {}
-  virtual void configResp(uint32_t pointer, uint64_t msg){
-    //fprintf(stderr, "configResp: %x, %"PRIx64"\n", pointer, msg);
+  virtual void configResp(uint32_t pointer){
+    //fprintf(stderr, "configResp: %x\n", pointer);
     portalMemory->confResp(pointer);
   }
   virtual void addrResponse(uint64_t physAddr){

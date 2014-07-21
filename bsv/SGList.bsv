@@ -112,9 +112,12 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
       rule stage1;
 	 let req <- toGet(incomingReqs[i]).get();
 	 match { .ptr, .off } = req;
-	 portsel(reg8, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:truncate(ptr-1), datain:?});
-	 portsel(reg4, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:truncate(ptr-1), datain:?});
-	 portsel(reg0, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:truncate(ptr-1), datain:?});
+	 portsel(reg8, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
+            address:truncate(ptr-1), datain:?});
+	 portsel(reg4, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
+            address:truncate(ptr-1), datain:?});
+	 portsel(reg0, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
+            address:truncate(ptr-1), datain:?});
 	 reqs[i].enq(req);
       endrule
 
@@ -190,7 +193,8 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 end
 	 let address = {ptr-1,p};
 	 //$display("pages[%d].read %h", i, rp[i].first());
-	 portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:address, datain:?});
+	 portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
+          address:address, datain:?});
 	 offs1[i].enq(off);
       endrule
       rule stage4;
@@ -235,10 +239,10 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    end
 
 
-   FIFO#(Tuple2#(SGListId,Bit#(40))) configRespFifo <- mkFIFO;
+   FIFO#(SGListId) configRespFifo <- mkFIFO;
    rule sendConfigResp;
-      match { .ptr, .barr0 } <- toGet(configRespFifo).get();
-      dmaIndication.configResp(extend(ptr), extend(barr0));
+      let ptr <- toGet(configRespFifo).get();
+      dmaIndication.configResp(extend(ptr));
    endrule
 
    FIFO#(Tuple3#(SGListId,Bit#(40),Bit#(32))) sglistFifo <- mkFIFO();
@@ -267,13 +271,15 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	    else if (extend(len) == ord8) begin
 	       page = tagged POrd8 truncate(paddr>>page_shift8);
 	    end
-	    if (extend(len) > ord8) begin
+	    else begin
+//if (extend(len) > ord8) begin
 	       $display("mkSGListMMU::sglist unsupported length %h", len);
 	       dmaIndication.dmaError(extend(pack(DmaErrorBadPageSize)), extend(ptr), extend(len), 0);
 	    end
 	 end
-	 configRespFifo.enq(tuple2(truncate(ptr), 40'haaaaaaaa));
-	 portsel(pages, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:{truncate(ptr-1),idxReg}, datain:page});
+	 configRespFifo.enq(truncate(ptr));
+	 portsel(pages, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
+             address:{truncate(ptr-1),idxReg}, datain:page});
       end
    endrule
 
@@ -281,11 +287,14 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    rule regionRule;
       match { .ptr, .region8, .region4, .region0 } <- toGet(regionFifo).get();
       let idx = ptr-1;
-      portsel(reg8, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address: idx, datain: region8});
-      portsel(reg4, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address: idx, datain: region4});
-      portsel(reg0, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address: idx, datain: region0});
+      portsel(reg8, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
+          address: idx, datain: region8});
+      portsel(reg4, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
+          address: idx, datain: region4});
+      portsel(reg0, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
+          address: idx, datain: region0});
       //$display("region ptr=%d off8=%h off4=%h off0=%h", ptr, off8, off4, off0);
-      configRespFifo.enq(tuple2(ptr, region0.barrier));
+      configRespFifo.enq(ptr);
    endrule
 
    Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addrServers;

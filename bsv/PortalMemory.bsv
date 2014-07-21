@@ -57,7 +57,7 @@ typedef enum {
 // @brief Events sent from a Dma engine
 //
 interface DmaIndication;
-   method Action configResp(Bit#(32) pointer, Bit#(64) msg);
+   method Action configResp(Bit#(32) pointer);
    method Action addrResponse(Bit#(64) physAddr);
    method Action reportStateDbg(DmaDbgRec rec);
    method Action reportMemoryTraffic(Bit#(64) words);
