@@ -60,25 +60,31 @@ static void manual_event(void)
     }
 }
 
+static PortalInternal *init_fpga_slot(PortalInternal *pint, int id)
+{
+   // this example uses Directory to map IfcName_xxx -> fpga number
+   init_portal_internal(pint, globalDirectory.get_fpga(id), globalDirectory.get_addrbits(id));
+   return pint;
+}
+
 int main(int argc, const char **argv)
 {
-PortalInternalCpp *intarrtemp[MAX_INDARRAY];
-   intarrtemp[0] = new PortalInternalCpp(IfcNames_SimpleRequest); // portal 1
-   intarrtemp[1] = new PortalInternalCpp(IfcNames_SimpleIndication); // portal 2
-   intarr[0] = &intarrtemp[0]->pint;
-   intarr[1] = &intarrtemp[1]->pint;
+static PortalInternal intdata[MAX_INDARRAY];
+
+   intarr[0] = init_fpga_slot(&intdata[0], IfcNames_SimpleRequest); // portal 1
+   intarr[1] = init_fpga_slot(&intdata[1], IfcNames_SimpleIndication); // portal 2
    indfn[0] = SimpleRequestProxy_handleMessage;
    indfn[1] = SimpleIndicationWrapper_handleMessage;
 
    WRITEL(intarr[0], &intarr[0]->map_base[IND_REG_INTERRUPT_MASK], 0);
    WRITEL(intarr[0], &intarr[1]->map_base[IND_REG_INTERRUPT_MASK], 0);
-  fprintf(stderr, "Main::calling say1(%d)\n", v1a);
-  //device->say1(v1a);  
-  SimpleRequestProxy_say1 (intarr[0], v1a);
-  manual_event();
+   fprintf(stderr, "Main::calling say1(%d)\n", v1a);
+   //device->say1(v1a);  
+   SimpleRequestProxy_say1 (intarr[0], v1a);
+   manual_event();
 
-  fprintf(stderr, "Main::calling say2(%d, %d)\n", v2a,v2b);
-  //device->say2(v2a,v2b);
-  SimpleRequestProxy_say2 (intarr[0], v2a, v2b);
-  manual_event();
+   fprintf(stderr, "Main::calling say2(%d, %d)\n", v2a,v2b);
+   //device->say2(v2a,v2b);
+   SimpleRequestProxy_say2 (intarr[0], v2a, v2b);
+   manual_event();
 }
