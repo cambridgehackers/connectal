@@ -146,7 +146,7 @@ class MethodMixin:
             return int
     def formalParameters(self, params):
         return [ 'const %s%s %s' % (p.type.cName(), p.type.refParam(), p.name) for p in params]
-    def emitCDeclaration(self, f, proxy, indentation, namespace, className):
+    def emitMethodDeclaration(self, f, proxy, indentation, namespace, className):
         if self.name == putFailedMethodName:
             return
         indent(f, indentation)
@@ -436,7 +436,7 @@ class InterfaceMixin:
             f.write("\nclass %s%s;\n" % (cName(self.name), 'ProxyStatus'))
         f.write(proxyClassPrefixTemplate % subs)
         for d in self.decls:
-            d.emitCDeclaration(f, True, indentation + 4, namespace, className)
+            d.emitMethodDeclaration(f, True, indentation + 4, namespace, className)
         f.write(wrapperClassSuffixTemplate % subs)
 	of.write('enum { ' + ','.join(reqChanNums) + '};\n')
         if suffix == 'Proxy':
@@ -452,7 +452,7 @@ class InterfaceMixin:
                 'parentClass': self.parentClass('Portal')}
         f.write(wrapperClassPrefixTemplate % subs)
         for d in self.decls:
-            d.emitCDeclaration(f, False, indentation + 4, namespace, className)
+            d.emitMethodDeclaration(f, False, indentation + 4, namespace, className)
         f.write(wrapperClassSuffixTemplate % subs)
         for d in self.decls:
             d.emitCStructDeclaration(cppf, of, namespace, className)
