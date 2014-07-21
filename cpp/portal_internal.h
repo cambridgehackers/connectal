@@ -40,12 +40,6 @@ typedef unsigned long dma_addr_t;
 
 #include "sock_utils.h"
 
-struct memrequest{
-  int write_flag;
-  volatile unsigned int *addr;
-  unsigned int data;
-};
-
 #define MAX_TIMERS 50
 typedef struct {
     uint64_t total, min, max, over;

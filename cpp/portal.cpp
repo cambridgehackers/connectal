@@ -122,32 +122,6 @@ void print_timer(int loops)
     }
 }
 
-unsigned int read_portal_bsim(int sockfd, volatile unsigned int *addr, int id)
-{
-  unsigned int rv;
-  struct memrequest foo = {0,addr,0};
-
-  if (send(sockfd, &foo, sizeof(foo), 0) == -1) {
-    fprintf(stderr, "%s (fpga%d) send error, errno=%s\n",__FUNCTION__, id, strerror(errno));
-    exit(1);
-  }
-  if(recv(sockfd, &rv, sizeof(rv), 0) == -1){
-    fprintf(stderr, "%s (fpga%d) recv error\n",__FUNCTION__, id);
-    exit(1);	  
-  }
-  return rv;
-}
-
-void write_portal_bsim(int sockfd, volatile unsigned int *addr, unsigned int v, int id)
-{
-  struct memrequest foo = {1,addr,v};
-
-  if (send(sockfd, &foo, sizeof(foo), 0) == -1) {
-    fprintf(stderr, "%s (fpga%d) send error\n",__FUNCTION__, id);
-    //exit(1);
-  }
-}
-
 void init_portal_internal(PortalInternal *pint, int fpga_number, int addrbits)
 {
     int rc = 0;

@@ -22,8 +22,6 @@
 #ifndef __PORTAL_OFFSETS_H__
 #define __PORTAL_OFFSETS_H__
 
-#include <socket_channel.h>
-
 /* Offset of each /dev/fpgaxxx device in the address space */
 #define PORTAL_BASE_OFFSET         (1 << 16)
 
@@ -51,8 +49,8 @@
 typedef struct PortalInternal {
   struct PortalPoller *poller;
   int fpga_fd;
-  struct channel p_read;
-  struct channel p_write;
+  int p_read;
+  int p_write;
   int fpga_number;
   volatile unsigned int *map_base;
   void *parent;
@@ -78,8 +76,8 @@ void init_portal_internal(PortalInternal *pint, int fpga_number, int addrbits);
 #else
 unsigned int read_portal_bsim(int sockfd, volatile unsigned int *addr, int id);
 void write_portal_bsim(int sockfd, volatile unsigned int *addr, unsigned int v, int id);
-#define READL(CITEM, A) read_portal_bsim((CITEM)->p_read.sockfd, (A), (CITEM)->fpga_number)
-#define WRITEL(CITEM, A, B) write_portal_bsim((CITEM)->p_write.sockfd, (A), (B), (CITEM)->fpga_number)
+#define READL(CITEM, A) read_portal_bsim((CITEM)->p_read, (A), (CITEM)->fpga_number)
+#define WRITEL(CITEM, A, B) write_portal_bsim((CITEM)->p_write, (A), (B), (CITEM)->fpga_number)
 #endif
 
 #endif /* __PORTAL_OFFSETS_H__ */

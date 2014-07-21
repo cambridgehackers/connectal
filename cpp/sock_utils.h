@@ -26,10 +26,14 @@
 
 #include <sys/un.h>
 
-#include <socket_channel.h>
+struct memrequest{
+  int write_flag;
+  volatile unsigned int *addr;
+  unsigned int data;
+};
 
-void connect_socket(channel *c, const char *format, int id);
-void thread_socket(struct channel* rc, const char *format, int id);
+void connect_socket(int *psocket, const char *format, int id);
+void thread_socket(int *psocket, const char *format, int id);
 ssize_t sock_fd_write(int sock, int fd);
 ssize_t sock_fd_read(int sock, int *fd);
 

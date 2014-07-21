@@ -36,7 +36,7 @@
 #include <portal.h>
 #include "sock_utils.h"
 
-static struct channel dma_sockfd;
+static int dma_sockfd;
 static struct {
     unsigned char *buffer;
     uint32_t buffer_len;
@@ -70,7 +70,7 @@ extern "C" {
     dma_info[pref-1].size_accum += size;
     if(size == 0){
       int fd;
-      sock_fd_read(dma_sockfd.sockfd, &fd);
+      sock_fd_read(dma_sockfd, &fd);
       dma_info[pref-1].buffer = (unsigned char *)mmap(0,
           dma_info[pref-1].size_accum, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
       dma_info[pref-1].buffer_len = dma_info[pref-1].size_accum/sizeof(unsigned char);

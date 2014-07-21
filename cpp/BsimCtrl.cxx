@@ -35,8 +35,8 @@
 #include "sock_utils.h"
 
 static struct {
-    struct channel p_read;
-    struct channel p_write;
+    int p_read;
+    int p_write;
 } portals[16];
 
 typedef struct {
@@ -57,8 +57,8 @@ extern "C" {
     HEAD_TYPE *head = &headarr[rr];
     if (!head->valid && !head->inflight){
       for(int i = 0; i < 16; i++){
-	struct channel* chan = rr ? &(portals[i].p_write) : &(portals[i].p_read);
-	int rv = recv(chan->sockfd, &head->req, sizeof(memrequest), MSG_DONTWAIT);
+	int chan = rr ? portals[i].p_write : portals[i].p_read;
+	int rv = recv(chan, &head->req, sizeof(memrequest), MSG_DONTWAIT);
 	if(rv > 0){
 	  //fprintf(stderr, "recv size %d\n", rv);
 	  assert(rv == sizeof(memrequest));
@@ -93,7 +93,7 @@ extern "C" {
     headarr[0].valid = 0;
     headarr[0].inflight = 0;
     int send_attempts = 0;
-    while(send(portals[headarr[0].pnum].p_read.sockfd, &x, sizeof(x), 0) == -1){
+    while(send(portals[headarr[0].pnum].p_read, &x, sizeof(x), 0) == -1){
       if(send_attempts++ > 16){
 	fprintf(stderr, "(%d) send failure\n", headarr[0].pnum);
 	exit(1);
