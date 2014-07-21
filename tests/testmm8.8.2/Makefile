@@ -1,7 +1,7 @@
 
 BSCFLAGS=-aggressive-conditions -show-schedule -keep-fires -p +:../paclib
 
-XBSVDIR=../..
+XBSVDIR=$(shell cd ../..; /bin/pwd)
 DBNDIR=../../examples/testmm
 DBNTOPBSV=    $(DBNDIR)/Top.bsv
 TESTCPPFILES= $(DBNDIR)/testmm.cpp
