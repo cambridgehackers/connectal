@@ -82,6 +82,9 @@ void DmaIndicationWrapperreportMemoryTraffic_cb (  struct PortalInternal *p, con
         priv.mtCnt = words;
         sem_post(&priv.mtSem);
 }
+void DmaIndicationWrapperdmaError_cb (  struct PortalInternal *p, const uint32_t code, const uint32_t pointer, const uint64_t offset, const uint64_t extra ) {
+        fprintf(stderr, "DmaIndication::dmaError(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
+}
 
 static void manual_event(void)
 {
