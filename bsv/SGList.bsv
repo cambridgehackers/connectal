@@ -179,28 +179,20 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 let ptr <- toGet(ptrs[i]).get();
 	 let pageSize <- toGet(pageSizes[i]).get();
 	 Bit#(8) p = pbase + idxOffset;
-	 if (pageSize == 3) begin
-	    //$display("request: ptr=%h off=%h barrier8=%h", ptr, off, barrier8);
-	 end
-	 else if (pageSize == 2) begin
-	 end
-	 else if (pageSize == 1) begin
-	 end
-	 else if (pageSize == 0) begin
+	 if (pageSize == 0) begin
 	    //FIXME offset
 	    //$display("mkSGListMMU.addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
 	    dmaIndication.dmaError(extend(pack(DmaErrorBadAddrTrans)), extend(ptr), -1, 0);
 	 end
-	 let address = {ptr-1,p};
-	 //$display("pages[%d].read %h", i, rp[i].first());
+	 //$display("p ages[%d].read %h", i, rp[i].first());
 	 portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
-          address:address, datain:?});
+            address:{ptr-1,p}, datain:?});
 	 offs1[i].enq(off);
       endrule
       rule stage4;
 	 let page <- portsel(pages, i).response.get;
 	 let offset <- toGet(offs1[i]).get();
-	 //$display("pages[%d].response page=%h offset=%h", i, page, offset);
+	 //$display("p ages[%d].response page=%h offset=%h", i, page, offset);
 	 Bit#(ObjectOffsetSize) rv = 0;
 	 case (offset) matches
 	    tagged OOrd0 .o:
@@ -272,7 +264,6 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	       page = tagged POrd8 truncate(paddr>>page_shift8);
 	    end
 	    else begin
-//if (extend(len) > ord8) begin
 	       $display("mkSGListMMU::sglist unsupported length %h", len);
 	       dmaIndication.dmaError(extend(pack(DmaErrorBadPageSize)), extend(ptr), extend(len), 0);
 	    end

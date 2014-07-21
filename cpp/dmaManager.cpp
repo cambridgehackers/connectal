@@ -120,26 +120,29 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
 #endif
   for(int i = 0; i < pa->header.numEntries; i++){
     DmaEntry *e = &(pa->entries[i]);
+#ifdef MMAP_HW
+    dma_addr_t addr = e->dma_address;
+#else
+    int addr = (e->length > 0) ? size_accum : 0;
+#endif
     switch (e->length) {
     case (1<<PAGE_SHIFT0):
       regions[2]++;
+      //addr >>= PAGE_SHIFT0;
       break;
     case (1<<PAGE_SHIFT4):
       regions[1]++;
+      //addr >>= PAGE_SHIFT4;
       break;
     case (1<<PAGE_SHIFT8):
       regions[0]++;
+      //addr >>= PAGE_SHIFT8;
       break;
     case (0):
       break;
     default:
       fprintf(stderr, "DmaManager::unsupported sglist size %x\n", e->length);
     }
-#ifdef MMAP_HW
-    dma_addr_t addr = e->dma_address;
-#else
-    int addr = (e->length > 0) ? size_accum : 0;
-#endif
     if (trace_memory)
       fprintf(stderr, "DmaManager::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, (long)addr, e->length);
     DMAsglist(priv->device, id, addr, e->length);
