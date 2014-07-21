@@ -459,22 +459,14 @@ class InterfaceMixin:
 	of.write('enum { ' + ','.join(indChanNums) + '};\n')
     def emitCProxyImplementation(self, f, hpp, suffix, namespace, doCpp):
         className = "%s%s" % (cName(self.name), suffix)
-	statusName = "%s%s" % (cName(self.name), 'ProxyStatus')
-	statusInstantiate = ''
         substitutions = {'namespace': namespace,
                          'className': className,
-			 'statusInstantiate' : statusInstantiate,
                          'parentClass': self.parentClass('Portal')}
-        if not doCpp:
-            for d in self.decls:
-                if d.name != putFailedMethodName:
-                    d.emitCImplementation(f, hpp, className, namespace,True, False)
-        else:
-            for d in self.decls:
-                d.emitCImplementation(f, hpp, className, namespace,True, True)
+        for d in self.decls:
+            if doCpp or d.name != putFailedMethodName:
+                d.emitCImplementation(f, hpp, className, namespace,True, doCpp)
     def emitCWrapperImplementation (self, f, hpp, suffix, namespace, doCpp):
         className = "%s%s" % (cName(self.name), suffix)
-        emitPutFailed = self.hasPutFailed()
         substitutions = {'namespace': namespace,
                          'className': className,
 			 'putFailedMethodName' : putFailedMethodName,
@@ -484,19 +476,15 @@ class InterfaceMixin:
                                                                                 'methodName': cName(d.name),
                                                                                 'msg': '%s%sMSG' % (className, d.name)}
                                                      for d in self.decls 
-                                                     if d.type == 'Method' and d.return_type.name == 'Action']),
-                         'putFailedStrings': '' if (not emitPutFailed) else ', '.join('"%s"' % (d.name) for d in self.req.decls if d.__class__ == AST.Method )}
+                                                     if d.type == 'Method' and d.return_type.name == 'Action'])}
         if not doCpp:
-            if emitPutFailed:
+            if self.hasPutFailed():
+                substitutions['putFailedStrings'] = ', '.join('"%s"' % (d.name) for d in self.req.decls if d.__class__ == AST.Method )
                 f.write(putFailedTemplate % substitutions)
             for d in self.decls:
                 d.emitCImplementation(f, hpp, className, namespace, False, False);
             f.write(handleMessageTemplate % substitutions)
             hpp.write(handleMessageTemplateDecl % substitutions)
-        else:
-            if suffix == 'ProxyStatus':
-                substitutions['className'] = "%s%s" % (cName(self.name), 'Proxy')
-
 
 class ParamMixin:
     def cName(self):
