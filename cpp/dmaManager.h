@@ -29,6 +29,7 @@
 #endif
 
 #include "portal.h"
+#include "drivers/portalmem/portalmem.h"
 #ifdef NO_CPP_PORTAL_CODE
 #include "GeneratedTypes.h" // generated in project directory
 #define DMAsglist(P, A, B, C) DmaConfigProxy_sglist((P), (A), (B), (C));
