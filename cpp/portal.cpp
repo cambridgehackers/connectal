@@ -46,7 +46,7 @@
 #include <android/log.h>
 #include <zynqportal.h>
 #else
-#include <../drivers/pcieportal/pcieportal.h>
+#include <pcieportal.h>
 #endif
 
 #include "portal.h"
@@ -70,27 +70,26 @@
 #define ALOGE(fmt, ...) fprintf(stderr, "PORTAL: " fmt, __VA_ARGS__)
 #endif
 
-static PortalPoller *defaultPoller = new PortalPoller();
 Directory globalDirectory;
-static Directory *pdir;
+
+static PortalPoller *defaultPoller = new PortalPoller();
 static uint64_t c_start[MAX_TIMER_COUNT];
+static uint64_t lap_timer_temp;
+static TIMETYPE timers[MAX_TIMERS];
 
 void start_timer(unsigned int i) 
 {
   assert(i < MAX_TIMER_COUNT);
-  c_start[i] = pdir->cycle_count();
+  c_start[i] = globalDirectory.cycle_count();
 }
 
-static uint64_t lap_timer_temp;
 uint64_t lap_timer(unsigned int i)
 {
   assert(i < MAX_TIMER_COUNT);
-  uint64_t temp = pdir->cycle_count();
+  uint64_t temp = globalDirectory.cycle_count();
   lap_timer_temp = temp;
   return temp - c_start[i];
 }
-
-static TIMETYPE timers[MAX_TIMERS];
 
 void init_timer(void)
 {
@@ -113,6 +112,7 @@ uint64_t catch_timer(unsigned int i)
     timers[i].total += val;
     return lap_timer_temp;
 }
+
 void print_timer(int loops)
 {
     for (int i = 0; i < MAX_TIMERS; i++) {
@@ -289,18 +289,21 @@ int PortalPoller::registerInstance(Portal *portal)
 
 int PortalPoller::setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)
 {
-    PortalClockRequest request;
+    int status = 0;
     if (!numFds) {
 	ALOGE("%s No fds open\n", __FUNCTION__);
 	return -ENODEV;
     }
+#ifdef ZYNQ
+    PortalClockRequest request;
     request.clknum = clkNum;
     request.requested_rate = requestedFrequency;
-    int status = ioctl(portal_fds[0].fd, PORTAL_SET_FCLK_RATE, (long)&request);
+    status = ioctl(portal_fds[0].fd, PORTAL_SET_FCLK_RATE, (long)&request);
     if (status == 0 && actualFrequency)
 	*actualFrequency = request.actual_rate;
     if (status < 0)
 	status = errno;
+#endif
     return status;
 }
 
@@ -438,8 +441,6 @@ void portalExec_start()
 Directory::Directory() 
   : PortalInternalCpp(-1)
 {
-  pdir=this;
-  
 #ifdef ZYNQ /* There is no way to set userclock freq from host on PCIE */
   // start by setting the clock frequency (this only has any effect on the zynq platform)
   PortalClockRequest request;
@@ -490,32 +491,23 @@ unsigned int Directory::get_addrbits(unsigned int id)
   return READL(&pint, PORTAL_DIRECTORY_ADDRBITS);
 }
 
-void Directory::traceStart()
+void portalTrace_start()
 {
 #ifndef ZYNQ
   tTraceInfo traceInfo;
   traceInfo.trace = 1;
-  int res = ioctl(pint.fpga_fd,BNOC_TRACE,&traceInfo);
+  int res = ioctl(globalDirectory.pint.fpga_fd,BNOC_TRACE,&traceInfo);
   if (res)
     fprintf(stderr, "Failed to start tracing. errno=%d\n", errno);
 #endif
 }
-
-void Directory::traceStop()
+void portalTrace_stop()
 {
 #ifndef ZYNQ
   tTraceInfo traceInfo;
   traceInfo.trace = 0;
-  int res = ioctl(pint.fpga_fd,BNOC_TRACE,&traceInfo);
+  int res = ioctl(globalDirectory.pint.fpga_fd,BNOC_TRACE,&traceInfo);
   if (res)
     fprintf(stderr, "Failed to stop tracing. errno=%d\n", errno);
 #endif
-}
-void portalTrace_start()
-{
-  pdir->traceStart();
-}
-void portalTrace_stop()
-{
-  pdir->traceStop();
 }

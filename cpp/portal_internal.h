@@ -37,8 +37,6 @@
 #include <pthread.h>
 
 typedef unsigned long dma_addr_t;
-#include "drivers/portalmem/portalmem.h"
-#include "drivers/zynqportal/zynqportal.h"
 
 #include "sock_utils.h"
 
@@ -95,12 +93,9 @@ class Directory : public PortalInternalCpp
 {
  public:
   Directory();
-  void scan(int display);
   unsigned int get_fpga(unsigned int id);
   unsigned int get_addrbits(unsigned int id);
   uint64_t cycle_count();
-  void traceStart();
-  void traceStop();
 };
 
 void start_timer(unsigned int i);
