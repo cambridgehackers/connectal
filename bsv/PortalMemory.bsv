@@ -42,20 +42,26 @@ typedef struct {
    Bit#(32) w;
    } DmaDbgRec deriving(Bits);
 
+typedef enum {
+   DmaErrorNone,
+   //DmaErrorAddrResponse,
+   DmaErrorBadPointer,
+   DmaErrorBadAddrTrans,
+   DmaErrorBadPageSize,
+   DmaErrorBadNumberEntries,
+   DmaErrorBadAddr,
+   DmaErrorTagMismatch
+   } DmaErrorType deriving (Bits);
+
 //
 // @brief Events sent from a Dma engine
 //
 interface DmaIndication;
    method Action configResp(Bit#(32) pointer, Bit#(64) msg);
    method Action addrResponse(Bit#(64) physAddr);
-   method Action badPointer(Bit#(32) pointer);
-   method Action badAddrTrans(Bit#(32) pointer, Bit#(64) offset, Bit#(64) barrier);
-   method Action badPageSize(Bit#(32) pointer, Bit#(32) sz);
-   method Action badNumberEntries(Bit#(32) pointer, Bit#(32) sz, Bit#(32) idx);
-   method Action badAddr(Bit#(32) pointer, Bit#(64) offset, Bit#(64) physAddr);
    method Action reportStateDbg(DmaDbgRec rec);
    method Action reportMemoryTraffic(Bit#(64) words);
-   method Action tagMismatch(ChannelType x, Bit#(32) a, Bit#(32) b);
+   method Action dmaError(Bit#(32) code, Bit#(32) pointer, Bit#(64) offset, Bit#(64) extra);
 endinterface
 
 //

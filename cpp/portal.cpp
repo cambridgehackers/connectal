@@ -46,7 +46,7 @@
 #include <android/log.h>
 #include <zynqportal.h>
 #else
-#include <pcieportal.h>
+#include <pcieportal.h> // BNOC_TRACE
 #endif
 
 #include "portal.h"

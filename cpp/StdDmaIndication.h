@@ -41,26 +41,6 @@ class DmaIndication : public DmaIndicationWrapper
   virtual void addrResponse(uint64_t physAddr){
     fprintf(stderr, "DmaIndication::addrResponse(physAddr=%"PRIx64")\n", physAddr);
   }
-  //unused virtual void parefResp(uint32_t pointer){
-    //unused fprintf(stderr, "DmaIndication::parefResp(pointer=%x)\n", pointer);
-  //unused }
-  virtual void badPointer (uint32_t pointer) {
-    fprintf(stderr, "DmaIndication::badPointer(pointer=%x)\n", pointer);
-  }
-  virtual void badPageSize (uint32_t pointer, uint32_t sz) {
-    fprintf(stderr, "DmaIndication::badPageSize(pointer=%x, sz=%x)\n", pointer, sz);
-  }
-  virtual void badNumberEntries (uint32_t pointer, uint32_t sz, uint32_t idx) {
-    fprintf(stderr, "DmaIndication::badNumberEntries(pointer=%x, sz=%x, idx=%x)\n", pointer, sz, idx);
-  }
-  virtual void badAddrTrans (uint32_t pointer, uint64_t offset, uint64_t barrier) {
-    fprintf(stderr, "DmaIndication::badAddrTrans(pointer=%x, offset=%"PRIx64" barrier=%"PRIx64"\n", pointer, offset, barrier);
-    if (--error_limit < 0)
-        exit(-1);
-  }
-  virtual void badAddr (uint32_t pointer, uint64_t offset , uint64_t physAddr) {
-    fprintf(stderr, "DmaIndication::badAddr(pointer=%x offset=%"PRIx64" physAddr=%"PRIx64")\n", pointer, offset, physAddr);
-  }
   virtual void reportStateDbg(const DmaDbgRec rec){
     //fprintf(stderr, "reportStateDbg: {x:%08x y:%08x z:%08x w:%08x}\n", rec.x,rec.y,rec.z,rec.w);
     portalMemory->dbgResp(rec);
@@ -69,8 +49,9 @@ class DmaIndication : public DmaIndicationWrapper
     //fprintf(stderr, "reportMemoryTraffic: words=%"PRIx64"\n", words);
     portalMemory->mtResp(words);
   }
-  virtual void tagMismatch(const ChannelType x, uint32_t a, uint32_t b){
-    //if (tag_mismatch_cnt++ < 10)
-    fprintf(stderr, "tagMismatch: %s %d %d\n", x==ChannelType_Read ? "Read" : "Write", a, b);
+  virtual void dmaError (uint32_t code, uint32_t pointer, uint64_t offset, uint64_t extra) {
+    fprintf(stderr, "DmaIndication::dmaError(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
+    if (--error_limit < 0)
+        exit(-1);
   }
 };

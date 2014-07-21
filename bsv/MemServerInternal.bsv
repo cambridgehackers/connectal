@@ -190,7 +190,7 @@ module mkMemReadInternal#(Integer id,
 	 //last_loadClient <= cycle_cnt;
    	 ObjectRequest req <- readClients[selectReg].readReq.get();
    	 if (bad_pointer(req.pointer))
-   	    dmaIndication.badPointer(req.pointer);
+   	    dmaIndication.dmaError(extend(pack(DmaErrorBadPointer)), req.pointer, 0, 0);
    	 else begin
 	    tag_gen.tag_request(fromInteger(selectReg), req.tag);
    	    lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
@@ -207,7 +207,7 @@ module mkMemReadInternal#(Integer id,
       if (physAddr <= (1 << valueOf(SGListPageShift0))) begin
 	 // squash request
 	 $display("dmaRead: badAddr pointer=%d offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
-	 dmaIndication.badAddr(req.pointer, extend(req.offset), extend(physAddr));
+	 dmaIndication.dmaError(extend(pack(DmaErrorBadAddr)), req.pointer, extend(req.offset), extend(physAddr));
 	 tag_gen.return_tag(rename_tag);
       end
       else begin
@@ -325,7 +325,7 @@ module mkMemWriteInternal#(Integer iid,
 	  //last_loadClient <= cycle_cnt;
    	  ObjectRequest req <- writeClients[selectReg].writeReq.get();
    	  if (bad_pointer(req.pointer))
-   	     dmaIndication.badPointer(req.pointer);
+   	     dmaIndication.dmaError(extend(pack(DmaErrorBadPointer)), req.pointer, 0, 0);
    	  else begin
 	     tag_gen.tag_request(fromInteger(selectReg), req.tag);
    	     lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
@@ -342,7 +342,7 @@ module mkMemWriteInternal#(Integer iid,
       if (physAddr <= (1 << valueOf(SGListPageShift0))) begin
 	 // squash request
 	 $display("dmaWrite: badAddr handle=%d addr=%h physAddr=%h", req.pointer, req.offset, physAddr);
-	 dmaIndication.badAddr(req.pointer, extend(req.offset), extend(physAddr));
+	 dmaIndication.dmaError(extend(pack(DmaErrorBadAddr)), req.pointer, extend(req.offset), extend(physAddr));
 	 tag_gen.return_tag(rename_tag);
       end
       else begin

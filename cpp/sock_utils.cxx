@@ -65,7 +65,7 @@ void connect_socket(int *psockfd, const char *format, int id)
   fprintf(stderr, "%s (%s) connected\n",__FUNCTION__, path);
 }
 
-static void* init_socket(void *_xx)
+static void* socket_listen_task(void *_xx)
 {
   SOCKPARAM *c = (SOCKPARAM *)_xx;
   int listening_socket;
@@ -106,7 +106,7 @@ void thread_socket(int* psockfd, const char *format, int id)
   }
 
   param->psocket = psockfd;
-  if(pthread_create(&tid, NULL, init_socket, (void*)param)){
+  if(pthread_create(&tid, NULL, socket_listen_task, (void*)param)){
      fprintf(stderr, "error creating init thread\n");
      exit(1);
   }

@@ -265,7 +265,7 @@ module mkConfigMemServerRW#(DmaIndication dmaIndication,
       endmethod
       method Action sglist(Bit#(32) pref, Bit#(64) addr, Bit#(32) len);
 	 if (bad_pointer(pref))
-	    dmaIndication.badPointer(pref);
+	    dmaIndication.dmaError(extend(pack(DmaErrorBadPointer)), pref, 0, 0);
 `ifdef BSIM
 `ifndef PCIE
 	 let va <- pareff(pref, len);
@@ -359,7 +359,7 @@ module mkConfigMemServerR#(DmaIndication dmaIndication,
       endmethod
       method Action sglist(Bit#(32) pref, Bit#(64) addr, Bit#(32) len);
 	 if (bad_pointer(pref))
-	    dmaIndication.badPointer(pref);
+	    dmaIndication.dmaError(extend(pack(DmaErrorBadPointer)), pref, 0, 0);
 `ifdef BSIM
 `ifndef PCIE
 	 let va <- pareff(pref, len);
@@ -452,7 +452,7 @@ module mkConfigMemServerW#(DmaIndication dmaIndication,
       endmethod
       method Action sglist(Bit#(32) pref, Bit#(64) addr, Bit#(32) len);
 	 if (bad_pointer(pref))
-	    dmaIndication.badPointer(pref);
+	    dmaIndication.dmaError(extend(pack(DmaErrorBadPointer)), pref, 0, 0);
 `ifdef BSIM
 `ifndef PCIE
 	 let va <- pareff(pref, len);

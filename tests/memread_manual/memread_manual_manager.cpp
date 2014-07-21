@@ -69,26 +69,6 @@ void DmaIndicationWrapperaddrResponse_cb (  struct PortalInternal *p, const uint
 {
         fprintf(stderr, "DmaIndication_addrResponse(physAddr=%"PRIx64")\n", physAddr);
 }
-void DmaIndicationWrapperbadPointer_cb (  struct PortalInternal *p, const uint32_t pointer )
-{
-        fprintf(stderr, "DmaIndication_badPointer(pointer=%x)\n", pointer);
-}
-void DmaIndicationWrapperbadAddrTrans_cb (  struct PortalInternal *p, const uint32_t pointer, const uint64_t offset, const uint64_t barrier )
-{
-        fprintf(stderr, "DmaIndication_badAddrTrans(pointer=%x, offset=%"PRIx64" barrier=%"PRIx64"\n", pointer, offset, barrier);
-}
-void DmaIndicationWrapperbadPageSize_cb (  struct PortalInternal *p, const uint32_t pointer, const uint32_t sz )
-{
-        fprintf(stderr, "DmaIndication_badPageSize(pointer=%x, len=%x)\n", pointer, sz);
-}
-void DmaIndicationWrapperbadNumberEntries_cb (  struct PortalInternal *p, const uint32_t pointer, const uint32_t sz, const uint32_t idx )
-{
-        fprintf(stderr, "DmaIndication_badNumberEntries(pointer=%x, len=%x, idx=%x)\n", pointer, sz, idx);
-}
-void DmaIndicationWrapperbadAddr_cb (  struct PortalInternal *p, const uint32_t pointer, const uint64_t offset, const uint64_t physAddr )
-{
-        fprintf(stderr, "DmaIndication_badAddr(pointer=%x offset=%"PRIx64" physAddr=%"PRIx64")\n", pointer, offset, physAddr);
-}
 void DmaIndicationWrapperreportStateDbg_cb (  struct PortalInternal *p, const DmaDbgRec rec )
 {
         //fprintf(stderr, "reportStateDbg: {x:%08x y:%08x z:%08x w:%08x}\n", rec.x,rec.y,rec.z,rec.w);
@@ -101,10 +81,6 @@ void DmaIndicationWrapperreportMemoryTraffic_cb (  struct PortalInternal *p, con
         //fprintf(stderr, "reportMemoryTraffic: words=%"PRIx64"\n", words);
         priv.mtCnt = words;
         sem_post(&priv.mtSem);
-}
-void DmaIndicationWrappertagMismatch_cb (  struct PortalInternal *p, const ChannelType x, const uint32_t a, const uint32_t b )
-{
-        fprintf(stderr, "tagMismatch: %s %d %d\n", x==ChannelType_Read ? "Read" : "Write", a, b);
 }
 
 static void manual_event(void)

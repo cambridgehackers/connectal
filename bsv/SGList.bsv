@@ -161,7 +161,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 end
 	 else begin
 	    pageSize = 0;
-	    //dmaIndication.badAddrTrans(extend(ptr), extend(off), barrier0);
+	    //dmaIndication.dmaError(extend(pack(DmaErrorBadAddrTrans)), extend(ptr), extend(off), barrier0);
 	 end
 	 offs0[i].enq(o);
 	 pbases[i].enq(pbase);
@@ -186,7 +186,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 else if (pageSize == 0) begin
 	    //FIXME offset
 	    //$display("mkSGListMMU.addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
-	    dmaIndication.badAddrTrans(extend(ptr), -1, 0);
+	    dmaIndication.dmaError(extend(pack(DmaErrorBadAddrTrans)), extend(ptr), -1, 0);
 	 end
 	 let address = {ptr-1,p};
 	 //$display("pages[%d].read %h", i, rp[i].first());
@@ -249,7 +249,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
       // $display("sglist(ptr=%d, paddr=%h, len=%h", ptr, paddr,len);
       if (idxReg+1 == 0) begin
 	 $display("sglist: exceeded maximun length of sglist");
-	 dmaIndication.badNumberEntries(extend(ptr),len, extend(idxReg));
+	 dmaIndication.dmaError(extend(pack(DmaErrorBadNumberEntries)), extend(ptr),extend(len), extend(idxReg));
       end
       else begin
 	 Page page = tagged POrd0 0;
@@ -269,7 +269,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	    end
 	    if (extend(len) > ord8) begin
 	       $display("mkSGListMMU::sglist unsupported length %h", len);
-	       dmaIndication.badPageSize(extend(ptr), len);
+	       dmaIndication.dmaError(extend(pack(DmaErrorBadPageSize)), extend(ptr), extend(len), 0);
 	    end
 	 end
 	 configRespFifo.enq(tuple2(truncate(ptr), 40'haaaaaaaa));
