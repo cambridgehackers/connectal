@@ -81,6 +81,9 @@ argparser.add_argument('--xsimflags', default=[], help='Options to pass to the x
 argparser.add_argument('--ipdir', help='Directory in which to store generated IP')
 argparser.add_argument('-q', '--qtused', help='Qt used in Bsim test application', action='store_true')
 argparser.add_argument('--stl', help='STL implementation to use for Android builds', default=None)
+argparser.add_argument('--floorplan', help='Floorplan XDC', default=None)
+argparser.add_argument('-P', '--partition-module', default=[], help='Modules to separately synthesize/place/route', action='append')
+
 
 tclReadVerilogTemplate='read_verilog [ glob %(verilog)s/*.v ]'
 tclReadXciTemplate='''
@@ -269,6 +272,20 @@ foreach {pat} {CLK_GATE_hdmi_clock_if CLK_*deleteme_unused_clock* CLK_GATE_*dele
 }
 '''
 
+bitsmakeRuleTemplate='''
+hw/mkTop.bit: $(vfile)
+	vivado -mode batch -source vivado-impl.tcl $(VIVADOFLAGS)
+'''
+
+fpgamakeRuleTemplate='''
+FPGAMAKE=$(XBSVDIR)/../fpgamake/fpgamake
+fpgamake.mk: $(vfile)
+	$(FPGAMAKE) -o fpgamake.mk %(partitions)s --floorplan=%(floorplan)s -t $(MKTOP) -b hw/mkTop.bit verilog $(XBSVDIR)/verilog
+
+hw/mkTop.bit: fpgamake.mk
+	make -f fpgamake.mk
+'''
+
 makefileTemplate='''
 ## make targets
 ##    all: make software and programmable logic binaries
@@ -363,8 +380,7 @@ verilog: $(vfile)
 lint: $(vfile)
 	verilator --error-limit 200 --lint-only -Isources/%(dut)s -Isources/source $(vfile)
 
-hw/mkTop.bit: $(vfile)
-	vivado -mode batch -source %(dut)s-impl.tcl $(VIVADOFLAGS)
+%(bitsmake)s
 
 implementation: bits
 
@@ -803,7 +819,7 @@ if __name__=='__main__':
         close_bsv_package(bsv,pname)
 
     tclboardname = os.path.join(project_dir, 'board.tcl')
-    tclimplname = os.path.join(project_dir, '%s-impl.tcl' % namespace.export.lower())
+    tclimplname = os.path.join(project_dir, 'vivado-impl.tcl')
     tclsynthname = os.path.join(project_dir, '%s-synth.tcl' % namespace.export.lower())
     makename = os.path.join(project_dir, 'Makefile')
     timestampname = os.path.join(project_dir, 'sources', dutname.lower(), '.timestamp')
@@ -908,6 +924,14 @@ if __name__=='__main__':
     debug_flag = ''
     if os.environ.has_key('XBSV_DEBUG'):
         debug_flag = '_debug'
+
+    if namespace.floorplan and namespace.partition_module:
+        bitsmake=fpgamakeRuleTemplate % {'partitions': ' '.join(['-s %s' % p for p in namespace.partition_module]),
+					 'floorplan': os.path.abspath(namespace.floorplan)
+					 }
+    else:
+        bitsmake=bitsmakeRuleTemplate
+
     make.write(makefileTemplate % {'xbsvdir': xbsvdir,
                                    'bsvpath': ':'.join(list(set([os.path.dirname(os.path.abspath(bsvfile)) for bsvfile in namespace.bsvfile]
                                                                 + [os.path.join(xbsvdir, 'bsv')]
@@ -938,7 +962,8 @@ if __name__=='__main__':
                                    'bscminor': bscminor,
                                    'bscflags': ' '.join(namespace.bscflags),
                                    'xelabflags': ' '.join(namespace.xelabflags),
-                                   'xsimflags': ' '.join(namespace.xsimflags)
+                                   'xsimflags': ' '.join(namespace.xsimflags),
+				   'bitsmake': bitsmake
                                    })
     make.close()
     print namespace.xsimflags
