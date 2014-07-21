@@ -436,12 +436,7 @@ void portalExec_start()
 }
 
 Directory::Directory() 
-  : PortalInternalCpp(-1), //"fpga0", 16),
-    addrbits(0),
-    numportals(0),
-    portal_ids(NULL),
-    portal_types(NULL),
-    counter_offset(0)
+  : PortalInternalCpp(-1)
 {
   pdir=this;
   
@@ -458,30 +453,32 @@ Directory::Directory()
 #endif
 
   // finally scan
-  scan(1);
+  unsigned int i;
+  if(1) fprintf(stderr, "Directory::scan(fpga%d)\n", pint.fpga_number);
+  if(1){
+    time_t timestamp  = READL(&pint, PORTAL_DIRECTORY_TIMESTAMP);
+    uint32_t numportals = READL(&pint, PORTAL_DIRECTORY_NUMPORTALS);
+    fprintf(stderr, "version=%d\n",  READL(&pint, PORTAL_DIRECTORY_VERSION));
+    fprintf(stderr, "timestamp=%s",  ctime(&timestamp));
+    fprintf(stderr, "numportals=%d\n", numportals);
+    fprintf(stderr, "addrbits=%d\n", READL(&pint, PORTAL_DIRECTORY_ADDRBITS));
+    for(i = 0; (i < numportals) && (i < 32); i++)
+      fprintf(stderr, "portal[%d]: ifcid=%d, ifctype=%08x\n", i, READL(&pint, PORTAL_DIRECTORY_PORTAL_ID(i)), READL(&pint, PORTAL_DIRECTORY_PORTAL_TYPE(i)));
+  }
 }
-
-#define PORTAL_DIRECTORY_OFFSET(A)      &pint.map_base[PORTAL_REQ_FIFO(0)+128+(A)];
-#define PORTAL_DIRECTORY_VERSION        PORTAL_DIRECTORY_OFFSET(0)
-#define PORTAL_DIRECTORY_TIMESTAMP      PORTAL_DIRECTORY_OFFSET(1)
-#define PORTAL_DIRECTORY_NUMPORTALS     PORTAL_DIRECTORY_OFFSET(2)
-#define PORTAL_DIRECTORY_ADDRBITS       PORTAL_DIRECTORY_OFFSET(3)
-#define PORTAL_DIRECTORY_COUNTER_MSB    PORTAL_DIRECTORY_OFFSET(4)
-#define PORTAL_DIRECTORY_COUNTER_LSB    PORTAL_DIRECTORY_OFFSET(5)
-#define PORTAL_DIRECTORY_PORTAL_ID(A)   PORTAL_DIRECTORY_OFFSET(6 + 2 * (A))
-#define PORTAL_DIRECTORY_PORTAL_TYPE(A) PORTAL_DIRECTORY_OFFSET(6 + 2 * (A) + 1)
 
 uint64_t Directory::cycle_count()
 {
-  unsigned int high_bits = READL(&pint, counter_offset+0);
-  unsigned int low_bits  = READL(&pint, counter_offset+1);
+  unsigned int high_bits = READL(&pint, PORTAL_DIRECTORY_COUNTER_MSB);
+  unsigned int low_bits  = READL(&pint, PORTAL_DIRECTORY_COUNTER_LSB);
   return (((uint64_t)high_bits)<<32) | ((uint64_t)low_bits);
 }
 unsigned int Directory::get_fpga(unsigned int id)
 {
   int i;
+  int numportals = READL(&pint, PORTAL_DIRECTORY_NUMPORTALS);
   for(i = 0; i < numportals; i++){
-    if(portal_ids[i] == id)
+    if(READL(&pint, PORTAL_DIRECTORY_PORTAL_ID(i)) == id)
       return i+1;
   }
   fprintf(stderr, "Directory::fpga(id=%d) id not found\n", id);
@@ -490,34 +487,7 @@ unsigned int Directory::get_fpga(unsigned int id)
 
 unsigned int Directory::get_addrbits(unsigned int id)
 {
-  return addrbits;
-}
-
-void Directory::scan(int display)
-{
-  unsigned int i;
-  if(display) fprintf(stderr, "Directory::scan(fpga%d)\n", pint.fpga_number);
-  volatile unsigned int *ptr = PORTAL_DIRECTORY_OFFSET(0);
-  uint32_t version    = READL(&pint, ptr++);
-  time_t timestamp  = READL(&pint, ptr++);
-  numportals = READL(&pint, ptr++);
-  addrbits   = READL(&pint, ptr++);
-  counter_offset = ptr++;
-  ptr++;
-  portal_ids   = (unsigned int *)malloc(sizeof(portal_ids[0])*numportals);
-  portal_types = (unsigned int *)malloc(sizeof(portal_types[0])*numportals);
-  for(i = 0; (i < numportals) && (i < 32); i++){
-    portal_ids[i] = READL(&pint, ptr++);
-    portal_types[i] = READL(&pint, ptr++);
-  }
-  if(display){
-    fprintf(stderr, "version=%d\n",  version);
-    fprintf(stderr, "timestamp=%s",  ctime(&timestamp));
-    fprintf(stderr, "numportals=%d\n", numportals);
-    fprintf(stderr, "addrbits=%d\n", addrbits);
-    for(i = 0; i < numportals; i++)
-      fprintf(stderr, "portal[%d]: ifcid=%d, ifctype=%08x\n", i, portal_ids[i], portal_types[i]);
-  }
+  return READL(&pint, PORTAL_DIRECTORY_ADDRBITS);
 }
 
 void Directory::traceStart()

@@ -93,12 +93,6 @@ public:
 
 class Directory : public PortalInternalCpp
 {
- private:
-  unsigned int addrbits;
-  unsigned int numportals;
-  unsigned int *portal_ids;
-  unsigned int *portal_types;
-  volatile unsigned int *counter_offset;
  public:
   Directory();
   void scan(int display);
