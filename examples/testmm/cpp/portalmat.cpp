@@ -282,7 +282,11 @@ void PortalMat::multf(PortalMat &a, PortalMat &b_transpose,  MmIndication *mmind
 	    bref, b_transpose.rows, b_transpose.cols);
     mmdevice->mmf(aref, a.rows, a.cols,
 		  bref, b_transpose.rows, b_transpose.cols,
-		  cref);
+		  cref,
+		  a.rows*a.cols, a.cols*J_VALUE,
+		  b_transpose.rows*b_transpose.cols, b_transpose.cols*K_VALUE,
+		  a.rows*b_transpose.rows, b_transpose.rows*J_VALUE);
+
     sem_wait(&mul_sem);
     if(mmind) {
       int macs = a.rows*a.cols*b_transpose.rows;

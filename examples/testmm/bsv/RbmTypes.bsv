@@ -76,7 +76,10 @@ endinterface
 interface MmRequest;
    method Action mmf(Bit#(32) inPointer1, Bit#(32) r1, Bit#(32) c1,
 		     Bit#(32) inPointer2, Bit#(32) r2, Bit#(32) c2,
-		     Bit#(32) outPointer);
+		     Bit#(32) outPointer,
+		     Bit#(32) r1_x_c1, Bit#(32) c1_x_j,
+		     Bit#(32) r2_x_c2, Bit#(32) c2_x_k,
+		     Bit#(32) r1_x_r1, Bit#(32) r2_x_j);
    method Action dpsCount(Bit#(32) count);
    method Action dpsA(Bit#(32) aval);
    method Action dpsB(Bit#(32) bval);

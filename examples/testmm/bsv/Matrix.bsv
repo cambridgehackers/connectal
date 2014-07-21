@@ -574,7 +574,10 @@ endinterface
 interface DmaMatrixMultiplyIfc#(numeric type addrwidth, numeric type dsz);
    method Action start(ObjectPointer pointerA, UInt#(addrwidth) numRowsA, UInt#(addrwidth) numColumnsA,
 		       ObjectPointer pointerB, UInt#(addrwidth) numRowsB, UInt#(addrwidth) numColumnsB,
-		       ObjectPointer pointerC);
+		       ObjectPointer pointerC,
+		       UInt#(addrwidth) numRowsA_x_numColumnsA, UInt#(addrwidth) numColumnsA_x_J,
+		       UInt#(addrwidth) numRowsB_x_numColumnsB, UInt#(addrwidth) numColumnsB_x_K,
+		       UInt#(addrwidth) numRowsA_x_numRowsB,    UInt#(addrwidth) numRowsB_x_J);
    method ActionValue#(Bool) finish();
    interface DmaMatrixMultiplyDebug debug;
 endinterface
@@ -806,19 +809,23 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 
    method Action start(ObjectPointer pointerA, UInt#(addrwidth) numRowsA, UInt#(addrwidth) numColumnsA,
 		       ObjectPointer pointerB, UInt#(addrwidth) numRowsB, UInt#(addrwidth) numColumnsB,
-		       ObjectPointer pointerC) if (!running);
+		       ObjectPointer pointerC,
+		       UInt#(addrwidth) numRowsA_x_numColumnsA, UInt#(addrwidth) numColumnsA_x_J,
+		       UInt#(addrwidth) numRowsB_x_numColumnsB, UInt#(addrwidth) numColumnsB_x_K,
+		       UInt#(addrwidth) numRowsA_x_numRowsB,    UInt#(addrwidth) numRowsB_x_J
+		       ) if (!running);
       XYRangeConfig#(UInt#(addrwidth)) indexcfg  = XYRangeConfig {xbase: 0, xlimit: numRowsA, xstep: fromInteger(jj),
 								  ybase: 0, ylimit: numRowsB, ystep: fromInteger(kk) };
-      XYRangeConfig#(UInt#(addrwidth)) offsetcfgA = XYRangeConfig {xbase: 0, xlimit: numRowsA*numColumnsA, xstep: numColumnsA*fromInteger(jj),
+      XYRangeConfig#(UInt#(addrwidth)) offsetcfgA = XYRangeConfig {xbase: 0, xlimit: numRowsA_x_numColumnsA, xstep: numColumnsA_x_J,
 								  ybase: 0, ylimit: numRowsB, ystep: fromInteger(kk) };
       XYRangeConfig#(UInt#(addrwidth)) offsetcfgB = XYRangeConfig {xbase: 0, xlimit: numRowsA, xstep: fromInteger(jj),
-								  ybase: 0, ylimit: numRowsB*numColumnsB, ystep: fromInteger(kk)*numColumnsB };
-      XYRangeConfig#(UInt#(addrwidth)) offsetcfgC = XYRangeConfig {xbase: 0, xlimit: numRowsA*numRowsB, xstep: numRowsB*fromInteger(jj),
+								  ybase: 0, ylimit: numRowsB_x_numColumnsB, ystep: numColumnsB_x_K };
+      XYRangeConfig#(UInt#(addrwidth)) offsetcfgC = XYRangeConfig {xbase: 0, xlimit: numRowsA_x_numRowsB, xstep: numRowsB_x_J,
 								  ybase: 0, ylimit: numRowsB, ystep: fromInteger(kk) };
       descriptorA <= MatrixDescriptor { pointer: pointerA, base: 0, numRows: numRowsA, numColumns: numColumnsA};
       descriptorB <= MatrixDescriptor { pointer: pointerB, base: 0, numRows: numRowsB, numColumns: numColumnsB};
       descriptorC <= MatrixDescriptor { pointer: pointerC, base: 0, numRows: numRowsA, numColumns: numRowsB};
-      dotprodCount <= numRowsA*numRowsB;
+      dotprodCount <= numRowsA_x_numRowsB;
       running <= True;
 
       if (verbose) $display("mm pointerA=%d pointerB=%d pointerC=%d\n", pointerA, pointerB, pointerC);
@@ -850,7 +857,10 @@ interface DramMatrixMultiply#(numeric type n, numeric type dmasz);
    interface ObjectWriteClient#(dmasz) writeClient;
    method Action start(ObjectPointer pointerA, UInt#(MMSize) numRowsA, UInt#(MMSize) numColumnsA,
 		       ObjectPointer pointerB, UInt#(MMSize) numRowsB, UInt#(MMSize) numColumnsB,
-		       ObjectPointer pointerC);
+		       ObjectPointer pointerC,
+		       UInt#(MMSize) numRowsA_x_numColumnsA, UInt#(MMSize) numColumnsA_x_J,
+		       UInt#(MMSize) numRowsB_x_numColumnsB, UInt#(MMSize) numColumnsB_x_K,
+		       UInt#(MMSize) numRowsA_x_numRowsB,    UInt#(MMSize) numRowsB_x_J);
    method ActionValue#(Bool) finish();
    interface DmaMatrixMultiplyDebug debug;
 endinterface
@@ -940,10 +950,17 @@ module  mkMm#(MmIndication ind, TimerIndication timerInd, MmDebugIndication mmDe
    interface MmRequest mmRequest;
       method Action mmf(Bit#(32) h1, Bit#(32) r1, Bit#(32) c1,
 			Bit#(32) h2, Bit#(32) r2, Bit#(32) c2,
-			Bit#(32) h3);
+			Bit#(32) h3,
+			Bit#(32) r1_x_c1, Bit#(32) c1_x_j,
+			Bit#(32) r2_x_c2, Bit#(32) c2_x_k,
+			Bit#(32) r1_x_r2, Bit#(32) r2_x_j);
 	 dmaMMF.start(h1, unpack(truncate(r1)), unpack(truncate(c1)),
 		      h2, unpack(truncate(r2)), unpack(truncate(c2)),
-		      h3);
+		      h3,
+		      unpack(truncate(r1_x_c1)), unpack(truncate(c1_x_j)),
+		      unpack(truncate(r2_x_c2)), unpack(truncate(c2_x_k)),
+		      unpack(truncate(r1_x_r2)), unpack(truncate(r2_x_j)));
+
 	 mmfCycles <= 0;
 	 busyFifo.enq(True);
       endmethod
