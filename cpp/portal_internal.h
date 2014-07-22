@@ -100,6 +100,7 @@ void portalTrace_start();
 void portalTrace_stop();
 int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
 
+extern PortalPoller *defaultPoller;
 extern int portalExec_timeout;
 
 #endif // _PORTAL_H_
