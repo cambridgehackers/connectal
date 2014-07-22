@@ -65,15 +65,15 @@ extern "C" {
   }
 
   void pareff(uint32_t pref, uint32_t size){
-    //fprintf(stderr, "BsimDma::pareff pref=%ld, size=%08x size_accum=%08x\n", pref, size, dma_info[pref-1].size_accum);
+    //fprintf(stderr, "BsimDma::pareff pref=%ld, size=%08x size_accum=%08x\n", pref, size, dma_info[pref].size_accum);
     assert(pref < 32);
-    dma_info[pref-1].size_accum += size;
+    dma_info[pref].size_accum += size;
     if(size == 0){
       int fd;
       sock_fd_read(dma_sockfd, &fd);
-      dma_info[pref-1].buffer = (unsigned char *)mmap(0,
-          dma_info[pref-1].size_accum, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
-      dma_info[pref-1].buffer_len = dma_info[pref-1].size_accum/sizeof(unsigned char);
+      dma_info[pref].buffer = (unsigned char *)mmap(0,
+          dma_info[pref].size_accum, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
+      dma_info[pref].buffer_len = dma_info[pref].size_accum/sizeof(unsigned char);
     }
   }
 }

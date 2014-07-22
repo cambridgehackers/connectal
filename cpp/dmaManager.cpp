@@ -149,7 +149,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
     }
     if (trace_memory)
       fprintf(stderr, "DmaManager::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, (long)addr, e->length);
-    DMAsglist(priv->device, id, addr, e->length);
+    DMAsglist(priv->device, id-1, addr, e->length);
     size_accum += e->length;
     // fprintf(stderr, "%s:%d sem_wait\n", __FILE__, __LINE__);
     sem_wait(&priv->confSem);

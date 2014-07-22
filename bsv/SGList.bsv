@@ -246,7 +246,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 end
 	 configRespFifo.enq(truncate(ptr));
 	 portsel(pages, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
-             address:{truncate(ptr-1),idxReg}, datain:truncate(paddr)});
+             address:{truncate(ptr),idxReg}, datain:truncate(paddr)});
       end
    endmethod
    interface addr = addrServers;
