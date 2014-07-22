@@ -47,15 +47,14 @@ static int trace_memory;// = 1;
 
 void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *argDevice)
 {
-  priv->handle = 1;
+  memset(priv, 0, sizeof(*priv));
   priv->device = argDevice;
 #ifndef MMAP_HW
   connect_socket(&priv->write, "fd_sock_wc", 0);
 #endif
-  const char* path = "/dev/portalmem";
-  priv->pa_fd = ::open(path, O_RDWR);
+  priv->pa_fd = open("/dev/portalmem", O_RDWR);
   if (priv->pa_fd < 0){
-    fprintf(stderr, "Failed to open %s pa_fd=%d errno=%d\n", path, priv->pa_fd, errno);
+    fprintf(stderr, "Failed to open /dev/portalmem pa_fd=%d errno=%d\n", priv->pa_fd, errno);
   }
   if (sem_init(&priv->confSem, 1, 0)){
     fprintf(stderr, "failed to init confSem errno=%d:%s\n", errno, strerror(errno));
@@ -114,7 +113,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
   pa->entries[ne].length = 0;
   pa->header.numEntries++;
   if (trace_memory)
-    fprintf(stderr, "DmaManager::reference id=%08x, numEntries:=%d len=%08lx)\n", id, ne, pa->header.size);
+    fprintf(stderr, "DmaManager_reference id=%08x, numEntries:=%d len=%08lx)\n", id, ne, pa->header.size);
 #ifndef MMAP_HW
   sock_fd_write(priv->write, pa->header.fd);
 #endif
@@ -126,7 +125,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
     long addr = (e->length > 0) ? size_accum : 0;
 #endif
 #ifdef BSIM
-    addr |= ((long)id) << 32; //[39:32] = truncate(pref);
+    addr |= ((long)id+1) << 32; //[39:32] = truncate(pref);
 #endif
 
     switch (e->length) {
@@ -145,11 +144,11 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
     case (0):
       break;
     default:
-      fprintf(stderr, "DmaManager::unsupported sglist size %x\n", e->length);
+      fprintf(stderr, "DmaManager:unsupported sglist size %x\n", e->length);
     }
     if (trace_memory)
-      fprintf(stderr, "DmaManager::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, (long)addr, e->length);
-    DMAsglist(priv->device, id-1, addr, e->length);
+      fprintf(stderr, "DmaManager:sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, (long)addr, e->length);
+    DMAsglist(priv->device, id, addr, e->length);
     size_accum += e->length;
     // fprintf(stderr, "%s:%d sem_wait\n", __FILE__, __LINE__);
     sem_wait(&priv->confSem);
@@ -181,13 +180,13 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
     fprintf(stderr, "regions %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,regions[0], regions[1], regions[2]);
     fprintf(stderr, "borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borders[0].border, borders[1].border, borders[2].border);
   }
-  DMAregion(priv->device, id-1,
+  DMAregion(priv->device, id,
 	 (borders[0].border << 8) | borders[0].idxOffset,
 	 (borders[1].border << 8) | borders[1].idxOffset,
 	 (borders[2].border << 8) | borders[2].idxOffset);
   //fprintf(stderr, "%s:%d sem_wait\n", __FILE__, __LINE__);
   sem_wait(&priv->confSem);
-  return id;
+  return id+1;
 }
 
 int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa)
