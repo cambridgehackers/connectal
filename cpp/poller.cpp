@@ -27,6 +27,10 @@
 
 #include "portal.h"
 
+#ifdef ZYNQ
+#include <android/log.h>
+#endif
+
 #define USE_INTERRUPTS
 #ifdef USE_INTERRUPTS
 #define ENABLE_INTERRUPTS(A) WRITEL((A), &((A)->map_base[IND_REG_INTERRUPT_MASK]), 1)

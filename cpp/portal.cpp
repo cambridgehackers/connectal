@@ -24,21 +24,8 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <linux/ioctl.h>
-#include <linux/types.h>
-#include <poll.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/ioctl.h>
 #include <sys/mman.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <unistd.h>
-#include <assert.h>
-#include <time.h>
-#include <pthread.h>
-#include <semaphore.h>
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
@@ -151,11 +138,11 @@ void init_portal_internal(PortalInternal *pint, int fpga_number, int addrbits)
 #ifdef MMAP_HW
     snprintf(buff, sizeof(buff), "/dev/fpga%d", pint->fpga_number);
 #ifdef ZYNQ
-    pint->fpga_fd = ::open(buff, O_RDWR);
+    pint->fpga_fd = open(buff, O_RDWR);
     ioctl(pint->fpga_fd, PORTAL_ENABLE_INTERRUPT, &intsettings);
 #else
     // FIXME: bluenoc driver only opens readonly for some reason
-    pint->fpga_fd = ::open(buff, O_RDONLY);
+    pint->fpga_fd = open(buff, O_RDONLY);
 #endif
     if (pint->fpga_fd < 0) {
 	ALOGE("Failed to open %s fd=%d errno=%d\n", buff, pint->fpga_fd, errno);
@@ -180,34 +167,6 @@ errlab:
       ALOGD("init_portal_internal: failure rc=%d\n", rc);
       exit(1);
     }
-}
-
-PortalInternalCpp::PortalInternalCpp(int id)
-{
-    init_portal_internal(&pint, directory_get_fpga(id), directory_get_addrbits(id));
-    pint.parent = (void *)this; /* used for callback functions */
-}
-
-PortalInternalCpp::~PortalInternalCpp()
-{
-    if (pint.fpga_fd > 0) {
-        ::close(pint.fpga_fd);
-        pint.fpga_fd = -1;
-    }    
-}
-
-Portal::Portal(int id, PortalPoller *poller)
-  : PortalInternalCpp(id)
-{
-  if (poller == 0)
-    poller = defaultPoller;
-  pint.poller = poller;
-  pint.poller->registerInstance(this);
-}
-
-Portal::~Portal()
-{
-  pint.poller->unregisterInstance(this);
 }
 
 int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)
@@ -242,13 +201,13 @@ static int once = 0;
   request.requested_rate = reqF;
   int status = ioctl(globalDirectory.fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
   if (status < 0)
-    fprintf(stderr, "Directory::Directory() error setting fclk0, errno=%d\n", errno);
-  fprintf(stderr, "Directory::Directory() set fclk0 (%ld,%ld)\n", reqF, request.actual_rate);
+    fprintf(stderr, "init_directory: error setting fclk0, errno=%d\n", errno);
+  fprintf(stderr, "init_directory: set fclk0 (%ld,%ld)\n", reqF, request.actual_rate);
 #endif
 
   // finally scan
   unsigned int i;
-  if(1) fprintf(stderr, "Directory::scan(fpga%d)\n", globalDirectory.fpga_number);
+  if(1) fprintf(stderr, "init_directory: scan(fpga%d)\n", globalDirectory.fpga_number);
   if(1){
     time_t timestamp  = READL(&globalDirectory, PORTAL_DIRECTORY_TIMESTAMP);
     uint32_t numportals = READL(&globalDirectory, PORTAL_DIRECTORY_NUMPORTALS);
@@ -308,4 +267,32 @@ void portalTrace_stop()
   if (res)
     fprintf(stderr, "Failed to stop tracing. errno=%d\n", errno);
 #endif
+}
+
+PortalInternalCpp::PortalInternalCpp(int id)
+{
+    init_portal_internal(&pint, directory_get_fpga(id), directory_get_addrbits(id));
+    pint.parent = (void *)this; /* used for callback functions */
+}
+
+PortalInternalCpp::~PortalInternalCpp()
+{
+    if (pint.fpga_fd > 0) {
+        close(pint.fpga_fd);
+        pint.fpga_fd = -1;
+    }    
+}
+
+Portal::Portal(int id, PortalPoller *poller)
+  : PortalInternalCpp(id)
+{
+  if (poller == 0)
+    poller = defaultPoller;
+  pint.poller = poller;
+  pint.poller->registerInstance(this);
+}
+
+Portal::~Portal()
+{
+  pint.poller->unregisterInstance(this);
 }
