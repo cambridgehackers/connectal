@@ -181,7 +181,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
     fprintf(stderr, "regions %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,regions[0], regions[1], regions[2]);
     fprintf(stderr, "borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borders[0].border, borders[1].border, borders[2].border);
   }
-  DMAregion(priv->device, id,
+  DMAregion(priv->device, id-1,
 	 borders[0].border, borders[0].idxOffset,
 	 borders[1].border, borders[1].idxOffset,
 	 borders[2].border, borders[2].idxOffset);

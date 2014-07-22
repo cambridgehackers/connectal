@@ -222,17 +222,12 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 
    // FIXME: split this into three methods?
    method Action region(Bit#(32) ptr, Bit#(40) barr8, Bit#(8) off8, Bit#(40) barr4, Bit#(8) off4, Bit#(40) barr0, Bit#(8) off0);
-      Region region8 = Region { barrier: barr8, idxOffset: off8 };
-      Region region4 = Region { barrier: barr4, idxOffset: off4 };
-      Region region0 = Region { barrier: barr0, idxOffset: off0 };
-      //regionFifo.enq(tuple4(truncate(ptr),region8,region4,region0));
-      let idx = ptr-1;
       portsel(reg8, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
-          address: truncate(idx), datain: region8});
+          address: truncate(ptr), datain: Region { barrier: barr8, idxOffset: off8 }});
       portsel(reg4, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
-          address: truncate(idx), datain: region4});
+          address: truncate(ptr), datain: Region { barrier: barr4, idxOffset: off4 }});
       portsel(reg0, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
-          address: truncate(idx), datain: region0});
+          address: truncate(ptr), datain: Region { barrier: barr0, idxOffset: off0 }});
       //$display("region ptr=%d off8=%h off4=%h off0=%h", ptr, off8, off4, off0);
       configRespFifo.enq(truncate(ptr));
    endmethod
