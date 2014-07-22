@@ -32,9 +32,6 @@ synth-ip.tcl:
 	ln -svf $(XBSVDIR)/examples/testmm/synth-ip.tcl .
 
 prebuild:: synth-ip.tcl
-
-
-prebuild1::
 	   sleep $(shell echo $$RANDOM \% 12 | bc)
 
 include $(XBSVDIR)/Makefile.common
