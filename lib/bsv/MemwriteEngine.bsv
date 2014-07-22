@@ -188,7 +188,7 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
    UGBramFifos#(numServers,cmdQDepth,MemengineCmd) cmdBuf <- mkUGBramFifos;
 
    Reg#(Bool) load_in_progress <- mkReg(False);
-   FIFO#(Tuple2#(MemengineCmd,Bool))              loadf_b <- mkSizedFIFO(1);
+   FIFO#(Tuple3#(MemengineCmd,Bool,Bool))         loadf_b <- mkSizedFIFO(1);
    FIFO#(Tuple2#(Bit#(serverIdxSz),MemengineCmd)) loadf_c <- mkSizedFIFO(1);
    FIFO#(Tuple3#(Bit#(8),Bit#(serverIdxSz),Bool))   workf <- mkSizedFIFO(32); // is this the right size?
    FIFO#(Tuple2#(Bit#(serverIdxSz),Bool))           donef <- mkSizedFIFO(32); // is this the right size?
@@ -225,20 +225,21 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
 
    rule load_ctxt_b;
       let cmd <- cmdBuf.first_resp;
-      let cond = buffCap[loadIdx].read() >= unpack(extend(cmd.burstLen>>beat_shift));
-      loadf_b.enq(tuple2(cmd,cond));
+      let cond0 = buffCap[loadIdx].read() >= unpack(extend(cmd.burstLen>>beat_shift));
+      let cond1 = cmd.len <= extend(cmd.burstLen);
+      loadf_b.enq(tuple3(cmd,cond0,cond1));
    endrule
-
+   
    rule load_ctxt_c;
       load_in_progress <= False;
       loadIdx <= loadIdx+1;
-      match {.cmd,.cond} <- toGet(loadf_b).get;
-      if  (cond) begin
+      match {.cmd,.cond0,.cond1} <- toGet(loadf_b).get;
+      if  (cond0) begin
 	 //$display("load_ctxt_b %h %d", cmd.base, idx);
 	 buffCap[loadIdx].decrement(unpack(extend(cmd.burstLen>>beat_shift)));
 	 loadf_c.enq(tuple2(loadIdx,cmd));
 	 write_data_funnel.loadIdx(loadIdx);
-	 if (cmd.len <= extend(cmd.burstLen)) begin
+	 if (cond1) begin
 	    outs1[loadIdx] <= outs1[loadIdx]-1;
 	    cmdBuf.deq(loadIdx);
 	 end
