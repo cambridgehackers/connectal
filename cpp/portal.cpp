@@ -261,18 +261,14 @@ int PortalPoller::registerInstance(Portal *portal)
     return 0;
 }
 
-int PortalPoller::setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)
+int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)
 {
     int status = 0;
-    if (!numFds) {
-	ALOGE("%s No fds open\n", __FUNCTION__);
-	return -ENODEV;
-    }
 #ifdef ZYNQ
     PortalClockRequest request;
     request.clknum = clkNum;
     request.requested_rate = requestedFrequency;
-    status = ioctl(portal_fds[0].fd, PORTAL_SET_FCLK_RATE, (long)&request);
+    status = ioctl(globalDirectory.pint.fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
     if (status == 0 && actualFrequency)
 	*actualFrequency = request.actual_rate;
     if (status < 0)

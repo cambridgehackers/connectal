@@ -50,7 +50,7 @@ int main(int argc, const char **argv)
   AuroraRequestProxy *device = new AuroraRequestProxy(IfcNames_AuroraRequest, poller);
 
   long freq = 0;
-  poller->setClockFrequency(0, 200000000, &freq);
+  setClockFrequency(0, 200000000, &freq);
 
   pthread_t tid;
   fprintf(stderr, "Main::creating exec thread\n");

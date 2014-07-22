@@ -479,11 +479,11 @@ int main(int argc, const char **argv)
     // for surfaceflinger 
     long actualFrequency = 0;
     int status;
-    status = poller->setClockFrequency(0, 100000000, &actualFrequency);
+    status = setClockFrequency(0, 100000000, &actualFrequency);
     printf("[%s:%d] setClockFrequency 0 100000000 status=%d actualfreq=%ld\n", __FUNCTION__, __LINE__, status, actualFrequency);
-    status = poller->setClockFrequency(1, 160000000, &actualFrequency);
+    status = setClockFrequency(1, 160000000, &actualFrequency);
     printf("[%s:%d] setClockFrequency 1 160000000 status=%d actualfreq=%ld\n", __FUNCTION__, __LINE__, status, actualFrequency);
-    status = poller->setClockFrequency(3, 200000000, &actualFrequency);
+    status = setClockFrequency(3, 200000000, &actualFrequency);
     printf("[%s:%d] setClockFrequency 3 200000000 status=%d actualfreq=%ld\n", __FUNCTION__, __LINE__, status, actualFrequency);
     pthread_create(&threaddata, NULL, &pthread_worker, NULL);
     printf("[%s:%d] before set_i2c_mux_reset_n\n", __FUNCTION__, __LINE__);
@@ -507,7 +507,7 @@ int main(int argc, const char **argv)
                 pixclk,
                 60l * (long)(hblank + npixels) * (long)(vblank + nlines),
                 npixels, nlines);
-        status = poller->setClockFrequency(1, pixclk, 0);
+        status = setClockFrequency(1, pixclk, 0);
 
 hblank--; // needed on zc702
         hdmidevice->setDeLine(vsyncoff,           // End of FrontPorch

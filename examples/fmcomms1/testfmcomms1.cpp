@@ -91,9 +91,9 @@ int main(int argc, const char **argv)
   pthread_create(&thread, &attr, thread_routine, 0);
 
   int status;
-  status = poller->setClockFrequency(0, 100000000, 0);
+  status = setClockFrequency(0, 100000000, 0);
   /* FMComms1 refclk should be 30 MHz */
-  status = poller->setClockFrequency(1,  30000000, 0);
+  status = setClockFrequency(1,  30000000, 0);
     
   dma->dCacheFlushInval(srcAlloc, srcBuffer);
   dma->dCacheFlushInval(dstAlloc, dstBuffer);

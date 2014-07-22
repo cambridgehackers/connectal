@@ -244,9 +244,8 @@ void DmaManager::mtResp(uint64_t words)
   sem_post(&priv.mtSem);
 }
 
-void DmaManager::dbgResp(const DmaDbgRec& rec)
+void DmaManager::dbgResp(const DmaDbgRec& dbgRec)
 {
-  DmaDbgRec dbgRec = rec;
   fprintf(stderr, "dbgResp: %08x %08x %08x %08x\n", dbgRec.x, dbgRec.y, dbgRec.z, dbgRec.w);
   sem_post(&priv.dbgSem);
 }

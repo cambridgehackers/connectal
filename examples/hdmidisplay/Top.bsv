@@ -40,7 +40,11 @@ module mkPortalTop#(HostType host)(PortalTop#(addrWidth,64,HDMI#(Bit#(16)),1))
 	    Add#(e__, c__, ObjectOffsetSize),
 	    Add#(f__, addrWidth, 40));
 
+`ifdef ZynqHostTypeIF
    Clock clk1 = host.fclkclk[1];
+`else
+   Clock clk1 <- exposeCurrentClock();
+`endif
    HdmiInternalIndicationProxy hdmiInternalIndicationProxy <- mkHdmiInternalIndicationProxy(HdmiInternalIndication);
    HdmiDisplayIndicationProxy hdmiDisplayIndicationProxy <- mkHdmiDisplayIndicationProxy(HdmiDisplayIndication);
    HdmiDisplay hdmiDisplay <- mkHdmiDisplay(clk1, hdmiDisplayIndicationProxy.ifc, hdmiInternalIndicationProxy.ifc);

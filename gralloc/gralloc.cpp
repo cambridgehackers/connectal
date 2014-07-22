@@ -461,10 +461,7 @@ vsyncwidth = 0;
             gralloc_dev->hdmiInternal->setDeLineCountMinMax (lmin - vsyncwidth, lmin + nlines - vsyncwidth, (lmin + lmin + nlines) / 2 - vsyncwidth);
             gralloc_dev->hdmiInternal->setDePixelCountMinMax (pmin, pmin + npixels, pmin + npixels / 2);
 	    ALOGD("setting clock frequency %ld\n", 60l * (long)(pmin + npixels) * (long)(lmin + nlines));
-	    gralloc_dev->poller->setClockFrequency(1,
-						   60l * (long)(pmin + npixels) * (long)(lmin + nlines),
-						   0);
-	    ALOGD("setClockFrequency returned %d", status);
+	    setClockFrequency(1, 60l * (long)(pmin + npixels) * (long)(lmin + nlines), 0);
             *device = &dev->common;
         }
     }

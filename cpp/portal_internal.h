@@ -80,7 +80,6 @@ public:
   sem_t sem_startup;
 
   void* portalExec(void* __x);
-  int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
 };
 
 class Directory : public PortalInternalCpp
@@ -108,8 +107,9 @@ void portalExec_start();
 void portalExec_end(void);
 void portalTrace_start();
 void portalTrace_stop();
-extern int portalExec_timeout;
+int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
 
+extern int portalExec_timeout;
 extern Directory globalDirectory;
 
 #endif // _PORTAL_H_

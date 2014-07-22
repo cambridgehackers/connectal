@@ -179,7 +179,7 @@ int main(int argc, const char **argv)
     pthread_create(&thread, &attr, thread_routine, 0);
 
     int status;
-    status = poller->setClockFrequency(0, 100000000, 0);
+    status = setClockFrequency(0, 100000000, 0);
 
 #ifdef BOARD_bluesim
     nlines = 100;
@@ -220,7 +220,7 @@ hblank--; // needed on zc702
 		pixclk,
 		60l * (long)(hblank + npixels) * (long)(vblank + nlines),
 		npixels, nlines);
-	status = poller->setClockFrequency(1, pixclk, 0);
+	status = setClockFrequency(1, pixclk, 0);
 hblank--; // needed on zc702
 	hdmiInternal->setDeLine(vsyncoff,           // End of FrontPorch
                                 vsyncoff+vsyncwidth,// End of Sync
