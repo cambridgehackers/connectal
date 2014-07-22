@@ -34,7 +34,7 @@ BSVFILES += $(XBSVDIR)/bsv/PortalMemory.bsv
 CPPFILES += $(XBSVDIR)/cpp/dmaManager.cpp
 endif
 
-all bits verilog implementation android_exe bsim bsim_exe ubuntu_exe xsim xsimrun: gentarget
+all bits verilog implementation android_exe bsim bsim_exe ubuntu_exe xsim xsimrun: gentarget prebuild
 	make -C $(BOARD) $@
 
 ifeq ($(origin TOP),undefined)
