@@ -41,6 +41,9 @@ static struct {
     int inflight;
 } head;
 static int sockfd[16];
+static int cleanedup;
+#define MAX_PATH_LENGTH 100
+static char path[MAX_PATH_LENGTH];
 
 extern "C" {
   void initPortal(unsigned long id){
@@ -61,6 +64,15 @@ extern "C" {
 	  if(0)
 	  fprintf(stderr, "processReq32(i=%d,rr=%d) {write=%d, addr=%08lx, data=%08x}\n", 
 		  i, rr, head.req.write_flag, (long)head.req.addr, head.req.data);
+          if (!cleanedup && i) {
+               cleanedup = 1;
+               for (int j = 0; j < 16; j++) {
+                   /* all connected now, we can remove socket names */
+                   snprintf(path, sizeof(path), "fpga%ld_rc", j);
+                   remove(path);
+                   remove("fd_sock_wc");
+               }
+          }
 	  break;
 	}
       }
