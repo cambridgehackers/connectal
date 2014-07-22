@@ -47,7 +47,7 @@ static char path[MAX_PATH_LENGTH];
 
 extern "C" {
   void initPortal(unsigned long id){
-    thread_socket(&sockfd[id], "fpga%ld_rc", id);
+    thread_socket(&sockfd[id], "fpga%d_rc", id);
   }
 
   bool processReq32(uint32_t rr){
@@ -68,7 +68,7 @@ extern "C" {
                cleanedup = 1;
                for (int j = 0; j < 16; j++) {
                    /* all connected now, we can remove socket names */
-                   snprintf(path, sizeof(path), "fpga%ld_rc", j);
+                   snprintf(path, sizeof(path), "fpga%d_rc", j);
                    remove(path);
                    remove("fd_sock_wc");
                }
