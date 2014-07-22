@@ -33,12 +33,12 @@
 #ifdef NO_CPP_PORTAL_CODE
 #include "GeneratedTypes.h" // generated in project directory
 #define DMAsglist(P, A, B, C) DmaConfigProxy_sglist((P), (A), (B), (C));
-#define DMAregion(P, PTR, B8, O8, B4, O4, B0, O0) DmaConfigProxy_region((P), (PTR), (B8), (O8), (B4), (O4), (B0), (O0))
+#define DMAregion(P, PTR, B8, B4, B0) DmaConfigProxy_region((P), (PTR), (B8), (B4), (B0))
 #define DMAGetMemoryTraffic(P,A) DmaConfigProxy_getMemoryTraffic((P), (A))
 #else
 #include "DmaConfigProxy.h" // generated in project directory
 #define DMAsglist(P, A, B, C) ((DmaConfigProxy *)((P)->parent))->sglist((A), (B), (C))
-#define DMAregion(P, PTR, B8, O8, B4, O4, B0, O0) ((DmaConfigProxy *)((P)->parent))->region((PTR), (B8), (O8), (B4), (O4), (B0), (O0))
+#define DMAregion(P, PTR, B8, B4, B0) ((DmaConfigProxy *)((P)->parent))->region((PTR), (B8), (B4), (B0))
 #define DMAGetMemoryTraffic(P,A) ((DmaConfigProxy *)((P)->parent))->getMemoryTraffic((A))
 #endif
 

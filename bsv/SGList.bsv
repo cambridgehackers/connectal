@@ -43,7 +43,7 @@ typedef Tuple2#(SGListId,Bit#(ObjectOffsetSize)) ReqTup;
 
 interface SGListMMU#(numeric type addrWidth);
    method Action sglist(Bit#(32) pointer, Bit#(40) paddr, Bit#(32) len);
-   method Action region(Bit#(32) ptr, Bit#(40) barr8, Bit#(8) off8, Bit#(40) barr4, Bit#(8) off4, Bit#(40) barr0, Bit#(8) off0);
+   method Action region(Bit#(32) ptr, Bit#(48) barr8, Bit#(48) barr4, Bit#(48) barr0);
    interface Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addr;
 endinterface
 
@@ -221,13 +221,13 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
        endinterface);
 
    // FIXME: split this into three methods?
-   method Action region(Bit#(32) ptr, Bit#(40) barr8, Bit#(8) off8, Bit#(40) barr4, Bit#(8) off4, Bit#(40) barr0, Bit#(8) off0);
+   method Action region(Bit#(32) ptr, Bit#(48) barr8, Bit#(48) barr4, Bit#(48) barr0);
       portsel(reg8, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
-          address: truncate(ptr), datain: Region { barrier: barr8, idxOffset: off8 }});
+          address: truncate(ptr), datain: unpack(barr8)});
       portsel(reg4, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
-          address: truncate(ptr), datain: Region { barrier: barr4, idxOffset: off4 }});
+          address: truncate(ptr), datain: unpack(barr4)});
       portsel(reg0, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
-          address: truncate(ptr), datain: Region { barrier: barr0, idxOffset: off0 }});
+          address: truncate(ptr), datain: unpack(barr0)});
       //$display("region ptr=%d off8=%h off4=%h off0=%h", ptr, off8, off4, off0);
       configRespFifo.enq(truncate(ptr));
    endmethod

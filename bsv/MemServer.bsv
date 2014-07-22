@@ -269,13 +269,12 @@ module mkConfigMemServerRW#(DmaIndication dmaIndication,
 `ifdef BSIM
 `ifndef PCIE
 	 let va <- pareff(pref, len);
-         //moved to dmaManager.cpp addr[39:32] = truncate(pref);
 `endif
 `endif
 	 sgl.sglist(pref, truncate(addr), len);
       endmethod
-      method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) off8, Bit#(64) barr4, Bit#(32) off4, Bit#(64) barr0, Bit#(32) off0);
-	 sgl.region(pointer,truncate(barr8),truncate(off8),truncate(barr4),truncate(off4),truncate(barr0),truncate(off0));
+      method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(64) barr4, Bit#(64) barr0);
+	 sgl.region(pointer,truncate(barr8),truncate(barr4),truncate(barr0));
       endmethod
       method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
 	 writer.request.addrRequest(pointer,offset);
@@ -363,13 +362,12 @@ module mkConfigMemServerR#(DmaIndication dmaIndication,
 `ifdef BSIM
 `ifndef PCIE
 	 let va <- pareff(pref, len);
-         //moved to dmaManager.cpp addr[39:32] = truncate(pref);
 `endif
 `endif
 	 sgl.sglist(pref, truncate(addr), len);
       endmethod
-      method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) off8, Bit#(64) barr4, Bit#(32) off4, Bit#(64) barr0, Bit#(32) off0);
-	 sgl.region(pointer,truncate(barr8),truncate(off8),truncate(barr4),truncate(off4),truncate(barr0),truncate(off0));
+      method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(64) barr4, Bit#(64) barr0);
+	 sgl.region(pointer,truncate(barr8),truncate(barr4),truncate(barr0));
       endmethod
       method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
 	 addrReqFifo.enq(?);
@@ -456,13 +454,12 @@ module mkConfigMemServerW#(DmaIndication dmaIndication,
 `ifdef BSIM
 `ifndef PCIE
 	 let va <- pareff(pref, len);
-         //moved to dmaManager.cpp addr[39:32] = truncate(pref);
 `endif
 `endif
 	 sgl.sglist(pref, truncate(addr), len);
       endmethod
-      method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) off8, Bit#(64) barr4, Bit#(32) off4, Bit#(64) barr0, Bit#(32) off0);
-	 sgl.region(pointer,truncate(barr8),truncate(off8),truncate(barr4),truncate(off4),truncate(barr0),truncate(off0));
+      method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(64) barr4, Bit#(64) barr0);
+	 sgl.region(pointer,truncate(barr8),truncate(barr4),truncate(barr0));
       endmethod
       method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
 	 addrReqFifo.enq(?);

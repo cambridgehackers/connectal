@@ -182,9 +182,9 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
     fprintf(stderr, "borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borders[0].border, borders[1].border, borders[2].border);
   }
   DMAregion(priv->device, id-1,
-	 borders[0].border, borders[0].idxOffset,
-	 borders[1].border, borders[1].idxOffset,
-	 borders[2].border, borders[2].idxOffset);
+	 (borders[0].border << 8) | borders[0].idxOffset,
+	 (borders[1].border << 8) | borders[1].idxOffset,
+	 (borders[2].border << 8) | borders[2].idxOffset);
   //fprintf(stderr, "%s:%d sem_wait\n", __FILE__, __LINE__);
   sem_wait(&priv->confSem);
   return id;

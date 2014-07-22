@@ -76,9 +76,7 @@ interface DmaConfig;
    // @param len Length of the segment
    //
    method Action sglist(Bit#(32) pointer, Bit#(64) addr,  Bit#(32) len);
-   method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) off8,
-                                          Bit#(64) barr4, Bit#(32) off4,
-                                          Bit#(64) barr0, Bit#(32) off0);
+   method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(64) barr4, Bit#(64) barr0);
    method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
    //
    // @brief Requests debug info for the specified channel type
