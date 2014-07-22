@@ -185,21 +185,21 @@ if [file exists ../synth-ip.tcl] {
 #
 command "synth_design -name %(Dut)s -top %(Dut)s -part %(partname)s -flatten rebuilt" hw/synth_design.log
 
-write_checkpoint -force $outputDir/%(dut)s_post_synth > hw/temp.log
+write_checkpoint -force $outputDir/top-post-synth > hw/temp.log
 #not in 2013.2 report_timing_summary -warn_on_violation
-#not in 2013.2 report_timing_summary -warn_on_violation -verbose  -file $outputDir/%(dut)s_post_synth_timing_summary.rpt > hw/temp.log
+#not in 2013.2 report_timing_summary -warn_on_violation -verbose  -file $outputDir/top-post-synth-timing-summary.rpt > hw/temp.log
 report_timing -nworst 20 -sort_by slack -path_type summary -slack_lesser_than 0.2 -unique_pins
-report_io -file $outputDir/%(dut)s_post_synth_io.rpt > hw/temp.log
+report_io -file $outputDir/top-post-synth-io.rpt > hw/temp.log
 puts "****************************************"
 puts "If timing report says 'No timing paths found.' then the design met the timing constraints."
 puts "If it reported negative slack, then the design did not meet the timing constraints."
 puts "****************************************"
-report_timing_summary -verbose  -file $outputDir/%(dut)s_post_synth_timing_summary.rpt > hw/temp.log
-report_timing -sort_by group -max_paths 100 -path_type summary -file $outputDir/%(dut)s_post_synth_timing.rpt > hw/temp.log
-report_utilization -verbose -file $outputDir/%(dut)s_post_synth_utilization.txt > hw/temp.log
-report_datasheet -file $outputDir/%(dut)s_post_synth_datasheet.txt > hw/temp.log
-write_verilog -force $outputDir/%(dut)s_netlist.v > hw/temp.log
-#report_power -file $outputDir/%(dut)s_post_synth_power.rpt
+report_timing_summary -verbose  -file $outputDir/top-post-synth-timing-summary.rpt > hw/temp.log
+report_timing -sort_by group -max_paths 100 -path_type summary -file $outputDir/top-post-synth-timing.rpt > hw/temp.log
+report_utilization -verbose -file $outputDir/top-post-synth_utilization.txt > hw/temp.log
+report_datasheet -file $outputDir/top-post-synth_datasheet.txt > hw/temp.log
+write_verilog -force $outputDir/top-netlist.v > hw/temp.log
+#report_power -file $outputDir/top-post-synth-power.rpt
 
 #
 # STEP#3: run placement and logic optimization, report utilization and timing estimates, write checkpoint design
@@ -209,37 +209,37 @@ write_verilog -force $outputDir/%(dut)s_netlist.v > hw/temp.log
 command opt_design     hw/opt_design.log
 # power_opt_design
 command place_design    hw/place_design.log
-report_timing_summary -file $outputDir/%(dut)s_post_place_timing_summary.rpt > hw/temp.log
+report_timing_summary -file $outputDir/top-post-place-timing-summary.rpt > hw/temp.log
 report_timing -nworst 20 -sort_by slack -path_type summary -slack_lesser_than 0.2 -unique_pins
-report_io -file $outputDir/%(dut)s_post_place_io.rpt > hw/temp.log
-write_checkpoint -force $outputDir/%(dut)s_post_place > hw/temp.log
+report_io -file $outputDir/top-post-place-io.rpt > hw/temp.log
+write_checkpoint -force $outputDir/top-post-place > hw/temp.log
 command phys_opt_design hw/phys_opt_design.log
-report_timing_summary -file $outputDir/%(dut)s_post_phys_opt_timing_summary.rpt > hw/temp.log
+report_timing_summary -file $outputDir/top-post-phys-opt-timing-summary.rpt > hw/temp.log
 report_timing -nworst 20 -sort_by slack -path_type summary -slack_lesser_than 0.2 -unique_pins
-write_checkpoint -force $outputDir/%(dut)s_post_phys_opt > hw/temp.log
-#not in 2013.2 report_timing_summary -warn_on_violation -file $outputDir/%(dut)s_post_place_timing_summary.rpt > hw/temp.log
+write_checkpoint -force $outputDir/top-post-phys-opt > hw/temp.log
+#not in 2013.2 report_timing_summary -warn_on_violation -file $outputDir/top-post-place-timing-summary.rpt > hw/temp.log
 #
 # STEP#4: run router, report actual utilization and timing, write checkpoint design, run drc, write verilog and xdc out
 #
 command route_design hw/route_design.log
-write_checkpoint -force $outputDir/%(dut)s_post_route > hw/temp.log
+write_checkpoint -force $outputDir/top-post-route > hw/temp.log
 #not in 2013.2 report_timing_summary -warn_on_violation
-#not in 2013.2 report_timing_summary -warn_on_violation -file $outputDir/%(dut)s_post_route_timing_summary.rpt > hw/temp.log
+#not in 2013.2 report_timing_summary -warn_on_violation -file $outputDir/top-post-route-timing-summary.rpt > hw/temp.log
 report_timing -nworst 20 -sort_by slack -path_type summary -slack_lesser_than 0.2 -unique_pins
 puts "****************************************"
 puts "If timing report says 'No timing paths found.' then the design met the timing constraints."
 puts "If it reported negative slack, then the design did not meet the timing constraints."
 puts "****************************************"
-report_timing_summary -file $outputDir/%(dut)s_post_route_timing_summary.rpt > hw/temp.log
-report_timing -sort_by group -max_paths 100 -path_type summary -file $outputDir/%(dut)s_post_route_timing.rpt > hw/temp.log
-report_clock_utilization -file $outputDir/%(dut)s_clock_util.rpt > hw/temp.log
-report_utilization -file $outputDir/%(dut)s_post_route_util.rpt > hw/temp.log
-report_datasheet -file $outputDir/%(dut)s_post_route_datasheet.rpt > hw/temp.log
-report_io -file $outputDir/%(dut)s_post_route_io.rpt > hw/temp.log
-#report_power -file $outputDir/%(dut)s_post_route_power.rpt
-#report_drc -file $outputDir/%(dut)s_post_imp_drc.rpt
-#write_verilog -force $outputDir/%(dut)s_impl_netlist.v
-write_xdc -no_fixed_only -force $outputDir/%(dut)s_impl.xdc > hw/temp.log
+report_timing_summary -file $outputDir/top-post-route-timing-summary.rpt > hw/temp.log
+report_timing -sort_by group -max_paths 100 -path_type summary -file $outputDir/top-post-route-timing.rpt > hw/temp.log
+report_clock_utilization -file $outputDir/top-clock_util.rpt > hw/temp.log
+report_utilization -file $outputDir/top-post-route_util.rpt > hw/temp.log
+report_datasheet -file $outputDir/top-post-route_datasheet.rpt > hw/temp.log
+report_io -file $outputDir/top-post-route-io.rpt > hw/temp.log
+#report_power -file $outputDir/top-post-route-power.rpt
+#report_drc -file $outputDir/top-post-imp-drc.rpt
+#write_verilog -force $outputDir/top-impl_netlist.v
+write_xdc -no_fixed_only -force $outputDir/top-impl.xdc > hw/temp.log
 
 ## Halt the flow with an error if the timing constraints weren't met
 ## (thanks to http://xillybus.com/tutorials/vivado-timing-constraints-error for this way to do it)
@@ -255,7 +255,7 @@ if {! [string match -nocase {*timing constraints are met*} $minireport]} {
 # 
 set_property SEVERITY {Warning} [get_drc_checks NSTD-1]
 set_property SEVERITY {Warning} [get_drc_checks UCIO-1]
-report_drc -file $outputDir/%(dut)s_post_route_drc.rpt > hw/temp.log
+report_drc -file $outputDir/top-post-route-drc.rpt > hw/temp.log
 write_bitstream -force -bin_file $outputDir/mkTop.bit
 
 close $rfh
@@ -282,6 +282,7 @@ hw/mkTop.bit: $(vfile)
 fpgamakeRuleTemplate='''
 FPGAMAKE=$(XBSVDIR)/../fpgamake/fpgamake
 fpgamake.mk: $(vfile) Makefile
+	mkdir -p hw
 	$(FPGAMAKE) -o fpgamake.mk %(partitions)s --floorplan=%(floorplan)s -t $(MKTOP) -b hw/mkTop.bit verilog $(XBSVDIR)/verilog
 
 hw/mkTop.bit: fpgamake.mk
@@ -392,7 +393,7 @@ program:
 	fpgajtag bin/mkTop.bin.gz
 
 reprogram:
-	vivado -mode batch -source %(dut)s-reprogram.tcl $(VIVADOFLAGS)
+	vivado -mode batch -source top-reprogram.tcl $(VIVADOFLAGS)
 	xbsvutil reset /dev/fpga0
 
 ## for partial reconfiguration on VC707
@@ -405,15 +406,15 @@ verilog/portalstub.v:
 	make verilog/portal/mkSynthesizeablePortalTop.v
 	cat verilog/portal/mkSynthesizeablePortalTop.v | sed 's/^module /(*black_box*)module /' > verilog/portalstub.v
 
-hw/portaltop_post_synth.dcp: verilog/portal/mkSynthesizeablePortalTop.v $(vfile)
+hw/portaltop-post-synth.dcp: verilog/portal/mkSynthesizeablePortalTop.v $(vfile)
 	make verilog/portalstub.v
 	vivado -mode batch -source $(XBSVDIR)/scripts/portaltop-synth.tcl $(VIVADOFLAGS)
 
-hw/mkpcietop_post_synth.dcp:
+hw/mkpcietop-post-synth.dcp:
 	make verilog/portalstub.v
 	vivado -mode batch -source $(XBSVDIR)/scripts/mkpcietop-synth.tcl $(VIVADOFLAGS)
 
-hw/mkPcieTop_pblock_portalTop_partial.bit: hw/mkpcietop_post_synth.dcp hw/portaltop_post_synth.dcp
+hw/mkPcieTop_pblock_portalTop_partial.bit: hw/mkpcietop-post-synth.dcp hw/portaltop-post-synth.dcp
 	vivado -mode batch -source $(XBSVDIR)/scripts/mkpcietop-partial-reconfiguration.tcl $(VIVADOFLAGS)
 
 partial: hw/mkPcieTop_pblock_portalTop_partial.bit
@@ -428,7 +429,7 @@ bits: hw/mkTop.bit
 	git diff | gzip -c > bin/gitdiff.patch.gz
 	xxd hw/mkTop.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r > bin/mkTop.xdevcfg.bin
 	gzip -f bin/mkTop.xdevcfg.bin
-	$(XBSVDIR)/scripts/check-timing.py bin/%(dut)s_post_route_timing_summary.rpt
+	$(XBSVDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
 
 else
 
@@ -437,7 +438,7 @@ bits: hw/mkTop.bit
 	git rev-parse HEAD > bin/githash
 	git diff | gzip -c > bin/gitdiff.patch.gz
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
-	$(XBSVDIR)/scripts/check-timing.py bin/%(dut)s_post_route_timing_summary.rpt
+	$(XBSVDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
 
 endif
 
