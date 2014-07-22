@@ -51,7 +51,7 @@ extern "C" {
 
   bool processReq32(uint32_t rr){
     HEAD_TYPE *head = &headarr[rr];
-    if (!head->valid && !head->inflight){
+    if (!head->valid){
       for(int i = 0; i < 16; i++){
 	int rv = recv(head->sockfd[i], &head->req, sizeof(memrequest), MSG_DONTWAIT);
 	if(rv > 0){
@@ -59,7 +59,7 @@ extern "C" {
 	  assert(rv == sizeof(memrequest));
 	  head->pnum = i;
 	  head->valid = 1;
-	  head->inflight = rr;
+	  head->inflight = 1;
 	  head->req.addr = (unsigned int *)(((long) head->req.addr) | i << 16);
 	  if(0)
 	  fprintf(stderr, "processReq32(i=%d,rr=%d) {write=%d, addr=%08lx, data=%08x}\n", 
@@ -68,12 +68,12 @@ extern "C" {
 	}
       }
     }
-    return head->valid && head->inflight == rr && head->req.write_flag == rr;
+    return head->valid && head->inflight == 1 && head->req.write_flag == rr;
   }
 
   long processAddr32(int v){
     //fprintf(stderr, "processAddr32()\n");
-    headarr[v].inflight = 1 - v;
+    headarr[v].inflight = 0;
     return (long)headarr[v].req.addr;
   }
   
@@ -86,7 +86,7 @@ extern "C" {
   void readData32(unsigned int x){
     //fprintf(stderr, "readData()\n");
     headarr[0].valid = 0;
-    headarr[0].inflight = 0;
+    //headarr[0].inflight = 0;
     int send_attempts = 0;
     while(send(headarr[0].sockfd[headarr[0].pnum], &x, sizeof(x), 0) == -1){
       if(send_attempts++ > 16){
