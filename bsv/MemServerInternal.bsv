@@ -48,7 +48,7 @@ interface MemReadInternal#(numeric type addrWidth, numeric type dataWidth);
 endinterface
 
 function Bool bad_pointer(ObjectPointer p);
-   return (p > fromInteger(valueOf(MaxNumSGLists)) || p == 0);
+   return (p > fromInteger(valueOf(MaxNumSGLists)));
 endfunction
 
 interface TagGen#(numeric type numClients, numeric type numTags);
@@ -190,7 +190,7 @@ module mkMemReadInternal#(Integer id,
 	 //last_loadClient <= cycle_cnt;
    	 ObjectRequest req <- readClients[selectReg].readReq.get();
    	 if (bad_pointer(req.pointer))
-   	    dmaIndication.dmaError(extend(pack(DmaErrorBadPointer)), req.pointer, 0, 0);
+   	    dmaIndication.dmaError(extend(pack(DmaErrorBadPointer4)), req.pointer, 0, 0);
    	 else begin
 	    tag_gen.tag_request(fromInteger(selectReg), req.tag);
    	    lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
@@ -325,7 +325,7 @@ module mkMemWriteInternal#(Integer iid,
 	  //last_loadClient <= cycle_cnt;
    	  ObjectRequest req <- writeClients[selectReg].writeReq.get();
    	  if (bad_pointer(req.pointer))
-   	     dmaIndication.dmaError(extend(pack(DmaErrorBadPointer)), req.pointer, 0, 0);
+   	     dmaIndication.dmaError(extend(pack(DmaErrorBadPointer5)), req.pointer, 0, 0);
    	  else begin
 	     tag_gen.tag_request(fromInteger(selectReg), req.tag);
    	     lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});

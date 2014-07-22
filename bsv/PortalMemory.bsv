@@ -45,7 +45,11 @@ typedef struct {
 typedef enum {
    DmaErrorNone,
    //DmaErrorAddrResponse,
-   DmaErrorBadPointer,
+   DmaErrorBadPointer1,
+   DmaErrorBadPointer2,
+   DmaErrorBadPointer3,
+   DmaErrorBadPointer4,
+   DmaErrorBadPointer5,
    DmaErrorBadAddrTrans,
    DmaErrorBadPageSize,
    DmaErrorBadNumberEntries,
