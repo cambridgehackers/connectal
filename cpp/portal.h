@@ -49,7 +49,6 @@
 typedef struct PortalInternal {
   struct PortalPoller *poller;
   int fpga_fd;
-  int p_read;
   int fpga_number;
   volatile unsigned int *map_base;
   void *parent;
@@ -78,8 +77,8 @@ unsigned int directory_get_addrbits(unsigned int id);
 #else
 unsigned int read_portal_bsim(int sockfd, volatile unsigned int *addr, int id);
 void write_portal_bsim(int sockfd, volatile unsigned int *addr, unsigned int v, int id);
-#define READL(CITEM, A) read_portal_bsim((CITEM)->p_read, (A), (CITEM)->fpga_number)
-#define WRITEL(CITEM, A, B) write_portal_bsim((CITEM)->p_read, (A), (B), (CITEM)->fpga_number)
+#define READL(CITEM, A) read_portal_bsim((CITEM)->fpga_fd, (A), (CITEM)->fpga_number)
+#define WRITEL(CITEM, A, B) write_portal_bsim((CITEM)->fpga_fd, (A), (B), (CITEM)->fpga_number)
 #endif
 
 #endif /* __PORTAL_OFFSETS_H__ */

@@ -165,7 +165,7 @@ void init_portal_internal(PortalInternal *pint, int id)
 	goto errlab;
     }  
 #else
-    connect_socket(&pint->p_read, "fpga%d_rc", pint->fpga_number);
+    connect_socket(&pint->fpga_fd, "fpga%d_rc", pint->fpga_number);
 #endif
 
 errlab:
