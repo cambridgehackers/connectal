@@ -923,17 +923,6 @@ module  mkMm#(MmIndication ind, TimerIndication timerInd, MmDebugIndication mmDe
       ind.mmfDone(mmfCycles);
    endrule
 
-`ifdef DPS_TESTBENCH
-   let dps <- mkSharedInterleavedDotProdServer;
-   FIFOF#(Vector#(K, Token)) dpsAFifo <- mkSizedFIFO(32);
-   FIFOF#(Vector#(K, Token)) dpsBFifo <- mkSizedFIFO(32);
-   mkConnection(toGet(dpsAFifo), dps.aInput);
-   mkConnection(toGet(dpsBFifo), dps.bInput);
-   rule dpsdebug;
-      let v <- toGet(dps.debug.macCount()).get();
-   endrule
-`endif
-
    FIFOF#(Bool) timerRunning <- mkFIFOF();
    Reg#(Bit#(64)) cycleCount <- mkReg(0);
    Reg#(Bit#(64)) idleCount <- mkReg(0);
@@ -971,21 +960,6 @@ module  mkMm#(MmIndication ind, TimerIndication timerInd, MmDebugIndication mmDe
 
 	 mmfCycles <= 0;
 	 busyFifo.enq(True);
-      endmethod
-      method Action dpsCount(Bit#(32) count);
-`ifdef DPS_TESTBENCH
-	 dps.numElts <= count;
-`endif
-      endmethod
-      method Action dpsA(Bit#(32) aval);
-`ifdef DPS_TESTBENCH
-	 aFifo.enq(aval);
-`endif
-      endmethod
-      method Action dpsB(Bit#(32) bval);
-`ifdef DPS_TESTBENCH
-	 aFifo.enq(bval);
-`endif
       endmethod
    endinterface
    interface MmDebugRequest mmDebug;

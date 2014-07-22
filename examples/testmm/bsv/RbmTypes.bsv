@@ -70,7 +70,6 @@ typedef enum {
 
 interface MmIndication;
    method Action mmfDone(Bit#(64) cycles);
-   method Action dpsVal(Bit#(32) val);
 endinterface
 
 interface MmRequest;
@@ -80,9 +79,6 @@ interface MmRequest;
 		     Bit#(32) r1_x_c1, Bit#(32) c1_x_j,
 		     Bit#(32) r2_x_c2, Bit#(32) c2_x_k,
 		     Bit#(32) r1_x_r1, Bit#(32) r2_x_j);
-   method Action dpsCount(Bit#(32) count);
-   method Action dpsA(Bit#(32) aval);
-   method Action dpsB(Bit#(32) bval);
 endinterface
 
 interface SigmoidIndication;
