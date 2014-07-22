@@ -34,31 +34,26 @@
 
 #include "sock_utils.h"
 
-static struct {
-    int p_read;
-    int p_write;
-} portals[16];
-
 typedef struct {
     struct memrequest req;
     unsigned int pnum;
     int valid;
     int inflight;
+    int sockfd[16];
 } HEAD_TYPE;
 static HEAD_TYPE headarr[2]; /* 0 -> read; 1 -> write */
 
 extern "C" {
   void initPortal(unsigned long id){
-    thread_socket(&portals[id].p_read, "fpga%ld_rc", id);
-    thread_socket(&portals[id].p_write, "fpga%ld_wc", id);
+    thread_socket(&headarr[0].sockfd[id], "fpga%ld_rc", id);
+    thread_socket(&headarr[1].sockfd[id], "fpga%ld_wc", id);
   }
 
   bool processReq32(uint32_t rr){
     HEAD_TYPE *head = &headarr[rr];
     if (!head->valid && !head->inflight){
       for(int i = 0; i < 16; i++){
-	int chan = rr ? portals[i].p_write : portals[i].p_read;
-	int rv = recv(chan, &head->req, sizeof(memrequest), MSG_DONTWAIT);
+	int rv = recv(head->sockfd[i], &head->req, sizeof(memrequest), MSG_DONTWAIT);
 	if(rv > 0){
 	  //fprintf(stderr, "recv size %d\n", rv);
 	  assert(rv == sizeof(memrequest));
@@ -93,7 +88,7 @@ extern "C" {
     headarr[0].valid = 0;
     headarr[0].inflight = 0;
     int send_attempts = 0;
-    while(send(portals[headarr[0].pnum].p_read, &x, sizeof(x), 0) == -1){
+    while(send(headarr[0].sockfd[headarr[0].pnum], &x, sizeof(x), 0) == -1){
       if(send_attempts++ > 16){
 	fprintf(stderr, "(%d) send failure\n", headarr[0].pnum);
 	exit(1);
