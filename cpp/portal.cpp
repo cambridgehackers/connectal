@@ -57,6 +57,14 @@ static uint64_t c_start[MAX_TIMER_COUNT];
 static uint64_t lap_timer_temp;
 static TIMETYPE timers[MAX_TIMERS];
 
+uint64_t directory_cycle_count()
+{
+    init_directory();
+  unsigned int high_bits = READL(&globalDirectory, PORTAL_DIRECTORY_COUNTER_MSB);
+  unsigned int low_bits  = READL(&globalDirectory, PORTAL_DIRECTORY_COUNTER_LSB);
+  return (((uint64_t)high_bits)<<32) | ((uint64_t)low_bits);
+}
+
 void start_timer(unsigned int i) 
 {
   assert(i < MAX_TIMER_COUNT);
@@ -102,14 +110,18 @@ void print_timer(int loops)
     }
 }
 
-void init_portal_internal(PortalInternal *pint, int fpga_number, int addrbits)
+void init_portal_internal(PortalInternal *pint, int id)
 {
     int rc = 0;
     char buff[128];
+    int addrbits = 16;
 
     init_directory();
     memset(pint, 0, sizeof(*pint));
-    pint->fpga_number = fpga_number;
+    if (id != -1) {
+        pint->fpga_number = directory_get_fpga(id);
+        addrbits = directory_get_addrbits(id);
+    }
     pint->fpga_fd = -1;
 #ifdef ZYNQ
     PortalEnableInterrupt intsettings = {3 << 14, (3 << 14) + 4};
@@ -188,7 +200,7 @@ static int once = 0;
   if (once)
       return;
   once = 1;
-  init_portal_internal(&globalDirectory, 0, 16);
+  init_portal_internal(&globalDirectory, -1);
 #ifdef ZYNQ /* There is no way to set userclock freq from host on PCIE */
   // start by setting the clock frequency (this only has any effect on the zynq platform)
   PortalClockRequest request;
@@ -216,13 +228,6 @@ static int once = 0;
   }
 }
 
-uint64_t directory_cycle_count()
-{
-    init_directory();
-  unsigned int high_bits = READL(&globalDirectory, PORTAL_DIRECTORY_COUNTER_MSB);
-  unsigned int low_bits  = READL(&globalDirectory, PORTAL_DIRECTORY_COUNTER_LSB);
-  return (((uint64_t)high_bits)<<32) | ((uint64_t)low_bits);
-}
 unsigned int directory_get_fpga(unsigned int id)
 {
   int i;
@@ -267,7 +272,7 @@ void portalTrace_stop()
 
 PortalInternalCpp::PortalInternalCpp(int id)
 {
-    init_portal_internal(&pint, directory_get_fpga(id), directory_get_addrbits(id));
+    init_portal_internal(&pint, id);
     pint.parent = (void *)this; /* used for callback functions */
 }
 

@@ -66,7 +66,7 @@ typedef struct PortalInternal {
 #ifdef __cplusplus
 #include "portal_internal.h"
 #endif
-void init_portal_internal(PortalInternal *pint, int fpga_number, int addrbits);
+void init_portal_internal(PortalInternal *pint, int id);
 uint64_t directory_cycle_count();
 unsigned int directory_get_fpga(unsigned int id);
 unsigned int directory_get_addrbits(unsigned int id);
