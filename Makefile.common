@@ -8,7 +8,7 @@ gen.%:
 	make BOARD=$* gentarget prebuild
 
 build.%: gen.%
-	make -C $* BOARD=$* all
+	make -C $* BOARD=$* all prebuild1
 
 run.%:
 	make -C $* BOARD=$* run
@@ -105,3 +105,6 @@ endif
 
 prebuild::
 	# additional steps needed before making verilog etc
+
+prebuild1::
+	# additional steps needed before invoking compile

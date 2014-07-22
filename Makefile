@@ -41,14 +41,18 @@ parsetab.py: syntax.py
 memtests =  memread_manyclients  \
             memwrite_manyclients 
 
-matrixtests =testmm2.2.2         \
+matrixtests2 =testmm2.2.2        \
+	    testmm16.16.2        \
 	    testmm4.2.2          \
 	    testmm4.4.2          \
-	    testmm4.4.4          \
-	    testmm8.8.2          \
+	    testmm8.8.2          
+
+matrixtests4 = testmm4.4.4       \
 	    testmm8.8.4          \
-	    testmm16.16.2        \
 	    testmm16.16.4        
+
+matrixtests = $(matrixtests2)    \
+	    $(matrixtests4)       
 
 tests    =  $(memtests)          \
 	    $(matrixtests)       \
@@ -279,6 +283,7 @@ matrixtests.bluesim:  $(addprefix tests/, $(addsuffix .bluesim, $(matrixtests)))
 matrixtests.bluesimrun:  $(addprefix tests/, $(addsuffix .bluesimrun, $(matrixtests)))
 matrixtests.kc705:  $(addprefix tests/, $(addsuffix .kc705, $(matrixtests)))
 matrixtests.vc707:  $(addprefix tests/, $(addsuffix .vc707, $(matrixtests)))
+matrixtests.zc706:  $(addprefix tests/, $(addsuffix .zc706, $(matrixtests2)))
 
 #################################################################################################
 # misc
