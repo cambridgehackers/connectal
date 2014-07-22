@@ -122,7 +122,7 @@ int main(int argc, const char **argv)
 
   long req_freq = 100000000;
   long freq = 0;
-  poller->setClockFrequency(0, req_freq, &freq);
+  setClockFrequency(0, req_freq, &freq);
   fprintf(stderr, "Requested FCLK[0]=%d actually %d\n", req_freq, freq);
 
   matAllocator = new PortalMatAllocator(dmap, dma);
