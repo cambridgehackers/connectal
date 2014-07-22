@@ -275,15 +275,19 @@ foreach {pat} {CLK_GATE_hdmi_clock_if CLK_*deleteme_unused_clock* CLK_GATE_*dele
 bitsmakeRuleTemplate='''
 hw/mkTop.bit: $(vfile)
 	vivado -mode batch -source vivado-impl.tcl $(VIVADOFLAGS)
+	mkdir -p bin
+	cp -f hw/*.rpt bin
 '''
 
 fpgamakeRuleTemplate='''
 FPGAMAKE=$(XBSVDIR)/../fpgamake/fpgamake
-fpgamake.mk: $(vfile)
+fpgamake.mk: $(vfile) Makefile
 	$(FPGAMAKE) -o fpgamake.mk %(partitions)s --floorplan=%(floorplan)s -t $(MKTOP) -b hw/mkTop.bit verilog $(XBSVDIR)/verilog
 
 hw/mkTop.bit: fpgamake.mk
 	make -f fpgamake.mk
+	mkdir -p bin
+	cp -f Impl/*/*.rpt bin
 '''
 
 makefileTemplate='''
@@ -420,7 +424,6 @@ ifeq ($(OS),android)
 
 bits: hw/mkTop.bit
 	mkdir -p bin
-	cp -f hw/*.rpt bin
 	git rev-parse HEAD > bin/githash
 	git diff | gzip -c > bin/gitdiff.patch.gz
 	xxd hw/mkTop.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r > bin/mkTop.xdevcfg.bin
@@ -431,7 +434,6 @@ else
 
 bits: hw/mkTop.bit
 	mkdir -p bin
-	cp -f hw/*.rpt bin
 	git rev-parse HEAD > bin/githash
 	git diff | gzip -c > bin/gitdiff.patch.gz
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
