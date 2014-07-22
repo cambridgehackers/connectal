@@ -50,13 +50,13 @@ public:
     assert(b == v2b);
     incr_cnt();
   }
-  virtual void heard3(const S1& s){
+  virtual void heard3(S1 s){
     fprintf(stderr, "heard3(S1{a:%d,b:%d})\n", s.a, s.b);
     assert(s.a == s1.a);
     assert(s.b == s1.b);
     incr_cnt();
   }
-  virtual void heard4(const S2& s){
+  virtual void heard4(S2 s){
     fprintf(stderr, "heard4(S2{a:%d,b:%d,c:%d})\n", s.a,s.b,s.c);
     assert(s.a == s2.a);
     assert(s.b == s2.b);
@@ -77,7 +77,7 @@ public:
     assert(c == v6c);
     incr_cnt();
   }
-  virtual void heard7(uint32_t a, const E1& b) {
+  virtual void heard7(uint32_t a, E1 b) {
     fprintf(stderr, "heard7(%08x, %08x)\n", a, b);
     assert(a == v7a);
     assert(b == v7b);
