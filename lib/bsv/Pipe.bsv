@@ -52,6 +52,10 @@ typeclass MkPipeOut#(type a, type b);
    module mkPipeOut#(b in)(PipeOut#(a));
 endtypeclass
 
+typeclass MkPipeIn#(type a, type b);
+   module mkPipeIn#(b in)(PipeIn#(a));
+endtypeclass
+
 instance ToPipeIn#(a, FIFOF#(a));
    function PipeIn#(a) toPipeIn(FIFOF#(a) in);
       return (interface PipeIn#(a);
@@ -133,6 +137,18 @@ instance MkPipeOut#(a, Get#(a))
 	 fifo.enq(v);
       endrule
       return toPipeOut(fifo);
+   endmodule
+endinstance
+
+instance MkPipeIn#(a, Put#(a))
+   provisos (Bits#(a, asz));
+   module mkPipeIn#(Put#(a) out)(PipeIn#(a));
+      FIFOF#(a) fifo <- mkFIFOF();
+      rule connect;
+	 let v <- toGet(fifo).get;
+	 out.put(v);
+      endrule
+      return toPipeIn(fifo);
    endmodule
 endinstance
 
@@ -315,11 +331,15 @@ instance FunnelPipesPipelined#(1,k,a,bpc)
 	    function Bit#(bpc) sh(Bit#(bpc) x) = x<<(valueOf(bpc)-bits);
 	    for(Integer l = 0; l < 2**bits; l=l+1)  begin
 	       let buff <- mkFIFOF;
-	       outs[(2**bits)*i+l] = toPipeOut(buff);
-	       rule xfer if(tpl_1(ins[i].first)[(valueOf(logk)-1):(valueOf(logk)-valueOf(bpc))] == sh(fromInteger(l)));
-		  match{.idx, .v} <- toGet(ins[i]).get;
-		  buff.enq(tuple2(idx<<valueOf(bpc), v));
-	       endrule
+	       // extra conditional in case 'k' is not a power of 2
+	       let idx = (2**bits)*i+l;
+	       if (idx < valueOf(k)) begin
+		  outs[idx] = toPipeOut(buff);
+		  rule xfer if(tpl_1(ins[i].first)[(valueOf(logk)-1):(valueOf(logk)-valueOf(bpc))] == sh(fromInteger(l)));
+		     match{.idx, .v} <- toGet(ins[i]).get;
+		     buff.enq(tuple2(idx<<valueOf(bpc), v));
+		  endrule
+	       end
 	    end
 	 end
 	 ins = outs;

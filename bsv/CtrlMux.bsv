@@ -28,10 +28,12 @@ import GetPut::*;
 import FIFOF::*;
 import SpecialFIFOs::*;
 import FIFO::*;
+import Connectable::*;
 
 import Portal::*;
 import Directory::*;
 import MemTypes::*;
+import Pipe::*;
 
 module mkInterruptMux#(Vector#(numPortals,ReadOnly#(Bool)) inputs) (ReadOnly#(Bool))
    provisos(Add#(nz, TLog#(numPortals), 4),
@@ -54,7 +56,10 @@ endmodule
 module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
 		   Vector#(numPortals,MemPortal#(aw,dataWidth)) portals) (MemSlave#(addrWidth,dataWidth))
    provisos(Add#(1,numPortals,numInputs),
-	    Add#(a__,TLog#(numInputs),4));
+	    Add#(a__,TLog#(numInputs),4),
+	    Min#(2,TLog#(numInputs),bpc),
+	    FunnelPipesPipelined#(1, numInputs, ObjectData#(dataWidth), bpc)
+	    );
    
    Vector#(numInputs, MemSlave#(aw,dataWidth)) ifcs = cons(dir.portalIfc.slave,map(getSlave, portals));
    let port_sel_low = valueOf(aw);
@@ -69,11 +74,19 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
    FIFO#(MemRequest#(aw)) req_ars <- mkSizedFIFO(1);
    FIFO#(void) req_ar_fifo <- mkSizedFIFO(1);
    FIFO#(Bit#(TLog#(numInputs))) rs <- mkFIFO();
-   
+   function Get#(ObjectData#(dataWidth)) bar0(MemSlave#(aw,dataWidth) x) = x.read_server.readData;
+   Vector#(numInputs, PipeOut#(ObjectData#(dataWidth))) foo0 <- mapM(mkPipeOut, map(bar0,ifcs)); 
+   FunnelPipe#(1, numInputs, ObjectData#(dataWidth), bpc) read_data_funnel <- mkFunnelPipesPipelined(foo0);
+      
    FIFO#(MemRequest#(aw)) req_aws <- mkSizedFIFO(1);
    FIFO#(void) req_aw_fifo <- mkSizedFIFO(1);
    FIFO#(Bit#(TLog#(numInputs))) ws <- mkFIFO();
-   
+   FIFOF#(Tuple2#(Bit#(TLog#(numInputs)), ObjectData#(dataWidth))) write_data <- mkFIFOF;
+   UnFunnelPipe#(1, numInputs, ObjectData#(dataWidth), bpc) write_data_unfunnel <- mkUnFunnelPipesPipelined(cons(toPipeOut(write_data),nil));
+   function Put#(ObjectData#(dataWidth)) bar1(MemSlave#(aw,dataWidth) x) = x.write_server.writeData;
+   Vector#(numInputs, PipeIn#(ObjectData#(dataWidth))) foo1 <- mapM(mkPipeIn, map(bar1,ifcs)); 
+   zipWithM(mkConnection, write_data_unfunnel, foo1);
+ 
    rule req_aw;
       let req <- toGet(req_aws).get;
       ifcs[ws.first].write_server.writeReq.put(req);
@@ -96,7 +109,7 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
       endinterface
       interface Put writeData;
 	 method Action put(ObjectData#(dataWidth) wdata);
-	    ifcs[ws.first].write_server.writeData.put(wdata);
+	    write_data.enq(tuple2(ws.first,wdata));
 	 endmethod
       endinterface
       interface Get writeDone;
@@ -120,7 +133,7 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
       endinterface
       interface Get readData;
 	 method ActionValue#(ObjectData#(dataWidth)) get();
-	    let rv <- ifcs[rs.first].read_server.readData.get();
+	    let rv <- toGet(read_data_funnel[0]).get;
 	    req_ar_fifo.deq;
 	    rs.deq();
 	    //$display("mkSlaveMux.readData rs=%d data=%h", rs.first, rv.data);
