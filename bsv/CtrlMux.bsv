@@ -32,7 +32,6 @@ import FIFO::*;
 import Portal::*;
 import Directory::*;
 import MemTypes::*;
-import RegFileA::*;
 
 module mkInterruptMux#(Vector#(numPortals,ReadOnly#(Bool)) inputs) (ReadOnly#(Bool))
    provisos(Add#(nz, TLog#(numPortals), 4),
