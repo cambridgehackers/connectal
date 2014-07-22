@@ -95,10 +95,6 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    let page_shift4 = fromInteger(valueOf(SGListPageShift4));
    let page_shift8 = fromInteger(valueOf(SGListPageShift8));
    
-   let ord0 = 40'd1 << page_shift0;
-   let ord4 = 40'd1 << page_shift4;
-   let ord8 = 40'd1 << page_shift8;
-
    function BRAMServer#(a,b) portsel(BRAM2Port#(a,b) x, Integer i);
       if(i==0) return x.portA;
       else return x.portB;
@@ -117,7 +113,6 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 reqs[i].enq(req);
       endrule
 
-   
    // pipeline the address lookup
    for(Integer i = 0; i < 2; i=i+1) begin
       rule stage2;
@@ -191,12 +186,9 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 //$display("p ages[%d].response page=%h offset=%h", i, page, offset);
 	 Bit#(ObjectOffsetSize) rv = 0;
 	 case (offset) matches
-	    tagged OOrd0 .o:
-		  rv = {truncate(page),o};
-	    tagged OOrd4 .o:
-		  rv = {truncate(page),o};
-	    tagged OOrd8 .o:
-		  rv = {truncate(page),o};
+	    tagged OOrd0 .o: rv = {truncate(page),o};
+	    tagged OOrd4 .o: rv = {truncate(page),o};
+	    tagged OOrd8 .o: rv = {truncate(page),o};
 	 endcase
 	 pageResponseFifos[i].enq(truncate(rv));
       endrule
@@ -209,42 +201,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
       dmaIndication.configResp(extend(ptr));
    endrule
 
-   FIFO#(Tuple3#(SGListId,Bit#(40),Bit#(32))) sglistFifo <- mkFIFO();
    Reg#(Bit#(8))                      idxReg <- mkReg(0);
-   rule sglistRule;
-      match { .ptr, .paddr, .len } <- toGet(sglistFifo).get();
-
-      // $display("sglist(ptr=%d, paddr=%h, len=%h", ptr, paddr,len);
-      if (idxReg+1 == 0) begin
-	 $display("sglist: exceeded maximun length of sglist");
-	 dmaIndication.dmaError(extend(pack(DmaErrorBadNumberEntries)), extend(ptr),extend(len), extend(idxReg));
-      end
-      else begin
-	 if (len == 0) begin
-	    idxReg <= 0;
-	 end
-	 else begin
-	    idxReg <= idxReg+1;
-	 end
-	 configRespFifo.enq(truncate(ptr));
-	 portsel(pages, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
-             address:{truncate(ptr-1),idxReg}, datain:truncate(paddr)});
-      end
-   endrule
-
-   FIFOF#(Tuple4#(RegionsIdx,Region,Region,Region)) regionFifo <- mkSizedFIFOF(1);
-   rule regionRule;
-      match { .ptr, .region8, .region4, .region0 } <- toGet(regionFifo).get();
-      let idx = ptr-1;
-      portsel(reg8, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
-          address: idx, datain: region8});
-      portsel(reg4, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
-          address: idx, datain: region4});
-      portsel(reg0, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
-          address: idx, datain: region0});
-      //$display("region ptr=%d off8=%h off4=%h off0=%h", ptr, off8, off4, off0);
-      configRespFifo.enq(ptr);
-   endrule
 
    Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addrServers;
    for(Integer i = 0; i < 2; i=i+1)
@@ -268,13 +225,35 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
       Region region8 = Region { barrier: barr8, idxOffset: off8 };
       Region region4 = Region { barrier: barr4, idxOffset: off4 };
       Region region0 = Region { barrier: barr0, idxOffset: off0 };
-      regionFifo.enq(tuple4(truncate(ptr),region8,region4,region0));
+      //regionFifo.enq(tuple4(truncate(ptr),region8,region4,region0));
+      let idx = ptr-1;
+      portsel(reg8, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
+          address: truncate(idx), datain: region8});
+      portsel(reg4, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
+          address: truncate(idx), datain: region4});
+      portsel(reg0, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
+          address: truncate(idx), datain: region0});
+      //$display("region ptr=%d off8=%h off4=%h off0=%h", ptr, off8, off4, off0);
+      configRespFifo.enq(truncate(ptr));
    endmethod
 
    method Action sglist(Bit#(32) ptr, Bit#(40) paddr, Bit#(32) len);
-      sglistFifo.enq(tuple3(truncate(ptr), paddr, len));
+      if (idxReg+1 == 0) begin
+	 $display("sglist: exceeded maximun length of sglist");
+	 //dmaIndication.dmaError(extend(pack(DmaErrorBadNumberEntries)), extend(ptr),extend(len), extend(idxReg));
+      end
+      else begin
+	 if (len == 0) begin
+	    idxReg <= 0;
+	 end
+	 else begin
+	    idxReg <= idxReg+1;
+	 end
+	 configRespFifo.enq(truncate(ptr));
+	 portsel(pages, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
+             address:{truncate(ptr-1),idxReg}, datain:truncate(paddr)});
+      end
    endmethod
-
    interface addr = addrServers;
 
 endmodule
