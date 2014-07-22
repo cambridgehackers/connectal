@@ -63,7 +63,7 @@ static void manual_event(void)
 static PortalInternal *init_fpga_slot(PortalInternal *pint, int id)
 {
    // this example uses Directory to map IfcName_xxx -> fpga number
-   init_portal_internal(pint, globalDirectory.get_fpga(id), globalDirectory.get_addrbits(id));
+   init_portal_internal(pint, directory_get_fpga(id), directory_get_addrbits(id));
    return pint;
 }
 

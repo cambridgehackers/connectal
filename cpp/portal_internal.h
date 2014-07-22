@@ -82,15 +82,6 @@ public:
   void* portalExec(void* __x);
 };
 
-class Directory : public PortalInternalCpp
-{
- public:
-  Directory();
-  unsigned int get_fpga(unsigned int id);
-  unsigned int get_addrbits(unsigned int id);
-  uint64_t cycle_count();
-};
-
 void start_timer(unsigned int i);
 uint64_t lap_timer(unsigned int i);
 void init_timer(void);
@@ -110,6 +101,5 @@ void portalTrace_stop();
 int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
 
 extern int portalExec_timeout;
-extern Directory globalDirectory;
 
 #endif // _PORTAL_H_

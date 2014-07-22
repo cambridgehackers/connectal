@@ -36,7 +36,7 @@
 
 // Directory offsets
 
-#define PORTAL_DIRECTORY_OFFSET(A)      &pint.map_base[PORTAL_REQ_FIFO(0)+128+(A)]
+#define PORTAL_DIRECTORY_OFFSET(A)      &globalDirectory.map_base[PORTAL_REQ_FIFO(0)+128+(A)]
 #define PORTAL_DIRECTORY_VERSION        PORTAL_DIRECTORY_OFFSET(0)
 #define PORTAL_DIRECTORY_TIMESTAMP      PORTAL_DIRECTORY_OFFSET(1)
 #define PORTAL_DIRECTORY_NUMPORTALS     PORTAL_DIRECTORY_OFFSET(2)
@@ -67,6 +67,9 @@ typedef struct PortalInternal {
 #include "portal_internal.h"
 #endif
 void init_portal_internal(PortalInternal *pint, int fpga_number, int addrbits);
+uint64_t directory_cycle_count();
+unsigned int directory_get_fpga(unsigned int id);
+unsigned int directory_get_addrbits(unsigned int id);
 #define PORTAL_PRINTF printf
 #endif
 

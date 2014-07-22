@@ -70,7 +70,8 @@
 #define ALOGE(fmt, ...) fprintf(stderr, "PORTAL: " fmt, __VA_ARGS__)
 #endif
 
-Directory globalDirectory;
+static void init_directory(void);
+static PortalInternal globalDirectory;
 
 static PortalPoller *defaultPoller = new PortalPoller();
 static uint64_t c_start[MAX_TIMER_COUNT];
@@ -80,13 +81,13 @@ static TIMETYPE timers[MAX_TIMERS];
 void start_timer(unsigned int i) 
 {
   assert(i < MAX_TIMER_COUNT);
-  c_start[i] = globalDirectory.cycle_count();
+  c_start[i] = directory_cycle_count();
 }
 
 uint64_t lap_timer(unsigned int i)
 {
   assert(i < MAX_TIMER_COUNT);
-  uint64_t temp = globalDirectory.cycle_count();
+  uint64_t temp = directory_cycle_count();
   lap_timer_temp = temp;
   return temp - c_start[i];
 }
@@ -127,6 +128,7 @@ void init_portal_internal(PortalInternal *pint, int fpga_number, int addrbits)
     int rc = 0;
     char buff[128];
     volatile unsigned int * dev_base = 0;
+    init_directory();
     pint->fpga_number = fpga_number;
     pint->fpga_fd = -1;
     pint->map_base = 0x0;
@@ -192,8 +194,8 @@ PortalInternalCpp::PortalInternalCpp(int id)
 {
     unsigned int addrbits = 16, fpga_number = 0;
     if (id != -1) {    // not Directory
-      fpga_number = globalDirectory.get_fpga(id);
-      addrbits = globalDirectory.get_addrbits(id);
+      fpga_number = directory_get_fpga(id);
+      addrbits = directory_get_addrbits(id);
     }
     init_portal_internal(&pint, fpga_number, addrbits);
     pint.parent = (void *)this; /* used for callback functions */
@@ -264,11 +266,12 @@ int PortalPoller::registerInstance(Portal *portal)
 int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)
 {
     int status = 0;
+    init_directory();
 #ifdef ZYNQ
     PortalClockRequest request;
     request.clknum = clkNum;
     request.requested_rate = requestedFrequency;
-    status = ioctl(globalDirectory.pint.fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
+    status = ioctl(globalDirectory.fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
     if (status == 0 && actualFrequency)
 	*actualFrequency = request.actual_rate;
     if (status < 0)
@@ -374,6 +377,7 @@ void* portalExec(void* __x)
 
 void* portalExec_init(void)
 {
+    init_directory();
   return defaultPoller->portalExec_init();
 }
 
@@ -408,16 +412,20 @@ void portalExec_start()
     defaultPoller->portalExec_start();
 }
 
-Directory::Directory() 
-  : PortalInternalCpp(-1)
+static void init_directory(void)
 {
+static int once = 0;
+  if (once)
+      return;
+  once = 1;
+  init_portal_internal(&globalDirectory, 0, 16);
 #ifdef ZYNQ /* There is no way to set userclock freq from host on PCIE */
   // start by setting the clock frequency (this only has any effect on the zynq platform)
   PortalClockRequest request;
   long reqF = 100000000; // 100 Mhz
   request.clknum = 0;
   request.requested_rate = reqF;
-  int status = ioctl(pint.fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
+  int status = ioctl(globalDirectory.fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
   if (status < 0)
     fprintf(stderr, "Directory::Directory() error setting fclk0, errno=%d\n", errno);
   fprintf(stderr, "Directory::Directory() set fclk0 (%ld,%ld)\n", reqF, request.actual_rate);
@@ -425,58 +433,63 @@ Directory::Directory()
 
   // finally scan
   unsigned int i;
-  if(1) fprintf(stderr, "Directory::scan(fpga%d)\n", pint.fpga_number);
+  if(1) fprintf(stderr, "Directory::scan(fpga%d)\n", globalDirectory.fpga_number);
   if(1){
-    time_t timestamp  = READL(&pint, PORTAL_DIRECTORY_TIMESTAMP);
-    uint32_t numportals = READL(&pint, PORTAL_DIRECTORY_NUMPORTALS);
-    fprintf(stderr, "version=%d\n",  READL(&pint, PORTAL_DIRECTORY_VERSION));
+    time_t timestamp  = READL(&globalDirectory, PORTAL_DIRECTORY_TIMESTAMP);
+    uint32_t numportals = READL(&globalDirectory, PORTAL_DIRECTORY_NUMPORTALS);
+    fprintf(stderr, "version=%d\n",  READL(&globalDirectory, PORTAL_DIRECTORY_VERSION));
     fprintf(stderr, "timestamp=%s",  ctime(&timestamp));
     fprintf(stderr, "numportals=%d\n", numportals);
-    fprintf(stderr, "addrbits=%d\n", READL(&pint, PORTAL_DIRECTORY_ADDRBITS));
+    fprintf(stderr, "addrbits=%d\n", READL(&globalDirectory, PORTAL_DIRECTORY_ADDRBITS));
     for(i = 0; (i < numportals) && (i < 32); i++)
-      fprintf(stderr, "portal[%d]: ifcid=%d, ifctype=%08x\n", i, READL(&pint, PORTAL_DIRECTORY_PORTAL_ID(i)), READL(&pint, PORTAL_DIRECTORY_PORTAL_TYPE(i)));
+      fprintf(stderr, "portal[%d]: ifcid=%d, ifctype=%08x\n", i, READL(&globalDirectory, PORTAL_DIRECTORY_PORTAL_ID(i)), READL(&globalDirectory, PORTAL_DIRECTORY_PORTAL_TYPE(i)));
   }
 }
 
-uint64_t Directory::cycle_count()
+uint64_t directory_cycle_count()
 {
-  unsigned int high_bits = READL(&pint, PORTAL_DIRECTORY_COUNTER_MSB);
-  unsigned int low_bits  = READL(&pint, PORTAL_DIRECTORY_COUNTER_LSB);
+    init_directory();
+  unsigned int high_bits = READL(&globalDirectory, PORTAL_DIRECTORY_COUNTER_MSB);
+  unsigned int low_bits  = READL(&globalDirectory, PORTAL_DIRECTORY_COUNTER_LSB);
   return (((uint64_t)high_bits)<<32) | ((uint64_t)low_bits);
 }
-unsigned int Directory::get_fpga(unsigned int id)
+unsigned int directory_get_fpga(unsigned int id)
 {
   int i;
-  int numportals = READL(&pint, PORTAL_DIRECTORY_NUMPORTALS);
+    init_directory();
+  int numportals = READL(&globalDirectory, PORTAL_DIRECTORY_NUMPORTALS);
   for(i = 0; i < numportals; i++){
-    if(READL(&pint, PORTAL_DIRECTORY_PORTAL_ID(i)) == id)
+    if(READL(&globalDirectory, PORTAL_DIRECTORY_PORTAL_ID(i)) == id)
       return i+1;
   }
-  fprintf(stderr, "Directory::fpga(id=%d) id not found\n", id);
+  fprintf(stderr, "directory_fpga(id=%d) id not found\n", id);
   exit(1);
 }
 
-unsigned int Directory::get_addrbits(unsigned int id)
+unsigned int directory_get_addrbits(unsigned int id)
 {
-  return READL(&pint, PORTAL_DIRECTORY_ADDRBITS);
+    init_directory();
+  return READL(&globalDirectory, PORTAL_DIRECTORY_ADDRBITS);
 }
 
 void portalTrace_start()
 {
+    init_directory();
 #ifndef ZYNQ
   tTraceInfo traceInfo;
   traceInfo.trace = 1;
-  int res = ioctl(globalDirectory.pint.fpga_fd,BNOC_TRACE,&traceInfo);
+  int res = ioctl(globalDirectory.fpga_fd,BNOC_TRACE,&traceInfo);
   if (res)
     fprintf(stderr, "Failed to start tracing. errno=%d\n", errno);
 #endif
 }
 void portalTrace_stop()
 {
+    init_directory();
 #ifndef ZYNQ
   tTraceInfo traceInfo;
   traceInfo.trace = 0;
-  int res = ioctl(globalDirectory.pint.fpga_fd,BNOC_TRACE,&traceInfo);
+  int res = ioctl(globalDirectory.fpga_fd,BNOC_TRACE,&traceInfo);
   if (res)
     fprintf(stderr, "Failed to stop tracing. errno=%d\n", errno);
 #endif
