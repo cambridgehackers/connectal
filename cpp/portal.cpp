@@ -106,37 +106,34 @@ void init_portal_internal(PortalInternal *pint, int fpga_number, int addrbits)
 {
     int rc = 0;
     char buff[128];
-    volatile unsigned int * dev_base = 0;
+
     init_directory();
+    memset(pint, 0, sizeof(*pint));
     pint->fpga_number = fpga_number;
     pint->fpga_fd = -1;
-    pint->map_base = 0x0;
-    pint->parent = NULL;
-    sprintf(buff, "fpga%d", pint->fpga_number);
 #ifdef ZYNQ
     PortalEnableInterrupt intsettings = {3 << 14, (3 << 14) + 4};
-    FILE *pgfile = fopen("/sys/devices/amba.0/f8007000.devcfg/prog_done", "r");
-    if (!pgfile) {
+    int pgfile = open("/sys/devices/amba.0/f8007000.devcfg/prog_done", O_RDONLY);
+    if (pgfile == -1) {
         // 3.9 kernel uses amba.2
-        pgfile = fopen("/sys/devices/amba.2/f8007000.devcfg/prog_done", "r");
+        pgfile = open("/sys/devices/amba.2/f8007000.devcfg/prog_done", O_RDONLY);
     }
-    if (pgfile == 0) {
+    if (pgfile == -1) {
 	ALOGE("failed to open /sys/devices/amba.[02]/f8007000.devcfg/prog_done %d\n", errno);
 	printf("failed to open /sys/devices/amba.[02]/f8007000.devcfg/prog_done %d\n", errno);
 	rc = -1;
 	goto errlab;
     }
-    fgets(buff, sizeof(buff), pgfile);
-    if (buff[0] != '1') {
+    if (read(pgfile, buff, 1) != 1 || buff[0] != '1') {
 	ALOGE("FPGA not programmed: %s\n", buff);
 	printf("FPGA not programmed: %s\n", buff);
 	rc = -ENODEV;
 	goto errlab;
     }
-    fclose(pgfile);
+    close(pgfile);
 #endif
-#ifdef MMAP_HW
     snprintf(buff, sizeof(buff), "/dev/fpga%d", pint->fpga_number);
+#ifdef MMAP_HW
 #ifdef ZYNQ
     pint->fpga_fd = open(buff, O_RDWR);
     ioctl(pint->fpga_fd, PORTAL_ENABLE_INTERRUPT, &intsettings);
@@ -149,13 +146,12 @@ void init_portal_internal(PortalInternal *pint, int fpga_number, int addrbits)
 	rc = -errno;
 	goto errlab;
     }
-    dev_base = (volatile unsigned int*)mmap(NULL, 1<<addrbits, PROT_READ|PROT_WRITE, MAP_SHARED, pint->fpga_fd, 0);
-    if (dev_base == MAP_FAILED) {
+    pint->map_base = (volatile unsigned int*)mmap(NULL, 1<<addrbits, PROT_READ|PROT_WRITE, MAP_SHARED, pint->fpga_fd, 0);
+    if (pint->map_base == MAP_FAILED) {
         ALOGE("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", pint->fpga_fd, errno);
         rc = -errno;
 	goto errlab;
     }  
-    pint->map_base   = (volatile unsigned int*)dev_base;
 #else
     connect_socket(&pint->p_read, "fpga%d_rc", pint->fpga_number);
     connect_socket(&pint->p_write, "fpga%d_wc", pint->fpga_number);
