@@ -23,19 +23,6 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <linux/ioctl.h>
-#include <linux/types.h>
-#include <poll.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/ioctl.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <assert.h>
-#include <time.h>
 
 #include "dmaManager.h"
 #include "sock_utils.h"
@@ -77,7 +64,7 @@ int DmaManager_dCacheFlushInval(DmaManagerPrivate *priv, PortalAlloc *portalAllo
   }
 #elif defined(__i386__) || defined(__x86_64__)
   // not sure any of this is necessary (mdk)
-  for(int i = 0; i < portalAlloc->header.size; i++){
+  for(unsigned int i = 0; i < portalAlloc->header.size; i++){
     char foo = *(((volatile char *)__p)+i);
     asm volatile("clflush %0" :: "m" (foo));
   }
@@ -113,7 +100,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
   pa->entries[ne].length = 0;
   pa->header.numEntries++;
   if (trace_memory)
-    fprintf(stderr, "DmaManager_reference id=%08x, numEntries:=%d len=%08lx)\n", id, ne, pa->header.size);
+    fprintf(stderr, "DmaManager_reference id=%08x, numEntries:=%d len=%08lx)\n", id, ne, (long)pa->header.size);
 #ifndef MMAP_HW
   sock_fd_write(priv->write, pa->header.fd);
 #endif

@@ -83,7 +83,7 @@ void init_timer(void)
 {
     memset(timers, 0, sizeof(timers));
     for (int i = 0; i < MAX_TIMERS; i++)
-      timers[i].min = 1LL << 63;
+      timers[i].min = 1LLU << 63;
 }
 
 uint64_t catch_timer(unsigned int i)
@@ -104,7 +104,7 @@ uint64_t catch_timer(unsigned int i)
 void print_timer(int loops)
 {
     for (int i = 0; i < MAX_TIMERS; i++) {
-      if (timers[i].min != (1LL << 63))
+      if (timers[i].min != (1LLU << 63))
            printf("[%d]: avg %" PRIu64 " min %" PRIu64 " max %" PRIu64 " over %" PRIu64 "\n",
                i, timers[i].total/loops, timers[i].min, timers[i].max, timers[i].over);
     }

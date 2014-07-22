@@ -68,7 +68,6 @@ void connect_socket(int *psockfd, const char *format, int id)
 static void* socket_listen_task(void *_xx)
 {
   SOCKPARAM *c = (SOCKPARAM *)_xx;
-  int listening_socket;
   
   if (listen(c->listening_socket, 5) == -1) {
     fprintf(stderr, "%s[%d]: listen error %s\n",__FUNCTION__, c->listening_socket, strerror(errno));
@@ -115,7 +114,6 @@ void thread_socket(int* psockfd, const char *format, int id)
 /* Thanks to keithp.com for readable examples how to do this! */
 
 #define COMMON_SOCK_FD \
-    ssize_t     size; \
     struct msghdr   msg; \
     struct iovec    iov; \
     union { \
@@ -148,6 +146,7 @@ ssize_t sock_fd_write(int sock, int fd)
 ssize_t
 sock_fd_read(int sock, int *fd)
 {
+    ssize_t     size;
     char buf[16];
 
     COMMON_SOCK_FD;
