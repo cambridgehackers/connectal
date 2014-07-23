@@ -9,7 +9,8 @@ typedef struct PortalAllocHeader {
 } PortalAllocHeader;
 
 typedef struct DmaEntry {
-  dma_addr_t dma_address;
+  //dma_addr_t dma_address;
+  long dma_address;
   unsigned int length; // to match length field in scatterlist.h
 } DmaEntry;
 
