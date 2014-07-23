@@ -477,6 +477,19 @@ module mkRepeat#(UInt#(n) repetitions, PipeOut#(a) inpipe)(PipeOut#(a));
    method notEmpty = inpipe.notEmpty;
 endmodule
 
+module mkPipelinedForkVector#(PipeOut#(a) inpipe)(UnFunnelPipe#(1,k,a,bpc))
+   provisos (Bits#(a, asz));
+   Vector#(k, FIFOF#(a)) fifos <- replicateM(mkFIFOF());
+   rule forkelts;
+      let v = inpipe.first();
+      inpipe.deq;
+      for (Integer i = 0; i < valueOf(k); i = i + 1) begin
+	 fifos[i].enq(v);
+      end
+   endrule
+   return map(toPipeOut, fifos);
+endmodule
+
 module mkForkVector#(PipeOut#(a) inpipe)(Vector#(n, PipeOut#(a)))
    provisos (Bits#(a, asz));
    Vector#(n, FIFOF#(a)) fifos <- replicateM(mkFIFOF());
@@ -502,6 +515,8 @@ module mkSizedForkVector#(Integer size, PipeOut#(a) inpipe)(Vector#(n, PipeOut#(
    endrule
    return map(toPipeOut, fifos);
 endmodule
+   
+
 
 module mkJoin#(function c f(a av, b bv), PipeOut#(a) apipe, PipeOut#(b) bpipe)(PipeOut#(c));
    method c first();

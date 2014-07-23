@@ -611,6 +611,8 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 	     , Add#(b__, 20, addrwidth)
 	     , Add#(a__, addrwidth, 40)
 	     , Add#(c__, addrwidth, 32)
+	     , Max#(1, TDiv#(TLog#(J),2), bpc_j)
+	     , Max#(1, TDiv#(TLog#(K),2), bpc_k)
       );
 
    let n = valueOf(N);
@@ -630,9 +632,12 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 
    Reg#(UInt#(32)) cycles <- mkReg(0);
    Reg#(Bool) doneReg <- mkReg(False);
-   Reg#(MatrixDescriptor#(UInt#(addrwidth))) descriptorA <- mkReg(unpack(0));
-   Reg#(MatrixDescriptor#(UInt#(addrwidth))) descriptorB <- mkReg(unpack(0));
-   Reg#(MatrixDescriptor#(UInt#(addrwidth))) descriptorC <- mkReg(unpack(0));
+   FIFOF#(MatrixDescriptor#(UInt#(addrwidth))) descFifoA <- mkSizedFIFOF(1);
+   FIFOF#(MatrixDescriptor#(UInt#(addrwidth))) descFifoB <- mkSizedFIFOF(1);
+   FIFOF#(MatrixDescriptor#(UInt#(addrwidth))) descFifoC <- mkSizedFIFOF(1);
+   UnFunnelPipe#(1,J,MatrixDescriptor#(UInt#(addrwidth)),bpc_j) descriptorA <- mkPipelinedForkVector(toPipeOut(descFifoA));
+   UnFunnelPipe#(1,K,MatrixDescriptor#(UInt#(addrwidth)),bpc_k) descriptorB <- mkPipelinedForkVector(toPipeOut(descFifoB));
+   UnFunnelPipe#(1,J,MatrixDescriptor#(UInt#(addrwidth)),bpc_j) descriptorC <- mkPipelinedForkVector(toPipeOut(descFifoC));
    Reg#(UInt#(addrwidth)) dotprodCount <- mkReg(0);
    
    Vector#(J, RowColSource#(TMul#(N,32), Vector#(N,Token))) sourceA <- mapM(mkRowSource, sA);
@@ -712,7 +717,7 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 
 	 if (verbose || verbose1) $display($format(fshow(cycles)+fshow("    sourceB[")+fshow(kint)+fshow("].start")+fshow(startB)));
 
-	 sourceB[k].start(descriptorB.pointer, pack(extend(startB>>nshift)), pack(extend(descriptorB.numColumns>>nshift)), extend(col));
+	 sourceB[k].start(descriptorB[k].first.pointer, pack(extend(startB>>nshift)), pack(extend(descriptorB[k].first.numColumns>>nshift)), extend(col));
 
       endrule
       rule finishSourceB;
@@ -750,9 +755,9 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 						 +fshow(" startC=")+fshow(startC)
 						 +fshow(" j=")+fshow(jint)));
 	 
-	 sourceA[j].start(descriptorA.pointer, pack(extend(startA>>nshift)), pack(extend(descriptorA.numColumns>>nshift)), extend(row));
+	 sourceA[j].start(descriptorA[j].first.pointer, pack(extend(startA>>nshift)), pack(extend(descriptorA[j].first.numColumns>>nshift)), extend(row));
 	 if (verbose || verbose1) $display($format(fshow(cycles)+fshow("    sourceA[")+fshow(jint)+fshow("].start")+fshow(startA)));
-	 sinks[j].start(descriptorC.pointer, pack(extend(startC>>nshift)), fromInteger(kk/n));
+	 sinks[j].start(descriptorC[j].first.pointer, pack(extend(startC>>nshift)), fromInteger(kk/n));
 	 if (verbose || verbose1) $display($format(fshow(cycles)+fshow("      sinks[")+fshow(jint)+fshow("].start")+fshow(startC)));
 	 
       endrule
@@ -774,6 +779,12 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 	 if (c == 0) begin
 	    running <= False;
 	    doneFifo.enq(?);
+	    for(Integer i = 0; i < kk; i=i+1)
+	       descriptorB[i].deq;
+	    for(Integer i = 0; i < jj; i=i+1) begin
+	       descriptorA[i].deq;
+	       descriptorC[i].deq;
+	    end
 	 end
       endrule
    end
@@ -781,9 +792,9 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
    FIFO#(Bool) initNumEltsFifo <- mkFIFO();
    rule dotProdsNumElts;
       initNumEltsFifo.deq();
-      let numColumnsA = descriptorA.numColumns;
-      let numColumnsB = descriptorB.numColumns;
-      let numRowsB    = descriptorB.numRows;
+      let numColumnsA = descriptorA[0].first.numColumns;
+      let numColumnsB = descriptorB[0].first.numColumns;
+      let numRowsB    = descriptorB[0].first.numRows;
       for (Integer j = 0; j < jj; j = j + 1) begin
 	 startAOffset[j] <= fromInteger(j)*numColumnsA;
 	 startCOffset[j] <= fromInteger(j)*numRowsB;
@@ -822,9 +833,9 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 								  ybase: 0, ylimit: numRowsB_x_numColumnsB, ystep: numColumnsB_x_K };
       XYRangeConfig#(UInt#(addrwidth)) offsetcfgC = XYRangeConfig {xbase: 0, xlimit: numRowsA_x_numRowsB, xstep: numRowsB_x_J,
 								  ybase: 0, ylimit: numRowsB, ystep: fromInteger(kk) };
-      descriptorA <= MatrixDescriptor { pointer: pointerA, base: 0, numRows: numRowsA, numColumns: numColumnsA};
-      descriptorB <= MatrixDescriptor { pointer: pointerB, base: 0, numRows: numRowsB, numColumns: numColumnsB};
-      descriptorC <= MatrixDescriptor { pointer: pointerC, base: 0, numRows: numRowsA, numColumns: numRowsB};
+      descFifoA.enq(MatrixDescriptor { pointer: pointerA, base: 0, numRows: numRowsA, numColumns: numColumnsA});
+      descFifoB.enq(MatrixDescriptor { pointer: pointerB, base: 0, numRows: numRowsB, numColumns: numColumnsB});
+      descFifoC.enq(MatrixDescriptor { pointer: pointerC, base: 0, numRows: numRowsA, numColumns: numRowsB});
       dotprodCount <= numRowsA_x_numRowsB;
       running <= True;
 

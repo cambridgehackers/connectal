@@ -41,15 +41,15 @@ parsetab.py: syntax.py
 memtests =  memread_manyclients  \
             memwrite_manyclients 
 
-matrixtests2 =testmm2.2.2        \
+matrixtests2 = testmm8.8.2       \
 	    testmm16.16.2        \
 	    testmm4.2.2          \
 	    testmm4.4.2          \
-	    testmm8.8.2          
+	    testmm2.2.2          
 
-matrixtests4 = testmm4.4.4       \
+matrixtests4 = testmm16.16.4     \
 	    testmm8.8.4          \
-	    testmm16.16.4        
+	    testmm4.4.4        
 
 matrixtests = $(matrixtests2)    \
 	    $(matrixtests4)       
