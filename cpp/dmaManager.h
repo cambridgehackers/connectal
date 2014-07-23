@@ -29,8 +29,8 @@
 #else
 #include <semaphore.h>
 #include <stdint.h>
-#include "drivers/portalmem/portalmem.h"
 #endif
+#include "portalmem.h"
 
 #include "portal.h"
 #if 1 //def NO_CPP_PORTAL_CODE
@@ -46,9 +46,11 @@
 #endif
 
 typedef struct {
+#ifndef __KERNEL__
   sem_t confSem;
   sem_t mtSem;
   sem_t dbgSem;
+#endif
   uint64_t mtCnt;
   PortalInternal *device;
 #ifndef MMAP_HW

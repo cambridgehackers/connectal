@@ -160,13 +160,12 @@ void init_portal_internal(PortalInternal *pint, int id)
     snprintf(buff, sizeof(buff), "/dev/fpga%d", pint->fpga_number);
 #ifdef __KERNEL__
 {
-static tBoard* tboard;
+    static tBoard* tboard;
     if (!tboard)
         tboard = get_pcie_portal_descriptor();
     pint->map_base = (volatile unsigned int*)(tboard->bar2io + pint->fpga_number * PORTAL_BASE_OFFSET);
 }
-#else
-#ifdef MMAP_HW
+#elif defined (MMAP_HW)
 #ifdef ZYNQ
     pint->fpga_fd = open(buff, O_RDWR);
     ioctl(pint->fpga_fd, PORTAL_ENABLE_INTERRUPT, &intsettings);
@@ -185,9 +184,8 @@ static tBoard* tboard;
         rc = -errno;
 	goto errlab;
     }  
-#else
+#else // BSIM version
     connect_socket(&pint->fpga_fd, "fpga%d_rc", pint->fpga_number);
-#endif
 #endif
 
 errlab:
@@ -270,6 +268,7 @@ unsigned int directory_get_addrbits(unsigned int id)
     init_directory();
   return READL(&globalDirectory, PORTAL_DIRECTORY_ADDRBITS);
 }
+
 #ifndef __KERNEL__
 void portalTrace_start()
 {

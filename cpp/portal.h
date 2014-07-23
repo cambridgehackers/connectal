@@ -75,8 +75,6 @@ unsigned int directory_get_fpga(unsigned int id);
 unsigned int directory_get_addrbits(unsigned int id);
 unsigned int read_portal_bsim(int sockfd, volatile unsigned int *addr, int id);
 void write_portal_bsim(int sockfd, volatile unsigned int *addr, unsigned int v, int id);
-//typedef unsigned long dma_addr_t;
-#define MAX_TIMERS 50
 
 void start_timer(unsigned int i);
 uint64_t lap_timer(unsigned int i);
@@ -97,16 +95,19 @@ void portalTrace_stop(void);
 int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
 
 extern int portalExec_timeout;
+#ifdef __cplusplus
+}
+#endif
+
+#ifdef __cplusplus
+#include "poller.h"
+#endif
+
+#define MAX_TIMERS 50
 
 typedef struct {
     uint64_t total, min, max, over;
 } TIMETYPE;
-#ifdef __cplusplus
-}
-#endif
-#ifdef __cplusplus
-#include "poller.h"
-#endif
 
 #if defined(MMAP_HW) || defined(__KERNEL__)
 #define READL(CITEM, A)     (*(A))
