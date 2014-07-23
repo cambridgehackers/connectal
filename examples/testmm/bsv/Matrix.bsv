@@ -635,9 +635,9 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
    FIFOF#(MatrixDescriptor#(UInt#(addrwidth))) descFifoA <- mkSizedFIFOF(1);
    FIFOF#(MatrixDescriptor#(UInt#(addrwidth))) descFifoB <- mkSizedFIFOF(1);
    FIFOF#(MatrixDescriptor#(UInt#(addrwidth))) descFifoC <- mkSizedFIFOF(1);
-   UnFunnelPipe#(1,J,MatrixDescriptor#(UInt#(addrwidth)),bpc_j) descriptorA <- mkPipelinedForkVector(toPipeOut(descFifoA));
-   UnFunnelPipe#(1,K,MatrixDescriptor#(UInt#(addrwidth)),bpc_k) descriptorB <- mkPipelinedForkVector(toPipeOut(descFifoB));
-   UnFunnelPipe#(1,J,MatrixDescriptor#(UInt#(addrwidth)),bpc_j) descriptorC <- mkPipelinedForkVector(toPipeOut(descFifoC));
+   UnFunnelPipe#(1,J,MatrixDescriptor#(UInt#(addrwidth)),bpc_j) descriptorA <- mkPipelinedForkVector(toPipeOut(descFifoA), 0);
+   UnFunnelPipe#(1,K,MatrixDescriptor#(UInt#(addrwidth)),bpc_k) descriptorB <- mkPipelinedForkVector(toPipeOut(descFifoB), 1);
+   UnFunnelPipe#(1,J,MatrixDescriptor#(UInt#(addrwidth)),bpc_j) descriptorC <- mkPipelinedForkVector(toPipeOut(descFifoC), 2);
    Reg#(UInt#(addrwidth)) dotprodCount <- mkReg(0);
    
    Vector#(J, RowColSource#(TMul#(N,32), Vector#(N,Token))) sourceA <- mapM(mkRowSource, sA);

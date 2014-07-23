@@ -477,17 +477,29 @@ module mkRepeat#(UInt#(n) repetitions, PipeOut#(a) inpipe)(PipeOut#(a));
    method notEmpty = inpipe.notEmpty;
 endmodule
 
-module mkPipelinedForkVector#(PipeOut#(a) inpipe)(UnFunnelPipe#(1,k,a,bpc))
-   provisos (Bits#(a, asz));
-   Vector#(k, FIFOF#(a)) fifos <- replicateM(mkFIFOF());
-   rule forkelts;
-      let v = inpipe.first();
-      inpipe.deq;
-      for (Integer i = 0; i < valueOf(k); i = i + 1) begin
-	 fifos[i].enq(v);
-      end
-   endrule
-   return map(toPipeOut, fifos);
+module mkPipelinedForkVector#(PipeOut#(a) inpipe, Integer id)(UnFunnelPipe#(1,k,a,bpc))
+   provisos ( Bits#(a,a__)
+	     ,Add#(1,b__,k)
+	     ,Log#(k,logk)
+	     ,Div#(logk,bpc,stages));
+   Vector#(k, FIFOF#(a))  buffs = newVector;
+   Vector#(k, PipeOut#(a)) infs = cons(inpipe,replicate(?));
+   for(Integer j = 0; j < valueOf(stages); j=j+1)begin
+      for(Integer i = 0; i < 2**((j+1)*valueOf(bpc)) && i < valueOf(k); i=i+1) 
+	 buffs[i] <- mkFIFOF;
+      rule xfer;
+      	 for(Integer i = 0; i < 2**(j*valueOf(bpc)) && i < valueOf(k); i=i+1) begin
+      	    for(Integer l = 0; l < 2**valueOf(bpc) && l < valueOf(k); l=l+1) begin
+	       Integer idx = (i*(2**valueOf(bpc)))+l;
+      	       if (idx < valueOf(k)) 
+		  buffs[idx].enq(infs[i].first);
+      	    end
+      	    infs[i].deq;
+      	 end
+      endrule
+      infs = map(toPipeOut, buffs);
+   end
+   return infs;
 endmodule
 
 module mkForkVector#(PipeOut#(a) inpipe)(Vector#(n, PipeOut#(a)))
