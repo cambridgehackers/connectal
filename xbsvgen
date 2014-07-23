@@ -86,7 +86,7 @@ argparser.add_argument('--floorplan', help='Floorplan XDC', default=None)
 argparser.add_argument('-P', '--partition-module', default=[], help='Modules to separately synthesize/place/route', action='append')
 
 
-tclReadVerilogTemplate='read_verilog [ glob %(verilog)s/*.v ]'
+tclReadVerilogTemplate='read_verilog [ glob %(verilog)s%(pattern)s ]'
 tclReadXciTemplate='''
 generate_target {Synthesis} [get_files %(xci)s]
 read_ip %(xci)s
@@ -883,7 +883,8 @@ if __name__=='__main__':
                                                   % { 'xdcname': os.path.basename(f) }
                                                   for f in namespace.constraint ]),
                  'read_verilog': '\n'.join([tclReadVerilogTemplate
-                                            % { 'verilog': f } for f in namespace.verilog]),
+                                            % { 'verilog': os.path.abspath(f),
+						'pattern': '/*.v' if os.path.isdir(f) else ''} for f in namespace.verilog]),
                  'read_xci': '\n'.join([tclReadXciTemplate
                                         % { 'xci': f } for f in namespace.xci]),
                  'needspcie': 1 if needs_pcie_7x_gen1x8 else 0,
@@ -897,7 +898,7 @@ if __name__=='__main__':
     tcl.write(tclboardTemplate % tclsubsts)
     tcl.close()
 
-    if namespace.verilog:
+    if namespace.verilog and 0:
         for verilog in namespace.verilog:
             print 'Copying verilog sources from', verilog
             dstverilog = os.path.join(project_dir, 'sources', os.path.basename(verilog))
