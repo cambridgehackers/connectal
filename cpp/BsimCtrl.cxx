@@ -30,7 +30,10 @@
 #include <sys/un.h>
 #include <pthread.h>
 #include <assert.h>
-#include <portal.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+
+#include "portal.h"
 
 #include "sock_utils.h"
 

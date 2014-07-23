@@ -21,23 +21,11 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef _PORTAL_H_
-#define _PORTAL_H_
+#ifndef __POLLER_H__
+#define __POLLER_H__
 
-#include <stdint.h>
-#include <sys/types.h>
-#include <linux/ioctl.h>
-#include <sys/ioctl.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <assert.h>
 #include <semaphore.h>
-#include <pthread.h>
 #include <unistd.h>
-
-#include "sock_utils.h"
 
 class Portal;
 class PortalPoller {
@@ -89,4 +77,4 @@ class Portal : public PortalInternalCpp
   virtual int handleMessage(unsigned int channel) { return 0; };
 };
 
-#endif // _PORTAL_H_
+#endif // __POLLER_H__

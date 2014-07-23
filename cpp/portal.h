@@ -104,7 +104,7 @@ typedef struct {
 }
 #endif
 #ifdef __cplusplus
-#include "portal_internal.h"
+#include "poller.h"
 #endif
 
 #if defined(MMAP_HW) || defined(__KERNEL__)

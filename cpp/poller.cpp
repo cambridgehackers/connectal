@@ -22,8 +22,10 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include <string.h>
 #include <poll.h>
 #include <errno.h>
+#include <pthread.h>
 
 #include "portal.h"
 

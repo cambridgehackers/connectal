@@ -30,6 +30,7 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include <sys/ioctl.h>
+#include <time.h> // ctime
 
 #ifdef ZYNQ
 #include <android/log.h>
