@@ -21,13 +21,19 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+`ifdef NUMBER_OF_LEDS
+typedef `NUMBER_OF_LEDS LedsWidth;
+`else
+typedef 8 LedsWidth;
+`endif
+
 interface LEDS;
-    method Bit#(8) leds;
+    method Bit#(LedsWidth) leds;
 endinterface
 
 function LEDS default_leds();
    return (interface LEDS;
-	      method Bit#(8) leds;
+	      method Bit#(LedsWidth) leds;
 		 return 0;
 	      endmethod
 	   endinterface);   

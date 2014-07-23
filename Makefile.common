@@ -76,7 +76,7 @@ ifeq ($(origin TOP),undefined)
     ifeq ($(BOARD),zc706)
     TOP=$(XBSVDIR)/bsv/ZynqTop.bsv
     MKTOP=mkZynqTop
-    XBSVFLAGS += -D ZynqHostTypeIF
+    XBSVFLAGS += -D ZynqHostTypeIF -D NUMBER_OF_LEDS=4
     endif
     ifeq ($(BOARD),zynq100)
     TOP=$(XBSVDIR)/bsv/ZynqTop.bsv
