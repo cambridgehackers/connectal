@@ -20,24 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifdef __KERNEL__
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/kthread.h>
-#include <linux/miscdevice.h>
-#include <linux/fs.h>
-
-#define DRIVER_NAME "testprog"
-#define DRIVER_DESCRIPTION "xbsv test program"
-#define DRIVER_VERSION "0.1"
-
-#else
-//#include <stdio.h>
-//#include <unistd.h>
-//#include <stdint.h>
-#endif
 #include "GeneratedTypes.h"
-//#include "portal.h"
 
 static int v1a = 42;
 static int v2a = 2;
@@ -103,45 +86,3 @@ static PortalInternal intdata[MAX_INDARRAY];
    manual_event();
    return 0;
 }
-
-#ifdef __KERNEL__
-static struct miscdevice miscdev;
-static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
-{
-printk("[%s:%d]\n", __FUNCTION__, __LINE__);
-  switch (cmd) {
-  }
-  return 0;
-}
-static struct file_operations pa_fops = {
-    .owner = THIS_MODULE,
-    .unlocked_ioctl = pa_unlocked_ioctl
-  };
-
-static int __init pa_init(void)
-{
-  struct miscdevice *md = &miscdev;
-  printk("TestProgram::pa_init\n");
-  md->minor = MISC_DYNAMIC_MINOR+1;
-  md->name = "xbsvtest";
-  md->fops = &pa_fops;
-  md->parent = NULL;
-  misc_register(md);
-  main(0, NULL);
-  return 0;
-}
-
-static void __exit pa_exit(void)
-{
-  struct miscdevice *md = &miscdev;
-  printk("TestProgram::pa_exit\n");
-  misc_deregister(md);
-}
-
-module_init(pa_init);
-module_exit(pa_exit);
-
-MODULE_LICENSE("GPL v2");
-MODULE_DESCRIPTION(DRIVER_DESCRIPTION);
-MODULE_VERSION(DRIVER_VERSION);
-#endif

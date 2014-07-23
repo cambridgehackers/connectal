@@ -13,6 +13,7 @@ testme-y := ../simple_manual.o \
      $(BOARDDIR)/SimpleIndicationWrapper.o \
      $(BOARDDIR)/SimpleRequestProxy.o \
      $(CPPDIR)/portal.o \
+     $(CPPDIR)/kernel_module.o \
 
 #     $(CPPDIR)/dmaManager.o
 
