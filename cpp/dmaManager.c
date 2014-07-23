@@ -23,9 +23,14 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/ioctl.h>
 
 #include "dmaManager.h"
 #include "sock_utils.h"
+#include "portalmem.h"
+#if defined(__arm__)
+#include "zynqportal.h"
+#endif
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
@@ -90,6 +95,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
   const int PAGE_SHIFT0 = 12;
   const int PAGE_SHIFT4 = 16;
   const int PAGE_SHIFT8 = 20;
+  int i;
   uint64_t regions[3] = {0,0,0};
   uint64_t shifts[3] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0};
   int id = priv->handle++;
@@ -104,12 +110,13 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
 #ifndef MMAP_HW
   sock_fd_write(priv->write, pa->header.fd);
 #endif
-  for(int i = 0; i < pa->header.numEntries; i++){
+  for(i = 0; i < pa->header.numEntries; i++){
     DmaEntry *e = &(pa->entries[i]);
+    long addr;
 #ifdef MMAP_HW
-    dma_addr_t addr = e->dma_address;
+    addr = e->dma_address;
 #else
-    long addr = (e->length > 0) ? size_accum : 0;
+    addr = (e->length > 0) ? size_accum : 0;
 #endif
 #ifdef BSIM
     addr |= ((long)id+1) << 32; //[39:32] = truncate(pref);
@@ -146,7 +153,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
     uint64_t border;
     unsigned char idxOffset;
   } borders[3];
-  for(int i = 0; i < 3; i++){
+  for(i = 0; i < 3; i++){
     
 
     // fprintf(stderr, "i=%d entryCount=%d border=%zx shifts=%zd shifted=%zx masked=%zx idxOffset=%zx added=%zx\n",

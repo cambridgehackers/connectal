@@ -37,36 +37,7 @@
 #include <pthread.h>
 #include <unistd.h>
 
-typedef unsigned long dma_addr_t;
-
 #include "sock_utils.h"
-
-#define MAX_TIMERS 50
-
-void start_timer(unsigned int i);
-uint64_t lap_timer(unsigned int i);
-void init_timer(void);
-uint64_t catch_timer(unsigned int i);
-void print_timer(int loops);
-
-// uses the default poller
-void* portalExec(void* __x);
-/* fine grained functions for building custom portalExec */
-void* portalExec_init(void);
-void* portalExec_poll(int timeout);
-void* portalExec_event(void);
-void portalExec_start();
-void portalExec_end(void);
-void portalTrace_start();
-void portalTrace_stop();
-int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
-
-extern PortalPoller *defaultPoller;
-extern int portalExec_timeout;
-
-typedef struct {
-    uint64_t total, min, max, over;
-} TIMETYPE;
 
 class Portal;
 class PortalPoller {
@@ -89,6 +60,8 @@ public:
 
   void* portalExec(void* __x);
 };
+
+extern PortalPoller *defaultPoller;
 
 class PortalInternalCpp
 {

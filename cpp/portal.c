@@ -28,6 +28,7 @@
 #include <unistd.h>
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
+#include <sys/ioctl.h>
 
 #ifdef ZYNQ
 #include <android/log.h>
@@ -81,8 +82,9 @@ uint64_t lap_timer(unsigned int i)
 
 void init_timer(void)
 {
+    int i;
     memset(timers, 0, sizeof(timers));
-    for (int i = 0; i < MAX_TIMERS; i++)
+    for (i = 0; i < MAX_TIMERS; i++)
       timers[i].min = 1LLU << 63;
 }
 
@@ -103,7 +105,8 @@ uint64_t catch_timer(unsigned int i)
 
 void print_timer(int loops)
 {
-    for (int i = 0; i < MAX_TIMERS; i++) {
+    int i;
+    for (i = 0; i < MAX_TIMERS; i++) {
       if (timers[i].min != (1LLU << 63))
            printf("[%d]: avg %" PRIu64 " min %" PRIu64 " max %" PRIu64 " over %" PRIu64 "\n",
                i, timers[i].total/loops, timers[i].min, timers[i].max, timers[i].over);

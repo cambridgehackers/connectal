@@ -25,12 +25,14 @@
 #define _PORTAL_MEMORY_H_
 
 #ifndef __KERNEL__
+#include <semaphore.h>
 #include <stdint.h>
 #endif
+#include "linux/types.h"
 
 #include "portal.h"
 #include "drivers/portalmem/portalmem.h"
-#ifdef NO_CPP_PORTAL_CODE
+#if 1 //def NO_CPP_PORTAL_CODE
 #include "GeneratedTypes.h" // generated in project directory
 #define DMAsglist(P, A, B, C) DmaConfigProxy_sglist((P), (A), (B), (C));
 #define DMAregion(P, PTR, B8, B4, B0) DmaConfigProxy_region((P), (PTR), (B8), (B4), (B0))
@@ -67,6 +69,7 @@ int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa);
 }
 #endif
 #ifndef NO_CPP_PORTAL_CODE
+#ifdef __cplusplus
 class DmaManager
 {
  private:
@@ -100,5 +103,6 @@ class DmaManager
     sem_post(&priv.dbgSem);
   };
 };
+#endif
 #endif
 #endif // _PORTAL_MEMORY_H_

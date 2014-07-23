@@ -24,6 +24,7 @@
 #ifndef _SOCK_UTILS_H_
 #define _SOCK_UTILS_H_
 
+#include <linux/socket.h>
 #include <sys/un.h>
 
 struct memrequest{
