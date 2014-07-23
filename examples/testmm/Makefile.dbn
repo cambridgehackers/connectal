@@ -19,7 +19,8 @@ FAMILY=$(shell echo $(BOARD) | sed 's/z.*/zynq/' | sed 's/k.*/kintex/' | sed 's/
 ifeq (zynq,$(FAMILY))
 NDK_DIR=$(shell ndk-which gcc | sed 's:toolchains.*::')
 OPENCVDIR=$(XBSVDIR)/../opencv-android-sdk/sdk/native/
-XBSVFLAGS += -I$(DBNDIR)/cpp -I$(OPENCVDIR)/jni/include -L$(OPENCVDIR)/libs/armeabi-v7a -lz -L$(NDK_DIR)/sources/cxx-stl/stlport/libs/armeabi-v7a/ -lstlport_static
+XBSVFLAGS += -I$(DBNDIR)/cpp -I$(OPENCVDIR)/jni/include -L$(OPENCVDIR)/libs/armeabi-v7a -lz
+XBSVFLAGS += -S$(NDK_DIR)/sources/cxx-stl/stlport/libs/armeabi-v7a/libstlport_static.a
 NUMBER_OF_MASTERS=4
 endif
 ifeq (bluesim,$(FAMILY))
