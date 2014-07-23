@@ -123,7 +123,7 @@ void print_timer(int loops)
     }
 }
 
-void init_portal_internal(PortalInternal *pint, int id)
+PortalInternal *init_portal_internal(PortalInternal *pint, int id)
 {
     int rc = 0;
     char buff[128];
@@ -194,6 +194,7 @@ errlab:
       ALOGD("init_portal_internal: failure rc=%d\n", rc);
       exit(1);
     }
+    return pint;
 }
 
 int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)

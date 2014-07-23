@@ -69,7 +69,7 @@ typedef struct PortalInternal {
 #ifdef __cplusplus
 extern "C" {
 #endif
-void init_portal_internal(PortalInternal *pint, int id);
+PortalInternal *init_portal_internal(PortalInternal *pint, int id);
 uint64_t directory_cycle_count(void);
 unsigned int directory_get_fpga(unsigned int id);
 unsigned int directory_get_addrbits(unsigned int id);

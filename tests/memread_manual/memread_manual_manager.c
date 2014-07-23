@@ -19,13 +19,18 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#ifdef __KERNEL__
+#define PRIx64 "llx"
+typedef int sem_t;
+#define sem_post(A)
+#define sem_wait(A)
+#else
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
-#ifndef __KERNEL__
 #include <sys/mman.h>
 #include <pthread.h>
 #include <fcntl.h>
@@ -46,48 +51,49 @@ static INDFUNC indfn[MAX_INDARRAY];
 static sem_t test_sem;
 static int burstLen = 16;
 #ifdef MMAP_HW
-static int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
+#define numWords 0x1240000/4 // make sure to allocate at least one entry of each size
 #else
-static int numWords = 0x124000/4;
+#define numWords 0x124000/4
 #endif
-static size_t test_sz  = numWords*sizeof(unsigned int);
-static size_t alloc_sz = test_sz;
+static long test_sz  = numWords*sizeof(unsigned int);
+static long alloc_sz = numWords*sizeof(unsigned int);
 static DmaManagerPrivate priv;
 
 void MemreadIndicationWrapperreadDone_cb (  struct PortalInternal *p, const uint32_t mismatchCount )
 {
-         printf( "Memread_readDone(mismatch = %x)\n", mismatchCount);
+         PORTAL_PRINTF( "Memread_readDone(mismatch = %x)\n", mismatchCount);
          sem_post(&test_sem);
 }
 void DmaIndicationWrapperconfigResp_cb (  struct PortalInternal *p, const uint32_t pointer)
 {
-        //fprintf(stderr, "configResp %x\n", pointer);
+        //PORTAL_PRINTF("configResp %x\n", pointer);
         sem_post(&priv.confSem);
 }
 void DmaIndicationWrapperaddrResponse_cb (  struct PortalInternal *p, const uint64_t physAddr )
 {
-        fprintf(stderr, "DmaIndication_addrResponse(physAddr=%"PRIx64")\n", physAddr);
+        PORTAL_PRINTF("DmaIndication_addrResponse(physAddr=%"PRIx64")\n", physAddr);
 }
 void DmaIndicationWrapperreportStateDbg_cb (  struct PortalInternal *p, const DmaDbgRec rec )
 {
-        //fprintf(stderr, "reportStateDbg: {x:%08x y:%08x z:%08x w:%08x}\n", rec.x,rec.y,rec.z,rec.w);
+        //PORTAL_PRINTF("reportStateDbg: {x:%08x y:%08x z:%08x w:%08x}\n", rec.x,rec.y,rec.z,rec.w);
         DmaDbgRec dbgRec = rec;
-        fprintf(stderr, "dbgResp: %08x %08x %08x %08x\n", dbgRec.x, dbgRec.y, dbgRec.z, dbgRec.w);
+        PORTAL_PRINTF("dbgResp: %08x %08x %08x %08x\n", dbgRec.x, dbgRec.y, dbgRec.z, dbgRec.w);
         sem_post(&priv.dbgSem);
 }
 void DmaIndicationWrapperreportMemoryTraffic_cb (  struct PortalInternal *p, const uint64_t words )
 {
-        //fprintf(stderr, "reportMemoryTraffic: words=%"PRIx64"\n", words);
+        //PORTAL_PRINTF("reportMemoryTraffic: words=%"PRIx64"\n", words);
         priv.mtCnt = words;
         sem_post(&priv.mtSem);
 }
 void DmaIndicationWrapperdmaError_cb (  struct PortalInternal *p, const uint32_t code, const uint32_t pointer, const uint64_t offset, const uint64_t extra ) {
-        fprintf(stderr, "DmaIndication::dmaError(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
+        PORTAL_PRINTF("DmaIndication::dmaError(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
 }
 
 static void manual_event(void)
 {
-    for (int i = 0; i < MAX_INDARRAY; i++) {
+    int i;
+    for (i = 0; i < MAX_INDARRAY; i++) {
       PortalInternal *instance = intarr[i];
       volatile unsigned int *map_base = instance->map_base;
       unsigned int queue_status;
@@ -95,7 +101,7 @@ static void manual_event(void)
         unsigned int int_src = READL(instance, &map_base[IND_REG_INTERRUPT_FLAG]);
         unsigned int int_en  = READL(instance, &map_base[IND_REG_INTERRUPT_MASK]);
         unsigned int ind_count  = READL(instance, &map_base[IND_REG_INTERRUPT_COUNT]);
-        fprintf(stderr, "(%d:fpga%d) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->fpga_number, int_src, int_en, queue_status);
+        PORTAL_PRINTF("(%d:fpga%d) about to receive messages int=%08x en=%08x qs=%08x cnt=%x\n", i, instance->fpga_number, int_src, int_en, queue_status, ind_count);
         if (indfn[i])
             indfn[i](instance, queue_status-1);
       }
@@ -119,40 +125,44 @@ static void *pthread_worker(void *p)
 
 int main(int argc, const char **argv)
 {
-PortalInternalCpp *intarrtemp[MAX_INDARRAY];
-int i;
-  intarrtemp[0] = new PortalInternalCpp(IfcNames_DmaIndication);     // fpga1
-  intarrtemp[1] = new PortalInternalCpp(IfcNames_MemreadIndication); // fpga2
-  intarrtemp[2] = new PortalInternalCpp(IfcNames_DmaConfig);         // fpga3
-  intarrtemp[3] = new PortalInternalCpp(IfcNames_MemreadRequest);    // fpga4
+  PortalInternal intarrtemp[MAX_INDARRAY];
+  PortalAlloc *srcAlloc;
+  unsigned int *srcBuffer;
+  unsigned int ref_srcAlloc;
+  int rc, i;
+
+  intarr[0] = init_portal_internal(&intarrtemp[0], IfcNames_DmaIndication);     // fpga1
+  intarr[1] = init_portal_internal(&intarrtemp[1], IfcNames_MemreadIndication); // fpga2
+  intarr[2] = init_portal_internal(&intarrtemp[2], IfcNames_DmaConfig);         // fpga3
+  intarr[3] = init_portal_internal(&intarrtemp[3], IfcNames_MemreadRequest);    // fpga4
   indfn[0] = DmaIndicationWrapper_handleMessage;
   indfn[1] = MemreadIndicationWrapper_handleMessage;
   indfn[2] = DmaConfigProxy_handleMessage;
   indfn[3] = MemreadRequestProxy_handleMessage;
-  for (i = 0; i < 4; i++)
-      intarr[i] = &intarrtemp[i]->pint;
 
-  PortalAlloc *srcAlloc;
   DmaManager_init(&priv, intarr[2]);
-  int rc = DmaManager_alloc(&priv, alloc_sz, &srcAlloc);
+  rc = DmaManager_alloc(&priv, alloc_sz, &srcAlloc);
   if (rc){
-    fprintf(stderr, "portal alloc failed rc=%d\n", rc);
+    PORTAL_PRINTF("portal alloc failed rc=%d\n", rc);
     return rc;
   }
 
 #ifndef __KERNEL__ ///////////////////////// userspace version
+  {
   pthread_t tid;
-  printf( "Main: creating exec thread\n");
+  PORTAL_PRINTF( "Main: creating exec thread\n");
   if(pthread_create(&tid, NULL,  pthread_worker, NULL)){
-   printf( "error creating exec thread\n");
+   PORTAL_PRINTF( "error creating exec thread\n");
    exit(1);
   }
-  unsigned int *srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
+  }
+  srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
 #else   /// kernel version
 //??????
+  srcBuffer = NULL;
 #endif ////////////////////////////////
 
-  for (int i = 0; i < numWords; i++)
+  for (i = 0; i < numWords; i++)
     srcBuffer[i] = i;
 
 #ifndef __KERNEL__   //////////////// userspace code for flushing dcache for srcAlloc
@@ -160,8 +170,8 @@ int i;
 #else   /// kernel version
 //??????
 #endif /////////////////////
-  unsigned int ref_srcAlloc = DmaManager_reference(&priv, srcAlloc);
-  printf( "Main: starting read %08x\n", numWords);
+  ref_srcAlloc = DmaManager_reference(&priv, srcAlloc);
+  PORTAL_PRINTF( "Main: starting read %08x\n", numWords);
   MemreadRequestProxy_startRead (intarr[3], ref_srcAlloc, numWords, burstLen, 1);
   sem_wait(&test_sem);
   return 0;

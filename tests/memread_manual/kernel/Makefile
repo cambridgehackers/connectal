@@ -11,12 +11,14 @@ DRIVERDIR=$(src)/../../../drivers
 KBUILD_EXTRA_SYMBOLS := $(DRIVERDIR)/pcieportal/Module.symvers
 
 testme-y := ../memread_manual_manager.o \
-     $(BOARDDIR)/SimpleIndicationWrapper.o \
-     $(BOARDDIR)/SimpleRequestProxy.o \
+     $(BOARDDIR)/DmaConfigProxy.o \
+     $(BOARDDIR)/DmaIndicationWrapper.o \
+     $(BOARDDIR)/MemreadIndicationWrapper.o \
+     $(BOARDDIR)/MemreadRequestProxy.o \
      $(CPPDIR)/portal.o \
+     $(CPPDIR)/dmaManager.o \
      $(CPPDIR)/kernel_module.o
 
-testme-y := $(CPPDIR)/dmaManager.o
 
 obj-m := testme.o
 
