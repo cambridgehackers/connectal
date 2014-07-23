@@ -39,15 +39,14 @@
 #include <inttypes.h>
 #include <sys/ioctl.h>
 #include <time.h> // ctime
+#include "sock_utils.h"
+#endif
 
 #ifdef ZYNQ
 #include <android/log.h>
 #include <zynqportal.h>
 #else
 #include <pcieportal.h> // BNOC_TRACE
-#endif
-
-#include "sock_utils.h"
 #endif
 
 #define MAX_TIMER_COUNT      16
@@ -160,6 +159,12 @@ void init_portal_internal(PortalInternal *pint, int id)
 #endif
     snprintf(buff, sizeof(buff), "/dev/fpga%d", pint->fpga_number);
 #ifdef __KERNEL__
+{
+static tBoard* tboard;
+    if (!tboard)
+        tboard = get_pcie_portal_descriptor();
+    pint->map_base = (volatile unsigned int*)(tboard->bar2io + pint->fpga_number * PORTAL_BASE_OFFSET);
+}
 #else
 #ifdef MMAP_HW
 #ifdef ZYNQ

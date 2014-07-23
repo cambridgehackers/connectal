@@ -122,11 +122,12 @@ static int __init pa_init(void)
 {
   struct miscdevice *md = &miscdev;
   printk("TestProgram::pa_init\n");
-  md->minor = MISC_DYNAMIC_MINOR;
-  md->name = "portalmem";
+  md->minor = MISC_DYNAMIC_MINOR+1;
+  md->name = "xbsvtest";
   md->fops = &pa_fops;
   md->parent = NULL;
   misc_register(md);
+  main(0, NULL);
   return 0;
 }
 
