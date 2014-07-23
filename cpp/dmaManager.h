@@ -55,26 +55,50 @@ typedef struct {
   int handle;
 } DmaManagerPrivate;
 
-#ifdef NO_CPP_PORTAL_CODE
+#ifdef __cplusplus
+extern "C" {
+#endif
 void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *argDevice);
 int DmaManager_dCacheFlushInval(DmaManagerPrivate *priv, PortalAlloc *portalAlloc, void *__p);
 uint64_t DmaManager_show_mem_stats(DmaManagerPrivate *priv, ChannelType rc);
 int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa);
 int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa);
-#else
+#ifdef __cplusplus
+}
+#endif
+#ifndef NO_CPP_PORTAL_CODE
 class DmaManager
 {
  private:
   DmaManagerPrivate priv;
  public:
-  DmaManager(PortalInternalCpp *argDevice);
-  int dCacheFlushInval(PortalAlloc *portalAlloc, void *__p);
-  int alloc(size_t size, PortalAlloc **portalAlloc);
-  int reference(PortalAlloc* pa);
-  uint64_t show_mem_stats(ChannelType rc);
-  void confResp(uint32_t channelId);
-  void mtResp(uint64_t words);
-  void dbgResp(const DmaDbgRec& rec);
+  DmaManager(PortalInternalCpp *argDevice) {
+    DmaManager_init(&priv, &argDevice->pint);
+  };
+  int dCacheFlushInval(PortalAlloc *portalAlloc, void *__p) {
+    return DmaManager_dCacheFlushInval(&priv, portalAlloc, __p);
+  };
+  int alloc(size_t size, PortalAlloc **ppa) {
+   return DmaManager_alloc(&priv, size, ppa);
+  };
+  int reference(PortalAlloc* pa) {
+    return DmaManager_reference(&priv, pa);
+  };
+  uint64_t show_mem_stats(ChannelType rc) {
+    return DmaManager_show_mem_stats(&priv, rc);
+  };
+  void confResp(uint32_t channelId) {
+    //fprintf(stderr, "configResp %d\n", channelId);
+    sem_post(&priv.confSem);
+  };
+  void mtResp(uint64_t words) {
+    priv.mtCnt = words;
+    sem_post(&priv.mtSem);
+  };
+  void dbgResp(const DmaDbgRec& dbgRec) {
+    fprintf(stderr, "dbgResp: %08x %08x %08x %08x\n", dbgRec.x, dbgRec.y, dbgRec.z, dbgRec.w);
+    sem_post(&priv.dbgSem);
+  };
 };
 #endif
 #endif // _PORTAL_MEMORY_H_

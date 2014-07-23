@@ -35,52 +35,13 @@
 #include <assert.h>
 #include <semaphore.h>
 #include <pthread.h>
+#include <unistd.h>
 
 typedef unsigned long dma_addr_t;
 
 #include "sock_utils.h"
 
 #define MAX_TIMERS 50
-typedef struct {
-    uint64_t total, min, max, over;
-} TIMETYPE;
-
-class PortalInternalCpp
-{
- public:
-  PortalInternal pint;
-  PortalInternalCpp(int id);
-  virtual ~PortalInternalCpp();
-};
-
-class Portal : public PortalInternalCpp
-{
- public:
-  virtual ~Portal();
-  Portal(int id, PortalPoller *poller = 0);
-  virtual int handleMessage(unsigned int channel) { return 0; };
-};
-
-class PortalPoller {
-private:
-  Portal **portal_wrappers;
-  struct pollfd *portal_fds;
-  int numFds;
-public:
-  PortalPoller();
-  int registerInstance(Portal *portal);
-  int unregisterInstance(Portal *portal);
-  void *portalExec_init(void);
-  void *portalExec_poll(int timeout);
-  void *portalExec_event(void);
-  void portalExec_end(void);
-  void portalExec_start();
-  int portalExec_timeout;
-  int stopping;
-  sem_t sem_startup;
-
-  void* portalExec(void* __x);
-};
 
 void start_timer(unsigned int i);
 uint64_t lap_timer(unsigned int i);
@@ -102,5 +63,57 @@ int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency
 
 extern PortalPoller *defaultPoller;
 extern int portalExec_timeout;
+
+typedef struct {
+    uint64_t total, min, max, over;
+} TIMETYPE;
+
+class Portal;
+class PortalPoller {
+private:
+  Portal **portal_wrappers;
+  struct pollfd *portal_fds;
+  int numFds;
+public:
+  PortalPoller();
+  int registerInstance(Portal *portal);
+  int unregisterInstance(Portal *portal);
+  void *portalExec_init(void);
+  void *portalExec_poll(int timeout);
+  void *portalExec_event(void);
+  void portalExec_end(void);
+  void portalExec_start();
+  int portalExec_timeout;
+  int stopping;
+  sem_t sem_startup;
+
+  void* portalExec(void* __x);
+};
+
+class PortalInternalCpp
+{
+ public:
+  PortalInternal pint;
+  PortalInternalCpp(int id) { init_portal_internal(&pint, id); };
+  ~PortalInternalCpp() {
+    if (pint.fpga_fd > 0) {
+        ::close(pint.fpga_fd);
+        pint.fpga_fd = -1;
+    }    
+  };
+};
+
+class Portal : public PortalInternalCpp
+{
+ public:
+  Portal(int id, PortalPoller *poller = 0) : PortalInternalCpp(id) {
+    if (poller == 0)
+      poller = defaultPoller;
+    pint.poller = poller;
+    pint.poller->registerInstance(this);
+  };
+  ~Portal() { pint.poller->unregisterInstance(this); };
+  virtual int handleMessage(unsigned int channel) { return 0; };
+};
 
 #endif // _PORTAL_H_

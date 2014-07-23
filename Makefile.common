@@ -31,7 +31,7 @@ ifneq ($(NUMBER_OF_MASTERS), 0)
 S2H += DmaConfig
 H2S += DmaIndication
 BSVFILES += $(XBSVDIR)/bsv/PortalMemory.bsv
-CPPFILES += $(XBSVDIR)/cpp/dmaManager.cpp
+CPPFILES += $(XBSVDIR)/cpp/dmaManager.c
 endif
 
 all bits verilog implementation android_exe bsim bsim_exe ubuntu_exe xsim xsimrun: gentarget prebuild

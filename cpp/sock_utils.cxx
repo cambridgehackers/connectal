@@ -31,6 +31,7 @@
 #include <sys/un.h>
 #include <pthread.h>
 
+#include "portal.h"
 #include "sock_utils.h"
 
 #define MAX_PATH_LENGTH 100

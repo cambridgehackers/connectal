@@ -61,22 +61,30 @@ typedef struct PortalInternal {
 #else
 #include <stdio.h>   // printf()
 #include <stdlib.h>  // exit()
+#define PORTAL_PRINTF printf
+#endif
+#include <stdint.h>
+
 #ifdef __cplusplus
-#include "portal_internal.h"
+extern "C" {
 #endif
 void init_portal_internal(PortalInternal *pint, int id);
 uint64_t directory_cycle_count();
 unsigned int directory_get_fpga(unsigned int id);
 unsigned int directory_get_addrbits(unsigned int id);
-#define PORTAL_PRINTF printf
+unsigned int read_portal_bsim(int sockfd, volatile unsigned int *addr, int id);
+void write_portal_bsim(int sockfd, volatile unsigned int *addr, unsigned int v, int id);
+#ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+#include "portal_internal.h"
 #endif
 
 #if defined(MMAP_HW) || defined(__KERNEL__)
 #define READL(CITEM, A)     (*(A))
 #define WRITEL(CITEM, A, B) (*(A) = (B))
 #else
-unsigned int read_portal_bsim(int sockfd, volatile unsigned int *addr, int id);
-void write_portal_bsim(int sockfd, volatile unsigned int *addr, unsigned int v, int id);
 #define READL(CITEM, A) read_portal_bsim((CITEM)->fpga_fd, (A), (CITEM)->fpga_number)
 #define WRITEL(CITEM, A, B) write_portal_bsim((CITEM)->fpga_fd, (A), (B), (CITEM)->fpga_number)
 #endif

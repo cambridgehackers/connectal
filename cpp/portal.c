@@ -268,31 +268,3 @@ void portalTrace_stop()
     fprintf(stderr, "Failed to stop tracing. errno=%d\n", errno);
 #endif
 }
-
-PortalInternalCpp::PortalInternalCpp(int id)
-{
-    init_portal_internal(&pint, id);
-    pint.parent = (void *)this; /* used for callback functions */
-}
-
-PortalInternalCpp::~PortalInternalCpp()
-{
-    if (pint.fpga_fd > 0) {
-        close(pint.fpga_fd);
-        pint.fpga_fd = -1;
-    }    
-}
-
-Portal::Portal(int id, PortalPoller *poller)
-  : PortalInternalCpp(id)
-{
-  if (poller == 0)
-    poller = defaultPoller;
-  pint.poller = poller;
-  pint.poller->registerInstance(this);
-}
-
-Portal::~Portal()
-{
-  pint.poller->unregisterInstance(this);
-}

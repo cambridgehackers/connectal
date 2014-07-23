@@ -33,14 +33,14 @@ proxyClassPrefixTemplate='''
 class %(namespace)s%(className)s : public %(parentClass)s {
 //proxyClass
 public:
-    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, poller) { };
+    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, poller) { pint.parent = static_cast<void *>(this); };
 '''
 
 wrapperClassPrefixTemplate='''
 class %(namespace)s%(className)s : public %(parentClass)s {
 //wrapperClass
 public:
-    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, poller) { };
+    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, poller) { pint.parent = static_cast<void *>(this); };
 '''
 wrapperClassSuffixTemplate='''
 protected:
@@ -178,7 +178,7 @@ class MethodMixin:
             f.write(', '.join(formalParams))
             f.write(' ) {\n')
             indent(f, 4)
-            f.write(('((%s *)p->parent)->%s ( ' % (className, methodName)) + paramValues + ');\n')
+            f.write(('(static_cast<%s *>(p->parent))->%s ( ' % (className, methodName)) + paramValues + ');\n')
             f.write('};\n')
     def emitCImplementation(self, f, hpp, className, namespace, proxy, doCpp):
 

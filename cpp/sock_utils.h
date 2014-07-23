@@ -32,9 +32,15 @@ struct memrequest{
   unsigned int data;
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 void connect_socket(int *psocket, const char *format, int id);
 void thread_socket(int *psocket, const char *format, int id);
 ssize_t sock_fd_write(int sock, int fd);
 ssize_t sock_fd_read(int sock, int *fd);
+#ifdef __cplusplus
+}
+#endif
 
 #endif //_SOCK_UTILS_H_
