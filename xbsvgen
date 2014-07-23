@@ -208,6 +208,8 @@ write_verilog -force $outputDir/top-netlist.v > hw/temp.log
 %(sourceTcl)s
 %(rewire_clock)s
 command opt_design     hw/opt_design.log
+write_checkpoint -force $outputDir/top-post-opt.dcp > hw/temp.log
+
 # power_opt_design
 command place_design    hw/place_design.log
 report_timing_summary -file $outputDir/top-post-place-timing-summary.rpt > hw/temp.log
