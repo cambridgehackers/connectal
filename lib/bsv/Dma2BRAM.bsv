@@ -115,6 +115,7 @@ module mkBRAMWriteClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMWriteClient#
 	    Div#(busWidth,dsz,nd),
 	    Mul#(nd,dsz,busWidth),
 	    Add#(1,a__,nd),
+	    Add#(1, d__, busWidth),
 	    Add#(1, b__, TMul#(2, nd)),
 	    Add#(nd, c__, TMul#(2, nd)),
 	    Add#(1,bramIdxWidth,cntW),
