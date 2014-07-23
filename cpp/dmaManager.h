@@ -24,14 +24,15 @@
 #ifndef _PORTAL_MEMORY_H_
 #define _PORTAL_MEMORY_H_
 
-#ifndef __KERNEL__
+#ifdef __KERNEL__
+#include "linux/types.h"
+#else
 #include <semaphore.h>
 #include <stdint.h>
+#include "drivers/portalmem/portalmem.h"
 #endif
-#include "linux/types.h"
 
 #include "portal.h"
-#include "drivers/portalmem/portalmem.h"
 #if 1 //def NO_CPP_PORTAL_CODE
 #include "GeneratedTypes.h" // generated in project directory
 #define DMAsglist(P, A, B, C) DmaConfigProxy_sglist((P), (A), (B), (C));

@@ -21,19 +21,21 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include "dmaManager.h"
+
+#ifndef __KERNEL__
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
-
-#include "dmaManager.h"
 #include "sock_utils.h"
 #include "portalmem.h"
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 #if defined(__arm__)
 #include "zynqportal.h"
 #endif
-
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
+#endif
 
 static int trace_memory;// = 1;
 

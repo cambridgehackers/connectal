@@ -22,6 +22,14 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include "portal.h"
+
+#ifdef __KERNEL__
+#include "linux/delay.h"
+#define assert(A)
+#define exit(A) while(1) msleep(2000);
+#define PRIu64 "llx"
+#else
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -39,8 +47,8 @@
 #include <pcieportal.h> // BNOC_TRACE
 #endif
 
-#include "portal.h"
 #include "sock_utils.h"
+#endif
 
 #define MAX_TIMER_COUNT      16
 #define TIMING_INTERVAL_SIZE  6
@@ -49,8 +57,8 @@
 #define ALOGD(fmt, ...) __android_log_print(ANDROID_LOG_DEBUG, "PORTAL", fmt, __VA_ARGS__)
 #define ALOGE(fmt, ...) __android_log_print(ANDROID_LOG_ERROR, "PORTAL", fmt, __VA_ARGS__)
 #else
-#define ALOGD(fmt, ...) fprintf(stderr, "PORTAL: " fmt, __VA_ARGS__)
-#define ALOGE(fmt, ...) fprintf(stderr, "PORTAL: " fmt, __VA_ARGS__)
+#define ALOGD(fmt, ...) PORTAL_PRINTF("PORTAL: " fmt, __VA_ARGS__)
+#define ALOGE(fmt, ...) PORTAL_PRINTF("PORTAL: " fmt, __VA_ARGS__)
 #endif
 
 static void init_directory(void);
@@ -62,9 +70,10 @@ static TIMETYPE timers[MAX_TIMERS];
 
 uint64_t directory_cycle_count()
 {
+  unsigned int high_bits, low_bits;
     init_directory();
-  unsigned int high_bits = READL(&globalDirectory, PORTAL_DIRECTORY_COUNTER_MSB);
-  unsigned int low_bits  = READL(&globalDirectory, PORTAL_DIRECTORY_COUNTER_LSB);
+  high_bits = READL(&globalDirectory, PORTAL_DIRECTORY_COUNTER_MSB);
+  low_bits  = READL(&globalDirectory, PORTAL_DIRECTORY_COUNTER_LSB);
   return (((uint64_t)high_bits)<<32) | ((uint64_t)low_bits);
 }
 
@@ -76,13 +85,13 @@ void start_timer(unsigned int i)
 
 uint64_t lap_timer(unsigned int i)
 {
-  assert(i < MAX_TIMER_COUNT);
   uint64_t temp = directory_cycle_count();
+  assert(i < MAX_TIMER_COUNT);
   lap_timer_temp = temp;
   return temp - c_start[i];
 }
 
-void init_timer(void)
+void xbsv_timer_init(void)
 {
     int i;
     memset(timers, 0, sizeof(timers));
@@ -110,7 +119,7 @@ void print_timer(int loops)
     int i;
     for (i = 0; i < MAX_TIMERS; i++) {
       if (timers[i].min != (1LLU << 63))
-           printf("[%d]: avg %" PRIu64 " min %" PRIu64 " max %" PRIu64 " over %" PRIu64 "\n",
+           PORTAL_PRINTF("[%d]: avg %" PRIu64 " min %" PRIu64 " max %" PRIu64 " over %" PRIu64 "\n",
                i, timers[i].total/loops, timers[i].min, timers[i].max, timers[i].over);
     }
 }
@@ -137,19 +146,21 @@ void init_portal_internal(PortalInternal *pint, int id)
     }
     if (pgfile == -1) {
 	ALOGE("failed to open /sys/devices/amba.[02]/f8007000.devcfg/prog_done %d\n", errno);
-	printf("failed to open /sys/devices/amba.[02]/f8007000.devcfg/prog_done %d\n", errno);
+	PORTAL_PRINTF("failed to open /sys/devices/amba.[02]/f8007000.devcfg/prog_done %d\n", errno);
 	rc = -1;
 	goto errlab;
     }
     if (read(pgfile, buff, 1) != 1 || buff[0] != '1') {
 	ALOGE("FPGA not programmed: %s\n", buff);
-	printf("FPGA not programmed: %s\n", buff);
+	PORTAL_PRINTF("FPGA not programmed: %s\n", buff);
 	rc = -ENODEV;
 	goto errlab;
     }
     close(pgfile);
 #endif
     snprintf(buff, sizeof(buff), "/dev/fpga%d", pint->fpga_number);
+#ifdef __KERNEL__
+#else
 #ifdef MMAP_HW
 #ifdef ZYNQ
     pint->fpga_fd = open(buff, O_RDWR);
@@ -172,10 +183,11 @@ void init_portal_internal(PortalInternal *pint, int id)
 #else
     connect_socket(&pint->fpga_fd, "fpga%d_rc", pint->fpga_number);
 #endif
+#endif
 
 errlab:
     if (rc != 0) {
-      printf("[%s:%d] failed to open Portal fpga%d\n", __FUNCTION__, __LINE__, pint->fpga_number);
+      PORTAL_PRINTF("[%s:%d] failed to open Portal fpga%d\n", __FUNCTION__, __LINE__, pint->fpga_number);
       ALOGD("init_portal_internal: failure rc=%d\n", rc);
       exit(1);
     }
@@ -200,7 +212,9 @@ int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency
 
 static void init_directory(void)
 {
-static int once = 0;
+  unsigned int i;
+  static int once = 0;
+
   if (once)
       return;
   once = 1;
@@ -213,35 +227,36 @@ static int once = 0;
   request.requested_rate = reqF;
   int status = ioctl(globalDirectory.fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
   if (status < 0)
-    fprintf(stderr, "init_directory: error setting fclk0, errno=%d\n", errno);
-  fprintf(stderr, "init_directory: set fclk0 (%ld,%ld)\n", reqF, request.actual_rate);
+    PORTAL_PRINTF("init_directory: error setting fclk0, errno=%d\n", errno);
+  PORTAL_PRINTF("init_directory: set fclk0 (%ld,%ld)\n", reqF, request.actual_rate);
 #endif
 
   // finally scan
-  unsigned int i;
-  if(1) fprintf(stderr, "init_directory: scan(fpga%d)\n", globalDirectory.fpga_number);
+  if(1) PORTAL_PRINTF("init_directory: scan(fpga%d)\n", globalDirectory.fpga_number);
   if(1){
     time_t timestamp  = READL(&globalDirectory, PORTAL_DIRECTORY_TIMESTAMP);
     uint32_t numportals = READL(&globalDirectory, PORTAL_DIRECTORY_NUMPORTALS);
-    fprintf(stderr, "version=%d\n",  READL(&globalDirectory, PORTAL_DIRECTORY_VERSION));
-    fprintf(stderr, "timestamp=%s",  ctime(&timestamp));
-    fprintf(stderr, "numportals=%d\n", numportals);
-    fprintf(stderr, "addrbits=%d\n", READL(&globalDirectory, PORTAL_DIRECTORY_ADDRBITS));
+    PORTAL_PRINTF("version=%d\n",  READL(&globalDirectory, PORTAL_DIRECTORY_VERSION));
+#ifndef __KERNEL__
+    PORTAL_PRINTF("timestamp=%s",  ctime(&timestamp));
+#endif
+    PORTAL_PRINTF("numportals=%d\n", numportals);
+    PORTAL_PRINTF("addrbits=%d\n", READL(&globalDirectory, PORTAL_DIRECTORY_ADDRBITS));
     for(i = 0; (i < numportals) && (i < 32); i++)
-      fprintf(stderr, "portal[%d]: ifcid=%d, ifctype=%08x\n", i, READL(&globalDirectory, PORTAL_DIRECTORY_PORTAL_ID(i)), READL(&globalDirectory, PORTAL_DIRECTORY_PORTAL_TYPE(i)));
+      PORTAL_PRINTF("portal[%d]: ifcid=%d, ifctype=%08x\n", i, READL(&globalDirectory, PORTAL_DIRECTORY_PORTAL_ID(i)), READL(&globalDirectory, PORTAL_DIRECTORY_PORTAL_TYPE(i)));
   }
 }
 
 unsigned int directory_get_fpga(unsigned int id)
 {
-  int i;
+  int numportals, i;
     init_directory();
-  int numportals = READL(&globalDirectory, PORTAL_DIRECTORY_NUMPORTALS);
+  numportals = READL(&globalDirectory, PORTAL_DIRECTORY_NUMPORTALS);
   for(i = 0; i < numportals; i++){
     if(READL(&globalDirectory, PORTAL_DIRECTORY_PORTAL_ID(i)) == id)
       return i+1;
   }
-  fprintf(stderr, "directory_fpga(id=%d) id not found\n", id);
+  PORTAL_PRINTF("directory_fpga(id=%d) id not found\n", id);
   exit(1);
 }
 
@@ -250,7 +265,7 @@ unsigned int directory_get_addrbits(unsigned int id)
     init_directory();
   return READL(&globalDirectory, PORTAL_DIRECTORY_ADDRBITS);
 }
-
+#ifndef __KERNEL__
 void portalTrace_start()
 {
     init_directory();
@@ -259,7 +274,7 @@ void portalTrace_start()
   traceInfo.trace = 1;
   int res = ioctl(globalDirectory.fpga_fd,BNOC_TRACE,&traceInfo);
   if (res)
-    fprintf(stderr, "Failed to start tracing. errno=%d\n", errno);
+    PORTAL_PRINTF("Failed to start tracing. errno=%d\n", errno);
 #endif
 }
 void portalTrace_stop()
@@ -270,6 +285,7 @@ void portalTrace_stop()
   traceInfo.trace = 0;
   int res = ioctl(globalDirectory.fpga_fd,BNOC_TRACE,&traceInfo);
   if (res)
-    fprintf(stderr, "Failed to stop tracing. errno=%d\n", errno);
+    PORTAL_PRINTF("Failed to stop tracing. errno=%d\n", errno);
 #endif
 }
+#endif

@@ -206,7 +206,7 @@ void call_swallowdddd(void)
 void dotestout(const char *testname, void (*testfn)(void))
 {
   uint64_t elapsed;
-  init_timer();
+  xbsv_timer_init();
   start_timer(1);
   for (int i = 0; i < LOOP_COUNT; i++) {
     testfn();
@@ -221,7 +221,7 @@ void dotestin(const char *testname, int which)
   uint64_t elapsed;
   heard_count = 0;
   printf("starting test %s, which %d\n", testname, which);
-  init_timer();
+  xbsv_timer_init();
   start_timer(1);
   start_timer(0);
   catch_timer(0);
@@ -243,7 +243,7 @@ int main(int argc, const char **argv)
     portalExec_init();
 
     printf("Timer tests\n");
-    init_timer();
+    xbsv_timer_init();
     for (int i = 0; i < 1000; i++) {
       start_timer(0);
       catch_timer(1);

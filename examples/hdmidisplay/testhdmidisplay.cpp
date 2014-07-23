@@ -29,6 +29,7 @@
 #include "HdmiInternalRequestProxy.h"
 #include "portal.h"
 #include <stdio.h>
+#include <pthread.h>
 #include <unistd.h>
 #include <sys/mman.h>
 #include <ctype.h>

@@ -127,7 +127,7 @@ int main(int argc, const char **argv)
 
 #if 0
     printf("Timer tests\n");
-    init_timer();
+    xbsv_timer_init();
     for (int i = 0; i < 1000; i++) {
       START_TIMER(0);
       CATCH_TIMER(1);
@@ -149,7 +149,7 @@ int main(int argc, const char **argv)
     call_say(v*17);
     call_say(v*93);
     printf("[%s:%d] run %d loops\n\n", __FUNCTION__, __LINE__, LOOP_COUNT);
-    init_timer();
+    xbsv_timer_init();
     START_TIMER(1);
     for (int i = 0; i < LOOP_COUNT; i++)
         call_say2(v, v*3);

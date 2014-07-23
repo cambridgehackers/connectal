@@ -48,6 +48,7 @@
 #define ALOGE(fmt, ...) fprintf(stderr, "PORTAL: " fmt, __VA_ARGS__)
 #endif
 
+#ifndef NO_CPP_PORTAL_CODE
 PortalPoller *defaultPoller = new PortalPoller();
 
 PortalPoller::PortalPoller()
@@ -221,3 +222,4 @@ void portalExec_start()
     defaultPoller->portalExec_start();
 }
 
+#endif // NO_CPP_PORTAL_CODE
