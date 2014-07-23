@@ -325,3 +325,6 @@ xilinx/pcie_7x_gen1x8: scripts/generate-pcie-gen1x8.tcl
 	mv ./project_pcie_gen1x8/project_pcie_gen1x8.srcs/sources_1/ip/pcie_7x_0 xilinx/pcie_7x_gen1x8
 	rm -fr ./project_pcie_gen1x8
 
+distclean:
+	rm -rf examples/*/bluesim examples/*/vc707 examples/*/kc705 examples/*/zedboard examples/*/zc702 examples/*/zc706
+	rm -rf tests/*/bluesim tests/*/vc707 tests/*/kc705 tests/*/zedboard tests/*/zc702 tests/*/zc706
