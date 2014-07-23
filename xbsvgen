@@ -284,7 +284,7 @@ fpgamakeRuleTemplate='''
 FPGAMAKE=$(XBSVDIR)/../fpgamake/fpgamake
 fpgamake.mk: $(vfile) Makefile
 	mkdir -p hw
-	$(FPGAMAKE) -o fpgamake.mk %(partitions)s --floorplan=%(floorplan)s %(xdc)s -t $(MKTOP) -b hw/mkTop.bit verilog $(XBSVDIR)/verilog
+	$(FPGAMAKE) -o fpgamake.mk %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s -t $(MKTOP) -b hw/mkTop.bit verilog $(XBSVDIR)/verilog
 
 hw/mkTop.bit: fpgamake.mk
 	make -f fpgamake.mk
@@ -933,7 +933,8 @@ if __name__=='__main__':
     if namespace.floorplan and namespace.partition_module:
         bitsmake=fpgamakeRuleTemplate % {'partitions': ' '.join(['-s %s' % p for p in namespace.partition_module]),
 					 'floorplan': os.path.abspath(namespace.floorplan),
-					 'xdc': ' '.join(['--xdc=%s' % os.path.abspath(xdc) for xdc in namespace.constraint])
+					 'xdc': ' '.join(['--xdc=%s' % os.path.abspath(xdc) for xdc in namespace.constraint]),
+					 'xci': ' '.join(['--xci=%s' % os.path.abspath(xci) for xci in namespace.xci])
 					 }
     else:
         bitsmake=bitsmakeRuleTemplate
