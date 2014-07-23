@@ -20,11 +20,24 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <stdio.h>
-#include <unistd.h>
-#include <stdint.h>
+#ifdef __KERNEL__
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/kthread.h>
+#include <linux/miscdevice.h>
+#include <linux/fs.h>
+
+#define DRIVER_NAME "testprog"
+#define DRIVER_DESCRIPTION "xbsv test program"
+#define DRIVER_VERSION "0.1"
+
+#else
+//#include <stdio.h>
+//#include <unistd.h>
+//#include <stdint.h>
+#endif
 #include "GeneratedTypes.h"
-#include "portal.h"
+//#include "portal.h"
 
 static int v1a = 42;
 static int v2a = 2;
@@ -36,16 +49,17 @@ static INDFUNC indfn[MAX_INDARRAY];
 
 void SimpleIndicationWrapperheard1_cb (  struct PortalInternal *p, const uint32_t v )
 {
-    fprintf(stderr, "heard1(%d)\n", v);
+    PORTAL_PRINTF("heard1(%d)\n", v);
 }
 void SimpleIndicationWrapperheard2_cb (  struct PortalInternal *p, const uint32_t a, const uint32_t b )
 {
-    fprintf(stderr, "heard2(%d %d)\n", a, b);
+    PORTAL_PRINTF("heard2(%d %d)\n", a, b);
 }
 
 static void manual_event(void)
 {
-    for (int i = 0; i < MAX_INDARRAY; i++) {
+    int i;
+    for (i = 0; i < MAX_INDARRAY; i++) {
       PortalInternal *instance = intarr[i];
       volatile unsigned int *map_base = instance->map_base;
       unsigned int queue_status;
@@ -53,7 +67,7 @@ static void manual_event(void)
         unsigned int int_src = READL(instance, &map_base[IND_REG_INTERRUPT_FLAG]);
         unsigned int int_en  = READL(instance, &map_base[IND_REG_INTERRUPT_MASK]);
         unsigned int ind_count  = READL(instance, &map_base[IND_REG_INTERRUPT_COUNT]);
-        fprintf(stderr, "(%d:fpga%d) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->fpga_number, int_src, int_en, queue_status);
+        PORTAL_PRINTF("(%d:fpga%d) about to receive messages int=%08x en=%08x qs=%08x ind_count %d\n", i, instance->fpga_number, int_src, int_en, queue_status, ind_count);
         if (indfn[i])
             indfn[i](instance, queue_status-1);
       }
@@ -78,13 +92,55 @@ static PortalInternal intdata[MAX_INDARRAY];
 
    WRITEL(intarr[0], &intarr[0]->map_base[IND_REG_INTERRUPT_MASK], 0);
    WRITEL(intarr[0], &intarr[1]->map_base[IND_REG_INTERRUPT_MASK], 0);
-   fprintf(stderr, "Main::calling say1(%d)\n", v1a);
+   PORTAL_PRINTF("Main::calling say1(%d)\n", v1a);
    //device->say1(v1a);  
    SimpleRequestProxy_say1 (intarr[0], v1a);
    manual_event();
 
-   fprintf(stderr, "Main::calling say2(%d, %d)\n", v2a,v2b);
+   PORTAL_PRINTF("Main::calling say2(%d, %d)\n", v2a,v2b);
    //device->say2(v2a,v2b);
    SimpleRequestProxy_say2 (intarr[0], v2a, v2b);
    manual_event();
+   return 0;
 }
+
+#ifdef __KERNEL__
+static struct miscdevice miscdev;
+static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
+{
+printk("[%s:%d]\n", __FUNCTION__, __LINE__);
+  switch (cmd) {
+  }
+  return 0;
+}
+static struct file_operations pa_fops = {
+    .owner = THIS_MODULE,
+    .unlocked_ioctl = pa_unlocked_ioctl
+  };
+
+static int __init pa_init(void)
+{
+  struct miscdevice *md = &miscdev;
+  printk("TestProgram::pa_init\n");
+  md->minor = MISC_DYNAMIC_MINOR;
+  md->name = "portalmem";
+  md->fops = &pa_fops;
+  md->parent = NULL;
+  misc_register(md);
+  return 0;
+}
+
+static void __exit pa_exit(void)
+{
+  struct miscdevice *md = &miscdev;
+  printk("TestProgram::pa_exit\n");
+  misc_deregister(md);
+}
+
+module_init(pa_init);
+module_exit(pa_exit);
+
+MODULE_LICENSE("GPL v2");
+MODULE_DESCRIPTION(DRIVER_DESCRIPTION);
+MODULE_VERSION(DRIVER_VERSION);
+#endif
