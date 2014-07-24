@@ -31,6 +31,7 @@
 #include <linux/miscdevice.h>
 #include <linux/fs.h>
 #include <linux/kthread.h>
+#include <linux/uaccess.h> // copy_to/from_user
 
 #include "portal.h"   // pthread_t
 
@@ -43,15 +44,46 @@ int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *
   }
   return 0;
 }
+static void memdump(unsigned char *p, int len, char *title)
+{
+int i;
 
-static ssize_t pa_read (struct file *f, char __user *u, size_t len, loff_t *data)
-{
-printk("[%s:%d] f %p u %p len %lx data %p\n", __FUNCTION__, __LINE__, f, u, len, data);
-    return 0;
+    i = 0;
+    while (len > 0) {
+        if (!(i & 0xf)) {
+            if (i > 0)
+                printk("\n");
+            printk("%s: ",title);
+        }
+        printk("%02x ", *p++);
+        i++;
+        len--;
+    }
+    printk("\n");
 }
-static ssize_t pa_write (struct file *f, const char __user *u, size_t len, loff_t *data)
+
+static unsigned char tempdata[100];
+static unsigned char readdata[100] = "abcdefghij1234567890";
+static ssize_t pa_read (struct file *f, char __user *arg, size_t len, loff_t *data)
 {
-printk("[%s:%d] f %p u %p len %lx data %p\n", __FUNCTION__, __LINE__, f, u, len, data);
+static int once;
+printk("[%s:%d] f %p u %p len %lx data %p\n", __FUNCTION__, __LINE__, f, arg, len, data);
+if (once) return 0;
+once = 1;
+    if (len > sizeof(readdata))
+        len = sizeof(readdata);
+    int err = copy_to_user((void __user *) arg, &readdata, len);
+    return len;
+}
+static ssize_t pa_write (struct file *f, const char __user *arg, size_t len, loff_t *data)
+{
+printk("[%s:%d] f %p u %p len %lx data %p\n", __FUNCTION__, __LINE__, f, arg, len, data);
+    if (len > sizeof(tempdata))
+        len = sizeof(tempdata);
+    int err = copy_from_user(&tempdata, (void __user *) arg, len);
+    if (!err) {
+memdump(tempdata, sizeof(tempdata), "READ");
+    }
     return len;
 }
 
