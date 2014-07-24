@@ -339,8 +339,106 @@ module mkColSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSourc
 `endif
       endmethod
    endinterface
-endmodule
+endmodule: mkColSource
 
+// Interleaves K columns of row major matrix into output pipe
+module mkInterleavedColSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (ColSource#(TMul#(N,32), Vector#(N,Token)))
+   provisos (Log#(N,nshift));
+`ifdef TAGGED_TOKENS
+   Reg#(UInt#(32)) row <- mkReg(0);
+   FIFOF#(UInt#(32)) tagFifo <- mkSizedFIFOF(4);
+`endif
+
+   Bool verbose = False;
+   let kk = valueOf(K);
+   let nshift = valueOf(nshift);
+   Reg#(Bit#(TAdd#(TLog#(K),1)))  kReg <- mkReg(0);
+   FIFOF#(Bool) firstFifo <- mkFIFOF();
+   FIFOF#(Bool) lastFifo <- mkFIFOF();
+   FIFOF#(Bool) finishedFifo <- mkFIFOF();
+   FIFOF#(RangeConfig#(Bit#(ObjectOffsetSize))) cmdFifo <- mkSizedFIFOF(4);
+   RangePipeIfc#(Bit#(ObjectOffsetSize)) sequencer <- mkRangePipeOut();
+   Reg#(ObjectPointer) pointerReg <- mkReg(0);
+
+   rule startCmd;
+      let cfg <- toGet(cmdFifo).get();
+      sequencer.start(cfg);
+      $display("mkColSource startCmd base=%d", cfg.xbase);
+   endrule
+
+   rule fetchRow;
+      let base <- toGet(sequencer.pipe).get();
+      firstFifo.enq(sequencer.isFirst());
+      lastFifo.enq(sequencer.isLast());
+      if (sequencer.isLast())
+	 finishedFifo.enq(True);
+      Bit#(8) len = fromInteger(kk) >> nshift;
+      $display("colSource.fetchRow: base=%d base>>nshift=%d len=%d nshift=%d isFirst=%d isLast=%d",
+			    base, base >> nshift, len, nshift,
+			    sequencer.isFirst(), sequencer.isLast());
+      vs.start(pointerReg, base >> nshift, fromInteger(kk) >> nshift);
+   endrule
+
+   rule finishRow;
+      $display("colSource.finishrow");
+      let rv <- vs.finish;
+   endrule
+
+   method Action start(ObjectPointer pointer, Bit#(ObjectOffsetSize) rows, Bit#(ObjectOffsetSize) cols, Bit#(ObjectOffsetSize) col);
+`ifdef TAGGED_TOKENS
+      tagFifo.enq(tag);
+`endif
+      let cfg = RangeConfig { xbase: col,
+			     xlimit: rows*cols+col,
+			     xstep: cols };
+      pointerReg <= pointer;
+      cmdFifo.enq(cfg);
+      if (verbose) $display("mkColSource.start rows=%d cols=%d col=%d", rows, cols, col);
+   endmethod
+   method ActionValue#(Bool) finish;
+      if (verbose) $display("mkColSource.finish()");
+      let rv <- toGet(finishedFifo).get();
+      return rv;
+   endmethod
+   interface PipeOut pipe;
+      method Vector#(N,Token) first;
+	 Vector#(N,Token) rv;
+	 Bool isfirst = firstFifo.first();
+	 Bool islast = lastFifo.first();
+`ifdef TAGGED_TOKENS
+	 for(Integer i = 0; i < valueOf(N); i=i+1)
+	    rv[i] = Token{row:row+fromInteger(i), col:tagFifo.first, v:vs.pipe.first[i], first:isfirst, last:islast};
+`else
+	 for(Integer i = 0; i < valueOf(N); i=i+1)
+	    rv[i] = Token{v:vs.pipe.first[i], first:isfirst, last:islast};
+`endif
+
+	 return rv;
+      endmethod
+      method Action deq;
+	 vs.pipe.deq;
+
+	 $display("colSource.deq k=%d first=%d last=%d vs.pipe.first[0]=%h vs.pipe.first[1]=%h",
+		  kReg, firstFifo.first(), lastFifo.first(), pack(vs.pipe.first[0]), pack(vs.pipe.first[1]));
+	 let nextk = kReg + fromInteger(valueOf(N));
+	 if (nextk == fromInteger(valueOf(K))) begin
+	    firstFifo.deq();
+	    lastFifo.deq();
+	    nextk = 0;
+`ifdef TAGGED_TOKENS
+	    tagFifo.deq();
+`endif
+	    //nextrow = 0;
+	 end
+	 kReg <= nextk;
+
+`ifdef TAGGED_TOKENS
+	 row <= nextrow;
+`endif
+      endmethod
+      method Bool notEmpty = vs.pipe.notEmpty;
+   endinterface
+endmodule: mkInterleavedColSource
 
 typedef 8 UB_MulLat; // upper bound on MUL latency?
 typedef 8 UB_AddLat; // upper bound on ADD latency?
