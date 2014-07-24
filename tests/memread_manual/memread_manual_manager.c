@@ -24,7 +24,13 @@
 typedef struct task_struct *pthread_t;
 #include <linux/delay.h>  // msleep
 #include <linux/kthread.h>
-static void *pthread_worker(void *p);
+static int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *), void *arg)
+{
+  if (!(*thread = kthread_run ((int (*)(void *))start_routine, arg, "pthread_worker"))) {
+        printk ("pthread_create: kthread_run failed");
+  }
+  return 0;
+}
 #else
 #include <string.h>
 #include <sys/mman.h>
@@ -125,7 +131,7 @@ int main(int argc, const char **argv)
   unsigned int *srcBuffer;
   unsigned int ref_srcAlloc;
   int rc, i;
-  pthread_t tid = NULL;
+  pthread_t tid = 0;
 
   init_portal_internal(&intarr[0], IfcNames_DmaIndication, DmaIndicationWrapper_handleMessage);     // fpga1
   init_portal_internal(&intarr[1], IfcNames_MemreadIndication, MemreadIndicationWrapper_handleMessage); // fpga2
@@ -141,16 +147,13 @@ int main(int argc, const char **argv)
   }
 
   PORTAL_PRINTF( "Main: creating exec thread\n");
-#ifndef __KERNEL__ ///////////////////////// userspace version
-  if(pthread_create(&tid, NULL,  pthread_worker, NULL)){
+  if(pthread_create(&tid, NULL, pthread_worker, NULL)){
    PORTAL_PRINTF( "error creating exec thread\n");
-   exit(1);
+   return -1;
   }
+#ifndef __KERNEL__ ///////////////////////// userspace version
   srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
 #else   /// kernel version
-  if (!(tid = kthread_run ((int (*)(void *))pthread_worker, NULL, "pthread_worker"))) {
-        printk ("kthread_run failed");
-  }
 //??????
   srcBuffer = NULL;
 #endif ////////////////////////////////
