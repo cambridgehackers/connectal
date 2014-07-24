@@ -28,11 +28,35 @@
 
 #include <linux/module.h>
 #include <linux/kernel.h>
+#include <linux/delay.h>
 #include <linux/kthread.h>
 #include <linux/miscdevice.h>
 #include <linux/fs.h>
 
 extern int main(int argc, char *argv[]);
+extern void manual_event(void);
+static struct task_struct *tid = NULL;
+
+static int kthread_worker (void* arg) 
+{
+    printk ("kthread_worker starts\n");
+    while (1) {
+        manual_event();
+        msleep(100);
+        if (kthread_should_stop()) {
+            printk ("exit from kthread_worker\n");
+            return 0;
+        }
+    }
+    printk ("kthread_worker ends\n");
+    return 0;
+}
+void bdbm_test_memread_thread_init (void) 
+{
+    if ((tid = kthread_create (kthread_worker, NULL, "kthread_worker")) == NULL) {
+        printk ("kthread_create failed");
+    }
+}
 
 static struct miscdevice miscdev;
 static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
@@ -57,6 +81,9 @@ static int __init pa_init(void)
   md->parent = NULL;
   misc_register(md);
   main(0, NULL); /* start the test program */
+  if (!kthread_stop (tid)) {
+    printk ("kthread stops");
+  }
   return 0;
 }
 

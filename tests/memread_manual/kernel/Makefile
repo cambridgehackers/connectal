@@ -8,7 +8,7 @@ CPPDIR=../../../cpp
 BOARDDIR=../$(BOARD)/jni
 DRIVERDIR=$(src)/../../../drivers
 
-KBUILD_EXTRA_SYMBOLS := $(DRIVERDIR)/pcieportal/Module.symvers
+KBUILD_EXTRA_SYMBOLS := $(DRIVERDIR)/pcieportal/Module.symvers $(DRIVERDIR)/portalmem/Module.symvers
 
 testme-y := ../memread_manual_manager.o \
      $(BOARDDIR)/DmaConfigProxy.o \

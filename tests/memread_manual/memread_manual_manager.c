@@ -21,23 +21,17 @@
 
 #ifdef __KERNEL__
 #define PRIx64 "llx"
-typedef int sem_t;
-#define sem_post(A)
-#define sem_wait(A)
+void bdbm_test_memread_thread_init (void);
 #else
-#include <stdio.h>
 #include <string.h>
-#include <stdint.h>
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
-
 #include <sys/mman.h>
 #include <pthread.h>
 #include <fcntl.h>
 #include <sys/select.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #endif
 
-#include "portal.h"
 #include "dmaManager.h"
 #include "GeneratedTypes.h" 
 
@@ -88,7 +82,7 @@ void DmaIndicationWrapperdmaError_cb (  struct PortalInternal *p, const uint32_t
         PORTAL_PRINTF("DmaIndication::dmaError(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
 }
 
-static void manual_event(void)
+void manual_event(void)
 {
     int i;
     for (i = 0; i < MAX_INDARRAY; i++) {
@@ -150,12 +144,13 @@ int main(int argc, const char **argv)
   }
   srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
 #else   /// kernel version
+  bdbm_test_memread_thread_init();
 //??????
   srcBuffer = NULL;
 #endif ////////////////////////////////
 
-  for (i = 0; i < numWords; i++)
-    srcBuffer[i] = i;
+  //for (i = 0; i < numWords; i++)
+    //srcBuffer[i] = i;
 
 #ifndef __KERNEL__   //////////////// userspace code for flushing dcache for srcAlloc
   DmaManager_dCacheFlushInval(&priv, srcAlloc, srcBuffer);

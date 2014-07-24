@@ -46,6 +46,7 @@
 #define PORTAL_DIRECTORY_PORTAL_ID(A)   PORTAL_DIRECTORY_OFFSET(6 + 2 * (A))
 #define PORTAL_DIRECTORY_PORTAL_TYPE(A) PORTAL_DIRECTORY_OFFSET(6 + 2 * (A) + 1)
 
+struct PortalInternal;
 typedef int (*PORTAL_INDFUNC)(struct PortalInternal *p, unsigned int channel);
 typedef struct PortalInternal {
   struct PortalPoller *poller;

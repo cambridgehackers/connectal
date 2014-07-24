@@ -25,7 +25,12 @@
 #define _PORTAL_MEMORY_H_
 
 #ifdef __KERNEL__
-#include "linux/types.h"
+#include <linux/types.h>
+#include <linux/semaphore.h>
+#define sem_wait(A) down_interruptible(A)
+#define sem_post(A) up(A)
+#define sem_init(A, B, C) (sema_init ((A), (B)), 0)
+typedef struct semaphore sem_t;
 #else
 #include <semaphore.h>
 #include <stdint.h>
@@ -46,11 +51,9 @@
 #endif
 
 typedef struct {
-#ifndef __KERNEL__
   sem_t confSem;
   sem_t mtSem;
   sem_t dbgSem;
-#endif
   uint64_t mtCnt;
   PortalInternal *device;
 #ifndef MMAP_HW
