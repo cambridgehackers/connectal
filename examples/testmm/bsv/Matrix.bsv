@@ -1040,7 +1040,7 @@ instance DramMM#(1);
    module  mkDramMatrixMultiply#(HostType host)(DramMatrixMultiply#(N,TMul#(N,32),1));
    
       MemwriteEngineV#(TMul#(N,32),2, J)         writeEngine <- mkMemwriteEngine();
-      MemreadEngineV#(TMul#(N,32), 2, TAdd#(J,K)) readEngine <- mkMemreadEngineBuff(512);
+      MemreadEngineV#(TMul#(N,32), 2, TAdd#(J,K)) readEngine <- mkMemreadEngineNoBuff;
    
       Vector#(J, Server#(MemengineCmd,Bool))    rowReadServers = take(readEngine.readServers);
       Vector#(K, Server#(MemengineCmd,Bool))    colReadServers = takeTail(readEngine.readServers);
@@ -1064,8 +1064,8 @@ instance DramMM#(2);
    module  mkDramMatrixMultiply#(HostType host)(DramMatrixMultiply#(N,TMul#(N,32),2));
 
       MemwriteEngineV#(TMul#(N,32),2, J)   writeEngine <- mkMemwriteEngine();
-      MemreadEngineV#(TMul#(N,32), 2, J) rowReadEngine <- mkMemreadEngineBuff(512);
-      MemreadEngineV#(TMul#(N,32), 2, K) colReadEngine <- mkMemreadEngineBuff(512);
+      MemreadEngineV#(TMul#(N,32), 2, J) rowReadEngine <- mkMemreadEngineNoBuff;
+      MemreadEngineV#(TMul#(N,32), 2, K) colReadEngine <- mkMemreadEngineNoBuff;
    
       Vector#(J, Server#(MemengineCmd,Bool)) rowReadServers = rowReadEngine.readServers;
       Vector#(K, Server#(MemengineCmd,Bool)) colReadServers = colReadEngine.readServers;
