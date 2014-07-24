@@ -29,22 +29,6 @@
 #define DRIVER_DESCRIPTION "Memory management between HW and SW processes"
 #define DRIVER_VERSION "0.1"
 
-/**
- * struct pa_buffer - metadata for a particular buffer
- * @size:              size of the buffer
- * @lock:		protects the buffers cnt fields
- * @kmap_cnt:		number of times the buffer is mapped to the kernel
- * @vaddr:		the kenrel mapping if kmap_cnt is not zero
- * @sg_table:		the sg table for the buffer
- */
-struct pa_buffer {
-  size_t          size;
-  struct mutex    lock;
-  int             kmap_cnt;
-  void            *vaddr;
-  struct sg_table *sg_table;
-};
-
 static struct miscdevice miscdev;
 
 static void free_buffer_page(struct page *page, unsigned int order)
