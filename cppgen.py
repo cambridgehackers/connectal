@@ -33,21 +33,19 @@ proxyClassPrefixTemplate='''
 class %(namespace)s%(className)s : public %(parentClass)s {
 //proxyClass
 public:
-    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, poller) { pint.parent = static_cast<void *>(this); };
+    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, poller) {
+        pint.parent = static_cast<void *>(this);
+    };
 '''
 
 wrapperClassPrefixTemplate='''
 class %(namespace)s%(className)s : public %(parentClass)s {
 //wrapperClass
 public:
-    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, poller) { pint.parent = static_cast<void *>(this); };
-'''
-wrapperClassSuffixTemplate='''
-protected:
-    virtual int handleMessage(unsigned int channel) {
-        return %(namespace)s%(className)s_handleMessage(&pint, channel);
-    }
-};
+    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, poller) {
+        pint.handler = %(namespace)s%(className)s_handleMessage;
+        pint.parent = static_cast<void *>(this);
+    };
 '''
 
 putFailedMethodName = "putFailed"
@@ -437,7 +435,7 @@ class InterfaceMixin:
         f.write(proxyClassPrefixTemplate % subs)
         for d in self.decls:
             d.emitMethodDeclaration(f, True, indentation + 4, namespace, className)
-        f.write(wrapperClassSuffixTemplate % subs)
+        f.write('\n};\n')
 	of.write('enum { ' + ','.join(reqChanNums) + '};\n')
         if suffix == 'Proxy':
 	    of.write('enum { CHAN_NUM_%s_putFailed };\n' % className)
@@ -453,7 +451,7 @@ class InterfaceMixin:
         f.write(wrapperClassPrefixTemplate % subs)
         for d in self.decls:
             d.emitMethodDeclaration(f, False, indentation + 4, namespace, className)
-        f.write(wrapperClassSuffixTemplate % subs)
+        f.write('\n};\n')
         for d in self.decls:
             d.emitCStructDeclaration(cppf, of, namespace, className)
 	of.write('enum { ' + ','.join(indChanNums) + '};\n')

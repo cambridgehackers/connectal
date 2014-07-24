@@ -156,7 +156,7 @@ void* PortalPoller::portalExec_event(void)
           unsigned int ind_count  = READL(&instance->pint, &map_base[IND_REG_INTERRUPT_COUNT]);
           fprintf(stderr, "(%d:fpga%d) about to receive messages int=%08x en=%08x qs=%08x cnt=%x\n", i, instance->pint.fpga_number, int_src, int_en, queue_status, ind_count);
         }
-        instance->handleMessage(queue_status-1);
+        instance->pint.handler(&instance->pint, queue_status-1);
 	mcnt++;
       }
       // re-enable interrupt which was disabled by portal_isr

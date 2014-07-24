@@ -26,6 +26,7 @@
 
 #include <semaphore.h>
 #include <unistd.h>
+#include "portal.h"
 
 class Portal;
 class PortalPoller {
@@ -74,7 +75,6 @@ class Portal : public PortalInternalCpp
     pint.poller->registerInstance(this);
   };
   ~Portal() { pint.poller->unregisterInstance(this); };
-  virtual int handleMessage(unsigned int channel) { return 0; };
 };
 
 #endif // __POLLER_H__
