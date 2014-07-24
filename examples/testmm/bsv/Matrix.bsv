@@ -189,6 +189,12 @@ interface RowColSink#(numeric type dsz, type a);
    method ActionValue#(Bool) finish();
 endinterface
 
+interface ColSource#(numeric type dsz, type a);
+   interface PipeOut#(a) pipe;
+   method Action start(ObjectPointer pointer, Bit#(ObjectOffsetSize) rows, Bit#(ObjectOffsetSize) cols, Bit#(ObjectOffsetSize) col);
+   method ActionValue#(Bool) finish();
+endinterface
+
 function Put#(a) toCountedPut(Reg#(Bit#(n)) r, Put#(a) p);
    return (interface Put#(a);
       method Action put(a v);
