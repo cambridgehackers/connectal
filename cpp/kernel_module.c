@@ -44,37 +44,40 @@ int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *
   return 0;
 }
 
-static struct miscdevice miscdev;
-static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
+static ssize_t pa_read (struct file *f, char __user *u, size_t len, loff_t *data)
 {
-printk("[%s:%d]\n", __FUNCTION__, __LINE__);
-  switch (cmd) {
-  }
-  return 0;
+printk("[%s:%d] f %p u %p len %lx data %p\n", __FUNCTION__, __LINE__, f, u, len, data);
+    return 0;
 }
+static ssize_t pa_write (struct file *f, const char __user *u, size_t len, loff_t *data)
+{
+printk("[%s:%d] f %p u %p len %lx data %p\n", __FUNCTION__, __LINE__, f, u, len, data);
+    return len;
+}
+
 static struct file_operations pa_fops = {
     .owner = THIS_MODULE,
-    .unlocked_ioctl = pa_unlocked_ioctl
+    .read = pa_read,
+    .write = pa_write,
   };
+static struct miscdevice miscdev = {
+  .minor = MISC_DYNAMIC_MINOR,  // Must be < 256!
+  .name = "xbsvtest",
+  .fops = &pa_fops,
+};
 
 static int __init pa_init(void)
 {
-  struct miscdevice *md = &miscdev;
-  printk("TestProgram::pa_init\n");
-  md->minor = MISC_DYNAMIC_MINOR+1;
-  md->name = "xbsvtest";
-  md->fops = &pa_fops;
-  md->parent = NULL;
-  misc_register(md);
+  printk("TestProgram::pa_init minor %d\n", miscdev.minor);
+  misc_register(&miscdev);
   main(0, NULL); /* start the test program */
   return 0;
 }
 
 static void __exit pa_exit(void)
 {
-  struct miscdevice *md = &miscdev;
   printk("TestProgram::pa_exit\n");
-  misc_deregister(md);
+  misc_deregister(&miscdev);
 }
 
 module_init(pa_init);
