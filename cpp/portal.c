@@ -28,15 +28,12 @@
 #include "linux/delay.h"
 #define assert(A)
 #define exit(A) while(1) msleep(2000);
-#define PRIu64 "llx"
 #else
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
 #include <sys/ioctl.h>
 #include <time.h> // ctime
 #include "sock_utils.h"
@@ -118,7 +115,7 @@ void print_timer(int loops)
     int i;
     for (i = 0; i < MAX_TIMERS; i++) {
       if (timers[i].min != (1LLU << 63))
-           PORTAL_PRINTF("[%d]: avg %" PRIu64 " min %" PRIu64 " max %" PRIu64 " over %" PRIu64 "\n",
+           PORTAL_PRINTF("[%d]: avg %" PRIx64 " min %" PRIx64 " max %" PRIx64 " over %" PRIx64 "\n",
                i, timers[i].total/loops, timers[i].min, timers[i].max, timers[i].over);
     }
 }

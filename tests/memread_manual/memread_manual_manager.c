@@ -20,25 +20,14 @@
  */
 
 #ifdef __KERNEL__
-#define PRIx64 "llx"
-typedef struct task_struct *pthread_t;
 #include <linux/delay.h>  // msleep
 #include <linux/kthread.h>
-static int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *), void *arg)
-{
-  if (!(*thread = kthread_run ((int (*)(void *))start_routine, arg, "pthread_worker"))) {
-        printk ("pthread_create: kthread_run failed");
-  }
-  return 0;
-}
 #else
 #include <string.h>
 #include <sys/mman.h>
 #include <pthread.h>
 #include <fcntl.h>
 #include <sys/select.h>
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
 #endif
 
 #include "dmaManager.h"

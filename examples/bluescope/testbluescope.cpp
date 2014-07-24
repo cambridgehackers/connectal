@@ -26,8 +26,6 @@
 #include <pthread.h>
 #include <monkit.h>
 #include <semaphore.h>
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
 
 #include "StdDmaIndication.h"
 

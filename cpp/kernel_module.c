@@ -30,8 +30,19 @@
 #include <linux/kernel.h>
 #include <linux/miscdevice.h>
 #include <linux/fs.h>
+#include <linux/kthread.h>
+
+#include "portal.h"   // pthread_t
 
 extern int main(int argc, char *argv[]);
+
+int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *), void *arg)
+{
+  if (!(*thread = kthread_run ((int (*)(void *))start_routine, arg, "pthread_worker"))) {
+        printk ("pthread_create: kthread_run failed");
+  }
+  return 0;
+}
 
 static struct miscdevice miscdev;
 static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)

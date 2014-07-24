@@ -3,8 +3,6 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <semaphore.h>
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
 
 #include "BscanIndicationWrapper.h"
 #include "BscanRequestProxy.h"

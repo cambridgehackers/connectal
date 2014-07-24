@@ -4,8 +4,6 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <unistd.h>
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
 
 #include "PipeMulIndicationWrapper.h"
 #include "PipeMulRequestProxy.h"

@@ -28,9 +28,6 @@
 #include <stdio.h>
 #include <sys/mman.h>
 
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
-
 #include <portal.h>
 #include "dmaManager.h"
 #include "DmaConfigProxy.h"

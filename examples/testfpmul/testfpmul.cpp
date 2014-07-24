@@ -31,8 +31,6 @@
 #include <errno.h>
 #include <math.h>
 #include <assert.h>
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
 
 #include <GeneratedTypes.h>
 #include <FpMulRequestProxy.h>

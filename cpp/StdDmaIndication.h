@@ -24,10 +24,6 @@
 #include "dmaManager.h"
 #include "DmaIndicationWrapper.h"
 
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
-
-static int error_limit = 20;
 class DmaIndication : public DmaIndicationWrapper
 {
   DmaManager *portalMemory;

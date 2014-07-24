@@ -24,7 +24,6 @@
 #include "dmaManager.h"
 
 #ifdef __KERNEL__
-#define PRIx64 "llx"
 #include <linux/slab.h>
 #include <linux/dma-buf.h>
 extern struct dma_buf *portalmem_dmabuffer_create(unsigned long len, unsigned long align);
@@ -35,8 +34,6 @@ extern struct dma_buf *portalmem_dmabuffer_create(unsigned long len, unsigned lo
 #include <sys/ioctl.h>
 #include "sock_utils.h"
 #include "portalmem.h"
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
 
 #if defined(__arm__)
 #include "zynqportal.h"

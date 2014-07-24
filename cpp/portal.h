@@ -61,11 +61,20 @@ typedef struct PortalInternal {
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/types.h>  // has same typedefs as stdint.h
+
+typedef struct task_struct *pthread_t;
+int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *), void *arg);
+#define PRIu64 "llx"
+#define PRIx64 "llx"
+
 #define PORTAL_PRINTF printk
 #else
 #include <stdio.h>   // printf()
 #include <stdlib.h>  // exit()
 #include <stdint.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 #define PORTAL_PRINTF printf
 #endif
 

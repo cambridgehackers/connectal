@@ -35,8 +35,6 @@
 #include <ctype.h>
 #include "i2chdmi.h"
 #include "edid.h"
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
 
 #define FRAME_COUNT 2
 #define MAX_PIXEL 256
