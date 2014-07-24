@@ -204,6 +204,13 @@ class MethodMixin:
                 else:
                     return self.collectMembers(scope, tdtype.type)
 
+        class paramInfo:
+            def __init__(self, name, width, shifted, datatype, fitsOneWord):
+                self.name = name
+                self.width = width
+                self.shifted = shifted
+                self.datatype = datatype
+                self.fitsOneWord = fitsOneWord
         # pack flattened struct-member list into 32-bit wide bins.  If a type is wider than 32-bits or 
         # crosses a 32-bit boundary, it will appear in more than one bin (though with different ranges).  
         # This is intended to mimick exactly Bluespec struct packing.  The padding must match the code 
@@ -211,23 +218,27 @@ class MethodMixin:
         # the number of bits already consumed from atoms[0].
         def accumWords(s, pro, atoms):
             if len(atoms) == 0:
-                return [] if len(s) == 0 else [s]
-            w = sum([x[1]-x[2] for x in s])
+                if len(s) == 0:
+                     return []
+                else:
+                     return [s]
+            w = sum([x.width-x.shifted for x in s])
             a = atoms[0]
             aw = a[1].bitWidth();
             #print '%d %d %d' %(aw, pro, w)
+            print 'JJJJ ', aw, pro, w, a
             if (aw-pro+w == 32):
-                ns = s+[(a[0],aw,pro,a[1],True)]
+                s.append(paramInfo(a[0],aw,pro,a[1],True))
                 #print '%s (0)'% (a[0])
-                return [ns]+accumWords([],0,atoms[1:])
+                return [s]+accumWords([],0,atoms[1:])
             if (aw-pro+w < 32):
-                ns = s+[(a[0],aw,pro,a[1],True)]
+                s.append(paramInfo(a[0],aw,pro,a[1],True))
                 #print '%s (1)'% (a[0])
-                return accumWords(ns,0,atoms[1:])
+                return accumWords(s,0,atoms[1:])
             else:
-                ns = s+[(a[0],pro+(32-w),pro,a[1],False)]
+                s.append(paramInfo(a[0],pro+(32-w),pro,a[1],False))
                 #print '%s (2)'% (a[0])
-                return [ns]+accumWords([],pro+(32-w), atoms)
+                return [s]+accumWords([],pro+(32-w), atoms)
 
         params = self.params
         paramDeclarations = self.formalParameters(params)
@@ -247,42 +258,42 @@ class MethodMixin:
         #         print '%s[%d:%d]' % (b[0], b[1], b[2])
         # print ''
 
-        def marshall(w):
+        def generate_marshall(w):
             off = 0
             word = []
             for e in w:
-                field = e[0];
-		if e[3].cName() == 'float':
-		    return '        WRITEL(p, temp_working_addr, *(int*)&%s);\n' % e[0];
-                if e[2]:
-                    field = '(%s>>%s)' % (field, e[2])
+                field = e.name;
+		if e.datatype.cName() == 'float':
+		    return '        WRITEL(p, temp_working_addr, *(int*)&%s);\n' % e.name;
+                if e.shifted:
+                    field = '(%s>>%s)' % (field, e.shifted)
                 if off:
                     field = '(%s<<%s)' % (field, off)
-                if e[3].bitWidth() > 64:
-                    field = '(const %s & std::bitset<%d>(0xFFFFFFFF)).to_ulong()' % (field, e[3].bitWidth())
+                if e.datatype.bitWidth() > 64:
+                    field = '(const %s & std::bitset<%d>(0xFFFFFFFF)).to_ulong()' % (field, e.datatype.bitWidth())
                 word.append(field)
-                off = off+e[1]-e[2]
+                off = off+e.width-e.shifted
             return '        WRITEL(p, temp_working_addr, %s);\n' % (''.join(util.intersperse('|', word)))
 
-        def demarshall(w):
+        def generate_demarshall(w):
             off = 0
             word = []
             word.append('        tmp = READL(p, temp_working_addr);\n');
             for e in w:
-                # print e[0]+' (d)'
-                ass = '=' if e[4] else '|='
+                # print e.name+' (d)'
+                ass = '=' if e.fitsOneWord else '|='
                 field = 'tmp'
-		if e[3].cName() == 'float':
-		    word.append('        %s = *(float*)&(%s);\n'%(e[0],field))
+		if e.datatype.cName() == 'float':
+		    word.append('        %s = *(float*)&(%s);\n'%(e.name,field))
 		    continue
                 if off:
                     field = '%s>>%s' % (field, off)
-                if e[3].bitWidth() < 32:
-                    field = '((%s)&0x%xul)' % (field, ((1 << e[3].bitWidth())-1))
-                if e[2]:
-                    field = '((%s)(%s)<<%s)' % (e[3].cName(),field, e[2])
-		word.append('        %s %s (%s)(%s);\n'%(e[0],ass,e[3].cName(),field))
-                off = off+e[1]-e[2]
+                if e.datatype.bitWidth() < 32:
+                    field = '((%s)&0x%xul)' % (field, ((1 << e.datatype.bitWidth())-1))
+                if e.shifted:
+                    field = '((%s)(%s)<<%s)' % (e.datatype.cName(),field, e.shifted)
+		word.append('        %s %s (%s)(%s);\n'%(e.name,ass,e.datatype.cName(),field))
+                off = off+e.width-e.shifted
             # print ''
             return ''.join(word)
 
@@ -290,9 +301,9 @@ class MethodMixin:
             paramStructMarshall = ['        WRITEL(p, temp_working_addr, 0);\n']
             paramStructDemarshall = ['        tmp = READL(p, temp_working_addr);\n']
         else:
-            paramStructMarshall = map(marshall, argWords)
+            paramStructMarshall = map(generate_marshall, argWords)
             paramStructMarshall.reverse();
-            paramStructDemarshall = map(demarshall, argWords)
+            paramStructDemarshall = map(generate_demarshall, argWords)
             paramStructDemarshall.reverse();
         
         if not params:
