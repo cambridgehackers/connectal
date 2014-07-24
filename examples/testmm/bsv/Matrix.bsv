@@ -95,6 +95,65 @@ module mkRangePipeOut(RangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq
    method Bool isLast() = last;
 endmodule: mkRangePipeOut
 
+typedef struct {
+   a xbase;
+   a xlimit;
+   a xstep;
+   a ybase;
+   a ylimit;
+   a ystep;
+} XYRangeConfig#(type a) deriving (Bits, FShow);
+
+interface XYRangePipeIfc#(type a);
+   interface PipeOut#(Tuple2#(a,a)) pipe;
+   method Action start(XYRangeConfig#(a) cfg);
+   method Action display();
+endinterface
+
+module mkXYRangePipeOut(XYRangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
+   Reg#(a) x <- mkReg(0);
+   Reg#(a) y <- mkReg(0);
+   Reg#(a) xbase <- mkReg(0);
+   Reg#(a) ybase <- mkReg(0);
+   Reg#(a) xstep <- mkReg(0);
+   Reg#(a) ystep <- mkReg(0);
+   Reg#(a) xlimit <- mkReg(0);
+   Reg#(a) ylimit <- mkReg(0);
+
+   interface PipeOut pipe;
+      method Tuple2#(a,a) first() if (x < xlimit && y < ylimit);
+	 return tuple2(x,y);
+      endmethod
+      method Action deq if (x < xlimit && y < ylimit);
+	 let newx = x;
+	 let newy = y+ystep;
+	 if (newy >= ylimit && x < xlimit) begin
+	    newy = ybase;
+	    newx = newx + xstep;
+	 end
+	 x <= newx;
+	 y <= newy;
+      endmethod
+      method Bool notEmpty();
+	 return (x < xlimit && y < ylimit);
+      endmethod
+   endinterface
+   method Action start(XYRangeConfig#(a) cfg) if (x >= xlimit);
+      //$display("XYRangePipe x=%d xlimit=%d xstep=%d y=%d ylimit=%d ystep=%d", cfg.xbase, cfg.xlimit, cfg.xstep, cfg.ybase, cfg.ylimit, cfg.ystep);
+      x <= cfg.xbase;
+      y <= cfg.ybase;
+      xbase <= cfg.xbase;
+      ybase <= cfg.ybase;
+      xstep <= cfg.xstep;
+      ystep <= cfg.ystep;
+      xlimit <= cfg.xlimit;
+      ylimit <= cfg.ylimit;
+   endmethod
+   method Action display();
+      $display("XYRangePipe x=%d xlimit=%d y=%d ylimit=%d xstep=%d ystep=%d", x, xlimit, xstep, y, ylimit, ystep);
+   endmethod
+endmodule: mkXYRangePipeOut
+
 interface SharedDotProdDebug#(numeric type k);
    interface PipeOut#(Bit#(32)) macCount;
 endinterface
@@ -550,65 +609,6 @@ function Vector#(TMul#(j,k), etype) flattenMatrix(Vector#(j, Vector#(k, etype)) 
    function etype flatten(Integer i); return mat[i/valueOf(k)][i%valueOf(k)]; endfunction
    return genWith(flatten);
 endfunction
-
-typedef struct {
-   a xbase;
-   a xlimit;
-   a xstep;
-   a ybase;
-   a ylimit;
-   a ystep;
-} XYRangeConfig#(type a) deriving (Bits, FShow);
-
-interface XYRangePipeIfc#(type a);
-   interface PipeOut#(Tuple2#(a,a)) pipe;
-   method Action start(XYRangeConfig#(a) cfg);
-   method Action display();
-endinterface
-
-module mkXYRangePipeOut(XYRangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
-   Reg#(a) x <- mkReg(0);
-   Reg#(a) y <- mkReg(0);
-   Reg#(a) xbase <- mkReg(0);
-   Reg#(a) ybase <- mkReg(0);
-   Reg#(a) xstep <- mkReg(0);
-   Reg#(a) ystep <- mkReg(0);
-   Reg#(a) xlimit <- mkReg(0);
-   Reg#(a) ylimit <- mkReg(0);
-
-   interface PipeOut pipe;
-      method Tuple2#(a,a) first() if (x < xlimit && y < ylimit);
-	 return tuple2(x,y);
-      endmethod
-      method Action deq if (x < xlimit && y < ylimit);
-	 let newx = x;
-	 let newy = y+ystep;
-	 if (newy >= ylimit && x < xlimit) begin
-	    newy = ybase;
-	    newx = newx + xstep;
-	 end
-	 x <= newx;
-	 y <= newy;
-      endmethod
-      method Bool notEmpty();
-	 return (x < xlimit && y < ylimit);
-      endmethod
-   endinterface
-   method Action start(XYRangeConfig#(a) cfg) if (x >= xlimit);
-      //$display("XYRangePipe x=%d xlimit=%d xstep=%d y=%d ylimit=%d ystep=%d", cfg.xbase, cfg.xlimit, cfg.xstep, cfg.ybase, cfg.ylimit, cfg.ystep);
-      x <= cfg.xbase;
-      y <= cfg.ybase;
-      xbase <= cfg.xbase;
-      ybase <= cfg.ybase;
-      xstep <= cfg.xstep;
-      ystep <= cfg.ystep;
-      xlimit <= cfg.xlimit;
-      ylimit <= cfg.ylimit;
-   endmethod
-   method Action display();
-      $display("XYRangePipe x=%d xlimit=%d y=%d ylimit=%d xstep=%d ystep=%d", x, xlimit, xstep, y, ylimit, ystep);
-   endmethod
-endmodule: mkXYRangePipeOut
 
 typedef struct {
    ObjectPointer pointer;
