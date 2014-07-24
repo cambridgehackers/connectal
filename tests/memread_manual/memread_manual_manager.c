@@ -21,7 +21,10 @@
 
 #ifdef __KERNEL__
 #define PRIx64 "llx"
-void bdbm_test_memread_thread_init (void);
+typedef struct task_struct *pthread_t;
+#include <linux/delay.h>  // msleep
+#include <linux/kthread.h>
+static void *pthread_worker(void *p);
 #else
 #include <string.h>
 #include <sys/mman.h>
@@ -97,20 +100,24 @@ void manual_event(void)
     }
 }
 
-#ifndef __KERNEL__ ///////////////////////// userspace version
 static void *pthread_worker(void *p)
 {
     void *rc = NULL;
     while (1) {
+        manual_event();
+#ifdef __KERNEL__
+        msleep(10);
+        if (kthread_should_stop())
+            break;
+#else ///////////////////////// userspace version
         struct timeval timeout;
         timeout.tv_sec = 0;
         timeout.tv_usec = 10000;
-        manual_event();
         select(0, NULL, NULL, NULL, &timeout);
+#endif
     }
     return rc;
 }
-#endif
 
 int main(int argc, const char **argv)
 {
@@ -118,6 +125,7 @@ int main(int argc, const char **argv)
   unsigned int *srcBuffer;
   unsigned int ref_srcAlloc;
   int rc, i;
+  pthread_t tid = NULL;
 
   init_portal_internal(&intarr[0], IfcNames_DmaIndication, DmaIndicationWrapper_handleMessage);     // fpga1
   init_portal_internal(&intarr[1], IfcNames_MemreadIndication, MemreadIndicationWrapper_handleMessage); // fpga2
@@ -132,18 +140,17 @@ int main(int argc, const char **argv)
     return rc;
   }
 
-#ifndef __KERNEL__ ///////////////////////// userspace version
-  {
-  pthread_t tid;
   PORTAL_PRINTF( "Main: creating exec thread\n");
+#ifndef __KERNEL__ ///////////////////////// userspace version
   if(pthread_create(&tid, NULL,  pthread_worker, NULL)){
    PORTAL_PRINTF( "error creating exec thread\n");
    exit(1);
   }
-  }
   srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
 #else   /// kernel version
-  bdbm_test_memread_thread_init();
+  if (!(tid = kthread_run ((int (*)(void *))pthread_worker, NULL, "pthread_worker"))) {
+        printk ("kthread_run failed");
+  }
 //??????
   srcBuffer = NULL;
 #endif ////////////////////////////////
@@ -151,16 +158,17 @@ int main(int argc, const char **argv)
   //for (i = 0; i < numWords; i++)
     //srcBuffer[i] = i;
 
-#ifndef __KERNEL__   //////////////// userspace code for flushing dcache for srcAlloc
   DmaManager_dCacheFlushInval(&priv, srcAlloc, srcBuffer);
-#else   /// kernel version
-//??????
-#endif /////////////////////
   ref_srcAlloc = DmaManager_reference(&priv, srcAlloc);
   PORTAL_PRINTF( "Main: starting read %08x\n", numWords);
   MemreadRequestProxy_startRead (&intarr[3], ref_srcAlloc, numWords, burstLen, 1);
   PORTAL_PRINTF( "Main: waiting for semaphore\n");
   sem_wait(&test_sem);
   PORTAL_PRINTF( "Main: all done\n");
+#ifdef __KERNEL__
+  if (tid && !kthread_stop (tid)) {
+    printk ("kthread stops");
+  }
+#endif
   return 0;
 }

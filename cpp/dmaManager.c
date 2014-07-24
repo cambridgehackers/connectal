@@ -70,9 +70,9 @@ void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *argDevice)
   }
 }
 
-#ifndef __KERNEL__
 int DmaManager_dCacheFlushInval(DmaManagerPrivate *priv, PortalAlloc *portalAlloc, void *__p)
 {
+#ifndef __KERNEL__
 #if defined(__arm__)
   int rc = ioctl(priv->pa_fd, PA_DCACHE_FLUSH_INVAL, portalAlloc);
   if (rc){
@@ -89,11 +89,10 @@ int DmaManager_dCacheFlushInval(DmaManagerPrivate *priv, PortalAlloc *portalAllo
 #else
 #error("dCAcheFlush not defined for unspecified architecture")
 #endif
+#endif // __KERNEL__
   //PORTAL_PRINTF("dcache flush\n");
   return 0;
-
 }
-#endif
 uint64_t DmaManager_show_mem_stats(DmaManagerPrivate *priv, ChannelType rc)
 {
   uint64_t rv = 0;
