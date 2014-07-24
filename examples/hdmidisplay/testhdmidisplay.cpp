@@ -19,15 +19,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "DmaConfigProxy.h"
-#include "DmaIndicationWrapper.h"
-#include "StdDmaIndication.h"
-#include "GeneratedTypes.h"
-#include "HdmiDisplayRequestProxy.h"
-#include "HdmiDisplayIndicationWrapper.h"
-#include "HdmiInternalIndicationWrapper.h"
-#include "HdmiInternalRequestProxy.h"
-#include "portal.h"
+#include <string.h>
 #include <stdio.h>
 #include <pthread.h>
 #include <unistd.h>
@@ -35,6 +27,14 @@
 #include <ctype.h>
 #include "i2chdmi.h"
 #include "edid.h"
+
+#include "DmaConfigProxy.h"
+#include "DmaIndicationWrapper.h"
+#include "StdDmaIndication.h"
+#include "HdmiDisplayRequestProxy.h"
+#include "HdmiDisplayIndicationWrapper.h"
+#include "HdmiInternalIndicationWrapper.h"
+#include "HdmiInternalRequestProxy.h"
 
 #define FRAME_COUNT 2
 #define MAX_PIXEL 256
