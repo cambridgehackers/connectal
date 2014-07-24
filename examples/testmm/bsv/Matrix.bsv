@@ -44,6 +44,57 @@ import Gearbox::*;
 import XilinxCells::*;
 import HostInterface::*;
 
+typedef struct {
+   a xbase;
+   a xlimit;
+   a xstep;
+} RangeConfig#(type a) deriving (Bits, FShow);
+
+interface RangePipeIfc#(type a);
+   interface PipeOut#(a) pipe;
+   method Bool isFirst();
+   method Bool isLast();
+   method Action start(RangeConfig#(a) cfg);
+endinterface
+
+module mkRangePipeOut(RangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
+   Reg#(a) x <- mkReg(1);
+   Reg#(a) xbase <- mkReg(0);
+   Reg#(a) xstep <- mkReg(1);
+   // inclusive limit
+   Reg#(a) xlimit <- mkReg(0);
+   Reg#(Bool) first <- mkReg(True);
+   Reg#(Bool) last <- mkReg(True);
+   Bool verbose = False;
+   interface PipeOut pipe;
+      method a first();
+	 return x;
+      endmethod
+      method Action deq if (x <= xlimit);
+	 x <= x + xstep;
+	 first <= False;
+	 last <= (x+xstep >= xlimit);
+      endmethod
+      method Bool notEmpty();
+	 return (x <= xlimit);
+      endmethod
+   endinterface
+   method Action start(RangeConfig#(a) cfg) if (x > xlimit);
+      x <= cfg.xbase;
+      xbase <= cfg.xbase;
+      xstep <= cfg.xstep;
+
+      // inclusive limit, should update interface accordingly
+      xlimit <= cfg.xlimit-cfg.xstep;
+
+      first <= True;
+      last <= (cfg.xbase+cfg.xstep >= cfg.xlimit);
+      if (verbose) $display("mkRangePipeOut xbase=%d xstep=%d cfg.xlimit=%d xlimit=%d last=%d", cfg.xbase, cfg.xstep, cfg.xlimit, (cfg.xlimit-cfg.xstep), (cfg.xbase+cfg.xstep >= cfg.xlimit));
+   endmethod
+   method Bool isFirst() = first;
+   method Bool isLast() = last;
+endmodule: mkRangePipeOut
+
 interface SharedDotProdDebug#(numeric type k);
    interface PipeOut#(Bit#(32)) macCount;
 endinterface
