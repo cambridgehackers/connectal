@@ -46,12 +46,14 @@
 #define PORTAL_DIRECTORY_PORTAL_ID(A)   PORTAL_DIRECTORY_OFFSET(6 + 2 * (A))
 #define PORTAL_DIRECTORY_PORTAL_TYPE(A) PORTAL_DIRECTORY_OFFSET(6 + 2 * (A) + 1)
 
+typedef int (*PORTAL_INDFUNC)(struct PortalInternal *p, unsigned int channel);
 typedef struct PortalInternal {
   struct PortalPoller *poller;
   int fpga_fd;
   int fpga_number;
   volatile unsigned int *map_base;
   void *parent;
+  PORTAL_INDFUNC handler;
 } PortalInternal;
 
 #ifdef __KERNEL__
@@ -69,7 +71,7 @@ typedef struct PortalInternal {
 #ifdef __cplusplus
 extern "C" {
 #endif
-PortalInternal *init_portal_internal(PortalInternal *pint, int id);
+void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler);
 uint64_t directory_cycle_count(void);
 unsigned int directory_get_fpga(unsigned int id);
 unsigned int directory_get_addrbits(unsigned int id);

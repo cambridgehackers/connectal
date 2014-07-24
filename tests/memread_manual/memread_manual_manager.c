@@ -44,9 +44,7 @@ typedef int sem_t;
 static int trace_memory;// = 1;
 
 #define MAX_INDARRAY 4
-typedef int (*INDFUNC)(PortalInternal *p, unsigned int channel);
-static PortalInternal *intarr[MAX_INDARRAY];
-static INDFUNC indfn[MAX_INDARRAY];
+static PortalInternal intarr[MAX_INDARRAY];
 
 static sem_t test_sem;
 static int burstLen = 16;
@@ -94,7 +92,7 @@ static void manual_event(void)
 {
     int i;
     for (i = 0; i < MAX_INDARRAY; i++) {
-      PortalInternal *instance = intarr[i];
+      PortalInternal *instance = &intarr[i];
       volatile unsigned int *map_base = instance->map_base;
       unsigned int queue_status;
       while ((queue_status= READL(instance, &map_base[IND_REG_QUEUE_STATUS]))) {
@@ -102,8 +100,7 @@ static void manual_event(void)
         unsigned int int_en  = READL(instance, &map_base[IND_REG_INTERRUPT_MASK]);
         unsigned int ind_count  = READL(instance, &map_base[IND_REG_INTERRUPT_COUNT]);
         PORTAL_PRINTF("(%d:fpga%d) about to receive messages int=%08x en=%08x qs=%08x cnt=%x\n", i, instance->fpga_number, int_src, int_en, queue_status, ind_count);
-        if (indfn[i])
-            indfn[i](instance, queue_status-1);
+        instance->handler(instance, queue_status-1);
       }
     }
 }
@@ -125,22 +122,17 @@ static void *pthread_worker(void *p)
 
 int main(int argc, const char **argv)
 {
-  PortalInternal intarrtemp[MAX_INDARRAY];
   PortalAlloc *srcAlloc;
   unsigned int *srcBuffer;
   unsigned int ref_srcAlloc;
   int rc, i;
 
-  intarr[0] = init_portal_internal(&intarrtemp[0], IfcNames_DmaIndication);     // fpga1
-  intarr[1] = init_portal_internal(&intarrtemp[1], IfcNames_MemreadIndication); // fpga2
-  intarr[2] = init_portal_internal(&intarrtemp[2], IfcNames_DmaConfig);         // fpga3
-  intarr[3] = init_portal_internal(&intarrtemp[3], IfcNames_MemreadRequest);    // fpga4
-  indfn[0] = DmaIndicationWrapper_handleMessage;
-  indfn[1] = MemreadIndicationWrapper_handleMessage;
-  indfn[2] = DmaConfigProxy_handleMessage;
-  indfn[3] = MemreadRequestProxy_handleMessage;
+  init_portal_internal(&intarr[0], IfcNames_DmaIndication, DmaIndicationWrapper_handleMessage);     // fpga1
+  init_portal_internal(&intarr[1], IfcNames_MemreadIndication, MemreadIndicationWrapper_handleMessage); // fpga2
+  init_portal_internal(&intarr[2], IfcNames_DmaConfig, DmaConfigProxy_handleMessage);         // fpga3
+  init_portal_internal(&intarr[3], IfcNames_MemreadRequest, MemreadRequestProxy_handleMessage);    // fpga4
 
-  DmaManager_init(&priv, intarr[2]);
+  DmaManager_init(&priv, &intarr[2]);
   rc = DmaManager_alloc(&priv, alloc_sz, &srcAlloc);
   if (rc){
     PORTAL_PRINTF("portal alloc failed rc=%d\n", rc);
@@ -172,7 +164,7 @@ int main(int argc, const char **argv)
 #endif /////////////////////
   ref_srcAlloc = DmaManager_reference(&priv, srcAlloc);
   PORTAL_PRINTF( "Main: starting read %08x\n", numWords);
-  MemreadRequestProxy_startRead (intarr[3], ref_srcAlloc, numWords, burstLen, 1);
+  MemreadRequestProxy_startRead (&intarr[3], ref_srcAlloc, numWords, burstLen, 1);
   sem_wait(&test_sem);
   return 0;
 }

@@ -123,7 +123,7 @@ void print_timer(int loops)
     }
 }
 
-PortalInternal *init_portal_internal(PortalInternal *pint, int id)
+void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler)
 {
     int rc = 0;
     char buff[128];
@@ -136,6 +136,7 @@ PortalInternal *init_portal_internal(PortalInternal *pint, int id)
         addrbits = directory_get_addrbits(id);
     }
     pint->fpga_fd = -1;
+    pint->handler = handler;
 #ifdef ZYNQ
     PortalEnableInterrupt intsettings = {3 << 14, (3 << 14) + 4};
     int pgfile = open("/sys/devices/amba.0/f8007000.devcfg/prog_done", O_RDONLY);
@@ -194,7 +195,6 @@ errlab:
       ALOGD("init_portal_internal: failure rc=%d\n", rc);
       exit(1);
     }
-    return pint;
 }
 
 int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)
@@ -222,7 +222,7 @@ static void init_directory(void)
   if (once)
       return;
   once = 1;
-  init_portal_internal(&globalDirectory, -1);
+  init_portal_internal(&globalDirectory, -1, NULL);
 #ifdef ZYNQ /* There is no way to set userclock freq from host on PCIE */
   // start by setting the clock frequency (this only has any effect on the zynq platform)
   PortalClockRequest request;
