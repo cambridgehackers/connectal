@@ -58,7 +58,7 @@ void MemreadIndicationWrapperreadDone_cb (  struct PortalInternal *p, const uint
 }
 void DmaIndicationWrapperconfigResp_cb (  struct PortalInternal *p, const uint32_t pointer)
 {
-        PORTAL_PRINTF("configResp %x\n", pointer);
+        //PORTAL_PRINTF("configResp %x\n", pointer);
         sem_post(&priv.confSem);
 }
 void DmaIndicationWrapperaddrResponse_cb (  struct PortalInternal *p, const uint64_t physAddr )
@@ -159,6 +159,8 @@ int main(int argc, const char **argv)
   ref_srcAlloc = DmaManager_reference(&priv, srcAlloc);
   PORTAL_PRINTF( "Main: starting read %08x\n", numWords);
   MemreadRequestProxy_startRead (&intarr[3], ref_srcAlloc, numWords, burstLen, 1);
+  PORTAL_PRINTF( "Main: waiting for semaphore\n");
   sem_wait(&test_sem);
+  PORTAL_PRINTF( "Main: all done\n");
   return 0;
 }

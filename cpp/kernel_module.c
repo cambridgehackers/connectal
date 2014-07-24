@@ -36,14 +36,13 @@
 extern int main(int argc, char *argv[]);
 extern void manual_event(void);
 static struct task_struct *tid = NULL;
-static int loop_limit = 100000;
 
 static int kthread_worker (void* arg) 
 {
     printk ("kthread_worker starts\n");
-    while (loop_limit-- > 0) {
+    while (1) {
         manual_event();
-        msleep(100);
+        msleep(10);
         if (kthread_should_stop()) {
             printk ("exit from kthread_worker\n");
             return 0;
@@ -54,8 +53,8 @@ static int kthread_worker (void* arg)
 }
 void bdbm_test_memread_thread_init (void) 
 {
-    if ((tid = kthread_create (kthread_worker, NULL, "kthread_worker")) == NULL) {
-        printk ("kthread_create failed");
+    if (!(tid = kthread_run (kthread_worker, NULL, "kthread_worker"))) {
+        printk ("kthread_run failed");
     }
 }
 
@@ -82,7 +81,7 @@ static int __init pa_init(void)
   md->parent = NULL;
   misc_register(md);
   main(0, NULL); /* start the test program */
-  if (!kthread_stop (tid)) {
+  if (tid && !kthread_stop (tid)) {
     printk ("kthread stops");
   }
   return 0;

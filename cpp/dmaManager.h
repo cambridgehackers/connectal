@@ -27,17 +27,19 @@
 #ifdef __KERNEL__
 #include <linux/types.h>
 #include <linux/semaphore.h>
+#include <asm/cacheflush.h>
 #define sem_wait(A) down_interruptible(A)
 #define sem_post(A) up(A)
-#define sem_init(A, B, C) (sema_init ((A), (B)), 0)
+#define sem_init(A, B, C) (sema_init ((A), (C)), 0)
 typedef struct semaphore sem_t;
 #else
 #include <semaphore.h>
 #include <stdint.h>
 #endif
-#include "portalmem.h"
 
+#include "portalmem.h"
 #include "portal.h"
+
 #if 1 //def NO_CPP_PORTAL_CODE
 #include "GeneratedTypes.h" // generated in project directory
 #define DMAsglist(P, A, B, C) DmaConfigProxy_sglist((P), (A), (B), (C));

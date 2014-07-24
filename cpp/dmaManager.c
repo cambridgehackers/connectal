@@ -28,14 +28,7 @@
 #include <linux/slab.h>
 #include <linux/dma-buf.h>
 extern struct dma_buf *portalmem_dmabuffer_create(unsigned long len, unsigned long align);
-
-struct pa_buffer {
-  size_t          size;
-  struct mutex    lock;
-  int             kmap_cnt;
-  void            *vaddr;
-  struct sg_table *sg_table;
-};
+#define PORTAL_MALLOC vmalloc
 #else
 #include <errno.h>
 #include <fcntl.h>
@@ -48,6 +41,7 @@ struct pa_buffer {
 #if defined(__arm__)
 #include "zynqportal.h"
 #endif
+#define PORTAL_MALLOC malloc
 #endif
 
 static int trace_memory = 1;
@@ -65,7 +59,7 @@ void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *argDevice)
     PORTAL_PRINTF("Failed to open /dev/portalmem pa_fd=%d errno=%d\n", priv->pa_fd, errno);
   }
 #endif
-  if (sem_init(&priv->confSem, 1, 0)){
+  if (sem_init(&priv->confSem, 0, 0)){
     PORTAL_PRINTF("failed to init confSem\n");
   }
   if (sem_init(&priv->mtSem, 0, 0)){
@@ -170,7 +164,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
       PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, (long)addr, e->length);
     DMAsglist(priv->device, id, addr, e->length);
     size_accum += e->length;
-    // PORTAL_PRINTF("%s:%d sem_wait\n", __FILE__, __LINE__);
+    //PORTAL_PRINTF("%s:%d sem_wait\n", __FUNCTION__, __LINE__);
     sem_wait(&priv->confSem);
   }
   for(i = 0; i < 3; i++){
@@ -198,7 +192,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
      (borders[0].border << 8) | borders[0].idxOffset,
      (borders[1].border << 8) | borders[1].idxOffset,
      (borders[2].border << 8) | borders[2].idxOffset);
-  //PORTAL_PRINTF("%s:%d sem_wait\n", __FILE__, __LINE__);
+  //PORTAL_PRINTF("%s:%d sem_wait\n", __FUNCTION__, __LINE__);
   sem_wait(&priv->confSem);
   return id+1;
 }
@@ -207,61 +201,63 @@ int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa)
 {
   PortalAlloc localPortalAlloc;
   PortalAlloc *portalAlloc = NULL;
-  memset(&localPortalAlloc, 0, sizeof(localPortalAlloc));
-  localPortalAlloc.header.size = size;
-#ifndef __KERNEL__
-  int rc = ioctl(priv->pa_fd, PA_ALLOC, &localPortalAlloc);
-  if (rc){
-    PORTAL_PRINTF("portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
-    return rc;
-  }
-  long mb = localPortalAlloc.header.size/(1L<<20);
-  PORTAL_PRINTF("alloc size=%ldMB fd=%d numEntries=%d\n", 
-      mb, localPortalAlloc.header.fd, localPortalAlloc.header.numEntries);
-  portalAlloc = (PortalAlloc *)malloc(sizeof(PortalAlloc)+((localPortalAlloc.header.numEntries+1)*sizeof(DmaEntry)));
-  memcpy(portalAlloc, &localPortalAlloc, sizeof(localPortalAlloc));
-  rc = ioctl(priv->pa_fd, PA_DMA_ADDRESSES, portalAlloc);
-  if (rc){
-    PORTAL_PRINTF("portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
-    return rc;
-  }
-#else
-#if 1
-{
+  int rc;
+#ifdef __KERNEL__
     size_t align = 4096;
     struct dma_buf *dmabuf;
     struct scatterlist *sg;
     struct file *f;
     struct sg_table *sgtable;
     int i;
+#endif
 
-    portalAlloc = (PortalAlloc *)vmalloc(sizeof(PortalAlloc)+((localPortalAlloc.header.numEntries+1)*sizeof(DmaEntry)));
-    memcpy(portalAlloc, &localPortalAlloc, sizeof(localPortalAlloc));
-    // code for PA_ALLOC
-    printk("%s, portalAlloc.size=%zd\n", __FUNCTION__, portalAlloc->header.size);
-    portalAlloc->header.size = PAGE_ALIGN(round_up(portalAlloc->header.size, align));
-    dmabuf = portalmem_dmabuffer_create(portalAlloc->header.size, align);
-    if (IS_ERR(dmabuf))
-        return PTR_ERR(dmabuf);
-    printk("pa_get_dma_buf %p %zd\n", dmabuf->file, dmabuf->file->f_count.counter);
-    portalAlloc->header.numEntries = ((struct pa_buffer *)dmabuf->priv)->sg_table->nents;
-    portalAlloc->header.fd = dma_buf_fd(dmabuf, O_CLOEXEC);
-    if (portalAlloc->header.fd < 0)
-        dma_buf_put(dmabuf);
-    // code for PA_DMA_ADDRESSES
-    f = fget(portalAlloc->header.fd);
-    sgtable = ((struct pa_buffer *)((struct dma_buf *)f->private_data)->priv)->sg_table;
-    for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
-        portalAlloc->entries[i].dma_address = sg_phys(sg);
-        portalAlloc->entries[i].length = sg->length;
-        printk ("hw addr = %lx, len = %u\n", 
-            portalAlloc->entries[i].dma_address,
-            portalAlloc->entries[i].length);
-    }
-    fput(f);
-}
+  memset(&localPortalAlloc, 0, sizeof(localPortalAlloc));
+  localPortalAlloc.header.size = size;
+  PORTAL_PRINTF("%s: localPortalAlloc.size=%zd\n", __FUNCTION__, localPortalAlloc.header.size);
+#ifndef __KERNEL__
+  rc = ioctl(priv->pa_fd, PA_ALLOC, &localPortalAlloc);
+  if (rc){
+    PORTAL_PRINTF("portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
+    return rc;
+  }
+#else
+  localPortalAlloc.header.size = PAGE_ALIGN(round_up(localPortalAlloc.header.size, align));
+  dmabuf = portalmem_dmabuffer_create(localPortalAlloc.header.size, align);
+  if (IS_ERR(dmabuf)) {
+      PORTAL_PRINTF("%s: portalmem_dmabuffer_create error\n", __FUNCTION__);
+      return PTR_ERR(dmabuf);
+  }
+  PORTAL_PRINTF("pa_get_dma_buf %p %zd\n", dmabuf->file, dmabuf->file->f_count.counter);
+  localPortalAlloc.header.numEntries = ((struct pa_buffer *)dmabuf->priv)->sg_table->nents;
+  localPortalAlloc.header.fd = dma_buf_fd(dmabuf, O_CLOEXEC);
+  if (localPortalAlloc.header.fd < 0) {
+      PORTAL_PRINTF("%s: fd error\n", __FUNCTION__);
+      dma_buf_put(dmabuf);
+      return -1;
+  }
 #endif
-#endif
+  PORTAL_PRINTF("alloc size=%ldMB fd=%d numEntries=%d\n", 
+      localPortalAlloc.header.size/(1L<<20), localPortalAlloc.header.fd, localPortalAlloc.header.numEntries);
+  portalAlloc = (PortalAlloc *)PORTAL_MALLOC(sizeof(PortalAlloc)+((localPortalAlloc.header.numEntries+1)*sizeof(DmaEntry)));
+  memcpy(portalAlloc, &localPortalAlloc, sizeof(localPortalAlloc));
   *ppa = portalAlloc;
+#ifndef __KERNEL__
+  rc = ioctl(priv->pa_fd, PA_DMA_ADDRESSES, portalAlloc);
+  if (rc){
+    PORTAL_PRINTF("portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
+    return rc;
+  }
+#else
+  f = fget(portalAlloc->header.fd);
+  sgtable = ((struct pa_buffer *)((struct dma_buf *)f->private_data)->priv)->sg_table;
+  for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
+      portalAlloc->entries[i].dma_address = sg_phys(sg);
+      portalAlloc->entries[i].length = sg->length;
+      PORTAL_PRINTF ("hw addr = %lx, len = %u\n", 
+          portalAlloc->entries[i].dma_address,
+          portalAlloc->entries[i].length);
+  }
+  fput(f);
+#endif
   return 0;
 }
