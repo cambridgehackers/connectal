@@ -36,11 +36,12 @@
 extern int main(int argc, char *argv[]);
 extern void manual_event(void);
 static struct task_struct *tid = NULL;
+static int loop_limit = 100000;
 
 static int kthread_worker (void* arg) 
 {
     printk ("kthread_worker starts\n");
-    while (1) {
+    while (loop_limit-- > 0) {
         manual_event();
         msleep(100);
         if (kthread_should_stop()) {

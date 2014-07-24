@@ -58,7 +58,7 @@ void MemreadIndicationWrapperreadDone_cb (  struct PortalInternal *p, const uint
 }
 void DmaIndicationWrapperconfigResp_cb (  struct PortalInternal *p, const uint32_t pointer)
 {
-        //PORTAL_PRINTF("configResp %x\n", pointer);
+        PORTAL_PRINTF("configResp %x\n", pointer);
         sem_post(&priv.confSem);
 }
 void DmaIndicationWrapperaddrResponse_cb (  struct PortalInternal *p, const uint64_t physAddr )
@@ -67,9 +67,7 @@ void DmaIndicationWrapperaddrResponse_cb (  struct PortalInternal *p, const uint
 }
 void DmaIndicationWrapperreportStateDbg_cb (  struct PortalInternal *p, const DmaDbgRec rec )
 {
-        //PORTAL_PRINTF("reportStateDbg: {x:%08x y:%08x z:%08x w:%08x}\n", rec.x,rec.y,rec.z,rec.w);
-        DmaDbgRec dbgRec = rec;
-        PORTAL_PRINTF("dbgResp: %08x %08x %08x %08x\n", dbgRec.x, dbgRec.y, dbgRec.z, dbgRec.w);
+        PORTAL_PRINTF("reportStateDbg: {x:%08x y:%08x z:%08x w:%08x}\n", rec.x,rec.y,rec.z,rec.w);
         sem_post(&priv.dbgSem);
 }
 void DmaIndicationWrapperreportMemoryTraffic_cb (  struct PortalInternal *p, const uint64_t words )
@@ -126,6 +124,7 @@ int main(int argc, const char **argv)
   init_portal_internal(&intarr[2], IfcNames_DmaConfig, DmaConfigProxy_handleMessage);         // fpga3
   init_portal_internal(&intarr[3], IfcNames_MemreadRequest, MemreadRequestProxy_handleMessage);    // fpga4
 
+  sem_init(&test_sem, 0, 0);
   DmaManager_init(&priv, &intarr[2]);
   rc = DmaManager_alloc(&priv, alloc_sz, &srcAlloc);
   if (rc){

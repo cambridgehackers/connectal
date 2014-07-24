@@ -50,7 +50,7 @@ struct pa_buffer {
 #endif
 #endif
 
-static int trace_memory;// = 1;
+static int trace_memory = 1;
 
 void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *argDevice)
 {
