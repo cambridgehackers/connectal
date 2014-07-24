@@ -15,10 +15,10 @@ uninstall:
 docs:
 	doxygen Doxyfile
 
+## PLY's home is http://www.dabeaz.com/ply/
 install-dependences:
 ifeq ($(shell uname), Darwin)
 	port install asciidoc
-	## PLY's home is http://www.dabeaz.com/ply/
 	easy_install ply
 else
 	apt-get install asciidoc python-dev python-setuptools python-ply
@@ -43,7 +43,6 @@ memtests =  memread_manyclients  \
 
 matrixtests2 = testmm8.8.2       \
 	    testmm16.16.2        \
-	    testmm4.2.2          \
 	    testmm4.4.2          \
 	    testmm2.2.2          
 
@@ -52,7 +51,8 @@ matrixtests4 = testmm16.16.4     \
 	    testmm4.4.4        
 
 matrixtests = $(matrixtests2)    \
-	    $(matrixtests4)       
+	    $(matrixtests4)      \
+	    testmm4.2.2          
 
 tests    =  $(memtests)          \
 	    $(matrixtests)       \
