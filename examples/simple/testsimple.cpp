@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <assert.h>
+#include <pthread.h>
 
 #include "SimpleIndicationWrapper.h"
 #include "SimpleRequestProxy.h"
