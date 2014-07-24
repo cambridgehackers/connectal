@@ -205,12 +205,12 @@ class MethodMixin:
                     return self.collectMembers(scope, tdtype.type)
 
         class paramInfo:
-            def __init__(self, name, width, shifted, datatype, fitsOneWord):
+            def __init__(self, name, width, shifted, datatype, assignOp):
                 self.name = name
                 self.width = width
                 self.shifted = shifted
                 self.datatype = datatype
-                self.fitsOneWord = fitsOneWord
+                self.assignOp = assignOp
         # pack flattened struct-member list into 32-bit wide bins.  If a type is wider than 32-bits or 
         # crosses a 32-bit boundary, it will appear in more than one bin (though with different ranges).  
         # This is intended to mimick exactly Bluespec struct packing.  The padding must match the code 
@@ -224,19 +224,20 @@ class MethodMixin:
                      return [s]
             w = sum([x.width-x.shifted for x in s])
             a = atoms[0]
-            aw = a[1].bitWidth();
+            thisType = a[1]
+            aw = thisType.bitWidth();
             #print '%d %d %d' %(aw, pro, w)
             print 'JJJJ ', aw, pro, w, a
             if (aw-pro+w == 32):
-                s.append(paramInfo(a[0],aw,pro,a[1],True))
+                s.append(paramInfo(a[0],aw,pro,thisType,'='))
                 #print '%s (0)'% (a[0])
                 return [s]+accumWords([],0,atoms[1:])
             if (aw-pro+w < 32):
-                s.append(paramInfo(a[0],aw,pro,a[1],True))
+                s.append(paramInfo(a[0],aw,pro,thisType,'='))
                 #print '%s (1)'% (a[0])
                 return accumWords(s,0,atoms[1:])
             else:
-                s.append(paramInfo(a[0],pro+(32-w),pro,a[1],False))
+                s.append(paramInfo(a[0],pro+(32-w),pro,thisType,'|='))
                 #print '%s (2)'% (a[0])
                 return [s]+accumWords([],pro+(32-w), atoms)
 
@@ -281,7 +282,6 @@ class MethodMixin:
             word.append('        tmp = READL(p, temp_working_addr);\n');
             for e in w:
                 # print e.name+' (d)'
-                ass = '=' if e.fitsOneWord else '|='
                 field = 'tmp'
 		if e.datatype.cName() == 'float':
 		    word.append('        %s = *(float*)&(%s);\n'%(e.name,field))
@@ -292,7 +292,7 @@ class MethodMixin:
                     field = '((%s)&0x%xul)' % (field, ((1 << e.datatype.bitWidth())-1))
                 if e.shifted:
                     field = '((%s)(%s)<<%s)' % (e.datatype.cName(),field, e.shifted)
-		word.append('        %s %s (%s)(%s);\n'%(e.name,ass,e.datatype.cName(),field))
+		word.append('        %s %s (%s)(%s);\n'%(e.name, e.assignOp, e.datatype.cName(), field))
                 off = off+e.width-e.shifted
             # print ''
             return ''.join(word)
