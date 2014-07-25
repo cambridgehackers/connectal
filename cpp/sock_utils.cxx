@@ -36,6 +36,8 @@
 #include "sock_utils.h"
 
 #define MAX_PATH_LENGTH 100
+#define MAGIC_PORTAL_FOR_SENDING_FD 666
+
 typedef struct {
     int *psocket;
     int listening_socket;
@@ -158,7 +160,7 @@ ssize_t sock_fd_write(int fd)
     cmsg->cmsg_level = SOL_SOCKET;
     cmsg->cmsg_type = SCM_RIGHTS;
     *((int *) CMSG_DATA(cmsg)) = fd;
-  struct memrequest foo = {666};
+  struct memrequest foo = {MAGIC_PORTAL_FOR_SENDING_FD};
 
   sem_wait(&socket_mutex);
   if (send(sockfd, &foo, sizeof(foo), 0) == -1) {
@@ -239,7 +241,7 @@ int pareff_fd(int *fd)
 int bsim_ctrl_recv(int sockfd, struct memrequest *data)
 {
   int rc = recv(sockfd, data, sizeof(*data), MSG_DONTWAIT);
-  if (rc == sizeof(*data) && data->portal == 666) {
+  if (rc == sizeof(*data) && data->portal == MAGIC_PORTAL_FOR_SENDING_FD) {
     sock_fd_read(sockfd, &dma_fd);
     sem_post(&dma_waiting);
     rc = -1;
