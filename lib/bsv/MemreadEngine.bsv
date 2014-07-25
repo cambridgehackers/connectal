@@ -209,7 +209,12 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
 endmodule
 
 
-module mkMemreadEngineStaticSched(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
+interface StaticSched#(numeric type numServers);
+   method Bit#(TLog#(numServers)) loadIdx;
+   method Action nextIdx;
+endinterface
+
+module mkMemreadEngineStaticSched#(StaticSched#(numServers) sched)(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
    provisos (Div#(dataWidth,8,dataWidthBytes),
 	     Mul#(dataWidthBytes,8,dataWidth),
 	     Log#(dataWidthBytes,beatShift),
@@ -259,8 +264,7 @@ module mkMemreadEngineStaticSched(MemreadEngineV#(dataWidth, cmdQDepth, numServe
        endinterface);
    Vector#(numServers, PipeOut#(Bit#(dataWidth))) read_data_pipes = zipWith(check_out, map(toPipeOut,read_data_buffs), genVector);
    
-   Reg#(Bit#(8))                               respCnt <- mkReg(0);
-   Reg#(Bit#(serverIdxSz))                     loadIdx <- mkReg(0);
+   Reg#(Bit#(8)) respCnt <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
    let cmd_q_depth = fromInteger(valueOf(cmdQDepth));
 
@@ -272,12 +276,13 @@ module mkMemreadEngineStaticSched(MemreadEngineV#(dataWidth, cmdQDepth, numServe
    endrule
    
    rule load_ctxt_a (!load_in_progress);
-      if (outs1[loadIdx] > 0) begin
+      let li = sched.loadIdx;
+      if (outs1[li] > 0) begin
 	 load_in_progress <= True;
-	 cmdBuf.first_req(loadIdx);
+	 cmdBuf.first_req(li);
       end
       else begin
-	 loadIdx <= loadIdx+1;
+	 sched.nextIdx;
       end
    endrule
 
@@ -289,16 +294,17 @@ module mkMemreadEngineStaticSched(MemreadEngineV#(dataWidth, cmdQDepth, numServe
 
    rule load_ctxt_c;
       load_in_progress <= False;
-      loadIdx <= loadIdx+1;
+      sched.nextIdx;
+      let li = sched.loadIdx;
       match {.cmd,.cond} <- toGet(loadf_b).get;
-      loadf_c.enq(tuple2(loadIdx,cmd));
+      loadf_c.enq(tuple2(li,cmd));
       if (cond) begin
-	 outs1[loadIdx] <= outs1[loadIdx]-1;
-	 cmdBuf.deq(loadIdx);
+	 outs1[li] <= outs1[li]-1;
+	 cmdBuf.deq(li);
       end
       else begin
 	 let new_cmd = MemengineCmd{pointer:cmd.pointer, base:cmd.base+extend(cmd.burstLen), burstLen:cmd.burstLen, len:cmd.len-extend(cmd.burstLen)};
-	 cmdBuf.upd_head(loadIdx,new_cmd);
+	 cmdBuf.upd_head(li,new_cmd);
       end
    endrule
    

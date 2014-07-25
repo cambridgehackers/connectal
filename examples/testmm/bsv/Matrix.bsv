@@ -1035,12 +1035,23 @@ endinterface
 typeclass DramMM#(numeric type nm);
    module  mkDramMatrixMultiply#(HostType host)(DramMatrixMultiply#(N,TMul#(N,32),nm));
 endtypeclass
+
+module mkRoundRobin(StaticSched#(numServers));
+   Reg#(Bit#(TLog#(numServers))) idxReg <- mkReg(0);
+   method Action nextIdx;
+      idxReg <= idxReg+1;
+   endmethod
+   method Bit#(TLog#(numServers)) loadIdx;
+      return idxReg;
+   endmethod
+endmodule
    
 instance DramMM#(1);
    module  mkDramMatrixMultiply#(HostType host)(DramMatrixMultiply#(N,TMul#(N,32),1));
    
+      StaticSched#(TAdd#(J,K))                     readSched <- mkRoundRobin;
       MemwriteEngineV#(TMul#(N,32),2, J)         writeEngine <- mkMemwriteEngine();
-      MemreadEngineV#(TMul#(N,32), 2, TAdd#(J,K)) readEngine <- mkMemreadEngineStaticSched;
+      MemreadEngineV#(TMul#(N,32), 2, TAdd#(J,K)) readEngine <- mkMemreadEngineStaticSched(readSched);
    
       Vector#(J, Server#(MemengineCmd,Bool))    rowReadServers = take(readEngine.readServers);
       Vector#(K, Server#(MemengineCmd,Bool))    colReadServers = takeTail(readEngine.readServers);
@@ -1064,8 +1075,10 @@ instance DramMM#(2);
    module  mkDramMatrixMultiply#(HostType host)(DramMatrixMultiply#(N,TMul#(N,32),2));
 
       MemwriteEngineV#(TMul#(N,32),2, J)   writeEngine <- mkMemwriteEngine();
-      MemreadEngineV#(TMul#(N,32), 2, J) rowReadEngine <- mkMemreadEngineStaticSched;
-      MemreadEngineV#(TMul#(N,32), 2, K) colReadEngine <- mkMemreadEngineStaticSched;
+      StaticSched#(J)                     rowReadSched <- mkRoundRobin;
+      StaticSched#(K)                     colReadSched <- mkRoundRobin;
+      MemreadEngineV#(TMul#(N,32), 2, J) rowReadEngine <- mkMemreadEngineStaticSched(rowReadSched);
+      MemreadEngineV#(TMul#(N,32), 2, K) colReadEngine <- mkMemreadEngineStaticSched(colReadSched);
    
       Vector#(J, Server#(MemengineCmd,Bool)) rowReadServers = rowReadEngine.readServers;
       Vector#(K, Server#(MemengineCmd,Bool)) colReadServers = colReadEngine.readServers;
