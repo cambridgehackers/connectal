@@ -77,12 +77,19 @@ static struct miscdevice miscdev = {
   .fops = &pa_fops,
 };
 
+void *main_start(void *arg)
+{
+  main(0, NULL); /* start the test program */
+  return NULL;
+}
+
 static int __init pa_init(void)
 {
+  pthread_t pid;
   printk("TestProgram::pa_init minor %d\n", miscdev.minor);
   misc_register(&miscdev);
   sema_init (&bsim_start, 0);
-  main(0, NULL); /* start the test program */
+  pthread_create(&pid, NULL, main_start, NULL);
   return 0;
 }
 

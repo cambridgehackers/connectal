@@ -28,7 +28,6 @@
 #ifdef __KERNEL__
 #include "linux/delay.h"
 #define assert(A)
-#define exit(A) while(1) msleep(2000);
 #else
 #include <string.h>
 #include <assert.h>
@@ -125,6 +124,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler)
 {
     int rc = 0;
     char buff[128];
+    char read_status;
     int addrbits = 16;
 
     init_directory();
@@ -135,6 +135,17 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler)
     }
     pint->fpga_fd = -1;
     pint->handler = handler;
+    snprintf(buff, sizeof(buff), "/dev/fpga%d", pint->fpga_number);
+#ifndef MMAP_HW   // BSIM version
+    connect_to_bsim();
+#elif defined(__KERNEL__)
+{
+    static tBoard* tboard;
+    if (!tboard)
+        tboard = get_pcie_portal_descriptor();
+    pint->map_base = (volatile unsigned int*)(tboard->bar2io + pint->fpga_number * PORTAL_BASE_OFFSET);
+}
+#else
 #ifdef ZYNQ
     PortalEnableInterrupt intsettings = {3 << 14, (3 << 14) + 4};
     int pgfile = open("/sys/devices/amba.0/f8007000.devcfg/prog_done", O_RDONLY);
@@ -148,26 +159,13 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler)
 	rc = -1;
 	goto errlab;
     }
-    if (read(pgfile, buff, 1) != 1 || buff[0] != '1') {
-	ALOGE("FPGA not programmed: %s\n", buff);
-	PORTAL_PRINTF("FPGA not programmed: %s\n", buff);
+    if (read(pgfile, &read_status, 1) != 1 || read_status != '1') {
+	ALOGE("FPGA not programmed: %x\n", read_status);
+	PORTAL_PRINTF("FPGA not programmed: %x\n", read_status);
 	rc = -ENODEV;
 	goto errlab;
     }
     close(pgfile);
-#endif
-    snprintf(buff, sizeof(buff), "/dev/fpga%d", pint->fpga_number);
-#ifndef MMAP_HW   // BSIM version
-    connect_to_bsim();
-#elif defined(__KERNEL__)
-{
-    static tBoard* tboard;
-    if (!tboard)
-        tboard = get_pcie_portal_descriptor();
-    pint->map_base = (volatile unsigned int*)(tboard->bar2io + pint->fpga_number * PORTAL_BASE_OFFSET);
-}
-#else
-#ifdef ZYNQ
     pint->fpga_fd = open(buff, O_RDWR);
     ioctl(pint->fpga_fd, PORTAL_ENABLE_INTERRUPT, &intsettings);
 #else
@@ -191,7 +189,7 @@ errlab:
     if (rc != 0) {
       PORTAL_PRINTF("[%s:%d] failed to open Portal fpga%d\n", __FUNCTION__, __LINE__, pint->fpga_number);
       ALOGD("init_portal_internal: failure rc=%d\n", rc);
-      exit(1);
+      //exit(1);
     }
 }
 
@@ -259,7 +257,8 @@ unsigned int directory_get_fpga(unsigned int id)
       return i+1;
   }
   PORTAL_PRINTF("directory_fpga(id=%d) id not found\n", id);
-  exit(1);
+  //exit(1);
+  return 0;
 }
 
 unsigned int directory_get_addrbits(unsigned int id)
@@ -271,26 +270,22 @@ unsigned int directory_get_addrbits(unsigned int id)
 void portalTrace_start()
 {
     init_directory();
-#ifndef __KERNEL__
-#ifndef ZYNQ
+#if !defined(ZYNQ) && !defined(__KERNEL__)
   tTraceInfo traceInfo;
   traceInfo.trace = 1;
   int res = ioctl(globalDirectory.fpga_fd,BNOC_TRACE,&traceInfo);
   if (res)
     PORTAL_PRINTF("Failed to start tracing. errno=%d\n", errno);
 #endif
-#endif
 }
 void portalTrace_stop()
 {
     init_directory();
-#ifndef __KERNEL__
-#ifndef ZYNQ
+#if !defined(ZYNQ) && !defined(__KERNEL__)
   tTraceInfo traceInfo;
   traceInfo.trace = 0;
   int res = ioctl(globalDirectory.fpga_fd,BNOC_TRACE,&traceInfo);
   if (res)
     PORTAL_PRINTF("Failed to stop tracing. errno=%d\n", errno);
-#endif
 #endif
 }
