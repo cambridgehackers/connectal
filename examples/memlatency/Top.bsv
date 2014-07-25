@@ -53,6 +53,7 @@ module mkPortalTop(StdPortalDmaTop#(addrWidth))
    StdDirectory dir <- mkStdDirectory(portals);
    let ctrl_mux <- mkSlaveMux(dir,portals);
    
+   interface Empty pins; endinterface
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
    interface masters = dma.masters;
