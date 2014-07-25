@@ -85,7 +85,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	  return 0;
     endfunction
 
-   rule writeHeaderTlp if (writeDwCount == 0);
+   rule writeHeaderTlp if (writeDwCount == 0 && writeDataMimo.deqReadyN(1));
       let tlp = tlpWriteHeaderFifo.first;
 
       TLPMemory4DWHeader hdr_4dw = unpack(tlp.data);
@@ -300,7 +300,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    endinterface
    interface MemReadServer read_server;
       interface Put readReq;
-         method Action put(MemRequest#(40) req) if (writeDwCount == 0);
+         method Action put(MemRequest#(40) req) if (writeDwCount == 0 && !writeDataMimo.deqReadyN(1));
 	      let burstLen = req.burstLen >> beat_shift;
 	      let addr = req.addr;
 	      let arid = req.tag;
