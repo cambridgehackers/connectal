@@ -46,7 +46,7 @@ module mkMemSlave#(MemSlaveClient client)(MemSlave#(32,32));
 
       let v = client.rd(unpack(truncate(addr >> 2)));
       //$display("MemSlave do_read addr=%h len=%d v=%h", addr, bc, v);
-      slaveReadDataFifos.enq(MemData { data: v, tag: b.tag });
+      slaveReadDataFifos.enq(MemData { data: v, tag: b.tag, last: b.last });
 
    endrule
 
