@@ -121,7 +121,7 @@ typedef struct {
     uint64_t total, min, max, over;
 } TIMETYPE;
 
-#if defined(MMAP_HW) || defined(__KERNEL__)
+#if defined(MMAP_HW)
 #define READL(CITEM, A)     (*(A))
 #define WRITEL(CITEM, A, B) (*(A) = (B))
 #else
