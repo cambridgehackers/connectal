@@ -933,9 +933,9 @@ if __name__=='__main__':
     if os.environ.has_key('XBSV_DEBUG'):
         debug_flag = '_debug'
 
-    if namespace.floorplan and namespace.partition_module:
+    if namespace.partition_module:
         bitsmake=fpgamakeRuleTemplate % {'partitions': ' '.join(['-s %s' % p for p in namespace.partition_module]),
-					 'floorplan': os.path.abspath(namespace.floorplan),
+					 'floorplan': os.path.abspath(namespace.floorplan) if namespace.floorplan else '',
 					 'xdc': ' '.join(['--xdc=%s' % os.path.abspath(xdc) for xdc in namespace.constraint]),
 					 'xci': ' '.join(['--xci=%s' % os.path.abspath(xci) for xci in namespace.xci])
 					 }
