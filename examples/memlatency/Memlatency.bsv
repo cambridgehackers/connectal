@@ -63,8 +63,8 @@ module mkMemlatency#(MemlatencyIndication indication)(Memlatency);
    Reg#(Bit#(32))         burstLen <- mkReg(0);
    
    Reg#(Bit#(32))           cycles <- mkReg(0);
-   Reg#(Bit#(32))          rdStart <- mkReg(0);
-   Reg#(Bit#(32))          wrStart <- mkReg(0);
+   FIFO#(Bit#(32))     rdStartFifo <- mkSizedBRAMFIFO(16);
+   FIFO#(Bit#(32))     wrStartFifo <- mkSizedBRAMFIFO(16);
    FIFO#(Bit#(32))       rdLatFifo <- mkSizedBRAMFIFO(16);
    FIFO#(Bit#(32))       wrLatFifo <- mkSizedBRAMFIFO(16);
    
@@ -75,11 +75,12 @@ module mkMemlatency#(MemlatencyIndication indication)(Memlatency);
    rule startRead(rdIterCnt > 0);
       re.readServers[0].request.put(MemengineCmd{pointer:rdPointer, base:0, len:burstLen*4, burstLen:truncate(burstLen*4)});
       rdIterCnt <= rdIterCnt-1;
-      rdStart <= cycles;
+      wrStartFifo.enq(cycles);
    endrule
 
    rule finishRead;
       let rv0 <- re.readServers[0].response.get;
+      let rdStart <- toGet(rdStartFifo).get();
       rdLatFifo.enq(cycles-rdStart);
    endrule
    
@@ -90,11 +91,12 @@ module mkMemlatency#(MemlatencyIndication indication)(Memlatency);
    rule startWrite(wrIterCnt > 0);
       we.writeServers[0].request.put(MemengineCmd{pointer:wrPointer, base:0, len:burstLen*4, burstLen:truncate(burstLen*4)});
       wrIterCnt <= wrIterCnt-1;
-      wrStart <= cycles;
+      wrStartFifo.enq(cycles);
    endrule
 
    rule finishWrite;
       let rv0 <- we.writeServers[0].response.get;
+      let wrStart <- toGet(wrStartFifo).get();
       wrLatFifo.enq(cycles-wrStart);
    endrule
    
@@ -115,7 +117,7 @@ module mkMemlatency#(MemlatencyIndication indication)(Memlatency);
 
    
    interface MemlatencyRequest request;
-   method Action start(Bit#(32) wp, Bit#(32) rp, Bit#(32) bl);
+   method Action start(Bit#(32) wp, Bit#(32) rp, Bit#(32) bl) if (rdIterCnt == 0 && wrIterCnt == 0);
       $display("start wrPointer=%d rdPointer=%d burstLen=%d", wp, rp, bl);
       indication.started;
       // initialized
