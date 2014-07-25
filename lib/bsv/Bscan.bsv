@@ -51,6 +51,9 @@ module mkBscanTop#(Integer bus)(BscanTop);
    Reset defaultReset <- exposeCurrentReset();
    interface tck = defaultClock;
    interface rst = defaultReset;
+   method reset();
+       return 0;
+   endmethod
    method tdi;
        return 0;
    endmethod
@@ -89,6 +92,7 @@ module mkBscanTop#(Integer bus)(BscanTop);
 
    interface tck = mytck;
    interface rst = myrst;
+   method reset = bscan.reset;
    method tdi = bscan.tdi;
    method tdo = bscan.tdo;
    method capture;
