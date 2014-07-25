@@ -62,8 +62,6 @@ interface ZynqTop;
    interface ZynqPins zynq;
    (* prefix="GPIO" *)
    interface LEDS             leds;
-   (* prefix="XADC" *)
-   interface XADC             xadc;
 `ifdef USE_I2C0
    (* prefix="I2C0" *)
    interface I2C_Pins         i2c0;
@@ -122,7 +120,6 @@ module mkZynqTop(ZynqTop);
 
    interface zynq = ps7.pins;
    interface leds = top.leds;
-   interface XADC xadc = top.xadc;
 `ifdef USE_I2C0
    interface I2C_Pins i2c0;
       interface Inout scl = tscl0.io;

@@ -65,7 +65,6 @@ interface PortalTop#(numeric type addrWidth, numeric type dataWidth, type pins, 
    interface Vector#(numMasters,MemMaster#(addrWidth, dataWidth)) masters;
    interface Vector#(16,ReadOnly#(Bool)) interrupt;
    interface LEDS             leds;
-   interface XADC             xadc;
    interface pins             pins;
 endinterface
 
