@@ -75,7 +75,7 @@ module mkMemlatency#(MemlatencyIndication indication)(Memlatency);
    rule startRead(rdIterCnt > 0);
       re.readServers[0].request.put(MemengineCmd{pointer:rdPointer, base:0, len:burstLen*4, burstLen:truncate(burstLen*4)});
       rdIterCnt <= rdIterCnt-1;
-      wrStartFifo.enq(cycles);
+      rdStartFifo.enq(cycles);
    endrule
 
    rule finishRead;
