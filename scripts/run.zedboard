@@ -11,6 +11,7 @@ fi
 ANDROID_SERIAL=$ZEDBOARD_IPADDR:5555
 exename=`basename $2`
 adb -s $ANDROID_SERIAL disconnect
+sleep 2
 adb connect $ZEDBOARD_IPADDR
 adb -s $ANDROID_SERIAL root
 sleep 2
