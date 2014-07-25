@@ -48,7 +48,7 @@ extern "C" {
   void initPortal(unsigned long id){
     static int once = 1;
     if (once)
-        thread_socket(&sockfd, "fpga0_rc", id);
+        bsim_wait_for_connect(&sockfd);
     once = 0;
   }
 

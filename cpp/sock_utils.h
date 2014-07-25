@@ -41,8 +41,8 @@ struct memresponse{
 #ifdef __cplusplus
 extern "C" {
 #endif
-void connect_socket(int *psocket, const char *format, int id);
-void thread_socket(int *psocket, const char *format, int id);
+void connect_to_bsim(void);
+void bsim_wait_for_connect(int* psockfd);
 ssize_t sock_fd_write(int fd);
 int pareff_fd(int *fd);
 void init_pareff();

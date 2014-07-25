@@ -183,7 +183,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler)
 	goto errlab;
     }  
 #else // BSIM version
-    connect_socket(&pint->fpga_fd, "fpga%d_rc", pint->fpga_number);
+    connect_to_bsim();
 #endif
 
 errlab:

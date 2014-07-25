@@ -34,8 +34,8 @@
 #include "portal.h"
 #include "sock_utils.h"
 
-#define MAX_PATH_LENGTH 100
 #define MAGIC_PORTAL_FOR_SENDING_FD 666
+#define SOCKET_NAME "fpga0_rc"
 
 typedef struct {
     int *psocket;
@@ -45,50 +45,36 @@ typedef struct {
 static sem_t socket_mutex;
 static int sockfd = -1;
 
-static void connect_socket_internal(int *psockfd, const char *format, int id)
+void connect_to_bsim(void)
 {
   int connect_attempts = 0;
-  char path[MAX_PATH_LENGTH];
 
-  snprintf(path, sizeof(path), format, id);
-  if ((*psockfd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-    fprintf(stderr, "%s (%s) socket error %s\n",__FUNCTION__, path, strerror(errno));
+  if (sockfd != -1)
+    return;
+  if ((sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+    fprintf(stderr, "%s (%s) socket error %s\n",__FUNCTION__, SOCKET_NAME, strerror(errno));
     exit(1);
   }
 
-  //fprintf(stderr, "%s (%s) trying to connect...\n",__FUNCTION__, path);
+  //fprintf(stderr, "%s (%s) trying to connect...\n",__FUNCTION__, SOCKET_NAME);
   struct sockaddr_un local;
   local.sun_family = AF_UNIX;
-  strcpy(local.sun_path, path);
-  while (connect(*psockfd, (struct sockaddr *)&local, strlen(local.sun_path) + sizeof(local.sun_family)) == -1) {
+  strcpy(local.sun_path, SOCKET_NAME);
+  while (connect(sockfd, (struct sockaddr *)&local, strlen(local.sun_path) + sizeof(local.sun_family)) == -1) {
     if(connect_attempts++ > 16){
-      fprintf(stderr,"%s (%s) connect error %s\n",__FUNCTION__, path, strerror(errno));
+      fprintf(stderr,"%s (%s) connect error %s\n",__FUNCTION__, SOCKET_NAME, strerror(errno));
       exit(1);
     }
-    //fprintf(stderr, "%s (%s) retrying connection\n",__FUNCTION__, path);
+    //fprintf(stderr, "%s (%s) retrying connection\n",__FUNCTION__, SOCKET_NAME);
     sleep(1);
   }
-  fprintf(stderr, "%s (%s) connected\n",__FUNCTION__, path);
+  fprintf(stderr, "%s (%s) connected\n",__FUNCTION__, SOCKET_NAME);
+  sem_init(&socket_mutex, 0, 1);
 }
 
-void connect_socket(int *psockfd, const char *format, int id)
+void bsim_wait_for_connect(int* psockfd)
 {
-  if (strncmp(format, "fpga", 4))
-    connect_socket_internal(psockfd, format, id);
-  else {
-    if (sockfd == -1) {
-        connect_socket_internal(&sockfd, format, 0);
-        sem_init(&socket_mutex, 0, 1);
-    }
-    *psockfd = sockfd;
-  }
-}
-
-void thread_socket(int* psockfd, const char *format, int id)
-{
-  char path[MAX_PATH_LENGTH];
   int listening_socket;
-  snprintf(path, sizeof(path), format, id);
 
   if ((listening_socket = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
     fprintf(stderr, "%s: socket error %s",__FUNCTION__, strerror(errno));
@@ -97,7 +83,7 @@ void thread_socket(int* psockfd, const char *format, int id)
 
   struct sockaddr_un local;
   local.sun_family = AF_UNIX;
-  strcpy(local.sun_path, path);
+  strcpy(local.sun_path, SOCKET_NAME);
   unlink(local.sun_path);
   int len = strlen(local.sun_path) + sizeof(local.sun_family);
   if (bind(listening_socket, (struct sockaddr *)&local, len) == -1) {
@@ -115,7 +101,7 @@ void thread_socket(int* psockfd, const char *format, int id)
     fprintf(stderr, "%s[%d]: accept error %s\n",__FUNCTION__, listening_socket, strerror(errno));
     exit(1);
   }
-  remove(path);  // we are connected now, so we can remove named socket
+  remove(SOCKET_NAME);  // we are connected now, so we can remove named socket
 }
 
 /* Thanks to keithp.com for readable examples how to do this! */
