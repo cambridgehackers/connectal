@@ -30,6 +30,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <pthread.h>
+#include <semaphore.h>
 
 #include "portal.h"
 #include "sock_utils.h"
@@ -40,7 +41,10 @@ typedef struct {
     int listening_socket;
 } SOCKPARAM;
 
-void connect_socket(int *psockfd, const char *format, int id)
+static sem_t socket_mutex;
+static int sockfd = -1;
+
+static void connect_socket_internal(int *psockfd, const char *format, int id)
 {
   int connect_attempts = 0;
   char path[MAX_PATH_LENGTH];
@@ -64,6 +68,19 @@ void connect_socket(int *psockfd, const char *format, int id)
     sleep(1);
   }
   fprintf(stderr, "%s (%s) connected\n",__FUNCTION__, path);
+}
+
+void connect_socket(int *psockfd, const char *format, int id)
+{
+  if (strncmp(format, "fpga", 4))
+    connect_socket_internal(psockfd, format, id);
+  else {
+    if (sockfd == -1) {
+        connect_socket_internal(&sockfd, format, 0);
+        sem_init(&socket_mutex, 0, 1);
+    }
+    *psockfd = sockfd;
+  }
 }
 
 static void* socket_listen_task(void *_xx)
@@ -165,11 +182,12 @@ sock_fd_read(int sock, int *fd)
 }
 
 /* functions called by READL() and WRITEL() macros in application software */
-unsigned int read_portal_bsim(int sockfd, volatile unsigned int *addr, int id)
+unsigned int read_portal_bsim(volatile unsigned int *addr, int id)
 {
-  unsigned int rv;
-  struct memrequest foo = {0,addr,0};
+  struct memresponse rv;
+  struct memrequest foo = {id, 0,addr,0};
 
+  sem_wait(&socket_mutex);
   if (send(sockfd, &foo, sizeof(foo), 0) == -1) {
     fprintf(stderr, "%s (fpga%d) send error, errno=%s\n",__FUNCTION__, id, strerror(errno));
     exit(1);
@@ -178,15 +196,18 @@ unsigned int read_portal_bsim(int sockfd, volatile unsigned int *addr, int id)
     fprintf(stderr, "%s (fpga%d) recv error\n",__FUNCTION__, id);
     exit(1);	  
   }
-  return rv;
+  sem_post(&socket_mutex);
+  return rv.data;
 }
 
-void write_portal_bsim(int sockfd, volatile unsigned int *addr, unsigned int v, int id)
+void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id)
 {
-  struct memrequest foo = {1,addr,v};
+  struct memrequest foo = {id, 1,addr,v};
 
+  sem_wait(&socket_mutex);
   if (send(sockfd, &foo, sizeof(foo), 0) == -1) {
     fprintf(stderr, "%s (fpga%d) send error\n",__FUNCTION__, id);
     //exit(1);
   }
+  sem_post(&socket_mutex);
 }

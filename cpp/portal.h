@@ -85,8 +85,8 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler);
 uint64_t directory_cycle_count(void);
 unsigned int directory_get_fpga(unsigned int id);
 unsigned int directory_get_addrbits(unsigned int id);
-unsigned int read_portal_bsim(int sockfd, volatile unsigned int *addr, int id);
-void write_portal_bsim(int sockfd, volatile unsigned int *addr, unsigned int v, int id);
+unsigned int read_portal_bsim(volatile unsigned int *addr, int id);
+void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id);
 
 void start_timer(unsigned int i);
 uint64_t lap_timer(unsigned int i);
@@ -125,8 +125,8 @@ typedef struct {
 #define READL(CITEM, A)     (*(A))
 #define WRITEL(CITEM, A, B) (*(A) = (B))
 #else
-#define READL(CITEM, A) read_portal_bsim((CITEM)->fpga_fd, (A), (CITEM)->fpga_number)
-#define WRITEL(CITEM, A, B) write_portal_bsim((CITEM)->fpga_fd, (A), (B), (CITEM)->fpga_number)
+#define READL(CITEM, A) read_portal_bsim((A), (CITEM)->fpga_number)
+#define WRITEL(CITEM, A, B) write_portal_bsim((A), (B), (CITEM)->fpga_number)
 #endif
 
 #endif /* __PORTAL_OFFSETS_H__ */

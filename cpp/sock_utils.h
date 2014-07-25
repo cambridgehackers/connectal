@@ -28,8 +28,13 @@
 #include <sys/un.h>
 
 struct memrequest{
+  int portal;
   int write_flag;
   volatile unsigned int *addr;
+  unsigned int data;
+};
+struct memresponse{
+  int portal;
   unsigned int data;
 };
 

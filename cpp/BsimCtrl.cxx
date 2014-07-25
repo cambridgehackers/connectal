@@ -43,42 +43,40 @@ static struct {
     int valid;
     int inflight;
 } head;
-static int sockfd[16];
+static int sockfd;
+static struct memresponse respitem;
 static int cleanedup;
 #define MAX_PATH_LENGTH 100
 static char path[MAX_PATH_LENGTH];
 
 extern "C" {
   void initPortal(unsigned long id){
-    thread_socket(&sockfd[id], "fpga%d_rc", id);
+    static int once = 1;
+    if (once)
+        thread_socket(&sockfd, "fpga0_rc", id);
+    once = 0;
   }
 
   bool processReq32(uint32_t rr){
     if (!head.valid){
-      for(int i = 0; i < 16; i++){
-	int rv = recv(sockfd[i], &head.req, sizeof(memrequest), MSG_DONTWAIT);
+	int rv = recv(sockfd, &head.req, sizeof(memrequest), MSG_DONTWAIT);
 	if(rv > 0){
 	  //fprintf(stderr, "recv size %d\n", rv);
 	  assert(rv == sizeof(memrequest));
-	  head.pnum = i;
+	  respitem.portal = head.req.portal;
 	  head.valid = 1;
 	  head.inflight = 1;
-	  head.req.addr = (unsigned int *)(((long) head.req.addr) | i << 16);
+	  head.req.addr = (unsigned int *)(((long) head.req.addr) | head.req.portal << 16);
 	  if(0)
 	  fprintf(stderr, "processReq32(i=%d,rr=%d) {write=%d, addr=%08lx, data=%08x}\n", 
-		  i, rr, head.req.write_flag, (long)head.req.addr, head.req.data);
-          if (!cleanedup && i) {
+		  head.req.portal, rr, head.req.write_flag, (long)head.req.addr, head.req.data);
+          if (!cleanedup && head.req.portal) {
                cleanedup = 1;
-               for (int j = 0; j < 16; j++) {
-                   /* all connected now, we can remove socket names */
-                   snprintf(path, sizeof(path), "fpga%d_rc", j);
-                   remove(path);
-                   remove("fd_sock_wc");
-               }
+               snprintf(path, sizeof(path), "fpga0_rc", 0);
+               remove(path);
+               remove("fd_sock_wc");
           }
-	  break;
 	}
-      }
     }
     return head.valid && head.inflight == 1 && head.req.write_flag == rr;
   }
@@ -97,11 +95,12 @@ extern "C" {
   
   void readData32(unsigned int x){
     //fprintf(stderr, "readData()\n");
+    respitem.data = x;
     head.valid = 0;
     int send_attempts = 0;
-    while(send(sockfd[head.pnum], &x, sizeof(x), 0) == -1){
+    while(send(sockfd, &respitem, sizeof(respitem), 0) == -1){
       if(send_attempts++ > 16){
-	fprintf(stderr, "(%d) send failure\n", head.pnum);
+	fprintf(stderr, "(%d) send failure\n", respitem.portal);
 	exit(1);
       }
       sleep(1);
