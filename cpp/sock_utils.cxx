@@ -34,24 +34,19 @@
 #include "portal.h"
 #include "sock_utils.h"
 
-#define MAGIC_PORTAL_FOR_SENDING_FD 666
-#define SOCKET_NAME "fpga0_rc"
+#define SOCKET_NAME                 "socket_for_bluesim"
+#define MAGIC_PORTAL_FOR_SENDING_FD                 666
 
-typedef struct {
-    int *psocket;
-    int listening_socket;
-} SOCKPARAM;
-
-static sem_t socket_mutex;
-static int sockfd = -1;
+static sem_t socket_mutex, dma_waiting;
+static int global_sockfd = -1;
 
 void connect_to_bsim(void)
 {
   int connect_attempts = 0;
 
-  if (sockfd != -1)
+  if (global_sockfd != -1)
     return;
-  if ((sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+  if ((global_sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
     fprintf(stderr, "%s (%s) socket error %s\n",__FUNCTION__, SOCKET_NAME, strerror(errno));
     exit(1);
   }
@@ -60,7 +55,7 @@ void connect_to_bsim(void)
   struct sockaddr_un local;
   local.sun_family = AF_UNIX;
   strcpy(local.sun_path, SOCKET_NAME);
-  while (connect(sockfd, (struct sockaddr *)&local, strlen(local.sun_path) + sizeof(local.sun_family)) == -1) {
+  while (connect(global_sockfd, (struct sockaddr *)&local, strlen(local.sun_path) + sizeof(local.sun_family)) == -1) {
     if(connect_attempts++ > 16){
       fprintf(stderr,"%s (%s) connect error %s\n",__FUNCTION__, SOCKET_NAME, strerror(errno));
       exit(1);
@@ -70,6 +65,7 @@ void connect_to_bsim(void)
   }
   fprintf(stderr, "%s (%s) connected\n",__FUNCTION__, SOCKET_NAME);
   sem_init(&socket_mutex, 0, 1);
+  sem_init(&dma_waiting, 0, 0);
 }
 
 void bsim_wait_for_connect(int* psockfd)
@@ -136,11 +132,11 @@ ssize_t sock_fd_write(int fd)
   struct memrequest foo = {MAGIC_PORTAL_FOR_SENDING_FD};
 
   sem_wait(&socket_mutex);
-  if (send(sockfd, &foo, sizeof(foo), 0) == -1) {
+  if (send(global_sockfd, &foo, sizeof(foo), 0) == -1) {
     fprintf(stderr, "%s: send error sending fd\n",__FUNCTION__);
     //exit(1);
   }
-  int rv = sendmsg(sockfd, &msg, 0);
+  int rv = sendmsg(global_sockfd, &msg, 0);
   sem_post(&socket_mutex);
   return rv;
 }
@@ -168,15 +164,15 @@ sock_fd_read(int sock, int *fd)
 /* functions called by READL() and WRITEL() macros in application software */
 unsigned int read_portal_bsim(volatile unsigned int *addr, int id)
 {
-  struct memresponse rv;
   struct memrequest foo = {id, 0,addr,0};
+  struct memresponse rv;
 
   sem_wait(&socket_mutex);
-  if (send(sockfd, &foo, sizeof(foo), 0) == -1) {
+  if (send(global_sockfd, &foo, sizeof(foo), 0) == -1) {
     fprintf(stderr, "%s (fpga%d) send error, errno=%s\n",__FUNCTION__, id, strerror(errno));
     exit(1);
   }
-  if(recv(sockfd, &rv, sizeof(rv), 0) == -1){
+  if(recv(global_sockfd, &rv, sizeof(rv), 0) == -1){
     fprintf(stderr, "%s (fpga%d) recv error\n",__FUNCTION__, id);
     exit(1);	  
   }
@@ -189,18 +185,15 @@ void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id)
   struct memrequest foo = {id, 1,addr,v};
 
   sem_wait(&socket_mutex);
-  if (send(sockfd, &foo, sizeof(foo), 0) == -1) {
+  if (send(global_sockfd, &foo, sizeof(foo), 0) == -1) {
     fprintf(stderr, "%s (fpga%d) send error\n",__FUNCTION__, id);
-    //exit(1);
+    exit(1);
   }
   sem_post(&socket_mutex);
 }
 
-static int dma_sockfd;
-static sem_t dma_waiting;
 void init_pareff()
 {
-  sem_init(&dma_waiting, 0, 0);
 }
 
 static int dma_fd = -1;
