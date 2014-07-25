@@ -238,6 +238,8 @@ int bsim_ctrl_send(int sockfd, struct memresponse *data)
 #include <linux/uaccess.h> // copy_to/from_user
 #include <linux/mutex.h>
 #include <linux/semaphore.h>
+#include <linux/slab.h>
+#include <linux/dma-buf.h>
 
 extern struct semaphore bsim_start;
 static struct semaphore bsim_avail;
@@ -247,6 +249,8 @@ static int have_request;
 static struct memrequest upreq;
 static struct memresponse downresp;
 static int once = 1;
+extern void *dmamanager_translate[100];
+extern int main_program_finished;
 
 ssize_t xbsv_kernel_read (struct file *f, char __user *arg, size_t len, loff_t *data)
 {
@@ -254,11 +258,15 @@ ssize_t xbsv_kernel_read (struct file *f, char __user *arg, size_t len, loff_t *
     if (once)
         up(&bsim_start);
     once = 0;
+    if (main_program_finished)
+        return 0;          // all done!
     if (!have_request)
         return -EAGAIN;
 //printk("[%s:%d] f %p u %p len %lx data %p\n", __FUNCTION__, __LINE__, f, arg, len, data);
     if (len > sizeof(upreq))
         len = sizeof(upreq);
+    if (upreq.portal == MAGIC_PORTAL_FOR_SENDING_FD)
+        upreq.data = dma_buf_fd(dmamanager_translate[upreq.data], O_CLOEXEC); /* get an fd in user process!! */
     err = copy_to_user((void __user *) arg, &upreq, len);
     have_request = 0;
     up(&bsim_avail);

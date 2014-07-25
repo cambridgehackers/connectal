@@ -191,6 +191,9 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
   return id+1;
 }
 
+#ifdef __KERNEL__
+void *dmamanager_translate[100];
+#endif
 int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa)
 {
   PortalAlloc localPortalAlloc;
@@ -224,6 +227,7 @@ int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa)
   PORTAL_PRINTF("pa_get_dma_buf %p %zd\n", dmabuf->file, dmabuf->file->f_count.counter);
   localPortalAlloc.header.numEntries = ((struct pa_buffer *)dmabuf->priv)->sg_table->nents;
   localPortalAlloc.header.fd = dma_buf_fd(dmabuf, O_CLOEXEC);
+  dmamanager_translate[localPortalAlloc.header.fd] = dmabuf; /* keep around dmabuf ptr for translation to user process in write_fd */
   if (localPortalAlloc.header.fd < 0) {
       PORTAL_PRINTF("%s: fd error\n", __FUNCTION__);
       dma_buf_put(dmabuf);

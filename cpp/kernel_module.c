@@ -65,6 +65,7 @@ int i;
 /* in sock_utils.c */
 ssize_t xbsv_kernel_read (struct file *f, char __user *arg, size_t len, loff_t *data);
 ssize_t xbsv_kernel_write (struct file *f, const char __user *arg, size_t len, loff_t *data);
+int main_program_finished = 0;
 
 static struct file_operations pa_fops = {
     .owner = THIS_MODULE,
@@ -80,6 +81,7 @@ static struct miscdevice miscdev = {
 void *main_start(void *arg)
 {
   main(0, NULL); /* start the test program */
+  main_program_finished = 1;
   return NULL;
 }
 

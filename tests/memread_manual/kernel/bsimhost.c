@@ -69,27 +69,23 @@ printf("[%s:%d] opened bsim\n", __FUNCTION__, __LINE__);
             select(0, NULL, NULL, NULL, &timeout);
             continue;
         }
-        if (1||rc != sizeof(req)) {
+        if (rc != sizeof(req)) {
             printf("[%s:%d] rc = %d.\n", __FUNCTION__, __LINE__, rc);
             memdump((unsigned char *)&req, sizeof(req), "RX");
         }
         rv.portal = req.portal;
         if (req.portal == 666) {
-printf("[%s:%d] fd write %d\n", __FUNCTION__, __LINE__, req.data);
-#define numWords 0x124000/4
-static long alloc_sz = numWords*sizeof(unsigned int);
-  unsigned int *srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, req.data, 0);
-printf("[%s:%d] buf %p errno %d BADF %d\n", __FUNCTION__, __LINE__, srcBuffer, errno, BADF);
+//printf("[%s:%d] fd write %d\n", __FUNCTION__, __LINE__, req.data);
             sock_fd_write(req.data);
             rv.data = 0xdead;
             write(fd, &rv, sizeof(rv));
         }
         else if (req.write_flag) {
-printf("[%s:%d] write\n", __FUNCTION__, __LINE__);
+//printf("[%s:%d] write\n", __FUNCTION__, __LINE__);
             write_portal_bsim(req.addr, req.data, req.portal);
         }
         else {
-printf("[%s:%d] read\n", __FUNCTION__, __LINE__);
+//printf("[%s:%d] read\n", __FUNCTION__, __LINE__);
             rv.data = read_portal_bsim(req.addr, req.portal);
             write(fd, &rv, sizeof(rv));
         }
