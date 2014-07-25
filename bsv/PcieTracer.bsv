@@ -48,8 +48,7 @@ endinterface
 interface TlpTraceData;
    interface Reg#(Bool)     tlpTracing;
    interface Reg#(Bit#(TlpTraceAddrSize)) tlpTraceLimit;
-   interface Reg#(Bit#(TlpTraceAddrSize)) fromPcieTraceBramWrAddr;
-   interface Reg#(Bit#(TlpTraceAddrSize))   toPcieTraceBramWrAddr;
+   interface Reg#(Bit#(TlpTraceAddrSize)) pcieTraceBramWrAddr;
    interface BRAMServer#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) bramServer;
    interface BRAMServer#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) bscanBramServer;
 endinterface
@@ -66,8 +65,7 @@ module mkPcieTracer(PcieTracer);
    // Trace Support
    Reg#(Bool) tlpTracingReg        <- mkReg(False);
    Reg#(Bit#(TlpTraceAddrSize)) tlpTraceLimitReg <- mkReg(0);
-   Reg#(Bit#(TlpTraceAddrSize)) fromPcieTraceBramWrAddrReg <- mkReg(0);
-   Reg#(Bit#(TlpTraceAddrSize))   toPcieTraceBramWrAddrReg <- mkReg(0);
+   Reg#(Bit#(TlpTraceAddrSize)) pcieTraceBramWrAddrReg <- mkReg(0);
    Integer memorySize = 2**valueOf(TlpTraceAddrSize);
 
    BRAM_Configure bramCfg = defaultValue;
@@ -105,12 +103,12 @@ module mkPcieTracer(PcieTracer);
 
    rule doTracing if (fromPcie || toPcie);
       TimestampedTlpData fromttd = fromPcie ? TimestampedTlpData { timestamp: timestamp, source: 7'h04, tlp: fromPcieTlp } : unpack(0);
-      fromPcieTraceBram.portA.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(fromPcieTraceBramWrAddrReg), datain: fromttd });
-      fromPcieTraceBramWrAddrReg <= fromPcieTraceBramWrAddrReg + 1;
+      fromPcieTraceBram.portA.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(pcieTraceBramWrAddrReg), datain: fromttd });
 
       TimestampedTlpData   tottd = toPcie ? TimestampedTlpData { timestamp: timestamp, source: 7'h08, tlp: toPcieTlp } : unpack(0);
-      toPcieTraceBram.portA.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(toPcieTraceBramWrAddrReg), datain: tottd });
-      toPcieTraceBramWrAddrReg <= toPcieTraceBramWrAddrReg + 1;
+      toPcieTraceBram.portA.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(pcieTraceBramWrAddrReg), datain: tottd });
+
+      pcieTraceBramWrAddrReg <= pcieTraceBramWrAddrReg + 1;
    endrule
 
    interface Server     bus;
@@ -154,19 +152,18 @@ module mkPcieTracer(PcieTracer);
       interface response = toPut(tlpFromBusFifo);
    endinterface
    interface Put trace;
-       method Action put(TimestampedTlpData ttd);
+       method Action put(TimestampedTlpData ttd) if (!fromPcie && !toPcie);
 	   if (tlpTracingReg) begin
 	       ttd.timestamp = timestamp;
-	       toPcieTraceBram.portA.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(toPcieTraceBramWrAddrReg), datain: ttd });
-	       toPcieTraceBramWrAddrReg <= toPcieTraceBramWrAddrReg + 1;
+	       toPcieTraceBram.portA.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(pcieTraceBramWrAddrReg), datain: ttd });
+	       pcieTraceBramWrAddrReg <= pcieTraceBramWrAddrReg + 1;
 	   end
        endmethod
    endinterface: trace
    interface TlpTraceData tlpdata;
       interface Reg tlpTracing    = tlpTracingReg;
       interface Reg tlpTraceLimit = tlpTraceLimitReg;
-      interface Reg fromPcieTraceBramWrAddr = fromPcieTraceBramWrAddrReg;
-      interface Reg   toPcieTraceBramWrAddr =   toPcieTraceBramWrAddrReg;
+      interface Reg pcieTraceBramWrAddr = pcieTraceBramWrAddrReg;
       interface Server bramServer = bramMuxReg.bramServer;
       interface Server bscanBramServer = bscanBramMux.bramServer;
    endinterface

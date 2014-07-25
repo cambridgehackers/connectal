@@ -48,8 +48,7 @@
 #define CSR_TLPDATABRAMRESPONSESLICE3 ( 779 << 2)
 #define CSR_TLPDATABRAMRESPONSESLICE4 ( 780 << 2)
 #define CSR_TLPDATABRAMRESPONSESLICE5 ( 781 << 2)
-#define CSR_TLPFROMPCIEWRADDRREG      ( 792 << 2)
-#define CSR_TLPTOPCIEWRADDRREG        ( 793 << 2)
+#define CSR_TLPPCIEWRADDRREG          ( 792 << 2)
 /* MSIX must be in separate 4kb page */
 #define CSR_MSIX_ADDR_LO              (1024 << 2)
 #define CSR_MSIX_ADDR_HI              (1025 << 2)
@@ -222,8 +221,7 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                 err = copy_from_user(&traceInfo, (void __user *) arg, sizeof(tTraceInfo));
                 if (!err) {
                          // update tlpBramWrAddr, which also writes the scratchpad to BRAM
-                         iowrite32(0, this_board->bar0io + CSR_TLPFROMPCIEWRADDRREG);
-                         iowrite32(0, this_board->bar0io + CSR_TLPTOPCIEWRADDRREG);
+                         iowrite32(0, this_board->bar0io + CSR_TLPPCIEWRADDRREG);
                          traceInfo.oldTrace = ioread32(this_board->bar0io + CSR_TLPTRACINGREG);
                          traceInfo.traceLength = ioread32(this_board->bar0io + CSR_TLPTRACELENGTHREG);
 			 if (traceInfo.traceLength == 0xbad0add0) // unimplemented
@@ -369,8 +367,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
                 }
         	// this replaces 'xbsv/pcie/xbsvutil/xbsvutil trace /dev/fpga0'
         	// but why is it needed?...
-        	iowrite32(0, this_board->bar0io + CSR_TLPFROMPCIEWRADDRREG);
-        	iowrite32(0, this_board->bar0io + CSR_TLPTOPCIEWRADDRREG);
+        	iowrite32(0, this_board->bar0io + CSR_TLPPCIEWRADDRREG);
         	// enable tracing
                 iowrite32(1, this_board->bar0io + CSR_TLPTRACINGREG);
                 /* check the magic number in BAR 0 */

@@ -133,8 +133,7 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
 	 779: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 3);
 	 780: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 4);
 	 781: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 5);
-	 792: return extend(tlpdata.fromPcieTraceBramWrAddr);
-	 793: return extend(  tlpdata.toPcieTraceBramWrAddr);
+	 792: return extend(tlpdata.pcieTraceBramWrAddr);
 	 794: return extend(tlpdata.tlpTraceLimit);
 
          //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
@@ -170,8 +169,7 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
 		    tlpdata.bramServer.request.put(BRAMRequest{ write: False, responseOnWrite: False, address: bramMuxRdAddrReg, datain: unpack(0)});
 		    bramMuxRdAddrReg <= bramMuxRdAddrReg + 1;
 		    end
-	    792: tlpdata.fromPcieTraceBramWrAddr <= truncate(dword);
-	    793:   tlpdata.toPcieTraceBramWrAddr <= truncate(dword);
+	    792: tlpdata.pcieTraceBramWrAddr <= truncate(dword);
 	    794: tlpdata.tlpTraceLimit <= truncate(dword);
          endcase
    endmethod
