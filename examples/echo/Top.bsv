@@ -59,5 +59,7 @@ module mkPortalTop#(HostType host)(StdPortalTop#(addrWidth));
    interface slave = ctrl_mux;
    interface masters = nil;
    interface leds = echoRequestInternal.leds;
+   interface Empty pins;
+   endinterface
 
 endmodule : mkPortalTop
