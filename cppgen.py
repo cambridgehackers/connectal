@@ -288,8 +288,9 @@ class MethodMixin:
 		    continue
                 if off:
                     field = '%s>>%s' % (field, off)
-                if e.datatype.bitWidth() < 32:
-                    field = '((%s)&0x%xul)' % (field, ((1 << e.datatype.bitWidth())-1))
+                print 'JJJ', e.name, '{{'+field+'}}', e.datatype.bitWidth(), e.shifted, e.assignOp, off
+                #if e.datatype.bitWidth() < 32:
+                field = '((%s)&0x%xul)' % (field, ((1 << (e.datatype.bitWidth()-e.shifted))-1))
                 if e.shifted:
                     field = '((%s)(%s)<<%s)' % (e.datatype.cName(),field, e.shifted)
 		word.append('        %s %s (%s)(%s);\n'%(e.name, e.assignOp, e.datatype.cName(), field))
