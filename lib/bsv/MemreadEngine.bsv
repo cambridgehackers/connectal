@@ -209,7 +209,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
 endmodule
 
 
-module mkMemreadEngineNoBuff(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
+module mkMemreadEngineStaticSched(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
    provisos (Div#(dataWidth,8,dataWidthBytes),
 	     Mul#(dataWidthBytes,8,dataWidth),
 	     Log#(dataWidthBytes,beatShift),
@@ -309,7 +309,7 @@ module mkMemreadEngineNoBuff(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
 		     method Action put(MemengineCmd c) if (outs0[i] < cmd_q_depth);
 			Bit#(32) bsb = fromInteger(maxBurstLenBeats*valueOf(dataWidthBytes));
 			if(extend(c.burstLen) > bsb)
-			   $display("mkMemreadEngineNoBuff::unsupportedBurstLen %d %d", bsb, c.burstLen);
+			   $display("mkMemreadEngineStaticSched::unsupportedBurstLen %d %d", bsb, c.burstLen);
 	 		outs0[i] <= outs0[i]+1;
 			cmds_in[i].enq(tuple2(fromInteger(i),c));
  		     endmethod
