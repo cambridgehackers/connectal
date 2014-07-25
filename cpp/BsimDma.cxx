@@ -33,10 +33,9 @@
 #include <unistd.h>
 #include <pthread.h>
 
-#include <portal.h>
+#include "portal.h"
 #include "sock_utils.h"
 
-static int dma_sockfd;
 static struct {
     unsigned char *buffer;
     uint32_t buffer_len;
@@ -44,10 +43,6 @@ static struct {
 } dma_info[32];
 
 extern "C" {
-  void init_pareff(){
-    thread_socket(&dma_sockfd, "fd_sock_wc", 0);
-  }
-
   void write_pareff32(uint32_t pref, uint32_t offset, unsigned int data){
     *(unsigned int *)&dma_info[pref-1].buffer[offset] = data;
   }
@@ -70,10 +65,10 @@ extern "C" {
     dma_info[pref].size_accum += size;
     if(size == 0){
       int fd;
-      sock_fd_read(dma_sockfd, &fd);
+      pareff_fd(&fd);
       dma_info[pref].buffer = (unsigned char *)mmap(0,
           dma_info[pref].size_accum, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
-      dma_info[pref].buffer_len = dma_info[pref].size_accum/sizeof(unsigned char);
+      dma_info[pref].buffer_len = dma_info[pref].size_accum;
     }
   }
 }

@@ -58,9 +58,6 @@ typedef struct {
   sem_t dbgSem;
   uint64_t mtCnt;
   PortalInternal *device;
-#ifndef MMAP_HW
-  int write;
-#endif
   int pa_fd;
   int handle;
 } DmaManagerPrivate;

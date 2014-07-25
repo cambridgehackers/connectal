@@ -149,7 +149,7 @@ void thread_socket(int* psockfd, const char *format, int id)
     msg.msg_control = cmsgu.control; \
     msg.msg_controllen = sizeof(cmsgu.control);
 
-ssize_t sock_fd_write(int sock, int fd)
+ssize_t sock_fd_write(int fd)
 {
     char buf[] = "1";
     COMMON_SOCK_FD;
@@ -158,10 +158,19 @@ ssize_t sock_fd_write(int sock, int fd)
     cmsg->cmsg_level = SOL_SOCKET;
     cmsg->cmsg_type = SCM_RIGHTS;
     *((int *) CMSG_DATA(cmsg)) = fd;
-    return sendmsg(sock, &msg, 0);
+  struct memrequest foo = {666};
+
+  sem_wait(&socket_mutex);
+  if (send(sockfd, &foo, sizeof(foo), 0) == -1) {
+    fprintf(stderr, "%s: send error sending fd\n",__FUNCTION__);
+    //exit(1);
+  }
+  int rv = sendmsg(sockfd, &msg, 0);
+  sem_post(&socket_mutex);
+  return rv;
 }
 
-ssize_t
+static ssize_t
 sock_fd_read(int sock, int *fd)
 {
     ssize_t     size;
@@ -210,4 +219,35 @@ void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id)
     //exit(1);
   }
   sem_post(&socket_mutex);
+}
+
+static int dma_sockfd;
+static sem_t dma_waiting;
+void init_pareff()
+{
+  sem_init(&dma_waiting, 0, 0);
+}
+
+static int dma_fd = -1;
+int pareff_fd(int *fd)
+{
+  sem_wait(&dma_waiting);
+  *fd = dma_fd;
+  dma_fd = -1;
+}
+
+int bsim_ctrl_recv(int sockfd, struct memrequest *data)
+{
+  int rc = recv(sockfd, data, sizeof(*data), MSG_DONTWAIT);
+  if (rc == sizeof(*data) && data->portal == 666) {
+    sock_fd_read(sockfd, &dma_fd);
+    sem_post(&dma_waiting);
+    rc = -1;
+  }
+  return rc;
+}
+
+int bsim_ctrl_send(int sockfd, struct memresponse *data)
+{
+  return send(sockfd, data, sizeof(*data), 0);
 }

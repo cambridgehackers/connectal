@@ -43,8 +43,11 @@ extern "C" {
 #endif
 void connect_socket(int *psocket, const char *format, int id);
 void thread_socket(int *psocket, const char *format, int id);
-ssize_t sock_fd_write(int sock, int fd);
-ssize_t sock_fd_read(int sock, int *fd);
+ssize_t sock_fd_write(int fd);
+int pareff_fd(int *fd);
+void init_pareff();
+int bsim_ctrl_recv(int sockfd, struct memrequest *data);
+int bsim_ctrl_send(int sockfd, struct memresponse *data);
 #ifdef __cplusplus
 }
 #endif

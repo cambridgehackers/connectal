@@ -48,9 +48,6 @@ void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *argDevice)
   memset(priv, 0, sizeof(*priv));
   priv->device = argDevice;
 #ifndef __KERNEL__
-#ifndef MMAP_HW
-  connect_socket(&priv->write, "fd_sock_wc", 0);
-#endif
   priv->pa_fd = open("/dev/portalmem", O_RDWR);
   if (priv->pa_fd < 0){
     PORTAL_PRINTF("Failed to open /dev/portalmem pa_fd=%d errno=%d\n", priv->pa_fd, errno);
@@ -124,7 +121,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
   if (trace_memory)
     PORTAL_PRINTF("DmaManager_reference id=%08x, numEntries:=%d len=%08lx)\n", id, ne, (long)pa->header.size);
 #ifndef MMAP_HW
-  sock_fd_write(priv->write, pa->header.fd);
+  sock_fd_write(pa->header.fd);
 #endif
   for(i = 0; i < pa->header.numEntries; i++){
     DmaEntry *e = &(pa->entries[i]);

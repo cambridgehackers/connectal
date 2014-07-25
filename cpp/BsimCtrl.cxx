@@ -1,4 +1,3 @@
-
 // Copyright (c) 2013-2014 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
@@ -34,7 +33,6 @@
 #include <sys/socket.h>
 
 #include "portal.h"
-
 #include "sock_utils.h"
 
 static struct {
@@ -57,7 +55,7 @@ extern "C" {
 
   bool processReq32(uint32_t rr){
     if (!head.valid){
-	int rv = recv(sockfd, &head.req, sizeof(memrequest), MSG_DONTWAIT);
+	int rv = bsim_ctrl_recv(sockfd, &head.req);
 	if(rv > 0){
 	  //fprintf(stderr, "recv size %d\n", rv);
 	  assert(rv == sizeof(memrequest));
@@ -94,13 +92,6 @@ extern "C" {
     //fprintf(stderr, "readData()\n");
     respitem.data = x;
     head.valid = 0;
-    int send_attempts = 666;
-    while(send(sockfd, &respitem, sizeof(respitem), 0) == -1){
-      if(send_attempts++ > 16){
-	fprintf(stderr, "(%d) send failure\n", respitem.portal);
-	exit(1);
-      }
-      sleep(1);
-    }
+    bsim_ctrl_send(sockfd, &respitem);
   }
 }
