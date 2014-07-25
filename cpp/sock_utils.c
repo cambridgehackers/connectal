@@ -133,6 +133,7 @@ ssize_t sock_fd_write(int fd)
     *((int *) CMSG_DATA(cmsg)) = fd;
   struct memrequest foo = {MAGIC_PORTAL_FOR_SENDING_FD};
 
+printf("[%s:%d] fd %d\n", __FUNCTION__, __LINE__, fd);
   pthread_mutex_lock(&socket_mutex);
   if (send(global_sockfd, &foo, sizeof(foo), 0) == -1) {
     fprintf(stderr, "%s: send error sending fd\n",__FUNCTION__);
@@ -159,6 +160,11 @@ sock_fd_read(int sock, int *fd)
             exit(1);
         }
         *fd = *((int *) CMSG_DATA(cmsg));
+    }
+    else {
+        printf("sock_fd_read: error in receiving fd %d size %ld len %ld\n", *fd, (long)size, (long)(cmsg?cmsg->cmsg_len:-666));
+        printf("sock_fd_read: controllen %lx control %lx\n", (long)msg.msg_controllen, (long)msg.msg_control);
+        exit(-1);
     }
     return size;
 }
@@ -305,13 +311,13 @@ void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id)
 ssize_t sock_fd_write(int fd)
 {
     struct memrequest foo = {MAGIC_PORTAL_FOR_SENDING_FD};
-    int rv = 0;
 
     printk("[%s:%d]\n", __FUNCTION__, __LINE__);
     foo.data = fd;
     down_interruptible(&bsim_avail);
     memcpy(&upreq, &foo, sizeof(upreq));
     have_request = 1;
-    return rv;
+    down_interruptible(&bsim_have_response);
+    return 0;
 }
 #endif
