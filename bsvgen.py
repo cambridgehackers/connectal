@@ -411,6 +411,8 @@ class MethodMixin:
             formal = ['%s %s' % (p.type.toBsvType(), p.name) for p in self.params]
             substs['formals'] = ', '.join(formal)
             structElements = ['%s: %s' % (p.name, p.name) for p in self.params]
+            if not self.params:
+                structElements = ['padding: 0']
             substs['structElements'] = ', '.join(structElements)
             return indicationMethodTemplate % substs
         else:
@@ -422,6 +424,8 @@ class MethodMixin:
             formal = ['%s %s' % (p.type.toBsvType(), p.name) for p in self.params]
             substs['formals'] = ', '.join(formal)
             structElements = ['%s: %s' % (p.name, p.name) for p in self.params]
+            if not self.params:
+                structElements = ['padding: 0']
             substs['structElements'] = ', '.join(structElements)
             return indicationMethodDeclTemplate % substs
         else:
