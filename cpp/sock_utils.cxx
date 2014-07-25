@@ -30,6 +30,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <semaphore.h>
+#include <pthread.h>
 
 #include "portal.h"
 #include "sock_utils.h"
@@ -37,7 +38,8 @@
 #define SOCKET_NAME                 "socket_for_bluesim"
 #define MAGIC_PORTAL_FOR_SENDING_FD                 666
 
-static sem_t socket_mutex, dma_waiting;
+static pthread_mutex_t socket_mutex;
+static sem_t dma_waiting;
 static int global_sockfd = -1;
 
 void connect_to_bsim(void)
@@ -64,7 +66,7 @@ void connect_to_bsim(void)
     sleep(1);
   }
   fprintf(stderr, "%s (%s) connected\n",__FUNCTION__, SOCKET_NAME);
-  sem_init(&socket_mutex, 0, 1);
+  pthread_mutex_init(&socket_mutex, NULL);
   sem_init(&dma_waiting, 0, 0);
 }
 
@@ -131,13 +133,13 @@ ssize_t sock_fd_write(int fd)
     *((int *) CMSG_DATA(cmsg)) = fd;
   struct memrequest foo = {MAGIC_PORTAL_FOR_SENDING_FD};
 
-  sem_wait(&socket_mutex);
+  pthread_mutex_lock(&socket_mutex);
   if (send(global_sockfd, &foo, sizeof(foo), 0) == -1) {
     fprintf(stderr, "%s: send error sending fd\n",__FUNCTION__);
     //exit(1);
   }
   int rv = sendmsg(global_sockfd, &msg, 0);
-  sem_post(&socket_mutex);
+  pthread_mutex_unlock(&socket_mutex);
   return rv;
 }
 
@@ -167,7 +169,7 @@ unsigned int read_portal_bsim(volatile unsigned int *addr, int id)
   struct memrequest foo = {id, 0,addr,0};
   struct memresponse rv;
 
-  sem_wait(&socket_mutex);
+  pthread_mutex_lock(&socket_mutex);
   if (send(global_sockfd, &foo, sizeof(foo), 0) == -1) {
     fprintf(stderr, "%s (fpga%d) send error, errno=%s\n",__FUNCTION__, id, strerror(errno));
     exit(1);
@@ -176,7 +178,7 @@ unsigned int read_portal_bsim(volatile unsigned int *addr, int id)
     fprintf(stderr, "%s (fpga%d) recv error\n",__FUNCTION__, id);
     exit(1);	  
   }
-  sem_post(&socket_mutex);
+  pthread_mutex_unlock(&socket_mutex);
   return rv.data;
 }
 
@@ -184,12 +186,12 @@ void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id)
 {
   struct memrequest foo = {id, 1,addr,v};
 
-  sem_wait(&socket_mutex);
+  pthread_mutex_lock(&socket_mutex);
   if (send(global_sockfd, &foo, sizeof(foo), 0) == -1) {
     fprintf(stderr, "%s (fpga%d) send error\n",__FUNCTION__, id);
     exit(1);
   }
-  sem_post(&socket_mutex);
+  pthread_mutex_unlock(&socket_mutex);
 }
 
 void init_pareff()
