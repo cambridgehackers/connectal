@@ -32,92 +32,43 @@ interface MemSlaveClient;
 endinterface
 
 module mkMemSlave#(MemSlaveClient client)(MemSlave#(32,32));
-   FIFOF#(MemRequest#(32)) req_ar_fifo <- mkFIFOF();
    FIFOF#(MemData#(32)) slaveReadDataFifos <- mkSizedFIFOF(8);
-   FIFOF#(MemRequest#(32)) req_aw_fifo <- mkFIFOF();
    FIFOF#(MemData#(32)) slaveWriteDataFifos <- mkSizedFIFOF(8);
    FIFOF#(Bit#(ObjectTagSize)) slaveBrespFifo <- mkFIFOF();
 
-   Reg#(Bit#(8)) readBurstCount <- mkReg(0);
-   Reg#(Bit#(30)) readAddr <- mkReg(0);
-   rule do_read if (req_ar_fifo.notEmpty());
-      Bit#(8) bc = readBurstCount;
-      Bit#(30) addr = readAddr;
-      let req = req_ar_fifo.first();
-      if (bc == 0) begin
-	 bc = extend(req.burstLen);
-	 addr = truncate(req.addr);
-      end
+   AddressGenerator#(30) readAddrGenerator <- mkAddressGenerator();
+   AddressGenerator#(30) writeAddrGenerator <- mkAddressGenerator();
+
+   rule do_read;
+      let b <- readAddrGenerator.addrBeat.get();
+      let addr = b.addr;
 
       let v = client.rd(unpack(addr >> 2));
       //$display("MemSlave do_read addr=%h len=%d v=%h", addr, bc, v);
-      slaveReadDataFifos.enq(MemData { data: v, tag: req.tag });
+      slaveReadDataFifos.enq(MemData { data: v, tag: b.tag });
 
-      addr = addr + 4;
-      bc = bc - 1;
-
-      readBurstCount <= bc;
-      readAddr <= addr;
-      if (bc == 0)
+      if (b.last)
 	 req_ar_fifo.deq();
    endrule
 
-   Reg#(Bit#(8)) writeBurstCount <- mkReg(0);
-   Reg#(Bit#(30)) writeAddr <- mkReg(0);
-   rule do_write if (req_aw_fifo.notEmpty());
-      Bit#(8) bc = writeBurstCount;
-      Bit#(30) addr = writeAddr;
-      let req = req_aw_fifo.first();
-      if (bc == 0) begin
-	 bc = extend(req.burstLen);
-	 addr = truncate(req.addr);
-      end
-
-      let resp_write = slaveWriteDataFifos.first();
-      slaveWriteDataFifos.deq();
+   rule do_write;
+      let b <- writeAddrGenerator.addrBeat.get();
+      let resp_write <- toGet(slaveWriteDataFifos).get();
 
       client.wr(unpack(addr >> 2), resp_write.data);
 
-      addr = addr + 4;
-      bc = bc - 1;
-
-      writeBurstCount <= bc;
-      writeAddr <= addr;
-      if (bc == 0) begin
-	 req_aw_fifo.deq();
-	 slaveBrespFifo.enq(req.tag);
+      if (b.last) begin
+	 slaveBrespFifo.enq(b.tag);
       end
    endrule
 
    interface MemWriteServer write_server; 
-      interface Put writeReq;
-         method Action put(MemRequest#(32) req);
-            req_aw_fifo.enq(req);
-         endmethod
-      endinterface
-      interface Put writeData;
-         method Action put(MemData#(32) resp);
-            slaveWriteDataFifos.enq(resp);
-         endmethod
-      endinterface
-      interface Get writeDone;
-         method ActionValue#(Bit#(ObjectTagSize)) get();
-            slaveBrespFifo.deq;
-            return slaveBrespFifo.first;
-         endmethod
-      endinterface
+      interface Put writeReq = writeAddressGenerator.request;
+      interface Put writeData = toPut(slaveWriteDataFifos);
+      interface Get writeDone = toGet(slaveBrespFifo);
    endinterface
    interface MemReadServer read_server;
-      interface Put readReq;
-         method Action put(MemRequest#(32) req);
-            req_ar_fifo.enq(req);
-         endmethod
-      endinterface
-      interface Get     readData;
-         method ActionValue#(MemData#(32)) get();
-            slaveReadDataFifos.deq;
-            return slaveReadDataFifos.first;
-         endmethod
-      endinterface
+      interface Put readReq = readAddressGenerator.request;
+      interface Get     readData = toGet(slaveReadDataFifos);
    endinterface
 endmodule
