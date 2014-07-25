@@ -29,7 +29,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <pthread.h>
 #include <semaphore.h>
 
 #include "portal.h"
@@ -85,31 +84,13 @@ void connect_socket(int *psockfd, const char *format, int id)
   }
 }
 
-static void* socket_listen_task(void *_xx)
-{
-  SOCKPARAM *c = (SOCKPARAM *)_xx;
-  
-  if (listen(c->listening_socket, 5) == -1) {
-    fprintf(stderr, "%s[%d]: listen error %s\n",__FUNCTION__, c->listening_socket, strerror(errno));
-    exit(1);
-  }
-  
-  //fprintf(stderr, "%s[%d]: waiting for a connection...\n",__FUNCTION__, c->listening_socket);
-  if ((*c->psocket = accept(c->listening_socket, NULL, NULL)) == -1) {
-    fprintf(stderr, "%s[%d]: accept error %s\n",__FUNCTION__, c->listening_socket, strerror(errno));
-    exit(1);
-  }
-  return NULL;
-}
-
 void thread_socket(int* psockfd, const char *format, int id)
 {
-  pthread_t tid;
   char path[MAX_PATH_LENGTH];
-  SOCKPARAM *param = (SOCKPARAM *)malloc(sizeof(SOCKPARAM));
+  int listening_socket;
   snprintf(path, sizeof(path), format, id);
 
-  if ((param->listening_socket = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+  if ((listening_socket = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
     fprintf(stderr, "%s: socket error %s",__FUNCTION__, strerror(errno));
     exit(1);
   }
@@ -119,16 +100,22 @@ void thread_socket(int* psockfd, const char *format, int id)
   strcpy(local.sun_path, path);
   unlink(local.sun_path);
   int len = strlen(local.sun_path) + sizeof(local.sun_family);
-  if (bind(param->listening_socket, (struct sockaddr *)&local, len) == -1) {
-    fprintf(stderr, "%s[%d]: bind error %s\n",__FUNCTION__, param->listening_socket, strerror(errno));
+  if (bind(listening_socket, (struct sockaddr *)&local, len) == -1) {
+    fprintf(stderr, "%s[%d]: bind error %s\n",__FUNCTION__, listening_socket, strerror(errno));
     exit(1);
   }
 
-  param->psocket = psockfd;
-  if(pthread_create(&tid, NULL, socket_listen_task, (void*)param)){
-     fprintf(stderr, "error creating init thread\n");
-     exit(1);
+  if (listen(listening_socket, 5) == -1) {
+    fprintf(stderr, "%s[%d]: listen error %s\n",__FUNCTION__, listening_socket, strerror(errno));
+    exit(1);
   }
+  
+  //fprintf(stderr, "%s[%d]: waiting for a connection...\n",__FUNCTION__, listening_socket);
+  if ((*psockfd = accept(listening_socket, NULL, NULL)) == -1) {
+    fprintf(stderr, "%s[%d]: accept error %s\n",__FUNCTION__, listening_socket, strerror(errno));
+    exit(1);
+  }
+  remove(path);  // we are connected now, so we can remove named socket
 }
 
 /* Thanks to keithp.com for readable examples how to do this! */

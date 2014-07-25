@@ -43,7 +43,6 @@ static struct {
 } head;
 static int sockfd;
 static struct memresponse respitem;
-static int cleanedup;
 
 extern "C" {
   void initPortal(unsigned long id){
@@ -66,11 +65,6 @@ extern "C" {
 	  if(0)
 	  fprintf(stderr, "processReq32(i=%d,rr=%d) {write=%d, addr=%08lx, data=%08x}\n", 
 		  head.req.portal, rr, head.req.write_flag, (long)head.req.addr, head.req.data);
-          if (!cleanedup && head.req.portal) {
-               cleanedup = 1;
-               remove("fpga0_rc");
-               remove("fd_sock_wc");
-          }
 	}
     }
     return head.valid && head.inflight == 1 && head.req.write_flag == rr;
