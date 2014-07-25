@@ -25,6 +25,7 @@ import FIFOF          :: *;
 import GetPut         :: *;
 import Clocks         :: *;
 import MemTypes       :: *;
+import AddressGenerator:: *;
 
 interface MemSlaveClient;
     method Bit#(32) rd(UInt#(30) addr);
