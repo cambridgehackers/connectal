@@ -77,7 +77,7 @@ typedef `DataBusWidth DataBusWidth;
 typedef `NumberOfMasters NumberOfMasters;
 
 interface PcieHost#(numeric type dsz, numeric type nSlaves);
-   interface Vector#(16,MSIX_Entry)              msixEntry;
+   interface Vector#(16,ReadOnly_MSIX_Entry)     msixEntry;
    interface MemMaster#(32,32)                   master;
    interface Vector#(nSlaves,MemSlave#(40,dsz))  slave;
    interface Put#(Tuple2#(Bit#(64),Bit#(32)))    interruptRequest;

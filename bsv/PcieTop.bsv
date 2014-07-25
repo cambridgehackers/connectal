@@ -217,7 +217,7 @@ module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Cl
 	 interruptRequested[i] <= portalTop.interrupt[i];
      end
      if (intr_num != 0) begin // i= 0 for the directory
-        MSIX_Entry msixEntry = host.tpciehost.msixEntry[intr_num];
+        ReadOnly_MSIX_Entry msixEntry = host.tpciehost.msixEntry[intr_num];
         host.tpciehost.interruptRequest.put(tuple2({msixEntry.addr_hi, msixEntry.addr_lo}, msixEntry.msg_data));
      end
    endrule

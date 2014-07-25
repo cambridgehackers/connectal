@@ -39,10 +39,26 @@ interface MSIX_Entry;
    interface Reg#(Bool)     masked;
 endinterface
 
+interface ReadOnly_MSIX_Entry;
+   interface ReadOnly#(Bit#(32)) addr_lo;
+   interface ReadOnly#(Bit#(32)) addr_hi;
+   interface ReadOnly#(Bit#(32)) msg_data;
+   interface ReadOnly#(Bool)     masked;
+endinterface
+
+function ReadOnly_MSIX_Entry toReadOnlyMsixEntry(MSIX_Entry msix);
+   return (interface ReadOnly_MSIX_Entry;
+	   interface ReadOnly addr_lo = regToReadOnly(msix.addr_lo);
+	   interface ReadOnly addr_hi = regToReadOnly(msix.addr_hi);
+	   interface ReadOnly msg_data = regToReadOnly(msix.msg_data);
+	   interface ReadOnly masked = regToReadOnly(msix.masked);
+	   endinterface);
+endfunction
+
 // control and status registers accessed from PCIe
 interface PcieControlAndStatusRegs;
    interface MemSlaveClient client;
-   interface Vector#(16,MSIX_Entry) msixEntry;
+   interface Vector#(16,ReadOnly_MSIX_Entry) msixEntry;
 endinterface: PcieControlAndStatusRegs
 
 // This module encapsulates all of the logic for instantiating and
@@ -160,5 +176,5 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
          endcase
    endmethod
    endinterface
-   interface Vector msixEntry = msix_entry;
+   interface Vector msixEntry = map(toReadOnlyMsixEntry, msix_entry);
 endmodule: mkPcieControlAndStatusRegs
