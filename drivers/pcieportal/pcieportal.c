@@ -371,7 +371,8 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
         	// enable tracing
                 iowrite32(1, this_board->bar0io + CSR_TLPTRACINGREG);
                 /* check the magic number in BAR 0 */
-                magic_num = readq(this_board->bar0io + CSR_ID);
+                magic_num = ((long long)ioread32(this_board->bar0io + CSR_ID +  4)) << 32;
+                magic_num |= ioread32(this_board->bar0io + CSR_ID);
                 if (magic_num != expected_magic) {
                         printk(KERN_ERR "%s: magic number %llx does not match expected %llx\n",
                                DEV_NAME, magic_num, expected_magic);
