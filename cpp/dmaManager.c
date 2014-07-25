@@ -22,6 +22,7 @@
 // SOFTWARE.
 
 #include "dmaManager.h"
+#include "sock_utils.h"
 
 #ifdef __KERNEL__
 #include <linux/slab.h>
@@ -29,10 +30,10 @@
 extern struct dma_buf *portalmem_dmabuffer_create(unsigned long len, unsigned long align);
 #define PORTAL_MALLOC vmalloc
 #else
+#include <string.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
-#include "sock_utils.h"
 #include "portalmem.h"
 
 #if defined(__arm__)

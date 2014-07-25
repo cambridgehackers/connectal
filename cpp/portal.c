@@ -23,12 +23,14 @@
 // SOFTWARE.
 
 #include "portal.h"
+#include "sock_utils.h"
 
 #ifdef __KERNEL__
 #include "linux/delay.h"
 #define assert(A)
 #define exit(A) while(1) msleep(2000);
 #else
+#include <string.h>
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -36,7 +38,6 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <time.h> // ctime
-#include "sock_utils.h"
 #endif
 
 #ifdef ZYNQ
@@ -156,14 +157,16 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler)
     close(pgfile);
 #endif
     snprintf(buff, sizeof(buff), "/dev/fpga%d", pint->fpga_number);
-#ifdef __KERNEL__
+#ifndef MMAP_HW   // BSIM version
+    connect_to_bsim();
+#elif defined(__KERNEL__)
 {
     static tBoard* tboard;
     if (!tboard)
         tboard = get_pcie_portal_descriptor();
     pint->map_base = (volatile unsigned int*)(tboard->bar2io + pint->fpga_number * PORTAL_BASE_OFFSET);
 }
-#elif defined (MMAP_HW)
+#else
 #ifdef ZYNQ
     pint->fpga_fd = open(buff, O_RDWR);
     ioctl(pint->fpga_fd, PORTAL_ENABLE_INTERRUPT, &intsettings);
@@ -182,8 +185,6 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler)
         rc = -errno;
 	goto errlab;
     }  
-#else // BSIM version
-    connect_to_bsim();
 #endif
 
 errlab:
@@ -267,10 +268,10 @@ unsigned int directory_get_addrbits(unsigned int id)
   return READL(&globalDirectory, PORTAL_DIRECTORY_ADDRBITS);
 }
 
-#ifndef __KERNEL__
 void portalTrace_start()
 {
     init_directory();
+#ifndef __KERNEL__
 #ifndef ZYNQ
   tTraceInfo traceInfo;
   traceInfo.trace = 1;
@@ -278,10 +279,12 @@ void portalTrace_start()
   if (res)
     PORTAL_PRINTF("Failed to start tracing. errno=%d\n", errno);
 #endif
+#endif
 }
 void portalTrace_stop()
 {
     init_directory();
+#ifndef __KERNEL__
 #ifndef ZYNQ
   tTraceInfo traceInfo;
   traceInfo.trace = 0;
@@ -289,5 +292,5 @@ void portalTrace_stop()
   if (res)
     PORTAL_PRINTF("Failed to stop tracing. errno=%d\n", errno);
 #endif
-}
 #endif
+}

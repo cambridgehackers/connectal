@@ -326,7 +326,7 @@ endif
 BSCOPTFLAGS= -show-schedule -aggressive-conditions
 BSCPATHFLAGS=  -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj -info-dir $(DTOP)/obj
 BSCFLAGS = $(BSCWARNFLAGS) $(BSCOPTFLAGS) $(BSCPATHFLAGS) --wait-for-license -D TimeStamp=%(timestamp)s %(bscflags)s
-BSIM_CXX = $(XBSVDIR)/cpp/BsimCtrl.cxx $(XBSVDIR)/cpp/TlpReplay.cxx $(XBSVDIR)/cpp/BsimDma.cxx $(XBSVDIR)/cpp/sock_utils.cxx %(bsimsource)s
+BSIM_CXX = $(XBSVDIR)/cpp/BsimCtrl.cxx $(XBSVDIR)/cpp/TlpReplay.cxx $(XBSVDIR)/cpp/BsimDma.cxx $(XBSVDIR)/cpp/sock_utils.c %(bsimsource)s
 
 VIVADOFLAGS= -notrace
 XVLOGFLAGS =
@@ -507,7 +507,7 @@ androidmk_template='''
 include $(CLEAR_VARS)
 LOCAL_ARM_MODE := arm
 APP_SRC_FILES := $(addprefix %(project_dir)s/jni/,  %(generatedCFiles)s) %(source)s
-PORTAL_SRC_FILES := $(addprefix %(xbsvdir)s/cpp/, portal.c poller.cpp sock_utils.cxx)
+PORTAL_SRC_FILES := $(addprefix %(xbsvdir)s/cpp/, portal.c poller.cpp sock_utils.c)
 LOCAL_SRC_FILES := $(APP_SRC_FILES) $(PORTAL_SRC_FILES)
 
 LOCAL_PATH :=
@@ -525,7 +525,7 @@ linuxmakefile_template='''
 CFLAGS_COMMON = -O -g -I%(project_dir)s/jni -I%(xbsvdir)s -I%(xbsvdir)s/cpp -I%(xbsvdir)s/lib/cpp %(sourceincludes)s %(cincludes)s %(cdefines)s -I%(xbsvdir)s/drivers/portalmem -I%(xbsvdir)s/drivers/pcieportal -I%(xbsvdir)s/drivers/zynqportal
 CFLAGS = -DMMAP_HW $(CFLAGS_COMMON)
 
-PORTAL_CPP_FILES = $(addprefix %(xbsvdir)s/cpp/, portal.c poller.cpp sock_utils.cxx)
+PORTAL_CPP_FILES = $(addprefix %(xbsvdir)s/cpp/, portal.c poller.cpp sock_utils.c)
 SOURCES = $(addprefix %(project_dir)s/jni/,  %(generatedCFiles)s) %(source)s $(PORTAL_CPP_FILES)
 LDLIBS := %(clibdirs)s %(clibs)s -pthread 
 

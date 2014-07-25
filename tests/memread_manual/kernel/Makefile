@@ -1,7 +1,9 @@
 
 # grep get_pcie_portal_descriptor /proc/kallsyms 
 
-BOARD=kc705
+#BOARD=kc705
+BOARD=bluesim
+#HARDWARE_FLAGS=-DMMAP_HW
 
 export KROOT=/lib/modules/$(shell uname -r)/build
 CPPDIR=../../../cpp
@@ -17,12 +19,13 @@ testme-y := ../memread_manual_manager.o \
      $(BOARDDIR)/MemreadRequestProxy.o \
      $(CPPDIR)/portal.o \
      $(CPPDIR)/dmaManager.o \
+     $(CPPDIR)/sock_utils.o \
      $(CPPDIR)/kernel_module.o
 
 
 obj-m := testme.o
 
-ccflags-y := -I$(src)/.. -I$(DRIVERDIR)/pcieportal -I$(DRIVERDIR)/portalmem -I$(src)/$(CPPDIR) -I$(src)/$(BOARDDIR) -DMMAP_HW
+ccflags-y := -I$(src)/.. -I$(DRIVERDIR)/pcieportal -I$(DRIVERDIR)/portalmem -I$(src)/$(CPPDIR) -I$(src)/$(BOARDDIR) $(HARDWARE_FLAGS)
 
 default:
 	$(MAKE) -C $(KROOT) M=$(PWD) modules

@@ -24,9 +24,6 @@
 #ifndef _SOCK_UTILS_H_
 #define _SOCK_UTILS_H_
 
-#include <linux/socket.h>
-#include <sys/un.h>
-
 struct memrequest{
   int portal;
   int write_flag;
@@ -45,7 +42,7 @@ void connect_to_bsim(void);
 void bsim_wait_for_connect(int* psockfd);
 ssize_t sock_fd_write(int fd);
 int pareff_fd(int *fd);
-void init_pareff();
+void init_pareff(void);
 int bsim_ctrl_recv(int sockfd, struct memrequest *data);
 int bsim_ctrl_send(int sockfd, struct memresponse *data);
 #ifdef __cplusplus

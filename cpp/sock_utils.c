@@ -21,6 +21,12 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include "portal.h"
+#include "sock_utils.h"
+#define MAGIC_PORTAL_FOR_SENDING_FD                 666
+#define SOCKET_NAME                 "socket_for_bluesim"
+
+#ifndef __KERNEL__
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -31,12 +37,6 @@
 #include <sys/un.h>
 #include <semaphore.h>
 #include <pthread.h>
-
-#include "portal.h"
-#include "sock_utils.h"
-
-#define SOCKET_NAME                 "socket_for_bluesim"
-#define MAGIC_PORTAL_FOR_SENDING_FD                 666
 
 static pthread_mutex_t socket_mutex;
 static sem_t dma_waiting;
@@ -204,6 +204,7 @@ int pareff_fd(int *fd)
   sem_wait(&dma_waiting);
   *fd = dma_fd;
   dma_fd = -1;
+  return 0;
 }
 
 int bsim_ctrl_recv(int sockfd, struct memrequest *data)
@@ -221,3 +222,91 @@ int bsim_ctrl_send(int sockfd, struct memresponse *data)
 {
   return send(sockfd, data, sizeof(*data), 0);
 }
+#else // __KERNEL__
+
+/*
+ * Used when running application in kernel and BSIM in userspace
+ */
+
+#include <linux/kernel.h>
+#include <linux/uaccess.h> // copy_to/from_user
+#include <linux/mutex.h>
+//#include <linux/types.h>
+#include <linux/semaphore.h>
+//#include <asm/cacheflush.h>
+
+extern struct semaphore bsim_start;
+static unsigned char tempdata[100];
+static unsigned char readdata[100] = "abcdefghij1234567890";
+void memdump(unsigned char *p, int len, char *title);
+DEFINE_MUTEX(bsim_mutex);
+
+ssize_t xbsv_kernel_read (struct file *f, char __user *arg, size_t len, loff_t *data)
+{
+    static int once;
+    int err;
+printk("[%s:%d] f %p u %p len %lx data %p\n", __FUNCTION__, __LINE__, f, arg, len, data);
+    up(&bsim_start);
+    mutex_lock(&bsim_mutex);
+    mutex_unlock(&bsim_mutex);
+    if (once) return 0;
+    once = 1;
+    if (len > sizeof(readdata))
+        len = sizeof(readdata);
+    err = copy_to_user((void __user *) arg, &readdata, len);
+    return len;
+}
+ssize_t xbsv_kernel_write (struct file *f, const char __user *arg, size_t len, loff_t *data)
+{
+    int err;
+printk("[%s:%d] f %p u %p len %lx data %p\n", __FUNCTION__, __LINE__, f, arg, len, data);
+    if (len > sizeof(tempdata))
+        len = sizeof(tempdata);
+    err = copy_from_user(&tempdata, (void __user *) arg, len);
+    if (!err) {
+    mutex_lock(&bsim_mutex);
+    mutex_unlock(&bsim_mutex);
+memdump(tempdata, sizeof(tempdata), "READ");
+    }
+    return len;
+}
+
+void connect_to_bsim(void)
+{
+    printk("[%s:%d]\n", __FUNCTION__, __LINE__);
+    down_interruptible(&bsim_start);
+}
+
+unsigned int read_portal_bsim(volatile unsigned int *addr, int id)
+{
+    struct memrequest foo = {id, 0,addr,0};
+    struct memresponse rv;
+    printk("[%s:%d]\n", __FUNCTION__, __LINE__);
+    mutex_lock(&bsim_mutex);
+    mutex_unlock(&bsim_mutex);
+    return 0;
+}
+
+void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id)
+{
+    struct memrequest foo = {id, 1,addr,v};
+    printk("[%s:%d]\n", __FUNCTION__, __LINE__);
+    mutex_lock(&bsim_mutex);
+    mutex_unlock(&bsim_mutex);
+}
+ssize_t sock_fd_write(int fd)
+{
+    struct memrequest foo = {MAGIC_PORTAL_FOR_SENDING_FD};
+    int rv = 0;
+
+    printk("[%s:%d]\n", __FUNCTION__, __LINE__);
+    mutex_lock(&bsim_mutex);
+    mutex_unlock(&bsim_mutex);
+    //if (send(global_sockfd, &foo, sizeof(foo), 0) == -1) {
+      //fprintf(stderr, "%s: send error sending fd\n",__FUNCTION__);
+      ////exit(1);
+    //}
+    //int rv = sendmsg(global_sockfd, &msg, 0);
+    return rv;
+}
+#endif
