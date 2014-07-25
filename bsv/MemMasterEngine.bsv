@@ -42,7 +42,6 @@ endinterface
 (* synthesize *)
 module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
     Reg#(Bit#(7)) hitReg <- mkReg(0);
-    Reg#(Bit#(4)) timerReg <- mkReg(0);
     FIFOF#(TLPMemoryIO3DWHeader) readHeaderFifo <- mkSizedFIFOF(8);
     FIFOF#(TLPMemoryIO3DWHeader) readDataFifo <- mkSizedFIFOF(8);
     FIFOF#(TLPMemoryIO3DWHeader) writeHeaderFifo <- mkSizedFIFOF(8);
@@ -142,9 +141,6 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
 	 tlpOutFifo.enq(tlp);
       end
    endrule
-   rule txnTimer if (timerReg > 0);
-      timerReg <= timerReg - 1;
-   endrule
 
     interface Client        tlp;
     interface Put response;
@@ -164,7 +160,6 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
 	       if (writeHeaderFifo.notFull())
 		  writeHeaderFifo.enq(hdr_3dw);
 	    end
-            timerReg <= truncate(32'hFFFFFFFF);
 	endmethod
     endinterface
     interface Get request = toGet(tlpOutFifo);
