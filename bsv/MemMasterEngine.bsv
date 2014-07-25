@@ -177,10 +177,9 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
        endinterface
         interface Get writeData;
 	  method ActionValue#(MemData#(32)) get();
-	     writeDataFifo.deq;
-	     let data = writeDataFifo.first.data;
-	     data = byteSwap(data);
-	     return MemData { data: data, tag: truncate(writeDataFifo.first.tag)};
+	     let hdr <- toGet(writeDataFifo).get();
+	     let data = byteSwap(hdr.data);
+	     return MemData { data: data, tag: truncate(hdr.tag), last: True};
 	  endmethod
        endinterface
         interface Put       writeDone;
