@@ -70,7 +70,7 @@ module mkPortalTop#(HostType host)(PortalTop#(addrWidth,64,HDMI#(Bit#(16)),1))
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
    interface masters = dma.masters;
-   interface xadc = hdmiDisplay.xadc;
+   //interface xadc = hdmiDisplay.xadc;
    interface pins = hdmiDisplay.hdmi;      
 endmodule : mkPortalTop
 
