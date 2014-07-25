@@ -46,8 +46,6 @@ static struct {
 static int sockfd;
 static struct memresponse respitem;
 static int cleanedup;
-#define MAX_PATH_LENGTH 100
-static char path[MAX_PATH_LENGTH];
 
 extern "C" {
   void initPortal(unsigned long id){
@@ -72,8 +70,7 @@ extern "C" {
 		  head.req.portal, rr, head.req.write_flag, (long)head.req.addr, head.req.data);
           if (!cleanedup && head.req.portal) {
                cleanedup = 1;
-               snprintf(path, sizeof(path), "fpga0_rc", 0);
-               remove(path);
+               remove("fpga0_rc");
                remove("fd_sock_wc");
           }
 	}
@@ -97,7 +94,7 @@ extern "C" {
     //fprintf(stderr, "readData()\n");
     respitem.data = x;
     head.valid = 0;
-    int send_attempts = 0;
+    int send_attempts = 666;
     while(send(sockfd, &respitem, sizeof(respitem), 0) == -1){
       if(send_attempts++ > 16){
 	fprintf(stderr, "(%d) send failure\n", respitem.portal);
