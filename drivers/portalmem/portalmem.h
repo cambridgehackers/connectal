@@ -24,7 +24,7 @@
 
 typedef struct PortalAllocHeader {
     size_t size;
-    int fd;
+    long fd;        /* when running in kernel, this has a pointer */
     int numEntries;
 } PortalAllocHeader;
 
