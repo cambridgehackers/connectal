@@ -104,7 +104,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
   const int PAGE_SHIFT0 = 12;
   const int PAGE_SHIFT4 = 16;
   const int PAGE_SHIFT8 = 20;
-  int i, rc = 0;
+  int i, j, rc = 0;
   uint64_t regions[3] = {0,0,0};
   uint64_t shifts[3] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0};
   int id = priv->handle++;
@@ -112,10 +112,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
   int size_accum = 0;
   uint64_t border = 0;
   unsigned char entryCount = 0;
-  struct {
-    uint64_t border;
-    unsigned char idxOffset;
-  } borders[3];
+  uint64_t borderVal[3];
   PortalAlloc *portalAlloc = (PortalAlloc *)PORTAL_MALLOC(sizeof(PortalAlloc)+((pa->header.numEntries+1)*sizeof(DmaEntry)));
 #ifdef __KERNEL__
   struct sg_table *sgtable;
@@ -155,25 +152,14 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
 #ifdef BSIM
     addr |= ((long)id+1) << 32; //[39:32] = truncate(pref);
 #endif
-
-    switch (e->length) {
-    case (1<<PAGE_SHIFT0):
-      regions[2]++;
-      addr >>= PAGE_SHIFT0;
-      break;
-    case (1<<PAGE_SHIFT4):
-      regions[1]++;
-      addr >>= PAGE_SHIFT4;
-      break;
-    case (1<<PAGE_SHIFT8):
-      regions[0]++;
-      addr >>= PAGE_SHIFT8;
-      break;
-    case (0):
-      break;
-    default:
+    for(j = 0; j < 3; j++)
+        if (e->length == 1<<shifts[j]) {
+          regions[j]++;
+          addr >>= shifts[j];
+          break;
+        }
+    if (j >= 3)
       PORTAL_PRINTF("DmaManager:unsupported sglist size %x\n", e->length);
-    }
     if (trace_memory)
       PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, (long)addr, e->length);
     DMAsglist(priv->device, id, addr, e->length);
@@ -186,22 +172,16 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
   sem_wait(&priv->confSem);
 
   for(i = 0; i < 3; i++){
-    if (i == 0)
-      borders[i].idxOffset = 0;
-    else
-      borders[i].idxOffset = entryCount - ((border >> shifts[i])&0xff);
+    unsigned char idxOffset = entryCount - ((border >> shifts[i])&0xff);
     border += regions[i]*(1<<shifts[i]);
-    borders[i].border = border;
+    borderVal[i] = (border << 8) | idxOffset;
     entryCount += regions[i];
   }
   if (trace_memory) {
     PORTAL_PRINTF("regions %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,regions[0], regions[1], regions[2]);
-    PORTAL_PRINTF("borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borders[0].border, borders[1].border, borders[2].border);
+    PORTAL_PRINTF("borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borderVal[0], borderVal[1], borderVal[2]);
   }
-  DMAregion(priv->device, id,
-     (borders[0].border << 8) | borders[0].idxOffset,
-     (borders[1].border << 8) | borders[1].idxOffset,
-     (borders[2].border << 8) | borders[2].idxOffset);
+  DMAregion(priv->device, id, borderVal[0], borderVal[1], borderVal[2]);
   //PORTAL_PRINTF("%s:%d sem_wait\n", __FUNCTION__, __LINE__);
   sem_wait(&priv->confSem);
   rc = id+1;
