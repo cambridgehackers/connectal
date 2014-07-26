@@ -139,10 +139,6 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
           portalAlloc->entries[i].length);
   }
 #endif
-  // HW interprets zeros as end of sglist
-  portalAlloc->entries[ne].dma_address = 0;
-  portalAlloc->entries[ne].length = 0;
-  portalAlloc->header.numEntries++;
   if (trace_memory)
     PORTAL_PRINTF("DmaManager_reference id=%08x, numEntries:=%d len=%08lx)\n", id, ne, (long)portalAlloc->header.size);
 #ifndef MMAP_HW
@@ -154,7 +150,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
 #ifdef MMAP_HW
     addr = e->dma_address;
 #else
-    addr = (e->length > 0) ? size_accum : 0;
+    addr = size_accum;
 #endif
 #ifdef BSIM
     addr |= ((long)id+1) << 32; //[39:32] = truncate(pref);
@@ -185,19 +181,15 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
     //PORTAL_PRINTF("%s:%d sem_wait\n", __FUNCTION__, __LINE__);
     sem_wait(&priv->confSem);
   }
+  // HW interprets zeros as end of sglist
+  DMAsglist(priv->device, id, 0, 0); // end list
+  sem_wait(&priv->confSem);
+
   for(i = 0; i < 3; i++){
-    
-
-    // PORTAL_PRINTF("i=%d entryCount=%d border=%zx shifts=%zd shifted=%zx masked=%zx idxOffset=%zx added=%zx\n",
-    //         i, entryCount, border, shifts[i], border >> shifts[i], (border >> shifts[i]) &0xFF,
-    //         (entryCount - ((border >> shifts[i])&0xff)) & 0xff,
-    //         (((border >> shifts[i])&0xff) + (entryCount - ((border >> shifts[i])&0xff)) & 0xff) & 0xff);
-
     if (i == 0)
       borders[i].idxOffset = 0;
     else
       borders[i].idxOffset = entryCount - ((border >> shifts[i])&0xff);
-
     border += regions[i]*(1<<shifts[i]);
     borders[i].border = border;
     entryCount += regions[i];
