@@ -51,7 +51,6 @@ int main(int argc, char *argv[])
 struct memrequest req;
 int rc;
 
-printf("[%s:%d] start\n", __FUNCTION__, __LINE__);
     int fd = open("/dev/xbsvtest", O_RDWR);
     if (fd == -1) {
         printf("bsimhost: /dev/xbsvtest not found\n");
@@ -75,21 +74,16 @@ printf("[%s:%d] opened bsim\n", __FUNCTION__, __LINE__);
         }
         rv.portal = req.portal;
         if (req.portal == 666) {
-//printf("[%s:%d] fd write %d\n", __FUNCTION__, __LINE__, req.data);
-            sock_fd_write(req.data);
+            sock_fd_write((long)req.addr);
             rv.data = 0xdead;
             write(fd, &rv, sizeof(rv));
         }
-        else if (req.write_flag) {
-//printf("[%s:%d] write\n", __FUNCTION__, __LINE__);
+        else if (req.write_flag)
             write_portal_bsim(req.addr, req.data, req.portal);
-        }
         else {
-//printf("[%s:%d] read\n", __FUNCTION__, __LINE__);
             rv.data = read_portal_bsim(req.addr, req.portal);
             write(fd, &rv, sizeof(rv));
         }
     }
-printf("[%s:%d] over\n", __FUNCTION__, __LINE__);
     return 0;
 }

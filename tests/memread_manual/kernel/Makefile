@@ -32,5 +32,5 @@ default:
 
 clean:
 	$(MAKE) -C $(KROOT) M=$(PWD) clean
-	rm -f a.out
+	rm -f $(testme-y) a.out
 

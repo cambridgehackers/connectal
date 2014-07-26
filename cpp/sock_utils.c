@@ -122,7 +122,7 @@ void bsim_wait_for_connect(int* psockfd)
     msg.msg_control = cmsgu.control; \
     msg.msg_controllen = sizeof(cmsgu.control);
 
-ssize_t sock_fd_write(int fd)
+ssize_t sock_fd_write(long fd)
 {
     char buf[] = "1";
     COMMON_SOCK_FD;
@@ -133,7 +133,7 @@ ssize_t sock_fd_write(int fd)
     *((int *) CMSG_DATA(cmsg)) = fd;
   struct memrequest foo = {MAGIC_PORTAL_FOR_SENDING_FD};
 
-printf("[%s:%d] fd %d\n", __FUNCTION__, __LINE__, fd);
+printf("[%s:%d] fd %ld\n", __FUNCTION__, __LINE__, fd);
   pthread_mutex_lock(&socket_mutex);
   if (send(global_sockfd, &foo, sizeof(foo), 0) == -1) {
     fprintf(stderr, "%s: send error sending fd\n",__FUNCTION__);
@@ -249,7 +249,6 @@ static int have_request;
 static struct memrequest upreq;
 static struct memresponse downresp;
 static int once = 1;
-extern void *dmamanager_translate[100];
 extern int main_program_finished;
 
 ssize_t xbsv_kernel_read (struct file *f, char __user *arg, size_t len, loff_t *data)
@@ -262,11 +261,10 @@ ssize_t xbsv_kernel_read (struct file *f, char __user *arg, size_t len, loff_t *
         return 0;          // all done!
     if (!have_request)
         return -EAGAIN;
-//printk("[%s:%d] f %p u %p len %lx data %p\n", __FUNCTION__, __LINE__, f, arg, len, data);
     if (len > sizeof(upreq))
         len = sizeof(upreq);
-    if (upreq.portal == MAGIC_PORTAL_FOR_SENDING_FD)
-        upreq.data = dma_buf_fd(dmamanager_translate[upreq.data], O_CLOEXEC); /* get an fd in user process!! */
+    if (upreq.portal == MAGIC_PORTAL_FOR_SENDING_FD) // part of sock_fd_write() processing
+        upreq.addr = (void *)(long)dma_buf_fd((struct dma_buf *)upreq.addr, O_CLOEXEC); /* get an fd in user process!! */
     err = copy_to_user((void __user *) arg, &upreq, len);
     have_request = 0;
     up(&bsim_avail);
@@ -275,14 +273,11 @@ ssize_t xbsv_kernel_read (struct file *f, char __user *arg, size_t len, loff_t *
 ssize_t xbsv_kernel_write (struct file *f, const char __user *arg, size_t len, loff_t *data)
 {
     int err;
-//printk("[%s:%d] f %p u %p len %lx data %p\n", __FUNCTION__, __LINE__, f, arg, len, data);
     if (len > sizeof(downresp))
         len = sizeof(downresp);
     err = copy_from_user(&downresp, (void __user *) arg, len);
-    if (!err) {
-//memdump((unsigned char *)&downresp, sizeof(downresp), "READ");
-    up(&bsim_have_response);
-    }
+    if (!err)
+        up(&bsim_have_response);
     return len;
 }
 
@@ -299,7 +294,6 @@ void connect_to_bsim(void)
 unsigned int read_portal_bsim(volatile unsigned int *addr, int id)
 {
     struct memrequest foo = {id, 0,addr,0};
-    struct memresponse rv;
     //printk("[%s:%d]\n", __FUNCTION__, __LINE__);
     down_interruptible(&bsim_avail);
     memcpy(&upreq, &foo, sizeof(upreq));
@@ -316,12 +310,12 @@ void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id)
     memcpy(&upreq, &foo, sizeof(upreq));
     have_request = 1;
 }
-ssize_t sock_fd_write(int fd)
+ssize_t sock_fd_write(long fd)
 {
     struct memrequest foo = {MAGIC_PORTAL_FOR_SENDING_FD};
 
     printk("[%s:%d]\n", __FUNCTION__, __LINE__);
-    foo.data = fd;
+    foo.addr = (void *)fd;
     down_interruptible(&bsim_avail);
     memcpy(&upreq, &foo, sizeof(upreq));
     have_request = 1;

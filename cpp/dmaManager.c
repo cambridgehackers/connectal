@@ -191,9 +191,6 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
   return id+1;
 }
 
-#ifdef __KERNEL__
-void *dmamanager_translate[100];
-#endif
 int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa)
 {
   PortalAlloc localPortalAlloc;
@@ -203,7 +200,6 @@ int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa)
     size_t align = 4096;
     struct dma_buf *dmabuf;
     struct scatterlist *sg;
-    struct file *f;
     struct sg_table *sgtable;
     int i;
 #endif
@@ -225,16 +221,11 @@ int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa)
       return PTR_ERR(dmabuf);
   }
   PORTAL_PRINTF("pa_get_dma_buf %p %zd\n", dmabuf->file, dmabuf->file->f_count.counter);
-  localPortalAlloc.header.numEntries = ((struct pa_buffer *)dmabuf->priv)->sg_table->nents;
-  localPortalAlloc.header.fd = dma_buf_fd(dmabuf, O_CLOEXEC);
-  dmamanager_translate[localPortalAlloc.header.fd] = dmabuf; /* keep around dmabuf ptr for translation to user process in write_fd */
-  if (localPortalAlloc.header.fd < 0) {
-      PORTAL_PRINTF("%s: fd error\n", __FUNCTION__);
-      dma_buf_put(dmabuf);
-      return -1;
-  }
+  sgtable = ((struct pa_buffer *)dmabuf->priv)->sg_table;
+  localPortalAlloc.header.numEntries = sgtable->nents;
+  localPortalAlloc.header.fd = (long)dmabuf;
 #endif
-  PORTAL_PRINTF("alloc size=%ldMB fd=%d numEntries=%d\n", 
+  PORTAL_PRINTF("alloc size=%ldMB fd=%ld numEntries=%d\n", 
       localPortalAlloc.header.size/(1L<<20), localPortalAlloc.header.fd, localPortalAlloc.header.numEntries);
   portalAlloc = (PortalAlloc *)PORTAL_MALLOC(sizeof(PortalAlloc)+((localPortalAlloc.header.numEntries+1)*sizeof(DmaEntry)));
   memcpy(portalAlloc, &localPortalAlloc, sizeof(localPortalAlloc));
@@ -246,8 +237,6 @@ int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa)
     return rc;
   }
 #else
-  f = fget(portalAlloc->header.fd);
-  sgtable = ((struct pa_buffer *)((struct dma_buf *)f->private_data)->priv)->sg_table;
   for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
       portalAlloc->entries[i].dma_address = sg_phys(sg);
       portalAlloc->entries[i].length = sg->length;
@@ -255,7 +244,6 @@ int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa)
           portalAlloc->entries[i].dma_address,
           portalAlloc->entries[i].length);
   }
-  fput(f);
 #endif
   return 0;
 }
