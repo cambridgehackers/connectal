@@ -89,6 +89,10 @@ public:
    * Multiplies a * b-transpose
    */
   void multf(PortalMat &a, PortalMat &b_transpose, MmIndication *mmind = NULL);
+  /*!
+   * Multiplies a * b
+   */
+  void multf_interleaved(PortalMat &a, PortalMat &b, MmIndication *mmind = NULL);
   void sigmoid(PortalMat &a);
   void hiddenStates(PortalMat &a);
   void hiddenStates2(PortalMat &a, PortalMat &rand);

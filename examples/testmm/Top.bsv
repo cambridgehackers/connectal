@@ -28,7 +28,11 @@ import MmDebugRequestWrapper::*;
 import MmDebugIndicationProxy::*;
 
 // defined by user
+`ifdef INTERLEAVED
+import MatrixInterleaved::*;
+`else
 import Matrix::*;
+`endif
 
 module  mkPortalTop#(HostType host)(PortalTop#(addrWidth,TMul#(32,N),Empty,NumberOfMasters))
    provisos (Add#(a__, addrWidth, 40),

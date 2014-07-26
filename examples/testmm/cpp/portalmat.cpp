@@ -295,6 +295,40 @@ void PortalMat::multf(PortalMat &a, PortalMat &b_transpose,  MmIndication *mmind
     }
 }
 
+/*!
+ * Multiplies a * b
+ */
+void PortalMat::multf_interleaved(PortalMat &a, PortalMat &b,  MmIndication *mmind)
+{
+    if (a.cols != b.rows) {
+	fprintf(stderr, "Mismatched matrices: a.rows=%d a.cols=%d b.rows=%d b.cols=%d\n", a.rows, a.cols, b.rows, b.cols);
+	return;
+    }
+    create(a.rows, b.rows, CV_32F);
+    long aref = a.reference();
+    long bref = b.reference();
+    long cref = reference();
+    if (0)
+    fprintf(stderr, "mult: ref=%d rows=%d cols=%d a.ref=%d a.rows=%d a.cols=%d b.ref=%d b.rows=%d b.cols=%d\n",
+	    cref, rows, cols,
+	    aref, a.rows, a.cols,
+	    bref, b.rows, b.cols);
+    mmdevice->mmf(aref, a.rows, a.cols,
+		  bref, b.rows, b.cols,
+		  cref,
+		  a.rows*a.cols, a.cols*J_VALUE,
+		  a.rows*b.cols, b.cols*J_VALUE,
+		  a.rows*b.rows, b.rows*J_VALUE);
+
+    sem_wait(&mul_sem);
+    if(mmind) {
+      int macs = a.rows*a.cols*b.rows;
+      if (0)
+	fprintf(stderr, "macs %d cycles %f lap_timer %f macs/cycle: %f\n", macs, (float)mmind->ccnt, (float)lap_timer(0), ((float)macs)/((float)mmind->ccnt));
+    }
+}
+
+
 void PortalMat::sigmoid(PortalMat &a)
 {
     create(a.rows, a.cols, CV_32F);

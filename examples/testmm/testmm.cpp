@@ -197,13 +197,22 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "pm1\n");
   PortalMat pm1(m1);
+#ifdef INTERLEAVED
+  fprintf(stderr, "pm2\n");
+  PortalMat pm2(m2);
+#else
   fprintf(stderr, "pm2t\n");
   PortalMat pm2t(m2.t());
+#endif
   PortalMat pm3;
 
   // now reference the matrices so we do not count that in the timer
   pm1.reference();
+#ifdef INTERLEAVED
+  pm2.reference();
+#else
   pm2t.reference();
+#endif
   pm3.create(m1.rows, m2.cols, CV_32F);
   pm3.reference();
 
@@ -216,7 +225,11 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "HW matmul\n");
   start_timer(0);
+#ifdef INTERLEAVED
+  pm3.multf_interleaved(pm1, pm2, mmdeviceIndication);
+#else
   pm3.multf(pm1, pm2t, mmdeviceIndication);
+#endif
   uint64_t hw_cycles = lap_timer(0); 
   uint64_t read_beats = dma->show_mem_stats(ChannelType_Read);
   uint64_t write_beats = dma->show_mem_stats(ChannelType_Write);
