@@ -47,13 +47,14 @@ interface SGListMMU#(numeric type addrWidth);
    interface Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addr;
 endinterface
 
-typedef union tagged{
-   Bit#(SGListPageShift0) OOrd0;
-   Bit#(SGListPageShift4) OOrd4;
-   Bit#(SGListPageShift8) OOrd8;
+typedef struct {
+   Bit#(3) pageSize;
+   Bit#(SGListPageShift8) value;
 } Offset deriving (Eq,Bits,FShow);
 
 typedef Bit#(TSub#(ObjectOffsetSize,SGListPageShift0)) Page;
+typedef Bit#(TSub#(ObjectOffsetSize,SGListPageShift4)) Page4;
+typedef Bit#(TSub#(ObjectOffsetSize,SGListPageShift8)) Page8;
 
 typedef struct {
    Bit#(ObjectOffsetSize) barrier;
@@ -87,8 +88,6 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    Vector#(2,FIFOF#(Bit#(8)))         pbases <- replicateM(mkFIFOF);
    Vector#(2,FIFOF#(Bit#(8)))    idxOffsets1 <- replicateM(mkFIFOF);
    Vector#(2,FIFOF#(SGListId))         ptrs1 <- replicateM(mkFIFOF);
-   Vector#(2,FIFOF#(Bit#(3)))      pageSizes <- replicateM(mkFIFOF);
-
 
    // stage 4 (latency == 2)
    BRAM2Port#(Bit#(entryIdxSize),Page) pages <- mkBRAM2Server(bramConfig);
@@ -132,6 +131,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 Bit#(40) barrier4 = region4.barrier;
 	 Bit#(40) barrier0 = region0.barrier;
 
+         //////# change to use bitmask, not relational
 	 let cond8 = off < barrier8;
 	 let cond4 = off < barrier4;
 	 let cond0 = off < barrier0;
@@ -141,77 +141,68 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 reqs1[i].enq(req);
       endrule
       rule stage3;
-	 Offset o = tagged OOrd0 0;
 	 match{.ptr,.off} <- toGet(reqs1[i]).get;
+	 Offset o = Offset{pageSize: 0, value: truncate(off)};
 	 Bit#(8) pbase = 0;
 	 Bit#(8) idxOffset = 0;
 
 	 match{.cond8,.cond4,.cond0} <- toGet(conds[i]).get;
 	 match{.idxOffset8,.idxOffset4,.idxOffset0} <- toGet(idxOffsets0[i]).get;
 
-	 Bit#(3) pageSize = 0;
 	 if (cond8) begin
 	    //$display("request: ptr=%h off=%h barrier8=%h", ptr, off, barrier8);
-	    o = tagged OOrd8 truncate(off);
+	    o.pageSize = 3;
 	    pbase = truncate(off>>page_shift8);
-	    pageSize = 3;
 	    idxOffset = idxOffset8;
 	 end
 	 else if (cond4) begin
 	    //$display("request: ptr=%h off=%h barrier4=%h", ptr, off, barrier4);
-	    o = tagged OOrd4 truncate(off);
+	    o.pageSize = 2;
 	    pbase = truncate(off>>page_shift4);
-	    pageSize = 2;
 	    idxOffset = idxOffset4;
 	 end
 	 else if (cond0) begin
 	    //$display("request: ptr=%h off=%h barrier0=%h", ptr, off, barrier0);
-	    o = tagged OOrd0 truncate(off);
+	    o.pageSize = 1;
 	    pbase = truncate(off>>page_shift0);
-	    pageSize = 1;
 	    idxOffset = idxOffset0;
-	 end
-	 else begin
-	    pageSize = 0;
-	    //dmaIndication.dmaError(extend(pack(DmaErrorBadAddrTrans)), extend(ptr), extend(off), barrier0);
 	 end
 	 offs0[i].enq(o);
 	 pbases[i].enq(pbase);
 	 idxOffsets1[i].enq(idxOffset);
-	 ptrs1[i].enq(ptr);
-	 pageSizes[i].enq(pageSize);
+	 ptrs1[i].enq(ptr-1);
       endrule
       rule stage4;
 	 let off <- toGet(offs0[i]).get();
 	 let pbase <- toGet(pbases[i]).get();
 	 let idxOffset <- toGet(idxOffsets1[i]).get();
 	 let ptr <- toGet(ptrs1[i]).get();
-	 let pageSize <- toGet(pageSizes[i]).get();
 	 Bit#(8) p = pbase + idxOffset;
-	 if (pageSize == 0) begin
+	 if (off.pageSize == 0) begin
 	    //FIXME offset
 	    //$display("mkSGListMMU.addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
 	    dmaIndication.dmaError(extend(pack(DmaErrorBadAddrTrans)), extend(ptr), -1, 0);
 	 end
 	 //$display("p ages[%d].read %h", i, rp[i].first());
 	 portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
-            address:{ptr-1,p}, datain:?});
+            address:{ptr,p}, datain:?});
 	 offs1[i].enq(off);
       endrule
       rule stage5;
-	 let page <- portsel(pages, i).response.get;
+	 Page page <- portsel(pages, i).response.get;
 	 let offset <- toGet(offs1[i]).get();
 	 //$display("p ages[%d].response page=%h offset=%h", i, page, offset);
 	 Bit#(ObjectOffsetSize) rv = 0;
-	 case (offset) matches
-	    tagged OOrd0 .o: rv = {truncate(page),o};
-	    tagged OOrd4 .o: rv = {truncate(page),o};
-	    tagged OOrd8 .o: rv = {truncate(page),o};
+	 Page4 b4 = truncate(page);
+	 Page8 b8 = truncate(page);
+	 case (offset.pageSize) 
+	    1: rv = {page,truncate(offset.value)};
+	    2: rv = {b4,truncate(offset.value)};
+	    3: rv = {b8,truncate(offset.value)};
 	 endcase
 	 pageResponseFifos[i].enq(truncate(rv));
       endrule
    end
-
 
    FIFO#(SGListId) configRespFifo <- mkFIFO;
    rule sendConfigResp;
