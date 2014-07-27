@@ -113,6 +113,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
   uint64_t border = 0;
   unsigned char entryCount = 0;
   uint64_t borderVal[3];
+  unsigned char idxOffset;
   PortalAlloc *portalAlloc = (PortalAlloc *)PORTAL_MALLOC(sizeof(PortalAlloc)+((pa->header.numEntries+1)*sizeof(DmaEntry)));
 #ifdef __KERNEL__
   struct sg_table *sgtable;
@@ -131,9 +132,6 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
   for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
       portalAlloc->entries[i].dma_address = sg_phys(sg);
       portalAlloc->entries[i].length = sg->length;
-      PORTAL_PRINTF ("hw addr = %lx, len = %u\n", 
-          portalAlloc->entries[i].dma_address,
-          portalAlloc->entries[i].length);
   }
 #endif
   if (trace_memory)
@@ -148,8 +146,8 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
     addr = e->dma_address;
 #else
     addr = size_accum;
-#endif
-#ifdef BSIM
+//#endif
+//#ifdef BSIM
     addr |= ((long)id+1) << 32; //[39:32] = truncate(pref);
 #endif
     for(j = 0; j < 3; j++)
@@ -172,10 +170,10 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
   sem_wait(&priv->confSem);
 
   for(i = 0; i < 3; i++){
-    unsigned char idxOffset = entryCount - ((border >> shifts[i])&0xff);
-    border += regions[i]*(1<<shifts[i]);
-    borderVal[i] = (border << 8) | idxOffset;
+    idxOffset = entryCount - (border >> shifts[i]);
     entryCount += regions[i];
+    border += regions[i]<<shifts[i];
+    borderVal[i] = (border << 8) | idxOffset;
   }
   if (trace_memory) {
     PORTAL_PRINTF("regions %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,regions[0], regions[1], regions[2]);
@@ -192,17 +190,15 @@ retlab:
 
 int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa)
 {
-  PortalAlloc localPortalAlloc;
   int rc = 0;
 #ifdef __KERNEL__
-    size_t align = 4096;
-    struct dma_buf *dmabuf;
+  size_t align = 4096;
+  struct dma_buf *dmabuf;
 #endif
 
   PortalAlloc *portalAlloc = (PortalAlloc *)PORTAL_MALLOC(sizeof(PortalAlloc));
   memset(portalAlloc, 0, sizeof(*portalAlloc));
   portalAlloc->header.size = size;
-  PORTAL_PRINTF("%s: portalAlloc->size=%zd\n", __FUNCTION__, portalAlloc->header.size);
 #ifndef __KERNEL__
   rc = ioctl(priv->pa_fd, PA_ALLOC, portalAlloc);
   if (rc)
