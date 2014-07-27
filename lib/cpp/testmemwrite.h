@@ -59,7 +59,9 @@ void child(int rd_sock)
 {
   int fd;
   bool mismatch = false;
+  fprintf(stderr, "[%s:%d] child waiting for fd\n", __FUNCTION__, __LINE__);
   sock_fd_read(rd_sock, &fd);
+  fprintf(stderr, "[%s:%d] child got fd %d\n", __FUNCTION__, __LINE__, fd);
 
   unsigned int *dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
   fprintf(stderr, "child::dstBuffer = %p\n", dstBuffer);
@@ -139,7 +141,8 @@ void parent(int rd_sock, int wr_sock)
     .setWriteBwUtil(write_util)
     .writeFile();
 
-  sock_fd_write(wr_sock, dstAlloc->header.fd);
+  fprintf(stderr, "[%s:%d] send fd to child %d\n", __FUNCTION__, __LINE__, (int)dstAlloc->header.fd);
+  sock_fd_write(wr_sock, (int)dstAlloc->header.fd);
   munmap(dstBuffer, alloc_sz);
   close(dstAlloc->header.fd);
 }

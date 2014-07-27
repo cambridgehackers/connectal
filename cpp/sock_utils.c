@@ -122,7 +122,7 @@ void bsim_wait_for_connect(int* psockfd)
     msg.msg_control = cmsgu.control; \
     msg.msg_controllen = sizeof(cmsgu.control);
 
-ssize_t sock_fd_write(long fd)
+ssize_t sock_fd_write(int sockfd, int fd)
 {
     char buf[] = "1";
     COMMON_SOCK_FD;
@@ -131,21 +131,27 @@ ssize_t sock_fd_write(long fd)
     cmsg->cmsg_level = SOL_SOCKET;
     cmsg->cmsg_type = SCM_RIGHTS;
     *((int *) CMSG_DATA(cmsg)) = fd;
+
+printf("[%s:%d] fd %d\n", __FUNCTION__, __LINE__, fd);
+  int rv = sendmsg(sockfd, &msg, 0);
+  return rv;
+}
+
+ssize_t bluesim_sock_fd_write(long fd)
+{
   struct memrequest foo = {MAGIC_PORTAL_FOR_SENDING_FD};
 
-printf("[%s:%d] fd %ld\n", __FUNCTION__, __LINE__, fd);
   pthread_mutex_lock(&socket_mutex);
   if (send(global_sockfd, &foo, sizeof(foo), 0) == -1) {
     fprintf(stderr, "%s: send error sending fd\n",__FUNCTION__);
     //exit(1);
   }
-  int rv = sendmsg(global_sockfd, &msg, 0);
+  int rv = sock_fd_write(global_sockfd, fd);
   pthread_mutex_unlock(&socket_mutex);
   return rv;
 }
 
-static ssize_t
-sock_fd_read(int sock, int *fd)
+ssize_t sock_fd_read(int sock, int *fd)
 {
     ssize_t     size;
     char buf[16];

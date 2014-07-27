@@ -40,7 +40,9 @@ extern "C" {
 #endif
 void connect_to_bsim(void);
 void bsim_wait_for_connect(int* psockfd);
-ssize_t sock_fd_write(long fd);
+ssize_t sock_fd_write(int sockfd, int fd);
+ssize_t sock_fd_read(int sock, int *fd);
+ssize_t bluesim_sock_fd_write(long fd);
 int pareff_fd(int *fd);
 void init_pareff(void);
 int bsim_ctrl_recv(int sockfd, struct memrequest *data);

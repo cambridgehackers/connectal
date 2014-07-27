@@ -137,7 +137,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
   if (trace_memory)
     PORTAL_PRINTF("DmaManager_reference id=%08x, numEntries:=%d len=%08lx)\n", id, ne, (long)portalAlloc->header.size);
 #ifndef MMAP_HW
-  sock_fd_write(portalAlloc->header.fd);
+  bluesim_sock_fd_write(portalAlloc->header.fd);
 #endif
   for(i = 0; i < portalAlloc->header.numEntries; i++){
     DmaEntry *e = &(portalAlloc->entries[i]);
