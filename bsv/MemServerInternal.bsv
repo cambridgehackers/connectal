@@ -48,7 +48,7 @@ interface MemReadInternal#(numeric type addrWidth, numeric type dataWidth);
 endinterface
 
 function Bool bad_pointer(ObjectPointer p);
-   return (p > fromInteger(valueOf(MaxNumSGLists)));
+   return ((p >>8) > fromInteger(valueOf(MaxNumSGLists)));
 endfunction
 
 interface TagGen#(numeric type numClients, numeric type numTags);

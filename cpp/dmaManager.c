@@ -160,13 +160,13 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
       PORTAL_PRINTF("DmaManager:unsupported sglist size %x\n", e->length);
     if (trace_memory)
       PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, (long)addr, e->length);
-    DMAsglist(priv->device, id, addr, e->length);
+    DMAsglist(priv->device, (id << 8) + i, addr, e->length);
     size_accum += e->length;
     //PORTAL_PRINTF("%s:%d sem_wait\n", __FUNCTION__, __LINE__);
     sem_wait(&priv->confSem);
   }
   // HW interprets zeros as end of sglist
-  DMAsglist(priv->device, id, 0, 0); // end list
+  DMAsglist(priv->device, (id << 8) + i, 0, 0); // end list
   sem_wait(&priv->confSem);
 
   for(i = 0; i < 3; i++){

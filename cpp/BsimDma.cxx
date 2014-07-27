@@ -59,7 +59,8 @@ extern "C" {
     return *(uint64_t *)&dma_info[pref-1].buffer[offset];
   }
 
-  void pareff(uint32_t pref, uint32_t size){
+  void pareff(uint32_t apref, uint32_t size){
+    uint32_t pref = apref >> 8;
     //fprintf(stderr, "BsimDma::pareff pref=%ld, size=%08x size_accum=%08x\n", pref, size, dma_info[pref].size_accum);
     assert(pref < 32);
     dma_info[pref].size_accum += size;

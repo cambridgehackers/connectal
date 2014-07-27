@@ -219,8 +219,6 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
       dmaIndication.configResp(extend(ptr));
    endrule
 
-   Reg#(Bit#(8))                      idxReg <- mkReg(0);
-
    Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addrServers;
    for(Integer i = 0; i < 2; i=i+1)
       addrServers[i] =
@@ -251,21 +249,9 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    endmethod
 
    method Action sglist(Bit#(32) ptr, Bit#(40) paddr, Bit#(32) len);
-      if (idxReg+1 == 0) begin
-	 $display("sglist: exceeded maximun length of sglist");
-	 //dmaIndication.dmaError(extend(pack(DmaErrorBadNumberEntries)), extend(ptr),extend(len), extend(idxReg));
-      end
-      else begin
-	 if (len == 0) begin
-	    idxReg <= 0;
-	 end
-	 else begin
-	    idxReg <= idxReg+1;
-	 end
 	 configRespFifo.enq(truncate(ptr));
 	 portsel(pages, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
-             address:{truncate(ptr),idxReg}, datain:truncate(paddr)});
-      end
+             address:{truncate(ptr)}, datain:truncate(paddr)});
    endmethod
    interface addr = addrServers;
 
