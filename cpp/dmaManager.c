@@ -145,6 +145,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
     addr = e->dma_address;
 #else
     addr = size_accum;
+    size_accum += e->length;
     addr |= ((long)id) << 32; //[39:32] = truncate(pref);
 #endif
     for(j = 0; j < 3; j++)
@@ -158,7 +159,6 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
     if (trace_memory)
       PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, (long)addr, e->length);
     DMAsglist(priv->device, (id << 8) + i, addr, e->length);
-    size_accum += e->length;
   }
   // HW interprets zeros as end of sglist
   DMAsglist(priv->device, (id << 8) + i, 0, 0); // end list

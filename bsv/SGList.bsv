@@ -48,7 +48,7 @@ interface SGListMMU#(numeric type addrWidth);
 endinterface
 
 typedef struct {
-   Bit#(3) pageSize;
+   Bit#(2) pageSize;
    Bit#(SGListPageShift8) value;
 } Offset deriving (Eq,Bits,FShow);
 
@@ -190,7 +190,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 Page page <- portsel(pages, i).response.get;
 	 let offset <- toGet(offs1[i]).get();
 	 //$display("p ages[%d].response page=%h offset=%h", i, page, offset);
-	 Bit#(ObjectOffsetSize) rv = 0;
+	 Bit#(ObjectOffsetSize) rv = ?;
 	 Page4 b4 = truncate(page);
 	 Page8 b8 = truncate(page);
 	 case (offset.pageSize) 
@@ -238,7 +238,6 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    endmethod
 
    method Action sglist(Bit#(32) ptr, Bit#(40) paddr, Bit#(32) len);
-	 //now busywait on requests configRespFifo.enq(truncate(ptr));
 	 portsel(pages, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
              address:{truncate(ptr)}, datain:truncate(paddr)});
    endmethod

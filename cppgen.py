@@ -230,7 +230,6 @@ class MethodMixin:
             thisType = a[1]
             aw = thisType.bitWidth();
             #print '%d %d %d' %(aw, pro, w)
-            print 'JJJJ ', aw, pro, w, a
             if (aw-pro+w == 32):
                 s.append(paramInfo(a[0],aw,pro,thisType,'='))
                 #print '%s (0)'% (a[0])
@@ -291,7 +290,7 @@ class MethodMixin:
 		    continue
                 if off:
                     field = '%s>>%s' % (field, off)
-                print 'JJJ', e.name, '{{'+field+'}}', e.datatype.bitWidth(), e.shifted, e.assignOp, off
+                #print 'JJJ', e.name, '{{'+field+'}}', e.datatype.bitWidth(), e.shifted, e.assignOp, off
                 #if e.datatype.bitWidth() < 32:
                 field = '((%s)&0x%xul)' % (field, ((1 << (e.datatype.bitWidth()-e.shifted))-1))
                 if e.shifted:
