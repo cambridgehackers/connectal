@@ -40,7 +40,7 @@ ENDIF()
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${BOARD}/libs/bin")
 
 FILE( GLOB hdrs "${DBNDIR}/cpp/*.h*" )
-FILE( GLOB srcs "testmm.cpp" "${DBNDIR}/cpp/portalmat.cpp"  "${JNIDIR}/*.cpp" ${XBSVDIR}/cpp/portal.cpp ${XBSVDIR}/cpp/dmaManager.cpp)
+FILE( GLOB srcs "testmm.cpp" "${DBNDIR}/cpp/portalmat.cpp"  "${JNIDIR}/*.cpp" ${XBSVDIR}/cpp/portal.c ${XBSVDIR}/cpp/dmaManager.cpp)
 
 ADD_EXECUTABLE( ${PROJECT_NAME} ${srcs} )
 TARGET_LINK_LIBRARIES( ${PROJECT_NAME} ${LIBRARY_DEPS} /scratch/android-ndk-r9d/sources/cxx-stl/stlport/libs/armeabi-v7a/libstlport_static.a)

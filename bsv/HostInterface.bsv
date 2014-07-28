@@ -30,9 +30,6 @@ import MemTypes          :: *;
 `ifndef DataBusWidth
 `define DataBusWidth 64
 `endif
-`ifndef PinType
-`define PinType Empty
-`endif
 
 typedef `NumberOfMasters NumberOfMasters;
 typedef `DataBusWidth DataBusWidth;
@@ -68,9 +65,6 @@ import PcieEndpointX7    :: *;
 
 `ifndef DataBusWidth
 `define DataBusWidth 64
-`endif
-`ifndef PinType
-`define PinType Empty
 `endif
 
 typedef `DataBusWidth DataBusWidth;

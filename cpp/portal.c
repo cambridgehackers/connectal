@@ -46,79 +46,12 @@
 #include <pcieportal.h> // BNOC_TRACE
 #endif
 
-#define MAX_TIMER_COUNT      16
-#define TIMING_INTERVAL_SIZE  6
-
-#ifdef ZYNQ
-#define ALOGD(fmt, ...) __android_log_print(ANDROID_LOG_DEBUG, "PORTAL", fmt, __VA_ARGS__)
-#define ALOGE(fmt, ...) __android_log_print(ANDROID_LOG_ERROR, "PORTAL", fmt, __VA_ARGS__)
-#else
-#define ALOGD(fmt, ...) PORTAL_PRINTF("PORTAL: " fmt, __VA_ARGS__)
-#define ALOGE(fmt, ...) PORTAL_PRINTF("PORTAL: " fmt, __VA_ARGS__)
-#endif
-
 static void init_directory(void);
 static PortalInternal globalDirectory;
 
-static uint64_t c_start[MAX_TIMER_COUNT];
-static uint64_t lap_timer_temp;
-static TIMETYPE timers[MAX_TIMERS];
-
-uint64_t directory_cycle_count()
-{
-  unsigned int high_bits, low_bits;
-    init_directory();
-  high_bits = READL(&globalDirectory, PORTAL_DIRECTORY_COUNTER_MSB);
-  low_bits  = READL(&globalDirectory, PORTAL_DIRECTORY_COUNTER_LSB);
-  return (((uint64_t)high_bits)<<32) | ((uint64_t)low_bits);
-}
-
-void start_timer(unsigned int i) 
-{
-  assert(i < MAX_TIMER_COUNT);
-  c_start[i] = directory_cycle_count();
-}
-
-uint64_t lap_timer(unsigned int i)
-{
-  uint64_t temp = directory_cycle_count();
-  assert(i < MAX_TIMER_COUNT);
-  lap_timer_temp = temp;
-  return temp - c_start[i];
-}
-
-void xbsv_timer_init(void)
-{
-    int i;
-    memset(timers, 0, sizeof(timers));
-    for (i = 0; i < MAX_TIMERS; i++)
-      timers[i].min = 1LLU << 63;
-}
-
-uint64_t catch_timer(unsigned int i)
-{
-    uint64_t val = lap_timer(0);
-    if (i >= MAX_TIMERS)
-        return 0;
-    if (val > timers[i].max)
-        timers[i].max = val;
-    if (val < timers[i].min)
-        timers[i].min = val;
-    if (val == 000000)
-        timers[i].over++;
-    timers[i].total += val;
-    return lap_timer_temp;
-}
-
-void print_timer(int loops)
-{
-    int i;
-    for (i = 0; i < MAX_TIMERS; i++) {
-      if (timers[i].min != (1LLU << 63))
-           PORTAL_PRINTF("[%d]: avg %" PRIx64 " min %" PRIx64 " max %" PRIx64 " over %" PRIx64 "\n",
-               i, timers[i].total/loops, timers[i].min, timers[i].max, timers[i].over);
-    }
-}
+#ifdef __KERNEL__
+static tBoard* tboard;
+#endif
 
 void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler)
 {
@@ -139,12 +72,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler)
 #ifndef MMAP_HW   // BSIM version
     connect_to_bsim();
 #elif defined(__KERNEL__)
-{
-    static tBoard* tboard;
-    if (!tboard)
-        tboard = get_pcie_portal_descriptor();
     pint->map_base = (volatile unsigned int*)(tboard->bar2io + pint->fpga_number * PORTAL_BASE_OFFSET);
-}
 #else
 #ifdef ZYNQ
     PortalEnableInterrupt intsettings = {3 << 14, (3 << 14) + 4};
@@ -154,13 +82,11 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler)
         pgfile = open("/sys/devices/amba.2/f8007000.devcfg/prog_done", O_RDONLY);
     }
     if (pgfile == -1) {
-	ALOGE("failed to open /sys/devices/amba.[02]/f8007000.devcfg/prog_done %d\n", errno);
 	PORTAL_PRINTF("failed to open /sys/devices/amba.[02]/f8007000.devcfg/prog_done %d\n", errno);
 	rc = -1;
 	goto errlab;
     }
     if (read(pgfile, &read_status, 1) != 1 || read_status != '1') {
-	ALOGE("FPGA not programmed: %x\n", read_status);
 	PORTAL_PRINTF("FPGA not programmed: %x\n", read_status);
 	rc = -ENODEV;
 	goto errlab;
@@ -173,13 +99,13 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler)
     pint->fpga_fd = open(buff, O_RDONLY);
 #endif
     if (pint->fpga_fd < 0) {
-	ALOGE("Failed to open %s fd=%d errno=%d\n", buff, pint->fpga_fd, errno);
+	PORTAL_PRINTF("Failed to open %s fd=%d errno=%d\n", buff, pint->fpga_fd, errno);
 	rc = -errno;
 	goto errlab;
     }
     pint->map_base = (volatile unsigned int*)mmap(NULL, 1<<addrbits, PROT_READ|PROT_WRITE, MAP_SHARED, pint->fpga_fd, 0);
     if (pint->map_base == MAP_FAILED) {
-        ALOGE("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", pint->fpga_fd, errno);
+        PORTAL_PRINTF("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", pint->fpga_fd, errno);
         rc = -errno;
 	goto errlab;
     }  
@@ -187,8 +113,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler)
 
 errlab:
     if (rc != 0) {
-      PORTAL_PRINTF("[%s:%d] failed to open Portal fpga%d\n", __FUNCTION__, __LINE__, pint->fpga_number);
-      ALOGD("init_portal_internal: failure rc=%d\n", rc);
+      PORTAL_PRINTF("%s: failed to open Portal fpga%d\n", __FUNCTION__, pint->fpga_number);
       //exit(1);
     }
 }
@@ -218,6 +143,9 @@ static void init_directory(void)
   if (once)
       return;
   once = 1;
+#ifdef __KERNEL__
+  tboard = get_pcie_portal_descriptor();
+#endif
   init_portal_internal(&globalDirectory, -1, NULL);
 #ifdef ZYNQ /* There is no way to set userclock freq from host on PCIE */
   // start by setting the clock frequency (this only has any effect on the zynq platform)
@@ -288,4 +216,13 @@ void portalTrace_stop()
   if (res)
     PORTAL_PRINTF("Failed to stop tracing. errno=%d\n", errno);
 #endif
+}
+
+uint64_t directory_cycle_count()
+{
+  unsigned int high_bits, low_bits;
+    init_directory();
+  high_bits = READL(&globalDirectory, PORTAL_DIRECTORY_COUNTER_MSB);
+  low_bits  = READL(&globalDirectory, PORTAL_DIRECTORY_COUNTER_LSB);
+  return (((uint64_t)high_bits)<<32) | ((uint64_t)low_bits);
 }

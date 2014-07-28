@@ -44,7 +44,7 @@ extern struct dma_buf *portalmem_dmabuffer_create(unsigned long len, unsigned lo
 #define PORTAL_FREE(A) free(A)
 #endif
 
-static int trace_memory = 1;
+static int trace_memory;// = 1;
 
 void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *argDevice)
 {

@@ -300,7 +300,7 @@ void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id)
     memcpy(&upreq, &foo, sizeof(upreq));
     have_request = 1;
 }
-ssize_t sock_fd_write(long fd)
+ssize_t bluesim_sock_fd_write(long fd)
 {
     struct memrequest foo = {MAGIC_PORTAL_FOR_SENDING_FD};
 

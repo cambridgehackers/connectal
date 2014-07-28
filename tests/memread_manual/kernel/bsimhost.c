@@ -74,7 +74,7 @@ printf("[%s:%d] opened bsim\n", __FUNCTION__, __LINE__);
         }
         rv.portal = req.portal;
         if (req.portal == 666) {
-            sock_fd_write((long)req.addr);
+            bluesim_sock_fd_write((long)req.addr);
             rv.data = 0xdead;
             write(fd, &rv, sizeof(rv));
         }
