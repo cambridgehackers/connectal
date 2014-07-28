@@ -43,14 +43,30 @@ static struct {
 } head;
 static int sockfd;
 static struct memresponse respitem;
+static int dma_fd = -1;
+static sem_t dma_waiting;
 
 extern "C" {
   void initPortal(unsigned long id){
     static int once = 1;
-    if (once)
+    if (once) {
+        sem_init(&dma_waiting, 0, 0);
         bsim_wait_for_connect(&sockfd);
+    }
     once = 0;
   }
+
+void init_pareff()
+{
+}
+
+int pareff_fd(int *fd)
+{
+  sem_wait(&dma_waiting);
+  *fd = dma_fd;
+  dma_fd = -1;
+  return 0;
+}
 
   bool processReq32(uint32_t rr){
     if (!head.valid){
@@ -59,6 +75,11 @@ extern "C" {
 	  //fprintf(stderr, "recv size %d\n", rv);
 	  assert(rv == sizeof(memrequest));
 	  respitem.portal = head.req.portal;
+	  if (head.req.portal == MAGIC_PORTAL_FOR_SENDING_FD) {
+              dma_fd = head.req.data;
+              sem_post(&dma_waiting);
+              return 0;
+          }
 	  head.valid = 1;
 	  head.inflight = 1;
 	  head.req.addr = (unsigned int *)(((long) head.req.addr) | head.req.portal << 16);

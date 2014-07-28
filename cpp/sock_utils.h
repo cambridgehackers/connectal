@@ -24,6 +24,8 @@
 #ifndef _SOCK_UTILS_H_
 #define _SOCK_UTILS_H_
 
+#define MAGIC_PORTAL_FOR_SENDING_FD                 666
+
 struct memrequest{
   int portal;
   int write_flag;

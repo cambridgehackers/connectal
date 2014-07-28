@@ -23,7 +23,6 @@
 
 #include "portal.h"
 #include "sock_utils.h"
-#define MAGIC_PORTAL_FOR_SENDING_FD                 666
 #define SOCKET_NAME                 "socket_for_bluesim"
 
 #ifndef __KERNEL__
@@ -39,7 +38,6 @@
 #include <pthread.h>
 
 static pthread_mutex_t socket_mutex;
-static sem_t dma_waiting;
 static int global_sockfd = -1;
 
 void connect_to_bsim(void)
@@ -67,7 +65,6 @@ void connect_to_bsim(void)
   }
   fprintf(stderr, "%s (%s) connected\n",__FUNCTION__, SOCKET_NAME);
   pthread_mutex_init(&socket_mutex, NULL);
-  sem_init(&dma_waiting, 0, 0);
 }
 
 void bsim_wait_for_connect(int* psockfd)
@@ -206,26 +203,13 @@ void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id)
   pthread_mutex_unlock(&socket_mutex);
 }
 
-void init_pareff()
-{
-}
-
-static int dma_fd = -1;
-int pareff_fd(int *fd)
-{
-  sem_wait(&dma_waiting);
-  *fd = dma_fd;
-  dma_fd = -1;
-  return 0;
-}
-
 int bsim_ctrl_recv(int sockfd, struct memrequest *data)
 {
   int rc = recv(sockfd, data, sizeof(*data), MSG_DONTWAIT);
   if (rc == sizeof(*data) && data->portal == MAGIC_PORTAL_FOR_SENDING_FD) {
-    sock_fd_read(sockfd, &dma_fd);
-    sem_post(&dma_waiting);
-    rc = -1;
+    int new_fd;
+    sock_fd_read(sockfd, &new_fd);
+    data->data = new_fd;
   }
   return rc;
 }
