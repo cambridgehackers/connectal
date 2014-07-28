@@ -71,7 +71,7 @@ endinterface
  * 
  * DDR data is convered to SDR using IDDR cells
  * At this point, the data is a 14 bit in-phase data signal, plus in-phase
- * overrange, but a 14 bit quadrature signal, plus overrange.
+ * overrange, and a 14 bit quadrature signal, plus overrange.
  * 
  * The data is packed into a 64-bit IQ datatype, with overrange as the LSB
  * 
