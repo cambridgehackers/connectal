@@ -106,7 +106,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
   const int PAGE_SHIFT8 = 20;
   int i, j, rc = 0;
   uint64_t regions[3] = {0,0,0};
-  uint64_t shifts[3] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0};
+  uint64_t shifts[] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0, 0};
   int id = priv->handle++;
   int size_accum = 0;
   uint64_t border = 0;
@@ -164,10 +164,11 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
   DMAsglist(priv->device, (id << 8) + i, 0, 0); // end list
 
   for(i = 0; i < 3; i++){
-    idxOffset = entryCount - (border >> shifts[i]);
+    idxOffset = entryCount - border;
     entryCount += regions[i];
-    border += regions[i]<<shifts[i];
-    borderVal[i] = ((border >> shifts[i]) << 8) | idxOffset;
+    border += regions[i];
+    borderVal[i] = (border << 8) | idxOffset;
+    border <<= (shifts[i] - shifts[i+1]);
   }
   if (trace_memory) {
     PORTAL_PRINTF("regions %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,regions[0], regions[1], regions[2]);
