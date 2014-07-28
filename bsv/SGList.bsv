@@ -240,7 +240,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    endmethod
 
    method Action sglist(Bit#(32) ptr, Bit#(40) paddr, Bit#(32) len);
-	 configRespFifo.enq(truncate(ptr));
+	 //now busywait on requests configRespFifo.enq(truncate(ptr));
 	 portsel(pages, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
              address:{truncate(ptr)}, datain:truncate(paddr)});
    endmethod

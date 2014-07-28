@@ -163,11 +163,11 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
     DMAsglist(priv->device, (id << 8) + i, addr, e->length);
     size_accum += e->length;
     //PORTAL_PRINTF("%s:%d sem_wait\n", __FUNCTION__, __LINE__);
-    sem_wait(&priv->confSem);
+    //now busywait sem_wait(&priv->confSem);
   }
   // HW interprets zeros as end of sglist
   DMAsglist(priv->device, (id << 8) + i, 0, 0); // end list
-  sem_wait(&priv->confSem);
+  //now busywait sem_wait(&priv->confSem);
 
   for(i = 0; i < 3; i++){
     idxOffset = entryCount - (border >> shifts[i]);
