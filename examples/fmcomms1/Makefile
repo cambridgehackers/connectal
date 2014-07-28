@@ -21,10 +21,16 @@ TOP=ImageonPcieTop.bsv
 MKTOP=mkImageonPcieTop
 endif
 
-gentarget:: fmcomms1-$(BOARD).xdc
+gentarget:: fmcomms1-$(BOARD).xdc sine.bin
 
 fmcomms1-$(BOARD).xdc: fmcomms1-fmc.json ../../boardinfo/$(BOARD).json
 	../../scripts/generate-constraints.py ../../boardinfo/$(BOARD).json fmcomms1-fmc.json > fmcomms1-$(BOARD).xdc
+
+sine.bin: sinetable
+	./sinetable >sine.bin
+
+sinetable: sinetable.c
+	cc -o sinetable sinetable.c -lm
 
 include ../../Makefile.common
 
