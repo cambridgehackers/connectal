@@ -131,7 +131,7 @@ int main(int argc, const char **argv)
 #ifdef LARGE_MAT
 #ifdef BSIM
   int A = 32;
-  int B = 512;
+  int B = 16;
 #else
   int A = 256;
   int B = 2048;

@@ -410,3 +410,95 @@ module mkXYRangePipeOut(XYRangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth)
    endmethod
 endmodule: mkXYRangePipeOut
 
+interface RowColSource#(numeric type dsz, type a);
+   interface PipeOut#(a) pipe;
+   method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
+   method ActionValue#(Bool) finish();
+endinterface
+
+module mkRowSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSource#(TMul#(N,32), Vector#(N,MmToken)));
+`ifdef TAGGED_TOKENS
+   Reg#(UInt#(32)) col <- mkReg(0);
+   FIFOF#(UInt#(32)) tagFifo <- mkSizedFIFOF(4);
+`endif
+   // perhaps memreadengine could do the labeling
+   Reg#(Bit#(ObjectOffsetSize)) countReg <- mkReg(0);
+   FIFOF#(Bit#(ObjectOffsetSize)) cmdFifo <- mkSizedFIFOF(4);
+
+   method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
+`ifdef TAGGED_TOKENS
+      tagFifo.enq(tag);
+`endif
+      vs.start(h,a,l);
+      cmdFifo.enq(l);
+   endmethod 
+   method ActionValue#(Bool) finish;
+      let rv <- vs.finish;
+      return rv;
+   endmethod
+   interface PipeOut pipe;
+      method Vector#(N,MmToken) first;
+	 Vector#(N,MmToken) rv;
+`ifdef TAGGED_TOKENS
+	 for(Integer i = 0; i < valueOf(N); i=i+1)
+	    rv[i] = MmToken{row:tagFifo.first, col:col+fromInteger(i), v:vs.pipe.first[i], first:False, last:False};
+`else
+	 for(Integer i = 0; i < valueOf(N); i=i+1)
+	    rv[i] = MmToken{v:vs.pipe.first[i], first:False, last:False};
+`endif
+	 if (countReg==0)
+	    rv[0].first = True;
+	 if (countReg+1==cmdFifo.first)
+	    rv[valueOf(N)-1].last = True;
+	 return rv;
+      endmethod
+      method Action deq;
+	 vs.pipe.deq;
+	 //$display("mkRowSource count=%d first=%d last=%d", countReg, firstReg, lastReg);
+	 if(countReg+1==cmdFifo.first) begin
+	    countReg <= 0;
+	    cmdFifo.deq;
+`ifdef TAGGED_TOKENS
+	    tagFifo.deq;
+	    col <= 0;
+`endif      
+	 end
+	 else begin
+`ifdef TAGGED_TOKENS
+	    col <= col+fromInteger(valueOf(N));
+`endif
+	    countReg <= countReg + 1;
+	 end
+      endmethod
+      method Bool notEmpty;
+`ifdef TAGGED_TOKENS
+	 return (tagFifo.notEmpty && vs.pipe.notEmpty);
+`else
+	 return (vs.pipe.notEmpty);
+`endif
+      endmethod
+   endinterface
+endmodule
+
+interface RowColSink#(numeric type dsz, type a);
+   interface PipeIn#(a) pipe;
+   method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
+   method ActionValue#(Bool) finish();
+endinterface
+
+function PipeOut#(dtype) getRowColSourcePipe(RowColSource#(dsz,dtype) vs); return vs.pipe; endfunction
+function PipeIn#(a) getRowColSinkPipe(RowColSink#(n,a) vs) = vs.pipe;
+   
+module mkRowColSink#(VectorSink#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSink#(TMul#(N,32), Vector#(N,MmToken)));
+   function Float tokenValue(MmToken v) = v.v;
+   method Action start(ObjectPointer p, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
+      vs.start(p,a,l);
+   endmethod
+   method finish = vs.finish;
+   interface PipeIn pipe;
+      method Action enq(Vector#(N,MmToken) v);
+	 vs.pipe.enq(map(tokenValue,v));
+      endmethod
+      method Bool notFull = vs.pipe.notFull;
+   endinterface
+endmodule
