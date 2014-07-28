@@ -36,6 +36,7 @@ extern struct dma_buf *portalmem_dmabuffer_create(unsigned long len, unsigned lo
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include "portalmem.h"
+#include "pcieportal.h"
 
 #if defined(__arm__)
 #include "zynqportal.h"
@@ -101,13 +102,26 @@ uint64_t DmaManager_show_mem_stats(DmaManagerPrivate *priv, ChannelType rc)
 
 int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
 {
+  int id = priv->handle++;
+  int rc = 0;
+//#define KERNEL_REFERENCE
+#ifdef KERNEL_REFERENCE
+  tSendFd sendFd;
+  sendFd.fd = pa->header.fd;
+  sendFd.id = id;
+  if (priv->device->fpga_fd) {
+    printf("[%s:%d] try new ioctl!!!!! *****************************\n", __FUNCTION__, __LINE__);
+    ioctl(priv->device->fpga_fd, PCIE_SEND_FD, &sendFd);
+  }
+  sem_wait(&priv->confSem);
+  rc = id;
+#else // KERNEL_REFERENCE
   const int PAGE_SHIFT0 = 12;
   const int PAGE_SHIFT4 = 16;
   const int PAGE_SHIFT8 = 20;
-  int i, j, rc = 0;
+  int i, j;
   uint64_t regions[3] = {0,0,0};
   uint64_t shifts[] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0, 0};
-  int id = priv->handle++;
   int size_accum = 0;
   uint64_t border = 0;
   unsigned char entryCount = 0;
@@ -180,6 +194,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
   rc = id;
 retlab:
   PORTAL_FREE(portalAlloc);
+#endif // KERNEL_REFERENCE
   return rc;
 }
 
