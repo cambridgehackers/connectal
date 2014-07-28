@@ -28,8 +28,8 @@ import MemTypes       :: *;
 import AddressGenerator:: *;
 
 interface MemSlaveClient;
-    method Bit#(32) rd(UInt#(30) addr);
-    method Action wr(UInt#(30) addr, Bit#(32) dword);
+    method Bit#(32) rd(UInt#(16) addr);
+    method Action wr(UInt#(16) addr, Bit#(32) dword);
 endinterface
 
 module mkMemSlave#(MemSlaveClient client)(MemSlave#(32,32));
@@ -37,8 +37,8 @@ module mkMemSlave#(MemSlaveClient client)(MemSlave#(32,32));
    FIFOF#(MemData#(32)) slaveWriteDataFifos <- mkSizedFIFOF(8);
    FIFOF#(Bit#(ObjectTagSize)) slaveBrespFifo <- mkFIFOF();
 
-   AddressGenerator#(32) readAddrGenerator <- mkAddressGenerator();
-   AddressGenerator#(32) writeAddrGenerator <- mkAddressGenerator();
+   AddressGenerator#(16) readAddrGenerator <- mkAddressGenerator();
+   AddressGenerator#(16) writeAddrGenerator <- mkAddressGenerator();
 
    rule do_read;
       let b <- readAddrGenerator.addrBeat.get();
@@ -63,12 +63,20 @@ module mkMemSlave#(MemSlaveClient client)(MemSlave#(32,32));
    endrule
 
    interface MemWriteServer write_server; 
-      interface Put writeReq = writeAddrGenerator.request;
+      interface Put writeReq;
+	 method Action put(MemRequest#(32) req);
+	    writeAddrGenerator.request.put(MemRequest {addr: truncate(req.addr), burstLen:req.burstLen, tag:req.tag});
+	 endmethod
+      endinterface
       interface Put writeData = toPut(slaveWriteDataFifos);
       interface Get writeDone = toGet(slaveBrespFifo);
    endinterface
    interface MemReadServer read_server;
-      interface Put readReq = readAddrGenerator.request;
+      interface Put readReq;
+	 method Action put(MemRequest#(32) req);
+	    readAddrGenerator.request.put(MemRequest {addr: truncate(req.addr), burstLen:req.burstLen, tag:req.tag});
+	 endmethod
+      endinterface
       interface Get     readData = toGet(slaveReadDataFifos);
    endinterface
 endmodule
