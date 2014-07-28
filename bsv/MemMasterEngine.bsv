@@ -51,8 +51,10 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
 
     MIMOConfiguration mimoCfg = defaultValue;
     MIMO#(1,4,16,Bit#(32)) completionMimo <- mkMIMO(mimoCfg);
-   Reg#(TLPLength) readBurstCount <- mkReg(0);
-   rule completionHeader if (readBurstCount == 0 && readDataFifo.notEmpty() && completionMimo.deqReadyN(1));
+   Reg#(TLPLength)             readBurstCount <- mkReg(0);
+   Reg#(Bool)      readBurstCountGreaterThan4 <- mkReg(False);
+   Reg#(Bool)                  readInProgress <- mkReg(False);
+   rule completionHeader if (!readInProgress && readDataFifo.notEmpty() && completionMimo.deqReadyN(1));
       let hdr = readDataFifo.first;
       TLPLength rbc = hdr.length;
 
@@ -83,6 +85,8 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
 
       rbc = rbc - 1;
       readBurstCount <= rbc;
+      readInProgress <= (rbc != 0);
+      readBurstCountGreaterThan4 <= (rbc > 4);
       if (rbc == 0) begin
 	 readDataFifo.deq;
       end
@@ -101,14 +105,14 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
 	  return 16'hffff;
     endfunction
 
-   rule continuation if (readBurstCount > 0);
+   rule continuation if (readInProgress);
       let rbc = readBurstCount;
       let sendit = False;
       TLPData#(16) tlp = defaultValue;
       Vector#(4, Bit#(32)) dvec = unpack(0);
       tlp.sof = False;
       //$display("continuation rbc=%d", rbc);
-      if (rbc > 4) begin
+      if (readBurstCountGreaterThan4) begin
 	 if (completionMimo.deqReadyN(4)) begin
 	    rbc = rbc - 4;
 	    dvec = completionMimo.first();
@@ -132,8 +136,10 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
       end
 
       readBurstCount <= rbc;
+      readBurstCountGreaterThan4 <= (rbc > 4);
       if (rbc == 0) begin
 	 readDataFifo.deq();
+	 readInProgress <= False;
       end
       if (sendit) begin
 	 for (Integer i = 0; i < 4; i = i + 1)
