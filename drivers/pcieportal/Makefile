@@ -43,6 +43,7 @@ uninstall:
 clean:
 	rm -rf *.ko *.o *.mod.*
 	rm -rf Module.symvers Module.markers modules.order
+	cd ../portalmem; make -f Makefile.x86 clean
 
 .PHONY: rmmod
 rmmod:
