@@ -65,6 +65,7 @@ module mkPcieTracer(PcieTracer);
    // Trace Support
    Reg#(Bool) tlpTracingReg        <- mkReg(False);
    Reg#(Bit#(TlpTraceAddrSize)) tlpTraceLimitReg <- mkReg(0);
+   FIFOF#(Bit#(TlpTraceAddrSize)) pcieTraceBramWrAddrFifo <- mkFIFOF();
    Reg#(Bit#(TlpTraceAddrSize)) pcieTraceBramWrAddrReg <- mkReg(0);
    Integer memorySize = 2**valueOf(TlpTraceAddrSize);
 
@@ -103,12 +104,16 @@ module mkPcieTracer(PcieTracer);
 
    rule doTracing if (fromPcie || toPcie);
       TimestampedTlpData fromttd = fromPcie ? TimestampedTlpData { timestamp: timestamp, source: 7'h04, tlp: fromPcieTlp } : unpack(0);
-      fromPcieTraceBram.portA.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(pcieTraceBramWrAddrReg), datain: fromttd });
+      let writeAddr = pcieTraceBramWrAddrReg;
+      if (pcieTraceBramWrAddrFifo.notEmpty)
+	 writeAddr <- toGet(pcieTraceBramWrAddrFifo).get();
+
+      fromPcieTraceBram.portA.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: writeAddr, datain: fromttd });
 
       TimestampedTlpData   tottd = toPcie ? TimestampedTlpData { timestamp: timestamp, source: 7'h08, tlp: toPcieTlp } : unpack(0);
-      toPcieTraceBram.portA.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(pcieTraceBramWrAddrReg), datain: tottd });
+      toPcieTraceBram.portA.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: writeAddr, datain: tottd });
 
-      pcieTraceBramWrAddrReg <= pcieTraceBramWrAddrReg + 1;
+      pcieTraceBramWrAddrReg <= writeAddr + 1;
    endrule
 
    interface Server     bus;
@@ -163,7 +168,10 @@ module mkPcieTracer(PcieTracer);
    interface TlpTraceData tlpdata;
       interface Reg tlpTracing    = tlpTracingReg;
       interface Reg tlpTraceLimit = tlpTraceLimitReg;
-      interface Reg pcieTraceBramWrAddr = pcieTraceBramWrAddrReg;
+      interface Reg pcieTraceBramWrAddr;
+	 method Bit#(TlpTraceAddrSize) _read(); return pcieTraceBramWrAddrReg; endmethod
+	 method Action _write(Bit#(TlpTraceAddrSize) v); pcieTraceBramWrAddrFifo.enq(v); endmethod
+      endinterface
       interface Server bramServer = bramMuxReg.bramServer;
       interface Server bscanBramServer = bscanBramMux.bramServer;
    endinterface
