@@ -44,19 +44,19 @@ static struct {
 
 extern "C" {
   void write_pareff32(uint32_t pref, uint32_t offset, unsigned int data){
-    *(unsigned int *)&dma_info[pref-1].buffer[offset] = data;
+    *(unsigned int *)&dma_info[pref].buffer[offset] = data;
   }
 
   unsigned int read_pareff32(uint32_t pref, uint32_t offset){
-    return *(unsigned int *)&dma_info[pref-1].buffer[offset];
+    return *(unsigned int *)&dma_info[pref].buffer[offset];
   }
 
   void write_pareff64(uint32_t pref, uint32_t offset, uint64_t data){
-    *(uint64_t *)&dma_info[pref-1].buffer[offset] = data;
+    *(uint64_t *)&dma_info[pref].buffer[offset] = data;
   }
 
   uint64_t read_pareff64(uint32_t pref, uint32_t offset){
-    return *(uint64_t *)&dma_info[pref-1].buffer[offset];
+    return *(uint64_t *)&dma_info[pref].buffer[offset];
   }
 
   void pareff(uint32_t apref, uint32_t size){

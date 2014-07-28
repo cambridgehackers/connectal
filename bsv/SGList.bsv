@@ -110,11 +110,11 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 let req <- toGet(incomingReqs[i]).get();
 	 match { .ptr, .off } = req;
 	 portsel(reg8, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
-            address:truncate(ptr-1), datain:?});
+            address:truncate(ptr), datain:?});
 	 portsel(reg4, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
-            address:truncate(ptr-1), datain:?});
+            address:truncate(ptr), datain:?});
 	 portsel(reg0, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
-            address:truncate(ptr-1), datain:?});
+            address:truncate(ptr), datain:?});
 	 reqs0[i].enq(req);
       endrule
 
@@ -170,7 +170,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 offs0[i].enq(o);
 	 pbases[i].enq(pbase);
 	 idxOffsets1[i].enq(idxOffset);
-	 ptrs1[i].enq(ptr-1);
+	 ptrs1[i].enq(ptr);
       endrule
       rule stage4;
 	 let off <- toGet(offs0[i]).get();

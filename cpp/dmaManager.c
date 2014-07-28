@@ -146,9 +146,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
     addr = e->dma_address;
 #else
     addr = size_accum;
-//#endif
-//#ifdef BSIM
-    addr |= ((long)id+1) << 32; //[39:32] = truncate(pref);
+    addr |= ((long)id) << 32; //[39:32] = truncate(pref);
 #endif
     for(j = 0; j < 3; j++)
         if (e->length == 1<<shifts[j]) {
@@ -182,7 +180,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
   DMAregion(priv->device, id, borderVal[0], borderVal[1], borderVal[2]);
   //PORTAL_PRINTF("%s:%d sem_wait\n", __FUNCTION__, __LINE__);
   sem_wait(&priv->confSem);
-  rc = id+1;
+  rc = id;
 retlab:
   PORTAL_FREE(portalAlloc);
   return rc;

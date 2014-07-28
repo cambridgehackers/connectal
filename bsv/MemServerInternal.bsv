@@ -204,18 +204,8 @@ module mkMemReadInternal#(Integer id,
       let client = lreqFifo.first.client;
       let rename_tag <- tag_gen.tag_response;
       lreqFifo.deq();
-      if (physAddr <= (1 << valueOf(SGListPageShift0))) begin
-	 // squash request
-	 $display("dmaRead: badAddr pointer=%d offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
-	 dmaIndication.dmaError(extend(pack(DmaErrorBadAddr)), req.pointer, extend(req.offset), extend(physAddr));
-	 tag_gen.return_tag(rename_tag);
-      end
-      else begin
-	 if (False && physAddr[31:24] != 0)
-	    $display("checkSglResp: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
-	 reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
-	 //$display("checkSglResp: client=%d, rename_tag=%d", client,rename_tag);
-      end
+      reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
+      //$display("checkSglResp: client=%d, rename_tag=%d", client,rename_tag);
       //$display("mkMemReadInternal::sglResp %d %d", client, cycle_cnt-last_sglResp);
       //last_sglResp <= cycle_cnt;
    endrule
@@ -339,16 +329,8 @@ module mkMemWriteInternal#(Integer iid,
       let client = lreqFifo.first.client;
       let rename_tag <- tag_gen.tag_response;
       lreqFifo.deq();
-      if (physAddr <= (1 << valueOf(SGListPageShift0))) begin
-	 // squash request
-	 $display("dmaWrite: badAddr handle=%d addr=%h physAddr=%h", req.pointer, req.offset, physAddr);
-	 dmaIndication.dmaError(extend(pack(DmaErrorBadAddr)), req.pointer, extend(req.offset), extend(physAddr));
-	 tag_gen.return_tag(rename_tag);
-      end
-      else begin
-	 reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
-	 //$display("checkSglResp: client=%d, rename_tag=%d", client,rename_tag);
-      end
+      reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
+      //$display("checkSglResp: client=%d, rename_tag=%d", client,rename_tag);
       //$display("mkMemWriteInternal::sglResp %d %d", client, cycle_cnt-last_sglResp);
       //last_sglResp <= cycle_cnt;
    endrule
