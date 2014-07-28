@@ -164,10 +164,10 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
   DMAsglist(priv->device, (id << 8) + i, 0, 0); // end list
 
   for(i = 0; i < 3; i++){
-    idxOffset = entryCount - (border >> (shifts[i] - PAGE_SHIFT0));
+    idxOffset = entryCount - (border >> shifts[i]);
     entryCount += regions[i];
-    border += regions[i]<<(shifts[i] - PAGE_SHIFT0);
-    borderVal[i] = (border << 8) | idxOffset;
+    border += regions[i]<<shifts[i];
+    borderVal[i] = ((border >> shifts[i]) << 8) | idxOffset;
   }
   if (trace_memory) {
     PORTAL_PRINTF("regions %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,regions[0], regions[1], regions[2]);

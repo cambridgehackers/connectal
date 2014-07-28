@@ -128,8 +128,10 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 Region region0 <- portsel(reg0,i).response.get;
 	 
          Page off = truncate(offreq >> valueOf(SGListPageShift0));
-	 let cond8 = off < region8.barrier;
-	 let cond4 = off < region4.barrier;
+         Page4 off4 = truncate(offreq >> valueOf(SGListPageShift4));
+         Page4 off8 = truncate(offreq >> valueOf(SGListPageShift8));
+	 let cond8 = off8 < truncate(region8.barrier);
+	 let cond4 = off4 < truncate(region4.barrier);
 	 let cond0 = off < region0.barrier;
 	 
 	 conds[i].enq(tuple3(cond8,cond4,cond0));
