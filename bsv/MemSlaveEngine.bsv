@@ -67,6 +67,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
     MIMO#(busWidthWords,4,8,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
     Reg#(Bit#(9)) writeBurstCount <- mkReg(0);
     Reg#(TLPLength)  writeDwCount <- mkReg(0);
+    Reg#(Bool)    writeInProgress <- mkReg(False);
     FIFOF#(TLPTag) writeTag <- mkSizedFIFOF(16);
     FIFOF#(TLPTag) doneTag <- mkSizedFIFOF(16);
 
@@ -85,7 +86,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	  return 0;
     endfunction
 
-   rule writeHeaderTlp if (writeDwCount == 0 && writeDataMimo.deqReadyN(1));
+   rule writeHeaderTlp if (!writeInProgress);
       let tlp = tlpWriteHeaderFifo.first;
 
       TLPMemory4DWHeader hdr_4dw = unpack(tlp.data);
@@ -123,6 +124,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	 tlpOutFifo.enq(tlp);
 	 $display("writeHeaderTlp dwCount=%d", dwCount);
 	 writeDwCount <= dwCount;
+	 writeInProgress <= (dwCount != 0);
 	 if (dwCount == 0) begin
 	    doneTag.enq(writeTag.first());
 	    writeTag.deq();
@@ -130,7 +132,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       end
    endrule
 
-   rule writeTlps if (writeDwCount > 0);
+   rule writeTlps if (writeInProgress);
       TLPData#(16) tlp = defaultValue;
       tlp.sof = False;
       Vector#(4, Bit#(32)) v = unpack(0);
@@ -150,6 +152,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	 v = writeDataMimo.first();
 	 writeDataMimo.deq(unpack(truncate(writeDwCount)));
 	 writeDwCount <= 0;
+	 writeInProgress <= False;
 	 doneTag.enq(writeTag.first());
 	 writeTag.deq();
 	 $display("writeDwCount=%d will be zero", writeDwCount);
@@ -300,7 +303,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    endinterface
    interface MemReadServer read_server;
       interface Put readReq;
-         method Action put(MemRequest#(40) req) if (writeDwCount == 0 && !writeDataMimo.deqReadyN(1));
+         method Action put(MemRequest#(40) req) if (!writeInProgress && !writeDataMimo.deqReadyN(1));
 	      let burstLen = req.burstLen >> beat_shift;
 	      let addr = req.addr;
 	      let arid = req.tag;
