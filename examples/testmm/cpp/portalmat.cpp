@@ -318,7 +318,7 @@ void PortalMat::multf_interleaved(PortalMat &a, PortalMat &b,  MmIndication *mmi
 		  cref,
 		  a.rows*a.cols, a.cols*J_VALUE,
 		  a.rows*b.cols, b.cols*J_VALUE,
-		  a.rows*b.rows, b.rows*J_VALUE);
+		  a.rows*b.rows, b.rows*b.cols);
 
     sem_wait(&mul_sem);
     if(mmind) {

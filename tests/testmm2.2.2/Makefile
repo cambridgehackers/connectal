@@ -5,7 +5,7 @@ XBSVDIR=../..
 DBNDIR=../../examples/testmm
 DBNTOPBSV=    $(DBNDIR)/Top.bsv
 TESTCPPFILES= $(DBNDIR)/testmm.cpp
-XBSVFLAGS = -D J_VALUE=2 -D K_VALUE=2 -D N_VALUE=2 # -D INTERLEAVED
+XBSVFLAGS = -D J_VALUE=2 -D K_VALUE=2 -D N_VALUE=2 #-D INTERLEAVED
 include $(DBNDIR)/Makefile.dbn
 
 FPGAMAKE=$(XBSVDIR)/../fpgamake/fpgamake

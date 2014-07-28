@@ -343,9 +343,15 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
    Vector#(K, Reg#(UInt#(addrwidth))) startBOffset <- replicateM(mkReg(0));
    Vector#(J, Reg#(UInt#(addrwidth))) startCOffset <- replicateM(mkReg(0));
 
+   Vector#(K, FIFO#(void)) controlDependenceB <- replicateM(mkFIFO);
    for (Integer k = 0; k < kk; k = k + 1) begin
       rule startSourceB;
 	 
+	 if(k > 0)
+	    controlDependenceB[k-1].deq;
+	 if(k < kk-1)
+	    controlDependenceB[k].enq(?);
+
 	 Tuple2#(UInt#(addrwidth),UInt#(addrwidth)) index <- toGet(indexpipes[k]).get();
 	 match { .unusedB, .startBBase } <- toGet(offsetpipesB[k]).get();
 
@@ -375,11 +381,17 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 	 let b <- sourceB[k].finish();
       endrule
    end
+   Vector#(J, FIFO#(void)) controlDependenceA <- replicateM(mkFIFO);
    for (Integer j = 0; j < jj; j = j + 1) begin
 
       int jint = fromInteger(j);
       rule startSourceAndSink;
 	 
+	 if(j > 0)
+	    controlDependenceA[j-1].deq;
+	 if(j < jj-1)
+	    controlDependenceA[j].enq(?);
+
 	 Tuple2#(UInt#(addrwidth),UInt#(addrwidth)) index <- toGet(indexpipes[j+kk]).get();
 	 
 	 let row = tpl_1(index)+fromInteger(j);
@@ -483,6 +495,10 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
       if (verbose) $display("mm pointerA=%d pointerB=%d pointerC=%d\n", pointerA, pointerB, pointerC);
       if (verbose) $display("mm.start ra=%d ca=%d rb=%d cb=%d dotprodCount=%d", numRowsA, numColumnsA, numRowsB, numColumnsB, dotprodCount);
       if (verbose) $display($format(fshow("mm.start ")+fshow(indexcfg)));
+      if (verbose) $display($format(fshow("offsetcfgA ")+fshow(offsetcfgA)));
+      if (verbose) $display($format(fshow("offsetcfgB ")+fshow(offsetcfgB)));
+      if (verbose) $display($format(fshow("offsetcfgC ")+fshow(offsetcfgC)));
+
       indexpipeifc.start(indexcfg);
       offsetpipeA.start(offsetcfgA);
       offsetpipeB.start(offsetcfgB);

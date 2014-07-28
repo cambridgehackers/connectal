@@ -46,6 +46,81 @@ import XilinxCells::*;
 import HostInterface::*;
 import DotProdServer::*;
 
+typedef struct {
+   a xbase;
+   a xlimit;
+   a xstep;
+   a ybase;
+   a ylimit;
+   a ystep;
+   a zbase;
+   a zlimit;
+   a zstep;
+} XYZRangeConfig#(type a) deriving (Bits, FShow);
+
+interface XYZRangePipeIfc#(type a);
+   interface PipeOut#(Tuple2#(a,a)) pipe;
+   method Action start(XYZRangeConfig#(a) cfg);
+   method Action display();
+endinterface
+
+module mkXYZRangePipeOut(XYZRangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
+   Reg#(a) x <- mkReg(0);
+   Reg#(a) y <- mkReg(0);
+   Reg#(a) z <- mkReg(0);
+   Reg#(a) xbase <- mkReg(0);
+   Reg#(a) ybase <- mkReg(0);
+   Reg#(a) zbase <- mkReg(0);
+   Reg#(a) xstep <- mkReg(0);
+   Reg#(a) ystep <- mkReg(0);
+   Reg#(a) zstep <- mkReg(0);
+   Reg#(a) xlimit <- mkReg(0);
+   Reg#(a) ylimit <- mkReg(0);
+   Reg#(a) zlimit <- mkReg(0);
+
+   interface PipeOut pipe;
+      method Tuple2#(a,a) first() if (x < xlimit && y < ylimit);
+	 return tuple2(x,y);
+      endmethod
+      method Action deq if (x < xlimit && y < ylimit);
+	 let newx = x;
+	 let newy = y+ystep;
+	 let newz = z;
+	 if (newy >= ylimit && x < xlimit) begin
+	    newy = ybase;
+	    newx = newx + xstep;
+	    if (newx >= xlimit && z < zlimit) begin
+	       newx = xbase;
+	       newz = z + zstep;
+	    end
+	 end
+	 x <= newx;
+	 y <= newy;
+      endmethod
+      method Bool notEmpty();
+	 return (x < xlimit && y < ylimit && z < zlimit);
+      endmethod
+   endinterface
+   method Action start(XYZRangeConfig#(a) cfg) if (x >= xlimit);
+      //$display("XYZRangePipe x=%d xlimit=%d xstep=%d y=%d ylimit=%d ystep=%d", cfg.xbase, cfg.xlimit, cfg.xstep, cfg.ybase, cfg.ylimit, cfg.ystep);
+      x <= cfg.xbase;
+      y <= cfg.ybase;
+      xbase <= cfg.xbase;
+      ybase <= cfg.ybase;
+      zbase <= cfg.zbase;
+      xstep <= cfg.xstep;
+      ystep <= cfg.ystep;
+      zstep <= cfg.zstep;
+      xlimit <= cfg.xlimit;
+      ylimit <= cfg.ylimit;
+      zlimit <= cfg.zlimit;
+   endmethod
+   method Action display();
+      $display("XYZRangePipe x=%d xlimit=%d y=%d ylimit=%d z=%d zlimit=%d xstep=%d ystep=%d zstep=%d", x, xlimit, y, ylimit, z, zlimit,  xstep, ystep, zstep);
+   endmethod
+endmodule: mkXYZRangePipeOut
+
+
 interface RowColSource#(numeric type dsz, type a);
    interface PipeOut#(a) pipe;
    method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
@@ -151,6 +226,8 @@ module mkColSource#(MemreadEngineV#(TMul#(N,32), 2, 1) vs, Reg#(UInt#(addrwidth)
       Log#(abytes,ashift),
       Mul#(abytes, 8, asz)
       );
+
+   let verbose = False;
    
    let ashift = valueOf(ashift);
 `ifdef TAGGED_TOKENS
@@ -166,7 +243,9 @@ module mkColSource#(MemreadEngineV#(TMul#(N,32), 2, 1) vs, Reg#(UInt#(addrwidth)
 `ifdef TAGGED_TOKENS
       tagFifo.enq(tag);
 `endif
-      vs.readServers[0].request.put(MemengineCmd{pointer:h,base:a<<ashift,len:truncate(l<<ashift), burstLen:fromInteger(valueOf(K))<<ashift}); //start(h,a,l);
+      let cmd = MemengineCmd{pointer:h,base:a<<ashift,len:truncate(l<<ashift), burstLen:fromInteger(valueOf(TDiv#(K,N)))<<ashift};
+      vs.readServers[0].request.put(cmd); //start(h,a,l);
+      if(verbose) $display("mkColSource.start %d %d", cmd.base, cmd.burstLen);
       cmdFifo.enq(l);
    endmethod
    method ActionValue#(Bool) finish;
@@ -194,6 +273,7 @@ module mkColSource#(MemreadEngineV#(TMul#(N,32), 2, 1) vs, Reg#(UInt#(addrwidth)
 	 return rv;
       endmethod
       method Action deq;
+	 if(verbose) $display("mkColSource.deq %d %d", countReg+1==cmdFifo.first, cmdCountReg+1==numRowsB);
 	 vs.dataPipes[0].deq;
 	 if(countReg+1==cmdFifo.first) begin
 	    countReg <= 0;
@@ -292,7 +372,7 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
    let nshift = valueOf(nshift);
    Bool verbose = False;
    Bool verbose1 = False;
-   Bool timing = True;
+   Bool timing = False;
 
    let defaultClock <- exposeCurrentClock();
    let defaultReset <- exposeCurrentReset();
@@ -301,7 +381,6 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
    let doubleReset = host.doubleReset;
 
    Reg#(UInt#(32)) cycles <- mkReg(0);
-   Reg#(Bool) doneReg <- mkReg(False);
    FIFOF#(MatrixDescriptor#(UInt#(addrwidth))) descFifoA <- mkSizedFIFOF(1);
    FIFOF#(MatrixDescriptor#(UInt#(addrwidth))) descFifoC <- mkSizedFIFOF(1);
    UnFunnelPipe#(1,J,MatrixDescriptor#(UInt#(addrwidth)),bpc_j) descriptorA <- mkPipelinedForkVector(toPipeOut(descFifoA), 0);
@@ -340,7 +419,7 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
    XYRangePipeIfc#(UInt#(addrwidth)) indexpipeifc <- mkXYRangePipeOut();
    XYRangePipeIfc#(UInt#(addrwidth)) offsetpipeA <- mkXYRangePipeOut();
    XYRangePipeIfc#(UInt#(addrwidth)) offsetpipeC <- mkXYRangePipeOut();
-   XYRangePipeIfc#(UInt#(addrwidth)) offsetpipeB <- mkXYRangePipeOut();
+   XYZRangePipeIfc#(UInt#(addrwidth)) offsetpipeB <- mkXYZRangePipeOut();
 
    Vector#(J, PipeOut#(Tuple2#(UInt#(addrwidth),UInt#(addrwidth)))) indexpipes <- mkForkVector(indexpipeifc.pipe);
    Vector#(J, PipeOut#(Tuple2#(UInt#(addrwidth),UInt#(addrwidth)))) offsetpipesA <- mkForkVector(offsetpipeA.pipe);
@@ -373,12 +452,17 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
    //
    /////////////////////////////////////////////////
    
-   
+   Vector#(J, FIFO#(void)) controlDependenceA <- replicateM(mkFIFO);   
    for (Integer j = 0; j < jj; j = j + 1) begin
 
       int jint = fromInteger(j);
       rule startSourceAndSink;
 	 
+	 if(j > 0)
+	    controlDependenceA[j-1].deq;
+	 if(j < jj-1)
+	    controlDependenceA[j].enq(?);
+
 	 Tuple2#(UInt#(addrwidth),UInt#(addrwidth)) index <- toGet(indexpipes[j]).get();
 	 
 	 let row = tpl_1(index)+fromInteger(j);
@@ -432,10 +516,9 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
       initNumEltsFifo.deq();
       let numColumnsA = descriptorA[0].first.numColumns;
       let numColumnsB = descriptorB.numColumns;
-      let numRowsB    = descriptorB.numRows;
       for (Integer j = 0; j < jj; j = j + 1) begin
 	 startAOffset[j] <= fromInteger(j)*numColumnsA;
-	 startCOffset[j] <= fromInteger(j)*numRowsB;
+	 startCOffset[j] <= fromInteger(j)*numColumnsB;
       end
   endrule
 
@@ -460,26 +543,30 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 		       UInt#(addrwidth) numRowsA_x_numColumnsB /*mdk*/, 
 		       UInt#(addrwidth) numColumnsB_x_J /*mdk*/,
 		       UInt#(addrwidth) numRowsA_x_numRowsB,    
-		       UInt#(addrwidth) numRowsB_x_J /**/
+		       UInt#(addrwidth) numRowsB_x_numColumnsB /*mdk*/
 		       ) if (!running);
       XYRangeConfig#(UInt#(addrwidth)) indexcfg  = XYRangeConfig {xbase: 0, xlimit: numRowsA, xstep: fromInteger(jj),
 								  ybase: 0, ylimit: numColumnsB, ystep: fromInteger(kk) };
       XYRangeConfig#(UInt#(addrwidth)) offsetcfgA = XYRangeConfig {xbase: 0, xlimit: numRowsA_x_numColumnsA, xstep: numColumnsA_x_J,
 								  ybase: 0, ylimit: numColumnsB, ystep: fromInteger(kk) };
-      XYRangeConfig#(UInt#(addrwidth)) offsetcfgB = XYRangeConfig {xbase: 0, xlimit: numColumnsB, xstep: fromInteger(kk),
-								  ybase: 0, ylimit: numRowsB, ystep: numColumnsB };
+      XYZRangeConfig#(UInt#(addrwidth)) offsetcfgB = XYZRangeConfig {xbase: 0, xlimit: numColumnsB, xstep: fromInteger(kk),
+								     ybase: 0, ylimit: numRowsB_x_numColumnsB, ystep: numColumnsB,
+								     zbase: 0, zlimit: numRowsA, zstep: fromInteger(jj)};
       XYRangeConfig#(UInt#(addrwidth)) offsetcfgC = XYRangeConfig {xbase: 0, xlimit: numRowsA_x_numColumnsB, xstep: numColumnsB_x_J,
 								  ybase: 0, ylimit: numColumnsB, ystep: fromInteger(kk) };
       descFifoA.enq(MatrixDescriptor { pointer: pointerA, base: 0, numRows: numRowsA, numColumns: numColumnsA});
       descriptorB <= MatrixDescriptor { pointer: pointerB, base: 0, numRows: numRowsB, numColumns: numColumnsB};
       descFifoC.enq(MatrixDescriptor { pointer: pointerC, base: 0, numRows: numRowsA, numColumns: numRowsB});
-      dotprodCount <= numRowsA_x_numRowsB;
+      dotprodCount <= numRowsA_x_numColumnsB;
       numRowsBReg <= numRowsB;
       running <= True;
 
       if (verbose) $display("mm pointerA=%d pointerB=%d pointerC=%d\n", pointerA, pointerB, pointerC);
       if (verbose) $display("mm.start ra=%d ca=%d rb=%d cb=%d dotprodCount=%d", numRowsA, numColumnsA, numRowsB, numColumnsB, dotprodCount);
       if (verbose) $display($format(fshow("mm.start ")+fshow(indexcfg)));
+      if (verbose) $display($format(fshow("offsetcfgA ")+fshow(offsetcfgA)));
+      if (verbose) $display($format(fshow("offsetcfgB ")+fshow(offsetcfgB)));
+      if (verbose) $display($format(fshow("offsetcfgC ")+fshow(offsetcfgC)));
       indexpipeifc.start(indexcfg);
       offsetpipeA.start(offsetcfgA);
       offsetpipeC.start(offsetcfgC);
@@ -593,13 +680,13 @@ module  mkMm#(MmIndication ind, TimerIndication timerInd, MmDebugIndication mmDe
 			Bit#(32) h3,
 			Bit#(32) r1_x_c1, Bit#(32) c1_x_j,
 			Bit#(32) r1_x_c2, Bit#(32) c2_x_j,
-			Bit#(32) r1_x_r2, Bit#(32) r2_x_j);
+			Bit#(32) r1_x_r2, Bit#(32) r2_x_c2);
 	 dmaMMF.start(h1, unpack(truncate(r1)), unpack(truncate(c1)),
 		      h2, unpack(truncate(r2)), unpack(truncate(c2)),
 		      h3,
 		      unpack(truncate(r1_x_c1)), unpack(truncate(c1_x_j)),
 		      unpack(truncate(r1_x_c2)), unpack(truncate(c2_x_j)),
-		      unpack(truncate(r1_x_r2)), unpack(truncate(r2_x_j)));
+		      unpack(truncate(r1_x_r2)), unpack(truncate(r2_x_c2)));
 
 	 mmfCycles <= 0;
 	 busyFifo.enq(True);
