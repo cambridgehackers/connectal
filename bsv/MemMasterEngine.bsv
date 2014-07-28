@@ -50,7 +50,7 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
     Reg#(TLPTag) tlpTag <- mkReg(0);
 
     MIMOConfiguration mimoCfg = defaultValue;
-    MIMO#(1,4,16,Bit#(32)) completionMimo <- mkMIMO(mimoCfg);
+    MIMO#(1,4,4,Bit#(32)) completionMimo <- mkMIMO(mimoCfg);
    Reg#(TLPLength)             readBurstCount <- mkReg(0);
    Reg#(Bool)      readBurstCountGreaterThan4 <- mkReg(False);
    Reg#(Bool)                  readInProgress <- mkReg(False);
