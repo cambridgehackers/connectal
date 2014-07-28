@@ -103,7 +103,7 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
 
    interface MemSlaveClient client;
    // Function to read from the CSR address space (using DW address)
-   method Bit#(32) rd(UInt#(30) addr);
+   method Bit#(32) rd(UInt#(16) addr);
       let modaddr = (addr % 8192);
       let msixaddr = modaddr - `msix_base;
       if (msixaddr >= 0 && msixaddr <= 63)
@@ -147,7 +147,7 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
    endmethod
 
    // Function to write to the CSR address space (using DW address)
-   method Action wr(UInt#(30) addr, Bit#(32) dword);
+   method Action wr(UInt#(16) addr, Bit#(32) dword);
          let modaddr = (addr % 8192);
          let msixaddr = modaddr - `msix_base;
          if (msixaddr >= 0 && msixaddr <= 63)
