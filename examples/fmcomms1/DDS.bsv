@@ -22,23 +22,28 @@
 
 import Complex::*;
 import FixedPoint::*;
-import StmtFSM::*;
+//import StmtFSM::*;
 import BRAM::*;
+import Pipe::*;
+import Vector::*;
+
+typedef Complex#(FixedPoint#(2,23)) DDSOutType;
+typedef FixedPoint#(2,23) PhaseType;
 
 interface DDS;
    method Action setPhaseAdvance(FixedPoint#(10,32) v);
-   method  Complex#(FixedPoint#(2,23)) getValue();
+   interface PipeOut#(DDSOutType) osc;
 endinterface
 
-
-
-module mkDDS(Empty);
+module mkDDS(DDS);
    BRAM_Configure cfg = defaultValue;
    cfg.memorySize = 1024;
    cfg.loadFormat = tagged Binary "sine.bin";
-   BRAM1Port#(Bit#(10), Complex#(FixedPoint#(2,23))) ram <-mkBRAM1Server(cfg);
-   Reg#(FixedPoint#(2,23)) phase <- mkReg(0);
-   Reg#(FixedPoint#(2,23)) phaseAdvance <- mkReg(0);
+   BRAM1Port#(Bit#(10), DDSOutType) ram <-mkBRAM1Server(cfg);
+   Reg#(DDSOutType) ddsout <- mkReg(?);
+   Reg#(PhaseType) phase <- mkReg(0);
+   Reg#(PhaseType) phaseAdvance <- mkReg(0);
+      /*
    Reg#(UInt#(12)) idx <- mkReg(0);
    Stmt dumpRam =   
    seq
@@ -55,11 +60,22 @@ module mkDDS(Empty);
    endseq;
 
    mkAutoFSM (dumpRam);
-   
+   */
+
    rule filter_phase;
       phase <= phase + phaseAdvance;
-
+      ram.portA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: truncate(rotateBitsBy(phase.f, 10)), datain: ?});
    endrule
    
+   rule ddsoutrule;
+      let v <- ram.portA.response.get();
+      ddsout <= v;
+   endrule
    
+
+   method Action setPhaseAdvance(FixedPoint#(10,32) v);
+      phaseAdvance <= PhaseType{i: truncate(v.i), f: truncate(rotateBitsBy(v.f, 10))};
+      endmethod
+   interface PipeOut osc = toPipeOut(ddsout);
+
 endmodule
