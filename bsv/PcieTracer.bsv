@@ -96,11 +96,24 @@ module mkPcieTracer(PcieTracer);
 
    FIFO#(TLPData#(16)) tlpFromBusFifo <- mkFIFO();
    FIFO#(TLPData#(16)) tlpToBusFifo <- mkFIFO();
+   FIFO#(TLPData#(16)) tlpBusResponseFifo <- mkFIFO();
+
    Reg#(Bool) skippingIncomingTlps <- mkReg(False);
+   FIFO#(Bool) isRootBroadcastMessage <- mkFIFO();
    PulseWire fromPcie <- mkPulseWire;
    PulseWire   toPcie <- mkPulseWire;
    Wire#(TLPData#(16)) fromPcieTlp <- mkDWire(unpack(0));
    Wire#(TLPData#(16))   toPcieTlp <- mkDWire(unpack(0));
+
+   rule sniffTlpFromBus;
+      let tlp <- toGet(tlpFromBusFifo).get();
+      tlpBusResponseFifo.enq(tlp);
+
+      TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
+      // skip root_broadcast_messages sent to tlp.hit 0
+      isRootBroadcastMessage.enq(tlp.sof && tlp.hit == 0 && hdr_3dw.pkttype != COMPLETION);
+
+   endrule
 
    rule doTracing if (fromPcie || toPcie);
       TimestampedTlpData fromttd = fromPcie ? TimestampedTlpData { timestamp: timestamp, source: 7'h04, tlp: fromPcieTlp } : unpack(0);
@@ -117,29 +130,28 @@ module mkPcieTracer(PcieTracer);
    endrule
 
    interface Server     bus;
-       interface Get response;
+      interface Get response;
            method ActionValue#(TLPData#(16)) get();
-           let tlp = tlpFromBusFifo.first;
-           tlpFromBusFifo.deq();
-           //$display("tlp in: %h\n", tlp);
-           if (tlpTracingReg) begin
-               TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
-               // skip root_broadcast_messages sent to tlp.hit 0
-               if (tlp.sof && tlp.hit == 0 && hdr_3dw.pkttype != COMPLETION) begin
- 	          skippingIncomingTlps <= True;
-	       end
-	       else if (skippingIncomingTlps && !tlp.sof) begin
-	          // do nothing
-	       end
-	       else begin
-	          fromPcie.send();
-	          fromPcieTlp <= tlp;
-	           skippingIncomingTlps <= False;
-	       end
-           end
-           return tlp;
-           endmethod
-       endinterface
+	      let tlp <- toGet(tlpBusResponseFifo).get();
+
+	      if (tlpTracingReg) begin
+		 if (tlp.sof && isRootBroadcastMessage.first) begin
+ 		    skippingIncomingTlps <= True;
+		 end
+		 else if (skippingIncomingTlps && !tlp.sof) begin
+		    // do nothing
+		 end
+		 else begin
+		    fromPcie.send();
+		    fromPcieTlp <= tlp;
+		    skippingIncomingTlps <= False;
+		 end
+	      end
+
+	      isRootBroadcastMessage.deq();
+	      return tlp;
+	   endmethod
+      endinterface
 
        interface Put request;
            method Action put(TLPData#(16) tlp);
