@@ -53,6 +53,11 @@ typedef struct {
   unsigned int value;
 } tWriteInfo;
 
+typedef struct {
+  int fd;
+  int id;
+} tSendFd;
+
 typedef unsigned int tTlpData[6];
 
 /* IOCTL code definitions */
@@ -63,9 +68,10 @@ typedef unsigned int tTlpData[6];
 #define BNOC_TRACE           _IOWR(BNOC_IOC_MAGIC,8,tTraceInfo*)
 #define PCIE_MANUAL_READ     _IOWR(BNOC_IOC_MAGIC,10,tReadInfo*)
 #define PCIE_MANUAL_WRITE    _IOWR(BNOC_IOC_MAGIC,11,tWriteInfo*)
+#define PCIE_SEND_FD         _IOR(BNOC_IOC_MAGIC,12,tSendFd*)
 
 /* maximum valid IOCTL number */
-#define BNOC_IOC_MAXNR 11
+#define BNOC_IOC_MAXNR 12
 
 /* Number of boards to support */
 #define NUM_BOARDS 1
