@@ -126,7 +126,8 @@ module mkPortalCtrlMemSlave#(Vector#(numIndications, PipeOut#(Bit#(dataWidth))) 
    endinterface
 endmodule   
 
-module mkPipeInMemSlave#(PipeIn#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWidth, dataWidth));
+module mkPipeInMemSlave#(PipeIn#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWidth, dataWidth))
+   provisos (Add#(1,a__,dataWidth));
 
    AddressGenerator#(addrWidth) fifoReadAddrGenerator  <- mkAddressGenerator();
    AddressGenerator#(addrWidth) fifoWriteAddrGenerator <- mkAddressGenerator();
@@ -138,7 +139,10 @@ module mkPipeInMemSlave#(PipeIn#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWidt
       interface Get readData;
 	 method ActionValue#(MemData#(dataWidth)) get();
 	    let b <- fifoReadAddrGenerator.addrBeat.get();
-	    return MemData { data: 0, tag: b.tag, last: b.last };
+	    let v = 0;
+	    if (b.addr[7:0] == 4)
+	       v = extend(pack(methodPipe.notFull()));
+	    return MemData { data: v, tag: b.tag, last: b.last };
 	 endmethod
       endinterface
    endinterface
@@ -160,7 +164,8 @@ module mkPipeInMemSlave#(PipeIn#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWidt
    endinterface
 endmodule
 
-module mkPipeOutMemSlave#(PipeOut#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWidth, dataWidth));
+module mkPipeOutMemSlave#(PipeOut#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWidth, dataWidth))
+   provisos (Add#(1,a__,dataWidth));
    AddressGenerator#(addrWidth) fifoReadAddrGenerator <- mkAddressGenerator();
    AddressGenerator#(addrWidth) fifoWriteAddrGenerator <- mkAddressGenerator();
    FIFO#(Bit#(ObjectTagSize))                  fifoWriteDoneFifo <- mkFIFO();
@@ -175,9 +180,13 @@ module mkPipeOutMemSlave#(PipeOut#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWi
       interface Get readData;
 	 method ActionValue#(MemData#(dataWidth)) get();
 	    let b <- fifoReadAddrGenerator.addrBeat.get();
-	    let data <- toGet(methodPipe).get();
+	    let v = 0;
+	    if (b.addr[7:0] == 0)
+	       v <- toGet(methodPipe).get();
+	    else if (b.addr[7:0] == 4)
+	       v = extend(pack(methodPipe.notEmpty()));
 	    //$display("mkPipeOutMemSlave.readData.get addr=%h data=%h", b.addr, data);
-	    return MemData { data: data, tag: b.tag, last: b.last };
+	    return MemData { data: v, tag: b.tag, last: b.last };
 	 endmethod
       endinterface
    endinterface
@@ -196,7 +205,8 @@ module mkPipeOutMemSlave#(PipeOut#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWi
 endmodule
 
 module mkMemPortal#(Portal#(numRequests, numIndications, slaveDataWidth) portal)(MemPortal#(slaveAddrWidth, slaveDataWidth))
-   provisos (Add#(c__, 15, slaveAddrWidth),
+   provisos (Add#(1, i__, slaveDataWidth),
+	     Add#(c__, 15, slaveAddrWidth),
 	     Add#(d__, 1, c__),
 	     Max#(numRequests,1,numRequestsToMux),
 	     Max#(numIndications,1,numIndicationsToMux),
