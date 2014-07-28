@@ -44,7 +44,7 @@ extern struct dma_buf *portalmem_dmabuffer_create(unsigned long len, unsigned lo
 #define PORTAL_FREE(A) free(A)
 #endif
 
-static int trace_memory;// = 1;
+static int trace_memory = 1;
 
 void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *argDevice)
 {
@@ -108,7 +108,6 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
   uint64_t regions[3] = {0,0,0};
   uint64_t shifts[3] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0};
   int id = priv->handle++;
-  int ne = pa->header.numEntries;
   int size_accum = 0;
   uint64_t border = 0;
   unsigned char entryCount = 0;
@@ -135,7 +134,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
   }
 #endif
   if (trace_memory)
-    PORTAL_PRINTF("DmaManager_reference id=%08x, numEntries:=%d len=%08lx)\n", id, ne, (long)portalAlloc->header.size);
+    PORTAL_PRINTF("DmaManager_reference id=%08x, numEntries:=%d len=%08lx)\n", id, pa->header.numEntries, (long)portalAlloc->header.size);
 #ifndef MMAP_HW
   bluesim_sock_fd_write(portalAlloc->header.fd);
 #endif
@@ -160,17 +159,14 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
       PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, (long)addr, e->length);
     DMAsglist(priv->device, (id << 8) + i, addr, e->length);
     size_accum += e->length;
-    //PORTAL_PRINTF("%s:%d sem_wait\n", __FUNCTION__, __LINE__);
-    //now busywait sem_wait(&priv->confSem);
   }
   // HW interprets zeros as end of sglist
   DMAsglist(priv->device, (id << 8) + i, 0, 0); // end list
-  //now busywait sem_wait(&priv->confSem);
 
   for(i = 0; i < 3; i++){
-    idxOffset = entryCount - (border >> shifts[i]);
+    idxOffset = entryCount - (border >> (shifts[i] - PAGE_SHIFT0));
     entryCount += regions[i];
-    border += regions[i]<<shifts[i];
+    border += regions[i]<<(shifts[i] - PAGE_SHIFT0);
     borderVal[i] = (border << 8) | idxOffset;
   }
   if (trace_memory) {

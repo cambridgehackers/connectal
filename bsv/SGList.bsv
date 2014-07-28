@@ -43,7 +43,7 @@ typedef Tuple2#(SGListId,Bit#(ObjectOffsetSize)) ReqTup;
 
 interface SGListMMU#(numeric type addrWidth);
    method Action sglist(Bit#(32) pointer, Bit#(40) paddr, Bit#(32) len);
-   method Action region(Bit#(32) ptr, Bit#(48) barr8, Bit#(48) barr4, Bit#(48) barr0);
+   method Action region(Bit#(32) ptr, Bit#(36) barr8, Bit#(36) barr4, Bit#(36) barr0);
    interface Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addr;
 endinterface
 
@@ -57,7 +57,7 @@ typedef Bit#(TSub#(ObjectOffsetSize,SGListPageShift4)) Page4;
 typedef Bit#(TSub#(ObjectOffsetSize,SGListPageShift8)) Page8;
 
 typedef struct {
-   Bit#(ObjectOffsetSize) barrier;
+   Bit#(28) barrier;
    Bit#(8) idxOffset;
    } Region deriving (Eq,Bits,FShow);
 
@@ -122,19 +122,15 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    for(Integer i = 0; i < 2; i=i+1) begin
       rule stage2;
 	 let req <- toGet(reqs0[i]).get;
-	 match {.ptr,.off} = req; 
+	 match {.ptr,.offreq} = req; 
 	 Region region8 <- portsel(reg8,i).response.get;
 	 Region region4 <- portsel(reg4,i).response.get;
 	 Region region0 <- portsel(reg0,i).response.get;
 	 
-	 Bit#(40) barrier8 = region8.barrier;
-	 Bit#(40) barrier4 = region4.barrier;
-	 Bit#(40) barrier0 = region0.barrier;
-
-         //////# change to use bitmask, not relational
-	 let cond8 = off < barrier8;
-	 let cond4 = off < barrier4;
-	 let cond0 = off < barrier0;
+         Page off = truncate(offreq >> valueOf(SGListPageShift0));
+	 let cond8 = off < region8.barrier;
+	 let cond4 = off < region4.barrier;
+	 let cond0 = off < region0.barrier;
 	 
 	 conds[i].enq(tuple3(cond8,cond4,cond0));
 	 idxOffsets0[i].enq(tuple3(region8.idxOffset,region4.idxOffset, region0.idxOffset));
@@ -150,19 +146,19 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 match{.idxOffset8,.idxOffset4,.idxOffset0} <- toGet(idxOffsets0[i]).get;
 
 	 if (cond8) begin
-	    //$display("request: ptr=%h off=%h barrier8=%h", ptr, off, barrier8);
+	    //$display("request: ptr=%h off=%h", ptr, off);
 	    o.pageSize = 3;
 	    pbase = truncate(off>>page_shift8);
 	    idxOffset = idxOffset8;
 	 end
 	 else if (cond4) begin
-	    //$display("request: ptr=%h off=%h barrier4=%h", ptr, off, barrier4);
+	    //$display("request: ptr=%h off=%h", ptr, off);
 	    o.pageSize = 2;
 	    pbase = truncate(off>>page_shift4);
 	    idxOffset = idxOffset4;
 	 end
 	 else if (cond0) begin
-	    //$display("request: ptr=%h off=%h barrier0=%h", ptr, off, barrier0);
+	    //$display("request: ptr=%h off=%h", ptr, off);
 	    o.pageSize = 1;
 	    pbase = truncate(off>>page_shift0);
 	    idxOffset = idxOffset0;
@@ -228,7 +224,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
        endinterface);
 
    // FIXME: split this into three methods?
-   method Action region(Bit#(32) ptr, Bit#(48) barr8, Bit#(48) barr4, Bit#(48) barr0);
+   method Action region(Bit#(32) ptr, Bit#(36) barr8, Bit#(36) barr4, Bit#(36) barr0);
       portsel(reg8, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
           address: truncate(ptr), datain: unpack(barr8)});
       portsel(reg4, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
