@@ -56,10 +56,6 @@ extern "C" {
     once = 0;
   }
 
-void init_pareff()
-{
-}
-
 int pareff_fd(int *fd)
 {
   sem_wait(&dma_waiting);
