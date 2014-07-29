@@ -1,14 +1,12 @@
 #
 set -e
 set -x
-./bin/bsim& bsimpid=$!
+../bluesim/bin/bsim& bsimpid=$!
 echo bsimpid $bsimpid
-EXISTMOD=`lsmod | grep testme | true`
-echo EXISTMOD
-if [ "$EXISTMOD" != "" ]; then
+if [ "`lsmod | grep testme`" != "" ]; then
    sudo rmmod testme
-#else
-#   echo EXISTMOD
+else
+   echo "HA"
 fi
 sudo insmod testme.ko
 ./bsimhost
