@@ -69,6 +69,10 @@ extern "C" {
       pareff_fd(&fd);
       dma_info[pref].buffer = (unsigned char *)mmap(0,
           dma_info[pref].size_accum, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
+      if (dma_info[pref].buffer == MAP_FAILED) {
+          printf("%s: mmap failed fd %x buffer %p size %x errno %d\n", __FUNCTION__, fd, dma_info[pref].buffer, size, errno);
+          exit(-1);
+      }
       dma_info[pref].buffer_len = dma_info[pref].size_accum;
     }
   }
