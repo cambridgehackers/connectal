@@ -41,15 +41,15 @@ module mkMemReader(MemReader#(dataWidth))
 	    Mul#(dataWidthBytes,8,dataWidth),
 	    Log#(dataWidthBytes,beatShift));
 
-   FIFOF#(ObjectData#(dataWidth))  readBuffer <- mkFIFOF;
-   FIFOF#(ObjectRequest)       reqOutstanding <- mkFIFOF;
+   FIFOF#(ObjectData#(dataWidth)) readBuffer <- mkFIFOF;
+   FIFOF#(ObjectRequest)           reqBuffer <- mkFIFOF;
 
    interface ObjectReadServer readServer;
-      interface Put readReq = toPut(reqOutstanding);
+      interface Put readReq = toPut(reqBuffer);
       interface Get readData = toGet(readBuffer);
    endinterface
    interface ObjectReadClient readClient;
-      interface Get readReq = toGet(reqOutstanding);
+      interface Get readReq = toGet(reqBuffer);
       interface Put readData = toPut(readBuffer);
    endinterface
 endmodule

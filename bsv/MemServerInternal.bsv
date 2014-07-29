@@ -166,7 +166,7 @@ module mkMemReadInternal#(Integer id,
    // stage 1: address validation (latency = 1)
    FIFO#(RRec#(numClients,numTags,addrWidth))  reqFifo <- mkFIFO;
    // stage 2: read commands (maximum buffering to handle high latency read response times)
-   Vector#(numTags, FIFOF#(DRec#(numClients,numTags,addrWidth))) dreqFifos <- replicateM(mkSizedFIFOF(valueOf(TAG_DEPTH)));
+   Vector#(numTags, FIFOF#(DRec#(numClients,numTags,addrWidth))) dreqFifos <- replicateM(mkSizedBRAMFIFOF(valueOf(TAG_DEPTH)));
    // stage 3: read data (minimal buffering required) 
    FIFO#(Tuple2#(DRec#(numClients,numTags,addrWidth),MemData#(dataWidth))) readDataPipelineFifo <- mkFIFO;
    FIFO#(MemData#(dataWidth)) responseFifo <- mkFIFO;
@@ -292,7 +292,7 @@ module mkMemWriteInternal#(Integer iid,
    // stage 2: write commands (maximum buffering to handle high latency writes)
    FIFO#(DRec#(numClients,numTags,addrWidth)) dreqFifo <- mkSizedBRAMFIFO(valueOf(TMul#(TAG_DEPTH,numTags)));
    // stage 3: write data (maximum buffering, though I have no idea if any hosts will begin the next data transfer before sending the write ack)
-   Vector#(numTags, FIFO#(RResp#(numClients,numTags,addrWidth))) respFifos <- replicateM(mkSizedFIFO(valueOf(TAG_DEPTH)));
+   Vector#(numTags, FIFO#(RResp#(numClients,numTags,addrWidth))) respFifos <- replicateM(mkSizedBRAMFIFO(valueOf(TAG_DEPTH)));
    // stage 4: write done (minimal buffering required)
    FIFO#(Tuple2#(RResp#(numClients,numTags,addrWidth),Bit#(6))) writeDonePipelineFifo <- mkFIFO;
 

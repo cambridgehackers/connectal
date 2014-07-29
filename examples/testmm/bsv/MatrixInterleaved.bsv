@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import BRAMFIFO::*;
 import FIFO::*;
 import FIFOF::*;
 import MIMO::*;
@@ -121,7 +122,7 @@ module mkXYZRangePipeOut(XYZRangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidt
    endmethod
 endmodule: mkXYZRangePipeOut
 
-module mkColSource#(MemreadEngineV#(TMul#(N,32), 2, 1) vs, Reg#(UInt#(addrwidth)) numRowsB) (RowColSource#(TMul#(N,32), Vector#(N,MmToken)))
+module mkColSource#(ObjectReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) numRowsB) (RowColSource#(TMul#(N,32), Vector#(N,MmToken)))
    provisos (Bits#(Vector#(N,Float),asz),
       Div#(asz,8,abytes),
       Log#(abytes,ashift),
@@ -134,30 +135,35 @@ module mkColSource#(MemreadEngineV#(TMul#(N,32), 2, 1) vs, Reg#(UInt#(addrwidth)
    let ashift = valueOf(ashift);
 `ifdef TAGGED_TOKENS
    Reg#(UInt#(32)) row <- mkReg(0);
-   FIFOF#(UInt#(32)) tagFifo <- mkSizedFIFOF(32);
+   FIFOF#(UInt#(32)) tagFifo <- mkSizedBRAMFIFOF(cmd_buffer_depth);
 `endif
    // perhaps memreadengine could do the labeling
    Reg#(Bit#(ObjectOffsetSize)) countReg <- mkReg(0);
    Reg#(UInt#(addrwidth)) cmdCountReg <- mkReg(0);
-   FIFOF#(Bit#(ObjectOffsetSize)) cmdFifo <- mkSizedFIFOF(32);
-
+   FIFOF#(Bit#(ObjectOffsetSize)) cmdFifo <- mkSizedBRAMFIFOF(cmd_buffer_depth);
+   FIFOF#(Vector#(N,Float)) read_data_buffer <- mkFIFOF;
+   
+   rule read_data;
+      let foo <- vs.readData.get;
+      read_data_buffer.enq(unpack(foo.data));
+   endrule
+   
    method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
 `ifdef TAGGED_TOKENS
       tagFifo.enq(tag);
 `endif
-      let cmd = MemengineCmd{pointer:h,base:a<<ashift,len:truncate(l<<ashift), burstLen:fromInteger(valueOf(TDiv#(K,N)))<<ashift};
-      vs.readServers[0].request.put(cmd); //start(h,a,l);
-      if(verbose) $display("mkColSource.start %d %d", cmd.base, cmd.burstLen);
+      if (l != fromInteger(valueOf(TDiv#(K,N)))) begin
+	 $display("mkColSource.start error %d %d", l, valueOf(TDiv#(K,N)));
+      end
+      let cmd = ObjectRequest{pointer:h, offset:a<<ashift, burstLen:fromInteger(valueOf(TDiv#(K,N)))<<ashift, tag:10};
+      vs.readReq.put(cmd); //start(h,a,l);
+      if(verbose) $display("mkColSource.start %d %d", cmd.offset, cmd.burstLen);
       cmdFifo.enq(l);
-   endmethod
-   method ActionValue#(Bool) finish;
-      let rv <- vs.readServers[0].response.get; //finish;
-      return rv;
    endmethod
    interface PipeOut pipe;
       method Vector#(N,MmToken) first;
 	 Vector#(N,MmToken) rv;
-	 Vector#(N,Float) foo = unpack(vs.dataPipes[0].first);
+	 Vector#(N,Float) foo = read_data_buffer.first;
 `ifdef TAGGED_TOKENS
 	 for(Integer i = 0; i < valueOf(N); i=i+1)
 	    rv[i] = MmToken{row:row+fromInteger(i), col:tagFifo.first, v:foo[i], first:False, last:False};
@@ -176,7 +182,7 @@ module mkColSource#(MemreadEngineV#(TMul#(N,32), 2, 1) vs, Reg#(UInt#(addrwidth)
       endmethod
       method Action deq;
 	 if(verbose) $display("mkColSource.deq %d %d", countReg+1==cmdFifo.first, cmdCountReg+1==numRowsB);
-	 vs.dataPipes[0].deq;
+	 read_data_buffer.deq;
 	 if(countReg+1==cmdFifo.first) begin
 	    countReg <= 0;
 	    cmdFifo.deq;
@@ -200,7 +206,7 @@ module mkColSource#(MemreadEngineV#(TMul#(N,32), 2, 1) vs, Reg#(UInt#(addrwidth)
 `ifdef TAGGED_TOKENS
 	 return (tagFifo.notEmpty && vs.dataPipes[0].notEmpty);
 `else
-	 return (vs.dataPipes[0].notEmpty);
+	 return (read_data_buffer.notEmpty);
 `endif
       endmethod
    endinterface
@@ -247,7 +253,7 @@ typedef enum {
  *
  */
 module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) sA,
-			     MemreadEngineV#(TMul#(N,32), 2, 1) sB,
+			     ObjectReadServer#(TMul#(N,32)) sB,
 			     Vector#(J, VectorSink#(dsz, Vector#(N,Float)))    ss,
 			     HostType host
 			     )(DmaMatrixMultiplyIfc#(addrwidth, dsz))
@@ -345,10 +351,6 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
       let interval = cycles-lastStartB;
       if (timing || verbose) $display($format(fshow(interval)+fshow(" startB=")+fshow(startB)));
       sourceB.start(descriptorB.pointer, pack(extend(startB>>nshift)), fromInteger(kk)>>nshift, 0);
-   endrule
-   rule finishSourceB;
-      if (timing || verbose || verbose1) $display($format(fshow(cycles)+fshow("    sourceB.finish")));
-      let b <- sourceB.finish();
    endrule
    
    //
@@ -507,9 +509,8 @@ module  mkDramMatrixMultiply#(HostType host)(DramMatrixMultiply#(N,TMul#(N,32),2
 
    MemwriteEngineV#(TMul#(N,32),2, J)   writeEngine <- mkMemwriteEngine();
    StaticSched#(J)                     rowReadSched <- mkRoundRobin;
-   StaticSched#(1)                     colReadSched <- mkRoundRobin;
    MemreadEngineV#(TMul#(N,32), 2, J) rowReadEngine <- mkMemreadEngineStaticSched(rowReadSched);
-   MemreadEngineV#(TMul#(N,32), 2, 1) colReadEngine <- mkMemreadEngineStaticSched(colReadSched);
+   MemReader#(TMul#(N,32))                colReader <- mkMemReader;
    MemWriter#(TMul#(32,N)) bogusWriter <- mkMemWriter;
    
    Vector#(J, Server#(MemengineCmd,Bool)) rowReadServers = rowReadEngine.readServers;
@@ -517,8 +518,8 @@ module  mkDramMatrixMultiply#(HostType host)(DramMatrixMultiply#(N,TMul#(N,32),2
    Vector#(J, VectorSource#(DmaSz, Vector#(N,Float))) xvfsources <- mapM(uncurry(mkMemreadVectorSource), zip(rowReadServers, rowReadDataPipes));
    Vector#(J,   VectorSink#(DmaSz, Vector#(N,Float)))      sinks <- mapM(uncurry(mkMemwriteVectorSink),   zip(writeEngine.writeServers,   writeEngine.dataPipes));
    
-   DmaMatrixMultiplyIfc#(MMSize,DmaSz) dmaMMF <- mkDmaMatrixMultiply(xvfsources, colReadEngine, sinks, host);
-   interface Vector readClients  = cons(rowReadEngine.dmaClient, cons(colReadEngine.dmaClient, nil));
+   DmaMatrixMultiplyIfc#(MMSize,DmaSz) dmaMMF <- mkDmaMatrixMultiply(xvfsources, colReader.readServer, sinks, host);
+   interface Vector readClients  = cons(rowReadEngine.dmaClient, cons(colReader.readClient, nil));
    interface Vector writeClients = cons(writeEngine.dmaClient,   cons(bogusWriter.writeClient, nil));
    method start = dmaMMF.start;
    method finish = dmaMMF.finish;

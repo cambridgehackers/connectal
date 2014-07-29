@@ -146,7 +146,7 @@ instance SelectBsimRdmaReadWrite#(128);
    endmodule
 endinstance
 
-module mkAxi3Slave(Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))
+module mkAxi3Slave#(Integer id)(Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))
    provisos (SelectBsimRdmaReadWrite#(serverBusWidth));
 
    BsimRdmaReadWrite#(serverBusWidth) rw <- selectBsimRdmaReadWrite();
@@ -185,7 +185,7 @@ module mkAxi3Slave(Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))
 
    interface Put req_ar;
       method Action put(Axi3ReadRequest#(serverAddrWidth,serverIdWidth) req);
-	 //$display("mkBsimHost::req_ar_a: %d %d", req.id, cycle-last_reqAr);
+	 //if(id==1) $display("mkBsimHost::req_ar_a: %d %d", req.id, cycle-last_reqAr);
 	 //last_reqAr <= cycle;
 	 readDelayFifo.enq(tuple2(cycle,req));
       endmethod
@@ -204,9 +204,9 @@ module mkAxi3Slave(Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))
 	    read_addr = req.address;
 	    read_id = req.id;
 	    handle = req.address[39:32];
-	    //$display("mkBsimHost::resp_read_a: %d %d", req.id,  cycle-last_read_eob);
+	    //if(id==1) $display("mkBsimHost::resp_read_a: %d %d %d", req.id,  cycle-last_read_eob, req.len);
 	    //last_read_eob <= cycle;
-	 end
+	 end 
 	 else begin
 	    //$display("mkBsimHost::resp_read_b: %d %d", readId,  cycle-last_read_eob);
 	    //last_read_eob <= cycle;
@@ -280,7 +280,7 @@ module  mkBsimHost#(Clock double_clock, Reset double_reset)(BsimHost#(clientAddr
    provisos (SelectBsimRdmaReadWrite#(serverBusWidth),
 	     SelectBsimCtrlReadWrite#(clientAddrWidth, clientBusWidth));
 
-   Vector#(nSlaves,Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth)) servers <- replicateM(mkAxi3Slave);
+   Vector#(nSlaves,Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth)) servers <- mapM(mkAxi3Slave,genVector);
    BsimCtrlReadWrite#(clientAddrWidth,clientBusWidth) crw <- selectBsimCtrlReadWrite();
    FIFO#(Bit#(clientBusWidth)) wf <- mkPipelineFIFO;
    let init_seq = (action
