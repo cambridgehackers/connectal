@@ -33,16 +33,21 @@ typedef struct DmaEntry {
     unsigned int length; // to match length field in scatterlist.h
 } DmaEntry;
 
-
 typedef struct PortalAlloc {
     PortalAllocHeader header;
     DmaEntry entries[0];
 } PortalAlloc;
 
-#define PA_ALLOC _IOWR('B', 10, PortalAlloc)
+typedef struct PortalElementSize {
+    int fd;
+    int index;
+} PortalElementSize;
+
+#define PA_ALLOC              _IOWR('B', 10, PortalAlloc)
 #define PA_DCACHE_FLUSH_INVAL _IOWR('B', 11, PortalAlloc)
-#define PA_DMA_ADDRESSES _IOWR('B', 13, PortalAlloc)
-#define PA_MALLOC _IOWR('B', 14, unsigned long)
+#define PA_DMA_ADDRESSES      _IOWR('B', 13, PortalAlloc)
+#define PA_MALLOC              _IOR('B', 14, unsigned long)
+#define PA_ELEMENT_SIZE        _IOR('B', 15, PortalElementSize)
 
 /**
  * struct pa_buffer - metadata for a particular buffer

@@ -420,8 +420,29 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
     fput(f);
     return 0;
   }
-  case PA_MALLOC: {
+  case PA_MALLOC:
     return portalmem_dmabuffer_create((unsigned long)arg);
+  case PA_ELEMENT_SIZE: {
+    struct PortalElementSize req;
+    struct file *f;
+    struct sg_table *sgtable;
+    struct scatterlist *sg;
+    int i = 0;
+    int retsize = 0;  // 0 -> end of sglist items
+
+    if (copy_from_user(&req, (void __user *)arg, sizeof(req)))
+      return -EFAULT;
+    f = fget(req.fd);
+    sgtable = ((struct pa_buffer *)((struct dma_buf *)f->private_data)->priv)->sg_table;
+    for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
+printk("[%s:%d] i %d req.index %d\n", __FUNCTION__, __LINE__, i, req.index);
+      if (i == req.index) {
+          retsize = sg->length;
+          break;
+      }
+    }
+    fput(f);
+    return retsize;
   }
   default:
     printk("pa_unlocked_ioctl ENOTTY cmd=%x\n", cmd);
