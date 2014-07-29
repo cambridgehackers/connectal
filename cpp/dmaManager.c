@@ -36,7 +36,7 @@ extern struct dma_buf *portalmem_dmabuffer_create(unsigned long len, unsigned lo
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include "portalmem.h"
-#include "pcieportal.h"
+//#include "pcieportal.h"
 
 #if defined(__arm__)
 #include "zynqportal.h"
