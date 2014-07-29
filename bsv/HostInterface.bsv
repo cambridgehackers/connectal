@@ -56,7 +56,6 @@ import ClientServer      :: *;
 import PCIE               :: *;
 import PCIEWRAPPER       :: *;
 import PcieCsr           :: *;
-import MemSlave          :: *;
 import MemTypes          :: *;
 import Bscan             :: *;
 `ifndef BSIM
