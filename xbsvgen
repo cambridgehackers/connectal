@@ -182,7 +182,7 @@ proc synth_pcie_if_needed {} {
     }
 }
 
-synth_pcie_if_needed > hw/synth-pcie.log
+synth_pcie_if_needed
 
 if [file exists ../synth-ip.tcl] {
     source ../synth-ip.tcl
