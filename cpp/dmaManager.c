@@ -35,11 +35,13 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include "portalmem.h"
-//#include "pcieportal.h"
 
 #if defined(__arm__)
 #include "zynqportal.h"
+#else
+#include "pcieportal.h"
 #endif
+
 #define PORTAL_MALLOC(A) malloc(A)
 #define PORTAL_FREE(A) free(A)
 #endif
@@ -99,22 +101,9 @@ uint64_t DmaManager_show_mem_stats(DmaManagerPrivate *priv, ChannelType rc)
   return rv;
 }
 
-int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
+static int host_sendfd(DmaManagerPrivate *priv, int id, PortalAlloc *pa)
 {
-  int id = priv->handle++;
   int rc = 0;
-//#define KERNEL_REFERENCE
-#ifdef KERNEL_REFERENCE
-  tSendFd sendFd;
-  sendFd.fd = pa->header.fd;
-  sendFd.id = id;
-  if (priv->device->fpga_fd) {
-    printf("[%s:%d] try new ioctl!!!!! *****************************\n", __FUNCTION__, __LINE__);
-    ioctl(priv->device->fpga_fd, PCIE_SEND_FD, &sendFd);
-  }
-  sem_wait(&priv->confSem);
-  rc = id;
-#else // KERNEL_REFERENCE
   const int PAGE_SHIFT0 = 12;
   const int PAGE_SHIFT4 = 16;
   const int PAGE_SHIFT8 = 20;
@@ -198,6 +187,24 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
   rc = id;
 retlab:
   PORTAL_FREE(portalAlloc);
+  return rc;
+}
+
+int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
+{
+  int id = priv->handle++;
+  int rc = 0;
+//#define KERNEL_REFERENCE
+#ifdef KERNEL_REFERENCE
+  tSendFd sendFd;
+  sendFd.fd = pa->header.fd;
+  sendFd.id = id;
+  rc = ioctl(priv->device->fpga_fd, PCIE_SEND_FD, &sendFd);
+  if (!rc)
+    sem_wait(&priv->confSem);
+  rc = id;
+#else // KERNEL_REFERENCE
+  rc = host_sendfd(priv, id, pa);
 #endif // KERNEL_REFERENCE
   return rc;
 }
