@@ -25,8 +25,8 @@ typedef struct {
 } PortalEnableInterrupt;
 
 typedef struct {
-  int fd;
-  int id;
+    int fd;
+    int id;
 } PortalSendFd;
 
 #define PORTAL_SET_FCLK_RATE    _IOWR('B', 40, PortalClockRequest)

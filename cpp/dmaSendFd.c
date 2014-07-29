@@ -19,6 +19,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#define MMAP_HW
+#include "portal.h"
 #include "../generated/cpp/DmaConfigProxy.c"
 #include "../drivers/portalmem/portalmem.h"
 

@@ -259,7 +259,7 @@ int portalmem_dmabuffer_create(unsigned long len)
   size_t align = 4096;
   int return_fd;
 
-  printk("%s, size=%zd\n", __FUNCTION__, len);
+  printk("%s, size=%ld\n", __FUNCTION__, len);
   len = PAGE_ALIGN(round_up(len, align));
   size_remaining = len;
   buffer = kzalloc(sizeof(struct pa_buffer), GFP_KERNEL);

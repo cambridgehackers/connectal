@@ -29,9 +29,7 @@
 #include <linux/scatterlist.h>
 
 #include "zynqportal.h"
-//#define MMAP_HW
-//#include "portal.h" // PORTAL_BASE_OFFSET
-//#include "../../cpp/dmaSendFd.c"
+#include "../../cpp/dmaSendFd.c"
 
 #define DRIVER_NAME        "zynqportal"
 #define DRIVER_DESCRIPTION "Generic userspace hardware bridge"
@@ -52,6 +50,7 @@ struct portal_data {
         dma_addr_t        dev_base_phys;
         void             *interrupt_virt;
         void             *mask_virt;
+        void             *map_base;
         unsigned int      portal_irq;
         int               irq_is_registered;
 };
@@ -129,6 +128,9 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
                 if (!portal_data->mask_virt)
                         portal_data->mask_virt = ioremap_nocache(
                                 portal_data->dev_base_phys + request.mask_offset, sizeof(long));
+                if (!portal_data->map_base)
+                        portal_data->map_base = ioremap_nocache(
+                                portal_data->dev_base_phys, PORTAL_BASE_OFFSET);
                 if (!portal_data->irq_is_registered) {
                         // read the interrupt as a sanity check (to force segv if hw not present)
                         u32 int_status = readl(portal_data->interrupt_virt);
@@ -145,19 +147,17 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
                 return 0;
                 }
                 break;
-#if 0
         case PORTAL_SEND_FD: {
                 /* pushd down allocated fd */
 		PortalSendFd sendFd;
 
-                err = copy_from_user(&sendFd, (void __user *) arg, sizeof(sendFd));
+                int err = copy_from_user(&sendFd, (void __user *) arg, sizeof(sendFd));
                 if (err)
                     break;
                 printk("[%s:%d] PORTAL_SEND_FD %x %x  **\n", __FUNCTION__, __LINE__, sendFd.fd, sendFd.id);
                 return send_fd_to_portal(portal_data->map_base, sendFd.fd, sendFd.id);
                 }
                 break;
-#endif
         default:
                 printk("portal_unlocked_ioctl ENOTTY cmd=%x\n", cmd);
                 return -ENOTTY;
