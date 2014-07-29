@@ -130,24 +130,26 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
 #ifdef __KERNEL__
   struct sg_table *sgtable;
   struct scatterlist *sg;
-  struct file *fmem;
+  struct file *fmem = fget(portalAlloc->header.fd);
+
+  sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
+  pa->header.numEntries = sgtable->nents;
 #endif
 
+  portalAlloc = (PortalAlloc *)PORTAL_MALLOC(sizeof(PortalAlloc)+((pa->header.numEntries+1)*sizeof(DmaEntry)));
   memcpy(portalAlloc, pa, sizeof(*pa));
-#ifndef __KERNEL__
-  rc = ioctl(priv->pa_fd, PA_DMA_ADDRESSES, portalAlloc);
-  if (rc){
-    PORTAL_PRINTF("portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
-    goto retlab;
-  }
-#else
-  fmem = fget(portalAlloc->header.fd);
-  sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
+#ifdef __KERNEL__
   for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
       portalAlloc->entries[i].dma_address = sg_phys(sg);
       portalAlloc->entries[i].length = sg->length;
   }
   fput(fmem);
+#else
+  rc = ioctl(priv->pa_fd, PA_DMA_ADDRESSES, portalAlloc);
+  if (rc){
+    PORTAL_PRINTF("portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
+    goto retlab;
+  }
 #endif
   if (trace_memory)
     PORTAL_PRINTF("DmaManager_reference id=%08x, numEntries:=%d len=%08lx)\n", id, pa->header.numEntries, (long)portalAlloc->header.size);
@@ -216,9 +218,6 @@ int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa)
     PORTAL_PRINTF("portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
 #else
   portalAlloc->header.fd = portalmem_dmabuffer_create(portalAlloc->header.size);
-  fmem = fget(portalAlloc->header.fd);
-  portalAlloc->header.numEntries = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table->nents;
-  fput(fmem);
 #endif
   PORTAL_PRINTF("alloc size=%ldMB fd=%ld numEntries=%d\n", 
       portalAlloc->header.size/(1L<<20), portalAlloc->header.fd, portalAlloc->header.numEntries);
