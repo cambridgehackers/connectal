@@ -506,8 +506,7 @@ endinterface
 module  mkDramMatrixMultiply#(HostType host)(DramMatrixMultiply#(N,TMul#(N,32),2));
 
    MemwriteEngineV#(TMul#(N,32),2, J)   writeEngine <- mkMemwriteEngine();
-   StaticSched#(J)                     rowReadSched <- mkRoundRobin;
-   MemreadEngineV#(TMul#(N,32), 2, J) rowReadEngine <- mkMemreadEngineStaticSched(rowReadSched);
+   MemreadEngineV#(TMul#(N,32), 2, J) rowReadEngine <- mkMemreadEngineBuff(512);
    MemReader#(TMul#(N,32))                colReader <- mkMemReader;
    MemWriter#(TMul#(32,N)) bogusWriter <- mkMemWriter;
    

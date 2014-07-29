@@ -434,82 +434,48 @@ interface DramMatrixMultiply#(numeric type n, numeric type dmasz, numeric type n
    interface DmaMatrixMultiplyDebug debug;
 endinterface
 
-typeclass DramMM#(numeric type nm);
-   module  mkDramMatrixMultiply#(HostType host)(DramMatrixMultiply#(N,TMul#(N,32),nm));
-endtypeclass
-   
-instance DramMM#(1);
-   module  mkDramMatrixMultiply#(HostType host)(DramMatrixMultiply#(N,TMul#(N,32),1));
-   
-      StaticSched#(TAdd#(J,K))                     readSched <- mkRoundRobin;
-      MemwriteEngineV#(TMul#(N,32),2, J)         writeEngine <- mkMemwriteEngine();
-      MemreadEngineV#(TMul#(N,32), 2, TAdd#(J,K)) readEngine <- mkMemreadEngineStaticSched(readSched);
-   
-      Vector#(J, Server#(MemengineCmd,Bool))    rowReadServers = take(readEngine.readServers);
-      Vector#(K, Server#(MemengineCmd,Bool))    colReadServers = takeTail(readEngine.readServers);
-      Vector#(J, PipeOut#(Bit#(TMul#(N,32)))) rowReadDataPipes = take(readEngine.dataPipes);
-      Vector#(K, PipeOut#(Bit#(TMul#(N,32)))) colReadDataPipes = takeTail(readEngine.dataPipes);
-      
-      Vector#(J, VectorSource#(DmaSz, Vector#(N,Float))) xvfsources <- mapM(uncurry(mkMemreadVectorSource), zip(rowReadServers, rowReadDataPipes));
-      Vector#(K, VectorSource#(DmaSz, Vector#(N,Float))) yvfsources <- mapM(uncurry(mkMemreadVectorSource), zip(colReadServers, colReadDataPipes));
-      Vector#(J,   VectorSink#(DmaSz, Vector#(N,Float)))      sinks <- mapM(uncurry(mkMemwriteVectorSink),   zip(writeEngine.writeServers,   writeEngine.dataPipes));
-      
-      DmaMatrixMultiplyIfc#(MMSize,DmaSz) dmaMMF <- mkDmaMatrixMultiply(xvfsources, yvfsources, sinks, host);
-      interface Vector readClients  = cons(readEngine.dmaClient, nil);
-      interface Vector writeClients = cons(writeEngine.dmaClient,   nil);
-      method start = dmaMMF.start;
-      method finish = dmaMMF.finish;
-      interface DmaMatrixMultiplyDebug debug = dmaMMF.debug;
-   endmodule
-endinstance
+module  mkDramMatrixMultiply#(HostType host)(DramMatrixMultiply#(N,TMul#(N,32),2));
 
-instance DramMM#(2);
-   module  mkDramMatrixMultiply#(HostType host)(DramMatrixMultiply#(N,TMul#(N,32),2));
-
-      MemwriteEngineV#(TMul#(N,32),2, J)   writeEngine <- mkMemwriteEngine();
-      StaticSched#(J)                     rowReadSched <- mkRoundRobin;
-      StaticSched#(K)                     colReadSched <- mkRoundRobin;
-      MemreadEngineV#(TMul#(N,32), 2, J) rowReadEngine <- mkMemreadEngineStaticSched(rowReadSched);
-      MemreadEngineV#(TMul#(N,32), 2, K) colReadEngine <- mkMemreadEngineStaticSched(colReadSched);
+   MemwriteEngineV#(TMul#(N,32),2, J)   writeEngine <- mkMemwriteEngine();
+   MemreadEngineV#(TMul#(N,32), 2, J) rowReadEngine <- mkMemreadEngineBuff(512);
+   MemreadEngineV#(TMul#(N,32), 2, K) colReadEngine <- mkMemreadEngineBuff(512);
    
-      Vector#(J, Server#(MemengineCmd,Bool)) rowReadServers = rowReadEngine.readServers;
-      Vector#(K, Server#(MemengineCmd,Bool)) colReadServers = colReadEngine.readServers;
-      Vector#(J, PipeOut#(Bit#(TMul#(N,32)))) rowReadDataPipes = rowReadEngine.dataPipes;
-      Vector#(K, PipeOut#(Bit#(TMul#(N,32)))) colReadDataPipes = colReadEngine.dataPipes;
+   Vector#(J, Server#(MemengineCmd,Bool)) rowReadServers = rowReadEngine.readServers;
+   Vector#(K, Server#(MemengineCmd,Bool)) colReadServers = colReadEngine.readServers;
+   Vector#(J, PipeOut#(Bit#(TMul#(N,32)))) rowReadDataPipes = rowReadEngine.dataPipes;
+   Vector#(K, PipeOut#(Bit#(TMul#(N,32)))) colReadDataPipes = colReadEngine.dataPipes;
       
-      MemWriter#(TMul#(32,N)) bogusWriter <- mkMemWriter;
-      
-      Vector#(J, VectorSource#(DmaSz, Vector#(N,Float))) xvfsources <- mapM(uncurry(mkMemreadVectorSource), zip(rowReadServers, rowReadDataPipes));
-      Vector#(K, VectorSource#(DmaSz, Vector#(N,Float))) yvfsources <- mapM(uncurry(mkMemreadVectorSource), zip(colReadServers, colReadDataPipes));
-      Vector#(J,   VectorSink#(DmaSz, Vector#(N,Float)))      sinks <- mapM(uncurry(mkMemwriteVectorSink),   zip(writeEngine.writeServers,   writeEngine.dataPipes));
+   MemWriter#(TMul#(32,N)) bogusWriter <- mkMemWriter;
    
-      DmaMatrixMultiplyIfc#(MMSize,DmaSz) dmaMMF <- mkDmaMatrixMultiply(xvfsources, yvfsources, sinks, host);
-      interface Vector readClients  = cons(rowReadEngine.dmaClient, cons(colReadEngine.dmaClient, nil));
-      interface Vector writeClients = cons(writeEngine.dmaClient,   cons(bogusWriter.writeClient, nil));
-      method start = dmaMMF.start;
-      method finish = dmaMMF.finish;
-      interface DmaMatrixMultiplyDebug debug = dmaMMF.debug;
-   endmodule
-endinstance
+   Vector#(J, VectorSource#(DmaSz, Vector#(N,Float))) xvfsources <- mapM(uncurry(mkMemreadVectorSource), zip(rowReadServers, rowReadDataPipes));
+   Vector#(K, VectorSource#(DmaSz, Vector#(N,Float))) yvfsources <- mapM(uncurry(mkMemreadVectorSource), zip(colReadServers, colReadDataPipes));
+   Vector#(J,   VectorSink#(DmaSz, Vector#(N,Float)))      sinks <- mapM(uncurry(mkMemwriteVectorSink),   zip(writeEngine.writeServers,   writeEngine.dataPipes));
+   
+   DmaMatrixMultiplyIfc#(MMSize,DmaSz) dmaMMF <- mkDmaMatrixMultiply(xvfsources, yvfsources, sinks, host);
+   interface Vector readClients  = cons(rowReadEngine.dmaClient, cons(colReadEngine.dmaClient, nil));
+   interface Vector writeClients = cons(writeEngine.dmaClient,   cons(bogusWriter.writeClient, nil));
+   method start = dmaMMF.start;
+   method finish = dmaMMF.finish;
+   interface DmaMatrixMultiplyDebug debug = dmaMMF.debug;
+endmodule
    
 interface MmNT#(numeric type n);
    interface MmRequestNT mmRequest;
    interface MmDebugRequest mmDebug;
    interface TimerRequest timerRequest;
-   interface Vector#(NumberOfMasters, ObjectReadClient#(TMul#(32,n)))  readClients;
-   interface Vector#(NumberOfMasters, ObjectWriteClient#(TMul#(32,n))) writeClients;
+   interface Vector#(2, ObjectReadClient#(TMul#(32,n)))  readClients;
+   interface Vector#(2, ObjectWriteClient#(TMul#(32,n))) writeClients;
 endinterface
 
 module  mkMmNT#(MmIndication ind, TimerIndication timerInd, MmDebugIndication mmDebugIndication, HostType host)(MmNT#(N))
    provisos (Add#(1,a__,N),
 	     Add#(N,0,n),
-	     Mul#(N,32,DmaSz),
-	     DramMM#(NumberOfMasters)
+	     Mul#(N,32,DmaSz)
 	     );
 
    let n = valueOf(n);
 
-   DramMatrixMultiply#(N, TMul#(N,32),NumberOfMasters) dmaMMF <- mkDramMatrixMultiply(host);
+   DramMatrixMultiply#(N,TMul#(N,32),2) dmaMMF <- mkDramMatrixMultiply(host);
 
    Reg#(Bit#(64)) mmfCycles <- mkReg(0);
    rule countMmfCycles;

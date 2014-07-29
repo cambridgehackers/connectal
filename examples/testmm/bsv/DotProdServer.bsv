@@ -341,16 +341,6 @@ module  mkMmTile#(Clock slowClock, Reset slowReset, UInt#(TLog#(T)) tile)(MmTile
    endinterface
 endmodule : mkMmTile
 
-module mkRoundRobin(StaticSched#(numServers));
-   Reg#(Bit#(TLog#(numServers))) idxReg <- mkReg(0);
-   method Action nextIdx;
-      idxReg <= idxReg+1;
-   endmethod
-   method Bit#(TLog#(numServers)) loadIdx;
-      return idxReg;
-   endmethod
-endmodule
-
 typedef struct {
    a xbase;
    a xlimit;

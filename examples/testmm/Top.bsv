@@ -62,8 +62,8 @@ module  mkPortalTop#(HostType host)(PortalTop#(addrWidth,TMul#(32,N),Empty,Numbe
    MmDebugRequestWrapper mmDebugRequestWrapper <- mkMmDebugRequestWrapper(MmDebugRequestPortal,mm.mmDebug);
    TimerRequestWrapper timerRequestWrapper <- mkTimerRequestWrapper(TimerRequestPortal,mm.timerRequest);
    
-   Vector#(NumberOfMasters,ObjectReadClient#(TMul#(32,N)))  readClients  = mm.readClients;
-   Vector#(NumberOfMasters,ObjectWriteClient#(TMul#(32,N))) writeClients = mm.writeClients;
+   Vector#(2,ObjectReadClient#(TMul#(32,N)))  readClients  = mm.readClients;
+   Vector#(2,ObjectWriteClient#(TMul#(32,N))) writeClients = mm.writeClients;
 
    MemServer#(addrWidth, TMul#(32,N), NumberOfMasters) dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
    DmaConfigWrapper dmaConfigWrapper <- mkDmaConfigWrapper(DmaConfigPortal,dma.request);
