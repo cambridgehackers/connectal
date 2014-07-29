@@ -24,6 +24,7 @@ import Vector         :: *;
 import BRAM           :: *;
 import FIFOF          :: *;
 import GetPut         :: *;
+import Connectable    :: *;
 import PCIE           :: *;
 import Clocks         :: *;
 import PcieTracer     :: *;
@@ -155,6 +156,9 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
       readResponseFifo.enq(MemData { data: data, tag: beat.tag, last: beat.last });
    endrule
 
+   FIFOF#(BRAMRequest#(Bit#(TAdd#(TlpTraceAddrSize,1)),TimestampedTlpData)) bramRequestFifo <- mkFIFOF();
+   mkConnection(toGet(bramRequestFifo), tlpdata.bramServer.request);
+
    rule writeDataRule;
       let beat <- csrWag.addrBeat.get();
       let addr = beat.addr;
@@ -179,7 +183,7 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
 	    775: tlpdata.tlpTracing <= (dword != 0) ? True : False;
 
 	    768: begin
-		    tlpdata.bramServer.request.put(BRAMRequest{ write: False, responseOnWrite: False, address: bramMuxRdAddrReg, datain: unpack(0)});
+		    bramRequestFifo.enq(BRAMRequest{ write: False, responseOnWrite: False, address: bramMuxRdAddrReg, datain: ?});
 		    bramMuxRdAddrReg <= bramMuxRdAddrReg + 1;
 		 end
 	    792: tlpdata.pcieTraceBramWrAddr <= truncate(dword);
