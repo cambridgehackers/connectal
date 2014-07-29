@@ -77,5 +77,5 @@ module mkPortalTop(StdPortalDmaTop#(addrWidth))
    interface slave = ctrl_mux;
    interface masters = dma.masters;
    interface leds = default_leds;
-   interface pins; endinterface      
+   interface Empty pins; endinterface      
 endmodule : mkPortalTop
