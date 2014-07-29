@@ -111,7 +111,7 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
 
    rule readDataRule;
       let beat <- csrRag.addrBeat.get();
-      let addr = beat.addr;
+      let addr = beat.addr >> 2; // word address
       Bit#(32) data = 0;
       let modaddr = (addr % 8192);
       let msixaddr = modaddr - `msix_base;
@@ -161,7 +161,7 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
 
    rule writeDataRule;
       let beat <- csrWag.addrBeat.get();
-      let addr = beat.addr;
+      let addr = beat.addr >> 2; // word address
       let memData <- toGet(writeDataFifo).get();
       let dword = memData.data;
 
