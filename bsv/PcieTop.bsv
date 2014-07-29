@@ -37,7 +37,6 @@ import Top               :: *;
 import MemSlaveEngine    :: *;
 import MemMasterEngine   :: *;
 import PcieCsr           :: *;
-import MemSlave          :: *;
 import MemTypes          :: *;
 import Bscan             :: *;
 `ifndef BSIM
