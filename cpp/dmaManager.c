@@ -27,7 +27,6 @@
 #ifdef __KERNEL__
 #include <linux/slab.h>
 #include <linux/dma-buf.h>
-extern struct dma_buf *portalmem_dmabuffer_create(unsigned long len, unsigned long align);
 #define PORTAL_MALLOC(A) vmalloc(A)
 #define PORTAL_FREE(A) vfree(A)
 #else
@@ -131,6 +130,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
 #ifdef __KERNEL__
   struct sg_table *sgtable;
   struct scatterlist *sg;
+  struct file *fmem;
 #endif
 
   memcpy(portalAlloc, pa, sizeof(*pa));
@@ -141,11 +141,13 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
     goto retlab;
   }
 #else
-  sgtable = ((struct pa_buffer *)((struct dma_buf *)portalAlloc->header.fd)->priv)->sg_table;
+  fmem = fget(portalAlloc->header.fd);
+  sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
   for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
       portalAlloc->entries[i].dma_address = sg_phys(sg);
       portalAlloc->entries[i].length = sg->length;
   }
+  fput(fmem);
 #endif
   if (trace_memory)
     PORTAL_PRINTF("DmaManager_reference id=%08x, numEntries:=%d len=%08lx)\n", id, pa->header.numEntries, (long)portalAlloc->header.size);
@@ -201,10 +203,6 @@ retlab:
 int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa)
 {
   int rc = 0;
-#ifdef __KERNEL__
-  size_t align = 4096;
-  struct dma_buf *dmabuf;
-#endif
 
   PortalAlloc *portalAlloc = (PortalAlloc *)PORTAL_MALLOC(sizeof(PortalAlloc));
   memset(portalAlloc, 0, sizeof(*portalAlloc));
@@ -214,15 +212,7 @@ int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa)
   if (rc)
     PORTAL_PRINTF("portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
 #else
-  portalAlloc->header.size = PAGE_ALIGN(round_up(portalAlloc->header.size, align));
-  dmabuf = portalmem_dmabuffer_create(portalAlloc->header.size, align);
-  if (IS_ERR(dmabuf)) {
-      PORTAL_PRINTF("%s: portalmem_dmabuffer_create error\n", __FUNCTION__);
-      return PTR_ERR(dmabuf);
-  }
-  PORTAL_PRINTF("pa_get_dma_buf %p %zd\n", dmabuf->file, dmabuf->file->f_count.counter);
-  portalAlloc->header.numEntries = ((struct pa_buffer *)dmabuf->priv)->sg_table->nents;
-  portalAlloc->header.fd = (long)dmabuf;
+  portalAlloc->header.fd = portalmem_dmabuffer_create(portalAlloc->header.size);
 #endif
   PORTAL_PRINTF("alloc size=%ldMB fd=%ld numEntries=%d\n", 
       portalAlloc->header.size/(1L<<20), portalAlloc->header.fd, portalAlloc->header.numEntries);
