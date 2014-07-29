@@ -303,9 +303,12 @@ void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id)
 ssize_t bluesim_sock_fd_write(long fd)
 {
     struct memrequest foo = {MAGIC_PORTAL_FOR_SENDING_FD};
+    struct file *fmem;
 
-    printk("[%s:%d]\n", __FUNCTION__, __LINE__);
-    foo.addr = (void *)fd;
+    fmem = fget(fd);
+    foo.addr = fmem->private_data;
+    printk("[%s:%d] fd %lx dmabuf %p\n", __FUNCTION__, __LINE__, fd, foo.addr);
+    fput(fmem);
     down_interruptible(&bsim_avail);
     memcpy(&upreq, &foo, sizeof(upreq));
     have_request = 1;

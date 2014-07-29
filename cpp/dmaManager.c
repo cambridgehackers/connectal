@@ -203,6 +203,9 @@ retlab:
 int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa)
 {
   int rc = 0;
+#ifdef __KERNEL__
+  struct file *fmem;
+#endif
 
   PortalAlloc *portalAlloc = (PortalAlloc *)PORTAL_MALLOC(sizeof(PortalAlloc));
   memset(portalAlloc, 0, sizeof(*portalAlloc));
@@ -213,6 +216,9 @@ int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa)
     PORTAL_PRINTF("portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
 #else
   portalAlloc->header.fd = portalmem_dmabuffer_create(portalAlloc->header.size);
+  fmem = fget(portalAlloc->header.fd);
+  portalAlloc->header.numEntries = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table->nents;
+  fput(fmem);
 #endif
   PORTAL_PRINTF("alloc size=%ldMB fd=%ld numEntries=%d\n", 
       portalAlloc->header.size/(1L<<20), portalAlloc->header.fd, portalAlloc->header.numEntries);
