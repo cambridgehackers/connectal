@@ -137,6 +137,8 @@ read_verilog [ glob {verilog/*.v} ]
 
 source $xbsvdir/scripts/xbsv-synth-ip.tcl
 proc synth_pcie_if_needed {} {
+    global needspcie boardname xbsvdir xbsvipdir partname
+
     if $needspcie {
 	set pcieversion {3.0}
 	set maxlinkwidth {X8}
