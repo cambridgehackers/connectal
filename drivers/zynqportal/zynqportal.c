@@ -29,6 +29,9 @@
 #include <linux/scatterlist.h>
 
 #include "zynqportal.h"
+//#define MMAP_HW
+//#include "portal.h" // PORTAL_BASE_OFFSET
+//#include "../../cpp/dmaSendFd.c"
 
 #define DRIVER_NAME        "zynqportal"
 #define DRIVER_DESCRIPTION "Generic userspace hardware bridge"
@@ -142,6 +145,19 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
                 return 0;
                 }
                 break;
+#if 0
+        case PORTAL_SEND_FD: {
+                /* pushd down allocated fd */
+		PortalSendFd sendFd;
+
+                err = copy_from_user(&sendFd, (void __user *) arg, sizeof(sendFd));
+                if (err)
+                    break;
+                printk("[%s:%d] PORTAL_SEND_FD %x %x  **\n", __FUNCTION__, __LINE__, sendFd.fd, sendFd.id);
+                return send_fd_to_portal(portal_data->map_base, sendFd.fd, sendFd.id);
+                }
+                break;
+#endif
         default:
                 printk("portal_unlocked_ioctl ENOTTY cmd=%x\n", cmd);
                 return -ENOTTY;

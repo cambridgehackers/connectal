@@ -22,9 +22,8 @@
 
 #include "pcieportal.h"
 #define MMAP_HW
-#include "portal.h"
-#include "../../generated/cpp/DmaConfigProxy.c"
-#include "../portalmem/portalmem.h"
+#include "portal.h" // PORTAL_BASE_OFFSET
+#include "../../cpp/dmaSendFd.c"
 
 /* flag for adding 'direct call' interface to driver */
 //#define SUPPORT_MANUAL_INTERFACE
@@ -262,54 +261,13 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
         case PCIE_SEND_FD:
                 {
                 /* pushd down allocated fd */
-#define PAGE_SHIFT0 12
-#define PAGE_SHIFT4 16
-#define PAGE_SHIFT8 20
 		tSendFd sendFd;
-                int i, j;
-                uint64_t regions[3] = {0,0,0};
-                static uint64_t shifts[] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0, 0};
-                uint64_t border = 0;
-                unsigned char entryCount = 0;
-                uint64_t borderVal[3];
-                unsigned char idxOffset;
-                struct scatterlist *sg;
-                PortalInternal devptr = {0};
-                devptr.map_base = (volatile int *)(this_board->bar2io + PORTAL_BASE_OFFSET * this_portal->portal_number);
 
                 err = copy_from_user(&sendFd, (void __user *) arg, sizeof(sendFd));
                 if (err)
                     break;
                 printk("[%s:%d] PCIE_SEND_FD %x %x  **\n", __FUNCTION__, __LINE__, sendFd.fd, sendFd.id);
-
-                struct file *fmem = fget(sendFd.fd);
-                struct sg_table *sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
-                for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
-                  long addr = sg_phys(sg);
-                  for(j = 0; j < 3; j++)
-                      if (sg->length == 1<<shifts[j]) {
-                        regions[j]++;
-                        addr >>= shifts[j];
-                        break;
-                      }
-                  if (j >= 3)
-                    printk("DmaManager:unsupported sglist size %x\n", sg->length);
-                  printk("DmaManager:sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", sendFd.id, i, addr, sg->length);
-                  DmaConfigProxy_sglist(&devptr, (sendFd.id << 8) + i, addr, sg->length);
-                }
-                fput(fmem);
-                // HW interprets zeros as end of sglist
-                DmaConfigProxy_sglist(&devptr, (sendFd.id << 8) + i, 0, 0); // end list
-
-                for(i = 0; i < 3; i++){
-                  idxOffset = entryCount - border;
-                  entryCount += regions[i];
-                  border += regions[i];
-                  borderVal[i] = (border << 8) | idxOffset;
-                  border <<= (shifts[i] - shifts[i+1]);
-                }
-                printk("borders %d (%llx %llx %llx)\n", sendFd.id,borderVal[0], borderVal[1], borderVal[2]);
-                DmaConfigProxy_region(&devptr, sendFd.id, borderVal[0], borderVal[1], borderVal[2]);
+                return send_fd_to_portal((volatile int *)(this_board->bar2io + PORTAL_BASE_OFFSET * this_portal->portal_number), sendFd.fd, sendFd.id);
                 }
                 break;
         default:
