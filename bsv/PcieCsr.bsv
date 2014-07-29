@@ -27,7 +27,8 @@ import GetPut         :: *;
 import PCIE           :: *;
 import Clocks         :: *;
 import PcieTracer     :: *;
-import MemSlave       :: *;
+import MemTypes       :: *;
+import AddressGenerator::*;
 
 `define msix_base 1024
 
@@ -57,7 +58,7 @@ endfunction
 
 // control and status registers accessed from PCIe
 interface PcieControlAndStatusRegs;
-   interface MemSlaveClient client;
+   interface MemSlave#(32,32) memSlave;
    interface Vector#(16,ReadOnly_MSIX_Entry) msixEntry;
 endinterface: PcieControlAndStatusRegs
 
@@ -101,78 +102,112 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
        pcieTraceBramResponse <= v;
    endrule
 
-   interface MemSlaveClient client;
-   // Function to read from the CSR address space (using DW address)
-   method Bit#(32) rd(UInt#(16) addr);
+   AddressGenerator#(16)              csrRag <- mkAddressGenerator;
+   AddressGenerator#(16)              csrWag <- mkAddressGenerator;
+   FIFOF#(MemData#(32))     readResponseFifo <- mkFIFOF();
+   FIFOF#(MemData#(32))        writeDataFifo <- mkFIFOF();
+   FIFOF#(Bit#(ObjectTagSize)) writeDoneFifo <- mkFIFOF();
+
+   rule readDataRule;
+      let beat <- csrRag.addrBeat.get();
+      let addr = beat.addr;
+      Bit#(32) data = 0;
       let modaddr = (addr % 8192);
       let msixaddr = modaddr - `msix_base;
       if (msixaddr >= 0 && msixaddr <= 63)
          begin
-         let groupaddr = (msixaddr / 4);
-         //******************************** area referenced from xilinx_x7_pcie_wrapper.v
-         case (msixaddr % 4)
-         0: return msix_entry[groupaddr].addr_lo;
-         1: return msix_entry[groupaddr].addr_hi;
-         2: return msix_entry[groupaddr].msg_data;
-         3: return {'0, pack(msix_entry[groupaddr].masked)}; // vector control
-         default: return 32'hbad0add0;
-         endcase
-         end
-      else
-      case (modaddr)
-         // board identification
-         0: return 32'h65756c42; // Blue
-         1: return 32'h63657073; // spec
-	 
-	 768: return extend(bramMuxRdAddrReg);
-	 774: return fromInteger(2**valueOf(TAdd#(TlpTraceAddrSize,1)));
-	 775: return (tlpdata.tlpTracing ? 1 : 0);
-	 776: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 0);
-	 777: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 1);
-	 778: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 2);
-	 779: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 3);
-	 780: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 4);
-	 781: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 5);
-	 792: return extend(tlpdata.pcieTraceBramWrAddr);
-	 794: return extend(tlpdata.tlpTraceLimit);
-
-         //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
-         // 4-bit MSIx pending bit field
-         992: return '0;                               // PBA structure (low)
-         993: return '0;                               // PBA structure (high)
-         //******************************** end of area referenced from xilinx_x7_pcie_wrapper.v
-         // unused addresses
-         default: return 32'hbad0add0;
-      endcase
-   endmethod
-
-   // Function to write to the CSR address space (using DW address)
-   method Action wr(UInt#(16) addr, Bit#(32) dword);
-         let modaddr = (addr % 8192);
-         let msixaddr = modaddr - `msix_base;
-         if (msixaddr >= 0 && msixaddr <= 63)
-            begin
             let groupaddr = (msixaddr / 4);
             //******************************** area referenced from xilinx_x7_pcie_wrapper.v
             case (msixaddr % 4)
-            0: msix_entry[groupaddr].addr_lo  <= (dword & 32'hfffffffc);
-            1: msix_entry[groupaddr].addr_hi  <= dword;
-            2: msix_entry[groupaddr].msg_data <= dword;
-            3: msix_entry[groupaddr].masked <= unpack(dword[0]);
+               0: data = msix_entry[groupaddr].addr_lo;
+               1: data = msix_entry[groupaddr].addr_hi;
+               2: data = msix_entry[groupaddr].msg_data;
+               3: data = {'0, pack(msix_entry[groupaddr].masked)}; // vector control
+               default: data = 32'hbad0add0;
             endcase
-            end
-         else
+         end
+      else
+	 case (modaddr)
+            // board identification
+            0: data = 32'h65756c42; // Blue
+            1: data = 32'h63657073; // spec
+	    
+	    768: data = extend(bramMuxRdAddrReg);
+	    774: data = fromInteger(2**valueOf(TAdd#(TlpTraceAddrSize,1)));
+	    775: data = (tlpdata.tlpTracing ? 1 : 0);
+	    776: data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 0);
+	    777: data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 1);
+	    778: data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 2);
+	    779: data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 3);
+	    780: data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 4);
+	    781: data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 5);
+	    792: data = extend(tlpdata.pcieTraceBramWrAddr);
+	    794: data = extend(tlpdata.tlpTraceLimit);
+
+            //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
+            // 4-bit MSIx pending bit field
+            992: data = '0;                               // PBA structure (low)
+            993: data = '0;                               // PBA structure (high)
+            //******************************** end of area referenced from xilinx_x7_pcie_wrapper.v
+            // unused addresses
+            default: data = 32'hbad0add0;
+	 endcase
+      readResponseFifo.enq(MemData { data: data, tag: beat.tag, last: beat.last });
+   endrule
+
+   rule writeDataRule;
+      let beat <- csrWag.addrBeat.get();
+      let addr = beat.addr;
+      let memData <- toGet(writeDataFifo).get();
+      let dword = memData.data;
+
+      let modaddr = (addr % 8192);
+      let msixaddr = modaddr - `msix_base;
+      if (msixaddr >= 0 && msixaddr <= 63)
+         begin
+            let groupaddr = (msixaddr / 4);
+            //******************************** area referenced from xilinx_x7_pcie_wrapper.v
+            case (msixaddr % 4)
+               0: msix_entry[groupaddr].addr_lo  <= (dword & 32'hfffffffc);
+               1: msix_entry[groupaddr].addr_hi  <= dword;
+               2: msix_entry[groupaddr].msg_data <= dword;
+               3: msix_entry[groupaddr].masked <= unpack(dword[0]);
+            endcase
+         end
+      else
          case (modaddr)
 	    775: tlpdata.tlpTracing <= (dword != 0) ? True : False;
 
 	    768: begin
 		    tlpdata.bramServer.request.put(BRAMRequest{ write: False, responseOnWrite: False, address: bramMuxRdAddrReg, datain: unpack(0)});
 		    bramMuxRdAddrReg <= bramMuxRdAddrReg + 1;
-		    end
+		 end
 	    792: tlpdata.pcieTraceBramWrAddr <= truncate(dword);
 	    794: tlpdata.tlpTraceLimit <= truncate(dword);
          endcase
-   endmethod
+      if (beat.last)
+	 writeDoneFifo.enq(beat.tag);
+   endrule
+
+   interface MemSlave memSlave;
+      interface MemReadServer read_server;
+	 interface Put readReq;
+	    method Action put(MemRequest#(32) req);
+	       csrRag.request.put(MemRequest { addr: truncate(req.addr), burstLen: req.burstLen, tag: req.tag});
+	    endmethod
+	 endinterface
+	 interface Get readData = toGet(readResponseFifo);
+   endinterface: read_server
+
+  interface MemWriteServer write_server; 
+	 interface Put writeReq;
+	    method Action put(MemRequest#(32) req);
+	       csrWag.request.put(MemRequest { addr: truncate(req.addr), burstLen: req.burstLen, tag: req.tag});
+	    endmethod
+	 endinterface
+     interface Put writeData = toPut(writeDataFifo);
+     interface Get writeDone = toGet(writeDoneFifo);
+   endinterface: write_server
    endinterface
    interface Vector msixEntry = map(toReadOnlyMsixEntry, msix_entry);
 endmodule: mkPcieControlAndStatusRegs

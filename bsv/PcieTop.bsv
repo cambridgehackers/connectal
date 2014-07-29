@@ -111,8 +111,7 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
 `endif
 
    PcieControlAndStatusRegs csr <- mkPcieControlAndStatusRegs(traceif.tlpdata);
-   MemSlave#(32,32) csr_slave <- mkMemSlave(csr.client);
-   mkConnection(mvec[portConfig].master, csr_slave);
+   mkConnection(mvec[portConfig].master, csr.memSlave);
 
    interface msixEntry = csr.msixEntry;
    interface master = mvec[portPortal].master;
