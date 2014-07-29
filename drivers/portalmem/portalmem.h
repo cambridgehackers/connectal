@@ -42,6 +42,7 @@ typedef struct PortalAlloc {
 #define PA_ALLOC _IOWR('B', 10, PortalAlloc)
 #define PA_DCACHE_FLUSH_INVAL _IOWR('B', 11, PortalAlloc)
 #define PA_DMA_ADDRESSES _IOWR('B', 13, PortalAlloc)
+#define PA_MALLOC _IOWR('B', 14, unsigned long)
 
 /**
  * struct pa_buffer - metadata for a particular buffer
@@ -59,6 +60,7 @@ struct pa_buffer {
     void            *vaddr;
     struct sg_table *sg_table;
 };
+int portalmem_dmabuffer_create(unsigned long len);
 #endif
 
 #endif /* __PORTALALLOC_H__ */

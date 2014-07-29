@@ -236,8 +236,7 @@ static struct dma_buf_ops dma_buf_ops = {
   .kunmap           = pa_dma_buf_kunmap,
 };
 
-static struct dma_buf *portalmem_dmabuffer_create(unsigned long len,
-					  unsigned long align)
+int portalmem_dmabuffer_create(unsigned long len)
 {
   static unsigned int high_order_gfp_flags = (GFP_HIGHUSER | __GFP_ZERO |
 	    __GFP_NOWARN | __GFP_NORETRY | __GFP_NO_KSWAPD) & ~__GFP_WAIT;
@@ -255,16 +254,21 @@ static struct dma_buf *portalmem_dmabuffer_create(unsigned long len,
     struct list_head list;
   } *info = NULL, *tmp_info;
   unsigned int max_order = orders[0];
-  long size_remaining = len;
+  long size_remaining;
   int infocount = 0;
+  size_t align = 4096;
+  int return_fd;
 
+  printk("%s, size=%zd\n", __FUNCTION__, len);
+  len = PAGE_ALIGN(round_up(len, align));
+  size_remaining = len;
   buffer = kzalloc(sizeof(struct pa_buffer), GFP_KERNEL);
   if (!buffer)
-    return ERR_PTR(-ENOMEM);
+    return -ENOMEM;
   table = kmalloc(sizeof(struct sg_table), GFP_KERNEL);
   if (!table) {
     kfree(buffer);
-    return ERR_PTR(-ENOMEM);
+    return -ENOMEM;
   }
   INIT_LIST_HEAD(&pages);
   while (size_remaining > 0) {
@@ -313,7 +317,7 @@ static struct dma_buf *portalmem_dmabuffer_create(unsigned long len,
       }
       if (IS_ERR_OR_NULL(table)) {
         pa_buffer_free(buffer);
-        return ERR_PTR(PTR_ERR(table));
+        return PTR_ERR(table);
       }
       buffer->sg_table = table;
       buffer->size = len;
@@ -331,7 +335,11 @@ static struct dma_buf *portalmem_dmabuffer_create(unsigned long len,
       dmabuf = dma_buf_export(buffer, &dma_buf_ops, len, O_RDWR);
       if (IS_ERR(dmabuf))
         pa_buffer_free(buffer);
-      return dmabuf;
+      printk("pa_get_dma_buf %p %zd\n", dmabuf->file, dmabuf->file->f_count.counter);
+      return_fd = dma_buf_fd(dmabuf, O_CLOEXEC);
+      if (return_fd < 0)
+        dma_buf_put(dmabuf);
+      return return_fd;
     }
     kfree(table);
   }
@@ -341,7 +349,7 @@ static struct dma_buf *portalmem_dmabuffer_create(unsigned long len,
     kfree(info);
   }
   kfree(buffer);
-  return ERR_PTR(-ENOMEM);
+  return -ENOMEM;
 }
 
 /*
@@ -379,20 +387,15 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
   }
   case PA_ALLOC: {
     struct PortalAllocHeader header;
-    size_t align = 4096;
-    struct dma_buf *dmabuf;
+    struct file *f;
     if (copy_from_user(&header, (void __user *)arg, sizeof(header)))
       return -EFAULT;
-    printk("%s, header.size=%zd\n", __FUNCTION__, header.size);
-    header.size = PAGE_ALIGN(round_up(header.size, align));
-    dmabuf = portalmem_dmabuffer_create(header.size, align);
-    if (IS_ERR(dmabuf))
-      return PTR_ERR(dmabuf);
-    printk("pa_get_dma_buf %p %zd\n", dmabuf->file, dmabuf->file->f_count.counter);
-    header.numEntries = ((struct pa_buffer *)dmabuf->priv)->sg_table->nents;
-    header.fd = dma_buf_fd(dmabuf, O_CLOEXEC);
+    header.fd = portalmem_dmabuffer_create(header.size);
     if (header.fd < 0)
-      dma_buf_put(dmabuf);
+      return header.fd;
+    f = fget(header.fd);
+    header.numEntries = ((struct pa_buffer *)((struct dma_buf *)f->private_data)->priv)->sg_table->nents;
+    fput(f);
     if (copy_to_user((void __user *)arg, &header, sizeof(header)))
       return -EFAULT;
     return 0;
@@ -416,6 +419,9 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
     }
     fput(f);
     return 0;
+  }
+  case PA_MALLOC: {
+    return portalmem_dmabuffer_create((unsigned long)arg);
   }
   default:
     printk("pa_unlocked_ioctl ENOTTY cmd=%x\n", cmd);
