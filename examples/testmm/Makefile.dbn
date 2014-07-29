@@ -1,10 +1,10 @@
 BSVDIR=$(XBSVDIR)/bsv
-S2H = RbmRequest MmRequest SigmoidRequest TimerRequest DmaConfig FpMacRequest FpMulRequest MmDebugRequest 
+S2H = RbmRequest  MmRequestTN MmRequestNT SigmoidRequest TimerRequest DmaConfig FpMacRequest FpMulRequest MmDebugRequest 
 H2S = RbmIndication MmIndication SigmoidIndication TimerIndication DmaIndication FpMacIndication FpMulIndication MmDebugIndication
 BSVFILES = $(DBNDIR)/bsv/RbmTypes.bsv $(DBNDIR)/bsv/Timer.bsv $(DBNDIR)/bsv/FpMacTb.bsv $(DBNTOPBSV)
 CPPFILES= $(DBNDIR)/cpp/portalmat.cpp $(DBNDIR)/cpp/rbm.cpp $(TESTCPPFILES)
 XBSVFLAGS += --clib opencv_core --stl=stlport_static
-XBSVFLAGS += -D IMPORT_HOSTIF #-D INTERLEAVED
+XBSVFLAGS += -D IMPORT_HOSTIF -D MATRIX_NT
 XBSVFLAGS += --bscflags="+RTS -K16777216 -RTS"
 Dma = Dma
 PINS = Std

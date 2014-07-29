@@ -33,7 +33,17 @@
 #include "DmaConfigProxy.h"
 #include "RbmRequestProxy.h"
 #include "RbmIndicationWrapper.h"
-#include "MmRequestProxy.h"
+
+#ifdef MATRIX_NT
+#include "MmRequestNTProxy.h"
+extern MmRequestNTProxy *mmdevice;
+#else
+#ifdef MATRIX_TN
+#include "MmRequestTNProxy.h"
+extern MmRequestTNProxy *mmdevice;
+#endif
+#endif
+ 
 #include "MmIndicationWrapper.h"
 #include "MmDebugIndicationWrapper.h"
 #include "SigmoidRequestProxy.h"
@@ -44,7 +54,6 @@
 class SigmoidIndication;
 
 extern RbmRequestProxy *rbmdevice;
-extern MmRequestProxy *mmdevice;
 extern SigmoidRequestProxy *sigmoiddevice;
 extern SigmoidIndication *sigmoidindication;
 extern TimerRequestProxy *timerdevice;
@@ -85,14 +94,7 @@ public:
   bool compare(Mat &other, const char *file=0, int line=0, float epsilon=0.0001, Mat *pm = 0, bool verbose = false);
   void naive_mul(cv::Mat &a, cv::Mat &b, FILE *f);
 
-  /*!
-   * Multiplies a * b-transpose
-   */
   void multf(PortalMat &a, PortalMat &b_transpose, MmIndication *mmind = NULL);
-  /*!
-   * Multiplies a * b
-   */
-  void multf_interleaved(PortalMat &a, PortalMat &b, MmIndication *mmind = NULL);
   void sigmoid(PortalMat &a);
   void hiddenStates(PortalMat &a);
   void hiddenStates2(PortalMat &a, PortalMat &rand);

@@ -21,7 +21,15 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <MmRequestProxy.h>
+#ifdef MATRIX_NT
+#include "MmRequestNTProxy.h"
+MmRequestNTProxy *mmdevice = 0;
+#else
+#ifdef MATRIX_TN
+#include "MmRequestTNProxy.h"
+MmRequestTNProxy *mmdevice = 0;
+#endif
+#endif
 #include <MmIndicationWrapper.h>
 #include <MmDebugIndicationWrapper.h>
 #include <MmDebugRequestProxy.h>
@@ -51,7 +59,6 @@ class MmDebugIndication;
 #define N 2
 
 RbmRequestProxy *rbmdevice = 0;
-MmRequestProxy *mmdevice = 0;
 MmDebugRequestProxy *mmdebug = 0;
 SigmoidIndication *sigmoidindication = 0;
 SigmoidRequestProxy *sigmoiddevice = 0;
@@ -97,7 +104,14 @@ int main(int argc, const char **argv)
   PortalPoller *poller = new PortalPoller();
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
-  mmdevice = new MmRequestProxy(IfcNames_MmRequestPortal);
+
+#ifdef MATRIX_NT
+  mmdevice = new MmRequestNTProxy(IfcNames_MmRequestPortal);
+#else
+#ifdef MATRIX_TN
+  mmdevice = new MmRequestTNProxy(IfcNames_MmRequestPortal);
+#endif
+#endif
   mmdebug = new MmDebugRequestProxy(IfcNames_MmDebugRequestPortal);
   mmdeviceIndication = new MmIndication(IfcNames_MmIndicationPortal);
   mmDebugIndication = new MmDebugIndication(IfcNames_MmDebugIndicationPortal);
@@ -197,21 +211,25 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "pm1\n");
   PortalMat pm1(m1);
-#ifdef INTERLEAVED
+#ifdef MATRIX_TN
   fprintf(stderr, "pm2\n");
   PortalMat pm2(m2);
 #else
+#ifdef MATRIX_NT
   fprintf(stderr, "pm2t\n");
   PortalMat pm2t(m2.t());
+#endif
 #endif
   PortalMat pm3;
 
   // now reference the matrices so we do not count that in the timer
   pm1.reference();
-#ifdef INTERLEAVED
+#ifdef MATRIX_TN
   pm2.reference();
 #else
+#ifdef MATRIX_NT
   pm2t.reference();
+#endif
 #endif
   pm3.create(m1.rows, m2.cols, CV_32F);
   pm3.reference();
@@ -225,10 +243,12 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "HW matmul\n");
   start_timer(0);
-#ifdef INTERLEAVED
-  pm3.multf_interleaved(pm1, pm2, mmdeviceIndication);
+#ifdef MATRIX_TN
+  pm3.multf(pm1, pm2, mmdeviceIndication);
 #else
+#ifdef MATRIX_NT
   pm3.multf(pm1, pm2t, mmdeviceIndication);
+#endif
 #endif
   uint64_t hw_cycles = lap_timer(0); 
   uint64_t read_beats = dma->show_mem_stats(ChannelType_Read);

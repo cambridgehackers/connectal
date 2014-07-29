@@ -72,13 +72,22 @@ interface MmIndication;
    method Action mmfDone(Bit#(64) cycles);
 endinterface
 
-interface MmRequest;
+interface MmRequestNT;
    method Action mmf(Bit#(32) inPointer1, Bit#(32) r1, Bit#(32) c1,
 		     Bit#(32) inPointer2, Bit#(32) r2, Bit#(32) c2,
 		     Bit#(32) outPointer,
 		     Bit#(32) r1_x_c1, Bit#(32) c1_x_j,
 		     Bit#(32) r2_x_c2, Bit#(32) c2_x_k,
 		     Bit#(32) r1_x_r1, Bit#(32) r2_x_j);
+endinterface
+
+interface MmRequestTN;
+   method Action mmf(Bit#(32) inPointer1, Bit#(32) r1, Bit#(32) c1,
+		     Bit#(32) inPointer2, Bit#(32) r2, Bit#(32) c2,
+		     Bit#(32) outPointer,
+		     Bit#(32) r1_x_c1, Bit#(32) c1_x_j,
+		     Bit#(32) r1_x_c2, Bit#(32) c2_x_j,
+		     Bit#(32) r1_x_r2, Bit#(32) r2_x_c2);
 endinterface
 
 interface SigmoidIndication;

@@ -262,6 +262,8 @@ void PortalMat::naive_mul(cv::Mat &a, cv::Mat &b, FILE *f)
 }
 
 
+#ifdef MATRIX_NT
+
 /*!
  * Multiplies a * b-transpose
  */
@@ -295,10 +297,13 @@ void PortalMat::multf(PortalMat &a, PortalMat &b_transpose,  MmIndication *mmind
     }
 }
 
+
+#else
+#ifdef MATRIX_TN
 /*!
  * Multiplies a * b
  */
-void PortalMat::multf_interleaved(PortalMat &a, PortalMat &b,  MmIndication *mmind)
+void PortalMat::multf(PortalMat &a, PortalMat &b,  MmIndication *mmind)
 {
     if (a.cols != b.rows) {
 	fprintf(stderr, "Mismatched matrices: a.rows=%d a.cols=%d b.rows=%d b.cols=%d\n", a.rows, a.cols, b.rows, b.cols);
@@ -328,6 +333,8 @@ void PortalMat::multf_interleaved(PortalMat &a, PortalMat &b,  MmIndication *mmi
     }
 }
 
+#endif
+#endif
 
 void PortalMat::sigmoid(PortalMat &a)
 {

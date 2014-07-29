@@ -21,17 +21,19 @@ import HostInterface::*;
 import DmaConfigWrapper::*;
 import DmaIndicationProxy::*;
 import MmIndicationProxy::*;
-import MmRequestWrapper::*;
 import TimerIndicationProxy::*;
 import TimerRequestWrapper::*;
 import MmDebugRequestWrapper::*;
 import MmDebugIndicationProxy::*;
 
-// defined by user
-`ifdef INTERLEAVED
-import MatrixInterleaved::*;
+`ifdef MATRIX_TN
+import MmRequestTNWrapper::*;
+import MatrixTN::*;
 `else
-import Matrix::*;
+`ifdef MATRIX_NT
+import MmRequestNTWrapper::*;
+import MatrixNT::*;
+`endif
 `endif
 
 module  mkPortalTop#(HostType host)(PortalTop#(addrWidth,TMul#(32,N),Empty,NumberOfMasters))
@@ -48,8 +50,15 @@ module  mkPortalTop#(HostType host)(PortalTop#(addrWidth,TMul#(32,N),Empty,Numbe
    MmDebugIndicationProxy mmDebugIndicationProxy <- mkMmDebugIndicationProxy(MmDebugIndicationPortal);
    MmIndicationProxy mmIndicationProxy <- mkMmIndicationProxy(MmIndicationPortal);
    TimerIndicationProxy timerIndicationProxy <- mkTimerIndicationProxy(TimerIndicationPortal);
-   Mm#(N) mm <- mkMm(mmIndicationProxy.ifc, timerIndicationProxy.ifc, mmDebugIndicationProxy.ifc, host);
-   MmRequestWrapper mmRequestWrapper <- mkMmRequestWrapper(MmRequestPortal,mm.mmRequest);
+`ifdef MATRIX_TN
+   MmTN#(N) mm <- mkMmTN(mmIndicationProxy.ifc, timerIndicationProxy.ifc, mmDebugIndicationProxy.ifc, host);
+   MmRequestTNWrapper mmRequestWrapper <- mkMmRequestTNWrapper(MmRequestPortal,mm.mmRequest);
+`else
+`ifdef MATRIX_NT
+   MmNT#(N) mm <- mkMmNT(mmIndicationProxy.ifc, timerIndicationProxy.ifc, mmDebugIndicationProxy.ifc, host);
+   MmRequestNTWrapper mmRequestWrapper <- mkMmRequestNTWrapper(MmRequestPortal,mm.mmRequest);
+`endif
+`endif
    MmDebugRequestWrapper mmDebugRequestWrapper <- mkMmDebugRequestWrapper(MmDebugRequestPortal,mm.mmDebug);
    TimerRequestWrapper timerRequestWrapper <- mkTimerRequestWrapper(TimerRequestPortal,mm.timerRequest);
    
