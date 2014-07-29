@@ -11,4 +11,5 @@ fi
 sudo insmod kernel_exe.ko
 ./bsim_relay
 kill $bsimpid
+sudo rmmod kernel_exe
 dmesg | tail -200
