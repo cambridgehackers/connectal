@@ -1,6 +1,8 @@
 
-all:
+all: pciedrivers
 	make parsetab.py
+
+pciedrivers:
 	(cd drivers/pcieportal; make)
 	make -C pcie/xbsvutil
 
