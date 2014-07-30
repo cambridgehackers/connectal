@@ -48,6 +48,8 @@
 
 static int trace_memory;// = 1;
 
+#include "dmaSendFd.h"
+
 void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *argDevice)
 {
   memset(priv, 0, sizeof(*priv));
@@ -99,99 +101,6 @@ uint64_t DmaManager_show_mem_stats(DmaManagerPrivate *priv, ChannelType rc)
   sem_wait(&priv->mtSem);
   rv += priv->mtCnt;
   return rv;
-}
-
-static int host_sendfd(DmaManagerPrivate *priv, int id, PortalAlloc *pa)
-{
-  int rc = 0;
-  const int PAGE_SHIFT0 = 12;
-  const int PAGE_SHIFT4 = 16;
-  const int PAGE_SHIFT8 = 20;
-  int i, j;
-  uint32_t regions[3] = {0,0,0};
-  int shifts[] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0, 0};
-  int size_accum = 0;
-  uint64_t border = 0;
-  unsigned char entryCount = 0;
-  uint64_t borderVal[3];
-  unsigned char idxOffset;
-  PortalAlloc *portalAlloc;
-#ifdef __KERNEL__
-  struct sg_table *sgtable;
-  struct scatterlist *sg;
-  struct file *fmem = fget(pa->header.fd);
-
-  sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
-  pa->header.numEntries = sgtable->nents;
-#endif
-
-  portalAlloc = (PortalAlloc *)PORTAL_MALLOC(sizeof(PortalAlloc)+((pa->header.numEntries+1)*sizeof(DmaEntry)));
-  memcpy(portalAlloc, pa, sizeof(*pa));
-#ifdef __KERNEL__
-  for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
-      portalAlloc->entries[i].dma_address = sg_phys(sg);
-      portalAlloc->entries[i].length = sg->length;
-  }
-  fput(fmem);
-#else
-  rc = ioctl(priv->pa_fd, PA_DMA_ADDRESSES, portalAlloc);
-  if (rc){
-    PORTAL_PRINTF("portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
-    goto retlab;
-  }
-#endif
-  if (trace_memory)
-    PORTAL_PRINTF("DmaManager_reference id=%08x, numEntries:=%d len=%08lx)\n", id, pa->header.numEntries, (long)portalAlloc->header.size);
-#ifndef MMAP_HW
-  bluesim_sock_fd_write(portalAlloc->header.fd);
-#endif
-  for(i = 0; i < portalAlloc->header.numEntries; i++){
-    DmaEntry *e = &(portalAlloc->entries[i]);
-    long addr;
-#ifdef MMAP_HW
-    addr = e->dma_address;
-#else
-    addr = size_accum;
-    size_accum += e->length;
-    addr |= ((long)id) << 32; //[39:32] = truncate(pref);
-#endif
-    for(j = 0; j < 3; j++)
-        if (e->length == 1<<shifts[j]) {
-          regions[j]++;
-          if (addr & ((1L<<shifts[j]) - 1))
-              PORTAL_PRINTF("%s: addr %lx shift %x *********\n", __FUNCTION__, addr, shifts[j]);
-          addr >>= shifts[j];
-          break;
-        }
-    if (j >= 3)
-      PORTAL_PRINTF("DmaManager:unsupported sglist size %x\n", e->length);
-    if (trace_memory)
-      PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, (long)addr, e->length);
-    DMAsglist(priv->device, (id << 8) + i, addr, e->length);
-  }
-  // HW interprets zeros as end of sglist
-  if (trace_memory)
-    PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d end of list)\n", id, i);
-  DMAsglist(priv->device, (id << 8) + i, 0, 0); // end list
-
-  for(i = 0; i < 3; i++){
-    idxOffset = entryCount - border;
-    entryCount += regions[i];
-    border += regions[i];
-    borderVal[i] = (border << 8) | idxOffset;
-    border <<= (shifts[i] - shifts[i+1]);
-  }
-  if (trace_memory) {
-    PORTAL_PRINTF("regions %d (%x %x %x)\n", id,regions[0], regions[1], regions[2]);
-    PORTAL_PRINTF("borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borderVal[0], borderVal[1], borderVal[2]);
-  }
-  DMAregion(priv->device, id, borderVal[0], borderVal[1], borderVal[2]);
-  //PORTAL_PRINTF("%s:%d sem_wait\n", __FUNCTION__, __LINE__);
-  sem_wait(&priv->confSem);
-  rc = id;
-retlab:
-  PORTAL_FREE(portalAlloc);
-  return rc;
 }
 
 int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)

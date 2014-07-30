@@ -21,9 +21,10 @@
 #include <linux/dma-buf.h>
 
 #include "pcieportal.h"
+#define XBSV_DRIVER_CODE
 #define MMAP_HW
 #include "portal.h" // PORTAL_BASE_OFFSET
-#include "../../cpp/dmaSendFd.c"
+#include "../../cpp/dmaSendFd.h"
 
 /* flag for adding 'direct call' interface to driver */
 //#define SUPPORT_MANUAL_INTERFACE

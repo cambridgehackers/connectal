@@ -29,7 +29,8 @@
 #include <linux/scatterlist.h>
 
 #include "zynqportal.h"
-#include "../../cpp/dmaSendFd.c"
+#define XBSV_DRIVER_CODE
+#include "../../cpp/dmaSendFd.h"
 
 #define DRIVER_NAME        "zynqportal"
 #define DRIVER_DESCRIPTION "Generic userspace hardware bridge"

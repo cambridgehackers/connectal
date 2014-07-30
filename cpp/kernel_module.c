@@ -104,12 +104,14 @@ static int __init pa_init(void)
 static void __exit pa_exit(void)
 {
   printk("TestProgram::pa_exit\n");
+#ifdef BOARD_bluesim
   if (!bsim_relay_running) {
     printk("TestProgram::pa_exit terminate main program\n");
     main_program_finished = 1;
     up(&bsim_start); // in case host never starts
   }
   else
+#endif
     wait_for_completion(&main_completion);
   misc_deregister(&miscdev);
 }
