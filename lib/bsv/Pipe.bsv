@@ -544,6 +544,17 @@ module mkJoin#(function c f(a av, b bv), PipeOut#(a) apipe, PipeOut#(b) bpipe)(P
    endmethod
 endmodule
 
+module mkJoinBuffered#(function c f(a av, b bv), PipeOut#(a) apipe, PipeOut#(b) bpipe)(PipeOut#(c))
+   provisos (Bits#(c, csz));
+   FIFOF#(c) joinFifo <- mkFIFOF();
+   rule joinrule;
+      let av <- toGet(apipe).get();
+      let bv <- toGet(bpipe).get();
+      joinFifo.enq(f(av, bv));
+   endrule
+   return toPipeOut(joinFifo);
+endmodule
+
 module mkJoinVector#(function b f(Vector#(n, a) av), Vector#(n, PipeOut#(a)) apipes)(PipeOut#(b))
    provisos (Bits#(Vector#(n,a),vasz));
    method b first();
