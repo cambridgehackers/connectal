@@ -71,7 +71,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
     FIFOF#(TLPTag) writeTag <- mkSizedFIFOF(16);
     FIFOF#(TLPTag) doneTag <- mkSizedFIFOF(16);
 
-    function Integer tlpWordCount(TLPData#(16) tlp);
+    function LUInt#(4) tlpWordCount(TLPData#(16) tlp);
        if (tlp.be == 16'h0000)
 	  return 0;
        else if (tlp.be == 16'h000f || tlp.be == 16'hf000)
@@ -180,8 +180,17 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    endrule
 
    Reg#(TLPTag) lastTag <- mkReg(0);
-   rule handleTlpIn;
-      let tlp = tlpInFifo.first;
+   FIFOF#(TLPData#(16)) tlpDecodeFifo <- mkFIFOF();
+   FIFOF#(LUInt#(4))    tlpWordCountFifo <- mkFIFOF();
+   rule tlpInRule;
+      let tlp <- toGet(tlpInFifo).get();
+      tlpWordCountFifo.enq(tlpWordCount(tlp));
+      tlpDecodeFifo.enq(tlp);
+   endrule
+
+   rule handleTlpRule;
+      let tlp = tlpDecodeFifo.first;
+      let count = tlpWordCountFifo.first;
       Bool handled = False;
       TLPMemoryIO3DWHeader h = unpack(tlp.data);
       hitReg <= tlp.hit;
@@ -191,26 +200,16 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       Vector#(4, Bit#(32)) tlpvec = unpack(tlp.data);
 
       if (!tlp.sof) begin
-	 let count = tlpWordCount(tlp);
-	 // if sof is false, then count will be at least 1
-	 function Bit#(32) f(Integer i);
-	    begin
-	       if (i < count)
-		  return tlpvec[3-i];
-	       else
-		  return 32'hbad0beef;
-	    end
-	 endfunction
-	 vec = genWith(f);
+	 vec = reverse(tlpvec);
 	 // The MIMO implicit guard only checks for space to enqueue 1 element
 	 // so we explicitly check for the number of elements required
 	 // otherwise elements in the queue will be overwritten.
-	 if (completionMimo.enqReadyN(fromInteger(count))
-	    && completionTagMimo.enqReadyN(fromInteger(count)))
+	 if (completionMimo.enqReadyN(count)
+	    && completionTagMimo.enqReadyN(count))
 	    begin
-	       completionMimo.enq(fromInteger(count), vec);
+	       completionMimo.enq(count, vec);
 	       Vector#(4, TLPTag) tagvec = replicate(lastTag);
-	       completionTagMimo.enq(fromInteger(count), tagvec);
+	       completionTagMimo.enq(count, tagvec);
 	       handled = True;
 	    end
       end
@@ -226,8 +225,10 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	    handled = True;
       end
       //$display("tlpIn handled=%d tlp=%h\n", handled, tlp);
-      if (handled)
-	 tlpInFifo.deq();
+      if (handled) begin
+	 tlpDecodeFifo.deq();
+	 tlpWordCountFifo.deq();
+      end
    endrule
 
     interface Client        tlp;
