@@ -26,6 +26,7 @@ import Vector::*;
 import GetPut::*;
 import ClientServer::*;
 
+import Arith::*;
 import Pipe::*;
 import MemTypes::*;
 import MemreadEngine::*;
@@ -69,12 +70,29 @@ module mkMemread#(MemreadIndication indication) (Memread);
    Vector#(NumEngineServers, FIFOF#(Bit#(32))) mismatchFifos <- replicateM(mkFIFOF);
    Bit#(ObjectOffsetSize) chunk = (extend(numWords)/fromInteger(valueOf(NumEngineServers)))*4;
    
+   Vector#(NumEngineServers, RangePipeIfc#(Bit#(32)))     rangePipeIfcs <- replicateM(mkRangePipeOut);
+   function PipeOut#(a) getRangePipePipe(RangePipeIfc#(a) rpi); return rpi.pipe; endfunction
+   Vector#(NumEngineServers, PipeOut#(Vector#(1,Bit#(32)))) rangePipes = map(mapPipe(replicate), map(getRangePipePipe, rangePipeIfcs));
+   Vector#(NumEngineServers, PipeOut#(Vector#(2,Bit#(32)))) srcGenPipes <- mapM(mkUnfunnel, rangePipes);
+   function Vector#(2,Bit#(32)) split(Bit#(64) v); return unpack(v); endfunction
+   Vector#(NumEngineServers, PipeOut#(Vector#(2,Bit#(32)))) readPipes <- mapM(mkMapPipe(split), re.dataPipes);
+
+   function Vector#(n, Bool) vcompare(Vector#(n, a) x, Vector#(n, a) y) provisos (Eq#(a));
+      return map(uncurry(eq), zip(x,y));
+   endfunction
+   Vector#(NumEngineServers, PipeOut#(Vector#(2, Bool)))  mismatchPipes <- mapM(uncurry(mkJoinBuffered(vcompare)), zip(readPipes, srcGenPipes));
    
    for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
       rule start (iterCnts[i] > 0);
 	 re.readServers[i].request.put(MemengineCmd{pointer:pointer, base:fromInteger(i)*chunk, len:truncate(chunk), burstLen:truncate(burstLen*4)});
 	 $display("start %d, %d", i, iterCnts[i]);
 	 iterCnts[i] <= iterCnts[i]-1;
+
+	 Bit#(32) base = fromInteger(i)*(truncate(chunk)/4);
+	 Bit#(32) limit = base + truncate(chunk)/4;
+	 let rangeConfig = RangeConfig { xbase: base, xlimit: limit, xstep: 1 };
+	 rangePipeIfcs[i].start(rangeConfig);
+
       endrule
       rule finish;
 	 $display("finish %d", i);
@@ -85,14 +103,10 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 mismatchFifos[i].enq(mismatchCounts[i]);
       endrule
       rule check;
-	 let v <- toGet(re.dataPipes[i]).get;
-	 let expectedV = {srcGens[i]+1,srcGens[i]};
-	 let misMatch = v != expectedV;
+	 let bv <- toGet(mismatchPipes[i]).get();
+	 let misMatch = !bv[0] || !bv[1];
 	 mismatchCounts[i] <= mismatchCounts[i] + (misMatch ? 1 : 0);
-	 let new_srcGens = srcGens[i]+2;
-	 if (new_srcGens >= fromInteger(i+1)*truncate(chunk/4))
-	    new_srcGens = fromInteger(i)*truncate(chunk/4); 
-	 srcGens[i] <= new_srcGens;
+
       endrule
    end
    
@@ -125,7 +139,6 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
 	    iterCnts[i] <= ic;
 	    mismatchCounts[i] <= 0;
-	    srcGens[i] <= fromInteger(i)*(nw/fromInteger(valueOf(NumEngineServers)));      
 	 end
       endmethod
    endinterface
