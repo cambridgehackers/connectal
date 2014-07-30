@@ -458,9 +458,9 @@ module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
     endinterface
 endmodule : mkDmaMatrixMultiply
 
-interface DramMatrixMultiply#(numeric type n, numeric type dmasz, numeric type nm);
-   interface Vector#(nm, ObjectReadClient#(dmasz)) readClients;
-   interface Vector#(nm, ObjectWriteClient#(dmasz)) writeClients;
+interface DramMatrixMultiply#(numeric type n, numeric type dmasz);
+   interface Vector#(2, ObjectReadClient#(dmasz)) readClients;
+   interface Vector#(2, ObjectWriteClient#(dmasz)) writeClients;
    method Action start(ObjectPointer pointerA, UInt#(MMSize) numRowsA, UInt#(MMSize) numColumnsA,
 		       ObjectPointer pointerB, UInt#(MMSize) numRowsB, UInt#(MMSize) numColumnsB,
 		       ObjectPointer pointerC,
@@ -471,7 +471,7 @@ interface DramMatrixMultiply#(numeric type n, numeric type dmasz, numeric type n
    interface DmaMatrixMultiplyDebug debug;
 endinterface
       
-module  mkDramMatrixMultiply#(HostType host)(DramMatrixMultiply#(N,TMul#(N,32),2));
+module  mkDramMatrixMultiply#(HostType host)(DramMatrixMultiply#(N,TMul#(N,32)));
 
    MemwriteEngineV#(TMul#(N,32),2, J)   writeEngine <- mkMemwriteEngine();
    MemReader#(TMul#(N,32))                rowReader <- mkMemReader;
@@ -492,8 +492,8 @@ interface MmTN#(numeric type n);
    interface MmRequestTN mmRequest;
    interface MmDebugRequest mmDebug;
    interface TimerRequest timerRequest;
-   interface Vector#(NumberOfMasters, ObjectReadClient#(TMul#(32,n)))  readClients;
-   interface Vector#(NumberOfMasters, ObjectWriteClient#(TMul#(32,n))) writeClients;
+   interface Vector#(2, ObjectReadClient#(TMul#(32,n)))  readClients;
+   interface Vector#(2, ObjectWriteClient#(TMul#(32,n))) writeClients;
 endinterface
 
 module  mkMmTN#(MmIndication ind, TimerIndication timerInd, MmDebugIndication mmDebugIndication, HostType host)(MmTN#(N))
@@ -504,7 +504,7 @@ module  mkMmTN#(MmIndication ind, TimerIndication timerInd, MmDebugIndication mm
 
    let n = valueOf(n);
 
-   DramMatrixMultiply#(N, TMul#(N,32),NumberOfMasters) dmaMMF <- mkDramMatrixMultiply(host);
+   DramMatrixMultiply#(N, TMul#(N,32)) dmaMMF <- mkDramMatrixMultiply(host);
 
    Reg#(Bit#(64)) mmfCycles <- mkReg(0);
    rule countMmfCycles;
