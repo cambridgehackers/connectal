@@ -1,10 +1,13 @@
 
 all: pciedrivers
-	make parsetab.py
 
 pciedrivers:
 	(cd drivers/pcieportal; make)
 	make -C pcie/xbsvutil
+
+pciedrivers-clean:
+	(cd drivers/pcieportal; make clean)
+	make -C pcie/xbsvutil clean
 
 install:
 	(cd drivers/pcieportal; make install)
@@ -318,6 +321,10 @@ $(ac701runs):
 zynqdrivers:
 	(cd drivers/zynqportal/; DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make zynqportal.ko)
 	(cd drivers/portalmem/;  DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make portalmem.ko)
+
+zynqdrivers-clean:
+	(cd drivers/zynqportal/; DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make clean)
+	(cd drivers/portalmem/;  DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make clean)
 
 #################################################################################################
 
