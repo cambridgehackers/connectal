@@ -75,11 +75,14 @@ void DmaIndicationWrapperreportMemoryTraffic_cb (  struct PortalInternal *p, con
         sem_post(&priv.mtSem);
 }
 void DmaIndicationWrapperdmaError_cb (  struct PortalInternal *p, const uint32_t code, const uint32_t pointer, const uint64_t offset, const uint64_t extra ) {
+static int maxnumber = 10;
+if (maxnumber-- > 0)
         PORTAL_PRINTF("DmaIndication::dmaError(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
 }
 
 void manual_event(void)
 {
+static int maxnumber = 20;
     int i;
     for (i = 0; i < MAX_INDARRAY; i++) {
       PortalInternal *instance = &intarr[i];
@@ -89,12 +92,16 @@ void manual_event(void)
         unsigned int int_src = READL(instance, &map_base[IND_REG_INTERRUPT_FLAG]);
         unsigned int int_en  = READL(instance, &map_base[IND_REG_INTERRUPT_MASK]);
         unsigned int ind_count  = READL(instance, &map_base[IND_REG_INTERRUPT_COUNT]);
+if (maxnumber-- > 0)
         PORTAL_PRINTF("(%d:fpga%d) about to receive messages int=%08x en=%08x qs=%08x cnt=%x\n", i, instance->fpga_number, int_src, int_en, queue_status, ind_count);
         instance->handler(instance, queue_status-1);
       }
     }
 }
 
+#ifdef __KERNEL__
+DECLARE_COMPLETION(worker_completion);
+#endif
 static void *pthread_worker(void *p)
 {
     void *rc = NULL;
@@ -111,6 +118,9 @@ static void *pthread_worker(void *p)
         select(0, NULL, NULL, NULL, &timeout);
 #endif
     }
+#ifdef __KERNEL__
+    complete(&worker_completion);
+#endif
     return rc;
 }
 
@@ -159,8 +169,9 @@ int main(int argc, const char **argv)
   PORTAL_PRINTF( "Main: all done\n");
 #ifdef __KERNEL__
   if (tid && !kthread_stop (tid)) {
-    printk ("kthread stops");
+    printk("kthread stops");
   }
+  wait_for_completion(&worker_completion);
 #endif
   return 0;
 }
