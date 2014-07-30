@@ -11,7 +11,7 @@ export UDEV_RULES_DIR=/etc/udev/rules.d
 .PHONY: default
 default: pcieportal.ko ../portalmem/portalmem.ko
 
-EXTRA_CFLAGS = -I$(PWD) -I$(PWD)/../../cpp
+EXTRA_CFLAGS = -I$(PWD) -I$(PWD)/../../cpp -I$(PWD)/../portalmem -I$(PWD)/../../generated/cpp
 cflags-y += -I$(PWD)
 
 ../portalmem/portalmem.ko: ../portalmem/portalmem.c

@@ -32,9 +32,15 @@
 #define sem_post(A) up(A)
 #define sem_init(A, B, C) (sema_init ((A), (C)), 0)
 typedef struct semaphore sem_t;
+#include <linux/slab.h>
+#include <linux/dma-buf.h>
+#define PORTAL_MALLOC(A) vmalloc(A)
+#define PORTAL_FREE(A) vfree(A)
 #else
 #include <semaphore.h>
 #include <stdint.h>
+#define PORTAL_MALLOC(A) malloc(A)
+#define PORTAL_FREE(A) free(A)
 #endif
 
 #include "portalmem.h"
@@ -67,7 +73,9 @@ extern "C" {
 #endif
 void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *argDevice);
 int DmaManager_dCacheFlushInval(DmaManagerPrivate *priv, PortalAlloc *portalAlloc, void *__p);
+#ifndef XBSV_DRIVER_CODE
 uint64_t DmaManager_show_mem_stats(DmaManagerPrivate *priv, ChannelType rc);
+#endif
 int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa);
 int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa);
 #ifdef __cplusplus

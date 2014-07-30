@@ -24,25 +24,31 @@
 #define PAGE_SHIFT8 20
 static int shifts[] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0, 0};
 
+#include "dmaManager.h"
 #ifdef XBSV_DRIVER_CODE
-#include "portal.h"
+//#include "portal.h"
 #include "../generated/cpp/DmaConfigProxy.c"
 #include "../drivers/portalmem/portalmem.h"
+static int trace_memory = 1;
+#endif
 
-int send_fd_to_portal(volatile int *map_base, int fd, int id)
+int send_fd_to_portal(PortalInternal *device, int fd, int id, int numEntries, int pa_fd)
 {
+    int rc = 0;
     int i, j;
-    uint64_t regions[3] = {0,0,0};
+    uint32_t regions[3] = {0,0,0};
     uint64_t border = 0;
     unsigned char entryCount = 0;
     uint64_t borderVal[3];
     unsigned char idxOffset;
+    int size_accum = 0;
+    PortalAlloc *portalAlloc = NULL;
+#ifdef __KERNEL__
     struct scatterlist *sg;
-    PortalInternal devptr = {0};
-
+#endif
+#ifdef XBSV_DRIVER_CODE
     struct file *fmem = fget(fd);
     struct sg_table *sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
-    devptr.map_base = map_base;
     for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
       long addr = sg_phys(sg);
       for(j = 0; j < 3; j++)
@@ -52,42 +58,27 @@ int send_fd_to_portal(volatile int *map_base, int fd, int id)
             break;
           }
       if (j >= 3)
-        printk("DmaManager:unsupported sglist size %x\n", sg->length);
-      printk("DmaManager:sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, addr, sg->length);
-      DmaConfigProxy_sglist(&devptr, (id << 8) + i, addr, sg->length);
+        PORTAL_PRINTF("DmaManager:unsupported sglist size %x\n", sg->length);
+      PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, addr, sg->length);
+      DmaConfigProxy_sglist(device, (id << 8) + i, addr, sg->length);
     }
     fput(fmem);
-    // HW interprets zeros as end of sglist
-    printk("DmaManager:sglist(id=%08x, i=%d end of list)\n", id, i);
-    DmaConfigProxy_sglist(&devptr, (id << 8) + i, 0, 0); // end list
+    //// HW interprets zeros as end of sglist
+    //PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d end of list)\n", id, i);
+    //DmaConfigProxy_sglist(device, (id << 8) + i, 0, 0); // end list
 
-    for(i = 0; i < 3; i++){
-      idxOffset = entryCount - border;
-      entryCount += regions[i];
-      border += regions[i];
-      borderVal[i] = (border << 8) | idxOffset;
-      border <<= (shifts[i] - shifts[i+1]);
-    }
-    printk("borders %d (%llx %llx %llx)\n", id,borderVal[0], borderVal[1], borderVal[2]);
-    DmaConfigProxy_region(&devptr, id, borderVal[0], borderVal[1], borderVal[2]);
-    return 0;
-}
+    //for(i = 0; i < 3; i++){
+      //idxOffset = entryCount - border;
+      //entryCount += regions[i];
+      //border += regions[i];
+      //borderVal[i] = (border << 8) | idxOffset;
+      //border <<= (shifts[i] - shifts[i+1]);
+    //}
+    //PORTAL_PRINTF("borders %d (%llx %llx %llx)\n", id,borderVal[0], borderVal[1], borderVal[2]);
+    //DmaConfigProxy_region(device, id, borderVal[0], borderVal[1], borderVal[2]);
 #else // XBSV_DRIVER_CODE
-
-static int host_sendfd(DmaManagerPrivate *priv, int id, int fd, int numEntries)
-{
-  int rc = 0;
-  int i, j;
-  uint32_t regions[3] = {0,0,0};
-  int size_accum = 0;
-  uint64_t border = 0;
-  unsigned char entryCount = 0;
-  uint64_t borderVal[3];
-  unsigned char idxOffset;
-  PortalAlloc *portalAlloc;
 #ifdef __KERNEL__
   struct sg_table *sgtable;
-  struct scatterlist *sg;
   struct file *fmem = fget(fd);
 
   sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
@@ -104,12 +95,13 @@ static int host_sendfd(DmaManagerPrivate *priv, int id, int fd, int numEntries)
   }
   fput(fmem);
 #else
-  rc = ioctl(priv->pa_fd, PA_DMA_ADDRESSES, portalAlloc);
+  rc = ioctl(pa_fd, PA_DMA_ADDRESSES, portalAlloc);
   if (rc){
     PORTAL_PRINTF("portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
     goto retlab;
   }
 #endif
+  rc = id;
   if (trace_memory)
     PORTAL_PRINTF("DmaManager_reference id=%08x, numEntries:=%d len=%08lx)\n", id, numEntries, (long)portalAlloc->header.size);
 #ifdef BSIM
@@ -137,12 +129,13 @@ static int host_sendfd(DmaManagerPrivate *priv, int id, int fd, int numEntries)
       PORTAL_PRINTF("DmaManager:unsupported sglist size %x\n", e->length);
     if (trace_memory)
       PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, (long)addr, e->length);
-    DMAsglist(priv->device, (id << 8) + i, addr, e->length);
+    DMAsglist(device, (id << 8) + i, addr, e->length);
   }
+#endif // XBSV_DRIVER_CODE
   // HW interprets zeros as end of sglist
   if (trace_memory)
     PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d end of list)\n", id, i);
-  DMAsglist(priv->device, (id << 8) + i, 0, 0); // end list
+  DMAsglist(device, (id << 8) + i, 0, 0); // end list
 
   for(i = 0; i < 3; i++){
     idxOffset = entryCount - border;
@@ -155,10 +148,9 @@ static int host_sendfd(DmaManagerPrivate *priv, int id, int fd, int numEntries)
     PORTAL_PRINTF("regions %d (%x %x %x)\n", id,regions[0], regions[1], regions[2]);
     PORTAL_PRINTF("borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borderVal[0], borderVal[1], borderVal[2]);
   }
-  DMAregion(priv->device, id, borderVal[0], borderVal[1], borderVal[2]);
-  rc = id;
+  DMAregion(device, id, borderVal[0], borderVal[1], borderVal[2]);
 retlab:
-  PORTAL_FREE(portalAlloc);
-  return rc;
+    if (portalAlloc)
+        PORTAL_FREE(portalAlloc);
+    return rc;
 }
-#endif // XBSV_DRIVER_CODE

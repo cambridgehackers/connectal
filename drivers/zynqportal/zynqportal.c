@@ -151,12 +151,13 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
         case PORTAL_SEND_FD: {
                 /* pushd down allocated fd */
 		PortalSendFd sendFd;
+                PortalInternal devptr = {.map_base = portal_data->map_base};
 
                 int err = copy_from_user(&sendFd, (void __user *) arg, sizeof(sendFd));
                 if (err)
                     break;
                 printk("[%s:%d] PORTAL_SEND_FD %x %x  **\n", __FUNCTION__, __LINE__, sendFd.fd, sendFd.id);
-                return send_fd_to_portal(portal_data->map_base, sendFd.fd, sendFd.id);
+                return send_fd_to_portal(&devptr, sendFd.fd, sendFd.id, 0, 0);
                 }
                 break;
         default:
@@ -187,9 +188,9 @@ int portal_mmap(struct file *filep, struct vm_area_struct *vma)
 
 unsigned int portal_poll (struct file *filep, poll_table *poll_table)
 {
+	u32 int_status = 0;
         struct portal_data *portal_data = filep->private_data;
         poll_wait(filep, &portal_data->wait_queue, poll_table);
-	u32 int_status = 0;
 	if(portal_data->interrupt_virt)
 	  int_status = readl(portal_data->interrupt_virt);
 	if (int_status)

@@ -262,12 +262,13 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                 {
                 /* pushd down allocated fd */
 		tSendFd sendFd;
+                PortalInternal devptr = {.map_base = (volatile int *)(this_board->bar2io + PORTAL_BASE_OFFSET * this_portal->portal_number)};
 
                 err = copy_from_user(&sendFd, (void __user *) arg, sizeof(sendFd));
                 if (err)
                     break;
                 printk("[%s:%d] PCIE_SEND_FD %x %x  **\n", __FUNCTION__, __LINE__, sendFd.fd, sendFd.id);
-                return send_fd_to_portal((volatile int *)(this_board->bar2io + PORTAL_BASE_OFFSET * this_portal->portal_number), sendFd.fd, sendFd.id);
+                return send_fd_to_portal(&devptr, sendFd.fd, sendFd.id, 0, 0);
                 }
                 break;
         default:

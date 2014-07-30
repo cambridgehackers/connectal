@@ -2,6 +2,8 @@ obj-m += zynqportal.o
 
 export KROOT=$(DEVICE_XILINX_KERNEL)
 
+ccflags-y := -I$(src)/../portalmem -I$(src)/../../generated/cpp
+
 default: zynqportal.ko
 	cp zynqportal.ko ~/adb_scripts/
 

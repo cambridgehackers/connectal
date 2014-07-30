@@ -24,26 +24,17 @@
 #include "dmaManager.h"
 #include "sock_utils.h"
 
-#ifdef __KERNEL__
-#include <linux/slab.h>
-#include <linux/dma-buf.h>
-#define PORTAL_MALLOC(A) vmalloc(A)
-#define PORTAL_FREE(A) vfree(A)
-#else
+#ifndef __KERNEL__
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
-#include "portalmem.h"
 
 #if defined(__arm__)
 #include "zynqportal.h"
 #else
 #include "pcieportal.h"
 #endif
-
-#define PORTAL_MALLOC(A) malloc(A)
-#define PORTAL_FREE(A) free(A)
 #endif
 
 static int trace_memory;// = 1;
@@ -117,7 +108,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
     sem_wait(&priv->confSem);
   rc = id;
 #else // KERNEL_REFERENCE
-  rc = host_sendfd(priv, id, pa->header.fd, pa->header.numEntries);
+  rc = send_fd_to_portal(priv->device, pa->header.fd, id, pa->header.numEntries, priv->pa_fd);
   if (rc <= 0) {
     //PORTAL_PRINTF("%s:%d sem_wait\n", __FUNCTION__, __LINE__);
     sem_wait(&priv->confSem);
