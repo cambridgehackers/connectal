@@ -19,6 +19,11 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#define PAGE_SHIFT0 12
+#define PAGE_SHIFT4 16
+#define PAGE_SHIFT8 20
+static int shifts[] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0, 0};
+
 #ifdef XBSV_DRIVER_CODE
 #include "portal.h"
 #include "../generated/cpp/DmaConfigProxy.c"
@@ -26,12 +31,8 @@
 
 int send_fd_to_portal(volatile int *map_base, int fd, int id)
 {
-#define PAGE_SHIFT0 12
-#define PAGE_SHIFT4 16
-#define PAGE_SHIFT8 20
     int i, j;
     uint64_t regions[3] = {0,0,0};
-    static uint64_t shifts[] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0, 0};
     uint64_t border = 0;
     unsigned char entryCount = 0;
     uint64_t borderVal[3];
@@ -73,15 +74,11 @@ int send_fd_to_portal(volatile int *map_base, int fd, int id)
 }
 #else // XBSV_DRIVER_CODE
 
-static int host_sendfd(DmaManagerPrivate *priv, int id, PortalAlloc *pa)
+static int host_sendfd(DmaManagerPrivate *priv, int id, int fd, int numEntries)
 {
   int rc = 0;
-  const int PAGE_SHIFT0 = 12;
-  const int PAGE_SHIFT4 = 16;
-  const int PAGE_SHIFT8 = 20;
   int i, j;
   uint32_t regions[3] = {0,0,0};
-  int shifts[] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0, 0};
   int size_accum = 0;
   uint64_t border = 0;
   unsigned char entryCount = 0;
@@ -91,14 +88,15 @@ static int host_sendfd(DmaManagerPrivate *priv, int id, PortalAlloc *pa)
 #ifdef __KERNEL__
   struct sg_table *sgtable;
   struct scatterlist *sg;
-  struct file *fmem = fget(pa->header.fd);
+  struct file *fmem = fget(fd);
 
   sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
-  pa->header.numEntries = sgtable->nents;
+  numEntries = sgtable->nents;
 #endif
 
-  portalAlloc = (PortalAlloc *)PORTAL_MALLOC(sizeof(PortalAlloc)+((pa->header.numEntries+1)*sizeof(DmaEntry)));
-  memcpy(portalAlloc, pa, sizeof(*pa));
+  portalAlloc = (PortalAlloc *)PORTAL_MALLOC(sizeof(PortalAlloc)+((numEntries+1)*sizeof(DmaEntry)));
+  portalAlloc->header.fd = fd;
+  portalAlloc->header.numEntries = numEntries;
 #ifdef __KERNEL__
   for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
       portalAlloc->entries[i].dma_address = sg_phys(sg);
@@ -113,7 +111,7 @@ static int host_sendfd(DmaManagerPrivate *priv, int id, PortalAlloc *pa)
   }
 #endif
   if (trace_memory)
-    PORTAL_PRINTF("DmaManager_reference id=%08x, numEntries:=%d len=%08lx)\n", id, pa->header.numEntries, (long)portalAlloc->header.size);
+    PORTAL_PRINTF("DmaManager_reference id=%08x, numEntries:=%d len=%08lx)\n", id, numEntries, (long)portalAlloc->header.size);
 #ifdef BSIM
   bluesim_sock_fd_write(portalAlloc->header.fd);
 #endif
@@ -158,8 +156,6 @@ static int host_sendfd(DmaManagerPrivate *priv, int id, PortalAlloc *pa)
     PORTAL_PRINTF("borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borderVal[0], borderVal[1], borderVal[2]);
   }
   DMAregion(priv->device, id, borderVal[0], borderVal[1], borderVal[2]);
-  //PORTAL_PRINTF("%s:%d sem_wait\n", __FUNCTION__, __LINE__);
-  sem_wait(&priv->confSem);
   rc = id;
 retlab:
   PORTAL_FREE(portalAlloc);

@@ -117,7 +117,11 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
     sem_wait(&priv->confSem);
   rc = id;
 #else // KERNEL_REFERENCE
-  rc = host_sendfd(priv, id, pa);
+  rc = host_sendfd(priv, id, pa->header.fd, pa->header.numEntries);
+  if (rc <= 0) {
+    //PORTAL_PRINTF("%s:%d sem_wait\n", __FUNCTION__, __LINE__);
+    sem_wait(&priv->confSem);
+  }
 #endif // KERNEL_REFERENCE
   return rc;
 }
