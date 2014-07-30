@@ -1,9 +1,0 @@
-
-CPPDIR=../../../cpp
-SOURCES=$(CPPDIR)/bsim_relay.c $(CPPDIR)/sock_utils.c
-
-all: $(SOURCES)
-	gcc -o bsim_relay -g -I$(CPPDIR) $(SOURCES) -lpthread
-
-clean:
-	rm -f bsim_relay

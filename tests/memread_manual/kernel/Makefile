@@ -44,4 +44,34 @@ default:
 
 clean:
 	$(MAKE) -C $(KROOT) M=$(PWD) clean
-	rm -f $(kernel_exe-y) a.out
+	rm -f $(kernel_exe-y) a.out bsim_relay
+
+CURRENTMOD=$(shell lsmod | grep kernel_exe)
+
+run: host
+ifeq ($(BOARD),bluesim)
+	../bluesim/bin/bsim& bsimpid=$!
+else
+	fpgajtag ../$(BOARD)/bin/mkTop.bin.gz
+endif
+	echo bsimpid $bsimpid
+ifneq ("$(CURRENTMOD)", "")
+	sudo rmmod kernel_exe
+endif
+	sudo insmod kernel_exe.ko
+ifeq ($(BOARD),bluesim)
+	./bsim_relay
+	kill $bsimpid
+endif
+	sudo rmmod kernel_exe
+	dmesg | tail -30
+
+#
+# Target for making userspace bsim_relay program
+CPPDIR=../../../cpp
+HOSTSOURCES=$(CPPDIR)/bsim_relay.c $(CPPDIR)/sock_utils.c
+
+host: $(HOSTSOURCES)
+ifeq ($(BOARD),bluesim)
+	gcc -o bsim_relay -g -I$(CPPDIR) $(HOSTSOURCES) -lpthread
+endif
