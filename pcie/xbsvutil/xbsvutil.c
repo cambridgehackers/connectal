@@ -10,6 +10,7 @@
 #include <time.h>
 #include <sys/mman.h>
 #include <errno.h>
+#include <stdint.h>
 
 #include "../../drivers/pcieportal/pcieportal.h"
 
