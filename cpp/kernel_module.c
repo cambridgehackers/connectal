@@ -36,6 +36,7 @@
 
 extern int main(int argc, char *argv[]);
 struct semaphore bsim_start;
+DECLARE_COMPLETION(main_completion);
 
 int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *), void *arg)
 {
@@ -69,8 +70,10 @@ int main_program_finished = 0;
 
 static struct file_operations pa_fops = {
     .owner = THIS_MODULE,
+#ifndef MMAP_HW
     .read = xbsv_kernel_read,
     .write = xbsv_kernel_write,
+#endif
   };
 static struct miscdevice miscdev = {
   .minor = MISC_DYNAMIC_MINOR,  // Must be < 256!
@@ -81,6 +84,8 @@ static struct miscdevice miscdev = {
 void *main_start(void *arg)
 {
   main(0, NULL); /* start the test program */
+  printk("TestProgram::main program finished\n");
+  complete(&main_completion);
   main_program_finished = 1;
   return NULL;
 }
@@ -98,6 +103,7 @@ static int __init pa_init(void)
 static void __exit pa_exit(void)
 {
   printk("TestProgram::pa_exit\n");
+  wait_for_completion(&main_completion);
   misc_deregister(&miscdev);
 }
 
