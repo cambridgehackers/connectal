@@ -57,6 +57,7 @@ int send_fd_to_portal(volatile int *map_base, int fd, int id)
     }
     fput(fmem);
     // HW interprets zeros as end of sglist
+    printk("DmaManager:sglist(id=%08x, i=%d end of list)\n", id, i);
     DmaConfigProxy_sglist(&devptr, (id << 8) + i, 0, 0); // end list
 
     for(i = 0; i < 3; i++){
