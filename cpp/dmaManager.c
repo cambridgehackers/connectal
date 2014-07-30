@@ -108,8 +108,8 @@ static int host_sendfd(DmaManagerPrivate *priv, int id, PortalAlloc *pa)
   const int PAGE_SHIFT4 = 16;
   const int PAGE_SHIFT8 = 20;
   int i, j;
-  uint64_t regions[3] = {0,0,0};
-  uint64_t shifts[] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0, 0};
+  uint32_t regions[3] = {0,0,0};
+  int shifts[] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0, 0};
   int size_accum = 0;
   uint64_t border = 0;
   unsigned char entryCount = 0;
@@ -158,6 +158,8 @@ static int host_sendfd(DmaManagerPrivate *priv, int id, PortalAlloc *pa)
     for(j = 0; j < 3; j++)
         if (e->length == 1<<shifts[j]) {
           regions[j]++;
+          if (addr & ((1L<<shifts[j]) - 1))
+              PORTAL_PRINTF("%s: addr %lx shift %x *********\n", __FUNCTION__, addr, shifts[j]);
           addr >>= shifts[j];
           break;
         }
@@ -168,6 +170,8 @@ static int host_sendfd(DmaManagerPrivate *priv, int id, PortalAlloc *pa)
     DMAsglist(priv->device, (id << 8) + i, addr, e->length);
   }
   // HW interprets zeros as end of sglist
+  if (trace_memory)
+    PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d end of list)\n", id, i);
   DMAsglist(priv->device, (id << 8) + i, 0, 0); // end list
 
   for(i = 0; i < 3; i++){
@@ -178,7 +182,7 @@ static int host_sendfd(DmaManagerPrivate *priv, int id, PortalAlloc *pa)
     border <<= (shifts[i] - shifts[i+1]);
   }
   if (trace_memory) {
-    PORTAL_PRINTF("regions %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,regions[0], regions[1], regions[2]);
+    PORTAL_PRINTF("regions %d (%x %x %x)\n", id,regions[0], regions[1], regions[2]);
     PORTAL_PRINTF("borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borderVal[0], borderVal[1], borderVal[2]);
   }
   DMAregion(priv->device, id, borderVal[0], borderVal[1], borderVal[2]);
@@ -212,11 +216,13 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
 int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa)
 {
   int rc = 0;
-#ifdef __KERNEL__
-  struct file *fmem;
-#endif
-
   PortalAlloc *portalAlloc = (PortalAlloc *)PORTAL_MALLOC(sizeof(PortalAlloc));
+
+  *ppa = portalAlloc;
+  if (!portalAlloc) {
+    PORTAL_PRINTF("DmaManager_alloc: malloc failed\n");
+    return -1;
+  }
   memset(portalAlloc, 0, sizeof(*portalAlloc));
   portalAlloc->header.size = size;
 #ifndef __KERNEL__
@@ -228,6 +234,5 @@ int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa)
 #endif
   PORTAL_PRINTF("alloc size=%ldMB fd=%ld numEntries=%d\n", 
       portalAlloc->header.size/(1L<<20), portalAlloc->header.fd, portalAlloc->header.numEntries);
-  *ppa = portalAlloc;
   return rc;
 }
