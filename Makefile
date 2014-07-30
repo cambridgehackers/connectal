@@ -189,7 +189,7 @@ zc702runs: $(zc702runs)
 
 # RUNPARAM=ipaddr is an optional argument if you already know the IP of the zc702
 $(zc702runs):
-	scripts/run.zedboard $(basename $@)/zc702/bin/*bin.gz `find $(basename $@)/zedboard -name android_exe | grep libs`
+	scripts/run.zedboard $(basename $@)/zc702/bin/*bin.gz `find $(basename $@)/zc702 -name android_exe | grep libs`
 
 #################################################################################################
 # zc706
@@ -208,7 +208,7 @@ zc706runs: $(zc706runs)
 
 # RUNPARAM=ipaddr is an optional argument if you already know the IP of the zc706
 $(zc706runs):
-	scripts/run.zedboard $(basename $@)/zc706/bin/*bin.gz `find $(basename $@)/zedboard -name android_exe | grep libs`
+	scripts/run.zedboard $(basename $@)/zc706/bin/*bin.gz `find $(basename $@)/zc706 -name android_exe | grep libs`
 
 #################################################################################################
 # vc707
