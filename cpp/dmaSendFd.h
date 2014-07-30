@@ -26,7 +26,6 @@ static int shifts[] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0, 0};
 
 #include "dmaManager.h"
 #ifdef XBSV_DRIVER_CODE
-//#include "portal.h"
 #include "../generated/cpp/DmaConfigProxy.c"
 #include "../drivers/portalmem/portalmem.h"
 static int trace_memory = 1;
@@ -45,9 +44,9 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int numEntries, in
     PortalAlloc *portalAlloc = NULL;
 #ifdef __KERNEL__
     struct scatterlist *sg;
+    struct file *fmem = fget(fd);
 #endif
 #ifdef XBSV_DRIVER_CODE
-    struct file *fmem = fget(fd);
     struct sg_table *sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
     for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
       long addr = sg_phys(sg);
@@ -62,26 +61,9 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int numEntries, in
       PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, addr, sg->length);
       DmaConfigProxy_sglist(device, (id << 8) + i, addr, sg->length);
     }
-    fput(fmem);
-    //// HW interprets zeros as end of sglist
-    //PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d end of list)\n", id, i);
-    //DmaConfigProxy_sglist(device, (id << 8) + i, 0, 0); // end list
-
-    //for(i = 0; i < 3; i++){
-      //idxOffset = entryCount - border;
-      //entryCount += regions[i];
-      //border += regions[i];
-      //borderVal[i] = (border << 8) | idxOffset;
-      //border <<= (shifts[i] - shifts[i+1]);
-    //}
-    //PORTAL_PRINTF("borders %d (%llx %llx %llx)\n", id,borderVal[0], borderVal[1], borderVal[2]);
-    //DmaConfigProxy_region(device, id, borderVal[0], borderVal[1], borderVal[2]);
 #else // XBSV_DRIVER_CODE
 #ifdef __KERNEL__
-  struct sg_table *sgtable;
-  struct file *fmem = fget(fd);
-
-  sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
+  struct sg_table *sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
   numEntries = sgtable->nents;
 #endif
 
@@ -93,7 +75,6 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int numEntries, in
       portalAlloc->entries[i].dma_address = sg_phys(sg);
       portalAlloc->entries[i].length = sg->length;
   }
-  fput(fmem);
 #else
   rc = ioctl(pa_fd, PA_DMA_ADDRESSES, portalAlloc);
   if (rc){
@@ -132,6 +113,10 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int numEntries, in
     DMAsglist(device, (id << 8) + i, addr, e->length);
   }
 #endif // XBSV_DRIVER_CODE
+#ifdef __KERNEL__
+  fput(fmem);
+#endif
+
   // HW interprets zeros as end of sglist
   if (trace_memory)
     PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d end of list)\n", id, i);
