@@ -28,32 +28,44 @@ typedef FixedPoint#(2,16) Signal;
 typedef FixedPoint#(2,23) Coeff;
 typedef FixedPoint#(4,39) Product;
 
+typedef struct {
+		Complex#(Coeff) a;
+		Bit#(1) filterPhase;
+		} CoeffData;
+
+typedef struct {
+		Complex#(Product) y;
+		Bit#(1) filterPhase;
+		} ProductData;
+
 interface FPCMult;
    interface PipeIn#(Complex#(Signal)) x;
-   interface PipeIn#(Complex#(Coeff)) a;
-   interface PipeOut#(Complex#(Product)) y;
+   interface PipeIn#(CoeffData) a;
+   interface PipeOut#(ProductData) y;
 endinterface
    
 module mkFPCMult(FPCMult);
    /* input registers */
    Reg#(Complex#(Signal)) xin <- mkReg(?);
-   Reg#(Complex#(Coeff)) ain <- mkReg(?);
+   Reg#(CoeffData) ain <- mkReg(?);
    /* pipeline registers at output of multipliers */
    Reg#(Product) arxr <- mkReg(?);
    Reg#(Product) aixi <- mkReg(?);
    Reg#(Product) arxi <- mkReg(?);
    Reg#(Product) aixr <- mkReg(?);
+   Reg#(Bit#(1)) multstage <- mkReg(?);
    /* result registers */
-   Reg#(Complex#(Product)) yout <- mkReg(?);
+   Reg#(ProductData) yout <- mkReg(?);
 
    rule work;
       /* compute multiplies */
-      arxr <= fxptMult(ain.r, xin.r);
-      aixi <= fxptMult(ain.i, xin.i);
-      arxi <= fxptMult(ain.r, xin.i);
-      aixr <= fxptMult(ain.i, xin.r);
+      arxr <= fxptMult(ain.a.r, xin.r);
+      aixi <= fxptMult(ain.a.i, xin.i);
+      arxi <= fxptMult(ain.a.r, xin.i);
+      aixr <= fxptMult(ain.a.i, xin.r);
+      multFilterPhase <= ain.filterPhase;
       /* combine into outputs */
-      yout <= Complex{r: arxr - aixi, i: arxi + aixr};
+      yout <= ProductData{y: Complex{r: arxr - aixi, i: arxi + aixr}, filterPhase: multstage};
    endrule
    
    interface PipeOut y = toPipeOut(yout);
@@ -66,7 +78,7 @@ module mkFPCMult(FPCMult);
       endmethod
    endinterface
    interface PipeIn a;
-      method Action enq(Complex#(Coeff) v);
+      method Action enq(CoeffData v);
          ain <= v;
       endmethod
       method Bool notFull();
