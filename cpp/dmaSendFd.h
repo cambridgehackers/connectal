@@ -45,37 +45,14 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int numEntries, in
 #ifdef __KERNEL__
     struct scatterlist *sg;
     struct file *fmem = fget(fd);
-#endif
-#ifdef XBSV_DRIVER_CODE
     struct sg_table *sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
-    for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
-      long addr = sg_phys(sg);
-      for(j = 0; j < 3; j++)
-          if (sg->length == 1<<shifts[j]) {
-            regions[j]++;
-            addr >>= shifts[j];
-            break;
-          }
-      if (j >= 3)
-        PORTAL_PRINTF("DmaManager:unsupported sglist size %x\n", sg->length);
-      PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, addr, sg->length);
-      DmaConfigProxy_sglist(device, (id << 8) + i, addr, sg->length);
-    }
-#else // XBSV_DRIVER_CODE
-#ifdef __KERNEL__
-  struct sg_table *sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
-  numEntries = sgtable->nents;
+    numEntries = sgtable->nents;
 #endif
 
+#ifndef __KERNEL__
   portalAlloc = (PortalAlloc *)PORTAL_MALLOC(sizeof(PortalAlloc)+((numEntries+1)*sizeof(DmaEntry)));
   portalAlloc->header.fd = fd;
   portalAlloc->header.numEntries = numEntries;
-#ifdef __KERNEL__
-  for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
-      portalAlloc->entries[i].dma_address = sg_phys(sg);
-      portalAlloc->entries[i].length = sg->length;
-  }
-#else
   rc = ioctl(pa_fd, PA_DMA_ADDRESSES, portalAlloc);
   if (rc){
     PORTAL_PRINTF("portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
@@ -84,22 +61,28 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int numEntries, in
 #endif
   rc = id;
   if (trace_memory)
-    PORTAL_PRINTF("DmaManager_reference id=%08x, numEntries:=%d len=%08lx)\n", id, numEntries, (long)portalAlloc->header.size);
+    PORTAL_PRINTF("DmaManager_reference id=%08x, numEntries:=%d)\n", id, numEntries);
 #ifdef BSIM
-  bluesim_sock_fd_write(portalAlloc->header.fd);
+  bluesim_sock_fd_write(fd);
 #endif
-  for(i = 0; i < portalAlloc->header.numEntries; i++){
-    DmaEntry *e = &(portalAlloc->entries[i]);
-    long addr;
-#ifndef BSIM
-    addr = e->dma_address;
+#ifdef __KERNEL__
+  for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
+      long addr = sg_phys(sg);
+      long len = sg->length;
 #else
+  for(i = 0; i < numEntries; i++){
+    DmaEntry *e = &(portalAlloc->entries[i]);
+    long addr = e->dma_address;
+    long len = e->length;
+#endif
+#ifdef BSIM
     addr = size_accum;
-    size_accum += e->length;
+    size_accum += len;
     addr |= ((long)id) << 32; //[39:32] = truncate(pref);
 #endif
+
     for(j = 0; j < 3; j++)
-        if (e->length == 1<<shifts[j]) {
+        if (len == 1<<shifts[j]) {
           regions[j]++;
           if (addr & ((1L<<shifts[j]) - 1))
               PORTAL_PRINTF("%s: addr %lx shift %x *********\n", __FUNCTION__, addr, shifts[j]);
@@ -107,12 +90,11 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int numEntries, in
           break;
         }
     if (j >= 3)
-      PORTAL_PRINTF("DmaManager:unsupported sglist size %x\n", e->length);
+      PORTAL_PRINTF("DmaManager:unsupported sglist size %x\n", len);
     if (trace_memory)
-      PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, (long)addr, e->length);
-    DMAsglist(device, (id << 8) + i, addr, e->length);
+      PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, (long)addr, len);
+    DMAsglist(device, (id << 8) + i, addr, len);
   }
-#endif // XBSV_DRIVER_CODE
 #ifdef __KERNEL__
   fput(fmem);
 #endif
