@@ -30,7 +30,6 @@ import Vector::*;
 import DmaVector::*;
 import PortalMemory::*;
 import MemTypes::*;
-import MemreadEngine::*;
 import MemwriteEngine::*;
 import MemUtils::*;
 import FloatingPoint::*;
@@ -66,7 +65,7 @@ interface XYZRangePipeIfc#(type a);
    method Action display();
 endinterface
 
-module mkXYZRangePipeOut(XYZRangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
+module mkXYZRangePipeOut#(Bool alt) (XYZRangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
    Reg#(a) x <- mkReg(0);
    Reg#(a) y <- mkReg(0);
    Reg#(a) z <- mkReg(0);
@@ -82,7 +81,10 @@ module mkXYZRangePipeOut(XYZRangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidt
 
    interface PipeOut pipe;
       method Tuple2#(a,a) first() if (x < xlimit && y < ylimit);
-	 return tuple2(x,y);
+	 if (alt)
+	    return tuple2(z,y);
+	 else
+	    return tuple2(x,y);
       endmethod
       method Action deq if (x < xlimit && y < ylimit);
 	 let newx = x;
@@ -122,7 +124,7 @@ module mkXYZRangePipeOut(XYZRangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidt
    endmethod
 endmodule: mkXYZRangePipeOut
 
-module mkColSource#(ObjectReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) numRowsB) (RowColSource#(TMul#(N,32), Vector#(N,MmToken)))
+module mkRowSource#(ObjectReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) numRows, Bit#(ObjectTagSize) id) (RowColSource#(TMul#(N,32), Vector#(N,MmToken)))
    provisos (Bits#(Vector#(N,Float),asz),
       Div#(asz,8,abytes),
       Log#(abytes,ashift),
@@ -152,12 +154,9 @@ module mkColSource#(ObjectReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) nu
 `ifdef TAGGED_TOKENS
       tagFifo.enq(tag);
 `endif
-      if (l != fromInteger(valueOf(TDiv#(K,N)))) begin
-	 $display("mkColSource.start error %d %d", l, valueOf(TDiv#(K,N)));
-      end
-      let cmd = ObjectRequest{pointer:h, offset:a<<ashift, burstLen:fromInteger(valueOf(TDiv#(K,N)))<<ashift, tag:10};
+      let cmd = ObjectRequest{pointer:h, offset:a<<ashift, burstLen:truncate(l<<ashift), tag:id};
       vs.readReq.put(cmd); //start(h,a,l);
-      if(verbose) $display("mkColSource.start %d %d", cmd.offset, cmd.burstLen);
+      if(verbose) $display("mkRowSource.start %d %d", cmd.offset, cmd.burstLen);
       cmdFifo.enq(l);
    endmethod
    interface PipeOut pipe;
@@ -175,18 +174,18 @@ module mkColSource#(ObjectReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) nu
 	    for(Integer i = 0; i < valueOf(N); i=i+1)
 	       rv[i].first = True;
 
-	 if (cmdCountReg+1 == numRowsB)
+	 if (cmdCountReg+1 == numRows)
 	    for(Integer i = 0; i < valueOf(N); i=i+1)
 	       rv[i].last = True;
 	 return rv;
       endmethod
       method Action deq;
-	 if(verbose) $display("mkColSource.deq %d %d", countReg+1==cmdFifo.first, cmdCountReg+1==numRowsB);
+	 if(verbose) $display("mkRowSource.deq %d %d", countReg+1==cmdFifo.first, cmdCountReg+1==numRows);
 	 read_data_buffer.deq;
 	 if(countReg+1==cmdFifo.first) begin
 	    countReg <= 0;
 	    cmdFifo.deq;
-	    if (cmdCountReg+1 == numRowsB)
+	    if (cmdCountReg+1 == numRows)
 	       cmdCountReg <= 0;
 	    else
 	       cmdCountReg <= cmdCountReg+1;
@@ -210,7 +209,7 @@ module mkColSource#(ObjectReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) nu
 `endif
       endmethod
    endinterface
-endmodule: mkColSource
+endmodule: mkRowSource
 
 function Vector#(TMul#(j,k), etype) flattenMatrix(Vector#(j, Vector#(k, etype)) mat);
    function etype flatten(Integer i); return mat[i/valueOf(k)][i%valueOf(k)]; endfunction
@@ -235,7 +234,7 @@ interface DmaMatrixMultiplyIfc#(numeric type addrwidth, numeric type dsz);
 		       ObjectPointer pointerC,
 		       UInt#(addrwidth) numRowsA_x_numColumnsA, UInt#(addrwidth) numColumnsA_x_J,
 		       UInt#(addrwidth) numRowsA_x_numColumnsB, UInt#(addrwidth) numColumnsB_x_J,
-		       UInt#(addrwidth) numRowsA_x_numRowsB,    UInt#(addrwidth) numRowsB_x_J);
+		       UInt#(addrwidth) numColumnsA_x_numColumnsB,    UInt#(addrwidth) numRowsB_x_J);
    method ActionValue#(Bool) finish();
    interface DmaMatrixMultiplyDebug debug;
 endinterface
@@ -252,7 +251,7 @@ typedef enum {
  * Just considering memory bandwidth, every J+K cycles it is ready to perform J*K*N multiply accumulates.
  *
  */
-module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) sA,
+module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
 			     ObjectReadServer#(TMul#(N,32)) sB,
 			     Vector#(J, VectorSink#(dsz, Vector#(N,Float)))    ss,
 			     HostType host
@@ -270,7 +269,6 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 	     , Add#(a__, addrwidth, 40)
 	     , Add#(c__, addrwidth, 32)
 	     , Max#(1, TDiv#(TLog#(J),2), bpc_j)
-	     , Max#(1, TDiv#(TLog#(K),2), bpc_k)
       );
 
    let n = valueOf(N);
@@ -289,19 +287,20 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
    let doubleReset = host.doubleReset;
 
    Reg#(UInt#(32)) cycles <- mkReg(0);
-   FIFOF#(MatrixDescriptor#(UInt#(addrwidth))) descFifoA <- mkSizedFIFOF(1);
    FIFOF#(MatrixDescriptor#(UInt#(addrwidth))) descFifoC <- mkSizedFIFOF(1);
-   UnFunnelPipe#(1,J,MatrixDescriptor#(UInt#(addrwidth)),bpc_j) descriptorA <- mkPipelinedForkVector(toPipeOut(descFifoA), 0);
    UnFunnelPipe#(1,J,MatrixDescriptor#(UInt#(addrwidth)),bpc_j) descriptorC <- mkPipelinedForkVector(toPipeOut(descFifoC), 2);
+   Reg#(MatrixDescriptor#(UInt#(addrwidth))) descriptorA <- mkReg(unpack(0));
    Reg#(MatrixDescriptor#(UInt#(addrwidth))) descriptorB <- mkReg(unpack(0));
    Reg#(UInt#(addrwidth)) dotprodCount <- mkReg(0);
    
-   Vector#(J, RowColSource#(TMul#(N,32), Vector#(N,MmToken))) sourceA <- mapM(mkRowSource, sA);
+   Reg#(UInt#(addrwidth)) numRowsAReg <- mkReg(0);
    Reg#(UInt#(addrwidth)) numRowsBReg <- mkReg(0);
-   RowColSource#(TMul#(N,32), Vector#(N,MmToken)) sourceB <- mkColSource(sB, numRowsBReg);
+   RowColSource#(TMul#(N,32), Vector#(N,MmToken)) sourceA <- mkRowSource(sA, numRowsAReg, 0);
+   RowColSource#(TMul#(N,32), Vector#(N,MmToken)) sourceB <- mkRowSource(sB, numRowsBReg, 1);
    Vector#(J, RowColSink#(TMul#(N,32),   Vector#(N,MmToken))) sinks   <- mapM(mkRowColSink,ss);
-   Vector#(J, PipeOut#(MmToken))       aPipes <- mapM(mkFunnelGB1(defaultClock, defaultReset, doubleClock, doubleReset), map(getRowColSourcePipe, sourceA));
-   PipeOut#(MmToken)       bFunnel <- mkFunnelGB1(defaultClock, defaultReset, doubleClock, doubleReset, sourceB.pipe);
+   PipeOut#(MmToken) aPipe <- mkFunnelGB1(defaultClock, defaultReset, doubleClock, doubleReset, sourceA.pipe);
+   Vector#(J, PipeOut#(MmToken)) aPipes <- mkUnfunnelPipes(clocked_by doubleClock, reset_by doubleReset, cons(aPipe,nil));
+   PipeOut#(MmToken) bFunnel <- mkFunnelGB1(defaultClock, defaultReset, doubleClock, doubleReset, sourceB.pipe);
    Vector#(J, PipeOut#(MmToken)) bFunnelPipes <- mkForkVector(bFunnel, clocked_by doubleClock, reset_by doubleReset);
 
    rule countCycles;
@@ -324,23 +323,18 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
    
    zipWithM(mkConnection, fxpipes, map(getRowColSinkPipe, sinks));
    
-   XYRangePipeIfc#(UInt#(addrwidth)) indexpipeifc <- mkXYRangePipeOut();
-   XYRangePipeIfc#(UInt#(addrwidth)) offsetpipeA <- mkXYRangePipeOut();
    XYRangePipeIfc#(UInt#(addrwidth)) offsetpipeC <- mkXYRangePipeOut();
-   XYZRangePipeIfc#(UInt#(addrwidth)) offsetpipeB <- mkXYZRangePipeOut();
+   XYZRangePipeIfc#(UInt#(addrwidth)) offsetpipeA <- mkXYZRangePipeOut(True);
+   XYZRangePipeIfc#(UInt#(addrwidth)) offsetpipeB <- mkXYZRangePipeOut(False);
 
-   Vector#(J, PipeOut#(Tuple2#(UInt#(addrwidth),UInt#(addrwidth)))) indexpipes <- mkForkVector(indexpipeifc.pipe);
-   Vector#(J, PipeOut#(Tuple2#(UInt#(addrwidth),UInt#(addrwidth)))) offsetpipesA <- mkForkVector(offsetpipeA.pipe);
    Vector#(J, PipeOut#(Tuple2#(UInt#(addrwidth),UInt#(addrwidth)))) offsetpipesC <- mkForkVector(offsetpipeC.pipe);
    
-   Vector#(J, Reg#(UInt#(32))) lastStartAs <- replicateM(mkReg(0));
+   Reg#(UInt#(32)) lastStartA <- mkReg(0);
    Reg#(UInt#(32)) lastStartB <- mkReg(0);
    Vector#(K, Reg#(UInt#(32))) lastStartCs <- replicateM(mkReg(0));
       
    Reg#(Bool) running <- mkReg(False);
    FIFOF#(Bool) doneFifo <- mkFIFOF();
-   
-   Vector#(J, Reg#(UInt#(addrwidth))) startAOffset <- replicateM(mkReg(0));
    Vector#(J, Reg#(UInt#(addrwidth))) startCOffset <- replicateM(mkReg(0));
    
    
@@ -353,48 +347,29 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
       sourceB.start(descriptorB.pointer, pack(extend(startB>>nshift)), fromInteger(kk)>>nshift, 0);
    endrule
    
-   //
-   /////////////////////////////////////////////////
+   rule startSourceA;
+      match { .startABase, .startAOffset } <- toGet(offsetpipeA.pipe).get();
+      let startA = startABase + startAOffset;
+      lastStartA <= cycles;
+      let interval = cycles-lastStartA;
+      if (timing || verbose) $display($format(fshow(interval)+fshow(" startA=")+fshow(startA)));
+      sourceA.start(descriptorA.pointer, pack(extend(startA>>nshift)), fromInteger(jj)>>nshift, 1);      
+   endrule
    
-   Vector#(J, FIFO#(void)) controlDependenceA <- replicateM(mkFIFO);   
+   Vector#(J, FIFO#(void)) controlDependenceSink <- replicateM(mkFIFO);   
    for (Integer j = 0; j < jj; j = j + 1) begin
-
       int jint = fromInteger(j);
-      rule startSourceAndSink;
-	 
+      rule startSink;
 	 if(j > 0)
-	    controlDependenceA[j-1].deq;
+	    controlDependenceSink[j-1].deq;
 	 if(j < jj-1)
-	    controlDependenceA[j].enq(?);
-
-	 Tuple2#(UInt#(addrwidth),UInt#(addrwidth)) index <- toGet(indexpipes[j]).get();
-	 
-	 let row = tpl_1(index)+fromInteger(j);
-	 let col = tpl_2(index);
-	 
-	 match { .startABase, .unusedA } <- toGet(offsetpipesA[j]).get();
+	    controlDependenceSink[j].enq(?);
 	 match { .startCBase, .offsetC } <- toGet(offsetpipesC[j]).get();
-	 let startA = startABase + startAOffset[j];
 	 let startC = startCBase + startCOffset[j] + offsetC;
-	 
 	 int jint = fromInteger(j);
-	 if (timing || verbose) $display($format(fshow(cycles)+fshow("    start A index=")+fshow(tuple2(row,col))
-						 +fshow(" startA=")+fshow(startA)
-						 +fshow(" startC=")+fshow(startC)
-						 +fshow(" j=")+fshow(jint)));
-	 
-	 sourceA[j].start(descriptorA[j].first.pointer, pack(extend(startA>>nshift)), pack(extend(descriptorA[j].first.numColumns>>nshift)), extend(row));
-	 if (verbose || verbose1) $display($format(fshow(cycles)+fshow("    sourceA[")+fshow(jint)+fshow("].start")+fshow(startA)));
 	 sinks[j].start(descriptorC[j].first.pointer, pack(extend(startC>>nshift)), fromInteger(kk/n));
 	 if (verbose || verbose1) $display($format(fshow(cycles)+fshow("      sinks[")+fshow(jint)+fshow("].start")+fshow(startC)));
-	 
       endrule
-
-      rule finishSourceA;
-	 if (timing || verbose || verbose1) $display($format(fshow(cycles)+fshow("    sourceA[")+fshow(jint)+fshow("].finish ")));
-	 let b <- sourceA[j].finish();
-      endrule
-
       rule finishSink;
 	 $dumpoff();
 	 // each time we write a burst of k values via sinks
@@ -407,10 +382,8 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 	 if (c == 0) begin
 	    running <= False;
 	    doneFifo.enq(?);
-	    for(Integer i = 0; i < jj; i=i+1) begin
-	       descriptorA[i].deq;
+	    for(Integer i = 0; i < jj; i=i+1) 
 	       descriptorC[i].deq;
-	    end
 	 end
       endrule
    end
@@ -418,12 +391,9 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
    FIFO#(Bool) initNumEltsFifo <- mkFIFO();
    rule dotProdsNumElts;
       initNumEltsFifo.deq();
-      let numColumnsA = descriptorA[0].first.numColumns;
       let numColumnsB = descriptorB.numColumns;
-      for (Integer j = 0; j < jj; j = j + 1) begin
-	 startAOffset[j] <= fromInteger(j)*numColumnsA;
+      for (Integer j = 0; j < jj; j = j + 1) 
 	 startCOffset[j] <= fromInteger(j)*numColumnsB;
-      end
   endrule
 
    function Bit#(32) my_add(Tuple2#(Bit#(32),Bit#(32)) ab); match { .a, .b } = ab; return a+b; endfunction
@@ -445,31 +415,29 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 		       ObjectPointer pointerC,
 		       UInt#(addrwidth) numRowsA_x_numColumnsA,UInt#(addrwidth) numColumnsA_x_J,
 		       UInt#(addrwidth) numRowsA_x_numColumnsB,UInt#(addrwidth) numColumnsB_x_J,
-		       UInt#(addrwidth) numRowsA_x_numRowsB,UInt#(addrwidth) numRowsB_x_numColumnsB
+		       UInt#(addrwidth) numColumnsA_x_numColumnsB,UInt#(addrwidth) numRowsB_x_numColumnsB
 		       ) if (!running);
-      XYRangeConfig#(UInt#(addrwidth)) indexcfg  = XYRangeConfig {xbase: 0, xlimit: numRowsA, xstep: fromInteger(jj),
-								  ybase: 0, ylimit: numColumnsB, ystep: fromInteger(kk) };
-      XYRangeConfig#(UInt#(addrwidth)) offsetcfgA = XYRangeConfig {xbase: 0, xlimit: numRowsA_x_numColumnsA, xstep: numColumnsA_x_J,
-								  ybase: 0, ylimit: numColumnsB, ystep: fromInteger(kk) };
+      XYZRangeConfig#(UInt#(addrwidth)) offsetcfgA = XYZRangeConfig {xbase: 0, xlimit: numColumnsA, xstep: fromInteger(jj),
+								     ybase: 0, ylimit: numRowsA_x_numColumnsA, ystep: numColumnsA,
+								     zbase: 0, zlimit: numColumnsB, zstep: fromInteger(kk)};
       XYZRangeConfig#(UInt#(addrwidth)) offsetcfgB = XYZRangeConfig {xbase: 0, xlimit: numColumnsB, xstep: fromInteger(kk),
 								     ybase: 0, ylimit: numRowsB_x_numColumnsB, ystep: numColumnsB,
-								     zbase: 0, zlimit: numRowsA, zstep: fromInteger(jj)};
-      XYRangeConfig#(UInt#(addrwidth)) offsetcfgC = XYRangeConfig {xbase: 0, xlimit: numRowsA_x_numColumnsB, xstep: numColumnsB_x_J,
+								     zbase: 0, zlimit: numColumnsA, zstep: fromInteger(jj)};
+      XYRangeConfig#(UInt#(addrwidth)) offsetcfgC = XYRangeConfig {xbase: 0, xlimit: numColumnsA_x_numColumnsB, xstep: numColumnsB_x_J,
 								  ybase: 0, ylimit: numColumnsB, ystep: fromInteger(kk) };
-      descFifoA.enq(MatrixDescriptor { pointer: pointerA, base: 0, numRows: numRowsA, numColumns: numColumnsA});
-      descriptorB <= MatrixDescriptor { pointer: pointerB, base: 0, numRows: numRowsB, numColumns: numColumnsB};
-      descFifoC.enq(MatrixDescriptor { pointer: pointerC, base: 0, numRows: numRowsA, numColumns: numRowsB});
-      dotprodCount <= numRowsA_x_numColumnsB;
+      descriptorA <= MatrixDescriptor { pointer: pointerA, base: 0, numRows: numRowsA,    numColumns: numColumnsA};
+      descriptorB <= MatrixDescriptor { pointer: pointerB, base: 0, numRows: numRowsB,    numColumns: numColumnsB};
+      descFifoC.enq( MatrixDescriptor { pointer: pointerC, base: 0, numRows: numColumnsA, numColumns: numColumnsB});
+      dotprodCount <= numColumnsA_x_numColumnsB;
       numRowsBReg <= numRowsB;
+      numRowsAReg <= numRowsA;
       running <= True;
 
       if (verbose) $display("mm pointerA=%d pointerB=%d pointerC=%d\n", pointerA, pointerB, pointerC);
       if (verbose) $display("mm.start ra=%d ca=%d rb=%d cb=%d dotprodCount=%d", numRowsA, numColumnsA, numRowsB, numColumnsB, dotprodCount);
-      if (verbose) $display($format(fshow("mm.start ")+fshow(indexcfg)));
       if (verbose) $display($format(fshow("offsetcfgA ")+fshow(offsetcfgA)));
       if (verbose) $display($format(fshow("offsetcfgB ")+fshow(offsetcfgB)));
       if (verbose) $display($format(fshow("offsetcfgC ")+fshow(offsetcfgC)));
-      indexpipeifc.start(indexcfg);
       offsetpipeA.start(offsetcfgA);
       offsetpipeC.start(offsetcfgC);
       offsetpipeB.start(offsetcfgB);
@@ -498,7 +466,7 @@ interface DramMatrixMultiply#(numeric type n, numeric type dmasz, numeric type n
 		       ObjectPointer pointerC,
 		       UInt#(MMSize) numRowsA_x_numColumnsA, UInt#(MMSize) numColumnsA_x_J,
 		       UInt#(MMSize) numRowsA_x_numColumnsB, UInt#(MMSize) numColumnsB_x_J,
-		       UInt#(MMSize) numRowsA_x_numRowsB,    UInt#(MMSize) numRowsB_x_J);
+		       UInt#(MMSize) numColumnsA_x_numColumnsB, UInt#(MMSize) numRowsB_x_J);
    method ActionValue#(Bool) finish();
    interface DmaMatrixMultiplyDebug debug;
 endinterface
@@ -506,18 +474,15 @@ endinterface
 module  mkDramMatrixMultiply#(HostType host)(DramMatrixMultiply#(N,TMul#(N,32),2));
 
    MemwriteEngineV#(TMul#(N,32),2, J)   writeEngine <- mkMemwriteEngine();
-   MemreadEngineV#(TMul#(N,32), 2, J) rowReadEngine <- mkMemreadEngineBuff(512);
+   MemReader#(TMul#(N,32))                rowReader <- mkMemReader;
    MemReader#(TMul#(N,32))                colReader <- mkMemReader;
    MemWriter#(TMul#(32,N)) bogusWriter <- mkMemWriter;
    
-   Vector#(J, Server#(MemengineCmd,Bool)) rowReadServers = rowReadEngine.readServers;
-   Vector#(J, PipeOut#(Bit#(TMul#(N,32)))) rowReadDataPipes = rowReadEngine.dataPipes;
-   Vector#(J, VectorSource#(DmaSz, Vector#(N,Float))) xvfsources <- mapM(uncurry(mkMemreadVectorSource), zip(rowReadServers, rowReadDataPipes));
-   Vector#(J,   VectorSink#(DmaSz, Vector#(N,Float)))      sinks <- mapM(uncurry(mkMemwriteVectorSink),   zip(writeEngine.writeServers,   writeEngine.dataPipes));
-   
-   DmaMatrixMultiplyIfc#(MMSize,DmaSz) dmaMMF <- mkDmaMatrixMultiply(xvfsources, colReader.readServer, sinks, host);
-   interface Vector readClients  = cons(rowReadEngine.dmaClient, cons(colReader.readClient, nil));
-   interface Vector writeClients = cons(writeEngine.dmaClient,   cons(bogusWriter.writeClient, nil));
+   Vector#(J,   VectorSink#(DmaSz, Vector#(N,Float))) sinks <- mapM(uncurry(mkMemwriteVectorSink),  zip(writeEngine.writeServers, writeEngine.dataPipes));
+   DmaMatrixMultiplyIfc#(MMSize,DmaSz) dmaMMF <- mkDmaMatrixMultiply(rowReader.readServer, colReader.readServer, sinks, host);
+
+   interface Vector readClients  = cons(rowReader.readClient, cons(colReader.readClient,    nil));
+   interface Vector writeClients = cons(writeEngine.dmaClient,cons(bogusWriter.writeClient, nil));
    method start = dmaMMF.start;
    method finish = dmaMMF.finish;
    interface DmaMatrixMultiplyDebug debug = dmaMMF.debug;
@@ -580,13 +545,13 @@ module  mkMmTN#(MmIndication ind, TimerIndication timerInd, MmDebugIndication mm
 			Bit#(32) h3,
 			Bit#(32) r1_x_c1, Bit#(32) c1_x_j,
 			Bit#(32) r1_x_c2, Bit#(32) c2_x_j,
-			Bit#(32) r1_x_r2, Bit#(32) r2_x_c2);
+			Bit#(32) c1_x_c2, Bit#(32) r2_x_c2);
 	 dmaMMF.start(h1, unpack(truncate(r1)), unpack(truncate(c1)),
 		      h2, unpack(truncate(r2)), unpack(truncate(c2)),
 		      h3,
 		      unpack(truncate(r1_x_c1)), unpack(truncate(c1_x_j)),
 		      unpack(truncate(r1_x_c2)), unpack(truncate(c2_x_j)),
-		      unpack(truncate(r1_x_r2)), unpack(truncate(r2_x_c2)));
+		      unpack(truncate(c1_x_c2)), unpack(truncate(r2_x_c2)));
 
 	 mmfCycles <= 0;
 	 busyFifo.enq(True);

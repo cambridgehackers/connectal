@@ -443,18 +443,17 @@ endmodule
 module mkUnfunnelPipes#(Vector#(m, PipeOut#(a)) ins)(Vector#(mk, PipeOut#(a)))
    provisos (Mul#(m, k, mk),
 	     Log#(k,ksz),
-	     Bits#(a, asz),
-	     Add#(1, b__, asz)
-	     );
+	     Bits#(a,asz));
+   
    let m = fromInteger(valueOf(m));
    let k = fromInteger(valueOf(k));
    let mk = fromInteger(valueOf(mk));
-
+   
    Vector#(mk, FIFOF#(a)) fifos <- replicateM(mkFIFOF);
    for (Integer i = 0; i < m; i = i + 1) begin
-      Reg#(Bit#(asz)) which <- mkReg(0);
+      Reg#(Bit#(TAdd#(1,ksz))) which <- mkReg(0);
       rule consumer;
-	 let index = (which << valueOf(ksz)) + fromInteger(i);
+	 let index = which + fromInteger(i)*k;
 	 let v <- toGet(ins[i]).get();
 	 fifos[index].enq(v);
 	 which <= (which + 1) % k;

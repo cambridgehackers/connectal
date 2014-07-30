@@ -209,13 +209,15 @@ int main(int argc, const char **argv)
     fflush(stdout);
   }
 
-  fprintf(stderr, "pm1\n");
-  PortalMat pm1(m1);
 #ifdef MATRIX_TN
+  fprintf(stderr, "pm1t\n");
+  PortalMat pm1t(m1.t());
   fprintf(stderr, "pm2\n");
   PortalMat pm2(m2);
 #else
 #ifdef MATRIX_NT
+  fprintf(stderr, "pm1\n");
+  PortalMat pm1(m1);
   fprintf(stderr, "pm2t\n");
   PortalMat pm2t(m2.t());
 #endif
@@ -223,11 +225,12 @@ int main(int argc, const char **argv)
   PortalMat pm3;
 
   // now reference the matrices so we do not count that in the timer
-  pm1.reference();
 #ifdef MATRIX_TN
+  pm1t.reference();
   pm2.reference();
 #else
 #ifdef MATRIX_NT
+  pm1.reference();
   pm2t.reference();
 #endif
 #endif
@@ -244,7 +247,7 @@ int main(int argc, const char **argv)
   fprintf(stderr, "HW matmul\n");
   start_timer(0);
 #ifdef MATRIX_TN
-  pm3.multf(pm1, pm2, mmdeviceIndication);
+  pm3.multf(pm1t, pm2, mmdeviceIndication);
 #else
 #ifdef MATRIX_NT
   pm3.multf(pm1, pm2t, mmdeviceIndication);
