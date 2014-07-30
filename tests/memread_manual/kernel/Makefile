@@ -29,8 +29,11 @@ kernel_exe-y := ../memread_manual_manager.o \
      $(BOARDDIR)/MemreadRequestProxy.o \
      $(CPPDIR)/portal.o \
      $(CPPDIR)/dmaManager.o \
-     $(CPPDIR)/sock_utils.o \
      $(CPPDIR)/kernel_module.o
+
+ifeq ($(BOARD),bluesim)
+kernel_exe-y += $(CPPDIR)/sock_utils.o
+endif
 
 obj-m := kernel_exe.o
 
