@@ -51,7 +51,7 @@ CURRENTMOD=$(shell lsmod | grep kernel_exe)
 run: host
 ifeq ($(BOARD),bluesim)
 	@echo running bsim
-	../bluesim/bin/bsim& echo "$$!"
+	../bluesim/bin/bsim& echo $$! >tmp.bluesim.makefile.pid
 else
 	fpgajtag ../$(BOARD)/bin/mkTop.bin.gz
 endif
@@ -61,10 +61,12 @@ endif
 	sudo insmod kernel_exe.ko
 ifeq ($(BOARD),bluesim)
 	./bsim_relay
-	killall bluetcl
+	kill `cat tmp.bluesim.makefile.pid`
+	#killall bluetcl
 endif
 	sudo rmmod kernel_exe
 	dmesg | tail -30
+	@rm -f tmp.bluesim.makefile.pid
 
 #
 # Target for making userspace bsim_relay program

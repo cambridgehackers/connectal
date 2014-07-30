@@ -105,10 +105,12 @@ static void __exit pa_exit(void)
 {
   printk("TestProgram::pa_exit\n");
   if (!bsim_relay_running) {
+    printk("TestProgram::pa_exit terminate main program\n");
     main_program_finished = 1;
     up(&bsim_start); // in case host never starts
   }
-  wait_for_completion(&main_completion);
+  else
+    wait_for_completion(&main_completion);
   misc_deregister(&miscdev);
 }
 
