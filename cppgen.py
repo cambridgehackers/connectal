@@ -441,6 +441,8 @@ class InterfaceMixin:
 	reqChanNums = []
         for d in self.decls:
             reqChanNums.append('CHAN_NUM_%s' % self.global_name(d.name, suffix))
+        if suffix == 'Proxy':
+            reqChanNums.append('CHAN_NUM_%s_putFailed' % className)
         subs = {'className': className,
                 'namespace': namespace,
                 'parentClass': self.parentClass('Portal')}
@@ -451,8 +453,6 @@ class InterfaceMixin:
             d.emitMethodDeclaration(f, True, indentation + 4, namespace, className)
         f.write('\n};\n')
 	of.write('enum { ' + ','.join(reqChanNums) + '};\n')
-        if suffix == 'Proxy':
-	    of.write('enum { CHAN_NUM_%s_putFailed };\n' % className)
     def emitCWrapperDeclaration(self, f, of, cppf, suffix, indentation=0, namespace=''):
         className = "%s%s" % (cName(self.name), suffix)
         indent(f, indentation)

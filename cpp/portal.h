@@ -26,9 +26,9 @@
 #define PORTAL_BASE_OFFSET         (1 << 16)
 
 /* Offsets of mapped registers within an /dev/fpgaxxx device */
-#define PORTAL_REQ_FIFO(A)         (((0<<14) + (A) * 256)/sizeof(uint32_t))
-#define PORTAL_IND_FIFO(A)         (((2<<14) + (A) * 256)/sizeof(uint32_t))
-#define PORTAL_IND_REG_OFFSET_32   ( (3<<14)             /sizeof(uint32_t))
+#define PORTAL_REQ_FIFO(A)         (((0<<14) + (A) * 256 + 256)/sizeof(uint32_t))
+#define PORTAL_IND_FIFO(A)         (((0<<14) + (A) * 256 + 256)/sizeof(uint32_t))
+#define PORTAL_IND_REG_OFFSET_32   ( (0<<14)             /sizeof(uint32_t))
 #define     IND_REG_INTERRUPT_FLAG    (PORTAL_IND_REG_OFFSET_32 + 0)
 #define     IND_REG_INTERRUPT_MASK    (PORTAL_IND_REG_OFFSET_32 + 1)
 #define     IND_REG_INTERRUPT_COUNT   (PORTAL_IND_REG_OFFSET_32 + 2)
@@ -36,7 +36,7 @@
 
 // Directory offsets
 
-#define PORTAL_DIRECTORY_OFFSET(A)      &globalDirectory.map_base[PORTAL_REQ_FIFO(0)+128+(A)]
+#define PORTAL_DIRECTORY_OFFSET(A)      &globalDirectory.map_base[128+(A)]
 #define PORTAL_DIRECTORY_VERSION        PORTAL_DIRECTORY_OFFSET(0)
 #define PORTAL_DIRECTORY_TIMESTAMP      PORTAL_DIRECTORY_OFFSET(1)
 #define PORTAL_DIRECTORY_NUMPORTALS     PORTAL_DIRECTORY_OFFSET(2)

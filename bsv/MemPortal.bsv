@@ -206,17 +206,11 @@ endmodule
 
 module mkMemPortal#(Portal#(numRequests, numIndications, slaveDataWidth) portal)(MemPortal#(slaveAddrWidth, slaveDataWidth))
    provisos (Add#(1, i__, slaveDataWidth),
-	     Add#(c__, 15, slaveAddrWidth),
+	     Add#(c__, 8, slaveAddrWidth),
 	     Add#(d__, 1, c__),
-	     Max#(numRequests,1,numRequestsToMux),
 	     Max#(numIndications,1,numIndicationsToMux),
-
-	     Add#(a__, TLog#(numRequestsToMux), 6),
-	     Add#(b__, TLog#(numIndicationsToMux), 6),
-	     Add#(numIndications, e__, numIndicationsToMux),
-	     Add#(numRequests, f__, numRequestsToMux),
-	     Add#(numIndicationsToMux, g__, TAdd#(numIndications, 1)),
-	     Add#(numRequestsToMux, h__, TAdd#(numRequests, 1))
+	     Add#(a__, TLog#(TAdd#(1, TAdd#(numRequests, numIndicationsToMux))), c__),
+	     Add#(numIndicationsToMux, b__, TAdd#(numIndications, 1))
 	     );
 
    PipeIn#(Bit#(slaveDataWidth)) guardRequestPipe =
@@ -224,28 +218,24 @@ module mkMemPortal#(Portal#(numRequests, numIndications, slaveDataWidth) portal)
 	  method Action enq(Bit#(slaveDataWidth) v) if (False); endmethod
 	  method Bool notFull(); return False; endmethod
        endinterface);
+   Vector#(1, PipeIn#(Bit#(slaveDataWidth))) guardRequestPipes = replicate(guardRequestPipe);
+
    FIFOF#(Bit#(slaveDataWidth)) putFailedIndicationFifo <- mkFIFOF();
    PipeOut#(Bit#(slaveDataWidth)) putFailedIndicationPipe = toPipeOut(putFailedIndicationFifo);
 
-   Vector#(numRequestsToMux,    PipeIn#(Bit#(slaveDataWidth)))     requestPipes = take(append(portal.requests, cons(guardRequestPipe, nil)));
+   Vector#(numRequests,         PipeIn#(Bit#(slaveDataWidth)))     requestPipes = take(portal.requests);
    Vector#(numIndicationsToMux, PipeOut#(Bit#(slaveDataWidth))) indicationPipes = take(append(portal.indications, cons(putFailedIndicationPipe, nil)));
-   Vector#(numRequestsToMux,    MemSlave#(8, slaveDataWidth))    requestMemSlaves <- mapM(mkPipeInMemSlave, requestPipes);
+   Vector#(numRequests,         MemSlave#(8, slaveDataWidth))    requestMemSlaves <- mapM(mkPipeInMemSlave, requestPipes);
    Vector#(numIndicationsToMux, MemSlave#(8, slaveDataWidth)) indicationMemSlaves <- mapM(mkPipeOutMemSlave, indicationPipes);
 
-   MemSlave#(14,slaveDataWidth) requestFifoMemSlave    <- mkMemSlaveMux(requestMemSlaves);
-   MemSlave#(14,slaveDataWidth) indicationFifoMemSlave <- mkMemSlaveMux(indicationMemSlaves);
+   PortalCtrlMemSlave#(8,slaveDataWidth) ctrlPort <- mkPortalCtrlMemSlave(indicationPipes);
 
-   MemSlave#(14,slaveDataWidth)     requestCtrlMemSlave <- mkPipeInMemSlave(guardRequestPipe);
-   PortalCtrlMemSlave#(14,slaveDataWidth) indicationCtrlPort <- mkPortalCtrlMemSlave(indicationPipes);
-
-   MemSlave#(15,slaveDataWidth) requestMemSlave <- mkMemSlaveMux(cons(requestFifoMemSlave, cons(requestCtrlMemSlave, nil)));
-   MemSlave#(15,slaveDataWidth) indicationMemSlave <- mkMemSlaveMux(cons(indicationFifoMemSlave, cons(indicationCtrlPort.memSlave, nil)));
-
-   MemSlave#(slaveAddrWidth,slaveDataWidth) memslave  <- mkMemSlaveMux(cons(requestMemSlave, cons(indicationMemSlave, nil)));
+   MemSlave#(slaveAddrWidth,slaveDataWidth) memslave  <- mkMemSlaveMux(cons(ctrlPort.memSlave,
+									    append(requestMemSlaves, indicationMemSlaves)));
 
    method ifcId   = portal.ifcId;
    method ifcType = portal.ifcType;
 
    interface MemSlave slave = memslave;
-   interface ReadOnly interrupt = indicationCtrlPort.interrupt;
+   interface ReadOnly interrupt = ctrlPort.interrupt;
 endmodule
