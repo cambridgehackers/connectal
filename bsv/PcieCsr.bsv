@@ -109,13 +109,27 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
    FIFOF#(MemData#(32))        writeDataFifo <- mkFIFOF();
    FIFOF#(Bit#(ObjectTagSize)) writeDoneFifo <- mkFIFOF();
 
+   FIFOF#(AddrBeat#(16)) csrRagBeatFifo <- mkFIFOF();
+   FIFOF#(Bool)       csrIsMsixAddrFifo <- mkFIFOF();
    rule readDataRule;
       let beat <- csrRag.addrBeat.get();
       let addr = beat.addr >> 2; // word address
       Bit#(32) data = 0;
       let modaddr = (addr % 8192);
       let msixaddr = modaddr - `msix_base;
-      if (msixaddr >= 0 && msixaddr <= 63)
+
+      csrRagBeatFifo.enq(beat);
+      csrIsMsixAddrFifo.enq(msixaddr >= 0 && msixaddr <= 63);
+   endrule
+   rule readDataRule2;
+      let beat       <- toGet(csrRagBeatFifo).get();
+      let isMsixAddr <- toGet(csrIsMsixAddrFifo).get();
+      let addr = beat.addr >> 2; // word address
+      Bit#(32) data = 0;
+      let modaddr = (addr % 8192);
+      let msixaddr = modaddr - `msix_base;
+
+      if (isMsixAddr)
          begin
             let groupaddr = (msixaddr / 4);
             //******************************** area referenced from xilinx_x7_pcie_wrapper.v
