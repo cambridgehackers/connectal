@@ -238,15 +238,15 @@ void memdump(unsigned char *p, int len, char *title);
 static int have_request;
 static struct memrequest upreq;
 static struct memresponse downresp;
-static int once = 1;
+extern int bsim_relay_running;
 extern int main_program_finished;
 
 ssize_t xbsv_kernel_read (struct file *f, char __user *arg, size_t len, loff_t *data)
 {
     int err;
-    if (once)
+    if (!bsim_relay_running)
         up(&bsim_start);
-    once = 0;
+    bsim_relay_running = 1;
     if (main_program_finished)
         return 0;          // all done!
     if (!have_request)
@@ -274,7 +274,7 @@ ssize_t xbsv_kernel_write (struct file *f, const char __user *arg, size_t len, l
 void connect_to_bsim(void)
 {
     printk("[%s:%d]\n", __FUNCTION__, __LINE__);
-    if (!once)
+    if (bsim_relay_running)
         return;
     sema_init (&bsim_avail, 1);
     sema_init (&bsim_have_response, 0);
@@ -285,6 +285,8 @@ unsigned int read_portal_bsim(volatile unsigned int *addr, int id)
 {
     struct memrequest foo = {id, 0,addr,0};
     //printk("[%s:%d]\n", __FUNCTION__, __LINE__);
+    if (main_program_finished)
+        return 0;
     down_interruptible(&bsim_avail);
     memcpy(&upreq, &foo, sizeof(upreq));
     have_request = 1;
@@ -296,6 +298,8 @@ void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id)
 {
     struct memrequest foo = {id, 1,addr,v};
     //printk("[%s:%d]\n", __FUNCTION__, __LINE__);
+    if (main_program_finished)
+        return;
     down_interruptible(&bsim_avail);
     memcpy(&upreq, &foo, sizeof(upreq));
     have_request = 1;
@@ -305,6 +309,8 @@ ssize_t bluesim_sock_fd_write(long fd)
     struct memrequest foo = {MAGIC_PORTAL_FOR_SENDING_FD};
     struct file *fmem;
 
+    if (main_program_finished)
+        return 0;
     fmem = fget(fd);
     foo.addr = fmem->private_data;
     printk("[%s:%d] fd %lx dmabuf %p\n", __FUNCTION__, __LINE__, fd, foo.addr);

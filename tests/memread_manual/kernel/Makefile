@@ -50,18 +50,18 @@ CURRENTMOD=$(shell lsmod | grep kernel_exe)
 
 run: host
 ifeq ($(BOARD),bluesim)
-	../bluesim/bin/bsim& bsimpid=$!
+	@echo running bsim
+	../bluesim/bin/bsim& echo "$$!"
 else
 	fpgajtag ../$(BOARD)/bin/mkTop.bin.gz
 endif
-	echo bsimpid $bsimpid
 ifneq ("$(CURRENTMOD)", "")
 	sudo rmmod kernel_exe
 endif
 	sudo insmod kernel_exe.ko
 ifeq ($(BOARD),bluesim)
 	./bsim_relay
-	kill $bsimpid
+	killall bluetcl
 endif
 	sudo rmmod kernel_exe
 	dmesg | tail -30

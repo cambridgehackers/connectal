@@ -161,6 +161,7 @@ int main(int argc, const char **argv)
     //srcBuffer[i] = i;
 
   DmaManager_dCacheFlushInval(&priv, srcAlloc, srcBuffer);
+  PORTAL_PRINTF( "Main: before DmaManager_reference(%p)\n", srcAlloc);
   ref_srcAlloc = DmaManager_reference(&priv, srcAlloc);
   PORTAL_PRINTF( "Main: starting read %08x\n", numWords);
   MemreadRequestProxy_startRead (&intarr[3], ref_srcAlloc, numWords, burstLen, 1);

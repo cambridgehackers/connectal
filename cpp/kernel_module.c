@@ -35,6 +35,7 @@
 #include "portal.h"   // pthread_t
 
 extern int main(int argc, char *argv[]);
+int bsim_relay_running;
 struct semaphore bsim_start;
 DECLARE_COMPLETION(main_completion);
 
@@ -103,6 +104,10 @@ static int __init pa_init(void)
 static void __exit pa_exit(void)
 {
   printk("TestProgram::pa_exit\n");
+  if (!bsim_relay_running) {
+    main_program_finished = 1;
+    up(&bsim_start); // in case host never starts
+  }
   wait_for_completion(&main_completion);
   misc_deregister(&miscdev);
 }

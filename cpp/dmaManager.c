@@ -115,11 +115,11 @@ static int host_sendfd(DmaManagerPrivate *priv, int id, PortalAlloc *pa)
   unsigned char entryCount = 0;
   uint64_t borderVal[3];
   unsigned char idxOffset;
-  PortalAlloc *portalAlloc = (PortalAlloc *)PORTAL_MALLOC(sizeof(PortalAlloc)+((pa->header.numEntries+1)*sizeof(DmaEntry)));
+  PortalAlloc *portalAlloc;
 #ifdef __KERNEL__
   struct sg_table *sgtable;
   struct scatterlist *sg;
-  struct file *fmem = fget(portalAlloc->header.fd);
+  struct file *fmem = fget(pa->header.fd);
 
   sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
   pa->header.numEntries = sgtable->nents;
