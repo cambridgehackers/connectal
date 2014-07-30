@@ -19,7 +19,7 @@ int readBurstLen = 16;
 int writeBurstLen = 16;
 
 
-#ifdef MMAP_HW
+#ifndef BSIM
 int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
 #else
 int numWords = 0x124000/4;

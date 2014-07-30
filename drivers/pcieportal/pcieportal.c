@@ -22,7 +22,6 @@
 
 #include "pcieportal.h"
 #define XBSV_DRIVER_CODE
-#define MMAP_HW
 #include "portal.h" // PORTAL_BASE_OFFSET
 #include "../../cpp/dmaSendFd.h"
 

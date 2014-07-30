@@ -12,7 +12,7 @@ PortalAlloc *srcAlloc;
 PortalAlloc *dstAlloc;
 unsigned int *srcBuffer = 0;
 unsigned int *dstBuffer = 0;
-#ifdef MMAP_HW
+#ifndef BSIM
 int numWords = 16 << 18;
 #else
 int numWords = 16 << 10;
@@ -130,7 +130,7 @@ int runtest(int argc, const char **argv)
 
   fprintf(stderr, "Main::starting mempcy numWords:%d\n", numWords);
   int burstLen = 16;
-#ifdef MMAP_HW
+#ifndef BSIM
   int iterCnt = 64;
 #else
   int iterCnt = 2;

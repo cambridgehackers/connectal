@@ -12,7 +12,7 @@
 
 
 sem_t done_sem;
-#ifdef MMAP_HW
+#ifndef BSIM
 int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
 #else
 int numWords = 0x124000/4;
@@ -21,7 +21,7 @@ size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 
 int burstLen = 16;
-#ifdef MMAP_HW
+#ifndef BSIM
 int iterCnt = 128;
 #else
 int iterCnt = 2;

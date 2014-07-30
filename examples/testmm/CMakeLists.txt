@@ -20,9 +20,9 @@ FIND_PACKAGE( OpenCV REQUIRED )
 
 #notice the "recycling" of CMAKE_C_FLAGS
 #this is necessary to pick up android flags
-SET( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -pedantic -DZYNQ -DMMAP_HW" )
-SET( CMAKE_CPP_FLAGS "${CMAKE_CPP_FLAGS} -Wall -pedantic -DZYNQ -DMMAP_HW" )
-SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DZYNQ -DMMAP_HW" )
+SET( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -pedantic -DZYNQ" )
+SET( CMAKE_CPP_FLAGS "${CMAKE_CPP_FLAGS} -Wall -pedantic -DZYNQ" )
+SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DZYNQ" )
 
 #SET(BOARD zc706)
 SET(JNIDIR  ${CMAKE_CURRENT_SOURCE_DIR}/${BOARD}/jni )

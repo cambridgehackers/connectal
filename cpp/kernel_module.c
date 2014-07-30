@@ -71,7 +71,7 @@ int main_program_finished = 0;
 
 static struct file_operations pa_fops = {
     .owner = THIS_MODULE,
-#ifndef MMAP_HW
+#ifdef BSIM
     .read = xbsv_kernel_read,
     .write = xbsv_kernel_write,
 #endif

@@ -167,7 +167,7 @@ int main(int argc, const char **argv)
     PortalAlloc *haystackAlloc;
     PortalAlloc *mpNextAlloc;
     const char *needle_text = "I have control\n";
-#ifdef MMAP_HW
+#ifndef BSIM
     unsigned int BENCHMARK_INPUT_SIZE = 16 << 18;
 #else
     unsigned int BENCHMARK_INPUT_SIZE = 16 << 4;
@@ -204,7 +204,7 @@ int main(int argc, const char **argv)
     for(int i = 2; i < needle_len+1; i++)
       assert(mpNext[i] == border[i-1]+1);
 
-#ifdef MMAP_HW
+#ifndef BSIM
     int iter_cnt = 8;
 #else
     int iter_cnt = 2;

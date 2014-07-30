@@ -6,5 +6,4 @@
 
 --CPP
 
-  MMAP_HW is defined for the following platforms: [zc702, zedboard, ac701, kc707, vc707]
   ZYNQ is defined for the following platforms: [zedboard, zc702]

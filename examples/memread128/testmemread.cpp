@@ -89,7 +89,7 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::starting read %08x\n", numWords);
   start_timer(0);
   int burstLen = 16;
-#ifdef MMAP_HW
+#ifndef BSIM
   int iterCnt = 64;
 #else
   int iterCnt = 2;

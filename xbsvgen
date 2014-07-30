@@ -524,15 +524,15 @@ LOCAL_MODULE := android_exe
 LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS := -llog %(clibdirs)s %(clibs)s %(clibfiles)s
 LOCAL_CPPFLAGS := "-march=armv7-a"
-LOCAL_CFLAGS := -DZYNQ -DMMAP_HW -I%(xbsvdir)s -I%(xbsvdir)s/cpp -I%(xbsvdir)s/lib/cpp -I%(xbsvdir)s/drivers/zynqportal -I%(project_dir)s/jni %(cincludes)s %(cdefines)s -I%(xbsvdir)s/drivers/portalmem
-LOCAL_CXXFLAGS := -DZYNQ -DMMAP_HW -I%(xbsvdir)s -I%(xbsvdir)s/cpp -I%(xbsvdir)s/lib/cpp -I%(xbsvdir)s/drivers/zynqportal -I%(project_dir)s/jni %(cincludes)s %(cdefines)s -I%(xbsvdir)s/drivers/portalmem
+LOCAL_CFLAGS := -DZYNQ -I%(xbsvdir)s -I%(xbsvdir)s/cpp -I%(xbsvdir)s/lib/cpp -I%(xbsvdir)s/drivers/zynqportal -I%(project_dir)s/jni %(cincludes)s %(cdefines)s -I%(xbsvdir)s/drivers/portalmem
+LOCAL_CXXFLAGS := -DZYNQ -I%(xbsvdir)s -I%(xbsvdir)s/cpp -I%(xbsvdir)s/lib/cpp -I%(xbsvdir)s/drivers/zynqportal -I%(project_dir)s/jni %(cincludes)s %(cdefines)s -I%(xbsvdir)s/drivers/portalmem
 
 include $(BUILD_EXECUTABLE)
 '''
 
 linuxmakefile_template='''
 CFLAGS_COMMON = -O -g -I%(project_dir)s/jni -I%(xbsvdir)s -I%(xbsvdir)s/cpp -I%(xbsvdir)s/lib/cpp %(sourceincludes)s %(cincludes)s %(cdefines)s -I%(xbsvdir)s/drivers/portalmem -I%(xbsvdir)s/drivers/pcieportal -I%(xbsvdir)s/drivers/zynqportal
-CFLAGS = -DMMAP_HW $(CFLAGS_COMMON)
+CFLAGS = $(CFLAGS_COMMON)
 
 PORTAL_CPP_FILES = $(addprefix %(xbsvdir)s/cpp/, portal.c poller.cpp sock_utils.c timer.c)
 SOURCES = $(addprefix %(project_dir)s/jni/,  %(generatedCFiles)s) %(source)s $(PORTAL_CPP_FILES)

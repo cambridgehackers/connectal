@@ -20,7 +20,6 @@
  */
 
 #ifdef XBSV_DRIVER_CODE
-#define MMAP_HW
 #include "portal.h"
 #include "../generated/cpp/DmaConfigProxy.c"
 #include "../drivers/portalmem/portalmem.h"
@@ -115,13 +114,13 @@ static int host_sendfd(DmaManagerPrivate *priv, int id, PortalAlloc *pa)
 #endif
   if (trace_memory)
     PORTAL_PRINTF("DmaManager_reference id=%08x, numEntries:=%d len=%08lx)\n", id, pa->header.numEntries, (long)portalAlloc->header.size);
-#ifndef MMAP_HW
+#ifdef BSIM
   bluesim_sock_fd_write(portalAlloc->header.fd);
 #endif
   for(i = 0; i < portalAlloc->header.numEntries; i++){
     DmaEntry *e = &(portalAlloc->entries[i]);
     long addr;
-#ifdef MMAP_HW
+#ifndef BSIM
     addr = e->dma_address;
 #else
     addr = size_accum;

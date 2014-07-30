@@ -11,8 +11,8 @@
 BOARD=bluesim
 ###################### End of target h/w flags ###################
 
-ifneq ($(BOARD),bluesim)
-    HARDWARE_FLAGS=-DMMAP_HW
+ifeq ($(BOARD),bluesim)
+    HARDWARE_FLAGS=-DBSIM
 endif
 
 export KROOT=/lib/modules/$(shell uname -r)/build

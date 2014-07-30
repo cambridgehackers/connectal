@@ -123,7 +123,7 @@ void PortalPoller::portalExec_end(void)
 void* PortalPoller::portalExec_poll(int timeout)
 {
     long rc = 0;
-#ifdef MMAP_HW
+#ifndef BSIM
     // LCS bypass the call to poll if the timeout is 0
     if (timeout != 0)
       rc = poll(portal_fds, numFds, timeout);

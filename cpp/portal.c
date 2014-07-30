@@ -69,7 +69,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler)
     pint->fpga_fd = -1;
     pint->handler = handler;
     snprintf(buff, sizeof(buff), "/dev/fpga%d", pint->fpga_number);
-#ifndef MMAP_HW   // BSIM version
+#ifdef BSIM   // BSIM version
     connect_to_bsim();
 #elif defined(__KERNEL__)
     pint->map_base = (volatile unsigned int*)(tboard->bar2io + pint->fpga_number * PORTAL_BASE_OFFSET);

@@ -20,7 +20,7 @@ testme-n := $(CPPDIR)/dmaManager.o
 
 obj-m := testme.o
 
-ccflags-y := -I$(src)/.. -I$(DRIVERDIR)/pcieportal -I$(DRIVERDIR)/portalmem -I$(src)/$(CPPDIR) -I$(src)/$(BOARDDIR) -DMMAP_HW
+ccflags-y := -I$(src)/.. -I$(DRIVERDIR)/pcieportal -I$(DRIVERDIR)/portalmem -I$(src)/$(CPPDIR) -I$(src)/$(BOARDDIR)
 
 default:
 	$(MAKE) -C $(KROOT) M=$(PWD) modules
