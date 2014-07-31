@@ -19,9 +19,10 @@ install:
 	    install -m644 etc/udev/rules.d/$$fname $(UDEV_RULES_DIR) ; \
 	done
 	service udev restart
-	rmmod portalmem pcieportal 
-	modprobe portalmem 
-	modprobe pcieportal
+	-rmmod portalmem
+	-rmmod pcieportal 
+	-modprobe portalmem 
+	-modprobe pcieportal
 
 uninstall:
 	(cd drivers/pcieportal; make uninstall)
