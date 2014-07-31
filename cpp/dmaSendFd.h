@@ -71,11 +71,19 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int numEntries, in
       long len = sg->length;
 #else
   for(i = 0; i < numEntries; i++){
+    PortalElementSize portalElementSize;
     DmaEntry *e = &(portalAlloc->entries[i]);
     long addr = e->dma_address;
     long len = e->length;
 #endif
 #ifdef BSIM
+#if 0
+    portalElementSize.fd = fd;
+    portalElementSize.index = i;
+    len = ioctl(pa_fd, PA_ELEMENT_SIZE, &portalElementSize);
+    if (!len)
+        break;
+#endif
     addr = size_accum;
     size_accum += len;
     addr |= ((long)id) << 32; //[39:32] = truncate(pref);

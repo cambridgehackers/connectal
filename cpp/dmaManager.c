@@ -37,6 +37,8 @@
 #endif
 #endif
 
+//#define KERNEL_REFERENCE
+
 static int trace_memory;// = 1;
 
 #include "dmaSendFd.h"
@@ -98,8 +100,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
 {
   int id = priv->handle++;
   int rc = 0;
-//#define KERNEL_REFERENCE
-#ifdef KERNEL_REFERENCE
+#if defined(KERNEL_REFERENCE) && !defined(BSIM)
   tSendFd sendFd;
   sendFd.fd = pa->header.fd;
   sendFd.id = id;
