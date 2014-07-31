@@ -111,6 +111,7 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
 
    FIFOF#(AddrBeat#(16)) csrRagBeatFifo <- mkFIFOF();
    FIFOF#(Bool)       csrIsMsixAddrFifo <- mkFIFOF();
+   FIFOF#(Vector#(1024,Bool)) csrOneHotFifo <- mkFIFOF();
    rule readDataRule;
       let beat <- csrRag.addrBeat.get();
       let addr = beat.addr >> 2; // word address
@@ -120,53 +121,56 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
 
       csrRagBeatFifo.enq(beat);
       csrIsMsixAddrFifo.enq(msixaddr >= 0 && msixaddr <= 63);
+      function Bool addrDecode(Integer i); return addr == fromInteger(i); endfunction
+      csrOneHotFifo.enq(genWith(addrDecode));
    endrule
    rule readDataRule2;
       let beat       <- toGet(csrRagBeatFifo).get();
       let isMsixAddr <- toGet(csrIsMsixAddrFifo).get();
       let addr = beat.addr >> 2; // word address
-      Bit#(32) data = 0;
+      Bit#(32) data = 32'hbad0add0;
       let modaddr = (addr % 8192);
-      let msixaddr = modaddr - `msix_base;
+      let msix_base = `msix_base;
+      let msixaddr = modaddr - msix_base;
+      let oneHotDecode <- toGet(csrOneHotFifo).get();
 
-      if (isMsixAddr)
+      if (isMsixAddr) begin
          begin
             let groupaddr = (msixaddr / 4);
-            //******************************** area referenced from xilinx_x7_pcie_wrapper.v
+            //******************************** msix_base has to match CONFIG.MXIx_Table_Offset in scripts/xbsv-synth-pcie.tcl
             case (msixaddr % 4)
                0: data = msix_entry[groupaddr].addr_lo;
                1: data = msix_entry[groupaddr].addr_hi;
                2: data = msix_entry[groupaddr].msg_data;
                3: data = {'0, pack(msix_entry[groupaddr].masked)}; // vector control
                default: data = 32'hbad0add0;
+	  //******************************** end of MSIX Table
             endcase
          end
-      else
-	 case (modaddr)
-            // board identification
-            0: data = 32'h65756c42; // Blue
-            1: data = 32'h63657073; // spec
-	    
-	    768: data = extend(bramMuxRdAddrReg);
-	    774: data = fromInteger(2**valueOf(TAdd#(TlpTraceAddrSize,1)));
-	    775: data = (tlpdata.tlpTracing ? 1 : 0);
-	    776: data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 0);
-	    777: data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 1);
-	    778: data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 2);
-	    779: data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 3);
-	    780: data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 4);
-	    781: data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 5);
-	    792: data = extend(tlpdata.pcieTraceBramWrAddr);
-	    794: data = extend(tlpdata.tlpTraceLimit);
+      end
+      else begin
+	  // board identification
+	  if (oneHotDecode[0]) data = 32'h65756c42; // Blue
+	  if (oneHotDecode[1]) data = 32'h63657073; // spec
 
-            //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
-            // 4-bit MSIx pending bit field
-            992: data = '0;                               // PBA structure (low)
-            993: data = '0;                               // PBA structure (high)
-            //******************************** end of area referenced from xilinx_x7_pcie_wrapper.v
-            // unused addresses
-            default: data = 32'hbad0add0;
-	 endcase
+	  if (oneHotDecode[768]) data = extend(bramMuxRdAddrReg);
+	  if (oneHotDecode[774]) data = fromInteger(2**valueOf(TAdd#(TlpTraceAddrSize,1)));
+	  if (oneHotDecode[775]) data = (tlpdata.tlpTracing ? 1 : 0);
+	  if (oneHotDecode[776]) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 0);
+	  if (oneHotDecode[777]) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 1);
+	  if (oneHotDecode[778]) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 2);
+	  if (oneHotDecode[779]) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 3);
+	  if (oneHotDecode[780]) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 4);
+	  if (oneHotDecode[781]) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 5);
+	  if (oneHotDecode[792]) data = extend(tlpdata.pcieTraceBramWrAddr);
+	  if (oneHotDecode[794]) data = extend(tlpdata.tlpTraceLimit);
+
+         //******************************** msix_base has to match CONFIG.MXIx_PBA_Offset in scripts/xbsv-synth-pcie.tcl
+	  // 4-bit MSIx pending bit field
+	  if (oneHotDecode[992]) data = '0;                               // PBA structure (low)
+	  if (oneHotDecode[993]) data = '0;                               // PBA structure (high)
+	  //******************************** end of PBA Table
+      end
       readResponseFifo.enq(MemData { data: data, tag: beat.tag, last: beat.last });
    endrule
 

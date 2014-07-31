@@ -93,6 +93,7 @@ endif
 ifeq ("$(NEEDSPCIE)","true")
     FPGAMAKE_XBSVFLAGS += -P mkPcieEndpointX7 -P mkPcieHost
     XBSVFLAGS += --xci=$(shell cd $(IPDIR); /bin/pwd)/$(BOARD)/pcie_7x_0/pcie_7x_0.xci
+    XBSVFLAGS += --bscflags="+RTS -K46777216 -RTS"
 endif
 
 ifeq ($(USE_FPGAMAKE),true)
