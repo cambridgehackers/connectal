@@ -268,7 +268,7 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                 if (err)
                     break;
                 printk("[%s:%d] PCIE_SEND_FD %x %x  **\n", __FUNCTION__, __LINE__, sendFd.fd, sendFd.id);
-                err = send_fd_to_portal(&devptr, sendFd.fd, sendFd.id, 0, 0);
+                err = send_fd_to_portal(&devptr, sendFd.fd, sendFd.id, 0);
                 if (err < 0)
                     break;
                 err = 0;

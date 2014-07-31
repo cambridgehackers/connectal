@@ -31,7 +31,7 @@ static int shifts[] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0, 0};
 static int trace_memory = 1;
 #endif
 
-int send_fd_to_portal(PortalInternal *device, int fd, int id, int numEntries, int pa_fd)
+int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
 {
     int rc = 0;
     int i, j;
@@ -40,13 +40,18 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int numEntries, in
     unsigned char entryCount = 0;
     uint64_t borderVal[3];
     unsigned char idxOffset;
+#ifdef BSIM
     int size_accum = 0;
+#endif
 #ifdef __KERNEL__
     struct scatterlist *sg;
     struct file *fmem = fget(fd);
     struct sg_table *sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
+#elif defined(BSIM)
+    bluesim_sock_fd_write(fd);
 #else
-  PortalAlloc *portalAlloc, pa = { 0 };
+  int numEntries = 0;
+  PortalAlloc *portalAlloc = NULL, pa = { 0 };
   pa.header.fd=fd;
   rc = ioctl(pa_fd, PA_DMA_ADDRESSES, &pa);
   if (rc){
@@ -54,7 +59,6 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int numEntries, in
     goto retlab;
   }
   numEntries = pa.header.numEntries;
-printf("[%s:%d] num %d\n", __FUNCTION__, __LINE__, numEntries);
   portalAlloc = (PortalAlloc *)PORTAL_MALLOC(sizeof(PortalAlloc)+((numEntries+1)*sizeof(DmaEntry)));
   portalAlloc->header.fd = fd;
   portalAlloc->header.numEntries = numEntries;
@@ -65,37 +69,31 @@ printf("[%s:%d] num %d\n", __FUNCTION__, __LINE__, numEntries);
   }
 #endif
   rc = id;
-  if (trace_memory)
-    PORTAL_PRINTF("send_fd_to_portal: id=%08x, numEntries:=%d)\n", id, numEntries);
-#ifdef BSIM
-  bluesim_sock_fd_write(fd);
-  numEntries = 666;
-#endif
 #ifdef __KERNEL__
   for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
       long addr = sg_phys(sg);
       long len = sg->length;
-#else
-  for(i = 0; i < numEntries; i++){
+#elif defined(BSIM)
+  for(i = 0; 1; i++){
+    long len, addr = size_accum;
     PortalElementSize portalElementSize;
-    DmaEntry *e = &(portalAlloc->entries[i]);
-    long addr = e->dma_address;
-    long len = e->length;
-#endif
-#ifdef BSIM
+
     portalElementSize.fd = fd;
     portalElementSize.index = i;
     len = ioctl(pa_fd, PA_ELEMENT_SIZE, &portalElementSize);
     if (len < 0) {
-        PORTAL_PRINTF("send_fd_to_portal: bad return from PA_ELEMENT_SIZE %d\n", len);
+        PORTAL_PRINTF("send_fd_to_portal: bad return from PA_ELEMENT_SIZE %ld\n", len);
         rc = len;
         goto retlab;
     }
     if (!len)
         break;
-    addr = size_accum;
     size_accum += len;
     addr |= ((long)id) << 32; //[39:32] = truncate(pref);
+#else
+  for(i = 0; i < numEntries; i++) {
+    long addr = portalAlloc->entries[i].dma_address;
+    long len = portalAlloc->entries[i].length;
 #endif
 
     for(j = 0; j < 3; j++)
@@ -107,14 +105,14 @@ printf("[%s:%d] num %d\n", __FUNCTION__, __LINE__, numEntries);
           break;
         }
     if (j >= 3)
-      PORTAL_PRINTF("DmaManager:unsupported sglist size %x\n", len);
+      PORTAL_PRINTF("DmaManager:unsupported sglist size %lx\n", len);
     if (trace_memory)
-      PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, (long)addr, len);
+      PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d dma_addr=%08lx, len=%08lx)\n", id, i, (long)addr, len);
     DMAsglist(device, (id << 8) + i, addr, len);
-  } // }
+  } // balance } }
 #ifdef __KERNEL__
   fput(fmem);
-#else
+#elif !defined(BSIM)
   PORTAL_FREE(portalAlloc);
 #endif
 

@@ -109,7 +109,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
     sem_wait(&priv->confSem);
   rc = id;
 #else // KERNEL_REFERENCE
-  rc = send_fd_to_portal(priv->device, pa->header.fd, id, pa->header.numEntries, priv->pa_fd);
+  rc = send_fd_to_portal(priv->device, pa->header.fd, id, priv->pa_fd);
   if (rc <= 0) {
     //PORTAL_PRINTF("%s:%d sem_wait\n", __FUNCTION__, __LINE__);
     sem_wait(&priv->confSem);
@@ -129,22 +129,11 @@ int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa)
     return -1;
   }
   memset(portalAlloc, 0, sizeof(*portalAlloc));
-  portalAlloc->header.size = size;
-#ifndef __KERNEL__
-#ifdef KERNEL_REFERENCE
-  rc = ioctl(priv->pa_fd, PA_ALLOC, portalAlloc);
-  if (rc)
-    PORTAL_PRINTF("DmaManager_alloc: alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
+#ifdef __KERNEL__
+  portalAlloc->header.fd = portalmem_dmabuffer_create(size);
 #else
-  rc = ioctl(priv->pa_fd, PA_MALLOC, size);
-  if (rc < 0)
-    PORTAL_PRINTF("DmaManager_alloc: malloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
-  portalAlloc->header.fd = rc;
+  portalAlloc->header.fd = ioctl(priv->pa_fd, PA_MALLOC, size);
 #endif
-#else
-  portalAlloc->header.fd = portalmem_dmabuffer_create(portalAlloc->header.size);
-#endif
-  PORTAL_PRINTF("alloc size=%ldMB fd=%ld numEntries=%d\n", 
-      portalAlloc->header.size/(1L<<20), portalAlloc->header.fd, portalAlloc->header.numEntries);
+  PORTAL_PRINTF("alloc size=%ldMB fd=%d\n", size/(1L<<20), portalAlloc->header.fd);
   return rc;
 }

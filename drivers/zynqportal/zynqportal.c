@@ -157,7 +157,7 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
                 if (err)
                     break;
                 printk("[%s:%d] PORTAL_SEND_FD %x %x  **\n", __FUNCTION__, __LINE__, sendFd.fd, sendFd.id);
-                err = send_fd_to_portal(&devptr, sendFd.fd, sendFd.id, 0, 0);
+                err = send_fd_to_portal(&devptr, sendFd.fd, sendFd.id, 0);
                 if (err < 0)
                     break;
                 return 0;
