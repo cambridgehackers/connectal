@@ -145,7 +145,7 @@ int main(int argc, const char **argv)
 #ifdef LARGE_MAT
 #ifdef BSIM
   int A = 64;
-  int B = 512;
+  int B = 128;
 #else
   int A = 256;
   int B = 2048;
@@ -154,14 +154,14 @@ int main(int argc, const char **argv)
     B = strtoul(argv[1], 0, 0);
     A = 2*B;
   }
+  srand(A*B);
   cv::Mat m1(A,B,CV_32F);
   cv::Mat m2(B,A,CV_32F);
-  float v = 0;
   for(int a = 0; a < A; a++){
     for(int b = 0; b < B; b++){
+      float v = (float)(rand() % 10);
       m2.at<float>(b,a) = (A*B)+v;
       m1.at<float>(a,b) = v;
-      v++;
     }
   }
 #else
@@ -276,9 +276,7 @@ int main(int argc, const char **argv)
     dumpMat<float>("pm3", "%5.1f", pm3);
     dumpMat<float>(" m3", "%5.1f", m3);
   }
-  //bool eq = std::equal(m3.begin<float>(), m3.end<float>(), pm3.begin<float>());
   bool eq = pm3.compare(m3);
   fprintf(stderr, "XXXXXXXXXXXXXXXXXXXXXXXXXX eq=%d\n", eq);
-  //device->finish();
-  exit(!eq&&!sane);
+  exit(!(eq&&sane));
 }
