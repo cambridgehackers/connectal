@@ -41,30 +41,26 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int numEntries, in
     uint64_t borderVal[3];
     unsigned char idxOffset;
     int size_accum = 0;
-    PortalAlloc *portalAlloc = NULL;
 #ifdef __KERNEL__
     struct scatterlist *sg;
     struct file *fmem = fget(fd);
     struct sg_table *sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
-    numEntries = sgtable->nents;
-#endif
-
-#ifndef __KERNEL__
-  portalAlloc = (PortalAlloc *)PORTAL_MALLOC(sizeof(PortalAlloc)+((numEntries+1)*sizeof(DmaEntry)));
+#else
+  PortalAlloc *portalAlloc = (PortalAlloc *)PORTAL_MALLOC(sizeof(PortalAlloc)+((numEntries+1)*sizeof(DmaEntry)));
   portalAlloc->header.fd = fd;
   portalAlloc->header.numEntries = numEntries;
   rc = ioctl(pa_fd, PA_DMA_ADDRESSES, portalAlloc);
   if (rc){
-    PORTAL_PRINTF("portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
+    PORTAL_PRINTF("send_fd_to_portal: alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
     goto retlab;
   }
 #endif
   rc = id;
   if (trace_memory)
-    PORTAL_PRINTF("DmaManager_reference id=%08x, numEntries:=%d)\n", id, numEntries);
+    PORTAL_PRINTF("send_fd_to_portal: id=%08x, numEntries:=%d)\n", id, numEntries);
 #ifdef BSIM
   bluesim_sock_fd_write(fd);
-numEntries = 666;
+  numEntries = 666;
 #endif
 #ifdef __KERNEL__
   for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
@@ -78,13 +74,16 @@ numEntries = 666;
     long len = e->length;
 #endif
 #ifdef BSIM
-#if 1
     portalElementSize.fd = fd;
     portalElementSize.index = i;
     len = ioctl(pa_fd, PA_ELEMENT_SIZE, &portalElementSize);
+    if (len < 0) {
+        PORTAL_PRINTF("send_fd_to_portal: bad return from PA_ELEMENT_SIZE %d\n", len);
+        rc = len;
+        goto retlab;
+    }
     if (!len)
         break;
-#endif
     addr = size_accum;
     size_accum += len;
     addr |= ((long)id) << 32; //[39:32] = truncate(pref);
@@ -103,9 +102,11 @@ numEntries = 666;
     if (trace_memory)
       PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, (long)addr, len);
     DMAsglist(device, (id << 8) + i, addr, len);
-  }
+  } // }
 #ifdef __KERNEL__
   fput(fmem);
+#else
+  PORTAL_FREE(portalAlloc);
 #endif
 
   // HW interprets zeros as end of sglist
@@ -126,7 +127,5 @@ numEntries = 666;
   }
   DMAregion(device, id, borderVal[0], borderVal[1], borderVal[2]);
 retlab:
-    if (portalAlloc)
-        PORTAL_FREE(portalAlloc);
     return rc;
 }

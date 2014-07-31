@@ -131,9 +131,16 @@ int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa)
   memset(portalAlloc, 0, sizeof(*portalAlloc));
   portalAlloc->header.size = size;
 #ifndef __KERNEL__
+#ifdef KERNEL_REFERENCE
   rc = ioctl(priv->pa_fd, PA_ALLOC, portalAlloc);
   if (rc)
-    PORTAL_PRINTF("portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
+    PORTAL_PRINTF("DmaManager_alloc: alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
+#else
+  rc = ioctl(priv->pa_fd, PA_MALLOC, size);
+  if (rc < 0)
+    PORTAL_PRINTF("DmaManager_alloc: malloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
+  portalAlloc->header.fd = rc;
+#endif
 #else
   portalAlloc->header.fd = portalmem_dmabuffer_create(portalAlloc->header.size);
 #endif
