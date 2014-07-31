@@ -27,9 +27,11 @@ import Vector::*;
 import Gearbox::*;
 import FIFOF::*;
 import SpecialFIFOs::*;
-
 import GetPut::*;
+
 import MemTypes::*;
+import ConfigCounter::*;
+import BRAMFIFOFLevel::*;
 
 interface MemReader#(numeric type dataWidth);
    interface ObjectReadServer #(dataWidth) readServer;
@@ -51,6 +53,46 @@ module mkMemReader(MemReader#(dataWidth))
    interface ObjectReadClient readClient;
       interface Get readReq = toGet(reqBuffer);
       interface Put readData = toPut(readBuffer);
+   endinterface
+endmodule
+
+interface MemReaderBuff#(numeric type dataWidth, numeric type bufferDepth);
+   interface ObjectReadServer #(dataWidth) readServer;
+   interface ObjectReadClient#(dataWidth) readClient;
+endinterface
+
+module mkMemReaderBuff(MemReaderBuff#(dataWidth, bufferDepth))
+   provisos(Add#(b__, TAdd#(1,TLog#(bufferDepth)), 8),
+	    Div#(dataWidth,8,dataWidthBytes),
+	    Mul#(dataWidthBytes,8,dataWidth),
+	    Log#(dataWidthBytes,beatShift));
+
+   FIFOFLevel#(ObjectData#(dataWidth),bufferDepth)  readBuffer <- mkBRAMFIFOFLevel;
+   FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF();
+   ConfigCounter#(TAdd#(1,TLog#(bufferDepth))) unfulfilled <- mkConfigCounter(0);
+   let beat_shift = fromInteger(valueOf(beatShift));
+   
+   // only issue the readRequest when sufficient buffering is available.  This includes the bufering we have already comitted.
+   Bit#(TAdd#(1,TLog#(bufferDepth))) sreq = pack(satPlus(Sat_Bound, unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)), unfulfilled.read()));
+
+   interface ObjectReadServer readServer;
+      interface Put readReq = toPut(reqOutstanding);
+      interface Get readData = toGet(readBuffer);
+   endinterface
+   interface ObjectReadClient readClient;
+      interface Get readReq;
+	 method ActionValue#(ObjectRequest) get if (readBuffer.lowWater(sreq));
+	    reqOutstanding.deq;
+	    unfulfilled.increment(unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)));
+	    return reqOutstanding.first;
+	 endmethod
+      endinterface
+      interface Put readData;
+	 method Action put(ObjectData#(dataWidth) x);
+	    readBuffer.fifo.enq(x);
+	    unfulfilled.decrement(1);
+	 endmethod
+      endinterface
    endinterface
 endmodule
 
@@ -82,7 +124,52 @@ module mkMemWriter(MemWriter#(dataWidth))
    endinterface
 
 endmodule
+
+
+interface MemWriterBuff#(numeric type dataWidth, numeric type bufferDepth);
+   interface ObjectWriteServer#(dataWidth) writeServer;
+   interface ObjectWriteClient#(dataWidth) writeClient;
+endinterface
+
+module mkMemWriterBuff(MemWriterBuff#(dataWidth, bufferDepth))
+   provisos(Add#(b__, TAdd#(1, TLog#(bufferDepth)), 8),
+	    Div#(dataWidth,8,dataWidthBytes),
+	    Mul#(dataWidthBytes,8,dataWidth),
+	    Log#(dataWidthBytes,beatShift));
+
+   FIFOFLevel#(ObjectData#(dataWidth),bufferDepth) writeBuffer <- mkBRAMFIFOFLevel;
+   FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF();
+   FIFOF#(Bit#(6))                        doneTags <- mkFIFOF();
+   ConfigCounter#(TAdd#(1,TLog#(bufferDepth)))  unfulfilled <- mkConfigCounter(0);
+   let beat_shift = fromInteger(valueOf(beatShift));
    
+   // only issue the writeRequest when sufficient data is available.  This includes the data we have already comitted.
+   Bit#(TAdd#(1,TLog#(bufferDepth))) sreq = pack(satPlus(Sat_Bound, unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)), unfulfilled.read()));
+
+   interface ObjectWriteServer writeServer;
+      interface Put writeReq = toPut(reqOutstanding);
+      interface Put writeData = toPut(writeBuffer);
+      interface Get writeDone = toGet(doneTags);
+   endinterface
+   interface ObjectWriteClient writeClient;
+      interface Get writeReq;
+	 method ActionValue#(ObjectRequest) get if (writeBuffer.highWater(sreq));
+	    reqOutstanding.deq;
+	    unfulfilled.increment(unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)));
+	    return reqOutstanding.first;
+	 endmethod
+      endinterface
+      interface Get writeData;
+	 method ActionValue#(ObjectData#(dataWidth)) get();
+	    unfulfilled.decrement(1);
+	    writeBuffer.fifo.deq;
+	    return writeBuffer.fifo.first;
+	 endmethod
+      endinterface
+      interface Put writeDone = toPut(doneTags);
+   endinterface
+endmodule
+
 
 interface UGBramFifos#(numeric type numFifos, numeric type fifoDepth, type a);
    method Action enq(Bit#(TLog#(numFifos)) idx, a v);

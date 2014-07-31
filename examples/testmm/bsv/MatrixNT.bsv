@@ -46,6 +46,93 @@ import XilinxCells::*;
 import HostInterface::*;
 import DotProdServer::*;
 
+typedef struct {
+   a xbase;
+   a xlimit;
+   a xstep;
+   a ybase;
+   a ylimit;
+   a ystep;
+} XYRangeConfig#(type a) deriving (Bits, FShow);
+
+interface XYRangePipeIfc#(type a);
+   interface PipeOut#(Tuple2#(a,a)) pipe;
+   method Action start(XYRangeConfig#(a) cfg);
+   method Action display();
+endinterface
+
+module mkXYRangePipeOut(XYRangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
+   Reg#(a) x <- mkReg(0);
+   Reg#(a) y <- mkReg(0);
+   Reg#(a) xbase <- mkReg(0);
+   Reg#(a) ybase <- mkReg(0);
+   Reg#(a) xstep <- mkReg(0);
+   Reg#(a) ystep <- mkReg(0);
+   Reg#(a) xlimit <- mkReg(0);
+   Reg#(a) ylimit <- mkReg(0);
+
+   interface PipeOut pipe;
+      method Tuple2#(a,a) first() if (x < xlimit && y < ylimit);
+	 return tuple2(x,y);
+      endmethod
+      method Action deq if (x < xlimit && y < ylimit);
+	 let newx = x;
+	 let newy = y+ystep;
+	 if (newy >= ylimit && x < xlimit) begin
+	    newy = ybase;
+	    newx = newx + xstep;
+	 end
+	 x <= newx;
+	 y <= newy;
+      endmethod
+      method Bool notEmpty();
+	 return (x < xlimit && y < ylimit);
+      endmethod
+   endinterface
+   method Action start(XYRangeConfig#(a) cfg) if (x >= xlimit);
+      //$display("XYRangePipe x=%d xlimit=%d xstep=%d y=%d ylimit=%d ystep=%d", cfg.xbase, cfg.xlimit, cfg.xstep, cfg.ybase, cfg.ylimit, cfg.ystep);
+      x <= cfg.xbase;
+      y <= cfg.ybase;
+      xbase <= cfg.xbase;
+      ybase <= cfg.ybase;
+      xstep <= cfg.xstep;
+      ystep <= cfg.ystep;
+      xlimit <= cfg.xlimit;
+      ylimit <= cfg.ylimit;
+   endmethod
+   method Action display();
+      $display("XYRangePipe x=%d xlimit=%d y=%d ylimit=%d xstep=%d ystep=%d", x, xlimit, xstep, y, ylimit, ystep);
+   endmethod
+endmodule: mkXYRangePipeOut
+
+interface RowColSource#(numeric type dsz, type a);
+   interface PipeOut#(a) pipe;
+   method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
+   method ActionValue#(Bool) finish();
+endinterface
+
+interface RowColSink#(numeric type dsz, type a);
+   interface PipeIn#(a) pipe;
+   method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
+   method ActionValue#(Bool) finish();
+endinterface
+
+function PipeOut#(dtype) getRowColSourcePipe(RowColSource#(dsz,dtype) vs); return vs.pipe; endfunction
+function PipeIn#(a) getRowColSinkPipe(RowColSink#(n,a) vs) = vs.pipe;
+
+module mkRowColSink#(VectorSink#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSink#(TMul#(N,32), Vector#(N,MmToken)));
+   function Float tokenValue(MmToken v) = v.v;
+   method Action start(ObjectPointer p, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
+      vs.start(p,a,l);
+   endmethod
+   method finish = vs.finish;
+   interface PipeIn pipe;
+      method Action enq(Vector#(N,MmToken) v);
+	 vs.pipe.enq(map(tokenValue,v));
+      endmethod
+      method Bool notFull = vs.pipe.notFull;
+   endinterface
+endmodule
 
 module mkRowSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSource#(TMul#(N,32), Vector#(N,MmToken)));
 `ifdef TAGGED_TOKENS
@@ -173,22 +260,6 @@ module mkColSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSourc
       endmethod
    endinterface
 endmodule: mkColSource
-
-function Vector#(TMul#(j,k), etype) flattenMatrix(Vector#(j, Vector#(k, etype)) mat);
-   function etype flatten(Integer i); return mat[i/valueOf(k)][i%valueOf(k)]; endfunction
-   return genWith(flatten);
-endfunction
-
-typedef struct {
-   ObjectPointer pointer;
-   addrtype base;
-   addrtype numRows;
-   addrtype numColumns;
-} MatrixDescriptor#(type addrtype) deriving (Bits);
-
-interface DmaMatrixMultiplyDebug;
-   method Bit#(32) macCount();
-endinterface
    
 // row major layout
 interface DmaMatrixMultiplyIfc#(numeric type addrwidth, numeric type dsz);

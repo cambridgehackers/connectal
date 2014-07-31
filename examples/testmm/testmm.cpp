@@ -277,8 +277,8 @@ int main(int argc, const char **argv)
     dumpMat<float>(" m3", "%5.1f", m3);
   }
   //bool eq = std::equal(m3.begin<float>(), m3.end<float>(), pm3.begin<float>());
-  bool eq = pm3.compare(pm3);
-  fprintf(stderr, "eq=%d\n", eq);
+  bool eq = pm3.compare(m3);
+  fprintf(stderr, "XXXXXXXXXXXXXXXXXXXXXXXXXX eq=%d\n", eq);
   //device->finish();
   exit(!eq&&!sane);
 }
