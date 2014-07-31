@@ -84,6 +84,7 @@ argparser.add_argument('-q', '--qtused', help='Qt used in Bsim test application'
 argparser.add_argument('--stl', help='STL implementation to use for Android builds', default=None)
 argparser.add_argument('--floorplan', help='Floorplan XDC', default=None)
 argparser.add_argument('-P', '--partition-module', default=[], help='Modules to separately synthesize/place/route', action='append')
+argparser.add_argument('--cachedir', default=None, help='Cache directory for fpgamake to use')
 
 
 tclReadVerilogTemplate='read_verilog [ glob %(verilog)s%(pattern)s ]'
@@ -292,7 +293,7 @@ fpgamakeRuleTemplate='''
 FPGAMAKE=$(XBSVDIR)/../fpgamake/fpgamake
 fpgamake.mk: $(vfile) Makefile
 	mkdir -p hw
-	$(FPGAMAKE) -o fpgamake.mk %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s -t $(MKTOP) -b hw/mkTop.bit verilog $(XBSVDIR)/verilog
+	$(FPGAMAKE) -o fpgamake.mk %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s -t $(MKTOP) %(cachedir)s -b hw/mkTop.bit verilog $(XBSVDIR)/verilog
 
 hw/mkTop.bit: fpgamake.mk
 	make -f fpgamake.mk
@@ -947,7 +948,8 @@ if __name__=='__main__':
         bitsmake=fpgamakeRuleTemplate % {'partitions': ' '.join(['-s %s' % p for p in namespace.partition_module]),
 					 'floorplan': os.path.abspath(namespace.floorplan) if namespace.floorplan else '',
 					 'xdc': ' '.join(['--xdc=%s' % os.path.abspath(xdc) for xdc in namespace.constraint]),
-					 'xci': ' '.join(['--xci=%s' % os.path.abspath(xci) for xci in namespace.xci])
+					 'xci': ' '.join(['--xci=%s' % os.path.abspath(xci) for xci in namespace.xci]),
+					 'cachedir': '--cachedir=%s' % os.path.abspath(namespace.cachedir) if namespace.cachedir else ''
 					 }
     else:
         bitsmake=bitsmakeRuleTemplate
