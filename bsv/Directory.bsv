@@ -105,8 +105,6 @@ module mkStdDirectory#(Vector#(n,StdPortal) portals) (StdDirectory);
 			 end
 			 else if (req.address == 5+base)
 			    dataFifo.enq(snapshot);
-			 else if (req.address == 6+base) // portal layout version
-			    dataFifo.enq(2);
 			 else begin
 			    dynamicAssert((req.address > base), "mkStdDirectory: invalid address");
 			    addrFifo.enq(truncate(req.address));
