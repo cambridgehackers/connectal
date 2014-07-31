@@ -48,22 +48,26 @@ ifeq ($(origin TOP),undefined)
     TOP=$(XBSVDIR)/bsv/PcieTop.bsv
     MKTOP=mkPcieTop
     XBSVFLAGS += -D PcieHostTypeIF
+    NEEDSPCIE=true
     endif
     ifeq ($(BOARD),kc705)
     TOP=$(XBSVDIR)/bsv/PcieTop.bsv
     MKTOP=mkPcieTop
     XBSVFLAGS += -D PcieHostTypeIF
+    NEEDSPCIE=true
     endif
     ifeq ($(BOARD),vc707)
     TOP=$(XBSVDIR)/bsv/PcieTop.bsv
     MKTOP=mkPcieTop
     XBSVFLAGS += -D PcieHostTypeIF
     FPGAMAKE_XBSVFLAGS += -P mkPcieEndpointX7 -P mkPcieHost --xci=$(IPDIR)/$(BOARD)/pcie_7x_0/pcie_7x_0.xci
+    NEEDSPCIE=true
     endif
     ifeq ($(BOARD),v2000t)
     TOP=$(XBSVDIR)/bsv/PcieTop.bsv
     MKTOP=mkPcieTop
     XBSVFLAGS += -D PcieHostTypeIF
+    NEEDSPCIE=true
     endif
     ifeq ($(BOARD),zedboard)
     TOP=$(XBSVDIR)/bsv/ZynqTop.bsv
@@ -113,4 +117,6 @@ endif
 
 prebuild::
 	# additional steps needed before making verilog etc
-
+ifeq ("$(NEEDSPCIE)","true")
+	cd $(BOARD); vivado -mode batch -source $(shell cd $(XBSVDIR); /bin/pwd)/scripts/xbsv-synth-pcie.tcl
+endif
