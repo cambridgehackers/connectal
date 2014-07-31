@@ -137,10 +137,6 @@ static unsigned int pcieportal_poll(struct file *filp, poll_table *poll_table)
 
         //printk(KERN_INFO "%s_%d: poll function called\n", DEV_NAME, this_board->info.board_number);
         poll_wait(filp, &this_portal->extra->wait_queue, poll_table);
-        if (this_portal->count) {
-            tc = *this_portal->count;
-            //printk(KERN_INFO "%s_%d: count %x\n", DEV_NAME, this_portal->portal_number, tc);
-        }
         if (tc)
             mask |= POLLIN  | POLLRDNORM; /* readable */
         //mask |= POLLOUT | POLLWRNORM; /* writable */
@@ -435,8 +431,6 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
                                   MINOR(device_number) + fpga_number);
                         this_board->portal[dn].portal_number = dn;
                         this_board->portal[dn].board = this_board;
-                        if (this_board->bar2io)
-                                this_board->portal[dn].count = (volatile uint32_t *)(this_board->bar2io + 0x10000 * dn + 0xc000);
                         /* add the device operations */
                         cdev_init(&this_board->portal[dn].extra->cdev, &pcieportal_fops);
                         if (cdev_add(&this_board->portal[dn].extra->cdev, this_device_number, 1)) {
