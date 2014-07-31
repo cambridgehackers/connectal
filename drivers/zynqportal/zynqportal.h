@@ -32,5 +32,6 @@ typedef struct {
 #define PORTAL_SET_FCLK_RATE    _IOWR('B', 40, PortalClockRequest)
 #define PORTAL_ENABLE_INTERRUPT _IOWR('B', 41, PortalEnableInterrupt)
 #define PORTAL_SEND_FD           _IOR('B', 42, PortalSendFd)
+#define PORTAL_DCACHE_FLUSH_INVAL _IOR('B', 43, int)
 
 #endif /* __PORTAL_H__ */

@@ -68,7 +68,7 @@ int DmaManager_dCacheFlushInval(DmaManagerPrivate *priv, PortalAlloc *portalAllo
 {
 #ifndef __KERNEL__
 #if defined(__arm__)
-  int rc = ioctl(priv->pa_fd, PA_DCACHE_FLUSH_INVAL, portalAlloc);
+  int rc = ioctl(priv->device->fpga_fd, PORTAL_DCACHE_FLUSH_INVAL, portalAlloc->header.fd);
   if (rc){
     PORTAL_PRINTF("portal dcache flush failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
     return rc;
