@@ -35,7 +35,8 @@ import Top               :: *;
 import AxiMasterSlave    :: *;
 import MemTypes          :: *;
 import AxiDma            :: *;
-import HostInterface    :: *;
+import HostInterface     :: *;
+import CtrlMux           :: *;
 
 `ifndef DataBusWidth
 `define DataBusWidth 64
@@ -49,11 +50,12 @@ typedef `NumberOfMasters NumberOfMasters;
 typedef `DataBusWidth DataBusWidth;
 
 // implemented in BsimCtrl.cxx
-import "BDPI" function Action      initPortal(Bit#(32) d);
-import "BDPI" function Bool                    processReq32(Bit#(32) v);
+import "BDPI" function Action                 initPortal(Bit#(32) d);
+import "BDPI" function Bool                   processReq32(Bit#(32) v);
 import "BDPI" function ActionValue#(Bit#(32)) processAddr32(Bit#(32) v);
 import "BDPI" function ActionValue#(Bit#(32)) writeData32();
-import "BDPI" function Action        readData32(Bit#(32) d);
+import "BDPI" function Action                 readData32(Bit#(32) d);
+import "BDPI" function Action                 interruptLevel(Bit#(1) d);
 
 // implemented in BsimDma.cxx
 import "BDPI" function Action pareff(Bit#(32) handle, Bit#(32) size);
@@ -371,6 +373,11 @@ module  mkBsimTop(Empty)
    Vector#(NumberOfMasters,Axi3Master#(40,DataBusWidth,6)) m_axis <- mapM(mkAxiDmaMaster,top.masters, clocked_by singleClock, reset_by singleReset);
    mkConnection(host.mem_client, top.slave, clocked_by singleClock, reset_by singleReset);
    mapM(uncurry(mkConnection),zip(m_axis, host.axi_servers), clocked_by singleClock, reset_by singleReset);
+
+   let intr_mux <- mkInterruptMux(top.interrupt);
+   rule int_rule;
+      interruptLevel(truncate(pack(intr_mux)));
+   endrule
 
 `ifdef BSIMRESPONDER
    `BSIMRESPONDER (top.pins);

@@ -25,6 +25,7 @@
 #define _SOCK_UTILS_H_
 
 #define MAGIC_PORTAL_FOR_SENDING_FD                 666
+#define MAGIC_PORTAL_FOR_SENDING_INTERRUPT          999
 
 struct memrequest{
   int portal;
@@ -49,6 +50,7 @@ int pareff_fd(int *fd);
 void init_pareff(void);
 int bsim_ctrl_recv(int sockfd, struct memrequest *data);
 int bsim_ctrl_send(int sockfd, struct memresponse *data);
+unsigned int bsim_poll_interrupt(void);
 #ifdef __cplusplus
 }
 #endif

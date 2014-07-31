@@ -172,6 +172,21 @@ ssize_t sock_fd_read(int sock, int *fd)
     return size;
 }
 
+static uint32_t interrupt_value;
+unsigned int bsim_poll_interrupt(void)
+{
+  struct memresponse rv;
+  int rc;
+
+  if (global_sockfd == -1)
+      return 0;
+  pthread_mutex_lock(&socket_mutex);
+  rc = recv(global_sockfd, &rv, sizeof(rv), MSG_DONTWAIT);
+  if (rc == sizeof(rv) && rv.portal == MAGIC_PORTAL_FOR_SENDING_INTERRUPT)
+      interrupt_value = rv.data;
+  pthread_mutex_unlock(&socket_mutex);
+  return interrupt_value;
+}
 /* functions called by READL() and WRITEL() macros in application software */
 unsigned int read_portal_bsim(volatile unsigned int *addr, int id)
 {
@@ -183,9 +198,15 @@ unsigned int read_portal_bsim(volatile unsigned int *addr, int id)
     fprintf(stderr, "%s (fpga%d) send error, errno=%s\n",__FUNCTION__, id, strerror(errno));
     exit(1);
   }
-  if(recv(global_sockfd, &rv, sizeof(rv), 0) == -1){
-    fprintf(stderr, "%s (fpga%d) recv error\n",__FUNCTION__, id);
-    exit(1);	  
+  while (1) {
+    if(recv(global_sockfd, &rv, sizeof(rv), 0) == -1){
+      fprintf(stderr, "%s (fpga%d) recv error\n",__FUNCTION__, id);
+      exit(1);	  
+    }
+    if (rv.portal == MAGIC_PORTAL_FOR_SENDING_INTERRUPT)
+      interrupt_value = rv.data;
+    else
+      break;
   }
   pthread_mutex_unlock(&socket_mutex);
   return rv.data;

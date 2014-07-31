@@ -45,16 +45,37 @@ static int sockfd;
 static struct memresponse respitem;
 static int dma_fd = -1;
 static sem_t dma_waiting;
+static pthread_mutex_t socket_mutex;
+static int trace_port;// = 1;
 
 extern "C" {
-  void initPortal(unsigned long id){
+
+void initPortal(unsigned long id){
     static int once = 1;
     if (once) {
         sem_init(&dma_waiting, 0, 0);
+        pthread_mutex_init(&socket_mutex, NULL);
         bsim_wait_for_connect(&sockfd);
     }
     once = 0;
-  }
+}
+
+void interruptLevel(uint32_t ivalue){
+    static int last_level;
+    int temp;
+
+    if (ivalue != last_level) {
+        last_level = ivalue;
+        printf("%s: %d\n", __FUNCTION__, ivalue);
+        pthread_mutex_lock(&socket_mutex);
+        temp = respitem.portal;
+        respitem.portal = MAGIC_PORTAL_FOR_SENDING_INTERRUPT;
+        respitem.data = ivalue;
+        bsim_ctrl_send(sockfd, &respitem);
+        respitem.portal = temp;
+        pthread_mutex_unlock(&socket_mutex);
+    }
+}
 
 int pareff_fd(int *fd)
 {
@@ -79,30 +100,35 @@ int pareff_fd(int *fd)
 	  head.valid = 1;
 	  head.inflight = 1;
 	  head.req.addr = (unsigned int *)(((long) head.req.addr) | head.req.portal << 16);
-	  if(0)
-	  fprintf(stderr, "processReq32(i=%d,rr=%d) {write=%d, addr=%08lx, data=%08x}\n", 
-		  head.req.portal, rr, head.req.write_flag, (long)head.req.addr, head.req.data);
+	  if(trace_port)
+	  fprintf(stderr, "processr p=%d w=%d, a=%lx, d=%x:", 
+		  head.req.portal, head.req.write_flag, (long)head.req.addr, head.req.data);
 	}
     }
     return head.valid && head.inflight == 1 && head.req.write_flag == rr;
   }
 
-  long processAddr32(int v){
-    //fprintf(stderr, "processAddr32()\n");
+  long processAddr32(int rr){
+    if(trace_port)
+        fprintf(stderr, " addr");
     head.inflight = 0;
     return (long)head.req.addr;
   }
   
   unsigned int writeData32(){
-    //fprintf(stderr, "writeData32()\n");
+    if(trace_port)
+        fprintf(stderr, " write\n");
     head.valid = 0;
     return head.req.data;
   }
   
   void readData32(unsigned int x){
-    //fprintf(stderr, "readData()\n");
-    respitem.data = x;
+    if(trace_port)
+        fprintf(stderr, " read\n");
     head.valid = 0;
+    pthread_mutex_lock(&socket_mutex);
+    respitem.data = x;
     bsim_ctrl_send(sockfd, &respitem);
+    pthread_mutex_unlock(&socket_mutex);
   }
 }

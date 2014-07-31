@@ -26,8 +26,12 @@
 #include <poll.h>
 #include <errno.h>
 #include <pthread.h>
+#include <sys/select.h>
 
 #include "portal.h"
+#ifdef BSIM
+#include "sock_utils.h"
+#endif
 
 #ifdef ZYNQ
 #include <android/log.h>
@@ -123,11 +127,19 @@ void PortalPoller::portalExec_end(void)
 void* PortalPoller::portalExec_poll(int timeout)
 {
     long rc = 0;
-#ifndef BSIM
     // LCS bypass the call to poll if the timeout is 0
-    if (timeout != 0)
+    if (timeout != 0) {
+#ifdef BSIM
+      while(!bsim_poll_interrupt()) {
+          struct timeval timeout;
+          timeout.tv_sec = 0;
+          timeout.tv_usec = 10000;
+          select(0, NULL, NULL, NULL, &timeout);
+      }
+#else
       rc = poll(portal_fds, numFds, timeout);
 #endif
+    }
     if(rc < 0) {
 	// return only in error case
 	fprintf(stderr, "poll returned rc=%ld errno=%d:%s\n", rc, errno, strerror(errno));
