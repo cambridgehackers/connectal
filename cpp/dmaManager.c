@@ -101,10 +101,17 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
   int id = priv->handle++;
   int rc = 0;
 #if defined(KERNEL_REFERENCE) && !defined(BSIM)
+#ifdef ZYNQ
+  PortalSendFd sendFd;
+  sendFd.fd = pa->header.fd;
+  sendFd.id = id;
+  rc = ioctl(priv->device->fpga_fd, PORTAL_SEND_FD, &sendFd);
+#else
   tSendFd sendFd;
   sendFd.fd = pa->header.fd;
   sendFd.id = id;
   rc = ioctl(priv->device->fpga_fd, PCIE_SEND_FD, &sendFd);
+#endif
   if (!rc)
     sem_wait(&priv->confSem);
   rc = id;
