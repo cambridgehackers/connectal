@@ -7,8 +7,6 @@ XBSVFLAGS += --clib opencv_core --stl=stlport_static
 XBSVFLAGS += -D IMPORT_HOSTIF -D MATRIX_NT
 XBSVFLAGS += --bscflags="+RTS -K26777216 -RTS"
 
-FPGAMAKE_XBSVFLAGS += -P mkMmTile --xci=$(XBSVDIR)/generated/xilinx/$(BOARD)/fp_add/fp_add.xci --xci=$(XBSVDIR)/generated/xilinx/$(BOARD)/fp_mul/fp_mul.xci
-
 Dma = Dma
 PINS = Std
 
@@ -35,12 +33,12 @@ gen:: $(DBNDIR)/datasets
 synth-ip.tcl:
 	ln -svf $(XBSVDIR)/examples/testmm/synth-ip.tcl .
 
-prebuild:: synth-ip.tcl
-
-## prebuild::
-## 	   sleep $(shell echo $$RANDOM \% 12 | bc)
+prebuild::
+	if [ "$(BOARD)" != "bluesim" ] ; then cd $(BOARD); vivado -mode batch -source ../synth-ip.tcl; fi
 
 include $(XBSVDIR)/Makefile.common
+
+FPGAMAKE_XBSVFLAGS += -P mkMmTile --xci=$(IPDIR)/$(BOARD)/fp_add/fp_add.xci --xci=$(IPDIR)/$(BOARD)/fp_mul/fp_mul.xci
 
 $(DBNDIR)/datasets:
 	mkdir -p $(DBNDIR)/datasets

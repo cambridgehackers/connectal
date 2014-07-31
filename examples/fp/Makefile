@@ -6,7 +6,7 @@ BSVFILES = Fp.bsv Top.bsv
 CPPFILES=testfp.cpp
 NUMBER_OF_MASTERS =0
 
-FP_ADD_V = $(XBSVDIR)/generated/xilinx/$(BOARD)/fp_add/fp_add_stub.v
+FP_ADD_V = $(IPDIR)/$(BOARD)/fp_add/fp_add_stub.v
 
 ifeq ($(BOARD),bluesim)
 # not for bluesim

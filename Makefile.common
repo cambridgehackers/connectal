@@ -19,13 +19,14 @@ run.%:
 ifeq ($(origin XBSVDIR),undefined)
 XBSVDIR=$(shell cd ../..; /bin/pwd)
 endif
-ifneq ($(origin IPDIR),undefined)
-XBSVFLAGS += --ipdir=$(IPDIR)
+ifeq ($(origin IPDIR),undefined)
+IPDIR=$(XBSVDIR)/out
 endif
 ifndef NUMBER_OF_MASTERS
 NUMBER_OF_MASTERS=1
 endif
-XBSVFLAGS += --bscflags " -D NumberOfMasters=$(NUMBER_OF_MASTERS)"
+
+XBSVFLAGS += --bscflags " -D NumberOfMasters=$(NUMBER_OF_MASTERS)" --ipdir=$(IPDIR)
 
 ifneq ($(NUMBER_OF_MASTERS), 0)
 S2H += DmaConfig
@@ -57,7 +58,7 @@ ifeq ($(origin TOP),undefined)
     TOP=$(XBSVDIR)/bsv/PcieTop.bsv
     MKTOP=mkPcieTop
     XBSVFLAGS += -D PcieHostTypeIF
-    FPGAMAKE_XBSVFLAGS += -P mkPcieEndpointX7 -P mkPcieHost --xci=$(XBSVDIR)/generated/xilinx/$(BOARD)/pcie_7x_0/pcie_7x_0.xci
+    FPGAMAKE_XBSVFLAGS += -P mkPcieEndpointX7 -P mkPcieHost --xci=$(IPDIR)/$(BOARD)/pcie_7x_0/pcie_7x_0.xci
     endif
     ifeq ($(BOARD),v2000t)
     TOP=$(XBSVDIR)/bsv/PcieTop.bsv
