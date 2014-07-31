@@ -100,9 +100,14 @@ int pareff_fd(int *fd)
 	  head.valid = 1;
 	  head.inflight = 1;
 	  head.req.addr = (unsigned int *)(((long) head.req.addr) | head.req.portal << 16);
-	  if(trace_port)
-	  fprintf(stderr, "processr p=%d w=%d, a=%8lx, d=%8x:", 
-		  head.req.portal, head.req.write_flag, (long)head.req.addr, head.req.data);
+	  if(trace_port) {
+	      fprintf(stderr, "processr p=%d w=%d, a=%8lx", 
+		  head.req.portal, head.req.write_flag, (long)head.req.addr);
+              if (head.req.write_flag)
+	          fprintf(stderr, ", d=%8x:", head.req.data);
+              else
+	          fprintf(stderr, "            :", head.req.data);
+          }
 	}
     }
     return head.valid && head.inflight == 1 && head.req.write_flag == rr;
@@ -124,7 +129,7 @@ int pareff_fd(int *fd)
   
   void readData32(unsigned int x){
     if(trace_port)
-        fprintf(stderr, " read\n");
+        fprintf(stderr, " read = %x\n", x);
     head.valid = 0;
     pthread_mutex_lock(&socket_mutex);
     respitem.data = x;
