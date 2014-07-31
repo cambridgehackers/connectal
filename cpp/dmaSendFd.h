@@ -46,7 +46,16 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int numEntries, in
     struct file *fmem = fget(fd);
     struct sg_table *sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
 #else
-  PortalAlloc *portalAlloc = (PortalAlloc *)PORTAL_MALLOC(sizeof(PortalAlloc)+((numEntries+1)*sizeof(DmaEntry)));
+  PortalAlloc *portalAlloc, pa = { 0 };
+  pa.header.fd=fd;
+  rc = ioctl(pa_fd, PA_DMA_ADDRESSES, &pa);
+  if (rc){
+    PORTAL_PRINTF("send_fd_to_portal: alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
+    goto retlab;
+  }
+  numEntries = pa.header.numEntries;
+printf("[%s:%d] num %d\n", __FUNCTION__, __LINE__, numEntries);
+  portalAlloc = (PortalAlloc *)PORTAL_MALLOC(sizeof(PortalAlloc)+((numEntries+1)*sizeof(DmaEntry)));
   portalAlloc->header.fd = fd;
   portalAlloc->header.numEntries = numEntries;
   rc = ioctl(pa_fd, PA_DMA_ADDRESSES, portalAlloc);
