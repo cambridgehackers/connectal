@@ -84,11 +84,6 @@ typedef struct {
         unsigned int      portal_number;
         struct tBoard    *board;
         void             *virt;
-#if 0
-        wait_queue_head_t wait_queue; /* used for interrupt notifications */
-        dma_addr_t        dma_handle;
-        struct cdev       cdev; /* per-portal cdev structure */
-#endif
         struct extra_info *extra;
 } tPortal;
 
