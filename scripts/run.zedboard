@@ -16,6 +16,8 @@ adb connect $ZEDBOARD_IPADDR
 adb -s $ANDROID_SERIAL root
 sleep 2
 adb connect $ZEDBOARD_IPADDR
+## sometimes /mnt/sdcard is readonly:
+adb -s $ANDROID_SERIAL mount -o remount,rw /mnt/scard
 adb -s $ANDROID_SERIAL push $1 /mnt/sdcard || exit -1
 adb -s $ANDROID_SERIAL push $2 /mnt/sdcard
 adb -s $ANDROID_SERIAL shell rmmod portalmem
