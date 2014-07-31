@@ -63,6 +63,8 @@ memtests =  memread_manyclients  \
 
 matrixtests2 = testmm8.8.2       \
 	    testmm16.16.2        \
+	    testmm32.32.2        \
+	    testmm32.16.2        \
 	    testmm4.4.2          \
 	    testmm4.2.2          \
 	    testmm2.4.2          \
