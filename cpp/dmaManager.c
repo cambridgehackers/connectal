@@ -37,7 +37,7 @@
 #endif
 #endif
 
-//#define KERNEL_REFERENCE
+#define KERNEL_REFERENCE
 
 static int trace_memory;// = 1;
 

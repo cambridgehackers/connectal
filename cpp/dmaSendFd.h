@@ -64,6 +64,7 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int numEntries, in
     PORTAL_PRINTF("DmaManager_reference id=%08x, numEntries:=%d)\n", id, numEntries);
 #ifdef BSIM
   bluesim_sock_fd_write(fd);
+numEntries = 666;
 #endif
 #ifdef __KERNEL__
   for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
@@ -77,7 +78,7 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int numEntries, in
     long len = e->length;
 #endif
 #ifdef BSIM
-#if 0
+#if 1
     portalElementSize.fd = fd;
     portalElementSize.index = i;
     len = ioctl(pa_fd, PA_ELEMENT_SIZE, &portalElementSize);
