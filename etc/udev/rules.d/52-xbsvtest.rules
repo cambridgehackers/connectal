@@ -1,0 +1,4 @@
+#
+# rule for xbsv kernel test module
+#
+KERNEL=="xbsvtest", MODE="0666"

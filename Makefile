@@ -1,4 +1,7 @@
 
+export UDEV_RULES_DIR=/etc/udev/rules.d
+UDEV_RULES=$(shell ls etc/udev/rules.d)
+#51-xbsvtty.rules  52-digilent-usb.rules  52-xbsvtest.rules  99-pcieportal.rules
 all: pciedrivers
 
 pciedrivers:
@@ -12,10 +15,21 @@ pciedrivers-clean:
 install:
 	(cd drivers/pcieportal; make install)
 	make -C pcie/xbsvutil install
+	for fname in $(UDEV_RULES) ; do \
+	    install -m644 etc/udev/rules.d/$$fname $(UDEV_RULES_DIR) ; \
+	done
+	service udev restart
+	rmmod portalmem pcieportal 
+	modprobe portalmem 
+	modprobe pcieportal
 
 uninstall:
 	(cd drivers/pcieportal; make uninstall)
 	make -C pcie/xbsvutil uninstall
+	for fname in $(UDEV_RULES) ; do \
+	    rm -f $(UDEV_RULES_DIR)/$$fname ; \
+	done
+	service udev restart
 
 docs:
 	doxygen Doxyfile

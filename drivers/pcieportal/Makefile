@@ -6,7 +6,6 @@ obj-m += pcieportal.o
 
 export KROOT=/lib/modules/$(shell uname -r)/build
 export BS_MOD_DIR=/lib/modules/$(shell uname -r)/bluespec
-export UDEV_RULES_DIR=/etc/udev/rules.d
 
 .PHONY: default
 default: pcieportal.ko ../portalmem/portalmem.ko
@@ -30,14 +29,12 @@ install: pcieportal.ko
 	install -m644 pcieportal.ko $(BS_MOD_DIR)
 	install -m644 ../portalmem/portalmem.ko $(BS_MOD_DIR)
 	depmod
-	install -m644 99-pcieportal.rules $(UDEV_RULES_DIR)
 
 .PHONY: uninstall
 uninstall:
 	rm -f $(BS_MOD_DIR)/pcieportal.ko
 	rmdir --ignore-fail-on-non-empty $(BS_MOD_DIR)
 	depmod
-	rm -f $(UDEV_RULES_DIR)/99-pcieportal.rules
 
 .PHONY: clean
 clean:
