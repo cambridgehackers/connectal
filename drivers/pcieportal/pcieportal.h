@@ -84,6 +84,7 @@ typedef struct {
         unsigned int      portal_number;
         struct tBoard    *board;
         void             *virt;
+        volatile uint32_t *regs;
         struct extra_info *extra;
 } tPortal;
 

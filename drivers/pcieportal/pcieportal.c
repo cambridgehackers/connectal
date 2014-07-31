@@ -131,13 +131,16 @@ static int pcieportal_release(struct inode *inode, struct file *filp)
 static unsigned int pcieportal_poll(struct file *filp, poll_table *poll_table)
 {
         unsigned int mask = 0;
-        uint32_t tc = 1;
+        uint32_t intr_status = 0;
         tPortal *this_portal = (tPortal *) filp->private_data;
         //tBoard *this_board = this_portal->board;
 
         //printk(KERN_INFO "%s_%d: poll function called\n", DEV_NAME, this_board->info.board_number);
         poll_wait(filp, &this_portal->extra->wait_queue, poll_table);
-        if (tc)
+	if (this_portal->regs) {
+            intr_status = *this_portal->regs;
+        }
+        if (intr_status)
             mask |= POLLIN  | POLLRDNORM; /* readable */
         //mask |= POLLOUT | POLLWRNORM; /* writable */
         //printk(KERN_INFO "%s_%d: poll return status is %x\n", DEV_NAME, this_board->info.board_number, mask);
@@ -431,6 +434,12 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
                                   MINOR(device_number) + fpga_number);
                         this_board->portal[dn].portal_number = dn;
                         this_board->portal[dn].board = this_board;
+                        if (this_board->bar2io) {
+				uint32_t directory_version = *(volatile uint32_t *)(this_board->bar2io + 0);
+				uint32_t reg_offset = (directory_version == 1) ? 0xc000 : 0;
+				printk("%s: directory_version=%d reg_offset=%d", DEV_NAME, directory_version, reg_offset);
+                                this_board->portal[dn].regs = (volatile uint32_t *)(this_board->bar2io + 0x10000 * dn + reg_offset);
+			}
                         /* add the device operations */
                         cdev_init(&this_board->portal[dn].extra->cdev, &pcieportal_fops);
                         if (cdev_add(&this_board->portal[dn].extra->cdev, this_device_number, 1)) {
