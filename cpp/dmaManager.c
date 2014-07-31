@@ -100,7 +100,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
 {
   int id = priv->handle++;
   int rc = 0;
-#if defined(KERNEL_REFERENCE) && !defined(BSIM)
+#if defined(KERNEL_REFERENCE) && !defined(BSIM) && !defined(__KERNEL__)
 #ifdef ZYNQ
   PortalSendFd sendFd;
   sendFd.fd = pa->header.fd;

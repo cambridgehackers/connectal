@@ -42,14 +42,13 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
     unsigned char idxOffset;
 #ifdef BSIM
     int size_accum = 0;
+    bluesim_sock_fd_write(fd);
 #endif
 #ifdef __KERNEL__
     struct scatterlist *sg;
     struct file *fmem = fget(fd);
     struct sg_table *sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
-#elif defined(BSIM)
-    bluesim_sock_fd_write(fd);
-#else
+#elif !defined(BSIM)
   int numEntries = 0;
   PortalAlloc *portalAlloc = NULL, pa = { 0 };
   pa.header.fd=fd;
@@ -75,7 +74,7 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
       long len = sg->length;
 #elif defined(BSIM)
   for(i = 0; 1; i++){
-    long len, addr = size_accum;
+    long len, addr;
     PortalElementSize portalElementSize;
 
     portalElementSize.fd = fd;
@@ -88,12 +87,15 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
     }
     if (!len)
         break;
-    size_accum += len;
-    addr |= ((long)id) << 32; //[39:32] = truncate(pref);
 #else
   for(i = 0; i < numEntries; i++) {
     long addr = portalAlloc->entries[i].dma_address;
     long len = portalAlloc->entries[i].length;
+#endif
+#ifdef BSIM
+    addr = size_accum;
+    size_accum += len;
+    addr |= ((long)id) << 32; //[39:32] = truncate(pref);
 #endif
 
     for(j = 0; j < 3; j++)
