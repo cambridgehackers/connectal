@@ -155,6 +155,13 @@ bluesimruns: $(bluesimruns)
 $(bluesimruns):
 	(cd $(basename $@)/bluesim; make run)
 
+bluesimcpps = $(addprefix examples/, $(addsuffix .bluesimcpp, $(examples))) \
+	      $(addprefix tests/, $(addsuffix .bluesimcpp, $(tests)))
+bluesimcpps: $(bluesimcpps)
+
+$(bluesimcpps):
+	make BOARD=bluesim -C $(basename $@) bsim_exe
+
 #################################################################################################
 # xsim
 
@@ -192,6 +199,13 @@ zedboardruns: $(zedboardruns)
 $(zedboardruns):
 	scripts/run.zedboard $(basename $@)/zedboard/bin/*bin.gz `find $(basename $@)/zedboard -name android_exe | grep libs`
 
+zedboardcpps = $(addprefix examples/, $(addsuffix .zedboardcpp, $(examples))) \
+	       $(addprefix tests/, $(addsuffix .zedboardcpp, $(tests)))
+zedboardcpps: $(zedboardcpps)
+
+# RUNPARAM=ipaddr is an optional argument if you already know the IP of the zedboard
+$(zedboardcpps):
+	make BOARD=bluesim -C $(basename $@) android_exe
 
 #################################################################################################
 # zc702
@@ -249,6 +263,13 @@ vc707runs: $(vc707runs)
 $(vc707runs):
 	scripts/run.pcietest $(basename $@)/vc707/bin/mk*.bin.gz $(basename $@)/vc707/bin/mkpcietop
 
+vc707cpps = $(addprefix examples/, $(addsuffix .vc707cpp, $(examples))) \
+	    $(addprefix tests/, $(addsuffix .vc707cpp, $(tests)))
+vc707cpps: $(vc707cpps)
+
+$(vc707cpps):
+	make BOARD=bluesim -C $(basename $@) ubuntu_exe
+
 #################################################################################################
 # kc705
 
@@ -266,6 +287,13 @@ kc705runs: $(kc705runs)
 
 $(kc705runs):
 	scripts/run.pcietest $(basename $@)/kc705/bin/mk*.bin.gz $(basename $@)/kc705/bin/mkpcietop
+
+kc705cpps = $(addprefix examples/, $(addsuffix .kc705cpp, $(examples))) \
+	    $(addprefix tests/, $(addsuffix .kc705cpp, $(tests)))
+kc705cpps: $(kc705cpps)
+
+$(kc705cpps):
+	make BOARD=bluesim -C $(basename $@) ubuntu_exe
 
 
 #################################################################################################
