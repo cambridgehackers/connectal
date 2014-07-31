@@ -21,5 +21,6 @@ if [ "$RUNPARAM" != "" ]; then
     ssh $SSHPARAM $RUNPARAM "rm -rf $TEMPDIR"
 else
     fpgajtag $BOARD_SERIAL $1
+    sleep 1
     timeout 3m catchsegv $2
 fi
