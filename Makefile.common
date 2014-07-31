@@ -60,7 +60,6 @@ ifeq ($(origin TOP),undefined)
     TOP=$(XBSVDIR)/bsv/PcieTop.bsv
     MKTOP=mkPcieTop
     XBSVFLAGS += -D PcieHostTypeIF
-    FPGAMAKE_XBSVFLAGS += -P mkPcieEndpointX7 -P mkPcieHost --xci=$(IPDIR)/$(BOARD)/pcie_7x_0/pcie_7x_0.xci
     NEEDSPCIE=true
     endif
     ifeq ($(BOARD),v2000t)
@@ -89,6 +88,11 @@ ifeq ($(origin TOP),undefined)
     MKTOP=mkZynqTop
     XBSVFLAGS += -D ZynqHostTypeIF
     endif
+endif
+
+ifeq ("$(NEEDSPCIE)","true")
+    FPGAMAKE_XBSVFLAGS += -P mkPcieEndpointX7 -P mkPcieHost
+    XBSVFLAGS += --xci=$(shell cd $(IPDIR); /bin/pwd)/$(BOARD)/pcie_7x_0/pcie_7x_0.xci
 endif
 
 ifeq ($(USE_FPGAMAKE),true)
