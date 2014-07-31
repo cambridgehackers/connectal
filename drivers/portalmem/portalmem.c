@@ -411,13 +411,17 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
       return -EFAULT;
     f = fget(header.fd);
     sgtable = ((struct pa_buffer *)((struct dma_buf *)f->private_data)->priv)->sg_table;
-    for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
-      unsigned long p = sg_phys(sg);
-      if (copy_to_user((void __user *)&(palloc->entries[i].dma_address), &(p), sizeof(p))
-       || copy_to_user((void __user *)&(palloc->entries[i].length), &(sg->length), sizeof(sg->length)))
-    	return -EFAULT;
-    }
+    if (header.numEntries > 0)
+      for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
+        unsigned long p = sg_phys(sg);
+        if (copy_to_user((void __user *)&(palloc->entries[i].dma_address), &(p), sizeof(p))
+         || copy_to_user((void __user *)&(palloc->entries[i].length), &(sg->length), sizeof(sg->length)))
+    	  return -EFAULT;
+      }
+    header.numEntries = ((struct pa_buffer *)((struct dma_buf *)f->private_data)->priv)->sg_table->nents;
     fput(f);
+    if (copy_to_user((void __user *)arg, &header, sizeof(header)))
+      return -EFAULT;
     return 0;
   }
   case PA_MALLOC:
