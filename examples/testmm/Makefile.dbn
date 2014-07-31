@@ -4,7 +4,7 @@ H2S = RbmIndication MmIndication SigmoidIndication TimerIndication DmaIndication
 BSVFILES = $(DBNDIR)/bsv/RbmTypes.bsv $(DBNDIR)/bsv/Timer.bsv $(DBNDIR)/bsv/FpMacTb.bsv $(DBNTOPBSV)
 CPPFILES= $(DBNDIR)/cpp/portalmat.cpp $(DBNDIR)/cpp/rbm.cpp $(TESTCPPFILES)
 XBSVFLAGS += --clib opencv_core --stl=stlport_static
-XBSVFLAGS += -D IMPORT_HOSTIF -D MATRIX_NT
+XBSVFLAGS += -D IMPORT_HOSTIF -D MATRIX_TN
 XBSVFLAGS += --bscflags="+RTS -K26777216 -RTS"
 
 Dma = Dma

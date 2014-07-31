@@ -330,6 +330,7 @@ tests.vc707:  $(addprefix tests/, $(addsuffix .vc707, $(tests)))
 
 matrixtests.bluesim:  $(addprefix tests/, $(addsuffix .bluesim, $(matrixtests)))
 matrixtests.bluesimrun:  $(addprefix tests/, $(addsuffix .bluesimrun, $(matrixtests)))
+matrixtests.bluesimcpp:  $(addprefix tests/, $(addsuffix .bluesimcpp, $(matrixtests)))
 matrixtests.kc705:  $(addprefix tests/, $(addsuffix .kc705, $(matrixtests)))
 matrixtests.vc707:  $(addprefix tests/, $(addsuffix .vc707, $(matrixtests)))
 matrixtests.zc706:  $(addprefix tests/, $(addsuffix .zc706, $(matrixtests2)))
