@@ -428,6 +428,15 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		       DEV_NAME, num_entries, this_board->irq_num);
 		iowrite32(0, this_board->bar0io + CSR_MSIX_MASKED);
                 pci_set_master(dev); /* enable PCI bus master */
+		uint32_t reg_offset = 0xc000;
+		if (this_board->bar2io) {
+			uint32_t directory_version = *(volatile uint32_t *)(this_board->bar2io + (128 + 0)*4);
+			uint32_t num_portals       = *(volatile uint32_t *)(this_board->bar2io + (128 + 2)*4);
+			uint32_t addr_bits         = *(volatile uint32_t *)(this_board->bar2io + (128 + 3)*4);
+			reg_offset = (directory_version == 1) ? 0xc000 : 0;
+			printk("%s: directory_version=%x num_portals=%d addr_bits=%d reg_offset=%d",
+			       DEV_NAME, directory_version, num_portals, addr_bits, reg_offset);
+		}
                 for (dn = 0; dn < NUM_PORTALS && err >= 0; dn++) {
                         int fpga_number = this_board->info.board_number * NUM_PORTALS + dn;
                         dev_t this_device_number = MKDEV(MAJOR(device_number),
@@ -435,9 +444,6 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
                         this_board->portal[dn].portal_number = dn;
                         this_board->portal[dn].board = this_board;
                         if (this_board->bar2io) {
-				uint32_t directory_version = *(volatile uint32_t *)(this_board->bar2io + 0);
-				uint32_t reg_offset = (directory_version == 1) ? 0xc000 : 0;
-				printk("%s: directory_version=%d reg_offset=%d", DEV_NAME, directory_version, reg_offset);
                                 this_board->portal[dn].regs = (volatile uint32_t *)(this_board->bar2io + 0x10000 * dn + reg_offset);
 			}
                         /* add the device operations */
