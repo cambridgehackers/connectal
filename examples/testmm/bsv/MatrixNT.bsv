@@ -375,6 +375,7 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
       
    Reg#(Bool) running <- mkReg(False);
    FIFOF#(Bool) doneFifo <- mkFIFOF();
+   FIFOF#(Bool) initNumEltsFifo <- mkFIFOF();
    
    Vector#(J, Reg#(UInt#(addrwidth))) startAOffset <- replicateM(mkReg(0));
    Vector#(K, Reg#(UInt#(addrwidth))) startBOffset <- replicateM(mkReg(0));
@@ -382,7 +383,7 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 
    Vector#(K, FIFO#(void)) controlDependenceB <- replicateM(mkFIFO);
    for (Integer k = 0; k < kk; k = k + 1) begin
-      rule startSourceB;
+      rule startSourceB if (!initNumEltsFifo.notEmpty);
 	 
 	 if(k > 0)
 	    controlDependenceB[k-1].deq;
@@ -422,7 +423,7 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
    for (Integer j = 0; j < jj; j = j + 1) begin
 
       int jint = fromInteger(j);
-      rule startSourceAndSink;
+      rule startSourceAndSink if (!initNumEltsFifo.notEmpty);
 	 
 	 if(j > 0)
 	    controlDependenceA[j-1].deq;
@@ -479,7 +480,6 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
       endrule
    end
 
-   FIFO#(Bool) initNumEltsFifo <- mkFIFO();
    rule dotProdsNumElts;
       initNumEltsFifo.deq();
       let numColumnsA = descriptorA[0].first.numColumns;

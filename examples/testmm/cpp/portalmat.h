@@ -91,7 +91,7 @@ public:
   bool copy(cv::Mat &other);
   bool copy(cv::MatExpr other);
   bool transpose(cv::Mat &other);
-  bool compare(Mat &other, const char *file=0, int line=0, float epsilon=0.0001, Mat *pm = 0, bool verbose = false);
+  bool compare(Mat &other, const char *file=0, int line=0, float epsilon=0.01, Mat *pm = 0, bool verbose = false);
   void naive_mul(cv::Mat &a, cv::Mat &b, FILE *f);
 
   void multf(PortalMat &a, PortalMat &b_transpose, MmIndication *mmind = NULL);

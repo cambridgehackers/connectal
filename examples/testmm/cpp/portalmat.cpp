@@ -197,7 +197,7 @@ bool PortalMat::compare(Mat &other, const char *file, int line, float epsilon, M
 	for (int j = 0; j < cols; j++) {
 	    float v = at<float>(i, j);
 	    float ov = other.at<float>(i, j);
-	    if (fabs(v - ov) > epsilon) {
+	    if (fabs((v - ov)/ov) > epsilon) {
 		if (file)
 		  if(verbose) fprintf(stderr, "%s:%d: ", file, line);
 		if(verbose) fprintf(stderr, "mismatch[%d,%d] expected %f got %f error=%f", i, j, v, ov, fabs(v - ov));
