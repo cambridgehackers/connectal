@@ -101,7 +101,7 @@ int pareff_fd(int *fd)
 	  head.inflight = 1;
 	  head.req.addr = (unsigned int *)(((long) head.req.addr) | head.req.portal << 16);
 	  if(trace_port)
-	  fprintf(stderr, "processr p=%d w=%d, a=%lx, d=%x:", 
+	  fprintf(stderr, "processr p=%d w=%d, a=%8lx, d=%8x:", 
 		  head.req.portal, head.req.write_flag, (long)head.req.addr, head.req.data);
 	}
     }
