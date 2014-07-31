@@ -214,15 +214,6 @@ Restart surfaceflinger:
 
 Sometimes multiple restarts are required.
 
-Imageon Example
-~~~~~~~~~~~~~~~
-
-This is an example using the Avnet Imageon board and ZC702 (not tested with Zedboard yet):
-
-To generate code for a ZC702 board:
-    make imageon.zc702
-
-
 Zynq Hints
 -------------
 
