@@ -109,8 +109,8 @@ PRINTF_EXTRA=$(XBSVDIR)/bsv/DisplayInd.bsv
 endif
 
 gentarget::
-	[ -e $(BOARD)/generatedbsv ] || mkdir -p $(BOARD)/generatedbsv
-	[ -e $(BOARD)/jni ] || mkdir -p $(BOARD)/jni
+	@[ -e $(BOARD)/generatedbsv ] || mkdir -p $(BOARD)/generatedbsv
+	@[ -e $(BOARD)/jni ] || mkdir -p $(BOARD)/jni
 ifeq ($(USE_PRINTF),1)
 	$(XBSVDIR)/scripts/preprocess_trace.py $(BOARD) $(BSVFILES)
 endif

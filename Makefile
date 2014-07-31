@@ -205,7 +205,7 @@ zedboardcpps: $(zedboardcpps)
 
 # RUNPARAM=ipaddr is an optional argument if you already know the IP of the zedboard
 $(zedboardcpps):
-	make BOARD=bluesim -C $(basename $@) android_exe
+	make BOARD=zedboard -C $(basename $@) android_exe
 
 #################################################################################################
 # zc702
@@ -268,7 +268,7 @@ vc707cpps = $(addprefix examples/, $(addsuffix .vc707cpp, $(examples))) \
 vc707cpps: $(vc707cpps)
 
 $(vc707cpps):
-	make BOARD=bluesim -C $(basename $@) ubuntu_exe
+	make BOARD=vc707 -C $(basename $@) ubuntu_exe
 
 #################################################################################################
 # kc705
@@ -293,7 +293,7 @@ kc705cpps = $(addprefix examples/, $(addsuffix .kc705cpp, $(examples))) \
 kc705cpps: $(kc705cpps)
 
 $(kc705cpps):
-	make BOARD=bluesim -C $(basename $@) ubuntu_exe
+	make BOARD=kc705 -C $(basename $@) ubuntu_exe
 
 
 #################################################################################################
