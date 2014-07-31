@@ -412,20 +412,6 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 			err = -EFAULT;
                         goto BARS_MAPPED_label;
 		}
-#if 0
-{
-int i;
-int pos = pci_find_capability(dev, PCI_CAP_ID_MSIX);
-for (i = 0; i < 10; i++) {
-        u16 control;
-        pci_read_config_word(dev, pos + i * 2, &control);
-        printk("[%s:%d] [%x] = %x\n", __FUNCTION__, __LINE__, i*2, control);
-}
-int nr_entries = 0; //pci_msix_table_size(dev);
-printk("[%s:%d] nr_entries %x msi %x msix %x\n", __FUNCTION__, __LINE__, nr_entries, dev->msi_enabled, dev->msix_enabled);
-
-}
-#endif
 		this_board->irq_num = msix_entries[0].vector;
 		printk(KERN_INFO "%s: Using MSIX interrupts num_entries=%d check_device\n", DEV_NAME, num_entries);
 		for (i = 0; i < num_entries; i++)
