@@ -61,6 +61,9 @@ typedef struct {
    Bit#(8) idxOffset;
    } Region deriving (Eq,Bits,FShow);
 
+typedef struct {DmaErrorType errorType;
+		Bit#(32) pref; } DmaError deriving (Bits);
+
 // the address translation servers (addr[0], addr[1]) have a latency of 8 and are fully pipelined
 module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    provisos(Log#(MaxNumSGLists, listIdxSize),
@@ -96,6 +99,13 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    // stage 4 (latnecy == 1)
    Vector#(2,FIFOF#(Bit#(addrWidth))) pageResponseFifos <- replicateM(mkFIFOF);
       
+   FIFO#(DmaError) dmaErrorFifo <- mkFIFO();
+   rule dmaError;
+      let error <- toGet(dmaErrorFifo).get();
+      dmaIndication.dmaError(extend(pack(error.errorType)), error.pref, -1, 0);
+   endrule
+
+
    let page_shift0 = fromInteger(valueOf(SGListPageShift0));
    let page_shift4 = fromInteger(valueOf(SGListPageShift4));
    let page_shift8 = fromInteger(valueOf(SGListPageShift8));
@@ -179,7 +189,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 if (off.pageSize == 0) begin
 	    //FIXME offset
 	    //$display("mkSGListMMU.addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
-	    dmaIndication.dmaError(extend(pack(DmaErrorBadAddrTrans)), extend(ptr), -1, 0);
+	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadAddrTrans, pref: extend(ptr) });
 	 end
 	 //$display("p ages[%d].read %h", i, rp[i].first());
 	 portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
