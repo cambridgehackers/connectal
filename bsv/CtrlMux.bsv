@@ -33,6 +33,7 @@ import Connectable::*;
 import Portal::*;
 import Directory::*;
 import MemTypes::*;
+import Arith::*;
 import Pipe::*;
 
 module mkInterruptMux#(Vector#(numPortals,ReadOnly#(Bool)) inputs) (ReadOnly#(Bool))
@@ -43,12 +44,8 @@ module mkInterruptMux#(Vector#(numPortals,ReadOnly#(Bool)) inputs) (ReadOnly#(Bo
       return x._read;
    endfunction
    
-   function Bool my_or(Bool a, Bool b);
-      return a || b;
-   endfunction
-   
    method Bool _read;
-      return fold(my_or,map(my_read,inputs));
+      return fold(boolor,map(my_read,inputs));
    endmethod
 
 endmodule

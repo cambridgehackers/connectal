@@ -24,6 +24,7 @@
 import Vector::*;
 
 function Bool booland(Bool x1, Bool x2); return x1 && x2; endfunction
+function Bool boolor(Bool x1, Bool x2); return x1 || x2; endfunction
 
 function Bool eq(a x1, a x2) provisos (Eq#(a)); return x1 == x2; endfunction
 
