@@ -175,7 +175,7 @@ dma_buf_vmap
   //for (i = 0; i < numWords; i++)
     //srcBuffer[i] = i;
 
-  DmaManager_dCacheFlushInval(&priv, srcAlloc, srcBuffer);
+  DmaManager_dCacheFlushInval(&intarr[2], srcAlloc->header.fd, alloc_sz, srcBuffer);
   PORTAL_PRINTF( "Main: before DmaManager_reference(%p)\n", srcAlloc);
   ref_srcAlloc = DmaManager_reference(&priv, srcAlloc);
   PORTAL_PRINTF( "Main: starting read %08x\n", numWords);

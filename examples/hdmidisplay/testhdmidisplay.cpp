@@ -43,6 +43,7 @@
 static HdmiInternalRequestProxy *hdmiInternal;
 static HdmiDisplayRequestProxy *device;
 static DmaManager *dma;
+static DmaConfigProxy *dmap;
 static PortalAlloc *portalAlloc[FRAME_COUNT];
 static unsigned int ref_srcAlloc[FRAME_COUNT];
 static int *dataptr[FRAME_COUNT];
@@ -93,7 +94,7 @@ static void fill_pixels(int offset)
 	ptr[line * npixels + pixel] = v;
       }
     corner_index = offset/16;
-    dma->dCacheFlushInval(portalAlloc[frame_index], dataptr[frame_index]);
+    dmap->dCacheFlushInval(portalAlloc[frame_index]->header.fd, fbsize, dataptr[frame_index]);
     device->startFrameBuffer(ref_srcAlloc[frame_index], fbsize);
     hdmiInternal->setTestPattern(0);
     hdmiInternal->waitForVsync(0);
@@ -141,7 +142,7 @@ int main(int argc, const char **argv)
 
     poller = new PortalPoller();
     device = new HdmiDisplayRequestProxy(IfcNames_HdmiDisplayRequest, poller);
-    DmaConfigProxy *dmap = new DmaConfigProxy(IfcNames_DmaConfig);
+    dmap = new DmaConfigProxy(IfcNames_DmaConfig);
     dma = new DmaManager(dmap);
     dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
     HdmiInternalIndicationWrapper *hdmiIndication = new HdmiIndication(IfcNames_HdmiInternalIndication);

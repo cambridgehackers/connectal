@@ -20,6 +20,7 @@
  */
 
 #include <stdio.h>
+#include <assert.h>
 #include <sys/mman.h>
 #include <string.h>
 #include <stdlib.h>
@@ -148,13 +149,13 @@ class RingIndication : public RingIndicationWrapper
 {
 public:
   virtual void setResult(uint32_t cmd, uint32_t regist, uint64_t addr) {
-    fprintf(stderr, "setResult(cmd %d regist %d addr %zx)\n", 
-	    cmd, regist, addr);
+    fprintf(stderr, "setResult(cmd %d regist %d addr %llx)\n", 
+	    cmd, regist, (long long)addr);
     setresult_flag = 1;
   }
   virtual void getResult(uint32_t cmd, uint32_t regist, uint64_t addr) {
-    //fprintf(stderr, "getResult(cmd %d regist %d addr %zx)\n", 
-    //	    cmd, regist, addr);
+    //fprintf(stderr, "getResult(cmd %d regist %d addr %llx)\n", 
+    //	    cmd, regist, (long long)addr);
     /* returning query about last pointer of cmd ring */
     if ((cmd == cmd_ring.ringid) && (regist == REG_LASTACK)) {
       //fprintf(stderr, "update cmd_ring.last %zx\n", addr);
@@ -425,7 +426,7 @@ int fast_echo_test()
       if ((p->exp_a != p->got_a)
 	  || (p->exp_b != p->got_b)) {
 	printf("echo failed iteration %d got %lx %lx exp %lx %lx\n",
-	       i, p->got_a, p->got_b, p->exp_a, p->exp_b);
+	       i, (long)p->got_a, (long)p->got_b, (long)p->exp_a, (long)p->exp_b);
       }
     }
     interval = deltatime(start, stop);
@@ -450,8 +451,8 @@ void hw_echo(long unsigned a, long unsigned b)
   STARTRING();
   while (myevent.flag == 0) StatusPoll();
   if ((myevent.got_a != a) || (myevent.got_b != b)) {
-    printf("echo failed a=%lx b= %lx got %lx %lx\n",
-	   a, b, myevent.got_a, myevent.got_b);
+    printf("echo failed a=%lx b= %lx got %llx %llx\n",
+	   a, b, (long long)myevent.got_a, (long long)myevent.got_b);
   }
   
 }
@@ -512,9 +513,9 @@ int main(int argc, const char **argv)
   statusPointer = dma->reference(statusAlloc);
   scratchPointer = dma->reference(scratchAlloc);
 
-  /*   dma->dCacheFlushInval(cmdAlloc, cmdBuffer);
-  dma->dCacheFlushInval(statusAlloc, statusBuffer);
-  dma->dCacheFlushInval(scratchAlloc, scratchBuffer);
+  /*   dmap->dCacheFlushInval(cmdAlloc->header.fd, cmd_ring_sz, cmdBuffer);
+  dmap->dCacheFlushInval(statusAlloc->header.fd, status_ring_sz, statusBuffer);
+  dmap->dCacheFlushInval(scratchAlloc->header.fd, scratch_sz, scratchBuffer);
   fprintf(stderr, "flush and invalidate complete\n");
   */
   portalThreadRun = 0;

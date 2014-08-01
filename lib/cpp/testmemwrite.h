@@ -111,7 +111,7 @@ void parent(int rd_sock, int wr_sock)
     dstBuffer[i] = 0xDEADBEEF;
   }
   
-  dma->dCacheFlushInval(dstAlloc, dstBuffer);
+  dmap->dCacheFlushInval(dstAlloc->header.fd, alloc_sz, dstBuffer);
   fprintf(stderr, "parent::flush and invalidate complete\n");
 
   // for(int i = 0; i < dstAlloc->header.numEntries; i++)

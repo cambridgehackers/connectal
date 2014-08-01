@@ -60,7 +60,7 @@ void* parent(void* pwr_sock)
     dstBuffer[i] = i;
   }
   
-  pm->dCacheFlushInval(&dstAlloc, dstBuffer);
+  pm->dCacheFlushInval(dstAlloc->header.fd, alloc_sz, dstBuffer);
   fprintf(stderr, "parent::flush and invalidate complete\n");
 
   int rc = ioctl(pm->pa_fd, PA_DEBUG_PK, &dstAlloc);

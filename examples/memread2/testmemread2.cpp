@@ -50,7 +50,7 @@ public:
     fprintf(stderr, "Memread2::reportStateDbg: x=%08x y=%08x\n", x, y);
   }  
   virtual void mismatch(uint32_t offset, uint64_t ev, uint64_t v) {
-    fprintf(stderr, "Mismatch at %x %zx != %zx\n", offset, ev, v);
+    fprintf(stderr, "Mismatch at %x %llx != %llx\n", offset, (long long)ev, (long long)v);
 
     mismatchesReceived++;
     if (mismatchesReceived == mismatchCount)
@@ -100,7 +100,7 @@ int main(int argc, const char **argv)
     srcBuffer2[i] = v*3;
   }
     
-  dma->dCacheFlushInval(srcAlloc, srcBuffer);
+  dmap->dCacheFlushInval(srcAlloc->header.fd, alloc_sz, srcBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);

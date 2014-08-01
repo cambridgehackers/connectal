@@ -180,9 +180,9 @@ int main(int argc, const char **argv)
     bsBuffer[i]  = 0x5a5abeef;
   }
 
-  dma->dCacheFlushInval(bsAlloc,  bsBuffer);
-  dma->dCacheFlushInval(srcAlloc, srcBuffer);
-  dma->dCacheFlushInval(dstAlloc, dstBuffer);
+  dmap->dCacheFlushInval(bsAlloc->header.fd, alloc_sz,  bsBuffer);
+  dmap->dCacheFlushInval(srcAlloc->header.fd, alloc_sz, srcBuffer);
+  dmap->dCacheFlushInval(dstAlloc->header.fd, alloc_sz, dstBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);

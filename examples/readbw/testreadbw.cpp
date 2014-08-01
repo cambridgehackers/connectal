@@ -115,7 +115,7 @@ int main(int argc, const char **argv)
 
     // flush cache not needed on x86
 #ifdef __arm__
-    rc = device->dCacheFlushInval(&srcAlloc, srcBuffer);
+    rc = device->dCacheFlushInval(srcAlloc->header.fd, alloc_sz, srcBuffer);
     fprintf(stderr, "cache flushed rc=%d\n", rc);
 #endif
     // map the Dma buf into PCIe. Seems not to be needed.

@@ -112,7 +112,7 @@ void runtest(int argc, const char ** argv)
     srcBuffer[i] = i;
   }
     
-  dma->dCacheFlushInval(srcAlloc, srcBuffer);
+  dmap->dCacheFlushInval(srcAlloc->header.fd, alloc_sz, srcBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
   device->getStateDbg();
   fprintf(stderr, "Main::after getStateDbg\n");

@@ -87,7 +87,7 @@ int main(int argc, const char **argv)
     srcBuffer[i] = srcGen++;
   }
     
-  dma->dCacheFlushInval(srcAlloc, srcBuffer);
+  dmap->dCacheFlushInval(srcAlloc->header.fd, numBytes, srcBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
   sleep(1);
 

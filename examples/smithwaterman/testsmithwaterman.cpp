@@ -22,10 +22,12 @@
 
 #include <stdio.h>
 #include <sys/mman.h>
+#include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <assert.h>
 #include <semaphore.h>
+#include <pthread.h>
 #include <ctime>
 #include <monkit.h>
 #include <mp.h>
@@ -128,10 +130,10 @@ int main(int argc, const char **argv)
     start_timer(0);
 
 
-    fprintf(stderr, "elapsed time (hw cycles): %zd\n", lap_timer(0));
+    fprintf(stderr, "elapsed time (hw cycles): %lld\n", (long long)lap_timer(0));
     
-    dma->dCacheFlushInval(strAAlloc, strA);
-    dma->dCacheFlushInval(strBAlloc, strB);
+    dmap->dCacheFlushInval(strAAlloc->header.fd, alloc_len, strA);
+    dmap->dCacheFlushInval(strBAlloc->header.fd, alloc_len, strB);
 
     unsigned int ref_strAAlloc = dma->reference(strAAlloc);
     unsigned int ref_strBAlloc = dma->reference(strBAlloc);

@@ -25,6 +25,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <assert.h>
+#include <pthread.h>
+#include <string.h>
 #include <semaphore.h>
 #include <ctime>
 #include <monkit.h>
@@ -137,10 +139,10 @@ int main(int argc, const char **argv)
 
     start_timer(0);
     MP(needle, haystack, mpNext, needle_len, haystack_len, iter_cnt, &sw_match_cnt);
-    fprintf(stderr, "elapsed time (hw cycles): %zd\n", lap_timer(0));
+    fprintf(stderr, "elapsed time (hw cycles): %lld\n", (long long)lap_timer(0));
     
-    dma->dCacheFlushInval(needleAlloc, needle);
-    dma->dCacheFlushInval(mpNextAlloc, mpNext);
+    dmap->dCacheFlushInval(needleAlloc->header.fd, alloc_len, needle);
+    dmap->dCacheFlushInval(mpNextAlloc->header.fd, alloc_len, mpNext);
 
     unsigned int ref_needleAlloc = dma->reference(needleAlloc);
     unsigned int ref_mpNextAlloc = dma->reference(mpNextAlloc);
@@ -213,10 +215,10 @@ int main(int argc, const char **argv)
     start_timer(0);
     MP(needle, haystack, mpNext, needle_len, haystack_len, iter_cnt, &sw_match_cnt);
     uint64_t sw_cycles = lap_timer(0);
-    fprintf(stderr, "sw_cycles:%zx\n", sw_cycles);
+    fprintf(stderr, "sw_cycles:%llx\n", (long long)sw_cycles);
 
-    dma->dCacheFlushInval(needleAlloc, needle);
-    dma->dCacheFlushInval(mpNextAlloc, mpNext);
+    dmap->dCacheFlushInval(needleAlloc->header.fd, needle_alloc_len, needle);
+    dmap->dCacheFlushInval(mpNextAlloc->header.fd, mpNext_alloc_len, mpNext);
 
     device->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
     sem_wait(&setup_sem);
@@ -226,7 +228,7 @@ int main(int argc, const char **argv)
     uint64_t hw_cycles = lap_timer(0);
     uint64_t beats = dma->show_mem_stats(ChannelType_Read);
     float read_util = (float)beats/(float)hw_cycles;
-    fprintf(stderr, "hw_cycles:%zx\n", hw_cycles);
+    fprintf(stderr, "hw_cycles:%llx\n", (long long)hw_cycles);
     fprintf(stderr, "memory read utilization (beats/cycle): %f\n", read_util);
     fprintf(stderr, "speedup: %f\n", ((float)sw_cycles)/((float)hw_cycles));
 

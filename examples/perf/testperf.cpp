@@ -150,13 +150,13 @@ void printportalalloc(const char *name, PortalAlloc *p)
 {
   int i;
   fprintf(stderr, "%s\n", name);
-  fprintf(stderr, "size %ld\n", p->header.size);
+  fprintf(stderr, "size %ld\n", (long)p->header.size);
   fprintf(stderr, "fd %d\n", p->header.fd);
   fprintf(stderr, "numEntries %d\n", p->header.numEntries);
   for (i = 0; i < p->header.numEntries; i += 1)
     {
-      fprintf(stderr, " entry %d (%zx, %x)\n", i, p->entries[i].dma_address,
-	      p->entries[i].length);
+      fprintf(stderr, " entry %d (%lx, %lx)\n", i, (long)p->entries[i].dma_address,
+	      (long)p->entries[i].length);
     }
 }
 
@@ -192,8 +192,8 @@ int main(int argc, const char **argv)
   }
 
 
-  dma->dCacheFlushInval(srcAlloc, srcBuffer);
-  dma->dCacheFlushInval(dstAlloc, dstBuffer);
+  dmap->dCacheFlushInval(srcAlloc->header.fd, alloc_sz, srcBuffer);
+  dmap->dCacheFlushInval(dstAlloc->header.fd, alloc_sz, dstBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   ref_srcAlloc = dma->reference(srcAlloc);

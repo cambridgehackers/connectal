@@ -60,7 +60,7 @@ int main(int argc, const char **argv)
   }
   for (int i = 0; i < numWords; i++)
     srcBuffer[i] = i;
-  dma->dCacheFlushInval(srcAlloc, srcBuffer);
+  dmap->dCacheFlushInval(srcAlloc->header.fd, alloc_sz, srcBuffer);
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
   printf( "Main::starting read %08x\n", numWords);
   device->startRead(ref_srcAlloc, numWords, burstLen, 1);
