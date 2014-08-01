@@ -30,6 +30,7 @@ import AxiMasterSlave::*;
 import MemTypes::*;
 import MemwriteEngine::*;
 import Pipe::*;
+import Arith::*;
 
 `ifdef NumEngineServers
 typedef `NumEngineServers NumEngineServers;
@@ -92,10 +93,8 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
       endrule
    end
  
-   function Bool my_and(Tuple2#(Bool,Bool) xy); match { .x, .y } = xy; return x && y; endfunction
-   
    PipeOut#(Vector#(NumEngineServers, Bool)) finishPipe <- mkJoinVector(id, map(toPipeOut, finishFifos));
-   PipeOut#(Bool) finishReducePipe <- mkReducePipe(my_and, finishPipe);
+   PipeOut#(Bool) finishReducePipe <- mkReducePipe(uncurry(booland), finishPipe);
 
    rule indicate_finish;
       let rv <- toGet(finishReducePipe).get();
