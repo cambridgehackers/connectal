@@ -29,6 +29,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 
 #if defined(__arm__)
 #include "zynqportal.h"
@@ -151,4 +152,17 @@ int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa)
 #endif
   PORTAL_PRINTF("alloc size=%ldMB fd=%d\n", size/(1L<<20), portalAlloc->header.fd);
   return rc;
+}
+
+void *DmaManager_mmap(int fd, size_t size)
+{
+  void *retptr;
+#ifdef __KERNEL__
+  struct file *fmem = fget(fd);
+  retptr = dma_buf_vmap(fmem->private_data);
+  fput(fmem);
+#else      ///////////////////////// userspace version
+  retptr = (unsigned int *)mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
+#endif
+  return retptr;
 }
