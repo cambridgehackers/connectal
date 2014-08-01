@@ -35,6 +35,7 @@ import MemwriteEngine::*;
 import MemUtils::*;
 import FloatingPoint::*;
 import Pipe::*;
+import Arith::*;
 import FloatOps::*;
 import Timer::*;
 import RbmTypes::*;
@@ -330,9 +331,8 @@ module  mkMmTile#(Clock slowClock, Reset slowReset, UInt#(TLog#(T)) tile)(MmTile
 `endif
 
    function Bool fifofNotEmpty(FIFOF#(a) fifof); return fifof.notEmpty(); endfunction
-   function Bit#(32) my_add(Tuple2#(Bit#(32),Bit#(32)) ab); match { .a, .b } = ab; return a+b; endfunction
    function PipeOut#(Bit#(32)) dotProdMacCount(SharedDotProdServer#(K) dotprodserver); return dotprodserver.debug.macCount; endfunction
-   PipeOut#(Bit#(32)) macCountPipe <- mkReducePipes(my_add, map(dotProdMacCount, fxdotprods));
+   PipeOut#(Bit#(32)) macCountPipe <- mkReducePipes(uncurry(add), map(dotProdMacCount, fxdotprods));
 
    interface Vector aInputs = zipWith(toCountedPut, aMmTokensPutRegs, map(toPut, aFifos));
    interface Vector bInputs = zipWith(toCountedPut, bMmTokensPutRegs, map(toPut, bFifos));

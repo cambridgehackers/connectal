@@ -35,6 +35,7 @@ import MemwriteEngine::*;
 import MemUtils::*;
 import FloatingPoint::*;
 import Pipe::*;
+import Arith::*;
 import FloatOps::*;
 import Timer::*;
 import RbmTypes::*;
@@ -494,12 +495,11 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
       end
   endrule
 
-   function Bit#(32) my_add(Tuple2#(Bit#(32),Bit#(32)) ab); match { .a, .b } = ab; return a+b; endfunction
    function PipeOut#(Bit#(32)) mmTileMacCount(MmTile mmtile); return mmtile.debug.macCount; endfunction
    Vector#(T, PipeOut#(Vector#(2,Bit#(32)))) macCountPipes <- mapM(mkUnfunnelGB(defaultClock, defaultReset, doubleClock, doubleReset),
 								   map(mapPipe(replicate),
 								       map(mmTileMacCount, mmTiles)));
-   PipeOut#(Bit#(32)) macCountPipe <- mkReducePipes(my_add, map(mapPipe(head),macCountPipes));
+   PipeOut#(Bit#(32)) macCountPipe <- mkReducePipes(uncurry(add), map(mapPipe(head),macCountPipes));
    Reg#(Bit#(32)) macCountReg <- mkReg(0);
    rule updateMacCount;
       let mc <- toGet(macCountPipe).get();
