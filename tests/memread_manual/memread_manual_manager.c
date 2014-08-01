@@ -150,32 +150,10 @@ int main(int argc, const char **argv)
    PORTAL_PRINTF( "error creating exec thread\n");
    return -1;
   }
-#ifndef __KERNEL__ ///////////////////////// userspace version
-  srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
-#else   /// kernel version
-#if 0
-dma_buf_vmap
-//drivers/gpu/drm/i915/i915_gem_dmabuf.c
-// http://lxr.free-electrons.com/source/Documentation/dma-buf-sharing.txt
-// https://www.kernel.org/doc/Documentation/dma-buf-sharing.txt
-        pages = drm_malloc_ab(obj->pages->nents, sizeof(struct page *));
-        if (pages == NULL)
-                goto error;
+  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc->header.fd, alloc_sz);
 
-        for_each_sg(obj->pages->sgl, sg, obj->pages->nents, i)
-                pages[i] = sg_page(sg);
-
-        obj->dma_buf_vmapping = vmap(pages, obj->pages->nents, 0, PAGE_KERNEL);
-        drm_free_large(pages);
-#endif
-//??????
-  srcBuffer = NULL;
-#endif ////////////////////////////////
-
-#ifndef __KERNEL__
   for (i = 0; i < numWords; i++)
     srcBuffer[i] = i;
-#endif
 
   PORTAL_PRINTF( "Test 1: check for match\n");
   DmaManager_dCacheFlushInval(&intarr[2], srcAlloc->header.fd, alloc_sz, srcBuffer);
@@ -187,10 +165,8 @@ dma_buf_vmap
   sem_wait(&test_sem);
 
   PORTAL_PRINTF( "Test 2: check that mismatch is detected\n");
-#ifndef __KERNEL__
   for (i = 0; i < numWords; i++)
     srcBuffer[i] = 1-i;
-#endif
   DmaManager_dCacheFlushInval(&intarr[2], srcAlloc->header.fd, alloc_sz, srcBuffer);
   MemreadRequestProxy_startRead (&intarr[3], ref_srcAlloc, numWords, burstLen, 1);
   PORTAL_PRINTF( "Main: waiting for semaphore2\n");
