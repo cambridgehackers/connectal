@@ -90,27 +90,28 @@ module mkXYZRangePipeOut#(RangeBehavior alt) (XYZRangePipeIfc#(a)) provisos (Ari
    Reg#(a) xlimit <- mkReg(0);
    Reg#(a) ylimit <- mkReg(0);
    Reg#(a) zlimit <- mkReg(0);
-
+   
+   let guard = (x < xlimit && y < ylimit && z < zlimit);
+   
    interface PipeOut pipe;
-      method Tuple2#(a,a) first() if (x < xlimit && y < ylimit);
+      method Tuple2#(a,a) first() if (guard);
 	 if (alt==RangeA)
-	    return tuple2(z,y);
+	    return tuple2(x,z);
 	 else if (alt == RangeB)
 	    return tuple2(x,y);
 	 else //if (alt == RangeC)
 	    return tuple2(x+y,z);
       endmethod
-      method Action deq if (x < xlimit && y < ylimit);
-	 let newx = x;
-	 let newy = y+ystep;
+      method Action deq if (guard);
+	 let newx = x+xstep;
+	 let newy = y;
 	 let newz = z;
-	 if (newy >= ylimit && x < xlimit) begin
-	    newy = ybase;
-	    newx = newx + xstep;
-	    if (newx >= xlimit && z < zlimit) begin
-	       newx = xbase;
+	 if (newx >= xlimit) begin
+	    newx = xbase;
+	    newy = y + ystep;
+	    if (newy >= ylimit) begin
+	       newy = ybase;
 	       newz = z + zstep;
-	       //if (alt==RangeC) $display ("xxx %d %d %d",x,y,z);
 	    end
 	 end
 	 x <= newx;
@@ -118,11 +119,10 @@ module mkXYZRangePipeOut#(RangeBehavior alt) (XYZRangePipeIfc#(a)) provisos (Ari
 	 z <= newz;
       endmethod
       method Bool notEmpty();
-	 return (x < xlimit && y < ylimit && z < zlimit);
+	 return guard;
       endmethod
    endinterface
    method Action start(XYZRangeConfig#(a) cfg) if (x >= xlimit);
-      //$display("XYZRangePipe x=%d xlimit=%d xstep=%d y=%d ylimit=%d ystep=%d", cfg.xbase, cfg.xlimit, cfg.xstep, cfg.ybase, cfg.ylimit, cfg.ystep);
       x <= cfg.xbase;
       y <= cfg.ybase;
       z <= cfg.zbase;
@@ -306,9 +306,7 @@ module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
    let kk = valueOf(K);
    let tt = valueOf(T);
    let nshift = valueOf(nshift);
-   Bool verbose = True;
-   Bool verbose1 = True;
-   Bool timing = True;
+   Bool verbose = False;
 
    let defaultClock <- exposeCurrentClock();
    let defaultReset <- exposeCurrentReset();
@@ -370,7 +368,7 @@ module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
       let startB = startBBase + startBOffset;
       lastStartB <= cycles;
       let interval = cycles-lastStartB;
-      if (timing || verbose) $display($format(fshow(interval)+fshow(" startB=")+fshow(startB)));
+      if ( verbose) $display($format(fshow(interval)+fshow(" startB=")+fshow(startB)));
       sourceB.start(descriptorB.pointer, pack(extend(startB>>nshift)), fromInteger(kk)>>nshift, 0);
    endrule
    
@@ -379,7 +377,7 @@ module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
       let startA = startABase + startAOffset;
       lastStartA <= cycles;
       let interval = cycles-lastStartA;
-      if (timing || verbose) $display($format(fshow(interval)+fshow(" startA=")+fshow(startA)));
+      if ( verbose) $display($format(fshow(interval)+fshow(" startA=")+fshow(startA)));
       sourceA.start(descriptorA.pointer, pack(extend(startA>>nshift)), fromInteger(jj)>>nshift, 1);      
    endrule
    
@@ -388,8 +386,8 @@ module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
       let startC = startCBase + offsetC;
       lastStartC <= cycles;
       let interval = cycles-lastStartC;
-      sink.start(descriptorC.pointer, pack(extend(startC>>nshift)), fromInteger(kk/n));
-      if (timing || verbose) $display($format(fshow(interval)+fshow(" startC=")+fshow(startC)));
+      if ( verbose) $display($format(fshow(interval)+fshow(" startC=")+fshow(startC)));
+      sink.start(descriptorC.pointer, pack(extend(startC>>nshift)), fromInteger(kk)>>nshift);
    endrule
 
    rule finishSink;
@@ -397,7 +395,7 @@ module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
       let c = dotprodCount-fromInteger(kk);
       dotprodCount <= c;
       if (c == 0) begin
-	 $display("feck");
+	 $display("finishSink");
 	 running <= False;
 	 doneFifo.enq(?);
       end
@@ -421,18 +419,22 @@ module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
 		       ObjectPointer pointerB, UInt#(addrwidth) numRowsB, UInt#(addrwidth) numColumnsB,
 		       ObjectPointer pointerC,
 		       UInt#(addrwidth) numRowsA_x_numColumnsA,UInt#(addrwidth) numColumnsA_x_J,
-		       UInt#(addrwidth) numRowsA_x_numColumnsB,UInt#(addrwidth) numColumnsB_x_K,
+		       UInt#(addrwidth) numRowsA_x_numColumnsB,UInt#(addrwidth) numColumnsB_x_J,
 		       UInt#(addrwidth) numColumnsA_x_numColumnsB,UInt#(addrwidth) numRowsB_x_numColumnsB
 		       ) if (!running);
-      XYZRangeConfig#(UInt#(addrwidth)) offsetcfgA = XYZRangeConfig {xbase: 0, xlimit: numColumnsA, xstep: fromInteger(jj),
-								     ybase: 0, ylimit: numRowsA_x_numColumnsA, ystep: numColumnsA,
-								     zbase: 0, zlimit: numColumnsB, zstep: fromInteger(kk)};
-      XYZRangeConfig#(UInt#(addrwidth)) offsetcfgB = XYZRangeConfig {xbase: 0, xlimit: numColumnsB, xstep: fromInteger(kk),
-								     ybase: 0, ylimit: numRowsB_x_numColumnsB, ystep: numColumnsB,
-								     zbase: 0, zlimit: numColumnsA, zstep: fromInteger(jj)};
-      XYZRangeConfig#(UInt#(addrwidth)) offsetcfgC = XYZRangeConfig {xbase: 0, xlimit: numColumnsB, xstep: fromInteger(jj),
-								     ybase: 0, ylimit: numColumnsB_x_K, ystep: numColumnsB,
-								     zbase: 0, zlimit: numColumnsA_x_numColumnsB, zstep: numColumnsB_x_K };
+
+      XYZRangeConfig#(UInt#(addrwidth)) offsetcfgA = XYZRangeConfig {xbase: 0, xlimit: numRowsA_x_numColumnsA, xstep: numColumnsA,
+								     ybase: 0, ylimit: numColumnsB,            ystep: fromInteger(kk),
+								     zbase: 0, zlimit: numColumnsA,            zstep: fromInteger(jj)};
+
+      XYZRangeConfig#(UInt#(addrwidth)) offsetcfgB = XYZRangeConfig {xbase: 0, xlimit: numRowsB_x_numColumnsB, xstep: numColumnsB,
+								     ybase: 0, ylimit: numColumnsB,            ystep: fromInteger(kk),
+								     zbase: 0, zlimit: numColumnsA,            zstep: fromInteger(jj)};
+
+      XYZRangeConfig#(UInt#(addrwidth)) offsetcfgC = XYZRangeConfig {xbase: 0, xlimit: numColumnsB_x_J,           xstep: numColumnsB,
+								     ybase: 0, ylimit: numColumnsB,               ystep: fromInteger(kk),
+								     zbase: 0, zlimit: numColumnsA_x_numColumnsB, zstep: numColumnsB_x_J };
+
       descriptorA <= MatrixDescriptor { pointer: pointerA, base: 0, numRows: numRowsA,    numColumns: numColumnsA};
       descriptorB <= MatrixDescriptor { pointer: pointerB, base: 0, numRows: numRowsB,    numColumns: numColumnsB};
       descriptorC <= MatrixDescriptor { pointer: pointerC, base: 0, numRows: numColumnsA, numColumns: numColumnsB};
@@ -470,7 +472,7 @@ interface DramMatrixMultiply#(numeric type n, numeric type dmasz);
 		       ObjectPointer pointerB, UInt#(MMSize) numRowsB, UInt#(MMSize) numColumnsB,
 		       ObjectPointer pointerC,
 		       UInt#(MMSize) numRowsA_x_numColumnsA, UInt#(MMSize) numColumnsA_x_J,
-		       UInt#(MMSize) numRowsA_x_numColumnsB, UInt#(MMSize) numColumnsB_x_K,
+		       UInt#(MMSize) numRowsA_x_numColumnsB, UInt#(MMSize) numColumnsB_x_J,
 		       UInt#(MMSize) numColumnsA_x_numColumnsB, UInt#(MMSize) numRowsB_x_J);
    method ActionValue#(Bool) finish();
    interface DmaMatrixMultiplyDebug debug;

@@ -63,6 +63,8 @@ memtests =  memread_manyclients  \
 
 matrixtests2 = testmm8.8.2       \
 	    testmm16.16.2        \
+	    testmm32.32.2        \
+	    testmm32.16.2        \
 	    testmm4.4.2          \
 	    testmm4.2.2          \
 	    testmm2.4.2          \
@@ -330,6 +332,7 @@ tests.vc707:  $(addprefix tests/, $(addsuffix .vc707, $(tests)))
 
 matrixtests.bluesim:  $(addprefix tests/, $(addsuffix .bluesim, $(matrixtests)))
 matrixtests.bluesimrun:  $(addprefix tests/, $(addsuffix .bluesimrun, $(matrixtests)))
+matrixtests.bluesimcpp:  $(addprefix tests/, $(addsuffix .bluesimcpp, $(matrixtests)))
 matrixtests.kc705:  $(addprefix tests/, $(addsuffix .kc705, $(matrixtests)))
 matrixtests.vc707:  $(addprefix tests/, $(addsuffix .vc707, $(matrixtests)))
 matrixtests.zc706:  $(addprefix tests/, $(addsuffix .zc706, $(matrixtests2)))

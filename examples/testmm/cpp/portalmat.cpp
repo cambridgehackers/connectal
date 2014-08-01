@@ -273,7 +273,6 @@ void PortalMat::multf(PortalMat &a, PortalMat &b_transpose,  MmIndication *mmind
 	fprintf(stderr, "Mismatched matrices: a.rows=%d a.cols=%d b.rows=%d b.cols=%d\n", a.rows, a.cols, b_transpose.rows, b_transpose.cols);
 	return;
     }
-    create(a.rows, b_transpose.rows, CV_32F);
     long aref = a.reference();
     long bref = b_transpose.reference();
     long cref = reference();
@@ -309,7 +308,6 @@ void PortalMat::multf(PortalMat &a, PortalMat &b,  MmIndication *mmind)
 	fprintf(stderr, "Mismatched matrices: a.rows=%d a.cols=%d b.rows=%d b.cols=%d\n", a.rows, a.cols, b.rows, b.cols);
 	return;
     }
-    create(a.rows, b.rows, CV_32F);
     long aref = a.reference();
     long bref = b.reference();
     long cref = reference();
@@ -322,7 +320,7 @@ void PortalMat::multf(PortalMat &a, PortalMat &b,  MmIndication *mmind)
 		  bref, b.rows, b.cols,
 		  cref,
 		  a.rows*a.cols, a.cols*J_VALUE,
-		  a.rows*b.cols, b.cols*K_VALUE,
+		  a.rows*b.cols, b.cols*J_VALUE,
 		  a.cols*b.cols, b.rows*b.cols);
 
     sem_wait(&mul_sem);
