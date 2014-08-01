@@ -220,6 +220,11 @@ module mkMemServerOOW#(DmaIndication dmaIndication,
 endmodule
 
    
+typedef struct {
+   DmaErrorType errorType;
+   Bit#(32) pref;
+   } DmaError deriving (Bits);
+
 module mkConfigMemServerRW#(DmaIndication dmaIndication,
 			    Vector#(nMasters,TagGen#(nrc, numReadTags)) readTagGens,
 			    Vector#(nMasters,TagGen#(nwc, numWriteTags)) writeTagGens,
@@ -245,6 +250,12 @@ module mkConfigMemServerRW#(DmaIndication dmaIndication,
    MemServer#(addrWidth,dataWidth,nMasters) reader <- mkConfigMemServerR(dmaIndication, readTagGens,  readClients,  sgl);
    MemServer#(addrWidth,dataWidth,nMasters) writer <- mkConfigMemServerW(dmaIndication, writeTagGens, writeClients, sgl);
    
+   FIFO#(DmaError) dmaErrorFifo <- mkFIFO();
+   rule dmaError;
+      let error <- toGet(dmaErrorFifo).get();
+      dmaIndication.dmaError(extend(pack(error.errorType)), error.pref, 0, 0);
+   endrule
+
    function MemMaster#(addrWidth,dataWidth) mkm(Integer i) = (interface MemMaster#(addrWidth,dataWidth);
 								 interface MemReadClient read_client = reader.masters[i].read_client;
 								 interface MemWriteClient write_client = writer.masters[i].write_client;
@@ -265,7 +276,7 @@ module mkConfigMemServerRW#(DmaIndication dmaIndication,
       endmethod
       method Action sglist(Bit#(32) pref, Bit#(64) addr, Bit#(32) len);
 	 if (bad_pointer(pref))
-	    dmaIndication.dmaError(extend(pack(DmaErrorBadPointer1)), pref, 0, 0);
+	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer1, pref: pref });
 `ifdef BSIM
 `ifndef PCIE
 	 let va <- pareff(pref, len);
@@ -347,6 +358,12 @@ module mkConfigMemServerR#(DmaIndication dmaIndication,
 		      endseq;
    FSM trafficFSM <- mkFSM(trafficStmt);
       
+   FIFO#(DmaError) dmaErrorFifo <- mkFIFO();
+   rule dmaError;
+      let error <- toGet(dmaErrorFifo).get();
+      dmaIndication.dmaError(extend(pack(error.errorType)), error.pref, 0, 0);
+   endrule
+
    interface DmaConfig request;
       method Action getStateDbg(ChannelType rc);
 	 if (rc == Read)
@@ -358,7 +375,7 @@ module mkConfigMemServerR#(DmaIndication dmaIndication,
       endmethod
       method Action sglist(Bit#(32) pref, Bit#(64) addr, Bit#(32) len);
 	 if (bad_pointer(pref))
-	    dmaIndication.dmaError(extend(pack(DmaErrorBadPointer2)), pref, 0, 0);
+	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer2, pref: pref });
 `ifdef BSIM
 `ifndef PCIE
 	 let va <- pareff(pref, len);
@@ -439,6 +456,12 @@ module mkConfigMemServerW#(DmaIndication dmaIndication,
 		      endseq;
    FSM trafficFSM <- mkFSM(trafficStmt);
 
+   FIFO#(DmaError) dmaErrorFifo <- mkFIFO();
+   rule dmaError;
+      let error <- toGet(dmaErrorFifo).get();
+      dmaIndication.dmaError(extend(pack(error.errorType)), error.pref, 0, 0);
+   endrule
+
    interface DmaConfig request;
       method Action getStateDbg(ChannelType rc);
 	 if (rc == Write)
@@ -450,7 +473,7 @@ module mkConfigMemServerW#(DmaIndication dmaIndication,
       endmethod
       method Action sglist(Bit#(32) pref, Bit#(64) addr, Bit#(32) len);
 	 if (bad_pointer(pref))
-	    dmaIndication.dmaError(extend(pack(DmaErrorBadPointer3)), pref, 0, 0);
+	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer3, pref: pref });
 `ifdef BSIM
 `ifndef PCIE
 	 let va <- pareff(pref, len);
