@@ -131,6 +131,54 @@ zmemexamples = memread_4m        \
             memwrite_4m          \
             $(memexamples)        
 
+cppalllist =     \
+    examples/echo \
+    examples/bscan \
+    examples/fib \
+    examples/flowcontrol \
+    examples/fp \
+    examples/hdmidisplay \
+    examples/imageon \
+    examples/maxcommonsubseq \
+    examples/memcpy \
+    examples/memlatency \
+    examples/memread \
+    examples/memread128 \
+    examples/memread2 \
+    examples/memread_4m \
+    examples/memrw \
+    examples/memwrite \
+    examples/memwrite_4m \
+    examples/nandsim \
+    examples/noc \
+    examples/noc2d \
+    examples/perf \
+    examples/pipe_mul \
+    examples/pipe_mul2 \
+    examples/printf \
+    examples/ring \
+    examples/serialconfig \
+    examples/simple \
+    examples/smithwaterman \
+    examples/splice \
+    examples/strstr \
+    examples/testmm \
+    examples/xsim-echo \
+    examples/yuv \
+    tests/memread_manual \
+    tests/simple_manual \
+    tests/testmm16.16.2 \
+    tests/testmm16.16.4 \
+    tests/testmm2.2.2 \
+    tests/testmm2.4.2 \
+    tests/testmm4.2.2 \
+    tests/testmm4.4.2 \
+    tests/testmm4.4.4 \
+    tests/testmm8.8.2 \
+    tests/testmm8.8.4 \
+
+allarchlist = bluesim zedboard vc707 
+
 #################################################################################################
 # gdb
 
@@ -380,6 +428,14 @@ xilinx/pcie_7x_gen1x8: scripts/generate-pcie-gen1x8.tcl
 	vivado -mode batch -source scripts/generate-pcie-gen1x8.tcl
 	mv ./project_pcie_gen1x8/project_pcie_gen1x8.srcs/sources_1/ip/pcie_7x_0 xilinx/pcie_7x_gen1x8
 	rm -fr ./project_pcie_gen1x8
+
+cppall:
+	@for testname in $(cppalllist) ; do  \
+	   for archname in $(allarchlist) ; do  \
+	       echo make $$testname."$$archname"cpp;  \
+	       make  --no-print-directory $$testname."$$archname"cpp;  \
+	   done ;  \
+	done  \
 
 distclean:
 	rm -rf examples/*/bluesim examples/*/vc707 examples/*/kc705 examples/*/zedboard examples/*/zc702 examples/*/zc706

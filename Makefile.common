@@ -2,10 +2,10 @@
 
 V=0
 ifeq ($(V),0)
-ECHO_OUT=@
+Q=@
 VERBOSE_SWITCH=
 else
-ECHO_OUT=
+Q=
 VERBOSE_SWITCH=--verbose
 endif
 
@@ -121,12 +121,12 @@ PRINTF_EXTRA=$(XBSVDIR)/bsv/DisplayInd.bsv
 endif
 
 gentarget::
-	$(ECHO_OUT)[ -e $(BOARD)/generatedbsv ] || mkdir -p $(BOARD)/generatedbsv
-	$(ECHO_OUT)[ -e $(BOARD)/jni ] || mkdir -p $(BOARD)/jni
+	$(Q)[ -e $(BOARD)/generatedbsv ] || mkdir -p $(BOARD)/generatedbsv
+	$(Q)[ -e $(BOARD)/jni ] || mkdir -p $(BOARD)/jni
 ifeq ($(USE_PRINTF),1)
 	$(XBSVDIR)/scripts/preprocess_trace.py $(BOARD) $(BSVFILES)
 endif
-	$(ECHO_OUT)$(XBSVDIR)/xbsvgen -B$(BOARD) -p $(BOARD) -x $(MKTOP) \
+	$(Q)$(XBSVDIR)/xbsvgen -B$(BOARD) -p $(BOARD) -x $(MKTOP) \
 	$(foreach s2h, $(S2H), -s2h $(s2h)) \
 	$(foreach h2s, $(H2S), -h2s $(h2s)) \
 	$(foreach f, $(CPPFILES), -s $f) \
