@@ -85,7 +85,9 @@ argparser.add_argument('--stl', help='STL implementation to use for Android buil
 argparser.add_argument('--floorplan', help='Floorplan XDC', default=None)
 argparser.add_argument('-P', '--partition-module', default=[], help='Modules to separately synthesize/place/route', action='append')
 argparser.add_argument('--cachedir', default=None, help='Cache directory for fpgamake to use')
+argparser.add_argument('-v', '--verbose', help='Display verbose information messages', action='store_true')
 
+noisyFlag=False
 
 tclReadVerilogTemplate='read_verilog [ glob %(verilog)s%(pattern)s ]'
 tclReadXciTemplate='''
@@ -323,27 +325,27 @@ $(vfile): %(topbsvfile)s %(bsvfiles)s $(timestampefile)
 	for v in verilog/*.v; do $(XBSVDIR)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
 
 bsim_exe:
-	mkdir -p bin
-	git rev-parse HEAD > bin/githash
-	git diff | gzip -c > bin/gitdiff.patch.gz
+	@mkdir -p bin
+	@git rev-parse HEAD > bin/githash
+	@git diff | gzip -c > bin/gitdiff.patch.gz
 	cd jni; make -f Ubuntu.mk bsim_exe
-	cp -v jni/bsim_exe bin
+	@cp -v jni/bsim_exe bin
 
 ubuntu_exe:
-	mkdir -p bin
-	git rev-parse HEAD > bin/githash
-	git diff | gzip -c > bin/gitdiff.patch.gz
+	@mkdir -p bin
+	@git rev-parse HEAD > bin/githash
+	@git diff | gzip -c > bin/gitdiff.patch.gz
 	cd jni; make -f Ubuntu.mk
-	cp -v jni/mk* bin
+	@cp -v jni/mk* bin
 
 bsim: $(timestampfile)
-	mkdir -p bin
-	git rev-parse HEAD > bin/githash
-	git diff | gzip -c > bin/gitdiff.patch.gz
+	@mkdir -p bin
+	@git rev-parse HEAD > bin/githash
+	@git diff | gzip -c > bin/gitdiff.patch.gz
 	mkdir -p $(DTOP)/obj
 	cd sources; bsc -D BSIM %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -u -g %(topbsvmod)s %(topbsvfile)s
 	export BSC_CXXFLAGS="-I$(XBSVDIR)/cpp -I$(XBSVDIR) -DBSIM" ; cd sources; bsc $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX)
-	cp -v sources/bsim* bin
+	@cp -v sources/bsim* bin
 	%(qtused)s
 
 verilog: $(vfile)
@@ -391,9 +393,9 @@ partial: hw/mkPcieTop_pblock_portalTop_partial.bit
 ifeq ($(OS),android)
 
 bits: hw/mkTop.bit
-	mkdir -p bin
-	git rev-parse HEAD > bin/githash
-	git diff | gzip -c > bin/gitdiff.patch.gz
+	@mkdir -p bin
+	@git rev-parse HEAD > bin/githash
+	@git diff | gzip -c > bin/gitdiff.patch.gz
 	xxd hw/mkTop.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r > bin/mkTop.xdevcfg.bin
 	gzip -f bin/mkTop.xdevcfg.bin
 	$(XBSVDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
@@ -401,27 +403,27 @@ bits: hw/mkTop.bit
 else
 
 bits: hw/mkTop.bit
-	mkdir -p bin
-	git rev-parse HEAD > bin/githash
-	git diff | gzip -c > bin/gitdiff.patch.gz
+	@mkdir -p bin
+	@git rev-parse HEAD > bin/githash
+	@git diff | gzip -c > bin/gitdiff.patch.gz
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
 	$(XBSVDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
 
 endif
 
 android_exe:
-	mkdir -p bin
-	git rev-parse HEAD > bin/githash
-	git diff | gzip -c > bin/gitdiff.patch.gz
-	ndk-build
-	cp -v libs/armeabi/android_exe bin
+	@mkdir -p bin
+	@git rev-parse HEAD > bin/githash
+	@git diff | gzip -c > bin/gitdiff.patch.gz
+	ndk-build %(ndkQuietFlag)s
+	@cp -v libs/armeabi/android_exe bin
 
 android_exe_debug:
-	mkdir -p bin
-	git rev-parse HEAD > bin/githash
-	git diff | gzip -c > bin/gitdiff.patch.gz
-	ndk-build -B V=1 NDK_DEBUG=1
-	cp -v libs/armeabi/android_exe bin
+	@mkdir -p bin
+	@git rev-parse HEAD > bin/githash
+	@git diff | gzip -c > bin/gitdiff.patch.gz
+	ndk-build %(ndkQuietFlag)s -B V=1 NDK_DEBUG=1
+	@cp -v libs/armeabi/android_exe bin
 
 ifeq ($(BOARD),bluesim)
 
@@ -556,6 +558,8 @@ if __name__=='__main__':
     xbsvdir = os.path.dirname(exename)
     options = argparser.parse_args()
 
+    if options.verbose:
+        noisyFlag = True
     if not options.export:
         sys.stderr.write('Must specify top level module name via -x/--export flag\n')
         sys.exit(-1)
@@ -582,7 +586,8 @@ if __name__=='__main__':
     if m:
         bscmajor = int(m.group(1))
         bscminor = int(m.group(2))
-        print "Using bsc %d.%d" % (bscmajor, bscminor)
+        if noisyFlag:
+            print "Using bsc %d.%d" % (bscmajor, bscminor)
     popen.terminate()
 
     project_dir = os.path.expanduser(options.project_dir)
@@ -621,7 +626,7 @@ if __name__=='__main__':
             srcdirs.append(inputdir)
         s0 = open(inputfile).read() + '\n'
         s1 = preprocess(s0, bsvdefines)
-        s2 = syntax.parse(s1,inputfile)
+        s2 = syntax.parse(s1,inputfile, noisyFlag)
 
     needs_pcie_7x_gen1x8 = False
     rewireclockstring = ''
@@ -695,14 +700,16 @@ if __name__=='__main__':
     def create_cpp_file(name):
         fname = os.path.join(project_dir, 'jni', name)
         f = util.createDirAndOpen(fname, 'w')
-        print "Writing file ",fname
+        if noisyFlag:
+            print "Writing file ",fname
         f.write('#include "GeneratedTypes.h"\n');
         return f
 
     def create_bare_file(name):
         fname = os.path.join(project_dir, 'jni', name)
         f = util.createDirAndOpen(fname, 'w')
-        print "Writing file ",fname
+        if noisyFlag:
+            print "Writing file ",fname
         return f
 
     generatedCFiles = []
@@ -769,7 +776,8 @@ if __name__=='__main__':
         bsv_file = util.createDirAndOpen(fname, 'w')
         bsv_file.write('package %s;\n' % pname)
         bsvgen.emitPreamble(bsv_file, files)
-        print 'Writing file ', fname
+        if noisyFlag:
+            print 'Writing file ', fname
         return bsv_file
 
     def close_bsv_package(bsv_file, pname):
@@ -802,10 +810,8 @@ if __name__=='__main__':
         xpsgen.writeProgramTcl(dutname, os.path.join(project_dir, '%s-program.tcl' % dutname.lower()))
         xpsgen.writeReprogramTcl(dutname, os.path.join(project_dir, '%s-reprogram.tcl' % dutname.lower()))
 
-    print 'Writing Android.mk', androidmkname
-    print 'cinclude', options.cinclude
-    print 'clib', options.clib
-    print 'clibdir', options.clibdir
+    if noisyFlag:
+        print 'Writing Android.mk', androidmkname
     className = cppgen.cName(dutname)
     substs = {
         #android
@@ -834,7 +840,8 @@ if __name__=='__main__':
 	    f.write('APP_STL                 := %s\n' % options.stl)
 	    f.close()
 
-    print 'Writing tcl impl file', tclimplname
+    if noisyFlag:
+        print 'Writing tcl impl file', tclimplname
     tclsubsts = {'dut': topmodulename.lower(),
                  'Dut': topmodulename,
                  'rewire_clock': rewireclockstring,
@@ -864,7 +871,8 @@ if __name__=='__main__':
 
     if options.verilog and 0:
         for verilog in options.verilog:
-            print 'Copying verilog sources from', verilog
+            if noisyFlag:
+                print 'Copying verilog sources from', verilog
             dstverilog = os.path.join(project_dir, 'sources', os.path.basename(verilog))
             ## this path is here so we can overwrite sources
             if os.path.exists(dstverilog):
@@ -879,7 +887,8 @@ if __name__=='__main__':
                 shutil.copytree(verilog, os.path.join(project_dir, 'sources', os.path.basename(verilog)))
     if options.constraint:
         for constraint in options.constraint:
-            print 'Copying constraint file from', constraint
+            if noisyFlag:
+                print 'Copying constraint file from', constraint
             dstconstraintdir = os.path.join(project_dir, 'constraints')
             if not os.path.exists(dstconstraintdir):
                 os.makedirs(dstconstraintdir)
@@ -887,11 +896,13 @@ if __name__=='__main__':
             shutil.copy(constraint, dstconstraintdir)
     if options.tcl:
         for tcl in options.tcl:
-            print 'Copying tcl file from', tcl
+            if noisyFlag:
+                print 'Copying tcl file from', tcl
             ## this path is here so we can overwrite sources
             shutil.copy(tcl, project_dir)
 
-    print 'Writing Makefile', makename
+    if noisyFlag:
+        print 'Writing Makefile', makename
     make = util.createDirAndOpen(makename, 'w')
     debug_flag = ''
     if os.environ.has_key('XBSV_DEBUG'):
@@ -938,19 +949,13 @@ if __name__=='__main__':
                                    'bscflags': ' '.join(options.bscflags),
                                    'xelabflags': ' '.join(options.xelabflags),
                                    'xsimflags': ' '.join(options.xsimflags),
+				   'ndkQuietFlag': '' if noisyFlag else 'NDK_HOST_ECHO=true',
 				   'bitsmake': bitsmake
                                    })
     make.close()
-    print options.xsimflags
+    #print options.xsimflags
     timestamp = util.createDirAndOpen(timestampname, 'w')
     timestamp.close()
-
-    print '############################################################'
-    print '## To build:'
-    print '    cd %s; make all' % (project_dir)
-    print '## To run:'
-    print '    cd %s; make run' % (project_dir)
-    print '## You can use XPS to generate bit file or exit and let make complete the process.'
 
     if options.make:
         os.chdir(project_dir)

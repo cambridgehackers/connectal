@@ -114,14 +114,14 @@ gentarget::
 ifeq ($(USE_PRINTF),1)
 	$(XBSVDIR)/scripts/preprocess_trace.py $(BOARD) $(BSVFILES)
 endif
-	$(XBSVDIR)/xbsvgen -B$(BOARD) -p $(BOARD) -x $(MKTOP) \
+	@$(XBSVDIR)/xbsvgen -B$(BOARD) -p $(BOARD) -x $(MKTOP) \
 	$(foreach s2h, $(S2H), -s2h $(s2h)) \
 	$(foreach h2s, $(H2S), -h2s $(h2s)) \
 	$(foreach f, $(CPPFILES), -s $f) \
         -t $(TOP) $(XBSVFLAGS) $(BSVFILES) $(PRINTF_EXTRA)
 
 prebuild::
-	# additional steps needed before making verilog etc
+	@# additional steps needed before making verilog etc
 ifeq ("$(NEEDSPCIE)","true")
 	cd $(BOARD); vivado -mode batch -source $(shell cd $(XBSVDIR); /bin/pwd)/scripts/xbsv-synth-pcie.tcl
 endif
