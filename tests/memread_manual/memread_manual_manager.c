@@ -172,16 +172,30 @@ dma_buf_vmap
   srcBuffer = NULL;
 #endif ////////////////////////////////
 
-  //for (i = 0; i < numWords; i++)
-    //srcBuffer[i] = i;
+#ifndef __KERNEL__
+  for (i = 0; i < numWords; i++)
+    srcBuffer[i] = i;
+#endif
 
+  PORTAL_PRINTF( "Test 1: check for match\n");
   DmaManager_dCacheFlushInval(&intarr[2], srcAlloc->header.fd, alloc_sz, srcBuffer);
   PORTAL_PRINTF( "Main: before DmaManager_reference(%p)\n", srcAlloc);
   ref_srcAlloc = DmaManager_reference(&priv, srcAlloc);
   PORTAL_PRINTF( "Main: starting read %08x\n", numWords);
   MemreadRequestProxy_startRead (&intarr[3], ref_srcAlloc, numWords, burstLen, 1);
-  PORTAL_PRINTF( "Main: waiting for semaphore\n");
+  PORTAL_PRINTF( "Main: waiting for semaphore1\n");
   sem_wait(&test_sem);
+
+  PORTAL_PRINTF( "Test 2: check that mismatch is detected\n");
+#ifndef __KERNEL__
+  for (i = 0; i < numWords; i++)
+    srcBuffer[i] = 1-i;
+#endif
+  DmaManager_dCacheFlushInval(&intarr[2], srcAlloc->header.fd, alloc_sz, srcBuffer);
+  MemreadRequestProxy_startRead (&intarr[3], ref_srcAlloc, numWords, burstLen, 1);
+  PORTAL_PRINTF( "Main: waiting for semaphore2\n");
+  sem_wait(&test_sem);
+
   PORTAL_PRINTF( "Main: all done\n");
 #ifdef __KERNEL__
   if (tid && !kthread_stop (tid)) {
