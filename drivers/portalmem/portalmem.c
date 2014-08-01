@@ -374,47 +374,8 @@ int portalmem_dmabuffer_create(unsigned long len)
 static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
   switch (cmd) {
-  case PA_DCACHE_FLUSH_INVAL: {
-#if defined(__arm__)
-    struct PortalAllocHeader header;
-    struct PortalAlloc* palloc = (struct PortalAlloc*)arg;
-    dma_addr_t start_addr, end_addr;
-    unsigned int length;
-    int i;
-    if (copy_from_user(&header, (void __user *)arg, sizeof(header)))
-      return -EFAULT;
-    for(i = 0; i < header.numEntries; i++){
-      if (copy_from_user(&start_addr, (void __user *)&(palloc->entries[i].dma_address),
-          sizeof(palloc->entries[i].dma_address))
-       || copy_from_user(&length, (void __user *)&(palloc->entries[i].length),
-          sizeof(palloc->entries[i].length)))
-	return -EFAULT;
-      end_addr = start_addr+length;
-      outer_clean_range(start_addr, end_addr);
-      outer_inv_range(start_addr, end_addr);
-    }
-    return 0;
-#elif defined(__i386__) || defined(__x86_64__)
-    return -EFAULT;
-#else
-#error("PA_DCACHE_FLUSH_INVAL architecture undefined");
-#endif
-  }
-  case PA_ALLOC: {
-    struct PortalAllocHeader header;
-    struct file *f;
-    if (copy_from_user(&header, (void __user *)arg, sizeof(header)))
-      return -EFAULT;
-    header.fd = portalmem_dmabuffer_create(header.size);
-    if (header.fd < 0)
-      return header.fd;
-    f = fget(header.fd);
-    header.numEntries = ((struct pa_buffer *)((struct dma_buf *)f->private_data)->priv)->sg_table->nents;
-    fput(f);
-    if (copy_to_user((void __user *)arg, &header, sizeof(header)))
-      return -EFAULT;
-    return 0;
-  }
+#define DIAGNOSTIC
+#ifdef DIAGNOSTIC
   case PA_DMA_ADDRESSES: {
     struct PortalAllocHeader header;
     struct file *f;
@@ -439,6 +400,7 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
       return -EFAULT;
     return 0;
   }
+#endif
   case PA_MALLOC:
     return portalmem_dmabuffer_create((unsigned long)arg);
   case PA_ELEMENT_SIZE: {

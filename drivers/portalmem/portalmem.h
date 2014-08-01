@@ -43,8 +43,6 @@ typedef struct PortalElementSize {
     int index;
 } PortalElementSize;
 
-#define PA_ALLOC              _IOWR('B', 10, PortalAlloc)
-#define PA_DCACHE_FLUSH_INVAL _IOWR('B', 11, PortalAlloc)
 #define PA_DMA_ADDRESSES      _IOWR('B', 13, PortalAlloc)
 #define PA_MALLOC              _IOR('B', 14, unsigned long)
 #define PA_ELEMENT_SIZE        _IOR('B', 15, PortalElementSize)
