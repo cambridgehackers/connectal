@@ -169,7 +169,7 @@ public:
   }
   virtual ~TimerIndication() {}
   virtual void elapsedCycles(uint64_t cycles, uint64_t idleCycles) {
-    fprintf(stderr, "elapsedCycles %zd idle %zd idle %f\n", cycles, idleCycles, (double)idleCycles / (double)cycles);
+    fprintf(stderr, "elapsedCycles %lld idle %lld idle %f\n", (long long)cycles, (long long)idleCycles, (double)idleCycles / (double)cycles);
   }
 };
 class RbmIndication : public RbmIndicationWrapper

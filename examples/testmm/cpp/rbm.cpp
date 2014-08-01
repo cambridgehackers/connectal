@@ -207,7 +207,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
   }
   uint64_t total_cycles = lap_timer(0);
   uint64_t beats = dma->show_mem_stats(ChannelType_Read);
-  fprintf(stderr, "total_cycles=%zd beats=%zd utilization=%f\n", total_cycles, beats, (float)beats / (float)total_cycles);
+  fprintf(stderr, "total_cycles=%ld beats=%ld utilization=%f\n", (long)total_cycles, (long)beats, (float)beats / (float)total_cycles);
 }
 
 void RBM::run()

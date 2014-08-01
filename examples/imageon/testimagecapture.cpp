@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <pthread.h>
+#include <string.h>
 #include <ctype.h> // isprint, isascii
 #include "i2chdmi.h"
 #include "i2ccamera.h"
