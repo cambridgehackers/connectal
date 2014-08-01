@@ -110,10 +110,8 @@ module mkMemread#(MemreadIndication indication) (Memread);
       endrule
    end
    
-   function Bit#(32) my_add(Tuple2#(Bit#(32),Bit#(32)) xy); match { .x, .y } = xy; return x + y; endfunction
-   
    PipeOut#(Vector#(NumEngineServers, Bit#(32))) mismatchCountsPipe <- mkJoinVector(id, map(toPipeOut, mismatchFifos));
-   PipeOut#(Bit#(32)) mismatchCountPipe <- mkReducePipe(my_add, mismatchCountsPipe);
+   PipeOut#(Bit#(32)) mismatchCountPipe <- mkReducePipe(uncurry(add), mismatchCountsPipe);
    
    rule indicate_finish;
       let mc <- toGet(mismatchCountPipe).get();
