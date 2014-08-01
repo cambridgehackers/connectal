@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <monkit.h>
 
 #include "testmemwrite.h"

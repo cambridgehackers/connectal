@@ -14,7 +14,7 @@ class PipeMulIndication : public PipeMulIndicationWrapper
 {
 public:
     virtual void res(uint64_t v) {
-      fprintf(stderr, "res: %lld\n", v);
+      fprintf(stderr, "res: %lld\n", (long long)v);
       exit(0);
     }
     PipeMulIndication(unsigned int id) : PipeMulIndicationWrapper(id) {}

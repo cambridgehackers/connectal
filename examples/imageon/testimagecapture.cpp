@@ -20,15 +20,7 @@
  */
 
 #include <stdio.h>
-//#include <sys/mman.h>
-//#include <stdlib.h>
-//#include <string.h>
-//#include <stdarg.h>
-//#include <unistd.h>
-//#include <stdint.h>
-//#include <fcntl.h>
-//#include <pthread.h>
-//#include <semaphore.h>
+#include <pthread.h>
 #include <ctype.h> // isprint, isascii
 #include "i2chdmi.h"
 #include "i2ccamera.h"
@@ -503,7 +495,7 @@ int main(int argc, const char **argv)
 
         fprintf(stderr, "lines %d, pixels %d, vblank %d, hblank %d, vwidth %d, hwidth %d\n",
              nlines, npixels, vblank, hblank, vsyncwidth, hsyncwidth);
-        fprintf(stderr, "Using pixclk %d calc_pixclk %d npixels %d nlines %d\n",
+        fprintf(stderr, "Using pixclk %d calc_pixclk %ld npixels %d nlines %d\n",
                 pixclk,
                 60l * (long)(hblank + npixels) * (long)(vblank + nlines),
                 npixels, nlines);
@@ -529,7 +521,7 @@ hblank--; // needed on zc702
     hdmidevice->waitForVsync(0);
     usleep(2000000);
     while (1/*getchar() != EOF*/) {
-        printf("[%s:%d] iserdes %lx\n", __FUNCTION__, __LINE__, read_iserdes_control());
+        printf("[%s:%d] iserdes %x\n", __FUNCTION__, __LINE__, read_iserdes_control());
         static int regids[] = {24, 97, 186, 0};
         int i;
         for (i = 0; regids[i]; i++)

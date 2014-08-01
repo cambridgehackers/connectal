@@ -25,6 +25,7 @@
 #include <unistd.h>
 #include <assert.h>
 #include <semaphore.h>
+#include <pthread.h>
 #include <ctime>
 #include <monkit.h>
 #include <mp.h>

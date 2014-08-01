@@ -23,6 +23,7 @@
 #include <sys/mman.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <assert.h>
 #include <semaphore.h>
 #include <ctime>

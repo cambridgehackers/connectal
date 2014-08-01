@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <semaphore.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #include "FibIndicationWrapper.h"
 #include "FibRequestProxy.h"

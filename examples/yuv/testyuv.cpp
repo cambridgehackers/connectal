@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <assert.h>
+#include <pthread.h>
 
 #include "YuvIndicationWrapper.h"
 #include "YuvRequestProxy.h"
@@ -82,7 +83,11 @@ struct yuv rgbtoyuv(unsigned short r, unsigned short g, unsigned short b)
   unsigned char u = (-43*r -  85*g + 128*b + 128) >> 8;
   unsigned char v = (128*r - 107*g -  21*b + 128) >> 8;
   fprintf(stderr, "rgb %d,%d,%d -> yuv %d,%d,%d\n", r, g, b, y, u, v);
-  return { y, u, v };
+  struct yuv yuvret;
+  yuvret.y = y;
+  yuvret.u = u;
+  yuvret.v = v;
+  return yuvret;
 }
 
 int main(int argc, const char **argv)

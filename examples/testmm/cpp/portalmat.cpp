@@ -312,7 +312,7 @@ void PortalMat::multf(PortalMat &a, PortalMat &b,  MmIndication *mmind)
     long bref = b.reference();
     long cref = reference();
     if (0)
-    fprintf(stderr, "mult: ref=%d rows=%d cols=%d a.ref=%d a.rows=%d a.cols=%d b.ref=%d b.rows=%d b.cols=%d\n",
+    fprintf(stderr, "mult: ref=%ld rows=%d cols=%d a.ref=%ld a.rows=%d a.cols=%d b.ref=%ld b.rows=%d b.cols=%d\n",
 	    cref, rows, cols,
 	    aref, a.rows, a.cols,
 	    bref, b.rows, b.cols);

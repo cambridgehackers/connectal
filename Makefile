@@ -136,7 +136,6 @@ cppalllist =     \
     examples/bscan \
     examples/fib \
     examples/flowcontrol \
-    examples/fp \
     examples/hdmidisplay \
     examples/imageon \
     examples/maxcommonsubseq \

@@ -30,6 +30,7 @@
 #include <mp.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <pthread.h>
 
 #include "NocIndicationWrapper.h"
 #include "NocRequestProxy.h"

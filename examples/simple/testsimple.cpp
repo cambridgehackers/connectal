@@ -65,14 +65,14 @@ public:
     incr_cnt();
   }
   virtual void heard5(uint32_t a, uint64_t b, uint32_t c) {
-    fprintf(stderr, "heard5(%08x, %016zx, %08x)\n", a, b, c);
+    fprintf(stderr, "heard5(%08x, %016llx, %08x)\n", a, (long long)b, c);
     assert(a == v5a);
     assert(b == v5b);
     assert(c == v5c);
     incr_cnt();
   }
   virtual void heard6(uint32_t a, uint64_t b, uint32_t c) {
-    fprintf(stderr, "heard6(%08x, %016zx, %08x)\n", a, b, c);
+    fprintf(stderr, "heard6(%08x, %016llx, %08x)\n", a, (long long)b, c);
     assert(a == v6a);
     assert(b == v6b);
     assert(c == v6c);
@@ -109,9 +109,9 @@ int main(int argc, const char **argv)
   device->say3(s1);
   fprintf(stderr, "Main::calling say4(S2{a:%d,b:%d,c:%d})\n", s2.a,s2.b,s2.c);
   device->say4(s2);
-  fprintf(stderr, "Main::calling say5(%08x, %016zx, %08x)\n", v5a, v5b, v5c);
+  fprintf(stderr, "Main::calling say5(%08x, %016llx, %08x)\n", v5a, (long long)v5b, v5c);
   device->say5(v5a, v5b, v5c);  
-  fprintf(stderr, "Main::calling say6(%08x, %016zx, %08x)\n", v6a, v6b, v6c);
+  fprintf(stderr, "Main::calling say6(%08x, %016llx, %08x)\n", v6a, (long long)v6b, v6c);
   device->say6(v6a, v6b, v6c);  
   fprintf(stderr, "Main::calling say7(%08x, %08x)\n", s3.a, s3.e1);
   device->say7(s3);  
