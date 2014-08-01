@@ -26,8 +26,7 @@ static int shifts[] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0, 0};
 
 #include "dmaManager.h"
 #ifdef XBSV_DRIVER_CODE
-#include "../generated/cpp/DmaConfigProxy.c"
-#include "../drivers/portalmem/portalmem.h"
+#include "DmaConfigProxy.c"
 static int trace_memory = 1;
 #endif
 
