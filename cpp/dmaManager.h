@@ -72,7 +72,6 @@ typedef struct {
 extern "C" {
 #endif
 void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *argDevice);
-int DmaManager_dCacheFlushInval(DmaManagerPrivate *priv, PortalAlloc *portalAlloc, void *__p);
 #ifndef XBSV_DRIVER_CODE
 uint64_t DmaManager_show_mem_stats(DmaManagerPrivate *priv, ChannelType rc);
 #endif
@@ -90,9 +89,6 @@ class DmaManager
  public:
   DmaManager(PortalInternalCpp *argDevice) {
     DmaManager_init(&priv, &argDevice->pint);
-  };
-  int dCacheFlushInval(PortalAlloc *portalAlloc, void *__p) {
-    return DmaManager_dCacheFlushInval(&priv, portalAlloc, __p);
   };
   int alloc(size_t size, PortalAlloc **ppa) {
    return DmaManager_alloc(&priv, size, ppa);

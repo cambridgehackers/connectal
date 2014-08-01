@@ -64,18 +64,18 @@ void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *argDevice)
   }
 }
 
-int DmaManager_dCacheFlushInval(DmaManagerPrivate *priv, PortalAlloc *portalAlloc, void *__p)
+int DmaManager_dCacheFlushInval(PortalInternal *priv, int fd, long size, void *__p)
 {
 #ifndef __KERNEL__
 #if defined(__arm__)
-  int rc = ioctl(priv->device->fpga_fd, PORTAL_DCACHE_FLUSH_INVAL, portalAlloc->header.fd);
+  int rc = ioctl(priv->fpga_fd, PORTAL_DCACHE_FLUSH_INVAL, fd);
   if (rc){
     PORTAL_PRINTF("portal dcache flush failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
     return rc;
   }
 #elif defined(__i386__) || defined(__x86_64__)
   // not sure any of this is necessary (mdk)
-  for(unsigned int i = 0; i < portalAlloc->header.size; i++){
+  for(unsigned int i = 0; i < size; i++){
     char foo = *(((volatile char *)__p)+i);
     asm volatile("clflush %0" :: "m" (foo));
   }
