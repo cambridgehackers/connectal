@@ -147,6 +147,9 @@ typedef struct {ObjectRequest req;
 typedef struct {Bit#(6) orig_tag;
 		Bit#(TLog#(numClients)) client; } RResp#(numeric type numClients, numeric type numTags, numeric type addrWidth) deriving(Bits);
 
+typedef struct {DmaErrorType errorType;
+		Bit#(32) pref; } DmaError deriving (Bits);
+
 module mkMemReadInternal#(Integer id,
 			  Vector#(numClients, ObjectReadClient#(dataWidth)) readClients, 
 			  DmaIndication dmaIndication,
@@ -187,13 +190,19 @@ module mkMemReadInternal#(Integer id,
       cycle_cnt <= cycle_cnt+1;
    endrule
          
+   FIFO#(DmaError) dmaErrorFifo <- mkFIFO();
+   rule dmaError;
+      let error <- toGet(dmaErrorFifo).get();
+      dmaIndication.dmaError(extend(pack(error.errorType)), error.pref, 0, 0);
+   endrule
+
    for (Integer selectReg = 0; selectReg < valueOf(numClients); selectReg = selectReg + 1) 
       rule loadClient;
       	 //$display("mkMemReadInternal::loadClient %d %d", selectReg, cycle_cnt-last_loadClient);
 	 //last_loadClient <= cycle_cnt;
    	 ObjectRequest req <- readClients[selectReg].readReq.get();
    	 if (bad_pointer(req.pointer))
-   	    dmaIndication.dmaError(extend(pack(DmaErrorBadPointer4)), req.pointer, 0, 0);
+	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer4, pref: req.pointer });
    	 else begin
 	    tag_gen.tag_request(fromInteger(selectReg), req.tag);
    	    lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
@@ -318,13 +327,19 @@ module mkMemWriteInternal#(Integer iid,
       cycle_cnt <= cycle_cnt+1;
    endrule
    
+   FIFO#(DmaError) dmaErrorFifo <- mkFIFO();
+   rule dmaError;
+      let error <- toGet(dmaErrorFifo).get();
+      dmaIndication.dmaError(extend(pack(error.errorType)), error.pref, 0, 0);
+   endrule
+
    for (Integer selectReg = 0; selectReg < valueOf(numClients); selectReg = selectReg + 1)
        rule loadClient;
       	  //$display("mkMemWriteInternal::loadClient %d %d", selectReg, cycle_cnt-last_loadClient);
 	  //last_loadClient <= cycle_cnt;
    	  ObjectRequest req <- writeClients[selectReg].writeReq.get();
    	  if (bad_pointer(req.pointer))
-   	     dmaIndication.dmaError(extend(pack(DmaErrorBadPointer5)), req.pointer, 0, 0);
+	     dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer5, pref: req.pointer });
    	  else begin
 	     tag_gen.tag_request(fromInteger(selectReg), req.tag);
    	     lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
