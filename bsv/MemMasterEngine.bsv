@@ -219,9 +219,16 @@ interface MemInterrupt;
     interface Put#(Tuple2#(Bit#(64),Bit#(32))) interruptRequest;
 endinterface
 
+typedef struct {
+   Bit#(64) addr;
+   Bit#(32) data;
+   Bool     mswIsZero;
+   Bool     lswIsZero;
+   } InterruptRequest deriving (Bits);
+
 //(* synthesize *)
 module mkMemInterrupt#(PciId my_id)(MemInterrupt);
-    FIFOF#(Tuple4#(Bit#(64),Bit#(32),Bool,Bool)) interruptRequestFifo <- mkFIFOF();
+    FIFOF#(InterruptRequest) interruptRequestFifo <- mkFIFOF();
     Reg#(Maybe#(Bit#(32))) interruptSecondHalf <- mkReg(tagged Invalid);
     Reg#(TLPTag) tlpTag <- mkReg(0);
     FIFOF#(TLPData#(16)) tlpOutFifo <- mkSizedFIFOF(8);
@@ -236,7 +243,12 @@ module mkMemInterrupt#(PciId my_id)(MemInterrupt);
        let interruptRequested = True;
        let sendInterrupt = False;
 
-       match { .interruptAddr, .interruptData, .mswIsZero, .lswIsZero } = interruptRequestFifo.first;
+       let interruptRequest = interruptRequestFifo.first;
+       let interruptAddr = interruptRequest.addr;
+       let interruptData = interruptRequest.data;
+       let mswIsZero = interruptRequest.mswIsZero;
+       let lswIsZero = interruptRequest.lswIsZero;
+
        if (mswIsZero && lswIsZero) begin
 	  // do not write to 0 -- it wedges the host
 	  interruptRequested = False;
@@ -304,7 +316,7 @@ module mkMemInterrupt#(PciId my_id)(MemInterrupt);
 	  match { .addr, .data } = intr;
 	  Bool mswIsZero = (addr[63:32] == 0);
 	  Bool lswIsZero = (addr[31:0] == 0);
-          interruptRequestFifo.enq(tuple4(addr, data, lswIsZero, mswIsZero));
+          interruptRequestFifo.enq(InterruptRequest { addr: addr, data: data, mswIsZero: mswIsZero, lswIsZero: lswIsZero });
        endmethod
     endinterface
 endmodule: mkMemInterrupt
