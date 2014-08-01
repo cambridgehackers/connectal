@@ -25,6 +25,7 @@ import Vector::*;
 import Arith ::*;
 import FIFOF ::*;
 import GetPut::*;
+import Pipe  ::*;
 import MIMO  ::*; //LUInt
 
 interface MIFO#(numeric type max_in, numeric type n_out, numeric type size, type t);
@@ -165,4 +166,147 @@ module mkMIFO(MIFO#(max_in, n_out, size, t))
 
    method    Bool                        deqReady = deqReadyInternal;
 
+endmodule
+
+
+interface FIMO#(numeric type n_in, numeric type max_out, numeric type size, type t);
+   interface PipeIn#(Vector#(n_in, t)) in;
+   interface Vector#(TAdd#(max_out,1), PipeOut#(Vector#(max_out, t))) out;
+endinterface
+
+module mkFIMO(FIMO#(n_in, max_out, size, t))
+   provisos (Log#(n_in, n_in_sz),
+	     Log#(max_out, max_out_sz),
+	     Add#(n_in, a__, max_out),
+	     Add#(1, b__, max_out),
+	     Bits#(t, c__),
+	     Add#(d__, max_out_sz, TLog#(TAdd#(max_out, 1)))
+      );
+   FIFOF#(Vector#(max_out, t))     inFifo <- mkFIFOF();
+   FIFOF#(UInt#(max_out_sz))      posFifo <- mkFIFOF();
+   FIFOF#(Bit#(max_out))           weFifo <- mkFIFOF();
+   Vector#(max_out, FIFOF#(t))      fifos <- replicateM(mkFIFOF());
+
+   Reg#(UInt#(max_out_sz))            inPos <- mkReg(0);
+   Reg#(UInt#(max_out_sz))            outPos <- mkReg(0);
+
+   LUInt#(max_out) i_n_in = fromInteger(valueOf(n_in));
+   LUInt#(max_out) i_max_out = fromInteger(valueOf(max_out));
+
+   let verbose = False;
+
+   function a fifoFirst(FIFOF#(a) fifo); if (fifo.notEmpty()) return fifo.first(); else return ?; endfunction
+   function Bool fifoNotEmpty(FIFOF#(a) fifo); return fifo.notEmpty(); endfunction
+   function Bool fifoNotFull(FIFOF#(a) fifo); return fifo.notFull(); endfunction
+
+   FIFOF#(Bool) checkInFifo <- mkFIFOF();
+   rule checkin if (verbose);
+      let v <- toGet(checkInFifo).get();
+      $display("checkIn: inPos=%d outPos=%d notEmpties: %h notFulls: %h values: %h",
+	       inPos, outPos, map(fifoNotEmpty, fifos), map(fifoNotFull, fifos), map(fifoFirst, fifos));
+   endrule
+
+   rule tofifos;
+      let values = inFifo.first;
+      let pos    = posFifo.first;
+      let we     = weFifo.first;
+
+
+      Bool ready = True;
+      for (Integer i = 0; i < valueOf(max_out); i = i+1) begin
+	 if (we[i] == 1)
+	    ready = ready && fifos[i].notFull();
+      end
+      if (ready) begin
+	 for (Integer i = 0; i < valueOf(max_out); i = i+1) begin
+	    if (we[i] == 1)
+	       fifos[i].enq(values[i]);
+	 end
+	 inFifo.deq();
+	 weFifo.deq();
+	 posFifo.deq();
+
+	 if (verbose) begin
+	    $display("tofifos: pos=%d we=%h", pos, we, " values: %h notFull: %h", values, map(fifoNotFull, fifos));
+	    checkInFifo.enq(True);
+	 end
+      end
+   endrule
+
+   function Bool deqReadyInternal(Integer n_out);
+      LUInt#(max_out) rot = i_max_out - extend(outPos);
+      Vector#(max_out, Bool) notEmpties = rotateBy(map(fifoNotEmpty, fifos), truncate(rot));
+
+      function Bool n_notEmpty(Integer i); if (i < n_out) return notEmpties[i]; else return True; endfunction
+      Vector#(max_out, Bool) n_notEmpties = genWith(n_notEmpty);
+
+      return fold(booland, n_notEmpties);
+   endfunction
+
+   FIFOF#(Bool) checkFifo <- mkFIFOF();
+   rule check if (verbose);
+      let v <- toGet(checkFifo).get();
+      LUInt#(max_out) rot = i_max_out - extend(outPos);
+      Vector#(max_out, Bool) allNotEmpties = map(fifoNotEmpty, fifos);
+      Vector#(max_out, Bool) notEmpties = rotateBy(map(fifoNotEmpty, fifos), truncate(rot));
+      if (verbose)
+      $display("check outPos: ", outPos, " notEmpty: ", fifos[outPos].notEmpty(),
+	 " notEmpties: ", notEmpties, " allNotEmpties: %h", allNotEmpties);
+   endrule
+
+   function PipeIn#(Vector#(n_in, t)) genInPipe(Integer i);
+      return (interface PipeIn#(Vector#(n_in, t))
+		 method Action enq(Vector#(n_in, t) data);
+		    function Bool lessThanCount(Integer i); return fromInteger(i) < i_n_in; endfunction
+		    Vector#(max_out, Bool) we = genWith(lessThanCount);
+		    Vector#(max_out, t) wdata = append(data, replicate(?));
+		    inFifo.enq(rotateBy(wdata, inPos));
+		    weFifo.enq(pack(rotateBy(we, inPos)));
+		    posFifo.enq(inPos);
+		    inPos <= truncate((extend(inPos) + extend(i_n_in)) % i_max_out);
+
+		    if (verbose) $display("enq: inPos=%d we=%h", inPos, we);
+		 endmethod
+		 method notFull = inFifo.notFull;
+	      endinterface);
+   endfunction
+
+   function PipeOut#(Vector#(max_out, t)) genOutPipe(Integer n_out);
+      function t firstN(Integer i);
+	 if (i < n_out)
+	    return fifos[(extend(outPos) + fromInteger(i)) % i_max_out].first;
+	 else
+	    return ?;
+      endfunction
+
+      PipeOut#(Vector#(max_out, t)) pipeOut =
+        (interface PipeOut#(Vector#(max_out, t))
+	    method    Vector#(max_out, t)           first if (deqReadyInternal(n_out));
+	       return genWith(firstN);
+	    endmethod
+
+	    method    Action                      deq() if (deqReadyInternal(n_out));
+	       for (Integer i = 0; i < n_out; i = i+1)
+		  fifos[(extend(outPos) + fromInteger(i)) % i_max_out].deq();
+	       UInt#(max_out_sz) nextOutPos = truncate((extend(outPos) + fromInteger(valueOf(max_out))) % i_max_out);
+	       outPos <= nextOutPos;
+
+	       if (verbose) begin
+		  LUInt#(max_out) rot = i_max_out - extend(outPos);
+		  Vector#(max_out, t) v = genWith(firstN);
+		  Vector#(max_out, Bool) allNotEmpties = rotateBy(map(fifoNotEmpty, fifos), truncate(rot));
+		  Vector#(max_out, Bool) notEmpties = map(fifoNotEmpty, rotateBy(fifos, truncate(rot)));
+		  $display("first: ", v, " outPos: ", outPos, " nextOutPos: ", nextOutPos, " nextNotEmpty: ", fifos[nextOutPos].notEmpty(),
+		     " notEmpties: ", notEmpties, " allNotEmpties: %h", allNotEmpties);
+		  checkFifo.enq(True);
+	       end
+	    endmethod
+      
+	    method notEmpty  = deqReadyInternal(n_out);
+	 endinterface);
+      return pipeOut;
+   endfunction
+
+   interface Vector in = genInPipe(0);
+   interface Vector out = genWith(genOutPipe);
 endmodule
