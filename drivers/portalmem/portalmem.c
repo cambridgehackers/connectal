@@ -188,7 +188,7 @@ static int pa_dma_buf_begin_cpu_access(struct dma_buf *dmabuf, size_t start,
       struct scatterlist *sg;
       pgprot_t pgprot = pgprot_writecombine(PAGE_KERNEL);
       for_each_sg(table->sgl, sg, table->nents, i) {
-        int npages_this_entry = PAGE_ALIGN(sg_dma_len(sg)) / PAGE_SIZE;
+        int npages_this_entry = PAGE_ALIGN(sg->length) / PAGE_SIZE;
         struct page *page = sg_page(sg);
         BUG_ON(i >= npages);
         for (j = 0; j < npages_this_entry; j++)
@@ -223,6 +223,19 @@ static void pa_dma_buf_end_cpu_access(struct dma_buf *dmabuf, size_t start,
   mutex_unlock(&buffer->lock);
 }
 
+static void *pa_dma_buf_vmap(struct dma_buf *dmabuf)
+{
+  struct pa_buffer *buffer = dmabuf->priv;
+  int rc = pa_dma_buf_begin_cpu_access(dmabuf, 0, 0, 0);
+  return buffer->vaddr;
+}
+
+static void pa_dma_buf_vunmap(struct dma_buf *dmabuf, void *vaddr)
+{
+printk("%s: dmabuf %p vaddr %p\n", __FUNCTION__, dmabuf, vaddr);
+}
+
+
 static struct dma_buf_ops dma_buf_ops = {
   .map_dma_buf      = pa_dma_buf_map,
   .unmap_dma_buf    = pa_dma_buf_unmap,
@@ -234,6 +247,8 @@ static struct dma_buf_ops dma_buf_ops = {
   .kunmap_atomic    = pa_dma_buf_kunmap,
   .kmap             = pa_dma_buf_kmap,
   .kunmap           = pa_dma_buf_kunmap,
+  .vmap             = pa_dma_buf_vmap,
+  .vunmap           = pa_dma_buf_vunmap,
 };
 
 int portalmem_dmabuffer_create(unsigned long len)
@@ -439,7 +454,6 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
     f = fget(req.fd);
     sgtable = ((struct pa_buffer *)((struct dma_buf *)f->private_data)->priv)->sg_table;
     for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
-printk("[%s:%d] i %d req.index %d\n", __FUNCTION__, __LINE__, i, req.index);
       if (i == req.index) {
           retsize = sg->length;
           break;
