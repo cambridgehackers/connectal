@@ -43,20 +43,8 @@ typedef struct semaphore sem_t;
 #define PORTAL_FREE(A) free(A)
 #endif
 
-#include "portalmem.h"
+#include "portalmem.h" // PortalAlloc
 #include "portal.h"
-
-#if 1 //def NO_CPP_PORTAL_CODE
-#include "GeneratedTypes.h" // generated in project directory
-#define DMAsglist(P, A, B, C) DmaConfigProxy_sglist((P), (A), (B), (C));
-#define DMAregion(P, PTR, B8, B4, B0) DmaConfigProxy_region((P), (PTR), (B8), (B4), (B0))
-#define DMAGetMemoryTraffic(P,A) DmaConfigProxy_getMemoryTraffic((P), (A))
-#else
-#include "DmaConfigProxy.h" // generated in project directory
-#define DMAsglist(P, A, B, C) ((DmaConfigProxy *)((P)->parent))->sglist((A), (B), (C))
-#define DMAregion(P, PTR, B8, B4, B0) ((DmaConfigProxy *)((P)->parent))->region((PTR), (B8), (B4), (B0))
-#define DMAGetMemoryTraffic(P,A) ((DmaConfigProxy *)((P)->parent))->getMemoryTraffic((A))
-#endif
 
 typedef struct {
   sem_t confSem;
@@ -72,16 +60,16 @@ typedef struct {
 extern "C" {
 #endif
 void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *argDevice);
-#ifndef XBSV_DRIVER_CODE
-uint64_t DmaManager_show_mem_stats(DmaManagerPrivate *priv, ChannelType rc);
-#endif
 int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa);
 int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa);
 #ifdef __cplusplus
 }
 #endif
+
 #ifndef NO_CPP_PORTAL_CODE
 #ifdef __cplusplus
+#include "GeneratedTypes.h" //ChannelType!!
+extern "C" uint64_t DmaManager_show_mem_stats(DmaManagerPrivate *priv, ChannelType rc);
 class DmaManager
 {
  private:
