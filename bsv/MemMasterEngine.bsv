@@ -221,7 +221,7 @@ endinterface
 
 //(* synthesize *)
 module mkMemInterrupt#(PciId my_id)(MemInterrupt);
-    FIFOF#(Tuple2#(Bit#(64),Bit#(32))) interruptRequestFifo <- mkSizedFIFOF(16);
+    FIFOF#(Tuple4#(Bit#(64),Bit#(32),Bool,Bool)) interruptRequestFifo <- mkFIFOF();
     Reg#(Maybe#(Bit#(32))) interruptSecondHalf <- mkReg(tagged Invalid);
     Reg#(TLPTag) tlpTag <- mkReg(0);
     FIFOF#(TLPData#(16)) tlpOutFifo <- mkSizedFIFOF(8);
@@ -236,13 +236,12 @@ module mkMemInterrupt#(PciId my_id)(MemInterrupt);
        let interruptRequested = True;
        let sendInterrupt = False;
 
-       Bit#(64) interruptAddr = tpl_1(interruptRequestFifo.first);
-       Bit#(32) interruptData = tpl_2(interruptRequestFifo.first);
-       if (interruptAddr == '0) begin
+       match { .interruptAddr, .interruptData, .mswIsZero, .lswIsZero } = interruptRequestFifo.first;
+       if (mswIsZero && lswIsZero) begin
 	  // do not write to 0 -- it wedges the host
 	  interruptRequested = False;
        end
-       else if (interruptAddr[63:32] == '0) begin
+       else if (mswIsZero) begin
           TLPMemoryIO3DWHeader hdr_3dw = defaultValue();
           hdr_3dw.format = MEM_WRITE_3DW_DATA;
 	  //hdr_3dw.pkttype = MEM_READ_WRITE;
@@ -302,7 +301,10 @@ module mkMemInterrupt#(PciId my_id)(MemInterrupt);
     endinterface: tlp
     interface Put interruptRequest;
        method Action put(Tuple2#(Bit#(64),Bit#(32)) intr);
-          interruptRequestFifo.enq(intr);
+	  match { .addr, .data } = intr;
+	  Bool mswIsZero = (addr[63:32] == 0);
+	  Bool lswIsZero = (addr[31:0] == 0);
+          interruptRequestFifo.enq(tuple4(addr, data, lswIsZero, mswIsZero));
        endmethod
     endinterface
 endmodule: mkMemInterrupt
