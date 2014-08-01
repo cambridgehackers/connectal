@@ -9,6 +9,7 @@
 #include "GeneratedTypes.h" 
 #include "MemwriteIndicationWrapper.h"
 #include "MemwriteRequestProxy.h"
+#include "dmaManager.h"
 
 
 sem_t done_sem;
@@ -63,7 +64,7 @@ void child(int rd_sock)
   sock_fd_read(rd_sock, &fd);
   fprintf(stderr, "[%s:%d] child got fd %d\n", __FUNCTION__, __LINE__, fd);
 
-  unsigned int *dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
+  unsigned int *dstBuffer = (unsigned int *)DmaManager_mmap(fd, alloc_sz);
   fprintf(stderr, "child::dstBuffer = %p\n", dstBuffer);
 
   unsigned int sg = 0;
@@ -96,7 +97,7 @@ void parent(int rd_sock, int wr_sock)
   
   fprintf(stderr, "parent::allocating memory...\n");
   dma->alloc(alloc_sz, &dstAlloc);
-  dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc->header.fd, 0);
+  dstBuffer = (unsigned int *)DmaManager_mmap(dstAlloc->header.fd, alloc_sz);
   
   pthread_t tid;
   fprintf(stderr, "parent::creating portalExec thread\n");

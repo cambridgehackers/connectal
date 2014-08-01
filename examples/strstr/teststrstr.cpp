@@ -107,9 +107,9 @@ int main(int argc, const char **argv)
     dma->alloc(alloc_len, &mpNextAlloc);
     dma->alloc(alloc_len, &haystackAlloc);
 
-    char *needle = (char *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, needleAlloc->header.fd, 0);
-    char *haystack = (char *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, haystackAlloc->header.fd, 0);
-    int *mpNext = (int *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, mpNextAlloc->header.fd, 0);
+    char *needle = (char *)DmaManager_mmap(needleAlloc->header.fd, alloc_len);
+    char *haystack = (char *)DmaManager_mmap(haystackAlloc->header.fd, alloc_len);
+    int *mpNext = (int *)DmaManager_mmap(mpNextAlloc->header.fd, alloc_len);
     
     const char *needle_text = "ababab";
     const char *haystack_text = "acabcabacababacababababababcacabcabacababacabababc";
@@ -182,9 +182,9 @@ int main(int argc, const char **argv)
     dma->alloc(haystack_alloc_len, &haystackAlloc);
     dma->alloc(mpNext_alloc_len, &mpNextAlloc);
 
-    char *needle = (char *)mmap(0, needle_alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, needleAlloc->header.fd, 0);
-    char *haystack = (char *)mmap(0, haystack_alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, haystackAlloc->header.fd, 0);
-    int *mpNext = (int *)mmap(0, mpNext_alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, mpNextAlloc->header.fd, 0);
+    char *needle = (char *)DmaManager_mmap(needleAlloc->header.fd, needle_alloc_len);
+    char *haystack = (char *)DmaManager_mmap(haystackAlloc->header.fd, haystack_alloc_len);
+    int *mpNext = (int *)DmaManager_mmap(mpNextAlloc->header.fd, mpNext_alloc_len);
 
     unsigned int ref_needleAlloc = dma->reference(needleAlloc);
     unsigned int ref_haystackAlloc = dma->reference(haystackAlloc);

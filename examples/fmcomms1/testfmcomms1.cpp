@@ -80,10 +80,10 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::allocating memory...\n");
   dma->alloc(alloc_sz, &srcAlloc);
 
-  srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
+  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc->header.fd, alloc_sz);
   dma->alloc(alloc_sz, &dstAlloc);
 
-  dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc->header.fd, 0);
+  dstBuffer = (unsigned int *)DmaManager_mmap(dstAlloc->header.fd, alloc_sz);
 
   pthread_t thread;
   pthread_attr_t attr;

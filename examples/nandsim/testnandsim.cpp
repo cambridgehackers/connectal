@@ -73,7 +73,7 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::allocating memory...\n");
   dma->alloc(numBytes, &srcAlloc);
   fprintf(stderr, "fd=%d\n", srcAlloc->header.fd);
-  srcBuffer = (unsigned int *)mmap(0, numBytes, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
+  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc->header.fd, numBytes);
   fprintf(stderr, "srcBuffer=%p\n", srcBuffer);
 
   pthread_t tid;

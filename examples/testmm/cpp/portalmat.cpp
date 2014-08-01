@@ -36,7 +36,7 @@ void PortalMatAllocator::allocate(int dims, const int* sizes, int type, int*& re
   int arraynum = numarrays++;
   dma->alloc(totalsize, &portalAlloc[arraynum]);
 
-  data = datastart = (uchar*)(unsigned int *)mmap(0, totalsize, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, portalAlloc[arraynum]->header.fd, 0);
+  data = datastart = (uchar*)(unsigned int *)DmaManager_mmap(portalAlloc[arraynum]->header.fd, totalsize);
   refcount = (int*)(data + arraysize);
   int *parraynum = refcount+1;
   *parraynum = arraynum;

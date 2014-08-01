@@ -50,7 +50,7 @@ int main(int argc, const char **argv)
 
   PortalAlloc *srcAlloc;
   dma->alloc(alloc_sz, &srcAlloc);
-  unsigned int *srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
+  unsigned int *srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc->header.fd, alloc_sz);
 
   pthread_t tid;
   printf( "Main::creating exec thread\n");

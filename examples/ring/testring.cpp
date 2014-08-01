@@ -488,14 +488,14 @@ int main(int argc, const char **argv)
   dma->alloc(status_ring_sz, &statusAlloc);
   dma->alloc(scratch_sz, &scratchAlloc);
 
-  v = mmap(0, cmd_ring_sz, PROT_READ|PROT_WRITE, MAP_SHARED, cmdAlloc->header.fd, 0);
+  v = DmaManager_mmap(cmdAlloc->header.fd, cmd_ring_sz);
   assert(v != MAP_FAILED);
   cmdBuffer = (char *) v;
 
-  v = mmap(0, status_ring_sz, PROT_READ|PROT_WRITE, MAP_SHARED, statusAlloc->header.fd, 0);
+  v = DmaManager_mmap(statusAlloc->header.fd, status_ring_sz);
   assert(v != MAP_FAILED);
   statusBuffer = (char *) v;
-  v = mmap(0, scratch_sz, PROT_READ|PROT_WRITE, MAP_SHARED, scratchAlloc->header.fd, 0);
+  v = DmaManager_mmap(scratchAlloc->header.fd, scratch_sz);
   assert(v != MAP_FAILED);
   scratchBuffer = (char *) v;
 

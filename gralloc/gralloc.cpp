@@ -147,7 +147,7 @@ static int gralloc_alloc_buffer(alloc_device_t* dev,
         err = ctx->dma->alloc(size, &portalAlloc);
         ctx->ref_srcAlloc = ctx->dma->reference(portalAlloc);
         fd = portalAlloc->header.fd;
-        //ptr = mmap(0, size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+        //ptr = DmaManager_mmap(fd, size);
     }
     if (fd < 0) {
         ALOGE("couldn't create ashmem (%s)", strerror(-errno));

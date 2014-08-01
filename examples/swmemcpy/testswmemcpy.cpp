@@ -7,6 +7,7 @@
 #include <semaphore.h>
 
 #include "portal.h"
+#include "dmaManager.h"
 #include "sock_utils.h"
 
 int numWords = 16;
@@ -27,7 +28,7 @@ void* child(void* prd_sock)
   int rd_sock = *((int*)prd_sock);
   sock_fd_read(rd_sock, &fd);
 
-  unsigned int *dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
+  unsigned int *dstBuffer = (unsigned int *)DmaManager_mmap(fd, alloc_sz);
   //fprintf(stderr, "child::mmap %08x\n", dstBuffer);  
 
   unsigned int sg = 0;
@@ -53,7 +54,7 @@ void* parent(void* pwr_sock)
   
   fprintf(stderr, "parent::allocating memory...\n");
   pm->alloc(alloc_sz, &dstAlloc);
-  dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc.header.fd, 0);
+  dstBuffer = (unsigned int *)DmaManager_mmap(dstAlloc.header.fd, alloc_sz);
   fprintf(stderr, "parent::mmap %p\n", dstBuffer);  
 
   for (int i = 0; i < numWords; i++){
@@ -66,7 +67,7 @@ void* parent(void* pwr_sock)
   int rc = ioctl(pm->pa_fd, PA_DEBUG_PK, &dstAlloc);
   fprintf(stderr, "parent::debug ioctl complete (%d)\n",rc);
 
-  dba = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc.header.fd, 0);
+  dba = (unsigned int *)DmaManager_mmap(dstAlloc.header.fd, alloc_sz);
   fprintf(stderr, "parent::mmap %p\n", dba);  
 
   unsigned int sg = 0;

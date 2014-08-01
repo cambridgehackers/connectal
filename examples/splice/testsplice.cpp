@@ -115,9 +115,9 @@ int main(int argc, const char **argv)
     dma->alloc(alloc_len, &strBAlloc);
     dma->alloc(fetch_len, &fetchAlloc);
 
-    char *strA = (char *)mmap(0, alloc_len, PROT_READ|PROT_WRITE, MAP_SHARED, strAAlloc->header.fd, 0);
-    char *strB = (char *)mmap(0, alloc_len, PROT_READ|PROT_WRITE, MAP_SHARED, strBAlloc->header.fd, 0);
-    int *fetch = (int *)mmap(0, fetch_len, PROT_READ|PROT_WRITE, MAP_SHARED, fetchAlloc->header.fd, 0);
+    char *strA = (char *)DmaManager_mmap(strAAlloc->header.fd, alloc_len);
+    char *strB = (char *)DmaManager_mmap(strBAlloc->header.fd, alloc_len);
+    int *fetch = (int *)DmaManager_mmap(fetchAlloc->header.fd, fetch_len);
     
     const char *strA_text = "   a     b      c    ";
     const char *strB_text = "..a........b......";

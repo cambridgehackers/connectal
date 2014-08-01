@@ -163,9 +163,9 @@ int main(int argc, const char **argv)
   //   fprintf(stderr, "%lx %lx\n", bsAlloc->entries[i].dma_address, bsAlloc->entries[i].length);
 
 
-  srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
-  dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc->header.fd, 0);
-  bsBuffer  = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, bsAlloc->header.fd, 0);
+  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc->header.fd, alloc_sz);
+  dstBuffer = (unsigned int *)DmaManager_mmap(dstAlloc->header.fd, alloc_sz);
+  bsBuffer  = (unsigned int *)DmaManager_mmap(bsAlloc->header.fd, alloc_sz);
 
   pthread_t tid;
   fprintf(stderr, "creating exec thread\n");

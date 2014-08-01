@@ -110,21 +110,21 @@ int main(int argc, const char **argv)
     dma->alloc(fetch_len*sizeof(uint16_t), &fetchAlloc);
     rcFetch = fstat(fetchAlloc->header.fd, &statFetchbuf);
     if (rcA < 0) perror("fstatFetch");
-    int *fetch = (int *)mmap(0, fetch_len * sizeof(uint16_t), PROT_READ|PROT_WRITE, MAP_SHARED, fetchAlloc->header.fd, 0);
+    int *fetch = (int *)DmaManager_mmap(fetchAlloc->header.fd, fetch_len * sizeof(uint16_t));
     if (fetch == MAP_FAILED) perror("fetch mmap failed");
     assert(fetch != MAP_FAILED);
 
     dma->alloc(alloc_len, &strAAlloc);
     rcA = fstat(strAAlloc->header.fd, &statAbuf);
     if (rcA < 0) perror("fstatA");
-    char *strA = (char *)mmap(0, alloc_len, PROT_READ|PROT_WRITE, MAP_SHARED, strAAlloc->header.fd, 0);
+    char *strA = (char *)DmaManager_mmap(strAAlloc->header.fd, alloc_len);
     if (strA == MAP_FAILED) perror("strA mmap failed");
     assert(strA != MAP_FAILED);
 
     dma->alloc(alloc_len, &strBAlloc);
     rcB = fstat(strBAlloc->header.fd, &statBbuf);
     if (rcA < 0) perror("fstatB");
-    char *strB = (char *)mmap(0, alloc_len, PROT_READ|PROT_WRITE, MAP_SHARED, strBAlloc->header.fd, 0);
+    char *strB = (char *)DmaManager_mmap(strBAlloc->header.fd, alloc_len);
     if (strB == MAP_FAILED) perror("strB mmap failed");
     assert(strB != MAP_FAILED);
 
