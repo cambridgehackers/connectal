@@ -141,7 +141,8 @@ typedef struct {ObjectRequest req;
 
 typedef struct {ObjectRequest req;
 		Bit#(TLog#(numTags)) rename_tag;
-		Bit#(TLog#(numClients)) client; } DRec#(numeric type numClients, numeric type numTags, numeric type addrWidth) deriving(Bits);
+		Bit#(TLog#(numClients)) client;
+		Bool last; } DRec#(numeric type numClients, numeric type numTags, numeric type addrWidth) deriving(Bits);
 
 typedef struct {Bit#(6) orig_tag;
 		Bit#(TLog#(numClients)) client; } RResp#(numeric type numClients, numeric type numTags, numeric type addrWidth) deriving(Bits);
@@ -171,6 +172,8 @@ module mkMemReadInternal#(Integer id,
    FIFO#(Tuple2#(DRec#(numClients,numTags,addrWidth),MemData#(dataWidth))) readDataPipelineFifo <- mkFIFO;
    FIFO#(MemData#(dataWidth)) responseFifo <- mkFIFO;
    Vector#(numTags, Reg#(Bit#(8)))           burstRegs <- replicateM(mkReg(0));
+   Vector#(numTags, Reg#(Bool))              firstRegs <- replicateM(mkReg(True));
+   Vector#(numTags, Reg#(Bool))               lastRegs <- replicateM(mkReg(False));
    Reg#(Bit#(64))  beatCount <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
    
@@ -228,15 +231,21 @@ module mkMemReadInternal#(Integer id,
       dynamicAssert(truncate(response_tag) == dreqFifo.first.rename_tag, "mkMemReadInternal");
       readDataPipelineFifo.enq(tuple2(dreqFifo.first, response));
       let burstLen = burstRegs[response_tag];
-      if (burstLen == 0)
+      let first =    firstRegs[response_tag];
+      let last  =    lastRegs[response_tag];
+      if (first) begin
 	 burstLen = dreqFifo.first.req.burstLen >> beat_shift;
-      if (burstLen == 1) begin
+	 last = dreqFifo.first.last;
+      end
+      if (last) begin
 	 //$display("mkMemReadInternal::eob %d", cycle_cnt-last_eob);
 	 last_eob <= cycle_cnt;
 	 dreqFifo.deq();
 	 tag_gen.return_tag(truncate(response_tag));
       end
       burstRegs[response_tag] <= burstLen-1;
+      firstRegs[response_tag] <= (burstLen-1 == 0);
+      lastRegs[response_tag] <= (burstLen-1 == 1);
    endrule
 
    interface MemReadClient read_client;
@@ -249,7 +258,7 @@ module mkMemReadInternal#(Integer id,
 	    let rename_tag = reqFifo.first.rename_tag;
 	    if (False && physAddr[31:24] != 0)
 	       $display("req_ar: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
-	    dreqFifos[rename_tag].enq(DRec{req:req, client:client, rename_tag:rename_tag});
+	    dreqFifos[rename_tag].enq(DRec{req:req, client:client, rename_tag:rename_tag, last:(req.burstLen == beat_shift)});
 	    //$display("readReq: client=%d, rename_tag=%d, physAddr=%h", client,rename_tag,physAddr);
 	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(rename_tag)};
 	 endmethod
