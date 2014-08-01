@@ -59,24 +59,24 @@ module mkMemread#(MemreadIndication indication) (Memread);
    Bit#(ObjectOffsetSize) chunk = extend(numWords)*4;
    
    
-      rule start (iterCnts > 0);
-	 re.readServers[0].request.put(MemengineCmd{pointer:pointer, base:0, len:truncate(chunk), burstLen:truncate(burstLen*4)});
-	 iterCnts <= iterCnts-1;
-      endrule
-      rule finish;
-	 let rv <- re.readServers[0].response.get;
-	 mismatchCounts <= 0;
-      endrule
-      rule check;
-	 let v <- toGet(re.dataPipes[0]).get;
-	 let expectedV = {srcGens+1,srcGens};
-	 let misMatch = v != expectedV;
-	 mismatchCounts <= mismatchCounts + (misMatch ? 1 : 0);
-	 let new_srcGens = srcGens+2;
-	 if (new_srcGens >= truncate(chunk/4))
-	    new_srcGens = 0;
-	 srcGens <= new_srcGens;
-      endrule
+   rule start (iterCnts > 0);
+      re.readServers[0].request.put(MemengineCmd{pointer:pointer, base:0, len:truncate(chunk), burstLen:truncate(burstLen*4)});
+      iterCnts <= iterCnts-1;
+   endrule
+   rule finish;
+      let rv <- re.readServers[0].response.get;
+      mismatchCounts <= 0;
+   endrule
+   rule check;
+      let v <- toGet(re.dataPipes[0]).get;
+      let expectedV = {srcGens+1,srcGens};
+      let misMatch = v != expectedV;
+      mismatchCounts <= mismatchCounts + (misMatch ? 1 : 0);
+      let new_srcGens = srcGens+2;
+      if (new_srcGens >= truncate(chunk/4))
+	 new_srcGens = 0;
+      srcGens <= new_srcGens;
+   endrule
    
    rule indicate_finish;
       let mc = mismatchCnt;
