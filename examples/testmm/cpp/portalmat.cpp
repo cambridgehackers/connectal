@@ -53,7 +53,7 @@ void PortalMatAllocator::deallocate(int* refcount, uchar* datastart, uchar* data
   int *pref = refcount+2;
   int arraynum = *parraynum;
   int ref = *pref;
-  size_t size = portalAlloc[arraynum]->header.size;
+  size_t size = 0; //this needs to be stored in class     //portalAlloc[arraynum]->header.size;
   fprintf(stderr, "PortalMatAllocator::deallocate datastart=%p arraynum=%d size=%ld\n",
 	  datastart, arraynum, (long)size);
   munmap(datastart, size);
