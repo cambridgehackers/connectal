@@ -49,24 +49,20 @@ module mkMemread#(MemreadIndication indication) (Memread);
    Reg#(ObjectPointer)   pointer <- mkReg(0);
    Reg#(Bit#(32))       numWords <- mkReg(0);
    Reg#(Bit#(32))       burstLen <- mkReg(0);
-   Reg#(Bit#(32))    mismatchCnt <- mkReg(0);
-   FIFO#(void)          cf <- mkSizedFIFO(1);
-   Reg#(Bit#(32))       iterCnt <- mkReg(0);
-   Reg#(Bit#(32))       iterCnts <- mkReg(0);
+   FIFO#(void)                cf <- mkSizedFIFO(1);
+   Reg#(Bit#(32))  itersToFinish <- mkReg(0);
+   Reg#(Bit#(32))   itersToStart <- mkReg(0);
    Reg#(Bit#(32))        srcGens <- mkReg(0);
    Reg#(Bit#(32)) mismatchCounts <- mkReg(0);
    MemreadEngineV#(64,2,1)        re <- mkMemreadEngine;
    Bit#(ObjectOffsetSize) chunk = extend(numWords)*4;
    
    
-   rule start (iterCnts > 0);
+   rule start (itersToStart > 0);
       re.readServers[0].request.put(MemengineCmd{pointer:pointer, base:0, len:truncate(chunk), burstLen:truncate(burstLen*4)});
-      iterCnts <= iterCnts-1;
+      itersToStart <= itersToStart-1;
    endrule
-   rule finish;
-      let rv <- re.readServers[0].response.get;
-      mismatchCounts <= 0;
-   endrule
+
    rule check;
       let v <- toGet(re.dataPipes[0]).get;
       let expectedV = {srcGens+1,srcGens};
@@ -78,26 +74,24 @@ module mkMemread#(MemreadIndication indication) (Memread);
       srcGens <= new_srcGens;
    endrule
    
-   rule indicate_finish;
-      let mc = mismatchCnt;
-      if (iterCnt == 1) begin
+   rule finish if (itersToFinish > 0);
+      let rv <- re.readServers[0].response.get;
+      if (itersToFinish == 1) begin
 	 cf.deq;
-	 indication.readDone(mc);
-	 mc = 0;
+	 indication.readDone(mismatchCounts);
       end
-      mismatchCnt <= mc;
-      iterCnt <= iterCnt - 1;
+      itersToFinish <= itersToFinish - 1;
    endrule
    
    interface dmaClient = re.dmaClient;
    interface MemreadRequest request;
-      method Action startRead(Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
+      method Action startRead(Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic) if (itersToStart == 0 && itersToFinish == 0);
 	 pointer <= rp;
 	 cf.enq(?);
 	 numWords  <= nw;
 	 burstLen  <= bl;
-	 iterCnt <= ic;
-	 iterCnts <= ic;
+	 itersToFinish <= ic;
+	 itersToStart <= ic;
 	 mismatchCounts <= 0;
 	 srcGens <= 0;
       endmethod
