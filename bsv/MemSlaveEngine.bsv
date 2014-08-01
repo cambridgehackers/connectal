@@ -26,6 +26,7 @@ import Connectable  :: *;
 import PCIE         :: *;
 import DefaultValue :: *;
 import MIMO         :: *;
+import MIFO         :: *;
 import Vector       :: *;
 import ClientServer :: *;
 import MemTypes     :: *;
@@ -48,7 +49,10 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	     Add#(bbb, buswidth, 256),
 	     Add#(ccc, TMul#(8, busWidthWords), 64),
 	     Add#(ddd, TMul#(32, busWidthWords), 256),
-	     Add#(eee, busWidthWords, 8));
+	     Add#(eee, busWidthWords, 8),
+	     Add#(1, a__, busWidthWords),
+	     Add#(busWidthWords, b__, 4)
+      );
 
     let beat_shift = fromInteger(valueOf(beatShift));
 
@@ -62,8 +66,12 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
     // default configuration for MIMO is for guarded enq() and deq().
     // However, the implicit guard only checks for space for 1 element for enq(), and availability of 1 element for deq().
     MIMOConfiguration mimoCfg = defaultValue;
-    MIMO#(4,busWidthWords,8,Bit#(32)) completionMimo <- mkMIMO(mimoCfg);
-    MIMO#(4,busWidthWords,8,TLPTag) completionTagMimo <- mkMIMO(mimoCfg);
+   MIFO#(4,busWidthWords,8,Bit#(32)) completionMimo <- mkMIFO();
+   MIFO#(4,busWidthWords,8,TLPTag) completionTagMimo <- mkMIFO();
+
+    Vector#(4,FIFOF#(Bit#(32))) completionFifos <- replicateM(mkFIFOF);
+    Vector#(4,FIFOF#(TLPTag)) completionTagFifos <- replicateM(mkFIFOF);
+
     MIMO#(busWidthWords,4,8,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
     Reg#(Bit#(9)) writeBurstCount <- mkReg(0);
     Reg#(TLPLength)  writeDwCount <- mkReg(0);
@@ -204,8 +212,8 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	 // The MIMO implicit guard only checks for space to enqueue 1 element
 	 // so we explicitly check for the number of elements required
 	 // otherwise elements in the queue will be overwritten.
-	 if (completionMimo.enqReadyN(count)
-	    && completionTagMimo.enqReadyN(count))
+	 if (completionMimo.enqReady()
+	    && completionTagMimo.enqReady())
 	    begin
 	       completionMimo.enq(count, vec);
 	       Vector#(4, TLPTag) tagvec = replicate(lastTag);
@@ -215,8 +223,8 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       end
       else if (hdr_3dw.format == MEM_WRITE_3DW_DATA
 	       && hdr_3dw.pkttype == COMPLETION
-	       && completionMimo.enqReadyN(1)
-	       && completionTagMimo.enqReadyN(1)) begin
+	       && completionMimo.enqReady()
+	       && completionTagMimo.enqReady()) begin
 	    vec[0] = hdr_3dw.data;
 	    completionMimo.enq(1, vec);
             TLPTag tag = hdr_completion.tag;
@@ -304,7 +312,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    endinterface
    interface MemReadServer read_server;
       interface Put readReq;
-         method Action put(MemRequest#(40) req) if (!writeInProgress && !writeDataMimo.deqReadyN(1));
+         method Action put(MemRequest#(40) req) if (!writeInProgress && !writeDataMimo.deqReady());
 	      let burstLen = req.burstLen >> beat_shift;
 	      let addr = req.addr;
 	      let arid = req.tag;
@@ -344,12 +352,12 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
            endmethod
        endinterface
       interface Get     readData;
-         method ActionValue#(MemData#(buswidth)) get() if (completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords)))
-									&& completionTagMimo.deqReadyN(fromInteger(valueOf(busWidthWords))));
+         method ActionValue#(MemData#(buswidth)) get() if (completionMimo.deqReady()
+							   && completionTagMimo.deqReady());
 	      let data_v = completionMimo.first;
 	      let tag_v = completionTagMimo.first;
-	      completionMimo.deq(fromInteger(valueOf(busWidthWords)));
-	      completionTagMimo.deq(fromInteger(valueOf(busWidthWords)));
+	      completionMimo.deq();
+	      completionTagMimo.deq();
               Bit#(buswidth) v = 0;
 	      for (Integer i = 0; i < valueOf(busWidthWords); i = i+1)
 		 v[(i+1)*32-1:i*32] = byteSwap(data_v[i]);
