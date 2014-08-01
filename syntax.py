@@ -4,6 +4,8 @@ import AST
 import sys
 import os
 
+noisyFlag=True
+
 tokens = (
     'AMPER',
     'AMPERAMPER',
@@ -881,12 +883,14 @@ if 0:
     for tok in lexer:
         print tok
 
-def parse(data, inputfilename):
-    global globalfilename
+def parse(data, inputfilename, nf):
+    global globalfilename, noisyFlag
+    noisyFlag=nf
     lexer = lex.lex(errorlog=lex.NullLogger())
     parser = yacc.yacc(optimize=1,errorlog=yacc.NullLogger())
     globalfilename = [inputfilename]
-    print 'Parsing:', inputfilename
+    if noisyFlag:
+        print 'Parsing:', inputfilename
     return  parser.parse(data)
     
 if __name__=='__main__':
