@@ -1,5 +1,14 @@
 #################################################################################################
 
+V=0
+ifeq ($(V),0)
+ECHO_OUT=@
+VERBOSE_SWITCH=
+else
+ECHO_OUT=
+VERBOSE_SWITCH=--verbose
+endif
+
 bozotarget:
 	@echo "Makefile.common: please invoke with make gen.boardname"
 
@@ -109,16 +118,16 @@ PRINTF_EXTRA=$(XBSVDIR)/bsv/DisplayInd.bsv
 endif
 
 gentarget::
-	@[ -e $(BOARD)/generatedbsv ] || mkdir -p $(BOARD)/generatedbsv
-	@[ -e $(BOARD)/jni ] || mkdir -p $(BOARD)/jni
+	$(ECHO_OUT)[ -e $(BOARD)/generatedbsv ] || mkdir -p $(BOARD)/generatedbsv
+	$(ECHO_OUT)[ -e $(BOARD)/jni ] || mkdir -p $(BOARD)/jni
 ifeq ($(USE_PRINTF),1)
 	$(XBSVDIR)/scripts/preprocess_trace.py $(BOARD) $(BSVFILES)
 endif
-	@$(XBSVDIR)/xbsvgen -B$(BOARD) -p $(BOARD) -x $(MKTOP) \
+	$(ECHO_OUT)$(XBSVDIR)/xbsvgen -B$(BOARD) -p $(BOARD) -x $(MKTOP) \
 	$(foreach s2h, $(S2H), -s2h $(s2h)) \
 	$(foreach h2s, $(H2S), -h2s $(h2s)) \
 	$(foreach f, $(CPPFILES), -s $f) \
-        -t $(TOP) $(XBSVFLAGS) $(BSVFILES) $(PRINTF_EXTRA)
+        -t $(TOP) $(XBSVFLAGS) $(BSVFILES) $(PRINTF_EXTRA) $(VERBOSE_SWITCH)
 
 prebuild::
 	@# additional steps needed before making verilog etc
