@@ -263,6 +263,13 @@ makefileTemplate='''
 ##         pass parameters to software via 'make RUN_ARGS= run'
 RUN_ARGS=
 
+V=0
+ifeq ($(V),0)
+Q=@
+else
+Q=
+endif
+
 DTOP=%(project_dir)s
 XBSVDIR=%(xbsvdir)s
 BSVPATH = %(bsvpath)s
@@ -328,14 +335,14 @@ bsim_exe:
 	@mkdir -p bin
 	@git rev-parse HEAD > bin/githash
 	@git diff | gzip -c > bin/gitdiff.patch.gz
-	cd jni; make -f Ubuntu.mk bsim_exe
+	$(Q)cd jni; make -f Ubuntu.mk bsim_exe
 	@cp -v jni/bsim_exe bin
 
 ubuntu_exe:
 	@mkdir -p bin
 	@git rev-parse HEAD > bin/githash
 	@git diff | gzip -c > bin/gitdiff.patch.gz
-	cd jni; make -f Ubuntu.mk
+	$(Q)cd jni; make -f Ubuntu.mk
 	@cp -v jni/mk* bin
 
 bsim: $(timestampfile)
@@ -488,6 +495,13 @@ include $(BUILD_EXECUTABLE)
 '''
 
 linuxmakefile_template='''
+V=0
+ifeq ($(V),0)
+Q=@
+else
+Q=
+endif
+
 CFLAGS_COMMON = -O -g -I%(project_dir)s/jni -I%(xbsvdir)s -I%(xbsvdir)s/cpp -I%(xbsvdir)s/lib/cpp %(sourceincludes)s %(cincludes)s %(cdefines)s -I%(xbsvdir)s/drivers/portalmem -I%(xbsvdir)s/drivers/pcieportal -I%(xbsvdir)s/drivers/zynqportal
 CFLAGS = $(CFLAGS_COMMON)
 
@@ -499,10 +513,10 @@ BSIM_EXE_CXX_FILES = BsimDma.cxx BsimCtrl.cxx TlpReplay.cxx
 BSIM_EXE_CXX = $(addprefix %(xbsvdir)s/cpp/, $(BSIM_EXE_CXX_FILES))
 
 test%(classname)s: $(SOURCES)
-	g++ $(CFLAGS) -o %(classname)s $(SOURCES) $(LDLIBS)
+	$(Q)g++ $(CFLAGS) -o %(classname)s $(SOURCES) $(LDLIBS)
 
 bsim_exe: $(SOURCES)
-	g++ $(CFLAGS_COMMON) -o bsim_exe -DBSIM $(SOURCES) $(BSIM_EXE_CXX) $(LDLIBS)
+	$(Q)g++ $(CFLAGS_COMMON) -o bsim_exe -DBSIM $(SOURCES) $(BSIM_EXE_CXX) $(LDLIBS)
 '''
 
 def preprocess(source, defs):
