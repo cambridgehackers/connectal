@@ -10,6 +10,6 @@
 
 int main(int argc, const char **argv)
 {
-  runtest(argc, argv);
-  exit(mismatchCount ? 1 : 0);
+  int ret = runtest(argc, argv);
+  exit(ret ? 1 : 0);
 }
