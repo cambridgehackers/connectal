@@ -75,16 +75,31 @@ void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *argDevice)
 
 int DmaManager_dCacheFlushInval(PortalInternal *priv, int fd, long size, void *__p)
 {
-#ifndef __KERNEL__
+    int i;
 #if defined(__arm__)
+#ifdef __KERNEL__
+    struct scatterlist *sg;
+    struct file *fmem = fget(fd);
+    struct sg_table *sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
+printk("[%s:%d] flush %d\n", __FUNCTION__, __LINE__, fd);
+    for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
+        unsigned int length = sg->length;
+        dma_addr_t start_addr = sg_phys(sg), end_addr = start_addr+length;
+printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start_addr, (long)end_addr, length);
+        outer_clean_range(start_addr, end_addr);
+        outer_inv_range(start_addr, end_addr);
+    }
+    fput(fmem);
+#else
   int rc = ioctl(priv->fpga_fd, PORTAL_DCACHE_FLUSH_INVAL, fd);
   if (rc){
     PORTAL_PRINTF("portal dcache flush failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
     return rc;
   }
+#endif
 #elif defined(__i386__) || defined(__x86_64__)
   // not sure any of this is necessary (mdk)
-  for(unsigned int i = 0; i < size; i++){
+  for(i = 0; i < size; i++){
     char foo = *(((volatile char *)__p)+i);
     asm volatile("clflush %0" :: "m" (foo));
   }
@@ -92,7 +107,6 @@ int DmaManager_dCacheFlushInval(PortalInternal *priv, int fd, long size, void *_
 #else
 #error("dCAcheFlush not defined for unspecified architecture")
 #endif
-#endif // __KERNEL__
   //PORTAL_PRINTF("dcache flush\n");
   return 0;
 }
