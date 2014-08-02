@@ -254,7 +254,7 @@ printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start
     }
     fput(fmem);
 #else
-  int rc = ioctl(priv->fpga_fd, PORTAL_DCACHE_FLUSH_INVAL, fd);
+  int rc = ioctl(globalDirectory.fpga_fd, PORTAL_DCACHE_FLUSH_INVAL, fd);
   if (rc){
     PORTAL_PRINTF("portal dcache flush failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
     return rc;
