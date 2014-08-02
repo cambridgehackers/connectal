@@ -75,7 +75,7 @@ class Portal : public PortalInternalCpp
     pint.poller->registerInstance(this);
   };
   int dCacheFlushInval(int fd, long size, void *__p) {
-    return DmaManager_dCacheFlushInval(&pint, fd, size, __p);
+    return DmaManager_dCacheFlushInval(fd, size, __p);
   };
   ~Portal() { pint.poller->unregisterInstance(this); };
 };
