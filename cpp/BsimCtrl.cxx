@@ -66,7 +66,8 @@ void interruptLevel(uint32_t ivalue){
 
     if (ivalue != last_level) {
         last_level = ivalue;
-        printf("%s: %d\n", __FUNCTION__, ivalue);
+        if (trace_port)
+            printf("%s: %d\n", __FUNCTION__, ivalue);
         pthread_mutex_lock(&socket_mutex);
         temp = respitem.portal;
         respitem.portal = MAGIC_PORTAL_FOR_SENDING_INTERRUPT;
