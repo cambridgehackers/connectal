@@ -120,11 +120,11 @@ int main(int argc, const char **argv)
     int strA_len = strlen(strA);
     int strB_len = strlen(strB);
 
-    xbsv_timer_init();
-    start_timer(0);
+    portalTimerInit();
+    portalTimerStart(0);
 
 
-    fprintf(stderr, "elapsed time (hw cycles): %lld\n", (long long)lap_timer(0));
+    fprintf(stderr, "elapsed time (hw cycles): %lld\n", (long long)portalTimerLap(0));
     
     portalDCacheFlushInval(strAAlloc, alloc_len, strA);
     portalDCacheFlushInval(strBAlloc, alloc_len, strB);
@@ -143,12 +143,12 @@ int main(int argc, const char **argv)
 
 
     fprintf(stderr, "starting algorithm C\n");
-    xbsv_timer_init();
-    start_timer(0);
+    portalTimerInit();
+    portalTimerStart(0);
 
     device->start(3);
     sem_wait(&test_sem);
-    cycles = lap_timer(0);
+    cycles = portalTimerLap(0);
     fprintf(stderr, "hw cycles: %f\n", (float)cycles);
 
     sem_wait(&test_sem);

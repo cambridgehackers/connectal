@@ -292,7 +292,7 @@ void PortalMat::multf(PortalMat &a, PortalMat &b_transpose,  MmIndication *mmind
     if(mmind) {
       int macs = a.rows*a.cols*b_transpose.rows;
       if (0)
-	fprintf(stderr, "macs %d cycles %f lap_timer %f macs/cycle: %f\n", macs, (float)mmind->ccnt, (float)lap_timer(0), ((float)macs)/((float)mmind->ccnt));
+	fprintf(stderr, "macs %d cycles %f lap_timer %f macs/cycle: %f\n", macs, (float)mmind->ccnt, (float)portalTimerLap(0), ((float)macs)/((float)mmind->ccnt));
     }
 }
 
@@ -327,7 +327,7 @@ void PortalMat::multf(PortalMat &a, PortalMat &b,  MmIndication *mmind)
     if(mmind) {
       int macs = a.rows*a.cols*b.rows;
       if (0)
-	fprintf(stderr, "macs %d cycles %f lap_timer %f macs/cycle: %f\n", macs, (float)mmind->ccnt, (float)lap_timer(0), ((float)macs)/((float)mmind->ccnt));
+	fprintf(stderr, "macs %d cycles %f lap_timer %f macs/cycle: %f\n", macs, (float)mmind->ccnt, (float)portalTimerLap(0), ((float)macs)/((float)mmind->ccnt));
     }
 }
 

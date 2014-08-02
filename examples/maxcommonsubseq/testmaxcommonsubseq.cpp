@@ -139,11 +139,11 @@ int main(int argc, const char **argv)
     int strB_len = strlen(strB);
     uint16_t swFetch[fetch_len];
 
-    xbsv_timer_init();
-    start_timer(0);
+    portalTimerInit();
+    portalTimerStart(0);
 
 
-    fprintf(stderr, "elapsed time (hw cycles): %lld\n", (long long)lap_timer(0));
+    fprintf(stderr, "elapsed time (hw cycles): %lld\n", (long long)portalTimerLap(0));
     
     portalDCacheFlushInval(strAAlloc, alloc_len, strA);
     portalDCacheFlushInval(strBAlloc, alloc_len, strB);
@@ -164,12 +164,12 @@ int main(int argc, const char **argv)
 
     fprintf(stderr, "starting algorithm A\n");
 
-    xbsv_timer_init();
-    start_timer(0);
+    portalTimerInit();
+    portalTimerStart(0);
 
     device->start(0);
     sem_wait(&test_sem);
-    cycles = lap_timer(0);
+    cycles = portalTimerLap(0);
     beats = dma->show_mem_stats(ChannelType_Read);
     fprintf(stderr, "hw cycles: %f\n", (float)cycles);
     device->fetch(ref_fetchAlloc, 0, 0, fetch_len / 2);
@@ -200,12 +200,12 @@ int main(int argc, const char **argv)
 
 
     fprintf(stderr, "starting algorithm B, forward\n");
-    xbsv_timer_init();
-    start_timer(0);
+    portalTimerInit();
+    portalTimerStart(0);
 
     device->start(1);
     sem_wait(&test_sem);
-    cycles = lap_timer(0);
+    cycles = portalTimerLap(0);
     fprintf(stderr, "hw cycles: %f\n", (float)cycles);
     device->fetch(ref_fetchAlloc, 0, 0, fetch_len / 2);
     sem_wait(&test_sem);
@@ -247,12 +247,12 @@ int main(int argc, const char **argv)
 
 
 
-    xbsv_timer_init();
-    start_timer(0);
+    portalTimerInit();
+    portalTimerStart(0);
 
     device->start(2);
     sem_wait(&test_sem);
-    cycles = lap_timer(0);
+    cycles = portalTimerLap(0);
     fprintf(stderr, "hw cycles: %f\n", (float)cycles);
     device->fetch(ref_fetchAlloc, 0, 0, fetch_len / 2);
     sem_wait(&test_sem);
@@ -292,12 +292,12 @@ int main(int argc, const char **argv)
 
 
     fprintf(stderr, "starting algorithm C\n");
-    xbsv_timer_init();
-    start_timer(0);
+    portalTimerInit();
+    portalTimerStart(0);
 
     device->start(3);
     sem_wait(&test_sem);
-    cycles = lap_timer(0);
+    cycles = portalTimerLap(0);
     fprintf(stderr, "hw cycles: %f\n", (float)cycles);
     device->fetch(ref_fetchAlloc, 0, 0, fetch_len / 2);
     sem_wait(&test_sem);

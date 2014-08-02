@@ -33,17 +33,21 @@
 
 #define MAX_TIMER_COUNT      16
 
+typedef struct {
+    uint64_t total, min, max, over;
+} PORTAL_TIMETYPE;
+
 static uint64_t c_start[MAX_TIMER_COUNT];
 static uint64_t lap_timer_temp;
-static TIMETYPE timers[MAX_TIMERS];
+static PORTAL_TIMETYPE timers[MAX_TIMERS];
 
-void start_timer(unsigned int i) 
+void portalTimerStart(unsigned int i) 
 {
   assert(i < MAX_TIMER_COUNT);
   c_start[i] = portalCycleCount();
 }
 
-uint64_t lap_timer(unsigned int i)
+uint64_t portalTimerLap(unsigned int i)
 {
   uint64_t temp = portalCycleCount();
   assert(i < MAX_TIMER_COUNT);
@@ -51,7 +55,7 @@ uint64_t lap_timer(unsigned int i)
   return temp - c_start[i];
 }
 
-void xbsv_timer_init(void)
+void portalTimerInit(void)
 {
     int i;
     memset(timers, 0, sizeof(timers));
@@ -59,9 +63,9 @@ void xbsv_timer_init(void)
       timers[i].min = 1LLU << 63;
 }
 
-uint64_t catch_timer(unsigned int i)
+uint64_t portalTimerCatch(unsigned int i)
 {
-    uint64_t val = lap_timer(0);
+    uint64_t val = portalTimerLap(0);
     if (i >= MAX_TIMERS)
         return 0;
     if (val > timers[i].max)
@@ -74,7 +78,7 @@ uint64_t catch_timer(unsigned int i)
     return lap_timer_temp;
 }
 
-void print_timer(int loops)
+void portalTimerPrint(int loops)
 {
     int i;
     for (i = 0; i < MAX_TIMERS; i++) {

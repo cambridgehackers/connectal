@@ -130,10 +130,10 @@ int runtest(int argc, const char **argv)
 #else
   int iterCnt = 2;
 #endif
-  start_timer(0);
+  portalTimerStart(0);
   device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords, burstLen, iterCnt);
   sem_wait(&done_sem);
-  uint64_t cycles = lap_timer(0);
+  uint64_t cycles = portalTimerLap(0);
   uint64_t read_beats = dma->show_mem_stats(ChannelType_Read);
   uint64_t write_beats = dma->show_mem_stats(ChannelType_Write);
   float read_util = (float)read_beats/(float)cycles;

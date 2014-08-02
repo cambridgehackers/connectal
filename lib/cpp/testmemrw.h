@@ -33,12 +33,12 @@ public:
     fprintf(stderr, "started\n");
   }
   virtual void readDone() {
-    read_cycles = lap_timer(0);
+    read_cycles = portalTimerLap(0);
     sem_post(&read_done_sem);
     fprintf(stderr, "readDone\n");
   }
   virtual void writeDone() {
-    write_cycles = lap_timer(0);
+    write_cycles = portalTimerLap(0);
     sem_post(&write_done_sem);
     fprintf(stderr, "writeDone\n");
   }
@@ -119,11 +119,11 @@ int runtest(int argc, const char **argv)
 #else
   int iterCnt = 2;
 #endif
-  start_timer(0);
+  portalTimerStart(0);
   device->start(ref_dstAlloc, ref_srcAlloc, numWords, burstLen, iterCnt);
   sem_wait(&read_done_sem);
   sem_wait(&write_done_sem);
-  uint64_t hw_cycles = lap_timer(0); 
+  uint64_t hw_cycles = portalTimerLap(0); 
   uint64_t read_beats = dma->show_mem_stats(ChannelType_Read);
   uint64_t write_beats = dma->show_mem_stats(ChannelType_Write);
   float read_util = (float)read_beats/(float)read_cycles;

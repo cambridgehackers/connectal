@@ -69,7 +69,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
   if (verbose) dumpMat<float>("data", "%5.1f", data);
   if (verbose) dumpMat<float>("weights", "%5.1f", weights);
 
-  start_timer(0);
+  portalTimerStart(0);
   dma->show_mem_stats(ChannelType_Read);
   for (int epoch = 0; epoch < numEpochs; epoch++) {
 
@@ -205,7 +205,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
     fprintf(stderr, "completed epoch %d\n", epoch);
     timerdevice->stopTimer();
   }
-  uint64_t total_cycles = lap_timer(0);
+  uint64_t total_cycles = portalTimerLap(0);
   uint64_t beats = dma->show_mem_stats(ChannelType_Read);
   fprintf(stderr, "total_cycles=%ld beats=%ld utilization=%f\n", (long)total_cycles, (long)beats, (float)beats / (float)total_cycles);
 }

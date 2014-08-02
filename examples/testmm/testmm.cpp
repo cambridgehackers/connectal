@@ -181,15 +181,15 @@ int main(int argc, const char **argv)
   FILE *octave_file = fopen("foo.m", "w");
 
   fprintf(stderr, "OpenCV matmul\n");
-  start_timer(0);
+  portalTimerStart(0);
   cv::Mat  m3 = m1 * m2;
-  uint64_t opencv_hw_cycles = lap_timer(0);
+  uint64_t opencv_hw_cycles = portalTimerLap(0);
 
   PortalMat tm3;
   fprintf(stderr, "Naive matmul\n");
-  start_timer(0);
+  portalTimerStart(0);
   tm3.naive_mul(m1,m2, octave_file);
-  uint64_t naive_hw_cycles = lap_timer(0);
+  uint64_t naive_hw_cycles = portalTimerLap(0);
 
   bool sane = 1;
   if (1) {
@@ -240,7 +240,7 @@ int main(int argc, const char **argv)
   }
 
   fprintf(stderr, "HW matmul\n");
-  start_timer(0);
+  portalTimerStart(0);
 #ifdef MATRIX_TN
   pm3.multf(pm1t, pm2, mmdeviceIndication);
 #else
@@ -248,7 +248,7 @@ int main(int argc, const char **argv)
   pm3.multf(pm1, pm2t, mmdeviceIndication);
 #endif
 #endif
-  uint64_t hw_cycles = lap_timer(0); 
+  uint64_t hw_cycles = portalTimerLap(0); 
   uint64_t read_beats = dma->show_mem_stats(ChannelType_Read);
   uint64_t write_beats = dma->show_mem_stats(ChannelType_Write);
   float read_util = (float)read_beats/(float)mmdeviceIndication->ccnt;

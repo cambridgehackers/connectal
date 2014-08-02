@@ -119,12 +119,12 @@ void parent(int rd_sock, int wr_sock)
 
 
   fprintf(stderr, "parent::starting write %08x\n", numWords);
-  start_timer(0);
+  portalTimerStart(0);
   //portalTrace_start();
   device->startWrite(ref_dstAlloc, numWords, burstLen, iterCnt);
   sem_wait(&done_sem);
   //portalTrace_stop();
-  uint64_t cycles = lap_timer(0);
+  uint64_t cycles = portalTimerLap(0);
   uint64_t beats = dma->show_mem_stats(ChannelType_Write);
   float write_util = (float)beats/(float)cycles;
   fprintf(stderr, "   beats: %"PRIx64"\n", beats);

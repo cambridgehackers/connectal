@@ -118,14 +118,14 @@ int runtest(int argc, const char ** argv)
   fprintf(stderr, "ref_srcAlloc=%d\n", ref_srcAlloc);
 
   fprintf(stderr, "Main::starting read %08x\n", numWords);
-  start_timer(0);
+  portalTimerStart(0);
   device->startRead(ref_srcAlloc, numWords, burstLen, iterCnt);
   sem_wait(&test_sem);
   if (mismatchCount) {
     fprintf(stderr, "Main::first test failed to match %d.\n", mismatchCount);
     test_result++;     // failed
   }
-  uint64_t cycles = lap_timer(0);
+  uint64_t cycles = portalTimerLap(0);
   uint64_t beats = dma->show_mem_stats(ChannelType_Read);
   float read_util = (float)beats/(float)cycles;
   fprintf(stderr, "   beats: %"PRIx64"\n", beats);

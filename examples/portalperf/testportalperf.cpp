@@ -125,95 +125,95 @@ uint64_t vd1, vd2, vd3, vd4;
 void call_swallow(void)
 {
   DEBUGWHERE();
-  start_timer(0);
-  catch_timer(0);
+  portalTimerStart(0);
+  portalTimerCatch(0);
   portalPerfRequestProxy->swallow();
-  catch_timer(19);
+  portalTimerCatch(19);
 }
 
 void call_swallowl(void)
 {
   DEBUGWHERE();
-  start_timer(0);
-  catch_timer(0);
+  portalTimerStart(0);
+  portalTimerCatch(0);
   portalPerfRequestProxy->swallowl(vl1);
-  catch_timer(19);
+  portalTimerCatch(19);
 }
 
 void call_swallowll(void)
 {
   DEBUGWHERE();
-  start_timer(0);
-  catch_timer(0);
+  portalTimerStart(0);
+  portalTimerCatch(0);
   portalPerfRequestProxy->swallowll(vl1, vl2);
-  catch_timer(19);
+  portalTimerCatch(19);
 }
 
 void call_swallowlll(void)
 {
   DEBUGWHERE();
-  start_timer(0);
-  catch_timer(0);
+  portalTimerStart(0);
+  portalTimerCatch(0);
   portalPerfRequestProxy->swallowlll(vl1, vl2, vl3);
-  catch_timer(19);
+  portalTimerCatch(19);
 }
 
 void call_swallowllll(void)
 {
   DEBUGWHERE();
-  start_timer(0);
-  catch_timer(0);
+  portalTimerStart(0);
+  portalTimerCatch(0);
   portalPerfRequestProxy->swallowllll(vl1, vl2, vl3, vl4);
-  catch_timer(19);
+  portalTimerCatch(19);
 }
 
 void call_swallowd(void)
 {
   DEBUGWHERE();
-  start_timer(0);
-  catch_timer(0);
+  portalTimerStart(0);
+  portalTimerCatch(0);
   portalPerfRequestProxy->swallowd(vd1);
-  catch_timer(19);
+  portalTimerCatch(19);
 }
 
 void call_swallowdd(void)
 {
   DEBUGWHERE();
-  start_timer(0);
-  catch_timer(0);
+  portalTimerStart(0);
+  portalTimerCatch(0);
   portalPerfRequestProxy->swallowdd(vd1, vd2);
-  catch_timer(19);
+  portalTimerCatch(19);
 }
 
 void call_swallowddd(void)
 {
   DEBUGWHERE();
-  start_timer(0);
-  catch_timer(0);
+  portalTimerStart(0);
+  portalTimerCatch(0);
   portalPerfRequestProxy->swallowddd(vd1, vd2, vd3);
-  catch_timer(19);
+  portalTimerCatch(19);
 }
 
 void call_swallowdddd(void)
 {
   DEBUGWHERE();
-  start_timer(0);
-  catch_timer(0);
+  portalTimerStart(0);
+  portalTimerCatch(0);
   portalPerfRequestProxy->swallowdddd(vd1, vd2, vd3, vd4);
-  catch_timer(19);
+  portalTimerCatch(19);
 }
 
 void dotestout(const char *testname, void (*testfn)(void))
 {
   uint64_t elapsed;
-  xbsv_timer_init();
-  start_timer(1);
+  portalTimerInit();
+  portalTimerStart(1);
   for (int i = 0; i < LOOP_COUNT; i++) {
     testfn();
   }
-  elapsed = lap_timer(1);
+  elapsed = portalTimerLap(1);
   printf("test %s: elapsed %g average %g\n", testname, (double) elapsed, (double) elapsed/ (double) LOOP_COUNT);
-  print_timer(LOOP_COUNT);
+  portalTimerPrint(LOOP_COUNT);
 }
 
 void dotestin(const char *testname, int which)
@@ -221,17 +221,17 @@ void dotestin(const char *testname, int which)
   uint64_t elapsed;
   heard_count = 0;
   printf("starting test %s, which %d\n", testname, which);
-  xbsv_timer_init();
-  start_timer(1);
-  start_timer(0);
-  catch_timer(0);
+  portalTimerInit();
+  portalTimerStart(1);
+  portalTimerStart(0);
+  portalTimerCatch(0);
   portalPerfRequestProxy->startspit(which, LOOP_COUNT);
-  catch_timer(19);
+  portalTimerCatch(19);
   wait_for(LOOP_COUNT);
-  catch_timer(21);
-  elapsed = lap_timer(1);
+  portalTimerCatch(21);
+  elapsed = portalTimerLap(1);
   printf("test %s: heard %d elapsed %g average %g\n", testname, heard_count, (double) elapsed, (double) elapsed/ (double) LOOP_COUNT);
-  print_timer(1);
+  portalTimerPrint(1);
 }
 
 int main(int argc, const char **argv)
@@ -243,20 +243,20 @@ int main(int argc, const char **argv)
     portalExec_init();
 
     printf("Timer tests\n");
-    xbsv_timer_init();
+    portalTimerInit();
     for (int i = 0; i < 1000; i++) {
-      start_timer(0);
-      catch_timer(1);
-      catch_timer(2);
-      catch_timer(3);
-      catch_timer(4);
-      catch_timer(5);
-      catch_timer(6);
-      catch_timer(7);
-      catch_timer(8);
+      portalTimerStart(0);
+      portalTimerCatch(1);
+      portalTimerCatch(2);
+      portalTimerCatch(3);
+      portalTimerCatch(4);
+      portalTimerCatch(5);
+      portalTimerCatch(6);
+      portalTimerCatch(7);
+      portalTimerCatch(8);
     }
-    printf("Each line 1-8 is one more call to catch_timer()\n");
-    print_timer(1000);
+    printf("Each line 1-8 is one more call to portalTimerCatch()\n");
+    portalTimerPrint(1000);
 
     vl1 = 0xfeed000000000011;
     vl2 = 0xface000000000012;

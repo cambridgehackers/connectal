@@ -131,9 +131,9 @@ int main(int argc, const char **argv)
 
     int iter_cnt = 2;
 
-    start_timer(0);
+    portalTimerStart(0);
     MP(needle, haystack, mpNext, needle_len, haystack_len, iter_cnt, &sw_match_cnt);
-    fprintf(stderr, "elapsed time (hw cycles): %lld\n", (long long)lap_timer(0));
+    fprintf(stderr, "elapsed time (hw cycles): %lld\n", (long long)portalTimerLap(0));
     
     portalDCacheFlushInval(needleAlloc, alloc_len, needle);
     portalDCacheFlushInval(mpNextAlloc, alloc_len, mpNext);
@@ -144,10 +144,10 @@ int main(int argc, const char **argv)
 
     device->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
     sem_wait(&setup_sem);
-    start_timer(0);
+    portalTimerStart(0);
     device->search(ref_haystackAlloc, haystack_len, iter_cnt);
     sem_wait(&test_sem);
-    uint64_t cycles = lap_timer(0);
+    uint64_t cycles = portalTimerLap(0);
     uint64_t beats = dma->show_mem_stats(ChannelType_Read);
     fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
 
@@ -206,9 +206,9 @@ int main(int argc, const char **argv)
     int iter_cnt = 2;
 #endif
 
-    start_timer(0);
+    portalTimerStart(0);
     MP(needle, haystack, mpNext, needle_len, haystack_len, iter_cnt, &sw_match_cnt);
-    uint64_t sw_cycles = lap_timer(0);
+    uint64_t sw_cycles = portalTimerLap(0);
     fprintf(stderr, "sw_cycles:%llx\n", (long long)sw_cycles);
 
     portalDCacheFlushInval(needleAlloc, needle_alloc_len, needle);
@@ -216,10 +216,10 @@ int main(int argc, const char **argv)
 
     device->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
     sem_wait(&setup_sem);
-    start_timer(0);
+    portalTimerStart(0);
     device->search(ref_haystackAlloc, haystack_len, iter_cnt);
     sem_wait(&test_sem);
-    uint64_t hw_cycles = lap_timer(0);
+    uint64_t hw_cycles = portalTimerLap(0);
     uint64_t beats = dma->show_mem_stats(ChannelType_Read);
     float read_util = (float)beats/(float)hw_cycles;
     fprintf(stderr, "hw_cycles:%llx\n", (long long)hw_cycles);

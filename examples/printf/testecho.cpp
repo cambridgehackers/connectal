@@ -72,10 +72,10 @@ public:
 	echoRequestProxy->say2(v, 2*v);
     }
     virtual void heard2(uint32_t a, uint32_t b) {
-        catch_timer(20);
+        portalTimerCatch(20);
         SEMPOST(&sem_heard2);
         //fprintf(stderr, "heard an echo2: %ld %ld\n", a, b);
-        //catch_timer(25);
+        //portalTimerCatch(25);
     }
     EchoIndication(unsigned int id, PortalPoller *poller) : EchoIndicationWrapper(id, poller) {}
 };
@@ -85,22 +85,22 @@ public:
 static void call_say(int v)
 {
     printf("[%s:%d] %d\n", __FUNCTION__, __LINE__, v);
-    start_timer(0);
+    portalTimerStart(0);
     PREPAREWAIT(sem_heard2);
     echoRequestProxy->say(v);
     SEMWAIT(&sem_heard2);
-    printf("call_say: elapsed %" PRIu64 "\n", lap_timer(0));
+    printf("call_say: elapsed %" PRIu64 "\n", portalTimerLap(0));
 }
 
 static void call_say2(int v, int v2)
 {
-    start_timer(0);
+    portalTimerStart(0);
     PREPAREWAIT(sem_heard2);
-    catch_timer(0);
+    portalTimerCatch(0);
     echoRequestProxy->say2(v, v2);
-    catch_timer(19);
+    portalTimerCatch(19);
     SEMWAIT(&sem_heard2);
-    catch_timer(30);
+    portalTimerCatch(30);
 }
 
 int main(int argc, const char **argv)
@@ -118,19 +118,19 @@ int main(int argc, const char **argv)
 
 #if 0
     printf("Timer tests\n");
-    xbsv_timer_init();
+    portalTimerInit();
     for (int i = 0; i < 1000; i++) {
-      start_timer(0);
-      catch_timer(1);
-      catch_timer(2);
-      catch_timer(3);
-      catch_timer(4);
-      catch_timer(5);
-      catch_timer(6);
-      catch_timer(7);
-      catch_timer(8);
+      portalTimerStart(0);
+      portalTimerCatch(1);
+      portalTimerCatch(2);
+      portalTimerCatch(3);
+      portalTimerCatch(4);
+      portalTimerCatch(5);
+      portalTimerCatch(6);
+      portalTimerCatch(7);
+      portalTimerCatch(8);
     }
-    print_timer(1000);
+    portalTimerPrint(1000);
 #endif
 
     int v = 42;
@@ -140,11 +140,11 @@ int main(int argc, const char **argv)
     call_say(v*17);
     call_say(v*93);
     printf("[%s:%d] run %d loops\n\n", __FUNCTION__, __LINE__, LOOP_COUNT);
-    xbsv_timer_init();
-    start_timer(1);
+    portalTimerInit();
+    portalTimerStart(1);
     for (int i = 0; i < LOOP_COUNT; i++)
         call_say2(v, v*3);
-uint64_t elapsed = lap_timer(1);
+uint64_t elapsed = portalTimerLap(1);
     printf("TEST TYPE: "
 #ifndef SEPARATE_EVENT_THREAD
        "INLINE"
@@ -154,7 +154,7 @@ uint64_t elapsed = lap_timer(1);
        "SEM"
 #endif
        "\n");
-    print_timer(LOOP_COUNT);
+    portalTimerPrint(LOOP_COUNT);
     printf("call_say: elapsed %g average %g\n", (double) elapsed, (double) elapsed/ (double) LOOP_COUNT);
     echoRequestProxy->setLeds(9);
     poller->portalExec_end();

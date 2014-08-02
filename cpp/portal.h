@@ -49,12 +49,12 @@
 struct PortalInternal;
 typedef int (*PORTAL_INDFUNC)(struct PortalInternal *p, unsigned int channel);
 typedef struct PortalInternal {
-  struct PortalPoller *poller;
-  int fpga_fd;
-  int fpga_number;
+  struct PortalPoller   *poller;
+  int                    fpga_fd;
+  int                    fpga_number;
   volatile unsigned int *map_base;
-  void *parent;
-  PORTAL_INDFUNC handler;
+  void                  *parent;
+  PORTAL_INDFUNC         handler;
 } PortalInternal;
 
 #ifdef __KERNEL__
@@ -88,11 +88,11 @@ unsigned int portalGetAddrbits(unsigned int id);
 unsigned int read_portal_bsim(volatile unsigned int *addr, int id);
 void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id);
 
-void start_timer(unsigned int i);
-uint64_t lap_timer(unsigned int i);
-void xbsv_timer_init(void);
-uint64_t catch_timer(unsigned int i);
-void print_timer(int loops);
+void portalTimerInit(void);
+void portalTimerStart(unsigned int i);
+uint64_t portalTimerLap(unsigned int i);
+uint64_t portalTimerCatch(unsigned int i);
+void portalTimerPrint(int loops);
 
 // uses the default poller
 void* portalExec(void* __x);
@@ -122,15 +122,11 @@ extern int global_pa_fd;
 
 #define MAX_TIMERS 50
 
-typedef struct {
-    uint64_t total, min, max, over;
-} TIMETYPE;
-
 #if !defined(BSIM)
 #define READL(CITEM, A)     (*(A))
 #define WRITEL(CITEM, A, B) (*(A) = (B))
 #else
-#define READL(CITEM, A) read_portal_bsim((A), (CITEM)->fpga_number)
+#define READL(CITEM, A)     read_portal_bsim((A), (CITEM)->fpga_number)
 #define WRITEL(CITEM, A, B) write_portal_bsim((A), (B), (CITEM)->fpga_number)
 #endif
 

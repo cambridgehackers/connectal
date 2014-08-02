@@ -41,9 +41,9 @@ typedef sem_t SEM_TYPE;
 #endif
 
 #if 0
-#define START_TIMER(A) start_timer(A)
-#define CATCH_TIMER(A) catch_timer(A)
-#define LAP_TIMER(A) lap_timer(A)
+#define START_TIMER(A) portalTimerStart(A)
+#define CATCH_TIMER(A) portalTimerCatch(A)
+#define LAP_TIMER(A) portalTimerLap(A)
 #else
 /* using timers make it difficult to compare AXI bus traces */
 #define START_TIMER(A) {}
@@ -125,7 +125,7 @@ int main(int argc, const char **argv)
 
 #if 0
     printf("Timer tests\n");
-    xbsv_timer_init();
+    portalTimerInit();
     for (int i = 0; i < 1000; i++) {
       START_TIMER(0);
       CATCH_TIMER(1);
@@ -137,7 +137,7 @@ int main(int argc, const char **argv)
       CATCH_TIMER(7);
       CATCH_TIMER(8);
     }
-    print_timer(1000);
+    portalTimerPrint(1000);
 #endif
 
     int v = 42;
@@ -147,7 +147,7 @@ int main(int argc, const char **argv)
     call_say(v*17);
     call_say(v*93);
     printf("[%s:%d] run %d loops\n\n", __FUNCTION__, __LINE__, LOOP_COUNT);
-    xbsv_timer_init();
+    portalTimerInit();
     START_TIMER(1);
     for (int i = 0; i < LOOP_COUNT; i++)
         call_say2(v, v*3);
@@ -161,7 +161,7 @@ uint64_t elapsed = LAP_TIMER(1);
        "SEM"
 #endif
        "\n");
-    print_timer(LOOP_COUNT);
+    portalTimerPrint(LOOP_COUNT);
     printf("call_say: elapsed %g average %g\n", (double) elapsed, (double) elapsed/ (double) LOOP_COUNT);
     echoRequestProxy->setLeds(9);
     poller->portalExec_end();

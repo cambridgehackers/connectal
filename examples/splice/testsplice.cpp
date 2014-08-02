@@ -132,10 +132,10 @@ int main(int argc, const char **argv)
     }
 
 
-    start_timer(0);
+    portalTimerStart(0);
 
 
-    fprintf(stderr, "elapsed time (hw cycles): %lld\n", (long long)lap_timer(0));
+    fprintf(stderr, "elapsed time (hw cycles): %lld\n", (long long)portalTimerLap(0));
     
     portalDCacheFlushInval(strAAlloc, alloc_len, strA);
     portalDCacheFlushInval(strBAlloc, alloc_len, strB);
@@ -150,11 +150,11 @@ int main(int argc, const char **argv)
 
     device->setupB(ref_strBAlloc, strB_len);
     sem_wait(&setup_sem);
-    start_timer(0);
+    portalTimerStart(0);
 
     device->start();
     sem_wait(&test_sem);
-    uint64_t cycles = lap_timer(0);
+    uint64_t cycles = portalTimerLap(0);
     uint64_t beats = dma->show_mem_stats(ChannelType_Read);
     fprintf(stderr, "hw cycles: %f\n", (float)cycles);
     assert(result_len < alloc_len * alloc_len);
