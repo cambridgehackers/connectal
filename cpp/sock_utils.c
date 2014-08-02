@@ -122,12 +122,14 @@ void bsim_wait_for_connect(int* psockfd)
 ssize_t sock_fd_write(int sockfd, int fd)
 {
     char buf[] = "1";
+    int *iptr;
     COMMON_SOCK_FD;
     cmsg = CMSG_FIRSTHDR(&msg);
     cmsg->cmsg_len = CMSG_LEN(sizeof (int));
     cmsg->cmsg_level = SOL_SOCKET;
     cmsg->cmsg_type = SCM_RIGHTS;
-    *((int *) CMSG_DATA(cmsg)) = fd;
+    iptr = (int *) CMSG_DATA(cmsg);
+    *iptr = fd;
 
 printf("[%s:%d] fd %d\n", __FUNCTION__, __LINE__, fd);
   int rv = sendmsg(sockfd, &msg, 0);
@@ -152,6 +154,7 @@ ssize_t sock_fd_read(int sock, int *fd)
 {
     ssize_t     size;
     char buf[16];
+    int *iptr;
 
     COMMON_SOCK_FD;
     *fd = -1;
@@ -162,7 +165,8 @@ ssize_t sock_fd_read(int sock, int *fd)
             fprintf(stderr, "%s: invalid message\n", __FUNCTION__);
             exit(1);
         }
-        *fd = *((int *) CMSG_DATA(cmsg));
+        iptr = (int *)CMSG_DATA(cmsg);
+        *fd = *iptr;
     }
     else {
         printf("sock_fd_read: error in receiving fd %d size %ld len %ld\n", *fd, (long)size, (long)(cmsg?cmsg->cmsg_len:-666));
