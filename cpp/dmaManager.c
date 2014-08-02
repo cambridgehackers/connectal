@@ -52,14 +52,16 @@ static int trace_memory;// = 1;
 
 #include "dmaSendFd.h"
 
+static int global_pa_fd = -1;
 void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *argDevice)
 {
   memset(priv, 0, sizeof(*priv));
   priv->device = argDevice;
 #ifndef __KERNEL__
-  priv->pa_fd = open("/dev/portalmem", O_RDWR);
-  if (priv->pa_fd < 0){
-    PORTAL_PRINTF("Failed to open /dev/portalmem pa_fd=%d errno=%d\n", priv->pa_fd, errno);
+  if (global_pa_fd == -1)
+      global_pa_fd = open("/dev/portalmem", O_RDWR);
+  if (global_pa_fd < 0){
+    PORTAL_PRINTF("Failed to open /dev/portalmem pa_fd=%d errno=%d\n", global_pa_fd, errno);
   }
 #endif
   if (sem_init(&priv->confSem, 0, 0)){
@@ -139,7 +141,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, int fd)
     sem_wait(&priv->confSem);
   rc = id;
 #else // KERNEL_REFERENCE
-  rc = send_fd_to_portal(priv->device, fd, id, priv->pa_fd);
+  rc = send_fd_to_portal(priv->device, fd, id, global_pa_fd);
   if (rc <= 0) {
     //PORTAL_PRINTF("%s:%d sem_wait\n", __FUNCTION__, __LINE__);
     sem_wait(&priv->confSem);
@@ -148,14 +150,14 @@ int DmaManager_reference(DmaManagerPrivate *priv, int fd)
   return rc;
 }
 
-int DmaManager_alloc(DmaManagerPrivate *priv, size_t size)
+int DmaManager_alloc(size_t size)
 {
   int rc = 0;
 
 #ifdef __KERNEL__
   rc = portalmem_dmabuffer_create(size);
 #else
-  rc = ioctl(priv->pa_fd, PA_MALLOC, size);
+  rc = ioctl(global_pa_fd, PA_MALLOC, size);
 #endif
   PORTAL_PRINTF("alloc size=%ldMB fd=%d\n", size/(1L<<20), rc);
   return rc;

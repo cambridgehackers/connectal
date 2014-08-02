@@ -96,7 +96,7 @@ int main(int argc, const char **argv)
 
   std::ifstream infile("../memread_nobuff_oo.tstlp");
 
-  srcAlloc = dma->alloc(alloc_sz);
+  srcAlloc = DmaManager_alloc(alloc_sz);
   srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc, alloc_sz);
   for (int i = 0; i < numWords; i++)
     srcBuffer[i] = i;

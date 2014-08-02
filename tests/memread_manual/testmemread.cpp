@@ -49,7 +49,7 @@ int main(int argc, const char **argv)
   DmaIndication *dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   int srcAlloc;
-  srcAlloc = dma->alloc(alloc_sz);
+  srcAlloc = DmaManager_alloc(alloc_sz);
   unsigned int *srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc, alloc_sz);
 
   pthread_t tid;

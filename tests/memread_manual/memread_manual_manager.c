@@ -144,7 +144,7 @@ int main(int argc, const char **argv)
 
   sem_init(&test_sem, 0, 0);
   DmaManager_init(&priv, &intarr[2]);
-  srcAlloc = DmaManager_alloc(&priv, alloc_sz);
+  srcAlloc = DmaManager_alloc(alloc_sz);
   if (rc){
     PORTAL_PRINTF("portal alloc failed rc=%d\n", rc);
     return rc;

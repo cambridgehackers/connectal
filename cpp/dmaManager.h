@@ -60,7 +60,7 @@ extern "C" {
 #endif
 void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *argDevice);
 int DmaManager_reference(DmaManagerPrivate *priv, int fd);
-int DmaManager_alloc(DmaManagerPrivate *priv, size_t size);
+int DmaManager_alloc(size_t size);
 void *DmaManager_mmap(int fd, size_t size);
 #ifdef __cplusplus
 }
@@ -77,9 +77,6 @@ class DmaManager
  public:
   DmaManager(PortalInternalCpp *argDevice) {
     DmaManager_init(&priv, &argDevice->pint);
-  };
-  int alloc(size_t size) {
-   return DmaManager_alloc(&priv, size);
   };
   int reference(int fd) {
     return DmaManager_reference(&priv, fd);

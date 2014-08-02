@@ -81,8 +81,8 @@ int runtest(int argc, const char **argv)
 
   fprintf(stderr, "Main::allocating memory...\n");
 
-  srcAlloc = dma->alloc(alloc_sz);
-  dstAlloc = dma->alloc(alloc_sz);
+  srcAlloc = DmaManager_alloc(alloc_sz);
+  dstAlloc = DmaManager_alloc(alloc_sz);
 
   // for(int i = 0; i < srcAlloc->header.numEntries; i++)
   //   fprintf(stderr, "%lx %lx\n", srcAlloc->entries[i].dma_address, srcAlloc->entries[i].length);

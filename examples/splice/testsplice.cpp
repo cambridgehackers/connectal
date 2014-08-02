@@ -111,9 +111,9 @@ int main(int argc, const char **argv)
     unsigned int alloc_len = 128;
     unsigned int fetch_len = alloc_len * alloc_len;
     
-    strAAlloc = dma->alloc(alloc_len);
-    strBAlloc = dma->alloc(alloc_len);
-    fetchAlloc = dma->alloc(fetch_len);
+    strAAlloc = DmaManager_alloc(alloc_len);
+    strBAlloc = DmaManager_alloc(alloc_len);
+    fetchAlloc = DmaManager_alloc(fetch_len);
 
     char *strA = (char *)DmaManager_mmap(strAAlloc, alloc_len);
     char *strB = (char *)DmaManager_mmap(strBAlloc, alloc_len);

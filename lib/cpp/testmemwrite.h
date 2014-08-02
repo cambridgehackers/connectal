@@ -96,7 +96,7 @@ void parent(int rd_sock, int wr_sock)
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
   
   fprintf(stderr, "parent::allocating memory...\n");
-  dstAlloc = dma->alloc(alloc_sz);
+  dstAlloc = DmaManager_alloc(alloc_sz);
   dstBuffer = (unsigned int *)DmaManager_mmap(dstAlloc, alloc_sz);
   
   pthread_t tid;

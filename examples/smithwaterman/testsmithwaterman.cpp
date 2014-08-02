@@ -100,14 +100,14 @@ int main(int argc, const char **argv)
     int rcA, rcB;
     struct stat statAbuf, statBbuf;
     
-    strAAlloc = dma->alloc(alloc_len);
+    strAAlloc = DmaManager_alloc(alloc_len);
     rcA = fstat(strAAlloc, &statAbuf);
     if (rcA < 0) perror("fstatA");
     char *strA = (char *)DmaManager_mmap(strAAlloc, alloc_len);
     if (strA == MAP_FAILED) perror("strA mmap failed");
     assert(strA != MAP_FAILED);
 
-    strBAlloc = dma->alloc(alloc_len);
+    strBAlloc = DmaManager_alloc(alloc_len);
     rcB = fstat(strBAlloc, &statBbuf);
     if (rcA < 0) perror("fstatB");
     char *strB = (char *)DmaManager_mmap(strBAlloc, alloc_len);

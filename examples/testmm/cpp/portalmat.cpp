@@ -34,7 +34,7 @@ void PortalMatAllocator::allocate(int dims, const int* sizes, int type, int*& re
   size_t arraysize = step[0]*sizes[0];
   size_t totalsize = cv::alignSize(arraysize+3*sizeof(int), 4096);
   int arraynum = numarrays++;
-  portalAlloc[arraynum] = dma->alloc(totalsize);
+  portalAlloc[arraynum] = DmaManager_alloc(totalsize);
 
   data = datastart = (uchar*)(unsigned int *)DmaManager_mmap(portalAlloc[arraynum], totalsize);
   refcount = (int*)(data + arraysize);

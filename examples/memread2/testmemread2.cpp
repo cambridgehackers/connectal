@@ -82,9 +82,9 @@ int main(int argc, const char **argv)
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
-  srcAlloc = dma->alloc(alloc_sz);
+  srcAlloc = DmaManager_alloc(alloc_sz);
   srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc, alloc_sz);
-  srcAlloc2 = dma->alloc(alloc_sz);
+  srcAlloc2 = DmaManager_alloc(alloc_sz);
   srcBuffer2 = (unsigned int *)DmaManager_mmap(srcAlloc2, alloc_sz);
 
   pthread_t tid;

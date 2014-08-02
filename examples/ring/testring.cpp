@@ -484,9 +484,9 @@ int main(int argc, const char **argv)
   ringIndication = new RingIndication(IfcNames_RingIndication);
 
   fprintf(stderr, "allocating memory...\n");
-  cmdAlloc = dma->alloc(cmd_ring_sz);
-  statusAlloc = dma->alloc(status_ring_sz);
-  scratchAlloc = dma->alloc(scratch_sz);
+  cmdAlloc = DmaManager_alloc(cmd_ring_sz);
+  statusAlloc = DmaManager_alloc(status_ring_sz);
+  scratchAlloc = DmaManager_alloc(scratch_sz);
 
   v = DmaManager_mmap(cmdAlloc, cmd_ring_sz);
   assert(v != MAP_FAILED);

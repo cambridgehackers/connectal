@@ -103,9 +103,9 @@ int main(int argc, const char **argv)
     int mpNextAlloc;
     unsigned int alloc_len = 16 << 2;
     
-    needleAlloc = dma->alloc(alloc_len);
-    mpNextAlloc = dma->alloc(alloc_len);
-    haystackAlloc = dma->alloc(alloc_len);
+    needleAlloc = DmaManager_alloc(alloc_len);
+    mpNextAlloc = DmaManager_alloc(alloc_len);
+    haystackAlloc = DmaManager_alloc(alloc_len);
 
     char *needle = (char *)DmaManager_mmap(needleAlloc, alloc_len);
     char *haystack = (char *)DmaManager_mmap(haystackAlloc, alloc_len);
@@ -178,9 +178,9 @@ int main(int argc, const char **argv)
     unsigned int needle_alloc_len = strlen(needle_text);
     unsigned int mpNext_alloc_len = needle_alloc_len*4;
     
-    needleAlloc = dma->alloc(needle_alloc_len);
-    haystackAlloc = dma->alloc(haystack_alloc_len);
-    mpNextAlloc = dma->alloc(mpNext_alloc_len);
+    needleAlloc = DmaManager_alloc(needle_alloc_len);
+    haystackAlloc = DmaManager_alloc(haystack_alloc_len);
+    mpNextAlloc = DmaManager_alloc(mpNext_alloc_len);
 
     char *needle = (char *)DmaManager_mmap(needleAlloc, needle_alloc_len);
     char *haystack = (char *)DmaManager_mmap(haystackAlloc, haystack_alloc_len);

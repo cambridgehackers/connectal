@@ -71,7 +71,7 @@ int main(int argc, const char **argv)
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
-  srcAlloc = dma->alloc(numBytes);
+  srcAlloc = DmaManager_alloc(numBytes);
   fprintf(stderr, "fd=%d\n", srcAlloc);
   srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc, numBytes);
   fprintf(stderr, "srcBuffer=%p\n", srcBuffer);

@@ -107,8 +107,8 @@ int runtest(int argc, const char **argv)
 
   fprintf(stderr, "Main::allocating memory...\n");
 
-  srcAlloc = dma->alloc(alloc_sz);
-  dstAlloc = dma->alloc(alloc_sz);
+  srcAlloc = DmaManager_alloc(alloc_sz);
+  dstAlloc = DmaManager_alloc(alloc_sz);
 
   srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc, alloc_sz);
   dstBuffer = (unsigned int *)DmaManager_mmap(dstAlloc, alloc_sz);
