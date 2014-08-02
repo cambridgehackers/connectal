@@ -39,7 +39,7 @@
 
 #define USE_INTERRUPTS
 #ifdef USE_INTERRUPTS
-#define ENABLE_INTERRUPTS(A) portal_enable_interrupts(A)
+#define ENABLE_INTERRUPTS(A) portalEnableInterrupts(A)
 #else
 #define ENABLE_INTERRUPTS(A)
 #endif

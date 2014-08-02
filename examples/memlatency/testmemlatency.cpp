@@ -107,11 +107,11 @@ int runtest(int argc, const char **argv)
 
   fprintf(stderr, "Main::allocating memory...\n");
 
-  srcAlloc = DmaManager_alloc(alloc_sz);
-  dstAlloc = DmaManager_alloc(alloc_sz);
+  srcAlloc = portalAlloc(alloc_sz);
+  dstAlloc = portalAlloc(alloc_sz);
 
-  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc, alloc_sz);
-  dstBuffer = (unsigned int *)DmaManager_mmap(dstAlloc, alloc_sz);
+  srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
+  dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
 
   pthread_t tid;
   fprintf(stderr, "creating exec thread\n");

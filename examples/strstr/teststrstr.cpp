@@ -103,13 +103,13 @@ int main(int argc, const char **argv)
     int mpNextAlloc;
     unsigned int alloc_len = 16 << 2;
     
-    needleAlloc = DmaManager_alloc(alloc_len);
-    mpNextAlloc = DmaManager_alloc(alloc_len);
-    haystackAlloc = DmaManager_alloc(alloc_len);
+    needleAlloc = portalAlloc(alloc_len);
+    mpNextAlloc = portalAlloc(alloc_len);
+    haystackAlloc = portalAlloc(alloc_len);
 
-    char *needle = (char *)DmaManager_mmap(needleAlloc, alloc_len);
-    char *haystack = (char *)DmaManager_mmap(haystackAlloc, alloc_len);
-    int *mpNext = (int *)DmaManager_mmap(mpNextAlloc, alloc_len);
+    char *needle = (char *)portalMmap(needleAlloc, alloc_len);
+    char *haystack = (char *)portalMmap(haystackAlloc, alloc_len);
+    int *mpNext = (int *)portalMmap(mpNextAlloc, alloc_len);
     
     const char *needle_text = "ababab";
     const char *haystack_text = "acabcabacababacababababababcacabcabacababacabababc";
@@ -178,13 +178,13 @@ int main(int argc, const char **argv)
     unsigned int needle_alloc_len = strlen(needle_text);
     unsigned int mpNext_alloc_len = needle_alloc_len*4;
     
-    needleAlloc = DmaManager_alloc(needle_alloc_len);
-    haystackAlloc = DmaManager_alloc(haystack_alloc_len);
-    mpNextAlloc = DmaManager_alloc(mpNext_alloc_len);
+    needleAlloc = portalAlloc(needle_alloc_len);
+    haystackAlloc = portalAlloc(haystack_alloc_len);
+    mpNextAlloc = portalAlloc(mpNext_alloc_len);
 
-    char *needle = (char *)DmaManager_mmap(needleAlloc, needle_alloc_len);
-    char *haystack = (char *)DmaManager_mmap(haystackAlloc, haystack_alloc_len);
-    int *mpNext = (int *)DmaManager_mmap(mpNextAlloc, mpNext_alloc_len);
+    char *needle = (char *)portalMmap(needleAlloc, needle_alloc_len);
+    char *haystack = (char *)portalMmap(haystackAlloc, haystack_alloc_len);
+    int *mpNext = (int *)portalMmap(mpNextAlloc, mpNext_alloc_len);
 
     unsigned int ref_needleAlloc = dma->reference(needleAlloc);
     unsigned int ref_haystackAlloc = dma->reference(haystackAlloc);

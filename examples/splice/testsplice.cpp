@@ -111,13 +111,13 @@ int main(int argc, const char **argv)
     unsigned int alloc_len = 128;
     unsigned int fetch_len = alloc_len * alloc_len;
     
-    strAAlloc = DmaManager_alloc(alloc_len);
-    strBAlloc = DmaManager_alloc(alloc_len);
-    fetchAlloc = DmaManager_alloc(fetch_len);
+    strAAlloc = portalAlloc(alloc_len);
+    strBAlloc = portalAlloc(alloc_len);
+    fetchAlloc = portalAlloc(fetch_len);
 
-    char *strA = (char *)DmaManager_mmap(strAAlloc, alloc_len);
-    char *strB = (char *)DmaManager_mmap(strBAlloc, alloc_len);
-    int *fetch = (int *)DmaManager_mmap(fetchAlloc, fetch_len);
+    char *strA = (char *)portalMmap(strAAlloc, alloc_len);
+    char *strB = (char *)portalMmap(strBAlloc, alloc_len);
+    int *fetch = (int *)portalMmap(fetchAlloc, fetch_len);
     
     const char *strA_text = "   a     b      c    ";
     const char *strB_text = "..a........b......";

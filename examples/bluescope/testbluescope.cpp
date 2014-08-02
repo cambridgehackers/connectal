@@ -151,9 +151,9 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "Main::allocating memory of size=%d...\n", (int)alloc_sz);
 
-  srcAlloc = DmaManager_alloc(alloc_sz);
-  dstAlloc = DmaManager_alloc(alloc_sz);
-  bsAlloc = DmaManager_alloc(alloc_sz);
+  srcAlloc = portalAlloc(alloc_sz);
+  dstAlloc = portalAlloc(alloc_sz);
+  bsAlloc = portalAlloc(alloc_sz);
 
   // for(int i = 0; i < srcAlloc->header.numEntries; i++)
   //   fprintf(stderr, "%lx %lx\n", srcAlloc->entries[i].dma_address, srcAlloc->entries[i].length);
@@ -163,9 +163,9 @@ int main(int argc, const char **argv)
   //   fprintf(stderr, "%lx %lx\n", bsAlloc->entries[i].dma_address, bsAlloc->entries[i].length);
 
 
-  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc, alloc_sz);
-  dstBuffer = (unsigned int *)DmaManager_mmap(dstAlloc, alloc_sz);
-  bsBuffer  = (unsigned int *)DmaManager_mmap(bsAlloc, alloc_sz);
+  srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
+  dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
+  bsBuffer  = (unsigned int *)portalMmap(bsAlloc, alloc_sz);
 
   pthread_t tid;
   fprintf(stderr, "creating exec thread\n");

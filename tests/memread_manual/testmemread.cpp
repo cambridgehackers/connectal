@@ -49,8 +49,8 @@ int main(int argc, const char **argv)
   DmaIndication *dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   int srcAlloc;
-  srcAlloc = DmaManager_alloc(alloc_sz);
-  unsigned int *srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc, alloc_sz);
+  srcAlloc = portalAlloc(alloc_sz);
+  unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
 
   pthread_t tid;
   printf( "Main::creating exec thread\n");

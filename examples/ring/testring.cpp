@@ -484,18 +484,18 @@ int main(int argc, const char **argv)
   ringIndication = new RingIndication(IfcNames_RingIndication);
 
   fprintf(stderr, "allocating memory...\n");
-  cmdAlloc = DmaManager_alloc(cmd_ring_sz);
-  statusAlloc = DmaManager_alloc(status_ring_sz);
-  scratchAlloc = DmaManager_alloc(scratch_sz);
+  cmdAlloc = portalAlloc(cmd_ring_sz);
+  statusAlloc = portalAlloc(status_ring_sz);
+  scratchAlloc = portalAlloc(scratch_sz);
 
-  v = DmaManager_mmap(cmdAlloc, cmd_ring_sz);
+  v = portalMmap(cmdAlloc, cmd_ring_sz);
   assert(v != MAP_FAILED);
   cmdBuffer = (char *) v;
 
-  v = DmaManager_mmap(statusAlloc, status_ring_sz);
+  v = portalMmap(statusAlloc, status_ring_sz);
   assert(v != MAP_FAILED);
   statusBuffer = (char *) v;
-  v = DmaManager_mmap(scratchAlloc, scratch_sz);
+  v = portalMmap(scratchAlloc, scratch_sz);
   assert(v != MAP_FAILED);
   scratchBuffer = (char *) v;
 

@@ -231,7 +231,7 @@ uint64_t directory_cycle_count()
   return (((uint64_t)high_bits)<<32) | ((uint64_t)low_bits);
 }
 
-void portal_enable_interrupts(PortalInternal *p)
+void portalEnableInterrupts(PortalInternal *p)
 {
    WRITEL(p, &(p->map_base[IND_REG_INTERRUPT_MASK]), 1);
 }
@@ -274,7 +274,7 @@ printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start
   return 0;
 }
 
-int DmaManager_alloc(size_t size)
+int portalAlloc(size_t size)
 {
 #ifdef __KERNEL__
   int rc = portalmem_dmabuffer_create(size);
@@ -285,7 +285,7 @@ int DmaManager_alloc(size_t size)
   return rc;
 }
 
-void *DmaManager_mmap(int fd, size_t size)
+void *portalMmap(int fd, size_t size)
 {
 #ifdef __KERNEL__
   struct file *fmem = fget(fd);

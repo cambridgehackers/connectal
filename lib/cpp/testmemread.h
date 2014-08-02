@@ -99,8 +99,8 @@ int runtest(int argc, const char ** argv)
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
-  srcAlloc = DmaManager_alloc(alloc_sz);
-  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc, alloc_sz);
+  srcAlloc = portalAlloc(alloc_sz);
+  srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
 
   pthread_t tid;
   fprintf(stderr, "Main::creating exec thread\n");

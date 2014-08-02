@@ -143,9 +143,9 @@ static int gralloc_alloc_buffer(alloc_device_t* dev,
     struct gralloc_context_t *ctx = reinterpret_cast<gralloc_context_t*>(dev);
 
     if (ctx->hdmiDisplay != 0) {
-        fd = DmaManager_alloc(size);
+        fd = portalAlloc(size);
         ctx->ref_srcAlloc = ctx->dma->reference(fd);
-        //ptr = DmaManager_mmap(fd, size);
+        //ptr = portalMmap(fd, size);
     }
     if (fd < 0) {
         ALOGE("couldn't create ashmem (%s)", strerror(-errno));

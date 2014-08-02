@@ -100,17 +100,17 @@ int main(int argc, const char **argv)
     int rcA, rcB;
     struct stat statAbuf, statBbuf;
     
-    strAAlloc = DmaManager_alloc(alloc_len);
+    strAAlloc = portalAlloc(alloc_len);
     rcA = fstat(strAAlloc, &statAbuf);
     if (rcA < 0) perror("fstatA");
-    char *strA = (char *)DmaManager_mmap(strAAlloc, alloc_len);
+    char *strA = (char *)portalMmap(strAAlloc, alloc_len);
     if (strA == MAP_FAILED) perror("strA mmap failed");
     assert(strA != MAP_FAILED);
 
-    strBAlloc = DmaManager_alloc(alloc_len);
+    strBAlloc = portalAlloc(alloc_len);
     rcB = fstat(strBAlloc, &statBbuf);
     if (rcA < 0) perror("fstatB");
-    char *strB = (char *)DmaManager_mmap(strBAlloc, alloc_len);
+    char *strB = (char *)portalMmap(strBAlloc, alloc_len);
     if (strB == MAP_FAILED) perror("strB mmap failed");
     assert(strB != MAP_FAILED);
 

@@ -144,7 +144,7 @@ int main(int argc, const char **argv)
 
   sem_init(&test_sem, 0, 0);
   DmaManager_init(&priv, &intarr[2]);
-  srcAlloc = DmaManager_alloc(alloc_sz);
+  srcAlloc = portalAlloc(alloc_sz);
   if (rc){
     PORTAL_PRINTF("portal alloc failed rc=%d\n", rc);
     return rc;
@@ -155,12 +155,12 @@ int main(int argc, const char **argv)
    PORTAL_PRINTF( "error creating exec thread\n");
    return -1;
   }
-  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc, alloc_sz);
+  srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
 #ifdef BSIM
-  portal_enable_interrupts(&intarr[0]);
-  portal_enable_interrupts(&intarr[1]);
-  portal_enable_interrupts(&intarr[2]);
-  portal_enable_interrupts(&intarr[3]);
+  portalEnableInterrupts(&intarr[0]);
+  portalEnableInterrupts(&intarr[1]);
+  portalEnableInterrupts(&intarr[2]);
+  portalEnableInterrupts(&intarr[3]);
 #endif
 
   for (i = 0; i < numWords; i++)

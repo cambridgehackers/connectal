@@ -71,9 +71,9 @@ int main(int argc, const char **argv)
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
-  srcAlloc = DmaManager_alloc(numBytes);
+  srcAlloc = portalAlloc(numBytes);
   fprintf(stderr, "fd=%d\n", srcAlloc);
-  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc, numBytes);
+  srcBuffer = (unsigned int *)portalMmap(srcAlloc, numBytes);
   fprintf(stderr, "srcBuffer=%p\n", srcBuffer);
 
   pthread_t tid;

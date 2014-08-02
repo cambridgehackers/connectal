@@ -78,12 +78,12 @@ int main(int argc, const char **argv)
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
-  srcAlloc = DmaManager_alloc(alloc_sz);
+  srcAlloc = portalAlloc(alloc_sz);
 
-  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc, alloc_sz);
-  dstAlloc = DmaManager_alloc(alloc_sz);
+  srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
+  dstAlloc = portalAlloc(alloc_sz);
 
-  dstBuffer = (unsigned int *)DmaManager_mmap(dstAlloc, alloc_sz);
+  dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
 
   pthread_t thread;
   pthread_attr_t attr;
