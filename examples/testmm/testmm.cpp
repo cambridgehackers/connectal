@@ -90,7 +90,7 @@ void *dbgThread(void *)
       //dmap->getStateDbg(ChannelType_Read);
     }
     if (mmdebug) {
-      fprintf(stderr, "Calling mmdebug->debug()\n");
+      //fprintf(stderr, "Calling mmdebug->debug()\n");
       mmdebug->debug();
     }
   }

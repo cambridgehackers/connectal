@@ -129,13 +129,13 @@ public:
   virtual ~MmDebugIndication() {};
 
   void started() {
-    fprintf(stderr, "mm.started()\n");
+    fprintf(stderr, "mm.started:\n");
   }
   virtual void startSourceAndSink ( const unsigned int startA, const unsigned int startC, const int jint ) {
-    fprintf(stderr, "mm.startSourceAndSink startA=%6d startC=%06d jint=%d\n", startA, startC, jint);
+    fprintf(stderr, "mm.startSourceAndSink: startA=%6d startC=%06d jint=%d\n", startA, startC, jint);
   }
   virtual void debug ( uint32_t macCount) {
-    fprintf(stderr, "mmdebug macCount=%d\n", macCount);
+    fprintf(stderr, "mm.debug: macCount=%d\n", macCount);
   }
 };
 
