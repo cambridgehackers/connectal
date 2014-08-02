@@ -95,8 +95,8 @@ int main(int argc, const char **argv)
   /* FMComms1 refclk should be 30 MHz */
   status = setClockFrequency(1,  30000000, 0);
     
-  dmap->dCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
-  dmap->dCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
+  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
+  portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
 

@@ -141,8 +141,8 @@ int main(int argc, const char **argv)
     MP(needle, haystack, mpNext, needle_len, haystack_len, iter_cnt, &sw_match_cnt);
     fprintf(stderr, "elapsed time (hw cycles): %lld\n", (long long)lap_timer(0));
     
-    dmap->dCacheFlushInval(needleAlloc, alloc_len, needle);
-    dmap->dCacheFlushInval(mpNextAlloc, alloc_len, mpNext);
+    portalDCacheFlushInval(needleAlloc, alloc_len, needle);
+    portalDCacheFlushInval(mpNextAlloc, alloc_len, mpNext);
 
     unsigned int ref_needleAlloc = dma->reference(needleAlloc);
     unsigned int ref_mpNextAlloc = dma->reference(mpNextAlloc);
@@ -217,8 +217,8 @@ int main(int argc, const char **argv)
     uint64_t sw_cycles = lap_timer(0);
     fprintf(stderr, "sw_cycles:%llx\n", (long long)sw_cycles);
 
-    dmap->dCacheFlushInval(needleAlloc, needle_alloc_len, needle);
-    dmap->dCacheFlushInval(mpNextAlloc, mpNext_alloc_len, mpNext);
+    portalDCacheFlushInval(needleAlloc, needle_alloc_len, needle);
+    portalDCacheFlushInval(mpNextAlloc, mpNext_alloc_len, mpNext);
 
     device->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
     sem_wait(&setup_sem);

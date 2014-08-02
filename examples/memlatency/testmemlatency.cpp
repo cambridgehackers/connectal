@@ -125,8 +125,8 @@ int runtest(int argc, const char **argv)
     dstBuffer[i] = 0x5a5abeef;
   }
 
-  dmap->dCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
-  dmap->dCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
+  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
+  portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);

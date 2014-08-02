@@ -176,8 +176,8 @@ int main(int argc, const char **argv)
   }
 
 
-  dmap->dCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
-  dmap->dCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
+  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
+  portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   ref_srcAlloc = dma->reference(srcAlloc);

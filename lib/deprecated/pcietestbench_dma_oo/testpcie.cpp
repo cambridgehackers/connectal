@@ -108,7 +108,7 @@ int main(int argc, const char **argv)
    exit(1);
   }
 
-  dmap->dCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
+  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
 
   device->startRead(ref_srcAlloc, numWords, burstLen);

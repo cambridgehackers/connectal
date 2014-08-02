@@ -132,8 +132,8 @@ int main(int argc, const char **argv)
 
     fprintf(stderr, "elapsed time (hw cycles): %lld\n", (long long)lap_timer(0));
     
-    dmap->dCacheFlushInval(strAAlloc, alloc_len, strA);
-    dmap->dCacheFlushInval(strBAlloc, alloc_len, strB);
+    portalDCacheFlushInval(strAAlloc, alloc_len, strA);
+    portalDCacheFlushInval(strBAlloc, alloc_len, strB);
 
     unsigned int ref_strAAlloc = dma->reference(strAAlloc);
     unsigned int ref_strBAlloc = dma->reference(strBAlloc);

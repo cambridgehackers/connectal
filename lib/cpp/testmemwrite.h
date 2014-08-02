@@ -112,7 +112,7 @@ void parent(int rd_sock, int wr_sock)
     dstBuffer[i] = 0xDEADBEEF;
   }
   
-  dmap->dCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
+  portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
   fprintf(stderr, "parent::flush and invalidate complete\n");
 
   // for(int i = 0; i < dstAlloc->header.numEntries; i++)

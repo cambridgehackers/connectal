@@ -80,7 +80,7 @@ int main(int argc, const char **argv)
     srcBuffer[i] = i;
   }
     
-  dmap->dCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
+  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);

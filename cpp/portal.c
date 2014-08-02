@@ -236,7 +236,7 @@ void portal_enable_interrupts(PortalInternal *p)
    WRITEL(p, &(p->map_base[IND_REG_INTERRUPT_MASK]), 1);
 }
 
-int DmaManager_dCacheFlushInval(int fd, long size, void *__p)
+int portalDCacheFlushInval(int fd, long size, void *__p)
 {
     int i;
 #if defined(__arm__)

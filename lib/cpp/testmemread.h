@@ -114,7 +114,7 @@ int runtest(int argc, const char ** argv)
     srcBuffer[i] = i;
   }
     
-  dmap->dCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
+  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
   device->getStateDbg();
   fprintf(stderr, "Main::after getStateDbg\n");
@@ -142,7 +142,7 @@ int runtest(int argc, const char ** argv)
   srcBuffer[0] = -1;
   srcBuffer[numWords/2] = -1;
   srcBuffer[numWords-1] = -1;
-  dmap->dCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
+  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
 
   device->startRead(ref_srcAlloc, numWords, burstLen, iterCnt);
   sem_wait(&test_sem);

@@ -94,7 +94,7 @@ static void fill_pixels(int offset)
 	ptr[line * npixels + pixel] = v;
       }
     corner_index = offset/16;
-    dmap->dCacheFlushInval(portalAlloc[frame_index], fbsize, dataptr[frame_index]);
+    portalDCacheFlushInval(portalAlloc[frame_index], fbsize, dataptr[frame_index]);
     device->startFrameBuffer(ref_srcAlloc[frame_index], fbsize);
     hdmiInternal->setTestPattern(0);
     hdmiInternal->waitForVsync(0);
