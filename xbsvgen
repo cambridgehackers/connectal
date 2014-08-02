@@ -266,8 +266,12 @@ RUN_ARGS=
 V=0
 ifeq ($(V),0)
 Q=@
+BSC_QUIET=-no-show-compiles
+XBSV_NDK_PARAM="NDK_HOST_ECHO=true"
 else
 Q=
+BSC_QUIET=
+XBSV_NDK_PARAM=
 endif
 
 DTOP=%(project_dir)s
@@ -327,7 +331,7 @@ $(timestampfile): %(bsvfiles)s
 
 $(vfile): %(topbsvfile)s %(bsvfiles)s $(timestampefile)
 	mkdir -p verilog/portal $(DTOP)/obj
-	cd sources/%(dut)s; bsc %(bsvdefines)s $(BSCFLAGS) -remove-dollar -p +:$(DTOP)/generatedbsv:$(BSVPATH) -verilog -u -g %(topbsvmod)s %(topbsvfile)s
+	cd sources/%(dut)s; bsc $(BSC_QUIET) %(bsvdefines)s $(BSCFLAGS) -remove-dollar -p +:$(DTOP)/generatedbsv:$(BSVPATH) -verilog -u -g %(topbsvmod)s %(topbsvfile)s
 	sed -i 's|// On .*|// timestamp removed|' verilog/*.v
 	for v in verilog/*.v; do $(XBSVDIR)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
 
@@ -335,14 +339,14 @@ bsim_exe:
 	@mkdir -p bin
 	@git rev-parse HEAD > bin/githash
 	@git diff | gzip -c > bin/gitdiff.patch.gz
-	$(Q)cd jni; make -f Ubuntu.mk bsim_exe
+	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk bsim_exe
 	@cp -v jni/bsim_exe bin
 
 ubuntu_exe:
 	@mkdir -p bin
 	@git rev-parse HEAD > bin/githash
 	@git diff | gzip -c > bin/gitdiff.patch.gz
-	$(Q)cd jni; make -f Ubuntu.mk
+	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk
 	@cp -v jni/mk* bin
 
 bsim: $(timestampfile)
@@ -350,8 +354,8 @@ bsim: $(timestampfile)
 	@git rev-parse HEAD > bin/githash
 	@git diff | gzip -c > bin/gitdiff.patch.gz
 	mkdir -p $(DTOP)/obj
-	cd sources; bsc -D BSIM %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -u -g %(topbsvmod)s %(topbsvfile)s
-	export BSC_CXXFLAGS="-I$(XBSVDIR)/cpp -I$(XBSVDIR) -DBSIM" ; cd sources; bsc $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX)
+	cd sources; bsc $(BSC_QUIET) -D BSIM %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -u -g %(topbsvmod)s %(topbsvfile)s
+	export BSC_CXXFLAGS="-I$(XBSVDIR)/cpp -I$(XBSVDIR) -DBSIM" ; cd sources; bsc $(BSC_QUIET) $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX)
 	@cp -v sources/bsim* bin
 	%(qtused)s
 
@@ -379,15 +383,15 @@ verilog/portal/mkSynthesizeablePortalTop.v:
 
 ## (*black_box*) causes vivado to ignore contents of the module and treat it as a black box
 verilog/portalstub.v:
-	make verilog/portal/mkSynthesizeablePortalTop.v
+	make --no-print-directory verilog/portal/mkSynthesizeablePortalTop.v
 	cat verilog/portal/mkSynthesizeablePortalTop.v | sed 's/^module /(*black_box*)module /' > verilog/portalstub.v
 
 hw/portaltop-post-synth.dcp: verilog/portal/mkSynthesizeablePortalTop.v $(vfile)
-	make verilog/portalstub.v
+	make --no-print-directory verilog/portalstub.v
 	vivado -mode batch -source $(XBSVDIR)/scripts/portaltop-synth.tcl $(VIVADOFLAGS)
 
 hw/mkpcietop-post-synth.dcp:
-	make verilog/portalstub.v
+	make --no-print-directory verilog/portalstub.v
 	vivado -mode batch -source $(XBSVDIR)/scripts/mkpcietop-synth.tcl $(VIVADOFLAGS)
 
 hw/mkPcieTop_pblock_portalTop_partial.bit: hw/mkpcietop-post-synth.dcp hw/portaltop-post-synth.dcp
@@ -422,14 +426,14 @@ android_exe:
 	@mkdir -p bin
 	@git rev-parse HEAD > bin/githash
 	@git diff | gzip -c > bin/gitdiff.patch.gz
-	ndk-build %(ndkQuietFlag)s
+	ndk-build $(XBSV_NDK_PARAM)
 	@cp -v libs/armeabi/android_exe bin
 
 android_exe_debug:
 	@mkdir -p bin
 	@git rev-parse HEAD > bin/githash
 	@git diff | gzip -c > bin/gitdiff.patch.gz
-	ndk-build %(ndkQuietFlag)s -B V=1 NDK_DEBUG=1
+	ndk-build $(XBSV_NDK_PARAM) -B V=1 NDK_DEBUG=1
 	@cp -v libs/armeabi/android_exe bin
 
 ifeq ($(BOARD),bluesim)
@@ -963,7 +967,6 @@ if __name__=='__main__':
                                    'bscflags': ' '.join(options.bscflags),
                                    'xelabflags': ' '.join(options.xelabflags),
                                    'xsimflags': ' '.join(options.xsimflags),
-				   'ndkQuietFlag': '' if noisyFlag else 'NDK_HOST_ECHO=true',
 				   'bitsmake': bitsmake
                                    })
     make.close()
