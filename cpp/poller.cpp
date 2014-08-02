@@ -39,7 +39,7 @@
 
 #define USE_INTERRUPTS
 #ifdef USE_INTERRUPTS
-#define ENABLE_INTERRUPTS(A) WRITEL((A), &((A)->map_base[IND_REG_INTERRUPT_MASK]), 1)
+#define ENABLE_INTERRUPTS(A) portal_enable_interrupts(A)
 #else
 #define ENABLE_INTERRUPTS(A)
 #endif

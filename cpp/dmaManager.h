@@ -60,8 +60,6 @@ extern "C" {
 #endif
 void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *argDevice);
 int DmaManager_reference(DmaManagerPrivate *priv, int fd);
-int DmaManager_alloc(size_t size);
-void *DmaManager_mmap(int fd, size_t size);
 #ifdef __cplusplus
 }
 #endif

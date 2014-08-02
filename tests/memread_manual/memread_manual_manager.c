@@ -168,7 +168,7 @@ int main(int argc, const char **argv)
 
   PORTAL_PRINTF( "Test 1: check for match\n");
   DmaManager_dCacheFlushInval(&intarr[2], srcAlloc, alloc_sz, srcBuffer);
-  PORTAL_PRINTF( "Main: before DmaManager_reference(%p)\n", srcAlloc);
+  PORTAL_PRINTF( "Main: before DmaManager_reference(%x)\n", srcAlloc);
   ref_srcAlloc = DmaManager_reference(&priv, srcAlloc);
   PORTAL_PRINTF( "Main: starting read %08x\n", numWords);
   MemreadRequestProxy_startRead (&intarr[3], ref_srcAlloc, numWords, burstLen, 1);
