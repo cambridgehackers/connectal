@@ -40,12 +40,12 @@ static TIMETYPE timers[MAX_TIMERS];
 void start_timer(unsigned int i) 
 {
   assert(i < MAX_TIMER_COUNT);
-  c_start[i] = directory_cycle_count();
+  c_start[i] = portalCycleCount();
 }
 
 uint64_t lap_timer(unsigned int i)
 {
-  uint64_t temp = directory_cycle_count();
+  uint64_t temp = portalCycleCount();
   assert(i < MAX_TIMER_COUNT);
   lap_timer_temp = temp;
   return temp - c_start[i];

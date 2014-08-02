@@ -82,9 +82,9 @@ int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *
 extern "C" {
 #endif
 void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler);
-uint64_t directory_cycle_count(void);
-unsigned int directory_get_fpga(unsigned int id);
-unsigned int directory_get_addrbits(unsigned int id);
+uint64_t portalCycleCount(void);
+unsigned int portalGetFpga(unsigned int id);
+unsigned int portalGetAddrbits(unsigned int id);
 unsigned int read_portal_bsim(volatile unsigned int *addr, int id);
 void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id);
 

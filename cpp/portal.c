@@ -65,8 +65,8 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler)
     init_directory();
     memset(pint, 0, sizeof(*pint));
     if (id != -1) {
-        pint->fpga_number = directory_get_fpga(id);
-        addrbits = directory_get_addrbits(id);
+        pint->fpga_number = portalGetFpga(id);
+        addrbits = portalGetAddrbits(id);
     }
     pint->fpga_fd = -1;
     pint->handler = handler;
@@ -179,7 +179,7 @@ static void init_directory(void)
   }
 }
 
-unsigned int directory_get_fpga(unsigned int id)
+unsigned int portalGetFpga(unsigned int id)
 {
   int numportals, i;
     init_directory();
@@ -193,7 +193,7 @@ unsigned int directory_get_fpga(unsigned int id)
   return 0;
 }
 
-unsigned int directory_get_addrbits(unsigned int id)
+unsigned int portalGetAddrbits(unsigned int id)
 {
     init_directory();
   return READL(&globalDirectory, PORTAL_DIRECTORY_ADDRBITS);
@@ -222,7 +222,7 @@ void portalTrace_stop()
 #endif
 }
 
-uint64_t directory_cycle_count()
+uint64_t portalCycleCount()
 {
   unsigned int high_bits, low_bits;
     init_directory();
