@@ -27,7 +27,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <semaphore.h>
-#include <pthread.h>
 #include <errno.h>
 #include <math.h>
 #include <assert.h>
@@ -73,12 +72,7 @@ int main(int argc, const char **argv)
   FpMulRequestProxy *dev = new FpMulRequestProxy(IfcNames_FpMulRequestPortal);
   FpMulIndication   *ind = new FpMulIndication(IfcNames_FpMulIndicationPortal);
 
-  pthread_t tid;
-  fprintf(stderr, "creating exec thread\n");
-  if(pthread_create(&tid, NULL,  portalExec, NULL)){
-   fprintf(stderr, "error creating exec thread\n");
-   exit(1);
-  }
+  portalExec_start();
 
   dev->mul_req(0,0);
   while(1);

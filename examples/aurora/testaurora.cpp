@@ -52,12 +52,7 @@ int main(int argc, const char **argv)
   long freq = 0;
   setClockFrequency(0, 200000000, &freq);
 
-  pthread_t tid;
-  fprintf(stderr, "Main::creating exec thread\n");
-  if(pthread_create(&tid, NULL,  portalExec, NULL)){
-    fprintf(stderr, "Main::error creating exec thread\n");
-    exit(1);
-  }
+  portalExec_start();
 
   fprintf(stderr, "Main::calling say1(%d)\n", 0);
   device->send(0);

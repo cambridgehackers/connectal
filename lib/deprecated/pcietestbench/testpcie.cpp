@@ -41,12 +41,7 @@ int main(int argc, const char **argv)
   PcieTestBenchIndication *indication = new PcieTestBenchIndication(IfcNames_PcieTestBenchIndication);
   PcieTestBenchRequestProxy *device = new PcieTestBenchRequestProxy(IfcNames_PcieTestBenchRequest);
 
-  pthread_t tid;
-  fprintf(stderr, "Main::creating exec thread\n");
-  if(pthread_create(&tid, NULL,  portalExec, NULL)){
-    fprintf(stderr, "Main::error creating exec thread\n");
-    exit(1);
-  }
+  portalExec_start();
 
   device->sendReadRequest(1, 4, 1, 5);
   indication->wait();

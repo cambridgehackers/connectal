@@ -9,7 +9,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
 
 pthread_mutex_t count_mutex     = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t  condition_var   = PTHREAD_COND_INITIALIZER;
@@ -35,15 +34,11 @@ int main(int argc, const char **argv)
 {
 
   int tokens = 0;
-  pthread_t tid;
   SinkIndication *sinkIndication = new SinkIndication(IfcNames_SinkIndication);
   SinkRequestProxy *sinkRequestProxy = new SinkRequestProxy(IfcNames_SinkRequest);
   
   fprintf(stderr, "Main::creating exec thread\n");
-  if(pthread_create(&tid, NULL,  portalExec, NULL)){
-    fprintf(stderr, "error creating exec thread\n");
-    exit(1);
-  }
+  portalExec_start();
   
   sinkRequestProxy->init(0);
   while(tokens < 32){

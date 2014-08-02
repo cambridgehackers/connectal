@@ -30,7 +30,6 @@
 #include <mp.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <pthread.h>
 
 #include "NocIndicationWrapper.h"
 #include "NocRequestProxy.h"
@@ -111,12 +110,7 @@ int main(int argc, const char **argv)
     return -1;
   }
 
-  pthread_t tid;
-  fprintf(stderr, "creating exec thread\n");
-  if(pthread_create(&tid, NULL,  portalExec, NULL)){
-   fprintf(stderr, "error creating exec thread\n");
-   exit(1);
-  }
+  portalExec_start();
 
     fprintf(stderr, "simple tests\n");
     

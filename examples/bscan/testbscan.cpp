@@ -58,11 +58,7 @@ int main(int argc, const char **argv)
 
     poller->portalExec_init();
     init_thread();
-    pthread_t tid;
-    if(pthread_create(&tid, NULL,  portalExec, NULL)){
-	fprintf(stderr, "error creating default exec thread\n");
-	exit(1);
-    }
+    portalExec_start();
 
     if (argc == 1) {
     int v = 42;

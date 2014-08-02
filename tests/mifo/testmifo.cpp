@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <assert.h>
-#include <pthread.h>
 
 #include "MifoTestIndicationWrapper.h"
 #include "MifoTestRequestProxy.h"
@@ -78,12 +77,7 @@ int main(int argc, const char **argv)
   MifoTestIndication *indication = new MifoTestIndication(IfcNames_MifoTestIndication);
   MifoTestRequestProxy *device = new MifoTestRequestProxy(IfcNames_MifoTestRequest);
 
-  pthread_t tid;
-  fprintf(stderr, "Main::creating exec thread\n");
-  if(pthread_create(&tid, NULL,  portalExec, NULL)){
-    fprintf(stderr, "Main::error creating exec thread\n");
-    exit(1);
-  }
+  portalExec_start();
 
   device->fimo32(68);
   sleep(1);

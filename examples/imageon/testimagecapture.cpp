@@ -20,7 +20,6 @@
  */
 
 #include <stdio.h>
-#include <pthread.h>
 #include <string.h>
 #include <ctype.h> // isprint, isascii
 #include "i2chdmi.h"
@@ -429,16 +428,8 @@ sleep(5);
     fmc_imageon_demo_enable_ipipe();
 }
 
-static void *pthread_worker(void *ptr)
-{
-    portalExec(NULL);
-    return NULL;
-}
-
 int main(int argc, const char **argv)
 {
-    pthread_t threaddata;
-
     init_local_semaphores();
     PortalPoller *poller = new PortalPoller();
 
@@ -478,7 +469,7 @@ int main(int argc, const char **argv)
     printf("[%s:%d] setClockFrequency 1 160000000 status=%d actualfreq=%ld\n", __FUNCTION__, __LINE__, status, actualFrequency);
     status = setClockFrequency(3, 200000000, &actualFrequency);
     printf("[%s:%d] setClockFrequency 3 200000000 status=%d actualfreq=%ld\n", __FUNCTION__, __LINE__, status, actualFrequency);
-    pthread_create(&threaddata, NULL, &pthread_worker, NULL);
+    portalExec_start();
     printf("[%s:%d] before set_i2c_mux_reset_n\n", __FUNCTION__, __LINE__);
     sensordevice->set_i2c_mux_reset_n(1);
     printf("[%s:%d] before setTestPattern\n", __FUNCTION__, __LINE__);

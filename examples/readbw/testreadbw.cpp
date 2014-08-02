@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <semaphore.h>
-#include <pthread.h>
+//#include <pthread.h>
 #include <errno.h>
 #include "../../drivers/pcie/bluenoc.h"
 

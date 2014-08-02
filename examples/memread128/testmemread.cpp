@@ -3,7 +3,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <pthread.h>
 #include <monkit.h>
 #include "StdDmaIndication.h"
 
@@ -69,12 +68,7 @@ int main(int argc, const char **argv)
   srcAlloc = portalAlloc(alloc_sz);
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
 
-  pthread_t tid;
-  fprintf(stderr, "Main::creating exec thread\n");
-  if(pthread_create(&tid, NULL,  portalExec, NULL)){
-   fprintf(stderr, "error creating exec thread\n");
-   exit(1);
-  }
+  portalExec_start();
 
   for (int i = 0; i < numWords; i++){
     srcBuffer[i] = i;

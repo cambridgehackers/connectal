@@ -23,7 +23,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <pthread.h>
 #include <sys/time.h>
 #include <semaphore.h>
 #include "StdDmaIndication.h"
@@ -168,12 +167,7 @@ int main(int argc, const char **argv)
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
   dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
 
-  pthread_t tid;
-  fprintf(stderr, "creating exec thread\n");
-  if(pthread_create(&tid, NULL,  portalExec, NULL)){
-    fprintf(stderr, "error creating exec thread\n");
-    exit(1);
-  }
+  portalExec_start();
 
 
   portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);

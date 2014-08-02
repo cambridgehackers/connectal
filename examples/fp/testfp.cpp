@@ -30,11 +30,7 @@ int main(int argc, const char **argv)
   FpIndication *indication = new FpIndication(IfcNames_FpIndication);
   FpRequestProxy *device = new FpRequestProxy(IfcNames_FpRequest);
 
-  pthread_t tid;
-  if(pthread_create(&tid, NULL,  portalExec, NULL)){
-    fprintf(stderr, "Main::error creating exec thread\n");
-    exit(1);
-  }
+  portalExec_start();
 
   float a = 1.0;
   float b = 0.5;

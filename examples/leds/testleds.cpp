@@ -11,7 +11,6 @@ int main(int argc, const char **argv)
 {
   LedControllerRequestProxy *device = new LedControllerRequestProxy(IfcNames_LedControllerRequestPortal);
 
-  pthread_t tid;
   device->setLeds(10, 100000000);
   device->setLeds(5, 100000000);
 

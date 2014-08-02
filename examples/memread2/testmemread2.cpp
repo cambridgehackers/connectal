@@ -3,7 +3,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <pthread.h>
 #include "StdDmaIndication.h"
 
 #include "DmaConfigProxy.h"
@@ -87,12 +86,7 @@ int main(int argc, const char **argv)
   srcAlloc2 = portalAlloc(alloc_sz);
   srcBuffer2 = (unsigned int *)portalMmap(srcAlloc2, alloc_sz);
 
-  pthread_t tid;
-  fprintf(stderr, "Main::creating exec thread\n");
-  if(pthread_create(&tid, NULL,  portalExec, NULL)){
-   fprintf(stderr, "error creating exec thread\n");
-   exit(1);
-  }
+  portalExec_start();
 
   for (int i = 0; i < numWords; i++){
     int v = srcGen++;

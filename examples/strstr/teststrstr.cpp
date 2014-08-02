@@ -25,7 +25,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <assert.h>
-#include <pthread.h>
 #include <string.h>
 #include <semaphore.h>
 #include <ctime>
@@ -89,12 +88,7 @@ int main(int argc, const char **argv)
     return -1;
   }
 
-  pthread_t tid;
-  fprintf(stderr, "creating exec thread\n");
-  if(pthread_create(&tid, NULL,  portalExec, NULL)){
-   fprintf(stderr, "error creating exec thread\n");
-   exit(1);
-  }
+  portalExec_start();
 
   if(1){
     fprintf(stderr, "simple tests\n");

@@ -94,12 +94,7 @@ int runtest(int argc, const char **argv)
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
   dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
 
-  pthread_t tid;
-  fprintf(stderr, "creating exec thread\n");
-  if(pthread_create(&tid, NULL,  portalExec, NULL)){
-    fprintf(stderr, "error creating exec thread\n");
-    exit(1);
-  }
+  portalExec_start();
 
   for (int i = 0; i < numWords; i++){
     srcBuffer[i] = i;

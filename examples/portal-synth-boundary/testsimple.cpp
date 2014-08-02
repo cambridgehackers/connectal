@@ -35,12 +35,7 @@ int main(int argc, const char **argv)
   SimpleIndication *indication = new SimpleIndication(IfcNames_SimpleIndication);
   SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequest);
 
-  pthread_t tid;
-  fprintf(stderr, "Main::creating exec thread\n");
-  if(pthread_create(&tid, NULL,  portalExec, NULL)){
-    fprintf(stderr, "Main::error creating exec thread\n");
-    exit(1);
-  }
+  portalExec_start();
 
   fprintf(stderr, "Main::calling say1(%d)\n", v1a);
   device->say1(v1a);  

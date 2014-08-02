@@ -99,12 +99,7 @@ void parent(int rd_sock, int wr_sock)
   dstAlloc = portalAlloc(alloc_sz);
   dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
   
-  pthread_t tid;
-  fprintf(stderr, "parent::creating portalExec thread\n");
-  if(pthread_create(&tid, NULL,  portalExec, NULL)){
-    fprintf(stderr, "error: creating exec thwrite\n");
-    exit(1);
-  }
+  portalExec_start();
   
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
   

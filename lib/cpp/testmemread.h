@@ -102,12 +102,7 @@ int runtest(int argc, const char ** argv)
   srcAlloc = portalAlloc(alloc_sz);
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
 
-  pthread_t tid;
-  fprintf(stderr, "Main::creating exec thread\n");
-  if(pthread_create(&tid, NULL,  portalExec, NULL)){
-   fprintf(stderr, "error creating exec thread\n");
-   exit(1);
-  }
+  portalExec_start();
 
   /* Test 1: check that match is ok */
   for (int i = 0; i < numWords; i++){

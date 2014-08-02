@@ -23,7 +23,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <pthread.h>
 #include <monkit.h>
 #include <semaphore.h>
 
@@ -167,12 +166,7 @@ int main(int argc, const char **argv)
   dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
   bsBuffer  = (unsigned int *)portalMmap(bsAlloc, alloc_sz);
 
-  pthread_t tid;
-  fprintf(stderr, "creating exec thread\n");
-  if(pthread_create(&tid, NULL,  portalExec, NULL)){
-    fprintf(stderr, "error creating exec thread\n");
-    exit(1);
-  }
+  portalExec_start();
 
   for (int i = 0; i < numWords; i++){
     srcBuffer[i] = i;

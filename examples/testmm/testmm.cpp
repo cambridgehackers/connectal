@@ -127,12 +127,7 @@ int main(int argc, const char **argv)
     return -1;
   }
 
-  pthread_t tid;
-  fprintf(stderr, "creating exec thread\n");
-  if(pthread_create(&tid, NULL,  portalExec, NULL)){
-   fprintf(stderr, "error creating exec thread\n");
-   exit(1);
-  }
+  portalExec_start();
 
   long req_freq = 100000000;
   long freq = 0;

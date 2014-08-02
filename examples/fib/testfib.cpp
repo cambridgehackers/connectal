@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <semaphore.h>
 #include <unistd.h>
-#include <pthread.h>
 
 #include "FibIndicationWrapper.h"
 #include "FibRequestProxy.h"
@@ -36,12 +35,7 @@ int main(int argc, const char **argv)
     fprintf(stderr, "failed to init test_sem\n");
     return -1;
   }
-  pthread_t tid;
-  fprintf(stderr, "creating exec thread\n");
-  if(pthread_create(&tid, NULL,  portalExec, NULL)){
-   fprintf(stderr, "error creating exec thread\n");
-   exit(1);
-  }
+  portalExec_start();
 
   for (i = 0; i < 20; i += 1) {
     fprintf(stderr, "fib(%d)\n", i);
