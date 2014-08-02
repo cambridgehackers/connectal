@@ -39,9 +39,9 @@
 RingRequestProxy *ring = 0;
 DmaConfigProxy *dmap = 0;
 
-PortalAlloc *cmdAlloc;
-PortalAlloc *statusAlloc;
-PortalAlloc *scratchAlloc;
+int cmdAlloc;
+int statusAlloc;
+int scratchAlloc;
 
 char *cmdBuffer = 0;
 char *statusBuffer = 0;
@@ -484,18 +484,18 @@ int main(int argc, const char **argv)
   ringIndication = new RingIndication(IfcNames_RingIndication);
 
   fprintf(stderr, "allocating memory...\n");
-  dma->alloc(cmd_ring_sz, &cmdAlloc);
-  dma->alloc(status_ring_sz, &statusAlloc);
-  dma->alloc(scratch_sz, &scratchAlloc);
+  cmdAlloc = dma->alloc(cmd_ring_sz);
+  statusAlloc = dma->alloc(status_ring_sz);
+  scratchAlloc = dma->alloc(scratch_sz);
 
-  v = DmaManager_mmap(cmdAlloc->header.fd, cmd_ring_sz);
+  v = DmaManager_mmap(cmdAlloc, cmd_ring_sz);
   assert(v != MAP_FAILED);
   cmdBuffer = (char *) v;
 
-  v = DmaManager_mmap(statusAlloc->header.fd, status_ring_sz);
+  v = DmaManager_mmap(statusAlloc, status_ring_sz);
   assert(v != MAP_FAILED);
   statusBuffer = (char *) v;
-  v = DmaManager_mmap(scratchAlloc->header.fd, scratch_sz);
+  v = DmaManager_mmap(scratchAlloc, scratch_sz);
   assert(v != MAP_FAILED);
   scratchBuffer = (char *) v;
 
@@ -513,9 +513,9 @@ int main(int argc, const char **argv)
   statusPointer = dma->reference(statusAlloc);
   scratchPointer = dma->reference(scratchAlloc);
 
-  /*   dmap->dCacheFlushInval(cmdAlloc->header.fd, cmd_ring_sz, cmdBuffer);
-  dmap->dCacheFlushInval(statusAlloc->header.fd, status_ring_sz, statusBuffer);
-  dmap->dCacheFlushInval(scratchAlloc->header.fd, scratch_sz, scratchBuffer);
+  /*   dmap->dCacheFlushInval(cmdAlloc, cmd_ring_sz, cmdBuffer);
+  dmap->dCacheFlushInval(statusAlloc, status_ring_sz, statusBuffer);
+  dmap->dCacheFlushInval(scratchAlloc, scratch_sz, scratchBuffer);
   fprintf(stderr, "flush and invalidate complete\n");
   */
   portalThreadRun = 0;

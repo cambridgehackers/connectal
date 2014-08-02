@@ -47,13 +47,13 @@ void* child(void* prd_sock)
 void* parent(void* pwr_sock)
 {
   int wr_sock = *((int*)pwr_sock);
-  PortalAlloc dstAlloc;
+  int dstAlloc;
   unsigned int *dstBuffer = 0;
   unsigned int *dba = 0;
   class TestPM *pm = new TestPM();
   
   fprintf(stderr, "parent::allocating memory...\n");
-  pm->alloc(alloc_sz, &dstAlloc);
+  dstAlloc = pm->alloc(alloc_sz);
   dstBuffer = (unsigned int *)DmaManager_mmap(dstAlloc.header.fd, alloc_sz);
   fprintf(stderr, "parent::mmap %p\n", dstBuffer);  
 
@@ -61,7 +61,7 @@ void* parent(void* pwr_sock)
     dstBuffer[i] = i;
   }
   
-  pm->dCacheFlushInval(dstAlloc->header.fd, alloc_sz, dstBuffer);
+  pm->dCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
   fprintf(stderr, "parent::flush and invalidate complete\n");
 
   int rc = ioctl(pm->pa_fd, PA_DEBUG_PK, &dstAlloc);

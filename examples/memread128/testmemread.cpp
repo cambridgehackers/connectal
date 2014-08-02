@@ -47,7 +47,7 @@ public:
 
 int main(int argc, const char **argv)
 {
-  PortalAlloc *srcAlloc;
+  int srcAlloc;
   unsigned int *srcBuffer = 0;
 
   MemreadRequestProxy *device = 0;
@@ -66,8 +66,8 @@ int main(int argc, const char **argv)
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
-  dma->alloc(alloc_sz, &srcAlloc);
-  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc->header.fd, alloc_sz);
+  srcAlloc = dma->alloc(alloc_sz);
+  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc, alloc_sz);
 
   pthread_t tid;
   fprintf(stderr, "Main::creating exec thread\n");
@@ -80,7 +80,7 @@ int main(int argc, const char **argv)
     srcBuffer[i] = i;
   }
     
-  dmap->dCacheFlushInval(srcAlloc->header.fd, alloc_sz, srcBuffer);
+  dmap->dCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);

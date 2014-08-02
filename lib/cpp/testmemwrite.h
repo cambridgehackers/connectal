@@ -53,7 +53,7 @@ DmaConfigProxy *dmap = 0;
 MemwriteIndication *deviceIndication = 0;
 DmaIndication *dmaIndication = 0;
 
-PortalAlloc *dstAlloc;
+int dstAlloc;
 unsigned int *dstBuffer = 0;
 
 void child(int rd_sock)
@@ -96,8 +96,8 @@ void parent(int rd_sock, int wr_sock)
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
   
   fprintf(stderr, "parent::allocating memory...\n");
-  dma->alloc(alloc_sz, &dstAlloc);
-  dstBuffer = (unsigned int *)DmaManager_mmap(dstAlloc->header.fd, alloc_sz);
+  dstAlloc = dma->alloc(alloc_sz);
+  dstBuffer = (unsigned int *)DmaManager_mmap(dstAlloc, alloc_sz);
   
   pthread_t tid;
   fprintf(stderr, "parent::creating portalExec thread\n");
@@ -112,7 +112,7 @@ void parent(int rd_sock, int wr_sock)
     dstBuffer[i] = 0xDEADBEEF;
   }
   
-  dmap->dCacheFlushInval(dstAlloc->header.fd, alloc_sz, dstBuffer);
+  dmap->dCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
   fprintf(stderr, "parent::flush and invalidate complete\n");
 
   // for(int i = 0; i < dstAlloc->header.numEntries; i++)
@@ -142,10 +142,10 @@ void parent(int rd_sock, int wr_sock)
     .setWriteBwUtil(write_util)
     .writeFile();
 
-  fprintf(stderr, "[%s:%d] send fd to child %d\n", __FUNCTION__, __LINE__, (int)dstAlloc->header.fd);
-  sock_fd_write(wr_sock, (int)dstAlloc->header.fd);
+  fprintf(stderr, "[%s:%d] send fd to child %d\n", __FUNCTION__, __LINE__, (int)dstAlloc);
+  sock_fd_write(wr_sock, (int)dstAlloc);
   munmap(dstBuffer, alloc_sz);
-  close(dstAlloc->header.fd);
+  close(dstAlloc);
 }
 
 #endif // _TESTMEMWRITE_H_

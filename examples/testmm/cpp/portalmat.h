@@ -68,7 +68,7 @@ public:
   virtual void deallocate(int* refcount, uchar* datastart, uchar* data);
   int reference(int* refcount, uchar* datastart, uchar* data);
 private:
-  PortalAlloc *portalAlloc[128];
+  int portalAlloc[128];
   int numarrays;
   DmaConfigProxy *dmap;
   DmaManager *dma;

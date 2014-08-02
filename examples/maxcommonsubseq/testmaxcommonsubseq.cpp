@@ -99,32 +99,32 @@ int main(int argc, const char **argv)
   }
 
     fprintf(stderr, "simple tests\n");
-    PortalAlloc *strAAlloc;
-    PortalAlloc *strBAlloc;
-    PortalAlloc *fetchAlloc;
+    int strAAlloc;
+    int strBAlloc;
+    int fetchAlloc;
     unsigned int alloc_len = 128;
     unsigned int fetch_len = alloc_len * alloc_len;
     int rcA, rcB, rcFetch;
     struct stat statAbuf, statBbuf, statFetchbuf;
     
-    dma->alloc(fetch_len*sizeof(uint16_t), &fetchAlloc);
-    rcFetch = fstat(fetchAlloc->header.fd, &statFetchbuf);
+    fetchAlloc = dma->alloc(fetch_len*sizeof(uint16_t));
+    rcFetch = fstat(fetchAlloc, &statFetchbuf);
     if (rcA < 0) perror("fstatFetch");
-    int *fetch = (int *)DmaManager_mmap(fetchAlloc->header.fd, fetch_len * sizeof(uint16_t));
+    int *fetch = (int *)DmaManager_mmap(fetchAlloc, fetch_len * sizeof(uint16_t));
     if (fetch == MAP_FAILED) perror("fetch mmap failed");
     assert(fetch != MAP_FAILED);
 
-    dma->alloc(alloc_len, &strAAlloc);
-    rcA = fstat(strAAlloc->header.fd, &statAbuf);
+    strAAlloc = dma->alloc(alloc_len);
+    rcA = fstat(strAAlloc, &statAbuf);
     if (rcA < 0) perror("fstatA");
-    char *strA = (char *)DmaManager_mmap(strAAlloc->header.fd, alloc_len);
+    char *strA = (char *)DmaManager_mmap(strAAlloc, alloc_len);
     if (strA == MAP_FAILED) perror("strA mmap failed");
     assert(strA != MAP_FAILED);
 
-    dma->alloc(alloc_len, &strBAlloc);
-    rcB = fstat(strBAlloc->header.fd, &statBbuf);
+    strBAlloc = dma->alloc(alloc_len);
+    rcB = fstat(strBAlloc, &statBbuf);
     if (rcA < 0) perror("fstatB");
-    char *strB = (char *)DmaManager_mmap(strBAlloc->header.fd, alloc_len);
+    char *strB = (char *)DmaManager_mmap(strBAlloc, alloc_len);
     if (strB == MAP_FAILED) perror("strB mmap failed");
     assert(strB != MAP_FAILED);
 
@@ -151,9 +151,9 @@ int main(int argc, const char **argv)
 
     fprintf(stderr, "elapsed time (hw cycles): %lld\n", (long long)lap_timer(0));
     
-    dmap->dCacheFlushInval(strAAlloc->header.fd, alloc_len, strA);
-    dmap->dCacheFlushInval(strBAlloc->header.fd, alloc_len, strB);
-    dmap->dCacheFlushInval(fetchAlloc->header.fd, fetch_len*sizeof(uint16_t), fetch);
+    dmap->dCacheFlushInval(strAAlloc, alloc_len, strA);
+    dmap->dCacheFlushInval(strBAlloc, alloc_len, strB);
+    dmap->dCacheFlushInval(fetchAlloc, fetch_len*sizeof(uint16_t), fetch);
 
     unsigned int ref_strAAlloc = dma->reference(strAAlloc);
     unsigned int ref_strBAlloc = dma->reference(strBAlloc);
@@ -321,9 +321,9 @@ int main(int argc, const char **argv)
 
 
 
-    close(strAAlloc->header.fd);
-    close(strBAlloc->header.fd);
-    close(fetchAlloc->header.fd);
+    close(strAAlloc);
+    close(strBAlloc);
+    close(fetchAlloc);
   }
 
 

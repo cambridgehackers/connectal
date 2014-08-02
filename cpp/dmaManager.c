@@ -119,19 +119,19 @@ uint64_t DmaManager_show_mem_stats(DmaManagerPrivate *priv, ChannelType rc)
   return rv;
 }
 
-int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
+int DmaManager_reference(DmaManagerPrivate *priv, int fd)
 {
   int id = priv->handle++;
   int rc = 0;
 #if defined(KERNEL_REFERENCE) && !defined(BSIM) && !defined(__KERNEL__)
 #ifdef ZYNQ
   PortalSendFd sendFd;
-  sendFd.fd = pa->header.fd;
+  sendFd.fd = fd;
   sendFd.id = id;
   rc = ioctl(priv->device->fpga_fd, PORTAL_SEND_FD, &sendFd);
 #else
   tSendFd sendFd;
-  sendFd.fd = pa->header.fd;
+  sendFd.fd = fd;
   sendFd.id = id;
   rc = ioctl(priv->device->fpga_fd, PCIE_SEND_FD, &sendFd);
 #endif
@@ -139,7 +139,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
     sem_wait(&priv->confSem);
   rc = id;
 #else // KERNEL_REFERENCE
-  rc = send_fd_to_portal(priv->device, pa->header.fd, id, priv->pa_fd);
+  rc = send_fd_to_portal(priv->device, fd, id, priv->pa_fd);
   if (rc <= 0) {
     //PORTAL_PRINTF("%s:%d sem_wait\n", __FUNCTION__, __LINE__);
     sem_wait(&priv->confSem);
@@ -148,23 +148,16 @@ int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa)
   return rc;
 }
 
-int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa)
+int DmaManager_alloc(DmaManagerPrivate *priv, size_t size)
 {
   int rc = 0;
-  PortalAlloc *portalAlloc = (PortalAlloc *)PORTAL_MALLOC(sizeof(PortalAlloc));
 
-  *ppa = portalAlloc;
-  if (!portalAlloc) {
-    PORTAL_PRINTF("DmaManager_alloc: malloc failed\n");
-    return -1;
-  }
-  memset(portalAlloc, 0, sizeof(*portalAlloc));
 #ifdef __KERNEL__
-  portalAlloc->header.fd = portalmem_dmabuffer_create(size);
+  rc = portalmem_dmabuffer_create(size);
 #else
-  portalAlloc->header.fd = ioctl(priv->pa_fd, PA_MALLOC, size);
+  rc = ioctl(priv->pa_fd, PA_MALLOC, size);
 #endif
-  PORTAL_PRINTF("alloc size=%ldMB fd=%d\n", size/(1L<<20), portalAlloc->header.fd);
+  PORTAL_PRINTF("alloc size=%ldMB fd=%d\n", size/(1L<<20), rc);
   return rc;
 }
 

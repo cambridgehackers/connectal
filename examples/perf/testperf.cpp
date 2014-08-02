@@ -38,8 +38,8 @@ sem_t copy_sem;
 PerfRequestProxy *device = 0;
 DmaConfigProxy *dmap = 0;
   
-PortalAlloc *srcAlloc;
-PortalAlloc *dstAlloc;
+int srcAlloc;
+int dstAlloc;
 unsigned int *srcBuffer = 0;
 unsigned int *dstBuffer = 0;
 int numWords;
@@ -146,20 +146,6 @@ int dotest(unsigned size, unsigned repeatCount)
   fprintf(stderr, "\n  block size %d microseconds %lld\n", size*16, interval / loops); 
 }
 
-void printportalalloc(const char *name, PortalAlloc *p)
-{
-  int i;
-  fprintf(stderr, "%s\n", name);
-  //fprintf(stderr, "size %ld\n", (long)p->header.size);
-  fprintf(stderr, "fd %d\n", p->header.fd);
-  //fprintf(stderr, "numEntries %d\n", p->header.numEntries);
-  //for (i = 0; i < p->header.numEntries; i += 1)
-    //{
-      //fprintf(stderr, " entry %d (%lx, %lx)\n", i, (long)p->entries[i].dma_address,
-	      //(long)p->entries[i].length);
-    //}
-}
-
 int main(int argc, const char **argv)
 {
   unsigned int srcGen = 0;
@@ -176,13 +162,11 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "Main::allocating memory...\n");
 
-  dma->alloc(alloc_sz, &srcAlloc);
-  dma->alloc(alloc_sz, &dstAlloc);
-  printportalalloc("srcAlloc", srcAlloc);
-  printportalalloc("dstAlloc", dstAlloc);
+  srcAlloc = dma->alloc(alloc_sz);
+  dstAlloc = dma->alloc(alloc_sz);
 
-  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc->header.fd, alloc_sz);
-  dstBuffer = (unsigned int *)DmaManager_mmap(dstAlloc->header.fd, alloc_sz);
+  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc, alloc_sz);
+  dstBuffer = (unsigned int *)DmaManager_mmap(dstAlloc, alloc_sz);
 
   pthread_t tid;
   fprintf(stderr, "creating exec thread\n");
@@ -192,8 +176,8 @@ int main(int argc, const char **argv)
   }
 
 
-  dmap->dCacheFlushInval(srcAlloc->header.fd, alloc_sz, srcBuffer);
-  dmap->dCacheFlushInval(dstAlloc->header.fd, alloc_sz, dstBuffer);
+  dmap->dCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
+  dmap->dCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   ref_srcAlloc = dma->reference(srcAlloc);

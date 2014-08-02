@@ -55,8 +55,8 @@ static void *thread_routine(void *data)
 int main(int argc, const char **argv)
 {
   PortalPoller *poller = 0;
-  PortalAlloc *srcAlloc;
-  PortalAlloc *dstAlloc;
+  int srcAlloc;
+  int dstAlloc;
   unsigned int *srcBuffer = 0;
   unsigned int *dstBuffer = 0;
 
@@ -78,12 +78,12 @@ int main(int argc, const char **argv)
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
-  dma->alloc(alloc_sz, &srcAlloc);
+  srcAlloc = dma->alloc(alloc_sz);
 
-  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc->header.fd, alloc_sz);
-  dma->alloc(alloc_sz, &dstAlloc);
+  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc, alloc_sz);
+  dstAlloc = dma->alloc(alloc_sz);
 
-  dstBuffer = (unsigned int *)DmaManager_mmap(dstAlloc->header.fd, alloc_sz);
+  dstBuffer = (unsigned int *)DmaManager_mmap(dstAlloc, alloc_sz);
 
   pthread_t thread;
   pthread_attr_t attr;
@@ -95,8 +95,8 @@ int main(int argc, const char **argv)
   /* FMComms1 refclk should be 30 MHz */
   status = setClockFrequency(1,  30000000, 0);
     
-  dmap->dCacheFlushInval(srcAlloc->header.fd, alloc_sz, srcBuffer);
-  dmap->dCacheFlushInval(dstAlloc->header.fd, alloc_sz, dstBuffer);
+  dmap->dCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
+  dmap->dCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
 

@@ -11,7 +11,7 @@
 #include "Memread2IndicationWrapper.h"
 #include "Memread2RequestProxy.h"
 
-PortalAlloc *srcAlloc, *srcAlloc2;
+int srcAlloc, srcAlloc2;
 unsigned int *srcBuffer = 0;
 unsigned int *srcBuffer2 = 0;
 int numWords = 16 << 8;
@@ -82,10 +82,10 @@ int main(int argc, const char **argv)
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
-  dma->alloc(alloc_sz, &srcAlloc);
-  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc->header.fd, alloc_sz);
-  dma->alloc(alloc_sz, &srcAlloc2);
-  srcBuffer2 = (unsigned int *)DmaManager_mmap(srcAlloc2->header.fd, alloc_sz);
+  srcAlloc = dma->alloc(alloc_sz);
+  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc, alloc_sz);
+  srcAlloc2 = dma->alloc(alloc_sz);
+  srcBuffer2 = (unsigned int *)DmaManager_mmap(srcAlloc2, alloc_sz);
 
   pthread_t tid;
   fprintf(stderr, "Main::creating exec thread\n");
@@ -100,7 +100,7 @@ int main(int argc, const char **argv)
     srcBuffer2[i] = v*3;
   }
     
-  dmap->dCacheFlushInval(srcAlloc->header.fd, alloc_sz, srcBuffer);
+  dmap->dCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);

@@ -105,19 +105,19 @@ int main(int argc, const char **argv)
   }
 
     fprintf(stderr, "simple tests\n");
-    PortalAlloc *strAAlloc;
-    PortalAlloc *strBAlloc;
-    PortalAlloc *fetchAlloc;
+    int strAAlloc;
+    int strBAlloc;
+    int fetchAlloc;
     unsigned int alloc_len = 128;
     unsigned int fetch_len = alloc_len * alloc_len;
     
-    dma->alloc(alloc_len, &strAAlloc);
-    dma->alloc(alloc_len, &strBAlloc);
-    dma->alloc(fetch_len, &fetchAlloc);
+    strAAlloc = dma->alloc(alloc_len);
+    strBAlloc = dma->alloc(alloc_len);
+    fetchAlloc = dma->alloc(fetch_len);
 
-    char *strA = (char *)DmaManager_mmap(strAAlloc->header.fd, alloc_len);
-    char *strB = (char *)DmaManager_mmap(strBAlloc->header.fd, alloc_len);
-    int *fetch = (int *)DmaManager_mmap(fetchAlloc->header.fd, fetch_len);
+    char *strA = (char *)DmaManager_mmap(strAAlloc, alloc_len);
+    char *strB = (char *)DmaManager_mmap(strBAlloc, alloc_len);
+    int *fetch = (int *)DmaManager_mmap(fetchAlloc, fetch_len);
     
     const char *strA_text = "   a     b      c    ";
     const char *strB_text = "..a........b......";
@@ -143,9 +143,9 @@ int main(int argc, const char **argv)
 
     fprintf(stderr, "elapsed time (hw cycles): %lld\n", (long long)lap_timer(0));
     
-    dmap->dCacheFlushInval(strAAlloc->header.fd, alloc_len, strA);
-    dmap->dCacheFlushInval(strBAlloc->header.fd, alloc_len, strB);
-    dmap->dCacheFlushInval(fetchAlloc->header.fd, fetch_len, fetch);
+    dmap->dCacheFlushInval(strAAlloc, alloc_len, strA);
+    dmap->dCacheFlushInval(strBAlloc, alloc_len, strB);
+    dmap->dCacheFlushInval(fetchAlloc, fetch_len, fetch);
 
     unsigned int ref_strAAlloc = dma->reference(strAAlloc);
     unsigned int ref_strBAlloc = dma->reference(strBAlloc);
@@ -178,8 +178,8 @@ int main(int argc, const char **argv)
     }
 
 
-    close(strAAlloc->header.fd);
-    close(strBAlloc->header.fd);
-    close(fetchAlloc->header.fd);
+    close(strAAlloc);
+    close(strBAlloc);
+    close(fetchAlloc);
   }
 

@@ -8,8 +8,8 @@
 #include "MemcpyRequestProxy.h"
 
 sem_t done_sem;
-PortalAlloc *srcAlloc;
-PortalAlloc *dstAlloc;
+int srcAlloc;
+int dstAlloc;
 unsigned int *srcBuffer = 0;
 unsigned int *dstBuffer = 0;
 #ifndef BSIM
@@ -83,16 +83,16 @@ int runtest(int argc, const char **argv)
 
   fprintf(stderr, "Main::allocating memory...\n");
 
-  dma->alloc(alloc_sz, &srcAlloc);
-  dma->alloc(alloc_sz, &dstAlloc);
+  srcAlloc = dma->alloc(alloc_sz);
+  dstAlloc = dma->alloc(alloc_sz);
 
   // for(int i = 0; i < srcAlloc->header.numEntries; i++)
   //   fprintf(stderr, "%lx %lx\n", srcAlloc->entries[i].dma_address, srcAlloc->entries[i].length);
   // for(int i = 0; i < dstAlloc->header.numEntries; i++)
   //   fprintf(stderr, "%lx %lx\n", dstAlloc->entries[i].dma_address, dstAlloc->entries[i].length);
 
-  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc->header.fd, alloc_sz);
-  dstBuffer = (unsigned int *)DmaManager_mmap(dstAlloc->header.fd, alloc_sz);
+  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc, alloc_sz);
+  dstBuffer = (unsigned int *)DmaManager_mmap(dstAlloc, alloc_sz);
 
   pthread_t tid;
   fprintf(stderr, "creating exec thread\n");
@@ -106,8 +106,8 @@ int runtest(int argc, const char **argv)
     dstBuffer[i] = 0x5a5abeef;
   }
 
-  dmap->dCacheFlushInval(srcAlloc->header.fd, alloc_sz, srcBuffer);
-  dmap->dCacheFlushInval(dstAlloc->header.fd, alloc_sz, dstBuffer);
+  dmap->dCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
+  dmap->dCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);

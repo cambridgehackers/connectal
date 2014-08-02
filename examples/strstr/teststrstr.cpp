@@ -98,18 +98,18 @@ int main(int argc, const char **argv)
 
   if(1){
     fprintf(stderr, "simple tests\n");
-    PortalAlloc *needleAlloc;
-    PortalAlloc *haystackAlloc;
-    PortalAlloc *mpNextAlloc;
+    int needleAlloc;
+    int haystackAlloc;
+    int mpNextAlloc;
     unsigned int alloc_len = 16 << 2;
     
-    dma->alloc(alloc_len, &needleAlloc);
-    dma->alloc(alloc_len, &mpNextAlloc);
-    dma->alloc(alloc_len, &haystackAlloc);
+    needleAlloc = dma->alloc(alloc_len);
+    mpNextAlloc = dma->alloc(alloc_len);
+    haystackAlloc = dma->alloc(alloc_len);
 
-    char *needle = (char *)DmaManager_mmap(needleAlloc->header.fd, alloc_len);
-    char *haystack = (char *)DmaManager_mmap(haystackAlloc->header.fd, alloc_len);
-    int *mpNext = (int *)DmaManager_mmap(mpNextAlloc->header.fd, alloc_len);
+    char *needle = (char *)DmaManager_mmap(needleAlloc, alloc_len);
+    char *haystack = (char *)DmaManager_mmap(haystackAlloc, alloc_len);
+    int *mpNext = (int *)DmaManager_mmap(mpNextAlloc, alloc_len);
     
     const char *needle_text = "ababab";
     const char *haystack_text = "acabcabacababacababababababcacabcabacababacabababc";
@@ -141,8 +141,8 @@ int main(int argc, const char **argv)
     MP(needle, haystack, mpNext, needle_len, haystack_len, iter_cnt, &sw_match_cnt);
     fprintf(stderr, "elapsed time (hw cycles): %lld\n", (long long)lap_timer(0));
     
-    dmap->dCacheFlushInval(needleAlloc->header.fd, alloc_len, needle);
-    dmap->dCacheFlushInval(mpNextAlloc->header.fd, alloc_len, mpNext);
+    dmap->dCacheFlushInval(needleAlloc, alloc_len, needle);
+    dmap->dCacheFlushInval(mpNextAlloc, alloc_len, mpNext);
 
     unsigned int ref_needleAlloc = dma->reference(needleAlloc);
     unsigned int ref_mpNextAlloc = dma->reference(mpNextAlloc);
@@ -157,17 +157,17 @@ int main(int argc, const char **argv)
     uint64_t beats = dma->show_mem_stats(ChannelType_Read);
     fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
 
-    close(needleAlloc->header.fd);
-    close(haystackAlloc->header.fd);
-    close(mpNextAlloc->header.fd);
+    close(needleAlloc);
+    close(haystackAlloc);
+    close(mpNextAlloc);
   }
 
 
   if(1){
     fprintf(stderr, "benchmarks\n");
-    PortalAlloc *needleAlloc;
-    PortalAlloc *haystackAlloc;
-    PortalAlloc *mpNextAlloc;
+    int needleAlloc;
+    int haystackAlloc;
+    int mpNextAlloc;
     const char *needle_text = "I have control\n";
 #ifndef BSIM
     unsigned int BENCHMARK_INPUT_SIZE = 16 << 18;
@@ -178,13 +178,13 @@ int main(int argc, const char **argv)
     unsigned int needle_alloc_len = strlen(needle_text);
     unsigned int mpNext_alloc_len = needle_alloc_len*4;
     
-    dma->alloc(needle_alloc_len, &needleAlloc);
-    dma->alloc(haystack_alloc_len, &haystackAlloc);
-    dma->alloc(mpNext_alloc_len, &mpNextAlloc);
+    needleAlloc = dma->alloc(needle_alloc_len);
+    haystackAlloc = dma->alloc(haystack_alloc_len);
+    mpNextAlloc = dma->alloc(mpNext_alloc_len);
 
-    char *needle = (char *)DmaManager_mmap(needleAlloc->header.fd, needle_alloc_len);
-    char *haystack = (char *)DmaManager_mmap(haystackAlloc->header.fd, haystack_alloc_len);
-    int *mpNext = (int *)DmaManager_mmap(mpNextAlloc->header.fd, mpNext_alloc_len);
+    char *needle = (char *)DmaManager_mmap(needleAlloc, needle_alloc_len);
+    char *haystack = (char *)DmaManager_mmap(haystackAlloc, haystack_alloc_len);
+    int *mpNext = (int *)DmaManager_mmap(mpNextAlloc, mpNext_alloc_len);
 
     unsigned int ref_needleAlloc = dma->reference(needleAlloc);
     unsigned int ref_haystackAlloc = dma->reference(haystackAlloc);
@@ -217,8 +217,8 @@ int main(int argc, const char **argv)
     uint64_t sw_cycles = lap_timer(0);
     fprintf(stderr, "sw_cycles:%llx\n", (long long)sw_cycles);
 
-    dmap->dCacheFlushInval(needleAlloc->header.fd, needle_alloc_len, needle);
-    dmap->dCacheFlushInval(mpNextAlloc->header.fd, mpNext_alloc_len, mpNext);
+    dmap->dCacheFlushInval(needleAlloc, needle_alloc_len, needle);
+    dmap->dCacheFlushInval(mpNextAlloc, mpNext_alloc_len, mpNext);
 
     device->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
     sem_wait(&setup_sem);
@@ -238,9 +238,9 @@ int main(int argc, const char **argv)
       .setReadBwUtil(read_util)
       .writeFile();
 
-    close(needleAlloc->header.fd);
-    close(haystackAlloc->header.fd);
-    close(mpNextAlloc->header.fd);
+    close(needleAlloc);
+    close(haystackAlloc);
+    close(mpNextAlloc);
   }
 
   fprintf(stderr, "sw_match_cnt=%d, hw_match_cnt=%d\n", sw_match_cnt, hw_match_cnt);

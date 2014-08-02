@@ -131,10 +131,10 @@ static void *pthread_worker(void *p)
 
 int main(int argc, const char **argv)
 {
-  PortalAlloc *srcAlloc;
+  int srcAlloc;
   unsigned int *srcBuffer;
   unsigned int ref_srcAlloc;
-  int rc, i;
+  int rc = 0, i;
   pthread_t tid = 0;
 
   init_portal_internal(&intarr[0], IfcNames_DmaIndication, DmaIndicationWrapper_handleMessage);     // fpga1
@@ -144,7 +144,7 @@ int main(int argc, const char **argv)
 
   sem_init(&test_sem, 0, 0);
   DmaManager_init(&priv, &intarr[2]);
-  rc = DmaManager_alloc(&priv, alloc_sz, &srcAlloc);
+  srcAlloc = DmaManager_alloc(&priv, alloc_sz);
   if (rc){
     PORTAL_PRINTF("portal alloc failed rc=%d\n", rc);
     return rc;
@@ -155,7 +155,7 @@ int main(int argc, const char **argv)
    PORTAL_PRINTF( "error creating exec thread\n");
    return -1;
   }
-  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc->header.fd, alloc_sz);
+  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc, alloc_sz);
 #ifdef BSIM
   portal_enable_interrupts(&intarr[0]);
   portal_enable_interrupts(&intarr[1]);
@@ -167,7 +167,7 @@ int main(int argc, const char **argv)
     srcBuffer[i] = i;
 
   PORTAL_PRINTF( "Test 1: check for match\n");
-  DmaManager_dCacheFlushInval(&intarr[2], srcAlloc->header.fd, alloc_sz, srcBuffer);
+  DmaManager_dCacheFlushInval(&intarr[2], srcAlloc, alloc_sz, srcBuffer);
   PORTAL_PRINTF( "Main: before DmaManager_reference(%p)\n", srcAlloc);
   ref_srcAlloc = DmaManager_reference(&priv, srcAlloc);
   PORTAL_PRINTF( "Main: starting read %08x\n", numWords);
@@ -178,7 +178,7 @@ int main(int argc, const char **argv)
   PORTAL_PRINTF( "Test 2: check that mismatch is detected\n");
   for (i = 0; i < numWords; i++)
     srcBuffer[i] = 1-i;
-  DmaManager_dCacheFlushInval(&intarr[2], srcAlloc->header.fd, alloc_sz, srcBuffer);
+  DmaManager_dCacheFlushInval(&intarr[2], srcAlloc, alloc_sz, srcBuffer);
   MemreadRequestProxy_startRead (&intarr[3], ref_srcAlloc, numWords, burstLen, 1);
   PORTAL_PRINTF( "Main: waiting for semaphore2\n");
   sem_wait(&test_sem);

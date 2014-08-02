@@ -10,7 +10,7 @@
 #include "../../drivers/pcie/bluenoc.h"
 
 CoreRequest *device = 0;
-PortalAlloc srcAlloc;
+int srcAlloc;
 unsigned int *srcBuffer = 0;
 size_t alloc_sz = 8192;
 
@@ -104,8 +104,9 @@ int main(int argc, const char **argv)
 
   // use PortalAlloc
   if (1) {
-    int rc = device->alloc(alloc_sz, &srcAlloc);
-    fprintf(stderr, "alloc rc=%d fd=%d dma_address=%08lx\n", rc, srcAlloc.header.fd, srcAlloc.entries[0].dma_address);
+    int rc = 0;
+    srcAlloc = device->alloc(alloc_sz);
+    fprintf(stderr, "alloc rc=%d fd=%d\n", rc, srcAlloc);
 
     srcBuffer = (unsigned int *)device->mmap(&srcAlloc);
 
@@ -115,7 +116,7 @@ int main(int argc, const char **argv)
 
     // flush cache not needed on x86
 #ifdef __arm__
-    rc = device->dCacheFlushInval(srcAlloc->header.fd, alloc_sz, srcBuffer);
+    rc = device->dCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
     fprintf(stderr, "cache flushed rc=%d\n", rc);
 #endif
     // map the Dma buf into PCIe. Seems not to be needed.

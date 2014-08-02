@@ -91,13 +91,13 @@ int main(int argc, const char **argv)
   DmaManager *dma = new DmaManager(dmap);
   DmaIndication *dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
-  PortalAlloc *srcAlloc;
+  int srcAlloc;
   unsigned int *srcBuffer = 0;
 
   std::ifstream infile("../memread_nobuff_oo.tstlp");
 
-  dma->alloc(alloc_sz, &srcAlloc);
-  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc->header.fd, alloc_sz);
+  srcAlloc = dma->alloc(alloc_sz);
+  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc, alloc_sz);
   for (int i = 0; i < numWords; i++)
     srcBuffer[i] = i;
 
@@ -108,7 +108,7 @@ int main(int argc, const char **argv)
    exit(1);
   }
 
-  dmap->dCacheFlushInval(srcAlloc->header.fd, alloc_sz, srcBuffer);
+  dmap->dCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
 
   device->startRead(ref_srcAlloc, numWords, burstLen);

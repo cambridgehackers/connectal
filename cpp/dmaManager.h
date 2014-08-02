@@ -43,7 +43,6 @@ typedef struct semaphore sem_t;
 #define PORTAL_FREE(A) free(A)
 #endif
 
-#include "portalmem.h" // PortalAlloc
 #include "portal.h"
 
 typedef struct {
@@ -60,8 +59,8 @@ typedef struct {
 extern "C" {
 #endif
 void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *argDevice);
-int DmaManager_reference(DmaManagerPrivate *priv, PortalAlloc* pa);
-int DmaManager_alloc(DmaManagerPrivate *priv, size_t size, PortalAlloc **ppa);
+int DmaManager_reference(DmaManagerPrivate *priv, int fd);
+int DmaManager_alloc(DmaManagerPrivate *priv, size_t size);
 void *DmaManager_mmap(int fd, size_t size);
 #ifdef __cplusplus
 }
@@ -79,11 +78,11 @@ class DmaManager
   DmaManager(PortalInternalCpp *argDevice) {
     DmaManager_init(&priv, &argDevice->pint);
   };
-  int alloc(size_t size, PortalAlloc **ppa) {
-   return DmaManager_alloc(&priv, size, ppa);
+  int alloc(size_t size) {
+   return DmaManager_alloc(&priv, size);
   };
-  int reference(PortalAlloc* pa) {
-    return DmaManager_reference(&priv, pa);
+  int reference(int fd) {
+    return DmaManager_reference(&priv, fd);
   };
   uint64_t show_mem_stats(ChannelType rc) {
     return DmaManager_show_mem_stats(&priv, rc);

@@ -48,9 +48,9 @@ int main(int argc, const char **argv)
   MemreadIndication *deviceIndication = new MemreadIndication(IfcNames_MemreadIndication);
   DmaIndication *dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
-  PortalAlloc *srcAlloc;
-  dma->alloc(alloc_sz, &srcAlloc);
-  unsigned int *srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc->header.fd, alloc_sz);
+  int srcAlloc;
+  srcAlloc = dma->alloc(alloc_sz);
+  unsigned int *srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc, alloc_sz);
 
   pthread_t tid;
   printf( "Main::creating exec thread\n");
@@ -60,7 +60,7 @@ int main(int argc, const char **argv)
   }
   for (int i = 0; i < numWords; i++)
     srcBuffer[i] = i;
-  dmap->dCacheFlushInval(srcAlloc->header.fd, alloc_sz, srcBuffer);
+  dmap->dCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
   printf( "Main::starting read %08x\n", numWords);
   device->startRead(ref_srcAlloc, numWords, burstLen, 1);

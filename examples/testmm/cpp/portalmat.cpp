@@ -34,9 +34,9 @@ void PortalMatAllocator::allocate(int dims, const int* sizes, int type, int*& re
   size_t arraysize = step[0]*sizes[0];
   size_t totalsize = cv::alignSize(arraysize+3*sizeof(int), 4096);
   int arraynum = numarrays++;
-  dma->alloc(totalsize, &portalAlloc[arraynum]);
+  portalAlloc[arraynum] = dma->alloc(totalsize);
 
-  data = datastart = (uchar*)(unsigned int *)DmaManager_mmap(portalAlloc[arraynum]->header.fd, totalsize);
+  data = datastart = (uchar*)(unsigned int *)DmaManager_mmap(portalAlloc[arraynum], totalsize);
   refcount = (int*)(data + arraysize);
   int *parraynum = refcount+1;
   *parraynum = arraynum;
@@ -57,7 +57,7 @@ void PortalMatAllocator::deallocate(int* refcount, uchar* datastart, uchar* data
   fprintf(stderr, "PortalMatAllocator::deallocate datastart=%p arraynum=%d size=%ld\n",
 	  datastart, arraynum, (long)size);
   munmap(datastart, size);
-  close(portalAlloc[arraynum]->header.fd);
+  close(portalAlloc[arraynum]);
 }
 
 int PortalMatAllocator::reference(int* refcount, uchar* datastart, uchar* data)

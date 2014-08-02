@@ -11,7 +11,7 @@
 #include "NandSimIndicationWrapper.h"
 #include "NandSimRequestProxy.h"
 
-PortalAlloc *srcAlloc;
+int srcAlloc;
 unsigned int *srcBuffer = 0;
 size_t numBytes = 1 << 12;
 
@@ -71,9 +71,9 @@ int main(int argc, const char **argv)
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
-  dma->alloc(numBytes, &srcAlloc);
-  fprintf(stderr, "fd=%d\n", srcAlloc->header.fd);
-  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc->header.fd, numBytes);
+  srcAlloc = dma->alloc(numBytes);
+  fprintf(stderr, "fd=%d\n", srcAlloc);
+  srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc, numBytes);
   fprintf(stderr, "srcBuffer=%p\n", srcBuffer);
 
   pthread_t tid;
@@ -87,7 +87,7 @@ int main(int argc, const char **argv)
     srcBuffer[i] = srcGen++;
   }
     
-  dmap->dCacheFlushInval(srcAlloc->header.fd, numBytes, srcBuffer);
+  dmap->dCacheFlushInval(srcAlloc, numBytes, srcBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
   sleep(1);
 

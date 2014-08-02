@@ -44,7 +44,7 @@ static HdmiInternalRequestProxy *hdmiInternal;
 static HdmiDisplayRequestProxy *device;
 static DmaManager *dma;
 static DmaConfigProxy *dmap;
-static PortalAlloc *portalAlloc[FRAME_COUNT];
+static int portalAlloc[FRAME_COUNT];
 static unsigned int ref_srcAlloc[FRAME_COUNT];
 static int *dataptr[FRAME_COUNT];
 static int frame_index;
@@ -94,7 +94,7 @@ static void fill_pixels(int offset)
 	ptr[line * npixels + pixel] = v;
       }
     corner_index = offset/16;
-    dmap->dCacheFlushInval(portalAlloc[frame_index]->header.fd, fbsize, dataptr[frame_index]);
+    dmap->dCacheFlushInval(portalAlloc[frame_index], fbsize, dataptr[frame_index]);
     device->startFrameBuffer(ref_srcAlloc[frame_index], fbsize);
     hdmiInternal->setTestPattern(0);
     hdmiInternal->waitForVsync(0);
@@ -237,8 +237,8 @@ hblank--; // needed on zc702
     fbsize = nlines*npixels*4;
 
     for (int i = 0; i < FRAME_COUNT; i++) {
-        int err = dma->alloc(fbsize, &portalAlloc[i]);
-        dataptr[i] = (int*)DmaManager_mmap(portalAlloc[i]->header.fd, fbsize);
+        portalAlloc[i] = dma->alloc(fbsize);
+        dataptr[i] = (int*)DmaManager_mmap(portalAlloc[i], fbsize);
         memset(dataptr[i], i ? 0xff : 0, fbsize);
         fprintf(stderr, "calling dma->reference\n");
         ref_srcAlloc[i] = dma->reference(portalAlloc[i]);
