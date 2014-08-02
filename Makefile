@@ -178,6 +178,33 @@ cppalllist =     \
 
 allarchlist = bluesim zedboard vc707 
 
+bsimalllist =     \
+    examples/echo \
+    examples/memcpy \
+    examples/memlatency \
+    examples/memread \
+    examples/memread2 \
+    examples/memread_4m \
+    examples/memrw \
+    examples/memwrite \
+    examples/memwrite_4m \
+    examples/pipe_mul \
+    examples/pipe_mul2 \
+    examples/simple \
+    examples/strstr \
+    examples/testmm \
+    examples/yuv \
+    tests/memread_manual \
+    tests/simple_manual \
+    tests/testmm4.2.2 \
+    tests/testmm4.4.2 \
+    tests/testmm4.4.4 \
+    tests/testmm8.8.2 \
+    tests/testmm8.8.4 \
+
+bsimunused = \
+    examples/nandsim \
+
 #################################################################################################
 # gdb
 
@@ -434,7 +461,15 @@ cppall:
 	       echo make $$testname."$$archname"cpp;  \
 	       make  --no-print-directory $$testname."$$archname"cpp;  \
 	   done ;  \
-	done  \
+	done
+
+bsimall:
+	@for testname in $(bsimalllist) ; do  \
+	   echo make $$testname.bluesim;  \
+	   make  --no-print-directory $$testname.bluesim >/dev/null;  \
+	   echo make $$testname.bluesimrun;  \
+	   make  --no-print-directory $$testname.bluesimrun;  \
+	done
 
 distclean:
 	rm -rf examples/*/bluesim examples/*/vc707 examples/*/kc705 examples/*/zedboard examples/*/zc702 examples/*/zc706
