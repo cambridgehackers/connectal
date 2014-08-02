@@ -31,6 +31,7 @@
 #endif
 
 #include "dmaManager.h"
+#include "sock_utils.h"  // bsim_poll_interrupt()
 #include "GeneratedTypes.h" 
 
 static int trace_memory;// = 1;
@@ -84,6 +85,7 @@ void manual_event(void)
 {
 static int maxnumber = 20;
     int i;
+
     for (i = 0; i < MAX_INDARRAY; i++) {
       PortalInternal *instance = &intarr[i];
       volatile unsigned int *map_base = instance->map_base;
@@ -106,7 +108,10 @@ static void *pthread_worker(void *p)
 {
     void *rc = NULL;
     while (1) {
-        manual_event();
+#ifdef BSIM
+        if (bsim_poll_interrupt())
+#endif
+            manual_event();
 #ifdef __KERNEL__
         msleep(10);
         if (kthread_should_stop())
@@ -151,6 +156,12 @@ int main(int argc, const char **argv)
    return -1;
   }
   srcBuffer = (unsigned int *)DmaManager_mmap(srcAlloc->header.fd, alloc_sz);
+#ifdef BSIM
+  portal_enable_interrupts(&intarr[0]);
+  portal_enable_interrupts(&intarr[1]);
+  portal_enable_interrupts(&intarr[2]);
+  portal_enable_interrupts(&intarr[3]);
+#endif
 
   for (i = 0; i < numWords; i++)
     srcBuffer[i] = i;

@@ -105,6 +105,7 @@ void portalExec_end(void);
 void portalTrace_start(void);
 void portalTrace_stop(void);
 int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
+void portal_enable_interrupts(PortalInternal *p);
 int DmaManager_dCacheFlushInval(PortalInternal *priv, int fd, long size, void *__p);
 
 extern int portalExec_timeout;

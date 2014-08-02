@@ -228,3 +228,8 @@ uint64_t directory_cycle_count()
   low_bits  = READL(&globalDirectory, PORTAL_DIRECTORY_COUNTER_LSB);
   return (((uint64_t)high_bits)<<32) | ((uint64_t)low_bits);
 }
+
+void portal_enable_interrupts(PortalInternal *p)
+{
+   WRITEL(p, &(p->map_base[IND_REG_INTERRUPT_MASK]), 1);
+}
