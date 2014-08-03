@@ -71,11 +71,13 @@ module mkNandSim#(NandSimIndication indication, BRAMServer#(Bit#(Asz), Bit#(64))
    
    rule writeDone;
       let rv <- rc.finish;
+      $display("writeDone");
       indication.writeDone(0);
    endrule
 
    rule readDone;
       let rv <- wc.finish;
+      $display("readDone");
       indication.readDone(0);
    endrule
    
@@ -88,6 +90,7 @@ module mkNandSim#(NandSimIndication indication, BRAMServer#(Bit#(Asz), Bit#(64))
       method Action startRead(Bit#(32) pointer, Bit#(32) dramOffset, Bit#(32) nandAddr,Bit#(32) numBytes, Bit#(32) __bl);
 	 let bram_start_idx = truncate(nandAddr>>3);
 	 let bram_finish_idx = bram_start_idx+truncate((numBytes>>3)-1);
+         $display("startRead");
 	 wc.start(pointer, extend(dramOffset), bram_start_idx, bram_finish_idx);
       endmethod
 
@@ -97,6 +100,7 @@ module mkNandSim#(NandSimIndication indication, BRAMServer#(Bit#(Asz), Bit#(64))
       method Action startWrite(Bit#(32) pointer, Bit#(32) dramOffset, Bit#(32) nandAddr,Bit#(32) numBytes, Bit#(32) __bl);
 	 let bram_start_idx = truncate(nandAddr>>3);
 	 let bram_finish_idx = bram_start_idx+truncate((numBytes>>3)-1);
+         $display("startWrite");
 	 rc.start(pointer, extend(dramOffset), bram_start_idx, bram_finish_idx); 
       endmethod
 
