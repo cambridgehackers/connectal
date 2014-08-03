@@ -14,16 +14,16 @@ bozotarget:
 
 ## use "make gen.board" to generate the build directory
 gen.%:
-	make BOARD=$* gentarget prebuild
+	make BOARD=$* --no-print-directory gentarget prebuild
 
 build.%: gen.%
-	make -C $* BOARD=$* all
+	make -C $* BOARD=$* --no-print-directory all
 
 run.%:
-	make -C $* BOARD=$* run
+	make -C $* BOARD=$* --no-print-directory run
 
 %.gdb:
-	make XBSV_DEBUG=1 $*
+	make XBSV_DEBUG=1 --no-print-directory $*
 
 ifeq ($(origin XBSVDIR),undefined)
 XBSVDIR=$(shell cd ../..; /bin/pwd)
@@ -45,10 +45,10 @@ CPPFILES += $(XBSVDIR)/cpp/dmaManager.c
 endif
 
 all bits verilog implementation bsim xsim xsimrun: gentarget prebuild
-	make -C $(BOARD) $@
+	make -C $(BOARD) --no-print-directory $@
 
 android_exe bsim_exe ubuntu_exe: gentarget
-	make -C $(BOARD) $@
+	make -C $(BOARD) --no-print-directory $@
 
 ifeq ($(origin TOP),undefined)
     ifeq ($(BOARD),bluesim)

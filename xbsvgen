@@ -330,10 +330,11 @@ $(timestampfile): %(bsvfiles)s
 	touch $(timestampfile)
 
 $(vfile): %(topbsvfile)s %(bsvfiles)s $(timestampefile)
-	mkdir -p verilog/portal $(DTOP)/obj
-	cd sources/%(dut)s; bsc $(BSC_QUIET) %(bsvdefines)s $(BSCFLAGS) -remove-dollar -p +:$(DTOP)/generatedbsv:$(BSVPATH) -verilog -u -g %(topbsvmod)s %(topbsvfile)s
-	sed -i 's|// On .*|// timestamp removed|' verilog/*.v
-	for v in verilog/*.v; do $(XBSVDIR)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
+	$(Q)mkdir -p verilog/portal $(DTOP)/obj
+	@echo BSCVERILOG [%(project_dir)s]
+	$(Q)cd sources/%(dut)s; bsc $(BSC_QUIET) %(bsvdefines)s $(BSCFLAGS) -remove-dollar -p +:$(DTOP)/generatedbsv:$(BSVPATH) -verilog -u -g %(topbsvmod)s %(topbsvfile)s
+	$(Q)sed -i 's|// On .*|// timestamp removed|' verilog/*.v
+	$(Q)for v in verilog/*.v; do $(XBSVDIR)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
 
 bsim_exe:
 	@mkdir -p bin
@@ -353,10 +354,11 @@ bsim: $(timestampfile)
 	@mkdir -p bin verilog
 	@git rev-parse HEAD > bin/githash
 	@git diff | gzip -c > bin/gitdiff.patch.gz
-	mkdir -p $(DTOP)/obj
-	cd sources; bsc $(BSC_QUIET) -D BSIM %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -u -g %(topbsvmod)s %(topbsvfile)s
-	export BSC_CXXFLAGS="-I$(XBSVDIR)/cpp -I$(XBSVDIR) -DBSIM" ; cd sources; bsc $(BSC_QUIET) $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX)
-	@cp -v sources/bsim* bin
+	$(Q)mkdir -p $(DTOP)/obj
+	@echo BSCBSIM [%(project_dir)s]
+	$(Q)cd sources; bsc $(BSC_QUIET) -D BSIM %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -u -g %(topbsvmod)s %(topbsvfile)s
+	$(Q)export BSC_CXXFLAGS="-I$(XBSVDIR)/cpp -I$(XBSVDIR) -DBSIM" ; cd sources; bsc $(BSC_QUIET) $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX)
+	$(Q)cp -v sources/bsim* bin
 	%(qtused)s
 
 verilog: $(vfile)
