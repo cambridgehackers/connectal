@@ -221,7 +221,7 @@ bluesimtests: $(bluesimtests)
 
 $(bluesimtests):
 	rm -fr $(basename $@)/bluesim
-	make BOARD=bluesim -C $(basename $@) bsim_exe bsim
+	make BOARD=bluesim -C $(basename $@) --no-print-directory bsim_exe bsim
 
 
 bluesimruns = $(addprefix examples/, $(addsuffix .bluesimrun, $(examples))) \
@@ -229,7 +229,7 @@ bluesimruns = $(addprefix examples/, $(addsuffix .bluesimrun, $(examples))) \
 bluesimruns: $(bluesimruns)
 
 $(bluesimruns):
-	(cd $(basename $@)/bluesim; make run)
+	(cd $(basename $@)/bluesim; make --no-print-directory run)
 
 bluesimcpps = $(addprefix examples/, $(addsuffix .bluesimcpp, $(examples))) \
 	      $(addprefix tests/, $(addsuffix .bluesimcpp, $(tests)))
