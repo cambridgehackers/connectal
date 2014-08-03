@@ -70,12 +70,14 @@ module mkBRAMReadClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMReadClient#(b
    
    rule feed_gearbox;
       let v <- re.readServer.readData.get;
+      //$display("mkBRAMReadClient::readData.get %x", v.data);
       gb.enq(unpack(v.data));
    endrule
    
    rule loadReq(i <= n);
       re.readServer.readReq.put(ObjectRequest{pointer:ptr, offset:off, burstLen:bus_width_in_bytes, tag:0});
       off <= off+bus_width_in_bytes;
+      //$display("mkBRAMReadClient::readReq.put %x, %x", i, n);
       i <= i+fromInteger(valueOf(nd));
    endrule
       
@@ -83,6 +85,7 @@ module mkBRAMReadClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMReadClient#(b
       br.request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(j), datain:gb.first[0]});
       gb.deq;
       j <= j+1;
+      //$display("mkBRAMReadClient::bramserver put write %x, %x", j, n);
       if (j == n)
 	 f.enq(?);
    endrule
