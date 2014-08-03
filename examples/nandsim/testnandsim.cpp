@@ -1,10 +1,25 @@
-#include <stdio.h>
-#include <sys/mman.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include "StdDmaIndication.h"
+/* Copyright (c) 2014 Quanta Research Cambridge, Inc
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
 
+#include "StdDmaIndication.h"
 #include "DmaConfigProxy.h"
 #include "GeneratedTypes.h" 
 #include "NandSimIndicationWrapper.h"
@@ -13,14 +28,6 @@
 int srcAlloc;
 unsigned int *srcBuffer = 0;
 size_t numBytes = 1 << 12;
-
-void dump(const char *prefix, char *buf, size_t len)
-{
-    fprintf(stderr, "%s ", prefix);
-    for (int i = 0; i < (len > 16 ? 16 : len) ; i++)
-	fprintf(stderr, "%02x", (unsigned char)buf[i]);
-    fprintf(stderr, "\n");
-}
 
 class NandSimIndication : public NandSimIndicationWrapper
 {
@@ -43,20 +50,18 @@ public:
     sem_init(&sem, 0, 0);
   }
   void wait() {
+    fprintf(stderr, "NandSim::wait for semaphore\n");
     sem_wait(&sem);
   }
 private:
   sem_t sem;
-
 };
 
 int main(int argc, const char **argv)
 {
   unsigned int srcGen = 0;
-
   NandSimRequestProxy *device = 0;
   DmaConfigProxy *dmap = 0;
-  
   NandSimIndication *deviceIndication = 0;
   DmaIndication *dmaIndication = 0;
 
@@ -71,24 +76,21 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "Main::allocating memory...\n");
   srcAlloc = portalAlloc(numBytes);
-  fprintf(stderr, "fd=%d\n", srcAlloc);
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, numBytes);
-  fprintf(stderr, "srcBuffer=%p\n", srcBuffer);
+  fprintf(stderr, "fd=%d, srcBuffer=%p\n", srcAlloc, srcBuffer);
 
   portalExec_start();
 
-  for (int i = 0; i < numBytes/sizeof(srcBuffer[0]); i++){
+  for (int i = 0; i < numBytes/sizeof(srcBuffer[0]); i++)
     srcBuffer[i] = srcGen++;
-  }
     
   portalDCacheFlushInval(srcAlloc, numBytes, srcBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
   sleep(1);
 
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
-  fprintf(stderr, "ref_srcAlloc=%d\n", ref_srcAlloc);
 
-  fprintf(stderr, "Main::starting write %08zx\n", numBytes);
+  fprintf(stderr, "Main::starting write ref=%d, len=%08zx\n", ref_srcAlloc, numBytes);
   device->startWrite(ref_srcAlloc, 0, 0, numBytes, 1);
   deviceIndication->wait();
 
@@ -103,6 +105,5 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::starting read %08zx\n", numBytes);
   device->startRead(ref_srcAlloc, 0, 0, numBytes, 1);
   deviceIndication->wait();
-
-  exit(0);
+  return 0;
 }
