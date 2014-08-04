@@ -328,7 +328,7 @@ module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
    RowColSink#(TMul#(N,32),   Vector#(N,MmToken))    sink <- mkRowColSink(ss, 0);
 
    PipeOut#(MmToken) aPipe <- mkFunnelGB1(defaultClock, defaultReset, doubleClock, doubleReset, sourceA.pipe);
-   Vector#(J, PipeOut#(MmToken)) aPipes <- mkUnfunnelPipes(clocked_by doubleClock, reset_by doubleReset, cons(aPipe,nil));
+   UnFunnelPipe#(1,J,MmToken,1) aPipes <- mkUnFunnelPipesPipelinedRR(clocked_by doubleClock, reset_by doubleReset, cons(aPipe,nil), 1);
    PipeOut#(MmToken) bFunnel <- mkFunnelGB1(defaultClock, defaultReset, doubleClock, doubleReset, sourceB.pipe);
    Vector#(J, PipeOut#(MmToken)) bPipes <- mkForkVector(bFunnel, clocked_by doubleClock, reset_by doubleReset);
    
