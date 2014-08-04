@@ -33,114 +33,6 @@ else
   XBSV_NDK_PARAM=
 endif
 
-all: make_everything
-
-prepare_bin_target:
-	@mkdir -p bin
-	@git rev-parse HEAD > bin/githash
-	@git diff | gzip -c > bin/gitdiff.patch.gz
-
-bsim_exe: prepare_bin_target
-	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk bsim_exe
-	@cp -v jni/bsim_exe bin
-
-ubuntu_exe: prepare_bin_target
-	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk
-	@cp -v jni/mk* bin
-
-implementation: bits
-
-program:
-	fpgajtag bin/mkTop.bin.gz
-	sleep 1
-
-reprogram:
-	vivado -mode batch -source top-reprogram.tcl $(VIVADOFLAGS)
-	xbsvutil reset /dev/fpga0
-
-## for partial reconfiguration on VC707
-verilog/portal/mkSynthesizeablePortalTop.v:
-	mkdir -p verilog/portal
-	mv -fv verilog/mkSynthesizeablePortalTop.v verilog/portal
-
-## (*black_box*) causes vivado to ignore contents of the module and treat it as a black box
-verilog/portalstub.v:
-	make --no-print-directory verilog/portal/mkSynthesizeablePortalTop.v
-	cat verilog/portal/mkSynthesizeablePortalTop.v | sed 's/^module /(*black_box*)module /' > verilog/portalstub.v
-
-hw/portaltop-post-synth.dcp: verilog/portal/mkSynthesizeablePortalTop.v $(vfile)
-	make --no-print-directory verilog/portalstub.v
-	vivado -mode batch -source $(XBSVDIR)/scripts/portaltop-synth.tcl $(VIVADOFLAGS)
-
-hw/mkpcietop-post-synth.dcp:
-	make --no-print-directory verilog/portalstub.v
-	vivado -mode batch -source $(XBSVDIR)/scripts/mkpcietop-synth.tcl $(VIVADOFLAGS)
-
-hw/mkPcieTop_pblock_portalTop_partial.bit: hw/mkpcietop-post-synth.dcp hw/portaltop-post-synth.dcp
-	vivado -mode batch -source $(XBSVDIR)/scripts/mkpcietop-partial-reconfiguration.tcl $(VIVADOFLAGS)
-
-partial: hw/mkPcieTop_pblock_portalTop_partial.bit
-
-.PHONY: bits
-
-ifeq ($(OS),android)
-bits: hw/mkTop.bit prepare_bin_target
-	xxd hw/mkTop.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r > bin/mkTop.xdevcfg.bin
-	gzip -f bin/mkTop.xdevcfg.bin
-	$(XBSVDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
-else
-bits: hw/mkTop.bit prepare_bin_target
-	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
-	$(XBSVDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
-endif
-
-android_exe: prepare_bin_target
-	ndk-build $(XBSV_NDK_PARAM)
-	@cp -v libs/armeabi/android_exe bin
-
-android_exe_debug: prepare_bin_target
-	ndk-build $(XBSV_NDK_PARAM) -B V=1 NDK_DEBUG=1
-	@cp -v libs/armeabi/android_exe bin
-
-ifeq ($(BOARD),bluesim)
-
-ifeq ($(XBSV_DEBUG),1)
-GDB=gdb
-else
-GDB=
-endif
-
-run:
-	./bin/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
-
-else
-
-    ifeq ($(OS),android)
-
-run:
-	$(XBSVDIR)/scripts/run.zedboard bin/mkTop.xdevcfg.bin.gz bin/android_exe $(RUN_ARGS)
-
-    else
-
-run: program
-	timeout 3m catchsegv ./bin/mkpcietop $(RUN_ARGS)
-
-    endif
-endif
-
-xsim: verilog
-	xvlog $(XVLOGFLAGS) verilog/*.v
-	xelab $(XELABFLAGS) work.$(MKTOP)
-
-xsimrun: xsim
-	xsim $(XSIMFLAGS) work.$(MKTOP)
-
-hwclean:
-	rm -fr obj hw vivado*.jou vivado*.log fsm_encoding.os .Xil
-
-clean: hwclean
-	rm -fr verilog
-
 ifeq ($(BOARD),bluesim)
     ALLTARGETS=bsim bsim_exe
 else
@@ -172,9 +64,93 @@ XVLOGFLAGS =
 BSCFLAGS = $(BSCFLAGS_COMMON) $(BSCFLAGS_PROJECT)
 BSIM_CXX = $(BSIM_CXX_COMMON) $(BSIM_CXX_PROJECT)
 
-make_everything: $(ALLTARGETS)
+ifeq ($(XBSV_DEBUG),1)
+GDB=gdb
+else
+GDB=
+endif
+
+all: $(ALLTARGETS)
 
 timestampfile=sources/$(DUT)/.timestamp
+
+bsim_exe: prepare_bin_target
+	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk bsim_exe
+	@cp -v jni/bsim_exe bin
+
+ubuntu_exe: prepare_bin_target
+	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk
+	@cp -v jni/mk* bin
+
+program:
+ifneq ($(BOARD),bluesim)
+	fpgajtag bin/mkTop.bin.gz
+	sleep 1
+endif
+
+reprogram:
+	vivado -mode batch -source top-reprogram.tcl $(VIVADOFLAGS)
+	xbsvutil reset /dev/fpga0
+
+## for partial reconfiguration on VC707
+verilog/portal/mkSynthesizeablePortalTop.v:
+	mkdir -p verilog/portal
+	mv -fv verilog/mkSynthesizeablePortalTop.v verilog/portal
+
+## (*black_box*) causes vivado to ignore contents of the module and treat it as a black box
+verilog/portalstub.v:
+	make --no-print-directory verilog/portal/mkSynthesizeablePortalTop.v
+	cat verilog/portal/mkSynthesizeablePortalTop.v | sed 's/^module /(*black_box*)module /' > verilog/portalstub.v
+
+hw/portaltop-post-synth.dcp: verilog/portal/mkSynthesizeablePortalTop.v $(vfile)
+	make --no-print-directory verilog/portalstub.v
+	vivado -mode batch -source $(XBSVDIR)/scripts/portaltop-synth.tcl $(VIVADOFLAGS)
+
+hw/mkpcietop-post-synth.dcp:
+	make --no-print-directory verilog/portalstub.v
+	vivado -mode batch -source $(XBSVDIR)/scripts/mkpcietop-synth.tcl $(VIVADOFLAGS)
+
+hw/mkPcieTop_pblock_portalTop_partial.bit: hw/mkpcietop-post-synth.dcp hw/portaltop-post-synth.dcp
+	vivado -mode batch -source $(XBSVDIR)/scripts/mkpcietop-partial-reconfiguration.tcl $(VIVADOFLAGS)
+
+partial: hw/mkPcieTop_pblock_portalTop_partial.bit
+
+.PHONY: bits
+
+bits: hw/mkTop.bit prepare_bin_target
+ifeq ($(OS),android)
+	xxd hw/mkTop.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r > bin/mkTop.xdevcfg.bin
+	gzip -f bin/mkTop.xdevcfg.bin
+else
+	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
+endif
+	$(XBSVDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
+
+android_exe: prepare_bin_target
+	ndk-build $(XBSV_NDK_PARAM)
+	@cp -v libs/armeabi/android_exe bin
+
+android_exe_debug: prepare_bin_target
+	ndk-build $(XBSV_NDK_PARAM) -B V=1 NDK_DEBUG=1
+	@cp -v libs/armeabi/android_exe bin
+
+run: program
+ifeq ($(BOARD),bluesim)
+	./bin/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
+else
+    ifeq ($(OS),android)
+	$(XBSVDIR)/scripts/run.zedboard bin/mkTop.xdevcfg.bin.gz bin/android_exe $(RUN_ARGS)
+    else
+	timeout 3m catchsegv ./bin/mkpcietop $(RUN_ARGS)
+    endif
+endif
+
+xsim: verilog
+	xvlog $(XVLOGFLAGS) verilog/*.v
+	xelab $(XELABFLAGS) work.$(MKTOP)
+
+xsimrun: xsim
+	xsim $(XSIMFLAGS) work.$(MKTOP)
 
 $(timestampfile): $(BSVFILES)
 	cd $(DTOP); \
@@ -204,3 +180,17 @@ verilog: $(vfile)
 
 lint: $(vfile)
 	verilator --error-limit 200 --lint-only -Isources/$(DUT) -Isources/source $(vfile)
+
+prepare_bin_target:
+	@mkdir -p bin
+	@git rev-parse HEAD > bin/githash
+	@git diff | gzip -c > bin/gitdiff.patch.gz
+
+hwclean:
+	rm -fr obj hw vivado*.jou vivado*.log fsm_encoding.os .Xil
+
+clean: hwclean
+	rm -fr verilog
+
+implementation: bits
+
