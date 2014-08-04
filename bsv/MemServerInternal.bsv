@@ -378,7 +378,7 @@ module mkMemWriteInternal#(Integer iid,
 	    let client = reqFifo.first.client;
 	    let rename_tag = reqFifo.first.rename_tag;
 	    reqFifo.deq;
-	    dreqFifo.enq(DRec{req:req, client:client, rename_tag:rename_tag});
+	    dreqFifo.enq(DRec{req:req, client:client, rename_tag:rename_tag, last: False });
 	    //$display("writeReq: client=%d, rename_tag=%d", client,rename_tag);
 	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(rename_tag)};
 	 endmethod
