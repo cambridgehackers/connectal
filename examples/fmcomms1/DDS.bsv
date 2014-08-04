@@ -40,7 +40,7 @@ module mkDDS(DDS);
    cfg.memorySize = 1024;
    cfg.loadFormat = tagged Binary "sine.bin";
    BRAM1Port#(Bit#(10), DDSOutType) ram <-mkBRAM1Server(cfg);
-   Reg#(DDSOutType) ddsout <- mkReg(?);
+   FIFO#(DDSOutType) ddsout <- mkFIFO();
    Reg#(PhaseType) phase <- mkReg(0);
    Reg#(PhaseType) phaseAdvance <- mkReg(0);
       /*
@@ -69,7 +69,7 @@ module mkDDS(DDS);
    
    rule ddsoutrule;
       let v <- ram.portA.response.get();
-      ddsout <= v;
+      ddsout.enq(v);
    endrule
    
 
