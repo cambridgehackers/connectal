@@ -1,1 +1,1 @@
-/scratch/mdk/xbsv/examples/matmul/synth-ip.tcl
+../../examples/matmul/synth-ip.tcl
