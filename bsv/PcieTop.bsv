@@ -168,10 +168,19 @@ module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p
 
    Clock epClock125 = ep7.epClock125;
    Reset epReset125 = ep7.epReset125;
+   Clock epClock250 = ep7.epClock250;
+   Reset epReset250 = ep7.epReset250;
+`ifdef PCIE_250MHZ
+   Clock portalClock_ = epClock250;
+   Reset portalReset_ = epReset250;
+`else
+   Clock portalClock_ = epClock125;
+   Reset portalReset_ = epReset125;
+`endif
    PcieHost#(DataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(
          PciId{ bus:  ep7.cfg.bus_number(), dev: ep7.cfg.device_number(), func: ep7.cfg.function_number()},
-         clocked_by epClock125, reset_by epReset125);
-   mkConnection(ep7.tlp, pciehost.pci, clocked_by epClock125, reset_by epReset125);
+         clocked_by portalClock_, reset_by portalReset_);
+   mkConnection(ep7.tlp, pciehost.pci, clocked_by portalClock_, reset_by portalReset_);
    interface Clock tsys_clk_200mhz = sys_clk_200mhz;
    interface Clock tsys_clk_200mhz_buf = sys_clk_200mhz_buf;
    interface Clock tpci_clk_100mhz_buf = pci_clk_100mhz_buf;
@@ -181,8 +190,10 @@ module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p
    interface PcieHost tpciehost = pciehost;
 
    //once the dot product server makes timing, replace epClock125 with ep7.epclock250
-   interface doubleClock = epClock125;
-   interface doubleReset = epReset125;
+   interface portalClock = portalClock_;
+   interface portalReset = portalReset_;
+   interface doubleClock = epClock250;
+   interface doubleReset = epReset250;
       
 endmodule
 `endif
@@ -196,17 +207,17 @@ module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Cl
    PcieHostTop host <- mkPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n);
 
 `ifdef IMPORT_HOSTIF
-   PortalTop#(40, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkPortalTop(host, clocked_by host.tepClock125, reset_by host.tepReset125);
+   PortalTop#(40, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkPortalTop(host, clocked_by host.portalClock, reset_by host.portalReset);
 `else
-   PortalTop#(40, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkPortalTop(clocked_by host.tepClock125, reset_by host.tepReset125);
+   PortalTop#(40, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkPortalTop(clocked_by host.portalClock, reset_by host.portalReset);
 `endif
-   mkConnection(host.tpciehost.master, portalTop.slave, clocked_by host.tepClock125, reset_by host.tepReset125);
+   mkConnection(host.tpciehost.master, portalTop.slave, clocked_by host.portalClock, reset_by host.portalReset);
    if (valueOf(NumberOfMasters) > 0) begin
       mapM(uncurry(mkConnection),zip(portalTop.masters, host.tpciehost.slave));
    end
 
    // going from level to edge-triggered interrupt
-   Vector#(15, Reg#(Bool)) interruptRequested <- replicateM(mkReg(False, clocked_by host.tepClock125, reset_by host.tepReset125));
+   Vector#(15, Reg#(Bool)) interruptRequested <- replicateM(mkReg(False, clocked_by host.portalClock, reset_by host.portalReset));
    rule interrupt_rule;
      Integer intr_num = 0;
      for (Integer i = 0; i < 15; i = i + 1) begin

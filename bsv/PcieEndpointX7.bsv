@@ -352,13 +352,20 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
 						endinterface
 					     endinterface);
 
+`ifdef PCIE_250MHZ
+   Clock portalClock = clock250;
+   Reset portalReset = reset250;
+`else
+   Clock portalClock = clock125;
+   Reset portalReset = reset125;
+`endif
    // The PCIE endpoint is processing TLPData#(8)s at 250MHz.  The
    // AXI bridge is accepting TLPData#(16)s at 125 MHz. The
    // connection between the endpoint and the AXI contains GearBox
    // instances for the TLPData#(8)@250 <--> TLPData#(16)@125
    // conversion.
-   PcieGearbox gb <- mkPcieGearbox(clock250, reset250, clock125, reset125);
-   mkConnection(tlp8, gb.tlp, clocked_by clock250, reset_by reset250);
+   PcieGearbox gb <- mkPcieGearbox(clock250, reset250, portalClock, portalReset);
+   mkConnection(tlp8, gb.tlp, clocked_by portalClock, reset_by portalReset);
 
    interface tlp = gb.pci;
    interface pcie    = pcie_ep.pcie;

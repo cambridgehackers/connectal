@@ -88,6 +88,8 @@ interface PcieHostTop;
    interface Clock tpci_clk_100mhz_buf;
    interface PcieEndpointX7#(PcieLanes) tep7;
 `endif
+   interface Clock portalClock;
+   interface Reset portalReset;
    interface Clock doubleClock;
    interface Reset doubleReset;
 endinterface
