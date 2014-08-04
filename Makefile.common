@@ -109,7 +109,7 @@ ifeq ("$(NEEDSPCIE)","true")
 endif
 
 ifeq ($(USE_FPGAMAKE),true)
-XBSVFLAGS += $(FPGAMAKE_XBSVFLAGS) --cache=$(XBSVDIR)/xbsv-cache
+XBSVFLAGS += $(FPGAMAKE_XBSVFLAGS) --cache=$(XBSVDIR)/../fpgamake-cache/$(shell basename `/bin/pwd`)/$(BOARD)
 endif
 
 XBSVFLAGS += $(EXTRA_XBSVFLAGS)
