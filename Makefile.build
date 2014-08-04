@@ -119,25 +119,16 @@ xsim: verilog
 xsimrun: xsim
 	xsim $(XSIMFLAGS) work.$(MKTOP)
 
-project.timestamp: $(BSVFILES)
-	cd $(DTOP); \
-	$(XBSVDIR)/xbsvgen -B$(BOARD) -p $(DTOP) -x $(MKTOP) \
-	$(foreach s2h, $(S2H), -s2h $(s2h)) \
-	$(foreach h2s, $(H2S), -h2s $(h2s)) \
-	$(foreach f, $(CPPFILES), -s $f) \
-        -t $(XBSVDIR)/bsv/$(TOP).bsv $(XBSVFLAGS) $(BSVFILES)
-	touch project.timestamp
-
 RUN_BSC =  bsc $(BSC_QUIET) $(BSVDEFINES) $(BSCFLAGS_COMMON) $(BSCFLAGS_PROJECT) -p +:$(BSVPATH):$(DUT)/
 
-$(vfile): $(TOPBSVFILE) $(BSVFILES) project.timestamp
+$(vfile): $(TOPBSVFILE) $(BSVFILES)
 	$(Q)mkdir -p verilog/portal $(DTOP)/obj
 	@echo BSCVERILOG [$(DTOP)]
 	$(Q)cd sources/$(DUT); $(RUN_BSC) -remove-dollar -verilog -u -g $(MKTOP) $(TOPBSVFILE)
 	$(Q)sed -i 's|// On .*|// timestamp removed|' verilog/*.v
 	$(Q)for v in verilog/*.v; do $(XBSVDIR)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
 
-bsim: project.timestamp prepare_bin_target
+bsim: prepare_bin_target
 	$(Q)mkdir -p $(DTOP)/obj verilog
 	@echo BSCBSIM [$(DTOP)]
 	$(Q)cd sources; $(RUN_BSC) -D BSIM -sim -u -g $(MKTOP) $(TOPBSVFILE)
