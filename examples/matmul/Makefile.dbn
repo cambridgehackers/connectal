@@ -33,7 +33,7 @@ gen:: $(DBNDIR)/datasets
 synth-ip.tcl:
 	ln -svf $(XBSVDIR)/examples/matmul/synth-ip.tcl .
 
-prebuild::
+prebuild:: synth-ip.tcl
 	if [ "$(BOARD)" != "bluesim" ] ; then cd $(BOARD); vivado -mode batch -source ../synth-ip.tcl; fi
 
 include $(XBSVDIR)/Makefile.common

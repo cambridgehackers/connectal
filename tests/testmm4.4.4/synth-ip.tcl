@@ -1,1 +1,1 @@
-../../examples/testmm/synth-ip.tcl
+../../examples/matmul/synth-ip.tcl
