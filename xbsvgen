@@ -280,7 +280,7 @@ H2S = %(h2sinterface)s
 BSVFILES = %(bsvfiles)s
 CPPFILES=%(sourcefiles)s $(addprefix $(DTOP)/jni/, %(generatedCFiles)s)
 
-BSCFLAGS_PROJECT = -D TimeStamp=%(timestamp)s %(bscflags)s
+BSCFLAGS_PROJECT = %(bscflags)s
 BSIM_CXX_PROJECT = %(bsimsource)s
 XELABFLAGS = %(xelabflags)s
 XSIMFLAGS  = %(xsimflags)s
@@ -773,7 +773,6 @@ if __name__=='__main__':
                                    'topbsvmod'  : options.export,
                                    'dut' : options.export.lower(),
                                    'Dut': topmodulename,
-                                   'timestamp' : int(time.time()),
                                    'clibs': ' '.join(['-l%s' % l for l in options.clib]),
                                    'cdefines': ' '.join([ '-D%s' % d for d in options.bsvdefine ]),
                                    'mdefines': '\n'.join(['%s="%s"' % (var,val) for (var,val) in map(util.splitBinding, options.bsvdefine)]),
