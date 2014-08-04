@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+
 import FIFOF::*;
 import GetPut::*;
 import Connectable::*;
@@ -285,6 +286,7 @@ typedef Vector#(k,PipeOut#(a)) UnFunnelPipe#(numeric type j, numeric type k, typ
 
 typeclass FunnelPipesPipelined#(numeric type j, numeric type k, type a, numeric type bpc);
    module mkFunnelPipesPipelined#(Vector#(k,PipeOut#(a)) in) (FunnelPipe#(j,k,a,bpc));
+   module mkFunnelPipesPipelinedRR#(Vector#(k,PipeOut#(a)) in, Integer c) (FunnelPipe#(j,k,a,bpc));
    module mkUnFunnelPipesPipelined#(Vector#(j,PipeOut#(Tuple2#(Bit#(TLog#(k)),a))) in) (UnFunnelPipe#(j,k,a,bpc));
 endtypeclass
 
@@ -300,6 +302,9 @@ function PipeOut#(b) pipeSecond(PipeOut#(Tuple2#(a,b)) x) =
 instance FunnelPipesPipelined#(1,1,a,bpc)   
    provisos (Bits#(a,a__));
    module mkFunnelPipesPipelined#(Vector#(1,PipeOut#(a)) in) (FunnelPipe#(1,1,a,bpc));
+      return in;
+   endmodule
+   module mkFunnelPipesPipelinedRR#(Vector#(1,PipeOut#(a)) in, Integer c) (FunnelPipe#(1,1,a,bpc));
       return in;
    endmodule
    module mkUnFunnelPipesPipelined#(Vector#(1,PipeOut#(Tuple2#(Bit#(0),a))) in) (UnFunnelPipe#(1,1,a,bpc));
@@ -322,6 +327,90 @@ instance FunnelPipesPipelined#(1,k,a,bpc)
 	    mkConnection(infss[j][i], toPut(buffs[j-1][i/(2**valueOf(bpc))]));
       return cons(infss[0][0],nil);
    endmodule
+   module mkFunnelPipesPipelinedRR#(Vector#(k,PipeOut#(a)) in, Integer c) (FunnelPipe#(1,k,a,bpc));
+      Vector#(stages, Vector#(k, FIFOF#(a))) buffs  <- replicateM(replicateM(mkFIFOF));
+      Vector#(TAdd#(stages,1), Vector#(k, PipeOut#(a))) infss = append(map(map(toPipeOut),buffs), cons(in,nil));
+      for(Integer j = valueOf(stages); j > 0; j=j-1) begin
+   	 Vector#(k, FIFOF#(void)) ctrl  <- replicateM(mkSizedFIFOF(1));
+   	 for(Integer i = 0; i < 2**(j*valueOf(bpc)) && i < valueOf(k); i=i+1) begin
+   	    let first = i==0;
+   	    Reg#(Bit#(32)) cnt <- mkReg(0);
+   	    let maxp = (2**((valueOf(stages)-j)*valueOf(bpc)))*c;
+   	    let last = (maxp*(i+1) >= valueOf(k)*c);
+   	    if (maxp*(i+1) > valueOf(k)*c) begin
+   	       maxp = valueOf(k)*c-maxp*i;
+	    end
+   	    let xfer_guard = True;
+   	    if (!first)
+   	       xfer_guard = xfer_guard && ctrl[(i-1)].notEmpty;
+   	    if (!last)
+   	       xfer_guard = xfer_guard && (!ctrl[i].notEmpty);
+   	    rule xfer if (xfer_guard);
+   	       let new_cnt = cnt+1;
+   	       if (new_cnt==fromInteger(maxp)) begin
+   		  cnt <= 0;
+   		  if (!last)
+   		     ctrl[i].enq(?);
+   		  if (last) 
+   		     for(Integer ff = 0; ff < i; ff=ff+1)
+   		     	ctrl[ff].deq;
+   	       end
+   	       else begin
+   		  cnt <= new_cnt;
+   	       end
+   	       let v <- toGet(infss[j][i]).get;
+   	       toPut(buffs[j-1][i/(2**valueOf(bpc))]).put(v);
+   	    endrule
+   	 end
+      end
+      return cons(infss[0][0],nil);
+   endmodule
+   // module mkFunnelPipesPipelinedRR#(Vector#(k,PipeOut#(a)) in, Integer c) (FunnelPipe#(1,k,a,bpc));
+   //    Vector#(stages, Vector#(k, FIFOF#(a))) buffs  <- replicateM(replicateM(mkFIFOF));
+   //    Vector#(TAdd#(stages,1), Vector#(k, PipeOut#(a))) infss = append(map(map(toPipeOut),buffs), cons(in,nil));
+   //    for(Integer j = valueOf(stages); j > 0; j=j-1) begin
+   // 	 Vector#(k, FIFOF#(void)) ctrl  <- replicateM(mkSizedFIFOF(1));
+   // 	 messageM("j val");
+   // 	 for(Integer i = 0; i < 2**(j*valueOf(bpc)) && i < valueOf(k); i=i+1) begin
+   // 	    let first = i==0;
+   // 	    messageM("xfer rule");
+   // 	    Reg#(Bit#(32)) cnt <- mkReg(0);
+   // 	    let maxp = (2**((valueOf(stages)-j)*valueOf(bpc)))*c;
+   // 	    let last = (maxp*(i+1) >= valueOf(k)*c);
+   // 	    if(last) messageM("last");
+   // 	    if (maxp*(i+1) > valueOf(k)*c) begin
+   // 	       //errorM("mkFunnelPipesPipelinedRR");
+   // 	       maxp = valueOf(k)*c-maxp*i;
+   // 	    end
+   // 	    for(Integer f = 0; f < maxp; f=f+1)
+   // 	       messageM("maxp");
+   // 	    let xfer_guard = True;
+   // 	    if (!first)
+   // 	       xfer_guard = xfer_guard && ctrl[(i-1)].notEmpty;
+   // 	    if (!last)
+   // 	       xfer_guard = xfer_guard && (!ctrl[i].notEmpty);
+   // 	    rule xfer if (xfer_guard);
+   // 	       $display("(%d %d) : (%d < %d)", j, i, cnt, maxp);
+   // 	       let new_cnt = cnt+1;
+   // 	       if (new_cnt==fromInteger(maxp)) begin
+   // 		  $display("end %d", last);
+   // 		  cnt <= 0;
+   // 		  if (!last)
+   // 		     ctrl[i].enq(?);
+   // 		  if (last) 
+   // 		     for(Integer ff = 0; ff < i; ff=ff+1)
+   // 		     	ctrl[ff].deq;
+   // 	       end
+   // 	       else begin
+   // 		  cnt <= new_cnt;
+   // 	       end
+   // 	       let v <- toGet(infss[j][i]).get;
+   // 	       toPut(buffs[j-1][i/(2**valueOf(bpc))]).put(v);
+   // 	    endrule
+   // 	 end
+   //    end
+   //    return cons(infss[0][0],nil);
+   // endmodule
    module mkUnFunnelPipesPipelined#(Vector#(1, PipeOut#(Tuple2#(Bit#(TLog#(k)),a))) in) (UnFunnelPipe#(1,k,a,bpc));
       Vector#(k, PipeOut#(Tuple2#(Bit#(logk),a))) ins  = append(in,replicate(?));
       Vector#(k, PipeOut#(Tuple2#(Bit#(logk),a))) outs = newVector;
@@ -422,7 +511,6 @@ module mkFunnelPipes1#(Vector#(k, PipeOut#(a)) ins)(PipeOut#(a))
 	     Log#(k,ksz)
       );
    let k = fromInteger(valueOf(k));
-
    Reg#(Bit#(ksz)) selector <- mkReg(0);
 
    method a first();

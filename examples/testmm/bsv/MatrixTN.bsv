@@ -319,7 +319,7 @@ module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
    Reg#(MatrixDescriptor#(UInt#(addrwidth))) descriptorC <- mkReg(unpack(0));
    Reg#(MatrixDescriptor#(UInt#(addrwidth))) descriptorA <- mkReg(unpack(0));
    Reg#(MatrixDescriptor#(UInt#(addrwidth))) descriptorB <- mkReg(unpack(0));
-   Reg#(UInt#(addrwidth)) dotprodCount <- mkReg(0);
+   Reg#(UInt#(addrwidth)) sinkCnt <- mkReg(0);
    
    Reg#(UInt#(addrwidth)) numRowsAReg <- mkReg(0);
    Reg#(UInt#(addrwidth)) numRowsBReg <- mkReg(0);
@@ -349,8 +349,7 @@ module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
    	 fxpipes[j] = mmTiles[t].fxPipes[i];
       end
    end
-   // this needs a bit more infra since the tokens might get reordered in the funnel
-   FunnelPipe#(1,J,Vector#(N,MmToken),2) sinks <- mkFunnelPipesPipelined(fxpipes);
+   FunnelPipe#(1,J,Vector#(N,MmToken),2) sinks <- mkFunnelPipesPipelinedRR(fxpipes,kk/valueOf(N));
    mkConnection(sinks[0],sink.pipe);
 
    XYZRangePipeIfc#(UInt#(addrwidth)) offsetpipeC <- mkXYZRangePipeOut(RangeC);
@@ -393,10 +392,10 @@ module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
 
    rule finishSink;
       let b <- sink.finish();
-      let c = dotprodCount-fromInteger(kk);
-      dotprodCount <= c;
+      let c = sinkCnt-1;
+      sinkCnt <= c;
+      $display("finishSink %d", c);
       if (c == 0) begin
-	 $display("finishSink");
 	 running <= False;
 	 doneFifo.enq(?);
       end
@@ -438,13 +437,13 @@ module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
       descriptorA <= MatrixDescriptor { pointer: pointerA, base: 0, numRows: numRowsA,    numColumns: numColumnsA};
       descriptorB <= MatrixDescriptor { pointer: pointerB, base: 0, numRows: numRowsB,    numColumns: numColumnsB};
       descriptorC <= MatrixDescriptor { pointer: pointerC, base: 0, numRows: numColumnsA, numColumns: numColumnsB};
-      dotprodCount <= numColumnsA_x_numColumnsB;
+      sinkCnt <= numColumnsA_x_numColumnsB/fromInteger(kk);
       numRowsBReg <= numRowsB;
       numRowsAReg <= numRowsA;
       running <= True;
 
       if (verbose) $display("mm pointerA=%d pointerB=%d pointerC=%d\n", pointerA, pointerB, pointerC);
-      if (verbose) $display("mm.start ra=%d ca=%d rb=%d cb=%d dotprodCount=%d", numRowsA, numColumnsA, numRowsB, numColumnsB, dotprodCount);
+      if (verbose) $display("mm.start ra=%d ca=%d rb=%d cb=%d", numRowsA, numColumnsA, numRowsB, numColumnsB);
       if (verbose) $display($format(fshow("offsetcfgA ")+fshow(offsetcfgA)));
       if (verbose) $display($format(fshow("offsetcfgB ")+fshow(offsetcfgB)));
       if (verbose) $display($format(fshow("offsetcfgC ")+fshow(offsetcfgC)));
