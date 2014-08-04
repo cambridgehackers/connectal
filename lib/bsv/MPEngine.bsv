@@ -128,8 +128,8 @@ module mkMPEngine#(FIFOF#(void) compf,
 
    rule matchNeedleReq(stage == Run);
       //$display(" matchNeedleReq %d %d", epochReg, iReg);
-      needle.portA.request.put(BRAMRequest{write:False, address: truncate(iReg-1)});
-      mpNext.portA.request.put(BRAMRequest{write:False, address: truncate(iReg)});
+      needle.portA.request.put(BRAMRequest{write:False, address: truncate(iReg-1), datain:?, responseOnWrite:?});
+      mpNext.portA.request.put(BRAMRequest{write:False, address: truncate(iReg), datain:?, responseOnWrite:?});
       efifo.enq(tuple2(epochReg,iReg));
       iReg <= iReg+1;
    endrule
