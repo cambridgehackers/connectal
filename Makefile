@@ -474,3 +474,7 @@ bsimall:
 distclean:
 	rm -rf examples/*/bluesim examples/*/vc707 examples/*/kc705 examples/*/zedboard examples/*/zc702 examples/*/zc706
 	rm -rf tests/*/bluesim tests/*/vc707 tests/*/kc705 tests/*/zedboard tests/*/zc702 tests/*/zc706
+	rm -rf drivers/*/.tmp_versions tests/memread_manual/kernel/.tmp_versions/
+	rm -rf pcie/xbsvutil/xbsvutil tests/memread_manual/kernel/bsim_relay
+	rm -rf out/
+
