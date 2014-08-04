@@ -272,7 +272,6 @@ MKTOP=%(topbsvmod)s
 OS=%(OS)s
 vfile=verilog/$(MKTOP).v
 DUT=%(dut)s
-BSCMAJOR=%(bscmajor)d
 DEBUGFLAG=%(debug)s
 
 S2H = %(s2hinterface)s
@@ -412,17 +411,6 @@ if __name__=='__main__':
     if not options.xsimflags:
         options.xsimflags = ['-R']
 
-    bscmajor = 0
-    bscminor = 0
-    popen = subprocess.Popen(['bsc', '-v'], stdout=subprocess.PIPE)
-    m = re.match('.*version (\d+).(\d+)', popen.stdout.read())
-    if m:
-        bscmajor = int(m.group(1))
-        bscminor = int(m.group(2))
-        if noisyFlag:
-            print "Using bsc %d.%d" % (bscmajor, bscminor)
-    popen.terminate()
-
     project_dir = os.path.expanduser(options.project_dir)
     options.bsvdefine.append('project_dir=%s' % os.path.abspath(project_dir))
     srcdirs = []
@@ -450,8 +438,6 @@ if __name__=='__main__':
     elif boardname == 'zc702':
         bsvdefines += ['ZYNQ']
     bsvdefines += ['BOARD_'+boardname]
-    if bscmajor < 2014:
-        bsvdefines.append('ExportUnusedClocksAndResets')
 
     for inputfile in options.bsvfile:
         inputdir = os.path.dirname(inputfile)
@@ -776,8 +762,6 @@ if __name__=='__main__':
                                    'clibs': ' '.join(['-l%s' % l for l in options.clib]),
                                    'cdefines': ' '.join([ '-D%s' % d for d in options.bsvdefine ]),
                                    'mdefines': '\n'.join(['%s="%s"' % (var,val) for (var,val) in map(util.splitBinding, options.bsvdefine)]),
-                                   'bscmajor': bscmajor,
-                                   'bscminor': bscminor,
                                    'bscflags': ' '.join(options.bscflags),
                                    'xelabflags': ' '.join(options.xelabflags),
                                    'xsimflags': ' '.join(options.xsimflags),
