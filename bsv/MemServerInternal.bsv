@@ -244,7 +244,7 @@ module mkMemReadInternal#(Integer id,
       let last  =    lastRegs[response_tag];
       if (first) begin
 	 burstLen = dreqFifo.first.req.burstLen >> beat_shift;
-	 last = dreqFifo.first.last;
+	 last = (burstLen==1); //dreqFifo.first.last;
       end
       if (last) begin
 	 //$display("mkMemReadInternal::eob %d", cycle_cnt-last_eob);
