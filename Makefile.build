@@ -33,20 +33,6 @@ else
   XBSV_NDK_PARAM=
 endif
 
-ifeq ($(BOARD),bluesim)
-    ALLTARGETS=bsim bsim_exe
-else
-  ifneq ($(OS),android)
-    ALLTARGETS=ubuntu_exe
-  else
-    ifneq ($(DEBUGFLAG),)
-      ALLTARGETS=android_exe_debug
-    else
-      ALLTARGETS=android_exe
-    endif
-  endif
-endif
-
 ifeq ($(XBSV_DEBUG),1)
 GDB=gdb
 else
@@ -76,7 +62,19 @@ vfile=verilog/$(MKTOP).v
 
 all: exe bits
 
-exe: $(ALLTARGETS)
+ifeq ($(BOARD),bluesim)
+exe: bsim bsim_exe
+else
+  ifneq ($(OS),android)
+    exe: ubuntu_exe
+  else
+    ifneq ($(DEBUGFLAG),)
+      exe: android_exe_debug
+    else
+      exe: android_exe
+    endif
+  endif
+endif
 
 bsim_exe: prepare_bin_target
 	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk bsim_exe
