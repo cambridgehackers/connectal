@@ -131,53 +131,6 @@ zmemexamples = memread_4m        \
             memwrite_4m          \
             $(memexamples)        
 
-cppalllist =     \
-    examples/echo \
-    examples/bscan \
-    examples/fib \
-    examples/flowcontrol \
-    examples/hdmidisplay \
-    examples/imageon \
-    examples/maxcommonsubseq \
-    examples/memcpy \
-    examples/memlatency \
-    examples/memread \
-    examples/memread128 \
-    examples/memread2 \
-    examples/memread_4m \
-    examples/memrw \
-    examples/memwrite \
-    examples/memwrite_4m \
-    examples/nandsim \
-    examples/noc \
-    examples/noc2d \
-    examples/perf \
-    examples/pipe_mul \
-    examples/pipe_mul2 \
-    examples/printf \
-    examples/ring \
-    examples/serialconfig \
-    examples/simple \
-    examples/smithwaterman \
-    examples/splice \
-    examples/strstr \
-    examples/matmul \
-    examples/xsim-echo \
-    examples/yuv \
-    tests/memread_manual \
-    tests/simple_manual \
-    tests/testmm16.16.2 \
-    tests/testmm16.16.4 \
-    tests/testmm2.2.2 \
-    tests/testmm2.4.2 \
-    tests/testmm4.2.2 \
-    tests/testmm4.4.2 \
-    tests/testmm4.4.4 \
-    tests/testmm8.8.2 \
-    tests/testmm8.8.4 \
-
-allarchlist = bluesim zedboard vc707 
-
 bsimalllist =     \
     examples/echo \
     examples/memcpy \
@@ -188,11 +141,13 @@ bsimalllist =     \
     examples/memrw \
     examples/memwrite \
     examples/memwrite_4m \
+    examples/nandsim \
     examples/pipe_mul \
     examples/pipe_mul2 \
     examples/simple \
     examples/strstr \
     examples/matmul \
+    examples/xsim-echo \
     examples/yuv \
     tests/memread_manual \
     tests/simple_manual \
@@ -202,8 +157,29 @@ bsimalllist =     \
     tests/testmm8.8.2 \
     tests/testmm8.8.4 \
 
-bsimunused = \
-    examples/nandsim \
+cppalllist =     $(bsimalllist) \
+    examples/bscan \
+    examples/fib \
+    examples/flowcontrol \
+    examples/hdmidisplay \
+    examples/imageon \
+    examples/maxcommonsubseq \
+    examples/memread128 \
+    examples/noc \
+    examples/noc2d \
+    examples/perf \
+    examples/printf \
+    examples/ring \
+    examples/serialconfig \
+    examples/smithwaterman \
+    examples/splice \
+    examples/xsim-echo \
+    tests/testmm16.16.2 \
+    tests/testmm16.16.4 \
+    tests/testmm2.2.2 \
+    tests/testmm2.4.2 \
+
+allarchlist = bluesim zedboard vc707 
 
 #################################################################################################
 # gdb
