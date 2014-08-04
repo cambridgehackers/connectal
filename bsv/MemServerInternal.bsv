@@ -244,7 +244,9 @@ module mkMemReadInternal#(Integer id,
       let last  =    lastRegs[response_tag];
       if (first) begin
 	 burstLen = dreqFifo.first.req.burstLen >> beat_shift;
-	 last = (burstLen==1); //dreqFifo.first.last;
+	 last = dreqFifo.first.last;
+	 dynamicAssert(last == (burstLen==1), "Last incorrect");
+	 //$display("burstLen=%d dreqFifo.first.last=%d last=%d\n", burstLen, dreqFifo.first.last, last);
       end
       if (last) begin
 	 //$display("mkMemReadInternal::eob %d", cycle_cnt-last_eob);
@@ -267,8 +269,8 @@ module mkMemReadInternal#(Integer id,
 	    let rename_tag = reqFifo.first.rename_tag;
 	    if (False && physAddr[31:24] != 0)
 	       $display("req_ar: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
-	    dreqFifos[rename_tag].enq(DRec{req:req, client:client, rename_tag:rename_tag, last:(req.burstLen == beat_shift)});
-	    //$display("readReq: client=%d, rename_tag=%d, physAddr=%h", client,rename_tag,physAddr);
+	    dreqFifos[rename_tag].enq(DRec{req:req, client:client, rename_tag:rename_tag, last:(req.burstLen == fromInteger(valueOf(dataWidthBytes)))});
+	    //$display("readReq: client=%d, rename_tag=%d, physAddr=%h req.burstLen=%d beat_shift=%d last=%d", client,rename_tag,physAddr, req.burstLen, beat_shift, req.burstLen == beat_shift);
 	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(rename_tag)};
 	 endmethod
       endinterface
