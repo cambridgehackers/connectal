@@ -61,7 +61,7 @@ parsetab.py: syntax.py
 memtests =  memread_manyclients  \
             memwrite_manyclients 
 
-matrixtests2 = testmm8.8.2       \
+matmultests2 = testmm8.8.2       \
 	    testmm16.16.2        \
 	    testmm32.32.2        \
 	    testmm32.16.2        \
@@ -70,15 +70,15 @@ matrixtests2 = testmm8.8.2       \
 	    testmm2.4.2          \
 	    testmm2.2.2          
 
-matrixtests4 = testmm16.16.4     \
+matmultests4 = testmm16.16.4     \
 	    testmm8.8.4          \
 	    testmm4.4.4        
 
-matrixtests = $(matrixtests2)    \
-	    $(matrixtests4)
+matmultests = $(matmultests2)    \
+	    $(matmultests4)
 
 tests    =  $(memtests)          \
-	    $(matrixtests)       \
+	    $(matmultests)       \
 	    memread_manual       \
 	    simple_manual
 
@@ -118,7 +118,7 @@ examples =  echo                 \
             bscan                \
             memread_4m           \
             memwrite_4m          \
-	    testmm               \
+	    matmul               \
             yuv                  
 
 memexamples =  memcpy            \
@@ -161,7 +161,7 @@ cppalllist =     \
     examples/smithwaterman \
     examples/splice \
     examples/strstr \
-    examples/testmm \
+    examples/matmul \
     examples/xsim-echo \
     examples/yuv \
     tests/memread_manual \
@@ -192,7 +192,7 @@ bsimalllist =     \
     examples/pipe_mul2 \
     examples/simple \
     examples/strstr \
-    examples/testmm \
+    examples/matmul \
     examples/yuv \
     tests/memread_manual \
     tests/simple_manual \
@@ -402,14 +402,14 @@ tests.kc705:  $(addprefix tests/, $(addsuffix .kc705, $(tests)))
 tests.vc707:  $(addprefix tests/, $(addsuffix .vc707, $(tests)))
 
 #################################################################################################
-# matrixtests
+# matmultests
 
-matrixtests.bluesim:  $(addprefix tests/, $(addsuffix .bluesim, $(matrixtests)))
-matrixtests.bluesimrun:  $(addprefix tests/, $(addsuffix .bluesimrun, $(matrixtests)))
-matrixtests.bluesimcpp:  $(addprefix tests/, $(addsuffix .bluesimcpp, $(matrixtests)))
-matrixtests.kc705:  $(addprefix tests/, $(addsuffix .kc705, $(matrixtests)))
-matrixtests.vc707:  $(addprefix tests/, $(addsuffix .vc707, $(matrixtests)))
-matrixtests.zc706:  $(addprefix tests/, $(addsuffix .zc706, $(matrixtests2)))
+matmultests.bluesim:  $(addprefix tests/, $(addsuffix .bluesim, $(matmultests)))
+matmultests.bluesimrun:  $(addprefix tests/, $(addsuffix .bluesimrun, $(matmultests)))
+matmultests.bluesimcpp:  $(addprefix tests/, $(addsuffix .bluesimcpp, $(matmultests)))
+matmultests.kc705:  $(addprefix tests/, $(addsuffix .kc705, $(matmultests)))
+matmultests.vc707:  $(addprefix tests/, $(addsuffix .vc707, $(matmultests)))
+matmultests.zc706:  $(addprefix tests/, $(addsuffix .zc706, $(matmultests2)))
 
 #################################################################################################
 # misc

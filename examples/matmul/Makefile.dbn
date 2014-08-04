@@ -31,7 +31,7 @@ endif
 gen:: $(DBNDIR)/datasets
 
 synth-ip.tcl:
-	ln -svf $(XBSVDIR)/examples/testmm/synth-ip.tcl .
+	ln -svf $(XBSVDIR)/examples/matmul/synth-ip.tcl .
 
 prebuild::
 	if [ "$(BOARD)" != "bluesim" ] ; then cd $(BOARD); vivado -mode batch -source ../synth-ip.tcl; fi

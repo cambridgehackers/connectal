@@ -2,7 +2,7 @@
 BSCFLAGS=-aggressive-conditions -show-schedule -keep-fires -p +:../paclib
 
 XBSVDIR=../..
-DBNDIR=../../examples/testmm
+DBNDIR=../../examples/matmul
 DBNTOPBSV=    $(DBNDIR)/Top.bsv
 TESTCPPFILES= $(DBNDIR)/testmm.cpp
 XBSVFLAGS = -D J_VALUE=8 -D K_VALUE=8 -D N_VALUE=4 -D DataBusWidth=128
