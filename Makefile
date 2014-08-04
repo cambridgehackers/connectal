@@ -147,7 +147,6 @@ bsimalllist =     \
     examples/simple \
     examples/strstr \
     examples/matmul \
-    examples/xsim-echo \
     examples/yuv \
     tests/memread_manual \
     tests/simple_manual \

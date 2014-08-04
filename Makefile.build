@@ -47,6 +47,12 @@ else
   endif
 endif
 
+ifeq ($(XBSV_DEBUG),1)
+GDB=gdb
+else
+GDB=
+endif
+
 BSCMAJOR=$(shell bsc -v |grep Compiler | sed -e "s/.*version //" -e "s/\..*//")
 ifneq ($(BSCMAJOR), 2013)
     # S0015: The use of a mkSyncReset may not always result in a reset
@@ -65,11 +71,8 @@ BSIM_CXX_COMMON = $(XBSVDIR)/cpp/BsimCtrl.cxx $(XBSVDIR)/cpp/TlpReplay.cxx $(XBS
 VIVADOFLAGS= -notrace
 XVLOGFLAGS =
 
-ifeq ($(XBSV_DEBUG),1)
-GDB=gdb
-else
-GDB=
-endif
+RUN_BSC =  bsc $(BSC_QUIET) $(BSVDEFINES) $(BSCFLAGS_COMMON) $(BSCFLAGS_PROJECT) -p +:$(BSVPATH):$(DUT)/
+vfile=verilog/$(MKTOP).v
 
 all: $(ALLTARGETS)
 
@@ -121,8 +124,6 @@ xsim: verilog
 
 xsimrun: xsim
 	xsim $(XSIMFLAGS) work.$(MKTOP)
-
-RUN_BSC =  bsc $(BSC_QUIET) $(BSVDEFINES) $(BSCFLAGS_COMMON) $(BSCFLAGS_PROJECT) -p +:$(BSVPATH):$(DUT)/
 
 $(vfile): $(TOPBSVFILE) $(BSVFILES)
 	$(Q)mkdir -p verilog/portal $(DTOP)/obj

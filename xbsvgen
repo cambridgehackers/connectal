@@ -270,7 +270,6 @@ BSVPATH = %(bsvpath)s
 BOARD=%(boardname)s
 MKTOP=%(topbsvmod)s
 OS=%(OS)s
-vfile=verilog/$(MKTOP).v
 DUT=%(dut)s
 DEBUGFLAG=%(debug)s
 
