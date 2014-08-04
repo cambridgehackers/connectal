@@ -263,223 +263,36 @@ makefileTemplate='''
 ##         pass parameters to software via 'make RUN_ARGS= run'
 RUN_ARGS=
 
-V=0
-ifeq ($(V),0)
-Q=@
-BSC_QUIET=-no-show-compiles
-XBSV_NDK_PARAM="NDK_HOST_ECHO=true"
-else
-Q=
-BSC_QUIET=
-XBSV_NDK_PARAM=
-endif
-
 DTOP=%(project_dir)s
 XBSVDIR=%(xbsvdir)s
 BSVPATH = %(bsvpath)s
-vfile=verilog/%(topbsvmod)s.v
 
 BOARD=%(boardname)s
 MKTOP=%(topbsvmod)s
 OS=%(OS)s
-ifeq ($(BOARD),bluesim)
-    ALLTARGETS=bsim bsim_exe
-else
-  ifeq ($(OS),android)
-    ALLTARGETS=android_exe%(debug)s bits
-  else
-    ALLTARGETS=ubuntu_exe bits
-  endif
-endif
-
+vfile=verilog/$(MKTOP).v
+DUT=%(dut)s
 BSCMAJOR=%(bscmajor)d
-ifneq ($(BSCMAJOR), 2013)
-    # S0015: The use of a mkSyncReset may not always result in a reset
-    #        signal being seen on the destination side. Recommend
-    #        replacement with mkAsyncReset.
-    BSCWARNFLAGS += -demote-errors G0066:G0045 -suppress-warnings G0046:G0020:S0015:S0080:S0039
-endif
-BSCOPTFLAGS= -show-schedule -aggressive-conditions
-BSCPATHFLAGS=  -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj -info-dir $(DTOP)/obj
-BSCFLAGS = $(BSCWARNFLAGS) $(BSCOPTFLAGS) $(BSCPATHFLAGS) --wait-for-license -D TimeStamp=%(timestamp)s %(bscflags)s
-BSIM_CXX = $(XBSVDIR)/cpp/BsimCtrl.cxx $(XBSVDIR)/cpp/TlpReplay.cxx $(XBSVDIR)/cpp/BsimDma.cxx $(XBSVDIR)/cpp/sock_utils.c %(bsimsource)s
-
-VIVADOFLAGS= -notrace
-XVLOGFLAGS =
-XELABFLAGS = %(xelabflags)s
-XSIMFLAGS  = %(xsimflags)s
-
-%(mdefines)s
-
-all: $(ALLTARGETS)
+DEBUGFLAG=%(debug)s
 
 S2H = %(s2hinterface)s
 H2S = %(h2sinterface)s
 BSVFILES = %(bsvfiles)s
-CPPFILES=%(sourcefiles)s $(addprefix %(project_dir)s/jni/, %(generatedCFiles)s)
+CPPFILES=%(sourcefiles)s $(addprefix $(DTOP)/jni/, %(generatedCFiles)s)
 
-timestampfile=sources/%(dut)s/.timestamp
+BSCFLAGS_PROJECT = -D TimeStamp=%(timestamp)s %(bscflags)s
+BSIM_CXX_PROJECT = %(bsimsource)s
+XELABFLAGS = %(xelabflags)s
+XSIMFLAGS  = %(xsimflags)s
+TOPBSVFILE = %(topbsvfile)s
+BSVDEFINES = %(bsvdefines)s
+QTUSED = %(qtused)s
 
-$(timestampfile): %(bsvfiles)s
-	cd $(DTOP); \
-	$(XBSVDIR)/xbsvgen -B$(BOARD) -p %(project_dir)s -x $(MKTOP) \
-	$(foreach s2h, $(S2H), -s2h $(s2h)) \
-	$(foreach h2s, $(H2S), -h2s $(h2s)) \
-	$(foreach f, $(CPPFILES), -s $f) \
-        -t $(XBSVDIR)/bsv/$(TOP).bsv $(XBSVFLAGS) $(BSVFILES)
-	touch $(timestampfile)
+%(mdefines)s
 
-$(vfile): %(topbsvfile)s %(bsvfiles)s $(timestampefile)
-	$(Q)mkdir -p verilog/portal $(DTOP)/obj
-	@echo BSCVERILOG [%(project_dir)s]
-	$(Q)cd sources/%(dut)s; bsc $(BSC_QUIET) %(bsvdefines)s $(BSCFLAGS) -remove-dollar -p +:$(DTOP)/generatedbsv:$(BSVPATH) -verilog -u -g %(topbsvmod)s %(topbsvfile)s
-	$(Q)sed -i 's|// On .*|// timestamp removed|' verilog/*.v
-	$(Q)for v in verilog/*.v; do $(XBSVDIR)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
-
-bsim_exe:
-	@mkdir -p bin
-	@git rev-parse HEAD > bin/githash
-	@git diff | gzip -c > bin/gitdiff.patch.gz
-	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk bsim_exe
-	@cp -v jni/bsim_exe bin
-
-ubuntu_exe:
-	@mkdir -p bin
-	@git rev-parse HEAD > bin/githash
-	@git diff | gzip -c > bin/gitdiff.patch.gz
-	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk
-	@cp -v jni/mk* bin
-
-bsim: $(timestampfile)
-	@mkdir -p bin verilog
-	@git rev-parse HEAD > bin/githash
-	@git diff | gzip -c > bin/gitdiff.patch.gz
-	$(Q)mkdir -p $(DTOP)/obj
-	@echo BSCBSIM [%(project_dir)s]
-	$(Q)cd sources; bsc $(BSC_QUIET) -D BSIM %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -u -g %(topbsvmod)s %(topbsvfile)s
-	$(Q)export BSC_CXXFLAGS="-I$(XBSVDIR)/cpp -I$(XBSVDIR) -DBSIM" ; cd sources; bsc $(BSC_QUIET) $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX)
-	$(Q)cp -v sources/bsim* bin
-	%(qtused)s
-
-verilog: $(vfile)
-
-lint: $(vfile)
-	verilator --error-limit 200 --lint-only -Isources/%(dut)s -Isources/source $(vfile)
+include $(XBSVDIR)/Makefile.build
 
 %(bitsmake)s
-
-implementation: bits
-
-program:
-	fpgajtag bin/mkTop.bin.gz
-	sleep 1
-
-reprogram:
-	vivado -mode batch -source top-reprogram.tcl $(VIVADOFLAGS)
-	xbsvutil reset /dev/fpga0
-
-## for partial reconfiguration on VC707
-verilog/portal/mkSynthesizeablePortalTop.v:
-	mkdir -p verilog/portal
-	mv -fv verilog/mkSynthesizeablePortalTop.v verilog/portal
-
-## (*black_box*) causes vivado to ignore contents of the module and treat it as a black box
-verilog/portalstub.v:
-	make --no-print-directory verilog/portal/mkSynthesizeablePortalTop.v
-	cat verilog/portal/mkSynthesizeablePortalTop.v | sed 's/^module /(*black_box*)module /' > verilog/portalstub.v
-
-hw/portaltop-post-synth.dcp: verilog/portal/mkSynthesizeablePortalTop.v $(vfile)
-	make --no-print-directory verilog/portalstub.v
-	vivado -mode batch -source $(XBSVDIR)/scripts/portaltop-synth.tcl $(VIVADOFLAGS)
-
-hw/mkpcietop-post-synth.dcp:
-	make --no-print-directory verilog/portalstub.v
-	vivado -mode batch -source $(XBSVDIR)/scripts/mkpcietop-synth.tcl $(VIVADOFLAGS)
-
-hw/mkPcieTop_pblock_portalTop_partial.bit: hw/mkpcietop-post-synth.dcp hw/portaltop-post-synth.dcp
-	vivado -mode batch -source $(XBSVDIR)/scripts/mkpcietop-partial-reconfiguration.tcl $(VIVADOFLAGS)
-
-partial: hw/mkPcieTop_pblock_portalTop_partial.bit
-
-.PHONY: bits
-
-ifeq ($(OS),android)
-
-bits: hw/mkTop.bit
-	@mkdir -p bin
-	@git rev-parse HEAD > bin/githash
-	@git diff | gzip -c > bin/gitdiff.patch.gz
-	xxd hw/mkTop.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r > bin/mkTop.xdevcfg.bin
-	gzip -f bin/mkTop.xdevcfg.bin
-	$(XBSVDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
-
-else
-
-bits: hw/mkTop.bit
-	@mkdir -p bin
-	@git rev-parse HEAD > bin/githash
-	@git diff | gzip -c > bin/gitdiff.patch.gz
-	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
-	$(XBSVDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
-
-endif
-
-android_exe:
-	@mkdir -p bin
-	@git rev-parse HEAD > bin/githash
-	@git diff | gzip -c > bin/gitdiff.patch.gz
-	ndk-build $(XBSV_NDK_PARAM)
-	@cp -v libs/armeabi/android_exe bin
-
-android_exe_debug:
-	@mkdir -p bin
-	@git rev-parse HEAD > bin/githash
-	@git diff | gzip -c > bin/gitdiff.patch.gz
-	ndk-build $(XBSV_NDK_PARAM) -B V=1 NDK_DEBUG=1
-	@cp -v libs/armeabi/android_exe bin
-
-ifeq ($(BOARD),bluesim)
-
-ifeq ($(XBSV_DEBUG),1)
-GDB=gdb
-else
-GDB=
-endif
-
-run:
-	./bin/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
-
-else
-
-    ifeq ($(OS),android)
-
-run:
-	$(XBSVDIR)/scripts/run.zedboard bin/mkTop.xdevcfg.bin.gz bin/android_exe $(RUN_ARGS)
-
-    else
-
-run: program
-	timeout 3m catchsegv ./bin/mkpcietop $(RUN_ARGS)
-
-    endif
-endif
-
-xsim: verilog
-	xvlog $(XVLOGFLAGS) verilog/*.v
-	xelab $(XELABFLAGS) work.$(MKTOP)
-
-xsimrun: xsim
-	xsim $(XSIMFLAGS) work.$(MKTOP)
-
-JENKINS_HOST=sj9.qrclab.com
-jenkins:
-	$(XBSVDIR)/scripts/run.jenkins $(JENKINS_HOST) %(dut)s $(BOARD)
-
-hwclean:
-	rm -fr obj hw vivado*.jou vivado*.log fsm_encoding.os .Xil
-
-clean: hwclean
-	rm -fr verilog
 '''
 
 androidmk_template='''

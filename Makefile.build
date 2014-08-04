@@ -1,0 +1,206 @@
+# Copyright (c) 2014 Quanta Research Cambridge, Inc
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+#
+#
+# File: Makefile.build
+#
+
+V=0
+ifeq ($(V),0)
+  Q=@
+  BSC_QUIET=-no-show-compiles
+  XBSV_NDK_PARAM="NDK_HOST_ECHO=true"
+else
+  Q=
+  BSC_QUIET=
+  XBSV_NDK_PARAM=
+endif
+
+all: make_everything
+
+prepare_bin_target:
+	@mkdir -p bin
+	@git rev-parse HEAD > bin/githash
+	@git diff | gzip -c > bin/gitdiff.patch.gz
+
+bsim_exe: prepare_bin_target
+	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk bsim_exe
+	@cp -v jni/bsim_exe bin
+
+ubuntu_exe: prepare_bin_target
+	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk
+	@cp -v jni/mk* bin
+
+implementation: bits
+
+program:
+	fpgajtag bin/mkTop.bin.gz
+	sleep 1
+
+reprogram:
+	vivado -mode batch -source top-reprogram.tcl $(VIVADOFLAGS)
+	xbsvutil reset /dev/fpga0
+
+## for partial reconfiguration on VC707
+verilog/portal/mkSynthesizeablePortalTop.v:
+	mkdir -p verilog/portal
+	mv -fv verilog/mkSynthesizeablePortalTop.v verilog/portal
+
+## (*black_box*) causes vivado to ignore contents of the module and treat it as a black box
+verilog/portalstub.v:
+	make --no-print-directory verilog/portal/mkSynthesizeablePortalTop.v
+	cat verilog/portal/mkSynthesizeablePortalTop.v | sed 's/^module /(*black_box*)module /' > verilog/portalstub.v
+
+hw/portaltop-post-synth.dcp: verilog/portal/mkSynthesizeablePortalTop.v $(vfile)
+	make --no-print-directory verilog/portalstub.v
+	vivado -mode batch -source $(XBSVDIR)/scripts/portaltop-synth.tcl $(VIVADOFLAGS)
+
+hw/mkpcietop-post-synth.dcp:
+	make --no-print-directory verilog/portalstub.v
+	vivado -mode batch -source $(XBSVDIR)/scripts/mkpcietop-synth.tcl $(VIVADOFLAGS)
+
+hw/mkPcieTop_pblock_portalTop_partial.bit: hw/mkpcietop-post-synth.dcp hw/portaltop-post-synth.dcp
+	vivado -mode batch -source $(XBSVDIR)/scripts/mkpcietop-partial-reconfiguration.tcl $(VIVADOFLAGS)
+
+partial: hw/mkPcieTop_pblock_portalTop_partial.bit
+
+.PHONY: bits
+
+ifeq ($(OS),android)
+bits: hw/mkTop.bit prepare_bin_target
+	xxd hw/mkTop.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r > bin/mkTop.xdevcfg.bin
+	gzip -f bin/mkTop.xdevcfg.bin
+	$(XBSVDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
+else
+bits: hw/mkTop.bit prepare_bin_target
+	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
+	$(XBSVDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
+endif
+
+android_exe: prepare_bin_target
+	ndk-build $(XBSV_NDK_PARAM)
+	@cp -v libs/armeabi/android_exe bin
+
+android_exe_debug: prepare_bin_target
+	ndk-build $(XBSV_NDK_PARAM) -B V=1 NDK_DEBUG=1
+	@cp -v libs/armeabi/android_exe bin
+
+ifeq ($(BOARD),bluesim)
+
+ifeq ($(XBSV_DEBUG),1)
+GDB=gdb
+else
+GDB=
+endif
+
+run:
+	./bin/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
+
+else
+
+    ifeq ($(OS),android)
+
+run:
+	$(XBSVDIR)/scripts/run.zedboard bin/mkTop.xdevcfg.bin.gz bin/android_exe $(RUN_ARGS)
+
+    else
+
+run: program
+	timeout 3m catchsegv ./bin/mkpcietop $(RUN_ARGS)
+
+    endif
+endif
+
+xsim: verilog
+	xvlog $(XVLOGFLAGS) verilog/*.v
+	xelab $(XELABFLAGS) work.$(MKTOP)
+
+xsimrun: xsim
+	xsim $(XSIMFLAGS) work.$(MKTOP)
+
+hwclean:
+	rm -fr obj hw vivado*.jou vivado*.log fsm_encoding.os .Xil
+
+clean: hwclean
+	rm -fr verilog
+
+ifeq ($(BOARD),bluesim)
+    ALLTARGETS=bsim bsim_exe
+else
+  ifneq ($(OS),android)
+    ALLTARGETS=ubuntu_exe bits
+  else
+    ifneq ($(DEBUGFLAG),)
+      ALLTARGETS=android_exe_debug bits
+    else
+      ALLTARGETS=android_exe bits
+    endif
+  endif
+endif
+
+ifneq ($(BSCMAJOR), 2013)
+    # S0015: The use of a mkSyncReset may not always result in a reset
+    #        signal being seen on the destination side. Recommend
+    #        replacement with mkAsyncReset.
+    BSCWARNFLAGS += -demote-errors G0066:G0045 -suppress-warnings G0046:G0020:S0015:S0080:S0039
+endif
+BSCOPTFLAGS= -show-schedule -aggressive-conditions
+BSCPATHFLAGS=  -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj -info-dir $(DTOP)/obj
+BSCFLAGS_COMMON = $(BSCWARNFLAGS) $(BSCOPTFLAGS) $(BSCPATHFLAGS) --wait-for-license
+BSIM_CXX_COMMON = $(XBSVDIR)/cpp/BsimCtrl.cxx $(XBSVDIR)/cpp/TlpReplay.cxx $(XBSVDIR)/cpp/BsimDma.cxx $(XBSVDIR)/cpp/sock_utils.c
+
+VIVADOFLAGS= -notrace
+XVLOGFLAGS =
+
+BSCFLAGS = $(BSCFLAGS_COMMON) $(BSCFLAGS_PROJECT)
+BSIM_CXX = $(BSIM_CXX_COMMON) $(BSIM_CXX_PROJECT)
+
+make_everything: $(ALLTARGETS)
+
+timestampfile=sources/$(DUT)/.timestamp
+
+$(timestampfile): $(BSVFILES)
+	cd $(DTOP); \
+	$(XBSVDIR)/xbsvgen -B$(BOARD) -p $(DTOP) -x $(MKTOP) \
+	$(foreach s2h, $(S2H), -s2h $(s2h)) \
+	$(foreach h2s, $(H2S), -h2s $(h2s)) \
+	$(foreach f, $(CPPFILES), -s $f) \
+        -t $(XBSVDIR)/bsv/$(TOP).bsv $(XBSVFLAGS) $(BSVFILES)
+	touch $(timestampfile)
+
+$(vfile): $(TOPBSVFILE) $(BSVFILES) $(timestampefile)
+	$(Q)mkdir -p verilog/portal $(DTOP)/obj
+	@echo BSCVERILOG [$(DTOP)]
+	$(Q)cd sources/$(DUT); bsc $(BSC_QUIET) $(BSVDEFINES) $(BSCFLAGS) -remove-dollar -p +:$(DTOP)/generatedbsv:$(BSVPATH) -verilog -u -g $(MKTOP) $(TOPBSVFILE)
+	$(Q)sed -i 's|// On .*|// timestamp removed|' verilog/*.v
+	$(Q)for v in verilog/*.v; do $(XBSVDIR)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
+
+bsim: $(timestampfile) prepare_bin_target
+	$(Q)mkdir -p $(DTOP)/obj verilog
+	@echo BSCBSIM [$(DTOP)]
+	$(Q)cd sources; bsc $(BSC_QUIET) -D BSIM $(BSVDEFINES) $(BSCFLAGS) -p +:$(BSVPATH):$(DUT)/ -sim -u -g $(MKTOP) $(TOPBSVFILE)
+	$(Q)export BSC_CXXFLAGS="-I$(XBSVDIR)/cpp -I$(XBSVDIR) -DBSIM" ; cd sources; bsc $(BSC_QUIET) $(BSCFLAGS) -p +:$(BSVPATH):$(DUT)/ -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX)
+	$(Q)cp -v sources/bsim* bin
+	$(QTUSED)
+
+verilog: $(vfile)
+
+lint: $(vfile)
+	verilator --error-limit 200 --lint-only -Isources/$(DUT) -Isources/source $(vfile)
