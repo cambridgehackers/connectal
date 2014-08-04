@@ -115,14 +115,14 @@ endif
 XBSVFLAGS += $(EXTRA_XBSVFLAGS)
 
 ifeq ($(USE_PRINTF),1)
-PRINTF_EXTRA=$(BOARD)/generatedbsv/DisplayInd.bsv
+PRINTF_EXTRA=$(BOARD)/sources/DisplayInd.bsv
 else
 PRINTF_EXTRA=$(XBSVDIR)/bsv/DisplayInd.bsv
 endif
 
 gentarget::
 	$(Q)[ -e $(IPDIR) ] || mkdir -p $(IPDIR)
-	$(Q)[ -e $(BOARD)/generatedbsv ] || mkdir -p $(BOARD)/generatedbsv
+	$(Q)[ -e $(BOARD)/sources ] || mkdir -p $(BOARD)/sources
 	$(Q)[ -e $(BOARD)/jni ] || mkdir -p $(BOARD)/jni
 ifeq ($(USE_PRINTF),1)
 	$(XBSVDIR)/scripts/preprocess_trace.py $(BOARD) $(BSVFILES)
