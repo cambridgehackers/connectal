@@ -394,7 +394,7 @@ module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
       let b <- sink.finish();
       let c = sinkCnt-1;
       sinkCnt <= c;
-      $display("finishSink %d", c);
+      //$display("finishSink %d", c);
       if (c == 0) begin
 	 running <= False;
 	 doneFifo.enq(?);

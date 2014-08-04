@@ -317,8 +317,6 @@ instance FunnelPipesPipelined#(1,k,a,bpc)
 	     Bits#(a,a__),
 	     Add#(1,b__,k),
 	     Div#(logk,bpc,stages));
-   // this relies on the fact that dead-code will remove unused fifo instantiations
-   // if you are paranoid, your module will look like mkUnFunnelPipesPipelined
    module mkFunnelPipesPipelined#(Vector#(k,PipeOut#(a)) in) (FunnelPipe#(1,k,a,bpc));
       Vector#(stages, Vector#(k, FIFOF#(a))) buffs  <- replicateM(replicateM(mkFIFOF));
       Vector#(TAdd#(stages,1), Vector#(k, PipeOut#(a))) infss = append(map(map(toPipeOut),buffs), cons(in,nil));
