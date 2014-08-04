@@ -53,6 +53,7 @@ ifneq ($(BSCMAJOR), 2013)
     #        replacement with mkAsyncReset.
     BSCWARNFLAGS += -demote-errors G0066:G0045 -suppress-warnings G0046:G0020:S0015:S0080:S0039
 endif
+
 BSCOPTFLAGS= -show-schedule -aggressive-conditions
 BSCPATHFLAGS=  -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj -info-dir $(DTOP)/obj
 BSCFLAGS_COMMON = $(BSCWARNFLAGS) $(BSCOPTFLAGS) $(BSCPATHFLAGS) --wait-for-license
@@ -61,9 +62,6 @@ BSIM_CXX_COMMON = $(XBSVDIR)/cpp/BsimCtrl.cxx $(XBSVDIR)/cpp/TlpReplay.cxx $(XBS
 VIVADOFLAGS= -notrace
 XVLOGFLAGS =
 
-BSCFLAGS = $(BSCFLAGS_COMMON) $(BSCFLAGS_PROJECT)
-BSIM_CXX = $(BSIM_CXX_COMMON) $(BSIM_CXX_PROJECT)
-
 ifeq ($(XBSV_DEBUG),1)
 GDB=gdb
 else
@@ -71,8 +69,6 @@ GDB=
 endif
 
 all: $(ALLTARGETS)
-
-timestampfile=sources/$(DUT)/.timestamp
 
 bsim_exe: prepare_bin_target
 	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk bsim_exe
@@ -87,35 +83,6 @@ ifneq ($(BOARD),bluesim)
 	fpgajtag bin/mkTop.bin.gz
 	sleep 1
 endif
-
-reprogram:
-	vivado -mode batch -source top-reprogram.tcl $(VIVADOFLAGS)
-	xbsvutil reset /dev/fpga0
-
-## for partial reconfiguration on VC707
-verilog/portal/mkSynthesizeablePortalTop.v:
-	mkdir -p verilog/portal
-	mv -fv verilog/mkSynthesizeablePortalTop.v verilog/portal
-
-## (*black_box*) causes vivado to ignore contents of the module and treat it as a black box
-verilog/portalstub.v:
-	make --no-print-directory verilog/portal/mkSynthesizeablePortalTop.v
-	cat verilog/portal/mkSynthesizeablePortalTop.v | sed 's/^module /(*black_box*)module /' > verilog/portalstub.v
-
-hw/portaltop-post-synth.dcp: verilog/portal/mkSynthesizeablePortalTop.v $(vfile)
-	make --no-print-directory verilog/portalstub.v
-	vivado -mode batch -source $(XBSVDIR)/scripts/portaltop-synth.tcl $(VIVADOFLAGS)
-
-hw/mkpcietop-post-synth.dcp:
-	make --no-print-directory verilog/portalstub.v
-	vivado -mode batch -source $(XBSVDIR)/scripts/mkpcietop-synth.tcl $(VIVADOFLAGS)
-
-hw/mkPcieTop_pblock_portalTop_partial.bit: hw/mkpcietop-post-synth.dcp hw/portaltop-post-synth.dcp
-	vivado -mode batch -source $(XBSVDIR)/scripts/mkpcietop-partial-reconfiguration.tcl $(VIVADOFLAGS)
-
-partial: hw/mkPcieTop_pblock_portalTop_partial.bit
-
-.PHONY: bits
 
 bits: hw/mkTop.bit prepare_bin_target
 ifeq ($(OS),android)
@@ -152,27 +119,29 @@ xsim: verilog
 xsimrun: xsim
 	xsim $(XSIMFLAGS) work.$(MKTOP)
 
-$(timestampfile): $(BSVFILES)
+project.timestamp: $(BSVFILES)
 	cd $(DTOP); \
 	$(XBSVDIR)/xbsvgen -B$(BOARD) -p $(DTOP) -x $(MKTOP) \
 	$(foreach s2h, $(S2H), -s2h $(s2h)) \
 	$(foreach h2s, $(H2S), -h2s $(h2s)) \
 	$(foreach f, $(CPPFILES), -s $f) \
         -t $(XBSVDIR)/bsv/$(TOP).bsv $(XBSVFLAGS) $(BSVFILES)
-	touch $(timestampfile)
+	touch project.timestamp
 
-$(vfile): $(TOPBSVFILE) $(BSVFILES) $(timestampefile)
+RUN_BSC =  bsc $(BSC_QUIET) $(BSVDEFINES) $(BSCFLAGS_COMMON) $(BSCFLAGS_PROJECT) -p +:$(BSVPATH):$(DUT)/
+
+$(vfile): $(TOPBSVFILE) $(BSVFILES) project.timestamp
 	$(Q)mkdir -p verilog/portal $(DTOP)/obj
 	@echo BSCVERILOG [$(DTOP)]
-	$(Q)cd sources/$(DUT); bsc $(BSC_QUIET) $(BSVDEFINES) $(BSCFLAGS) -remove-dollar -p +:$(DTOP)/generatedbsv:$(BSVPATH) -verilog -u -g $(MKTOP) $(TOPBSVFILE)
+	$(Q)cd sources/$(DUT); $(RUN_BSC) -remove-dollar -verilog -u -g $(MKTOP) $(TOPBSVFILE)
 	$(Q)sed -i 's|// On .*|// timestamp removed|' verilog/*.v
 	$(Q)for v in verilog/*.v; do $(XBSVDIR)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
 
-bsim: $(timestampfile) prepare_bin_target
+bsim: project.timestamp prepare_bin_target
 	$(Q)mkdir -p $(DTOP)/obj verilog
 	@echo BSCBSIM [$(DTOP)]
-	$(Q)cd sources; bsc $(BSC_QUIET) -D BSIM $(BSVDEFINES) $(BSCFLAGS) -p +:$(BSVPATH):$(DUT)/ -sim -u -g $(MKTOP) $(TOPBSVFILE)
-	$(Q)export BSC_CXXFLAGS="-I$(XBSVDIR)/cpp -I$(XBSVDIR) -DBSIM" ; cd sources; bsc $(BSC_QUIET) $(BSCFLAGS) -p +:$(BSVPATH):$(DUT)/ -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX)
+	$(Q)cd sources; $(RUN_BSC) -D BSIM -sim -u -g $(MKTOP) $(TOPBSVFILE)
+	$(Q)export BSC_CXXFLAGS="-I$(XBSVDIR)/cpp -I$(XBSVDIR) -DBSIM" ; cd sources; $(RUN_BSC) -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX_COMMON) $(BSIM_CXX_PROJECT)
 	$(Q)cp -v sources/bsim* bin
 	$(QTUSED)
 
@@ -191,6 +160,4 @@ hwclean:
 
 clean: hwclean
 	rm -fr verilog
-
-implementation: bits
 

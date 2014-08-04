@@ -94,7 +94,7 @@ module mkStdDirectory#(Vector#(n,StdPortal) portals) (StdDirectory);
       			 if (req.address == 0+base)
 			    dataFifo.enq(2); // directory version
 			 else if (req.address == 1+base)
-			    dataFifo.enq(0); // was timestamp
+			    dataFifo.enq(0); // remove timestamp from builds, so that they are reproducable. `TimeStamp);
 			 else if (req.address == 2+base)
 			    dataFifo.enq(fromInteger(valueOf(n)));
 			 else if (req.address == 3+base)
