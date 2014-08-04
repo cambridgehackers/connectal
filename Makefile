@@ -1,7 +1,7 @@
 
 export UDEV_RULES_DIR=/etc/udev/rules.d
 UDEV_RULES=$(shell ls etc/udev/rules.d)
-#51-xbsvtty.rules  52-digilent-usb.rules  52-xbsvtest.rules  99-pcieportal.rules
+
 all: pciedrivers
 
 pciedrivers:
@@ -196,7 +196,7 @@ bluesimtests: $(bluesimtests)
 
 $(bluesimtests):
 	rm -fr $(basename $@)/bluesim
-	make BOARD=bluesim -C $(basename $@) --no-print-directory bsim_exe bsim
+	make BOARD=bluesim -C $(basename $@) --no-print-directory exe
 
 
 bluesimruns = $(addprefix examples/, $(addsuffix .bluesimrun, $(examples))) \
@@ -256,7 +256,7 @@ zedboardcpps: $(zedboardcpps)
 
 # RUNPARAM=ipaddr is an optional argument if you already know the IP of the zedboard
 $(zedboardcpps):
-	make BOARD=zedboard --no-print-directory -C $(basename $@) android_exe
+	make BOARD=zedboard --no-print-directory -C $(basename $@) exe
 
 #################################################################################################
 # zc702
@@ -319,7 +319,7 @@ vc707cpps = $(addprefix examples/, $(addsuffix .vc707cpp, $(examples))) \
 vc707cpps: $(vc707cpps)
 
 $(vc707cpps):
-	make BOARD=vc707 --no-print-directory -C $(basename $@) ubuntu_exe
+	make BOARD=vc707 --no-print-directory -C $(basename $@) exe
 
 #################################################################################################
 # kc705
@@ -344,7 +344,7 @@ kc705cpps = $(addprefix examples/, $(addsuffix .kc705cpp, $(examples))) \
 kc705cpps: $(kc705cpps)
 
 $(kc705cpps):
-	make BOARD=kc705 --no-print-directory -C $(basename $@) ubuntu_exe
+	make BOARD=kc705 --no-print-directory -C $(basename $@) exe
 
 
 #################################################################################################
@@ -393,13 +393,7 @@ android_exetests = $(addprefix examples/, $(addsuffix .android_exe, $(examples))
 android_exetests: $(android_exetests)
 
 $(android_exetests):
-	make BOARD=zedboard -C $(basename $@) android_exe
-
-ubuntu_exetests = $(addprefix examples/, $(addsuffix .ubuntu_exe, $(examples)))
-ubuntu_exetests: $(ubuntu_exetests)
-
-$(ubuntu_exetests):
-	make BOARD=zedboard -C $(basename $@) ubuntu_exe
+	make BOARD=zedboard -C $(basename $@) exe
 
 ac701tests = $(addprefix examples/, $(addsuffix .ac701, $(examples)))
 ac701tests: $(ac701tests)

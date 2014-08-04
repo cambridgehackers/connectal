@@ -37,12 +37,12 @@ ifeq ($(BOARD),bluesim)
     ALLTARGETS=bsim bsim_exe
 else
   ifneq ($(OS),android)
-    ALLTARGETS=ubuntu_exe bits
+    ALLTARGETS=ubuntu_exe
   else
     ifneq ($(DEBUGFLAG),)
-      ALLTARGETS=android_exe_debug bits
+      ALLTARGETS=android_exe_debug
     else
-      ALLTARGETS=android_exe bits
+      ALLTARGETS=android_exe
     endif
   endif
 endif
@@ -74,7 +74,9 @@ XVLOGFLAGS =
 RUN_BSC =  bsc $(BSC_QUIET) $(BSVDEFINES) $(BSCFLAGS_COMMON) $(BSCFLAGS_PROJECT) -p +:$(BSVPATH):$(DUT)/
 vfile=verilog/$(MKTOP).v
 
-all: $(ALLTARGETS)
+all: exe bits
+
+exe: $(ALLTARGETS)
 
 bsim_exe: prepare_bin_target
 	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk bsim_exe
@@ -90,6 +92,9 @@ ifneq ($(BOARD),bluesim)
 	sleep 1
 endif
 
+ifeq ($(BOARD),bluesim)
+bits:
+else
 bits: hw/mkTop.bit prepare_bin_target
 ifeq ($(OS),android)
 	xxd hw/mkTop.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r > bin/mkTop.xdevcfg.bin
@@ -98,6 +103,7 @@ else
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
 endif
 	$(XBSVDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
+endif
 
 android_exe: prepare_bin_target
 	ndk-build $(XBSV_NDK_PARAM)
