@@ -629,4 +629,7 @@ def generate_cpp(project_dir, noisyFlag, swProxies, swWrappers):
     generated_hpp.write('#endif\n')
     generated_hpp.write('#endif //__GENERATED_TYPES__\n');
     generated_hpp.close();
+    gen_makefile = util.createDirAndOpen(os.path.join(project_dir, 'jni', 'Makefile.generated_files'), 'w')
+    gen_makefile.write('\nGENERATED_CPP=' + ' '.join(generatedCFiles)+'\n');
+    gen_makefile.close();
     return generatedCFiles

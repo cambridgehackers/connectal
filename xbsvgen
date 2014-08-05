@@ -175,7 +175,6 @@ DEBUGFLAG=%(debug)s
 S2H = %(s2hinterface)s
 H2S = %(h2sinterface)s
 BSVFILES = %(bsvfiles)s
-CPPFILES=%(sourcefiles)s $(addprefix $(DTOP)/jni/, %(generatedCFiles)s)
 
 BSCFLAGS_PROJECT = %(bscflags)s
 BSIM_CXX_PROJECT = %(bsimsource)s
@@ -195,7 +194,8 @@ include $(XBSVDIR)/Makefile.build
 androidmk_template='''
 include $(CLEAR_VARS)
 LOCAL_ARM_MODE := arm
-APP_SRC_FILES := $(addprefix %(project_dir)s/jni/,  %(generatedCFiles)s) %(source)s
+include %(project_dir)s/jni/Makefile.generated_files
+APP_SRC_FILES := $(addprefix %(project_dir)s/jni/,  $(GENERATED_CPP)) %(source)s
 PORTAL_SRC_FILES := $(addprefix %(xbsvdir)s/cpp/, portal.c poller.cpp sock_utils.c timer.c)
 LOCAL_SRC_FILES := $(APP_SRC_FILES) $(PORTAL_SRC_FILES)
 
@@ -222,7 +222,8 @@ CFLAGS_COMMON = -O -g -I%(project_dir)s/jni -I%(xbsvdir)s -I%(xbsvdir)s/cpp -I%(
 CFLAGS = $(CFLAGS_COMMON)
 
 PORTAL_CPP_FILES = $(addprefix %(xbsvdir)s/cpp/, portal.c poller.cpp sock_utils.c timer.c)
-SOURCES = $(addprefix %(project_dir)s/jni/,  %(generatedCFiles)s) %(source)s $(PORTAL_CPP_FILES)
+include %(project_dir)s/jni/Makefile.generated_files
+SOURCES = $(addprefix %(project_dir)s/jni/,  $(GENERATED_CPP)) %(source)s $(PORTAL_CPP_FILES)
 LDLIBS := %(clibdirs)s %(clibs)s -pthread 
 
 BSIM_EXE_CXX_FILES = BsimDma.cxx BsimCtrl.cxx TlpReplay.cxx
