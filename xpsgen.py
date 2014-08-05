@@ -72,7 +72,3 @@ def writeProgramTcl(base, programtclname):
         f = util.createDirAndOpen(programtclname, 'w')
         f.write(programTclTemplate % { 'base': base.lower(), 'Base': base })
         f.close()
-def writeReprogramTcl(base, programtclname):
-        f = util.createDirAndOpen(programtclname, 'w')
-        f.write(programTclTemplate % { 'Base': 'mkPcieTop_pblock_top_portalTop_partial.bit' })
-        f.close()

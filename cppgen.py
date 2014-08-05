@@ -561,3 +561,79 @@ def cName(x):
         return x
     else:
         return x.cName()
+
+def generate_cpp(project_dir, noisyFlag, swProxies, swWrappers):
+    def create_cpp_file(name):
+        fname = os.path.join(project_dir, 'jni', name)
+        f = util.createDirAndOpen(fname, 'w')
+        if noisyFlag:
+            print "Writing file ",fname
+        f.write('#include "GeneratedTypes.h"\n');
+        return f
+
+    def create_bare_file(name):
+        fname = os.path.join(project_dir, 'jni', name)
+        f = util.createDirAndOpen(fname, 'w')
+        if noisyFlag:
+            print "Writing file ",fname
+        return f
+
+    generatedCFiles = []
+    hname = os.path.join(project_dir, 'jni', 'GeneratedTypes.h')
+    generated_hpp = util.createDirAndOpen(hname, 'w')
+    generated_hpp.write('#ifndef __GENERATED_TYPES__\n');
+    generated_hpp.write('#define __GENERATED_TYPES__\n');
+    generated_hpp.write('#include "portal.h"\n')
+    generated_hpp.write('#ifdef __cplusplus\n')
+    generated_hpp.write('extern "C" {\n')
+    generated_hpp.write('#endif\n')
+    # global type declarations used by interface mthods
+    for v in syntax.globaldecls:
+        if (v.type == 'TypeDef'):
+            v.emitCDeclaration(generated_hpp, 0, '')
+    generated_hpp.write('\n');
+    cppname = 'GeneratedCppCallbacks.cpp'
+    generated_cpp = create_cpp_file(cppname)
+    generatedCFiles.append(cppname)
+    generated_cpp.write('\n#ifndef NO_CPP_PORTAL_CODE\n\n')
+
+    for i in swProxies:
+        cppname = '%sProxy.c' % i.name
+        hppname = '%sProxy.h' % i.name
+        hpp = create_cpp_file(hppname)
+        cpp = create_cpp_file(cppname)
+        hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': i.name.upper()})
+        hpp.write('#include "%s.h"' % i.parentClass("portal"))
+        i.emitCProxyDeclaration(hpp, generated_hpp, "Proxy")
+        i.ind.emitCWrapperImplementation(cpp, generated_hpp, "Proxy", '', False)
+        i.emitCProxyImplementation(cpp, generated_hpp, "Proxy", "", False)
+        hpp.write('#endif // _%(name)s_H_\n' % {'name': i.name.upper()})
+        hpp.close();
+        cpp.close();
+        generatedCFiles.append(cppname)
+
+    for i in swWrappers:
+        cppname = '%sWrapper.c' % i.name
+        hppname = '%sWrapper.h' % i.name
+        hpp = create_cpp_file(hppname)
+        cpp = create_cpp_file(cppname)
+        hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': i.name.upper()})
+        i.ind.emitCProxyImplementation(cpp, generated_hpp, "WrapperStatus", "", False)
+        i.emitCWrapperImplementation(cpp, generated_hpp, "Wrapper", '', False)
+        generated_cpp.write('\n\n/************** Start of %sWrapper CPP ***********/\n' % i.name)
+        generated_cpp.write('#include "%s"' % hppname)
+        i.emitCWrapperDeclaration(hpp, generated_hpp, generated_cpp, "Wrapper")
+        i.emitCWrapperImplementation(generated_cpp, generated_hpp, "Wrapper", '', True)
+        hpp.write('#endif // _%(name)s_H_\n' % {'name': i.name.upper()})
+        hpp.close();
+        cpp.close();
+        generatedCFiles.append(cppname)
+    
+    generated_cpp.write('\n#endif //NO_CPP_PORTAL_CODE\n')
+    generated_cpp.close();
+    generated_hpp.write('#ifdef __cplusplus\n')
+    generated_hpp.write('}\n')
+    generated_hpp.write('#endif\n')
+    generated_hpp.write('#endif //__GENERATED_TYPES__\n');
+    generated_hpp.close();
+    return generatedCFiles
