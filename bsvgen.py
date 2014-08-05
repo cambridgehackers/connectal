@@ -315,7 +315,7 @@ module mk%(Dut)s#(idType id)(%(Dut)s)
 endmodule
 '''
 
-def emitPreamble(f, files=[]):
+def bsvgen_emitPreamble(f, files=[]):
     extraImports = (['import %s::*;\n' % os.path.splitext(os.path.basename(fn))[0] for fn in files]
                    + ['import %s::*;\n' % i for i in syntax.globalimports ])
     f.write(preambleTemplate % {'extraImports' : ''.join(extraImports)})
@@ -593,3 +593,30 @@ class InterfaceMixin:
                 if methodRule:
                     methods.append(methodRule)
         return methods
+
+def generate_bsv(project_dir, noisyFlag, hwProxies, hwWrappers, dutname):
+    def create_bsv_package(pname, files=[]):
+        fname = os.path.join(project_dir, 'sources', dutname.lower(), '%s.bsv' % pname)
+        bsv_file = util.createDirAndOpen(fname, 'w')
+        bsv_file.write('package %s;\n' % pname)
+        bsvgen_emitPreamble(bsv_file, files)
+        if noisyFlag:
+            print 'Writing file ', fname
+        return bsv_file
+
+    def close_bsv_package(bsv_file, pname):
+        bsv_file.write('endpackage: %s\n' % pname)
+        bsv_file.close()
+
+    for i in hwWrappers:
+        pname = '%sWrapper' % i.name
+        bsv = create_bsv_package(pname, i.package)
+        i.emitBsvWrapper(bsv)
+        close_bsv_package(bsv,pname)
+        
+    for i in hwProxies:
+        pname = '%sProxy' % i.name
+        bsv = create_bsv_package(pname, i.package)
+        i.emitBsvProxy(bsv, "Proxy")
+        close_bsv_package(bsv,pname)
+

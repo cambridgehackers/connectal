@@ -368,13 +368,11 @@ if __name__=='__main__':
         if not 'os' in options: options.os = 'android'
         partname = 'xc7z045ffg900-2'
         rewireclockstring = tclzynqrewireclock
-        #options.verilog.append(os.path.join(xbsvdir, 'xilinx', 'sources', 'processing_system7'))
         options.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/zc7z045ffg900.xdc'))
     elif boardname == 'zynq100':
         if not 'os' in options: options.os = 'android'
         partname = 'xc7z100ffg900-2'
         rewireclockstring = tclzynqrewireclock
-        #options.verilog.append(os.path.join(xbsvdir, 'xilinx', 'sources', 'processing_system7'))
         options.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/zc7z045ffg900.xdc'))
     else:
         if not 'os' in options: options.os = 'android'
@@ -384,9 +382,6 @@ if __name__=='__main__':
     options.verilog.append(os.path.join(xbsvdir, 'verilog'))
 
     options.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/%s.xdc' % boardname))
-    #if needs_pcie_7x_gen1x8:
-        #subprocess.call(['make', '-C', xbsvdir, 'xilinx/pcie_7x_gen1x8'])
-        #options.xci.append(os.path.join(xbsvdir, 'xilinx', 'pcie_7x_gen1x8', 'pcie_7x_0.xci'))
 
     ## code generation pass
     swProxies = []
@@ -415,31 +410,7 @@ if __name__=='__main__':
             swWrappers.append(ifc)
 
     generatedCFiles = cppgen.generate_cpp(project_dir, noisyFlag, swProxies, swWrappers)
-
-    def create_bsv_package(pname, files=[]):
-        fname = os.path.join(project_dir, 'sources', dutname.lower(), '%s.bsv' % pname)
-        bsv_file = util.createDirAndOpen(fname, 'w')
-        bsv_file.write('package %s;\n' % pname)
-        bsvgen.emitPreamble(bsv_file, files)
-        if noisyFlag:
-            print 'Writing file ', fname
-        return bsv_file
-
-    def close_bsv_package(bsv_file, pname):
-        bsv_file.write('endpackage: %s\n' % pname)
-        bsv_file.close()
-
-    for i in hwWrappers:
-        pname = '%sWrapper' % i.name
-        bsv = create_bsv_package(pname, i.package)
-        i.emitBsvWrapper(bsv)
-        close_bsv_package(bsv,pname)
-        
-    for i in hwProxies:
-        pname = '%sProxy' % i.name
-        bsv = create_bsv_package(pname, i.package)
-        i.emitBsvProxy(bsv, "Proxy")
-        close_bsv_package(bsv,pname)
+    bsvgen.generate_bsv(project_dir, noisyFlag, hwProxies, hwWrappers, dutname)
 
     tclboardname = os.path.join(project_dir, 'board.tcl')
     tclimplname = os.path.join(project_dir, 'vivado-impl.tcl')
