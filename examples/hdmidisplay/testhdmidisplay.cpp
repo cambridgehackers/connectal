@@ -249,7 +249,8 @@ hblank--; // needed on zc702
     fprintf(stderr, "Starting frame buffer ref=%d...", ref_srcAlloc[0]);
     fill_pixels(0);
     fprintf(stderr, "done\n");
-    while (1) {
+    int limit = 30;
+    while (limit-- > 0) {
       fprintf(stderr, "mem_stats=%"PRIx64"\n", dma->show_mem_stats(ChannelType_Read));
       sleep(1);
     }
