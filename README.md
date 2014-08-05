@@ -159,22 +159,41 @@ Preparation for Kintex and Virtex boards
 Examples
 --------
 
+Generally cd to the top level directory xbsv then type
+
+    make examples/examplename.<something>
+
+where something is
+
+Command suffix | Function
+--------------|----------
+bluesim | compile for simulation
+bluesimrun | build and run simulator
+zedboard| compile for zedboard
+zedboardrun | compile and run on attached zedboard
+zc702| compile for zc702 board
+zc702run| compile and run on attached board
+kc705| compile for kc705 board
+kc705run| compile and run on attached board
+vc707| compile for vc707 board
+vc707run| compile and run on attached board
+
 Echo Example
 ~~~~~~~~~~~~~
 
     ## this has only been tested with the Vivado 2013.2 release
     . Xilinx/Vivado/2013.2/settings64.sh
 
-    make echo.zedboard
+    make examples/echo.zedboard
 or
-    make echo.zc702
+    make examples/echo.zc702
 or
-    make echo.kc705
+    make examples/echo.kc705
 or
-    make echo.vc707
+    make examples/echo.vc707
 
 To run on a zedboard with IP address aa.bb.cc.dd:
-    RUNPARAM=aa.bb.cc.dd make echo.zedboardrun
+    RUNPARAM=aa.bb.cc.dd make examples/echo.zedboardrun
 
 Memcpy Example
 ~~~~~~~~~~~~~
@@ -190,10 +209,10 @@ This example does not work. -Jamey 4/29/2014.
 For example, to create an HDMI frame buffer from the example code:
 
 To generate code for Zedboard:
-    make hdmidisplay.zedboard
+    make examples/hdmidisplay.zedboard
 
 To generate code for a ZC702 board:
-    make hdmidisplay.zc702
+    make examples/hdmidisplay.zc702
 
 The result .bit file for this example will be:
 
