@@ -115,6 +115,7 @@ examples =  echo                 \
 	    imageon              \
 	    imageonfb            \
 	    fmcomms1		 \
+	    channelselect	 \
             bscan                \
             memread_4m           \
             memwrite_4m          \
