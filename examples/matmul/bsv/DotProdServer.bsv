@@ -108,7 +108,7 @@ module  mkSharedInterleavedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(Shared
    FIFOF#(Float)     gFifo <- mkSizedFIFOF(kk);
    Reg#(Bit#(16))  lastCnt <- mkReg(0);
    Reg#(Bit#(16))gatherCnt <- mkReg(0);
-   Reg#(Bool) gather_phase <- mkReg(0);
+   Reg#(Bool) gather_phase <- mkReg(False);
    //invariant: gather_phase = lastCnt == fromInteger(kk);
 
    FIFOF#(Tuple2#(Bool,Bool))    flFifo <- mkSizedFIFOF(ub_MulLat);
