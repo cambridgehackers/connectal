@@ -65,6 +65,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    Reg#(Bit#(32))                                   iterCnt <- mkReg(0);
    Vector#(NumEngineServers, Reg#(Bit#(32)))       iterCnts <- replicateM(mkReg(0));
    Vector#(NumEngineServers, Reg#(Bit#(32)))        srcGens <- replicateM(mkReg(0));
+   Vector#(NumEngineServers, Reg#(Bit#(32)))   valuesToRead <- replicateM(mkReg(0));
    Vector#(NumEngineServers, Reg#(Bit#(32))) mismatchCounts <- replicateM(mkReg(0));
    MemreadEngineV#(64,2,NumEngineServers)                re <- mkMemreadEngine;
    Vector#(NumEngineServers, FIFOF#(Bit#(32))) mismatchFifos <- replicateM(mkFIFOF);
@@ -97,15 +98,21 @@ module mkMemread#(MemreadIndication indication) (Memread);
       rule finish;
 	 $display("finish %d", i);
 	 let rv <- re.readServers[i].response.get;
-	 // need to pipeline this also
-	 //mismatchCnt <= mismatchCnt+mismatchCounts[i];
-	 mismatchCounts[i] <= 0;
-	 mismatchFifos[i].enq(mismatchCounts[i]);
       endrule
       rule check;
 	 let bv <- toGet(mismatchPipes[i]).get();
-	 let misMatch = !bv[0] || !bv[1];
-	 mismatchCounts[i] <= mismatchCounts[i] + (misMatch ? 1 : 0);
+	 let mismatch = !bv[0] || !bv[1];
+	 let mc = mismatchCounts[i] + (mismatch ? 1 : 0);
+
+	 mismatchCounts[i] <= mc;
+
+	 let newValuesToRead = valuesToRead[i] - 2;
+
+	 if (valuesToRead[i] <= 2) begin
+	    mismatchFifos[i].enq(mc);
+	    newValuesToRead = truncate(chunk/4);
+	 end
+	 valuesToRead[i] <= newValuesToRead;
 
       endrule
    end
@@ -137,6 +144,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
 	    iterCnts[i] <= ic;
 	    mismatchCounts[i] <= 0;
+	    valuesToRead[i] <= truncate(chunk/4);
 	 end
       endmethod
    endinterface
