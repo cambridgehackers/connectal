@@ -45,4 +45,8 @@ adb -s $ANDROID_SERIAL pull /mnt/sdcard/perf.monkit `dirname $1`
 fi
 adb -s $ANDROID_SERIAL shell rm -f /mnt/sdcard/`basename $1` /mnt/sdcard/`basename $2` perf.monkit
 pwd
-exit `cat exit.status`
+status=`cat exit.status`
+if [ "$status" != "0" ]; then
+  status=1
+fi
+exit $status
