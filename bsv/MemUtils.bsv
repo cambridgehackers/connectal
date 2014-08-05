@@ -62,18 +62,21 @@ interface MemReaderBuff#(numeric type dataWidth, numeric type bufferDepth);
 endinterface
 
 module mkMemReaderBuff(MemReaderBuff#(dataWidth, bufferDepth))
-   provisos(Add#(b__, TAdd#(1,TLog#(bufferDepth)), 8),
-	    Div#(dataWidth,8,dataWidthBytes),
-	    Mul#(dataWidthBytes,8,dataWidth),
-	    Log#(dataWidthBytes,beatShift));
+   provisos(Div#(dataWidth,8,dataWidthBytes)
+	    ,Mul#(dataWidthBytes,8,dataWidth)
+	    ,Log#(dataWidthBytes,beatShift)
+	    ,Log#(bufferDepth, a__)
+	    ,Add#(a__, 1, b__)
+	    ,Add#(TLog#(bufferDepth), c__, 15)
+	    );
 
    FIFOFLevel#(ObjectData#(dataWidth),bufferDepth)  readBuffer <- mkBRAMFIFOFLevel;
    FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF();
-   ConfigCounter#(TAdd#(1,TLog#(bufferDepth))) unfulfilled <- mkConfigCounter(0);
+   ConfigCounter#(16) unfulfilled <- mkConfigCounter(0);
    let beat_shift = fromInteger(valueOf(beatShift));
    
    // only issue the readRequest when sufficient buffering is available.  This includes the bufering we have already comitted.
-   Bit#(TAdd#(1,TLog#(bufferDepth))) sreq = pack(satPlus(Sat_Bound, unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)), unfulfilled.read()));
+   Bit#(16) sreq = pack(satPlus(Sat_Bound, unpack(extend(reqOutstanding.first.burstLen>>beat_shift)), unfulfilled.read()));
 
    interface ObjectReadServer readServer;
       interface Put readReq = toPut(reqOutstanding);
@@ -81,17 +84,17 @@ module mkMemReaderBuff(MemReaderBuff#(dataWidth, bufferDepth))
    endinterface
    interface ObjectReadClient readClient;
       interface Get readReq;
-	 method ActionValue#(ObjectRequest) get if (readBuffer.lowWater(sreq));
-	    reqOutstanding.deq;
-	    unfulfilled.increment(unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)));
-	    return reqOutstanding.first;
-	 endmethod
+   	 method ActionValue#(ObjectRequest) get if (readBuffer.lowWater(truncate(sreq)));
+   	    reqOutstanding.deq;
+   	    unfulfilled.increment(unpack(extend(reqOutstanding.first.burstLen>>beat_shift)));
+   	    return reqOutstanding.first;
+   	 endmethod
       endinterface
       interface Put readData;
-	 method Action put(ObjectData#(dataWidth) x);
-	    readBuffer.fifo.enq(x);
-	    unfulfilled.decrement(1);
-	 endmethod
+   	 method Action put(ObjectData#(dataWidth) x);
+   	    readBuffer.fifo.enq(x);
+   	    unfulfilled.decrement(1);
+   	 endmethod
       endinterface
    endinterface
 endmodule

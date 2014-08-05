@@ -480,8 +480,8 @@ endinterface
 module  mkDramMatrixMultiply#(HostType host)(DramMatrixMultiply#(N,TMul#(N,32)));
 
    MemWriterBuff#(TMul#(N,32),128)    writer <- mkMemWriterBuff;
-   MemReaderBuff#(TMul#(N,32),128) rowReader <- mkMemReaderBuff;
-   MemReaderBuff#(TMul#(N,32),128) colReader <- mkMemReaderBuff;
+   MemReaderBuff#(TMul#(N,32),256) rowReader <- mkMemReaderBuff;
+   MemReaderBuff#(TMul#(N,32),256) colReader <- mkMemReaderBuff;
    MemWriter#(TMul#(32,N))       bogusWriter <- mkMemWriter;
    
    DmaMatrixMultiplyIfc#(MMSize,DmaSz) dmaMMF <- mkDmaMatrixMultiply(rowReader.readServer, colReader.readServer, writer.writeServer, host);
