@@ -226,7 +226,7 @@ static void pa_dma_buf_end_cpu_access(struct dma_buf *dmabuf, size_t start,
 static void *pa_dma_buf_vmap(struct dma_buf *dmabuf)
 {
   struct pa_buffer *buffer = dmabuf->priv;
-  int rc = pa_dma_buf_begin_cpu_access(dmabuf, 0, 0, 0);
+  pa_dma_buf_begin_cpu_access(dmabuf, 0, 0, 0);
   return buffer->vaddr;
 }
 
