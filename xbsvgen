@@ -309,6 +309,11 @@ if __name__=='__main__':
     if not options.xsimflags:
         options.xsimflags = ['-R']
 
+    if not options.s2hinterface:
+        options.s2hinterface = []
+    if not options.h2sinterface:
+        options.h2sinterface = []
+
     project_dir = os.path.expanduser(options.project_dir)
     options.bsvdefine.append('project_dir=%s' % os.path.abspath(project_dir))
     srcdirs = []
@@ -393,11 +398,6 @@ if __name__=='__main__':
     hwProxies = []
     swWrappers = []
     hwWrappers = []
-
-    if not options.s2hinterface:
-        options.s2hinterface = []
-    if not options.h2sinterface:
-        options.h2sinterface = []
 
     for i in set(options.s2hinterface + options.h2sinterface):
         ifc = syntax.globalvars[i]

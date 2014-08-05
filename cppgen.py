@@ -571,13 +571,6 @@ def generate_cpp(project_dir, noisyFlag, swProxies, swWrappers):
         f.write('#include "GeneratedTypes.h"\n');
         return f
 
-    def create_bare_file(name):
-        fname = os.path.join(project_dir, 'jni', name)
-        f = util.createDirAndOpen(fname, 'w')
-        if noisyFlag:
-            print "Writing file ",fname
-        return f
-
     generatedCFiles = []
     hname = os.path.join(project_dir, 'jni', 'GeneratedTypes.h')
     generated_hpp = util.createDirAndOpen(hname, 'w')
