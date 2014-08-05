@@ -52,8 +52,9 @@ endif
 
 BOARD=zedboard
 
-parsetab.py: syntax.py
-	python syntax.py
+parsetab.py: scripts/syntax.py
+	mkdir out
+	python scripts/syntax.py
 
 #################################################################################################
 # tests

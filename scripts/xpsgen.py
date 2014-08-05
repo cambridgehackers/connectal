@@ -25,7 +25,7 @@ import sys
 import os
 import util
 import re
-import syntax
+#import syntax
 
 
 edkversion = '14.3'

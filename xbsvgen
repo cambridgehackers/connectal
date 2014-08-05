@@ -22,14 +22,14 @@
 ## SOFTWARE.
 
 import os, sys, shutil, string
-import AST
-import bsvgen
-import xpsgen
-import cppgen
-import syntax
+from scripts import AST
+from scripts import bsvgen
+from scripts import xpsgen
+from scripts import cppgen
+from scripts import syntax
 import argparse
 import subprocess
-import util
+from scripts import util
 import re
 import glob
 import time
