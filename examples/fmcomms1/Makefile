@@ -1,7 +1,8 @@
 
 S2H = FMComms1Request
 H2S = FMComms1Indication
-BSVFILES = FMComms1ADC.bsv FMComms1DAC.bsv FMComms1.bsv Top.bsv
+BSVFILES = FMComms1ADC.bsv FMComms1DAC.bsv FMComms1.bsv \
+	FPCMult.bsv DDS.bsv ChannelSelect.bsv Top.bsv
 CPPFILES=testi2c.c
 XBSVFLAGS = -C fmcomms1-$(BOARD).xdc --tcl clock.tcl
 #XBSVFLAGS += --bscflags " -D TRACE_AXI"
