@@ -108,6 +108,8 @@ module  mkSharedInterleavedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(Shared
    FIFOF#(Float)     gFifo <- mkSizedFIFOF(kk);
    Reg#(Bit#(16))  lastCnt <- mkReg(0);
    Reg#(Bit#(16))gatherCnt <- mkReg(0);
+   Reg#(Bool) gather_phase <- mkReg(0);
+   //invariant: gather_phase = lastCnt == fromInteger(kk);
 
    FIFOF#(Tuple2#(Bool,Bool))    flFifo <- mkSizedFIFOF(ub_MulLat);
    Vector#(K,FIFOF#(MmToken))    dotfifos <- replicateM(mkFIFOF1);
@@ -118,7 +120,6 @@ module  mkSharedInterleavedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(Shared
    Reg#(Bit#(32)) lastGather <- mkReg(0);
    Reg#(Bit#(32)) macs <- mkReg(0);
    
-   let gather_phase = lastCnt == fromInteger(kk);
    
    (* fire_when_enabled *)
    rule connect_adder_buffer;
@@ -172,6 +173,7 @@ module  mkSharedInterleavedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(Shared
       adder.request.put(tuple2(resp,acc));
       if(last) begin
 	 lastCnt <= lastCnt+1;
+	 gather_phase <= (lastCnt == fromInteger(kk)-1);
       end
 `ifdef TAGGED_TOKENS
       let row = rowReg;
@@ -217,6 +219,7 @@ module  mkSharedInterleavedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(Shared
 	    gatherCnt <= 0;
 	    lastCnt <= 0;
 	    firstCnt <= 0;
+	    gather_phase <= False;
 	 end 
       end
    endrule   
