@@ -86,8 +86,10 @@ ubuntu_exe: prepare_bin_target
 
 program:
 ifneq ($(BOARD),bluesim)
+ifneq ($(OS),android)
 	fpgajtag bin/mkTop.bin.gz
 	sleep 1
+endif
 endif
 
 ifeq ($(BOARD),bluesim)
