@@ -323,47 +323,40 @@ if __name__=='__main__':
     boardname = options.board.lower()
 
     bsvdefines = options.bsvdefine
-    if boardname == 'kc705':
-        bsvdefines += ['Kintex7', 'PCIE']
-    elif boardname == 'vc707':
-        bsvdefines += ['Virtex7', 'PCIE']
-    elif boardname == 'ac701':
-        bsvdefines += ['Artix7',  'PCIE']
-    elif boardname == 'v2000t':
-        bsvdefines += ['Virtex7', 'PCIE']
-    elif boardname == 'zedboard':
-        bsvdefines += ['ZYNQ']
-    elif boardname == 'zc702':
-        bsvdefines += ['ZYNQ']
-    bsvdefines += ['BOARD_'+boardname]
-
-    for inputfile in options.bsvfile:
-        inputdir = os.path.dirname(inputfile)
-        if not inputdir in srcdirs:
-            srcdirs.append(inputdir)
-        s0 = open(inputfile).read() + '\n'
-        s1 = preprocess(s0, bsvdefines)
-        s2 = syntax.parse(s1,inputfile, noisyFlag)
-
     needs_pcie_7x_gen1x8 = False
     rewireclockstring = ''
-    topmodulename = dutname
     if boardname == 'kc705':
+        bsvdefines += ['Kintex7', 'PCIE']
         if not 'os' in options: options.os = 'ubuntu'
         partname = 'xc7k325tffg900-2'
         needs_pcie_7x_gen1x8 = True
     elif boardname == 'vc707':
+        bsvdefines += ['Virtex7', 'PCIE']
         if not 'os' in options: options.os = 'ubuntu'
         partname = 'xc7vx485tffg1761-2'
         needs_pcie_7x_gen1x8 = True
-    elif boardname == 'v2000t':
-        if not 'os' in options: options.os = 'ubuntu'
-        partname = 'xc7v2000tflg1925-2'
-        needs_pcie_7x_gen1x8 = True
     elif boardname == 'ac701':
+        bsvdefines += ['Artix7',  'PCIE']
         if not 'os' in options: options.os = 'ubuntu'
         partname = 'xc7a200tfbg676-2'
         needs_pcie_7x_gen1x8 = True
+    elif boardname == 'v2000t':
+        bsvdefines += ['Virtex7', 'PCIE']
+        if not 'os' in options: options.os = 'ubuntu'
+        partname = 'xc7v2000tflg1925-2'
+        needs_pcie_7x_gen1x8 = True
+    elif boardname == 'zedboard':
+        bsvdefines += ['ZYNQ']
+        if not 'os' in options: options.os = 'android'
+        partname = 'xc7z020clg484-1'
+        rewireclockstring = tclzynqrewireclock
+        options.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/zc7z020clg484.xdc'))
+    elif boardname == 'zc702':
+        bsvdefines += ['ZYNQ']
+        if not 'os' in options: options.os = 'android'
+        partname = 'xc7z020clg484-1'
+        rewireclockstring = tclzynqrewireclock
+        options.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/zc7z020clg484.xdc'))
     elif boardname == 'zc706':
         if not 'os' in options: options.os = 'android'
         partname = 'xc7z045ffg900-2'
@@ -379,6 +372,18 @@ if __name__=='__main__':
         partname = 'xc7z020clg484-1'
         rewireclockstring = tclzynqrewireclock
         options.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/zc7z020clg484.xdc'))
+
+    bsvdefines += ['BOARD_'+boardname]
+
+    for inputfile in options.bsvfile:
+        inputdir = os.path.dirname(inputfile)
+        if not inputdir in srcdirs:
+            srcdirs.append(inputdir)
+        s0 = open(inputfile).read() + '\n'
+        s1 = preprocess(s0, bsvdefines)
+        s2 = syntax.parse(s1,inputfile, noisyFlag)
+
+    topmodulename = dutname
     options.verilog.append(os.path.join(xbsvdir, 'verilog'))
 
     options.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/%s.xdc' % boardname))
@@ -416,7 +421,6 @@ if __name__=='__main__':
     tclimplname = os.path.join(project_dir, 'vivado-impl.tcl')
     tclsynthname = os.path.join(project_dir, '%s-synth.tcl' % options.export.lower())
     makename = os.path.join(project_dir, 'Makefile')
-    timestampname = os.path.join(project_dir, 'sources', dutname.lower(), '.timestamp')
 
     androidmkname = os.path.join(project_dir, 'jni', 'Android.mk')
     linuxmkname = os.path.join(project_dir, 'jni', 'Ubuntu.mk')
@@ -564,9 +568,6 @@ if __name__=='__main__':
 				   'bitsmake': bitsmake
                                    })
     make.close()
-    #print options.xsimflags
-    timestamp = util.createDirAndOpen(timestampname, 'w')
-    timestamp.close()
 
     if options.make:
         os.chdir(project_dir)
