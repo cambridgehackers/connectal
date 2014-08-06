@@ -109,22 +109,20 @@ foreach {pat} {CLK_GATE_hdmi_clock_if CLK_*deleteme_unused_clock* CLK_GATE_*dele
 '''
 
 bitsmakeRuleTemplate='''
-hw/mkTop.bit: $(vfile)
+hw/mkTop.bit: $(vfile) prepare_bin_target
 	vivado -mode batch -source vivado-impl.tcl $(VIVADOFLAGS)
-	mkdir -p bin
-	cp -f hw/*.rpt bin
+	$(Q)cp -f hw/*.rpt bin
 '''
 
 fpgamakeRuleTemplate='''
 FPGAMAKE=$(XBSVDIR)/../fpgamake/fpgamake
-fpgamake.mk: $(vfile) Makefile
-	mkdir -p hw
-	$(FPGAMAKE) -o fpgamake.mk %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s -t $(MKTOP) %(cachedir)s -b hw/mkTop.bit verilog $(XBSVDIR)/verilog
+fpgamake.mk: $(vfile) Makefile prepare_bin_target
+	$(Q)mkdir -p hw
+	$(Q)$(FPGAMAKE) -o fpgamake.mk %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s -t $(MKTOP) %(cachedir)s -b hw/mkTop.bit verilog $(XBSVDIR)/verilog
 
-hw/mkTop.bit: fpgamake.mk
-	make -f fpgamake.mk
-	mkdir -p bin
-	cp -f Impl/*/*.rpt bin
+hw/mkTop.bit: fpgamake.mk prepare_bin_target
+	$(Q)make -f fpgamake.mk
+	$(Q)cp -f Impl/*/*.rpt bin
 '''
 
 makefileTemplate='''
