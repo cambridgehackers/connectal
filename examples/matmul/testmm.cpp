@@ -204,26 +204,20 @@ int main(int argc, const char **argv)
   PortalMat pm1t(m1.t());
   fprintf(stderr, "pm2\n");
   PortalMat pm2(m2);
+  pm1t.reference();
+  pm2.reference();
 #else
 #ifdef MATRIX_NT
   fprintf(stderr, "pm1\n");
   PortalMat pm1(m1);
   fprintf(stderr, "pm2t\n");
   PortalMat pm2t(m2.t());
-#endif
-#endif
-  PortalMat pm3;
-
-  // now reference the matrices so we do not count that in the timer
-#ifdef MATRIX_TN
-  pm1t.reference();
-  pm2.reference();
-#else
-#ifdef MATRIX_NT
   pm1.reference();
   pm2t.reference();
 #endif
 #endif
+
+  PortalMat pm3;
   pm3.create(m1.rows, m2.cols, CV_32F);
   pm3.reference();
 

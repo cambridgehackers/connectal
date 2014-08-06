@@ -147,16 +147,32 @@ int main(int argc, const char **argv)
 		  81,82,83,84,
 		  85,86,87,88
 		  );
-    RbmMat pm1(m1);
+#ifdef MATRIX_TN
+    RbmMat pm1(m1.t());
     RbmMat pm2(m2);
-    RbmMat pm3;
+#else
+#ifdef MATRIX_NT
+    RbmMat pm1(m1);
+    RbmMat pm2(m2.t());
+#endif
+#endif
+
+    pm1.reference();
+    pm2.reference();
     dumpMat<float>("pm1", "%5.1f", pm1);
     dumpMat<float>("pm2", "%5.1f", pm2);
-    pm3.multf(pm1, pm2);
-    pm3.multf(pm1, pm2);
+
+    RbmMat pm3;
+    pm3.create(m1.rows, m2.cols, CV_32F);
+    pm3.reference();
+
+    pm3.multf(pm1, pm2, mmdeviceIndication);
+    pm3.multf(pm1, pm2, mmdeviceIndication);
     dumpMat<float>("pm1 * pm2", "%5.1f", pm3);
+
     pm3.sigmoid(pm1);
     dumpMat<float>("sigmoid", "%5.1f", pm3);
+
   } else {
     RBM rbm(dma);
     rbm.run();
