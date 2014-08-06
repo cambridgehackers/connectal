@@ -1,4 +1,14 @@
 
+source $xbsvdir/scripts/xbsv-synth-ip.tcl
+
+if [file exists ../synth-ip.tcl] {
+    source ../synth-ip.tcl
+}
+
+# STEP#2: run synthesis, report utilization and timing estimates, write checkpoint design
+#
+command "synth_design -name $xbsv_dut -top $xbsv_dut -part $partname -flatten rebuilt" hw/synth_design.log
+
 write_checkpoint -force $outputDir/top-post-synth > hw/temp.log
 #not in 2013.2 report_timing_summary -warn_on_violation
 #not in 2013.2 report_timing_summary -warn_on_violation -verbose  -file $outputDir/top-post-synth-timing-summary.rpt > hw/temp.log

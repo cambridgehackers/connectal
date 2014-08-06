@@ -7,7 +7,6 @@ file mkdir $outputDir
 #
 # STEP#1: setup design sources and constraints
 #
-source board.tcl
 source $xbsvdir/scripts/xilinx/tcl/log.tcl
 
 ####Report and DCP controls - values: 0-required min; 1-few extra; 2-all

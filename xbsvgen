@@ -103,28 +103,20 @@ set boardname {%(boardname)s}
 set xbsvdir {%(xbsvdir)s}
 set xbsvipdir {%(ipdir)s}
 set needspcie {%(needspcie)s}
+set xbsv_dut { %(Dut)s }
 %(tcldefines)s
 '''
 
 tclfileTemplate='''
-source %(xbsvdir)s/scripts/portal_setup.tcl
+source board.tcl
+source $xbsvdir/scripts/portal_setup.tcl
 %(read_verilog)s
 %(read_xci)s
 %(tclfileConstraints)s
-
-source $xbsvdir/scripts/xbsv-synth-ip.tcl
-
-if [file exists ../synth-ip.tcl] {
-    source ../synth-ip.tcl
-}
-
-# STEP#2: run synthesis, report utilization and timing estimates, write checkpoint design
-#
-command "synth_design -name %(Dut)s -top %(Dut)s -part %(partname)s -flatten rebuilt" hw/synth_design.log
-source %(xbsvdir)s/scripts/portal_synth.tcl
+source $xbsvdir/scripts/portal_synth.tcl
 %(sourceTcl)s
 %(rewire_clock)s
-source %(xbsvdir)s/scripts/portal_opt.tcl
+source $xbsvdir/scripts/portal_opt.tcl
 '''
 
 tclzynqrewireclock = '''
@@ -415,7 +407,7 @@ if __name__=='__main__':
             hwProxies.append(ifc)
             swWrappers.append(ifc)
 
-    generatedCFiles = cppgen.generate_cpp(project_dir, noisyFlag, swProxies, swWrappers)
+    cppgen.generate_cpp(project_dir, noisyFlag, swProxies, swWrappers)
     bsvgen.generate_bsv(project_dir, noisyFlag, hwProxies, hwWrappers, dutname)
 
     tclboardname = os.path.join(project_dir, 'board.tcl')
@@ -435,7 +427,6 @@ if __name__=='__main__':
     className = cppgen.cName(dutname)
     substs = {
         #android
-	'generatedCFiles': ' '.join(generatedCFiles),
 	'project_dir': os.path.abspath(project_dir),
         #ubuntu
         'classname': className.lower(),
@@ -553,7 +544,6 @@ if __name__=='__main__':
                                    'bsvfiles': ' '.join([ os.path.abspath(bsvfile) for bsvfile in options.bsvfile]),
                                    'sourcefiles': ' '.join([os.path.abspath(source) for source in options.source]) if options.source else '',
                                    'bsimsource': ' '.join([os.path.abspath(bsimsource) for bsimsource in options.bsimsource]) if options.bsimsource else '',
-                                   'generatedCFiles': ' '.join(generatedCFiles),
                                    'includepath': ' '.join(['-I%s' % os.path.dirname(os.path.abspath(source)) for source in options.source]) if options.source else '',
                                    'project_dir': os.path.abspath(project_dir),
                                    'topbsvfile' : os.path.abspath(options.topbsv),
