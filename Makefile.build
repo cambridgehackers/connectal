@@ -57,7 +57,7 @@ BSIM_CXX_COMMON = $(XBSVDIR)/cpp/BsimCtrl.cxx $(XBSVDIR)/cpp/TlpReplay.cxx $(XBS
 VIVADOFLAGS= -notrace
 XVLOGFLAGS =
 
-RUN_BSC =  bsc $(BSC_QUIET) $(BSVDEFINES) $(BSCFLAGS_COMMON) $(BSCFLAGS_PROJECT) -p +:$(BSVPATH):$(DUT)/
+RUN_BSC =  bsc $(BSC_QUIET) $(BSVDEFINES) $(BSCFLAGS_COMMON) $(BSCFLAGS_PROJECT) -p +:$(BSVPATH)
 vfile=verilog/$(MKTOP).v
 
 all: exe bits
