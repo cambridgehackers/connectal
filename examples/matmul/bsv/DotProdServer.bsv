@@ -113,6 +113,7 @@ module  mkSharedInterleavedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(Shared
    FIFOF#(Tuple2#(Bool,Bool))    flFifo <- mkSizedFIFOF(ub_MulLat);
    Vector#(K,FIFOF#(MmToken))    dotfifos <- replicateM(mkFIFOF1);
    Reg#(Bit#(TAdd#(1,TLog#(K)))) rowReg <- mkReg(0);
+   Reg#(Bool)                lastRowReg <- mkReg(False);
       
    Reg#(Bit#(32)) lastMul <- mkReg(0);
    Reg#(Bit#(32)) lastAcc <- mkReg(0);
@@ -150,8 +151,14 @@ module  mkSharedInterleavedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(Shared
       (action
 	  // I have to do this check (instead of relying on wrap-around) because
 	  // rowReg has an extra bit to compenseate for bsc's silly Bit#(0) handling
-	  if (rowReg+1 == fromInteger(kk)) rowReg <= 0;
-	  else rowReg <= rowReg+1;
+	  if (rowReg+1 == fromInteger(kk)) begin
+	     rowReg <= 0;
+	     lastRowReg <= (0 == fromInteger(kk-1));
+	  end
+	  else begin
+	     rowReg <= rowReg+1;
+	     lastRowReg <= (rowReg == fromInteger(kk-2));
+	  end
        endaction);
 
    
@@ -187,7 +194,7 @@ module  mkSharedInterleavedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(Shared
       incrementRowReg;
       lastGather <= cycles;
       let row = rowReg;
-      let last_row = row == fromInteger(kk-1);
+      let last_row = lastRowReg;
       let last_pass = gatherCnt+1 == fromInteger(valueOf(gatherSz));
       if (verbose)
 	 $display("%08d gather: gather=%d row=%d last_pass=%d last_row=%d, gReg=%d", 
