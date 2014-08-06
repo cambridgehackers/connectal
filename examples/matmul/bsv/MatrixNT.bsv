@@ -27,7 +27,6 @@ import DefaultValue::*;
 import SpecialFIFOs::*;
 import Vector::*;
 import BRAM::*;
-import DmaVector::*;
 import PortalMemory::*;
 import MemTypes::*;
 import MemreadEngine::*;
