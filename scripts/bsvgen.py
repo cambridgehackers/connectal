@@ -58,12 +58,15 @@ typedef struct {
 
 '''
 
-
 requestStructTemplate='''
 typedef struct {
 %(paramStructDeclarations)s
 } %(MethodName)s_Request deriving (Bits);
 Bit#(6) %(methodName)s_Offset = %(channelNumber)s;
+'''
+
+requestOutputPipeInterfaceTemplate='''\
+    interface PipeOut#(%(MethodName)s_Request) %(methodName)s_PipeOut;
 '''
 
 exposedProxyInterfaceTemplate='''
@@ -77,20 +80,46 @@ interface %(Dut)s;
     interface StdPortal portalIfc;
     interface %(Ifc)s ifc;
 endinterface
+
+(* synthesize *)
+module %(moduleContext)s mk%(Dut)sPortalSynth#(Bit#(32) id) (%(Dut)sPortal);
+    Vector#(0, PipeIn#(Bit#(32))) requestPipes = nil;
+    Vector#(0, Bit#(32))          requestBits = nil;
+    Vector#(%(channelCount)s, PipeOut#(Bit#(32))) indicationPipes = newVector();
+    Vector#(%(channelCount)s, Bit#(32))           indicationBits = newVector();
+%(indicationMethodRules)s
+    interface %(Ifc)s ifc;
+%(indicationMethods)s
+    endinterface
+%(portalIfc)s
+endmodule
+
+// exposed proxy implementation
+module %(moduleContext)s mk%(Dut)sPortal#(idType id) (%(Dut)sPortal)
+    provisos (Bits#(idType, __a),
+              Add#(a__, __a, 32));
+    let rv <- mk%(Dut)sPortalSynth(extend(pack(id)));
+    return rv;
+endmodule
+
+// synthesizeable proxy MemPortal
+(* synthesize *)
+module mk%(Dut)sSynth#(Bit#(32) id)(%(Dut)s);
+  let dut <- mk%(Dut)sPortal(id);
+  let memPortal <- mkMemPortal(dut.portalIfc);
+  interface MemPortal portalIfc = memPortal;
+  interface %(Ifc)s ifc = dut.ifc;
+endmodule
+
+// exposed proxy MemPortal
+module mk%(Dut)s#(idType id)(%(Dut)s)
+   provisos (Bits#(idType, a__),
+	     Add#(b__, a__, 32));
+   let rv <- mk%(Dut)sSynth(extend(pack(id)));
+   return rv;
+endmodule
 '''
 
-hiddenProxyInterfaceTemplate='''
-%(responseElements)s
-// hidden proxy interface
-interface %(Dut)s;
-%(indicationMethodDecls)s
-    interface ReadOnly#(Bool) interrupt;
-endinterface
-'''
-
-requestOutputPipeInterfaceTemplate='''\
-    interface PipeOut#(%(MethodName)s_Request) %(methodName)s_PipeOut;
-'''
 exposedWrapperInterfaceTemplate='''
 %(requestElements)s
 // exposed wrapper portal interface
@@ -106,98 +135,7 @@ endinterface
 interface %(Dut)s;
     interface StdPortal portalIfc;
 endinterface
-'''
 
-hiddenWrapperInterfaceTemplate='''
-%(requestElements)s
-// hidden wrapper interface
-interface %(Dut)s;
-endinterface
-'''
-
-responseStructTemplate='''
-typedef struct {
-%(paramStructDeclarations)s
-} %(MethodName)s_Response deriving (Bits);
-Bit#(6) %(methodName)s_Offset = %(channelNumber)s;
-'''
-
-wrapperCtrlTemplate='''
-%(methodRules)s
-'''
-
-portalIfcTemplate='''
-    interface Portal portalIfc;
-        method Bit#(32) ifcId;
-            return zeroExtend(pack(id));
-        endmethod
-        method Bit#(32) ifcType;
-            return %(ifcType)s;
-        endmethod
-        interface Vector requests = requestPipes;
-        interface Vector requestSizeBits = requestBits;
-        interface Vector indications = indicationPipes;
-        interface Vector indicationSizeBits = indicationBits;
-    endinterface
-'''
-
-proxyInterruptImplTemplate='''
-    interface ReadOnly interrupt;
-        method Bool _read();
-            return (interruptEnableReg && interruptStatus);
-        endmethod
-    endinterface
-'''
-
-
-proxyCtrlTemplate='''
-%(indicationMethodRules)s
-%(startIndicationMethods)s
-%(indicationMethods)s
-%(endIndicationMethods)s
-'''
-
-
-requestRuleTemplate='''
-    FromBit#(32,%(MethodName)s_Request) %(methodName)s_requestFifo <- mkFromBit();
-    requestPipeIn[%(channelNumber)s] = toPipeIn(%(methodName)s_requestFifo);
-    requestBits[%(channelNumber)s]  = fromInteger(valueOf(SizeOf#(%(MethodName)s_Request)));
-'''
-
-mkConnectionMethodTemplate='''
-    rule handle_%(methodName)s_request;
-        let request <- toGet(pipes.%(methodName)s_PipeOut).get();
-        %(invokeMethod)s
-    endrule
-'''
-
-indicationRuleTemplate='''
-    ToBit#(32,%(MethodName)s_Response) %(methodName)s_responseFifo <- mkToBit();
-    indicationPipes[%(channelNumber)s] = toPipeOut(%(methodName)s_responseFifo);
-    indicationBits[%(channelNumber)s]  = fromInteger(valueOf(SizeOf#(%(MethodName)s_Response)));
-'''
-
-indicationMethodDeclTemplate='''
-    method Action %(methodName)s(%(formals)s);'''
-
-indicationMethodTemplate='''
-    method Action %(methodName)s(%(formals)s);
-        %(methodName)s_responseFifo.enq(%(MethodName)s_Response {%(structElements)s});
-        //$display(\"indicationMethod \'%(methodName)s\' invoked\");
-    endmethod'''
-
-
-mkHiddenWrapperInterfaceTemplate='''
-// hidden wrapper implementation
-module %(moduleContext)s mk%(Dut)s#(FIFO#(Bit#(15)) slaveWriteAddrFifo,
-                            FIFO#(Bit#(15)) slaveReadAddrFifo,
-                            FIFO#(Bit#(32)) slaveWriteDataFifo,
-                            FIFOF#(Bit#(32)) slaveReadDataFifo)(%(Dut)s);
-%(wrapperCtrl)s
-endmodule
-'''
-
-mkExposedWrapperInterfaceTemplate='''
 instance Connectable#(%(Dut)sPipes,%(Ifc)s);
    module mkConnection#(%(Dut)sPipes pipes, %(Ifc)s ifc)(Empty);
 %(mkConnectionMethodRules)s
@@ -211,7 +149,7 @@ module mk%(Dut)sPipes#(Bit#(32) id)(%(Dut)sPipes);
     Vector#(%(requestChannelCount)s, Bit#(32)) requestBits = newVector();
     Vector#(0, PipeOut#(Bit#(32))) indicationPipes = nil;
     Vector#(0, Bit#(32))           indicationBits = nil;
-%(wrapperCtrl)s
+%(methodRules)s
     interface Vector inputPipes = requestPipeIn;
     interface Vector requestSizeBits = requestBits;
 %(outputPipes)s
@@ -267,53 +205,63 @@ module mk%(Dut)s#(idType id, %(Ifc)s ifc)(%(Dut)s)
 endmodule
 '''
 
-mkHiddenProxyInterfaceTemplate='''
-// hidden proxy implementation
-module %(moduleContext)s mk%(Dut)s#(FIFO#(Bit#(15)) slaveWriteAddrFifo,
-                            FIFO#(Bit#(15)) slaveReadAddrFifo,
-                            FIFO#(Bit#(32)) slaveWriteDataFifo,
-                            FIFOF#(Bit#(32)) slaveReadDataFifo)(%(Dut)s);
-%(proxyCtrl)s
-%(portalIfcInterrupt)s
-endmodule
+responseStructTemplate='''
+typedef struct {
+%(paramStructDeclarations)s
+} %(MethodName)s_Response deriving (Bits);
+Bit#(6) %(methodName)s_Offset = %(channelNumber)s;
 '''
 
-mkExposedProxyInterfaceTemplate='''
-(* synthesize *)
-module %(moduleContext)s mk%(Dut)sPortalSynth#(Bit#(32) id) (%(Dut)sPortal);
-    Vector#(0, PipeIn#(Bit#(32))) requestPipes = nil;
-    Vector#(0, Bit#(32))          requestBits = nil;
-    Vector#(%(channelCount)s, PipeOut#(Bit#(32))) indicationPipes = newVector();
-    Vector#(%(channelCount)s, Bit#(32))           indicationBits = newVector();
-%(proxyCtrl)s
-%(portalIfc)s
-endmodule
-
-// exposed proxy implementation
-module %(moduleContext)s mk%(Dut)sPortal#(idType id) (%(Dut)sPortal)
-    provisos (Bits#(idType, __a),
-              Add#(a__, __a, 32));
-    let rv <- mk%(Dut)sPortalSynth(extend(pack(id)));
-    return rv;
-endmodule
-
-// synthesizeable proxy MemPortal
-(* synthesize *)
-module mk%(Dut)sSynth#(Bit#(32) id)(%(Dut)s);
-  let dut <- mk%(Dut)sPortal(id);
-  let memPortal <- mkMemPortal(dut.portalIfc);
-  interface MemPortal portalIfc = memPortal;
-  interface %(Ifc)s ifc = dut.ifc;
-endmodule
-
-// exposed proxy MemPortal
-module mk%(Dut)s#(idType id)(%(Dut)s)
-   provisos (Bits#(idType, a__),
-	     Add#(b__, a__, 32));
-   let rv <- mk%(Dut)sSynth(extend(pack(id)));
-   return rv;
-endmodule
+portalIfcTemplate='''
+    interface Portal portalIfc;
+        method Bit#(32) ifcId;
+            return zeroExtend(pack(id));
+        endmethod
+        method Bit#(32) ifcType;
+            return %(ifcType)s;
+        endmethod
+        interface Vector requests = requestPipes;
+        interface Vector requestSizeBits = requestBits;
+        interface Vector indications = indicationPipes;
+        interface Vector indicationSizeBits = indicationBits;
+    endinterface
 '''
+
+proxyInterruptImplTemplate='''
+    interface ReadOnly interrupt;
+        method Bool _read();
+            return (interruptEnableReg && interruptStatus);
+        endmethod
+    endinterface
+'''
+
+requestRuleTemplate='''
+    FromBit#(32,%(MethodName)s_Request) %(methodName)s_requestFifo <- mkFromBit();
+    requestPipeIn[%(channelNumber)s] = toPipeIn(%(methodName)s_requestFifo);
+    requestBits[%(channelNumber)s]  = fromInteger(valueOf(SizeOf#(%(MethodName)s_Request)));
+'''
+
+mkConnectionMethodTemplate='''
+    rule handle_%(methodName)s_request;
+        let request <- toGet(pipes.%(methodName)s_PipeOut).get();
+        ifc.%(methodName)s(%(paramsForCall)s);
+    endrule
+'''
+
+indicationRuleTemplate='''
+    ToBit#(32,%(MethodName)s_Response) %(methodName)s_responseFifo <- mkToBit();
+    indicationPipes[%(channelNumber)s] = toPipeOut(%(methodName)s_responseFifo);
+    indicationBits[%(channelNumber)s]  = fromInteger(valueOf(SizeOf#(%(MethodName)s_Response)));
+'''
+
+indicationMethodDeclTemplate='''
+    method Action %(methodName)s(%(formals)s);'''
+
+indicationMethodTemplate='''
+    method Action %(methodName)s(%(formals)s);
+        %(methodName)s_responseFifo.enq(%(MethodName)s_Response {%(structElements)s});
+        //$display(\"indicationMethod \'%(methodName)s\' invoked\");
+    endmethod'''
 
 def bsvgen_emitPreamble(f, files=[]):
     extraImports = (['import %s::*;\n' % os.path.splitext(os.path.basename(fn))[0] for fn in files]
@@ -433,7 +381,7 @@ class MethodMixin:
 
 class InterfaceMixin:
 
-    def substs(self,suffix,expose,proxy):
+    def substs(self,suffix,proxy):
         name = "%s%s"%(self.name,suffix)
         dutName = util.decapitalize(name)
         methods = [d for d in self.decls if d.type == 'Method' and d.return_type.name == 'Action']
@@ -442,7 +390,7 @@ class InterfaceMixin:
         requestElements = self.collectRequestElements(name)
         methodNames = self.collectMethodNames(name)
         methodRuleNames = self.collectMethodRuleNames(name)
-        methodRules = self.collectMethodRules(name,not expose)
+        methodRules = self.collectMethodRules(name,False)
         
         # specific to proxies
         responseElements = self.collectResponseElements(name)
@@ -463,8 +411,6 @@ class InterfaceMixin:
             'methodRules': ''.join(methodRules),
             'requestFailureRuleNames': "" if len(methodNames) == 0 else '(* descending_urgency = "'+', '.join(['handle_%s_requestFailure' % n for n in methodNames])+'"*)',
             'channelCount': self.channelCount,
-            'writeChannelCount': self.channelCount,
-            'hiddenProxy' : "%sStatus" % name,
             'moduleContext': '',
 
             'requestChannelCount': len(methodRules) if not proxy else 0,
@@ -474,50 +420,32 @@ class InterfaceMixin:
             'indicationMethodDecls' :''.join(indicationMethodDecls),
             'indicationChannelCount': self.channelCount if proxy else 0,
             'indicationInterfaces': ''.join(indicationTemplate % { 'Indication': name }) if not self.hasSource else '',
-            'hiddenWrapper' : "%sStatus" % name,
-            'startIndicationMethods' : '' if not expose else '    interface %s ifc;' % self.name,
-            'endIndicationMethods' : '' if not expose else '    endinterface',
-            'slaveFifoSelExposed' : '1' if proxy else '0',
-            'slaveFifoSelHidden'  : '0' if proxy else '1',
             }
 
         substs['portalIfcInterrupt'] = 'interface ReadOnly interrupt = p.interrupt;' if not proxy else proxyInterruptImplTemplate
         substs['ifcType'] = 'truncate(128\'h%s)' % m.hexdigest()
         substs['portalIfc'] = portalIfcTemplate % substs
-        substs['wrapperCtrl'] = wrapperCtrlTemplate % substs
-        substs['proxyCtrl'] = proxyCtrlTemplate % substs
         return substs
 
-    def emitBsvWrapper(self,f):
-        subs = self.substs('Wrapper',True,False)
+    def emitBsvWrapper(self):
+        subs = self.substs('Wrapper',False)
         name = "%s%s"%(self.name,'Wrapper')
         methodNames = self.collectMethodNames(name)
         subs['requestOutputPipeInterfaces'] = ''.join([requestOutputPipeInterfaceTemplate % {'methodName': methodName,
-                                                                                             'MethodName': util.capitalize(methodName)}
+                                                       'MethodName': util.capitalize(methodName)}
                                                        for methodName in methodNames])
-
-        hidden = False
         mkConnectionMethodRules = []
         outputPipes = []
         for m in self.decls:
             if m.type == 'Method' and m.return_type.name == 'Action':
                 paramsForCall = ['request.%s' % p.name for p in m.params]
                 msubs = {'methodName': m.name,
-                         'MethodName': util.capitalize(m.name),
                          'paramsForCall': ', '.join(paramsForCall)}
-                msubs['invokeMethod'] = '' if hidden else 'ifc.%(methodName)s(%(paramsForCall)s);' % msubs
                 mkConnectionMethodRules.append(mkConnectionMethodTemplate % msubs)
                 outputPipes.append('    interface %(methodName)s_PipeOut = toPipeOut(%(methodName)s_requestFifo);' % msubs)
-
         subs['mkConnectionMethodRules'] = ''.join(mkConnectionMethodRules)
         subs['outputPipes'] = '\n'.join(outputPipes)
-        f.write(exposedWrapperInterfaceTemplate % subs)
-        f.write(mkExposedWrapperInterfaceTemplate % subs)
-
-    def emitBsvProxy(self,f,suffix):
-        subs = self.substs(suffix,True,True)
-        f.write(exposedProxyInterfaceTemplate % subs)
-        f.write(mkExposedProxyInterfaceTemplate % subs)
+        return subs
 
     def collectRequestElements(self, outerTypeName):
         requestElements = []
@@ -595,28 +523,20 @@ class InterfaceMixin:
         return methods
 
 def generate_bsv(project_dir, noisyFlag, hwProxies, hwWrappers, dutname):
-    def create_bsv_package(pname, files=[]):
+    def create_bsv_package(pname, data, files):
         fname = os.path.join(project_dir, 'sources', dutname.lower(), '%s.bsv' % pname)
         bsv_file = util.createDirAndOpen(fname, 'w')
         bsv_file.write('package %s;\n' % pname)
         bsvgen_emitPreamble(bsv_file, files)
         if noisyFlag:
             print 'Writing file ', fname
-        return bsv_file
-
-    def close_bsv_package(bsv_file, pname):
+        bsv_file.write(data)
         bsv_file.write('endpackage: %s\n' % pname)
         bsv_file.close()
 
     for i in hwWrappers:
-        pname = '%sWrapper' % i.name
-        bsv = create_bsv_package(pname, i.package)
-        i.emitBsvWrapper(bsv)
-        close_bsv_package(bsv,pname)
+        create_bsv_package('%sWrapper' % i.name, exposedWrapperInterfaceTemplate % i.emitBsvWrapper(), i.package)
         
     for i in hwProxies:
-        pname = '%sProxy' % i.name
-        bsv = create_bsv_package(pname, i.package)
-        i.emitBsvProxy(bsv, "Proxy")
-        close_bsv_package(bsv,pname)
+        create_bsv_package('%sProxy' % i.name, exposedProxyInterfaceTemplate % i.substs("Proxy",True), i.package)
 
