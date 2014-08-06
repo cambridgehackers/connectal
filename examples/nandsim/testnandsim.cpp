@@ -25,9 +25,10 @@
 #include "NandSimIndicationWrapper.h"
 #include "NandSimRequestProxy.h"
 
-int srcAlloc;
+int srcAlloc, nandAlloc;
 unsigned int *srcBuffer = 0;
 size_t numBytes = 1 << 12;
+size_t nandBytes = 1 << 24;
 
 class NandSimIndication : public NandSimIndicationWrapper
 {
@@ -43,6 +44,10 @@ public:
   }
   virtual void eraseDone(uint32_t v){
     fprintf(stderr, "NandSim::eraseDone v=%x\n", v);
+    sem_post(&sem);
+  }
+  virtual void configureNandDone(){
+    fprintf(stderr, "NandSim::configureNandDone\n");
     sem_post(&sem);
   }
 
@@ -75,6 +80,7 @@ int main(int argc, const char **argv)
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
+
   srcAlloc = portalAlloc(numBytes);
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, numBytes);
   fprintf(stderr, "fd=%d, srcBuffer=%p\n", srcAlloc, srcBuffer);
@@ -90,12 +96,18 @@ int main(int argc, const char **argv)
 
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
 
+  nandAlloc = portalAlloc(nandBytes);
+  int ref_nandAlloc = dma->reference(nandAlloc);
+  fprintf(stderr, "NAND alloc fd=%d ref=%d\n", nandAlloc, ref_nandAlloc);
+  device->configureNand(ref_nandAlloc, nandBytes);
+  deviceIndication->wait();
+
   fprintf(stderr, "Main::starting write ref=%d, len=%08zx\n", ref_srcAlloc, numBytes);
-  device->startWrite(ref_srcAlloc, 0, 0, numBytes, 1);
+  device->startWrite(ref_srcAlloc, 0, 0, numBytes, 16);
   deviceIndication->wait();
 
   fprintf(stderr, "Main::starting read %08zx\n", numBytes);
-  device->startRead(ref_srcAlloc, 0, 0, numBytes, 1);
+  device->startRead(ref_srcAlloc, 0, 0, numBytes, 16);
   deviceIndication->wait();
 
   fprintf(stderr, "Main::starting erase %08zx\n", numBytes);
@@ -103,7 +115,7 @@ int main(int argc, const char **argv)
   deviceIndication->wait();
 
   fprintf(stderr, "Main::starting read %08zx\n", numBytes);
-  device->startRead(ref_srcAlloc, 0, 0, numBytes, 1);
+  device->startRead(ref_srcAlloc, 0, 0, numBytes, 16);
   deviceIndication->wait();
   return 0;
 }
