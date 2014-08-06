@@ -147,7 +147,8 @@ bsim: prepare_bin_target
 	$(QTUSED)
 
 syntax.timestamp: $(BSVFILES)
-	$(Q)V="$V" S2H="$(S2H)" H2S="$(H2S)" BSVDEFINES_LIST="$(BSVDEFINES_LIST)" DTOP="$(DTOP)" DUT_NAME="$(DUT_NAME)" $(XBSVDIR)/scripts/syntax.py $(BSVFILES)
+	@#$syntax.py uses environment variables: V S2H H2S BSVDEFINES_LIST DTOP DUT_NAME
+	$(Q)$(XBSVDIR)/scripts/syntax.py $(BSVFILES)
 	$(Q)touch syntax.timestamp
 
 verilog: $(vfile)

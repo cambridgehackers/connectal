@@ -132,7 +132,7 @@ makefileTemplate='''
 ##         pass parameters to software via 'make RUN_ARGS= run'
 RUN_ARGS=
 
-DTOP=%(project_dir)s
+export DTOP=%(project_dir)s
 XBSVDIR=%(xbsvdir)s
 BSVPATH = %(bsvpath)s
 
@@ -141,8 +141,8 @@ MKTOP=%(topbsvmod)s
 OS=%(OS)s
 DUT=%(dut)s
 
-S2H = %(s2hinterface)s
-H2S = %(h2sinterface)s
+export S2H = %(s2hinterface)s
+export H2S = %(h2sinterface)s
 BSVFILES = %(bsvfiles)s
 
 BSCFLAGS_PROJECT = %(bscflags)s
@@ -152,8 +152,8 @@ XSIMFLAGS  = %(xsimflags)s
 TOPBSVFILE = %(topbsvfile)s
 BSVDEFINES = %(bsvdefines)s
 QTUSED = %(qtused)s
-BSVDEFINES_LIST = %(bsvdefines_list)s
-DUT_NAME = %(Dut)s
+export BSVDEFINES_LIST = %(bsvdefines_list)s
+export DUT_NAME = %(Dut)s
 
 %(mdefines)s
 
@@ -182,7 +182,7 @@ include $(BUILD_EXECUTABLE)
 '''
 
 linuxmakefile_template='''
-V=0
+export V=0
 ifeq ($(V),0)
 Q=@
 else
