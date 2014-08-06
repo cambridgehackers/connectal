@@ -51,11 +51,6 @@ import MemTypes::*;
 import Pipe::*;
 %(extraImports)s
 
-typedef struct {
-    Bit#(1) select;
-    Bit#(6) tag;
-} ReadReqInfo deriving (Bits);
-
 '''
 
 requestStructTemplate='''
@@ -227,14 +222,6 @@ portalIfcTemplate='''
     endinterface
 '''
 
-proxyInterruptImplTemplate='''
-    interface ReadOnly interrupt;
-        method Bool _read();
-            return (interruptEnableReg && interruptStatus);
-        endmethod
-    endinterface
-'''
-
 requestRuleTemplate='''
     FromBit#(32,%(MethodName)s_Request) %(methodName)s_requestFifo <- mkFromBit();
     requestPipeIn[%(channelNumber)s] = toPipeIn(%(methodName)s_requestFifo);
@@ -263,17 +250,12 @@ indicationMethodTemplate='''
         //$display(\"indicationMethod \'%(methodName)s\' invoked\");
     endmethod'''
 
-def bsvgen_emitPreamble(f, files=[]):
-    extraImports = (['import %s::*;\n' % os.path.splitext(os.path.basename(fn))[0] for fn in files]
-                   + ['import %s::*;\n' % i for i in syntax.globalimports ])
-    f.write(preambleTemplate % {'extraImports' : ''.join(extraImports)})
-
 class ParamMixin:
     def numBitsBSV(self):
         return self.type.numBitsBSV();
 
 class NullMixin:
-    def emitBsvImplementation(self, f):
+    def functionnotused(self):
         pass
 
 class TypeMixin:
@@ -302,8 +284,6 @@ class EnumMixin:
         return int(math.ceil(math.log(len(self.elements),2)))
 
 class MethodMixin:
-    def emitBsvImplementation(self, f):
-        pass
     def substs(self, outerTypeName):
         if self.return_type.name == 'ActionValue':
             rt = self.return_type.params[0].toBsvType()
@@ -366,38 +346,20 @@ class MethodMixin:
         else:
             return None
 
-    def collectIndicationMethodDecl(self, outerTypeName):
-        substs = self.substs(outerTypeName)
-        if self.return_type.name == 'Action':
-            formal = ['%s %s' % (p.type.toBsvType(), p.name) for p in self.params]
-            substs['formals'] = ', '.join(formal)
-            structElements = ['%s: %s' % (p.name, p.name) for p in self.params]
-            if not self.params:
-                structElements = ['padding: 0']
-            substs['structElements'] = ', '.join(structElements)
-            return indicationMethodDeclTemplate % substs
-        else:
-            return None
-
 class InterfaceMixin:
-
     def substs(self,suffix,proxy):
         name = "%s%s"%(self.name,suffix)
         dutName = util.decapitalize(name)
-        methods = [d for d in self.decls if d.type == 'Method' and d.return_type.name == 'Action']
 
         # specific to wrappers
         requestElements = self.collectRequestElements(name)
         methodNames = self.collectMethodNames(name)
-        methodRuleNames = self.collectMethodRuleNames(name)
         methodRules = self.collectMethodRules(name,False)
         
         # specific to proxies
         responseElements = self.collectResponseElements(name)
-        indicationMethodRuleNames = self.collectIndicationMethodRuleNames(name)
         indicationMethodRules = self.collectIndicationMethodRules(name)
         indicationMethods = self.collectIndicationMethods(name)
-        indicationMethodDecls = self.collectIndicationMethodDecls(name)
 
         m = md5.new()
         m.update(self.name)
@@ -409,7 +371,6 @@ class InterfaceMixin:
             'requestElements': ''.join(requestElements),
             'methodNames': methodNames,
             'methodRules': ''.join(methodRules),
-            'requestFailureRuleNames': "" if len(methodNames) == 0 else '(* descending_urgency = "'+', '.join(['handle_%s_requestFailure' % n for n in methodNames])+'"*)',
             'channelCount': self.channelCount,
             'moduleContext': '',
 
@@ -417,21 +378,13 @@ class InterfaceMixin:
             'responseElements': ''.join(responseElements),
             'indicationMethodRules': ''.join(indicationMethodRules),
             'indicationMethods': ''.join(indicationMethods),
-            'indicationMethodDecls' :''.join(indicationMethodDecls),
             'indicationChannelCount': self.channelCount if proxy else 0,
             'indicationInterfaces': ''.join(indicationTemplate % { 'Indication': name }) if not self.hasSource else '',
             }
 
-        substs['portalIfcInterrupt'] = 'interface ReadOnly interrupt = p.interrupt;' if not proxy else proxyInterruptImplTemplate
         substs['ifcType'] = 'truncate(128\'h%s)' % m.hexdigest()
         substs['portalIfc'] = portalIfcTemplate % substs
-        return substs
-
-    def emitBsvWrapper(self):
-        subs = self.substs('Wrapper',False)
-        name = "%s%s"%(self.name,'Wrapper')
-        methodNames = self.collectMethodNames(name)
-        subs['requestOutputPipeInterfaces'] = ''.join([requestOutputPipeInterfaceTemplate % {'methodName': methodName,
+        substs['requestOutputPipeInterfaces'] = ''.join([requestOutputPipeInterfaceTemplate % {'methodName': methodName,
                                                        'MethodName': util.capitalize(methodName)}
                                                        for methodName in methodNames])
         mkConnectionMethodRules = []
@@ -443,9 +396,9 @@ class InterfaceMixin:
                          'paramsForCall': ', '.join(paramsForCall)}
                 mkConnectionMethodRules.append(mkConnectionMethodTemplate % msubs)
                 outputPipes.append('    interface %(methodName)s_PipeOut = toPipeOut(%(methodName)s_requestFifo);' % msubs)
-        subs['mkConnectionMethodRules'] = ''.join(mkConnectionMethodRules)
-        subs['outputPipes'] = '\n'.join(outputPipes)
-        return subs
+        substs['mkConnectionMethodRules'] = ''.join(mkConnectionMethodRules)
+        substs['outputPipes'] = '\n'.join(outputPipes)
+        return substs
 
     def collectRequestElements(self, outerTypeName):
         requestElements = []
@@ -471,14 +424,6 @@ class InterfaceMixin:
                 if methodRule:
                     methodRules.append(methodRule)
         return methodRules
-    def collectMethodRuleNames(self,outerTypeName):
-        methodRuleNames = []
-        for m in self.decls:
-            if m.type == 'Method':
-                methodRule = m.collectMethodRule(outerTypeName)
-                if methodRule:
-                    methodRuleNames.append('slaveWrite_%s' % m.name)
-        return methodRuleNames
     def collectMethodNames(self,outerTypeName):
         methodRuleNames = []
         for m in self.decls:
@@ -488,14 +433,6 @@ class InterfaceMixin:
                     methodRuleNames.append(m.name)
                 else:
                     print 'method %s has no rule' % m.name
-        return methodRuleNames
-    def collectIndicationMethodRuleNames(self,outerTypeName):
-        methodRuleNames = []
-        for m in self.decls:
-            if m.type == 'Method':
-                methodRule = m.collectIndicationMethodRule(outerTypeName)
-                if methodRule:
-                    methodRuleNames.append("%s_slaveRead" % m.name)
         return methodRuleNames
     def collectIndicationMethodRules(self,outerTypeName):
         methodRules = []
@@ -513,21 +450,15 @@ class InterfaceMixin:
                 if methodRule:
                     methods.append(methodRule)
         return methods
-    def collectIndicationMethodDecls(self,outerTypeName):
-        methods = []
-        for m in self.decls:
-            if m.type == 'Method':
-                methodRule = m.collectIndicationMethodDecl(outerTypeName)
-                if methodRule:
-                    methods.append(methodRule)
-        return methods
 
 def generate_bsv(project_dir, noisyFlag, hwProxies, hwWrappers, dutname):
     def create_bsv_package(pname, data, files):
         fname = os.path.join(project_dir, 'sources', dutname.lower(), '%s.bsv' % pname)
         bsv_file = util.createDirAndOpen(fname, 'w')
         bsv_file.write('package %s;\n' % pname)
-        bsvgen_emitPreamble(bsv_file, files)
+        extraImports = (['import %s::*;\n' % os.path.splitext(os.path.basename(fn))[0] for fn in files]
+                   + ['import %s::*;\n' % i for i in syntax.globalimports ])
+        bsv_file.write(preambleTemplate % {'extraImports' : ''.join(extraImports)})
         if noisyFlag:
             print 'Writing file ', fname
         bsv_file.write(data)
@@ -535,7 +466,7 @@ def generate_bsv(project_dir, noisyFlag, hwProxies, hwWrappers, dutname):
         bsv_file.close()
 
     for i in hwWrappers:
-        create_bsv_package('%sWrapper' % i.name, exposedWrapperInterfaceTemplate % i.emitBsvWrapper(), i.package)
+        create_bsv_package('%sWrapper' % i.name, exposedWrapperInterfaceTemplate % i.substs('Wrapper',False), i.package)
         
     for i in hwProxies:
         create_bsv_package('%sProxy' % i.name, exposedProxyInterfaceTemplate % i.substs("Proxy",True), i.package)
