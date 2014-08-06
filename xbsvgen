@@ -26,23 +26,8 @@ import argparse
 import subprocess
 import glob
 import time
-from scripts import AST
-from scripts import bsvgen
-from scripts import cppgen
 from scripts import syntax
 from scripts import util
-
-AST.TypeDef.__bases__ += (cppgen.TypeDefMixin,)
-AST.Function.__bases__ += (cppgen.NoCMixin,)
-AST.Module.__bases__ += (cppgen.NoCMixin,)
-AST.Method.__bases__ += (cppgen.MethodMixin,bsvgen.MethodMixin)
-AST.StructMember.__bases__ += (cppgen.StructMemberMixin,)
-AST.Struct.__bases__ += (cppgen.StructMixin,)
-AST.EnumElement.__bases__ += (cppgen.EnumElementMixin,)
-AST.Enum.__bases__ += (cppgen.EnumMixin,bsvgen.EnumMixin)
-AST.Type.__bases__ += (cppgen.TypeMixin,bsvgen.TypeMixin)
-AST.Param.__bases__ += (cppgen.ParamMixin,bsvgen.ParamMixin)
-AST.Interface.__bases__ += (cppgen.InterfaceMixin,bsvgen.InterfaceMixin)
 
 supported_boards = ['ac701', 'zedboard', 'zc702', 'zc706', 'kc705', 'vc707', 'zynq100', 'v2000t', 'bluesim']
 supported_os = ['android', 'ubuntu']
@@ -215,8 +200,8 @@ LDLIBS := %(clibdirs)s %(clibs)s -pthread
 BSIM_EXE_CXX_FILES = BsimDma.cxx BsimCtrl.cxx TlpReplay.cxx
 BSIM_EXE_CXX = $(addprefix %(xbsvdir)s/cpp/, $(BSIM_EXE_CXX_FILES))
 
-test%(classname)s: $(SOURCES)
-	$(Q)g++ $(CFLAGS) -o %(classname)s $(SOURCES) $(LDLIBS)
+ubuntu_exe: $(SOURCES)
+	$(Q)g++ $(CFLAGS) -o ubuntu_exe $(SOURCES) $(LDLIBS)
 
 bsim_exe: $(SOURCES)
 	$(Q)g++ $(CFLAGS_COMMON) -o bsim_exe -DBSIM $(SOURCES) $(BSIM_EXE_CXX) $(LDLIBS)
@@ -335,12 +320,10 @@ if __name__=='__main__':
  
     if noisyFlag:
         print 'Writing Android.mk', androidmkname
-    className = cppgen.cName(dutname)
     substs = {
         #android
 	'project_dir': os.path.abspath(project_dir),
         #ubuntu
-        'classname': className.lower(),
         'sourceincludes': ' '.join(['-I%s' % os.path.dirname(os.path.abspath(sf)) for sf in options.source]) if options.source else '',
         #common
         'source': ' '.join([os.path.abspath(sf) for sf in options.source]) if options.source else '',

@@ -23,7 +23,7 @@
 ## SOFTWARE.
 
 import os
-import syntax
+import globalv
 import AST
 import util
 import functools
@@ -196,7 +196,7 @@ class MethodMixin:
             elif tn == 'Vector':
                 return [('%s%s'%(scope,member.name),t)]
             else:
-                td = syntax.globalvars[tn]
+                td = globalv.globalvars[tn]
                 tdtype = td.tdtype
                 if tdtype.type == 'Struct':
                     ns = '%s%s.' % (scope,member.name)
@@ -412,9 +412,9 @@ class InterfaceMixin:
         return result
     def getSubinterface(self, name):
         subinterfaceName = name
-        if not syntax.globalvars.has_key(subinterfaceName):
+        if not globalv.globalvars.has_key(subinterfaceName):
             return None
-        subinterface = syntax.globalvars[subinterfaceName]
+        subinterface = globalv.globalvars[subinterfaceName]
         #print 'subinterface', subinterface, subinterface
         return subinterface
     def insertPutFailedMethod(self):
@@ -562,7 +562,7 @@ def cName(x):
     else:
         return x.cName()
 
-def generate_cpp(project_dir, noisyFlag, swProxies, swWrappers):
+def generate_cpp(globaldecls, project_dir, noisyFlag, swProxies, swWrappers):
     def create_cpp_file(name):
         fname = os.path.join(project_dir, 'jni', name)
         f = util.createDirAndOpen(fname, 'w')
@@ -581,7 +581,7 @@ def generate_cpp(project_dir, noisyFlag, swProxies, swWrappers):
     generated_hpp.write('extern "C" {\n')
     generated_hpp.write('#endif\n')
     # global type declarations used by interface mthods
-    for v in syntax.globaldecls:
+    for v in globaldecls:
         if (v.type == 'TypeDef'):
             v.emitCDeclaration(generated_hpp, 0, '')
     generated_hpp.write('\n');

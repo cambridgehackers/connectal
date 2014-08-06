@@ -28,7 +28,7 @@ import math
 import re
 import md5
 
-import syntax
+import globalv
 import AST
 import string
 import util
@@ -269,7 +269,7 @@ class TypeMixin:
             return self.params[0].numeric()
         if (self.name == 'Float'):
             return 32
-	sdef = syntax.globalvars[self.name].tdtype
+	sdef = globalv.globalvars[self.name].tdtype
         if (sdef.type == 'Struct'):
             return sum([e.type.numBitsBSV() for e in sdef.elements])
         else:
@@ -447,13 +447,13 @@ class InterfaceMixin:
                     methods.append(methodRule)
         return methods
 
-def generate_bsv(project_dir, noisyFlag, hwProxies, hwWrappers, dutname):
+def generate_bsv(globalimports, project_dir, noisyFlag, hwProxies, hwWrappers, dutname):
     def create_bsv_package(pname, data, files):
         fname = os.path.join(project_dir, 'sources', dutname.lower(), '%s.bsv' % pname)
         bsv_file = util.createDirAndOpen(fname, 'w')
         bsv_file.write('package %s;\n' % pname)
         extraImports = (['import %s::*;\n' % os.path.splitext(os.path.basename(fn))[0] for fn in files]
-                   + ['import %s::*;\n' % i for i in syntax.globalimports ])
+                   + ['import %s::*;\n' % i for i in globalimports ])
         bsv_file.write(preambleTemplate % {'extraImports' : ''.join(extraImports)})
         if noisyFlag:
             print 'Writing file ', fname

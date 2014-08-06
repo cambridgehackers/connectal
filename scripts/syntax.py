@@ -24,10 +24,23 @@ import ply.lex as lex
 import AST
 import os, re, sys
 
+import globalv
 import cppgen, bsvgen
 
 scripthome = os.path.dirname(os.path.abspath(__file__))
 noisyFlag=True
+
+AST.TypeDef.__bases__ += (cppgen.TypeDefMixin,)
+AST.Function.__bases__ += (cppgen.NoCMixin,)
+AST.Module.__bases__ += (cppgen.NoCMixin,)
+AST.Method.__bases__ += (cppgen.MethodMixin,bsvgen.MethodMixin)
+AST.StructMember.__bases__ += (cppgen.StructMemberMixin,)
+AST.Struct.__bases__ += (cppgen.StructMixin,)
+AST.EnumElement.__bases__ += (cppgen.EnumElementMixin,)
+AST.Enum.__bases__ += (cppgen.EnumMixin,bsvgen.EnumMixin)
+AST.Type.__bases__ += (cppgen.TypeMixin,bsvgen.TypeMixin)
+AST.Param.__bases__ += (cppgen.ParamMixin,bsvgen.ParamMixin)
+AST.Interface.__bases__ += (cppgen.InterfaceMixin,bsvgen.InterfaceMixin)
 
 tokens = (
     'AMPER',
@@ -864,8 +877,6 @@ def p_typeClassDecl(p):
     '''typeClassDecl : TOKTYPECLASS VAR HASH LPAREN interfaceFormalParams RPAREN provisos SEMICOLON typeClassDeclStmts TOKENDTYPECLASS'''
     p[0] = AST.Typeclass(p[2])
 
-globaldecls = []
-globalvars = {}
 globalimports = []
 globalfilename = []
 
@@ -880,9 +891,7 @@ def p_packageStmt(p):
                    | macroDef
                    | typeDef
                    | importBviDef'''
-    decl = p[1]
-    globaldecls.append(decl)
-    globalvars[decl.name] = decl
+    globalv.add_new(p[1])
 
 def p_packageStmts(p):
     '''packageStmts :
@@ -969,7 +978,7 @@ def generate_bsvcpp(srcdirs, filelist, project_dir, dutname, bsvdefines, s2hinte
     swWrappers = []
     hwWrappers = []
     for i in set(s2hinterface + h2sinterface):
-        ifc = globalvars[i]
+        ifc = globalv.globalvars[i]
         ifc = ifc.instantiate(dict(zip(ifc.params, ifc.params)))
         ifc.ind = AST.Interface(i, [], [], None, ifc.package)
         ifc.ind.insertPutFailedMethod()
@@ -982,8 +991,8 @@ def generate_bsvcpp(srcdirs, filelist, project_dir, dutname, bsvdefines, s2hinte
         if i in h2sinterface:
             hwProxies.append(ifc)
             swWrappers.append(ifc)
-    cppgen.generate_cpp(project_dir, noisyFlag, swProxies, swWrappers)
-    bsvgen.generate_bsv(project_dir, noisyFlag, hwProxies, hwWrappers, dutname)
+    cppgen.generate_cpp(globalv.globaldecls, project_dir, noisyFlag, swProxies, swWrappers)
+    bsvgen.generate_bsv(globalimports, project_dir, noisyFlag, hwProxies, hwWrappers, dutname)
     
 if __name__=='__main__':
     lexer = lex.lex()

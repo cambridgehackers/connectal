@@ -82,7 +82,7 @@ bsim_exe: prepare_bin_target
 
 ubuntu_exe: prepare_bin_target
 	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk
-	@cp -v jni/mk* bin
+	@cp -v jni/ubuntu_exe bin
 
 program:
 ifneq ($(BOARD),bluesim)
@@ -120,7 +120,7 @@ else
     ifeq ($(OS),android)
 	$(XBSVDIR)/scripts/run.zedboard bin/mkTop.xdevcfg.bin.gz bin/android_exe $(RUN_ARGS)
     else
-	timeout 3m catchsegv ./bin/mkpcietop $(RUN_ARGS)
+	timeout 3m catchsegv ./bin/ubuntu_exe $(RUN_ARGS)
     endif
 endif
 
