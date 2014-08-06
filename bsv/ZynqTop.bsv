@@ -25,6 +25,7 @@ import Vector            :: *;
 import Connectable       :: *;
 import ConnectableWithTrace::*;
 import Portal            :: *;
+import MemTypes          :: *;
 import Leds              :: *;
 import AxiMasterSlave    :: *;
 import XilinxCells       :: *;
@@ -102,9 +103,9 @@ module mkZynqTop(ZynqTop);
    BscanTop bscan <- mkBscanTop(3, clocked_by mainclock, reset_by mainreset); // Use USER3  (JTAG IDCODE address 0x22)
    BscanLocal lbscan <- mkBscanLocal(bscan, clocked_by bscan.tck, reset_by bscan.rst);
 `ifdef IMPORT_HOSTIF
-   PortalTop#(32, 64, PinType, NumberOfMasters) top <- mkPortalTop(ps7, clocked_by mainclock, reset_by mainreset);
+   PortalTop#(PhysAddrWidth, 64, PinType, NumberOfMasters) top <- mkPortalTop(ps7, clocked_by mainclock, reset_by mainreset);
 `else
-   PortalTop#(32, 64, PinType, NumberOfMasters) top <- mkPortalTop(`BSCAN_ARG clocked_by mainclock, reset_by mainreset);
+   PortalTop#(PhysAddrWidth, 64, PinType, NumberOfMasters) top <- mkPortalTop(`BSCAN_ARG clocked_by mainclock, reset_by mainreset);
 `endif
    mkConnectionWithTrace(ps7, top, lbscan.loc[1], clocked_by mainclock, reset_by mainreset);
 
