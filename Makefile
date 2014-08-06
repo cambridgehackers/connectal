@@ -315,7 +315,7 @@ vc707runs = $(addprefix examples/, $(addsuffix .vc707run, $(examples))) \
 vc707runs: $(vc707runs)
 
 $(vc707runs):
-	scripts/run.pcietest $(basename $@)/vc707/bin/mk*.bin.gz $(basename $@)/vc707/bin/mkpcietop
+	scripts/run.pcietest $(basename $@)/vc707/bin/mk*.bin.gz $(basename $@)/vc707/bin/ubuntu_exe
 
 vc707cpps = $(addprefix examples/, $(addsuffix .vc707cpp, $(examples))) \
 	    $(addprefix tests/, $(addsuffix .vc707cpp, $(tests)))
@@ -340,7 +340,7 @@ kc705runs = $(addprefix examples/, $(addsuffix .kc705run, $(examples))) \
 kc705runs: $(kc705runs)
 
 $(kc705runs):
-	scripts/run.pcietest $(basename $@)/kc705/bin/mk*.bin.gz $(basename $@)/kc705/bin/mkpcietop
+	scripts/run.pcietest $(basename $@)/kc705/bin/mk*.bin.gz $(basename $@)/kc705/bin/ubuntu_exe
 
 kc705cpps = $(addprefix examples/, $(addsuffix .kc705cpp, $(examples))) \
 	    $(addprefix tests/, $(addsuffix .kc705cpp, $(tests)))
@@ -409,7 +409,7 @@ ac701runs = $(addprefix examples/, $(addsuffix .ac701run, $(examples)))
 ac701runs: $(ac701runs)
 
 $(ac701runs):
-	scripts/run.pcietest $(basename $@)/ac701/bin/mk*.bin.gz $(basename $@)/ac701/bin/mkpcietop
+	scripts/run.pcietest $(basename $@)/ac701/bin/mk*.bin.gz $(basename $@)/ac701/bin/ubuntu_exe
 
 zynqdrivers:
 	(cd drivers/zynqportal/; DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make zynqportal.ko)
