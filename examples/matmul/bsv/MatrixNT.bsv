@@ -45,6 +45,7 @@ import Gearbox::*;
 import XilinxCells::*;
 import HostInterface::*;
 import DotProdServer::*;
+import DmaVector::*;
 
 typedef struct {
    a xbase;
@@ -70,12 +71,14 @@ module mkXYRangePipeOut(XYRangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth)
    Reg#(a) ystep <- mkReg(0);
    Reg#(a) xlimit <- mkReg(0);
    Reg#(a) ylimit <- mkReg(0);
-
+   
+   let guard = x < xlimit && y < ylimit;
+   
    interface PipeOut pipe;
-      method Tuple2#(a,a) first() if (x < xlimit && y < ylimit);
+      method Tuple2#(a,a) first() if (guard);
 	 return tuple2(x,y);
       endmethod
-      method Action deq if (x < xlimit && y < ylimit);
+      method Action deq if (guard);
 	 let newx = x;
 	 let newy = y+ystep;
 	 if (newy >= ylimit && x < xlimit) begin
@@ -86,11 +89,10 @@ module mkXYRangePipeOut(XYRangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth)
 	 y <= newy;
       endmethod
       method Bool notEmpty();
-	 return (x < xlimit && y < ylimit);
+	 return guard;
       endmethod
    endinterface
-   method Action start(XYRangeConfig#(a) cfg) if (x >= xlimit);
-      //$display("XYRangePipe x=%d xlimit=%d xstep=%d y=%d ylimit=%d ystep=%d", cfg.xbase, cfg.xlimit, cfg.xstep, cfg.ybase, cfg.ylimit, cfg.ystep);
+   method Action start(XYRangeConfig#(a) cfg) if (!guard);
       x <= cfg.xbase;
       y <= cfg.ybase;
       xbase <= cfg.xbase;

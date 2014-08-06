@@ -122,7 +122,7 @@ module mkXYZRangePipeOut#(RangeBehavior alt) (XYZRangePipeIfc#(a)) provisos (Ari
 	 return guard;
       endmethod
    endinterface
-   method Action start(XYZRangeConfig#(a) cfg) if (x >= xlimit);
+   method Action start(XYZRangeConfig#(a) cfg) if (!guard);
       x <= cfg.xbase;
       y <= cfg.ybase;
       z <= cfg.zbase;
@@ -393,8 +393,8 @@ module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
       let b <- sink.finish();
       let c = sinkCnt-1;
       sinkCnt <= c;
-      //$display("finishSink %d", c);
       if (c == 0) begin
+	 if (verbose) $display("finishSink %d", c);
 	 running <= False;
 	 doneFifo.enq(?);
       end
@@ -441,7 +441,7 @@ module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
       numRowsAReg <= numRowsA;
       running <= True;
 
-      if (verbose) $display("mm pointerA=%d pointerB=%d pointerC=%d\n", pointerA, pointerB, pointerC);
+      if (verbose) $display("mm pointerA=%d pointerB=%d pointerC=%d", pointerA, pointerB, pointerC);
       if (verbose) $display("mm.start ra=%d ca=%d rb=%d cb=%d", numRowsA, numColumnsA, numRowsB, numColumnsB);
       if (verbose) $display($format(fshow("offsetcfgA ")+fshow(offsetcfgA)));
       if (verbose) $display($format(fshow("offsetcfgB ")+fshow(offsetcfgB)));
@@ -484,7 +484,6 @@ module  mkDramMatrixMultiply#(HostType host)(DramMatrixMultiply#(N,TMul#(N,32)))
    MemWriter#(TMul#(32,N))       bogusWriter <- mkMemWriter;
    
    DmaMatrixMultiplyIfc#(MMSize,DmaSz) dmaMMF <- mkDmaMatrixMultiply(rowReader.readServer, colReader.readServer, writer.writeServer, host);
-
    interface Vector readClients  = cons(rowReader.readClient, cons(colReader.readClient,    nil));
    interface Vector writeClients = cons(writer.writeClient,   cons(bogusWriter.writeClient, nil));
    method start = dmaMMF.start;
@@ -505,7 +504,9 @@ module  mkMmTN#(MmIndication ind, TimerIndication timerInd, MmDebugIndication mm
 	     Add#(N,0,n),
 	     Mul#(N,32,DmaSz)
 	     );
-
+   
+   let verbose = False;
+   
    let n = valueOf(n);
 
    DramMatrixMultiply#(N, TMul#(N,32)) dmaMMF <- mkDramMatrixMultiply(host);
@@ -520,6 +521,7 @@ module  mkMmTN#(MmIndication ind, TimerIndication timerInd, MmDebugIndication mm
       let d <- dmaMMF.finish();
       busyFifo.deq();
       ind.mmfDone(mmfCycles);
+      if(verbose) $display("mkMmTN.mmfDone");
    endrule
 
    FIFOF#(Bool) timerRunning <- mkFIFOF();
@@ -550,6 +552,7 @@ module  mkMmTN#(MmIndication ind, TimerIndication timerInd, MmDebugIndication mm
 			Bit#(32) r1_x_c1, Bit#(32) c1_x_j,
 			Bit#(32) r1_x_c2, Bit#(32) c2_x_j,
 			Bit#(32) c1_x_c2, Bit#(32) r2_x_c2);
+	 if(verbose) $display("mkMmTN.start");
 	 dmaMMF.start(h1, unpack(truncate(r1)), unpack(truncate(c1)),
 		      h2, unpack(truncate(r2)), unpack(truncate(c2)),
 		      h3,
