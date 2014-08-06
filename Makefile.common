@@ -54,51 +54,51 @@ ifeq ($(origin TOP),undefined)
     ifeq ($(BOARD),bluesim)
     TOP=$(XBSVDIR)/bsv/BsimTop.bsv
     MKTOP=mkBsimTop
-    XBSVFLAGS += -D BsimHostTypeIF
+    XBSVFLAGS += -D BsimHostTypeIF -D PhysAddrWidth=40
     endif
     ifeq ($(BOARD),ac701)
     TOP=$(XBSVDIR)/bsv/PcieTop.bsv
     MKTOP=mkPcieTop
-    XBSVFLAGS += -D PcieHostTypeIF
+    XBSVFLAGS += -D PcieHostTypeIF -D PhysAddrWidth=40
     NEEDSPCIE=true
     endif
     ifeq ($(BOARD),kc705)
     TOP=$(XBSVDIR)/bsv/PcieTop.bsv
     MKTOP=mkPcieTop
-    XBSVFLAGS += -D PcieHostTypeIF
+    XBSVFLAGS += -D PcieHostTypeIF -D PhysAddrWidth=40
     NEEDSPCIE=true
     endif
     ifeq ($(BOARD),vc707)
     TOP=$(XBSVDIR)/bsv/PcieTop.bsv
     MKTOP=mkPcieTop
-    XBSVFLAGS += -D PcieHostTypeIF
+    XBSVFLAGS += -D PcieHostTypeIF -D PhysAddrWidth=40
     NEEDSPCIE=true
     endif
     ifeq ($(BOARD),v2000t)
     TOP=$(XBSVDIR)/bsv/PcieTop.bsv
     MKTOP=mkPcieTop
-    XBSVFLAGS += -D PcieHostTypeIF
+    XBSVFLAGS += -D PcieHostTypeIF -D PhysAddrWidth=40
     NEEDSPCIE=true
     endif
     ifeq ($(BOARD),zedboard)
     TOP=$(XBSVDIR)/bsv/ZynqTop.bsv
     MKTOP=mkZynqTop
-    XBSVFLAGS += -D ZynqHostTypeIF
+    XBSVFLAGS += -D ZynqHostTypeIF -D PhysAddrWidth=32
     endif
     ifeq ($(BOARD),zc702)
     TOP=$(XBSVDIR)/bsv/ZynqTop.bsv
     MKTOP=mkZynqTop
-    XBSVFLAGS += -D ZynqHostTypeIF
+    XBSVFLAGS += -D ZynqHostTypeIF -D PhysAddrWidth=32
     endif
     ifeq ($(BOARD),zc706)
     TOP=$(XBSVDIR)/bsv/ZynqTop.bsv
     MKTOP=mkZynqTop
-    XBSVFLAGS += -D ZynqHostTypeIF -D NUMBER_OF_LEDS=4
+    XBSVFLAGS += -D ZynqHostTypeIF -D PhysAddrWidth=32 -D NUMBER_OF_LEDS=4
     endif
     ifeq ($(BOARD),zynq100)
     TOP=$(XBSVDIR)/bsv/ZynqTop.bsv
     MKTOP=mkZynqTop
-    XBSVFLAGS += -D ZynqHostTypeIF
+    XBSVFLAGS += -D ZynqHostTypeIF -D PhysAddrWidth=40
     endif
 endif
 
