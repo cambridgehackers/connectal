@@ -33,7 +33,7 @@ uninstall:
 	service udev restart
 
 docs:
-	doxygen Doxyfile
+	doxygen scripts/Doxyfile
 
 ## PLY's home is http://www.dabeaz.com/ply/
 install-dependences:
