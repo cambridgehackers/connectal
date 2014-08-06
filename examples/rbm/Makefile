@@ -11,6 +11,3 @@ XBSVFLAGS = -D J_VALUE=1 -D K_VALUE=1 -D N_VALUE=1 -D DataBusWidth=32
 include $(MMDIR)/Makefile.mm
 include $(RBMDIR)/Makefile.rbm
 
-BSVFILES += $(RBMDIR)/bsv/Rbm.bsv
-CPPFILES += $(RBMDIR)/cpp/rbm.cpp
-

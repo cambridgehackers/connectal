@@ -5,7 +5,7 @@ BSVFILES   +=  $(RBMDIR)/bsv/RbmTypes.bsv $(RBMDIR)/bsv/Timer.bsv $(DBNTOPBSV)
 CPPFILES   +=  $(MMDIR)/cpp/portalmat.cpp $(TESTCPPFILES)
 XBSVFLAGS  +=  --clib opencv_core --stl=stlport_static
 XBSVFLAGS  +=  -D IMPORT_HOSTIF -D MATRIX_TN -D ZYNQ_NO_RESET
-XBSVFLAGS  +=  --bscflags="+RTS -K26777216 -RTS"
+XBSVFLAGS  +=  --bscflags="+RTS -K26777216 -RTS -p +:../../$(MMDIR)/bsv"
 
 Dma = Dma
 PINS = Std
