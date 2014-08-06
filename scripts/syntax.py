@@ -955,9 +955,8 @@ def preprocess(source, defs):
 
     return pp(source)
 
-def syntax_parse(argdata, inputfilename, bsvdefines, nf):
-    global globalfilename, noisyFlag
-    noisyFlag=nf
+def syntax_parse(argdata, inputfilename, bsvdefines):
+    global globalfilename
     data = preprocess(argdata + '\n', bsvdefines)
     lexer = lex.lex(errorlog=lex.NullLogger())
     parser = yacc.yacc(optimize=1,errorlog=yacc.NullLogger(),outputdir=scripthome+'/../out',debugfile=scripthome+'/../out/parser.out')
@@ -966,12 +965,11 @@ def syntax_parse(argdata, inputfilename, bsvdefines, nf):
         print 'Parsing:', inputfilename
     return  parser.parse(data)
 
-def generate_bsvcpp(srcdirs, filelist, project_dir, dutname, bsvdefines, s2hinterface, h2sinterface, noisyFlag):
+def generate_bsvcpp(filelist, project_dir, dutname, bsvdefines, s2hinterface, h2sinterface, nf):
+    global noisyFlag
+    noisyFlag=nf
     for inputfile in filelist:
-        inputdir = os.path.dirname(inputfile)
-        if not inputdir in srcdirs:
-            srcdirs.append(inputdir)
-        syntax_parse(open(inputfile).read(),inputfile, bsvdefines, noisyFlag)
+        syntax_parse(open(inputfile).read(),inputfile, bsvdefines)
     ## code generation pass
     swProxies = []
     hwProxies = []
@@ -995,11 +993,8 @@ def generate_bsvcpp(srcdirs, filelist, project_dir, dutname, bsvdefines, s2hinte
     bsvgen.generate_bsv(globalimports, project_dir, noisyFlag, hwProxies, hwWrappers, dutname)
     
 if __name__=='__main__':
-    lexer = lex.lex()
-    parser = yacc.yacc()
-    for f in sys.argv[1:]:
-        data = open(f).read()
-        print f
-        result = parser.parse(data)
-        parser.restart()
-        lexer = lex.lex()
+    if len(sys.argv) == 1:
+        parser = yacc.yacc(outputdir=scripthome+'/../out',debugfile=scripthome+'/../out/parser.out')
+        sys.exit(0)
+    generate_bsvcpp(sys.argv[1:], os.environ.get('DTOP'), os.environ.get('DUT_NAME'), \
+         os.environ.get('BSVDEFINES_LIST').split(), os.environ.get('S2H').split(), os.environ.get('H2S').split(), os.environ.get('V') == '1')

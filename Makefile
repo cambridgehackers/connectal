@@ -54,8 +54,7 @@ BOARD=zedboard
 
 out/parsetab.py: scripts/syntax.py
 	[ -e out ] || mkdir out
-	touch out/__init__.py
-	cd out; python ../scripts/syntax.py
+	python scripts/syntax.py
 
 #################################################################################################
 # tests
@@ -214,6 +213,7 @@ bluesimcpps = $(addprefix examples/, $(addsuffix .bluesimcpp, $(examples))) \
 bluesimcpps: $(bluesimcpps)
 
 $(bluesimcpps):
+	rm -fr $(basename $@)/bluesim
 	make BOARD=bluesim --no-print-directory -C $(basename $@) bsim_exe
 
 #################################################################################################
@@ -259,6 +259,7 @@ zedboardcpps: $(zedboardcpps)
 
 # RUNPARAM=ipaddr is an optional argument if you already know the IP of the zedboard
 $(zedboardcpps):
+	rm -fr $(basename $@)/zedboard
 	make BOARD=zedboard --no-print-directory -C $(basename $@) exe
 
 #################################################################################################
@@ -322,6 +323,7 @@ vc707cpps = $(addprefix examples/, $(addsuffix .vc707cpp, $(examples))) \
 vc707cpps: $(vc707cpps)
 
 $(vc707cpps):
+	rm -fr $(basename $@)/vc707
 	make BOARD=vc707 --no-print-directory -C $(basename $@) exe
 
 #################################################################################################
@@ -347,6 +349,7 @@ kc705cpps = $(addprefix examples/, $(addsuffix .kc705cpp, $(examples))) \
 kc705cpps: $(kc705cpps)
 
 $(kc705cpps):
+	rm -fr $(basename $@)/kc705
 	make BOARD=kc705 --no-print-directory -C $(basename $@) exe
 
 
