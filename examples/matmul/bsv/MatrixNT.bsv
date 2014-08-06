@@ -301,7 +301,7 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 	     , Bits#(MatrixDescriptor#(UInt#(addrwidth)), mdsz)
 	     , Bits#(Tuple2#(UInt#(addrwidth), UInt#(addrwidth)), tplsz)
 	     , Add#(b__, 20, addrwidth)
-	     , Add#(a__, addrwidth, 40)
+	     , Add#(a__, addrwidth, ObjectOffsetSize)
 	     , Add#(c__, addrwidth, 32)
 	     , Max#(1, TDiv#(TLog#(J),2), bpc_j)
 	     , Max#(1, TDiv#(TLog#(K),2), bpc_k)
