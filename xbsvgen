@@ -22,26 +22,22 @@
 ## SOFTWARE.
 
 import os, sys, shutil, string
-from scripts import AST
-from scripts import bsvgen
-from scripts import xpsgen
-from scripts import cppgen
-from scripts import syntax
 import argparse
 import subprocess
-from scripts import util
-import re
 import glob
 import time
-#import functools
-#import math
+from scripts import AST
+from scripts import bsvgen
+from scripts import cppgen
+from scripts import syntax
+from scripts import util
 
 AST.TypeDef.__bases__ += (cppgen.TypeDefMixin,)
 AST.Function.__bases__ += (cppgen.NoCMixin,)
 AST.Module.__bases__ += (cppgen.NoCMixin,)
 AST.Method.__bases__ += (cppgen.MethodMixin,bsvgen.MethodMixin)
 AST.StructMember.__bases__ += (cppgen.StructMemberMixin,)
-AST.Struct.__bases__ += (cppgen.StructMixin,bsvgen.NullMixin)
+AST.Struct.__bases__ += (cppgen.StructMixin,)
 AST.EnumElement.__bases__ += (cppgen.EnumElementMixin,)
 AST.Enum.__bases__ += (cppgen.EnumMixin,bsvgen.EnumMixin)
 AST.Type.__bases__ += (cppgen.TypeMixin,bsvgen.TypeMixin)
@@ -60,7 +56,6 @@ argparser.add_argument('-O', '--OS', default=None, choices=supported_os,
 argparser.add_argument('-s2h', '--s2hinterface', help='BSV interface to generate stubs for software to hardware communication', action='append')
 argparser.add_argument('-h2s', '--h2sinterface', help='BSV interface to generate stubs for hardware to software communication', action='append')
 argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps project directory')
-argparser.add_argument('-e', '--edk-version', default=xpsgen.edkversion, help='Xilinx EDK version', choices=xpsgen.edkversions)
 argparser.add_argument('-s', '--source', help='C++ source files', action='append')
 argparser.add_argument(      '--contentid', help='Specify 64-bit contentid for PCIe designs')
 argparser.add_argument('-I', '--cinclude', help='Specify C++ include directories', default=[], action='append')
@@ -162,7 +157,6 @@ BOARD=%(boardname)s
 MKTOP=%(topbsvmod)s
 OS=%(OS)s
 DUT=%(dut)s
-DEBUGFLAG=%(debug)s
 
 S2H = %(s2hinterface)s
 H2S = %(h2sinterface)s
@@ -227,54 +221,6 @@ test%(classname)s: $(SOURCES)
 bsim_exe: $(SOURCES)
 	$(Q)g++ $(CFLAGS_COMMON) -o bsim_exe -DBSIM $(SOURCES) $(BSIM_EXE_CXX) $(LDLIBS)
 '''
-
-def preprocess(source, defs):
-    
-    stack = [(True,True)]
-
-    def pp(s):
-        cond  = stack[-1][0]
-        valid = stack[-1][1]
-        i = re.search('\n`', s)
-        if i == None:
-            return s
-        pre = s[:i.end()-1]
-        s = s[i.end():]
-        j = re.search('\s', s)
-        tok = s[:j.start()]
-        s = s[j.end():]
-        if tok == 'ifdef':
-            k = re.search('\s', s)
-            sym = s[:k.start()]
-            s = s[k.end():]
-            new_cond = sym in defs
-            new_valid = new_cond and valid
-            stack.append((new_cond,new_valid))
-        elif tok == 'ifndef':
-            k = re.search('\s', s)
-            sym = s[:k.start()]
-            s = s[k.end():]
-            new_cond = not sym in defs
-            new_valid = valid and new_cond
-            stack.append((new_cond,new_valid))
-        elif tok == 'else':
-            new_cond = not cond
-            stack.pop()
-            stack.append((new_cond,valid))
-        elif tok == 'endif':
-            stack.pop()
-        elif tok == 'define':
-            k = re.search('\n', s).start()
-            foo = re.search('\s',s).start()
-            sym = s[:min(k,foo)]
-            defs.append(sym)
-            s = s[k:]
-        else:
-            assert(False)
-        prv = pre if valid and cond else '\n\n'
-        return prv+pp('\n'+s)
-
-    return pp(source)
 
 if __name__=='__main__':
     exename = os.path.abspath(sys.argv[0])
@@ -373,42 +319,11 @@ if __name__=='__main__':
 
     bsvdefines += ['BOARD_'+boardname]
 
-    for inputfile in options.bsvfile:
-        inputdir = os.path.dirname(inputfile)
-        if not inputdir in srcdirs:
-            srcdirs.append(inputdir)
-        s0 = open(inputfile).read() + '\n'
-        s1 = preprocess(s0, bsvdefines)
-        s2 = syntax.parse(s1,inputfile, noisyFlag)
-
     topmodulename = dutname
     options.verilog.append(os.path.join(xbsvdir, 'verilog'))
-
     options.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/%s.xdc' % boardname))
 
-    ## code generation pass
-    swProxies = []
-    hwProxies = []
-    swWrappers = []
-    hwWrappers = []
-
-    for i in set(options.s2hinterface + options.h2sinterface):
-        ifc = syntax.globalvars[i]
-        ifc = ifc.instantiate(dict(zip(ifc.params, ifc.params)))
-        ifc.ind = AST.Interface(i, [], [], None, ifc.package)
-        ifc.ind.insertPutFailedMethod()
-        ifc.ind.req = ifc
-        ifc.assignRequestResponseChannels()
-        ifc.ind.assignRequestResponseChannels()
-        if i in options.s2hinterface:
-            swProxies.append(ifc)
-            hwWrappers.append(ifc)
-        if i in options.h2sinterface:
-            hwProxies.append(ifc)
-            swWrappers.append(ifc)
-
-    cppgen.generate_cpp(project_dir, noisyFlag, swProxies, swWrappers)
-    bsvgen.generate_bsv(project_dir, noisyFlag, hwProxies, hwWrappers, dutname)
+    syntax.generate_bsvcpp(srcdirs, options.bsvfile, project_dir, dutname, bsvdefines, options.s2hinterface, options.h2sinterface, noisyFlag)
 
     tclboardname = os.path.join(project_dir, 'board.tcl')
     tclimplname = os.path.join(project_dir, 'vivado-impl.tcl')
@@ -418,10 +333,6 @@ if __name__=='__main__':
     androidmkname = os.path.join(project_dir, 'jni', 'Android.mk')
     linuxmkname = os.path.join(project_dir, 'jni', 'Ubuntu.mk')
  
-    if os != 'android':
-        xpsgen.writeImpactCmd(dutname, os.path.join(project_dir, 'impact.cmd'))
-        xpsgen.writeProgramTcl(dutname, os.path.join(project_dir, '%s-program.tcl' % dutname.lower()))
-
     if noisyFlag:
         print 'Writing Android.mk', androidmkname
     className = cppgen.cName(dutname)
@@ -515,9 +426,6 @@ if __name__=='__main__':
     if noisyFlag:
         print 'Writing Makefile', makename
     make = util.createDirAndOpen(makename, 'w')
-    debug_flag = ''
-    if os.environ.has_key('XBSV_DEBUG'):
-        debug_flag = '_debug'
 
     if options.partition_module:
         bitsmake=fpgamakeRuleTemplate % {'partitions': ' '.join(['-s %s' % p for p in options.partition_module]),
@@ -537,7 +445,6 @@ if __name__=='__main__':
                                    'bsvdefines': util.foldl((lambda e,a: e+' -D '+a), '', bsvdefines),
                                    'boardname': boardname,
                                    'OS': options.os,
-                                   'debug': debug_flag,
                                    'qtused': 'cd jni; qmake ../..; make' if options.qtused else '',
                                    's2hinterface': ' '.join(options.s2hinterface),
                                    'h2sinterface': ' '.join(options.h2sinterface),

@@ -22,8 +22,9 @@
 
 import ply.lex as lex
 import AST
-import sys
-import os
+import os, re, sys
+
+import cppgen, bsvgen
 
 scripthome = os.path.dirname(os.path.abspath(__file__))
 noisyFlag=True
@@ -899,21 +900,90 @@ def p_package(p):
     '''package : beginPackage exportDecls importDecls packageStmts endPackage'''
     p[0] = p[4]
 
-if 0:
-    data = open('/home/jamey/bluespec/zedboard_axi_blue/pcores/hdmidisplay_v1_00_a/hdl/verilog/HdmiDisplayWrapper.bsv').read()
-    lexer.input(data)
-    for tok in lexer:
-        print tok
+def preprocess(source, defs):
+    stack = [(True,True)]
+    def pp(s):
+        cond  = stack[-1][0]
+        valid = stack[-1][1]
+        i = re.search('\n`', s)
+        if i == None:
+            return s
+        pre = s[:i.end()-1]
+        s = s[i.end():]
+        j = re.search('\s', s)
+        tok = s[:j.start()]
+        s = s[j.end():]
+        if tok == 'ifdef':
+            k = re.search('\s', s)
+            sym = s[:k.start()]
+            s = s[k.end():]
+            new_cond = sym in defs
+            new_valid = new_cond and valid
+            stack.append((new_cond,new_valid))
+        elif tok == 'ifndef':
+            k = re.search('\s', s)
+            sym = s[:k.start()]
+            s = s[k.end():]
+            new_cond = not sym in defs
+            new_valid = valid and new_cond
+            stack.append((new_cond,new_valid))
+        elif tok == 'else':
+            new_cond = not cond
+            stack.pop()
+            stack.append((new_cond,valid))
+        elif tok == 'endif':
+            stack.pop()
+        elif tok == 'define':
+            k = re.search('\n', s).start()
+            foo = re.search('\s',s).start()
+            sym = s[:min(k,foo)]
+            defs.append(sym)
+            s = s[k:]
+        else:
+            assert(False)
+        prv = pre if valid and cond else '\n\n'
+        return prv+pp('\n'+s)
 
-def parse(data, inputfilename, nf):
+    return pp(source)
+
+def syntax_parse(argdata, inputfilename, bsvdefines, nf):
     global globalfilename, noisyFlag
     noisyFlag=nf
+    data = preprocess(argdata + '\n', bsvdefines)
     lexer = lex.lex(errorlog=lex.NullLogger())
     parser = yacc.yacc(optimize=1,errorlog=yacc.NullLogger(),outputdir=scripthome+'/../out',debugfile=scripthome+'/../out/parser.out')
     globalfilename = [inputfilename]
     if noisyFlag:
         print 'Parsing:', inputfilename
     return  parser.parse(data)
+
+def generate_bsvcpp(srcdirs, filelist, project_dir, dutname, bsvdefines, s2hinterface, h2sinterface, noisyFlag):
+    for inputfile in filelist:
+        inputdir = os.path.dirname(inputfile)
+        if not inputdir in srcdirs:
+            srcdirs.append(inputdir)
+        syntax_parse(open(inputfile).read(),inputfile, bsvdefines, noisyFlag)
+    ## code generation pass
+    swProxies = []
+    hwProxies = []
+    swWrappers = []
+    hwWrappers = []
+    for i in set(s2hinterface + h2sinterface):
+        ifc = globalvars[i]
+        ifc = ifc.instantiate(dict(zip(ifc.params, ifc.params)))
+        ifc.ind = AST.Interface(i, [], [], None, ifc.package)
+        ifc.ind.insertPutFailedMethod()
+        ifc.ind.req = ifc
+        ifc.assignRequestResponseChannels()
+        ifc.ind.assignRequestResponseChannels()
+        if i in s2hinterface:
+            swProxies.append(ifc)
+            hwWrappers.append(ifc)
+        if i in h2sinterface:
+            hwProxies.append(ifc)
+            swWrappers.append(ifc)
+    cppgen.generate_cpp(project_dir, noisyFlag, swProxies, swWrappers)
+    bsvgen.generate_bsv(project_dir, noisyFlag, hwProxies, hwWrappers, dutname)
     
 if __name__=='__main__':
     lexer = lex.lex()

@@ -68,7 +68,7 @@ else
   ifneq ($(OS),android)
     exe: ubuntu_exe
   else
-    ifneq ($(DEBUGFLAG),)
+    ifeq ($(XBSV_DEBUG),1)
       exe: android_exe_debug
     else
       exe: android_exe

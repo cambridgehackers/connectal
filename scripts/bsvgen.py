@@ -254,10 +254,6 @@ class ParamMixin:
     def numBitsBSV(self):
         return self.type.numBitsBSV();
 
-class NullMixin:
-    def functionnotused(self):
-        pass
-
 class TypeMixin:
     def toBsvType(self):
         if len(self.params):
