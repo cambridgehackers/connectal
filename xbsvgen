@@ -390,7 +390,7 @@ if __name__=='__main__':
         print 'Writing Makefile', makename
     make = util.createDirAndOpen(makename, 'w')
 
-    if options.partition_module:
+    if options.partition_module or ('USE_FPGAMAKE' in os.environ and os.environ['USE_FPGAMAKE']):
         bitsmake=fpgamakeRuleTemplate % {'partitions': ' '.join(['-s %s' % p for p in options.partition_module]),
 					 'floorplan': os.path.abspath(options.floorplan) if options.floorplan else '',
 					 'xdc': ' '.join(['--xdc=%s' % os.path.abspath(xdc) for xdc in options.constraint]),
