@@ -36,6 +36,7 @@ import PortalMemory::*;
 
 typedef Bit#(32) ObjectPointer;
 typedef 40 ObjectOffsetSize;
+typedef `PhysAddrWidth PhysAddrWidth;
 
 typedef 6 ObjectTagSize;
 typedef struct {
