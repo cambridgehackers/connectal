@@ -1,8 +1,8 @@
 BSVDIR=$(XBSVDIR)/bsv
 S2H = RbmRequest  MmRequestTN MmRequestNT SigmoidRequest TimerRequest DmaConfig FpMacRequest FpMulRequest MmDebugRequest 
 H2S = RbmIndication MmIndication SigmoidIndication TimerIndication DmaIndication FpMacIndication FpMulIndication MmDebugIndication
-BSVFILES = $(DBNDIR)/bsv/RbmTypes.bsv $(DBNDIR)/bsv/Timer.bsv $(DBNDIR)/bsv/FpMacTb.bsv $(DBNTOPBSV)
-CPPFILES= $(DBNDIR)/cpp/portalmat.cpp $(DBNDIR)/cpp/rbm.cpp $(TESTCPPFILES)
+BSVFILES = $(RBMDIR)/bsv/RbmTypes.bsv $(RBMDIR)/bsv/Timer.bsv $(MMDIR)/bsv/FpMacTb.bsv $(DBNTOPBSV)
+CPPFILES= $(MMDIR)/cpp/portalmat.cpp $(TESTCPPFILES)
 XBSVFLAGS += --clib opencv_core --stl=stlport_static
 XBSVFLAGS += -D IMPORT_HOSTIF -D MATRIX_TN -D ZYNQ_NO_RESET
 XBSVFLAGS += --bscflags="+RTS -K26777216 -RTS"
@@ -20,15 +20,13 @@ FAMILY=$(shell echo $(BOARD) | sed 's/z.*/zynq/' | sed 's/k.*/kintex/' | sed 's/
 ifeq (zynq,$(FAMILY))
 NDK_DIR=$(shell ndk-which gcc | sed 's:toolchains.*::')
 OPENCVDIR=$(XBSVDIR)/../opencv-android-sdk/sdk/native/
-XBSVFLAGS += -I$(DBNDIR)/cpp -I$(OPENCVDIR)/jni/include -L$(OPENCVDIR)/libs/armeabi-v7a -lz
+XBSVFLAGS += -I$(MMDIR)/cpp -I$(OPENCVDIR)/jni/include -L$(OPENCVDIR)/libs/armeabi-v7a -lz
 XBSVFLAGS += -S$(NDK_DIR)/sources/cxx-stl/stlport/libs/armeabi-v7a/libstlport_static.a
 NUMBER_OF_MASTERS=2
 endif
 ifeq (bluesim,$(FAMILY))
 NUMBER_OF_MASTERS=2
 endif
-
-gen:: $(DBNDIR)/datasets
 
 synth-ip.tcl:
 	ln -svf $(XBSVDIR)/examples/matmul/synth-ip.tcl .
@@ -39,11 +37,3 @@ prebuild:: synth-ip.tcl
 include $(XBSVDIR)/Makefile.common
 
 FPGAMAKE_XBSVFLAGS += -P mkMmTile --xci=$(IPDIR)/$(BOARD)/fp_add/fp_add.xci --xci=$(IPDIR)/$(BOARD)/fp_mul/fp_mul.xci
-
-$(DBNDIR)/datasets:
-	mkdir -p $(DBNDIR)/datasets
-	wget -P $(DBNDIR)/datasets http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz
-	wget -P $(DBNDIR)/datasets http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz
-	wget -P $(DBNDIR)/datasets http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz
-	wget -P $(DBNDIR)/datasets http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz
-	cd $(DBNDIR)/datasets; gunzip *.gz

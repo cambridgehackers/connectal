@@ -57,6 +57,16 @@ interface SharedDotProdServer#(numeric type k);
    interface SharedDotProdDebug#(k) debug;
 endinterface
 
+typedef struct {
+`ifdef TAGGED_TOKENS
+   UInt#(32) row;
+   UInt#(32) col;
+`endif
+   Float v;
+   Bool first;
+   Bool last;
+} MmToken deriving (Eq,Bits);
+
 typedef 8 UB_MulLat; // upper bound on MUL latency?
 typedef 8 UB_AddLat; // upper bound on ADD latency?
 	   

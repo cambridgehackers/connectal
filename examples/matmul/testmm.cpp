@@ -48,7 +48,6 @@ MmRequestTNProxy *mmdevice = 0;
 #include <math.h> // frexp(), fabs()
 #include <assert.h>
 #include "portalmat.h"
-#include "mnist.h"
 
 static int verbose = 0;
 
