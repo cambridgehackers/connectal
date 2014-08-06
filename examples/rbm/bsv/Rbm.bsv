@@ -34,15 +34,28 @@ import PortalMemory::*;
 import MemTypes::*;
 import DmaVector::*;
 import AxiMasterSlave::*;
+import HostInterface::*;
 
-import Matrix::*;
 import Sigmoid::*;
 import FloatOps::*;
 import Pipe::*;
 import Timer::*;
 import RbmTypes::*;
 
-function Float tokenValue(Token v) = v.v;
+`ifdef MATRIX_TN
+import MatrixTN::*;
+import MmRequestTNWrapper::*;
+`else
+`ifdef MATRIX_NT
+import MatrixNT::*;
+import MmRequestNTWrapper::*;
+`endif
+`endif
+import MmIndicationProxy::*;
+import DotProdServer::*;
+
+
+function Float tokenValue(MmToken v) = v.v;
 
 function ObjectReadClient#(asz) getSourceReadClient(DmaVectorSource#(asz,a) s); return s.dmaClient; endfunction
 function ObjectWriteClient#(asz) getSinkWriteClient(DmaVectorSink#(asz,a) s); return s.dmaClient; endfunction
@@ -198,7 +211,7 @@ module  mkDmaSumOfErrorSquared(DmaSumOfErrorSquared#(N, DmaSz))
 
    let n = valueOf(N);
 
-   let dotprod <- mkSharedDotProdServer(0);
+   let dotprod <- mkSharedInterleavedDotProdServer(0);
 
    FirstLastPipe#(Bit#(ObjectOffsetSize)) firstlastPipe <- mkFirstLastPipe();
    PipeOut#(Float) aPipe <- mkFunnel1(sources[0].vector.pipe);
@@ -208,7 +221,7 @@ module  mkDmaSumOfErrorSquared(DmaSumOfErrorSquared#(N, DmaSz))
    rule fromsub;
       match {.first, .last} <- toGet(firstlastPipe.pipe).get();
       let diff <- toGet(subPipe).get();
-      Token t = Token { v: diff, first: first, last: last };
+      MmToken t = MmToken { v: diff, first: first, last: last };
       dotprod.aInput.put(t);
       dotprod.bInput.put(t);
    endrule
@@ -231,15 +244,21 @@ endmodule: mkDmaSumOfErrorSquared
 
 interface Rbm#(numeric type n);
    interface RbmRequest rbmRequest;
-   interface MmRequest mmRequest;
+`ifdef MATRIX_TN
+   interface MmRequestTN mmRequest;
+`else
+`ifdef MATRIX_NT
+   interface MmRequestNT mmRequest;
+`endif
+`endif
    interface MmDebugRequest mmDebugRequest;
    interface SigmoidRequest sigmoidRequest;
    interface TimerRequest timerRequest;
    interface Vector#(12, ObjectReadClient#(TMul#(32,n))) readClients;
-   interface Vector#(5, ObjectWriteClient#(TMul#(32,n))) writeClients;
+   interface Vector#(6, ObjectWriteClient#(TMul#(32,n))) writeClients;
 endinterface
 
-module  mkRbm#(RbmIndication rbmInd, MmIndication mmInd, MmDebugIndication mmDebugInd, SigmoidIndication sigmoidInd, TimerIndication timerInd)(Rbm#(N))
+module  mkRbm#(HostType host, RbmIndication rbmInd, MmIndication mmInd, MmDebugIndication mmDebugInd, SigmoidIndication sigmoidInd, TimerIndication timerInd)(Rbm#(N))
    provisos (Add#(1,a__,N),
 	     Add#(N,0,n),
 	     Mul#(N,32,DmaSz)
@@ -247,7 +266,15 @@ module  mkRbm#(RbmIndication rbmInd, MmIndication mmInd, MmDebugIndication mmDeb
 
    let n = valueOf(n);
 
-   Mm#(N) mm <- mkMm(mmInd, timerInd, mmDebugInd);
+`ifdef MATRIX_TN
+   MmTN#(N) mm <- mkMmTN(mmInd, timerInd, mmDebugInd, host);
+   MmRequestTNWrapper mmRequestWrapper <- mkMmRequestTNWrapper(MmRequestPortal,mm.mmRequest);
+`else
+`ifdef MATRIX_NT
+   MmNT#(N) mm <- mkMmNT(mmInd, timerInd, mmDebugInd, host);
+   MmRequestNTWrapper mmRequestWrapper <- mkMmRequestNTWrapper(MmRequestPortal,mm.mmRequest);
+`endif
+`endif
 
    DmaSigmoidIfc#(TMul#(32,n)) dmaSigmoid <- mkDmaSigmoid();
    Vector#(2,ObjectReadClient#(TMul#(32,n))) sigmoidsources = dmaSigmoid.readClients;
@@ -418,6 +445,5 @@ module  mkRbm#(RbmIndication rbmInd, MmIndication mmInd, MmDebugIndication mmDeb
 
    interface Vector writeClients =
       append(dmaUpdateWeights.writeClients,
-	     cons(dmaSigmoid.dmaClient, cons(dmaStates.sinks[0], cons(dmaStates2.sinks[0],
-								      cons(mm.writeClient, nil)))));
+	     cons(dmaSigmoid.dmaClient, cons(dmaStates.sinks[0], cons(dmaStates2.sinks[0], mm.writeClients))));
 endmodule

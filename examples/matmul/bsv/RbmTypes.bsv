@@ -20,6 +20,9 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+
+import FloatingPoint::*;
+
 typedef 20 MMSize;
 
 `ifdef DataBusWidth
@@ -142,3 +145,13 @@ interface MmDebugIndication;
    method Action startSourceAndSink(UInt#(32) startA, UInt#(32) startC, Int#(32) jint);
    method Action debug(Bit#(32) macCount);
 endinterface
+
+typedef struct {
+`ifdef TAGGED_TOKENS
+   UInt#(32) row;
+   UInt#(32) col;
+`endif
+   Float v;
+   Bool first;
+   Bool last;
+} MmToken deriving (Eq,Bits);

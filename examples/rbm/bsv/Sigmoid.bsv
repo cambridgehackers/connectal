@@ -164,7 +164,6 @@ interface DmaSigmoidIfc#(numeric type dsz);
    method Action updateSigmoidTable(Bit#(32) readPointer, Bit#(32) readOffset, Bit#(32) numElts);
    method ActionValue#(Bool) sigmoidTableUpdated();
    method Bit#(32) tableSize();
-   
    interface Vector#(2, ObjectReadClient#(dsz)) readClients;
    interface ObjectWriteClient#(dsz) dmaClient;
 endinterface
@@ -174,7 +173,7 @@ module  mkDmaSigmoid(DmaSigmoidIfc#(dsz))
    provisos (Bits#(Float, fsz)
 	     , Add#(N,0,n)
 	     , Mul#(fsz,N,dmasz)
-	     , Bits#(Vector#(2,Float), dsz)
+	     , Bits#(Vector#(N,Float), dsz)
 	     , Mul#(dbytes, 8, dsz)
 	     , Div#(dsz, 8, dbytes)
 	     );

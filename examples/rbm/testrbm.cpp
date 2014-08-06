@@ -25,7 +25,6 @@
 #include <RbmIndicationWrapper.h>
 #include <DmaConfigProxy.h>
 #include <GeneratedTypes.h>
-//#include <DmaIndicationWrapper.h>
 #include <StdDmaIndication.h>
 #include <stdio.h>
 #include <sys/mman.h>
@@ -45,14 +44,22 @@ static int verbose = 0;
 
 class RbmIndication;
 
+#ifdef MATRIX_NT
+#include "MmRequestNTProxy.h"
+MmRequestNTProxy *mmdevice = 0;
+#else
+#ifdef MATRIX_TN
+#include "MmRequestTNProxy.h"
+MmRequestTNProxy *mmdevice = 0;
+#endif
+#endif
 DmaManager *dma = 0;
 DmaConfigProxy *dmap = 0;
 DmaIndicationWrapper *dmaIndication = 0;
 MmIndication *mmdeviceIndication = 0;
-MmRequestProxy *mmdevice = 0;
 SigmoidIndication *sigmoidindication = 0;
 SigmoidRequestProxy *sigmoiddevice = 0;
-RbmIndication *deviceIndication = 0;
+RbmIndication *rbmDeviceIndication = 0;
 RbmRequestProxy *rbmdevice = 0;
 TimerIndication *timerdeviceIndication = 0;
 TimerRequestProxy *timerdevice = 0;
@@ -88,9 +95,15 @@ int main(int argc, const char **argv)
   unsigned int srcGen = 0;
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
+#ifdef MATRIX_NT
+  mmdevice = new MmRequestNTProxy(IfcNames_MmRequestPortal);
+#else
+#ifdef MATRIX_TN
+  mmdevice = new MmRequestTNProxy(IfcNames_MmRequestPortal);
+#endif
+#endif
   rbmdevice = new RbmRequestProxy(IfcNames_RbmRequestPortal);
-  deviceIndication = new RbmIndication(IfcNames_RbmIndicationPortal);
-  mmdevice = new MmRequestProxy(IfcNames_MmRequestPortal);
+  rbmDeviceIndication = new RbmIndication(IfcNames_RbmIndicationPortal);
   mmdeviceIndication = new MmIndication(IfcNames_MmIndicationPortal);
   sigmoiddevice = new SigmoidRequestProxy(IfcNames_SigmoidRequestPortal);
   sigmoidindication = new SigmoidIndication(IfcNames_SigmoidIndicationPortal);
@@ -117,7 +130,7 @@ int main(int argc, const char **argv)
 
   matAllocator = new PortalMatAllocator(dmap, dma);
 
-  configureSigmoidTable(rbmdevice, deviceIndication);
+  configureSigmoidTable(rbmdevice, rbmDeviceIndication);
 
   if (1) {
     cv::Mat m1 = (cv::Mat_<float>(4,6) <<
