@@ -216,8 +216,6 @@ interface PS7LIB;
 endinterface
 
 module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
-    Clock defaultClock <- exposeCurrentClock();
-    Reset defaultReset <- exposeCurrentReset();
     PPS7LIB foo <- mkPPS7LIB(
         axi_clock, axi_reset, axi_clock, axi_reset, axi_clock, axi_reset, axi_clock, axi_reset,
         axi_clock, axi_reset, axi_clock, axi_reset, axi_clock, axi_reset, axi_clock, axi_reset,
@@ -806,6 +804,9 @@ module mkPS7(PS7);
    Vector#(4, Reset) freset <- genWithM(mkBufferedReset);
 
    Clock single_clock = fclk[0];
+`ifdef ZYNQ_NO_RESET
+   freset[0]          = noReset;
+`endif
    let single_reset   = freset[0];
 
    ClockGenerator7Params clockParams = defaultValue;
