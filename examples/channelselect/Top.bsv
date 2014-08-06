@@ -46,7 +46,7 @@ import ChannelSelect::*;
 
 typedef enum { ChannelSelectIndication, ChannelSelectRequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop#(StdPortalTop#(addrWidth));
+module mkPortalTop#(StdPortalTop#(PhysAddrWidth));
    
    ChannelSelectIndicationProxy channelSelectIndicationProxy <- mkChannelSelectIndicationProxy(ChannelSelectIndication);
    ChannelSelectRequest channelSelectRequest <- mkChannelSelectRequest(channelSelectIndicationProxy.ifc);

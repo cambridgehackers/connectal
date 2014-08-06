@@ -34,15 +34,7 @@ import RbmTypes::*;
 import Sigmoid::*;
 import Rbm::*;
 
-module  mkPortalTop(PortalTop#(addrWidth,TMul#(32,N),Empty,NumberOfMasters))
-   provisos (Add#(a__, addrWidth, 40),
-	     Add#(a__, b__, 40),
-	     Add#(addrWidth, c__, 52),
-	     Add#(addrWidth, d__, 64),
-	     Add#(e__, f__, 40),
-	     Add#(f__, 12, b__),
-	     Add#(b__, g__, 44)
-	     );
+module  mkPortalTop(PortalTop#(PhysAddrWidth,TMul#(32,N),Empty,NumberOfMasters));
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndicationPortal);
 
@@ -63,7 +55,7 @@ module  mkPortalTop(PortalTop#(addrWidth,TMul#(32,N),Empty,NumberOfMasters))
    Vector#(12,ObjectReadClient#(TMul#(32,N))) readClients = rbm.readClients;
    Vector#(5,ObjectWriteClient#(TMul#(32,N))) writeClients = rbm.writeClients;
 
-   MemServer#(addrWidth, TMul#(32,N), NumberOfMasters) dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
+   MemServer#(PhysAddrWidth, TMul#(32,N), NumberOfMasters) dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
    DmaConfigWrapper dmaConfigWrapper <- mkDmaConfigWrapper(DmaConfigPortal,dma.request);
 
    Vector#(12,StdPortal) portals;

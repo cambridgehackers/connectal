@@ -20,7 +20,7 @@ import FpMulRequestWrapper::*;
 import RbmTypes::*;
 import FpMacTb::*;
 
-module  mkPortalTop(StdPortalTop#(addrWidth));
+module  mkPortalTop(StdPortalTop#(PhysAddrWidth));
 
    FpMulIndicationProxy ind <- mkFpMulIndicationProxy(FpMulIndicationPortal);
    FpMulRequest req <- mkFpMulRequest(ind.ifc);

@@ -46,14 +46,7 @@ import Memread::*;
 
 typedef enum {MemreadIndication, MemreadRequest, DmaIndication, DmaConfig} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalDmaTop#(addrWidth)) 
-
-   provisos(Add#(addrWidth, a__, 52),
-	    Add#(b__, addrWidth, 64),
-	    Add#(c__, 12, addrWidth),
-	    Add#(addrWidth, d__, 44),
-	    Add#(e__, c__, ObjectOffsetSize),
-	    Add#(f__, addrWidth, 40));
+module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
 
    MemreadIndicationProxy memreadIndicationProxy <- mkMemreadIndicationProxy(MemreadIndication);
    Memread memread <- mkMemread(memreadIndicationProxy.ifc);
@@ -61,7 +54,7 @@ module mkPortalTop(StdPortalDmaTop#(addrWidth))
 
    Vector#(1, ObjectReadClient#(64)) clients = cons(memread.dmaClient, nil);
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
-   MemServer#(addrWidth,64,1) dma <- mkMemServerR(dmaIndicationProxy.ifc, clients);
+   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerR(dmaIndicationProxy.ifc, clients);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 
    Vector#(4,StdPortal) portals;

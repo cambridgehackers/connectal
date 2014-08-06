@@ -33,7 +33,7 @@ typedef enum {EchoIndication, EchoRequest, Swallow} IfcNames deriving (Eq,Bits);
 //    endrule
 // endmodule
 
-module mkPortalTop#(HostType host)(StdPortalTop#(addrWidth));
+module mkPortalTop#(HostType host)(StdPortalTop#(PhysAddrWidth));
 
    // instantiate user portals
    EchoIndicationProxy echoIndicationProxy <- mkEchoIndicationProxy(EchoIndication);

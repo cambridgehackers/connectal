@@ -47,21 +47,14 @@ import Memwrite::*;
 typedef enum {DmaIndication, DmaConfig, MemwriteIndication, MemwriteRequest} IfcNames deriving (Eq,Bits);
 
 typedef 4 NumMasters;
-module mkPortalTop(PortalTop#(addrWidth,64,Empty,NumMasters)) 
-
-   provisos(Add#(addrWidth, a__, 52),
-	    Add#(b__, addrWidth, 64),
-	    Add#(c__, 12, addrWidth),
-	    Add#(addrWidth, d__, 44),
-	    Add#(e__, c__, 40),
-	    Add#(f__, addrWidth, 40));
+module mkPortalTop(PortalTop#(PhysAddrWidth,64,Empty,NumMasters));
 
    MemwriteIndicationProxy memwriteIndicationProxy <- mkMemwriteIndicationProxy(MemwriteIndication);
    Memwrite#(NumMasters) memwrite <- mkMemwrite(memwriteIndicationProxy.ifc);
    MemwriteRequestWrapper memwriteRequestWrapper <- mkMemwriteRequestWrapper(MemwriteRequest,memwrite.request);
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
-   MemServer#(addrWidth, 64, NumMasters)   dma <- mkMemServerW(dmaIndicationProxy.ifc, memwrite.dmaClients);
+   MemServer#(PhysAddrWidth, 64, NumMasters)   dma <- mkMemServerW(dmaIndicationProxy.ifc, memwrite.dmaClients);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig ,dma.request);
 
    

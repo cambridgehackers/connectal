@@ -182,7 +182,7 @@ Reg#(Bit#(10)) xsvi <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
    endinterface
 endmodule
 
-module mkPortalTop(PortalTop#(addrWidth,64,ImageCapturePins,0));
+module mkPortalTop(PortalTop#(PhysAddrWidth,64,ImageCapturePins,0));
    //Clock defaultClock <- exposeCurrentClock();
    //Reset defaultReset <- exposeCurrentReset();
    B2C1 iclock <- mkB2C1();

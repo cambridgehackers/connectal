@@ -19,7 +19,7 @@ import Simple::*;
 
 typedef enum {SimpleIndication, SimpleRequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(addrWidth));
+module mkPortalTop(StdPortalTop#(PhysAddrWidth));
 
    // instantiate user portals
    SimpleIndicationProxy simpleIndicationProxy <- mkSimpleIndicationProxy(SimpleIndication);

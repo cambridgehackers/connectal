@@ -32,13 +32,7 @@ typedef enum {HdmiDisplayRequest, HdmiDisplayIndication, HdmiInternalRequest, Hd
 
 typedef HDMI#(Bit#(16)) HDMI16;
 
-module mkPortalTop#(HostType host)(PortalTop#(addrWidth,64,HDMI#(Bit#(16)),1))
-   provisos(Add#(addrWidth, a__, 52),
-	    Add#(b__, addrWidth, 64),
-	    Add#(c__, 12, addrWidth),
-	    Add#(addrWidth, d__, 44),
-	    Add#(e__, c__, ObjectOffsetSize),
-	    Add#(f__, addrWidth, 40));
+module mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,64,HDMI#(Bit#(16)),1));
 
 `ifdef ZynqHostTypeIF
    Clock clk1 = host.fclkclk[1];
@@ -53,7 +47,7 @@ module mkPortalTop#(HostType host)(PortalTop#(addrWidth,64,HDMI#(Bit#(16)),1))
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
    Vector#(1,  ObjectReadClient#(64))   readClients = cons(hdmiDisplay.dmaClient, nil);
-   MemServer#(addrWidth, 64, 1)   dma <- mkMemServerR(dmaIndicationProxy.ifc, readClients);
+   MemServer#(PhysAddrWidth, 64, 1)   dma <- mkMemServerR(dmaIndicationProxy.ifc, readClients);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 
    Vector#(6,StdPortal) portals;

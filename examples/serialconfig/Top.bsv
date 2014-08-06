@@ -44,7 +44,7 @@ import Serialconfig::*;
 
 typedef enum {SerialconfigIndication, SerialconfigRequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(addrWidth));
+module mkPortalTop(StdPortalTop#(PhysAddrWidth));
 
    // instantiate user portals
    SerialconfigIndicationProxy serialconfigIndicationProxy <- mkSerialconfigIndicationProxy(SerialconfigIndication);

@@ -102,6 +102,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
       rule check;
 	 let bv <- toGet(mismatchPipes[i]).get();
 	 let mismatch = !bv[0] || !bv[1];
+	 if (mismatch) $display("mismatch bv[0] %d bv[1] %d\n", bv[0], bv[1]);
 	 let mc = mismatchCounts[i] + (mismatch ? 1 : 0);
 
 	 mismatchCounts[i] <= mc;
@@ -109,6 +110,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 let newValuesToRead = valuesToRead[i] - 2;
 
 	 if (valuesToRead[i] <= 2) begin
+	    $display("mismatch count %d", mc);
 	    mismatchFifos[i].enq(mc);
 	    newValuesToRead = truncate(chunk/4);
 	 end

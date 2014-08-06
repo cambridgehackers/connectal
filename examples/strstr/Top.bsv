@@ -26,14 +26,7 @@ typedef enum {StrstrIndication, StrstrRequest, DmaIndication, DmaConfig} IfcName
 typedef 2 DegPar;
 
 
-module mkPortalTop(StdPortalDmaTop#(addrWidth)) 
-
-   provisos(Add#(addrWidth, a__, 52),
-	    Add#(b__, addrWidth, 64),
-	    Add#(c__, 12, addrWidth),
-	    Add#(addrWidth, d__, 44),
-	    Add#(e__, c__, 40),
-	    Add#(f__, addrWidth, 40));
+module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
 
    StrstrIndicationProxy strstrIndicationProxy <- mkStrstrIndicationProxy(StrstrIndication);
    Strstr#(DegPar,64) strstr <- mkStrstrRequest(strstrIndicationProxy.ifc);
@@ -47,7 +40,7 @@ module mkPortalTop(StdPortalDmaTop#(addrWidth))
    end
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
-   MemServer#(addrWidth,64,1) dma <- mkMemServerR(dmaIndicationProxy.ifc, readClients);
+   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerR(dmaIndicationProxy.ifc, readClients);
    DmaConfigWrapper dmaConfigWrapper <- mkDmaConfigWrapper(DmaConfig, dma.request);
 
    Vector#(4,StdPortal) portals;

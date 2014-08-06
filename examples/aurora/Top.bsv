@@ -22,7 +22,7 @@ import AuroraRequestWrapper::*;
 import Aurora::*;
 typedef enum {AuroraIndication, AuroraRequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(PortalTop#(addrWidth,64,AuroraPins,0));
+module mkPortalTop(PortalTop#(PhysAddrWidth,64,AuroraPins,0));
 
    // instantiate user portals
    AuroraIndicationProxy auroraIndicationProxy <- mkAuroraIndicationProxy(AuroraIndication);

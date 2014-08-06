@@ -25,13 +25,7 @@ import Memread2::*;
 
 typedef enum {Memread2Indication, Memread2Request, DmaIndication, DmaConfig} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalDmaTop#(addrWidth)) provisos (
-    Add#(addrWidth, a__, 52),
-    Add#(b__, addrWidth, 64),
-    Add#(c__, 12, addrWidth),
-    Add#(addrWidth, d__, 44),
-    Add#(e__, addrWidth, 40),
-    Add#(f__, c__, 40));
+module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
 
@@ -44,7 +38,7 @@ module mkPortalTop(StdPortalDmaTop#(addrWidth)) provisos (
    mkConnection(memread.dmaClient0, readBuffers[0].dmaServer);
    mkConnection(memread.dmaClient1, readBuffers[1].dmaServer);
    clients = cons(readBuffers[0].dmaClient, cons(readBuffers[1].dmaClient, nil));
-   MemServer#(addrWidth,64,1) dma <- mkMemServerR(dmaIndicationProxy.ifc, clients);
+   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerR(dmaIndicationProxy.ifc, clients);
 
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 

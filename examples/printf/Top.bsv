@@ -25,7 +25,7 @@ import DisplayIndProxy::*;
 
 typedef enum {EchoIndication, EchoRequest, Swallow, DisplayInd} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(addrWidth));
+module mkPortalTop(StdPortalTop#(PhysAddrWidth));
 
    // instantiate user portals
    EchoIndicationProxy echoIndicationProxy <- mkEchoIndicationProxy(EchoIndication);

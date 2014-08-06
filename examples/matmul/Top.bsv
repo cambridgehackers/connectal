@@ -36,15 +36,7 @@ import MatrixNT::*;
 `endif
 `endif
 
-module  mkPortalTop#(HostType host)(PortalTop#(addrWidth,TMul#(32,N),Empty,NumberOfMasters))
-   provisos (Add#(a__, addrWidth, 40),
-	     Add#(a__, b__, 40),
-	     Add#(addrWidth, c__, 52),
-	     Add#(addrWidth, d__, 64),
-	     Add#(e__, f__, 40),
-	     Add#(f__, 12, b__),
-	     Add#(b__, g__, 44)
-	     );
+module  mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,TMul#(32,N),Empty,NumberOfMasters));
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndicationPortal);
    MmDebugIndicationProxy mmDebugIndicationProxy <- mkMmDebugIndicationProxy(MmDebugIndicationPortal);
@@ -65,7 +57,7 @@ module  mkPortalTop#(HostType host)(PortalTop#(addrWidth,TMul#(32,N),Empty,Numbe
    Vector#(2,ObjectReadClient#(TMul#(32,N)))  readClients  = mm.readClients;
    Vector#(2,ObjectWriteClient#(TMul#(32,N))) writeClients = mm.writeClients;
 
-   MemServer#(addrWidth, TMul#(32,N), NumberOfMasters) dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
+   MemServer#(PhysAddrWidth, TMul#(32,N), NumberOfMasters) dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
    DmaConfigWrapper dmaConfigWrapper <- mkDmaConfigWrapper(DmaConfigPortal,dma.request);
 
    Vector#(8,StdPortal) portals;

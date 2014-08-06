@@ -28,14 +28,7 @@ typedef enum {SpliceIndication, SpliceRequest, DmaIndication, DmaConfig} IfcName
 typedef 1 DegPar;
 
 
-module mkPortalTop(StdPortalDmaTop#(addrWidth)) 
-
-   provisos(Add#(addrWidth, a__, 52),
-	    Add#(b__, addrWidth, 64),
-	    Add#(c__, 12, addrWidth),
-	    Add#(addrWidth, d__, 44),
-	    Add#(e__, c__, 40),
-	    Add#(f__, addrWidth, 40));
+module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
    DmaReadBuffer#(64,1) setupA_read_chan <- mkDmaReadBuffer();
@@ -54,7 +47,7 @@ module mkPortalTop(StdPortalDmaTop#(addrWidth))
    writeClients[0] = fetch_write_client;
 
 
-   MemServer#(addrWidth,64,1) dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
+   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
    
    DmaConfigWrapper dmaConfigWrapper <- mkDmaConfigWrapper(DmaConfig, dma.request);
    

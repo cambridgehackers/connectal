@@ -68,13 +68,7 @@ endinterface
 
 /* clk1 is the FCLKCLK1 controlled by software */
 
-module mkPortalTop#(HostType host)(PortalTop#(addrWidth,64,FMComms1Pins,1))
-      provisos(Add#(addrWidth, a__, 52),
-	    Add#(b__, addrWidth, 64),
-	    Add#(c__, 12, addrWidth),
-	    Add#(addrWidth, d__, 44),
-	    Add#(e__, c__, 40),
-	    Add#(f__, addrWidth, 40));
+module mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,64,FMComms1Pins,1));
 
    Clock clk1 = host.fclkclk[1];
    C2B ref_clk_as_bit <- mkC2B(clk1);
@@ -96,7 +90,7 @@ module mkPortalTop#(HostType host)(PortalTop#(addrWidth,64,FMComms1Pins,1))
    Vector#(1,  ObjectReadClient#(64))   readClients = cons(fmcomms1.readDmaClient, nil);
    Vector#(1, ObjectWriteClient#(64))  writeClients = cons(fmcomms1.writeDmaClient, nil);
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
-   MemServer#(addrWidth, 64, 1)   dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
+   MemServer#(PhysAddrWidth, 64, 1)   dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 
    Vector#(4,StdPortal) portals;

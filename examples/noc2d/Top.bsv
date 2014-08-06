@@ -44,7 +44,7 @@ import Noc2d::*;
 
 typedef enum {NocIndication, NocRequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(addrWidth));
+module mkPortalTop(StdPortalTop#(PhysAddrWidth));
 
    // instantiate user portals
    NocIndicationProxy nocIndicationProxy <- mkNocIndicationProxy(NocIndication);

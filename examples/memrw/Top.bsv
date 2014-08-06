@@ -24,15 +24,7 @@ import Memrw::*;
 
 typedef enum {MemrwIndication, MemrwRequest, DmaIndication, DmaConfig} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalDmaTop#(addrWidth)) 
-
-   provisos(Add#(addrWidth, a__, 52),
-	    Add#(b__, addrWidth, 64),
-	    Add#(c__, 12, addrWidth),
-	    Add#(addrWidth, d__, 44),
-	    Add#(e__, c__, 40),
-	    Add#(f__, addrWidth, 40));
-
+module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
 
    MemrwIndicationProxy memrwIndicationProxy <- mkMemrwIndicationProxy(MemrwIndication);
    Memrw memrw <- mkMemrw(memrwIndicationProxy.ifc);
@@ -41,7 +33,7 @@ module mkPortalTop(StdPortalDmaTop#(addrWidth))
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
    Vector#(1,  ObjectReadClient#(64))   readClients = cons(memrw.dmaReadClient, nil);
    Vector#(1, ObjectWriteClient#(64)) writeClients = cons(memrw.dmaWriteClient, nil);
-   MemServer#(addrWidth, 64, 1)   dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
+   MemServer#(PhysAddrWidth, 64, 1)   dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
    
    Vector#(4,StdPortal) portals;

@@ -24,15 +24,7 @@ import Memlatency::*;
 
 typedef enum {MemlatencyIndication, MemlatencyRequest, DmaIndication, DmaConfig} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalDmaTop#(addrWidth)) 
-
-   provisos(Add#(addrWidth, a__, 52),
-	    Add#(b__, addrWidth, 64),
-	    Add#(c__, 12, addrWidth),
-	    Add#(addrWidth, d__, 44),
-	    Add#(e__, c__, 40),
-	    Add#(f__, addrWidth, 40));
-
+module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
 
    MemlatencyIndicationProxy memlatencyIndicationProxy <- mkMemlatencyIndicationProxy(MemlatencyIndication);
    Memlatency memlatency <- mkMemlatency(memlatencyIndicationProxy.ifc);
@@ -41,7 +33,7 @@ module mkPortalTop(StdPortalDmaTop#(addrWidth))
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
    Vector#(1,  ObjectReadClient#(64))   readClients = cons(memlatency.dmaReadClient, nil);
    Vector#(1, ObjectWriteClient#(64)) writeClients = cons(memlatency.dmaWriteClient, nil);
-   MemServer#(addrWidth, 64, 1)   dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
+   MemServer#(PhysAddrWidth, 64, 1)   dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
    
    Vector#(4,StdPortal) portals;
