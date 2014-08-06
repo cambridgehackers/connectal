@@ -42,8 +42,6 @@
 
 static int verbose = 0;
 
-class RbmIndication;
-
 #ifdef MATRIX_NT
 #include "MmRequestNTProxy.h"
 MmRequestNTProxy *mmdevice = 0;
@@ -133,6 +131,7 @@ int main(int argc, const char **argv)
   configureSigmoidTable(rbmdevice, rbmDeviceIndication);
 
   if (1) {
+
     cv::Mat m1 = (cv::Mat_<float>(4,6) <<
 		  1,2,3,4,5,6,
 		  4,5,6,7,8,9,
@@ -143,9 +142,10 @@ int main(int argc, const char **argv)
 		  16,17,18,19,20,21,
 		  21,22,23,24,25,26,
 		  24,25,26,27,28,29);
-    PortalMat pm1(m1);
-    PortalMat pm2(m2);
-    PortalMat pm3;
+
+    RbmMat pm1(m1);
+    RbmMat pm2(m2);
+    RbmMat pm3;
     dumpMat<float>("pm1", "%5.1f", pm1);
     dumpMat<float>("pm2", "%5.1f", pm2);
     pm3.sigmoid(pm1);

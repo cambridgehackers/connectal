@@ -45,16 +45,17 @@ import Rbm::*;
 module  mkPortalTop#(HostType host) (PortalTop#(PhysAddrWidth,TMul#(32,N),Empty,NumberOfMasters));
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndicationPortal);
-
    RbmIndicationProxy rbmIndicationProxy <- mkRbmIndicationProxy(RbmIndicationPortal);
    MmDebugIndicationProxy mmDebugIndicationProxy <- mkMmDebugIndicationProxy(MmDebugIndicationPortal);
    MmIndicationProxy   mmIndicationProxy <- mkMmIndicationProxy(MmIndicationPortal);
    SigmoidIndicationProxy   sigmoidIndicationProxy <- mkSigmoidIndicationProxy(SigmoidIndicationPortal);
    TimerIndicationProxy timerIndicationProxy <- mkTimerIndicationProxy(TimerIndicationPortal);
+
    Rbm#(N) rbm <- mkRbm(host, 
 			rbmIndicationProxy.ifc, mmIndicationProxy.ifc,
 			mmDebugIndicationProxy.ifc,
 			sigmoidIndicationProxy.ifc, timerIndicationProxy.ifc);
+
    RbmRequestWrapper rbmRequestWrapper <- mkRbmRequestWrapper(RbmRequestPortal,rbm.rbmRequest);
 `ifdef MATRIX_TN
    MmRequestTNWrapper mmRequestWrapper <- mkMmRequestTNWrapper(MmRequestPortal,rbm.mmRequest);

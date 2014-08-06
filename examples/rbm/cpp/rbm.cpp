@@ -25,6 +25,123 @@
 #include "rbm.h"
 #include "mnist.h"
 
+float sigmoid(float x)
+{
+  if (x < -8.0)
+    x = -8.0;
+  if (x > 8.0)
+    x = 8.0;
+  return 1 / (1 + expf(-x));
+}
+
+void configureSigmoidTable(RbmRequestProxy *device, RbmIndication *indication)
+{
+  sigmoiddevice->sigmoidTableSize();
+  sem_wait(&mul_sem);
+
+  int num_entries = sigmoidindication->sigmoidTableSize();
+  int addrsize = log((double)num_entries) / log(2.0);
+
+  float range = 16.0;
+  float lowest_angle = - range/2.0;
+  double fincr = (float)num_entries / range;
+  double fscale = num_entries / range;
+  fprintf(stderr, "configureSigmoidTable: num_entries=%d addrsize=%d fscale=%f fincr=%f\n", num_entries, addrsize, fscale, fincr);
+
+  RbmMat sigmoidTable;
+  // each entry consists of [-angle, sigmoid(angle), derivative, 0]
+  sigmoidTable.create(1, 4*num_entries, CV_32F);
+
+  // v = (index-num_entries/2) / fscale
+  // index = v * fscale + num_entries/2
+
+  float fxscale = fscale;
+  float fxllimit = (float)lowest_angle;
+  float fxulimit = (float)-lowest_angle;
+  fprintf(stderr, "configureSigmoidTable num_entries=%d rscale=%f %x llimit=%f %x rlimit=%f %x\n",
+	  num_entries, fxscale, *(int*)&fxscale, fxllimit, *(int*)&fxllimit, fxulimit, *(int*)&fxulimit);
+  sigmoiddevice->setSigmoidLimits(*(int*)&fxscale, *(int*)&fxllimit, *(int*)&fxulimit);
+
+  int incr = 1;
+  fprintf(stderr, "filling sigmoid table pointer=%x\n", sigmoidTable.reference());
+  for (int ai = 0; ai < num_entries; ai += incr) {
+    float angle = (ai - num_entries / 2) / fscale;
+    int index = (int)(angle*fscale);
+    float s = sigmoid(angle);
+    //fprintf(stderr, "ai=%d angle=%f entry_angle=%f sigmoid=%f\n", ai, angle, angle * fscale + num_entries/2, s);
+    sigmoidTable.at<float>(0, 4*ai+0) = -angle;
+    sigmoidTable.at<float>(0, 4*ai+1) = s;
+    if (ai == num_entries-1) {
+      sigmoidTable.at<float>(0, 4*ai+2) = 0;
+    } else if (ai > 0) {
+      float angle_prev = (ai - 1 - num_entries/2) / fscale;
+      float s_prev = sigmoidTable.at<float>(0,4*(ai-1)+1);
+      float dangle = angle - angle_prev;
+      float ds = s - s_prev;
+      float slope = ds / dangle;
+      //fprintf(stderr, "angle=%f angle_prev=%f s=%f s_prev=%f ds=%f dangle=%f slope=%f\n", angle, angle_prev, s, s_prev, ds, dangle, slope);
+      sigmoidTable.at<float>(0, 4*ai+2) = slope;
+    }
+    sigmoidTable.at<float>(0, 4*ai+3) = 0;
+  }
+  fprintf(stderr, "updating sigmoid table pointer=%x\n", sigmoidTable.reference());
+  sigmoiddevice->updateSigmoidTable(sigmoidTable.reference(), 0, num_entries);
+  sem_wait(&mul_sem);
+  fprintf(stderr, "sigmoid table updated\n");
+}
+
+
+void RbmMat::sigmoid(RbmMat &a)
+{
+    create(a.rows, a.cols, CV_32F);
+    fprintf(stderr, "sigmoid: a.ref=%d a.rows=%d a.cols=%d\n", a.reference(), a.rows, a.cols);
+    reference();
+    //fprintf(stderr, "sigmoiddevice->sigmoid\n");
+    sigmoiddevice->sigmoid(a.reference(), 0, reference(), 0, a.rows*a.cols);
+    sem_wait(&mul_sem);
+}
+
+void RbmMat::hiddenStates(RbmMat &a)
+{
+    create(a.rows, a.cols, CV_32F);
+    fprintf(stderr, "hiddenStates: a.ref=%d a.rows=%d a.cols=%d\n", a.reference(), a.rows, a.cols);
+    reference();
+    //fprintf(stderr, "sigmoiddevice->computeStates\n");
+    rbmdevice->computeStates(a.reference(), 0, reference(), 0, a.rows*a.cols);
+    sem_wait(&mul_sem);
+}
+
+void RbmMat::hiddenStates2(RbmMat &a, RbmMat &rand)
+{
+    create(a.rows, a.cols, CV_32F);
+    fprintf(stderr, "hiddenStates2: a.ref=%d a.rows=%d a.cols=%d\n", a.reference(), a.rows, a.cols);
+    rand.reference();
+    reference();
+    //fprintf(stderr, "rbmdevice->computeStates2 ptr=%d randPtr=%d\n", a.reference(), rand.reference());
+    rbmdevice->computeStates2(a.reference(), 0, rand.reference(), 0, reference(), 0, a.rows*a.cols);
+    sem_wait(&mul_sem);
+}
+
+// weights += learningRate * (pos_associations - neg_associations) / num_examples;
+void RbmMat::updateWeights(RbmMat &posAssociations, RbmMat &negAssociations, float learningRateOverNumExamples)
+{
+    fprintf(stderr, "rbmdevice->updateWeights pa.ref=%d na.ref=%d\n", posAssociations.reference(), negAssociations.reference());
+    rbmdevice->updateWeights(posAssociations.reference(), negAssociations.reference(), reference(), rows*cols, *(int*)&learningRateOverNumExamples);
+    sem_wait(&mul_sem);
+}
+
+void RbmMat::sumOfErrorSquared(RbmMat &pred)
+{
+    if (rows != pred.rows || cols != pred.cols) {
+	fprintf(stderr, "Mismatched data and pred: data.rows=%d data.cols=%d  pred.rows=%d pred.cols=%d\n",
+		rows, cols, pred.rows, pred.cols);
+	return;
+    }
+    rbmdevice->sumOfErrorSquared(reference(), pred.reference(), rows*cols);
+    sem_wait(&mul_sem);
+}
+
+
 void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
 {
   int numExamples = trainingData.rows;
@@ -44,24 +161,24 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
   for (int i = 0; i < data.rows; i++)
     data.at<float>(i, 0) = 1.0;
 
-  PortalMat pmData(data);
-  PortalMat dataT(pmData.t());
+  RbmMat pmData(data);
+  RbmMat dataT(pmData.t());
 
-  PortalMat pmWeights(weights);
-  PortalMat pmWeightsCM;
-  PortalMat pm_pos_hidden_activations;
-  PortalMat pm_pos_hidden_probs;
-  PortalMat pm_rand_mat;
-  PortalMat pm_pos_hidden_states;
-  PortalMat pm_pos_hidden_probsT;
-  PortalMat pm_pos_associations;
-  PortalMat pm_neg_visible_activations;
-  PortalMat pm_neg_visible_probs;
-  PortalMat pm_neg_hidden_activations;
-  PortalMat pm_neg_hidden_probs;
-  PortalMat pm_neg_visible_probsT;
-  PortalMat pm_neg_hidden_probsT;
-  PortalMat pm_neg_associations;
+  RbmMat pmWeights(weights);
+  RbmMat pmWeightsCM;
+  RbmMat pm_pos_hidden_activations;
+  RbmMat pm_pos_hidden_probs;
+  RbmMat pm_rand_mat;
+  RbmMat pm_pos_hidden_states;
+  RbmMat pm_pos_hidden_probsT;
+  RbmMat pm_pos_associations;
+  RbmMat pm_neg_visible_activations;
+  RbmMat pm_neg_visible_probs;
+  RbmMat pm_neg_hidden_activations;
+  RbmMat pm_neg_hidden_probs;
+  RbmMat pm_neg_visible_probsT;
+  RbmMat pm_neg_hidden_probsT;
+  RbmMat pm_neg_associations;
 
   int numEpochs = 1;
   bool verbose = false;
@@ -80,14 +197,14 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
     pmWeightsCM.transpose(pmWeights);
     if (verbose) dumpMat<float>("pmWeightsCM", "%5.1f", pmWeightsCM);
 
-    //PortalMat pm_pos_hidden_activations;
+    //RbmMat pm_pos_hidden_activations;
     pm_pos_hidden_activations.multf(pmData, pmWeightsCM);
     if (verbose) dumpMat<float>("pm_pos_hidden_activations", "%5.1f", pm_pos_hidden_activations);
     if (verbose) dumpMat<float>("   pos_hidden_activations", "%5.1f", pos_hidden_activations);
 
     if (verify) assert(pm_pos_hidden_activations.compare(pos_hidden_activations, __FILE__, __LINE__));
 
-    // PortalMat pm_pos_hidden_probs;
+    // RbmMat pm_pos_hidden_probs;
     pm_pos_hidden_probs.create(pos_hidden_activations.rows, pos_hidden_activations.cols, CV_32F);
     pm_pos_hidden_probs.sigmoid(pm_pos_hidden_activations);
 
@@ -101,7 +218,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
     if (verbose) dumpMat<float>("   pos_hidden_probs", "%5.1f", pos_hidden_probs);
     if (verify) assert(pm_pos_hidden_probs.compare(pos_hidden_probs, __FILE__, __LINE__, .001, &pos_hidden_activations));
 
-    // PortalMat pm_rand_mat;
+    // RbmMat pm_rand_mat;
     pm_rand_mat.create(pm_pos_hidden_probs.rows, pm_pos_hidden_probs.cols, CV_32F);
     for (int i = 0; i < pm_pos_hidden_probs.rows; i++) {
       for (int j = 0; j < pm_pos_hidden_probs.cols; j++) {
@@ -121,7 +238,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
     }
 
 
-    // PortalMat pm_pos_hidden_states;
+    // RbmMat pm_pos_hidden_states;
     if (1) // verify
       pm_pos_hidden_states.hiddenStates2(pm_pos_hidden_probs, pm_rand_mat);
     else
@@ -132,7 +249,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
 
     if (verbose) dumpMat<float>("dataT", "%5.1f", dataT);
 
-    //PortalMat pmWeights(weights); // back to non-transposed
+    //RbmMat pmWeights(weights); // back to non-transposed
     //pmWeights.copy(weights);
     if (verbose) dumpMat<float>("pmWeights", "%5.1f", pmWeights);
 
@@ -141,14 +258,14 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
 
     cv::Mat pos_associations = dataT * pm_pos_hidden_probs;
 
-    //PortalMat pm_pos_associations;
+    //RbmMat pm_pos_associations;
     pm_pos_associations.multf(dataT, pm_pos_hidden_probsT);
     if (verbose) dumpMat<float>("pos_associations", "%5.1f", pm_pos_associations);
 
     // check results
     if (verify) assert(pm_pos_associations.compare(pos_associations, __FILE__, __LINE__));
 
-    // PortalMat pm_neg_visible_activations;
+    // RbmMat pm_neg_visible_activations;
     pm_neg_visible_activations.multf(pm_pos_hidden_states, pmWeights);
     if (verbose) dumpMat<float>("neg_visible_activations", "%5.1f", pm_neg_visible_activations);
 
@@ -159,7 +276,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
 	neg_visible_probs.at<float>(i,j) = sigmoid(pm_neg_visible_activations.at<float>(i,j));
       }
     }
-    // PortalMat pm_neg_visible_probs;
+    // RbmMat pm_neg_visible_probs;
     pm_neg_visible_probs.sigmoid(pm_neg_visible_activations);
     if (verbose) dumpMat<float>("neg_visible_probs", "%5.1f", pm_neg_visible_probs);
 
@@ -170,7 +287,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
     }
     if (verify) pm_neg_visible_probs.compare(neg_visible_probs, __FILE__, __LINE__, .001, &pm_neg_visible_activations);
 
-    // PortalMat pm_neg_hidden_activations;
+    // RbmMat pm_neg_hidden_activations;
     pm_neg_hidden_activations.multf(pm_neg_visible_probs, pmWeightsCM);
     if (verbose) dumpMat<float>("pm_neg_hidden_activations", "%5.1f", pm_neg_hidden_activations);
 
@@ -178,7 +295,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
     if (verbose) dumpMat<float>("   neg_hidden_activations", "%5.1f", neg_hidden_activations);
     if (verify) pm_neg_hidden_activations.compare(neg_hidden_activations, __FILE__, __LINE__);
 
-    // PortalMat pm_neg_hidden_probs;
+    // RbmMat pm_neg_hidden_probs;
     pm_neg_hidden_probs.sigmoid(pm_neg_hidden_activations);
     if (verbose) dumpMat<float>("pm_neg_hidden_probs", "%5.1f", pm_neg_hidden_probs);
 
@@ -186,7 +303,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
     if (verbose) dumpMat<float>("pm_neg_visible_probsT", "%5.1f", pm_neg_visible_probsT);
 
     pm_neg_hidden_probsT.transpose(pm_neg_hidden_probs);
-    //PortalMat pm_neg_associations;
+    //RbmMat pm_neg_associations;
     pm_neg_associations.multf(pm_neg_visible_probsT, pm_neg_hidden_probsT);
     if (verbose) dumpMat<float>("pm_neg_associations", "%5.1f", pm_neg_associations);
     cv::Mat neg_associations = pm_neg_visible_probsT * pm_neg_hidden_probs;

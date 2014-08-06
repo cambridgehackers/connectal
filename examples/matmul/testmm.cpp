@@ -51,16 +51,12 @@ MmRequestTNProxy *mmdevice = 0;
 
 static int verbose = 0;
 
-class SigmoidIndication;
 class MmIndication;
 class MmDebugIndication;
 
 #define N 2
 
-RbmRequestProxy *rbmdevice = 0;
 MmDebugRequestProxy *mmdebug = 0;
-SigmoidIndication *sigmoidindication = 0;
-SigmoidRequestProxy *sigmoiddevice = 0;
 TimerRequestProxy *timerdevice = 0;
 MmIndication *mmdeviceIndication = 0;
 MmDebugIndication *mmDebugIndication = 0;

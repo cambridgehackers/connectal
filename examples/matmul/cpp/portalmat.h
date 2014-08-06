@@ -31,8 +31,6 @@
 #include <portal.h>
 #include "dmaManager.h"
 #include "DmaConfigProxy.h"
-#include "RbmRequestProxy.h"
-#include "RbmIndicationWrapper.h"
 
 #ifdef MATRIX_NT
 #include "MmRequestNTProxy.h"
@@ -46,16 +44,9 @@ extern MmRequestTNProxy *mmdevice;
  
 #include "MmIndicationWrapper.h"
 #include "MmDebugIndicationWrapper.h"
-#include "SigmoidRequestProxy.h"
-#include "SigmoidIndicationWrapper.h"
 #include "TimerRequestProxy.h"
 #include "TimerIndicationWrapper.h"
 
-class SigmoidIndication;
-
-extern RbmRequestProxy *rbmdevice;
-extern SigmoidRequestProxy *sigmoiddevice;
-extern SigmoidIndication *sigmoidindication;
 extern TimerRequestProxy *timerdevice;
 extern sem_t mul_sem;
 
@@ -93,14 +84,7 @@ public:
   bool transpose(cv::Mat &other);
   bool compare(Mat &other, const char *file=0, int line=0, float epsilon=0.01, Mat *pm = 0, bool verbose = false);
   void naive_mul(cv::Mat &a, cv::Mat &b, FILE *f);
-
   void multf(PortalMat &a, PortalMat &b_transpose, MmIndication *mmind = NULL);
-  void sigmoid(PortalMat &a);
-  void hiddenStates(PortalMat &a);
-  void hiddenStates2(PortalMat &a, PortalMat &rand);
-  // weights += learningRate * (pos_associations - neg_associations) / num_examples;
-  void updateWeights(PortalMat &posAssociations, PortalMat &negAssociations, float learningRateOverNumExamples);
-  void sumOfErrorSquared(PortalMat &pred);
 };
 
 class MmIndication : public MmIndicationWrapper
@@ -139,29 +123,6 @@ public:
   }
 };
 
-class SigmoidIndication : public SigmoidIndicationWrapper
-{
-public:
- SigmoidIndication(int id) : SigmoidIndicationWrapper(id) {
-  }
-  virtual ~SigmoidIndication() {}
-  virtual void sigmoidDone() {
-    fprintf(stderr, "sigmoidDone\n");
-    sem_post(&mul_sem);
-  }
-  virtual void sigmoidTableUpdated(uint32_t addr) {
-    sem_post(&mul_sem);
-  }
-  uint32_t sigmoidTableSize() { return sigmoidTableSize_; }
-  virtual void sigmoidTableSize(uint32_t size) {
-    fprintf(stderr, "sigmoidTableSize %d\n", size);
-    sigmoidTableSize_ = size;
-    sem_post(&mul_sem);
-  }
- private:
-  uint32_t sigmoidTableSize_;
-};
-
 class TimerIndication : public TimerIndicationWrapper
 {
 public:
@@ -172,47 +133,6 @@ public:
     fprintf(stderr, "elapsedCycles %lld idle %lld idle %f\n", (long long)cycles, (long long)idleCycles, (double)idleCycles / (double)cycles);
   }
 };
-class RbmIndication : public RbmIndicationWrapper
-{
-public:
- RbmIndication(int id) : RbmIndicationWrapper(id) {
-  }
-  virtual ~RbmIndication() {}
-  virtual void bramMmfDone() {
-    //fprintf(stderr, "bramMmfDone\n");
-    sem_post(&mul_sem);
-  }
-  virtual void toBramDone() {
-    //fprintf(stderr, "toBramDone\n");
-    sem_post(&mul_sem);
-  }
-  virtual void fromBramDone() {
-    //fprintf(stderr, "fromBramDone\n");
-    sem_post(&mul_sem);
-  }
-  virtual void statesDone() {
-    //fprintf(stderr, "statesDone\n");
-    sem_post(&mul_sem);
-  }
-  virtual void statesDone2() {
-    //fprintf(stderr, "statesDone2\n");
-    sem_post(&mul_sem);
-  }
-  virtual void updateWeightsDone() {
-    //fprintf(stderr, "updateWeightsDone\n");
-    sem_post(&mul_sem);
-  }
-  virtual void sumOfErrorSquared(uint32_t x) {
-    //fprintf(stderr, "sumOfErrorSquared error=%f\n", *(float *)&x);
-    sem_post(&mul_sem);
-  }
-  virtual void dbg(uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
-    fprintf(stderr, "rbm dbg a=%x b=%x c=%x d=%x\n", a, b, c, d);
-  }
-};
-
-float sigmoid(float x);
-void configureSigmoidTable(RbmRequestProxy *device, RbmIndication *indication);
 
 template<typename T>
   void dumpMat(const char *prefix, const char *fmt, const cv::Mat &mat);
