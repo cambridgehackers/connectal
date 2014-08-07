@@ -28,7 +28,11 @@
 int srcAlloc, nandAlloc;
 unsigned int *srcBuffer = 0;
 size_t numBytes = 1 << 12;
+#ifndef BOARD_bluesim
 size_t nandBytes = 1 << 24;
+#else
+size_t nandBytes = 1 << 14;
+#endif
 
 class NandSimIndication : public NandSimIndicationWrapper
 {
@@ -142,5 +146,5 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::Summary: match=%lu mismatch:%lu (%lu) (%f percent)\n", 
 		match, mismatch, match+mismatch, (float)mismatch/(float)(match+mismatch)*100.0);
 
-  return 0;
+  return (mismatch > 0);
 }
