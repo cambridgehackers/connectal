@@ -30,12 +30,16 @@ import RbmIndicationProxy::*;
 import SigmoidRequestWrapper::*;
 import SigmoidIndicationProxy::*;
 `ifdef MATRIX_TN
+import MatrixTN::*;
 import MmRequestTNWrapper::*;
 `else
 `ifdef MATRIX_NT
+import MatrixNT::*;
 import MmRequestNTWrapper::*;
 `endif
 `endif
+
+
 
 import RbmTypes::*;
 import Sigmoid::*;
@@ -51,25 +55,23 @@ module  mkPortalTop#(HostType host) (PortalTop#(PhysAddrWidth,TMul#(32,N),Empty,
    SigmoidIndicationProxy   sigmoidIndicationProxy <- mkSigmoidIndicationProxy(SigmoidIndicationPortal);
    TimerIndicationProxy timerIndicationProxy <- mkTimerIndicationProxy(TimerIndicationPortal);
 
-   Rbm#(N) rbm <- mkRbm(host, 
-			rbmIndicationProxy.ifc, mmIndicationProxy.ifc,
-			mmDebugIndicationProxy.ifc,
-			sigmoidIndicationProxy.ifc, timerIndicationProxy.ifc);
-
+   Rbm#(N) rbm <- mkRbm(host,rbmIndicationProxy.ifc,sigmoidIndicationProxy.ifc, timerIndicationProxy.ifc);
    RbmRequestWrapper rbmRequestWrapper <- mkRbmRequestWrapper(RbmRequestPortal,rbm.rbmRequest);
 `ifdef MATRIX_TN
-   MmRequestTNWrapper mmRequestWrapper <- mkMmRequestTNWrapper(MmRequestPortal,rbm.mmRequest);
+   MmTN#(N) mm <- mkMmTN(mmIndicationProxy.ifc, timerIndicationProxy.ifc, mmDebugIndicationProxy.ifc, host);
+   MmRequestTNWrapper mmRequestWrapper <- mkMmRequestTNWrapper(MmRequestPortal,mm.mmRequest);
 `else
 `ifdef MATRIX_NT
-   MmRequestNTWrapper mmRequestWrapper <- mkMmRequestNTWrapper(MmRequestPortal,rbm.mmRequest);
+   MmNT#(N) mm <- mkMmNT(mmIndicationProxy.ifc, timerIndicationProxy.ifc, mmDebugIndicationProxy.ifc, host);
+   MmRequestNTWrapper mmRequestWrapper <- mkMmRequestNTWrapper(MmRequestPortal,mm.mmRequest);
 `endif
 `endif
-   MmDebugRequestWrapper mmDebugRequestWrapper <- mkMmDebugRequestWrapper(MmDebugRequestPortal,rbm.mmDebugRequest);
+   MmDebugRequestWrapper mmDebugRequestWrapper <- mkMmDebugRequestWrapper(MmDebugRequestPortal,mm.mmDebug);
    SigmoidRequestWrapper   sigmoidRequestWrapper <- mkSigmoidRequestWrapper(SigmoidRequestPortal,rbm.sigmoidRequest);
    TimerRequestWrapper timerRequestWrapper <- mkTimerRequestWrapper(TimerRequestPortal,rbm.timerRequest);
 
-   Vector#(12,ObjectReadClient#(TMul#(32,N))) readClients = rbm.readClients;
-   Vector#(6,ObjectWriteClient#(TMul#(32,N))) writeClients = rbm.writeClients;
+   Vector#(12,ObjectReadClient#(TMul#(32,N))) readClients = append(rbm.readClients,mm.readClients);
+   Vector#(6,ObjectWriteClient#(TMul#(32,N))) writeClients = append(rbm.writeClients,mm.writeClients);
 
    MemServer#(PhysAddrWidth, TMul#(32,N), NumberOfMasters) dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
    DmaConfigWrapper dmaConfigWrapper <- mkDmaConfigWrapper(DmaConfigPortal,dma.request);

@@ -41,17 +41,6 @@ import FloatOps::*;
 import Pipe::*;
 import Timer::*;
 import RbmTypes::*;
-
-`ifdef MATRIX_TN
-import MatrixTN::*;
-import MmRequestTNWrapper::*;
-`else
-`ifdef MATRIX_NT
-import MatrixNT::*;
-import MmRequestNTWrapper::*;
-`endif
-`endif
-import MmIndicationProxy::*;
 import DotProdServer::*;
 
 
@@ -244,37 +233,19 @@ endmodule: mkDmaSumOfErrorSquared
 
 interface Rbm#(numeric type n);
    interface RbmRequest rbmRequest;
-`ifdef MATRIX_TN
-   interface MmRequestTN mmRequest;
-`else
-`ifdef MATRIX_NT
-   interface MmRequestNT mmRequest;
-`endif
-`endif
-   interface MmDebugRequest mmDebugRequest;
    interface SigmoidRequest sigmoidRequest;
    interface TimerRequest timerRequest;
-   interface Vector#(12, ObjectReadClient#(TMul#(32,n))) readClients;
-   interface Vector#(6, ObjectWriteClient#(TMul#(32,n))) writeClients;
+   interface Vector#(10, ObjectReadClient#(TMul#(32,n))) readClients;
+   interface Vector#(4, ObjectWriteClient#(TMul#(32,n))) writeClients;
 endinterface
 
-module  mkRbm#(HostType host, RbmIndication rbmInd, MmIndication mmInd, MmDebugIndication mmDebugInd, SigmoidIndication sigmoidInd, TimerIndication timerInd)(Rbm#(N))
+module  mkRbm#(HostType host, RbmIndication rbmInd, SigmoidIndication sigmoidInd, TimerIndication timerInd)(Rbm#(N))
    provisos (Add#(1,a__,N),
 	     Add#(N,0,n),
 	     Mul#(N,32,DmaSz)
       );
 
    let n = valueOf(n);
-
-`ifdef MATRIX_TN
-   MmTN#(N) mm <- mkMmTN(mmInd, timerInd, mmDebugInd, host);
-   MmRequestTNWrapper mmRequestWrapper <- mkMmRequestTNWrapper(MmRequestPortal,mm.mmRequest);
-`else
-`ifdef MATRIX_NT
-   MmNT#(N) mm <- mkMmNT(mmInd, timerInd, mmDebugInd, host);
-   MmRequestNTWrapper mmRequestWrapper <- mkMmRequestNTWrapper(MmRequestPortal,mm.mmRequest);
-`endif
-`endif
 
    DmaSigmoidIfc#(TMul#(32,n)) dmaSigmoid <- mkDmaSigmoid();
    Vector#(2,ObjectReadClient#(TMul#(32,n))) sigmoidsources = dmaSigmoid.readClients;
@@ -346,9 +317,6 @@ module  mkRbm#(HostType host, RbmIndication rbmInd, MmIndication mmInd, MmDebugI
       endmethod
    endinterface
 
-   interface MmRequest mmRequest = mm.mmRequest;
-   interface MmDebugRequest mmDebugRequest = mm.mmDebug;
-   
    interface SigmoidRequest sigmoidRequest;
       method Action sigmoid(Bit#(32) readPointer, Bit#(32) readOffset,
 			    Bit#(32) writePointer, Bit#(32) writeOffset, Bit#(32) numElts);
@@ -371,25 +339,6 @@ module  mkRbm#(HostType host, RbmIndication rbmInd, MmIndication mmInd, MmDebugI
    endinterface   
 
    interface RbmRequest rbmRequest;
-      method Action bramMmf(Bit#(32) h1, Bit#(32) r1, Bit#(32) c1,
-			    Bit#(32) h2, Bit#(32) r2, Bit#(32) c2,
-			    Bit#(32) h3);
-	 // bramMMF.start(h1, unpack(extend(r1)), unpack(extend(c1)),
-	 // 	       h2, unpack(extend(r2)), unpack(extend(c2)),
-	 // 	       h3);
-	 // busyFifo.enq(True);
-      endmethod
-      method Action toBram(Bit#(32) off, Bit#(32) pointer, Bit#(32) offset, Bit#(32) numElts);
-	 // bramMMF.toBram(off, pointer, offset, numElts);
-	 // busyFifo.enq(True);
-      endmethod
-
-      method Action fromBram(Bit#(32) off, Bit#(32) pointer, Bit#(32) offset, Bit#(32) numElts);
-	 // bramMMF.fromBram(off, pointer, offset, numElts);
-	 // busyFifo.enq(True);
-      endmethod
-
-
       method Action dbg();
       endmethod
 
@@ -397,15 +346,8 @@ module  mkRbm#(HostType host, RbmIndication rbmInd, MmIndication mmInd, MmDebugI
 	 $finish(0);
       endmethod
       method Action computeStates(Bit#(32) readPointer, Bit#(32) readOffset,
+				  Bit#(32) readPointer2, Bit#(32) readOffset2,
 				  Bit#(32) writePointer, Bit#(32) writeOffset, Bit#(32) numElts);
-	 //$display("computeStates rh=%d wh=%d len=%d", readPointer, writePointer, numElts);
-	 dmaStates.start(readPointer, readOffset,
-			 writePointer, writeOffset, numElts);
-	 busyFifo.enq(True);
-      endmethod
-      method Action computeStates2(Bit#(32) readPointer, Bit#(32) readOffset,
-				   Bit#(32) readPointer2, Bit#(32) readOffset2,
-				   Bit#(32) writePointer, Bit#(32) writeOffset, Bit#(32) numElts);
 	 //$display("computeStates2 rh=%d wh=%d len=%d", readPointer, writePointer, numElts);
 	 dmaStates2.start(readPointer, readOffset,
 			  readPointer2, readOffset2,
@@ -428,22 +370,15 @@ module  mkRbm#(HostType host, RbmIndication rbmInd, MmIndication mmInd, MmDebugI
       endmethod
    endinterface   
 
-   interface Vector readClients = append(
-					 //append(
-					    mm.readClients,
-					    //bramMMF.readClients
-					    //),
-					 append(
-						append(dmaUpdateWeights.readClients,
-						       dmaSumOfErrorSquared.readClients),
-						append(
-						   sigmoidsources,
-						   append(
-						      dmaStates.sources,
-						      dmaStates2.sources)
-						   )));
+   interface Vector readClients = append(append(dmaUpdateWeights.readClients,
+						dmaSumOfErrorSquared.readClients),
+					 append(sigmoidsources,
+						append(dmaStates.sources,
+						       dmaStates2.sources)));
 
    interface Vector writeClients =
       append(dmaUpdateWeights.writeClients,
-	     cons(dmaSigmoid.dmaClient, cons(dmaStates.sinks[0], cons(dmaStates2.sinks[0], mm.writeClients))));
+	     cons(dmaSigmoid.dmaClient, 
+		  cons(dmaStates.sinks[0], 
+		       cons(dmaStates2.sinks[0], nil))));
 endmodule

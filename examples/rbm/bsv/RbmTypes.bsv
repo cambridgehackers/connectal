@@ -117,23 +117,14 @@ endinterface
 interface RbmRequest;
    method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
    method Action paref(Bit#(32) addr, Bit#(32) len);
-
-   method Action bramMmf(Bit#(32) inPointer1, Bit#(32) r1, Bit#(32) c1,
-			 Bit#(32) inPointer2, Bit#(32) r2, Bit#(32) c2,
-			 Bit#(32) outPointer);
-   method Action toBram(Bit#(32) off, Bit#(32) pointer, Bit#(32) offset, Bit#(32) numElts);
-   method Action fromBram(Bit#(32) off, Bit#(32) pointer, Bit#(32) offset, Bit#(32) numElts);
-
-    method Action computeStates(Bit#(32) readPointer, Bit#(32) readOffset, Bit#(32) writePointer, Bit#(32) writeOffset, Bit#(32) numElts);
-    method Action computeStates2(Bit#(32) readPointer, Bit#(32) readOffset, Bit#(32) readPointer2, Bit#(32) readOffset2,
-				 Bit#(32) writePointer, Bit#(32) writeOffset, Bit#(32) numElts);
-
-    method Action updateWeights(Bit#(32) posAssociationsPointer, Bit#(32) negAssociationsPointer, Bit#(32) weightsPointer, Bit#(32) numElts, Bit#(32) learningRateOverNumExamples);
-
-    method Action sumOfErrorSquared(Bit#(32) dataPointer, Bit#(32) predPointer, Bit#(32) numElts);
-
-    method Action dbg(); 
-    method Action finish(); // for bsim only
+   method Action computeStates(Bit#(32) readPointer, Bit#(32) readOffset, 
+			       Bit#(32) readPointer2, Bit#(32) readOffset2,
+			       Bit#(32) writePointer, Bit#(32) writeOffset, Bit#(32) numElts);
+   method Action updateWeights(Bit#(32) posAssociationsPointer, Bit#(32) negAssociationsPointer, 
+			       Bit#(32) weightsPointer, Bit#(32) numElts, Bit#(32) learningRateOverNumExamples);
+   method Action sumOfErrorSquared(Bit#(32) dataPointer, Bit#(32) predPointer, Bit#(32) numElts);
+   method Action dbg(); 
+   method Action finish(); // for bsim only
 endinterface
 
 interface MmDebugRequest;

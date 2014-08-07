@@ -101,24 +101,14 @@ void RbmMat::sigmoid(RbmMat &a)
     sem_wait(&mul_sem);
 }
 
-void RbmMat::hiddenStates(RbmMat &a)
-{
-    create(a.rows, a.cols, CV_32F);
-    fprintf(stderr, "hiddenStates: a.ref=%d a.rows=%d a.cols=%d\n", a.reference(), a.rows, a.cols);
-    reference();
-    //fprintf(stderr, "sigmoiddevice->computeStates\n");
-    rbmdevice->computeStates(a.reference(), 0, reference(), 0, a.rows*a.cols);
-    sem_wait(&mul_sem);
-}
-
-void RbmMat::hiddenStates2(RbmMat &a, RbmMat &rand)
+void RbmMat::hiddenStates(RbmMat &a, RbmMat &rand)
 {
     create(a.rows, a.cols, CV_32F);
     fprintf(stderr, "hiddenStates2: a.ref=%d a.rows=%d a.cols=%d\n", a.reference(), a.rows, a.cols);
     rand.reference();
     reference();
     //fprintf(stderr, "rbmdevice->computeStates2 ptr=%d randPtr=%d\n", a.reference(), rand.reference());
-    rbmdevice->computeStates2(a.reference(), 0, rand.reference(), 0, reference(), 0, a.rows*a.cols);
+    rbmdevice->computeStates(a.reference(), 0, rand.reference(), 0, reference(), 0, a.rows*a.cols);
     sem_wait(&mul_sem);
 }
 
@@ -239,10 +229,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
 
 
     // RbmMat pm_pos_hidden_states;
-    if (1) // verify
-      pm_pos_hidden_states.hiddenStates2(pm_pos_hidden_probs, pm_rand_mat);
-    else
-      pm_pos_hidden_states.hiddenStates(pm_pos_hidden_probs);
+    pm_pos_hidden_states.hiddenStates(pm_pos_hidden_probs, pm_rand_mat);
     if (verbose) dumpMat<float>("pm_pos_hidden_states", "%5.1f", pm_pos_hidden_states);
     if (verbose) dumpMat<float>("   pos_hidden_states", "%5.1f", pos_hidden_states);
     if (verify) assert(pm_pos_hidden_states.compare(pos_hidden_states, __FILE__, __LINE__));

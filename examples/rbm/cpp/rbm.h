@@ -95,8 +95,7 @@ class RbmMat : public PortalMat {
   RbmMat(const RbmMat &m) : PortalMat(m) {};
   RbmMat(const cv::Mat &m) : PortalMat(m) {};
   void sigmoid(RbmMat &a);
-  void hiddenStates(RbmMat &a);
-  void hiddenStates2(RbmMat &a, RbmMat &rand);
+  void hiddenStates(RbmMat &a, RbmMat &rand);
   // weights += learningRate * (pos_associations - neg_associations) / num_examples;
   void updateWeights(RbmMat &posAssociations, RbmMat &negAssociations, float learningRateOverNumExamples);
   void sumOfErrorSquared(RbmMat &pred);
