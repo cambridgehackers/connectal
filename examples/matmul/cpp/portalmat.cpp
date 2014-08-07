@@ -32,16 +32,18 @@ void PortalMatAllocator::allocate(int dims, const int* sizes, int type, int*& re
 				  uchar*& datastart, uchar*& data, size_t* step)
 {
   size_t arraysize = step[0]*sizes[0];
-  size_t totalsize = cv::alignSize(arraysize+3*sizeof(int), 4096);
+  size_t totalsize = cv::alignSize(arraysize+4*sizeof(int), 4096);
   int arraynum = numarrays++;
-  allocArea[arraynum] = portalAlloc(totalsize);
+  arrayFds[arraynum] = portalAlloc(totalsize);
 
-  data = datastart = (uchar*)(unsigned int *)portalMmap(allocArea[arraynum], totalsize);
+  data = datastart = (uchar*)(unsigned int *)portalMmap(arrayFds[arraynum], totalsize);
   refcount = (int*)(data + arraysize);
   int *parraynum = refcount+1;
   *parraynum = arraynum;
   int *pref = refcount+2;
   *pref = 0;
+  int *psize = refcount+3;
+  *psize = totalsize;
   *refcount = 1;
   fprintf(stderr, "PortalMatAllocator::allocate   datastart=%p arraynum=%d size=%ld\n",
 	  datastart, arraynum, (long)totalsize);
@@ -51,13 +53,14 @@ void PortalMatAllocator::deallocate(int* refcount, uchar* datastart, uchar* data
 {
   int *parraynum = refcount+1;
   int *pref = refcount+2;
+  int *psize = refcount+3;
   int arraynum = *parraynum;
   int ref = *pref;
-  size_t size = 0; //this needs to be stored in class     //allocArea[arraynum]->header.size;
+  size_t totalsize = *psize;
   fprintf(stderr, "PortalMatAllocator::deallocate datastart=%p arraynum=%d size=%ld\n",
-	  datastart, arraynum, (long)size);
-  munmap(datastart, size);
-  close(allocArea[arraynum]);
+	  datastart, arraynum, (long)totalsize);
+  munmap(datastart, totalsize);
+  close(arrayFds[arraynum]);
 }
 
 int PortalMatAllocator::reference(int* refcount, uchar* datastart, uchar* data)
@@ -69,7 +72,7 @@ int PortalMatAllocator::reference(int* refcount, uchar* datastart, uchar* data)
   //fprintf(stderr, "PortalMatAllocator::reference datastart=%p arraynum=%d ref=%d\n", datastart, arraynum, ref);
   if (!ref) {
     //fprintf(stderr, "Calling dma->reference arraynum=%d\n", arraynum);
-    ref = dma->reference(allocArea[arraynum]);
+    ref = dma->reference(arrayFds[arraynum]);
     *pref = ref;
   }
   return ref;
