@@ -34,6 +34,5 @@ synth-ip.tcl:
 prebuild:: synth-ip.tcl
 	if [ "$(BOARD)" != "bluesim" ] ; then cd $(BOARD); vivado -mode batch -source ../synth-ip.tcl; fi
 
-include $(XBSVDIR)/Makefile.common
-
 FPGAMAKE_XBSVFLAGS += -P mkMmTile --xci=$(IPDIR)/$(BOARD)/fp_add/fp_add.xci --xci=$(IPDIR)/$(BOARD)/fp_mul/fp_mul.xci
+

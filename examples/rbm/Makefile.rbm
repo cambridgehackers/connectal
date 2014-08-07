@@ -16,3 +16,5 @@ H2S += RbmIndication SigmoidIndication
 BSVFILES += $(RBMDIR)/bsv/Rbm.bsv
 CPPFILES += $(RBMDIR)/cpp/rbm.cpp
 
+
+NUMBER_OF_MASTERS=1
