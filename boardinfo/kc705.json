@@ -1,4 +1,12 @@
 {
+    "options": {
+        "bsvdefines" : ["Kintex7", "PCIE"],
+        "os" : "ubuntu",
+        "partname" : "xc7k325tffg900-2",
+        "needs_pcie_7x_gen1x8" : "True",
+        "rewireclockstring" : ""
+    },
+    "fmc": {
     "LA00_p_CC": {
         "LOC": "C25",
         "IOSTANDARD": "LVCMOS25"
@@ -224,4 +232,5 @@
 	"DIFF_TERM": "TRUE",
 	"PIO_DIRECTION": "OUTPUT"
     }
+}
 }

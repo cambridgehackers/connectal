@@ -1,4 +1,11 @@
 {
+    "options": {
+        "bsvdefines" : ["ZYNQ"],
+        "os" : "android",
+        "partname" : "xc7z020clg484-1",
+        "rewireclockstring" : "tclzynqrewireclock",
+        "needs_pcie_7x_gen1x8" : "False"
+    },
     "fmc": {
     "LA00_p_CC": {
         "LOC": "M19",

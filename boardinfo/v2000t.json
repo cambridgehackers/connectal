@@ -2,12 +2,10 @@
     "options": {
         "bsvdefines" : ["Virtex7", "PCIE"],
         "os" : "ubuntu",
-        "partname" : "xc7vx485tffg1761-2",
+        "partname" : "xc7v2000tflg1925-2",
         "needs_pcie_7x_gen1x8" : "True",
         "rewireclockstring" : ""
     },
     "fmc": {
     }
 }
-
-

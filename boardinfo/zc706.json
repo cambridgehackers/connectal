@@ -1,4 +1,11 @@
 {
+    "options": {
+        "os" : "android",
+        "partname" : "xc7z045ffg900-2",
+        "rewireclockstring" : "tclzynqrewireclock",
+        "needs_pcie_7x_gen1x8" : "False"
+    },
+    "fmc": {
     "LA00_p_CC": {
         "PACKAGE_PIN": "",
         "IOSTANDARD": "LVCMOS25"
@@ -265,4 +272,5 @@
 	"DIFF_TERM": "TRUE",
 	"PIO_DIRECTION": "OUTPUT"
     }
+}
 }

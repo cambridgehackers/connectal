@@ -251,55 +251,62 @@ if __name__=='__main__':
     boardname = options.board.lower()
 
     bsvdefines = options.bsvdefine
-    needs_pcie_7x_gen1x8 = False
-    rewireclockstring = ''
     if boardname == 'kc705':
         bsvdefines += ['Kintex7', 'PCIE']
         if not 'os' in options: options.os = 'ubuntu'
         partname = 'xc7k325tffg900-2'
         needs_pcie_7x_gen1x8 = True
+        rewireclockstring = ''
     elif boardname == 'vc707':
         bsvdefines += ['Virtex7', 'PCIE']
         if not 'os' in options: options.os = 'ubuntu'
         partname = 'xc7vx485tffg1761-2'
         needs_pcie_7x_gen1x8 = True
+        rewireclockstring = ''
     elif boardname == 'ac701':
         bsvdefines += ['Artix7',  'PCIE']
         if not 'os' in options: options.os = 'ubuntu'
         partname = 'xc7a200tfbg676-2'
         needs_pcie_7x_gen1x8 = True
+        rewireclockstring = ''
     elif boardname == 'v2000t':
         bsvdefines += ['Virtex7', 'PCIE']
         if not 'os' in options: options.os = 'ubuntu'
         partname = 'xc7v2000tflg1925-2'
         needs_pcie_7x_gen1x8 = True
+        rewireclockstring = ''
     elif boardname == 'zedboard':
         bsvdefines += ['ZYNQ']
         if not 'os' in options: options.os = 'android'
         partname = 'xc7z020clg484-1'
         rewireclockstring = tclzynqrewireclock
         options.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/zc7z020clg484.xdc'))
+        needs_pcie_7x_gen1x8 = False
     elif boardname == 'zc702':
         bsvdefines += ['ZYNQ']
         if not 'os' in options: options.os = 'android'
         partname = 'xc7z020clg484-1'
         rewireclockstring = tclzynqrewireclock
         options.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/zc7z020clg484.xdc'))
+        needs_pcie_7x_gen1x8 = False
     elif boardname == 'zc706':
         if not 'os' in options: options.os = 'android'
         partname = 'xc7z045ffg900-2'
         rewireclockstring = tclzynqrewireclock
         options.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/zc7z045ffg900.xdc'))
+        needs_pcie_7x_gen1x8 = False
     elif boardname == 'zynq100':
         if not 'os' in options: options.os = 'android'
         partname = 'xc7z100ffg900-2'
         rewireclockstring = tclzynqrewireclock
         options.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/zc7z045ffg900.xdc'))
+        needs_pcie_7x_gen1x8 = False
     else:
         if not 'os' in options: options.os = 'android'
         partname = 'xc7z020clg484-1'
         rewireclockstring = tclzynqrewireclock
         options.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/zc7z020clg484.xdc'))
+        needs_pcie_7x_gen1x8 = False
 
     bsvdefines += ['BOARD_'+boardname]
 
