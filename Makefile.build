@@ -27,10 +27,12 @@ ifeq ($(V),0)
   Q=@
   BSC_QUIET=-no-show-compiles
   XBSV_NDK_PARAM="NDK_HOST_ECHO=true"
+  FPGAMAKE_VERBOSE=
 else
   Q=
   BSC_QUIET=
   XBSV_NDK_PARAM=
+  FPGAMAKE_VERBOSE=-v
 endif
 
 ifeq ($(XBSV_DEBUG),1)
