@@ -52,9 +52,10 @@ interface NandSim;
 endinterface
 
 // Asz useded to be a type parameter to mkNandSim, but bsc couldn't handle that much polymorphism (mdk)
-typedef 14 Asz;
+//typedef 14 Asz;
 
-module mkNandSim#(NandSimIndication indication, BRAMServer#(Bit#(Asz), Bit#(64)) br) (NandSim);
+//module mkNandSim#(NandSimIndication indication, BRAMServer#(Bit#(Asz), Bit#(64)) br) (NandSim);
+module mkNandSim#(NandSimIndication indication) (NandSim);
 
    MemreadEngineV#(64, 1, 2)     re <- mkMemreadEngine();
    MemwriteEngineV#(64, 1, 3)    we <- mkMemwriteEngine();
@@ -68,9 +69,9 @@ module mkNandSim#(NandSimIndication indication, BRAMServer#(Bit#(Asz), Bit#(64))
 
    Reg#(Bit#(32))  nandPointer   <- mkReg(0);
    Reg#(Bit#(32))  nandLen       <- mkReg(0);
-   Reg#(Bit#(Asz)) nandEraseAddr <- mkReg(0);
-   Reg#(Bit#(Asz)) nandEraseLimit <- mkReg(0);
-   Reg#(Bit#(Asz)) nandEraseCnt <- mkReg(0);
+   //Reg#(Bit#(Asz)) nandEraseAddr <- mkReg(0);
+   //Reg#(Bit#(Asz)) nandEraseLimit <- mkReg(0);
+   //Reg#(Bit#(Asz)) nandEraseCnt <- mkReg(0);
 
    Reg#(Bit#(32)) nandWriteCount <- mkReg(0);
    // rule traceNandWrite;
