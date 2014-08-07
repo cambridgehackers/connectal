@@ -216,10 +216,15 @@ int main(int argc, const char **argv)
   pm2t.reference();
 #endif
 #endif
-
   PortalMat pm3;
   pm3.create(m1.rows, m2.cols, CV_32F);
   pm3.reference();
+
+  // we invoke .reference on the matrices in advance 
+  // in order to avoid counting the elapsed time for
+  // performance analysis.  This is not strictly necessary
+  // as all the portalmat methods make sure a valid 
+  // reference is available before invoking the hardware
 
   pthread_t dbgtid;
   fprintf(stderr, "creating debug thread\n");
