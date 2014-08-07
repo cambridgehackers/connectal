@@ -26,6 +26,9 @@ import json, os, sys
 
 scripthome = os.path.dirname(os.path.abspath(__file__))
 
-boardInfo = json.loads(open(scripthome + '/../boardinfo/' + sys.argv[1] + '.json').read())
+def attribute(boardname, name): 
+    boardInfo = json.loads(open(scripthome + '/../boardinfo/' + boardname + '.json').read())
+    return boardInfo[name]
 
-print(boardInfo["options"])
+if __name__=='__main__':
+    print(attribute(sys.argv[1], 'options'))

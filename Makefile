@@ -180,7 +180,9 @@ cppalllist =     $(bsimalllist) \
     tests/testmm2.2.2 \
     tests/testmm2.4.2 \
 
-allarchlist = bluesim zedboard vc707 
+#allarchlist = bluesim zedboard vc707 
+
+allarchlist = ac701 zedboard zc702 zc706 kc705 vc707 zynq100 v2000t bluesim
 
 #################################################################################################
 # gdb
@@ -281,6 +283,14 @@ zc702runs: $(zc702runs)
 $(zc702runs):
 	scripts/run.zedboard $(basename $@)/zc702/bin/*bin.gz `find $(basename $@)/zc702 -name android_exe | grep libs`
 
+zc702cpps = $(addprefix examples/, $(addsuffix .zc702cpp, $(examples))) \
+	    $(addprefix tests/, $(addsuffix .zc702cpp, $(tests)))
+zc702cpps: $(zc702cpps)
+
+$(zc702cpps):
+	rm -fr $(basename $@)/zc702
+	make BOARD=zc702 --no-print-directory -C $(basename $@) exe
+
 #################################################################################################
 # zc706
 
@@ -299,6 +309,68 @@ zc706runs: $(zc706runs)
 # RUNPARAM=ipaddr is an optional argument if you already know the IP of the zc706
 $(zc706runs):
 	scripts/run.zedboard $(basename $@)/zc706/bin/*bin.gz `find $(basename $@)/zc706 -name android_exe | grep libs`
+
+zc706cpps = $(addprefix examples/, $(addsuffix .zc706cpp, $(examples))) \
+	    $(addprefix tests/, $(addsuffix .zc706cpp, $(tests)))
+zc706cpps: $(zc706cpps)
+
+$(zc706cpps):
+	rm -fr $(basename $@)/zc706
+	make BOARD=zc706 --no-print-directory -C $(basename $@) exe
+
+#################################################################################################
+# zynq100
+
+zynq100tests = $(addprefix examples/, $(addsuffix .zynq100, $(examples))) \
+	     $(addprefix tests/, $(addsuffix .zynq100, $(tests)))
+zynq100tests: $(zynq100tests)
+
+$(zynq100tests):
+	rm -fr $(basename $@)/zynq100
+	make BOARD=zynq100 -C $(basename $@) all
+
+zynq100runs = $(addprefix examples/, $(addsuffix .zynq100run, $(examples))) \
+	    $(addprefix tests/, $(addsuffix .zynq100run, $(tests)))
+zynq100runs: $(zynq100runs)
+
+# RUNPARAM=ipaddr is an optional argument if you already know the IP of the zynq100
+$(zynq100runs):
+	scripts/run.zedboard $(basename $@)/zynq100/bin/*bin.gz `find $(basename $@)/zynq100 -name android_exe | grep libs`
+
+zynq100cpps = $(addprefix examples/, $(addsuffix .zynq100cpp, $(examples))) \
+	    $(addprefix tests/, $(addsuffix .zynq100cpp, $(tests)))
+zynq100cpps: $(zynq100cpps)
+
+$(zynq100cpps):
+	rm -fr $(basename $@)/zynq100
+	make BOARD=zynq100 --no-print-directory -C $(basename $@) exe
+
+#################################################################################################
+# v2000t
+
+v2000ttests = $(addprefix examples/, $(addsuffix .v2000t, $(examples))) \
+	     $(addprefix tests/, $(addsuffix .v2000t, $(tests)))
+v2000ttests: $(v2000ttests)
+
+$(v2000ttests):
+	rm -fr $(basename $@)/v2000t
+	make BOARD=v2000t -C $(basename $@) all
+
+v2000truns = $(addprefix examples/, $(addsuffix .v2000trun, $(examples))) \
+	    $(addprefix tests/, $(addsuffix .v2000trun, $(tests)))
+v2000truns: $(v2000truns)
+
+# RUNPARAM=ipaddr is an optional argument if you already know the IP of the v2000t
+$(v2000truns):
+	scripts/run.zedboard $(basename $@)/v2000t/bin/*bin.gz `find $(basename $@)/v2000t -name android_exe | grep libs`
+
+v2000tcpps = $(addprefix examples/, $(addsuffix .v2000tcpp, $(examples))) \
+	    $(addprefix tests/, $(addsuffix .v2000tcpp, $(tests)))
+v2000tcpps: $(v2000tcpps)
+
+$(v2000tcpps):
+	rm -fr $(basename $@)/v2000t
+	make BOARD=v2000t --no-print-directory -C $(basename $@) exe
 
 #################################################################################################
 # vc707
@@ -352,6 +424,29 @@ $(kc705cpps):
 	rm -fr $(basename $@)/kc705
 	make BOARD=kc705 --no-print-directory -C $(basename $@) exe
 
+#################################################################################################
+# ac701
+
+ac701tests = $(addprefix examples/, $(addsuffix .ac701, $(examples)))
+ac701tests: $(ac701tests)
+
+$(ac701tests):
+	rm -fr $(basename $@)/ac701
+	make BOARD=ac701 -C $(basename $@) all
+
+ac701runs = $(addprefix examples/, $(addsuffix .ac701run, $(examples)))
+ac701runs: $(ac701runs)
+
+$(ac701runs):
+	scripts/run.pcietest $(basename $@)/ac701/bin/mk*.bin.gz $(basename $@)/ac701/bin/ubuntu_exe
+
+ac701cpps = $(addprefix examples/, $(addsuffix .ac701cpp, $(examples))) \
+	    $(addprefix tests/, $(addsuffix .ac701cpp, $(tests)))
+ac701cpps: $(ac701cpps)
+
+$(ac701cpps):
+	rm -fr $(basename $@)/ac701
+	make BOARD=ac701 --no-print-directory -C $(basename $@) exe
 
 #################################################################################################
 # memexamples
@@ -401,19 +496,6 @@ android_exetests: $(android_exetests)
 $(android_exetests):
 	make BOARD=zedboard -C $(basename $@) exe
 
-ac701tests = $(addprefix examples/, $(addsuffix .ac701, $(examples)))
-ac701tests: $(ac701tests)
-
-$(ac701tests):
-	rm -fr $(basename $@)/ac701
-	make BOARD=ac701 -C $(basename $@) all
-
-ac701runs = $(addprefix examples/, $(addsuffix .ac701run, $(examples)))
-ac701runs: $(ac701runs)
-
-$(ac701runs):
-	scripts/run.pcietest $(basename $@)/ac701/bin/mk*.bin.gz $(basename $@)/ac701/bin/ubuntu_exe
-
 zynqdrivers:
 	(cd drivers/zynqportal/; DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make zynqportal.ko)
 	(cd drivers/portalmem/;  DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make portalmem.ko)
@@ -433,12 +515,20 @@ xilinx/pcie_7x_gen1x8: scripts/generate-pcie-gen1x8.tcl
 	mv ./project_pcie_gen1x8/project_pcie_gen1x8.srcs/sources_1/ip/pcie_7x_0 xilinx/pcie_7x_gen1x8
 	rm -fr ./project_pcie_gen1x8
 
+cppruns = $(addsuffix .cpp, $(cppalllist))
+
+cppruns: $(cppruns)
+
+$(cppruns):
+	for archname in $(allarchlist) ; do  \
+	   set -e \
+	   echo make $(basename $@)."$$archname";  \
+	   make  --no-print-directory $(basename $@)."$$archname"cpp;  \
+	done
+
 cppall:
 	@for testname in $(cppalllist) ; do  \
-	   for archname in $(allarchlist) ; do  \
-	       echo make $$testname."$$archname"cpp;  \
-	       make  --no-print-directory $$testname."$$archname"cpp;  \
-	   done ;  \
+	    make $$testname.cpp;  \
 	done
 
 bsimall:

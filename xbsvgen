@@ -28,6 +28,7 @@ import glob
 import time
 from scripts import syntax
 from scripts import util
+from scripts import boardinfo
 
 supported_boards = ['ac701', 'zedboard', 'zc702', 'zc706', 'kc705', 'vc707', 'zynq100', 'v2000t', 'bluesim']
 supported_os = ['android', 'ubuntu']
@@ -307,6 +308,11 @@ if __name__=='__main__':
         rewireclockstring = tclzynqrewireclock
         options.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/zc7z020clg484.xdc'))
         needs_pcie_7x_gen1x8 = False
+    option_info = boardinfo.attribute(boardname, 'options')
+    option_info['needs_pcie_7x_gen1x8'] = option_info['needs_pcie_7x_gen1x8'] == 'True'
+    if option_info['rewireclockstring'] != '':
+        option_info['rewireclockstring'] == tclzynqrewireclock
+    print 'OOO', option_info
 
     bsvdefines += ['BOARD_'+boardname]
 
