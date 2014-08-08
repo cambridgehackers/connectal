@@ -30,18 +30,6 @@ import cppgen, bsvgen
 scripthome = os.path.dirname(os.path.abspath(__file__))
 noisyFlag=True
 
-AST.TypeDef.__bases__ += (cppgen.TypeDefMixin,)
-AST.Function.__bases__ += (cppgen.NoCMixin,)
-AST.Module.__bases__ += (cppgen.NoCMixin,)
-AST.Method.__bases__ += (cppgen.MethodMixin,bsvgen.MethodMixin)
-AST.StructMember.__bases__ += (cppgen.StructMemberMixin,)
-AST.Struct.__bases__ += (cppgen.StructMixin,)
-AST.EnumElement.__bases__ += (cppgen.EnumElementMixin,)
-AST.Enum.__bases__ += (cppgen.EnumMixin,bsvgen.EnumMixin)
-AST.Type.__bases__ += (cppgen.TypeMixin,bsvgen.TypeMixin)
-AST.Param.__bases__ += (cppgen.ParamMixin,bsvgen.ParamMixin)
-AST.Interface.__bases__ += (cppgen.InterfaceMixin,bsvgen.InterfaceMixin)
-
 tokens = (
     'AMPER',
     'AMPERAMPER',

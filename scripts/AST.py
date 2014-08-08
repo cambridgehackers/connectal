@@ -1,5 +1,27 @@
+# Copyright (c) 2014 Quanta Research Cambridge, Inc
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+#
 
-class Method:
+import cppgen, bsvgen
+
+class Method(cppgen.MethodMixin,bsvgen.MethodMixin):
     def __init__(self, name, return_type, params):
         self.type = 'Method'
         self.name = name
@@ -14,7 +36,7 @@ class Method:
                       self.return_type.instantiate(paramBindings),
                       [ p.instantiate(paramBindings) for p in self.params])
 
-class Function:
+class Function(cppgen.NoCMixin):
     def __init__(self, name, return_type, params):
         self.type = 'Function'
         self.name = name
@@ -32,7 +54,7 @@ class Variable:
     def __repr__(self):
         return '<variable: %s : %s>' % (self.name, self.type)
 
-class Interface:
+class Interface(cppgen.InterfaceMixin,bsvgen.InterfaceMixin):
     def __init__(self, name, params, decls, subinterfacename, packagename):
         self.type = 'Interface'
         self.name = name
@@ -72,7 +94,7 @@ class TypeclassInstance:
     def __repr__(self):
         return '{typeclassinstance %s %s}' % (self.name, self.params)
 
-class Module:
+class Module(cppgen.NoCMixin):
     def __init__(self, moduleContext, name, params, interface, provisos, decls):
         self.type = 'Module'
         self.name = name
@@ -90,28 +112,28 @@ class Module:
                 result.extend(d.collectTypes())
         return result
 
-class EnumElement:
+class EnumElement(cppgen.EnumElementMixin):
     def __init__(self, name, qualifiers, value):
         self.qualifiers = qualifiers
         self.value = value
     def __repr__(self):
         return '{enumelt: %s}' % (self.name)
 
-class Enum:
+class Enum(cppgen.EnumMixin,bsvgen.EnumMixin):
     def __init__(self, elements):
         self.type = 'Enum'
         self.elements = elements
     def __repr__(self):
         return '{enum: %s}' % (self.elements)
 
-class StructMember:
+class StructMember(cppgen.StructMemberMixin):
     def __init__(self, t, name):
         self.type = t
         self.name = name
     def __repr__(self):
         return '{field: %s %s}' % (self.type, self.name)
 
-class Struct:
+class Struct(cppgen.StructMixin):
     def __init__(self, elements):
         self.type = 'Struct'
         self.elements = elements
@@ -119,7 +141,7 @@ class Struct:
         return '{struct: %s}' % (self.elements)
 
 
-class TypeDef:
+class TypeDef(cppgen.TypeDefMixin):
     def __init__(self, tdtype, name):
         self.name = name
         self.tdtype = tdtype
@@ -128,7 +150,7 @@ class TypeDef:
     def __repr__(self):
         return '{typedef: %s %s}' % (self.tdtype, self.name)
 
-class Param:
+class Param(cppgen.ParamMixin,bsvgen.ParamMixin):
     def __init__(self, name, t):
         self.name = name
         self.type = t
@@ -138,7 +160,7 @@ class Param:
         return Param(self.name,
                      self.type.instantiate(paramBindings))
 
-class Type:
+class Type(cppgen.TypeMixin,bsvgen.TypeMixin):
     def __init__(self, name, params):
         self.type = 'Type'
         self.name = name
