@@ -215,14 +215,10 @@ $1tests := $(addprefix examples/, $(addsuffix .$1, $(examples))) \
 
 $$($1tests):
 	rm -fr $$(basename $$@)/$1
-ifeq ("$1","bluesim")
-	make BOARD=$1 -C $$(basename $$@) --no-print-directory exe
-else
 ifeq ("$1","xsim")
 	make BOARD=bluesim -C $$(basename $$@) xsim
 else
-	make BOARD=$1 -C $$(basename $$@) all
-endif
+	make BOARD=$1 -C $$(basename $$@) --no-print-directory all
 endif
 
 $1runs := $(addprefix examples/, $(addsuffix .$1run, $(examples))) \
@@ -230,26 +226,10 @@ $1runs := $(addprefix examples/, $(addsuffix .$1run, $(examples))) \
 
 # RUNPARAM=ipaddr is an optional argument if you already know the IP of the $1
 $$($1runs):
-ifeq ("$1","bluesim")
-	(cd $$(basename $$@)/bluesim; make --no-print-directory run)
-else
 ifeq ("$1","xsim")
 	make BOARD=bluesim -C $$(basename $$@) xsimrun
 else
-ifeq ("$1","vc707")
-	scripts/run.pcietest $$(basename $$@)/$1/bin/mk*.bin.gz $$(basename $$@)/$1/bin/ubuntu_exe
-else
-ifeq ("$1","kc707")
-	scripts/run.pcietest $$(basename $$@)/$1/bin/mk*.bin.gz $$(basename $$@)/$1/bin/ubuntu_exe
-else
-ifeq ("$1","ac701")
-	scripts/run.pcietest $$(basename $$@)/$1/bin/mk*.bin.gz $$(basename $$@)/$1/bin/ubuntu_exe
-else
-	scripts/run.zedboard $$(basename $$@)/$1/bin/*bin.gz `find $$(basename $$@)/$1 -name android_exe | grep libs`
-endif
-endif
-endif
-endif
+	make BOARD=$1 --no-print-directory -C $$(basename $$@)/$1 run
 endif
 
 $1cpps := $(addprefix examples/, $(addsuffix .$1cpp, $(examples))) \
@@ -259,11 +239,8 @@ $$($1cpps):
 	rm -fr $$(basename $$@)/$1
 ifeq ("$1","bluesim")
 	make BOARD=$1 --no-print-directory -C $$(basename $$@) bsim_exe
-else
-ifeq ("$1","xsim")
-else
+else ifneq ("$1","xsim")
 	make BOARD=$1 --no-print-directory -C $$(basename $$@) exe
-endif
 endif
 
 endef

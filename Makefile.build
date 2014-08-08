@@ -91,9 +91,9 @@ ubuntu_exe: prepare_bin_target
 	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk
 	@cp -v jni/ubuntu_exe bin
 
-program:
 ifneq ($(BOARD),bluesim)
 ifneq ($(OS),android)
+program:
 	fpgajtag bin/mkTop.bin.gz
 	sleep 1
 endif
@@ -120,14 +120,14 @@ android_exe_debug: prepare_bin_target
 	ndk-build $(XBSV_NDK_PARAM) -B V=1 NDK_DEBUG=1
 	@cp -v libs/armeabi/android_exe bin
 
-run: program
+run:
 ifeq ($(BOARD),bluesim)
 	./bin/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
 else
     ifeq ($(OS),android)
 	$(XBSVDIR)/scripts/run.zedboard bin/mkTop.xdevcfg.bin.gz bin/android_exe $(RUN_ARGS)
     else
-	timeout 3m catchsegv ./bin/ubuntu_exe $(RUN_ARGS)
+	$(XBSVDIR)/scripts/run.pcietest bin/mk*.bin.gz bin/ubuntu_exe $(RUN_ARGS)
     endif
 endif
 
