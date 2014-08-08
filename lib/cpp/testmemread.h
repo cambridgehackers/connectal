@@ -128,6 +128,7 @@ int runtest(int argc, const char ** argv)
   uint64_t cycles = portalTimerLap(0);
   uint64_t beats = dma->show_mem_stats(ChannelType_Read);
   float read_util = (float)beats/(float)cycles;
+  fprintf(stderr, " iterCnt: %d\n", iterCnt);
   fprintf(stderr, "   beats: %"PRIx64"\n", beats);
   fprintf(stderr, "numWords: %x\n", numWords);
   fprintf(stderr, "     est: %"PRIx64"\n", (beats*2)/iterCnt);
@@ -142,7 +143,7 @@ int runtest(int argc, const char ** argv)
   device->startRead(ref_srcAlloc, numWords, burstLen, iterCnt);
   sem_wait(&test_sem);
   if (mismatchCount != 3/*number of errors introduced above*/ * iterCnt) {
-    fprintf(stderr, "Main::second test failed to match %d.\n", mismatchCount);
+    fprintf(stderr, "Main::second test failed to match mismatchCount=%d iterCnt=%d numWords=%d.\n", mismatchCount, iterCnt, numWords);
     test_result++;     // failed
   }
 
