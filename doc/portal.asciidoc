@@ -248,7 +248,7 @@ any additional hardware modules.
 
 Rather than constructing the `xbsvgen` command line from
 scratch, the examples in xbsv use include
-[Makefile.common](../Makefile.common) and define some `make`
+[Makefile.xbsv](../Makefile.xbsv) and define some `make`
 variables.
 
 Here is the Makefile for the `simple` example:
@@ -261,11 +261,11 @@ Here is the Makefile for the `simple` example:
     BSVFILES = Simple.bsv Top.bsv
     CPPFILES=testsimple.cpp
 
-    include ../../Makefile.common
+    include ../../Makefile.xbsv
 ---------------------------------
 
 
-Designs using `xbsv` may also include `xbsv/Makefile.common` if they define `XBSVDIR` in their Makefile:
+Designs using `xbsv` may also include `xbsv/Makefile.xbsv` if they define `XBSVDIR` in their Makefile:
 
 [source,makefile]
 ---------------------------------
@@ -274,7 +274,7 @@ Designs using `xbsv` may also include `xbsv/Makefile.common` if they define `XBS
     H2S = ...
     BSVFILES = ...
     CPPFILES = ...
-    include $(XBSVDIR)/Makefile.common
+    include $(XBSVDIR)/Makefile.xbsv
 ---------------------------------
 
 

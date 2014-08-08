@@ -10,5 +10,5 @@ XBSVFLAGS = -D J_VALUE=2 -D K_VALUE=2 -D N_VALUE=2 -D DataBusWidth=64
 
 include $(MMDIR)/Makefile.mm
 include $(RBMDIR)/Makefile.rbm
-include $(XBSVDIR)/Makefile.common
+include $(XBSVDIR)/Makefile.xbsv
 

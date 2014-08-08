@@ -29,7 +29,7 @@ VERBOSE_SWITCH=--verbose
 endif
 
 bozotarget:
-	@echo "Makefile.common: please invoke with make gen.boardname"
+	@echo "Makefile.xbsv: please invoke with make gen.boardname"
 
 ## use "make gen.board" to generate the build directory
 gen.%:

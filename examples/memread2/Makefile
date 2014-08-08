@@ -5,4 +5,4 @@ BSVFILES = Memread2.bsv Top.bsv ../../lib/deprecated/DmaUtils.bsv
 CPPFILES=testmemread2.cpp
 #XBSVFLAGS=--bscflags " -D TRACE_AXI"
 
-include ../../Makefile.common
+include ../../Makefile.xbsv

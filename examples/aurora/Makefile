@@ -25,4 +25,4 @@ $(BOARD)/sources/aurora-$(BOARD).xdc: aurora.json $(XBSVDIR)/boardinfo/$(BOARD).
 	mkdir -p $(BOARD)/sources
 	$(XBSVDIR)/scripts/generate-constraints.py $(XBSVDIR)/boardinfo/$(BOARD).json aurora.json > $(BOARD)/sources/aurora-$(BOARD).xdc
 
-include $(XBSVDIR)/Makefile.common
+include $(XBSVDIR)/Makefile.xbsv

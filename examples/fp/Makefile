@@ -27,4 +27,4 @@ endif
 BviFpAdd.bsv:
 	$(XBSVDIR)/scripts/importbvi.py -o BviFpAdd.bsv -c aclk -f s_axis_a -f s_axis_b -f m_axis_result -I BviFpAdd -P BviFpAdd $(FP_ADD_V)
 
-include ../../Makefile.common
+include ../../Makefile.xbsv

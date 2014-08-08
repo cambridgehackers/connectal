@@ -9,4 +9,4 @@ TESTCPPFILES=$(MMDIR)/testmm.cpp
 XBSVFLAGS = -D J_VALUE=32 -D K_VALUE=16 -D N_VALUE=2
 
 include $(MMDIR)/Makefile.mm
-include $(XBSVDIR)/Makefile.common
+include $(XBSVDIR)/Makefile.xbsv

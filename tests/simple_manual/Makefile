@@ -9,4 +9,4 @@ NUMBER_OF_MASTERS =0
 #XBSVFLAGS += --bscflags " -D TRACE_AXI"
 XBSVFLAGS += -D NO_CPP_PORTAL_CODE
 
-include ../../Makefile.common
+include ../../Makefile.xbsv

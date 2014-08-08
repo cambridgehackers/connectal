@@ -9,4 +9,4 @@ CPPFILES= testyuv.cpp
 NUMBER_OF_MASTERS =0
 #XBSVFLAGS+=  -D TRACE_AXI
 
-include ../../Makefile.common
+include ../../Makefile.xbsv

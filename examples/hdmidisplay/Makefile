@@ -16,4 +16,4 @@ XBSVFLAGS += -D BSIMRESPONDER=mkResponder -m $(XBSVDIR)/examples/hdmidisplay/Bsi
 
 #XBSVFLAGS=--bscflags " -D TRACE_AXI"
 
-include ../../Makefile.common
+include ../../Makefile.xbsv

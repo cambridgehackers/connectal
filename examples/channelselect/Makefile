@@ -15,5 +15,5 @@ sine.bin: sinetable
 sinetable: sinetable.c
 	cc -o sinetable sinetable.c -lm
 
-include ../../Makefile.common
+include ../../Makefile.xbsv
 

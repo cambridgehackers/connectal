@@ -6,4 +6,4 @@ BSVFILES = Splice.bsv Top.bsv ../../lib/deprecated/DmaUtils.bsv
 CPPFILES=testsplice.cpp
 #XBSVFLAGS=--bscflags " -D TRACE_AXI"
 
-include ../../Makefile.common
+include ../../Makefile.xbsv

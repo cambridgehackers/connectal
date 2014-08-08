@@ -11,5 +11,5 @@ CPPFILES=testnoc2d.cpp
 # XBSVFLAGS="--bscflags=-D TRACE_AXI"
 NUMBER_OF_MASTERS =0
 
-include ../../Makefile.common
+include ../../Makefile.xbsv
 
