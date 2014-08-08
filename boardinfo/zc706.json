@@ -4,6 +4,8 @@
         "partname" : "xc7z045ffg900-2",
         "rewireclockstring" : "tclzynqrewireclock",
         "constraints": "xilinx/constraints/zc7z045ffg900.xdc",
+        "TOP" : "ZynqTop",
+        "XBSVFLAGS" : ["ZynqHostTypeIF", "PhysAddrWidth=32", "NUMBER_OF_LEDS=4"],
         "needs_pcie_7x_gen1x8" : "False"
     },
     "fmc": {

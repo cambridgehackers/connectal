@@ -4,6 +4,8 @@
         "os" : "ubuntu",
         "partname" : "xc7v2000tflg1925-2",
         "needs_pcie_7x_gen1x8" : "True",
+        "TOP" : "PcieTop",
+        "XBSVFLAGS" : ["PcieHostTypeIF", "PhysAddrWidth=40"],
         "rewireclockstring" : ""
     },
     "fmc": {
