@@ -343,20 +343,20 @@ cppruns: $(cppruns)
 
 $(cppruns):
 	@for archname in $(allarchlist) ; do  \
-	   set -e \
+	   set -e ; \
 	   echo make $(basename $@)."$$archname";  \
 	   make  --no-print-directory $(basename $@)."$$archname"cpp;  \
 	done
 
 cppall:
 	@for testname in $(cppalllist) ; do  \
-	   set -e \
+	   set -e ; \
 	   make $$testname.cpp;  \
 	done
 
 bsimall:
 	@for testname in $(bsimalllist) ; do  \
-	   set -e \
+	   set -e ; \
 	   echo make $$testname.bluesim;  \
 	   make  --no-print-directory $$testname.bluesim;  \
 	   echo make $$testname.bluesimrun;  \
