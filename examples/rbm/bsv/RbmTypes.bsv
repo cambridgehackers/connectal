@@ -95,20 +95,19 @@ endinterface
 
 interface SigmoidIndication;
    method Action sigmoidDone();
-   method Action sigmoidTableSize(Bit#(32) size);
-   method Action sigmoidTableUpdated(Bit#(32) addr);
+   method Action tableSize(Bit#(32) size);
+   method Action tableUpdated(Bit#(32) addr);
 endinterface
 
 interface SigmoidRequest;
     method Action sigmoid(Bit#(32) readPointer, Bit#(32) readOffset, Bit#(32) writePointer, Bit#(32) writeOffset, Bit#(32) numElts);
-    method Action setSigmoidLimits(Bit#(32) rscale, Bit#(32) llimit, Bit#(32) ulimit);
-    method Action sigmoidTableSize();
-    method Action updateSigmoidTable(Bit#(32) readPointer, Bit#(32) readOffset, Bit#(32) numElts);
+    method Action setLimits(Bit#(32) rscale, Bit#(32) llimit, Bit#(32) ulimit);
+    method Action tableSize();
+    method Action updateTable(Bit#(32) readPointer, Bit#(32) readOffset, Bit#(32) numElts);
 endinterface
 
 interface RbmIndication;
    method Action statesDone();
-   method Action statesDone2();
    method Action updateWeightsDone();
    method Action sumOfErrorSquared(Bit#(32) error);
    method Action dbg(Bit#(32) a, Bit#(32) b, Bit#(32) c, Bit#(32) d);

@@ -34,10 +34,6 @@ public:
     //fprintf(stderr, "statesDone\n");
     sem_post(&mul_sem);
   }
-  virtual void statesDone2() {
-    //fprintf(stderr, "statesDone2\n");
-    sem_post(&mul_sem);
-  }
   virtual void updateWeightsDone() {
     //fprintf(stderr, "updateWeightsDone\n");
     sem_post(&mul_sem);
@@ -61,17 +57,17 @@ public:
     fprintf(stderr, "sigmoidDone\n");
     sem_post(&mul_sem);
   }
-  virtual void sigmoidTableUpdated(uint32_t addr) {
+  virtual void tableUpdated(uint32_t addr) {
     sem_post(&mul_sem);
   }
-  uint32_t sigmoidTableSize() { return sigmoidTableSize_; }
-  virtual void sigmoidTableSize(uint32_t size) {
+  uint32_t tableSize() { return tableSize_; }
+  virtual void tableSize(uint32_t size) {
     fprintf(stderr, "sigmoidTableSize %d\n", size);
-    sigmoidTableSize_ = size;
+    tableSize_ = size;
     sem_post(&mul_sem);
   }
  private:
-  uint32_t sigmoidTableSize_;
+  uint32_t tableSize_;
 };
 
 //  void sigmoid(PortalMat &a);

@@ -36,10 +36,10 @@ float sigmoid(float x)
 
 void configureSigmoidTable(RbmRequestProxy *device, RbmIndication *indication)
 {
-  sigmoiddevice->sigmoidTableSize();
+  sigmoiddevice->tableSize();
   sem_wait(&mul_sem);
 
-  int num_entries = sigmoidindication->sigmoidTableSize();
+  int num_entries = sigmoidindication->tableSize();
   int addrsize = log((double)num_entries) / log(2.0);
 
   float range = 16.0;
@@ -60,7 +60,7 @@ void configureSigmoidTable(RbmRequestProxy *device, RbmIndication *indication)
   float fxulimit = (float)-lowest_angle;
   fprintf(stderr, "configureSigmoidTable num_entries=%d rscale=%f %x llimit=%f %x rlimit=%f %x\n",
 	  num_entries, fxscale, *(int*)&fxscale, fxllimit, *(int*)&fxllimit, fxulimit, *(int*)&fxulimit);
-  sigmoiddevice->setSigmoidLimits(*(int*)&fxscale, *(int*)&fxllimit, *(int*)&fxulimit);
+  sigmoiddevice->setLimits(*(int*)&fxscale, *(int*)&fxllimit, *(int*)&fxulimit);
 
   int incr = 1;
   fprintf(stderr, "filling sigmoid table pointer=%x\n", sigmoidTable.reference());
@@ -85,7 +85,7 @@ void configureSigmoidTable(RbmRequestProxy *device, RbmIndication *indication)
     sigmoidTable.at<float>(0, 4*ai+3) = 0;
   }
   fprintf(stderr, "updating sigmoid table pointer=%x\n", sigmoidTable.reference());
-  sigmoiddevice->updateSigmoidTable(sigmoidTable.reference(), 0, num_entries);
+  sigmoiddevice->updateTable(sigmoidTable.reference(), 0, num_entries);
   sem_wait(&mul_sem);
   fprintf(stderr, "sigmoid table updated\n");
 }

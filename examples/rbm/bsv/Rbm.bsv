@@ -218,10 +218,10 @@ module  mkRbm#(HostType host, RbmIndication rbmInd, SigmoidIndication sigmoidInd
    UpdateWeights#(N, DmaSz) updateWeights <- mkUpdateWeights(takeAt(4,res), takeAt(4,rep), takeAt(2,wes), takeAt(2,wep)); // 3 read, 1 write
    SumOfErrorSquared#(N, DmaSz) sumOfErrorSquared <- mkSumOfErrorSquared(takeAt(7,res), takeAt(7,rep));                   // 2 read, 0 write
 
-   rule statesDone2;
-      $display("statesDone2");
+   rule statesDone;
+      $display("statesDone");
       let b <- states.finish();
-      rbmInd.statesDone2();
+      rbmInd.statesDone();
    endrule
 
    rule updateWeightsDone;

@@ -60,7 +60,7 @@ module mkSigmoidTable(SigmoidTable#(tsz));
    endmethod
 endmodule
 
-module mkSigmoidServer#(SigmoidTable#(tsz) sigmoidTable)(Server#(Float,Float))
+module mkSigmoidServer#(Integer id, SigmoidTable#(tsz) sigmoidTable)(Server#(Float,Float))
    provisos (Add#(tsz,2,usz),
 	     Add#(a__, usz, 32)
 	     );
@@ -69,21 +69,17 @@ module mkSigmoidServer#(SigmoidTable#(tsz) sigmoidTable)(Server#(Float,Float))
    // linear approximation around in range [-8,8]
 
    Bool verbose = False;
-   FIFOF#(Float) angleFifo2 <- mkFIFOF();
-   FIFOF#(Float) angleFifo <- mkFIFOF();
+   FIFOF#(Float) angleFifo <- mkSizedFIFOF(4);
    let multiplier <- mkFloatMultiplier(defaultValue);
    let adder <- mkFloatAdder(defaultValue);
    let mac <- mkFloatMac(defaultValue);
-
+   FIFOF#(void) cfifo <- mkSizedFIFOF(1);
+   
    rule lookupEntry;
-      Float angle = 0;
-      if (verbose) begin
-	 angle <- toGet(angleFifo2).get;
-      end
       let response <- multiplier.response.get();
       Float scaled_angle = tpl_1(response);
       Exception e = tpl_2(response);
-      if (pack(e) != 0) $display("lookup.exception e=%h scaled_angle=%h", e, pack(scaled_angle));
+      if (verbose && pack(e) != 0) $display("lookup.exception e=%h scaled_angle=%h", e, pack(scaled_angle));
       
       Int#(usz) i = truncate(toInt32(scaled_angle));
       Bit#(tsz) index = truncate(pack(i + numEntries/2));
@@ -91,8 +87,7 @@ module mkSigmoidServer#(SigmoidTable#(tsz) sigmoidTable)(Server#(Float,Float))
 	 index = truncate(pack(numEntries-1));
       if (i < -numEntries/2)
 	 index = 0;
-      if (verbose)
-	 $display("sigmoid lookupEntry angle=%h i=%d index=%d numEntries=%d", pack(angle), i, index, numEntries);
+      if (verbose) $display("sigmoid lookupEntry i=%d index=%d numEntries=%d", i, index, numEntries);
       sigmoidTable.ports[0].request.put(BRAMRequest{ write: False, responseOnWrite: False, address: index, datain: ?});
    endrule
 
@@ -110,7 +105,7 @@ module mkSigmoidServer#(SigmoidTable#(tsz) sigmoidTable)(Server#(Float,Float))
       let result <- adder.response.get();
       let delta = tpl_1(result);
       Exception e = tpl_2(result);
-      if (pack(e) != 0) $display("interpolate.exception e=%h delta=%h", e, pack(delta));
+      if (verbose && pack(e) != 0) $display("interpolate.exception e=%h delta=%h", e, pack(delta));
       if (verbose) $display("sigmoid interpolate delta=%h vs[1]=%h vs[2]", pack(delta), pack(vs[1]), pack(vs[2]));
       mac.request.put(tuple3(tagged Valid vs[1], vs[2], delta));
    endrule
@@ -123,10 +118,10 @@ module mkSigmoidServer#(SigmoidTable#(tsz) sigmoidTable)(Server#(Float,Float))
 	    angle = sigmoidTable.llimit;
 	 if (d == GT)
 	    angle = sigmoidTable.ulimit;
-	 if (verbose)
-	    angleFifo2.enq(angle);
 	 angleFifo.enq(angle);
 	 multiplier.request.put(tuple2(angle, sigmoidTable.rscale));
+	 cfifo.enq(?);
+	 if (verbose) $display("sigmoid request.put");
       endmethod
    endinterface
    interface Get response;
@@ -134,7 +129,9 @@ module mkSigmoidServer#(SigmoidTable#(tsz) sigmoidTable)(Server#(Float,Float))
 	 let result <- mac.response.get();
 	 let v = tpl_1(result);
 	 Exception e = tpl_2(result);
-	 if (pack(e) != 0) $display("mac.exception e=%h v=%h", e, pack(v));
+	 if (verbose && pack(e) != 0) $display("mac.exception e=%h v=%h", e, pack(v));
+	 if (verbose) $display("sigmoid response.get");
+	 cfifo.deq;
 	return v;
      endmethod
    endinterface
@@ -160,23 +157,22 @@ module  mkSigmoid#(SigmoidIndication sigmoidInd,
    
    let nshift = valueOf(nshift);
    
-   Bool verbose = True;
+   Bool verbose = False;
    VectorSource#(dmasz, Vector#(n,Float)) source <- mkMemreadVectorSource(readServers[0], readPipes[0]);
-   VectorSource#(dmasz, Vector#(n,Float)) tableSource <- mkMemreadVectorSource(readServers[1], readPipes[1]);
+   VectorSource#(dmasz, Vector#(n,Float)) tabsrc <- mkMemreadVectorSource(readServers[1], readPipes[1]);
 
    Vector#(n, SigmoidTable#(6)) sigmoidTables <- replicateM(mkSigmoidTable);
-   Vector#(n, Server#(Float,Float)) sigmoidServers;
-   for (Integer i = 0; i < valueOf(n); i = i + 1) begin
-      let s <- mkSigmoidServer(sigmoidTables[i]);
-      sigmoidServers[i] = s;
-   end
+   Vector#(n, Server#(Float,Float)) sigmoidServers <- mapM(uncurry(mkSigmoidServer), zip(genVector,sigmoidTables));
 
    Reg#(Bool) updatingSigmoidTable <- mkReg(False);
    Reg#(Bit#(6)) entryNumber <- mkReg(0);
 
-   PipeOut#(Vector#(4, Float)) sigmoidSourceFunnel <- mkUnfunnel(tableSource.pipe);
+   PipeOut#(Vector#(4, Float)) tabsrcs <- mkUnfunnel(tabsrc.pipe);
+   Reg#(Bit#(32)) count <- mkReg(0);
+   VectorSink#(TMul#(N,32),Vector#(N,Float)) sinkC <- mkMemwriteVectorSink(writeServers[0], writePipes[0]);
+
    rule updateSigmoidTableRule if (updatingSigmoidTable);
-      let vs <- toGet(sigmoidSourceFunnel).get;
+      let vs <- toGet(tabsrcs).get;
       if (verbose) $display("updateSigmaTableRule vs[0]=%h entryNumber=%d", vs[0], entryNumber);
       Vector#(3,Float) vs3 = take(vs);
       for (Integer i = 0; i < valueOf(n); i = i + 1) begin
@@ -195,8 +191,6 @@ module  mkSigmoid#(SigmoidIndication sigmoidInd,
       countInput <= countInput + 1;
    endrule
 
-   Reg#(Bit#(32)) count <- mkReg(0);
-   FIFOF#(Vector#(n, Float)) dfifo <- mkFIFOF();
    rule enqResult;
       Vector#(n, Float) vs;
       for (Integer i = 0; i < valueOf(n); i = i + 1) begin
@@ -205,10 +199,9 @@ module  mkSigmoid#(SigmoidIndication sigmoidInd,
       end
       if (verbose) $display("sigmoid count=%d value=%h", count+1, vs);
       count <= count + 1;
-      dfifo.enq(vs);
+      sinkC.pipe.enq(vs);
    endrule
 
-   VectorSink#(TMul#(N,32),Vector#(N,Float)) sinkC <- mkMemwriteVectorSink(writeServers[0], writePipes[0]);
 
    rule sourceFinishRule;
       let b <- source.finish();
@@ -217,10 +210,10 @@ module  mkSigmoid#(SigmoidIndication sigmoidInd,
       let b <- sinkC.finish();
       sigmoidInd.sigmoidDone();
    endrule
-   rule sigmoidTableUpdateDone;
-      let b <- tableSource.finish();
+   rule tableUpdateDone;
+      let b <- tabsrc.finish();
       updatingSigmoidTable <= False;
-      sigmoidInd.sigmoidTableUpdated(0);
+      sigmoidInd.tableUpdated(0);
    endrule
    
    interface SigmoidRequest sigmoidRequest;
@@ -230,19 +223,19 @@ module  mkSigmoid#(SigmoidIndication sigmoidInd,
 	 sinkC.start(writePointer, 0, unpack(extend(numvalues))>>nshift);
 	 if (verbose) $display("sigmoid.start numvalues=%d", numvalues);
       endmethod
-      method Action setSigmoidLimits(Bit#(32) rscale, Bit#(32) llimit, Bit#(32) ulimit);
+      method Action setLimits(Bit#(32) rscale, Bit#(32) llimit, Bit#(32) ulimit);
 	 for (Integer i = 0; i < valueOf(n); i = i + 1) begin
 	    sigmoidTables[i].setSigmoidLimits(unpack(rscale), unpack(llimit), unpack(ulimit));
 	 end
       endmethod
-      method Action updateSigmoidTable(Bit#(32) readPointer, Bit#(32) readOffset, Bit#(32) numvalues);
+      method Action updateTable(Bit#(32) readPointer, Bit#(32) readOffset, Bit#(32) numvalues);
 	 entryNumber <= 0;
 	 updatingSigmoidTable <= True;
-	 tableSource.start(readPointer, extend(readOffset), (4*extend(numvalues))>>nshift);
+	 tabsrc.start(readPointer, extend(readOffset), (4*extend(numvalues))>>nshift);
 	 if (verbose) $display("sigmoid.updateSigmoidTable %d %d %d", readPointer, readOffset, numvalues);
       endmethod
-      method Action sigmoidTableSize();
-	 sigmoidInd.sigmoidTableSize(sigmoidTables[0].tableSize());
+      method Action tableSize();
+	 sigmoidInd.tableSize(sigmoidTables[0].tableSize());
       endmethod
    endinterface
 endmodule
