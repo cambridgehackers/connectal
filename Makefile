@@ -1,3 +1,23 @@
+# Copyright (c) 2014 Quanta Research Cambridge, Inc
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+#
 
 export UDEV_RULES_DIR=/etc/udev/rules.d
 UDEV_RULES=$(shell ls etc/udev/rules.d)
@@ -180,8 +200,6 @@ cppalllist =     $(bsimalllist) \
     tests/testmm2.2.2 \
     tests/testmm2.4.2 \
 
-#allarchlist = bluesim zedboard vc707 
-
 allarchlist = ac701 zedboard zc702 zc706 kc705 vc707 zynq100 v2000t bluesim
 
 #################################################################################################
@@ -197,151 +215,60 @@ $1tests := $(addprefix examples/, $(addsuffix .$1, $(examples))) \
 
 $$($1tests):
 	rm -fr $$(basename $$@)/$1
+ifeq ("$1","bluesim")
+	make BOARD=$1 -C $$(basename $$@) --no-print-directory exe
+else
+ifeq ("$1","xsim")
+	make BOARD=bluesim -C $$(basename $$@) xsim
+else
 	make BOARD=$1 -C $$(basename $$@) all
+endif
+endif
 
 $1runs := $(addprefix examples/, $(addsuffix .$1run, $(examples))) \
 	    $(addprefix tests/, $(addsuffix .$1run, $(tests)))
 
 # RUNPARAM=ipaddr is an optional argument if you already know the IP of the $1
 $$($1runs):
+ifeq ("$1","bluesim")
+	(cd $$(basename $$@)/bluesim; make --no-print-directory run)
+else
+ifeq ("$1","xsim")
+	make BOARD=bluesim -C $$(basename $$@) xsimrun
+else
+ifeq ("$1","vc707")
+	scripts/run.pcietest $$(basename $$@)/$1/bin/mk*.bin.gz $$(basename $$@)/$1/bin/ubuntu_exe
+else
+ifeq ("$1","kc707")
+	scripts/run.pcietest $$(basename $$@)/$1/bin/mk*.bin.gz $$(basename $$@)/$1/bin/ubuntu_exe
+else
+ifeq ("$1","ac701")
+	scripts/run.pcietest $$(basename $$@)/$1/bin/mk*.bin.gz $$(basename $$@)/$1/bin/ubuntu_exe
+else
 	scripts/run.zedboard $$(basename $$@)/$1/bin/*bin.gz `find $$(basename $$@)/$1 -name android_exe | grep libs`
+endif
+endif
+endif
+endif
+endif
 
 $1cpps := $(addprefix examples/, $(addsuffix .$1cpp, $(examples))) \
 	    $(addprefix tests/, $(addsuffix .$1cpp, $(tests)))
 
 $$($1cpps):
 	rm -fr $$(basename $$@)/$1
+ifeq ("$1","bluesim")
+	make BOARD=$1 --no-print-directory -C $$(basename $$@) bsim_exe
+else
+ifeq ("$1","xsim")
+else
 	make BOARD=$1 --no-print-directory -C $$(basename $$@) exe
+endif
+endif
 
 endef
 
-$(eval $(call TARGET_RULE,zedboard))
-$(eval $(call TARGET_RULE,zc702))
-$(eval $(call TARGET_RULE,zc706))
-$(eval $(call TARGET_RULE,zynq100))
-$(eval $(call TARGET_RULE,v2000t))
-
-#################################################################################################
-# bluesim
-
-bluesimtests = $(addprefix examples/, $(addsuffix .bluesim, $(examples))) \
-	       $(addprefix tests/, $(addsuffix .bluesim, $(tests)))
-bluesimtests: $(bluesimtests)
-
-$(bluesimtests):
-	rm -fr $(basename $@)/bluesim
-	make BOARD=bluesim -C $(basename $@) --no-print-directory exe
-
-
-bluesimruns = $(addprefix examples/, $(addsuffix .bluesimrun, $(examples))) \
-	      $(addprefix tests/, $(addsuffix .bluesimrun, $(tests)))
-bluesimruns: $(bluesimruns)
-
-$(bluesimruns):
-	(cd $(basename $@)/bluesim; make --no-print-directory run)
-
-bluesimcpps = $(addprefix examples/, $(addsuffix .bluesimcpp, $(examples))) \
-	      $(addprefix tests/, $(addsuffix .bluesimcpp, $(tests)))
-bluesimcpps: $(bluesimcpps)
-
-$(bluesimcpps):
-	rm -fr $(basename $@)/bluesim
-	make BOARD=bluesim --no-print-directory -C $(basename $@) bsim_exe
-
-#################################################################################################
-# xsim
-
-xsimtests = $(addprefix examples/, $(addsuffix .xsim, $(examples))) \
-	    $(addprefix tests/, $(addsuffix .xsim, $(tests)))
-xsimtests: $(xsimtests)
-
-$(xsimtests):
-	rm -fr $(basename $@)/bluesim
-	make BOARD=bluesim -C $(basename $@) xsim
-
-xsimruns = $(addprefix examples/, $(addsuffix .xsimrun, $(examples))) \
-	   $(addprefix tests/, $(addsuffix .xsimrun, $(tests)))
-xsimruns: $(xsimruns)
-
-$(xsimruns):
-	make BOARD=bluesim -C $(basename $@) xsimrun
-
-
-#################################################################################################
-# vc707
-
-vc707tests = $(addprefix examples/, $(addsuffix .vc707, $(examples))) \
-	     $(addprefix tests/, $(addsuffix .vc707, $(tests)))
-vc707tests: $9vc707tests)
-
-$(vc707tests):
-	rm -fr $(basename $@)/vc707
-	make BOARD=vc707 -C $(basename $@) all
-
-vc707runs = $(addprefix examples/, $(addsuffix .vc707run, $(examples))) \
-	    $(addprefix tests/, $(addsuffix .vc707run, $(tests)))
-vc707runs: $(vc707runs)
-
-$(vc707runs):
-	scripts/run.pcietest $(basename $@)/vc707/bin/mk*.bin.gz $(basename $@)/vc707/bin/ubuntu_exe
-
-vc707cpps = $(addprefix examples/, $(addsuffix .vc707cpp, $(examples))) \
-	    $(addprefix tests/, $(addsuffix .vc707cpp, $(tests)))
-vc707cpps: $(vc707cpps)
-
-$(vc707cpps):
-	rm -fr $(basename $@)/vc707
-	make BOARD=vc707 --no-print-directory -C $(basename $@) exe
-
-#################################################################################################
-# kc705
-
-kc705tests = $(addprefix examples/, $(addsuffix .kc705, $(examples))) \
-	     $(addprefix tests/, $(addsuffix .kc705, $(tests)))
-kc705tests: $(kc705tests)
-
-$(kc705tests):
-	rm -fr $(basename $@)/kc705
-	make BOARD=kc705 -C $(basename $@) all
-
-kc705runs = $(addprefix examples/, $(addsuffix .kc705run, $(examples))) \
-	    $(addprefix tests/, $(addsuffix .kc705run, $(tests)))
-kc705runs: $(kc705runs)
-
-$(kc705runs):
-	scripts/run.pcietest $(basename $@)/kc705/bin/mk*.bin.gz $(basename $@)/kc705/bin/ubuntu_exe
-
-kc705cpps = $(addprefix examples/, $(addsuffix .kc705cpp, $(examples))) \
-	    $(addprefix tests/, $(addsuffix .kc705cpp, $(tests)))
-kc705cpps: $(kc705cpps)
-
-$(kc705cpps):
-	rm -fr $(basename $@)/kc705
-	make BOARD=kc705 --no-print-directory -C $(basename $@) exe
-
-#################################################################################################
-# ac701
-
-ac701tests = $(addprefix examples/, $(addsuffix .ac701, $(examples)))
-#ac701tests: $(ac701tests)
-
-$(ac701tests):
-	rm -fr $(basename $@)/ac701
-	make BOARD=ac701 -C $(basename $@) all
-
-ac701runs = $(addprefix examples/, $(addsuffix .ac701run, $(examples)))
-#ac701runs: $(ac701runs)
-
-$(ac701runs):
-	scripts/run.pcietest $(basename $@)/ac701/bin/mk*.bin.gz $(basename $@)/ac701/bin/ubuntu_exe
-
-ac701cpps = $(addprefix examples/, $(addsuffix .ac701cpp, $(examples))) \
-	    $(addprefix tests/, $(addsuffix .ac701cpp, $(tests)))
-#ac701cpps: $(ac701cpps)
-
-$(ac701cpps):
-	rm -fr $(basename $@)/ac701
-	make BOARD=ac701 --no-print-directory -C $(basename $@) exe
+$(foreach archname,$(allarchlist), $(eval $(call TARGET_RULE,$(archname))))
 
 #################################################################################################
 # memexamples
@@ -415,7 +342,7 @@ cppruns = $(addsuffix .cpp, $(cppalllist))
 cppruns: $(cppruns)
 
 $(cppruns):
-	for archname in $(allarchlist) ; do  \
+	@for archname in $(allarchlist) ; do  \
 	   set -e \
 	   echo make $(basename $@)."$$archname";  \
 	   make  --no-print-directory $(basename $@)."$$archname"cpp;  \
@@ -435,8 +362,9 @@ bsimall:
 	done
 
 distclean:
-	rm -rf examples/*/bluesim examples/*/vc707 examples/*/kc705 examples/*/zedboard examples/*/zc702 examples/*/zc706
-	rm -rf tests/*/bluesim tests/*/vc707 tests/*/kc705 tests/*/zedboard tests/*/zc702 tests/*/zc706
+	for archname in $(allarchlist) ; do  \
+	   rm -rf examples/*/"$$archname" tests/*/"$$archname"; \
+	done
 	rm -rf drivers/*/.tmp_versions tests/memread_manual/kernel/.tmp_versions/
 	rm -rf pcie/xbsvutil/xbsvutil tests/memread_manual/kernel/bsim_relay
 	rm -rf out/
