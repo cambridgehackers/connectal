@@ -191,12 +191,42 @@ allarchlist = ac701 zedboard zc702 zc706 kc705 vc707 zynq100 v2000t bluesim
 	make XBSV_DEBUG=1 $*
 
 #################################################################################################
+define TARGET_RULE
+$1tests := $(addprefix examples/, $(addsuffix .$1, $(examples))) \
+	     $(addprefix tests/, $(addsuffix .$1, $(tests)))
+
+$$($1tests):
+	rm -fr $$(basename $$@)/$1
+	make BOARD=$1 -C $$(basename $$@) all
+
+$1runs := $(addprefix examples/, $(addsuffix .$1run, $(examples))) \
+	    $(addprefix tests/, $(addsuffix .$1run, $(tests)))
+
+# RUNPARAM=ipaddr is an optional argument if you already know the IP of the $1
+$$($1runs):
+	scripts/run.zedboard $$(basename $$@)/$1/bin/*bin.gz `find $$(basename $$@)/$1 -name android_exe | grep libs`
+
+$1cpps := $(addprefix examples/, $(addsuffix .$1cpp, $(examples))) \
+	    $(addprefix tests/, $(addsuffix .$1cpp, $(tests)))
+
+$$($1cpps):
+	rm -fr $$(basename $$@)/$1
+	make BOARD=$1 --no-print-directory -C $$(basename $$@) exe
+
+endef
+
+$(eval $(call TARGET_RULE,zedboard))
+$(eval $(call TARGET_RULE,zc702))
+$(eval $(call TARGET_RULE,zc706))
+$(eval $(call TARGET_RULE,zynq100))
+$(eval $(call TARGET_RULE,v2000t))
+
+#################################################################################################
 # bluesim
 
 bluesimtests = $(addprefix examples/, $(addsuffix .bluesim, $(examples))) \
 	       $(addprefix tests/, $(addsuffix .bluesim, $(tests)))
 bluesimtests: $(bluesimtests)
-
 
 $(bluesimtests):
 	rm -fr $(basename $@)/bluesim
@@ -236,141 +266,6 @@ xsimruns: $(xsimruns)
 $(xsimruns):
 	make BOARD=bluesim -C $(basename $@) xsimrun
 
-#################################################################################################
-# zedboard
-
-zedtests = $(addprefix examples/, $(addsuffix .zedboard, $(examples))) \
-	   $(addprefix tests/, $(addsuffix .zedboard, $(tests)))
-zedtests: $(zedtests)
-
-$(zedtests):
-	rm -fr $(basename $@)/zedboard
-	make BOARD=zedboard -C $(basename $@) all
-
-zedboardruns = $(addprefix examples/, $(addsuffix .zedboardrun, $(examples))) \
-	       $(addprefix tests/, $(addsuffix .zedboardrun, $(tests)))
-zedboardruns: $(zedboardruns)
-
-# RUNPARAM=ipaddr is an optional argument if you already know the IP of the zedboard
-$(zedboardruns):
-	scripts/run.zedboard $(basename $@)/zedboard/bin/*bin.gz `find $(basename $@)/zedboard -name android_exe | grep libs`
-
-zedboardcpps = $(addprefix examples/, $(addsuffix .zedboardcpp, $(examples))) \
-	       $(addprefix tests/, $(addsuffix .zedboardcpp, $(tests)))
-zedboardcpps: $(zedboardcpps)
-
-# RUNPARAM=ipaddr is an optional argument if you already know the IP of the zedboard
-$(zedboardcpps):
-	rm -fr $(basename $@)/zedboard
-	make BOARD=zedboard --no-print-directory -C $(basename $@) exe
-
-#################################################################################################
-# zc702
-
-zctests = $(addprefix examples/, $(addsuffix .zc702, $(examples))) \
-	  $(addprefix tests/, $(addsuffix .zc702, $(tests)))
-zctests: $(zctests)
-
-$(zctests):
-	rm -fr $(basename $@)/zc702
-	make BOARD=zc702 -C $(basename $@) all
-
-zc702runs = $(addprefix examples/, $(addsuffix .zc702run, $(examples))) \
-	    $(addprefix tests/, $(addsuffix .zc702run, $(tests)))
-zc702runs: $(zc702runs)
-
-# RUNPARAM=ipaddr is an optional argument if you already know the IP of the zc702
-$(zc702runs):
-	scripts/run.zedboard $(basename $@)/zc702/bin/*bin.gz `find $(basename $@)/zc702 -name android_exe | grep libs`
-
-zc702cpps = $(addprefix examples/, $(addsuffix .zc702cpp, $(examples))) \
-	    $(addprefix tests/, $(addsuffix .zc702cpp, $(tests)))
-zc702cpps: $(zc702cpps)
-
-$(zc702cpps):
-	rm -fr $(basename $@)/zc702
-	make BOARD=zc702 --no-print-directory -C $(basename $@) exe
-
-#################################################################################################
-# zc706
-
-zc706tests = $(addprefix examples/, $(addsuffix .zc706, $(examples))) \
-	     $(addprefix tests/, $(addsuffix .zc706, $(tests)))
-zc706tests: $(zc706tests)
-
-$(zc706tests):
-	rm -fr $(basename $@)/zc706
-	make BOARD=zc706 -C $(basename $@) all
-
-zc706runs = $(addprefix examples/, $(addsuffix .zc706run, $(examples))) \
-	    $(addprefix tests/, $(addsuffix .zc706run, $(tests)))
-zc706runs: $(zc706runs)
-
-# RUNPARAM=ipaddr is an optional argument if you already know the IP of the zc706
-$(zc706runs):
-	scripts/run.zedboard $(basename $@)/zc706/bin/*bin.gz `find $(basename $@)/zc706 -name android_exe | grep libs`
-
-zc706cpps = $(addprefix examples/, $(addsuffix .zc706cpp, $(examples))) \
-	    $(addprefix tests/, $(addsuffix .zc706cpp, $(tests)))
-zc706cpps: $(zc706cpps)
-
-$(zc706cpps):
-	rm -fr $(basename $@)/zc706
-	make BOARD=zc706 --no-print-directory -C $(basename $@) exe
-
-#################################################################################################
-# zynq100
-
-zynq100tests = $(addprefix examples/, $(addsuffix .zynq100, $(examples))) \
-	     $(addprefix tests/, $(addsuffix .zynq100, $(tests)))
-zynq100tests: $(zynq100tests)
-
-$(zynq100tests):
-	rm -fr $(basename $@)/zynq100
-	make BOARD=zynq100 -C $(basename $@) all
-
-zynq100runs = $(addprefix examples/, $(addsuffix .zynq100run, $(examples))) \
-	    $(addprefix tests/, $(addsuffix .zynq100run, $(tests)))
-zynq100runs: $(zynq100runs)
-
-# RUNPARAM=ipaddr is an optional argument if you already know the IP of the zynq100
-$(zynq100runs):
-	scripts/run.zedboard $(basename $@)/zynq100/bin/*bin.gz `find $(basename $@)/zynq100 -name android_exe | grep libs`
-
-zynq100cpps = $(addprefix examples/, $(addsuffix .zynq100cpp, $(examples))) \
-	    $(addprefix tests/, $(addsuffix .zynq100cpp, $(tests)))
-zynq100cpps: $(zynq100cpps)
-
-$(zynq100cpps):
-	rm -fr $(basename $@)/zynq100
-	make BOARD=zynq100 --no-print-directory -C $(basename $@) exe
-
-#################################################################################################
-# v2000t
-
-v2000ttests = $(addprefix examples/, $(addsuffix .v2000t, $(examples))) \
-	     $(addprefix tests/, $(addsuffix .v2000t, $(tests)))
-v2000ttests: $(v2000ttests)
-
-$(v2000ttests):
-	rm -fr $(basename $@)/v2000t
-	make BOARD=v2000t -C $(basename $@) all
-
-v2000truns = $(addprefix examples/, $(addsuffix .v2000trun, $(examples))) \
-	    $(addprefix tests/, $(addsuffix .v2000trun, $(tests)))
-v2000truns: $(v2000truns)
-
-# RUNPARAM=ipaddr is an optional argument if you already know the IP of the v2000t
-$(v2000truns):
-	scripts/run.zedboard $(basename $@)/v2000t/bin/*bin.gz `find $(basename $@)/v2000t -name android_exe | grep libs`
-
-v2000tcpps = $(addprefix examples/, $(addsuffix .v2000tcpp, $(examples))) \
-	    $(addprefix tests/, $(addsuffix .v2000tcpp, $(tests)))
-v2000tcpps: $(v2000tcpps)
-
-$(v2000tcpps):
-	rm -fr $(basename $@)/v2000t
-	make BOARD=v2000t --no-print-directory -C $(basename $@) exe
 
 #################################################################################################
 # vc707
@@ -428,21 +323,21 @@ $(kc705cpps):
 # ac701
 
 ac701tests = $(addprefix examples/, $(addsuffix .ac701, $(examples)))
-ac701tests: $(ac701tests)
+#ac701tests: $(ac701tests)
 
 $(ac701tests):
 	rm -fr $(basename $@)/ac701
 	make BOARD=ac701 -C $(basename $@) all
 
 ac701runs = $(addprefix examples/, $(addsuffix .ac701run, $(examples)))
-ac701runs: $(ac701runs)
+#ac701runs: $(ac701runs)
 
 $(ac701runs):
 	scripts/run.pcietest $(basename $@)/ac701/bin/mk*.bin.gz $(basename $@)/ac701/bin/ubuntu_exe
 
 ac701cpps = $(addprefix examples/, $(addsuffix .ac701cpp, $(examples))) \
 	    $(addprefix tests/, $(addsuffix .ac701cpp, $(tests)))
-ac701cpps: $(ac701cpps)
+#ac701cpps: $(ac701cpps)
 
 $(ac701cpps):
 	rm -fr $(basename $@)/ac701
