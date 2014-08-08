@@ -27,6 +27,7 @@ import Connectable :: *;
 import Clocks :: *;
 import FIFO::*;
 import DefaultValue::*;
+import MemTypes::*;
 
 // portz libraries
 import Portal::*;
@@ -197,7 +198,7 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,64,ImageCapturePins,0));
    interface slave = ctrl_mux;
    interface masters = nil;
    //interface leds = captureRequestInternal.leds;
-   interface xadc = ic.xadc;
+   //interface xadc = ic.xadc;
    interface ImageCapturePins pins;
        method Action fmc_video_clk1(Bit#(1) v);
            iclock.inputclock(v);
