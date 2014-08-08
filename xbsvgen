@@ -30,15 +30,12 @@ from scripts import syntax
 from scripts import util
 from scripts import boardinfo
 
-supported_boards = ['ac701', 'zedboard', 'zc702', 'zc706', 'kc705', 'vc707', 'zynq100', 'v2000t', 'bluesim']
 supported_os = ['android', 'ubuntu']
 
 argparser = argparse.ArgumentParser("Generate C++/BSV/Xilinx stubs for an interface.")
 argparser.add_argument('bsvfile', help='BSV files to parse', nargs='+')
-argparser.add_argument('-B', '--board', default='zc702', choices=supported_boards,
-                       help='Board to generate stubs and ucf constraints for')
-argparser.add_argument('-O', '--OS', default=None, choices=supported_os,
-                       help='Target operating system')
+argparser.add_argument('-B', '--board', default='zc702', help='Target Board for compilation')
+argparser.add_argument('-O', '--OS', default=None, choices=supported_os, help='Target operating system')
 argparser.add_argument('-s2h', '--s2hinterface', help='BSV interface to generate stubs for software to hardware communication', action='append')
 argparser.add_argument('-h2s', '--h2sinterface', help='BSV interface to generate stubs for hardware to software communication', action='append')
 argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps project directory')
@@ -49,8 +46,6 @@ argparser.add_argument('-V', '--verilog', default=[], help='Additional verilog s
 argparser.add_argument('--xci', default=[], help='Additional IP sources', action='append')
 argparser.add_argument('-C', '--constraint', help='Additional constraint files', action='append')
 argparser.add_argument('-M', '--make', help='Run make on the specified targets', action='append')
-#argparser.add_argument('-x', '--export', help='Promote/export named interface from top module')
-#argparser.add_argument('-t', '--topbsv', help='Top-level bsv file')
 argparser.add_argument('-D', '--bsvdefine', default=[], help='BSV define', action='append')
 argparser.add_argument('-l', '--clib', default=[], help='C++ libary', action='append')
 argparser.add_argument('-S', '--clibfiles', default=[], help='C++ libary file', action='append')
@@ -127,8 +122,7 @@ hw/mkTop.bit: fpgamake.mk prepare_bin_target
 '''
 
 makefileTemplate='''
-## make targets
-##    all: make software and programmable logic binaries
+
 ##    run: run the program
 ##         pass parameters to software via 'make RUN_ARGS= run'
 RUN_ARGS=
@@ -215,12 +209,6 @@ if __name__=='__main__':
 
     if options.verbose:
         noisyFlag = True
-    #if not options.export:
-        #sys.stderr.write('Must specify top level module name via -x/--export flag\n')
-        #sys.exit(-1)
-    #if not options.topbsv:
-        #sys.stderr.write('Must specify top BSV file via -t/--topbsv flag\n')
-        #sys.exit(-1)
     if not options.source:
         options.source = []
     if not options.bsimsource:
@@ -263,9 +251,6 @@ if __name__=='__main__':
     if bdef:
         bsvdefines += bdef
         
-    #    "NEEDSPCIE" : "True",
-    #print 'OOO', option_info
-
     rewireclockstring = option_info['rewireclockstring']
     needs_pcie_7x_gen1x8 = option_info['needs_pcie_7x_gen1x8']
     partname = option_info['partname']
