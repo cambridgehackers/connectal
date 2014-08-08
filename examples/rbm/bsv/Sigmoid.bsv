@@ -73,7 +73,6 @@ module mkSigmoidServer#(Integer id, SigmoidTable#(tsz) sigmoidTable)(Server#(Flo
    let multiplier <- mkFloatMultiplier(defaultValue);
    let adder <- mkFloatAdder(defaultValue);
    let mac <- mkFloatMac(defaultValue);
-   FIFOF#(void) cfifo <- mkSizedFIFOF(1);
    
    rule lookupEntry;
       let response <- multiplier.response.get();
@@ -120,7 +119,6 @@ module mkSigmoidServer#(Integer id, SigmoidTable#(tsz) sigmoidTable)(Server#(Flo
 	    angle = sigmoidTable.ulimit;
 	 angleFifo.enq(angle);
 	 multiplier.request.put(tuple2(angle, sigmoidTable.rscale));
-	 cfifo.enq(?);
 	 if (verbose) $display("sigmoid request.put");
       endmethod
    endinterface
@@ -131,7 +129,6 @@ module mkSigmoidServer#(Integer id, SigmoidTable#(tsz) sigmoidTable)(Server#(Flo
 	 Exception e = tpl_2(result);
 	 if (verbose && pack(e) != 0) $display("mac.exception e=%h v=%h", e, pack(v));
 	 if (verbose) $display("sigmoid response.get");
-	 cfifo.deq;
 	return v;
      endmethod
    endinterface
