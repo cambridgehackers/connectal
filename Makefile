@@ -346,5 +346,5 @@ distclean:
 	done
 	rm -rf drivers/*/.tmp_versions tests/memread_manual/kernel/.tmp_versions/
 	rm -rf pcie/xbsvutil/xbsvutil tests/memread_manual/kernel/bsim_relay
-	rm -rf out/ exit.status
+	rm -rf out/ exit.status cpp/*.o scripts/*.pyc
 
