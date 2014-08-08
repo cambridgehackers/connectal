@@ -356,7 +356,7 @@ cppall:
 bsimall:
 	@for testname in $(bsimalllist) ; do  \
 	   echo make $$testname.bluesim;  \
-	   make  --no-print-directory $$testname.bluesim >/dev/null;  \
+	   make  --no-print-directory $$testname.bluesim;  \
 	   echo make $$testname.bluesimrun;  \
 	   make  --no-print-directory $$testname.bluesimrun;  \
 	done
