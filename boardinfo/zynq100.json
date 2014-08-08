@@ -3,6 +3,7 @@
         "os" : "android",
         "partname" : "xc7z100ffg900-2",
         "rewireclockstring" : "tclzynqrewireclock",
+        "constraints": "xilinx/constraints/zc7z045ffg900.xdc",
         "needs_pcie_7x_gen1x8" : "False"
     },
     "fmc": {

@@ -4,6 +4,7 @@
         "os" : "android",
         "partname" : "xc7z020clg484-1",
         "rewireclockstring" : "tclzynqrewireclock",
+        "constraints": "xilinx/constraints/zc7z020clg484.xdc",
         "needs_pcie_7x_gen1x8" : "False"
     },
     "fmc1": {
