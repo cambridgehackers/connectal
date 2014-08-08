@@ -1,7 +1,6 @@
 
 BSCFLAGS=-aggressive-conditions -show-schedule -keep-fires -p +:../paclib
 
-XBSVDIR=../..
 DBNDIR=../../examples/matmul
 DBNTOPBSV=     Top.bsv
 TESTCPPFILES=  testfpmul.cpp

@@ -265,16 +265,16 @@ Here is the Makefile for the `simple` example:
 ---------------------------------
 
 
-Designs using `xbsv` may also include `xbsv/Makefile.xbsv` if they define `XBSVDIR` in their Makefile:
+Designs using `xbsv` may also include `Makefile.xbsv`:
 
 [source,makefile]
 ---------------------------------
-    XBSVDIR=/scratch/xbsv
+    
     S2H = ...
     H2S = ...
     BSVFILES = ...
     CPPFILES = ...
-    include $(XBSVDIR)/Makefile.xbsv
+    include /scratch/xbsv/Makefile.xbsv
 ---------------------------------
 
 

@@ -19,6 +19,8 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
+XBSVDIR=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+
 V=0
 ifeq ($(V),0)
 Q=@
@@ -44,9 +46,6 @@ run.%:
 %.gdb:
 	make XBSV_DEBUG=1 --no-print-directory $*
 
-ifeq ($(origin XBSVDIR),undefined)
-XBSVDIR=$(shell cd ../..; /bin/pwd)
-endif
 ifeq ($(origin IPDIR),undefined)
 IPDIR=$(XBSVDIR)/out
 endif
