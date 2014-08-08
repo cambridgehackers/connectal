@@ -1,6 +1,6 @@
-# Using xbsvgen
+# Using makefilegen.py
 
-Here are the options supported by `xbsvgen`
+Here are the options supported by `makefilegen.py`
 
 | Option | Long Option | Default | Description |
 ---------|-------------|---------|-------------------------------------|

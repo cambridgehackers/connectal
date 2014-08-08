@@ -26,9 +26,9 @@ import argparse
 import subprocess
 import glob
 import time
-from scripts import syntax
-from scripts import util
-from scripts import boardinfo
+import syntax
+import util
+import boardinfo
 
 supported_os = ['android', 'ubuntu']
 
@@ -152,7 +152,7 @@ export DUT_NAME = %(Dut)s
 
 %(mdefines)s
 
-include $(XBSVDIR)/Makefile.build
+include $(XBSVDIR)/scripts/Makefile.xbsv.build
 
 %(bitsmake)s
 '''
@@ -203,8 +203,7 @@ bsim_exe: $(SOURCES)
 '''
 
 if __name__=='__main__':
-    exename = os.path.abspath(sys.argv[0])
-    xbsvdir = os.path.dirname(exename)
+    xbsvdir = os.path.dirname(os.path.abspath(sys.argv[0]))+'/../'
     options = argparser.parse_args()
 
     if options.verbose:
