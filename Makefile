@@ -350,11 +350,13 @@ $(cppruns):
 
 cppall:
 	@for testname in $(cppalllist) ; do  \
-	    make $$testname.cpp;  \
+	   set -e \
+	   make $$testname.cpp;  \
 	done
 
 bsimall:
 	@for testname in $(bsimalllist) ; do  \
+	   set -e \
 	   echo make $$testname.bluesim;  \
 	   make  --no-print-directory $$testname.bluesim;  \
 	   echo make $$testname.bluesimrun;  \
