@@ -178,6 +178,7 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
 	     ,FunnelPipesPipelined#(1, numServers, Tuple3#(Bit#(2),Bit#(dataWidth),Bool), TMin#(2, serverIdxSz))
 	     ,Add#(1, d__, dataWidth)
 	     ,FunnelPipesPipelined#(1, numServers, Tuple3#(Bit#(serverIdxSz),Bit#(dataWidth), Bool), TMin#(2, serverIdxSz))
+	     ,Add#(f__, TLog#(numServers), TAdd#(1, serverIdxSz))
 	     );
    
    
@@ -201,11 +202,19 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
    BurstFunnel#(numServers,dataWidth) write_data_funnel <- mkBurstFunnel(bufferSizeBeats);
    zipWithM(mkConnection, foo, write_data_funnel.dataIn);
       
-   Reg#(Bit#(8))                               respCnt <- mkReg(0);
-   Reg#(Bit#(serverIdxSz))                     loadIdx <- mkReg(0);
+   Reg#(Bit#(8))                    respCnt <- mkReg(0);
+   Reg#(Bit#(TAdd#(1,serverIdxSz))) loadIdx <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
    let cmd_q_depth = fromInteger(valueOf(cmdQDepth));
    
+   function Action incr_loadIdx =
+      (action
+       if(loadIdx+1 >= fromInteger(valueOf(numServers)))
+	  loadIdx <= 0;
+       else
+	  loadIdx <= loadIdx+1;
+       endaction);
+
    rule store_cmd;
       match {.idx, .cmd} <- toGet(cmds_in_funnel[0]).get;
       outs1[idx] <= outs1[idx]+1;
@@ -216,10 +225,10 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
    rule load_ctxt_a (!load_in_progress);
       if (outs1[loadIdx] > 0) begin
 	 load_in_progress <= True;
-	 cmdBuf.first_req(loadIdx);
+	 cmdBuf.first_req(truncate(loadIdx));
       end
       else begin
-	 loadIdx <= loadIdx+1;
+	 incr_loadIdx;
       end
    endrule
 
@@ -232,20 +241,20 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
    
    rule load_ctxt_c;
       load_in_progress <= False;
-      loadIdx <= loadIdx+1;
+      incr_loadIdx;
       match {.cmd,.cond0,.cond1} <- toGet(loadf_b).get;
       if  (cond0) begin
 	 //$display("load_ctxt_b %h %d", cmd.base, idx);
 	 buffCap[loadIdx].decrement(unpack(extend(cmd.burstLen>>beat_shift)));
-	 loadf_c.enq(tuple2(loadIdx,cmd));
-	 write_data_funnel.loadIdx(loadIdx);
+	 loadf_c.enq(tuple2(truncate(loadIdx),cmd));
+	 write_data_funnel.loadIdx(truncate(loadIdx));
 	 if (cond1) begin
 	    outs1[loadIdx] <= outs1[loadIdx]-1;
-	    cmdBuf.deq(loadIdx);
+	    cmdBuf.deq(truncate(loadIdx));
 	 end
 	 else begin
 	    let new_cmd = MemengineCmd{pointer:cmd.pointer, base:cmd.base+extend(cmd.burstLen), burstLen:cmd.burstLen, len:cmd.len-extend(cmd.burstLen)};
-	    cmdBuf.upd_head(loadIdx,new_cmd);
+	    cmdBuf.upd_head(truncate(loadIdx),new_cmd);
 	 end
       end
    endrule

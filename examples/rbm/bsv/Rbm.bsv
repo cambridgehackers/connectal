@@ -35,6 +35,8 @@ import MemTypes::*;
 import DmaVector::*;
 import AxiMasterSlave::*;
 import HostInterface::*;
+import MemreadEngine::*;
+import MemwriteEngine::*;
 
 import Sigmoid::*;
 import FloatOps::*;
@@ -46,53 +48,48 @@ import DotProdServer::*;
 
 function Float tokenValue(MmToken v) = v.v;
 
-function ObjectReadClient#(asz) getSourceReadClient(DmaVectorSource#(asz,a) s); return s.dmaClient; endfunction
-function ObjectWriteClient#(asz) getSinkWriteClient(DmaVectorSink#(asz,a) s); return s.dmaClient; endfunction
-
-interface DmaStatesPipe#(numeric type n, numeric type dmasz);
-   interface Vector#(2, ObjectReadClient#(dmasz))  sources; 
-   interface Vector#(1, ObjectWriteClient#(dmasz)) sinks; 
+interface StatesPipe#(numeric type n, numeric type dmasz);
    method Action start(Bit#(32) readPointer, Bit#(32) readOffset,
 		       Bit#(32) readPointer2, Bit#(32) readOffset2,
 		       Bit#(32) writePointer, Bit#(32) writeOffset, Bit#(32) numElts);
    method ActionValue#(Bool) finish();
 endinterface
 
-(* synthesize *)
-module  mkDmaStatesPipe(DmaStatesPipe#(N, DmaSz))
-   provisos (Bits#(Vector#(N, Float), DmaSz)
-	     );
-   Vector#(2, DmaVectorSource#(DmaSz, Vector#(N,Float))) statesources <- replicateM(mkDmaVectorSource());
-   PipeOut#(Vector#(N, Float)) dmaStatesPipe <- mkComputeStatesPipe2(statesources[0].vector.pipe, statesources[1].vector.pipe);
-   DmaVectorSink#(DmaSz, Vector#(N, Float)) dmaStatesSink <- mkDmaVectorSink(dmaStatesPipe);
+module  mkStatesPipe#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
+		      Vector#(2, PipeOut#(Bit#(TMul#(N,32)))) readPipes,
+		      Vector#(1,Server#(MemengineCmd,Bool)) writeServers,
+		      Vector#(1, PipeIn#(Bit#(TMul#(N,32))))  writePipes)(StatesPipe#(N, DmaSz))
+   provisos (Bits#(Vector#(N, Float), DmaSz));
+   Vector#(2, VectorSource#(DmaSz, Vector#(N,Float))) statesources <- mapM(uncurry(mkMemreadVectorSource), zip(readServers, readPipes));
+   PipeOut#(Vector#(N, Float)) dmaStatesPipe <- mkComputeStatesPipe2(statesources[0].pipe, statesources[1].pipe);
+   VectorSink#(DmaSz, Vector#(N, Float)) dmaStatesSink <- mkMemwriteVectorSink(writeServers[0], writePipes[0]);
 
-   interface Vector sources = map(getSourceReadClient, statesources);
-   interface Vector sinks = cons(dmaStatesSink.dmaClient, nil);
    method Action start(Bit#(32) readPointer, Bit#(32) readOffset,
 		       Bit#(32) readPointer2, Bit#(32) readOffset2,
 		       Bit#(32) writePointer, Bit#(32) writeOffset, Bit#(32) numElts);
-      statesources[0].vector.start(readPointer, extend(readOffset), extend(unpack(numElts)));
-      statesources[1].vector.start(readPointer2, extend(readOffset2), extend(unpack(numElts)));
-      dmaStatesSink.vector.start(writePointer, extend(writeOffset), extend(unpack(numElts)));
+      statesources[0].start(readPointer, extend(readOffset), extend(unpack(numElts)));
+      statesources[1].start(readPointer2, extend(readOffset2), extend(unpack(numElts)));
+      dmaStatesSink.start(writePointer, extend(writeOffset), extend(unpack(numElts)));
    endmethod
    method ActionValue#(Bool) finish();
-      let b <- dmaStatesSink.vector.finish();
+      let b <- dmaStatesSink.finish();
       return b;
    endmethod
 endmodule
 
-interface DmaUpdateWeights#(numeric type n, numeric type dmasz);
-   interface Vector#(3, ObjectReadClient#(dmasz)) readClients;
-   interface Vector#(1, ObjectWriteClient#(dmasz)) writeClients;
-   method Action start(Bit#(32) posAssociationsPointer, Bit#(32) negAssociationsPointer, Bit#(32) weightsPointer, Bit#(32) numElts, Float learningRateOverNumExamples);
+interface UpdateWeights#(numeric type n, numeric type dmasz);
+   method Action start(Bit#(32) posAssociationsPointer, Bit#(32) negAssociationsPointer, 
+		       Bit#(32) weightsPointer, Bit#(32) numElts, Float learningRateOverNumExamples);
    method ActionValue#(Bool) finish();
 endinterface
 
-(* synthesize *)
-module  mkDmaUpdateWeights(DmaUpdateWeights#(N, DmaSz))
-   provisos (Bits#(Vector#(N, Float), DmaSz)
-	     );
-   Vector#(3, DmaVectorSource#(DmaSz, Vector#(N,Float))) sources <- replicateM(mkDmaVectorSource());
+module  mkUpdateWeights#(Vector#(3,Server#(MemengineCmd,Bool)) readServers,
+			    Vector#(3, PipeOut#(Bit#(TMul#(N,32)))) readPipes,
+			    Vector#(1,Server#(MemengineCmd,Bool)) writeServers,
+			    Vector#(1, PipeIn#(Bit#(TMul#(N,32))))  writePipes)(UpdateWeights#(N, DmaSz))
+   provisos (Bits#(Vector#(N, Float), DmaSz));
+
+   Vector#(3, VectorSource#(DmaSz, Vector#(N,Float))) sources <- mapM(uncurry(mkMemreadVectorSource), zip(readServers, readPipes));
 
    let n = valueOf(N);
 
@@ -102,14 +99,14 @@ module  mkDmaUpdateWeights(DmaUpdateWeights#(N, DmaSz))
    Vector#(N, FloatAlu) adders <- replicateM(mkFloatAdder(defaultValue));
    Vector#(N, FloatAlu) adders2 <- replicateM(mkFloatAdder(defaultValue));
    Vector#(N, FloatAlu) multipliers <- replicateM(mkFloatMultiplier(defaultValue));
-   DmaVectorSink#(DmaSz, Vector#(N, Float)) sink <- mkDmaVectorSink(toPipeOut(wfifo));
+   VectorSink#(DmaSz, Vector#(N, Float)) sink <- mkMemwriteVectorSink(writeServers[0], writePipes[0]);
 
 // weights += learningRate * (pos_associations - neg_associations) / num_examples;
    rule sub;
-      let pa = sources[0].vector.pipe.first();
-      sources[0].vector.pipe.deq();
-      let na = sources[1].vector.pipe.first();
-      sources[1].vector.pipe.deq();
+      let pa = sources[0].pipe.first();
+      sources[0].pipe.deq();
+      let na = sources[1].pipe.first();
+      sources[1].pipe.deq();
       for (Integer i = 0; i < n; i = i+1) begin
 	 adders[i].request.put(tuple2(pa[i], -na[i]));
       end
@@ -121,8 +118,8 @@ module  mkDmaUpdateWeights(DmaUpdateWeights#(N, DmaSz))
       end
    endrule
    rule add;
-      let weights = sources[2].vector.pipe.first();
-      sources[2].vector.pipe.deq();
+      let weights = sources[2].pipe.first();
+      sources[2].pipe.deq();
       for (Integer i = 0; i < n; i = i+1) begin
 	 let resultexc <- multipliers[i].response.get();
 	 adders2[i].request.put(tuple2(weights[i], tpl_1(resultexc)));
@@ -139,43 +136,38 @@ module  mkDmaUpdateWeights(DmaUpdateWeights#(N, DmaSz))
 
    for (Integer i = 0; i < 3; i = i + 1)
       rule finishSources;
-	 let b <- sources[i].vector.finish();
+	 let b <- sources[i].finish();
       endrule
 
-   //interface Vector sources = cons(statesource, nil);
-   interface Vector readClients = map(getSourceReadClient, sources);
-   interface Vector writeClients = cons(getSinkWriteClient(sink), nil);
    method Action start(Bit#(32) posAssociationsPointer, Bit#(32) negAssociationsPointer, Bit#(32) weightsPointer, Bit#(32) numElts, Float lrone);
       learningRateOverNumExamples <= lrone;
-      sources[0].vector.start(posAssociationsPointer, 0, extend(numElts));
-      sources[1].vector.start(negAssociationsPointer, 0, extend(numElts));
-      sources[2].vector.start(weightsPointer, 0, extend(numElts));
-      sink.vector.start(weightsPointer, 0, extend(numElts));
+      sources[0].start(posAssociationsPointer, 0, extend(numElts));
+      sources[1].start(negAssociationsPointer, 0, extend(numElts));
+      sources[2].start(weightsPointer, 0, extend(numElts));
+      sink.start(weightsPointer, 0, extend(numElts));
    endmethod
    method ActionValue#(Bool) finish();
-      let b <- sink.vector.finish();
+      let b <- sink.finish();
       return b;
    endmethod
 endmodule
-interface DmaSumOfErrorSquared#(numeric type n, numeric type dmasz);
-   interface Vector#(2, ObjectReadClient#(dmasz)) readClients;
+   
+interface SumOfErrorSquared#(numeric type n, numeric type dmasz);
    interface PipeOut#(Float) pipe;
    method Action start(Bit#(32) dataPointer, Bit#(32) predPointer, Bit#(32) numElts);
 endinterface
 
-(* synthesize *)
-module  mkDmaSumOfErrorSquared(DmaSumOfErrorSquared#(N, DmaSz))
-   provisos (Bits#(Vector#(N, Float), DmaSz)
-	     );
-   Vector#(2, DmaVectorSource#(DmaSz, Vector#(N,Float))) sources <- replicateM(mkDmaVectorSource());
-
+module  mkSumOfErrorSquared#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
+			     Vector#(2, PipeOut#(Bit#(TMul#(N,32)))) readPipes)(SumOfErrorSquared#(N, DmaSz))
+   provisos (Bits#(Vector#(N, Float), DmaSz));
+   
+   Vector#(2, VectorSource#(DmaSz, Vector#(N,Float))) sources <- mapM(uncurry(mkMemreadVectorSource), zip(readServers, readPipes));
    let n = valueOf(N);
-
    let dotprod <- mkSharedInterleavedDotProdServer(0);
 
    FirstLastPipe#(Bit#(ObjectOffsetSize)) firstlastPipe <- mkFirstLastPipe();
-   PipeOut#(Float) aPipe <- mkFunnel1(sources[0].vector.pipe);
-   PipeOut#(Float) bPipe <- mkFunnel1(sources[1].vector.pipe);
+   PipeOut#(Float) aPipe <- mkFunnel1(sources[0].pipe);
+   PipeOut#(Float) bPipe <- mkFunnel1(sources[1].pipe);
    let joinPipe <- mkJoin(tuple2, aPipe, bPipe);
    let subPipe <- mkFloatSubPipe(joinPipe);
    rule fromsub;
@@ -185,29 +177,26 @@ module  mkDmaSumOfErrorSquared(DmaSumOfErrorSquared#(N, DmaSz))
       dotprod.aInput.put(t);
       dotprod.bInput.put(t);
    endrule
-   
 
    for (Integer i = 0; i < 2; i = i + 1)
       rule finishSources;
-	 let b <- sources[i].vector.finish();
+	 let b <- sources[i].finish();
       endrule
 
-   //interface Vector sources = cons(statesource, nil);
-   interface Vector readClients = map(getSourceReadClient, sources);
    interface PipeOut pipe = mapPipe(tokenValue, dotprod.pipes[0]);
    method Action start(Bit#(32) dataPointer, Bit#(32) predPointer, Bit#(32) numElts);
-      sources[0].vector.start(dataPointer, 0, extend(numElts));
-      sources[1].vector.start(predPointer, 0, extend(numElts));
+      sources[0].start(dataPointer, 0, extend(numElts));
+      sources[1].start(predPointer, 0, extend(numElts));
       firstlastPipe.start(extend(numElts));
    endmethod
-endmodule: mkDmaSumOfErrorSquared
+endmodule: mkSumOfErrorSquared
 
 interface Rbm#(numeric type n);
    interface RbmRequest rbmRequest;
    interface SigmoidRequest sigmoidRequest;
    interface TimerRequest timerRequest;
-   interface Vector#(9, ObjectReadClient#(TMul#(32,n))) readClients;
-   interface Vector#(3, ObjectWriteClient#(TMul#(32,n))) writeClients;
+   interface ObjectReadClient#(TMul#(32,n)) readClient;
+   interface ObjectWriteClient#(TMul#(32,n)) writeClient;
 endinterface
 
 module  mkRbm#(HostType host, RbmIndication rbmInd, SigmoidIndication sigmoidInd, TimerIndication timerInd)(Rbm#(N))
@@ -216,44 +205,53 @@ module  mkRbm#(HostType host, RbmIndication rbmInd, SigmoidIndication sigmoidInd
 	     Mul#(N,32,DmaSz));
 
    let n = valueOf(n);
-
-   DmaSigmoidIfc#(TMul#(32,n)) dmaSigmoid <- mkDmaSigmoid();
-   DmaStatesPipe#(N, DmaSz) dmaStates <- mkDmaStatesPipe();
-   DmaUpdateWeights#(N, DmaSz) dmaUpdateWeights <- mkDmaUpdateWeights();
-   DmaSumOfErrorSquared#(N, DmaSz) dmaSumOfErrorSquared <- mkDmaSumOfErrorSquared();
+   
+   // TODO: figure out the correct amount of buffering required
+   MemreadEngineV#(TMul#(n,32), 2, 9) readEngine  <- mkMemreadEngine; 
+   MemwriteEngineV#(TMul#(n,32),2, 3) writeEngine <- mkMemwriteEngine; 
+   
+   let res = readEngine.readServers;
+   let rep = readEngine.dataPipes;
+   let wes = writeEngine.writeServers;
+   let wep = writeEngine.dataPipes;
+   
+   SigmoidIfc#(TMul#(32,n)) sigmoid <- mkSigmoid(takeAt(0,res), takeAt(0,rep), takeAt(0,wes), takeAt(0,wep));             // 2 read, 1 write
+   StatesPipe#(N, DmaSz) states <- mkStatesPipe(takeAt(2,res), takeAt(2,rep), takeAt(1,wes), takeAt(1,wep));              // 2 read, 1 write
+   UpdateWeights#(N, DmaSz) updateWeights <- mkUpdateWeights(takeAt(4,res), takeAt(4,rep), takeAt(2,wes), takeAt(2,wep)); // 3 read, 1 write
+   SumOfErrorSquared#(N, DmaSz) sumOfErrorSquared <- mkSumOfErrorSquared(takeAt(7,res), takeAt(7,rep));                   // 2 read, 0 write
 
    FIFOF#(Bool) busyFifo <- mkFIFOF();
    rule sigmoidDone;
       $display("sigmoidDone");
-      let d <- dmaSigmoid.finish();
+      let d <- sigmoid.finish();
       busyFifo.deq();
       sigmoidInd.sigmoidDone();
    endrule
    rule sigmoidTableUpdateDone;
       $display("sigmoidDone");
-      let d <- dmaSigmoid.sigmoidTableUpdated();
+      let d <- sigmoid.sigmoidTableUpdated();
       busyFifo.deq();
       sigmoidInd.sigmoidTableUpdated(0);
    endrule
-   rule dmaStatesDone2;
-      $display("dmaStatesDone2");
-      let b <- dmaStates.finish();
+   rule statesDone2;
+      $display("statesDone2");
+      let b <- states.finish();
       busyFifo.deq();
       rbmInd.statesDone2();
    endrule
 
-   rule dmaUpdateWeightsDone;
-      $display("dmaUpdateWeightsDone");
-      let b <- dmaUpdateWeights.finish();
+   rule updateWeightsDone;
+      $display("updateWeightsDone");
+      let b <- updateWeights.finish();
       busyFifo.deq();
       rbmInd.updateWeightsDone();
    endrule
 
-   rule dmaSumOfErrorSquaredDone;
-      $display("dmaSumOfErrorSquaredDone");
-      dmaSumOfErrorSquared.pipe.deq();
+   rule sumOfErrorSquaredDone;
+      $display("sumOfErrorSquaredDone");
+      sumOfErrorSquared.pipe.deq();
       busyFifo.deq();
-      rbmInd.sumOfErrorSquared(pack(dmaSumOfErrorSquared.pipe.first()));
+      rbmInd.sumOfErrorSquared(pack(sumOfErrorSquared.pipe.first()));
    endrule
 
    FIFOF#(Bool) timerRunning <- mkFIFOF();
@@ -280,21 +278,21 @@ module  mkRbm#(HostType host, RbmIndication rbmInd, SigmoidIndication sigmoidInd
    interface SigmoidRequest sigmoidRequest;
       method Action sigmoid(Bit#(32) readPointer, Bit#(32) readOffset,
 			    Bit#(32) writePointer, Bit#(32) writeOffset, Bit#(32) numElts);
-	 dmaSigmoid.start(readPointer, writePointer, unpack(extend(numElts)));
+	 sigmoid.start(readPointer, writePointer, unpack(extend(numElts)));
 	 busyFifo.enq(True);
       endmethod
       method Action setSigmoidLimits(Bit#(32) rscale, Bit#(32) llimit, Bit#(32) ulimit);
 	 $display("rbm.setSigmoidLimits");
-	 dmaSigmoid.setSigmoidLimits(unpack(rscale), unpack(llimit), unpack(ulimit));
+	 sigmoid.setSigmoidLimits(unpack(rscale), unpack(llimit), unpack(ulimit));
 	 busyFifo.enq(True);
       endmethod
       method Action updateSigmoidTable(Bit#(32) readPointer, Bit#(32) readOffset, Bit#(32) numElts);
 	 $display("rbm.updateSigmoidTable pointer=%x addr=%h numElts=%d", readPointer, readOffset, numElts);
-	 dmaSigmoid.updateSigmoidTable(readPointer, extend(readOffset), extend(numElts));
+	 sigmoid.updateSigmoidTable(readPointer, extend(readOffset), extend(numElts));
 	 busyFifo.enq(True);
       endmethod
       method Action sigmoidTableSize();
-	 sigmoidInd.sigmoidTableSize(dmaSigmoid.tableSize());
+	 sigmoidInd.sigmoidTableSize(sigmoid.tableSize());
       endmethod
    endinterface   
 
@@ -308,9 +306,9 @@ module  mkRbm#(HostType host, RbmIndication rbmInd, SigmoidIndication sigmoidInd
       method Action computeStates(Bit#(32) readPointer, Bit#(32) readOffset,
 				  Bit#(32) readPointer2, Bit#(32) readOffset2,
 				  Bit#(32) writePointer, Bit#(32) writeOffset, Bit#(32) numElts);
-	 dmaStates.start(readPointer, readOffset,
-			 readPointer2, readOffset2,
-			 writePointer,writeOffset, numElts);
+	 states.start(readPointer, readOffset,
+		      readPointer2, readOffset2,
+		      writePointer,writeOffset, numElts);
 	 busyFifo.enq(True);
       endmethod
       method Action updateWeights(Bit#(32) posAssociationsPointer,
@@ -318,22 +316,18 @@ module  mkRbm#(HostType host, RbmIndication rbmInd, SigmoidIndication sigmoidInd
 				  Bit#(32) weightsPointer,
 				  Bit#(32) numElts,
 				  Bit#(32) learningRateOverNumExamples);
-	 dmaUpdateWeights.start(posAssociationsPointer, negAssociationsPointer, 
-				weightsPointer, numElts, 
-				unpack(learningRateOverNumExamples));
+	 updateWeights.start(posAssociationsPointer, negAssociationsPointer, 
+			     weightsPointer, numElts, 
+			     unpack(learningRateOverNumExamples));
 	 busyFifo.enq(True);
       endmethod
       method Action sumOfErrorSquared(Bit#(32) dataPointer, Bit#(32) predPointer, Bit#(32) numElts);
-	 dmaSumOfErrorSquared.start(dataPointer, predPointer, numElts);
+	 sumOfErrorSquared.start(dataPointer, predPointer, numElts);
 	 busyFifo.enq(True);
       endmethod
    endinterface   
-   interface Vector readClients = append(append(dmaUpdateWeights.readClients,
-						dmaSumOfErrorSquared.readClients),
-					 append(dmaSigmoid.readClients,
-						dmaStates.sources));
-   interface Vector writeClients =
-      append(dmaUpdateWeights.writeClients,
-	     cons(dmaSigmoid.dmaClient, 
-		  cons(dmaStates.sinks[0], nil)));
+
+   interface Vector readClient = readEngine.dmaClient;
+   interface Vector writeClient = writeEngine.dmaClient;
+
 endmodule

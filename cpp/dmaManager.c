@@ -48,7 +48,7 @@
 
 #define KERNEL_REFERENCE
 
-static int trace_memory;// = 1;
+static int trace_memory = 1;
 
 #include "dmaSendFd.h"
 

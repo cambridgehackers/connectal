@@ -64,7 +64,8 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
 	     Add#(a__, serverIdxSz, cmdBuffAddrSz),
 	     Min#(2,TLog#(numServers),bpc),
 	     FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(serverIdxSz),MemengineCmd),bpc),
-	     FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(dataWidth),Bool),bpc));
+	     FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(dataWidth),Bool),bpc),
+	     Add#(d__, TLog#(numServers), TAdd#(1, serverIdxSz)));
    
    Integer bufferSizeBeats = bufferSizeBytes/valueOf(dataWidthBytes);
    Vector#(numServers, Reg#(Bit#(outCntSz)))     outs1 <- replicateM(mkReg(0));
@@ -102,11 +103,19 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
        endinterface);
    Vector#(numServers, PipeOut#(Bit#(dataWidth))) read_data_pipes = zipWith(check_out, map(toPipeOut,read_data_buffs), genVector);
    
-   Reg#(Bit#(8))                               respCnt <- mkReg(0);
-   Reg#(Bit#(serverIdxSz))                     loadIdx <- mkReg(0);
+   Reg#(Bit#(8))                    respCnt <- mkReg(0);
+   Reg#(Bit#(TAdd#(1,serverIdxSz))) loadIdx <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
    let cmd_q_depth = fromInteger(valueOf(cmdQDepth));
-
+   
+   function Action incr_loadIdx =
+      (action
+       if(loadIdx+1 >= fromInteger(valueOf(numServers)))
+	  loadIdx <= 0;
+       else
+	  loadIdx <= loadIdx+1;
+       endaction);
+         
    rule store_cmd;
       match {.idx, .cmd} <- toGet(cmds_in_funnel[0]).get;
       outs1[idx] <= outs1[idx]+1;
@@ -117,10 +126,10 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
    rule load_ctxt_a (!load_in_progress);
       if (outs1[loadIdx] > 0) begin
 	 load_in_progress <= True;
-	 cmdBuf.first_req(loadIdx);
+	 cmdBuf.first_req(truncate(loadIdx));
       end
       else begin
-	 loadIdx <= loadIdx+1;
+	 incr_loadIdx;
       end
    endrule
 
@@ -133,19 +142,19 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
 
    rule load_ctxt_c;
       load_in_progress <= False;
-      loadIdx <= loadIdx+1;
+      incr_loadIdx;
       match {.cmd,.cond0,.cond1} <- toGet(loadf_b).get;
       if  (cond0) begin
 	 //$display("load_ctxt_b %h %d", cmd.base, idx);
 	 buffCap[loadIdx].decrement(unpack(extend(cmd.burstLen>>beat_shift)));
-	 loadf_c.enq(tuple2(loadIdx,cmd));
+	 loadf_c.enq(tuple2(truncate(loadIdx),cmd));
 	 if (cond1) begin
 	    outs1[loadIdx] <= outs1[loadIdx]-1;
-	    cmdBuf.deq(loadIdx);
+	    cmdBuf.deq(truncate(loadIdx));
 	 end
 	 else begin
 	    let new_cmd = MemengineCmd{pointer:cmd.pointer, base:cmd.base+extend(cmd.burstLen), burstLen:cmd.burstLen, len:cmd.len-extend(cmd.burstLen)};
-	    cmdBuf.upd_head(loadIdx,new_cmd);
+	    cmdBuf.upd_head(truncate(loadIdx),new_cmd);
 	 end
       end
    endrule

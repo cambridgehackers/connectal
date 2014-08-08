@@ -127,7 +127,6 @@ int main(int argc, const char **argv)
   }
 
   matAllocator = new PortalMatAllocator(dmap, dma);
-
   configureSigmoidTable(rbmdevice, rbmDeviceIndication);
   int rv = 0;
 
@@ -181,7 +180,7 @@ int main(int argc, const char **argv)
     // dumpMat<float>("pm1 * pm2", "%5.1f", pm3);
 
     bool eq = pm3.compare(m3);
-    fprintf(stderr, "eq=%d\n", eq);
+    fprintf(stderr, "XXXXXXXXXXXXXXXXXXXXXX eq=%d\n", eq);
 
     pm3.sigmoid(pm4);
     dumpMat<float>("pm4", "%1.6f", pm4);

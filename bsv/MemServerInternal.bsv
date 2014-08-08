@@ -340,7 +340,7 @@ module mkMemWriteInternal#(Integer iid,
       	  //$display("mkMemWriteInternal::loadClient %d %d", selectReg, cycle_cnt-last_loadClient);
 	  //last_loadClient <= cycle_cnt;
    	  ObjectRequest req <- writeClients[selectReg].writeReq.get();
-   	  if (bad_pointer(req.pointer))
+   	  if (bad_pointer(req.pointer)) 
 	     dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer5, pref: req.pointer });
    	  else begin
 	     tag_gen.tag_request(fromInteger(selectReg), req.tag);

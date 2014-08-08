@@ -70,8 +70,8 @@ module  mkPortalTop#(HostType host) (PortalTop#(PhysAddrWidth,TMul#(32,N),Empty,
    SigmoidRequestWrapper   sigmoidRequestWrapper <- mkSigmoidRequestWrapper(SigmoidRequestPortal,rbm.sigmoidRequest);
    TimerRequestWrapper timerRequestWrapper <- mkTimerRequestWrapper(TimerRequestPortal,rbm.timerRequest);
 
-   Vector#(11,ObjectReadClient#(TMul#(32,N))) readClients = append(rbm.readClients,mm.readClients);
-   Vector#(5,ObjectWriteClient#(TMul#(32,N))) writeClients = append(rbm.writeClients,mm.writeClients);
+   Vector#(3,ObjectReadClient#(TMul#(32,N))) readClients = cons(rbm.readClient,mm.readClients);
+   Vector#(3,ObjectWriteClient#(TMul#(32,N))) writeClients = cons(rbm.writeClient,mm.writeClients);
 
    MemServer#(PhysAddrWidth, TMul#(32,N), NumberOfMasters) dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
    DmaConfigWrapper dmaConfigWrapper <- mkDmaConfigWrapper(DmaConfigPortal,dma.request);

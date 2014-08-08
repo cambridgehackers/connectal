@@ -143,33 +143,19 @@ module mkSigmoidServer#(SigmoidTable#(tsz) sigmoidTable)(Server#(Float,Float))
    endinterface
 endmodule
 
-module  mkSigmoid#(SigmoidTable#(tsz) sigmoidTable, PipeOut#(Float) in)(PipeOut#(Float))
-   provisos (Add#(a__, TAdd#(tsz, 2), 32));
-
-   let server <- mkSigmoidServer(sigmoidTable);
-
-   FIFOF#(Float) rfifo <- mkFIFOF;
-   rule sigmoidOut;
-      let sv <- server.response.get();
-      rfifo.enq(sv);
-   endrule
-   mkConnection(in, server.request);
-   return toPipeOut(rfifo);
-endmodule
-
-interface DmaSigmoidIfc#(numeric type dsz);
+interface SigmoidIfc#(numeric type dsz);
    method Action start(ObjectPointer pointerA, ObjectPointer pointerB, UInt#(ObjectOffsetSize) numElts);
    method ActionValue#(Bool) finish();
    method Action setSigmoidLimits(Float rscale, Float llimit, Float ulimit);
    method Action updateSigmoidTable(Bit#(32) readPointer, Bit#(32) readOffset, Bit#(32) numElts);
    method ActionValue#(Bool) sigmoidTableUpdated();
    method Bit#(32) tableSize();
-   interface Vector#(2, ObjectReadClient#(dsz)) readClients;
-   interface ObjectWriteClient#(dsz) dmaClient;
 endinterface
 
-(* synthesize *)
-module  mkDmaSigmoid(DmaSigmoidIfc#(dsz))
+module  mkSigmoid#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
+		      Vector#(2, PipeOut#(Bit#(TMul#(N,32)))) readPipes,
+		      Vector#(1,Server#(MemengineCmd,Bool)) writeServers,
+		      Vector#(1, PipeIn#(Bit#(TMul#(N,32))))  writePipes ) (SigmoidIfc#(dsz))
    provisos (Bits#(Float, fsz)
 	     , Add#(N,0,n)
 	     , Mul#(fsz,N,dmasz)
@@ -179,11 +165,11 @@ module  mkDmaSigmoid(DmaSigmoidIfc#(dsz))
 	     );
 
    Bool verbose = False;
-
-   DmaVectorSource#(dmasz, Vector#(n,Float)) dmasource <- mkDmaVectorSource();
-   DmaVectorSource#(dmasz, Vector#(n,Float)) dmatablesource <- mkDmaVectorSource();
-   VectorSource#(dmasz, Vector#(n,Float)) source = dmasource.vector;
-   VectorSource#(dmasz, Vector#(n,Float)) tableSource = dmatablesource.vector;
+   
+   VectorSource#(dmasz, Vector#(n,Float)) dmasource <- mkMemreadVectorSource(readServers[0], readPipes[0]);
+   VectorSource#(dmasz, Vector#(n,Float)) dmatablesource <- mkMemreadVectorSource(readServers[1], readPipes[0]);
+   VectorSource#(dmasz, Vector#(n,Float)) source = dmasource;
+   VectorSource#(dmasz, Vector#(n,Float)) tableSource = dmatablesource;
 
    Vector#(n, SigmoidTable#(6)) sigmoidTables <- replicateM(mkSigmoidTable);
    Vector#(n, Server#(Float,Float)) sigmoidServers;
@@ -232,7 +218,7 @@ module  mkDmaSigmoid(DmaSigmoidIfc#(dsz))
       dfifo.enq(vs);
    endrule
 
-   DmaVectorSink#(TMul#(N,32),Vector#(N,Float)) sinkC <- mkDmaVectorSink(toPipeOut(dfifo));
+   VectorSink#(TMul#(N,32),Vector#(N,Float)) sinkC <- mkMemwriteVectorSink(writeServers[0], writePipes[0]);
 
    rule sourceFinishRule;
       let b <- source.finish();
@@ -241,11 +227,11 @@ module  mkDmaSigmoid(DmaSigmoidIfc#(dsz))
 
    method Action start(ObjectPointer pointerA, ObjectPointer pointerB, UInt#(ObjectOffsetSize) numvalues);
       source.start(pointerA, 0, pack(numvalues));
-      sinkC.vector.start(pointerB, 0, pack(numvalues));
+      sinkC.start(pointerB, 0, pack(numvalues));
       if (verbose) $display("sigmoid.start numvalues=%d", numvalues);
    endmethod
    method ActionValue#(Bool) finish();
-      let b <- sinkC.vector.finish();
+      let b <- sinkC.finish();
       return b;
    endmethod
    method Action setSigmoidLimits(Float rscale, Float llimit, Float ulimit);
@@ -267,8 +253,4 @@ module  mkDmaSigmoid(DmaSigmoidIfc#(dsz))
    method Bit#(32) tableSize();
       return sigmoidTables[0].tableSize();
    endmethod
-
-   interface ObjectReadClient readClients = cons(dmasource.dmaClient, cons(dmatablesource.dmaClient, nil));
-   interface ObjectWriteClient dmaClient = sinkC.dmaClient;
-
 endmodule
