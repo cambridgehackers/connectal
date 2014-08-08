@@ -175,9 +175,9 @@ int main(int argc, const char **argv)
     pm3.multf(pm1, pm2, mmdeviceIndication);
     pm3.multf(pm1, pm2, mmdeviceIndication);
 
-    // dumpMat<float>("pm1", "%5.1f", pm1);
-    // dumpMat<float>("pm2", "%5.1f", pm2);
-    // dumpMat<float>("pm1 * pm2", "%5.1f", pm3);
+    dumpMat<float>("pm1", "%5.1f", pm1);
+    dumpMat<float>("pm2", "%5.1f", pm2);
+    dumpMat<float>("pm1 * pm2", "%5.1f", pm3);
 
     bool eq = pm3.compare(m3);
     fprintf(stderr, "XXXXXXXXXXXXXXXXXXXXXX eq=%d\n", eq);

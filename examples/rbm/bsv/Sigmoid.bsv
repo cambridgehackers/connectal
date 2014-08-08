@@ -78,8 +78,7 @@ module mkSigmoidServer#(SigmoidTable#(tsz) sigmoidTable)(Server#(Float,Float))
    rule lookupEntry;
       Float angle = 0;
       if (verbose) begin
-	 angle = angleFifo2.first;
-	 angleFifo2.deq();
+	 angle <- toGet(angleFifo2).get;
       end
       let response <- multiplier.response.get();
       Float scaled_angle = tpl_1(response);
@@ -100,16 +99,14 @@ module mkSigmoidServer#(SigmoidTable#(tsz) sigmoidTable)(Server#(Float,Float))
    FIFOF#(Vector#(3, Float)) vFifo <- mkFIFOF();
    rule computeDelta;
       let vs <- sigmoidTable.ports[0].response.get();
-      let angle = angleFifo.first();
-      angleFifo.deq();
+      let angle <- toGet(angleFifo).get;
       if (verbose) $display("computeDelta angle=%h vs[0]=%h", pack(angle), pack(vs[0]));
       adder.request.put(tuple2(angle, vs[0]));
       vFifo.enq(vs);
    endrule
 
    rule interpolate;
-      let vs = vFifo.first();
-      vFifo.deq();
+      let vs <- toGet(vFifo).get;
       let result <- adder.response.get();
       let delta = tpl_1(result);
       Exception e = tpl_2(result);
@@ -144,32 +141,28 @@ module mkSigmoidServer#(SigmoidTable#(tsz) sigmoidTable)(Server#(Float,Float))
 endmodule
 
 interface SigmoidIfc#(numeric type dsz);
-   method Action start(ObjectPointer pointerA, ObjectPointer pointerB, UInt#(ObjectOffsetSize) numElts);
-   method ActionValue#(Bool) finish();
-   method Action setSigmoidLimits(Float rscale, Float llimit, Float ulimit);
-   method Action updateSigmoidTable(Bit#(32) readPointer, Bit#(32) readOffset, Bit#(32) numElts);
-   method ActionValue#(Bool) sigmoidTableUpdated();
-   method Bit#(32) tableSize();
+   interface SigmoidRequest sigmoidRequest;
 endinterface
 
-module  mkSigmoid#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
-		      Vector#(2, PipeOut#(Bit#(TMul#(N,32)))) readPipes,
-		      Vector#(1,Server#(MemengineCmd,Bool)) writeServers,
-		      Vector#(1, PipeIn#(Bit#(TMul#(N,32))))  writePipes ) (SigmoidIfc#(dsz))
+module  mkSigmoid#(SigmoidIndication sigmoidInd,
+		   Vector#(2,Server#(MemengineCmd,Bool)) readServers,
+		   Vector#(2, PipeOut#(Bit#(TMul#(N,32)))) readPipes,
+		   Vector#(1,Server#(MemengineCmd,Bool)) writeServers,
+		   Vector#(1, PipeIn#(Bit#(TMul#(N,32))))  writePipes ) (SigmoidIfc#(dsz))
    provisos (Bits#(Float, fsz)
 	     , Add#(N,0,n)
 	     , Mul#(fsz,N,dmasz)
 	     , Bits#(Vector#(N,Float), dsz)
 	     , Mul#(dbytes, 8, dsz)
 	     , Div#(dsz, 8, dbytes)
+	     , Log#(n,nshift)
 	     );
-
-   Bool verbose = False;
    
-   VectorSource#(dmasz, Vector#(n,Float)) dmasource <- mkMemreadVectorSource(readServers[0], readPipes[0]);
-   VectorSource#(dmasz, Vector#(n,Float)) dmatablesource <- mkMemreadVectorSource(readServers[1], readPipes[0]);
-   VectorSource#(dmasz, Vector#(n,Float)) source = dmasource;
-   VectorSource#(dmasz, Vector#(n,Float)) tableSource = dmatablesource;
+   let nshift = valueOf(nshift);
+   
+   Bool verbose = True;
+   VectorSource#(dmasz, Vector#(n,Float)) source <- mkMemreadVectorSource(readServers[0], readPipes[0]);
+   VectorSource#(dmasz, Vector#(n,Float)) tableSource <- mkMemreadVectorSource(readServers[1], readPipes[1]);
 
    Vector#(n, SigmoidTable#(6)) sigmoidTables <- replicateM(mkSigmoidTable);
    Vector#(n, Server#(Float,Float)) sigmoidServers;
@@ -183,11 +176,9 @@ module  mkSigmoid#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
 
    PipeOut#(Vector#(4, Float)) sigmoidSourceFunnel <- mkUnfunnel(tableSource.pipe);
    rule updateSigmoidTableRule if (updatingSigmoidTable);
-      let vs = sigmoidSourceFunnel.first;
+      let vs <- toGet(sigmoidSourceFunnel).get;
       if (verbose) $display("updateSigmaTableRule vs[0]=%h entryNumber=%d", vs[0], entryNumber);
-      sigmoidSourceFunnel.deq();
       Vector#(3,Float) vs3 = take(vs);
-
       for (Integer i = 0; i < valueOf(n); i = i + 1) begin
 	 sigmoidTables[i].updateSigmoidTable(entryNumber, vs3);
       end
@@ -196,8 +187,7 @@ module  mkSigmoid#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
 
    Reg#(Bit#(32)) countInput <- mkReg(0);
    rule consumeInput if (!updatingSigmoidTable);
-      let vs = source.pipe.first;
-      source.pipe.deq();
+      let vs <- toGet(source.pipe).get;
       for (Integer i = 0; i < valueOf(n); i = i + 1) begin
          sigmoidServers[i].request.put(vs[i]);
       end
@@ -222,35 +212,37 @@ module  mkSigmoid#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
 
    rule sourceFinishRule;
       let b <- source.finish();
-      if (verbose) $display("sigmoid.source.finish()");
    endrule
-
-   method Action start(ObjectPointer pointerA, ObjectPointer pointerB, UInt#(ObjectOffsetSize) numvalues);
-      source.start(pointerA, 0, pack(numvalues));
-      sinkC.start(pointerB, 0, pack(numvalues));
-      if (verbose) $display("sigmoid.start numvalues=%d", numvalues);
-   endmethod
-   method ActionValue#(Bool) finish();
+   rule sigmoidDone;
       let b <- sinkC.finish();
-      return b;
-   endmethod
-   method Action setSigmoidLimits(Float rscale, Float llimit, Float ulimit);
-      for (Integer i = 0; i < valueOf(n); i = i + 1) begin
-	 sigmoidTables[i].setSigmoidLimits(rscale, llimit, ulimit);
-      end
-   endmethod
-   method Action updateSigmoidTable(Bit#(32) readPointer, Bit#(32) readOffset, Bit#(32) numvalues);
-      entryNumber <= 0;
-      updatingSigmoidTable <= True;
-      tableSource.start(readPointer, extend(readOffset), 4*extend(numvalues));
-   endmethod
-   method ActionValue#(Bool) sigmoidTableUpdated();
-      if (verbose) $display("tableSource.finish()");
+      sigmoidInd.sigmoidDone();
+   endrule
+   rule sigmoidTableUpdateDone;
       let b <- tableSource.finish();
       updatingSigmoidTable <= False;
-      return b;
-   endmethod
-   method Bit#(32) tableSize();
-      return sigmoidTables[0].tableSize();
-   endmethod
+      sigmoidInd.sigmoidTableUpdated(0);
+   endrule
+   
+   interface SigmoidRequest sigmoidRequest;
+      method Action sigmoid(Bit#(32) readPointer, Bit#(32) readOffset,
+   			    Bit#(32) writePointer, Bit#(32) writeOffset, Bit#(32) numvalues);
+	 source.start(readPointer, 0, unpack(extend(numvalues))>>nshift);
+	 sinkC.start(writePointer, 0, unpack(extend(numvalues))>>nshift);
+	 if (verbose) $display("sigmoid.start numvalues=%d", numvalues);
+      endmethod
+      method Action setSigmoidLimits(Bit#(32) rscale, Bit#(32) llimit, Bit#(32) ulimit);
+	 for (Integer i = 0; i < valueOf(n); i = i + 1) begin
+	    sigmoidTables[i].setSigmoidLimits(unpack(rscale), unpack(llimit), unpack(ulimit));
+	 end
+      endmethod
+      method Action updateSigmoidTable(Bit#(32) readPointer, Bit#(32) readOffset, Bit#(32) numvalues);
+	 entryNumber <= 0;
+	 updatingSigmoidTable <= True;
+	 tableSource.start(readPointer, extend(readOffset), (4*extend(numvalues))>>nshift);
+	 if (verbose) $display("sigmoid.updateSigmoidTable %d %d %d", readPointer, readOffset, numvalues);
+      endmethod
+      method Action sigmoidTableSize();
+	 sigmoidInd.sigmoidTableSize(sigmoidTables[0].tableSize());
+      endmethod
+   endinterface
 endmodule

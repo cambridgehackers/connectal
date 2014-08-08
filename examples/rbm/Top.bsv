@@ -55,7 +55,7 @@ module  mkPortalTop#(HostType host) (PortalTop#(PhysAddrWidth,TMul#(32,N),Empty,
    SigmoidIndicationProxy   sigmoidIndicationProxy <- mkSigmoidIndicationProxy(SigmoidIndicationPortal);
    TimerIndicationProxy timerIndicationProxy <- mkTimerIndicationProxy(TimerIndicationPortal);
 
-   Rbm#(N) rbm <- mkRbm(host,rbmIndicationProxy.ifc,sigmoidIndicationProxy.ifc, timerIndicationProxy.ifc);
+   Rbm#(N) rbm <- mkRbm(host,rbmIndicationProxy.ifc,sigmoidIndicationProxy.ifc);
    RbmRequestWrapper rbmRequestWrapper <- mkRbmRequestWrapper(RbmRequestPortal,rbm.rbmRequest);
 `ifdef MATRIX_TN
    MmTN#(N) mm <- mkMmTN(mmIndicationProxy.ifc, timerIndicationProxy.ifc, mmDebugIndicationProxy.ifc, host);
@@ -68,7 +68,7 @@ module  mkPortalTop#(HostType host) (PortalTop#(PhysAddrWidth,TMul#(32,N),Empty,
 `endif
    MmDebugRequestWrapper mmDebugRequestWrapper <- mkMmDebugRequestWrapper(MmDebugRequestPortal,mm.mmDebug);
    SigmoidRequestWrapper   sigmoidRequestWrapper <- mkSigmoidRequestWrapper(SigmoidRequestPortal,rbm.sigmoidRequest);
-   TimerRequestWrapper timerRequestWrapper <- mkTimerRequestWrapper(TimerRequestPortal,rbm.timerRequest);
+   TimerRequestWrapper timerRequestWrapper <- mkTimerRequestWrapper(TimerRequestPortal,mm.timerRequest);
 
    Vector#(3,ObjectReadClient#(TMul#(32,N))) readClients = cons(rbm.readClient,mm.readClients);
    Vector#(3,ObjectWriteClient#(TMul#(32,N))) writeClients = cons(rbm.writeClient,mm.writeClients);
