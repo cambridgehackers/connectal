@@ -1,5 +1,4 @@
 
-BSVDIR=../../bsv
 S2H = StrstrRequest
 H2S = StrstrIndication
 BSVFILES = Strstr.bsv Top.bsv

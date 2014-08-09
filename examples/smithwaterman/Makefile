@@ -1,5 +1,4 @@
 
-BSVDIR=../../bsv
 S2H = SmithwatermanRequest
 H2S = SmithwatermanIndication
 BSVFILES = Smithwaterman.bsv Top.bsv ../../lib/deprecated/DmaUtils.bsv

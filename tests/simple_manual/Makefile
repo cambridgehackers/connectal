@@ -1,5 +1,4 @@
 
-BSVDIR=../../bsv
 S2H = SimpleRequest
 H2S = SimpleIndication
 BSVFILES = Simple.bsv Top.bsv

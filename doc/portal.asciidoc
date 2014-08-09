@@ -255,7 +255,6 @@ Here is the Makefile for the `simple` example:
 
 [source,makefile]
 ---------------------------------
-    BSVDIR=../../bsv
     S2H = SimpleRequest
     H2S = SimpleIndication
     BSVFILES = Simple.bsv Top.bsv
@@ -265,7 +264,7 @@ Here is the Makefile for the `simple` example:
 ---------------------------------
 
 
-Designs using `xbsv` may also include `Makefile.xbsv`:
+Designs outside the xbsv directory using `xbsv` may also include `Makefile.xbsv`:
 
 [source,makefile]
 ---------------------------------

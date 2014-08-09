@@ -1,5 +1,4 @@
 
-BSVDIR=../../bsv
 S2H = NandSimRequest
 H2S = NandSimIndication
 BSVFILES = NandSim.bsv Top.bsv

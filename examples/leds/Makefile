@@ -1,5 +1,4 @@
 
-BSVDIR=../../bsv
 S2H = LedControllerRequest
 H2S = 
 BSVFILES = LedController.bsv Top.bsv

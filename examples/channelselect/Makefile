@@ -1,4 +1,4 @@
-BSVDIR=../../bsv
+
 S2H = ChannelSelectRequest
 H2S = ChannelSelectIndication
 BSVFILES = DDS.bsv ChannelSelect.bsv Top.bsv
@@ -8,7 +8,6 @@ NUMBER_OF_MASTERS =0
 
 gentarget:: sine.bin
 
-
 sine.bin: sinetable
 	./sinetable >sine.bin
 
@@ -16,4 +15,3 @@ sinetable: sinetable.c
 	cc -o sinetable sinetable.c -lm
 
 include ../../Makefile.xbsv
-

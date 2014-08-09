@@ -1,6 +1,5 @@
 
 XBSVDIR=../..
-BSVDIR=../../bsv
 S2H = AuroraRequest
 H2S = AuroraIndication
 BSVFILES = Aurora.bsv Top.bsv
