@@ -46,9 +46,9 @@ run.%:
 %.gdb:
 	make XBSV_DEBUG=1 --no-print-directory $*
 
-ifeq ($(origin IPDIR),undefined)
+#ifeq ($(origin IPDIR),undefined)
 IPDIR=$(XBSVDIR)/out
-endif
+#endif
 ifndef NUMBER_OF_MASTERS
 NUMBER_OF_MASTERS=1
 endif
@@ -75,7 +75,7 @@ NEEDSPCIE_v2000t=1
 
 ifeq ($(NEEDSPCIE_$(BOARD)),1)
     FPGAMAKE_XBSVFLAGS += -P mkPcieEndpointX7 -P mkPcieHost
-    XBSVFLAGS += --xci=$(shell cd $(IPDIR); /bin/pwd)/$(BOARD)/pcie_7x_0/pcie_7x_0.xci
+    XBSVFLAGS += --xci=$(IPDIR)/$(BOARD)/pcie_7x_0/pcie_7x_0.xci
     XBSVFLAGS += --bscflags="+RTS -K46777216 -RTS"
 endif
 
