@@ -83,18 +83,6 @@ set xbsv_dut { %(Dut)s }
 %(tcldefines)s
 '''
 
-tclfileTemplate='''
-source board.tcl
-source $xbsvdir/scripts/portal_setup.tcl
-%(read_verilog)s
-%(read_xci)s
-%(tclfileConstraints)s
-source $xbsvdir/scripts/portal_synth.tcl
-%(sourceTcl)s
-%(rewire_clock)s
-source $xbsvdir/scripts/portal_opt.tcl
-'''
-
 tclzynqrewireclock = '''
 foreach {pat} {CLK_GATE_hdmi_clock_if CLK_*deleteme_unused_clock* CLK_GATE_*deleteme_unused_clock* RST_N_*deleteme_unused_reset*} {
     foreach {net} [get_nets -quiet $pat] {
@@ -102,12 +90,6 @@ foreach {pat} {CLK_GATE_hdmi_clock_if CLK_*deleteme_unused_clock* CLK_GATE_*dele
 	disconnect_net -net $net -objects [get_pins -quiet -of_objects $net]
     }
 }
-'''
-
-bitsmakeRuleTemplate='''
-hw/mkTop.bit: $(vfile) prepare_bin_target
-	vivado -mode batch -source vivado-impl.tcl $(VIVADOFLAGS)
-	$(Q)cp -f hw/*.rpt bin
 '''
 
 fpgamakeRuleTemplate='''
@@ -268,7 +250,6 @@ if __name__=='__main__':
     options.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/%s.xdc' % boardname))
 
     tclboardname = os.path.join(project_dir, 'board.tcl')
-    tclimplname = os.path.join(project_dir, 'vivado-impl.tcl')
     tclsynthname = os.path.join(project_dir, '%s-synth.tcl' % dutname.lower())
     makename = os.path.join(project_dir, 'Makefile')
 
@@ -302,8 +283,6 @@ if __name__=='__main__':
 	    f.write('APP_STL                 := %s\n' % options.stl)
 	    f.close()
 
-    if noisyFlag:
-        print 'Writing tcl impl file', tclimplname
     tclsubsts = {'dut': dutname.lower(),
                  'Dut': dutname,
                  'rewire_clock': rewireclockstring,
@@ -324,9 +303,6 @@ if __name__=='__main__':
                  'tcldefines': '\n'.join(['set %s {%s}' % (var,val) for (var,val) in map(util.splitBinding, bsvdefines)]),
                  'ipdir': os.path.abspath(options.ipdir) if options.ipdir else xbsvdir
                  }
-    tcl = util.createDirAndOpen(tclimplname, 'w')
-    tcl.write(tclfileTemplate % tclsubsts)
-    tcl.close()
     tcl = util.createDirAndOpen(tclboardname, 'w')
     tcl.write(tclboardTemplate % tclsubsts)
     tcl.close()
@@ -351,15 +327,12 @@ if __name__=='__main__':
         print 'Writing Makefile', makename
     make = util.createDirAndOpen(makename, 'w')
 
-    if options.partition_module or ('USE_FPGAMAKE' in os.environ and os.environ['USE_FPGAMAKE']):
-        bitsmake=fpgamakeRuleTemplate % {'partitions': ' '.join(['-s %s' % p for p in options.partition_module]),
+    bitsmake=fpgamakeRuleTemplate % {'partitions': ' '.join(['-s %s' % p for p in options.partition_module]),
 					 'floorplan': os.path.abspath(options.floorplan) if options.floorplan else '',
 					 'xdc': ' '.join(['--xdc=%s' % os.path.abspath(xdc) for xdc in options.constraint]),
 					 'xci': ' '.join(['--xci=%s' % os.path.abspath(xci) for xci in options.xci]),
 					 'cachedir': '--cachedir=%s' % os.path.abspath(options.cachedir) if options.cachedir else ''
 					 }
-    else:
-        bitsmake=bitsmakeRuleTemplate
 
     make.write(makefileTemplate % {'xbsvdir': xbsvdir,
                                    'bsvpath': ':'.join(list(set([os.path.dirname(os.path.abspath(bsvfile)) for bsvfile in options.bsvfile]

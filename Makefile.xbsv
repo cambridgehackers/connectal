@@ -79,8 +79,9 @@ ifeq ($(NEEDSPCIE_$(BOARD)),1)
     XBSVFLAGS += --bscflags="+RTS -K46777216 -RTS"
 endif
 
-ifeq ($(USE_FPGAMAKE),1)
-XBSVFLAGS += $(FPGAMAKE_XBSVFLAGS) --cache=$(XBSVDIR)/../fpgamake-cache/$(shell basename `/bin/pwd`)/$(BOARD)
+XBSVFLAGS += $(FPGAMAKE_XBSVFLAGS)
+ifeq ($(USE_BUILDCACHE),1)
+XBSVFLAGS += --cache=$(XBSVDIR)/../fpgamake-cache/$(shell basename `/bin/pwd`)/$(BOARD)
 endif
 
 XBSVFLAGS += $(EXTRA_XBSVFLAGS)
