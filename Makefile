@@ -308,11 +308,11 @@ zynqdrivers-install:
 
 #################################################################################################
 
-xilinx/pcie_7x_gen1x8: scripts/generate-pcie-gen1x8.tcl
-	rm -fr project_pcie_gen1x8
-	vivado -mode batch -source scripts/generate-pcie-gen1x8.tcl
-	mv ./project_pcie_gen1x8/project_pcie_gen1x8.srcs/sources_1/ip/pcie_7x_0 xilinx/pcie_7x_gen1x8
-	rm -fr ./project_pcie_gen1x8
+#xilinx/pcie_7x_gen1x8: scripts/generate-pcie-gen1x8.tcl
+#	rm -fr project_pcie_gen1x8
+#	vivado -mode batch -source scripts/generate-pcie-gen1x8.tcl
+#	mv ./project_pcie_gen1x8/project_pcie_gen1x8.srcs/sources_1/ip/pcie_7x_0 xilinx/pcie_7x_gen1x8
+#	rm -fr ./project_pcie_gen1x8
 
 cppruns = $(addsuffix .cpp, $(cppalllist))
 
