@@ -239,15 +239,15 @@ module mkConfigMemServerRW#(DmaIndication dmaIndication,
 	 else 
 	    writer.request.getMemoryTraffic(rc);
       endmethod
-      method Action sglist(Bit#(32) pref, Bit#(64) addr, Bit#(32) len);
-	 if (bad_pointer(pref))
-	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer1, pref: pref });
+      method Action sglist(Bit#(32) pointer, Bit#(32) pointerIndex, Bit#(64) addr,  Bit#(32) len);
+	 if (bad_pointer(pointer))
+	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer1, pref: pointer });
 `ifdef BSIM
 `ifndef PCIE
-	 let va <- pareff(pref, len);
+	 let va <- pareff(pointer, len);
 `endif
 `endif
-	 sgl.sglist(pref, truncate(addr), len);
+	 sgl.sglist(pointer, truncate(pointerIndex), truncate(addr), len);
       endmethod
       method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(64) barr4, Bit#(64) barr0);
 	 sgl.region(pointer,truncate(barr8),truncate(barr4),truncate(barr0));
@@ -332,15 +332,15 @@ module mkConfigMemServerR#(DmaIndication dmaIndication,
 	 if (rc == Read)
 	    trafficFSM.start;
       endmethod
-      method Action sglist(Bit#(32) pref, Bit#(64) addr, Bit#(32) len);
-	 if (bad_pointer(pref))
-	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer2, pref: pref });
+      method Action sglist(Bit#(32) pointer, Bit#(32) pointerIndex, Bit#(64) addr,  Bit#(32) len);
+	 if (bad_pointer(pointer))
+	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer2, pref: pointer });
 `ifdef BSIM
 `ifndef PCIE
-	 let va <- pareff(pref, len);
+	 let va <- pareff(pointer, len);
 `endif
 `endif
-	 sgl.sglist(pref, truncate(addr), len);
+	 sgl.sglist(pointer, truncate(pointerIndex), truncate(addr), len);
       endmethod
       method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(64) barr4, Bit#(64) barr0);
 	 sgl.region(pointer,truncate(barr8),truncate(barr4),truncate(barr0));
@@ -424,15 +424,15 @@ module mkConfigMemServerW#(DmaIndication dmaIndication,
 	 if (rc == Write) 
 	    trafficFSM.start;
       endmethod
-      method Action sglist(Bit#(32) pref, Bit#(64) addr, Bit#(32) len);
-	 if (bad_pointer(pref))
-	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer3, pref: pref });
+      method Action sglist(Bit#(32) pointer, Bit#(32) pointerIndex, Bit#(64) addr,  Bit#(32) len);
+	 if (bad_pointer(pointer))
+	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer3, pref: pointer });
 `ifdef BSIM
 `ifndef PCIE
-	 let va <- pareff(pref, len);
+	 let va <- pareff(pointer, len);
 `endif
 `endif
-	 sgl.sglist(pref, truncate(addr), len);
+	 sgl.sglist(pointer, truncate(pointerIndex), truncate(addr), len);
       endmethod
       method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(64) barr4, Bit#(64) barr0);
 	 sgl.region(pointer,truncate(barr8),truncate(barr4),truncate(barr0));

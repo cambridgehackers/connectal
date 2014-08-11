@@ -18,7 +18,7 @@ enum { CHAN_NUM_DmaConfigProxy_sglist,CHAN_NUM_DmaConfigProxy_region,CHAN_NUM_Dm
 
 int DmaConfigProxy_handleMessage(struct PortalInternal *p, unsigned int channel);
 
-void DmaConfigProxy_sglist (struct PortalInternal *p , const uint32_t pointer, const uint64_t addr, const uint32_t len );
+void DmaConfigProxy_sglist (struct PortalInternal *p , const uint32_t pointer, const uint32_t pointerIndex, const uint64_t addr, const uint32_t len );
 
 void DmaConfigProxy_region (struct PortalInternal *p , const uint32_t pointer, const uint64_t barr8, const uint64_t barr4, const uint64_t barr0 );
 

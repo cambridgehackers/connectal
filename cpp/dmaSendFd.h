@@ -34,11 +34,11 @@ static int trace_memory = 1;
 
 #if 1 //def NO_CPP_PORTAL_CODE
 #include "GeneratedTypes.h" // generated in project directory
-#define DMAsglist(P, A, B, C) DmaConfigProxy_sglist((P), (A), (B), (C));
+#define DMAsglist(P, A, B, C, D) DmaConfigProxy_sglist((P), (A), (B), (C), (D));
 #define DMAregion(P, PTR, B8, B4, B0) DmaConfigProxy_region((P), (PTR), (B8), (B4), (B0))
 #else
 #include "DmaConfigProxy.h" // generated in project directory
-#define DMAsglist(P, A, B, C) ((DmaConfigProxy *)((P)->parent))->sglist((A), (B), (C))
+#define DMAsglist(P, A, B, C, D) ((DmaConfigProxy *)((P)->parent))->sglist((A), (B), (C), (D))
 #define DMAregion(P, PTR, B8, B4, B0) ((DmaConfigProxy *)((P)->parent))->region((PTR), (B8), (B4), (B0))
 #endif
 
@@ -121,7 +121,7 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
       PORTAL_PRINTF("DmaManager:unsupported sglist size %lx\n", len);
     if (trace_memory)
       PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d dma_addr=%08lx, len=%08lx)\n", id, i, (long)addr, len);
-    DMAsglist(device, (id << 8) + i, addr, len);
+    DMAsglist(device, id, i, addr, len);
   } // balance } }
 #ifdef __KERNEL__
   fput(fmem);
@@ -132,7 +132,7 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
   // HW interprets zeros as end of sglist
   if (trace_memory)
     PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d end of list)\n", id, i);
-  DMAsglist(device, (id << 8) + i, 0, 0); // end list
+  DMAsglist(device, id, i, 0, 0); // end list
 
   for(i = 0; i < 3; i++){
     idxOffset = entryCount - border;

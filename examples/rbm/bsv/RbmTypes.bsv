@@ -114,7 +114,7 @@ interface RbmIndication;
 endinterface
 
 interface RbmRequest;
-   method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
+   //method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
    method Action paref(Bit#(32) addr, Bit#(32) len);
    method Action computeStates(Bit#(32) readPointer, Bit#(32) readOffset, 
 			       Bit#(32) readPointer2, Bit#(32) readOffset2,

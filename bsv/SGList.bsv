@@ -45,7 +45,7 @@ typedef struct {
 } ReqTup deriving (Eq,Bits,FShow);
 
 interface SGListMMU#(numeric type addrWidth);
-   method Action sglist(Bit#(32) pointer, Bit#(40) paddr, Bit#(32) len);
+   method Action sglist(Bit#(32) pointer, Bit#(8) pointerIndex, Bit#(40) addr,  Bit#(32) len);
    method Action region(Bit#(32) ptr, Bit#(36) barr8, Bit#(36) barr4, Bit#(36) barr0);
    interface Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addr;
 endinterface
@@ -251,9 +251,9 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
       configRespFifo.enq(truncate(ptr));
    endmethod
 
-   method Action sglist(Bit#(32) ptr, Bit#(40) paddr, Bit#(32) len);
+   method Action sglist(Bit#(32) pointer, Bit#(8) pointerIndex, Bit#(40) addr,  Bit#(32) len);
 	 portsel(pages, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
-             address:{truncate(ptr)}, datain:truncate(paddr)});
+             address:{truncate(pointer),pointerIndex}, datain:truncate(addr)});
    endmethod
    interface addr = addrServers;
 

@@ -38,7 +38,7 @@ interface CoreRequest;
     method Action load(Bit#(64) addr, Bit#(32) length);
     method Action store(Bit#(64) addr, Bit#(128) value);
 
-    method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
+    //method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
     method Action paref(Bit#(32) addr, Bit#(32) len);
 endinterface
 

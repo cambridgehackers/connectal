@@ -42,13 +42,14 @@ int DmaConfigProxy_handleMessage(PortalInternal *p, unsigned int channel)
     return 0;
 }
 
-void DmaConfigProxy_sglist (PortalInternal *p , const uint32_t pointer, const uint64_t addr, const uint32_t len )
+void DmaConfigProxy_sglist (PortalInternal *p , const uint32_t pointer, const uint32_t pointerIndex, const uint64_t addr, const uint32_t len )
 {
     volatile unsigned int* temp_working_addr = &(p->map_base[PORTAL_REQ_FIFO(CHAN_NUM_DmaConfigProxy_sglist)]);
     int i = 50;
     while (!READL(p, temp_working_addr + 1) && i-- > 0)
         ; /* busy wait a bit on 'fifo not full' */
         WRITEL(p, temp_working_addr, pointer);
+        WRITEL(p, temp_working_addr, pointerIndex);
         WRITEL(p, temp_working_addr, (addr>>32));
         WRITEL(p, temp_working_addr, addr);
         WRITEL(p, temp_working_addr, len);
