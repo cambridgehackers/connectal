@@ -85,7 +85,7 @@ public:
     const char *data = mapping + dataOffset + elementSize*i;
     int rows = sizes[1];
     int cols = sizes[2];
-    fprintf(stderr, "image %d rows=%d cols=%d offset=%d\n", i, rows, cols, dataOffset + elementSize*i);
+    //fprintf(stderr, "image %d rows=%d cols=%d offset=%d\n", i, rows, cols, dataOffset + elementSize*i);
     cv::Mat m(rows, cols, CV_8U);
     for (int i = 0; i < rows; i++) {
       for (int j = 0; j < cols; j++) {

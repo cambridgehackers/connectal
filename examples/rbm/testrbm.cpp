@@ -130,7 +130,7 @@ int main(int argc, const char **argv)
   configureSigmoidTable(rbmdevice, rbmDeviceIndication);
   int rv = 0;
 
-  if (1) {
+  if (0) {
     cv::Mat m1 = (cv::Mat_<float>(4,8) <<
 		  11,12,13,14,15,16,17,18,
 		  21,22,23,24,25,26,27,28,
@@ -169,7 +169,6 @@ int main(int argc, const char **argv)
     
     RbmMat pm4(m4);
     RbmMat pm3;
-    pm3.create(m1.rows, m2.cols, CV_32F);
     cv::Mat  m3 = m1 * m2;
 
     pm3.multf(pm1, pm2, mmdeviceIndication);

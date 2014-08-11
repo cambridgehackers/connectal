@@ -654,6 +654,10 @@ module  mkMmNT#(MmIndication ind, TimerIndication timerInd, MmDebugIndication mm
 			Bit#(32) r1_x_c1, Bit#(32) c1_x_j,
 			Bit#(32) r2_x_c2, Bit#(32) c2_x_k,
 			Bit#(32) r1_x_r2, Bit#(32) r2_x_j);
+	 check_dimension(r1);
+	 check_dimension(c1);
+	 check_dimension(r2);
+	 check_dimension(c2);
 	 dmaMMF.start(h1, unpack(truncate(r1)), unpack(truncate(c1)),
 		      h2, unpack(truncate(r2)), unpack(truncate(c2)),
 		      h3,

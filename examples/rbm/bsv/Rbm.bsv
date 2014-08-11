@@ -53,22 +53,53 @@ interface StatesPipe#(numeric type n, numeric type dmasz);
 		       Bit#(32) writePointer, Bit#(32) writeOffset, Bit#(32) numElts);
    method ActionValue#(Bool) finish();
 endinterface
-
+   
+   
+module  mkComputeStatesPipe#(PipeOut#(Vector#(n, Float)) pipe_in, 
+			     PipeOut#(Vector#(n, Float)) randomPipe,
+			     PipeIn#(Vector#(n,Float))   writePipe)(PipeOut#(Vector#(n, Float)))
+   provisos(Add#(a__, 1, n));
+   function Float greater(Float a, Float b);
+      if (compareFP(a, b) == GT)
+	 return 1.0;
+      else
+	 return 0.0;
+   endfunction
+   function Vector#(n, Float) vgreater(Vector#(n, Float) x, Vector#(n, Float) y);
+      return map(uncurry(greater), zip(x, y));
+   endfunction
+   rule foo;
+      let vs <- toGet(pipe_in).get;
+      let rs <- toGet(randomPipe).get;
+      let gs = vgreater(vs, rs); 
+      //$display($format(fshow("vs=")+fshow(pack(vs)) + fshow(" rs=") + fshow(pack(rs)) + fshow(" states=") + fshow(gs)));
+      writePipe.enq(gs);
+   endrule
+endmodule
+   
+   
+   
 module  mkStatesPipe#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
 		      Vector#(2, PipeOut#(Bit#(TMul#(N,32)))) readPipes,
 		      Vector#(1,Server#(MemengineCmd,Bool)) writeServers,
 		      Vector#(1, PipeIn#(Bit#(TMul#(N,32))))  writePipes)(StatesPipe#(N, DmaSz))
-   provisos (Bits#(Vector#(N, Float), DmaSz));
+   provisos ( Bits#(Vector#(N, Float), DmaSz)
+	     ,Log#(N,nshift));
+   
+   let verbose = True;
+   let nshift = valueOf(nshift);
+   
    Vector#(2, VectorSource#(DmaSz, Vector#(N,Float))) statesources <- mapM(uncurry(mkMemreadVectorSource), zip(readServers, readPipes));
-   PipeOut#(Vector#(N, Float)) dmaStatesPipe <- mkComputeStatesPipe2(statesources[0].pipe, statesources[1].pipe);
    VectorSink#(DmaSz, Vector#(N, Float)) dmaStatesSink <- mkMemwriteVectorSink(writeServers[0], writePipes[0]);
+   PipeOut#(Vector#(N, Float)) dmaStatesPipe <- mkComputeStatesPipe(statesources[0].pipe, statesources[1].pipe, dmaStatesSink.pipe);
 
    method Action start(Bit#(32) readPointer, Bit#(32) readOffset,
 		       Bit#(32) readPointer2, Bit#(32) readOffset2,
 		       Bit#(32) writePointer, Bit#(32) writeOffset, Bit#(32) numElts);
-      statesources[0].start(readPointer, extend(readOffset), extend(unpack(numElts)));
-      statesources[1].start(readPointer2, extend(readOffset2), extend(unpack(numElts)));
-      dmaStatesSink.start(writePointer, extend(writeOffset), extend(unpack(numElts)));
+      statesources[0].start(readPointer, extend(readOffset), extend(unpack(numElts)>>nshift));
+      statesources[1].start(readPointer2, extend(readOffset2), extend(unpack(numElts)>>nshift));
+      dmaStatesSink.start(writePointer, extend(writeOffset), extend(unpack(numElts)>>nshift));
+      if (verbose) $display("mkStatesPipe::start(%d %d %d %d %d %d)", readPointer, readOffset, readPointer2, readOffset2, writePointer, writeOffset, numElts);
    endmethod
    method ActionValue#(Bool) finish();
       let b <- dmaStatesSink.finish();
@@ -86,15 +117,16 @@ module  mkUpdateWeights#(Vector#(3,Server#(MemengineCmd,Bool)) readServers,
 			    Vector#(3, PipeOut#(Bit#(TMul#(N,32)))) readPipes,
 			    Vector#(1,Server#(MemengineCmd,Bool)) writeServers,
 			    Vector#(1, PipeIn#(Bit#(TMul#(N,32))))  writePipes)(UpdateWeights#(N, DmaSz))
-   provisos (Bits#(Vector#(N, Float), DmaSz));
+   provisos ( Bits#(Vector#(N, Float), DmaSz)
+	     ,Log#(N,nshift));
 
    Vector#(3, VectorSource#(DmaSz, Vector#(N,Float))) sources <- mapM(uncurry(mkMemreadVectorSource), zip(readServers, readPipes));
 
    let n = valueOf(N);
+   let nshift = valueOf(nshift);
 
    Reg#(Float) learningRateOverNumExamples <- mkReg(defaultValue);
 
-   FIFOF#(Vector#(N,Float)) wfifo <- mkFIFOF();
    Vector#(N, FloatAlu) adders <- replicateM(mkFloatAdder(defaultValue));
    Vector#(N, FloatAlu) adders2 <- replicateM(mkFloatAdder(defaultValue));
    Vector#(N, FloatAlu) multipliers <- replicateM(mkFloatMultiplier(defaultValue));
@@ -130,7 +162,7 @@ module  mkUpdateWeights#(Vector#(3,Server#(MemengineCmd,Bool)) readServers,
 	 let resultexc <- adders2[i].response.get();
 	 r[i] = tpl_1(resultexc);
       end
-      wfifo.enq(r);
+      sink.pipe.enq(r);
    endrule
 
    for (Integer i = 0; i < 3; i = i + 1)
@@ -140,10 +172,10 @@ module  mkUpdateWeights#(Vector#(3,Server#(MemengineCmd,Bool)) readServers,
 
    method Action start(Bit#(32) posAssociationsPointer, Bit#(32) negAssociationsPointer, Bit#(32) weightsPointer, Bit#(32) numElts, Float lrone);
       learningRateOverNumExamples <= lrone;
-      sources[0].start(posAssociationsPointer, 0, extend(numElts));
-      sources[1].start(negAssociationsPointer, 0, extend(numElts));
-      sources[2].start(weightsPointer, 0, extend(numElts));
-      sink.start(weightsPointer, 0, extend(numElts));
+      sources[0].start(posAssociationsPointer, 0, extend(numElts)>>nshift);
+      sources[1].start(negAssociationsPointer, 0, extend(numElts)>>nshift);
+      sources[2].start(weightsPointer, 0, extend(numElts)>>nshift);
+      sink.start(weightsPointer, 0, extend(numElts)>>nshift);
    endmethod
    method ActionValue#(Bool) finish();
       let b <- sink.finish();

@@ -135,3 +135,18 @@ interface MmDebugIndication;
    method Action startSourceAndSink(UInt#(32) startA, UInt#(32) startC, Int#(32) jint);
    method Action debug(Bit#(32) macCount);
 endinterface
+
+function Action check_dimension(Bit#(32) d);
+   return (action
+`ifdef BSIM
+      Bit#(32) x = d/fromInteger(valueOf(N));
+      Bit#(32) y = x*fromInteger(valueOf(N));
+      if (y != d) begin
+      	 $display("matrix dimension %d is not a multiple of %d", d, valueOf(N));
+      	 $finish(1);
+      end
+`else
+      return noAction;
+`endif
+      endaction);
+endfunction

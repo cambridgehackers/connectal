@@ -56,12 +56,13 @@ extern "C" {
   }
 
   uint64_t read_pareff64(uint32_t pref, uint32_t offset){
+    //fprintf(stderr, "read_pareff64 %d %d\n", pref, offset);
     return *(uint64_t *)&dma_info[pref].buffer[offset];
   }
 
   void pareff(uint32_t apref, uint32_t size){
     uint32_t pref = apref; // >> 8;
-    //fprintf(stderr, "BsimDma::pareff pref=%ld, size=%08x size_accum=%08x\n", pref, size, dma_info[pref].size_accum);
+    //fprintf(stderr, "BsimDma::pareff pref=%d, size=%08x size_accum=%08x\n", pref, size, dma_info[pref].size_accum);
     assert(pref < 32);
     dma_info[pref].size_accum += size;
     if(size == 0){
@@ -70,10 +71,11 @@ extern "C" {
       dma_info[pref].buffer = (unsigned char *)mmap(0,
           dma_info[pref].size_accum, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
       if (dma_info[pref].buffer == MAP_FAILED) {
-          printf("%s: mmap failed fd %x buffer %p size %x errno %d\n", __FUNCTION__, fd, dma_info[pref].buffer, size, errno);
-          exit(-1);
+	fprintf(stderr, "%s: mmap failed fd %x buffer %p size %x errno %d\n", __FUNCTION__, fd, dma_info[pref].buffer, size, errno);
+	exit(-1);
       }
       dma_info[pref].buffer_len = dma_info[pref].size_accum;
     }
+    //fprintf(stderr, "done\n");
   }
 }

@@ -75,6 +75,7 @@ int PortalMatAllocator::reference(int* refcount, uchar* datastart, uchar* data)
     ref = dma->reference(arrayFds[arraynum]);
     *pref = ref;
   }
+  fprintf(stderr, "PortalMatAllocator::reference returning %d\n", ref);
   return ref;
 }
 
@@ -145,7 +146,7 @@ PortalMat& PortalMat::operator = (const cv::Mat& o)
 int PortalMat::reference()
 {
     int ref = 0;
-    //fprintf(stderr, "PortalMat::reference this=%p datastart=%p\n", this, datastart);
+    fprintf(stderr, "PortalMat::reference this=%p datastart=%p\n", this, datastart);
     ref = matAllocator->reference(refcount, datastart, data);
     return ref;
 }
@@ -266,12 +267,9 @@ void PortalMat::naive_mul(cv::Mat &a, cv::Mat &b, FILE *f)
 
 
 #ifdef MATRIX_NT
-
-/*!
- * Multiplies a * b-transpose
- */
 void PortalMat::multf(PortalMat &a, PortalMat &b_transpose,  MmIndication *mmind)
 {
+    create(a.rows, b_transpose.rows, CV_32F);
     if (a.cols != b_transpose.cols) {
 	fprintf(stderr, "Mismatched matrices: a.rows=%d a.cols=%d b.rows=%d b.cols=%d\n", a.rows, a.cols, b_transpose.rows, b_transpose.cols);
 	return;
@@ -302,33 +300,29 @@ void PortalMat::multf(PortalMat &a, PortalMat &b_transpose,  MmIndication *mmind
 
 #else
 #ifdef MATRIX_TN
-/*!
- * Multiplies a * b
- */
-void PortalMat::multf(PortalMat &a, PortalMat &b,  MmIndication *mmind)
+void PortalMat::multf(PortalMat &a_transpose, PortalMat &b,  MmIndication *mmind)
 {
-    if (a.rows != b.rows) {
-	fprintf(stderr, "Mismatched matrices: a.rows=%d a.cols=%d b.rows=%d b.cols=%d\n", a.rows, a.cols, b.rows, b.cols);
+    create(a_transpose.cols, b.cols, CV_32F);
+    if (a_transpose.rows != b.rows) {
+	fprintf(stderr, "Mismatched matrices: a.rows=%d a.cols=%d b.rows=%d b.cols=%d\n", a_transpose.rows, a_transpose.cols, b.rows, b.cols);
 	return;
     }
-    long aref = a.reference();
+    long aref = a_transpose.reference();
     long bref = b.reference();
     long cref = reference();
-    if (0)
     fprintf(stderr, "mult: ref=%ld rows=%d cols=%d a.ref=%ld a.rows=%d a.cols=%d b.ref=%ld b.rows=%d b.cols=%d\n",
 	    cref, rows, cols,
-	    aref, a.rows, a.cols,
+	    aref, a_transpose.rows, a_transpose.cols,
 	    bref, b.rows, b.cols);
-    mmdevice->mmf(aref, a.rows, a.cols,
+    mmdevice->mmf(aref, a_transpose.rows, a_transpose.cols,
 		  bref, b.rows, b.cols,
 		  cref,
-		  a.rows*a.cols, a.cols*J_VALUE,
-		  a.rows*b.cols, b.cols*J_VALUE,
-		  a.cols*b.cols, b.rows*b.cols);
-
+		  a_transpose.rows*a_transpose.cols, a_transpose.cols*J_VALUE,
+		  a_transpose.rows*b.cols, b.cols*J_VALUE,
+		  a_transpose.cols*b.cols, b.rows*b.cols);
     sem_wait(&mul_sem);
     if(mmind) {
-      int macs = a.rows*a.cols*b.rows;
+      int macs = a_transpose.rows*a_transpose.cols*b.rows;
       if (0)
 	fprintf(stderr, "macs %d cycles %f lap_timer %f macs/cycle: %f\n", macs, (float)mmind->ccnt, (float)portalTimerLap(0), ((float)macs)/((float)mmind->ccnt));
     }
@@ -378,3 +372,4 @@ void dumpMat(const char *prefix, const char *fmt, const cv::Mat &mat)
 }
 template void dumpMat<float>(const char *prefix, const char *fmt, const cv::Mat &mat);
 template void dumpMat<int>(const char *prefix, const char *fmt, const cv::Mat &mat);
+template void dumpMat<unsigned char>(const char *prefix, const char *fmt, const cv::Mat &mat);
