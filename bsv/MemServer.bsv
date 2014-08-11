@@ -347,7 +347,7 @@ module mkConfigMemServerR#(DmaIndication dmaIndication,
       endmethod
       method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
 	 addrReqFifo.enq(?);
-	 sgl.addr[0].request.put(tuple2(truncate(pointer), extend(offset)));
+	 sgl.addr[0].request.put(ReqTup{id:truncate(pointer), off:extend(offset)});
       endmethod
    endinterface
    interface masters = map(mkm,genVector);
@@ -439,22 +439,9 @@ module mkConfigMemServerW#(DmaIndication dmaIndication,
       endmethod
       method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
 	 addrReqFifo.enq(?);
-	 sgl.addr[1].request.put(tuple2(truncate(pointer), extend(offset)));
+	 sgl.addr[1].request.put(ReqTup{id:truncate(pointer), off:extend(offset)});
       endmethod
    endinterface
    interface masters = map(mkm,genVector);
 endmodule
-		 
-		 
-	 
-	
-		 
-		 
-		 
-		 
 
-		 
-		 
-		 
-		 
-		 

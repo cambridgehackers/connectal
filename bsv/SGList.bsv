@@ -39,7 +39,10 @@ typedef 12 SGListPageShift0;
 typedef 16 SGListPageShift4;
 typedef 20 SGListPageShift8;
 typedef Bit#(TLog#(MaxNumSGLists)) RegionsIdx;
-typedef Tuple2#(SGListId,Bit#(ObjectOffsetSize)) ReqTup;
+typedef struct {
+   SGListId               id;
+   Bit#(ObjectOffsetSize) off;
+} ReqTup deriving (Eq,Bits,FShow);
 
 interface SGListMMU#(numeric type addrWidth);
    method Action sglist(Bit#(32) pointer, Bit#(40) paddr, Bit#(32) len);
@@ -117,29 +120,29 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    
    for (Integer i = 0; i < 2; i=i+1)
       rule stage1;
-	 let req <- toGet(incomingReqs[i]).get();
-	 match { .ptr, .off } = req;
+	 ReqTup req <- toGet(incomingReqs[i]).get();
+	 //match { .ptr, .off } = req;
 	 portsel(reg8, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
-            address:truncate(ptr), datain:?});
+            address:truncate(req.id), datain:?});
 	 portsel(reg4, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
-            address:truncate(ptr), datain:?});
+            address:truncate(req.id), datain:?});
 	 portsel(reg0, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
-            address:truncate(ptr), datain:?});
+            address:truncate(req.id), datain:?});
 	 reqs0[i].enq(req);
       endrule
 
    // pipeline the address lookup
    for(Integer i = 0; i < 2; i=i+1) begin
       rule stage2;
-	 let req <- toGet(reqs0[i]).get;
-	 match {.ptr,.offreq} = req; 
+	 ReqTup req <- toGet(reqs0[i]).get;
+	 //match {.ptr,.offreq} = req; 
 	 Region region8 <- portsel(reg8,i).response.get;
 	 Region region4 <- portsel(reg4,i).response.get;
 	 Region region0 <- portsel(reg0,i).response.get;
 	 
-         Page off = truncate(offreq >> valueOf(SGListPageShift0));
-         Page4 off4 = truncate(offreq >> valueOf(SGListPageShift4));
-         Page4 off8 = truncate(offreq >> valueOf(SGListPageShift8));
+         Page off = truncate(req.off >> valueOf(SGListPageShift0));
+         Page4 off4 = truncate(req.off >> valueOf(SGListPageShift4));
+         Page4 off8 = truncate(req.off >> valueOf(SGListPageShift8));
 	 let cond8 = off8 < truncate(region8.barrier);
 	 let cond4 = off4 < truncate(region4.barrier);
 	 let cond0 = off < region0.barrier;
@@ -149,8 +152,9 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 reqs1[i].enq(req);
       endrule
       rule stage3;
-	 match{.ptr,.off} <- toGet(reqs1[i]).get;
-	 Offset o = Offset{pageSize: 0, value: truncate(off)};
+	 ReqTup req <- toGet(reqs1[i]).get;
+         //match{.ptr,.off} = req;
+	 Offset o = Offset{pageSize: 0, value: truncate(req.off)};
 	 Bit#(8) pbase = 0;
 	 Bit#(8) idxOffset = 0;
 
@@ -158,27 +162,27 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 match{.idxOffset8,.idxOffset4,.idxOffset0} <- toGet(idxOffsets0[i]).get;
 
 	 if (cond8) begin
-	    //$display("request: ptr=%h off=%h", ptr, off);
+	    //$display("request: req.id=%h req.off=%h", req.id, req.off);
 	    o.pageSize = 3;
-	    pbase = truncate(off>>page_shift8);
+	    pbase = truncate(req.off>>page_shift8);
 	    idxOffset = idxOffset8;
 	 end
 	 else if (cond4) begin
-	    //$display("request: ptr=%h off=%h", ptr, off);
+	    //$display("request: req.id=%h req.off=%h", req.id, req.off);
 	    o.pageSize = 2;
-	    pbase = truncate(off>>page_shift4);
+	    pbase = truncate(req.off>>page_shift4);
 	    idxOffset = idxOffset4;
 	 end
 	 else if (cond0) begin
-	    //$display("request: ptr=%h off=%h", ptr, off);
+	    //$display("request: req.id=%h req.off=%h", req.id, req.off);
 	    o.pageSize = 1;
-	    pbase = truncate(off>>page_shift0);
+	    pbase = truncate(req.off>>page_shift0);
 	    idxOffset = idxOffset0;
 	 end
 	 offs0[i].enq(o);
 	 pbases[i].enq(pbase);
 	 idxOffsets1[i].enq(idxOffset);
-	 ptrs1[i].enq(ptr);
+	 ptrs1[i].enq(req.id);
       endrule
       rule stage4;
 	 let off <- toGet(offs0[i]).get();

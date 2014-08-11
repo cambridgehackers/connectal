@@ -153,7 +153,7 @@ typedef struct {DmaErrorType errorType;
 module mkMemReadInternal#(Integer id,
 			  Vector#(numClients, ObjectReadClient#(dataWidth)) readClients, 
 			  DmaIndication dmaIndication,
-			  Server#(Tuple2#(SGListId,Bit#(ObjectOffsetSize)),Bit#(addrWidth)) sgl,
+			  Server#(ReqTup,Bit#(addrWidth)) sgl,
 			  TagGen#(numClients, numTags) tag_gen) 
    (MemReadInternal#(addrWidth, dataWidth))
 
@@ -206,7 +206,7 @@ module mkMemReadInternal#(Integer id,
    	 else begin
 	    tag_gen.tag_request(fromInteger(selectReg), req.tag);
    	    lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
-   	    sgl.request.put(tuple2(truncate(req.pointer),req.offset));
+   	    sgl.request.put(ReqTup{id:truncate(req.pointer),off:req.offset});
    	 end
       endrule
    
@@ -292,7 +292,7 @@ endmodule
 module mkMemWriteInternal#(Integer iid,
 			   Vector#(numClients, ObjectWriteClient#(dataWidth)) writeClients,
 			   DmaIndication dmaIndication, 
-			   Server#(Tuple2#(SGListId,Bit#(ObjectOffsetSize)),Bit#(addrWidth)) sgl,
+			   Server#(ReqTup,Bit#(addrWidth)) sgl,
 			   TagGen#(numClients, numTags) tag_gen)
    (MemWriteInternal#(addrWidth, dataWidth))
    
@@ -345,7 +345,7 @@ module mkMemWriteInternal#(Integer iid,
    	  else begin
 	     tag_gen.tag_request(fromInteger(selectReg), req.tag);
    	     lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
-   	     sgl.request.put(tuple2(truncate(req.pointer),req.offset));
+   	     sgl.request.put(ReqTup{id:truncate(req.pointer),off:req.offset});
    	  end
        endrule
    
