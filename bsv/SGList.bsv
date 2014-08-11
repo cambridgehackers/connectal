@@ -39,14 +39,22 @@ typedef 12 SGListPageShift0;
 typedef 16 SGListPageShift4;
 typedef 20 SGListPageShift8;
 typedef Bit#(TLog#(MaxNumSGLists)) RegionsIdx;
+
+typedef 8 IndexWidth;
+
 typedef struct {
    SGListId               id;
    Bit#(ObjectOffsetSize) off;
 } ReqTup deriving (Eq,Bits,FShow);
 
+`ifdef BSIM
+`ifndef PCIE
+import "BDPI" function ActionValue#(Bit#(32)) pareff(Bit#(32) handle, Bit#(32) size);
+`endif
+`endif
+
 interface SGListMMU#(numeric type addrWidth);
-   method Action sglist(Bit#(32) pointer, Bit#(8) pointerIndex, Bit#(40) addr,  Bit#(32) len);
-   method Action region(Bit#(32) ptr, Bit#(36) barr8, Bit#(36) barr4, Bit#(36) barr0);
+   interface SGListSetup setup;
    interface Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addr;
 endinterface
 
@@ -61,7 +69,7 @@ typedef Bit#(TSub#(ObjectOffsetSize,SGListPageShift8)) Page8;
 
 typedef struct {
    Bit#(28) barrier;
-   Bit#(8) idxOffset;
+   Bit#(IndexWidth) idxOffset;
    } Region deriving (Eq,Bits,FShow);
 
 typedef struct {DmaErrorType errorType;
@@ -86,13 +94,13 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    
    // stage 2 (latency == 1)
    Vector#(2,FIFOF#(Tuple3#(Bool,Bool,Bool))) conds <- replicateM(mkFIFOF);
-   Vector#(2,FIFOF#(Tuple3#(Bit#(8),Bit#(8),Bit#(8)))) idxOffsets0 <- replicateM(mkFIFOF);
+   Vector#(2,FIFOF#(Tuple3#(Bit#(IndexWidth),Bit#(IndexWidth),Bit#(IndexWidth)))) idxOffsets0 <- replicateM(mkFIFOF);
    Vector#(2,FIFOF#(ReqTup))           reqs1 <- replicateM(mkSizedFIFOF(3));
 
    // stage 3 (latency == 1)
    Vector#(2,FIFOF#(Offset))           offs0 <- replicateM(mkFIFOF);
-   Vector#(2,FIFOF#(Bit#(8)))         pbases <- replicateM(mkFIFOF);
-   Vector#(2,FIFOF#(Bit#(8)))    idxOffsets1 <- replicateM(mkFIFOF);
+   Vector#(2,FIFOF#(Bit#(IndexWidth)))         pbases <- replicateM(mkFIFOF);
+   Vector#(2,FIFOF#(Bit#(IndexWidth)))    idxOffsets1 <- replicateM(mkFIFOF);
    Vector#(2,FIFOF#(SGListId))         ptrs1 <- replicateM(mkFIFOF);
 
    // stage 4 (latency == 2)
@@ -155,8 +163,8 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 ReqTup req <- toGet(reqs1[i]).get;
          //match{.ptr,.off} = req;
 	 Offset o = Offset{pageSize: 0, value: truncate(req.off)};
-	 Bit#(8) pbase = 0;
-	 Bit#(8) idxOffset = 0;
+	 Bit#(IndexWidth) pbase = 0;
+	 Bit#(IndexWidth) idxOffset = 0;
 
 	 match{.cond8,.cond4,.cond0} <- toGet(conds[i]).get;
 	 match{.idxOffset8,.idxOffset4,.idxOffset0} <- toGet(idxOffsets0[i]).get;
@@ -189,7 +197,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 let pbase <- toGet(pbases[i]).get();
 	 let idxOffset <- toGet(idxOffsets1[i]).get();
 	 let ptr <- toGet(ptrs1[i]).get();
-	 Bit#(8) p = pbase + idxOffset;
+	 Bit#(IndexWidth) p = pbase + idxOffset;
 	 if (off.pageSize == 0) begin
 	    //FIXME offset
 	    //$display("mkSGListMMU.addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
@@ -240,21 +248,29 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
        endinterface);
 
    // FIXME: split this into three methods?
-   method Action region(Bit#(32) ptr, Bit#(36) barr8, Bit#(36) barr4, Bit#(36) barr0);
+   interface SGListSetup setup;
+   method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) index8, Bit#(64) barr4, Bit#(32) index4, Bit#(64) barr0, Bit#(32) index0);
       portsel(reg8, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
-          address: truncate(ptr), datain: unpack(barr8)});
+          address: truncate(pointer), datain: Region{barrier: truncate(barr8), idxOffset: truncate(index8)}});
       portsel(reg4, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
-          address: truncate(ptr), datain: unpack(barr4)});
+          address: truncate(pointer), datain: Region{barrier: truncate(barr4), idxOffset: truncate(index4)}});
       portsel(reg0, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
-          address: truncate(ptr), datain: unpack(barr0)});
-      //$display("region ptr=%d off8=%h off4=%h off0=%h", ptr, off8, off4, off0);
-      configRespFifo.enq(truncate(ptr));
+          address: truncate(pointer), datain: Region{barrier: truncate(barr0), idxOffset: truncate(index0)}});
+      //$display("region pointer=%d off8=%h off4=%h off0=%h", pointer, off8, off4, off0);
+      configRespFifo.enq(truncate(pointer));
    endmethod
 
-   method Action sglist(Bit#(32) pointer, Bit#(8) pointerIndex, Bit#(40) addr,  Bit#(32) len);
+   method Action sglist(Bit#(32) pointer, Bit#(32) pointerIndex, Bit#(64) addr,  Bit#(32) len);
+`ifdef BSIM
+`ifndef PCIE
+	 let va <- pareff(pointer, len);
+`endif
+`endif
+         Bit#(IndexWidth) ind = truncate(pointerIndex);
 	 portsel(pages, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
-             address:{truncate(pointer),pointerIndex}, datain:truncate(addr)});
+             address:{truncate(pointer),ind}, datain:truncate(addr)});
    endmethod
+   endinterface
    interface addr = addrServers;
 
 endmodule

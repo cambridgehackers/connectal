@@ -20,7 +20,7 @@ int DmaConfigProxy_handleMessage(struct PortalInternal *p, unsigned int channel)
 
 void DmaConfigProxy_sglist (struct PortalInternal *p , const uint32_t pointer, const uint32_t pointerIndex, const uint64_t addr, const uint32_t len );
 
-void DmaConfigProxy_region (struct PortalInternal *p , const uint32_t pointer, const uint64_t barr8, const uint64_t barr4, const uint64_t barr0 );
+void DmaConfigProxy_region (struct PortalInternal *p , const uint32_t pointer, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 );
 
 void DmaConfigProxy_addrRequest (struct PortalInternal *p , const uint32_t pointer, const uint32_t offset );
 

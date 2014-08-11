@@ -35,11 +35,11 @@ static int trace_memory = 1;
 #if 1 //def NO_CPP_PORTAL_CODE
 #include "GeneratedTypes.h" // generated in project directory
 #define DMAsglist(P, A, B, C, D) DmaConfigProxy_sglist((P), (A), (B), (C), (D));
-#define DMAregion(P, PTR, B8, B4, B0) DmaConfigProxy_region((P), (PTR), (B8), (B4), (B0))
+#define DMAregion(P, PTR, B8, I8, B4, I4, B0, I0) DmaConfigProxy_region((P), (PTR), (B8), (I8), (B4), (I4), (B0), (I0))
 #else
 #include "DmaConfigProxy.h" // generated in project directory
 #define DMAsglist(P, A, B, C, D) ((DmaConfigProxy *)((P)->parent))->sglist((A), (B), (C), (D))
-#define DMAregion(P, PTR, B8, B4, B0) ((DmaConfigProxy *)((P)->parent))->region((PTR), (B8), (B4), (B0))
+#define DMAregion(P, PTR, B8, I8, B4, I4, B0, I0) ((DmaConfigProxy *)((P)->parent))->region((PTR), (B8), (I8), (B4), (I4), (B0), (I0))
 #endif
 
 int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
@@ -50,6 +50,7 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
     uint64_t border = 0;
     unsigned char entryCount = 0;
     uint64_t borderVal[3];
+    uint32_t indexVal[3];
     unsigned char idxOffset;
 #ifdef BSIM
     int size_accum = 0;
@@ -138,14 +139,15 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
     idxOffset = entryCount - border;
     entryCount += regions[i];
     border += regions[i];
-    borderVal[i] = (border << 8) | idxOffset;
+    borderVal[i] = border;
+    indexVal[i] = idxOffset;
     border <<= (shifts[i] - shifts[i+1]);
   }
   if (trace_memory) {
     PORTAL_PRINTF("regions %d (%x %x %x)\n", id,regions[0], regions[1], regions[2]);
     PORTAL_PRINTF("borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borderVal[0], borderVal[1], borderVal[2]);
   }
-  DMAregion(device, id, borderVal[0], borderVal[1], borderVal[2]);
+  DMAregion(device, id, borderVal[0], indexVal[0], borderVal[1], indexVal[1], borderVal[2], indexVal[2]);
 retlab:
     return rc;
 }

@@ -68,10 +68,7 @@ interface DmaIndication;
    method Action dmaError(Bit#(32) code, Bit#(32) pointer, Bit#(64) offset, Bit#(64) extra);
 endinterface
 
-//
-// @brief Configuration interface to Dma engine
-//
-interface DmaConfig;
+interface SGListSetup;
    //
    // @brief Adds an address translation entry to the scatter-gather list for an object
    //
@@ -80,7 +77,14 @@ interface DmaConfig;
    // @param len Length of the segment
    //
    method Action sglist(Bit#(32) pointer, Bit#(32) pointerIndex, Bit#(64) addr,  Bit#(32) len);
-   method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(64) barr4, Bit#(64) barr0);
+   method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) index8, Bit#(64) barr4, Bit#(32) index4, Bit#(64) barr0, Bit#(32) index0);
+endinterface
+//
+// @brief Configuration interface to Dma engine
+//
+interface DmaConfig;
+   method Action sglist(Bit#(32) pointer, Bit#(32) pointerIndex, Bit#(64) addr,  Bit#(32) len);
+   method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) index8, Bit#(64) barr4, Bit#(32) index4, Bit#(64) barr0, Bit#(32) index0);
    method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
    //
    // @brief Requests debug info for the specified channel type

@@ -66,12 +66,6 @@ function  MemReadClient#(addrWidth, busWidth) null_mem_read_client();
            endinterface);
 endfunction
 
-`ifdef BSIM
-`ifndef PCIE
-import "BDPI" function ActionValue#(Bit#(32)) pareff(Bit#(32) handle, Bit#(32) size);
-`endif
-`endif
-		 
 typedef 4 NUM_OO_TAGS;		
  
 interface MemServer#(numeric type addrWidth, numeric type dataWidth, numeric type nMasters);
@@ -239,19 +233,8 @@ module mkConfigMemServerRW#(DmaIndication dmaIndication,
 	 else 
 	    writer.request.getMemoryTraffic(rc);
       endmethod
-      method Action sglist(Bit#(32) pointer, Bit#(32) pointerIndex, Bit#(64) addr,  Bit#(32) len);
-	 if (bad_pointer(pointer))
-	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer1, pref: pointer });
-`ifdef BSIM
-`ifndef PCIE
-	 let va <- pareff(pointer, len);
-`endif
-`endif
-	 sgl.sglist(pointer, truncate(pointerIndex), truncate(addr), len);
-      endmethod
-      method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(64) barr4, Bit#(64) barr0);
-	 sgl.region(pointer,truncate(barr8),truncate(barr4),truncate(barr0));
-      endmethod
+      method sglist = sgl.setup.sglist;
+      method region = sgl.setup.region;
       method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
 	 writer.request.addrRequest(pointer,offset);
       endmethod
@@ -332,19 +315,8 @@ module mkConfigMemServerR#(DmaIndication dmaIndication,
 	 if (rc == Read)
 	    trafficFSM.start;
       endmethod
-      method Action sglist(Bit#(32) pointer, Bit#(32) pointerIndex, Bit#(64) addr,  Bit#(32) len);
-	 if (bad_pointer(pointer))
-	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer2, pref: pointer });
-`ifdef BSIM
-`ifndef PCIE
-	 let va <- pareff(pointer, len);
-`endif
-`endif
-	 sgl.sglist(pointer, truncate(pointerIndex), truncate(addr), len);
-      endmethod
-      method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(64) barr4, Bit#(64) barr0);
-	 sgl.region(pointer,truncate(barr8),truncate(barr4),truncate(barr0));
-      endmethod
+      method sglist = sgl.setup.sglist;
+      method region = sgl.setup.region;
       method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
 	 addrReqFifo.enq(?);
 	 sgl.addr[0].request.put(ReqTup{id:truncate(pointer), off:extend(offset)});
@@ -424,19 +396,8 @@ module mkConfigMemServerW#(DmaIndication dmaIndication,
 	 if (rc == Write) 
 	    trafficFSM.start;
       endmethod
-      method Action sglist(Bit#(32) pointer, Bit#(32) pointerIndex, Bit#(64) addr,  Bit#(32) len);
-	 if (bad_pointer(pointer))
-	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer3, pref: pointer });
-`ifdef BSIM
-`ifndef PCIE
-	 let va <- pareff(pointer, len);
-`endif
-`endif
-	 sgl.sglist(pointer, truncate(pointerIndex), truncate(addr), len);
-      endmethod
-      method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(64) barr4, Bit#(64) barr0);
-	 sgl.region(pointer,truncate(barr8),truncate(barr4),truncate(barr0));
-      endmethod
+      method sglist = sgl.setup.sglist;
+      method region = sgl.setup.region;
       method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
 	 addrReqFifo.enq(?);
 	 sgl.addr[1].request.put(ReqTup{id:truncate(pointer), off:extend(offset)});

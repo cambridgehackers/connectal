@@ -56,7 +56,7 @@ void DmaConfigProxy_sglist (PortalInternal *p , const uint32_t pointer, const ui
 
 };
 
-void DmaConfigProxy_region (PortalInternal *p , const uint32_t pointer, const uint64_t barr8, const uint64_t barr4, const uint64_t barr0 )
+void DmaConfigProxy_region (PortalInternal *p , const uint32_t pointer, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 )
 {
     volatile unsigned int* temp_working_addr = &(p->map_base[PORTAL_REQ_FIFO(CHAN_NUM_DmaConfigProxy_region)]);
     int i = 50;
@@ -65,10 +65,13 @@ void DmaConfigProxy_region (PortalInternal *p , const uint32_t pointer, const ui
         WRITEL(p, temp_working_addr, pointer);
         WRITEL(p, temp_working_addr, (barr8>>32));
         WRITEL(p, temp_working_addr, barr8);
+        WRITEL(p, temp_working_addr, index8);
         WRITEL(p, temp_working_addr, (barr4>>32));
         WRITEL(p, temp_working_addr, barr4);
+        WRITEL(p, temp_working_addr, index4);
         WRITEL(p, temp_working_addr, (barr0>>32));
         WRITEL(p, temp_working_addr, barr0);
+        WRITEL(p, temp_working_addr, index0);
 
 };
 
