@@ -70,6 +70,12 @@ typedef Bit#(TSub#(ObjectOffsetSize,SGListPageShift8)) Page8;
 typedef struct {
    Bit#(28) barrier;
    Bit#(IndexWidth) idxOffset;
+   } SingleRegion deriving (Eq,Bits,FShow);
+
+typedef struct {
+   SingleRegion reg8;
+   SingleRegion reg4;
+   SingleRegion reg0;
    } Region deriving (Eq,Bits,FShow);
 
 typedef struct {DmaErrorType errorType;
@@ -87,9 +93,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    // stage 1 (latency == 2)
    BRAM_Configure bramConfig = defaultValue;
    bramConfig.latency        = 2;
-   BRAM2Port#(RegionsIdx, Region)       reg8 <- mkBRAM2Server(bramConfig);
-   BRAM2Port#(RegionsIdx, Region)       reg4 <- mkBRAM2Server(bramConfig);
-   BRAM2Port#(RegionsIdx, Region)       reg0 <- mkBRAM2Server(bramConfig);
+   BRAM2Port#(RegionsIdx, Region)       regall <- mkBRAM2Server(bramConfig);
    Vector#(2,FIFOF#(ReqTup))           reqs0 <- replicateM(mkSizedFIFOF(3));
    
    // stage 2 (latency == 1)
@@ -127,41 +131,32 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    endfunction
    
    for (Integer i = 0; i < 2; i=i+1)
-      rule stage1;
+      rule stage1;  // first read in the address cutoff values between regions
 	 ReqTup req <- toGet(incomingReqs[i]).get();
-	 //match { .ptr, .off } = req;
-	 portsel(reg8, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
-            address:truncate(req.id), datain:?});
-	 portsel(reg4, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
-            address:truncate(req.id), datain:?});
-	 portsel(reg0, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
+	 portsel(regall, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
             address:truncate(req.id), datain:?});
 	 reqs0[i].enq(req);
       endrule
 
    // pipeline the address lookup
    for(Integer i = 0; i < 2; i=i+1) begin
-      rule stage2;
+      rule stage2; // Now compare address cutoffs with requested offset
 	 ReqTup req <- toGet(reqs0[i]).get;
-	 //match {.ptr,.offreq} = req; 
-	 Region region8 <- portsel(reg8,i).response.get;
-	 Region region4 <- portsel(reg4,i).response.get;
-	 Region region0 <- portsel(reg0,i).response.get;
+	 Region regionall <- portsel(regall,i).response.get;
 	 
          Page off = truncate(req.off >> valueOf(SGListPageShift0));
          Page4 off4 = truncate(req.off >> valueOf(SGListPageShift4));
          Page4 off8 = truncate(req.off >> valueOf(SGListPageShift8));
-	 let cond8 = off8 < truncate(region8.barrier);
-	 let cond4 = off4 < truncate(region4.barrier);
-	 let cond0 = off < region0.barrier;
+	 let cond8 = off8 < truncate(regionall.reg8.barrier);
+	 let cond4 = off4 < truncate(regionall.reg4.barrier);
+	 let cond0 = off < regionall.reg0.barrier;
 	 
 	 conds[i].enq(tuple3(cond8,cond4,cond0));
-	 idxOffsets0[i].enq(tuple3(region8.idxOffset,region4.idxOffset, region0.idxOffset));
+	 idxOffsets0[i].enq(tuple3(regionall.reg8.idxOffset,regionall.reg4.idxOffset, regionall.reg0.idxOffset));
 	 reqs1[i].enq(req);
       endrule
-      rule stage3;
+      rule stage3; // Based on results of comparision, select a region, putting it into 'o.pageSize'.  idxOffset holds offset in sglist table of relevant entry
 	 ReqTup req <- toGet(reqs1[i]).get;
-         //match{.ptr,.off} = req;
 	 Offset o = Offset{pageSize: 0, value: truncate(req.off)};
 	 Bit#(IndexWidth) pbase = 0;
 	 Bit#(IndexWidth) idxOffset = 0;
@@ -192,7 +187,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 idxOffsets1[i].enq(idxOffset);
 	 ptrs1[i].enq(req.id);
       endrule
-      rule stage4;
+      rule stage4; // Read relevant sglist entry
 	 let off <- toGet(offs0[i]).get();
 	 let pbase <- toGet(pbases[i]).get();
 	 let idxOffset <- toGet(idxOffsets1[i]).get();
@@ -208,7 +203,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
             address:{ptr,p}, datain:?});
 	 offs1[i].enq(off);
       endrule
-      rule stage5;
+      rule stage5; // Concatenate page base address from sglist entry with LSB offset bits from request and return
 	 Page page <- portsel(pages, i).response.get;
 	 let offset <- toGet(offs1[i]).get();
 	 //$display("p ages[%d].response page=%h offset=%h", i, page, offset);
@@ -250,12 +245,11 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    // FIXME: split this into three methods?
    interface SGListSetup setup;
    method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) index8, Bit#(64) barr4, Bit#(32) index4, Bit#(64) barr0, Bit#(32) index0);
-      portsel(reg8, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
-          address: truncate(pointer), datain: Region{barrier: truncate(barr8), idxOffset: truncate(index8)}});
-      portsel(reg4, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
-          address: truncate(pointer), datain: Region{barrier: truncate(barr4), idxOffset: truncate(index4)}});
-      portsel(reg0, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
-          address: truncate(pointer), datain: Region{barrier: truncate(barr0), idxOffset: truncate(index0)}});
+      portsel(regall, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
+          address: truncate(pointer), datain: Region{
+             reg8: SingleRegion{barrier: truncate(barr8), idxOffset: truncate(index8)},
+             reg4: SingleRegion{barrier: truncate(barr4), idxOffset: truncate(index4)},
+             reg0: SingleRegion{barrier: truncate(barr0), idxOffset: truncate(index0)}} });
       //$display("region pointer=%d off8=%h off4=%h off0=%h", pointer, off8, off4, off0);
       configRespFifo.enq(truncate(pointer));
    endmethod
