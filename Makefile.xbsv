@@ -109,5 +109,5 @@ endif
 prebuild::
 	@# additional steps needed before making verilog etc
 ifeq ($(NEEDSPCIE_$(BOARD)),1)
-	cd $(BOARD); vivado -mode batch -source $(shell cd $(XBSVDIR); /bin/pwd)/scripts/xbsv-synth-pcie.tcl
+	cd $(BOARD); vivado -notrace -mode batch -source $(shell cd $(XBSVDIR); /bin/pwd)/scripts/xbsv-synth-pcie.tcl
 endif
