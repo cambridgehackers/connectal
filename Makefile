@@ -89,7 +89,8 @@ matmultests2 = testmm8.8.2       \
 	    testmm4.4.2          \
 	    testmm4.2.2          \
 	    testmm2.4.2          \
-	    testmm2.2.2          
+	    testmm2.2.2          \
+	    testrbm2.2.2
 
 matmultests4 = testmm16.16.4     \
 	    testmm8.8.4          \
@@ -141,6 +142,7 @@ examples =  echo                 \
             memread_4m           \
             memwrite_4m          \
 	    matmul               \
+	    rbm                  \
             yuv                  
 
 memexamples =  memcpy            \
@@ -169,6 +171,7 @@ bsimalllist =     \
     examples/simple \
     examples/strstr \
     examples/matmul \
+    examples/rbm \
     examples/yuv \
     tests/memread_manual \
     tests/simple_manual \
