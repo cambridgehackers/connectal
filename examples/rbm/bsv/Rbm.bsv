@@ -37,6 +37,8 @@ import AxiMasterSlave::*;
 import HostInterface::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;
+import MatrixTN::*;
+import Timer::*;
 
 import Sigmoid::*;
 import FloatOps::*;
@@ -228,11 +230,13 @@ endmodule: mkSumOfErrorSquared
 interface Rbm#(numeric type n);
    interface RbmRequest rbmRequest;
    interface SigmoidRequest sigmoidRequest;
-   interface ObjectReadClient#(TMul#(32,n)) readClient;
-   interface ObjectWriteClient#(TMul#(32,n)) writeClient;
+   interface MmRequestTN mmRequest;
+   interface TimerRequest timerRequest;
+   interface Vector#(3,ObjectReadClient#(TMul#(32,n))) readClients;
+   interface Vector#(3,ObjectWriteClient#(TMul#(32,n))) writeClients;
 endinterface
 
-module  mkRbm#(HostType host, RbmIndication rbmInd, SigmoidIndication sigmoidInd)(Rbm#(N))
+module  mkRbm#(HostType host, RbmIndication rbmInd, SigmoidIndication sigmoidInd, MmIndication mmInd, TimerIndication timerInd)(Rbm#(N))
    provisos (Add#(1,a__,N),
 	     Add#(N,0,n),
 	     Mul#(N,32,DmaSz));
@@ -252,7 +256,8 @@ module  mkRbm#(HostType host, RbmIndication rbmInd, SigmoidIndication sigmoidInd
    StatesPipe#(N, DmaSz) states <- mkStatesPipe(takeAt(2,res), takeAt(2,rep), takeAt(1,wes), takeAt(1,wep));              // 2 read, 1 write
    UpdateWeights#(N, DmaSz) updateWeights <- mkUpdateWeights(takeAt(4,res), takeAt(4,rep), takeAt(2,wes), takeAt(2,wep)); // 3 read, 1 write
    SumOfErrorSquared#(N, DmaSz) sumOfErrorSquared <- mkSumOfErrorSquared(takeAt(7,res), takeAt(7,rep));                   // 2 read, 0 write
-
+   MmTN#(N) mm <- mkMmTN(mmInd, timerInd, host);
+   
    rule statesDone;
       $display("statesDone");
       let b <- states.finish();
@@ -270,12 +275,36 @@ module  mkRbm#(HostType host, RbmIndication rbmInd, SigmoidIndication sigmoidInd
       sumOfErrorSquared.pipe.deq();
       rbmInd.sumOfErrorSquared(pack(sumOfErrorSquared.pipe.first()));
    endrule
+   
+   ///////////////////////////////////////////////
+   // timing cruft
 
+   FIFOF#(Bool) busyFifo <- mkFIFOF();
+   FIFOF#(Bool) timerRunning <- mkFIFOF();
+   Reg#(Bit#(64)) cycleCount <- mkReg(0);
+   Reg#(Bit#(64)) idleCount <- mkReg(0);
+   rule countCycles if (timerRunning.notEmpty());
+      cycleCount <= cycleCount + 1;
+      if (!busyFifo.notEmpty())
+	 idleCount <= idleCount + 1;
+   endrule
+
+   ///////////////////////////////////////////////
+
+   interface MmRequestTN mmRequest = mm.mmRequest;
    interface SigmoidRequest sigmoidRequest = sigmoid.sigmoidRequest;
-   interface RbmRequest rbmRequest;
-      method Action dbg();
+   interface TimerRequest timerRequest;
+      method Action startTimer() if (!timerRunning.notEmpty());
+	 cycleCount <= 0;
+	 idleCount <= 0;
+	 timerRunning.enq(True);
       endmethod
-
+      method Action stopTimer();
+	 timerRunning.deq();
+	 timerInd.elapsedCycles(cycleCount, idleCount);
+      endmethod
+   endinterface
+   interface RbmRequest rbmRequest;
       method Action finish();
 	 $finish(0);
       endmethod
@@ -299,7 +328,7 @@ module  mkRbm#(HostType host, RbmIndication rbmInd, SigmoidIndication sigmoidInd
 	 sumOfErrorSquared.start(dataPointer, predPointer, numElts);
       endmethod
    endinterface   
-   interface Vector readClient = readEngine.dmaClient;
-   interface Vector writeClient = writeEngine.dmaClient;
+   interface Vector readClients = cons(readEngine.dmaClient,mm.readClients);
+   interface Vector writeClients = cons(writeEngine.dmaClient,mm.writeClients);
 
 endmodule

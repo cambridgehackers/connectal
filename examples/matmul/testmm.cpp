@@ -31,8 +31,6 @@ MmRequestTNProxy *mmdevice = 0;
 #endif
 #endif
 #include <MmIndicationWrapper.h>
-#include <MmDebugIndicationWrapper.h>
-#include <MmDebugRequestProxy.h>
 #include <DmaConfigProxy.h>
 #include <GeneratedTypes.h>
 //#include <DmaIndicationWrapper.h>
@@ -52,14 +50,9 @@ MmRequestTNProxy *mmdevice = 0;
 static int verbose = 0;
 
 class MmIndication;
-class MmDebugIndication;
 
-#define N 2
-
-MmDebugRequestProxy *mmdebug = 0;
 TimerRequestProxy *timerdevice = 0;
 MmIndication *mmdeviceIndication = 0;
-MmDebugIndication *mmDebugIndication = 0;
 TimerIndication *timerdeviceIndication = 0;
 DmaConfigProxy *dmap = 0;
 DmaIndicationWrapper *dmaIndication = 0;
@@ -81,13 +74,9 @@ void *dbgThread(void *)
 {
   while (1) {
     sleep(2);
-    if (dmap) {
-      //dmap->getStateDbg(ChannelType_Read);
-    }
-    if (mmdebug) {
-      //fprintf(stderr, "Calling mmdebug->debug()\n");
-      mmdebug->debug();
-    }
+    // if (dmap) 
+    //   dmap->getStateDbg(ChannelType_Read);
+    mmdevice->debug();
   }
   return 0;
 }
@@ -107,9 +96,7 @@ int main(int argc, const char **argv)
   mmdevice = new MmRequestTNProxy(IfcNames_MmRequestPortal);
 #endif
 #endif
-  mmdebug = new MmDebugRequestProxy(IfcNames_MmDebugRequestPortal);
   mmdeviceIndication = new MmIndication(IfcNames_MmIndicationPortal);
-  mmDebugIndication = new MmDebugIndication(IfcNames_MmDebugIndicationPortal);
   timerdevice = new TimerRequestProxy(IfcNames_TimerRequestPortal, poller);
   timerdeviceIndication = new TimerIndication(IfcNames_TimerIndicationPortal);
 
@@ -247,8 +234,8 @@ int main(int argc, const char **argv)
   uint64_t write_beats = dma->show_mem_stats(ChannelType_Write);
   float read_util = (float)read_beats/(float)mmdeviceIndication->ccnt;
   float write_util = (float)write_beats/(float)mmdeviceIndication->ccnt;
-  float read_bw = read_util * N * 4 * (float)freq / 1.0e9;
-  float write_bw = write_util * N * 4 * (float)freq / 1.0e9;
+  float read_bw = read_util * N_VALUE * 4 * (float)freq / 1.0e9;
+  float write_bw = write_util * N_VALUE * 4 * (float)freq / 1.0e9;
   float macs = m1.rows * m2.rows * m2.cols;
   fprintf(stderr, "Bus frequency %f MHz\n", (float)freq / 1.0e6);
   fprintf(stderr, "memory read  beats %f utilization %f (beats/cycle), bandwidth %f (GB/s)\n", (float)read_beats, read_util, read_bw);

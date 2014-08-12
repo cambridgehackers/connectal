@@ -40,17 +40,7 @@
 #include "rbm.h"
 #include "mnist.h"
 
-static int verbose = 0;
-
-#ifdef MATRIX_NT
-#include "MmRequestNTProxy.h"
-MmRequestNTProxy *mmdevice = 0;
-#else
-#ifdef MATRIX_TN
-#include "MmRequestTNProxy.h"
 MmRequestTNProxy *mmdevice = 0;
-#endif
-#endif
 DmaManager *dma = 0;
 DmaConfigProxy *dmap = 0;
 DmaIndicationWrapper *dmaIndication = 0;
@@ -79,11 +69,9 @@ void *dbgThread(void *)
 {
   while (1) {
     sleep(1);
-    if (dma) {
-      dmap->getStateDbg(ChannelType_Read);
-      rbmdevice->dbg();
-      sleep(5);
-    }
+    mmdevice->debug();
+    if (dma) dmap->getStateDbg(ChannelType_Read);
+    sleep(5);
   }
   return 0;
 }
@@ -93,13 +81,7 @@ int main(int argc, const char **argv)
   unsigned int srcGen = 0;
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
-#ifdef MATRIX_NT
-  mmdevice = new MmRequestNTProxy(IfcNames_MmRequestPortal);
-#else
-#ifdef MATRIX_TN
   mmdevice = new MmRequestTNProxy(IfcNames_MmRequestPortal);
-#endif
-#endif
   rbmdevice = new RbmRequestProxy(IfcNames_RbmRequestPortal);
   rbmDeviceIndication = new RbmIndication(IfcNames_RbmIndicationPortal);
   mmdeviceIndication = new MmIndication(IfcNames_MmIndicationPortal);
@@ -157,15 +139,8 @@ int main(int argc, const char **argv)
 		  0.50,0.50,0.50,0.50,
 		  0.50,0.50,0.50,0.50
 		  );
-#ifdef MATRIX_TN
     RbmMat pm1(m1.t());
     RbmMat pm2(m2);
-#else
-#ifdef MATRIX_NT
-    RbmMat pm1(m1);
-    RbmMat pm2(m2.t());
-#endif
-#endif
     
     RbmMat pm4(m4);
     RbmMat pm3;

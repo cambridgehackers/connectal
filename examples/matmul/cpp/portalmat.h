@@ -43,7 +43,6 @@ extern MmRequestTNProxy *mmdevice;
 #endif
  
 #include "MmIndicationWrapper.h"
-#include "MmDebugIndicationWrapper.h"
 #include "TimerRequestProxy.h"
 #include "TimerIndicationWrapper.h"
 
@@ -104,14 +103,6 @@ public:
     fprintf(stderr, "dpsVal v=%x %f\n", v, *(float *)&v);
     sem_post(&mul_sem);
   }
-};
-
-class MmDebugIndication : public MmDebugIndicationWrapper {
-//wrapperClass
-public:
- MmDebugIndication(int id, PortalPoller *poller = 0) : MmDebugIndicationWrapper(id, poller) {};
-  virtual ~MmDebugIndication() {};
-
   void started() {
     fprintf(stderr, "mm.started:\n");
   }

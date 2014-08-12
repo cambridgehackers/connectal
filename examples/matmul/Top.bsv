@@ -23,8 +23,6 @@ import DmaIndicationProxy::*;
 import MmIndicationProxy::*;
 import TimerIndicationProxy::*;
 import TimerRequestWrapper::*;
-import MmDebugRequestWrapper::*;
-import MmDebugIndicationProxy::*;
 
 `ifdef MATRIX_TN
 import MmRequestTNWrapper::*;
@@ -39,19 +37,17 @@ import MatrixNT::*;
 module  mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,TMul#(32,N),Empty,NumberOfMasters));
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndicationPortal);
-   MmDebugIndicationProxy mmDebugIndicationProxy <- mkMmDebugIndicationProxy(MmDebugIndicationPortal);
    MmIndicationProxy mmIndicationProxy <- mkMmIndicationProxy(MmIndicationPortal);
    TimerIndicationProxy timerIndicationProxy <- mkTimerIndicationProxy(TimerIndicationPortal);
 `ifdef MATRIX_TN
-   MmTN#(N) mm <- mkMmTN(mmIndicationProxy.ifc, timerIndicationProxy.ifc, mmDebugIndicationProxy.ifc, host);
+   MmTN#(N) mm <- mkMmTN(mmIndicationProxy.ifc, timerIndicationProxy.ifc, host);
    MmRequestTNWrapper mmRequestWrapper <- mkMmRequestTNWrapper(MmRequestPortal,mm.mmRequest);
 `else
 `ifdef MATRIX_NT
-   MmNT#(N) mm <- mkMmNT(mmIndicationProxy.ifc, timerIndicationProxy.ifc, mmDebugIndicationProxy.ifc, host);
+   MmNT#(N) mm <- mkMmNT(mmIndicationProxy.ifc, timerIndicationProxy.ifc, host);
    MmRequestNTWrapper mmRequestWrapper <- mkMmRequestNTWrapper(MmRequestPortal,mm.mmRequest);
 `endif
 `endif
-   MmDebugRequestWrapper mmDebugRequestWrapper <- mkMmDebugRequestWrapper(MmDebugRequestPortal,mm.mmDebug);
    TimerRequestWrapper timerRequestWrapper <- mkTimerRequestWrapper(TimerRequestPortal,mm.timerRequest);
    
    Vector#(2,ObjectReadClient#(TMul#(32,N)))  readClients  = mm.readClients;
@@ -60,15 +56,13 @@ module  mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,TMul#(32,N),Empty,N
    MemServer#(PhysAddrWidth, TMul#(32,N), NumberOfMasters) dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
    DmaConfigWrapper dmaConfigWrapper <- mkDmaConfigWrapper(DmaConfigPortal,dma.request);
 
-   Vector#(8,StdPortal) portals;
+   Vector#(6,StdPortal) portals;
    portals[0] = mmRequestWrapper.portalIfc;
    portals[1] = mmIndicationProxy.portalIfc; 
    portals[2] = dmaConfigWrapper.portalIfc;
    portals[3] = dmaIndicationProxy.portalIfc; 
    portals[4] = timerRequestWrapper.portalIfc;
    portals[5] = timerIndicationProxy.portalIfc; 
-   portals[6] = mmDebugIndicationProxy.portalIfc;
-   portals[7] = mmDebugRequestWrapper.portalIfc;
    StdDirectory dir <- mkStdDirectory(portals);
    let ctrl_mux <- mkSlaveMux(dir,portals);
    

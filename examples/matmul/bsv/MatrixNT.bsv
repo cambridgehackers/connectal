@@ -598,13 +598,12 @@ endmodule
    
 interface MmNT#(numeric type n);
    interface MmRequestNT mmRequest;
-   interface MmDebugRequest mmDebug;
    interface TimerRequest timerRequest;
    interface Vector#(2, ObjectReadClient#(TMul#(32,n)))  readClients;
    interface Vector#(2, ObjectWriteClient#(TMul#(32,n))) writeClients;
 endinterface
 
-module  mkMmNT#(MmIndication ind, TimerIndication timerInd, MmDebugIndication mmDebugIndication, HostType host)(MmNT#(N))
+module  mkMmNT#(MmIndication ind, TimerIndication timerInd, HostType host)(MmNT#(N))
    provisos (Add#(1,a__,N),
 	     Add#(N,0,n),
 	     Mul#(N,32,DmaSz)
@@ -668,11 +667,9 @@ module  mkMmNT#(MmIndication ind, TimerIndication timerInd, MmDebugIndication mm
 	 mmfCycles <= 0;
 	 busyFifo.enq(True);
       endmethod
-   endinterface
-   interface MmDebugRequest mmDebug;
       method Action debug();
 	 let macCount = dmaMMF.debug.macCount();
-	 mmDebugIndication.debug(macCount);
+	 ind.debug(macCount);
       endmethod
    endinterface
 

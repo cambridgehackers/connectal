@@ -66,16 +66,18 @@ typedef enum {
    FpMacRequestPortal,
    FpMacIndicationPortal,
    FpMulRequestPortal,
-   FpMulIndicationPortal,
-   MmDebugRequestPortal,
-   MmDebugIndicationPortal
+   FpMulIndicationPortal
 } IfcNames deriving (Eq,Bits);
 
 interface MmIndication;
+   method Action started();
+   method Action startSourceAndSink(UInt#(32) startA, UInt#(32) startC, Int#(32) jint);
+   method Action debug(Bit#(32) macCount);
    method Action mmfDone(Bit#(64) cycles);
 endinterface
 
 interface MmRequestNT;
+   method Action debug();
    method Action mmf(Bit#(32) inPointer1, Bit#(32) r1, Bit#(32) c1,
 		     Bit#(32) inPointer2, Bit#(32) r2, Bit#(32) c2,
 		     Bit#(32) outPointer,
@@ -85,6 +87,7 @@ interface MmRequestNT;
 endinterface
 
 interface MmRequestTN;
+   method Action debug();
    method Action mmf(Bit#(32) inPointer1, Bit#(32) r1, Bit#(32) c1,
 		     Bit#(32) inPointer2, Bit#(32) r2, Bit#(32) c2,
 		     Bit#(32) outPointer,
@@ -122,18 +125,7 @@ interface RbmRequest;
    method Action updateWeights(Bit#(32) posAssociationsPointer, Bit#(32) negAssociationsPointer, 
 			       Bit#(32) weightsPointer, Bit#(32) numElts, Bit#(32) learningRateOverNumExamples);
    method Action sumOfErrorSquared(Bit#(32) dataPointer, Bit#(32) predPointer, Bit#(32) numElts);
-   method Action dbg(); 
    method Action finish(); // for bsim only
-endinterface
-
-interface MmDebugRequest;
-   method Action debug();
-endinterface
-
-interface MmDebugIndication;
-   method Action started();
-   method Action startSourceAndSink(UInt#(32) startA, UInt#(32) startC, Int#(32) jint);
-   method Action debug(Bit#(32) macCount);
 endinterface
 
 function Action check_dimension(Bit#(32) d);
