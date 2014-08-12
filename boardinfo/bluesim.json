@@ -8,6 +8,33 @@
         "needs_pcie_7x_gen1x8" : "False"
     },
     "fmc": {
+    "CLK0_M2C_n": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "CLK0_M2C_p": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "LA00_n_CC": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "LA00_p_CC": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "LA01_n_CC": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "LA05_n": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "LA05_p": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "LA07_n": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "LA07_p": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "LA08_n": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "LA08_p": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "LA09_n": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "LA09_p": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "LA10_n": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "LA10_p": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "LA11_n": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "LA11_p": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "LA12_n": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "LA12_p": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "LA13_n": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "LA13_p": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "LA14_n": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "LA14_p": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "LA15_n": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "LA15_p": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "LA16_n": { "LOC": "ZZZ", "IOSTANDARD": "YY" },
+    "LA16_p": { "LOC": "ZZZ", "IOSTANDARD": "YY" }
     }
 }
 
