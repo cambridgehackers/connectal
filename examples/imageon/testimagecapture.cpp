@@ -26,13 +26,15 @@
 #include "i2ccamera.h"
 #include "edid.h"
 
+#include "dmaManager.h"
+#include "StdDmaIndication.h"
 #include "ImageonSensorRequestProxy.h"
 #include "ImageonSensorIndicationWrapper.h"
 #include "ImageonSerdesRequestProxy.h"
 #include "ImageonSerdesIndicationWrapper.h"
 #include "HdmiInternalRequestProxy.h"
 #include "HdmiInternalIndicationWrapper.h"
-#include "GeneratedTypes.h"
+#include "DmaConfigProxy.h"
 
 static ImageonSensorRequestProxy *sensordevice;
 static ImageonSerdesRequestProxy *serdesdevice;
@@ -64,6 +66,9 @@ public:
         cv_iserdes_control = v;
         sem_post(&sem_iserdes_control);
     }
+    virtual void iserdes_dma ( uint32_t v ){
+printf("[%s:%d] 0x%x ***************************************************************** \n", __FUNCTION__, __LINE__, v);
+    }
 };
 
 class ImageonSensorIndication : public ImageonSensorIndicationWrapper {
@@ -86,6 +91,24 @@ public:
     }
 
 };
+
+static void memdump(unsigned char *p, int len, const char *title)
+{
+int i;
+
+    i = 0;
+    while (len > 0) {
+        if (!(i & 0xf)) {
+            if (i > 0)
+                printf("\n");
+            printf("%s: ",title);
+        }
+        printf("%02x ", *p++);
+        i++;
+        len--;
+    }
+    printf("\n");
+}
 
 static void init_local_semaphores(void)
 {
@@ -428,11 +451,16 @@ sleep(5);
     fmc_imageon_demo_enable_ipipe();
 }
 
+#define DMA_BUFFER_SIZE 0x1240000
+
 int main(int argc, const char **argv)
 {
     init_local_semaphores();
     PortalPoller *poller = new PortalPoller();
 
+    DmaConfigProxy *dmap = new DmaConfigProxy(IfcNames_DmaConfig);
+    DmaManager *dma = new DmaManager(dmap);
+    DmaIndication *dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
     serdesdevice = new ImageonSerdesRequestProxy(IfcNames_ImageonSerdesRequest, poller);
     sensordevice = new ImageonSensorRequestProxy(IfcNames_ImageonSensorRequest, poller);
     hdmidevice = new HdmiInternalRequestProxy(IfcNames_HdmiInternalRequest);
@@ -472,7 +500,7 @@ int main(int argc, const char **argv)
     portalExec_start();
     printf("[%s:%d] before set_i2c_mux_reset_n\n", __FUNCTION__, __LINE__);
     sensordevice->set_i2c_mux_reset_n(1);
-    printf("[%s:%d] before setTestPattern\n", __FUNCTION__, __LINE__);
+    printf("[%s:%d] before setDeLine/Pixel\n", __FUNCTION__, __LINE__);
     for (int i = 0; i < 4; i++) {
       int pixclk = (long)edid.timing[i].pixclk * 10000;
       if ((pixclk > 0) && (pixclk < 148000000)) {
@@ -506,18 +534,29 @@ hblank--; // needed on zc702
     }
 
     fbsize = nlines*npixels*4;
+
+    int srcAlloc = portalAlloc(DMA_BUFFER_SIZE);
+    unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, DMA_BUFFER_SIZE);
+    printf("[%s:%d] before dma->reference\n", __FUNCTION__, __LINE__);
+    memset(srcBuffer, 0xff, 16);
+    memdump((unsigned char *)srcBuffer, 32, "STARTMEM");
+    unsigned int ref_srcAlloc = dma->reference(srcAlloc);
+    printf("[%s:%d] before setTestPattern\n", __FUNCTION__, __LINE__);
     hdmidevice->setTestPattern(1);
     fmc_imageon_demo_init(argc, argv);
     printf("[%s:%d] passed fmc_imageon_demo_init\n", __FUNCTION__, __LINE__);
     //usleep(200000);
     hdmidevice->waitForVsync(0);
     usleep(2000000);
+    printf("[%s:%d] before startWrite\n", __FUNCTION__, __LINE__);
+    serdesdevice->startWrite(ref_srcAlloc, 256 * 16 * 4); //DMA_BUFFER_SIZE/sizeof(int32_t));
     while (1/*getchar() != EOF*/) {
         printf("[%s:%d] iserdes %x\n", __FUNCTION__, __LINE__, read_iserdes_control());
         static int regids[] = {24, 97, 186, 0};
         int i;
         for (i = 0; regids[i]; i++)
             printf("[%s:%d] spi %d. %x\n", __FUNCTION__, __LINE__, regids[i], vita_spi_read(regids[i]));
+        memdump((unsigned char *)srcBuffer, 32, "MEM");
 	usleep(1000000);
     }
     return 0;

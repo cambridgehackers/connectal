@@ -5,7 +5,7 @@ BSVFILES = $(XBSVDIR)/lib/bsv/IserdesDatadeser.bsv $(XBSVDIR)/lib/bsv/HDMI.bsv $
 CPPFILES=testimagecapture.cpp
 XBSVFLAGS = -C $(BOARD)/sources/imageon-$(BOARD).xdc --tcl clock.tcl
 XBSVFLAGS += -D USE_I2C1 -D PinType=ImageCapturePins
-NUMBER_OF_MASTERS =0
+NUMBER_OF_MASTERS = 1
 #XBSVFLAGS += -D TRACE_AXI
 
 ifeq ($(BOARD),zedboard)

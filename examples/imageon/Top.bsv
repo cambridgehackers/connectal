@@ -28,6 +28,7 @@ import Clocks :: *;
 import FIFO::*;
 import DefaultValue::*;
 import MemTypes::*;
+import MemServer::*;
 
 // portz libraries
 import Portal::*;
@@ -44,6 +45,8 @@ import ImageonSensorRequestWrapper::*;
 import ImageonSensorIndicationProxy::*;
 import HdmiInternalRequestWrapper::*;
 import HdmiInternalIndicationProxy::*;
+import DmaConfigWrapper::*;
+import DmaIndicationProxy::*;
 
 // defined by user
 import IserdesDatadeser::*;
@@ -53,8 +56,8 @@ import YUV::*;
 import XilinxCells::*;
 import XbsvXilinxCells::*;
 
-typedef enum { ImageonSerdesRequest, ImageonSensorRequest, HdmiInternalRequest,
-    ImageonSerdesIndication, ImageonSensorIndication, HdmiInternalIndication} IfcNames deriving (Eq,Bits);
+typedef enum { ImageonSerdesRequest, ImageonSensorRequest, HdmiInternalRequest, DmaConfig,
+    ImageonSerdesIndication, ImageonSensorIndication, HdmiInternalIndication, DmaIndication} IfcNames deriving (Eq,Bits);
 
 interface ImageCapturePins;
    interface ImageonSensorPins pins;
@@ -64,9 +67,10 @@ interface ImageCapturePins;
    method Action fmc_video_clk1(Bit#(1) v);
 endinterface
 interface ImageCapture;
-   interface Vector#(6,StdPortal) portals;
+   interface Vector#(8,StdPortal) portals;
    interface ImageCapturePins pins;
    interface XADC             xadc;
+   interface MemServer#(PhysAddrWidth,64,1)   dmaif;
 endinterface
 
 module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
@@ -109,9 +113,13 @@ module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
    // serdes: serial line protocol for wires from sensor (nothing sensor specific)
    ImageonSerdesIndicationProxy serdesIndicationProxy <- mkImageonSerdesIndicationProxy(ImageonSerdesIndication);
 `ifndef BSIM
+   DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
    ISerdes serdes <- mkISerdes(defaultClock, defaultReset, serdesIndicationProxy.ifc,
 			clocked_by imageon_clock, reset_by imageon_reset);
    ImageonSerdesRequestWrapper serdesRequestWrapper <- mkImageonSerdesRequestWrapper(ImageonSerdesRequest,serdes.control);
+    Vector#(1, ObjectWriteClient#(64)) writeClients = cons(serdes.dmaClient,nil);
+    MemServer#(PhysAddrWidth,64,1)   dma <- mkMemServerW(dmaIndicationProxy.ifc, writeClients);
+   DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig, dma.request);
    let serdes_data = serdes.data;
 `else
    Wire#(Bit#(1)) serdes_reset <- mkDWire(0);
@@ -180,7 +188,7 @@ Reg#(Bit#(10)) xsvi <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
         bozobit <= ~bozobit;
     endrule
    
-   Vector#(6,StdPortal) portal_array;
+   Vector#(8,StdPortal) portal_array;
 `ifndef BSIM
    portal_array[0] = serdesRequestWrapper.portalIfc; 
 `endif
@@ -189,6 +197,10 @@ Reg#(Bit#(10)) xsvi <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
    portal_array[3] = sensorIndicationProxy.portalIfc; 
    portal_array[4] = hdmiRequestWrapper.portalIfc; 
    portal_array[5] = hdmiIndicationProxy.portalIfc; 
+`ifndef BSIM
+   portal_array[6] = dmaRequestWrapper.portalIfc;
+   portal_array[7] = dmaIndicationProxy.portalIfc;
+`endif
    interface Vector portals = portal_array;
 
    interface ImageCapturePins pins;
@@ -205,9 +217,10 @@ Reg#(Bit#(10)) xsvi <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
                 hdmisignals.hdmi_hsync, hdmisignals.hdmi_de};
         endmethod
    endinterface
+   interface dmaif = dma;
 endmodule
 
-module mkPortalTop(PortalTop#(PhysAddrWidth,64,ImageCapturePins,0));
+module mkPortalTop(PortalTop#(PhysAddrWidth,64,ImageCapturePins,1));
    Clock defaultClock <- exposeCurrentClock();
    //Reset defaultReset <- exposeCurrentReset();
 `ifndef BSIM
@@ -224,7 +237,7 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,64,ImageCapturePins,0));
    
    interface interrupt = getInterruptVector(ic.portals);
    interface slave = ctrl_mux;
-   interface masters = nil;
+   interface masters = ic.dmaif.masters;
    //interface leds = captureRequestInternal.leds;
    //interface xadc = ic.xadc;
    interface ImageCapturePins pins;
