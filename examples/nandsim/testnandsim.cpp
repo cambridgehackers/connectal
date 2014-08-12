@@ -28,7 +28,11 @@
 int srcAlloc, nandAlloc;
 unsigned int *srcBuffer = 0;
 size_t numBytes = 1 << 12;
+#ifndef BOARD_bluesim
 size_t nandBytes = 1 << 24;
+#else
+size_t nandBytes = 1 << 14;
+#endif
 
 class NandSimIndication : public NandSimIndicationWrapper
 {
@@ -70,6 +74,7 @@ int main(int argc, const char **argv)
   NandSimIndication *deviceIndication = 0;
   DmaIndication *dmaIndication = 0;
 
+  fprintf(stderr, "chamdoo-test\n");
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
   device = new NandSimRequestProxy(IfcNames_NandSimRequest);
@@ -102,20 +107,44 @@ int main(int argc, const char **argv)
   device->configureNand(ref_nandAlloc, nandBytes);
   deviceIndication->wait();
 
-  fprintf(stderr, "Main::starting write ref=%d, len=%08zx\n", ref_srcAlloc, numBytes);
-  device->startWrite(ref_srcAlloc, 0, 0, numBytes, 16);
-  deviceIndication->wait();
+  /* do tests */
+  unsigned long loop = 0;
+  unsigned long match = 0, mismatch = 0;
+  while (loop < nandBytes) {
+	  int i;
+	  for (i = 0; i < numBytes/sizeof(srcBuffer[0]); i++) {
+		  srcBuffer[i] = loop+i;
+	  }
 
-  fprintf(stderr, "Main::starting read %08zx\n", numBytes);
-  device->startRead(ref_srcAlloc, 0, 0, numBytes, 16);
-  deviceIndication->wait();
+	  fprintf(stderr, "Main::starting write ref=%d, len=%08zx (%lu)\n", ref_srcAlloc, numBytes, loop);
+	  device->startWrite(ref_srcAlloc, 0, loop, numBytes, 16);
+	  deviceIndication->wait();
 
-  fprintf(stderr, "Main::starting erase %08zx\n", numBytes);
-  device->startErase(0, numBytes);
-  deviceIndication->wait();
+	  loop+=numBytes;
+  }
 
-  fprintf(stderr, "Main::starting read %08zx\n", numBytes);
-  device->startRead(ref_srcAlloc, 0, 0, numBytes, 16);
-  deviceIndication->wait();
-  return 0;
+  loop = 0;
+  while (loop < nandBytes) {
+	  int i;
+	  fprintf(stderr, "Main::starting read %08zx (%lu)\n", numBytes, loop);
+	  device->startRead(ref_srcAlloc, 0, loop, numBytes, 16);
+	  deviceIndication->wait();
+
+	  for (i = 0; i < numBytes/sizeof(srcBuffer[0]); i++) {
+		  if (srcBuffer[i] != loop+i) {
+			  fprintf(stderr, "Main::mismatch [%08zx] != [%08zx]\n", loop+i, srcBuffer[i]);
+			  mismatch++;
+		  } else {
+			  match++;
+		  }
+	  }
+
+	  loop+=numBytes;
+  }
+  /* end */
+
+  fprintf(stderr, "Main::Summary: match=%lu mismatch:%lu (%lu) (%f percent)\n", 
+		match, mismatch, match+mismatch, (float)mismatch/(float)(match+mismatch)*100.0);
+
+  return (mismatch > 0);
 }
