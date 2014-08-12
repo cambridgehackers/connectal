@@ -114,7 +114,6 @@ module  mkSharedInterleavedDotProdServerConfig#(UInt#(TLog#(TMul#(J,K))) label)(
    Reg#(Bit#(16))gatherCnt <- mkReg(0);
    Reg#(Bool) gather_phase <- mkReg(False);
    //invariant: gather_phase = lastCnt == fromInteger(kk);
-   Reg#(Bool) lastPassReg <- mkReg(False);
 
    FIFOF#(Tuple2#(Bool,Bool))    flFifo <- mkSizedFIFOF(ub_MulLat);
    Vector#(k,FIFOF#(MmToken))    dotfifos <- replicateM(mkFIFOF1);
@@ -201,17 +200,14 @@ module  mkSharedInterleavedDotProdServerConfig#(UInt#(TLog#(TMul#(J,K))) label)(
       lastGather <= cycles;
       let row = rowReg;
       let last_row = lastRowReg;
-      let last_pass = lastPassReg; // invariant: gatherCnt+1 == fromInteger(valueOf(gatherSz));
+      let last_pass = gatherCnt+1 == fromInteger(valueOf(gatherSz));
       if (verbose)
 	 $display("%08d gather: gather=%d row=%d last_pass=%d last_row=%d, gReg=%d", 
 		  cycles-lastGather, gatherCnt, row, last_pass, last_row, gReg);
       let x <- toGet(adder_buffer).get;
       if (!last_pass) begin
 	 if (last_row) begin
-	    if (gReg) begin
-	       gatherCnt <= gatherCnt+1;
-	       lastPassReg <= gatherCnt == fromInteger(valueOf(gatherSz)-2);
-	    end
+	    if (gReg) gatherCnt <= gatherCnt+1;
 	    gReg <= !gReg;
 	 end
 	 if(gReg) begin
@@ -232,7 +228,6 @@ module  mkSharedInterleavedDotProdServerConfig#(UInt#(TLog#(TMul#(J,K))) label)(
 `endif      
 	 if (last_row) begin
 	    gatherCnt <= 0;
-	    lastPassReg <= (1 == fromInteger(valueOf(gatherSz)));
 	    lastCnt <= 0;
 	    firstCnt <= 0;
 	    gather_phase <= False;
