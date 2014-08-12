@@ -539,6 +539,7 @@ hblank--; // needed on zc702
     unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, DMA_BUFFER_SIZE);
     printf("[%s:%d] before dma->reference\n", __FUNCTION__, __LINE__);
     memset(srcBuffer, 0xff, 16);
+    portalDCacheFlushInval(srcAlloc, DMA_BUFFER_SIZE, srcBuffer);
     memdump((unsigned char *)srcBuffer, 32, "STARTMEM");
     unsigned int ref_srcAlloc = dma->reference(srcAlloc);
     printf("[%s:%d] before setTestPattern\n", __FUNCTION__, __LINE__);
@@ -556,6 +557,7 @@ hblank--; // needed on zc702
         int i;
         for (i = 0; regids[i]; i++)
             printf("[%s:%d] spi %d. %x\n", __FUNCTION__, __LINE__, regids[i], vita_spi_read(regids[i]));
+        portalDCacheFlushInval(srcAlloc, DMA_BUFFER_SIZE, srcBuffer);
         memdump((unsigned char *)srcBuffer, 32, "MEM");
 	usleep(1000000);
     }

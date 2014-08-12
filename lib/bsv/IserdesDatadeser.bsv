@@ -547,14 +547,14 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
     endrule
     rule start_dma_rule if (dmaOnce && numWords != 0);
         dmaOnce <= False;
-        we.writeServers[0].request.put(MemengineCmd{pointer:pointer, base:0, len:truncate(numWords), burstLen:16*4});
-        indication.iserdes_dma('hffff0000); // request started
+        we.writeServers[0].request.put(MemengineCmd{pointer:pointer, base:0, len:truncate(numWords * 4), burstLen:16*4});
+        indication.iserdes_dma({'hff, numWords[23:0]}); // request started
     endrule
     rule send_data if (!dmaOnce && numWords != 0);
         let v = numWords; //{empty_wire, raw_data_wire};
         we.dataPipes[0].enq(extend(v));
         numWords <= numWords - 1;
-        if (numWords[4:0] == 'h1f)
+        if (numWords[4:0] == 'h1f || numWords == 1)
             indication.iserdes_dma({pushCount, numWords[23:8]});
         pushCount <= pushCount + 1;
     endrule
