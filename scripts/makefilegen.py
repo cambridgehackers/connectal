@@ -96,7 +96,7 @@ fpgamakeRuleTemplate='''
 FPGAMAKE=$(XBSVDIR)/../fpgamake/fpgamake
 fpgamake.mk: $(vfile) Makefile prepare_bin_target
 	$(Q)mkdir -p hw
-	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s -t $(MKTOP) %(cachedir)s -b hw/mkTop.bit verilog $(XBSVDIR)/verilog
+	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s -t $(MKTOP) %(cachedir)s -b hw/mkTop.bit verilog $(XBSVDIR)/verilog
 
 hw/mkTop.bit: fpgamake.mk prepare_bin_target
 	$(Q)make -f fpgamake.mk
@@ -286,7 +286,6 @@ if __name__=='__main__':
     tclsubsts = {'dut': dutname.lower(),
                  'Dut': dutname,
                  'rewire_clock': rewireclockstring,
-                 'sourceTcl': ''.join(['source {%s}\n' % os.path.basename(tcl) for tcl in options.tcl]),
                  'project_dir': project_dir,
                  'partname': partname,
                  'boardname': boardname,
@@ -316,12 +315,6 @@ if __name__=='__main__':
                 os.makedirs(dstconstraintdir)
             ## this path is here so we can overwrite sources
             shutil.copy(constraint, dstconstraintdir)
-    if options.tcl:
-        for tcl in options.tcl:
-            if noisyFlag:
-                print 'Copying tcl file from', tcl
-            ## this path is here so we can overwrite sources
-            shutil.copy(tcl, project_dir)
 
     if noisyFlag:
         print 'Writing Makefile', makename
@@ -331,6 +324,7 @@ if __name__=='__main__':
 					 'floorplan': os.path.abspath(options.floorplan) if options.floorplan else '',
 					 'xdc': ' '.join(['--xdc=%s' % os.path.abspath(xdc) for xdc in options.constraint]),
 					 'xci': ' '.join(['--xci=%s' % os.path.abspath(xci) for xci in options.xci]),
+					 'sourceTcl': ' '.join(['--tcl=%s' % os.path.abspath(tcl) for tcl in options.tcl]),
 					 'cachedir': '--cachedir=%s' % os.path.abspath(options.cachedir) if options.cachedir else ''
 					 }
 
