@@ -70,12 +70,18 @@ typedef 8 UB_MulLat; // upper bound on MUL latency?
 typedef 8 UB_AddLat; // upper bound on ADD latency?
 	   
 (* synthesize *)
-module  mkSharedInterleavedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServer#(K))
-   provisos(Div#(UB_AddLat,K,gatherSz));
+module  mkSharedInterleavedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServer#(K));
+   let rv <- mkSharedInterleavedDotProdServerConfig(label);
+   return rv;
+endmodule
+
+
+module  mkSharedInterleavedDotProdServerConfig#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServer#(k))
+   provisos(Div#(UB_AddLat,k,gatherSz));
     
    let ub_MulLat = valueOf(UB_MulLat);
    let ub_AddLat = valueOf(UB_AddLat);
-   let kk = valueOf(K);
+   let kk = valueOf(k);
 
    Bool verbose = False; //label == 0;
    
@@ -83,11 +89,11 @@ module  mkSharedInterleavedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(Shared
 
    FloatAlu mul   <- mkFloatMultiplier(defaultValue);
    FloatAlu adder <- mkFloatAdder(defaultValue);
-   FIFOF#(Float) adder_buffer <- mkSizedFIFOF(valueOf(TMul#(K,gatherSz)));
+   FIFOF#(Float) adder_buffer <- mkSizedFIFOF(valueOf(TMul#(k,gatherSz)));
    
 `ifdef TAGGED_TOKENS
    FIFO#(Tuple2#(UInt#(32),UInt#(32))) tag_fifo <- mkSizedFIFO(ub_MulLat); 
-   Vector#(K,Reg#(Tuple2#(UInt#(32),UInt#(32)))) tag_regs <- replicateM(mkRegU);
+   Vector#(k,Reg#(Tuple2#(UInt#(32),UInt#(32)))) tag_regs <- replicateM(mkRegU);
 `endif   
    
    Reg#(Bit#(32)) cycles <- mkReg(0);
@@ -111,8 +117,8 @@ module  mkSharedInterleavedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(Shared
    Reg#(Bool) lastPassReg <- mkReg(False);
 
    FIFOF#(Tuple2#(Bool,Bool))    flFifo <- mkSizedFIFOF(ub_MulLat);
-   Vector#(K,FIFOF#(MmToken))    dotfifos <- replicateM(mkFIFOF1);
-   Reg#(Bit#(TAdd#(1,TLog#(K)))) rowReg <- mkReg(0);
+   Vector#(k,FIFOF#(MmToken))    dotfifos <- replicateM(mkFIFOF1);
+   Reg#(Bit#(TAdd#(1,TLog#(k)))) rowReg <- mkReg(0);
    Reg#(Bool)                lastRowReg <- mkReg(False);
       
    Reg#(Bit#(32)) lastMul <- mkReg(0);
@@ -171,7 +177,7 @@ module  mkSharedInterleavedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(Shared
 			    cycles-lastAcc, label, first, last, firstCnt, lastCnt);
       match {.resp,.*} <- mul.response.get;
       let acc = unpack(0);
-      if (firstCnt == fromInteger(valueOf(TMul#(K,gatherSz))))
+      if (firstCnt == fromInteger(valueOf(TMul#(k,gatherSz))))
 	 acc <- toGet(adder_buffer).get;
       else begin
 	 firstCnt <= firstCnt+1;
@@ -234,7 +240,7 @@ module  mkSharedInterleavedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(Shared
       end
    endrule   
 
-   Vector#(K,PipeOut#(MmToken)) dotpipes = map(toPipeOut, dotfifos);
+   Vector#(k,PipeOut#(MmToken)) dotpipes = map(toPipeOut, dotfifos);
 
    interface Put aInput;
       method Action put(MmToken a);
@@ -247,7 +253,7 @@ module  mkSharedInterleavedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(Shared
    interface SharedDotProdDebug debug;
       interface PipeOut  macCount = toPipeOut(macs._read);
    endinterface
-endmodule : mkSharedInterleavedDotProdServer
+endmodule : mkSharedInterleavedDotProdServerConfig
 
 
 

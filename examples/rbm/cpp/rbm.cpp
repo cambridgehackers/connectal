@@ -126,7 +126,7 @@ void RbmMat::sumOfErrorSquared(RbmMat &pred)
     if (rows != pred.rows || cols != pred.cols) {
 	fprintf(stderr, "Mismatched data and pred: data.rows=%d data.cols=%d  pred.rows=%d pred.cols=%d\n",
 		rows, cols, pred.rows, pred.cols);
-	return;
+	exit(-1);
     }
     rbmdevice->sumOfErrorSquared(reference(), pred.reference(), rows*cols);
     sem_wait(&mul_sem);
@@ -136,8 +136,8 @@ void RbmMat::sumOfErrorSquared(RbmMat &pred)
 void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
 {
   int numEpochs = 1;
-  bool verbose = false;
-  bool verify = false;
+  bool verbose = true;
+  bool verify = true;
   int numExamples = trainingData.rows;
 
   if (verbose) dumpMat<float>("trainingData", "%5.6f", trainingData);
@@ -158,10 +158,9 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
     data.at<float>(i, 0) = 1.0;
 
   RbmMat pmData(data);
-  RbmMat dataT(pmData.t());
-  RbmMat dataNT(pmData);
+  RbmMat pmDataT(pmData.t());
   RbmMat pmWeights(weights);
-  RbmMat pmWeightsCM;
+  RbmMat pmWeightsT;
   RbmMat pm_pos_hidden_activations;
   RbmMat pm_pos_hidden_probs;
   RbmMat pm_rand_mat;
@@ -187,12 +186,12 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
     cv::Mat pos_hidden_activations = data * pmWeights;
 
     // fixme transpose
-    pmWeightsCM.transpose(pmWeights);
-    if (verbose) dumpMat<float>("pmWeightsCM", "%5.1f", pmWeightsCM);
+    pmWeightsT.transpose(pmWeights);
+    if (verbose) dumpMat<float>("pmWeightsT", "%5.1f", pmWeightsT);
 
     //RbmMat pm_pos_hidden_activations;
 #ifdef MATRIX_TN
-    pm_pos_hidden_activations.multf(pmData, pmWeightsCM);
+    pm_pos_hidden_activations.multf(pmDataT, pmWeights);
 #else
     assert(0);
 #endif
@@ -238,7 +237,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
     if (verbose) dumpMat<float>("pm_pos_hidden_states", "%5.1f", pm_pos_hidden_states);
     if (verbose) dumpMat<float>("   pos_hidden_states", "%5.1f", pos_hidden_states);
     if (verify) assert(pm_pos_hidden_states.compare(pos_hidden_states, __FILE__, __LINE__));
-    if (verbose) dumpMat<float>("dataT", "%5.1f", dataT);
+    if (verbose) dumpMat<float>("pmDataT", "%5.1f", pmDataT);
 
     //RbmMat pmWeights(weights); // back to non-transposed
     //pmWeights.copy(weights);
@@ -247,11 +246,11 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
     pm_pos_hidden_probsT.transpose(pm_pos_hidden_probs);
     if (verbose) dumpMat<float>("pos_hidden_probsT", "%5.1f", pm_pos_hidden_probsT);
 
-    cv::Mat pos_associations = dataNT * pm_pos_hidden_probs;
+    cv::Mat pos_associations = pmDataT * pm_pos_hidden_probs;
 
     //RbmMat pm_pos_associations;
 #ifdef MATRIX_TN
-    pm_pos_associations.multf(dataT, pm_pos_hidden_probsT);
+    pm_pos_associations.multf(pmData, pm_pos_hidden_probs);
 #else
     assert(0);
 #endif
@@ -262,7 +261,8 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
 
     // RbmMat pm_neg_visible_activations;
 #ifdef MATRIX_TN
-    pm_neg_visible_activations.multf(pm_pos_hidden_states, pmWeights);
+    RbmMat pm_pos_hidden_statesT(pm_pos_hidden_states.t());
+    pm_neg_visible_activations.multf(pm_pos_hidden_statesT, pmWeightsT);
 #else
     assert(0);
 #endif
@@ -278,6 +278,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
 
     // RbmMat pm_neg_visible_probs;
     pm_neg_visible_probs.sigmoid(pm_neg_visible_activations);
+    pm_neg_visible_probsT.transpose(pm_neg_visible_probs);
     if (verbose) dumpMat<float>("neg_visible_probs", "%5.1f", pm_neg_visible_probs);
 
     // pm_neg_visible_probs[:0] = 1;
@@ -289,13 +290,13 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
 
     // RbmMat pm_neg_hidden_activations;
 #ifdef MATRIX_TN
-    pm_neg_hidden_activations.multf(pm_neg_visible_probs, pmWeightsCM);
+    pm_neg_hidden_activations.multf(pm_neg_visible_probsT, pmWeights);
 #else
     assert(0);
 #endif
     if (verbose) dumpMat<float>("pm_neg_hidden_activations", "%5.1f", pm_neg_hidden_activations);
 
-    cv::Mat neg_hidden_activations = pm_neg_visible_probs.t() * pmWeights;
+    cv::Mat neg_hidden_activations = pm_neg_visible_probs * pmWeights;
     if (verbose) dumpMat<float>("   neg_hidden_activations", "%5.1f", neg_hidden_activations);
     if (verify) pm_neg_hidden_activations.compare(neg_hidden_activations, __FILE__, __LINE__);
 
@@ -309,12 +310,12 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
     pm_neg_hidden_probsT.transpose(pm_neg_hidden_probs);
     //RbmMat pm_neg_associations;
 #ifdef MATRIX_TN
-    pm_neg_associations.multf(pm_neg_visible_probsT, pm_neg_hidden_probsT);
+    pm_neg_associations.multf(pm_neg_visible_probs, pm_neg_hidden_probs);
 #else
     assert(0);
 #endif
     if (verbose) dumpMat<float>("pm_neg_associations", "%5.1f", pm_neg_associations);
-    cv::Mat neg_associations = pm_neg_visible_probs * pm_neg_hidden_probs;
+    cv::Mat neg_associations = pm_neg_visible_probsT * pm_neg_hidden_probs;
     if (verbose) dumpMat<float>("   neg_associations", "%5.1f", neg_associations);
 
 

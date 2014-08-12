@@ -190,11 +190,13 @@ endinterface
 
 module  mkSumOfErrorSquared#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
 			     Vector#(2, PipeOut#(Bit#(TMul#(N,32)))) readPipes)(SumOfErrorSquared#(N, DmaSz))
-   provisos (Bits#(Vector#(N, Float), DmaSz));
+   provisos ( Bits#(Vector#(N, Float), DmaSz)
+	     ,Log#(N,nshift));
    
    Vector#(2, VectorSource#(DmaSz, Vector#(N,Float))) sources <- mapM(uncurry(mkMemreadVectorSource), zip(readServers, readPipes));
    let n = valueOf(N);
-   let dotprod <- mkSharedInterleavedDotProdServer(0);
+   let nshift = valueOf(nshift);
+   SharedDotProdServer#(1) dotprod <- mkSharedInterleavedDotProdServerConfig(0);
 
    FirstLastPipe#(Bit#(ObjectOffsetSize)) firstlastPipe <- mkFirstLastPipe();
    PipeOut#(Float) aPipe <- mkFunnel1(sources[0].pipe);
@@ -207,6 +209,7 @@ module  mkSumOfErrorSquared#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
       MmToken t = MmToken { v: diff, first: first, last: last };
       dotprod.aInput.put(t);
       dotprod.bInput.put(t);
+      //$display("%d %d", first, last);
    endrule
 
    for (Integer i = 0; i < 2; i = i + 1)
@@ -216,8 +219,8 @@ module  mkSumOfErrorSquared#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
 
    interface PipeOut pipe = mapPipe(tokenValue, dotprod.pipes[0]);
    method Action start(Bit#(32) dataPointer, Bit#(32) predPointer, Bit#(32) numElts);
-      sources[0].start(dataPointer, 0, extend(numElts));
-      sources[1].start(predPointer, 0, extend(numElts));
+      sources[0].start(dataPointer, 0, extend(numElts)>>nshift);
+      sources[1].start(predPointer, 0, extend(numElts)>>nshift);
       firstlastPipe.start(extend(numElts));
    endmethod
 endmodule: mkSumOfErrorSquared
