@@ -138,15 +138,11 @@ endinterface
 
 function Action check_dimension(Bit#(32) d);
    return (action
-`ifdef BSIM
       Bit#(32) x = d/fromInteger(valueOf(N));
       Bit#(32) y = x*fromInteger(valueOf(N));
       if (y != d) begin
       	 $display("matrix dimension %d is not a multiple of %d", d, valueOf(N));
       	 $finish(1);
       end
-`else
-      return noAction;
-`endif
       endaction);
 endfunction
