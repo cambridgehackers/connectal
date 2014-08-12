@@ -252,29 +252,11 @@ module  mkRbm#(HostType host, RbmIndication rbmInd, SigmoidIndication sigmoidInd
    let wes = writeEngine.writeServers;
    let wep = writeEngine.dataPipes;
    
-   SigmoidIfc#(TMul#(32,n)) sigmoid <- mkSigmoid(sigmoidInd, takeAt(0,res), takeAt(0,rep), takeAt(0,wes), takeAt(0,wep)); // 2 read, 1 write
+   SigmoidIfc#(TMul#(32,n)) sigmoid <- mkSigmoid(takeAt(0,res), takeAt(0,rep), takeAt(0,wes), takeAt(0,wep)); // 2 read, 1 write
    StatesPipe#(N, DmaSz) states <- mkStatesPipe(takeAt(2,res), takeAt(2,rep), takeAt(1,wes), takeAt(1,wep));              // 2 read, 1 write
    UpdateWeights#(N, DmaSz) updateWeights <- mkUpdateWeights(takeAt(4,res), takeAt(4,rep), takeAt(2,wes), takeAt(2,wep)); // 3 read, 1 write
    SumOfErrorSquared#(N, DmaSz) sumOfErrorSquared <- mkSumOfErrorSquared(takeAt(7,res), takeAt(7,rep));                   // 2 read, 0 write
-   MmTN#(N) mm <- mkMmTN(mmInd, timerInd, host);
-   
-   rule statesDone;
-      $display("statesDone");
-      let b <- states.finish();
-      rbmInd.statesDone();
-   endrule
-
-   rule updateWeightsDone;
-      $display("updateWeightsDone");
-      let b <- updateWeights.finish();
-      rbmInd.updateWeightsDone();
-   endrule
-
-   rule sumOfErrorSquaredDone;
-      $display("sumOfErrorSquaredDone");
-      sumOfErrorSquared.pipe.deq();
-      rbmInd.sumOfErrorSquared(pack(sumOfErrorSquared.pipe.first()));
-   endrule
+   MmTNInternal#(N) mm <- mkMmTNInternal(host);
    
    ///////////////////////////////////////////////
    // timing cruft
@@ -290,9 +272,66 @@ module  mkRbm#(HostType host, RbmIndication rbmInd, SigmoidIndication sigmoidInd
    endrule
 
    ///////////////////////////////////////////////
+   
+   ///////////////////////////////////////////////
+   // sigmoid indication
+   
+   rule sigmoidDone;
+      sigmoid.sigmoidDone();
+      sigmoidInd.sigmoidDone();
+      busyFifo.deq;
+   endrule
+   
+   rule sigmoidTableUpdateDone;
+      let b <- sigmoid.updateDone();
+      sigmoidInd.tableUpdated(0);
+      busyFifo.deq;
+   endrule
+   
+   ///////////////////////////////////////////////
+   
+   ///////////////////////////////////////////////
+   // mm indication
 
-   interface MmRequestTN mmRequest = mm.mmRequest;
-   interface SigmoidRequest sigmoidRequest = sigmoid.sigmoidRequest;
+   rule mmfDone;
+      let d <- mm.mmfDone;
+      busyFifo.deq();
+      mmInd.mmfDone(d);
+   endrule
+   
+   rule mmDebugDone;
+      let d <- mm.debugDone;
+      mmInd.debug(d);
+   endrule
+
+   ///////////////////////////////////////////////
+   
+   ///////////////////////////////////////////////
+   // rbm indication
+
+   rule statesDone;
+      $display("statesDone");
+      let b <- states.finish();
+      rbmInd.statesDone();
+      busyFifo.deq;
+   endrule
+
+   rule updateWeightsDone;
+      $display("updateWeightsDone");
+      let b <- updateWeights.finish();
+      rbmInd.updateWeightsDone();
+      busyFifo.deq;
+   endrule
+
+   rule sumOfErrorSquaredDone;
+      $display("sumOfErrorSquaredDone");
+      sumOfErrorSquared.pipe.deq();
+      rbmInd.sumOfErrorSquared(pack(sumOfErrorSquared.pipe.first()));
+      busyFifo.deq;
+   endrule
+   
+   ///////////////////////////////////////////////
+   
    interface TimerRequest timerRequest;
       method Action startTimer() if (!timerRunning.notEmpty());
 	 cycleCount <= 0;
@@ -304,6 +343,23 @@ module  mkRbm#(HostType host, RbmIndication rbmInd, SigmoidIndication sigmoidInd
 	 timerInd.elapsedCycles(cycleCount, idleCount);
       endmethod
    endinterface
+   interface MmRequestTN mmRequest;
+      method Action mmf(Bit#(32) h1, Bit#(32) r1, Bit#(32) c1,
+			Bit#(32) h2, Bit#(32) r2, Bit#(32) c2,
+			Bit#(32) h3,
+			Bit#(32) r1_x_c1, Bit#(32) c1_x_j,
+			Bit#(32) r1_x_c2, Bit#(32) c2_x_j,
+			Bit#(32) c1_x_c2, Bit#(32) r2_x_c2);
+	 mm.mmRequest.mmf(h1,r1,c1,
+			  h2,r2,c2,
+			  h3,
+			  r1_x_c1, c1_x_j,
+			  r1_x_c2, c2_x_j,
+			  c1_x_c2, r2_x_c2);
+	 busyFifo.enq(True);
+      endmethod
+      method Action debug = mm.mmRequest.debug;
+   endinterface
    interface RbmRequest rbmRequest;
       method Action finish();
 	 $finish(0);
@@ -314,6 +370,7 @@ module  mkRbm#(HostType host, RbmIndication rbmInd, SigmoidIndication sigmoidInd
 	 states.start(readPointer, readOffset,
 		      readPointer2, readOffset2,
 		      writePointer,writeOffset, numElts);
+	 busyFifo.enq(True);
       endmethod
       method Action updateWeights(Bit#(32) posAssociationsPointer,
 	 Bit#(32) negAssociationsPointer,
@@ -323,11 +380,30 @@ module  mkRbm#(HostType host, RbmIndication rbmInd, SigmoidIndication sigmoidInd
 	 updateWeights.start(posAssociationsPointer, negAssociationsPointer, 
 			     weightsPointer, numElts, 
 			     unpack(learningRateOverNumExamples));
+	 busyFifo.enq(True);
       endmethod
       method Action sumOfErrorSquared(Bit#(32) dataPointer, Bit#(32) predPointer, Bit#(32) numElts);
 	 sumOfErrorSquared.start(dataPointer, predPointer, numElts);
+	 busyFifo.enq(True);
       endmethod
    endinterface   
+   interface SigmoidRequest sigmoidRequest;
+      method Action sigmoid(Bit#(32) readPointer, Bit#(32) readOffset,
+   			    Bit#(32) writePointer, Bit#(32) writeOffset, Bit#(32) numvalues);
+	 sigmoid.sigmoidRequest.sigmoid(readPointer, readOffset, writePointer, writeOffset, numvalues);
+	 busyFifo.enq(True);
+      endmethod
+      method Action setLimits(Bit#(32) rscale, Bit#(32) llimit, Bit#(32) ulimit);
+	 sigmoid.sigmoidRequest.setLimits(rscale, llimit, ulimit);
+      endmethod
+      method Action updateTable(Bit#(32) readPointer, Bit#(32) readOffset, Bit#(32) numvalues);
+	 sigmoid.sigmoidRequest.updateTable(readPointer, readOffset, numvalues);
+	 busyFifo.enq(True);
+      endmethod
+      method Action tableSize();
+	 sigmoidInd.tableSize(sigmoid.tableSize);
+      endmethod
+   endinterface
    interface Vector readClients = cons(readEngine.dmaClient,mm.readClients);
    interface Vector writeClients = cons(writeEngine.dmaClient,mm.writeClients);
 

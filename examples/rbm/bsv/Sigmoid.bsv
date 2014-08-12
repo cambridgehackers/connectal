@@ -136,10 +136,12 @@ endmodule
 
 interface SigmoidIfc#(numeric type dsz);
    interface SigmoidRequest sigmoidRequest;
+   method Action sigmoidDone;
+   method Action updateDone;
+   method Bit#(32) tableSize;
 endinterface
 
-module  mkSigmoid#(SigmoidIndication sigmoidInd,
-		   Vector#(2,Server#(MemengineCmd,Bool)) readServers,
+module  mkSigmoid#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
 		   Vector#(2, PipeOut#(Bit#(TMul#(N,32)))) readPipes,
 		   Vector#(1,Server#(MemengineCmd,Bool)) writeServers,
 		   Vector#(1, PipeIn#(Bit#(TMul#(N,32))))  writePipes ) (SigmoidIfc#(dsz))
@@ -203,16 +205,20 @@ module  mkSigmoid#(SigmoidIndication sigmoidInd,
    rule sourceFinishRule;
       let b <- source.finish();
    endrule
-   rule sigmoidDone;
+
+   method Action sigmoidDone;
       let b <- sinkC.finish();
-      sigmoidInd.sigmoidDone();
-   endrule
-   rule tableUpdateDone;
+   endmethod
+
+   method Action updateDone;
       let b <- tabsrc.finish();
       updatingSigmoidTable <= False;
-      sigmoidInd.tableUpdated(0);
-   endrule
-   
+   endmethod
+
+   method Bit#(32) tableSize;
+      return sigmoidTables[0].tableSize;
+   endmethod
+
    interface SigmoidRequest sigmoidRequest;
       method Action sigmoid(Bit#(32) readPointer, Bit#(32) readOffset,
    			    Bit#(32) writePointer, Bit#(32) writeOffset, Bit#(32) numvalues);
@@ -232,7 +238,7 @@ module  mkSigmoid#(SigmoidIndication sigmoidInd,
 	 if (verbose) $display("sigmoid.updateSigmoidTable %d %d %d", readPointer, readOffset, numvalues);
       endmethod
       method Action tableSize();
-	 sigmoidInd.tableSize(sigmoidTables[0].tableSize());
+	 noAction;
       endmethod
    endinterface
 endmodule

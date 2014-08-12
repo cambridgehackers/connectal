@@ -498,51 +498,40 @@ interface MmTN#(numeric type n);
    interface Vector#(2, ObjectWriteClient#(TMul#(32,n))) writeClients;
 endinterface
 
-module  mkMmTN#(MmIndication ind, TimerIndication timerInd, HostType host)(MmTN#(N))
+interface MmTNInternal#(numeric type n);
+   interface MmRequestTN mmRequest;
+   interface Vector#(2, ObjectReadClient#(TMul#(32,n)))  readClients;
+   interface Vector#(2, ObjectWriteClient#(TMul#(32,n))) writeClients;
+   method ActionValue#(Bit#(64)) mmfDone(); 
+   method ActionValue#(Bit#(32)) debugDone(); 
+endinterface
+
+module  mkMmTNInternal#(HostType host)(MmTNInternal#(N))
    provisos (Add#(1,a__,N),
 	     Add#(N,0,n),
 	     Mul#(N,32,DmaSz)
 	     );
    
    let verbose = False;
-   
    let n = valueOf(n);
-
    DramMatrixMultiply#(N, TMul#(N,32)) dmaMMF <- mkDramMatrixMultiply(host);
+   FIFO#(void) mcReqs <- mkFIFO;
 
    Reg#(Bit#(64)) mmfCycles <- mkReg(0);
-   rule countMmfCycles;
+   rule countCycles;
       mmfCycles <= mmfCycles + 1;
    endrule
 
-   FIFOF#(Bool) busyFifo <- mkFIFOF();
-   rule mmfDone;
+   method ActionValue#(Bit#(64)) mmfDone;
       let d <- dmaMMF.finish();
-      busyFifo.deq();
-      ind.mmfDone(mmfCycles);
       if(verbose) $display("mkMmTN.mmfDone");
-   endrule
-   
-   FIFOF#(Bool) timerRunning <- mkFIFOF();
-   Reg#(Bit#(64)) cycleCount <- mkReg(0);
-   Reg#(Bit#(64)) idleCount <- mkReg(0);
-   rule countCycles if (timerRunning.notEmpty());
-      cycleCount <= cycleCount + 1;
-      if (!busyFifo.notEmpty())
-	 idleCount <= idleCount + 1;
-   endrule
+      return mmfCycles;
+   endmethod
 
-   interface TimerRequest timerRequest;
-      method Action startTimer() if (!timerRunning.notEmpty());
-	 cycleCount <= 0;
-	 idleCount <= 0;
-	 timerRunning.enq(True);
-      endmethod
-      method Action stopTimer();
-	 timerRunning.deq();
-	 timerInd.elapsedCycles(cycleCount, idleCount);
-      endmethod
-   endinterface
+   method ActionValue#(Bit#(32)) debugDone;
+      mcReqs.deq;
+      return dmaMMF.debug.macCount();
+   endmethod
    
    interface MmRequestTN mmRequest;
       method Action mmf(Bit#(32) h1, Bit#(32) r1, Bit#(32) c1,
@@ -562,18 +551,74 @@ module  mkMmTN#(MmIndication ind, TimerIndication timerInd, HostType host)(MmTN#
 		      unpack(truncate(r1_x_c1)), unpack(truncate(c1_x_j)),
 		      unpack(truncate(r1_x_c2)), unpack(truncate(c2_x_j)),
 		      unpack(truncate(c1_x_c2)), unpack(truncate(r2_x_c2)));
-
 	 mmfCycles <= 0;
-	 busyFifo.enq(True);
       endmethod
       method Action debug();
-	 let macCount = dmaMMF.debug.macCount();
-	 ind.debug(macCount);
+	 mcReqs.enq(?);
       endmethod
    endinterface
-
    interface Vector readClients = dmaMMF.readClients;
    interface Vector writeClients =  dmaMMF.writeClients;
+endmodule
 
+module  mkMmTN#(MmIndication ind, TimerIndication timerInd, HostType host)(MmTN#(N))
+   provisos (Add#(1,a__,N),
+	     Add#(N,0,n),
+	     Mul#(N,32,DmaSz)
+	     );
+   
+   MmTNInternal#(N) mmTnInt <- mkMmTNInternal(host);
+   FIFOF#(Bool) busyFifo <- mkFIFOF();
+   FIFOF#(Bool) timerRunning <- mkFIFOF();
+   Reg#(Bit#(64)) cycleCount <- mkReg(0);
+   Reg#(Bit#(64)) idleCount <- mkReg(0);
+
+   rule countCycles if (timerRunning.notEmpty());
+      cycleCount <= cycleCount + 1;
+      if (!busyFifo.notEmpty())
+	 idleCount <= idleCount + 1;
+   endrule
+
+   rule mmfDone;
+      let d <- mmTnInt.mmfDone;
+      busyFifo.deq();
+      ind.mmfDone(d);
+   endrule
+   
+   rule debugDone;
+      let d <- mmTnInt.debugDone;
+      ind.debug(d);
+   endrule
+   
+   interface TimerRequest timerRequest;
+      method Action startTimer() if (!timerRunning.notEmpty());
+	 cycleCount <= 0;
+	 idleCount <= 0;
+	 timerRunning.enq(True);
+      endmethod
+      method Action stopTimer();
+	 timerRunning.deq();
+	 timerInd.elapsedCycles(cycleCount, idleCount);
+      endmethod
+   endinterface
+   interface MmRequestTN mmRequest;
+      method Action mmf(Bit#(32) h1, Bit#(32) r1, Bit#(32) c1,
+			Bit#(32) h2, Bit#(32) r2, Bit#(32) c2,
+			Bit#(32) h3,
+			Bit#(32) r1_x_c1, Bit#(32) c1_x_j,
+			Bit#(32) r1_x_c2, Bit#(32) c2_x_j,
+			Bit#(32) c1_x_c2, Bit#(32) r2_x_c2);
+	 mmTnInt.mmRequest.mmf(h1,r1,c1,
+			       h2,r2,c2,
+			       h3,
+			       r1_x_c1, c1_x_j,
+			       r1_x_c2, c2_x_j,
+			       c1_x_c2, r2_x_c2);
+	 busyFifo.enq(True);
+      endmethod
+      method Action debug = mmTnInt.mmRequest.debug;
+   endinterface
+   interface Vector readClients = mmTnInt.readClients;
+   interface Vector writeClients =  mmTnInt.writeClients;
 endmodule
 
