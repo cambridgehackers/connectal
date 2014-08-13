@@ -233,6 +233,8 @@ module mkMemWriteInternal#(Integer iid,
    FIFO#(Tuple2#(RResp#(numClients,addrWidth),Bit#(6))) writeDonePipelineFifo <- mkFIFO;
 
    Reg#(Bit#(8)) burstReg <- mkReg(0);   
+   Reg#(Bool)    firstReg <- mkReg(True);
+   Reg#(Bool)     lastReg <- mkReg(False);
    Reg#(Bit#(64)) beatCount <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
 
@@ -291,13 +293,18 @@ module mkMemWriteInternal#(Integer iid,
       let rename_tag = mwDreqFifo.first.rename_tag;
       ObjectData#(dataWidth) tagdata <- writeClients[client].writeData.get();
       let burstLen = burstReg;
-      if (burstLen == 0) begin
+      let first    = firstReg;
+      let last     = lastReg;
+      if (first) begin
 	 burstLen = req.burstLen >> beat_shift;
+	 last     = mwDreqFifo.first.last;
 	 respFifos[rename_tag].enq(RResp{orig_tag:req.tag, client:client});
       end
       burstReg <= burstLen-1;
+      firstReg <= (burstLen-1 == 0);
+      lastReg  <= (burstLen-1 == 1);
       beatCount <= beatCount+1;
-      if (burstLen == 1)
+      if (last)
 	 mwDreqFifo.deq();
       //$display("writeData: client=%d, rename_tag=%d", client, rename_tag);
       memDataFifo.enq(MemData { data: tagdata.data,  tag:extend(rename_tag), last: False });
@@ -311,7 +318,7 @@ module mkMemWriteInternal#(Integer iid,
 	    let client = reqFifo.first.client;
 	    let rename_tag = reqFifo.first.rename_tag;
 	    reqFifo.deq;
-	    mwDreqFifo.enq(DRec{req:req, client:client, rename_tag:rename_tag, last: False });
+	    mwDreqFifo.enq(DRec{req:req, client:client, rename_tag:rename_tag, last: (req.burstLen == fromInteger(valueOf(dataWidthBytes))) });
 	    //$display("writeReq: client=%d, rename_tag=%d", client,rename_tag);
 	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(rename_tag)};
 	 endmethod
