@@ -561,7 +561,7 @@ hblank--; // needed on zc702
             printf("[%s:%d] spi %d. %x\n", __FUNCTION__, __LINE__, regids[i], vita_spi_read(regids[i]));
         portalDCacheFlushInval(srcAlloc, DMA_BUFFER_SIZE, srcBuffer);
         printf("counter %d\n", counter);
-        if (counter == 1) {
+        if (counter == 1 && argc > 1) {
             int fd = creat("tmp.outfile", 0666);
             int cnt = write(fd, srcBuffer, DMA_BUFFER_SIZE);
             printf("[%s:%d] length written %d.\n", __FUNCTION__, __LINE__, cnt);

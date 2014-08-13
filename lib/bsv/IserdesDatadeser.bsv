@@ -31,19 +31,132 @@ import XbsvXilinxCells::*;
 
 typedef Vector#(10, Reg#(Bit#(10))) TrainRotate;
 
+typedef enum { QIdle, QTrain, QOff} QState deriving (Bits,Eq);
+typedef enum { AIdle, AReset, AEdge, AWait, AShift,
+     ARotated, AFirst, ASecond, AFound, AAlign} AState deriving (Bits,Eq);
+
+interface IserdesCore;
+    method Action io_vita_data_p(Bit#(1) v);
+    method Action io_vita_data_n(Bit#(1) v);
+    method Bit#(10) data();
+endinterface: IserdesCore
+
+module mkIserdesCore#(Clock serdes_clock, Reset serdes_reset, Clock serdest,
+      Clock serdest_inverted, Bit#(1) astate_reset, Bit#(1) sync_bitslip,
+      Bool sync_increment, Bit#(1) sync_ce)(IserdesCore);
+
+    Clock defaultClock <- exposeCurrentClock();
+    Reset defaultReset <- exposeCurrentReset();
+    IdelayE2 delaye2 <- mkIDELAYE2(IDELAYE2_Config {
+        cinvctrl_sel: "FALSE", delay_src: "IDATAIN",
+        high_performance_mode: "TRUE",
+        idelay_type: "VARIABLE", idelay_value: 0,
+        pipe_sel: "FALSE", refclk_frequency: 200, signal_pattern: "DATA"},
+        defaultClock, clocked_by serdes_clock);
+    Vector#(2, IserdesE2) iserdes_v;
+    iserdes_v[0] <- mkISERDESE2( ISERDESE2_Config{
+        data_rate: "DDR", data_width: 10,
+        dyn_clk_inv_en: "FALSE", dyn_clkdiv_inv_en: "FALSE",
+        interface_type: "NETWORKING", num_ce: 2, ofb_used: "FALSE",
+        init_q1: 0, init_q2: 0, init_q3: 0, init_q4: 0,
+        srval_q1: 0, srval_q2: 0, srval_q3: 0, srval_q4: 0,
+        serdes_mode: "MASTER", iobdelay: "IFD"},
+        serdest, serdest_inverted, clocked_by serdes_clock, reset_by serdes_reset);
+    iserdes_v[1] <- mkISERDESE2( ISERDESE2_Config{
+        data_rate: "DDR", data_width: 10,
+        dyn_clk_inv_en: "FALSE", dyn_clkdiv_inv_en: "FALSE",
+        interface_type: "NETWORKING", num_ce: 2, ofb_used: "FALSE",
+        init_q1: 0, init_q2: 0, init_q3: 0, init_q4: 0,
+        srval_q1: 0, srval_q2: 0, srval_q3: 0, srval_q4: 0,
+        serdes_mode: "SLAVE", iobdelay: "NONE"},
+        serdest, serdest_inverted, clocked_by serdes_clock, reset_by serdes_reset);
+    Wire#(Bit#(1)) vita_data_p <- mkDWire(0); //, clocked_by serdes_clock, reset_by serdes_reset);
+    Wire#(Bit#(1)) vita_data_n <- mkDWire(0); //, clocked_by serdes_clock, reset_by serdes_reset);
+    ReadOnly#(Bit#(1))ibufds_v <- mkIBUFDS(vita_data_p, vita_data_n);
+
+    rule setruledata;
+        delaye2.idatain(ibufds_v);
+    endrule
+//(* always_enabled *)
+    rule setrule;
+        delaye2.reset(astate_reset);
+        delaye2.cinvctrl(0);
+        delaye2.cntvaluein(0);
+        delaye2.ld(0);
+        delaye2.ldpipeen(0);
+        delaye2.datain(0);
+        delaye2.inc(sync_increment);
+        delaye2.ce(sync_ce);
+        for (Integer i = 0; i < 2; i = i + 1)
+            begin
+            iserdes_v[i].d(0);
+            iserdes_v[i].bitslip(sync_bitslip);
+            iserdes_v[i].ce1(1);
+            iserdes_v[i].ce2(1);
+            iserdes_v[i].ofb(0);
+            iserdes_v[i].dynclkdivsel(0);
+            iserdes_v[i].dynclksel(0);
+            iserdes_v[i].oclk(0);
+            iserdes_v[i].oclkb(0);
+            iserdes_v[i].reset(astate_reset);
+            end
+        iserdes_v[0].ddly(delaye2.dataout());
+        iserdes_v[0].shiftin1(0);
+        iserdes_v[0].shiftin2(0);
+        iserdes_v[1].ddly(0);
+        iserdes_v[1].shiftin1(iserdes_v[0].shiftout1());
+        iserdes_v[1].shiftin2(iserdes_v[0].shiftout2());
+    endrule
+    method Bit#(10) data();
+        return {iserdes_v[1].q4(), iserdes_v[1].q3(), iserdes_v[0].q8(),
+           iserdes_v[0].q7(), iserdes_v[0].q6(), iserdes_v[0].q5(),
+           iserdes_v[0].q4(), iserdes_v[0].q3(), iserdes_v[0].q2(), iserdes_v[0].q1()};
+    endmethod
+    method Action io_vita_data_p(Bit#(1) v);
+        vita_data_p <= v;
+    endmethod
+    method Action io_vita_data_n(Bit#(1) v);
+        vita_data_n <= v;
+    endmethod
+endmodule
+
+interface SerdesClock;
+    interface Clock serdes_clkif;
+    interface Reset serdes_resetif;
+    interface Clock serdest_clkif;
+    method Action io_vita_clk_p(Bit#(1) v);
+    method Action io_vita_clk_n(Bit#(1) v);
+endinterface
+
+module mkSerdesClock(SerdesClock);
+    Reset defaultReset <- exposeCurrentReset();
+    Wire#(Bit#(1)) vita_clk_p <- mkDWire(0);
+    Wire#(Bit#(1)) vita_clk_n <- mkDWire(0);
+    Clock ibufds_clk <- mkClockIBUFDS(vita_clk_p, vita_clk_n);
+    ClockGenIfc serdes_clk <- mkBUFR5(ibufds_clk);
+    ClockGenIfc serdest_clk <- mkBUFIO(ibufds_clk);
+    Reset serdes_reset <- mkAsyncReset(2, defaultReset, serdes_clk.gen_clk);
+    interface Clock serdes_clkif = serdes_clk.gen_clk;
+    interface Reset serdes_resetif = serdes_reset;
+    interface Clock serdest_clkif = serdest_clk.gen_clk;
+    method Action io_vita_clk_p(Bit#(1) v);
+        vita_clk_p <= v;
+    endmethod
+    method Action io_vita_clk_n(Bit#(1) v);
+        vita_clk_n <= v;
+    endmethod
+endmodule
+
 interface IserdesDatadeser;
-    method Action           ibufdso(Bit#(1) v);
     method Bit#(1)          align_busy();
     method Bit#(3)          samplein();
     method Action           fifo_wren(Bit#(1) v);
     method Action           reset(Bit#(1) v);
     method Bit#(1)          empty();
     method Bit#(10)         dataout();
+    method Action io_vita_data_p(Bit#(1) v);
+    method Action io_vita_data_n(Bit#(1) v);
 endinterface: IserdesDatadeser
-
-typedef enum { QIdle, QTrain, QOff} QState deriving (Bits,Eq);
-typedef enum { AIdle, AReset, AEdge, AWait, AShift,
-     ARotated, AFirst, ASecond, AFound, AAlign} AState deriving (Bits,Eq);
 
 module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest, Bit#(1) align_start,
     Bit#(1) autoalign, Bit#(10) training, Bit#(10) manual_tap, TrainRotate trainrot)(IserdesDatadeser);
@@ -53,30 +166,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     FIFOF#(Bit#(10)) dfifo <- mkFIFOF(clocked_by serdes_clock, reset_by serdes_reset);
     SyncBitIfc#(Bit#(10)) dfifo_data <-  mkSyncBits(0, serdes_clock, serdes_reset, defaultClock, defaultReset);
     SyncBitIfc#(Bit#(1)) dfifo_empty <-  mkSyncBit(serdes_clock, serdes_reset, defaultClock);
-    IdelayE2 delaye2 <- mkIDELAYE2(IDELAYE2_Config {
-        cinvctrl_sel: "FALSE", delay_src: "IDATAIN",
-        high_performance_mode: "TRUE",
-        idelay_type: "VARIABLE", idelay_value: 0,
-        pipe_sel: "FALSE", refclk_frequency: 200, signal_pattern: "DATA"},
-        defaultClock, clocked_by serdes_clock);
-    ClockDividerIfc serdest_inverted <- mkClockInverter(clocked_by serdest);
-    Vector#(2, IserdesE2) iserdes_v;
-    iserdes_v[0] <- mkISERDESE2( ISERDESE2_Config{
-        data_rate: "DDR", data_width: 10,
-        dyn_clk_inv_en: "FALSE", dyn_clkdiv_inv_en: "FALSE",
-        interface_type: "NETWORKING", num_ce: 2, ofb_used: "FALSE",
-        init_q1: 0, init_q2: 0, init_q3: 0, init_q4: 0,
-        srval_q1: 0, srval_q2: 0, srval_q3: 0, srval_q4: 0,
-        serdes_mode: "MASTER", iobdelay: "IFD"},
-        serdest, serdest_inverted.slowClock, clocked_by serdes_clock);
-    iserdes_v[1] <- mkISERDESE2( ISERDESE2_Config{
-        data_rate: "DDR", data_width: 10,
-        dyn_clk_inv_en: "FALSE", dyn_clkdiv_inv_en: "FALSE",
-        interface_type: "NETWORKING", num_ce: 2, ofb_used: "FALSE",
-        init_q1: 0, init_q2: 0, init_q3: 0, init_q4: 0,
-        srval_q1: 0, srval_q2: 0, srval_q3: 0, srval_q4: 0,
-        serdes_mode: "SLAVE", iobdelay: "NONE"},
-        serdest, serdest_inverted.slowClock, clocked_by serdes_clock);
     Wire#(Bit#(1)) bvi_reset_reg <- mkDWire(0, clocked_by serdes_clock, reset_by serdes_reset);
     SyncBitIfc#(Bit#(1)) bvi_resets_reg <- mkSyncBit(serdes_clock, serdes_reset, defaultClock);
     Reg#(Bit#(3)) ctrl_sample <- mkReg(0);
@@ -108,6 +197,10 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     Reg#(Bit#(1)) sync_ce <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(3)) sync_counter <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(10)) ctrl_data <- mkSyncReg(0, serdes_clock, serdes_reset, defaultClock);
+    ClockDividerIfc serdest_inverted <- mkClockInverter(clocked_by serdest);
+    IserdesCore core <- mkIserdesCore(serdes_clock, serdes_reset, serdest,
+        serdest_inverted.slowClock, astate_reset.read(), sync_bitslip,
+        sync_increment == 1, sync_ce);
 
     //*************************** alignment operation FSM *****************
     rule afsminit_rule if (bvi_resets_reg.read() == 0);
@@ -387,40 +480,9 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     rule clear_fifo if (astate_reset.read() == 1);
         dfifo.clear();
     endrule
-    rule setrule;
-        delaye2.reset(astate_reset.read());
-        delaye2.cinvctrl(0);
-        delaye2.cntvaluein(0);
-        delaye2.ld(0);
-        delaye2.ldpipeen(0);
-        delaye2.datain(0);
-        delaye2.inc(sync_increment == 1);
-        delaye2.ce(sync_ce);
-        for (Integer i = 0; i < 2; i = i + 1)
-            begin
-            iserdes_v[i].d(0);
-            iserdes_v[i].bitslip(sync_bitslip);
-            iserdes_v[i].ce1(1);
-            iserdes_v[i].ce2(1);
-            iserdes_v[i].ofb(0);
-            iserdes_v[i].dynclkdivsel(0);
-            iserdes_v[i].dynclksel(0);
-            iserdes_v[i].oclk(0);
-            iserdes_v[i].oclkb(0);
-            iserdes_v[i].reset(astate_reset.read());
-            end
-        iserdes_v[0].ddly(delaye2.dataout());
-        iserdes_v[0].shiftin1(0);
-        iserdes_v[0].shiftin2(0);
-        iserdes_v[1].ddly(0);
-        iserdes_v[1].shiftin1(iserdes_v[0].shiftout1());
-        iserdes_v[1].shiftin2(iserdes_v[0].shiftout2());
-    endrule
 
     rule serdesda2_rule;
-        let dout = {iserdes_v[1].q4(), iserdes_v[1].q3(), iserdes_v[0].q8(),
-           iserdes_v[0].q7(), iserdes_v[0].q6(), iserdes_v[0].q5(),
-           iserdes_v[0].q4(), iserdes_v[0].q3(), iserdes_v[0].q2(), iserdes_v[0].q1()};
+        let dout = core.data();
         serdes_data <= dout;
         if (fifo_wren_sync.read() == 1)
             dfifo.enq(dout);
@@ -434,9 +496,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         dfifo_empty.send(pack(!dfifo.notEmpty()));
     endrule
 
-    method Action ibufdso(Bit#(1) v);
-        delaye2.idatain(v);
-    endmethod
     method Bit#(1)                align_busy();
         return pack(astate != AIdle);
     endmethod
@@ -455,6 +514,8 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     method Bit#(10)               dataout();
         return dfifo_data.read();
     endmethod
+    method io_vita_data_p = core.io_vita_data_p;
+    method io_vita_data_n = core.io_vita_data_n;
 endmodule: mkIserdesDatadeser
 
 (* always_enabled *)
@@ -499,15 +560,10 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
 
-    Wire#(Bit#(1)) vita_clk_p <- mkDWire(0);
-    Wire#(Bit#(1)) vita_clk_n <- mkDWire(0);
-    Clock ibufds_clk <- mkClockIBUFDS(vita_clk_p, vita_clk_n);
-    ClockGenIfc serdes_clk <- mkBUFR5(ibufds_clk);
-    Clock serdes_clock = serdes_clk.gen_clk;
-    Reset serdes_reset <- mkAsyncReset(2, defaultReset, serdes_clock);
+    SerdesClock coreClock <- mkSerdesClock();
+    Clock serdes_clock = coreClock.serdes_clkif;
+    Reset serdes_reset = coreClock.serdes_resetif;
 
-    Vector#(5, Wire#(Bit#(1))) vita_data_p <- replicateM(mkDWire(0));
-    Vector#(5, Wire#(Bit#(1))) vita_data_n <- replicateM(mkDWire(0));
     Reg#(Bit#(1)) decoder_enable_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(1)) serdes_auto_align_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(1)) serdes_align_start_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
@@ -520,21 +576,12 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
     Wire#(Bit#(50)) raw_data_wire <- mkDWire(0);
     Wire#(Bit#(1)) empty_wire <- mkDWire(0);
 
-    ClockGenIfc serdest_clk <- mkBUFIO(ibufds_clk);
     SyncBitIfc#(Bit#(1)) serdes_align_busy_reg <- mkSyncBit(defaultClock, defaultReset, axi_clock);
     Reg#(Bit#(1)) new_raw_empty_reg <- mkReg(1);
     TrainRotate trainrot <- replicateM(mkSyncReg(0, axi_clock, axi_reset, defaultClock));
-    Vector#(5, IserdesDatadeser) pin_v <- replicateM(mkIserdesDatadeser(serdes_clock, serdes_reset, serdest_clk.gen_clk,
+    Vector#(5, IserdesDatadeser) pin_v <- replicateM(mkIserdesDatadeser(serdes_clock, serdes_reset, coreClock.serdest_clkif,
 	  serdes_align_start_reg, serdes_auto_align_reg, serdes_training_reg,
 	  serdes_manual_tap_reg, trainrot));
-
-    Vector#(5, ReadOnly#(Bit#(1))) ibufds_v;
-    for (Integer i = 0; i < 5; i = i + 1)
-        ibufds_v[i] <- mkIBUFDS(vita_data_p[i], vita_data_n[i]);
-    rule sendup_ibufdso;
-       for (Bit#(8) i = 0; i < 5; i = i+1)
-	   pin_v[i].ibufdso(ibufds_v[i]);
-    endrule
 
     Reg#(Bit#(25)) control_data <- mkReg(0);
     Reg#(Bit#(50)) dump_data <- mkReg(0);
@@ -595,25 +642,21 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
 
     interface ImageonSerdesPins pins;
         method Action io_vita_sync_p(Bit#(1) v);
-            vita_data_p[0] <= v;
+            pin_v[0].io_vita_data_p(v);
         endmethod
         method Action io_vita_sync_n(Bit#(1) v);
-            vita_data_n[0] <= v;
+            pin_v[0].io_vita_data_n(v);
         endmethod
         method Action io_vita_data_p(Bit#(4) v);
             for (Integer i = 0; i < 4; i = i + 1)
-                vita_data_p[i+1] <= v[i];
+                pin_v[i+1].io_vita_data_p(v[i]);
         endmethod
         method Action io_vita_data_n(Bit#(4) v);
             for (Integer i = 0; i < 4; i = i + 1)
-                vita_data_n[i+1] <= v[i];
+                pin_v[i+1].io_vita_data_n(v[i]);
         endmethod
-        method Action io_vita_clk_p(Bit#(1) v);
-            vita_clk_p <= v;
-        endmethod
-        method Action io_vita_clk_n(Bit#(1) v);
-            vita_clk_n <= v;
-        endmethod
+        method io_vita_clk_p = coreClock.io_vita_clk_p;
+        method io_vita_clk_n = coreClock.io_vita_clk_n;
     endinterface
     interface SerdesData data;
         method Wire#(Bit#(1)) reset();
