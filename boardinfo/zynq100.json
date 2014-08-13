@@ -5,7 +5,8 @@
         "rewireclockstring" : "tclzynqrewireclock",
         "constraints": "xilinx/constraints/zc7z045ffg900.xdc",
         "TOP" : "ZynqTop",
-        "XBSVFLAGS" : ["ZynqHostTypeIF", "PhysAddrWidth=40"],
+        "bsvdefines" : ["ZynqHostTypeIF", "PhysAddrWidth=40"],
+	"XBSVFLAGS" : [],
         "needs_pcie_7x_gen1x8" : "False"
     },
     "fmc": {
