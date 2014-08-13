@@ -226,7 +226,7 @@ module mkMemWriteInternal#(Integer iid,
    // stage 1: address validation (latency = 1)
    FIFO#(RRec#(numClients,addrWidth))  reqFifo <- mkFIFO;
    // stage 2: write commands (maximum buffering to handle high latency writes)
-   FIFO#(DRec#(numClients, addrWidth)) dreqFifo <- mkSizedBRAMFIFO(valueOf(TMul#(TAG_DEPTH,numClients)));
+   FIFO#(DRec#(numClients, addrWidth)) mwDreqFifo <- mkSizedBRAMFIFO(valueOf(TMul#(TAG_DEPTH,numClients)));
    // stage 3: write data (maximum buffering, though I have no idea if any hosts will begin the next data transfer before sending the write ack)
    Vector#(numClients, FIFO#(RResp#(numClients,addrWidth))) respFifos <- replicateM(mkSizedBRAMFIFO(valueOf(TAG_DEPTH)));
    // stage 4: write done (minimal buffering required)
@@ -284,6 +284,25 @@ module mkMemWriteInternal#(Integer iid,
       writeClients[client].writeDone.put(orig_tag);
    endrule
    
+   FIFOF#(MemData#(dataWidth)) memDataFifo <- mkFIFOF();
+   rule memdata;
+      let client = mwDreqFifo.first.client;
+      let req = mwDreqFifo.first.req;
+      let rename_tag = mwDreqFifo.first.rename_tag;
+      ObjectData#(dataWidth) tagdata <- writeClients[client].writeData.get();
+      let burstLen = burstReg;
+      if (burstLen == 0) begin
+	 burstLen = req.burstLen >> beat_shift;
+	 respFifos[rename_tag].enq(RResp{orig_tag:req.tag, client:client});
+      end
+      burstReg <= burstLen-1;
+      beatCount <= beatCount+1;
+      if (burstLen == 1)
+	 mwDreqFifo.deq();
+      //$display("writeData: client=%d, rename_tag=%d", client, rename_tag);
+      memDataFifo.enq(MemData { data: tagdata.data,  tag:extend(rename_tag), last: False });
+   endrule
+
    interface MemWriteClient write_client;
       interface Get writeReq;
 	 method ActionValue#(MemRequest#(addrWidth)) get();
@@ -292,28 +311,15 @@ module mkMemWriteInternal#(Integer iid,
 	    let client = reqFifo.first.client;
 	    let rename_tag = reqFifo.first.rename_tag;
 	    reqFifo.deq;
-	    dreqFifo.enq(DRec{req:req, client:client, rename_tag:rename_tag, last: False });
+	    mwDreqFifo.enq(DRec{req:req, client:client, rename_tag:rename_tag, last: False });
 	    //$display("writeReq: client=%d, rename_tag=%d", client,rename_tag);
 	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(rename_tag)};
 	 endmethod
       endinterface
       interface Get writeData;
 	 method ActionValue#(MemData#(dataWidth)) get();
-	    let client = dreqFifo.first.client;
-	    let req = dreqFifo.first.req;
-	    let rename_tag =dreqFifo.first.rename_tag;
-	    ObjectData#(dataWidth) tagdata <- writeClients[client].writeData.get();
-	    let burstLen = burstReg;
-	    if (burstLen == 0) begin
-	       burstLen = req.burstLen >> beat_shift;
-	       respFifos[rename_tag].enq(RResp{orig_tag:req.tag, client:client});
-	    end
-	    burstReg <= burstLen-1;
-	    beatCount <= beatCount+1;
-	    if (burstLen == 1) 
-	       dreqFifo.deq();
-	    //$display("writeData: client=%d, rename_tag=%d", client, rename_tag);
-	    return MemData { data: tagdata.data,  tag:extend(rename_tag), last: False };
+            let d <- toGet(memDataFifo).get();
+            return d;
 	 endmethod
       endinterface
       interface Put writeDone;
