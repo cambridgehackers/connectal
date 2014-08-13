@@ -66,8 +66,8 @@ module mkStdDirectory#(Vector#(n,StdPortal) portals) (StdDirectory);
 
    Reg#(Bit#(64)) cycle_count <- mkReg(0);
    Reg#(Bit#(32))    snapshot <- mkReg(0);
-   FIFOF#(Bit#(16))  addrFifo <- mkSizedFIFOF(1);
-   FIFO#(Bit#(32))   dataFifo <- mkSizedFIFO(1);
+   FIFOF#(Bit#(16))  addrFifo <- mkFIFOF1();
+   FIFO#(Bit#(32))   dataFifo <- mkFIFO1();
    let startDirectoryOffset=valueOf(StartDirectoryOffset);
    
    let base = 128;
@@ -77,37 +77,38 @@ module mkStdDirectory#(Vector#(n,StdPortal) portals) (StdDirectory);
    endrule
    
    
-   rule req1;
-      let addr = addrFifo.first;
-      addrFifo.deq;
-      let idx = (addr-fromInteger(startDirectoryOffset)-base);
-      if (idx[0] == 0)
-	 dataFifo.enq(portals[idx>>1].ifcId);
-      else
-	 dataFifo.enq(portals[idx>>1].ifcType);
+   rule handle_read;
+      let addr <- toGet(addrFifo).get();
+      if (addr < 6+base) begin
+	 if (addr == 0+base)
+	    dataFifo.enq(2); // directory version
+	 else if (addr == 1+base)
+	    dataFifo.enq(0); // remove timestamp from builds, so that they are reproducable. `TimeStamp);
+	 else if (addr == 2+base)
+	    dataFifo.enq(fromInteger(valueOf(n)));
+	 else if (addr == 3+base)
+	    dataFifo.enq(16); // portal Addr bits
+	 else if (addr == 4+base) begin
+	    snapshot <= truncate(cycle_count);
+	    dataFifo.enq(cycle_count[63:32]);
+	 end
+	 else if (addr == 5+base)
+	    dataFifo.enq(snapshot);
+      end
+      else begin
+	  let idx = (addr-fromInteger(startDirectoryOffset)-base);
+	  if (idx[0] == 0)
+	     dataFifo.enq(portals[idx>>1].ifcId);
+	  else
+	     dataFifo.enq(portals[idx>>1].ifcType);
+      end
    endrule
    
    let br = (interface BRAMServer#(Bit#(16), Bit#(32));
 		interface Put request;
 		   method Action put(BRAMRequest#(Bit#(16),Bit#(32)) req) if (!addrFifo.notEmpty);
 		      if (!req.write) begin
-      			 if (req.address == 0+base)
-			    dataFifo.enq(2); // directory version
-			 else if (req.address == 1+base)
-			    dataFifo.enq(0); // remove timestamp from builds, so that they are reproducable. `TimeStamp);
-			 else if (req.address == 2+base)
-			    dataFifo.enq(fromInteger(valueOf(n)));
-			 else if (req.address == 3+base)
-			    dataFifo.enq(16); // portal Addr bits
-			 else if (req.address == 4+base) begin
-			    snapshot <= truncate(cycle_count);
-			    dataFifo.enq(cycle_count[63:32]);
-			 end
-			 else if (req.address == 5+base)
-			    dataFifo.enq(snapshot);
-			 else begin
-			    addrFifo.enq(truncate(req.address));
-			 end
+			 addrFifo.enq(truncate(req.address));
 		      end
 		   endmethod
 		endinterface
