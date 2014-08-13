@@ -542,7 +542,6 @@ hblank--; // needed on zc702
     printf("[%s:%d] before dma->reference\n", __FUNCTION__, __LINE__);
     memset(srcBuffer, 0xff, 16);
     portalDCacheFlushInval(srcAlloc, DMA_BUFFER_SIZE, srcBuffer);
-    memdump((unsigned char *)srcBuffer, 32, "STARTMEM");
     unsigned int ref_srcAlloc = dma->reference(srcAlloc);
     printf("[%s:%d] before setTestPattern\n", __FUNCTION__, __LINE__);
     hdmidevice->setTestPattern(1);
@@ -552,7 +551,8 @@ hblank--; // needed on zc702
     hdmidevice->waitForVsync(0);
     usleep(2000000);
     printf("[%s:%d] before startWrite\n", __FUNCTION__, __LINE__);
-    idevice->startWrite(ref_srcAlloc, 256 * 16 * 4); //DMA_BUFFER_SIZE/sizeof(int32_t));
+    idevice->startWrite(ref_srcAlloc, DMA_BUFFER_SIZE);
+    int counter = 0;
     while (1/*getchar() != EOF*/) {
         printf("[%s:%d] iserdes %x\n", __FUNCTION__, __LINE__, read_iserdes_control());
         static int regids[] = {24, 97, 186, 0};
@@ -560,6 +560,14 @@ hblank--; // needed on zc702
         for (i = 0; regids[i]; i++)
             printf("[%s:%d] spi %d. %x\n", __FUNCTION__, __LINE__, regids[i], vita_spi_read(regids[i]));
         portalDCacheFlushInval(srcAlloc, DMA_BUFFER_SIZE, srcBuffer);
+        printf("counter %d\n", counter);
+        if (counter == 1) {
+            int fd = creat("tmp.outfile", 0666);
+            int cnt = write(fd, srcBuffer, DMA_BUFFER_SIZE);
+            printf("[%s:%d] length written %d.\n", __FUNCTION__, __LINE__, cnt);
+            close(fd);
+        }
+        counter++;
         memdump((unsigned char *)srcBuffer, 32, "MEM");
 	usleep(1000000);
     }

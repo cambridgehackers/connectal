@@ -480,12 +480,13 @@ interface ImageonSerdesIndication;
 endinterface
 
 interface ImageonCaptureRequest;
-   method Action startWrite(Bit#(32) wp, Bit#(32) nw);
+   method Action startWrite(Bit#(32) pointer, Bit#(32) numBytes);
 endinterface
 
 interface SerdesData;
     method Wire#(Bit#(1)) reset();
     method Vector#(5, Bit#(10)) raw_data();
+    method Bit#(64) capture();
 endinterface
 
 interface ISerdes;
@@ -535,21 +536,25 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
 	   pin_v[i].ibufdso(ibufds_v[i]);
     endrule
 
+    Reg#(Bit#(25)) control_data <- mkReg(0);
+    Reg#(Bit#(50)) dump_data <- mkReg(0);
     rule sendup_imageon_clock;
-       Bit#(1) alignbusyw = 0;
-       Bit#(1) emptyw = 0;
-       Bit#(3) samplein = 0;
+       Bit#(5) alignbusyw = 0;
+       Bit#(5) emptyw = 0;
+       Bit#(15) samplein = 0;
        Bit#(50) rawdataw = 0;
        for (Bit#(8) i = 0; i < 5; i = i+1) begin
-	  alignbusyw = alignbusyw | pin_v[i].align_busy();
-	  emptyw = emptyw | pin_v[i].empty();
-          samplein = samplein | pin_v[i].samplein();
+	  alignbusyw[i] = pin_v[i].align_busy();
+	  emptyw[i] = pin_v[i].empty();
+          samplein[(i+1)*3-1: i*3] = pin_v[i].samplein();
 	  rawdataw[(i+1)*10-1: i*10] = pin_v[i].dataout();
        end
-       serdes_align_busy_reg.send(alignbusyw);
+       serdes_align_busy_reg.send(pack(alignbusyw != 0));
        //bittest_wire <= pack(samplein == 3'b110);
-       empty_wire <= emptyw;
+       empty_wire <= pack(emptyw != 0);
        raw_data_wire <= rawdataw;
+       control_data <= {alignbusyw, emptyw, samplein};
+       dump_data <= rawdataw;
     endrule
 
     rule sendup_sdes_clock;
@@ -617,6 +622,9 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
         method Vector#(5, Bit#(10)) raw_data() if (new_raw_empty_reg == 0 && serdes_reset_reg != 0);
             Vector#(5, Bit#(10)) in = unpack(raw_data_wire);
             return in;
+	endmethod
+        method Bit#(64) capture();
+            return {control_data, dump_data[38:0]};
 	endmethod
     endinterface
 endmodule

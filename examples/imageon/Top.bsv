@@ -26,6 +26,7 @@ import GetPut::*;
 import Connectable :: *;
 import Clocks :: *;
 import FIFO::*;
+import BRAMFIFO::*;
 import DefaultValue::*;
 import MemTypes::*;
 import MemServer::*;
@@ -138,28 +139,14 @@ module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
 `endif
     // mem capture
     MemwriteEngineV#(64,1,1) we <- mkMemwriteEngine();
-    Reg#(ObjectPointer)      pointer <- mkReg(0);
-    Reg#(Bit#(32))           numWords <- mkReg(0);
-    Reg#(Bit#(16))           pushCount <- mkReg(0);
-    Reg#(Bool) dmaOnce <- mkReg(True);
-    rule start_dma_rule if (dmaOnce && numWords != 0);
-        dmaOnce <= False;
-        we.writeServers[0].request.put(MemengineCmd{pointer:pointer, base:0, len:truncate(numWords * 4), burstLen:2*4});
-        serdesIndicationProxy.ifc.iserdes_dma({'hff, numWords[23:0]}); // request started
+    Reg#(Bool) dmaRun <- mkSyncReg(False, defaultClock, defaultReset, imageon_clock);
+    SyncFIFOIfc#(Bit#(64)) synchronizer <- mkSyncBRAMFIFO(10, imageon_clock, imageon_reset, defaultClock, defaultReset);
+    rule sync_data if (dmaRun);
+        synchronizer.enq(serdes_data.capture);
     endrule
-    Reg#(Bit#(51)) serdes_sync_data <- mkSyncReg(0, imageon_clock, imageon_reset, defaultClock);
-    rule sync_data;
-        //serdes_sync_data <= {serdes_data.reset, serdes_data.raw_data[4], serdes_data.raw_data[3], serdes_data.raw_data[2], serdes_data.raw_data[1], serdes_data.raw_data[0]};
-        serdes_sync_data <= {serdes_data.reset, pack(serdes_data.raw_data)};
-    endrule
-    rule send_data if (!dmaOnce && numWords != 0);
-        //let v = numWords;
-        let v = serdes_sync_data;
-        we.dataPipes[0].enq(extend(v));
-        numWords <= numWords - 1;
-        if (numWords[7:0] == 'hff)
-            serdesIndicationProxy.ifc.iserdes_dma({pushCount, numWords[23:8]});
-        pushCount <= pushCount + 1;
+    rule send_data;
+        we.dataPipes[0].enq(synchronizer.first);
+        synchronizer.deq;
     endrule
     rule dma_response;
         let rv <- we.writeServers[0].response.get;
@@ -167,10 +154,9 @@ module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
     endrule
    ImageonCaptureRequestWrapper imageonCaptureWrapper <- mkImageonCaptureRequestWrapper(ImageonCapture,
        (interface ImageonCaptureRequest;
-            method Action startWrite(Bit#(32) wp, Bit#(32) nw);
-                $display("startWrite pointer=%d numWords=%h", wp, nw);
-                pointer <= wp;
-                numWords  <= nw;
+            method Action startWrite(Bit#(32) pointer, Bit#(32) numBytes);
+                we.writeServers[0].request.put(MemengineCmd{pointer:pointer, base:0, len:truncate(numBytes), burstLen:8});
+                dmaRun <= True;
 	    endmethod
        endinterface));
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);

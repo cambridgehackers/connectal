@@ -1,0 +1,6 @@
+
+all:
+	gcc -Wall -o dump_image dump_image.cpp
+
+fetchdata:
+	adb -s 172.17.1.165:5555 pull /mnt/sdcard/tmp.outfile pixeldata.dat 
