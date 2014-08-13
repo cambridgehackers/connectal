@@ -60,7 +60,6 @@ import Imageon::*;
 import HDMI::*;
 import YUV::*;
 import XilinxCells::*;
-import ImageonInd::*;
 import XbsvXilinxCells::*;
 
 typedef enum { ImageonSerdesRequest, ImageonSensorRequest, HdmiInternalRequest, DmaConfig, ImageonCapture,
