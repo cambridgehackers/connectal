@@ -19,3 +19,5 @@ CPPFILES += $(RBMDIR)/cpp/rbm.cpp
 
 
 NUMBER_OF_MASTERS=1
+
+prebuild:: $(RBMDIR)/datasets
