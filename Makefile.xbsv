@@ -53,7 +53,7 @@ ifndef NUMBER_OF_MASTERS
 NUMBER_OF_MASTERS=1
 endif
 
-XBSVFLAGS += --bscflags " -D NumberOfMasters=$(NUMBER_OF_MASTERS)" --ipdir=$(IPDIR)
+XBSVFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) --ipdir=$(IPDIR)
 
 ifneq ($(NUMBER_OF_MASTERS), 0)
 S2H += DmaConfig
