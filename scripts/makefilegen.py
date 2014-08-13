@@ -188,6 +188,13 @@ if __name__=='__main__':
     xbsvdir = os.path.dirname(os.path.abspath(sys.argv[0]))+'/../'
     options = argparser.parse_args()
 
+    boardname = options.board.lower()
+    option_info = boardinfo.attribute(boardname, 'options')
+    # parse additional options together with sys.argv
+    if option_info['XBSVFLAGS']:
+        options=argparser.parse_args(option_info['XBSVFLAGS'] + sys.argv[1:])
+    print options
+
     if options.verbose:
         noisyFlag = True
     if not options.source:
@@ -216,21 +223,15 @@ if __name__=='__main__':
     os.path.exists('./out/parsetab.pyc') and os.remove('./out/parsetab.pyc')
     os.path.exists('./out/parsetab.py')  and os.remove('./out/parsetab.py')
     
-    boardname = options.board.lower()
-
     bsvdefines = options.bsvdefine
     bsvdefines.append('project_dir=%s' % project_dir)
 
-    option_info = boardinfo.attribute(boardname, 'options')
     option_info['needs_pcie_7x_gen1x8'] = option_info['needs_pcie_7x_gen1x8'] == 'True'
     if option_info['rewireclockstring'] != '':
         option_info['rewireclockstring'] = tclzynqrewireclock
 
     dutname = 'mk' + option_info['TOP']
     topbsv = xbsvdir + '/bsv/' + option_info['TOP'] + '.bsv'
-    bdef = option_info.get('XBSVFLAGS')
-    if bdef:
-        bsvdefines += bdef
         
     rewireclockstring = option_info['rewireclockstring']
     needs_pcie_7x_gen1x8 = option_info['needs_pcie_7x_gen1x8']
