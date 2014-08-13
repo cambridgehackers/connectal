@@ -22,6 +22,7 @@
 
 
 import BRAM::*;
+import BRAMFIFO::*;
 import FIFO::*;
 import Vector::*;
 import Gearbox::*;
@@ -65,21 +66,19 @@ module mkMemReaderBuff(MemReaderBuff#(dataWidth, bufferDepth))
    provisos(Div#(dataWidth,8,dataWidthBytes)
 	    ,Mul#(dataWidthBytes,8,dataWidth)
 	    ,Log#(dataWidthBytes,beatShift)
-	    ,Log#(bufferDepth, a__)
-	    ,Add#(a__, 1, b__)
-	    ,Add#(TLog#(bufferDepth), c__, 15)
+	    ,Log#(bufferDepth,bufferDepthWidth)
+	    ,Max#(TAdd#(bufferDepthWidth,1),8,availableWidth)
+	    ,Add#(a__,8,availableWidth)
 	    );
 
-   FIFOFLevel#(ObjectData#(dataWidth),bufferDepth)  readBuffer <- mkBRAMFIFOFLevel;
+   FIFOF#(ObjectData#(dataWidth))   readBuffer <- mkSizedBRAMFIFOF(valueOf(bufferDepth));
    FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF();
    FIFOF#(ObjectRequest)          reqCommitted <- mkFIFOF();
-   ConfigCounter#(16) unfulfilled <- mkConfigCounter(0);
+   ConfigCounter#(availableWidth) unfulfilled <- mkConfigCounter(0);
    let beat_shift = fromInteger(valueOf(beatShift));
    
    // only issue the readRequest when sufficient buffering is available.  This includes the bufering we have already comitted.
-   Bit#(16) sreq = pack(satPlus(Sat_Bound, unpack(extend(reqOutstanding.first.burstLen>>beat_shift)), unfulfilled.read()));
-
-   rule commitReq if (readBuffer.lowWater(truncate(sreq)));
+   rule commitReq if (unpack(extend(reqOutstanding.first.burstLen>>beat_shift)) + unfulfilled.read() < fromInteger(valueOf(bufferDepth)));
       let req <- toGet(reqOutstanding).get();
       unfulfilled.increment(unpack(extend(req.burstLen>>beat_shift)));
       reqCommitted.enq(req);
@@ -87,14 +86,19 @@ module mkMemReaderBuff(MemReaderBuff#(dataWidth, bufferDepth))
 
    interface ObjectReadServer readServer;
       interface Put readReq = toPut(reqOutstanding);
-      interface Get readData = toGet(readBuffer);
+      interface Get readData;
+	 method ActionValue#(ObjectData#(dataWidth)) get();
+	    let v <- toGet(readBuffer).get();
+	    unfulfilled.decrement(1);
+	    return v;
+	 endmethod
+      endinterface: readData
    endinterface
    interface ObjectReadClient readClient;
       interface Get readReq = toGet(reqCommitted);
       interface Put readData;
    	 method Action put(ObjectData#(dataWidth) x);
-   	    readBuffer.fifo.enq(x);
-   	    unfulfilled.decrement(1);
+	    readBuffer.enq(x);
    	 endmethod
       endinterface
    endinterface
@@ -136,45 +140,48 @@ interface MemWriterBuff#(numeric type dataWidth, numeric type bufferDepth);
 endinterface
 
 module mkMemWriterBuff(MemWriterBuff#(dataWidth, bufferDepth))
-   provisos(Add#(b__, TAdd#(1, TLog#(bufferDepth)), 8),
+   provisos(Log#(bufferDepth,bufferDepthWidth),
+	    Max#(TAdd#(bufferDepthWidth,1),8,availableWidth),
+	    Add#(a__,8,availableWidth),
 	    Div#(dataWidth,8,dataWidthBytes),
 	    Mul#(dataWidthBytes,8,dataWidth),
 	    Log#(dataWidthBytes,beatShift));
 
-   FIFOFLevel#(ObjectData#(dataWidth),bufferDepth) writeBuffer <- mkBRAMFIFOFLevel;
+   FIFOF#(ObjectData#(dataWidth))  writeBuffer <- mkSizedBRAMFIFOF(valueOf(bufferDepth));
    FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF();
-   FIFOF#(ObjectRequest)        reqCommitted <- mkFIFOF();
-   FIFOF#(Bit#(6))                        doneTags <- mkFIFOF();
-   ConfigCounter#(TAdd#(1,TLog#(bufferDepth)))  unfulfilled <- mkConfigCounter(0);
+   FIFOF#(ObjectRequest)          reqCommitted <- mkFIFOF();
+   FIFOF#(Bit#(6))                    doneTags <- mkFIFOF();
+   ConfigCounter#(availableWidth)    available <- mkConfigCounter(0);
    let beat_shift = fromInteger(valueOf(beatShift));
    
    // only issue the writeRequest when sufficient data is available.  This includes the data we have already comitted.
-   Bit#(TAdd#(1,TLog#(bufferDepth))) sreq = pack(satPlus(Sat_Bound, unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)), unfulfilled.read()));
-
-   rule commitReq if (writeBuffer.highWater(sreq));
+   rule commitReq if (unpack(extend(reqOutstanding.first.burstLen>>beat_shift)) <= available.read());
       let req <- toGet(reqOutstanding).get();
-      unfulfilled.increment(unpack(truncate(req.burstLen>>beat_shift)));
+      available.decrement(unpack(extend(req.burstLen>>beat_shift)));
       reqCommitted.enq(req);
    endrule
 
    interface ObjectWriteServer writeServer;
       interface Put writeReq = toPut(reqOutstanding);
-      interface Put writeData = toPut(writeBuffer);
+      interface Put writeData;
+	 method Action put(ObjectData#(dataWidth) d);
+	    writeBuffer.enq(d);
+	    available.increment(1);
+	 endmethod
+      endinterface: writeData
       interface Get writeDone = toGet(doneTags);
    endinterface
    interface ObjectWriteClient writeClient;
       interface Get writeReq = toGet(reqCommitted);
       interface Get writeData;
 	 method ActionValue#(ObjectData#(dataWidth)) get();
-	    unfulfilled.decrement(1);
-	    writeBuffer.fifo.deq;
-	    return writeBuffer.fifo.first;
+	    writeBuffer.deq;
+	    return writeBuffer.first;
 	 endmethod
       endinterface
       interface Put writeDone = toPut(doneTags);
    endinterface
 endmodule
-
 
 interface UGBramFifos#(numeric type numFifos, numeric type fifoDepth, type a);
    method Action enq(Bit#(TLog#(numFifos)) idx, a v);
