@@ -92,7 +92,7 @@ module mkMemReadInternal#(Integer id,
    // stage 2: read commands (maximum buffering to handle high latency read response times)
    Vector#(numClients, FIFOF#(DRec#(numClients,addrWidth))) dreqFifos <- replicateM(mkSizedBRAMFIFOF(valueOf(TAG_DEPTH)));
    // stage 3: read data (minimal buffering required) 
-   FIFO#(Tuple2#(DRec#(numClients,addrWidth),MemData#(dataWidth))) readDataPipelineFifo <- mkFIFO;
+   Vector#(numClients, FIFO#(Tuple2#(DRec#(numClients,addrWidth),MemData#(dataWidth)))) readDataPipelineFifo <- replicateM(mkFIFO);
    FIFO#(MemData#(dataWidth)) responseFifo <- mkFIFO;
    Vector#(numClients, Reg#(Bit#(8)))           burstRegs <- replicateM(mkReg(0));
    Vector#(numClients, Reg#(Bool))              firstRegs <- replicateM(mkReg(True));
@@ -141,23 +141,23 @@ module mkMemReadInternal#(Integer id,
       //last_sglResp <= cycle_cnt;
    endrule
 
-   rule readDataComp;
-      readDataPipelineFifo.deq;
-      let drq = tpl_1(readDataPipelineFifo.first);
-      let response = tpl_2(readDataPipelineFifo.first);
-      let client = drq.client;
-      let req = drq.req;
-      readClients[client].readData.put(ObjectData { data: response.data, tag: req.tag, last: False});
-      //$display("readDataComp: %d %h", client, response.data);
-      beatCount <= beatCount+1;
-   endrule
+   for (Integer client = 0; client < valueOf(numClients); client = client + 1)
+       rule readDataComp;
+	  readDataPipelineFifo[client].deq;
+	  let drq = tpl_1(readDataPipelineFifo[client].first);
+	  let response = tpl_2(readDataPipelineFifo[client].first);
+	  let req = drq.req;
+	  readClients[client].readData.put(ObjectData { data: response.data, tag: req.tag, last: False});
+	  //$display("readDataComp: %d %h", client, response.data);
+       endrule
 
    rule read_client_response;
       let response <- toGet(responseFifo).get();
+      beatCount <= beatCount+1;
       Bit#(6) response_tag = response.tag;
       let dreqFifo = dreqFifos[response_tag];
       dynamicAssert(truncate(response_tag) == dreqFifo.first.rename_tag, "mkMemReadInternal");
-      readDataPipelineFifo.enq(tuple2(dreqFifo.first, response));
+      readDataPipelineFifo[response_tag].enq(tuple2(dreqFifo.first, response));
       let burstLen = burstRegs[response_tag];
       let first =    firstRegs[response_tag];
       let last  =    lastRegs[response_tag];
