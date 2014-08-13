@@ -28,13 +28,6 @@ import FIFOF::*;
 import SyncBits::*;
 import XilinxCells::*;
 import XbsvXilinxCells::*;
-import GetPut::*;
-import ClientServer::*;
-import Pipe::*;
-import MemTypes::*;
-//import MemServer::*;
-import MemwriteEngine::*;
-//import PortalMemory::*;
 
 typedef Vector#(10, Reg#(Bit#(10))) TrainRotate;
 
@@ -480,11 +473,14 @@ interface ImageonSerdesRequest;
     method Action set_serdes_manual_tap(Bit#(10) v);
     method Action set_serdes_training(Bit#(10) v);
     method Action get_iserdes_control();
-    method Action startWrite(Bit#(32) pointer, Bit#(32) numWords);
 endinterface
 interface ImageonSerdesIndication;
     method Action iserdes_control_value(Bit#(32) v);
     method Action iserdes_dma(Bit#(32) v);
+endinterface
+
+interface ImageonCaptureRequest;
+   method Action startWrite(Bit#(32) wp, Bit#(32) nw);
 endinterface
 
 interface SerdesData;
@@ -496,7 +492,6 @@ interface ISerdes;
     interface ImageonSerdesRequest control;
     interface ImageonSerdesPins pins;
     interface SerdesData data;
-    interface ObjectWriteClient#(64) dmaClient;
 endinterface
 
 module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indication)(ISerdes);
@@ -523,12 +518,6 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
     ReadOnly#(Bit#(1)) serdes_reset_null <- mkNullCrossingWire(serdes_clock, serdes_reset_reg);
     Wire#(Bit#(50)) raw_data_wire <- mkDWire(0);
     Wire#(Bit#(1)) empty_wire <- mkDWire(0);
-    // mem capture
-    MemwriteEngineV#(64,1,1) we <- mkMemwriteEngine(clocked_by axi_clock, reset_by axi_reset);
-    Reg#(ObjectPointer)      pointer <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
-    Reg#(Bit#(32))           numWords <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
-    Reg#(Bit#(16))           pushCount <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
-    Reg#(Bool) dmaOnce <- mkReg(True, clocked_by axi_clock, reset_by axi_reset);
 
     ClockGenIfc serdest_clk <- mkBUFIO(ibufds_clk);
     SyncBitIfc#(Bit#(1)) serdes_align_busy_reg <- mkSyncBit(defaultClock, defaultReset, axi_clock);
@@ -544,23 +533,6 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
     rule sendup_ibufdso;
        for (Bit#(8) i = 0; i < 5; i = i+1)
 	   pin_v[i].ibufdso(ibufds_v[i]);
-    endrule
-    rule start_dma_rule if (dmaOnce && numWords != 0);
-        dmaOnce <= False;
-        we.writeServers[0].request.put(MemengineCmd{pointer:pointer, base:0, len:truncate(numWords * 4), burstLen:16*4});
-        indication.iserdes_dma({'hff, numWords[23:0]}); // request started
-    endrule
-    rule send_data if (!dmaOnce && numWords != 0);
-        let v = numWords; //{empty_wire, raw_data_wire};
-        we.dataPipes[0].enq(extend(v));
-        numWords <= numWords - 1;
-        if (numWords[4:0] == 'h1f || numWords == 1)
-            indication.iserdes_dma({pushCount, numWords[23:8]});
-        pushCount <= pushCount + 1;
-    endrule
-    rule dma_response;
-        let rv <- we.writeServers[0].response.get;
-        indication.iserdes_dma('hffffffff); // request is all finished
     endrule
 
     rule sendup_imageon_clock;
@@ -614,11 +586,6 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
 	method Action set_decoder_control(Bit#(32) v);
 	    decoder_enable_reg <= v[1];
 	endmethod
-        method Action startWrite(Bit#(32) wp, Bit#(32) nw);
-            $display("startWrite pointer=%d numWords=%h", wp, nw);
-            pointer <= wp;
-            numWords  <= nw;
-	endmethod
     endinterface
 
     interface ImageonSerdesPins pins;
@@ -652,5 +619,4 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
             return in;
 	endmethod
     endinterface
-    interface ObjectWriteClient dmaClient = we.dmaClient;
 endmodule

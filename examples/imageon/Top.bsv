@@ -29,6 +29,10 @@ import FIFO::*;
 import DefaultValue::*;
 import MemTypes::*;
 import MemServer::*;
+import ClientServer::*;
+import Pipe::*;
+import MemTypes::*;
+import MemwriteEngine::*;
 
 // portz libraries
 import Portal::*;
@@ -47,6 +51,7 @@ import HdmiInternalRequestWrapper::*;
 import HdmiInternalIndicationProxy::*;
 import DmaConfigWrapper::*;
 import DmaIndicationProxy::*;
+import ImageonCaptureRequestWrapper::*;
 
 // defined by user
 import IserdesDatadeser::*;
@@ -54,9 +59,10 @@ import Imageon::*;
 import HDMI::*;
 import YUV::*;
 import XilinxCells::*;
+import ImageonInd::*;
 import XbsvXilinxCells::*;
 
-typedef enum { ImageonSerdesRequest, ImageonSensorRequest, HdmiInternalRequest, DmaConfig,
+typedef enum { ImageonSerdesRequest, ImageonSensorRequest, HdmiInternalRequest, DmaConfig, ImageonCapture,
     ImageonSerdesIndication, ImageonSensorIndication, HdmiInternalIndication, DmaIndication} IfcNames deriving (Eq,Bits);
 
 interface ImageCapturePins;
@@ -67,7 +73,7 @@ interface ImageCapturePins;
    method Action fmc_video_clk1(Bit#(1) v);
 endinterface
 interface ImageCapture;
-   interface Vector#(8,StdPortal) portals;
+   interface Vector#(9,StdPortal) portals;
    interface ImageCapturePins pins;
    interface XADC             xadc;
    interface MemServer#(PhysAddrWidth,64,1)   dmaif;
@@ -113,13 +119,9 @@ module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
    // serdes: serial line protocol for wires from sensor (nothing sensor specific)
    ImageonSerdesIndicationProxy serdesIndicationProxy <- mkImageonSerdesIndicationProxy(ImageonSerdesIndication);
 `ifndef BSIM
-   DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
    ISerdes serdes <- mkISerdes(defaultClock, defaultReset, serdesIndicationProxy.ifc,
 			clocked_by imageon_clock, reset_by imageon_reset);
    ImageonSerdesRequestWrapper serdesRequestWrapper <- mkImageonSerdesRequestWrapper(ImageonSerdesRequest,serdes.control);
-    Vector#(1, ObjectWriteClient#(64)) writeClients = cons(serdes.dmaClient,nil);
-    MemServer#(PhysAddrWidth,64,1)   dma <- mkMemServerW(dmaIndicationProxy.ifc, writeClients);
-   DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig, dma.request);
    let serdes_data = serdes.data;
 `else
    Wire#(Bit#(1)) serdes_reset <- mkDWire(0);
@@ -134,6 +136,47 @@ module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
                       endmethod
                       endinterface);
 `endif
+    // mem capture
+    MemwriteEngineV#(64,1,1) we <- mkMemwriteEngine();
+    Reg#(ObjectPointer)      pointer <- mkReg(0);
+    Reg#(Bit#(32))           numWords <- mkReg(0);
+    Reg#(Bit#(16))           pushCount <- mkReg(0);
+    Reg#(Bool) dmaOnce <- mkReg(True);
+    rule start_dma_rule if (dmaOnce && numWords != 0);
+        dmaOnce <= False;
+        we.writeServers[0].request.put(MemengineCmd{pointer:pointer, base:0, len:truncate(numWords * 4), burstLen:2*4});
+        serdesIndicationProxy.ifc.iserdes_dma({'hff, numWords[23:0]}); // request started
+    endrule
+    Reg#(Bit#(51)) serdes_sync_data <- mkSyncReg(0, imageon_clock, imageon_reset, defaultClock);
+    rule sync_data;
+        //serdes_sync_data <= {serdes_data.reset, serdes_data.raw_data[4], serdes_data.raw_data[3], serdes_data.raw_data[2], serdes_data.raw_data[1], serdes_data.raw_data[0]};
+        serdes_sync_data <= {serdes_data.reset, pack(serdes_data.raw_data)};
+    endrule
+    rule send_data if (!dmaOnce && numWords != 0);
+        //let v = numWords;
+        let v = serdes_sync_data;
+        we.dataPipes[0].enq(extend(v));
+        numWords <= numWords - 1;
+        if (numWords[7:0] == 'hff)
+            serdesIndicationProxy.ifc.iserdes_dma({pushCount, numWords[23:8]});
+        pushCount <= pushCount + 1;
+    endrule
+    rule dma_response;
+        let rv <- we.writeServers[0].response.get;
+        serdesIndicationProxy.ifc.iserdes_dma('hffffffff); // request is all finished
+    endrule
+   ImageonCaptureRequestWrapper imageonCaptureWrapper <- mkImageonCaptureRequestWrapper(ImageonCapture,
+       (interface ImageonCaptureRequest;
+            method Action startWrite(Bit#(32) wp, Bit#(32) nw);
+                $display("startWrite pointer=%d numWords=%h", wp, nw);
+                pointer <= wp;
+                numWords  <= nw;
+	    endmethod
+       endinterface));
+   DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
+   Vector#(1, ObjectWriteClient#(64)) writeClients = cons(we.dmaClient,nil);
+   MemServer#(PhysAddrWidth,64,1)   dma <- mkMemServerW(dmaIndicationProxy.ifc, writeClients);
+   DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig, dma.request);
 
    // fromSensor: sensor specific processing of serdes input, resulting in pixels
    ImageonSensorIndicationProxy sensorIndicationProxy <- mkImageonSensorIndicationProxy(ImageonSensorIndication);
@@ -188,7 +231,7 @@ Reg#(Bit#(10)) xsvi <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
         bozobit <= ~bozobit;
     endrule
    
-   Vector#(8,StdPortal) portal_array;
+   Vector#(9,StdPortal) portal_array;
 `ifndef BSIM
    portal_array[0] = serdesRequestWrapper.portalIfc; 
 `endif
@@ -197,10 +240,9 @@ Reg#(Bit#(10)) xsvi <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
    portal_array[3] = sensorIndicationProxy.portalIfc; 
    portal_array[4] = hdmiRequestWrapper.portalIfc; 
    portal_array[5] = hdmiIndicationProxy.portalIfc; 
-`ifndef BSIM
    portal_array[6] = dmaRequestWrapper.portalIfc;
    portal_array[7] = dmaIndicationProxy.portalIfc;
-`endif
+   portal_array[8] = imageonCaptureWrapper.portalIfc;
    interface Vector portals = portal_array;
 
    interface ImageCapturePins pins;

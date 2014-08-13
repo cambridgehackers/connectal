@@ -28,6 +28,7 @@
 
 #include "dmaManager.h"
 #include "StdDmaIndication.h"
+#include "ImageonCaptureRequestProxy.h"
 #include "ImageonSensorRequestProxy.h"
 #include "ImageonSensorIndicationWrapper.h"
 #include "ImageonSerdesRequestProxy.h"
@@ -464,6 +465,7 @@ int main(int argc, const char **argv)
     serdesdevice = new ImageonSerdesRequestProxy(IfcNames_ImageonSerdesRequest, poller);
     sensordevice = new ImageonSensorRequestProxy(IfcNames_ImageonSensorRequest, poller);
     hdmidevice = new HdmiInternalRequestProxy(IfcNames_HdmiInternalRequest);
+    ImageonCaptureRequestProxy *idevice = new ImageonCaptureRequestProxy(IfcNames_ImageonCapture);
     
     ImageonSerdesIndicationWrapper *imageonSerdesIndication = new ImageonSerdesIndication(IfcNames_ImageonSerdesIndication);
     ImageonSensorIndicationWrapper *imageonSensorIndication = new ImageonSensorIndication(IfcNames_ImageonSensorIndication);
@@ -550,7 +552,7 @@ hblank--; // needed on zc702
     hdmidevice->waitForVsync(0);
     usleep(2000000);
     printf("[%s:%d] before startWrite\n", __FUNCTION__, __LINE__);
-    serdesdevice->startWrite(ref_srcAlloc, 256 * 16 * 4); //DMA_BUFFER_SIZE/sizeof(int32_t));
+    idevice->startWrite(ref_srcAlloc, 256 * 16 * 4); //DMA_BUFFER_SIZE/sizeof(int32_t));
     while (1/*getchar() != EOF*/) {
         printf("[%s:%d] iserdes %x\n", __FUNCTION__, __LINE__, read_iserdes_control());
         static int regids[] = {24, 97, 186, 0};
