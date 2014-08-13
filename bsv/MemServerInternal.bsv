@@ -141,6 +141,15 @@ module mkMemReadInternal#(Integer id,
       //last_sglResp <= cycle_cnt;
    endrule
 
+   rule read_client_response;
+      let response <- toGet(responseFifo).get();
+      beatCount <= beatCount+1;
+      Bit#(6) response_tag = response.tag;
+      let dreqFifo = dreqFifos[response_tag];
+      dynamicAssert(truncate(response_tag) == dreqFifo.first.rename_tag, "mkMemReadInternal");
+      readDataPipelineFifo[response_tag].enq(tuple2(dreqFifo.first, response));
+   endrule
+
    for (Integer client = 0; client < valueOf(numClients); client = client + 1)
        rule readDataComp;
 	  readDataPipelineFifo[client].deq;
@@ -149,15 +158,9 @@ module mkMemReadInternal#(Integer id,
 	  let req = drq.req;
 	  readClients[client].readData.put(ObjectData { data: response.data, tag: req.tag, last: False});
 	  //$display("readDataComp: %d %h", client, response.data);
-       endrule
 
-   rule read_client_response;
-      let response <- toGet(responseFifo).get();
-      beatCount <= beatCount+1;
-      Bit#(6) response_tag = response.tag;
+       Bit#(6) response_tag = fromInteger(client);
       let dreqFifo = dreqFifos[response_tag];
-      dynamicAssert(truncate(response_tag) == dreqFifo.first.rename_tag, "mkMemReadInternal");
-      readDataPipelineFifo[response_tag].enq(tuple2(dreqFifo.first, response));
       let burstLen = burstRegs[response_tag];
       let first =    firstRegs[response_tag];
       let last  =    lastRegs[response_tag];
