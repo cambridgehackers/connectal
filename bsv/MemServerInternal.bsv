@@ -92,7 +92,7 @@ module mkMemReadInternal#(Integer id,
    // stage 2: read commands (maximum buffering to handle high latency read response times)
    Vector#(numClients, FIFOF#(DRec#(numClients,addrWidth))) dreqFifos <- replicateM(mkSizedBRAMFIFOF(valueOf(TAG_DEPTH)));
    // stage 3: read data (minimal buffering required) 
-   Vector#(numClients, FIFO#(Tuple2#(DRec#(numClients,addrWidth),MemData#(dataWidth)))) readDataPipelineFifo <- replicateM(mkFIFO);
+   Vector#(numClients, FIFO#(MemData#(dataWidth))) readDataPipelineFifo <- replicateM(mkFIFO);
    FIFO#(MemData#(dataWidth)) responseFifo <- mkFIFO;
    Vector#(numClients, Reg#(Bit#(8)))           burstRegs <- replicateM(mkReg(0));
    Vector#(numClients, Reg#(Bool))              firstRegs <- replicateM(mkReg(True));
@@ -104,7 +104,6 @@ module mkMemReadInternal#(Integer id,
    Reg#(Bit#(64)) cycle_cnt <- mkReg(0);
    Reg#(Bit#(64)) last_loadClient <- mkReg(0);
    Reg#(Bit#(64)) last_sglResp <- mkReg(0);
-   Reg#(Bit#(64)) last_eob <- mkReg(0);
    (* fire_when_enabled *)
    rule cycle;
       cycle_cnt <= cycle_cnt+1;
@@ -141,44 +140,41 @@ module mkMemReadInternal#(Integer id,
       //last_sglResp <= cycle_cnt;
    endrule
 
-   rule read_client_response;
+   rule read_response;
       let response <- toGet(responseFifo).get();
       beatCount <= beatCount+1;
       Bit#(6) response_tag = response.tag;
       let dreqFifo = dreqFifos[response_tag];
       dynamicAssert(truncate(response_tag) == dreqFifo.first.rename_tag, "mkMemReadInternal");
-      readDataPipelineFifo[response_tag].enq(tuple2(dreqFifo.first, response));
+      readDataPipelineFifo[response_tag].enq(response);
    endrule
 
    for (Integer client = 0; client < valueOf(numClients); client = client + 1)
-       rule readDataComp;
-	  readDataPipelineFifo[client].deq;
-	  let drq = tpl_1(readDataPipelineFifo[client].first);
-	  let response = tpl_2(readDataPipelineFifo[client].first);
-	  let req = drq.req;
-	  readClients[client].readData.put(ObjectData { data: response.data, tag: req.tag, last: False});
-	  //$display("readDataComp: %d %h", client, response.data);
+       rule read_client_response;
+	  Bit#(6) response_tag = fromInteger(client);
+	  let response <- toGet(readDataPipelineFifo[client]).get();
 
-       Bit#(6) response_tag = fromInteger(client);
-      let dreqFifo = dreqFifos[response_tag];
-      let burstLen = burstRegs[response_tag];
-      let first =    firstRegs[response_tag];
-      let last  =    lastRegs[response_tag];
-      if (first) begin
-	 burstLen = dreqFifo.first.req.burstLen >> beat_shift;
-	 last = dreqFifo.first.last;
-	 dynamicAssert(last == (burstLen==1), "Last incorrect");
-	 //$display("burstLen=%d dreqFifo.first.last=%d last=%d\n", burstLen, dreqFifo.first.last, last);
-      end
-      if (last) begin
-	 //$display("mkMemReadInternal::eob %d", cycle_cnt-last_eob);
-	 last_eob <= cycle_cnt;
-	 dreqFifo.deq();
-      end
-      burstRegs[response_tag] <= burstLen-1;
-      firstRegs[response_tag] <= (burstLen-1 == 0);
-      lastRegs[response_tag] <= (burstLen-1 == 1);
-   endrule
+	  let dreqFifo = dreqFifos[response_tag];
+	  let drq = dreqFifo.first;
+	  let req = drq.req;
+	  let burstLen = burstRegs[response_tag];
+	  let first =    firstRegs[response_tag];
+	  let last  =    lastRegs[response_tag];
+	  if (first) begin
+	     burstLen = dreqFifo.first.req.burstLen >> beat_shift;
+	     last = dreqFifo.first.last;
+	     dynamicAssert(last == (burstLen==1), "Last incorrect");
+	     //$display("burstLen=%d dreqFifo.first.last=%d last=%d\n", burstLen, dreqFifo.first.last, last);
+	  end
+
+	  readClients[client].readData.put(ObjectData { data: response.data, tag: req.tag, last: last});
+	  if (last) begin
+	     dreqFifo.deq();
+	  end
+	  burstRegs[response_tag] <= burstLen-1;
+	  firstRegs[response_tag] <= (burstLen-1 == 0);
+	  lastRegs[response_tag] <= (burstLen-1 == 1);
+       endrule
 
    interface MemReadClient read_client;
       interface Get readReq;
