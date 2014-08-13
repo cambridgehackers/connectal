@@ -51,110 +51,29 @@ function Bool bad_pointer(ObjectPointer p);
    return ((p >>8) > fromInteger(valueOf(MaxNumSGLists)));
 endfunction
 
-interface TagGen#(numeric type numClients, numeric type numTags);
-   method Action tag_request(Bit#(TLog#(numClients)) client, Bit#(6) orig_tag);
-   method ActionValue#(Bit#(TLog#(numTags)))  tag_response;
-   method Action return_tag(Bit#(TLog#(numTags)) tag);
-endinterface
-
-module mkTagGenOO(TagGen#(numClients,numTags))
-   provisos(Log#(numTags,tagWidth),
-	    Log#(numClients,clientWidth));
-   
-   let request_fifo0 <- mkSizedFIFOF(valueOf(SGL_PIPELINE_DEPTH));
-   let request_fifo1 <- mkSizedFIFOF(valueOf(SGL_PIPELINE_DEPTH));
-   let return_fifo <- mkFIFO;
-   Vector#(numTags, Reg#(Bit#(TLog#(TAG_DEPTH)))) tag_regs <- replicateM(mkReg(0));
-   Vector#(numTags, Reg#(Maybe#(Tuple2#(Bit#(clientWidth),Bit#(6))))) client_map <- replicateM(mkReg(tagged Invalid));
-   Maybe#(UInt#(tagWidth)) next_free = findElem(0, readVReg(tag_regs));
-
-   rule return_tag_rule;
-      return_fifo.deq;
-      let tag = return_fifo.first;
-      tag_regs[tag] <= tag_regs[tag]-1;
-      if (tag_regs[tag]==1)
-	 client_map[tag] <= tagged Invalid;
-   endrule
-
-   rule tag_request_rule;
-      request_fifo0.deq;
-      let client = tpl_2(request_fifo0.first);
-      let orig_tag = tpl_3(request_fifo0.first);
-      let rv = case  (tpl_1(request_fifo0.first)) matches
-		  tagged Valid .tag: return (_when_(tag_regs[tag] < maxBound) (tag));
-		  tagged Invalid: return (_when_(isValid(next_free)) (fromMaybe(?, next_free)));
-	       endcase;
-      request_fifo1.enq(tuple3(rv,client,orig_tag));
-   endrule
-   
-   method Action tag_request(Bit#(clientWidth) client, Bit#(6) orig_tag) if (request_fifo0.notFull);
-      let rv = findElem(tagged Valid tuple2(client,orig_tag), readVReg(client_map));
-      request_fifo0.enq(tuple3(rv,client,orig_tag));
-   endmethod      
-   
-   method ActionValue#(Bit#(tagWidth)) tag_response;
-      request_fifo1.deq;
-      let rv = tpl_1(request_fifo1.first);
-      let client = tpl_2(request_fifo1.first);
-      let orig_tag = tpl_3(request_fifo1.first);
-      client_map[rv] <= tagged Valid tuple2(client,orig_tag);
-      tag_regs[rv] <= tag_regs[rv]+1;
-      return extend(pack(rv));
-   endmethod      
-
-   method Action return_tag(Bit#(tagWidth) tag);
-      return_fifo.enq(tag);
-   endmethod
-
-endmodule
-
-module mkTagGenIO(TagGen#(numClients,numTags))
-   provisos(Log#(numTags,tagWidth),
-	    Log#(numClients,clientWidth),
-	    Bits#(Bit#(clientWidth), tagWidth));
-   
-   let request_fifo <- mkSizedFIFO(valueOf(SGL_PIPELINE_DEPTH));
-   
-   method Action tag_request(Bit#(clientWidth) client, Bit#(6) client_tag);
-      request_fifo.enq(client);
-   endmethod      
-   
-   method ActionValue#(Bit#(tagWidth)) tag_response;
-      request_fifo.deq;
-      let client = request_fifo.first;
-      return pack(client);
-   endmethod      
-
-   method Action return_tag(Bit#(tagWidth) tag);
-      noAction;
-   endmethod
-
-endmodule
-
 typedef struct {ObjectRequest req;
-		Bit#(TLog#(numClients)) client; } LRec#(numeric type numClients, numeric type numTags, numeric type addrWidth) deriving(Bits);
+		Bit#(TLog#(numClients)) client; } LRec#(numeric type numClients, numeric type addrWidth) deriving(Bits);
 
 typedef struct {ObjectRequest req;
 		Bit#(addrWidth) pa;
-		Bit#(TLog#(numTags)) rename_tag;
-		Bit#(TLog#(numClients)) client; } RRec#(numeric type numClients, numeric type numTags, numeric type addrWidth) deriving(Bits);
+		Bit#(6) rename_tag;
+		Bit#(TLog#(numClients)) client; } RRec#(numeric type numClients, numeric type addrWidth) deriving(Bits);
 
 typedef struct {ObjectRequest req;
-		Bit#(TLog#(numTags)) rename_tag;
+		Bit#(6) rename_tag;
 		Bit#(TLog#(numClients)) client;
-		Bool last; } DRec#(numeric type numClients, numeric type numTags, numeric type addrWidth) deriving(Bits);
+		Bool last; } DRec#(numeric type numClients, numeric type addrWidth) deriving(Bits);
 
 typedef struct {Bit#(6) orig_tag;
-		Bit#(TLog#(numClients)) client; } RResp#(numeric type numClients, numeric type numTags, numeric type addrWidth) deriving(Bits);
+		Bit#(TLog#(numClients)) client; } RResp#(numeric type numClients, numeric type addrWidth) deriving(Bits);
 
 typedef struct {DmaErrorType errorType;
 		Bit#(32) pref; } DmaError deriving (Bits);
 
 module mkMemReadInternal#(Integer id,
-			  Vector#(numClients, ObjectReadClient#(dataWidth)) readClients, 
+			  Vector#(numClients, ObjectReadClient#(dataWidth)) readClients,
 			  DmaIndication dmaIndication,
-			  Server#(ReqTup,Bit#(addrWidth)) sgl,
-			  TagGen#(numClients, numTags) tag_gen) 
+			  Server#(ReqTup,Bit#(addrWidth)) sgl) 
    (MemReadInternal#(addrWidth, dataWidth))
 
    provisos(Add#(b__, addrWidth, 64), 
@@ -163,20 +82,21 @@ module mkMemReadInternal#(Integer id,
 	    Div#(dataWidth,8,dataWidthBytes),
 	    Mul#(dataWidthBytes,8,dataWidth),
 	    Log#(dataWidthBytes,beatShift),
-	    Add#(a__, TLog#(numTags), 6));
+	    Add#(a__, TLog#(numClients), 6)
+      );
    
    // stage 0: address translation (latency = SGL_PIPELINE_DEPTH)
-   FIFO#(LRec#(numClients,numTags,addrWidth)) lreqFifo <- mkSizedFIFO(valueOf(SGL_PIPELINE_DEPTH));
+   FIFO#(LRec#(numClients,addrWidth)) lreqFifo <- mkSizedFIFO(valueOf(SGL_PIPELINE_DEPTH));
    // stage 1: address validation (latency = 1)
-   FIFO#(RRec#(numClients,numTags,addrWidth))  reqFifo <- mkFIFO;
+   FIFO#(RRec#(numClients,addrWidth))  reqFifo <- mkFIFO;
    // stage 2: read commands (maximum buffering to handle high latency read response times)
-   Vector#(numTags, FIFOF#(DRec#(numClients,numTags,addrWidth))) dreqFifos <- replicateM(mkSizedBRAMFIFOF(valueOf(TAG_DEPTH)));
+   Vector#(numClients, FIFOF#(DRec#(numClients,addrWidth))) dreqFifos <- replicateM(mkSizedBRAMFIFOF(valueOf(TAG_DEPTH)));
    // stage 3: read data (minimal buffering required) 
-   FIFO#(Tuple2#(DRec#(numClients,numTags,addrWidth),MemData#(dataWidth))) readDataPipelineFifo <- mkFIFO;
+   FIFO#(Tuple2#(DRec#(numClients,addrWidth),MemData#(dataWidth))) readDataPipelineFifo <- mkFIFO;
    FIFO#(MemData#(dataWidth)) responseFifo <- mkFIFO;
-   Vector#(numTags, Reg#(Bit#(8)))           burstRegs <- replicateM(mkReg(0));
-   Vector#(numTags, Reg#(Bool))              firstRegs <- replicateM(mkReg(True));
-   Vector#(numTags, Reg#(Bool))               lastRegs <- replicateM(mkReg(False));
+   Vector#(numClients, Reg#(Bit#(8)))           burstRegs <- replicateM(mkReg(0));
+   Vector#(numClients, Reg#(Bool))              firstRegs <- replicateM(mkReg(True));
+   Vector#(numClients, Reg#(Bool))               lastRegs <- replicateM(mkReg(False));
    Reg#(Bit#(64))  beatCount <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
    
@@ -204,7 +124,6 @@ module mkMemReadInternal#(Integer id,
    	 if (bad_pointer(req.pointer))
 	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer4, pref: req.pointer });
    	 else begin
-	    tag_gen.tag_request(fromInteger(selectReg), req.tag);
    	    lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
    	    sgl.request.put(ReqTup{id:truncate(req.pointer),off:req.offset});
    	 end
@@ -214,9 +133,9 @@ module mkMemReadInternal#(Integer id,
       let physAddr <- sgl.response.get;
       let req = lreqFifo.first.req;
       let client = lreqFifo.first.client;
-      let rename_tag <- tag_gen.tag_response;
+      let rename_tag  = extend(client);
       lreqFifo.deq();
-      reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
+      reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:rename_tag});
       //$display("checkSglResp: client=%d, rename_tag=%d", client,rename_tag);
       //$display("mkMemReadInternal::sglResp %d %d", client, cycle_cnt-last_sglResp);
       //last_sglResp <= cycle_cnt;
@@ -252,7 +171,6 @@ module mkMemReadInternal#(Integer id,
 	 //$display("mkMemReadInternal::eob %d", cycle_cnt-last_eob);
 	 last_eob <= cycle_cnt;
 	 dreqFifo.deq();
-	 tag_gen.return_tag(truncate(response_tag));
       end
       burstRegs[response_tag] <= burstLen-1;
       firstRegs[response_tag] <= (burstLen-1 == 0);
@@ -271,7 +189,7 @@ module mkMemReadInternal#(Integer id,
 	       $display("req_ar: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
 	    dreqFifos[rename_tag].enq(DRec{req:req, client:client, rename_tag:rename_tag, last:(req.burstLen == fromInteger(valueOf(dataWidthBytes)))});
 	    //$display("readReq: client=%d, rename_tag=%d, physAddr=%h req.burstLen=%d beat_shift=%d last=%d", client,rename_tag,physAddr, req.burstLen, beat_shift, req.burstLen == beat_shift);
-	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(rename_tag)};
+	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
 	 endmethod
       endinterface
       interface Put readData = toPut(responseFifo);
@@ -292,8 +210,7 @@ endmodule
 module mkMemWriteInternal#(Integer iid,
 			   Vector#(numClients, ObjectWriteClient#(dataWidth)) writeClients,
 			   DmaIndication dmaIndication, 
-			   Server#(ReqTup,Bit#(addrWidth)) sgl,
-			   TagGen#(numClients, numTags) tag_gen)
+			   Server#(ReqTup,Bit#(addrWidth)) sgl)
    (MemWriteInternal#(addrWidth, dataWidth))
    
    provisos(Add#(b__, addrWidth, 64), 
@@ -302,19 +219,19 @@ module mkMemWriteInternal#(Integer iid,
 	    Div#(dataWidth,8,dataWidthBytes),
 	    Mul#(dataWidthBytes,8,dataWidth),
 	    Log#(dataWidthBytes,beatShift),
-	    Add#(a__, TLog#(numTags), 6));
+	    Add#(a__, TLog#(numClients), 6));
    
    
    // stage 0: address translation (latency = SGL_PIPELINE_DEPTH)
-   FIFO#(LRec#(numClients,numTags,addrWidth)) lreqFifo <- mkSizedFIFO(valueOf(SGL_PIPELINE_DEPTH));
+   FIFO#(LRec#(numClients,addrWidth)) lreqFifo <- mkSizedFIFO(valueOf(SGL_PIPELINE_DEPTH));
    // stage 1: address validation (latency = 1)
-   FIFO#(RRec#(numClients,numTags,addrWidth))  reqFifo <- mkFIFO;
+   FIFO#(RRec#(numClients,addrWidth))  reqFifo <- mkFIFO;
    // stage 2: write commands (maximum buffering to handle high latency writes)
-   FIFO#(DRec#(numClients,numTags,addrWidth)) dreqFifo <- mkSizedBRAMFIFO(valueOf(TMul#(TAG_DEPTH,numTags)));
+   FIFO#(DRec#(numClients, addrWidth)) dreqFifo <- mkSizedBRAMFIFO(valueOf(TMul#(TAG_DEPTH,numClients)));
    // stage 3: write data (maximum buffering, though I have no idea if any hosts will begin the next data transfer before sending the write ack)
-   Vector#(numTags, FIFO#(RResp#(numClients,numTags,addrWidth))) respFifos <- replicateM(mkSizedBRAMFIFO(valueOf(TAG_DEPTH)));
+   Vector#(numClients, FIFO#(RResp#(numClients,addrWidth))) respFifos <- replicateM(mkSizedBRAMFIFO(valueOf(TAG_DEPTH)));
    // stage 4: write done (minimal buffering required)
-   FIFO#(Tuple2#(RResp#(numClients,numTags,addrWidth),Bit#(6))) writeDonePipelineFifo <- mkFIFO;
+   FIFO#(Tuple2#(RResp#(numClients,addrWidth),Bit#(6))) writeDonePipelineFifo <- mkFIFO;
 
    Reg#(Bit#(8)) burstReg <- mkReg(0);   
    Reg#(Bit#(64)) beatCount <- mkReg(0);
@@ -343,7 +260,6 @@ module mkMemWriteInternal#(Integer iid,
    	  if (bad_pointer(req.pointer)) 
 	     dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer5, pref: req.pointer });
    	  else begin
-	     tag_gen.tag_request(fromInteger(selectReg), req.tag);
    	     lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
    	     sgl.request.put(ReqTup{id:truncate(req.pointer),off:req.offset});
    	  end
@@ -353,7 +269,7 @@ module mkMemWriteInternal#(Integer iid,
       let physAddr <- sgl.response.get;
       let req = lreqFifo.first.req;
       let client = lreqFifo.first.client;
-      let rename_tag <- tag_gen.tag_response;
+      let rename_tag  = client;
       lreqFifo.deq();
       reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
       //$display("checkSglResp: client=%d, rename_tag=%d", client,rename_tag);
@@ -367,7 +283,6 @@ module mkMemWriteInternal#(Integer iid,
       let orig_tag = tpl_1(writeDonePipelineFifo.first).orig_tag;
       let response_tag = tpl_2(writeDonePipelineFifo.first);
       writeClients[client].writeDone.put(orig_tag);
-      tag_gen.return_tag(truncate(response_tag));
    endrule
    
    interface MemWriteClient write_client;

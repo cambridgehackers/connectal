@@ -87,9 +87,7 @@ module mkMemServer#(DmaIndication dmaIndication,
 	    Add#(c__, TLog#(nwc), 6)
 	    );
    
-   Vector#(nMasters,TagGen#(nwc,nwc)) writeTagGens <- replicateM(mkTagGenIO);
-   Vector#(nMasters,TagGen#(nrc,nrc)) readTagGens  <- replicateM(mkTagGenIO);
-   let rv <- mkConfigMemServerRW(dmaIndication, readTagGens, writeTagGens, readClients, writeClients);
+   let rv <- mkConfigMemServerRW(dmaIndication, readClients, writeClients);
    return rv;
    
 endmodule
@@ -105,8 +103,7 @@ module mkMemServerR#(DmaIndication dmaIndication,
 	    );
    
    SGListMMU#(PhysAddrWidth) sgl <- mkSGListMMU(dmaIndication);
-   Vector#(nMasters,TagGen#(nrc,nrc)) readTagGens <- replicateM(mkTagGenIO);
-   let rv <- mkConfigMemServerR(dmaIndication,readTagGens,readClients,sgl);
+   let rv <- mkConfigMemServerR(dmaIndication,readClients,sgl);
    return rv;
    
 endmodule
@@ -122,8 +119,7 @@ module mkMemServerW#(DmaIndication dmaIndication,
 	    );
    
    SGListMMU#(PhysAddrWidth) sgl <- mkSGListMMU(dmaIndication);
-   Vector#(nMasters,TagGen#(nwc,nwc)) writeTagGens <- replicateM(mkTagGenIO);
-   let rv <- mkConfigMemServerW(dmaIndication, writeTagGens, writeClients,sgl);
+   let rv <- mkConfigMemServerW(dmaIndication, writeClients,sgl);
    return rv;
    
 endmodule
@@ -143,10 +139,7 @@ module mkMemServerOO#(DmaIndication dmaIndication,
 	    Add#(j__, TLog#(nwc), 6)
 	    );
 
-
-   Vector#(nMasters,TagGen#(nwc,NUM_OO_TAGS)) writeTagGens <- replicateM(mkTagGenOO);
-   Vector#(nMasters,TagGen#(nrc,NUM_OO_TAGS)) readTagGens <- replicateM(mkTagGenOO);
-   let rv <- mkConfigMemServerRW(dmaIndication, readTagGens, writeTagGens, readClients, writeClients);
+   let rv <- mkConfigMemServerRW(dmaIndication, readClients, writeClients);
    return rv;
 
 endmodule
@@ -157,12 +150,12 @@ module mkMemServerOOR#(DmaIndication dmaIndication,
    provisos(Add#(1,a__,dataWidth),
 	    Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
 	    Div#(numReadClients, nMasters, nrc),
-	    Mul#(nrc, nMasters, numReadClients)
+	    Mul#(nrc, nMasters, numReadClients),
+	    Add#(b__, TLog#(nrc), 6)
       );
    
    SGListMMU#(PhysAddrWidth) sgl <- mkSGListMMU(dmaIndication);
-   Vector#(nMasters,TagGen#(nrc,NUM_OO_TAGS)) readTagGens <- replicateM(mkTagGenOO);
-   let rv <- mkConfigMemServerR(dmaIndication,readTagGens,readClients,sgl);
+   let rv <- mkConfigMemServerR(dmaIndication,readClients,sgl);
    return rv;
    
 endmodule
@@ -173,12 +166,12 @@ module mkMemServerOOW#(DmaIndication dmaIndication,
    provisos(Add#(1,a__,dataWidth),
 	    Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
 	    Div#(numWriteClients, nMasters, nwc),
-	    Mul#(nwc, nMasters, numWriteClients)
+	    Mul#(nwc, nMasters, numWriteClients),
+	    Add#(b__, TLog#(nwc), 6)
 	    );
    
    SGListMMU#(PhysAddrWidth) sgl <- mkSGListMMU(dmaIndication);
-   Vector#(nMasters,TagGen#(nwc,NUM_OO_TAGS)) writeTagGens <- replicateM(mkTagGenOO);
-   let rv <- mkConfigMemServerW(dmaIndication, writeTagGens,writeClients,sgl);
+   let rv <- mkConfigMemServerW(dmaIndication, writeClients,sgl);
    return rv;
    
 endmodule
@@ -190,24 +183,22 @@ typedef struct {
    } DmaError deriving (Bits);
 
 module mkConfigMemServerRW#(DmaIndication dmaIndication,
-			    Vector#(nMasters,TagGen#(nrc, numReadTags)) readTagGens,
-			    Vector#(nMasters,TagGen#(nwc, numWriteTags)) writeTagGens,
 			    Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
 			    Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
    (MemServer#(PhysAddrWidth, dataWidth, nMasters))
    
    provisos (Add#(1,a__,dataWidth),
 	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
-	     Add#(b__, TLog#(numReadTags), 6),
-	     Add#(c__, TLog#(numWriteTags), 6),
 	     Mul#(nwc, nMasters, numWriteClients),
-	     Mul#(nrc, nMasters, numReadClients)
+	     Mul#(nrc, nMasters, numReadClients),
+	     Add#(b__, TLog#(nrc), 6),
+	     Add#(c__, TLog#(nwc), 6)
 	     );
 
 
    SGListMMU#(PhysAddrWidth) sgl <- mkSGListMMU(dmaIndication);
-   MemServer#(PhysAddrWidth,dataWidth,nMasters) reader <- mkConfigMemServerR(dmaIndication, readTagGens,  readClients,  sgl);
-   MemServer#(PhysAddrWidth,dataWidth,nMasters) writer <- mkConfigMemServerW(dmaIndication, writeTagGens, writeClients, sgl);
+   MemServer#(PhysAddrWidth,dataWidth,nMasters) reader <- mkConfigMemServerR(dmaIndication,  readClients, sgl);
+   MemServer#(PhysAddrWidth,dataWidth,nMasters) writer <- mkConfigMemServerW(dmaIndication, writeClients, sgl);
    
    FIFO#(DmaError) dmaErrorFifo <- mkFIFO();
    rule dmaError;
@@ -243,15 +234,15 @@ module mkConfigMemServerRW#(DmaIndication dmaIndication,
 endmodule
 	
 module mkConfigMemServerR#(DmaIndication dmaIndication,
-			   Vector#(nMasters,TagGen#(nrc, numReadTags)) readTagGens,
 			   Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
 			   SGListMMU#(PhysAddrWidth) sgl)
    (MemServer#(PhysAddrWidth, dataWidth, nMasters))
    
    provisos (Add#(1,a__,dataWidth),
 	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
-	     Add#(h__, TLog#(numReadTags), 6),
-	     Mul#(nrc, nMasters, numReadClients));
+	     Mul#(nrc, nMasters, numReadClients),
+	     Add#(b__, TLog#(nrc), 6)
+	     );
 
 
    FIFO#(void)   addrReqFifo <- mkFIFO;
@@ -260,14 +251,16 @@ module mkConfigMemServerR#(DmaIndication dmaIndication,
    Reg#(Bit#(64)) trafficAccum <- mkReg(0);
 
    
-   Vector#(nMasters,List#(ObjectReadClient#(dataWidth))) client_bins = replicate(Nil);
-   for(Integer i = 0; i < valueOf(numReadClients); i=i+1)
-      client_bins[i%valueOf(nMasters)] = List::cons(readClients[i], client_bins[i%valueOf(nMasters)]);
+   function a selectClient(Vector#(n, a) in, Integer r, Integer i, Integer j); return in[j * r + i]; endfunction
+   function Vector#(nrc, a) selectClients(Vector#(numReadClients, a) vec, Integer m);
+      return genWith(selectClient(vec, valueOf(nMasters), m));
+   endfunction
+   Vector#(nMasters,Vector#(nrc, ObjectReadClient#(dataWidth))) client_bins = genWith(selectClients(readClients));
 
    SglAddrServer#(PhysAddrWidth,nMasters) sgl_server <- mkSglAddrServer(sgl.addr[0]);
    Vector#(nMasters,MemReadInternal#(PhysAddrWidth,dataWidth)) readers;
    for(Integer i = 0; i < valueOf(nMasters); i = i+1)
-      readers[i] <- mkMemReadInternal(i, toVector(client_bins[i]), dmaIndication, sgl_server.servers[i], readTagGens[i]);
+      readers[i] <- mkMemReadInternal(i, client_bins[i], dmaIndication, sgl_server.servers[i]);
    
    rule sglistEntry;
       addrReqFifo.deq;
@@ -326,29 +319,31 @@ module mkConfigMemServerR#(DmaIndication dmaIndication,
 endmodule
 	
 module mkConfigMemServerW#(DmaIndication dmaIndication,
-			   Vector#(nMasters,TagGen#(nwc,numWriteTags)) writeTagGens,
 			   Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients,
 			   SGListMMU#(PhysAddrWidth) sgl)
    (MemServer#(PhysAddrWidth, dataWidth, nMasters))
    
    provisos (Add#(1,a__,dataWidth),
 	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
-	     Add#(j__, TLog#(numWriteTags), 6),
-	     Mul#(nwc, nMasters, numWriteClients));
+	     Mul#(nwc, nMasters, numWriteClients),
+	     Add#(b__, TLog#(nwc), 6)
+	     );
 
    FIFO#(void)   addrReqFifo <- mkFIFO;
    Reg#(Bit#(8)) dbgPtr <- mkReg(0);
    Reg#(Bit#(8)) trafficPtr <- mkReg(0);
    Reg#(Bit#(64)) trafficAccum <- mkReg(0);
    
-   Vector#(nMasters,List#(ObjectWriteClient#(dataWidth))) client_bins = replicate(Nil);
-   for(Integer i = 0; i < valueOf(numWriteClients); i=i+1)
-      client_bins[i%valueOf(nMasters)] = List::cons(writeClients[i], client_bins[i%valueOf(nMasters)]);
+   function a selectClient(Vector#(n, a) in, Integer r, Integer i, Integer j); return in[j * r + i]; endfunction
+   function Vector#(nwc, a) selectClients(Vector#(numWriteClients, a) vec, Integer m);
+      return genWith(selectClient(vec, valueOf(nMasters), m));
+   endfunction
+   Vector#(nMasters,Vector#(nwc, ObjectWriteClient#(dataWidth))) client_bins = genWith(selectClients(writeClients));
 
    SglAddrServer#(PhysAddrWidth,nMasters) sgl_server <- mkSglAddrServer(sgl.addr[1]);
    Vector#(nMasters,MemWriteInternal#(PhysAddrWidth,dataWidth)) writers;
    for(Integer i = 0; i < valueOf(nMasters); i = i+1)
-      writers[i] <- mkMemWriteInternal(i, toVector(client_bins[i]), dmaIndication, sgl_server.servers[i], writeTagGens[i]);
+      writers[i] <- mkMemWriteInternal(i, client_bins[i], dmaIndication, sgl_server.servers[i]);
    
    rule sglistEntry;
       addrReqFifo.deq;
