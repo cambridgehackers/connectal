@@ -70,6 +70,8 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
    function Get#(ObjectData#(dataWidth)) getMemPortalReadData(MemSlave#(aw,dataWidth) x) = x.read_server.readData;
    function Put#(ObjectData#(dataWidth)) getMemPortalWriteData(MemSlave#(aw,dataWidth) x) = x.write_server.writeData;
    
+   FIFO#(Bit#(6))        doneFifo <- mkFIFO1();
+
    FIFO#(MemRequest#(aw)) req_ars <- mkSizedFIFO(1);
    FIFO#(Bit#(TLog#(numInputs))) rs <- mkFIFO1();
    Vector#(numInputs, PipeOut#(ObjectData#(dataWidth))) readDataPipes <- mapM(mkPipeOut, map(getMemPortalReadData,portalIfcs));
@@ -92,6 +94,12 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
       portalIfcs[rs.first].read_server.readReq.put(req);
    endrule
    
+   rule write_done_rule;
+      let rv <- portalIfcs[ws.first].write_server.writeDone.get();
+      ws.deq();
+      doneFifo.enq(rv);
+   endrule
+
    interface MemWriteServer write_server;
       interface Put writeReq;
 	 method Action put(MemRequest#(addrWidth) req);
@@ -108,8 +116,7 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
       endinterface
       interface Get writeDone;
 	 method ActionValue#(Bit#(6)) get();
-	    let rv <- portalIfcs[ws.first].write_server.writeDone.get();
-	    ws.deq();
+	    let rv <- toGet(doneFifo).get();
 	    return rv;
 	 endmethod
       endinterface
@@ -150,11 +157,19 @@ module mkMemSlaveMux#(Vector#(numSlaves,MemSlave#(aw,dataWidth)) slaves) (MemSla
       return a[(port_sel_low-1):0];
    endfunction
 
+   FIFO#(Bit#(6)) doneFifo          <- mkFIFO1();
+
    FIFO#(MemRequest#(aw))   req_ars <- mkFIFO1();
    FIFO#(Bit#(TLog#(numSlaves))) rs <- mkFIFO1();
 
    FIFO#(MemRequest#(aw))   req_aws <- mkFIFO1();
    FIFO#(Bit#(TLog#(numSlaves))) ws <- mkFIFO1();
+
+   rule write_done;
+      let rv <- portalIfcs[ws.first].write_server.writeDone.get();
+      ws.deq();
+      doneFifo.enq(rv);
+   endrule
 
    rule req_aw;
       let req <- toGet(req_aws).get;
@@ -183,8 +198,7 @@ module mkMemSlaveMux#(Vector#(numSlaves,MemSlave#(aw,dataWidth)) slaves) (MemSla
       endinterface
       interface Get writeDone;
 	 method ActionValue#(Bit#(6)) get();
-	    let rv <- portalIfcs[ws.first].write_server.writeDone.get();
-	    ws.deq();
+	    let rv <- toGet(doneFifo).get();
 	    return rv;
 	 endmethod
       endinterface
