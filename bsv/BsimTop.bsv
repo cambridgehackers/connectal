@@ -313,7 +313,7 @@ module  mkBsimHost#(Clock double_clock, Reset double_reset)(BsimHost#(clientAddr
       init_fsm.start;
    endrule
 
-   let verbose = True;
+   let verbose = False;
     Reg#(Bit#(32)) cycles      <- mkReg(0);
     rule count;
        cycles <= cycles + 1;
