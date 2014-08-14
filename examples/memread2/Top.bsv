@@ -38,7 +38,7 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    mkConnection(memread.dmaClient0, readBuffers[0].dmaServer);
    mkConnection(memread.dmaClient1, readBuffers[1].dmaServer);
    clients = cons(readBuffers[0].dmaClient, cons(readBuffers[1].dmaClient, nil));
-   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerR(dmaIndicationProxy.ifc, clients);
+   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerR(True, dmaIndicationProxy.ifc, clients);
 
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 
