@@ -36,7 +36,7 @@ module mkCtrl2BRAM#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (Me
    FIFO#(Bool)     readLastFifo <- mkFIFO();
    AddressGenerator#(busAddrWidth,busDataWidth) readAddrGenerator <- mkAddressGenerator();
    AddressGenerator#(busAddrWidth,busDataWidth) writeAddrGenerator <- mkAddressGenerator();
-   Bool verbose = True;
+   Bool verbose = False;
 
     Reg#(Bit#(32)) cycles      <- mkReg(0);
     rule count;
