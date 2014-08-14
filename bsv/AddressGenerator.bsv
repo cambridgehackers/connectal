@@ -34,12 +34,14 @@ typedef struct {
    Bool    last;
    } AddrBeat#(numeric type addrWidth) deriving (Bits);
 
-interface AddressGenerator#(numeric type addrWidth);
+interface AddressGenerator#(numeric type addrWidth, numeric type dataWidth);
    interface Put#(MemRequest#(addrWidth)) request;
    interface Get#(AddrBeat#(addrWidth)) addrBeat;
 endinterface
 
-module mkAddressGenerator(AddressGenerator#(addrWidth));
+module mkAddressGenerator(AddressGenerator#(addrWidth, dataWidth))
+   provisos (Div#(dataWidth,8,dataWidthBytes),
+	     Log#(dataWidthBytes,beatShift));
    FIFOF#(MemRequest#(addrWidth)) requestFifo <- mkFIFOF1();
    FIFOF#(AddrBeat#(addrWidth)) addrBeatFifo <- mkFIFOF();
    Reg#(Bit#(addrWidth)) addrReg <- mkReg(0);
@@ -54,8 +56,8 @@ module mkAddressGenerator(AddressGenerator#(addrWidth));
       let isLast = isLastReg;
       if (isFirstReg) begin
 	 addr = req.addr;
-	 burstCount = req.burstLen;
-	 isLast = (req.burstLen == 1);
+	 burstCount = req.burstLen >> valueOf(beatShift);
+	 isLast = (req.burstLen == fromInteger(valueOf(dataWidthBytes)));
       end
 
       let nextIsLast = burstCount == 2;

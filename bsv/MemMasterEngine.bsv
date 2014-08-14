@@ -177,8 +177,8 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
 	     let hdr = writeHeaderFifo.first;
 	     writeHeaderFifo.deq;
 	     writeDataFifo.enq(hdr);
-	     let axilen = hdr.length;
-	     return MemRequest { addr: extend(writeHeaderFifo.first.addr) << 2, burstLen: truncate(axilen), tag: truncate(writeHeaderFifo.first.tag)};
+	     let burstLen = truncate(hdr.length << 2);
+	     return MemRequest { addr: extend(writeHeaderFifo.first.addr) << 2, burstLen: burstLen, tag: truncate(writeHeaderFifo.first.tag)};
 	  endmethod
        endinterface
         interface Get writeData;
@@ -200,8 +200,8 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
 	     readHeaderFifo.deq;
 	     //$display("req_ar hdr.length=%d hdr.addr=%h", hdr.length, hdr.addr);
 	     readDataFifo.enq(hdr);
-	     let axilen = hdr.length;
-	     return MemRequest { addr: extend(readHeaderFifo.first.addr) << 2, burstLen: truncate(axilen), tag: truncate(readHeaderFifo.first.tag)};
+	     let burstLen = truncate(hdr.length << 2);
+	     return MemRequest { addr: extend(readHeaderFifo.first.addr) << 2, burstLen: burstLen, tag: truncate(readHeaderFifo.first.tag)};
 	    endmethod
        endinterface
         interface Put readData;

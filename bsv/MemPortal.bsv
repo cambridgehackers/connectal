@@ -42,8 +42,8 @@ interface PortalCtrlMemSlave#(numeric type addrWidth, numeric type dataWidth);
 endinterface
 
 module mkPortalCtrlMemSlave#(Vector#(numIndications, PipeOut#(Bit#(dataWidth))) indicationPipes)(PortalCtrlMemSlave#(addrWidth, dataWidth));
-   AddressGenerator#(addrWidth) ctrlReadAddrGenerator  <- mkAddressGenerator();
-   AddressGenerator#(addrWidth) ctrlWriteAddrGenerator <- mkAddressGenerator();
+   AddressGenerator#(addrWidth,dataWidth) ctrlReadAddrGenerator  <- mkAddressGenerator();
+   AddressGenerator#(addrWidth,dataWidth) ctrlWriteAddrGenerator <- mkAddressGenerator();
    FIFO#(Bit#(ObjectTagSize))        ctrlWriteDoneFifo <- mkFIFO();
 
     // indication-specific state
@@ -129,8 +129,8 @@ endmodule
 module mkPipeInMemSlave#(PipeIn#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWidth, dataWidth))
    provisos (Add#(1,a__,dataWidth));
 
-   AddressGenerator#(addrWidth) fifoReadAddrGenerator  <- mkAddressGenerator();
-   AddressGenerator#(addrWidth) fifoWriteAddrGenerator <- mkAddressGenerator();
+   AddressGenerator#(addrWidth,dataWidth) fifoReadAddrGenerator  <- mkAddressGenerator();
+   AddressGenerator#(addrWidth,dataWidth) fifoWriteAddrGenerator <- mkAddressGenerator();
    FIFO#(Bit#(ObjectTagSize))        fifoWriteDoneFifo <- mkFIFO();
    FIFO#(Bool)                           putFailedFifo <- mkFIFO();
 
@@ -166,8 +166,8 @@ endmodule
 
 module mkPipeOutMemSlave#(PipeOut#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWidth, dataWidth))
    provisos (Add#(1,a__,dataWidth));
-   AddressGenerator#(addrWidth) fifoReadAddrGenerator <- mkAddressGenerator();
-   AddressGenerator#(addrWidth) fifoWriteAddrGenerator <- mkAddressGenerator();
+   AddressGenerator#(addrWidth,dataWidth) fifoReadAddrGenerator <- mkAddressGenerator();
+   AddressGenerator#(addrWidth,dataWidth) fifoWriteAddrGenerator <- mkAddressGenerator();
    FIFO#(Bit#(ObjectTagSize))                  fifoWriteDoneFifo <- mkFIFO();
    interface MemReadServer read_server;
       interface Put readReq;

@@ -32,9 +32,11 @@ import PortalMemory::*;
 
 
 module mkAxiDmaSlave#(MemSlave#(addrWidth,dataWidth) slave) (Axi3Slave#(addrWidth,dataWidth,12));
+   let beatShift = fromInteger(valueOf(TLog#(TDiv#(dataWidth,8))));
    interface Put req_ar;
       method Action put((Axi3ReadRequest#(addrWidth, 12)) req);
-	 slave.read_server.readReq.put(MemRequest{addr:req.address, burstLen:extend(req.len+1),  tag:truncate(req.id)});
+	 let burstLen = extend(req.len+1) << beatShift;
+	 slave.read_server.readReq.put(MemRequest{addr:req.address, burstLen:burstLen,  tag:truncate(req.id)});
       endmethod
    endinterface
    interface Get resp_read;
@@ -45,7 +47,8 @@ module mkAxiDmaSlave#(MemSlave#(addrWidth,dataWidth) slave) (Axi3Slave#(addrWidt
    endinterface
    interface Put req_aw;
       method Action put(Axi3WriteRequest#(addrWidth, 12) req);
-	 slave.write_server.writeReq.put(MemRequest{addr:req.address, burstLen:extend(req.len+1), tag:truncate(req.id)});
+	 let burstLen = extend(req.len+1) << beatShift;
+	 slave.write_server.writeReq.put(MemRequest{addr:req.address, burstLen:burstLen, tag:truncate(req.id)});
       endmethod
    endinterface
    interface Put resp_write;

@@ -104,7 +104,7 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
       interface Put writeReq;
 	 method Action put(MemRequest#(addrWidth) req);
 	    req_aws.enq(MemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
-	    if (req.burstLen > 1) $display("**** \n\n mkSlaveMux.writeReq len=%d \n\n ****", req.burstLen);
+	    if (req.burstLen > 4) $display("**** \n\n mkSlaveMux.writeReq len=%d \n\n ****", req.burstLen);
 	    ws.enq(truncate(psel(req.addr)));
 	    //$display("mkSlaveMux.writeReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));
 	 endmethod
@@ -126,7 +126,7 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
 	 method Action put(MemRequest#(addrWidth) req);
 	    req_ars.enq(MemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
 	    rs.enq(truncate(psel(req.addr)));
-	    if (req.burstLen > 1) $display("**** \n\n mkSlaveMux.readReq len=%d \n\n ****", req.burstLen);
+	    if (req.burstLen > 4) $display("**** \n\n mkSlaveMux.readReq len=%d \n\n ****", req.burstLen);
 	    //$display("mkSlaveMux.readReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));
 	 endmethod
       endinterface
@@ -185,7 +185,7 @@ module mkMemSlaveMux#(Vector#(numSlaves,MemSlave#(aw,dataWidth)) slaves) (MemSla
       interface Put writeReq;
 	 method Action put(MemRequest#(addrWidth) req);
 	    req_aws.enq(MemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
-	    if (req.burstLen > 1) $display("**** \n\n mkMemSlaveMux.writeReq len=%d \n\n ****", req.burstLen);
+	    if (req.burstLen > 4) $display("**** \n\n mkMemSlaveMux.writeReq len=%d \n\n ****", req.burstLen);
 	    //$display("mkMemSlaveMux.writeReq addr=%h selWidth=%d aw=%d psel=%h", req.addr, valueOf(selWidth), valueOf(aw), psel(req.addr));
 	    ws.enq(truncate(psel(req.addr)));
 	 endmethod
@@ -208,7 +208,7 @@ module mkMemSlaveMux#(Vector#(numSlaves,MemSlave#(aw,dataWidth)) slaves) (MemSla
 	 method Action put(MemRequest#(addrWidth) req);
 	    req_ars.enq(MemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
 	    //$display("mkMemSlaveMux.readReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));
-	    if (req.burstLen > 1) $display("**** \n\n mkMemSlaveMux.readReq len=%d \n\n ****", req.burstLen);
+	    if (req.burstLen > 4) $display("**** \n\n mkMemSlaveMux.readReq len=%d \n\n ****", req.burstLen);
 	    rs.enq(truncate(psel(req.addr)));
 	 endmethod
       endinterface

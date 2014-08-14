@@ -31,17 +31,17 @@ import BRAM::*;
 module mkCtrl2BRAM#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (MemSlave#(busAddrWidth, busDataWidth))
    provisos(Add#(a__, bramAddrWidth, busAddrWidth));
 
-   Reg#(Bit#(bramAddrWidth)) writeAddrReg <- mkReg(0);
-   Reg#(Bit#(8)) writeBurstCountReg <- mkReg(0);
-   FIFOF#(void) writeRespFifo <- mkFIFOF();
+   FIFOF#(Bit#(6))  readTagFifo <- mkFIFOF();
    FIFOF#(Bit#(6)) writeTagFifo <- mkFIFOF();
-   FIFO#(MemRequest#(busAddrWidth)) req_aw_fifo <- mkSizedFIFO(1);
+   FIFO#(Bool)     readLastFifo <- mkFIFO();
+   AddressGenerator#(busAddrWidth,busDataWidth) readAddrGenerator <- mkAddressGenerator();
+   AddressGenerator#(busAddrWidth,busDataWidth) writeAddrGenerator <- mkAddressGenerator();
+   Bool verbose = True;
 
-
-   FIFOF#(Bit#(6)) readTagFifo <- mkFIFOF();
-   FIFO#(Bool)    readLastFifo <- mkFIFO();
-   AddressGenerator#(busAddrWidth) readAddrGenerator <- mkAddressGenerator();
-   Bool verbose = False;
+    Reg#(Bit#(32)) cycles      <- mkReg(0);
+    rule count;
+       cycles <= cycles + 1;
+    endrule
 
    rule read_req;
       let addrBeat <- readAddrGenerator.addrBeat.get();
@@ -52,13 +52,13 @@ module mkCtrl2BRAM#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (Me
       readLastFifo.enq(addrBeat.last);
       Bit#(bramAddrWidth) regFileAddr = truncate(addr/fromInteger(valueOf(TDiv#(busDataWidth,8))));
       br.request.put(BRAMRequest{write:False, responseOnWrite:False, address:regFileAddr, datain:?});
-      if (verbose) $display("read_server.readData (a) %h %d", addr, burstCount);
+      if (verbose) $display("%d read_server.readData (a) %h %d last=%d", cycles, addr, burstCount, addrBeat.last);
    endrule
 
    interface MemReadServer read_server;
       interface Put readReq;
 	 method Action put(MemRequest#(busAddrWidth) req);
-            if (verbose) $display("axiSlave.read.readAddr %h bc %d", req.addr, req.burstLen);
+            if (verbose) $display("%d axiSlave.read.readAddr %h bc %d", cycles, req.addr, req.burstLen);
 	    readAddrGenerator.request.put(req);
 	 endmethod
       endinterface
@@ -68,7 +68,7 @@ module mkCtrl2BRAM#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (Me
 	    readTagFifo.deq;
 	    readLastFifo.deq;
             let data <- br.response.get;
-            if (verbose) $display("read_server.readData (b) %h", data);
+            if (verbose) $display("%d read_server.readData (b) %h", cycles, data);
             return ObjectData { data: data, tag: tag, last: readLastFifo.first };
 	 endmethod
       endinterface
@@ -76,33 +76,23 @@ module mkCtrl2BRAM#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (Me
    interface MemWriteServer write_server;
       interface Put writeReq;
 	 method Action put(MemRequest#(busAddrWidth) req);
-            req_aw_fifo.enq(req);
-            if (verbose) $display("write_server.writeAddr %h bc %d", req.addr, req.burstLen);
+	    writeAddrGenerator.request.put(req);
+            if (verbose) $display("%d write_server.writeAddr %h bc %d", cycles, req.addr, req.burstLen);
 	 endmethod
       endinterface
       interface Put writeData;
 	 method Action put(ObjectData#(busDataWidth) resp);
-	    let addr = writeAddrReg;
-            let burstCount = writeBurstCountReg;
-            if (burstCount == 0) begin
-	       let req = req_aw_fifo.first;
-               addr = truncate(req.addr/fromInteger(valueOf(TDiv#(busDataWidth,8))));
-               burstCount = req.burstLen;
-               writeTagFifo.enq(req.tag);
-	       req_aw_fifo.deq;
-	    end
-            if (verbose) $display("writeData %h %h %d", addr, resp.data, burstCount);
-            br.request.put(BRAMRequest{write:True, responseOnWrite:False, address:addr, datain:resp.data});
-            writeAddrReg <= addr + 1;
-            writeBurstCountReg <= burstCount - 1;
-            if (verbose) $display("write_server.writeData %h %h %d", addr, resp.data, burstCount);
-            if (burstCount == 1)
-               writeRespFifo.enq(?);
+	    let addrBeat <- writeAddrGenerator.addrBeat.get();
+	    let addr = addrBeat.addr;
+	    Bit#(bramAddrWidth) regFileAddr = truncate(addr/fromInteger(valueOf(TDiv#(busDataWidth,8))));
+            br.request.put(BRAMRequest{write:True, responseOnWrite:False, address:regFileAddr, datain:resp.data});
+            if (verbose) $display("%d write_server.writeData %h %h %d", cycles, addr, resp.data, addrBeat.bc);
+            if (addrBeat.last)
+               writeTagFifo.enq(addrBeat.tag);
 	 endmethod
       endinterface
       interface Get writeDone;
 	 method ActionValue#(Bit#(6)) get();
-            writeRespFifo.deq;
 	    writeTagFifo.deq;
             return writeTagFifo.first;
 	 endmethod

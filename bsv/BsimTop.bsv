@@ -327,7 +327,7 @@ module  mkBsimHost#(Clock double_clock, Reset double_reset)(BsimHost#(clientAddr
 	    //$write("req_ar: ");
 	    let ra <- crw.readAddr;
 	    //$display("ra=%h", ra);
-	    let burstLen = 1;
+	    let burstLen = fromInteger(valueOf(clientBusWidth) / 8);
 	    if (verbose) $display("\n%d BsimHost.readReq addr=%h burstLen=%d", cycles, ra, burstLen);
 	    return MemRequest { addr: ra, burstLen: burstLen, tag: 0};
 	 endmethod
@@ -346,7 +346,7 @@ module  mkBsimHost#(Clock double_clock, Reset double_reset)(BsimHost#(clientAddr
 	    let wa <- crw.writeAddr;
 	    let wd <- crw.writeData;
 	    wf.enq(wd);
-	    let burstLen = 1;
+	    let burstLen = fromInteger(valueOf(clientBusWidth) / 8);
 	    if (verbose) $display("\n%d BsimHost.writeReq addr=%h data=%h burstLen=%d", cycles, wa, wd, burstLen);
 	    return MemRequest { addr: wa, burstLen: burstLen, tag: 0 };
 	 endmethod
