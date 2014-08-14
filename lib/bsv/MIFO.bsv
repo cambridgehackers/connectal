@@ -81,10 +81,10 @@ module mkMIFO(MIFO#(max_in, n_out, size, t))
 
 
       Bool ready = True;
-      for (Integer i = 0; i < valueOf(max_in); i = i+1) begin
-	 if (we[i] == 1)
-	    ready = ready && fifos[i].notFull();
-      end
+      // for (Integer i = 0; i < valueOf(max_in); i = i+1) begin
+      // 	 if (we[i] == 1)
+      // 	    ready = ready && fifos[i].notFull();
+      // end
       if (ready) begin
 	 for (Integer i = 0; i < valueOf(max_in); i = i+1) begin
 	    if (we[i] == 1)
@@ -213,10 +213,11 @@ module mkFIMO(FIMO#(n_in, max_out, size, t))
 
 
       Bool ready = True;
-      for (Integer i = 0; i < valueOf(max_out); i = i+1) begin
-	 if (we[i] == 1)
-	    ready = ready && fifos[i].notFull();
-      end
+      // for (Integer i = 0; i < valueOf(max_out); i = i+1) begin
+      // 	 if (we[i] == 1)
+      // 	    ready = ready && fifos[i].notFull();
+      // end
+      $display("tofifos: we=%h", we);
       if (ready) begin
 	 for (Integer i = 0; i < valueOf(max_out); i = i+1) begin
 	    if (we[i] == 1)
@@ -261,11 +262,13 @@ module mkFIMO(FIMO#(n_in, max_out, size, t))
 		    Vector#(max_out, Bool) we = genWith(lessThanCount);
 		    Vector#(max_out, t) wdata = append(data, replicate(?));
 		    inFifo.enq(rotateBy(wdata, inPos));
-		    weFifo.enq(pack(rotateBy(we, inPos)));
 		    posFifo.enq(inPos);
+		    weFifo.enq(pack(rotateBy(we, inPos)));
 		    inPos <= truncate((extend(inPos) + extend(i_n_in)) % i_max_out);
 
-		    if (verbose) $display("enq: inPos=%d we=%h", inPos, we);
+		    if (verbose) begin
+		       $display("enq: inPos=%d we=%h", inPos, we);
+		    end
 		 endmethod
 		 method notFull = inFifo.notFull;
 	      endinterface);
