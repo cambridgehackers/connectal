@@ -69,12 +69,11 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    MIFO#(4,busWidthWords,8,Bit#(32)) completionMimo <- mkMIFO();
    MIFO#(4,busWidthWords,8,TLPTag) completionTagMimo <- mkMIFO();
 
-    Vector#(4,FIFOF#(Bit#(32))) completionFifos <- replicateM(mkFIFOF);
-    Vector#(4,FIFOF#(TLPTag)) completionTagFifos <- replicateM(mkFIFOF);
-
     MIMO#(busWidthWords,4,8,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
     Reg#(Bit#(9)) writeBurstCount <- mkReg(0);
-    Reg#(TLPLength)  writeDwCount <- mkReg(0);
+    Reg#(TLPLength)  writeDwCount <- mkReg(0); // how many 4 byte (double) words to send
+    Reg#(LUInt#(4))    tlpDwCount <- mkReg(0); // how many to send in the next tlp (at most 4)
+    Reg#(Bool)            lastTlp <- mkReg(False); // if the next tlp sent is the last one
     Reg#(Bool)    writeInProgress <- mkReg(False);
     FIFOF#(TLPTag) writeTag <- mkSizedFIFOF(16);
     FIFOF#(TLPTag) doneTag <- mkSizedFIFOF(16);
@@ -94,15 +93,14 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	  return 0;
     endfunction
 
-   rule writeHeaderTlp if (!writeInProgress);
+   rule writeHeaderTlp if (!writeInProgress && writeDataMimo.deqReadyN(1));
       let tlp = tlpWriteHeaderFifo.first;
 
       TLPMemory4DWHeader hdr_4dw = unpack(tlp.data);
       TLPLength dwCount = hdr_4dw.length;
 
       TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
-      Bool sendit = False;
-      if (hdr_3dw.format == MEM_WRITE_3DW_DATA && writeDataMimo.deqReadyN(1)) begin
+      if (hdr_3dw.format == MEM_WRITE_3DW_DATA) begin
 	 dwCount = hdr_3dw.length;
 	 Vector#(4, Bit#(32)) v = writeDataMimo.first();
 	 writeDataMimo.deq(1);
@@ -112,79 +110,57 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	    tlp.eof = True;
 	 dwCount = dwCount - 1;
 	 tlp.data = pack(hdr_3dw);
-	 sendit = True;
-      end
-      else if (hdr_3dw.format == MEM_WRITE_3DW_DATA) begin
-	 // retry until the data is available in writeDataMimo
       end
       else if (hdr_4dw.format == MEM_WRITE_4DW_DATA && writeDataMimo.deqReadyN(1)) begin
 	 tlp.be = 16'hffff;
-	 sendit = True;
       end
-      else if (hdr_4dw.format == MEM_WRITE_4DW_DATA) begin
-	 sendit = False;
+
+      tlpWriteHeaderFifo.deq();
+      tlpOutFifo.enq(tlp);
+      $display("writeHeaderTlp dwCount=%d", dwCount);
+      writeDwCount <= dwCount;
+      tlpDwCount <= min(4,truncate(unpack(dwCount)));
+      lastTlp <= (dwCount <= 4);
+      writeInProgress <= (dwCount != 0);
+      if (dwCount == 0) begin
+	 doneTag.enq(writeTag.first());
+	 writeTag.deq();
       end
-      else begin
-	 sendit = True;
-      end
-      if (sendit) begin
-	 tlpWriteHeaderFifo.deq();
-	 tlpOutFifo.enq(tlp);
-	 $display("writeHeaderTlp dwCount=%d", dwCount);
-	 writeDwCount <= dwCount;
-	 writeInProgress <= (dwCount != 0);
-	 if (dwCount == 0) begin
-	    doneTag.enq(writeTag.first());
-	    writeTag.deq();
-	 end
-      end
+
    endrule
 
-   rule writeTlps if (writeInProgress);
+   rule writeTlps if (writeInProgress && writeDataMimo.deqReadyN(tlpDwCount));
       TLPData#(16) tlp = defaultValue;
       tlp.sof = False;
       Vector#(4, Bit#(32)) v = unpack(0);
-      Bool sendit = False;
+
       // The MIMO implicit guard only checks for availability of 1 element
       // so we explicitly check for the number of elements required
-      if (writeDwCount > 4 && writeDataMimo.deqReadyN(4)) begin
-	 v = writeDataMimo.first();
-
-	 writeDataMimo.deq(4);
-	 writeDwCount <= writeDwCount - 4;
-	 tlp.eof = False;
+      writeDataMimo.deq(tlpDwCount);
+      v = writeDataMimo.first();
+      let dwCount = writeDwCount - extend(pack(tlpDwCount));
+      writeDwCount <= dwCount;
+      tlpDwCount <= min(4,truncate(unpack(dwCount)));
+      lastTlp <= (dwCount <= 4);
+      if (tlpDwCount == 4)
 	 tlp.be = 16'hffff;
-	 sendit = True;
-      end
-      else if (writeDwCount <= 4 && writeDataMimo.deqReadyN(unpack(truncate(writeDwCount)))) begin
-	 v = writeDataMimo.first();
-	 writeDataMimo.deq(unpack(truncate(writeDwCount)));
-	 writeDwCount <= 0;
+      else if (tlpDwCount == 3)
+	 tlp.be = 16'hfff0;
+      else if (tlpDwCount == 2)
+	 tlp.be = 16'hff00;
+      else if (tlpDwCount == 1)
+	 tlp.be = 16'hf000;
+      tlp.eof = lastTlp;
+      if (lastTlp) begin
 	 writeInProgress <= False;
 	 doneTag.enq(writeTag.first());
 	 writeTag.deq();
 	 $display("writeDwCount=%d will be zero", writeDwCount);
-	 tlp.eof = True;
-	 if (writeDwCount == 4)
-	    tlp.be = 16'hffff;
-	 else if (writeDwCount == 3)
-	    tlp.be = 16'hfff0;
-	 else if (writeDwCount == 2)
-	    tlp.be = 16'hff00;
-	 else if (writeDwCount == 1)
-	    tlp.be = 16'hf000;
-	 sendit = True;
       end
-      else begin
-	 // wait for more data in writeDataMimo
-	 $display("waiting for more data dwCount=%d count=%d writeBurstCount=%d enqReady=%d",
-	    writeDwCount, writeDataMimo.count(), writeBurstCount, writeDataMimo.enqReadyN(fromInteger(valueOf(busWidthWords))));
-      end
-      if (sendit) begin
-	 for (Integer i = 0; i < 4; i = i + 1)
-	    tlp.data[(i+1)*32-1:i*32] = byteSwap(v[3-i]);
-	 tlpOutFifo.enq(tlp);
-      end
+
+      for (Integer i = 0; i < 4; i = i + 1)
+	 tlp.data[(i+1)*32-1:i*32] = byteSwap(v[3-i]);
+      tlpOutFifo.enq(tlp);
    endrule
 
    Reg#(TLPTag) lastTag <- mkReg(0);
