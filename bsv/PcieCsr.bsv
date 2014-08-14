@@ -103,8 +103,8 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
        pcieTraceBramResponse <= v;
    endrule
 
-   AddressGenerator#(16)              csrRag <- mkAddressGenerator;
-   AddressGenerator#(16)              csrWag <- mkAddressGenerator;
+   AddressGenerator#(16,32)           csrRag <- mkAddressGenerator;
+   AddressGenerator#(16,32)           csrWag <- mkAddressGenerator;
    FIFOF#(MemData#(32))     readResponseFifo <- mkFIFOF();
    FIFOF#(MemData#(32))        writeDataFifo <- mkFIFOF();
    FIFOF#(Bit#(ObjectTagSize)) writeDoneFifo <- mkFIFOF();
