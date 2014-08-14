@@ -35,6 +35,11 @@ import MemwriteEngine::*;
 import MemUtils::*;
 import Pipe::*;
 
+interface BRAMWriter#(numeric type bramIdxWidth, numeric type busWidth);
+   method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) base, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
+   method ActionValue#(Bool) finish();
+endinterface
+   
 interface BRAMReadClient#(numeric type bramIdxWidth, numeric type busWidth);
    method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) base, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
    method ActionValue#(Bool) finish();
@@ -111,6 +116,68 @@ module mkBRAMReadClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMReadClient#(b
    
    interface dmaClient = re.readClient;
 
+endmodule
+
+
+module mkBRAMWriter#(Integer id,
+		     BRAMServer#(Bit#(bramIdxWidth),d) br, 
+		     Server#(MemengineCmd,Bool) readServer, 
+		     PipeOut#(Bit#(busWidth)) readPipe)(BRAMWriter#(bramIdxWidth,busWidth))
+   provisos(Bits#(d,dsz),
+	    Div#(busWidth,dsz,nd),
+	    Mul#(nd,dsz,busWidth),
+	    Add#(1,a__,nd),
+	    Add#(1,bramIdxWidth,cntW),
+	    Div#(busWidth,8,bwbytes),
+	    Mul#(bwbytes, 8, busWidth),
+	    Add#(b__, bramIdxWidth, 32),
+	    Add#(c__, TLog#(nd), 32));
+
+   let verbose = False;
+   Clock clk <- exposeCurrentClock;
+   Reset rst <- exposeCurrentReset;
+   Reg#(Bit#(cntW)) j <- mkReg(maxBound);
+   Reg#(Bit#(cntW)) n <- mkReg(0);
+   Gearbox#(nd,1,d) gb <- mkNto1Gearbox(clk,rst,clk,rst); 
+   
+   rule feed_gearbox;
+      let v <- toGet(readPipe).get;
+      if(verbose) $display("mkBRAMWriter::feed_gearbox (%d) %x", id, v);
+      gb.enq(unpack(v));
+   endrule
+   
+   rule load(j <= n);
+      br.request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(j), datain:gb.first[0]});
+      gb.deq;
+      j <= j+1;
+      if(verbose) $display("mkBRAMWriter::load (%d) %x, %x", id, j, n);
+   endrule
+   
+   rule discard(j > n);
+      gb.deq;
+      if(verbose) $display("mkBRAMWriter::discard (%d) %x", id, j);
+   endrule
+   
+   method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) b, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
+      if(verbose) $display("mkBRAMWriter::start (%d) %d, %d, %d %d", id, h, b, start_idx, finish_idx);
+      Bit#(8) burst_len_bytes = fromInteger(valueOf(bwbytes));
+
+      Bit#(32) req_len_ds = extend(finish_idx-start_idx)+fromInteger(valueOf(nd));
+      Bit#(TLog#(nd)) zeros = 0;
+      Bit#(32) req_len_bytes = {zeros,req_len_ds[31:valueOf(TLog#(nd))]} * fromInteger(valueOf(bwbytes));
+
+      readServer.request.put(MemengineCmd{pointer:h, base:b, len:req_len_bytes, burstLen:burst_len_bytes});
+      if(verbose) $display("mkBRAMWriter::start (%d) %d, %d", id, req_len_bytes, burst_len_bytes);
+      j <= extend(start_idx);
+      n <= extend(finish_idx);
+   endmethod
+   
+   method ActionValue#(Bool) finish();
+      if(verbose) $display("mkBRAMWriter::finish (%d)", id);
+      let rv <- readServer.response.get;
+      return True;
+   endmethod
+   
 endmodule
 
 module mkBRAMWriteClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMWriteClient#(bramIdxWidth,busWidth))

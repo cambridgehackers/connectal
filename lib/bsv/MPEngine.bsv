@@ -33,18 +33,18 @@ import Vector::*;
 import BRAM::*;
 import Gearbox::*;
 import Connectable::*;
-import MemUtils::*;
 
+import MemUtils::*;
 import AxiMasterSlave::*;
 import MemTypes::*;
 import Dma2BRAM::*;
+import MemreadEngine::*;
+import Pipe::*;
 
 interface MPEngine#(numeric type busWidth);
    method Action setup(Bit#(32) needlePointer, Bit#(32) mpNextPointer, Bit#(32) needle_len);
    method Action search(Bit#(32) haystackPointer, Bit#(32) haystack_len, Bit#(32) haystack_base);
-   interface ObjectReadClient#(busWidth) needle_read_client;
-   interface ObjectReadClient#(busWidth) mp_next_read_client;
-   interface ObjectReadClient#(busWidth) haystack_read_client;
+   interface ObjectReadClient#(busWidth) read_client;
 endinterface
 
 typedef Bit#(8) Char;
@@ -67,8 +67,14 @@ module mkMPEngine#(FIFOF#(void) compf,
 	    Add#(1, b__, nc),
 	    Add#(c__, 32, busWidth),
 	    Add#(1, d__, TDiv#(busWidth, 32)),
-	    Mul#(TDiv#(busWidth, 32), 32, busWidth));
+	    Mul#(TDiv#(busWidth, 32), 32, busWidth),
+	    Add#(e__, TLog#(nc), 32),
+	    Add#(f__, TLog#(TDiv#(busWidth, 32)), 32));
    
+
+   let verbose = True;
+   let debug = False;
+
    Clock clk <- exposeCurrentClock;
    Reset rst <- exposeCurrentReset;
    BRAM2Port#(NeedleIdx, Char) needle  <- mkBRAM2Server(defaultValue);
@@ -82,52 +88,41 @@ module mkMPEngine#(FIFOF#(void) compf,
    Reg#(Bit#(32)) jReg <- mkReg(0); // offset in haystack
    Reg#(Bit#(32)) iReg <- mkReg(0); // offset in needle
    Reg#(Bit#(2))  epochReg <- mkReg(0);
-   Reg#(Bit#(6))  dmaTag <- mkReg(0);
-   Reg#(Bit#(32)) haystackOff <- mkReg(0);
-   Reg#(ObjectPointer) haystackPointer <- mkReg(0);
-   
-   BRAMReadClient#(NeedleIdxWidth,busWidth) n2b <- mkBRAMReadClient(needle.portB);
-   BRAMReadClient#(NeedleIdxWidth,busWidth) mp2b <- mkBRAMReadClient(mpNext.portB);
-   MemReader#(busWidth) hreader <- mkMemReader;
+
+   MemreadEngineV#(busWidth, 1, 3) re <- mkMemreadEngine();
+   BRAMWriter#(NeedleIdxWidth,busWidth) n2b <- mkBRAMWriter(0, needle.portB, re.readServers[0], re.dataPipes[0]);
+   BRAMWriter#(NeedleIdxWidth,busWidth) mp2b <- mkBRAMWriter(1, mpNext.portB, re.readServers[1], re.dataPipes[1]);
 
    FIFOF#(Tuple2#(Bit#(2),Bit#(32))) efifo <- mkSizedFIFOF(2);
 
    rule finish_setup;
-      $display("mkMPEngine::finish_setup");
+      if (verbose) $display("mkMPEngine::finish_setup");
       let x <- n2b.finish;
       let y <- mp2b.finish;
       stage <= Ready;
       conff.enq(?);
    endrule
       
-   rule haystackReq (stage == Run && haystackOff < extend(haystackLenReg));
-      //$display("haystackReq %x", haystackOff);
-      hreader.readServer.readReq.put(ObjectRequest {pointer: haystackPointer, offset: extend(haystackBase+haystackOff), burstLen: fromInteger(valueOf(nc)), tag: dmaTag});
-      haystackOff <= haystackOff + fromInteger(valueOf(nc));
-   endrule
-   
    rule haystackResp;
-      //$display("haystackResp");
-      let rv <- hreader.readServer.readData.get;
-      Vector#(nc,Char) pv = unpack(rv.data);
-      if(rv.tag == dmaTag)
-	 haystack.enq(pv);
+      if (debug) $display("mkMPEngine::haystackResp");
+      let rv <- toGet(re.dataPipes[2]).get;
+      haystack.enq(unpack(rv));
    endrule
    
    rule haystackDrain(stage != Run);
-      //$display("haystackDrain");
+      if (debug) $display("mkMPEngine::haystackDrain");
       haystack.deq;
    endrule
    
    rule bramDrain(stage != Run);
-      //$display("mpNextDrain");
+      if (debug) $display("mkMPEngine::mpNextDrain");
       let x <- mpNext.portA.response.get;
       let y <- needle.portA.response.get;
       efifo.deq;
    endrule
 
    rule matchNeedleReq(stage == Run);
-      //$display(" matchNeedleReq %d %d", epochReg, iReg);
+      if (debug) $display("mkMPEngine::matchNeedleReq %d %d", epochReg, iReg);
       needle.portA.request.put(BRAMRequest{write:False, address: truncate(iReg-1), datain:?, responseOnWrite:?});
       mpNext.portA.request.put(BRAMRequest{write:False, address: truncate(iReg), datain:?, responseOnWrite:?});
       efifo.enq(tuple2(epochReg,iReg));
@@ -139,70 +134,71 @@ module mkMPEngine#(FIFOF#(void) compf,
       let mp <- mpNext.portA.response.get;
       let epoch = tpl_1(efifo.first);
       efifo.deq;
-      //$display("matchNeedleResp %d %d", epochReg, epoch);
+      if (debug) $display("mkMPEngine::matchNeedleResp %d %d", epochReg, epoch);
       if (epoch == epochReg) begin
 	 let n = haystackLenReg;
 	 let m = needleLenReg;
 	 let hv = haystack.first;
 	 let i = tpl_2(efifo.first);
 	 let j = jReg;
-	 //$display("feck %d %d %d %d %c", n, m, i, j, hv[0]);
+	 if (debug) $display("mkMPEngine::feck %d %d %d %d %x", n, m, i, j, hv[0]);
 	 if (j > n) begin
 	    // jReg points to the end of the haystack; we are done
-	    compf.enq(?);
 	    stage <= Ready;
-	    //$display("end of search %d", j);
+	    if (debug) $display("mkMPEngine::end of search %d", j);
 	 end
 	 else if (i==m+1) begin
 	    // iReg points to the end of the needle; we have a match
-	    //$display("string match %d", j);
+	    if (debug) $display("mkMPEngine::string match %d", j);
 	    locf.enq(unpack(haystackBase+j-i));
 	    epochReg <= epochReg + 1;
 	    iReg <= 1;
 	 end
 	 else if ((i>0) && (nv != hv[0])) begin
 	    // mismatch betwen head of haystack and head of needle; rewind iReg
-	    //$display("char mismatch %d %d MP_Next[i]=%d", i, j, mp);
+	    if (debug) $display("mkMPEngine::char mismatch %d %d MP_Next[i]=%d", i, j, mp);
 	    epochReg <= epochReg + 1;
 	    iReg <= mp;
 	 end
 	 else begin
 	    // match between head of needle and head of haystack; increment haystack
-	    //$display("char match %d %d", i, j);
+	    if (debug) $display("mkMPEngine::char match %d %d", i, j);
 	    jReg <= j+1;
 	    haystack.deq;
 	 end
       end
       else begin
-	 //$display("discard");
+	 if (debug) $display("mkMPEngine::discard");
 	 noAction;
       end
    endrule
    
+   rule finish;
+      let rv <- re.readServers[2].response.get;
+      compf.enq(?);
+   endrule
+
    method Action setup(Bit#(32) needle_pointer, Bit#(32) mpNext_pointer, Bit#(32) needle_len);
       needleLenReg <= extend(needle_len);
       n2b.start(needle_pointer, 0, 0, pack(truncate(needle_len)));
       mp2b.start(mpNext_pointer, 0, 0, pack(truncate(needle_len)));
-      jReg <= 0;
-      iReg <= 0;
    endmethod
 
    method Action search(Bit#(32) haystack_pointer, Bit#(32) haystack_len, Bit#(32) haystack_base) if (stage == Ready && !efifo.notEmpty && !haystack.notEmpty);
-      $display("search %d %d",  haystack_base, haystack_len);
       haystackLenReg <= extend(haystack_len);
-      haystackPointer <= haystack_pointer;
       haystackBase <= extend(haystack_base);
-      dmaTag   <= dmaTag+1;
-      haystackOff <= 0;
       stage <= Run;
       iReg <= 1;
       jReg <= 1;
-      efifo.clear;
       epochReg <= 0;
+      Bit#(32) haystack_len_ds = haystack_len+fromInteger(valueOf(nc)-1);
+      Bit#(TLog#(nc)) zeros = 0;
+      Bit#(32) haystack_len_bytes = {zeros,haystack_len_ds[31:valueOf(TLog#(nc))]} * fromInteger(valueOf(nc));
+      if (verbose) $display("mkMPEngine::search %d %d %d",  haystack_pointer, haystack_base, haystack_len_bytes);
+      // TODO: increase burstlen size, XXX
+      re.readServers[2].request.put(MemengineCmd{pointer:haystack_pointer, base:extend(haystack_base), len:haystack_len_bytes, burstLen:16*fromInteger(valueOf(nc))});
    endmethod
    
-   interface needle_read_client = n2b.dmaClient;
-   interface mp_next_read_client = mp2b.dmaClient;
-   interface haystack_read_client = hreader.readClient; 
+   interface read_client = re.dmaClient;
       
 endmodule

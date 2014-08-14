@@ -43,9 +43,7 @@ endinterface
 
 interface Strstr#(numeric type p, numeric type busWidth);
    interface StrstrRequest request;
-   interface Vector#(p,ObjectReadClient#(busWidth)) needle_read_clients;
-   interface Vector#(p,ObjectReadClient#(busWidth)) mp_next_read_clients;
-   interface Vector#(p,ObjectReadClient#(busWidth)) haystack_read_clients;
+   interface Vector#(p,ObjectReadClient#(busWidth)) read_clients;
 endinterface
 
 module mkStrstrRequest#(StrstrIndication indication)(Strstr#(p,busWidth))
@@ -57,8 +55,12 @@ module mkStrstrRequest#(StrstrIndication indication)(Strstr#(p,busWidth))
 	    Add#(c__, 32, busWidth),
 	    Add#(1, d__, TDiv#(busWidth, 32)),
 	    Mul#(TDiv#(busWidth, 32), 32, busWidth),
-	    Log#(p,lp));
+	    Log#(p,lp),
+	    Add#(e__, TLog#(nc), 32),
+	    Add#(f__, TLog#(TDiv#(busWidth, 32)), 32));
    
+
+   let verbose = True;
    Reg#(Bit#(32)) needleLen <- mkReg(0);
    
    Vector#(p, FIFOF#(void)) confs <- replicateM(mkFIFOF);
@@ -112,27 +114,23 @@ module mkStrstrRequest#(StrstrIndication indication)(Strstr#(p,busWidth))
 	 restartf.enq(?);
    endrule
    
-   
-   function ObjectReadClient#(busWidth) nrc (MPEngine#(busWidth) e) = e.needle_read_client;
-   function ObjectReadClient#(busWidth) mpnrc (MPEngine#(busWidth) e) = e.mp_next_read_client;
-   function ObjectReadClient#(busWidth) hsrc (MPEngine#(busWidth) e) = e.haystack_read_client;
+   function ObjectReadClient#(busWidth) rc (MPEngine#(busWidth) e) = e.read_client;
       
    interface StrstrRequest request;
       method Action setup(Bit#(32) needle_pointer, Bit#(32) mpNext_pointer, Bit#(32) needle_len);
-	 $display("setup(%d %d %d)", needle_pointer, mpNext_pointer, needle_len);
 	 needleLen <= needle_len;
 	 for(Integer i = 0; i < valueOf(p); i=i+1)
 	    engines[fromInteger(i)].setup(needle_pointer, mpNext_pointer, needle_len);
       endmethod
    
       method Action search(Bit#(32) haystack_pointer, Bit#(32) haystack_len, Bit#(32) iter_cnt);
+	 if (verbose) $display("mkStrstrRequest::search %d %d %d", haystack_pointer, haystack_len, iter_cnt);
 	 haystackLen <= haystack_len;
 	 haystackPointer <= haystack_pointer;
 	 iterCnt <= iter_cnt;
 	 restartf.enq(?);
+	 $dumpvars();
       endmethod
    endinterface
-   interface needle_read_clients = map(nrc,engines);
-   interface mp_next_read_clients = map(mpnrc,engines);
-   interface haystack_read_clients = map(hsrc,engines);
+   interface read_clients = map(rc,engines);
 endmodule

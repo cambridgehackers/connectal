@@ -129,7 +129,7 @@ int main(int argc, const char **argv)
     for(int i = 0; i < needle_len; i++)
       fprintf(stderr, "%d %d\n", needle[i], mpNext[i]);
 
-    int iter_cnt = 2;
+    int iter_cnt = 3;
 
     portalTimerStart(0);
     MP(needle, haystack, mpNext, needle_len, haystack_len, iter_cnt, &sw_match_cnt);
@@ -142,6 +142,7 @@ int main(int argc, const char **argv)
     unsigned int ref_mpNextAlloc = dma->reference(mpNextAlloc);
     unsigned int ref_haystackAlloc = dma->reference(haystackAlloc);
 
+    fprintf(stderr, "about to invoke device\n");
     device->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
     sem_wait(&setup_sem);
     portalTimerStart(0);
@@ -155,7 +156,6 @@ int main(int argc, const char **argv)
     close(haystackAlloc);
     close(mpNextAlloc);
   }
-
 
   if(1){
     fprintf(stderr, "benchmarks\n");
@@ -203,7 +203,7 @@ int main(int argc, const char **argv)
 #ifndef BSIM
     int iter_cnt = 8;
 #else
-    int iter_cnt = 2;
+    int iter_cnt = 3;
 #endif
 
     portalTimerStart(0);
@@ -214,6 +214,9 @@ int main(int argc, const char **argv)
     portalDCacheFlushInval(needleAlloc, needle_alloc_len, needle);
     portalDCacheFlushInval(mpNextAlloc, mpNext_alloc_len, mpNext);
 
+    
+
+    fprintf(stderr, "about to invoke device\n");
     device->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
     sem_wait(&setup_sem);
     portalTimerStart(0);

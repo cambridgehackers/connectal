@@ -245,7 +245,10 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
       match {.cmd,.cond0,.cond1} <- toGet(loadf_b).get;
       if  (cond0) begin
 	 //$display("load_ctxt_b %h %d", cmd.base, idx);
-	 buffCap[loadIdx].decrement(unpack(extend(cmd.burstLen>>beat_shift)));
+	 let x = cmd.burstLen;
+	 if (cmd.len < extend(cmd.burstLen))
+	    x = truncate(cmd.len);
+	 buffCap[loadIdx].decrement(unpack(extend(x>>beat_shift)));
 	 loadf_c.enq(tuple2(truncate(loadIdx),cmd));
 	 write_data_funnel.loadIdx(truncate(loadIdx));
 	 if (cond1) begin
