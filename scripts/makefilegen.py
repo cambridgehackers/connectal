@@ -107,7 +107,7 @@ makefileTemplate='''
 
 ##    run: run the program
 ##         pass parameters to software via 'make RUN_ARGS= run'
-RUN_ARGS=
+#RUN_ARGS=
 
 export DTOP=%(project_dir)s
 XBSVDIR=%(xbsvdir)s

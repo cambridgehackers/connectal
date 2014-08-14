@@ -41,7 +41,7 @@ echo set solib-search-path $TEMPDIR >$TEMPSCRIPT
 echo target remote :5039 >>$TEMPSCRIPT
 `ndk-which gdb` --command=$TEMPSCRIPT $TEMPDIR/android_exe
 else
-adb -s $ANDROID_SERIAL shell "cd /mnt/sdcard/; rm -f exit.status; ./timelimit -t 180 ./$exename; echo \$? > exit.status"
+adb -s $ANDROID_SERIAL shell "cd /mnt/sdcard/; rm -f exit.status; ./timelimit -t 180 ./$exename $3; echo \$? > exit.status"
 adb -s $ANDROID_SERIAL pull /mnt/sdcard/exit.status ./
 adb -s $ANDROID_SERIAL pull /mnt/sdcard/perf.monkit `dirname $1`
 fi
