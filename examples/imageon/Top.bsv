@@ -57,6 +57,7 @@ import ImageonCaptureRequestWrapper::*;
 // defined by user
 import IserdesDatadeser::*;
 import Imageon::*;
+import ImageonVita::*;
 import HDMI::*;
 import YUV::*;
 import XilinxCells::*;
@@ -65,52 +66,22 @@ import XbsvXilinxCells::*;
 typedef enum { ImageonSerdesRequest, ImageonSensorRequest, HdmiInternalRequest, DmaConfig, ImageonCapture,
     ImageonSerdesIndication, ImageonSensorIndication, HdmiInternalIndication, DmaIndication} IfcNames deriving (Eq,Bits);
 
-interface ImageCapturePins;
-   interface ImageonSensorPins pins;
-   interface ImageonSerdesPins serpins;
-   (* prefix="" *)
-   interface HDMI#(Bit#(HdmiBits)) hdmi;
-   method Action fmc_video_clk1(Bit#(1) v);
-endinterface
 interface ImageCapture;
    interface Vector#(9,StdPortal) portals;
-   interface ImageCapturePins pins;
+   interface ImageonSensorPins sensorpins;
+   interface ImageonSerdesPins serpins;
+   interface HDMI#(Bit#(HdmiBits)) hdmi;
    interface XADC             xadc;
    interface MemServer#(PhysAddrWidth,64,1)   dmaif;
 endinterface
 
+(* synthesize *)
 module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
-`ifndef BSIM
-   ClockGenerator7AdvParams clockParams = defaultValue;
-   clockParams.bandwidth          = "OPTIMIZED";
-   clockParams.compensation       = "ZHOLD";
-   clockParams.clkfbout_mult_f    = 8.000;
-   clockParams.clkfbout_phase     = 0.0;
-   clockParams.clkin1_period      = 6.734007; // 148.5 MHz
-   clockParams.clkin2_period      = 6.734007;
-   clockParams.clkout0_divide_f   = 8.000;    // 148.5 MHz
-   clockParams.clkout0_duty_cycle = 0.5;
-   clockParams.clkout0_phase      = 0.0000;
-   clockParams.clkout1_divide     = 32;       // 37.125 MHz
-   clockParams.clkout1_duty_cycle = 0.5;
-   clockParams.clkout1_phase      = 0.0000;
-   clockParams.divclk_divide      = 1;
-   clockParams.ref_jitter1        = 0.010;
-   clockParams.ref_jitter2        = 0.010;
-
-   XClockGenerator7 clockGen <- mkClockGenerator7Adv(clockParams, clocked_by fmc_imageon_clk1);
-   C2B c2b_fb <- mkC2B(clockGen.clkfbout, clocked_by clockGen.clkfbout);
-   rule txoutrule5;
-      clockGen.clkfbin(c2b_fb.o());
-   endrule
-   Clock hdmi_clock <- mkClockBUFG(clocked_by clockGen.clkout0);    // 148.5   MHz
-   Clock imageon_clock <- mkClockBUFG(clocked_by clockGen.clkout1); //  37.125 MHz
-`else
-   Clock hdmi_clock = defaultClock;
-   Clock imageon_clock = defaultClock;
-`endif
+   ImageClocks clk <- mkImageClocks(fmc_imageon_clk1);
+   Clock hdmi_clock = clk.hdmi;
+   Clock imageon_clock = clk.imageon;
    Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
    Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
    SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, imageon_clock);
@@ -118,24 +89,10 @@ module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
    // instantiate user portals
    // serdes: serial line protocol for wires from sensor (nothing sensor specific)
    ImageonSerdesIndicationProxy serdesIndicationProxy <- mkImageonSerdesIndicationProxy(ImageonSerdesIndication);
-`ifndef BSIM
    ISerdes serdes <- mkISerdes(defaultClock, defaultReset, serdesIndicationProxy.ifc,
 			clocked_by imageon_clock, reset_by imageon_reset);
    ImageonSerdesRequestWrapper serdesRequestWrapper <- mkImageonSerdesRequestWrapper(ImageonSerdesRequest,serdes.control);
    let serdes_data = serdes.data;
-`else
-   Wire#(Bit#(1)) serdes_reset <- mkDWire(0);
-   Reg#(Bit#(50)) serdes_data_reg <- mkReg(0);
-   Vector#(5, Bit#(10)) serdes_data_reg_wire = unpack(serdes_data_reg);
-   let serdes_data = (interface SerdesData;
-                      method Wire#(Bit#(1)) reset();
-                          return serdes_reset;
-                      endmethod
-                      method Vector#(5, Bit#(10)) raw_data();
-                          return serdes_data_reg_wire;
-                      endmethod
-                      endinterface);
-`endif
     // mem capture
     MemwriteEngineV#(64,1,1) we <- mkMemwriteEngine();
     Reg#(Bool) dmaRun <- mkSyncReg(False, defaultClock, defaultReset, imageon_clock);
@@ -217,9 +174,7 @@ Reg#(Bit#(10)) xsvi <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
     endrule
    
    Vector#(9,StdPortal) portal_array;
-`ifndef BSIM
    portal_array[0] = serdesRequestWrapper.portalIfc; 
-`endif
    portal_array[1] = serdesIndicationProxy.portalIfc;
    portal_array[2] = sensorRequestWrapper.portalIfc; 
    portal_array[3] = sensorIndicationProxy.portalIfc; 
@@ -230,13 +185,9 @@ Reg#(Bit#(10)) xsvi <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
    portal_array[8] = imageonCaptureWrapper.portalIfc;
    interface Vector portals = portal_array;
 
-   interface ImageCapturePins pins;
-       interface ImageonSensorPins pins = fromSensor.pins;
-`ifndef BSIM
-       interface ImageonSerdesPins serpins = serdes.pins;
-`endif
-       interface HDMI hdmi = hdmisignals;
-   endinterface
+   interface ImageonSensorPins sensorpins = fromSensor.pins;
+   interface ImageonSerdesPins serpins = serdes.pins;
+   interface HDMI hdmi = hdmisignals;
    interface XADC             xadc;
         method Bit#(4) gpio;
             return { bozobit, hdmisignals.hdmi_vsync,
@@ -247,14 +198,19 @@ Reg#(Bit#(10)) xsvi <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
    interface dmaif = dma;
 endmodule
 
+interface ImageCapturePins;
+   interface ImageonSensorPins pins;
+   interface ImageonSerdesPins serpins;
+   (* prefix="" *)
+   interface HDMI#(Bit#(HdmiBits)) hdmi;
+   method Action fmc_video_clk1(Bit#(1) v);
+endinterface
 module mkPortalTop(PortalTop#(PhysAddrWidth,64,ImageCapturePins,1));
-   Clock defaultClock <- exposeCurrentClock();
-   //Reset defaultReset <- exposeCurrentReset();
 `ifndef BSIM
    B2C1 iclock <- mkB2C1();
    Clock iclock_buf <- mkClockBUFG(clocked_by iclock.c);
 `else
-   Clock iclock_buf = defaultClock;
+   Clock iclock_buf <- exposeCurrentClock();
 `endif
    ImageCapture ic <- mkImageCapture(iclock_buf);
    
@@ -273,8 +229,8 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,64,ImageCapturePins,1));
            iclock.inputclock(v);
        endmethod
 `endif
-       interface ImageonSensorPins pins = ic.pins.pins;
-       interface ImageonSerdesPins serpins = ic.pins.serpins;
-       interface HDMI hdmi = ic.pins.hdmi;
+       interface ImageonSensorPins pins = ic.sensorpins;
+       interface ImageonSerdesPins serpins = ic.serpins;
+       interface HDMI hdmi = ic.hdmi;
    endinterface
 endmodule : mkPortalTop

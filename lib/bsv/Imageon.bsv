@@ -26,18 +26,15 @@ import GetPut::*;
 import Gearbox::*;
 import Clocks::*;
 import IserdesDatadeser::*;
-import XilinxCells::*;
-import XbsvXilinxCells::*;
 import XbsvSpi::*;
 import HDMI::*;
+import ImageonVita::*;
 
 Bit#(10) imageData = 10'h035;
 
 (* always_enabled *)
 interface ImageonSensorPins;
-    method Bit#(1) io_vita_clk_pll();
-    method Bit#(1) io_vita_reset_n();
-    method Vector#(3, ReadOnly#(Bit#(1))) io_vita_trigger();
+    interface ImageonVita io_vita;
     method Action io_vita_monitor(Bit#(2) v);
     interface SpiPins spi;
     method Bit#(1) i2c_mux_reset_n();
@@ -68,50 +65,17 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
 
-`ifndef BSIM
-    XbsvODDR#(Bit#(1)) pll_out <- mkXbsvODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
-    XbsvODDR#(Bit#(1)) pll_t <- mkXbsvODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
-`endif
     Wire#(Bit#(2)) monitor_wires <- mkDWire(0);
-    Wire#(Bit#(1)) poutq <- mkDWire(0);
-    Wire#(Bit#(1)) ptq <- mkDWire(0);
-`ifndef BSIM
-    ReadOnly#(Bit#(1)) vita_clk_pll <- mkOBUFT(poutq, ptq);
     Reg#(Bit#(1)) imageon_oe <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
-`endif
     Reg#(Bit#(32)) trigger_cnt_trigger_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
 
     Reg#(Bit#(1))  trigger_active <- mkReg(1);
     Reg#(Bit#(32)) tcounter <- mkReg(0);
     Reg#(Bit#(1))  remapkernel_reg <- mkReg(0);
-
-    Wire#(Bit#(1)) zero_wire <- mkDWire(0);
-    Wire#(Bit#(1)) one_wire <- mkDWire(1);
-`ifndef BSIM
-    Vector#(3, ReadOnly#(Bit#(1))) vita_trigger_wire;
-    vita_trigger_wire[2] <- mkOBUFT(zero_wire, imageon_oe);
-    vita_trigger_wire[1] <- mkOBUFT(one_wire, imageon_oe);
-    vita_trigger_wire[0] <- mkOBUFT(trigger_active, imageon_oe);
-    ReadOnly#(Bit#(1)) vita_reset_n_wire <- mkOBUFT(serdes.reset(), imageon_oe);
-`endif
     Gearbox#(4, 1, Bit#(10)) dataGearbox <- mkNto1Gearbox(defaultClock, defaultReset, hdmi_clock, hdmi_reset);
     SPI#(Bit#(26)) spiController <- mkSPI(1000, clocked_by axi_clock, reset_by axi_reset);
     Reg#(Bit#(1)) i2c_mux_reset_n_reg <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
-
-`ifndef BSIM
-    rule pll_rule;
-        poutq <= pll_out.q();
-        ptq <= pll_t.q();
-        pll_t.s(False);
-        pll_out.s(False);
-        pll_out.d1(0);
-        pll_out.d2(1);
-        pll_out.ce(True);
-        pll_t.d1(imageon_oe);
-        pll_t.d2(imageon_oe);
-        pll_t.ce(True);
-    endrule
-`endif
+    ImageonVita vitaItem <- mkImageonVita(imageon_oe, trigger_active, serdes.reset);
 
     rule tcalc;
         if (trigger_active == 1 && send_trigger)
@@ -148,11 +112,9 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
     endrule
 
     interface ImageonSensorRequest control;
-`ifndef BSIM
 	method Action set_host_oe(Bit#(1) v);
 	    imageon_oe <= ~v;
 	endmethod
-`endif
 	method Action set_trigger_cnt_trigger(Bit#(32) v);
 	    trigger_cnt_trigger_reg <= v;
 	endmethod
@@ -171,20 +133,10 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
         return monitor_wires;
     endmethod
     interface ImageonSensorPins pins;
-`ifndef BSIM
-        method Bit#(1) io_vita_clk_pll();
-            return vita_clk_pll;
-        endmethod
-        method Bit#(1) io_vita_reset_n();
-            return vita_reset_n_wire;
-        endmethod
-        method Vector#(3, ReadOnly#(Bit#(1))) io_vita_trigger();
-            return vita_trigger_wire;
-        endmethod
-`endif
         method Action io_vita_monitor(Bit#(2) v);
 	    monitor_wires <= v;
         endmethod
+        interface io_vita = vitaItem;
         method Bit#(1) i2c_mux_reset_n(); return i2c_mux_reset_n_reg; endmethod
         interface SpiPins spi = spiController.pins;
         interface deleteme_unused_clock = defaultClock;
