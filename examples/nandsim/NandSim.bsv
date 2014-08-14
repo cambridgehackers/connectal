@@ -45,23 +45,61 @@ interface NandSimIndication;
    method Action configureNandDone();
 endinterface
 
-interface NandSim;
-   interface NandSimRequest request;
+interface NandSim#(numeric type i);
+   interface Vector#(i,NandSimRequest) requests;
    interface ObjectReadClient#(64) readClient;
    interface ObjectWriteClient#(64) writeClient;
 endinterface
 
-module mkNandSim#(NandSimIndication indication) (NandSim);
+interface NandSimInternal;
+   interface NandSimRequest request;   
+endinterface
 
-   MemreadEngineV#(64, 1, 2)     re <- mkMemreadEngine();
-   MemwriteEngineV#(64, 1, 3)    we <- mkMemwriteEngine();
+module mkNandSim#(Vector#(i,NandSimIndication) indications) (NandSim#(i))
+   provisos( Add#(1, a__, TMul#(i, 3))
+	    ,Add#(b__, TLog#(TMul#(i, 3)), TAdd#(1, TLog#(TMul#(1, TMul#(i, 3)))))
+	    ,FunnelPipesPipelined#(1, TMul#(i, 3), Tuple2#(Bit#(TLog#(TMul#(i,3))), MemengineCmd), TMin#(2, TLog#(TMul#(i, 3))))
+	    ,FunnelPipesPipelined#(1, TMul#(i, 3), Tuple2#(Bit#(64), Bool),TMin#(2, TLog#(TMul#(i, 3))))
+	    ,Add#(c__, TLog#(TMul#(i, 3)), TLog#(TMul#(1, TMul#(i, 3))))
+	    ,FunnelPipesPipelined#(1, TMul#(i, 3), Tuple3#(Bit#(2), Bit#(64),Bool), TMin#(2, TLog#(TMul#(i, 3))))
+	    ,FunnelPipesPipelined#(1, TMul#(i, 3), Tuple3#(Bit#(TLog#(TMul#(i,3))), Bit#(64), Bool), TMin#(2, TLog#(TMul#(i, 3))))
+	    ,Add#(1, d__, TMul#(i, 2))
+	    ,Add#(e__, TLog#(TMul#(i, 2)), TAdd#(1, TLog#(TMul#(1, TMul#(i, 2)))))
+	    ,FunnelPipesPipelined#(1, TMul#(i, 2), Tuple2#(Bit#(TLog#(TMul#(i,2))), MemengineCmd), TMin#(2, TLog#(TMul#(i, 2))))
+	    ,FunnelPipesPipelined#(1, TMul#(i, 2), Tuple2#(Bit#(64), Bool),TMin#(2, TLog#(TMul#(i, 2))))
+	    ,Add#(f__, TLog#(TMul#(i, 2)), TLog#(TMul#(1, TMul#(i, 2))))
+	    ,Add#(3, g__, TMul#(i, 3))
+	    ,Add#(2, h__, TMul#(i, 2))
+	    );
+
+   MemreadEngineV#(64, 1, TMul#(i,2))   re <- mkMemreadEngine();
+   MemwriteEngineV#(64, 1, TMul#(i,3))  we <- mkMemwriteEngine();
    
-   Server#(MemengineCmd,Bool)  dramReadServer = re.readServers[0];
-   Server#(MemengineCmd,Bool)  nandReadServer = re.readServers[1];
+   Vector#(i, NandSimInternal) nss;
+   Vector#(i, NandSimRequest)  nsr;
+   for(Integer j = 0; j < valueOf(i); j=j+1) begin
+      nss[j] <- mkNandSimInternal(takeAt(j*2,re.readServers), takeAt(j*2,re.dataPipes), takeAt(j*3,we.writeServers), takeAt(j*3,we.dataPipes), indications[j]);
+      nsr[j] = nss[j].request;
+   end
+      
+   interface requests = nsr;
+   interface ObjectReadClient readClient = re.dmaClient;
+   interface ObjectWriteClient writeClient = we.dmaClient;
+   
+endmodule
 
-   Server#(MemengineCmd,Bool) dramWriteServer = we.writeServers[0];
-   Server#(MemengineCmd,Bool) nandWriteServer = we.writeServers[1];
-   Server#(MemengineCmd,Bool) nandEraseServer = we.writeServers[2];
+module mkNandSimInternal#(Vector#(2, Server#(MemengineCmd,Bool)) readServers,
+			  Vector#(2, PipeOut#(Bit#(64))) readPipes,
+			  Vector#(3, Server#(MemengineCmd,Bool)) writeServers,
+			  Vector#(3, PipeIn#(Bit#(64))) writePipes,
+			  NandSimIndication indication) (NandSimInternal);
+
+   Server#(MemengineCmd,Bool)  dramReadServer = readServers[0];
+   Server#(MemengineCmd,Bool)  nandReadServer = readServers[1];
+
+   Server#(MemengineCmd,Bool) dramWriteServer = writeServers[0];
+   Server#(MemengineCmd,Bool) nandWriteServer = writeServers[1];
+   Server#(MemengineCmd,Bool) nandEraseServer = writeServers[2];
 
    Reg#(Bit#(32))  nandPointer   <- mkReg(0);
    Reg#(Bit#(32))  nandLen       <- mkReg(0);
@@ -73,14 +111,14 @@ module mkNandSim#(NandSimIndication indication) (NandSim);
    FIFOF#(Bool)     readDoneFifo <- mkFIFOF();
    FIFOF#(Bool)    writeDoneFifo <- mkFIFOF();
    rule countNandWrite;
-      let v <- toGet(re.dataPipes[0]).get();
+      let v <- toGet(readPipes[0]).get();
 
       let count = writeCountReg;
       if (count == 0)
 	 count = writeReqFifo.first();
 
       //$display("write v=%h count=%d", v, count);
-      we.dataPipes[1].enq(v);
+      writePipes[1].enq(v);
 
       if (count == 8) begin
 	 writeReqFifo.deq();
@@ -89,14 +127,14 @@ module mkNandSim#(NandSimIndication indication) (NandSim);
       writeCountReg <= count-8;
    endrule
    rule countNandRead;
-      let v <- toGet(re.dataPipes[1]).get();
+      let v <- toGet(readPipes[1]).get();
 
       let count = readCountReg;
       if (count == 0)
 	 count = readReqFifo.first();
 
       //$display("read v=%h count=%d", v, count);
-      we.dataPipes[0].enq(v);
+      writePipes[0].enq(v);
 
       if (count == 8) begin
 	 readReqFifo.deq();
@@ -110,7 +148,7 @@ module mkNandSim#(NandSimIndication indication) (NandSim);
 				       method Action deq(); endmethod
 				       method Bool notEmpty(); return True; endmethod
 				   endinterface);
-   mkConnection(erasePipe, we.dataPipes[2]);
+   mkConnection(erasePipe, writePipes[2]);
 
    rule eraseDone;
       let done <- nandEraseServer.response.get();
@@ -166,10 +204,8 @@ module mkNandSim#(NandSimIndication indication) (NandSim);
 	 indication.configureNandDone();
 	 $display("configureNand ptr=%d", ptr);
       endmethod
-
    endinterface
 
-   interface ObjectReadClient readClient = re.dmaClient;
-   interface ObjectWriteClient writeClient = we.dmaClient;
-
 endmodule
+
+
