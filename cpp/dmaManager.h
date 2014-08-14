@@ -70,9 +70,8 @@ int DmaManager_reference(DmaManagerPrivate *priv, int fd);
 extern "C" uint64_t DmaManager_show_mem_stats(DmaManagerPrivate *priv, ChannelType rc);
 class DmaManager
 {
- private:
-  DmaManagerPrivate priv;
  public:
+  DmaManagerPrivate priv;
   DmaManager(PortalInternalCpp *argDevice) {
     DmaManager_init(&priv, &argDevice->pint);
   };

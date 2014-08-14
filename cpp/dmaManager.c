@@ -102,7 +102,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, int fd)
   if (!rc)
     sem_wait(&priv->confSem);
   rc = id;
-#else // KERNEL_REFERENCE
+#else // KERNEL_REFERENCE 
   rc = send_fd_to_portal(priv->device, fd, id, global_pa_fd);
   if (rc <= 0) {
     //PORTAL_PRINTF("%s:%d sem_wait\n", __FUNCTION__, __LINE__);

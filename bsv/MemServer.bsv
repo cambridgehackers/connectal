@@ -92,7 +92,7 @@ module mkMemServer#(DmaIndication dmaIndication,
    
 endmodule
 		 
-module mkMemServerR#(DmaIndication dmaIndication,
+module mkMemServerR#(Bool bsimMMap, DmaIndication dmaIndication,
 		     Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients)
    (MemServer#(PhysAddrWidth, dataWidth, nMasters))
    provisos(Add#(1,a__,dataWidth),
@@ -102,7 +102,7 @@ module mkMemServerR#(DmaIndication dmaIndication,
 	    Add#(b__, TLog#(nrc), 6)
 	    );
    
-   SGListMMU#(PhysAddrWidth) sgl <- mkSGListMMU(dmaIndication);
+   SGListMMU#(PhysAddrWidth) sgl <- mkSGListMMU(bsimMMap, dmaIndication);
    let rv <- mkConfigMemServerR(dmaIndication,readClients,sgl);
    return rv;
    
@@ -118,7 +118,7 @@ module mkMemServerW#(DmaIndication dmaIndication,
 	    Add#(i__, TLog#(nwc), 6)
 	    );
    
-   SGListMMU#(PhysAddrWidth) sgl <- mkSGListMMU(dmaIndication);
+   SGListMMU#(PhysAddrWidth) sgl <- mkSGListMMU(True, dmaIndication);
    let rv <- mkConfigMemServerW(dmaIndication, writeClients,sgl);
    return rv;
    
@@ -154,7 +154,7 @@ module mkMemServerOOR#(DmaIndication dmaIndication,
 	    Add#(b__, TLog#(nrc), 6)
       );
    
-   SGListMMU#(PhysAddrWidth) sgl <- mkSGListMMU(dmaIndication);
+   SGListMMU#(PhysAddrWidth) sgl <- mkSGListMMU(True, dmaIndication);
    let rv <- mkConfigMemServerR(dmaIndication,readClients,sgl);
    return rv;
    
@@ -170,7 +170,7 @@ module mkMemServerOOW#(DmaIndication dmaIndication,
 	    Add#(b__, TLog#(nwc), 6)
 	    );
    
-   SGListMMU#(PhysAddrWidth) sgl <- mkSGListMMU(dmaIndication);
+   SGListMMU#(PhysAddrWidth) sgl <- mkSGListMMU(True, dmaIndication);
    let rv <- mkConfigMemServerW(dmaIndication, writeClients,sgl);
    return rv;
    
@@ -196,7 +196,7 @@ module mkConfigMemServerRW#(DmaIndication dmaIndication,
 	     );
 
 
-   SGListMMU#(PhysAddrWidth) sgl <- mkSGListMMU(dmaIndication);
+   SGListMMU#(PhysAddrWidth) sgl <- mkSGListMMU(True, dmaIndication);
    MemServer#(PhysAddrWidth,dataWidth,nMasters) reader <- mkConfigMemServerR(dmaIndication,  readClients, sgl);
    MemServer#(PhysAddrWidth,dataWidth,nMasters) writer <- mkConfigMemServerW(dmaIndication, writeClients, sgl);
    
