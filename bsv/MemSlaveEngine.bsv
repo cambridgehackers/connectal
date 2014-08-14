@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import FIFO         :: *;
 import FIFOF        :: *;
 import GetPut       :: *;
 import Connectable  :: *;
@@ -58,7 +59,9 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 
     FIFOF#(TLPData#(16)) tlpOutFifo <- mkFIFOF;
     FIFOF#(TLPData#(16)) tlpInFifo <- mkFIFOF;
-    FIFOF#(TLPData#(16)) tlpWriteHeaderFifo <- mkFIFOF;
+    FIFO#(TLPData#(16)) tlpWriteHeaderFifo <- mkFIFO;
+    FIFO#(TLPLength)      writeDwCountFifo <- mkFIFO;
+    FIFO#(Bool)             writeIs3dwFifo <- mkFIFO;
 
     Reg#(Bit#(7)) hitReg <- mkReg(0);
     Reg#(Bool) use4dwReg <- mkReg(True);
@@ -94,14 +97,16 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
     endfunction
 
    rule writeHeaderTlp if (!writeInProgress && writeDataMimo.deqReadyN(1));
-      let tlp = tlpWriteHeaderFifo.first;
+      let tlp <- toGet(tlpWriteHeaderFifo).get();
+      let dwCount <- toGet(writeDwCountFifo).get();
+      let is3dw <- toGet(writeIs3dwFifo).get();
 
       TLPMemory4DWHeader hdr_4dw = unpack(tlp.data);
-      TLPLength dwCount = hdr_4dw.length;
 
       TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
-      if (hdr_3dw.format == MEM_WRITE_3DW_DATA) begin
-	 dwCount = hdr_3dw.length;
+      if (is3dw) begin
+	 if (hdr_3dw.format != MEM_WRITE_3DW_DATA)
+	    $display("MemSlaveEngine: expecting MEM_WRITE_3DW_DATA, got %d", hdr_3dw.format);
 	 Vector#(4, Bit#(32)) v = writeDataMimo.first();
 	 writeDataMimo.deq(1);
 	 hdr_3dw.data = byteSwap(v[0]);
@@ -111,11 +116,10 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	 dwCount = dwCount - 1;
 	 tlp.data = pack(hdr_3dw);
       end
-      else if (hdr_4dw.format == MEM_WRITE_4DW_DATA && writeDataMimo.deqReadyN(1)) begin
+      else begin
 	 tlp.be = 16'hffff;
       end
 
-      tlpWriteHeaderFifo.deq();
       tlpOutFifo.enq(tlp);
       $display("writeHeaderTlp dwCount=%d", dwCount);
       writeDwCount <= dwCount;
@@ -228,6 +232,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	      let burstLen = req.burstLen >> beat_shift;
 	      let addr = req.addr;
 	      let awid = req.tag;
+	      let writeIs3dw = False;
 
 	      TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen));
 	      TLPData#(16) tlp = defaultValue;
@@ -250,6 +255,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 		 tlp.data = pack(hdr_4dw);
 	      end
 	      else begin
+		 writeIs3dw = True;
 		 TLPMemoryIO3DWHeader hdr_3dw = defaultValue;
 		 hdr_3dw.format = MEM_WRITE_3DW_DATA;
 		 hdr_3dw.tag = extend(awid);
@@ -265,6 +271,8 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 		 tlp.data = pack(hdr_3dw);
 	      end
 	      tlpWriteHeaderFifo.enq(tlp);
+	      writeDwCountFifo.enq(tlplen);
+	      writeIs3dwFifo.enq(writeIs3dw);
 	      writeBurstCount <= zeroExtend(burstLen);
 	      writeTag.enq(extend(awid));
            endmethod
