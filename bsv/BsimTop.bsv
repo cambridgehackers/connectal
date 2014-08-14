@@ -37,6 +37,10 @@ import MemTypes          :: *;
 import AxiDma            :: *;
 import HostInterface     :: *;
 import CtrlMux           :: *;
+import ClientServer      :: *;
+import MemSlaveEngine    :: *;
+import MemMasterEngine   :: *;
+import PCIE              :: *;
 
 `ifndef DataBusWidth
 `define DataBusWidth 64
@@ -309,6 +313,12 @@ module  mkBsimHost#(Clock double_clock, Reset double_reset)(BsimHost#(clientAddr
       init_fsm.start;
    endrule
 
+   let verbose = True;
+    Reg#(Bit#(32)) cycles      <- mkReg(0);
+    rule count;
+       cycles <= cycles + 1;
+    endrule
+
    interface axi_servers = servers;
    interface MemMaster mem_client;
       interface MemReadClient read_client;
@@ -317,12 +327,15 @@ module  mkBsimHost#(Clock double_clock, Reset double_reset)(BsimHost#(clientAddr
 	    //$write("req_ar: ");
 	    let ra <- crw.readAddr;
 	    //$display("ra=%h", ra);
-	    return MemRequest { addr: ra, burstLen: 1, tag: 0};
+	    let burstLen = 1;
+	    if (verbose) $display("\n%d BsimHost.readReq addr=%h burstLen=%d", cycles, ra, burstLen);
+	    return MemRequest { addr: ra, burstLen: burstLen, tag: 0};
 	 endmethod
         endinterface
         interface Put readData;
 	 method Action put(MemData#(clientBusWidth) rd);
 	    //$display("resp_read: rd=%h", rd);
+	    if (verbose) $display("%d BsimHost.readData %h", cycles, rd.data);
 	    crw.readData(rd.data);
 	 endmethod
         endinterface
@@ -330,24 +343,24 @@ module  mkBsimHost#(Clock double_clock, Reset double_reset)(BsimHost#(clientAddr
       interface MemWriteClient write_client;
         interface Get writeReq;
 	 method ActionValue#(MemRequest#(clientAddrWidth)) get() if (crw.writeReq());
-	    //$write("req_aw: ");
 	    let wa <- crw.writeAddr;
 	    let wd <- crw.writeData;
-	    //$display("wa=%h, wd=%h", wa,wd);
 	    wf.enq(wd);
-	    return MemRequest { addr: wa, burstLen: 1, tag: 0 };
+	    let burstLen = 1;
+	    if (verbose) $display("\n%d BsimHost.writeReq addr=%h data=%h burstLen=%d", cycles, wa, wd, burstLen);
+	    return MemRequest { addr: wa, burstLen: burstLen, tag: 0 };
 	 endmethod
         endinterface
         interface Get writeData;
 	 method ActionValue#(MemData#(clientBusWidth)) get;
 	    wf.deq;
-	    //$display("resp_write %h", wf.first);
+	    if (verbose) $display("%d BsimHost.writeData %h", cycles, wf.first);
 	    return MemData { data: wf.first, tag: 0, last: True };
 	 endmethod
         endinterface
         interface Put writeDone;
 	 method Action put(Bit#(ObjectTagSize) resp);
-	    noAction;
+	    if (verbose) $display("%d BsimHost.writeDone %d", cycles, resp);
 	 endmethod
         endinterface
       endinterface
@@ -371,8 +384,19 @@ module  mkBsimTop(Empty)
    PortalTop#(PhysAddrWidth,DataBusWidth,PinType,NumberOfMasters) top <- mkPortalTop(clocked_by singleClock, reset_by singleReset);
 `endif
    Vector#(NumberOfMasters,Axi3Master#(PhysAddrWidth,DataBusWidth,6)) m_axis <- mapM(mkAxiDmaMaster,top.masters, clocked_by singleClock, reset_by singleReset);
-   mkConnection(host.mem_client, top.slave, clocked_by singleClock, reset_by singleReset);
    mapM(uncurry(mkConnection),zip(m_axis, host.axi_servers), clocked_by singleClock, reset_by singleReset);
+`ifndef BSIM_EXERCISE_MEM_MASTER_SLAVE
+   mkConnection(host.mem_client, top.slave, clocked_by singleClock, reset_by singleReset);
+`else
+   PciId masterPciId = unpack(22);
+   PciId slavePciId = unpack(23);
+   MemMasterEngine masterEngine <- mkMemMasterEngine(masterPciId, clocked_by singleClock, reset_by singleReset);
+   MemSlaveEngine#(32) slaveEngine <- mkMemSlaveEngine(slavePciId, clocked_by singleClock, reset_by singleReset);
+   mkConnection(host.mem_client, slaveEngine.slave, clocked_by singleClock, reset_by singleReset);
+   mkConnection(slaveEngine.tlp.request, masterEngine.tlp.response, clocked_by singleClock, reset_by singleReset);
+   mkConnection(slaveEngine.tlp.response, masterEngine.tlp.request, clocked_by singleClock, reset_by singleReset);
+   mkConnection(masterEngine.master, top.slave, clocked_by singleClock, reset_by singleReset);
+`endif
 
    let intr_mux <- mkInterruptMux(top.interrupt);
    rule int_rule;

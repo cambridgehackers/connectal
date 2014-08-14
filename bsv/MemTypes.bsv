@@ -196,3 +196,23 @@ instance Connectable#(MemMaster#(addrWidth, busWidth), MemSlave#(addrWidth, busW
    endmodule
 endinstance
 
+// this is used for debugging MemSlaveEngine/MemMasterEngine in BsimTop.bsv
+instance Connectable#(MemMaster#(32, busWidth), MemSlave#(40, busWidth));
+   module mkConnection#(MemMaster#(32, busWidth) m, MemSlave#(40, busWidth) s)(Empty);
+      //mkConnection(m.read_client.readReq, s.read_server.readReq);
+      rule readreq;
+	 let req <- m.read_client.readReq.get();
+	 s.read_server.readReq.put(MemRequest { addr: extend(req.addr), burstLen: req.burstLen, tag: req.tag });
+      endrule
+
+      mkConnection(s.read_server.readData, m.read_client.readData);
+      //mkConnection(m.write_client.writeReq, s.write_server.writeReq);
+      rule writereq;
+	 let req <- m.write_client.writeReq.get();
+	 s.write_server.writeReq.put(MemRequest { addr: extend(req.addr), burstLen: req.burstLen, tag: req.tag });
+      endrule
+      mkConnection(m.write_client.writeData, s.write_server.writeData);
+      mkConnection(s.write_server.writeDone, m.write_client.writeDone);
+   endmodule
+endinstance
+
