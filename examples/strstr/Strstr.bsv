@@ -30,6 +30,8 @@ import Gearbox::*;
 import AxiMasterSlave::*;
 import MemTypes::*;
 import MPEngine::*;
+import MemreadEngine::*;
+import Pipe::*;
 
 interface StrstrRequest;
    method Action setup(Bit#(32) needlePointer, Bit#(32) mpNextPointer, Bit#(32) needle_len);
@@ -43,11 +45,11 @@ endinterface
 
 interface Strstr#(numeric type p, numeric type busWidth);
    interface StrstrRequest request;
-   interface Vector#(p,ObjectReadClient#(busWidth)) read_clients;
+   interface ObjectReadClient#(busWidth) config_read_client;
+   interface ObjectReadClient#(busWidth) haystack_read_client;
 endinterface
 
 module mkStrstrRequest#(StrstrIndication indication)(Strstr#(p,busWidth))
-   
    provisos(Add#(a__, 8, busWidth),
 	    Div#(busWidth,8,nc),
 	    Mul#(nc,8,busWidth),
@@ -57,12 +59,29 @@ module mkStrstrRequest#(StrstrIndication indication)(Strstr#(p,busWidth))
 	    Mul#(TDiv#(busWidth, 32), 32, busWidth),
 	    Log#(p,lp),
 	    Add#(e__, TLog#(nc), 32),
-	    Add#(f__, TLog#(TDiv#(busWidth, 32)), 32));
+	    Add#(f__, TLog#(TDiv#(busWidth, 32)), 32)
+	    
+	    // these were added for the readengines
+	    ,Add#(k__, TLog#(TMul#(p, 2)), TLog#(TMul#(1, TMul#(p, 2))))
+	    ,Pipe::FunnelPipesPipelined#(1, TMul#(p, 2), Tuple2#(Bit#(busWidth), Bool),TMin#(2, TLog#(TMul#(p, 2))))
+	    ,Pipe::FunnelPipesPipelined#(1, TMul#(p, 2), Tuple2#(Bit#(TLog#(TMul#(p,2))), MemTypes::MemengineCmd), TMin#(2, TLog#(TMul#(p, 2))))
+	    ,Add#(l__, TLog#(TMul#(p, 2)), TAdd#(1, TLog#(TMul#(1, TMul#(p, 2)))))
+	    ,Add#(1, m__, TMul#(p, 2))
+	    ,Add#(n__, TLog#(TMul#(p, 1)), TLog#(TMul#(1, TMul#(p, 1))))
+	    ,Pipe::FunnelPipesPipelined#(1, TMul#(p, 1), Tuple2#(Bit#(busWidth), Bool),TMin#(2, TLog#(TMul#(p, 1))))
+	    ,Pipe::FunnelPipesPipelined#(1, TMul#(p, 1), Tuple2#(Bit#(TLog#(TMul#(p,1))), MemTypes::MemengineCmd), TMin#(2, TLog#(TMul#(p, 1))))
+	    ,Add#(o__, TLog#(TMul#(p, 1)), TAdd#(1, TLog#(TMul#(1, TMul#(p, 1)))))
+	    ,Add#(1, p__, TMul#(p, 1))
+	    ,Add#(2, q__, TMul#(p, 2))
+
+	    );
    
 
    let verbose = True;
    Reg#(Bit#(32)) needleLen <- mkReg(0);
-   
+   MemreadEngineV#(busWidth, 1, TMul#(p,2)) config_re <- mkMemreadEngine;
+   MemreadEngineV#(busWidth, 1, TMul#(p,1)) haystack_re <- mkMemreadEngine;
+
    Vector#(p, FIFOF#(void)) confs <- replicateM(mkFIFOF);
    Vector#(p, FIFOF#(void)) comps <- replicateM(mkFIFOF);
    Vector#(p, FIFOF#(Int#(32))) locs <- replicateM(mkFIFOF);
@@ -70,11 +89,13 @@ module mkStrstrRequest#(StrstrIndication indication)(Strstr#(p,busWidth))
    Reg#(Bit#(32)) haystackPointer <- mkReg(0);
    Reg#(Bit#(32)) haystackLen <- mkReg(0);
    FIFO#(void) restartf <- mkSizedFIFO(1);
-   
 	       
    Vector#(p, MPEngine#(busWidth)) engines;
-   for(Integer i = 0; i < valueOf(p); i=i+1) 
-      engines[i] <- mkMPEngine(comps[i], confs[i], locs[i]);
+   for(Integer i = 0; i < valueOf(p); i=i+1) begin 
+      let config_rss = takeAt(i*2, config_re.read_servers);
+      let haystack_rs = haystack_re.read_servers[i];
+      engines[i] <- mkMPEngine(comps[i], confs[i], locs[i],cons(haystack_rs,config_rss));
+   end
    
    rule confr;
       for(Integer i = 0; i < valueOf(p); i=i+1) 
@@ -114,8 +135,6 @@ module mkStrstrRequest#(StrstrIndication indication)(Strstr#(p,busWidth))
 	 restartf.enq(?);
    endrule
    
-   function ObjectReadClient#(busWidth) rc (MPEngine#(busWidth) e) = e.read_client;
-      
    interface StrstrRequest request;
       method Action setup(Bit#(32) needle_pointer, Bit#(32) mpNext_pointer, Bit#(32) needle_len);
 	 needleLen <= needle_len;
@@ -132,5 +151,8 @@ module mkStrstrRequest#(StrstrIndication indication)(Strstr#(p,busWidth))
 	 $dumpvars();
       endmethod
    endinterface
-   interface read_clients = map(rc,engines);
+   interface config_read_client = config_re.dmaClient;
+   interface haystack_read_client = haystack_re.dmaClient;
 endmodule
+
+

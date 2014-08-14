@@ -32,8 +32,9 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    Strstr#(DegPar,64) strstr <- mkStrstrRequest(strstrIndicationProxy.ifc);
    StrstrRequestWrapper strstrRequestWrapper <- mkStrstrRequestWrapper(StrstrRequest,strstr.request);
    
+   let read_clients = cons(strstr.config_read_client, cons(strstr.haystack_read_client,nil));
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
-   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerR(True, dmaIndicationProxy.ifc, strstr.read_clients);
+   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerR(True, dmaIndicationProxy.ifc, read_clients);
    DmaConfigWrapper dmaConfigWrapper <- mkDmaConfigWrapper(DmaConfig, dma.request);
 
    Vector#(4,StdPortal) portals;

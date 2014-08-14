@@ -38,13 +38,11 @@ import MemUtils::*;
 import AxiMasterSlave::*;
 import MemTypes::*;
 import Dma2BRAM::*;
-import MemreadEngine::*;
 import Pipe::*;
 
 interface MPEngine#(numeric type busWidth);
    method Action setup(Bit#(32) needlePointer, Bit#(32) mpNextPointer, Bit#(32) needle_len);
    method Action search(Bit#(32) haystackPointer, Bit#(32) haystack_len, Bit#(32) haystack_base);
-   interface ObjectReadClient#(busWidth) read_client;
 endinterface
 
 typedef Bit#(8) Char;
@@ -59,7 +57,8 @@ typedef enum {Idle, Ready, Run} Stage deriving (Eq, Bits);
 
 module mkMPEngine#(FIFOF#(void) compf, 
 		   FIFOF#(void) conff, 
-		   FIFOF#(Int#(32)) locf )(MPEngine#(busWidth))
+		   FIFOF#(Int#(32)) locf,
+		   Vector#(3,ReadServer#(busWidth)) readers)(MPEngine#(busWidth))
    
    provisos(Add#(a__, 8, busWidth),
 	    Div#(busWidth,8,nc),
@@ -71,7 +70,11 @@ module mkMPEngine#(FIFOF#(void) compf,
 	    Add#(e__, TLog#(nc), 32),
 	    Add#(f__, TLog#(TDiv#(busWidth, 32)), 32));
    
-
+   
+   ReadServer#(busWidth) mpReader = readers[0];
+   ReadServer#(busWidth) needleReader = readers[1];
+   ReadServer#(busWidth) haystackReader = readers[2];
+   
    let verbose = True;
    let debug = False;
 
@@ -89,9 +92,8 @@ module mkMPEngine#(FIFOF#(void) compf,
    Reg#(Bit#(32)) iReg <- mkReg(0); // offset in needle
    Reg#(Bit#(2))  epochReg <- mkReg(0);
 
-   MemreadEngineV#(busWidth, 1, 3) re <- mkMemreadEngine();
-   BRAMWriter#(NeedleIdxWidth,busWidth) n2b <- mkBRAMWriter(0, needle.portB, re.readServers[0], re.dataPipes[0]);
-   BRAMWriter#(NeedleIdxWidth,busWidth) mp2b <- mkBRAMWriter(1, mpNext.portB, re.readServers[1], re.dataPipes[1]);
+   BRAMWriter#(NeedleIdxWidth,busWidth) n2b <- mkBRAMWriter(0, needle.portB, needleReader.cmdServer, needleReader.dataPipe);
+   BRAMWriter#(NeedleIdxWidth,busWidth) mp2b <- mkBRAMWriter(1, mpNext.portB, mpReader.cmdServer, mpReader.dataPipe);
 
    FIFOF#(Tuple2#(Bit#(2),Bit#(32))) efifo <- mkSizedFIFOF(2);
 
@@ -105,7 +107,7 @@ module mkMPEngine#(FIFOF#(void) compf,
       
    rule haystackResp;
       if (debug) $display("mkMPEngine::haystackResp");
-      let rv <- toGet(re.dataPipes[2]).get;
+      let rv <- toGet(haystackReader.dataPipe).get;
       haystack.enq(unpack(rv));
    endrule
    
@@ -174,7 +176,7 @@ module mkMPEngine#(FIFOF#(void) compf,
    endrule
    
    rule finish;
-      let rv <- re.readServers[2].response.get;
+      let rv <- haystackReader.cmdServer.response.get;
       compf.enq(?);
    endrule
 
@@ -195,10 +197,7 @@ module mkMPEngine#(FIFOF#(void) compf,
       Bit#(TLog#(nc)) zeros = 0;
       Bit#(32) haystack_len_bytes = {zeros,haystack_len_ds[31:valueOf(TLog#(nc))]} * fromInteger(valueOf(nc));
       if (verbose) $display("mkMPEngine::search %d %d %d",  haystack_pointer, haystack_base, haystack_len_bytes);
-      // TODO: increase burstlen size, XXX
-      re.readServers[2].request.put(MemengineCmd{pointer:haystack_pointer, base:extend(haystack_base), len:haystack_len_bytes, burstLen:16*fromInteger(valueOf(nc))});
+      haystackReader.cmdServer.request.put(MemengineCmd{pointer:haystack_pointer, base:extend(haystack_base), len:haystack_len_bytes, burstLen:16*fromInteger(valueOf(nc))});
    endmethod
-   
-   interface read_client = re.dmaClient;
       
 endmodule

@@ -169,6 +169,13 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
       end
    endrule
    
+   function ReadServer#(dataWidth) bar(Server#(MemengineCmd,Bool) cs, PipeOut#(Bit#(dataWidth)) p) =
+      (interface ReadServer;
+	  interface cmdServer = cs;
+	  interface dataPipe  = p;
+       endinterface);
+
+      
    Vector#(numServers, Server#(MemengineCmd,Bool)) rs;
    for(Integer i = 0; i < valueOf(numServers); i=i+1)
       rs[i] = (interface Server#(MemengineCmd,Bool);
@@ -229,6 +236,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
       endinterface
    endinterface 
    interface dataPipes = read_data_pipes;
+   interface read_servers = zipWith(bar, rs, read_data_pipes);
 endmodule
 
 
