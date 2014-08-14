@@ -33,7 +33,7 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    StrstrRequestWrapper strstrRequestWrapper <- mkStrstrRequestWrapper(StrstrRequest,strstr.request);
    
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
-   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerR(dmaIndicationProxy.ifc, strstr.read_clients);
+   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerR(True, dmaIndicationProxy.ifc, strstr.read_clients);
    DmaConfigWrapper dmaConfigWrapper <- mkDmaConfigWrapper(DmaConfig, dma.request);
 
    Vector#(4,StdPortal) portals;
