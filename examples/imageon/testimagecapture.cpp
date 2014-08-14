@@ -422,36 +422,6 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
    usleep(10000);
 }
 
-static void fmc_imageon_demo_init(int argc, const char **argv)
-{
-    int ret;
-    //ret = fmc_iic_axi_init(uBaseAddr_IIC_FmcImageon);
-    //fmc_iic_axi_GpoWrite(uBaseAddr_IIC_FmcImageon, fmc_iic_axi_GpoRead(uBaseAddr_IIC_FmcImageon) | 2);
-    sensordevice->set_host_oe(1);
-
-printf("[%s:%d] before i2c_camera\n", __FUNCTION__, __LINE__);
-    init_i2c_camera();
-printf("[%s:%d] before i2c_hdmi\n", __FUNCTION__, __LINE__);
-    init_i2c_hdmi();
-printf("[%s:%d] after i2c_hdmi\n", __FUNCTION__, __LINE__);
-    //init_vclk();
-sleep(5);
-//sleep(10000);
-    hdmidevice->setTestPattern(0);
-
-    // Reset DCMs
-    /* puts the DCM_0 PCORE into reset */
-    //fmc_iic_axi_GpoWrite(uBaseAddr_IIC_FmcImageon, fmc_iic_axi_GpoRead(uBaseAddr_IIC_FmcImageon) | 4);
-    usleep(200000);
-    /* releases the DCM_0 PCORE from reset */
-    //fmc_iic_axi_GpoWrite(uBaseAddr_IIC_FmcImageon, fmc_iic_axi_GpoRead(uBaseAddr_IIC_FmcImageon) & ~4);
-
-    usleep(500000);
-    // FMC-IMAGEON VITA Receiver Initialization
-    printf( "FMC-IMAGEON VITA Receiver Initialization ...\n\r");
-    fmc_imageon_demo_enable_ipipe();
-}
-
 #define DMA_BUFFER_SIZE 0x1240000
 
 int main(int argc, const char **argv)
@@ -545,8 +515,33 @@ hblank--; // needed on zc702
     unsigned int ref_srcAlloc = dma->reference(srcAlloc);
     printf("[%s:%d] before setTestPattern\n", __FUNCTION__, __LINE__);
     hdmidevice->setTestPattern(1);
-    fmc_imageon_demo_init(argc, argv);
+
+    //ret = fmc_iic_axi_init(uBaseAddr_IIC_FmcImageon);
+    //fmc_iic_axi_GpoWrite(uBaseAddr_IIC_FmcImageon, fmc_iic_axi_GpoRead(uBaseAddr_IIC_FmcImageon) | 2);
+    sensordevice->set_host_oe(1);
+
+printf("[%s:%d] before i2c_camera\n", __FUNCTION__, __LINE__);
+    init_i2c_camera();
+printf("[%s:%d] before i2c_hdmi\n", __FUNCTION__, __LINE__);
+    init_i2c_hdmi();
+printf("[%s:%d] after i2c_hdmi\n", __FUNCTION__, __LINE__);
+    //init_vclk();
+sleep(5);
+//sleep(10000);
+    hdmidevice->setTestPattern(0);
+
+    // Reset DCMs
+    /* puts the DCM_0 PCORE into reset */
+    //fmc_iic_axi_GpoWrite(uBaseAddr_IIC_FmcImageon, fmc_iic_axi_GpoRead(uBaseAddr_IIC_FmcImageon) | 4);
+    usleep(200000);
+    /* releases the DCM_0 PCORE from reset */
+    //fmc_iic_axi_GpoWrite(uBaseAddr_IIC_FmcImageon, fmc_iic_axi_GpoRead(uBaseAddr_IIC_FmcImageon) & ~4);
+
+    usleep(500000);
+    // FMC-IMAGEON VITA Receiver Initialization
+    printf( "FMC-IMAGEON VITA Receiver Initialization ...\n\r");
     idevice->startWrite(ref_srcAlloc, DMA_BUFFER_SIZE);
+    fmc_imageon_demo_enable_ipipe();
     printf("[%s:%d] passed fmc_imageon_demo_init\n", __FUNCTION__, __LINE__);
     //usleep(200000);
     hdmidevice->waitForVsync(0);

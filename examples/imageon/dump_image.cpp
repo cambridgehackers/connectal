@@ -19,6 +19,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #include <stdio.h>
+#include <string.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -44,15 +45,18 @@ static struct {
     {1, "sync_bitslip", 0},
     {1, "sync_ce", 0},
 //48
-    {1, "bvi_reset_reg", 1},
+    {1, "serdes_running", 0},
     {1, "bvi_reset_reg", 1},
     {1, "fifo_wren_sync", 1},
     {3, "sync_counter", 7},
     {10, "serdes_data", -1},
 //64
     {}};
+#define STRING_LEN 10000
+static char last_string[STRING_LEN], current_string[STRING_LEN];
 int main(int argc, char *argv[])
 {
+    int repeat_count = 0;
     if (argc != 2) {
         printf("dump_pixel <filename>\n");
         return -1;
@@ -70,13 +74,24 @@ int main(int argc, char *argv[])
     for (unsigned int i = 0; i < len/sizeof(uint64_t); i++) {
         uint64_t ditem = data[i];
         dumpptr = dumpend;
+        char *p = current_string;
         do {
             uint64_t val = ditem & ((1 << dumpptr->len) - 1);
             ditem >>= dumpptr->len;
-            if (val != dumpptr->default_value)
-                printf(" %s=%llx", dumpptr->name, (long long)val);
+            if (val != dumpptr->default_value) {
+                sprintf(p, " %s=%llx", dumpptr->name, (long long)val);
+                p += strlen(p);
+            }
         } while (dumpptr-- != dumpitem);
-        printf("\n");
+        if (!strcmp(last_string, current_string))
+            repeat_count++;
+        else {
+            if (repeat_count)
+                printf("repeat %d\n", repeat_count);
+            printf("%s\n", current_string);
+            repeat_count = 0;
+            strcpy(last_string, current_string);
+        }
     }
     return 0;
 }
