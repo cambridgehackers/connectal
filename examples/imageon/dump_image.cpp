@@ -25,6 +25,32 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+static struct {
+    int         len;       /* number of bits of field */
+    const char *name;      /* name of field */
+    uint64_t    default_value; /* value to skip when dumping */
+} *dumpptr, *dumpend, dumpitem[] = {
+    {4, "astate", 0},
+    {2, "qstate", 0},
+    {10, "ctrl_data", 0x3a6},
+    {8, "data_init1[7:0]", 0},
+//24
+    {16, "gencounter", 0},
+//40
+    {3, "ctrl_sample", 0},
+    {1, "align_start", 0},
+    {1, "autoalign", 0},
+    {1, "sync_increment", 0},
+    {1, "sync_bitslip", 0},
+    {1, "sync_ce", 0},
+//48
+    {1, "bvi_reset_reg", 1},
+    {1, "bvi_reset_reg", 1},
+    {1, "fifo_wren_sync", 1},
+    {3, "sync_counter", 7},
+    {10, "serdes_data", -1},
+//64
+    {}};
 int main(int argc, char *argv[])
 {
     if (argc != 2) {
@@ -38,18 +64,18 @@ int main(int argc, char *argv[])
     uint64_t *data = (uint64_t *)malloc(len);
     read(fd, data, len);
     close(fd);
+    dumpend = dumpitem;
+    while((dumpend+1)->len) /* get last value in list to be dumped (LSB bits) */
+        dumpend++;
     for (unsigned int i = 0; i < len/sizeof(uint64_t); i++) {
-        uint16_t pixel[5];
         uint64_t ditem = data[i];
-        uint32_t control = data[i] >> 39;
-       
-        for (int j = 0; j < 5; j++) {
-            pixel[j] = ditem & 0x3ff; /* 10-bit pixels */
-            ditem >>= 10;
-        }
-        for (int j = 0; j < 5; j++)
-            printf(" %3x", pixel[j]);
-        printf(": alignbusy %2x emptyw %2x samplein %4x", (control >> 20) & 0x1f, (control >> 15) & 0x1f, control & 0x7fff);
+        dumpptr = dumpend;
+        do {
+            uint64_t val = ditem & ((1 << dumpptr->len) - 1);
+            ditem >>= dumpptr->len;
+            if (val != dumpptr->default_value)
+                printf(" %s=%llx", dumpptr->name, (long long)val);
+        } while (dumpptr-- != dumpitem);
         printf("\n");
     }
     return 0;

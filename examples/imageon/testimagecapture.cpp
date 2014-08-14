@@ -546,12 +546,13 @@ hblank--; // needed on zc702
     printf("[%s:%d] before setTestPattern\n", __FUNCTION__, __LINE__);
     hdmidevice->setTestPattern(1);
     fmc_imageon_demo_init(argc, argv);
+    idevice->startWrite(ref_srcAlloc, DMA_BUFFER_SIZE);
     printf("[%s:%d] passed fmc_imageon_demo_init\n", __FUNCTION__, __LINE__);
     //usleep(200000);
     hdmidevice->waitForVsync(0);
     usleep(2000000);
     printf("[%s:%d] before startWrite\n", __FUNCTION__, __LINE__);
-    idevice->startWrite(ref_srcAlloc, DMA_BUFFER_SIZE);
+    //idevice->startWrite(ref_srcAlloc, DMA_BUFFER_SIZE);
     int counter = 0;
     while (1/*getchar() != EOF*/) {
         printf("[%s:%d] iserdes %x\n", __FUNCTION__, __LINE__, read_iserdes_control());

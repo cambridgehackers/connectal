@@ -37,29 +37,27 @@ typedef enum { AIdle, AReset, AEdge, AWait, AShift,
 interface IserdesDatadeser;
     method Bit#(1)          align_busy();
     method Bit#(3)          samplein();
-    method Action           fifo_wren(Bit#(1) v);
-    method Action           reset(Bit#(1) v);
     method Bit#(1)          empty();
     method Bit#(10)         dataout();
     method Action io_vita_data_p(Bit#(1) v);
     method Action io_vita_data_n(Bit#(1) v);
+    method Bit#(64) capture();
 endinterface: IserdesDatadeser
 
 //(* synthesize *)
 module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest, Bit#(1) align_start,
-    Bit#(1) autoalign, Bit#(10) training, Bit#(10) manual_tap, TrainRotate trainrot)(IserdesDatadeser);
+    Bit#(1) autoalign, Bit#(10) training, Bit#(10) manual_tap, TrainRotate trainrot, ReadOnly#(Bit#(1)) bvi_reset_reg,
+    ReadOnly#(Bit#(1)) fifo_wren_sync)(IserdesDatadeser);
 
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
     FIFOF#(Bit#(10)) dfifo <- mkFIFOF(clocked_by serdes_clock, reset_by serdes_reset);
     SyncBitIfc#(Bit#(10)) dfifo_data <-  mkSyncBits(0, serdes_clock, serdes_reset, defaultClock, defaultReset);
     SyncBitIfc#(Bit#(1)) dfifo_empty <-  mkSyncBit(serdes_clock, serdes_reset, defaultClock);
-    Wire#(Bit#(1)) bvi_reset_reg <- mkDWire(0, clocked_by serdes_clock, reset_by serdes_reset);
     SyncBitIfc#(Bit#(1)) bvi_resets_reg <- mkSyncBit(serdes_clock, serdes_reset, defaultClock);
     Reg#(Bit#(3)) ctrl_sample <- mkReg(0);
     Reg#(Bit#(1)) fifo_reset <- mkReg(1, clocked_by serdes_clock, reset_by serdes_reset);
     SyncBitIfc#(Bit#(1)) fifo_reset_sync <- mkSyncBit(defaultClock, defaultReset, serdes_clock);
-    SyncBitIfc#(Bit#(1)) fifo_wren_sync <- mkSyncBit(serdes_clock, serdes_reset, serdes_clock);
 
     Reg#(QState)  qstate <- mkReg(QIdle);
 
@@ -81,14 +79,14 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     Reg#(Bit#(1)) serdes_running <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(10)) serdes_data <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(1)) sync_bitslip <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
-    Reg#(Bit#(1)) sync_increment <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
+    Reg#(Bool) sync_increment <- mkReg(False, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(1)) sync_ce <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(3)) sync_counter <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(10)) ctrl_data <- mkSyncReg(0, serdes_clock, serdes_reset, defaultClock);
     ClockDividerIfc serdest_inverted <- mkClockInverter(clocked_by serdest);
     IserdesCore core <- mkIserdesCore(serdes_clock, serdes_reset, serdest,
         serdest_inverted.slowClock, astate_reset.read(), sync_bitslip,
-        sync_increment == 1, sync_ce);
+        sync_increment, sync_ce);
 
     //*************************** alignment operation FSM *****************
     rule afsminit_rule if (bvi_resets_reg.read() == 0);
@@ -324,7 +322,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     //*************************** serdes setting FSM *****************
     rule serdes_idle_rule if (bvi_reset_reg != 0 && serdes_running == 0);
         serdes_start.deq();
-        sync_increment <= serdes_start.first;
+        sync_increment <= serdes_start.first == 1;
         sync_ce <= serdes_start.first | astate_found.read();
         sync_bitslip <= astate_bitslip.read();
         serdes_running <= 1;
@@ -334,7 +332,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     rule serdes_running1_rule if (bvi_reset_reg != 0 && serdes_running == 1
             && sync_counter[2] != 1);
         sync_counter <= sync_counter - 1;
-        sync_increment <= 0;
+        sync_increment <= False;
         sync_ce <= 0;
         sync_bitslip <= 0;
     endrule
@@ -356,7 +354,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
 
     rule serdesreset_rule if (bvi_reset_reg == 0);
         sync_bitslip <= 0;
-        sync_increment <= 0;
+        sync_increment <= False;
         sync_ce <= 0;
         serdes_running <= 0;
         dfifo.clear();
@@ -372,7 +370,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     rule serdesda2_rule;
         let dout = core.data();
         serdes_data <= dout;
-        if (fifo_wren_sync.read() == 1)
+        if (fifo_wren_sync == 1)
             dfifo.enq(dout);
     endrule
 
@@ -384,17 +382,38 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         dfifo_empty.send(pack(!dfifo.notEmpty()));
     endrule
 
+    SyncBitIfc#(Bit#(19)) serdes_capture <-  mkSyncBits(0, serdes_clock, serdes_reset, defaultClock, defaultReset);
+    rule capstateser;
+        serdes_capture.send({pack(sync_increment),
+           sync_bitslip, sync_ce, bvi_reset_reg, bvi_reset_reg, fifo_wren_sync,
+           sync_counter, serdes_data});
+    //SyncBitIfc#(Bit#(10)) dfifo_data, //SyncBitIfc#(Bit#(1)) dfifo_empty,
+    //Reg#(Bit#(1)) fifo_reset,
+    //SyncBitIfc#(Bit#(1)) fifo_reset_sync,
+    //SyncBitIfc#(Bit#(1)) astate_reset,
+    //SyncBitIfc#(Bit#(1)) astate_bitslip,
+    //SyncBitIfc#(Bit#(1)) astate_found,
+    //Reg#(Bit#(10)) edge_init,
+    //Reg#(Bit#(10)) edge_int,
+    //Reg#(Bit#(11)) maxcount,
+    //Reg#(Bit#(10)) windowcount,
+    //Reg#(Bit#(16)) retrycounter,
+    //SyncFIFOIfc#(Bit#(1)) serdes_start,
+    //SyncFIFOIfc#(Bit#(1)) serdes_end,
+    //Reg#(Bit#(1)) serdes_running,
+    // data_init2,
+    endrule
+
+    method Bit#(64) capture();
+        return {pack(astate), pack(qstate), ctrl_data, data_init1[7:0],
+            gencounter, ctrl_sample, align_start, autoalign,
+            serdes_capture.read};
+    endmethod
     method Bit#(1)                align_busy();
         return pack(astate != AIdle);
     endmethod
     method Bit#(3)                samplein();
         return ctrl_sample;
-    endmethod
-    method Action                 fifo_wren(Bit#(1) v);
-        fifo_wren_sync.send(v);
-    endmethod
-    method Action                 reset(Bit#(1) v);
-        bvi_reset_reg <= v;
     endmethod
     method Bit#(1)                empty();
         return dfifo_empty.read();
@@ -469,7 +488,7 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
     TrainRotate trainrot <- replicateM(mkSyncReg(0, axi_clock, axi_reset, defaultClock));
     Vector#(5, IserdesDatadeser) pin_v <- replicateM(mkIserdesDatadeser(serdes_clock, serdes_reset, coreClock.serdest_clkif,
 	  serdes_align_start_reg, serdes_auto_align_reg, serdes_training_reg,
-	  serdes_manual_tap_reg, trainrot));
+	  serdes_manual_tap_reg, trainrot, serdes_reset_null, serdes_fifo_enable_null));
 
     Reg#(Bit#(25)) control_data <- mkReg(0);
     Reg#(Bit#(50)) dump_data <- mkReg(0);
@@ -492,13 +511,6 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
        dump_data <= rawdataw;
     endrule
 
-    rule sendup_sdes_clock;
-    for (Bit#(8) i = 0; i < 5; i = i+1) begin
-       pin_v[i].reset(serdes_reset_null);
-       pin_v[i].fifo_wren(serdes_fifo_enable_null);
-    end
-    endrule
-    
     rule serdes_calc2;
         new_raw_empty_reg <= empty_wire;
     endrule
@@ -555,7 +567,7 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
             return in;
 	endmethod
         method Bit#(64) capture();
-            return {control_data, dump_data[38:0]};
+            return pin_v[0].capture(); //{control_data, dump_data[38:0]};
 	endmethod
     endinterface
 endmodule

@@ -123,7 +123,6 @@ module mkIserdesCore#(Clock serdes_clock, Reset serdes_reset, Clock serdest,
     rule setruledata;
         delaye2.idatain(ibufds_v);
     endrule
-//(* always_ready, always_enabled *)
     (* no_implicit_conditions *)
     rule setrule;
         delaye2.reset(astate_reset);
