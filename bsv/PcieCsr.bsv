@@ -112,6 +112,11 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
    FIFOF#(AddrBeat#(16)) csrRagBeatFifo <- mkFIFOF();
    FIFOF#(Bool)       csrIsMsixAddrFifo <- mkFIFOF();
    FIFOF#(Vector#(1024,Bool)) csrOneHotFifo <- mkFIFOF();
+
+   FIFOF#(AddrBeat#(16)) csrWagBeatFifo <- mkFIFOF();
+   FIFOF#(Bool)       csrWagIsMsixAddrFifo <- mkFIFOF();
+   FIFOF#(Vector#(1024,Bool)) csrWagOneHotFifo <- mkFIFOF();
+
    rule readDataRule;
       let beat <- csrRag.addrBeat.get();
       let addr = beat.addr >> 2; // word address
@@ -121,7 +126,7 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
 
       csrRagBeatFifo.enq(beat);
       csrIsMsixAddrFifo.enq(msixaddr >= 0 && msixaddr <= 63);
-      function Bool addrDecode(Integer i); return addr == fromInteger(i); endfunction
+      function Bool addrDecode(Integer i); return addr[9:0] == fromInteger(i); endfunction
       csrOneHotFifo.enq(genWith(addrDecode));
    endrule
    rule readDataRule2;
@@ -180,12 +185,29 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
    rule writeDataRule;
       let beat <- csrWag.addrBeat.get();
       let addr = beat.addr >> 2; // word address
-      let memData <- toGet(writeDataFifo).get();
-      let dword = memData.data;
 
       let modaddr = (addr % 8192);
       let msixaddr = modaddr - `msix_base;
-      if (msixaddr >= 0 && msixaddr <= 63)
+
+      csrWagBeatFifo.enq(beat);
+      csrWagIsMsixAddrFifo.enq(msixaddr >= 0 && msixaddr <= 63);
+      function Bool addrDecode(Integer i); return addr[9:0] == fromInteger(i); endfunction
+      csrWagOneHotFifo.enq(genWith(addrDecode));
+   endrule
+
+   rule writeDataRule2;
+      let memData <- toGet(writeDataFifo).get();
+      let dword = memData.data;
+
+      let beat       <- toGet(csrWagBeatFifo).get();
+      let isMsixAddr <- toGet(csrWagIsMsixAddrFifo).get();
+      let addr = beat.addr >> 2; // word address
+      let modaddr = (addr % 8192);
+      let msix_base = `msix_base;
+      let msixaddr = modaddr - msix_base;
+      let oneHotDecode <- toGet(csrWagOneHotFifo).get();
+
+      if (isMsixAddr)
          begin
             let groupaddr = (msixaddr / 4);
             //******************************** area referenced from xilinx_x7_pcie_wrapper.v
@@ -196,17 +218,16 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
                3: msix_entry[groupaddr].masked <= unpack(dword[0]);
             endcase
          end
-      else
-         case (modaddr)
-	    775: tlpdata.tlpTracing <= (dword != 0) ? True : False;
+      else begin
+	 if (oneHotDecode[775]) tlpdata.tlpTracing <= (dword != 0) ? True : False;
 
-	    768: begin
+	 if (oneHotDecode[768]) begin
 		    bramRequestFifo.enq(BRAMRequest{ write: False, responseOnWrite: False, address: bramMuxRdAddrReg, datain: ?});
 		    bramMuxRdAddrReg <= bramMuxRdAddrReg + 1;
 		 end
-	    792: tlpdata.pcieTraceBramWrAddr <= truncate(dword);
-	    794: tlpdata.tlpTraceLimit <= truncate(dword);
-         endcase
+	 if (oneHotDecode[792]) tlpdata.pcieTraceBramWrAddr <= truncate(dword);
+	 if (oneHotDecode[794]) tlpdata.tlpTraceLimit <= truncate(dword);
+      end
       if (beat.last)
 	 writeDoneFifo.enq(beat.tag);
    endrule
