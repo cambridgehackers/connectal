@@ -5,6 +5,7 @@ import StmtFSM::*;
 import FIFO::*;
 import BRAM::*;
 import DefaultValue::*;
+import Connectable::*;
 
 // portz libraries
 import Leds::*;
@@ -28,25 +29,28 @@ import StrstrIndicationProxy::*;
 import NandSim::*;
 import Strstr::*;
 
-typedef enum {DmaIndication, DmaConfig, NandSimIndication, NandSimRequest, StrstrIndication, StrstrRequest, StrstrDmaIndication, StrstrDmaConfig} IfcNames deriving (Eq,Bits);
+typedef enum {DmaIndication, DmaConfig, NandSimIndication, NandSimRequest, StrstrIndication, StrstrRequest, NandsimDmaIndication, NandsimDmaConfig} IfcNames deriving (Eq,Bits);
 
 module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    
+   
    NandSimIndicationProxy nandSimIndicationProxy <- mkNandSimIndicationProxy(NandSimIndication);
-   NandSim#(1) nandSim <- mkNandSim(cons(nandSimIndicationProxy.ifc,nil));
-   NandSimRequestWrapper nandSimRequestWrapper <- mkNandSimRequestWrapper(NandSimRequest,nandSim.requests[0]);
+   NandSim nandSim <- mkNandSim(nandSimIndicationProxy.ifc);
+   NandSimRequestWrapper nandSimRequestWrapper <- mkNandSimRequestWrapper(NandSimRequest,nandSim.request);
    
    StrstrIndicationProxy strstrIndicationProxy <- mkStrstrIndicationProxy(StrstrIndication);
    Strstr#(1,64) strstr <- mkStrstrRequest(strstrIndicationProxy.ifc);
    StrstrRequestWrapper strstrRequestWrapper <- mkStrstrRequestWrapper(StrstrRequest,strstr.request);
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
-   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(dmaIndicationProxy.ifc, cons(nandSim.readClient, nil), cons(nandSim.writeClient, nil));
+   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(dmaIndicationProxy.ifc, cons(strstr.config_read_client, cons(nandSim.readClient, nil)), cons(nandSim.writeClient, nil));
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
    
-   DmaIndicationProxy strstrDmaIndicationProxy <- mkDmaIndicationProxy(StrstrDmaIndication);   
-   MemServer#(PhysAddrWidth,64,1) strstrDma <- mkMemServerR(False, strstrDmaIndicationProxy.ifc, strstr.read_clients);
-   DmaConfigWrapper strstrDmaRequestWrapper <- mkDmaConfigWrapper(StrstrDmaConfig, strstrDma.request);
+   DmaIndicationProxy nandsimDmaIndicationProxy <- mkDmaIndicationProxy(NandsimDmaIndication);   
+   MemServer#(PhysAddrWidth,64,1) nandsimDma <- mkMemServerR(False, nandsimDmaIndicationProxy.ifc, cons(strstr.haystack_read_client,nil));
+   DmaConfigWrapper nandsimDmaRequestWrapper <- mkDmaConfigWrapper(NandsimDmaConfig, nandsimDma.request);
+
+   mkConnection(nandsimDma.masters[0], nandSim.memSlave);
    
    Vector#(8,StdPortal) portals;
    portals[0] = nandSimRequestWrapper.portalIfc;
@@ -55,8 +59,8 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    portals[3] = dmaIndicationProxy.portalIfc; 
    portals[4] = strstrRequestWrapper.portalIfc;
    portals[5] = strstrIndicationProxy.portalIfc; 
-   portals[6] = strstrDmaRequestWrapper.portalIfc;
-   portals[7] = strstrDmaIndicationProxy.portalIfc; 
+   portals[6] = nandsimDmaRequestWrapper.portalIfc;
+   portals[7] = nandsimDmaIndicationProxy.portalIfc; 
    
    StdDirectory dir <- mkStdDirectory(portals);
    let ctrl_mux <- mkSlaveMux(dir,portals);

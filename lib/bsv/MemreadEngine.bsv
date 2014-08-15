@@ -169,8 +169,8 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
       end
    endrule
    
-   function ReadServer#(dataWidth) bar(Server#(MemengineCmd,Bool) cs, PipeOut#(Bit#(dataWidth)) p) =
-      (interface ReadServer;
+   function MemreadServer#(dataWidth) bar(Server#(MemengineCmd,Bool) cs, PipeOut#(Bit#(dataWidth)) p) =
+      (interface MemreadServer;
 	  interface cmdServer = cs;
 	  interface dataPipe  = p;
        endinterface);
@@ -184,10 +184,6 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
 			Bit#(32) bsb = fromInteger(bufferSizeBytes);
 			if(extend(c.burstLen) > bsb)
 			   $display("mkMemreadEngineBuff::unsupportedBurstLen %d %d", bsb, c.burstLen);
-`ifdef BSIM
-			if((c.len/extend(c.burstLen))*extend(c.burstLen) != c.len)
-			   $display("mkMemreadEngineBuff::illegalCommand %d %d", c.len, c.burstLen);	 
-`endif
 	 		outs0[i] <= outs0[i]+1;
 			cmds_in[i].enq(tuple2(fromInteger(i),c));
  		     endmethod

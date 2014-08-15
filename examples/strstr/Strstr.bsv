@@ -77,7 +77,7 @@ module mkStrstrRequest#(StrstrIndication indication)(Strstr#(p,busWidth))
 	    );
    
 
-   let verbose = True;
+   let verbose = False;
    Reg#(Bit#(32)) needleLen <- mkReg(0);
    MemreadEngineV#(busWidth, 1, TMul#(p,2)) config_re <- mkMemreadEngine;
    MemreadEngineV#(busWidth, 1, TMul#(p,1)) haystack_re <- mkMemreadEngine;

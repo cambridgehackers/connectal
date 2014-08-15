@@ -129,7 +129,7 @@ int main(int argc, const char **argv)
     for(int i = 0; i < needle_len; i++)
       fprintf(stderr, "%d %d\n", needle[i], mpNext[i]);
 
-    int iter_cnt = 3;
+    int iter_cnt = 1;
 
     portalTimerStart(0);
     MP(needle, haystack, mpNext, needle_len, haystack_len, iter_cnt, &sw_match_cnt);
@@ -157,7 +157,7 @@ int main(int argc, const char **argv)
     close(mpNextAlloc);
   }
 
-  if(1){
+  if(0){
     fprintf(stderr, "benchmarks\n");
     int needleAlloc;
     int haystackAlloc;

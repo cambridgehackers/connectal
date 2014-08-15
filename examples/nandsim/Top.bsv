@@ -31,10 +31,8 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
    NandSimIndicationProxy nandSimIndicationProxy <- mkNandSimIndicationProxy(NandSimIndication);
    
-   //BRAM1Port#(Bit#(14), Bit#(64)) br <- mkBRAM1Server(defaultValue);
-   //NandSim nandSim <- mkNandSim(nandSimIndicationProxy.ifc, br.portA);
-   NandSim#(1) nandSim <- mkNandSim(cons(nandSimIndicationProxy.ifc,nil));
-   NandSimRequestWrapper nandSimRequestWrapper <- mkNandSimRequestWrapper(NandSimRequest,nandSim.requests[0]);
+   NandSim nandSim <- mkNandSim(nandSimIndicationProxy.ifc);
+   NandSimRequestWrapper nandSimRequestWrapper <- mkNandSimRequestWrapper(NandSimRequest,nandSim.request);
 
    Vector#(1, ObjectReadClient#(64)) readClients = cons(nandSim.readClient, nil);
    Vector#(1, ObjectWriteClient#(64)) writeClients = cons(nandSim.writeClient, nil);

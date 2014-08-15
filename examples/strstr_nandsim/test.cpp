@@ -19,7 +19,16 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-
+#include <stdio.h>
+#include <sys/mman.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <assert.h>
+#include <string.h>
+#include <semaphore.h>
+#include <ctime>
+#include <monkit.h>
+#include <mp.h>
 
 #include "StdDmaIndication.h"
 #include "DmaConfigProxy.h"
@@ -38,7 +47,6 @@ extern "C" {
 #include "dmaSendFd.h"
 }
 
-int scratchAlloc, nandAlloc;
 size_t numBytes = 1 << 12;
 #ifndef BOARD_bluesim
 size_t nandBytes = 1 << 24;
@@ -114,9 +122,9 @@ int main(int argc, const char **argv)
   DmaIndication *dmaIndication = 0;
 
   StrstrRequestProxy *strstrRequest = 0;
-  DmaConfigProxy *strstrDmaConfig = 0;
+  DmaConfigProxy *nandsimDmaConfig = 0;
   StrstrIndication *strstrIndication = 0;
-  DmaIndication *strstrDmaIndication = 0;
+  DmaIndication *nandsimDmaIndication = 0;
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
@@ -128,44 +136,61 @@ int main(int argc, const char **argv)
 
 
   strstrRequest = new StrstrRequestProxy(IfcNames_StrstrRequest);
-  strstrDmaConfig = new DmaConfigProxy(IfcNames_StrstrDmaConfig);
+  nandsimDmaConfig = new DmaConfigProxy(IfcNames_NandsimDmaConfig);
   strstrIndication = new StrstrIndication(IfcNames_StrstrIndication);
-  DmaManager *strstrDma = new DmaManager(strstrDmaConfig);
-  strstrDmaIndication = new DmaIndication(strstrDma,IfcNames_StrstrDmaIndication);
+  DmaManager *nandsimDma = new DmaManager(nandsimDmaConfig);
+  nandsimDmaIndication = new DmaIndication(nandsimDma,IfcNames_NandsimDmaIndication);
 
   portalExec_start();
-
   fprintf(stderr, "Main::allocating memory...\n");
 
-  // allocate scratch memory for program to write character strings
-  scratchAlloc = portalAlloc(numBytes);
-  unsigned int ref_scratchAlloc = dma->reference(scratchAlloc);
+  // allocate memory for strstr data
+  int haystackAlloc = portalAlloc(numBytes);
+  int needleAlloc = portalAlloc(numBytes);
+  int mpNextAlloc = portalAlloc(numBytes);
+  int ref_haystackAlloc = dma->reference(haystackAlloc);
+  int ref_needleAlloc = dma->reference(needleAlloc);
+  int ref_mpNextAlloc = dma->reference(mpNextAlloc);
+  char *needle = (char *)portalMmap(needleAlloc, numBytes);
+  char *haystack = (char *)portalMmap(haystackAlloc, numBytes);
+  int *mpNext = (int *)portalMmap(mpNextAlloc, numBytes);
 
   // allocate memory buffer for nandsim to use as backing store
-  nandAlloc = portalAlloc(nandBytes);
-  int ref_nandAlloc = dma->reference(nandAlloc);
+  int nandBacking = portalAlloc(nandBytes);
+  int ref_nandBacking = dma->reference(nandBacking);
 
   // give the nandsim a pointer to its backing store
-  nandsimRequest->configureNand(ref_nandAlloc, nandBytes);
+  nandsimRequest->configureNand(ref_nandBacking, nandBytes);
   nandsimIndication->wait();
 
   // write a pattern into the scratch memory and flush
-  unsigned int *srcBuffer = (unsigned int *)portalMmap(scratchAlloc, numBytes);
-  for (int i = 0; i < numBytes/sizeof(srcBuffer[0]); i++)
-    srcBuffer[i] = srcGen++;
-  portalDCacheFlushInval(scratchAlloc, numBytes, srcBuffer);
+  const char *needle_text = "ababab";
+  const char *haystack_text = "acabcabacababacababababababcacabcabacababacabababc";
+  int needle_len = strlen(needle_text);
+  int haystack_len = strlen(haystack_text);
+  strncpy(needle, needle_text, needle_len);
+  strncpy(haystack, haystack_text, haystack_len);
+  compute_MP_next(needle, mpNext, needle_len);
+  portalDCacheFlushInval(needleAlloc, numBytes, needle);
+  portalDCacheFlushInval(mpNextAlloc, numBytes, mpNext);
+  portalDCacheFlushInval(haystackAlloc, numBytes, haystack);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
-  // write the contents of scratch into "flash" memory
-  nandsimRequest->startWrite(ref_scratchAlloc, 0, 0, numBytes, 16);
+  // write the contents of haystack into "flash" memory
+  nandsimRequest->startWrite(ref_haystackAlloc, 0, 0, numBytes, 16);
   nandsimIndication->wait();
 
   // this is a temporary hack.  We are inlining the pertinant lines from DmaManager_reference
   // for this to work, NANDSIMHACK must be defined.  What this does is send an SGList of the size 
-  // scratchAlloc to strstrDMA starting at offset 0 in the nandsim backing store.
-  int id = strstrDma->priv.handle++;
-  int ref_nandMemory = send_fd_to_portal(strstrDma->priv.device, scratchAlloc, id, global_pa_fd);
-  sem_wait(&(strstrDma->priv.confSem));  
+  // haystackAlloc to strstrDMA starting at offset 0 in the nandsim backing store.
+  int id = nandsimDma->priv.handle++;
+  int ref_nandMemory = send_fd_to_portal(nandsimDma->priv.device, haystackAlloc, id, global_pa_fd);
+  sem_wait(&(nandsimDma->priv.confSem));
 
-  exit(0);
+  fprintf(stderr, "about to setup device %d %d\n", ref_needleAlloc, ref_mpNextAlloc);
+  strstrRequest->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
+  strstrIndication->wait();
+  fprintf(stderr, "about to invoke search %d\n", ref_nandMemory);
+  strstrRequest->search(ref_nandMemory, haystack_len, 1);
+  strstrIndication->wait();  
 }

@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import FIFO::*;
 import FIFOF::*;
 import GetPut::*;
 import Vector::*;
@@ -45,44 +46,82 @@ interface NandSimIndication;
    method Action configureNandDone();
 endinterface
 
-interface NandSim#(numeric type i);
-   interface Vector#(i,NandSimRequest) requests;
+interface NandSim;
+   interface NandSimRequest request;
+   interface MemSlave#(PhysAddrWidth,64) memSlave;
    interface ObjectReadClient#(64) readClient;
    interface ObjectWriteClient#(64) writeClient;
 endinterface
 
 interface NandSimInternal;
    interface NandSimRequest request;   
+   interface ReadOnly#(Bit#(32)) nandPtr;
 endinterface
 
-module mkNandSim#(Vector#(i,NandSimIndication) indications) (NandSim#(i))
-   provisos( Add#(1, a__, TMul#(i, 3))
-	    ,Add#(b__, TLog#(TMul#(i, 3)), TAdd#(1, TLog#(TMul#(1, TMul#(i, 3)))))
-	    ,FunnelPipesPipelined#(1, TMul#(i, 3), Tuple2#(Bit#(TLog#(TMul#(i,3))), MemengineCmd), TMin#(2, TLog#(TMul#(i, 3))))
-	    ,FunnelPipesPipelined#(1, TMul#(i, 3), Tuple2#(Bit#(64), Bool),TMin#(2, TLog#(TMul#(i, 3))))
-	    ,Add#(c__, TLog#(TMul#(i, 3)), TLog#(TMul#(1, TMul#(i, 3))))
-	    ,FunnelPipesPipelined#(1, TMul#(i, 3), Tuple3#(Bit#(2), Bit#(64),Bool), TMin#(2, TLog#(TMul#(i, 3))))
-	    ,FunnelPipesPipelined#(1, TMul#(i, 3), Tuple3#(Bit#(TLog#(TMul#(i,3))), Bit#(64), Bool), TMin#(2, TLog#(TMul#(i, 3))))
-	    ,Add#(1, d__, TMul#(i, 2))
-	    ,Add#(e__, TLog#(TMul#(i, 2)), TAdd#(1, TLog#(TMul#(1, TMul#(i, 2)))))
-	    ,FunnelPipesPipelined#(1, TMul#(i, 2), Tuple2#(Bit#(TLog#(TMul#(i,2))), MemengineCmd), TMin#(2, TLog#(TMul#(i, 2))))
-	    ,FunnelPipesPipelined#(1, TMul#(i, 2), Tuple2#(Bit#(64), Bool),TMin#(2, TLog#(TMul#(i, 2))))
-	    ,Add#(f__, TLog#(TMul#(i, 2)), TLog#(TMul#(1, TMul#(i, 2))))
-	    ,Add#(3, g__, TMul#(i, 3))
-	    ,Add#(2, h__, TMul#(i, 2))
-	    );
-
-   MemreadEngineV#(64, 1, TMul#(i,2))   re <- mkMemreadEngine();
-   MemwriteEngineV#(64, 1, TMul#(i,3))  we <- mkMemwriteEngine();
+module mkNandSim#(NandSimIndication indication) (NandSim);
    
-   Vector#(i, NandSimInternal) nss;
-   Vector#(i, NandSimRequest)  nsr;
-   for(Integer j = 0; j < valueOf(i); j=j+1) begin
-      nss[j] <- mkNandSimInternal(takeAt(j*2,re.readServers), takeAt(j*2,re.dataPipes), takeAt(j*3,we.writeServers), takeAt(j*3,we.dataPipes), indications[j]);
-      nsr[j] = nss[j].request;
-   end
-      
-   interface requests = nsr;
+   let verbose = False;
+   
+   MemreadEngineV#(64, 1, 3)   re <- mkMemreadEngine();
+   MemwriteEngineV#(64, 1, 4)  we <- mkMemwriteEngine();
+   NandSimInternal ns <- mkNandSimInternal(take(re.readServers), take(re.dataPipes), take(we.writeServers), take(we.dataPipes), indication);
+   
+   let slave_read_server  = re.readServers[2];
+   let slave_read_pipe    = re.dataPipes[2];
+   let slave_write_server = we.writeServers[3];
+   let slave_write_pipe   = we.dataPipes[3];
+   FIFO#(Bit#(ObjectTagSize)) slaveWriteTags <- mkSizedFIFO(1);
+   FIFO#(Bit#(ObjectTagSize)) slaveReadTags <- mkSizedFIFO(1);
+   Reg#(Bit#(8)) slaveReadCnt <- mkReg(0);
+   
+   rule completeSlaveReadReq;
+      slaveReadTags.deq;
+      let rv <- slave_read_server.response.get;
+      if (verbose) $display("mkNandSim::completeSlaveReadReq");
+   endrule
+   interface MemSlave memSlave;
+      interface MemWriteServer write_server; 
+	 interface Put writeReq;
+	    method Action put(MemRequest#(40) req);
+	       slave_write_server.request.put(MemengineCmd{pointer:ns.nandPtr, base:req.addr, burstLen:req.burstLen, len:extend(req.burstLen)});
+	       slaveWriteTags.enq(req.tag);
+            endmethod
+	 endinterface
+	 interface Put writeData;
+	    method Action put(MemData#(64) wdata);
+	       slave_write_pipe.enq(wdata.data);
+            endmethod
+	 endinterface
+	 interface Get writeDone;
+	    method ActionValue#(Bit#(ObjectTagSize)) get();
+	       let rv <- slave_write_server.response.get;
+	       slaveWriteTags.deq;
+	       return slaveWriteTags.first;
+            endmethod
+	 endinterface
+      endinterface
+      interface MemReadServer read_server;
+	 interface Put readReq;
+	    method Action put(MemRequest#(40) req);
+	       if (verbose) $display("mkNandSim.memSlave::readReq %d %d %d", req.addr, req.burstLen, req.tag);
+	       slave_read_server.request.put(MemengineCmd{pointer:ns.nandPtr, base:req.addr, burstLen:req.burstLen, len:extend(req.burstLen)});
+	       slaveReadTags.enq(req.tag);
+	       slaveReadCnt <= req.burstLen;
+	    endmethod
+	 endinterface
+	 interface Get  readData;
+	    method ActionValue#(MemData#(64)) get();
+	       let rv <- toGet(slave_read_pipe).get;
+	       let new_slaveReadCnt = slaveReadCnt-8;
+	       let last = new_slaveReadCnt==0;
+	       slaveReadCnt <= new_slaveReadCnt;
+	       if (verbose) $display("mkNandSim.memSlave::readData %d %d %d (%d)", slaveReadTags.first, last, rv, slaveReadCnt);
+	       return ObjectData{data:rv, tag:slaveReadTags.first,last:last};
+            endmethod
+	 endinterface
+      endinterface
+   endinterface : memSlave
+   interface request = ns.request;
    interface ObjectReadClient readClient = re.dmaClient;
    interface ObjectWriteClient writeClient = we.dmaClient;
    
@@ -101,7 +140,7 @@ module mkNandSimInternal#(Vector#(2, Server#(MemengineCmd,Bool)) readServers,
    Server#(MemengineCmd,Bool) nandWriteServer = writeServers[1];
    Server#(MemengineCmd,Bool) nandEraseServer = writeServers[2];
 
-   Reg#(Bit#(32))  nandPointer   <- mkReg(0);
+   Reg#(Maybe#(Bit#(32)))  nandPointer <- mkReg(tagged Invalid);
    Reg#(Bit#(32))  nandLen       <- mkReg(0);
 
    FIFOF#(Bit#(32))  readReqFifo <- mkFIFOF();
@@ -179,7 +218,7 @@ module mkNandSimInternal#(Vector#(2, Server#(MemengineCmd,Bool)) readServers,
       method Action startRead(Bit#(32) pointer, Bit#(32) dramOffset, Bit#(32) nandAddr,Bit#(32) numBytes, Bit#(32) burstLen);
 	 $display("startRead numBytes=%d burstLen=%d", numBytes, burstLen);
 	 readReqFifo.enq(numBytes);
-	 nandReadServer.request.put(MemengineCmd {pointer: nandPointer, base: extend(nandAddr), burstLen: truncate(burstLen), len: extend(numBytes)});
+	 nandReadServer.request.put(MemengineCmd {pointer: fromMaybe(0,nandPointer), base: extend(nandAddr), burstLen: truncate(burstLen), len: extend(numBytes)});
 	 dramWriteServer.request.put(MemengineCmd {pointer: pointer, base: extend(dramOffset), burstLen: truncate(burstLen), len: extend(numBytes)});
       endmethod
 
@@ -189,23 +228,27 @@ module mkNandSimInternal#(Vector#(2, Server#(MemengineCmd,Bool)) readServers,
       method Action startWrite(Bit#(32) pointer, Bit#(32) dramOffset, Bit#(32) nandAddr,Bit#(32) numBytes, Bit#(32) burstLen);
 	 $display("startWrite numBytes=%d burstLen=%d", numBytes, burstLen);
 	 writeReqFifo.enq(numBytes);
-	 nandWriteServer.request.put(MemengineCmd {pointer: nandPointer, base: extend(nandAddr), burstLen: truncate(burstLen), len: extend(numBytes)});
+	 nandWriteServer.request.put(MemengineCmd {pointer: fromMaybe(0,nandPointer), base: extend(nandAddr), burstLen: truncate(burstLen), len: extend(numBytes)});
 	 dramReadServer.request.put(MemengineCmd {pointer: pointer, base: extend(dramOffset), burstLen: truncate(burstLen), len: extend(numBytes)});
       endmethod
 
       method Action startErase(Bit#(32) nandAddr, Bit#(32) numBytes);
 	 $display("startErase numBytes=%d burstLen=%d", numBytes, 16);
-	 nandEraseServer.request.put(MemengineCmd {pointer: nandPointer, base: extend(nandAddr), burstLen: 16, len: extend(numBytes)});
+	 nandEraseServer.request.put(MemengineCmd {pointer: fromMaybe(0,nandPointer), base: extend(nandAddr), burstLen: 16, len: extend(numBytes)});
       endmethod
 
       method Action configureNand(Bit#(32) ptr, Bit#(32) numBytes);
-	 nandPointer <= ptr;
+	 nandPointer <= tagged Valid ptr;
 	 nandLen <= numBytes;
 	 indication.configureNandDone();
 	 $display("configureNand ptr=%d", ptr);
       endmethod
    endinterface
-
+   interface ReadOnly nandPtr;
+      method Bit#(32) _read if (isValid(nandPointer));
+	 return fromMaybe(0,nandPointer);
+      endmethod
+   endinterface
 endmodule
 
 

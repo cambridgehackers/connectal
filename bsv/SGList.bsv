@@ -87,6 +87,8 @@ module mkSGListMMU#(Bool bsimMMap, DmaIndication dmaIndication)(SGListMMU#(addrW
 	    Add#(listIdxSize,8, entryIdxSize),
 	    Add#(c__, addrWidth, ObjectOffsetSize));
    
+   let verbose = !bsimMMap;
+
    // stage 0 (latency == 1)
    Vector#(2, FIFO#(ReqTup)) incomingReqs <- replicateM(mkFIFO);
 
@@ -150,6 +152,8 @@ module mkSGListMMU#(Bool bsimMMap, DmaIndication dmaIndication)(SGListMMU#(addrW
 	 let cond8 = off8 < truncate(regionall.reg8.barrier);
 	 let cond4 = off4 < truncate(regionall.reg4.barrier);
 	 let cond0 = off < regionall.reg0.barrier;
+
+	 if (verbose) $display("mkSGListMMU::stage2: id=%d off=%d barrier8=%d", req.id, req.off, regionall.reg8.barrier);
 	 
 	 conds[i].enq(tuple3(cond8,cond4,cond0));
 	 idxOffsets0[i].enq(tuple3(regionall.reg8.idxOffset,regionall.reg4.idxOffset, regionall.reg0.idxOffset));
@@ -165,19 +169,19 @@ module mkSGListMMU#(Bool bsimMMap, DmaIndication dmaIndication)(SGListMMU#(addrW
 	 match{.idxOffset8,.idxOffset4,.idxOffset0} <- toGet(idxOffsets0[i]).get;
 
 	 if (cond8) begin
-	    //$display("request: req.id=%h req.off=%h", req.id, req.off);
+	    if (verbose) $display("mkSGListMMU::request: req.id=%h req.off=%h", req.id, req.off);
 	    o.pageSize = 3;
 	    pbase = truncate(req.off>>page_shift8);
 	    idxOffset = idxOffset8;
 	 end
 	 else if (cond4) begin
-	    //$display("request: req.id=%h req.off=%h", req.id, req.off);
+	    if (verbose) $display("mkSGListMMU::request: req.id=%h req.off=%h", req.id, req.off);
 	    o.pageSize = 2;
 	    pbase = truncate(req.off>>page_shift4);
 	    idxOffset = idxOffset4;
 	 end
 	 else if (cond0) begin
-	    //$display("request: req.id=%h req.off=%h", req.id, req.off);
+	    if (verbose) $display("mkSGListMMU::request: req.id=%h req.off=%h", req.id, req.off);
 	    o.pageSize = 1;
 	    pbase = truncate(req.off>>page_shift0);
 	    idxOffset = idxOffset0;
@@ -195,10 +199,10 @@ module mkSGListMMU#(Bool bsimMMap, DmaIndication dmaIndication)(SGListMMU#(addrW
 	 Bit#(IndexWidth) p = pbase + idxOffset;
 	 if (off.pageSize == 0) begin
 	    //FIXME offset
-	    //$display("mkSGListMMU.addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
+	    if (verbose) $display("mkSGListMMU::addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
 	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadAddrTrans, pref: extend(ptr) });
 	 end
-	 //$display("p ages[%d].read %h", i, rp[i].first());
+	 if (verbose) $display("mkSGListMMU::pages[%d].read %h", i, {ptr,p});
 	 portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
             address:{ptr,p}, datain:?});
 	 offs1[i].enq(off);
@@ -206,7 +210,7 @@ module mkSGListMMU#(Bool bsimMMap, DmaIndication dmaIndication)(SGListMMU#(addrW
       rule stage5; // Concatenate page base address from sglist entry with LSB offset bits from request and return
 	 Page page <- portsel(pages, i).response.get;
 	 let offset <- toGet(offs1[i]).get();
-	 //$display("p ages[%d].response page=%h offset=%h", i, page, offset);
+	 if (verbose) $display("mkSGListMMU::p ages[%d].response page=%h offset=%h", i, page, offset);
 	 Bit#(ObjectOffsetSize) rv = ?;
 	 Page4 b4 = truncate(page);
 	 Page8 b8 = truncate(page);
@@ -250,7 +254,7 @@ module mkSGListMMU#(Bool bsimMMap, DmaIndication dmaIndication)(SGListMMU#(addrW
              reg8: SingleRegion{barrier: truncate(barr8), idxOffset: truncate(index8)},
              reg4: SingleRegion{barrier: truncate(barr4), idxOffset: truncate(index4)},
              reg0: SingleRegion{barrier: truncate(barr0), idxOffset: truncate(index0)}} });
-      //$display("region pointer=%d off8=%h off4=%h off0=%h", pointer, off8, off4, off0);
+      if (verbose) $display("mkSGListMMU::region pointer=%d barr8=%h barr4=%h barr0=%h", pointer, barr8, barr4, barr0);
       configRespFifo.enq(truncate(pointer));
    endmethod
 
@@ -265,6 +269,7 @@ module mkSGListMMU#(Bool bsimMMap, DmaIndication dmaIndication)(SGListMMU#(addrW
          Bit#(IndexWidth) ind = truncate(pointerIndex);
 	 portsel(pages, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
              address:{truncate(pointer),ind}, datain:truncate(addr)});
+         if (verbose) $display("mkSGListMMU::sglist pointer=%d pointerIndex=%d addr=%d len=%d", pointer, pointerIndex, addr, len);
    endmethod
    endinterface
    interface addr = addrServers;

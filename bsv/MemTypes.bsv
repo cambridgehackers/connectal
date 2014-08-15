@@ -74,7 +74,7 @@ interface MemwriteEngineV#(numeric type dataWidth, numeric type cmdQDepth, numer
 endinterface
 typedef MemwriteEngineV#(dataWidth, cmdQDepth, 1) MemwriteEngine#(numeric type dataWidth, numeric type cmdQDepth);
 
-interface ReadServer#(numeric type dataWidth);
+interface MemreadServer#(numeric type dataWidth);
    interface Server#(MemengineCmd,Bool) cmdServer;
    interface PipeOut#(Bit#(dataWidth)) dataPipe;
 endinterface
@@ -83,7 +83,7 @@ interface MemreadEngineV#(numeric type dataWidth, numeric type cmdQDepth, numeri
    interface Vector#(numServers, Server#(MemengineCmd,Bool)) readServers;
    interface ObjectReadClient#(dataWidth) dmaClient;
    interface Vector#(numServers, PipeOut#(Bit#(dataWidth))) dataPipes;
-   interface Vector#(numServers, ReadServer#(dataWidth)) read_servers;
+   interface Vector#(numServers, MemreadServer#(dataWidth)) read_servers;
 endinterface
 typedef MemreadEngineV#(dataWidth, cmdQDepth, 1) MemreadEngine#(numeric type dataWidth, numeric type cmdQDepth);
 

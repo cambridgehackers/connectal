@@ -23,7 +23,7 @@ import DmaIndicationProxy::*;
 import Strstr::*;
 
 typedef enum {StrstrIndication, StrstrRequest, DmaIndication, DmaConfig} IfcNames deriving (Eq,Bits);
-typedef 2 DegPar;
+typedef 1 DegPar;
 
 
 module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));

@@ -58,7 +58,7 @@ typedef enum {Idle, Ready, Run} Stage deriving (Eq, Bits);
 module mkMPEngine#(FIFOF#(void) compf, 
 		   FIFOF#(void) conff, 
 		   FIFOF#(Int#(32)) locf,
-		   Vector#(3,ReadServer#(busWidth)) readers)(MPEngine#(busWidth))
+		   Vector#(3,MemreadServer#(busWidth)) readers)(MPEngine#(busWidth))
    
    provisos(Add#(a__, 8, busWidth),
 	    Div#(busWidth,8,nc),
@@ -71,11 +71,11 @@ module mkMPEngine#(FIFOF#(void) compf,
 	    Add#(f__, TLog#(TDiv#(busWidth, 32)), 32));
    
    
-   ReadServer#(busWidth) mpReader = readers[0];
-   ReadServer#(busWidth) needleReader = readers[1];
-   ReadServer#(busWidth) haystackReader = readers[2];
+   MemreadServer#(busWidth) haystackReader = readers[0];
+   MemreadServer#(busWidth) mpReader = readers[1];
+   MemreadServer#(busWidth) needleReader = readers[2];
    
-   let verbose = True;
+   let verbose = False;
    let debug = False;
 
    Clock clk <- exposeCurrentClock;
@@ -143,7 +143,7 @@ module mkMPEngine#(FIFOF#(void) compf,
 	 let hv = haystack.first;
 	 let i = tpl_2(efifo.first);
 	 let j = jReg;
-	 if (debug) $display("mkMPEngine::feck %d %d %d %d %x", n, m, i, j, hv[0]);
+	 if (debug) $display("mkMPEngine::feck %d %d %d %d %x %x", n, m, i, j, hv[0], nv);
 	 if (j > n) begin
 	    // jReg points to the end of the haystack; we are done
 	    stage <= Ready;
