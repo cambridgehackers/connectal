@@ -62,6 +62,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
     FIFO#(TLPData#(16)) tlpWriteHeaderFifo <- mkFIFO;
     FIFO#(TLPLength)      writeDwCountFifo <- mkFIFO;
     FIFO#(Bool)             writeIs3dwFifo <- mkFIFO;
+    FIFO#(Bool)             writeIsHeaderOnlyFifo <- mkFIFO;
 
     Reg#(Bit#(7)) hitReg <- mkReg(0);
     Reg#(Bool) use4dwReg <- mkReg(True);
@@ -100,6 +101,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       let tlp <- toGet(tlpWriteHeaderFifo).get();
       let dwCount <- toGet(writeDwCountFifo).get();
       let is3dw <- toGet(writeIs3dwFifo).get();
+      let isHeaderOnly <- toGet(writeIsHeaderOnlyFifo).get();
 
       TLPMemory4DWHeader hdr_4dw = unpack(tlp.data);
 
@@ -126,7 +128,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       tlpDwCount <= truncate(min(4,unpack(dwCount)));
       lastTlp <= (dwCount <= 4);
       writeInProgress <= (dwCount != 0);
-      if (dwCount == 0) begin
+      if (isHeaderOnly) begin
 	 doneTag.enq(writeTag.first());
 	 writeTag.deq();
       end
@@ -219,6 +221,99 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       end
    endrule
 
+   FIFO#(MemRequest#(40)) writeReqFifo <- mkFIFO();
+   FIFO#(MemRequest#(40)) readReqFifo <- mkFIFO();
+   rule writeReqRule if (writeBurstCount == 0);
+      let req <- toGet(writeReqFifo).get();
+      let burstLen = req.burstLen >> beat_shift;
+      let addr = req.addr;
+      let awid = req.tag;
+      let writeIs3dw = False;
+
+      TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen));
+      TLPData#(16) tlp = defaultValue;
+      tlp.sof = True;
+      tlp.eof = False;
+      tlp.hit = 7'h00;
+      tlp.be = 16'hffff;
+
+      $display("slave.writeAddr tlplen=%d burstLen=%d", tlplen, burstLen);
+      if ((addr >> 32) != 0) begin
+	 TLPMemory4DWHeader hdr_4dw = defaultValue;
+	 hdr_4dw.format = MEM_WRITE_4DW_DATA;
+	 hdr_4dw.tag = extend(awid);
+	 hdr_4dw.reqid = my_id;
+	 hdr_4dw.nosnoop = SNOOPING_REQD;
+	 hdr_4dw.addr = addr[40-1:2];
+	 hdr_4dw.length = tlplen;
+	 hdr_4dw.firstbe = 4'hf;
+	 hdr_4dw.lastbe = (tlplen > 1) ? 4'hf : 0;
+	 tlp.data = pack(hdr_4dw);
+      end
+      else begin
+	 writeIs3dw = True;
+	 TLPMemoryIO3DWHeader hdr_3dw = defaultValue;
+	 hdr_3dw.format = MEM_WRITE_3DW_DATA;
+	 hdr_3dw.tag = extend(awid);
+	 hdr_3dw.reqid = my_id;
+	 hdr_3dw.nosnoop = SNOOPING_REQD;
+	 hdr_3dw.addr = addr[32-1:2];
+	 hdr_3dw.length = tlplen;
+	 hdr_3dw.firstbe = 4'hf;
+	 hdr_3dw.lastbe = (tlplen > 1) ? 4'hf : 0;
+
+	 tlp.be = 16'hfff0; // no data word in this TLP
+
+	 tlp.data = pack(hdr_3dw);
+      end
+      tlpWriteHeaderFifo.enq(tlp);
+      writeDwCountFifo.enq(tlplen);
+      writeIs3dwFifo.enq(writeIs3dw);
+      writeIsHeaderOnlyFifo.enq(writeIs3dw && tlplen == 1);
+      writeBurstCount <= zeroExtend(burstLen);
+      writeTag.enq(extend(awid));
+   endrule
+
+   rule readReqRule;
+      let req <- toGet(readReqFifo).get();
+      let burstLen = req.burstLen >> beat_shift;
+      let addr = req.addr;
+      let arid = req.tag;
+
+      TLPData#(16) tlp = defaultValue;
+      tlp.sof = True;
+      tlp.eof = True;
+      tlp.hit = 7'h00;
+      TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen));
+      if (addr[39:32] != 0) begin
+	 TLPMemory4DWHeader hdr_4dw = defaultValue;
+	 hdr_4dw.format = MEM_READ_4DW_NO_DATA;
+	 hdr_4dw.tag = extend(arid);
+	 hdr_4dw.reqid = my_id;
+	 hdr_4dw.nosnoop = SNOOPING_REQD;
+	 hdr_4dw.addr = addr[40-1:2];
+	 hdr_4dw.length = tlplen;
+	 hdr_4dw.firstbe = 4'hf;
+	 hdr_4dw.lastbe = (tlplen > 1) ? 4'hf : 0;
+	 tlp.data = pack(hdr_4dw);
+	 tlp.be = 16'hffff;
+      end
+      else begin
+	 TLPMemoryIO3DWHeader hdr_3dw = defaultValue;
+	 hdr_3dw.format = MEM_READ_3DW_NO_DATA;
+	 hdr_3dw.tag = extend(arid);
+	 hdr_3dw.reqid = my_id;
+	 hdr_3dw.nosnoop = SNOOPING_REQD;
+	 hdr_3dw.addr = addr[32-1:2];
+	 hdr_3dw.length = tlplen;
+	 hdr_3dw.firstbe = 4'hf;
+	 hdr_3dw.lastbe = (tlplen > 1) ? 4'hf : 0;
+	 tlp.data = pack(hdr_3dw);
+	 tlp.be = 16'hfff0;
+      end
+      tlpOutFifo.enq(tlp);
+   endrule
+
     interface Client        tlp;
         interface request = toGet(tlpOutFifo);
         interface response = toPut(tlpInFifo);
@@ -226,56 +321,9 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
     interface MemSlave slave;
    interface MemWriteServer write_server; 
       interface Put writeReq;
-         method Action put(MemRequest#(40) req)
-	      if (writeBurstCount == 0);
-
-	      let burstLen = req.burstLen >> beat_shift;
-	      let addr = req.addr;
-	      let awid = req.tag;
-	      let writeIs3dw = False;
-
-	      TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen));
-	      TLPData#(16) tlp = defaultValue;
-	      tlp.sof = True;
-	      tlp.eof = False;
-	      tlp.hit = 7'h00;
-	      tlp.be = 16'hffff;
-
-	      $display("slave.writeAddr tlplen=%d burstLen=%d", tlplen, burstLen);
-	      if ((addr >> 32) != 0) begin
-		 TLPMemory4DWHeader hdr_4dw = defaultValue;
-		 hdr_4dw.format = MEM_WRITE_4DW_DATA;
-		 hdr_4dw.tag = extend(awid);
-		 hdr_4dw.reqid = my_id;
-		 hdr_4dw.nosnoop = SNOOPING_REQD;
-		 hdr_4dw.addr = addr[40-1:2];
-		 hdr_4dw.length = tlplen;
-		 hdr_4dw.firstbe = 4'hf;
-		 hdr_4dw.lastbe = (tlplen > 1) ? 4'hf : 0;
-		 tlp.data = pack(hdr_4dw);
-	      end
-	      else begin
-		 writeIs3dw = True;
-		 TLPMemoryIO3DWHeader hdr_3dw = defaultValue;
-		 hdr_3dw.format = MEM_WRITE_3DW_DATA;
-		 hdr_3dw.tag = extend(awid);
-		 hdr_3dw.reqid = my_id;
-		 hdr_3dw.nosnoop = SNOOPING_REQD;
-		 hdr_3dw.addr = addr[32-1:2];
-		 hdr_3dw.length = tlplen;
-		 hdr_3dw.firstbe = 4'hf;
-		 hdr_3dw.lastbe = (tlplen > 1) ? 4'hf : 0;
-
-		 tlp.be = 16'hfff0; // no data word in this TLP
-
-		 tlp.data = pack(hdr_3dw);
-	      end
-	      tlpWriteHeaderFifo.enq(tlp);
-	      writeDwCountFifo.enq(tlplen);
-	      writeIs3dwFifo.enq(writeIs3dw);
-	      writeBurstCount <= zeroExtend(burstLen);
-	      writeTag.enq(extend(awid));
-           endmethod
+         method Action put(MemRequest#(40) req);
+	    writeReqFifo.enq(req);
+         endmethod
 	endinterface
       interface Put writeData;
          method Action put(MemData#(buswidth) wdata)
@@ -297,43 +345,8 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    interface MemReadServer read_server;
       interface Put readReq;
          method Action put(MemRequest#(40) req) if (!writeInProgress && !writeDataMimo.deqReady());
-	      let burstLen = req.burstLen >> beat_shift;
-	      let addr = req.addr;
-	      let arid = req.tag;
-
-	       TLPData#(16) tlp = defaultValue;
-	       tlp.sof = True;
-	       tlp.eof = True;
-	       tlp.hit = 7'h00;
-	       TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen));
-	       if (addr[39:32] != 0) begin
-		   TLPMemory4DWHeader hdr_4dw = defaultValue;
-		   hdr_4dw.format = MEM_READ_4DW_NO_DATA;
-		   hdr_4dw.tag = extend(arid);
-		   hdr_4dw.reqid = my_id;
-		   hdr_4dw.nosnoop = SNOOPING_REQD;
-		   hdr_4dw.addr = addr[40-1:2];
-		   hdr_4dw.length = tlplen;
-		   hdr_4dw.firstbe = 4'hf;
-		   hdr_4dw.lastbe = (tlplen > 1) ? 4'hf : 0;
-		   tlp.data = pack(hdr_4dw);
-		   tlp.be = 16'hffff;
-	       end
-	       else begin
-		   TLPMemoryIO3DWHeader hdr_3dw = defaultValue;
-		   hdr_3dw.format = MEM_READ_3DW_NO_DATA;
-		   hdr_3dw.tag = extend(arid);
-		   hdr_3dw.reqid = my_id;
-		   hdr_3dw.nosnoop = SNOOPING_REQD;
-		   hdr_3dw.addr = addr[32-1:2];
-		   hdr_3dw.length = tlplen;
-		   hdr_3dw.firstbe = 4'hf;
-		   hdr_3dw.lastbe = (tlplen > 1) ? 4'hf : 0;
-		   tlp.data = pack(hdr_3dw);
-		   tlp.be = 16'hfff0;
-	       end
-	       tlpOutFifo.enq(tlp);
-           endmethod
+	    readReqFifo.enq(req);
+         endmethod
        endinterface
       interface Get     readData;
          method ActionValue#(MemData#(buswidth)) get() if (completionMimo.deqReady()
