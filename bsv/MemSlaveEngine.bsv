@@ -123,7 +123,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       tlpOutFifo.enq(tlp);
       $display("writeHeaderTlp dwCount=%d", dwCount);
       writeDwCount <= dwCount;
-      tlpDwCount <= min(4,truncate(unpack(dwCount)));
+      tlpDwCount <= truncate(min(4,unpack(dwCount)));
       lastTlp <= (dwCount <= 4);
       writeInProgress <= (dwCount != 0);
       if (dwCount == 0) begin
@@ -144,7 +144,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       v = writeDataMimo.first();
       let dwCount = writeDwCount - extend(pack(tlpDwCount));
       writeDwCount <= dwCount;
-      tlpDwCount <= min(4,truncate(unpack(dwCount)));
+      tlpDwCount <= truncate(min(4,unpack(dwCount)));
       lastTlp <= (dwCount <= 4);
       if (tlpDwCount == 4)
 	 tlp.be = 16'hffff;
