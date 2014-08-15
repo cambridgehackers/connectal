@@ -362,7 +362,7 @@ instance FunnelPipesPipelined#(1,k,a,bpc)
       Vector#(stages, Vector#(k, FIFOF#(a))) buffs  <- replicateM(replicateM(mkFIFOF));
       Vector#(TAdd#(stages,1), Vector#(k, PipeOut#(a))) infss = append(map(map(toPipeOut),buffs), cons(in,nil));
       for(Integer j = valueOf(stages); j > 0; j=j-1) begin
-   	 Vector#(k, FIFOF#(void)) ctrl  <- replicateM(mkSizedFIFOF(1));
+	 Vector#(k, FIFOF#(void)) ctrl  <- replicateM(mkFIFOF1());
    	 for(Integer i = 0; i < 2**(j*valueOf(bpc)) && i < valueOf(k); i=i+1) begin
    	    let first = i==0;
    	    Reg#(Bit#(32)) cnt <- mkReg(0);
