@@ -30,6 +30,7 @@ adb -s $ANDROID_SERIAL shell "gzip -dc /mnt/sdcard/`basename $1` >/dev/xdevcfg"
 adb -s $ANDROID_SERIAL shell "pwd"
 adb -s $ANDROID_SERIAL shell touch /mnt/sdcard/perf.monkit
 adb -s $ANDROID_SERIAL shell "sync"
+adb -s $ANDROID_SERIAL shell mount
 adb -s $ANDROID_SERIAL shell "sync"
 if [ "$XBSV_DEBUG" != "" ]; then
 adb -s $ANDROID_SERIAL forward tcp:5039 tcp:5039   
@@ -41,7 +42,7 @@ echo set solib-search-path $TEMPDIR >$TEMPSCRIPT
 echo target remote :5039 >>$TEMPSCRIPT
 `ndk-which gdb` --command=$TEMPSCRIPT $TEMPDIR/android_exe
 else
-adb -s $ANDROID_SERIAL shell "cd /mnt/sdcard/; rm -f exit.status; ./timelimit -t 180 ./$exename $3; echo \$? > exit.status"
+adb -s $ANDROID_SERIAL shell "cd /mnt/sdcard/; rm -f /mnt/sdcard/exit.status; ./timelimit -t 180 ./$exename $3; echo \$? > /mnt/sdcard/exit.status"
 adb -s $ANDROID_SERIAL pull /mnt/sdcard/exit.status ./
 adb -s $ANDROID_SERIAL pull /mnt/sdcard/perf.monkit `dirname $1`
 fi
