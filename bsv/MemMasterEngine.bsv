@@ -52,6 +52,7 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
     MIMOConfiguration mimoCfg = defaultValue;
     MIMO#(1,4,4,Bit#(32)) completionMimo <- mkMIMO(mimoCfg);
    Reg#(TLPLength)             readBurstCount <- mkReg(0);
+   Reg#(LUInt#(4))     completionMimoDeqCount <- mkReg(0);
    Reg#(Bool)      readBurstCountGreaterThan4 <- mkReg(False);
    Reg#(Bool)                  readInProgress <- mkReg(False);
    rule completionHeader if (!readInProgress && readDataFifo.notEmpty() && completionMimo.deqReadyN(1));
@@ -85,6 +86,7 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
 
       rbc = rbc - 1;
       readBurstCount <= rbc;
+      completionMimoDeqCount <= truncate(min(4,unpack(rbc)));
       readInProgress <= (rbc != 0);
       readBurstCountGreaterThan4 <= (rbc > 4);
       if (rbc == 0) begin
@@ -105,47 +107,36 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
 	  return 16'hffff;
     endfunction
 
-   rule continuation if (readInProgress);
+   rule continuation if (readInProgress && completionMimo.deqReadyN(completionMimoDeqCount));
       let rbc = readBurstCount;
-      let sendit = False;
       TLPData#(16) tlp = defaultValue;
       Vector#(4, Bit#(32)) dvec = unpack(0);
       tlp.sof = False;
-      //$display("continuation rbc=%d", rbc);
+      dvec = completionMimo.first();
+      completionMimo.deq(completionMimoDeqCount);
+
       if (readBurstCountGreaterThan4) begin
-	 if (completionMimo.deqReadyN(4)) begin
-	    rbc = rbc - 4;
-	    dvec = completionMimo.first();
-	    completionMimo.deq(4);
-	    tlp.be = tlpBe(4);
-	    tlp.eof = False;
-	    sendit = True;
-	 end
+	 rbc = rbc - 4;
+	 tlp.be = tlpBe(4);
+	 tlp.eof = False;
       end
       else begin
-	 UInt#(3) deqCount = truncate(unpack(rbc));
-	 if (completionMimo.deqReadyN(deqCount)) begin
-	    dvec = completionMimo.first();
-	    completionMimo.deq(deqCount);
-	    tlp.be = tlpBe(rbc);
-	    //$display("tlp.data=%h tlp.be=%h", tlp.data, tlp.be);
-	    tlp.eof = True;
-	    rbc = 0;
-	    sendit = True;
-	 end
+	 tlp.be = tlpBe(rbc);
+	 //$display("tlp.data=%h tlp.be=%h", tlp.data, tlp.be);
+	 tlp.eof = True;
+	 rbc = 0;
       end
 
       readBurstCount <= rbc;
+      completionMimoDeqCount <= truncate(min(4,unpack(rbc)));
       readBurstCountGreaterThan4 <= (rbc > 4);
-      if (rbc == 0) begin
+      if (!readBurstCountGreaterThan4) begin
 	 readDataFifo.deq();
 	 readInProgress <= False;
       end
-      if (sendit) begin
-	 for (Integer i = 0; i < 4; i = i + 1)
-	    tlp.data[(i+1)*32-1:i*32] = byteSwap(dvec[3-i]);
-	 tlpOutFifo.enq(tlp);
-      end
+      for (Integer i = 0; i < 4; i = i + 1)
+	 tlp.data[(i+1)*32-1:i*32] = byteSwap(dvec[3-i]);
+      tlpOutFifo.enq(tlp);
    endrule
 
     interface Client        tlp;
