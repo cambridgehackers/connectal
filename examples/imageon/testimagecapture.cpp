@@ -310,7 +310,7 @@ uint32_t uManualTap = 25;
    usleep(10); // 10 usec
    serdesdevice->set_iserdes_control( 0);
    serdesdevice->set_decoder_control( 0);
-   sleep(1); // 1 sec (time to get clocks to lock)
+   //jca sleep(1); // 1 sec (time to get clocks to lock)
    uData = vita_spi_read(0);
 printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
    switch ( uData) {
@@ -399,7 +399,7 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
    vita_spi_write_sequence(vita_spi_seq6, VITA_SPI_SEQ6_QTY);
    serdesdevice->set_iserdes_control( VITA_ISERDES_FIFO_ENABLE_BIT);
    serdesdevice->set_decoder_control(VITA_DECODER_ENABLE_BIT);
-   sleep(1);
+   //jca sleep(1);
    vita_spi_write(192, 0); usleep(100);
    vita_spi_write(193, 0x0400); usleep(100);
    vita_spi_write(192, 0x40); usleep(100);
@@ -419,7 +419,7 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
    vspi_data |= (4 << 11); // monitor0 Frame Start, monitor1 row-overhead-time (ROT)
    vita_spi_write(192, vspi_data); usleep(100);
    fprintf(stderr, "VITA SPI 192 %x\n", vspi_data);
-   usleep(10000);
+   //jca usleep(10000);
 }
 
 #define DMA_BUFFER_SIZE 0x1240000
@@ -526,18 +526,18 @@ printf("[%s:%d] before i2c_hdmi\n", __FUNCTION__, __LINE__);
     init_i2c_hdmi();
 printf("[%s:%d] after i2c_hdmi\n", __FUNCTION__, __LINE__);
     //init_vclk();
-sleep(5);
+//jca sleep(5);
 //sleep(10000);
     hdmidevice->setTestPattern(0);
 
     // Reset DCMs
     /* puts the DCM_0 PCORE into reset */
     //fmc_iic_axi_GpoWrite(uBaseAddr_IIC_FmcImageon, fmc_iic_axi_GpoRead(uBaseAddr_IIC_FmcImageon) | 4);
-    usleep(200000);
+    //jca usleep(200000);
     /* releases the DCM_0 PCORE from reset */
     //fmc_iic_axi_GpoWrite(uBaseAddr_IIC_FmcImageon, fmc_iic_axi_GpoRead(uBaseAddr_IIC_FmcImageon) & ~4);
 
-    usleep(500000);
+    //jca usleep(500000);
     // FMC-IMAGEON VITA Receiver Initialization
     printf( "FMC-IMAGEON VITA Receiver Initialization ...\n\r");
     idevice->startWrite(ref_srcAlloc, DMA_BUFFER_SIZE);
@@ -545,7 +545,7 @@ sleep(5);
     printf("[%s:%d] passed fmc_imageon_demo_init\n", __FUNCTION__, __LINE__);
     //usleep(200000);
     hdmidevice->waitForVsync(0);
-    usleep(2000000);
+    //jca usleep(2000000);
     printf("[%s:%d] before startWrite\n", __FUNCTION__, __LINE__);
     //idevice->startWrite(ref_srcAlloc, DMA_BUFFER_SIZE);
     int counter = 0;

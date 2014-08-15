@@ -117,6 +117,7 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
 	endmethod
 	method Action set_trigger_cnt_trigger(Bit#(32) v);
 	    trigger_cnt_trigger_reg <= v;
+            serdes.start_capture();
 	endmethod
         method Action put_spi_request(Bit#(32) v);
             spiController.request.put(truncate(v));

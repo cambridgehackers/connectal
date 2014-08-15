@@ -31,27 +31,23 @@ static struct {
     const char *name;      /* name of field */
     uint64_t    default_value; /* value to skip when dumping */
 } *dumpptr, *dumpend, dumpitem[] = {
-    {4, "astate", 0},
-    {2, "qstate", 0},
-    {10, "ctrl_data", 0x3a6},
-    {8, "data_init1[7:0]", 0},
-//24
-    {16, "gencounter", 0},
-//40
-    {3, "ctrl_sample", 0},
-    {1, "align_start", 0},
-    {1, "autoalign", 0},
-    {1, "sync_increment", 0},
-    {1, "sync_bitslip", 0},
-    {1, "sync_ce", 0},
-//48
-    {1, "serdes_running", 0},
-    {1, "bvi_reset_reg", 1},
-    {1, "fifo_wren_sync", 1},
-    {3, "sync_counter", 7},
-    {10, "serdes_data", -1},
+    {10, "ei", 0},
+    {5, "wc", 0},
+    {4, "a", 0},
+    {10, "cdata", 0x3a6},
+    {16, "gen", 0},
+    {3, "csam", 0},
+    {1, "astart", 0},
+    {1, "autoa", 0},
+    {1, "sinc", 0},
+    {1, "sbit", 0},
+    {1, "sce", 0},
+    {1, "wren", 1},
+    {10, "sdata", -1},
 //64
     {}};
+        //return {edge_int, windowcount[4:0], pack(astate), ctrl_data, gencounter, ctrl_sample, align_start, autoalign,
+        //serdes_capture.send({pack(syncparam), pack(fifo_wren_sync), serdes_data});
 #define STRING_LEN 10000
 static char last_string[STRING_LEN], current_string[STRING_LEN];
 int main(int argc, char *argv[])

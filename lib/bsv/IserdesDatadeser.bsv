@@ -30,7 +30,6 @@ import ImageonVita::*;
 
 typedef Vector#(10, Reg#(Bit#(10))) TrainRotate;
 
-typedef enum { QIdle, QTrain, QOff} QState deriving (Bits,Eq);
 typedef enum { AIdle, AReset, AEdge, AWait, AShift,
      ARotated, AFirst, ASecond, AFound, AAlign} AState deriving (Bits,Eq);
 
@@ -56,15 +55,9 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     SyncBitIfc#(Bit#(1)) dfifo_empty <-  mkSyncBit(serdes_clock, serdes_reset, defaultClock);
     SyncBitIfc#(Bool) bvi_resets_reg <- mkSyncBit(serdes_clock, serdes_reset, defaultClock);
     Reg#(Bit#(3)) ctrl_sample <- mkReg(0);
-    Reg#(Bit#(1)) fifo_reset <- mkReg(1, clocked_by serdes_clock, reset_by serdes_reset);
-    SyncBitIfc#(Bit#(1)) fifo_reset_sync <- mkSyncBit(defaultClock, defaultReset, serdes_clock);
-
-    Reg#(QState)  qstate <- mkReg(QIdle);
 
     Reg#(AState)  astate <- mkReg(AIdle);
-    SyncBitIfc#(Bit#(1)) astate_reset <- mkSyncBit(defaultClock, defaultReset, serdes_clock);
-    SyncBitIfc#(Bit#(1)) astate_bitslip <- mkSyncBit(defaultClock, defaultReset, serdes_clock);
-    SyncBitIfc#(Bit#(1)) astate_found <- mkSyncBit(defaultClock, defaultReset, serdes_clock);
+    Reg#(Bit#(1)) astate_reset <- mkSyncReg(0, defaultClock, defaultReset, serdes_clock);
     Reg#(Bit#(10)) data_init1 <- mkReg(0);
     Reg#(Bit#(10)) data_init2 <- mkReg(0);
     Reg#(Bit#(10)) edge_init <- mkReg(0);
@@ -74,19 +67,16 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     Reg#(Bit#(16)) retrycounter <- mkReg(0);
     Reg#(Bit#(16)) gencounter <- mkReg(0);
 
-    SyncFIFOIfc#(Bit#(1)) serdes_start <- mkSyncFIFO(2, defaultClock, defaultReset, serdes_clock);
+    SyncFIFOIfc#(SerdesStart) serdes_start <- mkSyncFIFO(2, defaultClock, defaultReset, serdes_clock);
     SyncFIFOIfc#(Bit#(1)) serdes_end <- mkSyncFIFO(2, serdes_clock, serdes_reset, defaultClock);
     Reg#(Bit#(1)) serdes_running <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(10)) serdes_data <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
-    Reg#(Bit#(1)) sync_bitslip <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
-    Reg#(Bool) sync_increment <- mkReg(False, clocked_by serdes_clock, reset_by serdes_reset);
-    Reg#(Bit#(1)) sync_ce <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
+    Reg#(SerdesStart) syncparam <- mkReg(unpack(0), clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(3)) sync_counter <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(10)) ctrl_data <- mkSyncReg(0, serdes_clock, serdes_reset, defaultClock);
     ClockDividerIfc serdest_inverted <- mkClockInverter(clocked_by serdest);
     IserdesCore core <- mkIserdesCore(serdes_clock, serdes_reset, serdest,
-        serdest_inverted.slowClock, astate_reset.read(), sync_bitslip,
-        sync_increment, sync_ce);
+        serdest_inverted.slowClock, astate_reset, syncparam);
 
     //*************************** alignment operation FSM *****************
     rule afsminit_rule if (!bvi_resets_reg.read());
@@ -106,21 +96,21 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         retrycounter <= 'h7ffd;
         ctrl_sample <= 0;
         astate <= AReset;
-        serdes_start.enq(0);
+        serdes_start.enq(SerdesStart{increment: False, ce:0, bitslip:0});
     endrule
     rule afsmdelay_rule if (bvi_resets_reg.read() && astate == AReset);
         serdes_end.deq();
-        let as = AEdge;
         let gc = 15;
         if (autoalign == 0)
             begin
             gc = {6'b0, manual_tap};
-            as = AFound;
+            astate <= AFound;
             end
+        else
+            astate <= AEdge;
         maxcount <= 31;
         gencounter <= gc;
-        astate <= as;
-        serdes_start.enq(0);
+        serdes_start.enq(SerdesStart{increment: False, ce:~autoalign, bitslip:0});
     endrule
     rule afsmcedge1_rule if (bvi_resets_reg.read() && astate == AEdge
             && retrycounter < 'h8000);
@@ -131,72 +121,68 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             && retrycounter >= 'h8000);
         serdes_end.deq();
         let mc = maxcount;
-        let inctemp = 0;
-        let as = AEdge;
+        let inctemp = False;
         if (edge_int != 0)
             begin
             data_init1 <= rotateBitsBy(ctrl_data, 10-1);
             data_init2 <= rotateBitsBy(ctrl_data, 10-2);
             edge_init <= edge_int;
-            as = AWait;
+            astate <= AWait;
             end
         else if (maxcount[10] == 1)
-            as = AReset;
+            astate <= AReset;
         else
             begin
             maxcount <= maxcount - 1;
-            inctemp = 1;
+            inctemp = True;
+            astate <= AEdge;
             end
         retrycounter <= retrycounter - 1;
-        astate <= as;
-        serdes_start.enq(inctemp);
+        serdes_start.enq(SerdesStart{increment: inctemp, ce:pack(inctemp), bitslip:0});
     endrule
     rule afsmwait_rule if (bvi_resets_reg.read() && astate == AWait);
         serdes_end.deq();
-        let as = astate;
         let gc = gencounter - 1;
         if (gencounter >= 'h8000)
             begin
             gc = 9;
-            as = AShift;
+            astate <= AShift;
             end
         else
             begin
-            let inctemp = 0;
+            let inctemp = False;
             if (edge_init != edge_int)
                 begin
                 if (maxcount[10] == 1)
-                    as = AReset;
+                    astate <= AReset;
                 else
                     begin
                     gc = 14;
-                    inctemp = 1;
-                    as = AEdge;
+                    inctemp = True;
+                    astate <= AEdge;
                     end
                 retrycounter <= retrycounter - 1;
                 maxcount <= maxcount - 1;
                 end
-            serdes_start.enq(inctemp);
+            serdes_start.enq(SerdesStart{increment: inctemp, ce:pack(inctemp), bitslip:0});
             end
-        astate <= as;
         gencounter <= gc;
     endrule
     rule afsmcompare_rule if (bvi_resets_reg.read() && astate == AShift);
-        let as = astate;
         let gc = gencounter - 1;
         if (gencounter >= 'h8000)
             begin
-            let inctemp = 0;
+            let inctemp = False;
             if (maxcount[10] == 1)
-                as = AReset;
+                astate <= AReset;
             else
                 begin
                 retrycounter <= retrycounter - 1;
                 gc = 14;
-                inctemp = 1;
-                as = AEdge;
+                inctemp = True;
+                astate <= AEdge;
                 end
-            serdes_start.enq(inctemp);
+            serdes_start.enq(SerdesStart{increment: inctemp, ce:pack(inctemp), bitslip:0});
             end
         else if (ctrl_data == trainrot[gencounter])
             begin
@@ -206,98 +192,91 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             else if (gencounter == 8)
                 csamplein = 3'b100;
             ctrl_sample <= csamplein;
-            as = ARotated;
-            serdes_start.enq(1);
+            astate <= ARotated;
+            serdes_start.enq(SerdesStart{increment: True, ce:1, bitslip:0});
             end
-        astate <= as;
         gencounter <= gc;
         maxcount <= maxcount - 1;
     endrule
     rule afsm1changed_rule if (bvi_resets_reg.read() && astate == ARotated);
         serdes_end.deq();
-        let as = astate;
-        let inctemp = 0;
+        let inctemp = False;
         if (ctrl_data == data_init1)
             begin
             gencounter <= 15;
-            as = AFirst;
+            astate <= AFirst;
             end
         else if (maxcount[10] == 1)
-            as = AReset;
+            astate <= AReset;
         else
             begin
-            inctemp = 1;
+            inctemp = True;
             maxcount <= maxcount - 1;
             end
-        astate <= as;
-        serdes_start.enq(inctemp);
+        serdes_start.enq(SerdesStart{increment: inctemp, ce:pack(inctemp), bitslip:0});
     endrule
     rule afsm1stable_rule if (bvi_resets_reg.read() && astate == AFirst);
         serdes_end.deq();
-        let as = astate;
         let mc = maxcount;
-        let inctemp = 1;
+        let inctemp = True;
         if (gencounter >= 'h8000)
             begin
             windowcount <= windowcount + 1;
             mc = mc - 1;
-            as = ASecond;
+            astate <= ASecond;
             end
         else
             begin
             let gc = gencounter - 1;
             if (ctrl_data == data_init1)
-                inctemp = 0;
+                inctemp = False;
             else
                 begin
                 mc = mc - 1;
                 gc = 15;
-                as = ARotated;
+                astate <= ARotated;
                 end
             gencounter <= gc;
             end
         maxcount <= mc;
-        astate <= as;
-        serdes_start.enq(inctemp);
+        serdes_start.enq(SerdesStart{increment: inctemp, ce:pack(inctemp), bitslip:0});
     endrule
     rule afsmsecond_rule if (bvi_resets_reg.read() && astate == ASecond);
         serdes_end.deq();
-        let as = astate;
-        let inctemp = 0;
+        let inctemp = False;
         if (ctrl_data == data_init2)
             begin
             gencounter <= {7'b0, windowcount[9:1]} - 16'b10;
-            as = AFound;
+            astate <= AFound;
             end
         else if (maxcount[10] == 1)
-            as = AReset;
+            astate <= AReset;
         else
             begin
             windowcount <= windowcount + 1;
-            inctemp = 1;
+            inctemp = True;
             maxcount <= maxcount - 1;
             end
-        astate <= as;
-        serdes_start.enq(inctemp);
+        serdes_start.enq(SerdesStart{increment: inctemp, ce:pack(inctemp), bitslip:0});
     endrule
     rule afsmfound_rule if (bvi_resets_reg.read() && astate == AFound);
         serdes_end.deq();
         let gc = gencounter;
         if (gencounter >= 'h8000)
             begin
-            let as = AIdle;
             if (ctrl_data != training)
                 begin
                 gc = 8;
-                as = AAlign;
-                serdes_start.enq(0);
+                astate <= AAlign;
+                serdes_start.enq(SerdesStart{increment: False, ce:1, bitslip:0});
                 end
-            astate <= as;
+            else
+                astate <= AIdle;
             end
         else
             begin
             gc = gc - 1;
-            serdes_start.enq(autoalign);
+            serdes_start.enq(SerdesStart{increment: autoalign == 1, ce:1, bitslip:0});
             end
         gencounter <= gc;
     endrule
@@ -308,34 +287,24 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         else
             begin
             gencounter <= gencounter - 1;
-            serdes_start.enq(0);
+            serdes_start.enq(SerdesStart{increment: False, ce:0, bitslip:1});
             end
     endrule
 
-    rule qfsmall;
-        fifo_reset_sync.send(pack(qstate != QIdle));
-        astate_reset.send(pack(astate == AReset));
-        astate_bitslip.send(pack(astate == AAlign));
-        astate_found.send(pack(astate == AFound));
-    endrule
-
     //*************************** serdes setting FSM *****************
-    rule serdes_idle_rule if (bvi_reset_reg && serdes_running == 0);
-        serdes_start.deq();
-        sync_increment <= serdes_start.first == 1;
-        sync_ce <= serdes_start.first | astate_found.read();
-        sync_bitslip <= astate_bitslip.read();
-        serdes_running <= 1;
-        sync_counter <= 3;
+    rule serdes_idle_rule if (bvi_reset_reg);
+        if (serdes_start.notEmpty) begin
+            serdes_start.deq();
+            syncparam <= serdes_start.first;
+            serdes_running <= 1;
+            sync_counter <= 3;
+        end
+        else begin
+            syncparam <= unpack(0);
+            sync_counter <= sync_counter - 1;
+        end
     endrule
 
-    rule serdes_running1_rule if (bvi_reset_reg && serdes_running == 1
-            && sync_counter[2] != 1);
-        sync_counter <= sync_counter - 1;
-        sync_increment <= False;
-        sync_ce <= 0;
-        sync_bitslip <= 0;
-    endrule
     rule serdes_running2_rule if (bvi_reset_reg && serdes_running == 1
             && sync_counter[2] == 1);
         ctrl_data <= serdes_data;
@@ -352,18 +321,16 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         bvi_resets_reg.send(bvi_reset_reg);
     endrule
 
+    rule qfsmall;
+        astate_reset <= pack(astate == AReset);
+    endrule
     rule serdesreset_rule if (!bvi_reset_reg);
-        sync_bitslip <= 0;
-        sync_increment <= False;
-        sync_ce <= 0;
+        syncparam <= unpack(0);
         serdes_running <= 0;
         dfifo.clear();
     endrule
-    rule wrensync_rule if (bvi_reset_reg);
-        fifo_reset <= fifo_reset_sync.read();
-    endrule
 
-    rule clear_fifo if (astate_reset.read() == 1);
+    rule clear_fifo if (astate_reset == 1);
         dfifo.clear();
     endrule
 
@@ -382,7 +349,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         dfifo_empty.send(pack(!dfifo.notEmpty()));
     endrule
 
-    SyncBitIfc#(Bit#(19)) serdes_capture <-  mkSyncBits(0, serdes_clock,
+    SyncBitIfc#(Bit#(14)) serdes_capture <-  mkSyncBits(0, serdes_clock,
         serdes_reset, defaultClock, defaultReset);
     Reg#(Bool) startCapture <- mkReg(False);
     rule startcap;
@@ -391,14 +358,11 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     endrule
 
     rule capstateser;
-        serdes_capture.send({pack(sync_increment),
-           sync_bitslip, sync_ce, serdes_running, pack(bvi_reset_reg), pack(fifo_wren_sync),
-           sync_counter, serdes_data});
+        serdes_capture.send({pack(syncparam), pack(fifo_wren_sync), serdes_data});
     endrule
 
-    method Bit#(64) capture() if (startCapture);
-        return {pack(astate), pack(qstate), ctrl_data, data_init1[7:0],
-            gencounter, ctrl_sample, align_start, autoalign,
+    method Bit#(64) capture() if (startCapture); // early time capture
+        return {edge_int, windowcount[4:0], pack(astate), ctrl_data, gencounter, ctrl_sample, align_start, autoalign,
             serdes_capture.read};
     endmethod
     method Bit#(1)                align_busy();
@@ -447,6 +411,7 @@ interface SerdesData;
     method Wire#(Bit#(1)) reset();
     method Vector#(5, Bit#(10)) raw_data();
     method Bit#(64) capture();
+    method Action start_capture();
 endinterface
 
 interface ISerdes;
@@ -495,7 +460,7 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
           samplein[(i+1)*3-1: i*3] = pin_v[i].samplein();
 	  rawdataw[(i+1)*10-1: i*10] = pin_v[i].dataout();
        end
-       serdes_align_busy_reg.send(pack(alignbusyw != 0));
+       serdes_align_busy_reg.send(pack(~alignbusyw == 0));
        //bittest_wire <= pack(samplein == 3'b110);
        empty_wire <= pack(emptyw != 0);
        raw_data_wire <= rawdataw;
@@ -506,7 +471,11 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
     rule serdes_calc2;
         new_raw_empty_reg <= empty_wire;
     endrule
+    rule clear_align if (serdes_align_busy_reg.read() == 1);
+        serdes_align_start_reg <= 0;
+    endrule
 
+    Reg#(Bool) runCapture <- mkSyncReg(False, axi_clock, axi_reset, defaultClock);
     interface ImageonSerdesRequest control;
 	method Action set_serdes_manual_tap(Bit#(10) v);
 	    serdes_manual_tap_reg <= v;
@@ -558,8 +527,11 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
             Vector#(5, Bit#(10)) in = unpack(raw_data_wire);
             return in;
 	endmethod
-        method Bit#(64) capture();
+        method Bit#(64) capture(); // late-time capture if (runCapture);
             return pin_v[0].capture(); //{control_data, dump_data[38:0]};
 	endmethod
+        method Action start_capture();
+            runCapture <= True;
+        endmethod
     endinterface
 endmodule

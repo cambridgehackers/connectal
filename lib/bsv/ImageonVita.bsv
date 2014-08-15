@@ -27,6 +27,12 @@ import DefaultValue::*;
 import XilinxCells::*;
 import XbsvXilinxCells::*;
 
+typedef struct {
+     Bool increment;
+     Bit#(1) ce;
+     Bit#(1) bitslip;
+} SerdesStart deriving (Bits);
+
 interface ImageonVita;
     method Bit#(1) clk_pll();
     method Bit#(1) reset_n();
@@ -86,8 +92,7 @@ endinterface: IserdesCore
 
 //(* synthesize *)
 module mkIserdesCore#(Clock serdes_clock, Reset serdes_reset, Clock serdest,
-      Clock serdest_inverted, Bit#(1) astate_reset, Bit#(1) sync_bitslip,
-      Bool sync_increment, Bit#(1) sync_ce)(IserdesCore);
+      Clock serdest_inverted, Bit#(1) astate_reset, SerdesStart param)(IserdesCore);
 
     Wire#(Bit#(1)) vita_data_p <- mkDWire(0);
     Wire#(Bit#(1)) vita_data_n <- mkDWire(0);
@@ -131,12 +136,12 @@ module mkIserdesCore#(Clock serdes_clock, Reset serdes_reset, Clock serdest,
         delaye2.ld(0);
         delaye2.ldpipeen(0);
         delaye2.datain(0);
-        delaye2.inc(sync_increment);
-        delaye2.ce(sync_ce);
+        delaye2.inc(param.increment);
+        delaye2.ce(param.ce);
         for (Integer i = 0; i < 2; i = i + 1)
             begin
             iserdes_v[i].d(0);
-            iserdes_v[i].bitslip(sync_bitslip);
+            iserdes_v[i].bitslip(param.bitslip);
             iserdes_v[i].ce1(1);
             iserdes_v[i].ce2(1);
             iserdes_v[i].ofb(0);
