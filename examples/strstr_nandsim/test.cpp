@@ -184,13 +184,13 @@ int main(int argc, const char **argv)
   // for this to work, NANDSIMHACK must be defined.  What this does is send an SGList of the size 
   // haystackAlloc to strstrDMA starting at offset 0 in the nandsim backing store.
   int id = nandsimDma->priv.handle++;
-  int ref_nandMemory = send_fd_to_portal(nandsimDma->priv.device, haystackAlloc, id, global_pa_fd);
+  int ref_haystackInNandMemory = send_fd_to_portal(nandsimDma->priv.device, haystackAlloc, id, global_pa_fd);
   sem_wait(&(nandsimDma->priv.confSem));
 
   fprintf(stderr, "about to setup device %d %d\n", ref_needleAlloc, ref_mpNextAlloc);
   strstrRequest->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
   strstrIndication->wait();
-  fprintf(stderr, "about to invoke search %d\n", ref_nandMemory);
-  strstrRequest->search(ref_nandMemory, haystack_len, 1);
+  fprintf(stderr, "about to invoke search %d\n", ref_haystackInNandMemory);
+  strstrRequest->search(ref_haystackInNandMemory, haystack_len, 1);
   strstrIndication->wait();  
 }
