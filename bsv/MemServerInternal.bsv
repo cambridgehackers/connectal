@@ -90,7 +90,7 @@ module mkMemReadInternal#(Integer id,
    // stage 1: address validation (latency = 1)
    FIFO#(RRec#(numClients,addrWidth))  reqFifo <- mkFIFO;
    // stage 2: read commands (maximum buffering to handle high latency read response times)
-   Vector#(numClients, FIFOF#(DRec#(numClients,addrWidth))) dreqFifos <- replicateM(mkSizedBRAMFIFOF(valueOf(TAG_DEPTH)));
+   Vector#(numClients, FIFOF#(DRec#(numClients,addrWidth))) dreqFifos <- replicateM(mkSizedFIFOF(valueOf(TAG_DEPTH)));
    // stage 3: read data (minimal buffering required) 
    Vector#(numClients, FIFO#(MemData#(dataWidth))) readDataPipelineFifo <- replicateM(mkFIFO);
    FIFO#(MemData#(dataWidth)) responseFifo <- mkFIFO;
@@ -226,7 +226,7 @@ module mkMemWriteInternal#(Integer iid,
    // stage 1: address validation (latency = 1)
    FIFO#(RRec#(numClients,addrWidth))  reqFifo <- mkFIFO;
    // stage 2: write commands (maximum buffering to handle high latency writes)
-   FIFO#(DRec#(numClients, addrWidth)) mwDreqFifo <- mkSizedBRAMFIFO(valueOf(TMul#(TAG_DEPTH,numClients)));
+   FIFO#(DRec#(numClients, addrWidth)) mwDreqFifo <- mkSizedFIFO(valueOf(TMul#(TAG_DEPTH,numClients)));
    // stage 3: write data (maximum buffering, though I have no idea if any hosts will begin the next data transfer before sending the write ack)
    Vector#(numClients, FIFO#(RResp#(numClients,addrWidth))) respFifos <- replicateM(mkSizedBRAMFIFO(valueOf(TAG_DEPTH)));
    // stage 4: write done (minimal buffering required)
@@ -286,12 +286,20 @@ module mkMemWriteInternal#(Integer iid,
       writeClients[client].writeDone.put(orig_tag);
    endrule
    
-   FIFOF#(MemData#(dataWidth)) memDataFifo <- mkFIFOF();
+   FIFO#(MemData#(dataWidth)) memDataFifo <- mkFIFO();
+   Vector#(numClients, FIFO#(ObjectData#(dataWidth))) clientWriteData <- replicateM(mkFIFO);
+   // Pipeline client data:
+   // The .get() operation seems to be long latency, so get it into a local FIFO
+   for (Integer client = 0; client < valueOf(numClients); client = client + 1)
+      rule clientdata;
+	 let d <- writeClients[client].writeData.get();
+	 clientWriteData[client].enq(d);
+      endrule
    rule memdata;
       let client = mwDreqFifo.first.client;
       let req = mwDreqFifo.first.req;
       let rename_tag = mwDreqFifo.first.rename_tag;
-      ObjectData#(dataWidth) tagdata <- writeClients[client].writeData.get();
+      ObjectData#(dataWidth) tagdata <- toGet(clientWriteData[client]).get();
       let burstLen = burstReg;
       let first    = firstReg;
       let last     = lastReg;
