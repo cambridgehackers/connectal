@@ -70,12 +70,12 @@ module mkSigmoidServer#(Integer id, SigmoidTable#(tsz) sigmoidTable)(Server#(Flo
 
    Bool verbose = False;
    FIFOF#(Float) angleFifo <- mkSizedFIFOF(4);
-   let multiplier <- mkFloatMultiplier(defaultValue);
-   let adder <- mkFloatAdder(defaultValue);
-   let mac <- mkFloatMac(defaultValue);
+   Vector#(2,FloatAlu) mul   <- replicateM(mkFloatMultiplier(defaultValue));
+   Vector#(2,FloatAlu) adder <- replicateM(mkFloatAdder(defaultValue));
+   let adder_fifo <- mkFIFO;
    
    rule lookupEntry;
-      let response <- multiplier.response.get();
+      let response <- mul[1].response.get();
       Float scaled_angle = tpl_1(response);
       Exception e = tpl_2(response);
       if (verbose && pack(e) != 0) $display("lookup.exception e=%h scaled_angle=%h", e, pack(scaled_angle));
@@ -95,20 +95,27 @@ module mkSigmoidServer#(Integer id, SigmoidTable#(tsz) sigmoidTable)(Server#(Flo
       let vs <- sigmoidTable.ports[0].response.get();
       let angle <- toGet(angleFifo).get;
       if (verbose) $display("computeDelta angle=%h vs[0]=%h", pack(angle), pack(vs[0]));
-      adder.request.put(tuple2(angle, vs[0]));
+      adder[1].request.put(tuple2(angle, vs[0]));
       vFifo.enq(vs);
    endrule
 
    rule interpolate;
       let vs <- toGet(vFifo).get;
-      let result <- adder.response.get();
+      let result <- adder[1].response.get();
       let delta = tpl_1(result);
       Exception e = tpl_2(result);
       if (verbose && pack(e) != 0) $display("interpolate.exception e=%h delta=%h", e, pack(delta));
       if (verbose) $display("sigmoid interpolate delta=%h vs[1]=%h vs[2]", pack(delta), pack(vs[1]), pack(vs[2]));
-      mac.request.put(tuple3(tagged Valid vs[1], vs[2], delta));
+      mul[0].request.put(tuple2(vs[2],delta));
+      adder_fifo.enq(vs[1]);
    endrule
-
+   
+   rule accumulate;
+      match {.p, .*} <- mul[0].response.get;
+      let v <- toGet(adder_fifo).get;
+      adder[0].request.put(tuple2(v,p));
+   endrule
+   
    interface Put request;
       method Action put(Float angle);
 	 let c = compareFP(angle, sigmoidTable.llimit);
@@ -118,16 +125,14 @@ module mkSigmoidServer#(Integer id, SigmoidTable#(tsz) sigmoidTable)(Server#(Flo
 	 if (d == GT)
 	    angle = sigmoidTable.ulimit;
 	 angleFifo.enq(angle);
-	 multiplier.request.put(tuple2(angle, sigmoidTable.rscale));
+	 mul[1].request.put(tuple2(angle, sigmoidTable.rscale));
 	 if (verbose) $display("sigmoid request.put");
       endmethod
    endinterface
    interface Get response;
       method ActionValue#(Float) get();
-	 let result <- mac.response.get();
-	 let v = tpl_1(result);
-	 Exception e = tpl_2(result);
-	 if (verbose && pack(e) != 0) $display("mac.exception e=%h v=%h", e, pack(v));
+	 match {.v,.e} <- adder[0].response.get();
+	 if (verbose && pack(e) != 0) $display("adder[0].exception e=%h v=%h", e, pack(v));
 	 if (verbose) $display("sigmoid response.get");
 	return v;
      endmethod

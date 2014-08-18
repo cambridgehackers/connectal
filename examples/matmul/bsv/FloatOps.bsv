@@ -109,13 +109,6 @@ module mkFloatMultiplier#(RoundMode rmode)(FloatAlu);
    endinterface
 endmodule
 
-
-(* synthesize *)
-module mkFloatMac#(RoundMode rmode) (Server#(Tuple3#(Maybe#(Float), Float, Float), Tuple2#(Float,Exception)));
-   let mac <- mkFpMac(rmode);
-   return mac;
-endmodule
-
 (* synthesize *)
 module mkRandomPipe(PipeOut#(Float));
    let randomizer <- mkConstrainedRandomizer(0, 1024);
