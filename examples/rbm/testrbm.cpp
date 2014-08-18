@@ -109,7 +109,7 @@ int main(int argc, const char **argv)
   }
 
   matAllocator = new PortalMatAllocator(dmap, dma);
-  configureSigmoidTable(rbmdevice, rbmDeviceIndication);
+  configureSigmoidTable();
   int rv = 0;
 
   if (0) {

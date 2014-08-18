@@ -104,7 +104,9 @@ module  mkStatesPipe#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
       if (verbose) $display("mkStatesPipe::start(%d %d %d %d %d %d)", readPointer, readOffset, readPointer2, readOffset2, writePointer, writeOffset, numElts);
    endmethod
    method ActionValue#(Bool) finish();
-      let b <- dmaStatesSink.finish();
+      let x0 <- statesources[0].finish;
+      let x1 <- statesources[1].finish;
+      let b <- dmaStatesSink.finish;
       return b;
    endmethod
 endmodule

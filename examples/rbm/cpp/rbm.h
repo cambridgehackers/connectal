@@ -7,10 +7,12 @@
 #include "SigmoidIndicationWrapper.h"
 
 class SigmoidIndication;
+class RbmIndication;
 
 extern RbmRequestProxy *rbmdevice;
 extern SigmoidRequestProxy *sigmoiddevice;
 extern SigmoidIndication *sigmoidindication;
+extern RbmIndication *rbmDeviceIndication;
 
 class RbmIndication : public RbmIndicationWrapper
 {
@@ -39,12 +41,14 @@ public:
     sem_post(&mul_sem);
   }
   virtual void sumOfErrorSquared(uint32_t x) {
-    //fprintf(stderr, "sumOfErrorSquared error=%f\n", *(float *)&x);
+    sum_of_errors_squared = *(float *)&x;
+    fprintf(stderr, "sumOfErrorSquared error=%f\n", sum_of_errors_squared);
     sem_post(&mul_sem);
   }
   virtual void dbg(uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
     fprintf(stderr, "rbm dbg a=%x b=%x c=%x d=%x\n", a, b, c, d);
   }
+  float sum_of_errors_squared;
 };
 
 class SigmoidIndication : public SigmoidIndicationWrapper
@@ -74,7 +78,7 @@ public:
 
 
 float sigmoid(float x);
-void configureSigmoidTable(RbmRequestProxy *device, RbmIndication *indication);
+void configureSigmoidTable();
 
 class RBM {
  public:

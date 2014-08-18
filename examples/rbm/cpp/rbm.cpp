@@ -34,7 +34,7 @@ float sigmoid(float x)
   return 1 / (1 + expf(-x));
 }
 
-void configureSigmoidTable(RbmRequestProxy *device, RbmIndication *indication)
+void configureSigmoidTable()
 {
   sigmoiddevice->tableSize();
   sem_wait(&mul_sem);
@@ -135,8 +135,13 @@ void RbmMat::sumOfErrorSquared(RbmMat &pred)
 
 void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
 {
-  int numEpochs = 1;
-  bool verbose = true;
+#ifdef BSIM
+  int numEpochs = 10;
+#else
+  int numEpochs = 100;
+#endif
+  int sum_of_errors_squareds[numEpochs];
+  bool verbose = false;
   bool verify = true;
   int numExamples = trainingData.rows;
 
@@ -174,6 +179,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
   RbmMat pm_neg_visible_probsT;
   RbmMat pm_neg_hidden_probsT;
   RbmMat pm_neg_associations;
+  RbmMat pm_pos_hidden_statesT;
 
   if (verbose) dumpMat<float>("data", "%5.6f", data);
   if (verbose) dumpMat<float>("weights", "%5.6f", weights);
@@ -206,7 +212,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
     }
     if (verbose) dumpMat<float>("pm_pos_hidden_probs", "%5.1f", pm_pos_hidden_probs);
     if (verbose) dumpMat<float>("   pos_hidden_probs", "%5.1f", pos_hidden_probs);
-    if (verify) assert(pm_pos_hidden_probs.compare(pos_hidden_probs, __FILE__, __LINE__, .001, &pos_hidden_activations));
+    if (verify) assert(pm_pos_hidden_probs.compare(pos_hidden_probs, __FILE__, __LINE__, .01, &pos_hidden_activations));
 
     // RbmMat pm_rand_mat;
     pm_rand_mat.create(pm_pos_hidden_probs.rows, pm_pos_hidden_probs.cols, CV_32F);
@@ -252,7 +258,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
     if (verify) assert(pm_pos_associations.compare(pos_associations, __FILE__, __LINE__));
 
     // RbmMat pm_neg_visible_activations;
-    RbmMat pm_pos_hidden_statesT(pm_pos_hidden_states.t());
+    pm_pos_hidden_statesT.transpose(pm_pos_hidden_states);
     pm_neg_visible_activations.multf(pm_pos_hidden_statesT, pmWeightsT);
     if (verbose) dumpMat<float>("neg_visible_activations", "%5.1f", pm_neg_visible_activations);
 
@@ -309,6 +315,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
     // error = np.sum((data - neg_visible_probs) ** 2)
     pmData.sumOfErrorSquared(pm_neg_visible_probs);
     fprintf(stderr, "completed epoch %d\n", epoch);
+    sum_of_errors_squareds[epoch] = rbmDeviceIndication->sum_of_errors_squared;
     timerdevice->stopTimer();
   }
   uint64_t total_cycles = portalTimerLap(0);
