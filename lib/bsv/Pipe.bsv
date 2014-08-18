@@ -734,12 +734,14 @@ endinstance
 instance ReducePipe#(n, a)
    provisos (Add#(TDiv#(n,2), a__, n),
 	     Bits#(Vector#(TDiv#(n,2), a), b__),
-	     ReducePipe#(TDiv#(n,2),a));
+	     ReducePipe#(TDiv#(n,2),a),
+	     ReducePipe#(TSub#(n, TDiv#(n, 2)), a)
+      );
    module  mkReducePipe (CombinePipe#(Tuple2#(a,a), a) combinepipe,
 			 PipeOut#(Vector#(n,a)) inpipe,
 			 PipeOut#(a) ifc);
       FIFOF#(Vector#(TDiv#(n,2),a)) infifo0 <- mkFIFOF;
-      FIFOF#(Vector#(TDiv#(n,2),a)) infifo1 <- mkFIFOF;
+      FIFOF#(Vector#(TSub#(n,TDiv#(n,2)),a)) infifo1 <- mkFIFOF;
       rule splitinput;
 	 let v = inpipe.first();
 	 inpipe.deq();
@@ -747,7 +749,7 @@ instance ReducePipe#(n, a)
 	 infifo1.enq(takeAt(valueOf(TDiv#(n,2)), v));
       endrule
       PipeOut#(Vector#(TDiv#(n,2),a)) inpipe0 = toPipeOut(infifo0);
-      PipeOut#(Vector#(TDiv#(n,2),a)) inpipe1 = toPipeOut(infifo1);
+      PipeOut#(Vector#(TSub#(n,TDiv#(n,2)),a)) inpipe1 = toPipeOut(infifo1);
    
       PipeOut#(a) p0 <- mkReducePipe(combinepipe, inpipe0);
       PipeOut#(a) p1 <- mkReducePipe(combinepipe, inpipe1);
@@ -763,7 +765,7 @@ instance ReducePipe#(n, a)
 			  Vector#(n, PipeOut#(a)) inpipes,
 			  PipeOut#(a) ifc);
       Vector#(TDiv#(n,2),PipeOut#(a)) pipes0 = takeAt(0, inpipes);
-      Vector#(TDiv#(n,2),PipeOut#(a)) pipes1 = takeAt(valueOf(TDiv#(n,2)), inpipes);
+      Vector#(TSub#(n,TDiv#(n,2)),PipeOut#(a)) pipes1 = takeAt(valueOf(TDiv#(n,2)), inpipes);
 
       PipeOut#(a) p0 <- mkReducePipes(combinepipe, pipes0);
       PipeOut#(a) p1 <- mkReducePipes(combinepipe, pipes1);
