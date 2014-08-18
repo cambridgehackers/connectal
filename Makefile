@@ -124,6 +124,7 @@ examples =  echo                 \
 	    ring                 \
 	    perf                 \
 	    nandsim              \
+	    strstr_nandsim       \
             flowcontrol          \
             bluescope            \
 	    splice               \
