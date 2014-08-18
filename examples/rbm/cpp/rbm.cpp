@@ -140,7 +140,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
 #else
   int numEpochs = 100;
 #endif
-  int sum_of_errors_squareds[numEpochs];
+  float sum_of_errors_squareds[numEpochs];
   bool verbose = false;
   bool verify = true;
   int numExamples = trainingData.rows;
@@ -212,7 +212,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
     }
     if (verbose) dumpMat<float>("pm_pos_hidden_probs", "%5.1f", pm_pos_hidden_probs);
     if (verbose) dumpMat<float>("   pos_hidden_probs", "%5.1f", pos_hidden_probs);
-    if (verify) assert(pm_pos_hidden_probs.compare(pos_hidden_probs, __FILE__, __LINE__, .01, &pos_hidden_activations));
+    if (verify) assert(pm_pos_hidden_probs.compare(pos_hidden_probs, __FILE__, __LINE__));
 
     // RbmMat pm_rand_mat;
     pm_rand_mat.create(pm_pos_hidden_probs.rows, pm_pos_hidden_probs.cols, CV_32F);
@@ -321,6 +321,8 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
   uint64_t total_cycles = portalTimerLap(0);
   uint64_t beats = dma->show_mem_stats(ChannelType_Read);
   fprintf(stderr, "total_cycles=%ld beats=%ld utilization=%f\n", (long)total_cycles, (long)beats, (float)beats / (float)total_cycles);
+  for(int i = 0; i < numEpochs; i++)
+    fprintf(stderr, "(%d) %f\n", i, sum_of_errors_squareds[i]);
 }
 
 void RBM::run()
