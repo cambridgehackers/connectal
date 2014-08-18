@@ -471,9 +471,9 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
     rule serdes_calc2;
         new_raw_empty_reg <= empty_wire;
     endrule
-    rule clear_align if (serdes_align_busy_reg.read() == 1);
-        serdes_align_start_reg <= 0;
-    endrule
+    //rule clear_align if (serdes_align_busy_reg.read() == 1);
+        //serdes_align_start_reg <= 0;
+    //endrule
 
     Reg#(Bool) runCapture <- mkSyncReg(False, axi_clock, axi_reset, defaultClock);
     interface ImageonSerdesRequest control;

@@ -373,7 +373,7 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
    while ( !(uStatus & 0x0200) && --timeout) {
        uStatus = read_iserdes_control();
        printf( "VITA ISERDES - Status = 0x%08X\n\r", uStatus);
-       usleep(1);
+       //usleep(1);
    }
    if ( !timeout) {
        printf( "\tTimed Out !!!\n\r");
@@ -475,6 +475,7 @@ int main(int argc, const char **argv)
     printf("[%s:%d] before setDeLine/Pixel\n", __FUNCTION__, __LINE__);
     for (int i = 0; i < 4; i++) {
       int pixclk = (long)edid.timing[i].pixclk * 10000;
+break;
       if ((pixclk > 0) && (pixclk < 148000000)) {
         nlines = edid.timing[i].nlines;    // number of visible lines
         npixels = edid.timing[i].npixels;
@@ -527,7 +528,7 @@ printf("[%s:%d] before i2c_hdmi\n", __FUNCTION__, __LINE__);
 printf("[%s:%d] after i2c_hdmi\n", __FUNCTION__, __LINE__);
     //init_vclk();
 //jca sleep(5);
-//sleep(10000);
+sleep(2);
     hdmidevice->setTestPattern(0);
 
     // Reset DCMs
@@ -555,9 +556,9 @@ printf("[%s:%d] after i2c_hdmi\n", __FUNCTION__, __LINE__);
         int i;
         for (i = 0; regids[i]; i++)
             printf("[%s:%d] spi %d. %x\n", __FUNCTION__, __LINE__, regids[i], vita_spi_read(regids[i]));
-        portalDCacheFlushInval(srcAlloc, DMA_BUFFER_SIZE, srcBuffer);
         printf("counter %d\n", counter);
         if (counter == 1 && argc > 1) {
+            portalDCacheFlushInval(srcAlloc, DMA_BUFFER_SIZE, srcBuffer);
             int fd = creat("tmp.outfile", 0666);
             int cnt = write(fd, srcBuffer, DMA_BUFFER_SIZE);
             printf("[%s:%d] length written %d.\n", __FUNCTION__, __LINE__, cnt);

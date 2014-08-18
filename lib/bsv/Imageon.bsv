@@ -91,7 +91,7 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
 
     rule calculate_framedata;
         Vector#(5, Bit#(10)) v = serdes.raw_data();
-        if (v[0] == imageData)
+        if (v[0] == imageData || v[0] == 'h15)
             begin
             Vector#(4, Bit#(10)) dor;
             for (Integer i = 0; i < 4; i = i + 1)
