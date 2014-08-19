@@ -82,6 +82,10 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler)
     if (pgfile == -1) {
         // 3.9 kernel uses amba.2
         pgfile = open("/sys/devices/amba.2/f8007000.devcfg/prog_done", O_RDONLY);
+        if (pgfile == -1) {
+            // miniitx100 uses different name!
+            pgfile = open("/sys/devices/amba.0/f8007000.ps7-dev-cfg/prog_done", O_RDONLY);
+        }
     }
     if (pgfile == -1) {
 	PORTAL_PRINTF("failed to open /sys/devices/amba.[02]/f8007000.devcfg/prog_done %d\n", errno);
