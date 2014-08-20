@@ -132,6 +132,15 @@ void RbmMat::sumOfErrorSquared(RbmMat &pred)
     sem_wait(&mul_sem);
 }
 
+void printDynamicRange(const char *label, cv::Mat m)
+{
+  int min_exp = 0;
+  int max_exp = 0;
+  float min_val = 0.0;
+  float max_val = 0.0;
+  dynamicRange(m, &min_exp, &max_exp, &min_val, &max_val);
+  printf("dynamic range: max_exp=%d min_exp=%d max_val=%f min_val=%f  %s\n", max_exp, min_exp, max_val, min_val, label);
+}
 
 void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
 {
@@ -143,17 +152,23 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
   float sum_of_errors_squareds[numEpochs];
   bool verbose = false;
   bool verify = true;
+  bool dynamicRange = false;
   int numExamples = trainingData.rows;
 
   if (verbose) dumpMat<float>("trainingData", "%5.6f", trainingData);
+  if (dynamicRange) printDynamicRange("trainingData", trainingData);
 
   cv::Mat weights;
   weights.create(numVisible+1, numHidden+1, CV_32F);
-  for (int i = 1; i < numVisible+1; i++) {
-    for (int j = 1; j < numHidden+1; j++) {
-      weights.at<float>(i,j) = 0.1 * drand48();
+  for (int i = 0; i < numVisible+1; i++) {
+    for (int j = 0; j < numHidden+1; j++) {
+      float w = 0.1 * drand48();
+      if (w < 0 || w > 1.0)
+	printf("w out of range %f\n", w);
+      weights.at<float>(i,j) = w;
     }
   }
+  if (dynamicRange) printDynamicRange("weights", weights);
 
   // insert bias units of 1 into first column of data
   cv::Mat data;
@@ -190,7 +205,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
 
     timerdevice->startTimer();
     cv::Mat pos_hidden_activations = data * pmWeights;
-
+    if (dynamicRange) printDynamicRange("pos_hidden_activations", pos_hidden_activations);
     // fixme transpose
     pmWeightsT.transpose(pmWeights);
     if (verbose) dumpMat<float>("pmWeightsT", "%5.1f", pmWeightsT);
@@ -203,6 +218,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
     if (verify) assert(pm_pos_hidden_activations.compare(pos_hidden_activations, __FILE__, __LINE__));
     // RbmMat pm_pos_hidden_probs;
     pm_pos_hidden_probs.sigmoid(pm_pos_hidden_activations);
+    if (dynamicRange) printDynamicRange("pm_pos_hidden_probs", pm_pos_hidden_probs);
 
     cv::Mat pos_hidden_probs(pm_pos_hidden_activations);
     for (int i = 0; i < pm_pos_hidden_activations.rows; i++) {
@@ -222,6 +238,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
       }
     }
     if (verbose) dumpMat<float>("pm_rand_mat", "%5.1f", pm_rand_mat);
+    if (dynamicRange) printDynamicRange("pm_rand_mat", pm_rand_mat);
     cv::Mat pos_hidden_states;
     pos_hidden_states.create(pm_pos_hidden_probs.rows, pm_pos_hidden_probs.cols, CV_32F);
     for (int i = 0; i < pm_pos_hidden_probs.rows; i++) {
@@ -232,6 +249,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
 	pos_hidden_states.at<float>(i,j) = val;
       }
     }
+    if (dynamicRange) printDynamicRange("pos_hidden_states", pos_hidden_states);
 
     // RbmMat pm_pos_hidden_states;
     pm_pos_hidden_states.hiddenStates(pm_pos_hidden_probs, pm_rand_mat);
@@ -253,6 +271,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
     //RbmMat pm_pos_associations;
     pm_pos_associations.multf(pmData, pm_pos_hidden_probs);
     if (verbose) dumpMat<float>("pos_associations", "%5.1f", pm_pos_associations);
+    if (dynamicRange) printDynamicRange("pm_pos_associations", pm_pos_associations);
 
     // check results
     if (verify) assert(pm_pos_associations.compare(pos_associations, __FILE__, __LINE__));
@@ -261,6 +280,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
     pm_pos_hidden_statesT.transpose(pm_pos_hidden_states);
     pm_neg_visible_activations.multf(pm_pos_hidden_statesT, pmWeightsT);
     if (verbose) dumpMat<float>("neg_visible_activations", "%5.1f", pm_neg_visible_activations);
+    if (dynamicRange) printDynamicRange("pm_neg_visible_activations", pm_neg_visible_activations);
 
     cv::Mat neg_visible_probs;
     neg_visible_probs.create(pm_neg_visible_activations.rows, pm_neg_visible_activations.cols, CV_32F);
@@ -280,11 +300,13 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
       pm_neg_visible_probs.at<float>(i,0) = 1.0;
       neg_visible_probs.at<float>(i,0) = 1.0;
     }
+    if (dynamicRange) printDynamicRange("pm_neg_visible_probs", pm_neg_visible_probs);
     if (verify) pm_neg_visible_probs.compare(neg_visible_probs, __FILE__, __LINE__, .001, &pm_neg_visible_activations);
 
     // RbmMat pm_neg_hidden_activations;
     pm_neg_hidden_activations.multf(pm_neg_visible_probsT, pmWeights);
     if (verbose) dumpMat<float>("pm_neg_hidden_activations", "%5.1f", pm_neg_hidden_activations);
+    if (dynamicRange) printDynamicRange("pm_neg_hidden_activations", pm_neg_hidden_activations);
 
     cv::Mat neg_hidden_activations = pm_neg_visible_probs * pmWeights;
     if (verbose) dumpMat<float>("   neg_hidden_activations", "%5.1f", neg_hidden_activations);
@@ -293,9 +315,11 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
     // RbmMat pm_neg_hidden_probs;
     pm_neg_hidden_probs.sigmoid(pm_neg_hidden_activations);
     if (verbose) dumpMat<float>("pm_neg_hidden_probs", "%5.1f", pm_neg_hidden_probs);
+    if (dynamicRange) printDynamicRange("pm_neg_hidden_probs", pm_neg_hidden_probs);
 
     pm_neg_visible_probsT.transpose(pm_neg_visible_probs);
     if (verbose) dumpMat<float>("pm_neg_visible_probsT", "%5.1f", pm_neg_visible_probsT);
+    if (dynamicRange) printDynamicRange("pm_neg_visible_probs", pm_neg_visible_probs);
 
     pm_neg_hidden_probsT.transpose(pm_neg_hidden_probs);
     //RbmMat pm_neg_associations;
@@ -303,7 +327,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
     if (verbose) dumpMat<float>("pm_neg_associations", "%5.1f", pm_neg_associations);
     cv::Mat neg_associations = pm_neg_visible_probsT * pm_neg_hidden_probs;
     if (verbose) dumpMat<float>("   neg_associations", "%5.1f", neg_associations);
-
+    if (dynamicRange) printDynamicRange("pm_neg_associations", pm_neg_associations);
 
     if (verbose) dumpMat<float>("pmWeights.before", "%5.1f", pmWeights);
     // weights += learningRate * (pos_associations - neg_associations) / num_examples;
@@ -311,6 +335,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
     float num_examples = data.rows;
     pmWeights.updateWeights(pm_pos_associations, pm_neg_associations, learningRate / num_examples);
     if (verbose) dumpMat<float>("pmWeights.after ", "%5.1f", pmWeights);
+    if (dynamicRange) printDynamicRange("weights", weights);
 
     // error = np.sum((data - neg_visible_probs) ** 2)
     pmData.sumOfErrorSquared(pm_neg_visible_probs);
