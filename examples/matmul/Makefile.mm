@@ -10,7 +10,7 @@ XBSVFLAGS  +=  --bscflags="+RTS -K26777216 -RTS -p +:../../$(MMDIR)/bsv"
 Dma = Dma
 PINS = Std
 
-FAMILY=$(shell echo $(BOARD) | sed 's/z.*/zynq/' | sed 's/k.*/kintex/' | sed 's/v.*/virtex/' | sed 's/minitx.*/zynq/')
+FAMILY=$(shell echo $(BOARD) | sed 's/z.*/zynq/' | sed 's/k.*/kintex/' | sed 's/v.*/virtex/' | sed 's/miniitx.*/zynq/')
 
 ##
 ## To build testmm for Android on Zynq
