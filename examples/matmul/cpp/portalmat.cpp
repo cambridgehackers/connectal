@@ -79,6 +79,15 @@ int PortalMatAllocator::reference(int* refcount, uchar* datastart, uchar* data)
   return ref;
 }
 
+void PortalMatAllocator::cacheFlushInvalidate(int* refcount, uchar* datastart, uchar* data)
+{
+  int *parraynum = refcount+1;
+  int *psize     = refcount+3;
+  int arraynum   = *parraynum;
+  int size       = *psize;
+  portalDCacheFlushInval(arrayFds[arraynum], size, datastart);
+}
+
 PortalMat::PortalMat()
     : cv::Mat() 
 {
@@ -149,6 +158,11 @@ int PortalMat::reference()
     fprintf(stderr, "PortalMat::reference this=%p datastart=%p\n", this, datastart);
     ref = matAllocator->reference(refcount, datastart, data);
     return ref;
+}
+
+void PortalMat::cacheFlushInvalidate()
+{
+    matAllocator->cacheFlushInvalidate(refcount, datastart, data);
 }
 
 bool PortalMat::copy(cv::Mat &other)
@@ -270,6 +284,7 @@ void PortalMat::naive_mul(cv::Mat &a, cv::Mat &b, FILE *f)
 void PortalMat::multf(PortalMat &a, PortalMat &b_transpose,  MmIndication *mmind)
 {
     create(a.rows, b_transpose.rows, CV_32F);
+    cacheFlushInvalidate();
     if (a.cols != b_transpose.cols) {
 	fprintf(stderr, "Mismatched matrices: a.rows=%d a.cols=%d b.rows=%d b.cols=%d\n", a.rows, a.cols, b_transpose.rows, b_transpose.cols);
 	return;
@@ -303,6 +318,8 @@ void PortalMat::multf(PortalMat &a, PortalMat &b_transpose,  MmIndication *mmind
 void PortalMat::multf(PortalMat &a_transpose, PortalMat &b,  MmIndication *mmind)
 {
     create(a_transpose.cols, b.cols, CV_32F);
+    cacheFlushInvalidate();
+
     if (a_transpose.rows != b.rows) {
 	fprintf(stderr, "Mismatched matrices: a.rows=%d a.cols=%d b.rows=%d b.cols=%d\n", a_transpose.rows, a_transpose.cols, b.rows, b.cols);
 	return;

@@ -57,6 +57,7 @@ public:
 			uchar*& datastart, uchar*& data, size_t* step);
   virtual void deallocate(int* refcount, uchar* datastart, uchar* data);
   int reference(int* refcount, uchar* datastart, uchar* data);
+  void cacheFlushInvalidate(int* refcount, uchar* datastart, uchar* data);
 private:
   int arrayFds[128];
   int numarrays;
@@ -78,6 +79,7 @@ public:
   PortalMat& operator = (const cv::MatExpr& expr);
   PortalMat& operator = (const cv::Mat& o);
   int reference();
+  void cacheFlushInvalidate();
   bool copy(cv::Mat &other);
   bool copy(cv::MatExpr other);
   bool transpose(cv::Mat &other);
