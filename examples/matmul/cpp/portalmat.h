@@ -136,5 +136,7 @@ template<typename T>
 template<typename T>
   void dumpMatOctave(const char *name, const char *fmt, const cv::Mat &mat, FILE *ofile);
 
+void dynamicRange(cv::Mat mat, int *pmin_exp, int *pmax_exp, float *pmin_val=0, float *pmax_val=0);
+
 #endif // _PORTALMAT_H_
 

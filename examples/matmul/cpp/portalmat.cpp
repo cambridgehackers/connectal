@@ -390,3 +390,31 @@ void dumpMat(const char *prefix, const char *fmt, const cv::Mat &mat)
 template void dumpMat<float>(const char *prefix, const char *fmt, const cv::Mat &mat);
 template void dumpMat<int>(const char *prefix, const char *fmt, const cv::Mat &mat);
 template void dumpMat<unsigned char>(const char *prefix, const char *fmt, const cv::Mat &mat);
+
+void dynamicRange(cv::Mat mat, int *pmin_exp, int *pmax_exp, float *pmin_val, float *pmax_val)
+{
+  int min_exp = 0;
+  int max_exp = 0;
+  float min_val = 0.0;
+  float max_val = 0.0;
+  
+  for (int i = 0; i < mat.rows; i++) {
+    for (int j = 0; j < mat.cols; j++) {
+      float f = mat.at<float>(i,j);
+      int exp = 0;
+      float mantissa = frexpf(f, &exp);
+      min_val = std::min<float>(min_val, f);
+      max_val = std::max<float>(max_val, f);
+      min_exp = std::min<int>(min_exp, exp);
+      max_exp = std::max<int>(max_exp, exp);
+    }
+  }
+  if (pmin_exp)
+    *pmin_exp = min_exp;
+  if (pmax_exp)
+    *pmax_exp = max_exp;
+  if (pmin_val)
+    *pmin_val = min_val;
+  if (pmax_val)
+    *pmax_val = max_val;
+}
