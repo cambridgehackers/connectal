@@ -281,12 +281,12 @@ printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start
 int portalAlloc(size_t size)
 {
 #ifdef __KERNEL__
-  int rc = portalmem_dmabuffer_create(size);
+  int fd = portalmem_dmabuffer_create(size);
 #else
-  int rc = ioctl(global_pa_fd, PA_MALLOC, size);
+  int fd = ioctl(global_pa_fd, PA_MALLOC, size);
 #endif
-  PORTAL_PRINTF("alloc size=%ldMB fd=%d\n", size/(1L<<20), rc);
-  return rc;
+  PORTAL_PRINTF("alloc size=%ldMB fd=%d\n", size/(1L<<20), fd);
+  return fd;
 }
 
 void *portalMmap(int fd, size_t size)
