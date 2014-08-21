@@ -318,7 +318,7 @@ module  mkRbm#(HostType host, RbmIndication rbmInd, SigmoidIndication sigmoidInd
    rule sumOfErrorSquaredDebugRule;
       let unused <- toGet(sumOfErrorSquaredDebugFifo).get();
       let macCount <- toGet(sumOfErrorSquared.debug.macCount).get();
-      rbmInd.sumOfErrorSquared(macCount);
+      rbmInd.sumOfErrorSquaredDebug(macCount);
    endrule
 
    ///////////////////////////////////////////////
