@@ -47,4 +47,5 @@ int main(int argc, char *argv[])
       printf("%1lx", (s_frac >> j) & 0x1);
     printf("\n");
   }
+  return(0);
 }
