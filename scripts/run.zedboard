@@ -27,6 +27,9 @@ adb -s $ANDROID_SERIAL shell mkdir -p /mnt/sdcard/tmp
 adb -s $ANDROID_SERIAL shell mount -t tmpfs tmpfs /mnt/sdcard/tmp
 adb -s $ANDROID_SERIAL push $1 /mnt/sdcard/tmp || exit -1
 adb -s $ANDROID_SERIAL push $2 /mnt/sdcard/tmp
+for f in $RUNFILES; do
+    adb -s $ANDROID_SERIAL push $f /mnt/sdcard/tmp
+done
 adb -s $ANDROID_SERIAL shell rmmod portalmem
 adb -s $ANDROID_SERIAL shell rmmod zynqportal
 adb -s $ANDROID_SERIAL shell insmod /mnt/sdcard/portalmem.ko
