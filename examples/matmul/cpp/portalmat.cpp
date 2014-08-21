@@ -32,48 +32,41 @@ void PortalMatAllocator::allocate(int dims, const int* sizes, int type, int*& re
 				  uchar*& datastart, uchar*& data, size_t* step)
 {
   size_t arraysize = step[0]*sizes[0];
-  size_t totalsize = cv::alignSize(arraysize+4*sizeof(int), 4096);
+  size_t totalsize = cv::alignSize(arraysize+1*sizeof(int), 4096);
   int arraynum = numarrays++;
-  arrayFds[arraynum] = portalAlloc(totalsize);
+  int fd = portalAlloc(totalsize);
+  struct arrayInfo *info = &arrayInfo[arraynum];
+  info->fd = fd;
+  info->refcount = 1;
+  info->totalsize = totalsize;
+  info->data = (uchar*)portalMmap(fd, totalsize);
+  info->ref = 0;
 
-  data = datastart = (uchar*)(unsigned int *)portalMmap(arrayFds[arraynum], totalsize);
-  refcount = (int*)(data + arraysize);
-  int *parraynum = refcount+1;
-  *parraynum = arraynum;
-  int *pref = refcount+2;
-  *pref = 0;
-  int *psize = refcount+3;
-  *psize = totalsize;
-  *refcount = 1;
-  fprintf(stderr, "PortalMatAllocator::allocate   datastart=%p arraynum=%d size=%ld\n",
-	  datastart, arraynum, (long)totalsize);
+  data = datastart = (uchar*)info->data;
+  refcount = (int*)info;
+  fprintf(stderr, "PortalMatAllocator::allocate   arraynum=%d arraysize=%d totalsize=%ld datastart=%p refcount=%p end of data=%p\n",
+	  arraynum, arraysize, (long)totalsize, datastart, refcount, datastart+totalsize);
 }
 
 void PortalMatAllocator::deallocate(int* refcount, uchar* datastart, uchar* data)
 {
-  int *parraynum = refcount+1;
-  int *pref = refcount+2;
-  int *psize = refcount+3;
-  int arraynum = *parraynum;
-  int ref = *pref;
-  size_t totalsize = *psize;
-  fprintf(stderr, "PortalMatAllocator::deallocate datastart=%p arraynum=%d size=%ld\n",
-	  datastart, arraynum, (long)totalsize);
+  struct arrayInfo *info = (struct arrayInfo *)refcount;
+  int ref = info->ref;
+  size_t totalsize = info->totalsize;
+  fprintf(stderr, "PortalMatAllocator::deallocate datastart=%p size=%ld\n",
+	  datastart, (long)totalsize);
   munmap(datastart, totalsize);
-  close(arrayFds[arraynum]);
+  close(info->fd);
+  memset(info, 0, sizeof(struct arrayInfo));
 }
 
 int PortalMatAllocator::reference(int* refcount, uchar* datastart, uchar* data)
 {
-  int *parraynum = refcount+1;
-  int *pref = refcount+2;
-  int arraynum = *parraynum;
-  int ref = *pref;
-  //fprintf(stderr, "PortalMatAllocator::reference datastart=%p arraynum=%d ref=%d\n", datastart, arraynum, ref);
+  struct arrayInfo *info = (struct arrayInfo *)refcount;
+  int ref = info->ref;
   if (!ref) {
-    //fprintf(stderr, "Calling dma->reference arraynum=%d\n", arraynum);
-    ref = dma->reference(arrayFds[arraynum]);
-    *pref = ref;
+    ref = dma->reference(info->fd);
+    info->ref = ref;
   }
   fprintf(stderr, "PortalMatAllocator::reference returning %d\n", ref);
   return ref;
@@ -81,11 +74,8 @@ int PortalMatAllocator::reference(int* refcount, uchar* datastart, uchar* data)
 
 void PortalMatAllocator::cacheFlushInvalidate(int* refcount, uchar* datastart, uchar* data)
 {
-  int *parraynum = refcount+1;
-  int *psize     = refcount+3;
-  int arraynum   = *parraynum;
-  int size       = *psize;
-  portalDCacheFlushInval(arrayFds[arraynum], size, datastart);
+  struct arrayInfo *info = (struct arrayInfo *)refcount;
+  portalDCacheFlushInval(info->fd, info->totalsize, datastart);
 }
 
 PortalMat::PortalMat()

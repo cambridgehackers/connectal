@@ -59,7 +59,14 @@ public:
   int reference(int* refcount, uchar* datastart, uchar* data);
   void cacheFlushInvalidate(int* refcount, uchar* datastart, uchar* data);
 private:
-  int arrayFds[128];
+  struct arrayInfo {
+    // refcount goes first
+    int refcount;
+    int fd;
+    uchar *data;
+    size_t totalsize;
+    int ref;
+  } arrayInfo[128];
   int numarrays;
   DmaConfigProxy *dmap;
   DmaManager *dma;
