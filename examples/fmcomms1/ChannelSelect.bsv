@@ -36,8 +36,8 @@ import DDS::*;
  */
 (* always_enabled *)
 interface ChannelSelect;
-   interface PipeIn#(Vector#(2, Signal)) rf;
-   interface PipeOut#(Signal) if;
+   interface PipeIn#(Vector#(2, Signal)) rfreq;
+   interface PipeOut#(Signal) ifreq;
    method Action setCoeff(Bit#(10) addr, Bit#(32) value);
 endinterface
 
@@ -59,14 +59,14 @@ module mkChannelSelect#(UInt#(10) decimation)(ChannelSelect);
    FPCMult lo <- mkFPCMult();
 
 
-   mkConnection(rf, mul.x);
+   mkConnection(rfreq, mul.x);
 
    /* could do this with mkForkVector() but we don't need the extra FIFOs
       since everything is ready every cycle
     */
    rule duplicateSignal;
-      let v = rf.first;
-      rf.deq();
+      let v = rfreq.first;
+      rfreq.deq();
       mul[0].x.enq(v);
       mul[1].x.enq(v);
    endrule
@@ -130,8 +130,8 @@ module mkChannelSelect#(UInt#(10) decimation)(ChannelSelect);
    rule combineoutloin;
       let yin <- ycombined.get();
       let loin <- dds.osc.get();
-      if.x.enq(yin):
-      if.coeffData.enq(loin);
+      ifreq.x.enq(yin):
+      ifreq.coeffData.enq(loin);
    endrule;
    
    
@@ -141,6 +141,6 @@ module mkChannelSelect#(UInt#(10) decimation)(ChannelSelect);
       coeffRam[idx].portA.request.put(BRamRequest{write: True, responseOnWrite: False, address: addr[8:1], datain: unpack(pack(value))});
    endmethod
       
-   interface PipeOut if = toPipeOut(output);
+   interface PipeOut ifreq = toPipeOut(output);
    
 endmodule
