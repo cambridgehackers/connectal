@@ -8,6 +8,11 @@ if [ "$RUNPARAM" != "" ]; then
 else
     ZEDBOARD_IPADDR=`checkip`
 fi
+if [ "$RUNTIMELIMIT" != "" ]; then
+    TIMELIMIT=$RUNTIMELIMIT
+else
+    TIMELIMIT=180
+fi
 ANDROID_SERIAL=$ZEDBOARD_IPADDR:5555
 exename=`basename $2`
 adb -s $ANDROID_SERIAL disconnect $ZEDBOARD_IPADDR
@@ -39,7 +44,7 @@ echo set solib-search-path $TEMPDIR >$TEMPSCRIPT
 echo target remote :5039 >>$TEMPSCRIPT
 `ndk-which gdb` --command=$TEMPSCRIPT $TEMPDIR/android_exe
 else
-adb -s $ANDROID_SERIAL shell "cd /mnt/sdcard/tmp/; rm -f /mnt/sdcard/tmp/exit.status; /mnt/sdcard/timelimit -t 180 ./$exename $3; echo \$? > /mnt/sdcard/tmp/exit.status"
+adb -s $ANDROID_SERIAL shell "cd /mnt/sdcard/tmp/; rm -f /mnt/sdcard/tmp/exit.status; /mnt/sdcard/timelimit -t $TIMELIMIT ./$exename $3; echo \$? > /mnt/sdcard/tmp/exit.status"
 adb -s $ANDROID_SERIAL pull /mnt/sdcard/tmp/exit.status ./
 adb -s $ANDROID_SERIAL pull /mnt/sdcard/tmp/perf.monkit `dirname $1`
 fi
