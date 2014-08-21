@@ -178,6 +178,14 @@ kc705run| compile and run on attached board
 vc707| compile for vc707 board
 vc707run| compile and run on attached board
 
+To turn on more verbosity for debugging when running make,
+add V=1 to the end of the command, as
+
+    make examples/examplename.<something> V=1
+
+If you undertand why adding V=1 at the beginning of the line
+doesn't work, let us know.
+
 Echo Example
 ~~~~~~~~~~~~~
 
