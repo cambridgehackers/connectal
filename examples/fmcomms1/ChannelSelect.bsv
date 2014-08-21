@@ -36,9 +36,9 @@ import DDS::*;
  */
 (* always_enabled *)
 interface ChannelSelect;
-   interface PipeIn#(Vector#(2, Signal)) rfreq;
-   interface PipeOut#(Signal) ifreq;
-   method Action setCoeff(Bit#(10) addr, Bit#(32) value);
+   interface PipeIn#(Vector#(2, Complex#(Signal))) rfreq;
+   interface PipeOut#(Complex#(Signal)) ifreq;
+   method Action setCoeff(Bit#(10) addr, Complex#(FixedPoint#(2, 23)) value);
 endinterface
 
 
@@ -51,7 +51,7 @@ module mkChannelSelect#(UInt#(10) decimation)(ChannelSelect);
    FIFO#(Bits#(1)) delayFilterPhase <- mkSizedFIFO(3);  // length > bram read latency
 
 
-   Reg#(Signal) output <- mkReg(?);
+   Reg#(Vector#(2, Signal)) output <- mkReg(?);
    Vector#(2, FPCMult) mul <- replicate(mkFPCMult());
 
    Vector#(2, FIFO#(Complex#(Product))) accum <- replicate(mkFIFO());
