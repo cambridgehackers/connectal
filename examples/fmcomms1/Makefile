@@ -16,11 +16,6 @@ ifeq ($(BOARD),zc702)
 HAS_PS7=true
 endif
 
-# fill in someday
-ifneq ($(HAS_PS7),true)
-TOP=ImageonPcieTop.bsv
-MKTOP=mkImageonPcieTop
-endif
 
 gentarget:: fmcomms1-$(BOARD).xdc sine.bin
 
