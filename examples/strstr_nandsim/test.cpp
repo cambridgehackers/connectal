@@ -44,7 +44,7 @@ extern "C" {
 #include "portalmem.h"
 #include "sock_utils.h"
 #include "dmaManager.h"
-#include "dmaSendFd.h"
+#include "userReference.h"
 }
 
 size_t numBytes = 1 << 12;
@@ -148,7 +148,9 @@ int main(int argc, const char **argv)
   int haystackAlloc = portalAlloc(numBytes);
   int needleAlloc = portalAlloc(numBytes);
   int mpNextAlloc = portalAlloc(numBytes);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   int ref_haystackAlloc = dma->reference(haystackAlloc);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   int ref_needleAlloc = dma->reference(needleAlloc);
   int ref_mpNextAlloc = dma->reference(mpNextAlloc);
   char *needle = (char *)portalMmap(needleAlloc, numBytes);
@@ -184,7 +186,9 @@ int main(int argc, const char **argv)
   // for this to work, NANDSIMHACK must be defined.  What this does is send an SGList of the size 
   // haystackAlloc to strstrDMA starting at offset 0 in the nandsim backing store.
   int id = nandsimDma->priv.handle++;
-  int ref_haystackInNandMemory = send_fd_to_portal(nandsimDma->priv.device, haystackAlloc, id, global_pa_fd);
+  RegionRef region[] = {{0, 0x100000}, {0x100000, 0x100000}};
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+  int ref_haystackInNandMemory = send_reference_to_portal(nandsimDma->priv.device, sizeof(region)/sizeof(region[0]), region, id);
   sem_wait(&(nandsimDma->priv.confSem));
 
   fprintf(stderr, "about to setup device %d %d\n", ref_needleAlloc, ref_mpNextAlloc);
