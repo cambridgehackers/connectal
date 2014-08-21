@@ -47,7 +47,9 @@ The basic idea of Smith Waterman is dynamic programming. Suppose that
     m = len(A) 
     n = len(B)
 
-Let's define C[i][j] as the minimum cost of a conversion from A_i to B_j.  D[i][j] as the minimum cost of a conversion from A_i to B_j such that A_i is deleted (a suffix gap in A), and that I[i][j] is the minimum cost of conversion from A_i to B_j such that b_j is inserted (into A).
+Define A_i to be the subsequence A[0]..A[i].
+
+Let's define C[i][j] as the minimum cost of a conversion from A_i to B_j.  D[i][j] as the minimum cost of a conversion from A_i to B_j such that A[i] is deleted (a suffix gap in A), and that I[i][j] is the minimum cost of conversion from A_i to B_j such that b[j] is inserted (into A).
 
 D and I are only necessary to handle the gap cost model - you have to know whether the best answer up to a point has a gap at the end or not, so you can apply the gap cost model to either extend a gap or open a new one.
 
