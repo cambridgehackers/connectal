@@ -143,6 +143,13 @@ void printDynamicRange(const char *label, cv::Mat m)
   printf("dynamic range: max_exp=%d min_exp=%d max_val=%f min_val=%f  %s\n", max_exp, min_exp, max_val, min_val, label);
 }
 
+float sumOfErrorSquared(cv::Mat &a, cv::Mat &b)
+{
+  cv::Mat diff = a - b;
+  float error = diff.dot(diff);
+  return error;
+}
+
 void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
 {
 #ifdef BSIM
@@ -341,8 +348,9 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
 fprintf(stderr, "========== %s:%d\n", __FILE__, __LINE__);
     // error = np.sum((data - neg_visible_probs) ** 2)
     pmData.sumOfErrorSquared(pm_neg_visible_probs);
+    float error = sumOfErrorSquared(data, pm_neg_visible_probs);
 fprintf(stderr, "========== %s:%d\n", __FILE__, __LINE__);
-    fprintf(stderr, "completed epoch %d\n", epoch);
+    fprintf(stderr, "completed epoch %d sumOfErrorSquared=%f\n", epoch, error);
     sum_of_errors_squareds[epoch] = rbmDeviceIndication->sum_of_errors_squared;
     timerdevice->stopTimer();
   }
