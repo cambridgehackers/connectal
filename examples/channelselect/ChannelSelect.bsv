@@ -33,22 +33,18 @@ import Pipe::*;
 import Connectable::*;
 
 interface ChannelSelectRequest;
-   
-   
-   
    method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) run);
    method Action startWrite(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) run);
    method Action getReadStatus();
    method Action getWriteStatus();
 endinterface
 
-
-interface ChannelRequestIndication;
+interface ChannelSelectIndication;
    method Action readStatus(Bit#(32) numIter, Bit#(32) running);
    method Action writeStatus(Bit#(32) numIter, Bit#(32) running);
 endinterface
 
-module mkChannelSelectRequest#(ChannelRequestIndication indication) (ChannelSelectRequest);
+module mkChannelSelectRequest#(ChannelSelectIndication indication) (ChannelSelectRequest);
 
    
    rule writeFinish;
@@ -57,7 +53,7 @@ module mkChannelSelectRequest#(ChannelRequestIndication indication) (ChannelSele
 	 indication.writeStatus(writeIterCount, zeroExtend(writeRun));
    endrule
    
-   interface ChannelRequestRequest request;
+   interface ChannelSelectRequest request;
       method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) run);
 	 $display("startRead rdPointer=%d numWords=%h burstLen=%d run=%d",
 	    pointer, numWords, burstLen, run);
