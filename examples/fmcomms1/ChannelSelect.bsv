@@ -96,8 +96,8 @@ module mkChannelSelect#(UInt#(10) decimation)(ChannelSelect);
    endrule
    
    rule muloutaccumin0;
-      let m <= mul0.y.get();
-      if m.filterPhase 
+      let m <- mul0.y.get();
+      if (m.filterPhase)
 	 begin
 	    accum[0] <= m.y;
 	    accumout[0].enq(accum[0]);
@@ -109,8 +109,8 @@ module mkChannelSelect#(UInt#(10) decimation)(ChannelSelect);
    endrule
 
    rule muloutaccumin1;
-      let m <= mul1.y.get();
-      if m.filterPhase 
+      let m <- mul1.y.get();
+      if (m.filterPhase)
 	 begin
 	    accum[1] <= m.y;
 	    accumout[1].enq(accum[1]);
@@ -125,14 +125,14 @@ module mkChannelSelect#(UInt#(10) decimation)(ChannelSelect);
       let a0 <- accumout[0].get();
       let a1 <- accumout[1].get();
       ycombined.enq(a0 + a1);
-   endrule;
+   endrule
    
    rule combineoutloin;
       let yin <- ycombined.get();
       let loin <- dds.osc.get();
-      ifreq.x.enq(yin):
+      ifreq.x.enq(yin);
       ifreq.coeffData.enq(loin);
-   endrule;
+   endrule
    
    
    
