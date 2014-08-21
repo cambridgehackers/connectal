@@ -113,6 +113,7 @@ interface RbmIndication;
    method Action statesDone();
    method Action updateWeightsDone();
    method Action sumOfErrorSquared(Bit#(32) error);
+   method Action sumOfErrorSquaredDebug(Bit#(32) macCount);
    method Action dbg(Bit#(32) a, Bit#(32) b, Bit#(32) c, Bit#(32) d);
 endinterface
 
@@ -125,6 +126,7 @@ interface RbmRequest;
    method Action updateWeights(Bit#(32) posAssociationsPointer, Bit#(32) negAssociationsPointer, 
 			       Bit#(32) weightsPointer, Bit#(32) numElts, Bit#(32) learningRateOverNumExamples);
    method Action sumOfErrorSquared(Bit#(32) dataPointer, Bit#(32) predPointer, Bit#(32) numElts);
+   method Action sumOfErrorSquaredDebug();
    method Action finish(); // for bsim only
 endinterface
 

@@ -45,6 +45,9 @@ public:
     fprintf(stderr, "sumOfErrorSquared error=%f\n", sum_of_errors_squared);
     sem_post(&mul_sem);
   }
+  virtual void sumOfErrorSquaredDebug(uint32_t macCount) {
+    fprintf(stderr, "sumOfErrorSquared debug macCount=%d\n", macCount);
+  }
   virtual void dbg(uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
     fprintf(stderr, "rbm dbg a=%x b=%x c=%x d=%x\n", a, b, c, d);
   }
@@ -58,7 +61,7 @@ public:
   }
   virtual ~SigmoidIndication() {}
   virtual void sigmoidDone() {
-    fprintf(stderr, "sigmoidDone\n");
+    //fprintf(stderr, "sigmoidDone\n");
     sem_post(&mul_sem);
   }
   virtual void tableUpdated(uint32_t addr) {

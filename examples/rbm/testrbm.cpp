@@ -70,6 +70,7 @@ void *dbgThread(void *)
   while (1) {
     sleep(1);
     mmdevice->debug();
+    //rbmdevice->sumOfErrorSquaredDebug();
     if (dma) dmap->getStateDbg(ChannelType_Read);
     sleep(5);
   }

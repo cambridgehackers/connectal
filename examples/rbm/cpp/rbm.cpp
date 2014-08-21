@@ -96,8 +96,8 @@ void RbmMat::sigmoid(RbmMat &a)
     create(a.rows, a.cols, CV_32F);
     fprintf(stderr, "RbmMat::sigmoid() %d %d\n", a.rows, a.cols);
     reference();
-    fprintf(stderr, "sigmoid: a.ref=%d a.rows=%d a.cols=%d\n", a.reference(), a.rows, a.cols);
-    fprintf(stderr, "sigmoiddevice->sigmoid\n");
+    //fprintf(stderr, "sigmoid: a.ref=%d a.rows=%d a.cols=%d\n", a.reference(), a.rows, a.cols);
+    //fprintf(stderr, "sigmoiddevice->sigmoid\n");
     sigmoiddevice->sigmoid(a.reference(), 0, reference(), 0, a.rows*a.cols);
     sem_wait(&mul_sem);
 }
@@ -128,6 +128,7 @@ void RbmMat::sumOfErrorSquared(RbmMat &pred)
 		rows, cols, pred.rows, pred.cols);
 	exit(-1);
     }
+    fprintf(stderr, "sumOfErrorSquared called numElts=%d\n", rows*cols);
     rbmdevice->sumOfErrorSquared(reference(), pred.reference(), rows*cols);
     sem_wait(&mul_sem);
 }
@@ -337,8 +338,10 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
     if (verbose) dumpMat<float>("pmWeights.after ", "%5.1f", pmWeights);
     if (dynamicRange) printDynamicRange("weights", weights);
 
+fprintf(stderr, "========== %s:%d\n", __FILE__, __LINE__);
     // error = np.sum((data - neg_visible_probs) ** 2)
     pmData.sumOfErrorSquared(pm_neg_visible_probs);
+fprintf(stderr, "========== %s:%d\n", __FILE__, __LINE__);
     fprintf(stderr, "completed epoch %d\n", epoch);
     sum_of_errors_squareds[epoch] = rbmDeviceIndication->sum_of_errors_squared;
     timerdevice->stopTimer();
@@ -364,15 +367,19 @@ void RBM::run()
 
   if (1) {
     char name_buff[256];
-    snprintf(name_buff, 256, "../%s/datasets/train-images-idx3-ubyte", RBMDIR);
+    snprintf(name_buff, 256, "../train-images-idx3-ubyte");
+    fprintf(stderr, "reading image data from %s\n", name_buff);
     MnistImageFile imagefile(name_buff);
     imagefile.open();
     int numImages = imagefile.numEntries();
 
     numImages = 100;
     int numPixels = imagefile.rows()*imagefile.cols();
-    int cols = 19;
-    if (numPixels < cols)
+    int cols = 0;
+#ifdef BSIM
+    cols = 19;
+#endif
+    if (!cols || numPixels < cols)
       cols = numPixels;
 
     //numVisible = imagefile.rows()*imagefile.cols();

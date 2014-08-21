@@ -187,9 +187,14 @@ module  mkUpdateWeights#(Vector#(3,Server#(MemengineCmd,Bool)) readServers,
    endmethod
 endmodule
    
+interface SumOfErrorSquaredDebug;
+   interface PipeOut#(Bit#(32)) macCount;
+endinterface
+
 interface SumOfErrorSquared#(numeric type n, numeric type dmasz);
    interface PipeOut#(Float) pipe;
    method Action start(Bit#(32) dataPointer, Bit#(32) predPointer, Bit#(32) numElts);
+   interface SumOfErrorSquaredDebug debug;
 endinterface
 
 module  mkSumOfErrorSquared#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
@@ -227,6 +232,9 @@ module  mkSumOfErrorSquared#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
       sources[1].start(predPointer, 0, extend(numElts)>>nshift);
       firstlastPipe.start(extend(numElts));
    endmethod
+   interface SumOfErrorSquaredDebug debug;
+      interface PipeOut macCount = dotprod.debug.macCount;
+   endinterface
 endmodule: mkSumOfErrorSquared
 
 interface Rbm#(numeric type n);
@@ -304,6 +312,13 @@ module  mkRbm#(HostType host, RbmIndication rbmInd, SigmoidIndication sigmoidInd
    rule mmDebugDone;
       let d <- mm.debugDone;
       mmInd.debug(d);
+   endrule
+
+   FIFO#(Bit#(32)) sumOfErrorSquaredDebugFifo <- mkFIFO();
+   rule sumOfErrorSquaredDebugRule;
+      let unused <- toGet(sumOfErrorSquaredDebugFifo).get();
+      let macCount <- toGet(sumOfErrorSquared.debug.macCount).get();
+      rbmInd.sumOfErrorSquared(macCount);
    endrule
 
    ///////////////////////////////////////////////
@@ -387,6 +402,9 @@ module  mkRbm#(HostType host, RbmIndication rbmInd, SigmoidIndication sigmoidInd
       method Action sumOfErrorSquared(Bit#(32) dataPointer, Bit#(32) predPointer, Bit#(32) numElts);
 	 sumOfErrorSquared.start(dataPointer, predPointer, numElts);
 	 busyFifo.enq(True);
+      endmethod
+      method Action sumOfErrorSquaredDebug();
+	 sumOfErrorSquaredDebugFifo.enq(0);
       endmethod
    endinterface   
    interface SigmoidRequest sigmoidRequest;
