@@ -68,7 +68,7 @@ int PortalMatAllocator::reference(int* refcount, uchar* datastart, uchar* data)
     ref = dma->reference(info->fd);
     info->ref = ref;
   }
-  fprintf(stderr, "PortalMatAllocator::reference returning %d\n", ref);
+  //fprintf(stderr, "PortalMatAllocator::reference returning %d\n", ref);
   return ref;
 }
 
@@ -145,7 +145,7 @@ PortalMat& PortalMat::operator = (const cv::Mat& o)
 int PortalMat::reference()
 {
     int ref = 0;
-    fprintf(stderr, "PortalMat::reference this=%p datastart=%p\n", this, datastart);
+    //fprintf(stderr, "PortalMat::reference this=%p datastart=%p\n", this, datastart);
     ref = matAllocator->reference(refcount, datastart, data);
     return ref;
 }
