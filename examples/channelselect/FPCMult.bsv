@@ -87,4 +87,4 @@ module mkFPCMult(FPCMult);
    endinterface
    
    
-endmodule;
+endmodule
