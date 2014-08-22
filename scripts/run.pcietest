@@ -10,6 +10,12 @@ if [ "$SERIALNO" != "" ]; then
 else
     BOARD_SERIAL=""
 fi
+if [ "$RUNTIMELIMIT" != "" ]; then
+    TIMELIMIT=$RUNTIMELIMIT
+else
+    TIMELIMIT=3m
+fi
+
 if [ "$RUNPARAM" != "" ]; then
     TEMPDIR=/tmp/`uname -n`-$PPID-pcie
     ssh $SSHPARAM $RUNPARAM "rm -rf $TEMPDIR; mkdir -p $TEMPDIR"
@@ -17,7 +23,7 @@ if [ "$RUNPARAM" != "" ]; then
     BINNAME=`basename $1`
     EXENAME=`basename $2`
     ssh $SSHPARAM $RUNPARAM "fpgajtag $BOARD_SERIAL $TEMPDIR/$BINNAME"
-    ssh $SSHPARAM $RUNPARAM "timeout 3m catchsegv $TEMPDIR/$EXENAME"
+    ssh $SSHPARAM $RUNPARAM "timeout $TIMELIMIT catchsegv $TEMPDIR/$EXENAME"
     ssh $SSHPARAM $RUNPARAM "rm -rf $TEMPDIR"
 else
     fpgajtag $BOARD_SERIAL $1
