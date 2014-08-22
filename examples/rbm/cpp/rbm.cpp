@@ -241,7 +241,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
     }
     if (verbose) dumpMat<float>("pm_pos_hidden_probs", "%5.1f", pm_pos_hidden_probs);
     if (verbose) dumpMat<float>("   pos_hidden_probs", "%5.1f", pos_hidden_probs);
-    if (verify) assert(pm_pos_hidden_probs.compare(pos_hidden_probs, __FILE__, __LINE__, 0.01, 0, true));
+    if (verify) assert(pm_pos_hidden_probs.compare(pos_hidden_probs, __FILE__, __LINE__));
 
     // RbmMat pm_rand_mat;
     pm_rand_mat.create(pm_pos_hidden_probs.rows, pm_pos_hidden_probs.cols, CV_32F);
@@ -314,7 +314,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
       neg_visible_probs.at<float>(i,0) = 1.0;
     }
     if (dynamicRange) printDynamicRange("pm_neg_visible_probs", pm_neg_visible_probs);
-    if (verify) assert(pm_neg_visible_probs.compare(neg_visible_probs, __FILE__, __LINE__, .001, &pm_neg_visible_activations));
+    if (verify) assert(pm_neg_visible_probs.compare(neg_visible_probs, __FILE__, __LINE__));
 
     // RbmMat pm_neg_hidden_activations;
     pm_neg_hidden_activations.multf(pm_neg_visible_probsT, pmWeights);
