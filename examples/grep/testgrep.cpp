@@ -27,6 +27,9 @@
 #include <assert.h>
 #include <string.h>
 #include <semaphore.h>
+#include <iostream>
+#include <fstream>
+#include <sys/stat.h>
 
 #include "StdDmaIndication.h"
 #include "GrepIndicationWrapper.h"
@@ -42,6 +45,8 @@ sem_t test_sem;
 sem_t setup_sem;
 int sw_match_cnt = 0;
 int hw_match_cnt = 0;
+
+using namespace std;
 
 class GrepIndication : public GrepIndicationWrapper
 {
@@ -92,7 +97,7 @@ int main(int argc, const char **argv)
   int charMap_length = 256;
   int stateMap_length = numStates*sizeof(unsigned int);
   int stateTransitions_length = numStates*numChars*sizeof(unsigned int);
-  int haystack_length = 1<<8;
+  int haystack_length = 1<<20;
 
   if(1){
     fprintf(stderr, "simple tests\n");
@@ -106,10 +111,10 @@ int main(int argc, const char **argv)
     stateTransitionsAlloc = portalAlloc(stateTransitions_length);
     haystackAlloc = portalAlloc(haystack_length);
     
-    char *charMap = (char *)portalMmap(charMapAlloc, charMap_length);
-    char *stateMap = (char *)portalMmap(stateMapAlloc, stateMap_length);
-    char *stateTransitions = (char *)portalMmap(stateTransitionsAlloc, stateTransitions_length);
-    char *haystack = (char *)portalMmap(haystackAlloc, haystack_length);
+    char *charMap_mem = (char *)portalMmap(charMapAlloc, charMap_length);
+    char *stateMap_mem = (char *)portalMmap(stateMapAlloc, stateMap_length);
+    char *stateTransitions_mem = (char *)portalMmap(stateTransitionsAlloc, stateTransitions_length);
+    char *haystack_mem = (char *)portalMmap(haystackAlloc, haystack_length);
         
     assert(numStates < MAX_NUM_STATES);
     assert(numChars  < MAX_NUM_CHARS);
@@ -119,9 +124,19 @@ int main(int argc, const char **argv)
     unsigned int ref_stateTransitions = dma->reference(stateTransitionsAlloc);
     unsigned int ref_haystack = dma->reference(haystackAlloc);
 
-
+    REGEX_MATCHER regex_matcher(charMap, stateMap, stateTransition, acceptStates, "jregexp");
+    ifstream binFile("../test.bin", ios::in|ios::binary|ios::ate);
+    streampos binFile_size = binFile.tellg();
+    int read_length = min<int>(binFile_size, haystack_length);
+    binFile.seekg (0, ios::beg);
+    if(!binFile.read(haystack_mem, read_length)){
+      fprintf(stderr, "error reading test.bin %d\n", read_length);
+      exit(-1);
+    }
+    for(int i =0; i < read_length; i++)
+      if(regex_matcher.processChar(haystack_mem[i]))
+	sw_match_cnt++;
     
-
     close(charMapAlloc);
     close(stateMapAlloc);
     close(stateTransitionsAlloc);
