@@ -35,23 +35,11 @@
 #include <errno.h>
 
 #include "portal.h"
-#include "dmaManager.h"
-
 #include <opencv2/core/core.hpp>
-#include <GeneratedTypes.h>
-#include <DmaConfigProxy.h>
-#include <StdDmaIndication.h>
 
 int main(int argc, const char **argv)
 {
   unsigned int srcGen = 0;
-
-  DmaConfigProxy *dmap = new DmaConfigProxy(IfcNames_DmaConfigPortal);
-  DmaManager *dma = new DmaManager(dmap);
-  DmaIndication *dmaIndication = new DmaIndication(dma, IfcNames_DmaIndicationPortal);
-
-  portalExec_start();
-
   int totalsize = 4096;
   int fd = portalAlloc(totalsize);
   if (fd < 0) {
