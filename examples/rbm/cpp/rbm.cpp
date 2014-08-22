@@ -97,6 +97,7 @@ void RbmMat::sigmoid(RbmMat &a)
     create(a.rows, a.cols, CV_32F);
     fprintf(stderr, "RbmMat::sigmoid() %d %d\n", a.rows, a.cols);
     reference();
+    cacheFlushInvalidate();
     //fprintf(stderr, "sigmoid: a.ref=%d a.rows=%d a.cols=%d\n", a.reference(), a.rows, a.cols);
     //fprintf(stderr, "sigmoiddevice->sigmoid\n");
     sigmoiddevice->sigmoid(a.reference(), 0, reference(), 0, a.rows*a.cols);
@@ -109,6 +110,7 @@ void RbmMat::hiddenStates(RbmMat &a, RbmMat &rand)
     fprintf(stderr, "hiddenStates: a.ref=%d a.rows=%d a.cols=%d\n", a.reference(), a.rows, a.cols);
     rand.reference();
     reference();
+    cacheFlushInvalidate();
     fprintf(stderr, "rbmdevice->computeStates ptr=%d randPtr=%d\n", a.reference(), rand.reference());
     rbmdevice->computeStates(a.reference(), 0, rand.reference(), 0, reference(), 0, a.rows*a.cols);
     sem_wait(&mul_sem);
@@ -118,6 +120,7 @@ void RbmMat::hiddenStates(RbmMat &a, RbmMat &rand)
 void RbmMat::updateWeights(RbmMat &posAssociations, RbmMat &negAssociations, float learningRateOverNumExamples)
 {
     fprintf(stderr, "rbmdevice->updateWeights pa.ref=%d na.ref=%d\n", posAssociations.reference(), negAssociations.reference());
+    cacheFlushInvalidate();
     rbmdevice->updateWeights(posAssociations.reference(), negAssociations.reference(), reference(), rows*cols, *(int*)&learningRateOverNumExamples);
     sem_wait(&mul_sem);
 }
@@ -130,6 +133,7 @@ void RbmMat::sumOfErrorSquared(RbmMat &pred)
 	exit(-1);
     }
     fprintf(stderr, "sumOfErrorSquared called numElts=%d\n", rows*cols);
+    cacheFlushInvalidate();
     rbmdevice->sumOfErrorSquared(reference(), pred.reference(), rows*cols);
     sem_wait(&mul_sem);
 }
@@ -237,7 +241,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
     }
     if (verbose) dumpMat<float>("pm_pos_hidden_probs", "%5.1f", pm_pos_hidden_probs);
     if (verbose) dumpMat<float>("   pos_hidden_probs", "%5.1f", pos_hidden_probs);
-    if (verify) assert(pm_pos_hidden_probs.compare(pos_hidden_probs, __FILE__, __LINE__));
+    if (verify) assert(pm_pos_hidden_probs.compare(pos_hidden_probs, __FILE__, __LINE__, 0.01, 0, true));
 
     // RbmMat pm_rand_mat;
     pm_rand_mat.create(pm_pos_hidden_probs.rows, pm_pos_hidden_probs.cols, CV_32F);
