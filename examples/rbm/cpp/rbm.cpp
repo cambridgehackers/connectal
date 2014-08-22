@@ -384,7 +384,7 @@ void RBM::run()
 
     numImages = 100;
     int numPixels = imagefile.rows()*imagefile.cols();
-    int cols = 0;
+    int cols = 511;
 #ifdef BSIM
     cols = 19;
 #endif
