@@ -201,22 +201,33 @@ bool PortalMat::compare(Mat &other, const char *file, int line, float epsilon, M
 	return false;
     }
     bool rv = true;
+    bool first = true;
     for (int i = 0; i < rows; i++) {
 	for (int j = 0; j < cols; j++) {
 	    float v = at<float>(i, j);
 	    float ov = other.at<float>(i, j);
-	    if (fabs((v - ov)/ov) > epsilon) {
+	    float relativeError = fabs((v - ov) / ov);
+	    if (relativeError > epsilon) {
+	      if (verbose || first) {
 		if (file)
-		  if(verbose) fprintf(stderr, "%s:%d: ", file, line);
-		if(verbose) fprintf(stderr, "mismatch[%d,%d] expected %f got %f error=%f", i, j, v, ov, fabs(v - ov));
+		  fprintf(stderr, "%s:%d: ", file, line);
+		fprintf(stderr, "mismatch[%d,%d] expected %f got %f error=%f)", i, j, v, ov, relativeError);
 		if (pm) {
-		    float pmv = pm->at<float>(i,j);
-		    if(verbose) fprintf(stderr, " pm[%d,%d]=%f %08x", i, j, pmv, *(int*)&pmv);
+		  float pmv = pm->at<float>(i,j);
+		  fprintf(stderr, " pm[%d,%d]=%f %08x", i, j, pmv, *(int*)&pmv);
 		}
-		if(verbose) fprintf(stderr, "\n");
-		rv = false;
+		fprintf(stderr, "\n");
+	      }
+	      rv = false;
+	      first = false;
 	    }
 	}
+    }
+    
+    if (!rv) {
+      if (file)
+	fprintf(stderr, "%s:%d: ", file, line);
+      fprintf(stderr, "PortalMat::compare detected a mismatch\n");
     }
     return rv;
 }
