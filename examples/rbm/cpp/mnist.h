@@ -71,7 +71,6 @@ public:
   }
 
   int numEntries() const {
-    int *sizes = (int *)(mapping + 4);
     return sizes[0];
   }
   int rows() const {
