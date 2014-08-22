@@ -82,9 +82,6 @@ module mkStrstrRequest#(StrstrIndication indication)(Strstr#(p,busWidth))
    MemreadEngineV#(busWidth, 1, TMul#(p,2)) config_re <- mkMemreadEngine;
    MemreadEngineV#(busWidth, 1, TMul#(p,1)) haystack_re <- mkMemreadEngine;
 
-   Vector#(p, FIFOF#(void)) confs <- replicateM(mkFIFOF);
-   Vector#(p, FIFOF#(void)) comps <- replicateM(mkFIFOF);
-   Vector#(p, FIFOF#(Int#(32))) locs <- replicateM(mkFIFOF);
    Reg#(Bit#(32)) iterCnt <- mkReg(0);
    Reg#(Bit#(32)) haystackPointer <- mkReg(0);
    Reg#(Bit#(32)) haystackLen <- mkReg(0);
@@ -94,19 +91,18 @@ module mkStrstrRequest#(StrstrIndication indication)(Strstr#(p,busWidth))
    for(Integer i = 0; i < valueOf(p); i=i+1) begin 
       let config_rss = takeAt(i*2, config_re.read_servers);
       let haystack_rs = haystack_re.read_servers[i];
-      engines[i] <- mkMPEngine(comps[i], confs[i], locs[i],cons(haystack_rs,config_rss));
+      engines[i] <- mkMPEngine(cons(haystack_rs,config_rss));
    end
    
    rule confr;
       for(Integer i = 0; i < valueOf(p); i=i+1) 
-	 confs[fromInteger(i)].deq;
+	 let rv <- engines[i].finishSetup;
       indication.setupComplete;
    endrule
    
    for(Integer i = 0; i < valueOf(p); i=i+1)
       rule resr;
-	 let rv = locs[fromInteger(i)].first;
-	 locs[fromInteger(i)].deq;
+	 let rv <- engines[i].loc.get;
 	 indication.searchResult(rv);
       endrule
    
@@ -124,13 +120,10 @@ module mkStrstrRequest#(StrstrIndication indication)(Strstr#(p,busWidth))
    endrule
    
    rule compr;
-      Bool locs_empty = True;
       for(Integer i = 0; i < valueOf(p); i=i+1)
-	 locs_empty = locs_empty && !locs[fromInteger(i)].notEmpty;
-      for(Integer i = 0; i < valueOf(p); i=i+1)
-	 comps[fromInteger(i)].deq;
+	 let rv <- engines[i].finishSearch;
       if(iterCnt==0)
-	 _when_(locs_empty) (indication.searchResult(-1));
+	 indication.searchResult(-1);
       else
 	 restartf.enq(?);
    endrule

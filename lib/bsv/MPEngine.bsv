@@ -43,6 +43,9 @@ import Pipe::*;
 interface MPEngine#(numeric type busWidth);
    method Action setup(Bit#(32) needlePointer, Bit#(32) mpNextPointer, Bit#(32) needle_len);
    method Action search(Bit#(32) haystackPointer, Bit#(32) haystack_len, Bit#(32) haystack_base);
+   method ActionValue#(Bool) finishSetup;
+   method ActionValue#(Bool) finishSearch;
+   interface Get#(Int#(32)) loc;
 endinterface
 
 typedef Bit#(8) Char;
@@ -55,10 +58,7 @@ typedef Bit#(NeedleIdxWidth) NeedleIdx;
 
 typedef enum {Idle, Ready, Run} Stage deriving (Eq, Bits);
 
-module mkMPEngine#(FIFOF#(void) compf, 
-		   FIFOF#(void) conff, 
-		   FIFOF#(Int#(32)) locf,
-		   Vector#(3,MemreadServer#(busWidth)) readers)(MPEngine#(busWidth))
+module mkMPEngine#(Vector#(3,MemreadServer#(busWidth)) readers)(MPEngine#(busWidth))
    
    provisos(Add#(a__, 8, busWidth),
 	    Div#(busWidth,8,nc),
@@ -71,6 +71,10 @@ module mkMPEngine#(FIFOF#(void) compf,
 	    Add#(f__, TLog#(TDiv#(busWidth, 32)), 32));
    
    
+   FIFOF#(void) compf <- mkFIFOF;
+   FIFOF#(void) conff <- mkFIFOF; 
+   FIFOF#(Int#(32)) locf <- mkFIFOF;
+		   
    MemreadServer#(busWidth) haystackReader = readers[0];
    MemreadServer#(busWidth) mpReader = readers[1];
    MemreadServer#(busWidth) needleReader = readers[2];
@@ -199,5 +203,13 @@ module mkMPEngine#(FIFOF#(void) compf,
       if (verbose) $display("mkMPEngine::search %d %d %d",  haystack_pointer, haystack_base, haystack_len_bytes);
       haystackReader.cmdServer.request.put(MemengineCmd{pointer:haystack_pointer, base:extend(haystack_base), len:haystack_len_bytes, burstLen:16*fromInteger(valueOf(nc))});
    endmethod
-      
+   method ActionValue#(Bool) finishSetup;
+      conff.deq;
+      return True;
+   endmethod
+   method ActionValue#(Bool) finishSearch if (!locf.notEmpty);
+      compf.deq;
+      return True;
+   endmethod
+   interface Get loc = toGet(locf);
 endmodule
