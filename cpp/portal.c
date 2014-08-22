@@ -278,8 +278,18 @@ printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start
   return 0;
 }
 
+void init_portal_memory(void)
+{
+  if (global_pa_fd == -1)
+      global_pa_fd = open("/dev/portalmem", O_RDWR);
+  if (global_pa_fd < 0){
+    PORTAL_PRINTF("Failed to open /dev/portalmem pa_fd=%d errno=%d\n", global_pa_fd, errno);
+  }
+}
+
 int portalAlloc(size_t size)
 {
+  init_portal_memory();
 #ifdef __KERNEL__
   int fd = portalmem_dmabuffer_create(size);
 #else

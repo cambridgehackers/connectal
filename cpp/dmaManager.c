@@ -57,11 +57,7 @@ void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *argDevice)
   memset(priv, 0, sizeof(*priv));
   priv->device = argDevice;
 #ifndef __KERNEL__
-  if (global_pa_fd == -1)
-      global_pa_fd = open("/dev/portalmem", O_RDWR);
-  if (global_pa_fd < 0){
-    PORTAL_PRINTF("Failed to open /dev/portalmem pa_fd=%d errno=%d\n", global_pa_fd, errno);
-  }
+  init_portal_memory();
 #endif
   if (sem_init(&priv->confSem, 0, 0)){
     PORTAL_PRINTF("failed to init confSem\n");
@@ -103,6 +99,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, int fd)
     sem_wait(&priv->confSem);
   rc = id;
 #else // KERNEL_REFERENCE 
+  init_portal_memory();
   rc = send_fd_to_portal(priv->device, fd, id, global_pa_fd);
   if (rc <= 0) {
     //PORTAL_PRINTF("%s:%d sem_wait\n", __FUNCTION__, __LINE__);
