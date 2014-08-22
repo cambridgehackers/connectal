@@ -189,15 +189,15 @@ bool PortalMat::transpose(cv::Mat &other)
     return true;
 }
 
-bool PortalMat::compare(Mat &other, const char *file, int line, float epsilon, Mat *pm, bool verbose)
+bool PortalMat::compare(Mat &refMat, const char *file, int line, float epsilon, Mat *pm, bool verbose)
 {
     if (0)
-	fprintf(stderr, "PortalMat.compare rows=%d cols=%d other.rows=%d other.cols=%d\n",
-		rows, cols, other.rows, other.cols);
+	fprintf(stderr, "PortalMat.compare rows=%d cols=%d refMat.rows=%d refMat.cols=%d\n",
+		rows, cols, refMat.rows, refMat.cols);
 
-    if (rows != other.rows || cols != other.cols) {
-	fprintf(stderr, "PortalMat.compare dimension mismatch rows=%d cols=%d other.rows=%d other.cols=%d\n",
-		rows, cols, other.rows, other.cols);
+    if (rows != refMat.rows || cols != refMat.cols) {
+	fprintf(stderr, "PortalMat.compare dimension mismatch rows=%d cols=%d refMat.rows=%d refMat.cols=%d\n",
+		rows, cols, refMat.rows, refMat.cols);
 	return false;
     }
     bool rv = true;
@@ -205,13 +205,13 @@ bool PortalMat::compare(Mat &other, const char *file, int line, float epsilon, M
     for (int i = 0; i < rows; i++) {
 	for (int j = 0; j < cols; j++) {
 	    float v = at<float>(i, j);
-	    float ov = other.at<float>(i, j);
-	    float relativeError = fabs((v - ov) / ov);
+	    float refVal = refMat.at<float>(i, j);
+	    float relativeError = fabs((v - refVal) / refVal);
 	    if (relativeError > epsilon) {
 	      if (verbose || first) {
 		if (file)
 		  fprintf(stderr, "%s:%d: ", file, line);
-		fprintf(stderr, "mismatch[%d,%d] expected %f got %f error=%f)", i, j, v, ov, relativeError);
+		fprintf(stderr, "mismatch[%d,%d] expected %f got %f error=%f)", i, j, refVal, v, relativeError);
 		if (pm) {
 		  float pmv = pm->at<float>(i,j);
 		  fprintf(stderr, " pm[%d,%d]=%f %08x", i, j, pmv, *(int*)&pmv);
