@@ -49,7 +49,7 @@ interface Strstr#(numeric type p, numeric type busWidth);
    interface ObjectReadClient#(busWidth) haystack_read_client;
 endinterface
 
-module mkStrstrRequest#(StrstrIndication indication)(Strstr#(p,busWidth))
+module mkStrstr#(StrstrIndication indication)(Strstr#(p,busWidth))
    provisos(Add#(a__, 8, busWidth),
 	    Div#(busWidth,8,nc),
 	    Mul#(nc,8,busWidth),
@@ -136,7 +136,7 @@ module mkStrstrRequest#(StrstrIndication indication)(Strstr#(p,busWidth))
       endmethod
    
       method Action search(Bit#(32) haystack_pointer, Bit#(32) haystack_len, Bit#(32) iter_cnt);
-	 if (verbose) $display("mkStrstrRequest::search %d %d %d", haystack_pointer, haystack_len, iter_cnt);
+	 if (verbose) $display("mkStrstr::search %d %d %d", haystack_pointer, haystack_len, iter_cnt);
 	 haystackLen <= haystack_len;
 	 haystackPointer <= haystack_pointer;
 	 iterCnt <= iter_cnt;

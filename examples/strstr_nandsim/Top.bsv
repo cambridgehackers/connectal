@@ -39,7 +39,7 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    NandSimRequestWrapper nandSimRequestWrapper <- mkNandSimRequestWrapper(NandSimRequest,nandSim.request);
    
    StrstrIndicationProxy strstrIndicationProxy <- mkStrstrIndicationProxy(StrstrIndication);
-   Strstr#(1,64) strstr <- mkStrstrRequest(strstrIndicationProxy.ifc);
+   Strstr#(1,64) strstr <- mkStrstr(strstrIndicationProxy.ifc);
    StrstrRequestWrapper strstrRequestWrapper <- mkStrstrRequestWrapper(StrstrRequest,strstr.request);
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
