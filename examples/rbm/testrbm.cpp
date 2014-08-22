@@ -113,59 +113,8 @@ int main(int argc, const char **argv)
   configureSigmoidTable();
   int rv = 0;
 
-  if (0) {
-    cv::Mat m1 = (cv::Mat_<float>(4,8) <<
-		  11,12,13,14,15,16,17,18,
-		  21,22,23,24,25,26,27,28,
-		  31,32,33,34,35,36,37,38,
-		  41,42,43,44,45,46,47,48
-		  );
-    cv::Mat m2 = (cv::Mat_<float>(8,4) <<
-		  51,62,53,54,
-		  55,56,57,58,
-		  61,62,63,64,
-		  65,66,67,68,
-		  71,72,73,74,
-		  75,76,77,78,
-		  81,82,83,84,
-		  85,86,87,88
-		  );
-    cv::Mat m4 = (cv::Mat_<float>(8,4) <<
-		  0.80,0.80,0.80,0.80,
-		  0.80,0.80,0.80,0.80,
-		  0.80,0.80,0.80,0.80,
-		  0.80,0.80,0.80,0.80,
-		  0.50,0.50,0.50,0.50,
-		  0.50,0.50,0.50,0.50,
-		  0.50,0.50,0.50,0.50,
-		  0.50,0.50,0.50,0.50
-		  );
-    RbmMat pm1(m1.t());
-    RbmMat pm2(m2);
-    
-    RbmMat pm4(m4);
-    RbmMat pm3;
-    cv::Mat  m3 = m1 * m2;
-
-    pm3.multf(pm1, pm2, mmdeviceIndication);
-    pm3.multf(pm1, pm2, mmdeviceIndication);
-
-    dumpMat<float>("pm1", "%5.1f", pm1);
-    dumpMat<float>("pm2", "%5.1f", pm2);
-    dumpMat<float>("pm1 * pm2", "%5.1f", pm3);
-
-    bool eq = pm3.compare(m3);
-    fprintf(stderr, "XXXXXXXXXXXXXXXXXXXXXX eq=%d\n", eq);
-
-    pm3.sigmoid(pm4);
-    dumpMat<float>("pm4", "%1.6f", pm4);
-    dumpMat<float>("sigmoid", "%1.6f", pm3);
-
-    rv = !eq;
-  } else {
-    RBM rbm(dma);
-    rbm.run();
-  }
+  RBM rbm(dma);
+  rbm.run();
 
   rbmdevice->finish();
   exit(rv);
