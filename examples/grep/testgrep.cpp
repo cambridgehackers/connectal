@@ -42,7 +42,6 @@
 
 
 sem_t test_sem;
-sem_t setup_sem;
 int sw_match_cnt = 0;
 int hw_match_cnt = 0;
 
@@ -54,7 +53,7 @@ public:
   GrepIndication(unsigned int id) : GrepIndicationWrapper(id){};
 
   virtual void setupComplete() {
-    sem_post(&setup_sem);
+    sem_post(&test_sem);
   }
 
   virtual void searchResult (int v){
@@ -87,29 +86,20 @@ int main(int argc, const char **argv)
     fprintf(stderr, "failed to init test_sem\n");
     return -1;
   }
-
-  if(sem_init(&setup_sem, 1, 0)){
-    fprintf(stderr, "failed to init setup_sem\n");
-    return -1;
-  }
   
   portalExec_start();
   int charMap_length = 256;
-  int stateMap_length = numStates*sizeof(unsigned int);
-  int stateTransitions_length = numStates*numChars*sizeof(unsigned int);
-  int haystack_length = 1<<20;
+  int stateMap_length = numStates*sizeof(char);
+  int stateTransitions_length = numStates*numChars*sizeof(char);
+  int haystack_length = 1<<10;
 
   if(1){
     fprintf(stderr, "simple tests\n");
-    int charMapAlloc;
-    int stateMapAlloc;
-    int stateTransitionsAlloc;
-    int haystackAlloc;
-    
-    charMapAlloc = portalAlloc(charMap_length);
-    stateMapAlloc = portalAlloc(stateMap_length);
-    stateTransitionsAlloc = portalAlloc(stateTransitions_length);
-    haystackAlloc = portalAlloc(haystack_length);
+
+    int charMapAlloc = portalAlloc(charMap_length);
+    int stateMapAlloc = portalAlloc(stateMap_length);
+    int stateTransitionsAlloc = portalAlloc(stateTransitions_length);
+    int haystackAlloc = portalAlloc(haystack_length);
     
     char *charMap_mem = (char *)portalMmap(charMapAlloc, charMap_length);
     char *stateMap_mem = (char *)portalMmap(stateMapAlloc, stateMap_length);
@@ -124,7 +114,6 @@ int main(int argc, const char **argv)
     unsigned int ref_stateTransitions = dma->reference(stateTransitionsAlloc);
     unsigned int ref_haystack = dma->reference(haystackAlloc);
 
-    REGEX_MATCHER regex_matcher(charMap, stateMap, stateTransition, acceptStates, "jregexp");
     ifstream binFile("../test.bin", ios::in|ios::binary|ios::ate);
     streampos binFile_size = binFile.tellg();
     int read_length = min<int>(binFile_size, haystack_length);
@@ -133,10 +122,38 @@ int main(int argc, const char **argv)
       fprintf(stderr, "error reading test.bin %d\n", read_length);
       exit(-1);
     }
+
+    // test the the generated functions (in jregexp.h) to compute sw_match_cnt
+    REGEX_MATCHER regex_matcher(charMap, stateMap, stateTransition, acceptStates, "jregexp");
     for(int i =0; i < read_length; i++)
       if(regex_matcher.processChar(haystack_mem[i]))
 	sw_match_cnt++;
-    
+
+    for(int i = 0; i < 256; i++)
+      charMap_mem[i] = charMap(i);
+
+    for(int i = 0; i < numStates; i++)
+      stateMap_mem[i] = (acceptStates(i) << 8) | stateMap(i);
+
+    for(int i = 0; i < numStates; i++)
+      for(int j = 0; j < numChars; j++)
+	stateTransitions_mem[(i*MAX_NUM_STATES)+j] = stateTransition(i,j);
+
+    portalDCacheFlushInval(charMapAlloc, charMap_length, charMap_mem);
+    portalDCacheFlushInval(stateMapAlloc, stateMap_length, stateMap_mem);
+    portalDCacheFlushInval(stateTransitionsAlloc, stateTransitions_length, stateTransitions_mem);
+    portalDCacheFlushInval(haystackAlloc, haystack_length, haystack_mem);
+
+    device->setup(ref_charMap, charMap_length);
+    sem_wait(&test_sem);
+    device->setup(ref_stateMap, stateMap_length);
+    sem_wait(&test_sem);
+    device->setup(ref_stateTransitions, stateTransitions_length);
+    sem_wait(&test_sem);
+
+    device->search(ref_haystack, read_length, 1);
+    sem_wait(&test_sem);
+
     close(charMapAlloc);
     close(stateMapAlloc);
     close(stateTransitionsAlloc);

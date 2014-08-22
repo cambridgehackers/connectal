@@ -23,13 +23,11 @@ import DmaIndicationProxy::*;
 import Grep::*;
 
 typedef enum {GrepIndication, GrepRequest, DmaIndication, DmaConfig} IfcNames deriving (Eq,Bits);
-typedef 1 DegPar;
-
 
 module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
 
    GrepIndicationProxy grepIndicationProxy <- mkGrepIndicationProxy(GrepIndication);
-   Grep#(DegPar,64) grep <- mkGrep(grepIndicationProxy.ifc);
+   Grep#(64) grep <- mkGrep(grepIndicationProxy.ifc);
    GrepRequestWrapper grepRequestWrapper <- mkGrepRequestWrapper(GrepRequest,grep.request);
    
    let read_clients = cons(grep.config_read_client, cons(grep.haystack_read_client,nil));
