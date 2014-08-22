@@ -386,14 +386,16 @@ void RBM::run()
     imagefile.open();
     int numImages = imagefile.numEntries();
 
-    numImages = 100;
     int numPixels = imagefile.rows()*imagefile.cols();
-    int cols = 511;
+    numImages = 200;
+    int cols = 783; // one more column is added below to make the total 784.
 #ifdef BSIM
-    cols = 19;
+    numImages = 100
+    //    cols = 19;
 #endif
     if (!cols || numPixels < cols)
       cols = numPixels;
+    fprintf(stderr, "numImages=%d numPixels=%d imagefile.rows=%d imagefile.cols=%d\n", numImages, numPixels, imagefile.rows(), imagefile.cols());
 
     //numVisible = imagefile.rows()*imagefile.cols();
     numVisible = cols;
