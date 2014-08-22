@@ -321,7 +321,8 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
    let defaultReset <- exposeCurrentReset();
 
    let doubleClock = host.doubleClock;
-   let doubleReset = host.doubleReset;
+   let currentReset <- exposeCurrentReset;
+   let doubleReset <- mkAsyncReset(2, currentReset, doubleClock);
 
    Reg#(UInt#(32)) cycles <- mkReg(0);
    Reg#(Bool) doneReg <- mkReg(False);

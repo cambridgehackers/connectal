@@ -312,7 +312,8 @@ module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
    let defaultReset <- exposeCurrentReset();
 
    let doubleClock = host.doubleClock;
-   let doubleReset = host.doubleReset;
+   let currentReset <- exposeCurrentReset;
+   let doubleReset <- mkAsyncReset(2, currentReset, doubleClock);
 
    Reg#(UInt#(32)) cycles <- mkReg(0);
    Reg#(MatrixDescriptor#(UInt#(addrwidth))) descriptorC <- mkReg(unpack(0));
