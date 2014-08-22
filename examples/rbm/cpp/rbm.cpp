@@ -21,6 +21,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#undef NDEBUG
 #include "portalmat.h"
 #include "rbm.h"
 #include "mnist.h"
@@ -160,7 +161,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
   float sum_of_errors_squareds[numEpochs];
   bool verbose = false;
   bool verify = true;
-  bool dynamicRange = false;
+  bool dynamicRange = true;
   int numExamples = trainingData.rows;
 
   if (verbose) dumpMat<float>("trainingData", "%5.6f", trainingData);
@@ -309,7 +310,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
       neg_visible_probs.at<float>(i,0) = 1.0;
     }
     if (dynamicRange) printDynamicRange("pm_neg_visible_probs", pm_neg_visible_probs);
-    if (verify) pm_neg_visible_probs.compare(neg_visible_probs, __FILE__, __LINE__, .001, &pm_neg_visible_activations);
+    if (verify) assert(pm_neg_visible_probs.compare(neg_visible_probs, __FILE__, __LINE__, .001, &pm_neg_visible_activations));
 
     // RbmMat pm_neg_hidden_activations;
     pm_neg_hidden_activations.multf(pm_neg_visible_probsT, pmWeights);
@@ -318,7 +319,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
 
     cv::Mat neg_hidden_activations = pm_neg_visible_probs * pmWeights;
     if (verbose) dumpMat<float>("   neg_hidden_activations", "%5.1f", neg_hidden_activations);
-    if (verify) pm_neg_hidden_activations.compare(neg_hidden_activations, __FILE__, __LINE__);
+    if (verify) assert(pm_neg_hidden_activations.compare(neg_hidden_activations, __FILE__, __LINE__));
 
     // RbmMat pm_neg_hidden_probs;
     pm_neg_hidden_probs.sigmoid(pm_neg_hidden_activations);
