@@ -107,36 +107,41 @@ module mkRegexp#(RegexpIndication indication)(Regexp#(64))
       let rv <- stateTransitionsWriter.finish;
    endrule
    
-   Reg#(Bit#(5)) fsmState <- mkReg(0);
-   Reg#(Bit#(64)) charCnt <- mkReg(0);
+   Reg#(Bool) fsmStateValid <- mkReg(True);
+   Reg#(Bit#(5))   fsmState <- mkReg(0);
+   Reg#(Bit#(64))   charCnt <- mkReg(0);
+   Reg#(Bool)     accepted <- mkReg(False);
 
-   Stmt s = (seq
-		while(True) seq
-		   action
-		      haystack.deq;
-		      charCnt <= charCnt+1;
-		      charMap.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:haystack.first[0], datain:?});
-		      stateMap.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:fsmState, datain:?});
-		      if (debug) $display("fsmState=%d", fsmState);
-		   endaction
-		   action
-		      let mapped_char <- charMap.portA.response.get;
-		      let mapped_state <- stateMap.portA.response.get;
-		      Bit#(10) ns_addr = {mapped_state[4:0],mapped_char[4:0]};
-		      let accept = mapped_state[7]==1;
-		      if (accept) begin
-			 if (verbose) $display("accept");
-			 indication.searchResult(1);
-		      end
-		      stateTransitions.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:ns_addr, datain:?});
-		   endaction
-		   action
-		      let new_state <- stateTransitions.portA.response.get;
-		      fsmState <= truncate(new_state);
-		   endaction
-		endseq
-	     endseq);
-   mkAutoFSM(s);
+   rule lookup_state if (fsmStateValid);
+      haystack.deq;
+      charCnt <= charCnt+1;
+      charMap.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:haystack.first[0], datain:?});
+      stateMap.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:fsmState, datain:?});
+      fsmStateValid <= False;
+   endrule
+   
+   rule resolve_state;
+      let mapped_char <- charMap.portA.response.get;
+      let mapped_state <- stateMap.portA.response.get;
+      Bit#(10) ns_addr = {mapped_state[4:0],mapped_char[4:0]};
+      let accept = mapped_state[7]==1;
+      if (debug) $display("fsmState=%d %d", fsmState, accept);
+      if (accept) begin
+	 indication.searchResult(1);
+	 accepted <= accept;
+	 fsmState <= 0;
+	 fsmStateValid <= True;
+      end
+      else begin
+	 stateTransitions.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:ns_addr, datain:?});
+      end
+   endrule
+      
+   rule next_state;
+      let new_state <- stateTransitions.portA.response.get;
+      fsmState <= truncate(new_state);
+      fsmStateValid <= True;
+   endrule
    
    interface RegexpRequest request;
       method Action setup(Bit#(32) pointer, Bit#(32) len);

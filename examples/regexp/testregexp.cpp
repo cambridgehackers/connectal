@@ -126,14 +126,14 @@ int main(int argc, const char **argv)
     // test the the generated functions (in jregexp.h) to compute sw_match_cnt
     REGEX_MATCHER regex_matcher(charMap, stateMap, stateTransition, acceptStates, "jregexp");
     for(int i =0; i < read_length; i++)
-      if(regex_matcher.processChar(haystack_mem[i]))
+      if(regex_matcher.processChar(haystack_mem[i], true))
 	sw_match_cnt++;
 
     for(int i = 0; i < 256; i++)
       charMap_mem[i] = charMap(i);
 
     for(int i = 0; i < numStates; i++)
-      stateMap_mem[i] = (acceptStates(i) << 8) | stateMap(i);
+      stateMap_mem[i] = (acceptStates(i) << 7) | stateMap(i);
 
     for(int i = 0; i < numStates; i++)
       for(int j = 0; j < numChars; j++)

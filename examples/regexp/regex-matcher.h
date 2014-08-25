@@ -21,7 +21,7 @@ class REGEX_MATCHER
    void setState(REGEX_STATE s) { state = s; }
    const char* getName() { return patternName; }
 
-   bool processChar(char c);
+   bool processChar(char c, bool debug);
 
   protected:
     const char* patternName;

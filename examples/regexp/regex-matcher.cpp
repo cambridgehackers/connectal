@@ -1,5 +1,6 @@
 
 #include <iostream>
+#include "stdio.h"
 
 #include "regex-matcher.h"
 
@@ -21,7 +22,7 @@ REGEX_MATCHER::~REGEX_MATCHER()
 }
 
 bool 
-REGEX_MATCHER::processChar(char c)
+REGEX_MATCHER::processChar(char c, bool debug)
 {
     if (!enabled) return false;
 
@@ -31,6 +32,9 @@ REGEX_MATCHER::processChar(char c)
     REGEX_STATE mapped_state = stateMap(state);
     // Use the state transition function to determine the next state.
     REGEX_STATE next_state = stateTransition(mapped_state, mapped_char);
+
+    if (debug)
+      fprintf(stderr, "fsmState=%2d %d\n", next_state, acceptStates(next_state));
 
     // Was this state one that indicates a match?
     if (acceptStates(next_state))
