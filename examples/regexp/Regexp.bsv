@@ -64,8 +64,8 @@ module mkRegexp#(RegexpIndication indication)(Regexp#(64))
 
 	    );
 
-   let debug = True;
-   let verbose = True;
+   let debug = False;
+   let verbose = False;
    MemreadEngineV#(64, 1, 3) config_re <- mkMemreadEngine;
    MemreadEngineV#(64, 1, 1) haystack_re <- mkMemreadEngine;
    Reg#(RegexpState) state <- mkReg(Config_charMap);

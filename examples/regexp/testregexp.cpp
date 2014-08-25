@@ -91,7 +91,7 @@ int main(int argc, const char **argv)
   int charMap_length = 256;
   int stateMap_length = numStates*sizeof(char);
   int stateTransitions_length = numStates*numChars*sizeof(char);
-  int haystack_length = 1<<10;
+  int haystack_length = 1<<15;
 
   if(1){
     fprintf(stderr, "simple tests\n");
@@ -126,7 +126,7 @@ int main(int argc, const char **argv)
     // test the the generated functions (in jregexp.h) to compute sw_match_cnt
     REGEX_MATCHER regex_matcher(charMap, stateMap, stateTransition, acceptStates, "jregexp");
     for(int i =0; i < read_length; i++)
-      if(regex_matcher.processChar(haystack_mem[i], true))
+      if(regex_matcher.processChar(haystack_mem[i]))
 	sw_match_cnt++;
 
     for(int i = 0; i < 256; i++)
