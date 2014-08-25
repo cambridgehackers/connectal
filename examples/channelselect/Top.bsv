@@ -48,13 +48,13 @@ typedef enum { ChannelSelectTestIndicationProxy, ChannelSelectTestRequestWrapper
 
 module mkPortalTop(StdPortalTop#(PhysAddrWidth));
    
-   ChannelSelectTestIndicationProxy channelSelectIndicationProxy <- mkChannelSelectTestIndicationProxy(ChannelSelectTestIndication);
-   ChannelSelectTestRequest channelSelectRequest <- mkChannelSelectTestRequest(channelSelectIndicationProxy.ifc);
-   ChannelSelectTestRequestWrapper channelSelectRequestWrapper <- mkChannelSelectTestRequestWrapper(ChannelSelectTestRequest, channelSelectRequest);
+   ChannelSelectTestIndicationProxy channelSelectTestIndicationProxy <- mkChannelSelectTestIndicationProxy(ChannelSelectTestIndication);
+   ChannelSelectTestRequest channelSelectTestRequest <- mkChannelSelectTestRequest(channelSelectTestIndicationProxy.ifc);
+   ChannelSelectTestRequestWrapper channelSelectTestRequestWrapper <- mkChannelSelectTestRequestWrapper(ChannelSelectTestRequest, channelSelectTestRequest);
 
    Vector#(2,StdPortal) portals;
-   portals[0] = channelSelectRequestWrapper.portalIfc;
-   portals[1] = channelSelectIndicationProxy.portalIfc; 
+   portals[0] = channelSelectTestRequestWrapper.portalIfc;
+   portals[1] = channelSelectTestIndicationProxy.portalIfc; 
 
    // instantiate system directory
    StdDirectory dir <- mkStdDirectory(portals);
