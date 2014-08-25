@@ -32,8 +32,8 @@
 #include <sys/stat.h>
 
 #include "StdDmaIndication.h"
-#include "GrepIndicationWrapper.h"
-#include "GrepRequestProxy.h"
+#include "RegexpIndicationWrapper.h"
+#include "RegexpRequestProxy.h"
 #include "GeneratedTypes.h"
 #include "DmaConfigProxy.h"
 
@@ -47,10 +47,10 @@ int hw_match_cnt = 0;
 
 using namespace std;
 
-class GrepIndication : public GrepIndicationWrapper
+class RegexpIndication : public RegexpIndicationWrapper
 {
 public:
-  GrepIndication(unsigned int id) : GrepIndicationWrapper(id){};
+  RegexpIndication(unsigned int id) : RegexpIndicationWrapper(id){};
 
   virtual void setupComplete() {
     sem_post(&test_sem);
@@ -68,18 +68,18 @@ public:
 
 int main(int argc, const char **argv)
 {
-  GrepRequestProxy *device = 0;
+  RegexpRequestProxy *device = 0;
   DmaConfigProxy *dmap = 0;
   
-  GrepIndication *deviceIndication = 0;
+  RegexpIndication *deviceIndication = 0;
   DmaIndication *dmaIndication = 0;
   
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
-  device = new GrepRequestProxy(IfcNames_GrepRequest);
+  device = new RegexpRequestProxy(IfcNames_RegexpRequest);
   dmap = new DmaConfigProxy(IfcNames_DmaConfig);
   DmaManager *dma = new DmaManager(dmap);
   
-  deviceIndication = new GrepIndication(IfcNames_GrepIndication);
+  deviceIndication = new RegexpIndication(IfcNames_RegexpIndication);
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
   
   if(sem_init(&test_sem, 1, 0)){
