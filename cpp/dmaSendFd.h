@@ -104,7 +104,7 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
     long addr = portalAlloc->entries[i].dma_address;
     long len = portalAlloc->entries[i].length;
 #endif
-#if defined(BSIM) || defined(NANDSIMHACK)
+#if defined(BSIM)
     addr = size_accum;
     size_accum += len;
     addr |= ((long)id) << 32; //[39:32] = truncate(pref);

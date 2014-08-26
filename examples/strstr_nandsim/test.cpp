@@ -107,9 +107,9 @@ public:
     fprintf(stderr, "Strstr::wait for semaphore\n");
     sem_wait(&sem);
   }
+  int match_cnt;
 private:
   sem_t sem;
-  int match_cnt;
 };
 
 
@@ -182,10 +182,10 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   nandsimRequest->startWrite(ref_haystackAlloc, 0, 0, numBytes, 16);
   nandsimIndication->wait();
 
-  // this is a temporary hack.  We are inlining the pertinant lines from DmaManager_reference
-  // for this to work, NANDSIMHACK must be defined.  What this does is send an SGList of the size 
-  // haystackAlloc to strstrDMA starting at offset 0 in the nandsim backing store.
   int id = nandsimDma->priv.handle++;
+  // pairs of ('offset','size') poinging to space in nandsim memory
+  // this is unsafe.  We should check that the we aren't overflowing 
+  // 'nandBytes', the size of the nandSimulator backing store
   RegionRef region[] = {{0, 0x100000}, {0x100000, 0x100000}};
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   int ref_haystackInNandMemory = send_reference_to_portal(nandsimDma->priv.device, sizeof(region)/sizeof(region[0]), region, id);
@@ -197,4 +197,5 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   fprintf(stderr, "about to invoke search %d\n", ref_haystackInNandMemory);
   strstrRequest->search(ref_haystackInNandMemory, haystack_len, 1);
   strstrIndication->wait();  
+  exit(!(strstrIndication->match_cnt==3));
 }
