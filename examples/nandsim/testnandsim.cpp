@@ -163,7 +163,7 @@ int main(int argc, const char **argv)
   nandsimRequest->configureNand(ref_nandAlloc, nandBytes);
   nandsimIndication->wait();
 
-  bool sangwoo = true;
+  bool sangwoo = false;
   if (sangwoo){
     fprintf(stderr, "sangwoo-test\n");
 
