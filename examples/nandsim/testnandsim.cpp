@@ -163,7 +163,24 @@ int main(int argc, const char **argv)
   nandsimRequest->configureNand(ref_nandAlloc, nandBytes);
   nandsimIndication->wait();
 
-  if (argc == 1) {
+  bool sangwoo = true;
+  if (sangwoo){
+    fprintf(stderr, "sangwoo-test\n");
+
+    for (int i = 0; i < numBytes/sizeof(srcBuffer[0]); i++)
+      srcBuffer[i] = i;
+    portalDCacheFlushInval(srcAlloc, numBytes, srcBuffer);
+
+    nandsimRequest->startWrite(ref_srcAlloc, 0, 0, numBytes, 16);
+    nandsimIndication->wait();
+
+    unsigned int* nand_memory = (unsigned int*)portalMmap(nandAlloc,nandBytes);
+    for (int i = 0; i < numBytes/sizeof(srcBuffer[0]); i++)
+      if(nand_memory[i] != srcBuffer[i])
+	fprintf(stderr, "ERROR: sangwoo-test %d %d (%d)\n", nand_memory[i], srcBuffer[i], i);
+      
+    fprintf(stderr, "sangwoo-test successful\n");
+  } else if (argc == 1) {
     /* do tests */
     fprintf(stderr, "chamdoo-test\n");
     unsigned long loop = 0;
