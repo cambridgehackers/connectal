@@ -74,7 +74,6 @@ int main(int argc, const char **argv)
   NandSimIndication *deviceIndication = 0;
   DmaIndication *dmaIndication = 0;
 
-  fprintf(stderr, "chamdoo-test\n");
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
   device = new NandSimRequestProxy(IfcNames_NandSimRequest);
@@ -107,44 +106,51 @@ int main(int argc, const char **argv)
   device->configureNand(ref_nandAlloc, nandBytes);
   deviceIndication->wait();
 
-  /* do tests */
-  unsigned long loop = 0;
-  unsigned long match = 0, mismatch = 0;
-  while (loop < nandBytes) {
-	  int i;
-	  for (i = 0; i < numBytes/sizeof(srcBuffer[0]); i++) {
-		  srcBuffer[i] = loop+i;
-	  }
 
-	  fprintf(stderr, "Main::starting write ref=%d, len=%08zx (%lu)\n", ref_srcAlloc, numBytes, loop);
-	  device->startWrite(ref_srcAlloc, 0, loop, numBytes, 16);
-	  deviceIndication->wait();
-
-	  loop+=numBytes;
+  if (argc == 1) {
+    /* do tests */
+    fprintf(stderr, "chamdoo-test\n");
+    unsigned long loop = 0;
+    unsigned long match = 0, mismatch = 0;
+    while (loop < nandBytes) {
+      int i;
+      for (i = 0; i < numBytes/sizeof(srcBuffer[0]); i++) {
+	srcBuffer[i] = loop+i;
+      }
+      
+      fprintf(stderr, "Main::starting write ref=%d, len=%08zx (%lu)\n", ref_srcAlloc, numBytes, loop);
+      device->startWrite(ref_srcAlloc, 0, loop, numBytes, 16);
+      deviceIndication->wait();
+      
+      loop+=numBytes;
+    }
+    
+    loop = 0;
+    while (loop < nandBytes) {
+      int i;
+      fprintf(stderr, "Main::starting read %08zx (%lu)\n", numBytes, loop);
+      device->startRead(ref_srcAlloc, 0, loop, numBytes, 16);
+      deviceIndication->wait();
+      
+      for (i = 0; i < numBytes/sizeof(srcBuffer[0]); i++) {
+	if (srcBuffer[i] != loop+i) {
+	  fprintf(stderr, "Main::mismatch [%08zx] != [%08zx]\n", loop+i, srcBuffer[i]);
+	  mismatch++;
+	} else {
+	  match++;
+	}
+      }
+      
+      loop+=numBytes;
+    }
+    /* end */
+    
+    fprintf(stderr, "Main::Summary: match=%lu mismatch:%lu (%lu) (%f percent)\n", 
+	    match, mismatch, match+mismatch, (float)mismatch/(float)(match+mismatch)*100.0);
+    
+    return (mismatch > 0);
+  } else {
+    // this case is for invocations by strstr_nandsim
+    
   }
-
-  loop = 0;
-  while (loop < nandBytes) {
-	  int i;
-	  fprintf(stderr, "Main::starting read %08zx (%lu)\n", numBytes, loop);
-	  device->startRead(ref_srcAlloc, 0, loop, numBytes, 16);
-	  deviceIndication->wait();
-
-	  for (i = 0; i < numBytes/sizeof(srcBuffer[0]); i++) {
-		  if (srcBuffer[i] != loop+i) {
-			  fprintf(stderr, "Main::mismatch [%08zx] != [%08zx]\n", loop+i, srcBuffer[i]);
-			  mismatch++;
-		  } else {
-			  match++;
-		  }
-	  }
-
-	  loop+=numBytes;
-  }
-  /* end */
-
-  fprintf(stderr, "Main::Summary: match=%lu mismatch:%lu (%lu) (%f percent)\n", 
-		match, mismatch, match+mismatch, (float)mismatch/(float)(match+mismatch)*100.0);
-
-  return (mismatch > 0);
 }

@@ -27,20 +27,18 @@ import StrstrIndicationProxy::*;
 
 // defined by user
 import NandSim::*;
+import NandSimNames::*;
 import Strstr::*;
 
-typedef enum {DmaIndication, DmaConfig, NandSimIndication, NandSimRequest, StrstrIndication, StrstrRequest, NandsimDmaIndication, NandsimDmaConfig} IfcNames deriving (Eq,Bits);
-
 module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
-   
    
    NandSimIndicationProxy nandSimIndicationProxy <- mkNandSimIndicationProxy(NandSimIndication);
    NandSim nandSim <- mkNandSim(nandSimIndicationProxy.ifc);
    NandSimRequestWrapper nandSimRequestWrapper <- mkNandSimRequestWrapper(NandSimRequest,nandSim.request);
    
-   StrstrIndicationProxy strstrIndicationProxy <- mkStrstrIndicationProxy(StrstrIndication);
+   StrstrIndicationProxy strstrIndicationProxy <- mkStrstrIndicationProxy(AlgoIndication);
    Strstr#(1,64) strstr <- mkStrstr(strstrIndicationProxy.ifc);
-   StrstrRequestWrapper strstrRequestWrapper <- mkStrstrRequestWrapper(StrstrRequest,strstr.request);
+   StrstrRequestWrapper strstrRequestWrapper <- mkStrstrRequestWrapper(AlgoRequest,strstr.request);
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
    MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(dmaIndicationProxy.ifc, cons(strstr.config_read_client, cons(nandSim.readClient, nil)), cons(nandSim.writeClient, nil));

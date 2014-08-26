@@ -23,8 +23,7 @@ import DmaIndicationProxy::*;
 
 // defined by user
 import NandSim::*;
-
-typedef enum {DmaIndication, DmaConfig, NandSimIndication, NandSimRequest} IfcNames deriving (Eq,Bits);
+import NandSimNames::*;
 
 module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    

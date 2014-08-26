@@ -135,9 +135,9 @@ int main(int argc, const char **argv)
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
 
-  strstrRequest = new StrstrRequestProxy(IfcNames_StrstrRequest);
+  strstrRequest = new StrstrRequestProxy(IfcNames_AlgoRequest);
   nandsimDmaConfig = new DmaConfigProxy(IfcNames_NandsimDmaConfig);
-  strstrIndication = new StrstrIndication(IfcNames_StrstrIndication);
+  strstrIndication = new StrstrIndication(IfcNames_AlgoIndication);
   DmaManager *nandsimDma = new DmaManager(nandsimDmaConfig);
   nandsimDmaIndication = new DmaIndication(nandsimDma,IfcNames_NandsimDmaIndication);
 
