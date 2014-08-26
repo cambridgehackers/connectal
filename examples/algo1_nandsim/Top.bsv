@@ -39,15 +39,14 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    StrstrIndicationProxy strstrIndicationProxy <- mkStrstrIndicationProxy(AlgoIndication);
    Strstr#(1,64) strstr <- mkStrstr(strstrIndicationProxy.ifc);
    StrstrRequestWrapper strstrRequestWrapper <- mkStrstrRequestWrapper(AlgoRequest,strstr.request);
-
+   
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
    MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(dmaIndicationProxy.ifc, cons(strstr.config_read_client, cons(nandSim.readClient, nil)), cons(nandSim.writeClient, nil));
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
-   
+
    DmaIndicationProxy nandsimDmaIndicationProxy <- mkDmaIndicationProxy(NandsimDmaIndication);   
    MemServer#(PhysAddrWidth,64,1) nandsimDma <- mkMemServerR(False, nandsimDmaIndicationProxy.ifc, cons(strstr.haystack_read_client,nil));
    DmaConfigWrapper nandsimDmaRequestWrapper <- mkDmaConfigWrapper(NandsimDmaConfig, nandsimDma.request);
-
    mkConnection(nandsimDma.masters[0], nandSim.memSlave);
    
    Vector#(8,StdPortal) portals;

@@ -19,15 +19,18 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <fstream>
+#include <iostream>
 #include <stdio.h>
-#include <sys/mman.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <assert.h>
+#include <errno.h>
 #include <string.h>
-#include <semaphore.h>
-#include <ctime>
-#include <monkit.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <sys/mman.h>
+#include <assert.h>
 #include <mp.h>
 
 #include "StdDmaIndication.h"
@@ -113,31 +116,72 @@ private:
 };
 
 
+
+static int sockfd;
+#define SOCK_NAME "socket_for_nandsim"
+void wait_for_connect_nandsim_exe()
+{
+  int listening_socket;
+
+  if ((listening_socket = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+    fprintf(stderr, "%s: socket error %s",__FUNCTION__, strerror(errno));
+    exit(1);
+  }
+
+  struct sockaddr_un local;
+  local.sun_family = AF_UNIX;
+  strcpy(local.sun_path, SOCK_NAME);
+  unlink(local.sun_path);
+  int len = strlen(local.sun_path) + sizeof(local.sun_family);
+  if (bind(listening_socket, (struct sockaddr *)&local, len) == -1) {
+    fprintf(stderr, "%s[%d]: bind error %s\n",__FUNCTION__, listening_socket, strerror(errno));
+    exit(1);
+  }
+
+  if (listen(listening_socket, 5) == -1) {
+    fprintf(stderr, "%s[%d]: listen error %s\n",__FUNCTION__, listening_socket, strerror(errno));
+    exit(1);
+  }
+  
+  //fprintf(stderr, "%s[%d]: waiting for a connection...\n",__FUNCTION__, listening_socket);
+  if ((sockfd = accept(listening_socket, NULL, NULL)) == -1) {
+    fprintf(stderr, "%s[%d]: accept error %s\n",__FUNCTION__, listening_socket, strerror(errno));
+    exit(1);
+  }
+  remove(SOCK_NAME);  // we are connected now, so we can remove named socket
+}
+
+unsigned int read_from_nandsim_exe()
+{
+  unsigned int rv;
+  if(recv(sockfd, &rv, sizeof(rv), 0) == -1){
+    fprintf(stderr, "%s recv error\n",__FUNCTION__);
+    exit(1);	  
+  }
+  return rv;
+}
+
 int main(int argc, const char **argv)
 {
-  unsigned int srcGen = 0;
-  NandSimRequestProxy *nandsimRequest = 0;
   DmaConfigProxy *dmaConfig = 0;
-  NandSimIndication *nandsimIndication = 0;
   DmaIndication *dmaIndication = 0;
 
   StrstrRequestProxy *strstrRequest = 0;
-  DmaConfigProxy *nandsimDmaConfig = 0;
   StrstrIndication *strstrIndication = 0;
+
+  DmaConfigProxy *nandsimDmaConfig = 0;
   DmaIndication *nandsimDmaIndication = 0;
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
-  nandsimRequest = new NandSimRequestProxy(IfcNames_NandSimRequest);
   dmaConfig = new DmaConfigProxy(IfcNames_DmaConfig);
   DmaManager *dma = new DmaManager(dmaConfig);
-  nandsimIndication = new NandSimIndication(IfcNames_NandSimIndication);
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
-
   strstrRequest = new StrstrRequestProxy(IfcNames_AlgoRequest);
-  nandsimDmaConfig = new DmaConfigProxy(IfcNames_NandsimDmaConfig);
   strstrIndication = new StrstrIndication(IfcNames_AlgoIndication);
+
+  nandsimDmaConfig = new DmaConfigProxy(IfcNames_NandsimDmaConfig);
   DmaManager *nandsimDma = new DmaManager(nandsimDmaConfig);
   nandsimDmaIndication = new DmaIndication(nandsimDma,IfcNames_NandsimDmaIndication);
 
@@ -145,57 +189,42 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::allocating memory...\n");
 
   // allocate memory for strstr data
-  int haystackAlloc = portalAlloc(numBytes);
   int needleAlloc = portalAlloc(numBytes);
   int mpNextAlloc = portalAlloc(numBytes);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-  int ref_haystackAlloc = dma->reference(haystackAlloc);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   int ref_needleAlloc = dma->reference(needleAlloc);
   int ref_mpNextAlloc = dma->reference(mpNextAlloc);
   char *needle = (char *)portalMmap(needleAlloc, numBytes);
-  char *haystack = (char *)portalMmap(haystackAlloc, numBytes);
   int *mpNext = (int *)portalMmap(mpNextAlloc, numBytes);
 
-  // allocate memory buffer for nandsim to use as backing store
-  int nandBacking = portalAlloc(nandBytes);
-  int ref_nandBacking = dma->reference(nandBacking);
-
-  // give the nandsim a pointer to its backing store
-  nandsimRequest->configureNand(ref_nandBacking, nandBytes);
-  nandsimIndication->wait();
-
-  // write a pattern into the scratch memory and flush
   const char *needle_text = "ababab";
-  const char *haystack_text = "acabcabacababacababababababcacabcabacababacabababc";
   int needle_len = strlen(needle_text);
-  int haystack_len = strlen(haystack_text);
   strncpy(needle, needle_text, needle_len);
-  strncpy(haystack, haystack_text, haystack_len);
   compute_MP_next(needle, mpNext, needle_len);
   portalDCacheFlushInval(needleAlloc, numBytes, needle);
   portalDCacheFlushInval(mpNextAlloc, numBytes, mpNext);
-  portalDCacheFlushInval(haystackAlloc, numBytes, haystack);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
-  // write the contents of haystack into "flash" memory
-  nandsimRequest->startWrite(ref_haystackAlloc, 0, 0, numBytes, 16);
-  nandsimIndication->wait();
+  wait_for_connect_nandsim_exe();
+  // base of haystack in "flash" memory
+  int haystack_base = read_from_nandsim_exe();
+  int haystack_len  = read_from_nandsim_exe();
 
   int id = nandsimDma->priv.handle++;
   // pairs of ('offset','size') poinging to space in nandsim memory
   // this is unsafe.  We should check that the we aren't overflowing 
   // 'nandBytes', the size of the nandSimulator backing store
   RegionRef region[] = {{0, 0x100000}, {0x100000, 0x100000}};
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+  printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   int ref_haystackInNandMemory = send_reference_to_portal(nandsimDma->priv.device, sizeof(region)/sizeof(region[0]), region, id);
   sem_wait(&(nandsimDma->priv.confSem));
 
   fprintf(stderr, "about to setup device %d %d\n", ref_needleAlloc, ref_mpNextAlloc);
   strstrRequest->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
   strstrIndication->wait();
+
   fprintf(stderr, "about to invoke search %d\n", ref_haystackInNandMemory);
   strstrRequest->search(ref_haystackInNandMemory, haystack_len, 1);
   strstrIndication->wait();  
+
   exit(!(strstrIndication->match_cnt==3));
 }

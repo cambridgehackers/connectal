@@ -19,11 +19,29 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <fstream>
+#include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+
 #include "StdDmaIndication.h"
 #include "DmaConfigProxy.h"
 #include "GeneratedTypes.h" 
 #include "NandSimIndicationWrapper.h"
 #include "NandSimRequestProxy.h"
+
+static int trace_memory = 1;
+extern "C" {
+#include "userReference.h"
+}
+
+using namespace std;
 
 int srcAlloc, nandAlloc;
 unsigned int *srcBuffer = 0;
@@ -66,21 +84,60 @@ private:
   sem_t sem;
 };
 
+static int sockfd = -1;
+#define SOCK_NAME "socket_for_nandsim"
+void connect_to_algo_exe(void)
+{
+  int connect_attempts = 0;
+
+  if (sockfd != -1)
+    return;
+  if ((sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+    fprintf(stderr, "%s (%s) socket error %s\n",__FUNCTION__, SOCK_NAME, strerror(errno));
+    exit(1);
+  }
+
+  //fprintf(stderr, "%s (%s) trying to connect...\n",__FUNCTION__, SOCK_NAME);
+  struct sockaddr_un local;
+  local.sun_family = AF_UNIX;
+  strcpy(local.sun_path, SOCK_NAME);
+  while (connect(sockfd, (struct sockaddr *)&local, strlen(local.sun_path) + sizeof(local.sun_family)) == -1) {
+    if(connect_attempts++ > 16){
+      fprintf(stderr,"%s (%s) connect error %s\n",__FUNCTION__, SOCK_NAME, strerror(errno));
+      exit(1);
+    }
+    //fprintf(stderr, "%s (%s) retrying connection\n",__FUNCTION__, SOCK_NAME);
+    sleep(1);
+  }
+  fprintf(stderr, "%s (%s) connected\n",__FUNCTION__, SOCK_NAME);
+}
+
+
+void write_to_algo_exe(unsigned int x)
+{
+  if (send(sockfd, &x, sizeof(x), 0) == -1) {
+    fprintf(stderr, "%s send error\n",__FUNCTION__);
+    exit(1);
+  }
+}
+
+
 int main(int argc, const char **argv)
 {
+  fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
   unsigned int srcGen = 0;
-  NandSimRequestProxy *device = 0;
-  DmaConfigProxy *dmap = 0;
-  NandSimIndication *deviceIndication = 0;
+
+  NandSimRequestProxy *nandsimRequest = 0;
+  NandSimIndication *nandsimIndication = 0;
+
+  DmaConfigProxy *dmaConfig = 0;
   DmaIndication *dmaIndication = 0;
 
-  fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
+  nandsimRequest = new NandSimRequestProxy(IfcNames_NandSimRequest);
+  nandsimIndication = new NandSimIndication(IfcNames_NandSimIndication);
 
-  device = new NandSimRequestProxy(IfcNames_NandSimRequest);
-  dmap = new DmaConfigProxy(IfcNames_DmaConfig);
-  DmaManager *dma = new DmaManager(dmap);
-
-  deviceIndication = new NandSimIndication(IfcNames_NandSimIndication);
+  dmaConfig = new DmaConfigProxy(IfcNames_DmaConfig);
+  DmaManager *dma = new DmaManager(dmaConfig);
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
@@ -103,9 +160,8 @@ int main(int argc, const char **argv)
   nandAlloc = portalAlloc(nandBytes);
   int ref_nandAlloc = dma->reference(nandAlloc);
   fprintf(stderr, "NAND alloc fd=%d ref=%d\n", nandAlloc, ref_nandAlloc);
-  device->configureNand(ref_nandAlloc, nandBytes);
-  deviceIndication->wait();
-
+  nandsimRequest->configureNand(ref_nandAlloc, nandBytes);
+  nandsimIndication->wait();
 
   if (argc == 1) {
     /* do tests */
@@ -119,8 +175,8 @@ int main(int argc, const char **argv)
       }
       
       fprintf(stderr, "Main::starting write ref=%d, len=%08zx (%lu)\n", ref_srcAlloc, numBytes, loop);
-      device->startWrite(ref_srcAlloc, 0, loop, numBytes, 16);
-      deviceIndication->wait();
+      nandsimRequest->startWrite(ref_srcAlloc, 0, loop, numBytes, 16);
+      nandsimIndication->wait();
       
       loop+=numBytes;
     }
@@ -129,12 +185,12 @@ int main(int argc, const char **argv)
     while (loop < nandBytes) {
       int i;
       fprintf(stderr, "Main::starting read %08zx (%lu)\n", numBytes, loop);
-      device->startRead(ref_srcAlloc, 0, loop, numBytes, 16);
-      deviceIndication->wait();
+      nandsimRequest->startRead(ref_srcAlloc, 0, loop, numBytes, 16);
+      nandsimIndication->wait();
       
       for (i = 0; i < numBytes/sizeof(srcBuffer[0]); i++) {
 	if (srcBuffer[i] != loop+i) {
-	  fprintf(stderr, "Main::mismatch [%08zx] != [%08zx]\n", loop+i, srcBuffer[i]);
+	  fprintf(stderr, "Main::mismatch [%08ld] != [%08d]\n", loop+i, srcBuffer[i]);
 	  mismatch++;
 	} else {
 	  match++;
@@ -150,7 +206,26 @@ int main(int argc, const char **argv)
     
     return (mismatch > 0);
   } else {
-    // this case is for invocations by strstr_nandsim
-    
+    // else we were invoked by alg1_nandsim
+    string filename = "../haystack.txt";
+    // open up the text file and read it into an allocated memory buffer
+    ifstream dataFile(filename.c_str(), ios::in|ios::binary|ios::ate);
+    streampos data_len = dataFile.tellg();
+    int dataAlloc = portalAlloc(data_len);
+    int ref_dataAlloc = dma->reference(dataAlloc);
+    char *data = (char *)portalMmap(dataAlloc, data_len);
+    if(!dataFile.read(data, data_len)){
+      fprintf(stderr, "error reading %s %d\n", filename.c_str(), (int)data_len);
+      exit(-1);
+    }
+
+    // write the contents of data into "flash" memory
+    nandsimRequest->startWrite(ref_dataAlloc, 0, 0, data_len, 16);
+    nandsimIndication->wait();
+
+    // send the offset and length (in nandsim) of the text
+    connect_to_algo_exe();
+    write_to_algo_exe(0);
+    write_to_algo_exe(data_len);
   }
 }
