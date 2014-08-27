@@ -177,6 +177,7 @@ int main(int argc, const char **argv)
 
   dmaConfig = new DmaConfigProxy(IfcNames_DmaConfig);
   DmaManager *dma = new DmaManager(dmaConfig);
+  dma->priv.handle = 4; // so doesn't overlap with nandsim
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   strstrRequest = new StrstrRequestProxy(IfcNames_AlgoRequest);

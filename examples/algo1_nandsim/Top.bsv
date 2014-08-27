@@ -30,6 +30,12 @@ import NandSim::*;
 import NandSimNames::*;
 import Strstr::*;
 
+`ifdef BSIM
+`ifndef PCIE
+import "BDPI" function ActionValue#(Bit#(32)) pareff_init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
+`endif
+`endif
+
 module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    
    NandSimIndicationProxy nandSimIndicationProxy <- mkNandSimIndicationProxy(NandSimIndication);
@@ -42,11 +48,39 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
    MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(dmaIndicationProxy.ifc, cons(strstr.config_read_client, cons(nandSim.readClient, nil)), cons(nandSim.writeClient, nil));
-   DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
+   DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,
+       (interface PortalMemory::DmaConfig;
+          method Action sglist(Bit#(32) pointer, Bit#(32) pointerIndex, Bit#(64) addr,  Bit#(32) len);
+`ifdef BSIM
+`ifndef PCIE
+              let va <- pareff_init(0, pointer, len);
+`endif
+`endif
+              dma.request.sglist(pointer, pointerIndex, addr, len);
+          endmethod
+          method region = dma.request.region;
+          method addrRequest = dma.request.addrRequest;
+          method getStateDbg = dma.request.getStateDbg;
+          method getMemoryTraffic = dma.request.getMemoryTraffic;
+       endinterface));
 
    DmaIndicationProxy nandsimDmaIndicationProxy <- mkDmaIndicationProxy(NandsimDmaIndication);   
    MemServer#(PhysAddrWidth,64,1) nandsimDma <- mkMemServerR(False, nandsimDmaIndicationProxy.ifc, cons(strstr.haystack_read_client,nil));
-   DmaConfigWrapper nandsimDmaRequestWrapper <- mkDmaConfigWrapper(NandsimDmaConfig, nandsimDma.request);
+   DmaConfigWrapper nandsimDmaRequestWrapper <- mkDmaConfigWrapper(NandsimDmaConfig, 
+       (interface PortalMemory::DmaConfig;
+          method Action sglist(Bit#(32) pointer, Bit#(32) pointerIndex, Bit#(64) addr,  Bit#(32) len);
+`ifdef BSIM
+`ifndef PCIE
+              //let va <- pareff_init(1, pointer, len);
+`endif
+`endif
+              nandsimDma.request.sglist(pointer, pointerIndex, addr, len);
+          endmethod
+          method region = nandsimDma.request.region;
+          method addrRequest = nandsimDma.request.addrRequest;
+          method getStateDbg = nandsimDma.request.getStateDbg;
+          method getMemoryTraffic = nandsimDma.request.getMemoryTraffic;
+       endinterface));
    mkConnection(nandsimDma.masters[0], nandSim.memSlave);
    
    Vector#(8,StdPortal) portals;

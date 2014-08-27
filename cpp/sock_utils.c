@@ -43,7 +43,6 @@ static int trace_socket;// = 1;
 #define MAX_FD_ARRAY 10
 static int fd_array[MAX_FD_ARRAY];
 static int fd_array_index = 0;
-int dma_index = -1; /* HACK HACK HACK used for multiple programs connecting to 1 BSIM task */
 
 void connect_to_bsim(void)
 {
@@ -108,11 +107,9 @@ static void *pthread_worker(void *p)
     fprintf(stderr, "%s[%d]: accept error %s\n",__FUNCTION__, listening_socket, strerror(errno));
     exit(1);
   }
-  //remove(SOCKET_NAME);  // we are connected now, so we can remove named socket
   if (trace_socket)
     printf("[%s:%d] sockfd %d\n", __FUNCTION__, __LINE__, sockfd);
   fd_array[fd_array_index++] = sockfd;
-  dma_index++;
   }
 }
 

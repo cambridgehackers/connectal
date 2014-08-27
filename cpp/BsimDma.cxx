@@ -45,7 +45,6 @@ static DMAINFO dma_info[4];
 static int dma_trace;// = 1;
 
 extern "C" {
-extern int dma_index;
   void write_pareff32(uint32_t id, uint32_t pref, uint32_t offset, unsigned int data){
     if (dma_trace)
       fprintf(stderr, "%s: %d %d %d\n", __FUNCTION__, id, pref, offset);
@@ -71,7 +70,6 @@ extern int dma_index;
   }
 
   void pareff_init(uint32_t id, uint32_t apref, uint32_t size){
-id = dma_index;
     uint32_t pref = apref; // >> 8;
     if (dma_trace)
       fprintf(stderr, "BsimDma::pareff id=%d pref=%d, size=%08x size_accum=%08x\n", id, pref, size, dma_info[id][pref].size_accum);

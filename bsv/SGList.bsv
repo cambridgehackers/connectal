@@ -261,9 +261,11 @@ module mkSGListMMU#(Bool bsimMMap, DmaIndication dmaIndication)(SGListMMU#(addrW
    method Action sglist(Bit#(32) pointer, Bit#(32) pointerIndex, Bit#(64) addr,  Bit#(32) len);
 `ifdef BSIM
 `ifndef PCIE
+`ifndef ALGO1_NANDSIM_HACK
          if(bsimMMap) begin
 	    let va <- pareff_init(0, pointer, len);
 	 end
+`endif
 `endif
 `endif
          Bit#(IndexWidth) ind = truncate(pointerIndex);
