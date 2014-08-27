@@ -26,6 +26,7 @@ import FPCMult::*;
 import Gearbox::*;
 import Pipe::*;
 import FIFO::*;
+import BRAM::*;
 import BRAMFIFO::*;
 import Vector::*;
 import Clocks::*;
