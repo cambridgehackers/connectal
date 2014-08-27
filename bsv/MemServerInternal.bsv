@@ -35,7 +35,34 @@ import PortalMemory::*;
 import SGList::*;
 
 typedef 9 SGL_PIPELINE_DEPTH;
-typedef 32 TAG_DEPTH;		 
+
+interface TagGen#(numeric type numTags);
+   method Action tag_request();
+   method ActionValue#(Bit#(TLog#(numTags))) tag_response;
+   method Action return_tag(Bit#(TLog#(numTags)) tag);
+endinterface
+
+module mkTagGen(TagGen#(numTags));
+
+   Vector#(numTags,Reg#(Bool)) tags <- replicateM(mkReg(False));
+   FIFO#(Bit#(TLog#(numTags))) resp_fifo <- mkFIFO;
+   Reg#(Bit#(TLog#(numTags)))  ptr <- mkReg(0);
+
+   method Action tag_request() if (!tags[ptr]);
+      tags[ptr] <= True;
+      resp_fifo.enq(ptr);
+      ptr <= ptr+1;
+   endmethod
+
+   method ActionValue#(Bit#(TLog#(numTags))) tag_response;
+      resp_fifo.deq;
+      return resp_fifo.first;
+   endmethod
+
+   method Action return_tag(Bit#(TLog#(numTags)) tag);
+      tags[tag] <= False;
+   endmethod
+endmodule
 
 interface MemWriteInternal#(numeric type addrWidth, numeric type dataWidth);
    interface DmaDbg dbg;
@@ -70,6 +97,8 @@ typedef struct {Bit#(6) orig_tag;
 typedef struct {DmaErrorType errorType;
 		Bit#(32) pref; } DmaError deriving (Bits);
 
+typedef 4 NumTags;
+
 module mkMemReadInternal#(Integer id,
 			  Vector#(numClients, ObjectReadClient#(dataWidth)) readClients,
 			  DmaIndication dmaIndication,
@@ -90,15 +119,16 @@ module mkMemReadInternal#(Integer id,
    // stage 1: address validation (latency = 1)
    FIFO#(RRec#(numClients,addrWidth))  reqFifo <- mkFIFO;
    // stage 2: read commands (maximum buffering to handle high latency read response times)
-   Vector#(numClients, FIFOF#(DRec#(numClients,addrWidth))) dreqFifos <- replicateM(mkSizedFIFOF(valueOf(TAG_DEPTH)));
+   Vector#(NumTags, FIFOF#(DRec#(numClients,addrWidth))) dreqFifos <- replicateM(mkSizedFIFOF(1));
    // stage 3: read data (minimal buffering required) 
    Vector#(numClients, FIFO#(MemData#(dataWidth))) readDataPipelineFifo <- replicateM(mkFIFO);
-   FIFO#(MemData#(dataWidth)) responseFifo <- mkFIFO;
-   Vector#(numClients, Reg#(Bit#(8)))           burstRegs <- replicateM(mkReg(0));
-   Vector#(numClients, Reg#(Bool))              firstRegs <- replicateM(mkReg(True));
-   Vector#(numClients, Reg#(Bool))               lastRegs <- replicateM(mkReg(False));
+
+   Vector#(NumTags, Reg#(Bit#(8)))           burstRegs <- replicateM(mkReg(0));
+   Vector#(NumTags, Reg#(Bool))              firstRegs <- replicateM(mkReg(True));
+   Vector#(NumTags, Reg#(Bool))               lastRegs <- replicateM(mkReg(False));
    Reg#(Bit#(64))  beatCount <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
+   TagGen#(NumTags) tag_gen <- mkTagGen;
    
    // performance analytics 
    Reg#(Bit#(64)) cycle_cnt <- mkReg(0);
@@ -123,6 +153,7 @@ module mkMemReadInternal#(Integer id,
    	 if (bad_pointer(req.pointer))
 	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer4, pref: req.pointer });
    	 else begin
+	    tag_gen.tag_request;
    	    lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
    	    sgl.request.put(ReqTup{id:truncate(req.pointer),off:req.offset});
    	 end
@@ -132,28 +163,19 @@ module mkMemReadInternal#(Integer id,
       let physAddr <- sgl.response.get;
       let req = lreqFifo.first.req;
       let client = lreqFifo.first.client;
-      let rename_tag  = extend(client);
+      let rename_tag <- tag_gen.tag_response;
       lreqFifo.deq();
-      reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:rename_tag});
+      reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
       //$display("checkSglResp: client=%d, rename_tag=%d", client,rename_tag);
       //$display("mkMemReadInternal::sglResp %d %d", client, cycle_cnt-last_sglResp);
       //last_sglResp <= cycle_cnt;
    endrule
-
-   rule read_response;
-      let response <- toGet(responseFifo).get();
-      beatCount <= beatCount+1;
-      Bit#(6) response_tag = response.tag;
-      let dreqFifo = dreqFifos[response_tag];
-      dynamicAssert(truncate(response_tag) == dreqFifo.first.rename_tag, "mkMemReadInternal");
-      readDataPipelineFifo[response_tag].enq(response);
-   endrule
-
+   
    for (Integer client = 0; client < valueOf(numClients); client = client + 1)
        rule read_client_response;
-	  Bit#(6) response_tag = fromInteger(client);
 	  let response <- toGet(readDataPipelineFifo[client]).get();
-
+	  Bit#(6) response_tag = response.tag;
+	  
 	  let dreqFifo = dreqFifos[response_tag];
 	  let drq = dreqFifo.first;
 	  let req = drq.req;
@@ -170,6 +192,7 @@ module mkMemReadInternal#(Integer id,
 	  readClients[client].readData.put(ObjectData { data: response.data, tag: req.tag, last: last});
 	  if (last) begin
 	     dreqFifo.deq();
+	     tag_gen.return_tag(truncate(response_tag));
 	  end
 	  burstRegs[response_tag] <= burstLen-1;
 	  firstRegs[response_tag] <= (burstLen-1 == 0);
@@ -191,7 +214,13 @@ module mkMemReadInternal#(Integer id,
 	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
 	 endmethod
       endinterface
-      interface Put readData = toPut(responseFifo);
+      interface Put readData;
+	 method Action put(MemData#(dataWidth) response);
+	    let client = dreqFifos[response.tag].first.client;
+	    readDataPipelineFifo[client].enq(response);
+	    beatCount <= beatCount+1;
+	 endmethod
+      endinterface
    endinterface
    interface DmaDbg dbg;
       method ActionValue#(DmaDbgRec) dbg();
@@ -226,11 +255,12 @@ module mkMemWriteInternal#(Integer iid,
    // stage 1: address validation (latency = 1)
    FIFO#(RRec#(numClients,addrWidth))  reqFifo <- mkFIFO;
    // stage 2: write commands (maximum buffering to handle high latency writes)
-   FIFO#(DRec#(numClients, addrWidth)) mwDreqFifo <- mkSizedFIFO(valueOf(TMul#(TAG_DEPTH,numClients)));
-   // stage 3: write data (maximum buffering, though I have no idea if any hosts will begin the next data transfer before sending the write ack)
-   Vector#(numClients, FIFO#(RResp#(numClients,addrWidth))) respFifos <- replicateM(mkSizedBRAMFIFO(valueOf(TAG_DEPTH)));
+   FIFO#(DRec#(numClients, addrWidth)) mwDreqFifo <- mkSizedBRAMFIFO(valueOf(TMul#(numClients,NumTags)));
+   // stage 3: write data 
+   Vector#(NumTags, FIFO#(RResp#(numClients,addrWidth))) respFifos <- replicateM(mkSizedFIFO(4));
    // stage 4: write done (minimal buffering required)
-   FIFO#(Tuple2#(RResp#(numClients,addrWidth),Bit#(6))) writeDonePipelineFifo <- mkFIFO;
+   FIFO#(RResp#(numClients,addrWidth)) writeDonePipelineFifo <- mkFIFO;
+   TagGen#(NumTags) tag_gen <- mkTagGen;
 
    Reg#(Bit#(8)) burstReg <- mkReg(0);   
    Reg#(Bool)    firstReg <- mkReg(True);
@@ -263,6 +293,7 @@ module mkMemWriteInternal#(Integer iid,
    	  else begin
    	     lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
    	     sgl.request.put(ReqTup{id:truncate(req.pointer),off:req.offset});
+	     tag_gen.tag_request;
    	  end
        endrule
    
@@ -270,7 +301,7 @@ module mkMemWriteInternal#(Integer iid,
       let physAddr <- sgl.response.get;
       let req = lreqFifo.first.req;
       let client = lreqFifo.first.client;
-      let rename_tag  = client;
+      let rename_tag <- tag_gen.tag_response;
       lreqFifo.deq();
       reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
       //$display("checkSglResp: client=%d, rename_tag=%d", client,rename_tag);
@@ -279,10 +310,9 @@ module mkMemWriteInternal#(Integer iid,
    endrule
    
    rule writeDoneComp;
-      writeDonePipelineFifo.deq;
-      let client = tpl_1(writeDonePipelineFifo.first).client;
-      let orig_tag = tpl_1(writeDonePipelineFifo.first).orig_tag;
-      let response_tag = tpl_2(writeDonePipelineFifo.first);
+      let rv <- toGet(writeDonePipelineFifo).get;
+      let client = rv.client;
+      let orig_tag = rv.orig_tag;
       writeClients[client].writeDone.put(orig_tag);
    endrule
    
@@ -295,6 +325,7 @@ module mkMemWriteInternal#(Integer iid,
 	 let d <- writeClients[client].writeData.get();
 	 clientWriteData[client].enq(d);
       endrule
+   
    rule memdata;
       let client = mwDreqFifo.first.client;
       let req = mwDreqFifo.first.req;
@@ -339,10 +370,9 @@ module mkMemWriteInternal#(Integer iid,
       endinterface
       interface Put writeDone;
 	 method Action put(Bit#(6) resp);
-	    let response_tag = resp;
-	    let respFifo = respFifos[response_tag];
-	    writeDonePipelineFifo.enq(tuple2(respFifo.first,resp));
-	    respFifo.deq;
+	    let r <- toGet(respFifos[resp]).get;
+	    writeDonePipelineFifo.enq(r);
+	    tag_gen.return_tag(truncate(resp));
 	 endmethod
       endinterface
    endinterface
@@ -355,3 +385,5 @@ module mkMemWriteInternal#(Integer iid,
       endmethod
    endinterface
 endmodule
+
+

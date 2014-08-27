@@ -66,8 +66,6 @@ function  MemReadClient#(addrWidth, busWidth) null_mem_read_client();
            endinterface);
 endfunction
 
-typedef 4 NUM_OO_TAGS;		
- 
 interface MemServer#(numeric type addrWidth, numeric type dataWidth, numeric type nMasters);
    interface DmaConfig request;
    interface Vector#(nMasters,MemMaster#(addrWidth, dataWidth)) masters;
@@ -123,59 +121,6 @@ module mkMemServerW#(DmaIndication dmaIndication,
    return rv;
    
 endmodule
-
-   
-module mkMemServerOO#(DmaIndication dmaIndication,
-		      Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
-		      Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
-   (MemServer#(PhysAddrWidth, dataWidth, nMasters))
-   provisos(Add#(1,a__,dataWidth),
-	    Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
-	    Div#(numReadClients, nMasters, nrc),
-	    Mul#(nrc, nMasters, numReadClients),
-	    Add#(i__, TLog#(nrc), 6),
-	    Div#(numWriteClients, nMasters, nwc),
-	    Mul#(nwc, nMasters, numWriteClients),
-	    Add#(j__, TLog#(nwc), 6)
-	    );
-
-   let rv <- mkConfigMemServerRW(dmaIndication, readClients, writeClients);
-   return rv;
-
-endmodule
-
-module mkMemServerOOR#(DmaIndication dmaIndication,
-		       Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients)
-   (MemServer#(PhysAddrWidth, dataWidth, nMasters))
-   provisos(Add#(1,a__,dataWidth),
-	    Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
-	    Div#(numReadClients, nMasters, nrc),
-	    Mul#(nrc, nMasters, numReadClients),
-	    Add#(b__, TLog#(nrc), 6)
-      );
-   
-   SGListMMU#(PhysAddrWidth) sgl <- mkSGListMMU(True, dmaIndication);
-   let rv <- mkConfigMemServerR(dmaIndication,readClients,sgl);
-   return rv;
-   
-endmodule
-		 
-module mkMemServerOOW#(DmaIndication dmaIndication,
-		    Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
-   (MemServer#(PhysAddrWidth, dataWidth, nMasters))
-   provisos(Add#(1,a__,dataWidth),
-	    Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
-	    Div#(numWriteClients, nMasters, nwc),
-	    Mul#(nwc, nMasters, numWriteClients),
-	    Add#(b__, TLog#(nwc), 6)
-	    );
-   
-   SGListMMU#(PhysAddrWidth) sgl <- mkSGListMMU(True, dmaIndication);
-   let rv <- mkConfigMemServerW(dmaIndication, writeClients,sgl);
-   return rv;
-   
-endmodule
-
    
 typedef struct {
    DmaErrorType errorType;
