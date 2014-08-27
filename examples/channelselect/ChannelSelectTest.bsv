@@ -23,13 +23,17 @@
 import Gearbox::*;
 import ChannelSelect::*;
 
+/* rfreqDataWrite data is FixedPoint(2,14) */
+/* setCoeff data is FixedPoint(2, 23) */
 interface ChannelSelectTestRequest;
-   method Action rfreqDataWrite(Complex#(Signal) data);
-   method Action setCoeff(Bit#(10) addr, Complex#(FixedPoint#(2, 23)) value);
+   method Action rfreqDataWrite(Bit#(16) dataRe, Bit#(16) dataIm);
+   method Action setCoeff(Bit#(10) addr, Bit#(32) valueRe, Bit#(32) valueIm);
 endinterface
 
+
+/* rfreqDataWrite data is FixedPoint(2,14) */
 interface ChannelSelectTestIndication;
-   method Action ifreqData(Complex#(Signal) data);
+   method Action ifreqData(Bit#(16) dataRe, Bit#(16) dataIm);
 endinterface
 
 module mkChannelSelectTestRequest#(ChannelSelectTestIndication indication) (ChannelSelectTestRequest);
@@ -50,12 +54,16 @@ module mkChannelSelectTestRequest#(ChannelSelectTestIndication indication) (Chan
       indication.ifreqData(data);
    endrule
    
-   method Action rfreqDataWrite(Complex#(Signal) data);
-      gb.enq(data);
+   method Action rfreqDataBit(Bit#(16) dataRe, Bit#(16) dataIm);
+      FixedPoint#(2,14) re = unpack(pack(dataRe));
+      FixedPoint#(2,14) im = unpack(pack(dataIm));
+      gb.enq(Complex{rel: re, img: im});
    endmethod
 
-   method Action setCoeff(Bit#(10) addr, Complex#(FixedPoint#(2, 23)) value);
-      cs.setCoeff(addr, value);
+   method Action setCoeff(Bit#(10) addr, Bit#(32) valueRe, Bit#(32) valueIm);
+    FixedPoint#(2, 23) re = unpack(pack(truncate(valueRe)));
+    FixedPoint#(2, 23) im = unpack(pack(truncate(valueIm)));
+      cs.setCoeff(addr, Complex{rel: re, img:im});
    endmethod
 endmodule
 
