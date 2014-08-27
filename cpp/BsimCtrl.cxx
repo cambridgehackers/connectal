@@ -37,11 +37,11 @@
 
 static struct {
     struct memrequest req;
+    int sockfd;
     unsigned int pnum;
     int valid;
     int inflight;
 } head;
-static int sockfd;
 static struct memresponse respitem;
 static int dma_fd = -1;
 static sem_t dma_waiting;
@@ -55,31 +55,28 @@ void initPortal(unsigned long id){
     if (once) {
         sem_init(&dma_waiting, 0, 0);
         pthread_mutex_init(&socket_mutex, NULL);
-        bsim_wait_for_connect(&sockfd);
+        bsim_wait_for_connect();
     }
     once = 0;
 }
 
 void interruptLevel(uint32_t ivalue){
     static int last_level;
-    int temp;
 
     if (ivalue != last_level) {
         last_level = ivalue;
         if (trace_port)
             printf("%s: %d\n", __FUNCTION__, ivalue);
         pthread_mutex_lock(&socket_mutex);
-        temp = respitem.portal;
-        respitem.portal = MAGIC_PORTAL_FOR_SENDING_INTERRUPT;
-        respitem.data = ivalue;
-        bsim_ctrl_send(sockfd, &respitem);
-        respitem.portal = temp;
+        bsim_ctrl_interrupt(ivalue);
         pthread_mutex_unlock(&socket_mutex);
     }
 }
 
 int pareff_fd(int *fd)
 {
+  if (trace_port)
+    printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   sem_wait(&dma_waiting);
   *fd = dma_fd;
   dma_fd = -1;
@@ -88,7 +85,7 @@ int pareff_fd(int *fd)
 
   bool processReq32(uint32_t rr){
     if (!head.valid){
-	int rv = bsim_ctrl_recv(sockfd, &head.req);
+	int rv = bsim_ctrl_recv(&head.sockfd, &head.req);
 	if(rv > 0){
 	  //fprintf(stderr, "recv size %d\n", rv);
 	  assert(rv == sizeof(memrequest));
@@ -131,10 +128,10 @@ int pareff_fd(int *fd)
   void readData32(unsigned int x){
     if(trace_port)
         fprintf(stderr, " read = %x\n", x);
-    head.valid = 0;
     pthread_mutex_lock(&socket_mutex);
     respitem.data = x;
-    bsim_ctrl_send(sockfd, &respitem);
+    bsim_ctrl_send(head.sockfd, &respitem);
     pthread_mutex_unlock(&socket_mutex);
+    head.valid = 0;
   }
 }

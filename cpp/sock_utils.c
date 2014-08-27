@@ -39,6 +39,11 @@
 
 static pthread_mutex_t socket_mutex;
 static int global_sockfd = -1;
+static int trace_socket;// = 1;
+#define MAX_FD_ARRAY 10
+static int fd_array[MAX_FD_ARRAY];
+static int fd_array_index = 0;
+int dma_index = -1; /* HACK HACK HACK used for multiple programs connecting to 1 BSIM task */
 
 void connect_to_bsim(void)
 {
@@ -51,7 +56,8 @@ void connect_to_bsim(void)
     exit(1);
   }
 
-  //fprintf(stderr, "%s (%s) trying to connect...\n",__FUNCTION__, SOCKET_NAME);
+  if (trace_socket)
+    fprintf(stderr, "%s (%s) trying to connect...\n",__FUNCTION__, SOCKET_NAME);
   struct sockaddr_un local;
   local.sun_family = AF_UNIX;
   strcpy(local.sun_path, SOCKET_NAME);
@@ -60,17 +66,20 @@ void connect_to_bsim(void)
       fprintf(stderr,"%s (%s) connect error %s\n",__FUNCTION__, SOCKET_NAME, strerror(errno));
       exit(1);
     }
-    //fprintf(stderr, "%s (%s) retrying connection\n",__FUNCTION__, SOCKET_NAME);
+    if (trace_socket)
+      fprintf(stderr, "%s (%s) retrying connection\n",__FUNCTION__, SOCKET_NAME);
     sleep(1);
   }
-  fprintf(stderr, "%s (%s) connected\n",__FUNCTION__, SOCKET_NAME);
+  fprintf(stderr, "%s (%s) connected.  Attempts %d\n",__FUNCTION__, SOCKET_NAME, connect_attempts);
   pthread_mutex_init(&socket_mutex, NULL);
 }
 
-void bsim_wait_for_connect(int* psockfd)
+static void *pthread_worker(void *p)
 {
   int listening_socket;
 
+  if (trace_socket)
+    printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   if ((listening_socket = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
     fprintf(stderr, "%s: socket error %s",__FUNCTION__, strerror(errno));
     exit(1);
@@ -91,12 +100,27 @@ void bsim_wait_for_connect(int* psockfd)
     exit(1);
   }
   
-  //fprintf(stderr, "%s[%d]: waiting for a connection...\n",__FUNCTION__, listening_socket);
-  if ((*psockfd = accept(listening_socket, NULL, NULL)) == -1) {
+  if (trace_socket)
+    fprintf(stderr, "%s[%d]: waiting for a connection...\n",__FUNCTION__, listening_socket);
+  while (1) {
+  int sockfd;
+  if ((sockfd = accept(listening_socket, NULL, NULL)) == -1) {
     fprintf(stderr, "%s[%d]: accept error %s\n",__FUNCTION__, listening_socket, strerror(errno));
     exit(1);
   }
-  remove(SOCKET_NAME);  // we are connected now, so we can remove named socket
+  //remove(SOCKET_NAME);  // we are connected now, so we can remove named socket
+  if (trace_socket)
+    printf("[%s:%d] sockfd %d\n", __FUNCTION__, __LINE__, sockfd);
+  fd_array[fd_array_index++] = sockfd;
+  dma_index++;
+  }
+}
+
+void bsim_wait_for_connect(void)
+{
+  pthread_t threaddata;
+
+  pthread_create(&threaddata, NULL, &pthread_worker, NULL);
 }
 
 /* Thanks to keithp.com for readable examples how to do this! */
@@ -156,6 +180,8 @@ ssize_t sock_fd_read(int sock, int *fd)
     char buf[16];
     int *iptr;
 
+    if (trace_socket)
+        printf("[%s:%d] sock %d\n", __FUNCTION__, __LINE__, sock);
     COMMON_SOCK_FD;
     *fd = -1;
     size = recvmsg (sock, &msg, 0);
@@ -228,15 +254,34 @@ void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id)
   pthread_mutex_unlock(&socket_mutex);
 }
 
-int bsim_ctrl_recv(int sockfd, struct memrequest *data)
+int bsim_ctrl_recv(int *sockfd, struct memrequest *data)
 {
-  int rc = recv(sockfd, data, sizeof(*data), MSG_DONTWAIT);
+  int i, rc = -1;
+  for (i = 0; i < fd_array_index; i++) {
+  *sockfd = fd_array[i];
+  rc = recv(*sockfd, data, sizeof(*data), MSG_DONTWAIT);
+  if (0 && rc > 0 && trace_socket)
+      printf("[%s:%d] sock %d rc %d\n", __FUNCTION__, __LINE__, *sockfd, rc);
   if (rc == sizeof(*data) && data->portal == MAGIC_PORTAL_FOR_SENDING_FD) {
     int new_fd;
-    sock_fd_read(sockfd, &new_fd);
+    sock_fd_read(*sockfd, &new_fd);
     data->data = new_fd;
   }
+  if (rc > 0)
+    break;
+  }
   return rc;
+}
+void bsim_ctrl_interrupt(int ivalue)
+{
+  static struct memresponse respitem;
+  int i;
+
+  for (i = 0; i < fd_array_index; i++) {
+     respitem.portal = MAGIC_PORTAL_FOR_SENDING_INTERRUPT;
+     respitem.data = ivalue;
+     bsim_ctrl_send(fd_array[i], &respitem);
+  }
 }
 
 int bsim_ctrl_send(int sockfd, struct memresponse *data)

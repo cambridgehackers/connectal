@@ -107,6 +107,7 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(p,busWidth))
       endrule
    
    rule restartr(iterCnt > 0);
+      if (verbose) $display("restartr %d", iterCnt);
       restartf.deq;
       iterCnt <= iterCnt-1;
       let pv = fromInteger(valueOf(p));
@@ -122,6 +123,7 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(p,busWidth))
    rule compr;
       for(Integer i = 0; i < valueOf(p); i=i+1)
 	 let rv <- engines[i].finishSearch;
+      if (verbose) $display("strstr iterCnt %x\n", iterCnt);
       if(iterCnt==0)
 	 indication.searchResult(-1);
       else
@@ -130,6 +132,7 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(p,busWidth))
    
    interface StrstrRequest request;
       method Action setup(Bit#(32) needle_pointer, Bit#(32) mpNext_pointer, Bit#(32) needle_len);
+	 if (verbose) $display("mkStrstr::setup %d %d %d", needle_pointer, mpNext_pointer, needle_len);
 	 needleLen <= needle_len;
 	 for(Integer i = 0; i < valueOf(p); i=i+1)
 	    engines[fromInteger(i)].setup(needle_pointer, mpNext_pointer, needle_len);

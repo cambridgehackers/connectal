@@ -97,6 +97,7 @@ public:
     match_cnt = 0;
   };
   virtual void setupComplete() {
+    fprintf(stderr, "Strstr::setupComplete\n");
     sem_post(&sem);
   }
   virtual void searchResult (int v){

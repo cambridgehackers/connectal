@@ -19,10 +19,9 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <fstream>
-#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
@@ -102,12 +101,12 @@ void connect_to_algo_exe(void)
   local.sun_family = AF_UNIX;
   strcpy(local.sun_path, SOCK_NAME);
   while (connect(sockfd, (struct sockaddr *)&local, strlen(local.sun_path) + sizeof(local.sun_family)) == -1) {
-    if(connect_attempts++ > 16){
+    if(connect_attempts++ > 100){
       fprintf(stderr,"%s (%s) connect error %s\n",__FUNCTION__, SOCK_NAME, strerror(errno));
       exit(1);
     }
-    //fprintf(stderr, "%s (%s) retrying connection\n",__FUNCTION__, SOCK_NAME);
-    sleep(1);
+    fprintf(stderr, "%s (%s) retrying connection\n",__FUNCTION__, SOCK_NAME);
+    sleep(5);
   }
   fprintf(stderr, "%s (%s) connected\n",__FUNCTION__, SOCK_NAME);
 }
@@ -224,15 +223,16 @@ int main(int argc, const char **argv)
     return (mismatch > 0);
   } else {
     // else we were invoked by alg1_nandsim
-    string filename = "../haystack.txt";
+    const char *filename = "../haystack.txt";
     // open up the text file and read it into an allocated memory buffer
-    ifstream dataFile(filename.c_str(), ios::in|ios::binary|ios::ate);
-    streampos data_len = dataFile.tellg();
+    int dataFile = open(filename, O_RDONLY);
+    uint32_t data_len = lseek(dataFile, 0, SEEK_END);
+    lseek(dataFile, 0, SEEK_SET);
     int dataAlloc = portalAlloc(data_len);
     int ref_dataAlloc = dma->reference(dataAlloc);
     char *data = (char *)portalMmap(dataAlloc, data_len);
-    if(!dataFile.read(data, data_len)){
-      fprintf(stderr, "error reading %s %d\n", filename.c_str(), (int)data_len);
+    if(read(dataFile, data, data_len) != data_len) {
+      fprintf(stderr, "error reading %s %d\n", filename, (int)data_len);
       exit(-1);
     }
 
@@ -244,5 +244,8 @@ int main(int argc, const char **argv)
     connect_to_algo_exe();
     write_to_algo_exe(0);
     write_to_algo_exe(data_len);
+    printf("[%s:%d] sleep, waiting for search\n", __FUNCTION__, __LINE__);
+    sleep(200);
+    printf("[%s:%d] now closing down\n", __FUNCTION__, __LINE__);
   }
 }

@@ -49,7 +49,7 @@ typedef struct {
 
 `ifdef BSIM
 `ifndef PCIE
-import "BDPI" function ActionValue#(Bit#(32)) pareff(Bit#(32) handle, Bit#(32) size);
+import "BDPI" function ActionValue#(Bit#(32)) pareff_init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
 `endif
 `endif
 
@@ -262,7 +262,7 @@ module mkSGListMMU#(Bool bsimMMap, DmaIndication dmaIndication)(SGListMMU#(addrW
 `ifdef BSIM
 `ifndef PCIE
          if(bsimMMap) begin
-	    let va <- pareff(pointer, len);
+	    let va <- pareff_init(0, pointer, len);
 	 end
 `endif
 `endif

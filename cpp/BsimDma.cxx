@@ -36,46 +36,59 @@
 #include "portal.h"
 #include "sock_utils.h"
 
-static struct {
+typedef struct {
     unsigned char *buffer;
     uint32_t buffer_len;
     int size_accum;
-} dma_info[32];
+} DMAINFO[32];
+static DMAINFO dma_info[4];
+static int dma_trace;// = 1;
 
 extern "C" {
-  void write_pareff32(uint32_t pref, uint32_t offset, unsigned int data){
-    *(unsigned int *)&dma_info[pref].buffer[offset] = data;
+extern int dma_index;
+  void write_pareff32(uint32_t id, uint32_t pref, uint32_t offset, unsigned int data){
+    if (dma_trace)
+      fprintf(stderr, "%s: %d %d %d\n", __FUNCTION__, id, pref, offset);
+    *(unsigned int *)&dma_info[id][pref].buffer[offset] = data;
   }
 
-  unsigned int read_pareff32(uint32_t pref, uint32_t offset){
-    return *(unsigned int *)&dma_info[pref].buffer[offset];
+  unsigned int read_pareff32(uint32_t id, uint32_t pref, uint32_t offset){
+    if (dma_trace)
+      fprintf(stderr, "%s: %d %d %d\n", __FUNCTION__, id, pref, offset);
+    return *(unsigned int *)&dma_info[id][pref].buffer[offset];
   }
 
-  void write_pareff64(uint32_t pref, uint32_t offset, uint64_t data){
-    *(uint64_t *)&dma_info[pref].buffer[offset] = data;
+  void write_pareff64(uint32_t id, uint32_t pref, uint32_t offset, uint64_t data){
+    if (dma_trace)
+      fprintf(stderr, "%s: %d %d %d\n", __FUNCTION__, id, pref, offset);
+    *(uint64_t *)&dma_info[id][pref].buffer[offset] = data;
   }
 
-  uint64_t read_pareff64(uint32_t pref, uint32_t offset){
-    //fprintf(stderr, "read_pareff64 %d %d\n", pref, offset);
-    return *(uint64_t *)&dma_info[pref].buffer[offset];
+  uint64_t read_pareff64(uint32_t id, uint32_t pref, uint32_t offset){
+    if (dma_trace)
+      fprintf(stderr, "%s: %d %d %d\n", __FUNCTION__, id, pref, offset);
+    return *(uint64_t *)&dma_info[id][pref].buffer[offset];
   }
 
-  void pareff(uint32_t apref, uint32_t size){
+  void pareff_init(uint32_t id, uint32_t apref, uint32_t size){
+id = dma_index;
     uint32_t pref = apref; // >> 8;
-    //fprintf(stderr, "BsimDma::pareff pref=%d, size=%08x size_accum=%08x\n", pref, size, dma_info[pref].size_accum);
+    if (dma_trace)
+      fprintf(stderr, "BsimDma::pareff id=%d pref=%d, size=%08x size_accum=%08x\n", id, pref, size, dma_info[id][pref].size_accum);
     assert(pref < 32);
-    dma_info[pref].size_accum += size;
+    dma_info[id][pref].size_accum += size;
     if(size == 0){
       int fd;
       pareff_fd(&fd);
-      dma_info[pref].buffer = (unsigned char *)mmap(0,
-          dma_info[pref].size_accum, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
-      if (dma_info[pref].buffer == MAP_FAILED) {
-	fprintf(stderr, "%s: mmap failed fd %x buffer %p size %x errno %d\n", __FUNCTION__, fd, dma_info[pref].buffer, size, errno);
+      dma_info[id][pref].buffer = (unsigned char *)mmap(0,
+          dma_info[id][pref].size_accum, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
+      if (dma_info[id][pref].buffer == MAP_FAILED) {
+	fprintf(stderr, "%s: mmap failed fd %x buffer %p size %x errno %d\n", __FUNCTION__, fd, dma_info[id][pref].buffer, size, errno);
 	exit(-1);
       }
-      dma_info[pref].buffer_len = dma_info[pref].size_accum;
+      dma_info[id][pref].buffer_len = dma_info[id][pref].size_accum;
     }
-    //fprintf(stderr, "done\n");
+    if (dma_trace)
+      fprintf(stderr, "done\n");
   }
 }
