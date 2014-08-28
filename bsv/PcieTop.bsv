@@ -64,7 +64,7 @@ import "BDPI" function ActionValue#(TLPData#(16)) get_tlp();
 import "BDPI" function Bool can_put_tlp();
 import "BDPI" function Bool can_get_tlp();
 
-(* synthesize *)
+//(* synthesize *)
 module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    Clock epClock125 <- exposeCurrentClock();
    Reset epReset125 <- exposeCurrentReset();
