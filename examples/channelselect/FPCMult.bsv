@@ -49,39 +49,48 @@ module mkFPCMult(FPCMult)
      Bits#(ProductData, b__));
    /* input registers */
    Reg#(Complex#(Signal)) xin <- mkReg(?);
+   Reg#(Bit#(1)) xinvalid <- mkReg(0);
    Reg#(CoeffData) ain <- mkReg(?);
    /* pipeline registers at output of multipliers */
    Reg#(Product) arxr <- mkReg(?);
    Reg#(Product) aixi <- mkReg(?);
    Reg#(Product) arxi <- mkReg(?);
    Reg#(Product) aixr <- mkReg(?);
-   Reg#(Bit#(1)) multstage <- mkReg(?);
+   Reg#(Bit#(1)) mulloutvalid <- mkReg(0):
+   Reg#(Bit#(1)) muloutphase <- mkReg(?);
    /* result registers */
    Reg#(ProductData) yout <- mkReg(?);
+   Reg#(Bit#(1)) youtvalid <- mkReg(0);
 
-   rule work;
+   rule work (muloutvalid == 0 || youtvalid == 0);
       /* compute multiplies */
       arxr <= fxptMult(ain.a.rel, xin.rel);
       aixi <= fxptMult(ain.a.img, xin.img);
       arxi <= fxptMult(ain.a.rel, xin.img);
       aixr <= fxptMult(ain.a.img, xin.rel);
-      multstage <= ain.filterPhase;
+      muloutvalid <= 1;
+      muloutphase <= ain.filterPhase;
+   endrule
+   
+   rule workadd (youtvalid == 0);
       /* combine into outputs */
-      yout <= ProductData{y: Complex{rel: arxr - aixi, img: arxi + aixr}, filterPhase: multstage};
+      yout <= ProductData{y: Complex{rel: arxr - aixi, img: arxi + aixr}, filterPhase: muloutphase};
    endrule
    
    interface PipeOut y = toPipeOut(yout);
    interface PipeIn x;
       method Action enq(Complex#(Signal) v);
          xin <= v;
+         xinvalid <= 1;
       endmethod
       method Bool notFull();
-         return (True);
+         return (xinvalid == 0 || );
       endmethod
    endinterface
    interface PipeIn a;
       method Action enq(CoeffData v);
          ain <= v;
+         ainvalid <= 1;
       endmethod
       method Bool notFull();
          return (True);

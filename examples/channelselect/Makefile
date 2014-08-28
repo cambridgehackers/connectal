@@ -1,7 +1,7 @@
 
 S2H = ChannelSelectTestRequest
 H2S = ChannelSelectTestIndication
-BSVFILES = ../fmcomms1/DDS.bsv ../fmcomms1/ChannelSelect.bsv ../fmcomms1/FPCMult.bsv ChannelSelectTest.bsv Top.bsv
+BSVFILES = DDS.bsv ChannelSelect.bsv FPCMult.bsv ChannelSelectTest.bsv Top.bsv
 CPPFILES=testChannelSelect.c
 NUMBER_OF_MASTERS =0
 #XBSVFLAGS=--bscflags " -D TRACE_AXI"
