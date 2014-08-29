@@ -44,8 +44,8 @@ void PortalMatAllocator::allocate(int dims, const int* sizes, int type, int*& re
 
   data = datastart = (uchar*)info->data;
   refcount = (int*)info;
-  fprintf(stderr, "PortalMatAllocator::allocate   arraynum=%d arraysize=%d totalsize=%ld datastart=%p refcount=%p end of data=%p\n",
-	  arraynum, arraysize, (long)totalsize, datastart, refcount, datastart+totalsize);
+  fprintf(stderr, "PortalMatAllocator::allocate   arraynum=%d arraysize=%ld totalsize=%ld datastart=%p refcount=%p end of data=%p\n",
+	  arraynum, (long)arraysize, (long)totalsize, datastart, refcount, datastart+totalsize);
 }
 
 void PortalMatAllocator::deallocate(int* refcount, uchar* datastart, uchar* data)
