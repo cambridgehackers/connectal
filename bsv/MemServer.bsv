@@ -82,7 +82,8 @@ module mkMemServer#(DmaIndication dmaIndication,
 	    Add#(b__, TLog#(nrc), 6),
 	    Div#(numWriteClients, nMasters, nwc),
 	    Mul#(nwc, nMasters, numWriteClients),
-	    Add#(c__, TLog#(nwc), 6)
+	    Add#(c__, TLog#(nwc), 6),
+	    Add#(TLog#(TDiv#(dataWidth, 8)), d__, 8)
 	    );
    
    let rv <- mkConfigMemServerRW(dmaIndication, readClients, writeClients);
@@ -97,7 +98,8 @@ module mkMemServerR#(Bool bsimMMap, DmaIndication dmaIndication,
 	    Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
 	    Div#(numReadClients, nMasters, nrc),
 	    Mul#(nrc, nMasters, numReadClients),
-	    Add#(b__, TLog#(nrc), 6)
+	    Add#(b__, TLog#(nrc), 6),
+	    Add#(TLog#(TDiv#(dataWidth, 8)), c__, 8)
 	    );
    
    SGListMMU#(PhysAddrWidth) sgl <- mkSGListMMU(bsimMMap, dmaIndication);
@@ -137,7 +139,8 @@ module mkConfigMemServerRW#(DmaIndication dmaIndication,
 	     Mul#(nwc, nMasters, numWriteClients),
 	     Mul#(nrc, nMasters, numReadClients),
 	     Add#(b__, TLog#(nrc), 6),
-	     Add#(c__, TLog#(nwc), 6)
+	     Add#(c__, TLog#(nwc), 6),
+	     Add#(TLog#(TDiv#(dataWidth, 8)), d__, 8)
 	     );
 
 
@@ -186,7 +189,8 @@ module mkConfigMemServerR#(DmaIndication dmaIndication,
    provisos (Add#(1,a__,dataWidth),
 	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
 	     Mul#(nrc, nMasters, numReadClients),
-	     Add#(b__, TLog#(nrc), 6)
+	     Add#(b__, TLog#(nrc), 6),
+	     Add#(TLog#(TDiv#(dataWidth, 8)), c__, 8)
 	     );
 
 

@@ -28,6 +28,7 @@ import Vector::*;
 import GetPut::*;
 import ClientServer::*;
 import Assert::*;
+import BRAM::*;
 
 // XBSV Libraries
 import MemTypes::*;
@@ -37,31 +38,58 @@ import SGList::*;
 typedef 9 SGL_PIPELINE_DEPTH;
 
 interface TagGen#(numeric type numTags);
-   method Action tag_request();
-   method ActionValue#(Bit#(TLog#(numTags))) tag_response;
-   method Action return_tag(Bit#(TLog#(numTags)) tag);
+   method ActionValue#(Bit#(TLog#(numTags))) getTag;
+   method Action returnTag(Bit#(TLog#(numTags)) tag);
+   method ActionValue#(Bit#(TLog#(numTags))) complete;
 endinterface
 
-module mkTagGen(TagGen#(numTags));
+module mkTagGen(TagGen#(numTags))
+   provisos(Log#(numTags,tsz));
+   
+   BRAM_Configure cfg = defaultValue;
+   cfg.outFIFODepth = 1;
+   BRAM2Port#(Bit#(tsz),Bool) tags <- mkBRAM2Server(cfg);
+   Reg#(Bit#(tsz))        head_ptr <- mkReg(0);
+   Reg#(Bit#(tsz))        tail_ptr <- mkReg(0);
+   Reg#(Bool)               inited <- mkReg(False);
+   FIFO#(Bit#(tsz))      comp_fifo <- mkFIFO;
+   Reg#(Bit#(numTags))  comp_state <- mkReg(0);
 
-   Vector#(numTags,Reg#(Bool)) tags <- replicateM(mkReg(False));
-   FIFO#(Bit#(TLog#(numTags))) resp_fifo <- mkFIFO;
-   Reg#(Bit#(TLog#(numTags)))  ptr <- mkReg(0);
+   rule complete_rule0 (comp_state[0] != 0);
+      tags.portB.request.put(BRAMRequest{write:False, address:tail_ptr});
+   endrule
 
-   method Action tag_request() if (!tags[ptr]);
-      tags[ptr] <= True;
-      resp_fifo.enq(ptr);
-      ptr <= ptr+1;
+   rule complete_rule1 (comp_state[0] != 0);
+      let rv <- tags.portB.response.get;
+      if (!rv) begin
+	 tail_ptr <= tail_ptr+1;
+	 comp_state <= comp_state >> 1;
+	 comp_fifo.enq(tail_ptr);
+      end
+   endrule
+   
+   rule init(!inited);
+      tags.portA.request.put(BRAMRequest{write:True,address:head_ptr,responseOnWrite:False,datain:False});
+      head_ptr <= head_ptr+1;
+      inited <= head_ptr+1==0;
+   endrule
+   
+   method ActionValue#(Bit#(tsz)) getTag() if (inited && (head_ptr+1 != tail_ptr));
+      tags.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:head_ptr, datain:True});
+      head_ptr <= head_ptr+1;
+      return head_ptr;
    endmethod
 
-   method ActionValue#(Bit#(TLog#(numTags))) tag_response;
-      resp_fifo.deq;
-      return resp_fifo.first;
+   method Action returnTag(Bit#(tsz) tag) if (inited);
+      tags.portB.request.put(BRAMRequest{write:True, responseOnWrite:False, address:tag, datain:False});
+      comp_state <= 1 | (comp_state << 1);
    endmethod
-
-   method Action return_tag(Bit#(TLog#(numTags)) tag);
-      tags[tag] <= False;
+   
+   method ActionValue#(Bit#(tsz)) complete;
+      comp_fifo.deq;
+      return comp_fifo.first;
    endmethod
+   
 endmodule
 
 interface MemWriteInternal#(numeric type addrWidth, numeric type dataWidth);
@@ -97,7 +125,7 @@ typedef struct {Bit#(6) orig_tag;
 typedef struct {DmaErrorType errorType;
 		Bit#(32) pref; } DmaError deriving (Bits);
 
-typedef 4 NumTags;
+typedef 32 NumTags;
 
 module mkMemReadInternal#(Integer id,
 			  Vector#(numClients, ObjectReadClient#(dataWidth)) readClients,
@@ -111,29 +139,38 @@ module mkMemReadInternal#(Integer id,
 	    Div#(dataWidth,8,dataWidthBytes),
 	    Mul#(dataWidthBytes,8,dataWidth),
 	    Log#(dataWidthBytes,beatShift),
-	    Add#(a__, TLog#(numClients), 6)
+	    Add#(a__, TLog#(numClients), 6),
+	    Add#(beatShift, e__, 8)
       );
    
    // stage 0: address translation (latency = SGL_PIPELINE_DEPTH)
    FIFO#(LRec#(numClients,addrWidth)) lreqFifo <- mkSizedFIFO(valueOf(SGL_PIPELINE_DEPTH));
    // stage 1: address validation (latency = 1)
    FIFO#(RRec#(numClients,addrWidth))  reqFifo <- mkFIFO;
-   // stage 2: read commands (maximum buffering to handle high latency read response times)
-   Vector#(NumTags, FIFOF#(DRec#(numClients,addrWidth))) dreqFifos <- replicateM(mkSizedFIFOF(1));
-   // stage 3: read data (minimal buffering required) 
-   Vector#(numClients, FIFO#(MemData#(dataWidth))) readDataPipelineFifo <- replicateM(mkFIFO);
+   // stage 2: read commands
+   BRAM2Port#(Bit#(TLog#(NumTags)), DRec#(numClients,addrWidth)) dreqFifos <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(Bit#(TAdd#(TLog#(NumTags),TSub#(8,beatShift))), ObjectData#(dataWidth)) read_buffer <- mkBRAM2Server(defaultValue);
+   // stage 3: read data 
+   FIFO#(MemData#(dataWidth)) readDataPipelineFifo <- mkFIFO;
 
-   Vector#(NumTags, Reg#(Bit#(8)))           burstRegs <- replicateM(mkReg(0));
-   Vector#(NumTags, Reg#(Bool))              firstRegs <- replicateM(mkReg(True));
-   Vector#(NumTags, Reg#(Bool))               lastRegs <- replicateM(mkReg(False));
+   Reg#(Bit#(8))           burstReg <- mkReg(0);
+   Reg#(Bool)              firstReg <- mkReg(True);
+   Reg#(Bool)               lastReg <- mkReg(False);
    Reg#(Bit#(64))  beatCount <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
    TagGen#(NumTags) tag_gen <- mkTagGen;
+
+   Reg#(Bit#(8))                 compReg0 <- mkReg(0); 
+   Reg#(Bit#(TLog#(NumTags)))    compReg1 <- mkReg(0);
+   Reg#(Bit#(TLog#(numClients))) compReg2 <- mkReg(0);
+   FIFO#(Bit#(TLog#(numClients)))compFifo0 <- mkFIFO;
+   FIFO#(Bit#(TLog#(NumTags)))   compFifo1 <- mkFIFO;
    
    // performance analytics 
    Reg#(Bit#(64)) cycle_cnt <- mkReg(0);
    Reg#(Bit#(64)) last_loadClient <- mkReg(0);
    Reg#(Bit#(64)) last_sglResp <- mkReg(0);
+   Reg#(Bit#(64)) last_comp <- mkReg(0);
    (* fire_when_enabled *)
    rule cycle;
       cycle_cnt <= cycle_cnt+1;
@@ -153,17 +190,47 @@ module mkMemReadInternal#(Integer id,
    	 if (bad_pointer(req.pointer))
 	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer4, pref: req.pointer });
    	 else begin
-	    tag_gen.tag_request;
    	    lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
    	    sgl.request.put(ReqTup{id:truncate(req.pointer),off:req.offset});
    	 end
       endrule
    
+   rule complete_burst0 if (compReg0==0);
+      let tag <- tag_gen.complete;
+      dreqFifos.portB.request.put(BRAMRequest{write:False, address:tag});      
+      compFifo1.enq(tag);
+   endrule
+   
+   rule complete_burst1;
+      let cnt = compReg0;
+      let tag = compReg1;
+      let cli = compReg2;
+      if (compReg0 == 0) begin
+	 let drq <- dreqFifos.portB.response.get;
+	 cnt = drq.req.burstLen >> beat_shift;
+	 cli = drq.client;
+	 tag <- toGet(compFifo1).get;
+      end
+      compFifo0.enq(cli);
+      read_buffer.portB.request.put(BRAMRequest{write:False, address:{tag,truncate(cnt)}});
+      compReg0 <= cnt-1;
+      compReg1 <= tag;
+      compReg2 <= cli;
+   endrule
+   
+   rule complete_burst2;
+      let client <- toGet(compFifo0).get;
+      let data <- read_buffer.portB.response.get;
+      readClients[client].readData.put(data);
+      //$display("mkMemReadInternal::comp %d  %x %d", client, data.data, cycle_cnt-last_comp);
+      //last_comp <= cycle_cnt;
+   endrule
+   
    rule checkSglResp;
       let physAddr <- sgl.response.get;
       let req = lreqFifo.first.req;
       let client = lreqFifo.first.client;
-      let rename_tag <- tag_gen.tag_response;
+      let rename_tag <- tag_gen.getTag;
       lreqFifo.deq();
       reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
       //$display("checkSglResp: client=%d, rename_tag=%d", client,rename_tag);
@@ -171,33 +238,29 @@ module mkMemReadInternal#(Integer id,
       //last_sglResp <= cycle_cnt;
    endrule
    
-   for (Integer client = 0; client < valueOf(numClients); client = client + 1)
-       rule read_client_response;
-	  let response <- toGet(readDataPipelineFifo[client]).get();
-	  Bit#(6) response_tag = response.tag;
-	  
-	  let dreqFifo = dreqFifos[response_tag];
-	  let drq = dreqFifo.first;
-	  let req = drq.req;
-	  let burstLen = burstRegs[response_tag];
-	  let first =    firstRegs[response_tag];
-	  let last  =    lastRegs[response_tag];
-	  if (first) begin
-	     burstLen = dreqFifo.first.req.burstLen >> beat_shift;
-	     last = dreqFifo.first.last;
-	     dynamicAssert(last == (burstLen==1), "Last incorrect");
-	     //$display("burstLen=%d dreqFifo.first.last=%d last=%d\n", burstLen, dreqFifo.first.last, last);
-	  end
-
-	  readClients[client].readData.put(ObjectData { data: response.data, tag: req.tag, last: last});
-	  if (last) begin
-	     dreqFifo.deq();
-	     tag_gen.return_tag(truncate(response_tag));
-	  end
-	  burstRegs[response_tag] <= burstLen-1;
-	  firstRegs[response_tag] <= (burstLen-1 == 0);
-	  lastRegs[response_tag] <= (burstLen-1 == 1);
-       endrule
+   rule read_data;
+      let response <- toGet(readDataPipelineFifo).get();
+      Bit#(6) response_tag = response.tag;
+      let drq <- dreqFifos.portA.response.get;
+      let req = drq.req;
+      let burstLen = burstReg;
+      let first =    firstReg;
+      let last  =    lastReg;
+      if (first) begin
+	 burstLen = drq.req.burstLen >> beat_shift;
+	 last = drq.last;
+	 dynamicAssert(last == (burstLen==1), "Last incorrect");
+	 //$display("burstLen=%d dreqFifo.first.last=%d last=%d\n", burstLen, dreqFifo.first.last, last);
+      end
+      Bit#(TLog#(NumTags)) tt = truncate(response_tag);
+      read_buffer.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, datain:ObjectData{data: response.data, tag: req.tag, last: last}, address:{tt,truncate(burstLen)}});
+      if (last) begin
+	 tag_gen.returnTag(truncate(response_tag));
+      end
+      burstReg <= burstLen-1;
+      firstReg <= (burstLen-1 == 0);
+      lastReg <= (burstLen-1 == 1);
+   endrule
 
    interface MemReadClient read_client;
       interface Get readReq;
@@ -209,15 +272,15 @@ module mkMemReadInternal#(Integer id,
 	    let rename_tag = reqFifo.first.rename_tag;
 	    if (False && physAddr[31:24] != 0)
 	       $display("req_ar: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
-	    dreqFifos[rename_tag].enq(DRec{req:req, client:client, rename_tag:rename_tag, last:(req.burstLen == fromInteger(valueOf(dataWidthBytes)))});
+	    dreqFifos.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(rename_tag), datain:DRec{req:req, client:client, rename_tag:rename_tag, last:(req.burstLen == fromInteger(valueOf(dataWidthBytes)))}});
 	    //$display("readReq: client=%d, rename_tag=%d, physAddr=%h req.burstLen=%d beat_shift=%d last=%d", client,rename_tag,physAddr, req.burstLen, beat_shift, req.burstLen == beat_shift);
 	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
 	 endmethod
       endinterface
       interface Put readData;
 	 method Action put(MemData#(dataWidth) response);
-	    let client = dreqFifos[response.tag].first.client;
-	    readDataPipelineFifo[client].enq(response);
+	    readDataPipelineFifo.enq(response);
+	    dreqFifos.portA.request.put(BRAMRequest{write:False, address:truncate(response.tag)});
 	    beatCount <= beatCount+1;
 	 endmethod
       endinterface
@@ -249,17 +312,16 @@ module mkMemWriteInternal#(Integer iid,
 	    Log#(dataWidthBytes,beatShift),
 	    Add#(a__, TLog#(numClients), 6));
    
-   
+   let debug = False;
+
    // stage 0: address translation (latency = SGL_PIPELINE_DEPTH)
    FIFO#(LRec#(numClients,addrWidth)) lreqFifo <- mkSizedFIFO(valueOf(SGL_PIPELINE_DEPTH));
    // stage 1: address validation (latency = 1)
    FIFO#(RRec#(numClients,addrWidth))  reqFifo <- mkFIFO;
-   // stage 2: write commands (maximum buffering to handle high latency writes)
-   FIFO#(DRec#(numClients, addrWidth)) mwDreqFifo <- mkSizedBRAMFIFO(valueOf(TMul#(numClients,NumTags)));
+   // stage 2: write commands
+   FIFO#(DRec#(numClients, addrWidth)) dreqFifo <- mkSizedBRAMFIFO(valueOf(TMul#(numClients,NumTags)));
    // stage 3: write data 
-   Vector#(NumTags, FIFO#(RResp#(numClients,addrWidth))) respFifos <- replicateM(mkSizedFIFO(4));
-   // stage 4: write done (minimal buffering required)
-   FIFO#(RResp#(numClients,addrWidth)) writeDonePipelineFifo <- mkFIFO;
+   BRAM2Port#(Bit#(TLog#(NumTags)), RResp#(numClients,addrWidth)) respFifos <- mkBRAM2Server(defaultValue);
    TagGen#(NumTags) tag_gen <- mkTagGen;
 
    Reg#(Bit#(8)) burstReg <- mkReg(0);   
@@ -272,6 +334,7 @@ module mkMemWriteInternal#(Integer iid,
    Reg#(Bit#(64)) last_loadClient <- mkReg(0);
    Reg#(Bit#(64)) last_sglResp <- mkReg(0);
    Reg#(Bit#(64)) last_eob <- mkReg(0);
+
    (* fire_when_enabled *)
    rule cycle;
       cycle_cnt <= cycle_cnt+1;
@@ -293,7 +356,6 @@ module mkMemWriteInternal#(Integer iid,
    	  else begin
    	     lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
    	     sgl.request.put(ReqTup{id:truncate(req.pointer),off:req.offset});
-	     tag_gen.tag_request;
    	  end
        endrule
    
@@ -301,16 +363,21 @@ module mkMemWriteInternal#(Integer iid,
       let physAddr <- sgl.response.get;
       let req = lreqFifo.first.req;
       let client = lreqFifo.first.client;
-      let rename_tag <- tag_gen.tag_response;
+      let rename_tag <- tag_gen.getTag;
       lreqFifo.deq();
       reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
-      //$display("checkSglResp: client=%d, rename_tag=%d", client,rename_tag);
+      if (debug) $display("checkSglResp: client=%d, rename_tag=%d", client,rename_tag);
       //$display("mkMemWriteInternal::sglResp %d %d", client, cycle_cnt-last_sglResp);
       //last_sglResp <= cycle_cnt;
    endrule
    
-   rule writeDoneComp;
-      let rv <- toGet(writeDonePipelineFifo).get;
+   rule writeDoneComp0;
+      let tag <- tag_gen.complete;
+      respFifos.portB.request.put(BRAMRequest{write:False, address:tag});
+   endrule
+   
+   rule writeDoneComp1;
+      let rv <- respFifos.portB.response.get;
       let client = rv.client;
       let orig_tag = rv.orig_tag;
       writeClients[client].writeDone.put(orig_tag);
@@ -327,24 +394,24 @@ module mkMemWriteInternal#(Integer iid,
       endrule
    
    rule memdata;
-      let client = mwDreqFifo.first.client;
-      let req = mwDreqFifo.first.req;
-      let rename_tag = mwDreqFifo.first.rename_tag;
+      let client = dreqFifo.first.client;
+      let req = dreqFifo.first.req;
+      let rename_tag = dreqFifo.first.rename_tag;
       ObjectData#(dataWidth) tagdata <- toGet(clientWriteData[client]).get();
       let burstLen = burstReg;
       let first    = firstReg;
       let last     = lastReg;
       if (first) begin
 	 burstLen = req.burstLen >> beat_shift;
-	 last     = mwDreqFifo.first.last;
-	 respFifos[rename_tag].enq(RResp{orig_tag:req.tag, client:client});
+	 last     = dreqFifo.first.last;
+	 respFifos.portA.request.put(BRAMRequest{write:True,responseOnWrite:False, address:truncate(rename_tag), datain:RResp{orig_tag:req.tag, client:client}});
       end
       burstReg <= burstLen-1;
       firstReg <= (burstLen-1 == 0);
       lastReg  <= (burstLen-1 == 1);
       beatCount <= beatCount+1;
       if (last)
-	 mwDreqFifo.deq();
+	 dreqFifo.deq();
       //$display("writeData: client=%d, rename_tag=%d", client, rename_tag);
       memDataFifo.enq(MemData { data: tagdata.data,  tag:extend(rename_tag), last: False });
    endrule
@@ -357,7 +424,7 @@ module mkMemWriteInternal#(Integer iid,
 	    let client = reqFifo.first.client;
 	    let rename_tag = reqFifo.first.rename_tag;
 	    reqFifo.deq;
-	    mwDreqFifo.enq(DRec{req:req, client:client, rename_tag:rename_tag, last: (req.burstLen == fromInteger(valueOf(dataWidthBytes))) });
+	    dreqFifo.enq(DRec{req:req, client:client, rename_tag:rename_tag, last: (req.burstLen == fromInteger(valueOf(dataWidthBytes))) });
 	    //$display("writeReq: client=%d, rename_tag=%d", client,rename_tag);
 	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(rename_tag)};
 	 endmethod
@@ -370,9 +437,8 @@ module mkMemWriteInternal#(Integer iid,
       endinterface
       interface Put writeDone;
 	 method Action put(Bit#(6) resp);
-	    let r <- toGet(respFifos[resp]).get;
-	    writeDonePipelineFifo.enq(r);
-	    tag_gen.return_tag(truncate(resp));
+	    tag_gen.returnTag(truncate(resp));
+	    if (debug) $display("writeDone: resp=%d", resp);
 	 endmethod
       endinterface
    endinterface

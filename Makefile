@@ -89,8 +89,7 @@ matmultests2 = testmm8.8.2       \
 	    testmm4.4.2          \
 	    testmm4.2.2          \
 	    testmm2.4.2          \
-	    testmm2.2.2          \
-	    testrbm2.2.2
+	    testmm2.2.2          
 
 matmultests4 = testmm16.16.4     \
 	    testmm8.8.4          \
@@ -99,8 +98,14 @@ matmultests4 = testmm16.16.4     \
 matmultests = $(matmultests2)    \
 	    $(matmultests4)
 
+
+rbmtests2 = testrbm2.2.2         \
+            testrbm8.8.2         \
+            testrbm16.16.2
+
 tests    =  $(memtests)          \
 	    $(matmultests)       \
+            $(rbmtests2)         \
 	    memread_manual       \
 	    simple_manual
 
