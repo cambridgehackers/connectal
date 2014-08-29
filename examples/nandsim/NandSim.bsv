@@ -82,8 +82,8 @@ module mkNandSim#(NandSimIndication indication) (NandSim);
    interface MemSlave memSlave;
       interface MemWriteServer write_server; 
 	 interface Put writeReq;
-	    method Action put(MemRequest#(40) req);
-	       slave_write_server.request.put(MemengineCmd{pointer:ns.nandPtr, base:req.addr, burstLen:req.burstLen, len:extend(req.burstLen)});
+	    method Action put(MemRequest#(PhysAddrWidth) req);
+	       slave_write_server.request.put(MemengineCmd{pointer:ns.nandPtr, base:extend(req.addr), burstLen:req.burstLen, len:extend(req.burstLen)});
 	       slaveWriteTags.enq(req.tag);
             endmethod
 	 endinterface
@@ -102,9 +102,9 @@ module mkNandSim#(NandSimIndication indication) (NandSim);
       endinterface
       interface MemReadServer read_server;
 	 interface Put readReq;
-	    method Action put(MemRequest#(40) req);
+	    method Action put(MemRequest#(PhysAddrWidth) req);
 	       if (verbose) $display("mkNandSim.memSlave::readReq %d %d %d", req.addr, req.burstLen, req.tag);
-	       slave_read_server.request.put(MemengineCmd{pointer:ns.nandPtr, base:req.addr, burstLen:req.burstLen, len:extend(req.burstLen)});
+	       slave_read_server.request.put(MemengineCmd{pointer:ns.nandPtr, base:extend(req.addr), burstLen:req.burstLen, len:extend(req.burstLen)});
 	       slaveReadTags.enq(req.tag);
 	       slaveReadCnt <= req.burstLen;
 	    endmethod
