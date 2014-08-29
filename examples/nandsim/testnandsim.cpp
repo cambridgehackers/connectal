@@ -42,15 +42,6 @@ extern "C" {
 
 using namespace std;
 
-int srcAlloc, nandAlloc;
-unsigned int *srcBuffer = 0;
-size_t numBytes = 1 << 12;
-#ifndef BOARD_bluesim
-size_t nandBytes = 1 << 24;
-#else
-size_t nandBytes = 1 << 14;
-#endif
-
 class NandSimIndication : public NandSimIndicationWrapper
 {
 public:
@@ -123,8 +114,14 @@ void write_to_algo_exe(unsigned int x)
 
 int main(int argc, const char **argv)
 {
+
+#ifndef BOARD_bluesim
+  size_t nandBytes = 1 << 12;
+#else
+  size_t nandBytes = 1 << 12;
+#endif
+
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
-  unsigned int srcGen = 0;
 
   NandSimRequestProxy *nandsimRequest = 0;
   NandSimIndication *nandsimIndication = 0;
@@ -139,81 +136,63 @@ int main(int argc, const char **argv)
   DmaManager *dma = new DmaManager(dmaConfig);
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
-  fprintf(stderr, "Main::allocating memory...\n");
-
-  srcAlloc = portalAlloc(numBytes);
-  srcBuffer = (unsigned int *)portalMmap(srcAlloc, numBytes);
-  fprintf(stderr, "fd=%d, srcBuffer=%p\n", srcAlloc, srcBuffer);
-
   portalExec_start();
 
-  for (int i = 0; i < numBytes/sizeof(srcBuffer[0]); i++)
-    srcBuffer[i] = srcGen++;
-    
-  portalDCacheFlushInval(srcAlloc, numBytes, srcBuffer);
-  fprintf(stderr, "Main::flush and invalidate complete\n");
-  sleep(1);
-
-  unsigned int ref_srcAlloc = dma->reference(srcAlloc);
-
-  nandAlloc = portalAlloc(nandBytes);
+  int nandAlloc = portalAlloc(nandBytes);
   int ref_nandAlloc = dma->reference(nandAlloc);
   fprintf(stderr, "NAND alloc fd=%d ref=%d\n", nandAlloc, ref_nandAlloc);
   nandsimRequest->configureNand(ref_nandAlloc, nandBytes);
   nandsimIndication->wait();
 
-  bool sangwoo = false;
-  if (sangwoo){
-    fprintf(stderr, "sangwoo-test\n");
+  if (argc == 1) {
 
-    for (int i = 0; i < numBytes/sizeof(srcBuffer[0]); i++)
-      srcBuffer[i] = i;
-    portalDCacheFlushInval(srcAlloc, numBytes, srcBuffer);
+    fprintf(stderr, "Main::allocating memory...\n");
+    size_t srcBytes = nandBytes>>2;
+    int srcAlloc = portalAlloc(srcBytes);
+    unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, srcBytes);
+    unsigned int ref_srcAlloc = dma->reference(srcAlloc);
+    fprintf(stderr, "fd=%d, srcBuffer=%p\n", srcAlloc, srcBuffer);
 
-    nandsimRequest->startWrite(ref_srcAlloc, 0, 0, numBytes, 16);
-    nandsimIndication->wait();
-
-    unsigned int* nand_memory = (unsigned int*)portalMmap(nandAlloc,nandBytes);
-    for (int i = 0; i < numBytes/sizeof(srcBuffer[0]); i++)
-      if(nand_memory[i] != srcBuffer[i])
-	fprintf(stderr, "ERROR: sangwoo-test %d %d (%d)\n", nand_memory[i], srcBuffer[i], i);
-      
-    fprintf(stderr, "sangwoo-test successful\n");
-  } else if (argc == 1) {
     /* do tests */
     fprintf(stderr, "chamdoo-test\n");
     unsigned long loop = 0;
     unsigned long match = 0, mismatch = 0;
+
     while (loop < nandBytes) {
-      int i;
-      for (i = 0; i < numBytes/sizeof(srcBuffer[0]); i++) {
+
+      fprintf(stderr, "Main::starting write ref=%d, len=%08zx (%lu)\n", ref_srcAlloc, srcBytes, loop);
+      for (int i = 0; i < srcBytes/sizeof(srcBuffer[0]); i++) {
 	srcBuffer[i] = loop+i;
       }
-      
-      fprintf(stderr, "Main::starting write ref=%d, len=%08zx (%lu)\n", ref_srcAlloc, numBytes, loop);
-      nandsimRequest->startWrite(ref_srcAlloc, 0, loop, numBytes, 16);
+      portalDCacheFlushInval(srcAlloc, srcBytes, srcBuffer);
+      nandsimRequest->startWrite(ref_srcAlloc, 0, loop, srcBytes, 16);
       nandsimIndication->wait();
-      
-      loop+=numBytes;
+      loop+=srcBytes;
     }
     
     loop = 0;
+
     while (loop < nandBytes) {
-      int i;
-      fprintf(stderr, "Main::starting read %08zx (%lu)\n", numBytes, loop);
-      nandsimRequest->startRead(ref_srcAlloc, 0, loop, numBytes, 16);
+      fprintf(stderr, "Main::starting read %08zx (%lu)\n", srcBytes, loop);
+
+      for (int i = 0; i < srcBytes/sizeof(srcBuffer[0]); i++) {
+	srcBuffer[i] = 5;
+      }
+
+      portalDCacheFlushInval(srcAlloc, srcBytes, srcBuffer);
+      nandsimRequest->startRead(ref_srcAlloc, 0, loop, srcBytes, 16);
       nandsimIndication->wait();
       
-      for (i = 0; i < numBytes/sizeof(srcBuffer[0]); i++) {
+      for (int i = 0; i < srcBytes/sizeof(srcBuffer[0]); i++) {
 	if (srcBuffer[i] != loop+i) {
-	  fprintf(stderr, "Main::mismatch [%08ld] != [%08d]\n", loop+i, srcBuffer[i]);
+	  fprintf(stderr, "Main::mismatch [%08ld] != [%08d] (%d,%d)\n", loop+i, srcBuffer[i], i, srcBytes/sizeof(srcBuffer[0]));
 	  mismatch++;
 	} else {
 	  match++;
 	}
       }
       
-      loop+=numBytes;
+      loop+=srcBytes;
     }
     /* end */
     
@@ -237,6 +216,7 @@ int main(int argc, const char **argv)
     }
 
     // write the contents of data into "flash" memory
+    portalDCacheFlushInval(ref_dataAlloc, data_len, data);
     nandsimRequest->startWrite(ref_dataAlloc, 0, 0, data_len, 16);
     nandsimIndication->wait();
 
