@@ -153,5 +153,67 @@ int runtest(int argc, const char **argv)
     .writeFile();
 }
 
+int runtest_chunk(int argc, const char **argv)
+{
+
+  MemcpyRequestProxy *device = 0;
+  DmaConfigProxy *dmap = 0;
+  
+  MemcpyIndication *deviceIndication = 0;
+  DmaIndication *dmaIndication = 0;
+
+  if(sem_init(&done_sem, 1, 0)){
+    fprintf(stderr, "failed to init done_sem\n");
+    exit(1);
+  }
+
+  device = new MemcpyRequestProxy(IfcNames_MemcpyRequest);
+  dmap = new DmaConfigProxy(IfcNames_DmaConfig);
+  DmaManager *dma = new DmaManager(dmap);
+
+  deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndication);
+  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
+
+  portalExec_start();
+
+  fprintf(stderr, "Main::allocating memory...\n");
+
+  fprintf(stderr, "XXX %s %d\n", __FUNCTION__, __LINE__);
+
+  size_t dstBytes = alloc_sz;
+  size_t srcBytes = dstBytes>>2;
+
+  fprintf(stderr, "XXX %s %d\n", __FUNCTION__, __LINE__);
+
+  int dstAlloc = portalAlloc(dstBytes);
+  int srcAlloc = portalAlloc(srcBytes);
+
+  fprintf(stderr, "XXX %s %d\n", __FUNCTION__, __LINE__);
+
+  int ref_dstAlloc = dma->reference(dstAlloc);
+  int ref_srcAlloc = dma->reference(srcAlloc);
+
+  fprintf(stderr, "XXX %s %d\n", __FUNCTION__, __LINE__);
+
+  unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, srcBytes);
+
+  unsigned long loop = 0;
+  sleep(1);
+  
+  while (loop < dstBytes) {
+
+    fprintf(stderr, "loop %x\n", loop);
+    int nw = srcBytes/sizeof(srcBuffer[0]);
+    for (int i = 0; i < nw; i++) {
+      srcBuffer[i] = loop/sizeof(srcBuffer[0])+i;
+    }
+    portalDCacheFlushInval(srcAlloc, srcBytes, srcBuffer);
+    device->startCopy(ref_dstAlloc, ref_srcAlloc, nw, 16, 1);
+    sem_wait(&done_sem);
+    loop+=srcBytes;
+  }
+
+}
+
 
 #endif //_TESTMEMCPY_H_
