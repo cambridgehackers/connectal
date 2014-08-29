@@ -181,7 +181,7 @@ int runtest_chunk(int argc, const char **argv)
   fprintf(stderr, "XXX %s %d\n", __FUNCTION__, __LINE__);
 
   size_t dstBytes = alloc_sz;
-  size_t srcBytes = dstBytes>>2;
+  size_t srcBytes = dstBytes;
 
   fprintf(stderr, "XXX %s %d\n", __FUNCTION__, __LINE__);
 
@@ -196,13 +196,13 @@ int runtest_chunk(int argc, const char **argv)
   fprintf(stderr, "XXX %s %d\n", __FUNCTION__, __LINE__);
 
   unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, srcBytes);
-
   unsigned long loop = 0;
   sleep(1);
   
   while (loop < dstBytes) {
 
-    fprintf(stderr, "loop %x\n", loop);
+    fprintf(stderr, "LOOP %s %d\n", __FUNCTION__, __LINE__);
+
     int nw = srcBytes/sizeof(srcBuffer[0]);
     for (int i = 0; i < nw; i++) {
       srcBuffer[i] = loop/sizeof(srcBuffer[0])+i;
@@ -210,8 +210,12 @@ int runtest_chunk(int argc, const char **argv)
     portalDCacheFlushInval(srcAlloc, srcBytes, srcBuffer);
     device->startCopy(ref_dstAlloc, ref_srcAlloc, nw, 16, 1);
     sem_wait(&done_sem);
+    fprintf(stderr, "LOOP %s %d\n", __FUNCTION__, __LINE__);
+
     loop+=srcBytes;
   }
+
+  fprintf(stderr, "XXX %s %d\n", __FUNCTION__, __LINE__);
 
 }
 
