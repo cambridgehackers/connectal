@@ -96,7 +96,7 @@ fpgamakeRuleTemplate='''
 FPGAMAKE=$(XBSVDIR)/../fpgamake/fpgamake
 fpgamake.mk: $(vfile) Makefile prepare_bin_target
 	$(Q)mkdir -p hw
-	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s -t $(MKTOP) %(cachedir)s -b hw/mkTop.bit verilog $(XBSVDIR)/verilog
+	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s -t $(MKTOP) %(cachedir)s -b hw/mkTop.bit verilog $(XBSVDIR)/verilog %(verilog)s
 
 hw/mkTop.bit: fpgamake.mk prepare_bin_target
 	$(Q)make -f fpgamake.mk
@@ -326,6 +326,7 @@ if __name__=='__main__':
 					 'xdc': ' '.join(['--xdc=%s' % os.path.abspath(xdc) for xdc in options.constraint]),
 					 'xci': ' '.join(['--xci=%s' % os.path.abspath(xci) for xci in options.xci]),
 					 'sourceTcl': ' '.join(['--tcl=%s' % os.path.abspath(tcl) for tcl in options.tcl]),
+                                         'verilog': ' '.join([os.path.abspath(f) for f in options.verilog]),
 					 'cachedir': '--cachedir=%s' % os.path.abspath(options.cachedir) if options.cachedir else ''
 					 }
 
