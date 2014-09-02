@@ -345,8 +345,13 @@ int portalmem_dmabuffer_create(unsigned long len)
          allocation via dma_map_sg. The implicit contract here is that
          memory is ready for dma, ie if it has a
          cached mapping that mapping has been invalidated */
-      for_each_sg(buffer->sg_table->sgl, sg, buffer->sg_table->nents, infocount)
+      for_each_sg(buffer->sg_table->sgl, sg, buffer->sg_table->nents, infocount){
         sg_dma_address(sg) = sg_phys(sg);
+	unsigned int length = sg->length;
+	dma_addr_t start_addr = sg_phys(sg), end_addr = start_addr+length;
+	outer_clean_range(start_addr, end_addr);
+	outer_inv_range(start_addr, end_addr);
+      }
       dmabuf = dma_buf_export(buffer, &dma_buf_ops, len, O_RDWR);
       if (IS_ERR(dmabuf))
         pa_buffer_free(buffer);

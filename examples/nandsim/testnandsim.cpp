@@ -118,7 +118,7 @@ int main(int argc, const char **argv)
 #ifndef BOARD_bluesim
   size_t nandBytes = 1 << 12;
 #else
-  size_t nandBytes = 1 << 12;
+  size_t nandBytes = 1 << 18;
 #endif
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
@@ -138,8 +138,16 @@ int main(int argc, const char **argv)
 
   portalExec_start();
 
+
   int nandAlloc = portalAlloc(nandBytes);
+  fprintf(stderr, "nandAlloc=%d\n", nandAlloc);
   int ref_nandAlloc = dma->reference(nandAlloc);
+  fprintf(stderr, "ref_nandAlloc=%d\n", ref_nandAlloc);
+#ifdef SANITY0
+  unsigned int *nandBuffer = (unsigned int*)portalMmap(nandAlloc, nandBytes); 
+  fprintf(stderr, "nandBuffer=%p\n", nandBuffer);
+  portalDCacheFlushInval(nandAlloc, nandBytes, nandBuffer);
+#endif
   fprintf(stderr, "NAND alloc fd=%d ref=%d\n", nandAlloc, ref_nandAlloc);
   nandsimRequest->configureNand(ref_nandAlloc, nandBytes);
   nandsimIndication->wait();
@@ -169,9 +177,27 @@ int main(int argc, const char **argv)
       nandsimIndication->wait();
       loop+=srcBytes;
     }
-    
-    loop = 0;
+    fprintf(stderr, "Main:: write phase complete\n");
 
+#ifdef SANITY1
+    // see what was written to the backing store...
+    int mmc = 0;
+    loop = 0;
+    int j = 0;
+    while (loop < nandBytes) {
+      for (int i = 0; i < srcBytes/sizeof(srcBuffer[0]); i++){
+	if (nandBuffer[j] != loop+i){
+	  mmc++;
+	  fprintf(stderr, "Main::sanity failed %d %d\n", i, nandBuffer[j]);
+	}
+	j++;
+      }
+      loop += srcBytes;
+    }
+    fprintf(stderr, "Main::sanity complete %d\n", mmc);
+#endif
+
+    loop = 0;
     while (loop < nandBytes) {
       fprintf(stderr, "Main::starting read %08zx (%lu)\n", srcBytes, loop);
 
@@ -185,7 +211,7 @@ int main(int argc, const char **argv)
       
       for (int i = 0; i < srcBytes/sizeof(srcBuffer[0]); i++) {
 	if (srcBuffer[i] != loop+i) {
-	  fprintf(stderr, "Main::mismatch [%08ld] != [%08d] (%d,%d)\n", loop+i, srcBuffer[i], i, srcBytes/sizeof(srcBuffer[0]));
+	  fprintf(stderr, "Main::mismatch [%08ld] != [%08d] (%d,%zu)\n", loop+i, srcBuffer[i], i, srcBytes/sizeof(srcBuffer[0]));
 	  mismatch++;
 	} else {
 	  match++;
