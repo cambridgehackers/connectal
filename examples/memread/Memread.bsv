@@ -39,7 +39,7 @@ typedef 1 NumEngineServers;
 `endif
 
 interface MemreadRequest;
-   method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
+   method Action startRead(Bit#(32) pointer, Bit#(32) offset, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
    method Action getStateDbg();   
 endinterface
 
@@ -63,8 +63,8 @@ module mkMemread#(MemreadIndication indication) (Memread);
    FIFO#(void)                cf <- mkSizedFIFO(1);
    
    Reg#(Bit#(32))                                   iterCnt <- mkReg(0);
+   Reg#(Bit#(32))                                readOffset <- mkReg(0);
    Vector#(NumEngineServers, Reg#(Bit#(32)))       iterCnts <- replicateM(mkReg(0));
-   Vector#(NumEngineServers, Reg#(Bit#(32)))        srcGens <- replicateM(mkReg(0));
    Vector#(NumEngineServers, Reg#(Bit#(32)))   valuesToRead <- replicateM(mkReg(0));
    Vector#(NumEngineServers, Reg#(Bit#(32))) mismatchCounts <- replicateM(mkReg(0));
    MemreadEngineV#(64,2,NumEngineServers)                re <- mkMemreadEngine;
@@ -85,15 +85,13 @@ module mkMemread#(MemreadIndication indication) (Memread);
    
    for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
       rule start (iterCnts[i] > 0);
-	 re.readServers[i].request.put(MemengineCmd{pointer:pointer, base:fromInteger(i)*chunk, len:truncate(chunk), burstLen:truncate(burstLen*4)});
-	 $display("start %d, %d", i, iterCnts[i]);
+	 re.readServers[i].request.put(MemengineCmd{pointer:pointer, base:extend(readOffset)+(fromInteger(i)*chunk), len:truncate(chunk), burstLen:truncate(burstLen*4)});
 	 iterCnts[i] <= iterCnts[i]-1;
-
-	 Bit#(32) base = fromInteger(i)*(truncate(chunk)/4);
+	 Bit#(32) base = (readOffset/4)+(fromInteger(i)*(truncate(chunk)/4));
 	 Bit#(32) limit = base + truncate(chunk)/4;
 	 let rangeConfig = RangeConfig { xbase: base, xlimit: limit, xstep: 1 };
 	 rangePipeIfcs[i].start(rangeConfig);
-
+	 $display("start %d, %d, %h", i, iterCnts[i], readOffset);
       endrule
       rule finish;
 	 $display("finish %d", i);
@@ -136,13 +134,14 @@ module mkMemread#(MemreadIndication indication) (Memread);
    
    interface dmaClient = re.dmaClient;
    interface MemreadRequest request;
-      method Action startRead(Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
+      method Action startRead(Bit#(32) rp, Bit#(32) off, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
 	 indication.started(nw);
 	 pointer <= rp;
 	 cf.enq(?);
 	 numWords  <= nw;
 	 burstLen  <= bl;
 	 iterCnt <= ic;
+	 readOffset <= off*4;
 	 for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
 	    iterCnts[i] <= ic;
 	    mismatchCounts[i] <= 0;

@@ -117,42 +117,58 @@ int runtest(int argc, const char ** argv)
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
   fprintf(stderr, "ref_srcAlloc=%d\n", ref_srcAlloc);
 
-  fprintf(stderr, "Main::starting read %08x\n", numWords);
-  portalTimerStart(0);
-  device->startRead(ref_srcAlloc, numWords, burstLen, iterCnt);
-  sem_wait(&test_sem);
-  if (mismatchCount) {
-    fprintf(stderr, "Main::first test failed to match %d.\n", mismatchCount);
-    test_result++;     // failed
+  bool orig_test = true;
+
+  if (orig_test){
+    fprintf(stderr, "Main::orig_test read %08x\n", numWords);
+    portalTimerStart(0);
+    device->startRead(ref_srcAlloc, 0, numWords, burstLen, iterCnt);
+    sem_wait(&test_sem);
+    if (mismatchCount) {
+      fprintf(stderr, "Main::first test failed to match %d.\n", mismatchCount);
+      test_result++;     // failed
+    }
+    uint64_t cycles = portalTimerLap(0);
+    uint64_t beats = dma->show_mem_stats(ChannelType_Read);
+    float read_util = (float)beats/(float)cycles;
+    fprintf(stderr, " iterCnt: %d\n", iterCnt);
+    fprintf(stderr, "   beats: %"PRIx64"\n", beats);
+    fprintf(stderr, "numWords: %x\n", numWords);
+    fprintf(stderr, "     est: %"PRIx64"\n", (beats*2)/iterCnt);
+    fprintf(stderr, "memory read utilization (beats/cycle): %f\n", read_util);
+
+    /* Test 2: check that mismatch is detected */
+    srcBuffer[0] = -1;
+    srcBuffer[numWords/2] = -1;
+    srcBuffer[numWords-1] = -1;
+    portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
+
+    device->startRead(ref_srcAlloc, 0, numWords, burstLen, iterCnt);
+    sem_wait(&test_sem);
+    if (mismatchCount != 3/*number of errors introduced above*/ * iterCnt) {
+      fprintf(stderr, "Main::second test failed to match mismatchCount=%d iterCnt=%d numWords=%d.\n", mismatchCount, iterCnt, numWords);
+      test_result++;     // failed
+    }
+
+    MonkitFile("perf.monkit")
+      .setHwCycles(cycles)
+      .setReadBwUtil(read_util)
+      .writeFile();
+
+    return test_result; 
+  } else {
+    fprintf(stderr, "Main::new_test read %08x\n", numWords);
+    int chunk = numWords >> 4;
+    for(int i = 0; i < numWords; i+=chunk){
+      device->startRead(ref_srcAlloc, i, chunk, burstLen, 1);
+      sem_wait(&test_sem);
+    }
+    if (mismatchCount) {
+      fprintf(stderr, "Main::new_test failed to match %08x.\n", mismatchCount);
+      test_result++;     // failed
+    }
+    return test_result;
   }
-  uint64_t cycles = portalTimerLap(0);
-  uint64_t beats = dma->show_mem_stats(ChannelType_Read);
-  float read_util = (float)beats/(float)cycles;
-  fprintf(stderr, " iterCnt: %d\n", iterCnt);
-  fprintf(stderr, "   beats: %"PRIx64"\n", beats);
-  fprintf(stderr, "numWords: %x\n", numWords);
-  fprintf(stderr, "     est: %"PRIx64"\n", (beats*2)/iterCnt);
-  fprintf(stderr, "memory read utilization (beats/cycle): %f\n", read_util);
-
-  /* Test 2: check that mismatch is detected */
-  srcBuffer[0] = -1;
-  srcBuffer[numWords/2] = -1;
-  srcBuffer[numWords-1] = -1;
-  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
-
-  device->startRead(ref_srcAlloc, numWords, burstLen, iterCnt);
-  sem_wait(&test_sem);
-  if (mismatchCount != 3/*number of errors introduced above*/ * iterCnt) {
-    fprintf(stderr, "Main::second test failed to match mismatchCount=%d iterCnt=%d numWords=%d.\n", mismatchCount, iterCnt, numWords);
-    test_result++;     // failed
-  }
-
-  MonkitFile("perf.monkit")
-    .setHwCycles(cycles)
-    .setReadBwUtil(read_util)
-    .writeFile();
-
-  return test_result; 
 }
 
 #endif // _TESTMEMREAD_H_
