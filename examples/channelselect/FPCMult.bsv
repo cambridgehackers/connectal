@@ -44,6 +44,7 @@
 // which indicates the start of a new sample period at the output
 // intermediate frequency.
 
+import SpecialFIFOs::*;
 import Complex::*;
 import FixedPoint::*;
 import Pipe::*;
