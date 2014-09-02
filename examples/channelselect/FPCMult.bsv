@@ -20,6 +20,30 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+
+// This module implements a fixed point complex multiplication
+// that is intended to map smoothly onto the DSP slices in Xilinx
+// FPGAs.  To this end, the signal path is 18 bits (2 bits of integer
+// and 16 bits of fraction), the coefficient path is 25 bits (2 bits
+// of integer and 23 bits of fraction), and the product is 43 bits
+// 4 bits of integer and 39 bits of fraction).  The multiplier
+// in a DSP slice is actually 18 x 25 -> 45 bits.  The additional two
+// product bits are for overflow, since the complex multipler adds
+// four intermediate results.
+
+// Signal inputs and outputs are Pipe datatypes, to provide flow control.
+// The module is intended for use in environments where there may be
+// one result per cycle, but at slow signal rates, clock cycles may
+// be skipped.  Because the logic is pipelined, there are valid
+// bits that follow the signal path.  The signal is assumed to be provided
+// intermittently, while the coefficients are provided on demand up to
+// one per cycle.
+
+// Because one intended application is a Channel Select filter with
+// downconversion, the coefficient path supplies a "filter phase" boolean
+// which indicates the start of a new sample period at the output
+// intermediate frequency.
+
 import Complex::*;
 import FixedPoint::*;
 import Pipe::*;
@@ -38,6 +62,14 @@ typedef struct {
 		Bit#(1) filterPhase;
 		} ProductData;
 
+typedef struct {
+		Product arxr;
+		Product arxr;
+		Product arxr;
+		Product arxr;
+		Bit#(1) filterPhase;
+		} MulData;
+
 interface FPCMult;
    interface PipeIn#(Complex#(Signal)) x;
    interface PipeIn#(CoeffData) a;
@@ -48,54 +80,29 @@ module mkFPCMult(FPCMult)
   provisos(Bits#(CoeffData, a__),
      Bits#(ProductData, b__));
    /* input registers */
-   Reg#(Complex#(Signal)) xin <- mkReg(?);
-   Reg#(Bit#(1)) xinvalid <- mkReg(0);
-   Reg#(CoeffData) ain <- mkReg(?);
+   FIFOF#(CoeffData) ain <- mkPipelineFIFOF();
+   FIFOF#(Complex#(Signal)) xin <- mkPipelineFIFOF();
    /* pipeline registers at output of multipliers */
-   Reg#(Product) arxr <- mkReg(?);
-   Reg#(Product) aixi <- mkReg(?);
-   Reg#(Product) arxi <- mkReg(?);
-   Reg#(Product) aixr <- mkReg(?);
-   Reg#(Bit#(1)) mulloutvalid <- mkReg(0):
-   Reg#(Bit#(1)) muloutphase <- mkReg(?);
+   Reg#(MulData) ax <- mkReg(?);
    /* result registers */
-   Reg#(ProductData) yout <- mkReg(?);
-   Reg#(Bit#(1)) youtvalid <- mkReg(0);
+   FIFOF#(ProductData) yout <- mkPipelineFIFOF();
 
-   rule work (muloutvalid == 0 || youtvalid == 0);
+   rule work;
       /* compute multiplies */
-      arxr <= fxptMult(ain.a.rel, xin.rel);
-      aixi <= fxptMult(ain.a.img, xin.img);
-      arxi <= fxptMult(ain.a.rel, xin.img);
-      aixr <= fxptMult(ain.a.img, xin.rel);
-      muloutvalid <= 1;
-      muloutphase <= ain.filterPhase;
-   endrule
-   
-   rule workadd (youtvalid == 0);
+      Product arxr = fxptMult(ain.a.rel, xin.first.rel);
+      Product aixi = fxptMult(ain.a.img, xin.first.img);
+      Product arxi = fxptMult(ain.a.rel, xin.first.img);
+      Product aixr = fxptMult(ain.a.img, xin.first.rel);
+      ain.deq();
+      xin.deq();
+      ax <= Muldata{arxr: arxr, aixi: aixi, arxi: arxi, aixr: aixr,
+	 filterPhase ain.filterPhase};
       /* combine into outputs */
-      yout <= ProductData{y: Complex{rel: arxr - aixi, img: arxi + aixr}, filterPhase: muloutphase};
+      yout.enq(ProductData{y: Complex{rel: arxr - aixi, img: arxi + aixr}, filterPhase: muloutphase});
    endrule
    
    interface PipeOut y = toPipeOut(yout);
-   interface PipeIn x;
-      method Action enq(Complex#(Signal) v);
-         xin <= v;
-         xinvalid <= 1;
-      endmethod
-      method Bool notFull();
-         return (xinvalid == 0 || );
-      endmethod
-   endinterface
-   interface PipeIn a;
-      method Action enq(CoeffData v);
-         ain <= v;
-         ainvalid <= 1;
-      endmethod
-      method Bool notFull();
-         return (True);
-      endmethod
-   endinterface
-   
+   interface PipeIn x = toPipeIn(xin);
+   interface PipeIn a = toPipeIn(ain);
    
 endmodule
