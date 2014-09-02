@@ -39,7 +39,7 @@ typedef 1 NumEngineServers;
 `endif
 
 interface MemwriteRequest;
-   method Action startWrite(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
+   method Action startWrite(Bit#(32) pointer, Bit#(32) offset, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
    method Action getStateDbg();   
 endinterface
 
@@ -62,6 +62,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    FIFOF#(void)               cf <- mkSizedFIFOF(1);
 
    Vector#(NumEngineServers, Reg#(Bit#(32)))         srcGens <- replicateM(mkReg(0));
+   Reg#(Bit#(32))                                writeOffset <- mkReg(0);
    Reg#(Bit#(32))                                    iterCnt <- mkReg(0);
    Vector#(NumEngineServers, Reg#(Bit#(32)))        iterCnts <- replicateM(mkReg(0));
    Vector#(NumEngineServers, FIFOF#(void))               cfs <- replicateM(mkSizedFIFOF(1));
@@ -71,10 +72,10 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 
    for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
       rule start (iterCnts[i] > 0);
-	 we.writeServers[i].request.put(MemengineCmd{pointer:pointer, base:fromInteger(i)*chunk, len:truncate(chunk), burstLen:truncate(burstLen*4)});
-	 Bit#(32) srcGen = fromInteger(i)*truncate(chunk/4);
+	 we.writeServers[i].request.put(MemengineCmd{pointer:pointer, base:extend(writeOffset)+(fromInteger(i)*chunk), len:truncate(chunk), burstLen:truncate(burstLen*4)});
+	 Bit#(32) srcGen = (writeOffset/4)+(fromInteger(i)*truncate(chunk/4));
 	 srcGens[i] <= srcGen;
-	 $display("start %d, %h %d", i, srcGen, iterCnts[i]);
+	 $display("start %d, %h %d %h", i, srcGen, iterCnts[i], writeOffset);
 	 cfs[i].enq(?);
       endrule
       rule finish;
@@ -88,7 +89,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 	 we.dataPipes[i].enq(v);
 	 let new_srcGen = srcGens[i]+2;
 	 srcGens[i] <= new_srcGen;
-	 if(new_srcGen == fromInteger(i+1)*truncate(chunk/4))
+	 if(new_srcGen == (writeOffset/4)+(fromInteger(i+1)*truncate(chunk/4)))
 	    cfs[i].deq;
       endrule
    end
@@ -107,14 +108,15 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    
    interface ObjectWriteClient dmaClient = we.dmaClient;
    interface MemwriteRequest request;
-       method Action startWrite(Bit#(32) wp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
-	  $display("startWrite pointer=%d numWords=%h burstLen=%d iterCnt=%d", pointer, nw, bl, ic);
+       method Action startWrite(Bit#(32) wp, Bit#(32) off, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
+	  $display("startWrite pointer=%d offset=%d numWords=%h burstLen=%d iterCnt=%d", pointer, off, nw, bl, ic);
 	  indication.started(nw);
 	  pointer <= wp;
 	  cf.enq(?);
 	  numWords  <= nw;
 	  burstLen  <= bl;
 	  iterCnt <= ic;
+	  writeOffset <= off*4;
 	  for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1)
 	     iterCnts[i] <= ic;
        endmethod

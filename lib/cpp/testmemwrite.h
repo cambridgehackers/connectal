@@ -12,7 +12,7 @@
 #include "dmaManager.h"
 
 
-sem_t done_sem;
+sem_t test_sem;
 #ifndef BSIM
 int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
 #else
@@ -39,7 +39,7 @@ public:
   }
   virtual void writeDone ( uint32_t srcGen ){
     fprintf(stderr, "Memwrite::writeDone (%08x)\n", srcGen);
-    sem_post(&done_sem);
+    sem_post(&test_sem);
   }
   virtual void reportStateDbg(uint32_t streamWrCnt, uint32_t srcGen){
     fprintf(stderr, "Memwrite::reportStateDbg: streamWrCnt=%08x srcGen=%d\n", streamWrCnt, srcGen);
@@ -81,8 +81,8 @@ void child(int rd_sock)
 void parent(int rd_sock, int wr_sock)
 {
   
-  if(sem_init(&done_sem, 1, 0)){
-    fprintf(stderr, "error: failed to init done_sem\n");
+  if(sem_init(&test_sem, 1, 0)){
+    fprintf(stderr, "error: failed to init test_sem\n");
     exit(1);
   }
 
@@ -117,25 +117,36 @@ void parent(int rd_sock, int wr_sock)
   // dmap->addrRequest(ref_dstAlloc, 2*sizeof(unsigned int));
   // sleep(1);
 
+  bool orig_test = true;
 
-  fprintf(stderr, "parent::starting write %08x\n", numWords);
-  portalTimerStart(0);
-  //portalTrace_start();
-  device->startWrite(ref_dstAlloc, numWords, burstLen, iterCnt);
-  sem_wait(&done_sem);
-  //portalTrace_stop();
-  uint64_t cycles = portalTimerLap(0);
-  uint64_t beats = dma->show_mem_stats(ChannelType_Write);
-  float write_util = (float)beats/(float)cycles;
-  fprintf(stderr, "   beats: %"PRIx64"\n", beats);
-  fprintf(stderr, "numWords: %x\n", numWords);
-  fprintf(stderr, "     est: %"PRIx64"\n", (beats*2)/iterCnt);
-  fprintf(stderr, "memory write utilization (beats/cycle): %f\n", write_util);
+  if (orig_test){
+    fprintf(stderr, "parent::starting write %08x\n", numWords);
+    portalTimerStart(0);
+    //portalTrace_start();
+    device->startWrite(ref_dstAlloc, 0, numWords, burstLen, iterCnt);
+    sem_wait(&test_sem);
+    //portalTrace_stop();
+    uint64_t cycles = portalTimerLap(0);
+    uint64_t beats = dma->show_mem_stats(ChannelType_Write);
+    float write_util = (float)beats/(float)cycles;
+    fprintf(stderr, "   beats: %"PRIx64"\n", beats);
+    fprintf(stderr, "numWords: %x\n", numWords);
+    fprintf(stderr, "     est: %"PRIx64"\n", (beats*2)/iterCnt);
+    fprintf(stderr, "memory write utilization (beats/cycle): %f\n", write_util);
+    
+    MonkitFile("perf.monkit")
+      .setHwCycles(cycles)
+      .setWriteBwUtil(write_util)
+      .writeFile();
 
-  MonkitFile("perf.monkit")
-    .setHwCycles(cycles)
-    .setWriteBwUtil(write_util)
-    .writeFile();
+  } else {
+    fprintf(stderr, "parent::new_test read %08x\n", numWords);
+    int chunk = numWords >> 4;
+    for(int i = 0; i < numWords; i+=chunk){
+      device->startWrite(ref_dstAlloc, i, chunk, burstLen, 1);
+      sem_wait(&test_sem);
+    }
+  }
 
   fprintf(stderr, "[%s:%d] send fd to child %d\n", __FUNCTION__, __LINE__, (int)dstAlloc);
   sock_fd_write(wr_sock, (int)dstAlloc);
