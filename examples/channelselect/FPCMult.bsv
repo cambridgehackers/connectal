@@ -101,7 +101,7 @@ module mkFPCMult(FPCMult)
       ain.deq();
       xin.deq();
       /* combine into outputs */
-      yout.enq(ProductData{y: Complex{rel: arxr - aixi, img: arxi + aixr}, filterPhase: muloutphase});
+      yout.enq(ProductData{y: Complex{rel: ax.arxr - ax.aixi, img: ax.arxi + ax.aixr}, filterPhase: ax.filterPhase});
    endrule
    
    interface PipeOut y = toPipeOut(yout);
