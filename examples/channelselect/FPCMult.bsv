@@ -44,6 +44,7 @@
 // which indicates the start of a new sample period at the output
 // intermediate frequency.
 
+import FIFOF::*;
 import SpecialFIFOs::*;
 import Complex::*;
 import FixedPoint::*;
@@ -90,6 +91,7 @@ module mkFPCMult(FPCMult)
 
    rule work;
       /* compute multiplies */
+
       Product arxr = fxptMult(ain.first().a.rel, xin.first.rel);
       Product aixi = fxptMult(ain.first().a.img, xin.first.img);
       Product arxi = fxptMult(ain.first().a.rel, xin.first.img);
