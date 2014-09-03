@@ -61,8 +61,10 @@ module mkChannelSelect#(UInt#(10) decimation)(ChannelSelect)
    FIFOF#(Vector#(2, Signal)) outfifo <- mkFIFOF();
    Vector#(2, FPCMult) mul <- replicateM(mkFPCMult());
 
-   Vector#(2, FIFO#(Complex#(Product))) accum <- replicateM(mkFIFO());
-   FIFO#(Complex#(Product)) ycombined <- mkFIFO();
+   Vector#(2, Reg#(Complex#(Product))) accum <- replicateM(mkReg(?));
+   Vector#(2, FIFOF#(Complex#(Product))) accumout <- replicateM(mkPipelineFIFOF());
+   
+   FIFOF#(Complex#(Product)) ycombined <- mkPipelineFIFOF();
    FPCMult lo <- mkFPCMult();
 
    /* could do this with mkForkVector() but we don't need the extra FIFOs
@@ -95,12 +97,13 @@ module mkChannelSelect#(UInt#(10) decimation)(ChannelSelect)
       let c1 <- coeffRam1.portB.response.get();
       let phase <- delayFilterPhase.get();
       
-      mul[0].coeffData.enq(CoeffData{a: c0, filterPhase: phase});
-      mul[1].coeffData.enq(CoeffData{a: c1, filterPhase: phase});
+      mul[0].a.enq(CoeffData{a: c0, filterPhase: phase});
+      mul[1].a.enq(CoeffData{a: c1, filterPhase: phase});
+
    endrule
    
    rule muloutaccumin0;
-      let m <- mul0.y.get();
+      let m <- mul[0].y.get();
       if (m.filterPhase)
 	 begin
 	    accum[0] <= m.y;
@@ -113,7 +116,7 @@ module mkChannelSelect#(UInt#(10) decimation)(ChannelSelect)
    endrule
 
    rule muloutaccumin1;
-      let m <- mul1.y.get();
+      let m <- mul[1].y.get();
       if (m.filterPhase)
 	 begin
 	    accum[1] <= m.y;
@@ -135,7 +138,12 @@ module mkChannelSelect#(UInt#(10) decimation)(ChannelSelect)
       let yin <- ycombined.get();
       let loin <- dds.osc.get();
       lo.x.enq(yin);
-      lo.coeffData.enq(loin);
+      lo.a.enq(CoeffData{a: loin, filterPhase: 0});
+   endrule
+   
+   rule loout;
+      let y <- lo.y;
+      outfifo.enq(y.y);
    endrule
    
    interface PipeIn rfreq = toPipeIn(infifo);
