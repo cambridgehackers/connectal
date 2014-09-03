@@ -58,7 +58,7 @@ module mkTagGen(TagGen#(numTags))
    let retFifo <- mkFIFO;
 
    rule complete_rule0 (comp_state[0] != 0);
-      tags.portB.request.put(BRAMRequest{write:False, address:tail_ptr});
+      tags.portB.request.put(BRAMRequest{write:False, address:tail_ptr, datain: ?, responseOnWrite: ?});
    endrule
 
    rule complete_rule1 (comp_state[0] != 0);
@@ -210,7 +210,7 @@ module mkMemReadInternal#(Integer id,
    
    rule complete_burst0;
       let tag <- tag_gen.complete;
-      dreqFifos.portB.request.put(BRAMRequest{write:False, address:tag});      
+      dreqFifos.portB.request.put(BRAMRequest{write:False, address:tag, datain: ?, responseOnWrite: ?});      
       compFifo1.enq(tag);
    endrule
    
@@ -220,7 +220,7 @@ module mkMemReadInternal#(Integer id,
       let cli = drq.client;
       let tag <- toGet(compFifo1).get;
       compFifo0.enq(cli);
-      read_buffer.portB.request.put(BRAMRequest{write:False, address:{tag,truncate(cnt)}});
+      read_buffer.portB.request.put(BRAMRequest{write:False, address:{tag,truncate(cnt)}, datain: ?, responseOnWrite: ?});
       compReg0 <= cnt-1;
       compReg1 <= tag;
       compReg2 <= cli;
@@ -231,7 +231,7 @@ module mkMemReadInternal#(Integer id,
       let tag = compReg1;
       let cli = compReg2;
       compFifo0.enq(cli);
-      read_buffer.portB.request.put(BRAMRequest{write:False, address:{tag,truncate(cnt)}});
+      read_buffer.portB.request.put(BRAMRequest{write:False, address:{tag,truncate(cnt)}, datain: ?, responseOnWrite: ?});
       compReg0 <= cnt-1;
    endrule
    
@@ -301,7 +301,7 @@ module mkMemReadInternal#(Integer id,
       interface Put readData;
 	 method Action put(MemData#(dataWidth) response);
 	    readDataPipelineFifo.enq(response);
-	    dreqFifos.portA.request.put(BRAMRequest{write:False, address:truncate(response.tag)});
+	    dreqFifos.portA.request.put(BRAMRequest{write:False, address:truncate(response.tag), datain: ?, responseOnWrite: ?});
 	    beatCount <= beatCount+1;
 	 endmethod
       endinterface
@@ -391,7 +391,7 @@ module mkMemWriteInternal#(Integer iid,
    
    rule writeDoneComp0;
       let tag <- tag_gen.complete;
-      respFifos.portB.request.put(BRAMRequest{write:False, address:tag});
+      respFifos.portB.request.put(BRAMRequest{write:False, address:tag, datain: ?, responseOnWrite: ?});
    endrule
    
    rule writeDoneComp1;
