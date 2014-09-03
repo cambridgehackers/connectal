@@ -44,6 +44,7 @@
 // which indicates the start of a new sample period at the output
 // intermediate frequency.
 
+import FIFOF::*;
 import SpecialFIFOs::*;
 import Complex::*;
 import FixedPoint::*;
@@ -65,9 +66,9 @@ typedef struct {
 
 typedef struct {
 		Product arxr;
-		Product arxr;
-		Product arxr;
-		Product arxr;
+		Product arxi;
+		Product aixr;
+		Product aixi;
 		Bit#(1) filterPhase;
 		} MulData;
 
@@ -79,7 +80,8 @@ endinterface
    
 module mkFPCMult(FPCMult)
   provisos(Bits#(CoeffData, a__),
-     Bits#(ProductData, b__));
+     Bits#(ProductData, b__),
+     Bits#(MulData, c__));
    /* input registers */
    FIFOF#(CoeffData) ain <- mkPipelineFIFOF();
    FIFOF#(Complex#(Signal)) xin <- mkPipelineFIFOF();
@@ -90,14 +92,14 @@ module mkFPCMult(FPCMult)
 
    rule work;
       /* compute multiplies */
-      Product arxr = fxptMult(ain.a.rel, xin.first.rel);
-      Product aixi = fxptMult(ain.a.img, xin.first.img);
-      Product arxi = fxptMult(ain.a.rel, xin.first.img);
-      Product aixr = fxptMult(ain.a.img, xin.first.rel);
+      Product arxr = fxptMult(ain.first.a.rel, xin.first.rel);
+      Product aixi = fxptMult(ain.first.a.img, xin.first.img);
+      Product arxi = fxptMult(ain.first.a.rel, xin.first.img);
+      Product aixr = fxptMult(ain.first.a.img, xin.first.rel);
+      ax <= MulData{arxr: arxr, aixi: aixi, arxi: arxi, aixr: aixr,
+	 filterPhase: ain.first.filterPhase};
       ain.deq();
       xin.deq();
-      ax <= Muldata{arxr: arxr, aixi: aixi, arxi: arxi, aixr: aixr,
-	 filterPhase ain.filterPhase};
       /* combine into outputs */
       yout.enq(ProductData{y: Complex{rel: arxr - aixi, img: arxi + aixr}, filterPhase: muloutphase});
    endrule
