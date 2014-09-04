@@ -44,43 +44,32 @@ typedef struct {
 static DMAINFO dma_info[4];
 static int dma_trace;// = 1;
 
-#ifdef ALGO1_NANDSIM_HACK
-#define CLEAR_ID {}
-#else
-#define CLEAR_ID {id = 0;}
-#endif
-
 extern "C" {
   void write_pareff32(uint32_t id, uint32_t pref, uint32_t offset, unsigned int data){
-    CLEAR_ID;
     if (dma_trace)
       fprintf(stderr, "%s: %d %d %d\n", __FUNCTION__, id, pref, offset);
     *(unsigned int *)&dma_info[id][pref].buffer[offset] = data;
   }
 
   unsigned int read_pareff32(uint32_t id, uint32_t pref, uint32_t offset){
-    CLEAR_ID;
     if (dma_trace)
       fprintf(stderr, "%s: %d %d %d\n", __FUNCTION__, id, pref, offset);
     return *(unsigned int *)&dma_info[id][pref].buffer[offset];
   }
 
   void write_pareff64(uint32_t id, uint32_t pref, uint32_t offset, uint64_t data){
-    CLEAR_ID;
     if (dma_trace)
       fprintf(stderr, "%s: %d %d %d\n", __FUNCTION__, id, pref, offset);
     *(uint64_t *)&dma_info[id][pref].buffer[offset] = data;
   }
 
   uint64_t read_pareff64(uint32_t id, uint32_t pref, uint32_t offset){
-    CLEAR_ID;
     if (dma_trace)
       fprintf(stderr, "%s: %d %d %d\n", __FUNCTION__, id, pref, offset);
     return *(uint64_t *)&dma_info[id][pref].buffer[offset];
   }
 
   void pareff_init(uint32_t id, uint32_t apref, uint32_t size){
-    CLEAR_ID;
     uint32_t pref = apref; // >> 8;
     if (dma_trace)
       fprintf(stderr, "BsimDma::pareff id=%d pref=%d, size=%08x size_accum=%08x\n", id, pref, size, dma_info[id][pref].size_accum);

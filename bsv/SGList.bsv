@@ -82,7 +82,7 @@ typedef struct {DmaErrorType errorType;
 		Bit#(32) pref; } DmaError deriving (Bits);
 
 // the address translation servers (addr[0], addr[1]) have a latency of 8 and are fully pipelined
-module mkSGListMMU#(Bool bsimMMap, DmaIndication dmaIndication)(SGListMMU#(addrWidth))
+module mkSGListMMU#(Integer iid, Bool bsimMMap, DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    provisos(Log#(MaxNumSGLists, listIdxSize),
 	    Add#(listIdxSize,8, entryIdxSize),
 	    Add#(c__, addrWidth, ObjectOffsetSize));
@@ -261,11 +261,9 @@ module mkSGListMMU#(Bool bsimMMap, DmaIndication dmaIndication)(SGListMMU#(addrW
    method Action sglist(Bit#(32) pointer, Bit#(32) pointerIndex, Bit#(64) addr,  Bit#(32) len);
 `ifdef BSIM
 `ifndef PCIE
-`ifndef ALGO1_NANDSIM_HACK
          if(bsimMMap) begin
-	    let va <- pareff_init(0, pointer, len);
+	    let va <- pareff_init(fromInteger(iid), pointer, len);
 	 end
-`endif
 `endif
 `endif
          Bit#(IndexWidth) ind = truncate(pointerIndex);

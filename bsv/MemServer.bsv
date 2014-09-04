@@ -86,12 +86,13 @@ module mkMemServer#(DmaIndication dmaIndication,
 	    Add#(TLog#(TDiv#(dataWidth, 8)), d__, 8)
 	    );
    
-   let rv <- mkConfigMemServerRW(dmaIndication, readClients, writeClients);
+   SGListMMU#(PhysAddrWidth) sgl <- mkSGListMMU(0, True, dmaIndication);
+   let rv <- mkConfigMemServerRW(dmaIndication, readClients, writeClients, sgl);
    return rv;
    
 endmodule
 		 
-module mkMemServerR#(Bool bsimMMap, DmaIndication dmaIndication,
+module mkMemServerR#(DmaIndication dmaIndication,
 		     Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients)
    (MemServer#(PhysAddrWidth, dataWidth, nMasters))
    provisos(Add#(1,a__,dataWidth),
@@ -102,7 +103,7 @@ module mkMemServerR#(Bool bsimMMap, DmaIndication dmaIndication,
 	    Add#(TLog#(TDiv#(dataWidth, 8)), c__, 8)
 	    );
    
-   SGListMMU#(PhysAddrWidth) sgl <- mkSGListMMU(bsimMMap, dmaIndication);
+   SGListMMU#(PhysAddrWidth) sgl <- mkSGListMMU(0, True, dmaIndication);
    let rv <- mkConfigMemServerR(dmaIndication,readClients,sgl);
    return rv;
    
@@ -118,7 +119,7 @@ module mkMemServerW#(DmaIndication dmaIndication,
 	    Add#(i__, TLog#(nwc), 6)
 	    );
    
-   SGListMMU#(PhysAddrWidth) sgl <- mkSGListMMU(True, dmaIndication);
+   SGListMMU#(PhysAddrWidth) sgl <- mkSGListMMU(0, True, dmaIndication);
    let rv <- mkConfigMemServerW(dmaIndication, writeClients,sgl);
    return rv;
    
@@ -131,7 +132,8 @@ typedef struct {
 
 module mkConfigMemServerRW#(DmaIndication dmaIndication,
 			    Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
-			    Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
+			    Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients,
+			    SGListMMU#(PhysAddrWidth) sgl)
    (MemServer#(PhysAddrWidth, dataWidth, nMasters))
    
    provisos (Add#(1,a__,dataWidth),
@@ -143,8 +145,6 @@ module mkConfigMemServerRW#(DmaIndication dmaIndication,
 	     Add#(TLog#(TDiv#(dataWidth, 8)), d__, 8)
 	     );
 
-
-   SGListMMU#(PhysAddrWidth) sgl <- mkSGListMMU(True, dmaIndication);
    MemServer#(PhysAddrWidth,dataWidth,nMasters) reader <- mkConfigMemServerR(dmaIndication,  readClients, sgl);
    MemServer#(PhysAddrWidth,dataWidth,nMasters) writer <- mkConfigMemServerW(dmaIndication, writeClients, sgl);
    
