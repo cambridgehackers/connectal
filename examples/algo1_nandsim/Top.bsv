@@ -59,6 +59,8 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    SGListMMU#(PhysAddrWidth) sgl1 <- mkSGListMMU(1, False, nandsimDmaIndicationProxy.ifc);
    MemServer#(PhysAddrWidth,64,1) nandsimDma <- mkConfigMemServerR(nandsimDmaIndicationProxy.ifc, cons(strstr.haystack_read_client,nil), sgl1);
    DmaConfigWrapper nandsimDmaRequestWrapper <- mkDmaConfigWrapper(NandsimDmaConfig, nandsimDma.request);
+   mkConnection(nandsimDma.masters[0], nandSim.memSlave);
+   
    
    Vector#(8,StdPortal) portals;
    portals[0] = nandSimRequestWrapper.portalIfc;

@@ -164,6 +164,9 @@ unsigned int read_from_nandsim_exe()
 
 int main(int argc, const char **argv)
 {
+
+  fprintf(stderr, "this executable should only be run after the nandsim executable has printed out \"..connecting to algo_exe... \"");
+
   DmaConfigProxy *dmaConfig = 0;
   DmaIndication *dmaIndication = 0;
 
@@ -202,14 +205,21 @@ int main(int argc, const char **argv)
   int needle_len = strlen(needle_text);
   strncpy(needle, needle_text, needle_len);
   compute_MP_next(needle, mpNext, needle_len);
+  fprintf(stderr, "mpNext=[");
+  for(int i= 0; i <= needle_len; i++)
+    fprintf(stderr, "%d ", mpNext[i]);
+  fprintf(stderr, "]\n");
   portalDCacheFlushInval(needleAlloc, numBytes, needle);
   portalDCacheFlushInval(mpNextAlloc, numBytes, mpNext);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
+  fprintf(stderr, "Main::waiting to connect to nandsim_exe\n");
   wait_for_connect_nandsim_exe();
+  fprintf(stderr, "Main::connected to nandsim_exe\n");
   // base of haystack in "flash" memory
   int haystack_base = read_from_nandsim_exe();
   int haystack_len  = read_from_nandsim_exe();
+
 
   int id = nandsimDma->priv.handle++;
   // pairs of ('offset','size') poinging to space in nandsim memory

@@ -227,8 +227,10 @@ int main(int argc, const char **argv)
     
     return (mismatch > 0);
   } else {
+
     // else we were invoked by alg1_nandsim
     const char *filename = "../haystack.txt";
+    fprintf(stderr, "Main::opening %s\n", filename);
     // open up the text file and read it into an allocated memory buffer
     int dataFile = open(filename, O_RDONLY);
     uint32_t data_len = lseek(dataFile, 0, SEEK_END);
@@ -246,8 +248,18 @@ int main(int argc, const char **argv)
     nandsimRequest->startWrite(ref_dataAlloc, 0, 0, data_len, 16);
     nandsimIndication->wait();
 
+#ifdef SANITY2
+    // see what was written to the backing store...
+    for(int i = 0; i < data_len; i++)
+      fprintf(stderr, "%c", ((char*)nandBuffer)[i]);
+    fprintf(stderr, "\n");
+#endif
+
     // send the offset and length (in nandsim) of the text
+    defaultPoller->unregisterInstance(dmaIndication); // deregister from poller.  now it is safe to start algo1_exe
+    fprintf(stderr, "Main::connecting to algo_exe...\n");
     connect_to_algo_exe();
+    fprintf(stderr, "Main::connected to algo_exe\n");
     write_to_algo_exe(0);
     write_to_algo_exe(data_len);
     printf("[%s:%d] sleep, waiting for search\n", __FUNCTION__, __LINE__);
