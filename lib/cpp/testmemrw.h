@@ -2,8 +2,8 @@
 #define _TESTMEMRW_H_
 
 #include "StdDmaIndication.h"
-#include "DmaConfigProxy.h"
-#include "GeneratedTypes.h"
+#include "DmaDebugRequestProxy.h"
+#include "SGListConfigRequestProxy.h"
 #include "MemrwIndicationWrapper.h"
 #include "MemrwRequestProxy.h"
 
@@ -56,10 +56,7 @@ public:
 int runtest(int argc, const char **argv)
 {
   MemrwRequestProxy *device = 0;
-  DmaConfigProxy *dmap = 0;
-  
   MemrwIndication *deviceIndication = 0;
-  DmaIndication *dmaIndication = 0;
 
   if(sem_init(&read_done_sem, 1, 0)){
     fprintf(stderr, "failed to init read_done_sem\n");
@@ -73,11 +70,12 @@ int runtest(int argc, const char **argv)
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
   device = new MemrwRequestProxy(IfcNames_MemrwRequest);
-  dmap = new DmaConfigProxy(IfcNames_DmaConfig);
-  DmaManager *dma = new DmaManager(dmap);
-
   deviceIndication = new MemrwIndication(IfcNames_MemrwIndication);
-  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
+  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
+  SGListConfigRequestProxy *dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
+  DmaManager *dma = new DmaManager(hostmemDmaDebugRequest, dmap);
+  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostmemDmaDebugIndication);
+  SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
 
@@ -107,10 +105,10 @@ int runtest(int argc, const char **argv)
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
   
   sleep(1);
-  dmap->addrRequest(ref_srcAlloc, 1*sizeof(unsigned int));
-  sleep(1);
-  dmap->addrRequest(ref_dstAlloc, 2*sizeof(unsigned int));
-  sleep(1);
+  //hostmemDmaDebugRequest->addrRequest(ref_srcAlloc, 1*sizeof(unsigned int));
+  //sleep(1);
+  //hostmemDmaDebugRequest->addrRequest(ref_dstAlloc, 2*sizeof(unsigned int));
+  //sleep(1);
   
   fprintf(stderr, "Main::starting mempcy numWords:%d\n", numWords);
   int burstLen = 16;
