@@ -27,8 +27,8 @@
 #include <semaphore.h>
 
 #include "StdDmaIndication.h"
-#include "DmaConfigProxy.h"
-#include "GeneratedTypes.h"
+#include "DmaDebugRequestProxy.h"
+#include "SGListConfigRequestProxy.h"
 #include "MemlatencyIndicationWrapper.h"
 #include "MemlatencyRequestProxy.h"
 
@@ -81,10 +81,7 @@ public:
 int runtest(int argc, const char **argv)
 {
   MemlatencyRequestProxy *device = 0;
-  DmaConfigProxy *dmap = 0;
-  
   MemlatencyIndication *deviceIndication = 0;
-  DmaIndication *dmaIndication = 0;
 
   if(sem_init(&read_done_sem, 1, 0)){
     fprintf(stderr, "failed to init read_done_sem\n");
@@ -98,11 +95,13 @@ int runtest(int argc, const char **argv)
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
   device = new MemlatencyRequestProxy(IfcNames_MemlatencyRequest);
-  dmap = new DmaConfigProxy(IfcNames_DmaConfig);
-  DmaManager *dma = new DmaManager(dmap);
+  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
+  SGListConfigRequestProxy *dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
+  DmaManager *dma = new DmaManager(hostmemDmaDebugRequest, dmap);
+  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostmemDmaDebugIndication);
+  SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
 
   deviceIndication = new MemlatencyIndication(IfcNames_MemlatencyIndication);
-  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
 
