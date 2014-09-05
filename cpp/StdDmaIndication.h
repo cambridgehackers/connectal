@@ -22,19 +22,31 @@
 // SOFTWARE.
 
 #include "dmaManager.h"
-#include "DmaIndicationWrapper.h"
+#include "DmaDebugIndicationWrapper.h"
+#include "SGListConfigIndicationWrapper.h"
 
 static int error_limit = 20;
-class DmaIndication : public DmaIndicationWrapper
+class SGListConfigIndication : public SGListConfigIndicationWrapper
 {
   DmaManager *portalMemory;
-  int tag_mismatch_cnt;
  public:
-  DmaIndication(DmaManager *pm, unsigned int  id) : DmaIndicationWrapper(id), portalMemory(pm), tag_mismatch_cnt(0) {}
+  SGListConfigIndication(DmaManager *pm, unsigned int  id) : SGListConfigIndicationWrapper(id), portalMemory(pm) {}
   virtual void configResp(uint32_t pointer){
-    //fprintf(stderr, "configResp: %x\n", pointer);
+    fprintf(stderr, "configResp: %x\n", pointer);
     portalMemory->confResp(pointer);
   }
+  virtual void error (uint32_t code, uint32_t pointer, uint64_t offset, uint64_t extra) {
+    fprintf(stderr, "SGListConfigIndication::error(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
+    if (--error_limit < 0)
+        exit(-1);
+  }
+};
+
+class DmaDebugIndication : public DmaDebugIndicationWrapper
+{
+  DmaManager *portalMemory;
+ public:
+  DmaDebugIndication(DmaManager *pm, unsigned int  id) : DmaDebugIndicationWrapper(id), portalMemory(pm) {}
   virtual void addrResponse(uint64_t physAddr){
     fprintf(stderr, "DmaIndication::addrResponse(physAddr=%"PRIx64")\n", physAddr);
   }
@@ -46,8 +58,8 @@ class DmaIndication : public DmaIndicationWrapper
     //fprintf(stderr, "reportMemoryTraffic: words=%"PRIx64"\n", words);
     portalMemory->mtResp(words);
   }
-  virtual void dmaError (uint32_t code, uint32_t pointer, uint64_t offset, uint64_t extra) {
-    fprintf(stderr, "DmaIndication::dmaError(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
+  virtual void error (uint32_t code, uint32_t pointer, uint64_t offset, uint64_t extra) {
+    fprintf(stderr, "DmaDebugIndication::error(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
     if (--error_limit < 0)
         exit(-1);
   }

@@ -54,7 +54,7 @@ import "BDPI" function ActionValue#(Bit#(32)) pareff_init(Bit#(32) id, Bit#(32) 
 `endif
 
 interface SGListMMU#(numeric type addrWidth);
-   interface SGListSetup setup;
+   interface SGListConfigRequest request;
    interface Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addr;
 endinterface
 
@@ -82,7 +82,7 @@ typedef struct {DmaErrorType errorType;
 		Bit#(32) pref; } DmaError deriving (Bits);
 
 // the address translation servers (addr[0], addr[1]) have a latency of 8 and are fully pipelined
-module mkSGListMMU#(Integer iid, Bool bsimMMap, DmaIndication dmaIndication)(SGListMMU#(addrWidth))
+module mkSGListMMU#(Integer iid, Bool bsimMMap, SGListConfigIndication sglIndication)(SGListMMU#(addrWidth))
    provisos(Log#(MaxNumSGLists, listIdxSize),
 	    Add#(listIdxSize,8, entryIdxSize),
 	    Add#(c__, addrWidth, ObjectOffsetSize));
@@ -119,7 +119,7 @@ module mkSGListMMU#(Integer iid, Bool bsimMMap, DmaIndication dmaIndication)(SGL
    FIFO#(DmaError) dmaErrorFifo <- mkFIFO();
    rule dmaError;
       let error <- toGet(dmaErrorFifo).get();
-      dmaIndication.dmaError(extend(pack(error.errorType)), error.pref, -1, 0);
+      sglIndication.error(extend(pack(error.errorType)), error.pref, -1, 0);
    endrule
 
 
@@ -226,7 +226,7 @@ module mkSGListMMU#(Integer iid, Bool bsimMMap, DmaIndication dmaIndication)(SGL
    FIFO#(SGListId) configRespFifo <- mkFIFO;
    rule sendConfigResp;
       let ptr <- toGet(configRespFifo).get();
-      dmaIndication.configResp(extend(ptr));
+      sglIndication.configResp(extend(ptr));
    endrule
 
    Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addrServers;
@@ -247,7 +247,7 @@ module mkSGListMMU#(Integer iid, Bool bsimMMap, DmaIndication dmaIndication)(SGL
        endinterface);
 
    // FIXME: split this into three methods?
-   interface SGListSetup setup;
+   interface SGListConfigRequest request;
    method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) index8, Bit#(64) barr4, Bit#(32) index4, Bit#(64) barr0, Bit#(32) index0);
       portsel(regall, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
           address: truncate(pointer), datain: Region{

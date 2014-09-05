@@ -138,7 +138,7 @@ typedef 32 NumTags;
 
 module mkMemReadInternal#(Integer id,
 			  Vector#(numClients, ObjectReadClient#(dataWidth)) readClients,
-			  DmaIndication dmaIndication,
+			  DmaDebugIndication dmaIndication,
 			  Server#(ReqTup,Bit#(addrWidth)) sgl) 
    (MemReadInternal#(addrWidth, dataWidth))
 
@@ -192,7 +192,7 @@ module mkMemReadInternal#(Integer id,
    FIFO#(DmaError) dmaErrorFifo <- mkFIFO();
    rule dmaError;
       let error <- toGet(dmaErrorFifo).get();
-      dmaIndication.dmaError(extend(pack(error.errorType)), error.pref, 0, 0);
+      dmaIndication.error(extend(pack(error.errorType)), error.pref, 0, 0);
    endrule
 
    for (Integer selectReg = 0; selectReg < valueOf(numClients); selectReg = selectReg + 1) 
@@ -320,7 +320,7 @@ typedef 64 NumTagsW;
 
 module mkMemWriteInternal#(Integer iid,
 			   Vector#(numClients, ObjectWriteClient#(dataWidth)) writeClients,
-			   DmaIndication dmaIndication, 
+			   DmaDebugIndication dmaIndication, 
 			   Server#(ReqTup,Bit#(addrWidth)) sgl)
    (MemWriteInternal#(addrWidth, dataWidth))
    
@@ -362,7 +362,7 @@ module mkMemWriteInternal#(Integer iid,
    FIFO#(DmaError) dmaErrorFifo <- mkFIFO();
    rule dmaError;
       let error <- toGet(dmaErrorFifo).get();
-      dmaIndication.dmaError(extend(pack(error.errorType)), error.pref, 0, 0);
+      dmaIndication.error(extend(pack(error.errorType)), error.pref, 0, 0);
    endrule
 
    for (Integer selectReg = 0; selectReg < valueOf(numClients); selectReg = selectReg + 1)

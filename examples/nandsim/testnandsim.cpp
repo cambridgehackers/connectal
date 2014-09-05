@@ -30,7 +30,8 @@
 #include <sys/un.h>
 
 #include "StdDmaIndication.h"
-#include "DmaConfigProxy.h"
+#include "DmaDebugRequestProxy.h"
+#include "SGListConfigRequestProxy.h"
 #include "GeneratedTypes.h" 
 #include "NandSimIndicationWrapper.h"
 #include "NandSimRequestProxy.h"
@@ -123,25 +124,34 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
+  DmaDebugRequestProxy *hostmemDmaDebugRequest = 0;
+  DmaDebugIndication *hostmemDmaDebugIndication = 0;
+
+  SGListConfigRequestProxy *hostmemSGListConfigRequest = 0;
+  SGListConfigIndication *hostmemSGListConfigIndication = 0;
+
   NandSimRequestProxy *nandsimRequest = 0;
   NandSimIndication *nandsimIndication = 0;
 
-  DmaConfigProxy *dmaConfig = 0;
-  DmaIndication *dmaIndication = 0;
+  fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
+
+  hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
+  hostmemSGListConfigRequest = new SGListConfigRequestProxy(IfcNames_BackingStoreSGListConfigRequest);
+  DmaManager *hostmemDma = new DmaManager(hostmemDmaDebugRequest, hostmemSGListConfigRequest);
+
+  hostmemDmaDebugIndication = new DmaDebugIndication(hostmemDma, IfcNames_HostmemDmaDebugIndication);
+  hostmemSGListConfigIndication = new SGListConfigIndication(hostmemDma, IfcNames_BackingStoreSGListConfigIndication);
 
   nandsimRequest = new NandSimRequestProxy(IfcNames_NandSimRequest);
   nandsimIndication = new NandSimIndication(IfcNames_NandSimIndication);
 
-  dmaConfig = new DmaConfigProxy(IfcNames_DmaConfig);
-  DmaManager *dma = new DmaManager(dmaConfig);
-  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   portalExec_start();
 
 
   int nandAlloc = portalAlloc(nandBytes);
   fprintf(stderr, "nandAlloc=%d\n", nandAlloc);
-  int ref_nandAlloc = dma->reference(nandAlloc);
+  int ref_nandAlloc = hostmemDma->reference(nandAlloc);
   fprintf(stderr, "ref_nandAlloc=%d\n", ref_nandAlloc);
 #ifdef SANITY0
   unsigned int *nandBuffer = (unsigned int*)portalMmap(nandAlloc, nandBytes); 
@@ -158,7 +168,7 @@ int main(int argc, const char **argv)
     size_t srcBytes = nandBytes>>2;
     int srcAlloc = portalAlloc(srcBytes);
     unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, srcBytes);
-    unsigned int ref_srcAlloc = dma->reference(srcAlloc);
+    unsigned int ref_srcAlloc = hostmemDma->reference(srcAlloc);
     fprintf(stderr, "fd=%d, srcBuffer=%p\n", srcAlloc, srcBuffer);
 
     /* do tests */
@@ -222,8 +232,11 @@ int main(int argc, const char **argv)
     }
     /* end */
     
-    fprintf(stderr, "Main::Summary: match=%lu mismatch:%lu (%lu) (%f percent)\n", 
-	    match, mismatch, match+mismatch, (float)mismatch/(float)(match+mismatch)*100.0);
+    uint64_t beats_r = hostmemDma->show_mem_stats(ChannelType_Read);
+    uint64_t beats_w = hostmemDma->show_mem_stats(ChannelType_Write);
+
+    fprintf(stderr, "Main::Summary: match=%lu mismatch:%lu (%lu) (%f percent)\n", match, mismatch, match+mismatch, (float)mismatch/(float)(match+mismatch)*100.0);
+    fprintf(stderr, "(%"PRIx64", %"PRIx64")\n", beats_r, beats_w);
     
     return (mismatch > 0);
   } else {
@@ -236,7 +249,7 @@ int main(int argc, const char **argv)
     uint32_t data_len = lseek(dataFile, 0, SEEK_END);
     lseek(dataFile, 0, SEEK_SET);
     int dataAlloc = portalAlloc(data_len);
-    int ref_dataAlloc = dma->reference(dataAlloc);
+    int ref_dataAlloc = hostmemDma->reference(dataAlloc);
     char *data = (char *)portalMmap(dataAlloc, data_len);
     if(read(dataFile, data, data_len) != data_len) {
       fprintf(stderr, "error reading %s %d\n", filename, (int)data_len);
@@ -255,11 +268,14 @@ int main(int argc, const char **argv)
     fprintf(stderr, "\n");
 #endif
 
-    // send the offset and length (in nandsim) of the text
-    defaultPoller->unregisterInstance(dmaIndication); // deregister from poller.  now it is safe to start algo1_exe
+    // deregister from poller.  now it is safe to start algo1_exe
+    defaultPoller->unregisterInstance(hostmemDmaDebugIndication); 
+    defaultPoller->unregisterInstance(hostmemSGListConfigIndication);
     fprintf(stderr, "Main::connecting to algo_exe...\n");
     connect_to_algo_exe();
     fprintf(stderr, "Main::connected to algo_exe\n");
+
+    // send the offset and length (in nandsim) of the text
     write_to_algo_exe(0);
     write_to_algo_exe(data_len);
     printf("[%s:%d] sleep, waiting for search\n", __FUNCTION__, __LINE__);

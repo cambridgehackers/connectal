@@ -28,18 +28,18 @@ static int shifts[] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0, 0};
 #include "portalmem.h" // PortalAlloc
 
 #ifdef XBSV_DRIVER_CODE
-#include "DmaConfigProxy.c"
+#include "SGListConfigRequestProxy.c"
 static int trace_memory = 1;
 #endif
 
 #if 1 //def NO_CPP_PORTAL_CODE
 #include "GeneratedTypes.h" // generated in project directory
-#define DMAsglist(P, A, B, C, D) DmaConfigProxy_sglist((P), (A), (B), (C), (D));
-#define DMAregion(P, PTR, B8, I8, B4, I4, B0, I0) DmaConfigProxy_region((P), (PTR), (B8), (I8), (B4), (I4), (B0), (I0))
+#define DMAsglist(P, A, B, C, D) SGListConfigRequestProxy_sglist((P), (A), (B), (C), (D));
+#define DMAregion(P, PTR, B8, I8, B4, I4, B0, I0) SGListConfigRequestProxy_region((P), (PTR), (B8), (I8), (B4), (I4), (B0), (I0))
 #else
-#include "DmaConfigProxy.h" // generated in project directory
-#define DMAsglist(P, A, B, C, D) ((DmaConfigProxy *)((P)->parent))->sglist((A), (B), (C), (D))
-#define DMAregion(P, PTR, B8, I8, B4, I4, B0, I0) ((DmaConfigProxy *)((P)->parent))->region((PTR), (B8), (I8), (B4), (I4), (B0), (I0))
+#include "SGListConfigRequestProxy.h" // generated in project directory
+#define DMAsglist(P, A, B, C, D) ((SGListConfigRequestProxy *)((P)->parent))->sglist((A), (B), (C), (D))
+#define DMAregion(P, PTR, B8, I8, B4, I4, B0, I0) ((SGListConfigRequestProxy *)((P)->parent))->region((PTR), (B8), (I8), (B4), (I4), (B0), (I0))
 #endif
 
 int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)

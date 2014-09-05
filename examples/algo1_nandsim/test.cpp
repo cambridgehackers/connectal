@@ -34,7 +34,8 @@
 #include <mp.h>
 
 #include "StdDmaIndication.h"
-#include "DmaConfigProxy.h"
+#include "DmaDebugRequestProxy.h"
+#include "SGListConfigRequestProxy.h"
 #include "GeneratedTypes.h" 
 #include "NandSimIndicationWrapper.h"
 #include "NandSimRequestProxy.h"
@@ -165,30 +166,39 @@ unsigned int read_from_nandsim_exe()
 int main(int argc, const char **argv)
 {
 
-  fprintf(stderr, "this executable should only be run after the nandsim executable has printed out \"..connecting to algo_exe... \"");
+  DmaDebugRequestProxy *hostmemDmaDebugRequest = 0;
+  DmaDebugIndication *hostmemDmaDebugIndication = 0;
 
-  DmaConfigProxy *dmaConfig = 0;
-  DmaIndication *dmaIndication = 0;
+  SGListConfigRequestProxy *hostmemSGListConfigRequest = 0;
+  SGListConfigIndication *hostmemSGListConfigIndication = 0;
+
+  SGListConfigRequestProxy *nandsimSGListConfigRequest = 0;
+  SGListConfigIndication *nandsimSGListConfigIndication = 0;
 
   StrstrRequestProxy *strstrRequest = 0;
   StrstrIndication *strstrIndication = 0;
 
-  DmaConfigProxy *nandsimDmaConfig = 0;
-  DmaIndication *nandsimDmaIndication = 0;
+  DmaDebugRequestProxy *nandsimDmaDebugRequest = 0;
+  DmaDebugIndication *nandsimDmaDebugIndication = 0;
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
-  dmaConfig = new DmaConfigProxy(IfcNames_DmaConfig);
-  DmaManager *dma = new DmaManager(dmaConfig);
-  dma->priv.handle = 4; // so doesn't overlap with nandsim
-  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
+  hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
+  hostmemSGListConfigRequest = new SGListConfigRequestProxy(IfcNames_BackingStoreSGListConfigRequest); // change this to AlgoSGListConfigRequest
+  DmaManager *hostmemDma = new DmaManager(hostmemDmaDebugRequest, hostmemSGListConfigRequest);
+  hostmemDma->priv.handle = 4; // so doesn't overlap with nandsim // remove this once above change is made
+
+  hostmemDmaDebugIndication = new DmaDebugIndication(hostmemDma, IfcNames_HostmemDmaDebugIndication);
+  hostmemSGListConfigIndication = new SGListConfigIndication(hostmemDma, IfcNames_BackingStoreSGListConfigIndication);  // change this to AlgoSGListConfigIndication
 
   strstrRequest = new StrstrRequestProxy(IfcNames_AlgoRequest);
   strstrIndication = new StrstrIndication(IfcNames_AlgoIndication);
 
-  nandsimDmaConfig = new DmaConfigProxy(IfcNames_NandsimDmaConfig);
-  DmaManager *nandsimDma = new DmaManager(nandsimDmaConfig);
-  nandsimDmaIndication = new DmaIndication(nandsimDma,IfcNames_NandsimDmaIndication);
+  nandsimDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_NandsimDmaDebugRequest);
+  nandsimSGListConfigRequest = new SGListConfigRequestProxy(IfcNames_NandsimSGListConfigRequest);
+  DmaManager *nandsimDma = new DmaManager(nandsimDmaDebugRequest, nandsimSGListConfigRequest);
+  nandsimDmaDebugIndication = new DmaDebugIndication(nandsimDma,IfcNames_NandsimDmaDebugIndication);
+  nandsimSGListConfigIndication = new SGListConfigIndication(nandsimDma,IfcNames_NandsimSGListConfigIndication);
 
   portalExec_start();
   fprintf(stderr, "Main::allocating memory...\n");
@@ -196,8 +206,8 @@ int main(int argc, const char **argv)
   // allocate memory for strstr data
   int needleAlloc = portalAlloc(numBytes);
   int mpNextAlloc = portalAlloc(numBytes);
-  int ref_needleAlloc = dma->reference(needleAlloc);
-  int ref_mpNextAlloc = dma->reference(mpNextAlloc);
+  int ref_needleAlloc = hostmemDma->reference(needleAlloc);
+  int ref_mpNextAlloc = hostmemDma->reference(mpNextAlloc);
   char *needle = (char *)portalMmap(needleAlloc, numBytes);
   int *mpNext = (int *)portalMmap(mpNextAlloc, numBytes);
 
@@ -227,7 +237,7 @@ int main(int argc, const char **argv)
   // 'nandBytes', the size of the nandSimulator backing store
   RegionRef region[] = {{0, 0x100000}, {0x100000, 0x100000}};
   printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-  int ref_haystackInNandMemory = send_reference_to_portal(nandsimDma->priv.device, sizeof(region)/sizeof(region[0]), region, id);
+  int ref_haystackInNandMemory = send_reference_to_portal(nandsimDma->priv.sglDevice, sizeof(region)/sizeof(region[0]), region, id);
   sem_wait(&(nandsimDma->priv.confSem));
 
   fprintf(stderr, "about to setup device %d %d\n", ref_needleAlloc, ref_mpNextAlloc);

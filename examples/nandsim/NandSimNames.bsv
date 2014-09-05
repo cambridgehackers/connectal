@@ -1,4 +1,23 @@
 
 
-typedef enum {DmaIndication, DmaConfig, NandSimIndication, NandSimRequest, AlgoIndication, AlgoRequest, NandsimDmaIndication, NandsimDmaConfig} IfcNames deriving (Eq,Bits);
+typedef enum {
+   
+   HostmemDmaDebugIndication, 
+   HostmemDmaDebugRequest,
+   NandsimDmaDebugIndication, 
+   NandsimDmaDebugRequest,
+	      
+   BackingStoreSGListConfigRequest,
+   BackingStoreSGListConfigIndication,
+   AlgoSGListConfigRequest,
+   AlgoSGListConfigIndication,
+   NandsimSGListConfigRequest,
+   NandsimSGListConfigIndication,
+
+   NandSimIndication, 
+   NandSimRequest, 
+   AlgoIndication, 
+   AlgoRequest 
+ 
+   } IfcNames deriving (Eq,Bits);
 

@@ -4,7 +4,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-typedef enum IfcNames { IfcNames_MemreadIndication, IfcNames_MemreadRequest, IfcNames_DmaIndication, IfcNames_DmaConfig } IfcNames;
+typedef enum IfcNames { IfcNames_HostmemDmaDebugIndication, IfcNames_HostmemDmaDebugRequest, IfcNames_NandsimDmaDebugIndication, IfcNames_NandsimDmaDebugRequest, IfcNames_BackingStoreSGListConfigRequest, IfcNames_BackingStoreSGListConfigIndication, IfcNames_AlgoSGListConfigRequest, IfcNames_AlgoSGListConfigIndication, IfcNames_NandsimSGListConfigRequest, IfcNames_NandsimSGListConfigIndication, IfcNames_NandSimIndication, IfcNames_NandSimRequest, IfcNames_AlgoIndication, IfcNames_AlgoRequest } IfcNames;
 typedef enum ChannelType { ChannelType_Read, ChannelType_Write } ChannelType;
 typedef struct DmaDbgRec {
     uint32_t x : 32;
@@ -14,36 +14,52 @@ typedef struct DmaDbgRec {
 } DmaDbgRec;
 typedef enum DmaErrorType { DmaErrorType_DmaErrorNone, DmaErrorType_DmaErrorBadPointer1, DmaErrorType_DmaErrorBadPointer2, DmaErrorType_DmaErrorBadPointer3, DmaErrorType_DmaErrorBadPointer4, DmaErrorType_DmaErrorBadPointer5, DmaErrorType_DmaErrorBadAddrTrans, DmaErrorType_DmaErrorBadPageSize, DmaErrorType_DmaErrorBadNumberEntries, DmaErrorType_DmaErrorBadAddr, DmaErrorType_DmaErrorTagMismatch } DmaErrorType;
 
-enum { CHAN_NUM_DmaConfigProxy_sglist,CHAN_NUM_DmaConfigProxy_region,CHAN_NUM_DmaConfigProxy_addrRequest,CHAN_NUM_DmaConfigProxy_getStateDbg,CHAN_NUM_DmaConfigProxy_getMemoryTraffic,CHAN_NUM_DmaConfigProxy_putFailed};
+enum { CHAN_NUM_NandSimRequestProxy_startRead,CHAN_NUM_NandSimRequestProxy_startWrite,CHAN_NUM_NandSimRequestProxy_startErase,CHAN_NUM_NandSimRequestProxy_configureNand,CHAN_NUM_NandSimRequestProxy_putFailed};
 
-int DmaConfigProxy_handleMessage(struct PortalInternal *p, unsigned int channel);
+int NandSimRequestProxy_handleMessage(struct PortalInternal *p, unsigned int channel);
 
-void DmaConfigProxy_sglist (struct PortalInternal *p , const uint32_t pointer, const uint32_t pointerIndex, const uint64_t addr, const uint32_t len );
+void NandSimRequestProxy_startRead (struct PortalInternal *p , const uint32_t drampointer, const uint32_t dramOffset, const uint32_t nandAddr, const uint32_t numBytes, const uint32_t burstLen );
 
-void DmaConfigProxy_region (struct PortalInternal *p , const uint32_t pointer, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 );
+void NandSimRequestProxy_startWrite (struct PortalInternal *p , const uint32_t drampointer, const uint32_t dramOffset, const uint32_t nandAddr, const uint32_t numBytes, const uint32_t burstLen );
 
-void DmaConfigProxy_addrRequest (struct PortalInternal *p , const uint32_t pointer, const uint32_t offset );
+void NandSimRequestProxy_startErase (struct PortalInternal *p , const uint32_t nandAddr, const uint32_t numBytes );
 
-void DmaConfigProxy_getStateDbg (struct PortalInternal *p , const ChannelType rc );
+void NandSimRequestProxy_configureNand (struct PortalInternal *p , const uint32_t ptr, const uint32_t numBytes );
+enum { CHAN_NUM_SGListConfigRequestProxy_sglist,CHAN_NUM_SGListConfigRequestProxy_region,CHAN_NUM_SGListConfigRequestProxy_putFailed};
 
-void DmaConfigProxy_getMemoryTraffic (struct PortalInternal *p , const ChannelType rc );
-enum { CHAN_NUM_MemreadRequestProxy_startRead,CHAN_NUM_MemreadRequestProxy_putFailed};
+int SGListConfigRequestProxy_handleMessage(struct PortalInternal *p, unsigned int channel);
 
-int MemreadRequestProxy_handleMessage(struct PortalInternal *p, unsigned int channel);
+void SGListConfigRequestProxy_sglist (struct PortalInternal *p , const uint32_t pointer, const uint32_t pointerIndex, const uint64_t addr, const uint32_t len );
 
-void MemreadRequestProxy_startRead (struct PortalInternal *p , const uint32_t pointer, const uint32_t numWords, const uint32_t burstLen, const uint32_t iterCnt );
+void SGListConfigRequestProxy_region (struct PortalInternal *p , const uint32_t pointer, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 );
+enum { CHAN_NUM_DmaDebugRequestProxy_addrRequest,CHAN_NUM_DmaDebugRequestProxy_getStateDbg,CHAN_NUM_DmaDebugRequestProxy_getMemoryTraffic,CHAN_NUM_DmaDebugRequestProxy_putFailed};
 
-int MemreadIndicationWrapper_handleMessage(struct PortalInternal *p, unsigned int channel);
-void MemreadIndicationWrapperreadDone_cb (  struct PortalInternal *p, const uint32_t mismatchCount );
-enum { CHAN_NUM_MemreadIndicationWrapper_readDone};
+int DmaDebugRequestProxy_handleMessage(struct PortalInternal *p, unsigned int channel);
 
-int DmaIndicationWrapper_handleMessage(struct PortalInternal *p, unsigned int channel);
-void DmaIndicationWrapperconfigResp_cb (  struct PortalInternal *p, const uint32_t pointer );
-void DmaIndicationWrapperaddrResponse_cb (  struct PortalInternal *p, const uint64_t physAddr );
-void DmaIndicationWrapperreportStateDbg_cb (  struct PortalInternal *p, const DmaDbgRec rec );
-void DmaIndicationWrapperreportMemoryTraffic_cb (  struct PortalInternal *p, const uint64_t words );
-void DmaIndicationWrapperdmaError_cb (  struct PortalInternal *p, const uint32_t code, const uint32_t pointer, const uint64_t offset, const uint64_t extra );
-enum { CHAN_NUM_DmaIndicationWrapper_configResp,CHAN_NUM_DmaIndicationWrapper_addrResponse,CHAN_NUM_DmaIndicationWrapper_reportStateDbg,CHAN_NUM_DmaIndicationWrapper_reportMemoryTraffic,CHAN_NUM_DmaIndicationWrapper_dmaError};
+void DmaDebugRequestProxy_addrRequest (struct PortalInternal *p , const uint32_t pointer, const uint32_t offset );
+
+void DmaDebugRequestProxy_getStateDbg (struct PortalInternal *p , const ChannelType rc );
+
+void DmaDebugRequestProxy_getMemoryTraffic (struct PortalInternal *p , const ChannelType rc );
+
+int SGListConfigIndicationWrapper_handleMessage(struct PortalInternal *p, unsigned int channel);
+void SGListConfigIndicationWrapperconfigResp_cb (  struct PortalInternal *p, const uint32_t pointer );
+void SGListConfigIndicationWrappererror_cb (  struct PortalInternal *p, const uint32_t code, const uint32_t pointer, const uint64_t offset, const uint64_t extra );
+enum { CHAN_NUM_SGListConfigIndicationWrapper_configResp,CHAN_NUM_SGListConfigIndicationWrapper_error};
+
+int DmaDebugIndicationWrapper_handleMessage(struct PortalInternal *p, unsigned int channel);
+void DmaDebugIndicationWrapperaddrResponse_cb (  struct PortalInternal *p, const uint64_t physAddr );
+void DmaDebugIndicationWrapperreportStateDbg_cb (  struct PortalInternal *p, const DmaDbgRec rec );
+void DmaDebugIndicationWrapperreportMemoryTraffic_cb (  struct PortalInternal *p, const uint64_t words );
+void DmaDebugIndicationWrappererror_cb (  struct PortalInternal *p, const uint32_t code, const uint32_t pointer, const uint64_t offset, const uint64_t extra );
+enum { CHAN_NUM_DmaDebugIndicationWrapper_addrResponse,CHAN_NUM_DmaDebugIndicationWrapper_reportStateDbg,CHAN_NUM_DmaDebugIndicationWrapper_reportMemoryTraffic,CHAN_NUM_DmaDebugIndicationWrapper_error};
+
+int NandSimIndicationWrapper_handleMessage(struct PortalInternal *p, unsigned int channel);
+void NandSimIndicationWrapperreadDone_cb (  struct PortalInternal *p, const uint32_t tag );
+void NandSimIndicationWrapperwriteDone_cb (  struct PortalInternal *p, const uint32_t tag );
+void NandSimIndicationWrappereraseDone_cb (  struct PortalInternal *p, const uint32_t tag );
+void NandSimIndicationWrapperconfigureNandDone_cb (  struct PortalInternal *p );
+enum { CHAN_NUM_NandSimIndicationWrapper_readDone,CHAN_NUM_NandSimIndicationWrapper_writeDone,CHAN_NUM_NandSimIndicationWrapper_eraseDone,CHAN_NUM_NandSimIndicationWrapper_configureNandDone};
 #ifdef __cplusplus
 }
 #endif

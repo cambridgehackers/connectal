@@ -50,7 +50,8 @@ typedef struct {
   sem_t mtSem;
   sem_t dbgSem;
   uint64_t mtCnt;
-  PortalInternal *device;
+  PortalInternal *dmaDevice;
+  PortalInternal *sglDevice;
   int pa_fd;
   int handle;
 } DmaManagerPrivate;
@@ -58,7 +59,7 @@ typedef struct {
 #ifdef __cplusplus
 extern "C" {
 #endif
-void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *argDevice);
+  void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *dmaDevice, PortalInternal *sglDevice);
 int DmaManager_reference(DmaManagerPrivate *priv, int fd);
 #ifdef __cplusplus
 }
@@ -72,8 +73,8 @@ class DmaManager
 {
  public:
   DmaManagerPrivate priv;
-  DmaManager(PortalInternalCpp *argDevice) {
-    DmaManager_init(&priv, &argDevice->pint);
+  DmaManager(PortalInternalCpp *dbgDevice, PortalInternalCpp *sglDevice) {
+    DmaManager_init(&priv, &dbgDevice->pint, &sglDevice->pint);
   };
   int reference(int fd) {
     return DmaManager_reference(&priv, fd);

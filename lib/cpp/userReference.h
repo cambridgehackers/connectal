@@ -34,8 +34,8 @@ static int trace_memory = 1;
 
 #if 1 //def NO_CPP_PORTAL_CODE
 #include "GeneratedTypes.h" // generated in project directory
-#define DMAsglist(P, A, B, C, D) DmaConfigProxy_sglist((P), (A), (B), (C), (D));
-#define DMAregion(P, PTR, B8, I8, B4, I4, B0, I0) DmaConfigProxy_region((P), (PTR), (B8), (I8), (B4), (I4), (B0), (I0))
+#define DMAsglist(P, A, B, C, D) SGListConfigRequestProxy_sglist((P), (A), (B), (C), (D));
+#define DMAregion(P, PTR, B8, I8, B4, I4, B0, I0) SGListConfigRequestProxy_region((P), (PTR), (B8), (I8), (B4), (I4), (B0), (I0))
 #else
 #include "DmaConfigProxy.h" // generated in project directory
 #define DMAsglist(P, A, B, C, D) ((DmaConfigProxy *)((P)->parent))->sglist((A), (B), (C), (D))

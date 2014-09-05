@@ -60,15 +60,25 @@ typedef enum {
 //
 // @brief Events sent from a Dma engine
 //
-interface DmaIndication;
-   method Action configResp(Bit#(32) pointer);
+interface DmaDebugIndication;
    method Action addrResponse(Bit#(64) physAddr);
    method Action reportStateDbg(DmaDbgRec rec);
    method Action reportMemoryTraffic(Bit#(64) words);
-   method Action dmaError(Bit#(32) code, Bit#(32) pointer, Bit#(64) offset, Bit#(64) extra);
+   method Action error(Bit#(32) code, Bit#(32) pointer, Bit#(64) offset, Bit#(64) extra);
 endinterface
 
-interface SGListSetup;
+//
+// @brief Events sent from a SGList
+//
+interface SGListConfigIndication;
+   method Action configResp(Bit#(32) pointer);
+   method Action error(Bit#(32) code, Bit#(32) pointer, Bit#(64) offset, Bit#(64) extra);
+endinterface
+
+//
+// @brief Configuration interface to an SGList
+//
+interface SGListConfigRequest;
    //
    // @brief Adds an address translation entry to the scatter-gather list for an object
    //
@@ -79,12 +89,14 @@ interface SGListSetup;
    method Action sglist(Bit#(32) pointer, Bit#(32) pointerIndex, Bit#(64) addr,  Bit#(32) len);
    method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) index8, Bit#(64) barr4, Bit#(32) index4, Bit#(64) barr0, Bit#(32) index0);
 endinterface
+
 //
-// @brief Configuration interface to Dma engine
+// @brief Debug interface to Dma engine
 //
-interface DmaConfig;
-   method Action sglist(Bit#(32) pointer, Bit#(32) pointerIndex, Bit#(64) addr,  Bit#(32) len);
-   method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) index8, Bit#(64) barr4, Bit#(32) index4, Bit#(64) barr0, Bit#(32) index0);
+interface DmaDebugRequest;
+   //
+   // @brief Requests an address translation
+   //
    method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
    //
    // @brief Requests debug info for the specified channel type
