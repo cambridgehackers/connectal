@@ -38,13 +38,8 @@
 #endif
 #endif
 
-#if 1 //def NO_CPP_PORTAL_CODE
 #include "GeneratedTypes.h" // generated in project directory
 #define DMAGetMemoryTraffic(P,A) DmaDebugRequestProxy_getMemoryTraffic((P), (A))
-#else
-#include "DmaConfigProxy.h" // generated in project directory
-#define DMAGetMemoryTraffic(P,A) ((DmaConfigProxy *)((P)->parent))->getMemoryTraffic((A))
-#endif
 
 #define KERNEL_REFERENCE
 
