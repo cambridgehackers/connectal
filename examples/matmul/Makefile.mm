@@ -1,6 +1,6 @@
 BSVDIR=$(XBSVDIR)/bsv
-S2H        +=  MmRequestTN MmRequestNT TimerRequest DmaConfig  
-H2S        +=  MmIndication TimerIndication DmaIndication 
+S2H        +=  MmRequestTN MmRequestNT TimerRequest
+H2S        +=  MmIndication TimerIndication
 BSVFILES   +=  $(RBMDIR)/bsv/RbmTypes.bsv $(RBMDIR)/bsv/Timer.bsv $(DBNTOPBSV)
 CPPFILES   +=  $(MMDIR)/cpp/portalmat.cpp $(TESTCPPFILES)
 XBSVFLAGS  +=  --clib opencv_core --stl=stlport_static
