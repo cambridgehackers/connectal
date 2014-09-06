@@ -6,6 +6,7 @@ CPPFILES   +=  $(MMDIR)/cpp/portalmat.cpp $(TESTCPPFILES)
 XBSVFLAGS  +=  --clib opencv_core --stl=stlport_static
 XBSVFLAGS  +=  -D IMPORT_HOSTIF -D MATRIX_TN
 XBSVFLAGS  +=  --bscflags="+RTS -K26777216 -RTS -p +:../../$(MMDIR)/bsv"
+XBSVFLAGS  +=  --bscflags " -Xc++ -DMATMUL_HACK" -D MATMUL_HACK
 
 Dma = Dma
 PINS = Std
