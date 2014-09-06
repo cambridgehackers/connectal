@@ -1,6 +1,6 @@
 
-S2H = PcieTestBenchRequest DmaConfig
-H2S = PcieTestBenchIndication DmaIndication
+S2H = PcieTestBenchRequest
+H2S = PcieTestBenchIndication
 BSVFILES = PcieTestBench.bsv Top.bsv ../../lib/deprecated/DmaUtils.bsv
 CPPFILES=testpcie.cpp
 
