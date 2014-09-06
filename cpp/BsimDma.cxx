@@ -48,7 +48,6 @@ static int dma_trace;// = 1;
 #define NUKE_ID {id = 0;}
 #else
 #define NUKE_ID {}
-#error laksjdl
 #endif
 
 extern "C" {
