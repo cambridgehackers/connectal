@@ -34,8 +34,8 @@
 #include "StdDmaIndication.h"
 #include "RegexpIndicationWrapper.h"
 #include "RegexpRequestProxy.h"
-#include "GeneratedTypes.h"
-#include "DmaConfigProxy.h"
+#include "DmaDebugRequestProxy.h"
+#include "SGListConfigRequestProxy.h"
 
 #include "regex-matcher.h"
 #include "jregexp.h"
@@ -69,18 +69,17 @@ public:
 int main(int argc, const char **argv)
 {
   RegexpRequestProxy *device = 0;
-  DmaConfigProxy *dmap = 0;
-  
   RegexpIndication *deviceIndication = 0;
-  DmaIndication *dmaIndication = 0;
   
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   device = new RegexpRequestProxy(IfcNames_RegexpRequest);
-  dmap = new DmaConfigProxy(IfcNames_DmaConfig);
-  DmaManager *dma = new DmaManager(dmap);
+  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
+  SGListConfigRequestProxy *dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
+  DmaManager *dma = new DmaManager(hostmemDmaDebugRequest, dmap);
+  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostmemDmaDebugIndication);
+  SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
   
   deviceIndication = new RegexpIndication(IfcNames_RegexpIndication);
-  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
   
   if(sem_init(&test_sem, 1, 0)){
     fprintf(stderr, "failed to init test_sem\n");
