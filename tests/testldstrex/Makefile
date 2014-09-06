@@ -8,8 +8,8 @@ TESTCPPFILES= testldstrex.cpp
 XBSVFLAGS = -D J_VALUE=2 -D K_VALUE=2 -D N_VALUE=2
 
 include $(MMDIR)/Makefile.mm
-S2H        =  TimerRequest DmaConfig
-H2S        =  TimerIndication DmaIndication
+S2H        =  TimerRequest
+H2S        =  TimerIndication
 CPPFILES   =  $(TESTCPPFILES)
 NUMBER_OF_MASTERS=1
 include ../../Makefile.xbsv
