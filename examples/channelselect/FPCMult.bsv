@@ -56,7 +56,7 @@ module mkFPCMult(FPCMult)
    Reg#(Product) aixi <- mkReg(?);
    Reg#(Product) arxi <- mkReg(?);
    Reg#(Product) aixr <- mkReg(?);
-   Reg#(Bit#(1)) mulloutvalid <- mkReg(0):
+   Reg#(Bit#(1)) mulloutvalid <- mkReg(0);
    Reg#(Bit#(1)) muloutphase <- mkReg(?);
    /* result registers */
    Reg#(ProductData) yout <- mkReg(?);

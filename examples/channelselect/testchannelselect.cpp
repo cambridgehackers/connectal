@@ -7,8 +7,8 @@
 #include <semaphore.h>
 
 #include "StdDmaIndication.h"
-#include "DmaConfigProxy.h"
-#include "GeneratedTypes.h" 
+#include "DmaDebugRequestProxy.h"
+#include "SGListConfigRequestProxy.h"
 #include "FMComms1RequestProxy.h"
 #include "FMComms1IndicationWrapper.h"
 
@@ -61,21 +61,20 @@ int main(int argc, const char **argv)
   unsigned int *dstBuffer = 0;
 
   FMComms1RequestProxy *device = 0;
-  DmaConfigProxy *dmap = 0;
-  
   FMComms1Indication *deviceIndication = 0;
-  DmaIndication *dmaIndication = 0;
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
   poller = new PortalPoller();
 
   device = new FMComms1RequestProxy(IfcNames_FMComms1Request, poller);
-  dmap = new DmaConfigProxy(IfcNames_DmaConfig);
-  DmaManager *dma = new DmaManager(dmap);
+  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
+  SGListConfigRequestProxy *hostmemSGListConfigRequest = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
+  DmaManager *dma = new DmaManager(hostmemDmaDebugRequest, hostmemSGListConfigRequest);
+  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostmemDmaDebugIndication);
+  SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
 
   deviceIndication = new FMComms1Indication(IfcNames_FMComms1Indication);
-  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
   dma->alloc(alloc_sz, &srcAlloc);
