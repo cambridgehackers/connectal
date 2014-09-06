@@ -35,7 +35,8 @@
 #include "ImageonSerdesIndicationWrapper.h"
 #include "HdmiInternalRequestProxy.h"
 #include "HdmiInternalIndicationWrapper.h"
-#include "DmaConfigProxy.h"
+#include "DmaDebugRequestProxy.h"
+#include "SGListConfigRequestProxy.h"
 
 static ImageonSensorRequestProxy *sensordevice;
 static ImageonSerdesRequestProxy *serdesdevice;
@@ -429,9 +430,12 @@ int main(int argc, const char **argv)
     init_local_semaphores();
     PortalPoller *poller = new PortalPoller();
 
-    DmaConfigProxy *dmap = new DmaConfigProxy(IfcNames_DmaConfig);
-    DmaManager *dma = new DmaManager(dmap);
-    DmaIndication *dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
+  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
+  SGListConfigRequestProxy *dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
+  DmaManager *dma = new DmaManager(hostmemDmaDebugRequest, dmap);
+  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostmemDmaDebugIndication);
+  SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
+
     serdesdevice = new ImageonSerdesRequestProxy(IfcNames_ImageonSerdesRequest, poller);
     sensordevice = new ImageonSensorRequestProxy(IfcNames_ImageonSensorRequest, poller);
     hdmidevice = new HdmiInternalRequestProxy(IfcNames_HdmiInternalRequest);
