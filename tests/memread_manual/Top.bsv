@@ -71,7 +71,6 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    portals[3] = memreadRequestWrapper.portalIfc;
    portals[4] = hostmemSGListConfigRequestWrapper.portalIfc;
    portals[5] = hostmemSGListConfigIndicationProxy.portalIfc;
-
    
    StdDirectory dir <- mkStdDirectory(portals);
    let ctrl_mux <- mkSlaveMux(dir,portals);
