@@ -36,8 +36,8 @@
 
 #include "SmithwatermanIndicationWrapper.h"
 #include "SmithwatermanRequestProxy.h"
-#include "GeneratedTypes.h"
-#include "DmaConfigProxy.h"
+#include "DmaDebugRequestProxy.h"
+#include "SGListConfigRequestProxy.h"
 
 
 sem_t test_sem;
@@ -67,18 +67,16 @@ public:
 int main(int argc, const char **argv)
 {
   SmithwatermanRequestProxy *device = 0;
-  DmaConfigProxy *dmap = 0;
-  
   SmithwatermanIndication *deviceIndication = 0;
-  DmaIndication *dmaIndication = 0;
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   device = new SmithwatermanRequestProxy(IfcNames_SmithwatermanRequest);
-  dmap = new DmaConfigProxy(IfcNames_DmaConfig);
-  DmaManager *dma = new DmaManager(dmap);
-
   deviceIndication = new SmithwatermanIndication(IfcNames_SmithwatermanIndication);
-  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
+  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
+  SGListConfigRequestProxy *dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
+  DmaManager *dma = new DmaManager(hostmemDmaDebugRequest, dmap);
+  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostmemDmaDebugIndication);
+  SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
 
   if(sem_init(&test_sem, 1, 0)){
     fprintf(stderr, "failed to init test_sem\n");

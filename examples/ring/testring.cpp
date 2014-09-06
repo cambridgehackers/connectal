@@ -33,8 +33,8 @@
 #include "StdDmaIndication.h"
 #include "RingIndicationWrapper.h"
 #include "RingRequestProxy.h"
-#include "DmaConfigProxy.h"
-#include "GeneratedTypes.h"
+#include "DmaDebugRequestProxy.h"
+#include "SGListConfigRequestProxy.h"
 
 RingRequestProxy *ring = 0;
 DmaConfigProxy *dmap = 0;
@@ -80,8 +80,6 @@ STAILQ_HEAD(completionlisthead, Ring_Completion) completionfreelist;
 
 char setresult_flag = 0;
 char getresult_flag = 0;
-
-DmaIndication *dmaIndication = 0;
 
 struct SWRing {
   unsigned int ref;
@@ -478,10 +476,12 @@ int main(int argc, const char **argv)
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   completion_list_init();
   ring = new RingRequestProxy(IfcNames_RingRequest);
-  dmap = new DmaConfigProxy(IfcNames_ObjectRequest);
-  DmaManager *dma = new DmaManager(dmap);
-  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
   ringIndication = new RingIndication(IfcNames_RingIndication);
+  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
+  SGListConfigRequestProxy *dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
+  DmaManager *dma = new DmaManager(hostmemDmaDebugRequest, dmap);
+  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostmemDmaDebugIndication);
+  SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
 
   fprintf(stderr, "allocating memory...\n");
   cmdAlloc = portalAlloc(cmd_ring_sz);
