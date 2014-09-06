@@ -23,8 +23,8 @@
 
 #include <RbmRequestProxy.h>
 #include <RbmIndicationWrapper.h>
-#include <DmaConfigProxy.h>
-#include <GeneratedTypes.h>
+#include "DmaDebugRequestProxy.h"
+#include "SGListConfigRequestProxy.h"
 #include <StdDmaIndication.h>
 #include <stdio.h>
 #include <sys/mman.h>
@@ -42,8 +42,8 @@
 
 MmRequestTNProxy *mmdevice = 0;
 DmaManager *dma = 0;
-DmaConfigProxy *dmap = 0;
-DmaIndicationWrapper *dmaIndication = 0;
+SGListConfigRequestProxy *dmap = 0;
+DmaDebugRequestProxy *hostmemDmaDebugRequest;
 MmIndication *mmdeviceIndication = 0;
 SigmoidIndication *sigmoidindication = 0;
 SigmoidRequestProxy *sigmoiddevice = 0;
@@ -71,7 +71,7 @@ void *dbgThread(void *)
     sleep(1);
     mmdevice->debug();
     //rbmdevice->sumOfErrorSquaredDebug();
-    if (dma) dmap->getStateDbg(ChannelType_Read);
+    if (hostmemDmaDebugRequest) hostmemDmaDebugRequest->getStateDbg(ChannelType_Read);
     sleep(5);
   }
   return 0;
@@ -91,9 +91,11 @@ int main(int argc, const char **argv)
   timerdevice = new TimerRequestProxy(IfcNames_TimerRequestPortal);
   timerdeviceIndication = new TimerIndication(IfcNames_TimerIndicationPortal);
 
-  dmap = new DmaConfigProxy(IfcNames_DmaConfigPortal);
-  dma = new DmaManager(dmap);
-  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndicationPortal);
+  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
+  dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
+  dma = new DmaManager(hostmemDmaDebugRequest, dmap);
+  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostmemDmaDebugIndication);
+  SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
 
   if(sem_init(&mul_sem, 1, 0)){
     fprintf(stderr, "failed to init mul_sem\n");
