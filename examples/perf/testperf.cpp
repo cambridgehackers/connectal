@@ -27,15 +27,15 @@
 #include <semaphore.h>
 #include "StdDmaIndication.h"
 
-#include "DmaConfigProxy.h"
-#include "GeneratedTypes.h"
+#include "DmaDebugRequestProxy.h"
+#include "SGListConfigRequestProxy.h"
 #include "PerfIndicationWrapper.h"
 #include "PerfRequestProxy.h"
 
 sem_t copy_sem;
 
 PerfRequestProxy *device = 0;
-DmaConfigProxy *dmap = 0;
+SGListConfigRequestProxy *dmap = 0;
   
 int srcAlloc;
 int dstAlloc;
@@ -103,7 +103,6 @@ public:
   }  
 };
 PerfIndication *deviceIndication = 0;
-DmaIndication *dmaIndication = 0;
 
 
 // we can use the data synchronization barrier instead of flushing the 
@@ -153,11 +152,13 @@ int main(int argc, const char **argv)
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
   device = new PerfRequestProxy(IfcNames_PerfRequest);
-  dmap = new DmaConfigProxy(IfcNames_DmaConfig);
-  DmaManager *dma = new DmaManager(dmap);
+  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
+  dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
+  DmaManager *dma = new DmaManager(hostmemDmaDebugRequest, dmap);
+  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostmemDmaDebugIndication);
+  SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
 
   deviceIndication = new PerfIndication(IfcNames_PerfIndication);
-  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
 
