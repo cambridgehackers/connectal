@@ -30,7 +30,6 @@ import BRAMFIFO::*;
 import DefaultValue::*;
 import MemTypes::*;
 import MemServer::*;
-import SGList::*;
 import ClientServer::*;
 import Pipe::*;
 import MemTypes::*;
@@ -51,10 +50,8 @@ import ImageonSensorRequestWrapper::*;
 import ImageonSensorIndicationProxy::*;
 import HdmiInternalRequestWrapper::*;
 import HdmiInternalIndicationProxy::*;
-import DmaDebugRequestWrapper::*;
-import SGListConfigRequestWrapper::*;
-import DmaDebugIndicationProxy::*;
-import SGListConfigIndicationProxy::*;
+import DmaConfigWrapper::*;
+import DmaIndicationProxy::*;
 import ImageonCaptureRequestWrapper::*;
 
 // defined by user
@@ -66,11 +63,11 @@ import YUV::*;
 import XilinxCells::*;
 import XbsvXilinxCells::*;
 
-typedef enum { ImageonSerdesRequest, ImageonSensorRequest, HdmiInternalRequest, ImageonCapture,
-    ImageonSerdesIndication, ImageonSensorIndication, HdmiInternalIndication, HostmemDmaDebugIndication, HostmemDmaDebugRequest, HostmemSGListConfigRequest, HostmemSGListConfigIndication} IfcNames deriving (Eq,Bits);
+typedef enum { ImageonSerdesRequest, ImageonSensorRequest, HdmiInternalRequest, DmaConfig, ImageonCapture,
+    ImageonSerdesIndication, ImageonSensorIndication, HdmiInternalIndication, DmaIndication} IfcNames deriving (Eq,Bits);
 
 interface ImageCapture;
-   interface Vector#(11,StdPortal) portalif;
+   interface Vector#(9,StdPortal) portals;
    interface ImageonSensorPins sensorpins;
    interface ImageonSerdesPins serpins;
    interface HDMI#(Bit#(HdmiBits)) hdmi;
@@ -118,14 +115,10 @@ module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
                 dmaRun <= True;
 	    endmethod
        endinterface));
+   DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
    Vector#(1, ObjectWriteClient#(64)) writeClients = cons(we.dmaClient,nil);
-   SGListConfigIndicationProxy hostmemSGListConfigIndicationProxy <- mkSGListConfigIndicationProxy(HostmemSGListConfigIndication);
-   SGListMMU#(PhysAddrWidth) hostmemSGList <- mkSGListMMU(0, True, hostmemSGListConfigIndicationProxy.ifc);
-   SGListConfigRequestWrapper hostmemSGListConfigRequestWrapper <- mkSGListConfigRequestWrapper(HostmemSGListConfigRequest, hostmemSGList.request);
-
-   DmaDebugIndicationProxy hostmemDmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(HostmemDmaDebugIndication);
-   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerW(hostmemDmaDebugIndicationProxy.ifc, writeClients, hostmemSGList);
-   DmaDebugRequestWrapper hostmemDmaDebugRequestWrapper <- mkDmaDebugRequestWrapper(HostmemDmaDebugRequest, dma.request);
+   MemServer#(PhysAddrWidth,64,1)   dma <- mkMemServerW(dmaIndicationProxy.ifc, writeClients);
+   DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig, dma.request);
 
    // fromSensor: sensor specific processing of serdes input, resulting in pixels
    ImageonSensorIndicationProxy sensorIndicationProxy <- mkImageonSensorIndicationProxy(ImageonSensorIndication);
@@ -180,19 +173,17 @@ Reg#(Bit#(10)) xsvi <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
         bozobit <= ~bozobit;
     endrule
    
-   Vector#(11,StdPortal) portals;
-   portals[0] = serdesRequestWrapper.portalIfc; 
-   portals[1] = serdesIndicationProxy.portalIfc;
-   portals[2] = sensorRequestWrapper.portalIfc; 
-   portals[3] = sensorIndicationProxy.portalIfc; 
-   portals[4] = hdmiRequestWrapper.portalIfc; 
-   portals[5] = hdmiIndicationProxy.portalIfc; 
-   portals[6] = hostmemDmaDebugRequestWrapper.portalIfc;
-   portals[7] = hostmemDmaDebugIndicationProxy.portalIfc;
-   portals[8] = imageonCaptureWrapper.portalIfc;
-   portals[9] = hostmemSGListConfigRequestWrapper.portalIfc;
-   portals[10] = hostmemSGListConfigIndicationProxy.portalIfc;
-   interface Vector portalif = portals;
+   Vector#(9,StdPortal) portal_array;
+   portal_array[0] = serdesRequestWrapper.portalIfc; 
+   portal_array[1] = serdesIndicationProxy.portalIfc;
+   portal_array[2] = sensorRequestWrapper.portalIfc; 
+   portal_array[3] = sensorIndicationProxy.portalIfc; 
+   portal_array[4] = hdmiRequestWrapper.portalIfc; 
+   portal_array[5] = hdmiIndicationProxy.portalIfc; 
+   portal_array[6] = dmaRequestWrapper.portalIfc;
+   portal_array[7] = dmaIndicationProxy.portalIfc;
+   portal_array[8] = imageonCaptureWrapper.portalIfc;
+   interface Vector portals = portal_array;
 
    interface ImageonSensorPins sensorpins = fromSensor.pins;
    interface ImageonSerdesPins serpins = serdes.pins;
@@ -224,10 +215,10 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,64,ImageCapturePins,1));
    ImageCapture ic <- mkImageCapture(iclock_buf);
    
    // instantiate system directory
-   StdDirectory dir <- mkStdDirectory(ic.portalif);
-   let ctrl_mux <- mkSlaveMux(dir,ic.portalif);
+   StdDirectory dir <- mkStdDirectory(ic.portals);
+   let ctrl_mux <- mkSlaveMux(dir,ic.portals);
    
-   interface interrupt = getInterruptVector(ic.portalif);
+   interface interrupt = getInterruptVector(ic.portals);
    interface slave = ctrl_mux;
    interface masters = ic.dmaif.masters;
    //interface leds = captureRequestInternal.leds;

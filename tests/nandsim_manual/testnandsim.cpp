@@ -20,8 +20,8 @@
  */
 
 #include "StdDmaIndication.h"
-#include "DmaDebugRequestProxy.h"
-#include "SGListConfigRequestProxy.h"
+#include "DmaConfigProxy.h"
+#include "GeneratedTypes.h" 
 #include "NandSimIndicationWrapper.h"
 #include "NandSimRequestProxy.h"
 
@@ -66,17 +66,18 @@ int main(int argc, const char **argv)
 {
   unsigned int srcGen = 0;
   NandSimRequestProxy *device = 0;
+  DmaConfigProxy *dmap = 0;
   NandSimIndication *deviceIndication = 0;
+  DmaIndication *dmaIndication = 0;
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
   device = new NandSimRequestProxy(IfcNames_NandSimRequest);
+  dmap = new DmaConfigProxy(IfcNames_DmaConfig);
+  DmaManager *dma = new DmaManager(dmap);
+
   deviceIndication = new NandSimIndication(IfcNames_NandSimIndication);
-  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
-  SGListConfigRequestProxy *dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
-  DmaManager *dma = new DmaManager(hostmemDmaDebugRequest, dmap);
-  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostmemDmaDebugIndication);
-  SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
+  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
 
