@@ -54,6 +54,7 @@
 
 #ifndef NO_CPP_PORTAL_CODE
 PortalPoller *defaultPoller = new PortalPoller();
+uint64_t poll_enter_time, poll_return_time; // for performance measurement
 
 PortalPoller::PortalPoller()
   : portal_wrappers(0), portal_fds(0), numFds(0), stopping(0)
@@ -133,6 +134,7 @@ void* PortalPoller::portalExec_poll(int timeout)
     long rc = 0;
     // LCS bypass the call to poll if the timeout is 0
     if (timeout != 0) {
+      poll_enter_time = portalCycleCount();
 #ifdef BSIM
       while(1){
 	struct timeval timeout;
@@ -145,6 +147,7 @@ void* PortalPoller::portalExec_poll(int timeout)
 #else
       rc = poll(portal_fds, numFds, timeout);
 #endif
+      poll_return_time = portalCycleCount();
     }
     if(rc < 0) {
 	// return only in error case

@@ -51,6 +51,7 @@ public:
 };
 
 extern PortalPoller *defaultPoller;
+extern uint64_t poll_enter_time, poll_return_time; // for performance measurement
 
 class PortalInternalCpp
 {
