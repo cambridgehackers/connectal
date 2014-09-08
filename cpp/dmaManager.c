@@ -40,7 +40,7 @@
 
 #include "GeneratedTypes.h" // generated in project directory
 #define DMAGetMemoryTraffic(P,A) DmaDebugRequestProxy_getMemoryTraffic((P), (A))
-
+#define SGListIdRequest(P) SGListConfigRequestProxy_idRequest((P));
 #define KERNEL_REFERENCE
 
 static int trace_memory = 1;
@@ -55,6 +55,9 @@ void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *dmaDevice, PortalI
 #ifndef __KERNEL__
   init_portal_memory();
 #endif
+  if (sem_init(&priv->sglIdSem, 0, 0)){
+    PORTAL_PRINTF("failed to init sglIdSem\n");
+  }
   if (sem_init(&priv->confSem, 0, 0)){
     PORTAL_PRINTF("failed to init confSem\n");
   }
@@ -77,7 +80,10 @@ uint64_t DmaManager_show_mem_stats(DmaManagerPrivate *priv, ChannelType rc)
 
 int DmaManager_reference(DmaManagerPrivate *priv, int fd)
 {
-  int id = priv->handle++;
+  int id = 0;
+  SGListIdRequest(priv->sglDevice);
+  sem_wait(&priv->sglIdSem);
+  id = priv->sglId;
   int rc = 0;
 #if defined(KERNEL_REFERENCE) && !defined(BSIM) && !defined(__KERNEL__)
 #ifdef ZYNQ

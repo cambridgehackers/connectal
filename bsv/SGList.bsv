@@ -88,6 +88,7 @@ module mkSGListMMU#(Integer iid, Bool bsimMMap, SGListConfigIndication sglIndica
 	    Add#(c__, addrWidth, ObjectOffsetSize));
    
    let verbose = !bsimMMap;
+   Reg#(Bit#(32)) nextId <- mkReg(0);
 
    // stage 0 (latency == 1)
    Vector#(2, FIFO#(ReqTup)) incomingReqs <- replicateM(mkFIFO);
@@ -248,6 +249,10 @@ module mkSGListMMU#(Integer iid, Bool bsimMMap, SGListConfigIndication sglIndica
 
    // FIXME: split this into three methods?
    interface SGListConfigRequest request;
+   method Action idRequest();
+      nextId <= nextId+1;
+      sglIndication.idResponse((fromInteger(iid) << 16) | nextId);
+   endmethod
    method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) index8, Bit#(64) barr4, Bit#(32) index4, Bit#(64) barr0, Bit#(32) index0);
       portsel(regall, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
           address: truncate(pointer), datain: Region{
@@ -262,7 +267,7 @@ module mkSGListMMU#(Integer iid, Bool bsimMMap, SGListConfigIndication sglIndica
 `ifdef BSIM
 `ifndef PCIE
          if(bsimMMap) begin
-	    let va <- pareff_init(fromInteger(iid), pointer, len);
+	    let va <- pareff_init(fromInteger(iid), {0,pointer[15:0]}, len);
 	 end
 `endif
 `endif

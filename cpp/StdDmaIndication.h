@@ -40,6 +40,9 @@ class SGListConfigIndication : public SGListConfigIndicationWrapper
     if (--error_limit < 0)
         exit(-1);
   }
+  virtual void idResponse(uint32_t sglId){
+    portalMemory->sglIdResp(sglId);
+  }
 };
 
 class DmaDebugIndication : public DmaDebugIndicationWrapper

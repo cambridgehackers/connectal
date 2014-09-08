@@ -71,6 +71,7 @@ endinterface
 // @brief Events sent from a SGList
 //
 interface SGListConfigIndication;
+   method Action idResponse(Bit#(32) sglId);
    method Action configResp(Bit#(32) pointer);
    method Action error(Bit#(32) code, Bit#(32) pointer, Bit#(64) offset, Bit#(64) extra);
 endinterface
@@ -88,6 +89,7 @@ interface SGListConfigRequest;
    //
    method Action sglist(Bit#(32) pointer, Bit#(32) pointerIndex, Bit#(64) addr,  Bit#(32) len);
    method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) index8, Bit#(64) barr4, Bit#(32) index4, Bit#(64) barr0, Bit#(32) index0);
+   method Action idRequest();
 endinterface
 
 //

@@ -49,11 +49,12 @@ typedef struct {
   sem_t confSem;
   sem_t mtSem;
   sem_t dbgSem;
+  sem_t sglIdSem;
   uint64_t mtCnt;
+  uint32_t sglId;
   PortalInternal *dmaDevice;
   PortalInternal *sglDevice;
   int pa_fd;
-  int handle;
 } DmaManagerPrivate;
 
 #ifdef __cplusplus
@@ -82,6 +83,10 @@ class DmaManager
   uint64_t show_mem_stats(ChannelType rc) {
     return DmaManager_show_mem_stats(&priv, rc);
   };
+  void sglIdResp(uint32_t sglId) {
+    sem_post(&priv.sglIdSem);
+    priv.sglId = sglId;
+  }
   void confResp(uint32_t channelId) {
     //fprintf(stderr, "configResp %d\n", channelId);
     sem_post(&priv.confSem);
