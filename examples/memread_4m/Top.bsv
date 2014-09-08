@@ -61,7 +61,7 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,64,Empty,NumMasters));
    SGListConfigRequestWrapper hostmemSGListConfigRequestWrapper <- mkSGListConfigRequestWrapper(HostmemSGListConfigRequest, hostmemSGList.request);
 
    DmaDebugIndicationProxy hostmemDmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(HostmemDmaDebugIndication);
-   MemServer#(PhysAddrWidth,64,NumMasters) dma <- mkMemServerR(hostmemDmaDebugIndicationProxy.ifc, memread.dmaClients, hostmemSGList);
+   MemServer#(PhysAddrWidth,64,NumMasters) dma <- mkMemServerR(hostmemDmaDebugIndicationProxy.ifc, memread.dmaClients, cons(hostmemSGList,nil));
    DmaDebugRequestWrapper hostmemDmaDebugRequestWrapper <- mkDmaDebugRequestWrapper(HostmemDmaDebugRequest, dma.request);
 
    Vector#(6,StdPortal) portals;
