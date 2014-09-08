@@ -161,7 +161,7 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
    // stage 3: read data 
    FIFO#(MemData#(dataWidth)) readDataPipelineFifo <- mkFIFO;
    
-   let debug = True;
+   let debug = False;
    
    Reg#(Bit#(8))           burstReg <- mkReg(0);
    Reg#(Bool)              firstReg <- mkReg(True);

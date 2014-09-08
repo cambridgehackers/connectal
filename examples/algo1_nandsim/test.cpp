@@ -220,7 +220,7 @@ int main(int argc, const char **argv)
   fprintf(stderr, "mpNext=[");
   for(int i= 0; i <= needle_len; i++) 
     fprintf(stderr, "%d ", mpNext[i]);
-  fprintf(stderr, "]\n needle=");
+  fprintf(stderr, "]\nneedle=[");
   for(int i= 0; i < needle_len; i++) 
     fprintf(stderr, "%d ", needle[i]);
   fprintf(stderr, "]\n");

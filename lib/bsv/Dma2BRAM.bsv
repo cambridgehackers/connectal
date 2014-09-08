@@ -133,7 +133,7 @@ module mkBRAMWriter#(Integer id,
 	    Add#(b__, bramIdxWidth, 32),
 	    Add#(c__, TLog#(nd), 32));
 
-   let verbose = True;
+   let verbose = False;
    Clock clk <- exposeCurrentClock;
    Reset rst <- exposeCurrentReset;
    Reg#(Bit#(cntW)) j <- mkReg(maxBound);

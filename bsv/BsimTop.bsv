@@ -63,10 +63,10 @@ import "BDPI" function Action                 interruptLevel(Bit#(1) d);
 
 // implemented in BsimDma.cxx
 import "BDPI" function Action pareff(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
-import "BDPI" function Action write_pareff32(Bit#(32) id, Bit#(32) handle, Bit#(32) addr, Bit#(32) v);
-import "BDPI" function Action write_pareff64(Bit#(32) id, Bit#(32) handle, Bit#(32) addr, Bit#(64) v);
-import "BDPI" function ActionValue#(Bit#(32)) read_pareff32(Bit#(32) id, Bit#(32) handle, Bit#(32) addr);
-import "BDPI" function ActionValue#(Bit#(64)) read_pareff64(Bit#(32) id, Bit#(32) handle, Bit#(32) addr);
+import "BDPI" function Action write_pareff32(Bit#(32) handle, Bit#(32) addr, Bit#(32) v);
+import "BDPI" function Action write_pareff64(Bit#(32) handle, Bit#(32) addr, Bit#(64) v);
+import "BDPI" function ActionValue#(Bit#(32)) read_pareff32(Bit#(32) handle, Bit#(32) addr);
+import "BDPI" function ActionValue#(Bit#(64)) read_pareff64(Bit#(32) handle, Bit#(32) addr);
 
 interface BsimCtrlReadWrite#(numeric type asz, numeric type dsz);
    method ActionValue#(Bit#(asz)) readAddr();
@@ -108,8 +108,8 @@ instance SelectBsimCtrlReadWrite#(32,32);
 endinstance
 
 interface BsimRdmaReadWrite#(numeric type dsz);
-   method Action write_pareff(Bit#(32) id, Bit#(32) handle, Bit#(32) addr, Bit#(dsz) v);
-   method ActionValue#(Bit#(dsz)) read_pareff(Bit#(32) id, Bit#(32) handle, Bit#(32) addr);
+   method Action write_pareff(Bit#(32) handle, Bit#(32) addr, Bit#(dsz) v);
+   method ActionValue#(Bit#(dsz)) read_pareff(Bit#(32) handle, Bit#(32) addr);
 endinterface
 
 typeclass SelectBsimRdmaReadWrite#(numeric type dsz);
@@ -118,41 +118,41 @@ endtypeclass
 
 instance SelectBsimRdmaReadWrite#(32);
    module selectBsimRdmaReadWrite(BsimRdmaReadWrite#(32) ifc);
-       method Action write_pareff(Bit#(32) id, Bit#(32) handle, Bit#(32) addr, Bit#(32) v);
-	  write_pareff32(id, handle, addr, v);
+       method Action write_pareff(Bit#(32) handle, Bit#(32) addr, Bit#(32) v);
+	  write_pareff32(handle, addr, v);
        endmethod
-       method ActionValue#(Bit#(32)) read_pareff(Bit#(32) id, Bit#(32) handle, Bit#(32) addr);
-	  let v <- read_pareff32(id, handle, addr);
+       method ActionValue#(Bit#(32)) read_pareff(Bit#(32) handle, Bit#(32) addr);
+	  let v <- read_pareff32(handle, addr);
 	  return v;
        endmethod
    endmodule
 endinstance
 instance SelectBsimRdmaReadWrite#(64);
    module selectBsimRdmaReadWrite(BsimRdmaReadWrite#(64) ifc);
-       method Action write_pareff(Bit#(32) id, Bit#(32) handle, Bit#(32) addr, Bit#(64) v);
-	  write_pareff64(id, handle, addr, v);
+       method Action write_pareff(Bit#(32) handle, Bit#(32) addr, Bit#(64) v);
+	  write_pareff64(handle, addr, v);
        endmethod
-       method ActionValue#(Bit#(64)) read_pareff(Bit#(32) id, Bit#(32) handle, Bit#(32) addr);
-	  let v <- read_pareff64(id, handle, addr);
+       method ActionValue#(Bit#(64)) read_pareff(Bit#(32) handle, Bit#(32) addr);
+	  let v <- read_pareff64(handle, addr);
 	  return v;
        endmethod
    endmodule
 endinstance
 instance SelectBsimRdmaReadWrite#(128);
    module selectBsimRdmaReadWrite(BsimRdmaReadWrite#(128) ifc);
-       method Action write_pareff(Bit#(32) id, Bit#(32) handle, Bit#(32) addr, Bit#(128) v);
-	  write_pareff64(id, handle, addr, v[63:0]);
-	  write_pareff64(id, handle, addr+8, v[127:64]);
+       method Action write_pareff(Bit#(32) handle, Bit#(32) addr, Bit#(128) v);
+	  write_pareff64(handle, addr, v[63:0]);
+	  write_pareff64(handle, addr+8, v[127:64]);
        endmethod
-       method ActionValue#(Bit#(128)) read_pareff(Bit#(32) id, Bit#(32) handle, Bit#(32) addr);
-	  let v0 <- read_pareff64(id, handle, addr);
-	  let v1 <- read_pareff64(id, handle, addr+8);
+       method ActionValue#(Bit#(128)) read_pareff(Bit#(32) handle, Bit#(32) addr);
+	  let v0 <- read_pareff64(handle, addr);
+	  let v1 <- read_pareff64(handle, addr+8);
 	  return {v1,v0};
        endmethod
    endmodule
 endinstance
 
-module mkAxi3Slave#(Integer id)(Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))
+module mkAxi3Slave(Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))
    provisos (SelectBsimRdmaReadWrite#(serverBusWidth));
 
    BsimRdmaReadWrite#(serverBusWidth) rw <- selectBsimRdmaReadWrite();
@@ -221,7 +221,7 @@ module mkAxi3Slave#(Integer id)(Axi3Slave#(serverAddrWidth,  serverBusWidth, ser
 	    read_id = readId;
 	    read_len = readLen;
 	 end
-	 Bit#(serverBusWidth) v <- rw.read_pareff(fromInteger(id), extend(handle), read_addr[31:0]);
+	 Bit#(serverBusWidth) v <- rw.read_pareff(extend(handle), read_addr[31:0]);
 	 readLen <= read_len - 1;
 	 readId <= read_id;
 	 readAddrr <= read_addr + fromInteger(valueOf(serverBusWidth)/8);
@@ -260,7 +260,7 @@ module mkAxi3Slave#(Integer id)(Axi3Slave#(serverAddrWidth,  serverBusWidth, ser
 	    write_addr = writeAddrr;
 	    write_id = writeId;
 	 end
-	 rw.write_pareff(fromInteger(id), extend(handle), write_addr[31:0], resp.data);
+	 rw.write_pareff(extend(handle), write_addr[31:0], resp.data);
 	 //$display("write_resp(%d): handle=%d addr=%h v=%h", cycle, handle, write_addr, resp.data);
 	 writeId <= write_id;
 	 writeLen <= write_len - 1;
@@ -286,7 +286,7 @@ module  mkBsimHost#(Clock double_clock, Reset double_reset)(BsimHost#(clientAddr
    provisos (SelectBsimRdmaReadWrite#(serverBusWidth),
 	     SelectBsimCtrlReadWrite#(clientAddrWidth, clientBusWidth));
 
-   Vector#(nSlaves,Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth)) servers <- mapM(mkAxi3Slave,genVector);
+   Vector#(nSlaves,Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth)) servers <- replicateM(mkAxi3Slave);
    BsimCtrlReadWrite#(clientAddrWidth,clientBusWidth) crw <- selectBsimCtrlReadWrite();
    FIFO#(Bit#(clientBusWidth)) wf <- mkPipelineFIFO;
    let init_seq = (action

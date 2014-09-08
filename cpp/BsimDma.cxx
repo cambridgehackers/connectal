@@ -42,39 +42,39 @@ typedef struct {
     int size_accum;
 } DMAINFO[32];
 static DMAINFO dma_info[4];
-static int dma_trace = 1;
+static int dma_trace;// = 1;
 
 
 
 
-#define NUKE_ID {  \
-id = pref>>5;      \
-pref -= id<<5;}
+#define NUKE_ID   \
+uint32_t id = pref>>5;      \
+pref -= id<<5; 
 
 
 extern "C" {
-  void write_pareff32(uint32_t id, uint32_t pref, uint32_t offset, unsigned int data){
+  void write_pareff32(uint32_t pref, uint32_t offset, unsigned int data){
     NUKE_ID;
     if (dma_trace)
       fprintf(stderr, "%s: %d %d %d\n", __FUNCTION__, id, pref, offset);
     *(unsigned int *)&dma_info[id][pref].buffer[offset] = data;
   }
 
-  unsigned int read_pareff32(uint32_t id, uint32_t pref, uint32_t offset){
+  unsigned int read_pareff32(uint32_t pref, uint32_t offset){
     NUKE_ID;
     if (dma_trace)
       fprintf(stderr, "%s: %d %d %d\n", __FUNCTION__, id, pref, offset);
     return *(unsigned int *)&dma_info[id][pref].buffer[offset];
   }
 
-  void write_pareff64(uint32_t id, uint32_t pref, uint32_t offset, uint64_t data){
+  void write_pareff64(uint32_t pref, uint32_t offset, uint64_t data){
     NUKE_ID;
     if (dma_trace)
       fprintf(stderr, "%s: %d %d %d\n", __FUNCTION__, id, pref, offset);
     *(uint64_t *)&dma_info[id][pref].buffer[offset] = data;
   }
 
-  uint64_t read_pareff64(uint32_t id, uint32_t pref, uint32_t offset){
+  uint64_t read_pareff64(uint32_t pref, uint32_t offset){
     NUKE_ID;
     if (dma_trace)
       fprintf(stderr, "%s: %d %d %d\n", __FUNCTION__, id, pref, offset);
