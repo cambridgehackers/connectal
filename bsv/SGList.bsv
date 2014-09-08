@@ -264,11 +264,14 @@ module mkSGListMMU#(Integer iid, Bool bsimMMap, SGListConfigIndication sglIndica
    endmethod
 
    method Action sglist(Bit#(32) pointer, Bit#(32) pointerIndex, Bit#(64) addr,  Bit#(32) len);
+         if (fromInteger(iid) != pointer[31:16]) begin
+	    $display("mkSGListMMU::sglist ERROR");
+	    $finish();
+	 end
 `ifdef BSIM
 `ifndef PCIE
-         if(bsimMMap) begin
-	    let va <- pareff_init(fromInteger(iid), {0,pointer[15:0]}, len);
-	 end
+	 if(bsimMMap) 
+	    let va <- pareff_init({0,pointer[31:16]}, {0,pointer[15:0]}, len);
 `endif
 `endif
          Bit#(IndexWidth) ind = truncate(pointerIndex);

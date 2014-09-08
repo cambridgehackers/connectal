@@ -80,7 +80,7 @@ typedef struct {
 module mkMemServerRW#(DmaDebugIndication dmaIndication,
 		      Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
 		      Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients,
-		      SGListMMU#(PhysAddrWidth) sgl)
+		      Vector#(numSGLs,SGListMMU#(PhysAddrWidth)) sgls)
    (MemServer#(PhysAddrWidth, dataWidth, nMasters))
    
    provisos (Add#(1,a__,dataWidth),
@@ -92,8 +92,8 @@ module mkMemServerRW#(DmaDebugIndication dmaIndication,
 	     Add#(TLog#(TDiv#(dataWidth, 8)), d__, 8)
 	     );
 
-   MemServer#(PhysAddrWidth,dataWidth,nMasters) reader <- mkMemServerR(dmaIndication,  readClients, sgl);
-   MemServer#(PhysAddrWidth,dataWidth,nMasters) writer <- mkMemServerW(dmaIndication, writeClients, sgl);
+   MemServer#(PhysAddrWidth,dataWidth,nMasters) reader <- mkMemServerR(dmaIndication,  readClients, sgls);
+   MemServer#(PhysAddrWidth,dataWidth,nMasters) writer <- mkMemServerW(dmaIndication, writeClients, sgls);
    
    FIFO#(DmaError) dmaErrorFifo <- mkFIFO();
    rule dmaError;
@@ -128,7 +128,7 @@ endmodule
 	
 module mkMemServerR#(DmaDebugIndication dmaIndication,
 		     Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
-		     SGListMMU#(PhysAddrWidth) sgl)
+		     Vector#(numSGLs,SGListMMU#(PhysAddrWidth)) sgls)
    (MemServer#(PhysAddrWidth, dataWidth, nMasters))
    
    provisos (Add#(1,a__,dataWidth),
@@ -139,7 +139,7 @@ module mkMemServerR#(DmaDebugIndication dmaIndication,
 	     );
 
 
-   FIFO#(void)   addrReqFifo <- mkFIFO;
+   FIFO#(Bit#(32))   addrReqFifo <- mkFIFO;
    Reg#(Bit#(8)) dbgPtr <- mkReg(0);
    Reg#(Bit#(8)) trafficPtr <- mkReg(0);
    Reg#(Bit#(64)) trafficAccum <- mkReg(0);
@@ -151,14 +151,23 @@ module mkMemServerR#(DmaDebugIndication dmaIndication,
    endfunction
    Vector#(nMasters,Vector#(nrc, ObjectReadClient#(dataWidth))) client_bins = genWith(selectClients(readClients));
 
-   SglAddrServer#(PhysAddrWidth,nMasters) sgl_server <- mkSglAddrServer(sgl.addr[0]);
+   module foo#(Integer i) (SglAddrServer#(PhysAddrWidth,nMasters));
+      let rv <- mkSglAddrServer(sgls[i].addr[0]);
+      return rv;
+   endmodule
+   Vector#(numSGLs,SglAddrServer#(PhysAddrWidth,nMasters)) sgl_servers <- mapM(foo,genVector);
+
    Vector#(nMasters,MemReadInternal#(PhysAddrWidth,dataWidth)) readers;
-   for(Integer i = 0; i < valueOf(nMasters); i = i+1)
-      readers[i] <- mkMemReadInternal(i, client_bins[i], dmaIndication, sgl_server.servers[i]);
+   for(Integer i = 0; i < valueOf(nMasters); i = i+1) begin
+      Vector#(numSGLs,Server#(ReqTup,Bit#(PhysAddrWidth))) ss;
+      for(Integer j = 0; j < valueOf(numSGLs); j=j+1)
+	 ss[j] = sgl_servers[j].servers[i];
+      readers[i] <- mkMemReadInternal(i, client_bins[i], dmaIndication, ss);
+   end
    
    rule sglistEntry;
       addrReqFifo.deq;
-      let physAddr <- sgl.addr[0].response.get;
+      let physAddr <- sgls[addrReqFifo.first[31:16]].addr[0].response.get;
       dmaIndication.addrResponse(zeroExtend(physAddr));
    endrule
    
@@ -203,8 +212,8 @@ module mkMemServerR#(DmaDebugIndication dmaIndication,
 	    trafficFSM.start;
       endmethod
       method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
-	 addrReqFifo.enq(?);
-	 sgl.addr[0].request.put(ReqTup{id:truncate(pointer), off:extend(offset)});
+	 addrReqFifo.enq(pointer);
+	 sgls[pointer[31:16]].addr[0].request.put(ReqTup{id:truncate(pointer), off:extend(offset)});
       endmethod
    endinterface
    interface masters = map(mkm,genVector);
@@ -212,7 +221,7 @@ endmodule
 	
 module mkMemServerW#(DmaDebugIndication dmaIndication,
 		     Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients,
-		     SGListMMU#(PhysAddrWidth) sgl)
+		     Vector#(numSGLs,SGListMMU#(PhysAddrWidth)) sgls)
    (MemServer#(PhysAddrWidth, dataWidth, nMasters))
    
    provisos (Add#(1,a__,dataWidth),
@@ -221,7 +230,7 @@ module mkMemServerW#(DmaDebugIndication dmaIndication,
 	     Add#(b__, TLog#(nwc), 6)
 	     );
 
-   FIFO#(void)   addrReqFifo <- mkFIFO;
+   FIFO#(Bit#(32))   addrReqFifo <- mkFIFO;
    Reg#(Bit#(8)) dbgPtr <- mkReg(0);
    Reg#(Bit#(8)) trafficPtr <- mkReg(0);
    Reg#(Bit#(64)) trafficAccum <- mkReg(0);
@@ -232,14 +241,23 @@ module mkMemServerW#(DmaDebugIndication dmaIndication,
    endfunction
    Vector#(nMasters,Vector#(nwc, ObjectWriteClient#(dataWidth))) client_bins = genWith(selectClients(writeClients));
 
-   SglAddrServer#(PhysAddrWidth,nMasters) sgl_server <- mkSglAddrServer(sgl.addr[1]);
+   module foo#(Integer i) (SglAddrServer#(PhysAddrWidth,nMasters));
+      let rv <- mkSglAddrServer(sgls[i].addr[1]);
+      return rv;
+   endmodule
+   Vector#(numSGLs,SglAddrServer#(PhysAddrWidth,nMasters)) sgl_servers <- mapM(foo,genVector);
+
    Vector#(nMasters,MemWriteInternal#(PhysAddrWidth,dataWidth)) writers;
-   for(Integer i = 0; i < valueOf(nMasters); i = i+1)
-      writers[i] <- mkMemWriteInternal(i, client_bins[i], dmaIndication, sgl_server.servers[i]);
+   for(Integer i = 0; i < valueOf(nMasters); i = i+1) begin
+      Vector#(numSGLs,Server#(ReqTup,Bit#(PhysAddrWidth))) ss;
+      for(Integer j = 0; j < valueOf(numSGLs); j=j+1)
+	 ss[j] = sgl_servers[j].servers[i];
+      writers[i] <- mkMemWriteInternal(i, client_bins[i], dmaIndication, ss);
+   end
    
    rule sglistEntry;
       addrReqFifo.deq;
-      let physAddr <- sgl.addr[1].response.get;
+      let physAddr <- sgls[addrReqFifo.first[31:16]].addr[1].response.get;
       dmaIndication.addrResponse(zeroExtend(physAddr));
    endrule
 
@@ -284,8 +302,8 @@ module mkMemServerW#(DmaDebugIndication dmaIndication,
 	    trafficFSM.start;
       endmethod
       method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
-	 addrReqFifo.enq(?);
-	 sgl.addr[1].request.put(ReqTup{id:truncate(pointer), off:extend(offset)});
+	 addrReqFifo.enq(pointer);
+	 sgls[pointer[31:16]].addr[1].request.put(ReqTup{id:truncate(pointer), off:extend(offset)});
       endmethod
    endinterface
    interface masters = map(mkm,genVector);

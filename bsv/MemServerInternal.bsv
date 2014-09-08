@@ -139,7 +139,7 @@ typedef 32 NumTags;
 module mkMemReadInternal#(Integer id,
 			  Vector#(numClients, ObjectReadClient#(dataWidth)) readClients,
 			  DmaDebugIndication dmaIndication,
-			  Server#(ReqTup,Bit#(addrWidth)) sgl) 
+			  Vector#(numSGLs,Server#(ReqTup,Bit#(addrWidth))) sgls) 
    (MemReadInternal#(addrWidth, dataWidth))
 
    provisos(Add#(b__, addrWidth, 64), 
@@ -204,7 +204,7 @@ module mkMemReadInternal#(Integer id,
 	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer4, pref: req.pointer });
    	 else begin
    	    lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
-   	    sgl.request.put(ReqTup{id:truncate(req.pointer),off:req.offset});
+   	    sgls[req.pointer[31:16]].request.put(ReqTup{id:truncate(req.pointer),off:req.offset});
    	 end
       endrule
    
@@ -244,9 +244,9 @@ module mkMemReadInternal#(Integer id,
    endrule
    
    rule checkSglResp;
-      let physAddr <- sgl.response.get;
       let req = lreqFifo.first.req;
       let client = lreqFifo.first.client;
+      let physAddr <- sgls[req.pointer[31:16]].response.get;
       let rename_tag <- tag_gen.getTag;
       lreqFifo.deq();
       reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
@@ -321,7 +321,7 @@ typedef 64 NumTagsW;
 module mkMemWriteInternal#(Integer iid,
 			   Vector#(numClients, ObjectWriteClient#(dataWidth)) writeClients,
 			   DmaDebugIndication dmaIndication, 
-			   Server#(ReqTup,Bit#(addrWidth)) sgl)
+			   Vector#(numSGLs,Server#(ReqTup,Bit#(addrWidth))) sgls)
    (MemWriteInternal#(addrWidth, dataWidth))
    
    provisos(Add#(b__, addrWidth, 64), 
@@ -374,14 +374,14 @@ module mkMemWriteInternal#(Integer iid,
 	     dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer5, pref: req.pointer });
    	  else begin
    	     lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
-   	     sgl.request.put(ReqTup{id:truncate(req.pointer),off:req.offset});
+   	     sgls[req.pointer[31:16]].request.put(ReqTup{id:truncate(req.pointer),off:req.offset});
    	  end
        endrule
    
    rule checkSglResp;
-      let physAddr <- sgl.response.get;
       let req = lreqFifo.first.req;
       let client = lreqFifo.first.client;
+      let physAddr <- sgls[req.pointer[31:16]].response.get;
       let rename_tag <- tag_gen.getTag;
       lreqFifo.deq();
       reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
