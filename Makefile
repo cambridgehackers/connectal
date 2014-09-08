@@ -316,6 +316,13 @@ zynqdrivers-clean:
 zynqdrivers-install:
 	cp drivers/zynqportal/zynqportal.ko drivers/portalmem/portalmem.ko ../zynq-boot/imagefiles/
 
+zynqdrivers-adb:
+	adb connect $(RUNPARAM)
+	adb -s $(RUNPARAM):5555 shell pwd || true
+	adb connect $(RUNPARAM)
+	adb -s $(RUNPARAM):5555 push drivers/zynqportal/zynqportal.ko /mnt/sdcard
+	adb -s $(RUNPARAM):5555 push drivers/portalmem/portalmem.ko /mnt/sdcard
+
 #################################################################################################
 
 #xilinx/pcie_7x_gen1x8: scripts/generate-pcie-gen1x8.tcl
