@@ -48,7 +48,7 @@
 #endif
 
 static void init_directory(void);
-static PortalInternal globalDirectory;
+PortalInternal globalDirectory;
 int global_pa_fd = -1;
 
 #ifdef __KERNEL__

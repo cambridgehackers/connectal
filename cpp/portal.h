@@ -114,6 +114,7 @@ void *portalMmap(int fd, size_t size);
 
 extern int portalExec_timeout;
 extern int global_pa_fd;
+extern PortalInternal globalDirectory;
 #ifdef __cplusplus
 }
 #endif
