@@ -112,7 +112,7 @@ interface MemReadInternal#(numeric type addrWidth, numeric type dataWidth);
 endinterface
 
 function Bool bad_pointer(ObjectPointer p);
-   return ((p >>8) > fromInteger(valueOf(MaxNumSGLists)));
+   return ((p[15:0] >>8) > fromInteger(valueOf(MaxNumSGLists)));
 endfunction
 
 typedef struct {ObjectRequest req;
@@ -136,8 +136,7 @@ typedef struct {DmaErrorType errorType;
 
 typedef 32 NumTags;
 
-module mkMemReadInternal#(Integer id,
-			  Vector#(numClients, ObjectReadClient#(dataWidth)) readClients,
+module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) readClients,
 			  DmaDebugIndication dmaIndication,
 			  Vector#(numSGLs,Server#(ReqTup,Bit#(addrWidth))) sgls) 
    (MemReadInternal#(addrWidth, dataWidth))
@@ -162,7 +161,7 @@ module mkMemReadInternal#(Integer id,
    // stage 3: read data 
    FIFO#(MemData#(dataWidth)) readDataPipelineFifo <- mkFIFO;
    
-   let debug = False;
+   let debug = True;
    
    Reg#(Bit#(8))           burstReg <- mkReg(0);
    Reg#(Bool)              firstReg <- mkReg(True);
@@ -197,14 +196,15 @@ module mkMemReadInternal#(Integer id,
 
    for (Integer selectReg = 0; selectReg < valueOf(numClients); selectReg = selectReg + 1) 
       rule loadClient;
-      	 if (debug) $display("mkMemReadInternal::loadClient %d %d", selectReg, cycle_cnt-last_loadClient);
 	 last_loadClient <= cycle_cnt;
    	 ObjectRequest req <- readClients[selectReg].readReq.get();
+	 let sglsel = req.pointer[31:16];
+      	 if (debug) $display("mkMemReadInternal::loadClient %d %d %d", selectReg, sglsel, cycle_cnt-last_loadClient);
    	 if (bad_pointer(req.pointer))
 	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer4, pref: req.pointer });
    	 else begin
    	    lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
-   	    sgls[req.pointer[31:16]].request.put(ReqTup{id:truncate(req.pointer),off:req.offset});
+   	    sgls[sglsel].request.put(ReqTup{id:truncate(req.pointer),off:req.offset});
    	 end
       endrule
    
@@ -318,8 +318,7 @@ endmodule
 
 typedef 64 NumTagsW;
 
-module mkMemWriteInternal#(Integer iid,
-			   Vector#(numClients, ObjectWriteClient#(dataWidth)) writeClients,
+module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) writeClients,
 			   DmaDebugIndication dmaIndication, 
 			   Vector#(numSGLs,Server#(ReqTup,Bit#(addrWidth))) sgls)
    (MemWriteInternal#(addrWidth, dataWidth))

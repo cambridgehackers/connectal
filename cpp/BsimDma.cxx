@@ -42,13 +42,15 @@ typedef struct {
     int size_accum;
 } DMAINFO[32];
 static DMAINFO dma_info[4];
-static int dma_trace;// = 1;
+static int dma_trace = 1;
 
-#ifdef MATMUL_HACK
-#define NUKE_ID {id = 0;}
-#else
-#define NUKE_ID {}
-#endif
+
+
+
+#define NUKE_ID {  \
+id = pref>>5;      \
+pref -= id<<5;}
+
 
 extern "C" {
   void write_pareff32(uint32_t id, uint32_t pref, uint32_t offset, unsigned int data){
@@ -79,9 +81,7 @@ extern "C" {
     return *(uint64_t *)&dma_info[id][pref].buffer[offset];
   }
 
-  void pareff_init(uint32_t id, uint32_t apref, uint32_t size){
-    NUKE_ID;
-    uint32_t pref = apref; // >> 8;
+  void pareff_init(uint32_t id, uint32_t pref, uint32_t size){
     if (dma_trace)
       fprintf(stderr, "BsimDma::pareff id=%d pref=%d, size=%08x size_accum=%08x\n", id, pref, size, dma_info[id][pref].size_accum);
     assert(pref < 32);

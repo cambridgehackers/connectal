@@ -51,25 +51,30 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    SGListConfigIndicationProxy backingStoreSGListConfigIndicationProxy <- mkSGListConfigIndicationProxy(BackingStoreSGListConfigIndication);
    SGListMMU#(PhysAddrWidth) backingStoreSGList <- mkSGListMMU(0, True, backingStoreSGListConfigIndicationProxy.ifc);
    SGListConfigRequestWrapper backingStoreSGListConfigRequestWrapper <- mkSGListConfigRequestWrapper(BackingStoreSGListConfigRequest, backingStoreSGList.request);
+
+   // algo sglist
+   SGListConfigIndicationProxy algoSGListConfigIndicationProxy <- mkSGListConfigIndicationProxy(AlgoSGListConfigIndication);
+   SGListMMU#(PhysAddrWidth) algoSGList <- mkSGListMMU(1, True, algoSGListConfigIndicationProxy.ifc);
+   SGListConfigRequestWrapper algoSGListConfigRequestWrapper <- mkSGListConfigRequestWrapper(AlgoSGListConfigRequest, algoSGList.request);
    
    // nandsim sglist
    SGListConfigIndicationProxy nandsimSGListConfigIndicationProxy <- mkSGListConfigIndicationProxy(NandsimSGListConfigIndication);
-   SGListMMU#(PhysAddrWidth) nandsimSGList <- mkSGListMMU(1, False, nandsimSGListConfigIndicationProxy.ifc);
+   SGListMMU#(PhysAddrWidth) nandsimSGList <- mkSGListMMU(0, False, nandsimSGListConfigIndicationProxy.ifc);
    SGListConfigRequestWrapper nandsimSGListConfigRequestWrapper <- mkSGListConfigRequestWrapper(NandsimSGListConfigRequest, nandsimSGList.request);
    
    // host memory dma server
    DmaDebugIndicationProxy hostDmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(HostmemDmaDebugIndication);
    let rcs = cons(strstr.config_read_client,cons(nandSim.readClient, nil));
-   MemServer#(PhysAddrWidth,64,1) hostDma <- mkMemServerRW(hostDmaDebugIndicationProxy.ifc, rcs, cons(nandSim.writeClient, nil), backingStoreSGList);
+   MemServer#(PhysAddrWidth,64,1) hostDma <- mkMemServerRW(hostDmaDebugIndicationProxy.ifc, rcs, cons(nandSim.writeClient, nil), cons(backingStoreSGList,cons(algoSGList,nil)));
    DmaDebugRequestWrapper hostDmaDebugRequestWrapper <- mkDmaDebugRequestWrapper(HostmemDmaDebugRequest, hostDma.request);
 
    // nandsim memory dma server
    DmaDebugIndicationProxy nandsimDmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(NandsimDmaDebugIndication);   
-   MemServer#(PhysAddrWidth,64,1) nandsimDma <- mkMemServerR(nandsimDmaDebugIndicationProxy.ifc, cons(strstr.haystack_read_client,nil), nandsimSGList);
+   MemServer#(PhysAddrWidth,64,1) nandsimDma <- mkMemServerR(nandsimDmaDebugIndicationProxy.ifc, cons(strstr.haystack_read_client,nil), cons(nandsimSGList,nil));
    DmaDebugRequestWrapper nandsimDmaRequestWrapper <- mkDmaDebugRequestWrapper(NandsimDmaDebugRequest, nandsimDma.request);
    mkConnection(nandsimDma.masters[0], nandSim.memSlave);
    
-   Vector#(12,StdPortal) portals;
+   Vector#(14,StdPortal) portals;
 
    portals[0] = nandSimRequestWrapper.portalIfc;
    portals[1] = nandSimIndicationProxy.portalIfc; 
@@ -89,6 +94,9 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    portals[10] = nandsimDmaRequestWrapper.portalIfc;
    portals[11] = nandsimDmaDebugIndicationProxy.portalIfc; 
    
+   portals[12] = algoSGListConfigRequestWrapper.portalIfc;
+   portals[13] = algoSGListConfigIndicationProxy.portalIfc;
+
    StdDirectory dir <- mkStdDirectory(portals);
    let ctrl_mux <- mkSlaveMux(dir,portals);
    

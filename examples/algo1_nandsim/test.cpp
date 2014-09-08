@@ -184,12 +184,11 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
   hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
-  hostmemSGListConfigRequest = new SGListConfigRequestProxy(IfcNames_BackingStoreSGListConfigRequest); // change this to AlgoSGListConfigRequest
+  hostmemSGListConfigRequest = new SGListConfigRequestProxy(IfcNames_AlgoSGListConfigRequest);
   DmaManager *hostmemDma = new DmaManager(hostmemDmaDebugRequest, hostmemSGListConfigRequest);
-  hostmemDma->priv.handle = 4; // so doesn't overlap with nandsim // remove this once above change is made
 
   hostmemDmaDebugIndication = new DmaDebugIndication(hostmemDma, IfcNames_HostmemDmaDebugIndication);
-  hostmemSGListConfigIndication = new SGListConfigIndication(hostmemDma, IfcNames_BackingStoreSGListConfigIndication);  // change this to AlgoSGListConfigIndication
+  hostmemSGListConfigIndication = new SGListConfigIndication(hostmemDma, IfcNames_AlgoSGListConfigIndication);
 
   strstrRequest = new StrstrRequestProxy(IfcNames_AlgoRequest);
   strstrIndication = new StrstrIndication(IfcNames_AlgoIndication);
@@ -208,6 +207,9 @@ int main(int argc, const char **argv)
   int mpNextAlloc = portalAlloc(numBytes);
   int ref_needleAlloc = hostmemDma->reference(needleAlloc);
   int ref_mpNextAlloc = hostmemDma->reference(mpNextAlloc);
+
+  fprintf(stderr, "%08x %08x\n", ref_needleAlloc, ref_mpNextAlloc);
+
   char *needle = (char *)portalMmap(needleAlloc, numBytes);
   int *mpNext = (int *)portalMmap(mpNextAlloc, numBytes);
 
@@ -216,8 +218,11 @@ int main(int argc, const char **argv)
   strncpy(needle, needle_text, needle_len);
   compute_MP_next(needle, mpNext, needle_len);
   fprintf(stderr, "mpNext=[");
-  for(int i= 0; i <= needle_len; i++)
+  for(int i= 0; i <= needle_len; i++) 
     fprintf(stderr, "%d ", mpNext[i]);
+  fprintf(stderr, "]\n needle=");
+  for(int i= 0; i < needle_len; i++) 
+    fprintf(stderr, "%d ", needle[i]);
   fprintf(stderr, "]\n");
   portalDCacheFlushInval(needleAlloc, numBytes, needle);
   portalDCacheFlushInval(mpNextAlloc, numBytes, mpNext);
@@ -230,8 +235,10 @@ int main(int argc, const char **argv)
   int haystack_base = read_from_nandsim_exe();
   int haystack_len  = read_from_nandsim_exe();
 
-
-  int id = nandsimDma->priv.handle++;
+  int id = 0;
+  SGListConfigRequestProxy_idRequest(nandsimDma->priv.sglDevice);
+  sem_wait(&nandsimDma->priv.sglIdSem);
+  id = nandsimDma->priv.sglId;
   // pairs of ('offset','size') poinging to space in nandsim memory
   // this is unsafe.  We should check that the we aren't overflowing 
   // 'nandBytes', the size of the nandSimulator backing store
@@ -239,6 +246,7 @@ int main(int argc, const char **argv)
   printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   int ref_haystackInNandMemory = send_reference_to_portal(nandsimDma->priv.sglDevice, sizeof(region)/sizeof(region[0]), region, id);
   sem_wait(&(nandsimDma->priv.confSem));
+  fprintf(stderr, "%08x\n", ref_haystackInNandMemory);
 
   fprintf(stderr, "about to setup device %d %d\n", ref_needleAlloc, ref_mpNextAlloc);
   strstrRequest->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);

@@ -268,9 +268,6 @@ int main(int argc, const char **argv)
     fprintf(stderr, "\n");
 #endif
 
-    // deregister from poller.  now it is safe to start algo1_exe
-    defaultPoller->unregisterInstance(hostmemDmaDebugIndication); 
-    defaultPoller->unregisterInstance(hostmemSGListConfigIndication);
     fprintf(stderr, "Main::connecting to algo_exe...\n");
     connect_to_algo_exe();
     fprintf(stderr, "Main::connected to algo_exe\n");

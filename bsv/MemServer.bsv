@@ -162,7 +162,7 @@ module mkMemServerR#(DmaDebugIndication dmaIndication,
       Vector#(numSGLs,Server#(ReqTup,Bit#(PhysAddrWidth))) ss;
       for(Integer j = 0; j < valueOf(numSGLs); j=j+1)
 	 ss[j] = sgl_servers[j].servers[i];
-      readers[i] <- mkMemReadInternal(i, client_bins[i], dmaIndication, ss);
+      readers[i] <- mkMemReadInternal(client_bins[i], dmaIndication, ss);
    end
    
    rule sglistEntry;
@@ -252,7 +252,7 @@ module mkMemServerW#(DmaDebugIndication dmaIndication,
       Vector#(numSGLs,Server#(ReqTup,Bit#(PhysAddrWidth))) ss;
       for(Integer j = 0; j < valueOf(numSGLs); j=j+1)
 	 ss[j] = sgl_servers[j].servers[i];
-      writers[i] <- mkMemWriteInternal(i, client_bins[i], dmaIndication, ss);
+      writers[i] <- mkMemWriteInternal(client_bins[i], dmaIndication, ss);
    end
    
    rule sglistEntry;
