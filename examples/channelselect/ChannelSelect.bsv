@@ -46,7 +46,8 @@ endinterface
 
 module mkChannelSelect#(UInt#(10) decimation)(ChannelSelect)
    provisos(Bits#(CoeffData, a__),
-	    Bits#(ProductData, b__));
+	    Bits#(ProductData, b__),
+            Bits#(MulData, c__));
    BRAM_Configure cfg = defaultValue;
    cfg.memorySize = 1024;
    BRAM2Port#(UInt#(8), Complex#(FixedPoint#(2,23))) coeffRam0 <- 
