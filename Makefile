@@ -320,8 +320,15 @@ zynqdrivers-adb:
 	adb connect $(RUNPARAM)
 	adb -s $(RUNPARAM):5555 shell pwd || true
 	adb connect $(RUNPARAM)
+	adb -s $(RUNPARAM):5555 root || true
+	sleep 1
+	adb connect $(RUNPARAM)
 	adb -s $(RUNPARAM):5555 push drivers/zynqportal/zynqportal.ko /mnt/sdcard
 	adb -s $(RUNPARAM):5555 push drivers/portalmem/portalmem.ko /mnt/sdcard
+	adb -s $(RUNPARAM):5555 shell rmmod zynqportal
+	adb -s $(RUNPARAM):5555 shell rmmod portalmem
+	adb -s $(RUNPARAM):5555 shell insmod /mnt/sdcard/zynqportal.ko
+	adb -s $(RUNPARAM):5555 shell insmod /mnt/sdcard/portalmem.ko
 
 #################################################################################################
 
