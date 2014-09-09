@@ -41,7 +41,7 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    SGListConfigRequestWrapper backingStoreSGListConfigRequestWrapper <- mkSGListConfigRequestWrapper(BackingStoreSGListConfigRequest, backingStoreSGList.request);
 
    DmaDebugIndicationProxy hostmemDmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(HostmemDmaDebugIndication);
-   MemServer#(PhysAddrWidth,64,1) hostmemDma <- mkMemServerRW(hostmemDmaDebugIndicationProxy.ifc, cons(nandSim.readClient, nil), cons(nandSim.writeClient, nil), backingStoreSGList);
+   MemServer#(PhysAddrWidth,64,1) hostmemDma <- mkMemServerRW(hostmemDmaDebugIndicationProxy.ifc, cons(nandSim.readClient, nil), cons(nandSim.writeClient, nil), cons(backingStoreSGList, nil));
    DmaDebugRequestWrapper hostmemDmaDebugRequestWrapper <- mkDmaDebugRequestWrapper(HostmemDmaDebugRequest, hostmemDma.request);
    
    
