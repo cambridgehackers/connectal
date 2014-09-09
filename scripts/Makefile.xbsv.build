@@ -70,10 +70,18 @@ vfile=verilog/$(MKTOP).v
 all: exe bits
 
 ifeq ($(BOARD),bluesim)
-exe: bsim bsim_exe
+ifeq ($(RUNSOURCE2),)
+  exe: bsim bsim_exe
+else
+  exe: bsim bsim_exe bsim_exe2
+endif
 else
   ifneq ($(OS),android)
-    exe: ubuntu_exe
+    ifeq ($(RUNSOURCE2),)
+      exe: ubuntu_exe
+    else
+      exe: ubuntu_exe ubuntu_exe2
+    endif
   else
     ifeq ($(XBSV_DEBUG),1)
       exe: android_exe_debug
@@ -87,9 +95,17 @@ bsim_exe: prepare_bin_target
 	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk bsim_exe
 	@cp -v jni/bsim_exe bin
 
+bsim_exe2: prepare_bin_target
+	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk bsim_exe2
+	@cp -v jni/bsim_exe2 bin
+
 ubuntu_exe: prepare_bin_target
-	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk
+	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk ubuntu_exe
 	@cp -v jni/ubuntu_exe bin
+
+ubuntu_exe2: prepare_bin_target
+	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk ubuntu_exe2
+	@cp -v jni/ubuntu_exe2 bin
 
 ifneq ($(BOARD),bluesim)
 ifneq ($(OS),android)
@@ -121,8 +137,13 @@ android_exe_debug: prepare_bin_target
 	@cp -v libs/armeabi/android_exe bin
 
 run:
+	echo SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS $(RUNSOURCE2) UUUUUUUUUUUU
 ifeq ($(BOARD),bluesim)
+    ifeq ($(RUNSOURCE2),)
 	./bin/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
+    else
+	./bin/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; ./bin/bsim_exe2& bsim2pid=$$!; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid $$bsim2pid; exit $$retcode
+    endif
 else
     ifeq ($(OS),android)
 	$(XBSVDIR)/scripts/run.zedboard bin/mkTop.xdevcfg.bin.gz bin/android_exe $(RUN_ARGS)

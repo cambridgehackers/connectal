@@ -162,6 +162,7 @@ int main(int argc, const char **argv)
   nandsimRequest->configureNand(ref_nandAlloc, nandBytes);
   nandsimIndication->wait();
 
+#ifndef ALGO1_NANDSIM
   if (argc == 1) {
 
     fprintf(stderr, "Main::allocating memory...\n");
@@ -239,7 +240,9 @@ int main(int argc, const char **argv)
     fprintf(stderr, "(%"PRIx64", %"PRIx64")\n", beats_r, beats_w);
     
     return (mismatch > 0);
-  } else {
+  } else
+#endif
+  {
 
     // else we were invoked by alg1_nandsim
     const char *filename = "../haystack.txt";

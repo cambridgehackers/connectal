@@ -60,6 +60,9 @@ S2H += DmaDebugRequest SGListConfigRequest
 H2S += DmaDebugIndication SGListConfigIndication
 BSVFILES += $(XBSVDIR)/bsv/PortalMemory.bsv
 CPPFILES += $(XBSVDIR)/cpp/dmaManager.c
+ifneq ($(CPPFILES2),)
+CPPFILES2 += $(XBSVDIR)/cpp/dmaManager.c
+endif
 endif
 
 all bits verilog implementation bsim xsim xsimrun: gentarget prebuild
@@ -103,7 +106,8 @@ endif
 	$(Q)$(XBSVDIR)/scripts/makefilegen.py -B$(BOARD) -p $(BOARD) \
 	$(foreach s2h, $(S2H), -s2h $(s2h)) \
 	$(foreach h2s, $(H2S), -h2s $(h2s)) \
-	$(foreach f, $(CPPFILES), -s $f) \
+	$(foreach f, $(CPPFILES), --source $f) \
+	$(foreach f, $(CPPFILES2), --source2 $f) \
         $(XBSVFLAGS) $(BSVFILES) $(PRINTF_EXTRA) $(VERBOSE_SWITCH)
 
 prebuild::
