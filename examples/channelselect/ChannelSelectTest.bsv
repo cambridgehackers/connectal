@@ -20,8 +20,12 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import DDS::*;
 import Gearbox::*;
 import ChannelSelect::*;
+import FPCMult::*;
+import FixedPoint::*;
+import Complex::*;
 
 /* rfreqDataWrite data is FixedPoint(2,14) */
 /* setCoeff data is FixedPoint(2, 23) */
@@ -36,11 +40,15 @@ interface ChannelSelectTestIndication;
    method Action ifreqData(Bit#(16) dataRe, Bit#(16) dataIm);
 endinterface
 
-module mkChannelSelectTestRequest#(ChannelSelectTestIndication indication) (ChannelSelectTestRequest);
+module mkChannelSelectTestRequest#(ChannelSelectTestIndication indication) (ChannelSelectTestRequest)
+   provisos(Bits#(CoeffData, a__),
+	    Bits#(ProductData, b__),
+	    Bits#(MulData, c__));
    Clock clk <- exposeCurrentClock;
    Reset rst <- exposeCurrentReset;
    Gearbox#(1, 2, Complex#(Signal)) gb <- mk1toNGearbox(clk, rst, clk, rst);
-   ChannelSelect cs <- mkChannelSelect(64);
+   DDS dds <- mkDDS();
+   ChannelSelect cs <- mkChannelSelect(64, dds);
    
    rule processRF;
       let data = gb.first();
