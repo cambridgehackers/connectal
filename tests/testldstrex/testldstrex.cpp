@@ -33,9 +33,14 @@
 #include <assert.h>
 #include <stdio.h>
 #include <errno.h>
+#include <ext/atomicity.h>
 
 #include "portal.h"
+#if 0
 #include <opencv2/core/core.hpp>
+#else
+#define CV_XADD __gnu_cxx::__exchange_and_add
+#endif
 
 int main(int argc, const char **argv)
 {
