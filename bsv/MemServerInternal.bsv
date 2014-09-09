@@ -58,7 +58,7 @@ module mkTagGen(TagGen#(numTags))
    let retFifo <- mkFIFO;
 
    rule complete_rule0 (comp_state[0] != 0);
-      tags.portB.request.put(BRAMRequest{write:False, address:tail_ptr});
+      tags.portB.request.put(BRAMRequest{write:False, address:tail_ptr, responseOnWrite: ?, datain: ?});
    endrule
 
    rule complete_rule1 (comp_state[0] != 0);
@@ -74,18 +74,18 @@ module mkTagGen(TagGen#(numTags))
    // consider access to portA and portB to be conflict free **sigh** 
    rule ret;
       let tag <- toGet(retFifo).get;
-      tags.portB.request.put(BRAMRequest{write:True, responseOnWrite:False, address:tag, datain:False});
+      tags.portB.request.put(BRAMRequest{write:True, responseOnWrite:False, address:tag, datain:False, responseOnWrite: ?, datain: ?});
       comp_state <= 1 | (comp_state << 1);
    endrule
 
    rule init(!inited);
-      tags.portA.request.put(BRAMRequest{write:True,address:head_ptr,responseOnWrite:False,datain:False});
+      tags.portA.request.put(BRAMRequest{write:True,address:head_ptr,responseOnWrite:False,datain:False, responseOnWrite: ?, datain: ?});
       head_ptr <= head_ptr+1;
       inited <= head_ptr+1==0;
    endrule
    
    method ActionValue#(Bit#(tsz)) getTag() if (inited && (head_ptr+1 != tail_ptr));
-      tags.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:head_ptr, datain:True});
+      tags.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:head_ptr, datain:True, responseOnWrite: ?, datain: ?});
       head_ptr <= head_ptr+1;
       return head_ptr;
    endmethod
