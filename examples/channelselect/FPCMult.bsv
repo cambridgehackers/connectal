@@ -80,7 +80,8 @@ endinterface
    
 module mkFPCMult(FPCMult)
   provisos(Bits#(CoeffData, a__),
-     Bits#(ProductData, b__));
+     Bits#(ProductData, b__),
+     Bits#(MulData, c__));
    /* input registers */
    FIFOF#(CoeffData) ain <- mkPipelineFIFOF();
    FIFOF#(Complex#(Signal)) xin <- mkPipelineFIFOF();
