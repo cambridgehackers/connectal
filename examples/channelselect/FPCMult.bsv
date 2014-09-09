@@ -64,9 +64,9 @@ typedef struct {
 
 typedef struct {
 		Product arxr;
-		Product arxr;
-		Product arxr;
-		Product arxr;
+		Product arxi;
+		Product aixr;
+		Product aixi;
 		Bit#(1) filterPhase;
 		} MulData;
 
@@ -96,7 +96,7 @@ module mkFPCMult(FPCMult)
       ain.deq();
       xin.deq();
       ax <= Muldata{arxr: arxr, aixi: aixi, arxi: arxi, aixr: aixr,
-	 filterPhase ain.filterPhase};
+	 filterPhase: ain.filterPhase};
       /* combine into outputs */
       yout.enq(ProductData{y: Complex{rel: arxr - aixi, img: arxi + aixr}, filterPhase: muloutphase});
    endrule
