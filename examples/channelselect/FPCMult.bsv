@@ -92,16 +92,16 @@ module mkFPCMult(FPCMult)
 
    rule work;
       /* compute multiplies */
-      Product arxr = fxptMult(ain.a.rel, xin.first.rel);
-      Product aixi = fxptMult(ain.a.img, xin.first.img);
-      Product arxi = fxptMult(ain.a.rel, xin.first.img);
-      Product aixr = fxptMult(ain.a.img, xin.first.rel);
+      Product arxr = fxptMult(ain.first().a.rel, xin.first.rel);
+      Product aixi = fxptMult(ain.first().a.img, xin.first.img);
+      Product arxi = fxptMult(ain.first().a.rel, xin.first.img);
+      Product aixr = fxptMult(ain.first().a.img, xin.first.rel);
       ain.deq();
       xin.deq();
-      ax <= Muldata{arxr: arxr, aixi: aixi, arxi: arxi, aixr: aixr,
-	 filterPhase: ain.filterPhase};
-      /* combine into outputs */
-      yout.enq(ProductData{y: Complex{rel: arxr - aixi, img: arxi + aixr}, filterPhase: muloutphase});
+      ax <= MulData{arxr: arxr, aixi: aixi, arxi: arxi, aixr: aixr,
+	 filterPhase: ain.first().filterPhase};
+      /* pipeline and combine into outputs */
+      yout.enq(ProductData{y: Complex{rel: ax.arxr - ax.aixi, img: ax.arxi + ax.aixr}, filterPhase: ax.filterPhase});
    endrule
    
    interface PipeOut y = toPipeOut(yout);
