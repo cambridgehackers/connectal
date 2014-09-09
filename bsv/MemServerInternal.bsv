@@ -74,18 +74,18 @@ module mkTagGen(TagGen#(numTags))
    // consider access to portA and portB to be conflict free **sigh** 
    rule ret;
       let tag <- toGet(retFifo).get;
-      tags.portB.request.put(BRAMRequest{write:True, responseOnWrite:False, address:tag, datain:False, responseOnWrite: ?, datain: ?});
+      tags.portB.request.put(BRAMRequest{write:True, responseOnWrite:False, address:tag, datain:False});
       comp_state <= 1 | (comp_state << 1);
    endrule
 
    rule init(!inited);
-      tags.portA.request.put(BRAMRequest{write:True,address:head_ptr,responseOnWrite:False,datain:False, responseOnWrite: ?, datain: ?});
+      tags.portA.request.put(BRAMRequest{write:True,address:head_ptr,responseOnWrite:False,datain:False});
       head_ptr <= head_ptr+1;
       inited <= head_ptr+1==0;
    endrule
    
    method ActionValue#(Bit#(tsz)) getTag() if (inited && (head_ptr+1 != tail_ptr));
-      tags.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:head_ptr, datain:True, responseOnWrite: ?, datain: ?});
+      tags.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:head_ptr, datain:True});
       head_ptr <= head_ptr+1;
       return head_ptr;
    endmethod
@@ -210,7 +210,7 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
    
    rule complete_burst0;
       let tag <- tag_gen.complete;
-      dreqFifos.portB.request.put(BRAMRequest{write:False, address:tag});      
+      dreqFifos.portB.request.put(BRAMRequest{write:False, address:tag, responseOnWrite: ?, datain: ?});      
       compFifo1.enq(tag);
    endrule
    
@@ -220,7 +220,7 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
       let cli = drq.client;
       let tag <- toGet(compFifo1).get;
       compFifo0.enq(cli);
-      read_buffer.portB.request.put(BRAMRequest{write:False, address:{tag,truncate(cnt)}});
+      read_buffer.portB.request.put(BRAMRequest{write:False, address:{tag,truncate(cnt)}, responseOnWrite: ?, datain: ?});
       compReg0 <= cnt-1;
       compReg1 <= tag;
       compReg2 <= cli;
@@ -231,7 +231,7 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
       let tag = compReg1;
       let cli = compReg2;
       compFifo0.enq(cli);
-      read_buffer.portB.request.put(BRAMRequest{write:False, address:{tag,truncate(cnt)}});
+      read_buffer.portB.request.put(BRAMRequest{write:False, address:{tag,truncate(cnt)}, responseOnWrite: ?, datain: ?});
       compReg0 <= cnt-1;
    endrule
    
@@ -301,7 +301,7 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
       interface Put readData;
 	 method Action put(MemData#(dataWidth) response);
 	    readDataPipelineFifo.enq(response);
-	    dreqFifos.portA.request.put(BRAMRequest{write:False, address:truncate(response.tag)});
+	    dreqFifos.portA.request.put(BRAMRequest{write:False, address:truncate(response.tag), responseOnWrite: ?, datain: ?});
 	    beatCount <= beatCount+1;
 	 endmethod
       endinterface
@@ -391,7 +391,7 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
    
    rule writeDoneComp0;
       let tag <- tag_gen.complete;
-      respFifos.portB.request.put(BRAMRequest{write:False, address:tag});
+      respFifos.portB.request.put(BRAMRequest{write:False, address:tag, responseOnWrite: ?, datain: ?});
    endrule
    
    rule writeDoneComp1;
