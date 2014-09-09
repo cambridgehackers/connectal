@@ -47,6 +47,8 @@
 import Complex::*;
 import FixedPoint::*;
 import Pipe::*;
+import FIFOF::*;
+import SpecialFIFOs::*;
 
 typedef FixedPoint#(2,16) Signal;
 typedef FixedPoint#(2,23) Coeff;
