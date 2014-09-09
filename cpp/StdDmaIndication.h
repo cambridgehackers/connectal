@@ -25,12 +25,15 @@
 #include "DmaDebugIndicationWrapper.h"
 #include "SGListConfigIndicationWrapper.h"
 
+class PortalPoller;
+
 static int error_limit = 20;
 class SGListConfigIndication : public SGListConfigIndicationWrapper
 {
   DmaManager *portalMemory;
  public:
   SGListConfigIndication(DmaManager *pm, unsigned int  id) : SGListConfigIndicationWrapper(id), portalMemory(pm) {}
+  SGListConfigIndication(DmaManager *pm, unsigned int  id, PortalPoller *poller) : SGListConfigIndicationWrapper(id,poller), portalMemory(pm) {}
   virtual void configResp(uint32_t pointer){
     fprintf(stderr, "configResp: %x\n", pointer);
     portalMemory->confResp(pointer);
@@ -49,6 +52,7 @@ class DmaDebugIndication : public DmaDebugIndicationWrapper
 {
   DmaManager *portalMemory;
  public:
+  DmaDebugIndication(DmaManager *pm, unsigned int  id, PortalPoller *poller) : DmaDebugIndicationWrapper(id,poller), portalMemory(pm) {}
   DmaDebugIndication(DmaManager *pm, unsigned int  id) : DmaDebugIndicationWrapper(id), portalMemory(pm) {}
   virtual void addrResponse(uint64_t physAddr){
     fprintf(stderr, "DmaIndication::addrResponse(physAddr=%"PRIx64")\n", physAddr);

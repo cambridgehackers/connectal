@@ -137,7 +137,6 @@ android_exe_debug: prepare_bin_target
 	@cp -v libs/armeabi/android_exe bin
 
 run:
-	echo SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS $(RUNSOURCE2) UUUUUUUUUUUU
 ifeq ($(BOARD),bluesim)
     ifeq ($(RUNSOURCE2),)
 	./bin/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
