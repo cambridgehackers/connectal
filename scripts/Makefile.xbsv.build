@@ -139,9 +139,9 @@ android_exe_debug: prepare_bin_target
 run:
 ifeq ($(BOARD),bluesim)
     ifeq ($(RUNSOURCE2),)
-	./bin/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
+	./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
     else
-	./bin/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; ./bin/bsim_exe2& bsim2pid=$$!; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid $$bsim2pid; exit $$retcode
+	./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; ./bin/bsim_exe2& bsim2pid=$$!; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid $$bsim2pid; exit $$retcode
     endif
 else
     ifeq ($(OS),android)
