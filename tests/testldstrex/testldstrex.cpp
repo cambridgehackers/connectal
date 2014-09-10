@@ -54,7 +54,7 @@ int main(int argc, const char **argv)
   fprintf(stderr, "allocated %d bytes, fd=%d\n", totalsize, fd);
   int *mem = (int*)portalMmap(fd, totalsize);
   *mem = 1;
-  fprintf(stderr, "Before CV_XADD: *mem=%d\n", *mem);
+  fprintf(stderr, "Before CV_XADD: mem=%p *mem=%d\n", mem, *mem);
   CV_XADD(mem, -1);
   fprintf(stderr, "Before CV_XADD: *mem=%d\n", *mem);
   exit(0);
