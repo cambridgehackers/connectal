@@ -216,11 +216,11 @@ int main(int argc, const char **argv)
     }
     /* end */
     
-    uint64_t beats_r = hostDma->show_mem_stats(ChannelType_Read);
-    uint64_t beats_w = hostDma->show_mem_stats(ChannelType_Write);
+    //uint64_t beats_r = hostDma->show_mem_stats(ChannelType_Read);
+    //uint64_t beats_w = hostDma->show_mem_stats(ChannelType_Write);
 
     fprintf(stderr, "Main::Summary: match=%lu mismatch:%lu (%lu) (%f percent)\n", match, mismatch, match+mismatch, (float)mismatch/(float)(match+mismatch)*100.0);
-    fprintf(stderr, "(%"PRIx64", %"PRIx64")\n", beats_r, beats_w);
+    //fprintf(stderr, "(%"PRIx64", %"PRIx64")\n", beats_r, beats_w);
     
     return (mismatch > 0);
   } else
