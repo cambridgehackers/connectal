@@ -2,7 +2,7 @@
 
 void MMUConfigRequestProxyputFailed_cb(struct PortalInternal *p, const uint32_t v)
 {
-    const char* methodNameStrings[] = {"sglist", "region"};
+    const char* methodNameStrings[] = {"sglist", "region", "idRequest"};
     PORTAL_PRINTF("putFailed: %s\n", methodNameStrings[v]);
     //exit(1);
 }
@@ -72,5 +72,15 @@ void MMUConfigRequestProxy_region (PortalInternal *p , const uint32_t pointer, c
         WRITEL(p, temp_working_addr, (barr0>>32));
         WRITEL(p, temp_working_addr, barr0);
         WRITEL(p, temp_working_addr, index0);
+
+};
+
+void MMUConfigRequestProxy_idRequest (PortalInternal *p   )
+{
+    volatile unsigned int* temp_working_addr = &(p->map_base[PORTAL_REQ_FIFO(CHAN_NUM_MMUConfigRequestProxy_idRequest)]);
+    int i = 50;
+    while (!READL(p, temp_working_addr + 1) && i-- > 0)
+        ; /* busy wait a bit on 'fifo not full' */
+        WRITEL(p, temp_working_addr, 0);
 
 };
