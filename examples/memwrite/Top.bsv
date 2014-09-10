@@ -38,16 +38,16 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUConfigIndicationProxy.ifc);
    MMUConfigRequestWrapper hostMMUConfigRequestWrapper <- mkMMUConfigRequestWrapper(HostMMUConfigRequest, hostMMU.request);
 
-   DmaDebugIndicationProxy hostmemDmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(HostDmaDebugIndication);
-   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerW(hostmemDmaDebugIndicationProxy.ifc, writeClients, cons(hostMMU,nil));
-   DmaDebugRequestWrapper hostmemDmaDebugRequestWrapper <- mkDmaDebugRequestWrapper(HostDmaDebugRequest, dma.request);
+   DmaDebugIndicationProxy hostDmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(HostDmaDebugIndication);
+   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerW(hostDmaDebugIndicationProxy.ifc, writeClients, cons(hostMMU,nil));
+   DmaDebugRequestWrapper hostDmaDebugRequestWrapper <- mkDmaDebugRequestWrapper(HostDmaDebugRequest, dma.request);
 
    
    Vector#(6,StdPortal) portals;
    portals[0] = memwriteRequestWrapper.portalIfc;
    portals[1] = memwriteIndicationProxy.portalIfc; 
-   portals[2] = hostmemDmaDebugRequestWrapper.portalIfc;
-   portals[3] = hostmemDmaDebugIndicationProxy.portalIfc; 
+   portals[2] = hostDmaDebugRequestWrapper.portalIfc;
+   portals[3] = hostDmaDebugIndicationProxy.portalIfc; 
    portals[4] = hostMMUConfigRequestWrapper.portalIfc;
    portals[5] = hostMMUConfigIndicationProxy.portalIfc;
 

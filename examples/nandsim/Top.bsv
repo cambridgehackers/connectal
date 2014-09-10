@@ -40,16 +40,16 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    MMU#(PhysAddrWidth) backingStoreSGList <- mkMMU(0, True, backingStoreMMUConfigIndicationProxy.ifc);
    MMUConfigRequestWrapper backingStoreMMUConfigRequestWrapper <- mkMMUConfigRequestWrapper(BackingStoreMMUConfigRequest, backingStoreSGList.request);
 
-   DmaDebugIndicationProxy hostmemDmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(HostDmaDebugIndication);
-   MemServer#(PhysAddrWidth,64,1) hostmemDma <- mkMemServerRW(hostmemDmaDebugIndicationProxy.ifc, cons(nandSim.readClient, nil), cons(nandSim.writeClient, nil), cons(backingStoreSGList, nil));
-   DmaDebugRequestWrapper hostmemDmaDebugRequestWrapper <- mkDmaDebugRequestWrapper(HostDmaDebugRequest, hostmemDma.request);
+   DmaDebugIndicationProxy hostDmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(HostDmaDebugIndication);
+   MemServer#(PhysAddrWidth,64,1) hostDma <- mkMemServerRW(hostDmaDebugIndicationProxy.ifc, cons(nandSim.readClient, nil), cons(nandSim.writeClient, nil), cons(backingStoreSGList, nil));
+   DmaDebugRequestWrapper hostDmaDebugRequestWrapper <- mkDmaDebugRequestWrapper(HostDmaDebugRequest, hostDma.request);
    
    
    Vector#(6,StdPortal) portals;
    portals[0] = nandSimRequestWrapper.portalIfc;
    portals[1] = nandSimIndicationProxy.portalIfc; 
-   portals[2] = hostmemDmaDebugRequestWrapper.portalIfc;
-   portals[3] = hostmemDmaDebugIndicationProxy.portalIfc; 
+   portals[2] = hostDmaDebugRequestWrapper.portalIfc;
+   portals[3] = hostDmaDebugIndicationProxy.portalIfc; 
    portals[4] = backingStoreMMUConfigRequestWrapper.portalIfc;
    portals[5] = backingStoreMMUConfigIndicationProxy.portalIfc;
    
@@ -58,7 +58,7 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
-   interface masters = hostmemDma.masters;
+   interface masters = hostDma.masters;
    interface leds = default_leds;
       
 endmodule : mkPortalTop
