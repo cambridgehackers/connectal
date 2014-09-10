@@ -30,7 +30,6 @@
 #include <sys/un.h>
 
 #include "StdDmaIndication.h"
-#include "DmaDebugRequestProxy.h"
 #include "SGListConfigRequestProxy.h"
 #include "GeneratedTypes.h" 
 #include "NandSimIndicationWrapper.h"
@@ -124,30 +123,14 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
-  DmaDebugRequestProxy *hostmemDmaDebugRequest = 0;
-  DmaDebugIndication *hostmemDmaDebugIndication = 0;
+  SGListConfigRequestProxy *hostmemSGListConfigRequest = new SGListConfigRequestProxy(IfcNames_BackingStoreSGListConfigRequest);
+  DmaManager *hostmemDma = new DmaManager(NULL, hostmemSGListConfigRequest);
+  SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(hostmemDma, IfcNames_BackingStoreSGListConfigIndication);
 
-  SGListConfigRequestProxy *hostmemSGListConfigRequest = 0;
-  SGListConfigIndication *hostmemSGListConfigIndication = 0;
-
-  NandSimRequestProxy *nandsimRequest = 0;
-  NandSimIndication *nandsimIndication = 0;
-
-  fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
-
-  hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
-  hostmemSGListConfigRequest = new SGListConfigRequestProxy(IfcNames_BackingStoreSGListConfigRequest);
-  DmaManager *hostmemDma = new DmaManager(hostmemDmaDebugRequest, hostmemSGListConfigRequest);
-
-  hostmemDmaDebugIndication = new DmaDebugIndication(hostmemDma, IfcNames_HostmemDmaDebugIndication);
-  hostmemSGListConfigIndication = new SGListConfigIndication(hostmemDma, IfcNames_BackingStoreSGListConfigIndication);
-
-  nandsimRequest = new NandSimRequestProxy(IfcNames_NandSimRequest);
-  nandsimIndication = new NandSimIndication(IfcNames_NandSimIndication);
-
+  NandSimRequestProxy *nandsimRequest = new NandSimRequestProxy(IfcNames_NandSimRequest);
+  NandSimIndication *nandsimIndication = new NandSimIndication(IfcNames_NandSimIndication);
 
   portalExec_start();
-
 
   int nandAlloc = portalAlloc(nandBytes);
   fprintf(stderr, "nandAlloc=%d\n", nandAlloc);
