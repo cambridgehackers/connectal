@@ -124,8 +124,8 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
   MMUConfigRequestProxy *hostMMUConfigRequest = new MMUConfigRequestProxy(IfcNames_BackingStoreMMUConfigRequest);
-  DmaManager *hostmemDma = new DmaManager(NULL, hostMMUConfigRequest);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(hostmemDma, IfcNames_BackingStoreMMUConfigIndication);
+  DmaManager *hostDma = new DmaManager(NULL, hostMMUConfigRequest);
+  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(hostDma, IfcNames_BackingStoreMMUConfigIndication);
 
   NandSimRequestProxy *nandsimRequest = new NandSimRequestProxy(IfcNames_NandSimRequest);
   NandSimIndication *nandsimIndication = new NandSimIndication(IfcNames_NandSimIndication);
@@ -134,7 +134,7 @@ int main(int argc, const char **argv)
 
   int nandAlloc = portalAlloc(nandBytes);
   fprintf(stderr, "nandAlloc=%d\n", nandAlloc);
-  int ref_nandAlloc = hostmemDma->reference(nandAlloc);
+  int ref_nandAlloc = hostDma->reference(nandAlloc);
   fprintf(stderr, "ref_nandAlloc=%d\n", ref_nandAlloc);
 #ifdef SANITY0
   unsigned int *nandBuffer = (unsigned int*)portalMmap(nandAlloc, nandBytes); 
@@ -152,7 +152,7 @@ int main(int argc, const char **argv)
     size_t srcBytes = nandBytes>>2;
     int srcAlloc = portalAlloc(srcBytes);
     unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, srcBytes);
-    unsigned int ref_srcAlloc = hostmemDma->reference(srcAlloc);
+    unsigned int ref_srcAlloc = hostDma->reference(srcAlloc);
     fprintf(stderr, "fd=%d, srcBuffer=%p\n", srcAlloc, srcBuffer);
 
     /* do tests */
@@ -216,8 +216,8 @@ int main(int argc, const char **argv)
     }
     /* end */
     
-    uint64_t beats_r = hostmemDma->show_mem_stats(ChannelType_Read);
-    uint64_t beats_w = hostmemDma->show_mem_stats(ChannelType_Write);
+    uint64_t beats_r = hostDma->show_mem_stats(ChannelType_Read);
+    uint64_t beats_w = hostDma->show_mem_stats(ChannelType_Write);
 
     fprintf(stderr, "Main::Summary: match=%lu mismatch:%lu (%lu) (%f percent)\n", match, mismatch, match+mismatch, (float)mismatch/(float)(match+mismatch)*100.0);
     fprintf(stderr, "(%"PRIx64", %"PRIx64")\n", beats_r, beats_w);
@@ -235,7 +235,7 @@ int main(int argc, const char **argv)
     uint32_t data_len = lseek(dataFile, 0, SEEK_END);
     lseek(dataFile, 0, SEEK_SET);
     int dataAlloc = portalAlloc(data_len);
-    int ref_dataAlloc = hostmemDma->reference(dataAlloc);
+    int ref_dataAlloc = hostDma->reference(dataAlloc);
     char *data = (char *)portalMmap(dataAlloc, data_len);
     if(read(dataFile, data, data_len) != data_len) {
       fprintf(stderr, "error reading %s %d\n", filename, (int)data_len);

@@ -167,8 +167,8 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
   MMUConfigRequestProxy *hostMMUConfigRequest = new MMUConfigRequestProxy(IfcNames_AlgoMMUConfigRequest);
-  DmaManager *hostmemDma = new DmaManager(NULL, hostMMUConfigRequest);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(hostmemDma, IfcNames_AlgoMMUConfigIndication);
+  DmaManager *hostDma = new DmaManager(NULL, hostMMUConfigRequest);
+  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(hostDma, IfcNames_AlgoMMUConfigIndication);
 
   MMUConfigRequestProxy *nandsimMMUConfigRequest = new MMUConfigRequestProxy(IfcNames_NandsimMMUConfigRequest);
   DmaManager *nandsimDma = new DmaManager(NULL, nandsimMMUConfigRequest);
@@ -183,8 +183,8 @@ int main(int argc, const char **argv)
   // allocate memory for strstr data
   int needleAlloc = portalAlloc(numBytes);
   int mpNextAlloc = portalAlloc(numBytes);
-  int ref_needleAlloc = hostmemDma->reference(needleAlloc);
-  int ref_mpNextAlloc = hostmemDma->reference(mpNextAlloc);
+  int ref_needleAlloc = hostDma->reference(needleAlloc);
+  int ref_mpNextAlloc = hostDma->reference(mpNextAlloc);
 
   fprintf(stderr, "%08x %08x\n", ref_needleAlloc, ref_mpNextAlloc);
 

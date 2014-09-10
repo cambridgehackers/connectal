@@ -76,10 +76,10 @@ int do_copy(int srcAlloc, int sgl_config_request_id, int sgl_config_indication_i
   PortalPoller *poller = new PortalPoller();
   MemcpyRequestProxy *device = new MemcpyRequestProxy(IfcNames_MemcpyRequest);
   MemcpyIndication *deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndication, poller);
-  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
+  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
   MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(sgl_config_request_id);
-  DmaManager *dma = new DmaManager(hostmemDmaDebugRequest, dmap);
-  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication, poller);
+  DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
+  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication, poller);
   MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, sgl_config_indication_id, poller);
 
   poller->portalExec_start();

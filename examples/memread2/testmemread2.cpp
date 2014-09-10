@@ -71,10 +71,10 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
   device = new Memread2RequestProxy(IfcNames_Memread2Request);
-  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
+  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
   MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
-  DmaManager *dma = new DmaManager(hostmemDmaDebugRequest, dmap);
-  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
+  DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
+  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
   MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
 
   deviceIndication = new Memread2Indication(IfcNames_Memread2Indication);
@@ -109,6 +109,6 @@ int main(int argc, const char **argv)
     device->getStateDbg();
     uint64_t beats = dma->show_mem_stats(ChannelType_Read);
     fprintf(stderr, "   beats: %"PRIx64"\n", beats);
-    hostmemDmaDebugRequest->getStateDbg(ChannelType_Read);
+    hostDmaDebugRequest->getStateDbg(ChannelType_Read);
   }
 }

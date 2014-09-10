@@ -43,7 +43,7 @@
 MmRequestTNProxy *mmdevice = 0;
 DmaManager *dma = 0;
 MMUConfigRequestProxy *dmap = 0;
-DmaDebugRequestProxy *hostmemDmaDebugRequest;
+DmaDebugRequestProxy *hostDmaDebugRequest;
 MmIndication *mmdeviceIndication = 0;
 SigmoidIndication *sigmoidindication = 0;
 SigmoidRequestProxy *sigmoiddevice = 0;
@@ -71,7 +71,7 @@ void *dbgThread(void *)
     sleep(1);
     mmdevice->debug();
     //rbmdevice->sumOfErrorSquaredDebug();
-    if (hostmemDmaDebugRequest) hostmemDmaDebugRequest->getStateDbg(ChannelType_Read);
+    if (hostDmaDebugRequest) hostDmaDebugRequest->getStateDbg(ChannelType_Read);
     sleep(5);
   }
   return 0;
@@ -91,10 +91,10 @@ int main(int argc, const char **argv)
   timerdevice = new TimerRequestProxy(IfcNames_TimerRequestPortal);
   timerdeviceIndication = new TimerIndication(IfcNames_TimerIndicationPortal);
 
-  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
+  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
   dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
-  dma = new DmaManager(hostmemDmaDebugRequest, dmap);
-  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
+  dma = new DmaManager(hostDmaDebugRequest, dmap);
+  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
   MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
 
   if(sem_init(&mul_sem, 1, 0)){
