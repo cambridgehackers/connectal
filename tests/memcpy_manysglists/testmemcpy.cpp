@@ -30,7 +30,7 @@
 #include "poller.h"
 #include "StdDmaIndication.h"
 #include "DmaDebugRequestProxy.h"
-#include "SGListConfigRequestProxy.h"
+#include "MMUConfigRequestProxy.h"
 #include "MemcpyIndicationWrapper.h"
 #include "MemcpyRequestProxy.h"
 
@@ -76,11 +76,11 @@ int do_copy(int srcAlloc, int sgl_config_request_id, int sgl_config_indication_i
   PortalPoller *poller = new PortalPoller();
   MemcpyRequestProxy *device = new MemcpyRequestProxy(IfcNames_MemcpyRequest);
   MemcpyIndication *deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndication, poller);
-  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
-  SGListConfigRequestProxy *dmap = new SGListConfigRequestProxy(sgl_config_request_id);
+  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
+  MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(sgl_config_request_id);
   DmaManager *dma = new DmaManager(hostmemDmaDebugRequest, dmap);
-  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostmemDmaDebugIndication, poller);
-  SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(dma, sgl_config_indication_id, poller);
+  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication, poller);
+  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, sgl_config_indication_id, poller);
 
   poller->portalExec_start();
 
@@ -128,13 +128,13 @@ int main(int argc, const char **argv)
 
   bool memcmp_fails[4] = {false, false, false, false};
 
-  int dst_ref0 = do_copy(0,        IfcNames_HostmemSGList0ConfigRequest, IfcNames_HostmemSGList0ConfigIndication);
+  int dst_ref0 = do_copy(0,        IfcNames_HostMMU0ConfigRequest, IfcNames_HostMMU0ConfigIndication);
   memcmp_fails[0] = memcmp_fail;
-  int dst_ref1 = do_copy(dst_ref0, IfcNames_HostmemSGList1ConfigRequest, IfcNames_HostmemSGList1ConfigIndication);
+  int dst_ref1 = do_copy(dst_ref0, IfcNames_HostMMU1ConfigRequest, IfcNames_HostMMU1ConfigIndication);
   memcmp_fails[1] = memcmp_fail;
-  int dst_ref2 = do_copy(dst_ref1, IfcNames_HostmemSGList2ConfigRequest, IfcNames_HostmemSGList2ConfigIndication);
+  int dst_ref2 = do_copy(dst_ref1, IfcNames_HostMMU2ConfigRequest, IfcNames_HostMMU2ConfigIndication);
   memcmp_fails[2] = memcmp_fail;
-  int dst_ref3 = do_copy(dst_ref3, IfcNames_HostmemSGList3ConfigRequest, IfcNames_HostmemSGList3ConfigIndication);
+  int dst_ref3 = do_copy(dst_ref3, IfcNames_HostMMU3ConfigRequest, IfcNames_HostMMU3ConfigIndication);
   memcmp_fails[3] = memcmp_fail;
 
   fprintf(stderr, "%d %d %d %d\n", memcmp_fails[0], memcmp_fails[1], memcmp_fails[2], memcmp_fails[3]);

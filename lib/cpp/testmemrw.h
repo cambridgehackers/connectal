@@ -3,7 +3,7 @@
 
 #include "StdDmaIndication.h"
 #include "DmaDebugRequestProxy.h"
-#include "SGListConfigRequestProxy.h"
+#include "MMUConfigRequestProxy.h"
 #include "MemrwIndicationWrapper.h"
 #include "MemrwRequestProxy.h"
 
@@ -71,11 +71,11 @@ int runtest(int argc, const char **argv)
 
   device = new MemrwRequestProxy(IfcNames_MemrwRequest);
   deviceIndication = new MemrwIndication(IfcNames_MemrwIndication);
-  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
-  SGListConfigRequestProxy *dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
+  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
+  MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostmemMMUConfigRequest);
   DmaManager *dma = new DmaManager(hostmemDmaDebugRequest, dmap);
-  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostmemDmaDebugIndication);
-  SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
+  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
+  MMUConfigIndication *hostmemMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostmemMMUConfigIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
 

@@ -37,7 +37,7 @@ import Leds::*;
 import PortalMemory::*;
 import MemTypes::*;
 import MemServer::*;
-import SGList::*;
+import MMU::*;
 import PS7LIB::*;
 import HostInterface::*;
 
@@ -45,9 +45,9 @@ import HostInterface::*;
 import FMComms1RequestWrapper::*;
 import FMComms1IndicationProxy::*;
 import DmaDebugRequestWrapper::*;
-import SGListConfigRequestWrapper::*;
+import MMUConfigRequestWrapper::*;
 import DmaDebugIndicationProxy::*;
-import SGListConfigIndicationProxy::*;
+import MMUConfigIndicationProxy::*;
 
 // defined by user
 import XilinxCells::*;
@@ -58,7 +58,7 @@ import FMComms1DAC::*;
 import FMComms1::*;
 import extraXilinxCells::*;
 
-typedef enum { FMComms1Request, FMComms1Indication, HostmemDmaDebugIndication, HostmemDmaDebugRequest, HostmemSGListConfigRequest, HostmemSGListConfigIndication} IfcNames deriving (Eq,Bits);
+typedef enum { FMComms1Request, FMComms1Indication, HostDmaDebugIndication, HostDmaDebugRequest, HostMMUConfigRequest, HostMMUConfigIndication} IfcNames deriving (Eq,Bits);
 
 interface FMComms1Pins;
    interface FMComms1ADCPins adcpins;
@@ -92,21 +92,21 @@ module mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,64,FMComms1Pins,1));
 
    Vector#(1,  ObjectReadClient#(64))   readClients = cons(fmcomms1.readDmaClient, nil);
    Vector#(1, ObjectWriteClient#(64))  writeClients = cons(fmcomms1.writeDmaClient, nil);
-   SGListConfigIndicationProxy hostmemSGListConfigIndicationProxy <- mkSGListConfigIndicationProxy(HostmemSGListConfigIndication);
-   SGListMMU#(PhysAddrWidth) hostmemSGList <- mkSGListMMU(0, True, hostmemSGListConfigIndicationProxy.ifc);
-   SGListConfigRequestWrapper hostmemSGListConfigRequestWrapper <- mkSGListConfigRequestWrapper(HostmemSGListConfigRequest, hostmemSGList.request);
+   MMUConfigIndicationProxy hostMMUConfigIndicationProxy <- mkMMUConfigIndicationProxy(HostMMUConfigIndication);
+   MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUConfigIndicationProxy.ifc);
+   MMUConfigRequestWrapper hostMMUConfigRequestWrapper <- mkMMUConfigRequestWrapper(HostMMUConfigRequest, hostMMU.request);
 
-   DmaDebugIndicationProxy hostmemDmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(HostmemDmaDebugIndication);
-   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerRW(hostmemDmaDebugIndicationProxy.ifc, readClients, writeClients, cons(hostmemSGList,nil));
-   DmaDebugRequestWrapper hostmemDmaDebugRequestWrapper <- mkDmaDebugRequestWrapper(HostmemDmaDebugRequest, dma.request);
+   DmaDebugIndicationProxy hostmemDmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(HostDmaDebugIndication);
+   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerRW(hostmemDmaDebugIndicationProxy.ifc, readClients, writeClients, cons(hostMMU,nil));
+   DmaDebugRequestWrapper hostmemDmaDebugRequestWrapper <- mkDmaDebugRequestWrapper(HostDmaDebugRequest, dma.request);
 
    Vector#(6,StdPortal) portals;
    portals[0] = fmcomms1RequestWrapper.portalIfc;
    portals[1] = fmcomms1IndicationProxy.portalIfc; 
    portals[2] = hostmemDmaDebugRequestWrapper.portalIfc;
    portals[3] = hostmemDmaDebugIndicationProxy.portalIfc; 
-   portals[4] = hostmemSGListConfigRequestWrapper.portalIfc;
-   portals[5] = hostmemSGListConfigIndicationProxy.portalIfc;
+   portals[4] = hostMMUConfigRequestWrapper.portalIfc;
+   portals[5] = hostMMUConfigIndicationProxy.portalIfc;
 
    
    

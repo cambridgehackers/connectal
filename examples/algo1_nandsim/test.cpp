@@ -34,7 +34,7 @@
 #include <mp.h>
 
 #include "StdDmaIndication.h"
-#include "SGListConfigRequestProxy.h"
+#include "MMUConfigRequestProxy.h"
 #include "GeneratedTypes.h" 
 #include "NandSimIndicationWrapper.h"
 #include "NandSimRequestProxy.h"
@@ -166,13 +166,13 @@ int main(int argc, const char **argv)
 {
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
-  SGListConfigRequestProxy *hostmemSGListConfigRequest = new SGListConfigRequestProxy(IfcNames_AlgoSGListConfigRequest);
-  DmaManager *hostmemDma = new DmaManager(NULL, hostmemSGListConfigRequest);
-  SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(hostmemDma, IfcNames_AlgoSGListConfigIndication);
+  MMUConfigRequestProxy *hostMMUConfigRequest = new MMUConfigRequestProxy(IfcNames_AlgoMMUConfigRequest);
+  DmaManager *hostmemDma = new DmaManager(NULL, hostMMUConfigRequest);
+  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(hostmemDma, IfcNames_AlgoMMUConfigIndication);
 
-  SGListConfigRequestProxy *nandsimSGListConfigRequest = new SGListConfigRequestProxy(IfcNames_NandsimSGListConfigRequest);
-  DmaManager *nandsimDma = new DmaManager(NULL, nandsimSGListConfigRequest);
-  SGListConfigIndication *nandsimSGListConfigIndication = new SGListConfigIndication(nandsimDma,IfcNames_NandsimSGListConfigIndication);
+  MMUConfigRequestProxy *nandsimMMUConfigRequest = new MMUConfigRequestProxy(IfcNames_NandsimMMUConfigRequest);
+  DmaManager *nandsimDma = new DmaManager(NULL, nandsimMMUConfigRequest);
+  MMUConfigIndication *nandsimMMUConfigIndication = new MMUConfigIndication(nandsimDma,IfcNames_NandsimMMUConfigIndication);
 
   StrstrRequestProxy *strstrRequest = new StrstrRequestProxy(IfcNames_AlgoRequest);
   StrstrIndication *strstrIndication = new StrstrIndication(IfcNames_AlgoIndication);
@@ -219,7 +219,7 @@ int main(int argc, const char **argv)
   // request the next sglist identifier from the sglistMMU hardware module
   // which is used by the mem server accessing flash memory.
   int id = 0;
-  SGListConfigRequestProxy_idRequest(nandsimDma->priv.sglDevice);
+  MMUConfigRequestProxy_idRequest(nandsimDma->priv.sglDevice);
   sem_wait(&nandsimDma->priv.sglIdSem);
   id = nandsimDma->priv.sglId;
   // pairs of ('offset','size') pointing to space in nandsim memory

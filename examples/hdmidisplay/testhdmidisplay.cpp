@@ -29,7 +29,7 @@
 #include "edid.h"
 
 #include "DmaDebugRequestProxy.h"
-#include "SGListConfigRequestProxy.h"
+#include "MMUConfigRequestProxy.h"
 #include "StdDmaIndication.h"
 #include "HdmiDisplayRequestProxy.h"
 #include "HdmiDisplayIndicationWrapper.h"
@@ -43,7 +43,7 @@
 static HdmiInternalRequestProxy *hdmiInternal;
 static HdmiDisplayRequestProxy *device;
 static DmaManager *dma;
-static SGListConfigRequestProxy *dmap;
+static MMUConfigRequestProxy *dmap;
 static int allocFrame[FRAME_COUNT];
 static unsigned int ref_srcAlloc[FRAME_COUNT];
 static int *dataptr[FRAME_COUNT];
@@ -141,11 +141,11 @@ int main(int argc, const char **argv)
 
     poller = new PortalPoller();
     device = new HdmiDisplayRequestProxy(IfcNames_HdmiDisplayRequest, poller);
-  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
-  dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
+  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
+  dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
   DmaManager *dma = new DmaManager(hostmemDmaDebugRequest, dmap);
-  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostmemDmaDebugIndication);
-  SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
+  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
+  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
 
     HdmiInternalIndicationWrapper *hdmiIndication = new HdmiIndication(IfcNames_HdmiInternalIndication);
     HdmiDisplayIndicationWrapper *displayIndication = new DisplayIndication(IfcNames_HdmiDisplayIndication);

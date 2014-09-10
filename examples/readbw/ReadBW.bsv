@@ -25,7 +25,7 @@ import GetPut::*;
 import AxiMasterSlave::*;
 import PcieToAxiBridge::*;
 import PortalMemory::*;
-import SGList::*;
+import MMU::*;
 
 interface CoreIndication;
     method Action loadValue(Bit#(128) value, Bit#(32) cycles);

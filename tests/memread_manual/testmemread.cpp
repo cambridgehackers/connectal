@@ -7,7 +7,7 @@
 
 #include "StdDmaIndication.h"
 #include "DmaDebugRequestProxy.h"
-#include "SGListConfigRequestProxy.h"
+#include "MMUConfigRequestProxy.h"
 #include "MemreadRequestProxy.h"
 #include "MemreadIndicationWrapper.h"
 
@@ -43,11 +43,11 @@ int main(int argc, const char **argv)
 {
   MemreadRequestProxy *device = new MemreadRequestProxy(IfcNames_MemreadRequest);
   MemreadIndication *deviceIndication = new MemreadIndication(IfcNames_MemreadIndication);
-  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
-  SGListConfigRequestProxy *dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
+  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
+  MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
   DmaManager *dma = new DmaManager(hostmemDmaDebugRequest, dmap);
-  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostmemDmaDebugIndication);
-  SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
+  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
+  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
 
   int srcAlloc;
   srcAlloc = portalAlloc(alloc_sz);

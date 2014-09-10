@@ -6,7 +6,7 @@
 #include "sock_utils.h"
 #include "StdDmaIndication.h"
 #include "DmaDebugRequestProxy.h"
-#include "SGListConfigRequestProxy.h"
+#include "MMUConfigRequestProxy.h"
 #include "MemwriteIndicationWrapper.h"
 #include "MemwriteRequestProxy.h"
 #include "dmaManager.h"
@@ -48,7 +48,7 @@ public:
 };
 
 MemwriteRequestProxy *device = 0;
-SGListConfigRequestProxy *dmap = 0;
+MMUConfigRequestProxy *dmap = 0;
 
 MemwriteIndication *deviceIndication = 0;
 
@@ -89,11 +89,11 @@ void parent(int rd_sock, int wr_sock)
 
   device = new MemwriteRequestProxy(IfcNames_MemwriteRequest);
   deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndication);
-  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
-  SGListConfigRequestProxy *dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
+  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
+  MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostmemMMUConfigRequest);
   DmaManager *dma = new DmaManager(hostmemDmaDebugRequest, dmap);
-  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostmemDmaDebugIndication);
-  SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
+  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
+  MMUConfigIndication *hostmemMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostmemMMUConfigIndication);
   
   fprintf(stderr, "parent::allocating memory...\n");
   dstAlloc = portalAlloc(alloc_sz);
