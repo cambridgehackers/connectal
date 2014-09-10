@@ -90,10 +90,10 @@ void parent(int rd_sock, int wr_sock)
   device = new MemwriteRequestProxy(IfcNames_MemwriteRequest);
   deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndication);
   DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
-  MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostmemMMUConfigRequest);
+  MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
   DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
   DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
-  MMUConfigIndication *hostmemMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostmemMMUConfigIndication);
+  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
   
   fprintf(stderr, "parent::allocating memory...\n");
   dstAlloc = portalAlloc(alloc_sz);

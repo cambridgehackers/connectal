@@ -4,7 +4,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-typedef enum IfcNames { IfcNames_HostmemDmaDebugIndication, IfcNames_HostmemDmaDebugRequest, IfcNames_NandsimDmaDebugIndication, IfcNames_NandsimDmaDebugRequest, IfcNames_BackingStoreSGListConfigRequest, IfcNames_BackingStoreSGListConfigIndication, IfcNames_AlgoSGListConfigRequest, IfcNames_AlgoSGListConfigIndication, IfcNames_NandsimSGListConfigRequest, IfcNames_NandsimSGListConfigIndication, IfcNames_NandSimIndication, IfcNames_NandSimRequest, IfcNames_AlgoIndication, IfcNames_AlgoRequest } IfcNames;
+typedef enum IfcNames { IfcNames_HostDmaDebugIndication, IfcNames_HostDmaDebugRequest, IfcNames_NandsimDmaDebugIndication, IfcNames_NandsimDmaDebugRequest, IfcNames_BackingStoreSGListConfigRequest, IfcNames_BackingStoreSGListConfigIndication, IfcNames_AlgoSGListConfigRequest, IfcNames_AlgoSGListConfigIndication, IfcNames_NandsimSGListConfigRequest, IfcNames_NandsimSGListConfigIndication, IfcNames_NandSimIndication, IfcNames_NandSimRequest, IfcNames_AlgoIndication, IfcNames_AlgoRequest } IfcNames;
 typedef enum ChannelType { ChannelType_Read, ChannelType_Write } ChannelType;
 typedef struct DmaDbgRec {
     uint32_t x : 32;

@@ -72,10 +72,10 @@ int runtest(int argc, const char **argv)
   device = new MemrwRequestProxy(IfcNames_MemrwRequest);
   deviceIndication = new MemrwIndication(IfcNames_MemrwIndication);
   DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
-  MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostmemMMUConfigRequest);
+  MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
   DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
   DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
-  MMUConfigIndication *hostmemMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostmemMMUConfigIndication);
+  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
 
