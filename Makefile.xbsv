@@ -56,8 +56,8 @@ endif
 XBSVFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) --ipdir=$(IPDIR)
 
 ifneq ($(NUMBER_OF_MASTERS), 0)
-S2H += DmaDebugRequest SGListConfigRequest
-H2S += DmaDebugIndication SGListConfigIndication
+S2H += DmaDebugRequest MMUConfigRequest
+H2S += DmaDebugIndication MMUConfigIndication
 BSVFILES += $(XBSVDIR)/bsv/PortalMemory.bsv
 CPPFILES += $(XBSVDIR)/cpp/dmaManager.c
 ifneq ($(CPPFILES2),)

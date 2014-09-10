@@ -40,7 +40,7 @@
 
 #include "GeneratedTypes.h" // generated in project directory
 #define DMAGetMemoryTraffic(P,A) DmaDebugRequestProxy_getMemoryTraffic((P), (A))
-#define SGListIdRequest(P) SGListConfigRequestProxy_idRequest((P));
+#define SGListIdRequest(P) MMUConfigRequestProxy_idRequest((P));
 #define KERNEL_REFERENCE
 
 static int trace_memory = 1;

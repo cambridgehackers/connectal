@@ -53,8 +53,8 @@ import "BDPI" function ActionValue#(Bit#(32)) pareff_init(Bit#(32) id, Bit#(32) 
 `endif
 `endif
 
-interface SGListMMU#(numeric type addrWidth);
-   interface SGListConfigRequest request;
+interface MMU#(numeric type addrWidth);
+   interface MMUConfigRequest request;
    interface Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addr;
 endinterface
 
@@ -82,7 +82,7 @@ typedef struct {DmaErrorType errorType;
 		Bit#(32) pref; } DmaError deriving (Bits);
 
 // the address translation servers (addr[0], addr[1]) have a latency of 8 and are fully pipelined
-module mkSGListMMU#(Integer iid, Bool bsimMMap, SGListConfigIndication sglIndication)(SGListMMU#(addrWidth))
+module mkMMU#(Integer iid, Bool bsimMMap, MMUConfigIndication mmuIndication)(MMU#(addrWidth))
    provisos(Log#(MaxNumSGLists, listIdxSize),
 	    Add#(listIdxSize,8, entryIdxSize),
 	    Add#(c__, addrWidth, ObjectOffsetSize));
@@ -120,7 +120,7 @@ module mkSGListMMU#(Integer iid, Bool bsimMMap, SGListConfigIndication sglIndica
    FIFO#(DmaError) dmaErrorFifo <- mkFIFO();
    rule dmaError;
       let error <- toGet(dmaErrorFifo).get();
-      sglIndication.error(extend(pack(error.errorType)), error.pref, -1, 0);
+      mmuIndication.error(extend(pack(error.errorType)), error.pref, -1, 0);
    endrule
 
 
@@ -154,7 +154,7 @@ module mkSGListMMU#(Integer iid, Bool bsimMMap, SGListConfigIndication sglIndica
 	 let cond4 = off4 < truncate(regionall.reg4.barrier);
 	 let cond0 = off < regionall.reg0.barrier;
 
-	 if (verbose) $display("mkSGListMMU::stage2: id=%d off=%d barrier8=%d", req.id, req.off, regionall.reg8.barrier);
+	 if (verbose) $display("mkMMU::stage2: id=%d off=%d barrier8=%d", req.id, req.off, regionall.reg8.barrier);
 	 
 	 conds[i].enq(tuple3(cond8,cond4,cond0));
 	 idxOffsets0[i].enq(tuple3(regionall.reg8.idxOffset,regionall.reg4.idxOffset, regionall.reg0.idxOffset));
@@ -170,19 +170,19 @@ module mkSGListMMU#(Integer iid, Bool bsimMMap, SGListConfigIndication sglIndica
 	 match{.idxOffset8,.idxOffset4,.idxOffset0} <- toGet(idxOffsets0[i]).get;
 
 	 if (cond8) begin
-	    if (verbose) $display("mkSGListMMU::request: req.id=%h req.off=%h", req.id, req.off);
+	    if (verbose) $display("mkMMU::request: req.id=%h req.off=%h", req.id, req.off);
 	    o.pageSize = 3;
 	    pbase = truncate(req.off>>page_shift8);
 	    idxOffset = idxOffset8;
 	 end
 	 else if (cond4) begin
-	    if (verbose) $display("mkSGListMMU::request: req.id=%h req.off=%h", req.id, req.off);
+	    if (verbose) $display("mkMMU::request: req.id=%h req.off=%h", req.id, req.off);
 	    o.pageSize = 2;
 	    pbase = truncate(req.off>>page_shift4);
 	    idxOffset = idxOffset4;
 	 end
 	 else if (cond0) begin
-	    if (verbose) $display("mkSGListMMU::request: req.id=%h req.off=%h", req.id, req.off);
+	    if (verbose) $display("mkMMU::request: req.id=%h req.off=%h", req.id, req.off);
 	    o.pageSize = 1;
 	    pbase = truncate(req.off>>page_shift0);
 	    idxOffset = idxOffset0;
@@ -200,10 +200,10 @@ module mkSGListMMU#(Integer iid, Bool bsimMMap, SGListConfigIndication sglIndica
 	 Bit#(IndexWidth) p = pbase + idxOffset;
 	 if (off.pageSize == 0) begin
 	    //FIXME offset
-	    if (verbose) $display("mkSGListMMU::addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
+	    if (verbose) $display("mkMMU::addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
 	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadAddrTrans, pref: extend(ptr) });
 	 end
-	 if (verbose) $display("mkSGListMMU::pages[%d].read %h", i, {ptr,p});
+	 if (verbose) $display("mkMMU::pages[%d].read %h", i, {ptr,p});
 	 portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
             address:{ptr,p}, datain:?});
 	 offs1[i].enq(off);
@@ -211,7 +211,7 @@ module mkSGListMMU#(Integer iid, Bool bsimMMap, SGListConfigIndication sglIndica
       rule stage5; // Concatenate page base address from sglist entry with LSB offset bits from request and return
 	 Page page <- portsel(pages, i).response.get;
 	 let offset <- toGet(offs1[i]).get();
-	 if (verbose) $display("mkSGListMMU::p ages[%d].response page=%h offset=%h", i, page, offset);
+	 if (verbose) $display("mkMMU::p ages[%d].response page=%h offset=%h", i, page, offset);
 	 Bit#(ObjectOffsetSize) rv = ?;
 	 Page4 b4 = truncate(page);
 	 Page8 b8 = truncate(page);
@@ -227,7 +227,7 @@ module mkSGListMMU#(Integer iid, Bool bsimMMap, SGListConfigIndication sglIndica
    FIFO#(SGListId) configRespFifo <- mkFIFO;
    rule sendConfigResp;
       let ptr <- toGet(configRespFifo).get();
-      sglIndication.configResp(extend(ptr));
+      mmuIndication.configResp(extend(ptr));
    endrule
 
    Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addrServers;
@@ -251,10 +251,10 @@ module mkSGListMMU#(Integer iid, Bool bsimMMap, SGListConfigIndication sglIndica
        endinterface);
 
    // FIXME: split this into three methods?
-   interface SGListConfigRequest request;
+   interface MMUConfigRequest request;
    method Action idRequest();
       nextId <= nextId+1;
-      sglIndication.idResponse((fromInteger(iid) << 16) | nextId);
+      mmuIndication.idResponse((fromInteger(iid) << 16) | nextId);
    endmethod
    method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) index8, Bit#(64) barr4, Bit#(32) index4, Bit#(64) barr0, Bit#(32) index0);
       portsel(regall, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
@@ -262,13 +262,13 @@ module mkSGListMMU#(Integer iid, Bool bsimMMap, SGListConfigIndication sglIndica
              reg8: SingleRegion{barrier: truncate(barr8), idxOffset: truncate(index8)},
              reg4: SingleRegion{barrier: truncate(barr4), idxOffset: truncate(index4)},
              reg0: SingleRegion{barrier: truncate(barr0), idxOffset: truncate(index0)}} });
-      if (verbose) $display("mkSGListMMU::region pointer=%d barr8=%h barr4=%h barr0=%h", pointer, barr8, barr4, barr0);
+      if (verbose) $display("mkMMU::region pointer=%d barr8=%h barr4=%h barr0=%h", pointer, barr8, barr4, barr0);
       configRespFifo.enq(truncate(pointer));
    endmethod
 
    method Action sglist(Bit#(32) pointer, Bit#(32) pointerIndex, Bit#(64) addr,  Bit#(32) len);
          if (fromInteger(iid) != pointer[31:16]) begin
-	    $display("mkSGListMMU::sglist ERROR");
+	    $display("mkMMU::sglist ERROR");
 	    $finish();
 	 end
 `ifdef BSIM
@@ -280,18 +280,18 @@ module mkSGListMMU#(Integer iid, Bool bsimMMap, SGListConfigIndication sglIndica
          Bit#(IndexWidth) ind = truncate(pointerIndex);
 	 portsel(pages, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
              address:{truncate(pointer),ind}, datain:truncate(addr)});
-         if (verbose) $display("mkSGListMMU::sglist pointer=%d pointerIndex=%d addr=%d len=%d", pointer, pointerIndex, addr, len);
+         if (verbose) $display("mkMMU::sglist pointer=%d pointerIndex=%d addr=%d len=%d", pointer, pointerIndex, addr, len);
    endmethod
    endinterface
    interface addr = addrServers;
 
 endmodule
 
-interface SglAddrServer#(numeric type addrWidth, numeric type numServers);
+interface MMUAddrServer#(numeric type addrWidth, numeric type numServers);
    interface Vector#(numServers,Server#(ReqTup,Bit#(addrWidth))) servers;
 endinterface
 
-module mkSglAddrServer#(Server#(ReqTup,Bit#(addrWidth)) server) (SglAddrServer#(addrWidth,numServers));
+module mkMMUAddrServer#(Server#(ReqTup,Bit#(addrWidth)) server) (MMUAddrServer#(addrWidth,numServers));
    
    FIFOF#(Bit#(TAdd#(1,TLog#(numServers)))) tokFifo <- mkSizedFIFOF(9);
    Vector#(numServers, Server#(ReqTup,Bit#(addrWidth))) addrServers;
