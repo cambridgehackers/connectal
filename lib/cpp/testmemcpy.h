@@ -61,9 +61,6 @@ public:
 
 int runtest(int argc, const char **argv)
 {
-  MemcpyRequestProxy *device = 0;
-  MemcpyIndication *deviceIndication = 0;
-
   if(sem_init(&done_sem, 1, 0)){
     fprintf(stderr, "failed to init done_sem\n");
     exit(1);
@@ -71,8 +68,8 @@ int runtest(int argc, const char **argv)
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
-  device = new MemcpyRequestProxy(IfcNames_MemcpyRequest);
-  deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndication);
+  MemcpyRequestProxy *device = new MemcpyRequestProxy(IfcNames_MemcpyRequest);
+  MemcpyIndication *deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndication);
   DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
   MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
   DmaManager *dma = new DmaManager(hostmemDmaDebugRequest, dmap);
@@ -154,16 +151,13 @@ int runtest(int argc, const char **argv)
 int runtest_chunk(int argc, const char **argv)
 {
 
-  MemcpyRequestProxy *device = 0;
-  MemcpyIndication *deviceIndication = 0;
-
   if(sem_init(&done_sem, 1, 0)){
     fprintf(stderr, "failed to init done_sem\n");
     exit(1);
   }
 
-  device = new MemcpyRequestProxy(IfcNames_MemcpyRequest);
-  deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndication);
+  MemcpyRequestProxy *device = new MemcpyRequestProxy(IfcNames_MemcpyRequest);
+  MemcpyIndication *deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndication);
   DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
   MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
   DmaManager *dma = new DmaManager(hostmemDmaDebugRequest, dmap);
