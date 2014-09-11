@@ -23,7 +23,7 @@
 import Gearbox::*;
 import ChannelSelect::*;
 import Complex::*;
-import FPCMult.bsv::*;
+import FPCMult::*;
 import FixedPoint::*;
 
 /* rfreqDataWrite data is FixedPoint(2,14) */
