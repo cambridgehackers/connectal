@@ -49,10 +49,7 @@ import FixedPoint::*;
 import Pipe::*;
 import FIFOF::*;
 import SpecialFIFOs::*;
-
-typedef FixedPoint#(2,16) Signal;
-typedef FixedPoint#(2,23) Coeff;
-typedef FixedPoint#(4,39) Product;
+import SDRTypes::*;
 
 typedef struct {
 		Complex#(Coeff) a;
