@@ -44,26 +44,27 @@ interface ChannelSelect;
 endinterface
 
 
-module mkChannelSelect#(UInt#(10) decimation)(ChannelSelect)
+module mkChannelSelect#(Bit#(10) decimation)(ChannelSelect)
    provisos(Bits#(CoeffData, a__),
 	    Bits#(ProductData, b__),
             Bits#(MulData, c__));
    BRAM_Configure cfg = defaultValue;
    cfg.memorySize = 1024;
-   BRAM2Port#(UInt#(8), Complex#(FixedPoint#(2,23))) coeffRam0 <- 
+   BRAM2Port#(Bit#(10), Complex#(FixedPoint#(2,23))) coeffRam0 <- 
        mkBRAM2Server(cfg);
-   BRAM2Port#(UInt#(8), Complex#(FixedPoint#(2,23))) coeffRam1 <- 
+   BRAM2Port#(Bit#(10), Complex#(FixedPoint#(2,23))) coeffRam1 <- 
        mkBRAM2Server(cfg);
-   Reg#(UInt#(10)) filterPhase <- mkReg(?);
+   Reg#(Bit#(10)) filterPhase <- mkReg(?);
    FIFO#(Bit#(1)) delayFilterPhase <- mkSizedFIFO(3);  // length > bram read latency
 
 
-   FIFOF#(Vector#(2, Signal)) infifo <- mkFIFOF();
-   FIFOF#(Vector#(2, Signal)) outfifo <- mkFIFOF();
+   FIFOF#(Vector#(2, Complex#(Signal))) infifo <- mkFIFOF();
+   FIFOF#(Complex#(Signal)) outfifo <- mkFIFOF();
    Vector#(2, FPCMult) mul <- replicateM(mkFPCMult());
-
-   Vector#(2, FIFO#(Complex#(Product))) accum <- replicateM(mkFIFO());
+   Vector#(2, Reg#(Complex#(Product))) accum <- replicateM(mkReg(?));
+   Vector#(2, FIFO#(Complex#(Product))) accumout <- replicateM(mkFIFO());
    FIFO#(Complex#(Product)) ycombined <- mkFIFO();
+   DDS dds <- mkDDS();
    FPCMult lo <- mkFPCMult();
 
    /* could do this with mkForkVector() but we don't need the extra FIFOs
@@ -72,8 +73,8 @@ module mkChannelSelect#(UInt#(10) decimation)(ChannelSelect)
    rule duplicateSignal;
       let v = infifo.first;
       infifo.deq();
-      mul[0].x.enq(v);
-      mul[1].x.enq(v);
+      mul[0].x.enq(v[0]);
+      mul[1].x.enq(v[1]);
    endrule
    
    rule filter_phase;
@@ -84,25 +85,26 @@ module mkChannelSelect#(UInt#(10) decimation)(ChannelSelect)
 	 end
       else
 	 begin
-	    filterPhase <= phase + 1;
+	    filterPhase <= filterPhase + 1;
 	    delayFilterPhase.enq(0);
 	 end
-      coeffRam0.portB.request.put(BRamRequest{write: False, responseOnWrite: False, address: filterPhase, datain: ?});
-      coeffRam1.portB.request.put(BRamRequest{write: False, responseOnWrite: False, address: filterPhase, datain: ?});
+      coeffRam0.portB.request.put(BRAMRequest{write: False, responseOnWrite: False, address: filterPhase, datain: ?});
+      coeffRam1.portB.request.put(BRAMRequest{write: False, responseOnWrite: False, address: filterPhase, datain: ?});
    endrule
    
    rule mulin;
       let c0 <- coeffRam0.portB.response.get();
       let c1 <- coeffRam1.portB.response.get();
-      let phase <- delayFilterPhase.get();
-      
-      mul[0].coeffData.enq(CoeffData{a: c0, filterPhase: phase});
-      mul[1].coeffData.enq(CoeffData{a: c1, filterPhase: phase});
+      Bit#(1) phase = delayFilterPhase.first();
+      delayFilterPhase.deq();
+      mul[0].a.enq(CoeffData{a: c0, filterPhase: phase});
+      mul[1].a.enq(CoeffData{a: c1, filterPhase: phase});
    endrule
    
    rule muloutaccumin0;
-      let m <- mul0.y.get();
-      if (m.filterPhase)
+      ProductData m = mul[0].y.first();
+      mul[0].y.deq();
+      if (m.filterPhase == 1)
 	 begin
 	    accum[0] <= m.y;
 	    accumout[0].enq(accum[0]);
@@ -114,8 +116,9 @@ module mkChannelSelect#(UInt#(10) decimation)(ChannelSelect)
    endrule
 
    rule muloutaccumin1;
-      let m <- mul1.y.get();
-      if (m.filterPhase)
+      ProductData m = mul[1].y.first();
+      mul[1].y.deq();
+      if (m.filterPhase == 1)
 	 begin
 	    accum[1] <= m.y;
 	    accumout[1].enq(accum[1]);
@@ -127,26 +130,40 @@ module mkChannelSelect#(UInt#(10) decimation)(ChannelSelect)
    endrule
 
    rule accumoutcombinein;
-      let a0 <- accumout[0].get();
-      let a1 <- accumout[1].get();
+      Complex#(Product) a0 = accumout[0].first();
+      Complex#(Product) a1 = accumout[1].first();
+      accumout[0].deq();
+      accumout[1].deq();
       ycombined.enq(a0 + a1);
    endrule
    
    rule combineoutloin;
-      let yin <- ycombined.get();
-      let loin <- dds.osc.get();
-      lo.x.enq(yin);
-      lo.coeffData.enq(loin);
+      Complex#(Product) yin = ycombined.first();
+      FixedPoint#(2,16) yrel = fxptTruncate(yin.rel);
+      FixedPoint#(2,16) yimg = fxptTruncate(yin.img);
+      DDSOutType loin = dds.osc.first();
+      dds.osc.deq();
+      ycombined.deq();
+      lo.x.enq(Complex{rel: yrel, img: yimg});
+      lo.a.enq(CoeffData{a: loin, filterPhase: 0});
+   endrule
+   
+   rule loout;
+      Complex#(Product) ifc = lo.y.first().y;
+      FixedPoint#(2,16) ifrel = fxptTruncate(ifc.rel);
+      FixedPoint#(2,16) ifimg = fxptTruncate(ifc.img);
+      outfifo.enq(Complex{rel: ifrel, img: ifimg});
+      lo.y.deq();
    endrule
    
    interface PipeIn rfreq = toPipeIn(infifo);
    
-   method Action setCoeff(Bit#(10) addr, Bit#(32) value);
-      int idx = addr[0];
+   method Action setCoeff(Bit#(10) addr, Complex#(FixedPoint#(2,23)) value);
+      Bit#(1) idx = addr[0];
       if (idx == 0)
-	 coeffRam0.portA.request.put(BRamRequest{write: True, responseOnWrite: False, address: addr[8:1], datain: unpack(pack(value))});
+	 coeffRam0.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: addr[10:1], datain: value});
       else
-	 coeffRam1.portA.request.put(BRamRequest{write: True, responseOnWrite: False, address: addr[8:1], datain: unpack(pack(value))});
+	 coeffRam1.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: addr[10:1], datain: value});
    endmethod
       
    interface PipeOut ifreq = toPipeOut(outfifo);
