@@ -32,7 +32,7 @@ MmRequestTNProxy *mmdevice = 0;
 #endif
 #include <MmIndicationWrapper.h>
 #include "DmaDebugRequestProxy.h"
-#include "SGListConfigRequestProxy.h"
+#include "MMUConfigRequestProxy.h"
 #include <StdDmaIndication.h>
 #include <stdio.h>
 #include <sys/mman.h>
@@ -53,7 +53,7 @@ class MmIndication;
 TimerRequestProxy *timerdevice = 0;
 MmIndication *mmdeviceIndication = 0;
 TimerIndication *timerdeviceIndication = 0;
-SGListConfigRequestProxy *dmap = 0;
+MMUConfigRequestProxy *dmap = 0;
 
 long dotprod = 0;
 
@@ -98,11 +98,11 @@ int main(int argc, const char **argv)
   timerdevice = new TimerRequestProxy(IfcNames_TimerRequestPortal, poller);
   timerdeviceIndication = new TimerIndication(IfcNames_TimerIndicationPortal);
 
-  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
-  dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
-  DmaManager *dma = new DmaManager(hostmemDmaDebugRequest, dmap);
-  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostmemDmaDebugIndication);
-  SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
+  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
+  dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
+  DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
+  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
+  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
 
   if(sem_init(&mul_sem, 1, 0)){
     fprintf(stderr, "failed to init mul_sem\n");

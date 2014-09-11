@@ -30,7 +30,7 @@ import Assert::*;
 // XBSV Libraries
 import MemTypes::*;
 import PortalMemory::*;
-import SGList::*;
+import MMU::*;
 
 `ifdef BSIM
 import "BDPI" function ActionValue#(Bit#(32)) pareff(Bit#(32) handle, Bit#(32) size);
@@ -336,7 +336,7 @@ module mkMemServer#(DmaIndication dmaIndication,
 	     Add#(g__, addrWidth, 40),
 	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth));
    
-   SGListMMU#(addrWidth) sgl <- mkSGListMMU(dmaIndication);
+   MMU#(addrWidth) sgl <- mkMMU(dmaIndication);
    FIFO#(void)   addrReqFifo <- mkFIFO;
 
    MemReadInternal#(addrWidth, dataWidth) reader <- mkMemReadInternal(readClients, dmaIndication, sgl.addr[0]);

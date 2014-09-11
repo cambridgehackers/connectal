@@ -28,14 +28,14 @@
 #include "StdDmaIndication.h"
 
 #include "DmaDebugRequestProxy.h"
-#include "SGListConfigRequestProxy.h"
+#include "MMUConfigRequestProxy.h"
 #include "PerfIndicationWrapper.h"
 #include "PerfRequestProxy.h"
 
 sem_t copy_sem;
 
 PerfRequestProxy *device = 0;
-SGListConfigRequestProxy *dmap = 0;
+MMUConfigRequestProxy *dmap = 0;
   
 int srcAlloc;
 int dstAlloc;
@@ -152,11 +152,11 @@ int main(int argc, const char **argv)
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
   device = new PerfRequestProxy(IfcNames_PerfRequest);
-  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
-  dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
-  DmaManager *dma = new DmaManager(hostmemDmaDebugRequest, dmap);
-  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostmemDmaDebugIndication);
-  SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
+  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
+  dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
+  DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
+  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
+  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
 
   deviceIndication = new PerfIndication(IfcNames_PerfIndication);
 

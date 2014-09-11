@@ -84,8 +84,8 @@ class DmaManager
     return DmaManager_show_mem_stats(&priv, rc);
   };
   void sglIdResp(uint32_t sglId) {
-    sem_post(&priv.sglIdSem);
     priv.sglId = sglId;
+    sem_post(&priv.sglIdSem);
   }
   void confResp(uint32_t channelId) {
     //fprintf(stderr, "configResp %d\n", channelId);

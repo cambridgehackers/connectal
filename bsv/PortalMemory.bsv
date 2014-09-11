@@ -68,18 +68,18 @@ interface DmaDebugIndication;
 endinterface
 
 //
-// @brief Events sent from a SGList
+// @brief Events sent from a MMU
 //
-interface SGListConfigIndication;
+interface MMUConfigIndication;
    method Action idResponse(Bit#(32) sglId);
    method Action configResp(Bit#(32) pointer);
    method Action error(Bit#(32) code, Bit#(32) pointer, Bit#(64) offset, Bit#(64) extra);
 endinterface
 
 //
-// @brief Configuration interface to an SGList
+// @brief Configuration interface to an MMU
 //
-interface SGListConfigRequest;
+interface MMUConfigRequest;
    //
    // @brief Adds an address translation entry to the scatter-gather list for an object
    //

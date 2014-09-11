@@ -23,20 +23,23 @@
 
 #include "dmaManager.h"
 #include "DmaDebugIndicationWrapper.h"
-#include "SGListConfigIndicationWrapper.h"
+#include "MMUConfigIndicationWrapper.h"
+
+class PortalPoller;
 
 static int error_limit = 20;
-class SGListConfigIndication : public SGListConfigIndicationWrapper
+class MMUConfigIndication : public MMUConfigIndicationWrapper
 {
   DmaManager *portalMemory;
  public:
-  SGListConfigIndication(DmaManager *pm, unsigned int  id) : SGListConfigIndicationWrapper(id), portalMemory(pm) {}
+  MMUConfigIndication(DmaManager *pm, unsigned int  id) : MMUConfigIndicationWrapper(id), portalMemory(pm) {}
+  MMUConfigIndication(DmaManager *pm, unsigned int  id, PortalPoller *poller) : MMUConfigIndicationWrapper(id,poller), portalMemory(pm) {}
   virtual void configResp(uint32_t pointer){
     fprintf(stderr, "configResp: %x\n", pointer);
     portalMemory->confResp(pointer);
   }
   virtual void error (uint32_t code, uint32_t pointer, uint64_t offset, uint64_t extra) {
-    fprintf(stderr, "SGListConfigIndication::error(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
+    fprintf(stderr, "MMUConfigIndication::error(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
     if (--error_limit < 0)
         exit(-1);
   }
@@ -49,6 +52,7 @@ class DmaDebugIndication : public DmaDebugIndicationWrapper
 {
   DmaManager *portalMemory;
  public:
+  DmaDebugIndication(DmaManager *pm, unsigned int  id, PortalPoller *poller) : DmaDebugIndicationWrapper(id,poller), portalMemory(pm) {}
   DmaDebugIndication(DmaManager *pm, unsigned int  id) : DmaDebugIndicationWrapper(id), portalMemory(pm) {}
   virtual void addrResponse(uint64_t physAddr){
     fprintf(stderr, "DmaIndication::addrResponse(physAddr=%"PRIx64")\n", physAddr);

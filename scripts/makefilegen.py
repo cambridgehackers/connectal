@@ -40,6 +40,7 @@ argparser.add_argument('-s2h', '--s2hinterface', help='BSV interface to generate
 argparser.add_argument('-h2s', '--h2sinterface', help='BSV interface to generate stubs for hardware to software communication', action='append')
 argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps project directory')
 argparser.add_argument('-s', '--source', help='C++ source files', action='append')
+argparser.add_argument(      '--source2', help='C++ second program source files', action='append')
 argparser.add_argument(      '--contentid', help='Specify 64-bit contentid for PCIe designs')
 argparser.add_argument('-I', '--cinclude', help='Specify C++ include directories', default=[], action='append')
 argparser.add_argument('-V', '--verilog', default=[], help='Additional verilog sources', action='append')
@@ -131,6 +132,7 @@ BSVDEFINES = %(bsvdefines)s
 QTUSED = %(qtused)s
 export BSVDEFINES_LIST = %(bsvdefines_list)s
 export DUT_NAME = %(Dut)s
+%(runsource2)s
 
 %(mdefines)s
 
@@ -172,6 +174,7 @@ CFLAGS = $(CFLAGS_COMMON)
 PORTAL_CPP_FILES = $(addprefix %(xbsvdir)s/cpp/, portal.c poller.cpp sock_utils.c timer.c)
 include %(project_dir)s/jni/Makefile.generated_files
 SOURCES = $(addprefix %(project_dir)s/jni/,  $(GENERATED_CPP)) %(source)s $(PORTAL_CPP_FILES)
+SOURCES2 = $(addprefix %(project_dir)s/jni/,  $(GENERATED_CPP)) %(source2)s $(PORTAL_CPP_FILES)
 LDLIBS := %(clibdirs)s %(clibs)s -pthread 
 
 BSIM_EXE_CXX_FILES = BsimDma.cxx BsimCtrl.cxx TlpReplay.cxx
@@ -180,8 +183,14 @@ BSIM_EXE_CXX = $(addprefix %(xbsvdir)s/cpp/, $(BSIM_EXE_CXX_FILES))
 ubuntu_exe: $(SOURCES)
 	$(Q)g++ $(CFLAGS) -o ubuntu_exe $(SOURCES) $(LDLIBS)
 
+ubuntu_exe2: $(SOURCES2)
+	$(Q)g++ $(CFLAGS) -o ubuntu_exe2 $(SOURCES2) $(LDLIBS)
+
 bsim_exe: $(SOURCES)
 	$(Q)g++ $(CFLAGS_COMMON) -o bsim_exe -DBSIM $(SOURCES) $(BSIM_EXE_CXX) $(LDLIBS)
+
+bsim_exe2: $(SOURCES2)
+	$(Q)g++ $(CFLAGS_COMMON) -o bsim_exe2 -DBSIM $(SOURCES2) $(BSIM_EXE_CXX) $(LDLIBS)
 '''
 
 if __name__=='__main__':
@@ -199,6 +208,8 @@ if __name__=='__main__':
         noisyFlag = True
     if not options.source:
         options.source = []
+    if not options.source2:
+        options.source2 = []
     if not options.bsimsource:
         options.bsimsource = []
     if not options.constraint:
@@ -266,6 +277,7 @@ if __name__=='__main__':
         'sourceincludes': ' '.join(['-I%s' % os.path.dirname(os.path.abspath(sf)) for sf in options.source]) if options.source else '',
         #common
         'source': ' '.join([os.path.abspath(sf) for sf in options.source]) if options.source else '',
+        'source2': ' '.join([os.path.abspath(sf) for sf in options.source2]) if options.source2 else '',
         'xbsvdir': xbsvdir,
 	'clibs': ' '.join(['-l%s' % l for l in options.clib]),
 	'clibfiles': ' '.join(['%s' % l for l in options.clibfiles]),
@@ -342,9 +354,9 @@ if __name__=='__main__':
                                    's2hinterface': ' '.join(options.s2hinterface),
                                    'h2sinterface': ' '.join(options.h2sinterface),
                                    'bsvfiles': ' '.join([ os.path.abspath(bsvfile) for bsvfile in options.bsvfile]),
-                                   'sourcefiles': ' '.join([os.path.abspath(source) for source in options.source]) if options.source else '',
                                    'bsimsource': ' '.join([os.path.abspath(bsimsource) for bsimsource in options.bsimsource]) if options.bsimsource else '',
                                    'includepath': ' '.join(['-I%s' % os.path.dirname(os.path.abspath(source)) for source in options.source]) if options.source else '',
+                                   'runsource2': 'RUNSOURCE2=1' if options.source2 else '',
                                    'project_dir': project_dir,
                                    'topbsvfile' : os.path.abspath(topbsv),
                                    'topbsvmod'  : dutname,

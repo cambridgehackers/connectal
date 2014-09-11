@@ -30,8 +30,7 @@
 #include <sys/un.h>
 
 #include "StdDmaIndication.h"
-#include "DmaDebugRequestProxy.h"
-#include "SGListConfigRequestProxy.h"
+#include "MMUConfigRequestProxy.h"
 #include "GeneratedTypes.h" 
 #include "NandSimIndicationWrapper.h"
 #include "NandSimRequestProxy.h"
@@ -124,34 +123,18 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
-  DmaDebugRequestProxy *hostmemDmaDebugRequest = 0;
-  DmaDebugIndication *hostmemDmaDebugIndication = 0;
+  MMUConfigRequestProxy *hostMMUConfigRequest = new MMUConfigRequestProxy(IfcNames_BackingStoreMMUConfigRequest);
+  DmaManager *hostDma = new DmaManager(NULL, hostMMUConfigRequest);
+  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(hostDma, IfcNames_BackingStoreMMUConfigIndication);
 
-  SGListConfigRequestProxy *hostmemSGListConfigRequest = 0;
-  SGListConfigIndication *hostmemSGListConfigIndication = 0;
-
-  NandSimRequestProxy *nandsimRequest = 0;
-  NandSimIndication *nandsimIndication = 0;
-
-  fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
-
-  hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
-  hostmemSGListConfigRequest = new SGListConfigRequestProxy(IfcNames_BackingStoreSGListConfigRequest);
-  DmaManager *hostmemDma = new DmaManager(hostmemDmaDebugRequest, hostmemSGListConfigRequest);
-
-  hostmemDmaDebugIndication = new DmaDebugIndication(hostmemDma, IfcNames_HostmemDmaDebugIndication);
-  hostmemSGListConfigIndication = new SGListConfigIndication(hostmemDma, IfcNames_BackingStoreSGListConfigIndication);
-
-  nandsimRequest = new NandSimRequestProxy(IfcNames_NandSimRequest);
-  nandsimIndication = new NandSimIndication(IfcNames_NandSimIndication);
-
+  NandSimRequestProxy *nandsimRequest = new NandSimRequestProxy(IfcNames_NandSimRequest);
+  NandSimIndication *nandsimIndication = new NandSimIndication(IfcNames_NandSimIndication);
 
   portalExec_start();
 
-
   int nandAlloc = portalAlloc(nandBytes);
   fprintf(stderr, "nandAlloc=%d\n", nandAlloc);
-  int ref_nandAlloc = hostmemDma->reference(nandAlloc);
+  int ref_nandAlloc = hostDma->reference(nandAlloc);
   fprintf(stderr, "ref_nandAlloc=%d\n", ref_nandAlloc);
 #ifdef SANITY0
   unsigned int *nandBuffer = (unsigned int*)portalMmap(nandAlloc, nandBytes); 
@@ -162,13 +145,14 @@ int main(int argc, const char **argv)
   nandsimRequest->configureNand(ref_nandAlloc, nandBytes);
   nandsimIndication->wait();
 
+#ifndef ALGO1_NANDSIM
   if (argc == 1) {
 
     fprintf(stderr, "Main::allocating memory...\n");
     size_t srcBytes = nandBytes>>2;
     int srcAlloc = portalAlloc(srcBytes);
     unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, srcBytes);
-    unsigned int ref_srcAlloc = hostmemDma->reference(srcAlloc);
+    unsigned int ref_srcAlloc = hostDma->reference(srcAlloc);
     fprintf(stderr, "fd=%d, srcBuffer=%p\n", srcAlloc, srcBuffer);
 
     /* do tests */
@@ -232,14 +216,16 @@ int main(int argc, const char **argv)
     }
     /* end */
     
-    uint64_t beats_r = hostmemDma->show_mem_stats(ChannelType_Read);
-    uint64_t beats_w = hostmemDma->show_mem_stats(ChannelType_Write);
+    //uint64_t beats_r = hostDma->show_mem_stats(ChannelType_Read);
+    //uint64_t beats_w = hostDma->show_mem_stats(ChannelType_Write);
 
     fprintf(stderr, "Main::Summary: match=%lu mismatch:%lu (%lu) (%f percent)\n", match, mismatch, match+mismatch, (float)mismatch/(float)(match+mismatch)*100.0);
-    fprintf(stderr, "(%"PRIx64", %"PRIx64")\n", beats_r, beats_w);
+    //fprintf(stderr, "(%"PRIx64", %"PRIx64")\n", beats_r, beats_w);
     
     return (mismatch > 0);
-  } else {
+  } else
+#endif
+  {
 
     // else we were invoked by alg1_nandsim
     const char *filename = "../haystack.txt";
@@ -249,7 +235,7 @@ int main(int argc, const char **argv)
     uint32_t data_len = lseek(dataFile, 0, SEEK_END);
     lseek(dataFile, 0, SEEK_SET);
     int dataAlloc = portalAlloc(data_len);
-    int ref_dataAlloc = hostmemDma->reference(dataAlloc);
+    int ref_dataAlloc = hostDma->reference(dataAlloc);
     char *data = (char *)portalMmap(dataAlloc, data_len);
     if(read(dataFile, data, data_len) != data_len) {
       fprintf(stderr, "error reading %s %d\n", filename, (int)data_len);

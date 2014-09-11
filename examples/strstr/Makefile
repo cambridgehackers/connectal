@@ -1,7 +1,7 @@
 
 S2H = StrstrRequest
 H2S = StrstrIndication
-BSVFILES = Strstr.bsv Top.bsv
+BSVFILES = ../../lib/bsv/Strstr.bsv Top.bsv
 CPPFILES=teststrstr.cpp
 #XBSVFLAGS=--bscflags " -D TRACE_AXI"
 

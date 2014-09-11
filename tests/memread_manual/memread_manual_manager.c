@@ -56,11 +56,15 @@ void MemreadIndicationWrapperreadDone_cb (  struct PortalInternal *p, const uint
          PORTAL_PRINTF( "Memread_readDone(mismatch = %x)\n", mismatchCount);
          sem_post(&test_sem);
 }
-void SGListConfigIndicationWrapperconfigResp_cb (  struct PortalInternal *p, const uint32_t pointer)
+void MMUConfigIndicationWrapperconfigResp_cb (  struct PortalInternal *p, const uint32_t pointer)
 {
         //PORTAL_PRINTF("configResp %x\n", pointer);
         sem_post(&priv.confSem);
 }
+void MMUConfigIndicationWrapperidResponse_cb (  struct PortalInternal *p, const uint32_t sglId ) {
+        priv.sglId = sglId;
+        sem_post(&priv.sglIdSem);
+};
 void DmaDebugIndicationWrapperaddrResponse_cb (  struct PortalInternal *p, const uint64_t physAddr )
 {
         PORTAL_PRINTF("DmaIndication_addrResponse(physAddr=%"PRIx64")\n", physAddr);
@@ -76,7 +80,7 @@ void DmaDebugIndicationWrapperreportMemoryTraffic_cb (  struct PortalInternal *p
         priv.mtCnt = words;
         sem_post(&priv.mtSem);
 }
-void SGListConfigIndicationWrappererror_cb (  struct PortalInternal *p, const uint32_t code, const uint32_t pointer, const uint64_t offset, const uint64_t extra ) {
+void MMUConfigIndicationWrappererror_cb (  struct PortalInternal *p, const uint32_t code, const uint32_t pointer, const uint64_t offset, const uint64_t extra ) {
 static int maxnumber = 10;
 if (maxnumber-- > 0)
         PORTAL_PRINTF("DmaIndication::dmaError(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
@@ -143,9 +147,9 @@ int main(int argc, const char **argv)
   int rc = 0, i;
   pthread_t tid = 0;
 
-  init_portal_internal(&intarr[0], IfcNames_HostmemSGListConfigIndication, SGListConfigIndicationWrapper_handleMessage);// fpga1
+  init_portal_internal(&intarr[0], IfcNames_HostMMUConfigIndication, MMUConfigIndicationWrapper_handleMessage);// fpga1
   init_portal_internal(&intarr[1], IfcNames_MemreadIndication, MemreadIndicationWrapper_handleMessage); // fpga2
-  init_portal_internal(&intarr[2], IfcNames_HostmemSGListConfigRequest, SGListConfigRequestProxy_handleMessage); // fpga3
+  init_portal_internal(&intarr[2], IfcNames_HostMMUConfigRequest, MMUConfigRequestProxy_handleMessage); // fpga3
   init_portal_internal(&intarr[3], IfcNames_MemreadRequest, MemreadRequestProxy_handleMessage);    // fpga4
 
   sem_init(&test_sem, 0, 0);

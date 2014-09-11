@@ -41,7 +41,7 @@ typedef 20 SGListPageShift8;
 typedef Bit#(TLog#(MaxNumSGLists)) RegionsIdx;
 typedef Tuple2#(SGListId,Bit#(ObjectOffsetSize)) ReqTup;
 
-interface SGListMMU#(numeric type addrWidth);
+interface MMU#(numeric type addrWidth);
    method Action sglist(Bit#(32) pointer, Bit#(40) paddr, Bit#(32) len);
    method Action region(Bit#(32) ptr, Bit#(40) barr8, Bit#(8) off8, Bit#(40) barr4, Bit#(8) off4, Bit#(40) barr0, Bit#(8) off0);
    interface Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addr;
@@ -64,7 +64,7 @@ typedef struct {
    Bit#(8) idxOffset;
    } Region deriving (Eq,Bits,FShow);
 
-module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
+module mkMMU#(DmaIndication dmaIndication)(MMU#(addrWidth))
    
    provisos(Log#(MaxNumSGLists, listIdxSize),
 	    Add#(listIdxSize,8, entryIdxSize),
@@ -153,7 +153,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 end
 	 else if (pageSize == 0) begin
 	    //FIXME offset
-	    //$display("mkSGListMMU.addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
+	    //$display("mkMMU.addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
 	    dmaIndication.badAddrTrans(extend(ptr), -1, 0);
 	 end
 	 let address = {ptr-1,p};
@@ -250,7 +250,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	       page = tagged POrd8 truncate(paddr>>page_shift8);
 	    end
 	    if (extend(len) > ord8) begin
-	       $display("mkSGListMMU::sglist unsupported length %h", len);
+	       $display("mkMMU::sglist unsupported length %h", len);
 	       dmaIndication.badPageSize(extend(ptr), len);
 	    end
 	 end

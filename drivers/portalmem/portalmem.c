@@ -102,6 +102,58 @@ static struct vm_operations_struct custom_vm_ops = {
     .access = custom_vma_access,
 };
 
+#ifdef __arm__
+#include <linux/sched.h>
+#include "asm/thread_info.h"
+#include "asm-generic/current.h"
+static void llshow_pte(struct mm_struct *mm, unsigned long addr)
+{
+	pgd_t *pgd; 
+	//if (!mm) //mm = &init_mm; 
+	printk(KERN_ALERT "pgd = %p\n", mm->pgd);
+	pgd = pgd_offset(mm, addr);
+	printk(KERN_ALERT "[%08lx] *pgd=%08llx", addr, (long long)pgd_val(*pgd)); 
+	do {
+		pud_t *pud;
+		pmd_t *pmd;
+		pte_t *pte; 
+		if (pgd_none(*pgd))
+			break; 
+		if (pgd_bad(*pgd)) {
+			printk("(bad)");
+			break;
+		} 
+		pud = pud_offset(pgd, addr);
+		if (PTRS_PER_PUD != 1)
+			printk(", *pud=%08llx", (long long)pud_val(*pud)); 
+		if (pud_none(*pud))
+			break; 
+		if (pud_bad(*pud)) {
+			printk("(bad)");
+			break;
+		} 
+		pmd = pmd_offset(pud, addr);
+		if (PTRS_PER_PMD != 1)
+			printk(", *pmd=%08llx", (long long)pmd_val(*pmd)); 
+		if (pmd_none(*pmd))
+			break; 
+		if (pmd_bad(*pmd)) {
+			printk("(bad)");
+			break;
+		} 
+		/* We must not map this if we have highmem enabled */
+		if (PageHighMem(pfn_to_page(pmd_val(*pmd) >> PAGE_SHIFT)))
+			break; 
+		pte = pte_offset_map(pmd, addr);
+		printk(", *pte=%08llx", (long long)pte_val(*pte));
+#ifndef CONFIG_ARM_LPAE
+		printk(", *ppte=%08llx", (long long)pte_val(pte[PTE_HWTABLE_PTRS]));
+#endif
+		pte_unmap(pte);
+	} while(0);
+	printk("\n");
+}
+#endif
 static int pa_dma_buf_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
 {
   struct pa_buffer *buffer = dmabuf->priv;
@@ -113,7 +165,13 @@ static int pa_dma_buf_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
   vma->vm_ops = &custom_vm_ops;
   vma->vm_private_data = buffer;
   printk("pa_dma_buf_mmap %p %zd\n", (dmabuf->file), dmabuf->file->f_count.counter);
+#if 0
+  // this is disabled so that ld/strex work correctly on arm (in C: __gnu_cxx::__exchange_and_add )
+  // According to Arm ARM A3.4.5: "LDREX and STREX ... only on memory with Normal"
+  // According to Arm ARM B3.7.2: TEX[2:0]/C/B == 000/0/1 -> "Device", 001/1/1 -> "Normal"
+  // (this is the difference between calling pgprot_writecombine() or not)
   vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
+#endif
   mutex_lock(&buffer->lock);
   /* now map it to userspace */
   {
@@ -127,7 +185,7 @@ static int pa_dma_buf_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
       unsigned long remainder = vma->vm_end - addr;
       unsigned int len = sg->length; // sg->length is unsigned int
       //printk("pa_system_heap_map_user %08x %08x\n", sg->length, sg_dma_len(sg));
-      //printk("(1) pa_system_heap_map_user %08lx %08lx %08lx\n", (unsigned long) page, remainder, len);
+      //printk("(1) pa_system_heap_map_user %08lx %08lx %08x\n", (unsigned long) page, remainder, len);
       if (offset >= (sg->length)) {
         //printk("feck %08lx %08x\n", offset, (sg->length));
         offset -= (sg->length);
@@ -141,6 +199,9 @@ static int pa_dma_buf_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
       //printk("(2) pa_system_heap_map_user %08lx %08lx %08lx\n", addr, (unsigned long)page, page_to_pfn(page));
       remap_pfn_range(vma, addr, page_to_pfn(page), len,
 		      vma->vm_page_prot);
+#ifdef __arm__
+      llshow_pte(current->mm, (unsigned long) addr);
+#endif
       addr += len;
       if (addr >= vma->vm_end)
         break;

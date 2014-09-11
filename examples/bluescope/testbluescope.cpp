@@ -31,7 +31,7 @@
 #include "BlueScopeIndicationWrapper.h"
 #include "BlueScopeRequestProxy.h"
 #include "DmaDebugRequestProxy.h"
-#include "SGListConfigRequestProxy.h"
+#include "MMUConfigRequestProxy.h"
 #include "MemcpyIndicationWrapper.h"
 #include "MemcpyRequestProxy.h"
 
@@ -138,11 +138,11 @@ int main(int argc, const char **argv)
 
   device = new MemcpyRequestProxy(IfcNames_MemcpyRequest);
   bluescope = new BlueScopeRequestProxy(IfcNames_BluescopeRequest);
-  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
-  SGListConfigRequestProxy *dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
-  DmaManager *dma = new DmaManager(hostmemDmaDebugRequest, dmap);
-  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostmemDmaDebugIndication);
-  SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
+  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
+  MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
+  DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
+  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
+  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
 
   deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndication);
   bluescopeIndication = new BlueScopeIndication(IfcNames_BluescopeIndication);
@@ -188,11 +188,11 @@ int main(int argc, const char **argv)
   bluescope->start(ref_bsAlloc, alloc_sz);
 
   sleep(1);
-  hostmemDmaDebugRequest->addrRequest(ref_srcAlloc, 1*sizeof(unsigned int));
+  hostDmaDebugRequest->addrRequest(ref_srcAlloc, 1*sizeof(unsigned int));
   sleep(1);
-  hostmemDmaDebugRequest->addrRequest(ref_dstAlloc, 2*sizeof(unsigned int));
+  hostDmaDebugRequest->addrRequest(ref_dstAlloc, 2*sizeof(unsigned int));
   sleep(1);
-  hostmemDmaDebugRequest->addrRequest(ref_bsAlloc, 3*sizeof(unsigned int));
+  hostDmaDebugRequest->addrRequest(ref_bsAlloc, 3*sizeof(unsigned int));
   sleep(1);
   
   fprintf(stderr, "Main::starting mempcy numWords:%d\n", numWords);
