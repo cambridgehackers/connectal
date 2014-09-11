@@ -41,6 +41,8 @@ endinterface
 /* rfreqDataWrite data is FixedPoint(2,14) */
 interface ChannelSelectTestIndication;
    method Action ifreqData(Bit#(32) dataRe, Bit#(32) dataIm);
+   method Action setDataResp();
+   method Action setCoeffResp();
 endinterface
 
 module mkChannelSelectTestRequest#(ChannelSelectTestIndication indication) (ChannelSelectTestRequest);
@@ -67,12 +69,14 @@ module mkChannelSelectTestRequest#(ChannelSelectTestIndication indication) (Chan
       Vector#(1, Complex#(Signal)) x = newVector();
       x[0] = Complex{rel: re, img: im};
       gb.enq(x);
+      indication.setDataResp();
    endmethod
 
    method Action setCoeff(Bit#(11) addr, Bit#(32) valueRe, Bit#(32) valueIm);
     FixedPoint#(2, 23) re = unpack(pack(truncate(valueRe)));
     FixedPoint#(2, 23) im = unpack(pack(truncate(valueIm)));
       cs.setCoeff(addr, Complex{rel: re, img:im});
+      indication.setCoeffResp();
    endmethod
 endmodule
 
