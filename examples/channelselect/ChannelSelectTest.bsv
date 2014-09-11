@@ -24,6 +24,7 @@ import DDS::*;
 import Gearbox::*;
 import ChannelSelect::*;
 import Complex::*;
+import SDRTypes::*;
 import FPCMult::*;
 import FixedPoint::*;
 import Pipe::*;
@@ -42,10 +43,7 @@ interface ChannelSelectTestIndication;
    method Action ifreqData(Bit#(32) dataRe, Bit#(32) dataIm);
 endinterface
 
-module mkChannelSelectTestRequest#(ChannelSelectTestIndication indication) (ChannelSelectTestRequest)
-   provisos(Bits#(CoeffData, a__),
-	    Bits#(ProductData, b__),
-	    Bits#(MulData, c__));
+module mkChannelSelectTestRequest#(ChannelSelectTestIndication indication) (ChannelSelectTestRequest);
    Clock clk <- exposeCurrentClock;
    Reset rst <- exposeCurrentReset;
    Gearbox#(1, 2, Complex#(Signal)) gb <- mk1toNGearbox(clk, rst, clk, rst);
