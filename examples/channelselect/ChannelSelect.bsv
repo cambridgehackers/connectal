@@ -41,7 +41,7 @@ import DDS::*;
 interface ChannelSelect;
    interface PipeIn#(Vector#(2, Complex#(Signal))) rfreq;
    interface PipeOut#(Complex#(Signal)) ifreq;
-   method Action setCoeff(Bit#(11) addr, Bit#(32) valre, Bit#(32) valim);
+   method Action setCoeff(Bit#(11) addr, Complex#(FixedPoint#(2,23)) value);
 endinterface
 
 
@@ -131,8 +131,6 @@ module mkChannelSelect#(Bit#(10) decimation)(ChannelSelect)
    rule accumoutcombinein;
       Complex#(Product) a0 = accumout[0].first();
       Complex#(Product) a1 = accumout[1].first();
-      accumout[0].deq();
-      accumout[1].deq();
       ycombined.enq(a0 + a1);
       accumout[0].deq();
       accumout[1].deq();
@@ -159,7 +157,7 @@ module mkChannelSelect#(Bit#(10) decimation)(ChannelSelect)
    
    interface PipeIn rfreq = toPipeIn(infifo);
    
-   method Action setCoeff(Bit#(10) addr, Complex#(FixedPoint#(2,23)) value);
+   method Action setCoeff(Bit#(11) addr, Complex#(FixedPoint#(2,23)) value);
       Bit#(1) idx = addr[0];
       if (idx == 0)
 	 coeffRam0.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: addr[10:1], datain: value});
