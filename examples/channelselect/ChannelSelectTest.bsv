@@ -23,21 +23,23 @@
 import DDS::*;
 import Gearbox::*;
 import ChannelSelect::*;
+import Complex::*;
 import FPCMult::*;
 import FixedPoint::*;
-import Complex::*;
+import Pipe::*;
+import Vector::*;
 
 /* rfreqDataWrite data is FixedPoint(2,14) */
 /* setCoeff data is FixedPoint(2, 23) */
 interface ChannelSelectTestRequest;
-   method Action rfreqDataWrite(Bit#(16) dataRe, Bit#(16) dataIm);
+   method Action rfreqDataWrite(Bit#(32) dataRe, Bit#(32) dataIm);
    method Action setCoeff(Bit#(10) addr, Bit#(32) valueRe, Bit#(32) valueIm);
 endinterface
 
 
 /* rfreqDataWrite data is FixedPoint(2,14) */
 interface ChannelSelectTestIndication;
-   method Action ifreqData(Bit#(16) dataRe, Bit#(16) dataIm);
+   method Action ifreqData(Bit#(32) dataRe, Bit#(32) dataIm);
 endinterface
 
 module mkChannelSelectTestRequest#(ChannelSelectTestIndication indication) (ChannelSelectTestRequest)
@@ -59,13 +61,15 @@ module mkChannelSelectTestRequest#(ChannelSelectTestIndication indication) (Chan
    rule processIF;
       let data = cs.ifreq.first();
       cs.ifreq.deq();
-      indication.ifreqData(data);
+      indication.ifreqData(zeroExtend(pack(data.rel)), zeroExtend(pack(data.img)));
    endrule
    
-   method Action rfreqDataBit(Bit#(16) dataRe, Bit#(16) dataIm);
-      FixedPoint#(2,14) re = unpack(pack(dataRe));
-      FixedPoint#(2,14) im = unpack(pack(dataIm));
-      gb.enq(Complex{rel: re, img: im});
+   method Action rfreqDataWrite(Bit#(32) dataRe, Bit#(32) dataIm);
+      Signal re = unpack(truncate(dataRe));
+      Signal im = unpack(truncate(dataIm));
+      Vector#(1, Complex#(Signal)) x = newVector();
+      x[0] = Complex{rel: re, img: im};
+      gb.enq(x);
    endmethod
 
    method Action setCoeff(Bit#(10) addr, Bit#(32) valueRe, Bit#(32) valueIm);

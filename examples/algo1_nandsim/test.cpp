@@ -34,7 +34,8 @@
 #include <mp.h>
 
 #include "StdDmaIndication.h"
-#include "DmaConfigProxy.h"
+#include "DmaDebugRequestProxy.h"
+#include "SGListConfigRequestProxy.h"
 #include "GeneratedTypes.h" 
 #include "NandSimIndicationWrapper.h"
 #include "NandSimRequestProxy.h"
@@ -164,28 +165,39 @@ unsigned int read_from_nandsim_exe()
 
 int main(int argc, const char **argv)
 {
-  DmaConfigProxy *dmaConfig = 0;
-  DmaIndication *dmaIndication = 0;
+
+  DmaDebugRequestProxy *hostmemDmaDebugRequest = 0;
+  DmaDebugIndication *hostmemDmaDebugIndication = 0;
+
+  SGListConfigRequestProxy *hostmemSGListConfigRequest = 0;
+  SGListConfigIndication *hostmemSGListConfigIndication = 0;
+
+  SGListConfigRequestProxy *nandsimSGListConfigRequest = 0;
+  SGListConfigIndication *nandsimSGListConfigIndication = 0;
 
   StrstrRequestProxy *strstrRequest = 0;
   StrstrIndication *strstrIndication = 0;
 
-  DmaConfigProxy *nandsimDmaConfig = 0;
-  DmaIndication *nandsimDmaIndication = 0;
+  DmaDebugRequestProxy *nandsimDmaDebugRequest = 0;
+  DmaDebugIndication *nandsimDmaDebugIndication = 0;
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
-  dmaConfig = new DmaConfigProxy(IfcNames_DmaConfig);
-  DmaManager *dma = new DmaManager(dmaConfig);
-  dma->priv.handle = 4; // so doesn't overlap with nandsim
-  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
+  hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
+  hostmemSGListConfigRequest = new SGListConfigRequestProxy(IfcNames_AlgoSGListConfigRequest);
+  DmaManager *hostmemDma = new DmaManager(hostmemDmaDebugRequest, hostmemSGListConfigRequest);
+
+  hostmemDmaDebugIndication = new DmaDebugIndication(hostmemDma, IfcNames_HostmemDmaDebugIndication);
+  hostmemSGListConfigIndication = new SGListConfigIndication(hostmemDma, IfcNames_AlgoSGListConfigIndication);
 
   strstrRequest = new StrstrRequestProxy(IfcNames_AlgoRequest);
   strstrIndication = new StrstrIndication(IfcNames_AlgoIndication);
 
-  nandsimDmaConfig = new DmaConfigProxy(IfcNames_NandsimDmaConfig);
-  DmaManager *nandsimDma = new DmaManager(nandsimDmaConfig);
-  nandsimDmaIndication = new DmaIndication(nandsimDma,IfcNames_NandsimDmaIndication);
+  nandsimDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_NandsimDmaDebugRequest);
+  nandsimSGListConfigRequest = new SGListConfigRequestProxy(IfcNames_NandsimSGListConfigRequest);
+  DmaManager *nandsimDma = new DmaManager(nandsimDmaDebugRequest, nandsimSGListConfigRequest);
+  nandsimDmaDebugIndication = new DmaDebugIndication(nandsimDma,IfcNames_NandsimDmaDebugIndication);
+  nandsimSGListConfigIndication = new SGListConfigIndication(nandsimDma,IfcNames_NandsimSGListConfigIndication);
 
   portalExec_start();
   fprintf(stderr, "Main::allocating memory...\n");
@@ -193,8 +205,11 @@ int main(int argc, const char **argv)
   // allocate memory for strstr data
   int needleAlloc = portalAlloc(numBytes);
   int mpNextAlloc = portalAlloc(numBytes);
-  int ref_needleAlloc = dma->reference(needleAlloc);
-  int ref_mpNextAlloc = dma->reference(mpNextAlloc);
+  int ref_needleAlloc = hostmemDma->reference(needleAlloc);
+  int ref_mpNextAlloc = hostmemDma->reference(mpNextAlloc);
+
+  fprintf(stderr, "%08x %08x\n", ref_needleAlloc, ref_mpNextAlloc);
+
   char *needle = (char *)portalMmap(needleAlloc, numBytes);
   int *mpNext = (int *)portalMmap(mpNextAlloc, numBytes);
 
@@ -202,23 +217,36 @@ int main(int argc, const char **argv)
   int needle_len = strlen(needle_text);
   strncpy(needle, needle_text, needle_len);
   compute_MP_next(needle, mpNext, needle_len);
+  fprintf(stderr, "mpNext=[");
+  for(int i= 0; i <= needle_len; i++) 
+    fprintf(stderr, "%d ", mpNext[i]);
+  fprintf(stderr, "]\nneedle=[");
+  for(int i= 0; i < needle_len; i++) 
+    fprintf(stderr, "%d ", needle[i]);
+  fprintf(stderr, "]\n");
   portalDCacheFlushInval(needleAlloc, numBytes, needle);
   portalDCacheFlushInval(mpNextAlloc, numBytes, mpNext);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
+  fprintf(stderr, "Main::waiting to connect to nandsim_exe\n");
   wait_for_connect_nandsim_exe();
+  fprintf(stderr, "Main::connected to nandsim_exe\n");
   // base of haystack in "flash" memory
   int haystack_base = read_from_nandsim_exe();
   int haystack_len  = read_from_nandsim_exe();
 
-  int id = nandsimDma->priv.handle++;
+  int id = 0;
+  SGListConfigRequestProxy_idRequest(nandsimDma->priv.sglDevice);
+  sem_wait(&nandsimDma->priv.sglIdSem);
+  id = nandsimDma->priv.sglId;
   // pairs of ('offset','size') poinging to space in nandsim memory
   // this is unsafe.  We should check that the we aren't overflowing 
   // 'nandBytes', the size of the nandSimulator backing store
   RegionRef region[] = {{0, 0x100000}, {0x100000, 0x100000}};
   printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-  int ref_haystackInNandMemory = send_reference_to_portal(nandsimDma->priv.device, sizeof(region)/sizeof(region[0]), region, id);
+  int ref_haystackInNandMemory = send_reference_to_portal(nandsimDma->priv.sglDevice, sizeof(region)/sizeof(region[0]), region, id);
   sem_wait(&(nandsimDma->priv.confSem));
+  fprintf(stderr, "%08x\n", ref_haystackInNandMemory);
 
   fprintf(stderr, "about to setup device %d %d\n", ref_needleAlloc, ref_mpNextAlloc);
   strstrRequest->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);

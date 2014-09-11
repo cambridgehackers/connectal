@@ -30,7 +30,8 @@
 
 #include <portal.h>
 #include "dmaManager.h"
-#include "DmaConfigProxy.h"
+#include "DmaDebugRequestProxy.h"
+#include "SGListConfigRequestProxy.h"
 
 #ifdef MATRIX_NT
 #include "MmRequestNTProxy.h"
@@ -51,7 +52,7 @@ extern sem_t mul_sem;
 
 class PortalMatAllocator : public cv::MatAllocator {
 public:
-  PortalMatAllocator(DmaConfigProxy *dmap, DmaManager *dma) : numarrays(1), dmap(dmap), dma(dma) {}
+  PortalMatAllocator(SGListConfigRequestProxy *dmap, DmaManager *dma) : numarrays(1), dmap(dmap), dma(dma) {}
   virtual ~PortalMatAllocator() {}
   virtual void allocate(int dims, const int* sizes, int type, int*& refcount,
 			uchar*& datastart, uchar*& data, size_t* step);
@@ -68,7 +69,7 @@ private:
     int ref;
   } arrayInfo[128];
   int numarrays;
-  DmaConfigProxy *dmap;
+  SGListConfigRequestProxy *dmap;
   DmaManager *dma;
 };
 

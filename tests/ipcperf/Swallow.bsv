@@ -1,6 +1,8 @@
-// Copyright (c) 2014 Quanta Research Cambridge, Inc.
 
-// Permission is hereby granted, free of change, to any person
+// Copyright (c) 2013 Nokia, Inc.
+// Copyright (c) 2013 Quanta Research Cambridge, Inc.
+
+// Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
 // files (the "Software"), to deal in the Software without
 // restriction, including without limitation the rights to use, copy,
@@ -20,43 +22,16 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import Complex::*;
-import FixedPoint::*;
-import FPCMult::*;
-import Pipe::*;
-import BRAM::*;
-import Vector::*;
-import DefaultValue::*;
-import DDS::*;
-
-typedef Complex#(FixedPoint#(2,14)) Signal;
-
-(* always_enabled *)
-interface ChannelSelect;
-   interface PipeIn#(Vector#(2, Signal));
-   interface PipeOut#(Signal);
-   method Action setCoeff(Bit#(10) addr, Bit#(32) value);
+interface Swallow;
+   method Action swallow(Bit#(32) v);
 endinterface
 
+module mkSwallow (Swallow);
 
-module mkFIR#()(ChannelSelect);
-   BRAM_Configure cfg = defaultValue;
-   cfg.memorySize = 1024;
-   BRAM2Port#(UInt#(8), Complex#(FixedPoint#(2,23))) coeffRam <- 
-        mkBRAM2Server(cfg);
-   Reg#(UInt#(10)) pphase <- mkReg(0);
-   Reg#(
+   Reg#(Bit#(32)) sink <- mkReg(0);
    
-   rule filter_phase;
-      if (pphase == (decimation - 1))
-	 pphase <= 0;
-      else
-	 pphase <= phase + 1;
-   endrule
-   
-   
-      
-      method Action setCoeff(Bit#(8) addr, Bit#(32) value);
-      endmethod
-      
+   method Action swallow(Bit#(32) v);
+      sink <= v;
+   endmethod
+
 endmodule

@@ -34,13 +34,16 @@ import PCIE              :: *;
 import AxiSlaveEngine    :: *;
 import Portal            :: *;
 import MemServer         :: *;
+import SGList::*;
 import MemreadEngine     :: *;
 import AxiDma            :: *;
 import MemTypes          :: *;
 import AxiMasterSlave    :: *;
 
-import DmaConfigWrapper::*;
-import DmaIndicationProxy::*;
+import DmaDebugRequestWrapper::*;
+import SGListConfigRequestWrapper::*;
+import DmaDebugIndicationProxy::*;
+import SGListConfigIndicationProxy::*;
 
 // copied from PCIE.bsv because xbsvgen cannot handle TMul#()
 typedef struct {
@@ -129,7 +132,7 @@ interface PcieTestBench#(numeric type addrWidth, numeric type dataWidth);
    interface Vector#(1,MemMaster#(addrWidth,dataWidth)) masters;
 endinterface
 
-typedef enum {TestBenchIndication, TestBenchRequest, DmaIndication, DmaConfig} IfcNames deriving (Eq,Bits);
+typedef enum {TestBenchIndication, TestBenchRequest, HostmemDmaDebugIndication, HostmemDmaDebugRequest, HostmemSGListConfigRequest, HostmemSGListConfigIndication} IfcNames deriving (Eq,Bits);
 
 //`define SANITY
 
@@ -140,9 +143,13 @@ module mkPcieTestBench#(PcieTestBenchIndication indication)(PcieTestBench#(40,64
    let     re <- mkMemreadEngine(1, readFifo);
    
    // dma state
-   DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
-   MemServer#(40,64,1) dma <- mkMemServerR(dmaIndicationProxy.ifc, cons(re.dmaClient,nil));
-   DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
+   SGListConfigIndicationProxy hostmemSGListConfigIndicationProxy <- mkSGListConfigIndicationProxy(HostmemSGListConfigIndication);
+   SGListMMU#(PhysAddrWidth) hostmemSGList <- mkSGListMMU(0, True, hostmemSGListConfigIndicationProxy.ifc);
+   SGListConfigRequestWrapper hostmemSGListConfigRequestWrapper <- mkSGListConfigRequestWrapper(HostmemSGListConfigRequest, hostmemSGList.request);
+
+   DmaDebugIndicationProxy hostmemDmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(HostmemDmaDebugIndication);
+   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerR(hostmemDmaDebugIndicationProxy.ifc, cons(re.dmaClient,nil), hostmemSGList);
+   DmaDebugRequestWrapper hostmemDmaDebugRequestWrapper <- mkDmaDebugRequestWrapper(HostmemDmaDebugRequest, dma.request);
 `ifdef SANITY
    Axi3Master#(40,64,6) m_axi = ?;
 `else   
@@ -198,8 +205,11 @@ module mkPcieTestBench#(PcieTestBenchIndication indication)(PcieTestBench#(40,64
 	 tlpin_fifo.enq(ttd);
       endmethod
    endinterface
-   interface StdPortal dmaConfig = dmaRequestWrapper.portalIfc;
-   interface StdPortal dmaIndication = dmaIndicationProxy.portalIfc;
+   interface StdPortal dmaConfig = hostmemDmaDebugRequestWrapper.portalIfc;
+   interface StdPortal dmaIndication = hostmemDmaDebugIndicationProxy.portalIfc;
+   //portals[z] = hostmemSGListConfigRequestWrapper.portalIfc;
+   //portals[z] = hostmemSGListConfigIndicationProxy.portalIfc;
+
 `ifdef SANITY
    interface masters = dma.masters;
 `else

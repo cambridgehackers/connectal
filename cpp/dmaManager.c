@@ -38,27 +38,26 @@
 #endif
 #endif
 
-#if 1 //def NO_CPP_PORTAL_CODE
 #include "GeneratedTypes.h" // generated in project directory
-#define DMAGetMemoryTraffic(P,A) DmaConfigProxy_getMemoryTraffic((P), (A))
-#else
-#include "DmaConfigProxy.h" // generated in project directory
-#define DMAGetMemoryTraffic(P,A) ((DmaConfigProxy *)((P)->parent))->getMemoryTraffic((A))
-#endif
-
+#define DMAGetMemoryTraffic(P,A) DmaDebugRequestProxy_getMemoryTraffic((P), (A))
+#define SGListIdRequest(P) SGListConfigRequestProxy_idRequest((P));
 #define KERNEL_REFERENCE
 
 static int trace_memory = 1;
 
 #include "dmaSendFd.h"
 
-void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *argDevice)
+void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *dmaDevice, PortalInternal *sglDevice)
 {
   memset(priv, 0, sizeof(*priv));
-  priv->device = argDevice;
+  priv->dmaDevice = dmaDevice;
+  priv->sglDevice = sglDevice;
 #ifndef __KERNEL__
   init_portal_memory();
 #endif
+  if (sem_init(&priv->sglIdSem, 0, 0)){
+    PORTAL_PRINTF("failed to init sglIdSem\n");
+  }
   if (sem_init(&priv->confSem, 0, 0)){
     PORTAL_PRINTF("failed to init confSem\n");
   }
@@ -73,7 +72,7 @@ void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *argDevice)
 uint64_t DmaManager_show_mem_stats(DmaManagerPrivate *priv, ChannelType rc)
 {
   uint64_t rv = 0;
-  DMAGetMemoryTraffic(priv->device, rc);
+  DMAGetMemoryTraffic(priv->dmaDevice, rc);
   sem_wait(&priv->mtSem);
   rv += priv->mtCnt;
   return rv;
@@ -81,26 +80,29 @@ uint64_t DmaManager_show_mem_stats(DmaManagerPrivate *priv, ChannelType rc)
 
 int DmaManager_reference(DmaManagerPrivate *priv, int fd)
 {
-  int id = priv->handle++;
+  int id = 0;
+  SGListIdRequest(priv->sglDevice);
+  sem_wait(&priv->sglIdSem);
+  id = priv->sglId;
   int rc = 0;
 #if defined(KERNEL_REFERENCE) && !defined(BSIM) && !defined(__KERNEL__)
 #ifdef ZYNQ
   PortalSendFd sendFd;
   sendFd.fd = fd;
   sendFd.id = id;
-  rc = ioctl(priv->device->fpga_fd, PORTAL_SEND_FD, &sendFd);
+  rc = ioctl(priv->sglDevice->fpga_fd, PORTAL_SEND_FD, &sendFd);
 #else
   tSendFd sendFd;
   sendFd.fd = fd;
   sendFd.id = id;
-  rc = ioctl(priv->device->fpga_fd, PCIE_SEND_FD, &sendFd);
+  rc = ioctl(priv->sglDevice->fpga_fd, PCIE_SEND_FD, &sendFd);
 #endif
   if (!rc)
     sem_wait(&priv->confSem);
   rc = id;
 #else // KERNEL_REFERENCE 
   init_portal_memory();
-  rc = send_fd_to_portal(priv->device, fd, id, global_pa_fd);
+  rc = send_fd_to_portal(priv->sglDevice, fd, id, global_pa_fd);
   if (rc <= 0) {
     //PORTAL_PRINTF("%s:%d sem_wait\n", __FUNCTION__, __LINE__);
     sem_wait(&priv->confSem);

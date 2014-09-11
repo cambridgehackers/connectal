@@ -352,7 +352,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
               Bit#(buswidth) v = 0;
 	      for (Integer i = 0; i < valueOf(busWidthWords); i = i+1)
 		 v[(i+1)*32-1:i*32] = byteSwap(data_v[i]);
-	      return MemData { data: v, tag: truncate(tag_v[0])};
+	      return MemData { data: v, tag: truncate(tag_v[0]), last: True};
            endmethod
 	endinterface
    endinterface

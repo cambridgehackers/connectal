@@ -38,9 +38,9 @@
 #include "gralloc_priv.h"
 #include "gr.h"
 
-#include "DmaConfigProxy.h"
+#include "DmaDebugRequestProxy.h"
+#include "SGListConfigRequestProxy.h"
 #include "DmaIndicationWrapper.h"
-#include "GeneratedTypes.h"
 #include "HdmiDisplayRequestProxy.h"
 #include "HdmiInternalRequestProxy.h"
 #include "HdmiInternalIndicationWrapper.h"
@@ -66,9 +66,9 @@ struct gralloc_context_t {
     PortalPoller *poller;
     HdmiDisplayRequestProxy *hdmiDisplay;
     HdmiInternalRequestProxy *hdmiInternal;
-    DmaConfigProxy *dmap;
+    SGListConfigRequestProxy *dmap;
     DmaManager *dma;
-    DmaIndicationWrapper *dmaIndication;
+    SGListConfigIndication *dmaIndication;
     unsigned int ref_srcAlloc;
     uint32_t nextSegmentNumber;
 };
@@ -357,9 +357,11 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 	dev->poller = new PortalPoller();
         dev->hdmiDisplay = new HdmiDisplayRequestProxy(IfcNames_HdmiDisplayRequest, dev->poller);
         dev->hdmiInternal = new HdmiInternalRequestProxy(IfcNames_HdmiInternalRequest, dev->poller);
-        dev->dmap = new DmaConfigProxy(IfcNames_DmaConfig);
-        dev->dma = new DmaManager(dev->dmap);
-        dev->dmaIndication = new DmaIndication(dev->dma, IfcNames_DmaIndication);
+        dev->dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
+        dev->dma = new DmaManager(hostmemDmaDebugRequest, dmap);
+        dev->dmaIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
+  //DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostmemDmaDebugIndication);
+  //DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
         dev->nextSegmentNumber = 0;
 
         status = 0;

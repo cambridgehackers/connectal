@@ -49,16 +49,18 @@ typedef struct {
   sem_t confSem;
   sem_t mtSem;
   sem_t dbgSem;
+  sem_t sglIdSem;
   uint64_t mtCnt;
-  PortalInternal *device;
+  uint32_t sglId;
+  PortalInternal *dmaDevice;
+  PortalInternal *sglDevice;
   int pa_fd;
-  int handle;
 } DmaManagerPrivate;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *argDevice);
+  void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *dmaDevice, PortalInternal *sglDevice);
 int DmaManager_reference(DmaManagerPrivate *priv, int fd);
 #ifdef __cplusplus
 }
@@ -72,8 +74,8 @@ class DmaManager
 {
  public:
   DmaManagerPrivate priv;
-  DmaManager(PortalInternalCpp *argDevice) {
-    DmaManager_init(&priv, &argDevice->pint);
+  DmaManager(PortalInternalCpp *dbgDevice, PortalInternalCpp *sglDevice) {
+    DmaManager_init(&priv, &dbgDevice->pint, &sglDevice->pint);
   };
   int reference(int fd) {
     return DmaManager_reference(&priv, fd);
@@ -81,6 +83,10 @@ class DmaManager
   uint64_t show_mem_stats(ChannelType rc) {
     return DmaManager_show_mem_stats(&priv, rc);
   };
+  void sglIdResp(uint32_t sglId) {
+    sem_post(&priv.sglIdSem);
+    priv.sglId = sglId;
+  }
   void confResp(uint32_t channelId) {
     //fprintf(stderr, "configResp %d\n", channelId);
     sem_post(&priv.confSem);

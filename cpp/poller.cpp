@@ -54,6 +54,7 @@
 
 #ifndef NO_CPP_PORTAL_CODE
 PortalPoller *defaultPoller = new PortalPoller();
+uint64_t poll_enter_time, poll_return_time; // for performance measurement
 
 PortalPoller::PortalPoller()
   : portal_wrappers(0), portal_fds(0), numFds(0), stopping(0)
@@ -64,20 +65,24 @@ PortalPoller::PortalPoller()
 int PortalPoller::unregisterInstance(Portal *portal)
 {
   int i = 0;
-  while(i < numFds)
-    if(portal_fds[i].fd == portal->pint.fpga_fd)
+  while(i < numFds){
+    if(portal_wrappers[i]->pint.fpga_number == portal->pint.fpga_number) {
+      fprintf(stderr, "PortalPoller::unregisterInstance %d %d\n", i, portal->pint.fpga_number);
       break;
-    else
+    } else {
       i++;
+    }
+  }
 
   while(i < numFds-1){
     portal_fds[i] = portal_fds[i+1];
     portal_wrappers[i] = portal_wrappers[i+1];
+    i++;
   }
 
   numFds--;
-  portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
-  portal_wrappers = (Portal **)realloc(portal_wrappers, numFds*sizeof(Portal *));  
+  // portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
+  // portal_wrappers = (Portal **)realloc(portal_wrappers, numFds*sizeof(Portal *));  
   return 0;
 }
 
@@ -129,16 +134,20 @@ void* PortalPoller::portalExec_poll(int timeout)
     long rc = 0;
     // LCS bypass the call to poll if the timeout is 0
     if (timeout != 0) {
+      poll_enter_time = portalCycleCount();
 #ifdef BSIM
-      while(!bsim_poll_interrupt()) {
-          struct timeval timeout;
-          timeout.tv_sec = 0;
-          timeout.tv_usec = 10000;
-          select(0, NULL, NULL, NULL, &timeout);
+      while(1){
+	struct timeval timeout;
+	timeout.tv_sec = 0;
+	timeout.tv_usec = 10000;
+	select(0, NULL, NULL, NULL, &timeout);
+	if(bsim_poll_interrupt())
+	  break;
       }
 #else
       rc = poll(portal_fds, numFds, timeout);
 #endif
+      poll_return_time = portalCycleCount();
     }
     if(rc < 0) {
 	// return only in error case

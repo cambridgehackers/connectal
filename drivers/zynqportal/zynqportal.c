@@ -35,6 +35,9 @@
 #define DRIVER_NAME        "zynqportal"
 #define DRIVER_DESCRIPTION "Generic userspace hardware bridge"
 #define DRIVER_VERSION     "0.1"
+#define PORTAL_BASE_OFFSET         (1 << 16)
+#define MSB_OFFSET 0x210
+#define LSB_OFFSET 0x214
 
 #ifdef DEBUG // was KERN_DEBUG
 #define driver_devel(format, ...) \
@@ -56,6 +59,9 @@ struct portal_data {
         int               irq_is_registered;
 };
 
+static void *directory_virt;  /* anyone should be able to get PORTAL_DIRECTORY_COUNTER */
+static PortalInterruptTime inttime;
+
 /*
  * Local helper functions
  */
@@ -67,6 +73,8 @@ static irqreturn_t portal_isr(int irq, void *dev_id)
 
         //driver_devel("%s %s %d basevirt %p\n", __func__, portal_data->misc.name, irq, portal_data->interrupt_virt);
         if (readl(portal_data->interrupt_virt)) {
+                inttime.msb = readl(directory_virt + MSB_OFFSET);
+                inttime.lsb = readl(directory_virt + LSB_OFFSET);
                 // disable interrupt.  this will be re-enabled by user mode
                 // driver  after all the HW->SW FIFOs have been emptied
                 writel(0, portal_data->mask_virt);
@@ -177,6 +185,12 @@ printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start
                 fput(fmem);
                 return 0;
                 }
+        case PORTAL_DIRECTORY_READ:
+                return readl(directory_virt + arg);
+        case PORTAL_INTERRUPT_TIME:
+                if (copy_to_user((void __user *)arg, &inttime, sizeof(inttime)))
+                        return -EFAULT;
+                return 0;
         default:
                 printk("portal_unlocked_ioctl ENOTTY cmd=%x\n", cmd);
                 return -ENOTTY;
@@ -269,6 +283,9 @@ static int portal_of_probe(struct platform_device *pdev)
                 portal_data->portal_irq = irq_res->start;
                 misc_register( &portal_data->misc);
                 rc = 0;
+                if (!directory_virt)
+                        directory_virt = ioremap_nocache(
+                                portal_data->dev_base_phys & ~(PORTAL_BASE_OFFSET * 16 - 1), sizeof(PAGE_SIZE));
         }
         dev_set_drvdata(&pdev->dev, (void *)portal_data);
         driver_devel("%s:%d about to return %d\n", __func__, __LINE__, rc);

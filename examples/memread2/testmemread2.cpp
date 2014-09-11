@@ -5,8 +5,8 @@
 #include <unistd.h>
 #include "StdDmaIndication.h"
 
-#include "DmaConfigProxy.h"
-#include "GeneratedTypes.h" 
+#include "DmaDebugRequestProxy.h"
+#include "SGListConfigRequestProxy.h"
 #include "Memread2IndicationWrapper.h"
 #include "Memread2RequestProxy.h"
 
@@ -66,19 +66,18 @@ int main(int argc, const char **argv)
   unsigned int srcGen = 0;
 
   Memread2RequestProxy *device = 0;
-  DmaConfigProxy *dmap = 0;
-  
   Memread2Indication *deviceIndication = 0;
-  DmaIndication *dmaIndication = 0;
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
   device = new Memread2RequestProxy(IfcNames_Memread2Request);
-  dmap = new DmaConfigProxy(IfcNames_DmaConfig);
-  DmaManager *dma = new DmaManager(dmap);
+  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
+  SGListConfigRequestProxy *dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
+  DmaManager *dma = new DmaManager(hostmemDmaDebugRequest, dmap);
+  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostmemDmaDebugIndication);
+  SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
 
   deviceIndication = new Memread2Indication(IfcNames_Memread2Indication);
-  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
   srcAlloc = portalAlloc(alloc_sz);
@@ -110,6 +109,6 @@ int main(int argc, const char **argv)
     device->getStateDbg();
     uint64_t beats = dma->show_mem_stats(ChannelType_Read);
     fprintf(stderr, "   beats: %"PRIx64"\n", beats);
-    dmap->getStateDbg(ChannelType_Read);
+    hostmemDmaDebugRequest->getStateDbg(ChannelType_Read);
   }
 }

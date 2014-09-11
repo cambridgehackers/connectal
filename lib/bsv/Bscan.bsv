@@ -57,8 +57,7 @@ module mkBscanTop#(Integer bus)(BscanTop);
    method tdi;
        return 0;
    endmethod
-   method tdo;
-       return 0;
+   method Action tdo(Bit#(1) v);
    endmethod
    method capture;
        return 0;
@@ -70,7 +69,7 @@ module mkBscanTop#(Integer bus)(BscanTop);
        return 0;
    endmethod
    method first();
-      return 0;
+      return False;
    endmethod
 endmodule
 `else

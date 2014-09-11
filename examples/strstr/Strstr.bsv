@@ -78,6 +78,7 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(p,busWidth))
    
 
    let verbose = False;
+
    Reg#(Bit#(32)) needleLen <- mkReg(0);
    MemreadEngineV#(busWidth, 1, TMul#(p,2)) config_re <- mkMemreadEngine;
    MemreadEngineV#(busWidth, 1, TMul#(p,1)) haystack_re <- mkMemreadEngine;
@@ -104,6 +105,7 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(p,busWidth))
       rule resr;
 	 let rv <- engines[i].loc.get;
 	 indication.searchResult(rv);
+	 if (verbose) $display("strstr search result %d", rv);
       endrule
    
    rule restartr(iterCnt > 0);

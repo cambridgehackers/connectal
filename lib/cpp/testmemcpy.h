@@ -2,8 +2,8 @@
 #define _TESTMEMCPY_H_
 
 #include "StdDmaIndication.h"
-#include "DmaConfigProxy.h"
-#include "GeneratedTypes.h"
+#include "DmaDebugRequestProxy.h"
+#include "SGListConfigRequestProxy.h"
 #include "MemcpyIndicationWrapper.h"
 #include "MemcpyRequestProxy.h"
 
@@ -62,10 +62,7 @@ public:
 int runtest(int argc, const char **argv)
 {
   MemcpyRequestProxy *device = 0;
-  DmaConfigProxy *dmap = 0;
-  
   MemcpyIndication *deviceIndication = 0;
-  DmaIndication *dmaIndication = 0;
 
   if(sem_init(&done_sem, 1, 0)){
     fprintf(stderr, "failed to init done_sem\n");
@@ -75,11 +72,12 @@ int runtest(int argc, const char **argv)
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
   device = new MemcpyRequestProxy(IfcNames_MemcpyRequest);
-  dmap = new DmaConfigProxy(IfcNames_DmaConfig);
-  DmaManager *dma = new DmaManager(dmap);
-
   deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndication);
-  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
+  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
+  SGListConfigRequestProxy *dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
+  DmaManager *dma = new DmaManager(hostmemDmaDebugRequest, dmap);
+  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostmemDmaDebugIndication);
+  SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
 
@@ -157,10 +155,7 @@ int runtest_chunk(int argc, const char **argv)
 {
 
   MemcpyRequestProxy *device = 0;
-  DmaConfigProxy *dmap = 0;
-  
   MemcpyIndication *deviceIndication = 0;
-  DmaIndication *dmaIndication = 0;
 
   if(sem_init(&done_sem, 1, 0)){
     fprintf(stderr, "failed to init done_sem\n");
@@ -168,11 +163,12 @@ int runtest_chunk(int argc, const char **argv)
   }
 
   device = new MemcpyRequestProxy(IfcNames_MemcpyRequest);
-  dmap = new DmaConfigProxy(IfcNames_DmaConfig);
-  DmaManager *dma = new DmaManager(dmap);
-
   deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndication);
-  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
+  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
+  SGListConfigRequestProxy *dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
+  DmaManager *dma = new DmaManager(hostmemDmaDebugRequest, dmap);
+  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostmemDmaDebugIndication);
+  SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
 
   portalExec_start();
 

@@ -87,6 +87,7 @@ module mkSpliceRequest#(SpliceIndication indication,
             Mul#(TDiv#(busWidth, 16), 16, busWidth),
             Add#(1, e__, TDiv#(busWidth, 16)),
             Add#(1, f__, TMul#(2, TDiv#(busWidth, 16))),
+            Add#(1, h__, busWidth),
             Add#(TDiv#(busWidth, 16), g__, TMul#(2, TDiv#(busWidth, 16))));
 
    

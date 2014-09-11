@@ -43,11 +43,15 @@ import ChannelSelectTestIndicationProxy::*;
 
 // defined by user
 import ChannelSelectTest::*;
+import FPCMult::*;
 
-typedef enum { ChannelSelectTestIndicationProxy, ChannelSelectTestRequestWrapper} IfcNames deriving (Eq,Bits);
+typedef enum { ChannelSelectTestIndication, ChannelSelectTestRequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(PhysAddrWidth));
-   
+module mkPortalTop(StdPortalTop#(PhysAddrWidth))
+      provisos(Bits#(CoeffData, a__),
+	    Bits#(ProductData, b__),
+            Bits#(MulData, c__));
+
    ChannelSelectTestIndicationProxy channelSelectTestIndicationProxy <- mkChannelSelectTestIndicationProxy(ChannelSelectTestIndication);
    ChannelSelectTestRequest channelSelectTestRequest <- mkChannelSelectTestRequest(channelSelectTestIndicationProxy.ifc);
    ChannelSelectTestRequestWrapper channelSelectTestRequestWrapper <- mkChannelSelectTestRequestWrapper(ChannelSelectTestRequest, channelSelectTestRequest);

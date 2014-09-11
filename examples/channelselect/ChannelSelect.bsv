@@ -45,10 +45,10 @@ interface ChannelSelect;
 endinterface
 
 
-module mkChannelSelect#(Bit#(10) decimation, DDS dds)(ChannelSelect)
+module mkChannelSelect#(Bit#(10) decimation)(ChannelSelect)
    provisos(Bits#(CoeffData, a__),
 	    Bits#(ProductData, b__),
-	    Bits#(MulData, c__));
+            Bits#(MulData, c__));
    BRAM_Configure cfg = defaultValue;
    cfg.memorySize = 1024;
    BRAM2Port#(Bit#(10), Complex#(FixedPoint#(2,23))) coeffRam0 <- 
@@ -60,11 +60,10 @@ module mkChannelSelect#(Bit#(10) decimation, DDS dds)(ChannelSelect)
    FIFOF#(Vector#(2, Complex#(Signal))) infifo <- mkFIFOF();
    FIFOF#(Complex#(Signal)) outfifo <- mkFIFOF();
    Vector#(2, FPCMult) mul <- replicateM(mkFPCMult());
-
    Vector#(2, Reg#(Complex#(Product))) accum <- replicateM(mkReg(?));
-   Vector#(2, FIFOF#(Complex#(Product))) accumout <- replicateM(mkPipelineFIFOF());
-   
-   FIFOF#(Complex#(Product)) ycombined <- mkPipelineFIFOF();
+   Vector#(2, FIFO#(Complex#(Product))) accumout <- replicateM(mkFIFO());
+   FIFO#(Complex#(Product)) ycombined <- mkFIFO();
+   DDS dds <- mkDDS();
    FPCMult lo <- mkFPCMult();
 
    /* could do this with mkForkVector() but we don't need the extra FIFOs
@@ -95,16 +94,14 @@ module mkChannelSelect#(Bit#(10) decimation, DDS dds)(ChannelSelect)
    rule mulin;
       let c0 <- coeffRam0.portB.response.get();
       let c1 <- coeffRam1.portB.response.get();
-      let phase = delayFilterPhase.first();
+      Bit#(1) phase = delayFilterPhase.first();
       delayFilterPhase.deq();
-      
       mul[0].a.enq(CoeffData{a: c0, filterPhase: phase});
       mul[1].a.enq(CoeffData{a: c1, filterPhase: phase});
-
    endrule
    
    rule muloutaccumin0;
-      let m = mul[0].y.first();
+      ProductData m = mul[0].y.first();
       mul[0].y.deq();
       if (m.filterPhase == 1)
 	 begin
@@ -118,7 +115,7 @@ module mkChannelSelect#(Bit#(10) decimation, DDS dds)(ChannelSelect)
    endrule
 
    rule muloutaccumin1;
-      let m = mul[1].y.first();
+      ProductData m = mul[1].y.first();
       mul[1].y.deq();
       if (m.filterPhase == 1)
 	 begin
@@ -132,38 +129,42 @@ module mkChannelSelect#(Bit#(10) decimation, DDS dds)(ChannelSelect)
    endrule
 
    rule accumoutcombinein;
-      let a0 = accumout[0].first();
-      let a1 = accumout[1].first();
+      Complex#(Product) a0 = accumout[0].first();
+      Complex#(Product) a1 = accumout[1].first();
+      accumout[0].deq();
+      accumout[1].deq();
       ycombined.enq(a0 + a1);
       accumout[0].deq();
       accumout[1].deq();
    endrule
    
    rule combineoutloin;
-      let yin = ycombined.first();
-      let loin = dds.osc.first();
-      ycombined.deq();
+      Complex#(Product) yin = ycombined.first();
+      FixedPoint#(2,16) yrel = fxptTruncate(yin.rel);
+      FixedPoint#(2,16) yimg = fxptTruncate(yin.img);
+      DDSOutType loin = dds.osc.first();
       dds.osc.deq();
-      lo.x.enq(Complex{rel: fxptTruncate(yin.rel), img: fxptTruncate(yin.img)});  // maybe round
+      ycombined.deq();
+      lo.x.enq(Complex{rel: yrel, img: yimg});
       lo.a.enq(CoeffData{a: loin, filterPhase: 0});
    endrule
    
    rule loout;
-      let y = lo.y.first();
+      Complex#(Product) ifc = lo.y.first().y;
+      FixedPoint#(2,16) ifrel = fxptTruncate(ifc.rel);
+      FixedPoint#(2,16) ifimg = fxptTruncate(ifc.img);
+      outfifo.enq(Complex{rel: ifrel, img: ifimg});
       lo.y.deq();
-      outfifo.enq(Complex{rel: fxptTruncate(y.y.rel), img: fxptTruncate(y.y.img)});  // maybe round
    endrule
    
    interface PipeIn rfreq = toPipeIn(infifo);
    
-/* really Complex#(FixedPoint#(2, 23)) value  */
- 
-    method Action setCoeff(Bit#(11) addr, Bit#(32) valre,  Bit#(32) valim);
+   method Action setCoeff(Bit#(10) addr, Complex#(FixedPoint#(2,23)) value);
       Bit#(1) idx = addr[0];
       if (idx == 0)
-	 coeffRam0.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: addr[10:1], datain: Complex{ rel: unpack(truncate(pack(valre))), img: unpack(truncate(pack(valim)))}});
+	 coeffRam0.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: addr[10:1], datain: value});
       else
-	 coeffRam1.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: addr[10:1], datain: Complex{ rel: unpack(truncate(pack(valre))), img: unpack(truncate(pack(valim)))}});
+	 coeffRam1.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: addr[10:1], datain: value});
    endmethod
       
    interface PipeOut ifreq = toPipeOut(outfifo);

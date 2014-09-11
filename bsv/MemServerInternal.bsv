@@ -112,7 +112,7 @@ interface MemReadInternal#(numeric type addrWidth, numeric type dataWidth);
 endinterface
 
 function Bool bad_pointer(ObjectPointer p);
-   return ((p >>8) > fromInteger(valueOf(MaxNumSGLists)));
+   return ((p[15:0] >>8) > fromInteger(valueOf(MaxNumSGLists)));
 endfunction
 
 typedef struct {ObjectRequest req;
@@ -136,10 +136,9 @@ typedef struct {DmaErrorType errorType;
 
 typedef 32 NumTags;
 
-module mkMemReadInternal#(Integer id,
-			  Vector#(numClients, ObjectReadClient#(dataWidth)) readClients,
-			  DmaIndication dmaIndication,
-			  Server#(ReqTup,Bit#(addrWidth)) sgl) 
+module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) readClients,
+			  DmaDebugIndication dmaIndication,
+			  Vector#(numSGLs,Server#(ReqTup,Bit#(addrWidth))) sgls) 
    (MemReadInternal#(addrWidth, dataWidth))
 
    provisos(Add#(b__, addrWidth, 64), 
@@ -192,19 +191,20 @@ module mkMemReadInternal#(Integer id,
    FIFO#(DmaError) dmaErrorFifo <- mkFIFO();
    rule dmaError;
       let error <- toGet(dmaErrorFifo).get();
-      dmaIndication.dmaError(extend(pack(error.errorType)), error.pref, 0, 0);
+      dmaIndication.error(extend(pack(error.errorType)), error.pref, 0, 0);
    endrule
 
    for (Integer selectReg = 0; selectReg < valueOf(numClients); selectReg = selectReg + 1) 
       rule loadClient;
-      	 if (debug) $display("mkMemReadInternal::loadClient %d %d", selectReg, cycle_cnt-last_loadClient);
 	 last_loadClient <= cycle_cnt;
    	 ObjectRequest req <- readClients[selectReg].readReq.get();
+	 let sglsel = req.pointer[31:16];
+      	 if (debug) $display("mkMemReadInternal::loadClient %d %d %d", selectReg, sglsel, cycle_cnt-last_loadClient);
    	 if (bad_pointer(req.pointer))
 	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer4, pref: req.pointer });
    	 else begin
    	    lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
-   	    sgl.request.put(ReqTup{id:truncate(req.pointer),off:req.offset});
+   	    sgls[sglsel].request.put(ReqTup{id:truncate(req.pointer),off:req.offset});
    	 end
       endrule
    
@@ -244,9 +244,9 @@ module mkMemReadInternal#(Integer id,
    endrule
    
    rule checkSglResp;
-      let physAddr <- sgl.response.get;
       let req = lreqFifo.first.req;
       let client = lreqFifo.first.client;
+      let physAddr <- sgls[req.pointer[31:16]].response.get;
       let rename_tag <- tag_gen.getTag;
       lreqFifo.deq();
       reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
@@ -316,10 +316,11 @@ module mkMemReadInternal#(Integer id,
    endinterface
 endmodule
 
-module mkMemWriteInternal#(Integer iid,
-			   Vector#(numClients, ObjectWriteClient#(dataWidth)) writeClients,
-			   DmaIndication dmaIndication, 
-			   Server#(ReqTup,Bit#(addrWidth)) sgl)
+typedef 64 NumTagsW;
+
+module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) writeClients,
+			   DmaDebugIndication dmaIndication, 
+			   Vector#(numSGLs,Server#(ReqTup,Bit#(addrWidth))) sgls)
    (MemWriteInternal#(addrWidth, dataWidth))
    
    provisos(Add#(b__, addrWidth, 64), 
@@ -337,10 +338,10 @@ module mkMemWriteInternal#(Integer iid,
    // stage 1: address validation (latency = 1)
    FIFO#(RRec#(numClients,addrWidth))  reqFifo <- mkFIFO;
    // stage 2: write commands
-   FIFO#(DRec#(numClients, addrWidth)) dreqFifo <- mkSizedBRAMFIFO(valueOf(TMul#(numClients,NumTags)));
+   FIFO#(DRec#(numClients, addrWidth)) dreqFifo <- mkSizedBRAMFIFO(valueOf(NumTagsW));
    // stage 3: write data 
-   BRAM2Port#(Bit#(TLog#(NumTags)), RResp#(numClients,addrWidth)) respFifos <- mkBRAM2Server(defaultValue);
-   TagGen#(NumTags) tag_gen <- mkTagGen;
+   BRAM2Port#(Bit#(TLog#(NumTagsW)), RResp#(numClients,addrWidth)) respFifos <- mkBRAM2Server(defaultValue);
+   TagGen#(NumTagsW) tag_gen <- mkTagGen;
 
    Reg#(Bit#(8)) burstReg <- mkReg(0);   
    Reg#(Bool)    firstReg <- mkReg(True);
@@ -351,7 +352,6 @@ module mkMemWriteInternal#(Integer iid,
    Reg#(Bit#(64)) cycle_cnt <- mkReg(0);
    Reg#(Bit#(64)) last_loadClient <- mkReg(0);
    Reg#(Bit#(64)) last_sglResp <- mkReg(0);
-   Reg#(Bit#(64)) last_eob <- mkReg(0);
 
    (* fire_when_enabled *)
    rule cycle;
@@ -361,32 +361,32 @@ module mkMemWriteInternal#(Integer iid,
    FIFO#(DmaError) dmaErrorFifo <- mkFIFO();
    rule dmaError;
       let error <- toGet(dmaErrorFifo).get();
-      dmaIndication.dmaError(extend(pack(error.errorType)), error.pref, 0, 0);
+      dmaIndication.error(extend(pack(error.errorType)), error.pref, 0, 0);
    endrule
 
    for (Integer selectReg = 0; selectReg < valueOf(numClients); selectReg = selectReg + 1)
        rule loadClient;
-      	  //$display("mkMemWriteInternal::loadClient %d %d", selectReg, cycle_cnt-last_loadClient);
-	  //last_loadClient <= cycle_cnt;
+      	  if (debug) $display("mkMemWriteInternal::loadClient %d %d", selectReg, cycle_cnt-last_loadClient);
+	  last_loadClient <= cycle_cnt;
    	  ObjectRequest req <- writeClients[selectReg].writeReq.get();
    	  if (bad_pointer(req.pointer)) 
 	     dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer5, pref: req.pointer });
    	  else begin
    	     lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
-   	     sgl.request.put(ReqTup{id:truncate(req.pointer),off:req.offset});
+   	     sgls[req.pointer[31:16]].request.put(ReqTup{id:truncate(req.pointer),off:req.offset});
    	  end
        endrule
    
    rule checkSglResp;
-      let physAddr <- sgl.response.get;
       let req = lreqFifo.first.req;
       let client = lreqFifo.first.client;
+      let physAddr <- sgls[req.pointer[31:16]].response.get;
       let rename_tag <- tag_gen.getTag;
       lreqFifo.deq();
       reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
-      if (debug) $display("checkSglResp: client=%d, rename_tag=%d", client,rename_tag);
-      //$display("mkMemWriteInternal::sglResp %d %d", client, cycle_cnt-last_sglResp);
-      //last_sglResp <= cycle_cnt;
+      //if (debug) $display("checkSglResp: client=%d, rename_tag=%d", client,rename_tag);
+      if (debug) $display("mkMemWriteInternal::sglResp %d %d", client, cycle_cnt-last_sglResp);
+      last_sglResp <= cycle_cnt;
    endrule
    
    rule writeDoneComp0;
@@ -431,7 +431,7 @@ module mkMemWriteInternal#(Integer iid,
       if (last)
 	 dreqFifo.deq();
       //$display("writeData: client=%d, rename_tag=%d", client, rename_tag);
-      memDataFifo.enq(MemData { data: tagdata.data,  tag:extend(rename_tag), last: False });
+      memDataFifo.enq(MemData { data: tagdata.data,  tag:extend(rename_tag), last: last });
    endrule
 
    interface MemWriteClient write_client;
@@ -447,12 +447,7 @@ module mkMemWriteInternal#(Integer iid,
 	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(rename_tag)};
 	 endmethod
       endinterface
-      interface Get writeData;
-	 method ActionValue#(MemData#(dataWidth)) get();
-            let d <- toGet(memDataFifo).get();
-            return d;
-	 endmethod
-      endinterface
+      interface Get writeData = toGet(memDataFifo);
       interface Put writeDone;
 	 method Action put(Bit#(6) resp);
 	    tag_gen.returnTag(truncate(resp));

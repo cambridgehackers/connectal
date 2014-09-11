@@ -54,7 +54,7 @@ import "BDPI" function ActionValue#(Bit#(32)) pareff_init(Bit#(32) id, Bit#(32) 
 `endif
 
 interface SGListMMU#(numeric type addrWidth);
-   interface SGListSetup setup;
+   interface SGListConfigRequest request;
    interface Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addr;
 endinterface
 
@@ -82,12 +82,13 @@ typedef struct {DmaErrorType errorType;
 		Bit#(32) pref; } DmaError deriving (Bits);
 
 // the address translation servers (addr[0], addr[1]) have a latency of 8 and are fully pipelined
-module mkSGListMMU#(Bool bsimMMap, DmaIndication dmaIndication)(SGListMMU#(addrWidth))
+module mkSGListMMU#(Integer iid, Bool bsimMMap, SGListConfigIndication sglIndication)(SGListMMU#(addrWidth))
    provisos(Log#(MaxNumSGLists, listIdxSize),
 	    Add#(listIdxSize,8, entryIdxSize),
 	    Add#(c__, addrWidth, ObjectOffsetSize));
    
    let verbose = !bsimMMap;
+   Reg#(Bit#(32)) nextId <- mkReg(0);
 
    // stage 0 (latency == 1)
    Vector#(2, FIFO#(ReqTup)) incomingReqs <- replicateM(mkFIFO);
@@ -119,7 +120,7 @@ module mkSGListMMU#(Bool bsimMMap, DmaIndication dmaIndication)(SGListMMU#(addrW
    FIFO#(DmaError) dmaErrorFifo <- mkFIFO();
    rule dmaError;
       let error <- toGet(dmaErrorFifo).get();
-      dmaIndication.dmaError(extend(pack(error.errorType)), error.pref, -1, 0);
+      sglIndication.error(extend(pack(error.errorType)), error.pref, -1, 0);
    endrule
 
 
@@ -226,7 +227,7 @@ module mkSGListMMU#(Bool bsimMMap, DmaIndication dmaIndication)(SGListMMU#(addrW
    FIFO#(SGListId) configRespFifo <- mkFIFO;
    rule sendConfigResp;
       let ptr <- toGet(configRespFifo).get();
-      dmaIndication.configResp(extend(ptr));
+      sglIndication.configResp(extend(ptr));
    endrule
 
    Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addrServers;
@@ -241,13 +242,20 @@ module mkSGListMMU#(Bool bsimMMap, DmaIndication dmaIndication)(SGListMMU#(addrW
 	  interface Get response;
 	     method ActionValue#(Bit#(addrWidth)) get();
 		let rv <- toGet(pageResponseFifos[i]).get();
+`ifdef BSIM
+		rv = rv | (fromInteger(iid)<<valueOf(addrWidth)-3);
+`endif
 		return rv;
 	     endmethod
 	  endinterface
        endinterface);
 
    // FIXME: split this into three methods?
-   interface SGListSetup setup;
+   interface SGListConfigRequest request;
+   method Action idRequest();
+      nextId <= nextId+1;
+      sglIndication.idResponse((fromInteger(iid) << 16) | nextId);
+   endmethod
    method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) index8, Bit#(64) barr4, Bit#(32) index4, Bit#(64) barr0, Bit#(32) index0);
       portsel(regall, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
           address: truncate(pointer), datain: Region{
@@ -259,13 +267,14 @@ module mkSGListMMU#(Bool bsimMMap, DmaIndication dmaIndication)(SGListMMU#(addrW
    endmethod
 
    method Action sglist(Bit#(32) pointer, Bit#(32) pointerIndex, Bit#(64) addr,  Bit#(32) len);
+         if (fromInteger(iid) != pointer[31:16]) begin
+	    $display("mkSGListMMU::sglist ERROR");
+	    $finish();
+	 end
 `ifdef BSIM
 `ifndef PCIE
-`ifndef ALGO1_NANDSIM_HACK
-         if(bsimMMap) begin
-	    let va <- pareff_init(0, pointer, len);
-	 end
-`endif
+	 if(bsimMMap) 
+	    let va <- pareff_init({0,pointer[31:16]}, {0,pointer[15:0]}, len);
 `endif
 `endif
          Bit#(IndexWidth) ind = truncate(pointerIndex);

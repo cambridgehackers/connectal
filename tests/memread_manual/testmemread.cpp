@@ -6,8 +6,8 @@
 #include <monkit.h>
 
 #include "StdDmaIndication.h"
-#include "DmaConfigProxy.h"
-#include "GeneratedTypes.h" 
+#include "DmaDebugRequestProxy.h"
+#include "SGListConfigRequestProxy.h"
 #include "MemreadRequestProxy.h"
 #include "MemreadIndicationWrapper.h"
 
@@ -42,10 +42,12 @@ public:
 int main(int argc, const char **argv)
 {
   MemreadRequestProxy *device = new MemreadRequestProxy(IfcNames_MemreadRequest);
-  DmaConfigProxy *dmap = new DmaConfigProxy(IfcNames_DmaConfig);
-  DmaManager *dma = new DmaManager(dmap);
   MemreadIndication *deviceIndication = new MemreadIndication(IfcNames_MemreadIndication);
-  DmaIndication *dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
+  DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
+  SGListConfigRequestProxy *dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
+  DmaManager *dma = new DmaManager(hostmemDmaDebugRequest, dmap);
+  DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostmemDmaDebugIndication);
+  SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
 
   int srcAlloc;
   srcAlloc = portalAlloc(alloc_sz);
