@@ -29,21 +29,8 @@ import FPCMult::*;
 import FixedPoint::*;
 import Pipe::*;
 import Vector::*;
+import ChannelSelectTestInterfaces::*;
 
-/* rfreqDataWrite data is FixedPoint(2,14) */
-/* setCoeff data is FixedPoint(2, 23) */
-interface ChannelSelectTestRequest;
-   method Action rfreqDataWrite(Bit#(32) dataRe, Bit#(32) dataIm);
-   method Action setCoeff(Bit#(11) addr, Bit#(32) valueRe, Bit#(32) valueIm);
-endinterface
-
-
-/* rfreqDataWrite data is FixedPoint(2,14) */
-interface ChannelSelectTestIndication;
-   method Action ifreqData(Bit#(32) dataRe, Bit#(32) dataIm);
-   method Action setDataResp();
-   method Action setCoeffResp();
-endinterface
 
 module mkChannelSelectTestRequest#(ChannelSelectTestIndication indication) (ChannelSelectTestRequest);
    Clock clk <- exposeCurrentClock;
