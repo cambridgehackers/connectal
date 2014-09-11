@@ -57,12 +57,12 @@ typedef FixedPoint#(4,39) Product;
 typedef struct {
 		Complex#(Coeff) a;
 		Bit#(1) filterPhase;
-		} CoeffData;
+		} CoeffData deriving(Bits);
 
 typedef struct {
 		Complex#(Product) y;
 		Bit#(1) filterPhase;
-		} ProductData;
+		} ProductData deriving(Bits);
 
 typedef struct {
 		Product arxr;
@@ -70,7 +70,7 @@ typedef struct {
 		Product aixr;
 		Product aixi;
 		Bit#(1) filterPhase;
-		} MulData;
+		} MulData deriving(Bits);
 
 interface FPCMult;
    interface PipeIn#(Complex#(Signal)) x;
