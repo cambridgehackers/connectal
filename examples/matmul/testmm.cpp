@@ -254,5 +254,8 @@ int main(int argc, const char **argv)
   }
   bool eq = pm3.compare(m3);
   fprintf(stderr, "XXXXXXXXXXXXXXXXXXXXXXXXXX eq=%d\n", eq);
+
+  //cv::GpuMat gm1(m1);
+
   exit(!(eq&&sane));
 }

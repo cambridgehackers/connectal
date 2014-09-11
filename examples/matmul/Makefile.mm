@@ -18,6 +18,11 @@ FAMILY=$(shell echo $(BOARD) | sed 's/z.*/zynq/' | sed 's/k.*/kintex/' | sed 's/
 ## cd $(XBSVDIR); cd ..; git clone git://github.com:cambridgehackers/opencv-android-sdk.git
 ##
 
+ifdef GPU_PERF_TEST
+OPENCVDIR=/scratch/opencv-cuda/opencv-2.4.9/install/
+XBSVFLAGS += -I$(OPENCVDIR)/include -L$(OPENCVDIR)/lib
+endif
+
 ifeq (zynq,$(FAMILY))
 NDK_DIR=$(shell ndk-which gcc | sed 's:toolchains.*::')
 OPENCVDIR=$(XBSVDIR)/../opencv-android-sdk/sdk/native/
