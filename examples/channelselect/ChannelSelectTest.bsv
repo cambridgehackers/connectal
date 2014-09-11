@@ -33,7 +33,7 @@ import Vector::*;
 /* setCoeff data is FixedPoint(2, 23) */
 interface ChannelSelectTestRequest;
    method Action rfreqDataWrite(Bit#(32) dataRe, Bit#(32) dataIm);
-   method Action setCoeff(Bit#(10) addr, Bit#(32) valueRe, Bit#(32) valueIm);
+   method Action setCoeff(Bit#(11) addr, Bit#(32) valueRe, Bit#(32) valueIm);
 endinterface
 
 
@@ -71,7 +71,7 @@ module mkChannelSelectTestRequest#(ChannelSelectTestIndication indication) (Chan
       gb.enq(x);
    endmethod
 
-   method Action setCoeff(Bit#(10) addr, Bit#(32) valueRe, Bit#(32) valueIm);
+   method Action setCoeff(Bit#(11) addr, Bit#(32) valueRe, Bit#(32) valueIm);
     FixedPoint#(2, 23) re = unpack(pack(truncate(valueRe)));
     FixedPoint#(2, 23) im = unpack(pack(truncate(valueIm)));
       cs.setCoeff(addr, Complex{rel: re, img:im});
