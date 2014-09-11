@@ -22,6 +22,7 @@
 
 import Complex::*;
 import FixedPoint::*;
+import SDRTypes::*;
 import FPCMult::*;
 import Gearbox::*;
 import Pipe::*;
@@ -45,10 +46,7 @@ interface ChannelSelect;
 endinterface
 
 
-module mkChannelSelect#(Bit#(10) decimation)(ChannelSelect)
-   provisos(Bits#(CoeffData, a__),
-	    Bits#(ProductData, b__),
-            Bits#(MulData, c__));
+module mkChannelSelect#(Bit#(10) decimation)(ChannelSelect);
    BRAM_Configure cfg = defaultValue;
    cfg.memorySize = 1024;
    BRAM2Port#(Bit#(10), Complex#(FixedPoint#(2,23))) coeffRam0 <- 
