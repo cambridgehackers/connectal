@@ -49,8 +49,7 @@ module mkChannelSelectTestRequest#(ChannelSelectTestIndication indication) (Chan
    Clock clk <- exposeCurrentClock;
    Reset rst <- exposeCurrentReset;
    Gearbox#(1, 2, Complex#(Signal)) gb <- mk1toNGearbox(clk, rst, clk, rst);
-   DDS dds <- mkDDS();
-   ChannelSelect cs <- mkChannelSelect(64, dds);
+   ChannelSelect cs <- mkChannelSelect(64);
    
    rule processRF;
       let data = gb.first();
