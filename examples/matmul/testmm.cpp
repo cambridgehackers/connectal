@@ -46,6 +46,8 @@ MmRequestTNProxy *mmdevice = 0;
 #include <assert.h>
 #include "portalmat.h"
 
+#include <opencv2/gpu/gpu.hpp>
+
 static int verbose = 0;
 
 class MmIndication;
@@ -255,7 +257,13 @@ int main(int argc, const char **argv)
   bool eq = pm3.compare(m3);
   fprintf(stderr, "XXXXXXXXXXXXXXXXXXXXXXXXXX eq=%d\n", eq);
 
-  //cv::GpuMat gm1(m1);
+#ifdef CUDA_PERF_TEST
+  cv::gpu::GpuMat gm1(m1);
+  cv::gpu::GpuMat gm2(m2);
+  cv::gpu::GpuMat gm3;
+  cv::gpu::GpuMat gzeros;
+  cv::gemm(gm1,gm2,1,gzeros,0,gm3,0);
+#endif
 
   exit(!(eq&&sane));
 }
