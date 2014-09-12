@@ -1,0 +1,3 @@
+#!/bin/bash
+set -x 
+LD_LIBRARY_PATH=/usr/local/cuda-5.5/lib64 ./bin/bsim_exe 

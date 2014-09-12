@@ -45,9 +45,53 @@ MmRequestTNProxy *mmdevice = 0;
 #include <math.h> // frexp(), fabs()
 #include <assert.h>
 #include "portalmat.h"
+
 #include <opencv2/gpu/gpu.hpp>
 
 static int verbose = 0;
+
+void test_cuda()
+{
+
+  int A = 100;
+  int B = 100;
+
+  cv::Mat src1(A,B,CV_32F);
+  cv::Mat src2(A,B,CV_32F);
+  cv::Mat src3(A,B,CV_32F);
+  cv::Mat dst(A,B,CV_32F);
+
+  cv::gpu::GpuMat d_src1, d_src2, d_src3, d_dst;
+  
+  for(int a = 0; a < A; a++){
+    for(int b = 0; b < B; b++){
+      src1.at<float>(a,b) = a*b;
+      src2.at<float>(a,b) = a*b;
+      src3.at<float>(a,b) = a*b;
+      dst.at<float>(a,b)  = 0;
+    }
+  }
+
+
+  
+  cv::gemm(src1, src2, 1.0, src3, 1.0, dst);
+  
+  //CPU_ON;
+  cv::gemm(src1, src2, 1.0, src3, 1.0, dst);
+  //CPU_OFF;
+  
+  d_src1.upload(src1);
+  d_src2.upload(src2);
+  d_src3.upload(src3);
+  
+  cv::gpu::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
+  
+  //GPU_ON;
+  cv::gpu::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
+  //GPU_OFF;
+ 
+}
+
 
 void *dbgThread(void *)
 {
@@ -232,12 +276,9 @@ int main(int argc, const char **argv)
   fprintf(stderr, "XXXXXXXXXXXXXXXXXXXXXXXXXX eq=%d\n", eq);
 #else
   bool eq = true;
-  cv::gpu::GpuMat gm1(m1);
-  cv::gpu::GpuMat gm2(m2);
-  cv::gpu::GpuMat gm3;
-  cv::gpu::GpuMat gzeros;
-  cv::gemm(gm1,gm2,1,gzeros,0,gm3,0);
+  test_cuda();
 #endif
 
   exit(!(eq&&sane));
 }
+

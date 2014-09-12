@@ -20,11 +20,22 @@ FAMILY=$(shell echo $(BOARD) | sed 's/z.*/zynq/' | sed 's/k.*/kintex/' | sed 's/
 ifdef CUDA_PERF_TEST
 OPENCVDIR=/scratch/opencv-cuda/opencv-2.4.9/install/
 XBSVFLAGS  += -I$(OPENCVDIR)/include
-XBSVFLAGS  += -S$(OPENCVDIR)/lib/libopencv_core.a 
-XBSVFLAGS  += -S/usr/local/cuda-5.5/targets/x86_64-linux/lib/libcudart_static.a
+XBSVFLAGS  += -L$(OPENCVDIR)/lib
+XBSVFLAGS  += -L/usr/local/cuda-5.5/lib64
 XBSVFLAGS  += --stl=stlport_static
 XBSVFLAGS  += --clib z
 XBSVFLAGS  += --clib cuda
+XBSVFLAGS  += --clib cudart
+XBSVFLAGS  += --clib nppi
+XBSVFLAGS  += --clib nppc
+XBSVFLAGS  += --clib npps
+XBSVFLAGS  += --clib cufft
+XBSVFLAGS  += --clib opencv_core
+XBSVFLAGS  += --clib opencv_gpu
+XBSVFLAGS  += --clib opencv_imgproc
+XBSVFLAGS  += --clib opencv_core
+XBSVFLAGS  += --clib opencv_objdetect
+XBSVFLAGS  += --clib opencv_imgproc
 else
 XBSVFLAGS  +=  --clib opencv_core --stl=stlport_static
 endif
