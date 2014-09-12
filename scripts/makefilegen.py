@@ -175,7 +175,7 @@ PORTAL_CPP_FILES = $(addprefix %(xbsvdir)s/cpp/, portal.c poller.cpp sock_utils.
 include %(project_dir)s/jni/Makefile.generated_files
 SOURCES = $(addprefix %(project_dir)s/jni/,  $(GENERATED_CPP)) %(source)s $(PORTAL_CPP_FILES)
 SOURCES2 = $(addprefix %(project_dir)s/jni/,  $(GENERATED_CPP)) %(source2)s $(PORTAL_CPP_FILES)
-LDLIBS := %(clibdirs)s %(clibs)s -pthread 
+LDLIBS := %(clibdirs)s %(clibs)s %(clibfiles)s -pthread 
 
 BSIM_EXE_CXX_FILES = BsimDma.cxx BsimCtrl.cxx TlpReplay.cxx
 BSIM_EXE_CXX = $(addprefix %(xbsvdir)s/cpp/, $(BSIM_EXE_CXX_FILES))
