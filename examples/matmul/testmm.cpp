@@ -45,37 +45,14 @@ MmRequestTNProxy *mmdevice = 0;
 #include <math.h> // frexp(), fabs()
 #include <assert.h>
 #include "portalmat.h"
-
 #include <opencv2/gpu/gpu.hpp>
 
 static int verbose = 0;
-
-class MmIndication;
-
-TimerRequestProxy *timerdevice = 0;
-MmIndication *mmdeviceIndication = 0;
-TimerIndication *timerdeviceIndication = 0;
-MMUConfigRequestProxy *dmap = 0;
-
-long dotprod = 0;
-
-void dump(const char *prefix, char *buf, size_t len)
-{
-    fprintf(stderr, "%s ", prefix);
-    for (int i = 0; i < (len > 64 ? 64 : len) ; i++) {
-	fprintf(stderr, "%02x", (unsigned char)buf[i]);
-	if (i % 4 == 3)
-	  fprintf(stderr, " ");
-    }
-    fprintf(stderr, "\n");
-}
 
 void *dbgThread(void *)
 {
   while (1) {
     sleep(2);
-    // if (dmap) 
-    //   dmap->getStateDbg(ChannelType_Read);
     mmdevice->debug();
   }
   return 0;
@@ -83,43 +60,9 @@ void *dbgThread(void *)
 
 int main(int argc, const char **argv)
 {
-  unsigned int srcGen = 0;
-
-  PortalPoller *poller = new PortalPoller();
-
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
-
-#ifdef MATRIX_NT
-  mmdevice = new MmRequestNTProxy(IfcNames_MmRequestPortal);
-#else
-#ifdef MATRIX_TN
-  mmdevice = new MmRequestTNProxy(IfcNames_MmRequestPortal);
-#endif
-#endif
-  mmdeviceIndication = new MmIndication(IfcNames_MmIndicationPortal);
-  timerdevice = new TimerRequestProxy(IfcNames_TimerRequestPortal, poller);
-  timerdeviceIndication = new TimerIndication(IfcNames_TimerIndicationPortal);
-
-  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
-  dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
-  DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
-  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
-
-  if(sem_init(&mul_sem, 1, 0)){
-    fprintf(stderr, "failed to init mul_sem\n");
-    return -1;
-  }
-
-  portalExec_start();
-
-  long req_freq = 100000000;
-  long freq = 0;
-  setClockFrequency(0, req_freq, &freq);
-  fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
-
-  matAllocator = new PortalMatAllocator(dmap, dma);
-
+  bool sane = 1;
+  unsigned int srcGen = 0;
 #define LARGE_MAT
 #ifdef LARGE_MAT
 #ifdef BSIM
@@ -162,6 +105,38 @@ int main(int argc, const char **argv)
 		);
 #endif
 
+#ifndef CUDA_PERF_TEST
+
+#ifdef MATRIX_NT
+  mmdevice = new MmRequestNTProxy(IfcNames_MmRequestPortal);
+#else
+#ifdef MATRIX_TN
+  mmdevice = new MmRequestTNProxy(IfcNames_MmRequestPortal);
+#endif
+#endif
+  MmIndication *mmdeviceIndication = new MmIndication(IfcNames_MmIndicationPortal);
+  TimerRequestProxy *timerdevice = new TimerRequestProxy(IfcNames_TimerRequestPortal);
+  TimerIndication *timerdeviceIndication = new TimerIndication(IfcNames_TimerIndicationPortal);
+
+  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
+  MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
+  DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
+  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
+  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
+
+  if(sem_init(&mul_sem, 1, 0)){
+    fprintf(stderr, "failed to init mul_sem\n");
+    return -1;
+  }
+
+  portalExec_start();
+
+  long req_freq = 100000000;
+  long freq = 0;
+  setClockFrequency(0, req_freq, &freq);
+  fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
+
+  matAllocator = new PortalMatAllocator(dmap, dma);
   FILE *octave_file = fopen("foo.m", "w");
 
   fprintf(stderr, "OpenCV matmul\n");
@@ -175,7 +150,6 @@ int main(int argc, const char **argv)
   tm3.naive_mul(m1,m2, octave_file);
   uint64_t naive_hw_cycles = portalTimerLap(0);
 
-  bool sane = 1;
   if (1) {
     fprintf(stderr, "DumpMat\n");
     dumpMatOctave<float>("m1",  "%10.5f", m1,  octave_file);
@@ -256,8 +230,8 @@ int main(int argc, const char **argv)
   }
   bool eq = pm3.compare(m3);
   fprintf(stderr, "XXXXXXXXXXXXXXXXXXXXXXXXXX eq=%d\n", eq);
-
-#ifdef CUDA_PERF_TEST
+#else
+  bool eq = true;
   cv::gpu::GpuMat gm1(m1);
   cv::gpu::GpuMat gm2(m2);
   cv::gpu::GpuMat gm3;

@@ -3,7 +3,6 @@ S2H        +=  MmRequestTN MmRequestNT TimerRequest
 H2S        +=  MmIndication TimerIndication
 BSVFILES   +=  $(RBMDIR)/bsv/RbmTypes.bsv $(RBMDIR)/bsv/Timer.bsv $(DBNTOPBSV)
 CPPFILES   +=  $(MMDIR)/cpp/portalmat.cpp $(TESTCPPFILES)
-XBSVFLAGS  +=  --clib opencv_core --stl=stlport_static
 XBSVFLAGS  +=  -D IMPORT_HOSTIF -D MATRIX_TN
 XBSVFLAGS  +=  --bscflags="+RTS -K26777216 -RTS -p +:../../$(MMDIR)/bsv"
 XBSVFLAGS  +=  --bscflags " -Xc++ -DMATMUL_HACK" -D MATMUL_HACK
@@ -20,7 +19,14 @@ FAMILY=$(shell echo $(BOARD) | sed 's/z.*/zynq/' | sed 's/k.*/kintex/' | sed 's/
 
 ifdef CUDA_PERF_TEST
 OPENCVDIR=/scratch/opencv-cuda/opencv-2.4.9/install/
-XBSVFLAGS += -I$(OPENCVDIR)/include -L$(OPENCVDIR)/lib
+XBSVFLAGS  += -I$(OPENCVDIR)/include
+XBSVFLAGS  += -S$(OPENCVDIR)/lib/libopencv_core.a 
+XBSVFLAGS  += -S/usr/local/cuda-5.5/targets/x86_64-linux/lib/libcudart_static.a
+XBSVFLAGS  += --stl=stlport_static
+XBSVFLAGS  += --clib z
+XBSVFLAGS  += --clib cuda
+else
+XBSVFLAGS  +=  --clib opencv_core --stl=stlport_static
 endif
 
 ifeq (zynq,$(FAMILY))
