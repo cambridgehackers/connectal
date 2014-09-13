@@ -41,6 +41,7 @@ else
 GDB=
 endif
 
+BSCVERSION=$(shell bsc -v |grep Compiler | sed -e "s/.*version //" -e "s/ .*//")
 BSCMAJOR=$(shell bsc -v |grep Compiler | sed -e "s/.*version //" -e "s/\..*//")
 ifneq ($(BSCMAJOR), 2013)
     # S0015: The use of a mkSyncReset may not always result in a reset
@@ -49,6 +50,9 @@ ifneq ($(BSCMAJOR), 2013)
     BSCWARNFLAGS += -demote-errors G0066:G0045 -suppress-warnings G0046:G0020:S0015:S0080:S0039
 else
     #BSCFLAGS_COMMON += -D ExportUnusedClocksAndResets
+endif
+ifeq ($(BSCVERSION), 2014.07.A)
+    BSCFLAGS_COMMON += -D ClockDefaultParam
 endif
 
 BSCOPTFLAGS= -show-schedule -aggressive-conditions

@@ -159,9 +159,17 @@ endmodule
 //(* synthesize, no_default_clock, no_default_reset *)
 (* no_default_clock, no_default_reset *)
 module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)(PcieHostTop);
-   Clock sys_clk_200mhz <- mkClockIBUFDS(sys_clk_p, sys_clk_n);
+   Clock sys_clk_200mhz <- mkClockIBUFDS(
+`ifdef ClockDefaultParam
+       defaultValue,
+`endif
+       sys_clk_p, sys_clk_n);
    Clock sys_clk_200mhz_buf <- mkClockBUFG(clocked_by sys_clk_200mhz);
-   Clock pci_clk_100mhz_buf <- mkClockIBUFDS_GTE2(True, pci_sys_clk_p, pci_sys_clk_n);
+   Clock pci_clk_100mhz_buf <- mkClockIBUFDS_GTE2(
+`ifdef ClockDefaultParam
+       defaultValue,
+`endif
+       True, pci_sys_clk_p, pci_sys_clk_n);
    // Instantiate the PCIE endpoint
    PcieEndpointX7#(PcieLanes) ep7 <- mkPcieEndpointX7( clocked_by pci_clk_100mhz_buf
 						      , reset_by pci_sys_reset_n
