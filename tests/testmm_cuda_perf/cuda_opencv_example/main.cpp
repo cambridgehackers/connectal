@@ -27,6 +27,8 @@ int main()
 	//Create output image
 	cv::Mat output(input.rows,input.cols,CV_8UC1);
 
+	fprintf(stderr, "about to call kernel\n");
+
 	//Call the wrapper function
 	convert_to_gray(input,output);
 
@@ -36,6 +38,8 @@ int main()
 	
 	//Wait for key press
 	//cv::waitKey();
+
+	fprintf(stderr, "successfully called kernel\n");
 
 	return 0;
 }
