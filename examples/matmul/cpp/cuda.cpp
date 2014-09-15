@@ -27,7 +27,7 @@
 #include <opencv2/gpu/gpu.hpp>
 
 
-void test_cuda()
+void cuda_test()
 {
 
   struct timeval tv0;
@@ -74,21 +74,16 @@ void test_cuda()
   fprintf(stderr, "gpu time: %d (usec)\n", tv1.tv_usec-tv0.tv_usec);
 }
 
-long int mm_cuda(cv::Mat& src1, cv::Mat& src2, cv::Mat& dst)
+long int cuda_mm(cv::Mat& src1, cv::Mat& src2, cv::Mat& dst)
 {
 
   struct timeval tv0;
   struct timeval tv1;
   struct timezone tz; 
 
-  cv::Mat src3(src1.rows,src2.cols,CV_32F);
+  cv::Mat src3 = cv::Mat::zeros(src1.rows,src2.cols,CV_32F);
   cv::gpu::GpuMat d_src1, d_src2, d_src3, d_dst;
   
-  for(int a = 0; a < src1.rows; a++)
-    for(int b = 0; b < src1.cols; b++)
-      src3.at<float>(a,b)  = 0;
-
-
   d_src1.upload(src1);
   d_src2.upload(src2);
   d_src3.upload(src3);

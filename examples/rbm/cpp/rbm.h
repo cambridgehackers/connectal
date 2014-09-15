@@ -77,8 +77,7 @@ public:
   uint32_t tableSize_;
 };
 
-//  void sigmoid(PortalMat &a);
-
+void sigmoid(PortalMat &a);
 
 float sigmoid(float x);
 void configureSigmoidTable();

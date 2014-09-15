@@ -37,7 +37,7 @@ XBSVFLAGS  += --clib opencv_core
 XBSVFLAGS  += --clib opencv_objdetect
 XBSVFLAGS  += --clib opencv_imgproc
 XBSVFLAGS  += --clib cublas
-CPPFILES   +=  $(MMDIR)/cpp/test_cuda.cpp 
+CPPFILES   +=  $(MMDIR)/cpp/cuda.cpp 
 else
 XBSVFLAGS  +=  --clib opencv_core --stl=stlport_static
 endif

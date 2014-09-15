@@ -49,8 +49,8 @@ MmRequestTNProxy *mmdevice = 0;
 static int verbose = 0;
 
 #ifdef CUDA_PERF_TEST
-void test_cuda();
-long int mm_cuda(cv::Mat& src1, cv::Mat& src2, cv::Mat& dst);
+void cuda_test();
+long int cuda_mm(cv::Mat& src1, cv::Mat& src2, cv::Mat& dst);
 #endif
 
 
@@ -63,7 +63,7 @@ void *dbgThread(void *)
   return 0;
 }
 
-bool mm_compare(cv::Mat& m1, cv::Mat& m2, float epsilon)
+bool compare(cv::Mat& m1, cv::Mat& m2, float epsilon)
 {
   bool rv = (m1.rows == m2.rows);
   rv &= (m1.cols == m2.cols);
@@ -250,9 +250,9 @@ int main(int argc, const char **argv)
   bool eq = pm3.compare(m3);
 #else // CUDA_PERF_TEST
   cv::Mat cm3(m1.rows,m2.cols, CV_32F);
-  mm_cuda(m1, m2, cm3);
+  cuda_mm(m1, m2, cm3);
   cv::Mat  m3 = m1 * m2;
-  bool eq = mm_compare(m3, cm3, 0.01);
+  bool eq = compare(m3, cm3, 0.01);
 #endif // CUDA_PERF_TEST
   fprintf(stderr, "XXXXXXXXXXXXXXXXXXXXXXXXXX eq=%d\n", eq);
   exit(!(eq&&sane));
