@@ -9,7 +9,45 @@ using std::cout;
 using std::endl;
 
 void convert_to_gray(const cv::Mat& input, cv::Mat& output);
+void map_sigmoid(const cv::Mat& input, cv::Mat& output);
+float sigmoid(float x);
 
+
+#define SIGMOID
+#ifdef SIGMOID
+
+int main()
+{
+  int A = 128;
+  int B = 128;
+
+  srand(A*B);
+
+  cv::Mat input(A,B,CV_32F);
+  cv::Mat output(A,B,CV_32F);
+
+  for(int a = 0; a < A; a++)
+    for(int b = 0; b < B; b++)
+      input.at<float>(a,b) = (float)(rand() % 10);
+
+  fprintf(stderr, "about to call kernel\n");
+  map_sigmoid(input,output);
+  fprintf(stderr, "successfully called kernel\n");
+  
+  bool match = true;
+  int cnt = 0;
+  for(int a = 0; a < A; a++) {
+    for(int b = 0; b < B; b++) {
+      bool eq = (sigmoid(input.at<float>(a,b)) == output.at<float>(a,b));
+      match &= eq;
+      if (!eq && (cnt++ < 10)) fprintf(stderr, "%f %f\n", cnt, sigmoid(input.at<float>(a,b)), output.at<float>(a,b));
+    }
+  }
+
+  return !match;
+}
+
+#else // SIGMOID
 int main()
 {
 	std::string imagePath = "image.jpg";
@@ -43,3 +81,4 @@ int main()
 
 	return 0;
 }
+#endif // SIGMOID

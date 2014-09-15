@@ -10,7 +10,6 @@ cuda_opencv_example: main.o main.cpp
 	-L/scratch/opencv-cuda/opencv-2.4.9/install/lib -L/usr/local/cuda-5.5/lib64 \
 	-lcuda -lopencv_core  -lopencv_gpu -lcudart -lopencv_core 
 
-
 run:
 	LD_LIBRARY_PATH=/usr/local/cuda-5.5/lib64 ./cuda_opencv_example
 

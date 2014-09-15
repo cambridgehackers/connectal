@@ -85,3 +85,66 @@ void convert_to_gray(const cv::Mat& input, cv::Mat& output)
 	SAFE_CALL(cudaFree(d_input),"CUDA Free Failed");
 	SAFE_CALL(cudaFree(d_output),"CUDA Free Failed");
 }
+
+#define SIGMOID(x) ((x < -8.0) ? -8.0 : ((x > 8.0) ? 8.0 : (1 / (1 + expf(-x)))))
+
+float sigmoid(float x)
+{
+  return SIGMOID(x);
+}
+
+__global__ void ssigmoid( float* input, 
+			  float* output, 
+			  int width,
+			  int height,
+			  int inputWidthStep,
+			  int outputWidthStep)
+{
+  //2D Index of current thread
+  const int xIndex = blockIdx.x * blockDim.x + threadIdx.x;
+  const int yIndex = blockIdx.y * blockDim.y + threadIdx.y;
+  
+  //Only valid threads perform memory I/O
+  if((xIndex<width) && (yIndex<height)) {
+      const int input_tid = yIndex * inputWidthStep + xIndex;
+      const int output_tid  = yIndex * outputWidthStep + xIndex;
+      output[output_tid] = SIGMOID(input[input_tid]);
+  }
+}
+
+
+void map_sigmoid(const cv::Mat& input, cv::Mat& output)
+{
+  //Calculate total number of bytes of input and output image
+  const int inputBytes = input.step * input.rows;
+  const int outputBytes = output.step * output.rows;
+  
+  float *d_input, *d_output;
+  
+  //Allocate device memory
+  SAFE_CALL(cudaMalloc<float>(&d_input,inputBytes),"CUDA Malloc Failed");
+  SAFE_CALL(cudaMalloc<float>(&d_output,outputBytes),"CUDA Malloc Failed");
+  
+  //Copy data from OpenCV input image to device memory
+  SAFE_CALL(cudaMemcpy(d_input,input.ptr(),inputBytes,cudaMemcpyHostToDevice),"CUDA Memcpy Host To Device Failed");
+  
+  //Specify a reasonable block size
+  const dim3 block(16,16);
+  
+  //Calculate grid size to cover the whole image
+  const dim3 grid((input.cols + block.x - 1)/block.x, (input.rows + block.y - 1)/block.y);
+  
+  //Launch the input conversion kernel
+  ssigmoid<<<grid,block>>>(d_input,d_output,input.cols,input.rows,input.step,output.step);
+  
+  //Synchronize to check for any kernel launch errors
+  SAFE_CALL(cudaDeviceSynchronize(),"Kernel Launch Failed");
+  
+  //Copy back data from destination device meory to OpenCV output image
+  SAFE_CALL(cudaMemcpy(output.ptr(),d_output,outputBytes,cudaMemcpyDeviceToHost),"CUDA Memcpy Host To Device Failed");
+  
+  //Free the device memory
+  SAFE_CALL(cudaFree(d_input),"CUDA Free Failed");
+  SAFE_CALL(cudaFree(d_output),"CUDA Free Failed");
+}
+
