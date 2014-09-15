@@ -50,6 +50,7 @@ static int verbose = 0;
 
 #ifdef CUDA_PERF_TEST
 void test_cuda();
+long int mm_cuda(cv::Mat& src1, cv::Mat& src2, cv::Mat& dst);
 #endif
 
 
@@ -60,6 +61,21 @@ void *dbgThread(void *)
     mmdevice->debug();
   }
   return 0;
+}
+
+bool mm_compare(cv::Mat& m1, cv::Mat& m2, float epsilon)
+{
+  bool rv = (m1.rows == m2.rows);
+  rv &= (m1.cols == m2.cols);
+  for(int i = 0; i < m1.rows; i++){
+    for(int j = 0; j < m1.cols; j++) {
+      float err = fabs(m1.at<float>(i,j)-m2.at<float>(i,j))/m1.at<float>(i,j);
+      bool pass = (epsilon > err);
+      if (verbose && !pass) fprintf(stderr, "%f %f\n", m1.at<float>(i,j), m2.at<float>(i,j));
+      rv &= pass;
+    }
+  }
+  return rv;
 }
 
 int main(int argc, const char **argv)
@@ -232,12 +248,13 @@ int main(int argc, const char **argv)
     dumpMat<float>(" m3", "%5.1f", m3);
   }
   bool eq = pm3.compare(m3);
-  fprintf(stderr, "XXXXXXXXXXXXXXXXXXXXXXXXXX eq=%d\n", eq);
 #else // CUDA_PERF_TEST
-  bool eq = true;
-  test_cuda();
+  cv::Mat cm3(m1.rows,m2.cols, CV_32F);
+  mm_cuda(m1, m2, cm3);
+  cv::Mat  m3 = m1 * m2;
+  bool eq = mm_compare(m3, cm3, 0.01);
 #endif // CUDA_PERF_TEST
-
+  fprintf(stderr, "XXXXXXXXXXXXXXXXXXXXXXXXXX eq=%d\n", eq);
   exit(!(eq&&sane));
 }
 

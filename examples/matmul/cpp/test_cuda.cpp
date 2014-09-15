@@ -48,7 +48,7 @@ void test_cuda()
     for(int b = 0; b < B; b++){
       src1.at<float>(a,b) = a*b;
       src2.at<float>(a,b) = a*b;
-      src3.at<float>(a,b) = a*b;
+      src3.at<float>(a,b) = 0;
       dst.at<float>(a,b)  = 0;
     }
   }
@@ -72,6 +72,39 @@ void test_cuda()
   assert(!gettimeofday(&tv1, &tz));
 
   fprintf(stderr, "gpu time: %d (usec)\n", tv1.tv_usec-tv0.tv_usec);
+}
+
+long int mm_cuda(cv::Mat& src1, cv::Mat& src2, cv::Mat& dst)
+{
+
+  struct timeval tv0;
+  struct timeval tv1;
+  struct timezone tz; 
+
+  cv::Mat src3(src1.rows,src2.cols,CV_32F);
+  cv::gpu::GpuMat d_src1, d_src2, d_src3, d_dst;
+  
+  for(int a = 0; a < src1.rows; a++)
+    for(int b = 0; b < src1.cols; b++)
+      src3.at<float>(a,b)  = 0;
+
+
+  d_src1.upload(src1);
+  d_src2.upload(src2);
+  d_src3.upload(src3);
+  d_dst.upload(dst);
+  
+  cv::gpu::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
+  
+  assert(!gettimeofday(&tv0, &tz));
+  cv::gpu::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
+  assert(!gettimeofday(&tv1, &tz));
+
+  d_dst.download(dst);
+
+  long int rv = tv1.tv_usec-tv0.tv_usec;
+  fprintf(stderr, "gpu time: %d (usec)\n", rv);
+  return rv;
 }
 
 
