@@ -46,51 +46,11 @@ MmRequestTNProxy *mmdevice = 0;
 #include <assert.h>
 #include "portalmat.h"
 
-#include <opencv2/gpu/gpu.hpp>
-
 static int verbose = 0;
 
-void test_cuda()
-{
-
-  int A = 100;
-  int B = 100;
-
-  cv::Mat src1(A,B,CV_32F);
-  cv::Mat src2(A,B,CV_32F);
-  cv::Mat src3(A,B,CV_32F);
-  cv::Mat dst(A,B,CV_32F);
-
-  cv::gpu::GpuMat d_src1, d_src2, d_src3, d_dst;
-  
-  for(int a = 0; a < A; a++){
-    for(int b = 0; b < B; b++){
-      src1.at<float>(a,b) = a*b;
-      src2.at<float>(a,b) = a*b;
-      src3.at<float>(a,b) = a*b;
-      dst.at<float>(a,b)  = 0;
-    }
-  }
-
-
-  
-  cv::gemm(src1, src2, 1.0, src3, 1.0, dst);
-  
-  //CPU_ON;
-  cv::gemm(src1, src2, 1.0, src3, 1.0, dst);
-  //CPU_OFF;
-  
-  d_src1.upload(src1);
-  d_src2.upload(src2);
-  d_src3.upload(src3);
-  
-  cv::gpu::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
-  
-  //GPU_ON;
-  cv::gpu::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
-  //GPU_OFF;
- 
-}
+#ifdef CUDA_PERF_TEST
+void test_cuda();
+#endif
 
 
 void *dbgThread(void *)
@@ -150,7 +110,6 @@ int main(int argc, const char **argv)
 #endif
 
 #ifndef CUDA_PERF_TEST
-
 #ifdef MATRIX_NT
   mmdevice = new MmRequestNTProxy(IfcNames_MmRequestPortal);
 #else
@@ -274,10 +233,10 @@ int main(int argc, const char **argv)
   }
   bool eq = pm3.compare(m3);
   fprintf(stderr, "XXXXXXXXXXXXXXXXXXXXXXXXXX eq=%d\n", eq);
-#else
+#else // CUDA_PERF_TEST
   bool eq = true;
   test_cuda();
-#endif
+#endif // CUDA_PERF_TEST
 
   exit(!(eq&&sane));
 }
