@@ -59,7 +59,7 @@ void test_cuda()
   cv::gemm(src1, src2, 1.0, src3, 1.0, dst);
   assert(!gettimeofday(&tv1, &tz));
 
-  fprintf(stderr, "cpu time: %d\n", tv1.tv_usec-tv0.tv_usec);
+  fprintf(stderr, "cpu time: %d (usec)\n", tv1.tv_usec-tv0.tv_usec);
 
   d_src1.upload(src1);
   d_src2.upload(src2);
@@ -71,7 +71,7 @@ void test_cuda()
   cv::gpu::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
   assert(!gettimeofday(&tv1, &tz));
 
-  fprintf(stderr, "gpu time: %d\n", tv1.tv_usec-tv0.tv_usec);
+  fprintf(stderr, "gpu time: %d (usec)\n", tv1.tv_usec-tv0.tv_usec);
 }
 
 
