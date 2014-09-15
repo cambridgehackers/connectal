@@ -15,7 +15,7 @@ int main()
 	std::string imagePath = "image.jpg";
 
 	//Read input image from the disk
-	cv::Mat input = cv::imread(imagePath,CV_LOAD_IMAGE_COLOR);
+	cv::Mat input = cv::Mat::zeros(100,100,CV_LOAD_IMAGE_COLOR); //cv::imread(imagePath,CV_LOAD_IMAGE_COLOR);
 
 	if(input.empty())
 	{
@@ -31,11 +31,11 @@ int main()
 	convert_to_gray(input,output);
 
 	//Show the input and output
-	cv::imshow("Input",input);
-	cv::imshow("Output",output);
+	//cv::imshow("Input",input);
+	//cv::imshow("Output",output);
 	
 	//Wait for key press
-	cv::waitKey();
+	//cv::waitKey();
 
 	return 0;
 }
