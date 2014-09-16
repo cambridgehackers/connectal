@@ -157,14 +157,16 @@ float sumOfErrorSquared(cv::Mat &a, cv::Mat &b)
 
 void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
 {
+  bool verify = false;
 #ifdef BSIM
   int numEpochs = 10;
 #else
   int numEpochs = 100;
 #endif
+  if (verify)
+    numEpochs = 1;
   float sum_of_errors_squareds[numEpochs];
   bool verbose = false;
-  bool verify = true;
   bool dynamicRange = true;
   int numExamples = trainingData.rows;
 
@@ -323,7 +325,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
 
     cv::Mat neg_hidden_activations = pm_neg_visible_probs * pmWeights;
     if (verbose) dumpMat<float>("   neg_hidden_activations", "%5.1f", neg_hidden_activations);
-    if (verify) assert(pm_neg_hidden_activations.compare(neg_hidden_activations, __FILE__, __LINE__));
+    if (verify) assert(pm_neg_hidden_activations.compare(neg_hidden_activations, __FILE__, __LINE__, 0.05));
 
     // RbmMat pm_neg_hidden_probs;
     pm_neg_hidden_probs.sigmoid(pm_neg_hidden_activations);
@@ -368,8 +370,6 @@ fprintf(stderr, "========== %s:%d\n", __FILE__, __LINE__);
 
 void RBM::run()
 {
-  int numVisible = 6;
-  int numHidden = 2;
   cv::Mat trainingData = (cv::Mat_<float>(6,6) <<
 			  1,1,1,0,0,0,
 			  1,0,1,0,0,0,
@@ -378,42 +378,40 @@ void RBM::run()
 			  0,0,1,1,0,0,
 			  0,0,1,1,1,0);
 
-  if (1) {
-    char name_buff[256];
-    snprintf(name_buff, 256, "../train-images-idx3-ubyte");
-    fprintf(stderr, "reading image data from %s\n", name_buff);
-    MnistImageFile imagefile(name_buff);
-    imagefile.open();
-    int numImages = imagefile.numEntries();
-
-    int numPixels = imagefile.rows()*imagefile.cols();
-    numImages = 200;
-    int cols = 783; // one more column is added below to make the total 784.
+  char name_buff[256];
+  snprintf(name_buff, 256, "../train-images-idx3-ubyte");
+  fprintf(stderr, "reading image data from %s\n", name_buff);
+  MnistImageFile imagefile(name_buff);
+  imagefile.open();
+  int numImages = imagefile.numEntries();
+  int numPixels = imagefile.rows()*imagefile.cols();
+  
+  numImages = 200;
+  int cols = 783; // one more column is added below to make the total 784.
 #ifdef BSIM
-    numImages = 100;
-    //    cols = 19;
+  numImages = 32;
+  cols = 31; // one more column is added to make the total 32
 #endif
-    if (!cols || numPixels < cols)
-      cols = numPixels;
-    fprintf(stderr, "numImages=%d numPixels=%d imagefile.rows=%d imagefile.cols=%d\n", numImages, numPixels, imagefile.rows(), imagefile.cols());
-
-    //numVisible = imagefile.rows()*imagefile.cols();
-    numVisible = cols;
-    numHidden = numVisible / 2;
-
-    trainingData.create(numImages, cols, CV_32F);
-
-    for (int i = 0; i < numImages; i++) {
-      //fprintf(stderr, "Reading mat %d\n", i);
-      cv::Mat m = imagefile.mat(i);
-      //dumpMat<unsigned char>("foo", "%02x", m);
-      for (int j = 0; j < imagefile.rows(); j++) {
-	for (int k = 0; k < imagefile.cols(); k++) {
-	  int offset = j*imagefile.cols() + k;
-	  if (offset < cols) {
-	    float f = (float)m.at<unsigned char>(k,j);
-	    trainingData.at<float>(i, offset) = f;
-	  }
+  if (!cols || numPixels < cols)
+    cols = numPixels;
+  fprintf(stderr, "numImages=%d numPixels=%d imagefile.rows=%d imagefile.cols=%d\n", numImages, numPixels, imagefile.rows(), imagefile.cols());
+  
+  //numVisible = imagefile.rows()*imagefile.cols();
+  int numVisible = cols;
+  int numHidden = numVisible / 2;
+  
+  trainingData.create(numImages, cols, CV_32F);
+  
+  for (int i = 0; i < numImages; i++) {
+    //fprintf(stderr, "Reading mat %d\n", i);
+    cv::Mat m = imagefile.mat(i);
+    //dumpMat<unsigned char>("foo", "%02x", m);
+    for (int j = 0; j < imagefile.rows(); j++) {
+      for (int k = 0; k < imagefile.cols(); k++) {
+	int offset = j*imagefile.cols() + k;
+	if (offset < cols) {
+	  float f = (float)m.at<unsigned char>(k,j);
+	  trainingData.at<float>(i, offset) = f;
 	}
       }
     }
