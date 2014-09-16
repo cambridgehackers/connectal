@@ -98,6 +98,7 @@ module mkFPCMult(FPCMult)
       Product aixr = fxptMult(ain.first().a.img, xin.first.rel);
       ain.deq();
       xin.deq();
+
       ax <= MulData{arxr: arxr, aixi: aixi, arxi: arxi, aixr: aixr,
 	 filterPhase: ain.first().filterPhase};
       /* pipeline and combine into outputs */
