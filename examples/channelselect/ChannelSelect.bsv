@@ -46,7 +46,7 @@ interface ChannelSelect;
 endinterface
 
 
-module mkChannelSelect#(Bit#(10) decimation)(ChannelSelect);
+module mkChannelSelect#(Bit#(10) decimation, DDS dds)(ChannelSelect);
    BRAM_Configure cfg = defaultValue;
    cfg.memorySize = 1024;
    BRAM2Port#(Bit#(10), Complex#(FixedPoint#(2,23))) coeffRam0 <- 
@@ -61,7 +61,6 @@ module mkChannelSelect#(Bit#(10) decimation)(ChannelSelect);
    Vector#(2, Reg#(Complex#(Product))) accum <- replicateM(mkReg(?));
    Vector#(2, FIFO#(Complex#(Product))) accumout <- replicateM(mkFIFO());
    FIFO#(Complex#(Product)) ycombined <- mkFIFO();
-   DDS dds <- mkDDS();
    FPCMult lo <- mkFPCMult();
 
    /* could do this with mkForkVector() but we don't need the extra FIFOs
