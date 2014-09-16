@@ -11,7 +11,7 @@ gentarget:: sine.bin
 sine.bin: sinetable
 	./sinetable >sine.bin
 
-sinetable: ../fmcomms1/sinetable.c
-	cc -o sinetable ../fmcomms1/sinetable.c -lm
+sinetable: sinetable.c
+	cc -o sinetable sinetable.c -lm
 
 include ../../Makefile.xbsv
