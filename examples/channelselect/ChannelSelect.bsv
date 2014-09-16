@@ -92,6 +92,8 @@ module mkChannelSelect#(Bit#(10) decimation, DDS dds)(ChannelSelect);
       let c0 <- coeffRam0.portB.response.get();
       let c1 <- coeffRam1.portB.response.get();
       Bit#(1) phase = delayFilterPhase.first();
+      $display ("mulin ph %d, c0.re %x c0.im %x, c1.re %x, c1.im %x\n",
+	 phase, c0.rel, c0.img, c1.rel, c1.img);
       delayFilterPhase.deq();
       mul[0].a.enq(CoeffData{a: c0, filterPhase: phase});
       mul[1].a.enq(CoeffData{a: c1, filterPhase: phase});
@@ -103,10 +105,14 @@ module mkChannelSelect#(Bit#(10) decimation, DDS dds)(ChannelSelect);
       if (m.filterPhase == 1)
 	 begin
 	    accum[0] <= m.y;
+	    $display("muloutaccumin0 ph 1 pd.re %x pd.im %x\n",
+	       m.rel, m.img);
 	    accumout[0].enq(accum[0]);
 	 end
       else
 	 begin
+	    $display("muloutaccumin0 ph 0 pd.re %x pd.im %x\n",
+	       m.rel, m.img);
 	    accum[0] <= accum[0] + m.y;
 	 end
    endrule
