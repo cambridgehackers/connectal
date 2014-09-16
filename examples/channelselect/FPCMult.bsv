@@ -44,6 +44,8 @@
 // which indicates the start of a new sample period at the output
 // intermediate frequency.
 
+import FIFOF::*;
+import SpecialFIFOs::*;
 import Complex::*;
 import FixedPoint::*;
 import Pipe::*;
@@ -89,12 +91,14 @@ module mkFPCMult(FPCMult)
 
    rule work;
       /* compute multiplies */
+
       Product arxr = fxptMult(ain.first().a.rel, xin.first.rel);
       Product aixi = fxptMult(ain.first().a.img, xin.first.img);
       Product arxi = fxptMult(ain.first().a.rel, xin.first.img);
       Product aixr = fxptMult(ain.first().a.img, xin.first.rel);
       ain.deq();
       xin.deq();
+
       ax <= MulData{arxr: arxr, aixi: aixi, arxi: arxi, aixr: aixr,
 	 filterPhase: ain.first().filterPhase};
       /* pipeline and combine into outputs */
