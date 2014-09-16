@@ -9,7 +9,9 @@ NUMBER_OF_MASTERS =0
 gentarget:: sine.bin
 
 sine.bin: sinetable
+	mkdir -p bluesim
 	./sinetable >sine.bin
+	cp sine.bin bluesim
 
 sinetable: sinetable.c
 	cc -o sinetable sinetable.c -lm
