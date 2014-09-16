@@ -23,6 +23,7 @@
 import DDS::*;
 import Gearbox::*;
 import ChannelSelect::*;
+
 import Complex::*;
 import SDRTypes::*;
 import FPCMult::*;
@@ -32,11 +33,15 @@ import Vector::*;
 import ChannelSelectTestInterfaces::*;
 
 
-module mkChannelSelectTestRequest#(ChannelSelectTestIndication indication) (ChannelSelectTestRequest);
+module mkChannelSelectTestRequest#(ChannelSelectTestIndication indication) (ChannelSelectTestRequest)
+   provisos(Bits#(CoeffData, a__),
+	    Bits#(ProductData, b__),
+	    Bits#(MulData, c__));
    Clock clk <- exposeCurrentClock;
    Reset rst <- exposeCurrentReset;
    Gearbox#(1, 2, Complex#(Signal)) gb <- mk1toNGearbox(clk, rst, clk, rst);
-   ChannelSelect cs <- mkChannelSelect(64);
+   DDS dds <- mkDDS();
+   ChannelSelect cs <- mkChannelSelect(64, dds);
    
    rule processRF;
       let data = gb.first();
