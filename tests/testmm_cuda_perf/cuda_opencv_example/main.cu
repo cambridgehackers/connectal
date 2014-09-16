@@ -96,9 +96,7 @@ float sigmoid(float x)
 __global__ void ssigmoid( float* input, 
 			  float* output, 
 			  int width,
-			  int height,
-			  int inputWidthStep,
-			  int outputWidthStep)
+			  int height)
 {
   //2D Index of current thread
   const int xIndex = blockIdx.x * blockDim.x + threadIdx.x;
@@ -106,9 +104,8 @@ __global__ void ssigmoid( float* input,
   
   //Only valid threads perform memory I/O
   if((xIndex<width) && (yIndex<height)) {
-      const int input_tid = yIndex * inputWidthStep + xIndex;
-      const int output_tid  = yIndex * outputWidthStep + xIndex;
-      output[output_tid] = SIGMOID(input[input_tid]);
+    int offs = (yIndex*width)+xIndex;
+    output[offs] = SIGMOID(input[offs]);
   }
 }
 
@@ -135,7 +132,7 @@ void map_sigmoid(const cv::Mat& input, cv::Mat& output)
   const dim3 grid((input.cols + block.x - 1)/block.x, (input.rows + block.y - 1)/block.y);
   
   //Launch the input conversion kernel
-  ssigmoid<<<grid,block>>>(d_input,d_output,input.cols,input.rows,input.step,output.step);
+  ssigmoid<<<grid,block>>>(d_input,d_output,input.cols,input.rows);
   
   //Synchronize to check for any kernel launch errors
   SAFE_CALL(cudaDeviceSynchronize(),"Kernel Launch Failed");

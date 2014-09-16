@@ -35,15 +35,17 @@ int main()
   fprintf(stderr, "successfully called kernel\n");
   
   bool match = true;
-  int cnt = 0;
+  float epsilon = 0.00001;
   for(int a = 0; a < A; a++) {
     for(int b = 0; b < B; b++) {
-      bool eq = (sigmoid(input.at<float>(a,b)) == output.at<float>(a,b));
+      float ref = sigmoid(input.at<float>(a,b));
+      float gpuv = output.at<float>(a,b);
+      float err = fabs(ref - gpuv);//ref;
+      bool eq = (epsilon > err);
       match &= eq;
-      if (!eq && (cnt++ < 10)) fprintf(stderr, "%f %f\n", cnt, sigmoid(input.at<float>(a,b)), output.at<float>(a,b));
+      if (!eq) fprintf(stderr, "(%d,%d) %f %f\n", a,b,ref,gpuv);
     }
   }
-
   return !match;
 }
 
