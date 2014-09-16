@@ -135,6 +135,7 @@ module mkChannelSelect#(Bit#(10) decimation)(ChannelSelect);
    endrule
    
    rule combineoutloin;
+
       Complex#(Product) yin = ycombined.first();
       FixedPoint#(2,16) yrel = fxptTruncate(yin.rel);
       FixedPoint#(2,16) yimg = fxptTruncate(yin.img);
