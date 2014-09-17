@@ -106,13 +106,13 @@ module mkChannelSelect#(Bit#(10) decimation, DDS dds)(ChannelSelect);
 	 begin
 	    accum[0] <= m.y;
 	    $display("muloutaccumin0 ph 1 pd.re %x pd.im %x\n",
-	       m.rel, m.img);
+	       m.y.rel, m.y.img);
 	    accumout[0].enq(accum[0]);
 	 end
       else
 	 begin
 	    $display("muloutaccumin0 ph 0 pd.re %x pd.im %x\n",
-	       m.rel, m.img);
+	       m.y.rel, m.y.img);
 	    accum[0] <= accum[0] + m.y;
 	 end
    endrule
@@ -122,11 +122,15 @@ module mkChannelSelect#(Bit#(10) decimation, DDS dds)(ChannelSelect);
       mul[1].y.deq();
       if (m.filterPhase == 1)
 	 begin
+	    $display("muloutaccumin1 ph 1 pd.re %x pd.im %x\n",
+	       m.y.rel, m.y.img);
 	    accum[1] <= m.y;
 	    accumout[1].enq(accum[1]);
 	 end
       else
 	 begin
+	    $display("muloutaccumin1 ph 0 pd.re %x pd.im %x\n",
+	       m.y.rel, m.y.img);
 	    accum[1] <= accum[1] + m.y;
 	 end
    endrule
