@@ -34,7 +34,7 @@ endinterface
 interface ChannelSelectTestIndication;
    method Action ifreqData(Bit#(32) dataRe, Bit#(32) dataIm);
    method Action setDataResp();
-   method Action setCoeffResp();
+   method Action setConfigResp();
 endinterface
 
 
