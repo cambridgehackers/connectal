@@ -68,12 +68,12 @@ module mkChannelSelectTestRequest#(ChannelSelectTestIndication indication) (Chan
     FixedPoint#(2, 23) re = unpack(pack(truncate(valueRe)));
     FixedPoint#(2, 23) im = unpack(pack(truncate(valueIm)));
       cs.setCoeff(addr, Complex{rel: re, img:im});
-      indication.setCoeffResp();
+      indication.setConfigResp();
    endmethod
 
    method Action setPhaseAdvance(Bit#(32) i, Bit#(32) f);
-    dds.setPhaseAdvance(FixedPoint{i: truncate(i), f: f});
-      indication.setPhaseResp();
+    dds.setPhaseAdvance(PhaseType{i: truncate(i), f: truncate(f)});
+      indication.setConfigResp();
    endmethod
 endmodule
 
