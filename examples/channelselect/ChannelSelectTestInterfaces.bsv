@@ -26,6 +26,7 @@
 interface ChannelSelectTestRequest;
    method Action rfreqDataWrite(Bit#(32) dataRe, Bit#(32) dataIm);
    method Action setCoeff(Bit#(11) addr, Bit#(32) valueRe, Bit#(32) valueIm);
+   method Action setPhaseAdvance(Bit#(32) i, Bit#(32) f);
 endinterface
 
 
