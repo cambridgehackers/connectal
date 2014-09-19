@@ -31,31 +31,35 @@ XBSV supports Linux on x86 with PCIe-attached Virtex and Kintex boards (vc707, k
 
 XBSV supports bluesim as a simulated hardware platform. 
 
-xbsvgen
------------------
-
-The script xbsvgen enables you to take a Bluespec System
-Verilog (BSV) file and generate a bitstream for a Xilinx Zynq FPGA. 
-
-It generates C++ and BSV stubs so that you can write code that runs on
-the Zynq's ARM CPUs to interact with your BSV componet.
-
-See [doc/xbsvgen.md](doc/xbsvgen.md) for a description of its options.
 
 Installation
 ------------
 
-1. Install the Bluespec compiler. XBSV is known to work with 2013.09beta1
+0. Checkout out the following from github:
+    git clone git://github.com/cambridgehackers/xbsv
+
+If you are generating code for an FPGA, check out fpgamake:
+    git clone git://github.com/cambridgehackers/fpgamake
+
+It appears that this requires buildcache to be checked out also:
+    git clone git://github.com/cambridgehackers/buildcache
+
+Add USE_BUILDCACHE=1 to your calls to make to enable it to cache, otherwise it will rerun all compilation steps.
+
+1. Install the Bluespec compiler. XBSV is known to work with 2013.09.beta1, 2014.05.beta1, and 2014.07.A
 
 Install the bluespec compiler. Make sure the BLUESPECDIR environment
-variable is set:
+variable is set appropriately:
 
     export BLUESPECDIR=~/bluespec/Bluespec-2013.09.beta1/lib
 
-2. Install xbsv dependences:
+2. Install xbsv dependences. This installs ubuntu packages used by xbsv or during compilation:
 
     cd xbsv;
     sudo make install-dependences
+
+3. If you are using an FPGA attached to your machine, install the drivers:
+
     make all
     sudo make install
 
