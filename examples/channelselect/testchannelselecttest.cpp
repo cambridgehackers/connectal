@@ -10,7 +10,7 @@
 #include "GeneratedTypes.h"
 
 sem_t data_sem;
-sem_t coeff_sem;
+sem_t config_sem;
 
 class ChannelSelectTestIndication : public ChannelSelectTestIndicationWrapper
 {
@@ -25,13 +25,9 @@ public:
     fprintf(stderr, "setDataResp\n");
     sem_post(&data_sem);
   }
-  virtual void setCoeffResp(){
+  virtual void setConfigResp(){
     fprintf(stderr, "setDataResp\n");
-    sem_post(&coeff_sem);
-  }
-  virtual void setPhaseResp(){
-    fprintf(stderr, "setPhaseResp\n");
-    sem_post(&coeff_sem);
+    sem_post(&config_sem);
   }
 };
 
@@ -41,7 +37,7 @@ int main(int argc, const char **argv)
   ChannelSelectTestRequestProxy *device = 0;
   ChannelSelectTestIndication *indication = 0;
   sem_init(&data_sem, 0, 0);
-  sem_init(&coeff_sem, 0, 0);
+  sem_init(&config_sem, 0, 0);
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
   device = new ChannelSelectTestRequestProxy(IfcNames_ChannelSelectTestRequest);
@@ -53,15 +49,15 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::starting\n");
 
   device->setCoeff(0, 1<<21, 0);
-  sem_wait(&coeff_sem);
+  sem_wait(&config_sem);
   device->setCoeff(1, 1<<21, 0);
-  sem_wait(&coeff_sem);
+  sem_wait(&config_sem);
   device->setCoeff(2, 1<<21, 0);
-  sem_wait(&coeff_sem);
+  sem_wait(&config_sem);
   device->setCoeff(3, 1<<21, 0);
-  sem_wait(&coeff_sem);
+  sem_wait(&config_sem);
   device->setPhaseAdvance(0, 1 << 21);
-  sem_wait(&coeff_sem);
+  sem_wait(&config_sem);
 
   int i;
   for (i = 0; i < 128; i += 1) {
