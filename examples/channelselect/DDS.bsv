@@ -66,7 +66,7 @@ module mkDDS(DDS);
    rule filter_phase;
       Bit#(10) addr;
       phase <= phase + phaseAdvance;
-      addr = truncate(rotateBitsBy(phase.f, 10));
+      addr = phase.i;
       ram.portA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: addr, datain: ?});
       $display("dds addr %x\n", addr);
    endrule
