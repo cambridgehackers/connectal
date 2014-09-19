@@ -70,6 +70,11 @@ module mkChannelSelectTestRequest#(ChannelSelectTestIndication indication) (Chan
       cs.setCoeff(addr, Complex{rel: re, img:im});
       indication.setCoeffResp();
    endmethod
+
+   method Action setPhaseAdvance(Bit#(32) i, Bit#(32) f);
+    dds.setPhaseAdvance(FixedPoint{i: truncate(i), f: f});
+      indication.setPhaseResp();
+   endmethod
 endmodule
 
 
