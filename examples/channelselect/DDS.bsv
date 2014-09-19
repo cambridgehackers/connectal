@@ -29,7 +29,7 @@ import Pipe::*;
 import Vector::*;
 
 typedef Complex#(FixedPoint#(2,23)) DDSOutType;
-typedef FixedPoint#(2,23) PhaseType;
+typedef FixedPoint#(10,23) PhaseType;
 
 interface DDS;
    method Action setPhaseAdvance(FixedPoint#(10,32) v);
@@ -64,19 +64,25 @@ module mkDDS(DDS);
    */
 
    rule filter_phase;
+      Bit#(10) addr;
       phase <= phase + phaseAdvance;
-      ram.portA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: truncate(rotateBitsBy(phase.f, 10)), datain: ?});
+      addr = truncate(rotateBitsBy(phase.f, 10));
+      ram.portA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: addr, datain: ?});
+      $display("dds addr %x\n", addr);
    endrule
    
    rule ddsoutrule;
       let v <- ram.portA.response.get();
+      $display("ddsout ph %d" , phase);
+	 $display(fshow(v));
       ddsout.enq(v);
    endrule
    
 
    method Action setPhaseAdvance(FixedPoint#(10,32) v);
-      phaseAdvance <= PhaseType{i: truncate(v.i), f: truncate(rotateBitsBy(v.f, 10))};
-      endmethod
+      phaseAdvance <= v;
+   endmethod
+   
    interface PipeOut osc = toPipeOut(ddsout);
 
 endmodule
