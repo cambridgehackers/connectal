@@ -1,9 +1,8 @@
 #include <stdio.h>
-#include <sys/mman.h>
-#include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <pthread.h>
+
+#include <assert.h>
 #include <semaphore.h>
 
 #include "ChannelSelectTestRequestProxy.h"
@@ -13,26 +12,11 @@
 sem_t data_sem;
 sem_t coeff_sem;
 
-int readBurstLen = 16;
-int writeBurstLen = 16;
-
-  PortalPoller *poller = 0;
-
-
-#ifndef BSIM
-int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
-#else
-int numWords = 0x124000/4;
-#endif
-
-size_t test_sz  = numWords*sizeof(unsigned int);
-size_t alloc_sz = test_sz;
-
 class ChannelSelectTestIndication : public ChannelSelectTestIndicationWrapper
 {
 
 public:
-  ChannelSelectTestIndication(unsigned int id, PortalPoller *poller) : ChannelSelectTestIndicationWrapper(id, poller){}
+  ChannelSelectTestIndication(unsigned int id) : ChannelSelectTestIndicationWrapper(id){}
 
   virtual void ifreqData(unsigned dataRe, unsigned dataIm){
     fprintf(stderr, "read %x %x\n", dataRe, dataIm);
@@ -45,53 +29,45 @@ public:
     fprintf(stderr, "setDataResp\n");
     sem_post(&coeff_sem);
   }
+  virtual void setPhaseResp(){
+    fprintf(stderr, "setPhaseResp\n");
+    sem_post(&coeff_sem);
+  }
 };
-
-static void *thread_routine(void *data)
-{
-    fprintf(stderr, "Calling portalExec\n");
-    portalExec(0);
-    fprintf(stderr, "portalExec returned ???\n");
-    return data;
-}
 
 int main(int argc, const char **argv)
 {
 
   ChannelSelectTestRequestProxy *device = 0;
-  ChannelSelectTestIndication *deviceIndication = 0;
+  ChannelSelectTestIndication *indication = 0;
   sem_init(&data_sem, 0, 0);
   sem_init(&coeff_sem, 0, 0);
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
-  poller = new PortalPoller();
+  device = new ChannelSelectTestRequestProxy(IfcNames_ChannelSelectTestRequest);
 
-  device = new ChannelSelectTestRequestProxy(IfcNames_ChannelSelectTestRequest, poller);
+  indication = new ChannelSelectTestIndication(IfcNames_ChannelSelectTestIndication);
 
-  deviceIndication = new ChannelSelectTestIndication(IfcNames_ChannelSelectTestIndication, poller);
+  portalExec_start();
 
-  pthread_t thread;
-  pthread_attr_t attr;
-  pthread_attr_init(&attr);
-  pthread_create(&thread, &attr, thread_routine, 0);
+  fprintf(stderr, "Main::starting\n");
 
-  int status;
-    
-  fprintf(stderr, "Main::flush and invalidate complete\n");
-
-
-  fprintf(stderr, "Main::after getStateDbg\n");
-
-
-  fprintf(stderr, "Main::starting read %08x\n", numWords);
-
-  device->setCoeff(0, 0, 0);
+  device->setCoeff(0, 1<<21, 0);
+  sem_wait(&coeff_sem);
+  device->setCoeff(1, 1<<21, 0);
+  sem_wait(&coeff_sem);
+  device->setCoeff(2, 1<<21, 0);
+  sem_wait(&coeff_sem);
+  device->setCoeff(3, 1<<21, 0);
+  sem_wait(&coeff_sem);
+  device->setPhaseAdvance(0, 1 << 21);
   sem_wait(&coeff_sem);
 
-  device->rfreqDataWrite(0, 0);
-  sem_wait(&data_sem);
-
-
+  int i;
+  for (i = 0; i < 128; i += 1) {
+    device->rfreqDataWrite(1<<16, 0);   // should be re=1, im=0
+    sem_wait(&data_sem);
+  }
 
   fprintf(stderr, "Main::stopping\n");
 
