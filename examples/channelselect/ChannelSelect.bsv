@@ -53,7 +53,7 @@ module mkChannelSelect#(Bit#(10) decimation, DDS dds)(ChannelSelect);
        mkBRAM2Server(cfg);
    BRAM2Port#(Bit#(10), Complex#(FixedPoint#(2,23))) coeffRam1 <- 
        mkBRAM2Server(cfg);
-   Reg#(Bit#(10)) filterPhase <- mkReg(?);
+   Reg#(Bit#(10)) filterPhase <- mkReg(0);
    FIFO#(Bit#(1)) delayFilterPhase <- mkSizedFIFO(3);  // length > bram read latency
    FIFOF#(Vector#(2, Complex#(Signal))) infifo <- mkFIFOF();
    FIFOF#(Complex#(Signal)) outfifo <- mkFIFOF();
@@ -74,6 +74,8 @@ module mkChannelSelect#(Bit#(10) decimation, DDS dds)(ChannelSelect);
    endrule
    
    rule filter_phase;
+      $display("filter_phase %d dec %d\n", filterPhase, decimation
+);
       if (filterPhase == (decimation - 1))
 	 begin
 	    filterPhase <= 0;
@@ -92,8 +94,12 @@ module mkChannelSelect#(Bit#(10) decimation, DDS dds)(ChannelSelect);
       let c0 <- coeffRam0.portB.response.get();
       let c1 <- coeffRam1.portB.response.get();
       Bit#(1) phase = delayFilterPhase.first();
-      $display ("mulin ph %d, c0.re %x c0.im %x, c1.re %x, c1.im %x\n",
-	 phase, c0.rel, c0.img, c1.rel, c1.img);
+      $write("mulin ph %d c0 ", phase);
+      $write(fshow(c0));
+      $write(" c1 ");
+      $write(fshow(c1));
+      $write("\n");
+      
       delayFilterPhase.deq();
       mul[0].a.enq(CoeffData{a: c0, filterPhase: phase});
       mul[1].a.enq(CoeffData{a: c1, filterPhase: phase});
@@ -105,14 +111,14 @@ module mkChannelSelect#(Bit#(10) decimation, DDS dds)(ChannelSelect);
       if (m.filterPhase == 1)
 	 begin
 	    accum[0] <= m.y;
-	    $display("muloutaccumin0 ph 1 pd.re %x pd.im %x\n",
-	       m.y.rel, m.y.img);
+	    $write("muloutaccumin0 ph 1 ");
+	    $display(fshow(m.y));
 	    accumout[0].enq(accum[0]);
 	 end
       else
 	 begin
-	    $display("muloutaccumin0 ph 0 pd.re %x pd.im %x\n",
-	       m.y.rel, m.y.img);
+	    $write("muloutaccumin0 ph 0 ");
+	    $display(fshow(m.y));
 	    accum[0] <= accum[0] + m.y;
 	 end
    endrule
@@ -122,15 +128,15 @@ module mkChannelSelect#(Bit#(10) decimation, DDS dds)(ChannelSelect);
       mul[1].y.deq();
       if (m.filterPhase == 1)
 	 begin
-	    $display("muloutaccumin1 ph 1 pd.re %x pd.im %x\n",
-	       m.y.rel, m.y.img);
+	    $write("muloutaccumin1 ph 1 ");
+	    $display(fshow(m.y));
 	    accum[1] <= m.y;
 	    accumout[1].enq(accum[1]);
 	 end
       else
 	 begin
-	    $display("muloutaccumin1 ph 0 pd.re %x pd.im %x\n",
-	       m.y.rel, m.y.img);
+	    $write("muloutaccumin0 ph 0 ");
+	    $display(fshow(m.y));
 	    accum[1] <= accum[1] + m.y;
 	 end
    endrule
@@ -152,6 +158,10 @@ module mkChannelSelect#(Bit#(10) decimation, DDS dds)(ChannelSelect);
       ycombined.deq();
       lo.x.enq(Complex{rel: yrel, img: yimg});
       lo.a.enq(CoeffData{a: loin, filterPhase: 0});
+      $write("combineoutloin x ");
+      $write(fshow(Complex{rel: yrel, img: yimg}));
+      $write(" loin ");
+      $display(fshow(loin));
    endrule
    
    rule loout;
@@ -160,6 +170,8 @@ module mkChannelSelect#(Bit#(10) decimation, DDS dds)(ChannelSelect);
       FixedPoint#(2,16) ifimg = fxptTruncate(ifc.img);
       outfifo.enq(Complex{rel: ifrel, img: ifimg});
       lo.y.deq();
+      $write("loout ");
+      $display(fshow(Complex{rel: ifrel, img: ifimg}));
    endrule
    
    interface PipeIn rfreq = toPipeIn(infifo);
