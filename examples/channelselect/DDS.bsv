@@ -68,13 +68,13 @@ module mkDDS(DDS);
       phase <= phase + phaseAdvance;
       addr = phase.i;
       ram.portA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: addr, datain: ?});
-      $display("dds addr %x\n", addr);
+      //$display("dds addr %x\n", addr);
    endrule
    
    rule ddsoutrule;
       let v <- ram.portA.response.get();
-      $display("ddsout ph %d" , phase);
-	 $display(fshow(v));
+      //$display("ddsout ph %d" , phase);
+	// $display(fshow(v));
       ddsout.enq(v);
    endrule
    
