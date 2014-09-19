@@ -98,8 +98,8 @@ proxyMethodTemplate='''
 void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p %(paramSeparator)s %(paramDeclarations)s )
 {
     volatile unsigned int* temp_working_addr = &(p->map_base[PORTAL_REQ_FIFO(%(methodChannelOffset)s)]);
-    int i = 50;
-    while (!READL(p, temp_working_addr + 1) && i-- > 0)
+    int __i = 50;
+    while (!READL(p, temp_working_addr + 1) && __i-- > 0)
         ; /* busy wait a bit on 'fifo not full' */
 %(paramStructMarshall)s
 };
