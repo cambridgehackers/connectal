@@ -41,6 +41,11 @@ public:
     fprintf("data %d %X %x\n", phase, dataRe, dataIM);
     sem_post(&data_sem);
   }
+  virtual void setConfigResp(){
+    fprintf(stderr, "dds.setDataResp\n");
+    sem_post(&config_sem);
+  }
+  
 };
 
 int main(int argc, const char **argv)
