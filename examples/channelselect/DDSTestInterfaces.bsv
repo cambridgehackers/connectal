@@ -29,6 +29,7 @@ endinterface
 
 /* ddsData is Complex#(FixedPoint(2,23)) */
 interface DDSTestIndication;
+   method Action setConfigResp();
    method Action ddsData(Bit#(32) phase, Bit#(32) dataRe, Bit#(32) dataIm);
 endinterface
 
