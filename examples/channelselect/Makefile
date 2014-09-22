@@ -1,7 +1,7 @@
 
-S2H = ChannelSelectTestRequest
-H2S = ChannelSelectTestIndication
-BSVFILES = ChannelSelectTestInterfaces.bsv  Top.bsv
+S2H = ChannelSelectTestRequest DDSTestRequest
+H2S = ChannelSelectTestIndication DDSTestIndication
+BSVFILES = ChannelSelectTestInterfaces.bsv  DDSTestInterfaces.bsv Top.bsv
 CPPFILES=testchannelselecttest.cpp
 NUMBER_OF_MASTERS =0
 #XBSVFLAGS=--bscflags " -D TRACE_AXI"
