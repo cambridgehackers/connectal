@@ -29,13 +29,6 @@ import DDSTestInterfaces::*;
 module mkDDSTestRequest#(DDSTestIndication indication) (DDSTestRequest);
    DDS dds <- mkDDS();
 
-   method Action setCoeff(Bit#(11) addr, Bit#(32) valueRe, Bit#(32) valueIm);
-    FixedPoint#(2, 23) re = unpack(pack(truncate(valueRe)));
-    FixedPoint#(2, 23) im = unpack(pack(truncate(valueIm)));
-      cs.setCoeff(addr, Complex{rel: re, img:im});
-      indication.setConfigResp();
-   endmethod
-
    method Action setPhaseAdvance(Bit#(32) i, Bit#(32) f);
     dds.setPhaseAdvance(PhaseType{i: truncate(i), f: truncate(f)});
       indication.setConfigResp();
