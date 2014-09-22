@@ -31,22 +31,47 @@ public:
   }
 };
 
+class DDSTestIndication : public DDSTestIndicationWrapper
+{
+
+public:
+  DDSTestIndication(unsigned int id) : DDSTestIndicationWrapper(id){}
+
+  virtual void ddsData(unsigned phase, unsigned dataRe, unsigned dataIm){
+    fprintf("data %d %X %x\n", phase, dataRe, dataIM);
+    sem_post(&data_sem);
+  }
+};
+
 int main(int argc, const char **argv)
 {
 
-  ChannelSelectTestRequestProxy *device = 0;
-  ChannelSelectTestIndication *indication = 0;
+  ChannelSelectTestRequestProxy *ctdevice = 0;
+  ChannelSelectTestIndication *ctindication = 0;
+  DDSTestRequestProxy *ctdevice = 0;
+  DDSTestIndication *ctindication = 0;
   sem_init(&data_sem, 0, 0);
   sem_init(&config_sem, 0, 0);
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
-  device = new ChannelSelectTestRequestProxy(IfcNames_ChannelSelectTestRequest);
+  ctdevice = new ChannelSelectTestRequestProxy(IfcNames_ChannelSelectTestRequest);
 
-  indication = new ChannelSelectTestIndication(IfcNames_ChannelSelectTestIndication);
+  ctindication = new ChannelSelectTestIndication(IfcNames_ChannelSelectTestIndication);
+
+  ddsdevice = new DDSTestRequestProxy(IfcNames_DDSTestRequest);
+
+  ddsindication = new DDSTestIndication(IfcNames_DDSTestIndication);
 
   portalExec_start();
 
-  fprintf(stderr, "Main::starting\n");
+  fprintf(stdout, "DDSTest\n");
+  ddsdevice.setPhaseAdvance(1, 0);
+
+  for (i = 0; i < 2048; i += 1)
+    ddsdevice.getData();
+
+
+  fprintf(stdout, "Main::starting\n");
 
   device->setCoeff(0, 1<<21, 0);
   sem_wait(&config_sem);
