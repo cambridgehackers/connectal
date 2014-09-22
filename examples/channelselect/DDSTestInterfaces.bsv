@@ -24,8 +24,8 @@
 /* setPhaseAdvance data is FixedPoint(10, 23) */
 interface DDSTestRequest;
    method Action setPhaseAdvance(Bit#(32) i, Bit#(32) f);
+   method Action getData();
 endinterface
-
 
 /* ddsData is Complex#(FixedPoint(2,23)) */
 interface DDSTestIndication;
