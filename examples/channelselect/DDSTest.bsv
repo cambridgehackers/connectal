@@ -37,7 +37,7 @@ module mkDDSTestRequest#(DDSTestIndication indication) (DDSTestRequest);
    method Action getData();
       PhaseType p = dds.getPhase();
       DDSOutType d = dds.osc.first();
-      indication.ddsData(zeroExtend(p.i), zeroExtend(pack(d.re)), zeroExtend(pack(d.im)));
+      indication.ddsData(zeroExtend(p.i), zeroExtend(pack(d.rel)), zeroExtend(pack(d.img)));
    endmethod
 endmodule
 
