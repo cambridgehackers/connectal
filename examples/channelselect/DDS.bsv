@@ -33,6 +33,7 @@ typedef FixedPoint#(10,23) PhaseType;
 
 interface DDS;
    method Action setPhaseAdvance(PhaseType v);
+   method PhaseType getPhase();
    interface PipeOut#(DDSOutType) osc;
 endinterface
 
@@ -81,6 +82,10 @@ module mkDDS(DDS);
 
    method Action setPhaseAdvance(PhaseType v);
       phaseAdvance <= v;
+   endmethod
+   
+   method PhaseType getPhase();
+      return(phase);
    endmethod
    
    interface PipeOut osc = toPipeOut(ddsout);
