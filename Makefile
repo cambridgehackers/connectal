@@ -106,6 +106,7 @@ rbmtests2 = testrbm2.2.2         \
 tests    =  $(memtests)          \
 	    $(matmultests)       \
             $(rbmtests2)         \
+	    ipcperf              \
 	    memread_manual       \
 	    simple_manual
 
