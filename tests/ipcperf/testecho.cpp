@@ -5,6 +5,7 @@
 #include <semaphore.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <string.h>
 
 #include "EchoIndicationWrapper.h"
 #include "EchoRequestProxy.h"
