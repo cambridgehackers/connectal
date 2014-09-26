@@ -100,4 +100,6 @@ typedef PS7 HostType;
 
 export PS7LIB::*;
 export HostType;
+export DataBusWidth;
+export NumberOfMasters;
 `endif
