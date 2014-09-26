@@ -8,8 +8,17 @@ import TinyAsm::*;
 import Tiny3::*;
 import BRAM::*;
 
+interface Tiny3Indication;
+   method Action outputdata(Bit#(32) v);
+   method Action inputresponse();
+endinterface
 
-module mkTestBenchA(Empty);
+interface Tiny3Request;
+   method Action inputdata(Bit#(32) v);
+endinterface
+
+
+module mkTiny3Request(Tiny3Indication indication)(Tiny3Request);
 
    /********** the program we wish to assemble **********/
    function List#(AsmLineT) my_program(function ImmT findaddr(String label)) =
@@ -27,8 +36,14 @@ module mkTestBenchA(Empty);
 
    rule handle_output;
       let out <- tiny.out.get();
+      indication.outputdata(out);
       $display("%05t: output = %d\n",$time,out);
    endrule
+   
+   method Action inputdata(Bit#(32) v);
+      tiny.in(v);
+      indication.inputresponse();
+   endmethod
 
 endmodule
 
