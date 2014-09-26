@@ -20,19 +20,21 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+////////////////////////////// common /////////////////////////////////
+
+`ifndef DataBusWidth
+`define DataBusWidth 64
+`endif
+
+typedef `DataBusWidth DataBusWidth;
+typedef `NumberOfMasters NumberOfMasters;
+
 ////////////////////////////// Bsim /////////////////////////////////
 `ifdef BsimHostTypeIF
 
 import Vector            :: *;
 import AxiMasterSlave    :: *;
 import MemTypes          :: *;
-
-`ifndef DataBusWidth
-`define DataBusWidth 64
-`endif
-
-typedef `NumberOfMasters NumberOfMasters;
-typedef `DataBusWidth DataBusWidth;
 
 // this interface should allow for different master and slave bus paraters;		 
 interface BsimHost#(numeric type clientAddrWidth, numeric type clientBusWidth, numeric type clientIdWidth,  
@@ -61,13 +63,6 @@ import Bscan             :: *;
 `ifndef BSIM
 import PcieEndpointX7    :: *;
 `endif
-
-`ifndef DataBusWidth
-`define DataBusWidth 64
-`endif
-
-typedef `DataBusWidth DataBusWidth;
-typedef `NumberOfMasters NumberOfMasters;
 
 interface PcieHost#(numeric type dsz, numeric type nSlaves);
    interface Vector#(16,ReadOnly_MSIX_Entry)     msixEntry;
