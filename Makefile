@@ -80,7 +80,9 @@ out/parsetab.py: scripts/syntax.py
 # tests
 
 memtests =  memread_manyclients  \
-            memwrite_manyclients 
+            memwrite_manyclients \
+            memread_manyclients128  \
+            memwrite_manyclients128 
 
 matmultests2 = testmm8.8.2       \
 	    testmm16.16.2        \
