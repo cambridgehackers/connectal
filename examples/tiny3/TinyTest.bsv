@@ -1,4 +1,3 @@
-package TinyTestBench;
 
 import FIFO::*;
 import GetPut::*;
@@ -47,7 +46,4 @@ module mkTiny3Request(Tiny3Indication indication)(Tiny3Request);
 
 endmodule
 
-
-
-endpackage: TinyTestBench
 
