@@ -32,12 +32,15 @@ import MemwriteEngine::*;
 import Pipe::*;
 import Arith::*;
 import MemUtils::*;
+import HostInterface::*;
 
 `ifdef NumEngineServers
 typedef `NumEngineServers NumEngineServers;
 `else
 typedef 1 NumEngineServers;
 `endif
+
+typedef TDiv#(DataBusWidth,32) DataBusWords;
 
 interface MemwriteRequest;
    method Action startWrite(Bit#(32) pointer, Bit#(32) offset, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
@@ -46,7 +49,7 @@ endinterface
 
 interface Memwrite;
    interface MemwriteRequest request;
-   interface ObjectWriteClient#(64) dmaClient;
+   interface ObjectWriteClient#(DataBusWidth) dmaClient;
 endinterface
 
 interface MemwriteIndication;
@@ -70,7 +73,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    Vector#(NumEngineServers, Reg#(Bit#(32)))        iterCnts <- replicateM(mkReg(0));
    Vector#(NumEngineServers, FIFOF#(void))               cfs <- replicateM(mkSizedFIFOF(1));
    Vector#(NumEngineServers, FIFOF#(Bool))       finishFifos <- replicateM(mkFIFOF);
-   MemwriteEngineV#(64,1,NumEngineServers)                we <- mkMemwriteEngine;
+   MemwriteEngineV#(DataBusWidth,1,NumEngineServers)                we <- mkMemwriteEngine;
    Bit#(ObjectOffsetSize) chunk = (extend(numWords)/fromInteger(valueOf(NumEngineServers)))*4;
 
    for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
@@ -88,9 +91,11 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 	 finishFifos[i].enq(rv);
       endrule
       rule src if (cfs[i].notEmpty);
-	 let v = {srcGens[i]+1,srcGens[i]};
-	 we.dataPipes[i].enq(v);
-	 let new_srcGen = srcGens[i]+2;
+	 Vector#(DataBusWords, Bit#(32)) v;
+	 for (Integer j = 0; j < valueOf(DataBusWords); j = j + 1)
+	    v[j] = srcGens[i]+fromInteger(j);
+	 we.dataPipes[i].enq(pack(v));
+	 let new_srcGen = srcGens[i]+fromInteger(valueOf(DataBusWords));
 	 srcGens[i] <= new_srcGen;
 	 if(new_srcGen == (writeOffset/4)+(fromInteger(i+1)*truncate(chunk/4)))
 	    cfs[i].deq;
@@ -137,7 +142,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    Reg#(Bit#(32))    writeOffset <- mkReg(0);
    Reg#(Bit#(32))       writeEnd <- mkReg(0);
    Reg#(Bit#(32))        iterCnt <- mkReg(0);
-   MemWriterBuff#(64,1024)    we <- mkMemWriterBuff;
+   MemWriterBuff#(DataBusWidth,1024)    we <- mkMemWriterBuff;
    FIFOF#(void)               cf <- mkSizedFIFOF(1);
    
    Reg#(Bit#(64)) cycle_cnt <- mkReg(0);
