@@ -31,6 +31,7 @@ import Pipe::*;
 import MemTypes::*;
 import MemreadEngine::*;
 import Pipe::*;
+import HostInterface::*; // for DataBusWidth
 
 `ifdef NumEngineServers
 typedef `NumEngineServers NumEngineServers;
@@ -45,7 +46,7 @@ endinterface
 
 interface Memread;
    interface MemreadRequest request;
-   interface ObjectReadClient#(64) dmaClient;
+   interface ObjectReadClient#(DataBusWidth) dmaClient;
 endinterface
 
 interface MemreadIndication;
@@ -53,6 +54,8 @@ interface MemreadIndication;
    method Action reportStateDbg(Bit#(32) streamRdCnt, Bit#(32) mismatchCount);
    method Action readDone(Bit#(32) mismatchCount);
 endinterface
+
+typedef TDiv#(DataBusWidth,32) DataBusWords;
 
 module mkMemread#(MemreadIndication indication) (Memread);
 
@@ -67,21 +70,21 @@ module mkMemread#(MemreadIndication indication) (Memread);
    Vector#(NumEngineServers, Reg#(Bit#(32)))       iterCnts <- replicateM(mkReg(0));
    Vector#(NumEngineServers, Reg#(Bit#(32)))   valuesToRead <- replicateM(mkReg(0));
    Vector#(NumEngineServers, Reg#(Bit#(32))) mismatchCounts <- replicateM(mkReg(0));
-   MemreadEngineV#(64,2,NumEngineServers)                re <- mkMemreadEngine;
+   MemreadEngineV#(DataBusWidth,2,NumEngineServers)                re <- mkMemreadEngine;
    Vector#(NumEngineServers, FIFOF#(Bit#(32))) mismatchFifos <- replicateM(mkFIFOF);
    Bit#(ObjectOffsetSize) chunk = (extend(numWords)/fromInteger(valueOf(NumEngineServers)))*4;
    
    Vector#(NumEngineServers, RangePipeIfc#(Bit#(32)))     rangePipeIfcs <- replicateM(mkRangePipeOut);
    function PipeOut#(a) getRangePipePipe(RangePipeIfc#(a) rpi); return rpi.pipe; endfunction
    Vector#(NumEngineServers, PipeOut#(Vector#(1,Bit#(32)))) rangePipes = map(mapPipe(replicate), map(getRangePipePipe, rangePipeIfcs));
-   Vector#(NumEngineServers, PipeOut#(Vector#(2,Bit#(32)))) srcGenPipes <- mapM(mkUnfunnel, rangePipes);
-   function Vector#(2,Bit#(32)) split(Bit#(64) v); return unpack(v); endfunction
-   Vector#(NumEngineServers, PipeOut#(Vector#(2,Bit#(32)))) readPipes <- mapM(mkMapPipe(split), re.dataPipes);
+   Vector#(NumEngineServers, PipeOut#(Vector#(DataBusWords,Bit#(32)))) srcGenPipes <- mapM(mkUnfunnel, rangePipes);
+   function Vector#(DataBusWords,Bit#(32)) split(Bit#(DataBusWidth) v); return unpack(v); endfunction
+   Vector#(NumEngineServers, PipeOut#(Vector#(DataBusWords,Bit#(32)))) readPipes <- mapM(mkMapPipe(split), re.dataPipes);
 
    function Vector#(n, Bool) vcompare(Vector#(n, a) x, Vector#(n, a) y) provisos (Eq#(a));
       return map(uncurry(eq), zip(x,y));
    endfunction
-   Vector#(NumEngineServers, PipeOut#(Vector#(2, Bool)))  mismatchPipes <- mapM(uncurry(mkJoinBuffered(vcompare)), zip(readPipes, srcGenPipes));
+   Vector#(NumEngineServers, PipeOut#(Vector#(DataBusWords, Bool)))  mismatchPipes <- mapM(uncurry(mkJoinBuffered(vcompare)), zip(readPipes, srcGenPipes));
    
    for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
       rule start (iterCnts[i] > 0);
