@@ -98,7 +98,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	  return 0;
     endfunction
 
-   rule writeHeaderTlp if (!writeInProgress && writeDataMimo.deqReadyN(1));
+   rule writeHeaderTlp if (!writeInProgress && (!writeIs3dwFifo.first || writeDataMimo.deqReadyN(1)));
       let tlp <- toGet(tlpWriteHeaderFifo).get();
       let dwCount <- toGet(writeDwCountFifo).get();
       let is3dw <- toGet(writeIs3dwFifo).get();
