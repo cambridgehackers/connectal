@@ -52,7 +52,8 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	     Add#(ddd, TMul#(32, busWidthWords), 256),
 	     Add#(eee, busWidthWords, 8),
 	     Add#(1, a__, busWidthWords),
-	     Add#(busWidthWords, b__, 4)
+	     Add#(busWidthWords, b__, 4),
+	     Add#(c__, busWidthWords, 16)
       );
 
     let beat_shift = fromInteger(valueOf(beatShift));
@@ -70,10 +71,10 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
     // default configuration for MIMO is for guarded enq() and deq().
     // However, the implicit guard only checks for space for 1 element for enq(), and availability of 1 element for deq().
     MIMOConfiguration mimoCfg = defaultValue;
-   MIFO#(4,busWidthWords,8,Bit#(32)) completionMimo <- mkMIFO();
-   MIFO#(4,busWidthWords,8,TLPTag) completionTagMimo <- mkMIFO();
+   MIFO#(4,busWidthWords,16,Bit#(32)) completionMimo <- mkMIFO();
+   MIFO#(4,busWidthWords,16,TLPTag) completionTagMimo <- mkMIFO();
 
-    MIMO#(busWidthWords,4,8,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
+    MIMO#(busWidthWords,4,16,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
     Reg#(Bit#(9)) writeBurstCount <- mkReg(0);
     Reg#(TLPLength)  writeDwCount <- mkReg(0); // how many 4 byte (double) words to send
     Reg#(LUInt#(4))    tlpDwCount <- mkReg(0); // how many to send in the next tlp (at most 4)
