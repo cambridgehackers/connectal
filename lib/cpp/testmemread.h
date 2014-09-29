@@ -102,6 +102,13 @@ int runtest(int argc, const char ** argv)
 
   portalExec_start();
 
+#ifdef FPGA0_CLOCK_FREQ
+  long req_freq = FPGA0_CLOCK_FREQ;
+  long freq = 0;
+  setClockFrequency(0, req_freq, &freq);
+  fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
+#endif
+
   /* Test 1: check that match is ok */
   for (int i = 0; i < numWords; i++){
     srcBuffer[i] = i;

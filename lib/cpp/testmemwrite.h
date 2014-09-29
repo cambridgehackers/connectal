@@ -100,6 +100,13 @@ void parent(int rd_sock, int wr_sock)
   dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
   
   portalExec_start();
+
+#ifdef FPGA0_CLOCK_FREQ
+  long req_freq = FPGA0_CLOCK_FREQ;
+  long freq = 0;
+  setClockFrequency(0, req_freq, &freq);
+  fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
+#endif
   
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
   
