@@ -29,7 +29,11 @@
 sem_t test_sem;
 
 
+#ifdef PCIE
+int burstLen = 32;
+#else
 int burstLen = 16;
+#endif
 #ifndef BSIM
 int iterCnt = 64;
 #else

@@ -21,7 +21,11 @@ int numWords = 0x124000/4;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 
+#ifdef PCIE
+int burstLen = 32;
+#else
 int burstLen = 16;
+#endif
 #ifndef BSIM
 int iterCnt = 128;
 #else
