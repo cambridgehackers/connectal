@@ -55,7 +55,7 @@ endmodule
 interface BurstFunnel#(numeric type k, numeric type w);
    method Action loadIdx(Bit#(TLog#(k)) i);
    interface Vector#(k, PipeIn#(Bit#(w))) dataIn;
-   interface Vector#(k, Reg#(Bit#(8))) burstLen;
+   interface Vector#(k, Reg#(Bit#(BurstLenSize))) burstLen;
    interface PipeOut#(Tuple2#(Bit#(TLog#(k)),Bit#(w))) dataOut;
 endinterface
 
@@ -69,13 +69,13 @@ module mkBurstFunnel#(Integer maxBurstLen)(BurstFunnel#(k,w))
    UGBramFifos#(4,16,Tuple2#(Bit#(w),Bool)) complBuff <- mkUGBramFifos;
    Vector#(4, ConfigCounter#(16)) compCnts <- replicateM(mkConfigCounter(0));
    Vector#(k,FIFOF#(Tuple3#(Bit#(2), Bit#(w), Bool))) data_in <- replicateM(mkFIFOF);
-   Vector#(k,Reg#(Bit#(8))) burst_len <- replicateM(mkReg(0));
-   Vector#(k,Reg#(Bit#(8))) drain_cnt <- replicateM(mkReg(0));
-   Reg#(Bit#(8)) inj_ctrl <- mkReg(0);
+   Vector#(k,Reg#(Bit#(BurstLenSize))) burst_len <- replicateM(mkReg(0));
+   Vector#(k,Reg#(Bit#(BurstLenSize))) drain_cnt <- replicateM(mkReg(0));
+   Reg#(Bit#(BurstLenSize)) inj_ctrl <- mkReg(0);
    FIFO#(Tuple2#(Bit#(TAdd#(1,logk)),Bit#(2))) loadIdxs <- mkSizedFIFO(32);
    FIFO#(Tuple2#(Bit#(TAdd#(1,logk)),Bit#(2))) inFlight <- mkSizedFIFO(4);
    FunnelPipe#(1, k, Tuple3#(Bit#(2),Bit#(w),Bool),bpc) data_in_funnel <- mkFunnelPipesPipelined(map(toPipeOut,data_in));
-   Reg#(Bit#(8)) drainCnt <- mkReg(0);
+   Reg#(Bit#(BurstLenSize)) drainCnt <- mkReg(0);
    FIFOF#(Tuple2#(Bit#(TLog#(k)),Bit#(w))) exit_data <- mkFIFOF;
    FIFO#(Bit#(logk)) drainRename <- mkFIFO;
    
@@ -107,16 +107,16 @@ module mkBurstFunnel#(Integer maxBurstLen)(BurstFunnel#(k,w))
        endinterface);
    Vector#(k, PipeIn#(Bit#(w))) data_in_pipes = zipWith(enter_data, data_in, genVector);
 
-   function Reg#(Bit#(8)) check(Reg#(Bit#(8)) r) =
+   function Reg#(Bit#(BurstLenSize)) check(Reg#(Bit#(BurstLenSize)) r) =
       (interface Reg;
-	  method Action _write(Bit#(8) v);
+	  method Action _write(Bit#(BurstLenSize) v);
 	     if(v > 16) begin
 		$display("ERROR mkBurstFunnel: burstLen too large");
 		$finish;
 	     end
 	     r <= v;
 	  endmethod
-	  method Bit#(8) _read = r._read;
+	  method Bit#(BurstLenSize) _read = r._read;
        endinterface);
 
    rule drain_funnel;
@@ -305,7 +305,7 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
       interface Get writeReq;
 	 method ActionValue#(ObjectRequest) get();
 	    match {.idx, .cmd} <- toGet(loadf_c).get;
-	    Bit#(8) bl = cmd.burstLen;
+	    Bit#(BurstLenSize) bl = cmd.burstLen;
 	    Bool last = False;
 	    if (cmd.len <= extend(bl)) begin
 	       last = True;
