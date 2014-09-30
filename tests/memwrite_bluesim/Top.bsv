@@ -72,6 +72,14 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
       cycles <= cycles + 1;
    endrule
 
+   rule startdump if (cycles == 1);
+      $dumpvars();
+   endrule
+
+   rule finish if (reqCycles == 10000);
+      $dumpoff();
+   endrule
+
    MemSlaveEngine#(DataBusWidth) memSlaveEngine <- mkMemSlaveEngine(PciId {bus: 4, dev: 2, func: 0});
    mkConnection(dma.masters[0], memSlaveEngine.slave);
 
@@ -81,11 +89,11 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
       TLPMemoryIO3DWHeader hdr3dw = unpack(tlp.data);
       let newReqCycles = reqCycles;
       if (tlp.sof && hdr4dw.format == MEM_WRITE_4DW_DATA) begin
-	 $display("%d req %h %d", cycles-reqCycles, hdr4dw.addr<<2, fromInteger(valueOf(DataBusWidth)));
+	 $display("%d 4dw req %h %d", cycles-reqCycles, hdr4dw.addr<<2, fromInteger(valueOf(DataBusWidth)));
 	 newReqCycles = cycles;
       end
-      if (tlp.sof && hdr3dw.format == MEM_WRITE_3DW_DATA) begin
-	 $display("%d req %h %d", cycles-reqCycles, hdr4dw.addr<<2, fromInteger(valueOf(DataBusWidth)));
+      else if (tlp.sof && hdr3dw.format == MEM_WRITE_3DW_DATA) begin
+	 $display("%d 3dw req %h %d", cycles-reqCycles, hdr4dw.addr<<2, fromInteger(valueOf(DataBusWidth)));
 	 newReqCycles = cycles;
       end
       else if (tlp.sof) begin
@@ -93,8 +101,9 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
 	 newReqCycles = cycles;
       end
       else begin
-	 $display("%d data %h", cycles-dataCycles, tlp.data);
+	 $display("%d data %h", cycles-reqCycles, tlp.data);
 	 dataCycles <= cycles;
+	 newReqCycles = cycles;
       end
       reqCycles <= newReqCycles;
    endrule
