@@ -78,7 +78,7 @@ module mkAxiDmaMaster#(MemMaster#(addrWidth,dataWidth) master) (Axi3Master#(addr
    interface Get req_aw;
       method ActionValue#(Axi3WriteRequest#(addrWidth,6)) get();
 	 let req <- master.write_client.writeReq.get;
-	 reqs.enq(req.burstLen);
+	 reqs.enq(truncate(req.burstLen));
 	 return Axi3WriteRequest{address:req.addr, len:truncate((req.burstLen>>beat_shift)-1), id:req.tag, size: axiBusSize(valueOf(dataWidth)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
       endmethod
    endinterface

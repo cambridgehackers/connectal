@@ -75,7 +75,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    MIFO#(4,busWidthWords,16,TLPTag) completionTagMimo <- mkMIFO();
 
     MIMO#(busWidthWords,4,16,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
-    Reg#(Bit#(9)) writeBurstCount <- mkReg(0);
+    Reg#(Bit#(10)) writeBurstCount <- mkReg(0);
     Reg#(TLPLength)  writeDwCount <- mkReg(0); // how many 4 byte (double) words to send
     Reg#(LUInt#(4))    tlpDwCount <- mkReg(0); // how many to send in the next tlp (at most 4)
     Reg#(Bool)            lastTlp <- mkReg(False); // if the next tlp sent is the last one
@@ -233,7 +233,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       tlp.sof = True;
       tlp.eof = True;
       tlp.hit = 7'h00;
-      TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen));
+      TLPLength tlplen = fromInteger(valueOf(busWidthWords))*burstLen;
       if (addr[39:32] != 0) begin
 	 TLPMemory4DWHeader hdr_4dw = defaultValue;
 	 hdr_4dw.format = MEM_READ_4DW_NO_DATA;
@@ -276,7 +276,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	    let awid = req.tag;
 	    let writeIs3dw = False;
 
-	    TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen));
+	    TLPLength tlplen = fromInteger(valueOf(busWidthWords))*burstLen;
 	    TLPData#(16) tlp = defaultValue;
 	    tlp.sof = True;
 	    tlp.eof = False;
@@ -316,7 +316,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	    writeDwCountFifo.enq(tlplen);
 	    writeIs3dwFifo.enq(writeIs3dw);
 	    writeIsHeaderOnlyFifo.enq(writeIs3dw && tlplen == 1);
-	    writeBurstCount <= zeroExtend(burstLen);
+	    writeBurstCount <= burstLen;
 	    writeTag.enq(extend(awid));
          endmethod
 	endinterface

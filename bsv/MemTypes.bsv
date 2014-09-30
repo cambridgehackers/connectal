@@ -39,15 +39,16 @@ typedef 40 ObjectOffsetSize;
 typedef `PhysAddrWidth PhysAddrWidth;
 
 typedef 6 ObjectTagSize;
+typedef 10 BurstLenSize;
 typedef struct {
    Bit#(addrWidth) addr;
-   Bit#(8) burstLen;
+   Bit#(BurstLenSize) burstLen;
    Bit#(ObjectTagSize) tag;
    } MemRequest#(numeric type addrWidth) deriving (Bits);
 typedef struct {
    ObjectPointer pointer;
    Bit#(ObjectOffsetSize) offset;
-   Bit#(8) burstLen;
+   Bit#(BurstLenSize) burstLen;
    Bit#(ObjectTagSize)  tag;
    } ObjectRequest deriving (Bits);
 typedef struct {
@@ -63,7 +64,7 @@ typedef ObjectData#(dsz) MemData#(numeric type dsz);
 
 typedef struct {ObjectPointer pointer;
 		Bit#(ObjectOffsetSize) base;
-		Bit#(8) burstLen;
+		Bit#(BurstLenSize) burstLen;
 		Bit#(32) len;
 		} MemengineCmd deriving (Eq,Bits);
 

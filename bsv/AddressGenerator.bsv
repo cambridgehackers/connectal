@@ -29,7 +29,7 @@ import MemTypes::*;
 
 typedef struct {
    Bit#(addrWidth) addr;
-   Bit#(8) bc;
+   Bit#(BurstLenSize) bc;
    Bit#(6) tag;
    Bool    last;
    } AddrBeat#(numeric type addrWidth) deriving (Bits);
@@ -45,7 +45,7 @@ module mkAddressGenerator(AddressGenerator#(addrWidth, dataWidth))
    FIFOF#(MemRequest#(addrWidth)) requestFifo <- mkFIFOF1();
    FIFOF#(AddrBeat#(addrWidth)) addrBeatFifo <- mkFIFOF();
    Reg#(Bit#(addrWidth)) addrReg <- mkReg(0);
-   Reg#(Bit#(8)) burstCountReg <- mkReg(0);
+   Reg#(Bit#(BurstLenSize)) burstCountReg <- mkReg(0);
    Reg#(Bool) isFirstReg <- mkReg(True);
    Reg#(Bool) isLastReg <- mkReg(False);
 

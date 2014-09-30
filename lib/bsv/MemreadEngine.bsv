@@ -201,7 +201,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
       interface Get readReq;
 	 method ActionValue#(ObjectRequest) get();
 	    match {.idx, .cmd} <- toGet(loadf_c).get;
-	    Bit#(8) bl = cmd.burstLen;
+	    Bit#(BurstLenSize) bl = cmd.burstLen;
 	    let last = False;
 	    if (cmd.len <= extend(bl)) begin
 	       last = True;

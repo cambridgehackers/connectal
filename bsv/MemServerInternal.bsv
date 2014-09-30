@@ -148,7 +148,7 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
 	    Mul#(dataWidthBytes,8,dataWidth),
 	    Log#(dataWidthBytes,beatShift),
 	    Add#(a__, TLog#(numClients), 6),
-	    Add#(beatShift, e__, 8)
+	    Add#(beatShift, e__, BurstLenSize)
       );
    
    // stage 0: address translation (latency = MMU_PIPELINE_DEPTH)
@@ -157,20 +157,20 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
    FIFO#(RRec#(numClients,addrWidth))  reqFifo <- mkFIFO;
    // stage 2: read commands
    BRAM2Port#(Bit#(TLog#(NumTags)), DRec#(numClients,addrWidth)) dreqFifos <- mkBRAM2Server(defaultValue);
-   BRAM2Port#(Bit#(TAdd#(TLog#(NumTags),TSub#(8,beatShift))), ObjectData#(dataWidth)) read_buffer <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(Bit#(TAdd#(TLog#(NumTags),TSub#(BurstLenSize,beatShift))), ObjectData#(dataWidth)) read_buffer <- mkBRAM2Server(defaultValue);
    // stage 3: read data 
    FIFO#(MemData#(dataWidth)) readDataPipelineFifo <- mkFIFO;
    
    let debug = False;
    
-   Reg#(Bit#(8))           burstReg <- mkReg(0);
-   Reg#(Bool)              firstReg <- mkReg(True);
-   Reg#(Bool)               lastReg <- mkReg(False);
+   Reg#(Bit#(BurstLenSize)) burstReg <- mkReg(0);
+   Reg#(Bool)               firstReg <- mkReg(True);
+   Reg#(Bool)                lastReg <- mkReg(False);
    Reg#(Bit#(64))  beatCount <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
    TagGen#(NumTags) tag_gen <- mkTagGen;
 
-   Reg#(Bit#(8))                 compReg0 <- mkReg(0); 
+   Reg#(Bit#(BurstLenSize))      compReg0 <- mkReg(0);
    Reg#(Bit#(TLog#(NumTags)))    compReg1 <- mkReg(0);
    Reg#(Bit#(TLog#(numClients))) compReg2 <- mkReg(0);
    FIFO#(Bit#(TLog#(numClients)))compFifo0 <- mkFIFO;
@@ -343,10 +343,10 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
    BRAM2Port#(Bit#(TLog#(NumTagsW)), RResp#(numClients,addrWidth)) respFifos <- mkBRAM2Server(defaultValue);
    TagGen#(NumTagsW) tag_gen <- mkTagGen;
 
-   Reg#(Bit#(8)) burstReg <- mkReg(0);   
-   Reg#(Bool)    firstReg <- mkReg(True);
-   Reg#(Bool)     lastReg <- mkReg(False);
-   Reg#(Bit#(64)) beatCount <- mkReg(0);
+   Reg#(Bit#(BurstLenSize)) burstReg <- mkReg(0);
+   Reg#(Bool)               firstReg <- mkReg(True);
+   Reg#(Bool)               lastReg <- mkReg(False);
+   Reg#(Bit#(64))           beatCount <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
 
    Reg#(Bit#(64)) cycle_cnt <- mkReg(0);

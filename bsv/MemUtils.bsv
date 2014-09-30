@@ -68,7 +68,7 @@ module mkMemReaderBuff(MemReaderBuff#(dataWidth, bufferDepth))
 	    ,Log#(dataWidthBytes,beatShift)
 	    ,Log#(bufferDepth,bufferDepthWidth)
 	    ,Max#(TAdd#(bufferDepthWidth,1),8,availableWidth)
-	    ,Add#(a__,8,availableWidth)
+	    ,Add#(a__,BurstLenSize,availableWidth)
 	    );
 
    FIFOF#(ObjectData#(dataWidth))   readBuffer <- mkSizedBRAMFIFOF(valueOf(bufferDepth));
@@ -142,7 +142,7 @@ endinterface
 module mkMemWriterBuff(MemWriterBuff#(dataWidth, bufferDepth))
    provisos(Log#(bufferDepth,bufferDepthWidth),
 	    Max#(TAdd#(bufferDepthWidth,1),8,availableWidth),
-	    Add#(a__,8,availableWidth),
+	    Add#(a__,BurstLenSize,availableWidth),
 	    Div#(dataWidth,8,dataWidthBytes),
 	    Mul#(dataWidthBytes,8,dataWidth),
 	    Log#(dataWidthBytes,beatShift));

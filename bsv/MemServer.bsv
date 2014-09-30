@@ -89,7 +89,7 @@ module mkMemServerRW#(DmaDebugIndication dmaIndication,
 	     Mul#(nrc, nMasters, numReadClients),
 	     Add#(b__, TLog#(nrc), 6),
 	     Add#(c__, TLog#(nwc), 6),
-	     Add#(TLog#(TDiv#(dataWidth, 8)), d__, 8)
+	     Add#(TLog#(TDiv#(dataWidth, 8)), d__, BurstLenSize)
 	     );
 
    MemServer#(PhysAddrWidth,dataWidth,nMasters) reader <- mkMemServerR(dmaIndication,  readClients, mmus);
@@ -135,7 +135,7 @@ module mkMemServerR#(DmaDebugIndication dmaIndication,
 	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
 	     Mul#(nrc, nMasters, numReadClients),
 	     Add#(b__, TLog#(nrc), 6),
-	     Add#(TLog#(TDiv#(dataWidth, 8)), c__, 8)
+	     Add#(TLog#(TDiv#(dataWidth, 8)), c__, BurstLenSize)
 	     );
 
 
