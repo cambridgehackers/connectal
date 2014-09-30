@@ -69,7 +69,7 @@ endinterface
 // @param bufferDepth The depth of the internal buffer
 //
 module mkDmaReadBuffer(DmaReadBuffer#(dataWidth, bufferDepth))
-   provisos(Add#(b__, TAdd#(1,TLog#(bufferDepth)), 8),
+   provisos(Add#(b__, TAdd#(1,TLog#(bufferDepth)), BurstLenSize),
 	    Div#(dataWidth,8,dataWidthBytes),
 	    Mul#(dataWidthBytes,8,dataWidth),
 	    Log#(dataWidthBytes,beatShift));
@@ -110,7 +110,7 @@ endmodule
 // @param bufferDepth The depth of the internal buffer
 //
 module mkDmaWriteBuffer(DmaWriteBuffer#(dataWidth, bufferDepth))
-   provisos(Add#(b__, TAdd#(1, TLog#(bufferDepth)), 8),
+   provisos(Add#(b__, TAdd#(1, TLog#(bufferDepth)), BurstLenSize),
 	    Div#(dataWidth,8,dataWidthBytes),
 	    Mul#(dataWidthBytes,8,dataWidth),
 	    Log#(dataWidthBytes,beatShift));
