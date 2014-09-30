@@ -62,7 +62,7 @@ module mkMemrw#(MemrwIndication indication)(Memrw);
    
    rule startRead(rdIterCnt > 0);
       $display("startRead %d", rdIterCnt);
-      re.readServers[0].request.put(MemengineCmd{pointer:rdPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
+      re.readServers[0].request.put(MemengineCmd{sglId:rdPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
       rdIterCnt <= rdIterCnt-1;
    endrule
 
@@ -78,7 +78,7 @@ module mkMemrw#(MemrwIndication indication)(Memrw);
    
    rule startWrite(wrIterCnt > 0);
       $display("startWrite %d", wrIterCnt);
-      we.writeServers[0].request.put(MemengineCmd{pointer:wrPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
+      we.writeServers[0].request.put(MemengineCmd{sglId:wrPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
       wrIterCnt <= wrIterCnt-1;
    endrule
 

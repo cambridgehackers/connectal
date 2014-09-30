@@ -101,12 +101,12 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
    for (Integer selectReg = 0; selectReg < valueOf(numReadClients); selectReg = selectReg + 1)
       rule loadChannel;
 	 ObjectRequest req <- readClients[selectReg].readReq.get();
-	 //$display("dmaread.loadChannel activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.pointer, req.offset, req.burstLen);
-	 if (bad_pointer(req.pointer))
-	    dmaIndication.badPointer(req.pointer);
+	 //$display("dmaread.loadChannel activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.sglId, req.offset, req.burstLen);
+	 if (bad_pointer(req.sglId))
+	    dmaIndication.badPointer(req.sglId);
 	 else begin
 	    lreqFifo.enq(IRec{req:req, rename_tag:?, pa:?, chan:fromInteger(selectReg)});
-	    sgl.request.put(tuple2(truncate(req.pointer),req.offset));
+	    sgl.request.put(tuple2(truncate(req.sglId),req.offset));
 	 end
       endrule
    
@@ -117,12 +117,12 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
       lreqFifo.deq();
       if (physAddr <= (1 << valueOf(SGListPageShift0))) begin
 	 // squash request
-	 $display("dmaRead: badAddr pointer=%d offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
-	 dmaIndication.badAddr(req.pointer, extend(req.offset), extend(physAddr));
+	 $display("dmaRead: badAddr pointer=%d offset=%h physAddr=%h", req.sglId, req.offset, physAddr);
+	 dmaIndication.badAddr(req.sglId, extend(req.offset), extend(physAddr));
       end
       else begin
 	 if (False && physAddr[31:24] != 0)
-	    $display("checkSglResp: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
+	    $display("checkSglResp: funny physAddr req.sglId=%d req.offset=%h physAddr=%h", req.sglId, req.offset, physAddr);
 	 reqFifo.enq(IRec{req:req, rename_tag:truncate(chan), pa:physAddr, chan:chan});
       end
    endrule
@@ -149,7 +149,7 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
 	    reqFifo.deq;
 	    //$display("mkMemReadInternal::req_ar tag=%d rename_tag=%d len=%d activeChan=%d", req.tag, rename_tag, req.burstLen, reqFifo.first.chan);
 	    if (False && physAddr[31:24] != 0)
-	       $display("req_ar: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
+	       $display("req_ar: funny physAddr req.sglId=%d req.offset=%h physAddr=%h", req.sglId, req.offset, physAddr);
 	    dreqFifo.enq(reqFifo.first);
 	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
 	 endmethod
@@ -224,12 +224,12 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
    for (Integer selectReg = 0; selectReg < valueOf(numWriteClients); selectReg = selectReg + 1)
        rule loadChannel;
 	  ObjectRequest req <- writeClients[selectReg].writeReq.get();
-	  //$display("dmawrite.loadChannel activeChan=%d handle=%h addr=%h burst=%h debugReq=%d", selectReg, req.pointer, req.offset, req.burstLen, debugReg);
-	  if (bad_pointer(req.pointer))
-	     dmaIndication.badPointer(req.pointer);
+	  //$display("dmawrite.loadChannel activeChan=%d handle=%h addr=%h burst=%h debugReq=%d", selectReg, req.sglId, req.offset, req.burstLen, debugReg);
+	  if (bad_pointer(req.sglId))
+	     dmaIndication.badPointer(req.sglId);
 	  else begin
 	     lreqFifo.enq(IRec{req:req, rename_tag:?, pa:?, chan:fromInteger(selectReg)});
-	     sgl.request.put(tuple2(truncate(req.pointer),req.offset));
+	     sgl.request.put(tuple2(truncate(req.sglId),req.offset));
 	  end
        endrule
    
@@ -240,8 +240,8 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
       lreqFifo.deq();
       if (physAddr <= (1 << valueOf(SGListPageShift0))) begin
 	 // squash request
-	 $display("dmaWrite: badAddr handle=%d addr=%h physAddr=%h", req.pointer, req.offset, physAddr);
-	 dmaIndication.badAddr(req.pointer, extend(req.offset), extend(physAddr));
+	 $display("dmaWrite: badAddr handle=%d addr=%h physAddr=%h", req.sglId, req.offset, physAddr);
+	 dmaIndication.badAddr(req.sglId, extend(req.offset), extend(physAddr));
       end
       else begin
 	 reqFifo.enq(IRec{req:req, rename_tag:truncate(chan), pa:physAddr, chan:chan});

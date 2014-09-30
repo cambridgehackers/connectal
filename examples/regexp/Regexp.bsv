@@ -165,7 +165,7 @@ module mkRegexp#(RegexpIndication indication)(Regexp#(64))
       endmethod
       method Action search(Bit#(32) haystack_pointer, Bit#(32) haystack_len, Bit#(32) iter_cnt) if (state == Config_finished);
 	 if (debug) $display("mkRegexp.RegexpRequest.search %d %d %d", haystack_pointer, haystack_len, iter_cnt);
-	 haystack_re.readServers[0].request.put(MemengineCmd{pointer:haystack_pointer, base:0, len:haystack_len, burstLen:16*fromInteger(valueOf(nc))});
+	 haystack_re.readServers[0].request.put(MemengineCmd{sglId:haystack_pointer, base:0, len:haystack_len, burstLen:16*fromInteger(valueOf(nc))});
       endmethod
    endinterface
    interface config_read_client = config_re.dmaClient;

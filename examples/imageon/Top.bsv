@@ -114,7 +114,7 @@ module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
    ImageonCaptureRequestWrapper imageonCaptureWrapper <- mkImageonCaptureRequestWrapper(ImageonCapture,
        (interface ImageonCaptureRequest;
             method Action startWrite(Bit#(32) pointer, Bit#(32) numBytes);
-                we.writeServers[0].request.put(MemengineCmd{pointer:pointer, base:0, len:truncate(numBytes), burstLen:8});
+                we.writeServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(numBytes), burstLen:8});
                 dmaRun <= True;
 	    endmethod
        endinterface));

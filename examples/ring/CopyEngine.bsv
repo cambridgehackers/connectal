@@ -96,7 +96,7 @@ module mkCopyEngine#(ObjectReadServer#(64) copy_read_chan, ObjectWriteServer#(64
       
     rule copyReadRule (copyBusy && (copyReadCount != 0));
        //$display("copyRead %h, count %h", copyReadAddr, copyReadCount);
-       copy_read_chan.readReq.put(ObjectRequest{pointer: copyReadPointer, offset: copyReadAddr, burstLen: 8, tag: copyReadAddr[8:3]});
+       copy_read_chan.readReq.put(ObjectRequest{sglId: copyReadPointer, offset: copyReadAddr, burstLen: 8, tag: copyReadAddr[8:3]});
        copyReadAddr <= copyReadAddr + 8;
        copyReadCount <= copyReadCount - 8;
     endrule
@@ -104,7 +104,7 @@ module mkCopyEngine#(ObjectReadServer#(64) copy_read_chan, ObjectWriteServer#(64
     rule copyReadWriteRule (copyBusy);
        let data <- copy_read_chan.readData.get;
        //$display("copyReadWrite addr %h", copyWriteAddr);
-       copy_write_chan.writeReq.put(ObjectRequest{pointer: copyWritePointer, offset: copyWriteAddr, burstLen: 8, tag: copyWriteAddr[8:3]});
+       copy_write_chan.writeReq.put(ObjectRequest{sglId: copyWritePointer, offset: copyWriteAddr, burstLen: 8, tag: copyWriteAddr[8:3]});
        copy_write_chan.writeData.put(ObjectData{data: data.data, tag: copyWriteAddr[8:3]});
        copyWriteAddr <= copyWriteAddr + 8;
     endrule

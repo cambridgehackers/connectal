@@ -101,7 +101,7 @@ module mkRingRequest#(RingIndication indication,
 //		     $display ("cmdFetch handle=%h address=%h burst=%h tag=%h", 
 //		      cmdRing.mempointer, cmdRing.bufferlastfetch, 8, ct );
 		     cmd_read_chan.readReq.put(
-			ObjectRequest{pointer: cmdRing.mempointer,
+			ObjectRequest{sglId: cmdRing.mempointer,
 			   offset: cmdRing.bufferlastfetch, burstLen: 8*8, tag: zeroExtend(unpack(ct))});
 		     cmdRing.popfetch();
 		  endaction
@@ -147,7 +147,7 @@ module mkRingRequest#(RingIndication indication,
 //	       $display("status write handle=%d address=%h burst=%h tag=%h",
 //		  statusRing.mempointer, statusRing.bufferfirst, 8, statusTag);
 	       status_write_chan.writeReq.put(
-		  ObjectRequest{pointer: statusRing.mempointer, 
+		  ObjectRequest{sglId: statusRing.mempointer, 
 		     offset: statusRing.bufferfirst, burstLen: 8*8, tag: statusTag});
 	       for (respCtr <= 0; respCtr < 8; respCtr <= respCtr + 1)
 		  action
@@ -164,7 +164,7 @@ module mkRingRequest#(RingIndication indication,
 //	       $display("status write handle=%d address=%h burst=%h tag=%h",
 //		  statusRing.mempointer, statusRing.bufferfirst, 8, statusTag);
 	       status_write_chan.writeReq.put(
-		  ObjectRequest{pointer: statusRing.mempointer, 
+		  ObjectRequest{sglId: statusRing.mempointer, 
 		     offset: statusRing.bufferfirst, burstLen: 8*8, tag: statusTag});
 	       for (respCtr <= 0; respCtr < 8; respCtr <= respCtr + 1)
 		  action
@@ -193,7 +193,7 @@ module mkRingRequest#(RingIndication indication,
       method Action doCommandIndirect(Bit#(64) pointer, Bit#(64) addr);
 	 let ct <- fetchComplete.reserve.get();
 	 cmd_read_chan.readReq.put(
-				   ObjectRequest{pointer: truncate(pointer),
+				   ObjectRequest{sglId: truncate(pointer),
 	 offset: truncate(addr), burstLen: 8*8, tag: zeroExtend(unpack(ct))});
       endmethod
    

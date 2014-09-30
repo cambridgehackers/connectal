@@ -145,7 +145,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
 
    Reg#(Bool) traceTransfers <- mkReg(False);
    rule startTransfer if (startDMA.pulse() &&& referenceReg matches tagged Valid .reference);
-      memreadEngine.readServers[0].request.put(MemengineCmd{pointer:reference, base:0, len:pack(extend(byteCountReg)), burstLen:64});
+      memreadEngine.readServers[0].request.put(MemengineCmd{sglId:reference, base:0, len:pack(extend(byteCountReg)), burstLen:64});
       if (traceTransfers)
 	 hdmiDisplayIndication.transferStarted(transferCount);
       transferCyclesSnapshot <= transferCycles;

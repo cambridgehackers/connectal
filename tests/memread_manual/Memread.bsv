@@ -59,7 +59,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    
    
    rule start (itersToStart > 0);
-      re.readServers[0].request.put(MemengineCmd{pointer:pointer, base:0, len:truncate(chunk), burstLen:truncate(burstLen*4)});
+      re.readServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(chunk), burstLen:truncate(burstLen*4)});
       itersToStart <= itersToStart-1;
    endrule
 

@@ -63,8 +63,8 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    Reg#(Bit#(32))         burstLen <- mkReg(0);
       
    rule start(iterCnt > 0);
-      re.readServers[0].request.put(MemengineCmd{pointer:rdPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
-      we.writeServers[0].request.put(MemengineCmd{pointer:wrPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
+      re.readServers[0].request.put(MemengineCmd{sglId:rdPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
+      we.writeServers[0].request.put(MemengineCmd{sglId:wrPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
       iterCnt <= iterCnt-1;
    endrule
 

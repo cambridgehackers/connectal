@@ -81,7 +81,7 @@ module  mkMemwriteVectorSink#(Server#(MemengineCmd,Bool) memwriteServer, PipeIn#
       // I set burstLen==1 so that testmm works for all J,K,N. If we want burst writes we will need to rethink this (mdk)
       let cmd = MemengineCmd { sglId: p, base: a << ashift, len: truncate(l << ashift), burstLen: fromInteger(valueOf(abytes)) };
       memwriteServer.request.put(cmd);
-      //$display("%d %d %d %d", cmd.pointer, cmd.base, cmd.len, cmd.burstLen);
+      //$display("%d %d %d %d", cmd.sglId, cmd.base, cmd.len, cmd.burstLen);
    endmethod
    method finish = memwriteServer.response.get;
    interface PipeIn pipe = mapPipeIn(pack, pipeIn);

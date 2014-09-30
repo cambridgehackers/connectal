@@ -201,7 +201,7 @@ module mkMPEngine#(Vector#(3,MemreadServer#(busWidth)) readers)(MPEngine#(busWid
       Bit#(TLog#(nc)) zeros = 0;
       Bit#(32) haystack_len_bytes = {zeros,haystack_len_ds[31:valueOf(TLog#(nc))]} * fromInteger(valueOf(nc));
       if (verbose) $display("mkMPEngine::search %d %d %d",  haystack_pointer, haystack_base, haystack_len_bytes);
-      haystackReader.cmdServer.request.put(MemengineCmd{pointer:haystack_pointer, base:extend(haystack_base), len:haystack_len_bytes, burstLen:16*fromInteger(valueOf(nc))});
+      haystackReader.cmdServer.request.put(MemengineCmd{sglId:haystack_pointer, base:extend(haystack_base), len:haystack_len_bytes, burstLen:16*fromInteger(valueOf(nc))});
    endmethod
    method ActionValue#(Bool) finishSetup;
       conff.deq;

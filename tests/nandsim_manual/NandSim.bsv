@@ -141,8 +141,8 @@ module mkNandSim#(NandSimIndication indication) (NandSim);
       method Action startRead(Bit#(32) pointer, Bit#(32) dramOffset, Bit#(32) nandAddr,Bit#(32) numBytes, Bit#(32) burstLen);
 	 $display("startRead numBytes=%d burstLen=%d", numBytes, burstLen);
 	 readReqFifo.enq(numBytes);
-	 nandReadServer.request.put(MemengineCmd {pointer: nandPointer, base: extend(nandAddr), burstLen: truncate(burstLen), len: extend(numBytes)});
-	 dramWriteServer.request.put(MemengineCmd {pointer: pointer, base: extend(dramOffset), burstLen: truncate(burstLen), len: extend(numBytes)});
+	 nandReadServer.request.put(MemengineCmd {sglId: nandPointer, base: extend(nandAddr), burstLen: truncate(burstLen), len: extend(numBytes)});
+	 dramWriteServer.request.put(MemengineCmd {sglId: pointer, base: extend(dramOffset), burstLen: truncate(burstLen), len: extend(numBytes)});
       endmethod
 
       /*!
@@ -151,13 +151,13 @@ module mkNandSim#(NandSimIndication indication) (NandSim);
       method Action startWrite(Bit#(32) pointer, Bit#(32) dramOffset, Bit#(32) nandAddr,Bit#(32) numBytes, Bit#(32) burstLen);
 	 $display("startWrite numBytes=%d burstLen=%d", numBytes, burstLen);
 	 writeReqFifo.enq(numBytes);
-	 nandWriteServer.request.put(MemengineCmd {pointer: nandPointer, base: extend(nandAddr), burstLen: truncate(burstLen), len: extend(numBytes)});
-	 dramReadServer.request.put(MemengineCmd {pointer: pointer, base: extend(dramOffset), burstLen: truncate(burstLen), len: extend(numBytes)});
+	 nandWriteServer.request.put(MemengineCmd {sglId: nandPointer, base: extend(nandAddr), burstLen: truncate(burstLen), len: extend(numBytes)});
+	 dramReadServer.request.put(MemengineCmd {sglId: pointer, base: extend(dramOffset), burstLen: truncate(burstLen), len: extend(numBytes)});
       endmethod
 
       method Action startErase(Bit#(32) nandAddr, Bit#(32) numBytes);
 	 $display("startErase numBytes=%d burstLen=%d", numBytes, 16);
-	 nandEraseServer.request.put(MemengineCmd {pointer: nandPointer, base: extend(nandAddr), burstLen: 16, len: extend(numBytes)});
+	 nandEraseServer.request.put(MemengineCmd {sglId: nandPointer, base: extend(nandAddr), burstLen: 16, len: extend(numBytes)});
       endmethod
 
       method Action configureNand(Bit#(32) ptr, Bit#(32) numBytes);

@@ -76,7 +76,7 @@ module mkPerfRequest#(PerfIndication indication,
       streamRdCnt <= streamRdCnt - extend(burstLen);
       streamRdOff <= streamRdOff + deltaOffset;
       //$display("readReq.put pointer=%h address=%h, burstlen=%h", streamRdPointer, streamRdOff, burstLen);
-      dma_stream_read_server.readReq.put(ObjectRequest {pointer: streamRdPointer, offset: streamRdOff, burstLen: extend(burstLen), tag: truncate(streamRdOff>>5)});
+      dma_stream_read_server.readReq.put(ObjectRequest {sglId: streamRdPointer, offset: streamRdOff, burstLen: extend(burstLen), tag: truncate(streamRdOff>>5)});
       //indication.readReq(streamRdCnt);
    endrule
 
@@ -85,7 +85,7 @@ module mkPerfRequest#(PerfIndication indication,
       streamWrCnt <= streamWrCnt-extend(burstLen);
       streamWrOff <= streamWrOff + deltaOffset;
       //$display("writeReq.put pointer=%h address=%h", streamWrPointer, streamWrOff);
-      dma_stream_write_server.writeReq.put(ObjectRequest {pointer: streamWrPointer, offset: streamWrOff, burstLen: extend(burstLen), tag: truncate(streamWrOff>>5)});
+      dma_stream_write_server.writeReq.put(ObjectRequest {sglId: streamWrPointer, offset: streamWrOff, burstLen: extend(burstLen), tag: truncate(streamWrOff>>5)});
       //indication.writeReq(streamWrCnt);
    endrule
    
@@ -139,7 +139,7 @@ module mkPerfRequest#(PerfIndication indication,
    endmethod
 
    method Action readWord();
-      dma_word_read_server.readReq.put(ObjectRequest {pointer: streamWrPointer, offset: 0, burstLen: fromInteger(busWidthBytes), tag: 1});
+      dma_word_read_server.readReq.put(ObjectRequest {sglId: streamWrPointer, offset: 0, burstLen: fromInteger(busWidthBytes), tag: 1});
    endmethod
 
    method Action getStateDbg();

@@ -194,7 +194,7 @@ module mkPcieTestBench#(PcieTestBenchIndication indication)(PcieTestBench#(40,64
    // memread rules
    rule rdReq if (rdOff < reqLen);
       rdOff <= rdOff + extend(burstLen);
-      rb.dmaServer.readReq.put(ObjectRequest { pointer: rdPointer, offset: extend(rdOff), burstLen: burstLen, tag: extend(rdTag) });
+      rb.dmaServer.readReq.put(ObjectRequest { sglId: rdPointer, offset: extend(rdOff), burstLen: burstLen, tag: extend(rdTag) });
       rdTag <= rdTag+1;
    endrule
    

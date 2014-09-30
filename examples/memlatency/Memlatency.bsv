@@ -73,7 +73,7 @@ module mkMemlatency#(MemlatencyIndication indication)(Memlatency);
    endrule
    
    rule startRead(rdIterCnt > 0);
-      re.readServers[0].request.put(MemengineCmd{pointer:rdPointer, base:0, len:burstLen*4, burstLen:truncate(burstLen*4)});
+      re.readServers[0].request.put(MemengineCmd{sglId:rdPointer, base:0, len:burstLen*4, burstLen:truncate(burstLen*4)});
       rdIterCnt <= rdIterCnt-1;
       rdStartFifo.enq(cycles);
    endrule
@@ -89,7 +89,7 @@ module mkMemlatency#(MemlatencyIndication indication)(Memlatency);
    endrule
    
    rule startWrite(wrIterCnt > 0);
-      we.writeServers[0].request.put(MemengineCmd{pointer:wrPointer, base:0, len:burstLen*4, burstLen:truncate(burstLen*4)});
+      we.writeServers[0].request.put(MemengineCmd{sglId:wrPointer, base:0, len:burstLen*4, burstLen:truncate(burstLen*4)});
       wrIterCnt <= wrIterCnt-1;
       wrStartFifo.enq(cycles);
    endrule

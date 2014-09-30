@@ -79,7 +79,7 @@ module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#(64)) dac, PipeOut
    
    rule readStart (readRun == 1);
       readIterCount <= readIterCount + 1;
-      re.readServers[0].request.put(MemengineCmd{pointer:readPointer, base:0, len:readNumWords*4, burstLen:readBurstLen*4});
+      re.readServers[0].request.put(MemengineCmd{sglId:readPointer, base:0, len:readNumWords*4, burstLen:readBurstLen*4});
    endrule
    
    rule readFinish;
@@ -90,7 +90,7 @@ module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#(64)) dac, PipeOut
    
    rule writeStart (writeRun == 1);
       writeIterCount <= writeIterCount + 1;
-      we.writeServers[0].request.put(MemengineCmd{pointer:writePointer, base:0, len:writeNumWords*4, burstLen:writeBurstLen*4});
+      we.writeServers[0].request.put(MemengineCmd{sglId:writePointer, base:0, len:writeNumWords*4, burstLen:writeBurstLen*4});
    endrule
    
    rule writeFinish;

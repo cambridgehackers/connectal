@@ -412,7 +412,7 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 
 	 if (verbose || verbose1) $display($format(fshow(cycles)+fshow("    sourceB[")+fshow(kint)+fshow("].start")+fshow(startB)));
 
-	 sourceB[k].start(descriptorB[k].first.pointer, pack(extend(startB>>nshift)), pack(extend(descriptorB[k].first.numColumns>>nshift)), extend(col));
+	 sourceB[k].start(descriptorB[k].first.sglId, pack(extend(startB>>nshift)), pack(extend(descriptorB[k].first.numColumns>>nshift)), extend(col));
 
       endrule
       rule finishSourceB;
@@ -449,9 +449,9 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 						 +fshow(" startC=")+fshow(startC)
 						 +fshow(" j=")+fshow(jint)));
 	 
-	 sourceA[j].start(descriptorA[j].first.pointer, pack(extend(startA>>nshift)), pack(extend(descriptorA[j].first.numColumns>>nshift)), extend(row));
+	 sourceA[j].start(descriptorA[j].first.sglId, pack(extend(startA>>nshift)), pack(extend(descriptorA[j].first.numColumns>>nshift)), extend(row));
 	 if (verbose || verbose1) $display($format(fshow(cycles)+fshow("    sourceA[")+fshow(jint)+fshow("].start")+fshow(startA)));
-	 sinks[j].start(descriptorC[j].first.pointer, pack(extend(startC>>nshift)), fromInteger(kk/n));
+	 sinks[j].start(descriptorC[j].first.sglId, pack(extend(startC>>nshift)), fromInteger(kk/n));
 	 if (verbose || verbose1) $display($format(fshow(cycles)+fshow("      sinks[")+fshow(jint)+fshow("].start")+fshow(startC)));
 	 
       endrule
@@ -525,9 +525,9 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 								  ybase: 0, ylimit: numRowsB_x_numColumnsB, ystep: numColumnsB_x_K };
       XYRangeConfig#(UInt#(addrwidth)) offsetcfgC = XYRangeConfig {xbase: 0, xlimit: numRowsA_x_numRowsB, xstep: numRowsB_x_J,
 								  ybase: 0, ylimit: numRowsB, ystep: fromInteger(kk) };
-      descFifoA.enq(MatrixDescriptor { pointer: pointerA, base: 0, numRows: numRowsA, numColumns: numColumnsA});
-      descFifoB.enq(MatrixDescriptor { pointer: pointerB, base: 0, numRows: numRowsB, numColumns: numColumnsB});
-      descFifoC.enq(MatrixDescriptor { pointer: pointerC, base: 0, numRows: numRowsA, numColumns: numRowsB});
+      descFifoA.enq(MatrixDescriptor { sglId: pointerA, base: 0, numRows: numRowsA, numColumns: numColumnsA});
+      descFifoB.enq(MatrixDescriptor { sglId: pointerB, base: 0, numRows: numRowsB, numColumns: numColumnsB});
+      descFifoC.enq(MatrixDescriptor { sglId: pointerC, base: 0, numRows: numRowsA, numColumns: numRowsB});
       dotprodCount <= numRowsA_x_numRowsB;
       running <= True;
 

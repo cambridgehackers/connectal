@@ -67,7 +67,7 @@ module mkMemread#(MemreadIndication indication) (Memread#(4));
 		       startBase <= 0;
 		       for(startPtr <= 0; startPtr < 4; startPtr <= startPtr+1)
 			  (action
-			      let cmd = MemengineCmd{pointer:pointer, base:extend(startBase), len:numWords, burstLen:truncate(burstLen*4)};
+			      let cmd = MemengineCmd{sglId:pointer, base:extend(startBase), len:numWords, burstLen:truncate(burstLen*4)};
 			      res[startPtr].readServers[0].request.put(cmd);
 			      startBase <= startBase+numWords;
 			      //$display("start:%d %h %d %h (%d)", startPtr, startBase, numWords, burstLen*4, iterCnt);

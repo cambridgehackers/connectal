@@ -78,7 +78,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 
    for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
       rule start (iterCnts[i] > 0);
-	 we.writeServers[i].request.put(MemengineCmd{pointer:pointer, base:extend(writeOffset)+(fromInteger(i)*chunk), len:truncate(chunk), burstLen:truncate(burstLen*4)});
+	 we.writeServers[i].request.put(MemengineCmd{sglId:pointer, base:extend(writeOffset)+(fromInteger(i)*chunk), len:truncate(chunk), burstLen:truncate(burstLen*4)});
 	 Bit#(32) srcGen = (writeOffset/4)+(fromInteger(i)*truncate(chunk/4));
 	 srcGens[i] <= srcGen;
 	 $display("start %d, %h %d %h", i, srcGen, iterCnts[i], writeOffset);
@@ -161,7 +161,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
       if (verbose) $display("write_req %d", cycle_cnt-last_write_req);
       last_write_req <= cycle_cnt;
       let nwe = writeEnd-burstLen;
-      we.writeServer.writeReq.put(ObjectRequest{pointer:pointer, offset:extend(nwe), burstLen:truncate(burstLen), tag:0});
+      we.writeServer.writeReq.put(ObjectRequest{sglId:pointer, offset:extend(nwe), burstLen:truncate(burstLen), tag:0});
       writeEnd <= nwe;
       //if (verbose) $display("write_req %d", nwe);
    endrule

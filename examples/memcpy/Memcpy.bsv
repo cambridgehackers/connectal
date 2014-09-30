@@ -72,7 +72,7 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
    
    rule start_read(rdIterCnt > 0 && rdBuffer >= burstLen);
       //$display("start_read %d", rdCnt);
-      re.readServers[0].request.put(MemengineCmd{pointer:rdPointer, base:extend(rdCnt*4), len:(burstLen*4), burstLen:truncate(burstLen*4)});
+      re.readServers[0].request.put(MemengineCmd{sglId:rdPointer, base:extend(rdCnt*4), len:(burstLen*4), burstLen:truncate(burstLen*4)});
       rdBuffer <= rdBuffer-burstLen;
       if(rdCnt+burstLen >= numWords) begin
 	 rdCnt <= 0;
@@ -85,7 +85,7 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
 
    rule start_write(wrIterCnt > 0 && wrBuffer >= burstLen);
       //$display("                    start_write %d", wrCnt);
-      we.writeServers[0].request.put(MemengineCmd{pointer:wrPointer, base:extend(wrCnt*4), len:burstLen*4, burstLen:truncate(burstLen*4)});
+      we.writeServers[0].request.put(MemengineCmd{sglId:wrPointer, base:extend(wrCnt*4), len:burstLen*4, burstLen:truncate(burstLen*4)});
       wrBuffer <= wrBuffer-burstLen;
       if(wrCnt+burstLen >= numWords) begin
 	 wrCnt <= 0;
