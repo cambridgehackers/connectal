@@ -42,16 +42,12 @@ import MemSlaveEngine    :: *;
 import MemMasterEngine   :: *;
 import PCIE              :: *;
 
-`ifndef DataBusWidth
-`define DataBusWidth 64
-`endif
 `ifndef PinType
 `define PinType Empty
 `endif
 
 typedef `PinType PinType;
 typedef `NumberOfMasters NumberOfMasters;
-typedef `DataBusWidth DataBusWidth;
 
 // implemented in BsimCtrl.cxx
 import "BDPI" function Action                 initPortal(Bit#(32) d);
