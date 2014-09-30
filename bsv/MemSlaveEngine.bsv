@@ -31,6 +31,7 @@ import MIFO         :: *;
 import Vector       :: *;
 import ClientServer :: *;
 import MemTypes     :: *;
+import Probe        :: *;
 
 import AxiMasterSlave :: *;
 
@@ -98,7 +99,25 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	  return 0;
     endfunction
 
+   Wire#(Bool) writeHeaderTlpWire <- mkDWire(False);
+   Probe#(Bool) writeHeaderAvailableProbe <- mkProbe;
+   Wire#(Bool) writeDataMimoEnqWire <- mkDWire(False);
+   Probe#(Bool) writeDataMimoEnqProbe <- mkProbe;
+   let    writeDataMimoCountProbe <- mkProbe;
+   let writeDataMimoEnqReadyProbe <- mkProbe;
+   Probe#(Bool) writeInProgressProbe <- mkProbe;
+   Probe#(Bit#(10)) writeBurstCountProbe <- mkProbe;
+   rule updateProbe0;
+      writeDataMimoCountProbe    <= writeDataMimo.count();
+      writeDataMimoEnqReadyProbe <= writeDataMimo.enqReadyN(fromInteger(valueOf(busWidthWords)));
+   endrule
+   rule updateProbe2;
+      writeHeaderAvailableProbe <= writeHeaderTlpWire;
+      writeDataMimoEnqProbe <= writeDataMimoEnqWire;
+   endrule
+
    rule writeHeaderTlp if (!writeInProgress && (!writeIs3dwFifo.first || writeDataMimo.deqReadyN(1)));
+      writeHeaderTlpWire <= True;
       let tlp <- toGet(tlpWriteHeaderFifo).get();
       let dwCount <- toGet(writeDwCountFifo).get();
       let is3dw <- toGet(writeIs3dwFifo).get();
@@ -124,11 +143,12 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       end
 
       tlpOutFifo.enq(tlp);
-      $display("writeHeaderTlp dwCount=%d", dwCount);
+      //$display("writeHeaderTlp dwCount=%d", dwCount);
       writeDwCount <= dwCount;
       tlpDwCount <= truncate(min(4,unpack(dwCount)));
       lastTlp <= (dwCount <= 4);
       writeInProgress <= (dwCount != 0);
+      writeInProgressProbe <= (dwCount != 0);
       if (isHeaderOnly) begin
 	 doneTag.enq(writeTag.first());
 	 writeTag.deq();
@@ -160,9 +180,10 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       tlp.eof = lastTlp;
       if (lastTlp) begin
 	 writeInProgress <= False;
+	 writeInProgressProbe <= False;
 	 doneTag.enq(writeTag.first());
 	 writeTag.deq();
-	 $display("writeDwCount=%d will be zero", writeDwCount);
+	 //$display("writeDwCount=%d will be zero", writeDwCount);
       end
 
       for (Integer i = 0; i < 4; i = i + 1)
@@ -233,7 +254,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       tlp.sof = True;
       tlp.eof = True;
       tlp.hit = 7'h00;
-      TLPLength tlplen = fromInteger(valueOf(busWidthWords))*burstLen;
+      TLPLength tlplen = fromInteger(valueOf(busWidthWords))*extend(burstLen);
       if (addr[39:32] != 0) begin
 	 TLPMemory4DWHeader hdr_4dw = defaultValue;
 	 hdr_4dw.format = MEM_READ_4DW_NO_DATA;
@@ -276,7 +297,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	    let awid = req.tag;
 	    let writeIs3dw = False;
 
-	    TLPLength tlplen = fromInteger(valueOf(busWidthWords))*burstLen;
+	    TLPLength tlplen = fromInteger(valueOf(busWidthWords))*extend(burstLen);
 	    TLPData#(16) tlp = defaultValue;
 	    tlp.sof = True;
 	    tlp.eof = False;
@@ -316,7 +337,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	    writeDwCountFifo.enq(tlplen);
 	    writeIs3dwFifo.enq(writeIs3dw);
 	    writeIsHeaderOnlyFifo.enq(writeIs3dw && tlplen == 1);
-	    writeBurstCount <= burstLen;
+	    writeBurstCount <= extend(burstLen);
 	    writeTag.enq(extend(awid));
          endmethod
 	endinterface
@@ -324,9 +345,11 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
          method Action put(MemData#(buswidth) wdata)
 	      provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth)) if (writeBurstCount > 0 && writeDataMimo.enqReadyN(fromInteger(valueOf(busWidthWords))));
 
-	      writeBurstCount <= writeBurstCount - 1;
+              writeBurstCount <= writeBurstCount - 1;
+	      writeBurstCountProbe <= writeBurstCount - 1;
 	      Vector#(busWidthWords, Bit#(32)) v = unpack(wdata.data);
 	      writeDataMimo.enq(fromInteger(valueOf(busWidthWords)), v);
+	      writeDataMimoEnqWire <= True;
            endmethod
        endinterface
       interface Get writeDone;
