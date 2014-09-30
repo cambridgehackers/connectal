@@ -162,7 +162,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
 	    cmdBuf.deq(truncate(loadIdx));
 	 end
 	 else begin
-	    let new_cmd = MemengineCmd{pointer:cmd.pointer, base:cmd.base+extend(cmd.burstLen), 
+	    let new_cmd = MemengineCmd{sglId:cmd.sglId, base:cmd.base+extend(cmd.burstLen), 
 				       burstLen:cmd.burstLen, len:cmd.len-extend(cmd.burstLen)};
 	    cmdBuf.upd_head(truncate(loadIdx),new_cmd);
 	 end
@@ -209,7 +209,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
 	    end
 	    workf.enq(tuple3(truncate(bl>>beat_shift), idx, last));
 	    //$display("readReq %d, %h %h %h", idx, cmd.base, bl, last);
-	    return ObjectRequest { pointer: cmd.pointer, offset: cmd.base, burstLen:bl, tag: 0 };
+	    return ObjectRequest { sglId: cmd.sglId, offset: cmd.base, burstLen:bl, tag: 0 };
 	 endmethod
       endinterface
       interface Put readData;

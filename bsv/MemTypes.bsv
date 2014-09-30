@@ -46,7 +46,7 @@ typedef struct {
    Bit#(ObjectTagSize) tag;
    } MemRequest#(numeric type addrWidth) deriving (Bits);
 typedef struct {
-   SGLId pointer;
+   SGLId sglId;
    Bit#(ObjectOffsetSize) offset;
    Bit#(BurstLenSize) burstLen;
    Bit#(ObjectTagSize)  tag;
@@ -62,7 +62,7 @@ typedef ObjectData#(dsz) MemData#(numeric type dsz);
 ///////////////////////////////////////////////////////////////////////////////////
 // 
 
-typedef struct {SGLId pointer;
+typedef struct {SGLId sglId;
 		Bit#(ObjectOffsetSize) base;
 		Bit#(BurstLenSize) burstLen;
 		Bit#(32) len;

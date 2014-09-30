@@ -370,7 +370,7 @@ module  mkMmTile#(Clock slowClock, Reset slowReset, UInt#(TLog#(T)) tile)(MmTile
 endmodule : mkMmTile
 
 typedef struct {
-   SGLId pointer;
+   SGLId sglId;
    addrtype base;
    addrtype numRows;
    addrtype numColumns;

@@ -171,7 +171,7 @@ module mkRowSource#(ObjectReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) nu
 `ifdef TAGGED_TOKENS
       tagFifo.enq(tag);
 `endif
-      let cmd = ObjectRequest{pointer:h, offset:a<<ashift, burstLen:truncate(l<<ashift), tag:id};
+      let cmd = ObjectRequest{sglId:h, offset:a<<ashift, burstLen:truncate(l<<ashift), tag:id};
       vs.readReq.put(cmd); //start(h,a,l);
       if(verbose) $display("mkRowSource.start %d %d", cmd.offset, cmd.burstLen);
       cmdFifo.enq(l);
@@ -242,7 +242,7 @@ module mkRowColSink#(ObjectWriteServer#(TMul#(N,32)) vs, Bit#(ObjectTagSize) id)
    endrule
    function Float tokenValue(MmToken v) = v.v;
    method Action start(SGLId h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
-      let cmd = ObjectRequest{pointer:h, offset:a<<ashift, burstLen:truncate(l<<ashift), tag:id};
+      let cmd = ObjectRequest{sglId:h, offset:a<<ashift, burstLen:truncate(l<<ashift), tag:id};
       vs.writeReq.put(cmd);
    endmethod
    interface PipeIn pipe;
@@ -369,7 +369,7 @@ module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
       lastStartB <= cycles;
       let interval = cycles-lastStartB;
       if ( verbose) $display($format(fshow(interval)+fshow(" startB=")+fshow(startB)));
-      sourceB.start(descriptorB.pointer, pack(extend(startB>>nshift)), fromInteger(kk)>>nshift, 0);
+      sourceB.start(descriptorB.sglId, pack(extend(startB>>nshift)), fromInteger(kk)>>nshift, 0);
    endrule
    
    rule startSourceA;
@@ -378,7 +378,7 @@ module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
       lastStartA <= cycles;
       let interval = cycles-lastStartA;
       if ( verbose) $display($format(fshow(interval)+fshow(" startA=")+fshow(startA)));
-      sourceA.start(descriptorA.pointer, pack(extend(startA>>nshift)), fromInteger(jj)>>nshift, 1);      
+      sourceA.start(descriptorA.sglId, pack(extend(startA>>nshift)), fromInteger(jj)>>nshift, 1);      
    endrule
    
    rule startSink;
@@ -387,7 +387,7 @@ module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
       lastStartC <= cycles;
       let interval = cycles-lastStartC;
       if ( verbose) $display($format(fshow(interval)+fshow(" startC=")+fshow(startC)));
-      sink.start(descriptorC.pointer, pack(extend(startC>>nshift)), fromInteger(kk)>>nshift);
+      sink.start(descriptorC.sglId, pack(extend(startC>>nshift)), fromInteger(kk)>>nshift);
    endrule
 
    rule finishSink;
@@ -434,9 +434,9 @@ module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
 								     ybase: 0, ylimit: numColumnsB,               ystep: fromInteger(kk),
 								     zbase: 0, zlimit: numColumnsA_x_numColumnsB, zstep: numColumnsB_x_J };
 
-      descriptorA <= MatrixDescriptor { pointer: pointerA, base: 0, numRows: numRowsA,    numColumns: numColumnsA};
-      descriptorB <= MatrixDescriptor { pointer: pointerB, base: 0, numRows: numRowsB,    numColumns: numColumnsB};
-      descriptorC <= MatrixDescriptor { pointer: pointerC, base: 0, numRows: numColumnsA, numColumns: numColumnsB};
+      descriptorA <= MatrixDescriptor { sglId: pointerA, base: 0, numRows: numRowsA,    numColumns: numColumnsA};
+      descriptorB <= MatrixDescriptor { sglId: pointerB, base: 0, numRows: numRowsB,    numColumns: numColumnsB};
+      descriptorC <= MatrixDescriptor { sglId: pointerC, base: 0, numRows: numColumnsA, numColumns: numColumnsB};
       sinkCnt <= numColumnsA_x_numColumnsB/fromInteger(kk);
       numRowsBReg <= numRowsB;
       numRowsAReg <= numRowsA;

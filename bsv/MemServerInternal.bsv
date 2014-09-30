@@ -198,13 +198,13 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
       rule loadClient;
 	 last_loadClient <= cycle_cnt;
    	 ObjectRequest req <- readClients[selectReg].readReq.get();
-	 let mmusel = req.pointer[31:16];
+	 let mmusel = req.sglId[31:16];
       	 if (debug) $display("mkMemReadInternal::loadClient %d %d %d", selectReg, mmusel, cycle_cnt-last_loadClient);
-   	 if (bad_pointer(req.pointer))
-	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer4, pref: req.pointer });
+   	 if (bad_pointer(req.sglId))
+	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer4, pref: req.sglId });
    	 else begin
    	    lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
-   	    mmus[mmusel].request.put(ReqTup{id:truncate(req.pointer),off:req.offset});
+   	    mmus[mmusel].request.put(ReqTup{id:truncate(req.sglId),off:req.offset});
    	 end
       endrule
    
@@ -246,7 +246,7 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
    rule checkMmuResp;
       let req = lreqFifo.first.req;
       let client = lreqFifo.first.client;
-      let physAddr <- mmus[req.pointer[31:16]].response.get;
+      let physAddr <- mmus[req.sglId[31:16]].response.get;
       let rename_tag <- tag_gen.getTag;
       lreqFifo.deq();
       reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
@@ -290,7 +290,7 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
 	    let client = reqFifo.first.client;
 	    let rename_tag = reqFifo.first.rename_tag;
 	    if (False && physAddr[31:24] != 0)
-	       $display("req_ar: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
+	       $display("req_ar: funny physAddr req.sglId=%d req.offset=%h physAddr=%h", req.sglId, req.offset, physAddr);
 	    dreqFifos.portB.request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(rename_tag), datain:DRec{req:req, client:client, rename_tag:rename_tag, last:(req.burstLen == fromInteger(valueOf(dataWidthBytes)))}});
 	    //$display("readReq: client=%d, rename_tag=%d, physAddr=%h req.burstLen=%d beat_shift=%d last=%d", client,rename_tag,physAddr, req.burstLen, beat_shift, req.burstLen == beat_shift);
 	    if (debug) $display("read_client.readReq %d", cycle_cnt-last_readReq);
@@ -369,18 +369,18 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
       	  if (debug) $display("mkMemWriteInternal::loadClient %d %d", selectReg, cycle_cnt-last_loadClient);
 	  last_loadClient <= cycle_cnt;
    	  ObjectRequest req <- writeClients[selectReg].writeReq.get();
-   	  if (bad_pointer(req.pointer)) 
-	     dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer5, pref: req.pointer });
+   	  if (bad_pointer(req.sglId)) 
+	     dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer5, pref: req.sglId });
    	  else begin
    	     lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
-   	     mmus[req.pointer[31:16]].request.put(ReqTup{id:truncate(req.pointer),off:req.offset});
+   	     mmus[req.sglId[31:16]].request.put(ReqTup{id:truncate(req.sglId),off:req.offset});
    	  end
        endrule
    
    rule checkMmuResp;
       let req = lreqFifo.first.req;
       let client = lreqFifo.first.client;
-      let physAddr <- mmus[req.pointer[31:16]].response.get;
+      let physAddr <- mmus[req.sglId[31:16]].response.get;
       let rename_tag <- tag_gen.getTag;
       lreqFifo.deq();
       reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
