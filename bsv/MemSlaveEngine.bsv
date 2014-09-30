@@ -77,6 +77,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 
     MIMO#(busWidthWords,4,16,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
     Reg#(Bit#(10)) writeBurstCount <- mkReg(0);
+   FIFO#(Bit#(10)) writeBurstCountFifo <- mkFIFO();
     Reg#(TLPLength)  writeDwCount <- mkReg(0); // how many 4 byte (double) words to send
     Reg#(LUInt#(4))    tlpDwCount <- mkReg(0); // how many to send in the next tlp (at most 4)
     Reg#(Bool)            lastTlp <- mkReg(False); // if the next tlp sent is the last one
@@ -291,7 +292,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
     interface MemSlave slave;
    interface MemWriteServer write_server; 
       interface Put writeReq;
-         method Action put(MemRequest#(40) req) if (writeBurstCount == 0);
+         method Action put(MemRequest#(40) req); // if (writeBurstCount == 0);
 	    let burstLen = req.burstLen >> beat_shift;
 	    let addr = req.addr;
 	    let awid = req.tag;
@@ -337,20 +338,25 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	    writeDwCountFifo.enq(tlplen);
 	    writeIs3dwFifo.enq(writeIs3dw);
 	    writeIsHeaderOnlyFifo.enq(writeIs3dw && tlplen == 1);
-	    writeBurstCount <= extend(burstLen);
+	    writeBurstCountFifo.enq(extend(burstLen));
 	    writeTag.enq(extend(awid));
          endmethod
 	endinterface
       interface Put writeData;
          method Action put(MemData#(buswidth) wdata)
-	      provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth)) if (writeBurstCount > 0 && writeDataMimo.enqReadyN(fromInteger(valueOf(busWidthWords))));
+	      provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth)) if (writeDataMimo.enqReadyN(fromInteger(valueOf(busWidthWords))));
 
-              writeBurstCount <= writeBurstCount - 1;
-	      writeBurstCountProbe <= writeBurstCount - 1;
-	      Vector#(busWidthWords, Bit#(32)) v = unpack(wdata.data);
-	      writeDataMimo.enq(fromInteger(valueOf(busWidthWords)), v);
-	      writeDataMimoEnqWire <= True;
-           endmethod
+	    let burstLen = writeBurstCount;
+	    if (burstLen == 0) begin
+	       burstLen <- toGet(writeBurstCountFifo).get();
+	    end
+	    writeBurstCount <= extend(burstLen-1);
+	    writeBurstCountProbe <= extend(burstLen-1);
+
+	    Vector#(busWidthWords, Bit#(32)) v = unpack(wdata.data);
+	    writeDataMimo.enq(fromInteger(valueOf(busWidthWords)), v);
+	    writeDataMimoEnqWire <= True;
+         endmethod
        endinterface
       interface Get writeDone;
          method ActionValue#(Bit#(ObjectTagSize)) get();
