@@ -140,7 +140,7 @@ typedef enum {TestBenchIndication, TestBenchRequest, HostmemDmaDebugIndication, 
 module mkPcieTestBench#(PcieTestBenchIndication indication)(PcieTestBench#(40,64));
    
    // memread state
-   Reg#(ObjectPointer)     rdPointer <- mkReg(0);
+   Reg#(SGLId)     rdPointer <- mkReg(0);
    Reg#(Bit#(8))            burstLen <- mkReg(0);
    Reg#(Bit#(32))             reqLen <- mkReg(0);
 

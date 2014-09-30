@@ -63,8 +63,8 @@ module mkPerfRequest#(PerfIndication indication,
    Reg#(Bit#(32)) repeatCnt <- mkReg(0);
    Reg#(Bit#(ObjectOffsetSize)) streamRdOff <- mkReg(0);
    Reg#(Bit#(ObjectOffsetSize)) streamWrOff <- mkReg(0);
-   Reg#(ObjectPointer)    streamRdPointer <- mkReg(0);
-   Reg#(ObjectPointer)    streamWrPointer <- mkReg(0);
+   Reg#(SGLId)    streamRdPointer <- mkReg(0);
+   Reg#(SGLId)    streamWrPointer <- mkReg(0);
    Reg#(Bool)               writeInProg <- mkReg(False);
    Reg#(Bool)               iterInProg <- mkReg(False);
    Reg#(Bool)              dataMismatch <- mkReg(False);  

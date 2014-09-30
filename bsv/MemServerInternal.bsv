@@ -111,7 +111,7 @@ interface MemReadInternal#(numeric type addrWidth, numeric type dataWidth);
    interface MemReadClient#(addrWidth,dataWidth) read_client;
 endinterface
 
-function Bool bad_pointer(ObjectPointer p);
+function Bool bad_pointer(SGLId p);
    return ((p[15:0] >>8) > fromInteger(valueOf(MaxNumSGLists)));
 endfunction
 

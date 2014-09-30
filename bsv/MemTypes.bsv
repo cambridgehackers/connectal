@@ -34,7 +34,7 @@ import Pipe::*;
 // XBSV Libraries
 import PortalMemory::*;
 
-typedef Bit#(32) ObjectPointer;
+typedef Bit#(32) SGLId;
 typedef 40 ObjectOffsetSize;
 typedef `PhysAddrWidth PhysAddrWidth;
 
@@ -46,7 +46,7 @@ typedef struct {
    Bit#(ObjectTagSize) tag;
    } MemRequest#(numeric type addrWidth) deriving (Bits);
 typedef struct {
-   ObjectPointer pointer;
+   SGLId pointer;
    Bit#(ObjectOffsetSize) offset;
    Bit#(BurstLenSize) burstLen;
    Bit#(ObjectTagSize)  tag;
@@ -62,7 +62,7 @@ typedef ObjectData#(dsz) MemData#(numeric type dsz);
 ///////////////////////////////////////////////////////////////////////////////////
 // 
 
-typedef struct {ObjectPointer pointer;
+typedef struct {SGLId pointer;
 		Bit#(ObjectOffsetSize) base;
 		Bit#(BurstLenSize) burstLen;
 		Bit#(32) len;

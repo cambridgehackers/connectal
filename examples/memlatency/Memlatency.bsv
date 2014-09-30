@@ -58,8 +58,8 @@ module mkMemlatency#(MemlatencyIndication indication)(Memlatency);
    
    Reg#(Bit#(32))        rdIterCnt <- mkReg(0);
    Reg#(Bit#(32))        wrIterCnt <- mkReg(0);
-   Reg#(ObjectPointer)   rdPointer <- mkReg(0);
-   Reg#(ObjectPointer)   wrPointer <- mkReg(0);
+   Reg#(SGLId)   rdPointer <- mkReg(0);
+   Reg#(SGLId)   wrPointer <- mkReg(0);
    Reg#(Bit#(32))         burstLen <- mkReg(0);
    
    Reg#(Bit#(32))           cycles <- mkReg(0);

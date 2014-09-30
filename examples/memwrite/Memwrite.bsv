@@ -62,7 +62,7 @@ endinterface
 `ifdef FOO
 module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 
-   Reg#(ObjectPointer)   pointer <- mkReg(0);
+   Reg#(SGLId)   pointer <- mkReg(0);
    Reg#(Bit#(32))       numWords <- mkReg(0);
    Reg#(Bit#(32))       burstLen <- mkReg(0);
    FIFOF#(void)               cf <- mkSizedFIFOF(1);
@@ -134,7 +134,7 @@ endmodule
 // this can come in handy for debugging the memserver
 module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 
-   Reg#(ObjectPointer)   pointer <- mkReg(0);
+   Reg#(SGLId)   pointer <- mkReg(0);
    Reg#(Bit#(32))       numWords <- mkReg(0);
    Reg#(Bit#(32))       burstLen <- mkReg(0);
 

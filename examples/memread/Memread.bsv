@@ -59,7 +59,7 @@ typedef TDiv#(DataBusWidth,32) DataBusWords;
 
 module mkMemread#(MemreadIndication indication) (Memread);
 
-   Reg#(ObjectPointer)   pointer <- mkReg(0);
+   Reg#(SGLId)   pointer <- mkReg(0);
    Reg#(Bit#(32))       numWords <- mkReg(0);
    Reg#(Bit#(32))       burstLen <- mkReg(0);
    Reg#(Bit#(32))    mismatchCnt <- mkReg(0);

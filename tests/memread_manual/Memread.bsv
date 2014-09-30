@@ -46,7 +46,7 @@ endinterface
 
 module mkMemread#(MemreadIndication indication) (Memread);
 
-   Reg#(ObjectPointer)   pointer <- mkReg(0);
+   Reg#(SGLId)   pointer <- mkReg(0);
    Reg#(Bit#(32))       numWords <- mkReg(0);
    Reg#(Bit#(32))       burstLen <- mkReg(0);
    FIFO#(void)                cf <- mkSizedFIFO(1);

@@ -58,8 +58,8 @@ module mkMemcpyRequest#(MemcpyIndication indication,
 
    Reg#(Bit#(32))          iterCnt <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);
-   Reg#(ObjectPointer)      rdPointer <- mkReg(0);
-   Reg#(ObjectPointer)      wrPointer <- mkReg(0);
+   Reg#(SGLId)      rdPointer <- mkReg(0);
+   Reg#(SGLId)      wrPointer <- mkReg(0);
    Reg#(Bit#(32))         burstLen <- mkReg(0);
       
    rule start(iterCnt > 0);

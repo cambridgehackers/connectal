@@ -50,8 +50,8 @@ module mkCopyEngine#(ObjectReadServer#(64) copy_read_chan, ObjectWriteServer#(64
    Reg#(Bit#(16)) copyWriteCount <- mkReg(0);
    Reg#(Bit#(ObjectOffsetSize)) copyReadAddr <- mkReg(0);
    Reg#(Bit#(ObjectOffsetSize)) copyWriteAddr <- mkReg(0);
-   Reg#(ObjectPointer) copyReadPointer <- mkReg(0);
-   Reg#(ObjectPointer) copyWritePointer <- mkReg(0);
+   Reg#(SGLId) copyReadPointer <- mkReg(0);
+   Reg#(SGLId) copyWritePointer <- mkReg(0);
    Reg#(Bit#(32)) copyTag <- mkReg(0);
    Reg#(Bool) copyBusy <- mkReg(False);
    Reg#(Bit#(4)) cmdCtr <- mkReg(0);

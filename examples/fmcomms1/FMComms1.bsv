@@ -58,7 +58,7 @@ endinterface
  */
 module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#(64)) dac, PipeOut#(Bit#(64)) adc) (FMComms1);
 
-   Reg#(ObjectPointer)     readPointer <- mkReg(0);
+   Reg#(SGLId)     readPointer <- mkReg(0);
    Reg#(Bit#(32))         readNumWords <- mkReg(0);
    Reg#(Bit#(32))         readIterCount <- mkReg(0);
    Reg#(Bit#(8))          readBurstLen <- mkReg(0);
@@ -66,7 +66,7 @@ module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#(64)) dac, PipeOut
 
    MemreadEngine#(64,1)         re <- mkMemreadEngineBuff(64*16);
 
-   Reg#(ObjectPointer)     writePointer <- mkReg(0);
+   Reg#(SGLId)     writePointer <- mkReg(0);
    Reg#(Bit#(32))         writeNumWords <- mkReg(0);
    Reg#(Bit#(32))         writeIterCount <- mkReg(0);
    Reg#(Bit#(8))          writeBurstLen <- mkReg(0);

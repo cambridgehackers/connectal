@@ -109,13 +109,13 @@ endmodule: mkXYRangePipeOut
 
 interface RowColSource#(numeric type dsz, type a);
    interface PipeOut#(a) pipe;
-   method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
+   method Action start(SGLId h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
    method ActionValue#(Bool) finish();
 endinterface
 
 interface RowColSink#(numeric type dsz, type a);
    interface PipeIn#(a) pipe;
-   method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
+   method Action start(SGLId h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
    method ActionValue#(Bool) finish();
 endinterface
 
@@ -124,7 +124,7 @@ function PipeIn#(a) getRowColSinkPipe(RowColSink#(n,a) vs) = vs.pipe;
 
 module mkRowColSink#(VectorSink#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSink#(TMul#(N,32), Vector#(N,MmToken)));
    function Float tokenValue(MmToken v) = v.v;
-   method Action start(ObjectPointer p, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
+   method Action start(SGLId p, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
       vs.start(p,a,l);
    endmethod
    method finish = vs.finish;
@@ -145,7 +145,7 @@ module mkRowSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSourc
    Reg#(Bit#(ObjectOffsetSize)) countReg <- mkReg(0);
    FIFOF#(Bit#(ObjectOffsetSize)) cmdFifo <- mkSizedFIFOF(4);
 
-   method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
+   method Action start(SGLId h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
 `ifdef TAGGED_TOKENS
       tagFifo.enq(tag);
 `endif
@@ -209,7 +209,7 @@ module mkColSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSourc
    Reg#(Bit#(ObjectOffsetSize)) countReg <- mkReg(0);
    FIFOF#(Bit#(ObjectOffsetSize)) cmdFifo <- mkSizedFIFOF(4);
 
-   method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
+   method Action start(SGLId h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
 `ifdef TAGGED_TOKENS
       tagFifo.enq(tag);
 `endif
@@ -265,9 +265,9 @@ endmodule: mkColSource
    
 // row major layout
 interface DmaMatrixMultiplyIfc#(numeric type addrwidth, numeric type dsz);
-   method Action start(ObjectPointer pointerA, UInt#(addrwidth) numRowsA, UInt#(addrwidth) numColumnsA,
-		       ObjectPointer pointerB, UInt#(addrwidth) numRowsB, UInt#(addrwidth) numColumnsB,
-		       ObjectPointer pointerC,
+   method Action start(SGLId pointerA, UInt#(addrwidth) numRowsA, UInt#(addrwidth) numColumnsA,
+		       SGLId pointerB, UInt#(addrwidth) numRowsB, UInt#(addrwidth) numColumnsB,
+		       SGLId pointerC,
 		       UInt#(addrwidth) numRowsA_x_numColumnsA, UInt#(addrwidth) numColumnsA_x_J,
 		       UInt#(addrwidth) numRowsB_x_numColumnsB, UInt#(addrwidth) numColumnsB_x_K,
 		       UInt#(addrwidth) numRowsA_x_numRowsB,    UInt#(addrwidth) numRowsB_x_J);
@@ -510,9 +510,9 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 
    function Bool pipeNotEmpty(RowColSource#(asz, a) vs); return vs.pipe.notEmpty(); endfunction
 
-   method Action start(ObjectPointer pointerA, UInt#(addrwidth) numRowsA, UInt#(addrwidth) numColumnsA,
-		       ObjectPointer pointerB, UInt#(addrwidth) numRowsB, UInt#(addrwidth) numColumnsB,
-		       ObjectPointer pointerC,
+   method Action start(SGLId pointerA, UInt#(addrwidth) numRowsA, UInt#(addrwidth) numColumnsA,
+		       SGLId pointerB, UInt#(addrwidth) numRowsB, UInt#(addrwidth) numColumnsB,
+		       SGLId pointerC,
 		       UInt#(addrwidth) numRowsA_x_numColumnsA, UInt#(addrwidth) numColumnsA_x_J,
 		       UInt#(addrwidth) numRowsB_x_numColumnsB, UInt#(addrwidth) numColumnsB_x_K,
 		       UInt#(addrwidth) numRowsA_x_numRowsB,    UInt#(addrwidth) numRowsB_x_J
@@ -562,9 +562,9 @@ endmodule : mkDmaMatrixMultiply
 interface DramMatrixMultiply#(numeric type n, numeric type dmasz, numeric type nm);
    interface Vector#(nm, ObjectReadClient#(dmasz)) readClients;
    interface Vector#(nm, ObjectWriteClient#(dmasz)) writeClients;
-   method Action start(ObjectPointer pointerA, UInt#(MMSize) numRowsA, UInt#(MMSize) numColumnsA,
-		       ObjectPointer pointerB, UInt#(MMSize) numRowsB, UInt#(MMSize) numColumnsB,
-		       ObjectPointer pointerC,
+   method Action start(SGLId pointerA, UInt#(MMSize) numRowsA, UInt#(MMSize) numColumnsA,
+		       SGLId pointerB, UInt#(MMSize) numRowsB, UInt#(MMSize) numColumnsB,
+		       SGLId pointerC,
 		       UInt#(MMSize) numRowsA_x_numColumnsA, UInt#(MMSize) numColumnsA_x_J,
 		       UInt#(MMSize) numRowsB_x_numColumnsB, UInt#(MMSize) numColumnsB_x_K,
 		       UInt#(MMSize) numRowsA_x_numRowsB,    UInt#(MMSize) numRowsB_x_J);

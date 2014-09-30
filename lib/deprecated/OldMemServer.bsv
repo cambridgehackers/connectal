@@ -53,7 +53,7 @@ interface MemReadInternal#(numeric type addrWidth, numeric type dataWidth);
    interface Get#(Tuple2#(Bit#(6),Bit#(6))) tagMismatch;
 endinterface
 
-function Bool bad_pointer(ObjectPointer p);
+function Bool bad_pointer(SGLId p);
    return (p > fromInteger(valueOf(MaxNumSGLists)) || p == 0);
 endfunction
 

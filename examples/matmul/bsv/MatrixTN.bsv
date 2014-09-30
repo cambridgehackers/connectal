@@ -48,12 +48,12 @@ import GetPut::*;
 
 interface RowColSource#(numeric type dsz, type a);
    interface PipeOut#(a) pipe;
-   method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
+   method Action start(SGLId h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
 endinterface
 
 interface RowColSink#(numeric type dsz, type a);
    interface PipeIn#(a) pipe;
-   method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
+   method Action start(SGLId h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
    method ActionValue#(Bool) finish();
 endinterface
 
@@ -167,7 +167,7 @@ module mkRowSource#(ObjectReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) nu
       read_data_buffer.enq(unpack(foo.data));
    endrule
    
-   method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
+   method Action start(SGLId h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
 `ifdef TAGGED_TOKENS
       tagFifo.enq(tag);
 `endif
@@ -241,7 +241,7 @@ module mkRowColSink#(ObjectWriteServer#(TMul#(N,32)) vs, Bit#(ObjectTagSize) id)
       vs.writeData.put(foo);
    endrule
    function Float tokenValue(MmToken v) = v.v;
-   method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
+   method Action start(SGLId h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
       let cmd = ObjectRequest{pointer:h, offset:a<<ashift, burstLen:truncate(l<<ashift), tag:id};
       vs.writeReq.put(cmd);
    endmethod
@@ -259,9 +259,9 @@ endmodule
    
 // row major layout
 interface DmaMatrixMultiplyIfc#(numeric type addrwidth, numeric type dsz);
-   method Action start(ObjectPointer pointerA, UInt#(addrwidth) numRowsA, UInt#(addrwidth) numColumnsA,
-		       ObjectPointer pointerB, UInt#(addrwidth) numRowsB, UInt#(addrwidth) numColumnsB,
-		       ObjectPointer pointerC,
+   method Action start(SGLId pointerA, UInt#(addrwidth) numRowsA, UInt#(addrwidth) numColumnsA,
+		       SGLId pointerB, UInt#(addrwidth) numRowsB, UInt#(addrwidth) numColumnsB,
+		       SGLId pointerC,
 		       UInt#(addrwidth) numRowsA_x_numColumnsA, UInt#(addrwidth) numColumnsA_x_J,
 		       UInt#(addrwidth) numRowsA_x_numColumnsB, UInt#(addrwidth) numColumnsB_x_K,
 		       UInt#(addrwidth) numColumnsA_x_numColumnsB,    UInt#(addrwidth) numRowsB_x_J);
@@ -414,9 +414,9 @@ module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
 
    function Bool pipeNotEmpty(RowColSource#(asz, a) vs); return vs.pipe.notEmpty(); endfunction
 
-   method Action start(ObjectPointer pointerA, UInt#(addrwidth) numRowsA, UInt#(addrwidth) numColumnsA,
-		       ObjectPointer pointerB, UInt#(addrwidth) numRowsB, UInt#(addrwidth) numColumnsB,
-		       ObjectPointer pointerC,
+   method Action start(SGLId pointerA, UInt#(addrwidth) numRowsA, UInt#(addrwidth) numColumnsA,
+		       SGLId pointerB, UInt#(addrwidth) numRowsB, UInt#(addrwidth) numColumnsB,
+		       SGLId pointerC,
 		       UInt#(addrwidth) numRowsA_x_numColumnsA,UInt#(addrwidth) numColumnsA_x_J,
 		       UInt#(addrwidth) numRowsA_x_numColumnsB,UInt#(addrwidth) numColumnsB_x_J,
 		       UInt#(addrwidth) numColumnsA_x_numColumnsB,UInt#(addrwidth) numRowsB_x_numColumnsB
@@ -467,9 +467,9 @@ endmodule : mkDmaMatrixMultiply
 interface DramMatrixMultiply#(numeric type n, numeric type dmasz);
    interface Vector#(2, ObjectReadClient#(dmasz)) readClients;
    interface Vector#(2, ObjectWriteClient#(dmasz)) writeClients;
-   method Action start(ObjectPointer pointerA, UInt#(MMSize) numRowsA, UInt#(MMSize) numColumnsA,
-		       ObjectPointer pointerB, UInt#(MMSize) numRowsB, UInt#(MMSize) numColumnsB,
-		       ObjectPointer pointerC,
+   method Action start(SGLId pointerA, UInt#(MMSize) numRowsA, UInt#(MMSize) numColumnsA,
+		       SGLId pointerB, UInt#(MMSize) numRowsB, UInt#(MMSize) numColumnsB,
+		       SGLId pointerC,
 		       UInt#(MMSize) numRowsA_x_numColumnsA, UInt#(MMSize) numColumnsA_x_J,
 		       UInt#(MMSize) numRowsA_x_numColumnsB, UInt#(MMSize) numColumnsB_x_J,
 		       UInt#(MMSize) numColumnsA_x_numColumnsB, UInt#(MMSize) numRowsB_x_J);

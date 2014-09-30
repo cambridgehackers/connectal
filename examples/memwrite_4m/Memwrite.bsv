@@ -50,7 +50,7 @@ endinterface
 
 module  mkMemwrite#(MemwriteIndication indication) (Memwrite#(4));
 
-   Reg#(ObjectPointer)     pointer <- mkReg(0);
+   Reg#(SGLId)     pointer <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);
    Reg#(Bit#(32))         burstLen <- mkReg(0);
    Reg#(Bit#(32))          iterCnt <- mkReg(0);
