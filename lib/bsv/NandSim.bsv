@@ -72,7 +72,7 @@ module mkNandSim#(NandSimIndication indication) (NandSim);
    let slave_write_pipe   = we.dataPipes[3];
    FIFO#(Bit#(ObjectTagSize)) slaveWriteTags <- mkSizedFIFO(1);
    FIFO#(Bit#(ObjectTagSize)) slaveReadTags <- mkSizedFIFO(1);
-   Reg#(Bit#(8)) slaveReadCnt <- mkReg(0);
+   Reg#(Bit#(BurstLenSize)) slaveReadCnt <- mkReg(0);
    
    rule completeSlaveReadReq;
       slaveReadTags.deq;
