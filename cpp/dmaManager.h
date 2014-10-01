@@ -60,8 +60,9 @@ typedef struct {
 #ifdef __cplusplus
 extern "C" {
 #endif
-  void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *dmaDevice, PortalInternal *sglDevice);
+void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *dmaDevice, PortalInternal *sglDevice);
 int DmaManager_reference(DmaManagerPrivate *priv, int fd);
+void DmaManager_dereference(DmaManagerPrivate *priv, int ref);
 #ifdef __cplusplus
 }
 #endif
@@ -80,6 +81,9 @@ class DmaManager
   int reference(int fd) {
     return DmaManager_reference(&priv, fd);
   };
+  void dereference(int ref){
+    DmaManager_dereference(&priv, ref);
+  }
   uint64_t show_mem_stats(ChannelType rc) {
     return DmaManager_show_mem_stats(&priv, rc);
   };

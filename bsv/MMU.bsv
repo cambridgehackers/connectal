@@ -32,6 +32,8 @@ import MemTypes::*;
 import StmtFSM::*;
 import ClientServer::*;
 import PortalMemory::*;
+import CompletionBuffer::*;
+
 
 typedef 32 MaxNumSGLists;
 typedef Bit#(TLog#(MaxNumSGLists)) SGListId;
@@ -88,8 +90,11 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUConfigIndication mmuIndication)(MMU
 	    Add#(c__, addrWidth, ObjectOffsetSize));
    
    let verbose = !bsimMMap;
-   Reg#(Bit#(32)) nextId <- mkReg(0);
-
+   TagGen#(MaxNumSGLists) sglId_gen <- mkTagGen;
+   rule complete_sglId_gen;
+      let __x <- sglId_gen.complete;
+   endrule
+   
    // stage 0 (latency == 1)
    Vector#(2, FIFO#(ReqTup)) incomingReqs <- replicateM(mkFIFO);
 
@@ -229,7 +234,7 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUConfigIndication mmuIndication)(MMU
       let ptr <- toGet(configRespFifo).get();
       mmuIndication.configResp(extend(ptr));
    endrule
-
+   
    Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addrServers;
    for(Integer i = 0; i < 2; i=i+1)
       addrServers[i] =
@@ -249,12 +254,14 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUConfigIndication mmuIndication)(MMU
 	     endmethod
 	  endinterface
        endinterface);
-
-   // FIXME: split this into three methods?
+      
    interface MMUConfigRequest request;
    method Action idRequest();
-      nextId <= nextId+1;
-      mmuIndication.idResponse((fromInteger(iid) << 16) | nextId);
+      let nextId <- sglId_gen.getTag;
+      mmuIndication.idResponse((fromInteger(iid) << 16) | extend(nextId));
+   endmethod
+   method Action idReturn(Bit#(32) sglId);
+      sglId_gen.returnTag(truncate(sglId));
    endmethod
    method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) index8, Bit#(64) barr4, Bit#(32) index4, Bit#(64) barr0, Bit#(32) index0);
       portsel(regall, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,

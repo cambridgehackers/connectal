@@ -2,7 +2,7 @@
 
 void MMUConfigRequestProxyputFailed_cb(struct PortalInternal *p, const uint32_t v)
 {
-    const char* methodNameStrings[] = {"sglist", "region", "idRequest"};
+    const char* methodNameStrings[] = {"sglist", "region", "idRequest", "idReturn"};
     PORTAL_PRINTF("putFailed: %s\n", methodNameStrings[v]);
     //exit(1);
 }
@@ -42,27 +42,27 @@ int MMUConfigRequestProxy_handleMessage(PortalInternal *p, unsigned int channel)
     return 0;
 }
 
-void MMUConfigRequestProxy_sglist (PortalInternal *p , const uint32_t pointer, const uint32_t pointerIndex, const uint64_t addr, const uint32_t len )
+void MMUConfigRequestProxy_sglist (PortalInternal *p , const uint32_t sglId, const uint32_t sglIndex, const uint64_t addr, const uint32_t len )
 {
     volatile unsigned int* temp_working_addr = &(p->map_base[PORTAL_REQ_FIFO(CHAN_NUM_MMUConfigRequestProxy_sglist)]);
-    int i = 50;
-    while (!READL(p, temp_working_addr + 1) && i-- > 0)
+    int __i = 50;
+    while (!READL(p, temp_working_addr + 1) && __i-- > 0)
         ; /* busy wait a bit on 'fifo not full' */
-        WRITEL(p, temp_working_addr, pointer);
-        WRITEL(p, temp_working_addr, pointerIndex);
+        WRITEL(p, temp_working_addr, sglId);
+        WRITEL(p, temp_working_addr, sglIndex);
         WRITEL(p, temp_working_addr, (addr>>32));
         WRITEL(p, temp_working_addr, addr);
         WRITEL(p, temp_working_addr, len);
 
 };
 
-void MMUConfigRequestProxy_region (PortalInternal *p , const uint32_t pointer, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 )
+void MMUConfigRequestProxy_region (PortalInternal *p , const uint32_t sglId, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 )
 {
     volatile unsigned int* temp_working_addr = &(p->map_base[PORTAL_REQ_FIFO(CHAN_NUM_MMUConfigRequestProxy_region)]);
-    int i = 50;
-    while (!READL(p, temp_working_addr + 1) && i-- > 0)
+    int __i = 50;
+    while (!READL(p, temp_working_addr + 1) && __i-- > 0)
         ; /* busy wait a bit on 'fifo not full' */
-        WRITEL(p, temp_working_addr, pointer);
+        WRITEL(p, temp_working_addr, sglId);
         WRITEL(p, temp_working_addr, (barr8>>32));
         WRITEL(p, temp_working_addr, barr8);
         WRITEL(p, temp_working_addr, index8);
@@ -78,9 +78,19 @@ void MMUConfigRequestProxy_region (PortalInternal *p , const uint32_t pointer, c
 void MMUConfigRequestProxy_idRequest (PortalInternal *p   )
 {
     volatile unsigned int* temp_working_addr = &(p->map_base[PORTAL_REQ_FIFO(CHAN_NUM_MMUConfigRequestProxy_idRequest)]);
-    int i = 50;
-    while (!READL(p, temp_working_addr + 1) && i-- > 0)
+    int __i = 50;
+    while (!READL(p, temp_working_addr + 1) && __i-- > 0)
         ; /* busy wait a bit on 'fifo not full' */
         WRITEL(p, temp_working_addr, 0);
+
+};
+
+void MMUConfigRequestProxy_idReturn (PortalInternal *p , const uint32_t sglId )
+{
+    volatile unsigned int* temp_working_addr = &(p->map_base[PORTAL_REQ_FIFO(CHAN_NUM_MMUConfigRequestProxy_idReturn)]);
+    int __i = 50;
+    while (!READL(p, temp_working_addr + 1) && __i-- > 0)
+        ; /* busy wait a bit on 'fifo not full' */
+        WRITEL(p, temp_working_addr, sglId);
 
 };

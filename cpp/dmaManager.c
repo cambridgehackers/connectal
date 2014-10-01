@@ -41,6 +41,7 @@
 #include "GeneratedTypes.h" // generated in project directory
 #define DMAGetMemoryTraffic(P,A) DmaDebugRequestProxy_getMemoryTraffic((P), (A))
 #define SGListIdRequest(P) MMUConfigRequestProxy_idRequest((P));
+#define SGListIdReturn(P,A) MMUConfigRequestProxy_idReturn((P),(A));
 #define KERNEL_REFERENCE
 
 static int trace_memory = 1;
@@ -76,6 +77,11 @@ uint64_t DmaManager_show_mem_stats(DmaManagerPrivate *priv, ChannelType rc)
   sem_wait(&priv->mtSem);
   rv += priv->mtCnt;
   return rv;
+}
+
+void DmaManager_dereference(DmaManagerPrivate *priv, int ref)
+{
+  SGListIdReturn(priv->dmaDevice, ref);
 }
 
 int DmaManager_reference(DmaManagerPrivate *priv, int fd)

@@ -64,7 +64,7 @@ interface DmaDebugIndication;
    method Action addrResponse(Bit#(64) physAddr);
    method Action reportStateDbg(DmaDbgRec rec);
    method Action reportMemoryTraffic(Bit#(64) words);
-   method Action error(Bit#(32) code, Bit#(32) pointer, Bit#(64) offset, Bit#(64) extra);
+   method Action error(Bit#(32) code, Bit#(32) sglId, Bit#(64) offset, Bit#(64) extra);
 endinterface
 
 //
@@ -72,8 +72,8 @@ endinterface
 //
 interface MMUConfigIndication;
    method Action idResponse(Bit#(32) sglId);
-   method Action configResp(Bit#(32) pointer);
-   method Action error(Bit#(32) code, Bit#(32) pointer, Bit#(64) offset, Bit#(64) extra);
+   method Action configResp(Bit#(32) sglId);
+   method Action error(Bit#(32) code, Bit#(32) sglId, Bit#(64) offset, Bit#(64) extra);
 endinterface
 
 //
@@ -83,13 +83,14 @@ interface MMUConfigRequest;
    //
    // @brief Adds an address translation entry to the scatter-gather list for an object
    //
-   // @param pointer Specifies the object to be translated
+   // @param sglId Specifies the object to be translated
    // @param addr Physical address of the segment
    // @param len Length of the segment
    //
-   method Action sglist(Bit#(32) pointer, Bit#(32) pointerIndex, Bit#(64) addr,  Bit#(32) len);
-   method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) index8, Bit#(64) barr4, Bit#(32) index4, Bit#(64) barr0, Bit#(32) index0);
+   method Action sglist(Bit#(32) sglId, Bit#(32) sglIndex, Bit#(64) addr,  Bit#(32) len);
+   method Action region(Bit#(32) sglId, Bit#(64) barr8, Bit#(32) index8, Bit#(64) barr4, Bit#(32) index4, Bit#(64) barr0, Bit#(32) index0);
    method Action idRequest();
+   method Action idReturn(Bit#(32) sglId);
 endinterface
 
 //
@@ -99,7 +100,7 @@ interface DmaDebugRequest;
    //
    // @brief Requests an address translation
    //
-   method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
+   method Action addrRequest(Bit#(32) sglId, Bit#(32) offset);
    //
    // @brief Requests debug info for the specified channel type
    //
