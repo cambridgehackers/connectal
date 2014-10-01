@@ -160,7 +160,7 @@ module mkBRAMWriter#(Integer id,
    
    method Action start(SGLId h, Bit#(ObjectOffsetSize) b, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
       if(verbose) $display("mkBRAMWriter::start (%d) %d, %d, %d %d", id, h, b, start_idx, finish_idx);
-      Bit#(8) burst_len_bytes = fromInteger(valueOf(bwbytes));
+      Bit#(BurstLenSize) burst_len_bytes = fromInteger(valueOf(bwbytes));
 
       Bit#(32) req_len_ds = extend(finish_idx-start_idx)+fromInteger(valueOf(nd));
       Bit#(TLog#(nd)) zeros = 0;
