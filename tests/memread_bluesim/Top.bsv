@@ -91,17 +91,13 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
 
    Reg#(Bit#(32)) cycles <- mkReg(0);
    Reg#(Bit#(32)) reqCycles <- mkReg(0);
-   Reg#(Bit#(32)) dataCycles <- mkReg(0);
+   Reg#(Bit#(32)) lastCycle <- mkReg(0);
    rule count;
       cycles <= cycles + 1;
-   endrule
-
-   rule startdump if (cycles == 1);
-      //$dumpvars();
-   endrule
-
-   rule finish if (reqCycles == 10000);
-      //$dumpoff();
+      if (cycles == 1)
+	 $dumpvars();
+      if (cycles == 10000)
+	 $dumpoff();
    endrule
 
    let my_id = PciId {bus: 4, dev: 2, func: 0};
@@ -111,6 +107,7 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
    AddressGenerator#(32, DataBusWidth) addrGenerator <- mkAddressGenerator();
 
    FIFO#(TLPData#(16)) tlpFifo <- mkSizedFIFO(1);
+   FIFO#(TLPData#(16)) tlpOutFifo <- mkSizedFIFO(16);
 
    rule displayTlp;
       let tlp <- memSlaveEngine.tlp.request.get();
@@ -133,7 +130,6 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
       end
       else if (tlp.sof) begin
 	 $display("%d sof %h", cycles-reqCycles, tlp.data);
-	 newReqCycles = cycles;
       end
       else begin
 	 $display("unknown tlp %h", tlp);
@@ -144,7 +140,7 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
       tlpFifo.enq(tlp);
 
       TLPData#(16) resptlp;
-      resptlp.sof = False;
+      resptlp.sof = True;
       resptlp.eof = (burstLen == 1);
       resptlp.be = 16'hffff;
       resptlp.hit = 0;
@@ -164,8 +160,9 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
       completion.data = byteSwap(0);
 
       resptlp.data = pack(completion);
-      memSlaveEngine.tlp.response.put(resptlp);
-      $display("resp tlp %h burstLen %d", resptlp, burstLen);
+      tlpOutFifo.enq(resptlp);
+      lastCycle <= cycles;
+      $display("%d: gen tlp resp %h burstLen %d", cycles-lastCycle, resptlp, burstLen);
    endrule
    rule dataRule;
       let addrBeat <- addrGenerator.addrBeat.get();
@@ -182,10 +179,14 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
       Vector#(4, Bit#(32)) vec = unpack(0);
       resptlp.data = pack(vec);
       $display("     addr %h", addrBeat.addr << 2);
-      $display("data tlp %h last=%d", resptlp, addrBeat.last);
+      $display("%d: gen tlp data %h last=%d", cycles-lastCycle, resptlp, addrBeat.last);
+      lastCycle <= cycles;
+      tlpOutFifo.enq(resptlp);
+   endrule
+   rule tlpout;
+      let resptlp <- toGet(tlpOutFifo).get();
       memSlaveEngine.tlp.response.put(resptlp);
    endrule
-
    Vector#(6,StdPortal) portals;
    portals[0] = hostDmaDebugIndicationProxy.portalIfc; 
    portals[1] = memreadIndicationProxy.portalIfc; 
