@@ -4,8 +4,9 @@ VERSION=140520.1
 
 obj-m += pcieportal.o
 
-export KROOT=/lib/modules/$(shell uname -r)/build
-export BS_MOD_DIR=/lib/modules/$(shell uname -r)/bluespec
+KVERSION=$(shell uname -r)
+export KROOT=/lib/modules/$(KVERSION)/build
+export BS_MOD_DIR=$(DESTDIR)/lib/modules/$(KVERSION)/bluespec
 
 .PHONY: default
 default: pcieportal.ko ../portalmem/portalmem.ko
