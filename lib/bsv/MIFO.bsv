@@ -53,7 +53,7 @@ module mkMIFO(MIFO#(max_in, n_out, size, t))
    FIFOF#(UInt#(max_in_sz))      posFifo <- mkFIFOF();
    FIFOF#(LUInt#(max_in))    inCountFifo <- mkFIFOF();
    FIFOF#(Bit#(max_in))           weFifo <- mkFIFOF();
-   Vector#(max_in, FIFOF#(t)) fifos      <- replicateM(mkFIFOF());
+   Vector#(max_in, FIFOF#(t)) fifos      <- replicateM(mkSizedFIFOF(4));
 
    Reg#(UInt#(max_in_sz))            inPos <- mkReg(0);
    Reg#(UInt#(max_in_sz))            outPos <- mkReg(0);
