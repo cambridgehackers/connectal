@@ -42,7 +42,7 @@ struct memresponse{
 extern "C" {
 #endif
 void connect_to_bsim(void);
-void bsim_wait_for_connect();
+void bsim_wait_for_connect(void);
 ssize_t sock_fd_write(int sockfd, int fd);
 ssize_t sock_fd_read(int sock, int *fd);
 ssize_t bluesim_sock_fd_write(long fd);

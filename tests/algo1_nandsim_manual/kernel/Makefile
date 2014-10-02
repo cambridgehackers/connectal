@@ -4,11 +4,11 @@
 ###################### Flags for using KC705   ###################
 #BOARD=kc705
 ###################### Flags for using VC707   ###################
-BOARD=vc707
+#BOARD=vc707
 ###################### Flags for using zedboard ##################
 #BOARD=zedboard
 ###################### Flags for using Bluesim ###################
-#BOARD=bluesim
+BOARD=bluesim
 ###################### End of target h/w flags ###################
 
 ifeq ($(BOARD),bluesim)
@@ -26,7 +26,7 @@ KBUILD_EXTRA_SYMBOLS := $(DRIVERDIR)/pcieportal/Module.symvers $(DRIVERDIR)/port
      #$(BOARDDIR)/DmaIndicationWrapper.o \
 
 
-kernel_exe-y := ../nandsim_manual.o \
+kernel_exe-y := nandsim_manual.o \
      $(BOARDDIR)/MMUConfigRequestProxy.o \
      $(BOARDDIR)/MMUConfigIndicationWrapper.o \
      $(BOARDDIR)/NandSimIndicationWrapper.o \

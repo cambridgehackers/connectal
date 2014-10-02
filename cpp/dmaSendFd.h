@@ -52,14 +52,18 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
     uint64_t borderVal[3];
     uint32_t indexVal[3];
     unsigned char idxOffset;
+#ifdef __KERNEL__
+    struct scatterlist *sg;
+    struct file *fmem;
+    struct sg_table *sgtable;
+#endif
 #ifdef BSIM
     int size_accum = 0;
     bluesim_sock_fd_write(fd);
 #endif
 #ifdef __KERNEL__
-    struct scatterlist *sg;
-    struct file *fmem = fget(fd);
-    struct sg_table *sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
+    fmem = fget(fd);
+    sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
 #elif !defined(BSIM)
   int numEntries = 0;
   PortalAlloc *portalAlloc = NULL, pa = { 0 };

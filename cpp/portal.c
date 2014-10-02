@@ -27,6 +27,8 @@
 
 #ifdef __KERNEL__
 #include "linux/delay.h"
+#include "linux/file.h"
+#include "linux/dma-buf.h"
 #define assert(A)
 #else
 #include <string.h>
@@ -37,8 +39,8 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <time.h> // ctime
-#include "portalmem.h" // PA_MALLOC
 #endif
+#include "portalmem.h" // PA_MALLOC
 
 #ifdef ZYNQ
 #include <android/log.h>
@@ -170,7 +172,9 @@ static void init_directory(void)
   // finally scan
   if(1) PORTAL_PRINTF("init_directory: scan(fpga%d)\n", globalDirectory.fpga_number);
   if(1){
+#ifndef __KERNEL__
     time_t timestamp  = READL(&globalDirectory, PORTAL_DIRECTORY_TIMESTAMP);
+#endif
     uint32_t numportals = READL(&globalDirectory, PORTAL_DIRECTORY_NUMPORTALS);
     PORTAL_PRINTF("version=%d\n",  READL(&globalDirectory, PORTAL_DIRECTORY_VERSION));
 #ifndef __KERNEL__
@@ -280,20 +284,23 @@ printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start
 
 void init_portal_memory(void)
 {
+#ifndef __KERNEL__
   if (global_pa_fd == -1)
       global_pa_fd = open("/dev/portalmem", O_RDWR);
   if (global_pa_fd < 0){
     PORTAL_PRINTF("Failed to open /dev/portalmem pa_fd=%d errno=%d\n", global_pa_fd, errno);
   }
+#endif
 }
 
 int portalAlloc(size_t size)
 {
+  int fd;
   init_portal_memory();
 #ifdef __KERNEL__
-  int fd = portalmem_dmabuffer_create(size);
+  fd = portalmem_dmabuffer_create(size);
 #else
-  int fd = ioctl(global_pa_fd, PA_MALLOC, size);
+  fd = ioctl(global_pa_fd, PA_MALLOC, size);
 #endif
   PORTAL_PRINTF("alloc size=%ldMB fd=%d\n", size/(1L<<20), fd);
   return fd;
