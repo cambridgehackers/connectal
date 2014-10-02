@@ -23,8 +23,10 @@ DRIVERDIR=$(src)/../../../drivers
 KBUILD_EXTRA_SYMBOLS := $(DRIVERDIR)/pcieportal/Module.symvers $(DRIVERDIR)/portalmem/Module.symvers
 
 kernel_exe-y := ../memread_manual_manager.o \
-     $(BOARDDIR)/DmaConfigProxy.o \
-     $(BOARDDIR)/DmaIndicationWrapper.o \
+     $(BOARDDIR)/MMUConfigRequestProxy.o \
+     $(BOARDDIR)/MMUConfigIndicationWrapper.o \
+     $(BOARDDIR)/DmaDebugRequestProxy.o \
+     $(BOARDDIR)/DmaDebugIndicationWrapper.o \
      $(BOARDDIR)/MemreadIndicationWrapper.o \
      $(BOARDDIR)/MemreadRequestProxy.o \
      $(CPPDIR)/portal.o \

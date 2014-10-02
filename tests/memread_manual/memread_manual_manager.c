@@ -44,12 +44,11 @@ static int burstLen = 16;
 #ifndef BSIM
 #define numWords 0x1240000/4 // make sure to allocate at least one entry of each size
 #else
-#define numWords 0x124000/4
+#define numWords 0x1240/4
 #endif
 static long test_sz  = numWords*sizeof(unsigned int);
 static long alloc_sz = numWords*sizeof(unsigned int);
 static DmaManagerPrivate priv;
-
 
 void MemreadIndicationWrapperreadDone_cb (  struct PortalInternal *p, const uint32_t mismatchCount )
 {
@@ -118,7 +117,7 @@ static void *pthread_worker(void *p)
 {
     void *rc = NULL;
     while (1) {
-#ifdef BSIM
+#if defined(BSIM) && !defined(__KERNEL__)
         if (bsim_poll_interrupt())
 #endif
             manual_event();

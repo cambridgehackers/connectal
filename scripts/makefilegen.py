@@ -48,6 +48,7 @@ argparser.add_argument('--xci', default=[], help='Additional IP sources', action
 argparser.add_argument('-C', '--constraint', help='Additional constraint files', action='append')
 argparser.add_argument('-M', '--make', help='Run make on the specified targets', action='append')
 argparser.add_argument('-D', '--bsvdefine', default=[], help='BSV define', action='append')
+argparser.add_argument('-D2', '--bsvdefine2', default=[], help='BSV define2', action='append')
 argparser.add_argument('-l', '--clib', default=[], help='C++ libary', action='append')
 argparser.add_argument('-S', '--clibfiles', default=[], help='C++ libary file', action='append')
 argparser.add_argument('-L', '--clibdir', default=[], help='C++ libary', action='append')
@@ -156,6 +157,7 @@ LOCAL_LDLIBS := -llog %(clibdirs)s %(clibs)s %(clibfiles)s
 LOCAL_CPPFLAGS := "-march=armv7-a"
 LOCAL_CFLAGS := -DZYNQ -I%(xbsvdir)s -I%(xbsvdir)s/cpp -I%(xbsvdir)s/lib/cpp -I%(xbsvdir)s/drivers/zynqportal -I%(project_dir)s/jni %(cincludes)s %(cdefines)s -I%(xbsvdir)s/drivers/portalmem
 LOCAL_CXXFLAGS := -DZYNQ -I%(xbsvdir)s -I%(xbsvdir)s/cpp -I%(xbsvdir)s/lib/cpp -I%(xbsvdir)s/drivers/zynqportal -I%(project_dir)s/jni %(cincludes)s %(cdefines)s -I%(xbsvdir)s/drivers/portalmem
+LOCAL_CFLAGS2 := $(cdefines2)s
 
 include $(BUILD_EXECUTABLE)
 '''
@@ -170,6 +172,7 @@ endif
 
 CFLAGS_COMMON = -O -g -I%(project_dir)s/jni -I%(xbsvdir)s -I%(xbsvdir)s/cpp -I%(xbsvdir)s/lib/cpp %(sourceincludes)s %(cincludes)s %(cdefines)s -I%(xbsvdir)s/drivers/portalmem -I%(xbsvdir)s/drivers/pcieportal -I%(xbsvdir)s/drivers/zynqportal
 CFLAGS = $(CFLAGS_COMMON)
+CFLAGS2 = %(cdefines2)s
 
 PORTAL_CPP_FILES = $(addprefix %(xbsvdir)s/cpp/, portal.c poller.cpp sock_utils.c timer.c)
 include %(project_dir)s/jni/Makefile.generated_files
@@ -184,13 +187,13 @@ ubuntu_exe: $(SOURCES)
 	$(Q)g++ $(CFLAGS) -o ubuntu_exe $(SOURCES) $(LDLIBS)
 
 ubuntu_exe2: $(SOURCES2)
-	$(Q)g++ $(CFLAGS) -o ubuntu_exe2 $(SOURCES2) $(LDLIBS)
+	$(Q)g++ $(CFLAGS) $(CFLAGS2) -o ubuntu_exe2 $(SOURCES2) $(LDLIBS)
 
 bsim_exe: $(SOURCES)
 	$(Q)g++ $(CFLAGS_COMMON) -o bsim_exe -DBSIM $(SOURCES) $(BSIM_EXE_CXX) $(LDLIBS)
 
 bsim_exe2: $(SOURCES2)
-	$(Q)g++ $(CFLAGS_COMMON) -o bsim_exe2 -DBSIM $(SOURCES2) $(BSIM_EXE_CXX) $(LDLIBS)
+	$(Q)g++ $(CFLAGS_COMMON) $(CFLAGS2) -o bsim_exe2 -DBSIM $(SOURCES2) $(BSIM_EXE_CXX) $(LDLIBS)
 '''
 
 if __name__=='__main__':
@@ -283,6 +286,7 @@ if __name__=='__main__':
 	'clibfiles': ' '.join(['%s' % l for l in options.clibfiles]),
 	'clibdirs': ' '.join([ '-L%s' % os.path.abspath(l) for l in options.clibdir ]),
 	'cdefines': ' '.join([ '-D%s' % d for d in bsvdefines ]),
+        'cdefines2': ' '.join([ '-D%s' % d for d in options.bsvdefine2 ]),
 	'cincludes': ' '.join([ '-I%s' % os.path.abspath(i) for i in options.cinclude ])
     }
     f = util.createDirAndOpen(androidmkname, 'w')

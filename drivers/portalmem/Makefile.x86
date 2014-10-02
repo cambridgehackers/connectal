@@ -1,5 +1,6 @@
 obj-m = portalmem.o
 
+KVERSION=$(shell uname -r)
 export KROOT=/lib/modules/$(KVERSION)/build
 
 default:
