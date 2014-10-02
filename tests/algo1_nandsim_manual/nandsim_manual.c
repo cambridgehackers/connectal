@@ -237,8 +237,9 @@ int main(int argc, const char **argv)
     PORTAL_PRINTF ("kthread stops\n");
   }
   wait_for_completion(&worker_completion);
+  msleep(20000);
 #else
-  while(1) sleep(1);
+  sleep(20);
 #endif
   PORTAL_PRINTF ("Main: ends\n");
   return 0;
