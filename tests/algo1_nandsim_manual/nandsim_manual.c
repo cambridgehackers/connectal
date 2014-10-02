@@ -42,83 +42,76 @@ static PortalInternal intarr[MAX_INDARRAY];
 static sem_t test_sem;
 static int burstLen = 16;
 #ifndef BSIM
-/*#define numWords 0x1240000/4 // make sure to allocate at least one entry of each size*/
-#define numWords 1024
+#define numWords 0x1240000/4 // make sure to allocate at least one entry of each size
 #else
-#define numWords 0x124000/4
+#define numWords 0x1240/4
 #endif
-static long test_sz  = numWords*sizeof(unsigned int);
-static long alloc_sz = numWords*sizeof(unsigned int);
+static long back_sz  = numWords*sizeof(unsigned int);
 static DmaManagerPrivate priv;
-/*size_t numBytes = 0x1240000;*/
-size_t numBytes = 1 << 12;
-/*size_t nandBytes = 1 << 28;*/
-size_t nandBytes = 1 << 20;
-
 
 void NandSimIndicationWrappereraseDone_cb (  struct PortalInternal *p, const uint32_t tag )
 {
-         PORTAL_PRINTF( "cb: NandSim_eraseDone(tag = %x)\n", tag);
-           sem_post(&test_sem);
+  PORTAL_PRINTF( "cb: NandSim_eraseDone(tag = %x)\n", tag);
+  sem_post(&test_sem);
 }
 
 void NandSimIndicationWrapperwriteDone_cb (  struct PortalInternal *p, const uint32_t tag )
 {
-         PORTAL_PRINTF( "cb: NandSim_writeDone(tag = %x)\n", tag);
-           sem_post(&test_sem);
+  PORTAL_PRINTF( "cb: NandSim_writeDone(tag = %x)\n", tag);
+  sem_post(&test_sem);
 }
 
 void NandSimIndicationWrapperreadDone_cb (  struct PortalInternal *p, const uint32_t tag )
 {
-         PORTAL_PRINTF( "cb: NandSim_readDone(tag = %x)\n", tag);
-           sem_post(&test_sem);
+  PORTAL_PRINTF( "cb: NandSim_readDone(tag = %x)\n", tag);
+  sem_post(&test_sem);
 }
 
 void NandSimIndicationWrapperconfigureNandDone_cb (  struct PortalInternal *p )
 {
-         PORTAL_PRINTF( "cb: NandSim_NandDone\n");
-                  sem_post(&test_sem);
+  PORTAL_PRINTF( "cb: NandSim_NandDone\n");
+  sem_post(&test_sem);
 }
 
 void MMUConfigIndicationWrapperconfigResp_cb (  struct PortalInternal *p, const uint32_t pointer )
 {
-         PORTAL_PRINTF("cb: MMUConfigIndicationWrapperconfigResp_cb(physAddr=%x)\n", pointer);
-          sem_post(&priv.confSem);
+  PORTAL_PRINTF("cb: MMUConfigIndicationWrapperconfigResp_cb(physAddr=%x)\n", pointer);
+  sem_post(&priv.confSem);
 }
 
 void MMUConfigIndicationWrapperidResponse_cb (  struct PortalInternal *p, const uint32_t sglId ) 
 {
-         PORTAL_PRINTF("cb: MMUConfigIndicationWrapperidResponse_cb\n");
-          priv.sglId = sglId;
-          sem_post(&priv.sglIdSem);
+  PORTAL_PRINTF("cb: MMUConfigIndicationWrapperidResponse_cb\n");
+  priv.sglId = sglId;
+  sem_post(&priv.sglIdSem);
 }
 
 void DmaDebugIndicationWrapperaddrResponse_cb (  struct PortalInternal *p, const uint64_t physAddr )
 {
-         PORTAL_PRINTF("cb: DmaDebugIndicationWrapperaddrResponse_cb\n");
+  PORTAL_PRINTF("cb: DmaDebugIndicationWrapperaddrResponse_cb\n");
 }
 
 void DmaDebugIndicationWrapperreportStateDbg_cb (  struct PortalInternal *p, const DmaDbgRec rec )
 {
-         PORTAL_PRINTF("cb: DmaDebugIndicationWrapperreportStateDbg_cb\n");
-          sem_post(&priv.dbgSem);
+  PORTAL_PRINTF("cb: DmaDebugIndicationWrapperreportStateDbg_cb\n");
+  sem_post(&priv.dbgSem);
 }
 
 void DmaDebugIndicationWrapperreportMemoryTraffic_cb (  struct PortalInternal *p, const uint64_t words )
 {
-         PORTAL_PRINTF("cb: DmaDebugIndicationWrapperreportMemoryTraffic_cb\n");
-          priv.mtCnt = words;
-          sem_post(&priv.mtSem);
+  PORTAL_PRINTF("cb: DmaDebugIndicationWrapperreportMemoryTraffic_cb\n");
+  priv.mtCnt = words;
+  sem_post(&priv.mtSem);
 }
 
 void DmaDebugIndicationWrappererror_cb (  struct PortalInternal *p, const uint32_t code, const uint32_t pointer, const uint64_t offset, const uint64_t extra ) 
 {
-         PORTAL_PRINTF("cb: DmaDebugIndicationWrappererror_cb\n");
+  PORTAL_PRINTF("cb: DmaDebugIndicationWrappererror_cb\n");
 }
 
 void MMUConfigIndicationWrappererror_cb (  struct PortalInternal *p, const uint32_t code, const uint32_t pointer, const uint64_t offset, const uint64_t extra ) 
 {
-         PORTAL_PRINTF("cb: MMUConfigIndicationWrappererror_cb\n");
+  PORTAL_PRINTF("cb: MMUConfigIndicationWrappererror_cb\n");
 }
 
 void StrstrIndicationWrappersearchResult_cb (  struct PortalInternal *p, const int v ) {
@@ -183,11 +176,11 @@ static void *pthread_worker(void *p)
 int main(int argc, const char **argv)
 {
   int srcAlloc;
-  int nandAlloc;
+  int backAlloc;
   unsigned int *srcBuffer;
   unsigned int ref_srcAlloc;
-  unsigned int *nandBuffer;
-  unsigned int ref_nandAlloc;
+  unsigned int *backBuffer;
+  unsigned int ref_backAlloc;
   int rc = 0, i;
   pthread_t tid = 0;
 
@@ -205,22 +198,21 @@ int main(int argc, const char **argv)
    return -1;
   }
 
-  nandAlloc = portalAlloc (nandBytes);
-  PORTAL_PRINTF("nandAlloc=%d\n", nandAlloc);
+  backAlloc = portalAlloc (back_sz);
+  PORTAL_PRINTF("backAlloc=%d\n", backAlloc);
 
-  ref_nandAlloc = DmaManager_reference(&priv, nandAlloc);
-  PORTAL_PRINTF("ref_nandAlloc=%d\n", ref_nandAlloc);
+  ref_backAlloc = DmaManager_reference(&priv, backAlloc);
+  PORTAL_PRINTF("ref_backAlloc=%d\n", ref_backAlloc);
 
-  nandBuffer = (unsigned int*)portalMmap(nandAlloc, nandBytes); 
-  /*portalDCacheFlushInval(nandAlloc, nandBytes, nandBuffer);*/
+  backBuffer = (unsigned int*)portalMmap(backAlloc, back_sz); 
+  portalDCacheFlushInval(backAlloc, back_sz, backBuffer);
 
-  NandSimRequestProxy_configureNand (&intarr[3], ref_nandAlloc, nandBytes);
-  PORTAL_PRINTF("Main::configure NAND fd=%d ref=%d\n", nandAlloc, ref_nandAlloc);
+  NandSimRequestProxy_configureNand (&intarr[3], ref_backAlloc, back_sz);
+  PORTAL_PRINTF("Main::configure NAND fd=%d ref=%d\n", backAlloc, ref_backAlloc);
   sem_wait(&test_sem);
 
-
-  srcAlloc = portalAlloc(alloc_sz);
-  srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
+  srcAlloc = portalAlloc(back_sz);
+  srcBuffer = (unsigned int *)portalMmap(srcAlloc, back_sz);
   ref_srcAlloc = DmaManager_reference(&priv, srcAlloc);
 
 #ifdef BSIM
@@ -230,9 +222,10 @@ int main(int argc, const char **argv)
   portalEnableInterrupts(&intarr[3]);
 #endif
 
+  PORTAL_PRINTF("about to start write\n");
   //write data to "flash" memory
   strcpy((char*)srcBuffer, "acabcabacababacababababababcacabcabacababacabababc\n012345678912");
-  NandSimRequestProxy_startWrite(&intarr[3], ref_srcAlloc, 0, 0, alloc_sz, 16);
+  NandSimRequestProxy_startWrite(&intarr[3], ref_srcAlloc, 0, 0, 1024, 8);
   sem_wait(&test_sem);
 
   // at this point, if we were synchronizing with the algo_exe, we
