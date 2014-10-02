@@ -947,7 +947,12 @@ def syntax_parse(argdata, inputfilename, bsvdefines):
     global globalfilename
     data = preprocess(argdata + '\n', bsvdefines)
     lexer = lex.lex(errorlog=lex.NullLogger())
-    parser = yacc.yacc(optimize=1,errorlog=yacc.NullLogger(),outputdir=scripthome+'/../out',debugfile=scripthome+'/../out/parser.out')
+    parserdir=scripthome+'/syntax'
+    if not os.path.isdir(parserdir):
+        os.makedirs(parserdir)
+    if not (parserdir in sys.path):
+        sys.path.append(parserdir)
+    parser = yacc.yacc(optimize=1,errorlog=yacc.NullLogger(),outputdir=parserdir,debugfile=parserdir+'/parser.out')
     globalfilename = [inputfilename]
     if noisyFlag:
         print 'Parsing:', inputfilename
