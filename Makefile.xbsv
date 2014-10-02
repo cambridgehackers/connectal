@@ -96,7 +96,7 @@ PRINTF_EXTRA=$(XBSVDIR)/bsv/DisplayInd.bsv
 endif
 
 gentarget::
-	@[ -e $(XBSVDIR)/out/parsetab.py ] || make -C $(XBSVDIR) out/parsetab.py
+	@[ -e $(XBSVDIR)/scripts/syntax/parsetab.py ] || make -C $(XBSVDIR) scripts/syntax/parsetab.py
 	$(Q)[ -e $(IPDIR) ] || mkdir -p $(IPDIR)
 	$(Q)[ -e $(BOARD)/sources ] || mkdir -p $(BOARD)/sources
 	$(Q)[ -e $(BOARD)/jni ] || mkdir -p $(BOARD)/jni
