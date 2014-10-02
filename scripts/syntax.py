@@ -987,7 +987,12 @@ def generate_bsvcpp(filelist, project_dir, dutname, bsvdefines, s2hinterface, h2
     
 if __name__=='__main__':
     if len(sys.argv) == 1:
-        parser = yacc.yacc(outputdir=scripthome+'/../out',debugfile=scripthome+'/../out/parser.out')
+        parserdir=scripthome+'/syntax'
+        sys.path.append(parserdir)
+        if not os.path.isdir(parserdir):
+            os.makedirs(parserdir)
+        parser = yacc.yacc(outputdir=parserdir,debugfile=parserdir+'/parser.out')
+        import parsetab
         sys.exit(0)
     generate_bsvcpp(sys.argv[1:], os.environ.get('DTOP'), os.environ.get('DUT_NAME'), \
          os.environ.get('BSVDEFINES_LIST').split(), os.environ.get('S2H').split(), os.environ.get('H2S').split(), os.environ.get('V') == '1')

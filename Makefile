@@ -72,7 +72,7 @@ endif
 
 BOARD=zedboard
 
-out/parsetab.py: scripts/syntax.py
+scripts/syntax/parsetab.py: scripts/syntax.py
 	[ -e out ] || mkdir out
 	python scripts/syntax.py
 
