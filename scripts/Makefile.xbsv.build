@@ -58,7 +58,9 @@ endif
 BSCOPTFLAGS= -show-schedule -aggressive-conditions
 BSCPATHFLAGS=  -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj -info-dir $(DTOP)/obj
 BSCFLAGS_COMMON += $(BSCWARNFLAGS) $(BSCOPTFLAGS) $(BSCPATHFLAGS) --wait-for-license
+BSC_CXXFLAGS= -I $(XBSVDIR)/cpp -I $(XBSVDIR) -D BSIM
 BSIM_CXX_COMMON = $(XBSVDIR)/cpp/BsimCtrl.cxx $(XBSVDIR)/cpp/TlpReplay.cxx $(XBSVDIR)/cpp/BsimDma.cxx $(XBSVDIR)/cpp/sock_utils.c
+BSIM_CXX_LOCAL = $(DTOP)/jni/BsimCtrl.cxx $(DTOP)/jni/TlpReplay.cxx $(DTOP)/jni/BsimDma.cxx $(DTOP)/jni/sock_utils.c
 
 VIVADOFLAGS= -notrace
 XVLOGFLAGS =
@@ -169,11 +171,18 @@ $(vfile): $(TOPBSVFILE) $(BSVFILES)
 	$(Q)sed -i 's|// On .*|// timestamp removed|' verilog/*.v
 	$(Q)for v in verilog/*.v; do $(XBSVDIR)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
 
-bsim: prepare_bin_target
+$(DTOP)/jni/%.cpp: $(XBSVDIR)/cpp/%.cpp
+	$(Q)cp $< $@
+$(DTOP)/jni/%.cxx: $(XBSVDIR)/cpp/%.cxx
+	$(Q)cp $< $@
+$(DTOP)/jni/%.c: $(XBSVDIR)/cpp/%.c
+	$(Q)cp $< $@
+
+bsim: prepare_bin_target $(DTOP)/jni/TlpReplay.cxx $(BSIM_CXX_LOCAL)
 	$(Q)mkdir -p $(DTOP)/obj verilog
 	@echo BSCBSIM [$(DTOP)]
 	$(Q)cd sources; $(RUN_BSC) -D BSIM -sim -u -g $(MKTOP) $(TOPBSVFILE)
-	$(Q)export BSC_CXXFLAGS="-I$(XBSVDIR)/cpp -I$(XBSVDIR) -DBSIM" ; cd sources; $(RUN_BSC) -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX_COMMON) $(BSIM_CXX_PROJECT)
+	$(Q)cd sources; $(RUN_BSC) $(BSC_CXXFLAGS) -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX_LOCAL) $(BSIM_CXX_PROJECT)
 	$(Q)cp -v sources/bsim* bin
 	$(QTUSED)
 
