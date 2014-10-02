@@ -81,7 +81,7 @@ uint64_t DmaManager_show_mem_stats(DmaManagerPrivate *priv, ChannelType rc)
 
 void DmaManager_dereference(DmaManagerPrivate *priv, int ref)
 {
-  SGListIdReturn(priv->dmaDevice, ref);
+  SGListIdReturn(priv->sglDevice, ref);
 }
 
 int DmaManager_reference(DmaManagerPrivate *priv, int fd)

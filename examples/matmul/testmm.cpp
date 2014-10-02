@@ -210,6 +210,7 @@ int main(int argc, const char **argv)
 
   pthread_t dbgtid;
   fprintf(stderr, "creating debug thread\n");
+
   if(pthread_create(&dbgtid, NULL,  dbgThread, NULL)){
    fprintf(stderr, "error creating debug thread\n");
    exit(1);
@@ -255,6 +256,6 @@ int main(int argc, const char **argv)
   bool eq = compare(m3, cm3, 0.01);
 #endif // CUDA_PERF_TEST
   fprintf(stderr, "XXXXXXXXXXXXXXXXXXXXXXXXXX eq=%d\n", eq);
-  exit(!(eq&&sane));
+  return(!(eq&&sane));
 }
 

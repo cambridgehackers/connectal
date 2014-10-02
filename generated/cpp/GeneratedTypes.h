@@ -4,7 +4,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-typedef enum IfcNames { IfcNames_MemcpyIndication, IfcNames_MemcpyRequest, IfcNames_HostDmaDebugIndication, IfcNames_HostDmaDebugRequest, IfcNames_HostMMUConfigRequest, IfcNames_HostMMUConfigIndication } IfcNames;
+typedef enum IfcNames { IfcNames_MemreadIndication, IfcNames_MemreadRequest, IfcNames_HostDmaDebugIndication, IfcNames_HostDmaDebugRequest, IfcNames_HostMMUConfigRequest, IfcNames_HostMMUConfigIndication } IfcNames;
 typedef enum ChannelType { ChannelType_Read, ChannelType_Write } ChannelType;
 typedef struct DmaDbgRec {
     uint32_t x : 32;
@@ -25,6 +25,11 @@ void MMUConfigRequestProxy_region (struct PortalInternal *p , const uint32_t sgl
 void MMUConfigRequestProxy_idRequest (struct PortalInternal *p   );
 
 void MMUConfigRequestProxy_idReturn (struct PortalInternal *p , const uint32_t sglId );
+enum { CHAN_NUM_MemreadRequestProxy_startRead,CHAN_NUM_MemreadRequestProxy_putFailed};
+
+int MemreadRequestProxy_handleMessage(struct PortalInternal *p, unsigned int channel);
+
+void MemreadRequestProxy_startRead (struct PortalInternal *p , const uint32_t pointer, const uint32_t numWords, const uint32_t burstLen, const uint32_t iterCnt );
 enum { CHAN_NUM_DmaDebugRequestProxy_addrRequest,CHAN_NUM_DmaDebugRequestProxy_getStateDbg,CHAN_NUM_DmaDebugRequestProxy_getMemoryTraffic,CHAN_NUM_DmaDebugRequestProxy_putFailed};
 
 int DmaDebugRequestProxy_handleMessage(struct PortalInternal *p, unsigned int channel);
@@ -34,16 +39,10 @@ void DmaDebugRequestProxy_addrRequest (struct PortalInternal *p , const uint32_t
 void DmaDebugRequestProxy_getStateDbg (struct PortalInternal *p , const ChannelType rc );
 
 void DmaDebugRequestProxy_getMemoryTraffic (struct PortalInternal *p , const ChannelType rc );
-enum { CHAN_NUM_MemcpyRequestProxy_startCopy,CHAN_NUM_MemcpyRequestProxy_putFailed};
 
-int MemcpyRequestProxy_handleMessage(struct PortalInternal *p, unsigned int channel);
-
-void MemcpyRequestProxy_startCopy (struct PortalInternal *p , const uint32_t wrPointer, const uint32_t rdPointer, const uint32_t numWords, const uint32_t burstLen, const uint32_t iterCnt );
-
-int MemcpyIndicationWrapper_handleMessage(struct PortalInternal *p, unsigned int channel);
-void MemcpyIndicationWrapperstarted_cb (  struct PortalInternal *p );
-void MemcpyIndicationWrapperdone_cb (  struct PortalInternal *p );
-enum { CHAN_NUM_MemcpyIndicationWrapper_started,CHAN_NUM_MemcpyIndicationWrapper_done};
+int MemreadIndicationWrapper_handleMessage(struct PortalInternal *p, unsigned int channel);
+void MemreadIndicationWrapperreadDone_cb (  struct PortalInternal *p, const uint32_t mismatchCount );
+enum { CHAN_NUM_MemreadIndicationWrapper_readDone};
 
 int DmaDebugIndicationWrapper_handleMessage(struct PortalInternal *p, unsigned int channel);
 void DmaDebugIndicationWrapperaddrResponse_cb (  struct PortalInternal *p, const uint64_t physAddr );

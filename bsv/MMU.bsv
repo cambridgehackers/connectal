@@ -262,6 +262,7 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUConfigIndication mmuIndication)(MMU
    endmethod
    method Action idReturn(Bit#(32) sglId);
       sglId_gen.returnTag(truncate(sglId));
+      $display("idReturn %h", sglId);
    endmethod
    method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) index8, Bit#(64) barr4, Bit#(32) index4, Bit#(64) barr0, Bit#(32) index0);
       portsel(regall, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,

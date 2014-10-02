@@ -52,8 +52,8 @@ void PortalMatAllocator::deallocate(int* refcount, uchar* datastart, uchar* data
 {
   struct arrayInfo *info = (struct arrayInfo *)refcount;
   size_t totalsize = info->totalsize;
-  fprintf(stderr, "PortalMatAllocator::deallocate datastart=%p size=%ld\n",
-	  datastart, (long)totalsize);
+  fprintf(stderr, "PortalMatAllocator::deallocate datastart=%p size=%ld ref=%d\n",
+	  datastart, (long)totalsize, info->ref);
   munmap(datastart, totalsize);
   dma->dereference(info->ref);
   close(info->fd);
