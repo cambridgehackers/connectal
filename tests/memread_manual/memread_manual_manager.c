@@ -151,6 +151,13 @@ int main(int argc, const char **argv)
   init_portal_internal(&intarr[2], IfcNames_HostMMUConfigRequest, MMUConfigRequestProxy_handleMessage); // fpga3
   init_portal_internal(&intarr[3], IfcNames_MemreadRequest, MemreadRequestProxy_handleMessage);    // fpga4
 
+#ifdef BSIM
+  portalEnableInterrupts(&intarr[0]);
+  portalEnableInterrupts(&intarr[1]);
+  portalEnableInterrupts(&intarr[2]);
+  portalEnableInterrupts(&intarr[3]);
+#endif
+
   sem_init(&test_sem, 0, 0);
   DmaManager_init(&priv, NULL, &intarr[2]);
   srcAlloc = portalAlloc(alloc_sz);
@@ -165,12 +172,6 @@ int main(int argc, const char **argv)
    return -1;
   }
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
-#ifdef BSIM
-  portalEnableInterrupts(&intarr[0]);
-  portalEnableInterrupts(&intarr[1]);
-  portalEnableInterrupts(&intarr[2]);
-  portalEnableInterrupts(&intarr[3]);
-#endif
 
   for (i = 0; i < numWords; i++)
     srcBuffer[i] = i;

@@ -191,6 +191,14 @@ int main(int argc, const char **argv)
   init_portal_internal(&intarr[0], IfcNames_BackingStoreMMUConfigIndication, MMUConfigIndicationWrapper_handleMessage);     // fpga1
   init_portal_internal(&intarr[3], IfcNames_NandSimRequest, NandSimRequestProxy_handleMessage);    // fpga4
   init_portal_internal(&intarr[1], IfcNames_NandSimIndication, NandSimIndicationWrapper_handleMessage); // fpga2
+
+#ifdef BSIM
+  portalEnableInterrupts(&intarr[0]);
+  portalEnableInterrupts(&intarr[1]);
+  portalEnableInterrupts(&intarr[2]);
+  portalEnableInterrupts(&intarr[3]);
+#endif
+
   DmaManager_init(&priv, NULL, &intarr[2]);
   sem_init(&test_sem, 0, 0);
 
@@ -216,13 +224,6 @@ int main(int argc, const char **argv)
   srcAlloc = portalAlloc(back_sz);
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, back_sz);
   ref_srcAlloc = DmaManager_reference(&priv, srcAlloc);
-
-#ifdef BSIM
-  portalEnableInterrupts(&intarr[0]);
-  portalEnableInterrupts(&intarr[1]);
-  portalEnableInterrupts(&intarr[2]);
-  portalEnableInterrupts(&intarr[3]);
-#endif
 
   PORTAL_PRINTF("about to start write\n");
   //write data to "flash" memory
