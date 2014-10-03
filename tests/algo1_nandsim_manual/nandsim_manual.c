@@ -34,6 +34,8 @@
 #include "sock_utils.h"  // bsim_poll_interrupt()
 #include "GeneratedTypes.h" 
 
+#include "portalmem.h"
+
 static int trace_memory;// = 1;
 
 #define MAX_INDARRAY 4
@@ -241,6 +243,13 @@ int main(int argc, const char **argv)
 #else
   sleep(20);
 #endif
+
+
+#ifdef __KERNEL__
+  portalmem_dmabuffer_destroy(backAlloc);
+  portalmem_dmabuffer_destroy(srcAlloc);
+#endif
+
   PORTAL_PRINTF ("Main: ends\n");
   return 0;
 }

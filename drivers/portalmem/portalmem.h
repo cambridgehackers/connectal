@@ -64,6 +64,7 @@ struct pa_buffer {
     struct sg_table *sg_table;
 };
 int portalmem_dmabuffer_create(unsigned long len);
+int portalmem_dmabuffer_destroy(int fd);
 #endif
 
 #endif /* __PORTALALLOC_H__ */

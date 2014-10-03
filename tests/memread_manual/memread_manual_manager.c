@@ -199,5 +199,9 @@ int main(int argc, const char **argv)
   }
   wait_for_completion(&worker_completion);
 #endif
+
+#ifdef __KERNEL__
+  portalmem_dmabuffer_destroy(srcAlloc);
+#endif
   return 0;
 }

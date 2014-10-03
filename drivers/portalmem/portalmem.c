@@ -312,6 +312,14 @@ static struct dma_buf_ops dma_buf_ops = {
   .vunmap           = pa_dma_buf_vunmap,
 };
 
+int portalmem_dmabuffer_destroy(int fd)
+{
+  struct file *fmem = fget(fd);
+  pa_dma_buf_release(fmem->private_data);
+  fput(fmem);
+  return 0;
+}
+
 int portalmem_dmabuffer_create(unsigned long len)
 {
   static unsigned int high_order_gfp_flags = (GFP_HIGHUSER | __GFP_ZERO |
@@ -528,6 +536,8 @@ static void __exit pa_exit(void)
 }
  
 EXPORT_SYMBOL(portalmem_dmabuffer_create);
+EXPORT_SYMBOL(portalmem_dmabuffer_destroy);
+
 module_init(pa_init);
 module_exit(pa_exit);
 
