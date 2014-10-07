@@ -65,7 +65,7 @@ typedef struct {
    Bit#(SGListPageShift8) value;
 } Offset deriving (Eq,Bits,FShow);
 
-typedef Bit#(TSub#(ObjectOffsetSize,SGListPageShift0)) Page;
+typedef Bit#(TSub#(ObjectOffsetSize,SGListPageShift0)) Page0;
 typedef Bit#(TSub#(ObjectOffsetSize,SGListPageShift4)) Page4;
 typedef Bit#(TSub#(ObjectOffsetSize,SGListPageShift8)) Page8;
 
@@ -91,7 +91,7 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUConfigIndication mmuIndication)(MMU
 	    Add#(listIdxSize,8, entryIdxSize),
 	    Add#(c__, addrWidth, ObjectOffsetSize));
    
-   let verbose = !bsimMMap;
+   let verbose = False;
    TagGen#(MaxNumSGLists) sglId_gen <- mkTagGen;
    rule complete_sglId_gen;
       let __x <- sglId_gen.complete;
@@ -118,7 +118,7 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUConfigIndication mmuIndication)(MMU
    Vector#(2,FIFOF#(SGListId))         ptrs1 <- replicateM(mkFIFOF);
 
    // stage 4 (latency == 2)
-   BRAM2Port#(Bit#(entryIdxSize),Page) pages <- mkBRAM2Server(bramConfig);
+   BRAM2Port#(Bit#(entryIdxSize),Page0) pages <- mkBRAM2Server(bramConfig);
    Vector#(2,FIFOF#(Offset))           offs1 <- replicateM(mkSizedFIFOF(3));
 
    // stage 4 (latnecy == 1)
@@ -155,14 +155,16 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUConfigIndication mmuIndication)(MMU
 	 
 	 case (m_regionall) matches 
 	    tagged Valid .regionall: begin
-               Page off = truncate(req.off >> valueOf(SGListPageShift0));
+               Page0 off0 = truncate(req.off >> valueOf(SGListPageShift0));
                Page4 off4 = truncate(req.off >> valueOf(SGListPageShift4));
-               Page4 off8 = truncate(req.off >> valueOf(SGListPageShift8));
+               Page8 off8 = truncate(req.off >> valueOf(SGListPageShift8));
 	       let cond8 = off8 < truncate(regionall.reg8.barrier);
 	       let cond4 = off4 < truncate(regionall.reg4.barrier);
-	       let cond0 = off < regionall.reg0.barrier;
+	       let cond0 = off0 < regionall.reg0.barrier;
 	       
-	       if (verbose) $display("mkMMU::stage2: id=%d off=%d barrier8=%d", req.id, req.off, regionall.reg8.barrier);
+	       if (verbose) $display("mkMMU::stage2: id=%d off=%h (%h %h %h) (%h %h %h)", req.id, req.off, 
+				     regionall.reg8.barrier, regionall.reg4.barrier, regionall.reg0.barrier,
+				     off8, off4, off0);
 	       
 	       conds[i].enq(tuple3(cond8,cond4,cond0));
 	       idxOffsets0[i].enq(tuple3(regionall.reg8.idxOffset,regionall.reg4.idxOffset, regionall.reg0.idxOffset));
@@ -211,17 +213,18 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUConfigIndication mmuIndication)(MMU
 	 let ptr <- toGet(ptrs1[i]).get();
 	 Bit#(IndexWidth) p = pbase + idxOffset;
 	 if (off.pageSize == 0) begin
-	    //FIXME offset
 	    if (verbose) $display("mkMMU::addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
-	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadAddrTrans, pref: extend(ptr), off:extend(off.value) });
+	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorOffsetOutOfRange, pref: extend(ptr), off:extend(off.value) });
 	 end
-	 if (verbose) $display("mkMMU::pages[%d].read %h", i, {ptr,p});
-	 portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
-            address:{ptr,p}, datain:?});
-	 offs1[i].enq(off);
+	 else begin
+	    if (verbose) $display("mkMMU::pages[%d].read %h", i, {ptr,p});
+	    portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
+						      address:{ptr,p}, datain:?});
+	    offs1[i].enq(off);
+	 end
       endrule
       rule stage5; // Concatenate page base address from sglist entry with LSB offset bits from request and return
-	 Page page <- portsel(pages, i).response.get;
+	 Page0 page <- portsel(pages, i).response.get;
 	 let offset <- toGet(offs1[i]).get();
 	 if (verbose) $display("mkMMU::p ages[%d].response page=%h offset=%h", i, page, offset);
 	 Bit#(ObjectOffsetSize) rv = ?;

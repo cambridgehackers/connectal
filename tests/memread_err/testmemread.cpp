@@ -100,18 +100,18 @@ int runtest(int argc, const char ** argv)
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
   fprintf(stderr, "ref_srcAlloc=%d\n", ref_srcAlloc);
 
-  fprintf(stderr, "Main::test read %08x\n", numWords);
-  portalTimerStart(0);
-
-  // first attempt should get the right answer
-  device->startRead(ref_srcAlloc, 0, numWords, burstLen);
-  sem_wait(&test_sem);
-  if (mismatchCount) {
-    fprintf(stderr, "Main::first test failed to match %d.\n", mismatchCount);
-    test_result++;     // failed
+  if(true) {
+    fprintf(stderr, "Main::test read %08x\n", numWords);
+    // first attempt should get the right answer
+    device->startRead(ref_srcAlloc, 0, numWords, burstLen);
+    sem_wait(&test_sem);
+    if (mismatchCount) {
+      fprintf(stderr, "Main::first test failed to match %d.\n", mismatchCount);
+      test_result++;     // failed
+    }
   }
 
-  int err = 4;
+  int err = 5;
   switch (err){
   case 0:
     {
@@ -141,8 +141,12 @@ int runtest(int argc, const char ** argv)
   case 4:
     {
       fprintf(stderr, "Main: attempt to read off the end of the region\n");
-      device->startRead(ref_srcAlloc, 0, numWords+burstLen, burstLen);
+      device->startRead(ref_srcAlloc, numWords<<2, burstLen, burstLen);
       break;
+    }
+  default:
+    {
+      device->startRead(ref_srcAlloc, 0, numWords, burstLen);
     }
   }
 

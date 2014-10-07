@@ -46,7 +46,7 @@ typedef enum {
    DmaErrorNone,
    DmaErrorSGLIdOutOfRange_r,
    DmaErrorSGLIdOutOfRange_w,
-   DmaErrorBadAddrTrans,
+   DmaErrorOffsetOutOfRange,
    DmaErrorSGLIdInvalid
    } DmaErrorType deriving (Bits);
 
