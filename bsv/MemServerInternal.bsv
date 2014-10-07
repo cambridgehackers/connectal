@@ -138,7 +138,9 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
    	 ObjectRequest req <- readClients[selectReg].readReq.get();
 	 let mmusel = req.sglId[31:16];
       	 if (debug) $display("mkMemReadInternal::loadClient %d %d %d", selectReg, mmusel, cycle_cnt-last_loadClient);
-   	 if (sglid_outofrange(req.sglId) || mmusel >= fromInteger(valueOf(numMMUs)))
+	 if (mmusel >= fromInteger(valueOf(numMMUs)))
+	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorMMUOutOfRange_r, pref: req.sglId });
+   	 else if (sglid_outofrange(req.sglId))
 	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorSGLIdOutOfRange_r, pref: req.sglId });
    	 else begin
    	    lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
@@ -308,7 +310,9 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
 	  last_loadClient <= cycle_cnt;
    	  ObjectRequest req <- writeClients[selectReg].writeReq.get();
 	  let mmusel = req.sglId[31:16];
-   	  if (sglid_outofrange(req.sglId) || mmusel >= fromInteger(valueOf(numMMUs))) 
+	  if (mmusel >= fromInteger(valueOf(numMMUs)))
+	     dmaErrorFifo.enq(DmaError { errorType: DmaErrorMMUOutOfRange_w, pref: req.sglId });
+   	  else if (sglid_outofrange(req.sglId))
 	     dmaErrorFifo.enq(DmaError { errorType: DmaErrorSGLIdOutOfRange_w, pref: req.sglId });
    	  else begin
    	     lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
