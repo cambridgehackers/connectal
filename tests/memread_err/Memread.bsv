@@ -36,9 +36,9 @@ interface MemreadRequest;
    method Action getStateDbg();   
 endinterface
 
-interface Memread#(numeric type nClients);
+interface Memread;
    interface MemreadRequest request;
-   interface Vector#(nClients,ObjectReadClient#(64)) dmaClients;
+   interface ObjectReadClient#(64) dmaClient;
 endinterface
 
 interface MemreadIndication;
@@ -47,93 +47,67 @@ interface MemreadIndication;
    method Action readDone(Bit#(32) mismatchCount);
 endinterface
 
-typedef 4 NumMasters;
-module mkMemread#(MemreadIndication indication) (Memread#(NumMasters));
+module mkMemread#(MemreadIndication indication) (Memread);
 
-   Reg#(SGLId)     pointer <- mkReg(0);
+   Reg#(SGLId)             pointer <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);
    Reg#(Bit#(32))         burstLen <- mkReg(0);
    Reg#(Bit#(32))          iterCnt <- mkReg(0);
-   Reg#(Bit#(32))        startBase <- mkReg(0);
-   Reg#(Bit#(3))          startPtr <- mkReg(0);
-   Reg#(Bit#(3))         finishPtr <- mkReg(0);
-   Reg#(Bit#(32))    mismatchAccum <- mkReg(0);
-   FIFO#(void)           startFifo <- mkFIFO;
+   FIFO#(void)           startFifo <- mkSizedFIFO(1);
+   FIFO#(void)            ctrlFifo <- mkSizedFIFO(1);
    
-   Vector#(NumMasters,Reg#(Bit#(32)))        srcGens <- replicateM(mkReg(0));
-   Vector#(NumMasters,Reg#(Bit#(32))) mismatchCounts <- replicateM(mkReg(0));
-   Vector#(NumMasters,MemreadEngine#(64,1))      res <- replicateM(mkMemreadEngine);
-   
-   Stmt startStmt = seq
-		       startBase <= 0;
-		       for(startPtr <= 0; startPtr < fromInteger(valueOf(NumMasters)); startPtr <= startPtr+1)
-			  (action
-			      let cmd = MemengineCmd{sglId:pointer, base:extend(startBase), len:numWords, burstLen:truncate(burstLen*4)};
-			      res[startPtr].readServers[0].request.put(cmd);
-			      startBase <= startBase+numWords;
-			      //$display("start:%d %h %d %h (%d)", startPtr, startBase, numWords, burstLen*4, iterCnt);
-			   endaction);
-		    endseq;
-   FSM startFSM <- mkFSM(startStmt);
+   Reg#(Bit#(32))           srcGen <- mkReg(0);
+   Reg#(Bit#(32))    mismatchCount <- mkReg(0);
+   MemreadEngine#(64,1)         re <- mkMemreadEngine;
 
-   Stmt finishStmt = seq
-			mismatchAccum <= 0;
-			for(finishPtr <= 0; finishPtr < fromInteger(valueOf(NumMasters)); finishPtr <= finishPtr+1)
-			   mismatchAccum <= mismatchAccum + mismatchCounts[finishPtr];
-			indication.readDone(mismatchAccum);
-			//$display("finishStmt: %h", mismatchAccum);
-		    endseq;
-   FSM finishFSM <- mkFSM(finishStmt);
+   let debug = True;
    
-   rule start (iterCnt > 0);
+   rule start;
       startFifo.deq;
-      startFSM.start;
+      let cmd = MemengineCmd{sglId:pointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)};
+      re.readServers[0].request.put(cmd);
+      ctrlFifo.enq(?);
       iterCnt <= iterCnt-1;
    endrule
    
    rule finish;
-      for(Integer i = 0; i < valueOf(NumMasters); i=i+1) begin
-	 //$display("finish: %d (%d)", i, iterCnt);
-	 let rv <- res[i].readServers[0].response.get;
-      end
+      ctrlFifo.deq;
+      if (debug) $display("finish: (%d)", iterCnt);
+      let rv <- re.readServers[0].response.get;
       if (iterCnt == 0)
-	 finishFSM.start;
+	 indication.readDone(mismatchCount);
       else
 	 startFifo.enq(?);
    endrule
    
-   for(Integer i = 0; i < valueOf(NumMasters); i=i+1)
-      rule check;
-	 let v <- toGet(res[i].dataPipes[0]).get;
-	 let expectedV = {srcGens[i]+1,srcGens[i]};
-	 let misMatch = v != expectedV;
-	 mismatchCounts[i] <= mismatchCounts[i] + (misMatch ? 1 : 0);
-	 if (srcGens[i]+2 == fromInteger(i+1)*(numWords>>2)) begin
-	    //$display("check %d %d", i, srcGens[i]+1);
-	    srcGens[i] <= fromInteger(i)*(numWords>>2);
-	 end
-	 else
-	    srcGens[i] <= srcGens[i]+2;
-      endrule
+   rule check;
+      let v <- toGet(re.dataPipes[0]).get;
+      let expectedV = {srcGen+1,srcGen};
+      let misMatch = v != expectedV;
+      if (debug && misMatch) $display("check %h %h", v, expectedV);
+      mismatchCount <= mismatchCount + (misMatch ? 1 : 0);
+      if (srcGen+2 == numWords) begin
+	 srcGen <= 0;
+      end
+      else
+	 srcGen <= srcGen+2;
+   endrule
    
-   function ObjectReadClient#(64) dc(MemreadEngine#(64,1) re) = re.dmaClient;
-   interface dmaClients = map(dc,res);
+   interface dmaClient = re.dmaClient;
    interface MemreadRequest request;
       method Action startRead(Bit#(32) rp, Bit#(32) off, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
-	 //$display("startRead rdPointer=%d numWords=%h burstLen=%d iterCnt=%d", rp, nw, bl, ic);
+	 if (debug) $display("startRead rdPointer=%d offset=%d numWords=%h burstLen=%d iterCnt=%d", rp, off, nw, bl, ic);
 	 indication.started(nw);
 	 pointer <= rp;
 	 numWords  <= nw;
 	 burstLen  <= bl;
 	 iterCnt <= ic;
-	 for(Integer i = 0; i < valueOf(NumMasters); i=i+1) begin
-	    mismatchCounts[i] <= 0;
-	    srcGens[i] <= fromInteger(i)*(nw>>2);
-	 end
+	 mismatchCount <= 0;
+	 srcGen <= 0;
 	 startFifo.enq(?);
       endmethod
       method Action getStateDbg();
-	 indication.reportStateDbg(iterCnt, mismatchCounts[0]);
+	 indication.reportStateDbg(iterCnt, mismatchCount);
       endmethod
    endinterface
 endmodule
