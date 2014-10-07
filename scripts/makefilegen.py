@@ -80,6 +80,7 @@ set partname {%(partname)s}
 set boardname {%(boardname)s}
 set xbsvdir {%(xbsvdir)s}
 set xbsvipdir {%(ipdir)s}
+set ipdir {%(ipdir)s}
 set needspcie {%(needspcie)s}
 set xbsv_dut { %(Dut)s }
 %(tcldefines)s
