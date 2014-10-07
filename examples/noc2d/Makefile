@@ -8,7 +8,7 @@ BSVFILES = Noc2d.bsv Top.bsv
 ## the source files in the example
 CPPFILES=testnoc2d.cpp
 ## uncomment the following line to enable AXI trace
-# XBSVFLAGS="--bscflags=-D TRACE_AXI"
+# CONNECTALFLAGS="--bscflags=-D TRACE_AXI"
 NUMBER_OF_MASTERS =0
 
 include ../../Makefile.connectal

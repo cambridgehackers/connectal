@@ -5,7 +5,7 @@
         "partname" : "xc7a200tfbg676-2",
         "needs_pcie_7x_gen1x8" : "True",
         "TOP" : "PcieTop",
-        "XBSVFLAGS" : [],
+        "CONNECTALFLAGS" : [],
         "rewireclockstring" : ""
     },
     "fmc": {

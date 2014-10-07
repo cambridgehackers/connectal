@@ -31,7 +31,7 @@ import GetPut::*;
 import ClientServer::*;
 import Pipe::*;
 
-// XBSV Libraries
+// CONNECTAL Libraries
 import PortalMemory::*;
 
 typedef Bit#(32) SGLId;

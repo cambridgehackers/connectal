@@ -1,7 +1,7 @@
-XBSV Support for Partial Reconfiguration
+CONNECTAL Support for Partial Reconfiguration
 =========================================
 
-XBSV supports partial reconfiguration on pcie-based platforms (kc705
+CONNECTAL supports partial reconfiguration on pcie-based platforms (kc705
 and vc707). There's not enough static logic on the zedboard to make
 this worthwhile at the moment.
 

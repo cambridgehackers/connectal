@@ -37,7 +37,7 @@ adb -s $ANDROID_SERIAL shell insmod /mnt/sdcard/zynqportal.ko
 adb -s $ANDROID_SERIAL shell "gzip -dc /mnt/sdcard/tmp/`basename $1` >/dev/xdevcfg"
 adb -s $ANDROID_SERIAL shell "pwd"
 adb -s $ANDROID_SERIAL shell touch /mnt/sdcard/tmp/perf.monkit
-if [ "$XBSV_DEBUG" != "" ]; then
+if [ "$CONNECTAL_DEBUG" != "" ]; then
 adb -s $ANDROID_SERIAL forward tcp:5039 tcp:5039   
 adb -s $ANDROID_SERIAL shell gdbserver :5039 /mnt/sdcard/tmp/android.exe &
 TEMP=`dirname $2`/../..

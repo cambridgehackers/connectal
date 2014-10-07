@@ -25,7 +25,7 @@ import FIFO::*;
 import GetPut::*;
 import ClientServer::*;
 
-// XBSV Libraries
+// CONNECTAL Libraries
 import AxiMasterSlave::*;
 import MemTypes::*;
 import PortalMemory::*;

@@ -8,9 +8,9 @@ BSVFILES = Echo.bsv XsimTop.bsv
 ## the source files in the example
 CPPFILES= testecho.cpp
 ## uncomment the following line to enable AXI trace
-# XBSVFLAGS+="--bscflags=-D TRACE_AXI"
+# CONNECTALFLAGS+="--bscflags=-D TRACE_AXI"
 ## uncomment the following to pass arguments to xelab and xsim
-XBSVFLAGS += --xelabflags=--debug --xelabflags=typical --xsimflags=--tclbatch --xsimflags=../xsim.tcl --xsimflags=--onfinish --xsimflags=quit
+CONNECTALFLAGS += --xelabflags=--debug --xelabflags=typical --xsimflags=--tclbatch --xsimflags=../xsim.tcl --xsimflags=--onfinish --xsimflags=quit
 
 TOP=XsimTop.bsv
 MKTOP=mkXsimTop

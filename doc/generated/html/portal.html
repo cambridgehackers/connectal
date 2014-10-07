@@ -4,7 +4,7 @@
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
 <meta name="generator" content="AsciiDoc 8.6.6" />
-<title>XBSV</title>
+<title>CONNECTAL</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
 
@@ -735,7 +735,7 @@ asciidoc.install(2);
 </head>
 <body class="article">
 <div id="header">
-<h1>XBSV</h1>
+<h1>CONNECTAL</h1>
 <span id="author">Jamey Hicks &lt;jamey.hicks@gmail.com&gt;, John Ankcorn, Myron King, L. Stewart - Scribe</span><br />
 <span id="revdate">0.002</span>
 <div id="toc">
@@ -750,11 +750,11 @@ asciidoc.install(2);
 </div>
 </div>
 <div class="sect1">
-<h2 id="_what_is_connectal">What is XBSV?</h2>
+<h2 id="_what_is_connectal">What is CONNECTAL?</h2>
 <div class="sectionbody">
-<div class="paragraph lead"><p>XBSV provides a hardware-software interface for applications split
+<div class="paragraph lead"><p>CONNECTAL provides a hardware-software interface for applications split
 between user mode code and custom hardware in an FPGA or ASIC.</p></div>
-<div class="paragraph"><p>XBSV can automaticaly build the software and hardware glue for a
+<div class="paragraph"><p>CONNECTAL can automaticaly build the software and hardware glue for a
 message based interface and also provides for configuring and using
 shared memory between applications and hardware. Communications
 between hardware and software are provided by a bidirectional flow of
@@ -1061,21 +1061,21 @@ http://www.gnu.org/software/src-highlite -->
     PINS <span style="color: #990000">=</span> Std
 
     include <span style="color: #990000">../..</span>/Makefile.common</tt></pre></div></div>
-<div class="paragraph"><p>Designs using <tt>connectal</tt> may also include <tt>connectal/Makefile.common</tt> if they define <tt>XBSVDIR</tt> in their Makefile:</p></div>
+<div class="paragraph"><p>Designs using <tt>connectal</tt> may also include <tt>connectal/Makefile.common</tt> if they define <tt>CONNECTALDIR</tt> in their Makefile:</p></div>
 <div class="listingblock">
 <div class="content"><!-- Generator: GNU source-highlight 3.1.5
 by Lorenzo Bettini
 http://www.lorenzobettini.it
 http://www.gnu.org/software/src-highlite -->
-<pre><tt>    <span style="color: #009900">XBSVDIR</span><span style="color: #990000">=</span>/scratch/connectal
+<pre><tt>    <span style="color: #009900">CONNECTALDIR</span><span style="color: #990000">=</span>/scratch/connectal
     S2H <span style="color: #990000">=</span> <span style="color: #990000">...</span>
     H2S <span style="color: #990000">=</span> <span style="color: #990000">...</span>
     BSVFILES <span style="color: #990000">=</span> <span style="color: #990000">...</span>
     CPPFILES <span style="color: #990000">=</span> <span style="color: #990000">...</span>
-    include <span style="color: #009900">$(XBSVDIR)</span>/Makefile.common</tt></pre></div></div>
+    include <span style="color: #009900">$(CONNECTALDIR)</span>/Makefile.common</tt></pre></div></div>
 <div class="sect2">
 <h3 id="_simple_top_bsv">simple/Top.bsv</h3>
-<div class="paragraph"><p>Each XBSV design implements [Top.bsv](../examples/simple/Top.bsv) with some standard components.</p></div>
+<div class="paragraph"><p>Each CONNECTAL design implements [Top.bsv](../examples/simple/Top.bsv) with some standard components.</p></div>
 <div class="paragraph"><p>It defines the <tt>IfcNames</tt> enum, for use in identifying the portals between software and hardware:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -1144,7 +1144,7 @@ x86/PCIe.</p></div>
 </div>
 <div class="sect2">
 <h3 id="_simple_testsimple_cpp">simple/testsimple.cpp</h3>
-<div class="paragraph"><p>XBSV generates header files declaring wrappers for
+<div class="paragraph"><p>CONNECTAL generates header files declaring wrappers for
 hardware-to-software interfaces and proxies for software-to-hardware
 interfaces. These will be in the "jni/" subdirectory of the project directory.</p></div>
 <div class="listingblock">
@@ -1161,7 +1161,7 @@ by Lorenzo Bettini
 http://www.lorenzobettini.it
 http://www.gnu.org/software/src-highlite -->
 <pre><tt><span style="font-weight: bold"><span style="color: #000080">    #include</span></span> <span style="color: #FF0000">"GeneratedTypes.h"</span></tt></pre></div></div>
-<div class="paragraph"><p>XBSV generates abstract virtual base classes for each Indication interface.</p></div>
+<div class="paragraph"><p>CONNECTAL generates abstract virtual base classes for each Indication interface.</p></div>
 <div class="listingblock">
 <div class="content"><!-- Generator: GNU source-highlight 3.1.5
 by Lorenzo Bettini
@@ -1193,7 +1193,7 @@ http://www.gnu.org/software/src-highlite -->
         <span style="color: #990000">...</span>
     <span style="color: #FF0000">}</span><span style="color: #990000">;</span></tt></pre></div></div>
 <div class="paragraph"><p>To connect these classes to the hardware, instantiate them using the
-<tt>IfcNames</tt> enum identifiers. XBSV prepends the name of the type
+<tt>IfcNames</tt> enum identifiers. CONNECTAL prepends the name of the type
 because C++ does not support overloading of enum tags.</p></div>
 <div class="listingblock">
 <div class="content"><!-- Generator: GNU source-highlight 3.1.5
@@ -1245,18 +1245,18 @@ the <tt>zedboard</tt> project directory is created, populated by the generated f
 <pre><tt>    zedboard/sources/mkzynqtop/SimpleIndicationProxy.bsv
     zedboard/sources/mkzynqtop/SimpleRequestWrapper.bsv</tt></pre>
 </div></div>
-<div class="paragraph"><p>XBSV supports Android on Zynq platforms, so connectalgen generates <tt>jni/Android.mk</tt> for <tt>ndk-build</tt>.</p></div>
+<div class="paragraph"><p>CONNECTAL supports Android on Zynq platforms, so connectalgen generates <tt>jni/Android.mk</tt> for <tt>ndk-build</tt>.</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>    zedboard/jni/Android.mk
     zedboard/jni/Application.mk</tt></pre>
 </div></div>
-<div class="paragraph"><p>XBSV generates <tt>jni/Makefile</tt> to compile the software for PCIe platforms (vc707 and kc705).</p></div>
+<div class="paragraph"><p>CONNECTAL generates <tt>jni/Makefile</tt> to compile the software for PCIe platforms (vc707 and kc705).</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>    zedboard/jni/Makefile</tt></pre>
 </div></div>
-<div class="paragraph"><p>XBSV generates software proxies for software-to-hardware interfaces and software wrappers for hardware-to-software interfaces:</p></div>
+<div class="paragraph"><p>CONNECTAL generates software proxies for software-to-hardware interfaces and software wrappers for hardware-to-software interfaces:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>    zedboard/jni/SimpleIndicationWrapper.h
@@ -1264,18 +1264,18 @@ the <tt>zedboard</tt> project directory is created, populated by the generated f
     zedboard/jni/SimpleRequestProxy.cpp
     zedboard/jni/SimpleRequestProxy.h</tt></pre>
 </div></div>
-<div class="paragraph"><p>XBSV also generates <tt>GeneratedTypes.h</tt> for struct and enum types in the processed BSV source files:</p></div>
+<div class="paragraph"><p>CONNECTAL also generates <tt>GeneratedTypes.h</tt> for struct and enum types in the processed BSV source files:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>    zedboard/jni/GeneratedTypes.h</tt></pre>
 </div></div>
-<div class="paragraph"><p>XBSV copies in standard and specified constraints files:</p></div>
+<div class="paragraph"><p>CONNECTAL copies in standard and specified constraints files:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>    zedboard/constraints/design_1_processing_system7_1_0.xdc
     zedboard/constraints/zedboard.xdc</tt></pre>
 </div></div>
-<div class="paragraph"><p>XBSV generates several TCL files to run <tt>vivado</tt>.</p></div>
+<div class="paragraph"><p>CONNECTAL generates several TCL files to run <tt>vivado</tt>.</p></div>
 <div class="paragraph"><p>The <tt>board.tcl</tt> file specifies <tt>partname</tt>, <tt>boardname</tt>, and <tt>connectaldir</tt> for the other TCL scripts.</p></div>
 <div class="listingblock">
 <div class="content">
@@ -1327,7 +1327,7 @@ the <tt>zedboard</tt> project directory is created, populated by the generated f
 </div>
 <div class="sect2">
 <h3 id="_make_android_exe">make android_exe</h3>
-<div class="paragraph"><p>XBSV supports Android 4.0 on Zynq platforms. It generates
+<div class="paragraph"><p>CONNECTAL supports Android 4.0 on Zynq platforms. It generates
 <tt>jni/Android.mk</tt> which is used by <tt>ndk-build</tt> to create a native
 Android executable.</p></div>
 <div class="listingblock">
@@ -1479,7 +1479,7 @@ the number of file descriptors associated with it.</p></div>
 <div class="content">
 <pre><tt>    srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc-&gt;header.fd, 0);</tt></pre>
 </div></div>
-<div class="paragraph"><p>XBSV is currently using non-snooped interfaces, so the cache must be flushed and invalidated before hardware accesses portal memory:</p></div>
+<div class="paragraph"><p>CONNECTAL is currently using non-snooped interfaces, so the cache must be flushed and invalidated before hardware accesses portal memory:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>    dma-&gt;dCacheFlushInval(srcAlloc, srcBuffer);</tt></pre>
@@ -1511,7 +1511,7 @@ the number of file descriptors associated with it.</p></div>
 <div class="sect1">
 <h2 id="_portal_interface_structure">Portal Interface Structure</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>XBSV connects software and hardware via portals, where each portal is
+<div class="paragraph"><p>CONNECTAL connects software and hardware via portals, where each portal is
 an interface that allows one side to invoke methods on the other side.</p></div>
 <div class="paragraph"><p>We generally call a portal from software to hardware to be a "request"
 and from hardware to software to be an "indication" interface.</p></div>
@@ -1521,14 +1521,14 @@ and from hardware to software to be an "indication" interface.</p></div>
 </div>
 </div>
 <div class="paragraph"><p>A portal is conceptually a FIFO, where the arguments to a method are
-packaged as a message. XBSV generates a "proxy" that marshalls the
+packaged as a message. CONNECTAL generates a "proxy" that marshalls the
 arguments to the method into a message and a "wrapper" that unpacks
 the arguments and invokes the method.</p></div>
 <div class="paragraph"><p>Currently, connectalgen includes a library that implements portals via
 memory mapped hardware.</p></div>
 <div class="sect2">
 <h3 id="_portal_device_drivers">Portal Device Drivers</h3>
-<div class="paragraph"><p>XBSV uses a platform-specific driver to enable user-space applications
+<div class="paragraph"><p>CONNECTAL uses a platform-specific driver to enable user-space applications
 to memory-map each portal used by the application and to enable the
 application to wait for interrupts from the hardware.</p></div>
 <div class="paragraph"><p>indexterm:pcieportal
@@ -1545,7 +1545,7 @@ zynqportal.ko
 </p>
 </li>
 </ul></div>
-<div class="paragraph"><p>XBSV also uses a generic driver to enable the applications to allocate DRAM that will be shared with the hardware and to send the memory mapping of that memory to the hardware.</p></div>
+<div class="paragraph"><p>CONNECTAL also uses a generic driver to enable the applications to allocate DRAM that will be shared with the hardware and to send the memory mapping of that memory to the hardware.</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1556,7 +1556,7 @@ portalmem.ko
 </div>
 <div class="sect2">
 <h3 id="_portal_memory_map">Portal Memory Map</h3>
-<div class="paragraph"><p>XBSV currently supports up to 15 portals connected between software and hardware, for a total of 1MB of address space. It also provides a directory.</p></div>
+<div class="paragraph"><p>CONNECTAL currently supports up to 15 portals connected between software and hardware, for a total of 1MB of address space. It also provides a directory.</p></div>
 <div class="tableblock">
 <table rules="all"
 width="100%"

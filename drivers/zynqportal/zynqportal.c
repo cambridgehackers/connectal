@@ -29,7 +29,7 @@
 #include <linux/scatterlist.h>
 
 #include "zynqportal.h"
-#define XBSV_DRIVER_CODE
+#define CONNECTAL_DRIVER_CODE
 #include "../../cpp/dmaSendFd.h"
 
 #define DRIVER_NAME        "zynqportal"

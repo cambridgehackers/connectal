@@ -8,7 +8,7 @@ BSVFILES = Echo.bsv Swallow.bsv Top.bsv
 ## the source files in the example
 CPPFILES=testecho.cpp
 ## uncomment the following line to enable AXI trace
-# XBSVFLAGS="--bscflags=-D TRACE_AXI"
+# CONNECTALFLAGS="--bscflags=-D TRACE_AXI"
 NUMBER_OF_MASTERS =0
 
 USE_PRINTF = 1

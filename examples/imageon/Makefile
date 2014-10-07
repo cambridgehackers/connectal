@@ -1,15 +1,15 @@
 
 S2H = ImageonSerdesRequest    ImageonSensorRequest    HdmiInternalRequest ImageonCaptureRequest
 H2S = ImageonSerdesIndication ImageonSensorIndication HdmiInternalIndication
-BSVFILES = $(XBSVDIR)/lib/bsv/IserdesDatadeser.bsv $(XBSVDIR)/lib/bsv/HDMI.bsv $(XBSVDIR)/lib/bsv/Imageon.bsv Top.bsv
+BSVFILES = $(CONNECTALDIR)/lib/bsv/IserdesDatadeser.bsv $(CONNECTALDIR)/lib/bsv/HDMI.bsv $(CONNECTALDIR)/lib/bsv/Imageon.bsv Top.bsv
 CPPFILES=testimagecapture.cpp
-XBSVFLAGS = -C $(BOARD)/sources/imageon-$(BOARD).xdc --tcl clock.tcl
-XBSVFLAGS += -D USE_I2C1 -D PinType=ImageCapturePins
+CONNECTALFLAGS = -C $(BOARD)/sources/imageon-$(BOARD).xdc --tcl clock.tcl
+CONNECTALFLAGS += -D USE_I2C1 -D PinType=ImageCapturePins
 NUMBER_OF_MASTERS = 1
-#XBSVFLAGS += -D TRACE_AXI
+#CONNECTALFLAGS += -D TRACE_AXI
 
 ifeq ($(BOARD),zedboard)
-  XBSVFLAGS += -D USE_I2C0
+  CONNECTALFLAGS += -D USE_I2C0
 else
   ifneq ($(BOARD),zc702)
     TOP=ImageonPcieTop.bsv

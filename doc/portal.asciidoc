@@ -1,17 +1,17 @@
-XBSV
+CONNECTAL
 ====
 Jamey Hicks <jamey.hicks@gmail.com>, John Ankcorn, Myron King, L. Stewart - Scribe
 0.002
 April 29, 2014
 
 
-== What is XBSV?
+== What is CONNECTAL?
 
 [role="lead"]
-XBSV provides a hardware-software interface for applications split
+CONNECTAL provides a hardware-software interface for applications split
 between user mode code and custom hardware in an FPGA or ASIC.
 
-XBSV can automaticaly build the software and hardware glue for a
+CONNECTAL can automaticaly build the software and hardware glue for a
 message based interface and also provides for configuring and using
 shared memory between applications and hardware. Communications
 between hardware and software are provided by a bidirectional flow of
@@ -279,7 +279,7 @@ Designs outside the connectal directory using `connectal` may also include `Make
 
 === simple/Top.bsv
 
-Each XBSV design implements [Top.bsv](../examples/simple/Top.bsv) with some standard components.
+Each CONNECTAL design implements [Top.bsv](../examples/simple/Top.bsv) with some standard components.
 
 It defines the `IfcNames` enum, for use in identifying the portals between software and hardware:
 
@@ -367,7 +367,7 @@ The following generic interfaces are used by the platform specific top BSV modul
 
 === simple/testsimple.cpp
 
-XBSV generates header files declaring wrappers for
+CONNECTAL generates header files declaring wrappers for
 hardware-to-software interfaces and proxies for software-to-hardware
 interfaces. These will be in the "jni/" subdirectory of the project directory.
 
@@ -386,7 +386,7 @@ It also declares software equivalents for structs and enums declared in the proc
 ---------------------------------
 
 
-XBSV generates abstract virtual base classes for each Indication interface.
+CONNECTAL generates abstract virtual base classes for each Indication interface.
 
 [source,C]
 ---------------------------------
@@ -418,7 +418,7 @@ Implement subclasses of the wrapper in order to define the callbacks
 ---------------------------------
 
 To connect these classes to the hardware, instantiate them using the
-`IfcNames` enum identifiers. XBSV prepends the name of the type
+`IfcNames` enum identifiers. CONNECTAL prepends the name of the type
 because C++ does not support overloading of enum tags.
 
 [source,C]
@@ -474,20 +474,20 @@ connectalgen generates wrappers for software-to-hardware interfaces and proxies 
     zedboard/sources/mkzynqtop/SimpleRequestWrapper.bsv
 ---------------------------------
 
-XBSV supports Android on Zynq platforms, so connectalgen generates `jni/Android.mk` for `ndk-build`.
+CONNECTAL supports Android on Zynq platforms, so connectalgen generates `jni/Android.mk` for `ndk-build`.
 
 ---------------------------------
     zedboard/jni/Android.mk
     zedboard/jni/Application.mk
 ---------------------------------
 
-XBSV generates `jni/Makefile` to compile the software for PCIe platforms (vc707 and kc705).
+CONNECTAL generates `jni/Makefile` to compile the software for PCIe platforms (vc707 and kc705).
 
 ---------------------------------
     zedboard/jni/Makefile
 ---------------------------------
 
-XBSV generates software proxies for software-to-hardware interfaces and software wrappers for hardware-to-software interfaces:
+CONNECTAL generates software proxies for software-to-hardware interfaces and software wrappers for hardware-to-software interfaces:
 
 ---------------------------------
     zedboard/jni/SimpleIndicationWrapper.h
@@ -496,20 +496,20 @@ XBSV generates software proxies for software-to-hardware interfaces and software
     zedboard/jni/SimpleRequestProxy.h
 ---------------------------------
 
-XBSV also generates `GeneratedTypes.h` for struct and enum types in the processed BSV source files:
+CONNECTAL also generates `GeneratedTypes.h` for struct and enum types in the processed BSV source files:
 
 ---------------------------------
     zedboard/jni/GeneratedTypes.h
 ---------------------------------
 
-XBSV copies in standard and specified constraints files:
+CONNECTAL copies in standard and specified constraints files:
 
 ---------------------------------
     zedboard/constraints/design_1_processing_system7_1_0.xdc
     zedboard/constraints/zedboard.xdc
 ---------------------------------
 
-XBSV generates several TCL files to run `vivado`. 
+CONNECTAL generates several TCL files to run `vivado`. 
 
 The `board.tcl` file specifies `partname`, `boardname`, and `connectaldir` for the other TCL scripts.
 
@@ -566,7 +566,7 @@ and the FPGA configuration file in .bit and .bin formats:
 
 === make android_exe
 
-XBSV supports Android 4.0 on Zynq platforms. It generates
+CONNECTAL supports Android 4.0 on Zynq platforms. It generates
 `jni/Android.mk` which is used by `ndk-build` to create a native
 Android executable.
 
@@ -734,7 +734,7 @@ Memory map it to make it accessible to software:
     srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
 ---------------------------------
 
-XBSV is currently using non-snooped interfaces, so the cache must be flushed and invalidated before hardware accesses portal memory:
+CONNECTAL is currently using non-snooped interfaces, so the cache must be flushed and invalidated before hardware accesses portal memory:
 
 ---------------------------------
     dma->dCacheFlushInval(srcAlloc, srcBuffer);

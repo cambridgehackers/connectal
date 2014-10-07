@@ -1,6 +1,6 @@
 == Portal Interface Structure
 
-XBSV connects software and hardware via portals, where each portal is
+CONNECTAL connects software and hardware via portals, where each portal is
 an interface that allows one side to invoke methods on the other side.
 
 We generally call a portal from software to hardware to be a "request"
@@ -16,7 +16,7 @@ and from hardware to software to be an "indication" interface.
 ---------------------------------------------------------------------
 
 A portal is conceptually a FIFO, where the arguments to a method are
-packaged as a message. XBSV generates a "proxy" that marshalls the
+packaged as a message. CONNECTAL generates a "proxy" that marshalls the
 arguments to the method into a message and a "wrapper" that unpacks
 the arguments and invokes the method.
 
@@ -25,7 +25,7 @@ memory mapped hardware.
 
 === Portal Device Drivers
 
-XBSV uses a platform-specific driver to enable user-space applications
+CONNECTAL uses a platform-specific driver to enable user-space applications
 to memory-map each portal used by the application and to enable the
 application to wait for interrupts from the hardware.
 
@@ -35,13 +35,13 @@ indexterm:zynqportal
 * pcieportal.ko
 * zynqportal.ko
 
-XBSV also uses a generic driver to enable the applications to allocate DRAM that will be shared with the hardware and to send the memory mapping of that memory to the hardware.
+CONNECTAL also uses a generic driver to enable the applications to allocate DRAM that will be shared with the hardware and to send the memory mapping of that memory to the hardware.
 
 * portalmem.ko
 
 === Portal Memory Map
 
-XBSV currently supports up to 15 portals connected between software and hardware, for a total of 1MB of address space. It also provides a directory.
+CONNECTAL currently supports up to 15 portals connected between software and hardware, for a total of 1MB of address space. It also provides a directory.
 
 [options="header"]
 |============================================================

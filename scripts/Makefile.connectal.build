@@ -26,16 +26,16 @@ V=0
 ifeq ($(V),0)
   Q=@
   BSC_QUIET=-no-show-compiles
-  XBSV_NDK_PARAM="NDK_HOST_ECHO=true"
+  CONNECTAL_NDK_PARAM="NDK_HOST_ECHO=true"
   FPGAMAKE_VERBOSE=
 else
   Q=
   BSC_QUIET=
-  XBSV_NDK_PARAM=
+  CONNECTAL_NDK_PARAM=
   FPGAMAKE_VERBOSE=-v
 endif
 
-ifeq ($(XBSV_DEBUG),1)
+ifeq ($(CONNECTAL_DEBUG),1)
 GDB=gdb
 else
 GDB=
@@ -58,16 +58,16 @@ endif
 BSCOPTFLAGS= -show-schedule -aggressive-conditions
 BSCPATHFLAGS=  -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj -info-dir $(DTOP)/obj
 BSCFLAGS_COMMON += $(BSCWARNFLAGS) $(BSCOPTFLAGS) $(BSCPATHFLAGS) --wait-for-license
-BSC_CXXFLAGS= -I $(XBSVDIR)/cpp -I $(XBSVDIR) -D BSIM
-BSIM_CXX_COMMON = $(XBSVDIR)/cpp/BsimCtrl.cxx $(XBSVDIR)/cpp/TlpReplay.cxx $(XBSVDIR)/cpp/BsimDma.cxx $(XBSVDIR)/cpp/sock_utils.c
+BSC_CXXFLAGS= -I $(CONNECTALDIR)/cpp -I $(CONNECTALDIR) -D BSIM
+BSIM_CXX_COMMON = $(CONNECTALDIR)/cpp/BsimCtrl.cxx $(CONNECTALDIR)/cpp/TlpReplay.cxx $(CONNECTALDIR)/cpp/BsimDma.cxx $(CONNECTALDIR)/cpp/sock_utils.c
 BSIM_CXX_LOCAL = $(DTOP)/jni/BsimCtrl.cxx $(DTOP)/jni/TlpReplay.cxx $(DTOP)/jni/BsimDma.cxx $(DTOP)/jni/sock_utils.c
 
 VIVADOFLAGS= -notrace
 XVLOGFLAGS =
 
 ifeq ($(USE_BUILDCACHE),1)
-BUILDCACHE=$(shell cd $(XBSVDIR)/..; /bin/pwd)/buildcache/buildcache
-BUILDCACHE_CACHEDIR=$(shell cd $(XBSVDIR)/..; /bin/pwd)/fpgamake-cache
+BUILDCACHE=$(shell cd $(CONNECTALDIR)/..; /bin/pwd)/buildcache/buildcache
+BUILDCACHE_CACHEDIR=$(shell cd $(CONNECTALDIR)/..; /bin/pwd)/fpgamake-cache
 endif
 
 RUN_BSC = BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) bsc $(BSC_QUIET) $(BSVDEFINES) $(BSCFLAGS_COMMON) $(BSCFLAGS_PROJECT) -p +:$(BSVPATH):$(DUT)/
@@ -89,7 +89,7 @@ else
       exe: ubuntu.exe ubuntu.exe2
     endif
   else
-    ifeq ($(XBSV_DEBUG),1)
+    ifeq ($(CONNECTAL_DEBUG),1)
       exe: android.debug.exe
     else
       exe: android.exe
@@ -131,15 +131,15 @@ ifeq ($(OS),android)
 else
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
 endif
-	$(XBSVDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
+	$(CONNECTALDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
 endif
 
 android.exe: prepare_bin_target
-	ndk-build $(XBSV_NDK_PARAM)
+	ndk-build $(CONNECTAL_NDK_PARAM)
 	@cp -v libs/armeabi/android.exe bin
 
 android.debug.exe: prepare_bin_target
-	ndk-build $(XBSV_NDK_PARAM) -B V=1 NDK_DEBUG=1
+	ndk-build $(CONNECTAL_NDK_PARAM) -B V=1 NDK_DEBUG=1
 	@cp -v libs/armeabi/android.exe bin
 
 run:
@@ -151,9 +151,9 @@ ifeq ($(BOARD),bluesim)
     endif
 else
     ifeq ($(OS),android)
-	$(XBSVDIR)/scripts/run.zedboard bin/mkTop.xdevcfg.bin.gz bin/android.exe $(RUN_ARGS)
+	$(CONNECTALDIR)/scripts/run.zedboard bin/mkTop.xdevcfg.bin.gz bin/android.exe $(RUN_ARGS)
     else
-	$(XBSVDIR)/scripts/run.pcietest bin/mk*.bin.gz bin/ubuntu.exe $(RUN_ARGS)
+	$(CONNECTALDIR)/scripts/run.pcietest bin/mk*.bin.gz bin/ubuntu.exe $(RUN_ARGS)
     endif
 endif
 
@@ -169,13 +169,13 @@ $(vfile): $(TOPBSVFILE) $(BSVFILES)
 	@echo BSCVERILOG [$(DTOP)]
 	$(Q)cd sources; $(RUN_BSC) -remove-dollar -verilog -u -g $(MKTOP) $(TOPBSVFILE)
 	$(Q)sed -i 's|// On .*|// timestamp removed|' verilog/*.v
-	$(Q)for v in verilog/*.v; do $(XBSVDIR)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
+	$(Q)for v in verilog/*.v; do $(CONNECTALDIR)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
 
-$(DTOP)/jni/%.cpp: $(XBSVDIR)/cpp/%.cpp
+$(DTOP)/jni/%.cpp: $(CONNECTALDIR)/cpp/%.cpp
 	$(Q)cp $< $@
-$(DTOP)/jni/%.cxx: $(XBSVDIR)/cpp/%.cxx
+$(DTOP)/jni/%.cxx: $(CONNECTALDIR)/cpp/%.cxx
 	$(Q)cp $< $@
-$(DTOP)/jni/%.c: $(XBSVDIR)/cpp/%.c
+$(DTOP)/jni/%.c: $(CONNECTALDIR)/cpp/%.c
 	$(Q)cp $< $@
 
 bsim: prepare_bin_target $(DTOP)/jni/TlpReplay.cxx $(BSIM_CXX_LOCAL)
@@ -188,7 +188,7 @@ bsim: prepare_bin_target $(DTOP)/jni/TlpReplay.cxx $(BSIM_CXX_LOCAL)
 
 syntax.timestamp: $(BSVFILES)
 	@#$syntax.py uses environment variables: V S2H H2S BSVDEFINES_LIST DTOP DUT_NAME
-	$(Q)$(XBSVDIR)/scripts/syntax.py $(BSVFILES)
+	$(Q)$(CONNECTALDIR)/scripts/syntax.py $(BSVFILES)
 	$(Q)touch syntax.timestamp
 
 verilog: $(vfile)

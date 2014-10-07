@@ -1,5 +1,5 @@
 /*
- * Linux device driver for XBSV portals on FPGAs connected via PCIe.
+ * Linux device driver for CONNECTAL portals on FPGAs connected via PCIe.
  */
 
 #include <linux/module.h>
@@ -21,7 +21,7 @@
 #include <linux/dma-buf.h>
 
 #include "pcieportal.h"
-#define XBSV_DRIVER_CODE
+#define CONNECTAL_DRIVER_CODE
 #include "portal.h" // PORTAL_BASE_OFFSET
 #include "../../cpp/dmaSendFd.h"
 
@@ -37,8 +37,8 @@
 /* Bluespec's standard vendor ID */
 #define BLUESPEC_VENDOR_ID 0x1be7
 
-/* XBSV device ID */
-#define XBSV_DEVICE_ID 0xc100
+/* CONNECTAL device ID */
+#define CONNECTAL_DEVICE_ID 0xc100
 
 /* CSR address space offsets */
 #define CSR_ID                        (   0 << 2) /* 64-bit */
@@ -513,7 +513,7 @@ static int __init pcieportal_probe(struct pci_dev *dev, const struct pci_device_
 printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__, &pcieportal_probe, dev, id, pci_get_drvdata(dev));
         printk(KERN_INFO "%s: PCI probe for 0x%04x 0x%04x\n", DEV_NAME, dev->vendor, dev->device); 
         /* double-check vendor and device */
-        if (dev->vendor != BLUESPEC_VENDOR_ID || dev->device != XBSV_DEVICE_ID) {
+        if (dev->vendor != BLUESPEC_VENDOR_ID || dev->device != CONNECTAL_DEVICE_ID) {
                 printk(KERN_ERR "%s: probe with invalid vendor or device ID\n", DEV_NAME);
                 return -EINVAL;
         }
@@ -546,7 +546,7 @@ printk("*****[%s:%d] getdrv %p\n", __FUNCTION__, __LINE__, this_board);
 
 /* PCI ID pattern table */
 static DEFINE_PCI_DEVICE_TABLE(pcieportal_id_table) = {{
-        PCI_DEVICE(BLUESPEC_VENDOR_ID, XBSV_DEVICE_ID)}, { /* end: all zeros */ } };
+        PCI_DEVICE(BLUESPEC_VENDOR_ID, CONNECTAL_DEVICE_ID)}, { /* end: all zeros */ } };
 
 MODULE_DEVICE_TABLE(pci, pcieportal_id_table);
 

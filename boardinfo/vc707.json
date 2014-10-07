@@ -5,7 +5,7 @@
         "partname" : "xc7vx485tffg1761-2",
         "needs_pcie_7x_gen1x8" : "True",
         "TOP" : "PcieTop",
-        "XBSVFLAGS" : [],
+        "CONNECTALFLAGS" : [],
         "rewireclockstring" : ""
     },
     "fmc": {

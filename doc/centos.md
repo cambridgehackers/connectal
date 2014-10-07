@@ -2,7 +2,7 @@
 
 [CentOS](http://centos.org/) has joined forces with Red Hat, working to provide a common platform for open source community project needs.
 Since [RedHat](http://www.redhat.com/) is one of the preferred Linux platform for all EDA vendors, this page lists all the packages that 
-were required to be installed on top of the typical installation to run the XBSV framework. 
+were required to be installed on top of the typical installation to run the CONNECTAL framework. 
 Vivado-14.1 also lists native support for CentOS in their [release notes](http://www.xilinx.com/support/documentation/sw_manuals/xilinx2014_1/ug973-vivado-release-notes-install-license.pdf).
 
 # yum

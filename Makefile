@@ -220,7 +220,7 @@ allarchlist = ac701 zedboard zc702 zc706 kc705 vc707 zynq100 v2000t bluesim mini
 # gdb
 
 %.gdb:
-	make XBSV_DEBUG=1 $*
+	make CONNECTAL_DEBUG=1 $*
 
 #################################################################################################
 define TARGET_RULE

@@ -19,7 +19,7 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
-XBSVDIR=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+CONNECTALDIR=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
 V=0
 ifeq ($(V),0)
@@ -44,24 +44,24 @@ run.%:
 	make -C $* BOARD=$* --no-print-directory run
 
 %.gdb:
-	make XBSV_DEBUG=1 --no-print-directory $*
+	make CONNECTAL_DEBUG=1 --no-print-directory $*
 
 #ifeq ($(origin IPDIR),undefined)
-IPDIR=$(XBSVDIR)/out
+IPDIR=$(CONNECTALDIR)/out
 #endif
 ifndef NUMBER_OF_MASTERS
 NUMBER_OF_MASTERS=1
 endif
 
-XBSVFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) --ipdir=$(IPDIR)
+CONNECTALFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) --ipdir=$(IPDIR)
 
 ifneq ($(NUMBER_OF_MASTERS), 0)
 S2H += DmaDebugRequest MMUConfigRequest
 H2S += DmaDebugIndication MMUConfigIndication
-BSVFILES += $(XBSVDIR)/bsv/PortalMemory.bsv
-CPPFILES += $(XBSVDIR)/cpp/dmaManager.c
+BSVFILES += $(CONNECTALDIR)/bsv/PortalMemory.bsv
+CPPFILES += $(CONNECTALDIR)/cpp/dmaManager.c
 ifneq ($(CPPFILES2),)
-CPPFILES2 += $(XBSVDIR)/cpp/dmaManager.c
+CPPFILES2 += $(CONNECTALDIR)/cpp/dmaManager.c
 endif
 endif
 
@@ -77,41 +77,41 @@ NEEDSPCIE_vc707=1
 NEEDSPCIE_v2000t=1
 
 ifeq ($(NEEDSPCIE_$(BOARD)),1)
-    FPGAMAKE_XBSVFLAGS += -P mkPcieEndpointX7 -P mkPcieHost
-    XBSVFLAGS += --xci=$(IPDIR)/$(BOARD)/pcie_7x_0/pcie_7x_0.xci
-    XBSVFLAGS += --bscflags="+RTS -K46777216 -RTS"
+    FPGAMAKE_CONNECTALFLAGS += -P mkPcieEndpointX7 -P mkPcieHost
+    CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/pcie_7x_0/pcie_7x_0.xci
+    CONNECTALFLAGS += --bscflags="+RTS -K46777216 -RTS"
 endif
 
-XBSVFLAGS += $(FPGAMAKE_XBSVFLAGS)
+CONNECTALFLAGS += $(FPGAMAKE_CONNECTALFLAGS)
 ifeq ($(USE_BUILDCACHE),1)
-XBSVFLAGS += --cache=$(XBSVDIR)/../fpgamake-cache/$(shell basename `/bin/pwd`)/$(BOARD)
+CONNECTALFLAGS += --cache=$(CONNECTALDIR)/../fpgamake-cache/$(shell basename `/bin/pwd`)/$(BOARD)
 endif
 
-XBSVFLAGS += $(EXTRA_XBSVFLAGS)
+CONNECTALFLAGS += $(EXTRA_CONNECTALFLAGS)
 
 ifeq ($(USE_PRINTF),1)
 PRINTF_EXTRA=$(BOARD)/sources/DisplayInd.bsv
 else
-PRINTF_EXTRA=$(XBSVDIR)/bsv/DisplayInd.bsv
+PRINTF_EXTRA=$(CONNECTALDIR)/bsv/DisplayInd.bsv
 endif
 
 gentarget::
-	@[ -e $(XBSVDIR)/scripts/syntax/parsetab.py ] || make -C $(XBSVDIR) scripts/syntax/parsetab.py
+	@[ -e $(CONNECTALDIR)/scripts/syntax/parsetab.py ] || make -C $(CONNECTALDIR) scripts/syntax/parsetab.py
 	$(Q)[ -e $(IPDIR) ] || mkdir -p $(IPDIR)
 	$(Q)[ -e $(BOARD)/sources ] || mkdir -p $(BOARD)/sources
 	$(Q)[ -e $(BOARD)/jni ] || mkdir -p $(BOARD)/jni
 ifeq ($(USE_PRINTF),1)
-	$(XBSVDIR)/scripts/preprocess_trace.py $(BOARD) $(BSVFILES)
+	$(CONNECTALDIR)/scripts/preprocess_trace.py $(BOARD) $(BSVFILES)
 endif
-	$(Q)$(XBSVDIR)/scripts/makefilegen.py -B$(BOARD) -p $(BOARD) \
+	$(Q)$(CONNECTALDIR)/scripts/makefilegen.py -B$(BOARD) -p $(BOARD) \
 	$(foreach s2h, $(S2H), -s2h $(s2h)) \
 	$(foreach h2s, $(H2S), -h2s $(h2s)) \
 	$(foreach f, $(CPPFILES), --source $f) \
 	$(foreach f, $(CPPFILES2), --source2 $f) \
-        $(XBSVFLAGS) $(BSVFILES) $(PRINTF_EXTRA) $(VERBOSE_SWITCH)
+        $(CONNECTALFLAGS) $(BSVFILES) $(PRINTF_EXTRA) $(VERBOSE_SWITCH)
 
 prebuild::
 	@# additional steps needed before making verilog etc
 ifeq ($(NEEDSPCIE_$(BOARD)),1)
-	cd $(BOARD); vivado -notrace -mode batch -source $(shell cd $(XBSVDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
+	cd $(BOARD); vivado -notrace -mode batch -source $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
 endif

@@ -12,8 +12,8 @@ $(RBMDIR)/datasets:
 S2H += RbmRequest  SigmoidRequest
 H2S += RbmIndication SigmoidIndication 
 
-XBSVFLAGS  +=  -D RBMDIR='\"'$(RBMDIR)'\"'
-XBSVFLAGS += -I$(RBMDIR)/cpp
+CONNECTALFLAGS  +=  -D RBMDIR='\"'$(RBMDIR)'\"'
+CONNECTALFLAGS += -I$(RBMDIR)/cpp
 
 BSVFILES += $(RBMDIR)/bsv/Rbm.bsv
 CPPFILES += $(RBMDIR)/cpp/rbm.cpp

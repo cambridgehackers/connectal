@@ -98,10 +98,10 @@ foreach {pat} {CLK_GATE_hdmi_clock_if CLK_*deleteme_unused_clock* CLK_GATE_*dele
 '''
 
 fpgamakeRuleTemplate='''
-FPGAMAKE=$(XBSVDIR)/../fpgamake/fpgamake
+FPGAMAKE=$(CONNECTALDIR)/../fpgamake/fpgamake
 fpgamake.mk: $(vfile) Makefile prepare_bin_target
 	$(Q)mkdir -p hw
-	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s -t $(MKTOP) %(cachedir)s -b hw/mkTop.bit verilog $(XBSVDIR)/verilog %(verilog)s
+	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s -t $(MKTOP) %(cachedir)s -b hw/mkTop.bit verilog $(CONNECTALDIR)/verilog %(verilog)s
 
 hw/mkTop.bit: fpgamake.mk prepare_bin_target
 	$(Q)make -f fpgamake.mk
@@ -115,7 +115,7 @@ makefileTemplate='''
 #RUN_ARGS=
 
 export DTOP=%(project_dir)s
-XBSVDIR=%(connectaldir)s
+CONNECTALDIR=%(connectaldir)s
 BSVPATH = %(bsvpath)s
 
 BOARD=%(boardname)s
@@ -140,7 +140,7 @@ export DUT_NAME = %(Dut)s
 
 %(mdefines)s
 
-include $(XBSVDIR)/scripts/Makefile.connectal.build
+include $(CONNECTALDIR)/scripts/Makefile.connectal.build
 
 %(bitsmake)s
 '''
@@ -206,8 +206,8 @@ if __name__=='__main__':
     boardname = options.board.lower()
     option_info = boardinfo.attribute(boardname, 'options')
     # parse additional options together with sys.argv
-    if option_info['XBSVFLAGS']:
-        options=argparser.parse_args(option_info['XBSVFLAGS'] + sys.argv[1:])
+    if option_info['CONNECTALFLAGS']:
+        options=argparser.parse_args(option_info['CONNECTALFLAGS'] + sys.argv[1:])
     print options
 
     if options.verbose:

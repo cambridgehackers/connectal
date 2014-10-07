@@ -6,7 +6,7 @@
         "rewireclockstring" : "tclzynqrewireclock",
         "constraints": "xilinx/constraints/zc7z020clg484.xdc",
         "TOP" : "ZynqTop",
-        "XBSVFLAGS" : [],
+        "CONNECTALFLAGS" : [],
         "needs_pcie_7x_gen1x8" : "False"
     },
     "fmc1": {

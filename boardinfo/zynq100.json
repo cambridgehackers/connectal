@@ -6,7 +6,7 @@
         "constraints": "xilinx/constraints/zc7z045ffg900.xdc",
         "TOP" : "ZynqTop",
         "bsvdefines" : ["ZynqHostTypeIF", "PhysAddrWidth=40"],
-	"XBSVFLAGS" : [],
+	"CONNECTALFLAGS" : [],
         "needs_pcie_7x_gen1x8" : "False"
     },
     "fmc": {

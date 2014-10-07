@@ -1,11 +1,11 @@
-BSVDIR=$(XBSVDIR)/bsv
+BSVDIR=$(CONNECTALDIR)/bsv
 S2H        +=  MmRequestTN MmRequestNT TimerRequest
 H2S        +=  MmIndication TimerIndication
 BSVFILES   +=  $(RBMDIR)/bsv/RbmTypes.bsv $(RBMDIR)/bsv/Timer.bsv $(DBNTOPBSV)
 CPPFILES   +=  $(MMDIR)/cpp/portalmat.cpp $(TESTCPPFILES)
-XBSVFLAGS  +=  -D IMPORT_HOSTIF -D MATRIX_TN
-XBSVFLAGS  +=  --bscflags="+RTS -K26777216 -RTS -p +:../../$(MMDIR)/bsv"
-XBSVFLAGS  +=  --bscflags " -Xc++ -DMATMUL_HACK" -D MATMUL_HACK
+CONNECTALFLAGS  +=  -D IMPORT_HOSTIF -D MATRIX_TN
+CONNECTALFLAGS  +=  --bscflags="+RTS -K26777216 -RTS -p +:../../$(MMDIR)/bsv"
+CONNECTALFLAGS  +=  --bscflags " -Xc++ -DMATMUL_HACK" -D MATMUL_HACK
 
 Dma = Dma
 PINS = Std
@@ -14,39 +14,39 @@ FAMILY=$(shell echo $(BOARD) | sed 's/z.*/zynq/' | sed 's/k.*/kintex/' | sed 's/
 
 ##
 ## To build testmm for Android on Zynq
-## cd $(XBSVDIR); cd ..; git clone git://github.com:cambridgehackers/opencv-android-sdk.git
+## cd $(CONNECTALDIR); cd ..; git clone git://github.com:cambridgehackers/opencv-android-sdk.git
 ##
 
 ifdef CUDA_PERF_TEST
 OPENCVDIR=/scratch/opencv-cuda/opencv-2.4.9/install/
-XBSVFLAGS  += -I$(OPENCVDIR)/include
-XBSVFLAGS  += -L$(OPENCVDIR)/lib
-XBSVFLAGS  += -L/usr/local/cuda-5.5/lib64
-XBSVFLAGS  += --stl=stlport_static
-XBSVFLAGS  += --clib z
-XBSVFLAGS  += --clib cuda
-XBSVFLAGS  += --clib cudart
-XBSVFLAGS  += --clib nppi
-XBSVFLAGS  += --clib nppc
-XBSVFLAGS  += --clib npps
-XBSVFLAGS  += --clib cufft
-XBSVFLAGS  += --clib opencv_core
-XBSVFLAGS  += --clib opencv_gpu
-XBSVFLAGS  += --clib opencv_imgproc
-XBSVFLAGS  += --clib opencv_core
-XBSVFLAGS  += --clib opencv_objdetect
-XBSVFLAGS  += --clib opencv_imgproc
-XBSVFLAGS  += --clib cublas
+CONNECTALFLAGS  += -I$(OPENCVDIR)/include
+CONNECTALFLAGS  += -L$(OPENCVDIR)/lib
+CONNECTALFLAGS  += -L/usr/local/cuda-5.5/lib64
+CONNECTALFLAGS  += --stl=stlport_static
+CONNECTALFLAGS  += --clib z
+CONNECTALFLAGS  += --clib cuda
+CONNECTALFLAGS  += --clib cudart
+CONNECTALFLAGS  += --clib nppi
+CONNECTALFLAGS  += --clib nppc
+CONNECTALFLAGS  += --clib npps
+CONNECTALFLAGS  += --clib cufft
+CONNECTALFLAGS  += --clib opencv_core
+CONNECTALFLAGS  += --clib opencv_gpu
+CONNECTALFLAGS  += --clib opencv_imgproc
+CONNECTALFLAGS  += --clib opencv_core
+CONNECTALFLAGS  += --clib opencv_objdetect
+CONNECTALFLAGS  += --clib opencv_imgproc
+CONNECTALFLAGS  += --clib cublas
 CPPFILES   +=  $(MMDIR)/cpp/cuda.cpp 
 else
-XBSVFLAGS  +=  --clib opencv_core --stl=stlport_static
+CONNECTALFLAGS  +=  --clib opencv_core --stl=stlport_static
 endif
 
 ifeq (zynq,$(FAMILY))
 NDK_DIR=$(shell ndk-which gcc | sed 's:toolchains.*::')
-OPENCVDIR=$(XBSVDIR)/../opencv-android-sdk/sdk/native/
-XBSVFLAGS += -I$(MMDIR)/cpp -I$(OPENCVDIR)/jni/include -L$(OPENCVDIR)/libs/armeabi-v7a -lz
-XBSVFLAGS += -S$(NDK_DIR)/sources/cxx-stl/stlport/libs/armeabi-v7a/libstlport_static.a
+OPENCVDIR=$(CONNECTALDIR)/../opencv-android-sdk/sdk/native/
+CONNECTALFLAGS += -I$(MMDIR)/cpp -I$(OPENCVDIR)/jni/include -L$(OPENCVDIR)/libs/armeabi-v7a -lz
+CONNECTALFLAGS += -S$(NDK_DIR)/sources/cxx-stl/stlport/libs/armeabi-v7a/libstlport_static.a
 NUMBER_OF_MASTERS=2
 endif
 ifeq (bluesim,$(FAMILY))
@@ -54,10 +54,10 @@ NUMBER_OF_MASTERS=2
 endif
 
 synth-ip.tcl:
-	ln -svf $(XBSVDIR)/examples/matmul/synth-ip.tcl .
+	ln -svf $(CONNECTALDIR)/examples/matmul/synth-ip.tcl .
 
 prebuild:: synth-ip.tcl
 	if [ "$(BOARD)" != "bluesim" ] ; then cd $(BOARD); vivado -notrace -mode batch -source ../synth-ip.tcl; fi
 
-FPGAMAKE_XBSVFLAGS += -P mkMmTile --xci=$(IPDIR)/$(BOARD)/fp_add/fp_add.xci --xci=$(IPDIR)/$(BOARD)/fp_mul/fp_mul.xci
+FPGAMAKE_CONNECTALFLAGS += -P mkMmTile --xci=$(IPDIR)/$(BOARD)/fp_add/fp_add.xci --xci=$(IPDIR)/$(BOARD)/fp_mul/fp_mul.xci
 

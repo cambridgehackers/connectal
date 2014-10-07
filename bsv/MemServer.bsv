@@ -29,7 +29,7 @@ import ClientServer::*;
 import Assert::*;
 import StmtFSM::*;
 
-// XBSV Libraries
+// CONNECTAL Libraries
 import MemTypes::*;
 import PortalMemory::*;
 import MMU::*;

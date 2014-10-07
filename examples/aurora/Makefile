@@ -1,14 +1,14 @@
 
-XBSVDIR=../..
+CONNECTALDIR=../..
 S2H = AuroraRequest
 H2S = AuroraIndication
 BSVFILES = Aurora.bsv Top.bsv
 CPPFILES=testaurora.cpp
-XBSVFLAGS +=  -D PinType=AuroraPins
+CONNECTALFLAGS +=  -D PinType=AuroraPins
 NUMBER_OF_MASTERS =0
-XBSVFLAGS += -C $(BOARD)/sources/aurora-$(BOARD).xdc -C aurora-clocks.xdc --tcl clock.tcl
+CONNECTALFLAGS += -C $(BOARD)/sources/aurora-$(BOARD).xdc -C aurora-clocks.xdc --tcl clock.tcl
 
-AURORA_V = $(XBSVDIR)/generated/xilinx/$(BOARD)/aurora_64b66b_0/aurora_64b66b_0_stub.v
+AURORA_V = $(CONNECTALDIR)/generated/xilinx/$(BOARD)/aurora_64b66b_0/aurora_64b66b_0_stub.v
 
 gentarget:: $(BOARD)/sources/aurora-$(BOARD).xdc
 
@@ -18,10 +18,10 @@ $(AURORA_V): synth-ip.tcl
 	(cd $(BOARD); vivado -mode batch -source ../synth-ip.tcl)
 
 BviAurora.bsv:
-	$(XBSVDIR)/generated/scripts/importbvi.py -o BviAurora.bsv -I BviAurora64  -P Au64 -n refclk1_in -n gt_qpllclk_quad2 -n gt_qpllrefclk_quad2 -c refclk1_in -r reset -c clk_in -c init_clk -c user_clk -c sync_clk $(AURORA_V)
+	$(CONNECTALDIR)/generated/scripts/importbvi.py -o BviAurora.bsv -I BviAurora64  -P Au64 -n refclk1_in -n gt_qpllclk_quad2 -n gt_qpllrefclk_quad2 -c refclk1_in -r reset -c clk_in -c init_clk -c user_clk -c sync_clk $(AURORA_V)
 
-$(BOARD)/sources/aurora-$(BOARD).xdc: aurora.json $(XBSVDIR)/boardinfo/$(BOARD).json
+$(BOARD)/sources/aurora-$(BOARD).xdc: aurora.json $(CONNECTALDIR)/boardinfo/$(BOARD).json
 	mkdir -p $(BOARD)/sources
-	$(XBSVDIR)/scripts/generate-constraints.py $(XBSVDIR)/boardinfo/$(BOARD).json aurora.json > $(BOARD)/sources/aurora-$(BOARD).xdc
+	$(CONNECTALDIR)/scripts/generate-constraints.py $(CONNECTALDIR)/boardinfo/$(BOARD).json aurora.json > $(BOARD)/sources/aurora-$(BOARD).xdc
 
-include $(XBSVDIR)/Makefile.connectal
+include $(CONNECTALDIR)/Makefile.connectal

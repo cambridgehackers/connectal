@@ -27,7 +27,7 @@ import GetPut::*;
 import ClientServer::*;
 import Assert::*;
 
-// XBSV Libraries
+// CONNECTAL Libraries
 import MemTypes::*;
 import PortalMemory::*;
 import MMU::*;
