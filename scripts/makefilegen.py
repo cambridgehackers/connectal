@@ -79,6 +79,7 @@ tclboardTemplate='''
 set partname {%(partname)s}
 set boardname {%(boardname)s}
 set xbsvdir {%(xbsvdir)s}
+## for compatibility with older fpgamake. will be removed.
 set xbsvipdir {%(ipdir)s}
 set ipdir {%(ipdir)s}
 set needspcie {%(needspcie)s}
