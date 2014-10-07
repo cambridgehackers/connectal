@@ -81,7 +81,9 @@ typedef struct {
    } Region deriving (Eq,Bits,FShow);
 
 typedef struct {DmaErrorType errorType;
-		Bit#(32) pref; } DmaError deriving (Bits);
+		Bit#(32) pref;
+		Bit#(ObjectOffsetSize) off;
+   } DmaError deriving (Bits);
 
 // the address translation servers (addr[0], addr[1]) have a latency of 8 and are fully pipelined
 module mkMMU#(Integer iid, Bool bsimMMap, MMUConfigIndication mmuIndication)(MMU#(addrWidth))
@@ -101,8 +103,8 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUConfigIndication mmuIndication)(MMU
    // stage 1 (latency == 2)
    BRAM_Configure bramConfig = defaultValue;
    bramConfig.latency        = 2;
-   BRAM2Port#(RegionsIdx, Region)       regall <- mkBRAM2Server(bramConfig);
-   Vector#(2,FIFOF#(ReqTup))           reqs0 <- replicateM(mkSizedFIFOF(3));
+   BRAM2Port#(RegionsIdx, Maybe#(Region)) regall <- mkBRAM2Server(bramConfig);
+   Vector#(2,FIFOF#(ReqTup))          reqs0 <- replicateM(mkSizedFIFOF(3));
    
    // stage 2 (latency == 1)
    Vector#(2,FIFOF#(Tuple3#(Bool,Bool,Bool))) conds <- replicateM(mkFIFOF);
@@ -125,9 +127,8 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUConfigIndication mmuIndication)(MMU
    FIFO#(DmaError) dmaErrorFifo <- mkFIFO();
    rule dmaError;
       let error <- toGet(dmaErrorFifo).get();
-      mmuIndication.error(extend(pack(error.errorType)), error.pref, -1, 0);
+      mmuIndication.error(extend(pack(error.errorType)), error.pref, extend(error.off), fromInteger(iid));
    endrule
-
 
    let page_shift0 = fromInteger(valueOf(SGListPageShift0));
    let page_shift4 = fromInteger(valueOf(SGListPageShift4));
@@ -150,20 +151,26 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUConfigIndication mmuIndication)(MMU
    for(Integer i = 0; i < 2; i=i+1) begin
       rule stage2; // Now compare address cutoffs with requested offset
 	 ReqTup req <- toGet(reqs0[i]).get;
-	 Region regionall <- portsel(regall,i).response.get;
+	 Maybe#(Region) m_regionall <- portsel(regall,i).response.get;
 	 
-         Page off = truncate(req.off >> valueOf(SGListPageShift0));
-         Page4 off4 = truncate(req.off >> valueOf(SGListPageShift4));
-         Page4 off8 = truncate(req.off >> valueOf(SGListPageShift8));
-	 let cond8 = off8 < truncate(regionall.reg8.barrier);
-	 let cond4 = off4 < truncate(regionall.reg4.barrier);
-	 let cond0 = off < regionall.reg0.barrier;
-
-	 if (verbose) $display("mkMMU::stage2: id=%d off=%d barrier8=%d", req.id, req.off, regionall.reg8.barrier);
-	 
-	 conds[i].enq(tuple3(cond8,cond4,cond0));
-	 idxOffsets0[i].enq(tuple3(regionall.reg8.idxOffset,regionall.reg4.idxOffset, regionall.reg0.idxOffset));
-	 reqs1[i].enq(req);
+	 case (m_regionall) matches 
+	    tagged Valid .regionall: begin
+               Page off = truncate(req.off >> valueOf(SGListPageShift0));
+               Page4 off4 = truncate(req.off >> valueOf(SGListPageShift4));
+               Page4 off8 = truncate(req.off >> valueOf(SGListPageShift8));
+	       let cond8 = off8 < truncate(regionall.reg8.barrier);
+	       let cond4 = off4 < truncate(regionall.reg4.barrier);
+	       let cond0 = off < regionall.reg0.barrier;
+	       
+	       if (verbose) $display("mkMMU::stage2: id=%d off=%d barrier8=%d", req.id, req.off, regionall.reg8.barrier);
+	       
+	       conds[i].enq(tuple3(cond8,cond4,cond0));
+	       idxOffsets0[i].enq(tuple3(regionall.reg8.idxOffset,regionall.reg4.idxOffset, regionall.reg0.idxOffset));
+	       reqs1[i].enq(req);
+	    end
+	    tagged Invalid:
+	       dmaErrorFifo.enq(DmaError { errorType: DmaErrorSGLIdInvalid, pref: extend(req.id), off:req.off });
+	 endcase
       endrule
       rule stage3; // Based on results of comparision, select a region, putting it into 'o.pageSize'.  idxOffset holds offset in sglist table of relevant entry
 	 ReqTup req <- toGet(reqs1[i]).get;
@@ -206,7 +213,7 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUConfigIndication mmuIndication)(MMU
 	 if (off.pageSize == 0) begin
 	    //FIXME offset
 	    if (verbose) $display("mkMMU::addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
-	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadAddrTrans, pref: extend(ptr) });
+	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadAddrTrans, pref: extend(ptr), off:extend(off.value) });
 	 end
 	 if (verbose) $display("mkMMU::pages[%d].read %h", i, {ptr,p});
 	 portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
@@ -262,11 +269,12 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUConfigIndication mmuIndication)(MMU
    endmethod
    method Action idReturn(Bit#(32) sglId);
       sglId_gen.returnTag(truncate(sglId));
+      portsel(regall, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address: truncate(sglId), datain: tagged Invalid });
       $display("idReturn %h", sglId);
    endmethod
    method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) index8, Bit#(64) barr4, Bit#(32) index4, Bit#(64) barr0, Bit#(32) index0);
       portsel(regall, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
-          address: truncate(pointer), datain: Region{
+          address: truncate(pointer), datain: tagged Valid Region{
              reg8: SingleRegion{barrier: truncate(barr8), idxOffset: truncate(index8)},
              reg4: SingleRegion{barrier: truncate(barr4), idxOffset: truncate(index4)},
              reg0: SingleRegion{barrier: truncate(barr0), idxOffset: truncate(index0)}} });

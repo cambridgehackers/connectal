@@ -32,8 +32,7 @@ import MemreadEngine::*;
 import Pipe::*;
 
 interface MemreadRequest;
-   method Action startRead(Bit#(32) pointer, Bit#(32) offset, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
-   method Action getStateDbg();   
+   method Action startRead(Bit#(32) pointer, Bit#(32) offset, Bit#(32) numWords, Bit#(32) burstLen);
 endinterface
 
 interface Memread;
@@ -43,18 +42,13 @@ endinterface
 
 interface MemreadIndication;
    method Action started(Bit#(32) numWords);
-   method Action reportStateDbg(Bit#(32) streamRdCnt, Bit#(32) mismatchCount);
    method Action readDone(Bit#(32) mismatchCount);
 endinterface
 
 module mkMemread#(MemreadIndication indication) (Memread);
 
-   Reg#(SGLId)             pointer <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);
    Reg#(Bit#(32))         burstLen <- mkReg(0);
-   Reg#(Bit#(32))          iterCnt <- mkReg(0);
-   FIFO#(void)           startFifo <- mkSizedFIFO(1);
-   FIFO#(void)            ctrlFifo <- mkSizedFIFO(1);
    
    Reg#(Bit#(32))           srcGen <- mkReg(0);
    Reg#(Bit#(32))    mismatchCount <- mkReg(0);
@@ -62,22 +56,10 @@ module mkMemread#(MemreadIndication indication) (Memread);
 
    let debug = True;
    
-   rule start;
-      startFifo.deq;
-      let cmd = MemengineCmd{sglId:pointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)};
-      re.readServers[0].request.put(cmd);
-      ctrlFifo.enq(?);
-      iterCnt <= iterCnt-1;
-   endrule
-   
    rule finish;
-      ctrlFifo.deq;
-      if (debug) $display("finish: (%d)", iterCnt);
+      if (debug) $display("finish");
       let rv <- re.readServers[0].response.get;
-      if (iterCnt == 0)
-	 indication.readDone(mismatchCount);
-      else
-	 startFifo.enq(?);
+      indication.readDone(mismatchCount);
    endrule
    
    rule check;
@@ -95,19 +77,15 @@ module mkMemread#(MemreadIndication indication) (Memread);
    
    interface dmaClient = re.dmaClient;
    interface MemreadRequest request;
-      method Action startRead(Bit#(32) rp, Bit#(32) off, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
-	 if (debug) $display("startRead rdPointer=%d offset=%d numWords=%h burstLen=%d iterCnt=%d", rp, off, nw, bl, ic);
+      method Action startRead(Bit#(32) rp, Bit#(32) off, Bit#(32) nw, Bit#(32) bl);
+	 if (debug) $display("startRead rdPointer=%d offset=%d numWords=%h burstLen=%d", rp, off, nw, bl);
 	 indication.started(nw);
-	 pointer <= rp;
 	 numWords  <= nw;
 	 burstLen  <= bl;
-	 iterCnt <= ic;
 	 mismatchCount <= 0;
 	 srcGen <= 0;
-	 startFifo.enq(?);
-      endmethod
-      method Action getStateDbg();
-	 indication.reportStateDbg(iterCnt, mismatchCount);
+	 let cmd = MemengineCmd{sglId:rp, base:0, len:nw*4, burstLen:truncate(bl*4)};
+	 re.readServers[0].request.put(cmd);
       endmethod
    endinterface
 endmodule

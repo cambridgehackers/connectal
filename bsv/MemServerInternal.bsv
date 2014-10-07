@@ -49,8 +49,8 @@ interface MemReadInternal#(numeric type addrWidth, numeric type dataWidth);
    interface MemReadClient#(addrWidth,dataWidth) read_client;
 endinterface
 
-function Bool bad_pointer(SGLId p);
-   return ((p[15:0] >>8) > fromInteger(valueOf(MaxNumSGLists)));
+function Bool sglid_outofrange(SGLId p);
+   return ((p[15:0]) >= fromInteger(valueOf(MaxNumSGLists)));
 endfunction
 
 typedef struct {ObjectRequest req;
@@ -138,8 +138,8 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
    	 ObjectRequest req <- readClients[selectReg].readReq.get();
 	 let mmusel = req.sglId[31:16];
       	 if (debug) $display("mkMemReadInternal::loadClient %d %d %d", selectReg, mmusel, cycle_cnt-last_loadClient);
-   	 if (bad_pointer(req.sglId))
-	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer4, pref: req.sglId });
+   	 if (sglid_outofrange(req.sglId) || mmusel >= fromInteger(valueOf(numMMUs)))
+	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorSGLIdOutOfRange_r, pref: req.sglId });
    	 else begin
    	    lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
    	    mmus[mmusel].request.put(ReqTup{id:truncate(req.sglId),off:req.offset});
@@ -307,11 +307,12 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
       	  if (debug) $display("mkMemWriteInternal::loadClient %d %d", selectReg, cycle_cnt-last_loadClient);
 	  last_loadClient <= cycle_cnt;
    	  ObjectRequest req <- writeClients[selectReg].writeReq.get();
-   	  if (bad_pointer(req.sglId)) 
-	     dmaErrorFifo.enq(DmaError { errorType: DmaErrorBadPointer5, pref: req.sglId });
+	  let mmusel = req.sglId[31:16];
+   	  if (sglid_outofrange(req.sglId) || mmusel >= fromInteger(valueOf(numMMUs))) 
+	     dmaErrorFifo.enq(DmaError { errorType: DmaErrorSGLIdOutOfRange_w, pref: req.sglId });
    	  else begin
    	     lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
-   	     mmus[req.sglId[31:16]].request.put(ReqTup{id:truncate(req.sglId),off:req.offset});
+   	     mmus[mmusel].request.put(ReqTup{id:truncate(req.sglId),off:req.offset});
    	  end
        endrule
    
