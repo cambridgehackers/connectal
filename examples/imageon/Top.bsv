@@ -64,7 +64,7 @@ import ImageonVita::*;
 import HDMI::*;
 import YUV::*;
 import XilinxCells::*;
-import XbsvXilinxCells::*;
+import ConnectalXilinxCells::*;
 
 typedef enum { ImageonSerdesRequest, ImageonSensorRequest, HdmiInternalRequest, ImageonCapture,
     ImageonSerdesIndication, ImageonSensorIndication, HdmiInternalIndication, HostDmaDebugIndication, HostDmaDebugRequest, HostMMUConfigRequest, HostMMUConfigIndication} IfcNames deriving (Eq,Bits);

@@ -25,7 +25,7 @@ import FIFO::*;
 import Vector::*;
 import GetPut::*;
 import ClientServer::*;
-import XbsvXilinxCells::*;
+import ConnectalXilinxCells::*;
 import XilinxCells::*;
 import BviAurora::*;
 import Clocks::*;

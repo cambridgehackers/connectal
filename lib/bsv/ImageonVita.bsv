@@ -25,7 +25,7 @@ import Vector::*;
 import Clocks::*;
 import DefaultValue::*;
 import XilinxCells::*;
-import XbsvXilinxCells::*;
+import ConnectalXilinxCells::*;
 
 typedef struct {
      Bool increment;
@@ -43,8 +43,8 @@ endinterface
 module mkImageonVita#(Wire#(Bit#(1)) imageon_oe, Wire#(Bit#(1)) trigger_active, Wire#(Bit#(1)) serdes_reset)(ImageonVita);
     Vector#(3, ReadOnly#(Bit#(1))) vita_trigger_wire;
 `ifndef BSIM
-    XbsvODDR#(Bit#(1)) pll_out <- mkXbsvODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
-    XbsvODDR#(Bit#(1)) pll_t <- mkXbsvODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
+    ConnectalODDR#(Bit#(1)) pll_out <- mkConnectalODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
+    ConnectalODDR#(Bit#(1)) pll_t <- mkConnectalODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
     Wire#(Bit#(1)) poutq <- mkDWire(0);
     Wire#(Bit#(1)) ptq <- mkDWire(0);
     ReadOnly#(Bit#(1)) vita_clk_pll <- mkOBUFT(poutq, ptq);

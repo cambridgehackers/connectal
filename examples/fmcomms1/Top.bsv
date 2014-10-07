@@ -51,7 +51,7 @@ import MMUConfigIndicationProxy::*;
 
 // defined by user
 import XilinxCells::*;
-import XbsvXilinxCells::*;
+import ConnectalXilinxCells::*;
 
 import FMComms1ADC::*;
 import FMComms1DAC::*;

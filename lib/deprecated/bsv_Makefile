@@ -2,8 +2,8 @@
 
 test: testspi testAdapter
 
-testspi: XbsvSpi.bsv
-	bsc -check-assert -sim -u -g mkSpiTestBench XbsvSpi.bsv
+testspi: ConnectalSpi.bsv
+	bsc -check-assert -sim -u -g mkSpiTestBench ConnectalSpi.bsv
 	bsc -check-assert -sim -u -e mkSpiTestBench -o spiTestBench mkSpiTestBench.ba
 	./spiTestBench -V spi.vcd
 
@@ -20,10 +20,10 @@ testAdapter: Adapter.bsv
 	bsc -check-assert -sim -u -e mkAdapterTb -o testAdapter mkAdapterTb.ba
 	./testAdapter
 
-testXbsvReadyQueue: XbsvReadyQueue.bsv
-	bsc -check-assert -sim -u -g mkRQTB XbsvReadyQueue.bsv
-	bsc -check-assert -sim -u -e mkRQTB -o testXbsvReadyQueue mkRQTB.ba
-	./testXbsvReadyQueue
+testConnectalReadyQueue: ConnectalReadyQueue.bsv
+	bsc -check-assert -sim -u -g mkRQTB ConnectalReadyQueue.bsv
+	bsc -check-assert -sim -u -e mkRQTB -o testConnectalReadyQueue mkRQTB.ba
+	./testConnectalReadyQueue
 
-mkSPI20.v: XbsvSpi.bsv
-	bsc -verilog -u -g mkSPI20 XbsvSpi.bsv
+mkSPI20.v: ConnectalSpi.bsv
+	bsc -verilog -u -g mkSPI20 ConnectalSpi.bsv

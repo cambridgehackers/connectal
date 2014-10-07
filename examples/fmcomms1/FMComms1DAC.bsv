@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 import XilinxCells::*;
-import XbsvXilinxCells::*;
+import ConnectalXilinxCells::*;
 import Gearbox::*;
 import Pipe::*;
 import FIFO::*;

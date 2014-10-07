@@ -34,7 +34,7 @@ import Portal::*;
 import AxiMasterSlave::*;
 import AxiDma::*;
 import XilinxCells::*;
-import XbsvXilinxCells::*;
+import ConnectalXilinxCells::*;
 
 interface AxiMasterCommon;
     method Bit#(1)            aresetn();

@@ -49,7 +49,7 @@ module mkIBUFDS#(Wire#(one_bit) i, Wire#(one_bit) ib)(ReadOnly#(one_bit)) provis
 endmodule: mkIBUFDS
 
 import "BVI" IBUFDS =
-module vMkXbsvClockIBUFDS#(Wire#(one_bit) i, Wire#(one_bit) ib)(ClockGenIfc) provisos(Bits#(one_bit,1));
+module vMkConnectalClockIBUFDS#(Wire#(one_bit) i, Wire#(one_bit) ib)(ClockGenIfc) provisos(Bits#(one_bit,1));
    default_clock clk();
    default_reset rstn();
    parameter CAPACITANCE = "DONT_CARE";
@@ -64,12 +64,12 @@ module vMkXbsvClockIBUFDS#(Wire#(one_bit) i, Wire#(one_bit) ib)(ClockGenIfc) pro
    path(I, O);
    path(IB, O);
    //schedule _read  CF _read;
-endmodule: vMkXbsvClockIBUFDS
+endmodule: vMkConnectalClockIBUFDS
 
-module mkXbsvClockIBUFDS#(Wire#(one_bit) i, Wire#(one_bit) ib)(Clock) provisos(Bits#(one_bit,1));
-   let _m <- vMkXbsvClockIBUFDS(i, ib);
+module mkConnectalClockIBUFDS#(Wire#(one_bit) i, Wire#(one_bit) ib)(Clock) provisos(Bits#(one_bit,1));
+   let _m <- vMkConnectalClockIBUFDS(i, ib);
    return _m.gen_clk;
-endmodule: mkXbsvClockIBUFDS
+endmodule: mkConnectalClockIBUFDS
 
 interface DiffPair;
    method Bit#(1) p;
@@ -99,7 +99,7 @@ module mkOBUFDS#(Bit#(1) i)(DiffPair);
 endmodule: mkOBUFDS
 
 import "BVI" IBUFDS_GTE2 =
-module vMkXbsvClockIBUFDS_GTE2#(Bool enable, Wire#(one_bit) i, Wire#(one_bit) ib)(ClockGenIfc) provisos(Bits#(one_bit,1));
+module vMkConnectalClockIBUFDS_GTE2#(Bool enable, Wire#(one_bit) i, Wire#(one_bit) ib)(ClockGenIfc) provisos(Bits#(one_bit,1));
    default_clock clk();
    default_reset rstn();
    port CEB = pack(!enable);
@@ -112,12 +112,12 @@ module vMkXbsvClockIBUFDS_GTE2#(Bool enable, Wire#(one_bit) i, Wire#(one_bit) ib
    path(IB, O);
    //path(I, ODIV2);
    //path(IB, ODIV2);
-endmodule: vMkXbsvClockIBUFDS_GTE2
+endmodule: vMkConnectalClockIBUFDS_GTE2
 
-module mkXbsvClockIBUFDS_GTE2#(Bool enable, Wire#(one_bit) i, Wire#(one_bit) ib)(Clock) provisos(Bits#(one_bit,1));
-   let _m <- vMkXbsvClockIBUFDS_GTE2(enable, i, ib);
+module mkConnectalClockIBUFDS_GTE2#(Bool enable, Wire#(one_bit) i, Wire#(one_bit) ib)(Clock) provisos(Bits#(one_bit,1));
+   let _m <- vMkConnectalClockIBUFDS_GTE2(enable, i, ib);
    return _m.gen_clk;
-endmodule: mkXbsvClockIBUFDS_GTE2
+endmodule: mkConnectalClockIBUFDS_GTE2
 
 import "BVI" OBUFT =
 module mkOBUFT#(Wire#(one_bit) i, Wire#(one_bit) t)(ReadOnly#(one_bit)) provisos(Bits#(one_bit,1));
@@ -365,16 +365,16 @@ module mkBUFIO#(Clock clk)(ClockGenIfc);
 endmodule
 
 (* always_ready, always_enabled *)
-interface XbsvODDR#(type a);
+interface ConnectalODDR#(type a);
    method    a            q();
    method    Action       s(Bool i);
    method    Action       ce(Bool i);
    method    Action       d1(a i);
    method    Action       d2(a i);
-endinterface: XbsvODDR
+endinterface: ConnectalODDR
 
 import "BVI" ODDR =
-module mkXbsvODDR#(ODDRParams#(a) params)(XbsvODDR#(a))
+module mkConnectalODDR#(ODDRParams#(a) params)(ConnectalODDR#(a))
    provisos(Bits#(a, 1), DefaultValue#(a));
 
    if (params.srtype != "SYNC" &&
@@ -407,7 +407,7 @@ module mkXbsvODDR#(ODDRParams#(a) params)(XbsvODDR#(a))
    schedule (q)      CF (q);
    schedule (ce, s)  CF (ce, s);
    schedule (ce, s)  SB (d1, d2, q);
-endmodule: mkXbsvODDR
+endmodule: mkConnectalODDR
 
 ////////////////////////////////////////////////////////////////////////////////
 /// ClockGenerator Xilinx 7 Adv

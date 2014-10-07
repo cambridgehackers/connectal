@@ -29,7 +29,7 @@ import MemTypes          :: *;
 import Leds              :: *;
 import AxiMasterSlave    :: *;
 import XilinxCells       :: *;
-import XbsvXilinxCells   :: *;
+import ConnectalXilinxCells   :: *;
 import PS7LIB::*;
 import PPS7LIB::*;
 import XADC::*;

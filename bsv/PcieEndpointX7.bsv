@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Copyright (c) 2012  Bluespec, Inc.  ALL RIGHTS RESERVED.
 ////////////////////////////////////////////////////////////////////////////////
-//  Filename      : XbsvXilinx7PCIE.bsv
+//  Filename      : ConnectalXilinx7PCIE.bsv
 //  Description   :
 ////////////////////////////////////////////////////////////////////////////////
 package PcieEndpointX7;
@@ -20,7 +20,7 @@ import FIFOF             ::*;
 import SpecialFIFOs      ::*;
 import ClientServer      ::*;
 
-import XbsvXilinxCells   ::*;
+import ConnectalXilinxCells   ::*;
 import XilinxCells       ::*;
 import PCIE              ::*;
 import PCIEWRAPPER       ::*;
