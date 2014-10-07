@@ -32,7 +32,7 @@ import MemreadEngine::*;
 import Pipe::*;
 
 interface MemreadRequest;
-   method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
+   method Action startRead(Bit#(32) pointer, Bit#(32) offset, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
    method Action getStateDbg();   
 endinterface
 
@@ -118,7 +118,7 @@ module mkMemread#(MemreadIndication indication) (Memread#(4));
    function ObjectReadClient#(64) dc(MemreadEngine#(64,1) re) = re.dmaClient;
    interface dmaClients = map(dc,res);
    interface MemreadRequest request;
-      method Action startRead(Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
+      method Action startRead(Bit#(32) rp, Bit#(32) off, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
 	 //$display("startRead rdPointer=%d numWords=%h burstLen=%d iterCnt=%d", rp, nw, bl, ic);
 	 indication.started(nw);
 	 pointer <= rp;

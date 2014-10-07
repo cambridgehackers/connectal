@@ -147,6 +147,7 @@ examples =  echo                 \
 	    imageonfb            \
 	    fmcomms1		 \
 	    channelselect	 \
+	    tiny3		 \
 	    ptest                \
             bscan                \
             memread_4m           \
