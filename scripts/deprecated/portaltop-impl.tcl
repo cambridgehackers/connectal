@@ -24,7 +24,7 @@ synth_design -mode out_of_context -name mkPortalTopForPcie -top mkPortalTopForPc
 
 write_checkpoint -force $outputDir/portaltop_post_synth
 
-read_xdc $xbsvdir/constraints/$boardname-portal-pblock.xdc
+read_xdc $connectaldir/constraints/$boardname-portal-pblock.xdc
 
 place_design
 route_design

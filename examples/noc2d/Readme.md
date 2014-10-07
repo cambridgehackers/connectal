@@ -8,7 +8,7 @@ Each node has four links to adjacent nodes, plus a link to the local
 Messages are a compiled-in datatype, plus a message address which is
 the coordinates of the destination host in the X and Y directions.
 
-Links are SerialFIFOs, from the xbsv library.  The link "transmitter"
+Links are SerialFIFOs, from the connectal library.  The link "transmitter"
 is a GearBox from the message datatype to a Bit#(1) serial datatype.
 The link "receiver" is a Gearbox from Bit#(1) back to the message
 datatype.

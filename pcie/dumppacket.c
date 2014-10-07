@@ -1,6 +1,6 @@
 
 // This program dumps a file produced by:
-//     xbsvutil tlp /dev/fpga0 >testdata.dat
+//     connectalutil tlp /dev/fpga0 >testdata.dat
 //
 
 #include <stdio.h>

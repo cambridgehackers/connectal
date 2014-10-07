@@ -14,4 +14,4 @@ S2H        =  TimerRequest
 H2S        =  TimerIndication
 CPPFILES   =  $(TESTCPPFILES)
 NUMBER_OF_MASTERS=1
-include ../../Makefile.xbsv
+include ../../Makefile.connectal

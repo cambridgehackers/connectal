@@ -31,7 +31,7 @@ VERBOSE_SWITCH=--verbose
 endif
 
 bozotarget:
-	@echo "Makefile.xbsv: please invoke with make gen.boardname"
+	@echo "Makefile.connectal: please invoke with make gen.boardname"
 
 ## use "make gen.board" to generate the build directory
 gen.%:
@@ -113,5 +113,5 @@ endif
 prebuild::
 	@# additional steps needed before making verilog etc
 ifeq ($(NEEDSPCIE_$(BOARD)),1)
-	cd $(BOARD); vivado -notrace -mode batch -source $(shell cd $(XBSVDIR); /bin/pwd)/scripts/xbsv-synth-pcie.tcl
+	cd $(BOARD); vivado -notrace -mode batch -source $(shell cd $(XBSVDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
 endif

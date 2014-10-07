@@ -12,7 +12,7 @@ In 1988, Miller, Webb, and Myers adapted a computer science algorithm by Hirshbe
 
 Limiting space usage is fairly important for FPGA implementations, since while FGPAs or ASICs have a lot of internal memory units, they aren't very big each.  In order to achieve a big speedup on sequencing, we have to have a lot of parallelism.  Each instance can have its own memory, but not very much of it.
 
-For the Hirschberg algorithm, see xbsv/examples/maxcommonsubseq.
+For the Hirschberg algorithm, see connectal/examples/maxcommonsubseq.
 
 
 How it works

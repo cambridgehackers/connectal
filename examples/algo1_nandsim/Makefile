@@ -6,4 +6,4 @@ CPPFILES=test.cpp
 CPPFILES2=../nandsim/testnandsim.cpp
 XBSVFLAGS += -D ALGO1_NANDSIM
 
-include ../../Makefile.xbsv
+include ../../Makefile.connectal

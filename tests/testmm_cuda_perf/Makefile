@@ -11,4 +11,4 @@ XBSVFLAGS = -D J_VALUE=8 -D K_VALUE=8 -D N_VALUE=2
 XBSVFLAGS += -D CUDA_PERF_TEST=$(CUDA_PERF_TEST)
 
 include $(MMDIR)/Makefile.mm
-include ../../Makefile.xbsv
+include ../../Makefile.connectal

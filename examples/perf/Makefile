@@ -5,4 +5,4 @@ BSVFILES = Perf.bsv Top.bsv ../../lib/deprecated/DmaUtils.bsv
 CPPFILES=testperf.cpp
 #XBSVFLAGS=--bscflags " -D TRACE_AXI"
 
-include ../../Makefile.xbsv
+include ../../Makefile.connectal

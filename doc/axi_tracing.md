@@ -56,6 +56,6 @@ This will compile ConnectableWithTrace to trace transactions into BRAM.
 
 ### After running the test:
 
-1. run the script xbsv/jtag/run_trace.sh.
+1. run the script connectal/jtag/run_trace.sh.
 
 2. the trace output will be in the file trace.log.

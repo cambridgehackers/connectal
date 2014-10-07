@@ -23,5 +23,5 @@ $(BOARD)/sources/imageon-$(BOARD).xdc: imageon-fmc.json ../../boardinfo/$(BOARD)
 	mkdir -p $(BOARD)/sources
 	../../scripts/generate-constraints.py ../../boardinfo/$(BOARD).json imageon-fmc.json > $(BOARD)/sources/imageon-$(BOARD).xdc
 
-include ../../Makefile.xbsv
+include ../../Makefile.connectal
 

@@ -15,5 +15,5 @@ XBSVFLAGS += --xelabflags=--debug --xelabflags=typical --xsimflags=--tclbatch --
 TOP=XsimTop.bsv
 MKTOP=mkXsimTop
 
-include ../../Makefile.xbsv
+include ../../Makefile.connectal
 

@@ -1,6 +1,6 @@
 These measurements based on 
   * dbn 9587023178c555dc8028cabb910e4571ae910798
-  * xbsv 53a86e0d2e5dfbe6a034d166c99aa39b999afd71
+  * connectal 53a86e0d2e5dfbe6a034d166c99aa39b999afd71
 
 Bluesim:
 

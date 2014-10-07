@@ -142,7 +142,7 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
       if (isMsixAddr) begin
          begin
             let groupaddr = (msixaddr / 4);
-            //******************************** msix_base has to match CONFIG.MXIx_Table_Offset in scripts/xbsv-synth-pcie.tcl
+            //******************************** msix_base has to match CONFIG.MXIx_Table_Offset in scripts/connectal-synth-pcie.tcl
             case (msixaddr % 4)
                0: data = msix_entry[groupaddr].addr_lo;
                1: data = msix_entry[groupaddr].addr_hi;
@@ -170,7 +170,7 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
 	  if (oneHotDecode[792]) data = extend(tlpdata.pcieTraceBramWrAddr);
 	  if (oneHotDecode[794]) data = extend(tlpdata.tlpTraceLimit);
 
-         //******************************** msix_base has to match CONFIG.MXIx_PBA_Offset in scripts/xbsv-synth-pcie.tcl
+         //******************************** msix_base has to match CONFIG.MXIx_PBA_Offset in scripts/connectal-synth-pcie.tcl
 	  // 4-bit MSIx pending bit field
 	  if (oneHotDecode[992]) data = '0;                               // PBA structure (low)
 	  if (oneHotDecode[993]) data = '0;                               // PBA structure (high)

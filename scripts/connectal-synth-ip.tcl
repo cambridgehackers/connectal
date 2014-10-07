@@ -21,6 +21,6 @@
 set scriptsdir [file dirname [info script] ]
 source "$scriptsdir/../../fpgamake/tcl/ipcore.tcl"
 
-proc xbsv_synth_ip {core_name core_version ip_name params} {
+proc connectal_synth_ip {core_name core_version ip_name params} {
    fpgamake_ipcore $core_name $core_version $ip_name $params
 }

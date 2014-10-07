@@ -1,12 +1,12 @@
 CC ?= gcc
 
-xbsvutil: xbsvutil.c ../../drivers/pcieportal/pcieportal.h
-	$(CC) -g -O2 -o xbsvutil xbsvutil.c
+connectalutil: connectalutil.c ../../drivers/pcieportal/pcieportal.h
+	$(CC) -g -O2 -o connectalutil connectalutil.c
 
 .PHONY: install
-install: xbsvutil
-	install -m 755 xbsvutil /usr/local/bin
+install: connectalutil
+	install -m 755 connectalutil /usr/local/bin
 
 .PHONY: clean
 clean:
-	rm -f xbsvutil *~
+	rm -f connectalutil *~

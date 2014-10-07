@@ -10,4 +10,4 @@ XBSVFLAGS += -D NumEngineServers=16 -D DataBusWidth=128
 #XBSVFLAGS=--bscflags " -D TRACE_AXI"
 
 
-include ../../Makefile.xbsv
+include ../../Makefile.connectal

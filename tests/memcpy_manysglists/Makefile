@@ -6,4 +6,4 @@ BSVFILES = $(MEMCPYDIR)/Memcpy.bsv Top.bsv
 CPPFILES=testmemcpy.cpp
 #XBSVFLAGS=--bscflags " -D TRACE_AXI"
 
-include ../../Makefile.xbsv
+include ../../Makefile.connectal

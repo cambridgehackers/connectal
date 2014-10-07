@@ -13,4 +13,4 @@ REALXBSVDIR=$(realpath ../..)
 XBSVFLAGS += -q --bscflags " -Xc++" --bscflags " -DLIBNAME=\\\"$(REALXBSVDIR)/examples/hdmidisplay/bluesim/jni/libHdmi.so\\\""
 XBSVFLAGS += -D BSIMRESPONDER=mkResponder -m ../../examples/hdmidisplay/BsimHdmi.cpp 
 
-include ../../Makefile.xbsv
+include ../../Makefile.connectal

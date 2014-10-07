@@ -5,4 +5,4 @@ BSVFILES = ../../lib/bsv/Strstr.bsv Top.bsv
 CPPFILES=teststrstr.cpp
 #XBSVFLAGS=--bscflags " -D TRACE_AXI"
 
-include ../../Makefile.xbsv
+include ../../Makefile.connectal

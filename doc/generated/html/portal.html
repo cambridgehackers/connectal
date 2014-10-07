@@ -750,7 +750,7 @@ asciidoc.install(2);
 </div>
 </div>
 <div class="sect1">
-<h2 id="_what_is_xbsv">What is XBSV?</h2>
+<h2 id="_what_is_connectal">What is XBSV?</h2>
 <div class="sectionbody">
 <div class="paragraph lead"><p>XBSV provides a hardware-software interface for applications split
 between user mode code and custom hardware in an FPGA or ASIC.</p></div>
@@ -769,7 +769,7 @@ symmetric.</p></div>
 <div class="sectionbody">
 <div class="dlist"><dl>
 <dt class="hdlist1">
-xbsv
+connectal
 </dt>
 <dd>
 <p>
@@ -844,7 +844,7 @@ This loadable kernel module exposes a subset of dma-buf functionality to user-sp
 </p>
 </dd>
 <dt class="hdlist1">
-xbsvgen
+connectalgen
 </dt>
 <dd>
 <p>
@@ -968,7 +968,7 @@ the application hardware to use.</p></div>
 <div class="sectionbody">
 <div class="paragraph"><p>An application developer will typically write the hardware part of the application in Bluespec and the software part of the application in C or C++.  In a short example, there will be a bsv source file for the hardware and a cpp source file for the application.</p></div>
 <div class="paragraph"><p>The application developer is free to specify whatever hardware-software interface makes sense.</p></div>
-<div class="paragraph"><p>Refer to <a href="https://github.com/cambridgehackers/xbsv">https://github.com/cambridgehackers/xbsv</a></p></div>
+<div class="paragraph"><p>Refer to <a href="https://github.com/cambridgehackers/connectal">https://github.com/cambridgehackers/connectal</a></p></div>
 <div class="paragraph"><p>In the examples directory, see [simple](../examples/simple/).  The file [Simple.bsv](../examples/simple/Simple.bsv) defines the hardware, and testsimple.cpp supplies the software part. In this case, the software part is a test framework for the hardware.</p></div>
 <div class="paragraph"><p>Simple.bsv declares a few <tt>struct</tt> and <tt>enum</tt> types:</p></div>
 <div class="listingblock">
@@ -1022,10 +1022,10 @@ the application hardware to use.</p></div>
 signals back to software with heard and heard2 and so fort.  In the
 case of this example, say and say2 merely echo their arguments back to
 software.</p></div>
-<div class="paragraph"><p>The definitions in the bsv file are used by the xbsv infrastructure ( a python program)  to automatically create corresponding c++ interfaces.</p></div>
+<div class="paragraph"><p>The definitions in the bsv file are used by the connectal infrastructure ( a python program)  to automatically create corresponding c++ interfaces.</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><tt>    ../../xbsvgen -Bbluesim -p bluesim -x mkBsimTop \
+<pre><tt>    ../../connectalgen -Bbluesim -p bluesim -x mkBsimTop \
          -s2h SimpleRequest \
          -h2s SimpleIndication \
          -s testsimple.cpp \
@@ -1035,15 +1035,15 @@ software.</p></div>
 Software to Hardware messages and which should be used for Hardware to
 Software messages. These interfaces are given on the command line for
 genxpprojfrombsv</p></div>
-<div class="paragraph"><p>xbsvgen constructs all the hardware and software modules
+<div class="paragraph"><p>connectalgen constructs all the hardware and software modules
 needed to wire up portals. This is sort of like an RPC compiler for
 the hardware-software interface. However, unlike an RPC each method is
 asynchronous.</p></div>
 <div class="paragraph"><p>The user must also create a toplevel bsv module Top.bsv, which
 instantiates the user portals, the standard hardware environment, and
 any additional hardware modules.</p></div>
-<div class="paragraph"><p>Rather than constructing the <tt>xbsvgen</tt> command line from
-scratch, the examples in xbsv use include
+<div class="paragraph"><p>Rather than constructing the <tt>connectalgen</tt> command line from
+scratch, the examples in connectal use include
 [Makefile.common](../Makefile.common) and define some <tt>make</tt>
 variables.</p></div>
 <div class="paragraph"><p>Here is the Makefile for the <tt>simple</tt> example:</p></div>
@@ -1061,13 +1061,13 @@ http://www.gnu.org/software/src-highlite -->
     PINS <span style="color: #990000">=</span> Std
 
     include <span style="color: #990000">../..</span>/Makefile.common</tt></pre></div></div>
-<div class="paragraph"><p>Designs using <tt>xbsv</tt> may also include <tt>xbsv/Makefile.common</tt> if they define <tt>XBSVDIR</tt> in their Makefile:</p></div>
+<div class="paragraph"><p>Designs using <tt>connectal</tt> may also include <tt>connectal/Makefile.common</tt> if they define <tt>XBSVDIR</tt> in their Makefile:</p></div>
 <div class="listingblock">
 <div class="content"><!-- Generator: GNU source-highlight 3.1.5
 by Lorenzo Bettini
 http://www.lorenzobettini.it
 http://www.gnu.org/software/src-highlite -->
-<pre><tt>    <span style="color: #009900">XBSVDIR</span><span style="color: #990000">=</span>/scratch/xbsv
+<pre><tt>    <span style="color: #009900">XBSVDIR</span><span style="color: #990000">=</span>/scratch/connectal
     S2H <span style="color: #990000">=</span> <span style="color: #990000">...</span>
     H2S <span style="color: #990000">=</span> <span style="color: #990000">...</span>
     BSVFILES <span style="color: #990000">=</span> <span style="color: #990000">...</span>
@@ -1239,13 +1239,13 @@ the <tt>zedboard</tt> project directory is created, populated by the generated f
 <div class="content">
 <pre><tt>    zedboard/Makefile</tt></pre>
 </div></div>
-<div class="paragraph"><p>xbsvgen generates wrappers for software-to-hardware interfaces and proxies for hardware-to-software interfaces:</p></div>
+<div class="paragraph"><p>connectalgen generates wrappers for software-to-hardware interfaces and proxies for hardware-to-software interfaces:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>    zedboard/sources/mkzynqtop/SimpleIndicationProxy.bsv
     zedboard/sources/mkzynqtop/SimpleRequestWrapper.bsv</tt></pre>
 </div></div>
-<div class="paragraph"><p>XBSV supports Android on Zynq platforms, so xbsvgen generates <tt>jni/Android.mk</tt> for <tt>ndk-build</tt>.</p></div>
+<div class="paragraph"><p>XBSV supports Android on Zynq platforms, so connectalgen generates <tt>jni/Android.mk</tt> for <tt>ndk-build</tt>.</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>    zedboard/jni/Android.mk
@@ -1276,7 +1276,7 @@ the <tt>zedboard</tt> project directory is created, populated by the generated f
     zedboard/constraints/zedboard.xdc</tt></pre>
 </div></div>
 <div class="paragraph"><p>XBSV generates several TCL files to run <tt>vivado</tt>.</p></div>
-<div class="paragraph"><p>The <tt>board.tcl</tt> file specifies <tt>partname</tt>, <tt>boardname</tt>, and <tt>xbsvdir</tt> for the other TCL scripts.</p></div>
+<div class="paragraph"><p>The <tt>board.tcl</tt> file specifies <tt>partname</tt>, <tt>boardname</tt>, and <tt>connectaldir</tt> for the other TCL scripts.</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>    zedboard/board.tcl</tt></pre>
@@ -1350,7 +1350,7 @@ Android executable.</p></div>
 <div class="paragraph"><p>will copy the Android executable and FPGA configuration file to the
 target device, program the FPGA, and run the executable. See
 [run.zedboard](../scripts/run.zedboard) for details.</p></div>
-<div class="paragraph"><p>It uses <tt>xbsv/consolable/checkip</tt> to determine the IP address of the
+<div class="paragraph"><p>It uses <tt>connectal/consolable/checkip</tt> to determine the IP address of the
 device via a USB console connection to the device. If the target is
 not connected to the build machine via USB, specify the IP address of
 the target manually:</p></div>
@@ -1524,7 +1524,7 @@ and from hardware to software to be an "indication" interface.</p></div>
 packaged as a message. XBSV generates a "proxy" that marshalls the
 arguments to the method into a message and a "wrapper" that unpacks
 the arguments and invokes the method.</p></div>
-<div class="paragraph"><p>Currently, xbsvgen includes a library that implements portals via
+<div class="paragraph"><p>Currently, connectalgen includes a library that implements portals via
 memory mapped hardware.</p></div>
 <div class="sect2">
 <h3 id="_portal_device_drivers">Portal Device Drivers</h3>

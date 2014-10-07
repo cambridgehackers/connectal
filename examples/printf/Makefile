@@ -13,5 +13,5 @@ NUMBER_OF_MASTERS =0
 
 USE_PRINTF = 1
 
-include ../../Makefile.xbsv
+include ../../Makefile.connectal
 

@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 /*
- * This is a test harness for running xbsv test programs as kernel modules.
+ * This is a test harness for running connectal test programs as kernel modules.
  *
  * After the module is loaded, it calls 'main(0, NULL)' to start the program.
  */
@@ -65,20 +65,20 @@ int i;
 }
 
 /* in sock_utils.c */
-ssize_t xbsv_kernel_read (struct file *f, char __user *arg, size_t len, loff_t *data);
-ssize_t xbsv_kernel_write (struct file *f, const char __user *arg, size_t len, loff_t *data);
+ssize_t connectal_kernel_read (struct file *f, char __user *arg, size_t len, loff_t *data);
+ssize_t connectal_kernel_write (struct file *f, const char __user *arg, size_t len, loff_t *data);
 int main_program_finished = 0;
 
 static struct file_operations pa_fops = {
     .owner = THIS_MODULE,
 #ifdef BSIM
-    .read = xbsv_kernel_read,
-    .write = xbsv_kernel_write,
+    .read = connectal_kernel_read,
+    .write = connectal_kernel_write,
 #endif
   };
 static struct miscdevice miscdev = {
   .minor = MISC_DYNAMIC_MINOR,  // Must be < 256!
-  .name = "xbsvtest",
+  .name = "connectaltest",
   .fops = &pa_fops,
 };
 
@@ -120,5 +120,5 @@ module_init(pa_init);
 module_exit(pa_exit);
 
 MODULE_LICENSE("GPL v2");
-MODULE_DESCRIPTION("xbsv test program");
+MODULE_DESCRIPTION("connectal test program");
 MODULE_VERSION("0.1");

@@ -6,4 +6,4 @@ CPPFILES=testnandsim_test.cpp
 #CPPFILES=testnandsim.cpp
 #CPPFILES=nandsim_manual.c
 
-include ../../Makefile.xbsv
+include ../../Makefile.connectal

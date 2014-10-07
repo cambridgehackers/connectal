@@ -16,5 +16,5 @@ NUMBER_OF_MASTERS =0
 ## for testing fpgamake:
 FPGAMAKE_XBSVFLAGS += -P mkEchoIndicationProxySynth -P mkEchoRequestWrapperMemPortalPipes
 
-include ../../Makefile.xbsv
+include ../../Makefile.connectal
 

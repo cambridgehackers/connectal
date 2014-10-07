@@ -45,7 +45,7 @@ import SGListConfigRequestWrapper::*;
 import DmaDebugIndicationProxy::*;
 import SGListConfigIndicationProxy::*;
 
-// copied from PCIE.bsv because xbsvgen cannot handle TMul#()
+// copied from PCIE.bsv because connectalgen cannot handle TMul#()
 typedef struct {
    Bit#(32)              data0;
    Bit#(32)              data1;
@@ -55,7 +55,7 @@ typedef struct {
    Bit#(32)              data5;
 } TsTLPData16 deriving (Bits, Eq);
 
-// copied from PCIE.bsv because xbsvgen cannot parse the file
+// copied from PCIE.bsv because connectalgen cannot parse the file
 typedef enum {
    MEM_READ_3DW_NO_DATA = 0,
    MEM_READ_4DW_NO_DATA = 1,
@@ -63,7 +63,7 @@ typedef enum {
    MEM_WRITE_4DW_DATA   = 3
    } TLPPacketFormat deriving (Bits, Eq);
 
-// copied from PCIE.bsv because xbsvgen cannot parse the file
+// copied from PCIE.bsv because connectalgen cannot parse the file
 typedef enum {
    MEMORY_READ_WRITE   = 0,
    MEMORY_READ_LOCKED  = 1,
@@ -99,7 +99,7 @@ typedef enum {
    UNKNOWN_TYPE_31     = 31
    } TLPPacketType deriving (Bits, Eq);
 
-// copied from PCIE.bsv because xbsvgen cannot parse the file
+// copied from PCIE.bsv because connectalgen cannot parse the file
 typedef struct {Bit#(8) hit;
 		Bit#(8) sof;
 		Bit#(8) eof;

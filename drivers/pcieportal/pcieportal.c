@@ -32,7 +32,7 @@
 #define DEV_NAME "fpga"
 
 /* version string for the driver */
-#define DEV_VERSION "1.0xbsv"
+#define DEV_VERSION "1.0connectal"
 
 /* Bluespec's standard vendor ID */
 #define BLUESPEC_VENDOR_ID 0x1be7
@@ -383,7 +383,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
                         err = -EFAULT;
                         goto BARS_ALLOCATED_label;
                 }
-        	// this replaces 'xbsv/pcie/xbsvutil/xbsvutil trace /dev/fpga0'
+        	// this replaces 'connectal/pcie/connectalutil/connectalutil trace /dev/fpga0'
         	// but why is it needed?...
         	iowrite32(0, this_board->bar0io + CSR_TLPPCIEWRADDRREG);
         	// enable tracing

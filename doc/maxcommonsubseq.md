@@ -107,4 +107,4 @@ where L' is the "reverse problem", the maximum length subsequence from subscript
     This method takes a logarithmic recursion depth, because the subproblems are half the size at each level. The storage used is O(m+n) and the time is O(mn).  The really clever bit is the use of Algorithm B to locate
 the j corresponding to a particular i.  Algorithm B uses the dynamic programming recurrance to solve for all possible j values in a single pass, then it is a simple matter to find the best j.
 
-See the actual example code in xbsv/examples/maxcommonsubseq/hirschberg.py
+See the actual example code in connectal/examples/maxcommonsubseq/hirschberg.py

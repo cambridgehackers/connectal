@@ -20,7 +20,7 @@ packaged as a message. XBSV generates a "proxy" that marshalls the
 arguments to the method into a message and a "wrapper" that unpacks
 the arguments and invokes the method.
 
-Currently, xbsvgen includes a library that implements portals via
+Currently, connectalgen includes a library that implements portals via
 memory mapped hardware.
 
 === Portal Device Drivers

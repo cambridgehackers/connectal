@@ -5,4 +5,4 @@ BSVFILES = Memlatency.bsv Top.bsv
 CPPFILES=testmemlatency.cpp
 #XBSVFLAGS=--bscflags " -D TRACE_AXI"
 
-include ../../Makefile.xbsv
+include ../../Makefile.connectal

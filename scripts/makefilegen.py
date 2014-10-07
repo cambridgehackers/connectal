@@ -82,8 +82,9 @@ set xbsvdir {%(xbsvdir)s}
 ## for compatibility with older fpgamake. will be removed.
 set xbsvipdir {%(ipdir)s}
 set ipdir {%(ipdir)s}
+set connectaldir {%(connectaldir)s}
 set needspcie {%(needspcie)s}
-set xbsv_dut { %(Dut)s }
+set connectal_dut { %(Dut)s }
 %(tcldefines)s
 '''
 
@@ -114,7 +115,7 @@ makefileTemplate='''
 #RUN_ARGS=
 
 export DTOP=%(project_dir)s
-XBSVDIR=%(xbsvdir)s
+XBSVDIR=%(connectaldir)s
 BSVPATH = %(bsvpath)s
 
 BOARD=%(boardname)s
@@ -139,7 +140,7 @@ export DUT_NAME = %(Dut)s
 
 %(mdefines)s
 
-include $(XBSVDIR)/scripts/Makefile.xbsv.build
+include $(XBSVDIR)/scripts/Makefile.connectal.build
 
 %(bitsmake)s
 '''
@@ -149,7 +150,7 @@ include $(CLEAR_VARS)
 LOCAL_ARM_MODE := arm
 include %(project_dir)s/jni/Makefile.generated_files
 APP_SRC_FILES := $(addprefix %(project_dir)s/jni/,  $(GENERATED_CPP)) %(source)s
-PORTAL_SRC_FILES := $(addprefix %(xbsvdir)s/cpp/, portal.c poller.cpp sock_utils.c timer.c)
+PORTAL_SRC_FILES := $(addprefix %(connectaldir)s/cpp/, portal.c poller.cpp sock_utils.c timer.c)
 LOCAL_SRC_FILES := $(APP_SRC_FILES) $(PORTAL_SRC_FILES)
 
 LOCAL_PATH :=
@@ -157,8 +158,8 @@ LOCAL_MODULE := android.exe
 LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS := -llog %(clibdirs)s %(clibs)s %(clibfiles)s
 LOCAL_CPPFLAGS := "-march=armv7-a"
-LOCAL_CFLAGS := -DZYNQ -I%(xbsvdir)s -I%(xbsvdir)s/cpp -I%(xbsvdir)s/lib/cpp -I%(xbsvdir)s/drivers/zynqportal -I%(project_dir)s/jni %(cincludes)s %(cdefines)s -I%(xbsvdir)s/drivers/portalmem
-LOCAL_CXXFLAGS := -DZYNQ -I%(xbsvdir)s -I%(xbsvdir)s/cpp -I%(xbsvdir)s/lib/cpp -I%(xbsvdir)s/drivers/zynqportal -I%(project_dir)s/jni %(cincludes)s %(cdefines)s -I%(xbsvdir)s/drivers/portalmem
+LOCAL_CFLAGS := -DZYNQ -I%(connectaldir)s -I%(connectaldir)s/cpp -I%(connectaldir)s/lib/cpp -I%(connectaldir)s/drivers/zynqportal -I%(project_dir)s/jni %(cincludes)s %(cdefines)s -I%(connectaldir)s/drivers/portalmem
+LOCAL_CXXFLAGS := -DZYNQ -I%(connectaldir)s -I%(connectaldir)s/cpp -I%(connectaldir)s/lib/cpp -I%(connectaldir)s/drivers/zynqportal -I%(project_dir)s/jni %(cincludes)s %(cdefines)s -I%(connectaldir)s/drivers/portalmem
 LOCAL_CFLAGS2 := $(cdefines2)s
 
 include $(BUILD_EXECUTABLE)
@@ -172,18 +173,18 @@ else
 Q=
 endif
 
-CFLAGS_COMMON = -O -g -I%(project_dir)s/jni -I%(xbsvdir)s -I%(xbsvdir)s/cpp -I%(xbsvdir)s/lib/cpp %(sourceincludes)s %(cincludes)s %(cdefines)s -I%(xbsvdir)s/drivers/portalmem -I%(xbsvdir)s/drivers/pcieportal -I%(xbsvdir)s/drivers/zynqportal
+CFLAGS_COMMON = -O -g -I%(project_dir)s/jni -I%(connectaldir)s -I%(connectaldir)s/cpp -I%(connectaldir)s/lib/cpp %(sourceincludes)s %(cincludes)s %(cdefines)s -I%(connectaldir)s/drivers/portalmem -I%(connectaldir)s/drivers/pcieportal -I%(connectaldir)s/drivers/zynqportal
 CFLAGS = $(CFLAGS_COMMON)
 CFLAGS2 = %(cdefines2)s
 
-PORTAL_CPP_FILES = $(addprefix %(xbsvdir)s/cpp/, portal.c poller.cpp sock_utils.c timer.c)
+PORTAL_CPP_FILES = $(addprefix %(connectaldir)s/cpp/, portal.c poller.cpp sock_utils.c timer.c)
 include %(project_dir)s/jni/Makefile.generated_files
 SOURCES = $(addprefix %(project_dir)s/jni/,  $(GENERATED_CPP)) %(source)s $(PORTAL_CPP_FILES)
 SOURCES2 = $(addprefix %(project_dir)s/jni/,  $(GENERATED_CPP)) %(source2)s $(PORTAL_CPP_FILES)
 LDLIBS := %(clibdirs)s %(clibs)s %(clibfiles)s -pthread 
 
 BSIM_EXE_CXX_FILES = BsimDma.cxx BsimCtrl.cxx TlpReplay.cxx
-BSIM_EXE_CXX = $(addprefix %(xbsvdir)s/cpp/, $(BSIM_EXE_CXX_FILES))
+BSIM_EXE_CXX = $(addprefix %(connectaldir)s/cpp/, $(BSIM_EXE_CXX_FILES))
 
 ubuntu.exe: $(SOURCES)
 	$(Q)g++ $(CFLAGS) -o ubuntu.exe $(SOURCES) $(LDLIBS)
@@ -199,7 +200,7 @@ bsim_exe2: $(SOURCES2)
 '''
 
 if __name__=='__main__':
-    xbsvdir = os.path.dirname(os.path.abspath(sys.argv[0]))+'/../'
+    connectaldir = os.path.dirname(os.path.abspath(sys.argv[0]))+'/../'
     options = argparser.parse_args()
 
     boardname = options.board.lower()
@@ -247,7 +248,7 @@ if __name__=='__main__':
         option_info['rewireclockstring'] = tclzynqrewireclock
 
     dutname = 'mk' + option_info['TOP']
-    topbsv = xbsvdir + '/bsv/' + option_info['TOP'] + '.bsv'
+    topbsv = connectaldir + '/bsv/' + option_info['TOP'] + '.bsv'
         
     rewireclockstring = option_info['rewireclockstring']
     needs_pcie_7x_gen1x8 = option_info['needs_pcie_7x_gen1x8']
@@ -259,12 +260,12 @@ if __name__=='__main__':
         bsvdefines += bdef
     cstr = option_info.get('constraints')
     if cstr:
-        options.constraint.append(os.path.join(xbsvdir, cstr))
+        options.constraint.append(os.path.join(connectaldir, cstr))
 
     bsvdefines += ['BOARD_'+boardname]
 
-    options.verilog.append(os.path.join(xbsvdir, 'verilog'))
-    options.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/%s.xdc' % boardname))
+    options.verilog.append(os.path.join(connectaldir, 'verilog'))
+    options.constraint.append(os.path.join(connectaldir, 'xilinx/constraints/%s.xdc' % boardname))
 
     tclboardname = os.path.join(project_dir, 'board.tcl')
     tclsynthname = os.path.join(project_dir, '%s-synth.tcl' % dutname.lower())
@@ -283,7 +284,7 @@ if __name__=='__main__':
         #common
         'source': ' '.join([os.path.abspath(sf) for sf in options.source]) if options.source else '',
         'source2': ' '.join([os.path.abspath(sf) for sf in options.source2]) if options.source2 else '',
-        'xbsvdir': xbsvdir,
+        'connectaldir': connectaldir,
 	'clibs': ' '.join(['-l%s' % l for l in options.clib]),
 	'clibfiles': ' '.join(['%s' % l for l in options.clibfiles]),
 	'clibdirs': ' '.join([ '-L%s' % os.path.abspath(l) for l in options.clibdir ]),
@@ -308,7 +309,7 @@ if __name__=='__main__':
                  'project_dir': project_dir,
                  'partname': partname,
                  'boardname': boardname,
-                 'xbsvdir': xbsvdir,
+                 'connectaldir': connectaldir,
                  'tclfileConstraints': '\n'.join([tclfileConstraintTemplate
                                                   % { 'xdcname': os.path.basename(f) }
                                                   for f in options.constraint ]),
@@ -319,7 +320,7 @@ if __name__=='__main__':
                                         % { 'xci': f } for f in options.xci]),
                  'needspcie': 1 if needs_pcie_7x_gen1x8 else 0,
                  'tcldefines': '\n'.join(['set %s {%s}' % (var,val) for (var,val) in map(util.splitBinding, bsvdefines)]),
-                 'ipdir': os.path.abspath(options.ipdir) if options.ipdir else xbsvdir
+                 'ipdir': os.path.abspath(options.ipdir) if options.ipdir else connectaldir
                  }
     tcl = util.createDirAndOpen(tclboardname, 'w')
     tcl.write(tclboardTemplate % tclsubsts)
@@ -348,11 +349,11 @@ if __name__=='__main__':
 					 'cachedir': '--cachedir=%s' % os.path.abspath(options.cachedir) if options.cachedir else ''
 					 }
 
-    make.write(makefileTemplate % {'xbsvdir': xbsvdir,
+    make.write(makefileTemplate % {'connectaldir': connectaldir,
                                    'bsvpath': ':'.join(list(set([os.path.dirname(os.path.abspath(bsvfile)) for bsvfile in options.bsvfile]
-                                                                + [os.path.join(xbsvdir, 'bsv')]
-                                                                + [os.path.join(xbsvdir, 'lib/bsv')]
-                                                                + [os.path.join(xbsvdir, 'generated/xilinx')]))),
+                                                                + [os.path.join(connectaldir, 'bsv')]
+                                                                + [os.path.join(connectaldir, 'lib/bsv')]
+                                                                + [os.path.join(connectaldir, 'generated/xilinx')]))),
                                    'bsvdefines': util.foldl((lambda e,a: e+' -D '+a), '', bsvdefines),
                                    'boardname': boardname,
                                    'OS': options.os,

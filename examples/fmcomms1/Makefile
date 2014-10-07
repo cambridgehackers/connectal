@@ -23,5 +23,5 @@ fmcomms1-$(BOARD).xdc: fmcomms1-fmc.json ../../boardinfo/$(BOARD).json
 	../../scripts/generate-constraints.py ../../boardinfo/$(BOARD).json fmcomms1-fmc.json > fmcomms1-$(BOARD).xdc
 
 
-include ../../Makefile.xbsv
+include ../../Makefile.connectal
 

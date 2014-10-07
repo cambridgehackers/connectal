@@ -29,7 +29,7 @@ if [file exists $outputDir/mkpcietop_static_routed.dcp] {
 read_checkpoint -cell top_portalTop hw/portaltop_post_synth.dcp
 if [file exists $outputDir/mkpcietop_static_routed.dcp] {
 } else {
-    read_xdc $xbsvdir/xilinx/constraints/$boardname-portal-pblock.xdc
+    read_xdc $connectaldir/xilinx/constraints/$boardname-portal-pblock.xdc
     set_property HD.RECONFIGURABLE TRUE [get_cells top_portalTop]
     ## if the pblock is aligned to a reconfigurable frame, can use the following
     #set_property RESET_AFTER_RECONFIG true [get_pblocks top_portalTop]

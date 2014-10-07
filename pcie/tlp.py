@@ -274,12 +274,12 @@ def print_tlp_log(tlplog, f=None):
 if __name__ == '__main__':
     f = open('tlp.vcd', 'w')
     if len(sys.argv) > 1 and sys.argv[1] == 'openocd':
-        os.chdir('/scratch/jamey/xbsv/jtag')
+        os.chdir('/scratch/jamey/connectal/jtag')
         tlplog = subprocess.check_output(['openocd', '-f', 'pcietrace.cfg'], stderr=subprocess.STDOUT).split('\n')
     elif len(sys.argv) > 1:
         tlplog = open(sys.argv[1]).read().split('\n')
     else:
-        tlplog = subprocess.check_output(['xbsvutil', 'tlp', '/dev/fpga0']).split('\n')
+        tlplog = subprocess.check_output(['connectalutil', 'tlp', '/dev/fpga0']).split('\n')
     print_tlp_log(tlplog[0:-1], f)
     print classCounts
     print sum([ classCounts[k] for k in classCounts])

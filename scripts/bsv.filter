@@ -267,7 +267,7 @@ def filter_bsv(bsvin, out):
 
 if __name__=='__main__':
     exename = os.path.abspath(sys.argv[0])
-    xbsvdir = os.path.dirname(exename)
+    connectaldir = os.path.dirname(exename)
     namespace = argparser.parse_args()
     if namespace.outdir and not os.path.exists(namespace.outdir):
         os.makedirs(namespace.outdir)

@@ -26,15 +26,15 @@ all: pciedrivers
 
 pciedrivers:
 	(cd drivers/pcieportal; make)
-	make -C pcie/xbsvutil
+	make -C pcie/connectalutil
 
 pciedrivers-clean:
 	(cd drivers/pcieportal; make clean)
-	make -C pcie/xbsvutil clean
+	make -C pcie/connectalutil clean
 
 install:
 	(cd drivers/pcieportal; make install)
-	make -C pcie/xbsvutil install
+	make -C pcie/connectalutil install
 	for fname in $(UDEV_RULES) ; do \
 	    install -m644 etc/udev/rules.d/$$fname $(UDEV_RULES_DIR) ; \
 	done
@@ -46,7 +46,7 @@ install:
 
 uninstall:
 	(cd drivers/pcieportal; make uninstall)
-	make -C pcie/xbsvutil uninstall
+	make -C pcie/connectalutil uninstall
 	for fname in $(UDEV_RULES) ; do \
 	    rm -f $(UDEV_RULES_DIR)/$$fname ; \
 	done
@@ -373,6 +373,6 @@ distclean:
 	   rm -rf examples/*/"$$archname" tests/*/"$$archname"; \
 	done
 	rm -rf drivers/*/.tmp_versions tests/memread_manual/kernel/.tmp_versions/
-	rm -rf pcie/xbsvutil/xbsvutil tests/memread_manual/kernel/bsim_relay
+	rm -rf pcie/connectalutil/connectalutil tests/memread_manual/kernel/bsim_relay
 	rm -rf out/ exit.status cpp/*.o scripts/*.pyc
 

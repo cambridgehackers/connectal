@@ -16,8 +16,8 @@ file mkdir $outputDir
 # STEP#1: setup design sources and constraints
 #
 read_verilog [ glob {verilog/top/*.v} ]
-read_verilog [ glob $xbsvdir/xilinx/pcie_7x_v2_1/pcie_7x_0/source/*.v ]
-read_verilog [ glob $xbsvdir/xilinx/7x/pcie/source/*.v ]
+read_verilog [ glob $connectaldir/xilinx/pcie_7x_v2_1/pcie_7x_0/source/*.v ]
+read_verilog [ glob $connectaldir/xilinx/7x/pcie/source/*.v ]
 read_xdc constraints/$boardname.xdc
 
 # STEP#2: run synthesis, report utilization and timing estimates, write checkpoint design

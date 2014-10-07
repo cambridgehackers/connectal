@@ -5,12 +5,12 @@ XBSV supports partial reconfiguration on pcie-based platforms (kc705
 and vc707). There's not enough static logic on the zedboard to make
 this worthwhile at the moment.
 
-Run xbsvgen as usual to create the project directory.
+Run connectalgen as usual to create the project directory.
 
 Create proxies, wrappers, scripts, and Makefiles:
 
     cd examples/echo
-    xbsvgen -Bkc705 -p kc705 -x mkPcieTop -s2h Say -h2s Say -s test.cpp -t ../../bsv/StdPcieTop.bsv  Say.bsv
+    connectalgen -Bkc705 -p kc705 -x mkPcieTop -s2h Say -h2s Say -s test.cpp -t ../../bsv/StdPcieTop.bsv  Say.bsv
 
 Compile the full bitstream:
 
@@ -33,5 +33,5 @@ Load the partial bitstream:
 
     make reprogram
 
-This also calls "xbsvutil reset /dev/fpga0" to reset the portals in the design. No reboot required.
+This also calls "connectalutil reset /dev/fpga0" to reset the portals in the design. No reboot required.
 

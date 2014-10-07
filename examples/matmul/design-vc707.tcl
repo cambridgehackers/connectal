@@ -65,7 +65,7 @@ set top "mkPcieTop"
 add_module $top
 set_attribute module $top    top_level     1
 set_attribute module $top    vlog          [concat [glob $rtlDir/top/*.v] [glob $rtlDir/lib/*.v] ]
-set_attribute module $top    ip            [glob /scratch/jamey/xbsv/generated/xilinx/zc706/*/*.xci]
+set_attribute module $top    ip            [glob /scratch/jamey/connectal/generated/xilinx/zc706/*/*.xci]
 #set_attribute module $top    vlog_headers  [glob $rtlDir/top/*Stub.v]
 set_attribute module $top    synth         ${run.topSynth}
 
@@ -81,7 +81,7 @@ set_attribute impl $top      hd.impl       1
 set module1 "pcie_7x_0"
 add_module $module1
 set_attribute module $module1 vlog          [concat [glob $rtlDir/lib/*.v] [glob $rtlDir/mmtile/*.v]]
-set_attribute module $module1 ip            [glob /scratch/jamey/xbsv/generated/xilinx/vc707/*/*.xci]
+set_attribute module $module1 ip            [glob /scratch/jamey/connectal/generated/xilinx/vc707/*/*.xci]
 set_attribute module $module1 synth        ${run.oocSynth}
 
 set instance "top_top_mm_dmaMMF_dmaMMF_mmTiles_0"

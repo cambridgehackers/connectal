@@ -51,9 +51,9 @@ int main(int argc, char *argv[])
 struct memrequest req;
 int rc;
 
-    int fd = open("/dev/xbsvtest", O_RDWR);
+    int fd = open("/dev/connectaltest", O_RDWR);
     if (fd == -1) {
-        printf("bsimhost: /dev/xbsvtest not found\n");
+        printf("bsimhost: /dev/connectaltest not found\n");
         return -1;
     }
 printf("[%s:%d] trying to connect to bsim\n", __FUNCTION__, __LINE__);

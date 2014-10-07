@@ -308,7 +308,7 @@ static struct memresponse downresp;
 extern int bsim_relay_running;
 extern int main_program_finished;
 
-ssize_t xbsv_kernel_read (struct file *f, char __user *arg, size_t len, loff_t *data)
+ssize_t connectal_kernel_read (struct file *f, char __user *arg, size_t len, loff_t *data)
 {
     int err;
     if (!bsim_relay_running)
@@ -327,7 +327,7 @@ ssize_t xbsv_kernel_read (struct file *f, char __user *arg, size_t len, loff_t *
     up(&bsim_avail);
     return len;
 }
-ssize_t xbsv_kernel_write (struct file *f, const char __user *arg, size_t len, loff_t *data)
+ssize_t connectal_kernel_write (struct file *f, const char __user *arg, size_t len, loff_t *data)
 {
     int err;
     if (len > sizeof(downresp))

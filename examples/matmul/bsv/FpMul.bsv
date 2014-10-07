@@ -1,6 +1,6 @@
 
 /*
-   /home/jamey/xbsv/scripts/importbvi.py
+   /home/jamey/connectal/scripts/importbvi.py
    -o
    FpMul.bsv
    -c

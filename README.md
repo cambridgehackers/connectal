@@ -15,11 +15,11 @@ called indications, but in fact they are symmetric.
 A logical request/indication pair is referred to as a portal".  An
 application can make use of multiple portals, which may be specified
 independently. A portal is specified by a BSV interface declaration,
-from which `xbsvgen` generates BSV and C++ wrappers and
+from which `connectalgen` generates BSV and C++ wrappers and
 proxies.
 
 XBSV has a mailing list:
-   https://groups.google.com/forum/#!forum/xbsv
+   https://groups.google.com/forum/#!forum/connectal
 
 
 Supported Platforms
@@ -36,7 +36,7 @@ Installation
 ------------
 
 0. Checkout out the following from github:
-    git clone git://github.com/cambridgehackers/xbsv
+    git clone git://github.com/cambridgehackers/connectal
 
 If you are generating code for an FPGA, check out fpgamake:
     git clone git://github.com/cambridgehackers/fpgamake
@@ -53,9 +53,9 @@ variable is set appropriately:
 
     export BLUESPECDIR=~/bluespec/Bluespec-2013.09.beta1/lib
 
-2. Install xbsv dependences. This installs ubuntu packages used by xbsv or during compilation:
+2. Install connectal dependences. This installs ubuntu packages used by connectal or during compilation:
 
-    cd xbsv;
+    cd connectal;
     sudo make install-dependences
 
 3. If you are using an FPGA attached to your machine, install the drivers:
@@ -163,7 +163,7 @@ Preparation for Kintex and Virtex boards
 Examples
 --------
 
-Generally cd to the top level directory xbsv then type
+Generally cd to the top level directory connectal then type
 
     make examples/examplename.<something>
 

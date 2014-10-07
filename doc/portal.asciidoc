@@ -25,7 +25,7 @@ symmetric.
 
 == Lexicon
 
-xbsv:: The name of the project, whose goal is to ease the task of
+connectal:: The name of the project, whose goal is to ease the task of
 building applications composed of hardware and software components.
 Programmers use bsv as an IDL to specify the interface between the
 hardware and software components.  A combination of generated code and
@@ -51,7 +51,7 @@ pcieportal/zynqportal:: these two loadable kernel modules implement the minimal 
 
 portalalloc:: This loadable kernel module exposes a subset of dma-buf functionality to user-space software (though a set of ioctl commands) to allocate and manage memory regions which can be shared between SW and HW processes.   Maintaining coherence of the allocated buffers between processes is not automatic: ioctl commands for flush/invalidate are provided to be invoked explicitly by the users if necessary. 
 
-xbsvgen:: The name of the interface compiler which takes as input the bsv interface specification along with a description of a target platform and generates logic in both HW and SW to support this interface across the communication fabric.
+connectalgen:: The name of the interface compiler which takes as input the bsv interface specification along with a description of a target platform and generates logic in both HW and SW to support this interface across the communication fabric.
 
 == Example setups:
 
@@ -162,7 +162,7 @@ An application developer will typically write the hardware part of the applicati
 
 The application developer is free to specify whatever hardware-software interface makes sense.
 
-Refer to https://github.com/cambridgehackers/xbsv
+Refer to https://github.com/cambridgehackers/connectal
 
 In the examples directory, see [simple](../examples/simple/).  The file [Simple.bsv](../examples/simple/Simple.bsv) defines the hardware, and testsimple.cpp supplies the software part. In this case, the software part is a test framework for the hardware.
 
@@ -222,10 +222,10 @@ signals back to software with heard and heard2 and so fort.  In the
 case of this example, say and say2 merely echo their arguments back to
 software.
 
-The definitions in the bsv file are used by the xbsv infrastructure ( a python program)  to automatically create corresponding c++ interfaces.
+The definitions in the bsv file are used by the connectal infrastructure ( a python program)  to automatically create corresponding c++ interfaces.
 
 ---------------------------------
-    ../../xbsvgen -Bbluesim -p bluesim -x mkBsimTop \
+    ../../connectalgen -Bbluesim -p bluesim -x mkBsimTop \
          -s2h SimpleRequest \
          -h2s SimpleIndication \
          -s testsimple.cpp \
@@ -237,7 +237,7 @@ Software to Hardware messages and which should be used for Hardware to
 Software messages. These interfaces are given on the command line for
 genxpprojfrombsv
 
-xbsvgen constructs all the hardware and software modules
+connectalgen constructs all the hardware and software modules
 needed to wire up portals. This is sort of like an RPC compiler for
 the hardware-software interface. However, unlike an RPC each method is
 asynchronous.
@@ -246,9 +246,9 @@ The user must also create a toplevel bsv module Top.bsv, which
 instantiates the user portals, the standard hardware environment, and
 any additional hardware modules.
 
-Rather than constructing the `xbsvgen` command line from
-scratch, the examples in xbsv use include
-[Makefile.xbsv](../Makefile.xbsv) and define some `make`
+Rather than constructing the `connectalgen` command line from
+scratch, the examples in connectal use include
+[Makefile.connectal](../Makefile.connectal) and define some `make`
 variables.
 
 Here is the Makefile for the `simple` example:
@@ -260,11 +260,11 @@ Here is the Makefile for the `simple` example:
     BSVFILES = Simple.bsv Top.bsv
     CPPFILES=testsimple.cpp
 
-    include ../../Makefile.xbsv
+    include ../../Makefile.connectal
 ---------------------------------
 
 
-Designs outside the xbsv directory using `xbsv` may also include `Makefile.xbsv`:
+Designs outside the connectal directory using `connectal` may also include `Makefile.connectal`:
 
 [source,makefile]
 ---------------------------------
@@ -273,7 +273,7 @@ Designs outside the xbsv directory using `xbsv` may also include `Makefile.xbsv`
     H2S = ...
     BSVFILES = ...
     CPPFILES = ...
-    include /scratch/xbsv/Makefile.xbsv
+    include /scratch/connectal/Makefile.connectal
 ---------------------------------
 
 
@@ -467,14 +467,14 @@ A top level `Makefile` is created:
     zedboard/Makefile
 ---------------------------------
 
-xbsvgen generates wrappers for software-to-hardware interfaces and proxies for hardware-to-software interfaces:
+connectalgen generates wrappers for software-to-hardware interfaces and proxies for hardware-to-software interfaces:
 
 ---------------------------------
     zedboard/sources/mkzynqtop/SimpleIndicationProxy.bsv
     zedboard/sources/mkzynqtop/SimpleRequestWrapper.bsv
 ---------------------------------
 
-XBSV supports Android on Zynq platforms, so xbsvgen generates `jni/Android.mk` for `ndk-build`.
+XBSV supports Android on Zynq platforms, so connectalgen generates `jni/Android.mk` for `ndk-build`.
 
 ---------------------------------
     zedboard/jni/Android.mk
@@ -511,7 +511,7 @@ XBSV copies in standard and specified constraints files:
 
 XBSV generates several TCL files to run `vivado`. 
 
-The `board.tcl` file specifies `partname`, `boardname`, and `xbsvdir` for the other TCL scripts.
+The `board.tcl` file specifies `partname`, `boardname`, and `connectaldir` for the other TCL scripts.
 
 ---------------------------------
     zedboard/board.tcl

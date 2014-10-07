@@ -100,7 +100,7 @@ set_attribute ooc $instance   preservation routing
 set module2 "mkPCIExpressEndpointX7"
 add_module $module2
 set_attribute module $module2 vlog          [concat [glob $rtlDir/lib/*.v] [list $rtlDir/ep7/mkPCIExpressEndpointX7.v]]
-set_attribute module $module2 ip            [glob /scratch/jamey/xbsv/generated/xilinx/vc707/*/*.xci]
+set_attribute module $module2 ip            [glob /scratch/jamey/connectal/generated/xilinx/vc707/*/*.xci]
 set_attribute module $module2 synth        ${run.oocSynth}
 
 set instance "ep7"

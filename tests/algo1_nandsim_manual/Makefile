@@ -10,4 +10,4 @@ CPPFILES=ss.cpp ss_hw.cpp
 CPPFILES2=nandsim_manual.c
 XBSVFLAGS += -D2 NO_CPP_PORTAL_CODE -lm -lblkid
 
-include ../../Makefile.xbsv
+include ../../Makefile.connectal

@@ -1,4 +1,4 @@
 #
-# rule for xbsv kernel test module
+# rule for connectal kernel test module
 #
-KERNEL=="xbsvtest", MODE="0666"
+KERNEL=="connectaltest", MODE="0666"
