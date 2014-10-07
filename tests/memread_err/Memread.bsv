@@ -47,7 +47,8 @@ interface MemreadIndication;
    method Action readDone(Bit#(32) mismatchCount);
 endinterface
 
-module mkMemread#(MemreadIndication indication) (Memread#(4));
+typedef 4 NumMasters;
+module mkMemread#(MemreadIndication indication) (Memread#(NumMasters));
 
    Reg#(SGLId)     pointer <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);
@@ -59,13 +60,13 @@ module mkMemread#(MemreadIndication indication) (Memread#(4));
    Reg#(Bit#(32))    mismatchAccum <- mkReg(0);
    FIFO#(void)           startFifo <- mkFIFO;
    
-   Vector#(4,Reg#(Bit#(32)))        srcGens <- replicateM(mkReg(0));
-   Vector#(4,Reg#(Bit#(32))) mismatchCounts <- replicateM(mkReg(0));
-   Vector#(4,MemreadEngine#(64,1))      res <- replicateM(mkMemreadEngine);
+   Vector#(NumMasters,Reg#(Bit#(32)))        srcGens <- replicateM(mkReg(0));
+   Vector#(NumMasters,Reg#(Bit#(32))) mismatchCounts <- replicateM(mkReg(0));
+   Vector#(NumMasters,MemreadEngine#(64,1))      res <- replicateM(mkMemreadEngine);
    
    Stmt startStmt = seq
 		       startBase <= 0;
-		       for(startPtr <= 0; startPtr < 4; startPtr <= startPtr+1)
+		       for(startPtr <= 0; startPtr < fromInteger(valueOf(NumMasters)); startPtr <= startPtr+1)
 			  (action
 			      let cmd = MemengineCmd{sglId:pointer, base:extend(startBase), len:numWords, burstLen:truncate(burstLen*4)};
 			      res[startPtr].readServers[0].request.put(cmd);
@@ -77,7 +78,7 @@ module mkMemread#(MemreadIndication indication) (Memread#(4));
 
    Stmt finishStmt = seq
 			mismatchAccum <= 0;
-			for(finishPtr <= 0; finishPtr < 4; finishPtr <= finishPtr+1)
+			for(finishPtr <= 0; finishPtr < fromInteger(valueOf(NumMasters)); finishPtr <= finishPtr+1)
 			   mismatchAccum <= mismatchAccum + mismatchCounts[finishPtr];
 			indication.readDone(mismatchAccum);
 			//$display("finishStmt: %h", mismatchAccum);
@@ -91,7 +92,7 @@ module mkMemread#(MemreadIndication indication) (Memread#(4));
    endrule
    
    rule finish;
-      for(Integer i = 0; i < 4; i=i+1) begin
+      for(Integer i = 0; i < valueOf(NumMasters); i=i+1) begin
 	 //$display("finish: %d (%d)", i, iterCnt);
 	 let rv <- res[i].readServers[0].response.get;
       end
@@ -101,7 +102,7 @@ module mkMemread#(MemreadIndication indication) (Memread#(4));
 	 startFifo.enq(?);
    endrule
    
-   for(Integer i = 0; i < 4; i=i+1)
+   for(Integer i = 0; i < valueOf(NumMasters); i=i+1)
       rule check;
 	 let v <- toGet(res[i].dataPipes[0]).get;
 	 let expectedV = {srcGens[i]+1,srcGens[i]};
@@ -125,7 +126,7 @@ module mkMemread#(MemreadIndication indication) (Memread#(4));
 	 numWords  <= nw;
 	 burstLen  <= bl;
 	 iterCnt <= ic;
-	 for(Integer i = 0; i < 4; i=i+1) begin
+	 for(Integer i = 0; i < valueOf(NumMasters); i=i+1) begin
 	    mismatchCounts[i] <= 0;
 	    srcGens[i] <= fromInteger(i)*(nw>>2);
 	 end

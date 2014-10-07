@@ -44,17 +44,10 @@ typedef struct {
 
 typedef enum {
    DmaErrorNone,
-   //DmaErrorAddrResponse,
-   DmaErrorBadPointer1,
-   DmaErrorBadPointer2,
-   DmaErrorBadPointer3,
    DmaErrorBadPointer4,
    DmaErrorBadPointer5,
    DmaErrorBadAddrTrans,
-   DmaErrorBadPageSize,
-   DmaErrorBadNumberEntries,
-   DmaErrorBadAddr,
-   DmaErrorTagMismatch
+   DmaErrorBadAddr
    } DmaErrorType deriving (Bits);
 
 //
