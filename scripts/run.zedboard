@@ -39,13 +39,13 @@ adb -s $ANDROID_SERIAL shell "pwd"
 adb -s $ANDROID_SERIAL shell touch /mnt/sdcard/tmp/perf.monkit
 if [ "$XBSV_DEBUG" != "" ]; then
 adb -s $ANDROID_SERIAL forward tcp:5039 tcp:5039   
-adb -s $ANDROID_SERIAL shell gdbserver :5039 /mnt/sdcard/tmp/android_exe &
+adb -s $ANDROID_SERIAL shell gdbserver :5039 /mnt/sdcard/tmp/android.exe &
 TEMP=`dirname $2`/../..
 TEMPDIR=$TEMP/obj/local/armeabi
 TEMPSCRIPT=$TEMP/xxfoo
 echo set solib-search-path $TEMPDIR >$TEMPSCRIPT
 echo target remote :5039 >>$TEMPSCRIPT
-`ndk-which gdb` --command=$TEMPSCRIPT $TEMPDIR/android_exe
+`ndk-which gdb` --command=$TEMPSCRIPT $TEMPDIR/android.exe
 else
 adb -s $ANDROID_SERIAL shell "cd /mnt/sdcard/tmp/; rm -f /mnt/sdcard/tmp/exit.status; /mnt/sdcard/timelimit -t $TIMELIMIT ./$exename $3; echo \$? > /mnt/sdcard/tmp/exit.status"
 adb -s $ANDROID_SERIAL pull /mnt/sdcard/tmp/exit.status ./

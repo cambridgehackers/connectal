@@ -90,9 +90,9 @@ else
     endif
   else
     ifeq ($(XBSV_DEBUG),1)
-      exe: android_exe_debug
+      exe: android.debug.exe
     else
-      exe: android_exe
+      exe: android.exe
     endif
   endif
 endif
@@ -134,13 +134,13 @@ endif
 	$(XBSVDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
 endif
 
-android_exe: prepare_bin_target
+android.exe: prepare_bin_target
 	ndk-build $(XBSV_NDK_PARAM)
-	@cp -v libs/armeabi/android_exe bin
+	@cp -v libs/armeabi/android.exe bin
 
-android_exe_debug: prepare_bin_target
+android.debug.exe: prepare_bin_target
 	ndk-build $(XBSV_NDK_PARAM) -B V=1 NDK_DEBUG=1
-	@cp -v libs/armeabi/android_exe bin
+	@cp -v libs/armeabi/android.exe bin
 
 run:
 ifeq ($(BOARD),bluesim)
@@ -151,7 +151,7 @@ ifeq ($(BOARD),bluesim)
     endif
 else
     ifeq ($(OS),android)
-	$(XBSVDIR)/scripts/run.zedboard bin/mkTop.xdevcfg.bin.gz bin/android_exe $(RUN_ARGS)
+	$(XBSVDIR)/scripts/run.zedboard bin/mkTop.xdevcfg.bin.gz bin/android.exe $(RUN_ARGS)
     else
 	$(XBSVDIR)/scripts/run.pcietest bin/mk*.bin.gz bin/ubuntu_exe $(RUN_ARGS)
     endif

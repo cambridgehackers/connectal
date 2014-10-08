@@ -152,7 +152,7 @@ PORTAL_SRC_FILES := $(addprefix %(xbsvdir)s/cpp/, portal.c poller.cpp sock_utils
 LOCAL_SRC_FILES := $(APP_SRC_FILES) $(PORTAL_SRC_FILES)
 
 LOCAL_PATH :=
-LOCAL_MODULE := android_exe
+LOCAL_MODULE := android.exe
 LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS := -llog %(clibdirs)s %(clibs)s %(clibfiles)s
 LOCAL_CPPFLAGS := "-march=armv7-a"
