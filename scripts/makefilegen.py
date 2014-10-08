@@ -184,11 +184,11 @@ LDLIBS := %(clibdirs)s %(clibs)s %(clibfiles)s -pthread
 BSIM_EXE_CXX_FILES = BsimDma.cxx BsimCtrl.cxx TlpReplay.cxx
 BSIM_EXE_CXX = $(addprefix %(xbsvdir)s/cpp/, $(BSIM_EXE_CXX_FILES))
 
-ubuntu_exe: $(SOURCES)
-	$(Q)g++ $(CFLAGS) -o ubuntu_exe $(SOURCES) $(LDLIBS)
+ubuntu.exe: $(SOURCES)
+	$(Q)g++ $(CFLAGS) -o ubuntu.exe $(SOURCES) $(LDLIBS)
 
-ubuntu_exe2: $(SOURCES2)
-	$(Q)g++ $(CFLAGS) $(CFLAGS2) -o ubuntu_exe2 $(SOURCES2) $(LDLIBS)
+ubuntu.exe2: $(SOURCES2)
+	$(Q)g++ $(CFLAGS) $(CFLAGS2) -o ubuntu.exe2 $(SOURCES2) $(LDLIBS)
 
 bsim_exe: $(SOURCES)
 	$(Q)g++ $(CFLAGS_COMMON) -o bsim_exe -DBSIM $(SOURCES) $(BSIM_EXE_CXX) $(LDLIBS)

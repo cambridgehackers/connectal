@@ -68,7 +68,7 @@ endif
 all bits verilog implementation bsim xsim xsimrun: gentarget prebuild
 	make -C $(BOARD) --no-print-directory $@
 
-android.exe bsim_exe ubuntu_exe exe: gentarget
+android.exe bsim_exe ubuntu.exe exe: gentarget
 	make -C $(BOARD) --no-print-directory $@
 
 NEEDSPCIE_ac701=1

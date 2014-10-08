@@ -84,9 +84,9 @@ endif
 else
   ifneq ($(OS),android)
     ifeq ($(RUNSOURCE2),)
-      exe: ubuntu_exe
+      exe: ubuntu.exe
     else
-      exe: ubuntu_exe ubuntu_exe2
+      exe: ubuntu.exe ubuntu.exe2
     endif
   else
     ifeq ($(XBSV_DEBUG),1)
@@ -105,13 +105,13 @@ bsim_exe2: prepare_bin_target
 	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk bsim_exe2
 	@cp -v jni/bsim_exe2 bin
 
-ubuntu_exe: prepare_bin_target
-	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk ubuntu_exe
-	@cp -v jni/ubuntu_exe bin
+ubuntu.exe: prepare_bin_target
+	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk ubuntu.exe
+	@cp -v jni/ubuntu.exe bin
 
-ubuntu_exe2: prepare_bin_target
-	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk ubuntu_exe2
-	@cp -v jni/ubuntu_exe2 bin
+ubuntu.exe2: prepare_bin_target
+	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk ubuntu.exe2
+	@cp -v jni/ubuntu.exe2 bin
 
 ifneq ($(BOARD),bluesim)
 ifneq ($(OS),android)
@@ -153,7 +153,7 @@ else
     ifeq ($(OS),android)
 	$(XBSVDIR)/scripts/run.zedboard bin/mkTop.xdevcfg.bin.gz bin/android.exe $(RUN_ARGS)
     else
-	$(XBSVDIR)/scripts/run.pcietest bin/mk*.bin.gz bin/ubuntu_exe $(RUN_ARGS)
+	$(XBSVDIR)/scripts/run.pcietest bin/mk*.bin.gz bin/ubuntu.exe $(RUN_ARGS)
     endif
 endif
 
