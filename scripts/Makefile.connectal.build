@@ -67,7 +67,9 @@ XVLOGFLAGS =
 
 ifeq ($(USE_BUILDCACHE),1)
 BUILDCACHE=$(shell cd $(CONNECTALDIR)/..; /bin/pwd)/buildcache/buildcache
+ifeq ("$(BUILDCACHE_CACHEDIR)", "")
 BUILDCACHE_CACHEDIR=$(shell cd $(CONNECTALDIR)/..; /bin/pwd)/fpgamake-cache
+endif
 endif
 
 RUN_BSC = BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) bsc $(BSC_QUIET) $(BSVDEFINES) $(BSCFLAGS_COMMON) $(BSCFLAGS_PROJECT) -p +:$(BSVPATH):$(DUT)/
