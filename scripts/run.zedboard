@@ -22,16 +22,27 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import adb.adb
-import adb.common
 import os
 import socket
+import subprocess
 import sys
+
+scriptdir=os.path.dirname(sys.argv[0])
+sys.path.append(scriptdir)
+
+import adb.adb
+import adb.common
 
 def run_zedboard(bitfile, androidexe, additional_files):
     timelimit = 600
 
-    ipaddr = os.environ['RUNPARAM']
+    if os.environ.has_key('RUNPARAM'):
+        ipaddr = os.environ['RUNPARAM']
+    else:
+        p = subprocess.Popen('checkip')
+        ipaddr = p.stdout.read()
+        ipaddr = ipaddr.replace('\n', '')
+        ipaddr = ipaddr.replace('\r', '')
     device_serial = '%s:5555' % (ipaddr)
 
     connected = False
