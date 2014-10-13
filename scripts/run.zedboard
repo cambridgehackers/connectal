@@ -22,8 +22,8 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import adb
-import common
+import adb.adb
+import adb.common
 import os
 import socket
 import sys
@@ -34,7 +34,7 @@ def run_zedboard(bitfile, androidexe, additional_files):
     connected = False
     while not connected:
         try:
-            connection = adb.AdbCommands.Connect(common.TcpHandle('172.17.1.185'))
+            connection = adb.AdbCommands.ConnectDevice(serial='172.17.1.185')
             connected = True
         except socket.error:
             #print 'socket.error', sys.exc_info()
