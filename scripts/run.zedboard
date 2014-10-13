@@ -31,7 +31,7 @@ import sys
 def run_zedboard(bitfile, androidexe, additional_files):
     timelimit = 600
 
-    ipaddr = os.environ('RUNPARAM')
+    ipaddr = os.environ['RUNPARAM']
     device_serial = '%s:5555' % (ipaddr)
 
     connected = False
