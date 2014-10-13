@@ -31,10 +31,13 @@ import sys
 def run_zedboard(bitfile, androidexe, additional_files):
     timelimit = 600
 
+    ipaddr = os.environ('RUNPARAM')
+    device_serial = '%s:5555' % (ipaddr)
+
     connected = False
     while not connected:
         try:
-            connection = adb.AdbCommands.ConnectDevice(serial='172.17.1.185')
+            connection = adb.AdbCommands.ConnectDevice(serial=device_serial)
             connected = True
         except socket.error:
             #print 'socket.error', sys.exc_info()
@@ -49,7 +52,7 @@ def run_zedboard(bitfile, androidexe, additional_files):
     connected = False
     while not connected:
         try:
-            connection = adb.AdbCommands.ConnectDevice(serial='172.17.1.185:5555')
+            connection = adb.AdbCommands.ConnectDevice(serial=device_serial)
             connected = True
         except socket.error:
             #print 'socket.error', sys.exc_info()
