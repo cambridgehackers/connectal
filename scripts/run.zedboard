@@ -30,7 +30,7 @@ import sys
 scriptdir=os.path.dirname(sys.argv[0])
 sys.path.append(scriptdir)
 
-from adb import adb
+from adb import adb_commands
 from adb import common
 
 def run_zedboard(bitfile, androidexe, additional_files):
@@ -48,7 +48,7 @@ def run_zedboard(bitfile, androidexe, additional_files):
     connected = False
     while not connected:
         try:
-            connection = adb.AdbCommands.ConnectDevice(serial=device_serial)
+            connection = adb_commands.AdbCommands.ConnectDevice(serial=device_serial)
             connected = True
         except socket.error:
             #print('socket.error', sys.exc_info())
@@ -63,7 +63,7 @@ def run_zedboard(bitfile, androidexe, additional_files):
     connected = False
     while not connected:
         try:
-            connection = adb.AdbCommands.ConnectDevice(serial=device_serial)
+            connection = adb_commands.AdbCommands.ConnectDevice(serial=device_serial)
             connected = True
         except socket.error:
             #print('socket.error', sys.exc_info())

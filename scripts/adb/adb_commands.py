@@ -30,13 +30,17 @@ import adb_protocol
 import common
 import filesync_protocol
 
-# From adb.h
-CLASS = 0xFF
-SUBCLASS = 0x42
-PROTOCOL = 0x01
-# pylint: disable=invalid-name
-DeviceIsAvailable = common.InterfaceMatcher(CLASS, SUBCLASS, PROTOCOL)
-
+try:
+    import libusb1
+    # From adb.h
+    CLASS = 0xFF
+    SUBCLASS = 0x42
+    PROTOCOL = 0x01
+    # pylint: disable=invalid-name
+    DeviceIsAvailable = common.InterfaceMatcher(CLASS, SUBCLASS, PROTOCOL)
+except:
+    # no libusb1 support
+    pass
 
 try:
     from M2Crypto import RSA
