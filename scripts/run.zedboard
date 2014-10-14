@@ -22,6 +22,7 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import argparse
 import os
 import socket
 import subprocess
@@ -33,12 +34,45 @@ sys.path.append(scriptdir)
 from adb import adb_commands
 from adb import common
 
-def run_zedboard(bitfile, androidexe, additional_files):
-    timelimit = 600
+timelimit=600
+if os.environ.has_key('RUNTIMELIMIT'):
+    timelimit = int(os.environ['RUNTIMELIMIT'])
+buildbot_build=None
+if os.environ.has_key('BUILDBOT_BUILD_NUMBER'):
+    buildbot_build = os.environ['BUILDBOT_BUILD_NUMBER']
 
-    if os.environ.has_key('RUNPARAM'):
-        ipaddr = os.environ['RUNPARAM']
-    else:
+if os.environ.has_key('RUNPARAM'):
+    ipaddr = os.environ['RUNPARAM']
+else:
+    ipaddr = None
+
+buildbot_url='http://connectalbuild.qrclab.com/archive/'
+if os.environ.has_key('BUILDBOT_URL'):
+    buildbot_url=os.environ['BUILDBOT_URL']
+
+epilog = '''
+Will download the bit file and executable from buildbot if
+buildbot-url, project, and build-number are specified.
+
+The buildbot-url defaults to %(buildbot_url)s.
+''' % {
+    'buildbot_url': buildbot_url
+}
+
+argparser = argparse.ArgumentParser("Run Connectal apps on Android Zynq boards.",
+                                    epilog=epilog)
+argparser.add_argument('bitfile', help='Gzipped binary bit file for the FPGA', nargs='?')
+argparser.add_argument('androidexe', help='Android executable for the Zynq', nargs='?')
+argparser.add_argument('file', help='Additional files to transfer to the target', nargs='*', default=[])
+argparser.add_argument('-t', '--timelimit', type=int, default=timelimit, help='Time limit for jobs running on the zedboard. Defaults to value of environment variable RUNTIMELIMIT or 600 seconds.')
+argparser.add_argument('-a', '--ipaddr', default=ipaddr, help='IP address of target board')
+argparser.add_argument('-u', '--buildbot-url', default=buildbot_url, help='Base URL of buildbot.')
+argparser.add_argument('-p', '--project', help='Name of project on buildbot.')
+argparser.add_argument('-b', '--build-number', help='Build number on buildbot.')
+
+def run_zedboard(bitfile, androidexe, additional_files):
+    ipaddr = options.ipaddr
+    if not ipaddr:
         p = subprocess.Popen('checkip')
         ipaddr = p.stdout.read()
         ipaddr = ipaddr.replace('\n', '')
@@ -82,16 +116,16 @@ def run_zedboard(bitfile, androidexe, additional_files):
     print(connection.Shell("insmod /mnt/sdcard/zynqportal.ko"))
     print(connection.Shell("gzip -dc /mnt/sdcard/tmp/%s >/dev/xdevcfg" % os.path.basename(bitfile)))
     print(connection.Shell("touch /mnt/sdcard/tmp/perf.monkit"))
-    print(connection.Shell("cd /mnt/sdcard/tmp/; rm -f /mnt/sdcard/tmp/exit.status; /mnt/sdcard/timelimit -t %d ./%s %s; echo $? > /mnt/sdcard/tmp/exit.status" % (timelimit, os.path.basename(androidexe), ' '.join([os.path.basename(f) for f in sys.argv[3:]]))))
+    print(connection.Shell("cd /mnt/sdcard/tmp/; rm -f /mnt/sdcard/tmp/exit.status; /mnt/sdcard/timelimit -t %d ./%s %s; echo $? > /mnt/sdcard/tmp/exit.status"
+                           % (options.timelimit, os.path.basename(androidexe), ' '.join([os.path.basename(f) for f in additional_files]))))
     connection.Pull('/mnt/sdcard/tmp/exit.status', 'exit.status')
     connection.Pull('/mnt/sdcard/tmp/perf.monkit', 'perf.monkit')
-    print(connection.Shell('rm -vf %s' % ' '.join([os.path.basename(f) for f in sys.argv[1:]])))
+    print(connection.Shell('rm -vf %s' % ' '.join([os.path.basename(f) for f in [bitfile, androidexe] + additional_files])))
     status = int(open('exit.status').read())
+    print('status=%d' % status)
     connection.Reboot()
     sys.exit(status)
 
 if __name__ == '__main__':
-    bitfile = sys.argv[1]
-    androidexe = sys.argv[2]
-    additional_files = sys.argv[3:]
-    run_zedboard(bitfile, androidexe, additional_files)
+    options = argparser.parse_args()
+    run_zedboard(options.bitfile, options.androidexe, options.file)
