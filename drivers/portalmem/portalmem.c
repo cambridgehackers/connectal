@@ -165,7 +165,7 @@ static int pa_dma_buf_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
   vma->vm_ops = &custom_vm_ops;
   vma->vm_private_data = buffer;
   printk("pa_dma_buf_mmap %p %zd\n", (dmabuf->file), dmabuf->file->f_count.counter);
-#if 0
+#if 1
   // this is disabled so that ld/strex work correctly on arm (in C: __gnu_cxx::__exchange_and_add )
   // According to Arm ARM A3.4.5: "LDREX and STREX ... only on memory with Normal"
   // According to Arm ARM B3.7.2: TEX[2:0]/C/B == 000/0/1 -> "Device", 001/1/1 -> "Normal"
