@@ -61,7 +61,7 @@ void initPortal(unsigned long id){
 }
 
 void interruptLevel(uint32_t ivalue){
-    static int last_level;
+    static uint32_t last_level;
 
     if (ivalue != last_level) {
         last_level = ivalue;
@@ -104,11 +104,11 @@ int pareff_fd(int *fd)
               if (head.req.write_flag)
 	          fprintf(stderr, ", d=%8x:", head.req.data);
               else
-	          fprintf(stderr, "            :", head.req.data);
+	          fprintf(stderr, "            :%8x", head.req.data);
           }
 	}
     }
-    return head.valid && head.inflight == 1 && head.req.write_flag == rr;
+    return head.valid && head.inflight == 1 && head.req.write_flag == (int)rr;
   }
 
   long processAddr32(int rr){

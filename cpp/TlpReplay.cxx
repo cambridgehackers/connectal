@@ -108,7 +108,7 @@ extern "C" {
     // fprintf(stderr, "\n");
 
     // byte-swapping for bsim compatability
-    for(int i = i; i < 20; i++){
+    for(int i = 0; i < 20; i++){
       ((uint8_t*)tlp)[19-i] = tlp_packets[i];
     }	
     tlp_packets += 20;
