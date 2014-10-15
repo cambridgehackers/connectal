@@ -27,7 +27,13 @@
 
 #define DRIVER_NAME "portalmem"
 #define DRIVER_DESCRIPTION "Memory management between HW and SW processes"
+#ifdef DRIVER_VERSION_RAW
+#define xstr(a) str(a)
+#define str(a) #a
+#define DRIVER_VERSION xstr(DRIVER_VERSION_RAW)
+#else
 #define DRIVER_VERSION "0.1"
+#endif
 
 static struct miscdevice miscdev;
 

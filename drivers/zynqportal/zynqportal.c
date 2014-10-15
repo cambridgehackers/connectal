@@ -34,7 +34,13 @@
 
 #define DRIVER_NAME        "zynqportal"
 #define DRIVER_DESCRIPTION "Generic userspace hardware bridge"
+#ifdef DRIVER_VERSION_RAW
+#define xstr(a) str(a)
+#define str(a) #a
+#define DRIVER_VERSION xstr(DRIVER_VERSION_RAW)
+#else
 #define DRIVER_VERSION     "0.1"
+#endif
 #define PORTAL_BASE_OFFSET         (1 << 16)
 #define MSB_OFFSET 0x210
 #define LSB_OFFSET 0x214
