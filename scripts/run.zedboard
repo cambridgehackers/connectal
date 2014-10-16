@@ -105,6 +105,7 @@ def run_zedboard(bitfile, androidexe, additional_files):
 
     #connection.Remount()
     connection.Shell('mkdir -p /mnt/sdcard/tmp')
+    connection.Shell('mount -t tmpfs tmpfs /mnt/sdcard/tmp')
     connection.Push(bitfile, '/mnt/sdcard/tmp/%s' % os.path.basename(bitfile))
     connection.Push(androidexe, '/mnt/sdcard/tmp/%s' % os.path.basename(androidexe))
     connection.Shell('chmod agu+rx /mnt/sdcard/tmp/%s' % os.path.basename(androidexe))
@@ -123,7 +124,6 @@ def run_zedboard(bitfile, androidexe, additional_files):
     print(connection.Shell('rm -vf %s' % ' '.join([os.path.basename(f) for f in [bitfile, androidexe] + additional_files])))
     status = int(open('exit.status').read())
     print('status=%d' % status)
-    connection.Reboot()
     sys.exit(status)
 
 if __name__ == '__main__':
