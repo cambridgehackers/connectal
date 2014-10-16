@@ -29,6 +29,9 @@ import MIMO::*;
 import DefaultValue::*;
 import Gearbox::*;
 
+typedef Tuple3#(x,x,x) Tripple#(type x);
+typedef Tuple2#(x,x)   Pair#(type x);
+
 interface PipeIn#(type a);
    method Action enq(a v);
    method Bool notFull();

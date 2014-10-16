@@ -26,7 +26,7 @@ import MMUConfigIndicationProxy::*;
 import Strstr::*;
 
 typedef enum {StrstrIndication, StrstrRequest, HostDmaDebugIndication, HostDmaDebugRequest, HostMMUConfigRequest, HostMMUConfigIndication} IfcNames deriving (Eq,Bits);
-typedef 1 DegPar;
+typedef 8 DegPar;
 
 
 module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));

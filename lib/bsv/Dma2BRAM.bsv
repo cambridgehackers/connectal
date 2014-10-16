@@ -138,9 +138,10 @@ module mkBRAMWriter#(Integer id,
    Reset rst <- exposeCurrentReset;
    Reg#(Bit#(cntW)) j <- mkReg(maxBound);
    Reg#(Bit#(cntW)) n <- mkReg(0);
-   Gearbox#(nd,1,d) gb <- mkNto1Gearbox(clk,rst,clk,rst); 
+   Gearbox#(nd,1,d) gb <- mkNto1Gearbox(clk,rst,clk,rst);
+   Reg#(Bool) running <- mkReg(False);
    
-   rule feed_gearbox;
+   rule feed_gearbox if (running);
       let v <- toGet(readPipe).get;
       if(verbose) $display("mkBRAMWriter::feed_gearbox (%d) %x", id, v);
       gb.enq(unpack(v));
@@ -158,7 +159,7 @@ module mkBRAMWriter#(Integer id,
       if(verbose) $display("mkBRAMWriter::discard (%d) %x", id, j);
    endrule
    
-   method Action start(SGLId h, Bit#(ObjectOffsetSize) b, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
+   method Action start(SGLId h, Bit#(ObjectOffsetSize) b, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx) if (!running);
       if(verbose) $display("mkBRAMWriter::start (%d) %d, %d, %d %d", id, h, b, start_idx, finish_idx);
       Bit#(BurstLenSize) burst_len_bytes = fromInteger(valueOf(bwbytes));
 
@@ -170,11 +171,13 @@ module mkBRAMWriter#(Integer id,
       if(verbose) $display("mkBRAMWriter::start (%d) %d, %d", id, req_len_bytes, burst_len_bytes);
       j <= extend(start_idx);
       n <= extend(finish_idx);
+      running <= True;
    endmethod
    
-   method ActionValue#(Bool) finish();
+   method ActionValue#(Bool) finish() if (running);
       if(verbose) $display("mkBRAMWriter::finish (%d)", id);
       let rv <- readServer.response.get;
+      running <= False;
       return True;
    endmethod
    

@@ -26,6 +26,8 @@ import SpecialFIFOs::*;
 import Vector::*;
 import BRAM::*;
 import Gearbox::*;
+import Connectable::*;
+import StmtFSM::*;
 
 import AxiMasterSlave::*;
 import MemTypes::*;
@@ -34,13 +36,12 @@ import MemreadEngine::*;
 import Pipe::*;
 
 interface StrstrRequest;
-   method Action setup(Bit#(32) needlePointer, Bit#(32) mpNextPointer, Bit#(32) needle_len);
-   method Action search(Bit#(32) haystackPointer, Bit#(32) haystack_len, Bit#(32) iter_cnt);
+   method Action setup(Bit#(32) needleSGLId, Bit#(32) mpNextSGLId, Bit#(32) needle_len);
+   method Action search(Bit#(32) haystackSGLId, Bit#(32) haystack_len, Bit#(32) iter_cnt);
 endinterface
 
 interface StrstrIndication;
    method Action searchResult(Int#(32) v);
-   method Action setupComplete();
 endinterface
 
 interface Strstr#(numeric type p, numeric type busWidth);
@@ -48,6 +49,9 @@ interface Strstr#(numeric type p, numeric type busWidth);
    interface ObjectReadClient#(busWidth) config_read_client;
    interface ObjectReadClient#(busWidth) haystack_read_client;
 endinterface
+
+// I can't belive we still have to do this shit
+function Bool my_or(Bool a, Bool b) = a || b;
 
 module mkStrstr#(StrstrIndication indication)(Strstr#(p,busWidth))
    provisos(Add#(a__, 8, busWidth),
@@ -59,7 +63,8 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(p,busWidth))
 	    Mul#(TDiv#(busWidth, 32), 32, busWidth),
 	    Log#(p,lp),
 	    Add#(e__, TLog#(nc), 32),
-	    Add#(f__, TLog#(TDiv#(busWidth, 32)), 32)
+	    Add#(f__, TLog#(TDiv#(busWidth, 32)), 32),
+	    ReducePipe#(p, Bool)
 	    
 	    // these were added for the readengines
 	    ,Add#(k__, TLog#(TMul#(p, 2)), TLog#(TMul#(1, TMul#(p, 2))))
@@ -76,77 +81,121 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(p,busWidth))
 
 	    );
    
-
-   let verbose = False;
+   let verbose = True;
 
    Reg#(Bit#(32)) needleLen <- mkReg(0);
    MemreadEngineV#(busWidth, 1, TMul#(p,2)) config_re <- mkMemreadEngine;
    MemreadEngineV#(busWidth, 1, TMul#(p,1)) haystack_re <- mkMemreadEngine;
-
+   
    Reg#(Bit#(32)) iterCnt <- mkReg(0);
-   Reg#(Bit#(32)) haystackPointer <- mkReg(0);
+   Reg#(Bit#(32)) needleSGLId <- mkReg(0);
+   Reg#(Bit#(32)) mpNextSGLId <- mkReg(0);
+   Reg#(Bit#(32)) haystackSGLId <- mkReg(0);
    Reg#(Bit#(32)) haystackLen <- mkReg(0);
    FIFO#(void) restartf <- mkSizedFIFO(1);
+   Reg#(Bit#(32)) restartCnt <- mkReg(0);
+   Reg#(Bit#(32)) restartBase <- mkReg(0);
+   Reg#(Bit#(32)) setupCnt <- mkReg(0);
 	       
    Vector#(p, MPEngine#(busWidth)) engines;
+   Vector#(p, PipeOut#(Bool)) donePipes;
+   Vector#(p, PipeOut#(Int#(32))) locPipes;
+
+   FIFO#(Tripple#(Bit#(32))) searchFIFO <- mkFIFO;
+   PipeOut#(Tripple#(Bit#(32))) sp0 <- mkPipeOut(toGet(searchFIFO));
+   Vector#(p,PipeOut#(Tripple#(Bit#(32)))) searchPipeUnfunnel <- mkUnfunnelPipes(cons(sp0,nil));
+
+   FIFO#(Tripple#(Bit#(32))) setupFIFO <- mkFIFO;
+   PipeOut#(Tripple#(Bit#(32))) sp1 <- mkPipeOut(toGet(setupFIFO));
+   Vector#(p,PipeOut#(Tripple#(Bit#(32)))) setupPipeUnfunnel <- mkUnfunnelPipes(cons(sp1,nil));
+
    for(Integer i = 0; i < valueOf(p); i=i+1) begin 
       let config_rss = takeAt(i*2, config_re.read_servers);
       let haystack_rs = haystack_re.read_servers[i];
       engines[i] <- mkMPEngine(cons(haystack_rs,config_rss));
+      donePipes[i] = engines[i].done;
+      locPipes[i] = engines[i].loc;
+      mkConnection(searchPipeUnfunnel[i],engines[i].search);
+      mkConnection(setupPipeUnfunnel[i],engines[i].setup);
    end
-   
-   rule confr;
-      for(Integer i = 0; i < valueOf(p); i=i+1) 
-	 let rv <- engines[i].finishSetup;
-      indication.setupComplete;
+
+   PipeOut#(Bool) donePipe <- mkReducePipes(uncurry(my_or), donePipes);
+   PipeOut#(Int#(32)) locPipe <- mkFunnelPipes1(locPipes);
+
+   // send results back to SW
+   rule resr;
+      let rv <- toGet(locPipe).get;
+      indication.searchResult(rv);
+      if (verbose) $display("strstr search result %d", rv);
    endrule
    
-   for(Integer i = 0; i < valueOf(p); i=i+1)
-      rule resr;
-	 let rv <- engines[i].loc.get;
-	 indication.searchResult(rv);
-	 if (verbose) $display("strstr search result %d", rv);
-      endrule
+   // restart the search 'iterCnt' times
+   let lpv = fromInteger(valueOf(lp));
+   let pv = fromInteger(valueOf(p));
+   Stmt restartStmt = 
+   seq
+      while(True) seq
+	 action
+	    if (verbose) $display("restartStmt (begin) %d", iterCnt);
+	    restartf.deq;
+	    iterCnt <= iterCnt-1;
+	    restartCnt <= 0;
+	    restartBase <= 0;
+	 endaction
+	 while (restartCnt < pv-1) action
+	    let tup = tuple3(haystackSGLId, (haystackLen>>lpv)+needleLen, restartBase);
+	    searchFIFO.enq(tup);
+	    restartBase <= restartBase + (haystackLen>>lpv);
+	    restartCnt <= restartCnt+1;
+	    if (verbose) $display(fshow("restartStmt ")+fshow(tup)+fshow(" (mid)"));
+	 endaction
+	 action
+	    let tup = tuple3(haystackSGLId, haystackLen>>lpv, restartBase);
+	    searchFIFO.enq(tup);
+	    if (verbose) $display(fshow("restartStmt ")+fshow(tup)+fshow(" (end)"));
+	 endaction
+      endseq
+   endseq;
+   mkAutoFSM(restartStmt);
    
-   rule restartr(iterCnt > 0);
-      if (verbose) $display("restartr %d", iterCnt);
-      restartf.deq;
-      iterCnt <= iterCnt-1;
-      let pv = fromInteger(valueOf(p));
-      let lpv = fromInteger(valueOf(lp));
-      Bit#(32) base = 0;
-      for(Integer i = 0; i < valueOf(p)-1; i=i+1) begin
-	 engines[fromInteger(i)].search(haystackPointer, (haystackLen>>lpv)+needleLen, base);
-	 base = base + (haystackLen>>lpv);
-      end
-      engines[pv-1].search(haystackPointer, haystackLen>>lpv, base);
-   endrule
-   
+   // notify the SW when the search is finished
    rule compr;
-      for(Integer i = 0; i < valueOf(p); i=i+1)
-	 let rv <- engines[i].finishSearch;
-      if (verbose) $display("strstr iterCnt %x\n", iterCnt);
-      if(iterCnt==0)
-	 indication.searchResult(-1);
-      else
-	 restartf.enq(?);
+      donePipe.deq;
+      if (verbose) $display("strstr iterCnt %x", iterCnt);
+      if(iterCnt==0) indication.searchResult(-1);
+      else restartf.enq(?);
    endrule
+   
+   // setup the MPEngines when new configuration arrives
+   Stmt setupStmt = 
+   seq
+      action
+	 if (verbose) $display("setupStmt (begin)");
+	 setupCnt <= 0;
+      endaction
+      while(setupCnt < pv) action
+	 setupCnt <= setupCnt+1;
+	 setupFIFO.enq(tuple3(needleSGLId, mpNextSGLId, needleLen));
+      endaction
+      if (verbose) $display("setupStmt (end)");
+   endseq;
+   FSM setupFSM <- mkFSM(setupStmt);
    
    interface StrstrRequest request;
-      method Action setup(Bit#(32) needle_pointer, Bit#(32) mpNext_pointer, Bit#(32) needle_len);
-	 if (verbose) $display("mkStrstr::setup %d %d %d", needle_pointer, mpNext_pointer, needle_len);
+      method Action setup(Bit#(32) needle_sglId, Bit#(32) mpNext_sglId, Bit#(32) needle_len);
+	 if (verbose) $display("mkStrstr::setup %d %d %d", needle_sglId, mpNext_sglId, needle_len);
 	 needleLen <= needle_len;
-	 for(Integer i = 0; i < valueOf(p); i=i+1)
-	    engines[fromInteger(i)].setup(needle_pointer, mpNext_pointer, needle_len);
+	 needleSGLId <= needle_sglId;
+	 mpNextSGLId <= mpNext_sglId;
+	 setupFSM.start();
       endmethod
    
-      method Action search(Bit#(32) haystack_pointer, Bit#(32) haystack_len, Bit#(32) iter_cnt);
-	 if (verbose) $display("mkStrstr::search %d %d %d", haystack_pointer, haystack_len, iter_cnt);
+      method Action search(Bit#(32) haystack_sglId, Bit#(32) haystack_len, Bit#(32) iter_cnt);
+	 if (verbose) $display("mkStrstr::search %d %d %d", haystack_sglId, haystack_len, iter_cnt);
 	 haystackLen <= haystack_len;
-	 haystackPointer <= haystack_pointer;
+	 haystackSGLId <= haystack_sglId;
 	 iterCnt <= iter_cnt;
 	 restartf.enq(?);
-	 $dumpvars();
       endmethod
    endinterface
    interface config_read_client = config_re.dmaClient;

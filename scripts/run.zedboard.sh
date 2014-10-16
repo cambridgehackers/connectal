@@ -6,16 +6,16 @@ echo "run.zedboard parameters are:" $*
 bitfile=$1
 androidexe=$2
 if [ "$BUILDBOT_URL" == "" ]; then
-   BUILDBOT_URL="http://sj10.qrclab.com/archive"
+   BUILDBOT_URL="http://sj9.qrclab.com/archive"
 fi
 if [ "$BUILDBOT_BUILD" != "" ]; then
    mkdir -p zedboard/bin
    (cd zedboard/bin; \
-   curl -v -O $BUILDBOT_URL/$BUILDBOT_BUILD/bin/android_exe ; \
+   curl -v -O $BUILDBOT_URL/$BUILDBOT_BUILD/bin/android.exe ; \
    curl -v -O $BUILDBOT_URL/$BUILDBOT_BUILD/bin/mkTop.xdevcfg.bin.gz)
-   chmod agu+rx zedboard/bin/android_exe
+   chmod agu+rx zedboard/bin/android.exe
    bitfile=zedboard/bin/mkTop.xdevcfg.bin.gz
-   androidexe=zedboard/bin/android_exe
+   androidexe=zedboard/bin/android.exe
 fi
 if [ "$RUNPARAM" != "" ]; then
     ZEDBOARD_IPADDR=$RUNPARAM

@@ -39,7 +39,6 @@
 
 
 sem_t test_sem;
-sem_t setup_sem;
 int sw_match_cnt = 0;
 int hw_match_cnt = 0;
 
@@ -47,10 +46,6 @@ class StrstrIndication : public StrstrIndicationWrapper
 {
 public:
   StrstrIndication(unsigned int id) : StrstrIndicationWrapper(id){};
-
-  virtual void setupComplete() {
-    sem_post(&setup_sem);
-  }
 
   virtual void searchResult (int v){
     fprintf(stderr, "searchResult = %d\n", v);
@@ -81,11 +76,6 @@ int main(int argc, const char **argv)
     return -1;
   }
 
-  if(sem_init(&setup_sem, 1, 0)){
-    fprintf(stderr, "failed to init setup_sem\n");
-    return -1;
-  }
-
   portalExec_start();
 
   if(1){
@@ -93,7 +83,7 @@ int main(int argc, const char **argv)
     int needleAlloc;
     int haystackAlloc;
     int mpNextAlloc;
-    unsigned int alloc_len = 16 << 2;
+    unsigned int alloc_len = 16 << 8;
     
     needleAlloc = portalAlloc(alloc_len);
     mpNextAlloc = portalAlloc(alloc_len);
@@ -105,12 +95,14 @@ int main(int argc, const char **argv)
     
     const char *needle_text = "ababab";
     const char *haystack_text = "acabcabacababacababababababcacabcabacababacabababc";
+    const int hmul = 16;
     
-    assert(strlen(haystack_text) < alloc_len);
+    assert(strlen(haystack_text)*hmul < alloc_len);
     assert(strlen(needle_text)*4 < alloc_len);
 
     strncpy(needle, needle_text, alloc_len);
-    strncpy(haystack, haystack_text, alloc_len);
+    for(int i = 0; i < hmul; i++)
+      strcpy(haystack+(i*strlen(haystack_text)), haystack_text);
 
     int needle_len = strlen(needle);
     int haystack_len = strlen(haystack);
@@ -142,7 +134,7 @@ int main(int argc, const char **argv)
 
     fprintf(stderr, "about to invoke device\n");
     device->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
-    sem_wait(&setup_sem);
+    sleep(5);
     portalTimerStart(0);
     device->search(ref_haystackAlloc, haystack_len, iter_cnt);
     sem_wait(&test_sem);
@@ -155,7 +147,7 @@ int main(int argc, const char **argv)
     close(mpNextAlloc);
   }
 
-  if(0){
+  if(1){
     fprintf(stderr, "benchmarks\n");
     int needleAlloc;
     int haystackAlloc;
@@ -212,11 +204,8 @@ int main(int argc, const char **argv)
     portalDCacheFlushInval(needleAlloc, needle_alloc_len, needle);
     portalDCacheFlushInval(mpNextAlloc, mpNext_alloc_len, mpNext);
 
-    
-
     fprintf(stderr, "about to invoke device\n");
     device->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
-    sem_wait(&setup_sem);
     portalTimerStart(0);
     device->search(ref_haystackAlloc, haystack_len, iter_cnt);
     sem_wait(&test_sem);

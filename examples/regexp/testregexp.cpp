@@ -52,10 +52,6 @@ class RegexpIndication : public RegexpIndicationWrapper
 public:
   RegexpIndication(unsigned int id) : RegexpIndicationWrapper(id){};
 
-  virtual void setupComplete() {
-    sem_post(&test_sem);
-  }
-
   virtual void searchResult (int v){
     fprintf(stderr, "searchResult = %d\n", v);
     if (v == -1)
@@ -125,8 +121,10 @@ int main(int argc, const char **argv)
     // test the the generated functions (in jregexp.h) to compute sw_match_cnt
     REGEX_MATCHER regex_matcher(charMap, stateMap, stateTransition, acceptStates, "jregexp");
     for(int i =0; i < read_length; i++)
-      if(regex_matcher.processChar(haystack_mem[i]))
+      if(regex_matcher.processChar(haystack_mem[i])){
+	fprintf(stderr, "sw_match %d\n", i);
 	sw_match_cnt++;
+      }
 
     for(int i = 0; i < 256; i++)
       charMap_mem[i] = charMap(i);
@@ -144,13 +142,9 @@ int main(int argc, const char **argv)
     portalDCacheFlushInval(haystackAlloc, haystack_length, haystack_mem);
 
     device->setup(ref_charMap, charMap_length);
-    sem_wait(&test_sem);
     device->setup(ref_stateMap, stateMap_length);
-    sem_wait(&test_sem);
     device->setup(ref_stateTransitions, stateTransitions_length);
-    sem_wait(&test_sem);
-
-    device->search(ref_haystack, read_length, 1);
+    device->search(ref_haystack, read_length);
     sem_wait(&test_sem);
 
     close(charMapAlloc);
