@@ -26,13 +26,11 @@ import MMUConfigIndicationProxy::*;
 import Strstr::*;
 
 typedef enum {StrstrIndication, StrstrRequest, HostDmaDebugIndication, HostDmaDebugRequest, HostMMUConfigRequest, HostMMUConfigIndication} IfcNames deriving (Eq,Bits);
-typedef 8 DegPar;
-
 
 module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
 
    StrstrIndicationProxy strstrIndicationProxy <- mkStrstrIndicationProxy(StrstrIndication);
-   Strstr#(DegPar,64) strstr <- mkStrstr(strstrIndicationProxy.ifc);
+   Strstr#(`DEGPAR,64) strstr <- mkStrstr(strstrIndicationProxy.ifc);
    StrstrRequestWrapper strstrRequestWrapper <- mkStrstrRequestWrapper(StrstrRequest,strstr.request);
    
    let readClients = cons(strstr.config_read_client, cons(strstr.haystack_read_client,nil));

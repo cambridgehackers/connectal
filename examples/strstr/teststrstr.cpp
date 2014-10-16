@@ -95,7 +95,7 @@ int main(int argc, const char **argv)
     
     const char *needle_text = "ababab";
     const char *haystack_text = "acabcabacababacababababababcacabcabacababacabababc";
-    const int hmul = 16;
+    const int hmul = DEGPAR;
     
     assert(strlen(haystack_text)*hmul < alloc_len);
     assert(strlen(needle_text)*4 < alloc_len);
@@ -134,7 +134,6 @@ int main(int argc, const char **argv)
 
     fprintf(stderr, "about to invoke device\n");
     device->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
-    sleep(5);
     portalTimerStart(0);
     device->search(ref_haystackAlloc, haystack_len, iter_cnt);
     sem_wait(&test_sem);
@@ -156,7 +155,7 @@ int main(int argc, const char **argv)
 #ifndef BSIM
     unsigned int BENCHMARK_INPUT_SIZE = 16 << 18;
 #else
-    unsigned int BENCHMARK_INPUT_SIZE = 16 << 4;
+    unsigned int BENCHMARK_INPUT_SIZE = 16 << 12;
 #endif
     unsigned int haystack_alloc_len = BENCHMARK_INPUT_SIZE;
     unsigned int needle_alloc_len = strlen(needle_text);

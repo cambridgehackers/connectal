@@ -77,7 +77,7 @@ module mkMPEngine#(Vector#(3,MemreadServer#(busWidth)) readers)(MPEngine#(busWid
    MemreadServer#(busWidth) mpReader = readers[1];
    MemreadServer#(busWidth) needleReader = readers[2];
    
-   let verbose = False;
+   let verbose = True;
    let debug = False;
 
    Clock clk <- exposeCurrentClock;
@@ -176,9 +176,10 @@ module mkMPEngine#(Vector#(3,MemreadServer#(busWidth)) readers)(MPEngine#(busWid
       end
    endrule
    
-   rule finish;
+   rule finish_search;
       let rv <- haystackReader.cmdServer.response.get;
       compf.enq(True);
+      if (verbose) $display("mkMPEngine::finish_search");
    endrule
 
    interface PipeIn setup;
@@ -188,6 +189,7 @@ module mkMPEngine#(Vector#(3,MemreadServer#(busWidth)) readers)(MPEngine#(busWid
 	 n2b.start(needle_sglId, 0, 0, pack(truncate(needle_len)));
 	 mp2b.start(mpNext_sglId, 0, 0, pack(truncate(needle_len)));
 	 stage <= Initializing;
+	 if (verbose) $display("mkMPEngine::setup %d %d %d", needle_sglId, mpNext_sglId, needle_len);
       endmethod
       method Bool notFull();
 	 return stage != Running;

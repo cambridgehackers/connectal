@@ -64,7 +64,8 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(p,busWidth))
 	    Log#(p,lp),
 	    Add#(e__, TLog#(nc), 32),
 	    Add#(f__, TLog#(TDiv#(busWidth, 32)), 32),
-	    ReducePipe#(p, Bool)
+	    ReducePipe#(p, Bool),
+	    FunnelPipesPipelined#(1, p, Tuple3#(Bit#(32), Bit#(32), Bit#(32)),2) 
 	    
 	    // these were added for the readengines
 	    ,Add#(k__, TLog#(TMul#(p, 2)), TLog#(TMul#(1, TMul#(p, 2))))
@@ -103,11 +104,11 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(p,busWidth))
 
    FIFO#(Tripple#(Bit#(32))) searchFIFO <- mkFIFO;
    PipeOut#(Tripple#(Bit#(32))) sp0 <- mkPipeOut(toGet(searchFIFO));
-   Vector#(p,PipeOut#(Tripple#(Bit#(32)))) searchPipeUnfunnel <- mkUnfunnelPipes(cons(sp0,nil));
+   UnFunnelPipe#(1,p,Tripple#(Bit#(32)),2) searchPipeUnFunnel <- mkUnFunnelPipesPipelinedRR(cons(sp0,nil), 1);
 
    FIFO#(Tripple#(Bit#(32))) setupFIFO <- mkFIFO;
    PipeOut#(Tripple#(Bit#(32))) sp1 <- mkPipeOut(toGet(setupFIFO));
-   Vector#(p,PipeOut#(Tripple#(Bit#(32)))) setupPipeUnfunnel <- mkUnfunnelPipes(cons(sp1,nil));
+   UnFunnelPipe#(1,p,Tripple#(Bit#(32)),2) setupPipeUnFunnel <- mkUnFunnelPipesPipelinedRR(cons(sp1,nil), 1);
 
    for(Integer i = 0; i < valueOf(p); i=i+1) begin 
       let config_rss = takeAt(i*2, config_re.read_servers);
@@ -115,8 +116,8 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(p,busWidth))
       engines[i] <- mkMPEngine(cons(haystack_rs,config_rss));
       donePipes[i] = engines[i].done;
       locPipes[i] = engines[i].loc;
-      mkConnection(searchPipeUnfunnel[i],engines[i].search);
-      mkConnection(setupPipeUnfunnel[i],engines[i].setup);
+      mkConnection(searchPipeUnFunnel[i],engines[i].search);
+      mkConnection(setupPipeUnFunnel[i],engines[i].setup);
    end
 
    PipeOut#(Bool) donePipe <- mkReducePipes(uncurry(my_or), donePipes);
