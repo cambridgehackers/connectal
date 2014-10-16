@@ -21,6 +21,7 @@
 
 export UDEV_RULES_DIR=/etc/udev/rules.d
 UDEV_RULES=$(shell ls etc/udev/rules.d)
+MODULES_LOAD_D_DIR=/etc/modules-load.d
 
 all: pciedrivers
 
@@ -33,6 +34,11 @@ pciedrivers-clean:
 	make -C pcie/connectalutil clean
 
 install:
+	if [ -d $(MODULES_LOAD_D_DIR) ]; then \
+	    for fname in ./$(MODULES_LOAD_D_DIR)/* ; do \
+		install -m644 $$fname $(MODULES_LOAD_D_DIR) ; \
+	    done; \
+	fi
 	(cd drivers/pcieportal; make install)
 	make -C pcie/connectalutil install
 	for fname in $(UDEV_RULES) ; do \
