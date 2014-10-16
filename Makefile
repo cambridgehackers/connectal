@@ -51,6 +51,9 @@ install:
 	-modprobe pcieportal
 
 uninstall:
+	for fname in ./$(MODULES_LOAD_D_DIR)/* ; do \
+	    rm -vf $(MODULES_LOAD_D_DIR)/`basename $$fname` ; \
+	done;
 	(cd drivers/pcieportal; make uninstall)
 	make -C pcie/connectalutil uninstall
 	for fname in $(UDEV_RULES) ; do \
