@@ -22,7 +22,7 @@
 # File: Makefile.build
 #
 
-V=0
+V?=0
 ifeq ($(V),0)
   Q=@
   BSC_QUIET=-no-show-compiles

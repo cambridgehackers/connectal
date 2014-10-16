@@ -21,7 +21,7 @@
 
 CONNECTALDIR=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
-V=0
+V?=0
 ifeq ($(V),0)
 Q=@
 VERBOSE_SWITCH=
