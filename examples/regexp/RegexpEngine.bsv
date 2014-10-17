@@ -32,7 +32,6 @@ import GetPut::*;
 
 import AxiMasterSlave::*;
 import MemTypes::*;
-import MPEngine::*;
 import MemreadEngine::*;
 import Pipe::*;
 import Dma2BRAM::*;
@@ -47,6 +46,10 @@ interface RegexpEngine#(numeric type tw);
    interface PipeIn#(Pair#(Bit#(32))) setsearch;
    interface PipeOut#(LDR#(tw)) ldr;
 endinterface
+
+typedef Bit#(8) Char;
+typedef Bit#(64) DWord;
+typedef Bit#(32) Word;
 
 typedef enum {Config_charMap, Config_stateMap, Config_stateTransitions, Search} RegexpState deriving (Eq,Bits);
 

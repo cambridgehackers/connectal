@@ -53,9 +53,9 @@ typedef 1024 MaxNeedleLen;
 typedef TLog#(MaxNeedleLen) NeedleIdxWidth;
 typedef Bit#(NeedleIdxWidth) NeedleIdx;
 
-typedef enum {Uninitialized, Initializing, Initialized, Running} Stage deriving (Eq, Bits);
+typedef enum {Config_needle, Config_mpNext, Initialized, Search} Stage deriving (Eq, Bits);
 
-module mkMPEngine#(Vector#(3,MemreadServer#(busWidth)) readers)(MPEngine#(busWidth))
+module mkMPEngine#(Pair#(MemreadServer#(busWidth)) readers)(MPEngine#(busWidth))
    
    provisos(Add#(a__, 8, busWidth),
 	    Div#(busWidth,8,nc),
@@ -69,10 +69,9 @@ module mkMPEngine#(Vector#(3,MemreadServer#(busWidth)) readers)(MPEngine#(busWid
    
    
    FIFOF#(Int#(32)) locf <- mkFIFOF;
-		   
-   MemreadServer#(busWidth) haystackReader = readers[0];
-   MemreadServer#(busWidth) mpReader = readers[1];
-   MemreadServer#(busWidth) needleReader = readers[2];
+   MemreadServer#(busWidth) haystackReader = tpl_1(readers);
+   MemreadServer#(busWidth) configReader = tpl_2(readers);
+   FIFO#(Bool) conff <- mkSizedFIFO(1);
    
    let verbose = True;
    let debug = False;
@@ -83,7 +82,7 @@ module mkMPEngine#(Vector#(3,MemreadServer#(busWidth)) readers)(MPEngine#(busWid
    BRAM2Port#(NeedleIdx, Bit#(32)) mpNext <- mkBRAM2Server(defaultValue);
    Gearbox#(nc,1,Char) haystack <- mkNto1Gearbox(clk,rst,clk,rst);
    
-   Reg#(Stage)    stage <- mkReg(Uninitialized);
+   Reg#(Stage)    stage <- mkReg(Config_needle);
    Reg#(Bit#(32)) needleLenReg <- mkReg(0);
    Reg#(Bit#(32)) haystackLenReg <- mkReg(0);
    Reg#(Bit#(32)) haystackBase <- mkReg(0);
@@ -91,38 +90,31 @@ module mkMPEngine#(Vector#(3,MemreadServer#(busWidth)) readers)(MPEngine#(busWid
    Reg#(Bit#(32)) iReg <- mkReg(0); // offset in needle
    Reg#(Bit#(2))  epochReg <- mkReg(0);
 
-   BRAMWriter#(NeedleIdxWidth,busWidth) n2b <- mkBRAMWriter(0, needle.portB, needleReader.cmdServer, needleReader.dataPipe);
-   BRAMWriter#(NeedleIdxWidth,busWidth) mp2b <- mkBRAMWriter(1, mpNext.portB, mpReader.cmdServer, mpReader.dataPipe);
+   BRAMWriter#(NeedleIdxWidth,busWidth) n2b <- mkBRAMWriter(0, needle.portB, configReader.cmdServer, configReader.dataPipe);
+   BRAMWriter#(NeedleIdxWidth,busWidth) mp2b <- mkBRAMWriter(1, mpNext.portB, configReader.cmdServer, configReader.dataPipe);
 
    FIFOF#(Tuple2#(Bit#(2),Bit#(32))) efifo <- mkSizedFIFOF(2);
    FIFOF#(Tripple#(Bit#(32))) ssfifo <- mkFIFOF;
 
-   rule finish_setup;
-      if (verbose) $display("mkMPEngine::finish_setup");
-      let x <- n2b.finish;
-      let y <- mp2b.finish;
-      stage <= Initialized;
-   endrule
-      
    rule haystackResp;
       if (debug) $display("mkMPEngine::haystackResp");
       let rv <- toGet(haystackReader.dataPipe).get;
       haystack.enq(unpack(rv));
    endrule
    
-   rule haystackDrain(stage != Running);
+   rule haystackDrain(stage != Search);
       if (debug) $display("mkMPEngine::haystackDrain");
       haystack.deq;
    endrule
    
-   rule bramDrain(stage != Running);
+   rule bramDrain(stage != Search);
       if (debug) $display("mkMPEngine::mpNextDrain");
       let x <- mpNext.portA.response.get;
       let y <- needle.portA.response.get;
       efifo.deq;
    endrule
 
-   rule matchNeedleReq(stage == Running);
+   rule matchNeedleReq(stage == Search);
       if (debug) $display("mkMPEngine::matchNeedleReq %d %d", epochReg, iReg);
       needle.portA.request.put(BRAMRequest{write:False, address: truncate(iReg-1), datain:?, responseOnWrite:?});
       mpNext.portA.request.put(BRAMRequest{write:False, address: truncate(iReg), datain:?, responseOnWrite:?});
@@ -130,7 +122,7 @@ module mkMPEngine#(Vector#(3,MemreadServer#(busWidth)) readers)(MPEngine#(busWid
       iReg <= iReg+1;
    endrule
          
-   rule matchNeedleResp(stage == Running);
+   rule matchNeedleResp(stage == Search);
       let nv <- needle.portA.response.get;
       let mp <- mpNext.portA.response.get;
       let epoch = tpl_1(efifo.first);
@@ -145,7 +137,7 @@ module mkMPEngine#(Vector#(3,MemreadServer#(busWidth)) readers)(MPEngine#(busWid
 	 if (debug) $display("mkMPEngine::feck %d %d %d %d %x %x", n, m, i, j, hv[0], nv);
 	 if (j > n) begin
 	    // jReg points to the end of the haystack; we are done
-	    stage <= Uninitialized;
+	    stage <= Config_needle;
 	    if (debug) $display("mkMPEngine::end of search %d", j);
 	 end
 	 else if (i==m+1) begin
@@ -174,26 +166,50 @@ module mkMPEngine#(Vector#(3,MemreadServer#(busWidth)) readers)(MPEngine#(busWid
       end
    endrule
    
+   rule finish_setup_n2b;
+      if (verbose) $display("mkMPEngine::finish_setup_n2b");
+      let x <- n2b.finish;
+      conff.deq;
+      stage <= Config_mpNext;
+   endrule
+
+   rule finish_setup_mp2b;
+      if (verbose) $display("mkMPEngine::finish_setup_mp2b");
+      let y <- mp2b.finish;
+      conff.deq;
+      stage <= Initialized;
+   endrule
+      
    rule finish_search;
       let rv <- haystackReader.cmdServer.response.get;
       locf.enq(-1);
+      conff.deq;
       if (verbose) $display("mkMPEngine::finish_search");
    endrule
-   
-   rule setup (stage == Uninitialized);
-      match {.needle_sglId, .mpNext_sglId, .needle_len} <- toGet(ssfifo).get;
+
+   rule setup_needle (stage == Config_needle);
+      conff.enq(True);
+      match {.needle_sglId, .mpNext_sglId, .needle_len} = ssfifo.first;
       needleLenReg <= extend(needle_len);
+      if (verbose) $display("mkMPEngine::setup_needle %d %d", needle_sglId, needle_len);
       n2b.start(needle_sglId, 0, 0, pack(truncate(needle_len)));
+   endrule
+   
+   rule setup_mpNext (stage == Config_mpNext);
+      conff.enq(True);
+      match {.needle_sglId, .mpNext_sglId, .needle_len} = ssfifo.first;
+      needleLenReg <= extend(needle_len);
+      if (verbose) $display("mkMPEngine::setup_mpNext %d %d", mpNext_sglId, needle_len);
       mp2b.start(mpNext_sglId, 0, 0, pack(truncate(needle_len)));
-      stage <= Initializing;
-      if (verbose) $display("mkMPEngine::setup %d %d %d", needle_sglId, mpNext_sglId, needle_len);
+      ssfifo.deq;
    endrule
 
    rule search (stage == Initialized && !efifo.notEmpty && !haystack.notEmpty);
+      stage <= Search;
+      conff.enq(True);
       match {.haystack_sglId, .haystack_len, .haystack_base} <- toGet(ssfifo).get;
       haystackLenReg <= extend(haystack_len);
       haystackBase <= extend(haystack_base);
-      stage <= Running;
       iReg <= 1;
       jReg <= 1;
       epochReg <= 0;

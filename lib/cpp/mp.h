@@ -83,25 +83,23 @@ void compute_MP_next(const char *x, int *MP_next, int m)
   }
 }
 
-void MP(const char *x, const char *t, int *MP_next, int m, int n, int iter_cnt, int *match_cnt)
+void MP(const char *x, const char *t, int *MP_next, int m, int n, int *match_cnt)
 {
-  while(iter_cnt--){
-    int i = 1;
-    int j = 1;
-    fprintf(stderr, "MP starting\n");
-    while (j <= n) {
-      while ((i==m+1) || ((i>0) && (x[i-1] != t[j-1]))){
-	//fprintf(stderr, "char mismatch %d %d MP_next[i]=%d\n", i,j,MP_next[i]);
-	i = MP_next[i];
-      }
-      //fprintf(stderr, "   char match %d %d\n", i, j);
-      i = i+1;
-      j = j+1;
-      if (i==m+1){
-	fprintf(stderr, "%s occurs in t at position %d\n", x, j-i);
-	i = 1;
-	(*match_cnt)++;
-      }
+  int i = 1;
+  int j = 1;
+  fprintf(stderr, "MP starting\n");
+  while (j <= n) {
+    while ((i==m+1) || ((i>0) && (x[i-1] != t[j-1]))){
+      //fprintf(stderr, "char mismatch %d %d MP_next[i]=%d\n", i,j,MP_next[i]);
+      i = MP_next[i];
+    }
+    //fprintf(stderr, "   char match %d %d\n", i, j);
+    i = i+1;
+    j = j+1;
+    if (i==m+1){
+      fprintf(stderr, "%s occurs in t at position %d\n", x, j-i);
+      i = 1;
+      (*match_cnt)++;
     }
   }
   fprintf(stderr, "MP exiting\n");

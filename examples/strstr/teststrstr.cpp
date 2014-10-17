@@ -119,10 +119,8 @@ int main(int argc, const char **argv)
     for(int i = 0; i < needle_len; i++)
       fprintf(stderr, "%d %d\n", needle[i], mpNext[i]);
 
-    int iter_cnt = 1;
-
     portalTimerStart(0);
-    MP(needle, haystack, mpNext, needle_len, haystack_len, iter_cnt, &sw_match_cnt);
+    MP(needle, haystack, mpNext, needle_len, haystack_len, &sw_match_cnt);
     fprintf(stderr, "elapsed time (hw cycles): %lld\n", (long long)portalTimerLap(0));
     
     portalDCacheFlushInval(needleAlloc, alloc_len, needle);
@@ -135,7 +133,7 @@ int main(int argc, const char **argv)
     fprintf(stderr, "about to invoke device\n");
     device->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
     portalTimerStart(0);
-    device->search(ref_haystackAlloc, haystack_len, iter_cnt);
+    device->search(ref_haystackAlloc, haystack_len);
     sem_wait(&test_sem);
     uint64_t cycles = portalTimerLap(0);
     uint64_t beats = dma->show_mem_stats(ChannelType_Read);
@@ -155,7 +153,7 @@ int main(int argc, const char **argv)
 #ifndef BSIM
     unsigned int BENCHMARK_INPUT_SIZE = 16 << 18;
 #else
-    unsigned int BENCHMARK_INPUT_SIZE = 16 << 12;
+    unsigned int BENCHMARK_INPUT_SIZE = 16 << 14;
 #endif
     unsigned int haystack_alloc_len = BENCHMARK_INPUT_SIZE;
     unsigned int needle_alloc_len = strlen(needle_text);
@@ -189,14 +187,8 @@ int main(int argc, const char **argv)
     for(int i = 2; i < needle_len+1; i++)
       assert(mpNext[i] == border[i-1]+1);
 
-#ifndef BSIM
-    int iter_cnt = 8;
-#else
-    int iter_cnt = 3;
-#endif
-
     portalTimerStart(0);
-    MP(needle, haystack, mpNext, needle_len, haystack_len, iter_cnt, &sw_match_cnt);
+    MP(needle, haystack, mpNext, needle_len, haystack_len, &sw_match_cnt);
     uint64_t sw_cycles = portalTimerLap(0);
     fprintf(stderr, "sw_cycles:%llx\n", (long long)sw_cycles);
 
@@ -206,7 +198,7 @@ int main(int argc, const char **argv)
     fprintf(stderr, "about to invoke device\n");
     device->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
     portalTimerStart(0);
-    device->search(ref_haystackAlloc, haystack_len, iter_cnt);
+    device->search(ref_haystackAlloc, haystack_len);
     sem_wait(&test_sem);
     uint64_t hw_cycles = portalTimerLap(0);
     uint64_t beats = dma->show_mem_stats(ChannelType_Read);

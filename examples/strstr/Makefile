@@ -4,6 +4,7 @@ H2S = StrstrIndication
 BSVFILES = ../../lib/bsv/Strstr.bsv Top.bsv
 CPPFILES=teststrstr.cpp
 CONNECTALFLAGS = -D DEGPAR=16
+
 #CONNECTALFLAGS=--bscflags " -D TRACE_AXI"
 
 include ../../Makefile.connectal

@@ -54,33 +54,34 @@ interface Regexp#(numeric type busWidth);
    interface ObjectReadClient#(busWidth) haystack_read_client;
 endinterface
 
-typedef 4 DegPar;
+typedef `DEGPAR DegPar;
 
 module mkRegexp#(RegexpIndication indication)(Regexp#(64))
-   provisos(Log#(`MAX_NUM_STATES,5),
-	    Log#(`MAX_NUM_CHARS,5),
-	    Div#(64,8,nc),
-	    Mul#(nc,8,64),
-	    Log#(DegPar, ldp)
+   provisos( Log#(`MAX_NUM_STATES,5)
+	    ,Log#(`MAX_NUM_CHARS,5)
+	    ,Div#(64,8,nc)
+	    ,Mul#(nc,8,64)
+	    ,Add#(0,DegPar,p)
+	    ,Log#(p,lp)
 	    );
 
-   MemreadEngineV#(64, 1, DegPar) config_re <- mkMemreadEngine;
-   MemreadEngineV#(64, 1, DegPar) haystack_re <- mkMemreadEngine;
+   MemreadEngineV#(64, 1, p) config_re <- mkMemreadEngine;
+   MemreadEngineV#(64, 1, p) haystack_re <- mkMemreadEngine;
    let read_servers = zip(config_re.read_servers,haystack_re.read_servers);
-   Vector#(DegPar, RegexpEngine#(ldp)) rees <- mapM(uncurry(mkRegexpEngine), zip(read_servers,genVector));
+   Vector#(p, RegexpEngine#(lp)) rees <- mapM(uncurry(mkRegexpEngine), zip(read_servers,genVector));
    Reg#(RegexpState) state <- mkReg(Config_charMap);
 
-   let readyFIFO <- mkSizedFIFOF(valueOf(DegPar));
-   Vector#(DegPar, PipeOut#(LDR#(ldp))) ldrPipes;   
+   let readyFIFO <- mkSizedFIFOF(valueOf(p));
+   Vector#(p, PipeOut#(LDR#(lp))) ldrPipes;   
    
-   FIFOF#(Tuple2#(Bit#(ldp), Pair#(Bit#(32)))) setsearchFIFO <- mkFIFOF;
-   UnFunnelPipe#(1,DegPar,Pair#(Bit#(32)),1) setsearchPipeUnFunnel <- mkUnFunnelPipesPipelined(cons(toPipeOut(setsearchFIFO),nil));
+   FIFOF#(Tuple2#(Bit#(lp), Pair#(Bit#(32)))) setsearchFIFO <- mkFIFOF;
+   UnFunnelPipe#(1,p,Pair#(Bit#(32)),1) setsearchPipeUnFunnel <- mkUnFunnelPipesPipelined(cons(toPipeOut(setsearchFIFO),nil));
 
-   for(Integer i = 0; i < valueOf(DegPar); i=i+1) begin
+   for(Integer i = 0; i < valueOf(p); i=i+1) begin
       ldrPipes[i] = rees[i].ldr;
       mkConnection(setsearchPipeUnFunnel[i],rees[i].setsearch);
    end
-   FunnelPipe#(1,DegPar,LDR#(ldp),1) ldr <- mkFunnelPipesPipelined(ldrPipes);
+   FunnelPipe#(1,p,LDR#(lp),1) ldr <- mkFunnelPipesPipelined(ldrPipes);
    
    rule ldrr;
       let rv <- toGet(ldr[0]).get;
