@@ -232,6 +232,20 @@ class AdbCommands(object):
         self._handle, service='shell', command=command,
         timeout_ms=timeout_ms)
 
+  def StreamingShell(self, command, timeout_ms=None):
+    """Run command on the device, returning the output.
+
+    Args:
+      command: the command to run on the target.
+      timeout_ms: Maximum time to allow the command to run.
+
+    Yields:
+      The responses from the shell command.
+    """
+    return self.protocol_handler.StreamingCommand(
+        self._handle, service='shell', command=command,
+        timeout_ms=timeout_ms)
+
   def Logcat(self, options, timeout_ms=None):
     """Run 'shell logcat' and stream the output to stdout."""
     return self.protocol_handler.StreamingCommand(
