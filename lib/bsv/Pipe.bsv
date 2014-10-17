@@ -422,7 +422,7 @@ instance FunnelPipesPipelined#(1,k,a,bpc)
 	 dest <= new_dest;
 	 let v <- toGet(in[0]).get;
 	 tagged_in_buffers[0].enq(tuple2(truncate(dest),v));
-	 $display("mkUnFunnelPipesPipelinedInternal::fill %d", dest);
+	 //$display("mkUnFunnelPipesPipelinedInternal::fill %d", dest);
       endrule
       return rv;
    endmodule

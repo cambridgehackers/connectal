@@ -37,16 +37,20 @@ import MemreadEngine::*;
 import Pipe::*;
 import Dma2BRAM::*;
 
-interface RegexpEngine;
-   interface PipeIn#(Pair#(Bit#(32))) setup;
-   interface PipeIn#(Pair#(Bit#(32))) search;
-   interface PipeOut#(Int#(32)) loc;
-   interface PipeOut#(Bool) done;
+typedef union tagged {
+   Tuple2#(Bit#(t),Int#(32)) Loc;
+   Bit#(t) Done;
+   Bit#(t) Ready;
+   } LDR#(numeric type t) deriving (Eq,Bits);
+
+interface RegexpEngine#(numeric type tw);
+   interface PipeIn#(Pair#(Bit#(32))) setsearch;
+   interface PipeOut#(LDR#(tw)) ldr;
 endinterface
 
-typedef enum {Config_charMap, Config_stateMap, Config_stateTransitions} RegexpState deriving (Eq,Bits);
+typedef enum {Config_charMap, Config_stateMap, Config_stateTransitions, Search} RegexpState deriving (Eq,Bits);
 
-module mkRegexpEngine#(Vector#(2,MemreadServer#(64)) readers)(RegexpEngine)
+module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEngine#(tw))
    provisos(Log#(`MAX_NUM_STATES,5),
 	    Log#(`MAX_NUM_CHARS,5),
 	    Div#(64,8,nc),
@@ -54,14 +58,14 @@ module mkRegexpEngine#(Vector#(2,MemreadServer#(64)) readers)(RegexpEngine)
 	    );
 
    let debug = False;
-   let config_re = readers[0];
-   let haystack_re = readers[1];
+   let config_re = tpl_1(readers);
+   let haystack_re = tpl_2(readers);
    FIFO#(Bool) conff <- mkSizedFIFO(1);
    Reg#(RegexpState) state <- mkReg(Config_charMap);
-   FIFOF#(Pair#(Bit#(32))) setupFIFO <- mkSizedFIFOF(3);
-   FIFOF#(Pair#(Bit#(32))) searchFIFO <- mkFIFOF;
-   FIFOF#(Int#(32)) locFIFO <- mkFIFOF;
-   FIFOF#(Bool) doneFIFO <- mkFIFOF;
+
+   Reg#(Bool) readyr <- mkReg(True);
+   FIFOF#(Pair#(Bit#(32))) setsearchFIFO <- mkSizedFIFOF(3);
+   FIFOF#(LDR#(tw)) ldrFIFO <- mkFIFOF;
    
    BRAM1Port#(Bit#(8), Bit#(8)) charMap <- mkBRAM1Server(defaultValue);
    BRAM1Port#(Bit#(5), Bit#(8)) stateMap <- mkBRAM1Server(defaultValue);
@@ -82,8 +86,10 @@ module mkRegexpEngine#(Vector#(2,MemreadServer#(64)) readers)(RegexpEngine)
    
    rule haystackFinish if (!haystack.notEmpty);
       let rv <- haystack_re.cmdServer.response.get;
-      doneFIFO.enq(True);
+      ldrFIFO.enq(tagged Done fromInteger(iid));
+      readyr <= True;
       conff.deq;
+      $display("Done");
    endrule
    
    rule finishCharMapWriter;
@@ -126,7 +132,8 @@ module mkRegexpEngine#(Vector#(2,MemreadServer#(64)) readers)(RegexpEngine)
       resCnt <= resCnt+1;
       if (debug) $display("fsmState=%d %d", fsmState, accept);
       if (accept) begin
-	 locFIFO.enq(unpack(truncate(resCnt)));
+	 $display("accept %d", resCnt);
+	 ldrFIFO.enq(tagged Loc tuple2(fromInteger(iid),unpack(truncate(resCnt))));
 	 accepted <= accept;
 	 fsmState <= 0;
 	 fsmStateValid <= True;
@@ -142,8 +149,8 @@ module mkRegexpEngine#(Vector#(2,MemreadServer#(64)) readers)(RegexpEngine)
       fsmStateValid <= True;
    endrule
    
-   rule setup_r;
-      match {.pointer,.len} <- toGet(setupFIFO).get;
+   rule setsearch_r;
+      match {.pointer,.len} <- toGet(setsearchFIFO).get;
       conff.enq(True);
       case (state) matches
 	 Config_charMap:
@@ -162,24 +169,26 @@ module mkRegexpEngine#(Vector#(2,MemreadServer#(64)) readers)(RegexpEngine)
 	 begin
 	    if (debug) $display("setupStateTransitions %d %h", pointer, len);
 	    stateTransitionsWriter.start(pointer, 0, minBound, maxBound);
+	    state <= Search;
+	 end
+	 Search:
+	 begin
+	    if (debug) $display("setupSearch %d %d", pointer, len);
+	    haystack_re.cmdServer.request.put(MemengineCmd{sglId:pointer, base:0, len:len, burstLen:16*fromInteger(valueOf(nc))});
+	    charCnt <= 0;
+	    resCnt <= 0;
 	    state <= Config_charMap;
 	 end
       endcase
    endrule
 
-   rule search_r;
-      match {.haystack_pointer, .haystack_len} <- toGet(searchFIFO).get;
-      conff.enq(True);
-      if (debug) $display("mkRegexp.RegexpRequest.search %d %d", haystack_pointer, haystack_len);
-      haystack_re.cmdServer.request.put(MemengineCmd{sglId:haystack_pointer, base:0, len:haystack_len, burstLen:16*fromInteger(valueOf(nc))});
-      charCnt <= 0;
-      resCnt <= 0;
+   rule ready_r if (readyr);
+      ldrFIFO.enq(tagged  Ready fromInteger(iid));
+      readyr <= False;
    endrule
 
-   interface PipeIn setup = toPipeIn(setupFIFO);
-   interface PipeIn search = toPipeIn(searchFIFO);
-   interface PipeOut loc = toPipeOut(locFIFO);
-   interface PipeOut done = toPipeOut(doneFIFO);
+   interface PipeIn setsearch = toPipeIn(setsearchFIFO);
+   interface PipeOut ldr = toPipeOut(ldrFIFO);
 
 endmodule
 

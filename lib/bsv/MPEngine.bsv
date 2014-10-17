@@ -41,10 +41,8 @@ import Dma2BRAM::*;
 import Pipe::*;
 
 interface MPEngine#(numeric type busWidth);
-   interface PipeIn#(Tripple#(Bit#(32))) setup;
-   interface PipeIn#(Tripple#(Bit#(32))) search;
-   interface PipeOut#(Int#(32)) loc;
-   interface PipeOut#(Bool) done;
+   interface PipeIn#(Tripple#(Bit#(32))) setsearch;
+   interface PipeOut#(Int#(32)) locdone;
 endinterface
 
 typedef Bit#(8) Char;
@@ -55,7 +53,7 @@ typedef 1024 MaxNeedleLen;
 typedef TLog#(MaxNeedleLen) NeedleIdxWidth;
 typedef Bit#(NeedleIdxWidth) NeedleIdx;
 
-typedef enum {Uninitialized, Initializing, Idle, Running} Stage deriving (Eq, Bits);
+typedef enum {Uninitialized, Initializing, Initialized, Running} Stage deriving (Eq, Bits);
 
 module mkMPEngine#(Vector#(3,MemreadServer#(busWidth)) readers)(MPEngine#(busWidth))
    
@@ -70,7 +68,6 @@ module mkMPEngine#(Vector#(3,MemreadServer#(busWidth)) readers)(MPEngine#(busWid
 	    Add#(f__, TLog#(TDiv#(busWidth, 32)), 32));
    
    
-   FIFOF#(Bool) compf <- mkFIFOF;
    FIFOF#(Int#(32)) locf <- mkFIFOF;
 		   
    MemreadServer#(busWidth) haystackReader = readers[0];
@@ -98,12 +95,13 @@ module mkMPEngine#(Vector#(3,MemreadServer#(busWidth)) readers)(MPEngine#(busWid
    BRAMWriter#(NeedleIdxWidth,busWidth) mp2b <- mkBRAMWriter(1, mpNext.portB, mpReader.cmdServer, mpReader.dataPipe);
 
    FIFOF#(Tuple2#(Bit#(2),Bit#(32))) efifo <- mkSizedFIFOF(2);
+   FIFOF#(Tripple#(Bit#(32))) ssfifo <- mkFIFOF;
 
    rule finish_setup;
       if (verbose) $display("mkMPEngine::finish_setup");
       let x <- n2b.finish;
       let y <- mp2b.finish;
-      stage <= Idle;
+      stage <= Initialized;
    endrule
       
    rule haystackResp;
@@ -147,7 +145,7 @@ module mkMPEngine#(Vector#(3,MemreadServer#(busWidth)) readers)(MPEngine#(busWid
 	 if (debug) $display("mkMPEngine::feck %d %d %d %d %x %x", n, m, i, j, hv[0], nv);
 	 if (j > n) begin
 	    // jReg points to the end of the haystack; we are done
-	    stage <= Idle;
+	    stage <= Uninitialized;
 	    if (debug) $display("mkMPEngine::end of search %d", j);
 	 end
 	 else if (i==m+1) begin
@@ -178,45 +176,35 @@ module mkMPEngine#(Vector#(3,MemreadServer#(busWidth)) readers)(MPEngine#(busWid
    
    rule finish_search;
       let rv <- haystackReader.cmdServer.response.get;
-      compf.enq(True);
+      locf.enq(-1);
       if (verbose) $display("mkMPEngine::finish_search");
    endrule
+   
+   rule setup (stage == Uninitialized);
+      match {.needle_sglId, .mpNext_sglId, .needle_len} <- toGet(ssfifo).get;
+      needleLenReg <= extend(needle_len);
+      n2b.start(needle_sglId, 0, 0, pack(truncate(needle_len)));
+      mp2b.start(mpNext_sglId, 0, 0, pack(truncate(needle_len)));
+      stage <= Initializing;
+      if (verbose) $display("mkMPEngine::setup %d %d %d", needle_sglId, mpNext_sglId, needle_len);
+   endrule
 
-   interface PipeIn setup;
-      method Action enq(Tripple#(Bit#(32)) t) if (stage != Running);
-	 match {.needle_sglId, .mpNext_sglId, .needle_len} = t;
-	 needleLenReg <= extend(needle_len);
-	 n2b.start(needle_sglId, 0, 0, pack(truncate(needle_len)));
-	 mp2b.start(mpNext_sglId, 0, 0, pack(truncate(needle_len)));
-	 stage <= Initializing;
-	 if (verbose) $display("mkMPEngine::setup %d %d %d", needle_sglId, mpNext_sglId, needle_len);
-      endmethod
-      method Bool notFull();
-	 return stage != Running;
-      endmethod
-   endinterface
-
-   interface PipeIn search;
-      method Action enq(Tripple#(Bit#(32)) t) if (stage == Idle && !efifo.notEmpty && !haystack.notEmpty);
-	 match {.haystack_sglId, .haystack_len, .haystack_base} = t;
-	 haystackLenReg <= extend(haystack_len);
-	 haystackBase <= extend(haystack_base);
-	 stage <= Running;
-	 iReg <= 1;
-	 jReg <= 1;
-	 epochReg <= 0;
-	 Bit#(32) haystack_len_ds = haystack_len+fromInteger(valueOf(nc)-1);
-	 Bit#(TLog#(nc)) zeros = 0;
-	 Bit#(32) haystack_len_bytes = {zeros,haystack_len_ds[31:valueOf(TLog#(nc))]} * fromInteger(valueOf(nc));
-	 haystackReader.cmdServer.request.put(MemengineCmd{sglId:haystack_sglId, base:extend(haystack_base), len:haystack_len_bytes, burstLen:16*fromInteger(valueOf(nc))});
-	 if (verbose) $display("mkMPEngine::search %d %d %d",  haystack_sglId, haystack_base, haystack_len_bytes);
-      endmethod
-      method Bool notFull();
-	 return stage == Idle && !efifo.notEmpty && !haystack.notEmpty;
-      endmethod
-   endinterface
-
-   interface PipeOut loc = toPipeOut(locf);
-   interface PipeOut done = toPipeOut(compf);
+   rule search (stage == Initialized && !efifo.notEmpty && !haystack.notEmpty);
+      match {.haystack_sglId, .haystack_len, .haystack_base} <- toGet(ssfifo).get;
+      haystackLenReg <= extend(haystack_len);
+      haystackBase <= extend(haystack_base);
+      stage <= Running;
+      iReg <= 1;
+      jReg <= 1;
+      epochReg <= 0;
+      Bit#(32) haystack_len_ds = haystack_len+fromInteger(valueOf(nc)-1);
+      Bit#(TLog#(nc)) zeros = 0;
+      Bit#(32) haystack_len_bytes = {zeros,haystack_len_ds[31:valueOf(TLog#(nc))]} * fromInteger(valueOf(nc));
+      haystackReader.cmdServer.request.put(MemengineCmd{sglId:haystack_sglId, base:extend(haystack_base), len:haystack_len_bytes, burstLen:16*fromInteger(valueOf(nc))});
+      if (verbose) $display("mkMPEngine::search %d %d %d",  haystack_sglId, haystack_base, haystack_len_bytes);
+   endrule
+   
+   interface PipeIn setsearch = toPipeIn(ssfifo);   
+   interface PipeOut locdone = toPipeOut(locf);
 
 endmodule

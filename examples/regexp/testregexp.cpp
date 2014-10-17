@@ -51,31 +51,33 @@ class RegexpIndication : public RegexpIndicationWrapper
 {
 public:
   RegexpIndication(unsigned int id) : RegexpIndicationWrapper(id){};
-
-  virtual void searchResult (int v){
-    fprintf(stderr, "searchResult = %d\n", v);
+  virtual void setupComplete(uint32_t t){
+    fprintf(stderr, "setupComplete = %d\n", t);
+    sem_post(&test_sem);
+    token = t;
+  }
+  virtual void searchResult (uint32_t t, int v){
+    fprintf(stderr, "searchResult = (%d, %d)\n", t, v);
     if (v == -1)
       sem_post(&test_sem);
     else 
       hw_match_cnt++;
   }
+  int token;
 };
 
 
 int main(int argc, const char **argv)
 {
-  RegexpRequestProxy *device = 0;
-  RegexpIndication *deviceIndication = 0;
-  
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
-  device = new RegexpRequestProxy(IfcNames_RegexpRequest);
+  RegexpRequestProxy *device = new RegexpRequestProxy(IfcNames_RegexpRequest);
   DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
   MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
   DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
   DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
   MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
   
-  deviceIndication = new RegexpIndication(IfcNames_RegexpIndication);
+  RegexpIndication *deviceIndication = new RegexpIndication(IfcNames_RegexpIndication);
   
   if(sem_init(&test_sem, 1, 0)){
     fprintf(stderr, "failed to init test_sem\n");
@@ -144,7 +146,8 @@ int main(int argc, const char **argv)
     device->setup(ref_charMap, charMap_length);
     device->setup(ref_stateMap, stateMap_length);
     device->setup(ref_stateTransitions, stateTransitions_length);
-    device->search(ref_haystack, read_length);
+    sem_wait(&test_sem);
+    device->search(deviceIndication->token, ref_haystack, read_length);
     sem_wait(&test_sem);
 
     close(charMapAlloc);
