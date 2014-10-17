@@ -71,6 +71,7 @@ argparser.add_argument('-p', '--project', help='Name of project on buildbot.')
 argparser.add_argument('-b', '--build-number', help='Build number on buildbot.')
 
 def run_zedboard(bitfile, androidexe, additional_files):
+
     ipaddr = options.ipaddr
     if not ipaddr:
         p = subprocess.Popen('checkip')
@@ -128,4 +129,21 @@ def run_zedboard(bitfile, androidexe, additional_files):
 
 if __name__ == '__main__':
     options = argparser.parse_args()
+    if options.buildbot_url and options.project and options.build_number:
+        # download android.exe and mkTop.xdevcfg.bin.gz
+        options.androidexe = 'android.exe'
+        options.bitfile = 'mkTop.xdevcfg.bin.gz'
+        url = '%s/%s/%s/bin/android.exe' % (options.buildbot_url, options.project, options.build_number)
+        print 'downloading', url
+        status = subprocess.call(['curl', '-f', '-O', url])
+        if status != 0:
+            #print 'curl returned error', status
+            sys.exit(status)
+        # http://54.86.72.185/archive/leds2/zedboard/1/bin/mkTop.xdevcfg.bin.gz
+        url = '%s/%s/%s/bin/mkTop.xdevcfg.bin.gz' % (options.buildbot_url, options.project, options.build_number)
+        print 'downloading', url
+        status = subprocess.call(['curl', '-f', '-O', url])
+        if status != 0:
+            #print 'curl returned error', status
+            sys.exit(status)
     run_zedboard(options.bitfile, options.androidexe, options.file)
