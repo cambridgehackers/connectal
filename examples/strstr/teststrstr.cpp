@@ -153,7 +153,7 @@ int main(int argc, const char **argv)
 #ifndef BSIM
     unsigned int BENCHMARK_INPUT_SIZE = 16 << 18;
 #else
-    unsigned int BENCHMARK_INPUT_SIZE = 16 << 14;
+    unsigned int BENCHMARK_INPUT_SIZE = 16 << 15;
 #endif
     unsigned int haystack_alloc_len = BENCHMARK_INPUT_SIZE;
     unsigned int needle_alloc_len = strlen(needle_text);

@@ -86,18 +86,9 @@ module mkRegexp#(RegexpIndication indication)(Regexp#(64))
    rule ldrr;
       let rv <- toGet(ldr[0]).get;
       case (rv) matches
-	 tagged Ready .r : begin
-	    $display("Ready %d", r);
-	    readyFIFO.enq(r);
-	 end
-	 tagged Done  .d : begin
-	    $display("Done %d", d);
-	    indication.searchResult(extend(d), -1);
-	 end
-	 tagged Loc   .l : begin
-	    $display("Loc %d", tpl_2(l));
-	    indication.searchResult(extend(tpl_1(l)), tpl_2(l));
-	 end
+	 tagged Ready .r : readyFIFO.enq(r);
+	 tagged Done  .d : indication.searchResult(extend(d), -1);
+	 tagged Loc   .l : indication.searchResult(extend(tpl_1(l)), tpl_2(l));
       endcase
    endrule
       
@@ -108,14 +99,8 @@ module mkRegexp#(RegexpIndication indication)(Regexp#(64))
       method Action setup(Bit#(32) sglId, Bit#(32) len) if (state != Search);
 	 setsearchFIFO.enq(tuple2(readyFIFO.first,tuple2(sglId,len)));
 	 case (state) matches
-	    Config_charMap:
-            begin
-	       state <= Config_stateMap;
-	    end
-	    Config_stateMap:
-	    begin
-               state <= Config_stateTransitions;
-	    end
+	    Config_charMap:  state <= Config_stateMap;
+	    Config_stateMap: state <= Config_stateTransitions;
 	    Config_stateTransitions: 
 	    begin
 	       state <= Config_charMap;
@@ -125,7 +110,7 @@ module mkRegexp#(RegexpIndication indication)(Regexp#(64))
 	 endcase
       endmethod
       method Action search(Bit#(32) token, Bit#(32) sglId, Bit#(32) len);
-	 $display("search %d %d %d", token, sglId, len);
+	 $display("mkRegexp::search %d %d %d", token, sglId, len);
 	 setsearchFIFO.enq(tuple2(truncate(token),tuple2(sglId,len)));
       endmethod
    endinterface

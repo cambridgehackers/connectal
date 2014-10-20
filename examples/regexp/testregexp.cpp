@@ -50,7 +50,7 @@ using namespace std;
 class RegexpIndication : public RegexpIndicationWrapper
 {
 public:
-  RegexpIndication(unsigned int id) : RegexpIndicationWrapper(id){};
+  RegexpIndication(unsigned int id) : RegexpIndicationWrapper(id),done_cnt(0){};
   virtual void setupComplete(uint32_t t){
     fprintf(stderr, "setupComplete = %d\n", t);
     sem_post(&test_sem);
@@ -58,12 +58,15 @@ public:
   }
   virtual void searchResult (uint32_t t, int v){
     fprintf(stderr, "searchResult = (%d, %d)\n", t, v);
-    if (v == -1)
+    if (v == -1 && ++done_cnt == DEGPAR){
+      fprintf(stderr, "donzo\n");
       sem_post(&test_sem);
-    else 
+    }else if (v >= 0){ 
       hw_match_cnt++;
+    }
   }
   int token;
+  int done_cnt;
 };
 
 
@@ -85,75 +88,137 @@ int main(int argc, const char **argv)
   }
   
   portalExec_start();
-  int charMap_length = 256;
-  int stateMap_length = numStates*sizeof(char);
-  int stateTransitions_length = numStates*numChars*sizeof(char);
-  int haystack_length = 1<<15;
+  int charMapLength = 256;
+  int stateMapLength = numStates*sizeof(char);
+  int stateTransitionsLength = numStates*numChars*sizeof(char);
+  int haystackLength = 1<<15;
+
+  assert(numStates < MAX_NUM_STATES);
+  assert(numChars  < MAX_NUM_CHARS);
 
   if(1){
-    fprintf(stderr, "simple tests\n");
+    fprintf(stderr, "benchmarks\n");
 
-    int charMapAlloc = portalAlloc(charMap_length);
-    int stateMapAlloc = portalAlloc(stateMap_length);
-    int stateTransitionsAlloc = portalAlloc(stateTransitions_length);
-    int haystackAlloc = portalAlloc(haystack_length);
+#ifndef BSIM
+    unsigned int BENCHMARK_INPUT_SIZE = 16 << 17;
+#else
+    unsigned int BENCHMARK_INPUT_SIZE = 16 << 10;
+#endif
+
+    int charMapAlloc[DEGPAR];
+    int stateMapAlloc[DEGPAR];
+    int stateTransitionsAlloc[DEGPAR];
+    int haystackAlloc[DEGPAR];
     
-    char *charMap_mem = (char *)portalMmap(charMapAlloc, charMap_length);
-    char *stateMap_mem = (char *)portalMmap(stateMapAlloc, stateMap_length);
-    char *stateTransitions_mem = (char *)portalMmap(stateTransitionsAlloc, stateTransitions_length);
-    char *haystack_mem = (char *)portalMmap(haystackAlloc, haystack_length);
-        
-    assert(numStates < MAX_NUM_STATES);
-    assert(numChars  < MAX_NUM_CHARS);
+    char *charMap_mem[DEGPAR];
+    char *stateMap_mem[DEGPAR];
+    char *stateTransitions_mem[DEGPAR];
+    char *haystack_mem[DEGPAR];
 
-    unsigned int ref_charMap = dma->reference(charMapAlloc);
-    unsigned int ref_stateMap = dma->reference(stateMapAlloc);
-    unsigned int ref_stateTransitions = dma->reference(stateTransitionsAlloc);
-    unsigned int ref_haystack = dma->reference(haystackAlloc);
+    int charMap_length[DEGPAR];
+    int stateMap_length[DEGPAR];
+    int stateTransitions_length[DEGPAR];
+    int haystack_length[DEGPAR];
+        
+    unsigned int ref_charMap[DEGPAR];
+    unsigned int ref_stateMap[DEGPAR];
+    unsigned int ref_stateTransitions[DEGPAR];
+    unsigned int ref_haystack[DEGPAR];
+
+    for(int i = 0; i < DEGPAR; i++){
+
+      charMap_length[i] = charMapLength;
+      stateMap_length[i] = stateMapLength;
+      stateTransitions_length[i] = stateTransitionsLength;
+      haystack_length[i] = haystackLength;
+
+      charMapAlloc[i] = portalAlloc(charMap_length[i]);
+      stateMapAlloc[i] = portalAlloc(stateMap_length[i]);
+      stateTransitionsAlloc[i] = portalAlloc(stateTransitions_length[i]);
+      haystackAlloc[i] = portalAlloc(haystack_length[i]);
+      
+      charMap_mem[i] = (char *)portalMmap(charMapAlloc[i], charMap_length[i]);
+      stateMap_mem[i] = (char *)portalMmap(stateMapAlloc[i], stateMap_length[i]);
+      stateTransitions_mem[i] = (char *)portalMmap(stateTransitionsAlloc[i], stateTransitions_length[i]);
+      haystack_mem[i] = (char *)portalMmap(haystackAlloc[i], haystack_length[i]);
+      
+      ref_charMap[i] = dma->reference(charMapAlloc[i]);
+      ref_stateMap[i] = dma->reference(stateMapAlloc[i]);
+      ref_stateTransitions[i] = dma->reference(stateTransitionsAlloc[i]);
+      ref_haystack[i] = dma->reference(haystackAlloc[i]);
+
+    }
+
 
     ifstream binFile("../test.bin", ios::in|ios::binary|ios::ate);
     streampos binFile_size = binFile.tellg();
-    int read_length = min<int>(binFile_size, haystack_length);
-    binFile.seekg (0, ios::beg);
-    if(!binFile.read(haystack_mem, read_length)){
-      fprintf(stderr, "error reading test.bin %d\n", read_length);
-      exit(-1);
+    int read_length = min<int>(binFile_size, haystack_length[0]);
+    for(int i = 0; i < DEGPAR; i++){
+      binFile.seekg (0, ios::beg);
+      if(!binFile.read(haystack_mem[i], read_length)){
+	fprintf(stderr, "error reading test.bin %d\n", read_length);
+	exit(-1);
+      }
     }
 
     // test the the generated functions (in jregexp.h) to compute sw_match_cnt
     REGEX_MATCHER regex_matcher(charMap, stateMap, stateTransition, acceptStates, "jregexp");
-    for(int i =0; i < read_length; i++)
-      if(regex_matcher.processChar(haystack_mem[i])){
-	fprintf(stderr, "sw_match %d\n", i);
-	sw_match_cnt++;
+    portalTimerStart(0);
+    for(int i = 0; i < DEGPAR; i++){
+      for(int j =0; j < read_length; j++){
+	if(regex_matcher.processChar(haystack_mem[i][j])){
+	  fprintf(stderr, "sw_match %d\n", j);
+	  sw_match_cnt++;
+	}
       }
+    }
+    uint64_t sw_cycles = portalTimerLap(0);
+    fprintf(stderr, "sw_cycles:%llx\n", (long long)sw_cycles);
 
-    for(int i = 0; i < 256; i++)
-      charMap_mem[i] = charMap(i);
+    for(int i = 0; i < DEGPAR; i++) {
+      for(int j = 0; j < 256; j++)
+	charMap_mem[i][j] = charMap(j);
+      
+      for(int j = 0; j < numStates; j++)
+	stateMap_mem[i][j] = (acceptStates(j) << 7) | stateMap(j);
+      
+      for(int j = 0; j < numStates; j++)
+	for(int k = 0; k < numChars; k++)
+	  stateTransitions_mem[i][(j*MAX_NUM_STATES)+k] = stateTransition(j,k);
+    }
 
-    for(int i = 0; i < numStates; i++)
-      stateMap_mem[i] = (acceptStates(i) << 7) | stateMap(i);
+    unsigned int tokens[DEGPAR];
 
-    for(int i = 0; i < numStates; i++)
-      for(int j = 0; j < numChars; j++)
-	stateTransitions_mem[(i*MAX_NUM_STATES)+j] = stateTransition(i,j);
+    for(int i = 0; i < DEGPAR; i++){
+      portalDCacheFlushInval(charMapAlloc[i], charMap_length[i], charMap_mem[i]);
+      portalDCacheFlushInval(stateMapAlloc[i], stateMap_length[i], stateMap_mem[i]);
+      portalDCacheFlushInval(stateTransitionsAlloc[i], stateTransitions_length[i], stateTransitions_mem[i]);
+      portalDCacheFlushInval(haystackAlloc[i], haystack_length[i], haystack_mem[i]);
+      
+      device->setup(ref_charMap[i], charMap_length[i]);
+      device->setup(ref_stateMap[i], stateMap_length[i]);
+      device->setup(ref_stateTransitions[i], stateTransitions_length[i]);
+      sem_wait(&test_sem);
+      tokens[i] = deviceIndication->token;
+    }
 
-    portalDCacheFlushInval(charMapAlloc, charMap_length, charMap_mem);
-    portalDCacheFlushInval(stateMapAlloc, stateMap_length, stateMap_mem);
-    portalDCacheFlushInval(stateTransitionsAlloc, stateTransitions_length, stateTransitions_mem);
-    portalDCacheFlushInval(haystackAlloc, haystack_length, haystack_mem);
-
-    device->setup(ref_charMap, charMap_length);
-    device->setup(ref_stateMap, stateMap_length);
-    device->setup(ref_stateTransitions, stateTransitions_length);
+    portalTimerStart(0);
+    for(int i = 0; i < DEGPAR; i++)
+      device->search(tokens[i], ref_haystack[i], read_length);
     sem_wait(&test_sem);
-    device->search(deviceIndication->token, ref_haystack, read_length);
-    sem_wait(&test_sem);
+    uint64_t hw_cycles = portalTimerLap(0);
+    uint64_t beats = dma->show_mem_stats(ChannelType_Read);
+    float read_util = (float)beats/(float)hw_cycles;
+    fprintf(stderr, "hw_cycles:%llx\n", (long long)hw_cycles);
+    fprintf(stderr, "memory read utilization (beats/cycle): %f\n", read_util);
+    fprintf(stderr, "speedup: %f\n", ((float)sw_cycles)/((float)hw_cycles));
 
-    close(charMapAlloc);
-    close(stateMapAlloc);
-    close(stateTransitionsAlloc);
-    close(haystackAlloc);
+    for(int i = 0; i < DEGPAR; i++){
+      close(charMapAlloc[i]);
+      close(stateMapAlloc[i]);
+      close(stateTransitionsAlloc[i]);
+      close(haystackAlloc[i]);
+    }
   }
 
   fprintf(stderr, "sw_match_cnt=%d, hw_match_cnt=%d\n", sw_match_cnt, hw_match_cnt);

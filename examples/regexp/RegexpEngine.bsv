@@ -61,6 +61,7 @@ module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEng
 	    );
 
    let debug = False;
+   let verbose = True;
    let config_re = tpl_1(readers);
    let haystack_re = tpl_2(readers);
    FIFO#(Bool) conff <- mkSizedFIFO(1);
@@ -82,6 +83,9 @@ module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEng
    let rst <- exposeCurrentReset;
    Gearbox#(nc,1,Char) haystack <- mkNto1Gearbox(clk,rst,clk,rst);
 
+   Reg#(Bit#(32)) cycleCnt <- mkReg(0);
+   Reg#(Bit#(32)) lastHD <- mkReg(0);
+
    rule haystackResp;
       let rv <- toGet(haystack_re.dataPipe).get;
       haystack.enq(unpack(rv));
@@ -92,19 +96,19 @@ module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEng
       ldrFIFO.enq(tagged Done fromInteger(iid));
       readyr <= True;
       conff.deq;
-      $display("Done");
+      if (verbose) $display("haystackFinish");
    endrule
    
    rule finishCharMapWriter;
       conff.deq;
       let rv <- charMapWriter.finish;
-      if (debug) $display("finishCharMapWriter");
+      if (verbose) $display("finishCharMapWriter");
    endrule
    
    rule finishStateMapWriter;
       conff.deq;
       let rv <- stateMapWriter.finish;
-      if (debug) $display("finishStateMapWriter");
+      if (verbose) $display("finishStateMapWriter");
    endrule
 
    rule finishStateTransitionsWriter;
@@ -113,18 +117,24 @@ module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEng
       if (debug) $display("finishStateTransitionsWriter");
    endrule
    
-   Reg#(Bool) fsmStateValid <- mkReg(True);
-   Reg#(Bit#(5))   fsmState <- mkReg(0);
-   Reg#(Bit#(64))   charCnt <- mkReg(0);
-   Reg#(Bit#(64))    resCnt <- mkReg(0);
+   FIFO#(Bit#(5)) fsmState <- mkBypassFIFO;
+   Reg#(Bit#(64))  charCnt <- mkReg(0);
+   Reg#(Bit#(64))   resCnt <- mkReg(0);
    Reg#(Bool)     accepted <- mkReg(False);
 
-   rule lookup_state if (fsmStateValid);
+   rule countCycles;
+      if (debug) $display("******************************************** %d", cycleCnt);
+      cycleCnt <= cycleCnt+1;
+   endrule
+
+   rule lookup_state;
+      lastHD <= cycleCnt;
+      if (debug) $display("deq haystack(%d)", cycleCnt-lastHD);
       haystack.deq;
       charCnt <= charCnt+1;
+      let fsm_addr <- toGet(fsmState).get;
       charMap.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:haystack.first[0], datain:?});
-      stateMap.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:fsmState, datain:?});
-      fsmStateValid <= False;
+      stateMap.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:fsm_addr, datain:?});
    endrule
    
    rule resolve_state;
@@ -133,13 +143,11 @@ module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEng
       Bit#(10) ns_addr = {mapped_state[4:0],mapped_char[4:0]};
       let accept = mapped_state[7]==1;
       resCnt <= resCnt+1;
-      if (debug) $display("fsmState=%d %d", fsmState, accept);
       if (accept) begin
 	 $display("accept %d", resCnt);
 	 ldrFIFO.enq(tagged Loc tuple2(fromInteger(iid),unpack(truncate(resCnt))));
 	 accepted <= accept;
-	 fsmState <= 0;
-	 fsmStateValid <= True;
+	 fsmState.enq(0);
       end
       else begin
 	 stateTransitions.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:ns_addr, datain:?});
@@ -148,8 +156,7 @@ module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEng
       
    rule next_state;
       let new_state <- stateTransitions.portA.response.get;
-      fsmState <= truncate(new_state);
-      fsmStateValid <= True;
+      fsmState.enq(truncate(new_state));
    endrule
    
    rule setsearch_r;
@@ -158,29 +165,30 @@ module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEng
       case (state) matches
 	 Config_charMap:
 	 begin
-	    if (debug) $display("setupCharMap %d %h", pointer, len);
+	    if (verbose) $display("setupCharMap %d %h", pointer, len);
 	    charMapWriter.start(pointer, 0, minBound, maxBound);
 	    state <= Config_stateMap;
 	 end
 	 Config_stateMap:
 	 begin
-	    if (debug) $display("setupStateMap %d %h", pointer, len);
+	    if (verbose) $display("setupStateMap %d %h", pointer, len);
 	    stateMapWriter.start(pointer, 0, minBound, maxBound);
 	    state <= Config_stateTransitions;
 	 end
 	 Config_stateTransitions:
 	 begin
-	    if (debug) $display("setupStateTransitions %d %h", pointer, len);
+	    if (verbose) $display("setupStateTransitions %d %h", pointer, len);
 	    stateTransitionsWriter.start(pointer, 0, minBound, maxBound);
 	    state <= Search;
 	 end
 	 Search:
 	 begin
-	    if (debug) $display("setupSearch %d %d", pointer, len);
+	    if (verbose) $display("setupSearch %d %d", pointer, len);
 	    haystack_re.cmdServer.request.put(MemengineCmd{sglId:pointer, base:0, len:len, burstLen:16*fromInteger(valueOf(nc))});
 	    charCnt <= 0;
 	    resCnt <= 0;
 	    state <= Config_charMap;
+	    fsmState.enq(0);
 	 end
       endcase
    endrule

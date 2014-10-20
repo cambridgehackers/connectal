@@ -63,8 +63,8 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(64))
    let verbose = True;
 
    Reg#(Bit#(32)) needleLen <- mkReg(0);
-   MemreadEngineV#(64, 1, p) config_re <- mkMemreadEngine;
-   MemreadEngineV#(64, 1, p) haystack_re <- mkMemreadEngine;
+   MemreadEngineV#(64, 1, p) config_re <- mkMemreadEngineBuff(1024);
+   MemreadEngineV#(64, 1, p) haystack_re <- mkMemreadEngineBuff(1024);
    
    Reg#(Bit#(32)) needleSGLId <- mkReg(0);
    Reg#(Bit#(32)) mpNextSGLId <- mkReg(0);
