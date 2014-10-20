@@ -43,9 +43,6 @@ import Bscan             :: *;
 import PcieEndpointX7    :: *;
 `endif
 import HostInterface    :: *;
-`ifdef ImportTop
-import `ImportTop :: *;
-`endif
 
 `ifndef DataBusWidth
 `define DataBusWidth 64

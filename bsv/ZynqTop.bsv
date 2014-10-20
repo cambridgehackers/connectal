@@ -39,9 +39,6 @@ import AxiDma            :: *;
 import Top               :: *;
 import Bscan             :: *;
 import HostInterface::*;
-`ifdef ImportTop
-import `ImportTop :: *;
-`endif
 
 `ifdef USES_BSCAN
 `define BSCAN_ARG  lbscan.loc[0],

@@ -41,9 +41,6 @@ import ClientServer      :: *;
 import MemSlaveEngine    :: *;
 import MemMasterEngine   :: *;
 import PCIE              :: *;
-`ifdef ImportTop
-import `ImportTop :: *;
-`endif
 
 `ifndef PinType
 `define PinType Empty

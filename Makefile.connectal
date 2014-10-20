@@ -52,8 +52,11 @@ IPDIR=$(CONNECTALDIR)/out
 ifndef NUMBER_OF_MASTERS
 NUMBER_OF_MASTERS=1
 endif
+ifndef PIN_TYPE
+PIN_TYPE=1
+endif
 
-CONNECTALFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) --ipdir=$(IPDIR)
+CONNECTALFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) -D PinType=$(PIN_TYPE) --ipdir=$(IPDIR)
 
 ifneq ($(NUMBER_OF_MASTERS), 0)
 S2H += DmaDebugRequest MMUConfigRequest
