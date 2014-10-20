@@ -34,21 +34,25 @@ pciedrivers-clean:
 	make -C pcie/connectalutil clean
 
 install:
-	if [ -d $(MODULES_LOAD_D_DIR) ]; then \
+	install -d -m755 $(DESTDIR)/$(UDEV_RULES_DIR)
+	if [ -d $(DESTDIR)/$(MODULES_LOAD_D_DIR) ]; then \
 	    for fname in ./$(MODULES_LOAD_D_DIR)/* ; do \
-		install -m644 $$fname $(MODULES_LOAD_D_DIR) ; \
+		install -m644 $$fname $(DESTDIR)$(MODULES_LOAD_D_DIR) ; \
 	    done; \
 	fi
 	(cd drivers/pcieportal; make install)
 	make -C pcie/connectalutil install
+	install -d -m755 $(DESTDIR)$(UDEV_RULES_DIR)
 	for fname in $(UDEV_RULES) ; do \
-	    install -m644 etc/udev/rules.d/$$fname $(UDEV_RULES_DIR) ; \
+	    install -m644 etc/udev/rules.d/$$fname $(DESTDIR)$(UDEV_RULES_DIR) ; \
 	done
-	service udev restart
-	-rmmod portalmem
-	-rmmod pcieportal 
-	-modprobe portalmem 
-	-modprobe pcieportal
+	-if [ "$(DESTDIR)" == "" ]; then \
+	service udev restart; \
+	rmmod portalmem; \
+	rmmod pcieportal; \
+	modprobe portalmem; \
+	modprobe pcieportal; \
+	fi
 
 uninstall:
 	for fname in ./$(MODULES_LOAD_D_DIR)/* ; do \
