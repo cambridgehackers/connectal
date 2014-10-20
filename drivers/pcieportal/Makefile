@@ -29,13 +29,17 @@ install: pcieportal.ko
 	install -d -m755 $(BS_MOD_DIR)
 	install -m644 pcieportal.ko $(BS_MOD_DIR)
 	install -m644 ../portalmem/portalmem.ko $(BS_MOD_DIR)
+ifeq ("$(DESTDIR)", "")
 	depmod
+endif
 
 .PHONY: uninstall
 uninstall:
 	rm -f $(BS_MOD_DIR)/pcieportal.ko
 	rmdir --ignore-fail-on-non-empty $(BS_MOD_DIR)
+ifeq ("$(DESTDIR)", "")
 	depmod
+endif
 
 .PHONY: clean
 clean:
