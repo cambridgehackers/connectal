@@ -33,7 +33,11 @@ pciedrivers-clean:
 	(cd drivers/pcieportal; make clean)
 	make -C pcie/connectalutil clean
 
-install:
+ifneq ("$(DESTDIR)", "")
+INSTALL_SHARED = install-shared
+endif
+
+install: $(INSTALL_SHARED)
 	install -d -m755 $(DESTDIR)/$(UDEV_RULES_DIR)
 	if [ -d $(DESTDIR)/$(MODULES_LOAD_D_DIR) ]; then \
 	    for fname in ./$(MODULES_LOAD_D_DIR)/* ; do \
@@ -53,6 +57,13 @@ install:
 	modprobe portalmem; \
 	modprobe pcieportal; \
 	fi
+
+INSTALL_DIRS = $(shell ls | grep -v debian)
+
+install-shared:
+	find $(INSTALL_DIRS) -type d -exec install -d -m755 $(DESTDIR)/usr/share/connectal/{} \; -print
+	find $(INSTALL_DIRS) -type f -exec install -m644 {} $(DESTDIR)/usr/share/connectal/{} \; -print
+	chmod agu+rx $(DESTDIR)/usr/share/connectal/scripts/*
 
 uninstall:
 	for fname in ./$(MODULES_LOAD_D_DIR)/* ; do \
