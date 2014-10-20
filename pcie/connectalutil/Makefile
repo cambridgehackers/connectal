@@ -1,11 +1,18 @@
 CC ?= gcc
 
+ifeq ("$(DESTDIR)","")
+PREFIX=/usr/local
+else
+PREFIX=/usr
+endif
+
 connectalutil: connectalutil.c ../../drivers/pcieportal/pcieportal.h
 	$(CC) -g -O2 -o connectalutil connectalutil.c
 
 .PHONY: install
 install: connectalutil
-	install -m 755 connectalutil /usr/local/bin
+	install -d -m755 $(DESTDIR)$(PREFIX)/bin
+	install -m 755 connectalutil $(DESTDIR)$(PREFIX)/bin
 
 .PHONY: clean
 clean:
