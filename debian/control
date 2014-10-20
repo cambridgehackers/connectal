@@ -1,0 +1,30 @@
+Source: connectal
+Section: devel
+Priority: extra
+Maintainer: Jamey Hicks <jamey.hicks@gmail.com>
+Build-Depends: debhelper (>= 8.0.0)
+Standards-Version: 3.9.2
+Homepage: https://github.com/cambridgehackers/connectal
+#Vcs-Git: git://git.debian.org/collab-maint/connectal.git
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/connectal.git;a=summary
+
+Package: connectal
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, python (>= 2.7), python-support (>= 0.90)
+Description: Software-driven hardware development framework
+ Connectal provides a hardware-software interface for applications
+ split between user mode code and custom hardware in an FPGA. Portal
+ can automatically build the software and hardware glue for a message
+ based interface and also provides for configuring and using shared
+ memory between applications and hardware. Communications between
+ hardware and software are provided by a bidirectional flow of events
+ and regions of memory shared between hardware and software. Events
+ from software to hardware are called requests and events from
+ hardware to software are called indications, but in fact they are
+ symmetric.
+
+Package: connectal-doc
+Section: doc
+Architecture: all
+Description: documentation for connectal
+ More of the same description
