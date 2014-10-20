@@ -169,8 +169,9 @@
     "LA19_n": {
         "PACKAGE_PIN": "",
         "IOSTANDARD": "LVCMOS25"
-        },
-
+        }
+    },
+    "pins": {
     "GPIO_leds[0]": {
 	"PACKAGE_PIN": "A17",
 	"IOSTANDARD": "LVCMOS25",
@@ -218,6 +219,24 @@
 	"IOSTANDARD": "LVCMOS25",
 	"slew": "SLOW",
 	"PIO_DIRECTION": "OUTPUT"
+    },
+    "GPIO_sw_left": {
+	"PACKAGE_PIN": "AK25",
+	"IOSTANDARD": "LVCMOS18",
+	"slew": "SLOW",
+	"PIO_DIRECTION": "INPUT"
+    },
+    "GPIO_sw_center": {
+	"PACKAGE_PIN": "K15",
+	"IOSTANDARD": "LVCMOS18",
+	"slew": "SLOW",
+	"PIO_DIRECTION": "INPUT"
+    },
+    "GPIO_sw_right": {
+	"PACKAGE_PIN": "R27",
+	"IOSTANDARD": "LVCMOS18",
+	"slew": "SLOW",
+	"PIO_DIRECTION": "INPUT"
     },
 
     "userClk_p": {

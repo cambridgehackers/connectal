@@ -47,19 +47,25 @@ for pin in pinout:
     loc = 'TBD'
     iostandard = 'TBD'
     if pinInfo.has_key('fmc'):
-        fmcPin = pinInfo['fmc']
+        pinName = pinInfo['fmc']
         if boardInfo.has_key('fmc2'):
-            fmcInfo = boardInfo['fmc2']
+            boardFmcInfo = boardInfo['fmc2']
         else:
-            fmcInfo = boardInfo['fmc']
-        if fmcInfo.has_key(fmcPin):
-            loc = fmcInfo[fmcPin]['LOC']
-            iostandard = fmcInfo[fmcPin]['IOSTANDARD']
+            boardFmcInfo = boardInfo['fmc']
+    else:
+        pinName = pinInfo['pin_name']
+        boardFmcInfo = boardInfo['pins']
+    if boardFmcInfo.has_key(pinName):
+        if boardFmcInfo[pinName].has_key('LOC'):
+            loc = boardFmcInfo[pinName]['LOC']
         else:
-            print('Missing pin description for', fmcPin, file=sys.stderr)
-            loc = 'fmc.%s' % (fmcPin)
-        if pinInfo.has_key('IOSTANDARD'):
-            iostandard = pinInfo['IOSTANDARD']
+            loc = boardFmcInfo[pinName]['PACKAGE_PIN']
+        iostandard = boardFmcInfo[pinName]['IOSTANDARD']
+    else:
+        print('Missing pin description for', pinName, file=sys.stderr)
+        loc = 'fmc.%s' % (pinName)
+    if pinInfo.has_key('IOSTANDARD'):
+        iostandard = pinInfo['IOSTANDARD']
     print(template % {
         'name': pin,
         'LOC': loc,
