@@ -23,7 +23,7 @@ export UDEV_RULES_DIR=/etc/udev/rules.d
 UDEV_RULES=$(shell ls etc/udev/rules.d)
 MODULES_LOAD_D_DIR=/etc/modules-load.d
 
-all: pciedrivers
+all: pciedrivers scripts/syntax/parsetab.py
 
 pciedrivers:
 	(cd drivers/pcieportal; make)
