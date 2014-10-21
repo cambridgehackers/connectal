@@ -79,6 +79,14 @@ uninstall:
 docs:
 	doxygen scripts/Doxyfile
 
+VERSION=14.10.01
+
+dpkg:
+	git archive --format=tar -o dpkg.tar --prefix=connectal-$(VERSION)/ HEAD
+	tar -xf dpkg.tar
+	rm -f connectal_*
+	(cd connectal-$(VERSION); pwd; dh_make --createorig --email jamey.hicks@gmail.com --multi -c bsd; dpkg-buildpackage)
+
 ## PLY's home is http://www.dabeaz.com/ply/
 install-dependences:
 ifeq ($(shell uname), Darwin)
