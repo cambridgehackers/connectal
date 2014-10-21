@@ -1,4 +1,10 @@
-connectal (14.10.01-1) unstable; urgency=low
+connectal (14.10.01-2precise1) precise; urgency=low
+
+  * Missed some files
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 21 Oct 2014 16:44:23 -0400
+
+connectal (14.10.01-1precise1) precise; urgency=low
 
   * Initial release
 

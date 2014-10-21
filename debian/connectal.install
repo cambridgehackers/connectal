@@ -1,0 +1,4 @@
+/usr/bin/connectalutil
+/usr/share/connectal
+lib/modules/*/bluespec/portalmem.ko
+lib/modules/*/bluespec/pcieportal.ko
