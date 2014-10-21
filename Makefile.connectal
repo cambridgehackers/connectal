@@ -53,7 +53,7 @@ ifndef NUMBER_OF_MASTERS
 NUMBER_OF_MASTERS=1
 endif
 ifndef PIN_TYPE
-PIN_TYPE=1
+PIN_TYPE=Empty
 endif
 
 CONNECTALFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) -D PinType=$(PIN_TYPE) --ipdir=$(IPDIR)
