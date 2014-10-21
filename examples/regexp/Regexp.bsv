@@ -86,9 +86,10 @@ module mkRegexp#(RegexpIndication indication)(Regexp#(64))
    rule ldrr;
       let rv <- toGet(ldr[0]).get;
       case (rv) matches
-	 tagged Ready .r : readyFIFO.enq(r);
-	 tagged Done  .d : indication.searchResult(extend(d), -1);
-	 tagged Loc   .l : indication.searchResult(extend(tpl_1(l)), tpl_2(l));
+	 tagged Ready  .r : readyFIFO.enq(r);
+	 tagged Done   .d : indication.searchResult(extend(d), -1);
+	 tagged Loc    .l : indication.searchResult(extend(tpl_1(l)), tpl_2(l));
+	 tagged Config .c : indication.setupComplete(extend(c));
       endcase
    endrule
       
@@ -101,10 +102,9 @@ module mkRegexp#(RegexpIndication indication)(Regexp#(64))
 	 case (state) matches
 	    Config_charMap:  state <= Config_stateMap;
 	    Config_stateMap: state <= Config_stateTransitions;
-	    Config_stateTransitions: 
+	    Config_stateTransitions:  
 	    begin
 	       state <= Config_charMap;
-	       indication.setupComplete(extend(readyFIFO.first));
 	       readyFIFO.deq;
 	    end
 	 endcase

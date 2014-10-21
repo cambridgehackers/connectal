@@ -40,6 +40,7 @@ typedef union tagged {
    Tuple2#(Bit#(t),Int#(32)) Loc;
    Bit#(t) Done;
    Bit#(t) Ready;
+   Bit#(t) Config;
    } LDR#(numeric type t) deriving (Eq,Bits);
 
 interface RegexpEngine#(numeric type tw);
@@ -115,6 +116,7 @@ module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEng
       conff.deq;
       let rv <- stateTransitionsWriter.finish;
       if (debug) $display("finishStateTransitionsWriter");
+      ldrFIFO.enq(tagged Config fromInteger(iid));
    endrule
    
    FIFO#(Bit#(5)) fsmState <- mkBypassFIFO;
@@ -144,7 +146,7 @@ module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEng
       let accept = mapped_state[7]==1;
       resCnt <= resCnt+1;
       if (accept) begin
-	 $display("accept %d", resCnt);
+	 if (debug) $display("accept %d", resCnt);
 	 ldrFIFO.enq(tagged Loc tuple2(fromInteger(iid),unpack(truncate(resCnt))));
 	 accepted <= accept;
 	 fsmState.enq(0);

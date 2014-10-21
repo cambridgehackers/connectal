@@ -105,50 +105,75 @@ int main(int argc, const char **argv)
     unsigned int BENCHMARK_INPUT_SIZE = 16 << 10;
 #endif
 
-    int charMapAlloc[DEGPAR];
-    int stateMapAlloc[DEGPAR];
-    int stateTransitionsAlloc[DEGPAR];
+    int charMapAlloc;
+    int stateMapAlloc;
+    int stateTransitionsAlloc;
     int haystackAlloc[DEGPAR];
     
-    char *charMap_mem[DEGPAR];
-    char *stateMap_mem[DEGPAR];
-    char *stateTransitions_mem[DEGPAR];
+    char *charMap_mem;
+    char *stateMap_mem;
+    char *stateTransitions_mem;
     char *haystack_mem[DEGPAR];
 
-    int charMap_length[DEGPAR];
-    int stateMap_length[DEGPAR];
-    int stateTransitions_length[DEGPAR];
+    int charMap_length;
+    int stateMap_length;
+    int stateTransitions_length;
     int haystack_length[DEGPAR];
         
-    unsigned int ref_charMap[DEGPAR];
-    unsigned int ref_stateMap[DEGPAR];
-    unsigned int ref_stateTransitions[DEGPAR];
+    unsigned int ref_charMap;
+    unsigned int ref_stateMap;
+    unsigned int ref_stateTransitions;
     unsigned int ref_haystack[DEGPAR];
 
-    for(int i = 0; i < DEGPAR; i++){
+    unsigned int tokens[DEGPAR];
 
-      charMap_length[i] = charMapLength;
-      stateMap_length[i] = stateMapLength;
-      stateTransitions_length[i] = stateTransitionsLength;
-      haystack_length[i] = haystackLength;
+    {
+      charMap_length = charMapLength;
+      stateMap_length = stateMapLength;
+      stateTransitions_length = stateTransitionsLength;
+      
+      charMapAlloc = portalAlloc(charMap_length);
+      stateMapAlloc = portalAlloc(stateMap_length);
+      stateTransitionsAlloc = portalAlloc(stateTransitions_length);
 
-      charMapAlloc[i] = portalAlloc(charMap_length[i]);
-      stateMapAlloc[i] = portalAlloc(stateMap_length[i]);
-      stateTransitionsAlloc[i] = portalAlloc(stateTransitions_length[i]);
-      haystackAlloc[i] = portalAlloc(haystack_length[i]);
+      charMap_mem = (char *)portalMmap(charMapAlloc, charMap_length);
+      stateMap_mem = (char *)portalMmap(stateMapAlloc, stateMap_length);
+      stateTransitions_mem = (char *)portalMmap(stateTransitionsAlloc, stateTransitions_length);
+
+      ref_charMap = dma->reference(charMapAlloc);
+      ref_stateMap = dma->reference(stateMapAlloc);
+      ref_stateTransitions = dma->reference(stateTransitionsAlloc);
+
+      for(int j = 0; j < 256; j++)
+	charMap_mem[j] = charMap(j);
       
-      charMap_mem[i] = (char *)portalMmap(charMapAlloc[i], charMap_length[i]);
-      stateMap_mem[i] = (char *)portalMmap(stateMapAlloc[i], stateMap_length[i]);
-      stateTransitions_mem[i] = (char *)portalMmap(stateTransitionsAlloc[i], stateTransitions_length[i]);
-      haystack_mem[i] = (char *)portalMmap(haystackAlloc[i], haystack_length[i]);
+      for(int j = 0; j < numStates; j++)
+	stateMap_mem[j] = (acceptStates(j) << 7) | stateMap(j);
       
-      ref_charMap[i] = dma->reference(charMapAlloc[i]);
-      ref_stateMap[i] = dma->reference(stateMapAlloc[i]);
-      ref_stateTransitions[i] = dma->reference(stateTransitionsAlloc[i]);
-      ref_haystack[i] = dma->reference(haystackAlloc[i]);
+      for(int j = 0; j < numStates; j++)
+	for(int k = 0; k < numChars; k++)
+	  stateTransitions_mem[(j*MAX_NUM_STATES)+k] = stateTransition(j,k);
 
     }
 
+    for(int i = 0; i < DEGPAR; i++){
+
+      haystack_length[i] = haystackLength;
+      haystackAlloc[i] = portalAlloc(haystack_length[i]);
+      haystack_mem[i] = (char *)portalMmap(haystackAlloc[i], haystack_length[i]);
+      ref_haystack[i] = dma->reference(haystackAlloc[i]);
+
+      portalDCacheFlushInval(charMapAlloc, charMap_length, charMap_mem);
+      portalDCacheFlushInval(stateMapAlloc, stateMap_length, stateMap_mem);
+      portalDCacheFlushInval(stateTransitionsAlloc, stateTransitions_length, stateTransitions_mem);
+      
+      device->setup(ref_charMap, charMap_length);
+      device->setup(ref_stateMap, stateMap_length);
+      device->setup(ref_stateTransitions, stateTransitions_length);
+      sem_wait(&test_sem);
+      tokens[i] = deviceIndication->token;
+    }
+    uint64_t config_beats = dma->show_mem_stats(ChannelType_Read);
 
     ifstream binFile("../test.bin", ios::in|ios::binary|ios::ate);
     streampos binFile_size = binFile.tellg();
@@ -175,48 +200,24 @@ int main(int argc, const char **argv)
     uint64_t sw_cycles = portalTimerLap(0);
     fprintf(stderr, "sw_cycles:%llx\n", (long long)sw_cycles);
 
-    for(int i = 0; i < DEGPAR; i++) {
-      for(int j = 0; j < 256; j++)
-	charMap_mem[i][j] = charMap(j);
-      
-      for(int j = 0; j < numStates; j++)
-	stateMap_mem[i][j] = (acceptStates(j) << 7) | stateMap(j);
-      
-      for(int j = 0; j < numStates; j++)
-	for(int k = 0; k < numChars; k++)
-	  stateTransitions_mem[i][(j*MAX_NUM_STATES)+k] = stateTransition(j,k);
-    }
-
-    unsigned int tokens[DEGPAR];
-
-    for(int i = 0; i < DEGPAR; i++){
-      portalDCacheFlushInval(charMapAlloc[i], charMap_length[i], charMap_mem[i]);
-      portalDCacheFlushInval(stateMapAlloc[i], stateMap_length[i], stateMap_mem[i]);
-      portalDCacheFlushInval(stateTransitionsAlloc[i], stateTransitions_length[i], stateTransitions_mem[i]);
-      portalDCacheFlushInval(haystackAlloc[i], haystack_length[i], haystack_mem[i]);
-      
-      device->setup(ref_charMap[i], charMap_length[i]);
-      device->setup(ref_stateMap[i], stateMap_length[i]);
-      device->setup(ref_stateTransitions[i], stateTransitions_length[i]);
-      sem_wait(&test_sem);
-      tokens[i] = deviceIndication->token;
-    }
-
     portalTimerStart(0);
-    for(int i = 0; i < DEGPAR; i++)
+    for(int i = 0; i < DEGPAR; i++) {
+      portalDCacheFlushInval(haystackAlloc[i], haystack_length[i], haystack_mem[i]);
       device->search(tokens[i], ref_haystack[i], read_length);
+    }
     sem_wait(&test_sem);
     uint64_t hw_cycles = portalTimerLap(0);
-    uint64_t beats = dma->show_mem_stats(ChannelType_Read);
+    uint64_t beats = dma->show_mem_stats(ChannelType_Read) - config_beats;
     float read_util = (float)beats/(float)hw_cycles;
     fprintf(stderr, "hw_cycles:%llx\n", (long long)hw_cycles);
     fprintf(stderr, "memory read utilization (beats/cycle): %f\n", read_util);
     fprintf(stderr, "speedup: %f\n", ((float)sw_cycles)/((float)hw_cycles));
 
+    close(charMapAlloc);
+    close(stateMapAlloc);
+    close(stateTransitionsAlloc);
+
     for(int i = 0; i < DEGPAR; i++){
-      close(charMapAlloc[i]);
-      close(stateMapAlloc[i]);
-      close(stateTransitionsAlloc[i]);
       close(haystackAlloc[i]);
     }
   }
