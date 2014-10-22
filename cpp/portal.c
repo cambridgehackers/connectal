@@ -70,9 +70,17 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
     pint->handler = handler;
     pint->reqsize = reqsize;
     if (reqsize) {
+#ifdef __KERNEL__
+printk("[%s:%d] software id %d reqsize %d\n", __FUNCTION__, __LINE__, id, reqsize);
+#else
 printf("[%s:%d] software id %d reqsize %d\n", __FUNCTION__, __LINE__, id, reqsize);
         sprintf(buff, "SWSOCK%d", id);
         pint->fpga_fd = init_listening(buff);
+        int opt = 1;
+        ioctl(pint->fpga_fd, FIONBIO, &opt);
+        pint->map_base = (volatile unsigned int*)malloc(reqsize);
+#endif
+        goto exitlab;
     }
     else if (id != -1) {
         pint->fpga_number = portalGetFpga(id);
@@ -98,12 +106,12 @@ printf("[%s:%d] software id %d reqsize %d\n", __FUNCTION__, __LINE__, id, reqsiz
     if (pgfile == -1) {
 	PORTAL_PRINTF("failed to open /sys/devices/amba.[02]/f8007000.devcfg/prog_done %d\n", errno);
 	rc = -1;
-	goto errlab;
+	goto exitlab;
     }
     if (read(pgfile, &read_status, 1) != 1 || read_status != '1') {
 	PORTAL_PRINTF("FPGA not programmed: %x\n", read_status);
 	rc = -ENODEV;
-	goto errlab;
+	goto exitlab;
     }
     close(pgfile);
     pint->fpga_fd = open(buff, O_RDWR);
@@ -115,17 +123,17 @@ printf("[%s:%d] software id %d reqsize %d\n", __FUNCTION__, __LINE__, id, reqsiz
     if (pint->fpga_fd < 0) {
 	PORTAL_PRINTF("Failed to open %s fd=%d errno=%d\n", buff, pint->fpga_fd, errno);
 	rc = -errno;
-	goto errlab;
+	goto exitlab;
     }
     pint->map_base = (volatile unsigned int*)mmap(NULL, 1<<addrbits, PROT_READ|PROT_WRITE, MAP_SHARED, pint->fpga_fd, 0);
     if (pint->map_base == MAP_FAILED) {
         PORTAL_PRINTF("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", pint->fpga_fd, errno);
         rc = -errno;
-	goto errlab;
+	goto exitlab;
     }  
 #endif
 
-errlab:
+exitlab:
     if (rc != 0) {
       PORTAL_PRINTF("%s: failed to open Portal fpga%d\n", __FUNCTION__, pint->fpga_number);
 #ifndef __KERNEL__

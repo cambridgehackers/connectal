@@ -32,6 +32,9 @@
 #ifdef BSIM
 #include "sock_utils.h"
 #endif
+#ifndef __KERNEL__
+#include <sys/ioctl.h>
+#endif
 
 #ifdef ZYNQ
 #include <android/log.h>
@@ -170,6 +173,29 @@ void* PortalPoller::portalExec_event(void)
       Portal *instance = portal_wrappers[i];
       if (instance->pint.reqsize) {
           /* sw portal */
+          if (instance->pint.accept_finished) { /* connection established */
+             int len = read(instance->pint.fpga_fd, (void *)instance->pint.map_base, sizeof(uint32_t));
+             if (len == -1 && errno == EAGAIN)
+                 continue;
+printf("[%s:%d] len %d\n", __FUNCTION__, __LINE__, len);
+             if (len <= 0) {
+                 fprintf(stderr, "%s[%d]: read error %d\n",__FUNCTION__, instance->pint.fpga_fd, errno);
+                 exit(1);
+             }
+          }
+          else { /* have not received connection yet */
+             int sockfd;
+             if ((sockfd = accept(instance->pint.fpga_fd, NULL, NULL)) == -1) {
+                 if (errno == EAGAIN)
+                     continue;
+                 fprintf(stderr, "%s[%d]: accept error %d\n",__FUNCTION__, instance->pint.fpga_fd, errno);
+                 exit(1);
+             }
+             instance->pint.accept_finished = 1;
+             instance->pint.fpga_fd = sockfd;
+             int opt = 1;
+             ioctl(sockfd, FIONBIO, &opt);
+          }
           continue;
       }
       volatile unsigned int *map_base = instance->pint.map_base;

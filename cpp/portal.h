@@ -60,6 +60,7 @@ typedef struct PortalInternal {
   void                  *parent;
   PORTAL_INDFUNC         handler;
   uint32_t               reqsize;
+  int                    accept_finished;
 } PortalInternal;
 
 #ifdef __KERNEL__
