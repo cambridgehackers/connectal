@@ -58,8 +58,8 @@ static void manual_event(void)
 int main(int argc, const char **argv)
 {
 
-   init_portal_internal(&intarr[0], IfcNames_SimpleRequest, SimpleRequestProxy_handleMessage); // portal 1
-   init_portal_internal(&intarr[1], IfcNames_SimpleIndication, SimpleIndicationWrapper_handleMessage); // portal 2
+   init_portal_internal(&intarr[0], IfcNames_SimpleRequest, SimpleRequestProxy_handleMessage, SimpleRequestProxy_reqsize); // portal 1
+   init_portal_internal(&intarr[1], IfcNames_SimpleIndication, SimpleIndicationWrapper_handleMessage, SimpleIndicationWrapper_reqsize); // portal 2
    //indfn[0] = SimpleRequestProxy_handleMessage;
    //indfn[1] = SimpleIndicationWrapper_handleMessage;
 

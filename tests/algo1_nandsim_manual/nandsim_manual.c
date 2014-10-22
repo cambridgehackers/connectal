@@ -187,10 +187,10 @@ int main(int argc, const char **argv)
   pthread_t tid = 0;
 
 
-  init_portal_internal(&intarr[2], IfcNames_BackingStoreMMUConfigRequest, MMUConfigRequestProxy_handleMessage);         // fpga3
-  init_portal_internal(&intarr[0], IfcNames_BackingStoreMMUConfigIndication, MMUConfigIndicationWrapper_handleMessage);     // fpga1
-  init_portal_internal(&intarr[3], IfcNames_NandSimRequest, NandSimRequestProxy_handleMessage);    // fpga4
-  init_portal_internal(&intarr[1], IfcNames_NandSimIndication, NandSimIndicationWrapper_handleMessage); // fpga2
+  init_portal_internal(&intarr[2], IfcNames_BackingStoreMMUConfigRequest, MMUConfigRequestProxy_handleMessage, MMUConfigRequestProxy_reqsize);         // fpga3
+  init_portal_internal(&intarr[0], IfcNames_BackingStoreMMUConfigIndication, MMUConfigIndicationWrapper_handleMessage, MMUConfigIndicationWrapper_reqsize);     // fpga1
+  init_portal_internal(&intarr[3], IfcNames_NandSimRequest, NandSimRequestProxy_handleMessage, NandSimRequestProxy_reqsize);    // fpga4
+  init_portal_internal(&intarr[1], IfcNames_NandSimIndication, NandSimIndicationWrapper_handleMessage, NandSimIndicationWrapper_reqsize); // fpga2
 
 #ifdef BSIM
   portalEnableInterrupts(&intarr[0]);
