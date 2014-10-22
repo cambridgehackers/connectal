@@ -26,11 +26,11 @@ MODULES_LOAD_D_DIR=/etc/modules-load.d
 all: pciedrivers scripts/syntax/parsetab.py
 
 pciedrivers:
-	(cd drivers/pcieportal; make)
+	#(cd drivers/pcieportal; make)
 	make -C pcie/connectalutil
 
 pciedrivers-clean:
-	(cd drivers/pcieportal; make clean)
+	#(cd drivers/pcieportal; make clean)
 	make -C pcie/connectalutil clean
 
 ifneq ("$(DESTDIR)", "")
@@ -44,7 +44,7 @@ install: $(INSTALL_SHARED)
 		install -m644 $$fname $(DESTDIR)$(MODULES_LOAD_D_DIR) ; \
 	    done; \
 	fi
-	(cd drivers/pcieportal; make install)
+	#(cd drivers/pcieportal; make install)
 	make -C pcie/connectalutil install
 	install -d -m755 $(DESTDIR)$(UDEV_RULES_DIR)
 	for fname in $(UDEV_RULES) ; do \
@@ -82,7 +82,7 @@ docs:
 VERSION=14.10.01
 
 spkg:
-	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu/precise --git-ignore-new -S -tc -sa
+	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu/precise --git-ignore-new -S -tc
 dpkg:
 	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu/precise --git-ignore-new -tc -us -uc
 
