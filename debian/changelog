@@ -1,10 +1,16 @@
-connectal (14.10.01-2precise1) precise; urgency=low
+connectal (14.10.01-2trusty2) trusty; urgency=low
+
+  * Include the source tarball
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 22 Oct 2014 08:11:22 -0400
+
+connectal (14.10.01-2trusty1) trusty; urgency=low
 
   * Missed some files
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 21 Oct 2014 16:44:23 -0400
 
-connectal (14.10.01-1precise1) precise; urgency=low
+connectal (14.10.01-1trusty1) trusty; urgency=low
 
   * Initial release
 
