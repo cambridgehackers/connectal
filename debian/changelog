@@ -1,3 +1,9 @@
+connectal (14.10.01-3trusty1) trusty; urgency=low
+
+  * Depends on python-ply
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 22 Oct 2014 17:29:22 -0400
+
 connectal (14.10.01-2trusty2) trusty; urgency=low
 
   * Include the source tarball

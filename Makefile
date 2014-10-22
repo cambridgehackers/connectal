@@ -81,8 +81,10 @@ docs:
 
 VERSION=14.10.01
 
-dpkg:
+spkg:
 	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu/precise --git-ignore-new -S -tc -sa
+dpkg:
+	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu/precise --git-ignore-new -tc -us -uc
 
 ## PLY's home is http://www.dabeaz.com/ply/
 install-dependences:
