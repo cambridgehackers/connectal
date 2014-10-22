@@ -958,7 +958,7 @@ def syntax_parse(argdata, inputfilename, bsvdefines):
         print 'Parsing:', inputfilename
     return  parser.parse(data)
 
-def generate_bsvcpp(filelist, project_dir, dutname, bsvdefines, s2hinterface, h2sinterface, nf):
+def generate_bsvcpp(filelist, project_dir, dutname, bsvdefines, s2hinterface, h2sinterface, s2sinterface, nf):
     global noisyFlag
     noisyFlag=nf
     for inputfile in filelist:
@@ -968,7 +968,8 @@ def generate_bsvcpp(filelist, project_dir, dutname, bsvdefines, s2hinterface, h2
     hwProxies = []
     swWrappers = []
     hwWrappers = []
-    for i in set(s2hinterface + h2sinterface):
+    ssInterface = []
+    for i in set(s2hinterface + h2sinterface + s2sinterface):
         ifc = globalv.globalvars[i]
         ifc = ifc.instantiate(dict(zip(ifc.params, ifc.params)))
         ifc.ind = AST.Interface(i, [], [], None, ifc.package)
@@ -982,7 +983,9 @@ def generate_bsvcpp(filelist, project_dir, dutname, bsvdefines, s2hinterface, h2
         if i in h2sinterface:
             hwProxies.append(ifc)
             swWrappers.append(ifc)
-    cppgen.generate_cpp(globalv.globaldecls, project_dir, noisyFlag, swProxies, swWrappers)
+        if i in s2sinterface:
+            ssInterface.append(ifc)
+    cppgen.generate_cpp(globalv.globaldecls, project_dir, noisyFlag, swProxies, swWrappers, ssInterface)
     bsvgen.generate_bsv(globalimports, project_dir, noisyFlag, hwProxies, hwWrappers, dutname)
     
 if __name__=='__main__':
@@ -995,4 +998,4 @@ if __name__=='__main__':
         import parsetab
         sys.exit(0)
     generate_bsvcpp(sys.argv[1:], os.environ.get('DTOP'), os.environ.get('DUT_NAME'), \
-         os.environ.get('BSVDEFINES_LIST').split(), os.environ.get('S2H').split(), os.environ.get('H2S').split(), os.environ.get('V') == '1')
+         os.environ.get('BSVDEFINES_LIST').split(), os.environ.get('S2H').split(), os.environ.get('H2S').split(), os.environ.get('S2S').split(), os.environ.get('V') == '1')

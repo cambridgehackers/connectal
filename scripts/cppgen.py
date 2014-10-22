@@ -33,7 +33,7 @@ proxyClassPrefixTemplate='''
 class %(namespace)s%(className)s : public %(parentClass)s {
 //proxyClass
 public:
-    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, poller) {
+    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, %(namespace)s%(className)s_reqsize, poller) {
         pint.parent = static_cast<void *>(this);
     };
 '''
@@ -42,7 +42,7 @@ wrapperClassPrefixTemplate='''
 class %(namespace)s%(className)s : public %(parentClass)s {
 //wrapperClass
 public:
-    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, poller) {
+    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, %(namespace)s%(className)s_reqsize, poller) {
         pint.handler = %(namespace)s%(className)s_handleMessage;
         pint.parent = static_cast<void *>(this);
     };
@@ -105,6 +105,17 @@ void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p %(paramSeparat
 };
 '''
 
+proxyMethodTemplateSW='''
+void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p %(paramSeparator)s %(paramDeclarations)s )
+{
+    unsigned int tempdata[%(wordLen)s+1];
+    volatile unsigned int* temp_working_addr = tempdata;
+    *temp_working_addr++ = %(methodChannelOffset)s << 16 | %(wordLen)s;
+%(paramStructMarshall)s
+    SWSENDDATA(p, tempdata, (%(wordLen)s+1) * sizeof(uint32_t));
+};
+'''
+
 proxyMethodTemplateCpp='''
 void %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
 {
@@ -122,6 +133,18 @@ void %(className)s%(methodName)s_demarshall(PortalInternal *p){
 }
 '''
 
+msgDemarshallTemplateSW='''
+void %(className)s%(methodName)s_demarshall(PortalInternal *p){
+    unsigned int tmp;
+    unsigned int tempdata[%(wordLen)s+1];
+    volatile unsigned int* temp_working_addr = tempdata;
+    SWRECVDATA(p, tempdata, (%(wordLen)s) * sizeof(uint32_t));
+%(paramStructDeclarations)s
+%(paramStructDemarshall)s
+    %(responseCase)s
+}
+'''
+
 def indent(f, indentation):
     for i in xrange(indentation):
         f.write(' ')
@@ -133,7 +156,7 @@ class NoCMixin:
     def emitCDeclaration(self, f, indentation, namespace):
         pass
     def emitCImplementation(self, f):
-        pass
+        return -1
 
 class MethodMixin:
     def collectTypes(self):
@@ -181,7 +204,7 @@ class MethodMixin:
             indent(f, 4)
             f.write(('(static_cast<%s *>(p->parent))->%s ( ' % (className, methodName)) + paramValues + ');\n')
             f.write('};\n')
-    def emitCImplementation(self, f, hpp, className, namespace, proxy, doCpp):
+    def emitCImplementation(self, f, hpp, className, namespace, proxy, doCpp, swInterface):
 
         # resurse interface types and flattening all structs into a list of types
         def collectMembers(scope, member):
@@ -267,7 +290,7 @@ class MethodMixin:
             for e in w:
                 field = e.name;
 		if e.datatype.cName() == 'float':
-		    return '        WRITEL(p, temp_working_addr, *(int*)&%s);\n' % e.name;
+		    return paramStructMarshallStr % ('*(int*)&' + e.name)
                 if e.shifted:
                     field = '(%s>>%s)' % (field, e.shifted)
                 if off:
@@ -276,12 +299,12 @@ class MethodMixin:
                     field = '(const %s & std::bitset<%d>(0xFFFFFFFF)).to_ulong()' % (field, e.datatype.bitWidth())
                 word.append(field)
                 off = off+e.width-e.shifted
-            return '        WRITEL(p, temp_working_addr, %s);\n' % (''.join(util.intersperse('|', word)))
+            return paramStructMarshallStr % (''.join(util.intersperse('|', word)))
 
         def generate_demarshall(w):
             off = 0
             word = []
-            word.append('        tmp = READL(p, temp_working_addr);\n');
+            word.append(paramStructDemarshallStr)
             for e in w:
                 # print e.name+' (d)'
                 field = 'tmp'
@@ -300,9 +323,15 @@ class MethodMixin:
             # print ''
             return ''.join(word)
 
+        if swInterface:
+            paramStructDemarshallStr = '        tmp = *temp_working_addr++;\n'
+            paramStructMarshallStr = '        *temp_working_addr++ = %s;\n'
+        else:
+            paramStructDemarshallStr = '        tmp = READL(p, temp_working_addr);\n'
+            paramStructMarshallStr = '        WRITEL(p, temp_working_addr, %s);\n'
         if argWords == []:
-            paramStructMarshall = ['        WRITEL(p, temp_working_addr, 0);\n']
-            paramStructDemarshall = ['        tmp = READL(p, temp_working_addr);\n']
+            paramStructMarshall = [paramStructMarshallStr % '0']
+            paramStructDemarshall = [paramStructDemarshallStr]
         else:
             paramStructMarshall = map(generate_marshall, argWords)
             paramStructMarshall.reverse();
@@ -326,6 +355,7 @@ class MethodMixin:
             'paramNames': ', '.join(['msg->%s' % p.name for p in params]),
             'resultType': resultTypeName,
             'methodChannelOffset': 'CHAN_NUM_%s_%s' % (className, cName(self.name)),
+            'wordLen': len(argWords),
             # if message is empty, we still send an int of padding
             'payloadSize' : max(4, 4*((sum([p.numBitsBSV() for p in self.params])+31)/32)) 
             }
@@ -339,11 +369,18 @@ class MethodMixin:
                                       % { 'name': self.name,
                                           'className' : className,
                                           'params': ', '.join(respParams)})
-            f.write(msgDemarshallTemplate % substs)
+            if swInterface:
+                f.write(msgDemarshallTemplateSW % substs)
+            else:
+                f.write(msgDemarshallTemplate % substs)
         else:
             substs['responseCase'] = ''
-            f.write(proxyMethodTemplate % substs)
+            if swInterface:
+                f.write(proxyMethodTemplateSW % substs)
+            else:
+                f.write(proxyMethodTemplate % substs)
             hpp.write(proxyMethodTemplateDecl % substs)
+        return len(argWords)
 
 
 class StructMemberMixin:
@@ -376,8 +413,8 @@ class StructMixin:
         if (indentation == 0):
             f.write(' %s;' % name)
         f.write('\n')
-    def emitCImplementation(self, f, hpp, className='', namespace='', doCpp=False):
-        pass
+    def emitCImplementation(self, f, hpp, className, namespace, doCpp, swInterface):
+        return -1
 
 class EnumElementMixin:
     def cName(self):
@@ -401,8 +438,8 @@ class EnumMixin:
         if (indentation == 0):
             f.write(' %s;' % name)
         f.write('\n')
-    def emitCImplementation(self, f, hpp, className='', namespace='', doCpp=False):
-        pass
+    def emitCImplementation(self, f, hpp, className, namespace, doCpp, swInterface):
+        return -1
     def bitWidth(self):
         return int(math.ceil(math.log(len(self.elements))))
 
@@ -436,7 +473,7 @@ class InterfaceMixin:
 	return rv
     def global_name(self, s, suffix):
         return '%s%s_%s' % (cName(self.name), suffix, s)
-    def emitCProxyDeclaration(self, f, of, suffix, indentation=0, namespace=''):
+    def emitCProxyDeclaration(self, f, of, suffix, indentation, namespace, maxSize):
         className = "%s%s" % (cName(self.name), suffix)
 	reqChanNums = []
         for d in self.decls:
@@ -445,6 +482,7 @@ class InterfaceMixin:
             reqChanNums.append('CHAN_NUM_%s_putFailed' % className)
         subs = {'className': className,
                 'namespace': namespace,
+                'maxSize': maxSize,
                 'parentClass': self.parentClass('Portal')}
         if suffix != "WrapperStatus":
             f.write("\nclass %s%s;\n" % (cName(self.name), 'ProxyStatus'))
@@ -453,7 +491,8 @@ class InterfaceMixin:
             d.emitMethodDeclaration(f, True, indentation + 4, namespace, className)
         f.write('\n};\n')
 	of.write('enum { ' + ','.join(reqChanNums) + '};\n')
-    def emitCWrapperDeclaration(self, f, of, cppf, suffix, indentation=0, namespace=''):
+        of.write('#define %(namespace)s%(className)s_reqsize (%(maxSize)s * sizeof(uint32_t))\n' % subs)
+    def emitCWrapperDeclaration(self, f, of, cppf, suffix, indentation, namespace, maxSize):
         className = "%s%s" % (cName(self.name), suffix)
         indent(f, indentation)
 	indChanNums = []
@@ -461,6 +500,7 @@ class InterfaceMixin:
             indChanNums.append('CHAN_NUM_%s' % self.global_name(cName(d.name), suffix));
         subs = {'className': className,
                 'namespace': namespace,
+                'maxSize': maxSize,
                 'parentClass': self.parentClass('Portal')}
         f.write(wrapperClassPrefixTemplate % subs)
         for d in self.decls:
@@ -469,15 +509,21 @@ class InterfaceMixin:
         for d in self.decls:
             d.emitCStructDeclaration(cppf, of, namespace, className)
 	of.write('enum { ' + ','.join(indChanNums) + '};\n')
-    def emitCProxyImplementation(self, f, hpp, suffix, namespace, doCpp):
+        of.write('#define %(namespace)s%(className)s_reqsize (%(maxSize)s * sizeof(uint32_t))\n' % subs)
+    def emitCProxyImplementation(self, f, hpp, suffix, namespace, doCpp, swInterface):
+        maxSize = 0;
         className = "%s%s" % (cName(self.name), suffix)
         substitutions = {'namespace': namespace,
                          'className': className,
                          'parentClass': self.parentClass('Portal')}
         for d in self.decls:
             if doCpp or d.name != putFailedMethodName:
-                d.emitCImplementation(f, hpp, className, namespace,True, doCpp)
-    def emitCWrapperImplementation (self, f, hpp, suffix, namespace, doCpp):
+                t = d.emitCImplementation(f, hpp, className, namespace,True, doCpp, swInterface)
+                if t > maxSize:
+                    maxSize = t
+        return maxSize
+    def emitCWrapperImplementation (self, f, hpp, suffix, namespace, doCpp, swInterface):
+        maxSize = 0;
         className = "%s%s" % (cName(self.name), suffix)
         substitutions = {'namespace': namespace,
                          'className': className,
@@ -494,9 +540,12 @@ class InterfaceMixin:
                 substitutions['putFailedStrings'] = ', '.join('"%s"' % (d.name) for d in self.req.decls if d.__class__ == AST.Method )
                 f.write(putFailedTemplate % substitutions)
             for d in self.decls:
-                d.emitCImplementation(f, hpp, className, namespace, False, False);
+                t = d.emitCImplementation(f, hpp, className, namespace, False, False, swInterface)
+                if t > maxSize:
+                    maxSize = t
             f.write(handleMessageTemplate % substitutions)
             hpp.write(handleMessageTemplateDecl % substitutions)
+        return maxSize
 
 class ParamMixin:
     def cName(self):
@@ -562,7 +611,43 @@ def cName(x):
     else:
         return x.cName()
 
-def generate_cpp(globaldecls, project_dir, noisyFlag, swProxies, swWrappers):
+def generateProxy(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i, swInterface):
+    cppname = '%sProxy.c' % i.name
+    hppname = '%sProxy.h' % i.name
+    hpp = create_cpp_file(hppname)
+    cpp = create_cpp_file(cppname)
+    hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': i.name.upper()})
+    hpp.write('#include "%s.h"' % i.parentClass("portal"))
+    i.ind.emitCWrapperImplementation(cpp, generated_hpp, "Proxy", '', False, False)
+    maxSize = i.emitCProxyImplementation(cpp, generated_hpp, "Proxy", "", False, swInterface)
+    if not swInterface:
+        maxSize = 0
+    i.emitCProxyDeclaration(hpp, generated_hpp, "Proxy", 0, '', maxSize)
+    hpp.write('#endif // _%(name)s_H_\n' % {'name': i.name.upper()})
+    hpp.close();
+    cpp.close();
+    generatedCFiles.append(cppname)
+
+def generateWrapper(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i, swInterface):
+    cppname = '%sWrapper.c' % i.name
+    hppname = '%sWrapper.h' % i.name
+    hpp = create_cpp_file(hppname)
+    cpp = create_cpp_file(cppname)
+    hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': i.name.upper()})
+    i.ind.emitCProxyImplementation(cpp, generated_hpp, "WrapperStatus", "", False, swInterface)
+    maxSize = i.emitCWrapperImplementation(cpp, generated_hpp, "Wrapper", '', False, swInterface)
+    if not swInterface:
+        maxSize = 0
+    generated_cpp.write('\n\n/************** Start of %sWrapper CPP ***********/\n' % i.name)
+    generated_cpp.write('#include "%s"' % hppname)
+    i.emitCWrapperDeclaration(hpp, generated_hpp, generated_cpp, "Wrapper", 0, '', maxSize)
+    i.emitCWrapperImplementation(generated_cpp, generated_hpp, "Wrapper", '', True, swInterface)
+    hpp.write('#endif // _%(name)s_H_\n' % {'name': i.name.upper()})
+    hpp.close();
+    cpp.close();
+    generatedCFiles.append(cppname)
+
+def generate_cpp(globaldecls, project_dir, noisyFlag, swProxies, swWrappers, swInterface):
     def create_cpp_file(name):
         fname = os.path.join(project_dir, 'jni', name)
         f = util.createDirAndOpen(fname, 'w')
@@ -591,36 +676,14 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, swProxies, swWrappers):
     generated_cpp.write('\n#ifndef NO_CPP_PORTAL_CODE\n\n')
 
     for i in swProxies:
-        cppname = '%sProxy.c' % i.name
-        hppname = '%sProxy.h' % i.name
-        hpp = create_cpp_file(hppname)
-        cpp = create_cpp_file(cppname)
-        hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': i.name.upper()})
-        hpp.write('#include "%s.h"' % i.parentClass("portal"))
-        i.emitCProxyDeclaration(hpp, generated_hpp, "Proxy")
-        i.ind.emitCWrapperImplementation(cpp, generated_hpp, "Proxy", '', False)
-        i.emitCProxyImplementation(cpp, generated_hpp, "Proxy", "", False)
-        hpp.write('#endif // _%(name)s_H_\n' % {'name': i.name.upper()})
-        hpp.close();
-        cpp.close();
-        generatedCFiles.append(cppname)
+        generateProxy(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i, False)
 
     for i in swWrappers:
-        cppname = '%sWrapper.c' % i.name
-        hppname = '%sWrapper.h' % i.name
-        hpp = create_cpp_file(hppname)
-        cpp = create_cpp_file(cppname)
-        hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': i.name.upper()})
-        i.ind.emitCProxyImplementation(cpp, generated_hpp, "WrapperStatus", "", False)
-        i.emitCWrapperImplementation(cpp, generated_hpp, "Wrapper", '', False)
-        generated_cpp.write('\n\n/************** Start of %sWrapper CPP ***********/\n' % i.name)
-        generated_cpp.write('#include "%s"' % hppname)
-        i.emitCWrapperDeclaration(hpp, generated_hpp, generated_cpp, "Wrapper")
-        i.emitCWrapperImplementation(generated_cpp, generated_hpp, "Wrapper", '', True)
-        hpp.write('#endif // _%(name)s_H_\n' % {'name': i.name.upper()})
-        hpp.close();
-        cpp.close();
-        generatedCFiles.append(cppname)
+        generateWrapper(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i, False)
+
+    for i in swInterface:
+        generateProxy(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i, True)
+        generateWrapper(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i, True)
     
     generated_cpp.write('\n#endif //NO_CPP_PORTAL_CODE\n')
     generated_cpp.close();

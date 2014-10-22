@@ -57,7 +57,7 @@ int global_pa_fd = -1;
 static tBoard* tboard;
 #endif
 
-void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler)
+void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, uint32_t reqsize)
 {
     int rc = 0;
     char buff[128];
@@ -72,6 +72,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler)
     }
     pint->fpga_fd = -1;
     pint->handler = handler;
+    pint->reqsize = reqsize;
     snprintf(buff, sizeof(buff), "/dev/fpga%d", pint->fpga_number);
 #ifdef BSIM   // BSIM version
     connect_to_bsim();
@@ -156,7 +157,7 @@ static void init_directory(void)
 #ifdef __KERNEL__
   tboard = get_pcie_portal_descriptor();
 #endif
-  init_portal_internal(&globalDirectory, -1, NULL);
+  init_portal_internal(&globalDirectory, -1, NULL, 0);
 #ifdef ZYNQ /* There is no way to set userclock freq from host on PCIE */
   // start by setting the clock frequency (this only has any effect on the zynq platform)
   PortalClockRequest request;

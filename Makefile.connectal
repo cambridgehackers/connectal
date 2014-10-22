@@ -109,6 +109,7 @@ endif
 	$(Q)$(CONNECTALDIR)/scripts/makefilegen.py -B$(BOARD) -p $(BOARD) \
 	$(foreach s2h, $(S2H), -s2h $(s2h)) \
 	$(foreach h2s, $(H2S), -h2s $(h2s)) \
+	$(foreach s2s, $(S2S), -s2s $(s2s)) \
 	$(foreach f, $(CPPFILES), --source $f) \
 	$(foreach f, $(CPPFILES2), --source2 $f) \
         $(CONNECTALFLAGS) $(BSVFILES) $(PRINTF_EXTRA) $(VERBOSE_SWITCH)

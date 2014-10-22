@@ -21,6 +21,9 @@
 
 #ifndef __PORTAL_OFFSETS_H__
 #define __PORTAL_OFFSETS_H__
+#include <stdint.h>
+#include <sys/types.h>
+#include <sys/socket.h> // for send()/recv()
 
 /* Offset of each /dev/fpgaxxx device in the address space */
 #define PORTAL_BASE_OFFSET         (1 << 16)
@@ -56,6 +59,7 @@ typedef struct PortalInternal {
   volatile unsigned int *map_base;
   void                  *parent;
   PORTAL_INDFUNC         handler;
+  uint32_t               reqsize;
 } PortalInternal;
 
 #ifdef __KERNEL__
@@ -82,7 +86,7 @@ int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *
 #ifdef __cplusplus
 extern "C" {
 #endif
-void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler);
+void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, uint32_t reqsize);
 uint64_t portalCycleCount(void);
 unsigned int portalGetFpga(unsigned int id);
 unsigned int portalGetAddrbits(unsigned int id);
@@ -132,5 +136,7 @@ extern PortalInternal globalDirectory;
 #define READL(CITEM, A)     read_portal_bsim((A), (CITEM)->fpga_number)
 #define WRITEL(CITEM, A, B) write_portal_bsim((A), (B), (CITEM)->fpga_number)
 #endif
+#define SWSENDDATA(CITEM, A, B) send((CITEM)->fpga_fd, (A), (B), 0)
+#define SWRECVDATA(CITEM, A, B) recv((CITEM)->fpga_fd, (A), (B), 0)
 
 #endif /* __PORTAL_OFFSETS_H__ */

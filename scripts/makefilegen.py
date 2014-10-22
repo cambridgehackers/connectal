@@ -38,6 +38,7 @@ argparser.add_argument('-B', '--board', default='zc702', help='Target Board for 
 argparser.add_argument('-O', '--OS', default=None, choices=supported_os, help='Target operating system')
 argparser.add_argument('-s2h', '--s2hinterface', help='BSV interface to generate stubs for software to hardware communication', action='append')
 argparser.add_argument('-h2s', '--h2sinterface', help='BSV interface to generate stubs for hardware to software communication', action='append')
+argparser.add_argument('-s2s', '--s2sinterface', help='BSV interface to generate stubs for software to software communication', action='append')
 argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps project directory')
 argparser.add_argument('-s', '--source', help='C++ source files', action='append')
 argparser.add_argument(      '--source2', help='C++ second program source files', action='append')
@@ -124,6 +125,7 @@ DUT=%(dut)s
 
 export S2H = %(s2hinterface)s
 export H2S = %(h2sinterface)s
+export S2S = %(s2sinterface)s
 BSVFILES = %(bsvfiles)s
 
 BSCFLAGS_PROJECT = %(bscflags)s
@@ -230,6 +232,8 @@ if __name__=='__main__':
         options.s2hinterface = []
     if not options.h2sinterface:
         options.h2sinterface = []
+    if not options.s2sinterface:
+        options.s2sinterface = []
 
     project_dir = os.path.abspath(os.path.expanduser(options.project_dir))
 
@@ -359,6 +363,7 @@ if __name__=='__main__':
                                    'qtused': 'cd jni; qmake ../..; make' if options.qtused else '',
                                    's2hinterface': ' '.join(options.s2hinterface),
                                    'h2sinterface': ' '.join(options.h2sinterface),
+                                   's2sinterface': ' '.join(options.s2sinterface),
                                    'bsvfiles': ' '.join([ os.path.abspath(bsvfile) for bsvfile in options.bsvfile]),
                                    'bsimsource': ' '.join([os.path.abspath(bsimsource) for bsimsource in options.bsimsource]) if options.bsimsource else '',
                                    'includepath': ' '.join(['-I%s' % os.path.dirname(os.path.abspath(source)) for source in options.source]) if options.source else '',
