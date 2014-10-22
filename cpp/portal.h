@@ -21,9 +21,11 @@
 
 #ifndef __PORTAL_OFFSETS_H__
 #define __PORTAL_OFFSETS_H__
+#ifndef __KERNEL__
 #include <stdint.h>
 #include <sys/types.h>
 #include <sys/socket.h> // for send()/recv()
+#endif
 
 /* Offset of each /dev/fpgaxxx device in the address space */
 #define PORTAL_BASE_OFFSET         (1 << 16)
