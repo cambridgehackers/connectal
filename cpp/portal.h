@@ -116,9 +116,14 @@ int portalDCacheFlushInval(int fd, long size, void *__p);
 void init_portal_memory(void);
 int portalAlloc(size_t size);
 void *portalMmap(int fd, size_t size);
+void portalInitiator(void);
+void portalSend(PortalInternal *p, void *data, int len);
+int portalRecv(PortalInternal *p, void *data, int len);
 
 extern int portalExec_timeout;
 extern int global_pa_fd;
+extern int global_sockfd;
+extern int we_are_initiator;
 extern PortalInternal globalDirectory;
 #ifdef __cplusplus
 }
@@ -137,7 +142,5 @@ extern PortalInternal globalDirectory;
 #define READL(CITEM, A)     read_portal_bsim((A), (CITEM)->fpga_number)
 #define WRITEL(CITEM, A, B) write_portal_bsim((A), (B), (CITEM)->fpga_number)
 #endif
-#define SWSENDDATA(CITEM, A, B) send((CITEM)->fpga_fd, (A), (B), 0)
-#define SWRECVDATA(CITEM, A, B) recv((CITEM)->fpga_fd, (A), (B), 0)
 
 #endif /* __PORTAL_OFFSETS_H__ */

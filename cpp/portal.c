@@ -49,6 +49,8 @@
 #include <pcieportal.h> // BNOC_TRACE
 #endif
 
+#define MAX_DIRECTORY_SIZE 1024
+
 static void init_directory(void);
 PortalInternal globalDirectory;
 int global_pa_fd = -1;
@@ -71,13 +73,15 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
     pint->reqsize = reqsize;
     if (reqsize) {
 #ifdef __KERNEL__
-printk("[%s:%d] software id %d reqsize %d\n", __FUNCTION__, __LINE__, id, reqsize);
+        printk("[%s:%d] software id %d reqsize %d\n", __FUNCTION__, __LINE__, id, reqsize);
 #else
-printf("[%s:%d] software id %d reqsize %d\n", __FUNCTION__, __LINE__, id, reqsize);
         sprintf(buff, "SWSOCK%d", id);
-        pint->fpga_fd = init_listening(buff);
-        int opt = 1;
-        ioctl(pint->fpga_fd, FIONBIO, &opt);
+        if (we_are_initiator) {
+            pint->fpga_fd = init_connecting(buff);
+            pint->accept_finished = 1;
+        }
+        else
+            pint->fpga_fd = init_listening(buff);
         pint->map_base = (volatile unsigned int*)malloc(reqsize);
 #endif
         goto exitlab;
@@ -164,7 +168,7 @@ static void init_directory(void)
   unsigned int i;
   static int once = 0;
 
-  if (once)
+  if (once || we_are_initiator)
       return;
   once = 1;
 #ifdef __KERNEL__
@@ -247,6 +251,8 @@ void portalTrace_stop()
 uint64_t portalCycleCount()
 {
   unsigned int high_bits, low_bits;
+  if (we_are_initiator)
+      return 0;
     init_directory();
   high_bits = READL(&globalDirectory, PORTAL_DIRECTORY_COUNTER_MSB);
   low_bits  = READL(&globalDirectory, PORTAL_DIRECTORY_COUNTER_LSB);
@@ -330,4 +336,9 @@ void *portalMmap(int fd, size_t size)
 #else      ///////////////////////// userspace version
   return mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
 #endif
+}
+
+void portalInitiator(void)
+{
+    we_are_initiator = 1;
 }

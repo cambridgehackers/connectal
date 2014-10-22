@@ -38,7 +38,7 @@
 #include <pthread.h>
 
 static pthread_mutex_t socket_mutex;
-static int global_sockfd = -1;
+int we_are_initiator;
 static int trace_socket;// = 1;
 #define MAX_FD_ARRAY 10
 static int fd_array[MAX_FD_ARRAY];
@@ -296,6 +296,19 @@ void bsim_ctrl_interrupt(int ivalue)
 int bsim_ctrl_send(int sockfd, struct memresponse *data)
 {
   return send(sockfd, data, sizeof(*data), 0);
+}
+void portalSend(PortalInternal *p, void *data, int len)
+{
+    if (trace_socket)
+        printf("%s: init %d fd %d data %p len %d\n", __FUNCTION__, we_are_initiator, p->fpga_fd, data, len);
+    send(p->fpga_fd, data, len, 0);
+}
+int portalRecv(PortalInternal *p, void *data, int len)
+{
+    int rc = recv(p->fpga_fd, data, len, MSG_DONTWAIT);
+    if (trace_socket)
+        printf("%s: init %d fd %d data %p len %d rc %d\n", __FUNCTION__, we_are_initiator, p->fpga_fd, data, len, rc);
+    return rc;
 }
 #else // __KERNEL__
 

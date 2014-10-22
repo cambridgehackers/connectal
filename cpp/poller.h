@@ -33,6 +33,7 @@ class PortalPoller {
 private:
   Portal **portal_wrappers;
   struct pollfd *portal_fds;
+  int numWrappers;
   int numFds;
 public:
   PortalPoller();

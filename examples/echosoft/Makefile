@@ -8,7 +8,8 @@ H2S = EchoIndication
 ## all the BSV files to be scanned for types and interfaces
 BSVFILES = Echo.bsv Swallow.bsv Top.bsv Soft.bsv
 ## the source files in the example
-CPPFILES=testecho.cpp
+CPPFILES=daemon.cpp
+CPPFILES2=testecho.cpp
 
 NUMBER_OF_MASTERS =0
 

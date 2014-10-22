@@ -25,10 +25,16 @@
 #include <semaphore.h>
 #include <unistd.h>
 
-#include "SIndicationWrapper.h"
-#include "SRequestProxy.h"
+#include "EchoIndicationWrapper.h"
+#include "EchoRequestProxy.h"
 #include "GeneratedTypes.h"
-SRequestProxy *sRequestProxy;
+#include "SwallowProxy.h"
+
+#include "SRequestWrapper.h"
+#include "SIndicationProxy.h"
+
+EchoRequestProxy *echoRequestProxy;
+SIndicationProxy *sIndicationProxy;
 
 static sem_t sem_heard2;
 
@@ -51,56 +57,56 @@ static void init_thread()
     pthread_create(&threaddata, NULL, &pthread_worker, (void*)poller);
 }
 
-class SIndication : public SIndicationWrapper
+class EchoIndication : public EchoIndicationWrapper
 {
 public:
     virtual void heard(uint32_t v) {
-        fprintf(stderr, "heard an s: %d\n", v);
-	sRequestProxy->say2(v, 2*v);
+        fprintf(stderr, "daemon: heard an echo: %d\n", v);
+        sIndicationProxy->heard(v);
     }
     virtual void heard2(uint32_t a, uint32_t b) {
-        sem_post(&sem_heard2);
-        //fprintf(stderr, "heard an s2: %ld %ld\n", a, b);
+        fprintf(stderr, "daemon: heard an echo2: %ld %ld\n", a, b);
+        sIndicationProxy->heard2(a, b);
     }
-    SIndication(unsigned int id, PortalPoller *poller) : SIndicationWrapper(id, poller) {}
+    EchoIndication(unsigned int id, PortalPoller *poller) : EchoIndicationWrapper(id, poller) {}
 };
 
-static void call_say(int v)
+class SRequest : public SRequestWrapper
 {
-    printf("[%s:%d] %d\n", __FUNCTION__, __LINE__, v);
-    sRequestProxy->say(v);
-    sem_wait(&sem_heard2);
-}
-
-static void call_say2(int v, int v2)
-{
-    sRequestProxy->say2(v, v2);
-    sem_wait(&sem_heard2);
-}
+public:
+    void say ( const uint32_t v ) {
+        fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
+        echoRequestProxy->say(v);
+    }
+    void say2 ( const uint32_t a, const uint32_t b ) {
+        fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
+        echoRequestProxy->say2(a, b);
+    }
+    void setLeds ( const uint32_t v ) {
+        fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
+        echoRequestProxy->setLeds(v);
+        sleep(1);
+        exit(1);
+    }
+    SRequest(unsigned int id, PortalPoller *poller) : SRequestWrapper(id, poller) {}
+};
 
 int main(int argc, const char **argv)
 {
-    portalInitiator();
     poller = new PortalPoller();
-    SIndication *sIndication = new SIndication(IfcNames_SIndication, poller);
+    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, poller);
     // these use the default poller
-    sRequestProxy = new SRequestProxy(IfcNames_SRequest);
+    SwallowProxy *swallowProxy = new SwallowProxy(IfcNames_Swallow);
+    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
+    sIndicationProxy = new SIndicationProxy(IfcNames_SIndication);
+    SRequest *sRequest = new SRequest(IfcNames_SRequest, poller);
 
     poller->portalExec_init();
     init_thread();
     portalExec_start();
 
-    int v = 42;
-    fprintf(stderr, "Saying %d\n", v);
-    call_say(v);
-    call_say(v*5);
-    call_say(v*17);
-    call_say(v*93);
-    portalTimerInit();
-    call_say2(v, v*3);
-    printf("TEST TYPE: SEM\n");
-    sRequestProxy->setLeds(9);
-    poller->portalExec_end();
-    portalExec_end();
+    printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);
+    while(1)
+        sleep(100);
     return 0;
 }

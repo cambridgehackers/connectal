@@ -60,7 +60,7 @@ PortalPoller *defaultPoller = new PortalPoller();
 uint64_t poll_enter_time, poll_return_time; // for performance measurement
 
 PortalPoller::PortalPoller()
-  : portal_wrappers(0), portal_fds(0), numFds(0), stopping(0)
+  : portal_wrappers(0), portal_fds(0), numFds(0), numWrappers(0), stopping(0)
 {
     sem_init(&sem_startup, 0, 0);
 }
@@ -68,42 +68,49 @@ PortalPoller::PortalPoller()
 int PortalPoller::unregisterInstance(Portal *portal)
 {
   int i = 0;
-  while(i < numFds){
+  while(i < numWrappers){
     if(portal_wrappers[i]->pint.fpga_number == portal->pint.fpga_number) {
       fprintf(stderr, "PortalPoller::unregisterInstance %d %d\n", i, portal->pint.fpga_number);
       break;
-    } else {
-      i++;
     }
+    i++;
+  }
+
+  while(i < numWrappers-1){
+    portal_wrappers[i] = portal_wrappers[i+1];
+    i++;
+  }
+  numWrappers--;
+  i = 0;
+  while(i < numFds){
+    if(portal_fds[i].fd == portal->pint.fpga_fd)
+      break;
+    i++;
   }
 
   while(i < numFds-1){
     portal_fds[i] = portal_fds[i+1];
-    portal_wrappers[i] = portal_wrappers[i+1];
     i++;
   }
-
   numFds--;
-  // portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
-  // portal_wrappers = (Portal **)realloc(portal_wrappers, numFds*sizeof(Portal *));  
   return 0;
 }
 
 int PortalPoller::registerInstance(Portal *portal)
 {
-    if (portal->pint.fpga_fd == -1 && !portal->pint.fpga_number) {
-        fprintf(stderr, "Portal::registerInstance skipped fpga%d\n", portal->pint.fpga_number);
-        return 0;
+    numWrappers++;
+    fprintf(stderr, "Portal::registerInstance fpga%d fd %d\n", portal->pint.fpga_number, portal->pint.fpga_fd);
+    portal_wrappers = (Portal **)realloc(portal_wrappers, numWrappers*sizeof(Portal *));
+    portal_fds = (struct pollfd *)realloc(portal_fds, numWrappers*sizeof(struct pollfd));
+    portal_wrappers[numWrappers-1] = portal;
+
+    if (portal->pint.fpga_fd != -1) {
+        numFds++;
+        struct pollfd *pollfd = &portal_fds[numFds-1];
+        memset(pollfd, 0, sizeof(struct pollfd));
+        pollfd->fd = portal->pint.fpga_fd;
+        pollfd->events = POLLIN;
     }
-    numFds++;
-    portal_wrappers = (Portal **)realloc(portal_wrappers, numFds*sizeof(Portal *));
-    portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
-    portal_wrappers[numFds-1] = portal;
-    struct pollfd *pollfd = &portal_fds[numFds-1];
-    memset(pollfd, 0, sizeof(struct pollfd));
-    pollfd->fd = portal->pint.fpga_fd;
-    pollfd->events = POLLIN;
-    fprintf(stderr, "Portal::registerInstance fpga%d\n", portal->pint.fpga_number);
     return 0;
 }
 
@@ -114,6 +121,16 @@ void* PortalPoller::portalExec_init(void)
 #else
     portalExec_timeout = 100;
 #endif
+#ifdef BSIM
+    if (global_sockfd != -1) {
+        portalExec_timeout = 100;
+        numFds++;
+        struct pollfd *pollfd = &portal_fds[numFds-1];
+        memset(pollfd, 0, sizeof(struct pollfd));
+        pollfd->fd = global_sockfd;
+        pollfd->events = POLLIN;
+    }
+#endif
     if (!numFds) {
         ALOGE("portalExec No fds open numFds=%d\n", numFds);
         return (void*)-ENODEV;
@@ -121,7 +138,8 @@ void* PortalPoller::portalExec_init(void)
     for (int i = 0; i < numFds; i++) {
       Portal *instance = portal_wrappers[i];
       //fprintf(stderr, "portalExec::enabling interrupts portal %d fpga%d\n", i, instance->pint.fpga_number);
-      ENABLE_INTERRUPTS(&instance->pint);
+      if (!instance->pint.reqsize)
+          ENABLE_INTERRUPTS(&instance->pint);
     }
     fprintf(stderr, "portalExec::about to enter loop, numFds=%d\n", numFds);
     return NULL;
@@ -132,7 +150,8 @@ void PortalPoller::portalExec_end(void)
     for (int i = 0; i < numFds; i++) {
       Portal *instance = portal_wrappers[i];
       fprintf(stderr, "portalExec::disabling interrupts portal %d fpga%d\n", i, instance->pint.fpga_number);
-      WRITEL(&instance->pint, &(instance->pint.map_base)[IND_REG_INTERRUPT_MASK], 0);
+      if (!instance->pint.reqsize)
+          WRITEL(&instance->pint, &(instance->pint.map_base)[IND_REG_INTERRUPT_MASK], 0);
     }
 }
 
@@ -142,17 +161,10 @@ void* PortalPoller::portalExec_poll(int timeout)
     // LCS bypass the call to poll if the timeout is 0
     if (timeout != 0) {
       poll_enter_time = portalCycleCount();
-#ifdef BSIM
-      while(1){
-	struct timeval timeout;
-	timeout.tv_sec = 0;
-	timeout.tv_usec = 10000;
-	select(0, NULL, NULL, NULL, &timeout);
-	if(bsim_poll_interrupt())
-	  break;
-      }
-#else
       rc = poll(portal_fds, numFds, timeout);
+#ifdef BSIM
+      if (global_sockfd >= 0)
+	  bsim_poll_interrupt();
 #endif
       poll_return_time = portalCycleCount();
     }
@@ -166,7 +178,7 @@ void* PortalPoller::portalExec_poll(int timeout)
 void* PortalPoller::portalExec_event(void)
 {
     int mcnt = 0;
-    for (int i = 0; i < numFds; i++) {
+    for (int i = 0; i < numWrappers; i++) {
       if (!portal_wrappers) {
         fprintf(stderr, "No portal_instances revents=%d\n", portal_fds[i].revents);
       }
@@ -174,14 +186,15 @@ void* PortalPoller::portalExec_event(void)
       if (instance->pint.reqsize) {
           /* sw portal */
           if (instance->pint.accept_finished) { /* connection established */
-             int len = read(instance->pint.fpga_fd, (void *)instance->pint.map_base, sizeof(uint32_t));
-             if (len == -1 && errno == EAGAIN)
+             int len = recv(instance->pint.fpga_fd, (void *)instance->pint.map_base, sizeof(uint32_t), MSG_DONTWAIT);
+             if (len == 0 || (len == -1 && errno == EAGAIN))
                  continue;
-printf("[%s:%d] len %d\n", __FUNCTION__, __LINE__, len);
              if (len <= 0) {
                  fprintf(stderr, "%s[%d]: read error %d\n",__FUNCTION__, instance->pint.fpga_fd, errno);
                  exit(1);
              }
+             instance->pint.handler(&instance->pint, *instance->pint.map_base >> 16);
+             continue;
           }
           else { /* have not received connection yet */
              int sockfd;
@@ -191,10 +204,13 @@ printf("[%s:%d] len %d\n", __FUNCTION__, __LINE__, len);
                  fprintf(stderr, "%s[%d]: accept error %d\n",__FUNCTION__, instance->pint.fpga_fd, errno);
                  exit(1);
              }
+             for (int j = 0; j < numFds; j++)
+                 if (portal_fds[j].fd == instance->pint.fpga_fd) {
+                     portal_fds[j].fd = sockfd;
+                     break;
+                 }
              instance->pint.accept_finished = 1;
              instance->pint.fpga_fd = sockfd;
-             int opt = 1;
-             ioctl(sockfd, FIONBIO, &opt);
           }
           continue;
       }
