@@ -88,6 +88,10 @@ int PortalPoller::unregisterInstance(Portal *portal)
 
 int PortalPoller::registerInstance(Portal *portal)
 {
+    if (portal->pint.fpga_fd == -1 && !portal->pint.fpga_number) {
+        fprintf(stderr, "Portal::registerInstance skipped fpga%d\n", portal->pint.fpga_number);
+        return 0;
+    }
     numFds++;
     portal_wrappers = (Portal **)realloc(portal_wrappers, numFds*sizeof(Portal *));
     portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
