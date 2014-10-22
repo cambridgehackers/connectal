@@ -66,13 +66,18 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
 
     init_directory();
     memset(pint, 0, sizeof(*pint));
-    if (id != -1) {
-        pint->fpga_number = portalGetFpga(id);
-        addrbits = portalGetAddrbits(id);
-    }
     pint->fpga_fd = -1;
     pint->handler = handler;
     pint->reqsize = reqsize;
+    if (reqsize) {
+printf("[%s:%d] software id %d reqsize %d\n", __FUNCTION__, __LINE__, id, reqsize);
+        sprintf(buff, "SWSOCK%d", id);
+        pint->fpga_fd = init_listening(buff);
+    }
+    else if (id != -1) {
+        pint->fpga_number = portalGetFpga(id);
+        addrbits = portalGetAddrbits(id);
+    }
     snprintf(buff, sizeof(buff), "/dev/fpga%d", pint->fpga_number);
 #ifdef BSIM   // BSIM version
     connect_to_bsim();

@@ -44,36 +44,43 @@ static int trace_socket;// = 1;
 static int fd_array[MAX_FD_ARRAY];
 static int fd_array_index = 0;
 
-void connect_to_bsim(void)
+int init_connecting(const char *arg_name)
 {
   int connect_attempts = 0;
+  int sockfd;
 
-  if (global_sockfd != -1)
-    return;
-  if ((global_sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-    fprintf(stderr, "%s (%s) socket error %s\n",__FUNCTION__, SOCKET_NAME, strerror(errno));
+  if ((sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+    fprintf(stderr, "%s (%s) socket error %s\n",__FUNCTION__, arg_name, strerror(errno));
     exit(1);
   }
 
   if (trace_socket)
-    fprintf(stderr, "%s (%s) trying to connect...\n",__FUNCTION__, SOCKET_NAME);
+    fprintf(stderr, "%s (%s) trying to connect...\n",__FUNCTION__, arg_name);
   struct sockaddr_un local;
   local.sun_family = AF_UNIX;
-  strcpy(local.sun_path, SOCKET_NAME);
-  while (connect(global_sockfd, (struct sockaddr *)&local, strlen(local.sun_path) + sizeof(local.sun_family)) == -1) {
+  strcpy(local.sun_path, arg_name);
+  while (connect(sockfd, (struct sockaddr *)&local, strlen(local.sun_path) + sizeof(local.sun_family)) == -1) {
     if(connect_attempts++ > 16){
-      fprintf(stderr,"%s (%s) connect error %s\n",__FUNCTION__, SOCKET_NAME, strerror(errno));
+      fprintf(stderr,"%s (%s) connect error %s\n",__FUNCTION__, arg_name, strerror(errno));
       exit(1);
     }
     if (trace_socket)
-      fprintf(stderr, "%s (%s) retrying connection\n",__FUNCTION__, SOCKET_NAME);
+      fprintf(stderr, "%s (%s) retrying connection\n",__FUNCTION__, arg_name);
     sleep(1);
   }
-  fprintf(stderr, "%s (%s) connected.  Attempts %d\n",__FUNCTION__, SOCKET_NAME, connect_attempts);
+  fprintf(stderr, "%s (%s) connected.  Attempts %d\n",__FUNCTION__, arg_name, connect_attempts);
+  return sockfd;
+}
+
+void connect_to_bsim(void)
+{
+  if (global_sockfd != -1)
+    return;
+  global_sockfd = init_connecting(SOCKET_NAME);
   pthread_mutex_init(&socket_mutex, NULL);
 }
 
-static void *pthread_worker(void *p)
+int init_listening(const char *arg_name)
 {
   int listening_socket;
 
@@ -86,7 +93,7 @@ static void *pthread_worker(void *p)
 
   struct sockaddr_un local;
   local.sun_family = AF_UNIX;
-  strcpy(local.sun_path, SOCKET_NAME);
+  strcpy(local.sun_path, arg_name);
   unlink(local.sun_path);
   int len = strlen(local.sun_path) + sizeof(local.sun_family);
   if (bind(listening_socket, (struct sockaddr *)&local, len) == -1) {
@@ -98,7 +105,12 @@ static void *pthread_worker(void *p)
     fprintf(stderr, "%s[%d]: listen error %s\n",__FUNCTION__, listening_socket, strerror(errno));
     exit(1);
   }
+  return listening_socket;
+}
   
+static void *pthread_worker(void *p)
+{
+  int listening_socket = init_listening(SOCKET_NAME);
   if (trace_socket)
     fprintf(stderr, "%s[%d]: waiting for a connection...\n",__FUNCTION__, listening_socket);
   while (1) {

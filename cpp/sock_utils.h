@@ -52,6 +52,8 @@ int bsim_ctrl_recv(int *sockfd, struct memrequest *data);
 int bsim_ctrl_send(int sockfd, struct memresponse *data);
 void bsim_ctrl_interrupt(int ivalue);
 unsigned int bsim_poll_interrupt(void);
+int init_connecting(const char *arg_name);
+int init_listening(const char *arg_name);
 #ifdef __cplusplus
 }
 #endif

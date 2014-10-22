@@ -168,6 +168,10 @@ void* PortalPoller::portalExec_event(void)
         fprintf(stderr, "No portal_instances revents=%d\n", portal_fds[i].revents);
       }
       Portal *instance = portal_wrappers[i];
+      if (instance->pint.reqsize) {
+          /* sw portal */
+          continue;
+      }
       volatile unsigned int *map_base = instance->pint.map_base;
     
       // sanity check, to see the status of interrupt source and enable
