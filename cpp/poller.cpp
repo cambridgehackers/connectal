@@ -119,7 +119,7 @@ void* PortalPoller::portalExec_init(void)
         ALOGE("portalExec No fds open numFds=%d\n", numFds);
         return (void*)-ENODEV;
     }
-    for (int i = 0; i < numFds; i++) {
+    for (int i = 0; i < numWrappers; i++) {
       Portal *instance = portal_wrappers[i];
       //fprintf(stderr, "portalExec::enabling interrupts portal %d fpga%d\n", i, instance->pint.fpga_number);
       portalEnableInterrupts(&instance->pint, 1);
@@ -130,7 +130,7 @@ void* PortalPoller::portalExec_init(void)
 void PortalPoller::portalExec_end(void)
 {
     stopping = 1;
-    for (int i = 0; i < numFds; i++) {
+    for (int i = 0; i < numWrappers; i++) {
       Portal *instance = portal_wrappers[i];
       fprintf(stderr, "portalExec::disabling interrupts portal %d fpga%d\n", i, instance->pint.fpga_number);
       portalEnableInterrupts(&instance->pint, 0);
