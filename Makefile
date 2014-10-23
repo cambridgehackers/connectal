@@ -82,7 +82,13 @@ docs:
 VERSION=14.10.01
 
 spkg:
+	git clean -fdx
+	sed -i s/trusty/precise/g debian/changelog
 	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu/precise --git-ignore-new -S -tc
+	git clean -fdx
+	sed -i s/precise/trusty/g debian/changelog
+	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu/precise --git-ignore-new -S -tc
+
 dpkg:
 	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu/precise --git-ignore-new -tc -us -uc
 
