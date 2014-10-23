@@ -102,7 +102,7 @@ void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p %(paramSeparat
     int __i = 50;
     while (!READL(p, temp_working_addr + 1) && __i-- > 0)
         ; /* busy wait a bit on 'fifo not full' */
-    if (!__i)
+    if (__i <= 0)
         PORTAL_PRINTF("putFailed: %(namespace)s%(className)s_%(methodName)s\\n");
 %(paramStructMarshall)s
 };
