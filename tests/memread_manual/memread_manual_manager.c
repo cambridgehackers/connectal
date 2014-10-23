@@ -146,17 +146,10 @@ int main(int argc, const char **argv)
   int rc = 0, i;
   pthread_t tid = 0;
 
-  init_portal_internal(&intarr[0], IfcNames_HostMMUConfigIndication, MMUConfigIndicationWrapper_handleMessage);// fpga1
-  init_portal_internal(&intarr[1], IfcNames_MemreadIndication, MemreadIndicationWrapper_handleMessage); // fpga2
-  init_portal_internal(&intarr[2], IfcNames_HostMMUConfigRequest, MMUConfigRequestProxy_handleMessage); // fpga3
-  init_portal_internal(&intarr[3], IfcNames_MemreadRequest, MemreadRequestProxy_handleMessage);    // fpga4
-
-#ifdef BSIM
-  portalEnableInterrupts(&intarr[0]);
-  portalEnableInterrupts(&intarr[1]);
-  portalEnableInterrupts(&intarr[2]);
-  portalEnableInterrupts(&intarr[3]);
-#endif
+  init_portal_internal(&intarr[0], IfcNames_HostMMUConfigIndication, MMUConfigIndicationWrapper_handleMessage, MMUConfigIndicationWrapper_reqsize);// fpga1
+  init_portal_internal(&intarr[1], IfcNames_MemreadIndication, MemreadIndicationWrapper_handleMessage, MemreadIndicationWrapper_reqsize); // fpga2
+  init_portal_internal(&intarr[2], IfcNames_HostMMUConfigRequest, MMUConfigRequestProxy_handleMessage, MMUConfigRequestProxy_reqsize); // fpga3
+  init_portal_internal(&intarr[3], IfcNames_MemreadRequest, MemreadRequestProxy_handleMessage, MemreadRequestProxy_reqsize);    // fpga4
 
   sem_init(&test_sem, 0, 0);
   DmaManager_init(&priv, NULL, &intarr[2]);

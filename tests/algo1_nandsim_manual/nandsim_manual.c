@@ -192,13 +192,6 @@ int main(int argc, const char **argv)
   init_portal_internal(&intarr[3], IfcNames_NandSimRequest, NandSimRequestProxy_handleMessage, NandSimRequestProxy_reqsize);    // fpga4
   init_portal_internal(&intarr[1], IfcNames_NandSimIndication, NandSimIndicationWrapper_handleMessage, NandSimIndicationWrapper_reqsize); // fpga2
 
-#ifdef BSIM
-  portalEnableInterrupts(&intarr[0]);
-  portalEnableInterrupts(&intarr[1]);
-  portalEnableInterrupts(&intarr[2]);
-  portalEnableInterrupts(&intarr[3]);
-#endif
-
   DmaManager_init(&priv, NULL, &intarr[2]);
   sem_init(&test_sem, 0, 0);
 

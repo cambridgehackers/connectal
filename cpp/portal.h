@@ -113,7 +113,7 @@ void portalExec_end(void);
 void portalTrace_start(void);
 void portalTrace_stop(void);
 int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
-void portalEnableInterrupts(PortalInternal *p);
+void portalEnableInterrupts(PortalInternal *p, int val);
 int portalDCacheFlushInval(int fd, long size, void *__p);
 void init_portal_memory(void);
 int portalAlloc(size_t size);
