@@ -39,6 +39,7 @@
 
 static pthread_mutex_t socket_mutex;
 int we_are_initiator;
+int global_sockfd = -1;
 static int trace_socket;// = 1;
 #define MAX_FD_ARRAY 10
 static int fd_array[MAX_FD_ARRAY];
