@@ -162,10 +162,6 @@ void* PortalPoller::portalExec_poll(int timeout)
     if (timeout != 0) {
       poll_enter_time = portalCycleCount();
       rc = poll(portal_fds, numFds, timeout);
-#ifdef BSIM
-      if (global_sockfd >= 0)
-	  bsim_poll_interrupt();
-#endif
       poll_return_time = portalCycleCount();
     }
     if(rc < 0) {
@@ -220,6 +216,10 @@ void* PortalPoller::portalExec_event(void)
       unsigned int queue_status;
     
       // handle all messasges from this portal instance
+#ifdef BSIM
+      if (instance->pint.fpga_fd == -1 && !bsim_poll_interrupt())
+        continue;
+#endif
       while ((queue_status= READL(&instance->pint, &map_base[IND_REG_QUEUE_STATUS]))) {
         if(0) {
           unsigned int int_src = READL(&instance->pint, &map_base[IND_REG_INTERRUPT_FLAG]);
@@ -233,8 +233,6 @@ void* PortalPoller::portalExec_event(void)
       // re-enable interrupt which was disabled by portal_isr
       ENABLE_INTERRUPTS(&instance->pint);
     }
-    //if(timeout == -1 && !mcnt)
-    //  fprintf(stderr, "poll returned even though no messages were detected\n");
     return NULL;
 }
 
