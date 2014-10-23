@@ -34,7 +34,6 @@ class %(namespace)s%(className)s : public %(parentClass)s {
 //proxyClass
 public:
     %(className)s(int id, PortalPoller *poller = 0) : Portal(id, %(namespace)s%(className)s_reqsize, poller) {
-        pint.handler = %(namespace)s%(className)s_handleMessage;
         pint.parent = static_cast<void *>(this);
     };
 '''
@@ -47,17 +46,6 @@ public:
         pint.handler = %(namespace)s%(className)s_handleMessage;
         pint.parent = static_cast<void *>(this);
     };
-'''
-
-putFailedMethodName = "putFailed"
-
-putFailedTemplate='''
-void %(namespace)s%(className)s%(putFailedMethodName)s_cb(struct PortalInternal *p, const uint32_t v)
-{
-    const char* methodNameStrings[] = {%(putFailedStrings)s};
-    PORTAL_PRINTF("putFailed: %%s\\n", methodNameStrings[v]);
-    //exit(1);
-}
 '''
 
 responseSzCaseTemplate='''
@@ -174,20 +162,17 @@ class MethodMixin:
     def formalParameters(self, params):
         return [ 'const %s%s %s' % (p.type.cName(), p.type.refParam(), p.name) for p in params]
     def emitMethodDeclaration(self, f, proxy, indentation, namespace, className):
-        if self.name == putFailedMethodName:
-            return
         indent(f, indentation)
         resultTypeName = self.resultTypeName()
         paramValues = [p.name for p in self.params]
         paramValues.insert(0, '&pint')
         methodName = cName(self.name)
-        if (not proxy):
+        if not proxy:
             f.write('virtual ')
         f.write('void %s ( ' % methodName)
         f.write(', '.join(self.formalParameters(self.params)))
         f.write(' ) ')
-	# ugly hack
-        if ((not proxy) and (not (self.name == putFailedMethodName))):
+        if not proxy:
             f.write('= 0;\n')
         else:
             f.write('{ %s_%s (' % (className, methodName))
@@ -197,16 +182,15 @@ class MethodMixin:
         formalParams = self.formalParameters(self.params)
         formalParams.insert(0, ' struct PortalInternal *p')
         methodName = cName(self.name)
-        if methodName != putFailedMethodName:
-            of.write('void %s%s_cb ( ' % (className, methodName))
-            of.write(', '.join(formalParams))
-            of.write(' );\n')
-            f.write('\nvoid %s%s_cb ( ' % (className, methodName))
-            f.write(', '.join(formalParams))
-            f.write(' ) {\n')
-            indent(f, 4)
-            f.write(('(static_cast<%s *>(p->parent))->%s ( ' % (className, methodName)) + paramValues + ');\n')
-            f.write('};\n')
+        of.write('void %s%s_cb ( ' % (className, methodName))
+        of.write(', '.join(formalParams))
+        of.write(' );\n')
+        f.write('\nvoid %s%s_cb ( ' % (className, methodName))
+        f.write(', '.join(formalParams))
+        f.write(' ) {\n')
+        indent(f, 4)
+        f.write(('(static_cast<%s *>(p->parent))->%s ( ' % (className, methodName)) + paramValues + ');\n')
+        f.write('};\n')
     def emitCImplementation(self, f, hpp, className, namespace, proxy, doCpp, swInterface):
 
         # resurse interface types and flattening all structs into a list of types
@@ -363,8 +347,7 @@ class MethodMixin:
             'payloadSize' : max(4, 4*((sum([p.numBitsBSV() for p in self.params])+31)/32)) 
             }
         if (doCpp):
-            if self.name != putFailedMethodName:
-                f.write(proxyMethodTemplateCpp % substs)
+            f.write(proxyMethodTemplateCpp % substs)
         elif (not proxy):
             respParams = [p.name for p in self.params]
             respParams.insert(0, 'p')
@@ -457,11 +440,6 @@ class InterfaceMixin:
         subinterface = globalv.globalvars[subinterfaceName]
         #print 'subinterface', subinterface, subinterface
         return subinterface
-    def insertPutFailedMethod(self):
-        meth_name = putFailedMethodName
-        meth_type = AST.Type("Action",[])
-        meth_formal_params = [AST.Param("v", AST.Type("Bit",[AST.Type(32,[])]))]
-        self.decls = self.decls + [AST.Method(meth_name, meth_type, meth_formal_params)]
     def assignRequestResponseChannels(self, channelNumber=0):
         for d in self.decls:
             if d.__class__ == AST.Method:
@@ -471,9 +449,6 @@ class InterfaceMixin:
     def parentClass(self, default):
         rv = default if (len(self.typeClassInstances)==0) else (self.typeClassInstances[0])
         return rv
-    def hasPutFailed(self):
-	rv = True in [d.name == putFailedMethodName for d in self.decls]
-	return rv
     def global_name(self, s, suffix):
         return '%s%s_%s' % (cName(self.name), suffix, s)
     def emitCProxyDeclaration(self, f, of, suffix, indentation, namespace, maxSize):
@@ -520,17 +495,15 @@ class InterfaceMixin:
                          'className': className,
                          'parentClass': self.parentClass('Portal')}
         for d in self.decls:
-            if doCpp or d.name != putFailedMethodName:
-                t = d.emitCImplementation(f, hpp, className, namespace,True, doCpp, swInterface)
-                if t > maxSize:
-                    maxSize = t
+            t = d.emitCImplementation(f, hpp, className, namespace,True, doCpp, swInterface)
+            if t > maxSize:
+                maxSize = t
         return maxSize
     def emitCWrapperImplementation (self, f, hpp, suffix, namespace, doCpp, swInterface):
         maxSize = 0;
         className = "%s%s" % (cName(self.name), suffix)
         substitutions = {'namespace': namespace,
                          'className': className,
-			 'putFailedMethodName' : putFailedMethodName,
                          'parentClass': self.parentClass('Portal'),
                          'responseSzCases': ''.join([responseSzCaseTemplate % { 'channelNumber': 'CHAN_NUM_%s' % self.global_name(cName(d.name), suffix),
                                                                                 'className': className,
@@ -539,9 +512,6 @@ class InterfaceMixin:
                                                      for d in self.decls 
                                                      if d.type == 'Method' and d.return_type.name == 'Action'])}
         if not doCpp:
-            if self.hasPutFailed():
-                substitutions['putFailedStrings'] = ', '.join('"%s"' % (d.name) for d in self.req.decls if d.__class__ == AST.Method )
-                f.write(putFailedTemplate % substitutions)
             for d in self.decls:
                 t = d.emitCImplementation(f, hpp, className, namespace, False, False, swInterface)
                 if t > maxSize:
@@ -621,7 +591,6 @@ def generateProxy(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles
     cpp = create_cpp_file(cppname)
     hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': i.name.upper()})
     hpp.write('#include "%s.h"' % i.parentClass("portal"))
-    i.ind.emitCWrapperImplementation(cpp, generated_hpp, "Proxy", '', False, False)
     maxSize = i.emitCProxyImplementation(cpp, generated_hpp, "Proxy", "", False, swInterface)
     if not swInterface:
         maxSize = 0

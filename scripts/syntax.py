@@ -973,7 +973,6 @@ def generate_bsvcpp(filelist, project_dir, dutname, bsvdefines, s2hinterface, h2
         ifc = globalv.globalvars[i]
         ifc = ifc.instantiate(dict(zip(ifc.params, ifc.params)))
         ifc.ind = AST.Interface(i, [], [], None, ifc.package)
-        ifc.ind.insertPutFailedMethod()
         ifc.ind.req = ifc
         ifc.assignRequestResponseChannels()
         ifc.ind.assignRequestResponseChannels()
