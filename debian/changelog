@@ -1,3 +1,9 @@
+connectal (14.10.2-2precise1) precise; urgency=high
+
+  * Depends on vim for xxd
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 23 Oct 2014 11:18:06 -0400
+
 connectal (14.10.2-1precise1) precise; urgency=high
 
   * Updated to 14.10.2
