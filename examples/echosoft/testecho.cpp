@@ -20,36 +20,11 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <pthread.h>
-#include <semaphore.h>
-#include <unistd.h>
-
-#include "SIndicationWrapper.h"
 #include "SRequestProxy.h"
-#include "GeneratedTypes.h"
+#include "SIndicationWrapper.h"
+
 SRequestProxy *sRequestProxy;
-
 static sem_t sem_heard2;
-
-PortalPoller *poller = 0;
-
-static void *pthread_worker(void *p)
-{
-    void *rc = NULL;
-    while (!rc && !poller->stopping) {
-        rc = poller->portalExec_poll(poller->portalExec_timeout);
-        if ((long) rc >= 0)
-            rc = poller->portalExec_event();
-    }
-    return rc;
-}
-static void init_thread()
-{
-    pthread_t threaddata;
-    sem_init(&sem_heard2, 0, 0);
-    pthread_create(&threaddata, NULL, &pthread_worker, (void*)poller);
-}
 
 class SIndication : public SIndicationWrapper
 {
@@ -62,7 +37,7 @@ public:
         sem_post(&sem_heard2);
         //fprintf(stderr, "heard an s2: %ld %ld\n", a, b);
     }
-    SIndication(unsigned int id, PortalPoller *poller) : SIndicationWrapper(id, poller) {}
+    SIndication(unsigned int id) : SIndicationWrapper(id) {}
 };
 
 static void call_say(int v)
@@ -81,13 +56,9 @@ static void call_say2(int v, int v2)
 int main(int argc, const char **argv)
 {
     portalInitiator();
-    poller = new PortalPoller();
-    SIndication *sIndication = new SIndication(IfcNames_SIndication, poller);
-    // these use the default poller
+    SIndication *sIndication = new SIndication(IfcNames_SIndication);
     sRequestProxy = new SRequestProxy(IfcNames_SRequest);
 
-    poller->portalExec_init();
-    init_thread();
     portalExec_start();
 
     int v = 42;
@@ -100,7 +71,6 @@ int main(int argc, const char **argv)
     call_say2(v, v*3);
     printf("TEST TYPE: SEM\n");
     sRequestProxy->setLeds(9);
-    poller->portalExec_end();
     portalExec_end();
     return 0;
 }

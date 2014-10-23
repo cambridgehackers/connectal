@@ -26,28 +26,16 @@
 #include <poll.h>
 #include <errno.h>
 #include <pthread.h>
+#include <sys/ioctl.h>
 #include <sys/select.h>
 
 #include "portal.h"
 #ifdef BSIM
 #include "sock_utils.h"
 #endif
-#ifndef __KERNEL__
-#include <sys/ioctl.h>
-#endif
 
 #ifdef ZYNQ
 #include <android/log.h>
-#endif
-
-#define USE_INTERRUPTS
-#ifdef USE_INTERRUPTS
-#define ENABLE_INTERRUPTS(A) portalEnableInterrupts(A)
-#else
-#define ENABLE_INTERRUPTS(A)
-#endif
-
-#ifdef ZYNQ
 #define ALOGD(fmt, ...) __android_log_print(ANDROID_LOG_DEBUG, "PORTAL", fmt, __VA_ARGS__)
 #define ALOGE(fmt, ...) __android_log_print(ANDROID_LOG_ERROR, "PORTAL", fmt, __VA_ARGS__)
 #else
@@ -116,11 +104,7 @@ int PortalPoller::registerInstance(Portal *portal)
 
 void* PortalPoller::portalExec_init(void)
 {
-#ifdef USE_INTERRUPTS
     portalExec_timeout = -1; // no interrupt timeout 
-#else
-    portalExec_timeout = 100;
-#endif
 #ifdef BSIM
     if (global_sockfd != -1) {
         portalExec_timeout = 100;
@@ -138,8 +122,7 @@ void* PortalPoller::portalExec_init(void)
     for (int i = 0; i < numFds; i++) {
       Portal *instance = portal_wrappers[i];
       //fprintf(stderr, "portalExec::enabling interrupts portal %d fpga%d\n", i, instance->pint.fpga_number);
-      if (!instance->pint.reqsize)
-          ENABLE_INTERRUPTS(&instance->pint);
+      portalEnableInterrupts(&instance->pint, 1);
     }
     fprintf(stderr, "portalExec::about to enter loop, numFds=%d\n", numFds);
     return NULL;
@@ -150,8 +133,7 @@ void PortalPoller::portalExec_end(void)
     for (int i = 0; i < numFds; i++) {
       Portal *instance = portal_wrappers[i];
       fprintf(stderr, "portalExec::disabling interrupts portal %d fpga%d\n", i, instance->pint.fpga_number);
-      if (!instance->pint.reqsize)
-          WRITEL(&instance->pint, &(instance->pint.map_base)[IND_REG_INTERRUPT_MASK], 0);
+      portalEnableInterrupts(&instance->pint, 0);
     }
 }
 
@@ -162,10 +144,6 @@ void* PortalPoller::portalExec_poll(int timeout)
     if (timeout != 0) {
       poll_enter_time = portalCycleCount();
       rc = poll(portal_fds, numFds, timeout);
-#ifdef BSIM
-      if (global_sockfd >= 0)
-	  bsim_poll_interrupt();
-#endif
       poll_return_time = portalCycleCount();
     }
     if(rc < 0) {
@@ -220,6 +198,10 @@ void* PortalPoller::portalExec_event(void)
       unsigned int queue_status;
     
       // handle all messasges from this portal instance
+#ifdef BSIM
+      if (instance->pint.fpga_fd == -1 && !bsim_poll_interrupt())
+        continue;
+#endif
       while ((queue_status= READL(&instance->pint, &map_base[IND_REG_QUEUE_STATUS]))) {
         if(0) {
           unsigned int int_src = READL(&instance->pint, &map_base[IND_REG_INTERRUPT_FLAG]);
@@ -231,10 +213,8 @@ void* PortalPoller::portalExec_event(void)
 	mcnt++;
       }
       // re-enable interrupt which was disabled by portal_isr
-      ENABLE_INTERRUPTS(&instance->pint);
+      portalEnableInterrupts(&instance->pint, 1);
     }
-    //if(timeout == -1 && !mcnt)
-    //  fprintf(stderr, "poll returned even though no messages were detected\n");
     return NULL;
 }
 

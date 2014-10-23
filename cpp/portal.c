@@ -93,6 +93,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
     snprintf(buff, sizeof(buff), "/dev/fpga%d", pint->fpga_number);
 #ifdef BSIM   // BSIM version
     connect_to_bsim();
+    portalEnableInterrupts(pint, 1);
 #elif defined(__KERNEL__)
     pint->map_base = (volatile unsigned int*)(tboard->bar2io + pint->fpga_number * PORTAL_BASE_OFFSET);
 #else
@@ -259,9 +260,10 @@ uint64_t portalCycleCount()
   return (((uint64_t)high_bits)<<32) | ((uint64_t)low_bits);
 }
 
-void portalEnableInterrupts(PortalInternal *p)
+void portalEnableInterrupts(PortalInternal *p, int val)
 {
-   WRITEL(p, &(p->map_base[IND_REG_INTERRUPT_MASK]), 1);
+   if (!p->reqsize)
+     WRITEL(p, &(p->map_base[IND_REG_INTERRUPT_MASK]), val);
 }
 
 int portalDCacheFlushInval(int fd, long size, void *__p)

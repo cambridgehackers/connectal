@@ -46,7 +46,6 @@ static struct memresponse respitem;
 static int dma_fd = -1;
 static sem_t dma_waiting;
 static pthread_mutex_t socket_mutex;
-int global_sockfd = -1;
 static int trace_port;// = 1;
 
 extern "C" {

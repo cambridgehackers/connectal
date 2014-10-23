@@ -147,19 +147,12 @@ int main(int argc, const char **argv)
     return rc;
   }
 
-  PORTAL_PRINTF( "chamdoo\n");
   PORTAL_PRINTF( "Main: creating exec thread\n");
   if(pthread_create(&tid, NULL, pthread_worker, NULL)){
    PORTAL_PRINTF( "error creating exec thread\n");
    return -1;
   }
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
-#ifdef BSIM
-  portalEnableInterrupts(&intarr[0]);
-  portalEnableInterrupts(&intarr[1]);
-  portalEnableInterrupts(&intarr[2]);
-  portalEnableInterrupts(&intarr[3]);
-#endif
 
   for (i = 0; i < numWords; i++) {
     srcBuffer[i] = i;
