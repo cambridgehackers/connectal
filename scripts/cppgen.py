@@ -34,6 +34,7 @@ class %(namespace)s%(className)s : public %(parentClass)s {
 //proxyClass
 public:
     %(className)s(int id, PortalPoller *poller = 0) : Portal(id, %(namespace)s%(className)s_reqsize, poller) {
+        pint.handler = %(namespace)s%(className)s_handleMessage;
         pint.parent = static_cast<void *>(this);
     };
 '''
