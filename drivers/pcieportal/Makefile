@@ -1,4 +1,3 @@
-VERSION=140520.1
 
 # On Centos: sudo yum install kernel-headers
 
@@ -61,7 +60,13 @@ insmod: rmmod
 
 .PHONY: install-dkms
 install-dkms:
-	mkdir -p /usr/src/pcieportal-$(VERSION)
-	cp -fv pcieportal.c pcieportal.h dkms.conf /usr/src/pcieportal-$(VERSION)
-	cp -fv ../portalmem/portalmem.h ../portalmem/portalmem.c /usr/src/pcieportal-$(VERSION)
-	cp -fv Makefile.dkms /usr/src/pcieportal-$(VERSION)/Makefile
+	mkdir -p $(DESTDIR)//usr/src/connectal-$(VERSION)
+	sed "s/@VERSION@/$(VERSION)/" dkms.conf > dkms.conf.out
+	cp -fv dkms.conf.out $(DESTDIR)/usr/src/connectal-$(VERSION)/dkms.conf
+	cp -fv pcieportal.c pcieportal.h $(DESTDIR)/usr/src/connectal-$(VERSION)
+	cp -fv ../../cpp/portal.h ../../cpp/dmaManager.h ../../cpp/dmaSendFd.h ../portalmem/portalmem.h \
+	../../generated/cpp/*.[ch] \
+	../portalmem/portalmem.c \
+	$(DESTDIR)/usr/src/connectal-$(VERSION)
+	sed -i 's|../../cpp/||g' $(DESTDIR)/usr/src/connectal-$(VERSION)/*.[ch]
+	cp -fv Makefile.dkms $(DESTDIR)/usr/src/connectal-$(VERSION)/Makefile

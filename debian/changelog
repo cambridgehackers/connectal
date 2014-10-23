@@ -1,3 +1,9 @@
+connectal (14.10.2-3precise1) precise; urgency=medium
+
+  * Fix DKMS install
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 23 Oct 2014 12:26:54 -0400
+
 connectal (14.10.2-2precise1) precise; urgency=high
 
   * Depends on vim for xxd

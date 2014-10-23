@@ -19,11 +19,14 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
+VERSION=14.10.2
+
 export UDEV_RULES_DIR=/etc/udev/rules.d
 UDEV_RULES=$(shell ls etc/udev/rules.d)
 MODULES_LOAD_D_DIR=/etc/modules-load.d
 
 all: pciedrivers scripts/syntax/parsetab.py
+	echo version "$(VERSION)"
 
 pciedrivers:
 	#(cd drivers/pcieportal; make)
@@ -45,6 +48,7 @@ install: $(INSTALL_SHARED)
 	    done; \
 	fi
 	#(cd drivers/pcieportal; make install)
+	make -C drivers/pcieportal VERSION=$(VERSION) install-dkms
 	make -C pcie/connectalutil install
 	install -d -m755 $(DESTDIR)$(UDEV_RULES_DIR)
 	for fname in $(UDEV_RULES) ; do \
@@ -78,8 +82,6 @@ uninstall:
 
 docs:
 	doxygen scripts/Doxyfile
-
-VERSION=14.10.01
 
 spkg:
 	git clean -fdx

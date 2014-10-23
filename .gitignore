@@ -32,3 +32,4 @@ examples/*/zc706
 examples/*/zedboard
 examples/*/zybo
 generated/xilinx/*
+dkms.conf.out
