@@ -26,28 +26,16 @@
 #include <poll.h>
 #include <errno.h>
 #include <pthread.h>
+#include <sys/ioctl.h>
 #include <sys/select.h>
 
 #include "portal.h"
 #ifdef BSIM
 #include "sock_utils.h"
 #endif
-#ifndef __KERNEL__
-#include <sys/ioctl.h>
-#endif
 
 #ifdef ZYNQ
 #include <android/log.h>
-#endif
-
-#define USE_INTERRUPTS
-#ifdef USE_INTERRUPTS
-#define ENABLE_INTERRUPTS(A) portalEnableInterrupts(A)
-#else
-#define ENABLE_INTERRUPTS(A)
-#endif
-
-#ifdef ZYNQ
 #define ALOGD(fmt, ...) __android_log_print(ANDROID_LOG_DEBUG, "PORTAL", fmt, __VA_ARGS__)
 #define ALOGE(fmt, ...) __android_log_print(ANDROID_LOG_ERROR, "PORTAL", fmt, __VA_ARGS__)
 #else
@@ -116,11 +104,7 @@ int PortalPoller::registerInstance(Portal *portal)
 
 void* PortalPoller::portalExec_init(void)
 {
-#ifdef USE_INTERRUPTS
     portalExec_timeout = -1; // no interrupt timeout 
-#else
-    portalExec_timeout = 100;
-#endif
 #ifdef BSIM
     if (global_sockfd != -1) {
         portalExec_timeout = 100;
@@ -139,7 +123,7 @@ void* PortalPoller::portalExec_init(void)
       Portal *instance = portal_wrappers[i];
       //fprintf(stderr, "portalExec::enabling interrupts portal %d fpga%d\n", i, instance->pint.fpga_number);
       if (!instance->pint.reqsize)
-          ENABLE_INTERRUPTS(&instance->pint);
+          portalEnableInterrupts(&instance->pint);
     }
     fprintf(stderr, "portalExec::about to enter loop, numFds=%d\n", numFds);
     return NULL;
@@ -231,7 +215,7 @@ void* PortalPoller::portalExec_event(void)
 	mcnt++;
       }
       // re-enable interrupt which was disabled by portal_isr
-      ENABLE_INTERRUPTS(&instance->pint);
+      portalEnableInterrupts(&instance->pint);
     }
     return NULL;
 }
