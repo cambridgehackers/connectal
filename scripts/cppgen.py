@@ -456,8 +456,6 @@ class InterfaceMixin:
 	reqChanNums = []
         for d in self.decls:
             reqChanNums.append('CHAN_NUM_%s' % self.global_name(d.name, suffix))
-        if suffix == 'Proxy':
-            reqChanNums.append('CHAN_NUM_%s_putFailed' % className)
         subs = {'className': className,
                 'namespace': namespace,
                 'maxSize': maxSize,

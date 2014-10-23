@@ -35,7 +35,7 @@ class MMUConfigIndication : public MMUConfigIndicationWrapper
   MMUConfigIndication(DmaManager *pm, unsigned int  id) : MMUConfigIndicationWrapper(id), portalMemory(pm) {}
   MMUConfigIndication(DmaManager *pm, unsigned int  id, PortalPoller *poller) : MMUConfigIndicationWrapper(id,poller), portalMemory(pm) {}
   virtual void configResp(uint32_t pointer){
-    fprintf(stderr, "configResp: %x\n", pointer);
+    fprintf(stderr, "MMUConfigIndication::configResp: %x\n", pointer);
     portalMemory->confResp(pointer);
   }
   virtual void error (uint32_t code, uint32_t pointer, uint64_t offset, uint64_t extra) {

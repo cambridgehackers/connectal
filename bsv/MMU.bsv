@@ -245,6 +245,15 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUConfigIndication mmuIndication)(MMU
       mmuIndication.configResp(extend(ptr));
    endrule
    
+   FIFOF#(Bit#(32)) idReturnFifo <- mkSizedBRAMFIFOF(valueOf(MaxNumSGLists));
+   rule idReturnRule;
+      let sglId <- toGet(idReturnFifo).get;
+      sglId_gen.returnTag(truncate(sglId));
+      portsel(regall, 1).request.put(BRAMRequest{write:True, responseOnWrite:False, address: truncate(sglId), datain: tagged Invalid });
+      $display("idReturn %h", sglId);
+   endrule
+      
+   
    Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addrServers;
    for(Integer i = 0; i < 2; i=i+1)
       addrServers[i] =
@@ -271,12 +280,10 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUConfigIndication mmuIndication)(MMU
       mmuIndication.idResponse((fromInteger(iid) << 16) | extend(nextId));
    endmethod
    method Action idReturn(Bit#(32) sglId);
-      sglId_gen.returnTag(truncate(sglId));
-      portsel(regall, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address: truncate(sglId), datain: tagged Invalid });
-      $display("idReturn %h", sglId);
+      idReturnFifo.enq(sglId);
    endmethod
    method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) index8, Bit#(64) barr4, Bit#(32) index4, Bit#(64) barr0, Bit#(32) index0);
-      portsel(regall, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
+      portsel(regall, 1).request.put(BRAMRequest{write:True, responseOnWrite:False,
           address: truncate(pointer), datain: tagged Valid Region{
              reg8: SingleRegion{barrier: truncate(barr8), idxOffset: truncate(index8)},
              reg4: SingleRegion{barrier: truncate(barr4), idxOffset: truncate(index4)},

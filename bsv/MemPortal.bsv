@@ -138,7 +138,6 @@ module mkPipeInMemSlave#(PipeIn#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWidt
    AddressGenerator#(addrWidth,dataWidth) fifoReadAddrGenerator  <- mkAddressGenerator();
    AddressGenerator#(addrWidth,dataWidth) fifoWriteAddrGenerator <- mkAddressGenerator();
    FIFO#(Bit#(ObjectTagSize))        fifoWriteDoneFifo <- mkFIFO();
-   FIFO#(Bool)                           putFailedFifo <- mkFIFO();
 
    interface MemReadServer read_server;
       interface Put readReq = fifoReadAddrGenerator.request;
@@ -160,10 +159,8 @@ module mkPipeInMemSlave#(PipeIn#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWidt
 	    //$display("mkPipeInMemSlave.writeData.put addr=%h data=%h", b.addr, d.data);
 	    if (b.last)
 	       fifoWriteDoneFifo.enq(b.tag);
-	    if (methodPipe.notFull()) begin
-	       // FIXME: handle putFailed
-	       methodPipe.enq(d.data);
-	    end
+	    methodPipe.enq(d.data);
+	    // this used to be where we triggered putFailed
 	 endmethod
       endinterface
       interface Get writeDone = toGet(fifoWriteDoneFifo);
@@ -217,28 +214,16 @@ module mkPipeOutMemSlave#(PipeOut#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWi
 endmodule
 
 module mkMemPortal#(Portal#(numRequests, numIndications, slaveDataWidth) portal)(MemPortal#(slaveAddrWidth, slaveDataWidth))
-   provisos (Add#(1, i__, slaveDataWidth),
-	     Add#(c__, 8, slaveAddrWidth),
-	     Add#(d__, 1, c__),
-	     Max#(numIndications,1,numIndicationsToMux),
-	     Add#(a__, TLog#(TAdd#(1, TAdd#(numRequests, numIndicationsToMux))), c__),
-	     Add#(numIndicationsToMux, b__, TAdd#(numIndications, 1))
+   provisos ( Add#(1, i__, slaveDataWidth)
+	     ,Add#(c__, 8, slaveAddrWidth)
+	     ,Add#(d__, 1, c__)
+	     ,Add#(a__, TLog#(TAdd#(1, TAdd#(numRequests, numIndications))), c__)
 	     );
 
-   PipeIn#(Bit#(slaveDataWidth)) guardRequestPipe =
-      (interface PipeIn#(Bit#(slaveDataWidth));
-	  method Action enq(Bit#(slaveDataWidth) v) if (False); endmethod
-	  method Bool notFull(); return False; endmethod
-       endinterface);
-   Vector#(1, PipeIn#(Bit#(slaveDataWidth))) guardRequestPipes = replicate(guardRequestPipe);
-
-   FIFOF#(Bit#(slaveDataWidth)) putFailedIndicationFifo <- mkFIFOF();
-   PipeOut#(Bit#(slaveDataWidth)) putFailedIndicationPipe = toPipeOut(putFailedIndicationFifo);
-
-   Vector#(numRequests,         PipeIn#(Bit#(slaveDataWidth)))     requestPipes = take(portal.requests);
-   Vector#(numIndicationsToMux, PipeOut#(Bit#(slaveDataWidth))) indicationPipes = take(append(portal.indications, cons(putFailedIndicationPipe, nil)));
-   Vector#(numRequests,         MemSlave#(8, slaveDataWidth))    requestMemSlaves <- mapM(mkPipeInMemSlave, requestPipes);
-   Vector#(numIndicationsToMux, MemSlave#(8, slaveDataWidth)) indicationMemSlaves <- mapM(mkPipeOutMemSlave, indicationPipes);
+   Vector#(numRequests,    PipeIn#(Bit#(slaveDataWidth)))     requestPipes = take(portal.requests);
+   Vector#(numIndications, PipeOut#(Bit#(slaveDataWidth))) indicationPipes = take(portal.indications);
+   Vector#(numRequests,    MemSlave#(8, slaveDataWidth))    requestMemSlaves <- mapM(mkPipeInMemSlave, requestPipes);
+   Vector#(numIndications, MemSlave#(8, slaveDataWidth)) indicationMemSlaves <- mapM(mkPipeOutMemSlave, indicationPipes);
 
    PortalCtrlMemSlave#(8,slaveDataWidth) ctrlPort <- mkPortalCtrlMemSlave(indicationPipes);
 
