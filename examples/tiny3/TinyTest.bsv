@@ -10,7 +10,7 @@ import BRAM::*;
 import TinyTestTypes::*;
 
 
-module mkTiny3Request(Tiny3Indication indication)(Tiny3Request);
+module mkTiny3Request#(Tiny3Indication indication)(Tiny3Request);
 
    /********** the program we wish to assemble **********/
    function List#(AsmLineT) my_program(function ImmT findaddr(String label)) =
@@ -28,12 +28,12 @@ module mkTiny3Request(Tiny3Indication indication)(Tiny3Request);
 
    rule handle_output;
       let out <- tiny.out.get();
-      indication.outputdata(out);
+      indication.outputdata(unpack(pack(out));
       $display("%05t: output = %d\n",$time,out);
    endrule
    
    method Action inputdata(Bit#(32) v);
-      tiny.in(v);
+      tiny.in.put(unpack(pack(v)));
       indication.inputresponse();
    endmethod
 
