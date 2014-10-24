@@ -247,7 +247,7 @@ module mkRowColSink#(ObjectWriteServer#(TMul#(N,32)) vs, Bit#(ObjectTagSize) id)
    endmethod
    interface PipeIn pipe;
       method Action enq(Vector#(N,MmToken) v);
-	 write_data_buffer.enq(ObjectData{data:pack(map(tokenValue,v)),tag:id,last:True});
+	 write_data_buffer.enq(MemData{data:pack(map(tokenValue,v)),tag:id,last:True});
       endmethod
       method Bool notFull = write_data_buffer.notFull;
    endinterface

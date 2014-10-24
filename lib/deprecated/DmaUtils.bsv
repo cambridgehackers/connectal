@@ -74,7 +74,7 @@ module mkDmaReadBuffer(DmaReadBuffer#(dataWidth, bufferDepth))
 	    Mul#(dataWidthBytes,8,dataWidth),
 	    Log#(dataWidthBytes,beatShift));
 
-   FIFOFLevel#(ObjectData#(dataWidth),bufferDepth)  readBuffer <- mkBRAMFIFOFLevel;
+   FIFOFLevel#(MemData#(dataWidth),bufferDepth)  readBuffer <- mkBRAMFIFOFLevel;
    FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF();
    ConfigCounter#(TAdd#(1,TLog#(bufferDepth))) unfulfilled <- mkConfigCounter(0);
    let beat_shift = fromInteger(valueOf(beatShift));
@@ -95,7 +95,7 @@ module mkDmaReadBuffer(DmaReadBuffer#(dataWidth, bufferDepth))
 	 endmethod
       endinterface
       interface Put readData;
-	 method Action put(ObjectData#(dataWidth) x);
+	 method Action put(MemData#(dataWidth) x);
 	    readBuffer.fifo.enq(x);
 	    unfulfilled.decrement(1);
 	 endmethod
@@ -115,7 +115,7 @@ module mkDmaWriteBuffer(DmaWriteBuffer#(dataWidth, bufferDepth))
 	    Mul#(dataWidthBytes,8,dataWidth),
 	    Log#(dataWidthBytes,beatShift));
 
-   FIFOFLevel#(ObjectData#(dataWidth),bufferDepth) writeBuffer <- mkBRAMFIFOFLevel;
+   FIFOFLevel#(MemData#(dataWidth),bufferDepth) writeBuffer <- mkBRAMFIFOFLevel;
    FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF();
    FIFOF#(Bit#(6))                        doneTags <- mkFIFOF();
    ConfigCounter#(TAdd#(1,TLog#(bufferDepth)))  unfulfilled <- mkConfigCounter(0);
@@ -138,7 +138,7 @@ module mkDmaWriteBuffer(DmaWriteBuffer#(dataWidth, bufferDepth))
 	 endmethod
       endinterface
       interface Get writeData;
-	 method ActionValue#(ObjectData#(dataWidth)) get();
+	 method ActionValue#(MemData#(dataWidth)) get();
 	    unfulfilled.decrement(1);
 	    writeBuffer.fifo.deq;
 	    return writeBuffer.fifo.first;
@@ -154,7 +154,7 @@ module mkDmaReadMux#(Vector#(numClients,ObjectReadClient#(dataWidth)) readClient
 	    Add#(tagsz,a__,ObjectTagSize));
 
    FIFO#(ObjectRequest)          readReqFifo  <- mkFIFO();
-   FIFO#(ObjectData#(dataWidth)) readRespFifo <- mkFIFO();
+   FIFO#(MemData#(dataWidth)) readRespFifo <- mkFIFO();
 
    for (Integer i = 0; i < valueOf(numClients); i = i + 1) begin
       // assume fixed tag per client
@@ -181,7 +181,7 @@ module mkDmaWriteMux#(Vector#(numClients,ObjectWriteClient#(dataWidth)) writeCli
        Add#(tagsz,a__,ObjectTagSize));
 
    FIFO#(ObjectRequest)          writeReqFifo  <- mkFIFO();
-   FIFO#(ObjectData#(dataWidth)) writeDataFifo <- mkFIFO();
+   FIFO#(MemData#(dataWidth)) writeDataFifo <- mkFIFO();
    FIFO#(Bit#(ObjectTagSize))    writeDoneFifo <- mkFIFO();
    FIFO#(Bit#(ObjectTagSize))    arbFifo       <- mkFIFO();
 

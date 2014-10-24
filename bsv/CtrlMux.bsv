@@ -55,7 +55,7 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
    provisos(Add#(1,numPortals,numInputs),
 	    Add#(a__,TLog#(numInputs),4),
 	    Min#(2,TLog#(numInputs),bpc),
-	    FunnelPipesPipelined#(1, numInputs, ObjectData#(dataWidth), bpc)
+	    FunnelPipesPipelined#(1, numInputs, MemData#(dataWidth), bpc)
 	    );
    
    Vector#(numInputs, MemSlave#(aw,dataWidth)) portalIfcs = cons(dir.portalIfc.slave,map(getSlave, portals));
@@ -67,21 +67,21 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
    function Bit#(aw) asel(Bit#(addrWidth) a);
       return a[(port_sel_low-1):0];
    endfunction
-   function Get#(ObjectData#(dataWidth)) getMemPortalReadData(MemSlave#(aw,dataWidth) x) = x.read_server.readData;
-   function Put#(ObjectData#(dataWidth)) getMemPortalWriteData(MemSlave#(aw,dataWidth) x) = x.write_server.writeData;
+   function Get#(MemData#(dataWidth)) getMemPortalReadData(MemSlave#(aw,dataWidth) x) = x.read_server.readData;
+   function Put#(MemData#(dataWidth)) getMemPortalWriteData(MemSlave#(aw,dataWidth) x) = x.write_server.writeData;
    
    FIFO#(Bit#(6))        doneFifo <- mkFIFO1();
 
    FIFO#(MemRequest#(aw)) req_ars <- mkSizedFIFO(1);
    FIFO#(Bit#(TLog#(numInputs))) rs <- mkFIFO1();
-   Vector#(numInputs, PipeOut#(ObjectData#(dataWidth))) readDataPipes <- mapM(mkPipeOut, map(getMemPortalReadData,portalIfcs));
-   FunnelPipe#(1, numInputs, ObjectData#(dataWidth), bpc) read_data_funnel <- mkFunnelPipesPipelined(readDataPipes);
+   Vector#(numInputs, PipeOut#(MemData#(dataWidth))) readDataPipes <- mapM(mkPipeOut, map(getMemPortalReadData,portalIfcs));
+   FunnelPipe#(1, numInputs, MemData#(dataWidth), bpc) read_data_funnel <- mkFunnelPipesPipelined(readDataPipes);
       
    FIFO#(MemRequest#(aw)) req_aws <- mkFIFO1();
    FIFO#(Bit#(TLog#(numInputs))) ws <- mkFIFO1();
-   FIFOF#(Tuple2#(Bit#(TLog#(numInputs)), ObjectData#(dataWidth))) write_data <- mkFIFOF;
-   UnFunnelPipe#(1, numInputs, ObjectData#(dataWidth), bpc) write_data_unfunnel <- mkUnFunnelPipesPipelined(cons(toPipeOut(write_data),nil));
-   Vector#(numInputs, PipeIn#(ObjectData#(dataWidth))) writeDataPipes <- mapM(mkPipeIn, map(getMemPortalWriteData,portalIfcs));
+   FIFOF#(Tuple2#(Bit#(TLog#(numInputs)), MemData#(dataWidth))) write_data <- mkFIFOF;
+   UnFunnelPipe#(1, numInputs, MemData#(dataWidth), bpc) write_data_unfunnel <- mkUnFunnelPipesPipelined(cons(toPipeOut(write_data),nil));
+   Vector#(numInputs, PipeIn#(MemData#(dataWidth))) writeDataPipes <- mapM(mkPipeIn, map(getMemPortalWriteData,portalIfcs));
    zipWithM(mkConnection, write_data_unfunnel, writeDataPipes);
  
    rule req_aw;
@@ -110,7 +110,7 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
 	 endmethod
       endinterface
       interface Put writeData;
-	 method Action put(ObjectData#(dataWidth) wdata);
+	 method Action put(MemData#(dataWidth) wdata);
 	    write_data.enq(tuple2(ws.first,wdata));
 	 endmethod
       endinterface
@@ -131,7 +131,7 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
 	 endmethod
       endinterface
       interface Get readData;
-	 method ActionValue#(ObjectData#(dataWidth)) get();
+	 method ActionValue#(MemData#(dataWidth)) get();
 	    let rv <- toGet(read_data_funnel[0]).get;
 	    rs.deq();
 	    //$display("mkSlaveMux.readData rs=%d data=%h", rs.first, rv.data);
@@ -191,7 +191,7 @@ module mkMemSlaveMux#(Vector#(numSlaves,MemSlave#(aw,dataWidth)) slaves) (MemSla
 	 endmethod
       endinterface
       interface Put writeData;
-	 method Action put(ObjectData#(dataWidth) wdata);
+	 method Action put(MemData#(dataWidth) wdata);
 	    //$display("mkMemSlaveMux.writeData aw=%d ws=%d data=%h", valueOf(aw), ws.first, wdata.data);
 	    portalIfcs[ws.first].write_server.writeData.put(wdata);
 	 endmethod
@@ -213,7 +213,7 @@ module mkMemSlaveMux#(Vector#(numSlaves,MemSlave#(aw,dataWidth)) slaves) (MemSla
 	 endmethod
       endinterface
       interface Get readData;
-	 method ActionValue#(ObjectData#(dataWidth)) get();
+	 method ActionValue#(MemData#(dataWidth)) get();
 	    let rv <- portalIfcs[rs.first].read_server.readData.get();
 	    //$display("mkMemSlaveMux.readData aw=%d rs=%d data=%h", valueOf(aw), rs.first, rv.data);
 	    //if (rv.last) begin

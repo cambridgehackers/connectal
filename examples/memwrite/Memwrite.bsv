@@ -169,7 +169,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
       if (verbose) $display("write_data %d", cycle_cnt-last_write_data);
       last_write_data <= cycle_cnt;
       let v = {srcGen-1,srcGen-2};
-      we.writeServer.writeData.put(ObjectData{data:v, tag:0, last:False});
+      we.writeServer.writeData.put(MemData{data:v, tag:0, last:False});
       let new_srcGen = srcGen-2;
       srcGen <= new_srcGen;
       //if (verbose) $display("write_data %d", srcGen);

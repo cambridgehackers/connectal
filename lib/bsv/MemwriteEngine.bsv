@@ -317,7 +317,7 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
 	 endmethod
       endinterface
       interface Get writeData;
-	 method ActionValue#(ObjectData#(dataWidth)) get;
+	 method ActionValue#(MemData#(dataWidth)) get;
 	    match {.rc, .idx, .last} = workf.first;
 	    let new_respCnt = respCnt+1;
 	    if (new_respCnt == rc) begin
@@ -333,7 +333,7 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
 	       $display("ERROR mkMemwriteEngineBuf: bursts oo %d %d", idx, _idx);
 	       $finish;
 	    end
-	    return ObjectData{data:wd, tag:0, last: False};
+	    return MemData{data:wd, tag:0, last: False};
 	 endmethod
       endinterface
       interface Put writeDone;

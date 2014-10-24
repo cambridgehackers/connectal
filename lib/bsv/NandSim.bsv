@@ -116,7 +116,7 @@ module mkNandSim#(NandSimIndication indication) (NandSim);
 	       let last = new_slaveReadCnt==0;
 	       slaveReadCnt <= new_slaveReadCnt;
 	       if (verbose) $display("mkNandSim.memSlave::readData %d %d %d (%d)", slaveReadTags.first, last, rv, slaveReadCnt);
-	       return ObjectData{data:rv, tag:slaveReadTags.first,last:last};
+	       return MemData{data:rv, tag:slaveReadTags.first,last:last};
             endmethod
 	 endinterface
       endinterface

@@ -95,7 +95,7 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
    FIFO#(RRec#(numClients,addrWidth))  reqFifo <- mkFIFO;
    // stage 2: read commands
    BRAM2Port#(Bit#(TLog#(NumTags)), DRec#(numClients,addrWidth)) dreqFifos <- mkBRAM2Server(defaultValue);
-   BRAM2Port#(Bit#(TAdd#(TLog#(NumTags),TSub#(BurstLenSize,beatShift))), ObjectData#(dataWidth)) read_buffer <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(Bit#(TAdd#(TLog#(NumTags),TSub#(BurstLenSize,beatShift))), MemData#(dataWidth)) read_buffer <- mkBRAM2Server(defaultValue);
    // stage 3: read data 
    FIFO#(MemData#(dataWidth)) readDataPipelineFifo <- mkFIFO;
    
@@ -210,7 +210,7 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
 	 //$display("burstLen=%d dreqFifo.first.last=%d last=%d\n", burstLen, dreqFifo.first.last, last);
       end
       Bit#(TLog#(NumTags)) tt = truncate(response_tag);
-      read_buffer.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, datain:ObjectData{data: response.data, tag: req.tag, last: last}, address:{tt,truncate(burstLen)}});
+      read_buffer.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, datain:MemData{data: response.data, tag: req.tag, last: last}, address:{tt,truncate(burstLen)}});
       if (last) begin
 	 tag_gen.returnTag(truncate(response_tag));
       end
@@ -345,7 +345,7 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
    endrule
    
    FIFO#(MemData#(dataWidth)) memDataFifo <- mkFIFO();
-   Vector#(numClients, FIFO#(ObjectData#(dataWidth))) clientWriteData <- replicateM(mkFIFO);
+   Vector#(numClients, FIFO#(MemData#(dataWidth))) clientWriteData <- replicateM(mkFIFO);
    // Pipeline client data:
    // The .get() operation seems to be long latency, so get it into a local FIFO
    for (Integer client = 0; client < valueOf(numClients); client = client + 1)
@@ -358,7 +358,7 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
       let client = dreqFifo.first.client;
       let req = dreqFifo.first.req;
       let rename_tag = dreqFifo.first.rename_tag;
-      ObjectData#(dataWidth) tagdata <- toGet(clientWriteData[client]).get();
+      MemData#(dataWidth) tagdata <- toGet(clientWriteData[client]).get();
       let burstLen = burstReg;
       let first    = firstReg;
       let last     = lastReg;

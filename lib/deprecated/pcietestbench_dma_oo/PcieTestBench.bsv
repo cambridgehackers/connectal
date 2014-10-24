@@ -199,7 +199,7 @@ module mkPcieTestBench#(PcieTestBenchIndication indication)(PcieTestBench#(40,64
    endrule
    
    rule rdData;
-      ObjectData#(64) d <- rb.dmaServer.readData.get;
+      MemData#(64) d <- rb.dmaServer.readData.get;
       let new_respCnt = respCnt+(64/8);
       respCnt <= new_respCnt;
       if (new_respCnt >= reqLen)

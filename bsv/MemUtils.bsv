@@ -44,7 +44,7 @@ module mkMemReader(MemReader#(dataWidth))
 	    Mul#(dataWidthBytes,8,dataWidth),
 	    Log#(dataWidthBytes,beatShift));
 
-   FIFOF#(ObjectData#(dataWidth)) readBuffer <- mkFIFOF;
+   FIFOF#(MemData#(dataWidth)) readBuffer <- mkFIFOF;
    FIFOF#(ObjectRequest)           reqBuffer <- mkFIFOF;
 
    interface ObjectReadServer readServer;
@@ -71,7 +71,7 @@ module mkMemReaderBuff(MemReaderBuff#(dataWidth, bufferDepth))
 	    ,Add#(a__,BurstLenSize,availableWidth)
 	    );
 
-   FIFOF#(ObjectData#(dataWidth))   readBuffer <- mkSizedBRAMFIFOF(valueOf(bufferDepth));
+   FIFOF#(MemData#(dataWidth))   readBuffer <- mkSizedBRAMFIFOF(valueOf(bufferDepth));
    FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF();
    FIFOF#(ObjectRequest)          reqCommitted <- mkFIFOF();
    ConfigCounter#(availableWidth) unfulfilled <- mkConfigCounter(0);
@@ -87,7 +87,7 @@ module mkMemReaderBuff(MemReaderBuff#(dataWidth, bufferDepth))
    interface ObjectReadServer readServer;
       interface Put readReq = toPut(reqOutstanding);
       interface Get readData;
-	 method ActionValue#(ObjectData#(dataWidth)) get();
+	 method ActionValue#(MemData#(dataWidth)) get();
 	    let v <- toGet(readBuffer).get();
 	    unfulfilled.decrement(1);
 	    return v;
@@ -97,7 +97,7 @@ module mkMemReaderBuff(MemReaderBuff#(dataWidth, bufferDepth))
    interface ObjectReadClient readClient;
       interface Get readReq = toGet(reqCommitted);
       interface Put readData;
-   	 method Action put(ObjectData#(dataWidth) x);
+   	 method Action put(MemData#(dataWidth) x);
 	    readBuffer.enq(x);
    	 endmethod
       endinterface
@@ -116,7 +116,7 @@ module mkMemWriter(MemWriter#(dataWidth))
 	    Mul#(dataWidthBytes,8,dataWidth),
 	    Log#(dataWidthBytes,beatShift));
 
-   FIFOF#(ObjectData#(dataWidth)) writeBuffer <- mkFIFOF;
+   FIFOF#(MemData#(dataWidth)) writeBuffer <- mkFIFOF;
    FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF;
    FIFOF#(Bit#(6))                        doneTags <- mkFIFOF();
 
@@ -147,7 +147,7 @@ module mkMemWriterBuff(MemWriterBuff#(dataWidth, bufferDepth))
 	    Mul#(dataWidthBytes,8,dataWidth),
 	    Log#(dataWidthBytes,beatShift));
 
-   FIFOF#(ObjectData#(dataWidth))  writeBuffer <- mkSizedBRAMFIFOF(valueOf(bufferDepth));
+   FIFOF#(MemData#(dataWidth))  writeBuffer <- mkSizedBRAMFIFOF(valueOf(bufferDepth));
    FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF();
    FIFOF#(ObjectRequest)          reqCommitted <- mkFIFOF();
    FIFOF#(Bit#(6))                    doneTags <- mkFIFOF();
@@ -164,7 +164,7 @@ module mkMemWriterBuff(MemWriterBuff#(dataWidth, bufferDepth))
    interface ObjectWriteServer writeServer;
       interface Put writeReq = toPut(reqOutstanding);
       interface Put writeData;
-	 method Action put(ObjectData#(dataWidth) d);
+	 method Action put(MemData#(dataWidth) d);
 	    writeBuffer.enq(d);
 	    available.increment(1);
 	 endmethod
@@ -174,7 +174,7 @@ module mkMemWriterBuff(MemWriterBuff#(dataWidth, bufferDepth))
    interface ObjectWriteClient writeClient;
       interface Get writeReq = toGet(reqCommitted);
       interface Get writeData;
-	 method ActionValue#(ObjectData#(dataWidth)) get();
+	 method ActionValue#(MemData#(dataWidth)) get();
 	    writeBuffer.deq;
 	    return writeBuffer.first;
 	 endmethod

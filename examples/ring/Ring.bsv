@@ -69,7 +69,7 @@ module mkRingRequest#(RingIndication indication,
    RingBuffer statusRing <- mkRingBuffer;
    Reg#(Bool) hwenabled <- mkReg(False);
    Reg#(Bool) cmdBusy <- mkReg(False);
-   Reg#(ObjectData#(64)) cmd <- mkReg(ObjectData{data:0, tag:0});
+   Reg#(MemData#(64)) cmd <- mkReg(MemData{data:0, tag:0});
    Reg#(Bit#(4)) ii <- mkReg(0);
    Reg#(Bit#(4)) respCtr <- mkReg(0);
    Reg#(Bit#(4)) dispCtr <- mkReg(0);
@@ -152,7 +152,7 @@ module mkRingRequest#(RingIndication indication,
 	       for (respCtr <= 0; respCtr < 8; respCtr <= respCtr + 1)
 		  action
 		     let rv <- copyEngine.response.get();
-		     status_write_chan.writeData.put(ObjectData{data: rv, tag: statusTag});
+		     status_write_chan.writeData.put(MemData{data: rv, tag: statusTag});
 		  endaction
 	       statusRing.push();
 	       statusTag <= statusTag + 1;
@@ -169,7 +169,7 @@ module mkRingRequest#(RingIndication indication,
 	       for (respCtr <= 0; respCtr < 8; respCtr <= respCtr + 1)
 		  action
 		     let rv <- echoEngine.response.get();
-		     status_write_chan.writeData.put(ObjectData{data: rv, tag: statusTag});
+		     status_write_chan.writeData.put(MemData{data: rv, tag: statusTag});
 		  endaction
 	       statusRing.push();
 	       statusTag <= statusTag + 1;

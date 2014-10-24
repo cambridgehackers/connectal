@@ -63,13 +63,13 @@ module mkCtrl2BRAM#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (Me
 	 endmethod
       endinterface
       interface Get readData;
-	 method ActionValue#(ObjectData#(busDataWidth)) get();
+	 method ActionValue#(MemData#(busDataWidth)) get();
    	    let tag = readTagFifo.first;
 	    readTagFifo.deq;
 	    readLastFifo.deq;
             let data <- br.response.get;
             if (verbose) $display("%d read_server.readData (b) %h", cycles, data);
-            return ObjectData { data: data, tag: tag, last: readLastFifo.first };
+            return MemData { data: data, tag: tag, last: readLastFifo.first };
 	 endmethod
       endinterface
    endinterface
@@ -81,7 +81,7 @@ module mkCtrl2BRAM#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (Me
 	 endmethod
       endinterface
       interface Put writeData;
-	 method Action put(ObjectData#(busDataWidth) resp);
+	 method Action put(MemData#(busDataWidth) resp);
 	    let addrBeat <- writeAddrGenerator.addrBeat.get();
 	    let addr = addrBeat.addr;
 	    Bit#(bramAddrWidth) regFileAddr = truncate(addr/fromInteger(valueOf(TDiv#(busDataWidth,8))));

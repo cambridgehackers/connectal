@@ -106,7 +106,7 @@ module mkMemSlaveFromRegFile#(RegFileA#(Bit#(regFileAddrWidth), Bit#(busDataWidt
 	 endmethod
       endinterface
       interface Get readData;
-	 method ActionValue#(ObjectData#(busDataWidth)) get();
+	 method ActionValue#(MemData#(busDataWidth)) get();
 	    let addrBeat <- readAddrGenerator.addrBeat.get();
    	    let addr = addrBeat.addr;
    	    let tag = addrBeat.tag;
@@ -114,7 +114,7 @@ module mkMemSlaveFromRegFile#(RegFileA#(Bit#(regFileAddrWidth), Bit#(busDataWidt
             Bit#(regFileAddrWidth) regFileAddr = truncate(addr/fromInteger(valueOf(TDiv#(busDataWidth,8))));
             let data <- rf.sub(regFileAddr);
             if (verbose) $display("read_server.readData %h %h %d", addr, data, burstCount);
-            return ObjectData { data: data, tag: tag, last: addrBeat.last };
+            return MemData { data: data, tag: tag, last: addrBeat.last };
 	 endmethod
       endinterface
    endinterface
@@ -126,7 +126,7 @@ module mkMemSlaveFromRegFile#(RegFileA#(Bit#(regFileAddrWidth), Bit#(busDataWidt
 	 endmethod
       endinterface
       interface Put writeData;
-	 method Action put(ObjectData#(busDataWidth) resp);
+	 method Action put(MemData#(busDataWidth) resp);
 	    let addr = writeAddrReg;
             let burstCount = writeBurstCountReg;
             if (burstCount == 0) begin

@@ -160,7 +160,7 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
 	    let req = dreqFifo.first.req;
 	    let rename_tag = dreqFifo.first.rename_tag;
 	    if (valueOf(numReadClients) > 0)
-	       readClients[activeChan].readData.put(ObjectData { data: response.data, tag: req.tag});
+	       readClients[activeChan].readData.put(MemData { data: response.data, tag: req.tag});
 
 	    let burstLen = burstReg;
 	    if (burstLen == 0)
@@ -275,7 +275,7 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
 	    let activeChan = dreqFifo.first.chan;
 	    let req = dreqFifo.first.req;
 	    let rename_tag = dreqFifo.first.rename_tag;
-	    ObjectData#(dataWidth) tagdata = unpack(0);
+	    MemData#(dataWidth) tagdata = unpack(0);
 	    if (valueOf(numWriteClients) > 0)
 	       tagdata <- writeClients[activeChan].writeData.get();
 	    let burstLen = burstReg;

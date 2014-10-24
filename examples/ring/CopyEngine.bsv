@@ -105,7 +105,7 @@ module mkCopyEngine#(ObjectReadServer#(64) copy_read_chan, ObjectWriteServer#(64
        let data <- copy_read_chan.readData.get;
        //$display("copyReadWrite addr %h", copyWriteAddr);
        copy_write_chan.writeReq.put(ObjectRequest{sglId: copyWritePointer, offset: copyWriteAddr, burstLen: 8, tag: copyWriteAddr[8:3]});
-       copy_write_chan.writeData.put(ObjectData{data: data.data, tag: copyWriteAddr[8:3]});
+       copy_write_chan.writeData.put(MemData{data: data.data, tag: copyWriteAddr[8:3]});
        copyWriteAddr <= copyWriteAddr + 8;
     endrule
     

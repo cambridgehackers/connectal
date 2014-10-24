@@ -213,7 +213,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
 	 endmethod
       endinterface
       interface Put readData;
-	 method Action put(ObjectData#(dataWidth) d);
+	 method Action put(MemData#(dataWidth) d);
 	    match {.rc, .idx, .last} = workf.first;
 	    let new_respCnt = respCnt+1;
 	    let l = False;

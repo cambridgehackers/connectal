@@ -1391,17 +1391,17 @@ by software and identified by a <tt>pointer</tt>.</p></div>
     typedef struct {
        Bit#(dsz) data;
        Bit#(6) tag;
-       } ObjectData#(numeric type dsz) deriving (Bits);</tt></pre>
+       } MemData#(numeric type dsz) deriving (Bits);</tt></pre>
 </div></div>
 <div class="paragraph"><p>Read clients implement the <tt>ObjectReadClient</tt> interface. On response to
-the read, <tt>burstLen</tt> <tt>ObjectData</tt> items will be put to the <tt>readData</tt>
+the read, <tt>burstLen</tt> <tt>MemData</tt> items will be put to the <tt>readData</tt>
 interface. The design must be ready to consume the data when it is
 delivered from the memory bus or the system may hang.</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>    interface ObjectReadClient#(numeric type dsz);
        interface GetF#(ObjectRequest)    readReq;
-       interface PutF#(ObjectData#(dsz)) readData;
+       interface PutF#(MemData#(dsz)) readData;
     endinterface</tt></pre>
 </div></div>
 <div class="paragraph"><p>Write clients implement <tt>ObjectWriteClient</tt>. To complete the transaction,
@@ -1413,7 +1413,7 @@ write request is issued to the memory bus or the system may hang.</p></div>
 <div class="content">
 <pre><tt>    interface ObjectWriteClient#(numeric type dsz);
        interface GetF#(ObjectRequest)    writeReq;
-       interface GetF#(ObjectData#(dsz)) writeData;
+       interface GetF#(MemData#(dsz)) writeData;
        interface PutF#(Bit#(6))       writeDone;
     endinterface</tt></pre>
 </div></div>

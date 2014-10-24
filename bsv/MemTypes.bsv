@@ -55,8 +55,7 @@ typedef struct {
    Bit#(dsz) data;
    Bit#(ObjectTagSize) tag;
    Bool                last;
-   } ObjectData#(numeric type dsz) deriving (Bits);
-typedef ObjectData#(dsz) MemData#(numeric type dsz);
+   } MemData#(numeric type dsz) deriving (Bits);
 
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -98,23 +97,23 @@ typedef MemreadEngineV#(dataWidth, cmdQDepth, 1) MemreadEngine#(numeric type dat
 			     
 interface ObjectReadClient#(numeric type dsz);
    interface Get#(ObjectRequest)    readReq;
-   interface Put#(ObjectData#(dsz)) readData;
+   interface Put#(MemData#(dsz)) readData;
 endinterface
 
 interface ObjectWriteClient#(numeric type dsz);
    interface Get#(ObjectRequest)    writeReq;
-   interface Get#(ObjectData#(dsz)) writeData;
+   interface Get#(MemData#(dsz)) writeData;
    interface Put#(Bit#(ObjectTagSize))       writeDone;
 endinterface
 
 interface ObjectReadServer#(numeric type dsz);
    interface Put#(ObjectRequest) readReq;
-   interface Get#(ObjectData#(dsz))     readData;
+   interface Get#(MemData#(dsz))     readData;
 endinterface
 
 interface ObjectWriteServer#(numeric type dsz);
    interface Put#(ObjectRequest) writeReq;
-   interface Put#(ObjectData#(dsz))     writeData;
+   interface Put#(MemData#(dsz))     writeData;
    interface Get#(Bit#(ObjectTagSize))           writeDone;
 endinterface
 
