@@ -51,16 +51,16 @@ function Get#(t) null_get();
            endinterface);
 endfunction
 
-function  MemWriteClient#(addrWidth, busWidth) null_mem_write_client();
-   return (interface MemWriteClient;
+function  PhysMemWriteClient#(addrWidth, busWidth) null_mem_write_client();
+   return (interface PhysMemWriteClient;
               interface Get writeReq = null_get;
               interface Get writeData = null_get;
               interface Put writeDone = null_put;
            endinterface);
 endfunction
 
-function  MemReadClient#(addrWidth, busWidth) null_mem_read_client();
-   return (interface MemReadClient;
+function  PhysMemReadClient#(addrWidth, busWidth) null_mem_read_client();
+   return (interface PhysMemReadClient;
               interface Get readReq = null_get;
               interface Put readData = null_put;
            endinterface);
@@ -68,7 +68,7 @@ endfunction
 
 interface MemServer#(numeric type addrWidth, numeric type dataWidth, numeric type nMasters);
    interface DmaDebugRequest request;
-   interface Vector#(nMasters,MemMaster#(addrWidth, dataWidth)) masters;
+   interface Vector#(nMasters,PhysMemMaster#(addrWidth, dataWidth)) masters;
 endinterface
 		 	 
    
@@ -101,9 +101,9 @@ module mkMemServerRW#(DmaDebugIndication dmaIndication,
       dmaIndication.error(extend(pack(error.errorType)), error.pref, 0, 0);
    endrule
 
-   function MemMaster#(PhysAddrWidth,dataWidth) mkm(Integer i) = (interface MemMaster#(PhysAddrWidth,dataWidth);
-								 interface MemReadClient read_client = reader.masters[i].read_client;
-								 interface MemWriteClient write_client = writer.masters[i].write_client;
+   function PhysMemMaster#(PhysAddrWidth,dataWidth) mkm(Integer i) = (interface PhysMemMaster#(PhysAddrWidth,dataWidth);
+								 interface PhysMemReadClient read_client = reader.masters[i].read_client;
+								 interface PhysMemWriteClient write_client = writer.masters[i].write_client;
 							      endinterface);
 
    interface DmaDebugRequest request;
@@ -171,9 +171,9 @@ module mkMemServerR#(DmaDebugIndication dmaIndication,
       dmaIndication.addrResponse(zeroExtend(physAddr));
    endrule
    
-   function MemMaster#(PhysAddrWidth,dataWidth) mkm(Integer i) = (interface MemMaster#(PhysAddrWidth,dataWidth);
-								 interface MemReadClient read_client = readers[i].read_client;
-								 interface MemWriteClient write_client = null_mem_write_client;
+   function PhysMemMaster#(PhysAddrWidth,dataWidth) mkm(Integer i) = (interface PhysMemMaster#(PhysAddrWidth,dataWidth);
+								 interface PhysMemReadClient read_client = readers[i].read_client;
+								 interface PhysMemWriteClient write_client = null_mem_write_client;
 							      endinterface);
 
    Stmt dbgStmt = seq
@@ -261,9 +261,9 @@ module mkMemServerW#(DmaDebugIndication dmaIndication,
       dmaIndication.addrResponse(zeroExtend(physAddr));
    endrule
 
-   function MemMaster#(PhysAddrWidth,dataWidth) mkm(Integer i) = (interface MemMaster#(PhysAddrWidth,dataWidth);
-								 interface MemReadClient read_client = null_mem_read_client;
-								 interface MemWriteClient write_client = writers[i].write_client;
+   function PhysMemMaster#(PhysAddrWidth,dataWidth) mkm(Integer i) = (interface PhysMemMaster#(PhysAddrWidth,dataWidth);
+								 interface PhysMemReadClient read_client = null_mem_read_client;
+								 interface PhysMemWriteClient write_client = writers[i].write_client;
 							      endinterface);
    
    Stmt dbgStmt = seq

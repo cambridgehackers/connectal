@@ -51,14 +51,14 @@ module mkInterruptMux#(Vector#(numPortals,ReadOnly#(Bool)) inputs) (ReadOnly#(Bo
 endmodule
 
 module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
-		   Vector#(numPortals,MemPortal#(aw,dataWidth)) portals) (MemSlave#(addrWidth,dataWidth))
+		   Vector#(numPortals,MemPortal#(aw,dataWidth)) portals) (PhysMemSlave#(addrWidth,dataWidth))
    provisos(Add#(1,numPortals,numInputs),
 	    Add#(a__,TLog#(numInputs),4),
 	    Min#(2,TLog#(numInputs),bpc),
 	    FunnelPipesPipelined#(1, numInputs, MemData#(dataWidth), bpc)
 	    );
    
-   Vector#(numInputs, MemSlave#(aw,dataWidth)) portalIfcs = cons(dir.portalIfc.slave,map(getSlave, portals));
+   Vector#(numInputs, PhysMemSlave#(aw,dataWidth)) portalIfcs = cons(dir.portalIfc.slave,map(getSlave, portals));
    let port_sel_low = valueOf(aw);
    let port_sel_high = valueOf(TAdd#(3,aw));
    function Bit#(4) psel(Bit#(addrWidth) a);
@@ -67,8 +67,8 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
    function Bit#(aw) asel(Bit#(addrWidth) a);
       return a[(port_sel_low-1):0];
    endfunction
-   function Get#(MemData#(dataWidth)) getMemPortalReadData(MemSlave#(aw,dataWidth) x) = x.read_server.readData;
-   function Put#(MemData#(dataWidth)) getMemPortalWriteData(MemSlave#(aw,dataWidth) x) = x.write_server.writeData;
+   function Get#(MemData#(dataWidth)) getMemPortalReadData(PhysMemSlave#(aw,dataWidth) x) = x.read_server.readData;
+   function Put#(MemData#(dataWidth)) getMemPortalWriteData(PhysMemSlave#(aw,dataWidth) x) = x.write_server.writeData;
    
    FIFO#(Bit#(6))        doneFifo <- mkFIFO1();
 
@@ -100,7 +100,7 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
       doneFifo.enq(rv);
    endrule
 
-   interface MemWriteServer write_server;
+   interface PhysMemWriteServer write_server;
       interface Put writeReq;
 	 method Action put(PhysMemRequest#(addrWidth) req);
 	    req_aws.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
@@ -121,7 +121,7 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
 	 endmethod
       endinterface
    endinterface
-   interface MemReadServer read_server;
+   interface PhysMemReadServer read_server;
       interface Put readReq;
 	 method Action put(PhysMemRequest#(addrWidth) req);
 	    req_ars.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
@@ -142,12 +142,12 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
    
 endmodule
 
-module mkMemSlaveMux#(Vector#(numSlaves,MemSlave#(aw,dataWidth)) slaves) (MemSlave#(addrWidth,dataWidth))
+module mkMemSlaveMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves) (PhysMemSlave#(addrWidth,dataWidth))
    provisos(Add#(selWidth,aw,addrWidth),
 	    Add#(a__, TLog#(numSlaves), selWidth)
       );
 
-   Vector#(numSlaves, MemSlave#(aw,dataWidth)) portalIfcs = take(slaves);
+   Vector#(numSlaves, PhysMemSlave#(aw,dataWidth)) portalIfcs = take(slaves);
    let port_sel_low = valueOf(aw);
    let port_sel_high = valueOf(TSub#(addrWidth,1));
    function Bit#(selWidth) psel(Bit#(addrWidth) a);
@@ -181,7 +181,7 @@ module mkMemSlaveMux#(Vector#(numSlaves,MemSlave#(aw,dataWidth)) slaves) (MemSla
       portalIfcs[rs.first].read_server.readReq.put(req);
    endrule
 
-   interface MemWriteServer write_server;
+   interface PhysMemWriteServer write_server;
       interface Put writeReq;
 	 method Action put(PhysMemRequest#(addrWidth) req);
 	    req_aws.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
@@ -203,7 +203,7 @@ module mkMemSlaveMux#(Vector#(numSlaves,MemSlave#(aw,dataWidth)) slaves) (MemSla
 	 endmethod
       endinterface
    endinterface
-   interface MemReadServer read_server;
+   interface PhysMemReadServer read_server;
       interface Put readReq;
 	 method Action put(PhysMemRequest#(addrWidth) req);
 	    req_ars.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});

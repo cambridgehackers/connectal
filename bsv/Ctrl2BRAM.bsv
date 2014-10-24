@@ -28,7 +28,7 @@ import AddressGenerator::*;
 import BRAM::*;
 
 
-module mkCtrl2BRAM#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (MemSlave#(busAddrWidth, busDataWidth))
+module mkCtrl2BRAM#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (PhysMemSlave#(busAddrWidth, busDataWidth))
    provisos(Add#(a__, bramAddrWidth, busAddrWidth));
 
    FIFOF#(Bit#(6))  readTagFifo <- mkFIFOF();
@@ -55,7 +55,7 @@ module mkCtrl2BRAM#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (Me
       if (verbose) $display("%d read_server.readData (a) %h %d last=%d", cycles, addr, burstCount, addrBeat.last);
    endrule
 
-   interface MemReadServer read_server;
+   interface PhysMemReadServer read_server;
       interface Put readReq;
 	 method Action put(PhysMemRequest#(busAddrWidth) req);
             if (verbose) $display("%d axiSlave.read.readAddr %h bc %d", cycles, req.addr, req.burstLen);
@@ -73,7 +73,7 @@ module mkCtrl2BRAM#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (Me
 	 endmethod
       endinterface
    endinterface
-   interface MemWriteServer write_server;
+   interface PhysMemWriteServer write_server;
       interface Put writeReq;
 	 method Action put(PhysMemRequest#(busAddrWidth) req);
 	    writeAddrGenerator.request.put(req);

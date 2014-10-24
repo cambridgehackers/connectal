@@ -295,8 +295,8 @@ module  mkBsimHost#(Clock double_clock, Reset double_reset)(BsimHost#(clientAddr
     endrule
 
    interface axi_servers = servers;
-   interface MemMaster mem_client;
-      interface MemReadClient read_client;
+   interface PhysMemMaster mem_client;
+      interface PhysMemReadClient read_client;
         interface Get readReq;
 	 method ActionValue#(PhysMemRequest#(clientAddrWidth)) get();
 	    //$write("req_ar: ");
@@ -315,7 +315,7 @@ module  mkBsimHost#(Clock double_clock, Reset double_reset)(BsimHost#(clientAddr
 	 endmethod
         endinterface
       endinterface
-      interface MemWriteClient write_client;
+      interface PhysMemWriteClient write_client;
         interface Get writeReq;
 	 method ActionValue#(PhysMemRequest#(clientAddrWidth)) get();
 	    let wd <- crw.writeRequest;

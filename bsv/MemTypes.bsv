@@ -121,33 +121,33 @@ endinterface
 ///////////////////////////////////////////////////////////////////////////////////
 // 
 
-interface MemSlave#(numeric type addrWidth, numeric type dataWidth);
-   interface MemReadServer#(addrWidth, dataWidth) read_server;
-   interface MemWriteServer#(addrWidth, dataWidth) write_server; 
+interface PhysMemSlave#(numeric type addrWidth, numeric type dataWidth);
+   interface PhysMemReadServer#(addrWidth, dataWidth) read_server;
+   interface PhysMemWriteServer#(addrWidth, dataWidth) write_server; 
 endinterface
 
-interface MemMaster#(numeric type addrWidth, numeric type dataWidth);
-   interface MemReadClient#(addrWidth, dataWidth) read_client;
-   interface MemWriteClient#(addrWidth, dataWidth) write_client; 
+interface PhysMemMaster#(numeric type addrWidth, numeric type dataWidth);
+   interface PhysMemReadClient#(addrWidth, dataWidth) read_client;
+   interface PhysMemWriteClient#(addrWidth, dataWidth) write_client; 
 endinterface
 
-interface MemReadClient#(numeric type asz, numeric type dsz);
+interface PhysMemReadClient#(numeric type asz, numeric type dsz);
    interface Get#(PhysMemRequest#(asz))    readReq;
    interface Put#(MemData#(dsz)) readData;
 endinterface
 
-interface MemWriteClient#(numeric type asz, numeric type dsz);
+interface PhysMemWriteClient#(numeric type asz, numeric type dsz);
    interface Get#(PhysMemRequest#(asz))    writeReq;
    interface Get#(MemData#(dsz)) writeData;
    interface Put#(Bit#(MemTagSize))       writeDone;
 endinterface
 
-interface MemReadServer#(numeric type asz, numeric type dsz);
+interface PhysMemReadServer#(numeric type asz, numeric type dsz);
    interface Put#(PhysMemRequest#(asz)) readReq;
    interface Get#(MemData#(dsz))     readData;
 endinterface
 
-interface MemWriteServer#(numeric type asz, numeric type dsz);
+interface PhysMemWriteServer#(numeric type asz, numeric type dsz);
    interface Put#(PhysMemRequest#(asz)) writeReq;
    interface Put#(MemData#(dsz))     writeData;
    interface Get#(Bit#(MemTagSize))           writeDone;
@@ -192,8 +192,8 @@ instance Connectable#(ObjectWriteClient#(dsz), ObjectWriteServer#(dsz));
    endmodule
 endinstance
 
-instance Connectable#(MemMaster#(addrWidth, busWidth), MemSlave#(addrWidth, busWidth));
-   module mkConnection#(MemMaster#(addrWidth, busWidth) m, MemSlave#(addrWidth, busWidth) s)(Empty);
+instance Connectable#(PhysMemMaster#(addrWidth, busWidth), PhysMemSlave#(addrWidth, busWidth));
+   module mkConnection#(PhysMemMaster#(addrWidth, busWidth) m, PhysMemSlave#(addrWidth, busWidth) s)(Empty);
       mkConnection(m.read_client.readReq, s.read_server.readReq);
       mkConnection(s.read_server.readData, m.read_client.readData);
       mkConnection(m.write_client.writeReq, s.write_server.writeReq);
@@ -203,8 +203,8 @@ instance Connectable#(MemMaster#(addrWidth, busWidth), MemSlave#(addrWidth, busW
 endinstance
 
 // this is used for debugging MemSlaveEngine/MemMasterEngine in BsimTop.bsv
-instance Connectable#(MemMaster#(32, busWidth), MemSlave#(40, busWidth));
-   module mkConnection#(MemMaster#(32, busWidth) m, MemSlave#(40, busWidth) s)(Empty);
+instance Connectable#(PhysMemMaster#(32, busWidth), PhysMemSlave#(40, busWidth));
+   module mkConnection#(PhysMemMaster#(32, busWidth) m, PhysMemSlave#(40, busWidth) s)(Empty);
       //mkConnection(m.read_client.readReq, s.read_server.readReq);
       rule readreq;
 	 let req <- m.read_client.readReq.get();

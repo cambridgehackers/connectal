@@ -36,7 +36,7 @@ import MemTypes     :: *;
 // Also sources interrupt MSIX requests
 interface MemMasterEngine;
     interface Client#(TLPData#(16), TLPData#(16)) tlp;
-    interface MemMaster#(32,32) master;
+    interface PhysMemMaster#(32,32) master;
 endinterface
 
 (* synthesize *)
@@ -161,8 +161,8 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
     endinterface
     interface Get request = toGet(tlpOutFifo);
     endinterface: tlp
-    interface MemMaster master;
-    interface MemWriteClient write_client;
+    interface PhysMemMaster master;
+    interface PhysMemWriteClient write_client;
         interface Get    writeReq;
 	  method ActionValue#(PhysMemRequest#(32)) get();
 	     let hdr = writeHeaderFifo.first;
@@ -184,7 +184,7 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
 	  endmethod
        endinterface
      endinterface
-    interface MemReadClient read_client;
+    interface PhysMemReadClient read_client;
         interface Get    readReq;
 	  method ActionValue#(PhysMemRequest#(32)) get();
 	     let hdr = readHeaderFifo.first;

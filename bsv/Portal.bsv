@@ -39,11 +39,11 @@ endinterface
 interface MemPortal#(numeric type slaveAddrWidth, numeric type slaveDataWidth);
    method Bit#(32) ifcId();
    method Bit#(32) ifcType();
-   interface MemSlave#(slaveAddrWidth,slaveDataWidth) slave;
+   interface PhysMemSlave#(slaveAddrWidth,slaveDataWidth) slave;
    interface ReadOnly#(Bool) interrupt;
 endinterface
 
-function MemSlave#(_a,_d) getSlave(MemPortal#(_a,_d) p);
+function PhysMemSlave#(_a,_d) getSlave(MemPortal#(_a,_d) p);
    return p.slave;
 endfunction
 
@@ -61,8 +61,8 @@ endfunction
 typedef MemPortal#(16,32) StdPortal;
 
 interface PortalTop#(numeric type addrWidth, numeric type dataWidth, type pins, numeric type numMasters);
-   interface MemSlave#(32,32) slave;
-   interface Vector#(numMasters,MemMaster#(addrWidth, dataWidth)) masters;
+   interface PhysMemSlave#(32,32) slave;
+   interface Vector#(numMasters,PhysMemMaster#(addrWidth, dataWidth)) masters;
    interface Vector#(16,ReadOnly#(Bool)) interrupt;
    interface LEDS             leds;
    interface pins             pins;

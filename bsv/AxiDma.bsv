@@ -31,7 +31,7 @@ import MemTypes::*;
 import ConnectalMemory::*;
 
 
-module mkAxiDmaSlave#(MemSlave#(addrWidth,dataWidth) slave) (Axi3Slave#(addrWidth,dataWidth,12));
+module mkAxiDmaSlave#(PhysMemSlave#(addrWidth,dataWidth) slave) (Axi3Slave#(addrWidth,dataWidth,12));
    let beatShift = fromInteger(valueOf(TLog#(TDiv#(dataWidth,8))));
    interface Put req_ar;
       method Action put((Axi3ReadRequest#(addrWidth, 12)) req);
@@ -64,7 +64,7 @@ module mkAxiDmaSlave#(MemSlave#(addrWidth,dataWidth) slave) (Axi3Slave#(addrWidt
    endinterface
 endmodule
 
-module mkAxiDmaMaster#(MemMaster#(addrWidth,dataWidth) master) (Axi3Master#(addrWidth,dataWidth,6))
+module mkAxiDmaMaster#(PhysMemMaster#(addrWidth,dataWidth) master) (Axi3Master#(addrWidth,dataWidth,6))
    
    provisos(Div#(dataWidth,8,dataWidthBytes),
 	    Mul#(dataWidthBytes,8,dataWidth),
