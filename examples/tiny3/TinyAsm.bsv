@@ -90,43 +90,12 @@ function Tuple2#(Bool,Fmt) find_duplicate_labels(function List#(AsmLineT) progra
 endfunction
 
 
-function Fmt disassemble(InstructionT inst);
-   Fmt msg = $format("");
-
-   case(inst) matches
-      tagged Normal { op: .op, func: .func, shift: .shift, skip: .skip, rw: .rw, ra: .ra, rb: .rb}:
-	 msg = msg + $format("%s-%s-%s-%s r%1d <- r%1d, %1d",
-			     opcode2string(op),
-			     func2string(func),
-			     shift2string(shift),
-			     skip2string(skip),
-			     rw, ra, rb);
-      tagged Immediate { rw: .rw, imm: .imm }:
-	 msg = msg + $format("r%1d = %1d",rw,imm);
-   endcase
-   return msg;
-   
-endfunction
-											    
-   
 function Fmt disassembleROM(InstructionROM_T rom);
    Fmt msg = $format("");   
    for(Integer a=0; a<length(rom); a=a+1)
       begin
 	 InstructionT inst = word2instruction(rom[a]);
-	 msg = msg + $format("pm[%2d] : ",a) + disassemble(inst) + $format("\n");
-/*	 case(i) matches
-	    tagged Normal { op: .op, func: .func, shift: .shift, skip: .skip, rw: .rw, ra: .ra, rb: .rb}:
-	       msg = msg + $format("prog[%2d] : %s-%s-%s-%s r%1d <- r%1d, %1d\n",a,
-				   opcode2string(op),
-				   func2string(func),
-				   shift2string(shift),
-				   skip2string(skip),
-				   rw, ra, rb);
-	    tagged Immediate { rw: .rw, imm: .imm }:
-	       msg = msg + $format("prog[%2d] : r%1d = %1d\n",a,rw,imm);
-	 endcase
-*/
+	 msg = msg + $format("pm[%2d] : ",a) + fshow(inst) + $format("\n");
       end
    return msg;
 endfunction
@@ -148,39 +117,5 @@ module mkInstructionROM#(function List#(AsmLineT) the_program(function ImmT find
    interface response = toGet(out_fifo);
 endmodule
    
-
-
-// simple test									       
-module mkTestAssembler(Empty);
-   
-   /********** the program we wish to assemble **********/
-   function List#(AsmLineT) my_program(function ImmT findaddr(String label)) =
-      cons(asmi("",    0, 0), // put 0 in r0
-      cons(asmi("",    1, 10), // put 10 in r1
-      cons(asmi("",    2, findaddr("loop")), // loop address in r2
-      cons(asm("loop", OpOut, FDECb, ShiftNone, SkipNever, 1, 0, 1), // r1-- and output
-      cons(asm("",     OpJump, FaORb, ShiftNone, SkipZero, 3, 2, 0), // jump r2 if not zero
-      cons(asm("",     OpReserved, Freserved, ShiftNone, SkipNever, 0, 0, 0), // stop processor
-      tagged Nil))))));
-				  
-   InstructionROM_T rom = assembler(my_program);
-
-   // check assembly worked   
-   Reg#(Bool) report_rom_state <- mkReg(True);
-   rule disassemble (report_rom_state);
-      report_rom_state <= False;
-      // check for duplicate labels
-      let fd = find_duplicate_labels(my_program);
-      if(tpl_1(fd))
-	 begin
-	    $display("Assembler error - duplicate labels found:");
-	    $write(tpl_2(fd)); // report any errors
-	 end
-      // produce disassembly of the program
-      $write(disassembleROM(rom));
-   endrule
-   
-endmodule
-
 
 endpackage: TinyAsm
