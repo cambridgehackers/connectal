@@ -37,7 +37,7 @@ endinterface
 
 interface Memwrite;
    interface MemwriteRequest request;
-   interface MemWriteClient#(64) dmaClient;
+   interface ObjectWriteClient#(64) dmaClient;
 endinterface
 
 module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
@@ -74,6 +74,6 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
           doOnce <= True;
        endmethod
    endinterface
-   interface MemWriteClient dmaClient = we.dmaClient;
+   interface ObjectWriteClient dmaClient = we.dmaClient;
 endmodule
 

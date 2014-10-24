@@ -38,8 +38,8 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    NandSim nandSim <- mkNandSim(nandSimIndicationProxy.ifc);
    NandSimRequestWrapper nandSimRequestWrapper <- mkNandSimRequestWrapper(NandSimRequest,nandSim.request);
 
-   Vector#(1, MemReadClient#(64)) readClients = cons(nandSim.readClient, nil);
-   Vector#(1, MemWriteClient#(64)) writeClients = cons(nandSim.writeClient, nil);
+   Vector#(1, ObjectReadClient#(64)) readClients = cons(nandSim.readClient, nil);
+   Vector#(1, ObjectWriteClient#(64)) writeClients = cons(nandSim.writeClient, nil);
 
    MMUConfigIndicationProxy hostMMUConfigIndicationProxy <- mkMMUConfigIndicationProxy(HostMMUConfigIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUConfigIndicationProxy.ifc);

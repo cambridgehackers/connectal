@@ -78,8 +78,8 @@ typedef struct {
    } DmaError deriving (Bits);
 
 module mkMemServerRW#(DmaDebugIndication dmaIndication,
-		      Vector#(numReadClients, MemReadClient#(dataWidth)) readClients,
-		      Vector#(numWriteClients, MemWriteClient#(dataWidth)) writeClients,
+		      Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
+		      Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients,
 		      Vector#(numMMUs,MMU#(PhysAddrWidth)) mmus)
    (MemServer#(PhysAddrWidth, dataWidth, nMasters))
    
@@ -127,7 +127,7 @@ module mkMemServerRW#(DmaDebugIndication dmaIndication,
 endmodule
 	
 module mkMemServerR#(DmaDebugIndication dmaIndication,
-		     Vector#(numReadClients, MemReadClient#(dataWidth)) readClients,
+		     Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
 		     Vector#(numMMUs,MMU#(PhysAddrWidth)) mmus)
    (MemServer#(PhysAddrWidth, dataWidth, nMasters))
    
@@ -149,7 +149,7 @@ module mkMemServerR#(DmaDebugIndication dmaIndication,
    function Vector#(nrc, a) selectClients(Vector#(numReadClients, a) vec, Integer m);
       return genWith(selectClient(vec, valueOf(nMasters), m));
    endfunction
-   Vector#(nMasters,Vector#(nrc, MemReadClient#(dataWidth))) client_bins = genWith(selectClients(readClients));
+   Vector#(nMasters,Vector#(nrc, ObjectReadClient#(dataWidth))) client_bins = genWith(selectClients(readClients));
 
    module foo#(Integer i) (MMUAddrServer#(PhysAddrWidth,nMasters));
       let rv <- mkMMUAddrServer(mmus[i].addr[0]);
@@ -220,7 +220,7 @@ module mkMemServerR#(DmaDebugIndication dmaIndication,
 endmodule
 	
 module mkMemServerW#(DmaDebugIndication dmaIndication,
-		     Vector#(numWriteClients, MemWriteClient#(dataWidth)) writeClients,
+		     Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients,
 		     Vector#(numMMUs,MMU#(PhysAddrWidth)) mmus)
    (MemServer#(PhysAddrWidth, dataWidth, nMasters))
    
@@ -239,7 +239,7 @@ module mkMemServerW#(DmaDebugIndication dmaIndication,
    function Vector#(nwc, a) selectClients(Vector#(numWriteClients, a) vec, Integer m);
       return genWith(selectClient(vec, valueOf(nMasters), m));
    endfunction
-   Vector#(nMasters,Vector#(nwc, MemWriteClient#(dataWidth))) client_bins = genWith(selectClients(writeClients));
+   Vector#(nMasters,Vector#(nwc, ObjectWriteClient#(dataWidth))) client_bins = genWith(selectClients(writeClients));
 
    module foo#(Integer i) (MMUAddrServer#(PhysAddrWidth,nMasters));
       let rv <- mkMMUAddrServer(mmus[i].addr[1]);

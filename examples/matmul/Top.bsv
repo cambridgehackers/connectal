@@ -52,8 +52,8 @@ module  mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,TMul#(32,N),Empty,N
 `endif
    TimerRequestWrapper timerRequestWrapper <- mkTimerRequestWrapper(TimerRequestPortal,mm.timerRequest);
    
-   Vector#(2,MemReadClient#(TMul#(32,N)))  readClients  = mm.readClients;
-   Vector#(2,MemWriteClient#(TMul#(32,N))) writeClients = mm.writeClients;
+   Vector#(2,ObjectReadClient#(TMul#(32,N)))  readClients  = mm.readClients;
+   Vector#(2,ObjectWriteClient#(TMul#(32,N))) writeClients = mm.writeClients;
 
    MMUConfigIndicationProxy hostMMUConfigIndicationProxy <- mkMMUConfigIndicationProxy(HostMMUConfigIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUConfigIndicationProxy.ifc);

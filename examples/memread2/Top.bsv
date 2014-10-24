@@ -34,7 +34,7 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    Memread2 memread <- mkMemread2(memreadIndicationProxy.ifc);
    Memread2RequestWrapper memreadRequestWrapper <- mkMemread2RequestWrapper(Memread2Request,memread.request);
 
-   Vector#(2, MemReadClient#(64)) readClients;
+   Vector#(2, ObjectReadClient#(64)) readClients;
    Vector#(2, DmaReadBuffer#(64, 16)) readBuffers <- replicateM(mkDmaReadBuffer);
    mkConnection(memread.dmaClient0, readBuffers[0].dmaServer);
    mkConnection(memread.dmaClient1, readBuffers[1].dmaServer);

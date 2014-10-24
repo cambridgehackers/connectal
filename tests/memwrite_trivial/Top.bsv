@@ -33,7 +33,7 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    Memwrite memwrite <- mkMemwrite(memwriteIndicationProxy.ifc);
    MemwriteRequestWrapper memwriteRequestWrapper <- mkMemwriteRequestWrapper(MemwriteRequest,memwrite.request);
 
-   Vector#(1, MemWriteClient#(64)) writeClients = cons(memwrite.dmaClient,nil);
+   Vector#(1, ObjectWriteClient#(64)) writeClients = cons(memwrite.dmaClient,nil);
    MMUConfigIndicationProxy hostMMUConfigIndicationProxy <- mkMMUConfigIndicationProxy(HostMMUConfigIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUConfigIndicationProxy.ifc);
    MMUConfigRequestWrapper hostMMUConfigRequestWrapper <- mkMMUConfigRequestWrapper(HostMMUConfigRequest, hostMMU.request);

@@ -35,8 +35,8 @@ import ConfigCounter::*;
 import BRAMFIFOFLevel::*;
 
 interface MemReader#(numeric type dataWidth);
-   interface MemReadServer #(dataWidth) readServer;
-   interface MemReadClient#(dataWidth) readClient;
+   interface ObjectReadServer #(dataWidth) readServer;
+   interface ObjectReadClient#(dataWidth) readClient;
 endinterface
 
 module mkMemReader(MemReader#(dataWidth))
@@ -47,19 +47,19 @@ module mkMemReader(MemReader#(dataWidth))
    FIFOF#(MemData#(dataWidth)) readBuffer <- mkFIFOF;
    FIFOF#(MemRequest)           reqBuffer <- mkFIFOF;
 
-   interface MemReadServer readServer;
+   interface ObjectReadServer readServer;
       interface Put readReq = toPut(reqBuffer);
       interface Get readData = toGet(readBuffer);
    endinterface
-   interface MemReadClient readClient;
+   interface ObjectReadClient readClient;
       interface Get readReq = toGet(reqBuffer);
       interface Put readData = toPut(readBuffer);
    endinterface
 endmodule
 
 interface MemReaderBuff#(numeric type dataWidth, numeric type bufferDepth);
-   interface MemReadServer #(dataWidth) readServer;
-   interface MemReadClient#(dataWidth) readClient;
+   interface ObjectReadServer #(dataWidth) readServer;
+   interface ObjectReadClient#(dataWidth) readClient;
 endinterface
 
 module mkMemReaderBuff(MemReaderBuff#(dataWidth, bufferDepth))
@@ -84,7 +84,7 @@ module mkMemReaderBuff(MemReaderBuff#(dataWidth, bufferDepth))
       reqCommitted.enq(req);
    endrule
 
-   interface MemReadServer readServer;
+   interface ObjectReadServer readServer;
       interface Put readReq = toPut(reqOutstanding);
       interface Get readData;
 	 method ActionValue#(MemData#(dataWidth)) get();
@@ -94,7 +94,7 @@ module mkMemReaderBuff(MemReaderBuff#(dataWidth, bufferDepth))
 	 endmethod
       endinterface: readData
    endinterface
-   interface MemReadClient readClient;
+   interface ObjectReadClient readClient;
       interface Get readReq = toGet(reqCommitted);
       interface Put readData;
    	 method Action put(MemData#(dataWidth) x);
@@ -106,8 +106,8 @@ endmodule
 
 
 interface MemWriter#(numeric type dataWidth);
-   interface MemWriteServer#(dataWidth) writeServer;
-   interface MemWriteClient#(dataWidth) writeClient;
+   interface ObjectWriteServer#(dataWidth) writeServer;
+   interface ObjectWriteClient#(dataWidth) writeClient;
 endinterface
 
 
@@ -120,12 +120,12 @@ module mkMemWriter(MemWriter#(dataWidth))
    FIFOF#(MemRequest)        reqOutstanding <- mkFIFOF;
    FIFOF#(Bit#(6))                        doneTags <- mkFIFOF();
 
-   interface MemWriteServer writeServer;
+   interface ObjectWriteServer writeServer;
       interface Put writeReq = toPut(reqOutstanding);
       interface Put writeData = toPut(writeBuffer);
       interface Get writeDone = toGet(doneTags);
    endinterface
-   interface MemWriteClient writeClient;
+   interface ObjectWriteClient writeClient;
       interface Get writeReq = toGet(reqOutstanding);
       interface Get writeData = toGet(writeBuffer);
       interface Put writeDone = toPut(doneTags);
@@ -135,8 +135,8 @@ endmodule
 
 
 interface MemWriterBuff#(numeric type dataWidth, numeric type bufferDepth);
-   interface MemWriteServer#(dataWidth) writeServer;
-   interface MemWriteClient#(dataWidth) writeClient;
+   interface ObjectWriteServer#(dataWidth) writeServer;
+   interface ObjectWriteClient#(dataWidth) writeClient;
 endinterface
 
 module mkMemWriterBuff(MemWriterBuff#(dataWidth, bufferDepth))
@@ -161,7 +161,7 @@ module mkMemWriterBuff(MemWriterBuff#(dataWidth, bufferDepth))
       reqCommitted.enq(req);
    endrule
 
-   interface MemWriteServer writeServer;
+   interface ObjectWriteServer writeServer;
       interface Put writeReq = toPut(reqOutstanding);
       interface Put writeData;
 	 method Action put(MemData#(dataWidth) d);
@@ -171,7 +171,7 @@ module mkMemWriterBuff(MemWriterBuff#(dataWidth, bufferDepth))
       endinterface: writeData
       interface Get writeDone = toGet(doneTags);
    endinterface
-   interface MemWriteClient writeClient;
+   interface ObjectWriteClient writeClient;
       interface Get writeReq = toGet(reqCommitted);
       interface Get writeData;
 	 method ActionValue#(MemData#(dataWidth)) get();

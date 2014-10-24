@@ -33,10 +33,10 @@ import BRAMFIFOFLevel::*;
 import GetPut::*;
 import MemTypes::*;
 
-function MemReadClient#(dataWidth) orc(DmaReadBuffer#(dataWidth,bufferDepth) rb) = rb.dmaClient;
-function MemWriteClient#(dataWidth) owc(DmaWriteBuffer#(dataWidth,bufferDepth) wb) = wb.dmaClient;
-function MemReadServer#(dataWidth) ors(DmaReadBuffer#(dataWidth,bufferDepth) rb) = rb.dmaServer;
-function MemWriteServer#(dataWidth) ows(DmaWriteBuffer#(dataWidth,bufferDepth) wb) = wb.dmaServer;
+function ObjectReadClient#(dataWidth) orc(DmaReadBuffer#(dataWidth,bufferDepth) rb) = rb.dmaClient;
+function ObjectWriteClient#(dataWidth) owc(DmaWriteBuffer#(dataWidth,bufferDepth) wb) = wb.dmaClient;
+function ObjectReadServer#(dataWidth) ors(DmaReadBuffer#(dataWidth,bufferDepth) rb) = rb.dmaServer;
+function ObjectWriteServer#(dataWidth) ows(DmaWriteBuffer#(dataWidth,bufferDepth) wb) = wb.dmaServer;
 
 //
 // @brief A buffer for reading from a bus of width dataWidth.
@@ -45,8 +45,8 @@ function MemWriteServer#(dataWidth) ows(DmaWriteBuffer#(dataWidth,bufferDepth) w
 // @param bufferDepth The depth of the internal buffer
 //
 interface DmaReadBuffer#(numeric type dataWidth, numeric type bufferDepth);
-   interface MemReadServer #(dataWidth) dmaServer;
-   interface MemReadClient#(dataWidth) dmaClient;
+   interface ObjectReadServer #(dataWidth) dmaServer;
+   interface ObjectReadClient#(dataWidth) dmaClient;
 endinterface
 
 //
@@ -56,8 +56,8 @@ endinterface
 // @param bufferDepth The depth of the internal buffer
 //
 interface DmaWriteBuffer#(numeric type dataWidth, numeric type bufferDepth);
-   interface MemWriteServer#(dataWidth) dmaServer;
-   interface MemWriteClient#(dataWidth) dmaClient;
+   interface ObjectWriteServer#(dataWidth) dmaServer;
+   interface ObjectWriteClient#(dataWidth) dmaClient;
 endinterface
 
 
@@ -82,11 +82,11 @@ module mkDmaReadBuffer(DmaReadBuffer#(dataWidth, bufferDepth))
    // only issue the readRequest when sufficient buffering is available.  This includes the bufering we have already comitted.
    Bit#(TAdd#(1,TLog#(bufferDepth))) sreq = pack(satPlus(Sat_Bound, unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)), unfulfilled.read()));
 
-   interface MemReadServer dmaServer;
+   interface ObjectReadServer dmaServer;
       interface Put readReq = toPut(reqOutstanding);
       interface Get readData = toGet(readBuffer);
    endinterface
-   interface MemReadClient dmaClient;
+   interface ObjectReadClient dmaClient;
       interface Get readReq;
 	 method ActionValue#(MemRequest) get if (readBuffer.lowWater(sreq));
 	    reqOutstanding.deq;
@@ -124,12 +124,12 @@ module mkDmaWriteBuffer(DmaWriteBuffer#(dataWidth, bufferDepth))
    // only issue the writeRequest when sufficient data is available.  This includes the data we have already comitted.
    Bit#(TAdd#(1,TLog#(bufferDepth))) sreq = pack(satPlus(Sat_Bound, unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)), unfulfilled.read()));
 
-   interface MemWriteServer dmaServer;
+   interface ObjectWriteServer dmaServer;
       interface Put writeReq = toPut(reqOutstanding);
       interface Put writeData = toPut(writeBuffer);
       interface Get writeDone = toGet(doneTags);
    endinterface
-   interface MemWriteClient dmaClient;
+   interface ObjectWriteClient dmaClient;
       interface Get writeReq;
 	 method ActionValue#(MemRequest) get if (writeBuffer.highWater(sreq));
 	    reqOutstanding.deq;
@@ -149,7 +149,7 @@ module mkDmaWriteBuffer(DmaWriteBuffer#(dataWidth, bufferDepth))
 endmodule
    
    
-module mkDmaReadMux#(Vector#(numClients,MemReadClient#(dataWidth)) readClients)(MemReadClient#(dataWidth))
+module mkDmaReadMux#(Vector#(numClients,ObjectReadClient#(dataWidth)) readClients)(ObjectReadClient#(dataWidth))
    provisos(Log#(numClients,tagsz),
 	    Add#(tagsz,a__,MemTagSize));
 
@@ -176,7 +176,7 @@ module mkDmaReadMux#(Vector#(numClients,MemReadClient#(dataWidth)) readClients)(
    interface Put readData = toPut(readRespFifo);
 endmodule
 
-module mkDmaWriteMux#(Vector#(numClients,MemWriteClient#(dataWidth)) writeClients)(MemWriteClient#(dataWidth))
+module mkDmaWriteMux#(Vector#(numClients,ObjectWriteClient#(dataWidth)) writeClients)(ObjectWriteClient#(dataWidth))
    provisos(Log#(numClients,tagsz),
        Add#(tagsz,a__,MemTagSize));
 

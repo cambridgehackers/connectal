@@ -62,7 +62,7 @@ typedef struct {MemRequest req;
 		Bit#(addrWidth) pa;
 		DmaChannelId chan; } IRec#(type addrWidth) deriving(Bits);
 		 
-module mkMemReadInternal#(Vector#(numReadClients, MemReadClient#(dataWidth)) readClients, 
+module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients, 
 			     DmaIndication dmaIndication,
 			     Server#(Tuple2#(SGListId,Bit#(MemOffsetSize)),Bit#(addrWidth)) sgl) 
    (MemReadInternal#(addrWidth, dataWidth))
@@ -195,7 +195,7 @@ module mkMemReadInternal#(Vector#(numReadClients, MemReadClient#(dataWidth)) rea
 endmodule
 
 
-module mkMemWriteInternal#(Vector#(numWriteClients, MemWriteClient#(dataWidth)) writeClients,
+module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients,
 			      DmaIndication dmaIndication, 
 			      Server#(Tuple2#(SGListId,Bit#(MemOffsetSize)),Bit#(addrWidth)) sgl)
 
@@ -322,8 +322,8 @@ endmodule
 // @param writeClients The writeclients.
 //
 module mkMemServer#(DmaIndication dmaIndication,
-		    Vector#(numReadClients, MemReadClient#(dataWidth)) readClients,
-		    Vector#(numWriteClients, MemWriteClient#(dataWidth)) writeClients)
+		    Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
+		    Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
 
    (MemServer#(addrWidth, dataWidth))
    

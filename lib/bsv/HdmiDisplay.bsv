@@ -50,11 +50,11 @@ endinterface
 interface HdmiDisplay;
 `ifdef HDMI_BLUESCOPE
    interface BlueScopeRequest  bluescopeRequest;
-   interface MemWriteClient#(64) bluescopeWriteClient;
+   interface ObjectWriteClient#(64) bluescopeWriteClient;
 `endif
     interface HdmiDisplayRequest displayRequest;
     interface HdmiInternalRequest internalRequest;
-    interface MemReadClient#(64) dmaClient;
+    interface ObjectReadClient#(64) dmaClient;
     interface HDMI#(Bit#(HdmiBits)) hdmi;
     interface XADC xadc;
 endinterface
@@ -183,12 +183,12 @@ module mkHdmiDisplay#(Clock hdmi_clock,
        endmethod
     endinterface: displayRequest
 
-    interface MemReadClient dmaClient = memreadEngine.dmaClient;
+    interface ObjectReadClient dmaClient = memreadEngine.dmaClient;
     interface HDMI hdmi = hdmisignals;
     interface HdmiInternalRequest internalRequest = hdmiGen.control;
 `ifdef HDMI_BLUESCOPE
     interface BlueScopeRequest bluescopeRequest = bluescope.requestIfc;
-    interface MemWriteClient bluescopeWriteClient = bluescope.writeClient;
+    interface ObjectWriteClient bluescopeWriteClient = bluescope.writeClient;
 `endif
     interface XADC xadc;
         method Bit#(4) gpio;

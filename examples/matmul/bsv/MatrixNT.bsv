@@ -560,8 +560,8 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 endmodule : mkDmaMatrixMultiply
 
 interface DramMatrixMultiply#(numeric type n, numeric type dmasz, numeric type nm);
-   interface Vector#(nm, MemReadClient#(dmasz)) readClients;
-   interface Vector#(nm, MemWriteClient#(dmasz)) writeClients;
+   interface Vector#(nm, ObjectReadClient#(dmasz)) readClients;
+   interface Vector#(nm, ObjectWriteClient#(dmasz)) writeClients;
    method Action start(SGLId pointerA, UInt#(MMSize) numRowsA, UInt#(MMSize) numColumnsA,
 		       SGLId pointerB, UInt#(MMSize) numRowsB, UInt#(MMSize) numColumnsB,
 		       SGLId pointerC,
@@ -600,8 +600,8 @@ endmodule
 interface MmNT#(numeric type n);
    interface MmRequestNT mmRequest;
    interface TimerRequest timerRequest;
-   interface Vector#(2, MemReadClient#(TMul#(32,n)))  readClients;
-   interface Vector#(2, MemWriteClient#(TMul#(32,n))) writeClients;
+   interface Vector#(2, ObjectReadClient#(TMul#(32,n)))  readClients;
+   interface Vector#(2, ObjectWriteClient#(TMul#(32,n))) writeClients;
 endinterface
 
 module  mkMmNT#(MmIndication ind, TimerIndication timerInd, HostType host)(MmNT#(N))

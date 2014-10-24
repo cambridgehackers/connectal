@@ -38,7 +38,7 @@ endinterface
 
 interface Memread#(numeric type nClients);
    interface MemreadRequest request;
-   interface Vector#(nClients,MemReadClient#(64)) dmaClients;
+   interface Vector#(nClients,ObjectReadClient#(64)) dmaClients;
 endinterface
 
 interface MemreadIndication;
@@ -115,7 +115,7 @@ module mkMemread#(MemreadIndication indication) (Memread#(4));
 	    srcGens[i] <= srcGens[i]+2;
       endrule
    
-   function MemReadClient#(64) dc(MemreadEngine#(64,1) re) = re.dmaClient;
+   function ObjectReadClient#(64) dc(MemreadEngine#(64,1) re) = re.dmaClient;
    interface dmaClients = map(dc,res);
    interface MemreadRequest request;
       method Action startRead(Bit#(32) rp, Bit#(32) off, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);

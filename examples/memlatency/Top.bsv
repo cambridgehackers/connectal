@@ -33,8 +33,8 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    Memlatency memlatency <- mkMemlatency(memlatencyIndicationProxy.ifc);
    MemlatencyRequestWrapper memlatencyRequestWrapper <- mkMemlatencyRequestWrapper(MemlatencyRequest,memlatency.request);
    
-   Vector#(1,  MemReadClient#(64))   readClients = cons(memlatency.dmaReadClient, nil);
-   Vector#(1, MemWriteClient#(64)) writeClients = cons(memlatency.dmaWriteClient, nil);
+   Vector#(1,  ObjectReadClient#(64))   readClients = cons(memlatency.dmaReadClient, nil);
+   Vector#(1, ObjectWriteClient#(64)) writeClients = cons(memlatency.dmaWriteClient, nil);
    MMUConfigIndicationProxy hostMMUConfigIndicationProxy <- mkMMUConfigIndicationProxy(HostMMUConfigIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUConfigIndicationProxy.ifc);
    MMUConfigRequestWrapper hostMMUConfigRequestWrapper <- mkMMUConfigRequestWrapper(HostMMUConfigRequest, hostMMU.request);

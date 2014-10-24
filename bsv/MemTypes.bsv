@@ -69,7 +69,7 @@ typedef struct {SGLId sglId;
 
 interface MemwriteEngineV#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers);
    interface Vector#(numServers, Server#(MemengineCmd,Bool)) writeServers;
-   interface MemWriteClient#(dataWidth) dmaClient;
+   interface ObjectWriteClient#(dataWidth) dmaClient;
    interface Vector#(numServers, PipeIn#(Bit#(dataWidth))) dataPipes;
 endinterface
 typedef MemwriteEngineV#(dataWidth, cmdQDepth, 1) MemwriteEngine#(numeric type dataWidth, numeric type cmdQDepth);
@@ -81,7 +81,7 @@ endinterface
       
 interface MemreadEngineV#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers);
    interface Vector#(numServers, Server#(MemengineCmd,Bool)) readServers;
-   interface MemReadClient#(dataWidth) dmaClient;
+   interface ObjectReadClient#(dataWidth) dmaClient;
    interface Vector#(numServers, PipeOut#(Bit#(dataWidth))) dataPipes;
    interface Vector#(numServers, MemreadServer#(dataWidth)) read_servers;
 endinterface
@@ -95,23 +95,23 @@ typedef MemreadEngineV#(dataWidth, cmdQDepth, 1) MemreadEngine#(numeric type dat
 // 
 
 			     
-interface MemReadClient#(numeric type dsz);
+interface ObjectReadClient#(numeric type dsz);
    interface Get#(MemRequest)    readReq;
    interface Put#(MemData#(dsz)) readData;
 endinterface
 
-interface MemWriteClient#(numeric type dsz);
+interface ObjectWriteClient#(numeric type dsz);
    interface Get#(MemRequest)    writeReq;
    interface Get#(MemData#(dsz)) writeData;
    interface Put#(Bit#(MemTagSize))       writeDone;
 endinterface
 
-interface MemReadServer#(numeric type dsz);
+interface ObjectReadServer#(numeric type dsz);
    interface Put#(MemRequest) readReq;
    interface Get#(MemData#(dsz))     readData;
 endinterface
 
-interface MemWriteServer#(numeric type dsz);
+interface ObjectWriteServer#(numeric type dsz);
    interface Put#(MemRequest) writeReq;
    interface Put#(MemData#(dsz))     writeData;
    interface Get#(Bit#(MemTagSize))           writeDone;
@@ -162,8 +162,8 @@ interface DmaDbg;
 endinterface
 
 
-instance Connectable#(MemReadClient#(dsz), MemReadServer#(dsz));
-   module mkConnection#(MemReadClient#(dsz) source, MemReadServer#(dsz) sink)(Empty);
+instance Connectable#(ObjectReadClient#(dsz), ObjectReadServer#(dsz));
+   module mkConnection#(ObjectReadClient#(dsz) source, ObjectReadServer#(dsz) sink)(Empty);
       rule request;
 	 let req <- source.readReq.get();
 	 sink.readReq.put(req);
@@ -175,8 +175,8 @@ instance Connectable#(MemReadClient#(dsz), MemReadServer#(dsz));
    endmodule
 endinstance
 
-instance Connectable#(MemWriteClient#(dsz), MemWriteServer#(dsz));
-   module mkConnection#(MemWriteClient#(dsz) source, MemWriteServer#(dsz) sink)(Empty);
+instance Connectable#(ObjectWriteClient#(dsz), ObjectWriteServer#(dsz));
+   module mkConnection#(ObjectWriteClient#(dsz) source, ObjectWriteServer#(dsz) sink)(Empty);
       rule request;
 	 let req <- source.writeReq.get();
 	 sink.writeReq.put(req);

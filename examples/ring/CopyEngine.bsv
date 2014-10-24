@@ -43,7 +43,7 @@ import GetPutF::*;
 //  word0-6 all 0
 //  word7  TAG[31:0]
 
-module mkCopyEngine#(MemReadServer#(64) copy_read_chan, MemWriteServer#(64) copy_write_chan) (ServerF#(Bit#(64), Bit#(64)));
+module mkCopyEngine#(ObjectReadServer#(64) copy_read_chan, ObjectWriteServer#(64) copy_write_chan) (ServerF#(Bit#(64), Bit#(64)));
    FIFOF#(Bit#(64)) f_in  <- mkSizedFIFOF(16);    // to buffer incoming requests
    FIFOF#(Bit#(64)) f_out <- mkSizedFIFOF(16);    // to buffer outgoing responses
    Reg#(Bit#(16)) copyReadCount <- mkReg(0);

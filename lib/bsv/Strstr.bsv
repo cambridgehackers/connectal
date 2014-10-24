@@ -46,8 +46,8 @@ endinterface
 
 interface Strstr#(numeric type busWidth);
    interface StrstrRequest request;
-   interface MemReadClient#(busWidth) config_read_client;
-   interface MemReadClient#(busWidth) haystack_read_client;
+   interface ObjectReadClient#(busWidth) config_read_client;
+   interface ObjectReadClient#(busWidth) haystack_read_client;
 endinterface
 
 // I can't belive we still have to do this shit

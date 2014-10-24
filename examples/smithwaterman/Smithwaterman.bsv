@@ -63,8 +63,8 @@ typedef TLog#(MaxFetchLen) LIdxWidth;
 typedef Bit#(LIdxWidth) LIdx;
 
 module mkSmithwatermanRequest#(SmithwatermanIndication indication,
-			MemReadServer#(busWidth)   setupA_read_server,
-			MemReadServer#(busWidth)   setupB_read_server)(SmithwatermanRequest)
+			ObjectReadServer#(busWidth)   setupA_read_server,
+			ObjectReadServer#(busWidth)   setupB_read_server)(SmithwatermanRequest)
    
    provisos(Add#(a__, 8, busWidth),
 	    Div#(busWidth,8,nc),

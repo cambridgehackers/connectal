@@ -88,8 +88,8 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    MMU#(PhysAddrWidth) hostMMU3 <- mkMMU(3, True, hostMMU3ConfigIndicationProxy.ifc);
    MMUConfigRequestWrapper hostMMU3ConfigRequestWrapper <- mkMMUConfigRequestWrapper(HostMMU3ConfigRequest, hostMMU3.request);
    
-   Vector#(1,  MemReadClient#(64))   readClients = cons(memcpy.dmaReadClient, nil);
-   Vector#(1, MemWriteClient#(64))  writeClients = cons(memcpy.dmaWriteClient, nil);
+   Vector#(1,  ObjectReadClient#(64))   readClients = cons(memcpy.dmaReadClient, nil);
+   Vector#(1, ObjectWriteClient#(64))  writeClients = cons(memcpy.dmaWriteClient, nil);
 
    DmaDebugIndicationProxy hostDmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(HostDmaDebugIndication);
    let sgls = cons(hostMMU0,cons(hostMMU1, cons(hostMMU2,cons(hostMMU3,nil))));  

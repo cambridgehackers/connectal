@@ -42,9 +42,9 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    Memcpy memcpy <- mkMemcpyRequest(memcpyIndicationProxy.ifc, bs);
    MemcpyRequestWrapper memcpyRequestWrapper <- mkMemcpyRequestWrapper(MemcpyRequest,memcpy.request);
 
-   Vector#(1,  MemReadClient#(64))   readClients = newVector();
+   Vector#(1,  ObjectReadClient#(64))   readClients = newVector();
    readClients[0] = memcpy.readClient;
-   Vector#(2, MemWriteClient#(64)) writeClients = newVector();
+   Vector#(2, ObjectWriteClient#(64)) writeClients = newVector();
    writeClients[0] = bs.writeClient;
    writeClients[1] = memcpy.writeClient;
    MMUConfigIndicationProxy hostMMUConfigIndicationProxy <- mkMMUConfigIndicationProxy(HostMMUConfigIndication);

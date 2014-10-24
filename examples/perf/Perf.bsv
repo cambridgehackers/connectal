@@ -45,9 +45,9 @@ interface PerfIndication;
 endinterface
 
 module mkPerfRequest#(PerfIndication indication,
-			MemReadServer#(busWidth) dma_stream_read_server,
-			MemWriteServer#(busWidth) dma_stream_write_server,
-			MemReadServer#(busWidth) dma_word_read_server)
+			ObjectReadServer#(busWidth) dma_stream_read_server,
+			ObjectWriteServer#(busWidth) dma_stream_write_server,
+			ObjectReadServer#(busWidth) dma_word_read_server)
    (PerfRequest)
    provisos (Div#(busWidth,8,busWidthBytes),
 	     Add#(a__,32,busWidth));
