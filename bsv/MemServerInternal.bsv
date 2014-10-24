@@ -74,7 +74,7 @@ typedef struct {DmaErrorType errorType;
 
 typedef 32 NumTags;
 
-module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) readClients,
+module mkMemReadInternal#(Vector#(numClients, MemReadClient#(dataWidth)) readClients,
 			  DmaDebugIndication dmaIndication,
 			  Vector#(numMMUs,Server#(ReqTup,Bit#(addrWidth))) mmus) 
    (MemReadInternal#(addrWidth, dataWidth))
@@ -258,7 +258,7 @@ endmodule
 
 typedef 64 NumTagsW;
 
-module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) writeClients,
+module mkMemWriteInternal#(Vector#(numClients, MemWriteClient#(dataWidth)) writeClients,
 			   DmaDebugIndication dmaIndication, 
 			   Vector#(numMMUs,Server#(ReqTup,Bit#(addrWidth))) mmus)
    (MemWriteInternal#(addrWidth, dataWidth))

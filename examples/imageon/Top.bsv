@@ -118,7 +118,7 @@ module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
                 dmaRun <= True;
 	    endmethod
        endinterface));
-   Vector#(1, ObjectWriteClient#(64)) writeClients = cons(we.dmaClient,nil);
+   Vector#(1, MemWriteClient#(64)) writeClients = cons(we.dmaClient,nil);
    MMUConfigIndicationProxy hostMMUConfigIndicationProxy <- mkMMUConfigIndicationProxy(HostMMUConfigIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUConfigIndicationProxy.ifc);
    MMUConfigRequestWrapper hostMMUConfigRequestWrapper <- mkMMUConfigRequestWrapper(HostMMUConfigRequest, hostMMU.request);

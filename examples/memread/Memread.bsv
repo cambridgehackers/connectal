@@ -46,7 +46,7 @@ endinterface
 
 interface Memread;
    interface MemreadRequest request;
-   interface ObjectReadClient#(DataBusWidth) dmaClient;
+   interface MemReadClient#(DataBusWidth) dmaClient;
 endinterface
 
 interface MemreadIndication;

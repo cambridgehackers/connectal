@@ -47,7 +47,7 @@ endinterface
 interface BlueScope#(numeric type dataWidth);
    method Action dataIn(Bit#(dataWidth) d, Bit#(dataWidth) t);
    interface BlueScopeRequest requestIfc;
-   interface ObjectWriteClient#(dataWidth) writeClient;
+   interface MemWriteClient#(dataWidth) writeClient;
 endinterface
 
 typedef enum { Idle, Enabled, Triggered } State deriving (Bits,Eq);

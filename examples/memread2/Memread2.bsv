@@ -37,8 +37,8 @@ endinterface
 
 interface Memread2;
    interface Memread2Request request;
-   interface ObjectReadClient#(64) dmaClient0;
-   interface ObjectReadClient#(64) dmaClient1;
+   interface MemReadClient#(64) dmaClient0;
+   interface MemReadClient#(64) dmaClient1;
 endinterface
 
 interface Memread2Indication;
@@ -106,6 +106,6 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
 	  indication.reportStateDbg({sg0,sg1}, {mm0,mm1});
        endmethod
    endinterface
-   interface ObjectReadClient dmaClient0 = re0.dmaClient;
-   interface ObjectReadClient dmaClient1 = re1.dmaClient;
+   interface MemReadClient dmaClient0 = re0.dmaClient;
+   interface MemReadClient dmaClient1 = re1.dmaClient;
 endmodule

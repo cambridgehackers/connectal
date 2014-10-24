@@ -34,7 +34,7 @@ endinterface
 
 interface Memread;
    interface MemreadRequest request;
-   interface ObjectReadClient#(64) dmaClient;
+   interface MemReadClient#(64) dmaClient;
 endinterface
 
 interface MemreadIndication;
@@ -78,7 +78,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 srcGen <= srcGen+2;
    endrule
    
-   interface ObjectReadClient dmaClient = re.dmaClient;
+   interface MemReadClient dmaClient = re.dmaClient;
    interface MemreadRequest request;
       method Action startRead(Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
 	 $display("startRead rdPointer=%d numWords=%h burstLen=%d iterCnt=%d", rp, nw, bl, ic);

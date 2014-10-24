@@ -141,7 +141,7 @@ module mkXYZRangePipeOut#(RangeBehavior alt) (XYZRangePipeIfc#(a)) provisos (Ari
    endmethod
 endmodule: mkXYZRangePipeOut
 
-module mkRowSource#(ObjectReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) numRows, Bit#(MemTagSize) id) (RowColSource#(TMul#(N,32), Vector#(N,MmToken)))
+module mkRowSource#(MemReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) numRows, Bit#(MemTagSize) id) (RowColSource#(TMul#(N,32), Vector#(N,MmToken)))
    provisos (Bits#(Vector#(N,Float),asz),
       Div#(asz,8,abytes),
       Log#(abytes,ashift),
@@ -228,7 +228,7 @@ module mkRowSource#(ObjectReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) nu
    endinterface
 endmodule: mkRowSource
 
-module mkRowColSink#(ObjectWriteServer#(TMul#(N,32)) vs, Bit#(MemTagSize) id) (RowColSink#(TMul#(N,32), Vector#(N,MmToken)))
+module mkRowColSink#(MemWriteServer#(TMul#(N,32)) vs, Bit#(MemTagSize) id) (RowColSink#(TMul#(N,32), Vector#(N,MmToken)))
    provisos (Bits#(Vector#(N,Float),asz),
       Div#(asz,8,abytes),
       Log#(abytes,ashift),
@@ -282,9 +282,9 @@ typedef enum {
  * perform J*K*N multiply accumulates.
  *
  */
-module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
-			     ObjectReadServer#(TMul#(N,32)) sB,
-			     ObjectWriteServer#(TMul#(N,32))ss,
+module  mkDmaMatrixMultiply#(MemReadServer#(TMul#(N,32)) sA,
+			     MemReadServer#(TMul#(N,32)) sB,
+			     MemWriteServer#(TMul#(N,32))ss,
 			     HostType host
 			     )(DmaMatrixMultiplyIfc#(addrwidth, dsz))
    provisos (  Mul#(N,n__,K) // K must be an integer multiple of N
@@ -465,8 +465,8 @@ module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
 endmodule : mkDmaMatrixMultiply
 
 interface DramMatrixMultiply#(numeric type n, numeric type dmasz);
-   interface Vector#(2, ObjectReadClient#(dmasz)) readClients;
-   interface Vector#(2, ObjectWriteClient#(dmasz)) writeClients;
+   interface Vector#(2, MemReadClient#(dmasz)) readClients;
+   interface Vector#(2, MemWriteClient#(dmasz)) writeClients;
    method Action start(SGLId pointerA, UInt#(MMSize) numRowsA, UInt#(MMSize) numColumnsA,
 		       SGLId pointerB, UInt#(MMSize) numRowsB, UInt#(MMSize) numColumnsB,
 		       SGLId pointerC,
@@ -495,14 +495,14 @@ endmodule
 interface MmTN#(numeric type n);
    interface MmRequestTN mmRequest;
    interface TimerRequest timerRequest;
-   interface Vector#(2, ObjectReadClient#(TMul#(32,n)))  readClients;
-   interface Vector#(2, ObjectWriteClient#(TMul#(32,n))) writeClients;
+   interface Vector#(2, MemReadClient#(TMul#(32,n)))  readClients;
+   interface Vector#(2, MemWriteClient#(TMul#(32,n))) writeClients;
 endinterface
 
 interface MmTNInternal#(numeric type n);
    interface MmRequestTN mmRequest;
-   interface Vector#(2, ObjectReadClient#(TMul#(32,n)))  readClients;
-   interface Vector#(2, ObjectWriteClient#(TMul#(32,n))) writeClients;
+   interface Vector#(2, MemReadClient#(TMul#(32,n)))  readClients;
+   interface Vector#(2, MemWriteClient#(TMul#(32,n))) writeClients;
    method ActionValue#(Bit#(64)) mmfDone(); 
    method ActionValue#(Bit#(32)) debugDone(); 
 endinterface

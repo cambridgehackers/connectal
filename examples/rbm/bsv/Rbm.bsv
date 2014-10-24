@@ -242,8 +242,8 @@ interface Rbm#(numeric type n);
    interface SigmoidRequest sigmoidRequest;
    interface MmRequestTN mmRequest;
    interface TimerRequest timerRequest;
-   interface Vector#(3,ObjectReadClient#(TMul#(32,n))) readClients;
-   interface Vector#(3,ObjectWriteClient#(TMul#(32,n))) writeClients;
+   interface Vector#(3,MemReadClient#(TMul#(32,n))) readClients;
+   interface Vector#(3,MemWriteClient#(TMul#(32,n))) writeClients;
 endinterface
 
 module  mkRbm#(HostType host, RbmIndication rbmInd, SigmoidIndication sigmoidInd, MmIndication mmInd, TimerIndication timerInd)(Rbm#(N))

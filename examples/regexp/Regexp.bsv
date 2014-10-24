@@ -51,8 +51,8 @@ endinterface
 
 interface Regexp#(numeric type busWidth);
    interface RegexpRequest request;
-   interface ObjectReadClient#(busWidth) config_read_client;
-   interface ObjectReadClient#(busWidth) haystack_read_client;
+   interface MemReadClient#(busWidth) config_read_client;
+   interface MemReadClient#(busWidth) haystack_read_client;
 endinterface
 
 typedef `DEGPAR DegPar;

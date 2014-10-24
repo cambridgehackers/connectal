@@ -41,8 +41,8 @@ endinterface
 
 interface FMComms1;
    interface FMComms1Request request;
-   interface ObjectReadClient#(64) readDmaClient;
-   interface ObjectWriteClient#(64) writeDmaClient;
+   interface MemReadClient#(64) readDmaClient;
+   interface MemWriteClient#(64) writeDmaClient;
 endinterface
 
 interface FMComms1Indication;
@@ -99,7 +99,7 @@ module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#(64)) dac, PipeOut
 	 indication.writeStatus(writeIterCount, zeroExtend(writeRun));
    endrule
    
-   interface ObjectReadClient readDmaClient = re.dmaClient;
+   interface MemReadClient readDmaClient = re.dmaClient;
    interface ObjectWeadClient writeDmaClient = we.dmaClient;
    interface FMComms1Request request;
       method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) run);
