@@ -26,6 +26,7 @@
 
 #define MAGIC_PORTAL_FOR_SENDING_FD                 666
 #define MAGIC_PORTAL_FOR_SENDING_INTERRUPT          999
+#define SOCKET_NAME                 "socket_for_bluesim"
 
 struct memrequest{
   int portal;
@@ -50,7 +51,6 @@ ssize_t bluesim_sock_fd_write(long fd);
 int pareff_fd(int *fd);
 void init_pareff(void);
 int bsim_ctrl_recv(int *sockfd, struct memrequest *data);
-int bsim_ctrl_send(int sockfd, struct memresponse *data);
 void bsim_ctrl_interrupt(int ivalue);
 unsigned int bsim_poll_interrupt(void);
 int init_connecting(const char *arg_name);

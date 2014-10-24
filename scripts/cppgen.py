@@ -105,7 +105,7 @@ void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p %(paramSeparat
     volatile unsigned int* temp_working_addr = tempdata;
     *temp_working_addr++ = %(methodChannelOffset)s << 16 | %(wordLen)s;
 %(paramStructMarshall)s
-    portalSend(p, tempdata, (%(wordLen)s+1) * sizeof(uint32_t));
+    portalSend(p->fpga_fd, tempdata, (%(wordLen)s+1) * sizeof(uint32_t));
 };
 '''
 
@@ -131,7 +131,7 @@ void %(className)s%(methodName)s_demarshall(PortalInternal *p){
     unsigned int tmp;
     unsigned int tempdata[%(wordLen)s+1];
     volatile unsigned int* temp_working_addr = tempdata;
-    portalRecv(p, tempdata, (%(wordLen)s) * sizeof(uint32_t));
+    portalRecv(p->fpga_fd, tempdata, (%(wordLen)s) * sizeof(uint32_t));
 %(paramStructDeclarations)s
 %(paramStructDemarshall)s
     %(responseCase)s
