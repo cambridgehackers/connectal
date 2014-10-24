@@ -46,8 +46,8 @@ endinterface
 
 interface Memcpy;
    interface MemcpyRequest request;
-   interface ObjectReadClient#(64) readClient;
-   interface ObjectWriteClient#(64) writeClient;
+   interface MemReadClient#(64) readClient;
+   interface MemWriteClient#(64) writeClient;
 endinterface
 
 module mkMemcpyRequest#(MemcpyIndication indication,

@@ -43,8 +43,8 @@ endinterface
 
 interface Memrw;
    interface MemrwRequest request;
-   interface ObjectReadClient#(64) dmaReadClient;
-   interface ObjectWriteClient#(64) dmaWriteClient;
+   interface MemReadClient#(64) dmaReadClient;
+   interface MemWriteClient#(64) dmaWriteClient;
 endinterface
 
 module mkMemrw#(MemrwIndication indication)(Memrw);
@@ -105,7 +105,7 @@ module mkMemrw#(MemrwIndication indication)(Memrw);
       burstLen  <= bl;
    endmethod
    endinterface
-   interface ObjectReadClient dmaReadClient = re.dmaClient;
-   interface ObjectWriteClient dmaWriteClient = we.dmaClient;
+   interface MemReadClient dmaReadClient = re.dmaClient;
+   interface MemWriteClient dmaWriteClient = we.dmaClient;
    
 endmodule

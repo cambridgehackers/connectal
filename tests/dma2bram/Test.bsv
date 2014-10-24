@@ -43,7 +43,7 @@ endinterface
 
 interface Test;
    interface TestRequest request;
-   interface ObjectReadClient#(64) readClient;
+   interface MemReadClient#(64) readClient;
 endinterface
 
 module mkTestRequest#(TestIndication indication)(Test);

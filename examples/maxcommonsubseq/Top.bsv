@@ -37,15 +37,15 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    DmaReadBuffer#(64,1) setupB_read_chan <- mkDmaReadBuffer();
    DmaWriteBuffer#(64,1) fetch_write_chan <- mkDmaWriteBuffer();
    
-   ObjectReadClient#(64) setupA_read_client = setupA_read_chan.dmaClient;
-   ObjectReadClient#(64) setupB_read_client = setupB_read_chan.dmaClient;
-   ObjectWriteClient#(64) fetch_write_client = fetch_write_chan.dmaClient;
+   MemReadClient#(64) setupA_read_client = setupA_read_chan.dmaClient;
+   MemReadClient#(64) setupB_read_client = setupB_read_chan.dmaClient;
+   MemWriteClient#(64) fetch_write_client = fetch_write_chan.dmaClient;
    
-   Vector#(2,  ObjectReadClient#(64)) readClients;
+   Vector#(2,  MemReadClient#(64)) readClients;
    readClients[0] = setupA_read_client;
    readClients[1] = setupB_read_client;
 
-   Vector#(1, ObjectWriteClient#(64)) writeClients;
+   Vector#(1, MemWriteClient#(64)) writeClients;
    writeClients[0] = fetch_write_client;
 
 

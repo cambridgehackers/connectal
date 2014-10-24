@@ -301,7 +301,7 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
 		  endinterface
 	       endinterface);
    interface writeServers = rs;
-   interface ObjectWriteClient dmaClient;
+   interface MemWriteClient dmaClient;
       interface Get writeReq;
 	 method ActionValue#(MemRequest) get();
 	    match {.idx, .cmd} <- toGet(loadf_c).get;

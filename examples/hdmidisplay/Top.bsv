@@ -48,7 +48,7 @@ module mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,64,HDMI#(Bit#(16)),1
    HdmiDisplayRequestWrapper hdmiDisplayRequestWrapper <- mkHdmiDisplayRequestWrapper(HdmiDisplayRequest,hdmiDisplay.displayRequest);
    HdmiInternalRequestWrapper hdmiInternalRequestWrapper <- mkHdmiInternalRequestWrapper(HdmiInternalRequest,hdmiDisplay.internalRequest);
 
-   Vector#(1,  ObjectReadClient#(64))   readClients = cons(hdmiDisplay.dmaClient, nil);
+   Vector#(1,  MemReadClient#(64))   readClients = cons(hdmiDisplay.dmaClient, nil);
    MMUConfigIndicationProxy hostMMUConfigIndicationProxy <- mkMMUConfigIndicationProxy(HostMMUConfigIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUConfigIndicationProxy.ifc);
    MMUConfigRequestWrapper hostMMUConfigRequestWrapper <- mkMMUConfigRequestWrapper(HostMMUConfigRequest, hostMMU.request);

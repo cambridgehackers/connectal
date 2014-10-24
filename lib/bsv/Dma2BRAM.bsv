@@ -43,13 +43,13 @@ endinterface
 interface BRAMReadClient#(numeric type bramIdxWidth, numeric type busWidth);
    method Action start(SGLId h, Bit#(MemOffsetSize) base, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
    method ActionValue#(Bool) finish();
-   interface ObjectReadClient#(busWidth) dmaClient;
+   interface MemReadClient#(busWidth) dmaClient;
 endinterface
 
 interface BRAMWriteClient#(numeric type bramIdxWidth, numeric type busWidth);
    method Action start(SGLId h, Bit#(MemOffsetSize) base, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
    method ActionValue#(Bool) finish();
-   interface ObjectWriteClient#(busWidth) dmaClient;
+   interface MemWriteClient#(busWidth) dmaClient;
 endinterface
 
 module mkBRAMReadClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMReadClient#(bramIdxWidth,busWidth))

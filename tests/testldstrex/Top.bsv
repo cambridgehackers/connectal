@@ -31,8 +31,8 @@ module  mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,TMul#(32,N),Empty,N
    let reader <- mkMemReader();
    let writer <- mkMemWriter();
 
-   Vector#(1,ObjectReadClient#(TMul#(32,N)))  readClients  = cons(reader.readClient, nil);
-   Vector#(1,ObjectWriteClient#(TMul#(32,N))) writeClients = cons(writer.writeClient, nil);
+   Vector#(1,MemReadClient#(TMul#(32,N)))  readClients  = cons(reader.readClient, nil);
+   Vector#(1,MemWriteClient#(TMul#(32,N))) writeClients = cons(writer.writeClient, nil);
 
    MMUConfigIndicationProxy hostMMUConfigIndicationProxy <- mkMMUConfigIndicationProxy(HostMMUConfigIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUConfigIndicationProxy.ifc);

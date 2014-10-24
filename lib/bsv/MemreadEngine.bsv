@@ -197,7 +197,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
 		  endinterface
 	       endinterface);
    interface readServers = rs;
-   interface ObjectReadClient dmaClient;
+   interface MemReadClient dmaClient;
       interface Get readReq;
 	 method ActionValue#(MemRequest) get();
 	    match {.idx, .cmd} <- toGet(loadf_c).get;

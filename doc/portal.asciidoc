@@ -639,33 +639,33 @@ Requests and responses are tagged in order to enable pipelining.
        } MemData#(numeric type dsz) deriving (Bits);
 ---------------------------------
 
-Read clients implement the `ObjectReadClient` interface. On response to
+Read clients implement the `MemReadClient` interface. On response to
 the read, `burstLen` `MemData` items will be put to the `readData`
 interface. The design must be ready to consume the data when it is
 delivered from the memory bus or the system may hang.
 
 ---------------------------------
-    interface ObjectReadClient#(numeric type dsz);
+    interface MemReadClient#(numeric type dsz);
        interface GetF#(MemRequest)    readReq;
        interface PutF#(MemData#(dsz)) readData;
     endinterface
 ---------------------------------
 
-Write clients implement `ObjectWriteClient`. To complete the transaction,
+Write clients implement `MemWriteClient`. To complete the transaction,
 `burstLen` data items will be consumed from the `writeData`
 interace. Upon completion of the request, the specified tag will be
 put to the `writeDone` interface. The data must be available when the
 write request is issued to the memory bus or the system may hang.
 
 ---------------------------------
-    interface ObjectWriteClient#(numeric type dsz);
+    interface MemWriteClient#(numeric type dsz);
        interface GetF#(MemRequest)    writeReq;
        interface GetF#(MemData#(dsz)) writeData;
        interface PutF#(Bit#(6))       writeDone;
     endinterface
 ---------------------------------
 
-A design may implement `ObjectReadClient` and `ObjectWriteClient` interfaces directly, or it may instantiate DmaReadBuffer or DmaWriteBuffer.
+A design may implement `MemReadClient` and `MemWriteClient` interfaces directly, or it may instantiate DmaReadBuffer or DmaWriteBuffer.
 
  The `AxiDmaServer` is configured with physical address translations
 for each region of memory identified by a `pointer`. A design using
@@ -685,8 +685,8 @@ Instantiate the design and its interface wrappers and proxies:
 Collect the read and write clients:
 
 ---------------------------------
-    Vector#(1, ObjectReadClient#(64)) readClients = cons(memread.dmaClient, nil);
-    Vector#(0, ObjectReadClient#(64)) writeClients = nil;
+    Vector#(1, MemReadClient#(64)) readClients = cons(memread.dmaClient, nil);
+    Vector#(0, MemReadClient#(64)) writeClients = nil;
 ---------------------------------
 
 Instantiate the DMA server and its wrapper and proxy:
