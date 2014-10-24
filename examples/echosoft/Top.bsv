@@ -33,7 +33,7 @@ typedef enum {EchoIndication, EchoRequest, Swallow, SRequest, SIndication} IfcNa
 //    endrule
 // endmodule
 
-module mkPortalTop(StdPortalTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
 
    // instantiate user portals
    EchoIndicationProxy echoIndicationProxy <- mkEchoIndicationProxy(EchoIndication);
@@ -59,4 +59,4 @@ module mkPortalTop(StdPortalTop#(PhysAddrWidth));
    interface Empty pins;
    endinterface
 
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

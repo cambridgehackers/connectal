@@ -50,7 +50,7 @@ import Memread::*;
 
 typedef enum {MemreadIndication, MemreadRequest, HostDmaDebugIndication, HostDmaDebugRequest, HostMMUConfigRequest, HostMMUConfigIndication} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(PortalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
+module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
 
    MemreadIndicationProxy memreadIndicationProxy <- mkMemreadIndicationProxy(MemreadIndication);
    Memread memread <- mkMemread(memreadIndicationProxy.ifc);
@@ -82,4 +82,4 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
    interface masters = dma.masters;
    interface leds = default_leds;
    interface Empty pins; endinterface      
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

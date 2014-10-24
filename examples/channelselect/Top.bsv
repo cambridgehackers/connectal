@@ -52,7 +52,7 @@ import DDSTestIndicationProxy::*;
 
 typedef enum { ChannelSelectTestIndication, ChannelSelectTestRequest, DDSTestIndication, DDSTestRequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
 
    ChannelSelectTestIndicationProxy channelSelectTestIndicationProxy <- mkChannelSelectTestIndicationProxy(ChannelSelectTestIndication);
    
@@ -79,4 +79,4 @@ module mkPortalTop(StdPortalTop#(PhysAddrWidth));
    interface masters = nil;
    interface leds = default_leds;
 
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

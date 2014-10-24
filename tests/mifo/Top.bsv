@@ -20,7 +20,7 @@ import MifoTest::*;
 
 typedef enum {MifoTestIndication, MifoTestRequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
 
    // instantiate user portals
    MifoTestIndicationProxy mifoIndicationProxy <- mkMifoTestIndicationProxy(MifoTestIndication);
@@ -40,6 +40,6 @@ module mkPortalTop(StdPortalTop#(PhysAddrWidth));
    interface masters = nil;
    interface leds = default_leds;
 
-endmodule : mkPortalTop
+endmodule : mkConnectalTop
 
 

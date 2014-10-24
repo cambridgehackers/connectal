@@ -25,7 +25,7 @@ import MMUConfigRequestWrapper::*;
 import DmaDebugIndicationProxy::*;
 import MMUConfigIndicationProxy::*;
 
-module  mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,TMul#(32,N),Empty,NumberOfMasters));
+module  mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,TMul#(32,N),Empty,NumberOfMasters));
 
    // all this stuff is here so we can call portalAlloc in user space
    let reader <- mkMemReader();
@@ -56,4 +56,4 @@ module  mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,TMul#(32,N),Empty,N
    interface slave = ctrl_mux;
    interface masters = dma.masters;
 
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

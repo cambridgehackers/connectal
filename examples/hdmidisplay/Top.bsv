@@ -35,7 +35,7 @@ typedef enum {HdmiDisplayRequest, HdmiDisplayIndication, HdmiInternalRequest, Hd
 
 typedef HDMI#(Bit#(16)) HDMI16;
 
-module mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,64,HDMI#(Bit#(16)),1));
+module mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,64,HDMI#(Bit#(16)),1));
 
 `ifdef ZynqHostTypeIF
    Clock clk1 = host.fclkclk[1];
@@ -76,7 +76,7 @@ module mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,64,HDMI#(Bit#(16)),1
    interface masters = dma.masters;
    //interface xadc = hdmiDisplay.xadc;
    interface pins = hdmiDisplay.hdmi;      
-endmodule : mkPortalTop
+endmodule : mkConnectalTop
 
 import "BDPI" function Action bdpi_hdmi_vsync(Bit#(1) v);
 import "BDPI" function Action bdpi_hdmi_hsync(Bit#(1) v);

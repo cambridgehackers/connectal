@@ -20,7 +20,7 @@ import Sink::*;
 
 typedef enum {SinkIndication, SinkRequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
 
    // instantiate user portals
    SinkIndicationProxy sinkIndicationProxy <- mkSinkIndicationProxy(SinkIndication);
@@ -40,4 +40,4 @@ module mkPortalTop(StdPortalTop#(PhysAddrWidth));
    interface masters = nil;
    interface leds = default_leds;
 
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

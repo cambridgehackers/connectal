@@ -54,7 +54,7 @@ typedef struct {
 typedef struct {
    Bit#(dsz) data;
    Bit#(MemTagSize) tag;
-   Bool                last;
+   Bool last;
    } MemData#(numeric type dsz) deriving (Bits);
 
 
@@ -68,8 +68,8 @@ typedef struct {SGLId sglId;
 		} MemengineCmd deriving (Eq,Bits);
 
 interface MemwriteEngineV#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers);
-   interface Vector#(numServers, Server#(MemengineCmd,Bool)) writeServers;
    interface MemWriteClient#(dataWidth) dmaClient;
+   interface Vector#(numServers, Server#(MemengineCmd,Bool)) writeServers;
    interface Vector#(numServers, PipeIn#(Bit#(dataWidth))) dataPipes;
 endinterface
 typedef MemwriteEngineV#(dataWidth, cmdQDepth, 1) MemwriteEngine#(numeric type dataWidth, numeric type cmdQDepth);
@@ -80,8 +80,8 @@ interface MemreadServer#(numeric type dataWidth);
 endinterface
       
 interface MemreadEngineV#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers);
-   interface Vector#(numServers, Server#(MemengineCmd,Bool)) readServers;
    interface MemReadClient#(dataWidth) dmaClient;
+   interface Vector#(numServers, Server#(MemengineCmd,Bool)) readServers;
    interface Vector#(numServers, PipeOut#(Bit#(dataWidth))) dataPipes;
    interface Vector#(numServers, MemreadServer#(dataWidth)) read_servers;
 endinterface

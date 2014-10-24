@@ -1081,22 +1081,22 @@ http://www.gnu.org/software/src-highlite -->
 <div class="content">
 <pre><tt>    typedef enum {SimpleIndication, SimpleRequest} IfcNames deriving (Eq,Bits);</tt></pre>
 </div></div>
-<div class="paragraph"><p>It defines <tt>mkPortalTop</tt>, which instantiates the wrappers, proxies, and the design itself:</p></div>
+<div class="paragraph"><p>It defines <tt>mkConnectalTop</tt>, which instantiates the wrappers, proxies, and the design itself:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><tt>    module mkPortalTop(StdPortalTop#(addrWidth));</tt></pre>
+<pre><tt>    module mkConnectalTop(StdConnectalTop#(addrWidth));</tt></pre>
 </div></div>
-<div class="paragraph"><p><tt>StdPortalTop</tt> is parameterized by <tt>addrWidth</tt> because Zynq and x86 have different width addressing. <tt>StdPortalTop</tt> is a typedef:</p></div>
+<div class="paragraph"><p><tt>StdConnectalTop</tt> is parameterized by <tt>addrWidth</tt> because Zynq and x86 have different width addressing. <tt>StdConnectalTop</tt> is a typedef:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><tt>    typedef PortalTop#(addrWidth,64,Empty)     StdPortalTop#(numeric type addrWidth);</tt></pre>
+<pre><tt>    typedef ConnectalTop#(addrWidth,64,Empty)     StdConnectalTop#(numeric type addrWidth);</tt></pre>
 </div></div>
 <div class="paragraph"><p>The "64" specifies the data width and <tt>Empty</tt> specifies the empty
 interface is exposed as pins from the design. In designs using HDMI,
 for example, <tt>Empty</tt> is replaced by <tt>HDMI</tt>.  On some platforms, the
 design may be able to use different data widths, such as 128 bits on
 x86/PCIe.</p></div>
-<div class="paragraph"><p>Next, <tt>mkPortalTop</tt> instantiates user portals:</p></div>
+<div class="paragraph"><p>Next, <tt>mkConnectalTop</tt> instantiates user portals:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>    // instantiate user portals
@@ -1139,7 +1139,7 @@ x86/PCIe.</p></div>
        interface m_axi = null_axi_master;
        interface leds = echoRequestInternal.leds;
 
-    endmodule : mkPortalTop</tt></pre>
+    endmodule : mkConnectalTop</tt></pre>
 </div></div>
 </div>
 <div class="sect2">

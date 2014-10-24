@@ -213,7 +213,7 @@ module mkPipeOutMemSlave#(PipeOut#(Bit#(dataWidth)) methodPipe)(PhysMemSlave#(ad
    endinterface
 endmodule
 
-module mkMemPortal#(Portal#(numRequests, numIndications, slaveDataWidth) portal)(MemPortal#(slaveAddrWidth, slaveDataWidth))
+module mkMemPortal#(PipePortal#(numRequests, numIndications, slaveDataWidth) portal)(MemPortal#(slaveAddrWidth, slaveDataWidth))
    provisos ( Add#(1, i__, slaveDataWidth)
 	     ,Add#(c__, 8, slaveAddrWidth)
 	     ,Add#(d__, 1, c__)

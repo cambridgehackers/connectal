@@ -68,7 +68,7 @@ exposedProxyInterfaceTemplate='''
 %(responseElements)s
 // exposed proxy interface
 interface %(Dut)sPortal;
-    interface Portal#(%(requestChannelCount)s, %(indicationChannelCount)s, 32) portalIfc;
+    interface PipePortal#(%(requestChannelCount)s, %(indicationChannelCount)s, 32) portalIfc;
     interface %(Ifc)s ifc;
 endinterface
 interface %(Dut)s;
@@ -124,7 +124,7 @@ interface %(Dut)sPipes;
 %(requestOutputPipeInterfaces)s
 endinterface
 interface %(Dut)sPortal;
-    interface Portal#(%(requestChannelCount)s, %(indicationChannelCount)s, 32) portalIfc;
+    interface PipePortal#(%(requestChannelCount)s, %(indicationChannelCount)s, 32) portalIfc;
 endinterface
 // exposed wrapper MemPortal interface
 interface %(Dut)s;
@@ -172,7 +172,7 @@ module mk%(Dut)sMemPortalPipes#(Bit#(32) id)(%(Dut)sMemPortalPipes);
 
   let p <- mk%(Dut)sPipes(zeroExtend(pack(id)));
 
-  Portal#(%(requestChannelCount)s, 0, 32) portalifc = (interface Portal;
+  PipePortal#(%(requestChannelCount)s, 0, 32) portalifc = (interface PipePortal;
         method Bit#(32) ifcId;
             return zeroExtend(pack(id));
         endmethod
@@ -208,7 +208,7 @@ Bit#(6) %(methodName)s_Offset = %(channelNumber)s;
 '''
 
 portalIfcTemplate='''
-    interface Portal portalIfc;
+    interface PipePortal portalIfc;
         method Bit#(32) ifcId;
             return zeroExtend(pack(id));
         endmethod

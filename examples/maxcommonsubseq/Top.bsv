@@ -31,7 +31,7 @@ typedef enum {MaxcommonsubseqIndication, MaxcommonsubseqRequest, HostDmaDebugInd
 typedef 1 DegPar;
 
 
-module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
 
    DmaReadBuffer#(64,1) setupA_read_chan <- mkDmaReadBuffer();
    DmaReadBuffer#(64,1) setupB_read_chan <- mkDmaReadBuffer();

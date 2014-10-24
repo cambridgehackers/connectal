@@ -65,7 +65,7 @@ typedef enum {MemcpyIndication,
 	      HostMMU3ConfigRequest, 
 	      HostMMU3ConfigIndication } IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
 
    MemcpyIndicationProxy memcpyIndicationProxy <- mkMemcpyIndicationProxy(MemcpyIndication);
    Memcpy memcpy <- mkMemcpy(memcpyIndicationProxy.ifc);

@@ -27,7 +27,7 @@ import Leds::*;
 import XADC::*;
 import Pipe::*;
 
-interface Portal#(numeric type numRequests, numeric type numIndications, numeric type slaveDataWidth);
+interface PipePortal#(numeric type numRequests, numeric type numIndications, numeric type slaveDataWidth);
    method Bit#(32) ifcId();
    method Bit#(32) ifcType();
    interface Vector#(numRequests, PipeIn#(Bit#(slaveDataWidth))) requests;
@@ -60,7 +60,7 @@ endfunction
 
 typedef MemPortal#(16,32) StdPortal;
 
-interface PortalTop#(numeric type addrWidth, numeric type dataWidth, type pins, numeric type numMasters);
+interface ConnectalTop#(numeric type addrWidth, numeric type dataWidth, type pins, numeric type numMasters);
    interface PhysMemSlave#(32,32) slave;
    interface Vector#(numMasters,PhysMemMaster#(addrWidth, dataWidth)) masters;
    interface Vector#(16,ReadOnly#(Bool)) interrupt;
@@ -68,9 +68,9 @@ interface PortalTop#(numeric type addrWidth, numeric type dataWidth, type pins, 
    interface pins             pins;
 endinterface
 
-typedef PortalTop#(addrWidth,64,Empty,0) StdPortalTop#(numeric type addrWidth);
-typedef PortalTop#(addrWidth,64,Empty,1) StdPortalDmaTop#(numeric type addrWidth);
+typedef ConnectalTop#(addrWidth,64,Empty,0) StdConnectalTop#(numeric type addrWidth);
+typedef ConnectalTop#(addrWidth,64,Empty,1) StdConnectalDmaTop#(numeric type addrWidth);
 
-typeclass SynthesizablePortalTop#(numeric type addrWidth, numeric type dataWidth, type pins, numeric type numMasters);
-   module mkSynthesizablePortalTop(PortalTop#(addrWidth,dataWidth,pins,numMasters) ifc);
+typeclass SynthesizableConnectalTop#(numeric type addrWidth, numeric type dataWidth, type pins, numeric type numMasters);
+   module mkSynthesizableConnectalTop(ConnectalTop#(addrWidth,dataWidth,pins,numMasters) ifc);
 endtypeclass

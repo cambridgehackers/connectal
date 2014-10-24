@@ -27,7 +27,7 @@ import Memrw::*;
 
 typedef enum {MemrwIndication, MemrwRequest, HostDmaDebugIndication, HostDmaDebugRequest, HostMMUConfigRequest, HostMMUConfigIndication} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
 
    MemrwIndicationProxy memrwIndicationProxy <- mkMemrwIndicationProxy(MemrwIndication);
    Memrw memrw <- mkMemrw(memrwIndicationProxy.ifc);

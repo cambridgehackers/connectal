@@ -37,7 +37,7 @@ import MatrixNT::*;
 `endif
 `endif
 
-module  mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,TMul#(32,N),Empty,NumberOfMasters));
+module  mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,TMul#(32,N),Empty,NumberOfMasters));
 
    MmIndicationProxy mmIndicationProxy <- mkMmIndicationProxy(MmIndicationPortal);
    TimerIndicationProxy timerIndicationProxy <- mkTimerIndicationProxy(TimerIndicationPortal);
@@ -80,4 +80,4 @@ module  mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,TMul#(32,N),Empty,N
    interface slave = ctrl_mux;
    interface masters = dma.masters;
 
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

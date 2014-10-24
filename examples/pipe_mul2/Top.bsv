@@ -22,7 +22,7 @@ import PipeMulTB::*;
 
 typedef enum {PipeMulIndication, PipeMulRequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
 
    // instantiate user portals
    PipeMulIndicationProxy indProxy <- mkPipeMulIndicationProxy(PipeMulIndication);
@@ -42,4 +42,4 @@ module mkPortalTop(StdPortalTop#(PhysAddrWidth));
    interface masters = nil;
    interface leds = pmTB.leds;
 
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

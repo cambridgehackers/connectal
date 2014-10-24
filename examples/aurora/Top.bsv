@@ -1,6 +1,6 @@
 // bsv libraries
 export Aurora::*;
-export mkPortalTop;
+export mkConnectalTop;
 
 import Vector::*;
 import FIFO::*;
@@ -22,7 +22,7 @@ import AuroraRequestWrapper::*;
 import Aurora::*;
 typedef enum {AuroraIndication, AuroraRequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(PortalTop#(PhysAddrWidth,64,AuroraPins,0));
+module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,AuroraPins,0));
 
    // instantiate user portals
    AuroraIndicationProxy auroraIndicationProxy <- mkAuroraIndicationProxy(AuroraIndication);
@@ -43,4 +43,4 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,64,AuroraPins,0));
    interface leds = default_leds;
    interface pins = auroraRequest.pins;
 
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

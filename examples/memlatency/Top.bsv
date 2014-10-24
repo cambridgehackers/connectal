@@ -27,7 +27,7 @@ import Memlatency::*;
 
 typedef enum {MemlatencyIndication, MemlatencyRequest, HostDmaDebugIndication, HostDmaDebugRequest, HostMMUConfigRequest, HostMMUConfigIndication} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
 
    MemlatencyIndicationProxy memlatencyIndicationProxy <- mkMemlatencyIndicationProxy(MemlatencyIndication);
    Memlatency memlatency <- mkMemlatency(memlatencyIndicationProxy.ifc);

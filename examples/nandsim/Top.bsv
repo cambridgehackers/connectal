@@ -30,7 +30,7 @@ import MMUConfigIndicationProxy::*;
 import NandSim::*;
 import NandSimNames::*;
 
-module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    
    NandSimIndicationProxy nandSimIndicationProxy <- mkNandSimIndicationProxy(NandSimIndication);   
    NandSim nandSim <- mkNandSim(nandSimIndicationProxy.ifc);
@@ -61,4 +61,4 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    interface masters = hostDma.masters;
    interface leds = default_leds;
       
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

@@ -49,7 +49,7 @@ import Memcpy::*;
 
 typedef enum {MemcpyIndication, MemcpyRequest, HostDmaDebugIndication, HostDmaDebugRequest, HostMMUConfigRequest, HostMMUConfigIndication} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
 
    MemcpyIndicationProxy memcpyIndicationProxy <- mkMemcpyIndicationProxy(MemcpyIndication);
    Memcpy memcpy <- mkMemcpy(memcpyIndicationProxy.ifc);

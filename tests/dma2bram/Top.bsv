@@ -27,7 +27,7 @@ import Test::*;
 
 typedef enum {TestIndication, TestRequest, HostMMUConfigRequest, HostMMUConfigIndication, HostDmaDebugIndication, HostDmaDebugRequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
 
    TestIndicationProxy testIndicationProxy <- mkTestIndicationProxy(TestIndication);
    Test test <- mkTestRequest(testIndicationProxy.ifc);

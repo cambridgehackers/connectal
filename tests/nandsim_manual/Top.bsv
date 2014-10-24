@@ -29,7 +29,7 @@ import NandSim::*;
 
 typedef enum {HostDmaDebugIndication, HostDmaDebugRequest, HostMMUConfigRequest, HostMMUConfigIndication, NandSimIndication, NandSimRequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    
    NandSimIndicationProxy nandSimIndicationProxy <- mkNandSimIndicationProxy(NandSimIndication);
    
@@ -66,4 +66,4 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    interface masters = dma.masters;
    interface leds = default_leds;
       
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

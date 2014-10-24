@@ -19,7 +19,7 @@ import PortalPerf::*;
 
 typedef enum {PortalPerfIndication, PortalPerfRequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
 
    // instantiate user portals
    PortalPerfIndicationProxy portalPerfIndicationProxy <- mkPortalPerfIndicationProxy(PortalPerfIndication);
@@ -41,4 +41,4 @@ module mkPortalTop(StdPortalTop#(PhysAddrWidth));
    interface slave = ctrl_mux;
    interface masters = nil;
 
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

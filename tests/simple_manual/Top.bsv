@@ -43,7 +43,7 @@ import Simple::*;
 
 typedef enum {SimpleIndication, SimpleRequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
 
    // instantiate user portals
    SimpleIndicationProxy simpleIndicationProxy <- mkSimpleIndicationProxy(SimpleIndication);
@@ -63,6 +63,6 @@ module mkPortalTop(StdPortalTop#(PhysAddrWidth));
    interface masters = nil;
    interface leds = default_leds;
 
-endmodule : mkPortalTop
+endmodule : mkConnectalTop
 
 

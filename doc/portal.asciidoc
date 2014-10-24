@@ -289,18 +289,18 @@ It defines the `IfcNames` enum, for use in identifying the portals between softw
 ---------------------------------
 
 
-It defines `mkPortalTop`, which instantiates the wrappers, proxies, and the design itself:
+It defines `mkConnectalTop`, which instantiates the wrappers, proxies, and the design itself:
 
 
 ---------------------------------
-    module mkPortalTop(StdPortalTop#(addrWidth));
+    module mkConnectalTop(StdConnectalTop#(addrWidth));
 ---------------------------------
 
 
-`StdPortalTop` is parameterized by `addrWidth` because Zynq and x86 have different width addressing. `StdPortalTop` is a typedef:
+`StdConnectalTop` is parameterized by `addrWidth` because Zynq and x86 have different width addressing. `StdConnectalTop` is a typedef:
 
 ---------------------------------
-    typedef PortalTop#(addrWidth,64,Empty)     StdPortalTop#(numeric type addrWidth);
+    typedef ConnectalTop#(addrWidth,64,Empty)     StdConnectalTop#(numeric type addrWidth);
 ---------------------------------
 
 The "64" specifies the data width and `Empty` specifies the empty
@@ -309,7 +309,7 @@ for example, `Empty` is replaced by `HDMI`.  On some platforms, the
 design may be able to use different data widths, such as 128 bits on
 x86/PCIe.
 
-Next, `mkPortalTop` instantiates user portals:
+Next, `mkConnectalTop` instantiates user portals:
 
 ---------------------------------
     // instantiate user portals
@@ -360,7 +360,7 @@ The following generic interfaces are used by the platform specific top BSV modul
        interface m_axi = null_axi_master;
        interface leds = echoRequestInternal.leds;
 
-    endmodule : mkPortalTop
+    endmodule : mkConnectalTop
 ---------------------------------
 
 

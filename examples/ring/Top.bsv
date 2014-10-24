@@ -27,7 +27,7 @@ import Ring::*;
 
 typedef enum {RingIndication, RingRequest, HostDmaDebugIndication, HostDmaDebugRequest, HostMMUConfigRequest, HostMMUConfigIndication} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
   
    // instantiate Dma infrastructure
    DmaReadBuffer#(64,8) dma_read_chan <- mkDmaReadBuffer();
@@ -73,4 +73,4 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    interface slave = ctrl_mux;
    interface masters = dma.masters;
    interface leds = ?;
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

@@ -353,9 +353,9 @@ module  mkBsimTop(Empty)
    Reset singleReset = single_reset.new_rst;
    BsimHost#(32,32,12,PhysAddrWidth,DataBusWidth,6,NumberOfMasters) host <- mkBsimHost(clocked_by singleClock, reset_by singleReset, doubleClock, doubleReset);
 `ifdef IMPORT_HOSTIF
-   PortalTop#(PhysAddrWidth,DataBusWidth,PinType,NumberOfMasters) top <- mkPortalTop(clocked_by singleClock, reset_by singleReset, host);
+   ConnectalTop#(PhysAddrWidth,DataBusWidth,PinType,NumberOfMasters) top <- mkConnectalTop(clocked_by singleClock, reset_by singleReset, host);
 `else
-   PortalTop#(PhysAddrWidth,DataBusWidth,PinType,NumberOfMasters) top <- mkPortalTop(clocked_by singleClock, reset_by singleReset);
+   ConnectalTop#(PhysAddrWidth,DataBusWidth,PinType,NumberOfMasters) top <- mkConnectalTop(clocked_by singleClock, reset_by singleReset);
 `endif
    Vector#(NumberOfMasters,Axi3Master#(PhysAddrWidth,DataBusWidth,6)) m_axis <- mapM(mkAxiDmaMaster,top.masters, clocked_by singleClock, reset_by singleReset);
    mapM(uncurry(mkConnection),zip(m_axis, host.axi_servers), clocked_by singleClock, reset_by singleReset);

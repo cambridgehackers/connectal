@@ -32,7 +32,7 @@ import Memcpy::*;
 
 typedef enum {MemcpyIndication, MemcpyRequest, HostDmaDebugIndication, HostDmaDebugRequest, HostMMUConfigRequest, HostMMUConfigIndication, BluescopeIndication, BluescopeRequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
 
    BlueScopeIndicationProxy blueScopeIndicationProxy <- mkBlueScopeIndicationProxy(BluescopeIndication);
    BlueScope#(64) bs <- mkBlueScope(`BluescopeSampleLength, blueScopeIndicationProxy.ifc);

@@ -44,7 +44,7 @@ import FibWide::*;
 
 typedef enum {FibIndication, FibRequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
 
    // instantiate user portals
    FibIndicationProxy fibIndicationProxy <- mkFibIndicationProxy(FibIndication);
@@ -64,4 +64,4 @@ module mkPortalTop(StdPortalTop#(PhysAddrWidth));
    interface masters = nil;
    interface leds = default_leds;
 
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

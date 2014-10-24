@@ -37,7 +37,7 @@ import AxiCsr            :: *;
 import HDMI::*;
 import Imageon::*;
 
-typedef (function Module#(PortalTop#(40, dsz, ipins)) mkPortalTop(Clock io_vita_clk)) MkPortalTop#(numeric type dsz, type ipins);
+typedef (function Module#(ConnectalTop#(40, dsz, ipins)) mkConnectalTop(Clock io_vita_clk)) MkConnectalTop#(numeric type dsz, type ipins);
 
 `ifdef Artix7
 typedef 4 PcieLanes;
@@ -60,7 +60,7 @@ module  mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 				      Clock sys_clk_p,     Clock sys_clk_n,
 				      Clock io_vita_clk_out_p, Clock io_vita_clk_out_n,
 				      Reset pci_sys_reset_n,
-				      MkPortalTop#(dsz, ipins) mkPortalTop)
+				      MkConnectalTop#(dsz, ipins) mkConnectalTop)
    (PcieTop#(ipins))
    provisos (Mul#(TDiv#(dsz, 32), 32, dsz),
 	     Add#(b__, 32, dsz),
@@ -79,7 +79,7 @@ module  mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    // instantiate user portals
    Clock io_vita_clk <- XilinxCells::mkClockIBUFDS(io_vita_clk_out_p, io_vita_clk_out_n);
    IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by x7pcie.clock200, reset_by x7pcie.portalReset);
-   let portalTop <- mkPortalTop(io_vita_clk, clocked_by x7pcie.clock125, reset_by x7pcie.portalReset);
+   let portalTop <- mkConnectalTop(io_vita_clk, clocked_by x7pcie.clock125, reset_by x7pcie.portalReset);
 
    AxiSlaveEngine#(dsz) axiSlaveEngine <- mkAxiSlaveEngine(x7pcie.pciId(), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    AxiMasterEngine axiMasterEngine <- mkAxiMasterEngine(x7pcie.pciId(), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
@@ -120,8 +120,8 @@ endmodule: mkPcieTopFromPortal
 
 
 (* synthesize *)
-module mkSynthesizeablePortalTop#(Clock io_vita_clk)(PortalTop#(40, 64, ImageCapturePins));
-   let top <- mkPortalTop(io_vita_clk);
+module mkSynthesizeableConnectalTop#(Clock io_vita_clk)(ConnectalTop#(40, 64, ImageCapturePins));
+   let top <- mkConnectalTop(io_vita_clk);
    interface master = top.master;
    interface slave = top.slave;
    interface interrupt = top.interrupt;
@@ -138,6 +138,6 @@ module mkImageonPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    let top <- mkPcieTopFromPortal(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n,
 				  io_vita_clk_out_p, io_vita_clk_out_n,
 				  pci_sys_reset_n,
-				  mkSynthesizeablePortalTop);
+				  mkSynthesizeableConnectalTop);
    return top;
 endmodule: mkImageonPcieTop

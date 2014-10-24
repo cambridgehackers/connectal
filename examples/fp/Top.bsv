@@ -42,7 +42,7 @@ import Fp::*;
 
 typedef enum {FpIndication, FpRequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
 
    // instantiate user portals
    FpIndicationProxy fpIndicationProxy <- mkFpIndicationProxy(FpIndication);
@@ -62,6 +62,6 @@ module mkPortalTop(StdPortalTop#(PhysAddrWidth));
    interface masters = nil;
    interface leds = default_leds;
 
-endmodule : mkPortalTop
+endmodule : mkConnectalTop
 
 

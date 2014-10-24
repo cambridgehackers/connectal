@@ -216,9 +216,9 @@ module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Cl
    PcieHostTop host <- mkPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n);
 
 `ifdef IMPORT_HOSTIF
-   PortalTop#(PhysAddrWidth, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkPortalTop(host, clocked_by host.portalClock, reset_by host.portalReset);
+   ConnectalTop#(PhysAddrWidth, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkConnectalTop(host, clocked_by host.portalClock, reset_by host.portalReset);
 `else
-   PortalTop#(PhysAddrWidth, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkPortalTop(clocked_by host.portalClock, reset_by host.portalReset);
+   ConnectalTop#(PhysAddrWidth, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkConnectalTop(clocked_by host.portalClock, reset_by host.portalReset);
 `endif
    mkConnection(host.tpciehost.master, portalTop.slave, clocked_by host.portalClock, reset_by host.portalReset);
    if (valueOf(NumberOfMasters) > 0) begin

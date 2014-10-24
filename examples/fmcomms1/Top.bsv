@@ -71,7 +71,7 @@ endinterface
 
 /* clk1 is the FCLKCLK1 controlled by software */
 
-module mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,64,FMComms1Pins,1));
+module mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,64,FMComms1Pins,1));
 
    Clock clk1 = host.fclkclk[1];
    C2B ref_clk_as_bit <- mkC2B(clk1);
@@ -132,4 +132,4 @@ module mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,64,FMComms1Pins,1));
 	 return(ref_clk.read_n());
       endmethod
    endinterface
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

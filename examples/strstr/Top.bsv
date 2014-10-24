@@ -27,7 +27,7 @@ import Strstr::*;
 
 typedef enum {StrstrIndication, StrstrRequest, HostDmaDebugIndication, HostDmaDebugRequest, HostMMUConfigRequest, HostMMUConfigIndication} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
 
    StrstrIndicationProxy strstrIndicationProxy <- mkStrstrIndicationProxy(StrstrIndication);
    Strstr#(64) strstr <- mkStrstr(strstrIndicationProxy.ifc);

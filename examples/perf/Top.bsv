@@ -28,7 +28,7 @@ import Perf::*;
 
 typedef enum {PerfIndication, PerfRequest, HostDmaDebugIndication, HostDmaDebugRequest, HostMMUConfigRequest, HostMMUConfigIndication} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
 
    DmaReadBuffer#(64,8)   dma_stream_read_chan <- mkDmaReadBuffer();
    DmaWriteBuffer#(64,8) dma_stream_write_chan <- mkDmaWriteBuffer();

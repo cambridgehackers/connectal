@@ -21,7 +21,7 @@ import FpMulRequestWrapper::*;
 import RbmTypes::*;
 import FpMacTb::*;
 
-module  mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,TMul#(32,N),Empty,NumberOfMasters));
+module  mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,TMul#(32,N),Empty,NumberOfMasters));
 
    FpMulIndicationProxy ind <- mkFpMulIndicationProxy(FpMulIndicationPortal);
    FpMulRequest req <- mkFpMulRequest(ind.ifc);
@@ -40,4 +40,4 @@ module  mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,TMul#(32,N),Empty,N
    interface slave = ctrl_mux;
    interface masters = replicate(?);
 
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

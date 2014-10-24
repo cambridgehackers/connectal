@@ -40,7 +40,7 @@ import LedController::*;
 
 typedef enum {LedControllerRequestPortal} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
 
    // instantiate user portals
    LedController ledController <- mkLedControllerRequest();
@@ -58,6 +58,6 @@ module mkPortalTop(StdPortalTop#(PhysAddrWidth));
    interface masters = nil;
    interface leds = ledController.leds;
 
-endmodule : mkPortalTop
+endmodule : mkConnectalTop
 
 
