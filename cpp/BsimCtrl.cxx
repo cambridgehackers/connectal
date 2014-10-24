@@ -79,7 +79,7 @@ extern "C" int pareff_fd(int *fd)
   return 0;
 }
 
-extern "C" bool processReq32(uint32_t rr)
+extern "C" bool checkForRequest(uint32_t rr)
 {
     if (!head.valid){
 	int rv = bsim_ctrl_recv(&head.sockfd, &head.req);
@@ -88,7 +88,7 @@ extern "C" bool processReq32(uint32_t rr)
 	  assert(rv == sizeof(memrequest));
 	  respitem.portal = head.req.portal;
 	  if (head.req.portal == MAGIC_PORTAL_FOR_SENDING_FD) {
-              dma_fd = head.req.data;
+              dma_fd = head.req.data_or_tag;
               sem_post(&dma_waiting);
               return 0;
           }
@@ -99,38 +99,39 @@ extern "C" bool processReq32(uint32_t rr)
 	      fprintf(stderr, "processr p=%d w=%d, a=%8lx", 
 		  head.req.portal, head.req.write_flag, (long)head.req.addr);
               if (head.req.write_flag)
-	          fprintf(stderr, ", d=%8x:", head.req.data);
+	          fprintf(stderr, ", d=%8x:", head.req.data_or_tag);
               else
-	          fprintf(stderr, "            :%8x", head.req.data);
+	          fprintf(stderr, "            :%8x", head.req.data_or_tag);
           }
 	}
     }
     return head.valid && head.inflight == 1 && head.req.write_flag == (int)rr;
 }
 
-extern "C" unsigned long long processAddr32()
+extern "C" unsigned long long readRequest32()
 {
     if(trace_port)
         fprintf(stderr, " addr");
     head.inflight = 0;
-    return (long)head.req.addr;
+    return (((unsigned long long)head.req.data_or_tag) << 32) | ((long)head.req.addr);
 }
   
-extern "C" unsigned long long writeData32()
+extern "C" unsigned long long writeRequest32()
 {
     if(trace_port)
         fprintf(stderr, " write\n");
     head.valid = 0;
     head.inflight = 0;
-    return (((unsigned long long)head.req.data) << 32) | ((long)head.req.addr);
+    return (((unsigned long long)head.req.data_or_tag) << 32) | ((long)head.req.addr);
 }
   
-extern "C" void readData32(unsigned int x, unsigned int tag)
+extern "C" void readResponse32(unsigned int data, unsigned int tag)
 {
     if(trace_port)
-        fprintf(stderr, " read = %x\n", x);
+        fprintf(stderr, " read = %x\n", data);
     pthread_mutex_lock(&socket_mutex);
-    respitem.data = x;
+    respitem.data = data;
+    respitem.tag = tag;
     bsim_ctrl_send(head.sockfd, &respitem);
     pthread_mutex_unlock(&socket_mutex);
     head.valid = 0;

@@ -51,10 +51,10 @@ typedef `NumberOfMasters NumberOfMasters;
 
 // implemented in BsimCtrl.cxx
 import "BDPI" function Action                 initPortal();
-import "BDPI" function Bool                   processReq32(Bit#(32) v);
-import "BDPI" function ActionValue#(Bit#(64)) processAddr32();
-import "BDPI" function ActionValue#(Bit#(64)) writeData32();
-import "BDPI" function Action                 readData32(Bit#(32) d, Bit#(32) tag);
+import "BDPI" function Bool                   checkForRequest(Bit#(32) v);
+import "BDPI" function ActionValue#(Bit#(64)) readRequest32();
+import "BDPI" function ActionValue#(Bit#(64)) writeRequest32();
+import "BDPI" function Action                 readResponse32(Bit#(32) d, Bit#(32) tag);
 import "BDPI" function Action                 interruptLevel(Bit#(1) d);
 
 // implemented in BsimDma.cxx
@@ -86,15 +86,15 @@ endtypeclass
 
 instance SelectBsimCtrlReadWrite#(32,32);
    module selectBsimCtrlReadWrite(BsimCtrlReadWrite#(32,32) ifc);
-      method ActionValue#(BsimReadRequest#(32,32)) readRequest() if (processReq32(0));
-	 let rv <- processAddr32();
+      method ActionValue#(BsimReadRequest#(32,32)) readRequest() if (checkForRequest(0));
+	 let rv <- readRequest32();
 	 return BsimReadRequest{tag: truncate(rv[63:32]), addr:rv[31:0]};
       endmethod
       method Action readResponse(Bit#(32) d, Bit#(MemTagSize) tag);
-	 readData32(d, extend(tag));
+	 readResponse32(d, extend(tag));
       endmethod
-      method ActionValue#(BsimWriteRequest#(32, 32)) writeRequest() if (processReq32(1));
-	 let rv <- writeData32();
+      method ActionValue#(BsimWriteRequest#(32, 32)) writeRequest() if (checkForRequest(1));
+	 let rv <- writeRequest32();
 	 return BsimWriteRequest{data: rv[63:32], addr: rv[31:0]};
       endmethod
    endmodule

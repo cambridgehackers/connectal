@@ -31,11 +31,12 @@ struct memrequest{
   int portal;
   int write_flag;
   volatile unsigned int *addr;
-  unsigned int data;
+  unsigned int data_or_tag;
 };
 struct memresponse{
   int portal;
   unsigned int data;
+  unsigned int tag;
 };
 
 #ifdef __cplusplus

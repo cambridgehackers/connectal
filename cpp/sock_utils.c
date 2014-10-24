@@ -228,12 +228,14 @@ unsigned int bsim_poll_interrupt(void)
   return interrupt_value;
 }
 /* functions called by READL() and WRITEL() macros in application software */
+unsigned int tag_counter;
 unsigned int read_portal_bsim(volatile unsigned int *addr, int id)
 {
   struct memrequest foo = {id, 0,addr,0};
   struct memresponse rv;
 
   pthread_mutex_lock(&socket_mutex);
+  foo.data_or_tag = tag_counter++;
   if (send(global_sockfd, &foo, sizeof(foo), 0) == -1) {
     fprintf(stderr, "%s (fpga%d) send error, errno=%s\n",__FUNCTION__, id, strerror(errno));
     exit(1);
@@ -275,7 +277,7 @@ int bsim_ctrl_recv(int *sockfd, struct memrequest *data)
   if (rc == sizeof(*data) && data->portal == MAGIC_PORTAL_FOR_SENDING_FD) {
     int new_fd;
     sock_fd_read(*sockfd, &new_fd);
-    data->data = new_fd;
+    data->data_or_tag = new_fd;
   }
   if (rc > 0)
     break;
