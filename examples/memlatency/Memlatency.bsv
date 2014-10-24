@@ -27,7 +27,7 @@ import GetPut::*;
 import BRAMFIFO::*;
 
 import Pipe::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;

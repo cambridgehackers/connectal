@@ -26,7 +26,7 @@ import BRAMFIFO::*;
 import GetPut::*;
 import ClientServer::*;
 
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;

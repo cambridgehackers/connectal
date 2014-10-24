@@ -24,7 +24,7 @@ import Connectable::*;
 import GetPut::*;
 import ClientServer::*;
 import FIFOF::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;

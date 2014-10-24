@@ -8,7 +8,7 @@ import FIFO::*;
 import Directory::*;
 import CtrlMux::*;
 import Portal::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import DmaUtils::*;
 import MemServer::*;

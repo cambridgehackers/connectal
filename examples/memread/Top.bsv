@@ -32,7 +32,7 @@ import MMU::*;
 import Directory::*;
 import CtrlMux::*;
 import Portal::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import Leds::*;
 import HostInterface::*;

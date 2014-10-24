@@ -26,7 +26,7 @@ import ClientServer::*;
 import GetPut::*;
 import Pipe::*;
 
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;

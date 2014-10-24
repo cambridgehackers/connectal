@@ -44,7 +44,7 @@ import Adapter::*;
 import Leds::*;
 import Vector::*;
 import SpecialFIFOs::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import Portal::*;
 import MemPortal::*;
 import MemTypes::*;

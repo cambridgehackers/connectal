@@ -31,7 +31,7 @@ import BRAM::*;
 import MemTypes::*;
 import StmtFSM::*;
 import ClientServer::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import CompletionBuffer::*;
 
 

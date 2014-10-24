@@ -31,7 +31,7 @@ import BRAMFIFO::*;
 import ConfigCounter::*;
 import Connectable::*;
 
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import Pipe::*;
 import MemUtils::*;

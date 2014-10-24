@@ -27,7 +27,7 @@ import DefaultValue::*;
 import SpecialFIFOs::*;
 import Vector::*;
 import BRAM::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;

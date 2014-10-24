@@ -10,11 +10,11 @@ import Directory::*;
 import CtrlMux::*;
 import Portal::*;
 import Leds::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemServer::*;
 import MMU::*;
 import MemUtils::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import HostInterface::*;
 

@@ -27,7 +27,7 @@ import MIMO::*;
 import DefaultValue::*;
 import SpecialFIFOs::*;
 import Vector::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import MemUtils::*;
 import FloatingPoint::*;

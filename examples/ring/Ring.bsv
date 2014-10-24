@@ -27,7 +27,7 @@ import GetPutF::*;
 import StmtFSM::*;
 import ClientServer::*;
 
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import CompletionBuffer::*;
 

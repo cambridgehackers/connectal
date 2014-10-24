@@ -32,7 +32,7 @@ import BRAM::*;
 
 // CONNECTAL Libraries
 import MemTypes::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MMU::*;
 import CompletionBuffer::*;
 

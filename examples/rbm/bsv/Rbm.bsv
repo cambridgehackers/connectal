@@ -30,7 +30,7 @@ import Connectable::*;
 import FloatingPoint::*;
 import BRAM::*;
 
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import DmaVector::*;
 import AxiMasterSlave::*;

@@ -24,7 +24,7 @@ import Vector::*;
 import FIFOF::*;
 import GetPut::*;
 
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 
 interface PerfRequest;

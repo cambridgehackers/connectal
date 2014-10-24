@@ -61,7 +61,7 @@ CONNECTALFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) -D PinType=$(PIN_TYPE)
 ifneq ($(NUMBER_OF_MASTERS), 0)
 S2H += DmaDebugRequest MMUConfigRequest
 H2S += DmaDebugIndication MMUConfigIndication
-BSVFILES += $(CONNECTALDIR)/bsv/PortalMemory.bsv
+BSVFILES += $(CONNECTALDIR)/bsv/ConnectalMemory.bsv
 CPPFILES += $(CONNECTALDIR)/cpp/dmaManager.c
 ifneq ($(CPPFILES2),)
 CPPFILES2 += $(CONNECTALDIR)/cpp/dmaManager.c

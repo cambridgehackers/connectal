@@ -31,7 +31,7 @@ import StmtFSM::*;
 
 // CONNECTAL Libraries
 import MemTypes::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MMU::*;
 import MemServerInternal::*;
 

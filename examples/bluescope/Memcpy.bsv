@@ -27,7 +27,7 @@ import FIFO::*;
 import Connectable::*;
 import ClientServer::*;
 
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import BlueScope::*;
 import MemreadEngine::*;

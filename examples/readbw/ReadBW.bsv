@@ -24,7 +24,7 @@ import FIFO::*;
 import GetPut::*;
 import AxiMasterSlave::*;
 import PcieToAxiBridge::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MMU::*;
 
 interface CoreIndication;
@@ -52,9 +52,9 @@ interface ReadBWRequest;
    interface TlpTrace trace;
 endinterface
 
-instance PortalMemory#(CoreRequest);
+instance ConnectalMemory#(CoreRequest);
 endinstance
-instance PortalMemory#(ReadBWRequest);
+instance ConnectalMemory#(ReadBWRequest);
 endinstance
 
 module mkReadBWRequest#(ReadBWIndication ind)(ReadBWRequest);

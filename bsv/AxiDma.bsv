@@ -28,7 +28,7 @@ import ClientServer::*;
 // CONNECTAL Libraries
 import AxiMasterSlave::*;
 import MemTypes::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 
 
 module mkAxiDmaSlave#(MemSlave#(addrWidth,dataWidth) slave) (Axi3Slave#(addrWidth,dataWidth,12));

@@ -32,7 +32,7 @@ import ClientServer::*;
 import Pipe::*;
 
 // CONNECTAL Libraries
-import PortalMemory::*;
+import ConnectalMemory::*;
 
 typedef Bit#(32) SGLId;
 typedef 40 ObjectOffsetSize;

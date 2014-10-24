@@ -14,12 +14,12 @@ int numWords = 16;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 
-class TestPM : public PortalMemory
+class TestPM : public ConnectalMemory
 {
 public:
   virtual void sglist(uint32_t off, uint64_t addr, uint32_t len) {}
   virtual void paref(uint32_t off, uint32_t ref) {}
-  TestPM() : PortalMemory(){}
+  TestPM() : ConnectalMemory(){}
 };
 
 void* child(void* prd_sock)

@@ -29,7 +29,7 @@ import Assert::*;
 
 // CONNECTAL Libraries
 import MemTypes::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MMU::*;
 
 `ifdef BSIM

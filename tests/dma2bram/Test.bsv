@@ -24,7 +24,7 @@ import Vector::*;
 import ClientServer::*;
 import BRAM::*;
 
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import BlueScope::*;
 import MemreadEngine::*;
