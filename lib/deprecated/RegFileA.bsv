@@ -41,12 +41,12 @@ typedef struct {
    } AddrBeat#(numeric type addrWidth) deriving (Bits);
 
 interface AddressGenerator#(numeric type addrWidth);
-   interface Put#(MemRequest#(addrWidth)) request;
+   interface Put#(PhysMemRequest#(addrWidth)) request;
    interface Get#(AddrBeat#(addrWidth)) addrBeat;
 endinterface
 
 module mkAddressGenerator(AddressGenerator#(addrWidth));
-   FIFOF#(MemRequest#(addrWidth)) requestFifo <- mkFIFOF();
+   FIFOF#(PhysMemRequest#(addrWidth)) requestFifo <- mkFIFOF();
    FIFOF#(AddrBeat#(addrWidth)) addrBeatFifo <- mkFIFOF();
    Reg#(Bit#(addrWidth)) addrReg <- mkReg(0);
    Reg#(Bit#(8)) burstCountReg <- mkReg(0);
@@ -71,7 +71,7 @@ module mkAddressGenerator(AddressGenerator#(addrWidth));
    endrule
 
    interface Put request;
-      method Action put(MemRequest#(addrWidth) req);
+      method Action put(PhysMemRequest#(addrWidth) req);
 	 requestFifo.enq(req);
 	 addrReg <= req.addr;
 	 burstCountReg <= req.burstLen;
@@ -93,14 +93,14 @@ module mkMemSlaveFromRegFile#(RegFileA#(Bit#(regFileAddrWidth), Bit#(busDataWidt
    Reg#(Bit#(8)) writeBurstCountReg <- mkReg(0);
    FIFOF#(void) writeRespFifo <- mkFIFOF();
    FIFOF#(Bit#(6)) writeTagFifo <- mkFIFOF();
-   FIFO#(MemRequest#(busAddrWidth)) req_aw_fifo <- mkSizedFIFO(1);
+   FIFO#(PhysMemRequest#(busAddrWidth)) req_aw_fifo <- mkSizedFIFO(1);
    
    AddressGenerator#(busAddrWidth) readAddrGenerator <- mkAddressGenerator();
 
    Bool verbose = False;
    interface MemReadServer read_server;
       interface Put readReq;
-	 method Action put(MemRequest#(busAddrWidth) req);
+	 method Action put(PhysMemRequest#(busAddrWidth) req);
             if (verbose) $display("axiSlave.read.readAddr %h bc %d", req.addr, req.burstLen);
 	    readAddrGenerator.request.put(req);
 	 endmethod
@@ -120,7 +120,7 @@ module mkMemSlaveFromRegFile#(RegFileA#(Bit#(regFileAddrWidth), Bit#(busDataWidt
    endinterface
    interface MemWriteServer write_server;
       interface Put writeReq;
-	 method Action put(MemRequest#(busAddrWidth) req);
+	 method Action put(PhysMemRequest#(busAddrWidth) req);
             req_aw_fifo.enq(req);
             if (verbose) $display("write_server.writeAddr %h bc %d", req.addr, req.burstLen);
 	 endmethod

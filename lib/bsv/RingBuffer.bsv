@@ -42,8 +42,8 @@ interface RingBuffer;
    method Action push();
    method Action popfetch();
    method Action popack();
-   interface Reg#(Bit#(ObjectOffsetSize)) bufferfirst;
-   interface Reg#(Bit#(ObjectOffsetSize)) bufferlastfetch;
+   interface Reg#(Bit#(MemOffsetSize)) bufferfirst;
+   interface Reg#(Bit#(MemOffsetSize)) bufferlastfetch;
    interface Reg#(Bool) enable;
    interface RingBufferConfig configifc;
    interface Reg#(SGLId) mempointer;
@@ -58,12 +58,12 @@ endinterface
 
 module mkRingBuffer(RingBuffer);
    
-   Reg#(Bit#(ObjectOffsetSize)) rbufferbase <- mkReg(0);
-   Reg#(Bit#(ObjectOffsetSize)) rbufferend <- mkReg(0);
-   Reg#(Bit#(ObjectOffsetSize)) rbufferfirst <- mkReg(0);
-   Reg#(Bit#(ObjectOffsetSize)) rbufferlastfetch <- mkReg(0);
-   Reg#(Bit#(ObjectOffsetSize)) rbufferlastack <- mkReg(0);
-   Reg#(Bit#(ObjectOffsetSize)) rbuffermask <- mkReg(0);
+   Reg#(Bit#(MemOffsetSize)) rbufferbase <- mkReg(0);
+   Reg#(Bit#(MemOffsetSize)) rbufferend <- mkReg(0);
+   Reg#(Bit#(MemOffsetSize)) rbufferfirst <- mkReg(0);
+   Reg#(Bit#(MemOffsetSize)) rbufferlastfetch <- mkReg(0);
+   Reg#(Bit#(MemOffsetSize)) rbufferlastack <- mkReg(0);
+   Reg#(Bit#(MemOffsetSize)) rbuffermask <- mkReg(0);
    Reg#(SGLId) rmempointer <- mkReg(0);
    Reg#(Bool) renable <- mkReg(False);
    

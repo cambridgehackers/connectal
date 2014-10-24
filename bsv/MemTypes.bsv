@@ -35,25 +35,25 @@ import Pipe::*;
 import ConnectalMemory::*;
 
 typedef Bit#(32) SGLId;
-typedef 40 ObjectOffsetSize;
+typedef 40 MemOffsetSize;
 typedef `PhysAddrWidth PhysAddrWidth;
-
-typedef 6 ObjectTagSize;
+typedef 6 MemTagSize;
 typedef 10 BurstLenSize;
+
 typedef struct {
    Bit#(addrWidth) addr;
    Bit#(BurstLenSize) burstLen;
-   Bit#(ObjectTagSize) tag;
-   } MemRequest#(numeric type addrWidth) deriving (Bits);
+   Bit#(MemTagSize) tag;
+   } PhysMemRequest#(numeric type addrWidth) deriving (Bits);
 typedef struct {
    SGLId sglId;
-   Bit#(ObjectOffsetSize) offset;
+   Bit#(MemOffsetSize) offset;
    Bit#(BurstLenSize) burstLen;
-   Bit#(ObjectTagSize)  tag;
+   Bit#(MemTagSize)  tag;
    } ObjectRequest deriving (Bits);
 typedef struct {
    Bit#(dsz) data;
-   Bit#(ObjectTagSize) tag;
+   Bit#(MemTagSize) tag;
    Bool                last;
    } MemData#(numeric type dsz) deriving (Bits);
 
@@ -62,7 +62,7 @@ typedef struct {
 // 
 
 typedef struct {SGLId sglId;
-		Bit#(ObjectOffsetSize) base;
+		Bit#(MemOffsetSize) base;
 		Bit#(BurstLenSize) burstLen;
 		Bit#(32) len;
 		} MemengineCmd deriving (Eq,Bits);
@@ -103,7 +103,7 @@ endinterface
 interface ObjectWriteClient#(numeric type dsz);
    interface Get#(ObjectRequest)    writeReq;
    interface Get#(MemData#(dsz)) writeData;
-   interface Put#(Bit#(ObjectTagSize))       writeDone;
+   interface Put#(Bit#(MemTagSize))       writeDone;
 endinterface
 
 interface ObjectReadServer#(numeric type dsz);
@@ -114,7 +114,7 @@ endinterface
 interface ObjectWriteServer#(numeric type dsz);
    interface Put#(ObjectRequest) writeReq;
    interface Put#(MemData#(dsz))     writeData;
-   interface Get#(Bit#(ObjectTagSize))           writeDone;
+   interface Get#(Bit#(MemTagSize))           writeDone;
 endinterface
 
 //
@@ -132,25 +132,25 @@ interface MemMaster#(numeric type addrWidth, numeric type dataWidth);
 endinterface
 
 interface MemReadClient#(numeric type asz, numeric type dsz);
-   interface Get#(MemRequest#(asz))    readReq;
+   interface Get#(PhysMemRequest#(asz))    readReq;
    interface Put#(MemData#(dsz)) readData;
 endinterface
 
 interface MemWriteClient#(numeric type asz, numeric type dsz);
-   interface Get#(MemRequest#(asz))    writeReq;
+   interface Get#(PhysMemRequest#(asz))    writeReq;
    interface Get#(MemData#(dsz)) writeData;
-   interface Put#(Bit#(ObjectTagSize))       writeDone;
+   interface Put#(Bit#(MemTagSize))       writeDone;
 endinterface
 
 interface MemReadServer#(numeric type asz, numeric type dsz);
-   interface Put#(MemRequest#(asz)) readReq;
+   interface Put#(PhysMemRequest#(asz)) readReq;
    interface Get#(MemData#(dsz))     readData;
 endinterface
 
 interface MemWriteServer#(numeric type asz, numeric type dsz);
-   interface Put#(MemRequest#(asz)) writeReq;
+   interface Put#(PhysMemRequest#(asz)) writeReq;
    interface Put#(MemData#(dsz))     writeData;
-   interface Get#(Bit#(ObjectTagSize))           writeDone;
+   interface Get#(Bit#(MemTagSize))           writeDone;
 endinterface
 
 //
@@ -208,14 +208,14 @@ instance Connectable#(MemMaster#(32, busWidth), MemSlave#(40, busWidth));
       //mkConnection(m.read_client.readReq, s.read_server.readReq);
       rule readreq;
 	 let req <- m.read_client.readReq.get();
-	 s.read_server.readReq.put(MemRequest { addr: extend(req.addr), burstLen: req.burstLen, tag: req.tag });
+	 s.read_server.readReq.put(PhysMemRequest { addr: extend(req.addr), burstLen: req.burstLen, tag: req.tag });
       endrule
 
       mkConnection(s.read_server.readData, m.read_client.readData);
       //mkConnection(m.write_client.writeReq, s.write_server.writeReq);
       rule writereq;
 	 let req <- m.write_client.writeReq.get();
-	 s.write_server.writeReq.put(MemRequest { addr: extend(req.addr), burstLen: req.burstLen, tag: req.tag });
+	 s.write_server.writeReq.put(PhysMemRequest { addr: extend(req.addr), burstLen: req.burstLen, tag: req.tag });
       endrule
       mkConnection(m.write_client.writeData, s.write_server.writeData);
       mkConnection(s.write_server.writeDone, m.write_client.writeDone);

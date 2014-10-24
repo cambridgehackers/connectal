@@ -244,7 +244,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       end
    endrule
 
-   FIFO#(MemRequest#(40)) readReqFifo <- mkFIFO();
+   FIFO#(PhysMemRequest#(40)) readReqFifo <- mkFIFO();
    rule readReqRule if (!writeInProgress && !writeDataMimo.deqReady());
       let req <- toGet(readReqFifo).get();
       let burstLen = req.burstLen >> beat_shift;
@@ -292,7 +292,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
     interface MemSlave slave;
    interface MemWriteServer write_server; 
       interface Put writeReq;
-         method Action put(MemRequest#(40) req); // if (writeBurstCount == 0);
+         method Action put(PhysMemRequest#(40) req); // if (writeBurstCount == 0);
 	    let burstLen = req.burstLen >> beat_shift;
 	    let addr = req.addr;
 	    let awid = req.tag;
@@ -359,7 +359,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
          endmethod
        endinterface
       interface Get writeDone;
-         method ActionValue#(Bit#(ObjectTagSize)) get();
+         method ActionValue#(Bit#(MemTagSize)) get();
 	      let tag = doneTag.first();
 	      doneTag.deq();
 	      return truncate(tag);
@@ -368,7 +368,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    endinterface
    interface MemReadServer read_server;
       interface Put readReq;
-         method Action put(MemRequest#(40) req);
+         method Action put(PhysMemRequest#(40) req);
 	    readReqFifo.enq(req);
          endmethod
        endinterface

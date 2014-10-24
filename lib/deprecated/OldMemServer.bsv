@@ -64,7 +64,7 @@ typedef struct {ObjectRequest req;
 		 
 module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients, 
 			     DmaIndication dmaIndication,
-			     Server#(Tuple2#(SGListId,Bit#(ObjectOffsetSize)),Bit#(addrWidth)) sgl) 
+			     Server#(Tuple2#(SGListId,Bit#(MemOffsetSize)),Bit#(addrWidth)) sgl) 
    (MemReadInternal#(addrWidth, dataWidth))
 
    provisos(Add#(b__, addrWidth, 64), 
@@ -142,7 +142,7 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
 
    interface MemReadClient read_client;
       interface Get readReq;
-	 method ActionValue#(MemRequest#(addrWidth)) get;
+	 method ActionValue#(PhysMemRequest#(addrWidth)) get;
 	    let req = reqFifo.first.req;
 	    let physAddr = reqFifo.first.pa;
 	    let rename_tag = reqFifo.first.rename_tag;
@@ -151,7 +151,7 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
 	    if (False && physAddr[31:24] != 0)
 	       $display("req_ar: funny physAddr req.sglId=%d req.offset=%h physAddr=%h", req.sglId, req.offset, physAddr);
 	    dreqFifo.enq(reqFifo.first);
-	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
+	    return PhysMemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
 	 endmethod
       endinterface
       interface Put readData;
@@ -197,7 +197,7 @@ endmodule
 
 module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients,
 			      DmaIndication dmaIndication, 
-			      Server#(Tuple2#(SGListId,Bit#(ObjectOffsetSize)),Bit#(addrWidth)) sgl)
+			      Server#(Tuple2#(SGListId,Bit#(MemOffsetSize)),Bit#(addrWidth)) sgl)
 
    (MemWriteInternal#(addrWidth, dataWidth))
    
@@ -259,7 +259,7 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
    
    interface MemWriteClient write_client;
       interface Get writeReq;
-	 method ActionValue#(MemRequest#(addrWidth)) get();
+	 method ActionValue#(PhysMemRequest#(addrWidth)) get();
 	    let req = reqFifo.first.req;
 	    let physAddr = reqFifo.first.pa;
 	    let rename_tag = reqFifo.first.rename_tag;
@@ -267,7 +267,7 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
 	    //$display("dmaWrite addr physAddr=%h burstReg=%d", physAddr, req.burstLen);
    
 	    dreqFifo.enq(reqFifo.first);
-	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
+	    return PhysMemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
 	 endmethod
       endinterface
       interface Get writeData;
@@ -331,8 +331,8 @@ module mkMemServer#(DmaIndication dmaIndication,
 	     Add#(b__, TSub#(addrWidth, 12), 32),
 	     Add#(c__, 12, addrWidth),
 	     Add#(d__, addrWidth, 64),
-	     Add#(e__, TSub#(addrWidth, 12), ObjectOffsetSize),
-	     Add#(f__, c__, ObjectOffsetSize),
+	     Add#(e__, TSub#(addrWidth, 12), MemOffsetSize),
+	     Add#(f__, c__, MemOffsetSize),
 	     Add#(g__, addrWidth, 40),
 	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth));
    
@@ -377,7 +377,7 @@ module mkMemServer#(DmaIndication dmaIndication,
 	    dmaIndication.reportMemoryTraffic(rv);
 	 end
       endmethod
-      method Action sglist(Bit#(32) pref, Bit#(ObjectOffsetSize) addr, Bit#(32) len);
+      method Action sglist(Bit#(32) pref, Bit#(MemOffsetSize) addr, Bit#(32) len);
 	 if (bad_pointer(pref))
 	    dmaIndication.badPointer(pref);
 `ifdef BSIM

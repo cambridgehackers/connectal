@@ -207,7 +207,7 @@ module  mkSumOfErrorSquared#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
    let nshift = valueOf(nshift);
    SharedDotProdServer#(1) dotprod <- mkSharedInterleavedDotProdServerConfig(0);
 
-   FirstLastPipe#(Bit#(ObjectOffsetSize)) firstlastPipe <- mkFirstLastPipe();
+   FirstLastPipe#(Bit#(MemOffsetSize)) firstlastPipe <- mkFirstLastPipe();
    PipeOut#(Float) aPipe <- mkFunnel1(sources[0].pipe);
    PipeOut#(Float) bPipe <- mkFunnel1(sources[1].pipe);
    let joinPipe <- mkJoin(tuple2, aPipe, bPipe);

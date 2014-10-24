@@ -75,14 +75,14 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
    MemMaster#(PhysAddrWidth,DataBusWidth) dma1 = (interface MemMaster;
 	  interface MemReadClient read_client;
 	     interface Get readReq;
-		method ActionValue#(MemRequest#(PhysAddrWidth)) get() if (False);
+		method ActionValue#(PhysMemRequest#(PhysAddrWidth)) get() if (False);
 		   return ?;
 	        endmethod
 	     endinterface
 	  endinterface
 	  interface MemWriteClient write_client;
 	     interface Get writeReq;
-		method ActionValue#(MemRequest#(PhysAddrWidth)) get() if (False);
+		method ActionValue#(PhysMemRequest#(PhysAddrWidth)) get() if (False);
 		   return ?;
 	        endmethod
 	     endinterface
@@ -135,7 +135,7 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
 	 $display("unknown tlp %h", tlp);
       end
 
-      addrGenerator.request.put(MemRequest {addr: addr, burstLen: burstLen<<2, tag: truncate(tag) });
+      addrGenerator.request.put(PhysMemRequest {addr: addr, burstLen: burstLen<<2, tag: truncate(tag) });
       reqCycles <= newReqCycles;
       tlpFifo.enq(tlp);
 

@@ -151,14 +151,14 @@ endmodule
    
 module mkDmaReadMux#(Vector#(numClients,ObjectReadClient#(dataWidth)) readClients)(ObjectReadClient#(dataWidth))
    provisos(Log#(numClients,tagsz),
-	    Add#(tagsz,a__,ObjectTagSize));
+	    Add#(tagsz,a__,MemTagSize));
 
    FIFO#(ObjectRequest)          readReqFifo  <- mkFIFO();
    FIFO#(MemData#(dataWidth)) readRespFifo <- mkFIFO();
 
    for (Integer i = 0; i < valueOf(numClients); i = i + 1) begin
       // assume fixed tag per client
-      Reg#(Bit#(ObjectTagSize)) tagReg <- mkReg(0);
+      Reg#(Bit#(MemTagSize)) tagReg <- mkReg(0);
       rule getreq;
 	   let req <- readClients[i].readReq.get();
 	   tagReg <= req.tag;
@@ -178,16 +178,16 @@ endmodule
 
 module mkDmaWriteMux#(Vector#(numClients,ObjectWriteClient#(dataWidth)) writeClients)(ObjectWriteClient#(dataWidth))
    provisos(Log#(numClients,tagsz),
-       Add#(tagsz,a__,ObjectTagSize));
+       Add#(tagsz,a__,MemTagSize));
 
    FIFO#(ObjectRequest)          writeReqFifo  <- mkFIFO();
    FIFO#(MemData#(dataWidth)) writeDataFifo <- mkFIFO();
-   FIFO#(Bit#(ObjectTagSize))    writeDoneFifo <- mkFIFO();
-   FIFO#(Bit#(ObjectTagSize))    arbFifo       <- mkFIFO();
+   FIFO#(Bit#(MemTagSize))    writeDoneFifo <- mkFIFO();
+   FIFO#(Bit#(MemTagSize))    arbFifo       <- mkFIFO();
 
    for (Integer i = 0; i < valueOf(numClients); i = i + 1) begin
       // assume fixed tag per client
-      Reg#(Bit#(ObjectTagSize)) tagReg <- mkReg(0);
+      Reg#(Bit#(MemTagSize)) tagReg <- mkReg(0);
       rule getreq;
 	   let req <- writeClients[i].writeReq.get();
 	   tagReg <= req.tag;

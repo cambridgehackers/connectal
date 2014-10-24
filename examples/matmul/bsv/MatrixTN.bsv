@@ -48,12 +48,12 @@ import GetPut::*;
 
 interface RowColSource#(numeric type dsz, type a);
    interface PipeOut#(a) pipe;
-   method Action start(SGLId h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
+   method Action start(SGLId h, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l, UInt#(32) tag);
 endinterface
 
 interface RowColSink#(numeric type dsz, type a);
    interface PipeIn#(a) pipe;
-   method Action start(SGLId h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
+   method Action start(SGLId h, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l);
    method ActionValue#(Bool) finish();
 endinterface
 
@@ -141,7 +141,7 @@ module mkXYZRangePipeOut#(RangeBehavior alt) (XYZRangePipeIfc#(a)) provisos (Ari
    endmethod
 endmodule: mkXYZRangePipeOut
 
-module mkRowSource#(ObjectReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) numRows, Bit#(ObjectTagSize) id) (RowColSource#(TMul#(N,32), Vector#(N,MmToken)))
+module mkRowSource#(ObjectReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) numRows, Bit#(MemTagSize) id) (RowColSource#(TMul#(N,32), Vector#(N,MmToken)))
    provisos (Bits#(Vector#(N,Float),asz),
       Div#(asz,8,abytes),
       Log#(abytes,ashift),
@@ -157,9 +157,9 @@ module mkRowSource#(ObjectReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) nu
    FIFOF#(UInt#(32)) tagFifo <- mkSizedBRAMFIFOF(cmd_buffer_depth);
 `endif
    // perhaps memreadengine could do the labeling
-   Reg#(Bit#(ObjectOffsetSize)) countReg <- mkReg(0);
+   Reg#(Bit#(MemOffsetSize)) countReg <- mkReg(0);
    Reg#(UInt#(addrwidth)) cmdCountReg <- mkReg(0);
-   FIFOF#(Bit#(ObjectOffsetSize)) cmdFifo <- mkSizedBRAMFIFOF(cmd_buffer_depth);
+   FIFOF#(Bit#(MemOffsetSize)) cmdFifo <- mkSizedBRAMFIFOF(cmd_buffer_depth);
    FIFOF#(Vector#(N,Float)) read_data_buffer <- mkFIFOF;
    
    rule read_data;
@@ -167,7 +167,7 @@ module mkRowSource#(ObjectReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) nu
       read_data_buffer.enq(unpack(foo.data));
    endrule
    
-   method Action start(SGLId h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
+   method Action start(SGLId h, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l, UInt#(32) tag);
 `ifdef TAGGED_TOKENS
       tagFifo.enq(tag);
 `endif
@@ -228,7 +228,7 @@ module mkRowSource#(ObjectReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) nu
    endinterface
 endmodule: mkRowSource
 
-module mkRowColSink#(ObjectWriteServer#(TMul#(N,32)) vs, Bit#(ObjectTagSize) id) (RowColSink#(TMul#(N,32), Vector#(N,MmToken)))
+module mkRowColSink#(ObjectWriteServer#(TMul#(N,32)) vs, Bit#(MemTagSize) id) (RowColSink#(TMul#(N,32), Vector#(N,MmToken)))
    provisos (Bits#(Vector#(N,Float),asz),
       Div#(asz,8,abytes),
       Log#(abytes,ashift),
@@ -241,7 +241,7 @@ module mkRowColSink#(ObjectWriteServer#(TMul#(N,32)) vs, Bit#(ObjectTagSize) id)
       vs.writeData.put(foo);
    endrule
    function Float tokenValue(MmToken v) = v.v;
-   method Action start(SGLId h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
+   method Action start(SGLId h, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l);
       let cmd = ObjectRequest{sglId:h, offset:a<<ashift, burstLen:truncate(l<<ashift), tag:id};
       vs.writeReq.put(cmd);
    endmethod
@@ -297,7 +297,7 @@ module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
 	     , Bits#(MatrixDescriptor#(UInt#(addrwidth)), mdsz)
 	     , Bits#(Tuple2#(UInt#(addrwidth), UInt#(addrwidth)), tplsz)
 	     , Add#(b__, 20, addrwidth)
-	     , Add#(a__, addrwidth, ObjectOffsetSize)
+	     , Add#(a__, addrwidth, MemOffsetSize)
 	     , Add#(c__, addrwidth, 32)
       );
 

@@ -70,8 +70,8 @@ module mkNandSim#(NandSimIndication indication) (NandSim);
    let slave_read_pipe    = re.dataPipes[2];
    let slave_write_server = we.writeServers[3];
    let slave_write_pipe   = we.dataPipes[3];
-   FIFO#(Bit#(ObjectTagSize)) slaveWriteTags <- mkSizedFIFO(1);
-   FIFO#(Bit#(ObjectTagSize)) slaveReadTags <- mkSizedFIFO(1);
+   FIFO#(Bit#(MemTagSize)) slaveWriteTags <- mkSizedFIFO(1);
+   FIFO#(Bit#(MemTagSize)) slaveReadTags <- mkSizedFIFO(1);
    Reg#(Bit#(BurstLenSize)) slaveReadCnt <- mkReg(0);
    
    rule completeSlaveReadReq;
@@ -82,7 +82,7 @@ module mkNandSim#(NandSimIndication indication) (NandSim);
    interface MemSlave memSlave;
       interface MemWriteServer write_server; 
 	 interface Put writeReq;
-	    method Action put(MemRequest#(PhysAddrWidth) req);
+	    method Action put(PhysMemRequest#(PhysAddrWidth) req);
 	       slave_write_server.request.put(MemengineCmd{sglId:ns.nandPtr, base:extend(req.addr), burstLen:req.burstLen, len:extend(req.burstLen)});
 	       slaveWriteTags.enq(req.tag);
             endmethod
@@ -93,7 +93,7 @@ module mkNandSim#(NandSimIndication indication) (NandSim);
             endmethod
 	 endinterface
 	 interface Get writeDone;
-	    method ActionValue#(Bit#(ObjectTagSize)) get();
+	    method ActionValue#(Bit#(MemTagSize)) get();
 	       let rv <- slave_write_server.response.get;
 	       slaveWriteTags.deq;
 	       return slaveWriteTags.first;
@@ -102,7 +102,7 @@ module mkNandSim#(NandSimIndication indication) (NandSim);
       endinterface
       interface MemReadServer read_server;
 	 interface Put readReq;
-	    method Action put(MemRequest#(PhysAddrWidth) req);
+	    method Action put(PhysMemRequest#(PhysAddrWidth) req);
 	       if (verbose) $display("mkNandSim.memSlave::readReq %d %d %d", req.addr, req.burstLen, req.tag);
 	       slave_read_server.request.put(MemengineCmd{sglId:ns.nandPtr, base:extend(req.addr), burstLen:req.burstLen, len:extend(req.burstLen)});
 	       slaveReadTags.enq(req.tag);

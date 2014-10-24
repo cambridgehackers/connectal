@@ -628,7 +628,7 @@ Requests and responses are tagged in order to enable pipelining.
 ---------------------------------
     typedef struct {
        SGLId pointer;
-       Bit#(ObjectOffsetSize) offset;
+       Bit#(MemOffsetSize) offset;
        Bit#(8) burstLen;
        Bit#(6)  tag;
        } ObjectRequest deriving (Bits);

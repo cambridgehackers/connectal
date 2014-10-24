@@ -1383,7 +1383,7 @@ by software and identified by a <tt>pointer</tt>.</p></div>
 <div class="content">
 <pre><tt>    typedef struct {
        SGLId pointer;
-       Bit#(ObjectOffsetSize) offset;
+       Bit#(MemOffsetSize) offset;
        Bit#(8) burstLen;
        Bit#(6)  tag;
        } ObjectRequest deriving (Bits);

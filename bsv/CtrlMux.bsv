@@ -72,12 +72,12 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
    
    FIFO#(Bit#(6))        doneFifo <- mkFIFO1();
 
-   FIFO#(MemRequest#(aw)) req_ars <- mkSizedFIFO(1);
+   FIFO#(PhysMemRequest#(aw)) req_ars <- mkSizedFIFO(1);
    FIFO#(Bit#(TLog#(numInputs))) rs <- mkFIFO1();
    Vector#(numInputs, PipeOut#(MemData#(dataWidth))) readDataPipes <- mapM(mkPipeOut, map(getMemPortalReadData,portalIfcs));
    FunnelPipe#(1, numInputs, MemData#(dataWidth), bpc) read_data_funnel <- mkFunnelPipesPipelined(readDataPipes);
       
-   FIFO#(MemRequest#(aw)) req_aws <- mkFIFO1();
+   FIFO#(PhysMemRequest#(aw)) req_aws <- mkFIFO1();
    FIFO#(Bit#(TLog#(numInputs))) ws <- mkFIFO1();
    FIFOF#(Tuple2#(Bit#(TLog#(numInputs)), MemData#(dataWidth))) write_data <- mkFIFOF;
    UnFunnelPipe#(1, numInputs, MemData#(dataWidth), bpc) write_data_unfunnel <- mkUnFunnelPipesPipelined(cons(toPipeOut(write_data),nil));
@@ -102,8 +102,8 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
 
    interface MemWriteServer write_server;
       interface Put writeReq;
-	 method Action put(MemRequest#(addrWidth) req);
-	    req_aws.enq(MemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
+	 method Action put(PhysMemRequest#(addrWidth) req);
+	    req_aws.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
 	    if (req.burstLen > 4) $display("**** \n\n mkSlaveMux.writeReq len=%d \n\n ****", req.burstLen);
 	    ws.enq(truncate(psel(req.addr)));
 	    //$display("mkSlaveMux.writeReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));
@@ -123,8 +123,8 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
    endinterface
    interface MemReadServer read_server;
       interface Put readReq;
-	 method Action put(MemRequest#(addrWidth) req);
-	    req_ars.enq(MemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
+	 method Action put(PhysMemRequest#(addrWidth) req);
+	    req_ars.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
 	    rs.enq(truncate(psel(req.addr)));
 	    if (req.burstLen > 4) $display("**** \n\n mkSlaveMux.readReq len=%d \n\n ****", req.burstLen);
 	    //$display("mkSlaveMux.readReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));
@@ -159,10 +159,10 @@ module mkMemSlaveMux#(Vector#(numSlaves,MemSlave#(aw,dataWidth)) slaves) (MemSla
 
    FIFO#(Bit#(6)) doneFifo          <- mkFIFO1();
 
-   FIFO#(MemRequest#(aw))   req_ars <- mkFIFO1();
+   FIFO#(PhysMemRequest#(aw))   req_ars <- mkFIFO1();
    FIFO#(Bit#(TLog#(numSlaves))) rs <- mkFIFO1();
 
-   FIFO#(MemRequest#(aw))   req_aws <- mkFIFO1();
+   FIFO#(PhysMemRequest#(aw))   req_aws <- mkFIFO1();
    FIFO#(Bit#(TLog#(numSlaves))) ws <- mkFIFO1();
 
    rule write_done;
@@ -183,8 +183,8 @@ module mkMemSlaveMux#(Vector#(numSlaves,MemSlave#(aw,dataWidth)) slaves) (MemSla
 
    interface MemWriteServer write_server;
       interface Put writeReq;
-	 method Action put(MemRequest#(addrWidth) req);
-	    req_aws.enq(MemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
+	 method Action put(PhysMemRequest#(addrWidth) req);
+	    req_aws.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
 	    if (req.burstLen > 4) $display("**** \n\n mkMemSlaveMux.writeReq len=%d \n\n ****", req.burstLen);
 	    //$display("mkMemSlaveMux.writeReq addr=%h selWidth=%d aw=%d psel=%h", req.addr, valueOf(selWidth), valueOf(aw), psel(req.addr));
 	    ws.enq(truncate(psel(req.addr)));
@@ -205,8 +205,8 @@ module mkMemSlaveMux#(Vector#(numSlaves,MemSlave#(aw,dataWidth)) slaves) (MemSla
    endinterface
    interface MemReadServer read_server;
       interface Put readReq;
-	 method Action put(MemRequest#(addrWidth) req);
-	    req_ars.enq(MemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
+	 method Action put(PhysMemRequest#(addrWidth) req);
+	    req_ars.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
 	    //$display("mkMemSlaveMux.readReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));
 	    if (req.burstLen > 4) $display("**** \n\n mkMemSlaveMux.readReq len=%d \n\n ****", req.burstLen);
 	    rs.enq(truncate(psel(req.addr)));

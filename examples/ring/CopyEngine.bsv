@@ -48,8 +48,8 @@ module mkCopyEngine#(ObjectReadServer#(64) copy_read_chan, ObjectWriteServer#(64
    FIFOF#(Bit#(64)) f_out <- mkSizedFIFOF(16);    // to buffer outgoing responses
    Reg#(Bit#(16)) copyReadCount <- mkReg(0);
    Reg#(Bit#(16)) copyWriteCount <- mkReg(0);
-   Reg#(Bit#(ObjectOffsetSize)) copyReadAddr <- mkReg(0);
-   Reg#(Bit#(ObjectOffsetSize)) copyWriteAddr <- mkReg(0);
+   Reg#(Bit#(MemOffsetSize)) copyReadAddr <- mkReg(0);
+   Reg#(Bit#(MemOffsetSize)) copyWriteAddr <- mkReg(0);
    Reg#(SGLId) copyReadPointer <- mkReg(0);
    Reg#(SGLId) copyWritePointer <- mkReg(0);
    Reg#(Bit#(32)) copyTag <- mkReg(0);

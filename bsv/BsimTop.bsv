@@ -65,7 +65,7 @@ import "BDPI" function ActionValue#(Bit#(32)) read_pareff32(Bit#(32) handle, Bit
 import "BDPI" function ActionValue#(Bit#(64)) read_pareff64(Bit#(32) handle, Bit#(32) addr);
 
 typedef struct {
-   Bit#(ObjectTagSize) tag;
+   Bit#(MemTagSize) tag;
    Bit#(asz) addr;
 } BsimReadRequest#(numeric type asz, numeric type dsz) deriving(Eq, Bits);
 
@@ -76,7 +76,7 @@ typedef struct {
 
 interface BsimCtrlReadWrite#(numeric type asz, numeric type dsz);
    method ActionValue#(BsimReadRequest#(asz, dsz)) readRequest();
-   method Action readResponse(Bit#(dsz) d, Bit#(ObjectTagSize) tag);
+   method Action readResponse(Bit#(dsz) d, Bit#(MemTagSize) tag);
    method ActionValue#(BsimWriteRequest#(asz, dsz)) writeRequest();
 endinterface
 
@@ -90,7 +90,7 @@ instance SelectBsimCtrlReadWrite#(32,32);
 	 let rv <- processAddr32();
 	 return BsimReadRequest{tag: truncate(rv[63:32]), addr:rv[31:0]};
       endmethod
-      method Action readResponse(Bit#(32) d, Bit#(ObjectTagSize) tag);
+      method Action readResponse(Bit#(32) d, Bit#(MemTagSize) tag);
 	 readData32(d, extend(tag));
       endmethod
       method ActionValue#(BsimWriteRequest#(32, 32)) writeRequest() if (processReq32(1));
@@ -298,13 +298,13 @@ module  mkBsimHost#(Clock double_clock, Reset double_reset)(BsimHost#(clientAddr
    interface MemMaster mem_client;
       interface MemReadClient read_client;
         interface Get readReq;
-	 method ActionValue#(MemRequest#(clientAddrWidth)) get();
+	 method ActionValue#(PhysMemRequest#(clientAddrWidth)) get();
 	    //$write("req_ar: ");
 	    let ra <- crw.readRequest();
 	    //$display("ra=%h", ra);
 	    let burstLen = fromInteger(valueOf(clientBusWidth) / 8);
 	    if (verbose) $display("\n%d BsimHost.readReq addr=%h burstLen=%d", cycles, ra, burstLen);
-	    return MemRequest { addr: ra.addr, burstLen: burstLen, tag: ra.tag};
+	    return PhysMemRequest { addr: ra.addr, burstLen: burstLen, tag: ra.tag};
 	 endmethod
         endinterface
         interface Put readData;
@@ -317,12 +317,12 @@ module  mkBsimHost#(Clock double_clock, Reset double_reset)(BsimHost#(clientAddr
       endinterface
       interface MemWriteClient write_client;
         interface Get writeReq;
-	 method ActionValue#(MemRequest#(clientAddrWidth)) get();
+	 method ActionValue#(PhysMemRequest#(clientAddrWidth)) get();
 	    let wd <- crw.writeRequest;
 	    wf.enq(wd.data);
 	    let burstLen = fromInteger(valueOf(clientBusWidth) / 8);
 	    if (verbose) $display("\n%d BsimHost.writeReq addr/data=%h burstLen=%d", cycles, wd, burstLen);
-	    return MemRequest { addr: wd.addr, burstLen: burstLen, tag: 0 };
+	    return PhysMemRequest { addr: wd.addr, burstLen: burstLen, tag: 0 };
 	 endmethod
         endinterface
         interface Get writeData;
@@ -333,7 +333,7 @@ module  mkBsimHost#(Clock double_clock, Reset double_reset)(BsimHost#(clientAddr
 	 endmethod
         endinterface
         interface Put writeDone;
-	 method Action put(Bit#(ObjectTagSize) resp);
+	 method Action put(Bit#(MemTagSize) resp);
 	    if (verbose) $display("%d BsimHost.writeDone %d", cycles, resp);
 	 endmethod
         endinterface

@@ -51,14 +51,14 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
    MemMaster#(PhysAddrWidth,DataBusWidth) dma1 = (interface MemMaster;
 	  interface MemReadClient read_client;
 	     interface Get readReq;
-		method ActionValue#(MemRequest#(PhysAddrWidth)) get() if (False);
+		method ActionValue#(PhysMemRequest#(PhysAddrWidth)) get() if (False);
 		   return ?;
 	        endmethod
 	     endinterface
 	  endinterface
 	  interface MemWriteClient write_client;
 	     interface Get writeReq;
-		method ActionValue#(MemRequest#(PhysAddrWidth)) get() if (False);
+		method ActionValue#(PhysMemRequest#(PhysAddrWidth)) get() if (False);
 		   return ?;
 	        endmethod
 	     endinterface

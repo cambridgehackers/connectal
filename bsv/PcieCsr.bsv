@@ -107,7 +107,7 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
    AddressGenerator#(16,32)           csrWag <- mkAddressGenerator;
    FIFOF#(MemData#(32))     readResponseFifo <- mkFIFOF();
    FIFOF#(MemData#(32))        writeDataFifo <- mkFIFOF();
-   FIFOF#(Bit#(ObjectTagSize)) writeDoneFifo <- mkFIFOF();
+   FIFOF#(Bit#(MemTagSize)) writeDoneFifo <- mkFIFOF();
 
    FIFOF#(AddrBeat#(16)) csrRagBeatFifo <- mkFIFOF();
    FIFOF#(Bool)       csrIsMsixAddrFifo <- mkFIFOF();
@@ -235,8 +235,8 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
    interface MemSlave memSlave;
       interface MemReadServer read_server;
 	 interface Put readReq;
-	    method Action put(MemRequest#(32) req);
-	       csrRag.request.put(MemRequest { addr: truncate(req.addr), burstLen: req.burstLen, tag: req.tag});
+	    method Action put(PhysMemRequest#(32) req);
+	       csrRag.request.put(PhysMemRequest { addr: truncate(req.addr), burstLen: req.burstLen, tag: req.tag});
 	    endmethod
 	 endinterface
 	 interface Get readData = toGet(readResponseFifo);
@@ -244,8 +244,8 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
 
   interface MemWriteServer write_server; 
 	 interface Put writeReq;
-	    method Action put(MemRequest#(32) req);
-	       csrWag.request.put(MemRequest { addr: truncate(req.addr), burstLen: req.burstLen, tag: req.tag});
+	    method Action put(PhysMemRequest#(32) req);
+	       csrWag.request.put(PhysMemRequest { addr: truncate(req.addr), burstLen: req.burstLen, tag: req.tag});
 	    endmethod
 	 endinterface
      interface Put writeData = toPut(writeDataFifo);

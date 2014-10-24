@@ -109,13 +109,13 @@ endmodule: mkXYRangePipeOut
 
 interface RowColSource#(numeric type dsz, type a);
    interface PipeOut#(a) pipe;
-   method Action start(SGLId h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
+   method Action start(SGLId h, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l, UInt#(32) tag);
    method ActionValue#(Bool) finish();
 endinterface
 
 interface RowColSink#(numeric type dsz, type a);
    interface PipeIn#(a) pipe;
-   method Action start(SGLId h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
+   method Action start(SGLId h, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l);
    method ActionValue#(Bool) finish();
 endinterface
 
@@ -124,7 +124,7 @@ function PipeIn#(a) getRowColSinkPipe(RowColSink#(n,a) vs) = vs.pipe;
 
 module mkRowColSink#(VectorSink#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSink#(TMul#(N,32), Vector#(N,MmToken)));
    function Float tokenValue(MmToken v) = v.v;
-   method Action start(SGLId p, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
+   method Action start(SGLId p, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l);
       vs.start(p,a,l);
    endmethod
    method finish = vs.finish;
@@ -142,10 +142,10 @@ module mkRowSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSourc
    FIFOF#(UInt#(32)) tagFifo <- mkSizedFIFOF(4);
 `endif
    // perhaps memreadengine could do the labeling
-   Reg#(Bit#(ObjectOffsetSize)) countReg <- mkReg(0);
-   FIFOF#(Bit#(ObjectOffsetSize)) cmdFifo <- mkSizedFIFOF(4);
+   Reg#(Bit#(MemOffsetSize)) countReg <- mkReg(0);
+   FIFOF#(Bit#(MemOffsetSize)) cmdFifo <- mkSizedFIFOF(4);
 
-   method Action start(SGLId h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
+   method Action start(SGLId h, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l, UInt#(32) tag);
 `ifdef TAGGED_TOKENS
       tagFifo.enq(tag);
 `endif
@@ -206,10 +206,10 @@ module mkColSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSourc
    FIFOF#(UInt#(32)) tagFifo <- mkSizedFIFOF(4);
 `endif
    // perhaps memreadengine could do the labeling
-   Reg#(Bit#(ObjectOffsetSize)) countReg <- mkReg(0);
-   FIFOF#(Bit#(ObjectOffsetSize)) cmdFifo <- mkSizedFIFOF(4);
+   Reg#(Bit#(MemOffsetSize)) countReg <- mkReg(0);
+   FIFOF#(Bit#(MemOffsetSize)) cmdFifo <- mkSizedFIFOF(4);
 
-   method Action start(SGLId h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
+   method Action start(SGLId h, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l, UInt#(32) tag);
 `ifdef TAGGED_TOKENS
       tagFifo.enq(tag);
 `endif
@@ -302,7 +302,7 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 	     , Bits#(MatrixDescriptor#(UInt#(addrwidth)), mdsz)
 	     , Bits#(Tuple2#(UInt#(addrwidth), UInt#(addrwidth)), tplsz)
 	     , Add#(b__, 20, addrwidth)
-	     , Add#(a__, addrwidth, ObjectOffsetSize)
+	     , Add#(a__, addrwidth, MemOffsetSize)
 	     , Add#(c__, addrwidth, 32)
 	     , Max#(1, TDiv#(TLog#(J),2), bpc_j)
 	     , Max#(1, TDiv#(TLog#(K),2), bpc_k)

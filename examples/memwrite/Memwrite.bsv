@@ -74,7 +74,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    Vector#(NumEngineServers, FIFOF#(void))               cfs <- replicateM(mkSizedFIFOF(1));
    Vector#(NumEngineServers, FIFOF#(Bool))       finishFifos <- replicateM(mkFIFOF);
    MemwriteEngineV#(DataBusWidth,1,NumEngineServers)                we <- mkMemwriteEngine;
-   Bit#(ObjectOffsetSize) chunk = (extend(numWords)/fromInteger(valueOf(NumEngineServers)))*4;
+   Bit#(MemOffsetSize) chunk = (extend(numWords)/fromInteger(valueOf(NumEngineServers)))*4;
 
    for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
       rule start (iterCnts[i] > 0);

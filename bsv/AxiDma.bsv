@@ -36,7 +36,7 @@ module mkAxiDmaSlave#(MemSlave#(addrWidth,dataWidth) slave) (Axi3Slave#(addrWidt
    interface Put req_ar;
       method Action put((Axi3ReadRequest#(addrWidth, 12)) req);
 	 let burstLen = extend(req.len+1) << beatShift;
-	 slave.read_server.readReq.put(MemRequest{addr:req.address, burstLen:burstLen,  tag:truncate(req.id)});
+	 slave.read_server.readReq.put(PhysMemRequest{addr:req.address, burstLen:burstLen,  tag:truncate(req.id)});
       endmethod
    endinterface
    interface Get resp_read;
@@ -48,7 +48,7 @@ module mkAxiDmaSlave#(MemSlave#(addrWidth,dataWidth) slave) (Axi3Slave#(addrWidt
    interface Put req_aw;
       method Action put(Axi3WriteRequest#(addrWidth, 12) req);
 	 let burstLen = extend(req.len+1) << beatShift;
-	 slave.write_server.writeReq.put(MemRequest{addr:req.address, burstLen:burstLen, tag:truncate(req.id)});
+	 slave.write_server.writeReq.put(PhysMemRequest{addr:req.address, burstLen:burstLen, tag:truncate(req.id)});
       endmethod
    endinterface
    interface Put resp_write;

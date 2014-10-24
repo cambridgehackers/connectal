@@ -45,7 +45,7 @@ module mkPortalCtrlMemSlave#(Vector#(numIndications, PipeOut#(Bit#(dataWidth))) 
    AddressGenerator#(addrWidth,dataWidth) ctrlReadAddrGenerator  <- mkAddressGenerator();
    AddressGenerator#(addrWidth,dataWidth) ctrlWriteAddrGenerator <- mkAddressGenerator();
    FIFO#(MemData#(dataWidth))        ctrlWriteDataFifo <- mkFIFO();
-   FIFO#(Bit#(ObjectTagSize))        ctrlWriteDoneFifo <- mkFIFO();
+   FIFO#(Bit#(MemTagSize))        ctrlWriteDoneFifo <- mkFIFO();
 
     // indication-specific state
     Reg#(Bit#(dataWidth)) underflowReadCountReg <- mkReg(0);
@@ -118,7 +118,7 @@ module mkPortalCtrlMemSlave#(Vector#(numIndications, PipeOut#(Bit#(dataWidth))) 
 	    endmethod
 	 endinterface
 	 interface Get writeDone;
-	    method ActionValue#(Bit#(ObjectTagSize)) get();
+	    method ActionValue#(Bit#(MemTagSize)) get();
 	       let tag <- toGet(ctrlWriteDoneFifo).get();
 	       return tag;
 	    endmethod
@@ -137,7 +137,7 @@ module mkPipeInMemSlave#(PipeIn#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWidt
 
    AddressGenerator#(addrWidth,dataWidth) fifoReadAddrGenerator  <- mkAddressGenerator();
    AddressGenerator#(addrWidth,dataWidth) fifoWriteAddrGenerator <- mkAddressGenerator();
-   FIFO#(Bit#(ObjectTagSize))        fifoWriteDoneFifo <- mkFIFO();
+   FIFO#(Bit#(MemTagSize))        fifoWriteDoneFifo <- mkFIFO();
 
    interface MemReadServer read_server;
       interface Put readReq = fifoReadAddrGenerator.request;
@@ -171,7 +171,7 @@ module mkPipeOutMemSlave#(PipeOut#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWi
    provisos (Add#(1,a__,dataWidth));
    AddressGenerator#(addrWidth,dataWidth) fifoReadAddrGenerator <- mkAddressGenerator();
    AddressGenerator#(addrWidth,dataWidth) fifoWriteAddrGenerator <- mkAddressGenerator();
-   FIFO#(Bit#(ObjectTagSize))                  fifoWriteDoneFifo <- mkFIFO();
+   FIFO#(Bit#(MemTagSize))                  fifoWriteDoneFifo <- mkFIFO();
    FIFO#(MemData#(dataWidth))                   fifoReadDataFifo <- mkFIFO();
    rule readDataRule;
       let b <- fifoReadAddrGenerator.addrBeat.get();
@@ -186,7 +186,7 @@ module mkPipeOutMemSlave#(PipeOut#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWi
 
    interface MemReadServer read_server;
       interface Put readReq;
-	 method Action put(MemRequest#(addrWidth) req);
+	 method Action put(PhysMemRequest#(addrWidth) req);
 	    fifoReadAddrGenerator.request.put(req);
 	    if (!methodPipe.notEmpty())
 	       $display("***\n\n mkPipeOutMemSlave.read_server.underflow! \n\n****");

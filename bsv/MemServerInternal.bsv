@@ -223,7 +223,7 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
 
    interface MemReadClient read_client;
       interface Get readReq;
-	 method ActionValue#(MemRequest#(addrWidth)) get();
+	 method ActionValue#(PhysMemRequest#(addrWidth)) get();
 	    reqFifo.deq;
 	    let req = reqFifo.first.req;
 	    let physAddr = reqFifo.first.pa;
@@ -235,7 +235,7 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
 	    //$display("readReq: client=%d, rename_tag=%d, physAddr=%h req.burstLen=%d beat_shift=%d last=%d", client,rename_tag,physAddr, req.burstLen, beat_shift, req.burstLen == beat_shift);
 	    if (debug) $display("read_client.readReq %d", cycle_cnt-last_readReq);
 	    last_readReq <= cycle_cnt;
-	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
+	    return PhysMemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
 	 endmethod
       endinterface
       interface Put readData;
@@ -379,7 +379,7 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
 
    interface MemWriteClient write_client;
       interface Get writeReq;
-	 method ActionValue#(MemRequest#(addrWidth)) get();
+	 method ActionValue#(PhysMemRequest#(addrWidth)) get();
 	    let req = reqFifo.first.req;
 	    let physAddr = reqFifo.first.pa;
 	    let client = reqFifo.first.client;
@@ -387,7 +387,7 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
 	    reqFifo.deq;
 	    dreqFifo.enq(DRec{req:req, client:client, rename_tag:rename_tag, last: (req.burstLen == fromInteger(valueOf(dataWidthBytes))) });
 	    //$display("writeReq: client=%d, rename_tag=%d", client,rename_tag);
-	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(rename_tag)};
+	    return PhysMemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(rename_tag)};
 	 endmethod
       endinterface
       interface Get writeData = toGet(memDataFifo);

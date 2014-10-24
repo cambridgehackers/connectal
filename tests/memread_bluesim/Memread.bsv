@@ -72,7 +72,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    Vector#(NumEngineServers, Reg#(Bit#(32))) mismatchCounts <- replicateM(mkReg(0));
    MemreadEngineV#(DataBusWidth,2,NumEngineServers)                re <- mkMemreadEngine;
    Vector#(NumEngineServers, FIFOF#(Bit#(32))) mismatchFifos <- replicateM(mkFIFOF);
-   Bit#(ObjectOffsetSize) chunk = (extend(numWords)/fromInteger(valueOf(NumEngineServers)))*4;
+   Bit#(MemOffsetSize) chunk = (extend(numWords)/fromInteger(valueOf(NumEngineServers)))*4;
    
    Vector#(NumEngineServers, RangePipeIfc#(Bit#(32)))     rangePipeIfcs <- replicateM(mkRangePipeOut);
    function PipeOut#(a) getRangePipePipe(RangePipeIfc#(a) rpi); return rpi.pipe; endfunction
