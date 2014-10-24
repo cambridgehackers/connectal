@@ -164,7 +164,7 @@ void* PortalPoller::portalExec_event(void)
       if (instance->pint.reqsize) {
           /* sw portal */
           if (instance->pint.accept_finished) { /* connection established */
-             int len = recv(instance->pint.fpga_fd, (void *)instance->pint.map_base, sizeof(uint32_t), MSG_DONTWAIT);
+             int len = portalRecv(instance->pint.fpga_fd, (void *)instance->pint.map_base, sizeof(uint32_t));
              if (len == 0 || (len == -1 && errno == EAGAIN))
                  continue;
              if (len <= 0) {
