@@ -349,15 +349,16 @@ $(android_exetests):
 	make BOARD=zedboard -C $(basename $@) exe
 
 zynqdrivers:
-	(cd drivers/zynqportal/; DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make zynqportal.ko)
-	(cd drivers/portalmem/;  DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make portalmem.ko)
+	(cd drivers/zynqportal/; MAKEKERNEL=true DEVICE_XILINX_KERNEL=/usr/src/connectal-zynq-linux-headers make zynqportal.ko)
+	(cd drivers/portalmem/;  MAKEKERNEL=true DEVICE_XILINX_KERNEL=/usr/src/connectal-zynq-linux-headers make portalmem.ko)
 
 zynqdrivers-clean:
-	(cd drivers/zynqportal/; DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make clean)
-	(cd drivers/portalmem/;  DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make clean)
+	(cd drivers/zynqportal/; MAKEKERNEL=true DEVICE_XILINX_KERNEL=/usr/src/connectal-zynq-linux-headers make clean)
+	(cd drivers/portalmem/;  MAKEKERNEL=true DEVICE_XILINX_KERNEL=/usr/src/connectal-zynq-linux-headers make clean)
 
 zynqdrivers-install:
-	cp drivers/zynqportal/zynqportal.ko drivers/portalmem/portalmem.ko ../zynq-boot/imagefiles/
+	install -d -m755 $(DESTDIR)/usr/share/connectal-zynqdrivers/
+	install -m644 drivers/zynqportal/zynqportal.ko drivers/portalmem/portalmem.ko $(DESTDIR)/usr/share/connectal-zynqdrivers/
 
 zynqdrivers-adb:
 	adb connect $(RUNPARAM)
