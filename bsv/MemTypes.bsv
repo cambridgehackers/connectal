@@ -121,33 +121,33 @@ endinterface
 ///////////////////////////////////////////////////////////////////////////////////
 // 
 
-interface MemSlave#(numeric type addrWidth, numeric type dataWidth);
-   interface MemReadServer#(addrWidth, dataWidth) read_server;
-   interface MemWriteServer#(addrWidth, dataWidth) write_server; 
+interface PhysMemSlave#(numeric type addrWidth, numeric type dataWidth);
+   interface PhysMemReadServer#(addrWidth, dataWidth) read_server;
+   interface PhysMemWriteServer#(addrWidth, dataWidth) write_server; 
 endinterface
 
-interface MemMaster#(numeric type addrWidth, numeric type dataWidth);
-   interface MemReadClient#(addrWidth, dataWidth) read_client;
-   interface MemWriteClient#(addrWidth, dataWidth) write_client; 
+interface PhysMemMaster#(numeric type addrWidth, numeric type dataWidth);
+   interface PhysMemReadClient#(addrWidth, dataWidth) read_client;
+   interface PhysMemWriteClient#(addrWidth, dataWidth) write_client; 
 endinterface
 
-interface MemReadClient#(numeric type asz, numeric type dsz);
+interface PhysMemReadClient#(numeric type asz, numeric type dsz);
    interface Get#(PhysMemRequest#(asz))    readReq;
    interface Put#(MemData#(dsz)) readData;
 endinterface
 
-interface MemWriteClient#(numeric type asz, numeric type dsz);
+interface PhysMemWriteClient#(numeric type asz, numeric type dsz);
    interface Get#(PhysMemRequest#(asz))    writeReq;
    interface Get#(MemData#(dsz)) writeData;
    interface Put#(Bit#(MemTagSize))       writeDone;
 endinterface
 
-interface MemReadServer#(numeric type asz, numeric type dsz);
+interface PhysMemReadServer#(numeric type asz, numeric type dsz);
    interface Put#(PhysMemRequest#(asz)) readReq;
    interface Get#(MemData#(dsz))     readData;
 endinterface
 
-interface MemWriteServer#(numeric type asz, numeric type dsz);
+interface PhysMemWriteServer#(numeric type asz, numeric type dsz);
    interface Put#(PhysMemRequest#(asz)) writeReq;
    interface Put#(MemData#(dsz))     writeData;
    interface Get#(Bit#(MemTagSize))           writeDone;

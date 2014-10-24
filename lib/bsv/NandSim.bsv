@@ -80,7 +80,7 @@ module mkNandSim#(NandSimIndication indication) (NandSim);
       if (verbose) $display("mkNandSim::completeSlaveReadReq");
    endrule
    interface MemSlave memSlave;
-      interface MemWriteServer write_server; 
+      interface PhysMemWriteServer write_server; 
 	 interface Put writeReq;
 	    method Action put(PhysMemRequest#(PhysAddrWidth) req);
 	       slave_write_server.request.put(MemengineCmd{sglId:ns.nandPtr, base:extend(req.addr), burstLen:req.burstLen, len:extend(req.burstLen)});
@@ -100,7 +100,7 @@ module mkNandSim#(NandSimIndication indication) (NandSim);
             endmethod
 	 endinterface
       endinterface
-      interface MemReadServer read_server;
+      interface PhysMemReadServer read_server;
 	 interface Put readReq;
 	    method Action put(PhysMemRequest#(PhysAddrWidth) req);
 	       if (verbose) $display("mkNandSim.memSlave::readReq %d %d %d", req.addr, req.burstLen, req.tag);

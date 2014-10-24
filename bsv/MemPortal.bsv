@@ -80,7 +80,7 @@ module mkPortalCtrlMemSlave#(Vector#(numIndications, PipeOut#(Bit#(dataWidth))) 
    endrule
 
    interface MemSlave memSlave;
-      interface MemReadServer read_server;
+      interface PhysMemReadServer read_server;
 	 interface Put readReq = ctrlReadAddrGenerator.request;
 	 interface Get readData;
 	    method ActionValue#(MemData#(dataWidth)) get();
@@ -110,7 +110,7 @@ module mkPortalCtrlMemSlave#(Vector#(numIndications, PipeOut#(Bit#(dataWidth))) 
 	    endmethod
 	 endinterface
       endinterface: read_server
-      interface MemWriteServer write_server; 
+      interface PhysMemWriteServer write_server; 
 	 interface Put writeReq = ctrlWriteAddrGenerator.request;
 	 interface Put writeData;
 	    method Action put(MemData#(dataWidth) d);
@@ -139,7 +139,7 @@ module mkPipeInMemSlave#(PipeIn#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWidt
    AddressGenerator#(addrWidth,dataWidth) fifoWriteAddrGenerator <- mkAddressGenerator();
    FIFO#(Bit#(MemTagSize))        fifoWriteDoneFifo <- mkFIFO();
 
-   interface MemReadServer read_server;
+   interface PhysMemReadServer read_server;
       interface Put readReq = fifoReadAddrGenerator.request;
       interface Get readData;
 	 method ActionValue#(MemData#(dataWidth)) get();
@@ -151,7 +151,7 @@ module mkPipeInMemSlave#(PipeIn#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWidt
 	 endmethod
       endinterface
    endinterface
-   interface MemWriteServer write_server; 
+   interface PhysMemWriteServer write_server; 
       interface Put writeReq = fifoWriteAddrGenerator.request;
       interface Put writeData;
 	 method Action put((MemData#(dataWidth)) d);
@@ -184,7 +184,7 @@ module mkPipeOutMemSlave#(PipeOut#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWi
       fifoReadDataFifo.enq(MemData { data: v, tag: b.tag, last: b.last });
    endrule
 
-   interface MemReadServer read_server;
+   interface PhysMemReadServer read_server;
       interface Put readReq;
 	 method Action put(PhysMemRequest#(addrWidth) req);
 	    fifoReadAddrGenerator.request.put(req);
@@ -199,7 +199,7 @@ module mkPipeOutMemSlave#(PipeOut#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWi
 	 endmethod
       endinterface
    endinterface
-   interface MemWriteServer write_server; 
+   interface PhysMemWriteServer write_server; 
       interface Put writeReq = fifoWriteAddrGenerator.request;
       interface Put writeData;
 	 method Action put((MemData#(dataWidth)) d);

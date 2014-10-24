@@ -98,7 +98,7 @@ module mkMemSlaveFromRegFile#(RegFileA#(Bit#(regFileAddrWidth), Bit#(busDataWidt
    AddressGenerator#(busAddrWidth) readAddrGenerator <- mkAddressGenerator();
 
    Bool verbose = False;
-   interface MemReadServer read_server;
+   interface PhysMemReadServer read_server;
       interface Put readReq;
 	 method Action put(PhysMemRequest#(busAddrWidth) req);
             if (verbose) $display("axiSlave.read.readAddr %h bc %d", req.addr, req.burstLen);
@@ -118,7 +118,7 @@ module mkMemSlaveFromRegFile#(RegFileA#(Bit#(regFileAddrWidth), Bit#(busDataWidt
 	 endmethod
       endinterface
    endinterface
-   interface MemWriteServer write_server;
+   interface PhysMemWriteServer write_server;
       interface Put writeReq;
 	 method Action put(PhysMemRequest#(busAddrWidth) req);
             req_aw_fifo.enq(req);
