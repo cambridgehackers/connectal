@@ -27,15 +27,15 @@ import Leds::*;
 import XADC::*;
 import Pipe::*;
 
+// implementation of a Portal as a group of Pipes
 interface PipePortal#(numeric type numRequests, numeric type numIndications, numeric type slaveDataWidth);
    method Bit#(32) ifcId();
    method Bit#(32) ifcType();
    interface Vector#(numRequests, PipeIn#(Bit#(slaveDataWidth))) requests;
-   interface Vector#(numRequests, Bit#(32))                      requestSizeBits;
    interface Vector#(numIndications, PipeOut#(Bit#(slaveDataWidth))) indications;
-   interface Vector#(numIndications, Bit#(32))                       indicationSizeBits;
 endinterface
 
+// implementation of a Portal as a physical memory slave
 interface MemPortal#(numeric type slaveAddrWidth, numeric type slaveDataWidth);
    method Bit#(32) ifcId();
    method Bit#(32) ifcType();

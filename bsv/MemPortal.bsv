@@ -220,8 +220,8 @@ module mkMemPortal#(PipePortal#(numRequests, numIndications, slaveDataWidth) por
 	     ,Add#(a__, TLog#(TAdd#(1, TAdd#(numRequests, numIndications))), c__)
 	     );
 
-   Vector#(numRequests,    PipeIn#(Bit#(slaveDataWidth)))     requestPipes = take(portal.requests);
-   Vector#(numIndications, PipeOut#(Bit#(slaveDataWidth))) indicationPipes = take(portal.indications);
+   Vector#(numRequests,    PipeIn#(Bit#(slaveDataWidth)))     requestPipes = portal.requests;
+   Vector#(numIndications, PipeOut#(Bit#(slaveDataWidth))) indicationPipes = portal.indications;
    Vector#(numRequests,    PhysMemSlave#(8, slaveDataWidth))    requestMemSlaves <- mapM(mkPipeInMemSlave, requestPipes);
    Vector#(numIndications, PhysMemSlave#(8, slaveDataWidth)) indicationMemSlaves <- mapM(mkPipeOutMemSlave, indicationPipes);
 

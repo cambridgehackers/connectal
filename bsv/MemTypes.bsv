@@ -40,17 +40,24 @@ typedef `PhysAddrWidth PhysAddrWidth;
 typedef 6 MemTagSize;
 typedef 10 BurstLenSize;
 
+// memory request with physical addresses.
+// these can be transmitted directly to the bus master
 typedef struct {
    Bit#(addrWidth) addr;
    Bit#(BurstLenSize) burstLen;
    Bit#(MemTagSize) tag;
    } PhysMemRequest#(numeric type addrWidth) deriving (Bits);
+
+// memory request with "virtual" addresses.
+// these need to be translated before they can be send to the bus
 typedef struct {
    SGLId sglId;
    Bit#(MemOffsetSize) offset;
    Bit#(BurstLenSize) burstLen;
    Bit#(MemTagSize)  tag;
    } MemRequest deriving (Bits);
+
+// memory paylaod
 typedef struct {
    Bit#(dsz) data;
    Bit#(MemTagSize) tag;
