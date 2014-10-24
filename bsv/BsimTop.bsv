@@ -52,8 +52,7 @@ typedef `NumberOfMasters NumberOfMasters;
 // implemented in BsimCtrl.cxx
 import "BDPI" function Action                 initPortal();
 import "BDPI" function Bool                   checkForRequest(Bit#(32) v);
-import "BDPI" function ActionValue#(Bit#(64)) readRequest32();
-import "BDPI" function ActionValue#(Bit#(64)) writeRequest32();
+import "BDPI" function ActionValue#(Bit#(64)) getRequest32(Bit#(32) v);
 import "BDPI" function Action                 readResponse32(Bit#(32) d, Bit#(32) tag);
 import "BDPI" function Action                 interruptLevel(Bit#(1) d);
 
@@ -87,14 +86,14 @@ endtypeclass
 instance SelectBsimCtrlReadWrite#(32,32);
    module selectBsimCtrlReadWrite(BsimCtrlReadWrite#(32,32) ifc);
       method ActionValue#(BsimReadRequest#(32,32)) readRequest() if (checkForRequest(0));
-	 let rv <- readRequest32();
+	 let rv <- getRequest32(0);
 	 return BsimReadRequest{tag: truncate(rv[63:32]), addr:rv[31:0]};
       endmethod
       method Action readResponse(Bit#(32) d, Bit#(MemTagSize) tag);
 	 readResponse32(d, extend(tag));
       endmethod
       method ActionValue#(BsimWriteRequest#(32, 32)) writeRequest() if (checkForRequest(1));
-	 let rv <- writeRequest32();
+	 let rv <- getRequest32(1);
 	 return BsimWriteRequest{data: rv[63:32], addr: rv[31:0]};
       endmethod
    endmodule
