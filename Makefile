@@ -25,7 +25,7 @@ export UDEV_RULES_DIR=/etc/udev/rules.d
 UDEV_RULES=$(shell ls etc/udev/rules.d)
 MODULES_LOAD_D_DIR=/etc/modules-load.d
 
-all: pciedrivers scripts/syntax/parsetab.py
+all: pciedrivers scripts/syntax/parsetab.py zynqdrivers
 	echo version "$(VERSION)"
 
 pciedrivers:
@@ -64,7 +64,7 @@ install: $(INSTALL_SHARED)
 
 INSTALL_DIRS = $(shell ls | grep -v debian)
 
-install-shared:
+install-shared: zynqdrivers-install
 	find $(INSTALL_DIRS) -type d -exec install -d -m755 $(DESTDIR)/usr/share/connectal/{} \; -print
 	find $(INSTALL_DIRS) -type f -exec install -m644 {} $(DESTDIR)/usr/share/connectal/{} \; -print
 	chmod agu+rx $(DESTDIR)/usr/share/connectal/scripts/*
