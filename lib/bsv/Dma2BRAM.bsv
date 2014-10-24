@@ -80,7 +80,7 @@ module mkBRAMReadClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMReadClient#(b
    endrule
    
    rule loadReq(i <= n);
-      re.readServer.readReq.put(MemRequest{sglId:ptr, offset:off, burstLen:bus_width_in_bytes, tag:0});
+      re.readServer.readReq.put(ObjectRequest{sglId:ptr, offset:off, burstLen:bus_width_in_bytes, tag:0});
       off <= off+bus_width_in_bytes;
       //$display("mkBRAMReadClient::readReq.put %x, %x", i, n);
       i <= i+fromInteger(valueOf(nd));

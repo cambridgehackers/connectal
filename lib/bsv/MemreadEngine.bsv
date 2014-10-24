@@ -199,7 +199,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
    interface readServers = rs;
    interface ObjectReadClient dmaClient;
       interface Get readReq;
-	 method ActionValue#(MemRequest) get();
+	 method ActionValue#(ObjectRequest) get();
 	    match {.idx, .cmd} <- toGet(loadf_c).get;
 	    Bit#(BurstLenSize) bl = cmd.burstLen;
 	    let last = False;
@@ -209,7 +209,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
 	    end
 	    workf.enq(tuple3(truncate(bl>>beat_shift), idx, last));
 	    //$display("readReq %d, %h %h %h", idx, cmd.base, bl, last);
-	    return MemRequest { sglId: cmd.sglId, offset: cmd.base, burstLen:bl, tag: 0 };
+	    return ObjectRequest { sglId: cmd.sglId, offset: cmd.base, burstLen:bl, tag: 0 };
 	 endmethod
       endinterface
       interface Put readData;

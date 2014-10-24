@@ -50,7 +50,7 @@ typedef struct {
    Bit#(MemOffsetSize) offset;
    Bit#(BurstLenSize) burstLen;
    Bit#(MemTagSize)  tag;
-   } MemRequest deriving (Bits);
+   } ObjectRequest deriving (Bits);
 typedef struct {
    Bit#(dsz) data;
    Bit#(MemTagSize) tag;
@@ -96,23 +96,23 @@ typedef MemreadEngineV#(dataWidth, cmdQDepth, 1) MemreadEngine#(numeric type dat
 
 			     
 interface ObjectReadClient#(numeric type dsz);
-   interface Get#(MemRequest)    readReq;
+   interface Get#(ObjectRequest)    readReq;
    interface Put#(MemData#(dsz)) readData;
 endinterface
 
 interface ObjectWriteClient#(numeric type dsz);
-   interface Get#(MemRequest)    writeReq;
+   interface Get#(ObjectRequest)    writeReq;
    interface Get#(MemData#(dsz)) writeData;
    interface Put#(Bit#(MemTagSize))       writeDone;
 endinterface
 
 interface ObjectReadServer#(numeric type dsz);
-   interface Put#(MemRequest) readReq;
+   interface Put#(ObjectRequest) readReq;
    interface Get#(MemData#(dsz))     readData;
 endinterface
 
 interface ObjectWriteServer#(numeric type dsz);
-   interface Put#(MemRequest) writeReq;
+   interface Put#(ObjectRequest) writeReq;
    interface Put#(MemData#(dsz))     writeData;
    interface Get#(Bit#(MemTagSize))           writeDone;
 endinterface
