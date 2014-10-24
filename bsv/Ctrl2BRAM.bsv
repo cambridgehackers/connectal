@@ -55,7 +55,7 @@ module mkCtrl2BRAM#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (Me
       if (verbose) $display("%d read_server.readData (a) %h %d last=%d", cycles, addr, burstCount, addrBeat.last);
    endrule
 
-   interface PhysMemReadServer read_server;
+   interface MemReadServer read_server;
       interface Put readReq;
 	 method Action put(PhysMemRequest#(busAddrWidth) req);
             if (verbose) $display("%d axiSlave.read.readAddr %h bc %d", cycles, req.addr, req.burstLen);
@@ -73,7 +73,7 @@ module mkCtrl2BRAM#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (Me
 	 endmethod
       endinterface
    endinterface
-   interface PhysMemWriteServer write_server;
+   interface MemWriteServer write_server;
       interface Put writeReq;
 	 method Action put(PhysMemRequest#(busAddrWidth) req);
 	    writeAddrGenerator.request.put(req);

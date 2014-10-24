@@ -233,7 +233,7 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
    endrule
 
    interface MemSlave memSlave;
-      interface PhysMemReadServer read_server;
+      interface MemReadServer read_server;
 	 interface Put readReq;
 	    method Action put(PhysMemRequest#(32) req);
 	       csrRag.request.put(PhysMemRequest { addr: truncate(req.addr), burstLen: req.burstLen, tag: req.tag});
@@ -242,7 +242,7 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
 	 interface Get readData = toGet(readResponseFifo);
    endinterface: read_server
 
-  interface PhysMemWriteServer write_server; 
+  interface MemWriteServer write_server; 
 	 interface Put writeReq;
 	    method Action put(PhysMemRequest#(32) req);
 	       csrWag.request.put(PhysMemRequest { addr: truncate(req.addr), burstLen: req.burstLen, tag: req.tag});

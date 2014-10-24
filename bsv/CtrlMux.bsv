@@ -100,7 +100,7 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
       doneFifo.enq(rv);
    endrule
 
-   interface PhysMemWriteServer write_server;
+   interface MemWriteServer write_server;
       interface Put writeReq;
 	 method Action put(PhysMemRequest#(addrWidth) req);
 	    req_aws.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
@@ -121,7 +121,7 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
 	 endmethod
       endinterface
    endinterface
-   interface PhysMemReadServer read_server;
+   interface MemReadServer read_server;
       interface Put readReq;
 	 method Action put(PhysMemRequest#(addrWidth) req);
 	    req_ars.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
@@ -181,7 +181,7 @@ module mkMemSlaveMux#(Vector#(numSlaves,MemSlave#(aw,dataWidth)) slaves) (MemSla
       portalIfcs[rs.first].read_server.readReq.put(req);
    endrule
 
-   interface PhysMemWriteServer write_server;
+   interface MemWriteServer write_server;
       interface Put writeReq;
 	 method Action put(PhysMemRequest#(addrWidth) req);
 	    req_aws.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
@@ -203,7 +203,7 @@ module mkMemSlaveMux#(Vector#(numSlaves,MemSlave#(aw,dataWidth)) slaves) (MemSla
 	 endmethod
       endinterface
    endinterface
-   interface PhysMemReadServer read_server;
+   interface MemReadServer read_server;
       interface Put readReq;
 	 method Action put(PhysMemRequest#(addrWidth) req);
 	    req_ars.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});

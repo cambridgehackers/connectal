@@ -290,7 +290,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
         interface response = toPut(tlpInFifo);
     endinterface
     interface MemSlave slave;
-   interface PhysMemWriteServer write_server; 
+   interface MemWriteServer write_server; 
       interface Put writeReq;
          method Action put(PhysMemRequest#(40) req); // if (writeBurstCount == 0);
 	    let burstLen = req.burstLen >> beat_shift;
@@ -366,7 +366,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
            endmethod
 	endinterface
    endinterface
-   interface PhysMemReadServer read_server;
+   interface MemReadServer read_server;
       interface Put readReq;
          method Action put(PhysMemRequest#(40) req);
 	    readReqFifo.enq(req);

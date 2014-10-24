@@ -43,13 +43,13 @@ endinterface
 
 interface MemWriteInternal#(numeric type addrWidth, numeric type dataWidth);
    interface DmaDbg dbg;
-   interface PhysMemWriteClient#(addrWidth,dataWidth) write_client;
+   interface MemWriteClient#(addrWidth,dataWidth) write_client;
    interface Get#(Tuple2#(Bit#(6),Bit#(6))) tagMismatch;
 endinterface
 
 interface MemReadInternal#(numeric type addrWidth, numeric type dataWidth);
    interface DmaDbg dbg;
-   interface PhysMemReadClient#(addrWidth,dataWidth) read_client;
+   interface MemReadClient#(addrWidth,dataWidth) read_client;
    interface Get#(Tuple2#(Bit#(6),Bit#(6))) tagMismatch;
 endinterface
 
@@ -140,7 +140,7 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
       endmethod
    endinterface
 
-   interface PhysMemReadClient read_client;
+   interface MemReadClient read_client;
       interface Get readReq;
 	 method ActionValue#(PhysMemRequest#(addrWidth)) get;
 	    let req = reqFifo.first.req;
@@ -257,7 +257,7 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
       endmethod
    endinterface
    
-   interface PhysMemWriteClient write_client;
+   interface MemWriteClient write_client;
       interface Get writeReq;
 	 method ActionValue#(PhysMemRequest#(addrWidth)) get();
 	    let req = reqFifo.first.req;
@@ -396,8 +396,8 @@ module mkMemServer#(DmaIndication dmaIndication,
    endinterface
 
    interface MemMaster master;
-      interface PhysMemReadClient read_client = reader.read_client;
-      interface PhysMemWriteClient write_client = writer.write_client;
+      interface MemReadClient read_client = reader.read_client;
+      interface MemWriteClient write_client = writer.write_client;
    endinterface
 endmodule
 

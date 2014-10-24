@@ -41,12 +41,12 @@ typedef 9 MMU_PIPELINE_DEPTH;
 
 interface MemWriteInternal#(numeric type addrWidth, numeric type dataWidth);
    interface DmaDbg dbg;
-   interface PhysMemWriteClient#(addrWidth,dataWidth) write_client;
+   interface MemWriteClient#(addrWidth,dataWidth) write_client;
 endinterface
 
 interface MemReadInternal#(numeric type addrWidth, numeric type dataWidth);
    interface DmaDbg dbg;
-   interface PhysMemReadClient#(addrWidth,dataWidth) read_client;
+   interface MemReadClient#(addrWidth,dataWidth) read_client;
 endinterface
 
 function Bool sglid_outofrange(SGLId p);
@@ -221,7 +221,7 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
       lastReg <= (burstLen-1 == 1);
    endrule
 
-   interface PhysMemReadClient read_client;
+   interface MemReadClient read_client;
       interface Get readReq;
 	 method ActionValue#(PhysMemRequest#(addrWidth)) get();
 	    reqFifo.deq;
@@ -377,7 +377,7 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
       memDataFifo.enq(MemData { data: tagdata.data,  tag:extend(rename_tag), last: last });
    endrule
 
-   interface PhysMemWriteClient write_client;
+   interface MemWriteClient write_client;
       interface Get writeReq;
 	 method ActionValue#(PhysMemRequest#(addrWidth)) get();
 	    let req = reqFifo.first.req;

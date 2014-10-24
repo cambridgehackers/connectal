@@ -49,14 +49,14 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
    DmaDebugRequestWrapper hostDmaDebugRequestWrapper <- mkDmaDebugRequestWrapper(HostDmaDebugRequest, dma.request);
 
    MemMaster#(PhysAddrWidth,DataBusWidth) dma1 = (interface MemMaster;
-	  interface PhysMemReadClient read_client;
+	  interface MemReadClient read_client;
 	     interface Get readReq;
 		method ActionValue#(PhysMemRequest#(PhysAddrWidth)) get() if (False);
 		   return ?;
 	        endmethod
 	     endinterface
 	  endinterface
-	  interface PhysMemWriteClient write_client;
+	  interface MemWriteClient write_client;
 	     interface Get writeReq;
 		method ActionValue#(PhysMemRequest#(PhysAddrWidth)) get() if (False);
 		   return ?;
