@@ -57,7 +57,7 @@ function Bool bad_pointer(SGLId p);
    return (p > fromInteger(valueOf(MaxNumSGLists)) || p == 0);
 endfunction
 
-typedef struct {ObjectRequest req;
+typedef struct {MemRequest req;
 		Bit#(6) rename_tag;
 		Bit#(addrWidth) pa;
 		DmaChannelId chan; } IRec#(type addrWidth) deriving(Bits);
@@ -100,7 +100,7 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
       
    for (Integer selectReg = 0; selectReg < valueOf(numReadClients); selectReg = selectReg + 1)
       rule loadChannel;
-	 ObjectRequest req <- readClients[selectReg].readReq.get();
+	 MemRequest req <- readClients[selectReg].readReq.get();
 	 //$display("dmaread.loadChannel activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.sglId, req.offset, req.burstLen);
 	 if (bad_pointer(req.sglId))
 	    dmaIndication.badPointer(req.sglId);
@@ -223,7 +223,7 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
 
    for (Integer selectReg = 0; selectReg < valueOf(numWriteClients); selectReg = selectReg + 1)
        rule loadChannel;
-	  ObjectRequest req <- writeClients[selectReg].writeReq.get();
+	  MemRequest req <- writeClients[selectReg].writeReq.get();
 	  //$display("dmawrite.loadChannel activeChan=%d handle=%h addr=%h burst=%h debugReq=%d", selectReg, req.sglId, req.offset, req.burstLen, debugReg);
 	  if (bad_pointer(req.sglId))
 	     dmaIndication.badPointer(req.sglId);

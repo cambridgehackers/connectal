@@ -631,7 +631,7 @@ Requests and responses are tagged in order to enable pipelining.
        Bit#(MemOffsetSize) offset;
        Bit#(8) burstLen;
        Bit#(6)  tag;
-       } ObjectRequest deriving (Bits);
+       } MemRequest deriving (Bits);
 
     typedef struct {
        Bit#(dsz) data;
@@ -646,7 +646,7 @@ delivered from the memory bus or the system may hang.
 
 ---------------------------------
     interface ObjectReadClient#(numeric type dsz);
-       interface GetF#(ObjectRequest)    readReq;
+       interface GetF#(MemRequest)    readReq;
        interface PutF#(MemData#(dsz)) readData;
     endinterface
 ---------------------------------
@@ -659,7 +659,7 @@ write request is issued to the memory bus or the system may hang.
 
 ---------------------------------
     interface ObjectWriteClient#(numeric type dsz);
-       interface GetF#(ObjectRequest)    writeReq;
+       interface GetF#(MemRequest)    writeReq;
        interface GetF#(MemData#(dsz)) writeData;
        interface PutF#(Bit#(6))       writeDone;
     endinterface

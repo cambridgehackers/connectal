@@ -171,7 +171,7 @@ module mkRowSource#(ObjectReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) nu
 `ifdef TAGGED_TOKENS
       tagFifo.enq(tag);
 `endif
-      let cmd = ObjectRequest{sglId:h, offset:a<<ashift, burstLen:truncate(l<<ashift), tag:id};
+      let cmd = MemRequest{sglId:h, offset:a<<ashift, burstLen:truncate(l<<ashift), tag:id};
       vs.readReq.put(cmd); //start(h,a,l);
       if(verbose) $display("mkRowSource.start %d %d", cmd.offset, cmd.burstLen);
       cmdFifo.enq(l);
@@ -242,7 +242,7 @@ module mkRowColSink#(ObjectWriteServer#(TMul#(N,32)) vs, Bit#(MemTagSize) id) (R
    endrule
    function Float tokenValue(MmToken v) = v.v;
    method Action start(SGLId h, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l);
-      let cmd = ObjectRequest{sglId:h, offset:a<<ashift, burstLen:truncate(l<<ashift), tag:id};
+      let cmd = MemRequest{sglId:h, offset:a<<ashift, burstLen:truncate(l<<ashift), tag:id};
       vs.writeReq.put(cmd);
    endmethod
    interface PipeIn pipe;

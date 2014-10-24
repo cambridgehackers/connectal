@@ -53,15 +53,15 @@ function Bool sglid_outofrange(SGLId p);
    return ((p[15:0]) >= fromInteger(valueOf(MaxNumSGLists)));
 endfunction
 
-typedef struct {ObjectRequest req;
+typedef struct {MemRequest req;
 		Bit#(TLog#(numClients)) client; } LRec#(numeric type numClients, numeric type addrWidth) deriving(Bits);
 
-typedef struct {ObjectRequest req;
+typedef struct {MemRequest req;
 		Bit#(addrWidth) pa;
 		Bit#(6) rename_tag;
 		Bit#(TLog#(numClients)) client; } RRec#(numeric type numClients, numeric type addrWidth) deriving(Bits);
 
-typedef struct {ObjectRequest req;
+typedef struct {MemRequest req;
 		Bit#(6) rename_tag;
 		Bit#(TLog#(numClients)) client;
 		Bool last; } DRec#(numeric type numClients, numeric type addrWidth) deriving(Bits);
@@ -135,7 +135,7 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
    for (Integer selectReg = 0; selectReg < valueOf(numClients); selectReg = selectReg + 1) 
       rule loadClient;
 	 last_loadClient <= cycle_cnt;
-   	 ObjectRequest req <- readClients[selectReg].readReq.get();
+   	 MemRequest req <- readClients[selectReg].readReq.get();
 	 let mmusel = req.sglId[31:16];
       	 if (debug) $display("mkMemReadInternal::loadClient %d %d %d", selectReg, mmusel, cycle_cnt-last_loadClient);
 	 if (mmusel >= fromInteger(valueOf(numMMUs)))
@@ -308,7 +308,7 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
        rule loadClient;
       	  if (debug) $display("mkMemWriteInternal::loadClient %d %d", selectReg, cycle_cnt-last_loadClient);
 	  last_loadClient <= cycle_cnt;
-   	  ObjectRequest req <- writeClients[selectReg].writeReq.get();
+   	  MemRequest req <- writeClients[selectReg].writeReq.get();
 	  let mmusel = req.sglId[31:16];
 	  if (mmusel >= fromInteger(valueOf(numMMUs)))
 	     dmaErrorFifo.enq(DmaError { errorType: DmaErrorMMUOutOfRange_w, pref: req.sglId });

@@ -45,7 +45,7 @@ module mkMemReader(MemReader#(dataWidth))
 	    Log#(dataWidthBytes,beatShift));
 
    FIFOF#(MemData#(dataWidth)) readBuffer <- mkFIFOF;
-   FIFOF#(ObjectRequest)           reqBuffer <- mkFIFOF;
+   FIFOF#(MemRequest)           reqBuffer <- mkFIFOF;
 
    interface ObjectReadServer readServer;
       interface Put readReq = toPut(reqBuffer);
@@ -72,8 +72,8 @@ module mkMemReaderBuff(MemReaderBuff#(dataWidth, bufferDepth))
 	    );
 
    FIFOF#(MemData#(dataWidth))   readBuffer <- mkSizedBRAMFIFOF(valueOf(bufferDepth));
-   FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF();
-   FIFOF#(ObjectRequest)          reqCommitted <- mkFIFOF();
+   FIFOF#(MemRequest)        reqOutstanding <- mkFIFOF();
+   FIFOF#(MemRequest)          reqCommitted <- mkFIFOF();
    ConfigCounter#(availableWidth) unfulfilled <- mkConfigCounter(0);
    let beat_shift = fromInteger(valueOf(beatShift));
    
@@ -117,7 +117,7 @@ module mkMemWriter(MemWriter#(dataWidth))
 	    Log#(dataWidthBytes,beatShift));
 
    FIFOF#(MemData#(dataWidth)) writeBuffer <- mkFIFOF;
-   FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF;
+   FIFOF#(MemRequest)        reqOutstanding <- mkFIFOF;
    FIFOF#(Bit#(6))                        doneTags <- mkFIFOF();
 
    interface ObjectWriteServer writeServer;
@@ -148,8 +148,8 @@ module mkMemWriterBuff(MemWriterBuff#(dataWidth, bufferDepth))
 	    Log#(dataWidthBytes,beatShift));
 
    FIFOF#(MemData#(dataWidth))  writeBuffer <- mkSizedBRAMFIFOF(valueOf(bufferDepth));
-   FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF();
-   FIFOF#(ObjectRequest)          reqCommitted <- mkFIFOF();
+   FIFOF#(MemRequest)        reqOutstanding <- mkFIFOF();
+   FIFOF#(MemRequest)          reqCommitted <- mkFIFOF();
    FIFOF#(Bit#(6))                    doneTags <- mkFIFOF();
    ConfigCounter#(availableWidth)    available <- mkConfigCounter(0);
    let beat_shift = fromInteger(valueOf(beatShift));
