@@ -48,19 +48,15 @@ static sem_t dma_waiting;
 static pthread_mutex_t socket_mutex;
 static int trace_port;// = 1;
 
-extern "C" {
-
-void initPortal(unsigned long id){
-    static int once = 1;
-    if (once) {
-        sem_init(&dma_waiting, 0, 0);
-        pthread_mutex_init(&socket_mutex, NULL);
-        bsim_wait_for_connect();
-    }
-    once = 0;
+extern "C" void initPortal(void)
+{
+    sem_init(&dma_waiting, 0, 0);
+    pthread_mutex_init(&socket_mutex, NULL);
+    bsim_wait_for_connect();
 }
 
-void interruptLevel(uint32_t ivalue){
+extern "C" void interruptLevel(uint32_t ivalue)
+{
     static uint32_t last_level;
 
     if (ivalue != last_level) {
@@ -73,7 +69,7 @@ void interruptLevel(uint32_t ivalue){
     }
 }
 
-int pareff_fd(int *fd)
+extern "C" int pareff_fd(int *fd)
 {
   if (trace_port)
     printf("[%s:%d]\n", __FUNCTION__, __LINE__);
@@ -83,7 +79,8 @@ int pareff_fd(int *fd)
   return 0;
 }
 
-  bool processReq32(uint32_t rr){
+extern "C" bool processReq32(uint32_t rr)
+{
     if (!head.valid){
 	int rv = bsim_ctrl_recv(&head.sockfd, &head.req);
 	if(rv > 0){
@@ -109,23 +106,26 @@ int pareff_fd(int *fd)
 	}
     }
     return head.valid && head.inflight == 1 && head.req.write_flag == (int)rr;
-  }
+}
 
-  long processAddr32(int rr){
+extern "C" long processAddr32()
+{
     if(trace_port)
         fprintf(stderr, " addr");
     head.inflight = 0;
     return (long)head.req.addr;
-  }
+}
   
-  unsigned int writeData32(){
+extern "C" unsigned int writeData32()
+{
     if(trace_port)
         fprintf(stderr, " write\n");
     head.valid = 0;
     return head.req.data;
-  }
+}
   
-  void readData32(unsigned int x){
+extern "C" void readData32(unsigned int x)
+{
     if(trace_port)
         fprintf(stderr, " read = %x\n", x);
     pthread_mutex_lock(&socket_mutex);
@@ -133,5 +133,4 @@ int pareff_fd(int *fd)
     bsim_ctrl_send(head.sockfd, &respitem);
     pthread_mutex_unlock(&socket_mutex);
     head.valid = 0;
-  }
 }

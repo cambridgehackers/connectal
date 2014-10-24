@@ -50,9 +50,9 @@ typedef `PinType PinType;
 typedef `NumberOfMasters NumberOfMasters;
 
 // implemented in BsimCtrl.cxx
-import "BDPI" function Action                 initPortal(Bit#(32) d);
+import "BDPI" function Action                 initPortal();
 import "BDPI" function Bool                   processReq32(Bit#(32) v);
-import "BDPI" function ActionValue#(Bit#(32)) processAddr32(Bit#(32) v);
+import "BDPI" function ActionValue#(Bit#(32)) processAddr32();
 import "BDPI" function ActionValue#(Bit#(32)) writeData32();
 import "BDPI" function Action                 readData32(Bit#(32) d);
 import "BDPI" function Action                 interruptLevel(Bit#(1) d);
@@ -65,10 +65,9 @@ import "BDPI" function ActionValue#(Bit#(32)) read_pareff32(Bit#(32) handle, Bit
 import "BDPI" function ActionValue#(Bit#(64)) read_pareff64(Bit#(32) handle, Bit#(32) addr);
 
 interface BsimCtrlReadWrite#(numeric type asz, numeric type dsz);
-   method ActionValue#(Bit#(asz)) readAddr();
+   method ActionValue#(Bit#(asz)) readWriteAddr();
    method Action readData(Bit#(dsz) d);
    method Bool readReq();
-   method ActionValue#(Bit#(asz)) writeAddr();
    method ActionValue#(Bit#(dsz)) writeData();
    method Bool writeReq();
 endinterface
@@ -79,19 +78,15 @@ endtypeclass
 
 instance SelectBsimCtrlReadWrite#(32,32);
    module selectBsimCtrlReadWrite(BsimCtrlReadWrite#(32,32) ifc);
-      method ActionValue#(Bit#(32)) readAddr();
-	 let rv <- processAddr32(0);
-	 return extend(rv);
+      method ActionValue#(Bit#(32)) readWriteAddr();
+	 let rv <- processAddr32();
+	 return rv;
       endmethod
       method Action readData(Bit#(32) d);
 	 readData32(d);
       endmethod
       method Bool readReq();
 	 return processReq32(0);
-      endmethod
-      method ActionValue#(Bit#(32)) writeAddr();
-	 let rv <- processAddr32(1);
-	 return extend(rv);
       endmethod
       method ActionValue#(Bit#(32)) writeData();
 	 let rv <- writeData32();
@@ -285,25 +280,7 @@ module  mkBsimHost#(Clock double_clock, Reset double_reset)(BsimHost#(clientAddr
    Vector#(nSlaves,Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth)) servers <- replicateM(mkAxi3Slave);
    BsimCtrlReadWrite#(clientAddrWidth,clientBusWidth) crw <- selectBsimCtrlReadWrite();
    FIFO#(Bit#(clientBusWidth)) wf <- mkPipelineFIFO;
-   let init_seq = (action
-		      initPortal(0);
-		      initPortal(1);
-		      initPortal(2);
-		      initPortal(3);
-		      initPortal(4);
-		      initPortal(5);
-		      initPortal(6);
-		      initPortal(7);
-		      initPortal(8);
-		      initPortal(9);
-		      initPortal(10);
-		      initPortal(11);
-		      initPortal(12);
-		      initPortal(13);
-		      initPortal(14);
-		      initPortal(15);
-                   endaction);
-   let init_fsm <- mkOnce(init_seq);
+   let init_fsm <- mkOnce(initPortal());
 
    rule init_rule;
       init_fsm.start;
@@ -319,9 +296,9 @@ module  mkBsimHost#(Clock double_clock, Reset double_reset)(BsimHost#(clientAddr
    interface MemMaster mem_client;
       interface MemReadClient read_client;
         interface Get readReq;
-	 method ActionValue#(MemRequest#(clientAddrWidth)) get() if (crw.readReq);
+	 method ActionValue#(MemRequest#(clientAddrWidth)) get() if (crw.readReq());
 	    //$write("req_ar: ");
-	    let ra <- crw.readAddr;
+	    let ra <- crw.readWriteAddr();
 	    //$display("ra=%h", ra);
 	    let burstLen = fromInteger(valueOf(clientBusWidth) / 8);
 	    if (verbose) $display("\n%d BsimHost.readReq addr=%h burstLen=%d", cycles, ra, burstLen);
@@ -339,7 +316,7 @@ module  mkBsimHost#(Clock double_clock, Reset double_reset)(BsimHost#(clientAddr
       interface MemWriteClient write_client;
         interface Get writeReq;
 	 method ActionValue#(MemRequest#(clientAddrWidth)) get() if (crw.writeReq());
-	    let wa <- crw.writeAddr;
+	    let wa <- crw.readWriteAddr();
 	    let wd <- crw.writeData;
 	    wf.enq(wd);
 	    let burstLen = fromInteger(valueOf(clientBusWidth) / 8);
