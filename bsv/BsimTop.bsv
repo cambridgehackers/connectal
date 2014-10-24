@@ -52,9 +52,9 @@ typedef `NumberOfMasters NumberOfMasters;
 // implemented in BsimCtrl.cxx
 import "BDPI" function Action                 initPortal();
 import "BDPI" function Bool                   processReq32(Bit#(32) v);
-import "BDPI" function ActionValue#(Bit#(32)) processAddr32();
-import "BDPI" function ActionValue#(Bit#(32)) writeData32();
-import "BDPI" function Action                 readData32(Bit#(32) d);
+import "BDPI" function ActionValue#(Bit#(64)) processAddr32();
+import "BDPI" function ActionValue#(Bit#(64)) writeData32();
+import "BDPI" function Action                 readData32(Bit#(32) d, Bit#(32) tag);
 import "BDPI" function Action                 interruptLevel(Bit#(1) d);
 
 // implemented in BsimDma.cxx
@@ -64,12 +64,20 @@ import "BDPI" function Action write_pareff64(Bit#(32) handle, Bit#(32) addr, Bit
 import "BDPI" function ActionValue#(Bit#(32)) read_pareff32(Bit#(32) handle, Bit#(32) addr);
 import "BDPI" function ActionValue#(Bit#(64)) read_pareff64(Bit#(32) handle, Bit#(32) addr);
 
+typedef struct {
+   Bit#(ObjectTagSize) tag;
+   Bit#(asz) addr;
+} BsimReadRequest#(numeric type asz, numeric type dsz) deriving(Eq, Bits);
+
+typedef struct {
+   Bit#(dsz) data;
+   Bit#(asz) addr;
+} BsimWriteRequest#(numeric type asz, numeric type dsz) deriving(Eq, Bits);
+
 interface BsimCtrlReadWrite#(numeric type asz, numeric type dsz);
-   method ActionValue#(Bit#(asz)) readWriteAddr();
-   method Action readData(Bit#(dsz) d);
-   method Bool readReq();
-   method ActionValue#(Bit#(dsz)) writeData();
-   method Bool writeReq();
+   method ActionValue#(BsimReadRequest#(asz, dsz)) readRequest();
+   method Action readResponse(Bit#(dsz) d, Bit#(ObjectTagSize) tag);
+   method ActionValue#(BsimWriteRequest#(asz, dsz)) writeRequest();
 endinterface
 
 typeclass SelectBsimCtrlReadWrite#(numeric type asz, numeric type dsz);
@@ -78,22 +86,16 @@ endtypeclass
 
 instance SelectBsimCtrlReadWrite#(32,32);
    module selectBsimCtrlReadWrite(BsimCtrlReadWrite#(32,32) ifc);
-      method ActionValue#(Bit#(32)) readWriteAddr();
+      method ActionValue#(BsimReadRequest#(32,32)) readRequest() if (processReq32(0));
 	 let rv <- processAddr32();
-	 return rv;
+	 return BsimReadRequest{tag: truncate(rv[63:32]), addr:rv[31:0]};
       endmethod
-      method Action readData(Bit#(32) d);
-	 readData32(d);
+      method Action readResponse(Bit#(32) d, Bit#(ObjectTagSize) tag);
+	 readData32(d, extend(tag));
       endmethod
-      method Bool readReq();
-	 return processReq32(0);
-      endmethod
-      method ActionValue#(Bit#(32)) writeData();
+      method ActionValue#(BsimWriteRequest#(32, 32)) writeRequest() if (processReq32(1));
 	 let rv <- writeData32();
-	 return rv;
-      endmethod
-      method Bool writeReq();
-	 return processReq32(1);
+	 return BsimWriteRequest{data: rv[63:32], addr: rv[31:0]};
       endmethod
    endmodule
 endinstance
@@ -296,32 +298,31 @@ module  mkBsimHost#(Clock double_clock, Reset double_reset)(BsimHost#(clientAddr
    interface MemMaster mem_client;
       interface MemReadClient read_client;
         interface Get readReq;
-	 method ActionValue#(MemRequest#(clientAddrWidth)) get() if (crw.readReq());
+	 method ActionValue#(MemRequest#(clientAddrWidth)) get();
 	    //$write("req_ar: ");
-	    let ra <- crw.readWriteAddr();
+	    let ra <- crw.readRequest();
 	    //$display("ra=%h", ra);
 	    let burstLen = fromInteger(valueOf(clientBusWidth) / 8);
 	    if (verbose) $display("\n%d BsimHost.readReq addr=%h burstLen=%d", cycles, ra, burstLen);
-	    return MemRequest { addr: ra, burstLen: burstLen, tag: 0};
+	    return MemRequest { addr: ra.addr, burstLen: burstLen, tag: ra.tag};
 	 endmethod
         endinterface
         interface Put readData;
 	 method Action put(MemData#(clientBusWidth) rd);
 	    //$display("resp_read: rd=%h", rd);
 	    if (verbose) $display("%d BsimHost.readData %h", cycles, rd.data);
-	    crw.readData(rd.data);
+	    crw.readResponse(rd.data, rd.tag);
 	 endmethod
         endinterface
       endinterface
       interface MemWriteClient write_client;
         interface Get writeReq;
-	 method ActionValue#(MemRequest#(clientAddrWidth)) get() if (crw.writeReq());
-	    let wa <- crw.readWriteAddr();
-	    let wd <- crw.writeData;
-	    wf.enq(wd);
+	 method ActionValue#(MemRequest#(clientAddrWidth)) get();
+	    let wd <- crw.writeRequest;
+	    wf.enq(wd.data);
 	    let burstLen = fromInteger(valueOf(clientBusWidth) / 8);
-	    if (verbose) $display("\n%d BsimHost.writeReq addr=%h data=%h burstLen=%d", cycles, wa, wd, burstLen);
-	    return MemRequest { addr: wa, burstLen: burstLen, tag: 0 };
+	    if (verbose) $display("\n%d BsimHost.writeReq addr/data=%h burstLen=%d", cycles, wd, burstLen);
+	    return MemRequest { addr: wd.addr, burstLen: burstLen, tag: 0 };
 	 endmethod
         endinterface
         interface Get writeData;

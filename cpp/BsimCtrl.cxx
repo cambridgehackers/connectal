@@ -108,7 +108,7 @@ extern "C" bool processReq32(uint32_t rr)
     return head.valid && head.inflight == 1 && head.req.write_flag == (int)rr;
 }
 
-extern "C" long processAddr32()
+extern "C" unsigned long long processAddr32()
 {
     if(trace_port)
         fprintf(stderr, " addr");
@@ -116,15 +116,16 @@ extern "C" long processAddr32()
     return (long)head.req.addr;
 }
   
-extern "C" unsigned int writeData32()
+extern "C" unsigned long long writeData32()
 {
     if(trace_port)
         fprintf(stderr, " write\n");
     head.valid = 0;
-    return head.req.data;
+    head.inflight = 0;
+    return (((unsigned long long)head.req.data) << 32) | ((long)head.req.addr);
 }
   
-extern "C" void readData32(unsigned int x)
+extern "C" void readData32(unsigned int x, unsigned int tag)
 {
     if(trace_port)
         fprintf(stderr, " read = %x\n", x);
