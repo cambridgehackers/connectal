@@ -161,7 +161,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
       if (verbose) $display("write_req %d", cycle_cnt-last_write_req);
       last_write_req <= cycle_cnt;
       let nwe = writeEnd-burstLen;
-      we.writeServer.writeReq.put(ObjectRequest{sglId:pointer, offset:extend(nwe), burstLen:truncate(burstLen), tag:0});
+      we.writeServer.writeReq.put(MemRequest{sglId:pointer, offset:extend(nwe), burstLen:truncate(burstLen), tag:0});
       writeEnd <= nwe;
       //if (verbose) $display("write_req %d", nwe);
    endrule

@@ -75,7 +75,7 @@ module mkDmaReadBuffer(DmaReadBuffer#(dataWidth, bufferDepth))
 	    Log#(dataWidthBytes,beatShift));
 
    FIFOFLevel#(MemData#(dataWidth),bufferDepth)  readBuffer <- mkBRAMFIFOFLevel;
-   FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF();
+   FIFOF#(MemRequest)        reqOutstanding <- mkFIFOF();
    ConfigCounter#(TAdd#(1,TLog#(bufferDepth))) unfulfilled <- mkConfigCounter(0);
    let beat_shift = fromInteger(valueOf(beatShift));
    
@@ -88,7 +88,7 @@ module mkDmaReadBuffer(DmaReadBuffer#(dataWidth, bufferDepth))
    endinterface
    interface ObjectReadClient dmaClient;
       interface Get readReq;
-	 method ActionValue#(ObjectRequest) get if (readBuffer.lowWater(sreq));
+	 method ActionValue#(MemRequest) get if (readBuffer.lowWater(sreq));
 	    reqOutstanding.deq;
 	    unfulfilled.increment(unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)));
 	    return reqOutstanding.first;
@@ -116,7 +116,7 @@ module mkDmaWriteBuffer(DmaWriteBuffer#(dataWidth, bufferDepth))
 	    Log#(dataWidthBytes,beatShift));
 
    FIFOFLevel#(MemData#(dataWidth),bufferDepth) writeBuffer <- mkBRAMFIFOFLevel;
-   FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF();
+   FIFOF#(MemRequest)        reqOutstanding <- mkFIFOF();
    FIFOF#(Bit#(6))                        doneTags <- mkFIFOF();
    ConfigCounter#(TAdd#(1,TLog#(bufferDepth)))  unfulfilled <- mkConfigCounter(0);
    let beat_shift = fromInteger(valueOf(beatShift));
@@ -131,7 +131,7 @@ module mkDmaWriteBuffer(DmaWriteBuffer#(dataWidth, bufferDepth))
    endinterface
    interface ObjectWriteClient dmaClient;
       interface Get writeReq;
-	 method ActionValue#(ObjectRequest) get if (writeBuffer.highWater(sreq));
+	 method ActionValue#(MemRequest) get if (writeBuffer.highWater(sreq));
 	    reqOutstanding.deq;
 	    unfulfilled.increment(unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)));
 	    return reqOutstanding.first;
@@ -153,7 +153,7 @@ module mkDmaReadMux#(Vector#(numClients,ObjectReadClient#(dataWidth)) readClient
    provisos(Log#(numClients,tagsz),
 	    Add#(tagsz,a__,MemTagSize));
 
-   FIFO#(ObjectRequest)          readReqFifo  <- mkFIFO();
+   FIFO#(MemRequest)          readReqFifo  <- mkFIFO();
    FIFO#(MemData#(dataWidth)) readRespFifo <- mkFIFO();
 
    for (Integer i = 0; i < valueOf(numClients); i = i + 1) begin
@@ -180,7 +180,7 @@ module mkDmaWriteMux#(Vector#(numClients,ObjectWriteClient#(dataWidth)) writeCli
    provisos(Log#(numClients,tagsz),
        Add#(tagsz,a__,MemTagSize));
 
-   FIFO#(ObjectRequest)          writeReqFifo  <- mkFIFO();
+   FIFO#(MemRequest)          writeReqFifo  <- mkFIFO();
    FIFO#(MemData#(dataWidth)) writeDataFifo <- mkFIFO();
    FIFO#(Bit#(MemTagSize))    writeDoneFifo <- mkFIFO();
    FIFO#(Bit#(MemTagSize))    arbFifo       <- mkFIFO();
