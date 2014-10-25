@@ -148,8 +148,8 @@ int main(int argc, const char **argv)
 
   init_portal_internal(&intarr[0], IfcNames_HostMMUConfigIndication, MMUConfigIndicationWrapper_handleMessage, MMUConfigIndicationWrapper_reqsize);// fpga1
   init_portal_internal(&intarr[1], IfcNames_MemreadIndication, MemreadIndicationWrapper_handleMessage, MemreadIndicationWrapper_reqsize); // fpga2
-  init_portal_internal(&intarr[2], IfcNames_HostMMUConfigRequest, MMUConfigRequestProxy_handleMessage, MMUConfigRequestProxy_reqsize); // fpga3
-  init_portal_internal(&intarr[3], IfcNames_MemreadRequest, MemreadRequestProxy_handleMessage, MemreadRequestProxy_reqsize);    // fpga4
+  init_portal_internal(&intarr[2], IfcNames_HostMMUConfigRequest, NULL, MMUConfigRequestProxy_reqsize); // fpga3
+  init_portal_internal(&intarr[3], IfcNames_MemreadRequest, NULL, MemreadRequestProxy_reqsize);    // fpga4
 
   sem_init(&test_sem, 0, 0);
   DmaManager_init(&priv, NULL, &intarr[2]);
