@@ -41,7 +41,7 @@ interface BsimHost#(numeric type clientAddrWidth, numeric type clientBusWidth, n
 		    numeric type serverAddrWidth, numeric type serverBusWidth, numeric type serverIdWidth,
 		    numeric type nSlaves);
    interface PhysMemMaster#(clientAddrWidth, clientBusWidth)  mem_client;
-   interface Vector#(nSlaves,Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))  axi_servers;
+   interface Vector#(nSlaves,PhysMemSlave#(serverAddrWidth,  serverBusWidth))  mem_servers;
    interface Clock doubleClock;
    interface Reset doubleReset;
 endinterface

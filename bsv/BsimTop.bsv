@@ -34,7 +34,6 @@ import Leds              :: *;
 import Top               :: *;
 import AxiMasterSlave    :: *;
 import MemTypes          :: *;
-import AxiDma            :: *;
 import HostInterface     :: *;
 import CtrlMux           :: *;
 import ClientServer      :: *;
@@ -165,17 +164,21 @@ instance SelectBsimRdmaReadWrite#(128);
    endmodule
 endinstance
 
-module mkAxi3Slave(Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))
-   provisos (SelectBsimRdmaReadWrite#(serverBusWidth));
+module mkBsimDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
+   provisos(Div#(serverBusWidth,8,dataWidthBytes),
+	    Mul#(dataWidthBytes,8,serverBusWidth),
+	    Log#(dataWidthBytes,beatShift),
+	    SelectBsimRdmaReadWrite#(serverBusWidth));
 
+   let verbose = False;
    BsimRdmaReadWrite#(serverBusWidth) rw <- selectBsimRdmaReadWrite();
 
    Reg#(Bit#(serverAddrWidth)) readAddrr <- mkReg(0);
-   Reg#(Bit#(5))  readLen <- mkReg(0);
-   Reg#(Bit#(serverIdWidth)) readId <- mkReg(0);
+   Reg#(Bit#(BurstLenSize))  readLen <- mkReg(0);
+   Reg#(Bit#(MemTagSize)) readId <- mkReg(0);
    Reg#(Bit#(serverAddrWidth)) writeAddrr <- mkReg(0);
-   Reg#(Bit#(5))  writeLen <- mkReg(0);
-   Reg#(Bit#(serverIdWidth)) writeId <- mkReg(0);
+   Reg#(Bit#(BurstLenSize))  writeLen <- mkReg(0);
+   Reg#(Bit#(MemTagSize)) writeId <- mkReg(0);
 
    let readLatency_I = 150;
    let writeLatency_I = 150;
@@ -185,50 +188,56 @@ module mkAxi3Slave(Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))
 
    Reg#(Bit#(64)) req_ar_b_ts <- mkReg(0);
    Reg#(Bit#(64)) req_aw_b_ts <- mkReg(0);
-   Reg#(Bit#(64)) cycle <- mkReg(0);
+   Reg#(Bit#(64)) cycles <- mkReg(0);
    Reg#(Bit#(64)) last_reqAr <- mkReg(0);
    Reg#(Bit#(64)) last_read_eob <- mkReg(0);
    Reg#(Bit#(64)) last_write_eob <- mkReg(0);
 
-   FIFOF#(Tuple2#(Bit#(64), Axi3ReadRequest#(serverAddrWidth,serverIdWidth)))  readDelayFifo <- mkSizedFIFOF(readLatency_I);
-   FIFOF#(Tuple2#(Bit#(64),Axi3WriteRequest#(serverAddrWidth,serverIdWidth))) writeDelayFifo <- mkSizedFIFOF(writeLatency_I);
+   FIFOF#(Tuple2#(Bit#(64), PhysMemRequest#(serverAddrWidth)))  readDelayFifo <- mkSizedFIFOF(readLatency_I);
+   FIFOF#(Tuple2#(Bit#(64),PhysMemRequest#(serverAddrWidth))) writeDelayFifo <- mkSizedFIFOF(writeLatency_I);
 
-   FIFOF#(Tuple2#(Bit#(64), Axi3WriteResponse#(serverIdWidth))) bFifo <- mkSizedFIFOF(writeLatency_I);
+   FIFOF#(Tuple2#(Bit#(64), Bit#(MemTagSize))) bFifo <- mkSizedFIFOF(writeLatency_I);
 
    rule increment_cycle;
-      cycle <= cycle+1;
+      cycles <= cycles+1;
    endrule
 
-   let read_jitter = True; //cycle[4:0] == 0;
-   let write_jitter = True; //cycle[4:0] == 5;
+   let read_jitter = True; //cycles[4:0] == 0;
+   let write_jitter = True; //cycles[4:0] == 5;
 
-   interface Put req_ar;
-      method Action put(Axi3ReadRequest#(serverAddrWidth,serverIdWidth) req);
-	 //if(id==1) $display("mkBsimHost::req_ar_a: %d %d", req.id, cycle-last_reqAr);
-	 //last_reqAr <= cycle;
-	 readDelayFifo.enq(tuple2(cycle,req));
-      endmethod
-   endinterface
-   interface Get resp_read;
-      method ActionValue#(Axi3ReadResponse#(serverBusWidth,serverIdWidth)) get if (((readLen > 0) || (readLen == 0 && (cycle-tpl_1(readDelayFifo.first)) > readLatency)) && read_jitter);
-	 Bit#(5) read_len = ?;
+   Reg#(Bit#(8))  burstReg <- mkReg(0);
+   FIFO#(Bit#(8)) reqs <- mkSizedFIFO(32);
+   
+   let beat_shift = fromInteger(valueOf(beatShift));
+
+   interface PhysMemReadServer read_server;
+      interface Put readReq;
+	 method Action put(PhysMemRequest#(serverAddrWidth) req);
+            if (verbose) $display("%d axiSlave.read.readAddr %h bc %d", cycles, req.addr, req.burstLen);
+	    //readAddrGenerator.request.put(req);
+	    readDelayFifo.enq(tuple2(cycles,req));
+	 endmethod
+      endinterface
+      interface Get readData;
+	 method ActionValue#(MemData#(serverBusWidth)) get() if (((readLen > 0) || (readLen == 0 && (cycles-tpl_1(readDelayFifo.first)) > readLatency)) && read_jitter);
+	 Bit#(BurstLenSize) read_len = ?;
 	 Bit#(serverAddrWidth) read_addr = ?;
-	 Bit#(serverIdWidth) read_id = ?;
+	 Bit#(MemTagSize) read_id = ?;
 	 Bit#(8) handle = ?;
-	 if (readLen == 0 && (cycle-tpl_1(readDelayFifo.first)) > readLatency) begin
-	    req_ar_b_ts <= cycle;
+	 if (readLen == 0 && (cycles-tpl_1(readDelayFifo.first)) > readLatency) begin
+	    req_ar_b_ts <= cycles;
 	    let req = tpl_2(readDelayFifo.first);
 	    readDelayFifo.deq;
-	    read_len = extend(req.len)+1;
-	    read_addr = req.address;
-	    read_id = req.id;
-	    handle = req.address[39:32];
-	    //if(id==1) $display("mkBsimHost::resp_read_a: %d %d %d", req.id,  cycle-last_read_eob, req.len);
-	    //last_read_eob <= cycle;
+	    read_len = req.burstLen>>beat_shift;
+	    read_addr = req.addr;
+	    read_id = req.tag;
+	    handle = req.addr[39:32];
+	    //if(id==1) $display("mkBsimHost::resp_read_a: %d %d %d", req.tag,  cycles-last_read_eob, (req.burstLen>>beat_shift)-1);
+	    //last_read_eob <= cycles;
 	 end 
 	 else begin
-	    //$display("mkBsimHost::resp_read_b: %d %d", readId,  cycle-last_read_eob);
-	    //last_read_eob <= cycle;
+	    //$display("mkBsimHost::resp_read_b: %d %d", readId,  cycles-last_read_eob);
+	    //last_read_eob <= cycles;
 	    handle = readAddrr[39:32];
 	    read_addr = readAddrr;
 	    read_id = readId;
@@ -239,57 +248,69 @@ module mkAxi3Slave(Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))
 	 readId <= read_id;
 	 readAddrr <= read_addr + fromInteger(valueOf(serverBusWidth)/8);
 	 //$display("mkBsimHost::resp_read id=%d %d", read_id, read_len);
-	 return Axi3ReadResponse { data: v, resp: 0, last: pack(readLen == 1), id: read_id};
-      endmethod
+	 //return Axi3ReadResponse { data: v, resp: 0, last: pack(readLen == 1), id: read_id};
+            //if (verbose) $display("%d read_server.readData (b) %h", cycles, data);
+            return MemData { data: v, tag: read_id, last: readLen == 1};
+	 endmethod
+      endinterface
    endinterface
-   interface Put req_aw;
-      method Action put(Axi3WriteRequest#(serverAddrWidth,serverIdWidth) req);
-	 //$display("mkBsimHost::req_aw id=%d", req.id);
-	 writeDelayFifo.enq(tuple2(cycle,req));
-      endmethod
-   endinterface
-   interface Put resp_write;
-      method Action put(Axi3WriteData#(serverBusWidth,serverIdWidth) resp) if (((writeLen > 0) || (writeLen == 0 && (cycle-tpl_1(writeDelayFifo.first)) > writeLatency)) && write_jitter);
-	 Bit#(5) write_len = ?;
+   interface PhysMemWriteServer write_server;
+      interface Put writeReq;
+	 method Action put(PhysMemRequest#(serverAddrWidth) req);
+	 //$display("mkBsimHost::req_aw id=%d", req.tag);
+	 writeDelayFifo.enq(tuple2(cycles,req));
+	 endmethod
+      endinterface
+      interface Put writeData;
+	 method Action put(MemData#(serverBusWidth) resp) if (((writeLen > 0) || (writeLen == 0 && (cycles-tpl_1(writeDelayFifo.first)) > writeLatency)) && write_jitter);
+	    //let addrBeat <- writeAddrGenerator.addrBeat.get();
+	    //let addr = addrBeat.addr;
+	    //Bit#(bramAddrWidth) regFileAddr = truncate(addr/fromInteger(valueOf(TDiv#(serverBusWidth,8))));
+            //br.request.put(BRAMRequest{write:True, responseOnWrite:False, address:regFileAddr, datain:resp.data});
+	 Bit#(BurstLenSize) write_len = ?;
 	 Bit#(serverAddrWidth) write_addr = ?;
-	 Bit#(serverIdWidth) write_id = ?;
+	 Bit#(MemTagSize) write_id = ?;
 	 Bit#(8) handle = ?;
-	 if (writeLen == 0 && (cycle-tpl_1(writeDelayFifo.first)) > writeLatency) begin
-	    req_aw_b_ts <= cycle;
+	 if (writeLen == 0 && (cycles-tpl_1(writeDelayFifo.first)) > writeLatency) begin
+	    req_aw_b_ts <= cycles;
 	    let req = tpl_2(writeDelayFifo.first);
 	    writeDelayFifo.deq;
-	    write_addr = req.address;
-	    write_len = extend(req.len)+1;
-	    write_id = req.id;
-	    handle = req.address[39:32];
-	    //$display("mkBsimHost::resp_write_a: %d %d", req.id,  cycle-last_write_eob);
-	    //last_write_eob <= cycle;
+	    write_addr = req.addr;
+	    write_len = req.burstLen>>beat_shift;
+	    write_id = req.tag;
+	    handle = req.addr[39:32];
+	    //$display("mkBsimHost::resp_write_a: %d %d", req.tag,  cycles-last_write_eob);
+	    //last_write_eob <= cycles;
 	 end
 	 else begin
-	    //$display("mkBsimHost::resp_write_b: %d %d", writeId,  cycle-last_write_eob);
-	    //last_write_eob <= cycle;
+	    //$display("mkBsimHost::resp_write_b: %d %d", writeId,  cycles-last_write_eob);
+	    //last_write_eob <= cycles;
 	    handle = writeAddrr[39:32];
 	    write_len = writeLen;
 	    write_addr = writeAddrr;
 	    write_id = writeId;
 	 end
 	 rw.write_pareff(extend(handle), write_addr[31:0], resp.data);
-	 //$display("write_resp(%d): handle=%d addr=%h v=%h", cycle, handle, write_addr, resp.data);
+	 //$display("write_resp(%d): handle=%d addr=%h v=%h", cycles, handle, write_addr, resp.data);
 	 writeId <= write_id;
 	 writeLen <= write_len - 1;
 	 writeAddrr <= write_addr + fromInteger(valueOf(serverBusWidth)/8);
 	 if (write_len == 1) begin
-	    bFifo.enq(tuple2(cycle,Axi3WriteResponse { id: write_id, resp: 0 }));
+	    bFifo.enq(tuple2(cycles,write_id));
 	 end
-      endmethod
-   endinterface
-   interface Get resp_b;
-      method ActionValue#(Axi3WriteResponse#(serverIdWidth)) get if ((cycle-tpl_1(bFifo.first)) > writeLatency);
+            //if (verbose) $display("%d write_server.writeAddr %h bc %d", cycles, req.addr, req.burstLen);
+            //if (verbose) $display("%d write_server.writeData %h %h %d", cycles, addr, resp.data, addrBeat.bc);
+            //if (addrBeat.last)
+               //writeTagFifo.enq(addrBeat.tag);
+	 endmethod
+      endinterface
+      interface Get writeDone;
+	 method ActionValue#(Bit#(MemTagSize)) get() if ((cycles-tpl_1(bFifo.first)) > writeLatency);
 	 bFifo.deq();
 	 return tpl_2(bFifo.first());
-      endmethod
+	 endmethod
+      endinterface
    endinterface
-
 endmodule
 
 
@@ -297,12 +318,13 @@ module  mkBsimHost#(Clock double_clock, Reset double_reset)(BsimHost#(clientAddr
 			      serverAddrWidth, serverBusWidth, serverIdWidth,
 			      nSlaves))
    provisos (SelectBsimRdmaReadWrite#(serverBusWidth),
-             Add#(a__, 32, clientAddrWidth), Add#(b__, 32, clientBusWidth));
+             Add#(a__, 32, clientAddrWidth), Add#(b__, 32, clientBusWidth),
+             Mul#(TDiv#(serverBusWidth, 8), 8, serverBusWidth));
 
-   Vector#(nSlaves,Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth)) servers <- replicateM(mkAxi3Slave);
+   Vector#(nSlaves,PhysMemSlave#(serverAddrWidth,  serverBusWidth)) servers <- replicateM(mkBsimDmaMaster);
    PhysMemMaster#(clientAddrWidth, clientBusWidth) crw <- mkBsimCtrlReadWrite();
 
-   interface axi_servers = servers;
+   interface mem_servers = servers;
    interface PhysMemMaster mem_client = crw;
    interface doubleClock = double_clock;
    interface doubleReset = double_reset;
@@ -322,8 +344,7 @@ module  mkBsimTop(Empty)
        host,
 `endif
        clocked_by singleClock, reset_by singleReset);
-   Vector#(NumberOfMasters,Axi3Master#(PhysAddrWidth,DataBusWidth,6)) m_axis <- mapM(mkAxiDmaMaster,top.masters, clocked_by singleClock, reset_by singleReset);
-   mapM(uncurry(mkConnection),zip(m_axis, host.axi_servers), clocked_by singleClock, reset_by singleReset);
+   mapM(uncurry(mkConnection),zip(top.masters, host.mem_servers), clocked_by singleClock, reset_by singleReset);
 `ifndef BSIM_EXERCISE_MEM_MASTER_SLAVE
    mkConnection(host.mem_client, top.slave, clocked_by singleClock, reset_by singleReset);
 `else
