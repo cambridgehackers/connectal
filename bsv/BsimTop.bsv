@@ -57,47 +57,68 @@ import "BDPI" function Action                 readResponse32(Bit#(32) d, Bit#(32
 import "BDPI" function Action                 interruptLevel(Bit#(1) d);
 
 // implemented in BsimDma.cxx
-import "BDPI" function Action pareff(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
 import "BDPI" function Action write_pareff32(Bit#(32) handle, Bit#(32) addr, Bit#(32) v);
 import "BDPI" function Action write_pareff64(Bit#(32) handle, Bit#(32) addr, Bit#(64) v);
 import "BDPI" function ActionValue#(Bit#(32)) read_pareff32(Bit#(32) handle, Bit#(32) addr);
 import "BDPI" function ActionValue#(Bit#(64)) read_pareff64(Bit#(32) handle, Bit#(32) addr);
 
-typedef struct {
-   Bit#(MemTagSize) tag;
-   Bit#(asz) addr;
-} BsimReadRequest#(numeric type asz, numeric type dsz) deriving(Eq, Bits);
-
-typedef struct {
-   Bit#(dsz) data;
-   Bit#(asz) addr;
-} BsimWriteRequest#(numeric type asz, numeric type dsz) deriving(Eq, Bits);
-
-interface BsimCtrlReadWrite#(numeric type asz, numeric type dsz);
-   method ActionValue#(BsimReadRequest#(asz, dsz)) readRequest();
-   method Action readResponse(Bit#(dsz) d, Bit#(MemTagSize) tag);
-   method ActionValue#(BsimWriteRequest#(asz, dsz)) writeRequest();
-endinterface
-
-typeclass SelectBsimCtrlReadWrite#(numeric type asz, numeric type dsz);
-   module selectBsimCtrlReadWrite(BsimCtrlReadWrite#(asz,dsz) ifc);
-endtypeclass
-
-instance SelectBsimCtrlReadWrite#(32,32);
-   module selectBsimCtrlReadWrite(BsimCtrlReadWrite#(32,32) ifc);
-      method ActionValue#(BsimReadRequest#(32,32)) readRequest() if (checkForRequest(0));
-	 let rv <- getRequest32(0);
-	 return BsimReadRequest{tag: truncate(rv[63:32]), addr:rv[31:0]};
-      endmethod
-      method Action readResponse(Bit#(32) d, Bit#(MemTagSize) tag);
-	 readResponse32(d, extend(tag));
-      endmethod
-      method ActionValue#(BsimWriteRequest#(32, 32)) writeRequest() if (checkForRequest(1));
-	 let rv <- getRequest32(1);
-	 return BsimWriteRequest{data: rv[63:32], addr: rv[31:0]};
-      endmethod
-   endmodule
-endinstance
+module mkBsimCtrlReadWrite(PhysMemMaster#(clientAddrWidth, clientBusWidth))
+   provisos(Add#(a__, 32, clientAddrWidth), Add#(b__, 32, clientBusWidth));
+   FIFO#(Bit#(clientBusWidth)) wf <- mkPipelineFIFO;
+   Reg#(Bit#(32)) cycles      <- mkReg(0);
+   rule count;
+      cycles <= cycles + 1;
+   endrule
+ 
+   let verbose = False;
+   let init_fsm <- mkOnce(initPortal());
+ 
+   rule init_rule;
+      init_fsm.start;
+   endrule
+   interface PhysMemReadClient read_client;
+     interface Get readReq;
+	 method ActionValue#(PhysMemRequest#(clientAddrWidth)) get() if (checkForRequest(0));
+	 //$write("req_ar: ");
+	 let ra <- getRequest32(0);
+	 //$display("ra=%h", ra);
+	 let burstLen = fromInteger(valueOf(clientBusWidth) / 8);
+	 if (verbose) $display("\n%d BsimHost.readReq addr=%h burstLen=%d", cycles, ra, burstLen);
+	 return PhysMemRequest { addr: extend(ra[31:0]), burstLen: burstLen, tag: truncate(ra[63:32])};
+	 endmethod
+     endinterface
+     interface Put readData;
+	 method Action put(MemData#(clientBusWidth) rd);
+	 //$display("resp_read: rd=%h", rd);
+	 if (verbose) $display("%d BsimHost.readData %h", cycles, rd.data);
+	 readResponse32(truncate(rd.data), extend(rd.tag));
+	 endmethod
+     endinterface
+   endinterface
+   interface PhysMemWriteClient write_client;
+     interface Get writeReq;
+	 method ActionValue#(PhysMemRequest#(clientAddrWidth)) get() if (checkForRequest(1));
+	 let wd <- getRequest32(1);
+	 wf.enq(extend(wd[63:32]));
+	 let burstLen = fromInteger(valueOf(clientBusWidth) / 8);
+	 if (verbose) $display("\n%d BsimHost.writeReq addr/data=%h burstLen=%d", cycles, wd, burstLen);
+	 return PhysMemRequest { addr: extend(wd[31:0]), burstLen: burstLen, tag: 0 };
+	 endmethod
+     endinterface
+     interface Get writeData;
+	 method ActionValue#(MemData#(clientBusWidth)) get;
+	 wf.deq;
+	 if (verbose) $display("%d BsimHost.writeData %h", cycles, wf.first);
+	 return MemData { data: wf.first, tag: 0, last: True };
+	 endmethod
+     endinterface
+     interface Put writeDone;
+	 method Action put(Bit#(MemTagSize) resp);
+	 if (verbose) $display("%d BsimHost.writeDone %d", cycles, resp);
+	 endmethod
+     endinterface
+   endinterface
+endmodule
 
 interface BsimRdmaReadWrite#(numeric type dsz);
    method Action write_pareff(Bit#(32) handle, Bit#(32) addr, Bit#(dsz) v);
@@ -276,68 +297,13 @@ module  mkBsimHost#(Clock double_clock, Reset double_reset)(BsimHost#(clientAddr
 			      serverAddrWidth, serverBusWidth, serverIdWidth,
 			      nSlaves))
    provisos (SelectBsimRdmaReadWrite#(serverBusWidth),
-	     SelectBsimCtrlReadWrite#(clientAddrWidth, clientBusWidth));
+             Add#(a__, 32, clientAddrWidth), Add#(b__, 32, clientBusWidth));
 
    Vector#(nSlaves,Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth)) servers <- replicateM(mkAxi3Slave);
-   BsimCtrlReadWrite#(clientAddrWidth,clientBusWidth) crw <- selectBsimCtrlReadWrite();
-   FIFO#(Bit#(clientBusWidth)) wf <- mkPipelineFIFO;
-   let init_fsm <- mkOnce(initPortal());
-
-   rule init_rule;
-      init_fsm.start;
-   endrule
-
-   let verbose = False;
-    Reg#(Bit#(32)) cycles      <- mkReg(0);
-    rule count;
-       cycles <= cycles + 1;
-    endrule
+   PhysMemMaster#(clientAddrWidth, clientBusWidth) crw <- mkBsimCtrlReadWrite();
 
    interface axi_servers = servers;
-   interface PhysMemMaster mem_client;
-      interface PhysMemReadClient read_client;
-        interface Get readReq;
-	 method ActionValue#(PhysMemRequest#(clientAddrWidth)) get();
-	    //$write("req_ar: ");
-	    let ra <- crw.readRequest();
-	    //$display("ra=%h", ra);
-	    let burstLen = fromInteger(valueOf(clientBusWidth) / 8);
-	    if (verbose) $display("\n%d BsimHost.readReq addr=%h burstLen=%d", cycles, ra, burstLen);
-	    return PhysMemRequest { addr: ra.addr, burstLen: burstLen, tag: ra.tag};
-	 endmethod
-        endinterface
-        interface Put readData;
-	 method Action put(MemData#(clientBusWidth) rd);
-	    //$display("resp_read: rd=%h", rd);
-	    if (verbose) $display("%d BsimHost.readData %h", cycles, rd.data);
-	    crw.readResponse(rd.data, rd.tag);
-	 endmethod
-        endinterface
-      endinterface
-      interface PhysMemWriteClient write_client;
-        interface Get writeReq;
-	 method ActionValue#(PhysMemRequest#(clientAddrWidth)) get();
-	    let wd <- crw.writeRequest;
-	    wf.enq(wd.data);
-	    let burstLen = fromInteger(valueOf(clientBusWidth) / 8);
-	    if (verbose) $display("\n%d BsimHost.writeReq addr/data=%h burstLen=%d", cycles, wd, burstLen);
-	    return PhysMemRequest { addr: wd.addr, burstLen: burstLen, tag: 0 };
-	 endmethod
-        endinterface
-        interface Get writeData;
-	 method ActionValue#(MemData#(clientBusWidth)) get;
-	    wf.deq;
-	    if (verbose) $display("%d BsimHost.writeData %h", cycles, wf.first);
-	    return MemData { data: wf.first, tag: 0, last: True };
-	 endmethod
-        endinterface
-        interface Put writeDone;
-	 method Action put(Bit#(MemTagSize) resp);
-	    if (verbose) $display("%d BsimHost.writeDone %d", cycles, resp);
-	 endmethod
-        endinterface
-      endinterface
-   endinterface
+   interface PhysMemMaster mem_client = crw;
    interface doubleClock = double_clock;
    interface doubleReset = double_reset;
 endmodule
@@ -351,11 +317,11 @@ module  mkBsimTop(Empty)
    let single_reset <- mkReset(2, True, singleClock);
    Reset singleReset = single_reset.new_rst;
    BsimHost#(32,32,12,PhysAddrWidth,DataBusWidth,6,NumberOfMasters) host <- mkBsimHost(clocked_by singleClock, reset_by singleReset, doubleClock, doubleReset);
+   ConnectalTop#(PhysAddrWidth,DataBusWidth,PinType,NumberOfMasters) top <- mkConnectalTop(
 `ifdef IMPORT_HOSTIF
-   ConnectalTop#(PhysAddrWidth,DataBusWidth,PinType,NumberOfMasters) top <- mkConnectalTop(clocked_by singleClock, reset_by singleReset, host);
-`else
-   ConnectalTop#(PhysAddrWidth,DataBusWidth,PinType,NumberOfMasters) top <- mkConnectalTop(clocked_by singleClock, reset_by singleReset);
+       host,
 `endif
+       clocked_by singleClock, reset_by singleReset);
    Vector#(NumberOfMasters,Axi3Master#(PhysAddrWidth,DataBusWidth,6)) m_axis <- mapM(mkAxiDmaMaster,top.masters, clocked_by singleClock, reset_by singleReset);
    mapM(uncurry(mkConnection),zip(m_axis, host.axi_servers), clocked_by singleClock, reset_by singleReset);
 `ifndef BSIM_EXERCISE_MEM_MASTER_SLAVE
