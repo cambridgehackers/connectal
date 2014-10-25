@@ -58,8 +58,8 @@ static void *pthread_worker(void *p)
     if (trace_port)
         fprintf(stderr, "%s[%d]: waiting for a connection...\n",__FUNCTION__, listening_socket);
     while (1) {
-        int sockfd;
-        if ((sockfd = accept(listening_socket, NULL, NULL)) == -1) {
+        int sockfd = accept(listening_socket, NULL, NULL);
+        if (sockfd == -1) {
             fprintf(stderr, "%s[%d]: accept error %s\n",__FUNCTION__, listening_socket, strerror(errno));
             exit(1);
         }

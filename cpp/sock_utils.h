@@ -52,6 +52,7 @@ void init_pareff(void);
 unsigned int bsim_poll_interrupt(void);
 int init_connecting(const char *arg_name);
 int init_listening(const char *arg_name);
+int accept_socket(int arg_listening);
 #ifdef __cplusplus
 }
 #endif

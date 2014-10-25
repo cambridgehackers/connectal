@@ -105,6 +105,18 @@ int init_listening(const char *arg_name)
   return listening_socket;
 }
 
+int accept_socket(int arg_listening)
+{
+    int sockfd = accept(arg_listening, NULL, NULL);
+    if (sockfd == -1) {
+        if (errno == EAGAIN)
+            return -1;
+        fprintf(stderr, "%s[%d]: accept error %s\n",__FUNCTION__, arg_listening, strerror(errno));
+        exit(1);
+    }
+    return sockfd;
+}
+
 /* Thanks to keithp.com for readable examples how to do this! */
 
 #define COMMON_SOCK_FD \
