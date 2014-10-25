@@ -53,9 +53,7 @@ void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *dmaDevice, PortalI
   memset(priv, 0, sizeof(*priv));
   priv->dmaDevice = dmaDevice;
   priv->sglDevice = sglDevice;
-#ifndef __KERNEL__
   init_portal_memory();
-#endif
   if (sem_init(&priv->sglIdSem, 0, 0)){
     PORTAL_PRINTF("failed to init sglIdSem\n");
   }
@@ -88,6 +86,10 @@ int DmaManager_reference(DmaManagerPrivate *priv, int fd)
 {
   int id = 0;
   int rc = 0;
+  init_portal_memory();
+#ifdef BSIM
+  bluesim_sock_fd_write(fd);
+#endif
   SGListIdRequest(priv->sglDevice);
   sem_wait(&priv->sglIdSem);
   id = priv->sglId;
@@ -107,7 +109,6 @@ int DmaManager_reference(DmaManagerPrivate *priv, int fd)
     sem_wait(&priv->confSem);
   rc = id;
 #else // KERNEL_REFERENCE 
-  init_portal_memory();
   rc = send_fd_to_portal(priv->sglDevice, fd, id, global_pa_fd);
   if (rc <= 0) {
     //PORTAL_PRINTF("%s:%d sem_wait\n", __FUNCTION__, __LINE__);
