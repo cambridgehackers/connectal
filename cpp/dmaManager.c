@@ -39,9 +39,6 @@
 #endif
 
 #include "GeneratedTypes.h" // generated in project directory
-#define DMAGetMemoryTraffic(P,A) DmaDebugRequestProxy_getMemoryTraffic((P), (A))
-#define SGListIdRequest(P) MMUConfigRequestProxy_idRequest((P));
-#define SGListIdReturn(P,A) MMUConfigRequestProxy_idReturn((P),(A));
 #define KERNEL_REFERENCE
 
 static int trace_memory = 1;
@@ -71,7 +68,7 @@ void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *dmaDevice, PortalI
 uint64_t DmaManager_show_mem_stats(DmaManagerPrivate *priv, ChannelType rc)
 {
   uint64_t rv = 0;
-  DMAGetMemoryTraffic(priv->dmaDevice, rc);
+  DmaDebugRequestProxy_getMemoryTraffic(priv->dmaDevice, rc);
   sem_wait(&priv->mtSem);
   rv += priv->mtCnt;
   return rv;
@@ -79,7 +76,7 @@ uint64_t DmaManager_show_mem_stats(DmaManagerPrivate *priv, ChannelType rc)
 
 void DmaManager_dereference(DmaManagerPrivate *priv, int ref)
 {
-  SGListIdReturn(priv->sglDevice, ref);
+  MMUConfigRequestProxy_idReturn(priv->sglDevice, ref);
 }
 
 int DmaManager_reference(DmaManagerPrivate *priv, int fd)
@@ -90,7 +87,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, int fd)
 #ifdef BSIM
   bluesim_sock_fd_write(fd);
 #endif
-  SGListIdRequest(priv->sglDevice);
+  MMUConfigRequestProxy_idRequest(priv->sglDevice);
   sem_wait(&priv->sglIdSem);
   id = priv->sglId;
 #if defined(KERNEL_REFERENCE) && !defined(BSIM) && !defined(__KERNEL__)
