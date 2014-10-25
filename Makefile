@@ -349,8 +349,8 @@ $(android_exetests):
 	make BOARD=zedboard -C $(basename $@) exe
 
 zynqdrivers:
-	(cd drivers/zynqportal/; MAKEKERNEL=true DEVICE_XILINX_KERNEL=/usr/src/connectal-zynq-linux-headers make zynqportal.ko)
-	(cd drivers/portalmem/;  MAKEKERNEL=true DEVICE_XILINX_KERNEL=/usr/src/connectal-zynq-linux-headers make portalmem.ko)
+	(cd drivers/zynqportal/; MAKEKERNEL=true DRIVER_VERSION=$(VERSION) DEVICE_XILINX_KERNEL=/usr/src/connectal-zynq-linux-headers make zynqportal.ko)
+	(cd drivers/portalmem/;  MAKEKERNEL=true DRIVER_VERSION=$(VERSION) DEVICE_XILINX_KERNEL=/usr/src/connectal-zynq-linux-headers make portalmem.ko)
 
 zynqdrivers-clean:
 	(cd drivers/zynqportal/; MAKEKERNEL=true DEVICE_XILINX_KERNEL=/usr/src/connectal-zynq-linux-headers make clean)

@@ -1,10 +1,16 @@
+connectal (14.10.2-7trusty2) trusty; urgency=medium
+
+  * Specify driver version
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Sati, 25 Oct 2014 14:34:22 -0400
+
 connectal (14.10.2-6trusty1) trusty; urgency=medium
 
   * Added the build depdences on zynqdrivers and zynqdrivers-install
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 24 Oct 2014 16:19:17 -0400
 
-connectal (14.10.2-5trusty1) precise; urgency=medium
+connectal (14.10.2-5trusty1) trusty; urgency=medium
 
   * Build zynqdrivers and package in connectal-zynqdrivers
 
