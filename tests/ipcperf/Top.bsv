@@ -7,9 +7,7 @@ import Connectable::*;
 import Portal::*;
 import Directory::*;
 import CtrlMux::*;
-import Portal::*;
 import Leds::*;
-import AxiMasterSlave::*;
 import MemTypes::*;
 import HostInterface::*;
 
