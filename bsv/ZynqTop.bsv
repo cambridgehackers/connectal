@@ -34,7 +34,6 @@ import PS7LIB::*;
 import PPS7LIB::*;
 import XADC::*;
 import CtrlMux::*;
-import AxiMasterSlave    :: *;
 import AxiDma            :: *;
 import Top               :: *;
 import Bscan             :: *;

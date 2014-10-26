@@ -1,11 +1,8 @@
 // bsv libraries
 import Vector::*;
-import FIFO::*;
-import Connectable::*;
 import Portal::*;
 import Directory::*;
 import CtrlMux::*;
-import Leds::*;
 import MemTypes::*;
 import HostInterface::*;
 
