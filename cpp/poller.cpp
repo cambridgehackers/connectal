@@ -28,9 +28,7 @@
 #include <pthread.h>
 
 #include "portal.h"
-#ifdef BSIM
 #include "sock_utils.h"
-#endif
 
 #ifdef ZYNQ
 #include <android/log.h>
