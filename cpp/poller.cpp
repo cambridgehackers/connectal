@@ -123,6 +123,10 @@ void* PortalPoller::portalExec_init(void)
     fprintf(stderr, "portalExec::about to enter loop, numFds=%d\n", numFds);
     return NULL;
 }
+void PortalPoller::portalExec_stop(void)
+{
+    stopping = 1;
+}
 void PortalPoller::portalExec_end(void)
 {
     stopping = 1;
