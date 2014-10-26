@@ -32,7 +32,6 @@ import DefaultValue::*;
 import Portal::*;
 import Directory::*;
 import CtrlMux::*;
-import Portal::*;
 import Leds::*;
 import ConnectalMemory::*;
 import MemTypes::*;

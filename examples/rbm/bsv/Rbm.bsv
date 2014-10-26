@@ -33,7 +33,6 @@ import BRAM::*;
 import ConnectalMemory::*;
 import MemTypes::*;
 import DmaVector::*;
-import AxiMasterSlave::*;
 import HostInterface::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;

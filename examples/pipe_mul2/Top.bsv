@@ -2,14 +2,10 @@
 import Vector::*;
 import FIFO::*;
 import Connectable::*;
-
-// portz libraries
 import Portal::*;
 import Directory::*;
 import CtrlMux::*;
-import Portal::*;
 import Leds::*;
-import AxiMasterSlave::*;
 import MemTypes::*;
 
 

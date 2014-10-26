@@ -26,8 +26,6 @@ import Vector  ::*;
 import StmtFSM ::*;
 import GetPut::*;
 import ClientServer::*;
-
-import AxiMasterSlave::*;
 import MemTypes::*;
 import MemwriteEngine::*;
 import Pipe::*;

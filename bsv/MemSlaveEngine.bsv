@@ -33,8 +33,6 @@ import ClientServer :: *;
 import MemTypes     :: *;
 import Probe        :: *;
 
-import AxiMasterSlave :: *;
-
 interface MemSlaveEngine#(numeric type buswidth);
     interface Client#(TLPData#(16), TLPData#(16)) tlp;
     interface PhysMemSlave#(40,buswidth) slave;

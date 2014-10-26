@@ -4,8 +4,6 @@ import Vector::*;
 import StmtFSM::*;
 import FIFO::*;
 import Connectable::*;
-
-// portz libraries
 import Directory::*;
 import CtrlMux::*;
 import Portal::*;
@@ -13,7 +11,6 @@ import Leds::*;
 import ConnectalMemory::*;
 import MemServer::*;
 import MMU::*;
-import ConnectalMemory::*;
 import MemTypes::*;
 import RbmTypes::*;
 import HostInterface::*;
