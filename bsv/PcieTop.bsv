@@ -72,7 +72,7 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    let dispatcher <- mkTLPDispatcher;
    let arbiter    <- mkTLPArbiter;
    Vector#(NumberOfMasters,MemSlaveEngine#(DataBusWidth)) sEngine <- replicateM(mkMemSlaveEngine(my_pciId));
-   Vector#(NumberOfMasters,MemSlave#(PhysAddrWidth,DataBusWidth)) slavearr;
+   Vector#(NumberOfMasters,PhysMemSlave#(PhysAddrWidth,DataBusWidth)) slavearr;
    MemInterrupt intr <- mkMemInterrupt(my_pciId);
    BscanTop bscan <- mkBscanTop(3); // Use USER3  (JTAG IDCODE address 0x22)
    BscanLocal lbscan <- mkBscanLocal(bscan, clocked_by bscan.tck, reset_by bscan.rst);

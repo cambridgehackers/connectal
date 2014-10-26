@@ -59,7 +59,7 @@ endfunction
 
 // control and status registers accessed from PCIe
 interface PcieControlAndStatusRegs;
-   interface MemSlave#(32,32) memSlave;
+   interface PhysMemSlave#(32,32) memSlave;
    interface Vector#(16,ReadOnly_MSIX_Entry) msixEntry;
 endinterface: PcieControlAndStatusRegs
 
@@ -232,8 +232,8 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
 	 writeDoneFifo.enq(beat.tag);
    endrule
 
-   interface MemSlave memSlave;
-      interface MemReadServer read_server;
+   interface PhysMemSlave memSlave;
+      interface PhysMemReadServer read_server;
 	 interface Put readReq;
 	    method Action put(PhysMemRequest#(32) req);
 	       csrRag.request.put(PhysMemRequest { addr: truncate(req.addr), burstLen: req.burstLen, tag: req.tag});
@@ -242,7 +242,7 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
 	 interface Get readData = toGet(readResponseFifo);
    endinterface: read_server
 
-  interface MemWriteServer write_server; 
+  interface PhysMemWriteServer write_server; 
 	 interface Put writeReq;
 	    method Action put(PhysMemRequest#(32) req);
 	       csrWag.request.put(PhysMemRequest { addr: truncate(req.addr), burstLen: req.burstLen, tag: req.tag});
