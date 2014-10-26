@@ -25,8 +25,6 @@ import FIFOF::*;
 import Vector::*;
 import ClientServer::*;
 import GetPut::*;
-
-import AxiMasterSlave::*;
 import MemTypes::*;
 import MemwriteEngine::*;
 import Pipe::*;

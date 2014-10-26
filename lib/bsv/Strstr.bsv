@@ -28,8 +28,6 @@ import BRAM::*;
 import Gearbox::*;
 import Connectable::*;
 import StmtFSM::*;
-
-import AxiMasterSlave::*;
 import MemTypes::*;
 import MPEngine::*;
 import MemreadEngine::*;

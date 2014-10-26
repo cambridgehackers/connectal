@@ -30,8 +30,6 @@ import StmtFSM::*;
 import ClientServer::*;
 import GetPut::*;
 import Connectable::*;
-
-import AxiMasterSlave::*;
 import MemTypes::*;
 import MemreadEngine::*;
 import Pipe::*;

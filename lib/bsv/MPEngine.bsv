@@ -36,7 +36,6 @@ import Connectable::*;
 import ConfigReg::*;
 
 import MemUtils::*;
-import AxiMasterSlave::*;
 import MemTypes::*;
 import Dma2BRAM::*;
 import Pipe::*;

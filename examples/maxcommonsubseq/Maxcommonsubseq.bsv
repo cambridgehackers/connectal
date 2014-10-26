@@ -26,13 +26,9 @@ import FIFOF::*;
 import SpecialFIFOs::*;
 import GetPut::*;
 import StmtFSM::*;
-//import Vector::*;
 import BRAM::*;
-//import Gearbox::*;
 import Connectable::*;
 import MCSAlgorithm::*;
-
-//import AxiMasterSlave::*;
 import MemTypes::*;
 import DmaUtils::*;
 import Dma2BRAM::*;

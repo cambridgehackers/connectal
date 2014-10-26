@@ -22,7 +22,6 @@
 
 import FIFO::*;
 import GetPut::*;
-import AxiMasterSlave::*;
 import PcieToAxiBridge::*;
 import ConnectalMemory::*;
 import MMU::*;

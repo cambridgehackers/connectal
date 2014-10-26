@@ -24,7 +24,6 @@ import Vector::*;
 import FIFOF::*;
 import FIFO::*;
 import GetPut::*;
-import GetPut::*;
 import ClientServer::*;
 import BRAM::*;
 import BRAMFIFO::*;
