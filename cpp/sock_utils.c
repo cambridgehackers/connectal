@@ -149,19 +149,7 @@ ssize_t sock_fd_write(int sockfd, int fd)
     iptr = (int *) CMSG_DATA(cmsg);
     *iptr = fd;
 
-printf("[%s:%d] fd %d\n", __FUNCTION__, __LINE__, fd);
   int rv = sendmsg(sockfd, &msg, 0);
-  return rv;
-}
-
-ssize_t bluesim_sock_fd_write(long fd)
-{
-  struct memrequest foo = {MAGIC_PORTAL_FOR_SENDING_FD};
-
-  pthread_mutex_lock(&socket_mutex);
-  portalSend(global_sockfd, &foo, sizeof(foo));
-  int rv = sock_fd_write(global_sockfd, fd);
-  pthread_mutex_unlock(&socket_mutex);
   return rv;
 }
 
@@ -258,7 +246,13 @@ void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id)
 }
 void write_portal_fd_bsim(volatile unsigned int *addr, unsigned int v, int id)
 {
-    bluesim_sock_fd_write(v);
+  struct memrequest foo = {id, MAGIC_PORTAL_FOR_SENDING_FD,addr,v};
+
+printf("[%s:%d] writefd %d\n", __FUNCTION__, __LINE__, v);
+  pthread_mutex_lock(&socket_mutex);
+  portalSend(global_sockfd, &foo, sizeof(foo));
+  int rv = sock_fd_write(global_sockfd, v);
+  pthread_mutex_unlock(&socket_mutex);
 }
 #else // __KERNEL__
 
@@ -295,7 +289,7 @@ ssize_t connectal_kernel_read (struct file *f, char __user *arg, size_t len, lof
         return -EAGAIN;
     if (len > sizeof(upreq))
         len = sizeof(upreq);
-    if (upreq.portal == MAGIC_PORTAL_FOR_SENDING_FD) // part of sock_fd_write() processing
+    if (upreq.write_flag == MAGIC_PORTAL_FOR_SENDING_FD) // part of sock_fd_write() processing
         upreq.addr = (void *)(long)dma_buf_fd((struct dma_buf *)upreq.addr, O_CLOEXEC); /* get an fd in user process!! */
     err = copy_to_user((void __user *) arg, &upreq, len);
     have_request = 0;
@@ -346,25 +340,20 @@ void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id)
     memcpy(&upreq, &foo, sizeof(upreq));
     have_request = 1;
 }
-ssize_t bluesim_sock_fd_write(long fd)
+void write_portal_fd_bsim(volatile unsigned int *addr, unsigned int v, int id)
 {
-    struct memrequest foo = {MAGIC_PORTAL_FOR_SENDING_FD};
+    struct memrequest foo = {id, MAGIC_PORTAL_FOR_SENDING_FD,addr,v};
     struct file *fmem;
 
     if (main_program_finished)
-        return 0;
-    fmem = fget(fd);
+        return;
+    fmem = fget(v);
     foo.addr = fmem->private_data;
-    printk("[%s:%d] fd %lx dmabuf %p\n", __FUNCTION__, __LINE__, fd, foo.addr);
+    printk("[%s:%d] fd %x dmabuf %p\n", __FUNCTION__, __LINE__, v, foo.addr);
     fput(fmem);
     down_interruptible(&bsim_avail);
     memcpy(&upreq, &foo, sizeof(upreq));
     have_request = 1;
     down_interruptible(&bsim_have_response);
-    return 0;
-}
-void write_portal_fd_bsim(volatile unsigned int *addr, unsigned int v, int id)
-{
-    bluesim_sock_fd_write(v);
 }
 #endif

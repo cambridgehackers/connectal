@@ -52,6 +52,7 @@ typedef struct {
 `ifdef BSIM
 `ifndef PCIE
 import "BDPI" function ActionValue#(Bit#(32)) pareff_init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
+import "BDPI" function ActionValue#(Bit#(32)) pareff_initfd(Bit#(32) id, Bit#(32) fd);
 `endif
 `endif
 
@@ -277,7 +278,11 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUConfigIndication mmuIndication)(MMU
    interface MMUConfigRequest request;
    method Action idRequest(SpecialTypeForSendingFd fd);
       let nextId <- sglId_gen.getTag;
-      mmuIndication.idResponse((fromInteger(iid) << 16) | extend(nextId));
+      let resp = (fromInteger(iid) << 16) | extend(nextId);
+`ifdef BSIM
+      let va <- pareff_initfd(resp, fd);
+`endif
+      mmuIndication.idResponse(resp);
    endmethod
    method Action idReturn(Bit#(32) sglId);
       idReturnFifo.enq(sglId);

@@ -36,6 +36,7 @@
 #include "sock_utils.h"
 
 #define MAX_FD_ARRAY 10
+#define MAX_PORTAL_ARRAY 16
 
 static struct {
     struct memrequest req;
@@ -45,11 +46,10 @@ static struct {
     int inflight;
 } head;
 static struct memresponse respitem;
-static int dma_fd = -1;
-static sem_t dma_waiting;
 static pthread_mutex_t socket_mutex;
 static int trace_port;// = 1;
 static int fd_array[MAX_FD_ARRAY];
+static int socket_fd_write_array[MAX_PORTAL_ARRAY];
 static int fd_array_index = 0;
 
 static void *pthread_worker(void *p)
@@ -72,7 +72,6 @@ static void *pthread_worker(void *p)
 extern "C" void initPortal(void)
 {
     pthread_t threaddata;
-    sem_init(&dma_waiting, 0, 0);
     pthread_mutex_init(&socket_mutex, NULL);
     pthread_create(&threaddata, NULL, &pthread_worker, NULL);
 }
@@ -94,16 +93,7 @@ extern "C" void interruptLevel(uint32_t ivalue)
     }
 }
 
-extern "C" int pareff_fd(int *fd)
-{
-    if (trace_port)
-        printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-    sem_wait(&dma_waiting);
-    *fd = dma_fd;
-    dma_fd = -1;
-    return 0;
-}
-
+static int gotfd;
 extern "C" bool checkForRequest(uint32_t rr)
 {
     if (!head.valid){
@@ -112,9 +102,9 @@ extern "C" bool checkForRequest(uint32_t rr)
         for (i = 0; i < fd_array_index; i++) {
             head.sockfd = fd_array[i];
             rv = portalRecv(head.sockfd, &head.req, sizeof(head.req));
-            if (rv == sizeof(head.req) && head.req.portal == MAGIC_PORTAL_FOR_SENDING_FD) {
-                sock_fd_read(head.sockfd, &dma_fd);
-                sem_post(&dma_waiting);
+            if (rv == sizeof(head.req) && head.req.write_flag == MAGIC_PORTAL_FOR_SENDING_FD) {
+                sock_fd_read(head.sockfd, &socket_fd_write_array[head.req.portal]);
+                gotfd = 1;
                 return 0;
             }
 	    if(rv > 0){
@@ -124,6 +114,10 @@ extern "C" bool checkForRequest(uint32_t rr)
 	        head.valid = 1;
 	        head.inflight = 1;
 	        head.req.addr = (unsigned int *)(((long) head.req.addr) | head.req.portal << 16);
+                if (gotfd && head.req.write_flag) {
+                    head.req.data_or_tag = socket_fd_write_array[head.req.portal];
+                    gotfd = 0;
+                }
 	        if(trace_port) {
 	            fprintf(stderr, "processr p=%d w=%d, a=%8lx", 
 		        head.req.portal, head.req.write_flag, (long)head.req.addr);
