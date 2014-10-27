@@ -148,5 +148,14 @@ extern PortalInternal globalDirectory;
 #define WRITEL(CITEM, A, B) write_portal_bsim((A), (B), (CITEM)->fpga_number)
 #define WRITEFD(CITEM, A, B) write_portal_fd_bsim((A), (B), (CITEM)->fpga_number)
 #endif
+#define BUSY_WAIT(CITEM, A, STR) { \
+    int __i = 50; \
+    while (!READL((CITEM), (A) + 1) && __i-- > 0) \
+        ; /* busy wait a bit on 'fifo not full' */ \
+    if (__i <= 0){ \
+        PORTAL_PRINTF(("putFailed: " STR "\n")); \
+        return; \
+    } \
+    }
 
 #endif /* __PORTAL_OFFSETS_H__ */
