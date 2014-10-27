@@ -28,7 +28,7 @@ module mkTiny3Request#(Tiny3Indication indication)(Tiny3Request);
 
    rule handle_output;
       let out <- tiny.out.get();
-      indication.outputdata(unpack(pack(out));
+      indication.outputdata(unpack(pack(out)));
       $display("%05t: output = %d\n",$time,out);
    endrule
    
