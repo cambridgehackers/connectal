@@ -22,7 +22,7 @@ import BscanRequest::*;
 
 typedef enum {BscanIndication, BscanRequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop#(BscanTop bscan)(StdPortalTop#(PhysAddrWidth));
+module mkConnectalTop#(BscanTop bscan)(StdConnectalTop#(PhysAddrWidth));
 
    // instantiate user portals
    BscanIndicationProxy bscanIndicationProxy <- mkBscanIndicationProxy(BscanIndication);
@@ -41,4 +41,4 @@ module mkPortalTop#(BscanTop bscan)(StdPortalTop#(PhysAddrWidth));
    interface slave = ctrl_mux;
    interface masters = nil;
 
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

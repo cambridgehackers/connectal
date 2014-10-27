@@ -10,7 +10,7 @@ import CtrlMux::*;
 import Portal::*;
 import Leds::*;
 import BlueScope::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import DmaUtils::*;
 import MemServer::*;
@@ -31,15 +31,15 @@ typedef enum {SmithwatermanIndication, SmithwatermanRequest, HostDmaDebugIndicat
 typedef 1 DegPar;
 
 
-module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
 
    DmaReadBuffer#(64,1) setupA_read_chan <- mkDmaReadBuffer();
    DmaReadBuffer#(64,1) setupB_read_chan <- mkDmaReadBuffer();
    
-   ObjectReadClient#(64) setupA_read_client = setupA_read_chan.dmaClient;
-   ObjectReadClient#(64) setupB_read_client = setupB_read_chan.dmaClient;
+   MemReadClient#(64) setupA_read_client = setupA_read_chan.dmaClient;
+   MemReadClient#(64) setupB_read_client = setupB_read_chan.dmaClient;
    
-   Vector#(2,  ObjectReadClient#(64)) readClients;
+   Vector#(2,  MemReadClient#(64)) readClients;
    readClients[0] = setupA_read_client;
    readClients[1] = setupB_read_client;
 

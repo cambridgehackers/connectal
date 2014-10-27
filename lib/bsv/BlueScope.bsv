@@ -47,7 +47,7 @@ endinterface
 interface BlueScope#(numeric type dataWidth);
    method Action dataIn(Bit#(dataWidth) d, Bit#(dataWidth) t);
    interface BlueScopeRequest requestIfc;
-   interface ObjectWriteClient#(dataWidth) writeClient;
+   interface MemWriteClient#(dataWidth) writeClient;
 endinterface
 
 typedef enum { Idle, Enabled, Triggered } State deriving (Bits,Eq);
@@ -75,7 +75,7 @@ module mkSyncBlueScope#(Integer samples, BlueScopeIndication indication, Clock s
    Reg#(Bit#(1))          triggeredReg <- mkReg(0,    clocked_by sClk, reset_by sRst);   
    Reg#(State)                stateReg <- mkReg(Idle, clocked_by sClk, reset_by sRst);
    Reg#(Bit#(32))             countReg <- mkReg(0,    clocked_by sClk, reset_by sRst);
-   Reg#(Bit#(ObjectOffsetSize)) writeOffsetReg <- mkReg(0,    clocked_by dClk, reset_by dRst);
+   Reg#(Bit#(MemOffsetSize)) writeOffsetReg <- mkReg(0,    clocked_by dClk, reset_by dRst);
    
    SyncPulseIfc             startPulse <- mkSyncPulse(dClk, dRst, sClk);
    SyncPulseIfc             resetPulse <- mkSyncPulse(dClk, dRst, sClk);

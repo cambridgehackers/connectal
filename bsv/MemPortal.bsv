@@ -37,7 +37,7 @@ typedef struct {
 } ReadReqInfo deriving (Bits);
 
 interface PortalCtrlMemSlave#(numeric type addrWidth, numeric type dataWidth);
-   interface MemSlave#(addrWidth, dataWidth) memSlave;
+   interface PhysMemSlave#(addrWidth, dataWidth) memSlave;
    interface ReadOnly#(Bool) interrupt;
 endinterface
 
@@ -45,7 +45,7 @@ module mkPortalCtrlMemSlave#(Vector#(numIndications, PipeOut#(Bit#(dataWidth))) 
    AddressGenerator#(addrWidth,dataWidth) ctrlReadAddrGenerator  <- mkAddressGenerator();
    AddressGenerator#(addrWidth,dataWidth) ctrlWriteAddrGenerator <- mkAddressGenerator();
    FIFO#(MemData#(dataWidth))        ctrlWriteDataFifo <- mkFIFO();
-   FIFO#(Bit#(ObjectTagSize))        ctrlWriteDoneFifo <- mkFIFO();
+   FIFO#(Bit#(MemTagSize))        ctrlWriteDoneFifo <- mkFIFO();
 
     // indication-specific state
     Reg#(Bit#(dataWidth)) underflowReadCountReg <- mkReg(0);
@@ -79,8 +79,8 @@ module mkPortalCtrlMemSlave#(Vector#(numIndications, PipeOut#(Bit#(dataWidth))) 
 	 ctrlWriteDoneFifo.enq(b.tag);
    endrule
 
-   interface MemSlave memSlave;
-      interface MemReadServer read_server;
+   interface PhysMemSlave memSlave;
+      interface PhysMemReadServer read_server;
 	 interface Put readReq = ctrlReadAddrGenerator.request;
 	 interface Get readData;
 	    method ActionValue#(MemData#(dataWidth)) get();
@@ -110,7 +110,7 @@ module mkPortalCtrlMemSlave#(Vector#(numIndications, PipeOut#(Bit#(dataWidth))) 
 	    endmethod
 	 endinterface
       endinterface: read_server
-      interface MemWriteServer write_server; 
+      interface PhysMemWriteServer write_server; 
 	 interface Put writeReq = ctrlWriteAddrGenerator.request;
 	 interface Put writeData;
 	    method Action put(MemData#(dataWidth) d);
@@ -118,7 +118,7 @@ module mkPortalCtrlMemSlave#(Vector#(numIndications, PipeOut#(Bit#(dataWidth))) 
 	    endmethod
 	 endinterface
 	 interface Get writeDone;
-	    method ActionValue#(Bit#(ObjectTagSize)) get();
+	    method ActionValue#(Bit#(MemTagSize)) get();
 	       let tag <- toGet(ctrlWriteDoneFifo).get();
 	       return tag;
 	    endmethod
@@ -132,14 +132,14 @@ module mkPortalCtrlMemSlave#(Vector#(numIndications, PipeOut#(Bit#(dataWidth))) 
    endinterface
 endmodule   
 
-module mkPipeInMemSlave#(PipeIn#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWidth, dataWidth))
+module mkPipeInMemSlave#(PipeIn#(Bit#(dataWidth)) methodPipe)(PhysMemSlave#(addrWidth, dataWidth))
    provisos (Add#(1,a__,dataWidth));
 
    AddressGenerator#(addrWidth,dataWidth) fifoReadAddrGenerator  <- mkAddressGenerator();
    AddressGenerator#(addrWidth,dataWidth) fifoWriteAddrGenerator <- mkAddressGenerator();
-   FIFO#(Bit#(ObjectTagSize))        fifoWriteDoneFifo <- mkFIFO();
+   FIFO#(Bit#(MemTagSize))        fifoWriteDoneFifo <- mkFIFO();
 
-   interface MemReadServer read_server;
+   interface PhysMemReadServer read_server;
       interface Put readReq = fifoReadAddrGenerator.request;
       interface Get readData;
 	 method ActionValue#(MemData#(dataWidth)) get();
@@ -151,7 +151,7 @@ module mkPipeInMemSlave#(PipeIn#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWidt
 	 endmethod
       endinterface
    endinterface
-   interface MemWriteServer write_server; 
+   interface PhysMemWriteServer write_server; 
       interface Put writeReq = fifoWriteAddrGenerator.request;
       interface Put writeData;
 	 method Action put((MemData#(dataWidth)) d);
@@ -167,11 +167,11 @@ module mkPipeInMemSlave#(PipeIn#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWidt
    endinterface
 endmodule
 
-module mkPipeOutMemSlave#(PipeOut#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWidth, dataWidth))
+module mkPipeOutMemSlave#(PipeOut#(Bit#(dataWidth)) methodPipe)(PhysMemSlave#(addrWidth, dataWidth))
    provisos (Add#(1,a__,dataWidth));
    AddressGenerator#(addrWidth,dataWidth) fifoReadAddrGenerator <- mkAddressGenerator();
    AddressGenerator#(addrWidth,dataWidth) fifoWriteAddrGenerator <- mkAddressGenerator();
-   FIFO#(Bit#(ObjectTagSize))                  fifoWriteDoneFifo <- mkFIFO();
+   FIFO#(Bit#(MemTagSize))                  fifoWriteDoneFifo <- mkFIFO();
    FIFO#(MemData#(dataWidth))                   fifoReadDataFifo <- mkFIFO();
    rule readDataRule;
       let b <- fifoReadAddrGenerator.addrBeat.get();
@@ -184,9 +184,9 @@ module mkPipeOutMemSlave#(PipeOut#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWi
       fifoReadDataFifo.enq(MemData { data: v, tag: b.tag, last: b.last });
    endrule
 
-   interface MemReadServer read_server;
+   interface PhysMemReadServer read_server;
       interface Put readReq;
-	 method Action put(MemRequest#(addrWidth) req);
+	 method Action put(PhysMemRequest#(addrWidth) req);
 	    fifoReadAddrGenerator.request.put(req);
 	    if (!methodPipe.notEmpty())
 	       $display("***\n\n mkPipeOutMemSlave.read_server.underflow! \n\n****");
@@ -199,7 +199,7 @@ module mkPipeOutMemSlave#(PipeOut#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWi
 	 endmethod
       endinterface
    endinterface
-   interface MemWriteServer write_server; 
+   interface PhysMemWriteServer write_server; 
       interface Put writeReq = fifoWriteAddrGenerator.request;
       interface Put writeData;
 	 method Action put((MemData#(dataWidth)) d);
@@ -213,26 +213,26 @@ module mkPipeOutMemSlave#(PipeOut#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWi
    endinterface
 endmodule
 
-module mkMemPortal#(Portal#(numRequests, numIndications, slaveDataWidth) portal)(MemPortal#(slaveAddrWidth, slaveDataWidth))
+module mkMemPortal#(PipePortal#(numRequests, numIndications, slaveDataWidth) portal)(MemPortal#(slaveAddrWidth, slaveDataWidth))
    provisos ( Add#(1, i__, slaveDataWidth)
 	     ,Add#(c__, 8, slaveAddrWidth)
 	     ,Add#(d__, 1, c__)
 	     ,Add#(a__, TLog#(TAdd#(1, TAdd#(numRequests, numIndications))), c__)
 	     );
 
-   Vector#(numRequests,    PipeIn#(Bit#(slaveDataWidth)))     requestPipes = take(portal.requests);
-   Vector#(numIndications, PipeOut#(Bit#(slaveDataWidth))) indicationPipes = take(portal.indications);
-   Vector#(numRequests,    MemSlave#(8, slaveDataWidth))    requestMemSlaves <- mapM(mkPipeInMemSlave, requestPipes);
-   Vector#(numIndications, MemSlave#(8, slaveDataWidth)) indicationMemSlaves <- mapM(mkPipeOutMemSlave, indicationPipes);
+   Vector#(numRequests,    PipeIn#(Bit#(slaveDataWidth)))     requestPipes = portal.requests;
+   Vector#(numIndications, PipeOut#(Bit#(slaveDataWidth))) indicationPipes = portal.indications;
+   Vector#(numRequests,    PhysMemSlave#(8, slaveDataWidth))    requestMemSlaves <- mapM(mkPipeInMemSlave, requestPipes);
+   Vector#(numIndications, PhysMemSlave#(8, slaveDataWidth)) indicationMemSlaves <- mapM(mkPipeOutMemSlave, indicationPipes);
 
    PortalCtrlMemSlave#(8,slaveDataWidth) ctrlPort <- mkPortalCtrlMemSlave(indicationPipes);
 
-   MemSlave#(slaveAddrWidth,slaveDataWidth) memslave  <- mkMemSlaveMux(cons(ctrlPort.memSlave,
+   PhysMemSlave#(slaveAddrWidth,slaveDataWidth) memslave  <- mkMemSlaveMux(cons(ctrlPort.memSlave,
 									    append(requestMemSlaves, indicationMemSlaves)));
 
    method ifcId   = portal.ifcId;
    method ifcType = portal.ifcType;
 
-   interface MemSlave slave = memslave;
+   interface PhysMemSlave slave = memslave;
    interface ReadOnly interrupt = ctrlPort.interrupt;
 endmodule

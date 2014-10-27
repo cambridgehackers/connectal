@@ -27,7 +27,7 @@ import MIMO::*;
 import DefaultValue::*;
 import SpecialFIFOs::*;
 import Vector::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import MemUtils::*;
 import FloatingPoint::*;
@@ -48,12 +48,12 @@ import GetPut::*;
 
 interface RowColSource#(numeric type dsz, type a);
    interface PipeOut#(a) pipe;
-   method Action start(SGLId h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
+   method Action start(SGLId h, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l, UInt#(32) tag);
 endinterface
 
 interface RowColSink#(numeric type dsz, type a);
    interface PipeIn#(a) pipe;
-   method Action start(SGLId h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
+   method Action start(SGLId h, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l);
    method ActionValue#(Bool) finish();
 endinterface
 
@@ -141,7 +141,7 @@ module mkXYZRangePipeOut#(RangeBehavior alt) (XYZRangePipeIfc#(a)) provisos (Ari
    endmethod
 endmodule: mkXYZRangePipeOut
 
-module mkRowSource#(ObjectReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) numRows, Bit#(ObjectTagSize) id) (RowColSource#(TMul#(N,32), Vector#(N,MmToken)))
+module mkRowSource#(MemReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) numRows, Bit#(MemTagSize) id) (RowColSource#(TMul#(N,32), Vector#(N,MmToken)))
    provisos (Bits#(Vector#(N,Float),asz),
       Div#(asz,8,abytes),
       Log#(abytes,ashift),
@@ -157,9 +157,9 @@ module mkRowSource#(ObjectReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) nu
    FIFOF#(UInt#(32)) tagFifo <- mkSizedBRAMFIFOF(cmd_buffer_depth);
 `endif
    // perhaps memreadengine could do the labeling
-   Reg#(Bit#(ObjectOffsetSize)) countReg <- mkReg(0);
+   Reg#(Bit#(MemOffsetSize)) countReg <- mkReg(0);
    Reg#(UInt#(addrwidth)) cmdCountReg <- mkReg(0);
-   FIFOF#(Bit#(ObjectOffsetSize)) cmdFifo <- mkSizedBRAMFIFOF(cmd_buffer_depth);
+   FIFOF#(Bit#(MemOffsetSize)) cmdFifo <- mkSizedBRAMFIFOF(cmd_buffer_depth);
    FIFOF#(Vector#(N,Float)) read_data_buffer <- mkFIFOF;
    
    rule read_data;
@@ -167,11 +167,11 @@ module mkRowSource#(ObjectReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) nu
       read_data_buffer.enq(unpack(foo.data));
    endrule
    
-   method Action start(SGLId h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
+   method Action start(SGLId h, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l, UInt#(32) tag);
 `ifdef TAGGED_TOKENS
       tagFifo.enq(tag);
 `endif
-      let cmd = ObjectRequest{sglId:h, offset:a<<ashift, burstLen:truncate(l<<ashift), tag:id};
+      let cmd = MemRequest{sglId:h, offset:a<<ashift, burstLen:truncate(l<<ashift), tag:id};
       vs.readReq.put(cmd); //start(h,a,l);
       if(verbose) $display("mkRowSource.start %d %d", cmd.offset, cmd.burstLen);
       cmdFifo.enq(l);
@@ -228,7 +228,7 @@ module mkRowSource#(ObjectReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) nu
    endinterface
 endmodule: mkRowSource
 
-module mkRowColSink#(ObjectWriteServer#(TMul#(N,32)) vs, Bit#(ObjectTagSize) id) (RowColSink#(TMul#(N,32), Vector#(N,MmToken)))
+module mkRowColSink#(MemWriteServer#(TMul#(N,32)) vs, Bit#(MemTagSize) id) (RowColSink#(TMul#(N,32), Vector#(N,MmToken)))
    provisos (Bits#(Vector#(N,Float),asz),
       Div#(asz,8,abytes),
       Log#(abytes,ashift),
@@ -241,13 +241,13 @@ module mkRowColSink#(ObjectWriteServer#(TMul#(N,32)) vs, Bit#(ObjectTagSize) id)
       vs.writeData.put(foo);
    endrule
    function Float tokenValue(MmToken v) = v.v;
-   method Action start(SGLId h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
-      let cmd = ObjectRequest{sglId:h, offset:a<<ashift, burstLen:truncate(l<<ashift), tag:id};
+   method Action start(SGLId h, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l);
+      let cmd = MemRequest{sglId:h, offset:a<<ashift, burstLen:truncate(l<<ashift), tag:id};
       vs.writeReq.put(cmd);
    endmethod
    interface PipeIn pipe;
       method Action enq(Vector#(N,MmToken) v);
-	 write_data_buffer.enq(ObjectData{data:pack(map(tokenValue,v)),tag:id,last:True});
+	 write_data_buffer.enq(MemData{data:pack(map(tokenValue,v)),tag:id,last:True});
       endmethod
       method Bool notFull = write_data_buffer.notFull;
    endinterface
@@ -282,9 +282,9 @@ typedef enum {
  * perform J*K*N multiply accumulates.
  *
  */
-module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
-			     ObjectReadServer#(TMul#(N,32)) sB,
-			     ObjectWriteServer#(TMul#(N,32))ss,
+module  mkDmaMatrixMultiply#(MemReadServer#(TMul#(N,32)) sA,
+			     MemReadServer#(TMul#(N,32)) sB,
+			     MemWriteServer#(TMul#(N,32))ss,
 			     HostType host
 			     )(DmaMatrixMultiplyIfc#(addrwidth, dsz))
    provisos (  Mul#(N,n__,K) // K must be an integer multiple of N
@@ -297,7 +297,7 @@ module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
 	     , Bits#(MatrixDescriptor#(UInt#(addrwidth)), mdsz)
 	     , Bits#(Tuple2#(UInt#(addrwidth), UInt#(addrwidth)), tplsz)
 	     , Add#(b__, 20, addrwidth)
-	     , Add#(a__, addrwidth, ObjectOffsetSize)
+	     , Add#(a__, addrwidth, MemOffsetSize)
 	     , Add#(c__, addrwidth, 32)
       );
 
@@ -465,8 +465,8 @@ module  mkDmaMatrixMultiply#(ObjectReadServer#(TMul#(N,32)) sA,
 endmodule : mkDmaMatrixMultiply
 
 interface DramMatrixMultiply#(numeric type n, numeric type dmasz);
-   interface Vector#(2, ObjectReadClient#(dmasz)) readClients;
-   interface Vector#(2, ObjectWriteClient#(dmasz)) writeClients;
+   interface Vector#(2, MemReadClient#(dmasz)) readClients;
+   interface Vector#(2, MemWriteClient#(dmasz)) writeClients;
    method Action start(SGLId pointerA, UInt#(MMSize) numRowsA, UInt#(MMSize) numColumnsA,
 		       SGLId pointerB, UInt#(MMSize) numRowsB, UInt#(MMSize) numColumnsB,
 		       SGLId pointerC,
@@ -495,14 +495,14 @@ endmodule
 interface MmTN#(numeric type n);
    interface MmRequestTN mmRequest;
    interface TimerRequest timerRequest;
-   interface Vector#(2, ObjectReadClient#(TMul#(32,n)))  readClients;
-   interface Vector#(2, ObjectWriteClient#(TMul#(32,n))) writeClients;
+   interface Vector#(2, MemReadClient#(TMul#(32,n)))  readClients;
+   interface Vector#(2, MemWriteClient#(TMul#(32,n))) writeClients;
 endinterface
 
 interface MmTNInternal#(numeric type n);
    interface MmRequestTN mmRequest;
-   interface Vector#(2, ObjectReadClient#(TMul#(32,n)))  readClients;
-   interface Vector#(2, ObjectWriteClient#(TMul#(32,n))) writeClients;
+   interface Vector#(2, MemReadClient#(TMul#(32,n)))  readClients;
+   interface Vector#(2, MemWriteClient#(TMul#(32,n))) writeClients;
    method ActionValue#(Bit#(64)) mmfDone(); 
    method ActionValue#(Bit#(32)) debugDone(); 
 endinterface

@@ -31,7 +31,7 @@ import BRAM::*;
 import MemTypes::*;
 import StmtFSM::*;
 import ClientServer::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import CompletionBuffer::*;
 
 
@@ -46,7 +46,7 @@ typedef 8 IndexWidth;
 
 typedef struct {
    SGListId               id;
-   Bit#(ObjectOffsetSize) off;
+   Bit#(MemOffsetSize) off;
 } ReqTup deriving (Eq,Bits,FShow);
 
 `ifdef BSIM
@@ -65,9 +65,9 @@ typedef struct {
    Bit#(SGListPageShift8) value;
 } Offset deriving (Eq,Bits,FShow);
 
-typedef Bit#(TSub#(ObjectOffsetSize,SGListPageShift0)) Page0;
-typedef Bit#(TSub#(ObjectOffsetSize,SGListPageShift4)) Page4;
-typedef Bit#(TSub#(ObjectOffsetSize,SGListPageShift8)) Page8;
+typedef Bit#(TSub#(MemOffsetSize,SGListPageShift0)) Page0;
+typedef Bit#(TSub#(MemOffsetSize,SGListPageShift4)) Page4;
+typedef Bit#(TSub#(MemOffsetSize,SGListPageShift8)) Page8;
 
 typedef struct {
    Bit#(28) barrier;
@@ -82,14 +82,14 @@ typedef struct {
 
 typedef struct {DmaErrorType errorType;
 		Bit#(32) pref;
-		Bit#(ObjectOffsetSize) off;
+		Bit#(MemOffsetSize) off;
    } DmaError deriving (Bits);
 
 // the address translation servers (addr[0], addr[1]) have a latency of 8 and are fully pipelined
 module mkMMU#(Integer iid, Bool bsimMMap, MMUConfigIndication mmuIndication)(MMU#(addrWidth))
    provisos(Log#(MaxNumSGLists, listIdxSize),
 	    Add#(listIdxSize,8, entryIdxSize),
-	    Add#(c__, addrWidth, ObjectOffsetSize));
+	    Add#(c__, addrWidth, MemOffsetSize));
    
    let verbose = False;
    TagGen#(MaxNumSGLists) sglId_gen <- mkTagGen;
@@ -227,7 +227,7 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUConfigIndication mmuIndication)(MMU
 	 Page0 page <- portsel(pages, i).response.get;
 	 let offset <- toGet(offs1[i]).get();
 	 if (verbose) $display("mkMMU::p ages[%d].response page=%h offset=%h", i, page, offset);
-	 Bit#(ObjectOffsetSize) rv = ?;
+	 Bit#(MemOffsetSize) rv = ?;
 	 Page4 b4 = truncate(page);
 	 Page8 b8 = truncate(page);
 	 case (offset.pageSize) 

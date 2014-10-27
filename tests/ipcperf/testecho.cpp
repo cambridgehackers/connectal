@@ -149,12 +149,11 @@ int main(int argc, const char **argv)
     for (i = 0; i < LOOP_COUNT; i++)
         run_test();
     printf("disable interrupts for echoIndication\n");
-    poller->portalExec_end();
+    poller->portalExec_stop();
     printf("now try inline\n");
     use_inline = 1;
     for (i = 0; i < LOOP_COUNT; i++)
         run_test();
-    portalExec_end();
 printf("[%s:%d] end\n", __FUNCTION__, __LINE__);
     return 0;
 }

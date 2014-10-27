@@ -26,13 +26,9 @@ import FIFOF::*;
 import SpecialFIFOs::*;
 import GetPut::*;
 import StmtFSM::*;
-//import Vector::*;
 import BRAM::*;
-//import Gearbox::*;
 import Connectable::*;
 import MCSAlgorithm::*;
-
-//import AxiMasterSlave::*;
 import MemTypes::*;
 import DmaUtils::*;
 import Dma2BRAM::*;
@@ -81,9 +77,9 @@ typedef TLog#(MaxFetchLen) LIdxWidth;
 typedef Bit#(LIdxWidth) LIdx;
 
 module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
-			ObjectReadServer#(busWidth)   setupA_read_server,
-			ObjectReadServer#(busWidth)   setupB_read_server,
-			ObjectWriteServer#(busWidth)   fetch_write_server )(MaxcommonsubseqRequest)
+			MemReadServer#(busWidth)   setupA_read_server,
+			MemReadServer#(busWidth)   setupB_read_server,
+			MemWriteServer#(busWidth)   fetch_write_server )(MaxcommonsubseqRequest)
    
    provisos(Add#(a__, 8, busWidth),
 	    Div#(busWidth,8,nc),

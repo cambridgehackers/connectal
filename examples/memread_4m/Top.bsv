@@ -32,7 +32,7 @@ import MMU::*;
 import Directory::*;
 import CtrlMux::*;
 import Portal::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import Leds::*;
 
@@ -50,7 +50,7 @@ import Memread::*;
 typedef enum {MemreadIndication, MemreadRequest, HostDmaDebugIndication, HostDmaDebugRequest, HostMMUConfigRequest, HostMMUConfigIndication} IfcNames deriving (Eq,Bits);
 
 typedef 4 NumMasters;
-module mkPortalTop(PortalTop#(PhysAddrWidth,64,Empty,NumMasters));
+module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,Empty,NumMasters));
 
    MemreadIndicationProxy memreadIndicationProxy <- mkMemreadIndicationProxy(MemreadIndication);
    Memread#(NumMasters) memread <- mkMemread(memreadIndicationProxy.ifc);
@@ -81,4 +81,4 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,64,Empty,NumMasters));
    interface masters = dma.masters;
    interface leds = default_leds;
       
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

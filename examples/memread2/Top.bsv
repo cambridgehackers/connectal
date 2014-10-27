@@ -9,7 +9,7 @@ import Connectable::*;
 import Directory::*;
 import CtrlMux::*;
 import Portal::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import DmaUtils::*;
 import MemServer::*;
@@ -28,13 +28,13 @@ import Memread2::*;
 
 typedef enum {Memread2Indication, Memread2Request, HostDmaDebugIndication, HostDmaDebugRequest, HostMMUConfigRequest, HostMMUConfigIndication} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
 
    Memread2IndicationProxy memreadIndicationProxy <- mkMemread2IndicationProxy(Memread2Indication);
    Memread2 memread <- mkMemread2(memreadIndicationProxy.ifc);
    Memread2RequestWrapper memreadRequestWrapper <- mkMemread2RequestWrapper(Memread2Request,memread.request);
 
-   Vector#(2, ObjectReadClient#(64)) readClients;
+   Vector#(2, MemReadClient#(64)) readClients;
    Vector#(2, DmaReadBuffer#(64, 16)) readBuffers <- replicateM(mkDmaReadBuffer);
    mkConnection(memread.dmaClient0, readBuffers[0].dmaServer);
    mkConnection(memread.dmaClient1, readBuffers[1].dmaServer);
@@ -63,4 +63,4 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    interface slave = ctrl_mux;
    interface masters = dma.masters;
    interface leds = ?;
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

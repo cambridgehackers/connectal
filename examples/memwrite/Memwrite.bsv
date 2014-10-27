@@ -25,8 +25,6 @@ import FIFOF::*;
 import Vector::*;
 import ClientServer::*;
 import GetPut::*;
-
-import AxiMasterSlave::*;
 import MemTypes::*;
 import MemwriteEngine::*;
 import Pipe::*;
@@ -49,7 +47,7 @@ endinterface
 
 interface Memwrite;
    interface MemwriteRequest request;
-   interface ObjectWriteClient#(DataBusWidth) dmaClient;
+   interface MemWriteClient#(DataBusWidth) dmaClient;
 endinterface
 
 interface MemwriteIndication;
@@ -74,7 +72,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    Vector#(NumEngineServers, FIFOF#(void))               cfs <- replicateM(mkSizedFIFOF(1));
    Vector#(NumEngineServers, FIFOF#(Bool))       finishFifos <- replicateM(mkFIFOF);
    MemwriteEngineV#(DataBusWidth,1,NumEngineServers)                we <- mkMemwriteEngine;
-   Bit#(ObjectOffsetSize) chunk = (extend(numWords)/fromInteger(valueOf(NumEngineServers)))*4;
+   Bit#(MemOffsetSize) chunk = (extend(numWords)/fromInteger(valueOf(NumEngineServers)))*4;
 
    for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
       rule start (iterCnts[i] > 0);
@@ -114,7 +112,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
       iterCnt <= iterCnt - 1;
    endrule
    
-   interface ObjectWriteClient dmaClient = we.dmaClient;
+   interface MemWriteClient dmaClient = we.dmaClient;
    interface MemwriteRequest request;
        method Action startWrite(Bit#(32) wp, Bit#(32) off, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
 	  $display("startWrite pointer=%d offset=%d numWords=%h burstLen=%d iterCnt=%d", pointer, off, nw, bl, ic);
@@ -161,7 +159,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
       if (verbose) $display("write_req %d", cycle_cnt-last_write_req);
       last_write_req <= cycle_cnt;
       let nwe = writeEnd-burstLen;
-      we.writeServer.writeReq.put(ObjectRequest{sglId:pointer, offset:extend(nwe), burstLen:truncate(burstLen), tag:0});
+      we.writeServer.writeReq.put(MemRequest{sglId:pointer, offset:extend(nwe), burstLen:truncate(burstLen), tag:0});
       writeEnd <= nwe;
       //if (verbose) $display("write_req %d", nwe);
    endrule
@@ -169,7 +167,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
       if (verbose) $display("write_data %d", cycle_cnt-last_write_data);
       last_write_data <= cycle_cnt;
       let v = {srcGen-1,srcGen-2};
-      we.writeServer.writeData.put(ObjectData{data:v, tag:0, last:False});
+      we.writeServer.writeData.put(MemData{data:v, tag:0, last:False});
       let new_srcGen = srcGen-2;
       srcGen <= new_srcGen;
       //if (verbose) $display("write_data %d", srcGen);
@@ -197,7 +195,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
       end
    endrule
        
-   interface ObjectWriteClient dmaClient = we.writeClient;
+   interface MemWriteClient dmaClient = we.writeClient;
    interface MemwriteRequest request;
        method Action startWrite(Bit#(32) wp, Bit#(32) off, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
 	  indication.started(nw);

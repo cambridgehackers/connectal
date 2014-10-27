@@ -27,7 +27,7 @@ import GetPutF::*;
 import StmtFSM::*;
 import ClientServer::*;
 
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import CompletionBuffer::*;
 
@@ -55,10 +55,10 @@ interface RingIndication;
 endinterface
 
 module mkRingRequest#(RingIndication indication,
-		      ObjectReadServer#(64) dma_read_chan,
-		      ObjectWriteServer#(64) dma_write_chan,
-		      ObjectReadServer#(64) cmd_read_chan,
-		      ObjectWriteServer#(64) status_write_chan )(RingRequest);
+		      MemReadServer#(64) dma_read_chan,
+		      MemWriteServer#(64) dma_write_chan,
+		      MemReadServer#(64) cmd_read_chan,
+		      MemWriteServer#(64) status_write_chan )(RingRequest);
 
    ServerF#(Bit#(64), Bit#(64)) copyEngine <- mkCopyEngine(dma_read_chan, dma_write_chan);   
    ServerF#(Bit#(64), Bit#(64)) nopEngine <- mkNopEngine();
@@ -69,7 +69,7 @@ module mkRingRequest#(RingIndication indication,
    RingBuffer statusRing <- mkRingBuffer;
    Reg#(Bool) hwenabled <- mkReg(False);
    Reg#(Bool) cmdBusy <- mkReg(False);
-   Reg#(ObjectData#(64)) cmd <- mkReg(ObjectData{data:0, tag:0});
+   Reg#(MemData#(64)) cmd <- mkReg(MemData{data:0, tag:0});
    Reg#(Bit#(4)) ii <- mkReg(0);
    Reg#(Bit#(4)) respCtr <- mkReg(0);
    Reg#(Bit#(4)) dispCtr <- mkReg(0);
@@ -101,7 +101,7 @@ module mkRingRequest#(RingIndication indication,
 //		     $display ("cmdFetch handle=%h address=%h burst=%h tag=%h", 
 //		      cmdRing.mempointer, cmdRing.bufferlastfetch, 8, ct );
 		     cmd_read_chan.readReq.put(
-			ObjectRequest{sglId: cmdRing.mempointer,
+			MemRequest{sglId: cmdRing.mempointer,
 			   offset: cmdRing.bufferlastfetch, burstLen: 8*8, tag: zeroExtend(unpack(ct))});
 		     cmdRing.popfetch();
 		  endaction
@@ -147,12 +147,12 @@ module mkRingRequest#(RingIndication indication,
 //	       $display("status write handle=%d address=%h burst=%h tag=%h",
 //		  statusRing.mempointer, statusRing.bufferfirst, 8, statusTag);
 	       status_write_chan.writeReq.put(
-		  ObjectRequest{sglId: statusRing.mempointer, 
+		  MemRequest{sglId: statusRing.mempointer, 
 		     offset: statusRing.bufferfirst, burstLen: 8*8, tag: statusTag});
 	       for (respCtr <= 0; respCtr < 8; respCtr <= respCtr + 1)
 		  action
 		     let rv <- copyEngine.response.get();
-		     status_write_chan.writeData.put(ObjectData{data: rv, tag: statusTag});
+		     status_write_chan.writeData.put(MemData{data: rv, tag: statusTag});
 		  endaction
 	       statusRing.push();
 	       statusTag <= statusTag + 1;
@@ -164,12 +164,12 @@ module mkRingRequest#(RingIndication indication,
 //	       $display("status write handle=%d address=%h burst=%h tag=%h",
 //		  statusRing.mempointer, statusRing.bufferfirst, 8, statusTag);
 	       status_write_chan.writeReq.put(
-		  ObjectRequest{sglId: statusRing.mempointer, 
+		  MemRequest{sglId: statusRing.mempointer, 
 		     offset: statusRing.bufferfirst, burstLen: 8*8, tag: statusTag});
 	       for (respCtr <= 0; respCtr < 8; respCtr <= respCtr + 1)
 		  action
 		     let rv <- echoEngine.response.get();
-		     status_write_chan.writeData.put(ObjectData{data: rv, tag: statusTag});
+		     status_write_chan.writeData.put(MemData{data: rv, tag: statusTag});
 		  endaction
 	       statusRing.push();
 	       statusTag <= statusTag + 1;
@@ -193,7 +193,7 @@ module mkRingRequest#(RingIndication indication,
       method Action doCommandIndirect(Bit#(64) pointer, Bit#(64) addr);
 	 let ct <- fetchComplete.reserve.get();
 	 cmd_read_chan.readReq.put(
-				   ObjectRequest{sglId: truncate(pointer),
+				   MemRequest{sglId: truncate(pointer),
 	 offset: truncate(addr), burstLen: 8*8, tag: zeroExtend(unpack(ct))});
       endmethod
    

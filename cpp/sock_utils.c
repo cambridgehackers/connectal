@@ -23,7 +23,6 @@
 
 #include "portal.h"
 #include "sock_utils.h"
-#define SOCKET_NAME                 "socket_for_bluesim"
 
 #ifndef __KERNEL__
 #include <stdio.h>
@@ -41,9 +40,6 @@ static pthread_mutex_t socket_mutex;
 int we_are_initiator;
 int global_sockfd = -1;
 static int trace_socket;// = 1;
-#define MAX_FD_ARRAY 10
-static int fd_array[MAX_FD_ARRAY];
-static int fd_array_index = 0;
 
 int init_connecting(const char *arg_name)
 {
@@ -108,29 +104,17 @@ int init_listening(const char *arg_name)
   }
   return listening_socket;
 }
-  
-static void *pthread_worker(void *p)
-{
-  int listening_socket = init_listening(SOCKET_NAME);
-  if (trace_socket)
-    fprintf(stderr, "%s[%d]: waiting for a connection...\n",__FUNCTION__, listening_socket);
-  while (1) {
-  int sockfd;
-  if ((sockfd = accept(listening_socket, NULL, NULL)) == -1) {
-    fprintf(stderr, "%s[%d]: accept error %s\n",__FUNCTION__, listening_socket, strerror(errno));
-    exit(1);
-  }
-  if (trace_socket)
-    printf("[%s:%d] sockfd %d\n", __FUNCTION__, __LINE__, sockfd);
-  fd_array[fd_array_index++] = sockfd;
-  }
-}
 
-void bsim_wait_for_connect(void)
+int accept_socket(int arg_listening)
 {
-  pthread_t threaddata;
-
-  pthread_create(&threaddata, NULL, &pthread_worker, NULL);
+    int sockfd = accept(arg_listening, NULL, NULL);
+    if (sockfd == -1) {
+        if (errno == EAGAIN)
+            return -1;
+        fprintf(stderr, "%s[%d]: accept error %s\n",__FUNCTION__, arg_listening, strerror(errno));
+        exit(1);
+    }
+    return sockfd;
 }
 
 /* Thanks to keithp.com for readable examples how to do this! */
@@ -175,10 +159,7 @@ ssize_t bluesim_sock_fd_write(long fd)
   struct memrequest foo = {MAGIC_PORTAL_FOR_SENDING_FD};
 
   pthread_mutex_lock(&socket_mutex);
-  if (send(global_sockfd, &foo, sizeof(foo), 0) == -1) {
-    fprintf(stderr, "%s: send error sending fd\n",__FUNCTION__);
-    //exit(1);
-  }
+  portalSend(global_sockfd, &foo, sizeof(foo));
   int rv = sock_fd_write(global_sockfd, fd);
   pthread_mutex_unlock(&socket_mutex);
   return rv;
@@ -213,6 +194,22 @@ ssize_t sock_fd_read(int sock, int *fd)
 }
 
 static uint32_t interrupt_value;
+void portalSend(int fd, void *data, int len)
+{
+    if (trace_socket)
+        printf("%s: init %d fd %d data %p len %d\n", __FUNCTION__, we_are_initiator, fd, data, len);
+    if (send(fd, data, len, 0) == -1) {
+        fprintf(stderr, "%s: send error\n",__FUNCTION__);
+        exit(1);
+    }
+}
+int portalRecv(int fd, void *data, int len)
+{
+    int rc = recv(fd, data, len, MSG_DONTWAIT);
+    if (trace_socket)
+        printf("%s: init %d fd %d data %p len %d rc %d\n", __FUNCTION__, we_are_initiator, fd, data, len, rc);
+    return rc;
+}
 unsigned int bsim_poll_interrupt(void)
 {
   struct memresponse rv;
@@ -221,23 +218,22 @@ unsigned int bsim_poll_interrupt(void)
   if (global_sockfd == -1)
       return 0;
   pthread_mutex_lock(&socket_mutex);
-  rc = recv(global_sockfd, &rv, sizeof(rv), MSG_DONTWAIT);
+  rc = portalRecv(global_sockfd, &rv, sizeof(rv));
   if (rc == sizeof(rv) && rv.portal == MAGIC_PORTAL_FOR_SENDING_INTERRUPT)
       interrupt_value = rv.data;
   pthread_mutex_unlock(&socket_mutex);
   return interrupt_value;
 }
 /* functions called by READL() and WRITEL() macros in application software */
+unsigned int tag_counter;
 unsigned int read_portal_bsim(volatile unsigned int *addr, int id)
 {
   struct memrequest foo = {id, 0,addr,0};
   struct memresponse rv;
 
   pthread_mutex_lock(&socket_mutex);
-  if (send(global_sockfd, &foo, sizeof(foo), 0) == -1) {
-    fprintf(stderr, "%s (fpga%d) send error, errno=%s\n",__FUNCTION__, id, strerror(errno));
-    exit(1);
-  }
+  foo.data_or_tag = tag_counter++;
+  portalSend(global_sockfd, &foo, sizeof(foo));
   while (1) {
     if(recv(global_sockfd, &rv, sizeof(rv), 0) == -1){
       fprintf(stderr, "%s (fpga%d) recv error\n",__FUNCTION__, id);
@@ -257,59 +253,8 @@ void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id)
   struct memrequest foo = {id, 1,addr,v};
 
   pthread_mutex_lock(&socket_mutex);
-  if (send(global_sockfd, &foo, sizeof(foo), 0) == -1) {
-    fprintf(stderr, "%s (fpga%d) send error\n",__FUNCTION__, id);
-    exit(1);
-  }
+  portalSend(global_sockfd, &foo, sizeof(foo));
   pthread_mutex_unlock(&socket_mutex);
-}
-
-int bsim_ctrl_recv(int *sockfd, struct memrequest *data)
-{
-  int i, rc = -1;
-  for (i = 0; i < fd_array_index; i++) {
-  *sockfd = fd_array[i];
-  rc = recv(*sockfd, data, sizeof(*data), MSG_DONTWAIT);
-  if (0 && rc > 0 && trace_socket)
-      printf("[%s:%d] sock %d rc %d\n", __FUNCTION__, __LINE__, *sockfd, rc);
-  if (rc == sizeof(*data) && data->portal == MAGIC_PORTAL_FOR_SENDING_FD) {
-    int new_fd;
-    sock_fd_read(*sockfd, &new_fd);
-    data->data = new_fd;
-  }
-  if (rc > 0)
-    break;
-  }
-  return rc;
-}
-void bsim_ctrl_interrupt(int ivalue)
-{
-  static struct memresponse respitem;
-  int i;
-
-  for (i = 0; i < fd_array_index; i++) {
-     respitem.portal = MAGIC_PORTAL_FOR_SENDING_INTERRUPT;
-     respitem.data = ivalue;
-     bsim_ctrl_send(fd_array[i], &respitem);
-  }
-}
-
-int bsim_ctrl_send(int sockfd, struct memresponse *data)
-{
-  return send(sockfd, data, sizeof(*data), 0);
-}
-void portalSend(PortalInternal *p, void *data, int len)
-{
-    if (trace_socket)
-        printf("%s: init %d fd %d data %p len %d\n", __FUNCTION__, we_are_initiator, p->fpga_fd, data, len);
-    send(p->fpga_fd, data, len, 0);
-}
-int portalRecv(PortalInternal *p, void *data, int len)
-{
-    int rc = recv(p->fpga_fd, data, len, MSG_DONTWAIT);
-    if (trace_socket)
-        printf("%s: init %d fd %d data %p len %d rc %d\n", __FUNCTION__, we_are_initiator, p->fpga_fd, data, len, rc);
-    return rc;
 }
 #else // __KERNEL__
 

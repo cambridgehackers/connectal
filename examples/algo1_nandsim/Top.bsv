@@ -12,7 +12,7 @@ import Leds::*;
 import Directory::*;
 import CtrlMux::*;
 import Portal::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import MemServer::*;
 import MemServerInternal::*;
@@ -35,7 +35,7 @@ import NandSim::*;
 import NandSimNames::*;
 import Strstr::*;
 
-module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    
    // nandsim 
    NandSimIndicationProxy nandSimIndicationProxy <- mkNandSimIndicationProxy(NandSimIndication);
@@ -105,4 +105,4 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    interface masters = hostDma.masters;
    interface leds = default_leds;
       
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

@@ -26,13 +26,9 @@
 #include <poll.h>
 #include <errno.h>
 #include <pthread.h>
-#include <sys/ioctl.h>
-#include <sys/select.h>
 
 #include "portal.h"
-#ifdef BSIM
 #include "sock_utils.h"
-#endif
 
 #ifdef ZYNQ
 #include <android/log.h>
@@ -127,6 +123,10 @@ void* PortalPoller::portalExec_init(void)
     fprintf(stderr, "portalExec::about to enter loop, numFds=%d\n", numFds);
     return NULL;
 }
+void PortalPoller::portalExec_stop(void)
+{
+    stopping = 1;
+}
 void PortalPoller::portalExec_end(void)
 {
     stopping = 1;
@@ -164,7 +164,7 @@ void* PortalPoller::portalExec_event(void)
       if (instance->pint.reqsize) {
           /* sw portal */
           if (instance->pint.accept_finished) { /* connection established */
-             int len = recv(instance->pint.fpga_fd, (void *)instance->pint.map_base, sizeof(uint32_t), MSG_DONTWAIT);
+             int len = portalRecv(instance->pint.fpga_fd, (void *)instance->pint.map_base, sizeof(uint32_t));
              if (len == 0 || (len == -1 && errno == EAGAIN))
                  continue;
              if (len <= 0) {
@@ -172,23 +172,18 @@ void* PortalPoller::portalExec_event(void)
                  exit(1);
              }
              instance->pint.handler(&instance->pint, *instance->pint.map_base >> 16);
-             continue;
           }
           else { /* have not received connection yet */
-             int sockfd;
-             if ((sockfd = accept(instance->pint.fpga_fd, NULL, NULL)) == -1) {
-                 if (errno == EAGAIN)
-                     continue;
-                 fprintf(stderr, "%s[%d]: accept error %d\n",__FUNCTION__, instance->pint.fpga_fd, errno);
-                 exit(1);
-             }
-             for (int j = 0; j < numFds; j++)
-                 if (portal_fds[j].fd == instance->pint.fpga_fd) {
-                     portal_fds[j].fd = sockfd;
-                     break;
-                 }
-             instance->pint.accept_finished = 1;
-             instance->pint.fpga_fd = sockfd;
+              int sockfd = accept_socket(instance->pint.fpga_fd);
+              if (sockfd != -1) {
+                  for (int j = 0; j < numFds; j++)
+                      if (portal_fds[j].fd == instance->pint.fpga_fd) {
+                          portal_fds[j].fd = sockfd;
+                          break;
+                      }
+                  instance->pint.accept_finished = 1;
+                  instance->pint.fpga_fd = sockfd;
+              }
           }
           continue;
       }

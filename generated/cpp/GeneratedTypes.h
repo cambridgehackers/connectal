@@ -14,9 +14,6 @@ typedef struct DmaDbgRec {
 } DmaDbgRec;
 typedef enum DmaErrorType { DmaErrorType_DmaErrorNone, DmaErrorType_DmaErrorSGLIdOutOfRange_r, DmaErrorType_DmaErrorSGLIdOutOfRange_w, DmaErrorType_DmaErrorMMUOutOfRange_r, DmaErrorType_DmaErrorMMUOutOfRange_w, DmaErrorType_DmaErrorOffsetOutOfRange, DmaErrorType_DmaErrorSGLIdInvalid } DmaErrorType;
 
-enum { CHAN_NUM_MMUConfigRequestProxy_sglist,CHAN_NUM_MMUConfigRequestProxy_region,CHAN_NUM_MMUConfigRequestProxy_idRequest,CHAN_NUM_MMUConfigRequestProxy_idReturn,CHAN_NUM_MMUConfigRequestProxy_putFailed};
-
-int MMUConfigRequestProxy_handleMessage(struct PortalInternal *p, unsigned int channel);
 
 void MMUConfigRequestProxy_sglist (struct PortalInternal *p , const uint32_t sglId, const uint32_t sglIndex, const uint64_t addr, const uint32_t len );
 
@@ -25,24 +22,25 @@ void MMUConfigRequestProxy_region (struct PortalInternal *p , const uint32_t sgl
 void MMUConfigRequestProxy_idRequest (struct PortalInternal *p   );
 
 void MMUConfigRequestProxy_idReturn (struct PortalInternal *p , const uint32_t sglId );
-enum { CHAN_NUM_MemreadRequestProxy_startRead,CHAN_NUM_MemreadRequestProxy_putFailed};
-
-int MemreadRequestProxy_handleMessage(struct PortalInternal *p, unsigned int channel);
+enum { CHAN_NUM_MMUConfigRequestProxy_sglist,CHAN_NUM_MMUConfigRequestProxy_region,CHAN_NUM_MMUConfigRequestProxy_idRequest,CHAN_NUM_MMUConfigRequestProxy_idReturn};
+#define MMUConfigRequestProxy_reqsize (0 * sizeof(uint32_t))
 
 void MemreadRequestProxy_startRead (struct PortalInternal *p , const uint32_t pointer, const uint32_t numWords, const uint32_t burstLen, const uint32_t iterCnt );
-enum { CHAN_NUM_DmaDebugRequestProxy_addrRequest,CHAN_NUM_DmaDebugRequestProxy_getStateDbg,CHAN_NUM_DmaDebugRequestProxy_getMemoryTraffic,CHAN_NUM_DmaDebugRequestProxy_putFailed};
-
-int DmaDebugRequestProxy_handleMessage(struct PortalInternal *p, unsigned int channel);
+enum { CHAN_NUM_MemreadRequestProxy_startRead};
+#define MemreadRequestProxy_reqsize (0 * sizeof(uint32_t))
 
 void DmaDebugRequestProxy_addrRequest (struct PortalInternal *p , const uint32_t sglId, const uint32_t offset );
 
 void DmaDebugRequestProxy_getStateDbg (struct PortalInternal *p , const ChannelType rc );
 
 void DmaDebugRequestProxy_getMemoryTraffic (struct PortalInternal *p , const ChannelType rc );
+enum { CHAN_NUM_DmaDebugRequestProxy_addrRequest,CHAN_NUM_DmaDebugRequestProxy_getStateDbg,CHAN_NUM_DmaDebugRequestProxy_getMemoryTraffic};
+#define DmaDebugRequestProxy_reqsize (0 * sizeof(uint32_t))
 
 int MemreadIndicationWrapper_handleMessage(struct PortalInternal *p, unsigned int channel);
 void MemreadIndicationWrapperreadDone_cb (  struct PortalInternal *p, const uint32_t mismatchCount );
 enum { CHAN_NUM_MemreadIndicationWrapper_readDone};
+#define MemreadIndicationWrapper_reqsize (0 * sizeof(uint32_t))
 
 int DmaDebugIndicationWrapper_handleMessage(struct PortalInternal *p, unsigned int channel);
 void DmaDebugIndicationWrapperaddrResponse_cb (  struct PortalInternal *p, const uint64_t physAddr );
@@ -50,12 +48,14 @@ void DmaDebugIndicationWrapperreportStateDbg_cb (  struct PortalInternal *p, con
 void DmaDebugIndicationWrapperreportMemoryTraffic_cb (  struct PortalInternal *p, const uint64_t words );
 void DmaDebugIndicationWrappererror_cb (  struct PortalInternal *p, const uint32_t code, const uint32_t sglId, const uint64_t offset, const uint64_t extra );
 enum { CHAN_NUM_DmaDebugIndicationWrapper_addrResponse,CHAN_NUM_DmaDebugIndicationWrapper_reportStateDbg,CHAN_NUM_DmaDebugIndicationWrapper_reportMemoryTraffic,CHAN_NUM_DmaDebugIndicationWrapper_error};
+#define DmaDebugIndicationWrapper_reqsize (0 * sizeof(uint32_t))
 
 int MMUConfigIndicationWrapper_handleMessage(struct PortalInternal *p, unsigned int channel);
 void MMUConfigIndicationWrapperidResponse_cb (  struct PortalInternal *p, const uint32_t sglId );
 void MMUConfigIndicationWrapperconfigResp_cb (  struct PortalInternal *p, const uint32_t sglId );
 void MMUConfigIndicationWrappererror_cb (  struct PortalInternal *p, const uint32_t code, const uint32_t sglId, const uint64_t offset, const uint64_t extra );
 enum { CHAN_NUM_MMUConfigIndicationWrapper_idResponse,CHAN_NUM_MMUConfigIndicationWrapper_configResp,CHAN_NUM_MMUConfigIndicationWrapper_error};
+#define MMUConfigIndicationWrapper_reqsize (0 * sizeof(uint32_t))
 #ifdef __cplusplus
 }
 #endif

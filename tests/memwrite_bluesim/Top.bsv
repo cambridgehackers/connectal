@@ -13,7 +13,7 @@ import Leds::*;
 import Directory::*;
 import CtrlMux::*;
 import Portal::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import MemServer::*;
 import MMU::*;
@@ -33,13 +33,13 @@ import Memwrite::*;
 
 typedef enum {HostDmaDebugIndication, HostDmaDebugRequest, HostMMUConfigRequest, HostMMUConfigIndication, MemwriteIndication, MemwriteRequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(PortalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
+module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
 
    MemwriteIndicationProxy memwriteIndicationProxy <- mkMemwriteIndicationProxy(MemwriteIndication);
    Memwrite memwrite <- mkMemwrite(memwriteIndicationProxy.ifc);
    MemwriteRequestWrapper memwriteRequestWrapper <- mkMemwriteRequestWrapper(MemwriteRequest,memwrite.request);
 
-   Vector#(1, ObjectWriteClient#(DataBusWidth)) writeClients = cons(memwrite.dmaClient,nil);
+   Vector#(1, MemWriteClient#(DataBusWidth)) writeClients = cons(memwrite.dmaClient,nil);
    MMUConfigIndicationProxy hostMMUConfigIndicationProxy <- mkMMUConfigIndicationProxy(HostMMUConfigIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUConfigIndicationProxy.ifc);
    MMUConfigRequestWrapper hostMMUConfigRequestWrapper <- mkMMUConfigRequestWrapper(HostMMUConfigRequest, hostMMU.request);
@@ -51,14 +51,14 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
    MemMaster#(PhysAddrWidth,DataBusWidth) dma1 = (interface MemMaster;
 	  interface MemReadClient read_client;
 	     interface Get readReq;
-		method ActionValue#(MemRequest#(PhysAddrWidth)) get() if (False);
+		method ActionValue#(PhysMemRequest#(PhysAddrWidth)) get() if (False);
 		   return ?;
 	        endmethod
 	     endinterface
 	  endinterface
 	  interface MemWriteClient write_client;
 	     interface Get writeReq;
-		method ActionValue#(MemRequest#(PhysAddrWidth)) get() if (False);
+		method ActionValue#(PhysMemRequest#(PhysAddrWidth)) get() if (False);
 		   return ?;
 	        endmethod
 	     endinterface

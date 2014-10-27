@@ -30,10 +30,9 @@ import Connectable::*;
 import FloatingPoint::*;
 import BRAM::*;
 
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import DmaVector::*;
-import AxiMasterSlave::*;
 import HostInterface::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;
@@ -207,7 +206,7 @@ module  mkSumOfErrorSquared#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
    let nshift = valueOf(nshift);
    SharedDotProdServer#(1) dotprod <- mkSharedInterleavedDotProdServerConfig(0);
 
-   FirstLastPipe#(Bit#(ObjectOffsetSize)) firstlastPipe <- mkFirstLastPipe();
+   FirstLastPipe#(Bit#(MemOffsetSize)) firstlastPipe <- mkFirstLastPipe();
    PipeOut#(Float) aPipe <- mkFunnel1(sources[0].pipe);
    PipeOut#(Float) bPipe <- mkFunnel1(sources[1].pipe);
    let joinPipe <- mkJoin(tuple2, aPipe, bPipe);
@@ -242,8 +241,8 @@ interface Rbm#(numeric type n);
    interface SigmoidRequest sigmoidRequest;
    interface MmRequestTN mmRequest;
    interface TimerRequest timerRequest;
-   interface Vector#(3,ObjectReadClient#(TMul#(32,n))) readClients;
-   interface Vector#(3,ObjectWriteClient#(TMul#(32,n))) writeClients;
+   interface Vector#(3,MemReadClient#(TMul#(32,n))) readClients;
+   interface Vector#(3,MemWriteClient#(TMul#(32,n))) writeClients;
 endinterface
 
 module  mkRbm#(HostType host, RbmIndication rbmInd, SigmoidIndication sigmoidInd, MmIndication mmInd, TimerIndication timerInd)(Rbm#(N))

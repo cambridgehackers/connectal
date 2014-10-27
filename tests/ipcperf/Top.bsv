@@ -7,9 +7,7 @@ import Connectable::*;
 import Portal::*;
 import Directory::*;
 import CtrlMux::*;
-import Portal::*;
 import Leds::*;
-import AxiMasterSlave::*;
 import MemTypes::*;
 import HostInterface::*;
 
@@ -33,7 +31,7 @@ typedef enum {EchoIndication, EchoRequest, Swallow} IfcNames deriving (Eq,Bits);
 //    endrule
 // endmodule
 
-module mkPortalTop#(HostType host)(StdPortalTop#(PhysAddrWidth));
+module mkConnectalTop#(HostType host)(StdConnectalTop#(PhysAddrWidth));
 
    // instantiate user portals
    EchoIndicationProxy echoIndicationProxy <- mkEchoIndicationProxy(EchoIndication);
@@ -62,4 +60,4 @@ module mkPortalTop#(HostType host)(StdPortalTop#(PhysAddrWidth));
    interface Empty pins;
    endinterface
 
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

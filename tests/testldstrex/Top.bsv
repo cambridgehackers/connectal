@@ -10,10 +10,10 @@ import Directory::*;
 import CtrlMux::*;
 import Portal::*;
 import Leds::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemServer::*;
 import MMU::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import MemUtils::*;
 import RbmTypes::*;
@@ -25,14 +25,14 @@ import MMUConfigRequestWrapper::*;
 import DmaDebugIndicationProxy::*;
 import MMUConfigIndicationProxy::*;
 
-module  mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,TMul#(32,N),Empty,NumberOfMasters));
+module  mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,TMul#(32,N),Empty,NumberOfMasters));
 
    // all this stuff is here so we can call portalAlloc in user space
    let reader <- mkMemReader();
    let writer <- mkMemWriter();
 
-   Vector#(1,ObjectReadClient#(TMul#(32,N)))  readClients  = cons(reader.readClient, nil);
-   Vector#(1,ObjectWriteClient#(TMul#(32,N))) writeClients = cons(writer.writeClient, nil);
+   Vector#(1,MemReadClient#(TMul#(32,N)))  readClients  = cons(reader.readClient, nil);
+   Vector#(1,MemWriteClient#(TMul#(32,N))) writeClients = cons(writer.writeClient, nil);
 
    MMUConfigIndicationProxy hostMMUConfigIndicationProxy <- mkMMUConfigIndicationProxy(HostMMUConfigIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUConfigIndicationProxy.ifc);
@@ -56,4 +56,4 @@ module  mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,TMul#(32,N),Empty,N
    interface slave = ctrl_mux;
    interface masters = dma.masters;
 
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

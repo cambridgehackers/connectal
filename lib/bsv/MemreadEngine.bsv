@@ -31,7 +31,7 @@ import BRAMFIFO::*;
 import ConfigCounter::*;
 import Connectable::*;
 
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import Pipe::*;
 import MemUtils::*;
@@ -197,9 +197,9 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
 		  endinterface
 	       endinterface);
    interface readServers = rs;
-   interface ObjectReadClient dmaClient;
+   interface MemReadClient dmaClient;
       interface Get readReq;
-	 method ActionValue#(ObjectRequest) get();
+	 method ActionValue#(MemRequest) get();
 	    match {.idx, .cmd} <- toGet(loadf_c).get;
 	    Bit#(BurstLenSize) bl = cmd.burstLen;
 	    let last = False;
@@ -209,11 +209,11 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
 	    end
 	    workf.enq(tuple3(truncate(bl>>beat_shift), idx, last));
 	    //$display("readReq %d, %h %h %h", idx, cmd.base, bl, last);
-	    return ObjectRequest { sglId: cmd.sglId, offset: cmd.base, burstLen:bl, tag: 0 };
+	    return MemRequest { sglId: cmd.sglId, offset: cmd.base, burstLen:bl, tag: 0 };
 	 endmethod
       endinterface
       interface Put readData;
-	 method Action put(ObjectData#(dataWidth) d);
+	 method Action put(MemData#(dataWidth) d);
 	    match {.rc, .idx, .last} = workf.first;
 	    let new_respCnt = respCnt+1;
 	    let l = False;

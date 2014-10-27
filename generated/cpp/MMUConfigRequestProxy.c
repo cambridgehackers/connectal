@@ -1,53 +1,15 @@
 #include "GeneratedTypes.h"
 
-void MMUConfigRequestProxyputFailed_cb(struct PortalInternal *p, const uint32_t v)
-{
-    const char* methodNameStrings[] = {"sglist", "region", "idRequest", "idReturn"};
-    PORTAL_PRINTF("putFailed: %s\n", methodNameStrings[v]);
-    //exit(1);
-}
-
-void MMUConfigRequestProxyputFailed_demarshall(PortalInternal *p){
-    unsigned int tmp;
-    volatile unsigned int* temp_working_addr = &(p->map_base[PORTAL_IND_FIFO(CHAN_NUM_MMUConfigRequestProxy_putFailed)]);
-        uint32_t v;
-
-        tmp = READL(p, temp_working_addr);
-        v = (uint32_t)(((tmp)&0xfffffffful));
-
-    MMUConfigRequestProxyputFailed_cb(p, v);
-
-}
-
-int MMUConfigRequestProxy_handleMessage(PortalInternal *p, unsigned int channel)
-{    
-    static int runaway = 0;
-    
-    switch (channel) {
-
-    case CHAN_NUM_MMUConfigRequestProxy_putFailed: 
-        MMUConfigRequestProxyputFailed_demarshall(p);
-        break;
-
-    default:
-        PORTAL_PRINTF("MMUConfigRequestProxy_handleMessage: unknown channel 0x%x\n", channel);
-        if (runaway++ > 10) {
-            PORTAL_PRINTF("MMUConfigRequestProxy_handleMessage: too many bogus indications, exiting\n");
-#ifndef __KERNEL__
-            exit(-1);
-#endif
-        }
-        return 0;
-    }
-    return 0;
-}
-
 void MMUConfigRequestProxy_sglist (PortalInternal *p , const uint32_t sglId, const uint32_t sglIndex, const uint64_t addr, const uint32_t len )
 {
     volatile unsigned int* temp_working_addr = &(p->map_base[PORTAL_REQ_FIFO(CHAN_NUM_MMUConfigRequestProxy_sglist)]);
     int __i = 50;
     while (!READL(p, temp_working_addr + 1) && __i-- > 0)
         ; /* busy wait a bit on 'fifo not full' */
+    if (__i <= 0){
+        PORTAL_PRINTF("putFailed: MMUConfigRequestProxy_sglist\n");
+        return;
+    }
         WRITEL(p, temp_working_addr, sglId);
         WRITEL(p, temp_working_addr, sglIndex);
         WRITEL(p, temp_working_addr, (addr>>32));
@@ -62,6 +24,10 @@ void MMUConfigRequestProxy_region (PortalInternal *p , const uint32_t sglId, con
     int __i = 50;
     while (!READL(p, temp_working_addr + 1) && __i-- > 0)
         ; /* busy wait a bit on 'fifo not full' */
+    if (__i <= 0){
+        PORTAL_PRINTF("putFailed: MMUConfigRequestProxy_region\n");
+        return;
+    }
         WRITEL(p, temp_working_addr, sglId);
         WRITEL(p, temp_working_addr, (barr8>>32));
         WRITEL(p, temp_working_addr, barr8);
@@ -81,6 +47,10 @@ void MMUConfigRequestProxy_idRequest (PortalInternal *p   )
     int __i = 50;
     while (!READL(p, temp_working_addr + 1) && __i-- > 0)
         ; /* busy wait a bit on 'fifo not full' */
+    if (__i <= 0){
+        PORTAL_PRINTF("putFailed: MMUConfigRequestProxy_idRequest\n");
+        return;
+    }
         WRITEL(p, temp_working_addr, 0);
 
 };
@@ -91,6 +61,10 @@ void MMUConfigRequestProxy_idReturn (PortalInternal *p , const uint32_t sglId )
     int __i = 50;
     while (!READL(p, temp_working_addr + 1) && __i-- > 0)
         ; /* busy wait a bit on 'fifo not full' */
+    if (__i <= 0){
+        PORTAL_PRINTF("putFailed: MMUConfigRequestProxy_idReturn\n");
+        return;
+    }
         WRITEL(p, temp_working_addr, sglId);
 
 };

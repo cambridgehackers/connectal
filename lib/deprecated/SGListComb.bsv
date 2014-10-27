@@ -31,7 +31,7 @@ import BRAM::*;
 import MemTypes::*;
 import StmtFSM::*;
 import ClientServer::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 
 typedef 32 MaxNumSGLists;
 typedef Bit#(TLog#(MaxNumSGLists)) SGListId;
@@ -39,7 +39,7 @@ typedef 12 SGListPageShift0;
 typedef 16 SGListPageShift4;
 typedef 20 SGListPageShift8;
 typedef Bit#(TLog#(MaxNumSGLists)) RegionsIdx;
-typedef Tuple2#(SGListId,Bit#(ObjectOffsetSize)) ReqTup;
+typedef Tuple2#(SGListId,Bit#(MemOffsetSize)) ReqTup;
 
 interface MMU#(numeric type addrWidth);
    method Action sglist(Bit#(32) pointer, Bit#(40) paddr, Bit#(32) len);
@@ -54,13 +54,13 @@ typedef union tagged{
 } Offset deriving (Eq,Bits,FShow);
 
 typedef union tagged{
-   Bit#(TSub#(ObjectOffsetSize,SGListPageShift0)) POrd0;
-   Bit#(TSub#(ObjectOffsetSize,SGListPageShift4)) POrd4;
-   Bit#(TSub#(ObjectOffsetSize,SGListPageShift8)) POrd8;
+   Bit#(TSub#(MemOffsetSize,SGListPageShift0)) POrd0;
+   Bit#(TSub#(MemOffsetSize,SGListPageShift4)) POrd4;
+   Bit#(TSub#(MemOffsetSize,SGListPageShift8)) POrd8;
 } Page deriving (Eq,Bits,FShow);
 
 typedef struct {
-   Bit#(ObjectOffsetSize) barrier;
+   Bit#(MemOffsetSize) barrier;
    Bit#(8) idxOffset;
    } Region deriving (Eq,Bits,FShow);
 
@@ -68,7 +68,7 @@ module mkMMU#(DmaIndication dmaIndication)(MMU#(addrWidth))
    
    provisos(Log#(MaxNumSGLists, listIdxSize),
 	    Add#(listIdxSize,8, entryIdxSize),
-	    Add#(c__, addrWidth, ObjectOffsetSize));
+	    Add#(c__, addrWidth, MemOffsetSize));
 
    BRAM_Configure bramConfig = defaultValue;
    bramConfig.latency        = 1;
@@ -180,7 +180,7 @@ module mkMMU#(DmaIndication dmaIndication)(MMU#(addrWidth))
 	     	    let page <- portsel(pages, i).response.get;
     	      	    let offset <- toGet(offs[i]).get();
 	  	    //$display("pages[%d].response page=%h offset=%h", i, page, offset);
-	 	    Bit#(ObjectOffsetSize) rv = 0;
+	 	    Bit#(MemOffsetSize) rv = 0;
 	            case (offset) matches
 	            tagged OOrd0 .o:
         	       begin

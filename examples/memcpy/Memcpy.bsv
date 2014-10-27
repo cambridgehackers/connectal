@@ -26,7 +26,7 @@ import BRAMFIFO::*;
 import GetPut::*;
 import ClientServer::*;
 
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;
@@ -43,8 +43,8 @@ endinterface
 
 interface Memcpy;
    interface MemcpyRequest request;
-   interface ObjectReadClient#(64) dmaReadClient;
-   interface ObjectWriteClient#(64) dmaWriteClient;
+   interface MemReadClient#(64) dmaReadClient;
+   interface MemWriteClient#(64) dmaWriteClient;
 endinterface
 
 
@@ -135,6 +135,6 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
       burstLen  <= bl;
    endmethod
    endinterface
-   interface ObjectReadClient dmaReadClient = re.dmaClient;
-   interface ObjectWriteClient dmaWriteClient = we.dmaClient;
+   interface MemReadClient dmaReadClient = re.dmaClient;
+   interface MemWriteClient dmaWriteClient = we.dmaClient;
 endmodule

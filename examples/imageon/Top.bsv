@@ -118,7 +118,7 @@ module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
                 dmaRun <= True;
 	    endmethod
        endinterface));
-   Vector#(1, ObjectWriteClient#(64)) writeClients = cons(we.dmaClient,nil);
+   Vector#(1, MemWriteClient#(64)) writeClients = cons(we.dmaClient,nil);
    MMUConfigIndicationProxy hostMMUConfigIndicationProxy <- mkMMUConfigIndicationProxy(HostMMUConfigIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUConfigIndicationProxy.ifc);
    MMUConfigRequestWrapper hostMMUConfigRequestWrapper <- mkMMUConfigRequestWrapper(HostMMUConfigRequest, hostMMU.request);
@@ -214,7 +214,7 @@ interface ImageCapturePins;
    interface HDMI#(Bit#(HdmiBits)) hdmi;
    method Action fmc_video_clk1(Bit#(1) v);
 endinterface
-module mkPortalTop(PortalTop#(PhysAddrWidth,64,ImageCapturePins,1));
+module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,ImageCapturePins,1));
 `ifndef BSIM
    B2C1 iclock <- mkB2C1();
    Clock iclock_buf <- mkClockBUFG(clocked_by iclock.c);
@@ -242,4 +242,4 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,64,ImageCapturePins,1));
        interface ImageonSerdesPins serpins = ic.serpins;
        interface HDMI hdmi = ic.hdmi;
    endinterface
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

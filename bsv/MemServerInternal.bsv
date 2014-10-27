@@ -32,7 +32,7 @@ import BRAM::*;
 
 // CONNECTAL Libraries
 import MemTypes::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MMU::*;
 import CompletionBuffer::*;
 
@@ -41,27 +41,27 @@ typedef 9 MMU_PIPELINE_DEPTH;
 
 interface MemWriteInternal#(numeric type addrWidth, numeric type dataWidth);
    interface DmaDbg dbg;
-   interface MemWriteClient#(addrWidth,dataWidth) write_client;
+   interface PhysMemWriteClient#(addrWidth,dataWidth) write_client;
 endinterface
 
 interface MemReadInternal#(numeric type addrWidth, numeric type dataWidth);
    interface DmaDbg dbg;
-   interface MemReadClient#(addrWidth,dataWidth) read_client;
+   interface PhysMemReadClient#(addrWidth,dataWidth) read_client;
 endinterface
 
 function Bool sglid_outofrange(SGLId p);
    return ((p[15:0]) >= fromInteger(valueOf(MaxNumSGLists)));
 endfunction
 
-typedef struct {ObjectRequest req;
+typedef struct {MemRequest req;
 		Bit#(TLog#(numClients)) client; } LRec#(numeric type numClients, numeric type addrWidth) deriving(Bits);
 
-typedef struct {ObjectRequest req;
+typedef struct {MemRequest req;
 		Bit#(addrWidth) pa;
 		Bit#(6) rename_tag;
 		Bit#(TLog#(numClients)) client; } RRec#(numeric type numClients, numeric type addrWidth) deriving(Bits);
 
-typedef struct {ObjectRequest req;
+typedef struct {MemRequest req;
 		Bit#(6) rename_tag;
 		Bit#(TLog#(numClients)) client;
 		Bool last; } DRec#(numeric type numClients, numeric type addrWidth) deriving(Bits);
@@ -74,7 +74,7 @@ typedef struct {DmaErrorType errorType;
 
 typedef 32 NumTags;
 
-module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) readClients,
+module mkMemReadInternal#(Vector#(numClients, MemReadClient#(dataWidth)) readClients,
 			  DmaDebugIndication dmaIndication,
 			  Vector#(numMMUs,Server#(ReqTup,Bit#(addrWidth))) mmus) 
    (MemReadInternal#(addrWidth, dataWidth))
@@ -95,7 +95,7 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
    FIFO#(RRec#(numClients,addrWidth))  reqFifo <- mkFIFO;
    // stage 2: read commands
    BRAM2Port#(Bit#(TLog#(NumTags)), DRec#(numClients,addrWidth)) dreqFifos <- mkBRAM2Server(defaultValue);
-   BRAM2Port#(Bit#(TAdd#(TLog#(NumTags),TSub#(BurstLenSize,beatShift))), ObjectData#(dataWidth)) read_buffer <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(Bit#(TAdd#(TLog#(NumTags),TSub#(BurstLenSize,beatShift))), MemData#(dataWidth)) read_buffer <- mkBRAM2Server(defaultValue);
    // stage 3: read data 
    FIFO#(MemData#(dataWidth)) readDataPipelineFifo <- mkFIFO;
    
@@ -135,7 +135,7 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
    for (Integer selectReg = 0; selectReg < valueOf(numClients); selectReg = selectReg + 1) 
       rule loadClient;
 	 last_loadClient <= cycle_cnt;
-   	 ObjectRequest req <- readClients[selectReg].readReq.get();
+   	 MemRequest req <- readClients[selectReg].readReq.get();
 	 let mmusel = req.sglId[31:16];
       	 if (debug) $display("mkMemReadInternal::loadClient %d %d %d", selectReg, mmusel, cycle_cnt-last_loadClient);
 	 if (mmusel >= fromInteger(valueOf(numMMUs)))
@@ -210,7 +210,7 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
 	 //$display("burstLen=%d dreqFifo.first.last=%d last=%d\n", burstLen, dreqFifo.first.last, last);
       end
       Bit#(TLog#(NumTags)) tt = truncate(response_tag);
-      read_buffer.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, datain:ObjectData{data: response.data, tag: req.tag, last: last}, address:{tt,truncate(burstLen)}});
+      read_buffer.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, datain:MemData{data: response.data, tag: req.tag, last: last}, address:{tt,truncate(burstLen)}});
       if (last) begin
 	 tag_gen.returnTag(truncate(response_tag));
       end
@@ -221,9 +221,9 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
       lastReg <= (burstLen-1 == 1);
    endrule
 
-   interface MemReadClient read_client;
+   interface PhysMemReadClient read_client;
       interface Get readReq;
-	 method ActionValue#(MemRequest#(addrWidth)) get();
+	 method ActionValue#(PhysMemRequest#(addrWidth)) get();
 	    reqFifo.deq;
 	    let req = reqFifo.first.req;
 	    let physAddr = reqFifo.first.pa;
@@ -235,7 +235,7 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
 	    //$display("readReq: client=%d, rename_tag=%d, physAddr=%h req.burstLen=%d beat_shift=%d last=%d", client,rename_tag,physAddr, req.burstLen, beat_shift, req.burstLen == beat_shift);
 	    if (debug) $display("read_client.readReq %d", cycle_cnt-last_readReq);
 	    last_readReq <= cycle_cnt;
-	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
+	    return PhysMemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
 	 endmethod
       endinterface
       interface Put readData;
@@ -258,7 +258,7 @@ endmodule
 
 typedef 64 NumTagsW;
 
-module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) writeClients,
+module mkMemWriteInternal#(Vector#(numClients, MemWriteClient#(dataWidth)) writeClients,
 			   DmaDebugIndication dmaIndication, 
 			   Vector#(numMMUs,Server#(ReqTup,Bit#(addrWidth))) mmus)
    (MemWriteInternal#(addrWidth, dataWidth))
@@ -308,7 +308,7 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
        rule loadClient;
       	  if (debug) $display("mkMemWriteInternal::loadClient %d %d", selectReg, cycle_cnt-last_loadClient);
 	  last_loadClient <= cycle_cnt;
-   	  ObjectRequest req <- writeClients[selectReg].writeReq.get();
+   	  MemRequest req <- writeClients[selectReg].writeReq.get();
 	  let mmusel = req.sglId[31:16];
 	  if (mmusel >= fromInteger(valueOf(numMMUs)))
 	     dmaErrorFifo.enq(DmaError { errorType: DmaErrorMMUOutOfRange_w, pref: req.sglId });
@@ -345,7 +345,7 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
    endrule
    
    FIFO#(MemData#(dataWidth)) memDataFifo <- mkFIFO();
-   Vector#(numClients, FIFO#(ObjectData#(dataWidth))) clientWriteData <- replicateM(mkFIFO);
+   Vector#(numClients, FIFO#(MemData#(dataWidth))) clientWriteData <- replicateM(mkFIFO);
    // Pipeline client data:
    // The .get() operation seems to be long latency, so get it into a local FIFO
    for (Integer client = 0; client < valueOf(numClients); client = client + 1)
@@ -358,7 +358,7 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
       let client = dreqFifo.first.client;
       let req = dreqFifo.first.req;
       let rename_tag = dreqFifo.first.rename_tag;
-      ObjectData#(dataWidth) tagdata <- toGet(clientWriteData[client]).get();
+      MemData#(dataWidth) tagdata <- toGet(clientWriteData[client]).get();
       let burstLen = burstReg;
       let first    = firstReg;
       let last     = lastReg;
@@ -377,9 +377,9 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
       memDataFifo.enq(MemData { data: tagdata.data,  tag:extend(rename_tag), last: last });
    endrule
 
-   interface MemWriteClient write_client;
+   interface PhysMemWriteClient write_client;
       interface Get writeReq;
-	 method ActionValue#(MemRequest#(addrWidth)) get();
+	 method ActionValue#(PhysMemRequest#(addrWidth)) get();
 	    let req = reqFifo.first.req;
 	    let physAddr = reqFifo.first.pa;
 	    let client = reqFifo.first.client;
@@ -387,7 +387,7 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
 	    reqFifo.deq;
 	    dreqFifo.enq(DRec{req:req, client:client, rename_tag:rename_tag, last: (req.burstLen == fromInteger(valueOf(dataWidthBytes))) });
 	    //$display("writeReq: client=%d, rename_tag=%d", client,rename_tag);
-	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(rename_tag)};
+	    return PhysMemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(rename_tag)};
 	 endmethod
       endinterface
       interface Get writeData = toGet(memDataFifo);

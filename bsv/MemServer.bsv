@@ -31,7 +31,7 @@ import StmtFSM::*;
 
 // CONNECTAL Libraries
 import MemTypes::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MMU::*;
 import MemServerInternal::*;
 
@@ -51,16 +51,16 @@ function Get#(t) null_get();
            endinterface);
 endfunction
 
-function  MemWriteClient#(addrWidth, busWidth) null_mem_write_client();
-   return (interface MemWriteClient;
+function  PhysMemWriteClient#(addrWidth, busWidth) null_mem_write_client();
+   return (interface PhysMemWriteClient;
               interface Get writeReq = null_get;
               interface Get writeData = null_get;
               interface Put writeDone = null_put;
            endinterface);
 endfunction
 
-function  MemReadClient#(addrWidth, busWidth) null_mem_read_client();
-   return (interface MemReadClient;
+function  PhysMemReadClient#(addrWidth, busWidth) null_mem_read_client();
+   return (interface PhysMemReadClient;
               interface Get readReq = null_get;
               interface Put readData = null_put;
            endinterface);
@@ -68,7 +68,7 @@ endfunction
 
 interface MemServer#(numeric type addrWidth, numeric type dataWidth, numeric type nMasters);
    interface DmaDebugRequest request;
-   interface Vector#(nMasters,MemMaster#(addrWidth, dataWidth)) masters;
+   interface Vector#(nMasters,PhysMemMaster#(addrWidth, dataWidth)) masters;
 endinterface
 		 	 
    
@@ -78,8 +78,8 @@ typedef struct {
    } DmaError deriving (Bits);
 
 module mkMemServerRW#(DmaDebugIndication dmaIndication,
-		      Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
-		      Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients,
+		      Vector#(numReadClients, MemReadClient#(dataWidth)) readClients,
+		      Vector#(numWriteClients, MemWriteClient#(dataWidth)) writeClients,
 		      Vector#(numMMUs,MMU#(PhysAddrWidth)) mmus)
    (MemServer#(PhysAddrWidth, dataWidth, nMasters))
    
@@ -101,9 +101,9 @@ module mkMemServerRW#(DmaDebugIndication dmaIndication,
       dmaIndication.error(extend(pack(error.errorType)), error.pref, 0, 0);
    endrule
 
-   function MemMaster#(PhysAddrWidth,dataWidth) mkm(Integer i) = (interface MemMaster#(PhysAddrWidth,dataWidth);
-								 interface MemReadClient read_client = reader.masters[i].read_client;
-								 interface MemWriteClient write_client = writer.masters[i].write_client;
+   function PhysMemMaster#(PhysAddrWidth,dataWidth) mkm(Integer i) = (interface PhysMemMaster#(PhysAddrWidth,dataWidth);
+								 interface PhysMemReadClient read_client = reader.masters[i].read_client;
+								 interface PhysMemWriteClient write_client = writer.masters[i].write_client;
 							      endinterface);
 
    interface DmaDebugRequest request;
@@ -127,7 +127,7 @@ module mkMemServerRW#(DmaDebugIndication dmaIndication,
 endmodule
 	
 module mkMemServerR#(DmaDebugIndication dmaIndication,
-		     Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
+		     Vector#(numReadClients, MemReadClient#(dataWidth)) readClients,
 		     Vector#(numMMUs,MMU#(PhysAddrWidth)) mmus)
    (MemServer#(PhysAddrWidth, dataWidth, nMasters))
    
@@ -149,7 +149,7 @@ module mkMemServerR#(DmaDebugIndication dmaIndication,
    function Vector#(nrc, a) selectClients(Vector#(numReadClients, a) vec, Integer m);
       return genWith(selectClient(vec, valueOf(nMasters), m));
    endfunction
-   Vector#(nMasters,Vector#(nrc, ObjectReadClient#(dataWidth))) client_bins = genWith(selectClients(readClients));
+   Vector#(nMasters,Vector#(nrc, MemReadClient#(dataWidth))) client_bins = genWith(selectClients(readClients));
 
    module foo#(Integer i) (MMUAddrServer#(PhysAddrWidth,nMasters));
       let rv <- mkMMUAddrServer(mmus[i].addr[0]);
@@ -171,9 +171,9 @@ module mkMemServerR#(DmaDebugIndication dmaIndication,
       dmaIndication.addrResponse(zeroExtend(physAddr));
    endrule
    
-   function MemMaster#(PhysAddrWidth,dataWidth) mkm(Integer i) = (interface MemMaster#(PhysAddrWidth,dataWidth);
-								 interface MemReadClient read_client = readers[i].read_client;
-								 interface MemWriteClient write_client = null_mem_write_client;
+   function PhysMemMaster#(PhysAddrWidth,dataWidth) mkm(Integer i) = (interface PhysMemMaster#(PhysAddrWidth,dataWidth);
+								 interface PhysMemReadClient read_client = readers[i].read_client;
+								 interface PhysMemWriteClient write_client = null_mem_write_client;
 							      endinterface);
 
    Stmt dbgStmt = seq
@@ -220,7 +220,7 @@ module mkMemServerR#(DmaDebugIndication dmaIndication,
 endmodule
 	
 module mkMemServerW#(DmaDebugIndication dmaIndication,
-		     Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients,
+		     Vector#(numWriteClients, MemWriteClient#(dataWidth)) writeClients,
 		     Vector#(numMMUs,MMU#(PhysAddrWidth)) mmus)
    (MemServer#(PhysAddrWidth, dataWidth, nMasters))
    
@@ -239,7 +239,7 @@ module mkMemServerW#(DmaDebugIndication dmaIndication,
    function Vector#(nwc, a) selectClients(Vector#(numWriteClients, a) vec, Integer m);
       return genWith(selectClient(vec, valueOf(nMasters), m));
    endfunction
-   Vector#(nMasters,Vector#(nwc, ObjectWriteClient#(dataWidth))) client_bins = genWith(selectClients(writeClients));
+   Vector#(nMasters,Vector#(nwc, MemWriteClient#(dataWidth))) client_bins = genWith(selectClients(writeClients));
 
    module foo#(Integer i) (MMUAddrServer#(PhysAddrWidth,nMasters));
       let rv <- mkMMUAddrServer(mmus[i].addr[1]);
@@ -261,9 +261,9 @@ module mkMemServerW#(DmaDebugIndication dmaIndication,
       dmaIndication.addrResponse(zeroExtend(physAddr));
    endrule
 
-   function MemMaster#(PhysAddrWidth,dataWidth) mkm(Integer i) = (interface MemMaster#(PhysAddrWidth,dataWidth);
-								 interface MemReadClient read_client = null_mem_read_client;
-								 interface MemWriteClient write_client = writers[i].write_client;
+   function PhysMemMaster#(PhysAddrWidth,dataWidth) mkm(Integer i) = (interface PhysMemMaster#(PhysAddrWidth,dataWidth);
+								 interface PhysMemReadClient read_client = null_mem_read_client;
+								 interface PhysMemWriteClient write_client = writers[i].write_client;
 							      endinterface);
    
    Stmt dbgStmt = seq

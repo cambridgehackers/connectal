@@ -9,7 +9,7 @@ import Directory::*;
 import CtrlMux::*;
 import Portal::*;
 import Leds::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import MemServer::*;
 import MMU::*;
@@ -27,7 +27,7 @@ import Regexp::*;
 
 typedef enum {RegexpIndication, RegexpRequest, HostDmaDebugIndication, HostDmaDebugRequest, HostMMUConfigRequest, HostMMUConfigIndication} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
 
    RegexpIndicationProxy regexpIndicationProxy <- mkRegexpIndicationProxy(RegexpIndication);
    Regexp#(64) regexp <- mkRegexp(regexpIndicationProxy.ifc);

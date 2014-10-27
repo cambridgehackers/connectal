@@ -289,18 +289,18 @@ It defines the `IfcNames` enum, for use in identifying the portals between softw
 ---------------------------------
 
 
-It defines `mkPortalTop`, which instantiates the wrappers, proxies, and the design itself:
+It defines `mkConnectalTop`, which instantiates the wrappers, proxies, and the design itself:
 
 
 ---------------------------------
-    module mkPortalTop(StdPortalTop#(addrWidth));
+    module mkConnectalTop(StdConnectalTop#(addrWidth));
 ---------------------------------
 
 
-`StdPortalTop` is parameterized by `addrWidth` because Zynq and x86 have different width addressing. `StdPortalTop` is a typedef:
+`StdConnectalTop` is parameterized by `addrWidth` because Zynq and x86 have different width addressing. `StdConnectalTop` is a typedef:
 
 ---------------------------------
-    typedef PortalTop#(addrWidth,64,Empty)     StdPortalTop#(numeric type addrWidth);
+    typedef ConnectalTop#(addrWidth,64,Empty)     StdConnectalTop#(numeric type addrWidth);
 ---------------------------------
 
 The "64" specifies the data width and `Empty` specifies the empty
@@ -309,7 +309,7 @@ for example, `Empty` is replaced by `HDMI`.  On some platforms, the
 design may be able to use different data widths, such as 128 bits on
 x86/PCIe.
 
-Next, `mkPortalTop` instantiates user portals:
+Next, `mkConnectalTop` instantiates user portals:
 
 ---------------------------------
     // instantiate user portals
@@ -360,7 +360,7 @@ The following generic interfaces are used by the platform specific top BSV modul
        interface m_axi = null_axi_master;
        interface leds = echoRequestInternal.leds;
 
-    endmodule : mkPortalTop
+    endmodule : mkConnectalTop
 ---------------------------------
 
 
@@ -628,44 +628,44 @@ Requests and responses are tagged in order to enable pipelining.
 ---------------------------------
     typedef struct {
        SGLId pointer;
-       Bit#(ObjectOffsetSize) offset;
+       Bit#(MemOffsetSize) offset;
        Bit#(8) burstLen;
        Bit#(6)  tag;
-       } ObjectRequest deriving (Bits);
+       } MemRequest deriving (Bits);
 
     typedef struct {
        Bit#(dsz) data;
        Bit#(6) tag;
-       } ObjectData#(numeric type dsz) deriving (Bits);
+       } MemData#(numeric type dsz) deriving (Bits);
 ---------------------------------
 
-Read clients implement the `ObjectReadClient` interface. On response to
-the read, `burstLen` `ObjectData` items will be put to the `readData`
+Read clients implement the `MemReadClient` interface. On response to
+the read, `burstLen` `MemData` items will be put to the `readData`
 interface. The design must be ready to consume the data when it is
 delivered from the memory bus or the system may hang.
 
 ---------------------------------
-    interface ObjectReadClient#(numeric type dsz);
-       interface GetF#(ObjectRequest)    readReq;
-       interface PutF#(ObjectData#(dsz)) readData;
+    interface MemReadClient#(numeric type dsz);
+       interface GetF#(MemRequest)    readReq;
+       interface PutF#(MemData#(dsz)) readData;
     endinterface
 ---------------------------------
 
-Write clients implement `ObjectWriteClient`. To complete the transaction,
+Write clients implement `MemWriteClient`. To complete the transaction,
 `burstLen` data items will be consumed from the `writeData`
 interace. Upon completion of the request, the specified tag will be
 put to the `writeDone` interface. The data must be available when the
 write request is issued to the memory bus or the system may hang.
 
 ---------------------------------
-    interface ObjectWriteClient#(numeric type dsz);
-       interface GetF#(ObjectRequest)    writeReq;
-       interface GetF#(ObjectData#(dsz)) writeData;
+    interface MemWriteClient#(numeric type dsz);
+       interface GetF#(MemRequest)    writeReq;
+       interface GetF#(MemData#(dsz)) writeData;
        interface PutF#(Bit#(6))       writeDone;
     endinterface
 ---------------------------------
 
-A design may implement `ObjectReadClient` and `ObjectWriteClient` interfaces directly, or it may instantiate DmaReadBuffer or DmaWriteBuffer.
+A design may implement `MemReadClient` and `MemWriteClient` interfaces directly, or it may instantiate DmaReadBuffer or DmaWriteBuffer.
 
  The `AxiDmaServer` is configured with physical address translations
 for each region of memory identified by a `pointer`. A design using
@@ -685,8 +685,8 @@ Instantiate the design and its interface wrappers and proxies:
 Collect the read and write clients:
 
 ---------------------------------
-    Vector#(1, ObjectReadClient#(64)) readClients = cons(memread.dmaClient, nil);
-    Vector#(0, ObjectReadClient#(64)) writeClients = nil;
+    Vector#(1, MemReadClient#(64)) readClients = cons(memread.dmaClient, nil);
+    Vector#(0, MemReadClient#(64)) writeClients = nil;
 ---------------------------------
 
 Instantiate the DMA server and its wrapper and proxy:

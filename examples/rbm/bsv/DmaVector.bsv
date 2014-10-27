@@ -24,7 +24,7 @@ import Connectable::*;
 import GetPut::*;
 import ClientServer::*;
 import FIFOF::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;
@@ -38,7 +38,7 @@ typedef 8 BurstLen;
 
 interface VectorSource#(numeric type dsz, type a);
    interface PipeOut#(a) pipe;
-   method Action start(SGLId h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
+   method Action start(SGLId h, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l);
    method ActionValue#(Bool) finish();
 endinterface
 
@@ -51,7 +51,7 @@ module  mkMemreadVectorSource#(Server#(MemengineCmd,Bool) memreadServer, PipeOut
    Bool verbose = False;
    let asz = valueOf(asz);
    let ashift = valueOf(ashift);
-   method Action start(SGLId p, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
+   method Action start(SGLId p, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l);
       if (verbose) $display("VectorSource.start h=%d a=%h l=%h ashift=%d", p, a, l, ashift);
       memreadServer.request.put(MemengineCmd { sglId: p, base: a << ashift, len: truncate(l << ashift), burstLen: (fromInteger(valueOf(BurstLen)) << ashift) });
       // Bit#(8) foo = (fromInteger(valueOf(BurstLen)) << ashift);
@@ -63,7 +63,7 @@ endmodule
 
 interface VectorSink#(numeric type dsz, type a);
    interface PipeIn#(a) pipe;
-   method Action start(SGLId h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
+   method Action start(SGLId h, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l);
    method ActionValue#(Bool) finish();
 endinterface
 
@@ -76,7 +76,7 @@ module  mkMemwriteVectorSink#(Server#(MemengineCmd,Bool) memwriteServer, PipeIn#
    Bool verbose = False;
    let asz = valueOf(asz);
    let ashift = valueOf(ashift);
-   method Action start(SGLId p, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
+   method Action start(SGLId p, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l);
       if (verbose) $display("VectorSink.start h=%d a=%h l=%h ashift=%d", p, a, l, ashift);
       // I set burstLen==1 so that testmm works for all J,K,N. If we want burst writes we will need to rethink this (mdk)
       let cmd = MemengineCmd { sglId: p, base: a << ashift, len: truncate(l << ashift), burstLen: fromInteger(valueOf(abytes)) };

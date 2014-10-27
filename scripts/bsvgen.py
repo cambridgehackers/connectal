@@ -44,7 +44,7 @@ import Adapter::*;
 import Leds::*;
 import Vector::*;
 import SpecialFIFOs::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import Portal::*;
 import MemPortal::*;
 import MemTypes::*;
@@ -68,7 +68,7 @@ exposedProxyInterfaceTemplate='''
 %(responseElements)s
 // exposed proxy interface
 interface %(Dut)sPortal;
-    interface Portal#(%(requestChannelCount)s, %(indicationChannelCount)s, 32) portalIfc;
+    interface PipePortal#(%(requestChannelCount)s, %(indicationChannelCount)s, 32) portalIfc;
     interface %(Ifc)s ifc;
 endinterface
 interface %(Dut)s;
@@ -79,9 +79,7 @@ endinterface
 (* synthesize *)
 module %(moduleContext)s mk%(Dut)sPortalSynth#(Bit#(32) id) (%(Dut)sPortal);
     Vector#(0, PipeIn#(Bit#(32))) requestPipes = nil;
-    Vector#(0, Bit#(32))          requestBits = nil;
     Vector#(%(channelCount)s, PipeOut#(Bit#(32))) indicationPipes = newVector();
-    Vector#(%(channelCount)s, Bit#(32))           indicationBits = newVector();
 %(indicationMethodRules)s
     interface %(Ifc)s ifc;
 %(indicationMethods)s
@@ -120,11 +118,10 @@ exposedWrapperInterfaceTemplate='''
 // exposed wrapper portal interface
 interface %(Dut)sPipes;
     interface Vector#(%(requestChannelCount)s, PipeIn#(Bit#(32))) inputPipes;
-    interface Vector#(%(requestChannelCount)s, Bit#(32)) requestSizeBits;
 %(requestOutputPipeInterfaces)s
 endinterface
 interface %(Dut)sPortal;
-    interface Portal#(%(requestChannelCount)s, %(indicationChannelCount)s, 32) portalIfc;
+    interface PipePortal#(%(requestChannelCount)s, %(indicationChannelCount)s, 32) portalIfc;
 endinterface
 // exposed wrapper MemPortal interface
 interface %(Dut)s;
@@ -141,12 +138,9 @@ endinstance
 (* synthesize *)
 module mk%(Dut)sPipes#(Bit#(32) id)(%(Dut)sPipes);
     Vector#(%(requestChannelCount)s, PipeIn#(Bit#(32))) requestPipeIn = newVector();
-    Vector#(%(requestChannelCount)s, Bit#(32)) requestBits = newVector();
     Vector#(0, PipeOut#(Bit#(32))) indicationPipes = nil;
-    Vector#(0, Bit#(32))           indicationBits = nil;
 %(methodRules)s
     interface Vector inputPipes = requestPipeIn;
-    interface Vector requestSizeBits = requestBits;
 %(outputPipes)s
 endmodule
 
@@ -156,9 +150,7 @@ module mk%(Dut)sPortal#(idType id, %(Ifc)s ifc)(%(Dut)sPortal)
     let pipes <- mk%(Dut)sPipes(zeroExtend(pack(id)));
     mkConnection(pipes, ifc);
     let requestPipes = pipes.inputPipes;
-    let requestBits = pipes.requestSizeBits;
     Vector#(0, PipeOut#(Bit#(32))) indicationPipes = nil;
-    Vector#(0, Bit#(32)) indicationBits = nil;
 %(portalIfc)s
 endmodule
 
@@ -172,7 +164,7 @@ module mk%(Dut)sMemPortalPipes#(Bit#(32) id)(%(Dut)sMemPortalPipes);
 
   let p <- mk%(Dut)sPipes(zeroExtend(pack(id)));
 
-  Portal#(%(requestChannelCount)s, 0, 32) portalifc = (interface Portal;
+  PipePortal#(%(requestChannelCount)s, 0, 32) portalifc = (interface PipePortal;
         method Bit#(32) ifcId;
             return zeroExtend(pack(id));
         endmethod
@@ -180,9 +172,7 @@ module mk%(Dut)sMemPortalPipes#(Bit#(32) id)(%(Dut)sMemPortalPipes);
             return %(ifcType)s;
         endmethod
         interface Vector requests = p.inputPipes;
-        interface Vector requestSizeBits = p.requestSizeBits;
         interface Vector indications = nil;
-        interface Vector indicationSizeBits = nil;
     endinterface);
 
   let memPortal <- mkMemPortal(portalifc);
@@ -208,7 +198,7 @@ Bit#(6) %(methodName)s_Offset = %(channelNumber)s;
 '''
 
 portalIfcTemplate='''
-    interface Portal portalIfc;
+    interface PipePortal portalIfc;
         method Bit#(32) ifcId;
             return zeroExtend(pack(id));
         endmethod
@@ -216,16 +206,13 @@ portalIfcTemplate='''
             return %(ifcType)s;
         endmethod
         interface Vector requests = requestPipes;
-        interface Vector requestSizeBits = requestBits;
         interface Vector indications = indicationPipes;
-        interface Vector indicationSizeBits = indicationBits;
     endinterface
 '''
 
 requestRuleTemplate='''
     FromBit#(32,%(MethodName)s_Request) %(methodName)s_requestFifo <- mkFromBit();
     requestPipeIn[%(channelNumber)s] = toPipeIn(%(methodName)s_requestFifo);
-    requestBits[%(channelNumber)s]  = fromInteger(valueOf(SizeOf#(%(MethodName)s_Request)));
 '''
 
 mkConnectionMethodTemplate='''
@@ -238,7 +225,6 @@ mkConnectionMethodTemplate='''
 indicationRuleTemplate='''
     ToBit#(32,%(MethodName)s_Response) %(methodName)s_responseFifo <- mkToBit();
     indicationPipes[%(channelNumber)s] = toPipeOut(%(methodName)s_responseFifo);
-    indicationBits[%(channelNumber)s]  = fromInteger(valueOf(SizeOf#(%(MethodName)s_Response)));
 '''
 
 indicationMethodDeclTemplate='''

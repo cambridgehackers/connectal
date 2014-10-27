@@ -24,14 +24,13 @@ import Vector::*;
 import FIFOF::*;
 import FIFO::*;
 import GetPut::*;
-import GetPut::*;
 import ClientServer::*;
 import BRAM::*;
 import BRAMFIFO::*;
 import Connectable::*;
 
 import ConfigCounter::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import Pipe::*;
 import MemUtils::*;
@@ -301,9 +300,9 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
 		  endinterface
 	       endinterface);
    interface writeServers = rs;
-   interface ObjectWriteClient dmaClient;
+   interface MemWriteClient dmaClient;
       interface Get writeReq;
-	 method ActionValue#(ObjectRequest) get();
+	 method ActionValue#(MemRequest) get();
 	    match {.idx, .cmd} <- toGet(loadf_c).get;
 	    Bit#(BurstLenSize) bl = cmd.burstLen;
 	    Bool last = False;
@@ -313,11 +312,11 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
 	    end
 	    workf.enq(tuple3(truncate(bl>>beat_shift), idx, last));
 	    //$display("writeReq %d, %h %h %h", idx, cmd.base, bl, last);
-	    return ObjectRequest { sglId: cmd.sglId, offset: cmd.base, burstLen:bl, tag: 0 };
+	    return MemRequest { sglId: cmd.sglId, offset: cmd.base, burstLen:bl, tag: 0 };
 	 endmethod
       endinterface
       interface Get writeData;
-	 method ActionValue#(ObjectData#(dataWidth)) get;
+	 method ActionValue#(MemData#(dataWidth)) get;
 	    match {.rc, .idx, .last} = workf.first;
 	    let new_respCnt = respCnt+1;
 	    if (new_respCnt == rc) begin
@@ -333,7 +332,7 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
 	       $display("ERROR mkMemwriteEngineBuf: bursts oo %d %d", idx, _idx);
 	       $finish;
 	    end
-	    return ObjectData{data:wd, tag:0, last: False};
+	    return MemData{data:wd, tag:0, last: False};
 	 endmethod
       endinterface
       interface Put writeDone;

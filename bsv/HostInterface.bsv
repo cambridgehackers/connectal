@@ -40,8 +40,8 @@ import MemTypes          :: *;
 interface BsimHost#(numeric type clientAddrWidth, numeric type clientBusWidth, numeric type clientIdWidth,  
 		    numeric type serverAddrWidth, numeric type serverBusWidth, numeric type serverIdWidth,
 		    numeric type nSlaves);
-   interface MemMaster#(clientAddrWidth, clientBusWidth)  mem_client;
-   interface Vector#(nSlaves,Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))  axi_servers;
+   interface PhysMemMaster#(clientAddrWidth, clientBusWidth)  mem_client;
+   interface Vector#(nSlaves,PhysMemSlave#(serverAddrWidth,  serverBusWidth))  mem_servers;
    interface Clock doubleClock;
    interface Reset doubleReset;
 endinterface
@@ -66,8 +66,8 @@ import PcieEndpointX7    :: *;
 
 interface PcieHost#(numeric type dsz, numeric type nSlaves);
    interface Vector#(16,ReadOnly_MSIX_Entry)     msixEntry;
-   interface MemMaster#(32,32)                   master;
-   interface Vector#(nSlaves,MemSlave#(40,dsz))  slave;
+   interface PhysMemMaster#(32,32)                   master;
+   interface Vector#(nSlaves,PhysMemSlave#(40,dsz))  slave;
    interface Put#(Tuple2#(Bit#(64),Bit#(32)))    interruptRequest;
    interface Client#(TLPData#(16), TLPData#(16)) pci;
    interface BscanTop bscanif;

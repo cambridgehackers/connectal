@@ -48,9 +48,9 @@ endinterface
 
 interface NandSim;
    interface NandSimRequest request;
-   interface MemSlave#(PhysAddrWidth,64) memSlave;
-   interface ObjectReadClient#(64) readClient;
-   interface ObjectWriteClient#(64) writeClient;
+   interface PhysMemSlave#(PhysAddrWidth,64) memSlave;
+   interface MemReadClient#(64) readClient;
+   interface MemWriteClient#(64) writeClient;
 endinterface
 
 interface NandSimInternal;
@@ -70,8 +70,8 @@ module mkNandSim#(NandSimIndication indication) (NandSim);
    let slave_read_pipe    = re.dataPipes[2];
    let slave_write_server = we.writeServers[3];
    let slave_write_pipe   = we.dataPipes[3];
-   FIFO#(Bit#(ObjectTagSize)) slaveWriteTags <- mkSizedFIFO(1);
-   FIFO#(Bit#(ObjectTagSize)) slaveReadTags <- mkSizedFIFO(1);
+   FIFO#(Bit#(MemTagSize)) slaveWriteTags <- mkSizedFIFO(1);
+   FIFO#(Bit#(MemTagSize)) slaveReadTags <- mkSizedFIFO(1);
    Reg#(Bit#(BurstLenSize)) slaveReadCnt <- mkReg(0);
    
    rule completeSlaveReadReq;
@@ -79,10 +79,10 @@ module mkNandSim#(NandSimIndication indication) (NandSim);
       let rv <- slave_read_server.response.get;
       if (verbose) $display("mkNandSim::completeSlaveReadReq");
    endrule
-   interface MemSlave memSlave;
-      interface MemWriteServer write_server; 
+   interface PhysMemSlave memSlave;
+      interface PhysMemWriteServer write_server; 
 	 interface Put writeReq;
-	    method Action put(MemRequest#(PhysAddrWidth) req);
+	    method Action put(PhysMemRequest#(PhysAddrWidth) req);
 	       slave_write_server.request.put(MemengineCmd{sglId:ns.nandPtr, base:extend(req.addr), burstLen:req.burstLen, len:extend(req.burstLen)});
 	       slaveWriteTags.enq(req.tag);
             endmethod
@@ -93,16 +93,16 @@ module mkNandSim#(NandSimIndication indication) (NandSim);
             endmethod
 	 endinterface
 	 interface Get writeDone;
-	    method ActionValue#(Bit#(ObjectTagSize)) get();
+	    method ActionValue#(Bit#(MemTagSize)) get();
 	       let rv <- slave_write_server.response.get;
 	       slaveWriteTags.deq;
 	       return slaveWriteTags.first;
             endmethod
 	 endinterface
       endinterface
-      interface MemReadServer read_server;
+      interface PhysMemReadServer read_server;
 	 interface Put readReq;
-	    method Action put(MemRequest#(PhysAddrWidth) req);
+	    method Action put(PhysMemRequest#(PhysAddrWidth) req);
 	       if (verbose) $display("mkNandSim.memSlave::readReq %d %d %d", req.addr, req.burstLen, req.tag);
 	       slave_read_server.request.put(MemengineCmd{sglId:ns.nandPtr, base:extend(req.addr), burstLen:req.burstLen, len:extend(req.burstLen)});
 	       slaveReadTags.enq(req.tag);
@@ -116,14 +116,14 @@ module mkNandSim#(NandSimIndication indication) (NandSim);
 	       let last = new_slaveReadCnt==0;
 	       slaveReadCnt <= new_slaveReadCnt;
 	       if (verbose) $display("mkNandSim.memSlave::readData %d %d %d (%d)", slaveReadTags.first, last, rv, slaveReadCnt);
-	       return ObjectData{data:rv, tag:slaveReadTags.first,last:last};
+	       return MemData{data:rv, tag:slaveReadTags.first,last:last};
             endmethod
 	 endinterface
       endinterface
    endinterface : memSlave
    interface request = ns.request;
-   interface ObjectReadClient readClient = re.dmaClient;
-   interface ObjectWriteClient writeClient = we.dmaClient;
+   interface MemReadClient readClient = re.dmaClient;
+   interface MemWriteClient writeClient = we.dmaClient;
    
 endmodule
 

@@ -32,7 +32,7 @@ import MMU::*;
 import Directory::*;
 import CtrlMux::*;
 import Portal::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import Leds::*;
 import HostInterface::*;
@@ -50,13 +50,13 @@ import Memread::*;
 
 typedef enum {MemreadIndication, MemreadRequest, HostDmaDebugIndication, HostDmaDebugRequest, HostMMUConfigRequest, HostMMUConfigIndication} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(PortalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
+module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
 
    MemreadIndicationProxy memreadIndicationProxy <- mkMemreadIndicationProxy(MemreadIndication);
    Memread memread <- mkMemread(memreadIndicationProxy.ifc);
    MemreadRequestWrapper memreadRequestWrapper <- mkMemreadRequestWrapper(MemreadRequest,memread.request);
 
-   Vector#(1, ObjectReadClient#(DataBusWidth)) readClients = cons(memread.dmaClient, nil);
+   Vector#(1, MemReadClient#(DataBusWidth)) readClients = cons(memread.dmaClient, nil);
    MMUConfigIndicationProxy hostMMUConfigIndicationProxy <- mkMMUConfigIndicationProxy(HostMMUConfigIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUConfigIndicationProxy.ifc);
    MMUConfigRequestWrapper hostMMUConfigRequestWrapper <- mkMMUConfigRequestWrapper(HostMMUConfigRequest, hostMMU.request);
@@ -82,4 +82,4 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
    interface masters = dma.masters;
    interface leds = default_leds;
    interface Empty pins; endinterface      
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

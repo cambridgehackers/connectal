@@ -10,11 +10,11 @@ import Directory::*;
 import CtrlMux::*;
 import Portal::*;
 import Leds::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemServer::*;
 import MMU::*;
 import MemUtils::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import HostInterface::*;
 
@@ -40,7 +40,7 @@ import Sigmoid::*;
 import Rbm::*;
 
 
-module  mkPortalTop#(HostType host) (PortalTop#(PhysAddrWidth,TMul#(32,N),Empty,NumberOfMasters));
+module  mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,TMul#(32,N),Empty,NumberOfMasters));
 
    RbmIndicationProxy rbmIndicationProxy <- mkRbmIndicationProxy(RbmIndicationPortal);
    MmIndicationProxy   mmIndicationProxy <- mkMmIndicationProxy(MmIndicationPortal);
@@ -82,4 +82,4 @@ module  mkPortalTop#(HostType host) (PortalTop#(PhysAddrWidth,TMul#(32,N),Empty,
    interface slave = ctrl_mux;
    interface masters = dma.masters;
 
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

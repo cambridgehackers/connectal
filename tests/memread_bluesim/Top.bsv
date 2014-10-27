@@ -37,7 +37,7 @@ import MMU::*;
 import Directory::*;
 import CtrlMux::*;
 import Portal::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import Leds::*;
 import HostInterface::*;
@@ -57,13 +57,13 @@ import Memread::*;
 
 typedef enum {MemreadIndication, MemreadRequest, HostDmaDebugIndication, HostDmaDebugRequest, HostMMUConfigRequest, HostMMUConfigIndication} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(PortalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
+module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
 
    MemreadIndicationProxy memreadIndicationProxy <- mkMemreadIndicationProxy(MemreadIndication);
    Memread memread <- mkMemread(memreadIndicationProxy.ifc);
    MemreadRequestWrapper memreadRequestWrapper <- mkMemreadRequestWrapper(MemreadRequest,memread.request);
 
-   Vector#(1, ObjectReadClient#(DataBusWidth)) readClients = cons(memread.dmaClient, nil);
+   Vector#(1, MemReadClient#(DataBusWidth)) readClients = cons(memread.dmaClient, nil);
    MMUConfigIndicationProxy hostMMUConfigIndicationProxy <- mkMMUConfigIndicationProxy(HostMMUConfigIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUConfigIndicationProxy.ifc);
    MMUConfigRequestWrapper hostMMUConfigRequestWrapper <- mkMMUConfigRequestWrapper(HostMMUConfigRequest, hostMMU.request);
@@ -75,14 +75,14 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
    MemMaster#(PhysAddrWidth,DataBusWidth) dma1 = (interface MemMaster;
 	  interface MemReadClient read_client;
 	     interface Get readReq;
-		method ActionValue#(MemRequest#(PhysAddrWidth)) get() if (False);
+		method ActionValue#(PhysMemRequest#(PhysAddrWidth)) get() if (False);
 		   return ?;
 	        endmethod
 	     endinterface
 	  endinterface
 	  interface MemWriteClient write_client;
 	     interface Get writeReq;
-		method ActionValue#(MemRequest#(PhysAddrWidth)) get() if (False);
+		method ActionValue#(PhysMemRequest#(PhysAddrWidth)) get() if (False);
 		   return ?;
 	        endmethod
 	     endinterface
@@ -135,7 +135,7 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
 	 $display("unknown tlp %h", tlp);
       end
 
-      addrGenerator.request.put(MemRequest {addr: addr, burstLen: burstLen<<2, tag: truncate(tag) });
+      addrGenerator.request.put(PhysMemRequest {addr: addr, burstLen: burstLen<<2, tag: truncate(tag) });
       reqCycles <= newReqCycles;
       tlpFifo.enq(tlp);
 
@@ -204,4 +204,4 @@ module mkPortalTop(PortalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
    interface masters = cons(dma1,nil);
    interface leds = default_leds;
    interface Empty pins; endinterface      
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

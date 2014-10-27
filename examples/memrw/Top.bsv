@@ -9,7 +9,7 @@ import Directory::*;
 import CtrlMux::*;
 import Portal::*;
 import Leds::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import MemServer::*;
 import MMU::*;
@@ -27,14 +27,14 @@ import Memrw::*;
 
 typedef enum {MemrwIndication, MemrwRequest, HostDmaDebugIndication, HostDmaDebugRequest, HostMMUConfigRequest, HostMMUConfigIndication} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
 
    MemrwIndicationProxy memrwIndicationProxy <- mkMemrwIndicationProxy(MemrwIndication);
    Memrw memrw <- mkMemrw(memrwIndicationProxy.ifc);
    MemrwRequestWrapper memrwRequestWrapper <- mkMemrwRequestWrapper(MemrwRequest,memrw.request);
    
-   Vector#(1,  ObjectReadClient#(64))   readClients = cons(memrw.dmaReadClient, nil);
-   Vector#(1, ObjectWriteClient#(64)) writeClients = cons(memrw.dmaWriteClient, nil);
+   Vector#(1,  MemReadClient#(64))   readClients = cons(memrw.dmaReadClient, nil);
+   Vector#(1, MemWriteClient#(64)) writeClients = cons(memrw.dmaWriteClient, nil);
    MMUConfigIndicationProxy hostMMUConfigIndicationProxy <- mkMMUConfigIndicationProxy(HostMMUConfigIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUConfigIndicationProxy.ifc);
    MMUConfigRequestWrapper hostMMUConfigRequestWrapper <- mkMMUConfigRequestWrapper(HostMMUConfigRequest, hostMMU.request);

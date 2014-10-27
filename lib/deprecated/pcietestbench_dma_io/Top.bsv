@@ -17,7 +17,7 @@ import PcieTestBenchRequestWrapper::*;
 // defined by user
 import PcieTestBench::*;
 
-module mkPortalTop(StdPortalDmaTop#(40));
+module mkConnectalTop(StdConnectalDmaTop#(40));
 
    // instantiate user portals
    PcieTestBenchIndicationProxy pcieTestBenchIndicationProxy <- mkPcieTestBenchIndicationProxy(TestBenchIndication);
@@ -39,6 +39,6 @@ module mkPortalTop(StdPortalDmaTop#(40));
    interface masters = pcieTestBench.masters;
    interface leds = default_leds;
 
-endmodule : mkPortalTop
+endmodule : mkConnectalTop
 
 

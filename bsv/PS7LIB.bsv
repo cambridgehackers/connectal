@@ -880,8 +880,8 @@ module mkPS7(PS7);
     interface Pps7Emioi2c       i2c = ps7.i2c;
 endmodule
 
-instance ConnectableWithTrace#(PS7, PortalTop#(32,64,ipins,nMasters), BscanTop);
-   module mkConnectionWithTrace#(PS7 ps7, PortalTop#(32,64,ipins,nMasters) top, BscanTop bscan)(Empty);
+instance ConnectableWithTrace#(PS7, ConnectalTop#(32,64,ipins,nMasters), BscanTop);
+   module mkConnectionWithTrace#(PS7 ps7, ConnectalTop#(32,64,ipins,nMasters) top, BscanTop bscan)(Empty);
 
       Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(top.slave);
       mkConnectionWithTrace(ps7.m_axi_gp[0].client, ctrl, bscan);

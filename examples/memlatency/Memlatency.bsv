@@ -27,7 +27,7 @@ import GetPut::*;
 import BRAMFIFO::*;
 
 import Pipe::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;
@@ -46,8 +46,8 @@ endinterface
 
 interface Memlatency;
    interface MemlatencyRequest request;
-   interface ObjectReadClient#(64) dmaReadClient;
-   interface ObjectWriteClient#(64) dmaWriteClient;
+   interface MemReadClient#(64) dmaReadClient;
+   interface MemWriteClient#(64) dmaWriteClient;
 endinterface
 
 module mkMemlatency#(MemlatencyIndication indication)(Memlatency);
@@ -128,7 +128,7 @@ module mkMemlatency#(MemlatencyIndication indication)(Memlatency);
       burstLen  <= bl;
    endmethod
    endinterface
-   interface ObjectReadClient dmaReadClient = re.dmaClient;
-   interface ObjectWriteClient dmaWriteClient = we.dmaClient;
+   interface MemReadClient dmaReadClient = re.dmaClient;
+   interface MemWriteClient dmaWriteClient = we.dmaClient;
    
 endmodule

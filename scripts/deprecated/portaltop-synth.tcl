@@ -20,6 +20,6 @@ read_verilog [ glob {verilog/portal/*.v} ]
 
 # STEP#2: run synthesis, report utilization and timing estimates, write checkpoint design
 #
-synth_design -mode out_of_context -name mkSynthesizeablePortalTop -top mkSynthesizeablePortalTop -part $partname -flatten rebuilt
+synth_design -mode out_of_context -name mkSynthesizeableConnectalTop -top mkSynthesizeableConnectalTop -part $partname -flatten rebuilt
 
 write_checkpoint -force $outputDir/portaltop_post_synth

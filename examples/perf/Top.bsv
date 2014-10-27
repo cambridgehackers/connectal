@@ -9,7 +9,7 @@ import Directory::*;
 import CtrlMux::*;
 import Portal::*;
 import Leds::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import DmaUtils::*;
 import MemServer::*;
@@ -28,18 +28,18 @@ import Perf::*;
 
 typedef enum {PerfIndication, PerfRequest, HostDmaDebugIndication, HostDmaDebugRequest, HostMMUConfigRequest, HostMMUConfigIndication} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
 
    DmaReadBuffer#(64,8)   dma_stream_read_chan <- mkDmaReadBuffer();
    DmaWriteBuffer#(64,8) dma_stream_write_chan <- mkDmaWriteBuffer();
    DmaReadBuffer#(64,8)     dma_word_read_chan <- mkDmaReadBuffer();
    DmaWriteBuffer#(64,8)  dma_debug_write_chan <- mkDmaWriteBuffer();
 
-   Vector#(2,  ObjectReadClient#(64))   readClients = newVector();
+   Vector#(2,  MemReadClient#(64))   readClients = newVector();
    readClients[0] = dma_stream_read_chan.dmaClient;
    readClients[1] = dma_word_read_chan.dmaClient;
 
-   Vector#(2, ObjectWriteClient#(64)) writeClients = newVector();
+   Vector#(2, MemWriteClient#(64)) writeClients = newVector();
    writeClients[0] = dma_stream_write_chan.dmaClient;
    writeClients[1] = dma_debug_write_chan.dmaClient;
 

@@ -26,34 +26,33 @@
 
 #define MAGIC_PORTAL_FOR_SENDING_FD                 666
 #define MAGIC_PORTAL_FOR_SENDING_INTERRUPT          999
+#define SOCKET_NAME                 "socket_for_bluesim"
 
 struct memrequest{
   int portal;
   int write_flag;
   volatile unsigned int *addr;
-  unsigned int data;
+  unsigned int data_or_tag;
 };
 struct memresponse{
   int portal;
   unsigned int data;
+  unsigned int tag;
 };
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 void connect_to_bsim(void);
-void bsim_wait_for_connect(void);
 ssize_t sock_fd_write(int sockfd, int fd);
 ssize_t sock_fd_read(int sock, int *fd);
 ssize_t bluesim_sock_fd_write(long fd);
 int pareff_fd(int *fd);
 void init_pareff(void);
-int bsim_ctrl_recv(int *sockfd, struct memrequest *data);
-int bsim_ctrl_send(int sockfd, struct memresponse *data);
-void bsim_ctrl_interrupt(int ivalue);
 unsigned int bsim_poll_interrupt(void);
 int init_connecting(const char *arg_name);
 int init_listening(const char *arg_name);
+int accept_socket(int arg_listening);
 #ifdef __cplusplus
 }
 #endif

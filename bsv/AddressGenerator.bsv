@@ -35,14 +35,14 @@ typedef struct {
    } AddrBeat#(numeric type addrWidth) deriving (Bits);
 
 interface AddressGenerator#(numeric type addrWidth, numeric type dataWidth);
-   interface Put#(MemRequest#(addrWidth)) request;
+   interface Put#(PhysMemRequest#(addrWidth)) request;
    interface Get#(AddrBeat#(addrWidth)) addrBeat;
 endinterface
 
 module mkAddressGenerator(AddressGenerator#(addrWidth, dataWidth))
    provisos (Div#(dataWidth,8,dataWidthBytes),
 	     Log#(dataWidthBytes,beatShift));
-   FIFOF#(MemRequest#(addrWidth)) requestFifo <- mkFIFOF1();
+   FIFOF#(PhysMemRequest#(addrWidth)) requestFifo <- mkFIFOF1();
    FIFOF#(AddrBeat#(addrWidth)) addrBeatFifo <- mkFIFOF();
    Reg#(Bit#(addrWidth)) addrReg <- mkReg(0);
    Reg#(Bit#(BurstLenSize)) burstCountReg <- mkReg(0);
@@ -77,7 +77,7 @@ module mkAddressGenerator(AddressGenerator#(addrWidth, dataWidth))
    endrule
 
    interface Put request;
-      method Action put(MemRequest#(addrWidth) req);
+      method Action put(PhysMemRequest#(addrWidth) req);
 	 requestFifo.enq(req);
       endmethod
    endinterface

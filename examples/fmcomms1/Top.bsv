@@ -32,9 +32,8 @@ import DefaultValue::*;
 import Portal::*;
 import Directory::*;
 import CtrlMux::*;
-import Portal::*;
 import Leds::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import MemServer::*;
 import MMU::*;
@@ -71,7 +70,7 @@ endinterface
 
 /* clk1 is the FCLKCLK1 controlled by software */
 
-module mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,64,FMComms1Pins,1));
+module mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,64,FMComms1Pins,1));
 
    Clock clk1 = host.fclkclk[1];
    C2B ref_clk_as_bit <- mkC2B(clk1);
@@ -90,8 +89,8 @@ module mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,64,FMComms1Pins,1));
    FMComms1 fmcomms1 <- mkFMComms1(fmcomms1IndicationProxy.ifc, dac.dac, adc.adc);
    FMComms1RequestWrapper fmcomms1RequestWrapper <- mkFMComms1RequestWrapper(FMComms1Request, fmcomms1.request);
 
-   Vector#(1,  ObjectReadClient#(64))   readClients = cons(fmcomms1.readDmaClient, nil);
-   Vector#(1, ObjectWriteClient#(64))  writeClients = cons(fmcomms1.writeDmaClient, nil);
+   Vector#(1,  MemReadClient#(64))   readClients = cons(fmcomms1.readDmaClient, nil);
+   Vector#(1, MemWriteClient#(64))  writeClients = cons(fmcomms1.writeDmaClient, nil);
    MMUConfigIndicationProxy hostMMUConfigIndicationProxy <- mkMMUConfigIndicationProxy(HostMMUConfigIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUConfigIndicationProxy.ifc);
    MMUConfigRequestWrapper hostMMUConfigRequestWrapper <- mkMMUConfigRequestWrapper(HostMMUConfigRequest, hostMMU.request);
@@ -132,4 +131,4 @@ module mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,64,FMComms1Pins,1));
 	 return(ref_clk.read_n());
       endmethod
    endinterface
-endmodule : mkPortalTop
+endmodule : mkConnectalTop

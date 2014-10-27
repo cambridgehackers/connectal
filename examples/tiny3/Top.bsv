@@ -22,7 +22,7 @@ import TinyTest::*;
 
 typedef enum {Tiny3Indication, Tiny3Request} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
 
    // instantiate user portals
    Tiny3IndicationProxy tiny3IndicationProxy <- mkTiny3IndicationProxy(Tiny3Indication);
@@ -42,6 +42,6 @@ module mkPortalTop(StdPortalTop#(PhysAddrWidth));
    interface masters = nil;
    interface leds = default_leds;
 
-endmodule : mkPortalTop
+endmodule : mkConnectalTop
 
 

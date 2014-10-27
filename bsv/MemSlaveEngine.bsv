@@ -33,11 +33,9 @@ import ClientServer :: *;
 import MemTypes     :: *;
 import Probe        :: *;
 
-import AxiMasterSlave :: *;
-
 interface MemSlaveEngine#(numeric type buswidth);
     interface Client#(TLPData#(16), TLPData#(16)) tlp;
-    interface MemSlave#(40,buswidth) slave;
+    interface PhysMemSlave#(40,buswidth) slave;
     method Bool tlpOutFifoNotEmpty();
     interface Reg#(Bool) use4dw;
 endinterface: MemSlaveEngine
@@ -244,7 +242,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       end
    endrule
 
-   FIFO#(MemRequest#(40)) readReqFifo <- mkFIFO();
+   FIFO#(PhysMemRequest#(40)) readReqFifo <- mkFIFO();
    rule readReqRule if (!writeInProgress && !writeDataMimo.deqReady());
       let req <- toGet(readReqFifo).get();
       let burstLen = req.burstLen >> beat_shift;
@@ -289,10 +287,10 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
         interface request = toGet(tlpOutFifo);
         interface response = toPut(tlpInFifo);
     endinterface
-    interface MemSlave slave;
-   interface MemWriteServer write_server; 
+    interface PhysMemSlave slave;
+   interface PhysMemWriteServer write_server; 
       interface Put writeReq;
-         method Action put(MemRequest#(40) req); // if (writeBurstCount == 0);
+         method Action put(PhysMemRequest#(40) req); // if (writeBurstCount == 0);
 	    let burstLen = req.burstLen >> beat_shift;
 	    let addr = req.addr;
 	    let awid = req.tag;
@@ -359,16 +357,16 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
          endmethod
        endinterface
       interface Get writeDone;
-         method ActionValue#(Bit#(ObjectTagSize)) get();
+         method ActionValue#(Bit#(MemTagSize)) get();
 	      let tag = doneTag.first();
 	      doneTag.deq();
 	      return truncate(tag);
            endmethod
 	endinterface
    endinterface
-   interface MemReadServer read_server;
+   interface PhysMemReadServer read_server;
       interface Put readReq;
-         method Action put(MemRequest#(40) req);
+         method Action put(PhysMemRequest#(40) req);
 	    readReqFifo.enq(req);
          endmethod
        endinterface

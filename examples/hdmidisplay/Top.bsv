@@ -8,7 +8,7 @@ import FIFO::*;
 import Directory::*;
 import CtrlMux::*;
 import Portal::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import MemServer::*;
 import MMU::*;
@@ -35,7 +35,7 @@ typedef enum {HdmiDisplayRequest, HdmiDisplayIndication, HdmiInternalRequest, Hd
 
 typedef HDMI#(Bit#(16)) HDMI16;
 
-module mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,64,HDMI#(Bit#(16)),1));
+module mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,64,HDMI#(Bit#(16)),1));
 
 `ifdef ZynqHostTypeIF
    Clock clk1 = host.fclkclk[1];
@@ -48,7 +48,7 @@ module mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,64,HDMI#(Bit#(16)),1
    HdmiDisplayRequestWrapper hdmiDisplayRequestWrapper <- mkHdmiDisplayRequestWrapper(HdmiDisplayRequest,hdmiDisplay.displayRequest);
    HdmiInternalRequestWrapper hdmiInternalRequestWrapper <- mkHdmiInternalRequestWrapper(HdmiInternalRequest,hdmiDisplay.internalRequest);
 
-   Vector#(1,  ObjectReadClient#(64))   readClients = cons(hdmiDisplay.dmaClient, nil);
+   Vector#(1,  MemReadClient#(64))   readClients = cons(hdmiDisplay.dmaClient, nil);
    MMUConfigIndicationProxy hostMMUConfigIndicationProxy <- mkMMUConfigIndicationProxy(HostMMUConfigIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUConfigIndicationProxy.ifc);
    MMUConfigRequestWrapper hostMMUConfigRequestWrapper <- mkMMUConfigRequestWrapper(HostMMUConfigRequest, hostMMU.request);
@@ -76,7 +76,7 @@ module mkPortalTop#(HostType host)(PortalTop#(PhysAddrWidth,64,HDMI#(Bit#(16)),1
    interface masters = dma.masters;
    //interface xadc = hdmiDisplay.xadc;
    interface pins = hdmiDisplay.hdmi;      
-endmodule : mkPortalTop
+endmodule : mkConnectalTop
 
 import "BDPI" function Action bdpi_hdmi_vsync(Bit#(1) v);
 import "BDPI" function Action bdpi_hdmi_hsync(Bit#(1) v);

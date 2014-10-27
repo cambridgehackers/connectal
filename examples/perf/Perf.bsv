@@ -24,7 +24,7 @@ import Vector::*;
 import FIFOF::*;
 import GetPut::*;
 
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 
 interface PerfRequest;
@@ -45,9 +45,9 @@ interface PerfIndication;
 endinterface
 
 module mkPerfRequest#(PerfIndication indication,
-			ObjectReadServer#(busWidth) dma_stream_read_server,
-			ObjectWriteServer#(busWidth) dma_stream_write_server,
-			ObjectReadServer#(busWidth) dma_word_read_server)
+			MemReadServer#(busWidth) dma_stream_read_server,
+			MemWriteServer#(busWidth) dma_stream_write_server,
+			MemReadServer#(busWidth) dma_word_read_server)
    (PerfRequest)
    provisos (Div#(busWidth,8,busWidthBytes),
 	     Add#(a__,32,busWidth));
@@ -61,8 +61,8 @@ module mkPerfRequest#(PerfIndication indication,
    Reg#(Bit#(32)) streamWrCnt <- mkReg(0);
    Reg#(Bit#(32)) streamAckCnt <- mkReg(0);
    Reg#(Bit#(32)) repeatCnt <- mkReg(0);
-   Reg#(Bit#(ObjectOffsetSize)) streamRdOff <- mkReg(0);
-   Reg#(Bit#(ObjectOffsetSize)) streamWrOff <- mkReg(0);
+   Reg#(Bit#(MemOffsetSize)) streamRdOff <- mkReg(0);
+   Reg#(Bit#(MemOffsetSize)) streamWrOff <- mkReg(0);
    Reg#(SGLId)    streamRdPointer <- mkReg(0);
    Reg#(SGLId)    streamWrPointer <- mkReg(0);
    Reg#(Bool)               writeInProg <- mkReg(False);
@@ -70,13 +70,13 @@ module mkPerfRequest#(PerfIndication indication,
    Reg#(Bool)              dataMismatch <- mkReg(False);  
    
    Reg#(Bit#(8)) burstLen <- mkReg(8*fromInteger(busWidthBytes));
-   Reg#(Bit#(ObjectOffsetSize)) deltaOffset <- mkReg(8*fromInteger(busWidthBytes));
+   Reg#(Bit#(MemOffsetSize)) deltaOffset <- mkReg(8*fromInteger(busWidthBytes));
 
    rule readReq(streamRdCnt > 0);
       streamRdCnt <= streamRdCnt - extend(burstLen);
       streamRdOff <= streamRdOff + deltaOffset;
       //$display("readReq.put pointer=%h address=%h, burstlen=%h", streamRdPointer, streamRdOff, burstLen);
-      dma_stream_read_server.readReq.put(ObjectRequest {sglId: streamRdPointer, offset: streamRdOff, burstLen: extend(burstLen), tag: truncate(streamRdOff>>5)});
+      dma_stream_read_server.readReq.put(MemRequest {sglId: streamRdPointer, offset: streamRdOff, burstLen: extend(burstLen), tag: truncate(streamRdOff>>5)});
       //indication.readReq(streamRdCnt);
    endrule
 
@@ -85,7 +85,7 @@ module mkPerfRequest#(PerfIndication indication,
       streamWrCnt <= streamWrCnt-extend(burstLen);
       streamWrOff <= streamWrOff + deltaOffset;
       //$display("writeReq.put pointer=%h address=%h", streamWrPointer, streamWrOff);
-      dma_stream_write_server.writeReq.put(ObjectRequest {sglId: streamWrPointer, offset: streamWrOff, burstLen: extend(burstLen), tag: truncate(streamWrOff>>5)});
+      dma_stream_write_server.writeReq.put(MemRequest {sglId: streamWrPointer, offset: streamWrOff, burstLen: extend(burstLen), tag: truncate(streamWrOff>>5)});
       //indication.writeReq(streamWrCnt);
    endrule
    
@@ -139,7 +139,7 @@ module mkPerfRequest#(PerfIndication indication,
    endmethod
 
    method Action readWord();
-      dma_word_read_server.readReq.put(ObjectRequest {sglId: streamWrPointer, offset: 0, burstLen: fromInteger(busWidthBytes), tag: 1});
+      dma_word_read_server.readReq.put(MemRequest {sglId: streamWrPointer, offset: 0, burstLen: fromInteger(busWidthBytes), tag: 1});
    endmethod
 
    method Action getStateDbg();

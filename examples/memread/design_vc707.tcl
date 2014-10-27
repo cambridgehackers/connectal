@@ -116,9 +116,9 @@ set_attribute ooc $instance   implXDC      [list $xdcDir/${instance}_phys.xdc \
 set_attribute ooc $instance   impl         ${run.oocImpl}
 set_attribute ooc $instance   preservation routing
 
-# set module3 "mkSynthesizeablePortalTop"
+# set module3 "mkSynthesizeableConnectalTop"
 # add_module $module3
-# set_attribute module $module3 vlog          [concat [glob $rtlDir/lib/*.v] [list $rtlDir/portal/mkSynthesizeablePortalTop.v]]
+# set_attribute module $module3 vlog          [concat [glob $rtlDir/lib/*.v] [list $rtlDir/portal/mkSynthesizeableConnectalTop.v]]
 # set_attribute module $module3 ip            []
 # set_attribute module $module3 synth        ${run.oocSynth}
 

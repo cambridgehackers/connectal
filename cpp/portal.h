@@ -119,8 +119,8 @@ void init_portal_memory(void);
 int portalAlloc(size_t size);
 void *portalMmap(int fd, size_t size);
 void portalInitiator(void);
-void portalSend(PortalInternal *p, void *data, int len);
-int portalRecv(PortalInternal *p, void *data, int len);
+void portalSend(int fd, void *data, int len);
+int portalRecv(int fd, void *data, int len);
 
 extern int portalExec_timeout;
 extern int global_pa_fd;

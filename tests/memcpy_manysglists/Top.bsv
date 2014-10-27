@@ -31,7 +31,7 @@ import Directory::*;
 import CtrlMux::*;
 import Portal::*;
 import Leds::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import MemServer::*;
 import MMU::*;
@@ -65,7 +65,7 @@ typedef enum {MemcpyIndication,
 	      HostMMU3ConfigRequest, 
 	      HostMMU3ConfigIndication } IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
 
    MemcpyIndicationProxy memcpyIndicationProxy <- mkMemcpyIndicationProxy(MemcpyIndication);
    Memcpy memcpy <- mkMemcpy(memcpyIndicationProxy.ifc);
@@ -88,8 +88,8 @@ module mkPortalTop(StdPortalDmaTop#(PhysAddrWidth));
    MMU#(PhysAddrWidth) hostMMU3 <- mkMMU(3, True, hostMMU3ConfigIndicationProxy.ifc);
    MMUConfigRequestWrapper hostMMU3ConfigRequestWrapper <- mkMMUConfigRequestWrapper(HostMMU3ConfigRequest, hostMMU3.request);
    
-   Vector#(1,  ObjectReadClient#(64))   readClients = cons(memcpy.dmaReadClient, nil);
-   Vector#(1, ObjectWriteClient#(64))  writeClients = cons(memcpy.dmaWriteClient, nil);
+   Vector#(1,  MemReadClient#(64))   readClients = cons(memcpy.dmaReadClient, nil);
+   Vector#(1, MemWriteClient#(64))  writeClients = cons(memcpy.dmaWriteClient, nil);
 
    DmaDebugIndicationProxy hostDmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(HostDmaDebugIndication);
    let sgls = cons(hostMMU0,cons(hostMMU1, cons(hostMMU2,cons(hostMMU3,nil))));  

@@ -47,14 +47,14 @@ typedef Directory#(16,16,32) StdDirectory;
 typedef 6 StartDirectoryOffset;
 
 module mkStdDirectoryPortalIfc#(BRAMServer#(Bit#(16), Bit#(32)) br)(StdPortal);
-   MemSlave#(16,32) ctrl <- mkCtrl2BRAM(br);
+   PhysMemSlave#(16,32) ctrl <- mkCtrl2BRAM(br);
    method Bit#(32) ifcId();
       return 0;
    endmethod
    method Bit#(32) ifcType();
       return 0;
    endmethod
-   interface MemSlave slave = ctrl;
+   interface PhysMemSlave slave = ctrl;
    interface ReadOnly interrupt;
       method Bool _read;
 	 return False;
