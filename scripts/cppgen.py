@@ -99,7 +99,7 @@ void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p %(paramSeparat
     volatile unsigned int* temp_working_addr = tempdata;
     *temp_working_addr++ = %(methodChannelOffset)s << 16 | %(wordLen)s;
 %(paramStructMarshall)s
-    portalSend(p->fpga_fd, tempdata, (%(wordLen)s+1) * sizeof(uint32_t));
+    portalSendFd(p->fpga_fd, tempdata, (%(wordLen)s+1) * sizeof(uint32_t), %(fdName)s);
 };
 '''
 
@@ -122,10 +122,11 @@ void %(className)s%(methodName)s_demarshall(PortalInternal *p){
 
 msgDemarshallTemplateSW='''
 void %(className)s%(methodName)s_demarshall(PortalInternal *p){
+    int tmpfd;
     unsigned int tmp;
     unsigned int tempdata[%(wordLen)s+1];
     volatile unsigned int* temp_working_addr = tempdata;
-    portalRecv(p->fpga_fd, tempdata, (%(wordLen)s) * sizeof(uint32_t));
+    portalRecvFd(p->fpga_fd, tempdata, (%(wordLen)s) * sizeof(uint32_t), &tmpfd);
 %(paramStructDeclarations)s
 %(paramStructDemarshall)s
     %(responseCase)s
@@ -268,8 +269,10 @@ class MethodMixin:
         #     for b in a:
         #         print '%s[%d:%d]' % (b[0], b[1], b[2])
         # print ''
+        fdName = '-1'
 
         def generate_marshall(w):
+            global fdName
             off = 0
             word = []
             fmt = paramStructMarshallStr
@@ -286,6 +289,7 @@ class MethodMixin:
                 word.append(field)
                 off = off+e.width-e.shifted
 		if e.datatype.cName() == 'SpecialTypeForSendingFdL_32_P':
+                    fdname = field
                     fmt = '        WRITEFD(p, temp_working_addr, %s);\n'
             return fmt % (''.join(util.intersperse('|', word)))
 
@@ -344,6 +348,7 @@ class MethodMixin:
             'resultType': resultTypeName,
             'methodChannelOffset': 'CHAN_NUM_%s_%s' % (className, cName(self.name)),
             'wordLen': len(argWords),
+            'fdName': fdName,
             # if message is empty, we still send an int of padding
             'payloadSize' : max(4, 4*((sum([p.numBitsBSV() for p in self.params])+31)/32)) 
             }

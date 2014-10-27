@@ -150,7 +150,8 @@ ssize_t sock_fd_write(int sockfd, void *ptr, size_t nbytes, int sendfd)
         cmptr->cmsg_len = CMSG_LEN(sizeof(int));
         cmptr->cmsg_level = SOL_SOCKET;
         cmptr->cmsg_type = SCM_RIGHTS;
-        *((int *) CMSG_DATA(cmptr)) = sendfd;
+        int *foo = (int *)CMSG_DATA(cmptr);
+        *foo = sendfd;
     }
     msg.msg_name = NULL;
     msg.msg_namelen = 0;
@@ -192,7 +193,8 @@ ssize_t sock_fd_read(int sockfd, void *ptr, size_t nbytes, int *recvfd)
             printf("%s failed\n", __FUNCTION__);
             exit(1);
         }
-        *recvfd = *((int *) CMSG_DATA(cmptr));
+        int *foo = (int *)CMSG_DATA(cmptr);
+        *recvfd = *foo;
     }
     return n;
 }
