@@ -2,7 +2,7 @@ Source: connectal
 Section: devel
 Priority: extra
 Maintainer: Jamey Hicks <jamey.hicks@gmail.com>
-Build-Depends: debhelper (>= 8.0.0), python (>= 2.7), python-ply, python-support (>= 0.90), dkms, connectal-zynq-linux-headers
+Build-Depends: debhelper (>= 8.0.0), python (>= 2.7), python-ply, python-support (>= 0.90), dkms, connectal-zynq-linux-headers, gcc-arm-linux-gnueabi, cpp-arm-linux-gnueabi, libc6-dev-armel-cross
 Standards-Version: 3.9.2
 Homepage: https://github.com/cambridgehackers/connectal
 #Vcs-Git: git://git.debian.org/collab-maint/connectal.git

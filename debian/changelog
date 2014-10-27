@@ -1,8 +1,14 @@
+connectal (14.10.2-7trusty4) trusty; urgency=medium
+
+  * Specify CROSS_COMPILE and add to arm-linux-gnueabi-gcc to Build-Depends
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 27 Oct 2014 08:27:24 -0400
+
 connectal (14.10.2-7trusty2) trusty; urgency=medium
 
   * Specify driver version
 
- -- Jamey Hicks <jamey.hicks@gmail.com>  Sati, 25 Oct 2014 14:34:22 -0400
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Sat, 25 Oct 2014 14:34:22 -0400
 
 connectal (14.10.2-6trusty1) trusty; urgency=medium
 
