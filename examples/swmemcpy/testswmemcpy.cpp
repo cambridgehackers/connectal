@@ -78,7 +78,7 @@ void* parent(void* pwr_sock)
   }
   fprintf(stderr, "parent::writeDone mismatch=%d\n", mismatch);
 
-  sock_fd_write(wr_sock, dstAlloc.header.fd);
+  sock_fd_write(wr_sock, NULL, 0, dstAlloc.header.fd);
   munmap(dstBuffer, alloc_sz);
   close(dstAlloc.header.fd);
   return NULL;

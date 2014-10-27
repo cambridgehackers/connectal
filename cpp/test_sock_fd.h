@@ -31,7 +31,7 @@ child(int sock)
 
     sleep(1);
     for (;;) {
-        size = sock_fd_read(sock, &fd);
+        size = sock_fd_read(sock, NULL, 0, &fd);
         if (size <= 0)
             break;
         printf ("read %d\n", size);
@@ -50,7 +50,7 @@ parent(int sock)
     int fd;
 
     fd = 1;
-    size = sock_fd_write(sock, fd);
+    size = sock_fd_write(sock, NULL, 0, fd);
     printf ("wrote %d\n", size);
 }
 

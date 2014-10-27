@@ -45,8 +45,8 @@ struct memresponse{
 extern "C" {
 #endif
 void connect_to_bsim(void);
-ssize_t sock_fd_write(int sockfd, int fd);
-ssize_t sock_fd_read(int sock, int *fd);
+ssize_t sock_fd_write(int sockfd, void *ptr, size_t nbytes, int sendfd);
+ssize_t sock_fd_read(int sockfd, void *ptr, size_t nbytes, int *recvfd);
 int pareff_fd(int *fd);
 void init_pareff(void);
 unsigned int bsim_poll_interrupt(void);

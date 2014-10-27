@@ -130,106 +130,9 @@ int accept_socket(int arg_listening)
     return sockfd;
 }
 
-/* Thanks to keithp.com for readable examples how to do this! */
-
-#define COMMON_SOCK_FD \
-    struct msghdr   msg; \
-    struct iovec    iov; \
-    union { \
-        struct cmsghdr  cmsghdr; \
-        char        control[CMSG_SPACE(sizeof (int))]; \
-    } cmsgu; \
-    struct cmsghdr  *cmsg; \
-    \
-    iov.iov_base = buf; \
-    iov.iov_len = sizeof(buf); \
-    msg.msg_name = NULL; \
-    msg.msg_namelen = 0; \
-    msg.msg_iov = &iov; \
-    msg.msg_iovlen = 1; \
-    msg.msg_control = cmsgu.control; \
-    msg.msg_controllen = sizeof(cmsgu.control);
-
-ssize_t sock_fd_write(int sockfd, int fd)
-{
-    char buf[] = "1";
-    int *iptr;
-    COMMON_SOCK_FD;
-    cmsg = CMSG_FIRSTHDR(&msg);
-    cmsg->cmsg_len = CMSG_LEN(sizeof (int));
-    cmsg->cmsg_level = SOL_SOCKET;
-    cmsg->cmsg_type = SCM_RIGHTS;
-    iptr = (int *) CMSG_DATA(cmsg);
-    *iptr = fd;
-
-  int rv = sendmsg(sockfd, &msg, 0);
-  return rv;
-}
-
-ssize_t sock_fd_read(int sock, int *fd)
-{
-    ssize_t     size;
-    char buf[16];
-    int *iptr;
-
-    if (trace_socket)
-        printf("[%s:%d] sock %d\n", __FUNCTION__, __LINE__, sock);
-    COMMON_SOCK_FD;
-    *fd = -1;
-    size = recvmsg (sock, &msg, 0);
-    cmsg = CMSG_FIRSTHDR(&msg);
-    if (size > 0 && cmsg && cmsg->cmsg_len == CMSG_LEN(sizeof(int))) {
-        if (cmsg->cmsg_level != SOL_SOCKET || cmsg->cmsg_type != SCM_RIGHTS) {
-            fprintf(stderr, "%s: invalid message\n", __FUNCTION__);
-            exit(1);
-        }
-        iptr = (int *)CMSG_DATA(cmsg);
-        *fd = *iptr;
-    }
-    else {
-        printf("sock_fd_read: error in receiving fd %d size %ld len %ld\n", *fd, (long)size, (long)(cmsg?cmsg->cmsg_len:-666));
-        printf("sock_fd_read: controllen %lx control %lx\n", (long)msg.msg_controllen, (long)msg.msg_control);
-        exit(-1);
-    }
-    return size;
-}
-#if 0
 // Taken from: UNIX Network Programming, Richard Stevens
 // http://www.kohala.com/start/unpv12e.html
-ssize_t read_fd(int fd, void *ptr, size_t nbytes, int *recvfd)
-{
-    struct msghdr    msg;
-    struct iovec     iov[1];
-    ssize_t          n;
-    int              newfd;
-    union {
-      struct cmsghdr cm;
-      char           control[CMSG_SPACE(sizeof(int))];
-    } control_un;
-    struct cmsghdr   *cmptr;
-
-    msg.msg_control = control_un.control;
-    msg.msg_controllen = sizeof(control_un.control);
-    msg.msg_name = NULL;
-    msg.msg_namelen = 0;
-    iov[0].iov_base = ptr;
-    iov[0].iov_len = nbytes;
-    msg.msg_iov = iov;
-    msg.msg_iovlen = 1;
-
-    *recvfd = -1;        /* descriptor was not passed */
-    if ( (n = recvmsg(fd, &msg, 0)) <= 0)
-        return n;
-    if ( (cmptr = CMSG_FIRSTHDR(&msg)) && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
-        if (cmptr->cmsg_level != SOL_SOCKET)
-            err_quit("control level != SOL_SOCKET");
-        if (cmptr->cmsg_type != SCM_RIGHTS)
-            err_quit("control type != SCM_RIGHTS");
-        *recvfd = *((int *) CMSG_DATA(cmptr));
-    }
-    return n;
-}
-ssize_t write_fd(int fd, void *ptr, size_t nbytes, int sendfd)
+ssize_t sock_fd_write(int sockfd, void *ptr, size_t nbytes, int sendfd)
 {
     struct msghdr    msg;
     struct iovec     iov[1];
@@ -254,9 +157,44 @@ ssize_t write_fd(int fd, void *ptr, size_t nbytes, int sendfd)
     iov[0].iov_len = nbytes;
     msg.msg_iov = iov;
     msg.msg_iovlen = 1;
-    return sendmsg(fd, &msg, 0);
+    return sendmsg(sockfd, &msg, 0);
 }
-#endif
+
+ssize_t sock_fd_read(int sockfd, void *ptr, size_t nbytes, int *recvfd)
+{
+    struct msghdr    msg;
+    struct iovec     iov[1];
+    ssize_t          n;
+    int              newfd;
+    union {
+      struct cmsghdr cm;
+      char           control[CMSG_SPACE(sizeof(int))];
+    } control_un;
+    struct cmsghdr   *cmptr;
+
+    if (trace_socket)
+        printf("[%s:%d] sock %d\n", __FUNCTION__, __LINE__, sockfd);
+    msg.msg_control = control_un.control;
+    msg.msg_controllen = sizeof(control_un.control);
+    msg.msg_name = NULL;
+    msg.msg_namelen = 0;
+    iov[0].iov_base = ptr;
+    iov[0].iov_len = nbytes;
+    msg.msg_iov = iov;
+    msg.msg_iovlen = 1;
+
+    *recvfd = -1;        /* descriptor was not passed */
+    if ( (n = recvmsg(sockfd, &msg, 0)) <= 0)
+        return n;
+    if ( (cmptr = CMSG_FIRSTHDR(&msg)) && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
+        if (cmptr->cmsg_level != SOL_SOCKET || cmptr->cmsg_type != SCM_RIGHTS) {
+            printf("%s failed\n", __FUNCTION__);
+            exit(1);
+        }
+        *recvfd = *((int *) CMSG_DATA(cmptr));
+    }
+    return n;
+}
 
 static uint32_t interrupt_value;
 void portalSend(int fd, void *data, int len)
@@ -328,7 +266,7 @@ void write_portal_fd_bsim(volatile unsigned int *addr, unsigned int v, int id)
 printf("[%s:%d] writefd %d\n", __FUNCTION__, __LINE__, v);
   pthread_mutex_lock(&socket_mutex);
   portalSend(global_sockfd, &foo, sizeof(foo));
-  int rv = sock_fd_write(global_sockfd, v);
+  sock_fd_write(global_sockfd, NULL, 0, v);
   pthread_mutex_unlock(&socket_mutex);
 }
 #else // __KERNEL__

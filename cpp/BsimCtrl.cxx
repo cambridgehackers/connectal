@@ -107,7 +107,7 @@ extern "C" bool checkForRequest(uint32_t rr)
 	        head.req.addr = (unsigned int *)(((long) head.req.addr) | head.req.portal << 16);
                 if (rv == sizeof(head.req) && head.req.write_flag == MAGIC_PORTAL_FOR_SENDING_FD) {
                     int fd;
-                    sock_fd_read(head.sockfd, &fd);
+                    sock_fd_read(head.sockfd, NULL, 0, &fd);
                     head.req.data_or_tag = fd;
                     head.req.write_flag = 1;
                 }
