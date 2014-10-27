@@ -5,7 +5,6 @@ import Connectable::*;
 
 // portz libraries
 import Portal::*;
-import Directory::*;
 import CtrlMux::*;
 import Leds::*;
 import MemTypes::*;
@@ -48,10 +47,7 @@ module mkConnectalTop#(HostType host)(StdConnectalTop#(PhysAddrWidth));
    portals[0] = swallowWrapper.portalIfc; 
    portals[1] = echoRequestWrapper.portalIfc; 
    portals[2] = echoIndicationProxy.portalIfc;
-   
-   // instantiate system directory
-   StdDirectory dir <- mkStdDirectory(portals);
-   let ctrl_mux <- mkSlaveMux(dir,portals);
+   let ctrl_mux <- mkSlaveMux(portals);
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
