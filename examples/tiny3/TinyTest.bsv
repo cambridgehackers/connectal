@@ -17,8 +17,8 @@ module mkTiny3Request#(Tiny3Indication indication)(Tiny3Request);
       cons(asmi("",    0, 0), // put 0 in r0
       cons(asmi("",    1, 10), // put 10 in r1
       cons(asmi("",    2, findaddr("loop")), // loop address in r2
-      cons(asm("loop", OpOut, FDECb, ShiftNone, SkipNever, 1, 0, 1), // r1-- and output
-      cons(asm("",     OpJump, FaORb, ShiftNone, SkipZero, 3, 2, 0), // jump r2 if not zero
+      cons(asm("loop", OpOut, FDECb, ShiftNone, SkipZero, 1, 0, 1), // r1-- and output
+      cons(asm("",     OpJump, FaORb, ShiftNone, SkipNever, 3, 2, 0), // jump r2 if not zero
       cons(asm("",     OpReserved, Freserved, ShiftNone, SkipNever, 0, 0, 0), // stop processor
       tagged Nil))))));
 
