@@ -99,7 +99,7 @@ endmodule
 (* synthesize *)
 module mk%(Dut)sSynth#(Bit#(32) id)(%(Dut)s);
   let dut <- mk%(Dut)sPortal(id);
-  let memPortal <- mkMemPortal(dut.portalIfc);
+  let memPortal <- mkMemPortal(id, dut.portalIfc);
   interface MemPortal portalIfc = memPortal;
   interface %(Ifc)s ifc = dut.ifc;
 endmodule
@@ -165,17 +165,11 @@ module mk%(Dut)sMemPortalPipes#(Bit#(32) id)(%(Dut)sMemPortalPipes);
   let p <- mk%(Dut)sPipes(zeroExtend(pack(id)));
 
   PipePortal#(%(requestChannelCount)s, 0, 32) portalifc = (interface PipePortal;
-        method Bit#(32) ifcId;
-            return zeroExtend(pack(id));
-        endmethod
-        method Bit#(32) ifcType;
-            return %(ifcType)s;
-        endmethod
         interface Vector requests = p.inputPipes;
         interface Vector indications = nil;
     endinterface);
 
-  let memPortal <- mkMemPortal(portalifc);
+  let memPortal <- mkMemPortal(id, portalifc);
   interface %(Dut)sPipes pipes = p;
   interface MemPortal portalIfc = memPortal;
 endmodule
@@ -199,12 +193,6 @@ Bit#(6) %(methodName)s_Offset = %(channelNumber)s;
 
 portalIfcTemplate='''
     interface PipePortal portalIfc;
-        method Bit#(32) ifcId;
-            return zeroExtend(pack(id));
-        endmethod
-        method Bit#(32) ifcType;
-            return %(ifcType)s;
-        endmethod
         interface Vector requests = requestPipes;
         interface Vector indications = indicationPipes;
     endinterface
@@ -366,7 +354,6 @@ class InterfaceMixin:
             'indicationInterfaces': ''.join(indicationTemplate % { 'Indication': name }) if not self.hasSource else '',
             }
 
-        substs['ifcType'] = 'truncate(128\'h%s)' % m.hexdigest()
         substs['portalIfc'] = portalIfcTemplate % substs
         substs['requestOutputPipeInterfaces'] = ''.join([requestOutputPipeInterfaceTemplate % {'methodName': methodName,
                                                        'MethodName': util.capitalize(methodName)}

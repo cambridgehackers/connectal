@@ -49,14 +49,15 @@
 #include <pcieportal.h> // BNOC_TRACE
 #endif
 
-#define MAX_DIRECTORY_SIZE 1024
-
-static void init_directory(void);
-PortalInternal globalDirectory;
+static void init_portal(void);
 int global_pa_fd = -1;
 
 #ifdef __KERNEL__
 static tBoard* tboard;
+#endif
+
+#ifdef BSIM
+extern int bsim_fpga_map[MAX_BSIM_PORTAL_ID];
 #endif
 
 void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, uint32_t reqsize)
@@ -64,10 +65,10 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
     int rc = 0;
     char buff[128];
     char read_status;
-    int addrbits = 16;
 
-    init_directory();
+    init_portal();
     memset(pint, 0, sizeof(*pint));
+    pint->fpga_number = id;
     pint->fpga_fd = -1;
     pint->handler = handler;
     pint->reqsize = reqsize;
@@ -86,13 +87,10 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
 #endif
         goto exitlab;
     }
-    else if (id != -1) {
-        pint->fpga_number = portalGetFpga(id);
-        addrbits = portalGetAddrbits(id);
-    }
     snprintf(buff, sizeof(buff), "/dev/fpga%d", pint->fpga_number);
 #ifdef BSIM   // BSIM version
-    connect_to_bsim();
+    assert(id < MAX_BSIM_PORTAL_ID);
+    pint->fpga_number = bsim_fpga_map[id];
     portalEnableInterrupts(pint, 1);
 #elif defined(__KERNEL__)
     pint->map_base = (volatile unsigned int*)(tboard->bar2io + pint->fpga_number * PORTAL_BASE_OFFSET);
@@ -130,7 +128,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
 	rc = -errno;
 	goto exitlab;
     }
-    pint->map_base = (volatile unsigned int*)mmap(NULL, 1<<addrbits, PROT_READ|PROT_WRITE, MAP_SHARED, pint->fpga_fd, 0);
+    pint->map_base = (volatile unsigned int*)mmap(NULL, PORTAL_BASE_OFFSET, PROT_READ|PROT_WRITE, MAP_SHARED, pint->fpga_fd, 0);
     if (pint->map_base == MAP_FAILED) {
         PORTAL_PRINTF("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", pint->fpga_fd, errno);
         rc = -errno;
@@ -150,7 +148,7 @@ exitlab:
 int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)
 {
     int status = 0;
-    init_directory();
+    init_portal();
 #ifdef ZYNQ
     PortalClockRequest request;
     request.clknum = clkNum;
@@ -164,7 +162,7 @@ int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency
     return status;
 }
 
-static void init_directory(void)
+static void init_portal(void)
 {
   unsigned int i;
   static int once = 0;
@@ -175,95 +173,52 @@ static void init_directory(void)
 #ifdef __KERNEL__
   tboard = get_pcie_portal_descriptor();
 #endif
-  init_portal_internal(&globalDirectory, -1, NULL, 0);
 #ifdef ZYNQ /* There is no way to set userclock freq from host on PCIE */
   // start by setting the clock frequency (this only has any effect on the zynq platform)
   PortalClockRequest request;
   long reqF = 100000000; // 100 Mhz
   request.clknum = 0;
   request.requested_rate = reqF;
-  int status = ioctl(globalDirectory.fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
+  assert(false);
+  int status = //ioctl(globalDirectory.fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
   if (status < 0)
-    PORTAL_PRINTF("init_directory: error setting fclk0, errno=%d\n", errno);
-  PORTAL_PRINTF("init_directory: set fclk0 (%ld,%ld)\n", reqF, request.actual_rate);
+    PORTAL_PRINTF("init_portal: error setting fclk0, errno=%d\n", errno);
+  PORTAL_PRINTF("init_portal: set fclk0 (%ld,%ld)\n", reqF, request.actual_rate);
 #endif
-
-  // finally scan
-  if(1) PORTAL_PRINTF("init_directory: scan(fpga%d)\n", globalDirectory.fpga_number);
-  if(1){
-#ifndef __KERNEL__
-    time_t timestamp  = READL(&globalDirectory, PORTAL_DIRECTORY_TIMESTAMP);
+#ifdef BSIM
+  connect_to_bsim();
 #endif
-    uint32_t numportals = READL(&globalDirectory, PORTAL_DIRECTORY_NUMPORTALS);
-    PORTAL_PRINTF("version=%d\n",  READL(&globalDirectory, PORTAL_DIRECTORY_VERSION));
-#ifndef __KERNEL__
-    PORTAL_PRINTF("timestamp=%s",  ctime(&timestamp));
-#endif
-    PORTAL_PRINTF("numportals=%d\n", numportals);
-    PORTAL_PRINTF("addrbits=%d\n", READL(&globalDirectory, PORTAL_DIRECTORY_ADDRBITS));
-    for(i = 0; (i < numportals) && (i < 32); i++)
-      PORTAL_PRINTF("portal[%d]: ifcid=%d, ifctype=%08x\n", i, READL(&globalDirectory, PORTAL_DIRECTORY_PORTAL_ID(i)), READL(&globalDirectory, PORTAL_DIRECTORY_PORTAL_TYPE(i)));
-  }
-}
-
-unsigned int portalGetFpga(unsigned int id)
-{
-  int numportals, i;
-    init_directory();
-  numportals = READL(&globalDirectory, PORTAL_DIRECTORY_NUMPORTALS);
-  for(i = 0; i < numportals; i++){
-    if(READL(&globalDirectory, PORTAL_DIRECTORY_PORTAL_ID(i)) == id)
-      return i+1;
-  }
-  PORTAL_PRINTF("directory_fpga(id=%d) id not found\n", id);
-  //exit(1);
-  return 0;
-}
-
-unsigned int portalGetAddrbits(unsigned int id)
-{
-    init_directory();
-  return READL(&globalDirectory, PORTAL_DIRECTORY_ADDRBITS);
 }
 
 void portalTrace_start()
 {
-    init_directory();
+  init_portal();
 #if !defined(ZYNQ) && !defined(__KERNEL__)
   tTraceInfo traceInfo;
   traceInfo.trace = 1;
-  int res = ioctl(globalDirectory.fpga_fd,BNOC_TRACE,&traceInfo);
+  assert(false);
+  int res = 0; //ioctl(globalDirectory.fpga_fd,BNOC_TRACE,&traceInfo);
   if (res)
     PORTAL_PRINTF("Failed to start tracing. errno=%d\n", errno);
 #endif
 }
 void portalTrace_stop()
 {
-    init_directory();
+  init_portal();
 #if !defined(ZYNQ) && !defined(__KERNEL__)
   tTraceInfo traceInfo;
   traceInfo.trace = 0;
-  int res = ioctl(globalDirectory.fpga_fd,BNOC_TRACE,&traceInfo);
+  assert(false);
+  int res = 0; //ioctl(globalDirectory.fpga_fd,BNOC_TRACE,&traceInfo);
   if (res)
     PORTAL_PRINTF("Failed to stop tracing. errno=%d\n", errno);
 #endif
 }
 
-uint64_t portalCycleCount()
-{
-  unsigned int high_bits, low_bits;
-  if (we_are_initiator)
-      return 0;
-    init_directory();
-  high_bits = READL(&globalDirectory, PORTAL_DIRECTORY_COUNTER_MSB);
-  low_bits  = READL(&globalDirectory, PORTAL_DIRECTORY_COUNTER_LSB);
-  return (((uint64_t)high_bits)<<32) | ((uint64_t)low_bits);
-}
-
 void portalEnableInterrupts(PortalInternal *p, int val)
 {
    if (!p->reqsize)
-     WRITEL(p, &(p->map_base[IND_REG_INTERRUPT_MASK]), val);
+     WRITEL(p, &(p->map_base[PORTAL_CTRL_REG_INTERRUPT_ENABLE]), val);
 }
 
 int portalDCacheFlushInval(int fd, long size, void *__p)
@@ -344,3 +299,4 @@ void portalInitiator(void)
 {
     we_are_initiator = 1;
 }
+

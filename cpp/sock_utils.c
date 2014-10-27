@@ -35,7 +35,10 @@
 #include <sys/un.h>
 #include <semaphore.h>
 #include <pthread.h>
+#include <assert.h>
 
+
+int bsim_fpga_map[MAX_BSIM_PORTAL_ID];
 static pthread_mutex_t socket_mutex;
 int we_are_initiator;
 int global_sockfd = -1;
@@ -75,6 +78,16 @@ void connect_to_bsim(void)
     return;
   global_sockfd = init_connecting(SOCKET_NAME);
   pthread_mutex_init(&socket_mutex, NULL);
+  unsigned int last = 0;
+  unsigned int idx = 0;
+  volatile unsigned int *ptr=0;
+  while(!last){
+    unsigned int id = read_portal_bsim(&ptr[PORTAL_CTRL_REG_PORTAL_ID], idx);
+    last = read_portal_bsim(&ptr[PORTAL_CTRL_REG_TOP], idx);
+    assert(id < MAX_BSIM_PORTAL_ID);
+    bsim_fpga_map[id] = idx++;
+    //fprintf(stderr, "%s bsim_fpga_map[%d]=%d (%d)\n", __FUNCTION__, id, bsim_fpga_map[id], last);
+  }  
 }
 
 int init_listening(const char *arg_name)

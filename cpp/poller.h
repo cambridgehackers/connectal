@@ -59,7 +59,10 @@ class PortalInternalCpp
 {
  public:
   PortalInternal pint;
-  PortalInternalCpp(int id, uint32_t reqsize) { init_portal_internal(&pint, id, NULL, reqsize); };
+  PortalInternalCpp(int id, uint32_t reqsize) { 
+    init_portal_internal(&pint, id, NULL, reqsize); 
+    fprintf(stderr, "PortalInternalCpp %d\n", pint.fpga_number);
+  };
   ~PortalInternalCpp() {
     if (pint.fpga_fd > 0) {
         ::close(pint.fpga_fd);

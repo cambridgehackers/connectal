@@ -33,23 +33,29 @@
 /* Offsets of mapped registers within an /dev/fpgaxxx device */
 #define PORTAL_REQ_FIFO(A)         (((0<<14) + (A) * 256 + 256)/sizeof(uint32_t))
 #define PORTAL_IND_FIFO(A)         (((0<<14) + (A) * 256 + 256)/sizeof(uint32_t))
-#define PORTAL_IND_REG_OFFSET_32   ( (0<<14)             /sizeof(uint32_t))
-#define     IND_REG_INTERRUPT_FLAG    (PORTAL_IND_REG_OFFSET_32 + 0)
-#define     IND_REG_INTERRUPT_MASK    (PORTAL_IND_REG_OFFSET_32 + 1)
-#define     IND_REG_INTERRUPT_COUNT   (PORTAL_IND_REG_OFFSET_32 + 2)
-#define     IND_REG_QUEUE_STATUS      (PORTAL_IND_REG_OFFSET_32 + 6)
 
-// Directory offsets
+// PortalCtrl offsets
+#define PORTAL_CTRL_INTERRUPT_STATUS 0
+#define PORTAL_CTRL_INTERRUPT_ENABLE 1
+#define PORTAL_CTRL_SEVEN            2
+#define PORTAL_CTRL_IND_QUEUE_STATUS 3
+#define PORTAL_CTRL_PORTAL_ID        4
+#define PORTAL_CTRL_TOP              5
+#define PORTAL_CTRL_COUNTER_MSB      6
+#define PORTAL_CTRL_COUNTER_LSB      7
 
-#define PORTAL_DIRECTORY_OFFSET(A)      &globalDirectory.map_base[128+(A)]
-#define PORTAL_DIRECTORY_VERSION        PORTAL_DIRECTORY_OFFSET(0)
-#define PORTAL_DIRECTORY_TIMESTAMP      PORTAL_DIRECTORY_OFFSET(1)
-#define PORTAL_DIRECTORY_NUMPORTALS     PORTAL_DIRECTORY_OFFSET(2)
-#define PORTAL_DIRECTORY_ADDRBITS       PORTAL_DIRECTORY_OFFSET(3)
-#define PORTAL_DIRECTORY_COUNTER_MSB    PORTAL_DIRECTORY_OFFSET(4)
-#define PORTAL_DIRECTORY_COUNTER_LSB    PORTAL_DIRECTORY_OFFSET(5)
-#define PORTAL_DIRECTORY_PORTAL_ID(A)   PORTAL_DIRECTORY_OFFSET(6 + 2 * (A))
-#define PORTAL_DIRECTORY_PORTAL_TYPE(A) PORTAL_DIRECTORY_OFFSET(6 + 2 * (A) + 1)
+
+// PortalCtrl registers
+#define PORTAL_CTRL_REG_OFFSET_32   ( (0<<14)             /sizeof(uint32_t))
+#define PORTAL_CTRL_REG_INTERRUPT_STATUS (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_INTERRUPT_STATUS)
+#define PORTAL_CTRL_REG_INTERRUPT_ENABLE (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_INTERRUPT_ENABLE)
+#define PORTAL_CTRL_REG_SEVEN            (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_SEVEN           )
+#define PORTAL_CTRL_REG_IND_QUEUE_STATUS (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_IND_QUEUE_STATUS)
+#define PORTAL_CTRL_REG_PORTAL_ID        (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_PORTAL_ID       )
+#define PORTAL_CTRL_REG_TOP              (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_TOP             )
+#define PORTAL_CTRL_REG_COUNTER_MSB      (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_COUNTER_MSB     )
+#define PORTAL_CTRL_REG_COUNTER_LSB      (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_COUNTER_LSB     )
+
 
 typedef int Bool;   /* for GeneratedTypes.h */
 typedef int SpecialTypeForSendingFd;   /* for GeneratedTypes.h */
@@ -91,9 +97,7 @@ int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *
 extern "C" {
 #endif
 void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, uint32_t reqsize);
-uint64_t portalCycleCount(void);
-unsigned int portalGetFpga(unsigned int id);
-unsigned int portalGetAddrbits(unsigned int id);
+uint64_t portalCycleCount(PortalInternal *pint);
 unsigned int read_portal_bsim(volatile unsigned int *addr, int id);
 void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id);
 void write_portal_fd_bsim(volatile unsigned int *addr, unsigned int v, int id);
@@ -128,7 +132,6 @@ extern int portalExec_timeout;
 extern int global_pa_fd;
 extern int global_sockfd;
 extern int we_are_initiator;
-extern PortalInternal globalDirectory;
 #ifdef __cplusplus
 }
 #endif

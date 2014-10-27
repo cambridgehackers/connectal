@@ -73,32 +73,41 @@ typedef struct {
 
 
 module mkSimpleRequest#(SimpleIndication indication)(SimpleRequest);
-
+   
+   let verbose = False;
+   
    method Action say1(Bit#(32) v);
+      if (verbose) $display("mkSimpleRequest::say1");
       indication.heard1(v);
    endmethod
    
    method Action say2(Bit#(16) a, Bit#(16) b);
+      if (verbose) $display("mkSimpleRequest::say2");
       indication.heard2(a,b);
    endmethod
       
    method Action say3(S1 v);
+      if (verbose) $display("mkSimpleRequest::say3");
       indication.heard3(v);
    endmethod
    
    method Action say4(S2 v);
+      if (verbose) $display("mkSimpleRequest::say4");
       indication.heard4(v);
    endmethod
       
    method Action say5(Bit#(32) a, Bit#(64) b, Bit#(32) c);
+      if (verbose) $display("mkSimpleRequest::say5");
       indication.heard5(a, b, c);
    endmethod
 
    method Action say6(Bit#(32) a, Bit#(40) b, Bit#(32) c);
+      if (verbose) $display("mkSimpleRequest::say6");
       indication.heard6(a, b, c);
    endmethod
 
    method Action say7(S3 v);
+      if (verbose) $display("mkSimpleRequest::say7");
       indication.heard7(v.a, v.e1);
    endmethod
 

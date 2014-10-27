@@ -24,6 +24,7 @@
 #ifndef _SOCK_UTILS_H_
 #define _SOCK_UTILS_H_
 
+#define MAX_BSIM_PORTAL_ID 128
 #define MAGIC_PORTAL_FOR_SENDING_FD                 666
 #define MAGIC_PORTAL_FOR_SENDING_INTERRUPT          999
 #define SOCKET_NAME                 "socket_for_bluesim"

@@ -103,7 +103,7 @@ void* PortalPoller::portalExec_init(void)
     portalExec_timeout = -1; // no interrupt timeout 
 #ifdef BSIM
     if (global_sockfd != -1) {
-        portalExec_timeout = 100;
+      portalExec_timeout = 100;
         numFds++;
         struct pollfd *pollfd = &portal_fds[numFds-1];
         memset(pollfd, 0, sizeof(struct pollfd));
@@ -142,13 +142,13 @@ void* PortalPoller::portalExec_poll(int timeout)
     long rc = 0;
     // LCS bypass the call to poll if the timeout is 0
     if (timeout != 0) {
-      poll_enter_time = portalCycleCount();
+      //poll_enter_time = portalCycleCount();
       rc = poll(portal_fds, numFds, timeout);
-      poll_return_time = portalCycleCount();
+      //poll_return_time = portalCycleCount();
     }
     if(rc < 0) {
-	// return only in error case
-	fprintf(stderr, "poll returned rc=%ld errno=%d:%s\n", rc, errno, strerror(errno));
+      // return only in error case
+      fprintf(stderr, "poll returned rc=%ld errno=%d:%s\n", rc, errno, strerror(errno));
     }
     return (void*)rc;
 }
@@ -197,12 +197,11 @@ void* PortalPoller::portalExec_event(void)
       if (instance->pint.fpga_fd == -1 && !bsim_poll_interrupt())
         continue;
 #endif
-      while ((queue_status= READL(&instance->pint, &map_base[IND_REG_QUEUE_STATUS]))) {
+      while ((queue_status= READL(&instance->pint, &map_base[PORTAL_CTRL_REG_IND_QUEUE_STATUS]))) {
         if(0) {
-          unsigned int int_src = READL(&instance->pint, &map_base[IND_REG_INTERRUPT_FLAG]);
-          unsigned int int_en  = READL(&instance->pint, &map_base[IND_REG_INTERRUPT_MASK]);
-          unsigned int ind_count  = READL(&instance->pint, &map_base[IND_REG_INTERRUPT_COUNT]);
-          fprintf(stderr, "(%d:fpga%d) about to receive messages int=%08x en=%08x qs=%08x cnt=%x\n", i, instance->pint.fpga_number, int_src, int_en, queue_status, ind_count);
+          unsigned int int_src = READL(&instance->pint, &map_base[PORTAL_CTRL_REG_INTERRUPT_STATUS]);
+          unsigned int int_en  = READL(&instance->pint, &map_base[PORTAL_CTRL_REG_INTERRUPT_ENABLE]);
+          fprintf(stderr, "(%d:fpga%d) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->pint.fpga_number, int_src, int_en, queue_status);
         }
         instance->pint.handler(&instance->pint, queue_status-1);
 	mcnt++;
