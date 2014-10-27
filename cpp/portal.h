@@ -127,6 +127,8 @@ void *portalMmap(int fd, size_t size);
 void portalInitiator(void);
 void portalSend(int fd, void *data, int len);
 int portalRecv(int fd, void *data, int len);
+void portalSendFd(int fd, void *data, int len, int sendFd);
+int portalRecvFd(int fd, void *data, int len, int *recvFd);
 
 extern int portalExec_timeout;
 extern int global_pa_fd;

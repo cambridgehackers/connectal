@@ -143,14 +143,15 @@ ssize_t sock_fd_write(int sockfd, void *ptr, size_t nbytes, int sendfd)
     struct cmsghdr   *cmptr;
 
     msg.msg_control = control_un.control;
-    msg.msg_controllen = sizeof(control_un.control);
-
-    cmptr = CMSG_FIRSTHDR(&msg);
-    cmptr->cmsg_len = CMSG_LEN(sizeof(int));
-    cmptr->cmsg_level = SOL_SOCKET;
-    cmptr->cmsg_type = SCM_RIGHTS;
-    *((int *) CMSG_DATA(cmptr)) = sendfd;
-
+    msg.msg_controllen = 0;
+    if (sendfd >= 0) {
+        msg.msg_controllen = sizeof(control_un.control);
+        cmptr = CMSG_FIRSTHDR(&msg);
+        cmptr->cmsg_len = CMSG_LEN(sizeof(int));
+        cmptr->cmsg_level = SOL_SOCKET;
+        cmptr->cmsg_type = SCM_RIGHTS;
+        *((int *) CMSG_DATA(cmptr)) = sendfd;
+    }
     msg.msg_name = NULL;
     msg.msg_namelen = 0;
     iov[0].iov_base = ptr;
@@ -184,7 +185,7 @@ ssize_t sock_fd_read(int sockfd, void *ptr, size_t nbytes, int *recvfd)
     msg.msg_iovlen = 1;
 
     *recvfd = -1;        /* descriptor was not passed */
-    if ( (n = recvmsg(sockfd, &msg, 0)) <= 0)
+    if ( (n = recvmsg(sockfd, &msg, MSG_DONTWAIT)) <= 0)
         return n;
     if ( (cmptr = CMSG_FIRSTHDR(&msg)) && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
         if (cmptr->cmsg_level != SOL_SOCKET || cmptr->cmsg_type != SCM_RIGHTS) {
@@ -197,21 +198,30 @@ ssize_t sock_fd_read(int sockfd, void *ptr, size_t nbytes, int *recvfd)
 }
 
 static uint32_t interrupt_value;
-void portalSend(int fd, void *data, int len)
+void portalSendFd(int fd, void *data, int len, int sendFd)
 {
     if (trace_socket)
         printf("%s: init %d fd %d data %p len %d\n", __FUNCTION__, we_are_initiator, fd, data, len);
-    if (send(fd, data, len, 0) == -1) {
+    if (sock_fd_write(fd, data, len, sendFd) == -1) {
         fprintf(stderr, "%s: send error\n",__FUNCTION__);
         exit(1);
     }
 }
-int portalRecv(int fd, void *data, int len)
+int portalRecvFd(int fd, void *data, int len, int *recvFd)
 {
-    int rc = recv(fd, data, len, MSG_DONTWAIT);
+    int rc = sock_fd_read(fd, data, len, recvFd);
     if (trace_socket)
         printf("%s: init %d fd %d data %p len %d rc %d\n", __FUNCTION__, we_are_initiator, fd, data, len, rc);
     return rc;
+}
+void portalSend(int fd, void *data, int len)
+{
+    portalSendFd(fd, data, len, -1);
+}
+int portalRecv(int fd, void *data, int len)
+{
+    int recvFd;
+    return portalRecvFd(fd, data, len, &recvFd);
 }
 unsigned int bsim_poll_interrupt(void)
 {
