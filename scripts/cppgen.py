@@ -286,7 +286,7 @@ class MethodMixin:
                 word.append(field)
                 off = off+e.width-e.shifted
 		if e.datatype.cName() == 'SpecialTypeForSendingFdL_32_P':
-                    fmt = '  WRITEFD(p, temp_working_addr, %s);\n'
+                    fmt = '        WRITEFD(p, temp_working_addr, %s);\n'
             return fmt % (''.join(util.intersperse('|', word)))
 
         def generate_demarshall(w):

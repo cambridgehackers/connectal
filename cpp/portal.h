@@ -142,7 +142,7 @@ extern PortalInternal globalDirectory;
 #if !defined(BSIM)
 #define READL(CITEM, A)     (*(A))
 #define WRITEL(CITEM, A, B) (*(A) = (B))
-#define WRITEFD(CITEM, A, B) {}
+#define WRITEFD(CITEM, A, B) (*(A) = (B))
 #else
 #define READL(CITEM, A)     read_portal_bsim((A), (CITEM)->fpga_number)
 #define WRITEL(CITEM, A, B) write_portal_bsim((A), (B), (CITEM)->fpga_number)
