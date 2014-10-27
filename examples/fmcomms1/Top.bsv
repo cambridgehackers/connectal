@@ -30,7 +30,6 @@ import DefaultValue::*;
 
 // portz libraries
 import Portal::*;
-import Directory::*;
 import CtrlMux::*;
 import Leds::*;
 import ConnectalMemory::*;
@@ -106,12 +105,7 @@ module mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,64,FMComms1Pin
    portals[3] = hostDmaDebugIndicationProxy.portalIfc; 
    portals[4] = hostMMUConfigRequestWrapper.portalIfc;
    portals[5] = hostMMUConfigIndicationProxy.portalIfc;
-
-   
-   
-   // instantiate system directory
-   StdDirectory dir <- mkStdDirectory(portals);
-   let ctrl_mux <- mkSlaveMux(dir,portals);
+   let ctrl_mux <- mkSlaveMux(portals);
    
 
 

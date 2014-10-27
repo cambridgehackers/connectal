@@ -5,7 +5,6 @@ import Connectable::*;
 
 // portz libraries
 import Portal::*;
-import Directory::*;
 import CtrlMux::*;
 import Portal::*;
 import Leds::*;
@@ -32,10 +31,7 @@ module mkConnectalTop#(BscanTop bscan)(StdConnectalTop#(PhysAddrWidth));
    Vector#(2,StdPortal) portals;
    portals[0] = bscanIndicationProxy.portalIfc;
    portals[1] = bscanRequestWrapper.portalIfc; 
-   
-   // instantiate system directory
-   StdDirectory dir <- mkStdDirectory(portals);
-   let ctrl_mux <- mkSlaveMux(dir,portals);
+   let ctrl_mux <- mkSlaveMux(portals);
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;

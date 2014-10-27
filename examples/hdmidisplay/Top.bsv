@@ -5,7 +5,6 @@ import StmtFSM::*;
 import FIFO::*;
 
 // portz libraries
-import Directory::*;
 import CtrlMux::*;
 import Portal::*;
 import ConnectalMemory::*;
@@ -66,10 +65,7 @@ module mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,64,HDMI#(Bit#(
    portals[5] = hostDmaDebugIndicationProxy.portalIfc; 
    portals[6] = hostMMUConfigRequestWrapper.portalIfc;
    portals[7] = hostMMUConfigIndicationProxy.portalIfc;
-
-   
-   StdDirectory dir <- mkStdDirectory(portals);
-   let ctrl_mux <- mkSlaveMux(dir,portals);
+   let ctrl_mux <- mkSlaveMux(portals);
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;

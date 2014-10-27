@@ -6,7 +6,6 @@ import FIFO::*;
 import Connectable::*;
 
 // portz libraries
-import Directory::*;
 import CtrlMux::*;
 import Portal::*;
 import Leds::*;
@@ -74,9 +73,7 @@ module  mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,TMul#(32,N),
    portals[9] = rbmIndicationProxy.portalIfc;
    portals[10] = hostMMUConfigRequestWrapper.portalIfc;
    portals[11] = hostMMUConfigIndicationProxy.portalIfc;
-
-   StdDirectory dir <- mkStdDirectory(portals);
-   let ctrl_mux <- mkSlaveMux(dir,portals);
+   let ctrl_mux <- mkSlaveMux(portals);
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;

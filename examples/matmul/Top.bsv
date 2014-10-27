@@ -4,7 +4,6 @@ import Vector::*;
 import StmtFSM::*;
 import FIFO::*;
 import Connectable::*;
-import Directory::*;
 import CtrlMux::*;
 import Portal::*;
 import Leds::*;
@@ -69,9 +68,7 @@ module  mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,TMul#(32,N),E
    portals[5] = timerIndicationProxy.portalIfc; 
    portals[6] = hostMMUConfigRequestWrapper.portalIfc;
    portals[7] = hostMMUConfigIndicationProxy.portalIfc;
-
-   StdDirectory dir <- mkStdDirectory(portals);
-   let ctrl_mux <- mkSlaveMux(dir,portals);
+   let ctrl_mux <- mkSlaveMux(portals);
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;

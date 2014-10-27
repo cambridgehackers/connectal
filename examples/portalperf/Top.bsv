@@ -3,7 +3,6 @@ import Vector::*;
 import FIFO::*;
 import Connectable::*;
 import Portal::*;
-import Directory::*;
 import CtrlMux::*;
 import MemTypes::*;
 
@@ -28,11 +27,7 @@ module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
    Vector#(2,StdPortal) portals;
    portals[0] = portalPerfIndicationProxy.portalIfc;
    portals[1] = portalPerfRequestWrapper.portalIfc; 
-
-   // instantiate system directory
-   StdDirectory dir <- mkStdDirectory(portals);
-   
-   let ctrl_mux <- mkSlaveMuxDbg(dir,portals);
+   let ctrl_mux <- mkSlaveMuxDbg(portals);
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
