@@ -216,6 +216,8 @@ class MethodMixin:
                     return sum(rv,[])
                 elif tdtype.type == 'Enum':
                     return [('%s%s'%(scope,member.name),tdtype)]
+                elif tn == 'SpecialTypeForSendingFd':
+                    return [('%s%s'%(scope,member.name),tdtype)]
                 else:
                     return self.collectMembers(scope, tdtype.type)
 
@@ -276,6 +278,7 @@ class MethodMixin:
         def generate_marshall(w):
             off = 0
             word = []
+            retval = ''
             for e in w:
                 field = e.name;
 		if e.datatype.cName() == 'float':
@@ -288,7 +291,9 @@ class MethodMixin:
                     field = '(const %s & std::bitset<%d>(0xFFFFFFFF)).to_ulong()' % (field, e.datatype.bitWidth())
                 word.append(field)
                 off = off+e.width-e.shifted
-            return paramStructMarshallStr % (''.join(util.intersperse('|', word)))
+		if e.datatype.cName() == 'SpecialTypeForSendingFdL_32_P':
+                    retval += '  WRITEFD(p, temp_working_addr, %s);\n' % (''.join(util.intersperse('|', word)))
+            return retval + paramStructMarshallStr % (''.join(util.intersperse('|', word)))
 
         def generate_demarshall(w):
             off = 0
@@ -326,7 +331,7 @@ class MethodMixin:
             paramStructMarshall.reverse();
             paramStructDemarshall = map(generate_demarshall, argWords)
             paramStructDemarshall.reverse();
-        
+
         if not params:
             paramStructDeclarations = ['        int padding;\n']
         resultTypeName = self.resultTypeName()

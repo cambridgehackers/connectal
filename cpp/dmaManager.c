@@ -84,10 +84,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, int fd)
   int id = 0;
   int rc = 0;
   init_portal_memory();
-#ifdef BSIM
-  bluesim_sock_fd_write(fd);
-#endif
-  MMUConfigRequestProxy_idRequest(priv->sglDevice);
+  MMUConfigRequestProxy_idRequest(priv->sglDevice, fd);
   sem_wait(&priv->sglIdSem);
   id = priv->sglId;
 #if defined(KERNEL_REFERENCE) && !defined(BSIM) && !defined(__KERNEL__)

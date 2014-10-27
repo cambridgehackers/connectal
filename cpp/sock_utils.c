@@ -256,6 +256,10 @@ void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id)
   portalSend(global_sockfd, &foo, sizeof(foo));
   pthread_mutex_unlock(&socket_mutex);
 }
+void write_portal_fd_bsim(volatile unsigned int *addr, unsigned int v, int id)
+{
+    bluesim_sock_fd_write(v);
+}
 #else // __KERNEL__
 
 /*
@@ -358,5 +362,9 @@ ssize_t bluesim_sock_fd_write(long fd)
     have_request = 1;
     down_interruptible(&bsim_have_response);
     return 0;
+}
+void write_portal_fd_bsim(volatile unsigned int *addr, unsigned int v, int id)
+{
+    bluesim_sock_fd_write(v);
 }
 #endif

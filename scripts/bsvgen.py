@@ -255,6 +255,8 @@ class TypeMixin:
             return self.params[0].numeric()
         if (self.name == 'Float'):
             return 32
+        if (self.name == 'SpecialTypeForSendingFd'):
+            return 32
 	sdef = globalv.globalvars[self.name].tdtype
         if (sdef.type == 'Struct'):
             return sum([e.type.numBitsBSV() for e in sdef.elements])

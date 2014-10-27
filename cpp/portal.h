@@ -52,6 +52,7 @@
 #define PORTAL_DIRECTORY_PORTAL_TYPE(A) PORTAL_DIRECTORY_OFFSET(6 + 2 * (A) + 1)
 
 typedef int Bool;   /* for GeneratedTypes.h */
+typedef int SpecialTypeForSendingFd;   /* for GeneratedTypes.h */
 struct PortalInternal;
 typedef int (*PORTAL_INDFUNC)(struct PortalInternal *p, unsigned int channel);
 typedef struct PortalInternal {
@@ -95,6 +96,7 @@ unsigned int portalGetFpga(unsigned int id);
 unsigned int portalGetAddrbits(unsigned int id);
 unsigned int read_portal_bsim(volatile unsigned int *addr, int id);
 void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id);
+void write_portal_fd_bsim(volatile unsigned int *addr, unsigned int v, int id);
 
 void portalTimerInit(void);
 void portalTimerStart(unsigned int i);
@@ -140,9 +142,11 @@ extern PortalInternal globalDirectory;
 #if !defined(BSIM)
 #define READL(CITEM, A)     (*(A))
 #define WRITEL(CITEM, A, B) (*(A) = (B))
+#define WRITEFD(CITEM, A, B) {}
 #else
 #define READL(CITEM, A)     read_portal_bsim((A), (CITEM)->fpga_number)
 #define WRITEL(CITEM, A, B) write_portal_bsim((A), (B), (CITEM)->fpga_number)
+#define WRITEFD(CITEM, A, B) write_portal_fd_bsim((A), (B), (CITEM)->fpga_number)
 #endif
 
 #endif /* __PORTAL_OFFSETS_H__ */

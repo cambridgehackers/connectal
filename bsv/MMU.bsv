@@ -275,7 +275,7 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUConfigIndication mmuIndication)(MMU
        endinterface);
       
    interface MMUConfigRequest request;
-   method Action idRequest();
+   method Action idRequest(SpecialTypeForSendingFd fd);
       let nextId <- sglId_gen.getTag;
       mmuIndication.idResponse((fromInteger(iid) << 16) | extend(nextId));
    endmethod
