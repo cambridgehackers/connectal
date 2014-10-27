@@ -278,7 +278,7 @@ class MethodMixin:
         def generate_marshall(w):
             off = 0
             word = []
-            retval = ''
+            fmt = paramStructMarshallStr
             for e in w:
                 field = e.name;
 		if e.datatype.cName() == 'float':
@@ -292,8 +292,8 @@ class MethodMixin:
                 word.append(field)
                 off = off+e.width-e.shifted
 		if e.datatype.cName() == 'SpecialTypeForSendingFdL_32_P':
-                    retval += '  WRITEFD(p, temp_working_addr, %s);\n' % (''.join(util.intersperse('|', word)))
-            return retval + paramStructMarshallStr % (''.join(util.intersperse('|', word)))
+                    fmt = '  WRITEFD(p, temp_working_addr, %s);\n'
+            return fmt % (''.join(util.intersperse('|', word)))
 
         def generate_demarshall(w):
             off = 0
