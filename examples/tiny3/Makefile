@@ -8,8 +8,8 @@ include ../../Makefile.connectal
 
 
 testbench:
-	bsc -sim -aggressive-conditions -u -g mkTinyTestBench TinyTestBench.bsv
-	bsc -sim -aggressive-conditions -e mkTinyTestBench mkTinyTestBench.ba
+	bsc -sim -show-schedule -aggressive-conditions -u -g mkTinyTestBench TinyTestBench.bsv
+	bsc -sim -show-schedule -aggressive-conditions -e mkTinyTestBench mkTinyTestBench.ba
 	./a.out
 clean:
 	-rm a.out* mkTestBench.* model*
