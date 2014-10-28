@@ -275,7 +275,6 @@ void write_portal_fd_bsim(volatile unsigned int *addr, unsigned int v, int id)
 {
   struct memrequest foo = {id, MAGIC_PORTAL_FOR_SENDING_FD,addr,v};
 
-printf("[%s:%d] writefd %d\n", __FUNCTION__, __LINE__, v);
   pthread_mutex_lock(&socket_mutex);
   portalSendFd(global_sockfd, &foo, sizeof(foo), v);
   pthread_mutex_unlock(&socket_mutex);
