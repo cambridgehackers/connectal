@@ -151,10 +151,18 @@ extern int we_are_initiator;
 #define READL(CITEM, A)     (*(A))
 #define WRITEL(CITEM, A, B) (*(A) = (B))
 #define WRITEFD(CITEM, A, B) (*(A) = (B))
+#define SSWRITE(CITEM, B, C) {\
+    *(CITEM)->map_base = (B); \
+    portalSendFd((CITEM)->fpga_fd, (void *)(CITEM)->map_base, (((B) & 0xffff) +1) * sizeof(uint32_t), (C)); \
+    }
 #else
 #define READL(CITEM, A)     read_portal_bsim((A), (CITEM)->fpga_number)
 #define WRITEL(CITEM, A, B) write_portal_bsim((A), (B), (CITEM)->fpga_number)
 #define WRITEFD(CITEM, A, B) write_portal_fd_bsim((A), (B), (CITEM)->fpga_number)
+#define SSWRITE(CITEM, B, C) {\
+    *(CITEM)->map_base = (B); \
+    portalSendFd((CITEM)->fpga_fd, (void *)(CITEM)->map_base, (((B) & 0xffff) +1) * sizeof(uint32_t), (C)); \
+    }
 #endif
 #define BUSY_WAIT(CITEM, A, STR) { \
     int __i = 50; \

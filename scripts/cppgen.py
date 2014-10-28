@@ -95,11 +95,9 @@ void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p %(paramSeparat
 proxyMethodTemplateSW='''
 void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p %(paramSeparator)s %(paramDeclarations)s )
 {
-    unsigned int tempdata[%(wordLen)s+1];
-    volatile unsigned int* temp_working_addr = tempdata;
-    *temp_working_addr++ = %(methodChannelOffset)s << 16 | %(wordLen)s;
+    volatile unsigned int* temp_working_addr = p->map_base+1;
 %(paramStructMarshall)s
-    portalSendFd(p->fpga_fd, tempdata, (%(wordLen)s+1) * sizeof(uint32_t), %(fdName)s);
+    SSWRITE(p, %(methodChannelOffset)s << 16 | %(wordLen)s, %(fdName)s);
 };
 '''
 
@@ -124,9 +122,8 @@ msgDemarshallTemplateSW='''
 void %(className)s%(methodName)s_demarshall(PortalInternal *p){
     int tmpfd;
     unsigned int tmp;
-    unsigned int tempdata[%(wordLen)s+1];
-    volatile unsigned int* temp_working_addr = tempdata;
-    portalRecvFd(p->fpga_fd, tempdata, (%(wordLen)s) * sizeof(uint32_t), &tmpfd);
+    volatile unsigned int* temp_working_addr = p->map_base+1;
+    portalRecvFd(p->fpga_fd, (void *)temp_working_addr, (%(wordLen)s) * sizeof(uint32_t), &tmpfd);
 %(paramStructDeclarations)s
 %(paramStructDemarshall)s
     %(responseCase)s
