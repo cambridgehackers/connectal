@@ -252,10 +252,16 @@ def p_typeParams(p):
 
 def p_type(p):
     '''type : VAR
+            | VAR COLONCOLON VAR
             | NUM
-            | VAR HASH LPAREN typeParams RPAREN'''
+            | VAR HASH LPAREN typeParams RPAREN
+            | VAR COLONCOLON VAR HASH LPAREN typeParams RPAREN'''
     if len(p) == 2:
         p[0] = AST.Type(p[1], [])
+    elif len(p) == 4:
+        p[0] = p[3]
+    elif len(p) == 8:
+        p[0] = AST.Type(p[3], p[6])
     else:
         p[0] = AST.Type(p[1], p[4])
 
