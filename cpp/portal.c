@@ -49,7 +49,7 @@
 #include <pcieportal.h> // BNOC_TRACE
 #endif
 
-static void init_portal(void);
+static void init_portal_hw(void);
 int global_pa_fd = -1;
 
 #ifdef __KERNEL__
@@ -66,7 +66,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
     char buff[128];
     char read_status;
 
-    init_portal();
+    init_portal_hw();
     memset(pint, 0, sizeof(*pint));
     pint->fpga_number = id;
     pint->fpga_fd = -1;
@@ -87,7 +87,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
 #endif
         goto exitlab;
     }
-    snprintf(buff, sizeof(buff), "/dev/fpga%d", pint->fpga_number);
+    snprintf(buff, sizeof(buff), "/dev/portal%d", pint->fpga_number);
 #ifdef BSIM   // BSIM version
     assert(id < MAX_BSIM_PORTAL_ID);
     pint->fpga_number = bsim_fpga_map[id];
@@ -146,15 +146,15 @@ exitlab:
     }
 }
 
-int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)
+int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency, PortalInternal *pint)
 {
     int status = 0;
-    init_portal();
+    init_portal_hw();
 #ifdef ZYNQ
     PortalClockRequest request;
     request.clknum = clkNum;
     request.requested_rate = requestedFrequency;
-    status = ioctl(globalDirectory.fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
+    status = ioctl(pint->fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
     if (status == 0 && actualFrequency)
 	*actualFrequency = request.actual_rate;
     if (status < 0)
@@ -163,7 +163,7 @@ int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency
     return status;
 }
 
-static void init_portal(void)
+static void init_portal_hw(void)
 {
   unsigned int i;
   static int once = 0;
@@ -181,7 +181,7 @@ static void init_portal(void)
   request.clknum = 0;
   request.requested_rate = reqF;
   assert(false);
-  int status = //ioctl(globalDirectory.fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
+  int status = -1;//ioctl(globalDirectory.fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
   if (status < 0)
     PORTAL_PRINTF("init_portal: error setting fclk0, errno=%d\n", errno);
   PORTAL_PRINTF("init_portal: set fclk0 (%ld,%ld)\n", reqF, request.actual_rate);
@@ -193,7 +193,7 @@ static void init_portal(void)
 
 void portalTrace_start()
 {
-  init_portal();
+  init_portal_hw();
 #if !defined(ZYNQ) && !defined(__KERNEL__)
   tTraceInfo traceInfo;
   traceInfo.trace = 1;
@@ -205,7 +205,7 @@ void portalTrace_start()
 }
 void portalTrace_stop()
 {
-  init_portal();
+  init_portal_hw();
 #if !defined(ZYNQ) && !defined(__KERNEL__)
   tTraceInfo traceInfo;
   traceInfo.trace = 0;
@@ -221,7 +221,7 @@ uint64_t portalCycleCount(PortalInternal *p)
   unsigned int high_bits, low_bits;
   if (we_are_initiator)
     return 0;
-  init_portal();
+  init_portal_hw();
   high_bits = READL(p, &(p->map_base[PORTAL_CTRL_REG_COUNTER_MSB]));
   low_bits  = READL(p, &(p->map_base[PORTAL_CTRL_REG_COUNTER_LSB]));
   return (((uint64_t)high_bits)<<32) | ((uint64_t)low_bits);
@@ -233,7 +233,7 @@ void portalEnableInterrupts(PortalInternal *p, int val)
      WRITEL(p, &(p->map_base[PORTAL_CTRL_REG_INTERRUPT_ENABLE]), val);
 }
 
-int portalDCacheFlushInval(int fd, long size, void *__p)
+int portalDCacheFlushInval(int fd, long size, void *__p, PortalInternal *p)
 {
     int i;
 #if defined(__arm__)
@@ -251,7 +251,7 @@ printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start
     }
     fput(fmem);
 #else
-  int rc = ioctl(globalDirectory.fpga_fd, PORTAL_DCACHE_FLUSH_INVAL, fd);
+  int rc = ioctl(p->fpga_fd, PORTAL_DCACHE_FLUSH_INVAL, fd);
   if (rc){
     PORTAL_PRINTF("portal dcache flush failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
     return rc;

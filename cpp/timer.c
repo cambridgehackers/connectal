@@ -23,7 +23,6 @@
 // SOFTWARE.
 
 #include "portal.h"
-#include "timer.h"
 
 #ifdef __KERNEL__
 #define assert(A)
@@ -44,15 +43,15 @@ static uint64_t lap_timer_temp;
 static PORTAL_TIMETYPE timers[MAX_TIMERS];
 
 
-void portalTimerStart(unsigned int i, Portal *p) 
+void portalTimerStart(unsigned int i, PortalInternal *p) 
 {
   assert(i < MAX_TIMER_COUNT);
-  c_start[i] = portalCycleCount(&p->pint);
+  c_start[i] = portalCycleCount(p);
 }
 
-uint64_t portalTimerLap(unsigned int i, Portal *p)
+uint64_t portalTimerLap(unsigned int i, PortalInternal *p)
 {
-  uint64_t temp = portalCycleCount(&p->pint);
+  uint64_t temp = portalCycleCount(p);
   assert(i < MAX_TIMER_COUNT);
   lap_timer_temp = temp;
   return temp - c_start[i];
@@ -66,7 +65,7 @@ void portalTimerInit(void)
       timers[i].min = 1LLU << 63;
 }
 
-uint64_t portalTimerCatch(unsigned int i, Portal *p)
+uint64_t portalTimerCatch(unsigned int i, PortalInternal *p)
 {
   uint64_t val = portalTimerLap(0, p);
     if (i >= MAX_TIMERS)

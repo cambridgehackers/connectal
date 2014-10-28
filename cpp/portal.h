@@ -114,9 +114,9 @@ void portalExec_stop(void);
 void portalExec_end(void);
 void portalTrace_start(void);
 void portalTrace_stop(void);
-int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
+int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency, PortalInternal *p);
 void portalEnableInterrupts(PortalInternal *p, int val);
-int portalDCacheFlushInval(int fd, long size, void *__p);
+  int portalDCacheFlushInval(int fd, long size, void *__p, PortalInternal *p);
 void init_portal_memory(void);
 int portalAlloc(size_t size);
 void *portalMmap(int fd, size_t size);
@@ -125,6 +125,13 @@ void portalSend(int fd, void *data, int len);
 int portalRecv(int fd, void *data, int len);
 void portalSendFd(int fd, void *data, int len, int sendFd);
 int portalRecvFd(int fd, void *data, int len, int *recvFd);
+
+void portalTimerStart(unsigned int i, PortalInternal *p);
+uint64_t portalTimerLap(unsigned int i, PortalInternal *p);
+void portalTimerInit(void);
+uint64_t portalTimerCatch(unsigned int i, PortalInternal *p);
+void portalTimerPrint(int loops);
+
 
 extern int portalExec_timeout;
 extern int global_pa_fd;

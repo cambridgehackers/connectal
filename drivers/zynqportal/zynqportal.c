@@ -42,8 +42,12 @@
 #define DRIVER_VERSION     "0.1"
 #endif
 #define PORTAL_BASE_OFFSET         (1 << 16)
-#define MSB_OFFSET 0x210
-#define LSB_OFFSET 0x214
+#define IID_OFFSET 0x010
+#define TOP_OFFSET 0x014
+#define MSB_OFFSET 0x018
+#define LSB_OFFSET 0x01C
+#define MAX_NUM_PORTALS 16
+
 
 #ifdef DEBUG // was KERN_DEBUG
 #define driver_devel(format, ...) \
@@ -63,6 +67,7 @@ struct portal_data {
         void             *map_base;
         unsigned int      portal_irq;
         int               irq_is_registered;
+        u32               top;
 };
 
 static void *directory_virt;  /* anyone should be able to get PORTAL_DIRECTORY_COUNTER */
@@ -96,7 +101,6 @@ static irqreturn_t portal_isr(int irq, void *dev_id)
 static int portal_open(struct inode *inode, struct file *filep)
 {
         struct portal_data *portal_data = filep->private_data;
-
         init_waitqueue_head(&portal_data->wait_queue);
         return 0;
 }
@@ -266,11 +270,18 @@ static int portal_of_probe(struct platform_device *pdev)
         int rc = -ENOMEM, size;
         struct portal_data *portal_data;
         struct resource *reg_res, *irq_res;
+	static void* foo;
+	u32 top = 0;
+	u32 iid = 0;
+	u32 fpn = 0;
+	resource_size_t bar;
+	void *drvdata = kzalloc(sizeof(struct portal_data)*MAX_NUM_PORTALS, GFP_KERNEL);
+	char *name;
 
         const char *dname = (char *)of_get_property(pdev->dev.of_node, "device-name", &size);
         if (!dname) {
-                pr_err("Error %s getting device-name\n", DRIVER_NAME);
-                return -EINVAL;
+	  pr_err("Error %s getting device-name\n", DRIVER_NAME);
+	  return -EINVAL;
         }
         driver_devel("%s: device_name=%s\n", DRIVER_NAME, dname);
         reg_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -280,33 +291,55 @@ static int portal_of_probe(struct platform_device *pdev)
                 return -ENODEV;
         }
 
-        portal_data = kzalloc(sizeof(struct portal_data), GFP_KERNEL);
-        if (portal_data) {
-                portal_data->misc.name = dname;
-                portal_data->misc.minor = MISC_DYNAMIC_MINOR;
-                portal_data->misc.fops = &portal_fops;
-                portal_data->dev_base_phys = reg_res->start;
-                portal_data->portal_irq = irq_res->start;
-                misc_register( &portal_data->misc);
-                rc = 0;
-                if (!directory_virt)
-                        directory_virt = ioremap_nocache(
-                                portal_data->dev_base_phys & ~(PORTAL_BASE_OFFSET * 16 - 1), sizeof(PAGE_SIZE));
-        }
-        dev_set_drvdata(&pdev->dev, (void *)portal_data);
+	while (!top){
+	  portal_data = drvdata+(fpn*sizeof(struct portal_data));
+	  bar = reg_res->start+(fpn*PORTAL_BASE_OFFSET);
+	  foo = ioremap_nocache(bar, sizeof(PAGE_SIZE));
+	  iid = readl(foo+IID_OFFSET);
+	  top = readl(foo+TOP_OFFSET);
+	  driver_devel("%s:%d bar=%08x fpn=%08x iid=%d top=%d\n", __func__, __LINE__, bar, fpn, iid, top);
+
+	  name = (char*)kzalloc(128, GFP_KERNEL);
+	  sprintf(name, "portal%d", iid);
+	  portal_data->misc.name = name;
+	  portal_data->misc.minor = MISC_DYNAMIC_MINOR;
+	  portal_data->misc.fops = &portal_fops;
+	  portal_data->dev_base_phys = bar;
+	  portal_data->portal_irq = irq_res->start;
+	  portal_data->top = top;
+	  misc_register( &portal_data->misc);
+
+	  if (++fpn > MAX_NUM_PORTALS)
+	    break;
+	}
+	if(top)
+	  rc = 0;
+
+	directory_virt = drvdata;
+        dev_set_drvdata(&pdev->dev, drvdata);
         driver_devel("%s:%d about to return %d\n", __func__, __LINE__, rc);
         return rc;
 }
 
 static int portal_of_remove(struct platform_device *pdev)
 {
-        struct portal_data *portal_data = (struct portal_data *)dev_get_drvdata(&pdev->dev);
+        void *drvdata = dev_get_drvdata(&pdev->dev);
+	u32 top = 0;
+	u32 fpn = 0;
+	struct portal_data *portal_data;
         driver_devel("%s:%s\n",__FUNCTION__, pdev->name);
-        if (portal_data->irq_is_registered)
-                free_irq(portal_data->portal_irq, portal_data);
-        misc_deregister(&portal_data->misc);
+	while(!top){
+	  portal_data = drvdata+(fpn*sizeof(struct portal_data));
+	  top = portal_data->top;
+	  if (portal_data->irq_is_registered)
+	    free_irq(portal_data->portal_irq, portal_data);
+	  kfree(portal_data->misc.name);
+	  misc_deregister(&portal_data->misc);
+	  if (++fpn > MAX_NUM_PORTALS)
+	    break;
+	}
+        kfree(drvdata);
         dev_set_drvdata(&pdev->dev, NULL);
-        kfree(portal_data);
         return 0;
 }
 
