@@ -37,7 +37,6 @@
 #include <pthread.h>
 #include <assert.h>
 
-
 int bsim_fpga_map[MAX_BSIM_PORTAL_ID];
 int we_are_initiator;
 int global_sockfd = -1;
@@ -238,9 +237,6 @@ int poll_response(int id)
 }
 unsigned int bsim_poll_interrupt(void)
 {
-  struct memresponse rv;
-  int rc;
-
   if (global_sockfd == -1)
       return 0;
   poll_response(-1);
@@ -255,6 +251,9 @@ unsigned int read_portal_bsim(volatile unsigned int *addr, int id)
   foo.data_or_tag = tag_counter++;
   portalSend(global_sockfd, &foo, sizeof(foo));
   while (!poll_response(id)) {
+      struct timeval tv = {};
+      tv.tv_usec = 10000;
+      select(0, NULL, NULL, NULL, &tv);
   }
   unsigned int rc = shared_response.data;
   shared_response_valid = 0;
