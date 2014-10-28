@@ -91,7 +91,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
 #ifdef BSIM   // BSIM version
     assert(id < MAX_BSIM_PORTAL_ID);
     pint->fpga_number = bsim_fpga_map[id];
-    pint->map_base = (volatile unsigned int*)(pint->fpga_number * PORTAL_BASE_OFFSET);
+    pint->map_base = (volatile unsigned int*)(long)(pint->fpga_number * PORTAL_BASE_OFFSET);
     portalEnableInterrupts(pint, 1);
 #elif defined(__KERNEL__)
     pint->map_base = (volatile unsigned int*)(tboard->bar2io + pint->fpga_number * PORTAL_BASE_OFFSET);
