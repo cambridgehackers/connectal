@@ -145,7 +145,8 @@ class TypeDef(cppgen.TypeDefMixin):
     def __init__(self, tdtype, name):
         self.name = name
         self.tdtype = tdtype
-        tdtype.name = name
+        if tdtype.type != 'Type':
+            tdtype.name = name
         self.type = 'TypeDef'
     def __repr__(self):
         return '{typedef: %s %s}' % (self.tdtype, self.name)
