@@ -81,7 +81,7 @@ void connect_to_bsim(void)
   unsigned int last = 0;
   unsigned int idx = 0;
   while(!last && idx < 32){
-    volatile unsigned int *ptr=(volatile unsigned int *)(idx * PORTAL_BASE_OFFSET);
+    volatile unsigned int *ptr=(volatile unsigned int *)(long)(idx * PORTAL_BASE_OFFSET);
     unsigned int id = read_portal_bsim(&ptr[PORTAL_CTRL_REG_PORTAL_ID], idx);
     last = read_portal_bsim(&ptr[PORTAL_CTRL_REG_TOP], idx);
     assert(id < MAX_BSIM_PORTAL_ID);
