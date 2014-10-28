@@ -19,7 +19,7 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
-import cppgen, bsvgen
+import cppgen, bsvgen, globalv
 
 class Method(cppgen.MethodMixin,bsvgen.MethodMixin):
     def __init__(self, name, return_type, params):
@@ -144,6 +144,7 @@ class Struct(cppgen.StructMixin):
 class TypeDef(cppgen.TypeDefMixin):
     def __init__(self, tdtype, name):
         self.name = name
+        self.type = 'TypeDef'
         self.tdtype = tdtype
         if tdtype.type != 'Type':
             tdtype.name = name
@@ -179,4 +180,8 @@ class Type(cppgen.TypeMixin,bsvgen.TypeMixin):
         else:
             return Type(self.name, [p.instantiate(paramBindings) for p in self.params])
     def numeric(self):
+        if globalv.globalvars.has_key(self.name):
+            decl = globalv.globalvars[self.name]
+            if decl.type == 'TypeDef':
+                return decl.tdtype.numeric()
         return int(self.name)
