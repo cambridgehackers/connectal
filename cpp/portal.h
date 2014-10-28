@@ -59,6 +59,7 @@
 
 typedef int Bool;   /* for GeneratedTypes.h */
 typedef int SpecialTypeForSendingFd;   /* for GeneratedTypes.h */
+typedef SpecialTypeForSendingFd SpecialTypeForSendingFdL_32_P;
 struct PortalInternal;
 typedef int (*PORTAL_INDFUNC)(struct PortalInternal *p, unsigned int channel);
 typedef struct PortalInternal {
@@ -127,6 +128,8 @@ void *portalMmap(int fd, size_t size);
 void portalInitiator(void);
 void portalSend(int fd, void *data, int len);
 int portalRecv(int fd, void *data, int len);
+void portalSendFd(int fd, void *data, int len, int sendFd);
+int portalRecvFd(int fd, void *data, int len, int *recvFd);
 
 extern int portalExec_timeout;
 extern int global_pa_fd;

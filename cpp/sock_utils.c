@@ -80,8 +80,8 @@ void connect_to_bsim(void)
   pthread_mutex_init(&socket_mutex, NULL);
   unsigned int last = 0;
   unsigned int idx = 0;
-  volatile unsigned int *ptr=0;
-  while(!last){
+  while(!last && idx < 32){
+    volatile unsigned int *ptr=(volatile unsigned int *)(idx * PORTAL_BASE_OFFSET);
     unsigned int id = read_portal_bsim(&ptr[PORTAL_CTRL_REG_PORTAL_ID], idx);
     last = read_portal_bsim(&ptr[PORTAL_CTRL_REG_TOP], idx);
     assert(id < MAX_BSIM_PORTAL_ID);
@@ -143,14 +143,16 @@ ssize_t sock_fd_write(int sockfd, void *ptr, size_t nbytes, int sendfd)
     struct cmsghdr   *cmptr;
 
     msg.msg_control = control_un.control;
-    msg.msg_controllen = sizeof(control_un.control);
-
-    cmptr = CMSG_FIRSTHDR(&msg);
-    cmptr->cmsg_len = CMSG_LEN(sizeof(int));
-    cmptr->cmsg_level = SOL_SOCKET;
-    cmptr->cmsg_type = SCM_RIGHTS;
-    *((int *) CMSG_DATA(cmptr)) = sendfd;
-
+    msg.msg_controllen = 0;
+    if (sendfd >= 0) {
+        msg.msg_controllen = sizeof(control_un.control);
+        cmptr = CMSG_FIRSTHDR(&msg);
+        cmptr->cmsg_len = CMSG_LEN(sizeof(int));
+        cmptr->cmsg_level = SOL_SOCKET;
+        cmptr->cmsg_type = SCM_RIGHTS;
+        int *foo = (int *)CMSG_DATA(cmptr);
+        *foo = sendfd;
+    }
     msg.msg_name = NULL;
     msg.msg_namelen = 0;
     iov[0].iov_base = ptr;
@@ -184,34 +186,44 @@ ssize_t sock_fd_read(int sockfd, void *ptr, size_t nbytes, int *recvfd)
     msg.msg_iovlen = 1;
 
     *recvfd = -1;        /* descriptor was not passed */
-    if ( (n = recvmsg(sockfd, &msg, 0)) <= 0)
+    if ( (n = recvmsg(sockfd, &msg, MSG_DONTWAIT)) <= 0)
         return n;
     if ( (cmptr = CMSG_FIRSTHDR(&msg)) && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
         if (cmptr->cmsg_level != SOL_SOCKET || cmptr->cmsg_type != SCM_RIGHTS) {
             printf("%s failed\n", __FUNCTION__);
             exit(1);
         }
-        *recvfd = *((int *) CMSG_DATA(cmptr));
+        int *foo = (int *)CMSG_DATA(cmptr);
+        *recvfd = *foo;
     }
     return n;
 }
 
 static uint32_t interrupt_value;
-void portalSend(int fd, void *data, int len)
+void portalSendFd(int fd, void *data, int len, int sendFd)
 {
     if (trace_socket)
         printf("%s: init %d fd %d data %p len %d\n", __FUNCTION__, we_are_initiator, fd, data, len);
-    if (send(fd, data, len, 0) == -1) {
+    if (sock_fd_write(fd, data, len, sendFd) == -1) {
         fprintf(stderr, "%s: send error\n",__FUNCTION__);
         exit(1);
     }
 }
-int portalRecv(int fd, void *data, int len)
+int portalRecvFd(int fd, void *data, int len, int *recvFd)
 {
-    int rc = recv(fd, data, len, MSG_DONTWAIT);
+    int rc = sock_fd_read(fd, data, len, recvFd);
     if (trace_socket)
         printf("%s: init %d fd %d data %p len %d rc %d\n", __FUNCTION__, we_are_initiator, fd, data, len, rc);
     return rc;
+}
+void portalSend(int fd, void *data, int len)
+{
+    portalSendFd(fd, data, len, -1);
+}
+int portalRecv(int fd, void *data, int len)
+{
+    int recvFd;
+    return portalRecvFd(fd, data, len, &recvFd);
 }
 unsigned int bsim_poll_interrupt(void)
 {
@@ -265,8 +277,7 @@ void write_portal_fd_bsim(volatile unsigned int *addr, unsigned int v, int id)
 
 printf("[%s:%d] writefd %d\n", __FUNCTION__, __LINE__, v);
   pthread_mutex_lock(&socket_mutex);
-  portalSend(global_sockfd, &foo, sizeof(foo));
-  sock_fd_write(global_sockfd, NULL, 0, v);
+  portalSendFd(global_sockfd, &foo, sizeof(foo), v);
   pthread_mutex_unlock(&socket_mutex);
 }
 #else // __KERNEL__

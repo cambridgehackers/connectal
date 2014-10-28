@@ -98,7 +98,6 @@ int main(int argc, const char **argv)
     call_say(v*5);
     call_say(v*17);
     call_say(v*93);
-    portalTimerInit();
     call_say2(v, v*3);
     printf("TEST TYPE: SEM\n");
     echoRequestProxy->setLeds(9);
