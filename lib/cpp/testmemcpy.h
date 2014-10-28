@@ -1,7 +1,6 @@
 #ifndef _TESTMEMCPY_H_
 #define _TESTMEMCPY_H_
 
-#include "timer.h"
 #include "StdDmaIndication.h"
 #include "DmaDebugRequestProxy.h"
 #include "MMUConfigRequestProxy.h"
