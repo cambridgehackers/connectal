@@ -216,7 +216,7 @@ def t_error(t):
     t.lexer.skip(1)
 
 def t_VAR(t):
-    r'`?([a-zA-Z_][$a-zA-Z0-9_]*)|(\\[-+*/])'
+    r'`?([a-zA-Z_][$a-zA-Z0-9_]*)|(\\[-+*/%])'
     t.type = reserved.get(t.value,'VAR')    
     return t
 
