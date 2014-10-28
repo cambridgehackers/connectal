@@ -579,7 +579,8 @@ def p_functionValue(p):
     '''functionValue : EQUAL expression SEMICOLON'''
 
 def p_functionFormal(p):
-    '''functionFormal : type VAR'''
+    '''functionFormal : type VAR
+                      | VAR'''
 
 def p_functionFormals(p):
     '''functionFormals :
@@ -599,8 +600,14 @@ def p_fsmStmtDef(p):
 
 def p_functionDef(p):
     '''functionDef : instanceAttributes TOKFUNCTION type VAR LPAREN functionFormals RPAREN provisos functionBody
-                   | instanceAttributes TOKFUNCTION type VAR LPAREN functionFormals RPAREN provisos functionValue'''
-    p[0] = AST.Function(p[4], p[3], p[6])
+                   | instanceAttributes TOKFUNCTION      VAR LPAREN functionFormals RPAREN provisos functionBody
+                   | instanceAttributes TOKFUNCTION type VAR LPAREN functionFormals RPAREN provisos functionValue
+                   '''
+    if len(p) == 9:
+        # no type
+        p[0] = AST.Function(p[3], None, p[5])
+    else:
+        p[0] = AST.Function(p[4], p[3], p[6])
 
 def p_methodDef(p):
     '''methodDef : TOKMETHOD type VAR LPAREN functionFormals RPAREN implicitCond SEMICOLON methodBody
