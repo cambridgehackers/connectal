@@ -39,7 +39,6 @@
 
 
 int bsim_fpga_map[MAX_BSIM_PORTAL_ID];
-static pthread_mutex_t socket_mutex;
 int we_are_initiator;
 int global_sockfd = -1;
 static int trace_socket;// = 1;
@@ -77,7 +76,6 @@ void connect_to_bsim(void)
   if (global_sockfd != -1)
     return;
   global_sockfd = init_connecting(SOCKET_NAME);
-  pthread_mutex_init(&socket_mutex, NULL);
   unsigned int last = 0;
   unsigned int idx = 0;
   while(!last && idx < 32){
@@ -225,6 +223,19 @@ int portalRecv(int fd, void *data, int len)
     int recvFd;
     return portalRecvFd(fd, data, len, &recvFd);
 }
+static struct memresponse shared_response;
+static int shared_response_valid;
+int poll_response(int id)
+{
+  if (!shared_response_valid) {
+      if (portalRecv(global_sockfd, &shared_response, sizeof(shared_response)) == sizeof(shared_response))
+          if (shared_response.portal == MAGIC_PORTAL_FOR_SENDING_INTERRUPT)
+              interrupt_value = shared_response.data;
+          else
+              shared_response_valid = 1;
+  }
+  return shared_response_valid && shared_response.portal == id;
+}
 unsigned int bsim_poll_interrupt(void)
 {
   struct memresponse rv;
@@ -232,11 +243,7 @@ unsigned int bsim_poll_interrupt(void)
 
   if (global_sockfd == -1)
       return 0;
-  pthread_mutex_lock(&socket_mutex);
-  rc = portalRecv(global_sockfd, &rv, sizeof(rv));
-  if (rc == sizeof(rv) && rv.portal == MAGIC_PORTAL_FOR_SENDING_INTERRUPT)
-      interrupt_value = rv.data;
-  pthread_mutex_unlock(&socket_mutex);
+  poll_response(-1);
   return interrupt_value;
 }
 /* functions called by READL() and WRITEL() macros in application software */
@@ -244,40 +251,27 @@ unsigned int tag_counter;
 unsigned int read_portal_bsim(volatile unsigned int *addr, int id)
 {
   struct memrequest foo = {id, 0,addr,0};
-  struct memresponse rv;
 
-  pthread_mutex_lock(&socket_mutex);
   foo.data_or_tag = tag_counter++;
   portalSend(global_sockfd, &foo, sizeof(foo));
-  while (1) {
-    if(recv(global_sockfd, &rv, sizeof(rv), 0) == -1){
-      fprintf(stderr, "%s (fpga%d) recv error\n",__FUNCTION__, id);
-      exit(1);	  
-    }
-    if (rv.portal == MAGIC_PORTAL_FOR_SENDING_INTERRUPT)
-      interrupt_value = rv.data;
-    else
-      break;
+  while (!poll_response(id)) {
   }
-  pthread_mutex_unlock(&socket_mutex);
-  return rv.data;
+  unsigned int rc = shared_response.data;
+  shared_response_valid = 0;
+  return rc;
 }
 
 void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id)
 {
   struct memrequest foo = {id, 1,addr,v};
 
-  pthread_mutex_lock(&socket_mutex);
   portalSend(global_sockfd, &foo, sizeof(foo));
-  pthread_mutex_unlock(&socket_mutex);
 }
 void write_portal_fd_bsim(volatile unsigned int *addr, unsigned int v, int id)
 {
   struct memrequest foo = {id, 1,addr,v};
 
-  pthread_mutex_lock(&socket_mutex);
   portalSendFd(global_sockfd, &foo, sizeof(foo), v);
-  pthread_mutex_unlock(&socket_mutex);
 }
 #else // __KERNEL__
 
