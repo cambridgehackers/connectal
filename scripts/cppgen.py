@@ -457,29 +457,27 @@ class InterfaceMixin:
         return rv
     def global_name(self, s, suffix):
         return '%s%s_%s' % (cName(self.name), suffix, s)
-    def emitCProxyDeclaration(self, f, of, suffix, indentation, namespace, maxSize):
-        className = "%s%s" % (cName(self.name), suffix)
+    def emitCProxyDeclaration(self, f, of, suffix, indentation, namespace, maxSize, swInterface):
+        className = "%s%s%s" % (swInterface, cName(self.name), suffix)
 	reqChanNums = []
         for d in self.decls:
-            reqChanNums.append('CHAN_NUM_%s' % self.global_name(d.name, suffix))
+            reqChanNums.append('CHAN_NUM_%s%s' % (swInterface, self.global_name(d.name, suffix)))
         subs = {'className': className,
                 'namespace': namespace,
                 'maxSize': maxSize,
                 'parentClass': self.parentClass('Portal')}
-        if suffix != "WrapperStatus":
-            f.write("\nclass %s%s;\n" % (cName(self.name), 'ProxyStatus'))
         f.write(proxyClassPrefixTemplate % subs)
         for d in self.decls:
             d.emitMethodDeclaration(f, True, indentation + 4, namespace, className)
         f.write('\n};\n')
 	of.write('enum { ' + ','.join(reqChanNums) + '};\n')
         of.write('#define %(namespace)s%(className)s_reqsize (%(maxSize)s * sizeof(uint32_t))\n' % subs)
-    def emitCWrapperDeclaration(self, f, of, cppf, suffix, indentation, namespace, maxSize):
-        className = "%s%s" % (cName(self.name), suffix)
+    def emitCWrapperDeclaration(self, f, of, cppf, suffix, indentation, namespace, maxSize, swInterface):
+        className = "%s%s%s" % (swInterface, cName(self.name), suffix)
         indent(f, indentation)
 	indChanNums = []
 	for d in self.decls:
-            indChanNums.append('CHAN_NUM_%s' % self.global_name(cName(d.name), suffix));
+            indChanNums.append('CHAN_NUM_%s%s' % (swInterface, self.global_name(cName(d.name), suffix)))
         subs = {'className': className,
                 'namespace': namespace,
                 'maxSize': maxSize,
@@ -494,7 +492,7 @@ class InterfaceMixin:
         of.write('#define %(namespace)s%(className)s_reqsize (%(maxSize)s * sizeof(uint32_t))\n' % subs)
     def emitCProxyImplementation(self, f, hpp, suffix, namespace, doCpp, swInterface):
         maxSize = 0;
-        className = "%s%s" % (cName(self.name), suffix)
+        className = "%s%s%s" % (swInterface, cName(self.name), suffix)
         substitutions = {'namespace': namespace,
                          'className': className,
                          'parentClass': self.parentClass('Portal')}
@@ -505,11 +503,11 @@ class InterfaceMixin:
         return maxSize
     def emitCWrapperImplementation (self, f, hpp, suffix, namespace, doCpp, swInterface):
         maxSize = 0;
-        className = "%s%s" % (cName(self.name), suffix)
+        className = "%s%s%s" % (swInterface, cName(self.name), suffix)
         substitutions = {'namespace': namespace,
                          'className': className,
                          'parentClass': self.parentClass('Portal'),
-                         'responseSzCases': ''.join([responseSzCaseTemplate % { 'channelNumber': 'CHAN_NUM_%s' % self.global_name(cName(d.name), suffix),
+                         'responseSzCases': ''.join([responseSzCaseTemplate % { 'channelNumber': 'CHAN_NUM_%s%s' % (swInterface, self.global_name(cName(d.name), suffix)),
                                                                                 'className': className,
                                                                                 'methodName': cName(d.name),
                                                                                 'msg': '%s%sMSG' % (className, d.name)}
@@ -589,36 +587,38 @@ def cName(x):
         return x.cName()
 
 def generateProxy(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i, swInterface):
-    cppname = '%sProxy.c' % i.name
-    hppname = '%sProxy.h' % i.name
+    myname = swInterface + i.name
+    cppname = '%sProxy.c' % myname
+    hppname = '%sProxy.h' % myname
     hpp = create_cpp_file(hppname)
     cpp = create_cpp_file(cppname)
-    hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': i.name.upper()})
+    hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': myname.upper()})
     hpp.write('#include "%s.h"' % i.parentClass("portal"))
     maxSize = i.emitCProxyImplementation(cpp, generated_hpp, "Proxy", "", False, swInterface)
     if not swInterface:
         maxSize = 0
-    i.emitCProxyDeclaration(hpp, generated_hpp, "Proxy", 0, '', maxSize)
-    hpp.write('#endif // _%(name)s_H_\n' % {'name': i.name.upper()})
+    i.emitCProxyDeclaration(hpp, generated_hpp, "Proxy", 0, '', maxSize, swInterface)
+    hpp.write('#endif // _%(name)s_H_\n' % {'name': myname.upper()})
     hpp.close();
     cpp.close();
     generatedCFiles.append(cppname)
 
 def generateWrapper(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i, swInterface):
-    cppname = '%sWrapper.c' % i.name
-    hppname = '%sWrapper.h' % i.name
+    myname = swInterface + i.name
+    cppname = '%sWrapper.c' % myname
+    hppname = '%sWrapper.h' % myname
     hpp = create_cpp_file(hppname)
     cpp = create_cpp_file(cppname)
-    hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': i.name.upper()})
-    i.ind.emitCProxyImplementation(cpp, generated_hpp, "WrapperStatus", "", False, swInterface)
+    hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': myname.upper()})
+    #i.ind.emitCProxyImplementation(cpp, generated_hpp, "WrapperStatus", "", False, swInterface)
     maxSize = i.emitCWrapperImplementation(cpp, generated_hpp, "Wrapper", '', False, swInterface)
     if not swInterface:
         maxSize = 0
-    generated_cpp.write('\n\n/************** Start of %sWrapper CPP ***********/\n' % i.name)
+    generated_cpp.write('\n\n/************** Start of %sWrapper CPP ***********/\n' % myname)
     generated_cpp.write('#include "%s"' % hppname)
-    i.emitCWrapperDeclaration(hpp, generated_hpp, generated_cpp, "Wrapper", 0, '', maxSize)
+    i.emitCWrapperDeclaration(hpp, generated_hpp, generated_cpp, "Wrapper", 0, '', maxSize, swInterface)
     i.emitCWrapperImplementation(generated_cpp, generated_hpp, "Wrapper", '', True, swInterface)
-    hpp.write('#endif // _%(name)s_H_\n' % {'name': i.name.upper()})
+    hpp.write('#endif // _%(name)s_H_\n' % {'name': myname.upper()})
     hpp.close();
     cpp.close();
     generatedCFiles.append(cppname)
@@ -652,14 +652,14 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, swProxies, swWrappers, swI
     generated_cpp.write('\n#ifndef NO_CPP_PORTAL_CODE\n\n')
 
     for i in swProxies:
-        generateProxy(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i, False)
+        generateProxy(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i, '')
 
     for i in swWrappers:
-        generateWrapper(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i, False)
+        generateWrapper(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i, '')
 
     for i in swInterface:
-        generateProxy(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i, True)
-        generateWrapper(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i, True)
+        generateProxy(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i, 'SS_')
+        generateWrapper(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i, 'SS_')
     
     generated_cpp.write('\n#endif //NO_CPP_PORTAL_CODE\n')
     generated_cpp.close();

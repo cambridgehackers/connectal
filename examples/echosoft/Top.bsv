@@ -16,7 +16,7 @@ import SwallowWrapper::*;
 import Echo::*;
 import Swallow::*;
 
-typedef enum {EchoIndication, EchoRequest, Swallow, SRequest, SIndication} IfcNames deriving (Eq,Bits);
+typedef enum {EchoIndication, EchoRequest, Swallow, SS_EchoRequest, SS_EchoIndication} IfcNames deriving (Eq,Bits);
 
 // module mkCntr#(Integer label)(Empty);
 //    Reg#(Bit#(32)) cycles <- mkReg(0);
