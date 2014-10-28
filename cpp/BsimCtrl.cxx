@@ -46,7 +46,7 @@ static struct {
 } head;
 static struct memresponse respitem;
 static pthread_mutex_t socket_mutex;
-static int trace_port; // = 1;
+static int trace_port;// = 1;
 static int fd_array[MAX_FD_ARRAY];
 static int fd_array_index = 0;
 
@@ -104,7 +104,6 @@ extern "C" bool checkForRequest(uint32_t rr)
 	        respitem.portal = head.req.portal;
 	        head.valid = 1;
 	        head.inflight = 1;
-	        head.req.addr = (unsigned int *)(((long) head.req.addr) | head.req.portal << 16);
                 if (rv == sizeof(head.req) && head.req.write_flag == MAGIC_PORTAL_FOR_SENDING_FD) {
                     head.req.data_or_tag = recvfd;
                     head.req.write_flag = 1;
@@ -122,7 +121,7 @@ extern "C" bool checkForRequest(uint32_t rr)
 extern "C" unsigned long long getRequest32(uint32_t rr)
 {
     if(trace_port)
-        fprintf(stderr, " get\n");
+        fprintf(stderr, " get%c", rr ? '\n' : ':');
     if (rr)
         head.valid = 0;
     head.inflight = 0;

@@ -80,8 +80,8 @@ void connect_to_bsim(void)
   pthread_mutex_init(&socket_mutex, NULL);
   unsigned int last = 0;
   unsigned int idx = 0;
-  volatile unsigned int *ptr=0;
-  while(!last){
+  while(!last && idx < 32){
+    volatile unsigned int *ptr=(volatile unsigned int *)(idx * PORTAL_BASE_OFFSET);
     unsigned int id = read_portal_bsim(&ptr[PORTAL_CTRL_REG_PORTAL_ID], idx);
     last = read_portal_bsim(&ptr[PORTAL_CTRL_REG_TOP], idx);
     assert(id < MAX_BSIM_PORTAL_ID);
