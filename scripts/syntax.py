@@ -380,7 +380,8 @@ def p_patterns(p):
 
 def p_importDecl(p):
     'importDecl : TOKIMPORT VAR COLONCOLON STAR SEMICOLON'
-    #globalimports.append(p[2])
+    if not p[2] in globalimports:
+        globalimports.append(p[2])
     p[0] = p[2]
 
 def p_importDecls(p):

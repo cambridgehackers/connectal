@@ -430,12 +430,12 @@ class InterfaceMixin:
         return methods
 
 def generate_bsv(globalimports, project_dir, noisyFlag, hwProxies, hwWrappers, dutname):
-    def create_bsv_package(pname, data, files):
+    def create_bsv_package(pname, data, files, generatedPackageNames):
         fname = os.path.join(project_dir, 'sources', dutname.lower(), '%s.bsv' % pname)
         bsv_file = util.createDirAndOpen(fname, 'w')
         bsv_file.write('package %s;\n' % pname)
-        extraImports = (['import %s::*;\n' % os.path.splitext(os.path.basename(fn))[0] for fn in files]
-                   + ['import %s::*;\n' % i for i in globalimports ])
+        extraImports = (['import %s::*;\n' % os.path.splitext(os.path.basename(fn))[0] for fn in files ]
+                   + ['import %s::*;\n' % i for i in globalimports if not i in generatedPackageNames])
         bsv_file.write(preambleTemplate % {'extraImports' : ''.join(extraImports)})
         if noisyFlag:
             print 'Writing file ', fname
@@ -443,9 +443,11 @@ def generate_bsv(globalimports, project_dir, noisyFlag, hwProxies, hwWrappers, d
         bsv_file.write('endpackage: %s\n' % pname)
         bsv_file.close()
 
+    generatedPackageNames = (['%sWrapper' % i.name for i in hwWrappers]
+                             + ['%sProxy' % i.name for i in hwProxies])
     for i in hwWrappers:
-        create_bsv_package('%sWrapper' % i.name, exposedWrapperInterfaceTemplate % i.substs('Wrapper',False), i.package)
+        create_bsv_package('%sWrapper' % i.name, exposedWrapperInterfaceTemplate % i.substs('Wrapper',False), i.package, generatedPackageNames)
         
     for i in hwProxies:
-        create_bsv_package('%sProxy' % i.name, exposedProxyInterfaceTemplate % i.substs("Proxy",True), i.package)
+        create_bsv_package('%sProxy' % i.name, exposedProxyInterfaceTemplate % i.substs("Proxy",True), i.package, generatedPackageNames)
 
