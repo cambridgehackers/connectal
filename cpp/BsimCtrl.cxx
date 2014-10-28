@@ -97,10 +97,8 @@ extern "C" bool checkForRequest(uint32_t rr)
 	        respitem.portal = head.req.portal;
 	        head.valid = 1;
 	        head.inflight = 1;
-                if (rv == sizeof(head.req) && head.req.write_flag == MAGIC_PORTAL_FOR_SENDING_FD) {
+                if (recvfd != -1)
                     head.req.data_or_tag = recvfd;
-                    head.req.write_flag = 1;
-                }
 	        if(trace_port)
 	            fprintf(stderr, "processr p=%d w=%d, a=%8lx, dt=%8x:", 
 		        head.req.portal, head.req.write_flag, (long)head.req.addr, head.req.data_or_tag);
