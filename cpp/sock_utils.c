@@ -227,11 +227,12 @@ static int shared_response_valid;
 int poll_response(int id)
 {
   if (!shared_response_valid) {
-      if (portalRecv(global_sockfd, &shared_response, sizeof(shared_response)) == sizeof(shared_response))
+      if (portalRecv(global_sockfd, &shared_response, sizeof(shared_response)) == sizeof(shared_response)) {
           if (shared_response.portal == MAGIC_PORTAL_FOR_SENDING_INTERRUPT)
               interrupt_value = shared_response.data;
           else
               shared_response_valid = 1;
+      }
   }
   return shared_response_valid && shared_response.portal == id;
 }
