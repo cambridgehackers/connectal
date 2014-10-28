@@ -719,7 +719,13 @@ def p_typeDefBody(p):
 def p_typeDef(p):
     '''typeDef : TOKTYPEDEF typeDefBody VAR deriving SEMICOLON
                | TOKTYPEDEF typeDefBody VAR interfaceHashParams deriving SEMICOLON'''
-    p[0] = AST.TypeDef(p[2], p[3])
+    print 'p_typeDef', len(p)
+    if len(p) == 6:
+        print p[3], [], p[2]
+        p[0] = AST.TypeDef(p[2], p[3], [])
+    else:
+        print p[3], p[4], p[2]
+        p[0] = AST.TypeDef(p[2], p[3], p[4])
 
 
 def p_interfaceDef(p):
