@@ -94,10 +94,10 @@ extern "C" bool checkForRequest(uint32_t rr)
 {
     if (!head.valid){
 	int rv = -1;
-        int i;
+        int i, recvfd;
         for (i = 0; i < fd_array_index; i++) {
             head.sockfd = fd_array[i];
-            rv = portalRecv(head.sockfd, &head.req, sizeof(head.req));
+            rv = portalRecvFd(head.sockfd, &head.req, sizeof(head.req), &recvfd);
 	    if(rv > 0){
 	        //fprintf(stderr, "recv size %d\n", rv);
 	        assert(rv == sizeof(memrequest));
@@ -106,9 +106,7 @@ extern "C" bool checkForRequest(uint32_t rr)
 	        head.inflight = 1;
 	        head.req.addr = (unsigned int *)(((long) head.req.addr) | head.req.portal << 16);
                 if (rv == sizeof(head.req) && head.req.write_flag == MAGIC_PORTAL_FOR_SENDING_FD) {
-                    int fd;
-                    sock_fd_read(head.sockfd, NULL, 0, &fd);
-                    head.req.data_or_tag = fd;
+                    head.req.data_or_tag = recvfd;
                     head.req.write_flag = 1;
                 }
 	        if(trace_port)

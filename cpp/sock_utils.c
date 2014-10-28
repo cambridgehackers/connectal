@@ -277,8 +277,7 @@ void write_portal_fd_bsim(volatile unsigned int *addr, unsigned int v, int id)
 
 printf("[%s:%d] writefd %d\n", __FUNCTION__, __LINE__, v);
   pthread_mutex_lock(&socket_mutex);
-  portalSend(global_sockfd, &foo, sizeof(foo));
-  sock_fd_write(global_sockfd, NULL, 0, v);
+  portalSendFd(global_sockfd, &foo, sizeof(foo), v);
   pthread_mutex_unlock(&socket_mutex);
 }
 #else // __KERNEL__
