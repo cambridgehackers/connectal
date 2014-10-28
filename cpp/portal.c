@@ -216,6 +216,17 @@ void portalTrace_stop()
 #endif
 }
 
+uint64_t portalCycleCount(PortalInternal *p)
+{
+  unsigned int high_bits, low_bits;
+  if (we_are_initiator)
+    return 0;
+  init_portal();
+  high_bits = READL(p, &(p->map_base[PORTAL_CTRL_REG_COUNTER_MSB]));
+  low_bits  = READL(p, &(p->map_base[PORTAL_CTRL_REG_COUNTER_LSB]));
+  return (((uint64_t)high_bits)<<32) | ((uint64_t)low_bits);
+}
+
 void portalEnableInterrupts(PortalInternal *p, int val)
 {
    if (!p->reqsize)

@@ -103,12 +103,6 @@ unsigned int read_portal_bsim(volatile unsigned int *addr, int id);
 void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id);
 void write_portal_fd_bsim(volatile unsigned int *addr, unsigned int v, int id);
 
-void portalTimerInit(void);
-void portalTimerStart(unsigned int i);
-uint64_t portalTimerLap(unsigned int i);
-uint64_t portalTimerCatch(unsigned int i);
-void portalTimerPrint(int loops);
-
 // uses the default poller
 void* portalExec(void* __x);
 /* fine grained functions for building custom portalExec */
