@@ -245,15 +245,22 @@ class TypeMixin:
             return 32
         if (self.name == 'SpecialTypeForSendingFd'):
             return 32
-	sdef = globalv.globalvars[self.name].tdtype
-        if (sdef.type == 'Struct'):
-            return sum([e.type.numBitsBSV() for e in sdef.elements])
-        else:
-            return sdef.numBitsBSV();
+	sdef = globalv.globalvars[self.name]
+        sdeftype = sdef.tdtype
+        #print 'Type.numBitsBSV()', sdef.type, sdef.name, sdef.params, sdef.tdtype
+        #print 'instantiating type parameters'
+        sdeftype = sdeftype.instantiate(dict(zip(sdef.params, self.params)))
+        #print 'resolved to', sdeftype.type
+        #print '           ', sdeftype
+        return sdeftype.numBitsBSV();
 
 class EnumMixin:
     def numBitsBSV(self):
         return int(math.ceil(math.log(len(self.elements),2)))
+
+class StructMixin:
+    def numBitsBSV(self):
+        return sum([e.type.numBitsBSV() for e in self.elements])
 
 class MethodMixin:
     def substs(self, outerTypeName):
