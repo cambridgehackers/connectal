@@ -200,6 +200,7 @@ int main(int argc, const char **argv)
     close(stateMapAlloc);
     close(stateTransitionsAlloc);
   }
+  portalExec_stop();
   fprintf(stderr, "hw_match_cnt=%d, sw_match_cnt=%d\n", hw_match_cnt, sw_match_cnt);
   return 0;
 }

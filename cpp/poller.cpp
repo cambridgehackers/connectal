@@ -266,5 +266,9 @@ void portalExec_start()
 {
     defaultPoller->portalExec_start();
 }
+void portalExec_stop()
+{
+    defaultPoller->portalExec_stop();
+}
 
 #endif // NO_CPP_PORTAL_CODE

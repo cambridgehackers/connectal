@@ -110,6 +110,7 @@ void* portalExec_init(void);
 void* portalExec_poll(int timeout);
 void* portalExec_event(void);
 void portalExec_start(void);
+void portalExec_stop(void);
 void portalExec_end(void);
 void portalTrace_start(void);
 void portalTrace_stop(void);
