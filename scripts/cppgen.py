@@ -203,7 +203,7 @@ class MethodMixin:
                 elif tn == 'SpecialTypeForSendingFd':
                     return [('%s%s'%(scope,member.name),tdtype)]
                 else:
-                    return self.collectMembers(scope, tdtype.type)
+                    return collectMembers(scope, tdtype.type)
 
         class paramInfo:
             def __init__(self, name, width, shifted, datatype, assignOp):
