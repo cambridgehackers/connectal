@@ -25,10 +25,10 @@
 #include <semaphore.h>
 #include <unistd.h>
 
-#include "EchoIndicationWrapper.h"
-#include "EchoRequestProxy.h"
+#include "EchoIndication.h"
+#include "EchoRequest.h"
 #include "GeneratedTypes.h"
-#include "SwallowProxy.h"
+#include "Swallow.h"
 
 EchoRequestProxy *echoRequestProxy = 0;
 
