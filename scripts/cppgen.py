@@ -621,6 +621,9 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, swProxies, swWrappers, swI
     # global type declarations used by interface mthods
     for v in globaldecls:
         if (v.type == 'TypeDef'):
+            if v.params:
+                print 'Skipping C++ declaration for parameterized type', v.name
+                continue
             try:
                 v.emitCDeclaration(generated_hpp, 0, '')
             except:
