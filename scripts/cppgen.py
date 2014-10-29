@@ -74,8 +74,7 @@ handleMessageTemplate2='''
 '''
 
 proxyMethodTemplateDecl='''
-void %(namespace)s%(className)s_%(methodName)s (struct PortalInternal *p %(paramSeparator)s %(paramDeclarations)s );
-'''
+void %(namespace)s%(className)s_%(methodName)s (struct PortalInternal *p %(paramSeparator)s %(paramDeclarations)s );'''
 
 proxyMethodTemplate='''
 void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p %(paramSeparator)s %(paramDeclarations)s )
@@ -173,7 +172,7 @@ class MethodMixin:
         of.write('void %s%s_cb ( ' % (className, methodName))
         of.write(', '.join(formalParams))
         of.write(' );\n')
-        f.write('\nvoid %s%s_cb ( ' % (className, methodName))
+        f.write('void %s%s_cb ( ' % (className, methodName))
         f.write(', '.join(formalParams))
         f.write(' ) {\n')
         indent(f, 4)
@@ -449,11 +448,11 @@ class InterfaceMixin:
         return rv
     def global_name(self, s, suffix):
         return '%s%s_%s' % (cName(self.name), suffix, s)
-    def emitCProxyDeclaration(self, f, of, suffix, indentation, namespace, maxSize, swInterface):
-        className = "%s%s%s" % (swInterface, cName(self.name), suffix)
+    def emitCProxyDeclaration(self, f, of, indentation, namespace, maxSize, swInterface):
+        className = "%s%sProxy" % (swInterface, cName(self.name))
 	reqChanNums = []
         for d in self.decls:
-            reqChanNums.append('CHAN_NUM_%s%s' % (swInterface, self.global_name(d.name, suffix)))
+            reqChanNums.append('CHAN_NUM_%s%s' % (swInterface, self.global_name(d.name, "Proxy")))
         subs = {'className': className,
                 'namespace': namespace,
                 'maxSize': maxSize,
@@ -464,12 +463,12 @@ class InterfaceMixin:
         f.write('};\n')
 	of.write('enum { ' + ','.join(reqChanNums) + '};\n')
         of.write('#define %(namespace)s%(className)s_reqsize (%(maxSize)s * sizeof(uint32_t))\n' % subs)
-    def emitCWrapperDeclaration(self, f, of, cppf, suffix, indentation, namespace, maxSize, swInterface):
-        className = "%s%s%s" % (swInterface, cName(self.name), suffix)
+    def emitCWrapperDeclaration(self, f, of, cppf, indentation, namespace, maxSize, swInterface):
+        className = "%s%sWrapper" % (swInterface, cName(self.name))
         indent(f, indentation)
 	indChanNums = []
 	for d in self.decls:
-            indChanNums.append('CHAN_NUM_%s%s' % (swInterface, self.global_name(cName(d.name), suffix)))
+            indChanNums.append('CHAN_NUM_%s%s' % (swInterface, self.global_name(cName(d.name), "Wrapper")))
         subs = {'className': className,
                 'namespace': namespace,
                 'maxSize': maxSize,
@@ -482,31 +481,31 @@ class InterfaceMixin:
             d.emitCStructDeclaration(cppf, of, namespace, className)
 	of.write('enum { ' + ','.join(indChanNums) + '};\n')
         of.write('#define %(namespace)s%(className)s_reqsize (%(maxSize)s * sizeof(uint32_t))\n' % subs)
-    def emitCProxyImplementation(self, f, hpp, suffix, namespace, doCpp, swInterface):
+    def emitCProxyImplementation(self, f, hpp, namespace, swInterface):
         maxSize = 0;
-        className = "%s%s%s" % (swInterface, cName(self.name), suffix)
+        className = "%s%sProxy" % (swInterface, cName(self.name))
         substitutions = {'namespace': namespace,
                          'className': className,
                          'parentClass': self.parentClass('Portal')}
         for d in self.decls:
-            t = d.emitCImplementation(f, hpp, className, namespace,True, doCpp, swInterface)
+            t = d.emitCImplementation(f, hpp, className, namespace,True, False, swInterface)
             if t > maxSize:
                 maxSize = t
+        hpp.write('\n')
         return maxSize
-    def emitCWrapperImplementation (self, f, hpp, suffix, namespace, doCpp, swInterface):
+    def emitCWrapperImplementation (self, f, hpp, namespace, swInterface):
         maxSize = 0;
-        className = "%s%s%s" % (swInterface, cName(self.name), suffix)
+        className = "%s%sWrapper" % (swInterface, cName(self.name))
         substitutions = {'namespace': namespace,
                          'className': className,
                          'parentClass': self.parentClass('Portal')}
-        if not doCpp:
-            f.write(handleMessageTemplate1 % substitutions)
-            for d in self.decls:
-                t = d.emitCImplementation(f, hpp, className, namespace, False, False, swInterface)
-                if t > maxSize:
-                    maxSize = t
-            f.write(handleMessageTemplate2 % substitutions)
-            hpp.write(handleMessageTemplateDecl % substitutions)
+        f.write(handleMessageTemplate1 % substitutions)
+        for d in self.decls:
+            t = d.emitCImplementation(f, hpp, className, namespace, False, False, swInterface)
+            if t > maxSize:
+                maxSize = t
+        f.write(handleMessageTemplate2 % substitutions)
+        hpp.write(handleMessageTemplateDecl % substitutions)
         return maxSize
 
 class ParamMixin:
@@ -573,25 +572,26 @@ def cName(x):
     else:
         return x.cName()
 
-def generateProxy(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i, swInterface):
-    myname = swInterface + i.name
+def generateProxy(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i, swInterfacez):
+    #myname = swInterface + i.name
+    myname = i.name
     cppname = '%s.c' % myname
     hppname = '%s.h' % myname
     hpp = create_cpp_file(hppname)
     cpp = create_cpp_file(cppname)
     hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': myname.upper()})
-    hpp.write('#include "%s.h"' % i.parentClass("portal"))
-    maxSize = i.emitCProxyImplementation(cpp, generated_hpp, "Proxy", "", False, swInterface)
-    if not swInterface:
-        maxSize = 0
-    i.emitCProxyDeclaration(hpp, generated_hpp, "Proxy", 0, '', maxSize, swInterface)
-    maxSize = i.emitCWrapperImplementation(cpp, generated_hpp, "Wrapper", '', False, swInterface)
-    if not swInterface:
-        maxSize = 0
-    generated_cpp.write('\n\n/************** Start of %sWrapper CPP ***********/\n' % myname)
-    generated_cpp.write('#include "%s"' % hppname)
-    i.emitCWrapperDeclaration(hpp, generated_hpp, generated_cpp, "Wrapper", 0, '', maxSize, swInterface)
-    i.emitCWrapperImplementation(generated_cpp, generated_hpp, "Wrapper", '', True, swInterface)
+    hpp.write('#include "%s.h"\n' % i.parentClass("portal"))
+    generated_cpp.write('\n/************** Start of %sWrapper CPP ***********/\n' % myname)
+    generated_cpp.write('#include "%s"\n' % hppname)
+    for swInterface in ['', 'SS_']:
+        maxSize = i.emitCProxyImplementation(cpp, generated_hpp, "", swInterface)
+        if not swInterface:
+            maxSize = 0
+        i.emitCProxyDeclaration(hpp, generated_hpp, 0, '', maxSize, swInterface)
+        maxSize = i.emitCWrapperImplementation(cpp, generated_hpp, '', swInterface)
+        if not swInterface:
+            maxSize = 0
+        i.emitCWrapperDeclaration(hpp, generated_hpp, generated_cpp, 0, '', maxSize, swInterface)
     hpp.write('#endif // _%(name)s_H_\n' % {'name': myname.upper()})
     hpp.close();
     cpp.close();
@@ -623,15 +623,15 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, swProxies, swWrappers, swI
     cppname = 'GeneratedCppCallbacks.cpp'
     generated_cpp = create_cpp_file(cppname)
     generatedCFiles.append(cppname)
-    generated_cpp.write('\n#ifndef NO_CPP_PORTAL_CODE\n\n')
+    generated_cpp.write('\n#ifndef NO_CPP_PORTAL_CODE\n')
 
-    for i in swProxies + swWrappers:
+    for i in swProxies + swWrappers+swInterface:
         generateProxy(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i, '')
-
-    for i in swInterface:
-        generateProxy(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i, 'SS_')
+#
+#    for i in swInterface:
+#        generateProxy(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i, 'SS_')
     
-    generated_cpp.write('\n#endif //NO_CPP_PORTAL_CODE\n')
+    generated_cpp.write('#endif //NO_CPP_PORTAL_CODE\n')
     generated_cpp.close();
     generated_hpp.write('#ifdef __cplusplus\n')
     generated_hpp.write('}\n')
