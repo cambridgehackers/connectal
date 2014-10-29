@@ -185,29 +185,32 @@ class MethodMixin:
         def collectMembers(scope, member):
             t = member.type
             tn = member.type.name
-            if tn == 'Bit':
-                return [('%s%s'%(scope,member.name),t)]
-            elif tn == 'Int' or tn == 'UInt':
-                return [('%s%s'%(scope,member.name),t)]
-            elif tn == 'Float':
-                return [('%s%s'%(scope,member.name),t)]
-            elif tn == 'Vector':
-                return [('%s%s'%(scope,member.name),t)]
-            else:
-                td = globalv.globalvars[tn]
-                #print 'instantiate', member.type.params
-                tdtype = td.tdtype.instantiate(dict(zip(td.params, member.type.params)))
-                #print '           ', tdtype
-                if tdtype.type == 'Struct':
-                    ns = '%s%s.' % (scope,member.name)
-                    rv = map(functools.partial(collectMembers, ns), tdtype.elements)
-                    return sum(rv,[])
-                elif tdtype.type == 'Enum':
-                    return [('%s%s'%(scope,member.name),tdtype)]
-                elif tn == 'SpecialTypeForSendingFd':
-                    return [('%s%s'%(scope,member.name),tdtype)]
+            while 1:
+                if tn == 'Bit':
+                    return [('%s%s'%(scope,member.name),t)]
+                elif tn == 'Int' or tn == 'UInt':
+                    return [('%s%s'%(scope,member.name),t)]
+                elif tn == 'Float':
+                    return [('%s%s'%(scope,member.name),t)]
+                elif tn == 'Vector':
+                    return [('%s%s'%(scope,member.name),t)]
                 else:
-                    return collectMembers(scope, tdtype.type)
+                    td = globalv.globalvars[tn]
+                    #print 'instantiate', t.params
+                    tdtype = td.tdtype.instantiate(dict(zip(td.params, t.params)))
+                    #print '           ', tdtype
+                    if tdtype.type == 'Struct':
+                        ns = '%s%s.' % (scope,member.name)
+                        rv = map(functools.partial(collectMembers, ns), tdtype.elements)
+                        return sum(rv,[])
+                    elif tdtype.type == 'Enum':
+                        return [('%s%s'%(scope,member.name),tdtype)]
+                    elif tn == 'SpecialTypeForSendingFd':
+                        return [('%s%s'%(scope,member.name),tdtype)]
+                    else:
+                        #print 'resolved to type', tdtype.type, tdtype.name, tdtype
+                        t = tdtype
+                        tn = tdtype.name
 
         class paramInfo:
             def __init__(self, name, width, shifted, datatype, assignOp):
@@ -379,9 +382,14 @@ class StructMemberMixin:
 
 class TypeDefMixin:
     def emitCDeclaration(self,f,indentation, namespace):
+        print 'TypeDefMixin.emitCdeclaration', self.tdtype.type, self.name, self.tdtype
         if self.tdtype.type == 'Struct' or self.tdtype.type == 'Enum':
             self.tdtype.emitCDeclaration(self.name,f,indentation,namespace)
-
+        elif self.tdtype.type == 'Type':
+            td = globalv.globalvars[self.tdtype.name]
+            tdtype = td.tdtype.instantiate(dict(zip(td.params, self.tdtype.params)))
+            tdtype.emitCDeclaration(self.name,f,indentation,namespace)
+            
 class StructMixin:
     def collectTypes(self):
         result = [self]
