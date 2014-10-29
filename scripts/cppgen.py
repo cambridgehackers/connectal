@@ -625,7 +625,7 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, swProxies, swWrappers, swI
                 v.emitCDeclaration(generated_hpp, 0, '')
             except:
                 print 'Skipping typedef', v.name
-                print traceback.print_exc()[1]
+                traceback.print_exc()
     generated_hpp.write('\n');
     cppname = 'GeneratedCppCallbacks.cpp'
     generated_cpp = create_cpp_file(cppname)
