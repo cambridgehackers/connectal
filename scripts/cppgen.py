@@ -23,6 +23,8 @@
 ## SOFTWARE.
 
 import os
+import sys
+import traceback
 import globalv
 import AST
 import util
@@ -619,7 +621,11 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, swProxies, swWrappers, swI
     # global type declarations used by interface mthods
     for v in globaldecls:
         if (v.type == 'TypeDef'):
-            v.emitCDeclaration(generated_hpp, 0, '')
+            try:
+                v.emitCDeclaration(generated_hpp, 0, '')
+            except:
+                print 'Skipping typedef', v.name
+                print traceback.print_exc()[1]
     generated_hpp.write('\n');
     cppname = 'GeneratedCppCallbacks.cpp'
     generated_cpp = create_cpp_file(cppname)
