@@ -193,7 +193,9 @@ class MethodMixin:
                 return [('%s%s'%(scope,member.name),t)]
             else:
                 td = globalv.globalvars[tn]
-                tdtype = td.tdtype
+                #print 'instantiate', member.type.params
+                tdtype = td.tdtype.instantiate(dict(zip(td.params, member.type.params)))
+                #print '           ', tdtype
                 if tdtype.type == 'Struct':
                     ns = '%s%s.' % (scope,member.name)
                     rv = map(functools.partial(collectMembers, ns), tdtype.elements)
