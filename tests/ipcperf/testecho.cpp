@@ -16,15 +16,8 @@
 #include <errno.h>
 
 #define LOOP_COUNT 5
-#define SEPARATE_EVENT_THREAD
 
 EchoRequestProxy *echoRequestProxy = 0;
-
-#ifdef SEPARATE_EVENT_THREAD
-#define CHECKSEM(A) 1
-#else // use inline sync
-#define CHECKSEM(A) (!(A))
-#endif
 
 static int silent;
 static int flag_heard;
@@ -36,16 +29,6 @@ static int use_mutex = 0;
 static int use_inline = 0;
 pthread_t threaddata;
 
-static void *pthread_worker(void *p)
-{
-    void *rc = NULL;
-    while (CHECKSEM(sem_heard) && !rc && !poller->stopping) {
-        rc = poller->portalExec_poll(poller->portalExec_timeout);
-        if ((long) rc >= 0)
-            rc = poller->portalExec_event();
-    }
-    return rc;
-}
 class EchoIndication : public EchoIndicationWrapper
 {
 public:
@@ -68,7 +51,6 @@ static void run_test(void)
   int i;
   uint64_t pcyc[PCYC_LEN];
   uint64_t lastp;
-  PortalInterruptTime inttime;
 
   memset(pcyc, 0, sizeof(pcyc));
   pcyc[0] = portalCycleCount();
@@ -91,8 +73,11 @@ static void run_test(void)
     pthread_mutex_lock(&mutex_heard);
   else
     sem_wait(&sem_heard);
-  ioctl(globalDirectory.fpga_fd, PORTAL_INTERRUPT_TIME, &inttime);
-  pcyc[9] = (((uint64_t)inttime.msb)<<32) | ((uint64_t)inttime.lsb);
+  if (echoRequestProxy->pint.fpga_fd >= 0) {
+      PortalInterruptTime inttime;
+      ioctl(echoRequestProxy->pint.fpga_fd, PORTAL_INTERRUPT_TIME, &inttime);
+      pcyc[9] = (((uint64_t)inttime.msb)<<32) | ((uint64_t)inttime.lsb);
+  }
   pcyc[12] = poll_return_time; // time after poll() returns
   pcyc[17] = poll_enter_time; // time poll() reentered
   }
@@ -118,8 +103,7 @@ int main(int argc, const char **argv)
     pthread_mutex_lock(&mutex_heard);
     sem_init(&sem_heard, 0, 0);
 
-    poller->portalExec_init();
-    pthread_create(&threaddata, NULL, &pthread_worker, (void*)poller);
+    poller->portalExec_start();
     portalExec_start();
 #ifdef ZYNQ
     uint64_t portcyc2 = portalCycleCount();
