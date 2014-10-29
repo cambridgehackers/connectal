@@ -203,6 +203,10 @@ void* PortalPoller::portalExec_event(void)
           unsigned int int_en  = READL(&instance->pint, &map_base[PORTAL_CTRL_REG_INTERRUPT_ENABLE]);
           fprintf(stderr, "(%d:fpga%d) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->pint.fpga_number, int_src, int_en, queue_status);
         }
+        if (!instance->pint.handler) {
+            printf("[%s:%d] missing handler!!!!\n", __FUNCTION__, __LINE__);
+            exit(1);
+        }
         instance->pint.handler(&instance->pint, queue_status-1);
 	mcnt++;
       }
