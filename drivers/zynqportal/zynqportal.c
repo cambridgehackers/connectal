@@ -309,9 +309,12 @@ static int portal_of_probe(struct platform_device *pdev)
 	  portal_data->top = top;
 	  misc_register( &portal_data->misc);
 
-	  if (++fpn > MAX_NUM_PORTALS)
+	  if (++fpn >= MAX_NUM_PORTALS){
+	    printk(KERN_INFO "%s: MAX_NUM_PORTALS exceeded", __func__);
 	    break;
+	  }
 	}
+
 	if(top)
 	  rc = 0;
 
@@ -335,7 +338,7 @@ static int portal_of_remove(struct platform_device *pdev)
 	    free_irq(portal_data->portal_irq, portal_data);
 	  kfree(portal_data->misc.name);
 	  misc_deregister(&portal_data->misc);
-	  if (++fpn > MAX_NUM_PORTALS)
+	  if (++fpn >= MAX_NUM_PORTALS)
 	    break;
 	}
         kfree(drvdata);
