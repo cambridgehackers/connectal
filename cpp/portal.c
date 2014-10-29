@@ -51,6 +51,7 @@
 
 static void init_portal_hw(void);
 int global_pa_fd = -1;
+PortalInternal *utility_portal = 0x0;
 
 #ifdef __KERNEL__
 static tBoard* tboard;
@@ -68,6 +69,8 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
 
     init_portal_hw();
     memset(pint, 0, sizeof(*pint));
+    if(!utility_portal)
+      utility_portal = pint;
     pint->fpga_number = id;
     pint->fpga_fd = -1;
     pint->handler = handler;
@@ -146,7 +149,7 @@ exitlab:
     }
 }
 
-int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency, PortalInternal *pint)
+int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)
 {
     int status = 0;
     init_portal_hw();
@@ -154,11 +157,15 @@ int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency
     PortalClockRequest request;
     request.clknum = clkNum;
     request.requested_rate = requestedFrequency;
-    status = ioctl(pint->fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
-    if (status == 0 && actualFrequency)
+    if (utility_portal){
+      status = ioctl(utility_portal->fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
+      if (status == 0 && actualFrequency)
 	*actualFrequency = request.actual_rate;
-    if (status < 0)
+      if (status < 0)
 	status = errno;
+    }else{ 
+      status = -1;
+    }
 #endif
     return status;
 }
@@ -216,14 +223,16 @@ void portalTrace_stop()
 #endif
 }
 
-uint64_t portalCycleCount(PortalInternal *p)
+uint64_t portalCycleCount()
 {
   unsigned int high_bits, low_bits;
   if (we_are_initiator)
     return 0;
+  if(!utility_portal)
+    return 0;
   init_portal_hw();
-  high_bits = READL(p, &(p->map_base[PORTAL_CTRL_REG_COUNTER_MSB]));
-  low_bits  = READL(p, &(p->map_base[PORTAL_CTRL_REG_COUNTER_LSB]));
+  high_bits = READL(utility_portal, &(utility_portal->map_base[PORTAL_CTRL_REG_COUNTER_MSB]));
+  low_bits  = READL(utility_portal, &(utility_portal->map_base[PORTAL_CTRL_REG_COUNTER_LSB]));
   return (((uint64_t)high_bits)<<32) | ((uint64_t)low_bits);
 }
 
@@ -233,7 +242,7 @@ void portalEnableInterrupts(PortalInternal *p, int val)
      WRITEL(p, &(p->map_base[PORTAL_CTRL_REG_INTERRUPT_ENABLE]), val);
 }
 
-int portalDCacheFlushInval(int fd, long size, void *__p, PortalInternal *p)
+int portalDCacheFlushInval(int fd, long size, void *__p)
 {
     int i;
 #if defined(__arm__)
@@ -251,7 +260,11 @@ printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start
     }
     fput(fmem);
 #else
-  int rc = ioctl(p->fpga_fd, PORTAL_DCACHE_FLUSH_INVAL, fd);
+  int rc;
+  if (utility_portal)
+    rc = ioctl(utility_portal->fpga_fd, PORTAL_DCACHE_FLUSH_INVAL, fd);
+  else
+    rc = -1;
   if (rc){
     PORTAL_PRINTF("portal dcache flush failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
     return rc;

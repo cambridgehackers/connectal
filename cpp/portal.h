@@ -98,7 +98,7 @@ int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *
 extern "C" {
 #endif
 void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, uint32_t reqsize);
-uint64_t portalCycleCount(PortalInternal *pint);
+uint64_t portalCycleCount(void);
 unsigned int read_portal_bsim(volatile unsigned int *addr, int id);
 void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id);
 void write_portal_fd_bsim(volatile unsigned int *addr, unsigned int v, int id);
@@ -114,9 +114,9 @@ void portalExec_stop(void);
 void portalExec_end(void);
 void portalTrace_start(void);
 void portalTrace_stop(void);
-int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency, PortalInternal *p);
+int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
 void portalEnableInterrupts(PortalInternal *p, int val);
-  int portalDCacheFlushInval(int fd, long size, void *__p, PortalInternal *p);
+int portalDCacheFlushInval(int fd, long size, void *__p);
 void init_portal_memory(void);
 int portalAlloc(size_t size);
 void *portalMmap(int fd, size_t size);
@@ -126,10 +126,10 @@ int portalRecv(int fd, void *data, int len);
 void portalSendFd(int fd, void *data, int len, int sendFd);
 int portalRecvFd(int fd, void *data, int len, int *recvFd);
 
-void portalTimerStart(unsigned int i, PortalInternal *p);
-uint64_t portalTimerLap(unsigned int i, PortalInternal *p);
+void portalTimerStart(unsigned int i);
+uint64_t portalTimerLap(unsigned int i);
 void portalTimerInit(void);
-uint64_t portalTimerCatch(unsigned int i, PortalInternal *p);
+uint64_t portalTimerCatch(unsigned int i);
 void portalTimerPrint(int loops);
 
 
@@ -137,6 +137,7 @@ extern int portalExec_timeout;
 extern int global_pa_fd;
 extern int global_sockfd;
 extern int we_are_initiator;
+extern PortalInternal *utility_portal;
 #ifdef __cplusplus
 }
 #endif
