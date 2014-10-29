@@ -38,6 +38,7 @@
 #include <assert.h>
 
 int bsim_fpga_map[MAX_BSIM_PORTAL_ID];
+static pthread_mutex_t socket_mutex;
 int we_are_initiator;
 int global_sockfd = -1;
 static int trace_socket;// = 1;
@@ -75,6 +76,7 @@ void connect_to_bsim(void)
   if (global_sockfd != -1)
     return;
   global_sockfd = init_connecting(SOCKET_NAME);
+  pthread_mutex_init(&socket_mutex, NULL);
   unsigned int last = 0;
   unsigned int idx = 0;
   while(!last && idx < 32){
@@ -227,12 +229,14 @@ static int shared_response_valid;
 int poll_response(int id)
 {
   if (!shared_response_valid) {
+      pthread_mutex_lock(&socket_mutex);
       if (portalRecv(global_sockfd, &shared_response, sizeof(shared_response)) == sizeof(shared_response)) {
           if (shared_response.portal == MAGIC_PORTAL_FOR_SENDING_INTERRUPT)
               interrupt_value = shared_response.data;
           else
               shared_response_valid = 1;
       }
+      pthread_mutex_unlock(&socket_mutex);
   }
   return shared_response_valid && shared_response.portal == id;
 }
