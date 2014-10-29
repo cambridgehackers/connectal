@@ -382,13 +382,19 @@ class StructMemberMixin:
 
 class TypeDefMixin:
     def emitCDeclaration(self,f,indentation, namespace):
-        print 'TypeDefMixin.emitCdeclaration', self.tdtype.type, self.name, self.tdtype
+        #print 'TypeDefMixin.emitCdeclaration', self.tdtype.type, self.name, self.tdtype
         if self.tdtype.type == 'Struct' or self.tdtype.type == 'Enum':
             self.tdtype.emitCDeclaration(self.name,f,indentation,namespace)
-        elif self.tdtype.type == 'Type':
-            td = globalv.globalvars[self.tdtype.name]
-            tdtype = td.tdtype.instantiate(dict(zip(td.params, self.tdtype.params)))
-            tdtype.emitCDeclaration(self.name,f,indentation,namespace)
+        elif False and self.tdtype.type == 'Type':
+            tdtype = self.tdtype
+            #print 'resolving', tdtype.type, tdtype
+            while tdtype.type == 'Type' and globalv.globalvars.has_key(tdtype.name):
+                td = globalv.globalvars[tdtype.name]
+                tdtype = td.tdtype.instantiate(dict(zip(td.params, tdtype.params)))
+                #print 'resolved to', tdtype.type, tdtype
+            if tdtype.type != 'Type':
+                #print 'emitting declaration'
+                tdtype.emitCDeclaration(self.name,f,indentation,namespace)
             
 class StructMixin:
     def collectTypes(self):
@@ -569,7 +575,14 @@ class TypeMixin:
         return self.name == 'Bit' or self.name == 'Int' or self.name == 'UInt'
     def bitWidth(self):
         if self.name == 'Bit' or self.name == 'Int' or self.name == 'UInt':
-            return int(self.params[0].name)
+            width = self.params[0].name
+            while globalv.globalvars.has_key(width):
+                decl = globalv.globalvars[width]
+                if decl.type != 'TypeDef':
+                    break
+                print 'Resolving width', width, decl.tdtype
+                width = decl.tdtype.name
+            return int(width)
         if self.name == 'Float':
             return 32
         else:
