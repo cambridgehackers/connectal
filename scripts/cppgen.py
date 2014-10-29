@@ -32,7 +32,7 @@ import math
 proxyClassPrefixTemplate='''
 class %(namespace)s%(className)s : public %(parentClass)s {
 public:
-    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, %(namespace)s%(className)s_reqsize, poller) {
+    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, %(namespace)s%(className)s_reqsize, NULL, poller) {
         pint.parent = static_cast<void *>(this);
     };
 '''
@@ -40,8 +40,7 @@ public:
 wrapperClassPrefixTemplate='''
 class %(namespace)s%(className)s : public %(parentClass)s {
 public:
-    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, %(namespace)s%(className)s_reqsize, poller) {
-        pint.handler = %(namespace)s%(className)s_handleMessage;
+    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, %(namespace)s%(className)s_reqsize, %(namespace)s%(className)s_handleMessage, poller) {
         pint.parent = static_cast<void *>(this);
     };
 '''
