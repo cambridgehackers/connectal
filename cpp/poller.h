@@ -75,12 +75,14 @@ class Portal : public PortalInternalCpp
 {
  public:
   Portal(int id, uint32_t reqsize, PORTAL_INDFUNC handler, PortalPoller *poller = 0) : PortalInternalCpp(id, handler, reqsize) {
-    if (poller == 0)
-      poller = defaultPoller;
-    pint.poller = poller;
-    pint.poller->registerInstance(this);
+    if (handler) {
+      if (poller == 0)
+        poller = defaultPoller;
+      pint.poller = poller;
+      pint.poller->registerInstance(this);
+    }
   };
-  ~Portal() { pint.poller->unregisterInstance(this); };
+  ~Portal() { if (pint.handler) pint.poller->unregisterInstance(this); };
 };
 
 #endif // __POLLER_H__
