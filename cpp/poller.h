@@ -61,7 +61,7 @@ class PortalInternalCpp
   PortalInternal pint;
   PortalInternalCpp(int id, PORTAL_INDFUNC handler, uint32_t reqsize) { 
     init_portal_internal(&pint, id, handler, reqsize); 
-    fprintf(stderr, "PortalInternalCpp %d\n", pint.fpga_number);
+    //fprintf(stderr, "PortalInternalCpp %d\n", pint.fpga_number);
   };
   ~PortalInternalCpp() {
     if (pint.fpga_fd > 0) {
