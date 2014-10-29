@@ -2,10 +2,10 @@
 #define _TESTMEMRW_H_
 
 #include "StdDmaIndication.h"
-#include "DmaDebugRequestProxy.h"
-#include "MMUConfigRequestProxy.h"
-#include "MemrwIndicationWrapper.h"
-#include "MemrwRequestProxy.h"
+#include "DmaDebugRequest.h"
+#include "MMUConfigRequest.h"
+#include "MemrwIndication.h"
+#include "MemrwRequest.h"
 
 sem_t read_done_sem;
 sem_t write_done_sem;

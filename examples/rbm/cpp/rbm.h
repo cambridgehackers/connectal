@@ -1,10 +1,10 @@
 #ifndef _RBM_H_
 #define _RBM_H_
 
-#include "RbmRequestProxy.h"
-#include "RbmIndicationWrapper.h"
-#include "SigmoidRequestProxy.h"
-#include "SigmoidIndicationWrapper.h"
+#include "RbmRequest.h"
+#include "RbmIndication.h"
+#include "SigmoidRequest.h"
+#include "SigmoidIndication.h"
 
 class SigmoidIndication;
 class RbmIndication;

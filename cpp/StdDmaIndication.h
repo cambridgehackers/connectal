@@ -22,8 +22,8 @@
 // SOFTWARE.
 
 #include "dmaManager.h"
-#include "DmaDebugIndicationWrapper.h"
-#include "MMUConfigIndicationWrapper.h"
+#include "DmaDebugIndication.h"
+#include "MMUConfigIndication.h"
 
 class PortalPoller;
 

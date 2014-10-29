@@ -5,10 +5,10 @@
 
 #include "sock_utils.h"
 #include "StdDmaIndication.h"
-#include "DmaDebugRequestProxy.h"
-#include "MMUConfigRequestProxy.h"
-#include "MemwriteIndicationWrapper.h"
-#include "MemwriteRequestProxy.h"
+#include "DmaDebugRequest.h"
+#include "MMUConfigRequest.h"
+#include "MemwriteIndication.h"
+#include "MemwriteRequest.h"
 #include "dmaManager.h"
 
 
