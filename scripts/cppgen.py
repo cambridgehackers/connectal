@@ -56,9 +56,7 @@ int %(namespace)s%(className)s_handleMessage(PortalInternal *p, unsigned int cha
     static int runaway = 0;
     unsigned int tmp;
     volatile unsigned int* temp_working_addr = &(p->map_base[PORTAL_IND_FIFO(channel)]);
-    
-    switch (channel) {
-'''
+    switch (channel) {'''
 
 handleMessageTemplate2='''
     default:
@@ -84,7 +82,7 @@ void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p %(paramSeparat
 {
     volatile unsigned int* temp_working_addr = &(p->map_base[PORTAL_REQ_FIFO(%(methodChannelOffset)s)]);
     BUSY_WAIT(p, temp_working_addr, "%(namespace)s%(className)s_%(methodName)s");
-%(paramStructMarshall)s
+    %(paramStructMarshall)s
 };
 '''
 
@@ -92,7 +90,7 @@ proxyMethodTemplateSW='''
 void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p %(paramSeparator)s %(paramDeclarations)s )
 {
     volatile unsigned int* temp_working_addr = p->map_base+1;
-%(paramStructMarshall)s
+    %(paramStructMarshall)s
     SSWRITE(p, %(methodChannelOffset)s << 16 | %(wordLen)s, %(fdName)s);
 };
 '''
@@ -107,10 +105,11 @@ void %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
 msgDemarshallTemplate='''
     case %(channelNumber)s: 
         {
-%(paramStructDeclarations)s%(paramStructDemarshall)s        %(responseCase)s
+        %(paramStructDeclarations)s
+        %(paramStructDemarshall)s
+        %(responseCase)s
         }
-        break;
-'''
+        break;'''
 
 msgDemarshallTemplateSW='''
     case %(channelNumber)s: 
@@ -119,10 +118,11 @@ msgDemarshallTemplateSW='''
         unsigned int tmp;
         volatile unsigned int* temp_working_addr = p->map_base+1;
         portalRecvFd(p->fpga_fd, (void *)temp_working_addr, (%(wordLen)s) * sizeof(uint32_t), &tmpfd);
-%(paramStructDeclarations)s%(paramStructDemarshall)s        %(responseCase)s
+        %(paramStructDeclarations)s
+        %(paramStructDemarshall)s
+        %(responseCase)s
         }
-        break;
-'''
+        break;'''
 
 def indent(f, indentation):
     for i in xrange(indentation):
@@ -245,7 +245,7 @@ class MethodMixin:
 
         params = self.params
         paramDeclarations = self.formalParameters(params)
-        paramStructDeclarations = [ '        %s %s;\n' % (p.type.cName(), p.name) for p in params]
+        paramStructDeclarations = [ '%s %s;' % (p.type.cName(), p.name) for p in params]
         
         argAtoms = sum(map(functools.partial(collectMembers, ''), params), [])
 
@@ -281,7 +281,7 @@ class MethodMixin:
                 off = off+e.width-e.shifted
 		if e.datatype.cName() == 'SpecialTypeForSendingFdL_32_P':
                     fdname = field
-                    fmt = '        WRITEFD(p, temp_working_addr, %s);\n'
+                    fmt = 'WRITEFD(p, temp_working_addr, %s);'
             return fmt % (''.join(util.intersperse('|', word)))
 
         def generate_demarshall(w):
@@ -292,7 +292,7 @@ class MethodMixin:
                 # print e.name+' (d)'
                 field = 'tmp'
 		if e.datatype.cName() == 'float':
-		    word.append('        %s = *(float*)&(%s);\n'%(e.name,field))
+		    word.append('%s = *(float*)&(%s);'%(e.name,field))
 		    continue
                 if off:
                     field = '%s>>%s' % (field, off)
@@ -301,17 +301,17 @@ class MethodMixin:
                 field = '((%s)&0x%xul)' % (field, ((1 << (e.datatype.bitWidth()-e.shifted))-1))
                 if e.shifted:
                     field = '((%s)(%s)<<%s)' % (e.datatype.cName(),field, e.shifted)
-		word.append('        %s %s (%s)(%s);\n'%(e.name, e.assignOp, e.datatype.cName(), field))
+		word.append('%s %s (%s)(%s);'%(e.name, e.assignOp, e.datatype.cName(), field))
                 off = off+e.width-e.shifted
             # print ''
-            return ''.join(word)
+            return '\n        '.join(word)
 
         if swInterface:
-            paramStructDemarshallStr = '        tmp = *temp_working_addr++;\n'
-            paramStructMarshallStr = '    *temp_working_addr++ = %s;\n'
+            paramStructDemarshallStr = 'tmp = *temp_working_addr++;'
+            paramStructMarshallStr = '*temp_working_addr++ = %s;'
         else:
-            paramStructDemarshallStr = '        tmp = READL(p, temp_working_addr);\n'
-            paramStructMarshallStr = '    WRITEL(p, temp_working_addr, %s);\n'
+            paramStructDemarshallStr = 'tmp = READL(p, temp_working_addr);'
+            paramStructMarshallStr = 'WRITEL(p, temp_working_addr, %s);'
         if argWords == []:
             paramStructMarshall = [paramStructMarshallStr % '0']
             paramStructDemarshall = [paramStructDemarshallStr]
@@ -332,10 +332,10 @@ class MethodMixin:
             'MethodName': capitalize(cName(self.name)),
             'paramDeclarations': ', '.join(paramDeclarations),
             'paramReferences': ', '.join([p.name for p in params]),
-            'paramStructDeclarations': ''.join(paramStructDeclarations),
-            'paramStructMarshall': ''.join(paramStructMarshall),
+            'paramStructDeclarations': '\n        '.join(paramStructDeclarations),
+            'paramStructMarshall': '\n    '.join(paramStructMarshall),
             'paramSeparator': ',' if params != [] else '',
-            'paramStructDemarshall': ''.join(paramStructDemarshall),
+            'paramStructDemarshall': '\n        '.join(paramStructDemarshall),
             'paramNames': ', '.join(['msg->%s' % p.name for p in params]),
             'resultType': resultTypeName,
             'methodChannelOffset': 'CHAN_NUM_%s_%s' % (className, cName(self.name)),
@@ -461,7 +461,7 @@ class InterfaceMixin:
         f.write(proxyClassPrefixTemplate % subs)
         for d in self.decls:
             d.emitMethodDeclaration(f, True, indentation + 4, namespace, className)
-        f.write('\n};\n')
+        f.write('};\n')
 	of.write('enum { ' + ','.join(reqChanNums) + '};\n')
         of.write('#define %(namespace)s%(className)s_reqsize (%(maxSize)s * sizeof(uint32_t))\n' % subs)
     def emitCWrapperDeclaration(self, f, of, cppf, suffix, indentation, namespace, maxSize, swInterface):
@@ -477,7 +477,7 @@ class InterfaceMixin:
         f.write(wrapperClassPrefixTemplate % subs)
         for d in self.decls:
             d.emitMethodDeclaration(f, False, indentation + 4, namespace, className)
-        f.write('\n};\n')
+        f.write('};\n')
         for d in self.decls:
             d.emitCStructDeclaration(cppf, of, namespace, className)
 	of.write('enum { ' + ','.join(indChanNums) + '};\n')
