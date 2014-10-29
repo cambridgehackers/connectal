@@ -957,7 +957,8 @@ def preprocess(source, defs):
             defs.append(sym)
             s = s[k:]
         else:
-            assert(False)
+            print 'unhandled preprocessor token', tok
+            assert(tok in ['ifdef', 'ifndef', 'else', 'endif', 'define'])
         prv = pre if valid and cond else '\n\n'
         return prv+pp('\n'+s)
 
