@@ -5,8 +5,8 @@
 #include <assert.h>
 #include <semaphore.h>
 
-#include "PcieTestBenchIndicationWrapper.h"
-#include "PcieTestBenchRequestProxy.h"
+#include "PcieTestBenchIndication.h"
+#include "PcieTestBenchRequest.h"
 #include "GeneratedTypes.h"
 
 

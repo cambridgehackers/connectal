@@ -34,10 +34,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "SmithwatermanIndicationWrapper.h"
-#include "SmithwatermanRequestProxy.h"
-#include "DmaDebugRequestProxy.h"
-#include "MMUConfigRequestProxy.h"
+#include "SmithwatermanIndication.h"
+#include "SmithwatermanRequest.h"
+#include "DmaDebugRequest.h"
+#include "MMUConfigRequest.h"
 
 
 sem_t test_sem;

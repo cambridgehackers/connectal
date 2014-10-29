@@ -27,10 +27,10 @@
 #include <semaphore.h>
 #include "StdDmaIndication.h"
 
-#include "DmaDebugRequestProxy.h"
-#include "MMUConfigRequestProxy.h"
-#include "PerfIndicationWrapper.h"
-#include "PerfRequestProxy.h"
+#include "DmaDebugRequest.h"
+#include "MMUConfigRequest.h"
+#include "PerfIndication.h"
+#include "PerfRequest.h"
 
 sem_t copy_sem;
 

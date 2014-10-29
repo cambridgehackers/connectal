@@ -5,11 +5,11 @@
 #include <semaphore.h>
 #include <unistd.h>
 
-#include "EchoIndicationWrapper.h"
-#include "DisplayIndWrapper.h"
-#include "EchoRequestProxy.h"
+#include "EchoIndication.h"
+#include "DisplayInd.h"
+#include "EchoRequest.h"
 #include "GeneratedTypes.h"
-#include "SwallowProxy.h"
+#include "Swallow.h"
 
 #define LOOP_COUNT 1//000
 #define SEPARATE_EVENT_THREAD

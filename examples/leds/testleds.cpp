@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <assert.h>
 
-#include "LedControllerRequestProxy.h"
+#include "LedControllerRequest.h"
 #include "GeneratedTypes.h"
 
 int main(int argc, const char **argv)

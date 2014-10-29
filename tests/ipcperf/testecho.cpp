@@ -7,10 +7,10 @@
 #include <pthread.h>
 #include <string.h>
 
-#include "EchoIndicationWrapper.h"
-#include "EchoRequestProxy.h"
+#include "EchoIndication.h"
+#include "EchoRequest.h"
 #include "GeneratedTypes.h"
-#include "SwallowProxy.h"
+#include "Swallow.h"
 #include <sys/ioctl.h>
 #include "zynqportal.h"
 #include <errno.h>

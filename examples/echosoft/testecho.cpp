@@ -20,8 +20,8 @@
  */
 
 #include <stdio.h>
-#include "SS_EchoRequestProxy.h"
-#include "SS_EchoIndicationWrapper.h"
+#include "SS_EchoRequest.h"
+#include "SS_EchoIndication.h"
 
 SS_EchoRequestProxy *sRequestProxy;
 static sem_t sem_heard2;

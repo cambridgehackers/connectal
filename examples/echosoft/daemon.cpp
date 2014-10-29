@@ -20,10 +20,10 @@
  */
 
 #include <stdio.h>
-#include "EchoRequestProxy.h"
-#include "EchoIndicationWrapper.h"
-#include "SS_EchoRequestWrapper.h"
-#include "SS_EchoIndicationProxy.h"
+#include "EchoRequest.h"
+#include "EchoIndication.h"
+#include "SS_EchoRequest.h"
+#include "SS_EchoIndication.h"
 
 EchoRequestProxy *echoRequestProxy;
 SS_EchoIndicationProxy *sIndicationProxy;

@@ -4,8 +4,8 @@
 #include <unistd.h>
 #include <assert.h>
 
-#include "SimpleIndicationWrapper.h"
-#include "SimpleRequestProxy.h"
+#include "SimpleIndication.h"
+#include "SimpleRequest.h"
 #include "GeneratedTypes.h"
 
 

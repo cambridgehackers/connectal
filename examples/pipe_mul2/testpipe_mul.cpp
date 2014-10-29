@@ -4,8 +4,8 @@
 #include <semaphore.h>
 #include <unistd.h>
 
-#include "PipeMulIndicationWrapper.h"
-#include "PipeMulRequestProxy.h"
+#include "PipeMulIndication.h"
+#include "PipeMulRequest.h"
 #include "GeneratedTypes.h"
 
 

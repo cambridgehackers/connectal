@@ -4,8 +4,8 @@
 #include <unistd.h>
 #include <assert.h>
 
-#include "MifoTestIndicationWrapper.h"
-#include "MifoTestRequestProxy.h"
+#include "MifoTestIndication.h"
+#include "MifoTestRequest.h"
 #include "GeneratedTypes.h"
 
 static uint32_t vs[4] = { 22, 0, 1, 2};

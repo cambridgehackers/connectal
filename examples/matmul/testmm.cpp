@@ -22,17 +22,17 @@
 // SOFTWARE.
 
 #ifdef MATRIX_NT
-#include "MmRequestNTProxy.h"
+#include "MmRequestNT.h"
 MmRequestNTProxy *mmdevice = 0;
 #else
 #ifdef MATRIX_TN
-#include "MmRequestTNProxy.h"
+#include "MmRequestTN.h"
 MmRequestTNProxy *mmdevice = 0;
 #endif
 #endif
-#include <MmIndicationWrapper.h>
-#include "DmaDebugRequestProxy.h"
-#include "MMUConfigRequestProxy.h"
+#include <MmIndication.h>
+#include "DmaDebugRequest.h"
+#include "MMUConfigRequest.h"
 #include <StdDmaIndication.h>
 #include <stdio.h>
 #include <sys/mman.h>

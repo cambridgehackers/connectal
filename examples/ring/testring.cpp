@@ -31,10 +31,10 @@
 #include <sys/time.h>
 
 #include "StdDmaIndication.h"
-#include "RingIndicationWrapper.h"
-#include "RingRequestProxy.h"
-#include "DmaDebugRequestProxy.h"
-#include "MMUConfigRequestProxy.h"
+#include "RingIndication.h"
+#include "RingRequest.h"
+#include "DmaDebugRequest.h"
+#include "MMUConfigRequest.h"
 
 RingRequestProxy *ring = 0;
 DmaConfigProxy *dmap = 0;

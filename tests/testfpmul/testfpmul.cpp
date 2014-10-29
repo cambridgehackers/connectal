@@ -32,8 +32,8 @@
 #include <assert.h>
 
 #include <GeneratedTypes.h>
-#include <FpMulRequestProxy.h>
-#include <FpMulIndicationWrapper.h>
+#include <FpMulRequest.h>
+#include <FpMulIndication.h>
 
 ////////////////////////////////////////////
 // 

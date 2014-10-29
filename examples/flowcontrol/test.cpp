@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-#include "SinkIndicationWrapper.h"
-#include "SinkRequestProxy.h"
+#include "SinkIndication.h"
+#include "SinkRequest.h"
 #include "GeneratedTypes.h"
 
 #include <stdio.h>

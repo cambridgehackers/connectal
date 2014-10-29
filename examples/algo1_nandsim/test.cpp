@@ -34,12 +34,12 @@
 #include <mp.h>
 
 #include "StdDmaIndication.h"
-#include "MMUConfigRequestProxy.h"
+#include "MMUConfigRequest.h"
 #include "GeneratedTypes.h" 
-#include "NandSimIndicationWrapper.h"
-#include "NandSimRequestProxy.h"
-#include "StrstrIndicationWrapper.h"
-#include "StrstrRequestProxy.h"
+#include "NandSimIndication.h"
+#include "NandSimRequest.h"
+#include "StrstrIndication.h"
+#include "StrstrRequest.h"
 
 static int trace_memory = 1;
 extern "C" {

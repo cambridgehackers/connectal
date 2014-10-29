@@ -16,12 +16,12 @@
 #include "ss.h"
 
 #include "StdDmaIndication.h"
-#include "MMUConfigRequestProxy.h"
+#include "MMUConfigRequest.h"
 #include "GeneratedTypes.h" 
-#include "NandSimIndicationWrapper.h"
-#include "NandSimRequestProxy.h"
-#include "StrstrIndicationWrapper.h"
-#include "StrstrRequestProxy.h"
+#include "NandSimIndication.h"
+#include "NandSimRequest.h"
+#include "StrstrIndication.h"
+#include "StrstrRequest.h"
 
 uint32_t io_time = 0;
 uint32_t comp_time = 0;

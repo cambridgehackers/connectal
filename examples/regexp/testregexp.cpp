@@ -32,10 +32,10 @@
 #include <sys/stat.h>
 
 #include "StdDmaIndication.h"
-#include "RegexpIndicationWrapper.h"
-#include "RegexpRequestProxy.h"
-#include "DmaDebugRequestProxy.h"
-#include "MMUConfigRequestProxy.h"
+#include "RegexpIndication.h"
+#include "RegexpRequest.h"
+#include "DmaDebugRequest.h"
+#include "MMUConfigRequest.h"
 
 #include "regex-matcher.h"
 #include "jregexp.h"

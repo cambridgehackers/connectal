@@ -28,12 +28,12 @@
 
 #include "StdDmaIndication.h"
 
-#include "BlueScopeIndicationWrapper.h"
-#include "BlueScopeRequestProxy.h"
-#include "DmaDebugRequestProxy.h"
-#include "MMUConfigRequestProxy.h"
-#include "MemcpyIndicationWrapper.h"
-#include "MemcpyRequestProxy.h"
+#include "BlueScopeIndication.h"
+#include "BlueScopeRequest.h"
+#include "DmaDebugRequest.h"
+#include "MMUConfigRequest.h"
+#include "MemcpyIndication.h"
+#include "MemcpyRequest.h"
 
 sem_t done_sem;
 int srcAlloc;
