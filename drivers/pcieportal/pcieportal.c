@@ -82,8 +82,8 @@ static unsigned long long expected_magic = 'B' | ((unsigned long long) 'l' << 8)
 static irqreturn_t intr_handler(int irq, void *p)
 {
         tPortal *this_portal = p;
-
-        printk(KERN_INFO "%s_%d: interrupt!\n", DEV_NAME, this_portal->portal_number);
+	uint32_t iid = (volatile uint32_t *)(this_portal->regs + 4);
+        printk(KERN_INFO "%s_%d: interrupt! (%d, %d)\n", DEV_NAME, this_portal->portal_number, iid, this_portal->device_name);
         wake_up_interruptible(&(this_portal->extra->wait_queue)); 
         return IRQ_HANDLED;
 }
@@ -102,8 +102,8 @@ static int pcieportal_open(struct inode *inode, struct file *filp)
         tBoard *this_board = &board_map[this_board_number];
         tPortal *this_portal = &this_board->portal[this_portal_number];
 
-        printk("pcieportal_open: device_number=%x board_number=%d portal_number=%d\n",
-             device_number, this_board_number, this_portal_number);
+        printk("pcieportal_open: device_number=%x board_number=%d portal_number=%d device_name=%d\n",
+	       device_number, this_board_number, this_portal_number, this_portal->device_name);
         if (!this_board) {
                 printk(KERN_ERR "%s_%d: Unable to locate board\n", DEV_NAME, this_board_number);
                 return -ENXIO;
@@ -344,8 +344,10 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
                         goto err_exit;
                 }
         if (activate) {
-        	for (i = 0; i < MAX_NUM_PORTALS; i++)
-        		init_waitqueue_head(&(this_board->portal[i].extra->wait_queue));
+   	        for (i = 0; i < MAX_NUM_PORTALS; i++)
+		  this_board->portal[i].device_name = -1;
+   	        for (i = 0; i < MAX_NUM_PORTALS; i++)
+		  init_waitqueue_head(&(this_board->portal[i].extra->wait_queue));
                 this_board->pci_dev = dev;
                 /* enable the PCI device */
                 if (pci_enable_device(dev)) {
