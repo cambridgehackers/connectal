@@ -81,7 +81,7 @@ module %(moduleContext)s mk%(Dut)sPortalSynth#(Bit#(32) id) (%(Dut)sPortal);
     Vector#(0, PipeIn#(Bit#(32))) requestPipes = nil;
     Vector#(%(channelCount)s, PipeOut#(Bit#(32))) indicationPipes = newVector();
 %(indicationMethodRules)s
-    interface %(Ifc)s ifc;
+    interface %(Package)s::%(Ifc)s ifc;
 %(indicationMethods)s
     endinterface
 %(portalIfc)s
@@ -101,7 +101,7 @@ module mk%(Dut)sSynth#(Bit#(32) id)(%(Dut)s);
   let dut <- mk%(Dut)sPortal(id);
   let memPortal <- mkMemPortal(id, dut.portalIfc);
   interface MemPortal portalIfc = memPortal;
-  interface %(Ifc)s ifc = dut.ifc;
+  interface %(Package)s::%(Ifc)s ifc = dut.ifc;
 endmodule
 
 // exposed proxy MemPortal
