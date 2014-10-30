@@ -384,6 +384,8 @@ class TypeDefMixin:
         #print 'TypeDefMixin.emitCdeclaration', self.tdtype.type, self.name, self.tdtype
         if self.tdtype.type == 'Struct' or self.tdtype.type == 'Enum':
             self.tdtype.emitCDeclaration(self.name,f,indentation,namespace)
+        elif self.name == 'SpecialTypeForSendingFd':
+            pass
         elif False and self.tdtype.type == 'Type':
             tdtype = self.tdtype
             #print 'resolving', tdtype.type, tdtype

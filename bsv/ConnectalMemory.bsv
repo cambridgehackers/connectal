@@ -71,7 +71,7 @@ interface MMUConfigIndication;
    method Action error(Bit#(32) code, Bit#(32) sglId, Bit#(64) offset, Bit#(64) extra);
 endinterface
 
-typedef enum {MinFd,MaxFd=65000 } SpecialTypeForSendingFd deriving (Bits,Eq,FShow);
+typedef Bit#(32) SpecialTypeForSendingFd;
 //
 // @brief Configuration interface to an MMU
 //
