@@ -40,9 +40,10 @@ public:
 '''
 
 wrapperClassPrefixTemplate='''
+extern %(className)sCb %(className)s_cbTable;
 class %(namespace)s%(className)s : public %(parentClass)s {
 public:
-    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, %(namespace)s%(className)s_reqsize, %(namespace)s%(className)s_handleMessage, NULL, poller) {
+    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, %(namespace)s%(className)s_reqsize, %(namespace)s%(className)s_handleMessage, (void *)&%(className)s_cbTable, poller) {
         pint.parent = static_cast<void *>(this);
     };
 '''
@@ -169,7 +170,7 @@ class MethodMixin:
         formalParams = self.formalParameters(self.params)
         formalParams.insert(0, ' struct PortalInternal *p')
         methodName = cName(self.name)
-        of.write('void %s%s_cb ( ' % (className, methodName))
+        of.write('    void (*%s) ( ' % methodName)
         of.write(', '.join(formalParams))
         of.write(' );\n')
         f.write('void %s%s_cb ( ' % (className, methodName))
@@ -353,7 +354,7 @@ class MethodMixin:
         elif (not proxy):
             respParams = [p.name for p in self.params]
             respParams.insert(0, 'p')
-            substs['responseCase'] = ('%(className)s%(name)s_cb(%(params)s);'
+            substs['responseCase'] = ('((%(className)sCb *)p->cb)->%(name)s(%(params)s);'
                                       % { 'name': self.name,
                                           'className' : className,
                                           'params': ', '.join(respParams)})
@@ -495,8 +496,14 @@ class InterfaceMixin:
         for d in self.decls:
             d.emitMethodDeclaration(f, False, indentation + 4, namespace, className)
         f.write('};\n')
+        of.write('typedef struct {\n');
         for d in self.decls:
             d.emitCStructDeclaration(cppf, of, namespace, className)
+        of.write('} %sCb;\n' % className);
+        cppf.write('%sCb %s_cbTable = {\n' % (className, className));
+        for d in self.decls:
+            cppf.write('    %s%s_cb,\n' % (className, d.name));
+        cppf.write('};\n');
 	of.write('enum { ' + ','.join(indChanNums) + '};\n')
         of.write('#define %(namespace)s%(className)s_reqsize (%(maxSize)s * sizeof(uint32_t))\n' % subs)
     def emitCProxyImplementation(self, f, hpp, namespace, swInterface):
