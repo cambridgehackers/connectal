@@ -193,6 +193,8 @@ class MethodMixin:
                     return [('%s%s'%(scope,member.name),t)]
                 elif tn == 'Vector':
                     return [('%s%s'%(scope,member.name),t)]
+                elif tn == 'SpecialTypeForSendingFd':
+                    return [('%s%s'%(scope,member.name),t)]
                 else:
                     td = globalv.globalvars[tn]
                     #print 'instantiate', t.params
@@ -203,8 +205,6 @@ class MethodMixin:
                         rv = map(functools.partial(collectMembers, ns), tdtype.elements)
                         return sum(rv,[])
                     elif tdtype.type == 'Enum':
-                        return [('%s%s'%(scope,member.name),tdtype)]
-                    elif tn == 'SpecialTypeForSendingFd':
                         return [('%s%s'%(scope,member.name),tdtype)]
                     else:
                         #print 'resolved to type', tdtype.type, tdtype.name, tdtype
@@ -283,7 +283,7 @@ class MethodMixin:
                     field = '(const %s & std::bitset<%d>(0xFFFFFFFF)).to_ulong()' % (field, e.datatype.bitWidth())
                 word.append(field)
                 off = off+e.width-e.shifted
-		if e.datatype.cName() == 'SpecialTypeForSendingFdL_32_P':
+		if e.datatype.cName() == 'SpecialTypeForSendingFd':
                     fdname = field
                     fmt = 'p->item->writefd(p, &temp_working_addr, %s);'
             return fmt % (''.join(util.intersperse('|', word)))

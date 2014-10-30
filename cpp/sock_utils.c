@@ -279,6 +279,7 @@ void write_portal_fd_bsim(PortalInternal *pint, volatile unsigned int **addr, un
 {
   struct memrequest foo = {pint->fpga_number, 1,*addr,v};
 
+printf("[%s:%d] fd %d\n", __FUNCTION__, __LINE__, v);
   portalSendFd(global_sockfd, &foo, sizeof(foo), v);
 }
 #else // __KERNEL__
