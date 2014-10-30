@@ -131,6 +131,8 @@ void PortalPoller::portalExec_stop(void)
 void PortalPoller::portalExec_end(void)
 {
     stopping = 1;
+    printf("%s: don't disable interrupts when stopping\n", __FUNCTION__);
+    return;
     for (int i = 0; i < numWrappers; i++) {
       Portal *instance = portal_wrappers[i];
       fprintf(stderr, "portalExec::disabling interrupts portal %d fpga%d\n", i, instance->pint.fpga_number);
