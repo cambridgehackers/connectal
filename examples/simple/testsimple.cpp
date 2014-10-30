@@ -4,8 +4,7 @@
 #include <unistd.h>
 #include <assert.h>
 
-#include "SimpleIndication.h"
-#include "SimpleRequest.h"
+#include "Simple.h"
 #include "GeneratedTypes.h"
 
 
@@ -31,7 +30,7 @@ E1 v7b = E1_E1Choice2;
 S3 s3 = { a: v7a, e1: v7b };
 
 
-class SimpleIndication : public SimpleIndicationWrapper
+class Simple : public SimpleWrapper
 {  
 public:
   uint32_t cnt;
@@ -83,15 +82,15 @@ public:
     assert(b == v7b);
     incr_cnt();
   }
-  SimpleIndication(unsigned int id) : SimpleIndicationWrapper(id), cnt(0){}
+  Simple(unsigned int id) : SimpleWrapper(id), cnt(0){}
 };
 
 
 
 int main(int argc, const char **argv)
 {
-  SimpleIndication *indication = new SimpleIndication(IfcNames_SimpleIndication);
-  SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequest);
+  Simple *indication = new Simple(IfcNames_SimpleIndication);
+  SimpleProxy *device = new SimpleProxy(IfcNames_SimpleRequest);
 
   portalExec_start();
 
