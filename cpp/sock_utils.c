@@ -233,14 +233,12 @@ static int shared_response_valid;
 int poll_response(int id)
 {
   if (!shared_response_valid) {
-      pthread_mutex_lock(&socket_mutex);
       if (portalRecv(global_sockfd, &shared_response, sizeof(shared_response)) == sizeof(shared_response)) {
           if (shared_response.portal == MAGIC_PORTAL_FOR_SENDING_INTERRUPT)
               interrupt_value = shared_response.data;
           else
               shared_response_valid = 1;
       }
-      pthread_mutex_unlock(&socket_mutex);
   }
   return shared_response_valid && shared_response.portal == id;
 }
@@ -248,7 +246,9 @@ unsigned int bsim_poll_interrupt(void)
 {
   if (global_sockfd == -1)
       return 0;
+  pthread_mutex_lock(&socket_mutex);
   poll_response(-1);
+  pthread_mutex_unlock(&socket_mutex);
   return interrupt_value;
 }
 /* functions called by READL() and WRITEL() macros in application software */
@@ -257,6 +257,7 @@ unsigned int read_portal_bsim(PortalInternal *pint, volatile unsigned int **addr
 {
   struct memrequest foo = {pint->fpga_number, 0,*addr,0};
 
+  pthread_mutex_lock(&socket_mutex);
   foo.data_or_tag = tag_counter++;
   portalSend(global_sockfd, &foo, sizeof(foo));
   while (!poll_response(pint->fpga_number)) {
@@ -266,6 +267,7 @@ unsigned int read_portal_bsim(PortalInternal *pint, volatile unsigned int **addr
   }
   unsigned int rc = shared_response.data;
   shared_response_valid = 0;
+  pthread_mutex_unlock(&socket_mutex);
   return rc;
 }
 
