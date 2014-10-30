@@ -88,44 +88,10 @@ void MMUConfigIndicationWrapperidResponse_cb (  struct PortalInternal *p, const 
   sem_post(&priv.sglIdSem);
 }
 
-void DmaDebugIndicationWrapperaddrResponse_cb (  struct PortalInternal *p, const uint64_t physAddr )
-{
-  PORTAL_PRINTF("cb: DmaDebugIndicationWrapperaddrResponse_cb\n");
-}
-
-void DmaDebugIndicationWrapperreportStateDbg_cb (  struct PortalInternal *p, const DmaDbgRec rec )
-{
-  PORTAL_PRINTF("cb: DmaDebugIndicationWrapperreportStateDbg_cb\n");
-  sem_post(&priv.dbgSem);
-}
-
-void DmaDebugIndicationWrapperreportMemoryTraffic_cb (  struct PortalInternal *p, const uint64_t words )
-{
-  PORTAL_PRINTF("cb: DmaDebugIndicationWrapperreportMemoryTraffic_cb\n");
-  priv.mtCnt = words;
-  sem_post(&priv.mtSem);
-}
-
-void DmaDebugIndicationWrappererror_cb (  struct PortalInternal *p, const uint32_t code, const uint32_t pointer, const uint64_t offset, const uint64_t extra ) 
-{
-  PORTAL_PRINTF("cb: DmaDebugIndicationWrappererror_cb\n");
-}
-
 void MMUConfigIndicationWrappererror_cb (  struct PortalInternal *p, const uint32_t code, const uint32_t pointer, const uint64_t offset, const uint64_t extra ) 
 {
   PORTAL_PRINTF("cb: MMUConfigIndicationWrappererror_cb\n");
 }
-
-void StrstrIndicationWrappersearchResult_cb (  struct PortalInternal *p, const int v ) {
-  PORTAL_PRINTF("cb: StrstrIndicationWrappersearchResult_cb\n");
-};
-
-void StrstrIndicationWrappersetupComplete_cb (  struct PortalInternal *p ) {
-  PORTAL_PRINTF("cb: StrstrIndicationWrappersetupComplete_cb\n");
-};
-
-
-
 
 void manual_event(void)
 {
@@ -163,7 +129,17 @@ static void *pthread_worker(void *p)
 #endif
     return rc;
 }
-
+NandSimIndicationWrapperCb NandSimIndication_cbTable = {
+    NandSimIndicationWrappereraseDone_cb,
+    NandSimIndicationWrapperwriteDone_cb,
+    NandSimIndicationWrapperreadDone_cb,
+    NandSimIndicationWrapperconfigureNandDone_cb,
+};
+MMUConfigIndicationWrapperCb MMUConfigIndication_cbTable = {
+    MMUConfigIndicationWrapperconfigResp_cb,
+    MMUConfigIndicationWrapperidResponse_cb,
+    MMUConfigIndicationWrappererror_cb,
+};
 int main(int argc, const char **argv)
 {
   int srcAlloc;
@@ -176,10 +152,10 @@ int main(int argc, const char **argv)
   pthread_t tid = 0;
 
 
-  init_portal_internal(&intarr[2], IfcNames_BackingStoreMMUConfigRequest, NULL, MMUConfigRequestProxy_reqsize);         // fpga3
-  init_portal_internal(&intarr[0], IfcNames_BackingStoreMMUConfigIndication, MMUConfigIndicationWrapper_handleMessage, MMUConfigIndicationWrapper_reqsize);     // fpga1
-  init_portal_internal(&intarr[3], IfcNames_NandSimRequest, NULL, NandSimRequestProxy_reqsize);    // fpga4
-  init_portal_internal(&intarr[1], IfcNames_NandSimIndication, NandSimIndicationWrapper_handleMessage, NandSimIndicationWrapper_reqsize); // fpga2
+  init_portal_internal(&intarr[2], IfcNames_BackingStoreMMUConfigRequest, NULL, NULL, MMUConfigRequestProxy_reqsize);         // fpga3
+  init_portal_internal(&intarr[0], IfcNames_BackingStoreMMUConfigIndication, MMUConfigIndicationWrapper_handleMessage, MMUConfigIndication_cbTable, MMUConfigIndicationWrapper_reqsize);     // fpga1
+  init_portal_internal(&intarr[3], IfcNames_NandSimRequest, NULL, NULL, NandSimRequestProxy_reqsize);    // fpga4
+  init_portal_internal(&intarr[1], IfcNames_NandSimIndication, NandSimIndicationWrapper_handleMessage, NandSimIndication_cbTable, NandSimIndicationWrapper_reqsize); // fpga2
 
   DmaManager_init(&priv, NULL, &intarr[2]);
   sem_init(&test_sem, 0, 0);

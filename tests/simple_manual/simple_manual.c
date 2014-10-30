@@ -45,11 +45,14 @@ static void manual_event(void)
       portalCheckIndication(&intarr[i]);
 }
 
+SimpleIndicationWrapperCb SimpleIndication_cbTable = {
+   SimpleIndicationWrapperheard1_cb,
+   SimpleIndicationWrapperheard2_cb,
+};
 int main(int argc, const char **argv)
 {
-
-   init_portal_internal(&intarr[0], IfcNames_SimpleRequest, NULL, SimpleRequestProxy_reqsize); // portal 1
-   init_portal_internal(&intarr[1], IfcNames_SimpleIndication, SimpleIndicationWrapper_handleMessage, SimpleIndicationWrapper_reqsize); // portal 2
+   init_portal_internal(&intarr[0], IfcNames_SimpleRequest, NULL, NULL, SimpleRequestProxy_reqsize); // portal 1
+   init_portal_internal(&intarr[1], IfcNames_SimpleIndication, SimpleIndicationWrapper_handleMessage, (void *)&SimpleIndication_cbTable, SimpleIndicationWrapper_reqsize); // portal 2
 
    portalEnableInterrupts(&intarr[0], 0);
    portalEnableInterrupts(&intarr[1], 0);
