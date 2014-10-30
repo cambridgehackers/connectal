@@ -215,6 +215,13 @@ def t_error(t):
     print "Illegal character '%s' in file '%s'" % (t.value[0], globalfilename)
     t.lexer.skip(1)
 
+def p_error(errtoken):
+    if hasattr(errtoken, 'lineno'):
+        sys.stderr.write("%s:%d: Syntax error, token=%s\n" % (globalfilename, errtoken.lineno, errtoken.type))
+    else:
+        sys.stderr.write("%s: Syntax error, token=%s\n" % (globalfilename, errtoken.lineno, errtoken.type))
+    return None
+    
 def t_VAR(t):
     r'`?([a-zA-Z_][$a-zA-Z0-9_]*)|(\\[-+*/%][*]?)'
     t.type = reserved.get(t.value,'VAR')    
