@@ -76,10 +76,10 @@ public:
     assert(c == v6c);
     incr_cnt();
   }
-  virtual void say7(uint32_t a, E1 b) {
-    fprintf(stderr, "say7(%08x, %08x)\n", a, b);
-    assert(a == v7a);
-    assert(b == v7b);
+  virtual void say7(S3 v) {
+    fprintf(stderr, "say7(%08x, %08x)\n", v.a, v.e1);
+    assert(v.a == v7a);
+    assert(v.e1 == v7b);
     incr_cnt();
   }
   Simple(unsigned int id) : SimpleWrapper(id), cnt(0){}

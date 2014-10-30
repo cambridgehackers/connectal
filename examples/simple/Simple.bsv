@@ -98,7 +98,7 @@ module mkSimple#(Simple indication)(Simple);
 
    method Action say7(S3 v);
       if (verbose) $display("mkSimple::say7");
-      indication.say7(v.a, v.e1);
+      indication.say7(v);
    endmethod
 
 endmodule
