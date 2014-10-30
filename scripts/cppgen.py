@@ -613,10 +613,12 @@ def generateProxy(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles
         if not swInterface:
             maxSize = 0
         i.emitCProxyDeclaration(hpp, generated_hpp, 0, '', maxSize, swInterface)
+        cpp.write('#ifndef NO_WRAPPER_FUNCTIONS\n')
         maxSize = i.emitCWrapperImplementation(cpp, generated_hpp, '', swInterface)
         if not swInterface:
             maxSize = 0
         i.emitCWrapperDeclaration(hpp, generated_hpp, generated_cpp, 0, '', maxSize, swInterface)
+        cpp.write('#endif /*NO_WRAPPER_FUNCTIONS*/\n')
     hpp.write('#endif // _%(name)s_H_\n' % {'name': myname.upper()})
     hpp.close();
     cpp.close();
