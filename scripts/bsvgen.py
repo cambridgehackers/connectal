@@ -69,11 +69,11 @@ exposedProxyInterfaceTemplate='''
 // exposed proxy interface
 interface %(Dut)sPortal;
     interface PipePortal#(%(requestChannelCount)s, %(indicationChannelCount)s, 32) portalIfc;
-    interface %(Ifc)s ifc;
+    interface %(Package)s::%(Ifc)s ifc;
 endinterface
 interface %(Dut)s;
     interface StdPortal portalIfc;
-    interface %(Ifc)s ifc;
+    interface %(Package)s::%(Ifc)s ifc;
 endinterface
 
 (* synthesize *)
@@ -344,6 +344,7 @@ class InterfaceMixin:
         m.update(self.name)
 
         substs = {
+            'Package': os.path.splitext(os.path.basename(self.package))[0],
             'Ifc': self.name,
             'dut': dutName,
             'Dut': util.capitalize(name),
@@ -446,8 +447,8 @@ def generate_bsv(globalimports, project_dir, noisyFlag, hwProxies, hwWrappers, d
     generatedPackageNames = (['%sWrapper' % i.name for i in hwWrappers]
                              + ['%sProxy' % i.name for i in hwProxies])
     for i in hwWrappers:
-        create_bsv_package('%sWrapper' % i.name, exposedWrapperInterfaceTemplate % i.substs('Wrapper',False), i.package, generatedPackageNames)
+        create_bsv_package('%sWrapper' % i.name, exposedWrapperInterfaceTemplate % i.substs('Wrapper',False), [i.package], generatedPackageNames)
         
     for i in hwProxies:
-        create_bsv_package('%sProxy' % i.name, exposedProxyInterfaceTemplate % i.substs("Proxy",True), i.package, generatedPackageNames)
+        create_bsv_package('%sProxy' % i.name, exposedProxyInterfaceTemplate % i.substs("Proxy",True), [i.package], generatedPackageNames)
 

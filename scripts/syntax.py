@@ -883,7 +883,7 @@ def p_typeClassDecl(p):
     p[0] = AST.Typeclass(p[2])
 
 globalimports = []
-globalfilename = []
+globalfilename = None
 
 def p_packageStmt(p):
     '''packageStmt : interfaceDecl
@@ -971,7 +971,7 @@ def syntax_parse(argdata, inputfilename, bsvdefines):
     if not (parserdir in sys.path):
         sys.path.append(parserdir)
     parser = yacc.yacc(optimize=1,errorlog=yacc.NullLogger(),outputdir=parserdir,debugfile=parserdir+'/parser.out')
-    globalfilename = [inputfilename]
+    globalfilename = inputfilename
     if noisyFlag:
         print 'Parsing:', inputfilename
     return  parser.parse(data)
