@@ -82,8 +82,7 @@ static unsigned long long expected_magic = 'B' | ((unsigned long long) 'l' << 8)
 static irqreturn_t intr_handler(int irq, void *p)
 {
         tPortal *this_portal = p;
-	uint32_t iid = (volatile uint32_t *)(this_portal->regs + 4);
-        printk(KERN_INFO "%s_%d: interrupt! (%d, %d)\n", DEV_NAME, this_portal->portal_number, iid, this_portal->device_name);
+        //printk(KERN_INFO "%s_%d: interrupt! (num:%d name:%d)\n", DEV_NAME, this_portal->portal_number, this_portal->portal_number, this_portal->device_name);
         wake_up_interruptible(&(this_portal->extra->wait_queue)); 
         return IRQ_HANDLED;
 }
