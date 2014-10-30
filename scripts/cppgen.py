@@ -608,7 +608,8 @@ def generateProxy(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles
     hpp.write('#include "%s.h"\n' % i.parentClass("portal"))
     generated_cpp.write('\n/************** Start of %sWrapper CPP ***********/\n' % myname)
     generated_cpp.write('#include "%s"\n' % hppname)
-    for swInterface in ['', 'SS_']:
+    #for swInterface in ['', 'SS_']:
+    for swInterface in ['']:
         maxSize = i.emitCProxyImplementation(cpp, generated_hpp, "", swInterface)
         if not swInterface:
             maxSize = 0
