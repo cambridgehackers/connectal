@@ -83,6 +83,7 @@ typedef unsigned int tTlpData[6];
  */
 typedef struct {
         unsigned int      portal_number;
+        unsigned int      device_name;
         struct tBoard    *board;
         void             *virt;
         volatile uint32_t *regs;

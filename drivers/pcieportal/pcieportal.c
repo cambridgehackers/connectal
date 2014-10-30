@@ -83,7 +83,7 @@ static irqreturn_t intr_handler(int irq, void *p)
 {
         tPortal *this_portal = p;
 
-        //printk(KERN_INFO "%s_%d: interrupt!\n", DEV_NAME, this_portal->portal_number);
+        printk(KERN_INFO "%s_%d: interrupt!\n", DEV_NAME, this_portal->portal_number);
         wake_up_interruptible(&(this_portal->extra->wait_queue)); 
         return IRQ_HANDLED;
 }
@@ -115,6 +115,7 @@ static int pcieportal_open(struct inode *inode, struct file *filp)
         //printk(KERN_INFO "%s_%d: Opened device file\n", DEV_NAME, this_board_number);
         // FIXME: why does the kernel think this device is RDONLY?
         filp->f_mode |= FMODE_WRITE;
+
         return err;
 }
 
@@ -177,7 +178,7 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
         case BNOC_IDENTIFY:
                 /* copy board identification info to a user-space struct */
                 info = this_board->info;
-                info.portal_number = this_portal->portal_number;
+		info.portal_number = this_portal->portal_number;
                 if (1) {        // msix info
 		  int i;
 		  for (i = 0; i < 16; i++)
@@ -313,6 +314,7 @@ static int portal_mmap(struct file *filp, struct vm_area_struct *vma)
         if (io_remap_pfn_range(vma, vma->vm_start, off >> PAGE_SHIFT,
              vma->vm_end - vma->vm_start, vma->vm_page_prot))
                 return -EAGAIN;
+
         return 0;
 }
 
@@ -445,7 +447,8 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		  printk("%s:%d fpn=%08x iid=%d top=%d\n", __func__, __LINE__, fpn, iid, top);
 		  int fpga_number = this_board->info.board_number * MAX_NUM_PORTALS + fpn;
 		  dev_t this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + fpga_number);
-		  this_board->portal[fpn].portal_number = iid;
+		  this_board->portal[fpn].portal_number = fpn;
+		  this_board->portal[fpn].device_name = iid;
 		  this_board->portal[fpn].board = this_board;
 		  if (this_board->bar2io) {
 		    this_board->portal[fpn].regs = (volatile uint32_t *)(this_board->bar2io + 0x10000 * fpn + reg_offset);
@@ -478,7 +481,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
         /******** deactivate board *******/
 	int fpn = 0;
 	while(fpn < this_board->info.num_portals) {
-    	        u32 iid = this_board->portal[fpn].portal_number;
+    	        u32 iid = this_board->portal[fpn].device_name;
 		  /* remove device node in udev */
                 int fpga_number = this_board->info.board_number * MAX_NUM_PORTALS + fpn;
 		dev_t this_device_number = MKDEV(MAJOR(device_number),MINOR(device_number) + fpga_number);

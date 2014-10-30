@@ -169,7 +169,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
 
 exitlab:
     if (rc != 0) {
-      PORTAL_PRINTF("%s: failed to open Portal fpga%d\n", __FUNCTION__, pint->fpga_number);
+      PORTAL_PRINTF("%s: failed to open Portal portal%d\n", __FUNCTION__, pint->fpga_number);
 #ifndef __KERNEL__
       exit(1);
 #endif
