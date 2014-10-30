@@ -85,11 +85,11 @@ int PortalPoller::registerInstance(Portal *portal)
     numWrappers++;
     fprintf(stderr, "Portal::registerInstance fpga%d fd %d\n", portal->pint.fpga_number, portal->pint.fpga_fd);
     portal_wrappers = (Portal **)realloc(portal_wrappers, numWrappers*sizeof(Portal *));
-    portal_fds = (struct pollfd *)realloc(portal_fds, numWrappers*sizeof(struct pollfd));
     portal_wrappers[numWrappers-1] = portal;
 
     if (portal->pint.fpga_fd != -1) {
         numFds++;
+        portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
         struct pollfd *pollfd = &portal_fds[numFds-1];
         memset(pollfd, 0, sizeof(struct pollfd));
         pollfd->fd = portal->pint.fpga_fd;
@@ -103,8 +103,9 @@ void* PortalPoller::portalExec_init(void)
     portalExec_timeout = -1; // no interrupt timeout 
 #ifdef BSIM
     if (global_sockfd != -1) {
-      portalExec_timeout = 100;
+        portalExec_timeout = 100;
         numFds++;
+        portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
         struct pollfd *pollfd = &portal_fds[numFds-1];
         memset(pollfd, 0, sizeof(struct pollfd));
         pollfd->fd = global_sockfd;
@@ -197,10 +198,13 @@ void* PortalPoller::portalExec_event(void)
       if (instance->pint.fpga_fd == -1 && !bsim_poll_interrupt())
         continue;
 #endif
-      while ((queue_status= READL(&instance->pint, &map_base[PORTAL_CTRL_REG_IND_QUEUE_STATUS]))) {
+      volatile unsigned int *statp = &map_base[PORTAL_CTRL_REG_IND_QUEUE_STATUS];
+      volatile unsigned int *srcp = &map_base[PORTAL_CTRL_REG_INTERRUPT_STATUS];
+      volatile unsigned int *enp = &map_base[PORTAL_CTRL_REG_INTERRUPT_ENABLE];
+      while ((queue_status= READL(&instance->pint, &statp))) {
         if(0) {
-          unsigned int int_src = READL(&instance->pint, &map_base[PORTAL_CTRL_REG_INTERRUPT_STATUS]);
-          unsigned int int_en  = READL(&instance->pint, &map_base[PORTAL_CTRL_REG_INTERRUPT_ENABLE]);
+          unsigned int int_src = READL(&instance->pint, &srcp);
+          unsigned int int_en  = READL(&instance->pint, &enp);
           fprintf(stderr, "(%d:fpga%d) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->pint.fpga_number, int_src, int_en, queue_status);
         }
         if (!instance->pint.handler) {

@@ -286,7 +286,7 @@ class MethodMixin:
                 off = off+e.width-e.shifted
 		if e.datatype.cName() == 'SpecialTypeForSendingFdL_32_P':
                     fdname = field
-                    fmt = 'WRITEFD(p, temp_working_addr, %s);'
+                    fmt = 'WRITEFD(p, &temp_working_addr, %s);'
             return fmt % (''.join(util.intersperse('|', word)))
 
         def generate_demarshall(w):
@@ -315,8 +315,8 @@ class MethodMixin:
             paramStructDemarshallStr = 'tmp = *temp_working_addr++;'
             paramStructMarshallStr = '*temp_working_addr++ = %s;'
         else:
-            paramStructDemarshallStr = 'tmp = READL(p, temp_working_addr);'
-            paramStructMarshallStr = 'WRITEL(p, temp_working_addr, %s);'
+            paramStructDemarshallStr = 'tmp = READL(p, &temp_working_addr);'
+            paramStructMarshallStr = 'WRITEL(p, &temp_working_addr, %s);'
         if argWords == []:
             paramStructMarshall = [paramStructMarshallStr % '0']
             paramStructDemarshall = [paramStructDemarshallStr]

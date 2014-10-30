@@ -62,6 +62,15 @@ typedef int SpecialTypeForSendingFd;   /* for GeneratedTypes.h */
 typedef SpecialTypeForSendingFd SpecialTypeForSendingFdL_32_P;
 struct PortalInternal;
 typedef int (*PORTAL_INDFUNC)(struct PortalInternal *p, unsigned int channel);
+typedef unsigned int (*READWORD)(struct PortalInternal *pint, volatile unsigned int *addr);
+typedef void (*WRITEWORD)(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
+typedef void (*WRITEFDWORD)(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
+typedef struct {
+READWORD read;
+WRITEWORD write;
+WRITEFDWORD writefd;
+} PortalItemFunctions;
+
 typedef struct PortalInternal {
   struct PortalPoller   *poller;
   int                    fpga_fd;
@@ -71,6 +80,7 @@ typedef struct PortalInternal {
   PORTAL_INDFUNC         handler;
   uint32_t               reqsize;
   int                    accept_finished;
+  PortalItemFunctions    *item;
 } PortalInternal;
 
 #ifdef __KERNEL__
@@ -99,9 +109,9 @@ extern "C" {
 #endif
 void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, uint32_t reqsize);
 uint64_t portalCycleCount(void);
-unsigned int read_portal_bsim(volatile unsigned int *addr, int id);
-void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id);
-void write_portal_fd_bsim(volatile unsigned int *addr, unsigned int v, int id);
+unsigned int read_portal_bsim(PortalInternal *pint, volatile unsigned int **addr);
+void write_portal_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
+void write_portal_fd_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 
 // uses the default poller
 void* portalExec(void* __x);
@@ -149,17 +159,17 @@ extern PortalInternal *utility_portal;
 #define MAX_TIMERS 50
 
 #if !defined(BSIM)
-#define READL(CITEM, A)     (*(A))
-#define WRITEL(CITEM, A, B) (*(A) = (B))
-#define WRITEFD(CITEM, A, B) (*(A) = (B))
+#define READL(CITEM, A)     (**(A))
+#define WRITEL(CITEM, A, B) (**(A) = (B))
+#define WRITEFD(CITEM, A, B) (**(A) = (B))
 #define SSWRITE(CITEM, B, C) {\
     *(CITEM)->map_base = (B); \
     portalSendFd((CITEM)->fpga_fd, (void *)(CITEM)->map_base, (((B) & 0xffff) +1) * sizeof(uint32_t), (C)); \
     }
 #else
-#define READL(CITEM, A)     read_portal_bsim((A), (CITEM)->fpga_number)
-#define WRITEL(CITEM, A, B) write_portal_bsim((A), (B), (CITEM)->fpga_number)
-#define WRITEFD(CITEM, A, B) write_portal_fd_bsim((A), (B), (CITEM)->fpga_number)
+#define READL(CITEM, A)     read_portal_bsim((CITEM), (A))
+#define WRITEL(CITEM, A, B) write_portal_bsim((CITEM), (A), (B))
+#define WRITEFD(CITEM, A, B) write_portal_fd_bsim((CITEM), (A), (B))
 #define SSWRITE(CITEM, B, C) {\
     *(CITEM)->map_base = (B); \
     portalSendFd((CITEM)->fpga_fd, (void *)(CITEM)->map_base, (((B) & 0xffff) +1) * sizeof(uint32_t), (C)); \
@@ -167,7 +177,8 @@ extern PortalInternal *utility_portal;
 #endif
 #define BUSY_WAIT(CITEM, A, STR) { \
     int __i = 50; \
-    while (!READL((CITEM), (A) + 1) && __i-- > 0) \
+    volatile unsigned int *tempp = (A) + 1; \
+    while (!READL((CITEM), &tempp) && __i-- > 0) \
         ; /* busy wait a bit on 'fifo not full' */ \
     if (__i <= 0){ \
         PORTAL_PRINTF(("putFailed: " STR "\n")); \

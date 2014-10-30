@@ -73,6 +73,7 @@ int init_connecting(const char *arg_name)
 
 void connect_to_bsim(void)
 {
+  static PortalInternal p;
   if (global_sockfd != -1)
     return;
   global_sockfd = init_connecting(SOCKET_NAME);
@@ -81,8 +82,11 @@ void connect_to_bsim(void)
   unsigned int idx = 0;
   while(!last && idx < 32){
     volatile unsigned int *ptr=(volatile unsigned int *)(long)(idx * PORTAL_BASE_OFFSET);
-    unsigned int id = read_portal_bsim(&ptr[PORTAL_CTRL_REG_PORTAL_ID], idx);
-    last = read_portal_bsim(&ptr[PORTAL_CTRL_REG_TOP], idx);
+    volatile unsigned int *idp = &ptr[PORTAL_CTRL_REG_PORTAL_ID];
+    volatile unsigned int *topp = &ptr[PORTAL_CTRL_REG_TOP];
+    p.fpga_number = idx;
+    unsigned int id = read_portal_bsim(&p, &idp);
+    last = read_portal_bsim(&p, &topp);
     assert(id < MAX_BSIM_PORTAL_ID);
     bsim_fpga_map[id] = idx++;
     //fprintf(stderr, "%s bsim_fpga_map[%d]=%d (%d)\n", __FUNCTION__, id, bsim_fpga_map[id], last);
@@ -249,13 +253,13 @@ unsigned int bsim_poll_interrupt(void)
 }
 /* functions called by READL() and WRITEL() macros in application software */
 unsigned int tag_counter;
-unsigned int read_portal_bsim(volatile unsigned int *addr, int id)
+unsigned int read_portal_bsim(PortalInternal *pint, volatile unsigned int **addr)
 {
-  struct memrequest foo = {id, 0,addr,0};
+  struct memrequest foo = {pint->fpga_number, 0,*addr,0};
 
   foo.data_or_tag = tag_counter++;
   portalSend(global_sockfd, &foo, sizeof(foo));
-  while (!poll_response(id)) {
+  while (!poll_response(pint->fpga_number)) {
       struct timeval tv = {};
       tv.tv_usec = 10000;
       select(0, NULL, NULL, NULL, &tv);
@@ -265,15 +269,15 @@ unsigned int read_portal_bsim(volatile unsigned int *addr, int id)
   return rc;
 }
 
-void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id)
+void write_portal_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
 {
-  struct memrequest foo = {id, 1,addr,v};
+  struct memrequest foo = {pint->fpga_number, 1,*addr,v};
 
   portalSend(global_sockfd, &foo, sizeof(foo));
 }
-void write_portal_fd_bsim(volatile unsigned int *addr, unsigned int v, int id)
+void write_portal_fd_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
 {
-  struct memrequest foo = {id, 1,addr,v};
+  struct memrequest foo = {pint->fpga_number, 1,*addr,v};
 
   portalSendFd(global_sockfd, &foo, sizeof(foo), v);
 }

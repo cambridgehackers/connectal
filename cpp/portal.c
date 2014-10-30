@@ -232,15 +232,18 @@ uint64_t portalCycleCount()
   if(!utility_portal)
     return 0;
   init_portal_hw();
-  high_bits = READL(utility_portal, &(utility_portal->map_base[PORTAL_CTRL_REG_COUNTER_MSB]));
-  low_bits  = READL(utility_portal, &(utility_portal->map_base[PORTAL_CTRL_REG_COUNTER_LSB]));
+  volatile unsigned int *msb = &utility_portal->map_base[PORTAL_CTRL_REG_COUNTER_MSB];
+  volatile unsigned int *lsb = &utility_portal->map_base[PORTAL_CTRL_REG_COUNTER_LSB];
+  high_bits = READL(utility_portal, &msb);
+  low_bits  = READL(utility_portal, &lsb);
   return (((uint64_t)high_bits)<<32) | ((uint64_t)low_bits);
 }
 
 void portalEnableInterrupts(PortalInternal *p, int val)
 {
+   volatile unsigned int *enp = &(p->map_base[PORTAL_CTRL_REG_INTERRUPT_ENABLE]);
    if (!p->reqsize)
-     WRITEL(p, &(p->map_base[PORTAL_CTRL_REG_INTERRUPT_ENABLE]), val);
+     WRITEL(p, &enp, val);
 }
 
 int portalDCacheFlushInval(int fd, long size, void *__p)
