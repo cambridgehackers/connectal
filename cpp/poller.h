@@ -59,8 +59,8 @@ class PortalInternalCpp
 {
  public:
   PortalInternal pint;
-  PortalInternalCpp(int id, PORTAL_INDFUNC handler, uint32_t reqsize) { 
-    init_portal_internal(&pint, id, handler, reqsize); 
+  PortalInternalCpp(int id, PORTAL_INDFUNC handler, void *cb, uint32_t reqsize) { 
+    init_portal_internal(&pint, id, handler, cb, reqsize); 
     //fprintf(stderr, "PortalInternalCpp %d\n", pint.fpga_number);
   };
   ~PortalInternalCpp() {
@@ -74,7 +74,7 @@ class PortalInternalCpp
 class Portal : public PortalInternalCpp
 {
  public:
-  Portal(int id, uint32_t reqsize, PORTAL_INDFUNC handler, PortalPoller *poller = 0) : PortalInternalCpp(id, handler, reqsize) {
+  Portal(int id, uint32_t reqsize, PORTAL_INDFUNC handler, void *cb, PortalPoller *poller = 0) : PortalInternalCpp(id, handler, cb, reqsize) {
     if (handler) {
       if (poller == 0)
         poller = defaultPoller;

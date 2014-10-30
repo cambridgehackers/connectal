@@ -92,22 +92,10 @@ if (maxnumber-- > 0)
 
 void manual_event(void)
 {
-static int maxnumber = 20;
     int i;
 
-    for (i = 0; i < MAX_INDARRAY; i++) {
-      PortalInternal *instance = &intarr[i];
-      volatile unsigned int *map_base = instance->map_base;
-      unsigned int queue_status;
-      while ((queue_status= READL(instance, &map_base[IND_REG_QUEUE_STATUS]))) {
-        unsigned int int_src = READL(instance, &map_base[IND_REG_INTERRUPT_FLAG]);
-        unsigned int int_en  = READL(instance, &map_base[IND_REG_INTERRUPT_MASK]);
-        unsigned int ind_count  = READL(instance, &map_base[IND_REG_INTERRUPT_COUNT]);
-if (maxnumber-- > 0)
-        PORTAL_PRINTF("(%d:fpga%d) about to receive messages int=%08x en=%08x qs=%08x cnt=%x\n", i, instance->fpga_number, int_src, int_en, queue_status, ind_count);
-        instance->handler(instance, queue_status-1);
-      }
-    }
+    for (i = 0; i < MAX_INDARRAY; i++)
+      portalCheckIndication(&intarr[i]);
 }
 
 #ifdef __KERNEL__

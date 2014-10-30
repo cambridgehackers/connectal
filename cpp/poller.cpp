@@ -158,7 +158,6 @@ void* PortalPoller::portalExec_poll(int timeout)
 
 void* PortalPoller::portalExec_event(void)
 {
-    int mcnt = 0;
     for (int i = 0; i < numWrappers; i++) {
       if (!portal_wrappers) {
         fprintf(stderr, "No portal_instances revents=%d\n", portal_fds[i].revents);
@@ -190,32 +189,12 @@ void* PortalPoller::portalExec_event(void)
           }
           continue;
       }
-      volatile unsigned int *map_base = instance->pint.map_base;
-    
-      // sanity check, to see the status of interrupt source and enable
-      unsigned int queue_status;
-    
-      // handle all messasges from this portal instance
 #ifdef BSIM
       if (instance->pint.fpga_fd == -1 && !bsim_poll_interrupt())
         continue;
 #endif
-      volatile unsigned int *statp = &map_base[PORTAL_CTRL_REG_IND_QUEUE_STATUS];
-      volatile unsigned int *srcp = &map_base[PORTAL_CTRL_REG_INTERRUPT_STATUS];
-      volatile unsigned int *enp = &map_base[PORTAL_CTRL_REG_INTERRUPT_ENABLE];
-      while ((queue_status= READL(&instance->pint, &statp))) {
-        if(0) {
-          unsigned int int_src = READL(&instance->pint, &srcp);
-          unsigned int int_en  = READL(&instance->pint, &enp);
-          fprintf(stderr, "(%d:fpga%d) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->pint.fpga_number, int_src, int_en, queue_status);
-        }
-        if (!instance->pint.handler) {
-            printf("[%s:%d] missing handler!!!!\n", __FUNCTION__, __LINE__);
-            exit(1);
-        }
-        instance->pint.handler(&instance->pint, queue_status-1);
-	mcnt++;
-      }
+      // handle all messasges from this portal instance
+      portalCheckIndication(&instance->pint);
       // re-enable interrupt which was disabled by portal_isr
       portalEnableInterrupts(&instance->pint, 1);
     }

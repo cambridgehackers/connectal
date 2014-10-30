@@ -82,6 +82,7 @@ typedef struct PortalInternal {
   uint32_t               reqsize;
   int                    accept_finished;
   PortalItemFunctions    *item;
+  void                   *cb;
 } PortalInternal;
 
 #ifdef __KERNEL__
@@ -108,7 +109,8 @@ int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *
 #ifdef __cplusplus
 extern "C" {
 #endif
-void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, uint32_t reqsize);
+void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, uint32_t reqsize);
+void portalCheckIndication(PortalInternal *pint);
 uint64_t portalCycleCount(void);
 unsigned int read_portal_bsim(PortalInternal *pint, volatile unsigned int **addr);
 void write_portal_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
@@ -179,7 +181,7 @@ extern PortalInternal *utility_portal;
 #define BUSY_WAIT(CITEM, A, STR) { \
     int __i = 50; \
     volatile unsigned int *tempp = (A) + 1; \
-    while (!READL((CITEM), &tempp) && __i-- > 0) \
+    while (!(CITEM)->item->read((CITEM), &tempp) && __i-- > 0) \
         ; /* busy wait a bit on 'fifo not full' */ \
     if (__i <= 0){ \
         PORTAL_PRINTF(("putFailed: " STR "\n")); \

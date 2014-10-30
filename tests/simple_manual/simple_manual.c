@@ -41,30 +41,18 @@ void SimpleIndicationWrapperheard2_cb (  struct PortalInternal *p, const uint32_
 static void manual_event(void)
 {
     int i;
-    for (i = 0; i < MAX_INDARRAY; i++) {
-      PortalInternal *instance = &intarr[i];
-      volatile unsigned int *map_base = instance->map_base;
-      unsigned int queue_status;
-      while ((queue_status= READL(instance, &map_base[IND_REG_QUEUE_STATUS]))) {
-        unsigned int int_src = READL(instance, &map_base[IND_REG_INTERRUPT_FLAG]);
-        unsigned int int_en  = READL(instance, &map_base[IND_REG_INTERRUPT_MASK]);
-        unsigned int ind_count  = READL(instance, &map_base[IND_REG_INTERRUPT_COUNT]);
-        PORTAL_PRINTF("(%d:fpga%d) about to receive messages int=%08x en=%08x qs=%08x ind_count %d\n", i, instance->fpga_number, int_src, int_en, queue_status, ind_count);
-        instance->handler(instance, queue_status-1);
-      }
-    }
+    for (i = 0; i < MAX_INDARRAY; i++)
+      portalCheckIndication(&intarr[i]);
 }
 
 int main(int argc, const char **argv)
 {
 
-   init_portal_internal(&intarr[0], IfcNames_SimpleRequest, SimpleRequestProxy_handleMessage, SimpleRequestProxy_reqsize); // portal 1
+   init_portal_internal(&intarr[0], IfcNames_SimpleRequest, NULL, SimpleRequestProxy_reqsize); // portal 1
    init_portal_internal(&intarr[1], IfcNames_SimpleIndication, SimpleIndicationWrapper_handleMessage, SimpleIndicationWrapper_reqsize); // portal 2
-   //indfn[0] = SimpleRequestProxy_handleMessage;
-   //indfn[1] = SimpleIndicationWrapper_handleMessage;
 
-   WRITEL(&intarr[0], &intarr[0].map_base[IND_REG_INTERRUPT_MASK], 0);
-   WRITEL(&intarr[0], &intarr[1].map_base[IND_REG_INTERRUPT_MASK], 0);
+   portalEnableInterrupts(&intarr[0], 0);
+   portalEnableInterrupts(&intarr[1], 0);
    PORTAL_PRINTF("Main::calling say1(%d)\n", v1a);
    //device->say1(v1a);  
    SimpleRequestProxy_say1 (&intarr[0], v1a);

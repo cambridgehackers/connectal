@@ -82,7 +82,7 @@ static PortalItemFunctions bsimfunc = {
 static PortalItemFunctions hardwarefunc = {
     read_hardware, write_hardware, write_fd_hardware, mapchannel_hardware};
 
-void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, uint32_t reqsize)
+void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, uint32_t reqsize)
 {
     int rc = 0;
     char buff[128];
@@ -96,6 +96,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
     pint->fpga_fd = -1;
     pint->handler = handler;
     pint->reqsize = reqsize;
+    pint->cb = cb;
 #ifdef BSIM
     pint->item = &bsimfunc;
 #else
@@ -260,8 +261,8 @@ uint64_t portalCycleCount()
   init_portal_hw();
   volatile unsigned int *msb = &utility_portal->map_base[PORTAL_CTRL_REG_COUNTER_MSB];
   volatile unsigned int *lsb = &utility_portal->map_base[PORTAL_CTRL_REG_COUNTER_LSB];
-  high_bits = READL(utility_portal, &msb);
-  low_bits  = READL(utility_portal, &lsb);
+  high_bits = utility_portal->item->read(utility_portal, &msb);
+  low_bits  = utility_portal->item->read(utility_portal, &lsb);
   return (((uint64_t)high_bits)<<32) | ((uint64_t)low_bits);
 }
 
@@ -269,7 +270,7 @@ void portalEnableInterrupts(PortalInternal *p, int val)
 {
    volatile unsigned int *enp = &(p->map_base[PORTAL_CTRL_REG_INTERRUPT_ENABLE]);
    if (!p->reqsize)
-     WRITEL(p, &enp, val);
+     p->item->write(p, &enp, val);
 }
 
 int portalDCacheFlushInval(int fd, long size, void *__p)
@@ -355,3 +356,24 @@ void portalInitiator(void)
     we_are_initiator = 1;
 }
 
+void portalCheckIndication(PortalInternal *pint)
+{
+  volatile unsigned int *map_base = pint->map_base;
+  // sanity check, to see the status of interrupt source and enable
+  unsigned int queue_status;
+  volatile unsigned int *statp = &map_base[PORTAL_CTRL_REG_IND_QUEUE_STATUS];
+  volatile unsigned int *srcp = &map_base[PORTAL_CTRL_REG_INTERRUPT_STATUS];
+  volatile unsigned int *enp = &map_base[PORTAL_CTRL_REG_INTERRUPT_ENABLE];
+  while ((queue_status = pint->item->read(pint, &statp))) {
+    if(0) {
+      unsigned int int_src = pint->item->read(pint, &srcp);
+      unsigned int int_en  = pint->item->read(pint, &enp);
+      fprintf(stderr, "%s: (fpga%d) about to receive messages int=%08x en=%08x qs=%08x\n", __FUNCTION__, pint->fpga_number, int_src, int_en, queue_status);
+    }
+    if (!pint->handler) {
+        printf("[%s:%d] missing handler!!!!\n", __FUNCTION__, __LINE__);
+        exit(1);
+    }
+    pint->handler(pint, queue_status-1);
+  }
+}

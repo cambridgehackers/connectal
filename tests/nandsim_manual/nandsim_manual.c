@@ -79,19 +79,8 @@ void DmaIndicationWrapperdmaError_cb (  struct PortalInternal *p, const uint32_t
 void manual_event(void)
 {
     int i;
-    for (i = 0; i < MAX_INDARRAY; i++) {
-      PortalInternal *instance = &intarr[i];
-      volatile unsigned int *map_base = instance->map_base;
-      unsigned int queue_status;
-	  /*PORTAL_PRINTF ("[%d]\n", i);*/
-      while ((queue_status= READL(instance, &map_base[IND_REG_QUEUE_STATUS]))) {
-        unsigned int int_src = READL(instance, &map_base[IND_REG_INTERRUPT_FLAG]);
-        unsigned int int_en  = READL(instance, &map_base[IND_REG_INTERRUPT_MASK]);
-        unsigned int ind_count  = READL(instance, &map_base[IND_REG_INTERRUPT_COUNT]);
-        PORTAL_PRINTF("(%d:fpga%d) about to receive messages int=%08x en=%08x qs=%08x cnt=%x\n", i, instance->fpga_number, int_src, int_en, queue_status, ind_count);
-        instance->handler(instance, queue_status-1);
-      }
-    }
+    for (i = 0; i < MAX_INDARRAY; i++)
+      portalCheckIndication(&intarr[i]);
 }
 
 #ifdef __KERNEL__
@@ -136,8 +125,8 @@ int main(int argc, const char **argv)
 
   init_portal_internal(&intarr[0], IfcNames_DmaIndication, DmaIndicationWrapper_handleMessage, DmaIndicationWrapper_reqsize);     // fpga1
   init_portal_internal(&intarr[1], IfcNames_NandSimIndication, NandSimIndicationWrapper_handleMessage, NandSimIndicationWrapper_reqsize); // fpga2
-  init_portal_internal(&intarr[2], IfcNames_DmaConfig, DmaConfigProxy_handleMessage, DmaConfigProxy_reqsize);         // fpga3
-  init_portal_internal(&intarr[3], IfcNames_NandSimRequest, NandSimRequestProxy_handleMessage, NandSimRequestProxy_reqsize);    // fpga4
+  init_portal_internal(&intarr[2], IfcNames_DmaConfig, NULL, DmaConfigProxy_reqsize);         // fpga3
+  init_portal_internal(&intarr[3], IfcNames_NandSimRequest, NULL, NandSimRequestProxy_reqsize);    // fpga4
 
   sem_init(&test_sem, 0, 0);
   DmaManager_init(&priv, &intarr[2]);
