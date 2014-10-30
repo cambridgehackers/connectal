@@ -61,6 +61,27 @@ static tBoard* tboard;
 extern int bsim_fpga_map[MAX_BSIM_PORTAL_ID];
 #endif
 
+static int mapchannel_hardware(unsigned int v)
+{
+    return PORTAL_IND_FIFO(v);
+}
+static unsigned int read_hardware(PortalInternal *pint, volatile unsigned int **addr)
+{
+    return **addr;
+}
+static void write_hardware(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
+{
+    **addr = v;
+}
+static void write_fd_hardware(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
+{
+    **addr = v;
+}
+static PortalItemFunctions bsimfunc = {
+    read_portal_bsim, write_portal_bsim, write_portal_fd_bsim, mapchannel_hardware};
+static PortalItemFunctions hardwarefunc = {
+    read_hardware, write_hardware, write_fd_hardware, mapchannel_hardware};
+
 void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, uint32_t reqsize)
 {
     int rc = 0;
@@ -75,6 +96,11 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
     pint->fpga_fd = -1;
     pint->handler = handler;
     pint->reqsize = reqsize;
+#ifdef BSIM
+    pint->item = &bsimfunc;
+#else
+    pint->item = &hardwarefunc;
+#endif
     if (reqsize) {
 #ifdef __KERNEL__
         printk("[%s:%d] software id %d reqsize %d\n", __FUNCTION__, __LINE__, id, reqsize);

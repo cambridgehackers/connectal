@@ -55,8 +55,9 @@ handleMessageTemplate1='''
 int %(namespace)s%(className)s_handleMessage(PortalInternal *p, unsigned int channel)
 {    
     static int runaway = 0;
+    int tmpfd;
     unsigned int tmp;
-    volatile unsigned int* temp_working_addr = &(p->map_base[PORTAL_IND_FIFO(channel)]);
+    volatile unsigned int* temp_working_addr = &(p->map_base[p->item->mapchannel(channel)]);
     switch (channel) {'''
 
 handleMessageTemplate2='''
@@ -114,9 +115,7 @@ msgDemarshallTemplate='''
 msgDemarshallTemplateSW='''
     case %(channelNumber)s: 
         {
-        int tmpfd;
-        unsigned int tmp;
-        volatile unsigned int* temp_working_addr = p->map_base+1;
+        volatile unsigned int* temp_working_addr = &p->map_base[1];
         portalRecvFd(p->fpga_fd, (void *)temp_working_addr, (%(wordLen)s) * sizeof(uint32_t), &tmpfd);
         %(paramStructDeclarations)s
         %(paramStructDemarshall)s
@@ -286,7 +285,7 @@ class MethodMixin:
                 off = off+e.width-e.shifted
 		if e.datatype.cName() == 'SpecialTypeForSendingFdL_32_P':
                     fdname = field
-                    fmt = 'WRITEFD(p, &temp_working_addr, %s);'
+                    fmt = 'p->item->writefd(p, &temp_working_addr, %s);'
             return fmt % (''.join(util.intersperse('|', word)))
 
         def generate_demarshall(w):
@@ -315,8 +314,8 @@ class MethodMixin:
             paramStructDemarshallStr = 'tmp = *temp_working_addr++;'
             paramStructMarshallStr = '*temp_working_addr++ = %s;'
         else:
-            paramStructDemarshallStr = 'tmp = READL(p, &temp_working_addr);'
-            paramStructMarshallStr = 'WRITEL(p, &temp_working_addr, %s);'
+            paramStructDemarshallStr = 'tmp = p->item->read(p, &temp_working_addr);'
+            paramStructMarshallStr = 'p->item->write(p, &temp_working_addr, %s);'
         if argWords == []:
             paramStructMarshall = [paramStructMarshallStr % '0']
             paramStructDemarshall = [paramStructDemarshallStr]

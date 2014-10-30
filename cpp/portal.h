@@ -62,13 +62,15 @@ typedef int SpecialTypeForSendingFd;   /* for GeneratedTypes.h */
 typedef SpecialTypeForSendingFd SpecialTypeForSendingFdL_32_P;
 struct PortalInternal;
 typedef int (*PORTAL_INDFUNC)(struct PortalInternal *p, unsigned int channel);
-typedef unsigned int (*READWORD)(struct PortalInternal *pint, volatile unsigned int *addr);
+typedef unsigned int (*READWORD)(struct PortalInternal *pint, volatile unsigned int **addr);
 typedef void (*WRITEWORD)(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 typedef void (*WRITEFDWORD)(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
+typedef int (*MAPCHANNEL)(unsigned int v);
 typedef struct {
-READWORD read;
-WRITEWORD write;
-WRITEFDWORD writefd;
+    READWORD read;
+    WRITEWORD write;
+    WRITEFDWORD writefd;
+    MAPCHANNEL mapchannel;
 } PortalItemFunctions;
 
 typedef struct PortalInternal {
