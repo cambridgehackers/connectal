@@ -667,8 +667,11 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, swProxies, swWrappers, swI
     generatedCFiles.append(cppname)
     generated_cpp.write('\n#ifndef NO_CPP_PORTAL_CODE\n')
 
+    commonIF = []
     for i in swProxies + swWrappers+swInterface:
-        generateProxy(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i, '')
+        if i not in commonIF:
+            generateProxy(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i, '')
+        commonIF.append(i)
 #
 #    for i in swInterface:
 #        generateProxy(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i, 'SS_')
