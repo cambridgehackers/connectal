@@ -84,7 +84,7 @@ proxyMethodTemplate='''
 void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p %(paramSeparator)s %(paramDeclarations)s )
 {
     volatile unsigned int* temp_working_addr = &(p->map_base[p->item->mapchannel(%(methodChannelOffset)s)]);
-    BUSY_WAIT(p, temp_working_addr, "%(namespace)s%(className)s_%(methodName)s");
+    if (p->item->busywait(p, temp_working_addr, "%(namespace)s%(className)s_%(methodName)s")) return;
     %(paramStructMarshall)s
     p->item->send(p, (%(methodChannelOffset)s << 16) | %(wordLen)s, %(fdName)s);
 };

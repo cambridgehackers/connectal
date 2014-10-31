@@ -383,10 +383,23 @@ int recv_hardware(struct PortalInternal *pint, volatile unsigned int *buffer, in
 {
     return 0;
 }
+int busy_hardware(struct PortalInternal *pint, volatile unsigned int *addr, const char *str)
+{
+    int count = 50;
+    volatile unsigned int *tempp = addr + 1;
+    while (!pint->item->read(pint, &tempp) && count-- > 0)
+        ; /* busy wait a bit on 'fifo not full' */
+    if (count <= 0){
+        PORTAL_PRINTF("putFailed: %s\n", str);
+        return 1;
+    }
+    return 0;
+}
 
 PortalItemFunctions bsimfunc = {
     read_portal_bsim, write_portal_bsim, write_portal_fd_bsim, mapchannel_hardware,
-    send_hardware, recv_hardware};
+    send_hardware, recv_hardware, busy_hardware};
 PortalItemFunctions hardwarefunc = {
     read_hardware, write_hardware, write_fd_hardware, mapchannel_hardware,
-    send_hardware, recv_hardware};
+    send_hardware, recv_hardware, busy_hardware};
+

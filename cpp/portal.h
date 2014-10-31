@@ -66,6 +66,7 @@ typedef int (*RECVMSG)(struct PortalInternal *pint, volatile unsigned int *buffe
 typedef unsigned int (*READWORD)(struct PortalInternal *pint, volatile unsigned int **addr);
 typedef void (*WRITEWORD)(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 typedef void (*WRITEFDWORD)(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
+typedef int (*BUSYWAIT)(struct PortalInternal *pint, volatile unsigned int *addr, const char *str);
 typedef int (*MAPCHANNEL)(unsigned int v);
 typedef struct {
     READWORD    read;
@@ -74,6 +75,7 @@ typedef struct {
     MAPCHANNEL  mapchannel;
     SENDMSG     send;
     RECVMSG     recv;
+    BUSYWAIT    busywait;
 } PortalItemFunctions;
 
 typedef struct PortalInternal {
@@ -184,15 +186,5 @@ extern PortalItemFunctions hardwarefunc;
     portalSendFd((CITEM)->fpga_fd, (void *)(CITEM)->map_base, (((B) & 0xffff) +1) * sizeof(uint32_t), (C)); \
     }
 #endif
-#define BUSY_WAIT(CITEM, A, STR) { \
-    int __i = 50; \
-    volatile unsigned int *tempp = (A) + 1; \
-    while (!(CITEM)->item->read((CITEM), &tempp) && __i-- > 0) \
-        ; /* busy wait a bit on 'fifo not full' */ \
-    if (__i <= 0){ \
-        PORTAL_PRINTF(("putFailed: " STR "\n")); \
-        return; \
-    } \
-    }
 
 #endif /* __PORTAL_OFFSETS_H__ */
