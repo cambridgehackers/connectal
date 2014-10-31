@@ -583,27 +583,6 @@ def cName(x):
     else:
         return x.cName()
 
-def generateProxy(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i):
-    myname = i.name
-    cppname = '%s.c' % myname
-    hppname = '%s.h' % myname
-    hpp = create_cpp_file(hppname)
-    cpp = create_cpp_file(cppname)
-    hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': myname.upper()})
-    hpp.write('#include "%s.h"\n' % i.parentClass("portal"))
-    generated_cpp.write('\n/************** Start of %sWrapper CPP ***********/\n' % myname)
-    generated_cpp.write('#include "%s"\n' % hppname)
-    maxSize = i.emitCProxyImplementation(cpp, generated_hpp, "")
-    i.emitCProxyDeclaration(hpp, generated_hpp, 0, '', maxSize)
-    cpp.write('#ifndef NO_WRAPPER_FUNCTIONS\n')
-    maxSize = i.emitCWrapperImplementation(cpp, generated_hpp, '')
-    i.emitCWrapperDeclaration(hpp, generated_hpp, generated_cpp, 0, '', maxSize)
-    cpp.write('#endif /*NO_WRAPPER_FUNCTIONS*/\n')
-    hpp.write('#endif // _%(name)s_H_\n' % {'name': myname.upper()})
-    hpp.close();
-    cpp.close();
-    generatedCFiles.append(cppname)
-
 def generate_cpp(globaldecls, project_dir, noisyFlag, swProxies, swWrappers, swInterface):
     def create_cpp_file(name):
         fname = os.path.join(project_dir, 'jni', name)
@@ -638,13 +617,25 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, swProxies, swWrappers, swI
     generated_cpp = create_cpp_file(cppname)
     generatedCFiles.append(cppname)
     generated_cpp.write('\n#ifndef NO_CPP_PORTAL_CODE\n')
-
-    commonIF = []
     for i in swProxies + swWrappers+swInterface:
-        if i not in commonIF:
-            generateProxy(create_cpp_file, generated_hpp, generated_cpp, generatedCFiles, i)
-        commonIF.append(i)
-    
+        cppname = '%s.c' % i.name
+        hppname = '%s.h' % i.name
+        if cppname in generatedCFiles:
+            continue
+        generatedCFiles.append(cppname)
+        hpp = create_cpp_file(hppname)
+        cpp = create_cpp_file(cppname)
+        hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': i.name.upper()})
+        hpp.write('#include "%s.h"\n' % i.parentClass("portal"))
+        generated_cpp.write('\n/************** Start of %sWrapper CPP ***********/\n' % i.name)
+        generated_cpp.write('#include "%s"\n' % hppname)
+        maxSize = i.emitCProxyImplementation(cpp, generated_hpp, "")
+        i.emitCProxyDeclaration(hpp, generated_hpp, 0, '', maxSize)
+        maxSize = i.emitCWrapperImplementation(cpp, generated_hpp, '')
+        i.emitCWrapperDeclaration(hpp, generated_hpp, generated_cpp, 0, '', maxSize)
+        hpp.write('#endif // _%(name)s_H_\n' % {'name': i.name.upper()})
+        hpp.close();
+        cpp.close();
     generated_cpp.write('#endif //NO_CPP_PORTAL_CODE\n')
     generated_cpp.close();
     generated_hpp.write('#ifdef __cplusplus\n')
