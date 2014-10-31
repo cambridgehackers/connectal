@@ -24,6 +24,7 @@
 #ifndef _SOCK_UTILS_H_
 #define _SOCK_UTILS_H_
 
+#define MAX_BSIM_PORTAL_ID 128
 #define MAGIC_PORTAL_FOR_SENDING_FD                 666
 #define MAGIC_PORTAL_FOR_SENDING_INTERRUPT          999
 #define SOCKET_NAME                 "socket_for_bluesim"
@@ -44,9 +45,8 @@ struct memresponse{
 extern "C" {
 #endif
 void connect_to_bsim(void);
-ssize_t sock_fd_write(int sockfd, int fd);
-ssize_t sock_fd_read(int sock, int *fd);
-ssize_t bluesim_sock_fd_write(long fd);
+ssize_t sock_fd_write(int sockfd, void *ptr, size_t nbytes, int sendfd);
+ssize_t sock_fd_read(int sockfd, void *ptr, size_t nbytes, int *recvfd);
 int pareff_fd(int *fd);
 void init_pareff(void);
 unsigned int bsim_poll_interrupt(void);

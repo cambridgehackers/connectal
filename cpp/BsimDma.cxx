@@ -32,6 +32,7 @@
 #define MAX_DMA_PORTS    4
 #define MAX_DMA_IDS     32
 typedef struct {
+    int fd;
     unsigned char *buffer;
     uint32_t buffer_len;
     int size_accum;
@@ -75,6 +76,14 @@ extern "C" uint64_t read_pareff64(uint32_t pref, uint32_t offset)
     return *(uint64_t *)&dma_info[id][pref].buffer[offset];
 }
 
+extern "C" void pareff_initfd(uint32_t aid, uint32_t fd)
+{
+    uint32_t id = aid >> 16;
+    uint32_t pref = aid & 0xffff;
+    if (dma_trace)
+      fprintf(stderr, "%s: id=%d pref=%d fd=%d\n", __FUNCTION__, id, pref, fd);
+    dma_info[id][pref].fd = fd;
+}
 extern "C" void pareff_init(uint32_t id, uint32_t pref, uint32_t size)
 {
     if (dma_trace)
@@ -82,12 +91,12 @@ extern "C" void pareff_init(uint32_t id, uint32_t pref, uint32_t size)
     assert(pref < MAX_DMA_IDS);
     dma_info[id][pref].size_accum += size;
     if(size == 0){
-      int fd;
-      pareff_fd(&fd);
+      if (dma_trace)
+          fprintf(stderr, "%s: id=%d pref=%d fd=%d\n", __FUNCTION__, id, pref, dma_info[id][pref].fd);
       dma_info[id][pref].buffer = (unsigned char *)mmap(0,
-          dma_info[id][pref].size_accum, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
+          dma_info[id][pref].size_accum, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, dma_info[id][pref].fd, 0);
       if (dma_info[id][pref].buffer == MAP_FAILED) {
-	fprintf(stderr, "pareff_init: mmap failed fd %x buffer %p size %x errno %d\n", fd, dma_info[id][pref].buffer, size, errno);
+	fprintf(stderr, "pareff_init: mmap failed fd %x buffer %p size %x errno %d\n", dma_info[id][pref].fd, dma_info[id][pref].buffer, size, errno);
 	exit(-1);
       }
       dma_info[id][pref].buffer_len = dma_info[id][pref].size_accum;

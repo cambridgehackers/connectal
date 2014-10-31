@@ -38,7 +38,6 @@ import MemwriteEngine::*;
 
 // portz libraries
 import Portal::*;
-import Directory::*;
 import CtrlMux::*;
 import Portal::*;
 import Leds::*;
@@ -222,10 +221,7 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,ImageCapturePins,1));
    Clock iclock_buf <- exposeCurrentClock();
 `endif
    ImageCapture ic <- mkImageCapture(iclock_buf);
-   
-   // instantiate system directory
-   StdDirectory dir <- mkStdDirectory(ic.portalif);
-   let ctrl_mux <- mkSlaveMux(dir,ic.portalif);
+   let ctrl_mux <- mkSlaveMux(ic.portalif);
    
    interface interrupt = getInterruptVector(ic.portalif);
    interface slave = ctrl_mux;

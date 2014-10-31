@@ -6,10 +6,10 @@
 #include <monkit.h>
 #include "StdDmaIndication.h"
 
-#include "DmaDebugRequestProxy.h"
-#include "MMUConfigRequestProxy.h"
-#include "MemreadIndicationWrapper.h"
-#include "MemreadRequestProxy.h"
+#include "DmaDebugRequest.h"
+#include "MMUConfigRequest.h"
+#include "MemreadIndication.h"
+#include "MemreadRequest.h"
 
 
 sem_t test_sem;

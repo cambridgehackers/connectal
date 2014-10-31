@@ -27,9 +27,9 @@
 #include <semaphore.h>
 
 #include "StdDmaIndication.h"
-#include "MMUConfigRequestProxy.h"
-#include "TestIndicationWrapper.h"
-#include "TestRequestProxy.h"
+#include "MMUConfigRequest.h"
+#include "TestIndication.h"
+#include "TestRequest.h"
 
 sem_t test_sem;
 unsigned int alloc_sz = 1<<10;

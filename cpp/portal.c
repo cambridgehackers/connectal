@@ -49,28 +49,59 @@
 #include <pcieportal.h> // BNOC_TRACE
 #endif
 
-#define MAX_DIRECTORY_SIZE 1024
-
-static void init_directory(void);
-PortalInternal globalDirectory;
+static void init_portal_hw(void);
 int global_pa_fd = -1;
+PortalInternal *utility_portal = 0x0;
 
 #ifdef __KERNEL__
 static tBoard* tboard;
 #endif
 
-void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, uint32_t reqsize)
+#ifdef BSIM
+extern int bsim_fpga_map[MAX_BSIM_PORTAL_ID];
+#endif
+
+static int mapchannel_hardware(unsigned int v)
+{
+    return PORTAL_IND_FIFO(v);
+}
+static unsigned int read_hardware(PortalInternal *pint, volatile unsigned int **addr)
+{
+    return **addr;
+}
+static void write_hardware(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
+{
+    **addr = v;
+}
+static void write_fd_hardware(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
+{
+    **addr = v;
+}
+static PortalItemFunctions bsimfunc = {
+    read_portal_bsim, write_portal_bsim, write_portal_fd_bsim, mapchannel_hardware};
+static PortalItemFunctions hardwarefunc = {
+    read_hardware, write_hardware, write_fd_hardware, mapchannel_hardware};
+
+void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, uint32_t reqsize)
 {
     int rc = 0;
     char buff[128];
     char read_status;
-    int addrbits = 16;
 
-    init_directory();
+    init_portal_hw();
     memset(pint, 0, sizeof(*pint));
+    if(!utility_portal)
+      utility_portal = pint;
+    pint->fpga_number = id;
     pint->fpga_fd = -1;
     pint->handler = handler;
     pint->reqsize = reqsize;
+    pint->cb = cb;
+#ifdef BSIM
+    pint->item = &bsimfunc;
+#else
+    pint->item = &hardwarefunc;
+#endif
     if (reqsize) {
 #ifdef __KERNEL__
         printk("[%s:%d] software id %d reqsize %d\n", __FUNCTION__, __LINE__, id, reqsize);
@@ -86,13 +117,12 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
 #endif
         goto exitlab;
     }
-    else if (id != -1) {
-        pint->fpga_number = portalGetFpga(id);
-        addrbits = portalGetAddrbits(id);
-    }
-    snprintf(buff, sizeof(buff), "/dev/fpga%d", pint->fpga_number);
+    snprintf(buff, sizeof(buff), "/dev/portal%d", pint->fpga_number);
 #ifdef BSIM   // BSIM version
-    connect_to_bsim();
+    assert(id < MAX_BSIM_PORTAL_ID);
+//printf("[%s:%d] id %d handler %p fpga_number %d\n", __FUNCTION__, __LINE__, id, handler, bsim_fpga_map[id]);
+    pint->fpga_number = bsim_fpga_map[id];
+    pint->map_base = (volatile unsigned int*)(long)(pint->fpga_number * PORTAL_BASE_OFFSET);
     portalEnableInterrupts(pint, 1);
 #elif defined(__KERNEL__)
     pint->map_base = (volatile unsigned int*)(tboard->bar2io + pint->fpga_number * PORTAL_BASE_OFFSET);
@@ -130,7 +160,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
 	rc = -errno;
 	goto exitlab;
     }
-    pint->map_base = (volatile unsigned int*)mmap(NULL, 1<<addrbits, PROT_READ|PROT_WRITE, MAP_SHARED, pint->fpga_fd, 0);
+    pint->map_base = (volatile unsigned int*)mmap(NULL, PORTAL_BASE_OFFSET, PROT_READ|PROT_WRITE, MAP_SHARED, pint->fpga_fd, 0);
     if (pint->map_base == MAP_FAILED) {
         PORTAL_PRINTF("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", pint->fpga_fd, errno);
         rc = -errno;
@@ -140,7 +170,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
 
 exitlab:
     if (rc != 0) {
-      PORTAL_PRINTF("%s: failed to open Portal fpga%d\n", __FUNCTION__, pint->fpga_number);
+      PORTAL_PRINTF("%s: failed to open Portal portal%d\n", __FUNCTION__, pint->fpga_number);
 #ifndef __KERNEL__
       exit(1);
 #endif
@@ -150,21 +180,25 @@ exitlab:
 int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)
 {
     int status = 0;
-    init_directory();
+    init_portal_hw();
 #ifdef ZYNQ
     PortalClockRequest request;
     request.clknum = clkNum;
     request.requested_rate = requestedFrequency;
-    status = ioctl(globalDirectory.fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
-    if (status == 0 && actualFrequency)
+    if (utility_portal){
+      status = ioctl(utility_portal->fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
+      if (status == 0 && actualFrequency)
 	*actualFrequency = request.actual_rate;
-    if (status < 0)
+      if (status < 0)
 	status = errno;
+    }else{ 
+      status = -1;
+    }
 #endif
     return status;
 }
 
-static void init_directory(void)
+static void init_portal_hw(void)
 {
   unsigned int i;
   static int once = 0;
@@ -175,75 +209,43 @@ static void init_directory(void)
 #ifdef __KERNEL__
   tboard = get_pcie_portal_descriptor();
 #endif
-  init_portal_internal(&globalDirectory, -1, NULL, 0);
 #ifdef ZYNQ /* There is no way to set userclock freq from host on PCIE */
   // start by setting the clock frequency (this only has any effect on the zynq platform)
   PortalClockRequest request;
   long reqF = 100000000; // 100 Mhz
   request.clknum = 0;
   request.requested_rate = reqF;
-  int status = ioctl(globalDirectory.fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
+  assert(false);
+  int status = -1;//ioctl(globalDirectory.fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
   if (status < 0)
-    PORTAL_PRINTF("init_directory: error setting fclk0, errno=%d\n", errno);
-  PORTAL_PRINTF("init_directory: set fclk0 (%ld,%ld)\n", reqF, request.actual_rate);
+    PORTAL_PRINTF("init_portal: error setting fclk0, errno=%d\n", errno);
+  PORTAL_PRINTF("init_portal: set fclk0 (%ld,%ld)\n", reqF, request.actual_rate);
 #endif
-
-  // finally scan
-  if(1) PORTAL_PRINTF("init_directory: scan(fpga%d)\n", globalDirectory.fpga_number);
-  if(1){
-#ifndef __KERNEL__
-    time_t timestamp  = READL(&globalDirectory, PORTAL_DIRECTORY_TIMESTAMP);
+#ifdef BSIM
+  connect_to_bsim();
 #endif
-    uint32_t numportals = READL(&globalDirectory, PORTAL_DIRECTORY_NUMPORTALS);
-    PORTAL_PRINTF("version=%d\n",  READL(&globalDirectory, PORTAL_DIRECTORY_VERSION));
-#ifndef __KERNEL__
-    PORTAL_PRINTF("timestamp=%s",  ctime(&timestamp));
-#endif
-    PORTAL_PRINTF("numportals=%d\n", numportals);
-    PORTAL_PRINTF("addrbits=%d\n", READL(&globalDirectory, PORTAL_DIRECTORY_ADDRBITS));
-    for(i = 0; (i < numportals) && (i < 32); i++)
-      PORTAL_PRINTF("portal[%d]: ifcid=%d, ifctype=%08x\n", i, READL(&globalDirectory, PORTAL_DIRECTORY_PORTAL_ID(i)), READL(&globalDirectory, PORTAL_DIRECTORY_PORTAL_TYPE(i)));
-  }
-}
-
-unsigned int portalGetFpga(unsigned int id)
-{
-  int numportals, i;
-    init_directory();
-  numportals = READL(&globalDirectory, PORTAL_DIRECTORY_NUMPORTALS);
-  for(i = 0; i < numportals; i++){
-    if(READL(&globalDirectory, PORTAL_DIRECTORY_PORTAL_ID(i)) == id)
-      return i+1;
-  }
-  PORTAL_PRINTF("directory_fpga(id=%d) id not found\n", id);
-  //exit(1);
-  return 0;
-}
-
-unsigned int portalGetAddrbits(unsigned int id)
-{
-    init_directory();
-  return READL(&globalDirectory, PORTAL_DIRECTORY_ADDRBITS);
 }
 
 void portalTrace_start()
 {
-    init_directory();
+  init_portal_hw();
 #if !defined(ZYNQ) && !defined(__KERNEL__)
   tTraceInfo traceInfo;
   traceInfo.trace = 1;
-  int res = ioctl(globalDirectory.fpga_fd,BNOC_TRACE,&traceInfo);
+  assert(false);
+  int res = 0; //ioctl(globalDirectory.fpga_fd,BNOC_TRACE,&traceInfo);
   if (res)
     PORTAL_PRINTF("Failed to start tracing. errno=%d\n", errno);
 #endif
 }
 void portalTrace_stop()
 {
-    init_directory();
+  init_portal_hw();
 #if !defined(ZYNQ) && !defined(__KERNEL__)
   tTraceInfo traceInfo;
   traceInfo.trace = 0;
-  int res = ioctl(globalDirectory.fpga_fd,BNOC_TRACE,&traceInfo);
+  assert(false);
+  int res = 0; //ioctl(globalDirectory.fpga_fd,BNOC_TRACE,&traceInfo);
   if (res)
     PORTAL_PRINTF("Failed to stop tracing. errno=%d\n", errno);
 #endif
@@ -253,17 +255,22 @@ uint64_t portalCycleCount()
 {
   unsigned int high_bits, low_bits;
   if (we_are_initiator)
-      return 0;
-    init_directory();
-  high_bits = READL(&globalDirectory, PORTAL_DIRECTORY_COUNTER_MSB);
-  low_bits  = READL(&globalDirectory, PORTAL_DIRECTORY_COUNTER_LSB);
+    return 0;
+  if(!utility_portal)
+    return 0;
+  init_portal_hw();
+  volatile unsigned int *msb = &utility_portal->map_base[PORTAL_CTRL_REG_COUNTER_MSB];
+  volatile unsigned int *lsb = &utility_portal->map_base[PORTAL_CTRL_REG_COUNTER_LSB];
+  high_bits = utility_portal->item->read(utility_portal, &msb);
+  low_bits  = utility_portal->item->read(utility_portal, &lsb);
   return (((uint64_t)high_bits)<<32) | ((uint64_t)low_bits);
 }
 
 void portalEnableInterrupts(PortalInternal *p, int val)
 {
+   volatile unsigned int *enp = &(p->map_base[PORTAL_CTRL_REG_INTERRUPT_ENABLE]);
    if (!p->reqsize)
-     WRITEL(p, &(p->map_base[IND_REG_INTERRUPT_MASK]), val);
+     p->item->write(p, &enp, val);
 }
 
 int portalDCacheFlushInval(int fd, long size, void *__p)
@@ -284,7 +291,11 @@ printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start
     }
     fput(fmem);
 #else
-  int rc = ioctl(globalDirectory.fpga_fd, PORTAL_DCACHE_FLUSH_INVAL, fd);
+  int rc;
+  if (utility_portal)
+    rc = ioctl(utility_portal->fpga_fd, PORTAL_DCACHE_FLUSH_INVAL, fd);
+  else
+    rc = -1;
   if (rc){
     PORTAL_PRINTF("portal dcache flush failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
     return rc;
@@ -343,4 +354,26 @@ void *portalMmap(int fd, size_t size)
 void portalInitiator(void)
 {
     we_are_initiator = 1;
+}
+
+void portalCheckIndication(PortalInternal *pint)
+{
+  volatile unsigned int *map_base = pint->map_base;
+  // sanity check, to see the status of interrupt source and enable
+  unsigned int queue_status;
+  volatile unsigned int *statp = &map_base[PORTAL_CTRL_REG_IND_QUEUE_STATUS];
+  volatile unsigned int *srcp = &map_base[PORTAL_CTRL_REG_INTERRUPT_STATUS];
+  volatile unsigned int *enp = &map_base[PORTAL_CTRL_REG_INTERRUPT_ENABLE];
+  while ((queue_status = pint->item->read(pint, &statp))) {
+    if(0) {
+      unsigned int int_src = pint->item->read(pint, &srcp);
+      unsigned int int_en  = pint->item->read(pint, &enp);
+      fprintf(stderr, "%s: (fpga%d) about to receive messages int=%08x en=%08x qs=%08x\n", __FUNCTION__, pint->fpga_number, int_src, int_en, queue_status);
+    }
+    if (!pint->handler) {
+        printf("[%s:%d] missing handler!!!!\n", __FUNCTION__, __LINE__);
+        exit(1);
+    }
+    pint->handler(pint, queue_status-1);
+  }
 }

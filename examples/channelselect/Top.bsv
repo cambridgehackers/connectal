@@ -28,7 +28,6 @@ import FIFO::*;
 
 // portz libraries
 import Portal::*;
-import Directory::*;
 import CtrlMux::*;
 import Portal::*;
 import Leds::*;
@@ -69,10 +68,7 @@ module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
    portals[1] = channelSelectTestIndicationProxy.portalIfc; 
    portals[2] = ddsTestRequestWrapper.portalIfc;
    portals[3] = ddsTestIndicationProxy.portalIfc; 
-
-   // instantiate system directory
-   StdDirectory dir <- mkStdDirectory(portals);
-   let ctrl_mux <- mkSlaveMux(dir,portals);
+   let ctrl_mux <- mkSlaveMux(portals);
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;

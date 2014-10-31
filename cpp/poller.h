@@ -59,7 +59,10 @@ class PortalInternalCpp
 {
  public:
   PortalInternal pint;
-  PortalInternalCpp(int id, uint32_t reqsize) { init_portal_internal(&pint, id, NULL, reqsize); };
+  PortalInternalCpp(int id, PORTAL_INDFUNC handler, void *cb, uint32_t reqsize) { 
+    init_portal_internal(&pint, id, handler, cb, reqsize); 
+    //fprintf(stderr, "PortalInternalCpp %d\n", pint.fpga_number);
+  };
   ~PortalInternalCpp() {
     if (pint.fpga_fd > 0) {
         ::close(pint.fpga_fd);
@@ -71,13 +74,15 @@ class PortalInternalCpp
 class Portal : public PortalInternalCpp
 {
  public:
-  Portal(int id, uint32_t reqsize, PortalPoller *poller = 0) : PortalInternalCpp(id, reqsize) {
-    if (poller == 0)
-      poller = defaultPoller;
-    pint.poller = poller;
-    pint.poller->registerInstance(this);
+  Portal(int id, uint32_t reqsize, PORTAL_INDFUNC handler, void *cb, PortalPoller *poller = 0) : PortalInternalCpp(id, handler, cb, reqsize) {
+    if (handler) {
+      if (poller == 0)
+        poller = defaultPoller;
+      pint.poller = poller;
+      pint.poller->registerInstance(this);
+    }
   };
-  ~Portal() { pint.poller->unregisterInstance(this); };
+  ~Portal() { if (pint.handler) pint.poller->unregisterInstance(this); };
 };
 
 #endif // __POLLER_H__

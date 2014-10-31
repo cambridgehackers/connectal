@@ -4,8 +4,8 @@
 #include <unistd.h>
 #include <assert.h>
 
-#include "AuroraIndicationWrapper.h"
-#include "AuroraRequestProxy.h"
+#include "AuroraIndication.h"
+#include "AuroraRequest.h"
 #include "GeneratedTypes.h"
 
 

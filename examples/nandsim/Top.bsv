@@ -9,7 +9,6 @@ import Connectable::*;
 
 // portz libraries
 import Leds::*;
-import Directory::*;
 import CtrlMux::*;
 import Portal::*;
 import ConnectalMemory::*;
@@ -52,9 +51,7 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    portals[3] = hostDmaDebugIndicationProxy.portalIfc; 
    portals[4] = backingStoreMMUConfigRequestWrapper.portalIfc;
    portals[5] = backingStoreMMUConfigIndicationProxy.portalIfc;
-   
-   StdDirectory dir <- mkStdDirectory(portals);
-   let ctrl_mux <- mkSlaveMux(dir,portals);
+   let ctrl_mux <- mkSlaveMux(portals);
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;

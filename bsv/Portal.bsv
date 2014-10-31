@@ -29,18 +29,15 @@ import Pipe::*;
 
 // implementation of a Portal as a group of Pipes
 interface PipePortal#(numeric type numRequests, numeric type numIndications, numeric type slaveDataWidth);
-   method Bit#(32) ifcId();
-   method Bit#(32) ifcType();
    interface Vector#(numRequests, PipeIn#(Bit#(slaveDataWidth))) requests;
    interface Vector#(numIndications, PipeOut#(Bit#(slaveDataWidth))) indications;
 endinterface
 
 // implementation of a Portal as a physical memory slave
 interface MemPortal#(numeric type slaveAddrWidth, numeric type slaveDataWidth);
-   method Bit#(32) ifcId();
-   method Bit#(32) ifcType();
    interface PhysMemSlave#(slaveAddrWidth,slaveDataWidth) slave;
    interface ReadOnly#(Bool) interrupt;
+   interface WriteOnly#(Bool) top; 
 endinterface
 
 function PhysMemSlave#(_a,_d) getSlave(MemPortal#(_a,_d) p);

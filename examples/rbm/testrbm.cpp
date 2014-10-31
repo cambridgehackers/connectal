@@ -21,10 +21,10 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <RbmRequestProxy.h>
-#include <RbmIndicationWrapper.h>
-#include "DmaDebugRequestProxy.h"
-#include "MMUConfigRequestProxy.h"
+#include <RbmRequest.h>
+#include <RbmIndication.h>
+#include "DmaDebugRequest.h"
+#include "MMUConfigRequest.h"
 #include <StdDmaIndication.h>
 #include <stdio.h>
 #include <sys/mman.h>

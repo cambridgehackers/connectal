@@ -373,8 +373,8 @@ interfaces. These will be in the "jni/" subdirectory of the project directory.
 
 [source,C]
 ---------------------------------
-    #include "SimpleIndicationWrapper.h"
-    #include "SimpleRequestProxy.h"
+    #include "SimpleIndication.h"
+    #include "SimpleRequest.h"
 ---------------------------------
 
 
@@ -490,10 +490,10 @@ CONNECTAL generates `jni/Makefile` to compile the software for PCIe platforms (v
 CONNECTAL generates software proxies for software-to-hardware interfaces and software wrappers for hardware-to-software interfaces:
 
 ---------------------------------
-    zedboard/jni/SimpleIndicationWrapper.h
-    zedboard/jni/SimpleIndicationWrapper.cpp
-    zedboard/jni/SimpleRequestProxy.cpp
-    zedboard/jni/SimpleRequestProxy.h
+    zedboard/jni/SimpleIndication.h
+    zedboard/jni/SimpleIndication.cpp
+    zedboard/jni/SimpleRequest.cpp
+    zedboard/jni/SimpleRequest.h
 ---------------------------------
 
 CONNECTAL also generates `GeneratedTypes.h` for struct and enum types in the processed BSV source files:

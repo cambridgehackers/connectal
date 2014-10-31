@@ -28,13 +28,13 @@
 #include "i2chdmi.h"
 #include "edid.h"
 
-#include "DmaDebugRequestProxy.h"
-#include "MMUConfigRequestProxy.h"
+#include "DmaDebugRequest.h"
+#include "MMUConfigRequest.h"
 #include "StdDmaIndication.h"
-#include "HdmiDisplayRequestProxy.h"
-#include "HdmiDisplayIndicationWrapper.h"
-#include "HdmiInternalIndicationWrapper.h"
-#include "HdmiInternalRequestProxy.h"
+#include "HdmiDisplayRequest.h"
+#include "HdmiDisplayIndication.h"
+#include "HdmiInternalIndication.h"
+#include "HdmiInternalRequest.h"
 
 #define FRAME_COUNT 2
 #define MAX_PIXEL 256

@@ -71,6 +71,7 @@ interface MMUConfigIndication;
    method Action error(Bit#(32) code, Bit#(32) sglId, Bit#(64) offset, Bit#(64) extra);
 endinterface
 
+typedef Bit#(32) SpecialTypeForSendingFd;
 //
 // @brief Configuration interface to an MMU
 //
@@ -84,7 +85,7 @@ interface MMUConfigRequest;
    //
    method Action sglist(Bit#(32) sglId, Bit#(32) sglIndex, Bit#(64) addr,  Bit#(32) len);
    method Action region(Bit#(32) sglId, Bit#(64) barr8, Bit#(32) index8, Bit#(64) barr4, Bit#(32) index4, Bit#(64) barr0, Bit#(32) index0);
-   method Action idRequest();
+   method Action idRequest(SpecialTypeForSendingFd fd);
    method Action idReturn(Bit#(32) sglId);
 endinterface
 

@@ -31,7 +31,6 @@ import FIFO::*;
 import Connectable::*;
 
 import Portal::*;
-import Directory::*;
 import MemTypes::*;
 import Arith::*;
 import Pipe::*;
@@ -50,15 +49,13 @@ module mkInterruptMux#(Vector#(numPortals,ReadOnly#(Bool)) inputs) (ReadOnly#(Bo
 
 endmodule
 
-module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
-		   Vector#(numPortals,MemPortal#(aw,dataWidth)) portals) (PhysMemSlave#(addrWidth,dataWidth))
-   provisos(Add#(1,numPortals,numInputs),
-	    Add#(a__,TLog#(numInputs),4),
-	    Min#(2,TLog#(numInputs),bpc),
-	    FunnelPipesPipelined#(1, numInputs, MemData#(dataWidth), bpc)
+module mkSlaveMux#(Vector#(numPortals,MemPortal#(aw,dataWidth)) portals) (PhysMemSlave#(addrWidth,dataWidth))
+   provisos(Add#(a__,TLog#(numPortals),4),
+	    Min#(2,TLog#(numPortals),bpc),
+	    FunnelPipesPipelined#(1, numPortals, MemData#(dataWidth), bpc)
 	    );
    
-   Vector#(numInputs, PhysMemSlave#(aw,dataWidth)) portalIfcs = cons(dir.portalIfc.slave,map(getSlave, portals));
+   Vector#(numPortals, PhysMemSlave#(aw,dataWidth)) portalIfcs = map(getSlave, portals);
    let port_sel_low = valueOf(aw);
    let port_sel_high = valueOf(TAdd#(3,aw));
    function Bit#(4) psel(Bit#(addrWidth) a);
@@ -73,17 +70,22 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
    FIFO#(Bit#(6))        doneFifo <- mkFIFO1();
 
    FIFO#(PhysMemRequest#(aw)) req_ars <- mkSizedFIFO(1);
-   FIFO#(Bit#(TLog#(numInputs))) rs <- mkFIFO1();
-   Vector#(numInputs, PipeOut#(MemData#(dataWidth))) readDataPipes <- mapM(mkPipeOut, map(getMemPortalReadData,portalIfcs));
-   FunnelPipe#(1, numInputs, MemData#(dataWidth), bpc) read_data_funnel <- mkFunnelPipesPipelined(readDataPipes);
+   FIFO#(Bit#(TLog#(numPortals))) rs <- mkFIFO1();
+   Vector#(numPortals, PipeOut#(MemData#(dataWidth))) readDataPipes <- mapM(mkPipeOut, map(getMemPortalReadData,portalIfcs));
+   FunnelPipe#(1, numPortals, MemData#(dataWidth), bpc) read_data_funnel <- mkFunnelPipesPipelined(readDataPipes);
       
    FIFO#(PhysMemRequest#(aw)) req_aws <- mkFIFO1();
-   FIFO#(Bit#(TLog#(numInputs))) ws <- mkFIFO1();
-   FIFOF#(Tuple2#(Bit#(TLog#(numInputs)), MemData#(dataWidth))) write_data <- mkFIFOF;
-   UnFunnelPipe#(1, numInputs, MemData#(dataWidth), bpc) write_data_unfunnel <- mkUnFunnelPipesPipelined(cons(toPipeOut(write_data),nil));
-   Vector#(numInputs, PipeIn#(MemData#(dataWidth))) writeDataPipes <- mapM(mkPipeIn, map(getMemPortalWriteData,portalIfcs));
+   FIFO#(Bit#(TLog#(numPortals))) ws <- mkFIFO1();
+   FIFOF#(Tuple2#(Bit#(TLog#(numPortals)), MemData#(dataWidth))) write_data <- mkFIFOF;
+   UnFunnelPipe#(1, numPortals, MemData#(dataWidth), bpc) write_data_unfunnel <- mkUnFunnelPipesPipelined(cons(toPipeOut(write_data),nil));
+   Vector#(numPortals, PipeIn#(MemData#(dataWidth))) writeDataPipes <- mapM(mkPipeIn, map(getMemPortalWriteData,portalIfcs));
    zipWithM(mkConnection, write_data_unfunnel, writeDataPipes);
  
+   for(Integer i = 0; i < valueOf(numPortals); i=i+1)
+      rule writeTop;
+	 portals[i].top <= (i+1 == valueOf(numPortals));
+      endrule
+
    rule req_aw;
       let req <- toGet(req_aws).get;
       portalIfcs[ws.first].write_server.writeReq.put(req);
@@ -139,7 +141,6 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
 	 endmethod
       endinterface
    endinterface
-   
 endmodule
 
 module mkMemSlaveMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves) (PhysMemSlave#(addrWidth,dataWidth))
@@ -223,6 +224,5 @@ module mkMemSlaveMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves) (Ph
 	 endmethod
       endinterface
    endinterface
-
 endmodule
 

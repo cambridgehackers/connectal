@@ -79,9 +79,9 @@ all: exe bits
 
 ifeq ($(BOARD),bluesim)
 ifeq ($(RUNSOURCE2),)
-  exe: bsim bsim_exe
+  exe: bsim_exe
 else
-  exe: bsim bsim_exe bsim_exe2
+  exe: bsim_exe bsim_exe2
 endif
 else
   ifneq ($(OS),android)
@@ -124,7 +124,7 @@ endif
 endif
 
 ifeq ($(BOARD),bluesim)
-bits: prepare_bin_target
+bits: bsim
 else
 bits: hw/mkTop.bit prepare_bin_target
 ifeq ($(OS),android)

@@ -7,10 +7,10 @@
 #include <semaphore.h>
 
 #include "StdDmaIndication.h"
-#include "DmaDebugRequestProxy.h"
-#include "MMUConfigRequestProxy.h"
-#include "FMComms1RequestProxy.h"
-#include "FMComms1IndicationWrapper.h"
+#include "DmaDebugRequest.h"
+#include "MMUConfigRequest.h"
+#include "FMComms1Request.h"
+#include "FMComms1Indication.h"
 
 sem_t read_sem;
 sem_t write_sem;

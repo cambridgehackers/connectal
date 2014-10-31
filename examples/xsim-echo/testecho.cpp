@@ -5,8 +5,8 @@
 #include <semaphore.h>
 #include <unistd.h>
 
-#include "EchoIndicationWrapper.h"
-#include "EchoRequestProxy.h"
+#include "EchoIndication.h"
+#include "EchoRequest.h"
 #include "GeneratedTypes.h"
 
 #define LOOP_COUNT 1000

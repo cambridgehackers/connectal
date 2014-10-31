@@ -69,11 +69,11 @@ exposedProxyInterfaceTemplate='''
 // exposed proxy interface
 interface %(Dut)sPortal;
     interface PipePortal#(%(requestChannelCount)s, %(indicationChannelCount)s, 32) portalIfc;
-    interface %(Ifc)s ifc;
+    interface %(Package)s::%(Ifc)s ifc;
 endinterface
 interface %(Dut)s;
     interface StdPortal portalIfc;
-    interface %(Ifc)s ifc;
+    interface %(Package)s::%(Ifc)s ifc;
 endinterface
 
 (* synthesize *)
@@ -81,7 +81,7 @@ module %(moduleContext)s mk%(Dut)sPortalSynth#(Bit#(32) id) (%(Dut)sPortal);
     Vector#(0, PipeIn#(Bit#(32))) requestPipes = nil;
     Vector#(%(channelCount)s, PipeOut#(Bit#(32))) indicationPipes = newVector();
 %(indicationMethodRules)s
-    interface %(Ifc)s ifc;
+    interface %(Package)s::%(Ifc)s ifc;
 %(indicationMethods)s
     endinterface
 %(portalIfc)s
@@ -99,9 +99,9 @@ endmodule
 (* synthesize *)
 module mk%(Dut)sSynth#(Bit#(32) id)(%(Dut)s);
   let dut <- mk%(Dut)sPortal(id);
-  let memPortal <- mkMemPortal(dut.portalIfc);
+  let memPortal <- mkMemPortal(id, dut.portalIfc);
   interface MemPortal portalIfc = memPortal;
-  interface %(Ifc)s ifc = dut.ifc;
+  interface %(Package)s::%(Ifc)s ifc = dut.ifc;
 endmodule
 
 // exposed proxy MemPortal
@@ -165,17 +165,11 @@ module mk%(Dut)sMemPortalPipes#(Bit#(32) id)(%(Dut)sMemPortalPipes);
   let p <- mk%(Dut)sPipes(zeroExtend(pack(id)));
 
   PipePortal#(%(requestChannelCount)s, 0, 32) portalifc = (interface PipePortal;
-        method Bit#(32) ifcId;
-            return zeroExtend(pack(id));
-        endmethod
-        method Bit#(32) ifcType;
-            return %(ifcType)s;
-        endmethod
         interface Vector requests = p.inputPipes;
         interface Vector indications = nil;
     endinterface);
 
-  let memPortal <- mkMemPortal(portalifc);
+  let memPortal <- mkMemPortal(id, portalifc);
   interface %(Dut)sPipes pipes = p;
   interface MemPortal portalIfc = memPortal;
 endmodule
@@ -199,12 +193,6 @@ Bit#(6) %(methodName)s_Offset = %(channelNumber)s;
 
 portalIfcTemplate='''
     interface PipePortal portalIfc;
-        method Bit#(32) ifcId;
-            return zeroExtend(pack(id));
-        endmethod
-        method Bit#(32) ifcType;
-            return %(ifcType)s;
-        endmethod
         interface Vector requests = requestPipes;
         interface Vector indications = indicationPipes;
     endinterface
@@ -255,15 +243,24 @@ class TypeMixin:
             return self.params[0].numeric()
         if (self.name == 'Float'):
             return 32
-	sdef = globalv.globalvars[self.name].tdtype
-        if (sdef.type == 'Struct'):
-            return sum([e.type.numBitsBSV() for e in sdef.elements])
-        else:
-            return sdef.numBitsBSV();
+        if (self.name == 'SpecialTypeForSendingFd'):
+            return 32
+	sdef = globalv.globalvars[self.name]
+        sdeftype = sdef.tdtype
+        #print 'Type.numBitsBSV()', sdef.type, sdef.name, sdef.params, sdef.tdtype
+        #print 'instantiating type parameters'
+        sdeftype = sdeftype.instantiate(dict(zip(sdef.params, self.params)))
+        #print 'resolved to', sdeftype.type
+        #print '           ', sdeftype
+        return sdeftype.numBitsBSV();
 
 class EnumMixin:
     def numBitsBSV(self):
         return int(math.ceil(math.log(len(self.elements),2)))
+
+class StructMixin:
+    def numBitsBSV(self):
+        return sum([e.type.numBitsBSV() for e in self.elements])
 
 class MethodMixin:
     def substs(self, outerTypeName):
@@ -347,6 +344,7 @@ class InterfaceMixin:
         m.update(self.name)
 
         substs = {
+            'Package': os.path.splitext(os.path.basename(self.package))[0],
             'Ifc': self.name,
             'dut': dutName,
             'Dut': util.capitalize(name),
@@ -364,7 +362,6 @@ class InterfaceMixin:
             'indicationInterfaces': ''.join(indicationTemplate % { 'Indication': name }) if not self.hasSource else '',
             }
 
-        substs['ifcType'] = 'truncate(128\'h%s)' % m.hexdigest()
         substs['portalIfc'] = portalIfcTemplate % substs
         substs['requestOutputPipeInterfaces'] = ''.join([requestOutputPipeInterfaceTemplate % {'methodName': methodName,
                                                        'MethodName': util.capitalize(methodName)}
@@ -434,12 +431,12 @@ class InterfaceMixin:
         return methods
 
 def generate_bsv(globalimports, project_dir, noisyFlag, hwProxies, hwWrappers, dutname):
-    def create_bsv_package(pname, data, files):
+    def create_bsv_package(pname, data, files, generatedPackageNames):
         fname = os.path.join(project_dir, 'sources', dutname.lower(), '%s.bsv' % pname)
         bsv_file = util.createDirAndOpen(fname, 'w')
         bsv_file.write('package %s;\n' % pname)
-        extraImports = (['import %s::*;\n' % os.path.splitext(os.path.basename(fn))[0] for fn in files]
-                   + ['import %s::*;\n' % i for i in globalimports ])
+        extraImports = (['import %s::*;\n' % os.path.splitext(os.path.basename(fn))[0] for fn in files ]
+                   + ['import %s::*;\n' % i for i in globalimports if not i in generatedPackageNames])
         bsv_file.write(preambleTemplate % {'extraImports' : ''.join(extraImports)})
         if noisyFlag:
             print 'Writing file ', fname
@@ -447,9 +444,11 @@ def generate_bsv(globalimports, project_dir, noisyFlag, hwProxies, hwWrappers, d
         bsv_file.write('endpackage: %s\n' % pname)
         bsv_file.close()
 
+    generatedPackageNames = (['%sWrapper' % i.name for i in hwWrappers]
+                             + ['%sProxy' % i.name for i in hwProxies])
     for i in hwWrappers:
-        create_bsv_package('%sWrapper' % i.name, exposedWrapperInterfaceTemplate % i.substs('Wrapper',False), i.package)
+        create_bsv_package('%sWrapper' % i.name, exposedWrapperInterfaceTemplate % i.substs('Wrapper',False), [i.package], generatedPackageNames)
         
     for i in hwProxies:
-        create_bsv_package('%sProxy' % i.name, exposedProxyInterfaceTemplate % i.substs("Proxy",True), i.package)
+        create_bsv_package('%sProxy' % i.name, exposedProxyInterfaceTemplate % i.substs("Proxy",True), [i.package], generatedPackageNames)
 

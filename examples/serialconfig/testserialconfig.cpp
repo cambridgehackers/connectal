@@ -31,8 +31,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "SerialconfigIndicationWrapper.h"
-#include "SerialconfigRequestProxy.h"
+#include "SerialconfigIndication.h"
+#include "SerialconfigRequest.h"
 #include "GeneratedTypes.h"
 
 sem_t test_sem;

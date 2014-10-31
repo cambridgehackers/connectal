@@ -30,10 +30,10 @@
 #include <sys/un.h>
 
 #include "StdDmaIndication.h"
-#include "MMUConfigRequestProxy.h"
+#include "MMUConfigRequest.h"
 #include "GeneratedTypes.h" 
-#include "NandSimIndicationWrapper.h"
-#include "NandSimRequestProxy.h"
+#include "NandSimIndication.h"
+#include "NandSimRequest.h"
 
 static int trace_memory = 1;
 extern "C" {

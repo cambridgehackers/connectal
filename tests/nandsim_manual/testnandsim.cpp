@@ -20,10 +20,10 @@
  */
 
 #include "StdDmaIndication.h"
-#include "DmaDebugRequestProxy.h"
-#include "MMUConfigRequestProxy.h"
-#include "NandSimIndicationWrapper.h"
-#include "NandSimRequestProxy.h"
+#include "DmaDebugRequest.h"
+#include "MMUConfigRequest.h"
+#include "NandSimIndication.h"
+#include "NandSimRequest.h"
 
 int srcAlloc, nandAlloc;
 unsigned int *srcBuffer = 0;

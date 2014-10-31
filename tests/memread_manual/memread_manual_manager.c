@@ -64,27 +64,7 @@ void MMUConfigIndicationWrapperidResponse_cb (  struct PortalInternal *p, const 
         priv.sglId = sglId;
         sem_post(&priv.sglIdSem);
 };
-void DmaDebugIndicationWrapperaddrResponse_cb (  struct PortalInternal *p, const uint64_t physAddr )
-{
-        PORTAL_PRINTF("DmaIndication_addrResponse(physAddr=%"PRIx64")\n", physAddr);
-}
-void DmaDebugIndicationWrapperreportStateDbg_cb (  struct PortalInternal *p, const DmaDbgRec rec )
-{
-        PORTAL_PRINTF("reportStateDbg: {x:%08x y:%08x z:%08x w:%08x}\n", rec.x,rec.y,rec.z,rec.w);
-        sem_post(&priv.dbgSem);
-}
-void DmaDebugIndicationWrapperreportMemoryTraffic_cb (  struct PortalInternal *p, const uint64_t words )
-{
-        //PORTAL_PRINTF("reportMemoryTraffic: words=%"PRIx64"\n", words);
-        priv.mtCnt = words;
-        sem_post(&priv.mtSem);
-}
 void MMUConfigIndicationWrappererror_cb (  struct PortalInternal *p, const uint32_t code, const uint32_t pointer, const uint64_t offset, const uint64_t extra ) {
-static int maxnumber = 10;
-if (maxnumber-- > 0)
-        PORTAL_PRINTF("DmaIndication::dmaError(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
-}
-void DmaDebugIndicationWrappererror_cb (  struct PortalInternal *p, const uint32_t code, const uint32_t pointer, const uint64_t offset, const uint64_t extra ) {
 static int maxnumber = 10;
 if (maxnumber-- > 0)
         PORTAL_PRINTF("DmaIndication::dmaError(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
@@ -92,22 +72,10 @@ if (maxnumber-- > 0)
 
 void manual_event(void)
 {
-static int maxnumber = 20;
     int i;
 
-    for (i = 0; i < MAX_INDARRAY; i++) {
-      PortalInternal *instance = &intarr[i];
-      volatile unsigned int *map_base = instance->map_base;
-      unsigned int queue_status;
-      while ((queue_status= READL(instance, &map_base[IND_REG_QUEUE_STATUS]))) {
-        unsigned int int_src = READL(instance, &map_base[IND_REG_INTERRUPT_FLAG]);
-        unsigned int int_en  = READL(instance, &map_base[IND_REG_INTERRUPT_MASK]);
-        unsigned int ind_count  = READL(instance, &map_base[IND_REG_INTERRUPT_COUNT]);
-if (maxnumber-- > 0)
-        PORTAL_PRINTF("(%d:fpga%d) about to receive messages int=%08x en=%08x qs=%08x cnt=%x\n", i, instance->fpga_number, int_src, int_en, queue_status, ind_count);
-        instance->handler(instance, queue_status-1);
-      }
-    }
+    for (i = 0; i < MAX_INDARRAY; i++)
+      portalCheckIndication(&intarr[i]);
 }
 
 #ifdef __KERNEL__
@@ -138,6 +106,14 @@ static void *pthread_worker(void *p)
     return rc;
 }
 
+MMUConfigIndicationWrapperCb MMUConfigIndicationWrapper_cbTable = {
+    MMUConfigIndicationWrapperidResponse_cb,
+    MMUConfigIndicationWrapperconfigResp_cb,
+    MMUConfigIndicationWrappererror_cb,
+};
+MemreadIndicationWrapperCb MemreadIndicationWrapper_cbTable = {
+    MemreadIndicationWrapperreadDone_cb,
+};
 int main(int argc, const char **argv)
 {
   int srcAlloc;
@@ -146,10 +122,10 @@ int main(int argc, const char **argv)
   int rc = 0, i;
   pthread_t tid = 0;
 
-  init_portal_internal(&intarr[0], IfcNames_HostMMUConfigIndication, MMUConfigIndicationWrapper_handleMessage, MMUConfigIndicationWrapper_reqsize);// fpga1
-  init_portal_internal(&intarr[1], IfcNames_MemreadIndication, MemreadIndicationWrapper_handleMessage, MemreadIndicationWrapper_reqsize); // fpga2
-  init_portal_internal(&intarr[2], IfcNames_HostMMUConfigRequest, NULL, MMUConfigRequestProxy_reqsize); // fpga3
-  init_portal_internal(&intarr[3], IfcNames_MemreadRequest, NULL, MemreadRequestProxy_reqsize);    // fpga4
+  init_portal_internal(&intarr[0], IfcNames_HostMMUConfigIndication, MMUConfigIndicationWrapper_handleMessage, (void *)&MMUConfigIndicationWrapper_cbTable, MMUConfigIndicationWrapper_reqsize);// fpga1
+  init_portal_internal(&intarr[1], IfcNames_MemreadIndication, MemreadIndicationWrapper_handleMessage, (void *)&MemreadIndicationWrapper_cbTable, MemreadIndicationWrapper_reqsize); // fpga2
+  init_portal_internal(&intarr[2], IfcNames_HostMMUConfigRequest, NULL, NULL, MMUConfigRequestProxy_reqsize); // fpga3
+  init_portal_internal(&intarr[3], IfcNames_MemreadRequest, NULL, NULL, MemreadRequestProxy_reqsize);    // fpga4
 
   sem_init(&test_sem, 0, 0);
   DmaManager_init(&priv, NULL, &intarr[2]);

@@ -20,13 +20,13 @@
  */
 
 #include <stdio.h>
-#include "SRequestProxy.h"
-#include "SIndicationWrapper.h"
+#include "SS_EchoRequest.h"
+#include "SS_EchoIndication.h"
 
-SRequestProxy *sRequestProxy;
+SS_EchoRequestProxy *sRequestProxy;
 static sem_t sem_heard2;
 
-class SIndication : public SIndicationWrapper
+class SS_EchoIndication : public SS_EchoIndicationWrapper
 {
 public:
     virtual void heard(uint32_t v) {
@@ -37,7 +37,7 @@ public:
         sem_post(&sem_heard2);
         //fprintf(stderr, "heard an s2: %ld %ld\n", a, b);
     }
-    SIndication(unsigned int id) : SIndicationWrapper(id) {}
+    SS_EchoIndication(unsigned int id) : SS_EchoIndicationWrapper(id) {}
 };
 
 static void call_say(int v)
@@ -56,8 +56,8 @@ static void call_say2(int v, int v2)
 int main(int argc, const char **argv)
 {
     portalInitiator();
-    SIndication *sIndication = new SIndication(IfcNames_SIndication);
-    sRequestProxy = new SRequestProxy(IfcNames_SRequest);
+    SS_EchoIndication *sIndication = new SS_EchoIndication(IfcNames_SS_EchoIndication);
+    sRequestProxy = new SS_EchoRequestProxy(IfcNames_SS_EchoRequest);
 
     portalExec_start();
 
@@ -67,7 +67,6 @@ int main(int argc, const char **argv)
     call_say(v*5);
     call_say(v*17);
     call_say(v*93);
-    portalTimerInit();
     call_say2(v, v*3);
     printf("TEST TYPE: SEM\n");
     sRequestProxy->setLeds(9);

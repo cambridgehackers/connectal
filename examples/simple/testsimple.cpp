@@ -4,8 +4,7 @@
 #include <unistd.h>
 #include <assert.h>
 
-#include "SimpleIndicationWrapper.h"
-#include "SimpleRequestProxy.h"
+#include "Simple.h"
 #include "GeneratedTypes.h"
 
 
@@ -31,7 +30,7 @@ E1 v7b = E1_E1Choice2;
 S3 s3 = { a: v7a, e1: v7b };
 
 
-class SimpleIndication : public SimpleIndicationWrapper
+class Simple : public SimpleWrapper
 {  
 public:
   uint32_t cnt;
@@ -39,59 +38,59 @@ public:
     if (++cnt == 7)
       exit(0);
   }
-  virtual void heard1(uint32_t a) {
-    fprintf(stderr, "heard1(%d)\n", a);
+  virtual void say1(uint32_t a) {
+    fprintf(stderr, "say1(%d)\n", a);
     assert(a == v1a);
     incr_cnt();
   }
-  virtual void heard2(uint32_t a, uint32_t b) {
-    fprintf(stderr, "heard2(%d %d)\n", a, b);
+  virtual void say2(uint32_t a, uint32_t b) {
+    fprintf(stderr, "say2(%d %d)\n", a, b);
     assert(a == v2a);
     assert(b == v2b);
     incr_cnt();
   }
-  virtual void heard3(S1 s){
-    fprintf(stderr, "heard3(S1{a:%d,b:%d})\n", s.a, s.b);
+  virtual void say3(S1 s){
+    fprintf(stderr, "say3(S1{a:%d,b:%d})\n", s.a, s.b);
     assert(s.a == s1.a);
     assert(s.b == s1.b);
     incr_cnt();
   }
-  virtual void heard4(S2 s){
-    fprintf(stderr, "heard4(S2{a:%d,b:%d,c:%d})\n", s.a,s.b,s.c);
+  virtual void say4(S2 s){
+    fprintf(stderr, "say4(S2{a:%d,b:%d,c:%d})\n", s.a,s.b,s.c);
     assert(s.a == s2.a);
     assert(s.b == s2.b);
     assert(s.c == s2.c);
     incr_cnt();
   }
-  virtual void heard5(uint32_t a, uint64_t b, uint32_t c) {
-    fprintf(stderr, "heard5(%08x, %016llx, %08x)\n", a, (long long)b, c);
+  virtual void say5(uint32_t a, uint64_t b, uint32_t c) {
+    fprintf(stderr, "say5(%08x, %016llx, %08x)\n", a, (long long)b, c);
     assert(a == v5a);
     assert(b == v5b);
     assert(c == v5c);
     incr_cnt();
   }
-  virtual void heard6(uint32_t a, uint64_t b, uint32_t c) {
-    fprintf(stderr, "heard6(%08x, %016llx, %08x)\n", a, (long long)b, c);
+  virtual void say6(uint32_t a, uint64_t b, uint32_t c) {
+    fprintf(stderr, "say6(%08x, %016llx, %08x)\n", a, (long long)b, c);
     assert(a == v6a);
     assert(b == v6b);
     assert(c == v6c);
     incr_cnt();
   }
-  virtual void heard7(uint32_t a, E1 b) {
-    fprintf(stderr, "heard7(%08x, %08x)\n", a, b);
-    assert(a == v7a);
-    assert(b == v7b);
+  virtual void say7(S3 v) {
+    fprintf(stderr, "say7(%08x, %08x)\n", v.a, v.e1);
+    assert(v.a == v7a);
+    assert(v.e1 == v7b);
     incr_cnt();
   }
-  SimpleIndication(unsigned int id) : SimpleIndicationWrapper(id), cnt(0){}
+  Simple(unsigned int id) : SimpleWrapper(id), cnt(0){}
 };
 
 
 
 int main(int argc, const char **argv)
 {
-  SimpleIndication *indication = new SimpleIndication(IfcNames_SimpleIndication);
-  SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequest);
+  Simple *indication = new Simple(IfcNames_SimpleIndication);
+  SimpleProxy *device = new SimpleProxy(IfcNames_SimpleRequest);
 
   portalExec_start();
 

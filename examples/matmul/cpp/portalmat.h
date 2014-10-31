@@ -30,22 +30,22 @@
 
 #include <portal.h>
 #include "dmaManager.h"
-#include "DmaDebugRequestProxy.h"
-#include "MMUConfigRequestProxy.h"
+#include "DmaDebugRequest.h"
+#include "MMUConfigRequest.h"
 
 #ifdef MATRIX_NT
-#include "MmRequestNTProxy.h"
+#include "MmRequestNT.h"
 extern MmRequestNTProxy *mmdevice;
 #else
 #ifdef MATRIX_TN
-#include "MmRequestTNProxy.h"
+#include "MmRequestTN.h"
 extern MmRequestTNProxy *mmdevice;
 #endif
 #endif
  
-#include "MmIndicationWrapper.h"
-#include "TimerRequestProxy.h"
-#include "TimerIndicationWrapper.h"
+#include "MmIndication.h"
+#include "TimerRequest.h"
+#include "TimerIndication.h"
 
 extern TimerRequestProxy *timerdevice;
 extern sem_t mul_sem;

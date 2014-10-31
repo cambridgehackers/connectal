@@ -3,7 +3,6 @@ import Vector::*;
 import FIFO::*;
 import Connectable::*;
 import Portal::*;
-import Directory::*;
 import CtrlMux::*;
 import Leds::*;
 import MemTypes::*;
@@ -17,7 +16,7 @@ import SwallowWrapper::*;
 import Echo::*;
 import Swallow::*;
 
-typedef enum {EchoIndication, EchoRequest, Swallow, SRequest, SIndication} IfcNames deriving (Eq,Bits);
+typedef enum {EchoIndication, EchoRequest, Swallow, SS_EchoRequest, SS_EchoIndication} IfcNames deriving (Eq,Bits);
 
 // module mkCntr#(Integer label)(Empty);
 //    Reg#(Bit#(32)) cycles <- mkReg(0);
@@ -41,10 +40,7 @@ module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
    portals[0] = swallowWrapper.portalIfc; 
    portals[1] = echoRequestWrapper.portalIfc; 
    portals[2] = echoIndicationProxy.portalIfc;
-   
-   // instantiate system directory
-   StdDirectory dir <- mkStdDirectory(portals);
-   let ctrl_mux <- mkSlaveMux(dir,portals);
+   let ctrl_mux <- mkSlaveMux(portals);
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;

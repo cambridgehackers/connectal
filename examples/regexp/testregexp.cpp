@@ -32,10 +32,10 @@
 #include <sys/stat.h>
 
 #include "StdDmaIndication.h"
-#include "RegexpIndicationWrapper.h"
-#include "RegexpRequestProxy.h"
-#include "DmaDebugRequestProxy.h"
-#include "MMUConfigRequestProxy.h"
+#include "RegexpIndication.h"
+#include "RegexpRequest.h"
+#include "DmaDebugRequest.h"
+#include "MMUConfigRequest.h"
 
 #include "regex-matcher.h"
 #include "jregexp.h"
@@ -200,6 +200,7 @@ int main(int argc, const char **argv)
     close(stateMapAlloc);
     close(stateTransitionsAlloc);
   }
+  portalExec_stop();
   fprintf(stderr, "hw_match_cnt=%d, sw_match_cnt=%d\n", hw_match_cnt, sw_match_cnt);
   return 0;
 }

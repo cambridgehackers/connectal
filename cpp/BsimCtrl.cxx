@@ -40,14 +40,10 @@
 static struct {
     struct memrequest req;
     int sockfd;
-    unsigned int pnum;
     int valid;
     int inflight;
 } head;
 static struct memresponse respitem;
-static int dma_fd = -1;
-static sem_t dma_waiting;
-static pthread_mutex_t socket_mutex;
 static int trace_port;// = 1;
 static int fd_array[MAX_FD_ARRAY];
 static int fd_array_index = 0;
@@ -72,8 +68,6 @@ static void *pthread_worker(void *p)
 extern "C" void initPortal(void)
 {
     pthread_t threaddata;
-    sem_init(&dma_waiting, 0, 0);
-    pthread_mutex_init(&socket_mutex, NULL);
     pthread_create(&threaddata, NULL, &pthread_worker, NULL);
 }
 
@@ -81,57 +75,33 @@ extern "C" void interruptLevel(uint32_t ivalue)
 {
     static struct memresponse respitem;
     int i;
-
     if (ivalue != respitem.data) {
         respitem.portal = MAGIC_PORTAL_FOR_SENDING_INTERRUPT;
         respitem.data = ivalue;
         if (trace_port)
             printf("%s: %d\n", __FUNCTION__, ivalue);
-        pthread_mutex_lock(&socket_mutex);
         for (i = 0; i < fd_array_index; i++)
-           portalSend(fd_array[i], &respitem, sizeof(respitem));
-        pthread_mutex_unlock(&socket_mutex);
+           portalSendFd(fd_array[i], &respitem, sizeof(respitem), -1);
     }
-}
-
-extern "C" int pareff_fd(int *fd)
-{
-    if (trace_port)
-        printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-    sem_wait(&dma_waiting);
-    *fd = dma_fd;
-    dma_fd = -1;
-    return 0;
 }
 
 extern "C" bool checkForRequest(uint32_t rr)
 {
     if (!head.valid){
-	int rv = -1;
-        int i;
+	int rv = -1, i, recvfd;
         for (i = 0; i < fd_array_index; i++) {
             head.sockfd = fd_array[i];
-            rv = portalRecv(head.sockfd, &head.req, sizeof(head.req));
-            if (rv == sizeof(head.req) && head.req.portal == MAGIC_PORTAL_FOR_SENDING_FD) {
-                sock_fd_read(head.sockfd, &dma_fd);
-                sem_post(&dma_waiting);
-                return 0;
-            }
+            rv = portalRecvFd(head.sockfd, &head.req, sizeof(head.req), &recvfd);
 	    if(rv > 0){
-	        //fprintf(stderr, "recv size %d\n", rv);
 	        assert(rv == sizeof(memrequest));
 	        respitem.portal = head.req.portal;
 	        head.valid = 1;
 	        head.inflight = 1;
-	        head.req.addr = (unsigned int *)(((long) head.req.addr) | head.req.portal << 16);
-	        if(trace_port) {
-	            fprintf(stderr, "processr p=%d w=%d, a=%8lx", 
-		        head.req.portal, head.req.write_flag, (long)head.req.addr);
-                    if (head.req.write_flag)
-	                fprintf(stderr, ", d=%8x:", head.req.data_or_tag);
-                    else
-	                fprintf(stderr, "            :%8x", head.req.data_or_tag);
-                }
+                if (recvfd != -1)
+                    head.req.data_or_tag = recvfd;
+	        if(trace_port)
+	            fprintf(stderr, "processr p=%d w=%d, a=%8lx, dt=%8x:", 
+		        head.req.portal, head.req.write_flag, (long)head.req.addr, head.req.data_or_tag);
                 break;
 	    }
         }
@@ -142,7 +112,7 @@ extern "C" bool checkForRequest(uint32_t rr)
 extern "C" unsigned long long getRequest32(uint32_t rr)
 {
     if(trace_port)
-        fprintf(stderr, " get\n");
+        fprintf(stderr, " get%c", rr ? '\n' : ':');
     if (rr)
         head.valid = 0;
     head.inflight = 0;
@@ -153,10 +123,8 @@ extern "C" void readResponse32(unsigned int data, unsigned int tag)
 {
     if(trace_port)
         fprintf(stderr, " read = %x\n", data);
-    pthread_mutex_lock(&socket_mutex);
+    head.valid = 0;
     respitem.data = data;
     respitem.tag = tag;
-    portalSend(head.sockfd, &respitem, sizeof(respitem));
-    pthread_mutex_unlock(&socket_mutex);
-    head.valid = 0;
+    portalSendFd(head.sockfd, &respitem, sizeof(respitem), -1);
 }

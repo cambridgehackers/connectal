@@ -27,10 +27,10 @@
 #include <semaphore.h>
 
 #include "StdDmaIndication.h"
-#include "DmaDebugRequestProxy.h"
-#include "MMUConfigRequestProxy.h"
-#include "MemlatencyIndicationWrapper.h"
-#include "MemlatencyRequestProxy.h"
+#include "DmaDebugRequest.h"
+#include "MMUConfigRequest.h"
+#include "MemlatencyIndication.h"
+#include "MemlatencyRequest.h"
 
 sem_t read_done_sem;
 sem_t write_done_sem;

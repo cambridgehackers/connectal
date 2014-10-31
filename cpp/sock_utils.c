@@ -35,7 +35,9 @@
 #include <sys/un.h>
 #include <semaphore.h>
 #include <pthread.h>
+#include <assert.h>
 
+int bsim_fpga_map[MAX_BSIM_PORTAL_ID];
 static pthread_mutex_t socket_mutex;
 int we_are_initiator;
 int global_sockfd = -1;
@@ -71,10 +73,24 @@ int init_connecting(const char *arg_name)
 
 void connect_to_bsim(void)
 {
+  static PortalInternal p;
   if (global_sockfd != -1)
     return;
   global_sockfd = init_connecting(SOCKET_NAME);
   pthread_mutex_init(&socket_mutex, NULL);
+  unsigned int last = 0;
+  unsigned int idx = 0;
+  while(!last && idx < 32){
+    volatile unsigned int *ptr=(volatile unsigned int *)(long)(idx * PORTAL_BASE_OFFSET);
+    volatile unsigned int *idp = &ptr[PORTAL_CTRL_REG_PORTAL_ID];
+    volatile unsigned int *topp = &ptr[PORTAL_CTRL_REG_TOP];
+    p.fpga_number = idx;
+    unsigned int id = read_portal_bsim(&p, &idp);
+    last = read_portal_bsim(&p, &topp);
+    assert(id < MAX_BSIM_PORTAL_ID);
+    bsim_fpga_map[id] = idx++;
+    //fprintf(stderr, "%s bsim_fpga_map[%d]=%d (%d)\n", __FUNCTION__, id, bsim_fpga_map[id], last);
+  }  
 }
 
 int init_listening(const char *arg_name)
@@ -117,144 +133,156 @@ int accept_socket(int arg_listening)
     return sockfd;
 }
 
-/* Thanks to keithp.com for readable examples how to do this! */
-
-#define COMMON_SOCK_FD \
-    struct msghdr   msg; \
-    struct iovec    iov; \
-    union { \
-        struct cmsghdr  cmsghdr; \
-        char        control[CMSG_SPACE(sizeof (int))]; \
-    } cmsgu; \
-    struct cmsghdr  *cmsg; \
-    \
-    iov.iov_base = buf; \
-    iov.iov_len = sizeof(buf); \
-    msg.msg_name = NULL; \
-    msg.msg_namelen = 0; \
-    msg.msg_iov = &iov; \
-    msg.msg_iovlen = 1; \
-    msg.msg_control = cmsgu.control; \
-    msg.msg_controllen = sizeof(cmsgu.control);
-
-ssize_t sock_fd_write(int sockfd, int fd)
+// Taken from: UNIX Network Programming, Richard Stevens
+// http://www.kohala.com/start/unpv12e.html
+ssize_t sock_fd_write(int sockfd, void *ptr, size_t nbytes, int sendfd)
 {
-    char buf[] = "1";
-    int *iptr;
-    COMMON_SOCK_FD;
-    cmsg = CMSG_FIRSTHDR(&msg);
-    cmsg->cmsg_len = CMSG_LEN(sizeof (int));
-    cmsg->cmsg_level = SOL_SOCKET;
-    cmsg->cmsg_type = SCM_RIGHTS;
-    iptr = (int *) CMSG_DATA(cmsg);
-    *iptr = fd;
+    struct msghdr    msg;
+    struct iovec     iov[1];
+    union {
+      struct cmsghdr cm;
+      char           control[CMSG_SPACE(sizeof(int))];
+    } control_un;
+    struct cmsghdr   *cmptr;
 
-printf("[%s:%d] fd %d\n", __FUNCTION__, __LINE__, fd);
-  int rv = sendmsg(sockfd, &msg, 0);
-  return rv;
+    msg.msg_control = control_un.control;
+    msg.msg_controllen = 0;
+    if (sendfd >= 0) {
+        msg.msg_controllen = sizeof(control_un.control);
+        cmptr = CMSG_FIRSTHDR(&msg);
+        cmptr->cmsg_len = CMSG_LEN(sizeof(int));
+        cmptr->cmsg_level = SOL_SOCKET;
+        cmptr->cmsg_type = SCM_RIGHTS;
+        int *foo = (int *)CMSG_DATA(cmptr);
+        *foo = sendfd;
+    }
+    msg.msg_name = NULL;
+    msg.msg_namelen = 0;
+    iov[0].iov_base = ptr;
+    iov[0].iov_len = nbytes;
+    msg.msg_iov = iov;
+    msg.msg_iovlen = 1;
+    return sendmsg(sockfd, &msg, 0);
 }
 
-ssize_t bluesim_sock_fd_write(long fd)
+ssize_t sock_fd_read(int sockfd, void *ptr, size_t nbytes, int *recvfd)
 {
-  struct memrequest foo = {MAGIC_PORTAL_FOR_SENDING_FD};
-
-  pthread_mutex_lock(&socket_mutex);
-  portalSend(global_sockfd, &foo, sizeof(foo));
-  int rv = sock_fd_write(global_sockfd, fd);
-  pthread_mutex_unlock(&socket_mutex);
-  return rv;
-}
-
-ssize_t sock_fd_read(int sock, int *fd)
-{
-    ssize_t     size;
-    char buf[16];
-    int *iptr;
+    struct msghdr    msg;
+    struct iovec     iov[1];
+    ssize_t          n;
+    int              newfd;
+    union {
+      struct cmsghdr cm;
+      char           control[CMSG_SPACE(sizeof(int))];
+    } control_un;
+    struct cmsghdr   *cmptr;
 
     if (trace_socket)
-        printf("[%s:%d] sock %d\n", __FUNCTION__, __LINE__, sock);
-    COMMON_SOCK_FD;
-    *fd = -1;
-    size = recvmsg (sock, &msg, 0);
-    cmsg = CMSG_FIRSTHDR(&msg);
-    if (size > 0 && cmsg && cmsg->cmsg_len == CMSG_LEN(sizeof(int))) {
-        if (cmsg->cmsg_level != SOL_SOCKET || cmsg->cmsg_type != SCM_RIGHTS) {
-            fprintf(stderr, "%s: invalid message\n", __FUNCTION__);
+        printf("[%s:%d] sock %d\n", __FUNCTION__, __LINE__, sockfd);
+    msg.msg_control = control_un.control;
+    msg.msg_controllen = sizeof(control_un.control);
+    msg.msg_name = NULL;
+    msg.msg_namelen = 0;
+    iov[0].iov_base = ptr;
+    iov[0].iov_len = nbytes;
+    msg.msg_iov = iov;
+    msg.msg_iovlen = 1;
+
+    *recvfd = -1;        /* descriptor was not passed */
+    if ( (n = recvmsg(sockfd, &msg, MSG_DONTWAIT)) <= 0)
+        return n;
+    if ( (cmptr = CMSG_FIRSTHDR(&msg)) && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
+        if (cmptr->cmsg_level != SOL_SOCKET || cmptr->cmsg_type != SCM_RIGHTS) {
+            printf("%s failed\n", __FUNCTION__);
             exit(1);
         }
-        iptr = (int *)CMSG_DATA(cmsg);
-        *fd = *iptr;
+        int *foo = (int *)CMSG_DATA(cmptr);
+        *recvfd = *foo;
     }
-    else {
-        printf("sock_fd_read: error in receiving fd %d size %ld len %ld\n", *fd, (long)size, (long)(cmsg?cmsg->cmsg_len:-666));
-        printf("sock_fd_read: controllen %lx control %lx\n", (long)msg.msg_controllen, (long)msg.msg_control);
-        exit(-1);
-    }
-    return size;
+    return n;
 }
 
 static uint32_t interrupt_value;
-void portalSend(int fd, void *data, int len)
+void portalSendFd(int fd, void *data, int len, int sendFd)
 {
     if (trace_socket)
         printf("%s: init %d fd %d data %p len %d\n", __FUNCTION__, we_are_initiator, fd, data, len);
-    if (send(fd, data, len, 0) == -1) {
+    if (sock_fd_write(fd, data, len, sendFd) == -1) {
         fprintf(stderr, "%s: send error\n",__FUNCTION__);
         exit(1);
     }
 }
-int portalRecv(int fd, void *data, int len)
+int portalRecvFd(int fd, void *data, int len, int *recvFd)
 {
-    int rc = recv(fd, data, len, MSG_DONTWAIT);
+    int rc = sock_fd_read(fd, data, len, recvFd);
     if (trace_socket)
         printf("%s: init %d fd %d data %p len %d rc %d\n", __FUNCTION__, we_are_initiator, fd, data, len, rc);
     return rc;
 }
+void portalSend(int fd, void *data, int len)
+{
+    portalSendFd(fd, data, len, -1);
+}
+int portalRecv(int fd, void *data, int len)
+{
+    int recvFd;
+    return portalRecvFd(fd, data, len, &recvFd);
+}
+static struct memresponse shared_response;
+static int shared_response_valid;
+int poll_response(int id)
+{
+  if (!shared_response_valid) {
+      if (portalRecv(global_sockfd, &shared_response, sizeof(shared_response)) == sizeof(shared_response)) {
+          if (shared_response.portal == MAGIC_PORTAL_FOR_SENDING_INTERRUPT)
+              interrupt_value = shared_response.data;
+          else
+              shared_response_valid = 1;
+      }
+  }
+  return shared_response_valid && shared_response.portal == id;
+}
 unsigned int bsim_poll_interrupt(void)
 {
-  struct memresponse rv;
-  int rc;
-
   if (global_sockfd == -1)
       return 0;
   pthread_mutex_lock(&socket_mutex);
-  rc = portalRecv(global_sockfd, &rv, sizeof(rv));
-  if (rc == sizeof(rv) && rv.portal == MAGIC_PORTAL_FOR_SENDING_INTERRUPT)
-      interrupt_value = rv.data;
+  poll_response(-1);
   pthread_mutex_unlock(&socket_mutex);
   return interrupt_value;
 }
 /* functions called by READL() and WRITEL() macros in application software */
 unsigned int tag_counter;
-unsigned int read_portal_bsim(volatile unsigned int *addr, int id)
+unsigned int read_portal_bsim(PortalInternal *pint, volatile unsigned int **addr)
 {
-  struct memrequest foo = {id, 0,addr,0};
-  struct memresponse rv;
+  struct memrequest foo = {pint->fpga_number, 0,*addr,0};
 
   pthread_mutex_lock(&socket_mutex);
   foo.data_or_tag = tag_counter++;
   portalSend(global_sockfd, &foo, sizeof(foo));
-  while (1) {
-    if(recv(global_sockfd, &rv, sizeof(rv), 0) == -1){
-      fprintf(stderr, "%s (fpga%d) recv error\n",__FUNCTION__, id);
-      exit(1);	  
-    }
-    if (rv.portal == MAGIC_PORTAL_FOR_SENDING_INTERRUPT)
-      interrupt_value = rv.data;
-    else
-      break;
+  while (!poll_response(pint->fpga_number)) {
+      struct timeval tv = {};
+      tv.tv_usec = 10000;
+      select(0, NULL, NULL, NULL, &tv);
   }
+  unsigned int rc = shared_response.data;
+  shared_response_valid = 0;
   pthread_mutex_unlock(&socket_mutex);
-  return rv.data;
+  return rc;
 }
 
-void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id)
+void write_portal_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
 {
-  struct memrequest foo = {id, 1,addr,v};
+  struct memrequest foo = {pint->fpga_number, 1,*addr,v};
 
-  pthread_mutex_lock(&socket_mutex);
   portalSend(global_sockfd, &foo, sizeof(foo));
-  pthread_mutex_unlock(&socket_mutex);
+}
+void write_portal_fd_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
+{
+  struct memrequest foo = {pint->fpga_number, 1,*addr,v};
+
+printf("[%s:%d] fd %d\n", __FUNCTION__, __LINE__, v);
+  portalSendFd(global_sockfd, &foo, sizeof(foo), v);
 }
 #else // __KERNEL__
 
@@ -291,7 +319,7 @@ ssize_t connectal_kernel_read (struct file *f, char __user *arg, size_t len, lof
         return -EAGAIN;
     if (len > sizeof(upreq))
         len = sizeof(upreq);
-    if (upreq.portal == MAGIC_PORTAL_FOR_SENDING_FD) // part of sock_fd_write() processing
+    if (upreq.write_flag == MAGIC_PORTAL_FOR_SENDING_FD) // part of sock_fd_write() processing
         upreq.addr = (void *)(long)dma_buf_fd((struct dma_buf *)upreq.addr, O_CLOEXEC); /* get an fd in user process!! */
     err = copy_to_user((void __user *) arg, &upreq, len);
     have_request = 0;
@@ -342,21 +370,20 @@ void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id)
     memcpy(&upreq, &foo, sizeof(upreq));
     have_request = 1;
 }
-ssize_t bluesim_sock_fd_write(long fd)
+void write_portal_fd_bsim(volatile unsigned int *addr, unsigned int v, int id)
 {
-    struct memrequest foo = {MAGIC_PORTAL_FOR_SENDING_FD};
+    struct memrequest foo = {id, MAGIC_PORTAL_FOR_SENDING_FD,addr,v};
     struct file *fmem;
 
     if (main_program_finished)
-        return 0;
-    fmem = fget(fd);
+        return;
+    fmem = fget(v);
     foo.addr = fmem->private_data;
-    printk("[%s:%d] fd %lx dmabuf %p\n", __FUNCTION__, __LINE__, fd, foo.addr);
+    printk("[%s:%d] fd %x dmabuf %p\n", __FUNCTION__, __LINE__, v, foo.addr);
     fput(fmem);
     down_interruptible(&bsim_avail);
     memcpy(&upreq, &foo, sizeof(upreq));
     have_request = 1;
     down_interruptible(&bsim_have_response);
-    return 0;
 }
 #endif

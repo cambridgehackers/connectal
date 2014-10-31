@@ -4,8 +4,8 @@
 #include <semaphore.h>
 #include <unistd.h>
 
-#include "FibIndicationWrapper.h"
-#include "FibRequestProxy.h"
+#include "FibIndication.h"
+#include "FibRequest.h"
 #include "GeneratedTypes.h"
 
 sem_t test_sem;

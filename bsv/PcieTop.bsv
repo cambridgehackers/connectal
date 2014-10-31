@@ -231,7 +231,7 @@ module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Cl
      Integer intr_num = 0;
      for (Integer i = 0; i < 15; i = i + 1) begin
 	 if (intr_num == 0 && portalTop.interrupt[i] && !interruptRequested[i])
-             intr_num = i+1;
+             intr_num = i;
 	 interruptRequested[i] <= portalTop.interrupt[i];
      end
      if (intr_num != 0) begin // i= 0 for the directory

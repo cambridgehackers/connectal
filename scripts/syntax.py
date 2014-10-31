@@ -215,8 +215,15 @@ def t_error(t):
     print "Illegal character '%s' in file '%s'" % (t.value[0], globalfilename)
     t.lexer.skip(1)
 
+def p_error(errtoken):
+    if hasattr(errtoken, 'lineno'):
+        sys.stderr.write("%s:%d: Syntax error, token=%s\n" % (globalfilename, errtoken.lineno, errtoken.type))
+    else:
+        sys.stderr.write("%s: Syntax error, token=%s\n" % (globalfilename, errtoken.lineno, errtoken.type))
+    return None
+    
 def t_VAR(t):
-    r'`?[a-zA-Z_][$a-zA-Z0-9_]*'
+    r'`?([a-zA-Z_][$a-zA-Z0-9_]*)|(\\[-+*/%][*]?)'
     t.type = reserved.get(t.value,'VAR')    
     return t
 
@@ -252,10 +259,16 @@ def p_typeParams(p):
 
 def p_type(p):
     '''type : VAR
+            | VAR COLONCOLON VAR
             | NUM
-            | VAR HASH LPAREN typeParams RPAREN'''
+            | VAR HASH LPAREN typeParams RPAREN
+            | VAR COLONCOLON VAR HASH LPAREN typeParams RPAREN'''
     if len(p) == 2:
         p[0] = AST.Type(p[1], [])
+    elif len(p) == 4:
+        p[0] = p[3]
+    elif len(p) == 8:
+        p[0] = AST.Type(p[3], p[6])
     else:
         p[0] = AST.Type(p[1], p[4])
 
@@ -374,7 +387,8 @@ def p_patterns(p):
 
 def p_importDecl(p):
     'importDecl : TOKIMPORT VAR COLONCOLON STAR SEMICOLON'
-    #globalimports.append(p[2])
+    if not p[2] in globalimports:
+        globalimports.append(p[2])
     p[0] = p[2]
 
 def p_importDecls(p):
@@ -573,7 +587,8 @@ def p_functionValue(p):
     '''functionValue : EQUAL expression SEMICOLON'''
 
 def p_functionFormal(p):
-    '''functionFormal : type VAR'''
+    '''functionFormal : type VAR
+                      | VAR'''
 
 def p_functionFormals(p):
     '''functionFormals :
@@ -593,8 +608,14 @@ def p_fsmStmtDef(p):
 
 def p_functionDef(p):
     '''functionDef : instanceAttributes TOKFUNCTION type VAR LPAREN functionFormals RPAREN provisos functionBody
-                   | instanceAttributes TOKFUNCTION type VAR LPAREN functionFormals RPAREN provisos functionValue'''
-    p[0] = AST.Function(p[4], p[3], p[6])
+                   | instanceAttributes TOKFUNCTION      VAR LPAREN functionFormals RPAREN provisos functionBody
+                   | instanceAttributes TOKFUNCTION type VAR LPAREN functionFormals RPAREN provisos functionValue
+                   '''
+    if len(p) == 9:
+        # no type
+        p[0] = AST.Function(p[3], None, p[5])
+    else:
+        p[0] = AST.Function(p[4], p[3], p[6])
 
 def p_methodDef(p):
     '''methodDef : TOKMETHOD type VAR LPAREN functionFormals RPAREN implicitCond SEMICOLON methodBody
@@ -706,7 +727,10 @@ def p_typeDefBody(p):
 def p_typeDef(p):
     '''typeDef : TOKTYPEDEF typeDefBody VAR deriving SEMICOLON
                | TOKTYPEDEF typeDefBody VAR interfaceHashParams deriving SEMICOLON'''
-    p[0] = AST.TypeDef(p[2], p[3])
+    if len(p) == 6:
+        p[0] = AST.TypeDef(p[2], p[3], [])
+    else:
+        p[0] = AST.TypeDef(p[2], p[3], p[4])
 
 
 def p_interfaceDef(p):
@@ -866,7 +890,7 @@ def p_typeClassDecl(p):
     p[0] = AST.Typeclass(p[2])
 
 globalimports = []
-globalfilename = []
+globalfilename = None
 
 def p_packageStmt(p):
     '''packageStmt : interfaceDecl
@@ -937,7 +961,8 @@ def preprocess(source, defs):
             defs.append(sym)
             s = s[k:]
         else:
-            assert(False)
+            print 'unhandled preprocessor token', tok
+            assert(tok in ['ifdef', 'ifndef', 'else', 'endif', 'define'])
         prv = pre if valid and cond else '\n\n'
         return prv+pp('\n'+s)
 
@@ -953,7 +978,7 @@ def syntax_parse(argdata, inputfilename, bsvdefines):
     if not (parserdir in sys.path):
         sys.path.append(parserdir)
     parser = yacc.yacc(optimize=1,errorlog=yacc.NullLogger(),outputdir=parserdir,debugfile=parserdir+'/parser.out')
-    globalfilename = [inputfilename]
+    globalfilename = inputfilename
     if noisyFlag:
         print 'Parsing:', inputfilename
     return  parser.parse(data)

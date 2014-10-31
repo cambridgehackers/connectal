@@ -25,10 +25,10 @@
 
 #include "dmaManager.h"
 #include "StdDmaIndication.h"
-#include "DmaDebugRequestProxy.h"
-#include "MMUConfigRequestProxy.h"
-#include "MemwriteIndicationWrapper.h"
-#include "MemwriteRequestProxy.h"
+#include "DmaDebugRequest.h"
+#include "MMUConfigRequest.h"
+#include "MemwriteIndication.h"
+#include "MemwriteRequest.h"
 
 static void memdump(unsigned char *p, int len, const char *title)
 {

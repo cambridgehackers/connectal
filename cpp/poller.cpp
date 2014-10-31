@@ -85,11 +85,11 @@ int PortalPoller::registerInstance(Portal *portal)
     numWrappers++;
     fprintf(stderr, "Portal::registerInstance fpga%d fd %d\n", portal->pint.fpga_number, portal->pint.fpga_fd);
     portal_wrappers = (Portal **)realloc(portal_wrappers, numWrappers*sizeof(Portal *));
-    portal_fds = (struct pollfd *)realloc(portal_fds, numWrappers*sizeof(struct pollfd));
     portal_wrappers[numWrappers-1] = portal;
 
     if (portal->pint.fpga_fd != -1) {
         numFds++;
+        portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
         struct pollfd *pollfd = &portal_fds[numFds-1];
         memset(pollfd, 0, sizeof(struct pollfd));
         pollfd->fd = portal->pint.fpga_fd;
@@ -105,6 +105,7 @@ void* PortalPoller::portalExec_init(void)
     if (global_sockfd != -1) {
         portalExec_timeout = 100;
         numFds++;
+        portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
         struct pollfd *pollfd = &portal_fds[numFds-1];
         memset(pollfd, 0, sizeof(struct pollfd));
         pollfd->fd = global_sockfd;
@@ -130,6 +131,8 @@ void PortalPoller::portalExec_stop(void)
 void PortalPoller::portalExec_end(void)
 {
     stopping = 1;
+    printf("%s: don't disable interrupts when stopping\n", __FUNCTION__);
+    return;
     for (int i = 0; i < numWrappers; i++) {
       Portal *instance = portal_wrappers[i];
       fprintf(stderr, "portalExec::disabling interrupts portal %d fpga%d\n", i, instance->pint.fpga_number);
@@ -142,20 +145,19 @@ void* PortalPoller::portalExec_poll(int timeout)
     long rc = 0;
     // LCS bypass the call to poll if the timeout is 0
     if (timeout != 0) {
-      poll_enter_time = portalCycleCount();
+      //poll_enter_time = portalCycleCount();
       rc = poll(portal_fds, numFds, timeout);
-      poll_return_time = portalCycleCount();
+      //poll_return_time = portalCycleCount();
     }
     if(rc < 0) {
-	// return only in error case
-	fprintf(stderr, "poll returned rc=%ld errno=%d:%s\n", rc, errno, strerror(errno));
+      // return only in error case
+      fprintf(stderr, "poll returned rc=%ld errno=%d:%s\n", rc, errno, strerror(errno));
     }
     return (void*)rc;
 }
 
 void* PortalPoller::portalExec_event(void)
 {
-    int mcnt = 0;
     for (int i = 0; i < numWrappers; i++) {
       if (!portal_wrappers) {
         fprintf(stderr, "No portal_instances revents=%d\n", portal_fds[i].revents);
@@ -187,26 +189,12 @@ void* PortalPoller::portalExec_event(void)
           }
           continue;
       }
-      volatile unsigned int *map_base = instance->pint.map_base;
-    
-      // sanity check, to see the status of interrupt source and enable
-      unsigned int queue_status;
-    
-      // handle all messasges from this portal instance
 #ifdef BSIM
       if (instance->pint.fpga_fd == -1 && !bsim_poll_interrupt())
         continue;
 #endif
-      while ((queue_status= READL(&instance->pint, &map_base[IND_REG_QUEUE_STATUS]))) {
-        if(0) {
-          unsigned int int_src = READL(&instance->pint, &map_base[IND_REG_INTERRUPT_FLAG]);
-          unsigned int int_en  = READL(&instance->pint, &map_base[IND_REG_INTERRUPT_MASK]);
-          unsigned int ind_count  = READL(&instance->pint, &map_base[IND_REG_INTERRUPT_COUNT]);
-          fprintf(stderr, "(%d:fpga%d) about to receive messages int=%08x en=%08x qs=%08x cnt=%x\n", i, instance->pint.fpga_number, int_src, int_en, queue_status, ind_count);
-        }
-        instance->pint.handler(&instance->pint, queue_status-1);
-	mcnt++;
-      }
+      // handle all messasges from this portal instance
+      portalCheckIndication(&instance->pint);
       // re-enable interrupt which was disabled by portal_isr
       portalEnableInterrupts(&instance->pint, 1);
     }
@@ -266,6 +254,10 @@ void PortalPoller::portalExec_start()
 void portalExec_start()
 {
     defaultPoller->portalExec_start();
+}
+void portalExec_stop()
+{
+    defaultPoller->portalExec_stop();
 }
 
 #endif // NO_CPP_PORTAL_CODE

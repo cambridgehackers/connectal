@@ -8,10 +8,10 @@
 #include <fstream>
 
 #include "StdDmaIndication.h"
-#include "DmaDebugRequestProxy.h"
-#include "SGListConfigRequestProxy.h"
-#include "PcieTestBenchIndicationWrapper.h"
-#include "PcieTestBenchRequestProxy.h"
+#include "DmaDebugRequest.h"
+#include "SGListConfigRequest.h"
+#include "PcieTestBenchIndication.h"
+#include "PcieTestBenchRequest.h"
 
 
 sem_t test_sem;

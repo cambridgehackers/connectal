@@ -5,10 +5,10 @@
 #include <assert.h>
 #include <semaphore.h>
 
-#include "ChannelSelectTestRequestProxy.h"
-#include "ChannelSelectTestIndicationWrapper.h"
-#include "DDSTestRequestProxy.h"
-#include "DDSTestIndicationWrapper.h"
+#include "ChannelSelectTestRequest.h"
+#include "ChannelSelectTestIndication.h"
+#include "DDSTestRequest.h"
+#include "DDSTestIndication.h"
 #include "GeneratedTypes.h"
 
 sem_t data_sem;

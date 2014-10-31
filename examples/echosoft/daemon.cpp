@@ -20,13 +20,13 @@
  */
 
 #include <stdio.h>
-#include "EchoRequestProxy.h"
-#include "EchoIndicationWrapper.h"
-#include "SRequestWrapper.h"
-#include "SIndicationProxy.h"
+#include "EchoRequest.h"
+#include "EchoIndication.h"
+#include "SS_EchoRequest.h"
+#include "SS_EchoIndication.h"
 
 EchoRequestProxy *echoRequestProxy;
-SIndicationProxy *sIndicationProxy;
+SS_EchoIndicationProxy *sIndicationProxy;
 
 class EchoIndication : public EchoIndicationWrapper
 {
@@ -42,7 +42,7 @@ public:
     EchoIndication(unsigned int id) : EchoIndicationWrapper(id) {}
 };
 
-class SRequest : public SRequestWrapper
+class SS_EchoRequest : public SS_EchoRequestWrapper
 {
 public:
     void say ( const uint32_t v ) {
@@ -59,15 +59,15 @@ public:
         sleep(1);
         exit(1);
     }
-    SRequest(unsigned int id) : SRequestWrapper(id) {}
+    SS_EchoRequest(unsigned int id) : SS_EchoRequestWrapper(id) {}
 };
 
 int main(int argc, const char **argv)
 {
     EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication);
-    SRequest *sRequest = new SRequest(IfcNames_SRequest);
+    SS_EchoRequest *sRequest = new SS_EchoRequest(IfcNames_SS_EchoRequest);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
-    sIndicationProxy = new SIndicationProxy(IfcNames_SIndication);
+    sIndicationProxy = new SS_EchoIndicationProxy(IfcNames_SS_EchoIndication);
 
     portalExec_start();
     printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);

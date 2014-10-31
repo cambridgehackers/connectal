@@ -24,8 +24,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "PortalPerfIndicationWrapper.h"
-#include "PortalPerfRequestProxy.h"
+#include "PortalPerfIndication.h"
+#include "PortalPerfRequest.h"
 #include "GeneratedTypes.h"
 
 //#define DEBUG 1

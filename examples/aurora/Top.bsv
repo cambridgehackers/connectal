@@ -7,7 +7,6 @@ import FIFO::*;
 import Connectable::*;
 
 // portz libraries
-import Directory::*;
 import CtrlMux::*;
 import Portal::*;
 import Leds::*;
@@ -32,10 +31,7 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,AuroraPins,0));
    Vector#(2,StdPortal) portals;
    portals[0] = auroraRequestWrapper.portalIfc;
    portals[1] = auroraIndicationProxy.portalIfc;
-   
-   // instantiate system directory
-   StdDirectory dir <- mkStdDirectory(portals);
-   let ctrl_mux <- mkSlaveMux(dir,portals);
+   let ctrl_mux <- mkSlaveMux(portals);
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;

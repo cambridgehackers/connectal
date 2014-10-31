@@ -132,6 +132,18 @@ instance ToPipeOut#(Vector#(n, a), Gearbox#(m, n, a));
    endfunction
 endinstance
 
+instance MkPipeOut#(a, ActionValue#(a))
+   provisos (Bits#(a, asz));
+   module mkPipeOut#(ActionValue#(a) in)(PipeOut#(a));
+      FIFOF#(a) fifo <- mkFIFOF();
+      rule connect;
+	 let v <- in;
+	 fifo.enq(v);
+      endrule
+      return toPipeOut(fifo);
+   endmodule
+endinstance
+
 instance MkPipeOut#(a, Get#(a))
    provisos (Bits#(a, asz));
    module mkPipeOut#(Get#(a) in)(PipeOut#(a));

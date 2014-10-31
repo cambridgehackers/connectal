@@ -28,7 +28,8 @@ static int shifts[] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0, 0};
 #include "portalmem.h" // PortalAlloc
 
 #ifdef CONNECTAL_DRIVER_CODE
-#include "MMUConfigRequestProxy.c"
+#define NO_WRAPPER_FUNCTIONS
+#include "MMUConfigRequest.c"
 static int trace_memory = 1;
 #endif
 

@@ -29,7 +29,6 @@ import FIFO::*;
 // portz libraries
 import MemServer::*;
 import MMU::*;
-import Directory::*;
 import CtrlMux::*;
 import Portal::*;
 import ConnectalMemory::*;
@@ -71,10 +70,7 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,Empty,NumMasters));
    portals[3] = hostDmaDebugIndicationProxy.portalIfc; 
    portals[4] = hostMMUConfigRequestWrapper.portalIfc;
    portals[5] = hostMMUConfigIndicationProxy.portalIfc;
-
-   
-   StdDirectory dir <- mkStdDirectory(portals);
-   let ctrl_mux <- mkSlaveMux(dir,portals);
+   let ctrl_mux <- mkSlaveMux(portals);
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;

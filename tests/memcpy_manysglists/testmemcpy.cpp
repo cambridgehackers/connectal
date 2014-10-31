@@ -29,10 +29,10 @@
 
 #include "poller.h"
 #include "StdDmaIndication.h"
-#include "DmaDebugRequestProxy.h"
-#include "MMUConfigRequestProxy.h"
-#include "MemcpyIndicationWrapper.h"
-#include "MemcpyRequestProxy.h"
+#include "DmaDebugRequest.h"
+#include "MMUConfigRequest.h"
+#include "MemcpyIndication.h"
+#include "MemcpyRequest.h"
 
 sem_t done_sem;
 int srcAlloc;

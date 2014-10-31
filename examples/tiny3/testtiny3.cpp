@@ -5,8 +5,8 @@
 #include <assert.h>
 #include <semaphore.h>
 
-#include "Tiny3IndicationWrapper.h"
-#include "Tiny3RequestProxy.h"
+#include "Tiny3Indication.h"
+#include "Tiny3Request.h"
 #include "GeneratedTypes.h"
 
 sem_t sem_sync;
