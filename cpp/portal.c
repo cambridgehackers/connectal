@@ -74,7 +74,6 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
     pint->fpga_number = id;
     pint->fpga_fd = -1;
     pint->handler = handler;
-    pint->reqsize = reqsize;
     pint->cb = cb;
     pint->item = item;
     if (!item) {
@@ -84,6 +83,9 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
         pint->item = &hardwarefunc;
 #endif
     }
+    if (pint->item != &socketfunc)
+        reqsize = 0;
+    pint->reqsize = reqsize;
     if (reqsize) {
 #ifdef __KERNEL__
         printk("[%s:%d] software id %d reqsize %d\n", __FUNCTION__, __LINE__, id, reqsize);
@@ -376,7 +378,7 @@ static void write_fd_hardware(PortalInternal *pint, volatile unsigned int **addr
 {
     **addr = v;
 }
-void send_hardware(struct PortalInternal *pint, unsigned int hdr, int len)
+void send_hardware(struct PortalInternal *pint, unsigned int hdr, int sendFd)
 {
 }
 int recv_hardware(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
@@ -402,4 +404,41 @@ PortalItemFunctions bsimfunc = {
 PortalItemFunctions hardwarefunc = {
     read_hardware, write_hardware, write_fd_hardware, mapchannel_hardware,
     send_hardware, recv_hardware, busy_hardware};
+
+static int mapchannel_socket(unsigned int v)
+{
+    return 1;
+}
+static unsigned int read_socket(PortalInternal *pint, volatile unsigned int **addr)
+{
+    unsigned int rc = **addr;
+    *addr += 1;
+    return rc;
+}
+static void write_socket(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
+{
+    **addr = v;
+    *addr += 1;
+}
+static void write_fd_socket(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
+{
+    **addr = v;
+    *addr += 1;
+}
+void send_socket(struct PortalInternal *pint, unsigned int hdr, int sendFd)
+{
+    pint->map_base[0] = hdr;
+    portalSendFd(pint->fpga_fd, (void *)pint->map_base, (hdr & 0xffff) + sizeof(uint32_t), sendFd);
+}
+int recv_socket(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
+{
+    return portalRecvFd(pint->fpga_fd, (void *)buffer, len, recvfd);
+}
+int busy_socket(struct PortalInternal *pint, volatile unsigned int *addr, const char *str)
+{
+    return 0;
+}
+PortalItemFunctions socketfunc = {
+    read_socket, write_socket, write_fd_socket, mapchannel_socket,
+    send_socket, recv_socket, busy_socket};
 

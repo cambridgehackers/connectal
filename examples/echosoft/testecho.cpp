@@ -20,13 +20,13 @@
  */
 
 #include <stdio.h>
-#include "SS_EchoRequest.h"
-#include "SS_EchoIndication.h"
+#include "EchoRequest.h"
+#include "EchoIndication.h"
 
-SS_EchoRequestProxy *sRequestProxy;
+EchoRequestProxy *sRequestProxy;
 static sem_t sem_heard2;
 
-class SS_EchoIndication : public SS_EchoIndicationWrapper
+class EchoIndication : public EchoIndicationWrapper
 {
 public:
     virtual void heard(uint32_t v) {
@@ -37,7 +37,7 @@ public:
         sem_post(&sem_heard2);
         //fprintf(stderr, "heard an s2: %ld %ld\n", a, b);
     }
-    SS_EchoIndication(unsigned int id) : SS_EchoIndicationWrapper(id) {}
+    EchoIndication(unsigned int id, PortalItemFunctions *item) : EchoIndicationWrapper(id, item) {}
 };
 
 static void call_say(int v)
@@ -56,8 +56,8 @@ static void call_say2(int v, int v2)
 int main(int argc, const char **argv)
 {
     portalInitiator();
-    SS_EchoIndication *sIndication = new SS_EchoIndication(IfcNames_SS_EchoIndication);
-    sRequestProxy = new SS_EchoRequestProxy(IfcNames_SS_EchoRequest);
+    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &socketfunc);
+    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &socketfunc);
 
     portalExec_start();
 

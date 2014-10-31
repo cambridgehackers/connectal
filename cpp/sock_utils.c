@@ -118,6 +118,8 @@ int init_listening(const char *arg_name)
     fprintf(stderr, "%s[%d]: listen error %s\n",__FUNCTION__, listening_socket, strerror(errno));
     exit(1);
   }
+  if (trace_socket)
+      printf("%s: listen(%d)\n", __FUNCTION__, listening_socket);
   return listening_socket;
 }
 
@@ -130,6 +132,8 @@ int accept_socket(int arg_listening)
         fprintf(stderr, "%s[%d]: accept error %s\n",__FUNCTION__, arg_listening, strerror(errno));
         exit(1);
     }
+    if (trace_socket)
+        printf("%s: accept(%d) = %d\n", __FUNCTION__, arg_listening, sockfd);
     return sockfd;
 }
 
@@ -177,8 +181,8 @@ ssize_t sock_fd_read(int sockfd, void *ptr, size_t nbytes, int *recvfd)
     } control_un;
     struct cmsghdr   *cmptr;
 
-    if (trace_socket)
-        printf("[%s:%d] sock %d\n", __FUNCTION__, __LINE__, sockfd);
+    //if (trace_socket)
+    //    printf("[%s:%d] sock %d\n", __FUNCTION__, __LINE__, sockfd);
     msg.msg_control = control_un.control;
     msg.msg_controllen = sizeof(control_un.control);
     msg.msg_name = NULL;
@@ -208,14 +212,14 @@ void portalSendFd(int fd, void *data, int len, int sendFd)
     if (trace_socket)
         printf("%s: init %d fd %d data %p len %d\n", __FUNCTION__, we_are_initiator, fd, data, len);
     if (sock_fd_write(fd, data, len, sendFd) == -1) {
-        fprintf(stderr, "%s: send error\n",__FUNCTION__);
+        fprintf(stderr, "%s: send error %d\n",__FUNCTION__, errno);
         exit(1);
     }
 }
 int portalRecvFd(int fd, void *data, int len, int *recvFd)
 {
     int rc = sock_fd_read(fd, data, len, recvFd);
-    if (trace_socket)
+    if (trace_socket && rc && rc != -1)
         printf("%s: init %d fd %d data %p len %d rc %d\n", __FUNCTION__, we_are_initiator, fd, data, len, rc);
     return rc;
 }

@@ -83,7 +83,7 @@ class Portal : public PortalInternalCpp
     }
   };
   Portal(int id, uint32_t reqsize, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, PortalPoller *poller = 0) : PortalInternalCpp(id, handler, cb, item, reqsize) {
-    if (pint.handler) {
+    if (pint.handler || item == &socketfunc) {
       if (poller == 0)
         poller = defaultPoller;
       pint.poller = poller;

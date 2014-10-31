@@ -176,8 +176,10 @@ void* PortalPoller::portalExec_event(void)
              instance->pint.handler(&instance->pint, *instance->pint.map_base >> 16);
           }
           else { /* have not received connection yet */
+printf("[%s:%d] beforeacc %d\n", __FUNCTION__, __LINE__, instance->pint.fpga_fd);
               int sockfd = accept_socket(instance->pint.fpga_fd);
               if (sockfd != -1) {
+printf("[%s:%d] afteracc %d\n", __FUNCTION__, __LINE__, sockfd);
                   for (int j = 0; j < numFds; j++)
                       if (portal_fds[j].fd == instance->pint.fpga_fd) {
                           portal_fds[j].fd = sockfd;

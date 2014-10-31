@@ -61,7 +61,7 @@ typedef int Bool;   /* for GeneratedTypes.h */
 typedef int SpecialTypeForSendingFd;
 struct PortalInternal;
 typedef int (*PORTAL_INDFUNC)(struct PortalInternal *p, unsigned int channel);
-typedef void (*SENDMSG)(struct PortalInternal *pint, unsigned int hdr, int len);
+typedef void (*SENDMSG)(struct PortalInternal *pint, unsigned int hdr, int sendFd);
 typedef int (*RECVMSG)(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd);
 typedef unsigned int (*READWORD)(struct PortalInternal *pint, volatile unsigned int **addr);
 typedef void (*WRITEWORD)(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
@@ -159,6 +159,7 @@ extern int we_are_initiator;
 extern PortalInternal *utility_portal;
 extern PortalItemFunctions bsimfunc;
 extern PortalItemFunctions hardwarefunc;
+extern PortalItemFunctions socketfunc;
 #ifdef __cplusplus
 }
 #endif
@@ -173,18 +174,10 @@ extern PortalItemFunctions hardwarefunc;
 #define READL(CITEM, A)     (**(A))
 #define WRITEL(CITEM, A, B) (**(A) = (B))
 #define WRITEFD(CITEM, A, B) (**(A) = (B))
-#define SSWRITE(CITEM, B, C) {\
-    *(CITEM)->map_base = (B); \
-    portalSendFd((CITEM)->fpga_fd, (void *)(CITEM)->map_base, (((B) & 0xffff) +1) * sizeof(uint32_t), (C)); \
-    }
 #else
 #define READL(CITEM, A)     read_portal_bsim((CITEM), (A))
 #define WRITEL(CITEM, A, B) write_portal_bsim((CITEM), (A), (B))
 #define WRITEFD(CITEM, A, B) write_portal_fd_bsim((CITEM), (A), (B))
-#define SSWRITE(CITEM, B, C) {\
-    *(CITEM)->map_base = (B); \
-    portalSendFd((CITEM)->fpga_fd, (void *)(CITEM)->map_base, (((B) & 0xffff) +1) * sizeof(uint32_t), (C)); \
-    }
 #endif
 
 #endif /* __PORTAL_OFFSETS_H__ */
