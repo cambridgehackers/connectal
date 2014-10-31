@@ -61,15 +61,19 @@ typedef int Bool;   /* for GeneratedTypes.h */
 typedef int SpecialTypeForSendingFd;
 struct PortalInternal;
 typedef int (*PORTAL_INDFUNC)(struct PortalInternal *p, unsigned int channel);
+typedef void (*SENDMSG)(struct PortalInternal *pint, unsigned int hdr, int len);
+typedef int (*RECVMSG)(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd);
 typedef unsigned int (*READWORD)(struct PortalInternal *pint, volatile unsigned int **addr);
 typedef void (*WRITEWORD)(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 typedef void (*WRITEFDWORD)(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 typedef int (*MAPCHANNEL)(unsigned int v);
 typedef struct {
-    READWORD read;
-    WRITEWORD write;
+    READWORD    read;
+    WRITEWORD   write;
     WRITEFDWORD writefd;
-    MAPCHANNEL mapchannel;
+    MAPCHANNEL  mapchannel;
+    SENDMSG     send;
+    RECVMSG     recv;
 } PortalItemFunctions;
 
 typedef struct PortalInternal {
@@ -109,7 +113,7 @@ int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *
 #ifdef __cplusplus
 extern "C" {
 #endif
-void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, uint32_t reqsize);
+void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, uint32_t reqsize);
 void portalCheckIndication(PortalInternal *pint);
 uint64_t portalCycleCount(void);
 unsigned int read_portal_bsim(PortalInternal *pint, volatile unsigned int **addr);
@@ -151,6 +155,8 @@ extern int global_pa_fd;
 extern int global_sockfd;
 extern int we_are_initiator;
 extern PortalInternal *utility_portal;
+extern PortalItemFunctions bsimfunc;
+extern PortalItemFunctions hardwarefunc;
 #ifdef __cplusplus
 }
 #endif

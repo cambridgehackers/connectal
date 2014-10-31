@@ -61,28 +61,7 @@ static tBoard* tboard;
 extern int bsim_fpga_map[MAX_BSIM_PORTAL_ID];
 #endif
 
-static int mapchannel_hardware(unsigned int v)
-{
-    return PORTAL_IND_FIFO(v);
-}
-static unsigned int read_hardware(PortalInternal *pint, volatile unsigned int **addr)
-{
-    return **addr;
-}
-static void write_hardware(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
-{
-    **addr = v;
-}
-static void write_fd_hardware(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
-{
-    **addr = v;
-}
-static PortalItemFunctions bsimfunc = {
-    read_portal_bsim, write_portal_bsim, write_portal_fd_bsim, mapchannel_hardware};
-static PortalItemFunctions hardwarefunc = {
-    read_hardware, write_hardware, write_fd_hardware, mapchannel_hardware};
-
-void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, uint32_t reqsize)
+void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, uint32_t reqsize)
 {
     int rc = 0;
     char buff[128];
@@ -97,11 +76,14 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
     pint->handler = handler;
     pint->reqsize = reqsize;
     pint->cb = cb;
+    pint->item = item;
+    if (!item) {
 #ifdef BSIM
-    pint->item = &bsimfunc;
+        pint->item = &bsimfunc;
 #else
-    pint->item = &hardwarefunc;
+        pint->item = &hardwarefunc;
 #endif
+    }
     if (reqsize) {
 #ifdef __KERNEL__
         printk("[%s:%d] software id %d reqsize %d\n", __FUNCTION__, __LINE__, id, reqsize);
@@ -377,3 +359,34 @@ void portalCheckIndication(PortalInternal *pint)
     pint->handler(pint, queue_status-1);
   }
 }
+
+static int mapchannel_hardware(unsigned int v)
+{
+    return PORTAL_IND_FIFO(v);
+}
+static unsigned int read_hardware(PortalInternal *pint, volatile unsigned int **addr)
+{
+    return **addr;
+}
+static void write_hardware(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
+{
+    **addr = v;
+}
+static void write_fd_hardware(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
+{
+    **addr = v;
+}
+void send_hardware(struct PortalInternal *pint, unsigned int hdr, int len)
+{
+}
+int recv_hardware(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
+{
+    return 0;
+}
+
+PortalItemFunctions bsimfunc = {
+    read_portal_bsim, write_portal_bsim, write_portal_fd_bsim, mapchannel_hardware,
+    send_hardware, recv_hardware};
+PortalItemFunctions hardwarefunc = {
+    read_hardware, write_hardware, write_fd_hardware, mapchannel_hardware,
+    send_hardware, recv_hardware};

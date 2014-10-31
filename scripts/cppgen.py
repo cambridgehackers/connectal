@@ -31,6 +31,7 @@ import util
 import functools
 import math
 
+sizeofUint32_t = 4
 proxyClassPrefixTemplate='''
 class %(namespace)s%(className)s : public %(parentClass)s {
 public:
@@ -82,9 +83,10 @@ void %(namespace)s%(className)s_%(methodName)s (struct PortalInternal *p %(param
 proxyMethodTemplate='''
 void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p %(paramSeparator)s %(paramDeclarations)s )
 {
-    volatile unsigned int* temp_working_addr = &(p->map_base[PORTAL_REQ_FIFO(%(methodChannelOffset)s)]);
+    volatile unsigned int* temp_working_addr = &(p->map_base[p->item->mapchannel(%(methodChannelOffset)s)]);
     BUSY_WAIT(p, temp_working_addr, "%(namespace)s%(className)s_%(methodName)s");
     %(paramStructMarshall)s
+    p->item->send(p, (%(methodChannelOffset)s << 16) | %(wordLen)s, %(fdName)s);
 };
 '''
 
@@ -107,6 +109,7 @@ void %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
 msgDemarshallTemplate='''
     case %(channelNumber)s: 
         {
+        p->item->recv(p, temp_working_addr, %(wordLen)s, &tmpfd);
         %(paramStructDeclarations)s
         %(paramStructDemarshall)s
         %(responseCase)s
@@ -117,7 +120,7 @@ msgDemarshallTemplateSW='''
     case %(channelNumber)s: 
         {
         volatile unsigned int* temp_working_addr = &p->map_base[1];
-        portalRecvFd(p->fpga_fd, (void *)temp_working_addr, (%(wordLen)s) * sizeof(uint32_t), &tmpfd);
+        portalRecvFd(p->fpga_fd, (void *)temp_working_addr, %(wordLen)s, &tmpfd);
         %(paramStructDeclarations)s
         %(paramStructDemarshall)s
         %(responseCase)s
@@ -344,7 +347,7 @@ class MethodMixin:
             'paramNames': ', '.join(['msg->%s' % p.name for p in params]),
             'resultType': resultTypeName,
             'methodChannelOffset': 'CHAN_NUM_%s_%s' % (className, cName(self.name)),
-            'wordLen': len(argWords),
+            'wordLen': len(argWords) * sizeofUint32_t,
             'fdName': fdName,
             # if message is empty, we still send an int of padding
             'payloadSize' : max(4, 4*((sum([p.numBitsBSV() for p in self.params])+31)/32)) 
@@ -358,16 +361,10 @@ class MethodMixin:
                                       % { 'name': self.name,
                                           'className' : className,
                                           'params': ', '.join(respParams)})
-            if swInterface:
-                f.write(msgDemarshallTemplateSW % substs)
-            else:
-                f.write(msgDemarshallTemplate % substs)
+            f.write(msgDemarshallTemplate % substs)
         else:
             substs['responseCase'] = ''
-            if swInterface:
-                f.write(proxyMethodTemplateSW % substs)
-            else:
-                f.write(proxyMethodTemplate % substs)
+            f.write(proxyMethodTemplate % substs)
             hpp.write(proxyMethodTemplateDecl % substs)
         return len(argWords)
 
@@ -474,14 +471,14 @@ class InterfaceMixin:
             reqChanNums.append('CHAN_NUM_%s%s' % (swInterface, self.global_name(d.name, "Proxy")))
         subs = {'className': className,
                 'namespace': namespace,
-                'maxSize': maxSize,
+                'maxSize': maxSize * sizeofUint32_t,
                 'parentClass': self.parentClass('Portal')}
         f.write(proxyClassPrefixTemplate % subs)
         for d in self.decls:
             d.emitMethodDeclaration(f, True, indentation + 4, namespace, className)
         f.write('};\n')
 	of.write('enum { ' + ','.join(reqChanNums) + '};\n')
-        of.write('#define %(namespace)s%(className)s_reqsize (%(maxSize)s * sizeof(uint32_t))\n' % subs)
+        of.write('#define %(namespace)s%(className)s_reqsize %(maxSize)s\n' % subs)
     def emitCWrapperDeclaration(self, f, of, cppf, indentation, namespace, maxSize, swInterface):
         className = "%s%sWrapper" % (swInterface, cName(self.name))
         indent(f, indentation)
@@ -490,7 +487,7 @@ class InterfaceMixin:
             indChanNums.append('CHAN_NUM_%s%s' % (swInterface, self.global_name(cName(d.name), "Wrapper")))
         subs = {'className': className,
                 'namespace': namespace,
-                'maxSize': maxSize,
+                'maxSize': maxSize * sizeofUint32_t,
                 'parentClass': self.parentClass('Portal')}
         f.write(wrapperClassPrefixTemplate % subs)
         for d in self.decls:
@@ -505,7 +502,7 @@ class InterfaceMixin:
             cppf.write('    %s%s_cb,\n' % (className, d.name));
         cppf.write('};\n');
 	of.write('enum { ' + ','.join(indChanNums) + '};\n')
-        of.write('#define %(namespace)s%(className)s_reqsize (%(maxSize)s * sizeof(uint32_t))\n' % subs)
+        of.write('#define %(namespace)s%(className)s_reqsize %(maxSize)s\n' % subs)
     def emitCProxyImplementation(self, f, hpp, namespace, swInterface):
         maxSize = 0;
         className = "%s%sProxy" % (swInterface, cName(self.name))
