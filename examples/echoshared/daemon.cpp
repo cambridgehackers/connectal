@@ -63,9 +63,9 @@ public:
 int main(int argc, const char **argv)
 {
     EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, NULL);
-    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &socketfunc);
+    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &socketfuncResp);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
-    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &socketfunc);
+    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &socketfuncResp);
 
     portalExec_start();
     printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);
