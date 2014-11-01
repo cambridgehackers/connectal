@@ -70,7 +70,7 @@ typedef void (*WRITEFDWORD)(struct PortalInternal *pint, volatile unsigned int *
 typedef int (*BUSYWAIT)(struct PortalInternal *pint, volatile unsigned int *addr, const char *str);
 typedef void (*ENABLEINT)(struct PortalInternal *pint, int val);
 typedef int (*MAPCHANNEL)(unsigned int v);
-typedef void (*EVENT)(struct PortalInternal *pint, void *portal_fds, int numFds);
+typedef int (*EVENT)(struct PortalInternal *pint);
 typedef struct {
     INIT        init;
     READWORD    read;
@@ -156,7 +156,6 @@ uint64_t portalTimerLap(unsigned int i);
 void portalTimerInit(void);
 uint64_t portalTimerCatch(unsigned int i);
 void portalTimerPrint(int loops);
-void replace_poll_fd(int numFds, void *aportal_fds, int fpga_fd, int sockfd);
 
 extern int portalExec_timeout;
 extern int global_pa_fd;

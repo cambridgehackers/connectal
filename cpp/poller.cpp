@@ -155,15 +155,6 @@ void* PortalPoller::portalExec_poll(int timeout)
     }
     return (void*)rc;
 }
-void replace_poll_fd(int numFds, void *aportal_fds, int fpga_fd, int sockfd)
-{
-    struct pollfd *portal_fds = (struct pollfd *)aportal_fds;
-    for (int j = 0; j < numFds; j++)
-        if (portal_fds[j].fd == fpga_fd) {
-            portal_fds[j].fd = sockfd;
-            break;
-        }
-}
 
 void* PortalPoller::portalExec_event(void)
 {
@@ -172,7 +163,15 @@ void* PortalPoller::portalExec_event(void)
         fprintf(stderr, "No portal_instances revents=%d\n", portal_fds[i].revents);
       }
       Portal *instance = portal_wrappers[i];
-      instance->pint.item->event(&instance->pint, portal_fds, numFds);
+      int sockfd = instance->pint.item->event(&instance->pint);
+      if (sockfd != -1) {
+          for (int j = 0; j < numFds; j++)
+              if (portal_fds[j].fd == instance->pint.fpga_fd) {
+                  portal_fds[j].fd = sockfd;
+                  break;
+              }
+          instance->pint.fpga_fd = sockfd;
+      }
     }
     return NULL;
 }

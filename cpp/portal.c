@@ -390,16 +390,17 @@ void enableint_hardware(struct PortalInternal *pint, int val)
     pint->item->write(pint, &enp, val);
 }
 /////////////////////
-void event_hardware(struct PortalInternal *pint, void *portal_fds, int numFds)
+int event_hardware(struct PortalInternal *pint)
 {
 #ifdef BSIM
-      if (pint->fpga_fd == -1 && !bsim_poll_interrupt())
-          return;
+    if (pint->fpga_fd == -1 && !bsim_poll_interrupt())
+        return -1;
 #endif
-      // handle all messasges from this portal instance
-      portalCheckIndication(pint);
-      // re-enable interrupt which was disabled by portal_isr
-      portalEnableInterrupts(pint, 1);
+    // handle all messasges from this portal instance
+    portalCheckIndication(pint);
+    // re-enable interrupt which was disabled by portal_isr
+    portalEnableInterrupts(pint, 1);
+    return -1;
 }
 /////////////////////
 
@@ -458,29 +459,29 @@ int busy_socket(struct PortalInternal *pint, volatile unsigned int *addr, const 
 void enableint_socket(struct PortalInternal *pint, int val)
 {
 }
-void event_socket(struct PortalInternal *pint, void *portal_fds, int numFds)
+int event_socket(struct PortalInternal *pint)
 {
-     /* sw portal */
-     if (pint->accept_finished) { /* connection established */
-        int len = portalRecv(pint->fpga_fd, (void *)pint->map_base, sizeof(uint32_t));
-        if (len == 0 || (len == -1 && errno == EAGAIN))
-            return;
-        if (len <= 0) {
-            fprintf(stderr, "%s[%d]: read error %d\n",__FUNCTION__, pint->fpga_fd, errno);
-            exit(1);
+    /* sw portal */
+    if (pint->accept_finished) { /* connection established */
+       int len = portalRecv(pint->fpga_fd, (void *)pint->map_base, sizeof(uint32_t));
+       if (len == 0 || (len == -1 && errno == EAGAIN))
+           return -1;
+       if (len <= 0) {
+           fprintf(stderr, "%s[%d]: read error %d\n",__FUNCTION__, pint->fpga_fd, errno);
+           exit(1);
+       }
+       pint->handler(pint, *pint->map_base >> 16);
+    }
+    else { /* have not received connection yet */
+printf("[%s:%d]beforeacc %d\n", __FUNCTION__, __LINE__, pint->fpga_fd);
+        int sockfd = accept_socket(pint->fpga_fd);
+        if (sockfd != -1) {
+printf("[%s:%d]afteracc %d\n", __FUNCTION__, __LINE__, sockfd);
+            pint->accept_finished = 1;
+            return sockfd;
         }
-        pint->handler(pint, *pint->map_base >> 16);
-     }
-     else { /* have not received connection yet */
-printf("[%s:%d] beforeacc %d\n", __FUNCTION__, __LINE__, pint->fpga_fd);
-         int sockfd = accept_socket(pint->fpga_fd);
-         if (sockfd != -1) {
-printf("[%s:%d] afteracc %d\n", __FUNCTION__, __LINE__, sockfd);
-             replace_poll_fd(numFds, portal_fds, pint->fpga_fd, sockfd);
-             pint->accept_finished = 1;
-             pint->fpga_fd = sockfd;
-         }
-     }
+    }
+    return -1;
 }
 PortalItemFunctions socketfunc = {
     init_socket, read_socket, write_socket, write_fd_socket, mapchannel_socket,
