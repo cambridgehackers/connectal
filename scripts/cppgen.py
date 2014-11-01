@@ -65,7 +65,7 @@ int %(namespace)s%(className)s_handleMessage(PortalInternal *p, unsigned int cha
     static int runaway = 0;
     int tmpfd;
     unsigned int tmp;
-    volatile unsigned int* temp_working_addr = &(p->map_base[p->item->mapchannel(channel)]);
+    volatile unsigned int* temp_working_addr = p->item->mapchannel(p, channel);
     switch (channel) {'''
 
 handleMessageTemplate2='''
@@ -89,7 +89,7 @@ void %(namespace)s%(className)s_%(methodName)s (struct PortalInternal *p %(param
 proxyMethodTemplate='''
 void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p %(paramSeparator)s %(paramDeclarations)s )
 {
-    volatile unsigned int* temp_working_addr = &(p->map_base[p->item->mapchannel(%(methodChannelOffset)s)]);
+    volatile unsigned int* temp_working_addr = p->item->mapchannel(p, %(methodChannelOffset)s);
     if (p->item->busywait(p, temp_working_addr, "%(namespace)s%(className)s_%(methodName)s")) return;
     %(paramStructMarshall)s
     p->item->send(p, (%(methodChannelOffset)s << 16) | %(wordLen)s, %(fdName)s);

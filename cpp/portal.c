@@ -342,9 +342,9 @@ void portalCheckIndication(PortalInternal *pint)
 static void init_hardware(struct PortalInternal *pint)
 {
 }
-static int mapchannel_hardware(unsigned int v)
+static volatile unsigned int *mapchannel_hardware(struct PortalInternal *pint, unsigned int v)
 {
-    return PORTAL_IND_FIFO(v);
+    return &pint->map_base[PORTAL_IND_FIFO(v)];
 }
 static unsigned int read_hardware(PortalInternal *pint, volatile unsigned int **addr)
 {
@@ -419,9 +419,9 @@ static void init_socketInit(struct PortalInternal *pint)
     pint->accept_finished = 1;
     pint->map_base = (volatile unsigned int*)malloc(pint->reqsize);
 }
-static int mapchannel_socket(unsigned int v)
+static volatile unsigned int *mapchannel_socket(struct PortalInternal *pint, unsigned int v)
 {
-    return 1;
+    return &pint->map_base[1];
 }
 static unsigned int read_socket(PortalInternal *pint, volatile unsigned int **addr)
 {
@@ -489,9 +489,9 @@ PortalItemFunctions socketfuncInit = {
 static void init_shared(struct PortalInternal *pint)
 {
 }
-static int mapchannel_shared(unsigned int v)
+static volatile unsigned int *mapchannel_shared(struct PortalInternal *pint, unsigned int v)
 {
-    return 1;
+    return &pint->map_base[1];
 }
 void send_shared(struct PortalInternal *pint, unsigned int hdr, int sendFd)
 {
@@ -503,7 +503,10 @@ int recv_shared(struct PortalInternal *pint, volatile unsigned int *buffer, int 
     //return portalRecvFd(pint->fpga_fd, (void *)buffer, len, recvfd);
     return 0;
 }
-PortalItemFunctions sharedfunc = {
+PortalItemFunctions sharedfuncResp = {
+    init_shared, read_socket, write_socket, write_fd_socket, mapchannel_shared,
+    send_shared, recv_shared, busy_socket, enableint_socket, event_socket};
+PortalItemFunctions sharedfuncInit = {
     init_shared, read_socket, write_socket, write_fd_socket, mapchannel_shared,
     send_shared, recv_shared, busy_socket, enableint_socket, event_socket};
 

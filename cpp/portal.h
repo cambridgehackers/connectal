@@ -69,7 +69,7 @@ typedef void (*WRITEWORD)(struct PortalInternal *pint, volatile unsigned int **a
 typedef void (*WRITEFDWORD)(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 typedef int (*BUSYWAIT)(struct PortalInternal *pint, volatile unsigned int *addr, const char *str);
 typedef void (*ENABLEINT)(struct PortalInternal *pint, int val);
-typedef int (*MAPCHANNEL)(unsigned int v);
+typedef volatile unsigned int *(*MAPCHANNEL)(struct PortalInternal *pint, unsigned int v);
 typedef int (*EVENT)(struct PortalInternal *pint);
 typedef struct {
     INIT        init;
@@ -160,7 +160,8 @@ extern int portalExec_timeout;
 extern int global_pa_fd;
 extern int global_sockfd;
 extern PortalInternal *utility_portal;
-extern PortalItemFunctions bsimfunc, hardwarefunc, socketfuncInit, socketfuncResp, sharedfunc;
+extern PortalItemFunctions bsimfunc, hardwarefunc,
+    socketfuncInit, socketfuncResp, sharedfuncInit, sharedfuncResp;
 #ifdef __cplusplus
 }
 #endif
