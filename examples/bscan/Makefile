@@ -1,6 +1,6 @@
 
 INTERFACES = BscanRequest BscanIndication
-BSVFILES = BscanRequest.bsv Top.bsv
+BSVFILES = BscanIF.bsv Top.bsv
 CPPFILES=testbscan.cpp
 NUMBER_OF_MASTERS =0
 CONNECTALFLAGS += --bscflags " -D USES_BSCAN"

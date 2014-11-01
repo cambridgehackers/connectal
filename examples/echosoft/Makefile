@@ -1,7 +1,7 @@
 
-INTERFACES = Swallow EchoRequest EchoIndication EchoRequest EchoIndication MMUConfigRequest MMUConfigIndication
+INTERFACES = Swallow EchoRequest EchoIndication MMUConfigRequest MMUConfigIndication
 ## all the BSV files to be scanned for types and interfaces
-BSVFILES = Echo.bsv Swallow.bsv Top.bsv
+BSVFILES = Echo.bsv SwallowIF.bsv Top.bsv
 BSVFILES += $(CONNECTALDIR)/bsv/ConnectalMemory.bsv
 ## the source files in the example
 CPPFILES=daemon.cpp

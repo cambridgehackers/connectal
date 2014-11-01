@@ -1,6 +1,6 @@
 
 INTERFACES = YuvRequest YuvIndication
-BSVFILES =  YuvRequest.bsv Top.bsv
+BSVFILES =  YuvIF.bsv Top.bsv
 CPPFILES= testyuv.cpp
 NUMBER_OF_MASTERS =0
 
