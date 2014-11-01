@@ -430,7 +430,7 @@ class InterfaceMixin:
                     methods.append(methodRule)
         return methods
 
-def generate_bsv(globalimports, project_dir, noisyFlag, hwProxies, hwWrappers, dutname):
+def generate_bsv(globalimports, project_dir, noisyFlag, interfaces, dutname):
     def create_bsv_package(pname, data, files):
         generatedPackageNames.append(pname)
         fname = os.path.join(project_dir, 'sources', dutname.lower(), '%s.bsv' % pname)
@@ -446,7 +446,7 @@ def generate_bsv(globalimports, project_dir, noisyFlag, hwProxies, hwWrappers, d
         bsv_file.close()
 
     generatedPackageNames = []
-    for i in hwWrappers + hwProxies:
+    for i in interfaces:
         wrapperName = '%sWrapper' % i.name
         proxyName = '%sProxy' % i.name
         if wrapperName in generatedPackageNames:

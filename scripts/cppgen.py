@@ -584,7 +584,7 @@ def cName(x):
     else:
         return x.cName()
 
-def generate_cpp(globaldecls, project_dir, noisyFlag, swProxies, swWrappers, swInterface):
+def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
     def create_cpp_file(name):
         fname = os.path.join(project_dir, 'jni', name)
         f = util.createDirAndOpen(fname, 'w')
@@ -618,7 +618,7 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, swProxies, swWrappers, swI
     generated_cpp = create_cpp_file(cppname)
     generatedCFiles.append(cppname)
     generated_cpp.write('\n#ifndef NO_CPP_PORTAL_CODE\n')
-    for i in swProxies + swWrappers+swInterface:
+    for i in interfaces:
         cppname = '%s.c' % i.name
         hppname = '%s.h' % i.name
         if cppname in generatedCFiles:

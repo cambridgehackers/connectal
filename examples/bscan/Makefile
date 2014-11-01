@@ -1,6 +1,5 @@
 
-S2H = BscanRequest
-H2S = BscanIndication
+INTERFACES = BscanRequest BscanIndication
 BSVFILES = BscanRequest.bsv Top.bsv
 CPPFILES=testbscan.cpp
 NUMBER_OF_MASTERS =0

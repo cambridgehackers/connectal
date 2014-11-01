@@ -1,6 +1,5 @@
 
-S2H = StrstrRequest
-H2S = StrstrIndication
+INTERFACES = StrstrRequest StrstrIndication
 BSVFILES = ../../lib/bsv/Strstr.bsv Top.bsv
 CPPFILES=teststrstr.cpp
 CONNECTALFLAGS = -D DEGPAR=8

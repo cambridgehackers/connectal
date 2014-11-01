@@ -1,7 +1,6 @@
 
 
-S2H = PipeMulRequest
-H2S = PipeMulIndication
+INTERFACES = PipeMulRequest PipeMulIndication
 BSVFILES = PipeMulTB.bsv  Top.bsv
 CPPFILES=testpipe_mul.cpp
 ## uncomment the following line to enable AXI trace

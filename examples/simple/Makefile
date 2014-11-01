@@ -1,6 +1,5 @@
 
-S2H = Simple
-H2S = Simple
+INTERFACES = Simple
 BSVFILES = Simple.bsv Top.bsv
 CPPFILES=testsimple.cpp
 NUMBER_OF_MASTERS =0

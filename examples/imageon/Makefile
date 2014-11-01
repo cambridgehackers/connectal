@@ -1,6 +1,5 @@
 
-S2H = ImageonSerdesRequest    ImageonSensorRequest    HdmiInternalRequest ImageonCaptureRequest
-H2S = ImageonSerdesIndication ImageonSensorIndication HdmiInternalIndication
+INTERFACES = ImageonSerdesRequest    ImageonSensorRequest    HdmiInternalRequest ImageonCaptureRequest ImageonSerdesIndication ImageonSensorIndication HdmiInternalIndication
 BSVFILES = $(CONNECTALDIR)/lib/bsv/IserdesDatadeser.bsv $(CONNECTALDIR)/lib/bsv/HDMI.bsv $(CONNECTALDIR)/lib/bsv/Imageon.bsv Top.bsv
 CPPFILES=testimagecapture.cpp
 CONNECTALFLAGS = -C $(BOARD)/sources/imageon-$(BOARD).xdc --tcl clock.tcl

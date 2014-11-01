@@ -1,6 +1,5 @@
 BSVDIR=$(CONNECTALDIR)/bsv
-S2H        +=  MmRequestTN MmRequestNT TimerRequest
-H2S        +=  MmIndication TimerIndication
+INTERFACES        +=  MmRequestTN MmRequestNT TimerRequest MmIndication TimerIndication
 BSVFILES   +=  $(RBMDIR)/bsv/RbmTypes.bsv $(RBMDIR)/bsv/Timer.bsv $(DBNTOPBSV)
 CPPFILES   +=  $(MMDIR)/cpp/portalmat.cpp $(TESTCPPFILES)
 CONNECTALFLAGS  +=  -D IMPORT_HOSTIF -D MATRIX_TN
