@@ -145,7 +145,6 @@ int portalDCacheFlushInval(int fd, long size, void *__p);
 void init_portal_memory(void);
 int portalAlloc(size_t size);
 void *portalMmap(int fd, size_t size);
-void portalInitiator(void);
 void portalSend(int fd, void *data, int len);
 int portalRecv(int fd, void *data, int len);
 void portalSendFd(int fd, void *data, int len, int sendFd);
@@ -160,9 +159,8 @@ void portalTimerPrint(int loops);
 extern int portalExec_timeout;
 extern int global_pa_fd;
 extern int global_sockfd;
-extern int we_are_initiator;
 extern PortalInternal *utility_portal;
-extern PortalItemFunctions bsimfunc, hardwarefunc, socketfunc, sharedfunc;
+extern PortalItemFunctions bsimfunc, hardwarefunc, socketfuncInit, socketfuncResp, sharedfunc;
 #ifdef __cplusplus
 }
 #endif

@@ -39,7 +39,6 @@
 
 int bsim_fpga_map[MAX_BSIM_PORTAL_ID];
 static pthread_mutex_t socket_mutex;
-int we_are_initiator;
 int global_sockfd = -1;
 static int trace_socket;// = 1;
 
@@ -210,7 +209,7 @@ static uint32_t interrupt_value;
 void portalSendFd(int fd, void *data, int len, int sendFd)
 {
     if (trace_socket)
-        printf("%s: init %d fd %d data %p len %d\n", __FUNCTION__, we_are_initiator, fd, data, len);
+        printf("%s: fd %d data %p len %d\n", __FUNCTION__, fd, data, len);
     if (sock_fd_write(fd, data, len, sendFd) == -1) {
         fprintf(stderr, "%s: send error %d\n",__FUNCTION__, errno);
         exit(1);
@@ -220,7 +219,7 @@ int portalRecvFd(int fd, void *data, int len, int *recvFd)
 {
     int rc = sock_fd_read(fd, data, len, recvFd);
     if (trace_socket && rc && rc != -1)
-        printf("%s: init %d fd %d data %p len %d rc %d\n", __FUNCTION__, we_are_initiator, fd, data, len, rc);
+        printf("%s: fd %d data %p len %d rc %d\n", __FUNCTION__, fd, data, len, rc);
     return rc;
 }
 void portalSend(int fd, void *data, int len)

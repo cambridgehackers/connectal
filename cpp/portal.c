@@ -173,7 +173,7 @@ static void init_portal_hw(void)
   unsigned int i;
   static int once = 0;
 
-  if (once || we_are_initiator)
+  if (once)
       return;
   once = 1;
 #ifdef __KERNEL__
@@ -224,8 +224,6 @@ void portalTrace_stop()
 uint64_t portalCycleCount()
 {
   unsigned int high_bits, low_bits;
-  if (we_are_initiator)
-    return 0;
   if(!utility_portal)
     return 0;
   init_portal_hw();
@@ -319,11 +317,6 @@ void *portalMmap(int fd, size_t size)
 #endif
 }
 
-void portalInitiator(void)
-{
-    we_are_initiator = 1;
-}
-
 void portalCheckIndication(PortalInternal *pint)
 {
   volatile unsigned int *map_base = pint->map_base;
@@ -411,16 +404,19 @@ PortalItemFunctions hardwarefunc = {
     init_hardware, read_hardware, write_hardware, write_fd_hardware, mapchannel_hardware,
     send_hardware, recv_hardware, busy_hardware, enableint_hardware, event_hardware};
 
-static void init_socket(struct PortalInternal *pint)
+static void init_socketResp(struct PortalInternal *pint)
 {
     char buff[128];
     sprintf(buff, "SWSOCK%d", pint->fpga_number);
-    if (we_are_initiator) {
-        pint->fpga_fd = init_connecting(buff);
-        pint->accept_finished = 1;
-    }
-    else
-        pint->fpga_fd = init_listening(buff);
+    pint->fpga_fd = init_listening(buff);
+    pint->map_base = (volatile unsigned int*)malloc(pint->reqsize);
+}
+static void init_socketInit(struct PortalInternal *pint)
+{
+    char buff[128];
+    sprintf(buff, "SWSOCK%d", pint->fpga_number);
+    pint->fpga_fd = init_connecting(buff);
+    pint->accept_finished = 1;
     pint->map_base = (volatile unsigned int*)malloc(pint->reqsize);
 }
 static int mapchannel_socket(unsigned int v)
@@ -483,8 +479,11 @@ printf("[%s:%d]afteracc %d\n", __FUNCTION__, __LINE__, sockfd);
     }
     return -1;
 }
-PortalItemFunctions socketfunc = {
-    init_socket, read_socket, write_socket, write_fd_socket, mapchannel_socket,
+PortalItemFunctions socketfuncResp = {
+    init_socketResp, read_socket, write_socket, write_fd_socket, mapchannel_socket,
+    send_socket, recv_socket, busy_socket, enableint_socket, event_socket};
+PortalItemFunctions socketfuncInit = {
+    init_socketInit, read_socket, write_socket, write_fd_socket, mapchannel_socket,
     send_socket, recv_socket, busy_socket, enableint_socket, event_socket};
 
 static void init_shared(struct PortalInternal *pint)
