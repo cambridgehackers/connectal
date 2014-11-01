@@ -83,24 +83,10 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
         pint->item = &hardwarefunc;
 #endif
     }
-    if (pint->item != &socketfunc)
-        reqsize = 0;
     pint->reqsize = reqsize;
-    if (reqsize) {
-#ifdef __KERNEL__
-        printk("[%s:%d] software id %d reqsize %d\n", __FUNCTION__, __LINE__, id, reqsize);
-#else
-        sprintf(buff, "SWSOCK%d", id);
-        if (we_are_initiator) {
-            pint->fpga_fd = init_connecting(buff);
-            pint->accept_finished = 1;
-        }
-        else
-            pint->fpga_fd = init_listening(buff);
-        pint->map_base = (volatile unsigned int*)malloc(reqsize);
-#endif
+    pint->item->init(pint);
+    if (pint->fpga_fd != -1)
         goto exitlab;
-    }
     snprintf(buff, sizeof(buff), "/dev/portal%d", pint->fpga_number);
 #ifdef BSIM   // BSIM version
     assert(id < MAX_BSIM_PORTAL_ID);
@@ -252,9 +238,7 @@ uint64_t portalCycleCount()
 
 void portalEnableInterrupts(PortalInternal *p, int val)
 {
-   volatile unsigned int *enp = &(p->map_base[PORTAL_CTRL_REG_INTERRUPT_ENABLE]);
-   if (!p->reqsize)
-     p->item->write(p, &enp, val);
+    p->item->enableint(p, val);
 }
 
 int portalDCacheFlushInval(int fd, long size, void *__p)
@@ -362,6 +346,9 @@ void portalCheckIndication(PortalInternal *pint)
   }
 }
 
+static void init_hardware(struct PortalInternal *pint)
+{
+}
 static int mapchannel_hardware(unsigned int v)
 {
     return PORTAL_IND_FIFO(v);
@@ -397,14 +384,44 @@ int busy_hardware(struct PortalInternal *pint, volatile unsigned int *addr, cons
     }
     return 0;
 }
+void enableint_hardware(struct PortalInternal *pint, int val)
+{
+    volatile unsigned int *enp = &(pint->map_base[PORTAL_CTRL_REG_INTERRUPT_ENABLE]);
+    pint->item->write(pint, &enp, val);
+}
+/////////////////////
+void event_hardware(struct PortalInternal *pint, void *portal_fds, int numFds)
+{
+#ifdef BSIM
+      if (pint->fpga_fd == -1 && !bsim_poll_interrupt())
+          return;
+#endif
+      // handle all messasges from this portal instance
+      portalCheckIndication(pint);
+      // re-enable interrupt which was disabled by portal_isr
+      portalEnableInterrupts(pint, 1);
+}
+/////////////////////
 
 PortalItemFunctions bsimfunc = {
-    read_portal_bsim, write_portal_bsim, write_portal_fd_bsim, mapchannel_hardware,
-    send_hardware, recv_hardware, busy_hardware};
+    init_hardware, read_portal_bsim, write_portal_bsim, write_portal_fd_bsim, mapchannel_hardware,
+    send_hardware, recv_hardware, busy_hardware, enableint_hardware, event_hardware};
 PortalItemFunctions hardwarefunc = {
-    read_hardware, write_hardware, write_fd_hardware, mapchannel_hardware,
-    send_hardware, recv_hardware, busy_hardware};
+    init_hardware, read_hardware, write_hardware, write_fd_hardware, mapchannel_hardware,
+    send_hardware, recv_hardware, busy_hardware, enableint_hardware, event_hardware};
 
+static void init_socket(struct PortalInternal *pint)
+{
+    char buff[128];
+    sprintf(buff, "SWSOCK%d", pint->fpga_number);
+    if (we_are_initiator) {
+        pint->fpga_fd = init_connecting(buff);
+        pint->accept_finished = 1;
+    }
+    else
+        pint->fpga_fd = init_listening(buff);
+    pint->map_base = (volatile unsigned int*)malloc(pint->reqsize);
+}
 static int mapchannel_socket(unsigned int v)
 {
     return 1;
@@ -438,7 +455,55 @@ int busy_socket(struct PortalInternal *pint, volatile unsigned int *addr, const 
 {
     return 0;
 }
+void enableint_socket(struct PortalInternal *pint, int val)
+{
+}
+void event_socket(struct PortalInternal *pint, void *portal_fds, int numFds)
+{
+     /* sw portal */
+     if (pint->accept_finished) { /* connection established */
+        int len = portalRecv(pint->fpga_fd, (void *)pint->map_base, sizeof(uint32_t));
+        if (len == 0 || (len == -1 && errno == EAGAIN))
+            return;
+        if (len <= 0) {
+            fprintf(stderr, "%s[%d]: read error %d\n",__FUNCTION__, pint->fpga_fd, errno);
+            exit(1);
+        }
+        pint->handler(pint, *pint->map_base >> 16);
+     }
+     else { /* have not received connection yet */
+printf("[%s:%d] beforeacc %d\n", __FUNCTION__, __LINE__, pint->fpga_fd);
+         int sockfd = accept_socket(pint->fpga_fd);
+         if (sockfd != -1) {
+printf("[%s:%d] afteracc %d\n", __FUNCTION__, __LINE__, sockfd);
+             replace_poll_fd(numFds, portal_fds, pint->fpga_fd, sockfd);
+             pint->accept_finished = 1;
+             pint->fpga_fd = sockfd;
+         }
+     }
+}
 PortalItemFunctions socketfunc = {
-    read_socket, write_socket, write_fd_socket, mapchannel_socket,
-    send_socket, recv_socket, busy_socket};
+    init_socket, read_socket, write_socket, write_fd_socket, mapchannel_socket,
+    send_socket, recv_socket, busy_socket, enableint_socket, event_socket};
+
+static void init_shared(struct PortalInternal *pint)
+{
+}
+static int mapchannel_shared(unsigned int v)
+{
+    return 1;
+}
+void send_shared(struct PortalInternal *pint, unsigned int hdr, int sendFd)
+{
+    pint->map_base[0] = hdr;
+    //portalSendFd(pint->fpga_fd, (void *)pint->map_base, (hdr & 0xffff) + sizeof(uint32_t), sendFd);
+}
+int recv_shared(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
+{
+    //return portalRecvFd(pint->fpga_fd, (void *)buffer, len, recvfd);
+    return 0;
+}
+PortalItemFunctions sharedfunc = {
+    init_shared, read_socket, write_socket, write_fd_socket, mapchannel_shared,
+    send_shared, recv_shared, busy_socket, enableint_socket, event_socket};
 

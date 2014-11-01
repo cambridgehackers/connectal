@@ -60,6 +60,7 @@
 typedef int Bool;   /* for GeneratedTypes.h */
 typedef int SpecialTypeForSendingFd;
 struct PortalInternal;
+typedef void (*INIT)(struct PortalInternal *pint);
 typedef int (*PORTAL_INDFUNC)(struct PortalInternal *p, unsigned int channel);
 typedef void (*SENDMSG)(struct PortalInternal *pint, unsigned int hdr, int sendFd);
 typedef int (*RECVMSG)(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd);
@@ -67,8 +68,11 @@ typedef unsigned int (*READWORD)(struct PortalInternal *pint, volatile unsigned 
 typedef void (*WRITEWORD)(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 typedef void (*WRITEFDWORD)(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 typedef int (*BUSYWAIT)(struct PortalInternal *pint, volatile unsigned int *addr, const char *str);
+typedef void (*ENABLEINT)(struct PortalInternal *pint, int val);
 typedef int (*MAPCHANNEL)(unsigned int v);
+typedef void (*EVENT)(struct PortalInternal *pint, void *portal_fds, int numFds);
 typedef struct {
+    INIT        init;
     READWORD    read;
     WRITEWORD   write;
     WRITEFDWORD writefd;
@@ -76,6 +80,8 @@ typedef struct {
     SENDMSG     send;
     RECVMSG     recv;
     BUSYWAIT    busywait;
+    ENABLEINT   enableint;
+    EVENT       event;
 } PortalItemFunctions;
 
 typedef struct PortalInternal {
@@ -150,16 +156,14 @@ uint64_t portalTimerLap(unsigned int i);
 void portalTimerInit(void);
 uint64_t portalTimerCatch(unsigned int i);
 void portalTimerPrint(int loops);
-
+void replace_poll_fd(int numFds, void *aportal_fds, int fpga_fd, int sockfd);
 
 extern int portalExec_timeout;
 extern int global_pa_fd;
 extern int global_sockfd;
 extern int we_are_initiator;
 extern PortalInternal *utility_portal;
-extern PortalItemFunctions bsimfunc;
-extern PortalItemFunctions hardwarefunc;
-extern PortalItemFunctions socketfunc;
+extern PortalItemFunctions bsimfunc, hardwarefunc, socketfunc, sharedfunc;
 #ifdef __cplusplus
 }
 #endif

@@ -169,6 +169,7 @@ class MethodMixin:
         f.write(('(static_cast<%s *>(p->parent))->%s ( ' % (className, methodName)) + paramValues + ');\n')
         f.write('};\n')
     def emitCImplementation(self, f, hpp, className, namespace, proxy, doCpp):
+        global fdName
 
         # resurse interface types and flattening all structs into a list of types
         def collectMembers(scope, member):
@@ -274,7 +275,7 @@ class MethodMixin:
                 word.append(field)
                 off = off+e.width-e.shifted
 		if e.datatype.cName() == 'SpecialTypeForSendingFd':
-                    fdname = field
+                    fdName = field
                     fmt = 'p->item->writefd(p, &temp_working_addr, %s);'
             return fmt % (''.join(util.intersperse('|', word)))
 

@@ -155,6 +155,15 @@ void* PortalPoller::portalExec_poll(int timeout)
     }
     return (void*)rc;
 }
+void replace_poll_fd(int numFds, void *aportal_fds, int fpga_fd, int sockfd)
+{
+    struct pollfd *portal_fds = (struct pollfd *)aportal_fds;
+    for (int j = 0; j < numFds; j++)
+        if (portal_fds[j].fd == fpga_fd) {
+            portal_fds[j].fd = sockfd;
+            break;
+        }
+}
 
 void* PortalPoller::portalExec_event(void)
 {
@@ -163,42 +172,7 @@ void* PortalPoller::portalExec_event(void)
         fprintf(stderr, "No portal_instances revents=%d\n", portal_fds[i].revents);
       }
       Portal *instance = portal_wrappers[i];
-      if (instance->pint.reqsize) {
-          /* sw portal */
-          if (instance->pint.accept_finished) { /* connection established */
-             int len = portalRecv(instance->pint.fpga_fd, (void *)instance->pint.map_base, sizeof(uint32_t));
-             if (len == 0 || (len == -1 && errno == EAGAIN))
-                 continue;
-             if (len <= 0) {
-                 fprintf(stderr, "%s[%d]: read error %d\n",__FUNCTION__, instance->pint.fpga_fd, errno);
-                 exit(1);
-             }
-             instance->pint.handler(&instance->pint, *instance->pint.map_base >> 16);
-          }
-          else { /* have not received connection yet */
-printf("[%s:%d] beforeacc %d\n", __FUNCTION__, __LINE__, instance->pint.fpga_fd);
-              int sockfd = accept_socket(instance->pint.fpga_fd);
-              if (sockfd != -1) {
-printf("[%s:%d] afteracc %d\n", __FUNCTION__, __LINE__, sockfd);
-                  for (int j = 0; j < numFds; j++)
-                      if (portal_fds[j].fd == instance->pint.fpga_fd) {
-                          portal_fds[j].fd = sockfd;
-                          break;
-                      }
-                  instance->pint.accept_finished = 1;
-                  instance->pint.fpga_fd = sockfd;
-              }
-          }
-          continue;
-      }
-#ifdef BSIM
-      if (instance->pint.fpga_fd == -1 && !bsim_poll_interrupt())
-        continue;
-#endif
-      // handle all messasges from this portal instance
-      portalCheckIndication(&instance->pint);
-      // re-enable interrupt which was disabled by portal_isr
-      portalEnableInterrupts(&instance->pint, 1);
+      instance->pint.item->event(&instance->pint, portal_fds, numFds);
     }
     return NULL;
 }
