@@ -65,7 +65,6 @@ public:
 
 int srcAlloc;
 int alloc_sz = 1000;
-extern int event_socket_fd;
 class MMUConfigRequest : public MMUConfigRequestWrapper
 {
 public:
@@ -79,8 +78,8 @@ printf("daemon[%s:%d] ptr %p\n", __FUNCTION__, __LINE__, srcBuffer);
        mIndicationProxy->configResp(0);
     }
     void idRequest(SpecialTypeForSendingFd fd) {
-       srcAlloc = event_socket_fd;
-printf("daemon[%s:%d] fd %d event_socket_fd %d\n", __FUNCTION__, __LINE__, fd, event_socket_fd);
+       srcAlloc = fd;
+printf("daemon[%s:%d] fd %d\n", __FUNCTION__, __LINE__, fd);
        mIndicationProxy->idResponse(44);
     }
     void idReturn (const uint32_t sglId ) {

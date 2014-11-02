@@ -296,7 +296,10 @@ class MethodMixin:
                 field = '((%s)&0x%xul)' % (field, ((1 << (e.datatype.bitWidth()-e.shifted))-1))
                 if e.shifted:
                     field = '((%s)(%s)<<%s)' % (e.datatype.cName(),field, e.shifted)
-		word.append('%s %s (%s)(%s);'%(e.name, e.assignOp, e.datatype.cName(), field))
+		if e.datatype.cName() == 'SpecialTypeForSendingFd':
+		     word.append('%s %s tmpfd;'%(e.name, e.assignOp))
+                else:
+		     word.append('%s %s (%s)(%s);'%(e.name, e.assignOp, e.datatype.cName(), field))
                 off = off+e.width-e.shifted
             # print ''
             return '\n        '.join(word)
