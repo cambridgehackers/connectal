@@ -61,7 +61,7 @@ typedef int Bool;   /* for GeneratedTypes.h */
 typedef int SpecialTypeForSendingFd;
 struct PortalInternal;
 typedef void (*INIT)(struct PortalInternal *pint);
-typedef int (*PORTAL_INDFUNC)(struct PortalInternal *p, unsigned int channel);
+typedef int (*PORTAL_INDFUNC)(struct PortalInternal *p, unsigned int channel, int messageFd);
 typedef void (*SENDMSG)(struct PortalInternal *pint, unsigned int hdr, int sendFd);
 typedef int (*RECVMSG)(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd);
 typedef unsigned int (*READWORD)(struct PortalInternal *pint, volatile unsigned int **addr);

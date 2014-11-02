@@ -56,11 +56,11 @@ public:
 '''
 
 handleMessageTemplateDecl='''
-int %(namespace)s%(className)s_handleMessage(struct PortalInternal *p, unsigned int channel);
+int %(namespace)s%(className)s_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
 '''
 
 handleMessageTemplate1='''
-int %(namespace)s%(className)s_handleMessage(PortalInternal *p, unsigned int channel)
+int %(namespace)s%(className)s_handleMessage(PortalInternal *p, unsigned int channel, int messageFd)
 {    
     static int runaway = 0;
     int tmpfd;
@@ -297,7 +297,7 @@ class MethodMixin:
                 if e.shifted:
                     field = '((%s)(%s)<<%s)' % (e.datatype.cName(),field, e.shifted)
 		if e.datatype.cName() == 'SpecialTypeForSendingFd':
-		     word.append('%s %s tmpfd;'%(e.name, e.assignOp))
+		     word.append('%s %s messageFd;'%(e.name, e.assignOp))
                 else:
 		     word.append('%s %s (%s)(%s);'%(e.name, e.assignOp, e.datatype.cName(), field))
                 off = off+e.width-e.shifted

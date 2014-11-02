@@ -335,7 +335,7 @@ void portalCheckIndication(PortalInternal *pint)
         printf("[%s:%d] missing handler!!!!\n", __FUNCTION__, __LINE__);
         exit(1);
     }
-    pint->handler(pint, queue_status-1);
+    pint->handler(pint, queue_status-1, 0);
   }
 }
 
@@ -444,11 +444,9 @@ void send_socket(struct PortalInternal *pint, unsigned int hdr, int sendFd)
     pint->map_base[0] = hdr;
     portalSendFd(pint->fpga_fd, (void *)pint->map_base, (hdr & 0xffff) + sizeof(uint32_t), sendFd);
 }
-extern int event_socket_fd;
 int recv_socket(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
 {
-    *recvfd = event_socket_fd;
-    return portalRecv(pint->fpga_fd, (void *)buffer, len);
+    return portalRecvFd(pint->fpga_fd, (void *)buffer, len, recvfd);
 }
 int busy_socket(struct PortalInternal *pint, volatile unsigned int *addr, const char *str)
 {
@@ -457,21 +455,19 @@ int busy_socket(struct PortalInternal *pint, volatile unsigned int *addr, const 
 void enableint_socket(struct PortalInternal *pint, int val)
 {
 }
-int event_socket_fd;
 int event_socket(struct PortalInternal *pint)
 {
+    int event_socket_fd;
     /* sw portal */
     if (pint->accept_finished) { /* connection established */
        int len = portalRecvFd(pint->fpga_fd, (void *)pint->map_base, sizeof(uint32_t), &event_socket_fd);
-if (event_socket_fd != -1)
-printf("[%s:%d] recv fd %d\n", __FUNCTION__, __LINE__, event_socket_fd);
        if (len == 0 || (len == -1 && errno == EAGAIN))
            return -1;
        if (len <= 0) {
            fprintf(stderr, "%s[%d]: read error %d\n",__FUNCTION__, pint->fpga_fd, errno);
            exit(1);
        }
-       pint->handler(pint, *pint->map_base >> 16);
+       pint->handler(pint, *pint->map_base >> 16, event_socket_fd);
     }
     else { /* have not received connection yet */
 printf("[%s:%d]beforeacc %d\n", __FUNCTION__, __LINE__, pint->fpga_fd);
