@@ -22,8 +22,12 @@
 #include <stdio.h>
 #include "EchoRequest.h"
 #include "EchoIndication.h"
+#include "MMUConfigRequest.h"
+#include "StdDmaIndication.h"
+#include "dmaManager.h"
 
 EchoRequestProxy *sRequestProxy;
+MMUConfigRequestProxy *dmap;
 static sem_t sem_heard2;
 
 class EchoIndication : public EchoIndicationWrapper
@@ -53,12 +57,22 @@ static void call_say2(int v, int v2)
     sem_wait(&sem_heard2);
 }
 
+int alloc_sz = 1000;
 int main(int argc, const char **argv)
 {
     EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &socketfuncInit);
     sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &socketfuncInit);
 
+    dmap = new MMUConfigRequestProxy(IfcNames_MMUConfigRequest, &socketfuncInit);
+    DmaManager *dma = new DmaManager(dmap);
+    MMUConfigIndication *mIndication = new MMUConfigIndication(dma, IfcNames_MMUConfigIndication, &socketfuncInit);
+
     portalExec_start();
+
+    int srcAlloc = portalAlloc(alloc_sz);
+    unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
+printf("[%s:%d] allocated fd %d ptr %p\n", __FUNCTION__, __LINE__, srcAlloc, srcBuffer);
+    unsigned int ref_srcAlloc = dma->reference(srcAlloc);
 
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
@@ -69,6 +83,6 @@ int main(int argc, const char **argv)
     call_say2(v, v*3);
     printf("TEST TYPE: SEM\n");
     sRequestProxy->setLeds(9);
-    portalExec_end();
+
     return 0;
 }

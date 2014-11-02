@@ -22,9 +22,12 @@
 #include <stdio.h>
 #include "EchoRequest.h"
 #include "EchoIndication.h"
+#include "MMUConfigRequest.h"
+#include "MMUConfigIndication.h"
 
 EchoRequestProxy *echoRequestProxy;
 EchoIndicationProxy *sIndicationProxy;
+MMUConfigIndicationProxy *mIndicationProxy;
 
 class EchoIndication : public EchoIndicationWrapper
 {
@@ -60,12 +63,41 @@ public:
     EchoRequest(unsigned int id, PortalItemFunctions *item) : EchoRequestWrapper(id, item) {}
 };
 
+int srcAlloc;
+int alloc_sz = 1000;
+class MMUConfigRequest : public MMUConfigRequestWrapper
+{
+public:
+    void sglist (const uint32_t sglId, const uint32_t sglIndex, const uint64_t addr, const uint32_t len ) {
+printf("daemon[%s:%d](%x, %x, %lx, %x)\n", __FUNCTION__, __LINE__, sglId, sglIndex, addr, len);
+    }
+    void region (const uint32_t sglId, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 ) {
+printf("daemon[%s:%d]\n", __FUNCTION__, __LINE__);
+    unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
+printf("[%s:%d] ptr %p\n", __FUNCTION__, __LINE__, srcBuffer);
+       mIndicationProxy->configResp(0);
+    }
+    void idRequest(SpecialTypeForSendingFd fd) {
+       srcAlloc = fd;
+printf("daemon[%s:%d] fd %d\n", __FUNCTION__, __LINE__, fd);
+       mIndicationProxy->idResponse(44);
+    }
+    void idReturn (const uint32_t sglId ) {
+printf("daemon[%s:%d] sglId %d\n", __FUNCTION__, __LINE__, sglId);
+    }
+    MMUConfigRequest(unsigned int id, PortalItemFunctions *item) : MMUConfigRequestWrapper(id, item) {}
+};
+
 int main(int argc, const char **argv)
 {
     EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, NULL);
-    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &socketfuncResp);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
+
+    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &socketfuncResp);
     sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &socketfuncResp);
+
+    MMUConfigRequest *mRequest = new MMUConfigRequest(IfcNames_MMUConfigRequest, &socketfuncResp);
+    mIndicationProxy = new MMUConfigIndicationProxy(IfcNames_MMUConfigIndication, &socketfuncResp);
 
     portalExec_start();
     printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);
