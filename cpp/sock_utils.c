@@ -165,7 +165,12 @@ ssize_t sock_fd_write(int sockfd, void *ptr, size_t nbytes, int sendfd)
     iov[0].iov_len = nbytes;
     msg.msg_iov = iov;
     msg.msg_iovlen = 1;
-    return sendmsg(sockfd, &msg, 0);
+    int rc = sendmsg(sockfd, &msg, MSG_DONTWAIT);
+    if (rc != nbytes) {
+        printf("[%s:%d] error in sendmsg %d %d\n", __FUNCTION__, __LINE__, rc, errno);
+        exit(1);
+    }
+    return rc;
 }
 
 ssize_t sock_fd_read(int sockfd, void *ptr, size_t nbytes, int *recvfd)
@@ -208,10 +213,11 @@ ssize_t sock_fd_read(int sockfd, void *ptr, size_t nbytes, int *recvfd)
 static uint32_t interrupt_value;
 void portalSendFd(int fd, void *data, int len, int sendFd)
 {
+    int rc;
     if (trace_socket)
         printf("%s: fd %d data %p len %d\n", __FUNCTION__, fd, data, len);
-    if (sock_fd_write(fd, data, len, sendFd) == -1) {
-        fprintf(stderr, "%s: send error %d\n",__FUNCTION__, errno);
+    if ((rc = sock_fd_write(fd, data, len, sendFd)) != len) {
+        fprintf(stderr, "%s: send len %d error %d\n",__FUNCTION__, rc, errno);
         exit(1);
     }
 }
