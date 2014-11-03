@@ -102,8 +102,8 @@ void* PortalPoller::portalExec_init(void)
 {
     portalExec_timeout = -1; // no interrupt timeout 
 #ifdef BSIM
+    portalExec_timeout = 100;
     if (global_sockfd != -1) {
-        portalExec_timeout = 100;
         numFds++;
         portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
         struct pollfd *pollfd = &portal_fds[numFds-1];

@@ -89,6 +89,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
     snprintf(buff, sizeof(buff), "/dev/portal%d", pint->fpga_number);
 #ifdef BSIM   // BSIM version
     assert(id < MAX_BSIM_PORTAL_ID);
+    connect_to_bsim();
 //printf("[%s:%d] id %d handler %p fpga_number %d\n", __FUNCTION__, __LINE__, id, handler, bsim_fpga_map[id]);
     pint->fpga_number = bsim_fpga_map[id];
     pint->map_base = (volatile unsigned int*)(long)(pint->fpga_number * PORTAL_BASE_OFFSET);
@@ -189,9 +190,6 @@ static void init_portal_hw(void)
   if (status < 0)
     PORTAL_PRINTF("init_portal: error setting fclk0, errno=%d\n", errno);
   PORTAL_PRINTF("init_portal: set fclk0 (%ld,%ld)\n", reqF, request.actual_rate);
-#endif
-#ifdef BSIM
-  connect_to_bsim();
 #endif
 }
 
