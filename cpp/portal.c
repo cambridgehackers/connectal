@@ -501,11 +501,18 @@ static volatile unsigned int *mapchannel_sharedReq(struct PortalInternal *pint, 
 {
     return &pint->map_base[pint->map_base[SHARED_WRITE]+1];
 }
+static inline unsigned int increment_shared(PortalInternal *pint, unsigned int newp)
+{
+//printf("[%s:%d] newp %d req %d max %d\n", __FUNCTION__, __LINE__, newp, pint->reqsize/(int)sizeof(uint32_t)+1, pint->map_base[SHARED_LIMIT]);
+    if (newp + pint->reqsize/sizeof(uint32_t) + 1 >= pint->map_base[SHARED_LIMIT])
+        newp = SHARED_START;
+    return newp;
+}
 void send_shared(struct PortalInternal *pint, unsigned int hdr, int sendFd)
 {
 //printf("[%s:%d] %x = hdr %x\n", __FUNCTION__, __LINE__, pint->map_base[SHARED_WRITE], hdr);
     pint->map_base[pint->map_base[SHARED_WRITE]] = hdr;
-    pint->map_base[SHARED_WRITE] += (hdr & 0xffff);
+    pint->map_base[SHARED_WRITE] = increment_shared(pint, pint->map_base[SHARED_WRITE] + (hdr & 0xffff));
     pint->map_base[pint->map_base[SHARED_WRITE]] = 0;
 }
 int recv_shared(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
@@ -541,7 +548,7 @@ int event_shared(struct PortalInternal *pint)
     if (pint->map_base && pint->map_base[SHARED_READ] != pint->map_base[SHARED_WRITE]) {
         unsigned int rc = pint->map_base[pint->map_base[SHARED_READ]];
         pint->handler(pint, rc >> 16, 0);
-        pint->map_base[SHARED_READ] += (rc & 0xffff);
+        pint->map_base[SHARED_READ] = increment_shared(pint, pint->map_base[SHARED_READ] + (rc & 0xffff));
     }
     return -1;
 }

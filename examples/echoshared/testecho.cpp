@@ -71,7 +71,8 @@ int allocateShared(DmaManager *dma, MMUConfigRequestProxy *dmap, uint32_t interf
 
 int main(int argc, const char **argv)
 {
-    int alloc_sz = 1000;
+    int alloc_sz = 64-4;
+//1000;
 
     MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_MMUConfigRequest, &socketfuncInit);
     DmaManager *dma = new DmaManager(dmap);
@@ -84,6 +85,7 @@ int main(int argc, const char **argv)
     sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &sharedfunc);
     allocateShared(dma, dmap, IfcNames_EchoRequest, &sRequestProxy->pint, alloc_sz);
 
+for (int i = 0; i < 10000; i++) {
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
     call_say(v);
@@ -91,6 +93,7 @@ int main(int argc, const char **argv)
     call_say(v*17);
     call_say(v*93);
     call_say2(v, v*3);
+}
     sRequestProxy->setLeds(9);
 
     return 0;
