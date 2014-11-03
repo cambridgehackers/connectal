@@ -961,7 +961,7 @@ def preprocess(source, defs):
             defs.append(sym)
             s = s[k:]
         else:
-            print 'unhandled preprocessor token', tok
+            print '%s: unhandled preprocessor token %s' % (globalfilename, tok)
             assert(tok in ['ifdef', 'ifndef', 'else', 'endif', 'define'])
         prv = pre if valid and cond else '\n\n'
         return prv+pp('\n'+s)
@@ -970,6 +970,7 @@ def preprocess(source, defs):
 
 def syntax_parse(argdata, inputfilename, bsvdefines):
     global globalfilename
+    globalfilename = inputfilename
     data = preprocess(argdata + '\n', bsvdefines)
     lexer = lex.lex(errorlog=lex.NullLogger())
     parserdir=scripthome+'/syntax'
@@ -978,7 +979,6 @@ def syntax_parse(argdata, inputfilename, bsvdefines):
     if not (parserdir in sys.path):
         sys.path.append(parserdir)
     parser = yacc.yacc(optimize=1,errorlog=yacc.NullLogger(),outputdir=parserdir,debugfile=parserdir+'/parser.out')
-    globalfilename = inputfilename
     if noisyFlag:
         print 'Parsing:', inputfilename
     return  parser.parse(data)
