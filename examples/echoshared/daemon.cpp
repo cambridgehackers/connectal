@@ -29,23 +29,6 @@ static EchoRequestProxy *echoRequestProxy;
 static EchoIndicationProxy *sIndicationProxy;
 static MMUConfigIndicationProxy *mIndicationProxy;
 unsigned int *srcBuffer;
-void memdump(unsigned char *p, int len, const char *title)
-{
-int i;
-
-    i = 0;
-    while (len > 0) {
-        if (!(i & 0xf)) {
-            if (i > 0)
-                printf("\n");
-            printf("%s: ",title);
-        }
-        printf("%02x ", *p++);
-        i++;
-        len--;
-    }
-    printf("\n");
-}
 
 class EchoIndication : public EchoIndicationWrapper
 {
@@ -93,18 +76,18 @@ printf("daemon[%s:%d](%x, %x, %lx, %x)\n", __FUNCTION__, __LINE__, sglId, sglInd
     }
     void region (const uint32_t sglId, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 ) {
        srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
-printf("daemon[%s:%d] ptr %p\n", __FUNCTION__, __LINE__, srcBuffer);
+       printf("daemon[%s:%d] ptr %p\n", __FUNCTION__, __LINE__, srcBuffer);
        sRequest->pint.map_base = (volatile unsigned int *)srcBuffer;
        sIndicationProxy->pint.map_base = (volatile unsigned int *)srcBuffer + (alloc_sz/2)/sizeof(uint32_t);
        mIndicationProxy->configResp(0);
     }
     void idRequest(SpecialTypeForSendingFd fd) {
        srcAlloc = fd;
-printf("daemon[%s:%d] fd %d\n", __FUNCTION__, __LINE__, fd);
+       printf("daemon[%s:%d] fd %d\n", __FUNCTION__, __LINE__, fd);
        mIndicationProxy->idResponse(44);
     }
     void idReturn (const uint32_t sglId ) {
-printf("daemon[%s:%d] sglId %d\n", __FUNCTION__, __LINE__, sglId);
+       printf("daemon[%s:%d] sglId %d\n", __FUNCTION__, __LINE__, sglId);
     }
     MMUConfigRequest(unsigned int id, PortalItemFunctions *item) : MMUConfigRequestWrapper(id, item) {}
 };
@@ -120,9 +103,7 @@ int main(int argc, const char **argv)
     MMUConfigRequest *mRequest = new MMUConfigRequest(IfcNames_MMUConfigRequest, &socketfuncResp);
     mIndicationProxy = new MMUConfigIndicationProxy(IfcNames_MMUConfigIndication, &socketfuncResp);
 
-    defaultPoller->portalExec_timeout = 100;
     portalExec_start();
-    defaultPoller->portalExec_timeout = 100;
     printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);
     while(1)
         sleep(100);

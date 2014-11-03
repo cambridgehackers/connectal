@@ -30,23 +30,6 @@ EchoRequestProxy *sRequestProxy;
 MMUConfigRequestProxy *dmap;
 unsigned int *srcBuffer;
 static sem_t sem_heard2;
-void memdump(unsigned char *p, int len, const char *title)
-{
-int i;
-
-    i = 0;
-    while (len > 0) {
-        if (!(i & 0xf)) {
-            if (i > 0)
-                printf("\n");
-            printf("%s: ",title);
-        }
-        printf("%02x ", *p++);
-        i++;
-        len--;
-    }
-    printf("\n");
-}
 
 class EchoIndication : public EchoIndicationWrapper
 {
@@ -85,20 +68,18 @@ int main(int argc, const char **argv)
     DmaManager *dma = new DmaManager(dmap);
     MMUConfigIndication *mIndication = new MMUConfigIndication(dma, IfcNames_MMUConfigIndication, &socketfuncInit);
 
-    defaultPoller->portalExec_timeout = 100;
     portalExec_start();
-    defaultPoller->portalExec_timeout = 100;
 
     int srcAlloc = portalAlloc(alloc_sz);
     srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
     sRequestProxy->pint.map_base = (volatile unsigned int *)srcBuffer;
-    sRequestProxy->pint.map_base[SHARED_LIMIT] = alloc_sz/sizeof(uint32_t);
+    sRequestProxy->pint.map_base[SHARED_LIMIT] = alloc_sz/2/sizeof(uint32_t);
     sRequestProxy->pint.map_base[SHARED_WRITE] = SHARED_START;
     sRequestProxy->pint.map_base[SHARED_READ] = SHARED_START;
     sRequestProxy->pint.map_base[SHARED_START] = 0;
 
     sIndication->pint.map_base = (volatile unsigned int *)srcBuffer + (alloc_sz/2)/sizeof(uint32_t);
-    sIndication->pint.map_base[SHARED_LIMIT] = alloc_sz/sizeof(uint32_t);
+    sIndication->pint.map_base[SHARED_LIMIT] = alloc_sz/2/sizeof(uint32_t);
     sIndication->pint.map_base[SHARED_WRITE] = SHARED_START;
     sIndication->pint.map_base[SHARED_READ] = SHARED_START;
     sIndication->pint.map_base[SHARED_START] = 0;
