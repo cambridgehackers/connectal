@@ -169,7 +169,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
       end
    endrule
    
-   function MemreadServer#(dataWidth) bar(Server#(MemengineCmd,Bool) cs, PipeOut#(Bit#(dataWidth)) p) =
+   function MemreadServer#(dataWidth) toMemreadServer(Server#(MemengineCmd,Bool) cs, PipeOut#(Bit#(dataWidth)) p) =
       (interface MemreadServer;
 	  interface cmdServer = cs;
 	  interface dataPipe  = p;
@@ -232,7 +232,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
       endinterface
    endinterface 
    interface dataPipes = read_data_pipes;
-   interface read_servers = zipWith(bar, rs, read_data_pipes);
+   interface read_servers = zipWith(toMemreadServer, rs, read_data_pipes);
 endmodule
 
 
