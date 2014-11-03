@@ -63,10 +63,7 @@ extern int bsim_fpga_map[MAX_BSIM_PORTAL_ID];
 
 void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, uint32_t reqsize)
 {
-    int rc = 0;
-    char buff[128];
-    char read_status;
-
+    int rc;
     init_portal_hw();
     memset(pint, 0, sizeof(*pint));
     if(!utility_portal)
@@ -84,61 +81,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
 #endif
     }
     pint->reqsize = reqsize;
-    if (pint->item->init(pint))
-        goto exitlab;
-    snprintf(buff, sizeof(buff), "/dev/portal%d", pint->fpga_number);
-#ifdef BSIM   // BSIM version
-    assert(id < MAX_BSIM_PORTAL_ID);
-    connect_to_bsim();
-//printf("[%s:%d] id %d handler %p fpga_number %d\n", __FUNCTION__, __LINE__, id, handler, bsim_fpga_map[id]);
-    pint->fpga_number = bsim_fpga_map[id];
-    pint->map_base = (volatile unsigned int*)(long)(pint->fpga_number * PORTAL_BASE_OFFSET);
-    portalEnableInterrupts(pint, 1);
-#elif defined(__KERNEL__)
-    pint->map_base = (volatile unsigned int*)(tboard->bar2io + pint->fpga_number * PORTAL_BASE_OFFSET);
-#else
-#ifdef ZYNQ
-    PortalEnableInterrupt intsettings = {3 << 14, (3 << 14) + 4};
-    int pgfile = open("/sys/devices/amba.0/f8007000.devcfg/prog_done", O_RDONLY);
-    if (pgfile == -1) {
-        // 3.9 kernel uses amba.2
-        pgfile = open("/sys/devices/amba.2/f8007000.devcfg/prog_done", O_RDONLY);
-        if (pgfile == -1) {
-            // miniitx100 uses different name!
-            pgfile = open("/sys/devices/amba.0/f8007000.ps7-dev-cfg/prog_done", O_RDONLY);
-        }
-    }
-    if (pgfile == -1) {
-	PORTAL_PRINTF("failed to open /sys/devices/amba.[02]/f8007000.devcfg/prog_done %d\n", errno);
-	rc = -1;
-	goto exitlab;
-    }
-    if (read(pgfile, &read_status, 1) != 1 || read_status != '1') {
-	PORTAL_PRINTF("FPGA not programmed: %x\n", read_status);
-	rc = -ENODEV;
-	goto exitlab;
-    }
-    close(pgfile);
-    pint->fpga_fd = open(buff, O_RDWR);
-    ioctl(pint->fpga_fd, PORTAL_ENABLE_INTERRUPT, &intsettings);
-#else
-    // FIXME: bluenoc driver only opens readonly for some reason
-    pint->fpga_fd = open(buff, O_RDONLY);
-#endif
-    if (pint->fpga_fd < 0) {
-	PORTAL_PRINTF("Failed to open %s fd=%d errno=%d\n", buff, pint->fpga_fd, errno);
-	rc = -errno;
-	goto exitlab;
-    }
-    pint->map_base = (volatile unsigned int*)mmap(NULL, PORTAL_BASE_OFFSET, PROT_READ|PROT_WRITE, MAP_SHARED, pint->fpga_fd, 0);
-    if (pint->map_base == MAP_FAILED) {
-        PORTAL_PRINTF("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", pint->fpga_fd, errno);
-        rc = -errno;
-	goto exitlab;
-    }  
-#endif
-
-exitlab:
+    rc = pint->item->init(pint);
     if (rc != 0) {
       PORTAL_PRINTF("%s: failed to open Portal portal%d\n", __FUNCTION__, pint->fpga_number);
 #ifndef __KERNEL__
@@ -336,8 +279,67 @@ void portalCheckIndication(PortalInternal *pint)
   }
 }
 
+static int init_bsim(struct PortalInternal *pint)
+{
+#ifdef BSIM
+    int rc = 0;
+    char read_status;
+    char buff[128];
+    snprintf(buff, sizeof(buff), "/dev/portal%d", pint->fpga_number);
+    assert(pint->fpga_number < MAX_BSIM_PORTAL_ID);
+    connect_to_bsim();
+//printf("[%s:%d] id %d handler %p fpga_number %d\n", __FUNCTION__, __LINE__, pint->fpga_number, handler, bsim_fpga_map[pint->fpga_number]);
+    pint->fpga_number = bsim_fpga_map[pint->fpga_number];
+    pint->map_base = (volatile unsigned int*)(long)(pint->fpga_number * PORTAL_BASE_OFFSET);
+    portalEnableInterrupts(pint, 1);
+#endif
+    return 0;
+}
 static int init_hardware(struct PortalInternal *pint)
 {
+    int rc = 0;
+    char read_status;
+    char buff[128];
+    snprintf(buff, sizeof(buff), "/dev/portal%d", pint->fpga_number);
+#if defined(__KERNEL__)
+    pint->map_base = (volatile unsigned int*)(tboard->bar2io + pint->fpga_number * PORTAL_BASE_OFFSET);
+#else
+#ifdef ZYNQ
+    PortalEnableInterrupt intsettings = {3 << 14, (3 << 14) + 4};
+    int pgfile = open("/sys/devices/amba.0/f8007000.devcfg/prog_done", O_RDONLY);
+    if (pgfile == -1) {
+        // 3.9 kernel uses amba.2
+        pgfile = open("/sys/devices/amba.2/f8007000.devcfg/prog_done", O_RDONLY);
+        if (pgfile == -1) {
+            // miniitx100 uses different name!
+            pgfile = open("/sys/devices/amba.0/f8007000.ps7-dev-cfg/prog_done", O_RDONLY);
+        }
+    }
+    if (pgfile == -1) {
+	PORTAL_PRINTF("failed to open /sys/devices/amba.[02]/f8007000.devcfg/prog_done %d\n", errno);
+	return -1;
+    }
+    if (read(pgfile, &read_status, 1) != 1 || read_status != '1') {
+	PORTAL_PRINTF("FPGA not programmed: %x\n", read_status);
+	return -ENODEV;
+    }
+    close(pgfile);
+    pint->fpga_fd = open(buff, O_RDWR);
+    ioctl(pint->fpga_fd, PORTAL_ENABLE_INTERRUPT, &intsettings);
+#else
+    // FIXME: bluenoc driver only opens readonly for some reason
+    pint->fpga_fd = open(buff, O_RDONLY);
+#endif
+    if (pint->fpga_fd < 0) {
+	PORTAL_PRINTF("Failed to open %s fd=%d errno=%d\n", buff, pint->fpga_fd, errno);
+	return -errno;
+    }
+    pint->map_base = (volatile unsigned int*)mmap(NULL, PORTAL_BASE_OFFSET, PROT_READ|PROT_WRITE, MAP_SHARED, pint->fpga_fd, 0);
+    if (pint->map_base == MAP_FAILED) {
+        PORTAL_PRINTF("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", pint->fpga_fd, errno);
+        return -errno;
+    }  
+#endif
     return 0;
 }
 static volatile unsigned int *mapchannel_hardware(struct PortalInternal *pint, unsigned int v)
@@ -396,7 +398,7 @@ int event_hardware(struct PortalInternal *pint)
 /////////////////////
 
 PortalItemFunctions bsimfunc = {
-    init_hardware, read_portal_bsim, write_portal_bsim, write_portal_fd_bsim, mapchannel_hardware, mapchannel_hardware,
+    init_bsim, read_portal_bsim, write_portal_bsim, write_portal_fd_bsim, mapchannel_hardware, mapchannel_hardware,
     send_hardware, recv_hardware, busy_hardware, enableint_hardware, event_hardware};
 PortalItemFunctions hardwarefunc = {
     init_hardware, read_hardware, write_hardware, write_fd_hardware, mapchannel_hardware, mapchannel_hardware,
@@ -408,7 +410,7 @@ static int init_socketResp(struct PortalInternal *pint)
     sprintf(buff, "SWSOCK%d", pint->fpga_number);
     pint->fpga_fd = init_listening(buff);
     pint->map_base = (volatile unsigned int*)malloc(pint->reqsize);
-    return 1;
+    return 0;
 }
 static int init_socketInit(struct PortalInternal *pint)
 {
@@ -417,7 +419,7 @@ static int init_socketInit(struct PortalInternal *pint)
     pint->fpga_fd = init_connecting(buff);
     pint->accept_finished = 1;
     pint->map_base = (volatile unsigned int*)malloc(pint->reqsize);
-    return 1;
+    return 0;
 }
 static volatile unsigned int *mapchannel_socket(struct PortalInternal *pint, unsigned int v)
 {
@@ -489,7 +491,7 @@ PortalItemFunctions socketfuncInit = {
 
 static int init_shared(struct PortalInternal *pint)
 {
-    return 1;
+    return 0;
 }
 static volatile unsigned int *mapchannel_sharedInd(struct PortalInternal *pint, unsigned int v)
 {
