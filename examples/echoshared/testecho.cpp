@@ -57,11 +57,22 @@ static void call_say2(int v, int v2)
     sem_wait(&sem_heard2);
 }
 
-int alloc_sz = 1000;
+int allocateShared(DmaManager *dma, MMUConfigRequestProxy *dmap, uint32_t interfaceId, PortalInternal *p, uint32_t size)
+{
+    int fd = portalAlloc(size);
+    p->map_base = (volatile unsigned int *)portalMmap(fd, size);
+    p->map_base[SHARED_LIMIT] = size/sizeof(uint32_t);
+    p->map_base[SHARED_WRITE] = SHARED_START;
+    p->map_base[SHARED_READ] = SHARED_START;
+    p->map_base[SHARED_START] = 0;
+    unsigned int ref = dma->reference(fd);
+    dmap->setInterface(interfaceId, ref);
+    return fd;
+}
+
 int main(int argc, const char **argv)
 {
-    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &sharedfuncInit);
-    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &sharedfuncInit);
+    int alloc_sz = 1000;
 
     dmap = new MMUConfigRequestProxy(IfcNames_MMUConfigRequest, &socketfuncInit);
     DmaManager *dma = new DmaManager(dmap);
@@ -69,26 +80,10 @@ int main(int argc, const char **argv)
 
     portalExec_start();
 
-    int srcAlloc = portalAlloc(alloc_sz);
-    unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
-    sRequestProxy->pint.map_base = (volatile unsigned int *)srcBuffer;
-    sRequestProxy->pint.map_base[SHARED_LIMIT] = alloc_sz/2/sizeof(uint32_t);
-    sRequestProxy->pint.map_base[SHARED_WRITE] = SHARED_START;
-    sRequestProxy->pint.map_base[SHARED_READ] = SHARED_START;
-    sRequestProxy->pint.map_base[SHARED_START] = 0;
-
-    int srcAlloc2 = portalAlloc(alloc_sz);
-    unsigned int *srcBuffer2 = (unsigned int *)portalMmap(srcAlloc2, alloc_sz);
-    sIndication->pint.map_base = (volatile unsigned int *)srcBuffer2;
-    sIndication->pint.map_base[SHARED_LIMIT] = alloc_sz/2/sizeof(uint32_t);
-    sIndication->pint.map_base[SHARED_WRITE] = SHARED_START;
-    sIndication->pint.map_base[SHARED_READ] = SHARED_START;
-    sIndication->pint.map_base[SHARED_START] = 0;
-
-    unsigned int ref_srcAlloc2 = dma->reference(srcAlloc2);
-    dmap->setInterface(IfcNames_EchoIndication, ref_srcAlloc2);
-    unsigned int ref_srcAlloc = dma->reference(srcAlloc);
-    dmap->setInterface(IfcNames_EchoRequest, ref_srcAlloc);
+    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &sharedfuncInit);
+    allocateShared(dma, dmap, IfcNames_EchoIndication, &sIndication->pint, alloc_sz);
+    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &sharedfuncInit);
+    allocateShared(dma, dmap, IfcNames_EchoRequest, &sRequestProxy->pint, alloc_sz);
 
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
@@ -97,7 +92,6 @@ int main(int argc, const char **argv)
     call_say(v*17);
     call_say(v*93);
     call_say2(v, v*3);
-    printf("TEST TYPE: SEM\n");
     sRequestProxy->setLeds(9);
 
     return 0;
