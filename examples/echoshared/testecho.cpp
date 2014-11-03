@@ -27,7 +27,6 @@
 #include "dmaManager.h"
 
 EchoRequestProxy *sRequestProxy;
-MMUConfigRequestProxy *dmap;
 static sem_t sem_heard2;
 
 class EchoIndication : public EchoIndicationWrapper
@@ -74,7 +73,7 @@ int main(int argc, const char **argv)
 {
     int alloc_sz = 1000;
 
-    dmap = new MMUConfigRequestProxy(IfcNames_MMUConfigRequest, &socketfuncInit);
+    MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_MMUConfigRequest, &socketfuncInit);
     DmaManager *dma = new DmaManager(dmap);
     MMUConfigIndication *mIndication = new MMUConfigIndication(dma, IfcNames_MMUConfigIndication, &socketfuncInit);
 

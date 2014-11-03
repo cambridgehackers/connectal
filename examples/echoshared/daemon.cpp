@@ -22,8 +22,6 @@
 #include <stdio.h>
 #include "EchoRequest.h"
 #include "EchoIndication.h"
-#include "MMUConfigRequest.h"
-#include "MMUConfigIndication.h"
 #include "MMUConfigServer.h"
 
 static EchoRequestProxy *echoRequestProxy;
