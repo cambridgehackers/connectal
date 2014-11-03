@@ -28,7 +28,25 @@
 
 EchoRequestProxy *sRequestProxy;
 MMUConfigRequestProxy *dmap;
+unsigned int *srcBuffer;
 static sem_t sem_heard2;
+void memdump(unsigned char *p, int len, const char *title)
+{
+int i;
+
+    i = 0;
+    while (len > 0) {
+        if (!(i & 0xf)) {
+            if (i > 0)
+                printf("\n");
+            printf("%s: ",title);
+        }
+        printf("%02x ", *p++);
+        i++;
+        len--;
+    }
+    printf("\n");
+}
 
 class EchoIndication : public EchoIndicationWrapper
 {
@@ -48,6 +66,7 @@ static void call_say(int v)
 {
     printf("[%s:%d] %d\n", __FUNCTION__, __LINE__, v);
     sRequestProxy->say(v);
+memdump((unsigned char *)srcBuffer, 64, "DATA");
     sem_wait(&sem_heard2);
 }
 
@@ -60,20 +79,38 @@ static void call_say2(int v, int v2)
 int alloc_sz = 1000;
 int main(int argc, const char **argv)
 {
-    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &socketfuncInit);
-    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &socketfuncInit);
+    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &sharedfuncInit);
+    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &sharedfuncInit);
 
     dmap = new MMUConfigRequestProxy(IfcNames_MMUConfigRequest, &socketfuncInit);
     DmaManager *dma = new DmaManager(dmap);
     MMUConfigIndication *mIndication = new MMUConfigIndication(dma, IfcNames_MMUConfigIndication, &socketfuncInit);
 
+    defaultPoller->portalExec_timeout = 100;
     portalExec_start();
+    defaultPoller->portalExec_timeout = 100;
 
     int srcAlloc = portalAlloc(alloc_sz);
-    unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
+    srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
+    srcBuffer[SHARED_LIMIT] = alloc_sz/sizeof(uint32_t);
+    srcBuffer[SHARED_WRITE] = SHARED_START;
+printf("[%s:%d] WRITE %x w %x start %x\n", __FUNCTION__, __LINE__, srcBuffer[SHARED_WRITE], SHARED_WRITE, SHARED_START);
+    srcBuffer[SHARED_READ] = SHARED_START;
+    srcBuffer[SHARED_START] = 0;
+printf("[%s:%d] WRITE %x READ %x\n", __FUNCTION__, __LINE__, srcBuffer[SHARED_WRITE], srcBuffer[SHARED_READ]);
+printf("[%s:%d] srcBuffer %p\n", __FUNCTION__, __LINE__, srcBuffer);
+memdump((unsigned char *)srcBuffer, 64, "DATA");
+    sRequestProxy->pint.map_base = (volatile unsigned int *)srcBuffer;
+    sIndication->pint.map_base = (volatile unsigned int *)srcBuffer;
 printf("[%s:%d] allocated fd %d ptr %p\n", __FUNCTION__, __LINE__, srcAlloc, srcBuffer);
+printf("[%s:%d] WRITE %x READ %x\n", __FUNCTION__, __LINE__, srcBuffer[SHARED_WRITE], srcBuffer[SHARED_READ]);
     unsigned int ref_srcAlloc = dma->reference(srcAlloc);
+printf("[%s:%d] WRITE %x READ %x\n", __FUNCTION__, __LINE__, srcBuffer[SHARED_WRITE], srcBuffer[SHARED_READ]);
+memdump((unsigned char *)srcBuffer, 64, "DATA");
 
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+sleep(4);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
     call_say(v);

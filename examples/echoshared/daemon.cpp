@@ -25,9 +25,27 @@
 #include "MMUConfigRequest.h"
 #include "MMUConfigIndication.h"
 
-EchoRequestProxy *echoRequestProxy;
-EchoIndicationProxy *sIndicationProxy;
-MMUConfigIndicationProxy *mIndicationProxy;
+static EchoRequestProxy *echoRequestProxy;
+static EchoIndicationProxy *sIndicationProxy;
+static MMUConfigIndicationProxy *mIndicationProxy;
+unsigned int *srcBuffer;
+void memdump(unsigned char *p, int len, const char *title)
+{
+int i;
+
+    i = 0;
+    while (len > 0) {
+        if (!(i & 0xf)) {
+            if (i > 0)
+                printf("\n");
+            printf("%s: ",title);
+        }
+        printf("%02x ", *p++);
+        i++;
+        len--;
+    }
+    printf("\n");
+}
 
 class EchoIndication : public EchoIndicationWrapper
 {
@@ -48,6 +66,7 @@ class EchoRequest : public EchoRequestWrapper
 public:
     void say ( const uint32_t v ) {
         fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
+memdump((unsigned char *)srcBuffer, 64, "DATA");
         echoRequestProxy->say(v);
     }
     void say2 ( const uint32_t a, const uint32_t b ) {
@@ -63,8 +82,9 @@ public:
     EchoRequest(unsigned int id, PortalItemFunctions *item) : EchoRequestWrapper(id, item) {}
 };
 
-int srcAlloc;
-int alloc_sz = 1000;
+static EchoRequest *sRequest;
+static int srcAlloc;
+static int alloc_sz = 1000;
 class MMUConfigRequest : public MMUConfigRequestWrapper
 {
 public:
@@ -73,9 +93,13 @@ printf("daemon[%s:%d](%x, %x, %lx, %x)\n", __FUNCTION__, __LINE__, sglId, sglInd
     }
     void region (const uint32_t sglId, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 ) {
 printf("daemon[%s:%d]\n", __FUNCTION__, __LINE__);
-    unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
+    srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
 printf("daemon[%s:%d] ptr %p\n", __FUNCTION__, __LINE__, srcBuffer);
+       sRequest->pint.map_base = (volatile unsigned int *)srcBuffer;
+       sIndicationProxy->pint.map_base = (volatile unsigned int *)srcBuffer;
+memdump((unsigned char *)srcBuffer, 64, "DATA");
        mIndicationProxy->configResp(0);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     }
     void idRequest(SpecialTypeForSendingFd fd) {
        srcAlloc = fd;
@@ -93,13 +117,15 @@ int main(int argc, const char **argv)
     EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, NULL);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
 
-    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &socketfuncResp);
-    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &socketfuncResp);
+    sRequest = new EchoRequest(IfcNames_EchoRequest, &sharedfuncResp);
+    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &sharedfuncResp);
 
     MMUConfigRequest *mRequest = new MMUConfigRequest(IfcNames_MMUConfigRequest, &socketfuncResp);
     mIndicationProxy = new MMUConfigIndicationProxy(IfcNames_MMUConfigIndication, &socketfuncResp);
 
+    defaultPoller->portalExec_timeout = 100;
     portalExec_start();
+    defaultPoller->portalExec_timeout = 100;
     printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);
     while(1)
         sleep(100);

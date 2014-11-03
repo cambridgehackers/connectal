@@ -60,7 +60,7 @@
 typedef int Bool;   /* for GeneratedTypes.h */
 typedef int SpecialTypeForSendingFd;
 struct PortalInternal;
-typedef void (*INIT)(struct PortalInternal *pint);
+typedef int (*ITEMINIT)(struct PortalInternal *pint);
 typedef int (*PORTAL_INDFUNC)(struct PortalInternal *p, unsigned int channel, int messageFd);
 typedef void (*SENDMSG)(struct PortalInternal *pint, unsigned int hdr, int sendFd);
 typedef int (*RECVMSG)(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd);
@@ -72,11 +72,12 @@ typedef void (*ENABLEINT)(struct PortalInternal *pint, int val);
 typedef volatile unsigned int *(*MAPCHANNEL)(struct PortalInternal *pint, unsigned int v);
 typedef int (*EVENT)(struct PortalInternal *pint);
 typedef struct {
-    INIT        init;
+    ITEMINIT    init;
     READWORD    read;
     WRITEWORD   write;
     WRITEFDWORD writefd;
-    MAPCHANNEL  mapchannel;
+    MAPCHANNEL  mapchannelInd;
+    MAPCHANNEL  mapchannelReq;
     SENDMSG     send;
     RECVMSG     recv;
     BUSYWAIT    busywait;
@@ -165,21 +166,15 @@ extern PortalItemFunctions bsimfunc, hardwarefunc,
 #ifdef __cplusplus
 }
 #endif
-
 #ifdef __cplusplus
 #include "poller.h"
 #endif
 
 #define MAX_TIMERS 50
 
-#if !defined(BSIM)
-#define READL(CITEM, A)     (**(A))
-#define WRITEL(CITEM, A, B) (**(A) = (B))
-#define WRITEFD(CITEM, A, B) (**(A) = (B))
-#else
-#define READL(CITEM, A)     read_portal_bsim((CITEM), (A))
-#define WRITEL(CITEM, A, B) write_portal_bsim((CITEM), (A), (B))
-#define WRITEFD(CITEM, A, B) write_portal_fd_bsim((CITEM), (A), (B))
-#endif
+#define SHARED_LIMIT  0
+#define SHARED_WRITE  1
+#define SHARED_READ   2
+#define SHARED_START  4
 
 #endif /* __PORTAL_OFFSETS_H__ */

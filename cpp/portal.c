@@ -84,8 +84,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
 #endif
     }
     pint->reqsize = reqsize;
-    pint->item->init(pint);
-    if (pint->fpga_fd != -1)
+    if (pint->item->init(pint))
         goto exitlab;
     snprintf(buff, sizeof(buff), "/dev/portal%d", pint->fpga_number);
 #ifdef BSIM   // BSIM version
@@ -339,8 +338,9 @@ void portalCheckIndication(PortalInternal *pint)
   }
 }
 
-static void init_hardware(struct PortalInternal *pint)
+static int init_hardware(struct PortalInternal *pint)
 {
+    return 0;
 }
 static volatile unsigned int *mapchannel_hardware(struct PortalInternal *pint, unsigned int v)
 {
@@ -398,26 +398,28 @@ int event_hardware(struct PortalInternal *pint)
 /////////////////////
 
 PortalItemFunctions bsimfunc = {
-    init_hardware, read_portal_bsim, write_portal_bsim, write_portal_fd_bsim, mapchannel_hardware,
+    init_hardware, read_portal_bsim, write_portal_bsim, write_portal_fd_bsim, mapchannel_hardware, mapchannel_hardware,
     send_hardware, recv_hardware, busy_hardware, enableint_hardware, event_hardware};
 PortalItemFunctions hardwarefunc = {
-    init_hardware, read_hardware, write_hardware, write_fd_hardware, mapchannel_hardware,
+    init_hardware, read_hardware, write_hardware, write_fd_hardware, mapchannel_hardware, mapchannel_hardware,
     send_hardware, recv_hardware, busy_hardware, enableint_hardware, event_hardware};
 
-static void init_socketResp(struct PortalInternal *pint)
+static int init_socketResp(struct PortalInternal *pint)
 {
     char buff[128];
     sprintf(buff, "SWSOCK%d", pint->fpga_number);
     pint->fpga_fd = init_listening(buff);
     pint->map_base = (volatile unsigned int*)malloc(pint->reqsize);
+    return 1;
 }
-static void init_socketInit(struct PortalInternal *pint)
+static int init_socketInit(struct PortalInternal *pint)
 {
     char buff[128];
     sprintf(buff, "SWSOCK%d", pint->fpga_number);
     pint->fpga_fd = init_connecting(buff);
     pint->accept_finished = 1;
     pint->map_base = (volatile unsigned int*)malloc(pint->reqsize);
+    return 1;
 }
 static volatile unsigned int *mapchannel_socket(struct PortalInternal *pint, unsigned int v)
 {
@@ -481,33 +483,91 @@ printf("[%s:%d]afteracc %d\n", __FUNCTION__, __LINE__, sockfd);
     return -1;
 }
 PortalItemFunctions socketfuncResp = {
-    init_socketResp, read_socket, write_socket, write_fd_socket, mapchannel_socket,
+    init_socketResp, read_socket, write_socket, write_fd_socket, mapchannel_socket, mapchannel_socket,
     send_socket, recv_socket, busy_socket, enableint_socket, event_socket};
 PortalItemFunctions socketfuncInit = {
-    init_socketInit, read_socket, write_socket, write_fd_socket, mapchannel_socket,
+    init_socketInit, read_socket, write_socket, write_fd_socket, mapchannel_socket, mapchannel_socket,
     send_socket, recv_socket, busy_socket, enableint_socket, event_socket};
 
-static void init_shared(struct PortalInternal *pint)
+static int init_shared(struct PortalInternal *pint)
 {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+    return 1;
 }
-static volatile unsigned int *mapchannel_shared(struct PortalInternal *pint, unsigned int v)
+static volatile unsigned int *mapchannel_sharedInd(struct PortalInternal *pint, unsigned int v)
 {
-    return &pint->map_base[1];
+printf("[%s:%d] %p %d=%p\n", __FUNCTION__, __LINE__, pint->map_base, pint->map_base[SHARED_READ], &pint->map_base[pint->map_base[SHARED_READ]+1]);
+    return &pint->map_base[pint->map_base[SHARED_READ]+1];
+}
+static volatile unsigned int *mapchannel_sharedReq(struct PortalInternal *pint, unsigned int v)
+{
+printf("[%s:%d] %p %d=%p\n", __FUNCTION__, __LINE__, pint->map_base, pint->map_base[SHARED_WRITE], &pint->map_base[pint->map_base[SHARED_WRITE]+1]);
+    return &pint->map_base[pint->map_base[SHARED_WRITE]+1];
 }
 void send_shared(struct PortalInternal *pint, unsigned int hdr, int sendFd)
 {
-    pint->map_base[0] = hdr;
+printf("[%s:%d] %p = hdr %x\n", __FUNCTION__, __LINE__, &pint->map_base[pint->map_base[SHARED_WRITE]], hdr);
+printf("[%s:%d] WRITE %x\n", __FUNCTION__, __LINE__, pint->map_base[SHARED_WRITE]);
+    pint->map_base[pint->map_base[SHARED_WRITE]] = hdr;
+printf("[%s:%d] WRITE %x\n", __FUNCTION__, __LINE__, pint->map_base[SHARED_WRITE]);
+    pint->map_base[SHARED_WRITE] += (hdr & 0xffff)/sizeof(uint32_t) + 1;
+printf("[%s:%d] WRITE %x\n", __FUNCTION__, __LINE__, pint->map_base[SHARED_WRITE]);
+    pint->map_base[pint->map_base[SHARED_WRITE]] = 0;
+printf("[%s:%d] WRITE %x\n", __FUNCTION__, __LINE__, pint->map_base[SHARED_WRITE]);
     //portalSendFd(pint->fpga_fd, (void *)pint->map_base, (hdr & 0xffff) + sizeof(uint32_t), sendFd);
 }
 int recv_shared(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
 {
-    //return portalRecvFd(pint->fpga_fd, (void *)buffer, len, recvfd);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     return 0;
 }
+static unsigned int read_shared(PortalInternal *pint, volatile unsigned int **addr)
+{
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+    unsigned int rc = **addr;
+    *addr += 1;
+    return rc;
+}
+static void write_shared(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
+{
+printf("[%s:%d] %p=%x\n", __FUNCTION__, __LINE__, *addr, v);
+    **addr = v;
+    *addr += 1;
+}
+static void write_fd_shared(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
+{
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+    **addr = v;
+    *addr += 1;
+}
+int busy_shared(struct PortalInternal *pint, volatile unsigned int *addr, const char *str)
+{
+//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+    return 0;
+}
+void enableint_shared(struct PortalInternal *pint, int val)
+{
+//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+}
+int event_shared(struct PortalInternal *pint)
+{
+    if (!pint->map_base)
+        return -1;
+    unsigned int rc = pint->map_base[pint->map_base[SHARED_READ]];
+static int once;
+if (once++ < 10)
+printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, rc);
+    if (rc) {
+printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, rc);
+        pint->handler(pint, rc >> 16, 0);
+        pint->map_base[SHARED_READ] += (rc & 0xffff) / sizeof(uint32_t) + 1;
+    }
+    return -1;
+}
 PortalItemFunctions sharedfuncResp = {
-    init_shared, read_socket, write_socket, write_fd_socket, mapchannel_shared,
-    send_shared, recv_shared, busy_socket, enableint_socket, event_socket};
+    init_shared, read_shared, write_shared, write_fd_shared, mapchannel_sharedInd, mapchannel_sharedReq,
+    send_shared, recv_shared, busy_shared, enableint_shared, event_shared};
 PortalItemFunctions sharedfuncInit = {
-    init_shared, read_socket, write_socket, write_fd_socket, mapchannel_shared,
-    send_shared, recv_shared, busy_socket, enableint_socket, event_socket};
+    init_shared, read_shared, write_shared, write_fd_shared, mapchannel_sharedInd, mapchannel_sharedReq,
+    send_shared, recv_shared, busy_shared, enableint_shared, event_shared};
 
