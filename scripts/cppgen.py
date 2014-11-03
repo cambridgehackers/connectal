@@ -92,7 +92,7 @@ void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p %(paramSeparat
     volatile unsigned int* temp_working_addr = p->item->mapchannelReq(p, %(methodChannelOffset)s);
     if (p->item->busywait(p, temp_working_addr, "%(namespace)s%(className)s_%(methodName)s")) return;
     %(paramStructMarshall)s
-    p->item->send(p, (%(methodChannelOffset)s << 16) | %(wordLen)s, %(fdName)s);
+    p->item->send(p, (%(methodChannelOffset)s << 16) | %(wordLenP1)s, %(fdName)s);
 };
 '''
 
@@ -333,7 +333,8 @@ class MethodMixin:
             'paramNames': ', '.join(['msg->%s' % p.name for p in params]),
             'resultType': resultTypeName,
             'methodChannelOffset': 'CHAN_NUM_%s_%s' % (className, cName(self.name)),
-            'wordLen': len(argWords) * sizeofUint32_t,
+            'wordLen': len(argWords),
+            'wordLenP1': len(argWords) + 1,
             'fdName': fdName,
             # if message is empty, we still send an int of padding
             'payloadSize' : max(4, 4*((sum([p.numBitsBSV() for p in self.params])+31)/32)) 

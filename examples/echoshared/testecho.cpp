@@ -66,7 +66,7 @@ static void call_say(int v)
 {
     printf("[%s:%d] %d\n", __FUNCTION__, __LINE__, v);
     sRequestProxy->say(v);
-memdump((unsigned char *)srcBuffer, 64, "DATA");
+memdump((unsigned char *)srcBuffer, 64, "IDATA");
     sem_wait(&sem_heard2);
 }
 
@@ -94,19 +94,11 @@ int main(int argc, const char **argv)
     srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
     srcBuffer[SHARED_LIMIT] = alloc_sz/sizeof(uint32_t);
     srcBuffer[SHARED_WRITE] = SHARED_START;
-printf("[%s:%d] WRITE %x w %x start %x\n", __FUNCTION__, __LINE__, srcBuffer[SHARED_WRITE], SHARED_WRITE, SHARED_START);
     srcBuffer[SHARED_READ] = SHARED_START;
     srcBuffer[SHARED_START] = 0;
-printf("[%s:%d] WRITE %x READ %x\n", __FUNCTION__, __LINE__, srcBuffer[SHARED_WRITE], srcBuffer[SHARED_READ]);
-printf("[%s:%d] srcBuffer %p\n", __FUNCTION__, __LINE__, srcBuffer);
-memdump((unsigned char *)srcBuffer, 64, "DATA");
     sRequestProxy->pint.map_base = (volatile unsigned int *)srcBuffer;
     sIndication->pint.map_base = (volatile unsigned int *)srcBuffer;
-printf("[%s:%d] allocated fd %d ptr %p\n", __FUNCTION__, __LINE__, srcAlloc, srcBuffer);
-printf("[%s:%d] WRITE %x READ %x\n", __FUNCTION__, __LINE__, srcBuffer[SHARED_WRITE], srcBuffer[SHARED_READ]);
     unsigned int ref_srcAlloc = dma->reference(srcAlloc);
-printf("[%s:%d] WRITE %x READ %x\n", __FUNCTION__, __LINE__, srcBuffer[SHARED_WRITE], srcBuffer[SHARED_READ]);
-memdump((unsigned char *)srcBuffer, 64, "DATA");
 
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 sleep(4);
