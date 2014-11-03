@@ -87,6 +87,7 @@ interface MMUConfigRequest;
    method Action region(Bit#(32) sglId, Bit#(64) barr8, Bit#(32) index8, Bit#(64) barr4, Bit#(32) index4, Bit#(64) barr0, Bit#(32) index0);
    method Action idRequest(SpecialTypeForSendingFd fd);
    method Action idReturn(Bit#(32) sglId);
+   method Action setInterface(Bit#(32) interfaceId, Bit#(32) sglId);
 endinterface
 
 //

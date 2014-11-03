@@ -28,7 +28,6 @@
 
 EchoRequestProxy *sRequestProxy;
 MMUConfigRequestProxy *dmap;
-unsigned int *srcBuffer;
 static sem_t sem_heard2;
 
 class EchoIndication : public EchoIndicationWrapper
@@ -71,21 +70,25 @@ int main(int argc, const char **argv)
     portalExec_start();
 
     int srcAlloc = portalAlloc(alloc_sz);
-    srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
+    unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
     sRequestProxy->pint.map_base = (volatile unsigned int *)srcBuffer;
     sRequestProxy->pint.map_base[SHARED_LIMIT] = alloc_sz/2/sizeof(uint32_t);
     sRequestProxy->pint.map_base[SHARED_WRITE] = SHARED_START;
     sRequestProxy->pint.map_base[SHARED_READ] = SHARED_START;
     sRequestProxy->pint.map_base[SHARED_START] = 0;
 
-    sIndication->pint.map_base = (volatile unsigned int *)srcBuffer + (alloc_sz/2)/sizeof(uint32_t);
+    int srcAlloc2 = portalAlloc(alloc_sz);
+    unsigned int *srcBuffer2 = (unsigned int *)portalMmap(srcAlloc2, alloc_sz);
+    sIndication->pint.map_base = (volatile unsigned int *)srcBuffer2;
     sIndication->pint.map_base[SHARED_LIMIT] = alloc_sz/2/sizeof(uint32_t);
     sIndication->pint.map_base[SHARED_WRITE] = SHARED_START;
     sIndication->pint.map_base[SHARED_READ] = SHARED_START;
     sIndication->pint.map_base[SHARED_START] = 0;
 
+    unsigned int ref_srcAlloc2 = dma->reference(srcAlloc2);
+    dmap->setInterface(IfcNames_EchoIndication, ref_srcAlloc2);
     unsigned int ref_srcAlloc = dma->reference(srcAlloc);
-    //sRequestProxy->setBuffer(ref_srcAlloc);
+    dmap->setInterface(IfcNames_EchoRequest, ref_srcAlloc);
 
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);

@@ -24,11 +24,10 @@
 #include "EchoIndication.h"
 #include "MMUConfigRequest.h"
 #include "MMUConfigIndication.h"
+#include "MMUConfigServer.h"
 
 static EchoRequestProxy *echoRequestProxy;
 static EchoIndicationProxy *sIndicationProxy;
-static MMUConfigIndicationProxy *mIndicationProxy;
-#define MAX_AREAS 20
 
 class EchoIndication : public EchoIndicationWrapper
 {
@@ -65,52 +64,19 @@ public:
 };
 
 static EchoRequest *sRequest;
-class MMUConfigRequest : public MMUConfigRequestWrapper
-{
-    struct {
-        int fd;
-        void *ptr;
-        int len;
-    } memoryAreas[MAX_AREAS];
-    int memoryAreasIndex;
-public:
-    void sglist (const uint32_t sglId, const uint32_t sglIndex, const uint64_t addr, const uint32_t len ) {
-printf("daemon[%s:%d](%x, %x, %lx, %x)\n", __FUNCTION__, __LINE__, sglId, sglIndex, addr, len);
-        memoryAreas[sglId].len = 1000;
-    }
-    void region (const uint32_t sglId, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 ) {
-       memoryAreas[sglId].ptr = portalMmap(memoryAreas[sglId].fd, memoryAreas[sglId].len);
-       printf("daemon[%s:%d] ptr %p\n", __FUNCTION__, __LINE__, memoryAreas[sglId].ptr);
-       sRequest->pint.map_base = (volatile unsigned int *)memoryAreas[sglId].ptr;
-       sIndicationProxy->pint.map_base = (volatile unsigned int *)memoryAreas[sglId].ptr + (memoryAreas[sglId].len/2)/sizeof(uint32_t);
-       mIndicationProxy->configResp(0);
-    }
-    void idRequest(SpecialTypeForSendingFd fd) {
-       memoryAreas[memoryAreasIndex].fd = fd;
-       memoryAreas[memoryAreasIndex].ptr = NULL;
-       memoryAreas[memoryAreasIndex].len = 0;
-       printf("daemon[%s:%d] fd %d\n", __FUNCTION__, __LINE__, fd);
-       mIndicationProxy->idResponse(memoryAreasIndex++);
-    }
-    void idReturn (const uint32_t sglId ) {
-       printf("daemon[%s:%d] sglId %d\n", __FUNCTION__, __LINE__, sglId);
-    }
-    void *getPtr (const uint32_t sglId ) {
-        return memoryAreas[sglId].ptr;
-    }
-    MMUConfigRequest(unsigned int id, PortalItemFunctions *item) : MMUConfigRequestWrapper(id, item), memoryAreasIndex(1) {}
-};
 
 int main(int argc, const char **argv)
 {
+    MMUConfigServer *mServer = new MMUConfigServer(IfcNames_MMUConfigRequest,
+        new MMUConfigIndicationProxy(IfcNames_MMUConfigIndication, &socketfuncResp), &socketfuncResp);
+
     EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, NULL);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
 
     sRequest = new EchoRequest(IfcNames_EchoRequest, &sharedfuncResp);
+    mServer->registerInterface(IfcNames_EchoRequest, &sRequest->pint);
     sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &sharedfuncResp);
-
-    MMUConfigRequest *mRequest = new MMUConfigRequest(IfcNames_MMUConfigRequest, &socketfuncResp);
-    mIndicationProxy = new MMUConfigIndicationProxy(IfcNames_MMUConfigIndication, &socketfuncResp);
+    mServer->registerInterface(IfcNames_EchoIndication, &sIndicationProxy->pint);
 
     portalExec_start();
     printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);
