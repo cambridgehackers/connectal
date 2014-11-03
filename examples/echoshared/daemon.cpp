@@ -71,9 +71,9 @@ int main(int argc, const char **argv)
     EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, NULL);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
 
-    sRequest = new EchoRequest(IfcNames_EchoRequest, &sharedfuncResp);
+    sRequest = new EchoRequest(IfcNames_EchoRequest, &sharedfunc);
     mServer->registerInterface(IfcNames_EchoRequest, &sRequest->pint);
-    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &sharedfuncResp);
+    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &sharedfunc);
     mServer->registerInterface(IfcNames_EchoIndication, &sIndicationProxy->pint);
 
     portalExec_start();

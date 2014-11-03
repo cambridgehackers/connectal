@@ -79,9 +79,9 @@ int main(int argc, const char **argv)
 
     portalExec_start();
 
-    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &sharedfuncInit);
+    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &sharedfunc);
     allocateShared(dma, dmap, IfcNames_EchoIndication, &sIndication->pint, alloc_sz);
-    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &sharedfuncInit);
+    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &sharedfunc);
     allocateShared(dma, dmap, IfcNames_EchoRequest, &sRequestProxy->pint, alloc_sz);
 
     int v = 42;

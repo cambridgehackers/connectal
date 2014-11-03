@@ -545,10 +545,7 @@ int event_shared(struct PortalInternal *pint)
     }
     return -1;
 }
-PortalItemFunctions sharedfuncResp = {
-    init_shared, read_shared, write_shared, write_fd_shared, mapchannel_sharedInd, mapchannel_sharedReq,
-    send_shared, recv_shared, busy_shared, enableint_shared, event_shared};
-PortalItemFunctions sharedfuncInit = {
+PortalItemFunctions sharedfunc = {
     init_shared, read_shared, write_shared, write_fd_shared, mapchannel_sharedInd, mapchannel_sharedReq,
     send_shared, recv_shared, busy_shared, enableint_shared, event_shared};
 
