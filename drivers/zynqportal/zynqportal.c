@@ -291,6 +291,8 @@ static int connectal_open(struct inode *inode, struct file *filep)
 {
   struct connectal_data *connectal_data = filep->private_data;
   struct platform_device *pdev = connectal_data->pdev;
+
+  driver_devel("%s:%d\n", __func__, __LINE__);
   
   if(connectal_data->portal_data)
     remove_portal_devices(connectal_data->portal_data);
@@ -318,16 +320,19 @@ static int connectal_open(struct inode *inode, struct file *filep)
     foo = ioremap_nocache(bar, sizeof(PAGE_SIZE));
     iid = readl(foo+IID_OFFSET);
     top = readl(foo+TOP_OFFSET);
-    driver_devel("%s:%d bar=%08x fpn=%08x iid=%d top=%d\n", __func__, __LINE__, bar, fpn, iid, top);
     
-    sprintf(&(portal_data->name[0]), "portal%d", iid);
+    driver_devel("%s:%d bar=%08x fpn=%08x iid=%d top=%d\n", __func__, __LINE__, bar, fpn, iid, top);
+
     portal_data->misc.name = &(portal_data->name[0]);
+    sprintf(portal_data->misc.name, "portal%d", iid);
     portal_data->misc.minor = MISC_DYNAMIC_MINOR;
     portal_data->misc.fops = &portal_fops;
     portal_data->dev_base_phys = bar;
     portal_data->portal_irq = irq_res->start;
     portal_data->top = top;
-    misc_register( &portal_data->misc);
+    driver_devel("%s:%d name=%s\n", __func__, __LINE__, portal_data->misc.name);
+    int rc = misc_register( &portal_data->misc);
+    driver_devel("%s:%d rc=%d minor=%d\n", __func__, __LINE__, rc, portal_data->misc.minor);
     
     if (++fpn >= MAX_NUM_PORTALS){
       printk(KERN_INFO "%s: MAX_NUM_PORTALS exceeded", __func__);
@@ -337,7 +342,7 @@ static int connectal_open(struct inode *inode, struct file *filep)
 
   connectal_data->portal_data = drvdata;
   directory_virt = drvdata;
-  return 0;
+  return -ENODEV;
 }
 
 static const struct file_operations connectal_fops = {
@@ -352,7 +357,6 @@ static int connectal_of_probe(struct platform_device *pdev)
     pr_err("Error %s getting device-name\n", DRIVER_NAME);
     return -EINVAL;
   }
-  driver_devel("%s: device-name=%s\n", DRIVER_NAME, dname);
   void *drvdata = kzalloc(sizeof(struct connectal_data), GFP_KERNEL);
   struct connectal_data *connectal_data = drvdata;
   connectal_data->misc.name = dname;
@@ -360,9 +364,9 @@ static int connectal_of_probe(struct platform_device *pdev)
   connectal_data->misc.fops = &connectal_fops;
   connectal_data->pdev = pdev;
   connectal_data->portal_data = 0;
-  misc_register( &connectal_data->misc);
+  int rc = misc_register(&connectal_data->misc);
+  driver_devel("%s:%d name=%s rc=%d minor=%d\n", __func__, __LINE__, connectal_data->misc.name, rc, connectal_data->misc.minor);
   dev_set_drvdata(&pdev->dev, drvdata);
-  return 0;
 }
 
 static int connectal_of_remove(struct platform_device *pdev)
@@ -372,6 +376,7 @@ static int connectal_of_remove(struct platform_device *pdev)
   driver_devel("%s:%s\n",__FUNCTION__, pdev->name);
   if(connectal_data->portal_data)
     remove_portal_devices(connectal_data->portal_data);
+  misc_deregister(&connectal_data->misc);
   kfree(drvdata);
   dev_set_drvdata(&pdev->dev, NULL);
   return 0;
