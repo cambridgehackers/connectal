@@ -25,15 +25,18 @@
 
 EchoRequestProxy *echoRequestProxy;
 EchoIndicationProxy *sIndicationProxy;
+static int daemon_trace;// = 1;
 
 class EchoIndication : public EchoIndicationWrapper
 {
 public:
     void heard(uint32_t v) {
+        if (daemon_trace)
         fprintf(stderr, "daemon: heard an echo: %d\n", v);
         sIndicationProxy->heard(v);
     }
     void heard2(uint32_t a, uint32_t b) {
+        if (daemon_trace)
         fprintf(stderr, "daemon: heard an echo2: %d %d\n", a, b);
         sIndicationProxy->heard2(a, b);
     }
@@ -44,10 +47,12 @@ class EchoRequest : public EchoRequestWrapper
 {
 public:
     void say ( const uint32_t v ) {
+        if (daemon_trace)
         fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
         echoRequestProxy->say(v);
     }
     void say2 ( const uint32_t a, const uint32_t b ) {
+        if (daemon_trace)
         fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
         echoRequestProxy->say2(a, b);
     }
