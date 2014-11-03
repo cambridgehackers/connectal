@@ -85,6 +85,7 @@ int main(int argc, const char **argv)
     sIndication->pint.map_base[SHARED_START] = 0;
 
     unsigned int ref_srcAlloc = dma->reference(srcAlloc);
+    //sRequestProxy->setBuffer(ref_srcAlloc);
 
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
