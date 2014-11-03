@@ -57,7 +57,7 @@ public:
     }
     virtual void heard2(uint32_t a, uint32_t b) {
         sem_post(&sem_heard2);
-        //fprintf(stderr, "heard an s2: %ld %ld\n", a, b);
+        //fprintf(stderr, "heard an s2: %d %d\n", a, b);
     }
     EchoIndication(unsigned int id, PortalItemFunctions *item) : EchoIndicationWrapper(id, item) {}
 };
@@ -66,7 +66,6 @@ static void call_say(int v)
 {
     printf("[%s:%d] %d\n", __FUNCTION__, __LINE__, v);
     sRequestProxy->say(v);
-memdump((unsigned char *)srcBuffer, 64, "IDATA");
     sem_wait(&sem_heard2);
 }
 
@@ -92,17 +91,20 @@ int main(int argc, const char **argv)
 
     int srcAlloc = portalAlloc(alloc_sz);
     srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
-    srcBuffer[SHARED_LIMIT] = alloc_sz/sizeof(uint32_t);
-    srcBuffer[SHARED_WRITE] = SHARED_START;
-    srcBuffer[SHARED_READ] = SHARED_START;
-    srcBuffer[SHARED_START] = 0;
     sRequestProxy->pint.map_base = (volatile unsigned int *)srcBuffer;
-    sIndication->pint.map_base = (volatile unsigned int *)srcBuffer;
+    sRequestProxy->pint.map_base[SHARED_LIMIT] = alloc_sz/sizeof(uint32_t);
+    sRequestProxy->pint.map_base[SHARED_WRITE] = SHARED_START;
+    sRequestProxy->pint.map_base[SHARED_READ] = SHARED_START;
+    sRequestProxy->pint.map_base[SHARED_START] = 0;
+
+    sIndication->pint.map_base = (volatile unsigned int *)srcBuffer + (alloc_sz/2)/sizeof(uint32_t);
+    sIndication->pint.map_base[SHARED_LIMIT] = alloc_sz/sizeof(uint32_t);
+    sIndication->pint.map_base[SHARED_WRITE] = SHARED_START;
+    sIndication->pint.map_base[SHARED_READ] = SHARED_START;
+    sIndication->pint.map_base[SHARED_START] = 0;
+
     unsigned int ref_srcAlloc = dma->reference(srcAlloc);
 
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-sleep(4);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
     call_say(v);

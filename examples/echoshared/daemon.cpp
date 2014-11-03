@@ -66,7 +66,6 @@ class EchoRequest : public EchoRequestWrapper
 public:
     void say ( const uint32_t v ) {
         fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
-memdump((unsigned char *)srcBuffer, 64, "RDATA");
         echoRequestProxy->say(v);
     }
     void say2 ( const uint32_t a, const uint32_t b ) {
@@ -90,13 +89,13 @@ class MMUConfigRequest : public MMUConfigRequestWrapper
 public:
     void sglist (const uint32_t sglId, const uint32_t sglIndex, const uint64_t addr, const uint32_t len ) {
 printf("daemon[%s:%d](%x, %x, %lx, %x)\n", __FUNCTION__, __LINE__, sglId, sglIndex, addr, len);
+        //alloc_sz = len;
     }
     void region (const uint32_t sglId, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 ) {
        srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
 printf("daemon[%s:%d] ptr %p\n", __FUNCTION__, __LINE__, srcBuffer);
        sRequest->pint.map_base = (volatile unsigned int *)srcBuffer;
-       sIndicationProxy->pint.map_base = (volatile unsigned int *)srcBuffer;
-memdump((unsigned char *)srcBuffer, 64, "RDATA");
+       sIndicationProxy->pint.map_base = (volatile unsigned int *)srcBuffer + (alloc_sz/2)/sizeof(uint32_t);
        mIndicationProxy->configResp(0);
     }
     void idRequest(SpecialTypeForSendingFd fd) {

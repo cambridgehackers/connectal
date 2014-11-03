@@ -491,69 +491,57 @@ PortalItemFunctions socketfuncInit = {
 
 static int init_shared(struct PortalInternal *pint)
 {
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     return 1;
 }
 static volatile unsigned int *mapchannel_sharedInd(struct PortalInternal *pint, unsigned int v)
 {
-printf("[%s:%d] %p %d=%p\n", __FUNCTION__, __LINE__, pint->map_base, pint->map_base[SHARED_READ], &pint->map_base[pint->map_base[SHARED_READ]+1]);
     return &pint->map_base[pint->map_base[SHARED_READ]+1];
 }
 static volatile unsigned int *mapchannel_sharedReq(struct PortalInternal *pint, unsigned int v)
 {
-printf("[%s:%d] %p %d=%p\n", __FUNCTION__, __LINE__, pint->map_base, pint->map_base[SHARED_WRITE], &pint->map_base[pint->map_base[SHARED_WRITE]+1]);
     return &pint->map_base[pint->map_base[SHARED_WRITE]+1];
 }
 void send_shared(struct PortalInternal *pint, unsigned int hdr, int sendFd)
 {
-printf("[%s:%d] %p = hdr %x\n", __FUNCTION__, __LINE__, &pint->map_base[pint->map_base[SHARED_WRITE]], hdr);
+//printf("[%s:%d] %x = hdr %x\n", __FUNCTION__, __LINE__, pint->map_base[SHARED_WRITE], hdr);
     pint->map_base[pint->map_base[SHARED_WRITE]] = hdr;
     pint->map_base[SHARED_WRITE] += (hdr & 0xffff);
     pint->map_base[pint->map_base[SHARED_WRITE]] = 0;
-    //portalSendFd(pint->fpga_fd, (void *)pint->map_base, (hdr & 0xffff) + sizeof(uint32_t), sendFd);
 }
 int recv_shared(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
 {
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     return 0;
 }
 static unsigned int read_shared(PortalInternal *pint, volatile unsigned int **addr)
 {
-//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     unsigned int rc = **addr;
     *addr += 1;
     return rc;
 }
 static void write_shared(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
 {
-//printf("[%s:%d] %p=%x\n", __FUNCTION__, __LINE__, *addr, v);
     **addr = v;
     *addr += 1;
 }
 static void write_fd_shared(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
 {
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     **addr = v;
     *addr += 1;
 }
 int busy_shared(struct PortalInternal *pint, volatile unsigned int *addr, const char *str)
 {
-//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     return 0;
 }
 void enableint_shared(struct PortalInternal *pint, int val)
 {
-//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 }
 int event_shared(struct PortalInternal *pint)
 {
-    if (!pint->map_base)
-        return -1;
-    unsigned int rc = pint->map_base[pint->map_base[SHARED_READ]];
-    if (rc) {
-printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, rc);
+    if (pint->map_base && pint->map_base[SHARED_READ] != pint->map_base[SHARED_WRITE]) {
+        unsigned int rc = pint->map_base[pint->map_base[SHARED_READ]];
         pint->handler(pint, rc >> 16, 0);
-        pint->map_base[SHARED_READ] += (rc & 0xffff) / sizeof(uint32_t) + 1;
+        pint->map_base[SHARED_READ] += (rc & 0xffff);
     }
     return -1;
 }
