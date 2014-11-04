@@ -40,7 +40,7 @@ public:
         sem_post(&sem_heard2);
         //fprintf(stderr, "heard an s2: %d %d\n", a, b);
     }
-    EchoIndication(unsigned int id, PortalItemFunctions *item) : EchoIndicationWrapper(id, item) {}
+    EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
 };
 
 static void call_say(int v)
@@ -56,36 +56,22 @@ static void call_say2(int v, int v2)
     sem_wait(&sem_heard2);
 }
 
-int allocateShared(DmaManager *dma, MMUConfigRequestProxy *dmap, uint32_t interfaceId, PortalInternal *p, uint32_t size)
-{
-    int fd = portalAlloc(size);
-    p->map_base = (volatile unsigned int *)portalMmap(fd, size);
-    p->map_base[SHARED_LIMIT] = size/sizeof(uint32_t);
-    p->map_base[SHARED_WRITE] = SHARED_START;
-    p->map_base[SHARED_READ] = SHARED_START;
-    p->map_base[SHARED_START] = 0;
-    unsigned int ref = dma->reference(fd);
-    dmap->setInterface(interfaceId, ref);
-    return fd;
-}
-
 int main(int argc, const char **argv)
 {
     int alloc_sz = 64-4;
 //1000;
 
-    MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_MMUConfigRequest, &socketfuncInit);
+    MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_MMUConfigRequest, &socketfuncInit, NULL);
     DmaManager *dma = new DmaManager(dmap);
-    MMUConfigIndication *mIndication = new MMUConfigIndication(dma, IfcNames_MMUConfigIndication, &socketfuncInit);
+    MMUConfigIndication *mIndication = new MMUConfigIndication(dma, IfcNames_MMUConfigIndication, &socketfuncInit, NULL);
 
     portalExec_start();
 
-    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &sharedfunc);
-    allocateShared(dma, dmap, IfcNames_EchoIndication, &sIndication->pint, alloc_sz);
-    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &sharedfunc);
-    allocateShared(dma, dmap, IfcNames_EchoRequest, &sRequestProxy->pint, alloc_sz);
+    PortalSharedParam param = {dma, alloc_sz};
+    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &sharedfunc, &param);
+    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &sharedfunc, &param);
 
-for (int i = 0; i < 100; i++) {
+for (int i = 0; i < 10; i++) {
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
     call_say(v);

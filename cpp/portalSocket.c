@@ -92,7 +92,7 @@ void connect_to_bsim(void)
   }  
 }
 
-static int init_socketResp(struct PortalInternal *pint)
+static int init_socketResp(struct PortalInternal *pint, void *param)
 {
     char buff[128];
     sprintf(buff, "SWSOCK%d", pint->fpga_number);
@@ -100,7 +100,7 @@ static int init_socketResp(struct PortalInternal *pint)
     pint->map_base = (volatile unsigned int*)malloc(pint->reqsize);
     return 0;
 }
-static int init_socketInit(struct PortalInternal *pint)
+static int init_socketInit(struct PortalInternal *pint, void *param)
 {
     char buff[128];
     sprintf(buff, "SWSOCK%d", pint->fpga_number);
@@ -318,7 +318,7 @@ void write_portal_fd_bsim(volatile unsigned int *addr, unsigned int v, int id)
     down_interruptible(&bsim_have_response);
 }
 #endif
-static int init_bsim(struct PortalInternal *pint)
+static int init_bsim(struct PortalInternal *pint, void *param)
 {
 #ifdef BSIM
     extern int bsim_fpga_map[MAX_BSIM_PORTAL_ID];

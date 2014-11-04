@@ -59,8 +59,8 @@ class PortalInternalCpp
 {
  public:
   PortalInternal pint;
-  PortalInternalCpp(int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions* item, uint32_t reqsize) { 
-    init_portal_internal(&pint, id, handler, cb, item, reqsize); 
+  PortalInternalCpp(int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions* item, void *param, uint32_t reqsize) { 
+    init_portal_internal(&pint, id, handler, cb, item, param, reqsize); 
     //fprintf(stderr, "PortalInternalCpp %d\n", pint.fpga_number);
   };
   ~PortalInternalCpp() {
@@ -73,22 +73,21 @@ class PortalInternalCpp
 
 class Portal : public PortalInternalCpp
 {
+   void initPortal() {
+    if (pint.handler || pint.item == &socketfuncResp) {
+      if (pint.poller == 0)
+        pint.poller = defaultPoller;
+      pint.poller->registerInstance(this);
+    }
+  }
  public:
-  Portal(int id, uint32_t reqsize, PORTAL_INDFUNC handler, void *cb, PortalPoller *poller = 0) : PortalInternalCpp(id, handler, cb, NULL, reqsize) {
-    if (pint.handler) {
-      if (poller == 0)
-        poller = defaultPoller;
-      pint.poller = poller;
-      pint.poller->registerInstance(this);
-    }
+  Portal(int id, uint32_t reqsize, PORTAL_INDFUNC handler, void *cb, PortalPoller *poller = 0) : PortalInternalCpp(id, handler, cb, NULL, NULL, reqsize) {
+    pint.poller = poller;
+    initPortal();
   };
-  Portal(int id, uint32_t reqsize, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, PortalPoller *poller = 0) : PortalInternalCpp(id, handler, cb, item, reqsize) {
-    if (pint.handler || item == &socketfuncResp) {
-      if (poller == 0)
-        poller = defaultPoller;
-      pint.poller = poller;
-      pint.poller->registerInstance(this);
-    }
+  Portal(int id, uint32_t reqsize, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : PortalInternalCpp(id, handler, cb, item, param, reqsize) {
+    pint.poller = poller;
+    initPortal();
   };
   ~Portal() { if (pint.handler) pint.poller->unregisterInstance(this); };
 };

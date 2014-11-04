@@ -122,10 +122,10 @@ int main(int argc, const char **argv)
   int rc = 0, i;
   pthread_t tid = 0;
 
-  init_portal_internal(&intarr[0], IfcNames_HostMMUConfigIndication, MMUConfigIndicationWrapper_handleMessage, (void *)&MMUConfigIndicationWrapper_cbTable, NULL, MMUConfigIndicationWrapper_reqsize);// fpga1
-  init_portal_internal(&intarr[1], IfcNames_MemreadIndication, MemreadIndicationWrapper_handleMessage, (void *)&MemreadIndicationWrapper_cbTable, NULL, MemreadIndicationWrapper_reqsize); // fpga2
-  init_portal_internal(&intarr[2], IfcNames_HostMMUConfigRequest, NULL, NULL, NULL, MMUConfigRequestProxy_reqsize); // fpga3
-  init_portal_internal(&intarr[3], IfcNames_MemreadRequest, NULL, NULL, NULL, MemreadRequestProxy_reqsize);    // fpga4
+  init_portal_internal(&intarr[0], IfcNames_HostMMUConfigIndication, MMUConfigIndicationWrapper_handleMessage, &MMUConfigIndicationWrapper_cbTable, NULL, NULL, MMUConfigIndicationWrapper_reqsize);// fpga1
+  init_portal_internal(&intarr[1], IfcNames_MemreadIndication, MemreadIndicationWrapper_handleMessage, &MemreadIndicationWrapper_cbTable, NULL, NULL, MemreadIndicationWrapper_reqsize); // fpga2
+  init_portal_internal(&intarr[2], IfcNames_HostMMUConfigRequest, NULL, NULL, NULL, NULL, MMUConfigRequestProxy_reqsize); // fpga3
+  init_portal_internal(&intarr[3], IfcNames_MemreadRequest, NULL, NULL, NULL, NULL, MemreadRequestProxy_reqsize);    // fpga4
 
   sem_init(&test_sem, 0, 0);
   DmaManager_init(&priv, NULL, &intarr[2]);

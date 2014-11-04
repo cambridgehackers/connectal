@@ -57,7 +57,7 @@ PortalInternal *utility_portal = 0x0;
 static tBoard* tboard;
 #endif
 
-void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, uint32_t reqsize)
+void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param, uint32_t reqsize)
 {
     int rc;
     init_portal_hw();
@@ -77,7 +77,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
 #endif
     }
     pint->reqsize = reqsize;
-    rc = pint->item->init(pint);
+    rc = pint->item->init(pint, param);
     if (rc != 0) {
       PORTAL_PRINTF("%s: failed to open Portal portal%d\n", __FUNCTION__, pint->fpga_number);
 #ifndef __KERNEL__
@@ -328,7 +328,7 @@ int event_hardware(struct PortalInternal *pint)
     return -1;
 }
 
-static int init_hardware(struct PortalInternal *pint)
+static int init_hardware(struct PortalInternal *pint, void *param)
 {
 #if defined(__KERNEL__)
     pint->map_base = (volatile unsigned int*)(tboard->bar2io + pint->fpga_number * PORTAL_BASE_OFFSET);
@@ -392,41 +392,3 @@ static void write_fd_hardware(PortalInternal *pint, volatile unsigned int **addr
 PortalItemFunctions hardwarefunc = {
     init_hardware, read_hardware, write_hardware, write_fd_hardware, mapchannel_hardware, mapchannel_hardware,
     send_portal_null, recv_portal_null, busy_hardware, enableint_hardware, event_hardware};
-
-static int init_shared(struct PortalInternal *pint)
-{
-    return 0;
-}
-static volatile unsigned int *mapchannel_sharedInd(struct PortalInternal *pint, unsigned int v)
-{
-    return &pint->map_base[pint->map_base[SHARED_READ]+1];
-}
-static volatile unsigned int *mapchannel_sharedReq(struct PortalInternal *pint, unsigned int v)
-{
-    return &pint->map_base[pint->map_base[SHARED_WRITE]+1];
-}
-static inline unsigned int increment_shared(PortalInternal *pint, unsigned int newp)
-{
-    if (newp + pint->reqsize/sizeof(uint32_t) + 1 >= pint->map_base[SHARED_LIMIT])
-        newp = SHARED_START;
-    return newp;
-}
-static void send_shared(struct PortalInternal *pint, unsigned int hdr, int sendFd)
-{
-    pint->map_base[pint->map_base[SHARED_WRITE]] = hdr;
-    pint->map_base[SHARED_WRITE] = increment_shared(pint, pint->map_base[SHARED_WRITE] + (hdr & 0xffff));
-    pint->map_base[pint->map_base[SHARED_WRITE]] = 0;
-}
-static int event_shared(struct PortalInternal *pint)
-{
-    if (pint->map_base && pint->map_base[SHARED_READ] != pint->map_base[SHARED_WRITE]) {
-        unsigned int rc = pint->map_base[pint->map_base[SHARED_READ]];
-        pint->handler(pint, rc >> 16, 0);
-        pint->map_base[SHARED_READ] = increment_shared(pint, pint->map_base[SHARED_READ] + (rc & 0xffff));
-    }
-    return -1;
-}
-PortalItemFunctions sharedfunc = {
-    init_shared, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_sharedInd, mapchannel_sharedReq,
-    send_shared, recv_portal_null, busy_portal_null, enableint_portal_null, event_shared};
-

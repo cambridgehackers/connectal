@@ -60,7 +60,7 @@
 typedef int Bool;   /* for GeneratedTypes.h */
 typedef int SpecialTypeForSendingFd;
 struct PortalInternal;
-typedef int (*ITEMINIT)(struct PortalInternal *pint);
+typedef int (*ITEMINIT)(struct PortalInternal *pint, void *param);
 typedef int (*PORTAL_INDFUNC)(struct PortalInternal *p, unsigned int channel, int messageFd);
 typedef void (*SENDMSG)(struct PortalInternal *pint, unsigned int hdr, int sendFd);
 typedef int (*RECVMSG)(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd);
@@ -84,6 +84,11 @@ typedef struct {
     ENABLEINT   enableint;
     EVENT       event;
 } PortalItemFunctions;
+
+typedef struct {
+    struct DmaManager *dma;
+    uint32_t    size;
+} PortalSharedParam; /* for ITEMINIT function */
 
 typedef struct PortalInternal {
   struct PortalPoller   *poller;
@@ -122,7 +127,7 @@ int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *
 #ifdef __cplusplus
 extern "C" {
 #endif
-void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, uint32_t reqsize);
+void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param, uint32_t reqsize);
 void portalCheckIndication(PortalInternal *pint);
 uint64_t portalCycleCount(void);
 void write_portal_fd_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);

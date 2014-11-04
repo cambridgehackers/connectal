@@ -40,7 +40,7 @@ public:
         fprintf(stderr, "daemon: heard an echo2: %d %d\n", a, b);
         sIndicationProxy->heard2(a, b);
     }
-    EchoIndication(unsigned int id, PortalItemFunctions *item) : EchoIndicationWrapper(id, item) {}
+    EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
 };
 
 class EchoRequest : public EchoRequestWrapper
@@ -62,15 +62,15 @@ public:
         sleep(1);
         exit(1);
     }
-    EchoRequest(unsigned int id, PortalItemFunctions *item) : EchoRequestWrapper(id, item) {}
+    EchoRequest(unsigned int id, PortalItemFunctions *item, void *param) : EchoRequestWrapper(id, item, param) {}
 };
 
 int main(int argc, const char **argv)
 {
-    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, NULL);
-    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &socketfuncResp);
+    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, NULL, NULL);
+    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &socketfuncResp, NULL);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
-    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &socketfuncResp);
+    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &socketfuncResp, NULL);
 
     portalExec_start();
     printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);

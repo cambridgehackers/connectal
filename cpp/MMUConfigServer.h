@@ -70,6 +70,6 @@ public:
     void registerInterface(uint32_t interfaceId, PortalInternal *p) {
         ifcarr[interfaceId] = p;
     }
-    MMUConfigServer(unsigned int id, MMUConfigIndicationProxy *mind, PortalItemFunctions *item) :
-        MMUConfigRequestWrapper(id, item), memoryAreasIndex(1), mIndicationProxy(mind) {}
+    MMUConfigServer(unsigned int id, MMUConfigIndicationProxy *mind, PortalItemFunctions *item, void *param) :
+        MMUConfigRequestWrapper(id, item, param), memoryAreasIndex(1), mIndicationProxy(mind) {}
 };

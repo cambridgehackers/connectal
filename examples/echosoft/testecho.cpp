@@ -37,7 +37,7 @@ public:
         sem_post(&sem_heard2);
         //fprintf(stderr, "heard an s2: %ld %ld\n", a, b);
     }
-    EchoIndication(unsigned int id, PortalItemFunctions *item) : EchoIndicationWrapper(id, item) {}
+    EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
 };
 
 static void call_say(int v)
@@ -55,8 +55,8 @@ static void call_say2(int v, int v2)
 
 int main(int argc, const char **argv)
 {
-    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &socketfuncInit);
-    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &socketfuncInit);
+    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &socketfuncInit, NULL);
+    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &socketfuncInit, NULL);
 
     portalExec_start();
 

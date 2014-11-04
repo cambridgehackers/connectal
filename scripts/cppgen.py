@@ -38,7 +38,7 @@ public:
     %(className)s(int id, PortalPoller *poller = 0) : Portal(id, %(namespace)s%(className)s_reqsize, NULL, NULL, poller) {
         pint.parent = static_cast<void *>(this);
     };
-    %(className)s(int id, PortalItemFunctions *item, PortalPoller *poller = 0) : Portal(id, %(namespace)s%(className)s_reqsize, NULL, NULL, item, poller) {
+    %(className)s(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(namespace)s%(className)s_reqsize, NULL, NULL, item, param, poller) {
         pint.parent = static_cast<void *>(this);
     };
 '''
@@ -50,7 +50,7 @@ public:
     %(className)s(int id, PortalPoller *poller = 0) : Portal(id, %(namespace)s%(className)s_reqsize, %(namespace)s%(className)s_handleMessage, (void *)&%(className)s_cbTable, poller) {
         pint.parent = static_cast<void *>(this);
     };
-    %(className)s(int id, PortalItemFunctions *item, PortalPoller *poller = 0) : Portal(id, %(namespace)s%(className)s_reqsize, %(namespace)s%(className)s_handleMessage, (void *)&%(className)s_cbTable, item, poller) {
+    %(className)s(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(namespace)s%(className)s_reqsize, %(namespace)s%(className)s_handleMessage, (void *)&%(className)s_cbTable, item, param, poller) {
         pint.parent = static_cast<void *>(this);
     };
 '''

@@ -4,8 +4,8 @@ INTERFACES = Swallow EchoRequest EchoIndication MMUConfigRequest MMUConfigIndica
 BSVFILES = Echo.bsv SwallowIF.bsv Top.bsv
 BSVFILES += $(CONNECTALDIR)/bsv/ConnectalMemory.bsv
 ## the source files in the example
-CPPFILES=daemon.cpp
-CPPFILES2=testecho.cpp $(CONNECTALDIR)/cpp/dmaManager.c
+CPPFILES=daemon.cpp $(CONNECTALDIR)/cpp/portalShared.c $(CONNECTALDIR)/cpp/dmaManager.c
+CPPFILES2=testecho.cpp $(CONNECTALDIR)/cpp/portalShared.c $(CONNECTALDIR)/cpp/dmaManager.c
 
 NUMBER_OF_MASTERS =0
 
