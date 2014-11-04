@@ -68,6 +68,13 @@ struct portal_data {
         unsigned int      portal_irq;
         int               irq_is_registered;
         u32               top;
+        char              name[128];
+};
+
+struct connectal_data{
+  struct miscdevice misc; /* must be first element (pointer passed to misc_register) */
+  struct platform_device *pdev;
+  struct portal_data *portal_data;
 };
 
 static void *directory_virt;  /* anyone should be able to get PORTAL_DIRECTORY_COUNTER */
@@ -255,6 +262,7 @@ static int portal_release(struct inode *inode, struct file *filep)
 }
 
 static const struct file_operations portal_fops = {
+        .owner          = THIS_MODULE,
         .open = portal_open,
         .mmap = portal_mmap,
         .unlocked_ioctl = portal_unlocked_ioctl,
@@ -262,91 +270,127 @@ static const struct file_operations portal_fops = {
         .release = portal_release,
 };
 
-/*
- * platform_device functions
- */
-static int portal_of_probe(struct platform_device *pdev)
+static int remove_portal_devices(struct portal_data *portal_data)
 {
-        int rc = -ENOMEM, size;
-        struct portal_data *portal_data;
-        struct resource *reg_res, *irq_res;
-	static void* foo;
-	u32 top = 0;
-	u32 iid = 0;
-	u32 fpn = 0;
-	resource_size_t bar;
-	void *drvdata = kzalloc(sizeof(struct portal_data)*MAX_NUM_PORTALS, GFP_KERNEL);
-	char *name;
-
-        const char *dname = (char *)of_get_property(pdev->dev.of_node, "device-name", &size);
-        if (!dname) {
-	  pr_err("Error %s getting device-name\n", DRIVER_NAME);
-	  return -EINVAL;
-        }
-        driver_devel("%s: device_name=%s\n", DRIVER_NAME, dname);
-        reg_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-        irq_res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-        if (!reg_res || !irq_res) {
-                pr_err("Error portal resources\n");
-                return -ENODEV;
-        }
-
-	while (!top){
-	  portal_data = drvdata+(fpn*sizeof(struct portal_data));
-	  bar = reg_res->start+(fpn*PORTAL_BASE_OFFSET);
-	  foo = ioremap_nocache(bar, sizeof(PAGE_SIZE));
-	  iid = readl(foo+IID_OFFSET);
-	  top = readl(foo+TOP_OFFSET);
-	  driver_devel("%s:%d bar=%08x fpn=%08x iid=%d top=%d\n", __func__, __LINE__, bar, fpn, iid, top);
-
-	  name = (char*)kzalloc(128, GFP_KERNEL);
-	  sprintf(name, "portal%d", iid);
-	  portal_data->misc.name = name;
-	  portal_data->misc.minor = MISC_DYNAMIC_MINOR;
-	  portal_data->misc.fops = &portal_fops;
-	  portal_data->dev_base_phys = bar;
-	  portal_data->portal_irq = irq_res->start;
-	  portal_data->top = top;
-	  misc_register( &portal_data->misc);
-
-	  if (++fpn >= MAX_NUM_PORTALS){
-	    printk(KERN_INFO "%s: MAX_NUM_PORTALS exceeded", __func__);
-	    break;
-	  }
-	}
-
-	if(top)
-	  rc = 0;
-
-	directory_virt = drvdata;
-        dev_set_drvdata(&pdev->dev, drvdata);
-        driver_devel("%s:%d about to return %d\n", __func__, __LINE__, rc);
-        return rc;
+  u32 top = 0;
+  u32 fpn = 0;
+  struct portal_data *pdata;
+  while(!top){
+    pdata = &portal_data[fpn];
+    top = pdata->top;
+    if (pdata->irq_is_registered)
+      free_irq(pdata->portal_irq, pdata);
+    misc_deregister(&pdata->misc);
+    if (++fpn >= MAX_NUM_PORTALS)
+      break;
+  }
+  kfree(portal_data);
+  return 0;
 }
 
-static int portal_of_remove(struct platform_device *pdev)
+static int connectal_open(struct inode *inode, struct file *filep)
 {
-        void *drvdata = dev_get_drvdata(&pdev->dev);
-	u32 top = 0;
-	u32 fpn = 0;
-	struct portal_data *portal_data;
-        driver_devel("%s:%s\n",__FUNCTION__, pdev->name);
-	while(!top){
-	  portal_data = drvdata+(fpn*sizeof(struct portal_data));
-	  top = portal_data->top;
-	  if (portal_data->irq_is_registered)
-	    free_irq(portal_data->portal_irq, portal_data);
-	  kfree(portal_data->misc.name);
-	  misc_deregister(&portal_data->misc);
-	  if (++fpn >= MAX_NUM_PORTALS)
-	    break;
-	}
-        kfree(drvdata);
-        dev_set_drvdata(&pdev->dev, NULL);
-        return 0;
+  struct connectal_data *connectal_data = filep->private_data;
+  struct platform_device *pdev = connectal_data->pdev;
+  struct portal_data *portal_data;
+  struct resource *reg_res, *irq_res;
+  static void* foo;
+  u32 top = 0;
+  u32 iid = 0;
+  u32 fpn = 0;
+  resource_size_t bar;
+  void *drvdata;
+
+  driver_devel("%s:%d\n", __func__, __LINE__);
+  
+  if(connectal_data->portal_data)
+    remove_portal_devices(connectal_data->portal_data);
+
+  drvdata = kzalloc(sizeof(struct portal_data)*MAX_NUM_PORTALS, GFP_KERNEL);
+
+  reg_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+  irq_res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+
+  if (!reg_res || !irq_res) {
+    pr_err("Error portal resources\n");
+    return -ENODEV;
+  }
+  
+  while (!top){
+    int rc;
+    portal_data = drvdata+(fpn*sizeof(struct portal_data));
+    bar = reg_res->start+(fpn*PORTAL_BASE_OFFSET);
+    foo = ioremap_nocache(bar, sizeof(PAGE_SIZE));
+    iid = readl(foo+IID_OFFSET);
+    top = readl(foo+TOP_OFFSET);
+    
+    driver_devel("%s:%d bar=%08x fpn=%08x iid=%d top=%d\n", __func__, __LINE__, bar, fpn, iid, top);
+
+    sprintf(portal_data->name, "portal%d", iid);
+    portal_data->misc.name = portal_data->name;
+    portal_data->misc.minor = MISC_DYNAMIC_MINOR;
+    portal_data->misc.fops = &portal_fops;
+    portal_data->dev_base_phys = bar;
+    portal_data->portal_irq = irq_res->start;
+    portal_data->top = top;
+    driver_devel("%s:%d name=%s\n", __func__, __LINE__, portal_data->misc.name);
+    rc = misc_register( &portal_data->misc);
+    driver_devel("%s:%d rc=%d minor=%d\n", __func__, __LINE__, rc, portal_data->misc.minor);
+    
+    if (++fpn >= MAX_NUM_PORTALS){
+      printk(KERN_INFO "%s: MAX_NUM_PORTALS exceeded", __func__);
+      break;
+    }
+  }
+
+  connectal_data->portal_data = drvdata;
+  directory_virt = drvdata;
+  return -ENODEV;
 }
 
-static struct of_device_id portal_of_match[]
+static const struct file_operations connectal_fops = {
+        .owner          = THIS_MODULE,
+        .open           = connectal_open,
+};
+  
+static int connectal_of_probe(struct platform_device *pdev)
+{
+  u32 size;
+  int rc;
+  void *drvdata;
+  struct connectal_data *connectal_data;
+  const char *dname = (char *)of_get_property(pdev->dev.of_node, "device-name", &size);
+  if (!dname) {
+    pr_err("Error %s getting device-name\n", DRIVER_NAME);
+    return -EINVAL;
+  }
+  drvdata = kzalloc(sizeof(struct connectal_data), GFP_KERNEL);
+  connectal_data = drvdata;
+  connectal_data->misc.name = dname;
+  connectal_data->misc.minor = MISC_DYNAMIC_MINOR;
+  connectal_data->misc.fops = &connectal_fops;
+  connectal_data->pdev = pdev;
+  connectal_data->portal_data = 0;
+  rc = misc_register(&connectal_data->misc);
+  driver_devel("%s:%d name=%s rc=%d minor=%d\n", __func__, __LINE__, connectal_data->misc.name, rc, connectal_data->misc.minor);
+  dev_set_drvdata(&pdev->dev, drvdata);
+  return 0;
+}
+
+static int connectal_of_remove(struct platform_device *pdev)
+{
+  void *drvdata = dev_get_drvdata(&pdev->dev);
+  struct connectal_data* connectal_data = drvdata;
+  driver_devel("%s:%s\n",__FUNCTION__, pdev->name);
+  if(connectal_data->portal_data)
+    remove_portal_devices(connectal_data->portal_data);
+  misc_deregister(&connectal_data->misc);
+  kfree(drvdata);
+  dev_set_drvdata(&pdev->dev, NULL);
+  return 0;
+}
+
+static struct of_device_id connectal_of_match[]
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0)
       __devinitdata
 #endif
@@ -355,40 +399,40 @@ static struct of_device_id portal_of_match[]
         { .compatible = "linux,portal-0.01.a" },
         {/* end of table */},
 };
-MODULE_DEVICE_TABLE(of, portal_of_match);
+MODULE_DEVICE_TABLE(of, connectal_of_match);
 
-static struct platform_driver portal_of_driver = {
-        .probe = portal_of_probe,
-        .remove = portal_of_remove,
+static struct platform_driver connectal_of_driver = {
+        .probe = connectal_of_probe,
+        .remove = connectal_of_remove,
         .driver = {
                 .owner = THIS_MODULE,
                 .name = DRIVER_NAME,
-                .of_match_table = portal_of_match,
+                .of_match_table = connectal_of_match,
         },
 };
 
 /*
  * Module functions
  */
-static int __init portal_of_init(void)
+static int __init connectal_of_init(void)
 {
-        if (platform_driver_register(&portal_of_driver)) {
+        if (platform_driver_register(&connectal_of_driver)) {
                 pr_err("Error portal driver registration\n");
                 return -ENODEV;
         }
         return 0;
 }
 
-static void __exit portal_of_exit(void)
+static void __exit connectal_of_exit(void)
 {
-        platform_driver_unregister(&portal_of_driver);
+        platform_driver_unregister(&connectal_of_driver);
 }
 
 #ifndef MODULE
-late_initcall(portal_of_init);
+late_initcall(connectal_of_init);
 #else
-module_init(portal_of_init);
-module_exit(portal_of_exit);
+module_init(connectal_of_init);
+module_exit(connectal_of_exit);
 #endif
 
 MODULE_LICENSE("GPL v2");

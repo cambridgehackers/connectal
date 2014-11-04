@@ -57,37 +57,9 @@ PortalInternal *utility_portal = 0x0;
 static tBoard* tboard;
 #endif
 
-#ifdef BSIM
-extern int bsim_fpga_map[MAX_BSIM_PORTAL_ID];
-#endif
-
-static int mapchannel_hardware(unsigned int v)
+void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param, uint32_t reqsize)
 {
-    return PORTAL_IND_FIFO(v);
-}
-static unsigned int read_hardware(PortalInternal *pint, volatile unsigned int **addr)
-{
-    return **addr;
-}
-static void write_hardware(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
-{
-    **addr = v;
-}
-static void write_fd_hardware(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
-{
-    **addr = v;
-}
-static PortalItemFunctions bsimfunc = {
-    read_portal_bsim, write_portal_bsim, write_portal_fd_bsim, mapchannel_hardware};
-static PortalItemFunctions hardwarefunc = {
-    read_hardware, write_hardware, write_fd_hardware, mapchannel_hardware};
-
-void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, uint32_t reqsize)
-{
-    int rc = 0;
-    char buff[128];
-    char read_status;
-
+    int rc;
     init_portal_hw();
     memset(pint, 0, sizeof(*pint));
     if(!utility_portal)
@@ -95,80 +67,17 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
     pint->fpga_number = id;
     pint->fpga_fd = -1;
     pint->handler = handler;
-    pint->reqsize = reqsize;
     pint->cb = cb;
+    pint->item = item;
+    if (!item) {
 #ifdef BSIM
-    pint->item = &bsimfunc;
+        pint->item = &bsimfunc;
 #else
-    pint->item = &hardwarefunc;
+        pint->item = &hardwarefunc;
 #endif
-    if (reqsize) {
-#ifdef __KERNEL__
-        printk("[%s:%d] software id %d reqsize %d\n", __FUNCTION__, __LINE__, id, reqsize);
-#else
-        sprintf(buff, "SWSOCK%d", id);
-        if (we_are_initiator) {
-            pint->fpga_fd = init_connecting(buff);
-            pint->accept_finished = 1;
-        }
-        else
-            pint->fpga_fd = init_listening(buff);
-        pint->map_base = (volatile unsigned int*)malloc(reqsize);
-#endif
-        goto exitlab;
     }
-    snprintf(buff, sizeof(buff), "/dev/portal%d", pint->fpga_number);
-#ifdef BSIM   // BSIM version
-    assert(id < MAX_BSIM_PORTAL_ID);
-//printf("[%s:%d] id %d handler %p fpga_number %d\n", __FUNCTION__, __LINE__, id, handler, bsim_fpga_map[id]);
-    pint->fpga_number = bsim_fpga_map[id];
-    pint->map_base = (volatile unsigned int*)(long)(pint->fpga_number * PORTAL_BASE_OFFSET);
-    portalEnableInterrupts(pint, 1);
-#elif defined(__KERNEL__)
-    pint->map_base = (volatile unsigned int*)(tboard->bar2io + pint->fpga_number * PORTAL_BASE_OFFSET);
-#else
-#ifdef ZYNQ
-    PortalEnableInterrupt intsettings = {3 << 14, (3 << 14) + 4};
-    int pgfile = open("/sys/devices/amba.0/f8007000.devcfg/prog_done", O_RDONLY);
-    if (pgfile == -1) {
-        // 3.9 kernel uses amba.2
-        pgfile = open("/sys/devices/amba.2/f8007000.devcfg/prog_done", O_RDONLY);
-        if (pgfile == -1) {
-            // miniitx100 uses different name!
-            pgfile = open("/sys/devices/amba.0/f8007000.ps7-dev-cfg/prog_done", O_RDONLY);
-        }
-    }
-    if (pgfile == -1) {
-	PORTAL_PRINTF("failed to open /sys/devices/amba.[02]/f8007000.devcfg/prog_done %d\n", errno);
-	rc = -1;
-	goto exitlab;
-    }
-    if (read(pgfile, &read_status, 1) != 1 || read_status != '1') {
-	PORTAL_PRINTF("FPGA not programmed: %x\n", read_status);
-	rc = -ENODEV;
-	goto exitlab;
-    }
-    close(pgfile);
-    pint->fpga_fd = open(buff, O_RDWR);
-    ioctl(pint->fpga_fd, PORTAL_ENABLE_INTERRUPT, &intsettings);
-#else
-    // FIXME: bluenoc driver only opens readonly for some reason
-    pint->fpga_fd = open(buff, O_RDONLY);
-#endif
-    if (pint->fpga_fd < 0) {
-	PORTAL_PRINTF("Failed to open %s fd=%d errno=%d\n", buff, pint->fpga_fd, errno);
-	rc = -errno;
-	goto exitlab;
-    }
-    pint->map_base = (volatile unsigned int*)mmap(NULL, PORTAL_BASE_OFFSET, PROT_READ|PROT_WRITE, MAP_SHARED, pint->fpga_fd, 0);
-    if (pint->map_base == MAP_FAILED) {
-        PORTAL_PRINTF("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", pint->fpga_fd, errno);
-        rc = -errno;
-	goto exitlab;
-    }  
-#endif
-
-exitlab:
+    pint->reqsize = reqsize;
+    rc = pint->item->init(pint, param);
     if (rc != 0) {
       PORTAL_PRINTF("%s: failed to open Portal portal%d\n", __FUNCTION__, pint->fpga_number);
 #ifndef __KERNEL__
@@ -203,7 +112,7 @@ static void init_portal_hw(void)
   unsigned int i;
   static int once = 0;
 
-  if (once || we_are_initiator)
+  if (once)
       return;
   once = 1;
 #ifdef __KERNEL__
@@ -220,9 +129,6 @@ static void init_portal_hw(void)
   if (status < 0)
     PORTAL_PRINTF("init_portal: error setting fclk0, errno=%d\n", errno);
   PORTAL_PRINTF("init_portal: set fclk0 (%ld,%ld)\n", reqF, request.actual_rate);
-#endif
-#ifdef BSIM
-  connect_to_bsim();
 #endif
 }
 
@@ -254,8 +160,6 @@ void portalTrace_stop()
 uint64_t portalCycleCount()
 {
   unsigned int high_bits, low_bits;
-  if (we_are_initiator)
-    return 0;
   if(!utility_portal)
     return 0;
   init_portal_hw();
@@ -264,13 +168,6 @@ uint64_t portalCycleCount()
   high_bits = utility_portal->item->read(utility_portal, &msb);
   low_bits  = utility_portal->item->read(utility_portal, &lsb);
   return (((uint64_t)high_bits)<<32) | ((uint64_t)low_bits);
-}
-
-void portalEnableInterrupts(PortalInternal *p, int val)
-{
-   volatile unsigned int *enp = &(p->map_base[PORTAL_CTRL_REG_INTERRUPT_ENABLE]);
-   if (!p->reqsize)
-     p->item->write(p, &enp, val);
 }
 
 int portalDCacheFlushInval(int fd, long size, void *__p)
@@ -351,11 +248,6 @@ void *portalMmap(int fd, size_t size)
 #endif
 }
 
-void portalInitiator(void)
-{
-    we_are_initiator = 1;
-}
-
 void portalCheckIndication(PortalInternal *pint)
 {
   volatile unsigned int *map_base = pint->map_base;
@@ -374,6 +266,129 @@ void portalCheckIndication(PortalInternal *pint)
         printf("[%s:%d] missing handler!!!!\n", __FUNCTION__, __LINE__);
         exit(1);
     }
-    pint->handler(pint, queue_status-1);
+    pint->handler(pint, queue_status-1, 0);
   }
 }
+
+void send_portal_null(struct PortalInternal *pint, unsigned int hdr, int sendFd)
+{
+}
+int recv_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
+{
+    return 0;
+}
+int busy_portal_null(struct PortalInternal *pint, volatile unsigned int *addr, const char *str)
+{
+    return 0;
+}
+void enableint_portal_null(struct PortalInternal *pint, int val)
+{
+}
+unsigned int read_portal_memory(PortalInternal *pint, volatile unsigned int **addr)
+{
+    unsigned int rc = **addr;
+    *addr += 1;
+    return rc;
+}
+void write_portal_memory(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
+{
+    **addr = v;
+    *addr += 1;
+}
+void write_fd_portal_memory(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
+{
+    **addr = v;
+    *addr += 1;
+}
+volatile unsigned int *mapchannel_hardware(struct PortalInternal *pint, unsigned int v)
+{
+    return &pint->map_base[PORTAL_IND_FIFO(v)];
+}
+int busy_hardware(struct PortalInternal *pint, volatile unsigned int *addr, const char *str)
+{
+    int count = 50;
+    volatile unsigned int *tempp = addr + 1;
+    while (!pint->item->read(pint, &tempp) && count-- > 0)
+        ; /* busy wait a bit on 'fifo not full' */
+    if (count <= 0){
+        PORTAL_PRINTF("putFailed: %s\n", str);
+        return 1;
+    }
+    return 0;
+}
+void enableint_hardware(struct PortalInternal *pint, int val)
+{
+    volatile unsigned int *enp = &(pint->map_base[PORTAL_CTRL_REG_INTERRUPT_ENABLE]);
+    pint->item->write(pint, &enp, val);
+}
+int event_hardware(struct PortalInternal *pint)
+{
+    // handle all messasges from this portal instance
+    portalCheckIndication(pint);
+    return -1;
+}
+
+static int init_hardware(struct PortalInternal *pint, void *param)
+{
+#if defined(__KERNEL__)
+    pint->map_base = (volatile unsigned int*)(tboard->bar2io + pint->fpga_number * PORTAL_BASE_OFFSET);
+#else
+    int rc = 0;
+    char read_status;
+    char buff[128];
+    snprintf(buff, sizeof(buff), "/dev/portal%d", pint->fpga_number);
+#ifdef ZYNQ
+    PortalEnableInterrupt intsettings = {3 << 14, (3 << 14) + 4};
+    int pgfile = open("/sys/devices/amba.0/f8007000.devcfg/prog_done", O_RDONLY);
+    if (pgfile == -1) {
+        // 3.9 kernel uses amba.2
+        pgfile = open("/sys/devices/amba.2/f8007000.devcfg/prog_done", O_RDONLY);
+        if (pgfile == -1) {
+            // miniitx100 uses different name!
+            pgfile = open("/sys/devices/amba.0/f8007000.ps7-dev-cfg/prog_done", O_RDONLY);
+        }
+    }
+    if (pgfile == -1) {
+	PORTAL_PRINTF("failed to open /sys/devices/amba.[02]/f8007000.devcfg/prog_done %d\n", errno);
+	return -1;
+    }
+    if (read(pgfile, &read_status, 1) != 1 || read_status != '1') {
+	PORTAL_PRINTF("FPGA not programmed: %x\n", read_status);
+	return -ENODEV;
+    }
+    close(pgfile);
+    pint->fpga_fd = open(buff, O_RDWR);
+    ioctl(pint->fpga_fd, PORTAL_ENABLE_INTERRUPT, &intsettings);
+#else
+    // FIXME: bluenoc driver only opens readonly for some reason
+    pint->fpga_fd = open(buff, O_RDONLY);
+#endif
+    if (pint->fpga_fd < 0) {
+	PORTAL_PRINTF("Failed to open %s fd=%d errno=%d\n", buff, pint->fpga_fd, errno);
+	return -errno;
+    }
+    pint->map_base = (volatile unsigned int*)portalMmap(pint->fpga_fd, PORTAL_BASE_OFFSET);
+//mmap(0, PORTAL_BASE_OFFSET, PROT_READ|PROT_WRITE, MAP_SHARED, pint->fpga_fd, 0);
+    if (pint->map_base == MAP_FAILED) {
+        PORTAL_PRINTF("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", pint->fpga_fd, errno);
+        return -errno;
+    }  
+#endif
+    return 0;
+}
+static unsigned int read_hardware(PortalInternal *pint, volatile unsigned int **addr)
+{
+    return **addr;
+}
+static void write_hardware(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
+{
+    **addr = v;
+}
+static void write_fd_hardware(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
+{
+    **addr = v;
+}
+
+PortalItemFunctions hardwarefunc = {
+    init_hardware, read_hardware, write_hardware, write_fd_hardware, mapchannel_hardware, mapchannel_hardware,
+    send_portal_null, recv_portal_null, busy_hardware, enableint_hardware, event_hardware};

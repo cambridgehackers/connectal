@@ -1,12 +1,7 @@
 
-## software interfaces invoked from software (requests)
-S2S = EchoRequest EchoIndication MMUConfigRequest MMUConfigIndication
-## hardware interfaces invoked from software (requests)
-S2H = Swallow EchoRequest
-## software interfaces invoked from hardware (indications)
-H2S = EchoIndication
+INTERFACES = Swallow EchoRequest EchoIndication MMUConfigRequest MMUConfigIndication
 ## all the BSV files to be scanned for types and interfaces
-BSVFILES = Echo.bsv Swallow.bsv Top.bsv
+BSVFILES = Echo.bsv SwallowIF.bsv Top.bsv
 BSVFILES += $(CONNECTALDIR)/bsv/ConnectalMemory.bsv
 ## the source files in the example
 CPPFILES=daemon.cpp

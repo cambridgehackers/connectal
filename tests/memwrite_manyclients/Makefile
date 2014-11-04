@@ -1,7 +1,6 @@
 
 MEMWRITEDIR=../../examples/memwrite
-S2H = MemwriteRequest
-H2S = MemwriteIndication
+INTERFACES = MemwriteRequest MemwriteIndication
 BSVFILES = $(MEMWRITEDIR)/Memwrite.bsv $(MEMWRITEDIR)/Top.bsv
 CPPFILES = $(MEMWRITEDIR)/testmemwrite.cpp
 CONNECTALFLAGS += -D NumEngineServers=16

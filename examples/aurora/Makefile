@@ -1,7 +1,6 @@
 
 CONNECTALDIR=../..
-S2H = AuroraRequest
-H2S = AuroraIndication
+INTERFACES = AuroraRequest AuroraIndication
 BSVFILES = Aurora.bsv Top.bsv
 CPPFILES=testaurora.cpp
 CONNECTALFLAGS +=  -D PinType=AuroraPins

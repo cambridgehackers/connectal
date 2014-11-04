@@ -1,8 +1,5 @@
 
-## hardware interfaces invoked from software (requests)
-S2H = NocRequest
-## software interfaces invoked from hardware (indications)
-H2S = NocIndication
+INTERFACES = NocRequest NocIndication
 ## all the BSV files to be scanned for types and interfaces
 BSVFILES = Noc2d.bsv Top.bsv
 ## the source files in the example

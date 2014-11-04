@@ -1,7 +1,6 @@
 
 MEMREADDIR=../../examples/memread
-S2H = MemreadRequest
-H2S = MemreadIndication
+INTERFACES = MemreadRequest MemreadIndication
 BSVFILES = $(MEMREADDIR)/Memread.bsv $(MEMREADDIR)/Top.bsv
 CPPFILES = $(MEMREADDIR)/testmemread.cpp
 CONNECTALFLAGS += -D NumEngineServers=16 -D DataBusWidth=128

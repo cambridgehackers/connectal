@@ -961,7 +961,7 @@ def preprocess(source, defs):
             defs.append(sym)
             s = s[k:]
         else:
-            print 'unhandled preprocessor token', tok
+            print '%s: unhandled preprocessor token %s' % (globalfilename, tok)
             assert(tok in ['ifdef', 'ifndef', 'else', 'endif', 'define'])
         prv = pre if valid and cond else '\n\n'
         return prv+pp('\n'+s)
@@ -970,6 +970,7 @@ def preprocess(source, defs):
 
 def syntax_parse(argdata, inputfilename, bsvdefines):
     global globalfilename
+    globalfilename = inputfilename
     data = preprocess(argdata + '\n', bsvdefines)
     lexer = lex.lex(errorlog=lex.NullLogger())
     parserdir=scripthome+'/syntax'
@@ -978,39 +979,27 @@ def syntax_parse(argdata, inputfilename, bsvdefines):
     if not (parserdir in sys.path):
         sys.path.append(parserdir)
     parser = yacc.yacc(optimize=1,errorlog=yacc.NullLogger(),outputdir=parserdir,debugfile=parserdir+'/parser.out')
-    globalfilename = inputfilename
     if noisyFlag:
         print 'Parsing:', inputfilename
     return  parser.parse(data)
 
-def generate_bsvcpp(filelist, project_dir, dutname, bsvdefines, s2hinterface, h2sinterface, s2sinterface, nf):
+def generate_bsvcpp(filelist, project_dir, dutname, bsvdefines, interfaces, nf):
     global noisyFlag
     noisyFlag=nf
     for inputfile in filelist:
         syntax_parse(open(inputfile).read(),inputfile, bsvdefines)
     ## code generation pass
-    swProxies = []
-    hwProxies = []
-    swWrappers = []
-    hwWrappers = []
-    ssInterface = []
-    for i in set(s2hinterface + h2sinterface + s2sinterface):
+    ilist = []
+    for i in interfaces:
         ifc = globalv.globalvars[i]
         ifc = ifc.instantiate(dict(zip(ifc.params, ifc.params)))
         ifc.ind = AST.Interface(i, [], [], None, ifc.package)
         ifc.ind.req = ifc
         ifc.assignRequestResponseChannels()
         ifc.ind.assignRequestResponseChannels()
-        if i in s2hinterface:
-            swProxies.append(ifc)
-            hwWrappers.append(ifc)
-        if i in h2sinterface:
-            hwProxies.append(ifc)
-            swWrappers.append(ifc)
-        if i in s2sinterface:
-            ssInterface.append(ifc)
-    cppgen.generate_cpp(globalv.globaldecls, project_dir, noisyFlag, swProxies, swWrappers, ssInterface)
-    bsvgen.generate_bsv(globalimports, project_dir, noisyFlag, hwProxies, hwWrappers, dutname)
+        ilist.append(ifc)
+    cppgen.generate_cpp(globalv.globaldecls, project_dir, noisyFlag, ilist)
+    bsvgen.generate_bsv(globalimports, project_dir, noisyFlag, ilist, dutname)
     
 if __name__=='__main__':
     if len(sys.argv) == 1:
@@ -1022,4 +1011,6 @@ if __name__=='__main__':
         import parsetab
         sys.exit(0)
     generate_bsvcpp(sys.argv[1:], os.environ.get('DTOP'), os.environ.get('DUT_NAME'), \
-         os.environ.get('BSVDEFINES_LIST').split(), os.environ.get('S2H').split(), os.environ.get('H2S').split(), os.environ.get('S2S').split(), os.environ.get('V') == '1')
+         os.environ.get('BSVDEFINES_LIST').split(), \
+         set(os.environ.get('INTERFACES').split()), os.environ.get('V') == '1')
+

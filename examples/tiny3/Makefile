@@ -1,5 +1,4 @@
-S2H = Tiny3Request
-H2S = Tiny3Indication
+INTERFACES = Tiny3Request Tiny3Indication
 BSVFILES = TinyTestTypes.bsv Top.bsv
 CPPFILES=testtiny3.cpp
 NUMBER_OF_MASTERS =0

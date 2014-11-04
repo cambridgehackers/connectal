@@ -79,9 +79,9 @@ printf("[%s:%d] opened bsim\n", __FUNCTION__, __LINE__);
             write(fd, &rv, sizeof(rv));
         }
         else if (req.write_flag)
-            write_portal_bsim(req.addr, req.data, req.portal);
+            bsimfunc.write(req.addr, req.data, req.portal);
         else {
-            rv.data = read_portal_bsim(req.addr, req.portal);
+            rv.data = bsimfunc.read(req.addr, req.portal);
             write(fd, &rv, sizeof(rv));
         }
     }

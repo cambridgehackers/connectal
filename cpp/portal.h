@@ -60,17 +60,35 @@
 typedef int Bool;   /* for GeneratedTypes.h */
 typedef int SpecialTypeForSendingFd;
 struct PortalInternal;
-typedef int (*PORTAL_INDFUNC)(struct PortalInternal *p, unsigned int channel);
+typedef int (*ITEMINIT)(struct PortalInternal *pint, void *param);
+typedef int (*PORTAL_INDFUNC)(struct PortalInternal *p, unsigned int channel, int messageFd);
+typedef void (*SENDMSG)(struct PortalInternal *pint, unsigned int hdr, int sendFd);
+typedef int (*RECVMSG)(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd);
 typedef unsigned int (*READWORD)(struct PortalInternal *pint, volatile unsigned int **addr);
 typedef void (*WRITEWORD)(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 typedef void (*WRITEFDWORD)(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
-typedef int (*MAPCHANNEL)(unsigned int v);
+typedef int (*BUSYWAIT)(struct PortalInternal *pint, volatile unsigned int *addr, const char *str);
+typedef void (*ENABLEINT)(struct PortalInternal *pint, int val);
+typedef volatile unsigned int *(*MAPCHANNEL)(struct PortalInternal *pint, unsigned int v);
+typedef int (*EVENT)(struct PortalInternal *pint);
 typedef struct {
-    READWORD read;
-    WRITEWORD write;
+    ITEMINIT    init;
+    READWORD    read;
+    WRITEWORD   write;
     WRITEFDWORD writefd;
-    MAPCHANNEL mapchannel;
+    MAPCHANNEL  mapchannelInd;
+    MAPCHANNEL  mapchannelReq;
+    SENDMSG     send;
+    RECVMSG     recv;
+    BUSYWAIT    busywait;
+    ENABLEINT   enableint;
+    EVENT       event;
 } PortalItemFunctions;
+
+typedef struct {
+    struct DmaManager *dma;
+    uint32_t    size;
+} PortalSharedParam; /* for ITEMINIT function */
 
 typedef struct PortalInternal {
   struct PortalPoller   *poller;
@@ -109,11 +127,9 @@ int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *
 #ifdef __cplusplus
 extern "C" {
 #endif
-void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, uint32_t reqsize);
+void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param, uint32_t reqsize);
 void portalCheckIndication(PortalInternal *pint);
 uint64_t portalCycleCount(void);
-unsigned int read_portal_bsim(PortalInternal *pint, volatile unsigned int **addr);
-void write_portal_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 void write_portal_fd_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 
 // uses the default poller
@@ -128,14 +144,10 @@ void portalExec_end(void);
 void portalTrace_start(void);
 void portalTrace_stop(void);
 int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
-void portalEnableInterrupts(PortalInternal *p, int val);
 int portalDCacheFlushInval(int fd, long size, void *__p);
 void init_portal_memory(void);
 int portalAlloc(size_t size);
 void *portalMmap(int fd, size_t size);
-void portalInitiator(void);
-void portalSend(int fd, void *data, int len);
-int portalRecv(int fd, void *data, int len);
 void portalSendFd(int fd, void *data, int len, int sendFd);
 int portalRecvFd(int fd, void *data, int len, int *recvFd);
 
@@ -145,48 +157,36 @@ void portalTimerInit(void);
 uint64_t portalTimerCatch(unsigned int i);
 void portalTimerPrint(int loops);
 
+void send_portal_null(struct PortalInternal *pint, unsigned int hdr, int sendFd);
+int recv_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd);
+int busy_portal_null(struct PortalInternal *pint, volatile unsigned int *addr, const char *str);
+void enableint_portal_null(struct PortalInternal *pint, int val);
+unsigned int read_portal_memory(PortalInternal *pint, volatile unsigned int **addr);
+void write_portal_memory(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
+void write_fd_portal_memory(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
+volatile unsigned int *mapchannel_hardware(struct PortalInternal *pint, unsigned int v);
+int busy_hardware(struct PortalInternal *pint, volatile unsigned int *addr, const char *str);
+void enableint_hardware(struct PortalInternal *pint, int val);
+int event_hardware(struct PortalInternal *pint);
 
 extern int portalExec_timeout;
 extern int global_pa_fd;
 extern int global_sockfd;
-extern int we_are_initiator;
 extern PortalInternal *utility_portal;
+extern PortalItemFunctions bsimfunc, hardwarefunc,
+    socketfuncInit, socketfuncResp, sharedfunc;
 #ifdef __cplusplus
 }
 #endif
-
 #ifdef __cplusplus
 #include "poller.h"
 #endif
 
 #define MAX_TIMERS 50
 
-#if !defined(BSIM)
-#define READL(CITEM, A)     (**(A))
-#define WRITEL(CITEM, A, B) (**(A) = (B))
-#define WRITEFD(CITEM, A, B) (**(A) = (B))
-#define SSWRITE(CITEM, B, C) {\
-    *(CITEM)->map_base = (B); \
-    portalSendFd((CITEM)->fpga_fd, (void *)(CITEM)->map_base, (((B) & 0xffff) +1) * sizeof(uint32_t), (C)); \
-    }
-#else
-#define READL(CITEM, A)     read_portal_bsim((CITEM), (A))
-#define WRITEL(CITEM, A, B) write_portal_bsim((CITEM), (A), (B))
-#define WRITEFD(CITEM, A, B) write_portal_fd_bsim((CITEM), (A), (B))
-#define SSWRITE(CITEM, B, C) {\
-    *(CITEM)->map_base = (B); \
-    portalSendFd((CITEM)->fpga_fd, (void *)(CITEM)->map_base, (((B) & 0xffff) +1) * sizeof(uint32_t), (C)); \
-    }
-#endif
-#define BUSY_WAIT(CITEM, A, STR) { \
-    int __i = 50; \
-    volatile unsigned int *tempp = (A) + 1; \
-    while (!(CITEM)->item->read((CITEM), &tempp) && __i-- > 0) \
-        ; /* busy wait a bit on 'fifo not full' */ \
-    if (__i <= 0){ \
-        PORTAL_PRINTF(("putFailed: " STR "\n")); \
-        return; \
-    } \
-    }
+#define SHARED_LIMIT  0
+#define SHARED_WRITE  1
+#define SHARED_READ   2
+#define SHARED_START  4
 
 #endif /* __PORTAL_OFFSETS_H__ */

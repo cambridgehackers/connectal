@@ -1,6 +1,5 @@
 
-S2H = FMComms1Request
-H2S = FMComms1Indication
+INTERFACES = FMComms1Request FMComms1Indication
 BSVFILES = FMComms1ADC.bsv FMComms1DAC.bsv FMComms1.bsv \
 	 Top.bsv
 CPPFILES=testi2c.c

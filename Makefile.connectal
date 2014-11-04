@@ -59,8 +59,7 @@ endif
 CONNECTALFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) -D PinType=$(PIN_TYPE) --ipdir=$(IPDIR)
 
 ifneq ($(NUMBER_OF_MASTERS), 0)
-S2H += DmaDebugRequest MMUConfigRequest
-H2S += DmaDebugIndication MMUConfigIndication
+INTERFACES += DmaDebugRequest MMUConfigRequest DmaDebugIndication MMUConfigIndication
 BSVFILES += $(CONNECTALDIR)/bsv/ConnectalMemory.bsv
 CPPFILES += $(CONNECTALDIR)/cpp/dmaManager.c
 ifneq ($(CPPFILES2),)
@@ -107,9 +106,7 @@ ifeq ($(USE_PRINTF),1)
 	$(CONNECTALDIR)/scripts/preprocess_trace.py $(BOARD) $(BSVFILES)
 endif
 	$(Q)$(CONNECTALDIR)/scripts/makefilegen.py -B$(BOARD) -p $(BOARD) \
-	$(foreach s2h, $(S2H), -s2h $(s2h)) \
-	$(foreach h2s, $(H2S), -h2s $(h2s)) \
-	$(foreach s2s, $(S2S), -s2s $(s2s)) \
+	$(foreach interfaces, $(INTERFACES), -interfaces $(interfaces)) \
 	$(foreach f, $(CPPFILES), --source $f) \
 	$(foreach f, $(CPPFILES2), --source2 $f) \
         $(CONNECTALFLAGS) $(BSVFILES) $(PRINTF_EXTRA) $(VERBOSE_SWITCH)

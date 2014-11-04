@@ -1,6 +1,5 @@
 
-S2H = FpRequest
-H2S = FpIndication
+INTERFACES = FpRequest FpIndication
 BSVFILES = Fp.bsv Top.bsv
 CPPFILES=testfp.cpp
 NUMBER_OF_MASTERS =0

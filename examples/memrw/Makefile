@@ -1,6 +1,5 @@
 
-S2H = MemrwRequest
-H2S = MemrwIndication
+INTERFACES = MemrwRequest MemrwIndication
 BSVFILES = Memrw.bsv Top.bsv
 CPPFILES=testmemrw.cpp
 #CONNECTALFLAGS=--bscflags " -D TRACE_AXI"

@@ -37,10 +37,6 @@
 #include "DmaDebugRequest.h"
 #include "MMUConfigRequest.h"
 
-#include "regex-matcher.h"
-#include "jregexp.h"
-
-
 sem_t test_sem;
 int sw_match_cnt = 0;
 int hw_match_cnt = 0;
@@ -49,11 +45,16 @@ int hw_match_cnt = 0;
 #define max_num_tokens (DEGPAR)
 int token_map[max_num_tokens];
 
-int haystackAlloc[num_tests];
-char *haystack_mem[num_tests];
-int haystack_length[num_tests];
-unsigned int ref_haystack[num_tests];
+typedef struct P {
+  unsigned int ref;
+  int alloc;
+  int length;
+  char *mem;
+}P;
 
+P haystackP[num_tests];
+
+DmaManager *dma;
 MMUConfigRequestProxy *dmap;
 RegexpRequestProxy *device;
 
@@ -71,9 +72,9 @@ public:
   virtual void searchResult (uint32_t t, int v){
     if (v == -1 ){
       fprintf(stderr, "searchComplete = (%d, %d)\n", t, v);
-      munmap(haystack_mem[token_map[t]], haystack_length[token_map[t]]);
-      close(haystackAlloc[token_map[t]]);
-      dmap->idReturn(ref_haystack[token_map[t]]);
+      munmap(haystackP[token_map[t]].mem, haystackP[token_map[t]].length);
+      close(haystackP[token_map[t]].alloc);
+      dmap->idReturn(haystackP[token_map[t]].ref);
       device->retire(t);
       if(++done_cnt == num_tests){
 	fprintf(stderr, "donzo\n");
@@ -88,6 +89,43 @@ public:
   int done_cnt;
 };
 
+int readfile(const char *fname, P* pP)
+{
+  int rc = 0;
+  char buff[128];
+  sprintf(buff, "../%s", fname);
+  ifstream binFile(buff, ios::in|ios::binary|ios::ate);
+  pP->length = binFile.tellg();
+  pP->alloc = portalAlloc(pP->length);
+  pP->mem = (char *)portalMmap(pP->alloc, pP->length);
+  pP->ref = dma->reference(pP->alloc);
+  binFile.seekg (0, ios::beg);
+  if(!binFile.read(pP->mem, pP->length)){
+    fprintf(stderr, "error reading %s\n", fname);
+    rc = -1;
+  }
+  binFile.close();
+  return rc;
+}
+
+
+int sw_ref(P *haystack, P *charMap, P *stateMap, P *stateTransitions)
+{
+  int matches = 0;
+  int state = 0;
+  for(int i = 0; i < haystack->length; i++){
+    unsigned int c = haystack->mem[i];
+    unsigned int mapped_c = charMap->mem[c];
+    unsigned int mapped_state = stateMap->mem[state];
+    if (mapped_state & (1<<7)){
+      matches++;
+      mapped_state = 0;
+    }
+    state = stateTransitions->mem[(mapped_state<<5) | mapped_c];
+  }
+  return matches;
+}
+
 
 int main(int argc, const char **argv)
 {
@@ -97,7 +135,7 @@ int main(int argc, const char **argv)
   device = new RegexpRequestProxy(IfcNames_RegexpRequest);
   DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
   dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
-  DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
+  dma = new DmaManager(hostDmaDebugRequest, dmap);
   DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
   MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
   RegexpIndication *deviceIndication = new RegexpIndication(IfcNames_RegexpIndication);
@@ -106,101 +144,51 @@ int main(int argc, const char **argv)
     fprintf(stderr, "failed to init test_sem\n");
     return -1;
   }
-  
   portalExec_start();
 
-  int charMapLength = 256;
-  int stateMapLength = numStates*sizeof(char);
-  int stateTransitionsLength = numStates*numChars*sizeof(char);
-  int haystackLength = 1<<15;
-
-  assert(numStates < MAX_NUM_STATES);
-  assert(numChars  < MAX_NUM_CHARS);
+  // this is hard-coded into the REParser.java
+  assert(32 == MAX_NUM_STATES);
+  assert(32 == MAX_NUM_CHARS);
 
   if(1){
-    fprintf(stderr, "benchmarks\n");
-
-#ifndef BSIM
-    unsigned int BENCHMARK_INPUT_SIZE = 16 << 17;
-#else
-    unsigned int BENCHMARK_INPUT_SIZE = 16 << 10;
-#endif
-
-    int charMapAlloc;
-    int stateMapAlloc;
-    int stateTransitionsAlloc;
+    P charMapP;
+    P stateMapP;
+    P stateTransitionsP;
     
-    char *charMap_mem;
-    char *stateMap_mem;
-    char *stateTransitions_mem;
+    readfile("jregexp.charMap", &charMapP);
+    readfile("jregexp.stateMap", &stateMapP);
+    readfile("jregexp.stateTransitions", &stateTransitionsP);
 
-    unsigned int ref_charMap;
-    unsigned int ref_stateMap;
-    unsigned int ref_stateTransitions;
+    portalDCacheFlushInval(charMapP.alloc,          charMapP.length,          charMapP.mem);
+    portalDCacheFlushInval(stateMapP.alloc,         stateMapP.length,         stateMapP.mem);
+    portalDCacheFlushInval(stateTransitionsP.alloc, stateTransitionsP.length, stateTransitionsP.mem);
 
-    {
-
-      charMapAlloc = portalAlloc(charMapLength);
-      stateMapAlloc = portalAlloc(stateMapLength);
-      stateTransitionsAlloc = portalAlloc(stateTransitionsLength);
-
-      charMap_mem = (char *)portalMmap(charMapAlloc, charMapLength);
-      stateMap_mem = (char *)portalMmap(stateMapAlloc, stateMapLength);
-      stateTransitions_mem = (char *)portalMmap(stateTransitionsAlloc, stateTransitionsLength);
-
-      ref_charMap = dma->reference(charMapAlloc);
-      ref_stateMap = dma->reference(stateMapAlloc);
-      ref_stateTransitions = dma->reference(stateTransitionsAlloc);
-
-      for(int j = 0; j < 256; j++)
-	charMap_mem[j] = charMap(j);
-      
-      for(int j = 0; j < numStates; j++)
-	stateMap_mem[j] = (acceptStates(j) << 7) | stateMap(j);
-      
-      for(int j = 0; j < numStates; j++)
-	for(int k = 0; k < numChars; k++)
-	  stateTransitions_mem[(j*MAX_NUM_STATES)+k] = stateTransition(j,k);
-
-    }
-
-    ifstream binFile("../test.bin", ios::in|ios::binary|ios::ate);
-    streampos binFile_size = binFile.tellg();
-    int read_length = min<int>(binFile_size, haystackLength);
-    
     for(int i = 0; i < num_tests; i++){
 
-      haystack_length[i] = haystackLength;
-      haystackAlloc[i] = portalAlloc(haystack_length[i]);
-      haystack_mem[i] = (char *)portalMmap(haystackAlloc[i], haystack_length[i]);
-      ref_haystack[i] = dma->reference(haystackAlloc[i]);
+      readfile("test.bin", &haystackP[i]);
+      device->setup(charMapP.ref, charMapP.length);
+      device->setup(stateMapP.ref, stateMapP.length);
+      device->setup(stateTransitionsP.ref, stateTransitionsP.length);
+      portalDCacheFlushInval(haystackP[i].alloc, haystackP[i].length, haystackP[i].mem);
 
-      portalDCacheFlushInval(charMapAlloc, charMapLength, charMap_mem);
-      portalDCacheFlushInval(stateMapAlloc, stateMapLength, stateMap_mem);
-      portalDCacheFlushInval(stateTransitionsAlloc, stateTransitionsLength, stateTransitions_mem);
 
-      device->setup(ref_charMap, charMapLength);
-      device->setup(ref_stateMap, stateMapLength);
-      device->setup(ref_stateTransitions, stateTransitionsLength);
+      if(i==0)
+	sw_match_cnt = num_tests*sw_ref(&haystackP[0], &charMapP, &stateMapP, &stateTransitionsP);
+
       sem_wait(&test_sem);
       int token = deviceIndication->token;
+
       assert(token < max_num_tokens);
       token_map[token] = i;
-
-      binFile.seekg (0, ios::beg);
-      if(!binFile.read(haystack_mem[i], read_length)){
-	fprintf(stderr, "error reading test.bin %d\n", read_length);
-	exit(-1);
-      }
-      portalDCacheFlushInval(haystackAlloc[i], haystack_length[i], haystack_mem[i]);
-      device->search(token, ref_haystack[i], read_length);
+      device->search(token, haystackP[i].ref, haystackP[i].length);
     }
+
     sem_wait(&test_sem);
-    close(charMapAlloc);
-    close(stateMapAlloc);
-    close(stateTransitionsAlloc);
+    close(charMapP.alloc);
+    close(stateMapP.alloc);
+    close(stateTransitionsP.alloc);
   }
   portalExec_stop();
   fprintf(stderr, "hw_match_cnt=%d, sw_match_cnt=%d\n", hw_match_cnt, sw_match_cnt);
-  return 0;
+  return (hw_match_cnt == sw_match_cnt ? 0 : -1);
 }

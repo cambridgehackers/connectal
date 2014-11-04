@@ -255,8 +255,7 @@ Here is the Makefile for the `simple` example:
 
 [source,makefile]
 ---------------------------------
-    S2H = SimpleRequest
-    H2S = SimpleIndication
+    INTERFACES = SimpleRequest SimpleIndication
     BSVFILES = Simple.bsv Top.bsv
     CPPFILES=testsimple.cpp
 
@@ -269,8 +268,7 @@ Designs outside the connectal directory using `connectal` may also include `Make
 [source,makefile]
 ---------------------------------
     
-    S2H = ...
-    H2S = ...
+    INTERFACES = ...
     BSVFILES = ...
     CPPFILES = ...
     include /scratch/connectal/Makefile.connectal

@@ -9,8 +9,7 @@ $(RBMDIR)/datasets:
 	(cd $(RBMDIR)/datasets; curl -O http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz)
 	cd $(RBMDIR)/datasets; gunzip *.gz
 
-S2H += RbmRequest  SigmoidRequest
-H2S += RbmIndication SigmoidIndication 
+INTERFACES += RbmRequest  SigmoidRequest RbmIndication SigmoidIndication 
 
 CONNECTALFLAGS  +=  -D RBMDIR='\"'$(RBMDIR)'\"'
 CONNECTALFLAGS += -I$(RBMDIR)/cpp

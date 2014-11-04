@@ -22,34 +22,37 @@
 #include <stdio.h>
 #include "EchoRequest.h"
 #include "EchoIndication.h"
-#include "SS_EchoRequest.h"
-#include "SS_EchoIndication.h"
 
 EchoRequestProxy *echoRequestProxy;
-SS_EchoIndicationProxy *sIndicationProxy;
+EchoIndicationProxy *sIndicationProxy;
+static int daemon_trace;// = 1;
 
 class EchoIndication : public EchoIndicationWrapper
 {
 public:
     void heard(uint32_t v) {
+        if (daemon_trace)
         fprintf(stderr, "daemon: heard an echo: %d\n", v);
         sIndicationProxy->heard(v);
     }
     void heard2(uint32_t a, uint32_t b) {
-        fprintf(stderr, "daemon: heard an echo2: %ld %ld\n", a, b);
+        if (daemon_trace)
+        fprintf(stderr, "daemon: heard an echo2: %d %d\n", a, b);
         sIndicationProxy->heard2(a, b);
     }
-    EchoIndication(unsigned int id) : EchoIndicationWrapper(id) {}
+    EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
 };
 
-class SS_EchoRequest : public SS_EchoRequestWrapper
+class EchoRequest : public EchoRequestWrapper
 {
 public:
     void say ( const uint32_t v ) {
+        if (daemon_trace)
         fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
         echoRequestProxy->say(v);
     }
     void say2 ( const uint32_t a, const uint32_t b ) {
+        if (daemon_trace)
         fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
         echoRequestProxy->say2(a, b);
     }
@@ -59,15 +62,15 @@ public:
         sleep(1);
         exit(1);
     }
-    SS_EchoRequest(unsigned int id) : SS_EchoRequestWrapper(id) {}
+    EchoRequest(unsigned int id, PortalItemFunctions *item, void *param) : EchoRequestWrapper(id, item, param) {}
 };
 
 int main(int argc, const char **argv)
 {
-    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication);
-    SS_EchoRequest *sRequest = new SS_EchoRequest(IfcNames_SS_EchoRequest);
+    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, NULL, NULL);
+    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &socketfuncResp, NULL);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
-    sIndicationProxy = new SS_EchoIndicationProxy(IfcNames_SS_EchoIndication);
+    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &socketfuncResp, NULL);
 
     portalExec_start();
     printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);

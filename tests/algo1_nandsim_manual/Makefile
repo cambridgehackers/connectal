@@ -1,8 +1,7 @@
 ## algo1_nandsim_manual
 
 
-S2H = NandSimRequest StrstrRequest
-H2S = NandSimIndication StrstrIndication
+INTERFACES = NandSimRequest StrstrRequest NandSimIndication StrstrIndication
 BSVFILES = ../../lib/bsv/NandSim.bsv ../../lib/bsv/Strstr.bsv ../../examples/algo1_nandsim/Top.bsv ../../lib/bsv/NandSimNames.bsv
 #CPPFILES=algo1.cpp
 CPPFILES=ss.cpp ss_hw.cpp

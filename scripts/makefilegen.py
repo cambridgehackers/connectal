@@ -36,9 +36,7 @@ argparser = argparse.ArgumentParser("Generate C++/BSV/Xilinx stubs for an interf
 argparser.add_argument('bsvfile', help='BSV files to parse', nargs='+')
 argparser.add_argument('-B', '--board', default='zc702', help='Target Board for compilation')
 argparser.add_argument('-O', '--OS', default=None, choices=supported_os, help='Target operating system')
-argparser.add_argument('-s2h', '--s2hinterface', help='BSV interface to generate stubs for software to hardware communication', action='append')
-argparser.add_argument('-h2s', '--h2sinterface', help='BSV interface to generate stubs for hardware to software communication', action='append')
-argparser.add_argument('-s2s', '--s2sinterface', help='BSV interface to generate stubs for software to software communication', action='append')
+argparser.add_argument('-interfaces', '--interfaces', help='BSV interface', action='append')
 argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps project directory')
 argparser.add_argument('-s', '--source', help='C++ source files', action='append')
 argparser.add_argument(      '--source2', help='C++ second program source files', action='append')
@@ -123,9 +121,7 @@ MKTOP=%(topbsvmod)s
 OS=%(OS)s
 DUT=%(dut)s
 
-export S2H = %(s2hinterface)s
-export H2S = %(h2sinterface)s
-export S2S = %(s2sinterface)s
+export INTERFACES = %(interfaces)s
 BSVFILES = %(bsvfiles)s
 
 BSCFLAGS_PROJECT = %(bscflags)s
@@ -151,7 +147,7 @@ include $(CLEAR_VARS)
 LOCAL_ARM_MODE := arm
 include %(project_dir)s/jni/Makefile.generated_files
 APP_SRC_FILES := $(addprefix %(project_dir)s/jni/,  $(GENERATED_CPP)) %(source)s
-PORTAL_SRC_FILES := $(addprefix %(connectaldir)s/cpp/, portal.c poller.cpp sock_utils.c timer.c)
+PORTAL_SRC_FILES := $(addprefix %(connectaldir)s/cpp/, portal.c portalSocket.c poller.cpp sock_utils.c timer.c)
 LOCAL_SRC_FILES := $(APP_SRC_FILES) $(PORTAL_SRC_FILES)
 
 LOCAL_PATH :=
@@ -178,7 +174,7 @@ CFLAGS_COMMON = -O -g -I%(project_dir)s/jni -I%(connectaldir)s -I%(connectaldir)
 CFLAGS = $(CFLAGS_COMMON)
 CFLAGS2 = %(cdefines2)s
 
-PORTAL_CPP_FILES = $(addprefix %(connectaldir)s/cpp/, portal.c poller.cpp sock_utils.c timer.c)
+PORTAL_CPP_FILES = $(addprefix %(connectaldir)s/cpp/, portal.c portalSocket.c poller.cpp sock_utils.c timer.c)
 include %(project_dir)s/jni/Makefile.generated_files
 SOURCES = $(addprefix %(project_dir)s/jni/,  $(GENERATED_CPP)) %(source)s $(PORTAL_CPP_FILES)
 SOURCES2 = $(addprefix %(project_dir)s/jni/,  $(GENERATED_CPP)) %(source2)s $(PORTAL_CPP_FILES)
@@ -228,12 +224,8 @@ if __name__=='__main__':
     if not options.xsimflags:
         options.xsimflags = ['-R']
 
-    if not options.s2hinterface:
-        options.s2hinterface = []
-    if not options.h2sinterface:
-        options.h2sinterface = []
-    if not options.s2sinterface:
-        options.s2sinterface = []
+    if not options.interfaces:
+        options.interfaces = []
 
     project_dir = os.path.abspath(os.path.expanduser(options.project_dir))
 
@@ -361,9 +353,7 @@ if __name__=='__main__':
                                    'boardname': boardname,
                                    'OS': options.os,
                                    'qtused': 'cd jni; qmake ../..; make' if options.qtused else '',
-                                   's2hinterface': ' '.join(options.s2hinterface),
-                                   'h2sinterface': ' '.join(options.h2sinterface),
-                                   's2sinterface': ' '.join(options.s2sinterface),
+                                   'interfaces': ' '.join(options.interfaces),
                                    'bsvfiles': ' '.join([ os.path.abspath(bsvfile) for bsvfile in options.bsvfile]),
                                    'bsimsource': ' '.join([os.path.abspath(bsimsource) for bsimsource in options.bsimsource]) if options.bsimsource else '',
                                    'includepath': ' '.join(['-I%s' % os.path.dirname(os.path.abspath(source)) for source in options.source]) if options.source else '',

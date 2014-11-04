@@ -57,7 +57,6 @@ requestStructTemplate='''
 typedef struct {
 %(paramStructDeclarations)s
 } %(MethodName)s_Request deriving (Bits);
-Bit#(6) %(methodName)s_Offset = %(channelNumber)s;
 '''
 
 requestOutputPipeInterfaceTemplate='''\
@@ -188,7 +187,6 @@ responseStructTemplate='''
 typedef struct {
 %(paramStructDeclarations)s
 } %(MethodName)s_Response deriving (Bits);
-Bit#(6) %(methodName)s_Offset = %(channelNumber)s;
 '''
 
 portalIfcTemplate='''
@@ -430,25 +428,23 @@ class InterfaceMixin:
                     methods.append(methodRule)
         return methods
 
-def generate_bsv(globalimports, project_dir, noisyFlag, hwProxies, hwWrappers, dutname):
-    def create_bsv_package(pname, data, files, generatedPackageNames):
+def generate_bsv(globalimports, project_dir, noisyFlag, interfaces, dutname):
+    generatedPackageNames = []
+    for item in interfaces:
+        pname = item.name
+        if pname in generatedPackageNames:
+            continue
+        generatedPackageNames.append(pname)
         fname = os.path.join(project_dir, 'sources', dutname.lower(), '%s.bsv' % pname)
         bsv_file = util.createDirAndOpen(fname, 'w')
         bsv_file.write('package %s;\n' % pname)
-        extraImports = (['import %s::*;\n' % os.path.splitext(os.path.basename(fn))[0] for fn in files ]
+        extraImports = (['import %s::*;\n' % os.path.splitext(os.path.basename(fn))[0] for fn in [item.package] ]
                    + ['import %s::*;\n' % i for i in globalimports if not i in generatedPackageNames])
         bsv_file.write(preambleTemplate % {'extraImports' : ''.join(extraImports)})
         if noisyFlag:
             print 'Writing file ', fname
-        bsv_file.write(data)
+        bsv_file.write(exposedWrapperInterfaceTemplate % item.substs('Wrapper',False))
+        bsv_file.write(exposedProxyInterfaceTemplate % item.substs("Proxy",True))
         bsv_file.write('endpackage: %s\n' % pname)
         bsv_file.close()
-
-    generatedPackageNames = (['%sWrapper' % i.name for i in hwWrappers]
-                             + ['%sProxy' % i.name for i in hwProxies])
-    for i in hwWrappers:
-        create_bsv_package('%sWrapper' % i.name, exposedWrapperInterfaceTemplate % i.substs('Wrapper',False), [i.package], generatedPackageNames)
-        
-    for i in hwProxies:
-        create_bsv_package('%sProxy' % i.name, exposedProxyInterfaceTemplate % i.substs("Proxy",True), [i.package], generatedPackageNames)
 
