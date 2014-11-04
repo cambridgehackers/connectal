@@ -1,12 +1,12 @@
 {
     "*dac_dco_p_v": {
-        "PIO_DIRECTION": "OUTPUT",
+        "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "CLK0_M2C_p"
     },
     "*dac_dco_n_v": {
-        "PIO_DIRECTION": "OUTPUT",
+        "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "CLK0_M2C_n"
@@ -144,13 +144,13 @@
 	"fmc": "LA32_n"
     },
     "*adc_dco_p_v": {
-        "PIO_DIRECTION": "OUTPUT",
+        "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "CLK1_M2C_p"
     },
     "*adc_dco_n_v": {
-        "PIO_DIRECTION": "OUTPUT",
+        "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "CLK1_M2C_n"
