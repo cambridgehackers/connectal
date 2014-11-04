@@ -87,7 +87,7 @@ module mkFMComms1DAC(FMComms1DAC);
    Wire#(Bit#(1)) dac_dco_p <- mkDWire(0);
    Wire#(Bit#(1)) dac_dco_n <- mkDWire(0);
 
-   dac_dco <- mkClockIBUFDS(dac_dco_p, dac_dco_n);
+   dac_dco <- mkConnectalClockIBUFDS(dac_dco_p, dac_dco_n);
    Reset dac_reset <- mkAsyncReset(3, def_reset, dac_dco);
    
    SyncFIFOIfc#(Vector#(2, OIQ)) outfifo <- mkSyncBRAMFIFO(128, def_clock, def_reset, dac_dco, dac_reset);

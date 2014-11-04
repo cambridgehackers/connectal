@@ -5,8 +5,7 @@ BSVFILES = FMComms1ADC.bsv FMComms1DAC.bsv FMComms1.bsv \
 	 Top.bsv
 CPPFILES=testi2c.c
 CONNECTALFLAGS = -C fmcomms1-$(BOARD).xdc --tcl clock.tcl
-#CONNECTALFLAGS += --bscflags " -D TRACE_AXI"
-CONNECTALFLAGS += --bscflags " -D USE_I2C1 -D IMPORT_HOSTIF -D PinType=FMComms1Pins"
+CONNECTALFLAGS +=  -D USE_I2C1 -D IMPORT_HOSTIF -D PinType=FMComms1Pins
 
 ifeq ($(BOARD),zedboard)
 HAS_PS7=true
@@ -17,7 +16,7 @@ HAS_PS7=true
 endif
 
 
-gentarget:: fmcomms1-$(BOARD).xdc sine.bin
+gentarget:: fmcomms1-$(BOARD).xdc
 
 fmcomms1-$(BOARD).xdc: fmcomms1-fmc.json ../../boardinfo/$(BOARD).json
 	../../scripts/generate-constraints.py ../../boardinfo/$(BOARD).json fmcomms1-fmc.json > fmcomms1-$(BOARD).xdc

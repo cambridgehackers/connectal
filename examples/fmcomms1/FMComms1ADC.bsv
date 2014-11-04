@@ -20,7 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// import XilinxCells::*;
+import XilinxCells::*;
 import ConnectalXilinxCells::*;
 import Gearbox::*;
 import Pipe::*;
@@ -105,17 +105,18 @@ module mkFMComms1ADC(FMComms1ADC);
    Wire#(Bit#(1)) adc_dco_p <- mkDWire(0);
    Wire#(Bit#(1)) adc_dco_n <- mkDWire(0);
    adc_dco <- mkConnectalClockIBUFDS(adc_dco_p, adc_dco_n);
+   Reset adc_reset <- mkAsyncReset(3, def_reset, adc_dco);
    
    Vector#(14, Wire#(Bit#(1))) adc_data_p = newVector;
    for (Integer i = 0; i < 14; i = i + 1)
-      adc_data_p[i] <- mkDWire(0, clocked_by adc_dco);
+      adc_data_p[i] <- mkDWire(0, clocked_by adc_dco, reset_by adc_reset);
 
    Vector#(14, Wire#(Bit#(1))) adc_data_n = newVector;
    for (Integer i = 0; i < 14; i = i + 1)
-      adc_data_n[i] <- mkDWire(0, clocked_by adc_dco);
+      adc_data_n[i] <- mkDWire(0, clocked_by adc_dco, reset_by adc_reset);
 
-   Wire#(Bit#(1)) adc_or_p <- mkDWire(0, clocked_by adc_dco);
-   Wire#(Bit#(1)) adc_or_n <- mkDWire(0, clocked_by adc_dco);
+   Wire#(Bit#(1)) adc_or_p <- mkDWire(0, clocked_by adc_dco, reset_by adc_reset);
+   Wire#(Bit#(1)) adc_or_n <- mkDWire(0, clocked_by adc_dco, reset_by adc_reset);
 
    Vector#(14, ReadOnly#(Bit#(1))) v_adc_data;   /* data */
    ReadOnly#(Bit#(14)) adc_data;
@@ -123,12 +124,11 @@ module mkFMComms1ADC(FMComms1ADC);
    ReadOnly#(Bit#(1)) adc_or;      /* overrange */
    
    
-   Reset adc_reset <- mkAsyncReset(3, def_reset, adc_dco);
    for(Integer i = 0; i < 14; i = i + 1)
-      v_adc_data[i] <- mkIBUFDS(adc_data_p[i], adc_data_n[i], clocked_by adc_dco);   
+      v_adc_data[i] <- mkIBUFDS(adc_data_p[i], adc_data_n[i], clocked_by adc_dco, reset_by adc_reset);   
    adc_data = rofromrov(v_adc_data);
    
-   adc_or <- mkIBUFDS(adc_or_p, adc_or_n, clocked_by adc_dco);
+   adc_or <- mkIBUFDS(adc_or_p, adc_or_n, clocked_by adc_dco, reset_by adc_reset);
    
    IDDRParams#(Bit#(14)) iddrparams_data = defaultValue;
 //   iddrparams_data.ddr_clk_edge = "SAME_EDGE_PIPELINED";
