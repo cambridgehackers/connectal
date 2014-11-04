@@ -57,10 +57,6 @@ PortalInternal *utility_portal = 0x0;
 static tBoard* tboard;
 #endif
 
-#ifdef BSIM
-extern int bsim_fpga_map[MAX_BSIM_PORTAL_ID];
-#endif
-
 void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, uint32_t reqsize)
 {
     int rc;
@@ -279,16 +275,43 @@ void portalCheckIndication(PortalInternal *pint)
   }
 }
 
+static void send_null(struct PortalInternal *pint, unsigned int hdr, int sendFd)
+{
+}
+static int recv_null(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
+{
+    return 0;
+}
+static int busy_null(struct PortalInternal *pint, volatile unsigned int *addr, const char *str)
+{
+    return 0;
+}
+static void enableint_null(struct PortalInternal *pint, int val)
+{
+}
+static unsigned int read_memory(PortalInternal *pint, volatile unsigned int **addr)
+{
+    unsigned int rc = **addr;
+    *addr += 1;
+    return rc;
+}
+static void write_memory(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
+{
+    **addr = v;
+    *addr += 1;
+}
+static void write_fd_memory(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
+{
+    **addr = v;
+    *addr += 1;
+}
+
 static int init_bsim(struct PortalInternal *pint)
 {
 #ifdef BSIM
-    int rc = 0;
-    char read_status;
-    char buff[128];
-    snprintf(buff, sizeof(buff), "/dev/portal%d", pint->fpga_number);
-    assert(pint->fpga_number < MAX_BSIM_PORTAL_ID);
+    extern int bsim_fpga_map[MAX_BSIM_PORTAL_ID];
     connect_to_bsim();
-//printf("[%s:%d] id %d handler %p fpga_number %d\n", __FUNCTION__, __LINE__, pint->fpga_number, handler, bsim_fpga_map[pint->fpga_number]);
+    assert(pint->fpga_number < MAX_BSIM_PORTAL_ID);
     pint->fpga_number = bsim_fpga_map[pint->fpga_number];
     pint->map_base = (volatile unsigned int*)(long)(pint->fpga_number * PORTAL_BASE_OFFSET);
     portalEnableInterrupts(pint, 1);
@@ -297,13 +320,13 @@ static int init_bsim(struct PortalInternal *pint)
 }
 static int init_hardware(struct PortalInternal *pint)
 {
+#if defined(__KERNEL__)
+    pint->map_base = (volatile unsigned int*)(tboard->bar2io + pint->fpga_number * PORTAL_BASE_OFFSET);
+#else
     int rc = 0;
     char read_status;
     char buff[128];
     snprintf(buff, sizeof(buff), "/dev/portal%d", pint->fpga_number);
-#if defined(__KERNEL__)
-    pint->map_base = (volatile unsigned int*)(tboard->bar2io + pint->fpga_number * PORTAL_BASE_OFFSET);
-#else
 #ifdef ZYNQ
     PortalEnableInterrupt intsettings = {3 << 14, (3 << 14) + 4};
     int pgfile = open("/sys/devices/amba.0/f8007000.devcfg/prog_done", O_RDONLY);
@@ -334,7 +357,8 @@ static int init_hardware(struct PortalInternal *pint)
 	PORTAL_PRINTF("Failed to open %s fd=%d errno=%d\n", buff, pint->fpga_fd, errno);
 	return -errno;
     }
-    pint->map_base = (volatile unsigned int*)mmap(NULL, PORTAL_BASE_OFFSET, PROT_READ|PROT_WRITE, MAP_SHARED, pint->fpga_fd, 0);
+    pint->map_base = (volatile unsigned int*)portalMmap(pint->fpga_fd, PORTAL_BASE_OFFSET);
+//mmap(0, PORTAL_BASE_OFFSET, PROT_READ|PROT_WRITE, MAP_SHARED, pint->fpga_fd, 0);
     if (pint->map_base == MAP_FAILED) {
         PORTAL_PRINTF("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", pint->fpga_fd, errno);
         return -errno;
@@ -358,14 +382,7 @@ static void write_fd_hardware(PortalInternal *pint, volatile unsigned int **addr
 {
     **addr = v;
 }
-void send_hardware(struct PortalInternal *pint, unsigned int hdr, int sendFd)
-{
-}
-int recv_hardware(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
-{
-    return 0;
-}
-int busy_hardware(struct PortalInternal *pint, volatile unsigned int *addr, const char *str)
+static int busy_hardware(struct PortalInternal *pint, volatile unsigned int *addr, const char *str)
 {
     int count = 50;
     volatile unsigned int *tempp = addr + 1;
@@ -377,13 +394,12 @@ int busy_hardware(struct PortalInternal *pint, volatile unsigned int *addr, cons
     }
     return 0;
 }
-void enableint_hardware(struct PortalInternal *pint, int val)
+static void enableint_hardware(struct PortalInternal *pint, int val)
 {
     volatile unsigned int *enp = &(pint->map_base[PORTAL_CTRL_REG_INTERRUPT_ENABLE]);
     pint->item->write(pint, &enp, val);
 }
-/////////////////////
-int event_hardware(struct PortalInternal *pint)
+static int event_hardware(struct PortalInternal *pint)
 {
 #ifdef BSIM
     if (pint->fpga_fd == -1 && !bsim_poll_interrupt())
@@ -395,15 +411,14 @@ int event_hardware(struct PortalInternal *pint)
     portalEnableInterrupts(pint, 1);
     return -1;
 }
-/////////////////////
 
 PortalItemFunctions bsimfunc = {
     init_bsim, read_portal_bsim, write_portal_bsim, write_portal_fd_bsim, mapchannel_hardware, mapchannel_hardware,
-    send_hardware, recv_hardware, busy_hardware, enableint_hardware, event_hardware};
+    send_null, recv_null, busy_hardware, enableint_hardware, event_hardware};
 PortalItemFunctions hardwarefunc = {
     init_hardware, read_hardware, write_hardware, write_fd_hardware, mapchannel_hardware, mapchannel_hardware,
-    send_hardware, recv_hardware, busy_hardware, enableint_hardware, event_hardware};
-
+    send_null, recv_null, busy_hardware, enableint_hardware, event_hardware};
+#if 1
 static int init_socketResp(struct PortalInternal *pint)
 {
     char buff[128];
@@ -425,22 +440,6 @@ static volatile unsigned int *mapchannel_socket(struct PortalInternal *pint, uns
 {
     return &pint->map_base[1];
 }
-static unsigned int read_socket(PortalInternal *pint, volatile unsigned int **addr)
-{
-    unsigned int rc = **addr;
-    *addr += 1;
-    return rc;
-}
-static void write_socket(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
-{
-    **addr = v;
-    *addr += 1;
-}
-static void write_fd_socket(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
-{
-    **addr = v;
-    *addr += 1;
-}
 void send_socket(struct PortalInternal *pint, unsigned int hdr, int sendFd)
 {
     pint->map_base[0] = hdr;
@@ -449,13 +448,6 @@ void send_socket(struct PortalInternal *pint, unsigned int hdr, int sendFd)
 int recv_socket(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
 {
     return portalRecvFd(pint->fpga_fd, (void *)buffer, len * sizeof(uint32_t), recvfd);
-}
-int busy_socket(struct PortalInternal *pint, volatile unsigned int *addr, const char *str)
-{
-    return 0;
-}
-void enableint_socket(struct PortalInternal *pint, int val)
-{
 }
 int event_socket(struct PortalInternal *pint)
 {
@@ -483,11 +475,12 @@ printf("[%s:%d]afteracc %d\n", __FUNCTION__, __LINE__, sockfd);
     return -1;
 }
 PortalItemFunctions socketfuncResp = {
-    init_socketResp, read_socket, write_socket, write_fd_socket, mapchannel_socket, mapchannel_socket,
-    send_socket, recv_socket, busy_socket, enableint_socket, event_socket};
+    init_socketResp, read_memory, write_memory, write_fd_memory, mapchannel_socket, mapchannel_socket,
+    send_socket, recv_socket, busy_null, enableint_null, event_socket};
 PortalItemFunctions socketfuncInit = {
-    init_socketInit, read_socket, write_socket, write_fd_socket, mapchannel_socket, mapchannel_socket,
-    send_socket, recv_socket, busy_socket, enableint_socket, event_socket};
+    init_socketInit, read_memory, write_memory, write_fd_memory, mapchannel_socket, mapchannel_socket,
+    send_socket, recv_socket, busy_null, enableint_null, event_socket};
+#endif
 
 static int init_shared(struct PortalInternal *pint)
 {
@@ -503,47 +496,17 @@ static volatile unsigned int *mapchannel_sharedReq(struct PortalInternal *pint, 
 }
 static inline unsigned int increment_shared(PortalInternal *pint, unsigned int newp)
 {
-//printf("[%s:%d] newp %d req %d max %d\n", __FUNCTION__, __LINE__, newp, pint->reqsize/(int)sizeof(uint32_t)+1, pint->map_base[SHARED_LIMIT]);
     if (newp + pint->reqsize/sizeof(uint32_t) + 1 >= pint->map_base[SHARED_LIMIT])
         newp = SHARED_START;
     return newp;
 }
-void send_shared(struct PortalInternal *pint, unsigned int hdr, int sendFd)
+static void send_shared(struct PortalInternal *pint, unsigned int hdr, int sendFd)
 {
-//printf("[%s:%d] %x = hdr %x\n", __FUNCTION__, __LINE__, pint->map_base[SHARED_WRITE], hdr);
     pint->map_base[pint->map_base[SHARED_WRITE]] = hdr;
     pint->map_base[SHARED_WRITE] = increment_shared(pint, pint->map_base[SHARED_WRITE] + (hdr & 0xffff));
     pint->map_base[pint->map_base[SHARED_WRITE]] = 0;
 }
-int recv_shared(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
-{
-//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-    return 0;
-}
-static unsigned int read_shared(PortalInternal *pint, volatile unsigned int **addr)
-{
-    unsigned int rc = **addr;
-    *addr += 1;
-    return rc;
-}
-static void write_shared(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
-{
-    **addr = v;
-    *addr += 1;
-}
-static void write_fd_shared(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
-{
-    **addr = v;
-    *addr += 1;
-}
-int busy_shared(struct PortalInternal *pint, volatile unsigned int *addr, const char *str)
-{
-    return 0;
-}
-void enableint_shared(struct PortalInternal *pint, int val)
-{
-}
-int event_shared(struct PortalInternal *pint)
+static int event_shared(struct PortalInternal *pint)
 {
     if (pint->map_base && pint->map_base[SHARED_READ] != pint->map_base[SHARED_WRITE]) {
         unsigned int rc = pint->map_base[pint->map_base[SHARED_READ]];
@@ -553,6 +516,6 @@ int event_shared(struct PortalInternal *pint)
     return -1;
 }
 PortalItemFunctions sharedfunc = {
-    init_shared, read_shared, write_shared, write_fd_shared, mapchannel_sharedInd, mapchannel_sharedReq,
-    send_shared, recv_shared, busy_shared, enableint_shared, event_shared};
+    init_shared, read_memory, write_memory, write_fd_memory, mapchannel_sharedInd, mapchannel_sharedReq,
+    send_shared, recv_null, busy_null, enableint_null, event_shared};
 

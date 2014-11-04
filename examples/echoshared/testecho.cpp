@@ -85,7 +85,7 @@ int main(int argc, const char **argv)
     sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &sharedfunc);
     allocateShared(dma, dmap, IfcNames_EchoRequest, &sRequestProxy->pint, alloc_sz);
 
-for (int i = 0; i < 10000; i++) {
+for (int i = 0; i < 100; i++) {
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
     call_say(v);
