@@ -20,7 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import XilinxCells::*;
+// import XilinxCells::*;
 import ConnectalXilinxCells::*;
 import Gearbox::*;
 import Pipe::*;
@@ -104,7 +104,7 @@ module mkFMComms1ADC(FMComms1ADC);
    Clock adc_dco;     /* DDR clock */
    Wire#(Bit#(1)) adc_dco_p <- mkDWire(0);
    Wire#(Bit#(1)) adc_dco_n <- mkDWire(0);
-   adc_dco <- mkClockIBUFDS(adc_dco_p, adc_dco_n);
+   adc_dco <- mkConnectalClockIBUFDS(adc_dco_p, adc_dco_n);
    
    Vector#(14, Wire#(Bit#(1))) adc_data_p = newVector;
    for (Integer i = 0; i < 14; i = i + 1)
