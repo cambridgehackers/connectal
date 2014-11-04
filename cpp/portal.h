@@ -125,8 +125,6 @@ extern "C" {
 void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, uint32_t reqsize);
 void portalCheckIndication(PortalInternal *pint);
 uint64_t portalCycleCount(void);
-unsigned int read_portal_bsim(PortalInternal *pint, volatile unsigned int **addr);
-void write_portal_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 void write_portal_fd_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 
 // uses the default poller
@@ -141,13 +139,10 @@ void portalExec_end(void);
 void portalTrace_start(void);
 void portalTrace_stop(void);
 int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
-void portalEnableInterrupts(PortalInternal *p, int val);
 int portalDCacheFlushInval(int fd, long size, void *__p);
 void init_portal_memory(void);
 int portalAlloc(size_t size);
 void *portalMmap(int fd, size_t size);
-void portalSend(int fd, void *data, int len);
-int portalRecv(int fd, void *data, int len);
 void portalSendFd(int fd, void *data, int len, int sendFd);
 int portalRecvFd(int fd, void *data, int len, int *recvFd);
 
@@ -156,6 +151,18 @@ uint64_t portalTimerLap(unsigned int i);
 void portalTimerInit(void);
 uint64_t portalTimerCatch(unsigned int i);
 void portalTimerPrint(int loops);
+
+void send_portal_null(struct PortalInternal *pint, unsigned int hdr, int sendFd);
+int recv_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd);
+int busy_portal_null(struct PortalInternal *pint, volatile unsigned int *addr, const char *str);
+void enableint_portal_null(struct PortalInternal *pint, int val);
+unsigned int read_portal_memory(PortalInternal *pint, volatile unsigned int **addr);
+void write_portal_memory(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
+void write_fd_portal_memory(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
+volatile unsigned int *mapchannel_hardware(struct PortalInternal *pint, unsigned int v);
+int busy_hardware(struct PortalInternal *pint, volatile unsigned int *addr, const char *str);
+void enableint_hardware(struct PortalInternal *pint, int val);
+int event_hardware(struct PortalInternal *pint);
 
 extern int portalExec_timeout;
 extern int global_pa_fd;

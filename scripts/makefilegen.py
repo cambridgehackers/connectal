@@ -147,7 +147,7 @@ include $(CLEAR_VARS)
 LOCAL_ARM_MODE := arm
 include %(project_dir)s/jni/Makefile.generated_files
 APP_SRC_FILES := $(addprefix %(project_dir)s/jni/,  $(GENERATED_CPP)) %(source)s
-PORTAL_SRC_FILES := $(addprefix %(connectaldir)s/cpp/, portal.c poller.cpp sock_utils.c timer.c)
+PORTAL_SRC_FILES := $(addprefix %(connectaldir)s/cpp/, portal.c portalSocket.c poller.cpp sock_utils.c timer.c)
 LOCAL_SRC_FILES := $(APP_SRC_FILES) $(PORTAL_SRC_FILES)
 
 LOCAL_PATH :=
@@ -174,7 +174,7 @@ CFLAGS_COMMON = -O -g -I%(project_dir)s/jni -I%(connectaldir)s -I%(connectaldir)
 CFLAGS = $(CFLAGS_COMMON)
 CFLAGS2 = %(cdefines2)s
 
-PORTAL_CPP_FILES = $(addprefix %(connectaldir)s/cpp/, portal.c poller.cpp sock_utils.c timer.c)
+PORTAL_CPP_FILES = $(addprefix %(connectaldir)s/cpp/, portal.c portalSocket.c poller.cpp sock_utils.c timer.c)
 include %(project_dir)s/jni/Makefile.generated_files
 SOURCES = $(addprefix %(project_dir)s/jni/,  $(GENERATED_CPP)) %(source)s $(PORTAL_CPP_FILES)
 SOURCES2 = $(addprefix %(project_dir)s/jni/,  $(GENERATED_CPP)) %(source2)s $(PORTAL_CPP_FILES)

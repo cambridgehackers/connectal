@@ -54,8 +54,8 @@ int main(int argc, const char **argv)
    init_portal_internal(&intarr[0], IfcNames_SimpleRequest, NULL, NULL, NULL, SimpleRequestProxy_reqsize); // portal 1
    init_portal_internal(&intarr[1], IfcNames_SimpleIndication, SimpleIndicationWrapper_handleMessage, (void *)&SimpleIndication_cbTable, NULL, SimpleIndicationWrapper_reqsize); // portal 2
 
-   portalEnableInterrupts(&intarr[0], 0);
-   portalEnableInterrupts(&intarr[1], 0);
+   intarr[0].item->enableint(&intarr[0], 0);
+   intarr[1].item->enableint(&intarr[1], 0);
    PORTAL_PRINTF("Main::calling say1(%d)\n", v1a);
    //device->say1(v1a);  
    SimpleRequestProxy_say1 (&intarr[0], v1a);

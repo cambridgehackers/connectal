@@ -119,7 +119,7 @@ void* PortalPoller::portalExec_init(void)
     for (int i = 0; i < numWrappers; i++) {
       Portal *instance = portal_wrappers[i];
       //fprintf(stderr, "portalExec::enabling interrupts portal %d fpga%d\n", i, instance->pint.fpga_number);
-      portalEnableInterrupts(&instance->pint, 1);
+      instance->pint.item->enableint(&instance->pint, 1);
     }
     fprintf(stderr, "portalExec::about to enter loop, numFds=%d\n", numFds);
     return NULL;
@@ -136,7 +136,7 @@ void PortalPoller::portalExec_end(void)
     for (int i = 0; i < numWrappers; i++) {
       Portal *instance = portal_wrappers[i];
       fprintf(stderr, "portalExec::disabling interrupts portal %d fpga%d\n", i, instance->pint.fpga_number);
-      portalEnableInterrupts(&instance->pint, 0);
+      instance->pint.item->enableint(&instance->pint, 0);
     }
 }
 
@@ -164,6 +164,8 @@ void* PortalPoller::portalExec_event(void)
       }
       Portal *instance = portal_wrappers[i];
       int sockfd = instance->pint.item->event(&instance->pint);
+      // re-enable interrupt which was disabled by portal_isr
+      instance->pint.item->enableint(&instance->pint, 1);
       if (sockfd != -1) {
           for (int j = 0; j < numFds; j++)
               if (portal_fds[j].fd == instance->pint.fpga_fd) {
