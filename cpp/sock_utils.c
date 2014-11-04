@@ -35,15 +35,24 @@
 #include <semaphore.h>
 #include <pthread.h>
 #include <assert.h>
+#include <netdb.h>
 
 static int trace_socket;// = 1;
 
-int init_listening(const char *arg_name)
+int init_listening(const char *arg_name, PortalSocketParam *param)
 {
   int listening_socket;
 
   if (trace_socket)
     printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+  if (param) {
+       listening_socket = socket(param->addr->ai_family, param->addr->ai_socktype, param->addr->ai_protocol);
+       if (listening_socket == -1 || bind(listening_socket, param->addr->ai_addr, param->addr->ai_addrlen) == -1) {
+           fprintf(stderr, "%s[%d]: bind error %s\n",__FUNCTION__, listening_socket, strerror(errno));
+           exit(1);
+       }
+  }
+  else {
   if ((listening_socket = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
     fprintf(stderr, "%s: socket error %s",__FUNCTION__, strerror(errno));
     exit(1);
@@ -57,6 +66,7 @@ int init_listening(const char *arg_name)
   if (bind(listening_socket, (struct sockaddr *)&local, len) == -1) {
     fprintf(stderr, "%s[%d]: bind error %s\n",__FUNCTION__, listening_socket, strerror(errno));
     exit(1);
+  }
   }
 
   if (listen(listening_socket, 5) == -1) {

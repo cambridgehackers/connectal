@@ -20,6 +20,7 @@
  */
 
 #include <stdio.h>
+#include <netdb.h>
 #include "EchoRequest.h"
 #include "EchoIndication.h"
 
@@ -55,8 +56,12 @@ static void call_say2(int v, int v2)
 
 int main(int argc, const char **argv)
 {
-    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &socketfuncInit, NULL);
-    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &socketfuncInit, NULL);
+    PortalSocketParam param;
+
+    int rc = getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
+    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &socketfuncInit, &param);
+    rc = getaddrinfo("127.0.0.1", "5001", NULL, &param.addr);
+    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &socketfuncInit, &param);
 
     portalExec_start();
 
@@ -70,5 +75,6 @@ int main(int argc, const char **argv)
     printf("TEST TYPE: SEM\n");
     sRequestProxy->setLeds(9);
     portalExec_end();
+    //freeaddrinfo(param.addr);
     return 0;
 }

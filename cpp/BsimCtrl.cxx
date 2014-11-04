@@ -50,7 +50,7 @@ static int fd_array_index = 0;
 
 static void *pthread_worker(void *p)
 {
-    int listening_socket = init_listening(SOCKET_NAME);
+    int listening_socket = init_listening(SOCKET_NAME, NULL);
     if (trace_port)
         fprintf(stderr, "%s[%d]: waiting for a connection...\n",__FUNCTION__, listening_socket);
     while (1) {

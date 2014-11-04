@@ -36,17 +36,37 @@
 #include <semaphore.h>
 #include <pthread.h>
 #include <assert.h>
+#include <netdb.h>
 
 int bsim_fpga_map[MAX_BSIM_PORTAL_ID];
 static pthread_mutex_t socket_mutex;
 int global_sockfd = -1;
 static int trace_socket;// = 1;
 
-int init_connecting(const char *arg_name)
+int init_connecting(const char *arg_name, PortalSocketParam *param)
 {
   int connect_attempts = 0;
   int sockfd;
 
+  if (param) {
+       sockfd = socket(param->addr->ai_family, param->addr->ai_socktype, param->addr->ai_protocol);
+       if (sockfd == -1) {
+           fprintf(stderr, "%s[%d]: socket error %s\n",__FUNCTION__, sockfd, strerror(errno));
+           exit(1);
+       }
+  if (trace_socket)
+    fprintf(stderr, "%s (%s) trying to connect...\n",__FUNCTION__, arg_name);
+  while (connect(sockfd, param->addr->ai_addr, param->addr->ai_addrlen) == -1) {
+    if(connect_attempts++ > 16){
+      fprintf(stderr,"%s (%s) connect error %s\n",__FUNCTION__, arg_name, strerror(errno));
+      exit(1);
+    }
+    if (trace_socket)
+      fprintf(stderr, "%s (%s) retrying connection\n",__FUNCTION__, arg_name);
+    sleep(1);
+  }
+  }
+  else {
   if ((sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
     fprintf(stderr, "%s (%s) socket error %s\n",__FUNCTION__, arg_name, strerror(errno));
     exit(1);
@@ -66,6 +86,7 @@ int init_connecting(const char *arg_name)
       fprintf(stderr, "%s (%s) retrying connection\n",__FUNCTION__, arg_name);
     sleep(1);
   }
+  }
   fprintf(stderr, "%s (%s) connected.  Attempts %d\n",__FUNCTION__, arg_name, connect_attempts);
   return sockfd;
 }
@@ -75,7 +96,7 @@ void connect_to_bsim(void)
   static PortalInternal p;
   if (global_sockfd != -1)
     return;
-  global_sockfd = init_connecting(SOCKET_NAME);
+  global_sockfd = init_connecting(SOCKET_NAME, NULL);
   pthread_mutex_init(&socket_mutex, NULL);
   unsigned int last = 0;
   unsigned int idx = 0;
@@ -92,19 +113,21 @@ void connect_to_bsim(void)
   }  
 }
 
-static int init_socketResp(struct PortalInternal *pint, void *param)
+static int init_socketResp(struct PortalInternal *pint, void *aparam)
 {
+    PortalSocketParam *param = (PortalSocketParam *)aparam;
     char buff[128];
     sprintf(buff, "SWSOCK%d", pint->fpga_number);
-    pint->fpga_fd = init_listening(buff);
+    pint->fpga_fd = init_listening(buff, param);
     pint->map_base = (volatile unsigned int*)malloc(pint->reqsize);
     return 0;
 }
-static int init_socketInit(struct PortalInternal *pint, void *param)
+static int init_socketInit(struct PortalInternal *pint, void *aparam)
 {
+    PortalSocketParam *param = (PortalSocketParam *)aparam;
     char buff[128];
     sprintf(buff, "SWSOCK%d", pint->fpga_number);
-    pint->fpga_fd = init_connecting(buff);
+    pint->fpga_fd = init_connecting(buff, param);
     pint->accept_finished = 1;
     pint->map_base = (volatile unsigned int*)malloc(pint->reqsize);
     return 0;

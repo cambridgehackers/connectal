@@ -89,6 +89,9 @@ typedef struct {
     struct DmaManager *dma;
     uint32_t    size;
 } PortalSharedParam; /* for ITEMINIT function */
+typedef struct PortalSocketParam {
+    struct addrinfo *addr;
+} PortalSocketParam; /* for ITEMINIT function */
 
 typedef struct PortalInternal {
   struct PortalPoller   *poller;
