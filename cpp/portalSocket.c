@@ -49,6 +49,7 @@ int init_connecting(const char *arg_name, PortalSocketParam *param)
   int sockfd;
 
   if (param) {
+printf("[%s:%d] TCP\n", __FUNCTION__, __LINE__);
        sockfd = socket(param->addr->ai_family, param->addr->ai_socktype, param->addr->ai_protocol);
        if (sockfd == -1) {
            fprintf(stderr, "%s[%d]: socket error %s\n",__FUNCTION__, sockfd, strerror(errno));
@@ -67,6 +68,7 @@ int init_connecting(const char *arg_name, PortalSocketParam *param)
   }
   }
   else {
+printf("[%s:%d] UNIX\n", __FUNCTION__, __LINE__);
   if ((sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
     fprintf(stderr, "%s (%s) socket error %s\n",__FUNCTION__, arg_name, strerror(errno));
     exit(1);

@@ -41,13 +41,6 @@
 #endif
 #include "portalmem.h" // PA_MALLOC
 
-//#ifdef ZYNQ
-//#include <android/log.h>
-//#include <zynqportal.h>
-//#else
-//#include <pcieportal.h> // BNOC_TRACE
-//#endif
-
 static int init_shared(struct PortalInternal *pint, void *aparam)
 {
     PortalSharedParam *param = (PortalSharedParam *)aparam;

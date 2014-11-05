@@ -162,6 +162,7 @@ ssize_t sock_fd_read(int sockfd, void *ptr, size_t nbytes, int *recvfd)
         }
         int *foo = (int *)CMSG_DATA(cmptr);
         *recvfd = *foo;
+printf("[%s:%d] got fd %d\n", __FUNCTION__, __LINE__, *foo);
     }
     return n;
 }
