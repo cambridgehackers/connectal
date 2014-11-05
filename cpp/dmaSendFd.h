@@ -34,8 +34,8 @@ static int trace_memory = 1;
 #endif
 
 #include "GeneratedTypes.h" // generated in project directory
-#define DMAsglist(P, A, B, C, D) MMUConfigRequestProxy_sglist((P), (A), (B), (C), (D));
-#define DMAregion(P, PTR, B8, I8, B4, I4, B0, I0) MMUConfigRequestProxy_region((P), (PTR), (B8), (I8), (B4), (I4), (B0), (I0))
+#define DMAsglist(P, A, B, C, D) MMUConfigRequest_sglist((P), (A), (B), (C), (D));
+#define DMAregion(P, PTR, B8, I8, B4, I4, B0, I0) MMUConfigRequest_region((P), (PTR), (B8), (I8), (B4), (I4), (B0), (I0))
 
 int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
 {

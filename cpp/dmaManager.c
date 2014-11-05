@@ -68,7 +68,7 @@ void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *dmaDevice, PortalI
 uint64_t DmaManager_show_mem_stats(DmaManagerPrivate *priv, ChannelType rc)
 {
   uint64_t rv = 0;
-  DmaDebugRequestProxy_getMemoryTraffic(priv->dmaDevice, rc);
+  DmaDebugRequest_getMemoryTraffic(priv->dmaDevice, rc);
   sem_wait(&priv->mtSem);
   rv += priv->mtCnt;
   return rv;
@@ -76,7 +76,7 @@ uint64_t DmaManager_show_mem_stats(DmaManagerPrivate *priv, ChannelType rc)
 
 void DmaManager_dereference(DmaManagerPrivate *priv, int ref)
 {
-  MMUConfigRequestProxy_idReturn(priv->sglDevice, ref);
+  MMUConfigRequest_idReturn(priv->sglDevice, ref);
 }
 
 int DmaManager_reference(DmaManagerPrivate *priv, int fd)
@@ -84,7 +84,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, int fd)
   int id = 0;
   int rc = 0;
   init_portal_memory();
-  MMUConfigRequestProxy_idRequest(priv->sglDevice, (SpecialTypeForSendingFd)fd);
+  MMUConfigRequest_idRequest(priv->sglDevice, (SpecialTypeForSendingFd)fd);
   sem_wait(&priv->sglIdSem);
   id = priv->sglId;
 #if defined(KERNEL_REFERENCE) && !defined(BSIM) && !defined(__KERNEL__)

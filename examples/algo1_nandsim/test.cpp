@@ -219,7 +219,7 @@ int main(int argc, const char **argv)
   // request the next sglist identifier from the sglistMMU hardware module
   // which is used by the mem server accessing flash memory.
   int id = 0;
-  MMUConfigRequestProxy_idRequest(nandsimDma->priv.sglDevice);
+  MMUConfigRequest_idRequest(nandsimDma->priv.sglDevice, 0);
   sem_wait(&nandsimDma->priv.sglIdSem);
   id = nandsimDma->priv.sglId;
   // pairs of ('offset','size') pointing to space in nandsim memory
