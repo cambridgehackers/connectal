@@ -35,32 +35,32 @@ sizeofUint32_t = 4
 proxyClassPrefixTemplate='''
 class %(className)sProxy : public %(parentClass)s {
 public:
-    %(className)sProxy(int id, PortalPoller *poller = 0) : Portal(id, %(className)sProxy_reqsize, NULL, NULL, poller) {
+    %(className)sProxy(int id, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, NULL, NULL, poller) {
         pint.parent = static_cast<void *>(this);
     };
-    %(className)sProxy(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(className)sProxy_reqsize, NULL, NULL, item, param, poller) {
+    %(className)sProxy(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, NULL, NULL, item, param, poller) {
         pint.parent = static_cast<void *>(this);
     };
 '''
 
 wrapperClassPrefixTemplate='''
-extern %(className)sWrapperCb %(className)sWrapper_cbTable;
+extern %(className)sCb %(className)s_cbTable;
 class %(className)sWrapper : public %(parentClass)s {
 public:
-    %(className)sWrapper(int id, PortalPoller *poller = 0) : Portal(id, %(className)sWrapper_reqsize, %(className)sWrapper_handleMessage, (void *)&%(className)sWrapper_cbTable, poller) {
+    %(className)sWrapper(int id, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, %(className)s_handleMessage, (void *)&%(className)s_cbTable, poller) {
         pint.parent = static_cast<void *>(this);
     };
-    %(className)sWrapper(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(className)sWrapper_reqsize, %(className)sWrapper_handleMessage, (void *)&%(className)sWrapper_cbTable, item, param, poller) {
+    %(className)sWrapper(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, %(className)s_handleMessage, (void *)&%(className)s_cbTable, item, param, poller) {
         pint.parent = static_cast<void *>(this);
     };
 '''
 
 handleMessageTemplateDecl='''
-int %(className)sWrapper_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
+int %(className)s_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
 '''
 
 handleMessageTemplate1='''
-int %(className)sWrapper_handleMessage(PortalInternal *p, unsigned int channel, int messageFd)
+int %(className)s_handleMessage(PortalInternal *p, unsigned int channel, int messageFd)
 {    
     static int runaway = 0;
     int tmpfd;
@@ -70,9 +70,9 @@ int %(className)sWrapper_handleMessage(PortalInternal *p, unsigned int channel, 
 
 handleMessageTemplate2='''
     default:
-        PORTAL_PRINTF("%(className)sWrapper_handleMessage: unknown channel 0x%%x\\n", channel);
+        PORTAL_PRINTF("%(className)s_handleMessage: unknown channel 0x%%x\\n", channel);
         if (runaway++ > 10) {
-            PORTAL_PRINTF("%(className)sWrapper_handleMessage: too many bogus indications, exiting\\n");
+            PORTAL_PRINTF("%(className)s_handleMessage: too many bogus indications, exiting\\n");
 #ifndef __KERNEL__
             exit(-1);
 #endif
@@ -530,7 +530,7 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
         subs = {'className': cName(item.name),
                 'maxSize': maxSize * sizeofUint32_t,
                 'parentClass': item.parentClass('Portal')}
-        generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(className)sProxy_reqsize %(maxSize)s\n' % subs)
+        generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(className)s_reqsize %(maxSize)s\n' % subs)
         hpp.write(proxyClassPrefixTemplate % subs)
         for d in item.decls:
             d.emitMethodDeclaration(hpp, "%sProxy" % cName(item.name))
@@ -541,7 +541,7 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
             substs['channelNumber'] = 'CHAN_NUM_%s_%s' % (cName(item.name), cName(mitem.name))
             respParams = [p.name for p in mitem.params]
             respParams.insert(0, 'p')
-            substs['responseCase'] = ('((%(className)sWrapperCb *)p->cb)->%(name)s(%(params)s);'
+            substs['responseCase'] = ('((%(className)sCb *)p->cb)->%(name)s(%(params)s);'
                               % { 'name': mitem.name,
                                   'className' : cName(item.name),
                                   'params': ', '.join(respParams)})
@@ -561,16 +561,16 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
             methodName = cName(d.name)
             generated_hpp.write('    void (*%s) ( ' % methodName)
             generated_hpp.write(', '.join(formalParams) + ' );\n')
-            generated_cpp.write('void %sWrapper%s_cb ( ' % (cName(item.name), methodName))
+            generated_cpp.write('void %s%s_cb ( ' % (cName(item.name), methodName))
             generated_cpp.write(', '.join(formalParams) + ' ) {\n')
             indent(generated_cpp, 4)
             generated_cpp.write(('(static_cast<%sWrapper *>(p->parent))->%s ( ' % (cName(item.name), methodName)) + paramValues + ');\n};\n')
-        generated_hpp.write('} %sWrapperCb;\n' % cName(item.name));
-        generated_cpp.write('%sWrapperCb %sWrapper_cbTable = {\n' % (cName(item.name), cName(item.name)));
+        generated_hpp.write('} %sCb;\n' % cName(item.name));
+        generated_cpp.write('%sCb %s_cbTable = {\n' % (cName(item.name), cName(item.name)));
         for d in item.decls:
-            generated_cpp.write('    %sWrapper%s_cb,\n' % (cName(item.name), d.name));
+            generated_cpp.write('    %s%s_cb,\n' % (cName(item.name), d.name));
         generated_cpp.write('};\n');
-        generated_hpp.write('#define %(className)sWrapper_reqsize %(maxSize)s\n' % subs)
+        #generated_hpp.write('#define %(className)s_reqsize %(maxSize)s\n' % subs)
         hpp.write('#endif // _%(name)s_H_\n' % {'name': item.name.upper()})
         hpp.close();
         cpp.close();
