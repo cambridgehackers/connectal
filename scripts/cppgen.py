@@ -557,45 +557,36 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
         generated_cpp.write('#include "%s"\n' % hppname)
         namespace = ''
         maxSize = 0;
+	reqChanNums = []
         className = "%sProxy" % cName(item.name)
         for d in item.decls:
             t = d.emitCImplementation(cpp, generated_hpp, className, namespace,True, False)
             if t > maxSize:
                 maxSize = t
-        generated_hpp.write('\n')
-	reqChanNums = []
-        for d in item.decls:
             reqChanNums.append('CHAN_NUM_%s' % item.global_name(d.name, "Proxy"))
         subs = {'className': className,
                 'namespace': namespace,
                 'maxSize': maxSize * sizeofUint32_t,
                 'parentClass': item.parentClass('Portal')}
+	generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(namespace)s%(className)s_reqsize %(maxSize)s\n' % subs)
         hpp.write(proxyClassPrefixTemplate % subs)
         for d in item.decls:
             d.emitMethodDeclaration(hpp, True, 4, namespace, className)
         hpp.write('};\n')
-	generated_hpp.write('enum { ' + ','.join(reqChanNums) + '};\n')
-        generated_hpp.write('#define %(namespace)s%(className)s_reqsize %(maxSize)s\n' % subs)
-        maxSize = 0;
         className = "%sWrapper" % cName(item.name)
-        substitutions = {'namespace': namespace,
-                         'className': className,
-                         'parentClass': item.parentClass('Portal')}
-        cpp.write(handleMessageTemplate1 % substitutions)
-        for d in item.decls:
-            t = d.emitCImplementation(cpp, generated_hpp, className, namespace, False, False)
-            if t > maxSize:
-                maxSize = t
-        cpp.write(handleMessageTemplate2 % substitutions)
-        generated_hpp.write(handleMessageTemplateDecl % substitutions)
-        indent(hpp, 0)
-	indChanNums = []
-	for d in item.decls:
-            indChanNums.append('CHAN_NUM_%s' % item.global_name(cName(d.name), "Wrapper"))
         subs = {'className': className,
                 'namespace': namespace,
                 'maxSize': maxSize * sizeofUint32_t,
                 'parentClass': item.parentClass('Portal')}
+        cpp.write(handleMessageTemplate1 % subs)
+        for d in item.decls:
+            d.emitCImplementation(cpp, generated_hpp, className, namespace, False, False)
+        cpp.write(handleMessageTemplate2 % subs)
+        generated_hpp.write(handleMessageTemplateDecl % subs)
+        indent(hpp, 0)
+	indChanNums = []
+	for d in item.decls:
+            indChanNums.append('CHAN_NUM_%s' % item.global_name(cName(d.name), "Wrapper"))
         hpp.write(wrapperClassPrefixTemplate % subs)
         for d in item.decls:
             d.emitMethodDeclaration(hpp, False, 4, namespace, className)
@@ -607,21 +598,17 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
             formalParams.insert(0, ' struct PortalInternal *p')
             methodName = cName(d.name)
             generated_hpp.write('    void (*%s) ( ' % methodName)
-            generated_hpp.write(', '.join(formalParams))
-            generated_hpp.write(' );\n')
+            generated_hpp.write(', '.join(formalParams) + ' );\n')
             generated_cpp.write('void %s%s_cb ( ' % (className, methodName))
-            generated_cpp.write(', '.join(formalParams))
-            generated_cpp.write(' ) {\n')
+            generated_cpp.write(', '.join(formalParams) + ' ) {\n')
             indent(generated_cpp, 4)
-            generated_cpp.write(('(static_cast<%s *>(p->parent))->%s ( ' % (className, methodName)) + paramValues + ');\n')
-            generated_cpp.write('};\n')
+            generated_cpp.write(('(static_cast<%s *>(p->parent))->%s ( ' % (className, methodName)) + paramValues + ');\n};\n')
         generated_hpp.write('} %sCb;\n' % className);
         generated_cpp.write('%sCb %s_cbTable = {\n' % (className, className));
         for d in item.decls:
             generated_cpp.write('    %s%s_cb,\n' % (className, d.name));
         generated_cpp.write('};\n');
-	generated_hpp.write('enum { ' + ','.join(indChanNums) + '};\n')
-        generated_hpp.write('#define %(namespace)s%(className)s_reqsize %(maxSize)s\n' % subs)
+	generated_hpp.write('enum { ' + ','.join(indChanNums) + '};\n#define %(namespace)s%(className)s_reqsize %(maxSize)s\n' % subs)
         hpp.write('#endif // _%(name)s_H_\n' % {'name': item.name.upper()})
         hpp.close();
         cpp.close();
