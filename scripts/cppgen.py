@@ -33,34 +33,34 @@ import math
 
 sizeofUint32_t = 4
 proxyClassPrefixTemplate='''
-class %(className)s : public %(parentClass)s {
+class %(className)sProxy : public %(parentClass)s {
 public:
-    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, NULL, NULL, poller) {
+    %(className)sProxy(int id, PortalPoller *poller = 0) : Portal(id, %(className)sProxy_reqsize, NULL, NULL, poller) {
         pint.parent = static_cast<void *>(this);
     };
-    %(className)s(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, NULL, NULL, item, param, poller) {
+    %(className)sProxy(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(className)sProxy_reqsize, NULL, NULL, item, param, poller) {
         pint.parent = static_cast<void *>(this);
     };
 '''
 
 wrapperClassPrefixTemplate='''
-extern %(className)sCb %(className)s_cbTable;
-class %(className)s : public %(parentClass)s {
+extern %(className)sWrapperCb %(className)sWrapper_cbTable;
+class %(className)sWrapper : public %(parentClass)s {
 public:
-    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, %(className)s_handleMessage, (void *)&%(className)s_cbTable, poller) {
+    %(className)sWrapper(int id, PortalPoller *poller = 0) : Portal(id, %(className)sWrapper_reqsize, %(className)sWrapper_handleMessage, (void *)&%(className)sWrapper_cbTable, poller) {
         pint.parent = static_cast<void *>(this);
     };
-    %(className)s(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, %(className)s_handleMessage, (void *)&%(className)s_cbTable, item, param, poller) {
+    %(className)sWrapper(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(className)sWrapper_reqsize, %(className)sWrapper_handleMessage, (void *)&%(className)sWrapper_cbTable, item, param, poller) {
         pint.parent = static_cast<void *>(this);
     };
 '''
 
 handleMessageTemplateDecl='''
-int %(className)s_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
+int %(className)sWrapper_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
 '''
 
 handleMessageTemplate1='''
-int %(className)s_handleMessage(PortalInternal *p, unsigned int channel, int messageFd)
+int %(className)sWrapper_handleMessage(PortalInternal *p, unsigned int channel, int messageFd)
 {    
     static int runaway = 0;
     int tmpfd;
@@ -70,9 +70,9 @@ int %(className)s_handleMessage(PortalInternal *p, unsigned int channel, int mes
 
 handleMessageTemplate2='''
     default:
-        PORTAL_PRINTF("%(className)s_handleMessage: unknown channel 0x%%x\\n", channel);
+        PORTAL_PRINTF("%(className)sWrapper_handleMessage: unknown channel 0x%%x\\n", channel);
         if (runaway++ > 10) {
-            PORTAL_PRINTF("%(className)s_handleMessage: too many bogus indications, exiting\\n");
+            PORTAL_PRINTF("%(className)sWrapper_handleMessage: too many bogus indications, exiting\\n");
 #ifndef __KERNEL__
             exit(-1);
 #endif
@@ -84,13 +84,13 @@ handleMessageTemplate2='''
 '''
 
 proxyMethodTemplateDecl='''
-void %(className)s_%(methodName)s (struct PortalInternal *p %(paramSeparator)s %(paramDeclarations)s );'''
+void %(className)sProxy_%(methodName)s (struct PortalInternal *p %(paramSeparator)s %(paramDeclarations)s );'''
 
 proxyMethodTemplate='''
-void %(className)s_%(methodName)s (PortalInternal *p %(paramSeparator)s %(paramDeclarations)s )
+void %(className)sProxy_%(methodName)s (PortalInternal *p %(paramSeparator)s %(paramDeclarations)s )
 {
     volatile unsigned int* temp_working_addr = p->item->mapchannelReq(p, %(channelNumber)s);
-    if (p->item->busywait(p, temp_working_addr, "%(className)s_%(methodName)s")) return;
+    if (p->item->busywait(p, temp_working_addr, "%(className)sProxy_%(methodName)s")) return;
     %(paramStructMarshall)s
     p->item->send(p, (%(channelNumber)s << 16) | %(wordLenP1)s, %(fdName)s);
 };
@@ -129,18 +129,18 @@ class MethodMixin:
             return int
     def formalParameters(self, params):
         return [ 'const %s%s %s' % (p.type.cName(), p.type.refParam(), p.name) for p in params]
-    def emitMethodDeclaration(self, f, proxy, indentation, className):
-        indent(f, indentation)
+    def emitMethodDeclaration(self, f, className):
+        indent(f, 4)
         resultTypeName = self.resultTypeName()
         paramValues = [p.name for p in self.params]
         paramValues.insert(0, '&pint')
         methodName = cName(self.name)
-        if not proxy:
+        if className == '':
             f.write('virtual ')
         f.write('void %s ( ' % methodName)
         f.write(', '.join(self.formalParameters(self.params)))
         f.write(' ) ')
-        if not proxy:
+        if className == '':
             f.write('= 0;\n')
         else:
             f.write('{ %s_%s (' % (className, methodName))
@@ -517,39 +517,33 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
         generated_cpp.write('#include "%s"\n' % hppname)
         maxSize = 0;
         reqChanNums = []
-        className = "%sProxy" % cName(item.name)
         for mitem in item.decls:
             substs, t = emitCImplementation(mitem)
             if t > maxSize:
                 maxSize = t
             substs['responseCase'] = ''
-            substs['className'] = className
+            substs['className'] = cName(item.name)
             substs['channelNumber'] = 'CHAN_NUM_%s_%s' % (cName(item.name), cName(mitem.name))
             cpp.write(proxyMethodTemplate % substs)
             generated_hpp.write(proxyMethodTemplateDecl % substs)
             reqChanNums.append('CHAN_NUM_%s' % item.global_name(mitem.name, ""))
-        subs = {'className': className,
+        subs = {'className': cName(item.name),
                 'maxSize': maxSize * sizeofUint32_t,
                 'parentClass': item.parentClass('Portal')}
-        generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(className)s_reqsize %(maxSize)s\n' % subs)
+        generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(className)sProxy_reqsize %(maxSize)s\n' % subs)
         hpp.write(proxyClassPrefixTemplate % subs)
         for d in item.decls:
-            d.emitMethodDeclaration(hpp, True, 4, className)
+            d.emitMethodDeclaration(hpp, "%sProxy" % cName(item.name))
         hpp.write('};\n')
-        className = "%sWrapper" % cName(item.name)
-        subs = {'className': className,
-                'maxSize': maxSize * sizeofUint32_t,
-                'parentClass': item.parentClass('Portal')}
         cpp.write(handleMessageTemplate1 % subs)
         for mitem in item.decls:
             substs, t = emitCImplementation(mitem)
-            substs['className'] = className
             substs['channelNumber'] = 'CHAN_NUM_%s_%s' % (cName(item.name), cName(mitem.name))
             respParams = [p.name for p in mitem.params]
             respParams.insert(0, 'p')
-            substs['responseCase'] = ('((%(className)sCb *)p->cb)->%(name)s(%(params)s);'
+            substs['responseCase'] = ('((%(className)sWrapperCb *)p->cb)->%(name)s(%(params)s);'
                               % { 'name': mitem.name,
-                                  'className' : className,
+                                  'className' : cName(item.name),
                                   'params': ', '.join(respParams)})
             cpp.write(msgDemarshallTemplate % substs)
         cpp.write(handleMessageTemplate2 % subs)
@@ -557,7 +551,7 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
         indent(hpp, 0)
         hpp.write(wrapperClassPrefixTemplate % subs)
         for d in item.decls:
-            d.emitMethodDeclaration(hpp, False, 4, className)
+            d.emitMethodDeclaration(hpp, '')
         hpp.write('};\n')
         generated_hpp.write('typedef struct {\n');
         for d in item.decls:
@@ -567,16 +561,16 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
             methodName = cName(d.name)
             generated_hpp.write('    void (*%s) ( ' % methodName)
             generated_hpp.write(', '.join(formalParams) + ' );\n')
-            generated_cpp.write('void %s%s_cb ( ' % (className, methodName))
+            generated_cpp.write('void %sWrapper%s_cb ( ' % (cName(item.name), methodName))
             generated_cpp.write(', '.join(formalParams) + ' ) {\n')
             indent(generated_cpp, 4)
-            generated_cpp.write(('(static_cast<%s *>(p->parent))->%s ( ' % (className, methodName)) + paramValues + ');\n};\n')
-        generated_hpp.write('} %sCb;\n' % className);
-        generated_cpp.write('%sCb %s_cbTable = {\n' % (className, className));
+            generated_cpp.write(('(static_cast<%sWrapper *>(p->parent))->%s ( ' % (cName(item.name), methodName)) + paramValues + ');\n};\n')
+        generated_hpp.write('} %sWrapperCb;\n' % cName(item.name));
+        generated_cpp.write('%sWrapperCb %sWrapper_cbTable = {\n' % (cName(item.name), cName(item.name)));
         for d in item.decls:
-            generated_cpp.write('    %s%s_cb,\n' % (className, d.name));
+            generated_cpp.write('    %sWrapper%s_cb,\n' % (cName(item.name), d.name));
         generated_cpp.write('};\n');
-        generated_hpp.write('#define %(className)s_reqsize %(maxSize)s\n' % subs)
+        generated_hpp.write('#define %(className)sWrapper_reqsize %(maxSize)s\n' % subs)
         hpp.write('#endif // _%(name)s_H_\n' % {'name': item.name.upper()})
         hpp.close();
         cpp.close();
