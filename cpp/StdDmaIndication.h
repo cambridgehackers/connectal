@@ -45,6 +45,11 @@ class MMUConfigIndication : public MMUConfigIndicationWrapper
     if (--error_limit < 0)
         exit(-1);
   }
+  virtual void dmaError (uint32_t code, uint32_t pointer, uint64_t offset, uint64_t extra) {
+    fprintf(stderr, "MMUConfigIndication::dmaError(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
+    if (--error_limit < 0)
+        exit(-1);
+  }
   virtual void idResponse(uint32_t sglId){
     portalMemory->sglIdResp(sglId);
   }
