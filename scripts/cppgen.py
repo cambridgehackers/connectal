@@ -154,20 +154,6 @@ class MethodMixin:
         else:
             f.write('{ %s_%s (' % (className, methodName))
             f.write(', '.join(paramValues) + '); };\n')
-    def emitCStructDeclaration(self, f, of, namespace, className):
-        paramValues = ', '.join([p.name for p in self.params])
-        formalParams = self.formalParameters(self.params)
-        formalParams.insert(0, ' struct PortalInternal *p')
-        methodName = cName(self.name)
-        of.write('    void (*%s) ( ' % methodName)
-        of.write(', '.join(formalParams))
-        of.write(' );\n')
-        f.write('void %s%s_cb ( ' % (className, methodName))
-        f.write(', '.join(formalParams))
-        f.write(' ) {\n')
-        indent(f, 4)
-        f.write(('(static_cast<%s *>(p->parent))->%s ( ' % (className, methodName)) + paramValues + ');\n')
-        f.write('};\n')
     def emitCImplementation(self, f, hpp, className, namespace, proxy, doCpp):
         global fdName
 
@@ -572,9 +558,6 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
         namespace = ''
         maxSize = 0;
         className = "%sProxy" % cName(item.name)
-        substitutions = {'namespace': namespace,
-                         'className': className,
-                         'parentClass': item.parentClass('Portal')}
         for d in item.decls:
             t = d.emitCImplementation(cpp, generated_hpp, className, namespace,True, False)
             if t > maxSize:
@@ -619,7 +602,19 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
         hpp.write('};\n')
         generated_hpp.write('typedef struct {\n');
         for d in item.decls:
-            d.emitCStructDeclaration(generated_cpp, generated_hpp, namespace, className)
+            paramValues = ', '.join([p.name for p in d.params])
+            formalParams = d.formalParameters(d.params)
+            formalParams.insert(0, ' struct PortalInternal *p')
+            methodName = cName(d.name)
+            generated_hpp.write('    void (*%s) ( ' % methodName)
+            generated_hpp.write(', '.join(formalParams))
+            generated_hpp.write(' );\n')
+            generated_cpp.write('void %s%s_cb ( ' % (className, methodName))
+            generated_cpp.write(', '.join(formalParams))
+            generated_cpp.write(' ) {\n')
+            indent(generated_cpp, 4)
+            generated_cpp.write(('(static_cast<%s *>(p->parent))->%s ( ' % (className, methodName)) + paramValues + ');\n')
+            generated_cpp.write('};\n')
         generated_hpp.write('} %sCb;\n' % className);
         generated_cpp.write('%sCb %s_cbTable = {\n' % (className, className));
         for d in item.decls:
