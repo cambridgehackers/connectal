@@ -104,9 +104,6 @@ proxyMethodTemplate='''
 };
 '''
 
-paramStructDemarshallStr = 'tmp = p->item->read(p, &temp_working_addr);'
-paramStructMarshallStr = 'p->item->write(p, &temp_working_addr, %s);'
-
 def indent(f, indentation):
     for i in xrange(indentation):
         f.write(' ')
@@ -181,8 +178,7 @@ class EnumMixin:
     def cName(self):
         return self.name
     def collectTypes(self):
-        result = [self]
-        return result
+        return [self]
     def emitCDeclaration(self, name, f, indentation):
         indent(f, indentation)
         if (indentation == 0):
@@ -200,8 +196,7 @@ class EnumMixin:
 
 class InterfaceMixin:
     def collectTypes(self):
-        result = [d.collectTypes() for d in self.decls]
-        return result
+        return [d.collectTypes() for d in self.decls]
     def getSubinterface(self, name):
         subinterfaceName = name
         if not globalv.globalvars.has_key(subinterfaceName):
@@ -229,11 +224,6 @@ class ParamMixin:
         f.write('s %s' % (self.type, self.name))
 
 class TypeMixin:
-    def refParam(self):
-        if (self.isBitField() and self.bitWidth() <= 64):
-            return ''
-        else:
-            return ''
     def cName(self):
         cid = self.name
         cid = cid.replace(' ', '')
@@ -360,15 +350,15 @@ def accumWords(s, pro, atoms):
         #print '%s (2)'% (a[0])
         return [s]+accumWords([],pro+(32-w), atoms)
 
-def generate_marshall(w):
+def generate_marshall(pfmt, w):
     global fdName
     off = 0
     word = []
-    fmt = paramStructMarshallStr
+    fmt = pfmt
     for e in w:
         field = e.name;
         if e.datatype.cName() == 'float':
-            return paramStructMarshallStr % ('*(int*)&' + e.name)
+            return pfmt % ('*(int*)&' + e.name)
         if e.shifted:
             field = '(%s>>%s)' % (field, e.shifted)
         if off:
@@ -382,10 +372,10 @@ def generate_marshall(w):
             fmt = 'p->item->writefd(p, &temp_working_addr, %s);'
     return fmt % (''.join(util.intersperse('|', word)))
 
-def generate_demarshall(w):
+def generate_demarshall(fmt, w):
     off = 0
     word = []
-    word.append(paramStructDemarshallStr)
+    word.append(fmt)
     for e in w:
         # print e.name+' (d)'
         field = 'tmp'
@@ -404,11 +394,10 @@ def generate_demarshall(w):
         else:
             word.append('%s %s (%s)(%s);'%(e.name, e.assignOp, e.datatype.cName(), field))
         off = off+e.width-e.shifted
-    # print ''
     return '\n        '.join(word)
 
 def formalParameters(params, insertPortal):
-    rc = [ 'const %s%s %s' % (p.type.cName(), p.type.refParam(), p.name) for p in params]
+    rc = [ 'const %s %s' % (p.type.cName(), p.name) for p in params]
     if insertPortal:
         rc.insert(0, ' struct PortalInternal *p')
     return ', '.join(rc)
@@ -422,13 +411,16 @@ def gatherMethodInfo(mitem, itemname):
     argWords  = accumWords([], 0, argAtoms)
     fdName = '-1'
 
+    paramStructMarshallStr = 'p->item->write(p, &temp_working_addr, %s);'
+    paramStructDemarshallStr = 'tmp = p->item->read(p, &temp_working_addr);'
+
     if argWords == []:
         paramStructMarshall = [paramStructMarshallStr % '0']
         paramStructDemarshall = [paramStructDemarshallStr]
     else:
-        paramStructMarshall = map(generate_marshall, argWords)
+        paramStructMarshall = map(functools.partial(generate_marshall, paramStructMarshallStr), argWords)
         paramStructMarshall.reverse();
-        paramStructDemarshall = map(generate_demarshall, argWords)
+        paramStructDemarshall = map(functools.partial(generate_demarshall, paramStructDemarshallStr), argWords)
         paramStructDemarshall.reverse();
 
     paramStructDeclarations = [ '%s %s;' % (p.type.cName(), p.name) for p in params]
@@ -493,7 +485,6 @@ def generate_class(item, generatedCFiles, create_cpp_file, generated_hpp, genera
         cpp.write((proxyMethodTemplateDecl + proxyMethodTemplate) % substs)
         generated_hpp.write((proxyMethodTemplateDecl % substs) + ';')
         reqChanNums.append(substs['channelNumber'])
-#'CHAN_NUM_%s' % item.global_name(mitem.name, ""))
     subs = {'className': cName(item.name),
             'maxSize': maxSize * sizeofUint32_t,
             'parentClass': item.parentClass('Portal')}
@@ -509,7 +500,6 @@ def generate_class(item, generatedCFiles, create_cpp_file, generated_hpp, genera
         cpp.write(handleMessageCase % substs)
     cpp.write(handleMessageTemplate2 % subs)
     generated_hpp.write((handleMessageTemplateDecl % subs)+ ';\n')
-    indent(hpp, 0)
     hpp.write(wrapperClassPrefixTemplate % subs)
     for d in item.decls:
         emitMethodDeclaration(d, hpp, '')
