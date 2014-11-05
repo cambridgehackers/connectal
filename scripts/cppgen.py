@@ -129,22 +129,6 @@ class MethodMixin:
             return int
     def formalParameters(self, params):
         return [ 'const %s%s %s' % (p.type.cName(), p.type.refParam(), p.name) for p in params]
-    def emitMethodDeclaration(self, f, className):
-        indent(f, 4)
-        resultTypeName = self.resultTypeName()
-        paramValues = [p.name for p in self.params]
-        paramValues.insert(0, '&pint')
-        methodName = cName(self.name)
-        if className == '':
-            f.write('virtual ')
-        f.write('void %s ( ' % methodName)
-        f.write(', '.join(self.formalParameters(self.params)))
-        f.write(' ) ')
-        if className == '':
-            f.write('= 0;\n')
-        else:
-            f.write('{ %s_%s (' % (className, methodName))
-            f.write(', '.join(paramValues) + '); };\n')
 
 class StructMemberMixin:
     def emitCDeclaration(self, f, indentation):
@@ -469,6 +453,23 @@ def emitCImplementation(mitem):
         }
     return substs, len(argWords)
 
+def emitMethodDeclaration(mitem, f, className):
+    indent(f, 4)
+    resultTypeName = mitem.resultTypeName()
+    paramValues = [p.name for p in mitem.params]
+    paramValues.insert(0, '&pint')
+    methodName = cName(mitem.name)
+    if className == '':
+        f.write('virtual ')
+    f.write('void %s ( ' % methodName)
+    f.write(', '.join(mitem.formalParameters(mitem.params)))
+    f.write(' ) ')
+    if className == '':
+        f.write('= 0;\n')
+    else:
+        f.write('{ %s_%s (' % (className, methodName))
+        f.write(', '.join(paramValues) + '); };\n')
+
 def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
     def create_cpp_file(name):
         fname = os.path.join(project_dir, 'jni', name)
@@ -533,7 +534,7 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
         generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(className)s_reqsize %(maxSize)s\n' % subs)
         hpp.write(proxyClassPrefixTemplate % subs)
         for d in item.decls:
-            d.emitMethodDeclaration(hpp, cName(item.name))
+            emitMethodDeclaration(d, hpp, cName(item.name))
         hpp.write('};\n')
         cpp.write(handleMessageTemplate1 % subs)
         for mitem in item.decls:
@@ -551,7 +552,7 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
         indent(hpp, 0)
         hpp.write(wrapperClassPrefixTemplate % subs)
         for d in item.decls:
-            d.emitMethodDeclaration(hpp, '')
+            emitMethodDeclaration(d, hpp, '')
         hpp.write('};\n')
         generated_hpp.write('typedef struct {\n');
         for d in item.decls:
@@ -570,7 +571,6 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
         for d in item.decls:
             generated_cpp.write('    %s%s_cb,\n' % (cName(item.name), d.name));
         generated_cpp.write('};\n');
-        #generated_hpp.write('#define %(className)s_reqsize %(maxSize)s\n' % subs)
         hpp.write('#endif // _%(name)s_H_\n' % {'name': item.name.upper()})
         hpp.close();
         cpp.close();
