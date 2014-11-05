@@ -33,34 +33,34 @@ import math
 
 sizeofUint32_t = 4
 proxyClassPrefixTemplate='''
-class %(namespace)s%(className)s : public %(parentClass)s {
+class %(className)s : public %(parentClass)s {
 public:
-    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, %(namespace)s%(className)s_reqsize, NULL, NULL, poller) {
+    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, NULL, NULL, poller) {
         pint.parent = static_cast<void *>(this);
     };
-    %(className)s(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(namespace)s%(className)s_reqsize, NULL, NULL, item, param, poller) {
+    %(className)s(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, NULL, NULL, item, param, poller) {
         pint.parent = static_cast<void *>(this);
     };
 '''
 
 wrapperClassPrefixTemplate='''
 extern %(className)sCb %(className)s_cbTable;
-class %(namespace)s%(className)s : public %(parentClass)s {
+class %(className)s : public %(parentClass)s {
 public:
-    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, %(namespace)s%(className)s_reqsize, %(namespace)s%(className)s_handleMessage, (void *)&%(className)s_cbTable, poller) {
+    %(className)s(int id, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, %(className)s_handleMessage, (void *)&%(className)s_cbTable, poller) {
         pint.parent = static_cast<void *>(this);
     };
-    %(className)s(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(namespace)s%(className)s_reqsize, %(namespace)s%(className)s_handleMessage, (void *)&%(className)s_cbTable, item, param, poller) {
+    %(className)s(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, %(className)s_handleMessage, (void *)&%(className)s_cbTable, item, param, poller) {
         pint.parent = static_cast<void *>(this);
     };
 '''
 
 handleMessageTemplateDecl='''
-int %(namespace)s%(className)s_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
+int %(className)s_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
 '''
 
 handleMessageTemplate1='''
-int %(namespace)s%(className)s_handleMessage(PortalInternal *p, unsigned int channel, int messageFd)
+int %(className)s_handleMessage(PortalInternal *p, unsigned int channel, int messageFd)
 {    
     static int runaway = 0;
     int tmpfd;
@@ -70,9 +70,9 @@ int %(namespace)s%(className)s_handleMessage(PortalInternal *p, unsigned int cha
 
 handleMessageTemplate2='''
     default:
-        PORTAL_PRINTF("%(namespace)s%(className)s_handleMessage: unknown channel 0x%%x\\n", channel);
+        PORTAL_PRINTF("%(className)s_handleMessage: unknown channel 0x%%x\\n", channel);
         if (runaway++ > 10) {
-            PORTAL_PRINTF("%(namespace)s%(className)s_handleMessage: too many bogus indications, exiting\\n");
+            PORTAL_PRINTF("%(className)s_handleMessage: too many bogus indications, exiting\\n");
 #ifndef __KERNEL__
             exit(-1);
 #endif
@@ -84,13 +84,13 @@ handleMessageTemplate2='''
 '''
 
 proxyMethodTemplateDecl='''
-void %(namespace)s%(className)s_%(methodName)s (struct PortalInternal *p %(paramSeparator)s %(paramDeclarations)s );'''
+void %(className)s_%(methodName)s (struct PortalInternal *p %(paramSeparator)s %(paramDeclarations)s );'''
 
 proxyMethodTemplate='''
-void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p %(paramSeparator)s %(paramDeclarations)s )
+void %(className)s_%(methodName)s (PortalInternal *p %(paramSeparator)s %(paramDeclarations)s )
 {
     volatile unsigned int* temp_working_addr = p->item->mapchannelReq(p, %(channelNumber)s);
-    if (p->item->busywait(p, temp_working_addr, "%(namespace)s%(className)s_%(methodName)s")) return;
+    if (p->item->busywait(p, temp_working_addr, "%(className)s_%(methodName)s")) return;
     %(paramStructMarshall)s
     p->item->send(p, (%(channelNumber)s << 16) | %(wordLenP1)s, %(fdName)s);
 };
@@ -114,7 +114,7 @@ def capitalize(s):
     return '%s%s' % (s[0].upper(), s[1:])
 
 class NoCMixin:
-    def emitCDeclaration(self, f, indentation, namespace):
+    def emitCDeclaration(self, f, indentation):
         pass
 
 class MethodMixin:
@@ -129,7 +129,7 @@ class MethodMixin:
             return int
     def formalParameters(self, params):
         return [ 'const %s%s %s' % (p.type.cName(), p.type.refParam(), p.name) for p in params]
-    def emitMethodDeclaration(self, f, proxy, indentation, namespace, className):
+    def emitMethodDeclaration(self, f, proxy, indentation, className):
         indent(f, indentation)
         resultTypeName = self.resultTypeName()
         paramValues = [p.name for p in self.params]
@@ -147,7 +147,7 @@ class MethodMixin:
             f.write(', '.join(paramValues) + '); };\n')
 
 class StructMemberMixin:
-    def emitCDeclaration(self, f, indentation, namespace):
+    def emitCDeclaration(self, f, indentation):
         indent(f, indentation)
         f.write('%s %s' % (self.type.cName(), self.name))
         if self.type.isBitField():
@@ -155,10 +155,10 @@ class StructMemberMixin:
         f.write(';\n')
 
 class TypeDefMixin:
-    def emitCDeclaration(self,f,indentation, namespace):
+    def emitCDeclaration(self,f,indentation):
         #print 'TypeDefMixin.emitCdeclaration', self.tdtype.type, self.name, self.tdtype
         if self.tdtype.type == 'Struct' or self.tdtype.type == 'Enum':
-            self.tdtype.emitCDeclaration(self.name,f,indentation,namespace)
+            self.tdtype.emitCDeclaration(self.name,f,indentation)
         elif self.name == 'SpecialTypeForSendingFd':
             pass
         elif False and self.tdtype.type == 'Type':
@@ -170,20 +170,20 @@ class TypeDefMixin:
                 #print 'resolved to', tdtype.type, tdtype
             if tdtype.type != 'Type':
                 #print 'emitting declaration'
-                tdtype.emitCDeclaration(self.name,f,indentation,namespace)
+                tdtype.emitCDeclaration(self.name,f,indentation)
             
 class StructMixin:
     def collectTypes(self):
         result = [self]
         result.append(self.elements)
         return result
-    def emitCDeclaration(self, name, f, indentation, namespace):
+    def emitCDeclaration(self, name, f, indentation):
         indent(f, indentation)
         if (indentation == 0):
             f.write('typedef ')
         f.write('struct %s {\n' % name)
         for e in self.elements:
-            e.emitCDeclaration(f, indentation+4, namespace)
+            e.emitCDeclaration(f, indentation+4)
         indent(f, indentation)
         f.write('}')
         if (indentation == 0):
@@ -200,7 +200,7 @@ class EnumMixin:
     def collectTypes(self):
         result = [self]
         return result
-    def emitCDeclaration(self, name, f, indentation, namespace):
+    def emitCDeclaration(self, name, f, indentation):
         indent(f, indentation)
         if (indentation == 0):
             f.write('typedef ')
@@ -241,7 +241,7 @@ class InterfaceMixin:
 class ParamMixin:
     def cName(self):
         return self.name
-    def emitCDeclaration(self, f, indentation, namespace):
+    def emitCDeclaration(self, f, indentation):
         indent(f, indentation)
         f.write('s %s' % (self.type, self.name))
 
@@ -494,7 +494,7 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
                 print 'Skipping C++ declaration for parameterized type', v.name
                 continue
             try:
-                v.emitCDeclaration(generated_hpp, 0, '')
+                v.emitCDeclaration(generated_hpp, 0)
             except:
                 print 'Skipping typedef', v.name
                 traceback.print_exc()
@@ -515,7 +515,6 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
         hpp.write('#include "%s.h"\n' % item.parentClass("portal"))
         generated_cpp.write('\n/************** Start of %sWrapper CPP ***********/\n' % item.name)
         generated_cpp.write('#include "%s"\n' % hppname)
-        namespace = ''
         maxSize = 0;
         reqChanNums = []
         className = "%sProxy" % cName(item.name)
@@ -524,32 +523,28 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
             if t > maxSize:
                 maxSize = t
             substs['responseCase'] = ''
-            substs['namespace'] = namespace
             substs['className'] = className
-            substs['channelNumber'] = 'CHAN_NUM_%s_%s' % (className, cName(mitem.name))
+            substs['channelNumber'] = 'CHAN_NUM_%s_%s' % (cName(item.name), cName(mitem.name))
             cpp.write(proxyMethodTemplate % substs)
             generated_hpp.write(proxyMethodTemplateDecl % substs)
-            reqChanNums.append('CHAN_NUM_%s' % item.global_name(mitem.name, "Proxy"))
+            reqChanNums.append('CHAN_NUM_%s' % item.global_name(mitem.name, ""))
         subs = {'className': className,
-                'namespace': namespace,
                 'maxSize': maxSize * sizeofUint32_t,
                 'parentClass': item.parentClass('Portal')}
-        generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(namespace)s%(className)s_reqsize %(maxSize)s\n' % subs)
+        generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(className)s_reqsize %(maxSize)s\n' % subs)
         hpp.write(proxyClassPrefixTemplate % subs)
         for d in item.decls:
-            d.emitMethodDeclaration(hpp, True, 4, namespace, className)
+            d.emitMethodDeclaration(hpp, True, 4, className)
         hpp.write('};\n')
         className = "%sWrapper" % cName(item.name)
         subs = {'className': className,
-                'namespace': namespace,
                 'maxSize': maxSize * sizeofUint32_t,
                 'parentClass': item.parentClass('Portal')}
         cpp.write(handleMessageTemplate1 % subs)
         for mitem in item.decls:
             substs, t = emitCImplementation(mitem)
-            substs['namespace'] = namespace
             substs['className'] = className
-            substs['channelNumber'] = 'CHAN_NUM_%s_%s' % (className, cName(mitem.name))
+            substs['channelNumber'] = 'CHAN_NUM_%s_%s' % (cName(item.name), cName(mitem.name))
             respParams = [p.name for p in mitem.params]
             respParams.insert(0, 'p')
             substs['responseCase'] = ('((%(className)sCb *)p->cb)->%(name)s(%(params)s);'
@@ -560,12 +555,9 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
         cpp.write(handleMessageTemplate2 % subs)
         generated_hpp.write(handleMessageTemplateDecl % subs)
         indent(hpp, 0)
-        indChanNums = []
-        for d in item.decls:
-            indChanNums.append('CHAN_NUM_%s' % item.global_name(cName(d.name), "Wrapper"))
         hpp.write(wrapperClassPrefixTemplate % subs)
         for d in item.decls:
-            d.emitMethodDeclaration(hpp, False, 4, namespace, className)
+            d.emitMethodDeclaration(hpp, False, 4, className)
         hpp.write('};\n')
         generated_hpp.write('typedef struct {\n');
         for d in item.decls:
@@ -584,7 +576,7 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
         for d in item.decls:
             generated_cpp.write('    %s%s_cb,\n' % (className, d.name));
         generated_cpp.write('};\n');
-        generated_hpp.write('enum { ' + ','.join(indChanNums) + '};\n#define %(namespace)s%(className)s_reqsize %(maxSize)s\n' % subs)
+        generated_hpp.write('#define %(className)s_reqsize %(maxSize)s\n' % subs)
         hpp.write('#endif // _%(name)s_H_\n' % {'name': item.name.upper()})
         hpp.close();
         cpp.close();
