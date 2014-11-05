@@ -37,10 +37,10 @@ proxyClassPrefixTemplate='''
 class %(className)sProxy : public %(parentClass)s {
 public:
     %(className)sProxy(int id, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, NULL, NULL, poller) {
-        pint.parent = static_cast<void *>(this);
+        //pint.parent = static_cast<void *>(this);
     };
     %(className)sProxy(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, NULL, NULL, item, param, poller) {
-        pint.parent = static_cast<void *>(this);
+        //pint.parent = static_cast<void *>(this);
     };
 '''
 
@@ -66,6 +66,16 @@ handleMessageTemplate1='''
     unsigned int tmp;
     volatile unsigned int* temp_working_addr = p->item->mapchannelInd(p, channel);
     switch (channel) {'''
+
+handleMessageCase='''
+    case %(channelNumber)s: 
+        {
+        p->item->recv(p, temp_working_addr, %(wordLen)s, &tmpfd);
+        %(paramStructDeclarations)s
+        %(paramStructDemarshall)s
+        %(responseCase)s
+        }
+        break;'''
 
 handleMessageTemplate2='''
     default:
@@ -96,16 +106,6 @@ proxyMethodTemplate='''
 
 paramStructDemarshallStr = 'tmp = p->item->read(p, &temp_working_addr);'
 paramStructMarshallStr = 'p->item->write(p, &temp_working_addr, %s);'
-
-msgDemarshallTemplate='''
-    case %(channelNumber)s: 
-        {
-        p->item->recv(p, temp_working_addr, %(wordLen)s, &tmpfd);
-        %(paramStructDeclarations)s
-        %(paramStructDemarshall)s
-        %(responseCase)s
-        }
-        break;'''
 
 def indent(f, indentation):
     for i in xrange(indentation):
@@ -413,7 +413,7 @@ def formalParameters(params, insertPortal):
         rc.insert(0, ' struct PortalInternal *p')
     return ', '.join(rc)
 
-def gatherMethodInfo(mitem):
+def gatherMethodInfo(mitem, itemname):
     global fdName
     params = mitem.params
     
@@ -434,6 +434,8 @@ def gatherMethodInfo(mitem):
     paramStructDeclarations = [ '%s %s;' % (p.type.cName(), p.name) for p in params]
     if not params:
         paramStructDeclarations = ['        int padding;\n']
+    respParams = [p.name for p in params]
+    respParams.insert(0, 'p')
     substs = {
         'methodName': cName(mitem.name),
         'paramDeclarations': formalParameters(params, False),
@@ -445,7 +447,13 @@ def gatherMethodInfo(mitem):
         'resultType': mitem.resultTypeName(),
         'wordLen': len(argWords),
         'wordLenP1': len(argWords) + 1,
-        'fdName': fdName
+        'fdName': fdName,
+        'className': cName(itemname),
+        'channelNumber': 'CHAN_NUM_%s_%s' % (cName(itemname), cName(mitem.name)),
+        'responseCase': ('((%(className)sCb *)p->cb)->%(name)s(%(params)s);'
+                          % { 'name': mitem.name,
+                              'className' : cName(itemname),
+                              'params': ', '.join(respParams)})
         }
     return substs, len(argWords)
 
@@ -479,16 +487,13 @@ def generate_class(item, generatedCFiles, create_cpp_file, generated_hpp, genera
     maxSize = 0;
     reqChanNums = []
     for mitem in item.decls:
-        substs, t = gatherMethodInfo(mitem)
+        substs, t = gatherMethodInfo(mitem, item.name)
         if t > maxSize:
             maxSize = t
-        substs['responseCase'] = ''
-        substs['className'] = cName(item.name)
-        substs['channelNumber'] = 'CHAN_NUM_%s_%s' % (cName(item.name), cName(mitem.name))
-        cpp.write(proxyMethodTemplateDecl % substs)
-        cpp.write(proxyMethodTemplate % substs)
+        cpp.write((proxyMethodTemplateDecl + proxyMethodTemplate) % substs)
         generated_hpp.write((proxyMethodTemplateDecl % substs) + ';')
-        reqChanNums.append('CHAN_NUM_%s' % item.global_name(mitem.name, ""))
+        reqChanNums.append(substs['channelNumber'])
+#'CHAN_NUM_%s' % item.global_name(mitem.name, ""))
     subs = {'className': cName(item.name),
             'maxSize': maxSize * sizeofUint32_t,
             'parentClass': item.parentClass('Portal')}
@@ -500,15 +505,8 @@ def generate_class(item, generatedCFiles, create_cpp_file, generated_hpp, genera
     cpp.write((handleMessageTemplateDecl % subs))
     cpp.write(handleMessageTemplate1 % subs)
     for mitem in item.decls:
-        substs, t = gatherMethodInfo(mitem)
-        substs['channelNumber'] = 'CHAN_NUM_%s_%s' % (cName(item.name), cName(mitem.name))
-        respParams = [p.name for p in mitem.params]
-        respParams.insert(0, 'p')
-        substs['responseCase'] = ('((%(className)sCb *)p->cb)->%(name)s(%(params)s);'
-                          % { 'name': mitem.name,
-                              'className' : cName(item.name),
-                              'params': ', '.join(respParams)})
-        cpp.write(msgDemarshallTemplate % substs)
+        substs, t = gatherMethodInfo(mitem, item.name)
+        cpp.write(handleMessageCase % substs)
     cpp.write(handleMessageTemplate2 % subs)
     generated_hpp.write((handleMessageTemplateDecl % subs)+ ';\n')
     indent(hpp, 0)

@@ -31,6 +31,7 @@
 #include "linux/dma-buf.h"
 #define assert(A)
 #else
+#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
@@ -219,6 +220,7 @@ void init_portal_memory(void)
       global_pa_fd = open("/dev/portalmem", O_RDWR);
   if (global_pa_fd < 0){
     PORTAL_PRINTF("Failed to open /dev/portalmem pa_fd=%d errno=%d\n", global_pa_fd, errno);
+    exit(ENODEV);
   }
 #endif
 }
