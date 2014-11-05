@@ -24,12 +24,18 @@ import Vector::*;
 import GetPut::*;
 import FIFO::*;
 import FIFOF::*;
+import GetPut::*;
+import ClientServer::*;
 import CtrlMux::*;
 
 import Pipe::*;
 import Portal::*;
 import MemTypes::*;
 import AddressGenerator::*;
+import MemTypes::*;
+import MemreadEngine::*;
+import MemwriteEngine::*;
+import ConnectalMemory::*;
 
 typedef struct {
     Bit#(1) select;
@@ -233,7 +239,7 @@ module mkPipeOutMemSlave#(PipeOut#(Bit#(dataWidth)) methodPipe)(PhysMemSlave#(ad
    endinterface
 endmodule
 
-module mkMemPortal#(Bit#(slaveDataWidth) ifcId, 
+module mkMemPortal#(Bit#(slaveDataWidth) ifcId,
 		    PipePortal#(numRequests, numIndications, slaveDataWidth) portal)(MemPortal#(slaveAddrWidth, slaveDataWidth))
    provisos ( Add#(1, i__, slaveDataWidth)
 	     ,Add#(c__, 8, slaveAddrWidth)
@@ -254,3 +260,140 @@ module mkMemPortal#(Bit#(slaveDataWidth) ifcId,
    interface WriteOnly top = ctrlPort.top;
 endmodule
 
+typedef enum {
+   Idle,
+   HeadRequested,
+   TailRequested,
+   RequestMessage,
+   MessageHeaderRequested,
+   MessageRequested,
+   UpdateTail,
+   Waiting,
+   Stop
+   } SharedMemoryPortalState deriving (Bits,Eq);
+
+module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal)(SharedMemoryPortal#(64));
+
+   MemreadEngineV#(64,2,2) readEngine <- mkMemreadEngine();
+   MemwriteEngineV#(64,2,2) writeEngine <- mkMemwriteEngine();
+
+   Reg#(Bit#(32)) sglIdReg <- mkReg(0);
+   Reg#(Bool)     readyReg   <- mkReg(False);
+
+   if (valueOf(numRequests) > 0) begin
+      // read the head and tail pointers, if they are different, then read a request
+      Reg#(Bit#(32)) limitReg <- mkReg(0);
+      Reg#(Bit#(32)) reqHeadReg <- mkReg(0);
+      Reg#(Bit#(32)) reqTailReg <- mkReg(0);
+      Reg#(Bit#(16)) wordCountReg <- mkReg(0);
+      Reg#(Bit#(16)) methodIdReg <- mkReg(0);
+      Reg#(SharedMemoryPortalState) reqState <- mkReg(Idle);
+
+      rule updateReqHeadTail if (reqState == Idle && readyReg);
+	 $display("updateReqHeadTail");
+	 readEngine.readServers[0].request.put(MemengineCmd { sglId: sglIdReg,
+							     base: 0,
+							     burstLen: 16,
+							     len: 16
+							     });
+	 reqState <= HeadRequested;
+      endrule
+
+      rule receiveReqHead if (reqState == HeadRequested || reqState == TailRequested);
+	 let data <- toGet(readEngine.dataPipes[0]).get();
+	 let w0 = data[31:0];
+	 let w1 = data[63:32];
+	 let head = reqHeadReg;
+	 let tail = reqTailReg;
+	 $display("receiveReqHead state=%d w0=%x w1=%x", reqState, w0, w1);
+	 if (reqState == HeadRequested) begin
+	    reqHeadReg <= w1;
+	    reqState <= TailRequested;
+	 end
+	 else begin
+	    tail = w0;
+	    if (reqTailReg == 0)
+	       reqTailReg <= tail;
+	     if (tail != reqHeadReg)
+		reqState <= RequestMessage;
+	     else
+		reqState <= Idle;
+	 end
+      endrule
+
+      rule requestMessage if (reqState == RequestMessage);
+	 Bit#(32) wordCount = reqHeadReg - reqTailReg;
+	 $display("requestMessage id=%d tail=%h wordCount=%d", sglIdReg, reqTailReg, wordCount);
+	 reqTailReg <= reqTailReg + wordCount;
+	 readEngine.readServers[0].request.put(MemengineCmd {sglId: sglIdReg,
+							     base: extend(reqTailReg << 2),
+							     burstLen: 16,
+							     len: wordCount << 2
+							     });
+	 reqState <= MessageHeaderRequested;
+      endrule
+
+      rule receiveMessageHeader if (reqState == MessageHeaderRequested);
+	 let data <- toGet(readEngine.dataPipes[0]).get();
+	 let hdr = data[31:0];
+	 let methodId = hdr[31:16];
+	 let wordCount = hdr[15:0];
+	 methodIdReg <= methodId;
+	 // FIXME: multiword requests
+	 let payload0 = data[63:32];
+	 $display("receiveMessageHeader data=%x methodId=%x wordCount=%x payload0=%x", data, methodId, wordCount, payload0);
+	 portal.requests[methodId].enq(payload0);
+	 if (wordCount <= 2)
+	    reqState <= UpdateTail;
+	 else
+	    reqState <= MessageRequested;
+      endrule
+
+      //GearBox(Bit#(64),Bit#(32)) gb <- mkNto1Gearbox(defaultClock,defaultReset,defaultClock,defaultReset);
+      rule receiveMessage if (reqState == MessageRequested);
+	 let data <- toGet(readEngine.dataPipes[0]).get();
+	 $display("receiveMessage data=%x wordCount=%d", data, wordCountReg);
+	 // FIXME: multiword requests
+	 //portal.requests[methodIdReg].enq(truncate(data));
+	 let wordCount = wordCountReg - 2;
+	 if (wordCountReg <= 2) // fetches two words per cycle
+	    reqState <= UpdateTail;
+	 wordCountReg <= wordCount;
+      endrule
+
+      rule updateTail if (reqState == UpdateTail);
+	 $display("updateTail: tail=%d", reqTailReg);
+	 // update the tail pointer
+	 writeEngine.writeServers[0].request.put(MemengineCmd {sglId: sglIdReg,
+							       base: 8,
+							       len: 8,
+							       burstLen: 8
+							       });
+	 writeEngine.dataPipes[0].enq(extend(reqTailReg));
+	 reqState <= Waiting;
+      endrule
+      rule waiting if (reqState == Waiting);
+	 let done <- writeEngine.writeServers[0].response.get();
+	 $display("done waiting for write");
+	 reqState <= Idle;
+      endrule
+
+      rule consumeResponse;
+	 let response <- readEngine.readServers[0].response.get();
+      endrule
+
+   end
+   if (valueOf(numIndications) > 0) begin
+   end
+   interface SharedMemoryPortalConfig cfg;
+      method Action setSglId(Bit#(32) id);
+	 $display("setSglId id=%d", id);
+	 sglIdReg <= id;
+	 readyReg <= True;
+      endmethod
+   endinterface
+   interface MemReadClient  readClient = readEngine.dmaClient;
+   interface MemWriteClient writeClient = writeEngine.dmaClient;
+   interface ReadOnly interrupt;
+   endinterface
+endmodule

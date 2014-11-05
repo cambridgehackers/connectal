@@ -26,6 +26,7 @@ import MemTypes::*;
 import Leds::*;
 import XADC::*;
 import Pipe::*;
+import ConnectalMemory::*;
 
 // implementation of a Portal as a group of Pipes
 interface PipePortal#(numeric type numRequests, numeric type numIndications, numeric type slaveDataWidth);
@@ -37,7 +38,7 @@ endinterface
 interface MemPortal#(numeric type slaveAddrWidth, numeric type slaveDataWidth);
    interface PhysMemSlave#(slaveAddrWidth,slaveDataWidth) slave;
    interface ReadOnly#(Bool) interrupt;
-   interface WriteOnly#(Bool) top; 
+   interface WriteOnly#(Bool) top;
 endinterface
 
 function PhysMemSlave#(_a,_d) getSlave(MemPortal#(_a,_d) p);
@@ -54,6 +55,13 @@ function Vector#(16, ReadOnly#(Bool)) getInterruptVector(Vector#(numPortals, Mem
       interrupts[i] = getInterrupt(portals[i]);
    return interrupts;
 endfunction
+
+interface SharedMemoryPortal#(numeric type dataBusWidth);
+   interface MemReadClient#(dataBusWidth)  readClient;
+   interface MemWriteClient#(dataBusWidth) writeClient;
+   interface SharedMemoryPortalConfig cfg;
+   interface ReadOnly#(Bool) interrupt;
+endinterface
 
 typedef MemPortal#(16,32) StdPortal;
 

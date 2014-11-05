@@ -104,3 +104,7 @@ interface DmaDebugRequest;
    method Action getStateDbg(ChannelType rc);
    method Action getMemoryTraffic(ChannelType rc);
 endinterface
+
+interface SharedMemoryPortalConfig;
+   method Action setSglId(Bit#(32) sglId);
+endinterface
