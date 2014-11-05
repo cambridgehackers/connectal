@@ -286,6 +286,8 @@ module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal
       Reg#(Bit#(32)) reqHeadReg <- mkReg(0);
       Reg#(Bit#(32)) reqTailReg <- mkReg(0);
       Reg#(Bit#(16)) wordCountReg <- mkReg(0);
+      Reg#(Bit#(16)) demuxCountReg <- mkReg(0);
+      Reg#(Bit#(16)) messageWordsReg <- mkReg(0);
       Reg#(Bit#(16)) methodIdReg <- mkReg(0);
       Reg#(SharedMemoryPortalState) reqState <- mkReg(Idle);
 
@@ -325,40 +327,75 @@ module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal
 	 Bit#(32) wordCount = reqHeadReg - reqTailReg;
 	 $display("requestMessage id=%d tail=%h wordCount=%d", sglIdReg, reqTailReg, wordCount);
 	 reqTailReg <= reqTailReg + wordCount;
+	 wordCountReg <= truncate(wordCount);
+	 demuxCountReg <= truncate(wordCount);
+	 let fetchCount = wordCount;
+	 if ((fetchCount & 1) == 1)
+	    fetchCount = fetchCount + 1;
 	 readEngine.readServers[0].request.put(MemengineCmd {sglId: sglIdReg,
 							     base: extend(reqTailReg << 2),
 							     burstLen: 16,
-							     len: wordCount << 2
+							     len: fetchCount << 2
 							     });
 	 reqState <= MessageHeaderRequested;
       endrule
 
-      rule receiveMessageHeader if (reqState == MessageHeaderRequested);
+      FIFOF#(Vector#(2,Maybe#(Bit#(32)))) readFifo <- mkFIFOF();
+      rule demuxwords;
 	 let data <- toGet(readEngine.dataPipes[0]).get();
-	 let hdr = data[31:0];
-	 let methodId = hdr[31:16];
-	 let wordCount = hdr[15:0];
-	 methodIdReg <= methodId;
-	 // FIXME: multiword requests
-	 let payload0 = data[63:32];
-	 $display("receiveMessageHeader data=%x methodId=%x wordCount=%x payload0=%x", data, methodId, wordCount, payload0);
-	 portal.requests[methodId].enq(payload0);
-	 if (wordCount <= 2)
-	    reqState <= UpdateTail;
-	 else
-	    reqState <= MessageRequested;
+	 Vector#(2,Bit#(32)) dvec = unpack(data);
+	 function Maybe#(a) toValid(a in); return tagged Valid in; endfunction
+	 Vector#(2,Maybe#(Bit#(32))) mvec = map(toValid, dvec);
+	 let demuxCount = demuxCountReg - 2;
+	 if (demuxCountReg == 1) begin
+	    mvec[1] = tagged Invalid;
+	    demuxCount = 0;
+	 end
+	 demuxCountReg <= demuxCount;
+	 readFifo.enq(mvec);
+      endrule
+
+      PipeOut#(Vector#(2,Maybe#(Bit#(32)))) readPipe2 = toPipeOut(readFifo);
+      PipeOut#(Maybe#(Bit#(32))) readPipe <- mkFunnel1(readPipe2);
+
+      rule receiveMessageHeader if (reqState == MessageHeaderRequested);
+	 let maybehdr <- toGet(readPipe).get();
+	 if (maybehdr matches tagged Valid .hdr) begin
+	     let methodId = hdr[31:16];
+	     let messageWords = hdr[15:0];
+	     methodIdReg <= methodId;
+	     $display("receiveMessageHeader hdr=%x methodId=%x messageWords=%d wordCount=%d", hdr, methodId, messageWords, wordCountReg);
+	     wordCountReg <= wordCountReg - 1;
+	     messageWordsReg <= messageWords - 1;
+	     if (wordCountReg <= 1)
+		reqState <= UpdateTail;
+	     else if (messageWords <= 1)
+		reqState <= MessageHeaderRequested;
+	     else
+		reqState <= MessageRequested;
+	 end
+	 else begin
+	    $display("receiveMessageHeader tagged invalid %x", maybehdr);
+	 end
       endrule
 
       //GearBox(Bit#(64),Bit#(32)) gb <- mkNto1Gearbox(defaultClock,defaultReset,defaultClock,defaultReset);
       rule receiveMessage if (reqState == MessageRequested);
-	 let data <- toGet(readEngine.dataPipes[0]).get();
-	 $display("receiveMessage data=%x wordCount=%d", data, wordCountReg);
-	 // FIXME: multiword requests
-	 //portal.requests[methodIdReg].enq(truncate(data));
-	 let wordCount = wordCountReg - 2;
-	 if (wordCountReg <= 2) // fetches two words per cycle
-	    reqState <= UpdateTail;
-	 wordCountReg <= wordCount;
+	 let maybedata <- toGet(readPipe).get();
+	 if (maybedata matches tagged Valid .data) begin
+	     $display("receiveMessage data=%x messageWords=%d wordCount=%d", data, messageWordsReg, wordCountReg);
+	     portal.requests[methodIdReg].enq(data);
+
+	     messageWordsReg <= messageWordsReg - 1;
+	     wordCountReg <= wordCountReg - 1;
+	     if (messageWordsReg <= 1)
+		reqState <= MessageHeaderRequested;
+	     else if (wordCountReg <= 1)
+		reqState <= UpdateTail;
+	 end
+	 else begin
+	    $display("receiveMessage tagged Invalid %x", maybedata);
+	 end
       endrule
 
       rule updateTail if (reqState == UpdateTail);
