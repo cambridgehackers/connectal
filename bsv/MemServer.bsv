@@ -95,12 +95,6 @@ module mkMemServerRW#(DmaDebugIndication dmaIndication,
    MemServer#(PhysAddrWidth,dataWidth,nMasters) reader <- mkMemServerR(dmaIndication,  readClients, mmus);
    MemServer#(PhysAddrWidth,dataWidth,nMasters) writer <- mkMemServerW(dmaIndication, writeClients, mmus);
    
-   FIFO#(DmaError) dmaErrorFifo <- mkFIFO();
-   rule dmaError;
-      let error <- toGet(dmaErrorFifo).get();
-      dmaIndication.error(extend(pack(error.errorType)), error.pref, 0, 0);
-   endrule
-
    function PhysMemMaster#(PhysAddrWidth,dataWidth) mkm(Integer i) = (interface PhysMemMaster#(PhysAddrWidth,dataWidth);
 								 interface PhysMemReadClient read_client = reader.masters[i].read_client;
 								 interface PhysMemWriteClient write_client = writer.masters[i].write_client;
@@ -196,12 +190,6 @@ module mkMemServerR#(DmaDebugIndication dmaIndication,
 		      endseq;
    FSM trafficFSM <- mkFSM(trafficStmt);
       
-   FIFO#(DmaError) dmaErrorFifo <- mkFIFO();
-   rule dmaError;
-      let error <- toGet(dmaErrorFifo).get();
-      dmaIndication.error(extend(pack(error.errorType)), error.pref, 0, 0);
-   endrule
-
    interface DmaDebugRequest request;
       method Action getStateDbg(ChannelType rc);
 	 if (rc == Read)
@@ -285,12 +273,6 @@ module mkMemServerW#(DmaDebugIndication dmaIndication,
 			 dmaIndication.reportMemoryTraffic(trafficAccum);
 		      endseq;
    FSM trafficFSM <- mkFSM(trafficStmt);
-
-   FIFO#(DmaError) dmaErrorFifo <- mkFIFO();
-   rule dmaError;
-      let error <- toGet(dmaErrorFifo).get();
-      dmaIndication.error(extend(pack(error.errorType)), error.pref, 0, 0);
-   endrule
 
    interface DmaDebugRequest request;
       method Action getStateDbg(ChannelType rc);
