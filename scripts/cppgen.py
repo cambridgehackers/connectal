@@ -89,10 +89,10 @@ void %(namespace)s%(className)s_%(methodName)s (struct PortalInternal *p %(param
 proxyMethodTemplate='''
 void %(namespace)s%(className)s_%(methodName)s (PortalInternal *p %(paramSeparator)s %(paramDeclarations)s )
 {
-    volatile unsigned int* temp_working_addr = p->item->mapchannelReq(p, %(methodChannelOffset)s);
+    volatile unsigned int* temp_working_addr = p->item->mapchannelReq(p, %(channelNumber)s);
     if (p->item->busywait(p, temp_working_addr, "%(namespace)s%(className)s_%(methodName)s")) return;
     %(paramStructMarshall)s
-    p->item->send(p, (%(methodChannelOffset)s << 16) | %(wordLenP1)s, %(fdName)s);
+    p->item->send(p, (%(channelNumber)s << 16) | %(wordLenP1)s, %(fdName)s);
 };
 '''
 
@@ -123,8 +123,6 @@ def capitalize(s):
 class NoCMixin:
     def emitCDeclaration(self, f, indentation, namespace):
         pass
-    def emitCImplementation(self, f):
-        return -1
 
 class MethodMixin:
     def collectTypes(self):
@@ -154,193 +152,6 @@ class MethodMixin:
         else:
             f.write('{ %s_%s (' % (className, methodName))
             f.write(', '.join(paramValues) + '); };\n')
-    def emitCImplementation(self, f, hpp, className, namespace, proxy, doCpp):
-        global fdName
-
-        # resurse interface types and flattening all structs into a list of types
-        def collectMembers(scope, member):
-            t = member.type
-            tn = member.type.name
-            while 1:
-                if tn == 'Bit':
-                    return [('%s%s'%(scope,member.name),t)]
-                elif tn == 'Int' or tn == 'UInt':
-                    return [('%s%s'%(scope,member.name),t)]
-                elif tn == 'Float':
-                    return [('%s%s'%(scope,member.name),t)]
-                elif tn == 'Vector':
-                    return [('%s%s'%(scope,member.name),t)]
-                elif tn == 'SpecialTypeForSendingFd':
-                    return [('%s%s'%(scope,member.name),t)]
-                else:
-                    td = globalv.globalvars[tn]
-                    #print 'instantiate', t.params
-                    tdtype = td.tdtype.instantiate(dict(zip(td.params, t.params)))
-                    #print '           ', tdtype
-                    if tdtype.type == 'Struct':
-                        ns = '%s%s.' % (scope,member.name)
-                        rv = map(functools.partial(collectMembers, ns), tdtype.elements)
-                        return sum(rv,[])
-                    elif tdtype.type == 'Enum':
-                        return [('%s%s'%(scope,member.name),tdtype)]
-                    else:
-                        #print 'resolved to type', tdtype.type, tdtype.name, tdtype
-                        t = tdtype
-                        tn = tdtype.name
-
-        class paramInfo:
-            def __init__(self, name, width, shifted, datatype, assignOp):
-                self.name = name
-                self.width = width
-                self.shifted = shifted
-                self.datatype = datatype
-                self.assignOp = assignOp
-        # pack flattened struct-member list into 32-bit wide bins.  If a type is wider than 32-bits or 
-        # crosses a 32-bit boundary, it will appear in more than one bin (though with different ranges).  
-        # This is intended to mimick exactly Bluespec struct packing.  The padding must match the code 
-        # in Adapter.bsv.  the argument s is a list of bins, atoms is the flattened list, and pro represents
-        # the number of bits already consumed from atoms[0].
-        def accumWords(s, pro, atoms):
-            if len(atoms) == 0:
-                if len(s) == 0:
-                     return []
-                else:
-                     return [s]
-            w = sum([x.width-x.shifted for x in s])
-            a = atoms[0]
-            thisType = a[1]
-            aw = thisType.bitWidth();
-            #print '%d %d %d' %(aw, pro, w)
-            if (aw-pro+w == 32):
-                s.append(paramInfo(a[0],aw,pro,thisType,'='))
-                #print '%s (0)'% (a[0])
-                return [s]+accumWords([],0,atoms[1:])
-            if (aw-pro+w < 32):
-                s.append(paramInfo(a[0],aw,pro,thisType,'='))
-                #print '%s (1)'% (a[0])
-                return accumWords(s,0,atoms[1:])
-            else:
-                s.append(paramInfo(a[0],pro+(32-w),pro,thisType,'|='))
-                #print '%s (2)'% (a[0])
-                return [s]+accumWords([],pro+(32-w), atoms)
-
-        params = self.params
-        paramDeclarations = self.formalParameters(params)
-        paramStructDeclarations = [ '%s %s;' % (p.type.cName(), p.name) for p in params]
-        
-        argAtoms = sum(map(functools.partial(collectMembers, ''), params), [])
-
-        # for a in argAtoms:
-        #     print a[0]
-        # print ''
-
-        argAtoms.reverse();
-        argWords  = accumWords([], 0, argAtoms)
-
-        # for a in argWords:
-        #     for b in a:
-        #         print '%s[%d:%d]' % (b[0], b[1], b[2])
-        # print ''
-        fdName = '-1'
-
-        def generate_marshall(w):
-            global fdName
-            off = 0
-            word = []
-            fmt = paramStructMarshallStr
-            for e in w:
-                field = e.name;
-		if e.datatype.cName() == 'float':
-		    return paramStructMarshallStr % ('*(int*)&' + e.name)
-                if e.shifted:
-                    field = '(%s>>%s)' % (field, e.shifted)
-                if off:
-                    field = '(%s<<%s)' % (field, off)
-                if e.datatype.bitWidth() > 64:
-                    field = '(const %s & std::bitset<%d>(0xFFFFFFFF)).to_ulong()' % (field, e.datatype.bitWidth())
-                word.append(field)
-                off = off+e.width-e.shifted
-		if e.datatype.cName() == 'SpecialTypeForSendingFd':
-                    fdName = field
-                    fmt = 'p->item->writefd(p, &temp_working_addr, %s);'
-            return fmt % (''.join(util.intersperse('|', word)))
-
-        def generate_demarshall(w):
-            off = 0
-            word = []
-            word.append(paramStructDemarshallStr)
-            for e in w:
-                # print e.name+' (d)'
-                field = 'tmp'
-		if e.datatype.cName() == 'float':
-		    word.append('%s = *(float*)&(%s);'%(e.name,field))
-		    continue
-                if off:
-                    field = '%s>>%s' % (field, off)
-                #print 'JJJ', e.name, '{{'+field+'}}', e.datatype.bitWidth(), e.shifted, e.assignOp, off
-                #if e.datatype.bitWidth() < 32:
-                field = '((%s)&0x%xul)' % (field, ((1 << (e.datatype.bitWidth()-e.shifted))-1))
-                if e.shifted:
-                    field = '((%s)(%s)<<%s)' % (e.datatype.cName(),field, e.shifted)
-		if e.datatype.cName() == 'SpecialTypeForSendingFd':
-		     word.append('%s %s messageFd;'%(e.name, e.assignOp))
-                else:
-		     word.append('%s %s (%s)(%s);'%(e.name, e.assignOp, e.datatype.cName(), field))
-                off = off+e.width-e.shifted
-            # print ''
-            return '\n        '.join(word)
-
-        paramStructDemarshallStr = 'tmp = p->item->read(p, &temp_working_addr);'
-        paramStructMarshallStr = 'p->item->write(p, &temp_working_addr, %s);'
-        if argWords == []:
-            paramStructMarshall = [paramStructMarshallStr % '0']
-            paramStructDemarshall = [paramStructDemarshallStr]
-        else:
-            paramStructMarshall = map(generate_marshall, argWords)
-            paramStructMarshall.reverse();
-            paramStructDemarshall = map(generate_demarshall, argWords)
-            paramStructDemarshall.reverse();
-
-        if not params:
-            paramStructDeclarations = ['        int padding;\n']
-        resultTypeName = self.resultTypeName()
-        substs = {
-            'namespace': namespace,
-            'className': className,
-            'methodName': cName(self.name),
-            'channelNumber': 'CHAN_NUM_%s_%s' % (className, cName(self.name)),
-            'MethodName': capitalize(cName(self.name)),
-            'paramDeclarations': ', '.join(paramDeclarations),
-            'paramReferences': ', '.join([p.name for p in params]),
-            'paramStructDeclarations': '\n        '.join(paramStructDeclarations),
-            'paramStructMarshall': '\n    '.join(paramStructMarshall),
-            'paramSeparator': ',' if params != [] else '',
-            'paramStructDemarshall': '\n        '.join(paramStructDemarshall),
-            'paramNames': ', '.join(['msg->%s' % p.name for p in params]),
-            'resultType': resultTypeName,
-            'methodChannelOffset': 'CHAN_NUM_%s_%s' % (className, cName(self.name)),
-            'wordLen': len(argWords),
-            'wordLenP1': len(argWords) + 1,
-            'fdName': fdName,
-            # if message is empty, we still send an int of padding
-            'payloadSize' : max(4, 4*((sum([p.numBitsBSV() for p in self.params])+31)/32)) 
-            }
-        if (doCpp):
-            f.write(proxyMethodTemplateCpp % substs)
-        elif (not proxy):
-            respParams = [p.name for p in self.params]
-            respParams.insert(0, 'p')
-            substs['responseCase'] = ('((%(className)sCb *)p->cb)->%(name)s(%(params)s);'
-                                      % { 'name': self.name,
-                                          'className' : className,
-                                          'params': ', '.join(respParams)})
-            f.write(msgDemarshallTemplate % substs)
-        else:
-            substs['responseCase'] = ''
-            f.write(proxyMethodTemplate % substs)
-            hpp.write(proxyMethodTemplateDecl % substs)
-        return len(argWords)
-
 
 class StructMemberMixin:
     def emitCDeclaration(self, f, indentation, namespace):
@@ -385,8 +196,6 @@ class StructMixin:
         if (indentation == 0):
             f.write(' %s;' % name)
         f.write('\n')
-    def emitCImplementation(self, f, hpp, className, namespace, doCpp):
-        return -1
 
 class EnumElementMixin:
     def cName(self):
@@ -410,8 +219,6 @@ class EnumMixin:
         if (indentation == 0):
             f.write(' %s;' % name)
         f.write('\n')
-    def emitCImplementation(self, f, hpp, className, namespace, doCpp):
-        return -1
     def bitWidth(self):
         return int(math.ceil(math.log(len(self.elements))))
 
@@ -472,7 +279,7 @@ class TypeMixin:
             else:
                 assert(False)
         elif cid == 'Float':
-	    return 'float'
+            return 'float'
         elif cid == 'Vector':
             return 'bsvvector<%d,%s>' % (self.params[0].numeric(), self.params[1].cName())
         elif cid == 'Action':
@@ -508,6 +315,194 @@ def cName(x):
         return x
     else:
         return x.cName()
+
+class paramInfo:
+    def __init__(self, name, width, shifted, datatype, assignOp):
+        self.name = name
+        self.width = width
+        self.shifted = shifted
+        self.datatype = datatype
+        self.assignOp = assignOp
+
+def emitCImplementation(item, f, hpp, className, namespace, proxy, doCpp):
+    global fdName
+
+    # resurse interface types and flattening all structs into a list of types
+    def collectMembers(scope, member):
+        t = member.type
+        tn = member.type.name
+        while 1:
+            if tn == 'Bit':
+                return [('%s%s'%(scope,member.name),t)]
+            elif tn == 'Int' or tn == 'UInt':
+                return [('%s%s'%(scope,member.name),t)]
+            elif tn == 'Float':
+                return [('%s%s'%(scope,member.name),t)]
+            elif tn == 'Vector':
+                return [('%s%s'%(scope,member.name),t)]
+            elif tn == 'SpecialTypeForSendingFd':
+                return [('%s%s'%(scope,member.name),t)]
+            else:
+                td = globalv.globalvars[tn]
+                #print 'instantiate', t.params
+                tdtype = td.tdtype.instantiate(dict(zip(td.params, t.params)))
+                #print '           ', tdtype
+                if tdtype.type == 'Struct':
+                    ns = '%s%s.' % (scope,member.name)
+                    rv = map(functools.partial(collectMembers, ns), tdtype.elements)
+                    return sum(rv,[])
+                elif tdtype.type == 'Enum':
+                    return [('%s%s'%(scope,member.name),tdtype)]
+                else:
+                    #print 'resolved to type', tdtype.type, tdtype.name, tdtype
+                    t = tdtype
+                    tn = tdtype.name
+
+    # pack flattened struct-member list into 32-bit wide bins.  If a type is wider than 32-bits or 
+    # crosses a 32-bit boundary, it will appear in more than one bin (though with different ranges).  
+    # This is intended to mimick exactly Bluespec struct packing.  The padding must match the code 
+    # in Adapter.bsv.  the argument s is a list of bins, atoms is the flattened list, and pro represents
+    # the number of bits already consumed from atoms[0].
+    def accumWords(s, pro, atoms):
+        if len(atoms) == 0:
+            if len(s) == 0:
+                 return []
+            else:
+                 return [s]
+        w = sum([x.width-x.shifted for x in s])
+        a = atoms[0]
+        thisType = a[1]
+        aw = thisType.bitWidth();
+        #print '%d %d %d' %(aw, pro, w)
+        if (aw-pro+w == 32):
+            s.append(paramInfo(a[0],aw,pro,thisType,'='))
+            #print '%s (0)'% (a[0])
+            return [s]+accumWords([],0,atoms[1:])
+        if (aw-pro+w < 32):
+            s.append(paramInfo(a[0],aw,pro,thisType,'='))
+            #print '%s (1)'% (a[0])
+            return accumWords(s,0,atoms[1:])
+        else:
+            s.append(paramInfo(a[0],pro+(32-w),pro,thisType,'|='))
+            #print '%s (2)'% (a[0])
+            return [s]+accumWords([],pro+(32-w), atoms)
+
+    params = item.params
+    paramDeclarations = item.formalParameters(params)
+    paramStructDeclarations = [ '%s %s;' % (p.type.cName(), p.name) for p in params]
+    
+    argAtoms = sum(map(functools.partial(collectMembers, ''), params), [])
+
+    # for a in argAtoms:
+    #     print a[0]
+    # print ''
+
+    argAtoms.reverse();
+    argWords  = accumWords([], 0, argAtoms)
+
+    # for a in argWords:
+    #     for b in a:
+    #         print '%s[%d:%d]' % (b[0], b[1], b[2])
+    # print ''
+    fdName = '-1'
+
+    def generate_marshall(w):
+        global fdName
+        off = 0
+        word = []
+        fmt = paramStructMarshallStr
+        for e in w:
+            field = e.name;
+            if e.datatype.cName() == 'float':
+                return paramStructMarshallStr % ('*(int*)&' + e.name)
+            if e.shifted:
+                field = '(%s>>%s)' % (field, e.shifted)
+            if off:
+                field = '(%s<<%s)' % (field, off)
+            if e.datatype.bitWidth() > 64:
+                field = '(const %s & std::bitset<%d>(0xFFFFFFFF)).to_ulong()' % (field, e.datatype.bitWidth())
+            word.append(field)
+            off = off+e.width-e.shifted
+            if e.datatype.cName() == 'SpecialTypeForSendingFd':
+                fdName = field
+                fmt = 'p->item->writefd(p, &temp_working_addr, %s);'
+        return fmt % (''.join(util.intersperse('|', word)))
+
+    def generate_demarshall(w):
+        off = 0
+        word = []
+        word.append(paramStructDemarshallStr)
+        for e in w:
+            # print e.name+' (d)'
+            field = 'tmp'
+            if e.datatype.cName() == 'float':
+                word.append('%s = *(float*)&(%s);'%(e.name,field))
+                continue
+            if off:
+                field = '%s>>%s' % (field, off)
+            #print 'JJJ', e.name, '{{'+field+'}}', e.datatype.bitWidth(), e.shifted, e.assignOp, off
+            #if e.datatype.bitWidth() < 32:
+            field = '((%s)&0x%xul)' % (field, ((1 << (e.datatype.bitWidth()-e.shifted))-1))
+            if e.shifted:
+                field = '((%s)(%s)<<%s)' % (e.datatype.cName(),field, e.shifted)
+            if e.datatype.cName() == 'SpecialTypeForSendingFd':
+                word.append('%s %s messageFd;'%(e.name, e.assignOp))
+            else:
+                word.append('%s %s (%s)(%s);'%(e.name, e.assignOp, e.datatype.cName(), field))
+            off = off+e.width-e.shifted
+        # print ''
+        return '\n        '.join(word)
+
+    paramStructDemarshallStr = 'tmp = p->item->read(p, &temp_working_addr);'
+    paramStructMarshallStr = 'p->item->write(p, &temp_working_addr, %s);'
+    if argWords == []:
+        paramStructMarshall = [paramStructMarshallStr % '0']
+        paramStructDemarshall = [paramStructDemarshallStr]
+    else:
+        paramStructMarshall = map(generate_marshall, argWords)
+        paramStructMarshall.reverse();
+        paramStructDemarshall = map(generate_demarshall, argWords)
+        paramStructDemarshall.reverse();
+
+    if not params:
+        paramStructDeclarations = ['        int padding;\n']
+    resultTypeName = item.resultTypeName()
+    substs = {
+        'namespace': namespace,
+        'className': className,
+        'methodName': cName(item.name),
+        'channelNumber': 'CHAN_NUM_%s_%s' % (className, cName(item.name)),
+        'MethodName': capitalize(cName(item.name)),
+        'paramDeclarations': ', '.join(paramDeclarations),
+        'paramReferences': ', '.join([p.name for p in params]),
+        'paramStructDeclarations': '\n        '.join(paramStructDeclarations),
+        'paramStructMarshall': '\n    '.join(paramStructMarshall),
+        'paramSeparator': ',' if params != [] else '',
+        'paramStructDemarshall': '\n        '.join(paramStructDemarshall),
+        'paramNames': ', '.join(['msg->%s' % p.name for p in params]),
+        'resultType': resultTypeName,
+        'wordLen': len(argWords),
+        'wordLenP1': len(argWords) + 1,
+        'fdName': fdName,
+        # if message is empty, we still send an int of padding
+        'payloadSize' : max(4, 4*((sum([p.numBitsBSV() for p in item.params])+31)/32)) 
+        }
+    if (doCpp):
+        f.write(proxyMethodTemplateCpp % substs)
+    elif (not proxy):
+        respParams = [p.name for p in item.params]
+        respParams.insert(0, 'p')
+        substs['responseCase'] = ('((%(className)sCb *)p->cb)->%(name)s(%(params)s);'
+                                  % { 'name': item.name,
+                                      'className' : className,
+                                      'params': ', '.join(respParams)})
+        f.write(msgDemarshallTemplate % substs)
+    else:
+        substs['responseCase'] = ''
+        f.write(proxyMethodTemplate % substs)
+        hpp.write(proxyMethodTemplateDecl % substs)
+    return len(argWords)
+
 
 def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
     def create_cpp_file(name):
@@ -557,10 +552,10 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
         generated_cpp.write('#include "%s"\n' % hppname)
         namespace = ''
         maxSize = 0;
-	reqChanNums = []
+        reqChanNums = []
         className = "%sProxy" % cName(item.name)
         for d in item.decls:
-            t = d.emitCImplementation(cpp, generated_hpp, className, namespace,True, False)
+            t = emitCImplementation(d, cpp, generated_hpp, className, namespace,True, False)
             if t > maxSize:
                 maxSize = t
             reqChanNums.append('CHAN_NUM_%s' % item.global_name(d.name, "Proxy"))
@@ -568,7 +563,7 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
                 'namespace': namespace,
                 'maxSize': maxSize * sizeofUint32_t,
                 'parentClass': item.parentClass('Portal')}
-	generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(namespace)s%(className)s_reqsize %(maxSize)s\n' % subs)
+        generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(namespace)s%(className)s_reqsize %(maxSize)s\n' % subs)
         hpp.write(proxyClassPrefixTemplate % subs)
         for d in item.decls:
             d.emitMethodDeclaration(hpp, True, 4, namespace, className)
@@ -580,12 +575,12 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
                 'parentClass': item.parentClass('Portal')}
         cpp.write(handleMessageTemplate1 % subs)
         for d in item.decls:
-            d.emitCImplementation(cpp, generated_hpp, className, namespace, False, False)
+            emitCImplementation(d, cpp, generated_hpp, className, namespace, False, False)
         cpp.write(handleMessageTemplate2 % subs)
         generated_hpp.write(handleMessageTemplateDecl % subs)
         indent(hpp, 0)
-	indChanNums = []
-	for d in item.decls:
+        indChanNums = []
+        for d in item.decls:
             indChanNums.append('CHAN_NUM_%s' % item.global_name(cName(d.name), "Wrapper"))
         hpp.write(wrapperClassPrefixTemplate % subs)
         for d in item.decls:
@@ -608,7 +603,7 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
         for d in item.decls:
             generated_cpp.write('    %s%s_cb,\n' % (className, d.name));
         generated_cpp.write('};\n');
-	generated_hpp.write('enum { ' + ','.join(indChanNums) + '};\n#define %(namespace)s%(className)s_reqsize %(maxSize)s\n' % subs)
+        generated_hpp.write('enum { ' + ','.join(indChanNums) + '};\n#define %(namespace)s%(className)s_reqsize %(maxSize)s\n' % subs)
         hpp.write('#endif // _%(name)s_H_\n' % {'name': item.name.upper()})
         hpp.close();
         cpp.close();
