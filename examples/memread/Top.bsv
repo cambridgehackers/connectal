@@ -61,7 +61,7 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
    MMUConfigRequestWrapper hostMMUConfigRequestWrapper <- mkMMUConfigRequestWrapper(HostMMUConfigRequest, hostMMU.request);
 
    DmaDebugIndicationProxy hostDmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(HostDmaDebugIndication);
-   MemServer#(PhysAddrWidth,DataBusWidth,1) dma <- mkMemServerR(hostDmaDebugIndicationProxy.ifc, readClients, cons(hostMMU,nil));
+   MemServer#(PhysAddrWidth,DataBusWidth,1) dma <- mkMemServerR(hostMMUConfigIndicationProxy.ifc, hostDmaDebugIndicationProxy.ifc, readClients, cons(hostMMU,nil));
    DmaDebugRequestWrapper hostDmaDebugRequestWrapper <- mkDmaDebugRequestWrapper(HostDmaDebugRequest, dma.request);
 
    Vector#(6,StdPortal) portals;

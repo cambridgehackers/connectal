@@ -47,7 +47,7 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    MMUConfigRequestWrapper hostMMUConfigRequestWrapper <- mkMMUConfigRequestWrapper(HostMMUConfigRequest, hostMMU.request);
 
    DmaDebugIndicationProxy hostDmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(HostDmaDebugIndication);
-   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerR(hostDmaDebugIndicationProxy.ifc, readClients, cons(hostMMU,nil));
+   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerR(hostMMUConfigIndicationProxy.ifc, hostDmaDebugIndicationProxy.ifc, readClients, cons(hostMMU,nil));
    DmaDebugRequestWrapper hostDmaDebugRequestWrapper <- mkDmaDebugRequestWrapper(HostDmaDebugRequest, dma.request);
 
    SmithwatermanIndicationProxy smithwatermanIndicationProxy <- mkSmithwatermanIndicationProxy(SmithwatermanIndication);

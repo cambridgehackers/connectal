@@ -38,7 +38,8 @@ module  mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,TMul#(32,N),E
    MMUConfigRequestWrapper hostMMUConfigRequestWrapper <- mkMMUConfigRequestWrapper(HostMMUConfigRequest, hostMMU.request);
 
    DmaDebugIndicationProxy hostDmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(HostDmaDebugIndication);
-   MemServer#(PhysAddrWidth,TMul#(32,N), NumberOfMasters) dma <- mkMemServerRW(hostDmaDebugIndicationProxy.ifc, readClients, writeClients, cons(hostMMU,nil));
+   MemServer#(PhysAddrWidth,TMul#(32,N), NumberOfMasters) dma <- mkMemServerRW(hostMMUConfigIndicationProxy.ifc,
+									       hostDmaDebugIndicationProxy.ifc, readClients, writeClients, cons(hostMMU,nil));
    DmaDebugRequestWrapper hostDmaDebugRequestWrapper <- mkDmaDebugRequestWrapper(HostDmaDebugRequest, dma.request);
 
    Vector#(4,StdPortal) portals;

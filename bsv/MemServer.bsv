@@ -77,7 +77,8 @@ typedef struct {
    Bit#(32) pref;
    } DmaError deriving (Bits);
 
-module mkMemServerRW#(DmaDebugIndication dmaIndication,
+module mkMemServerRW#(MMUConfigIndication mmuIndication,
+		      DmaDebugIndication dmaIndication,
 		      Vector#(numReadClients, MemReadClient#(dataWidth)) readClients,
 		      Vector#(numWriteClients, MemWriteClient#(dataWidth)) writeClients,
 		      Vector#(numMMUs,MMU#(PhysAddrWidth)) mmus)
@@ -92,8 +93,8 @@ module mkMemServerRW#(DmaDebugIndication dmaIndication,
 	     Add#(TLog#(TDiv#(dataWidth, 8)), d__, BurstLenSize)
 	     );
 
-   MemServer#(PhysAddrWidth,dataWidth,nMasters) reader <- mkMemServerR(dmaIndication,  readClients, mmus);
-   MemServer#(PhysAddrWidth,dataWidth,nMasters) writer <- mkMemServerW(dmaIndication, writeClients, mmus);
+   MemServer#(PhysAddrWidth,dataWidth,nMasters) reader <- mkMemServerR(mmuIndication, dmaIndication,  readClients, mmus);
+   MemServer#(PhysAddrWidth,dataWidth,nMasters) writer <- mkMemServerW(mmuIndication, dmaIndication, writeClients, mmus);
    
    function PhysMemMaster#(PhysAddrWidth,dataWidth) mkm(Integer i) = (interface PhysMemMaster#(PhysAddrWidth,dataWidth);
 								 interface PhysMemReadClient read_client = reader.masters[i].read_client;
@@ -120,7 +121,8 @@ module mkMemServerRW#(DmaDebugIndication dmaIndication,
    interface masters = map(mkm,genVector);
 endmodule
 	
-module mkMemServerR#(DmaDebugIndication dmaIndication,
+module mkMemServerR#(MMUConfigIndication mmuIndication,
+		     DmaDebugIndication dmaIndication,
 		     Vector#(numReadClients, MemReadClient#(dataWidth)) readClients,
 		     Vector#(numMMUs,MMU#(PhysAddrWidth)) mmus)
    (MemServer#(PhysAddrWidth, dataWidth, nMasters))
@@ -156,7 +158,7 @@ module mkMemServerR#(DmaDebugIndication dmaIndication,
       Vector#(numMMUs,Server#(ReqTup,Bit#(PhysAddrWidth))) ss;
       for(Integer j = 0; j < valueOf(numMMUs); j=j+1)
 	 ss[j] = mmu_servers[j].servers[i];
-      readers[i] <- mkMemReadInternal(client_bins[i], dmaIndication, ss);
+      readers[i] <- mkMemReadInternal(client_bins[i], mmuIndication, ss);
    end
    
    rule mmuEntry;
@@ -207,7 +209,8 @@ module mkMemServerR#(DmaDebugIndication dmaIndication,
    interface masters = map(mkm,genVector);
 endmodule
 	
-module mkMemServerW#(DmaDebugIndication dmaIndication,
+module mkMemServerW#(MMUConfigIndication mmuIndication,
+		     DmaDebugIndication dmaIndication,
 		     Vector#(numWriteClients, MemWriteClient#(dataWidth)) writeClients,
 		     Vector#(numMMUs,MMU#(PhysAddrWidth)) mmus)
    (MemServer#(PhysAddrWidth, dataWidth, nMasters))
@@ -240,7 +243,7 @@ module mkMemServerW#(DmaDebugIndication dmaIndication,
       Vector#(numMMUs,Server#(ReqTup,Bit#(PhysAddrWidth))) ss;
       for(Integer j = 0; j < valueOf(numMMUs); j=j+1)
 	 ss[j] = mmu_servers[j].servers[i];
-      writers[i] <- mkMemWriteInternal(client_bins[i], dmaIndication, ss);
+      writers[i] <- mkMemWriteInternal(client_bins[i], mmuIndication, ss);
    end
    
    rule mmuEntry;

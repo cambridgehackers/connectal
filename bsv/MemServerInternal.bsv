@@ -75,7 +75,7 @@ typedef struct {DmaErrorType errorType;
 typedef 32 NumTags;
 
 module mkMemReadInternal#(Vector#(numClients, MemReadClient#(dataWidth)) readClients,
-			  DmaDebugIndication dmaIndication,
+			  MMUConfigIndication dmaIndication,
 			  Vector#(numMMUs,Server#(ReqTup,Bit#(addrWidth))) mmus) 
    (MemReadInternal#(addrWidth, dataWidth))
 
@@ -129,7 +129,7 @@ module mkMemReadInternal#(Vector#(numClients, MemReadClient#(dataWidth)) readCli
    FIFO#(DmaError) dmaErrorFifo <- mkFIFO();
    rule dmaError;
       let error <- toGet(dmaErrorFifo).get();
-      dmaIndication.error(extend(pack(error.errorType)), error.pref, 0, 0);
+      dmaIndication.dmaError(extend(pack(error.errorType)), error.pref, 0, 0);
    endrule
 
    for (Integer selectReg = 0; selectReg < valueOf(numClients); selectReg = selectReg + 1) 
@@ -259,7 +259,7 @@ endmodule
 typedef 64 NumTagsW;
 
 module mkMemWriteInternal#(Vector#(numClients, MemWriteClient#(dataWidth)) writeClients,
-			   DmaDebugIndication dmaIndication, 
+			   MMUConfigIndication dmaIndication, 
 			   Vector#(numMMUs,Server#(ReqTup,Bit#(addrWidth))) mmus)
    (MemWriteInternal#(addrWidth, dataWidth))
    
@@ -301,7 +301,7 @@ module mkMemWriteInternal#(Vector#(numClients, MemWriteClient#(dataWidth)) write
    FIFO#(DmaError) dmaErrorFifo <- mkFIFO();
    rule dmaError;
       let error <- toGet(dmaErrorFifo).get();
-      dmaIndication.error(extend(pack(error.errorType)), error.pref, 0, 0);
+      dmaIndication.dmaError(extend(pack(error.errorType)), error.pref, 0, 0);
    endrule
 
    for (Integer selectReg = 0; selectReg < valueOf(numClients); selectReg = selectReg + 1)

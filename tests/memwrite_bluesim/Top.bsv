@@ -44,7 +44,8 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
    MMUConfigRequestWrapper hostMMUConfigRequestWrapper <- mkMMUConfigRequestWrapper(HostMMUConfigRequest, hostMMU.request);
 
    DmaDebugIndicationProxy hostDmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(HostDmaDebugIndication);
-   MemServer#(PhysAddrWidth,DataBusWidth,1) dma <- mkMemServerW(hostDmaDebugIndicationProxy.ifc, writeClients, cons(hostMMU,nil));
+   MemServer#(PhysAddrWidth,DataBusWidth,1) dma <- mkMemServerW(hostMMUConfigIndicationProxy.ifc,
+								hostDmaDebugIndicationProxy.ifc, writeClients, cons(hostMMU,nil));
    DmaDebugRequestWrapper hostDmaDebugRequestWrapper <- mkDmaDebugRequestWrapper(HostDmaDebugRequest, dma.request);
 
    MemMaster#(PhysAddrWidth,DataBusWidth) dma1 = (interface MemMaster;

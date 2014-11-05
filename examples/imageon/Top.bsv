@@ -123,7 +123,7 @@ module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
    MMUConfigRequestWrapper hostMMUConfigRequestWrapper <- mkMMUConfigRequestWrapper(HostMMUConfigRequest, hostMMU.request);
 
    DmaDebugIndicationProxy hostDmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(HostDmaDebugIndication);
-   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerW(hostDmaDebugIndicationProxy.ifc, writeClients, cons(hostMMU,nil));
+   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerW(hostMMUConfigIndicationProxy.ifc, hostDmaDebugIndicationProxy.ifc, writeClients, cons(hostMMU,nil));
    DmaDebugRequestWrapper hostDmaDebugRequestWrapper <- mkDmaDebugRequestWrapper(HostDmaDebugRequest, dma.request);
 
    // fromSensor: sensor specific processing of serdes input, resulting in pixels

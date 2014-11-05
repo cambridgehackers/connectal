@@ -60,7 +60,7 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,Empty,NumMasters));
    MMUConfigRequestWrapper hostMMUConfigRequestWrapper <- mkMMUConfigRequestWrapper(HostMMUConfigRequest, hostMMU.request);
 
    DmaDebugIndicationProxy hostDmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(HostDmaDebugIndication);
-   MemServer#(PhysAddrWidth,64,NumMasters) dma <- mkMemServerW(hostDmaDebugIndicationProxy.ifc, memwrite.dmaClients, cons(hostMMU,nil));
+   MemServer#(PhysAddrWidth,64,NumMasters) dma <- mkMemServerW(hostMMUConfigIndicationProxy.ifc, hostDmaDebugIndicationProxy.ifc, memwrite.dmaClients, cons(hostMMU,nil));
    DmaDebugRequestWrapper hostDmaDebugRequestWrapper <- mkDmaDebugRequestWrapper(HostDmaDebugRequest, dma.request);
 
    

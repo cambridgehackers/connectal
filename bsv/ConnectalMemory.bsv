@@ -59,7 +59,6 @@ interface DmaDebugIndication;
    method Action addrResponse(Bit#(64) physAddr);
    method Action reportStateDbg(DmaDbgRec rec);
    method Action reportMemoryTraffic(Bit#(64) words);
-   method Action error(Bit#(32) code, Bit#(32) sglId, Bit#(64) offset, Bit#(64) extra);
 endinterface
 
 //
@@ -69,6 +68,7 @@ interface MMUConfigIndication;
    method Action idResponse(Bit#(32) sglId);
    method Action configResp(Bit#(32) sglId);
    method Action error(Bit#(32) code, Bit#(32) sglId, Bit#(64) offset, Bit#(64) extra);
+   method Action dmaError(Bit#(32) code, Bit#(32) sglId, Bit#(64) offset, Bit#(64) extra);
 endinterface
 
 typedef Bit#(32) SpecialTypeForSendingFd;

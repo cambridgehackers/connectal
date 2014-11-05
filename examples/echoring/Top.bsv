@@ -15,9 +15,7 @@ import EchoIndication::*;
 import EchoRequest::*;
 import Swallow::*;
 
-import DmaDebugRequest::*;
 import MMUConfigRequest::*;
-import DmaDebugIndication::*;
 import MMUConfigIndication::*;
 import MMUConfigIndication::*;
 import SharedMemoryPortalConfig::*;
@@ -27,7 +25,7 @@ import Echo::*;
 import SwallowIF::*;
 
 typedef enum {EchoIndication, EchoRequest, Swallow, SS_EchoRequest, SS_EchoIndication,
-MMUConfigRequest, MMUConfigIndication, DmaDebugIndication, DmaDebugRequest, ConfigWrapper} IfcNames deriving (Eq,Bits);
+MMUConfigRequest, MMUConfigIndication, ConfigWrapper} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
 
@@ -48,19 +46,14 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    MMUConfigIndicationProxy mmuConfigIndicationProxy <- mkMMUConfigIndicationProxy(MMUConfigIndication);
    MMU#(PhysAddrWidth) mmu <- mkMMU(0, True, mmuConfigIndicationProxy.ifc);
    MMUConfigRequestWrapper mmuConfigRequestWrapper <- mkMMUConfigRequestWrapper(MMUConfigRequest, mmu.request);
+   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerRW(hostMMUConfigIndicationProxy.ifc, dmaDebugIndicationProxy.ifc, readClients, writeClients, cons(mmu,nil));
 
-   DmaDebugIndicationProxy dmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(DmaDebugIndication);
-   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerRW(dmaDebugIndicationProxy.ifc, readClients, writeClients, cons(mmu,nil));
-   DmaDebugRequestWrapper dmaDebugRequestWrapper <- mkDmaDebugRequestWrapper(DmaDebugRequest, dma.request);
-
-   Vector#(7,StdPortal) portals;
+   Vector#(5,StdPortal) portals;
    portals[0] = swallowWrapper.portalIfc;
    portals[1] = echoIndicationProxy.portalIfc;
-   portals[2] = dmaDebugIndicationProxy.portalIfc; 
-   portals[3] = dmaDebugRequestWrapper.portalIfc;
-   portals[4] = mmuConfigRequestWrapper.portalIfc;
-   portals[5] = mmuConfigIndicationProxy.portalIfc;
-   portals[6] = configWrapper.portalIfc;
+   portals[2] = mmuConfigRequestWrapper.portalIfc;
+   portals[3] = mmuConfigIndicationProxy.portalIfc;
+   portals[4] = configWrapper.portalIfc;
    let ctrl_mux <- mkSlaveMux(portals);
    
    interface interrupt = getInterruptVector(portals);
