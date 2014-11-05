@@ -241,7 +241,7 @@ int main(int argc, const char **argv)
   strstrIndication->wait();
 
   fprintf(stderr, "about to invoke search %d\n", ref_haystackInNandMemory);
-  strstrRequest->search(ref_haystackInNandMemory, haystack_len, 1);
+  strstrRequest->search(ref_haystackInNandMemory, haystack_len);
   strstrIndication->wait();  
 
   exit(!(strstrIndication->match_cnt==3));
