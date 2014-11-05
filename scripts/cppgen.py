@@ -84,13 +84,13 @@ handleMessageTemplate2='''
 '''
 
 proxyMethodTemplateDecl='''
-void %(className)sProxy_%(methodName)s (struct PortalInternal *p %(paramSeparator)s %(paramDeclarations)s );'''
+void %(className)s_%(methodName)s (struct PortalInternal *p %(paramSeparator)s %(paramDeclarations)s );'''
 
 proxyMethodTemplate='''
-void %(className)sProxy_%(methodName)s (PortalInternal *p %(paramSeparator)s %(paramDeclarations)s )
+void %(className)s_%(methodName)s (PortalInternal *p %(paramSeparator)s %(paramDeclarations)s )
 {
     volatile unsigned int* temp_working_addr = p->item->mapchannelReq(p, %(channelNumber)s);
-    if (p->item->busywait(p, temp_working_addr, "%(className)sProxy_%(methodName)s")) return;
+    if (p->item->busywait(p, temp_working_addr, "%(className)s_%(methodName)s")) return;
     %(paramStructMarshall)s
     p->item->send(p, (%(channelNumber)s << 16) | %(wordLenP1)s, %(fdName)s);
 };
@@ -533,7 +533,7 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
         generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(className)s_reqsize %(maxSize)s\n' % subs)
         hpp.write(proxyClassPrefixTemplate % subs)
         for d in item.decls:
-            d.emitMethodDeclaration(hpp, "%sProxy" % cName(item.name))
+            d.emitMethodDeclaration(hpp, cName(item.name))
         hpp.write('};\n')
         cpp.write(handleMessageTemplate1 % subs)
         for mitem in item.decls:
