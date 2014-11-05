@@ -39,8 +39,9 @@ class Simple : public SimpleWrapper
 {  
 public:
   uint32_t cnt;
+  uint32_t times;
   void incr_cnt(){
-    if (++cnt == 7)
+    if (++cnt == 7*times)
       exit(0);
   }
   virtual void say1(uint32_t a) {
@@ -87,7 +88,7 @@ public:
     assert(v.e1 == v7b);
     incr_cnt();
   }
-  Simple(unsigned int id) : SimpleWrapper(id), cnt(0){}
+  Simple(unsigned int id, unsigned int numtimes=1) : SimpleWrapper(id), cnt(0), times(numtimes){}
 };
 
 int allocateShared(DmaManager *dma, MMUConfigRequestProxy *dmap, uint32_t interfaceId, PortalInternal *p, uint32_t size)
@@ -107,7 +108,7 @@ int allocateShared(DmaManager *dma, MMUConfigRequestProxy *dmap, uint32_t interf
 
 int main(int argc, const char **argv)
 {
-    int alloc_sz = 1024*1024;
+    int alloc_sz = 4096;
     MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_MMUConfigRequest);
     DmaManager *dma = new DmaManager(dmap);
     MMUConfigIndication *mIndication = new MMUConfigIndication(dma, IfcNames_MMUConfigIndication);
@@ -115,28 +116,31 @@ int main(int argc, const char **argv)
 
   portalExec_start();
 
-    Simple *indication = new Simple(IfcNames_SimpleIndication);
+  int verbose = 0;
+  int numtimes = 80;
+  Simple *indication = new Simple(IfcNames_SimpleIndication, numtimes);
     SimpleProxy *device = new SimpleProxy(IfcNames_SimpleRequest, &sharedfunc, NULL);
 
     int fd = allocateShared(dma, dmap, IfcNames_SimpleRequest, &device->pint, alloc_sz);
     unsigned int ref = dma->reference(fd);
     smpConfig->setSglId(ref);
 
-  fprintf(stderr, "Main::calling say1(%d)\n", v1a);
-  device->say1(v1a);  
-  fprintf(stderr, "Main::calling say2(%d, %d)\n", v2a,v2b);
-  device->say2(v2a,v2b);
-  fprintf(stderr, "Main::calling say3(S1{a:%d,b:%d})\n", s1.a,s1.b);
-  device->say3(s1);
-  fprintf(stderr, "Main::calling say4(S2{a:%d,b:%d,c:%d})\n", s2.a,s2.b,s2.c);
-  device->say4(s2);
-  fprintf(stderr, "Main::calling say5(%08x, %016llx, %08x)\n", v5a, (long long)v5b, v5c);
-  device->say5(v5a, v5b, v5c);  
-  fprintf(stderr, "Main::calling say6(%08x, %016llx, %08x)\n", v6a, (long long)v6b, v6c);
-  device->say6(v6a, v6b, v6c);  
-  fprintf(stderr, "Main::calling say7(%08x, %08x)\n", s3.a, s3.e1);
-  device->say7(s3);  
-
+    for (int i = 0; i < numtimes; i++) {
+      if (verbose) fprintf(stderr, "Main::calling say1(%d)\n", v1a);
+      device->say1(v1a);  
+      if (verbose) fprintf(stderr, "Main::calling say2(%d, %d)\n", v2a,v2b);
+      device->say2(v2a,v2b);
+      if (verbose) fprintf(stderr, "Main::calling say3(S1{a:%d,b:%d})\n", s1.a,s1.b);
+      device->say3(s1);
+      if (verbose) fprintf(stderr, "Main::calling say4(S2{a:%d,b:%d,c:%d})\n", s2.a,s2.b,s2.c);
+      device->say4(s2);
+      if (verbose) fprintf(stderr, "Main::calling say5(%08x, %016llx, %08x)\n", v5a, (long long)v5b, v5c);
+      device->say5(v5a, v5b, v5c);  
+      if (verbose) fprintf(stderr, "Main::calling say6(%08x, %016llx, %08x)\n", v6a, (long long)v6b, v6c);
+      device->say6(v6a, v6b, v6c);  
+      if (verbose) fprintf(stderr, "Main::calling say7(%08x, %08x)\n", s3.a, s3.e1);
+      device->say7(s3);  
+    }
   fprintf(stderr, "Main::about to go to sleep\n");
   while(true){sleep(2);}
 }
