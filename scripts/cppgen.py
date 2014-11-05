@@ -32,6 +32,7 @@ import functools
 import math
 
 sizeofUint32_t = 4
+
 proxyClassPrefixTemplate='''
 class %(className)sProxy : public %(parentClass)s {
 public:
@@ -60,7 +61,7 @@ int %(className)s_handleMessage(struct PortalInternal *p, unsigned int channel, 
 '''
 
 handleMessageTemplate1='''
-int %(className)s_handleMessage(PortalInternal *p, unsigned int channel, int messageFd)
+int %(className)s_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd)
 {    
     static int runaway = 0;
     int tmpfd;
@@ -95,6 +96,9 @@ void %(className)s_%(methodName)s (PortalInternal *p %(paramSeparator)s %(paramD
     p->item->send(p, (%(channelNumber)s << 16) | %(wordLenP1)s, %(fdName)s);
 };
 '''
+
+paramStructDemarshallStr = 'tmp = p->item->read(p, &temp_working_addr);'
+paramStructMarshallStr = 'p->item->write(p, &temp_working_addr, %s);'
 
 msgDemarshallTemplate='''
     case %(channelNumber)s: 
@@ -362,7 +366,7 @@ def accumWords(s, pro, atoms):
         return [s]+accumWords([],pro+(32-w), atoms)
 
 def generate_marshall(w):
-    global fdName, paramStructMarshallStr, paramStructDemarshallStr
+    global fdName
     off = 0
     word = []
     fmt = paramStructMarshallStr
@@ -384,7 +388,6 @@ def generate_marshall(w):
     return fmt % (''.join(util.intersperse('|', word)))
 
 def generate_demarshall(w):
-    global paramStructDemarshallStr
     off = 0
     word = []
     word.append(paramStructDemarshallStr)
@@ -410,7 +413,7 @@ def generate_demarshall(w):
     return '\n        '.join(word)
 
 def emitCImplementation(mitem):
-    global fdName, paramStructMarshallStr, paramStructDemarshallStr
+    global fdName
     params = mitem.params
     paramDeclarations = mitem.formalParameters(params)
     paramStructDeclarations = [ '%s %s;' % (p.type.cName(), p.name) for p in params]
@@ -420,8 +423,6 @@ def emitCImplementation(mitem):
     argWords  = accumWords([], 0, argAtoms)
     fdName = '-1'
 
-    paramStructDemarshallStr = 'tmp = p->item->read(p, &temp_working_addr);'
-    paramStructMarshallStr = 'p->item->write(p, &temp_working_addr, %s);'
     if argWords == []:
         paramStructMarshall = [paramStructMarshallStr % '0']
         paramStructDemarshall = [paramStructDemarshallStr]
@@ -470,6 +471,76 @@ def emitMethodDeclaration(mitem, f, className):
         f.write('{ %s_%s (' % (className, methodName))
         f.write(', '.join(paramValues) + '); };\n')
 
+def generate_class(item, generatedCFiles, create_cpp_file, generated_hpp, generated_cpp):
+    cppname = '%s.c' % item.name
+    hppname = '%s.h' % item.name
+    if cppname in generatedCFiles:
+        return
+    generatedCFiles.append(cppname)
+    hpp = create_cpp_file(hppname)
+    cpp = create_cpp_file(cppname)
+    hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': item.name.upper()})
+    hpp.write('#include "%s.h"\n' % item.parentClass("portal"))
+    generated_cpp.write('\n/************** Start of %sWrapper CPP ***********/\n' % item.name)
+    generated_cpp.write('#include "%s"\n' % hppname)
+    maxSize = 0;
+    reqChanNums = []
+    for mitem in item.decls:
+        substs, t = emitCImplementation(mitem)
+        if t > maxSize:
+            maxSize = t
+        substs['responseCase'] = ''
+        substs['className'] = cName(item.name)
+        substs['channelNumber'] = 'CHAN_NUM_%s_%s' % (cName(item.name), cName(mitem.name))
+        cpp.write(proxyMethodTemplate % substs)
+        generated_hpp.write(proxyMethodTemplateDecl % substs)
+        reqChanNums.append('CHAN_NUM_%s' % item.global_name(mitem.name, ""))
+    subs = {'className': cName(item.name),
+            'maxSize': maxSize * sizeofUint32_t,
+            'parentClass': item.parentClass('Portal')}
+    generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(className)s_reqsize %(maxSize)s\n' % subs)
+    hpp.write(proxyClassPrefixTemplate % subs)
+    for d in item.decls:
+        emitMethodDeclaration(d, hpp, cName(item.name))
+    hpp.write('};\n')
+    cpp.write(handleMessageTemplate1 % subs)
+    for mitem in item.decls:
+        substs, t = emitCImplementation(mitem)
+        substs['channelNumber'] = 'CHAN_NUM_%s_%s' % (cName(item.name), cName(mitem.name))
+        respParams = [p.name for p in mitem.params]
+        respParams.insert(0, 'p')
+        substs['responseCase'] = ('((%(className)sCb *)p->cb)->%(name)s(%(params)s);'
+                          % { 'name': mitem.name,
+                              'className' : cName(item.name),
+                              'params': ', '.join(respParams)})
+        cpp.write(msgDemarshallTemplate % substs)
+    cpp.write(handleMessageTemplate2 % subs)
+    generated_hpp.write(handleMessageTemplateDecl % subs)
+    indent(hpp, 0)
+    hpp.write(wrapperClassPrefixTemplate % subs)
+    for d in item.decls:
+        emitMethodDeclaration(d, hpp, '')
+    hpp.write('};\n')
+    generated_hpp.write('typedef struct {\n');
+    for d in item.decls:
+        paramValues = ', '.join([p.name for p in d.params])
+        formalParams = d.formalParameters(d.params)
+        formalParams.insert(0, ' struct PortalInternal *p')
+        formalParamStr = ', '.join(formalParams)
+        methodName = cName(d.name)
+        generated_hpp.write(('    void (*%s) ( ' % methodName) + formalParamStr + ' );\n')
+        generated_cpp.write(('void %s%s_cb ( ' % (cName(item.name), methodName)) + formalParamStr + ' ) {\n')
+        indent(generated_cpp, 4)
+        generated_cpp.write(('(static_cast<%sWrapper *>(p->parent))->%s ( ' % (cName(item.name), methodName)) + paramValues + ');\n};\n')
+    generated_hpp.write('} %sCb;\n' % cName(item.name));
+    generated_cpp.write('%sCb %s_cbTable = {\n' % (cName(item.name), cName(item.name)));
+    for d in item.decls:
+        generated_cpp.write('    %s%s_cb,\n' % (cName(item.name), d.name));
+    generated_cpp.write('};\n');
+    hpp.write('#endif // _%(name)s_H_\n' % {'name': item.name.upper()})
+    hpp.close();
+    cpp.close();
+
 def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
     def create_cpp_file(name):
         fname = os.path.join(project_dir, 'jni', name)
@@ -505,75 +576,7 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
     generatedCFiles.append(cppname)
     generated_cpp.write('\n#ifndef NO_CPP_PORTAL_CODE\n')
     for item in interfaces:
-        cppname = '%s.c' % item.name
-        hppname = '%s.h' % item.name
-        if cppname in generatedCFiles:
-            continue
-        generatedCFiles.append(cppname)
-        hpp = create_cpp_file(hppname)
-        cpp = create_cpp_file(cppname)
-        hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': item.name.upper()})
-        hpp.write('#include "%s.h"\n' % item.parentClass("portal"))
-        generated_cpp.write('\n/************** Start of %sWrapper CPP ***********/\n' % item.name)
-        generated_cpp.write('#include "%s"\n' % hppname)
-        maxSize = 0;
-        reqChanNums = []
-        for mitem in item.decls:
-            substs, t = emitCImplementation(mitem)
-            if t > maxSize:
-                maxSize = t
-            substs['responseCase'] = ''
-            substs['className'] = cName(item.name)
-            substs['channelNumber'] = 'CHAN_NUM_%s_%s' % (cName(item.name), cName(mitem.name))
-            cpp.write(proxyMethodTemplate % substs)
-            generated_hpp.write(proxyMethodTemplateDecl % substs)
-            reqChanNums.append('CHAN_NUM_%s' % item.global_name(mitem.name, ""))
-        subs = {'className': cName(item.name),
-                'maxSize': maxSize * sizeofUint32_t,
-                'parentClass': item.parentClass('Portal')}
-        generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(className)s_reqsize %(maxSize)s\n' % subs)
-        hpp.write(proxyClassPrefixTemplate % subs)
-        for d in item.decls:
-            emitMethodDeclaration(d, hpp, cName(item.name))
-        hpp.write('};\n')
-        cpp.write(handleMessageTemplate1 % subs)
-        for mitem in item.decls:
-            substs, t = emitCImplementation(mitem)
-            substs['channelNumber'] = 'CHAN_NUM_%s_%s' % (cName(item.name), cName(mitem.name))
-            respParams = [p.name for p in mitem.params]
-            respParams.insert(0, 'p')
-            substs['responseCase'] = ('((%(className)sCb *)p->cb)->%(name)s(%(params)s);'
-                              % { 'name': mitem.name,
-                                  'className' : cName(item.name),
-                                  'params': ', '.join(respParams)})
-            cpp.write(msgDemarshallTemplate % substs)
-        cpp.write(handleMessageTemplate2 % subs)
-        generated_hpp.write(handleMessageTemplateDecl % subs)
-        indent(hpp, 0)
-        hpp.write(wrapperClassPrefixTemplate % subs)
-        for d in item.decls:
-            emitMethodDeclaration(d, hpp, '')
-        hpp.write('};\n')
-        generated_hpp.write('typedef struct {\n');
-        for d in item.decls:
-            paramValues = ', '.join([p.name for p in d.params])
-            formalParams = d.formalParameters(d.params)
-            formalParams.insert(0, ' struct PortalInternal *p')
-            methodName = cName(d.name)
-            generated_hpp.write('    void (*%s) ( ' % methodName)
-            generated_hpp.write(', '.join(formalParams) + ' );\n')
-            generated_cpp.write('void %s%s_cb ( ' % (cName(item.name), methodName))
-            generated_cpp.write(', '.join(formalParams) + ' ) {\n')
-            indent(generated_cpp, 4)
-            generated_cpp.write(('(static_cast<%sWrapper *>(p->parent))->%s ( ' % (cName(item.name), methodName)) + paramValues + ');\n};\n')
-        generated_hpp.write('} %sCb;\n' % cName(item.name));
-        generated_cpp.write('%sCb %s_cbTable = {\n' % (cName(item.name), cName(item.name)));
-        for d in item.decls:
-            generated_cpp.write('    %s%s_cb,\n' % (cName(item.name), d.name));
-        generated_cpp.write('};\n');
-        hpp.write('#endif // _%(name)s_H_\n' % {'name': item.name.upper()})
-        hpp.close();
-        cpp.close();
+        generate_class(item, generatedCFiles, create_cpp_file, generated_hpp, generated_cpp)
     generated_cpp.write('#endif //NO_CPP_PORTAL_CODE\n')
     generated_cpp.close();
     generated_hpp.write('#ifdef __cplusplus\n')
