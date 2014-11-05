@@ -57,11 +57,9 @@ public:
 '''
 
 handleMessageTemplateDecl='''
-int %(className)s_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
-'''
+int %(className)s_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd)'''
 
 handleMessageTemplate1='''
-int %(className)s_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd)
 {    
     static int runaway = 0;
     int tmpfd;
@@ -85,10 +83,9 @@ handleMessageTemplate2='''
 '''
 
 proxyMethodTemplateDecl='''
-void %(className)s_%(methodName)s (struct PortalInternal *p %(paramSeparator)s %(paramDeclarations)s );'''
+void %(className)s_%(methodName)s (%(paramProxyDeclarations)s )'''
 
 proxyMethodTemplate='''
-void %(className)s_%(methodName)s (PortalInternal *p %(paramSeparator)s %(paramDeclarations)s )
 {
     volatile unsigned int* temp_working_addr = p->item->mapchannelReq(p, %(channelNumber)s);
     if (p->item->busywait(p, temp_working_addr, "%(className)s_%(methodName)s")) return;
@@ -131,8 +128,6 @@ class MethodMixin:
             return self.return_type.cName()
         else:
             return int
-    def formalParameters(self, params):
-        return [ 'const %s%s %s' % (p.type.cName(), p.type.refParam(), p.name) for p in params]
 
 class StructMemberMixin:
     def emitCDeclaration(self, f, indentation):
@@ -412,11 +407,15 @@ def generate_demarshall(w):
     # print ''
     return '\n        '.join(word)
 
-def emitCImplementation(mitem):
+def formalParameters(params, insertPortal):
+    rc = [ 'const %s%s %s' % (p.type.cName(), p.type.refParam(), p.name) for p in params]
+    if insertPortal:
+        rc.insert(0, ' struct PortalInternal *p')
+    return ', '.join(rc)
+
+def gatherMethodInfo(mitem):
     global fdName
     params = mitem.params
-    paramDeclarations = mitem.formalParameters(params)
-    paramStructDeclarations = [ '%s %s;' % (p.type.cName(), p.name) for p in params]
     
     argAtoms = sum(map(functools.partial(collectMembers, ''), params), [])
     argAtoms.reverse();
@@ -432,25 +431,21 @@ def emitCImplementation(mitem):
         paramStructDemarshall = map(generate_demarshall, argWords)
         paramStructDemarshall.reverse();
 
+    paramStructDeclarations = [ '%s %s;' % (p.type.cName(), p.name) for p in params]
     if not params:
         paramStructDeclarations = ['        int padding;\n']
-    resultTypeName = mitem.resultTypeName()
     substs = {
         'methodName': cName(mitem.name),
-        'MethodName': capitalize(cName(mitem.name)),
-        'paramDeclarations': ', '.join(paramDeclarations),
-        'paramReferences': ', '.join([p.name for p in params]),
+        'paramDeclarations': formalParameters(params, False),
+        'paramProxyDeclarations': formalParameters(params, True),
         'paramStructDeclarations': '\n        '.join(paramStructDeclarations),
         'paramStructMarshall': '\n    '.join(paramStructMarshall),
-        'paramSeparator': ',' if params != [] else '',
         'paramStructDemarshall': '\n        '.join(paramStructDemarshall),
         'paramNames': ', '.join(['msg->%s' % p.name for p in params]),
-        'resultType': resultTypeName,
+        'resultType': mitem.resultTypeName(),
         'wordLen': len(argWords),
         'wordLenP1': len(argWords) + 1,
-        'fdName': fdName,
-        # if message is empty, we still send an int of padding
-        'payloadSize' : max(4, 4*((sum([p.numBitsBSV() for p in mitem.params])+31)/32)) 
+        'fdName': fdName
         }
     return substs, len(argWords)
 
@@ -462,9 +457,7 @@ def emitMethodDeclaration(mitem, f, className):
     methodName = cName(mitem.name)
     if className == '':
         f.write('virtual ')
-    f.write('void %s ( ' % methodName)
-    f.write(', '.join(mitem.formalParameters(mitem.params)))
-    f.write(' ) ')
+    f.write(('void %s ( ' % methodName) + formalParameters(mitem.params, False) + ' ) ')
     if className == '':
         f.write('= 0;\n')
     else:
@@ -486,14 +479,15 @@ def generate_class(item, generatedCFiles, create_cpp_file, generated_hpp, genera
     maxSize = 0;
     reqChanNums = []
     for mitem in item.decls:
-        substs, t = emitCImplementation(mitem)
+        substs, t = gatherMethodInfo(mitem)
         if t > maxSize:
             maxSize = t
         substs['responseCase'] = ''
         substs['className'] = cName(item.name)
         substs['channelNumber'] = 'CHAN_NUM_%s_%s' % (cName(item.name), cName(mitem.name))
+        cpp.write(proxyMethodTemplateDecl % substs)
         cpp.write(proxyMethodTemplate % substs)
-        generated_hpp.write(proxyMethodTemplateDecl % substs)
+        generated_hpp.write((proxyMethodTemplateDecl % substs) + ';')
         reqChanNums.append('CHAN_NUM_%s' % item.global_name(mitem.name, ""))
     subs = {'className': cName(item.name),
             'maxSize': maxSize * sizeofUint32_t,
@@ -503,9 +497,10 @@ def generate_class(item, generatedCFiles, create_cpp_file, generated_hpp, genera
     for d in item.decls:
         emitMethodDeclaration(d, hpp, cName(item.name))
     hpp.write('};\n')
+    cpp.write((handleMessageTemplateDecl % subs))
     cpp.write(handleMessageTemplate1 % subs)
     for mitem in item.decls:
-        substs, t = emitCImplementation(mitem)
+        substs, t = gatherMethodInfo(mitem)
         substs['channelNumber'] = 'CHAN_NUM_%s_%s' % (cName(item.name), cName(mitem.name))
         respParams = [p.name for p in mitem.params]
         respParams.insert(0, 'p')
@@ -515,7 +510,7 @@ def generate_class(item, generatedCFiles, create_cpp_file, generated_hpp, genera
                               'params': ', '.join(respParams)})
         cpp.write(msgDemarshallTemplate % substs)
     cpp.write(handleMessageTemplate2 % subs)
-    generated_hpp.write(handleMessageTemplateDecl % subs)
+    generated_hpp.write((handleMessageTemplateDecl % subs)+ ';\n')
     indent(hpp, 0)
     hpp.write(wrapperClassPrefixTemplate % subs)
     for d in item.decls:
@@ -524,9 +519,7 @@ def generate_class(item, generatedCFiles, create_cpp_file, generated_hpp, genera
     generated_hpp.write('typedef struct {\n');
     for d in item.decls:
         paramValues = ', '.join([p.name for p in d.params])
-        formalParams = d.formalParameters(d.params)
-        formalParams.insert(0, ' struct PortalInternal *p')
-        formalParamStr = ', '.join(formalParams)
+        formalParamStr = formalParameters(d.params, True)
         methodName = cName(d.name)
         generated_hpp.write(('    void (*%s) ( ' % methodName) + formalParamStr + ' );\n')
         generated_cpp.write(('void %s%s_cb ( ' % (cName(item.name), methodName)) + formalParamStr + ' ) {\n')
