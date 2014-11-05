@@ -19,13 +19,14 @@ import MMUConfigRequest::*;
 import MMUConfigIndication::*;
 import MMUConfigIndication::*;
 import SharedMemoryPortalConfig::*;
+import DmaDebugIndication::*;
 
 // defined by user
 import Echo::*;
 import SwallowIF::*;
 
 typedef enum {EchoIndication, EchoRequest, Swallow, SS_EchoRequest, SS_EchoIndication,
-MMUConfigRequest, MMUConfigIndication, ConfigWrapper} IfcNames deriving (Eq,Bits);
+MMUConfigRequest, MMUConfigIndication, DmaDebugIndication, ConfigWrapper} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
 
@@ -43,17 +44,19 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    let readClients = cons(echoRequestSharedMemoryPortal.readClient, nil);
    let writeClients = cons(echoRequestSharedMemoryPortal.writeClient, nil);
 
+   DmaDebugIndicationProxy dmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(DmaDebugIndication);
    MMUConfigIndicationProxy mmuConfigIndicationProxy <- mkMMUConfigIndicationProxy(MMUConfigIndication);
    MMU#(PhysAddrWidth) mmu <- mkMMU(0, True, mmuConfigIndicationProxy.ifc);
    MMUConfigRequestWrapper mmuConfigRequestWrapper <- mkMMUConfigRequestWrapper(MMUConfigRequest, mmu.request);
-   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerRW(hostMMUConfigIndicationProxy.ifc, dmaDebugIndicationProxy.ifc, readClients, writeClients, cons(mmu,nil));
+   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerRW(mmuConfigIndicationProxy.ifc, dmaDebugIndicationProxy.ifc, readClients, writeClients, cons(mmu,nil));
 
-   Vector#(5,StdPortal) portals;
+   Vector#(6,StdPortal) portals;
    portals[0] = swallowWrapper.portalIfc;
    portals[1] = echoIndicationProxy.portalIfc;
    portals[2] = mmuConfigRequestWrapper.portalIfc;
    portals[3] = mmuConfigIndicationProxy.portalIfc;
    portals[4] = configWrapper.portalIfc;
+   portals[5] = dmaDebugIndicationProxy.portalIfc;
    let ctrl_mux <- mkSlaveMux(portals);
    
    interface interrupt = getInterruptVector(portals);
