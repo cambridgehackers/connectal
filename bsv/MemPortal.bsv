@@ -301,13 +301,13 @@ module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal
 	 reqState <= HeadRequested;
       endrule
 
-      rule receiveReqHead if (reqState == HeadRequested || reqState == TailRequested);
+      rule receiveReqHeadTail if (reqState == HeadRequested || reqState == TailRequested);
 	 let data <- toGet(readEngine.dataPipes[0]).get();
 	 let w0 = data[31:0];
 	 let w1 = data[63:32];
 	 let head = reqHeadReg;
 	 let tail = reqTailReg;
-	 $display("receiveReqHead state=%d w0=%x w1=%x", reqState, w0, w1);
+	 $display("receiveReqHeadTail state=%d w0=%x w1=%x", reqState, w0, w1);
 	 if (reqState == HeadRequested) begin
 	    reqHeadReg <= w1;
 	    reqState <= TailRequested;
@@ -325,7 +325,9 @@ module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal
 
       rule requestMessage if (reqState == RequestMessage);
 	 Bit#(32) wordCount = reqHeadReg - reqTailReg;
-	 $display("requestMessage id=%d tail=%h wordCount=%d", sglIdReg, reqTailReg, wordCount);
+	 if (reqTailReg < reqHeadReg)
+	    $display("requestMessage wrapped: head=%d tail=%d", reqHeadReg, reqTailReg);
+	 //$display("requestMessage id=%d tail=%h wordCount=%d", sglIdReg, reqTailReg, wordCount);
 	 reqTailReg <= reqTailReg + wordCount;
 	 wordCountReg <= truncate(wordCount);
 	 demuxCountReg <= truncate(wordCount);
@@ -383,7 +385,7 @@ module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal
       rule receiveMessage if (reqState == MessageRequested);
 	 let maybedata <- toGet(readPipe).get();
 	 if (maybedata matches tagged Valid .data) begin
-	     $display("receiveMessage data=%x messageWords=%d wordCount=%d", data, messageWordsReg, wordCountReg);
+	    //$display("receiveMessage data=%x messageWords=%d wordCount=%d", data, messageWordsReg, wordCountReg);
 	     portal.requests[methodIdReg].enq(data);
 
 	     messageWordsReg <= messageWordsReg - 1;
