@@ -425,7 +425,7 @@ def generate_demarshall(w):
     # print ''
     return '\n        '.join(word)
 
-def emitCImplementation(mitem, f, hpp, className, namespace, proxy):
+def emitCImplementation(mitem):
     global fdName, paramStructMarshallStr, paramStructDemarshallStr
     params = mitem.params
     paramDeclarations = mitem.formalParameters(params)
@@ -451,10 +451,7 @@ def emitCImplementation(mitem, f, hpp, className, namespace, proxy):
         paramStructDeclarations = ['        int padding;\n']
     resultTypeName = mitem.resultTypeName()
     substs = {
-        'namespace': namespace,
-        'className': className,
         'methodName': cName(mitem.name),
-        'channelNumber': 'CHAN_NUM_%s_%s' % (className, cName(mitem.name)),
         'MethodName': capitalize(cName(mitem.name)),
         'paramDeclarations': ', '.join(paramDeclarations),
         'paramReferences': ', '.join([p.name for p in params]),
@@ -470,20 +467,7 @@ def emitCImplementation(mitem, f, hpp, className, namespace, proxy):
         # if message is empty, we still send an int of padding
         'payloadSize' : max(4, 4*((sum([p.numBitsBSV() for p in mitem.params])+31)/32)) 
         }
-    if (not proxy):
-        respParams = [p.name for p in mitem.params]
-        respParams.insert(0, 'p')
-        substs['responseCase'] = ('((%(className)sCb *)p->cb)->%(name)s(%(params)s);'
-                                  % { 'name': mitem.name,
-                                      'className' : className,
-                                      'params': ', '.join(respParams)})
-        f.write(msgDemarshallTemplate % substs)
-    else:
-        substs['responseCase'] = ''
-        f.write(proxyMethodTemplate % substs)
-        hpp.write(proxyMethodTemplateDecl % substs)
-    return len(argWords)
-
+    return substs, len(argWords)
 
 def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
     def create_cpp_file(name):
@@ -535,11 +519,17 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
         maxSize = 0;
         reqChanNums = []
         className = "%sProxy" % cName(item.name)
-        for d in item.decls:
-            t = emitCImplementation(d, cpp, generated_hpp, className, namespace,True)
+        for mitem in item.decls:
+            substs, t = emitCImplementation(mitem)
             if t > maxSize:
                 maxSize = t
-            reqChanNums.append('CHAN_NUM_%s' % item.global_name(d.name, "Proxy"))
+            substs['responseCase'] = ''
+            substs['namespace'] = namespace
+            substs['className'] = className
+            substs['channelNumber'] = 'CHAN_NUM_%s_%s' % (className, cName(mitem.name))
+            cpp.write(proxyMethodTemplate % substs)
+            generated_hpp.write(proxyMethodTemplateDecl % substs)
+            reqChanNums.append('CHAN_NUM_%s' % item.global_name(mitem.name, "Proxy"))
         subs = {'className': className,
                 'namespace': namespace,
                 'maxSize': maxSize * sizeofUint32_t,
@@ -555,8 +545,18 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
                 'maxSize': maxSize * sizeofUint32_t,
                 'parentClass': item.parentClass('Portal')}
         cpp.write(handleMessageTemplate1 % subs)
-        for d in item.decls:
-            emitCImplementation(d, cpp, generated_hpp, className, namespace, False)
+        for mitem in item.decls:
+            substs, t = emitCImplementation(mitem)
+            substs['namespace'] = namespace
+            substs['className'] = className
+            substs['channelNumber'] = 'CHAN_NUM_%s_%s' % (className, cName(mitem.name))
+            respParams = [p.name for p in mitem.params]
+            respParams.insert(0, 'p')
+            substs['responseCase'] = ('((%(className)sCb *)p->cb)->%(name)s(%(params)s);'
+                              % { 'name': mitem.name,
+                                  'className' : className,
+                                  'params': ', '.join(respParams)})
+            cpp.write(msgDemarshallTemplate % substs)
         cpp.write(handleMessageTemplate2 % subs)
         generated_hpp.write(handleMessageTemplateDecl % subs)
         indent(hpp, 0)
