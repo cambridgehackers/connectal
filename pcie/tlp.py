@@ -279,7 +279,7 @@ if __name__ == '__main__':
     elif len(sys.argv) > 1:
         tlplog = open(sys.argv[1]).read().split('\n')
     else:
-        tlplog = subprocess.check_output(['connectalutil', 'tlp', '/dev/fpga0']).split('\n')
+        tlplog = subprocess.check_output(['connectalutil', 'tlp', '/dev/portal0']).split('\n')
     print_tlp_log(tlplog[0:-1], f)
     print classCounts
     print sum([ classCounts[k] for k in classCounts])
