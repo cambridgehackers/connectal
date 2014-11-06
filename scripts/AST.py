@@ -19,7 +19,8 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
-import cppgen, bsvgen
+import math
+import cppgen, bsvgen, globalv
 
 class Method(cppgen.MethodMixin,bsvgen.MethodMixin):
     def __init__(self, name, return_type, params):
@@ -125,6 +126,8 @@ class Enum(cppgen.EnumMixin,bsvgen.EnumMixin):
         self.elements = elements
     def __repr__(self):
         return '{enum: %s}' % (self.elements)
+    def instantiate(self, paramBindings):
+        return self
 
 class StructMember(cppgen.StructMemberMixin):
     def __init__(self, t, name):
@@ -132,20 +135,26 @@ class StructMember(cppgen.StructMemberMixin):
         self.name = name
     def __repr__(self):
         return '{field: %s %s}' % (self.type, self.name)
+    def instantiate(self, paramBindings):
+        return StructMember(self.type.instantiate(paramBindings), self.name)
 
-class Struct(cppgen.StructMixin):
+class Struct(cppgen.StructMixin,bsvgen.StructMixin):
     def __init__(self, elements):
         self.type = 'Struct'
         self.elements = elements
     def __repr__(self):
         return '{struct: %s}' % (self.elements)
-
+    def instantiate(self, paramBindings):
+        return Struct([e.instantiate(paramBindings) for e in self.elements])
 
 class TypeDef(cppgen.TypeDefMixin):
-    def __init__(self, tdtype, name):
+    def __init__(self, tdtype, name, params):
         self.name = name
+        self.params = params
+        self.type = 'TypeDef'
         self.tdtype = tdtype
-        tdtype.name = name
+        if tdtype.type != 'Type':
+            tdtype.name = name
         self.type = 'TypeDef'
     def __repr__(self):
         return '{typedef: %s %s}' % (self.tdtype, self.name)
@@ -172,10 +181,32 @@ class Type(cppgen.TypeMixin,bsvgen.TypeMixin):
         sparams = map(str, self.params)
         return '{type: %s %s}' % (self.name, sparams)
     def instantiate(self, paramBindings):
-        #print 'instantiate', self.name
+        #print 'Type.instantiate', self.name, paramBindings
         if paramBindings.has_key(self.name):
             return paramBindings[self.name]
         else:
             return Type(self.name, [p.instantiate(paramBindings) for p in self.params])
     def numeric(self):
+        if globalv.globalvars.has_key(self.name):
+            decl = globalv.globalvars[self.name]
+            if decl.type == 'TypeDef':
+                return decl.tdtype.numeric()
+        elif self.name in ['TAdd', 'TSub', 'TMul', 'TDiv', 'TLog', 'TExp', 'TMax', 'TMin']:
+            values = [p.numeric() for p in self.params]
+            if self.name == 'TAdd':
+                return values[0] + values[1]
+            elif self.name == 'TSub':
+                return values[0] - values[1]
+            elif self.name == 'TMul':
+                return values[0] * values[1]
+            elif self.name == 'TDiv':
+                return math.ceil(values[0] / float(values[1]))
+            elif self.name == 'TLog':
+                return math.ceil(math.log(values[0], 2))
+            elif self.name == 'TExp':
+                return math.pow(2, values[0])
+            elif self.name == 'TMax':
+                return max(values[0], values[1])
+            elif self.name == 'TMax':
+                return min(values[0], values[1])
         return int(self.name)

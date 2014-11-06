@@ -31,8 +31,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "NocIndicationWrapper.h"
-#include "NocRequestProxy.h"
+#include "NocIndication.h"
+#include "NocRequest.h"
 #include "GeneratedTypes.h"
 
 sem_t test_sem;

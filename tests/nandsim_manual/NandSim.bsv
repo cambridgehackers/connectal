@@ -47,8 +47,8 @@ endinterface
 
 interface NandSim;
    interface NandSimRequest request;
-   interface ObjectReadClient#(64) readClient;
-   interface ObjectWriteClient#(64) writeClient;
+   interface MemReadClient#(64) readClient;
+   interface MemWriteClient#(64) writeClient;
 endinterface
 
 module mkNandSim#(NandSimIndication indication) (NandSim);
@@ -169,7 +169,7 @@ module mkNandSim#(NandSimIndication indication) (NandSim);
 
    endinterface
 
-   interface ObjectReadClient readClient = re.dmaClient;
-   interface ObjectWriteClient writeClient = we.dmaClient;
+   interface MemReadClient readClient = re.dmaClient;
+   interface MemWriteClient writeClient = we.dmaClient;
 
 endmodule

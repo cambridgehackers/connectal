@@ -44,7 +44,7 @@ import Adapter::*;
 import Leds::*;
 import Vector::*;
 import SpecialFIFOs::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import Portal::*;
 import MemPortal::*;
 import MemTypes::*;
@@ -57,7 +57,6 @@ requestStructTemplate='''
 typedef struct {
 %(paramStructDeclarations)s
 } %(MethodName)s_Request deriving (Bits);
-Bit#(6) %(methodName)s_Offset = %(channelNumber)s;
 '''
 
 requestOutputPipeInterfaceTemplate='''\
@@ -68,22 +67,20 @@ exposedProxyInterfaceTemplate='''
 %(responseElements)s
 // exposed proxy interface
 interface %(Dut)sPortal;
-    interface Portal#(%(requestChannelCount)s, %(indicationChannelCount)s, 32) portalIfc;
-    interface %(Ifc)s ifc;
+    interface PipePortal#(%(requestChannelCount)s, %(indicationChannelCount)s, 32) portalIfc;
+    interface %(Package)s::%(Ifc)s ifc;
 endinterface
 interface %(Dut)s;
     interface StdPortal portalIfc;
-    interface %(Ifc)s ifc;
+    interface %(Package)s::%(Ifc)s ifc;
 endinterface
 
 (* synthesize *)
 module %(moduleContext)s mk%(Dut)sPortalSynth#(Bit#(32) id) (%(Dut)sPortal);
     Vector#(0, PipeIn#(Bit#(32))) requestPipes = nil;
-    Vector#(0, Bit#(32))          requestBits = nil;
     Vector#(%(channelCount)s, PipeOut#(Bit#(32))) indicationPipes = newVector();
-    Vector#(%(channelCount)s, Bit#(32))           indicationBits = newVector();
 %(indicationMethodRules)s
-    interface %(Ifc)s ifc;
+    interface %(Package)s::%(Ifc)s ifc;
 %(indicationMethods)s
     endinterface
 %(portalIfc)s
@@ -101,9 +98,9 @@ endmodule
 (* synthesize *)
 module mk%(Dut)sSynth#(Bit#(32) id)(%(Dut)s);
   let dut <- mk%(Dut)sPortal(id);
-  let memPortal <- mkMemPortal(dut.portalIfc);
+  let memPortal <- mkMemPortal(id, dut.portalIfc);
   interface MemPortal portalIfc = memPortal;
-  interface %(Ifc)s ifc = dut.ifc;
+  interface %(Package)s::%(Ifc)s ifc = dut.ifc;
 endmodule
 
 // exposed proxy MemPortal
@@ -120,11 +117,10 @@ exposedWrapperInterfaceTemplate='''
 // exposed wrapper portal interface
 interface %(Dut)sPipes;
     interface Vector#(%(requestChannelCount)s, PipeIn#(Bit#(32))) inputPipes;
-    interface Vector#(%(requestChannelCount)s, Bit#(32)) requestSizeBits;
 %(requestOutputPipeInterfaces)s
 endinterface
 interface %(Dut)sPortal;
-    interface Portal#(%(requestChannelCount)s, %(indicationChannelCount)s, 32) portalIfc;
+    interface PipePortal#(%(requestChannelCount)s, %(indicationChannelCount)s, 32) portalIfc;
 endinterface
 // exposed wrapper MemPortal interface
 interface %(Dut)s;
@@ -141,12 +137,9 @@ endinstance
 (* synthesize *)
 module mk%(Dut)sPipes#(Bit#(32) id)(%(Dut)sPipes);
     Vector#(%(requestChannelCount)s, PipeIn#(Bit#(32))) requestPipeIn = newVector();
-    Vector#(%(requestChannelCount)s, Bit#(32)) requestBits = newVector();
     Vector#(0, PipeOut#(Bit#(32))) indicationPipes = nil;
-    Vector#(0, Bit#(32))           indicationBits = nil;
 %(methodRules)s
     interface Vector inputPipes = requestPipeIn;
-    interface Vector requestSizeBits = requestBits;
 %(outputPipes)s
 endmodule
 
@@ -156,9 +149,7 @@ module mk%(Dut)sPortal#(idType id, %(Ifc)s ifc)(%(Dut)sPortal)
     let pipes <- mk%(Dut)sPipes(zeroExtend(pack(id)));
     mkConnection(pipes, ifc);
     let requestPipes = pipes.inputPipes;
-    let requestBits = pipes.requestSizeBits;
     Vector#(0, PipeOut#(Bit#(32))) indicationPipes = nil;
-    Vector#(0, Bit#(32)) indicationBits = nil;
 %(portalIfc)s
 endmodule
 
@@ -172,20 +163,12 @@ module mk%(Dut)sMemPortalPipes#(Bit#(32) id)(%(Dut)sMemPortalPipes);
 
   let p <- mk%(Dut)sPipes(zeroExtend(pack(id)));
 
-  Portal#(%(requestChannelCount)s, 0, 32) portalifc = (interface Portal;
-        method Bit#(32) ifcId;
-            return zeroExtend(pack(id));
-        endmethod
-        method Bit#(32) ifcType;
-            return %(ifcType)s;
-        endmethod
+  PipePortal#(%(requestChannelCount)s, 0, 32) portalifc = (interface PipePortal;
         interface Vector requests = p.inputPipes;
-        interface Vector requestSizeBits = p.requestSizeBits;
         interface Vector indications = nil;
-        interface Vector indicationSizeBits = nil;
     endinterface);
 
-  let memPortal <- mkMemPortal(portalifc);
+  let memPortal <- mkMemPortal(id, portalifc);
   interface %(Dut)sPipes pipes = p;
   interface MemPortal portalIfc = memPortal;
 endmodule
@@ -204,28 +187,18 @@ responseStructTemplate='''
 typedef struct {
 %(paramStructDeclarations)s
 } %(MethodName)s_Response deriving (Bits);
-Bit#(6) %(methodName)s_Offset = %(channelNumber)s;
 '''
 
 portalIfcTemplate='''
-    interface Portal portalIfc;
-        method Bit#(32) ifcId;
-            return zeroExtend(pack(id));
-        endmethod
-        method Bit#(32) ifcType;
-            return %(ifcType)s;
-        endmethod
+    interface PipePortal portalIfc;
         interface Vector requests = requestPipes;
-        interface Vector requestSizeBits = requestBits;
         interface Vector indications = indicationPipes;
-        interface Vector indicationSizeBits = indicationBits;
     endinterface
 '''
 
 requestRuleTemplate='''
     FromBit#(32,%(MethodName)s_Request) %(methodName)s_requestFifo <- mkFromBit();
     requestPipeIn[%(channelNumber)s] = toPipeIn(%(methodName)s_requestFifo);
-    requestBits[%(channelNumber)s]  = fromInteger(valueOf(SizeOf#(%(MethodName)s_Request)));
 '''
 
 mkConnectionMethodTemplate='''
@@ -238,7 +211,6 @@ mkConnectionMethodTemplate='''
 indicationRuleTemplate='''
     ToBit#(32,%(MethodName)s_Response) %(methodName)s_responseFifo <- mkToBit();
     indicationPipes[%(channelNumber)s] = toPipeOut(%(methodName)s_responseFifo);
-    indicationBits[%(channelNumber)s]  = fromInteger(valueOf(SizeOf#(%(MethodName)s_Response)));
 '''
 
 indicationMethodDeclTemplate='''
@@ -269,15 +241,24 @@ class TypeMixin:
             return self.params[0].numeric()
         if (self.name == 'Float'):
             return 32
-	sdef = globalv.globalvars[self.name].tdtype
-        if (sdef.type == 'Struct'):
-            return sum([e.type.numBitsBSV() for e in sdef.elements])
-        else:
-            return sdef.numBitsBSV();
+        if (self.name == 'SpecialTypeForSendingFd'):
+            return 32
+	sdef = globalv.globalvars[self.name]
+        sdeftype = sdef.tdtype
+        #print 'Type.numBitsBSV()', sdef.type, sdef.name, sdef.params, sdef.tdtype
+        #print 'instantiating type parameters'
+        sdeftype = sdeftype.instantiate(dict(zip(sdef.params, self.params)))
+        #print 'resolved to', sdeftype.type
+        #print '           ', sdeftype
+        return sdeftype.numBitsBSV();
 
 class EnumMixin:
     def numBitsBSV(self):
         return int(math.ceil(math.log(len(self.elements),2)))
+
+class StructMixin:
+    def numBitsBSV(self):
+        return sum([e.type.numBitsBSV() for e in self.elements])
 
 class MethodMixin:
     def substs(self, outerTypeName):
@@ -361,6 +342,7 @@ class InterfaceMixin:
         m.update(self.name)
 
         substs = {
+            'Package': os.path.splitext(os.path.basename(self.package))[0],
             'Ifc': self.name,
             'dut': dutName,
             'Dut': util.capitalize(name),
@@ -378,7 +360,6 @@ class InterfaceMixin:
             'indicationInterfaces': ''.join(indicationTemplate % { 'Indication': name }) if not self.hasSource else '',
             }
 
-        substs['ifcType'] = 'truncate(128\'h%s)' % m.hexdigest()
         substs['portalIfc'] = portalIfcTemplate % substs
         substs['requestOutputPipeInterfaces'] = ''.join([requestOutputPipeInterfaceTemplate % {'methodName': methodName,
                                                        'MethodName': util.capitalize(methodName)}
@@ -447,23 +428,23 @@ class InterfaceMixin:
                     methods.append(methodRule)
         return methods
 
-def generate_bsv(globalimports, project_dir, noisyFlag, hwProxies, hwWrappers, dutname):
-    def create_bsv_package(pname, data, files):
+def generate_bsv(globalimports, project_dir, noisyFlag, interfaces, dutname):
+    generatedPackageNames = []
+    for item in interfaces:
+        pname = item.name
+        if pname in generatedPackageNames:
+            continue
+        generatedPackageNames.append(pname)
         fname = os.path.join(project_dir, 'sources', dutname.lower(), '%s.bsv' % pname)
         bsv_file = util.createDirAndOpen(fname, 'w')
         bsv_file.write('package %s;\n' % pname)
-        extraImports = (['import %s::*;\n' % os.path.splitext(os.path.basename(fn))[0] for fn in files]
-                   + ['import %s::*;\n' % i for i in globalimports ])
+        extraImports = (['import %s::*;\n' % os.path.splitext(os.path.basename(fn))[0] for fn in [item.package] ]
+                   + ['import %s::*;\n' % i for i in globalimports if not i in generatedPackageNames])
         bsv_file.write(preambleTemplate % {'extraImports' : ''.join(extraImports)})
         if noisyFlag:
             print 'Writing file ', fname
-        bsv_file.write(data)
+        bsv_file.write(exposedWrapperInterfaceTemplate % item.substs('Wrapper',False))
+        bsv_file.write(exposedProxyInterfaceTemplate % item.substs("Proxy",True))
         bsv_file.write('endpackage: %s\n' % pname)
         bsv_file.close()
-
-    for i in hwWrappers:
-        create_bsv_package('%sWrapper' % i.name, exposedWrapperInterfaceTemplate % i.substs('Wrapper',False), i.package)
-        
-    for i in hwProxies:
-        create_bsv_package('%sProxy' % i.name, exposedProxyInterfaceTemplate % i.substs("Proxy",True), i.package)
 

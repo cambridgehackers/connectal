@@ -24,12 +24,18 @@ import Vector::*;
 import GetPut::*;
 import FIFO::*;
 import FIFOF::*;
+import GetPut::*;
+import ClientServer::*;
 import CtrlMux::*;
 
 import Pipe::*;
 import Portal::*;
 import MemTypes::*;
 import AddressGenerator::*;
+import MemTypes::*;
+import MemreadEngine::*;
+import MemwriteEngine::*;
+import ConnectalMemory::*;
 
 typedef struct {
     Bit#(1) select;
@@ -37,34 +43,45 @@ typedef struct {
 } ReadReqInfo deriving (Bits);
 
 interface PortalCtrlMemSlave#(numeric type addrWidth, numeric type dataWidth);
-   interface MemSlave#(addrWidth, dataWidth) memSlave;
+   interface PhysMemSlave#(addrWidth, dataWidth) memSlave;
    interface ReadOnly#(Bool) interrupt;
+   interface WriteOnly#(Bool) top;
 endinterface
 
-module mkPortalCtrlMemSlave#(Vector#(numIndications, PipeOut#(Bit#(dataWidth))) indicationPipes)(PortalCtrlMemSlave#(addrWidth, dataWidth));
+module mkPortalCtrlMemSlave#(Bit#(dataWidth) ifcId, 
+			     Vector#(numIndications, PipeOut#(Bit#(dataWidth))) indicationPipes)(PortalCtrlMemSlave#(addrWidth, dataWidth))
+   provisos( Add#(a__, 1, dataWidth)
+	    ,Div#(dataWidth, 8, b__)
+	    ,Bits#(MemData#(dataWidth), c__)
+	    ,Add#(d__, dataWidth, TMul#(dataWidth, 2))
+	    );
+   
    AddressGenerator#(addrWidth,dataWidth) ctrlReadAddrGenerator  <- mkAddressGenerator();
    AddressGenerator#(addrWidth,dataWidth) ctrlWriteAddrGenerator <- mkAddressGenerator();
    FIFO#(MemData#(dataWidth))        ctrlWriteDataFifo <- mkFIFO();
-   FIFO#(Bit#(ObjectTagSize))        ctrlWriteDoneFifo <- mkFIFO();
+   FIFO#(Bit#(MemTagSize))        ctrlWriteDoneFifo <- mkFIFO();
+   Reg#(Bool) topR <- mkReg(True);
 
-    // indication-specific state
-    Reg#(Bit#(dataWidth)) underflowReadCountReg <- mkReg(0);
-    Reg#(Bit#(dataWidth)) outOfRangeReadCountReg <- mkReg(0);
-    Reg#(Bit#(dataWidth)) outOfRangeWriteCount <- mkReg(0);
-    function Bool pipeOutNotEmpty(PipeOut#(a) po); return po.notEmpty(); endfunction
-    Vector#(numIndications, Bool) readyBits = map(pipeOutNotEmpty, indicationPipes);
-
-    Reg#(Bool) interruptEnableReg <- mkReg(False);
-    Bool      interruptStatus = False;
-
-    Bit#(dataWidth)  readyChannel = -1;
-    for (Integer i = 0; i < valueOf(numIndications); i = i + 1) begin
-        if (readyBits[i]) begin
-           interruptStatus = True;
-           readyChannel = fromInteger(i);
-        end
-    end
-
+   function Bool pipeOutNotEmpty(PipeOut#(a) po); return po.notEmpty(); endfunction
+   Vector#(numIndications, Bool) readyBits = map(pipeOutNotEmpty, indicationPipes);
+   
+   Reg#(Bool) interruptEnableReg <- mkReg(False);
+   Bool      interruptStatus = False;
+   Reg#(Bit#(TMul#(dataWidth,2))) cycle_count <- mkReg(0);
+   Reg#(Bit#(dataWidth))    snapshot <- mkReg(0);
+   
+   Bit#(dataWidth)  readyChannel = -1;
+   for (Integer i = 0; i < valueOf(numIndications); i = i + 1) begin
+      if (readyBits[i]) begin
+         interruptStatus = True;
+         readyChannel = fromInteger(i);
+      end
+   end
+   
+   rule count;
+      cycle_count <= cycle_count+1;
+   endrule
+   
    rule writeDataRule;
       let d <- toGet(ctrlWriteDataFifo).get();
       let b <- ctrlWriteAddrGenerator.addrBeat.get();
@@ -79,8 +96,8 @@ module mkPortalCtrlMemSlave#(Vector#(numIndications, PipeOut#(Bit#(dataWidth))) 
 	 ctrlWriteDoneFifo.enq(b.tag);
    endrule
 
-   interface MemSlave memSlave;
-      interface MemReadServer read_server;
+   interface PhysMemSlave memSlave;
+      interface PhysMemReadServer read_server;
 	 interface Put readReq = ctrlReadAddrGenerator.request;
 	 interface Get readData;
 	    method ActionValue#(MemData#(dataWidth)) get();
@@ -93,24 +110,28 @@ module mkPortalCtrlMemSlave#(Vector#(numIndications, PipeOut#(Bit#(dataWidth))) 
 		  v = interruptEnableReg ? 1 : 0;
 	       if (addr == 'h008)
 		  v = 7;
-	       if (addr == 'h00C)
-		  v = underflowReadCountReg;
-	       if (addr == 'h010)
-		  v = outOfRangeReadCountReg;
-	       if (addr == 'h014)
-		  v = outOfRangeWriteCount;
-               if (addr == 'h018) begin
+               if (addr == 'h00C) begin
 		  if (interruptStatus)
 		     v = readyChannel+1;
 		  else 
 		     v = 0;
                end
+	       if (addr == 'h010)
+		  v = ifcId;
+	       if (addr == 'h014)
+		  v = extend(pack(topR));
+	       if (addr == 'h018) begin
+		  snapshot <= truncate(cycle_count);
+		  v = truncate(cycle_count>>valueOf(dataWidth));
+	       end
+	       if (addr == 'h01C)
+		  v = snapshot;
 	       //$display("mkCtrl.readData addr=%h data=%h", b.addr, v);
 	       return MemData { data: v, tag: b.tag, last: b.last };
 	    endmethod
 	 endinterface
       endinterface: read_server
-      interface MemWriteServer write_server; 
+      interface PhysMemWriteServer write_server; 
 	 interface Put writeReq = ctrlWriteAddrGenerator.request;
 	 interface Put writeData;
 	    method Action put(MemData#(dataWidth) d);
@@ -118,7 +139,7 @@ module mkPortalCtrlMemSlave#(Vector#(numIndications, PipeOut#(Bit#(dataWidth))) 
 	    endmethod
 	 endinterface
 	 interface Get writeDone;
-	    method ActionValue#(Bit#(ObjectTagSize)) get();
+	    method ActionValue#(Bit#(MemTagSize)) get();
 	       let tag <- toGet(ctrlWriteDoneFifo).get();
 	       return tag;
 	    endmethod
@@ -130,17 +151,21 @@ module mkPortalCtrlMemSlave#(Vector#(numIndications, PipeOut#(Bit#(dataWidth))) 
 	 return interruptStatus && interruptEnableReg;
       endmethod
    endinterface
+   interface WriteOnly top;
+      method Action _write(Bool v);
+	 topR <= v;
+      endmethod
+   endinterface
 endmodule   
 
-module mkPipeInMemSlave#(PipeIn#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWidth, dataWidth))
+module mkPipeInMemSlave#(PipeIn#(Bit#(dataWidth)) methodPipe)(PhysMemSlave#(addrWidth, dataWidth))
    provisos (Add#(1,a__,dataWidth));
 
    AddressGenerator#(addrWidth,dataWidth) fifoReadAddrGenerator  <- mkAddressGenerator();
    AddressGenerator#(addrWidth,dataWidth) fifoWriteAddrGenerator <- mkAddressGenerator();
-   FIFO#(Bit#(ObjectTagSize))        fifoWriteDoneFifo <- mkFIFO();
-   FIFO#(Bool)                           putFailedFifo <- mkFIFO();
+   FIFO#(Bit#(MemTagSize))        fifoWriteDoneFifo <- mkFIFO();
 
-   interface MemReadServer read_server;
+   interface PhysMemReadServer read_server;
       interface Put readReq = fifoReadAddrGenerator.request;
       interface Get readData;
 	 method ActionValue#(MemData#(dataWidth)) get();
@@ -152,7 +177,7 @@ module mkPipeInMemSlave#(PipeIn#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWidt
 	 endmethod
       endinterface
    endinterface
-   interface MemWriteServer write_server; 
+   interface PhysMemWriteServer write_server; 
       interface Put writeReq = fifoWriteAddrGenerator.request;
       interface Put writeData;
 	 method Action put((MemData#(dataWidth)) d);
@@ -160,21 +185,19 @@ module mkPipeInMemSlave#(PipeIn#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWidt
 	    //$display("mkPipeInMemSlave.writeData.put addr=%h data=%h", b.addr, d.data);
 	    if (b.last)
 	       fifoWriteDoneFifo.enq(b.tag);
-	    if (methodPipe.notFull()) begin
-	       // FIXME: handle putFailed
-	       methodPipe.enq(d.data);
-	    end
+	    methodPipe.enq(d.data);
+	    // this used to be where we triggered putFailed
 	 endmethod
       endinterface
       interface Get writeDone = toGet(fifoWriteDoneFifo);
    endinterface
 endmodule
 
-module mkPipeOutMemSlave#(PipeOut#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWidth, dataWidth))
+module mkPipeOutMemSlave#(PipeOut#(Bit#(dataWidth)) methodPipe)(PhysMemSlave#(addrWidth, dataWidth))
    provisos (Add#(1,a__,dataWidth));
    AddressGenerator#(addrWidth,dataWidth) fifoReadAddrGenerator <- mkAddressGenerator();
    AddressGenerator#(addrWidth,dataWidth) fifoWriteAddrGenerator <- mkAddressGenerator();
-   FIFO#(Bit#(ObjectTagSize))                  fifoWriteDoneFifo <- mkFIFO();
+   FIFO#(Bit#(MemTagSize))                  fifoWriteDoneFifo <- mkFIFO();
    FIFO#(MemData#(dataWidth))                   fifoReadDataFifo <- mkFIFO();
    rule readDataRule;
       let b <- fifoReadAddrGenerator.addrBeat.get();
@@ -187,9 +210,9 @@ module mkPipeOutMemSlave#(PipeOut#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWi
       fifoReadDataFifo.enq(MemData { data: v, tag: b.tag, last: b.last });
    endrule
 
-   interface MemReadServer read_server;
+   interface PhysMemReadServer read_server;
       interface Put readReq;
-	 method Action put(MemRequest#(addrWidth) req);
+	 method Action put(PhysMemRequest#(addrWidth) req);
 	    fifoReadAddrGenerator.request.put(req);
 	    if (!methodPipe.notEmpty())
 	       $display("***\n\n mkPipeOutMemSlave.read_server.underflow! \n\n****");
@@ -202,7 +225,7 @@ module mkPipeOutMemSlave#(PipeOut#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWi
 	 endmethod
       endinterface
    endinterface
-   interface MemWriteServer write_server; 
+   interface PhysMemWriteServer write_server; 
       interface Put writeReq = fifoWriteAddrGenerator.request;
       interface Put writeData;
 	 method Action put((MemData#(dataWidth)) d);
@@ -216,38 +239,217 @@ module mkPipeOutMemSlave#(PipeOut#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWi
    endinterface
 endmodule
 
-module mkMemPortal#(Portal#(numRequests, numIndications, slaveDataWidth) portal)(MemPortal#(slaveAddrWidth, slaveDataWidth))
-   provisos (Add#(1, i__, slaveDataWidth),
-	     Add#(c__, 8, slaveAddrWidth),
-	     Add#(d__, 1, c__),
-	     Max#(numIndications,1,numIndicationsToMux),
-	     Add#(a__, TLog#(TAdd#(1, TAdd#(numRequests, numIndicationsToMux))), c__),
-	     Add#(numIndicationsToMux, b__, TAdd#(numIndications, 1))
+module mkMemPortal#(Bit#(slaveDataWidth) ifcId,
+		    PipePortal#(numRequests, numIndications, slaveDataWidth) portal)(MemPortal#(slaveAddrWidth, slaveDataWidth))
+   provisos ( Add#(1, i__, slaveDataWidth)
+	     ,Add#(c__, 8, slaveAddrWidth)
+	     ,Add#(d__, 1, c__)
+	     ,Add#(a__, TLog#(TAdd#(1, TAdd#(numRequests, numIndications))), c__)
+	     ,Add#(b__, slaveDataWidth, TMul#(slaveDataWidth, 2))
 	     );
 
-   PipeIn#(Bit#(slaveDataWidth)) guardRequestPipe =
-      (interface PipeIn#(Bit#(slaveDataWidth));
-	  method Action enq(Bit#(slaveDataWidth) v) if (False); endmethod
-	  method Bool notFull(); return False; endmethod
-       endinterface);
-   Vector#(1, PipeIn#(Bit#(slaveDataWidth))) guardRequestPipes = replicate(guardRequestPipe);
-
-   FIFOF#(Bit#(slaveDataWidth)) putFailedIndicationFifo <- mkFIFOF();
-   PipeOut#(Bit#(slaveDataWidth)) putFailedIndicationPipe = toPipeOut(putFailedIndicationFifo);
-
-   Vector#(numRequests,         PipeIn#(Bit#(slaveDataWidth)))     requestPipes = take(portal.requests);
-   Vector#(numIndicationsToMux, PipeOut#(Bit#(slaveDataWidth))) indicationPipes = take(append(portal.indications, cons(putFailedIndicationPipe, nil)));
-   Vector#(numRequests,         MemSlave#(8, slaveDataWidth))    requestMemSlaves <- mapM(mkPipeInMemSlave, requestPipes);
-   Vector#(numIndicationsToMux, MemSlave#(8, slaveDataWidth)) indicationMemSlaves <- mapM(mkPipeOutMemSlave, indicationPipes);
-
-   PortalCtrlMemSlave#(8,slaveDataWidth) ctrlPort <- mkPortalCtrlMemSlave(indicationPipes);
-
-   MemSlave#(slaveAddrWidth,slaveDataWidth) memslave  <- mkMemSlaveMux(cons(ctrlPort.memSlave,
-									    append(requestMemSlaves, indicationMemSlaves)));
-
-   method ifcId   = portal.ifcId;
-   method ifcType = portal.ifcType;
-
-   interface MemSlave slave = memslave;
+   Vector#(numRequests,    PipeIn#(Bit#(slaveDataWidth)))     requestPipes = portal.requests;
+   Vector#(numIndications, PipeOut#(Bit#(slaveDataWidth))) indicationPipes = portal.indications;
+   Vector#(numRequests,    PhysMemSlave#(8, slaveDataWidth))    requestMemSlaves <- mapM(mkPipeInMemSlave, requestPipes);
+   Vector#(numIndications, PhysMemSlave#(8, slaveDataWidth)) indicationMemSlaves <- mapM(mkPipeOutMemSlave, indicationPipes);
+   
+   PortalCtrlMemSlave#(8,slaveDataWidth) ctrlPort <- mkPortalCtrlMemSlave(ifcId, indicationPipes);
+   PhysMemSlave#(slaveAddrWidth,slaveDataWidth) memslave  <- mkMemSlaveMux(cons(ctrlPort.memSlave,append(requestMemSlaves, indicationMemSlaves)));
+   interface PhysMemSlave slave = memslave;
    interface ReadOnly interrupt = ctrlPort.interrupt;
+   interface WriteOnly top = ctrlPort.top;
+endmodule
+
+typedef enum {
+   Idle,
+   HeadRequested,
+   TailRequested,
+   RequestMessage,
+   MessageHeaderRequested,
+   MessageRequested,
+   UpdateTail,
+   Waiting,
+   Stop
+   } SharedMemoryPortalState deriving (Bits,Eq);
+
+module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal)(SharedMemoryPortal#(64));
+
+   MemreadEngineV#(64,2,2) readEngine <- mkMemreadEngine();
+   MemwriteEngineV#(64,2,2) writeEngine <- mkMemwriteEngine();
+
+   Bool verbose = False;
+
+   Reg#(Bit#(32)) sglIdReg <- mkReg(0);
+   Reg#(Bool)     readyReg   <- mkReg(False);
+
+   if (valueOf(numRequests) > 0) begin
+      // read the head and tail pointers, if they are different, then read a request
+      Reg#(Bit#(32)) reqLimitReg <- mkReg(0);
+      Reg#(Bit#(32)) reqHeadReg <- mkReg(0);
+      Reg#(Bit#(32)) reqTailReg <- mkReg(0);
+      Reg#(Bit#(16)) wordCountReg <- mkReg(0);
+      Reg#(Bit#(16)) demuxCountReg <- mkReg(0);
+      Reg#(Bit#(16)) messageWordsReg <- mkReg(0);
+      Reg#(Bit#(16)) methodIdReg <- mkReg(0);
+      Reg#(SharedMemoryPortalState) reqState <- mkReg(Idle);
+
+      rule updateReqHeadTail if (reqState == Idle && readyReg);
+	 //$display("updateReqHeadTail");
+	 readEngine.readServers[0].request.put(MemengineCmd { sglId: sglIdReg,
+							     base: 0,
+							     burstLen: 16,
+							     len: 16
+							     });
+	 reqState <= HeadRequested;
+      endrule
+
+      rule receiveReqHeadTail if (reqState == HeadRequested || reqState == TailRequested);
+	 let data <- toGet(readEngine.dataPipes[0]).get();
+	 let w0 = data[31:0];
+	 let w1 = data[63:32];
+	 let head = reqHeadReg;
+	 let tail = reqTailReg;
+	 if (reqState == HeadRequested) begin
+	    reqLimitReg <= w0;
+	    reqHeadReg <= w1;
+	    head = w1;
+	    reqState <= TailRequested;
+	 end
+	 else begin
+	    if (reqTailReg == 0) begin
+	       tail = w0;
+	       reqTailReg <= tail;
+	    end
+	    if (tail != reqHeadReg)
+	       reqState <= RequestMessage;
+	    else
+	       reqState <= Idle;
+	 end
+	 if (head != tail)
+	    $display("receiveReqHeadTail state=%d w0=%x w1=%x", reqState, w0, w1);
+      endrule
+
+      rule requestMessage if (reqState == RequestMessage);
+	 Bit#(32) wordCount = reqHeadReg - reqTailReg;
+	 if ((reqTailReg & 1) == 1) begin
+	    $display("WARNING requestMessage: reqTail=%d is odd.", reqTailReg);
+	 end
+	 let tail = reqTailReg + wordCount;
+	 if (reqHeadReg < reqTailReg) begin
+	    $display("requestMessage wrapped: head=%d tail=%d", reqHeadReg, reqTailReg);
+	    wordCount = reqLimitReg - reqTailReg;
+	    tail = 4;
+	 end
+	 //$display("requestMessage id=%d tail=%h wordCount=%d", sglIdReg, reqTailReg, wordCount);
+
+	 reqTailReg <= tail;
+	 wordCountReg <= truncate(wordCount);
+	 demuxCountReg <= truncate(wordCount);
+	 let fetchCount = wordCount;
+	 if ((fetchCount & 1) == 1)
+	    fetchCount = fetchCount + 1;
+	 readEngine.readServers[0].request.put(MemengineCmd {sglId: sglIdReg,
+							     base: extend(reqTailReg << 2),
+							     burstLen: 16,
+							     len: fetchCount << 2
+							     });
+	 reqState <= MessageHeaderRequested;
+      endrule
+
+      FIFOF#(Vector#(2,Maybe#(Bit#(32)))) readFifo <- mkFIFOF();
+      rule demuxwords;
+	 let data <- toGet(readEngine.dataPipes[0]).get();
+	 Vector#(2,Bit#(32)) dvec = unpack(data);
+	 function Maybe#(a) toValid(a in); return tagged Valid in; endfunction
+	 Vector#(2,Maybe#(Bit#(32))) mvec = map(toValid, dvec);
+	 let demuxCount = demuxCountReg - 2;
+	 if (demuxCountReg == 1) begin
+	    mvec[1] = tagged Invalid;
+	    demuxCount = 0;
+	 end
+	 demuxCountReg <= demuxCount;
+	 readFifo.enq(mvec);
+      endrule
+
+      PipeOut#(Vector#(2,Maybe#(Bit#(32)))) readPipe2 = toPipeOut(readFifo);
+      PipeOut#(Maybe#(Bit#(32))) readPipe <- mkFunnel1(readPipe2);
+
+      rule receiveMessageHeader if (reqState == MessageHeaderRequested);
+	 let maybehdr <- toGet(readPipe).get();
+	 if (maybehdr matches tagged Valid .hdr) begin
+	     let methodId = hdr[31:16];
+	     let messageWords = hdr[15:0];
+	     methodIdReg <= methodId;
+	    if (verbose)
+	     $display("receiveMessageHeader hdr=%x methodId=%x messageWords=%d wordCount=%d", hdr, methodId, messageWords, wordCountReg);
+	     wordCountReg <= wordCountReg - 1;
+	     messageWordsReg <= messageWords - 1;
+	     if (wordCountReg <= 1)
+		reqState <= UpdateTail;
+	     else if (messageWords <= 1)
+		reqState <= MessageHeaderRequested;
+	     else
+		reqState <= MessageRequested;
+	 end
+	 else begin
+	    //$display("receiveMessageHeader tagged invalid %x wordCountReg", maybehdr, wordCountReg);
+	    reqState <= UpdateTail;
+	 end
+      endrule
+
+      //GearBox(Bit#(64),Bit#(32)) gb <- mkNto1Gearbox(defaultClock,defaultReset,defaultClock,defaultReset);
+      rule receiveMessage if (reqState == MessageRequested);
+	 let maybedata <- toGet(readPipe).get();
+	 if (maybedata matches tagged Valid .data) begin
+	    //$display("receiveMessage data=%x messageWords=%d wordCount=%d", data, messageWordsReg, wordCountReg);
+	     portal.requests[methodIdReg].enq(data);
+
+	     messageWordsReg <= messageWordsReg - 1;
+	     wordCountReg <= wordCountReg - 1;
+	     if (messageWordsReg <= 1)
+		reqState <= MessageHeaderRequested;
+	     else if (wordCountReg <= 1)
+		reqState <= UpdateTail;
+	 end
+	 else begin
+	    //$display("receiveMessage tagged Invalid %x", maybedata);
+	    reqState <= UpdateTail;
+	 end
+      endrule
+
+      rule updateTail if (reqState == UpdateTail);
+	 //$display("updateTail: tail=%d", reqTailReg);
+	 // update the tail pointer
+	 writeEngine.writeServers[0].request.put(MemengineCmd {sglId: sglIdReg,
+							       base: 8,
+							       len: 8,
+							       burstLen: 8
+							       });
+	 writeEngine.dataPipes[0].enq(extend(reqTailReg));
+	 reqState <= Waiting;
+      endrule
+      rule waiting if (reqState == Waiting);
+	 let done <- writeEngine.writeServers[0].response.get();
+	 //$display("done waiting for write");
+	 reqState <= Idle;
+      endrule
+
+      rule consumeResponse;
+	 let response <- readEngine.readServers[0].response.get();
+      endrule
+
+   end
+   if (valueOf(numIndications) > 0) begin
+   end
+   interface SharedMemoryPortalConfig cfg;
+      method Action setSglId(Bit#(32) id);
+	 $display("setSglId id=%d", id);
+	 sglIdReg <= id;
+	 readyReg <= True;
+      endmethod
+   endinterface
+   interface MemReadClient  readClient = readEngine.dmaClient;
+   interface MemWriteClient writeClient = writeEngine.dmaClient;
+   interface ReadOnly interrupt;
+   endinterface
 endmodule

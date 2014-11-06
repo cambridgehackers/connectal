@@ -36,20 +36,20 @@ import MemUtils::*;
 import Pipe::*;
 
 interface BRAMWriter#(numeric type bramIdxWidth, numeric type busWidth);
-   method Action start(SGLId h, Bit#(ObjectOffsetSize) base, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
+   method Action start(SGLId h, Bit#(MemOffsetSize) base, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
    method ActionValue#(Bool) finish();
 endinterface
    
 interface BRAMReadClient#(numeric type bramIdxWidth, numeric type busWidth);
-   method Action start(SGLId h, Bit#(ObjectOffsetSize) base, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
+   method Action start(SGLId h, Bit#(MemOffsetSize) base, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
    method ActionValue#(Bool) finish();
-   interface ObjectReadClient#(busWidth) dmaClient;
+   interface MemReadClient#(busWidth) dmaClient;
 endinterface
 
 interface BRAMWriteClient#(numeric type bramIdxWidth, numeric type busWidth);
-   method Action start(SGLId h, Bit#(ObjectOffsetSize) base, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
+   method Action start(SGLId h, Bit#(MemOffsetSize) base, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
    method ActionValue#(Bool) finish();
-   interface ObjectWriteClient#(busWidth) dmaClient;
+   interface MemWriteClient#(busWidth) dmaClient;
 endinterface
 
 module mkBRAMReadClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMReadClient#(bramIdxWidth,busWidth))
@@ -67,7 +67,7 @@ module mkBRAMReadClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMReadClient#(b
    Reg#(Bit#(cntW)) j <- mkReg(maxBound);
    Reg#(Bit#(cntW)) n <- mkReg(0);
    Reg#(SGLId) ptr <- mkReg(0);
-   Reg#(Bit#(ObjectOffsetSize)) off <- mkReg(0);
+   Reg#(Bit#(MemOffsetSize)) off <- mkReg(0);
    Gearbox#(nd,1,d) gb <- mkNto1Gearbox(clk,rst,clk,rst); 
    
    let bus_width_in_bytes = fromInteger(valueOf(busWidth)/8);
@@ -80,7 +80,7 @@ module mkBRAMReadClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMReadClient#(b
    endrule
    
    rule loadReq(i <= n);
-      re.readServer.readReq.put(ObjectRequest{sglId:ptr, offset:off, burstLen:bus_width_in_bytes, tag:0});
+      re.readServer.readReq.put(MemRequest{sglId:ptr, offset:off, burstLen:bus_width_in_bytes, tag:0});
       off <= off+bus_width_in_bytes;
       //$display("mkBRAMReadClient::readReq.put %x, %x", i, n);
       i <= i+fromInteger(valueOf(nd));
@@ -99,7 +99,7 @@ module mkBRAMReadClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMReadClient#(b
       gb.deq;
    endrule
    
-   method Action start(SGLId h, Bit#(ObjectOffsetSize) b, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
+   method Action start(SGLId h, Bit#(MemOffsetSize) b, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
       $display("mkBRAMReadClient::start(%h, %h, %h %h)", h, b, start_idx, finish_idx);
       i <= extend(start_idx);
       j <= extend(start_idx);
@@ -159,7 +159,7 @@ module mkBRAMWriter#(Integer id,
       if(verbose) $display("mkBRAMWriter::discard (%d) %x", id, j);
    endrule
    
-   method Action start(SGLId h, Bit#(ObjectOffsetSize) b, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx) if (!running);
+   method Action start(SGLId h, Bit#(MemOffsetSize) b, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx) if (!running);
       if(verbose) $display("mkBRAMWriter::start (%d) %d, %d, %d %d", id, h, b, start_idx, finish_idx);
       Bit#(BurstLenSize) burst_len_bytes = fromInteger(valueOf(bwbytes));
 
@@ -201,11 +201,11 @@ module mkBRAMWriteClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMWriteClient#
    Reg#(Bit#(cntW)) j <- mkReg(maxBound);
    Reg#(Bit#(cntW)) n <- mkReg(0);
    Reg#(SGLId) ptr <- mkReg(0);
-   Reg#(Bit#(ObjectOffsetSize)) off <- mkReg(0);
+   Reg#(Bit#(MemOffsetSize)) off <- mkReg(0);
    Gearbox#(1,nd,Bit#(dsz)) gb <- mk1toNGearbox(clk,rst,clk,rst);
    
    MemwriteEngine#(busWidth,1) we <- mkMemwriteEngine;
-   Bit#(ObjectOffsetSize) bus_width_in_bytes = fromInteger(valueOf(busWidth)/8);
+   Bit#(MemOffsetSize) bus_width_in_bytes = fromInteger(valueOf(busWidth)/8);
       
    rule drain_geatbox;
       Vector#(nd,Bit#(dsz)) v = gb.first;
@@ -237,7 +237,7 @@ module mkBRAMWriteClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMWriteClient#
 	 f.enq(?);
    endrule
    
-   method Action start(SGLId h, Bit#(ObjectOffsetSize) b, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
+   method Action start(SGLId h, Bit#(MemOffsetSize) b, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
       $display("mkBRAMWriteClient::start(%h, %h, %h %h)", h, b, start_idx, finish_idx);
       i <= extend(start_idx);
       j <= extend(start_idx);

@@ -32,10 +32,10 @@
 #include <mp.h>
 #include "StdDmaIndication.h"
 
-#include "SpliceIndicationWrapper.h"
-#include "SpliceRequestProxy.h"
-#include "DmaDebugRequestProxy.h"
-#include "MMUConfigRequestProxy.h"
+#include "SpliceIndication.h"
+#include "SpliceRequest.h"
+#include "DmaDebugRequest.h"
+#include "MMUConfigRequest.h"
 
 
 sem_t test_sem;

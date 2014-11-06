@@ -1,6 +1,5 @@
 
-S2H = PTestRequest
-H2S = PTestIndication
+INTERFACES = PTestRequest PTestIndication
 BSVFILES = PTest.bsv
 NUMBER_OF_MASTERS =0
 

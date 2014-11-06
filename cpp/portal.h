@@ -33,27 +33,66 @@
 /* Offsets of mapped registers within an /dev/fpgaxxx device */
 #define PORTAL_REQ_FIFO(A)         (((0<<14) + (A) * 256 + 256)/sizeof(uint32_t))
 #define PORTAL_IND_FIFO(A)         (((0<<14) + (A) * 256 + 256)/sizeof(uint32_t))
-#define PORTAL_IND_REG_OFFSET_32   ( (0<<14)             /sizeof(uint32_t))
-#define     IND_REG_INTERRUPT_FLAG    (PORTAL_IND_REG_OFFSET_32 + 0)
-#define     IND_REG_INTERRUPT_MASK    (PORTAL_IND_REG_OFFSET_32 + 1)
-#define     IND_REG_INTERRUPT_COUNT   (PORTAL_IND_REG_OFFSET_32 + 2)
-#define     IND_REG_QUEUE_STATUS      (PORTAL_IND_REG_OFFSET_32 + 6)
 
-// Directory offsets
+// PortalCtrl offsets
+#define PORTAL_CTRL_INTERRUPT_STATUS 0
+#define PORTAL_CTRL_INTERRUPT_ENABLE 1
+#define PORTAL_CTRL_SEVEN            2
+#define PORTAL_CTRL_IND_QUEUE_STATUS 3
+#define PORTAL_CTRL_PORTAL_ID        4
+#define PORTAL_CTRL_TOP              5
+#define PORTAL_CTRL_COUNTER_MSB      6
+#define PORTAL_CTRL_COUNTER_LSB      7
 
-#define PORTAL_DIRECTORY_OFFSET(A)      &globalDirectory.map_base[128+(A)]
-#define PORTAL_DIRECTORY_VERSION        PORTAL_DIRECTORY_OFFSET(0)
-#define PORTAL_DIRECTORY_TIMESTAMP      PORTAL_DIRECTORY_OFFSET(1)
-#define PORTAL_DIRECTORY_NUMPORTALS     PORTAL_DIRECTORY_OFFSET(2)
-#define PORTAL_DIRECTORY_ADDRBITS       PORTAL_DIRECTORY_OFFSET(3)
-#define PORTAL_DIRECTORY_COUNTER_MSB    PORTAL_DIRECTORY_OFFSET(4)
-#define PORTAL_DIRECTORY_COUNTER_LSB    PORTAL_DIRECTORY_OFFSET(5)
-#define PORTAL_DIRECTORY_PORTAL_ID(A)   PORTAL_DIRECTORY_OFFSET(6 + 2 * (A))
-#define PORTAL_DIRECTORY_PORTAL_TYPE(A) PORTAL_DIRECTORY_OFFSET(6 + 2 * (A) + 1)
+
+// PortalCtrl registers
+#define PORTAL_CTRL_REG_OFFSET_32   ( (0<<14)             /sizeof(uint32_t))
+#define PORTAL_CTRL_REG_INTERRUPT_STATUS (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_INTERRUPT_STATUS)
+#define PORTAL_CTRL_REG_INTERRUPT_ENABLE (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_INTERRUPT_ENABLE)
+#define PORTAL_CTRL_REG_SEVEN            (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_SEVEN           )
+#define PORTAL_CTRL_REG_IND_QUEUE_STATUS (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_IND_QUEUE_STATUS)
+#define PORTAL_CTRL_REG_PORTAL_ID        (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_PORTAL_ID       )
+#define PORTAL_CTRL_REG_TOP              (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_TOP             )
+#define PORTAL_CTRL_REG_COUNTER_MSB      (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_COUNTER_MSB     )
+#define PORTAL_CTRL_REG_COUNTER_LSB      (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_COUNTER_LSB     )
+
 
 typedef int Bool;   /* for GeneratedTypes.h */
+typedef int SpecialTypeForSendingFd;
 struct PortalInternal;
-typedef int (*PORTAL_INDFUNC)(struct PortalInternal *p, unsigned int channel);
+typedef int (*ITEMINIT)(struct PortalInternal *pint, void *param);
+typedef int (*PORTAL_INDFUNC)(struct PortalInternal *p, unsigned int channel, int messageFd);
+typedef void (*SENDMSG)(struct PortalInternal *pint, unsigned int hdr, int sendFd);
+typedef int (*RECVMSG)(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd);
+typedef unsigned int (*READWORD)(struct PortalInternal *pint, volatile unsigned int **addr);
+typedef void (*WRITEWORD)(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
+typedef void (*WRITEFDWORD)(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
+typedef int (*BUSYWAIT)(struct PortalInternal *pint, volatile unsigned int *addr, const char *str);
+typedef void (*ENABLEINT)(struct PortalInternal *pint, int val);
+typedef volatile unsigned int *(*MAPCHANNEL)(struct PortalInternal *pint, unsigned int v);
+typedef int (*EVENT)(struct PortalInternal *pint);
+typedef struct {
+    ITEMINIT    init;
+    READWORD    read;
+    WRITEWORD   write;
+    WRITEFDWORD writefd;
+    MAPCHANNEL  mapchannelInd;
+    MAPCHANNEL  mapchannelReq;
+    SENDMSG     send;
+    RECVMSG     recv;
+    BUSYWAIT    busywait;
+    ENABLEINT   enableint;
+    EVENT       event;
+} PortalItemFunctions;
+
+typedef struct {
+    struct DmaManager *dma;
+    uint32_t    size;
+} PortalSharedParam; /* for ITEMINIT function */
+typedef struct PortalSocketParam {
+    struct addrinfo *addr;
+} PortalSocketParam; /* for ITEMINIT function */
+
 typedef struct PortalInternal {
   struct PortalPoller   *poller;
   int                    fpga_fd;
@@ -63,6 +102,8 @@ typedef struct PortalInternal {
   PORTAL_INDFUNC         handler;
   uint32_t               reqsize;
   int                    accept_finished;
+  PortalItemFunctions    *item;
+  void                   *cb;
 } PortalInternal;
 
 #ifdef __KERNEL__
@@ -89,18 +130,10 @@ int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *
 #ifdef __cplusplus
 extern "C" {
 #endif
-void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, uint32_t reqsize);
+void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param, uint32_t reqsize);
+void portalCheckIndication(PortalInternal *pint);
 uint64_t portalCycleCount(void);
-unsigned int portalGetFpga(unsigned int id);
-unsigned int portalGetAddrbits(unsigned int id);
-unsigned int read_portal_bsim(volatile unsigned int *addr, int id);
-void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id);
-
-void portalTimerInit(void);
-void portalTimerStart(unsigned int i);
-uint64_t portalTimerLap(unsigned int i);
-uint64_t portalTimerCatch(unsigned int i);
-void portalTimerPrint(int loops);
+void write_portal_fd_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 
 // uses the default poller
 void* portalExec(void* __x);
@@ -109,40 +142,54 @@ void* portalExec_init(void);
 void* portalExec_poll(int timeout);
 void* portalExec_event(void);
 void portalExec_start(void);
+void portalExec_stop(void);
 void portalExec_end(void);
 void portalTrace_start(void);
 void portalTrace_stop(void);
 int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
-void portalEnableInterrupts(PortalInternal *p, int val);
 int portalDCacheFlushInval(int fd, long size, void *__p);
 void init_portal_memory(void);
 int portalAlloc(size_t size);
 void *portalMmap(int fd, size_t size);
-void portalInitiator(void);
-void portalSend(PortalInternal *p, void *data, int len);
-int portalRecv(PortalInternal *p, void *data, int len);
+void portalSendFd(int fd, void *data, int len, int sendFd);
+int portalRecvFd(int fd, void *data, int len, int *recvFd);
+
+void portalTimerStart(unsigned int i);
+uint64_t portalTimerLap(unsigned int i);
+void portalTimerInit(void);
+uint64_t portalTimerCatch(unsigned int i);
+void portalTimerPrint(int loops);
+
+void send_portal_null(struct PortalInternal *pint, unsigned int hdr, int sendFd);
+int recv_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd);
+int busy_portal_null(struct PortalInternal *pint, volatile unsigned int *addr, const char *str);
+void enableint_portal_null(struct PortalInternal *pint, int val);
+unsigned int read_portal_memory(PortalInternal *pint, volatile unsigned int **addr);
+void write_portal_memory(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
+void write_fd_portal_memory(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
+volatile unsigned int *mapchannel_hardware(struct PortalInternal *pint, unsigned int v);
+int busy_hardware(struct PortalInternal *pint, volatile unsigned int *addr, const char *str);
+void enableint_hardware(struct PortalInternal *pint, int val);
+int event_hardware(struct PortalInternal *pint);
 
 extern int portalExec_timeout;
 extern int global_pa_fd;
 extern int global_sockfd;
-extern int we_are_initiator;
-extern PortalInternal globalDirectory;
+extern PortalInternal *utility_portal;
+extern PortalItemFunctions bsimfunc, hardwarefunc,
+    socketfuncInit, socketfuncResp, sharedfunc;
 #ifdef __cplusplus
 }
 #endif
-
 #ifdef __cplusplus
 #include "poller.h"
 #endif
 
 #define MAX_TIMERS 50
 
-#if !defined(BSIM)
-#define READL(CITEM, A)     (*(A))
-#define WRITEL(CITEM, A, B) (*(A) = (B))
-#else
-#define READL(CITEM, A)     read_portal_bsim((A), (CITEM)->fpga_number)
-#define WRITEL(CITEM, A, B) write_portal_bsim((A), (B), (CITEM)->fpga_number)
-#endif
+#define SHARED_LIMIT  0
+#define SHARED_WRITE  1
+#define SHARED_READ   2
+#define SHARED_START  4
 
 #endif /* __PORTAL_OFFSETS_H__ */

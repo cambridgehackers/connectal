@@ -171,6 +171,7 @@ examples =  echo                 \
 	    ring                 \
 	    perf                 \
 	    nandsim              \
+	    algo1_nandsim        \
 	    strstr_nandsim       \
             flowcontrol          \
             bluescope            \

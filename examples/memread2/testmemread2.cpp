@@ -5,10 +5,10 @@
 #include <unistd.h>
 #include "StdDmaIndication.h"
 
-#include "DmaDebugRequestProxy.h"
-#include "MMUConfigRequestProxy.h"
-#include "Memread2IndicationWrapper.h"
-#include "Memread2RequestProxy.h"
+#include "DmaDebugRequest.h"
+#include "MMUConfigRequest.h"
+#include "Memread2Indication.h"
+#include "Memread2Request.h"
 
 int srcAlloc, srcAlloc2;
 unsigned int *srcBuffer = 0;

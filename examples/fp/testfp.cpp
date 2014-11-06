@@ -4,8 +4,8 @@
 #include <unistd.h>
 #include <assert.h>
 
-#include "FpIndicationWrapper.h"
-#include "FpRequestProxy.h"
+#include "FpIndication.h"
+#include "FpRequest.h"
 #include "GeneratedTypes.h"
 
 class FpIndication : public FpIndicationWrapper

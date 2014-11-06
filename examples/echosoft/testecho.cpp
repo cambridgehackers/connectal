@@ -20,13 +20,14 @@
  */
 
 #include <stdio.h>
-#include "SRequestProxy.h"
-#include "SIndicationWrapper.h"
+#include <netdb.h>
+#include "EchoRequest.h"
+#include "EchoIndication.h"
 
-SRequestProxy *sRequestProxy;
+EchoRequestProxy *sRequestProxy;
 static sem_t sem_heard2;
 
-class SIndication : public SIndicationWrapper
+class EchoIndication : public EchoIndicationWrapper
 {
 public:
     virtual void heard(uint32_t v) {
@@ -37,7 +38,7 @@ public:
         sem_post(&sem_heard2);
         //fprintf(stderr, "heard an s2: %ld %ld\n", a, b);
     }
-    SIndication(unsigned int id) : SIndicationWrapper(id) {}
+    EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
 };
 
 static void call_say(int v)
@@ -55,9 +56,12 @@ static void call_say2(int v, int v2)
 
 int main(int argc, const char **argv)
 {
-    portalInitiator();
-    SIndication *sIndication = new SIndication(IfcNames_SIndication);
-    sRequestProxy = new SRequestProxy(IfcNames_SRequest);
+    PortalSocketParam param;
+
+    int rc = getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
+    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &socketfuncInit, &param);
+    rc = getaddrinfo("127.0.0.1", "5001", NULL, &param.addr);
+    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &socketfuncInit, &param);
 
     portalExec_start();
 
@@ -67,10 +71,10 @@ int main(int argc, const char **argv)
     call_say(v*5);
     call_say(v*17);
     call_say(v*93);
-    portalTimerInit();
     call_say2(v, v*3);
     printf("TEST TYPE: SEM\n");
     sRequestProxy->setLeds(9);
     portalExec_end();
+    //freeaddrinfo(param.addr);
     return 0;
 }

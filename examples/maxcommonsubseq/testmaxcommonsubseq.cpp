@@ -35,10 +35,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "MaxcommonsubseqIndicationWrapper.h"
-#include "MaxcommonsubseqRequestProxy.h"
-#include "DmaDebugRequestProxy.h"
-#include "MMUConfigRequestProxy.h"
+#include "MaxcommonsubseqIndication.h"
+#include "MaxcommonsubseqRequest.h"
+#include "DmaDebugRequest.h"
+#include "MMUConfigRequest.h"
 
 
 sem_t test_sem;

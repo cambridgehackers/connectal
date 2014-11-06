@@ -32,10 +32,10 @@
 #include <mp.h>
 #include "StdDmaIndication.h"
 
-#include "StrstrIndicationWrapper.h"
-#include "StrstrRequestProxy.h"
-#include "DmaDebugRequestProxy.h"
-#include "MMUConfigRequestProxy.h"
+#include "StrstrIndication.h"
+#include "StrstrRequest.h"
+#include "DmaDebugRequest.h"
+#include "MMUConfigRequest.h"
 
 
 sem_t test_sem;

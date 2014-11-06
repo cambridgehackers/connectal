@@ -1,6 +1,5 @@
 
-S2H = ChannelSelectTestRequest DDSTestRequest
-H2S = ChannelSelectTestIndication DDSTestIndication
+INTERFACES = ChannelSelectTestRequest DDSTestRequest ChannelSelectTestIndication DDSTestIndication
 BSVFILES = ChannelSelectTestInterfaces.bsv  DDSTestInterfaces.bsv Top.bsv
 CPPFILES=testchannelselecttest.cpp
 NUMBER_OF_MASTERS =0

@@ -4,8 +4,8 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-#include "BscanIndicationWrapper.h"
-#include "BscanRequestProxy.h"
+#include "BscanIndication.h"
+#include "BscanRequest.h"
 #include "GeneratedTypes.h"
 
 #define LOOP_COUNT 1000

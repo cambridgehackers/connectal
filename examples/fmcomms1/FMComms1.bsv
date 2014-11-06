@@ -41,8 +41,8 @@ endinterface
 
 interface FMComms1;
    interface FMComms1Request request;
-   interface ObjectReadClient#(64) readDmaClient;
-   interface ObjectWriteClient#(64) writeDmaClient;
+   interface MemReadClient#(64) readDmaClient;
+   interface MemWriteClient#(64) writeDmaClient;
 endinterface
 
 interface FMComms1Indication;
@@ -61,7 +61,7 @@ module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#(64)) dac, PipeOut
    Reg#(SGLId)     readPointer <- mkReg(0);
    Reg#(Bit#(32))         readNumWords <- mkReg(0);
    Reg#(Bit#(32))         readIterCount <- mkReg(0);
-   Reg#(Bit#(8))          readBurstLen <- mkReg(0);
+   Reg#(Bit#(BurstLenSize)) readBurstLen <- mkReg(0);
    Reg#(Bit#(1))          readRun <- mkReg(0);
 
    MemreadEngine#(64,1)         re <- mkMemreadEngineBuff(64*16);
@@ -69,7 +69,7 @@ module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#(64)) dac, PipeOut
    Reg#(SGLId)     writePointer <- mkReg(0);
    Reg#(Bit#(32))         writeNumWords <- mkReg(0);
    Reg#(Bit#(32))         writeIterCount <- mkReg(0);
-   Reg#(Bit#(8))          writeBurstLen <- mkReg(0);
+   Reg#(Bit#(BurstLenSize)) writeBurstLen <- mkReg(0);
    Reg#(Bit#(1))          writeRun <- mkReg(0);
    
    MemwriteEngine#(64,1)        we <- mkMemwriteEngineBuff(64*16);
@@ -99,7 +99,7 @@ module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#(64)) dac, PipeOut
 	 indication.writeStatus(writeIterCount, zeroExtend(writeRun));
    endrule
    
-   interface ObjectReadClient readDmaClient = re.dmaClient;
+   interface MemReadClient readDmaClient = re.dmaClient;
    interface ObjectWeadClient writeDmaClient = we.dmaClient;
    interface FMComms1Request request;
       method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) run);

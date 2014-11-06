@@ -1,9 +1,9 @@
 
-S2H = FpRequest
-H2S = FpIndication
+INTERFACES = FpRequest FpIndication
 BSVFILES = Fp.bsv Top.bsv
 CPPFILES=testfp.cpp
 NUMBER_OF_MASTERS =0
+CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/fp_add/fp_add.xci --xci=$(IPDIR)/$(BOARD)/fp_mul/fp_mul.xci
 
 FP_ADD_V = $(IPDIR)/$(BOARD)/fp_add/fp_add_stub.v
 

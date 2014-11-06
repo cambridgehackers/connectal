@@ -3,100 +3,69 @@
  =========
  Simon Moore
  August 2011
+ October 2014 - made use of FShow
  
  Types for Chuck Thacker's Tiny3 processor
  *****************************************************************************/
 
 package TinyTypes;
 
-typedef enum {OpNormal, OpStoreDM, OpStoreIM, OpOut, OpLoadDM, OpIn, OpJump, OpReserved} OpcodeT deriving (Bits,Eq);
-typedef enum {FaADDb, FaSUBb, FINCb, FDECb, FaANDb, FaORb, FaXORb, Freserved} FuncT deriving (Bits,Eq);
-typedef enum {ShiftNone, ShiftRCY1, ShiftRCY8, ShiftRCY16} ShiftT deriving (Bits,Eq);
-typedef enum {SkipNever, SkipNeg, SkipZero, SkipInRdy} SkipT deriving (Bits,Eq);
-typedef UInt#(7) RegT;
-typedef Int#(32) WordT;
+typedef enum {OpNormal, OpStoreDM, OpStoreIM, OpOut,
+              OpLoadDM, OpIn, OpJump, OpReserved} OpcodeT
+             deriving (Bits,Eq,FShow);
+typedef enum {FaADDb, FaSUBb, FINCb, FDECb, FaANDb,
+              FaORb, FaXORb, Freserved} FuncT
+             deriving (Bits,Eq,FShow);
+typedef enum {ShiftNone, ShiftRCY1, ShiftRCY8, ShiftRCY16} ShiftT
+             deriving (Bits,Eq,FShow);
+typedef enum {SkipNever, SkipNeg, SkipZero, SkipInRdy} SkipT
+             deriving (Bits,Eq,FShow);
+typedef enum {INIT, IF, DC, EX, WB} PhaseT
+             deriving (Bits,Eq,FShow);
+
+typedef UInt#(7)  RegT;
+typedef Int#(32)  WordT;
 typedef UInt#(24) ImmT;
 typedef UInt#(10) PCT;
 
 typedef union tagged {
    struct {
-      RegT   rw;
-      RegT   ra;
-      RegT   rb;
-      FuncT  func;
-      ShiftT shift;
-      SkipT  skip;
+      RegT    rw;
+      RegT    ra;
+      RegT    rb;
+      FuncT   func;
+      ShiftT  shift;
+      SkipT   skip;
       OpcodeT op;
    } Normal;
    struct {
-      RegT   rw;
-      ImmT   imm;
-      } Immediate;
+      RegT    rw;
+      ImmT    imm;
+   } Immediate;
 } InstructionT deriving (Bits, Eq);
 
+// helper functions
+function WordT instruction2word(InstructionT i) = unpack(pack(i));
+function InstructionT word2instruction(WordT w) = unpack(pack(w));
+function WordT pc2word(PCT p) = unpack(zeroExtend(pack(p)));
+function PCT word2pc(WordT w) = unpack(truncate(pack(w)));
+function WordT imm2word(ImmT i) = unpack(zeroExtend(pack(i)));
+function WordT int2word(Int#(32) i) = unpack(pack(i));
 
-function String func2string(FuncT f);
-   String r="ERROR";
-   case(f)
-      FaADDb: r="FaADDb";
-      FaSUBb: r="FaSUBb";
-      FINCb:  r="FINCb";
-      FDECb:  r="FDECb";
-      FaANDb: r="FaANDb";
-      FaORb:  r="FaORb";
-      FaXORb: r="FaXORb";
-      Freserved: r="Freserved";
-   endcase
-   return r;
-endfunction
+// provide fshow() to display an instruction (i.e. disassemble)
+instance FShow#(InstructionT);
+  function Fmt fshow(InstructionT inst);
+    Fmt dash = $format("-");
+    case(inst) matches
+      tagged Normal { op: .op, func: .func, shift: .shift,
+                     skip: .skip, rw: .rw, ra: .ra, rb: .rb}:
+	return fshow(op) + dash + fshow(func) + dash + fshow(shift) + dash + fshow(skip) +
+	       $format("  r%1d <- r%1d, r%1d", rw, ra, rb);
+      tagged Immediate { rw: .rw, imm: .imm }:
+        return $format("r%1d = %1d",rw,imm);
+    endcase
+  endfunction
+endinstance
 
-
-function String shift2string(ShiftT s);
-   String r="ERROR";
-   case(s)
-      ShiftNone: r="ShiftNone";
-      ShiftRCY1: r="ShiftRCY1";
-      ShiftRCY8: r="ShiftRCY8";
-      ShiftRCY16: r="ShiftRCY16";
-   endcase
-   return r;
-endfunction
-
-
-function String skip2string(SkipT s);
-   String r="ERROR";
-   case(s)
-      SkipNever: r="SkipNever";
-      SkipNeg:   r="SkipNeg";
-      SkipZero:  r="SkipZero";
-      SkipInRdy: r="SkipInRdy";
-   endcase
-   return r;
-endfunction
-
-
-function String opcode2string(OpcodeT op);
-   String r="ERROR";
-   case(op)
-      OpNormal:   r="OpNormal";
-      OpStoreDM:  r="OpStoreDM";
-      OpStoreIM:  r="OpStoreIM";
-      OpOut:      r="OpOut";
-      OpLoadDM:   r="OpLoadDM";
-      OpIn:       r="OpIn";
-      OpJump:     r="OpJump";
-      OpReserved: r="OpReserved";
-   endcase
-   return r;
-endfunction
-
-
-function WordT instruction2word(InstructionT i);
-   return unpack(pack(i));
-endfunction
-
-function InstructionT word2instruction(WordT w);
-   return unpack(pack(w));
-endfunction
 
 endpackage: TinyTypes

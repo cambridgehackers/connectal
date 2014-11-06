@@ -19,7 +19,7 @@ import PcieTestBench::*;
 
 typedef enum {PcieTestBenchIndication, PcieTestBenchRequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(addrWidth));
+module mkConnectalTop(StdConnectalTop#(addrWidth));
 
    // instantiate user portals
    PcieTestBenchIndicationProxy pcieTestBenchIndicationProxy <- mkPcieTestBenchIndicationProxy(PcieTestBenchIndication);
@@ -39,6 +39,6 @@ module mkPortalTop(StdPortalTop#(addrWidth));
    interface masters = nil;
    interface leds = default_leds;
 
-endmodule : mkPortalTop
+endmodule : mkConnectalTop
 
 

@@ -1,8 +1,5 @@
 
-## hardware interfaces invoked from software (requests)
-S2H = FibRequest
-## software interfaces invoked from hardware (indications)
-H2S = FibIndication
+INTERFACES = FibRequest FibIndication
 ## all the BSV files to be scanned for types and interfaces
 BSVFILES = FibWide.bsv Top.bsv
 ## the source files in the example

@@ -26,8 +26,6 @@ import Vector  ::*;
 import StmtFSM ::*;
 import GetPut::*;
 import ClientServer::*;
-
-import AxiMasterSlave::*;
 import MemTypes::*;
 import MemwriteEngine::*;
 import Pipe::*;
@@ -39,7 +37,7 @@ endinterface
 
 interface Memwrite#(numeric type nClients);
    interface MemwriteRequest request;
-   interface Vector#(nClients,ObjectWriteClient#(64)) dmaClients;
+   interface Vector#(nClients,MemWriteClient#(64)) dmaClients;
 endinterface
 
 interface MemwriteIndication;
@@ -101,7 +99,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite#(4));
 	    srcGens[i] <= srcGens[i]+2;
       endrule
 
-   function ObjectWriteClient#(64) dc(MemwriteEngine#(64,1) we) = we.dmaClient;
+   function MemWriteClient#(64) dc(MemwriteEngine#(64,1) we) = we.dmaClient;
    interface dmaClients = map(dc,wes);
    interface MemwriteRequest request;
        method Action startWrite(Bit#(32) wp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);

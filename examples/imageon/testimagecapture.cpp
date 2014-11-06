@@ -28,15 +28,15 @@
 
 #include "dmaManager.h"
 #include "StdDmaIndication.h"
-#include "ImageonCaptureRequestProxy.h"
-#include "ImageonSensorRequestProxy.h"
-#include "ImageonSensorIndicationWrapper.h"
-#include "ImageonSerdesRequestProxy.h"
-#include "ImageonSerdesIndicationWrapper.h"
-#include "HdmiInternalRequestProxy.h"
-#include "HdmiInternalIndicationWrapper.h"
-#include "DmaDebugRequestProxy.h"
-#include "MMUConfigRequestProxy.h"
+#include "ImageonCaptureRequest.h"
+#include "ImageonSensorRequest.h"
+#include "ImageonSensorIndication.h"
+#include "ImageonSerdesRequest.h"
+#include "ImageonSerdesIndication.h"
+#include "HdmiInternalRequest.h"
+#include "HdmiInternalIndication.h"
+#include "DmaDebugRequest.h"
+#include "MMUConfigRequest.h"
 
 static ImageonSensorRequestProxy *sensordevice;
 static ImageonSerdesRequestProxy *serdesdevice;

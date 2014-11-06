@@ -78,6 +78,9 @@ class DmaManager
   DmaManager(PortalInternalCpp *dbgDevice, PortalInternalCpp *sglDevice) {
     DmaManager_init(&priv, &dbgDevice->pint, &sglDevice->pint);
   };
+  DmaManager(PortalInternalCpp *sglDevice) {
+    DmaManager_init(&priv, NULL, &sglDevice->pint);
+  };
   int reference(int fd) {
     return DmaManager_reference(&priv, fd);
   };

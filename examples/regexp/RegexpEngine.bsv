@@ -29,8 +29,7 @@ import Gearbox::*;
 import StmtFSM::*;
 import ClientServer::*;
 import GetPut::*;
-
-import AxiMasterSlave::*;
+import Probe::*;
 import MemTypes::*;
 import MemreadEngine::*;
 import Pipe::*;
@@ -43,16 +42,22 @@ typedef union tagged {
    Bit#(t) Config;
    } LDR#(numeric type t) deriving (Eq,Bits);
 
+typedef union tagged{
+   Pair#(Bit#(32)) CharMap;
+   Pair#(Bit#(32)) StateMap;
+   Pair#(Bit#(32)) StateTransitions;
+   Pair#(Bit#(32)) Search;
+   Bit#(t) Retire;
+  } SSV#(numeric type t) deriving (Eq,Bits);
+   
 interface RegexpEngine#(numeric type tw);
-   interface PipeIn#(Pair#(Bit#(32))) setsearch;
+   interface PipeIn#(SSV#(tw)) setsearch;
    interface PipeOut#(LDR#(tw)) ldr;
 endinterface
 
 typedef Bit#(8) Char;
 typedef Bit#(64) DWord;
 typedef Bit#(32) Word;
-
-typedef enum {Config_charMap, Config_stateMap, Config_stateTransitions, Search} RegexpState deriving (Eq,Bits);
 
 module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEngine#(tw))
    provisos(Log#(`MAX_NUM_STATES,5),
@@ -63,13 +68,14 @@ module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEng
 
    let debug = False;
    let verbose = True;
+   let timing = False;
    let config_re = tpl_1(readers);
    let haystack_re = tpl_2(readers);
    FIFO#(Bool) conff <- mkSizedFIFO(1);
-   Reg#(RegexpState) state <- mkReg(Config_charMap);
 
    Reg#(Bool) readyr <- mkReg(True);
-   FIFOF#(Pair#(Bit#(32))) setsearchFIFO <- mkSizedFIFOF(3);
+   FIFOF#(SSV#(tw)) setsearchFIFO <- mkSizedFIFOF(4);
+   Probe#(Bool) ssfp <- mkProbe();
    FIFOF#(LDR#(tw)) ldrFIFO <- mkFIFOF;
    
    BRAM1Port#(Bit#(8), Bit#(8)) charMap <- mkBRAM1Server(defaultValue);
@@ -86,7 +92,22 @@ module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEng
 
    Reg#(Bit#(32)) cycleCnt <- mkReg(0);
    Reg#(Bit#(32)) lastHD <- mkReg(0);
+   
+   FIFO#(Bit#(5)) fsmState <- mkBypassFIFO;
+   Reg#(Bit#(64))  charCnt <- mkReg(0);
+   Reg#(Bit#(64))   resCnt <- mkReg(0);
+   Reg#(Bool)     accepted <- mkReg(False);
+   
+   rule countCycles;
+      if (timing) $display("******************************************** %d", cycleCnt);
+      cycleCnt <= cycleCnt+1;
+      //$dumpvars();
+   endrule
 
+   rule set_ssfp;
+      ssfp <= setsearchFIFO.notEmpty;
+   endrule
+   
    rule haystackResp;
       let rv <- toGet(haystack_re.dataPipe).get;
       haystack.enq(unpack(rv));
@@ -95,8 +116,8 @@ module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEng
    rule haystackFinish if (!haystack.notEmpty);
       let rv <- haystack_re.cmdServer.response.get;
       ldrFIFO.enq(tagged Done fromInteger(iid));
-      readyr <= True;
       conff.deq;
+      fsmState.deq;
       if (verbose) $display("haystackFinish");
    endrule
    
@@ -115,20 +136,10 @@ module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEng
    rule finishStateTransitionsWriter;
       conff.deq;
       let rv <- stateTransitionsWriter.finish;
-      if (debug) $display("finishStateTransitionsWriter");
+      if (verbose) $display("finishStateTransitionsWriter");
       ldrFIFO.enq(tagged Config fromInteger(iid));
    endrule
    
-   FIFO#(Bit#(5)) fsmState <- mkBypassFIFO;
-   Reg#(Bit#(64))  charCnt <- mkReg(0);
-   Reg#(Bit#(64))   resCnt <- mkReg(0);
-   Reg#(Bool)     accepted <- mkReg(False);
-
-   rule countCycles;
-      if (debug) $display("******************************************** %d", cycleCnt);
-      cycleCnt <= cycleCnt+1;
-   endrule
-
    rule lookup_state;
       lastHD <= cycleCnt;
       if (debug) $display("deq haystack(%d)", cycleCnt-lastHD);
@@ -161,38 +172,83 @@ module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEng
       fsmState.enq(truncate(new_state));
    endrule
    
-   rule setsearch_r;
-      match {.pointer,.len} <- toGet(setsearchFIFO).get;
+   // the following case statement is much cleaner, but bsc doesn't compiler it
+   // correctly.  As a result, I broke it up into four rules, which seems to work (mdk)
+   //
+   // rule setsearch_r;
+   //    let ssv <- toGet(setsearchFIFO).get;
+   //    conff.enq(True);
+   //    case (ssv) matches
+   // 	 tagged CharMap .p:
+   // 	 begin
+   // 	    match {.pointer, .len}  = p;
+   // 	    if (verbose) $display("setupCharMap %d %h", pointer, len);
+   // 	    charMapWriter.start(pointer, 0, minBound, maxBound);
+   // 	 end
+   // 	 tagged StateMap .p:
+   // 	 begin
+   // 	    match {.pointer, .len}  = p;
+   // 	    if (verbose) $display("setupStateMap %d %h", pointer, len);
+   // 	    stateMapWriter.start(pointer, 0, minBound, maxBound);
+   // 	 end
+   // 	 tagged StateTransitions .p:
+   // 	 begin
+   // 	    match {.pointer, .len}  = p;
+   // 	    if (verbose) $display("setupStateTransitions %d %h", pointer, len);
+   // 	    stateTransitionsWriter.start(pointer, 0, minBound, maxBound);
+   // 	 end
+   // 	 tagged Search .p:
+   // 	 begin
+   // 	    match {.pointer, .len}  = p;
+   // 	    if (verbose) $display("setupSearch %d %d", pointer, len);
+   // 	    haystack_re.cmdServer.request.put(MemengineCmd{sglId:pointer, base:0, len:len, burstLen:16*fromInteger(valueOf(nc))});
+   // 	    charCnt <= 0;
+   // 	    resCnt <= 0;
+   // 	    fsmState.enq(0);
+   // 	 end
+   // 	 tagged Retire .r:
+   // 	 begin
+   // 	    readyr <= True;
+   // 	    if (verbose) $display("Retire %d", r);
+   // 	 end
+   //    endcase
+   // endrule
+
+   rule setsearch_r_0 if (setsearchFIFO.first matches tagged CharMap .p);
+      setsearchFIFO.deq;
       conff.enq(True);
-      case (state) matches
-	 Config_charMap:
-	 begin
-	    if (verbose) $display("setupCharMap %d %h", pointer, len);
-	    charMapWriter.start(pointer, 0, minBound, maxBound);
-	    state <= Config_stateMap;
-	 end
-	 Config_stateMap:
-	 begin
-	    if (verbose) $display("setupStateMap %d %h", pointer, len);
-	    stateMapWriter.start(pointer, 0, minBound, maxBound);
-	    state <= Config_stateTransitions;
-	 end
-	 Config_stateTransitions:
-	 begin
-	    if (verbose) $display("setupStateTransitions %d %h", pointer, len);
-	    stateTransitionsWriter.start(pointer, 0, minBound, maxBound);
-	    state <= Search;
-	 end
-	 Search:
-	 begin
-	    if (verbose) $display("setupSearch %d %d", pointer, len);
-	    haystack_re.cmdServer.request.put(MemengineCmd{sglId:pointer, base:0, len:len, burstLen:16*fromInteger(valueOf(nc))});
-	    charCnt <= 0;
-	    resCnt <= 0;
-	    state <= Config_charMap;
-	    fsmState.enq(0);
-	 end
-      endcase
+      match {.pointer, .len}  = p;
+      if (verbose) $display("setupCharMap %d %h", pointer, len);
+      charMapWriter.start(pointer, 0, minBound, maxBound);
+   endrule
+   rule setsearch_r_1 if (setsearchFIFO.first matches tagged StateMap .p);
+      setsearchFIFO.deq;
+      conff.enq(True);
+      match {.pointer, .len}  = p;
+      if (verbose) $display("setupStateMap %d %h", pointer, len);
+      stateMapWriter.start(pointer, 0, minBound, maxBound);
+   endrule
+   rule setsearch_r_2 if (setsearchFIFO.first matches tagged StateTransitions .p);
+      setsearchFIFO.deq;
+      conff.enq(True);
+      match {.pointer, .len}  = p;
+      if (verbose) $display("setupStateTransitions %d %h", pointer, len);
+      stateTransitionsWriter.start(pointer, 0, minBound, maxBound);
+   endrule
+   rule setsearch_r_3 if (setsearchFIFO.first matches tagged Search .p);
+      setsearchFIFO.deq;
+      conff.enq(True);
+      match {.pointer, .len}  = p;
+      if (verbose) $display("setupSearch %d %d", pointer, len);
+      haystack_re.cmdServer.request.put(MemengineCmd{sglId:pointer, base:0, len:len, burstLen:16*fromInteger(valueOf(nc))});
+      charCnt <= 0;
+      resCnt <= 0;
+      fsmState.enq(0);
+   endrule
+   rule setsearch_r_4 if (setsearchFIFO.first matches tagged Retire .r);
+      setsearchFIFO.deq;
+      readyr <= True;
+      if (verbose) $display("Retire %d", r);
    endrule
 
    rule ready_r if (readyr);

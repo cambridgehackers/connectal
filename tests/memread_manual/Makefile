@@ -1,7 +1,6 @@
 ## memread_manual
 
-S2H = MemreadRequest
-H2S = MemreadIndication
+INTERFACES = MemreadRequest MemreadIndication
 BSVFILES = Memread.bsv Top.bsv
 #CPPFILES=testmemread.cpp
 #CPPFILES=memread_manual.cpp

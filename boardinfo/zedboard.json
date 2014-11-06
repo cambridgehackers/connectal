@@ -281,6 +281,30 @@
     "LA33_n": {
         "LOC": "B22",
         "IOSTANDARD": "LVCMOS25"
+        },
+    "CLK0_M2C_p": {
+        "LOC": "L18",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "CLK0_M2C_n": {
+        "LOC": "L19",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "CLK1_M2C_p": {
+        "LOC": "D18",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "CLK1_M2C_n": {
+        "LOC": "C19",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "SDA": {
+        "LOC": "U7",
+        "IOSTANDARD": "LVCMOS33"
+        },
+    "SCL": {
+        "LOC": "R7",
+        "IOSTANDARD": "LVCMOS33"
         }
     },
     "pins": {
@@ -313,26 +337,6 @@
 	"IOSTANDARD": "LVCMOS18",
 	"slew": "SLOW",
 	"PIO_DIRECTION": "INPUT"
-    },
-    "CLK0_M2C_p": {
-        "LOC": "L18",
-        "IOSTANDARD": "LVCMOS25"
-        },
-    "CLK0_M2C_n": {
-        "LOC": "L19",
-        "IOSTANDARD": "LVCMOS25"
-        },
-    "CLK1_M2C_p": {
-        "LOC": "D18",
-        "IOSTANDARD": "LVCMOS25"
-        },
-    "SDA": {
-        "LOC": "U7",
-        "IOSTANDARD": "LVCMOS33"
-        },
-    "SCL": {
-        "LOC": "R7",
-        "IOSTANDARD": "LVCMOS33"
-        }
-}
+    }
+    }
 }

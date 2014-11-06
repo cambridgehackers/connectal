@@ -26,24 +26,22 @@ import MemTypes::*;
 import Leds::*;
 import XADC::*;
 import Pipe::*;
+import ConnectalMemory::*;
 
-interface Portal#(numeric type numRequests, numeric type numIndications, numeric type slaveDataWidth);
-   method Bit#(32) ifcId();
-   method Bit#(32) ifcType();
+// implementation of a Portal as a group of Pipes
+interface PipePortal#(numeric type numRequests, numeric type numIndications, numeric type slaveDataWidth);
    interface Vector#(numRequests, PipeIn#(Bit#(slaveDataWidth))) requests;
-   interface Vector#(numRequests, Bit#(32))                      requestSizeBits;
    interface Vector#(numIndications, PipeOut#(Bit#(slaveDataWidth))) indications;
-   interface Vector#(numIndications, Bit#(32))                       indicationSizeBits;
 endinterface
 
+// implementation of a Portal as a physical memory slave
 interface MemPortal#(numeric type slaveAddrWidth, numeric type slaveDataWidth);
-   method Bit#(32) ifcId();
-   method Bit#(32) ifcType();
-   interface MemSlave#(slaveAddrWidth,slaveDataWidth) slave;
+   interface PhysMemSlave#(slaveAddrWidth,slaveDataWidth) slave;
    interface ReadOnly#(Bool) interrupt;
+   interface WriteOnly#(Bool) top;
 endinterface
 
-function MemSlave#(_a,_d) getSlave(MemPortal#(_a,_d) p);
+function PhysMemSlave#(_a,_d) getSlave(MemPortal#(_a,_d) p);
    return p.slave;
 endfunction
 
@@ -58,19 +56,26 @@ function Vector#(16, ReadOnly#(Bool)) getInterruptVector(Vector#(numPortals, Mem
    return interrupts;
 endfunction
 
+interface SharedMemoryPortal#(numeric type dataBusWidth);
+   interface MemReadClient#(dataBusWidth)  readClient;
+   interface MemWriteClient#(dataBusWidth) writeClient;
+   interface SharedMemoryPortalConfig cfg;
+   interface ReadOnly#(Bool) interrupt;
+endinterface
+
 typedef MemPortal#(16,32) StdPortal;
 
-interface PortalTop#(numeric type addrWidth, numeric type dataWidth, type pins, numeric type numMasters);
-   interface MemSlave#(32,32) slave;
-   interface Vector#(numMasters,MemMaster#(addrWidth, dataWidth)) masters;
+interface ConnectalTop#(numeric type addrWidth, numeric type dataWidth, type pins, numeric type numMasters);
+   interface PhysMemSlave#(32,32) slave;
+   interface Vector#(numMasters,PhysMemMaster#(addrWidth, dataWidth)) masters;
    interface Vector#(16,ReadOnly#(Bool)) interrupt;
    interface LEDS             leds;
    interface pins             pins;
 endinterface
 
-typedef PortalTop#(addrWidth,64,Empty,0) StdPortalTop#(numeric type addrWidth);
-typedef PortalTop#(addrWidth,64,Empty,1) StdPortalDmaTop#(numeric type addrWidth);
+typedef ConnectalTop#(addrWidth,64,Empty,0) StdConnectalTop#(numeric type addrWidth);
+typedef ConnectalTop#(addrWidth,64,Empty,1) StdConnectalDmaTop#(numeric type addrWidth);
 
-typeclass SynthesizablePortalTop#(numeric type addrWidth, numeric type dataWidth, type pins, numeric type numMasters);
-   module mkSynthesizablePortalTop(PortalTop#(addrWidth,dataWidth,pins,numMasters) ifc);
+typeclass SynthesizableConnectalTop#(numeric type addrWidth, numeric type dataWidth, type pins, numeric type numMasters);
+   module mkSynthesizableConnectalTop(ConnectalTop#(addrWidth,dataWidth,pins,numMasters) ifc);
 endtypeclass

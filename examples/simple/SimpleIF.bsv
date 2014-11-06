@@ -45,17 +45,7 @@ typedef struct{
    E1 e1;
    } S3 deriving (Bits);
 
-interface SimpleIndication;
-    method Action heard1(Bit#(32) v);
-    method Action heard2(Bit#(16) a, Bit#(16) b);
-    method Action heard3(S1 v);
-    method Action heard4(S2 v);
-    method Action heard5(Bit#(32) a, Bit#(64) b, Bit#(32) c);
-    method Action heard6(Bit#(32) a, Bit#(40) b, Bit#(32) c);
-    method Action heard7(Bit#(32) a, E1 e1);
-endinterface
-
-interface SimpleRequest;
+interface Simple;
     method Action say1(Bit#(32) v);
     method Action say2(Bit#(16) a, Bit#(16) b);
     method Action say3(S1 v);
@@ -72,34 +62,43 @@ typedef struct {
 } Say6ReqSimple deriving (Bits);
 
 
-module mkSimpleRequest#(SimpleIndication indication)(SimpleRequest);
-
+module mkSimple#(Simple indication)(Simple);
+   
+   let verbose = False;
+   
    method Action say1(Bit#(32) v);
-      indication.heard1(v);
+      if (verbose) $display("mkSimple::say1");
+      indication.say1(v);
    endmethod
    
    method Action say2(Bit#(16) a, Bit#(16) b);
-      indication.heard2(a,b);
+      if (verbose) $display("mkSimple::say2");
+      indication.say2(a,b);
    endmethod
       
    method Action say3(S1 v);
-      indication.heard3(v);
+      if (verbose) $display("mkSimple::say3");
+      indication.say3(v);
    endmethod
    
    method Action say4(S2 v);
-      indication.heard4(v);
+      if (verbose) $display("mkSimple::say4");
+      indication.say4(v);
    endmethod
       
    method Action say5(Bit#(32) a, Bit#(64) b, Bit#(32) c);
-      indication.heard5(a, b, c);
+      if (verbose) $display("mkSimple::say5");
+      indication.say5(a, b, c);
    endmethod
 
    method Action say6(Bit#(32) a, Bit#(40) b, Bit#(32) c);
-      indication.heard6(a, b, c);
+      if (verbose) $display("mkSimple::say6");
+      indication.say6(a, b, c);
    endmethod
 
    method Action say7(S3 v);
-      indication.heard7(v.a, v.e1);
+      if (verbose) $display("mkSimple::say7");
+      indication.say7(v);
    endmethod
 
 endmodule

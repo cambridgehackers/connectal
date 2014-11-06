@@ -31,7 +31,7 @@ import BRAMFIFO::*;
 import ConfigCounter::*;
 import Connectable::*;
 
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import Pipe::*;
 import MemUtils::*;
@@ -169,7 +169,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
       end
    endrule
    
-   function MemreadServer#(dataWidth) bar(Server#(MemengineCmd,Bool) cs, PipeOut#(Bit#(dataWidth)) p) =
+   function MemreadServer#(dataWidth) toMemreadServer(Server#(MemengineCmd,Bool) cs, PipeOut#(Bit#(dataWidth)) p) =
       (interface MemreadServer;
 	  interface cmdServer = cs;
 	  interface dataPipe  = p;
@@ -197,9 +197,9 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
 		  endinterface
 	       endinterface);
    interface readServers = rs;
-   interface ObjectReadClient dmaClient;
+   interface MemReadClient dmaClient;
       interface Get readReq;
-	 method ActionValue#(ObjectRequest) get();
+	 method ActionValue#(MemRequest) get();
 	    match {.idx, .cmd} <- toGet(loadf_c).get;
 	    Bit#(BurstLenSize) bl = cmd.burstLen;
 	    let last = False;
@@ -209,11 +209,11 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
 	    end
 	    workf.enq(tuple3(truncate(bl>>beat_shift), idx, last));
 	    //$display("readReq %d, %h %h %h", idx, cmd.base, bl, last);
-	    return ObjectRequest { sglId: cmd.sglId, offset: cmd.base, burstLen:bl, tag: 0 };
+	    return MemRequest { sglId: cmd.sglId, offset: cmd.base, burstLen:bl, tag: 0 };
 	 endmethod
       endinterface
       interface Put readData;
-	 method Action put(ObjectData#(dataWidth) d);
+	 method Action put(MemData#(dataWidth) d);
 	    match {.rc, .idx, .last} = workf.first;
 	    let new_respCnt = respCnt+1;
 	    let l = False;
@@ -232,7 +232,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
       endinterface
    endinterface 
    interface dataPipes = read_data_pipes;
-   interface read_servers = zipWith(bar, rs, read_data_pipes);
+   interface read_servers = zipWith(toMemreadServer, rs, read_data_pipes);
 endmodule
 
 

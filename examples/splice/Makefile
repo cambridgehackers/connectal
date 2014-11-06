@@ -1,6 +1,5 @@
 
-S2H = SpliceRequest
-H2S = SpliceIndication
+INTERFACES = SpliceRequest SpliceIndication
 BSVFILES = Splice.bsv Top.bsv ../../lib/deprecated/DmaUtils.bsv
 CPPFILES=testsplice.cpp
 

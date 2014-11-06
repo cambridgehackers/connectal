@@ -38,8 +38,11 @@ endif
 ifeq ($(CONNECTAL_DEBUG),1)
 GDB=gdb
 else
-GDB=
+GDB= LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so SEGFAULT_USE_ALTSTACK=1 SEGFAULT_OUTPUT_NAME=bin/bsimexe-segv-output.txt
 endif
+
+GDB_BSIM= LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so SEGFAULT_USE_ALTSTACK=1 SEGFAULT_OUTPUT_NAME=bin/bsim-segv-output.txt
+
 
 BSCVERSION=$(shell bsc -v |grep Compiler | sed -e "s/.*version //" -e "s/ .*//")
 BSCMAJOR=$(shell bsc -v |grep Compiler | sed -e "s/.*version //" -e "s/\..*//")
@@ -79,9 +82,9 @@ all: exe bits
 
 ifeq ($(BOARD),bluesim)
 ifeq ($(RUNSOURCE2),)
-  exe: bsim bsim_exe
+  exe: bsim_exe
 else
-  exe: bsim bsim_exe bsim_exe2
+  exe: bsim_exe bsim_exe2
 endif
 else
   ifneq ($(OS),android)
@@ -124,7 +127,7 @@ endif
 endif
 
 ifeq ($(BOARD),bluesim)
-bits: prepare_bin_target
+bits: bsim
 else
 bits: hw/mkTop.bit prepare_bin_target
 ifeq ($(OS),android)
@@ -147,7 +150,7 @@ android.debug.exe: prepare_bin_target
 run:
 ifeq ($(BOARD),bluesim)
     ifeq ($(RUNSOURCE2),)
-	./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
+	$(GDB_BSIM) ./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
     else
 	./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; ./bin/bsim_exe2& bsim2pid=$$!; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid $$bsim2pid; exit $$retcode
     endif
@@ -189,7 +192,7 @@ bsim: prepare_bin_target $(DTOP)/jni/TlpReplay.cxx $(BSIM_CXX_LOCAL)
 	$(QTUSED)
 
 syntax.timestamp: $(BSVFILES)
-	@#$syntax.py uses environment variables: V S2H H2S BSVDEFINES_LIST DTOP DUT_NAME
+	@#$syntax.py uses environment variables: V INTERFACES BSVDEFINES_LIST DTOP DUT_NAME
 	$(Q)$(CONNECTALDIR)/scripts/syntax.py $(BSVFILES)
 	$(Q)touch syntax.timestamp
 

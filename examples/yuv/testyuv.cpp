@@ -27,8 +27,8 @@
 #include <assert.h>
 #include <pthread.h>
 
-#include "YuvIndicationWrapper.h"
-#include "YuvRequestProxy.h"
+#include "YuvIndication.h"
+#include "YuvRequest.h"
 #include "GeneratedTypes.h"
 
 struct rgb {

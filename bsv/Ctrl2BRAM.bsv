@@ -28,7 +28,7 @@ import AddressGenerator::*;
 import BRAM::*;
 
 
-module mkCtrl2BRAM#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (MemSlave#(busAddrWidth, busDataWidth))
+module mkCtrl2BRAM#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (PhysMemSlave#(busAddrWidth, busDataWidth))
    provisos(Add#(a__, bramAddrWidth, busAddrWidth));
 
    FIFOF#(Bit#(6))  readTagFifo <- mkFIFOF();
@@ -55,33 +55,33 @@ module mkCtrl2BRAM#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (Me
       if (verbose) $display("%d read_server.readData (a) %h %d last=%d", cycles, addr, burstCount, addrBeat.last);
    endrule
 
-   interface MemReadServer read_server;
+   interface PhysMemReadServer read_server;
       interface Put readReq;
-	 method Action put(MemRequest#(busAddrWidth) req);
+	 method Action put(PhysMemRequest#(busAddrWidth) req);
             if (verbose) $display("%d axiSlave.read.readAddr %h bc %d", cycles, req.addr, req.burstLen);
 	    readAddrGenerator.request.put(req);
 	 endmethod
       endinterface
       interface Get readData;
-	 method ActionValue#(ObjectData#(busDataWidth)) get();
+	 method ActionValue#(MemData#(busDataWidth)) get();
    	    let tag = readTagFifo.first;
 	    readTagFifo.deq;
 	    readLastFifo.deq;
             let data <- br.response.get;
             if (verbose) $display("%d read_server.readData (b) %h", cycles, data);
-            return ObjectData { data: data, tag: tag, last: readLastFifo.first };
+            return MemData { data: data, tag: tag, last: readLastFifo.first };
 	 endmethod
       endinterface
    endinterface
-   interface MemWriteServer write_server;
+   interface PhysMemWriteServer write_server;
       interface Put writeReq;
-	 method Action put(MemRequest#(busAddrWidth) req);
+	 method Action put(PhysMemRequest#(busAddrWidth) req);
 	    writeAddrGenerator.request.put(req);
             if (verbose) $display("%d write_server.writeAddr %h bc %d", cycles, req.addr, req.burstLen);
 	 endmethod
       endinterface
       interface Put writeData;
-	 method Action put(ObjectData#(busDataWidth) resp);
+	 method Action put(MemData#(busDataWidth) resp);
 	    let addrBeat <- writeAddrGenerator.addrBeat.get();
 	    let addr = addrBeat.addr;
 	    Bit#(bramAddrWidth) regFileAddr = truncate(addr/fromInteger(valueOf(TDiv#(busDataWidth,8))));

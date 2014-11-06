@@ -72,7 +72,7 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    let dispatcher <- mkTLPDispatcher;
    let arbiter    <- mkTLPArbiter;
    Vector#(NumberOfMasters,MemSlaveEngine#(DataBusWidth)) sEngine <- replicateM(mkMemSlaveEngine(my_pciId));
-   Vector#(NumberOfMasters,MemSlave#(PhysAddrWidth,DataBusWidth)) slavearr;
+   Vector#(NumberOfMasters,PhysMemSlave#(PhysAddrWidth,DataBusWidth)) slavearr;
    MemInterrupt intr <- mkMemInterrupt(my_pciId);
    BscanTop bscan <- mkBscanTop(3); // Use USER3  (JTAG IDCODE address 0x22)
    BscanLocal lbscan <- mkBscanLocal(bscan, clocked_by bscan.tck, reset_by bscan.rst);
@@ -216,9 +216,9 @@ module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Cl
    PcieHostTop host <- mkPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n);
 
 `ifdef IMPORT_HOSTIF
-   PortalTop#(PhysAddrWidth, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkPortalTop(host, clocked_by host.portalClock, reset_by host.portalReset);
+   ConnectalTop#(PhysAddrWidth, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkConnectalTop(host, clocked_by host.portalClock, reset_by host.portalReset);
 `else
-   PortalTop#(PhysAddrWidth, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkPortalTop(clocked_by host.portalClock, reset_by host.portalReset);
+   ConnectalTop#(PhysAddrWidth, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkConnectalTop(clocked_by host.portalClock, reset_by host.portalReset);
 `endif
    mkConnection(host.tpciehost.master, portalTop.slave, clocked_by host.portalClock, reset_by host.portalReset);
    if (valueOf(NumberOfMasters) > 0) begin
@@ -231,7 +231,7 @@ module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Cl
      Integer intr_num = 0;
      for (Integer i = 0; i < 15; i = i + 1) begin
 	 if (intr_num == 0 && portalTop.interrupt[i] && !interruptRequested[i])
-             intr_num = i+1;
+             intr_num = i;
 	 interruptRequested[i] <= portalTop.interrupt[i];
      end
      if (intr_num != 0) begin // i= 0 for the directory

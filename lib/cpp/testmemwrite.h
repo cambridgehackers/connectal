@@ -5,10 +5,10 @@
 
 #include "sock_utils.h"
 #include "StdDmaIndication.h"
-#include "DmaDebugRequestProxy.h"
-#include "MMUConfigRequestProxy.h"
-#include "MemwriteIndicationWrapper.h"
-#include "MemwriteRequestProxy.h"
+#include "DmaDebugRequest.h"
+#include "MMUConfigRequest.h"
+#include "MemwriteIndication.h"
+#include "MemwriteRequest.h"
 #include "dmaManager.h"
 
 
@@ -64,7 +64,7 @@ void child(int rd_sock)
   int fd;
   bool mismatch = false;
   fprintf(stderr, "[%s:%d] child waiting for fd\n", __FUNCTION__, __LINE__);
-  sock_fd_read(rd_sock, &fd);
+  sock_fd_read(rd_sock, NULL, 0, &fd);
   fprintf(stderr, "[%s:%d] child got fd %d\n", __FUNCTION__, __LINE__, fd);
 
   unsigned int *dstBuffer = (unsigned int *)portalMmap(fd, alloc_sz);
@@ -160,7 +160,7 @@ void parent(int rd_sock, int wr_sock)
   }
 
   fprintf(stderr, "[%s:%d] send fd to child %d\n", __FUNCTION__, __LINE__, (int)dstAlloc);
-  sock_fd_write(wr_sock, (int)dstAlloc);
+  sock_fd_write(wr_sock, NULL, 0, (int)dstAlloc);
   munmap(dstBuffer, alloc_sz);
   close(dstAlloc);
 }

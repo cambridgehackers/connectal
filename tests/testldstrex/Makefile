@@ -10,8 +10,7 @@ CONNECTALFLAGS += -I /scratch/android-ndk-r9d/sources/cxx-stl/gnu-libstdc++/4.6/
 CONNECTALFLAGS += -I /scratch/android-ndk-r9d/sources/cxx-stl/gnu-libstdc++/4.6/libs/armeabi-v7a/include
 
 include $(MMDIR)/Makefile.mm
-S2H        =  TimerRequest
-H2S        =  TimerIndication
+INTERFACES        =  TimerRequest TimerIndication
 CPPFILES   =  $(TESTCPPFILES)
 NUMBER_OF_MASTERS=1
 include ../../Makefile.connectal

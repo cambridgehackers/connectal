@@ -34,12 +34,12 @@
 #include <mp.h>
 
 #include "StdDmaIndication.h"
-#include "MMUConfigRequestProxy.h"
+#include "MMUConfigRequest.h"
 #include "GeneratedTypes.h" 
-#include "NandSimIndicationWrapper.h"
-#include "NandSimRequestProxy.h"
-#include "StrstrIndicationWrapper.h"
-#include "StrstrRequestProxy.h"
+#include "NandSimIndication.h"
+#include "NandSimRequest.h"
+#include "StrstrIndication.h"
+#include "StrstrRequest.h"
 
 static int trace_memory = 1;
 extern "C" {
@@ -219,7 +219,7 @@ int main(int argc, const char **argv)
   // request the next sglist identifier from the sglistMMU hardware module
   // which is used by the mem server accessing flash memory.
   int id = 0;
-  MMUConfigRequestProxy_idRequest(nandsimDma->priv.sglDevice);
+  MMUConfigRequest_idRequest(nandsimDma->priv.sglDevice, 0);
   sem_wait(&nandsimDma->priv.sglIdSem);
   id = nandsimDma->priv.sglId;
   // pairs of ('offset','size') pointing to space in nandsim memory
@@ -238,10 +238,8 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "about to setup device %d %d\n", ref_needleAlloc, ref_mpNextAlloc);
   strstrRequest->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
-  strstrIndication->wait();
-
   fprintf(stderr, "about to invoke search %d\n", ref_haystackInNandMemory);
-  strstrRequest->search(ref_haystackInNandMemory, haystack_len, 1);
+  strstrRequest->search(ref_haystackInNandMemory, haystack_len);
   strstrIndication->wait();  
 
   exit(!(strstrIndication->match_cnt==3));

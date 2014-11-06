@@ -31,6 +31,7 @@
 #include <assert.h>
 #endif
 
+
 #define MAX_TIMER_COUNT      16
 
 typedef struct {
@@ -40,6 +41,7 @@ typedef struct {
 static uint64_t c_start[MAX_TIMER_COUNT];
 static uint64_t lap_timer_temp;
 static PORTAL_TIMETYPE timers[MAX_TIMERS];
+
 
 void portalTimerStart(unsigned int i) 
 {
@@ -65,7 +67,7 @@ void portalTimerInit(void)
 
 uint64_t portalTimerCatch(unsigned int i)
 {
-    uint64_t val = portalTimerLap(0);
+  uint64_t val = portalTimerLap(0);
     if (i >= MAX_TIMERS)
         return 0;
     if (val > timers[i].max)
@@ -87,3 +89,4 @@ void portalTimerPrint(int loops)
                i, timers[i].total/loops, timers[i].min, timers[i].max, timers[i].over);
     }
 }
+

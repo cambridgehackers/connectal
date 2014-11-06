@@ -79,19 +79,8 @@ void DmaIndicationWrapperdmaError_cb (  struct PortalInternal *p, const uint32_t
 void manual_event(void)
 {
     int i;
-    for (i = 0; i < MAX_INDARRAY; i++) {
-      PortalInternal *instance = &intarr[i];
-      volatile unsigned int *map_base = instance->map_base;
-      unsigned int queue_status;
-	  /*PORTAL_PRINTF ("[%d]\n", i);*/
-      while ((queue_status= READL(instance, &map_base[IND_REG_QUEUE_STATUS]))) {
-        unsigned int int_src = READL(instance, &map_base[IND_REG_INTERRUPT_FLAG]);
-        unsigned int int_en  = READL(instance, &map_base[IND_REG_INTERRUPT_MASK]);
-        unsigned int ind_count  = READL(instance, &map_base[IND_REG_INTERRUPT_COUNT]);
-        PORTAL_PRINTF("(%d:fpga%d) about to receive messages int=%08x en=%08x qs=%08x cnt=%x\n", i, instance->fpga_number, int_src, int_en, queue_status, ind_count);
-        instance->handler(instance, queue_status-1);
-      }
-    }
+    for (i = 0; i < MAX_INDARRAY; i++)
+      portalCheckIndication(&intarr[i]);
 }
 
 #ifdef __KERNEL__
@@ -134,10 +123,10 @@ int main(int argc, const char **argv)
   int rc = 0, i;
   pthread_t tid = 0;
 
-  init_portal_internal(&intarr[0], IfcNames_DmaIndication, DmaIndicationWrapper_handleMessage, DmaIndicationWrapper_reqsize);     // fpga1
-  init_portal_internal(&intarr[1], IfcNames_NandSimIndication, NandSimIndicationWrapper_handleMessage, NandSimIndicationWrapper_reqsize); // fpga2
-  init_portal_internal(&intarr[2], IfcNames_DmaConfig, DmaConfigProxy_handleMessage, DmaConfigProxy_reqsize);         // fpga3
-  init_portal_internal(&intarr[3], IfcNames_NandSimRequest, NandSimRequestProxy_handleMessage, NandSimRequestProxy_reqsize);    // fpga4
+  init_portal_internal(&intarr[0], IfcNames_DmaIndication, DmaIndication_handleMessage, NULL, NULL, DmaIndication_reqsize);     // fpga1
+  init_portal_internal(&intarr[1], IfcNames_NandSimIndication, NandSimIndication_handleMessage, NULL, NULL, NandSimIndication_reqsize); // fpga2
+  init_portal_internal(&intarr[2], IfcNames_DmaConfig, NULL, NULL, NULL, DmaConfig_reqsize);         // fpga3
+  init_portal_internal(&intarr[3], IfcNames_NandSimRequest, NULL, NULL, NULL, NandSimRequest_reqsize);    // fpga4
 
   sem_init(&test_sem, 0, 0);
   DmaManager_init(&priv, &intarr[2]);
@@ -167,12 +156,12 @@ int main(int argc, const char **argv)
   nandAlloc = portalAlloc (nandBytes);
   ref_nandAlloc = DmaManager_reference(&priv, nandAlloc);
   PORTAL_PRINTF("Main::configure NAND fd=%d ref=%d\n", nandAlloc, ref_nandAlloc);
-  NandSimRequestProxy_configureNand (&intarr[3], ref_nandAlloc, nandBytes);
+  NandSimRequest_configureNand (&intarr[3], ref_nandAlloc, nandBytes);
   sem_wait(&test_sem);
 
 
   PORTAL_PRINTF( "Main::starting write - begin %08zx\n", numBytes);
-  NandSimRequestProxy_startWrite (&intarr[3], ref_srcAlloc, 0, 0, numBytes, 16);
+  NandSimRequest_startWrite (&intarr[3], ref_srcAlloc, 0, 0, numBytes, 16);
   PORTAL_PRINTF( "Main:: wait for semaphore\n");
   sem_wait(&test_sem);
 
@@ -180,16 +169,16 @@ int main(int argc, const char **argv)
     srcBuffer[i] = 0;
   }
   PORTAL_PRINTF( "Main::starting read %08zx\n", numBytes);
-  NandSimRequestProxy_startRead (&intarr[3], ref_srcAlloc, 0, 0, numBytes, 16);
+  NandSimRequest_startRead (&intarr[3], ref_srcAlloc, 0, 0, numBytes, 16);
   sem_wait(&test_sem);
   PORTAL_PRINTF ("read: %u %u %u %u\n", srcBuffer[0], srcBuffer[1], srcBuffer[2], srcBuffer[3]);
 
   PORTAL_PRINTF( "Main::starting erase %08zx\n", numBytes);
-  NandSimRequestProxy_startErase (&intarr[3], 0, numBytes);
+  NandSimRequest_startErase (&intarr[3], 0, numBytes);
   sem_wait(&test_sem);
 
   PORTAL_PRINTF( "Main::starting read %08zx\n", numBytes);
-  NandSimRequestProxy_startRead (&intarr[3], ref_srcAlloc, 0, 0, numBytes, 16);
+  NandSimRequest_startRead (&intarr[3], ref_srcAlloc, 0, 0, numBytes, 16);
   sem_wait(&test_sem);
   PORTAL_PRINTF ("read: %u %u %u %u\n", srcBuffer[0], srcBuffer[1], srcBuffer[2], srcBuffer[3]);
 
@@ -205,7 +194,7 @@ int main(int argc, const char **argv)
 	  }
 
 	  /*PORTAL_PRINTF("Main::starting write ref=%d, len=%08zx (%lu)\n", ref_srcAlloc, numBytes, loop);*/
-  	  NandSimRequestProxy_startWrite (&intarr[3], ref_srcAlloc, 0, loop, numBytes, 16);
+  	  NandSimRequest_startWrite (&intarr[3], ref_srcAlloc, 0, loop, numBytes, 16);
       sem_wait(&test_sem);
 
 	  loop+=numBytes;
@@ -215,7 +204,7 @@ int main(int argc, const char **argv)
   while (loop < nandBytes) {
 	  int i;
 	  /*PORTAL_PRINTF("Main::starting read %08zx (%lu)\n", numBytes, loop);*/
-	  NandSimRequestProxy_startRead (&intarr[3], ref_srcAlloc, 0, loop, numBytes, 16);
+	  NandSimRequest_startRead (&intarr[3], ref_srcAlloc, 0, loop, numBytes, 16);
 	  sem_wait(&test_sem);
 
 	  for (i = 0; i < numBytes/sizeof(srcBuffer[0]); i++) {

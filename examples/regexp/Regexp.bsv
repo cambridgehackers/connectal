@@ -30,8 +30,6 @@ import StmtFSM::*;
 import ClientServer::*;
 import GetPut::*;
 import Connectable::*;
-
-import AxiMasterSlave::*;
 import MemTypes::*;
 import MemreadEngine::*;
 import Pipe::*;
@@ -41,6 +39,7 @@ import RegexpEngine::*;
 interface RegexpRequest;
    method Action setup(Bit#(32) mapSGLId, Bit#(32) mapLen);
    method Action search(Bit#(32) token, Bit#(32) haystackSGLId, Bit#(32) haystackLen);
+   method Action retire(Bit#(32) token);
 endinterface
 
 interface RegexpIndication;
@@ -50,11 +49,13 @@ endinterface
 
 interface Regexp#(numeric type busWidth);
    interface RegexpRequest request;
-   interface ObjectReadClient#(busWidth) config_read_client;
-   interface ObjectReadClient#(busWidth) haystack_read_client;
+   interface MemReadClient#(busWidth) config_read_client;
+   interface MemReadClient#(busWidth) haystack_read_client;
 endinterface
 
 typedef `DEGPAR DegPar;
+
+typedef enum {Config_charMap, Config_stateMap, Config_stateTransitions} RegexpState deriving (Eq,Bits);
 
 module mkRegexp#(RegexpIndication indication)(Regexp#(64))
    provisos( Log#(`MAX_NUM_STATES,5)
@@ -66,7 +67,7 @@ module mkRegexp#(RegexpIndication indication)(Regexp#(64))
 	    );
 
    MemreadEngineV#(64, 1, p) config_re <- mkMemreadEngine;
-   MemreadEngineV#(64, 1, p) haystack_re <- mkMemreadEngine;
+   MemreadEngineV#(64, 2, p) haystack_re <- mkMemreadEngine;
    let read_servers = zip(config_re.read_servers,haystack_re.read_servers);
    Vector#(p, RegexpEngine#(lp)) rees <- mapM(uncurry(mkRegexpEngine), zip(read_servers,genVector));
    Reg#(RegexpState) state <- mkReg(Config_charMap);
@@ -74,8 +75,8 @@ module mkRegexp#(RegexpIndication indication)(Regexp#(64))
    let readyFIFO <- mkSizedFIFOF(valueOf(p));
    Vector#(p, PipeOut#(LDR#(lp))) ldrPipes;   
    
-   FIFOF#(Tuple2#(Bit#(lp), Pair#(Bit#(32)))) setsearchFIFO <- mkFIFOF;
-   UnFunnelPipe#(1,p,Pair#(Bit#(32)),1) setsearchPipeUnFunnel <- mkUnFunnelPipesPipelined(cons(toPipeOut(setsearchFIFO),nil));
+   FIFOF#(Tuple2#(Bit#(lp), SSV#(lp))) setsearchFIFO <- mkFIFOF;
+   UnFunnelPipe#(1,p,SSV#(lp),1) setsearchPipeUnFunnel <- mkUnFunnelPipesPipelined(cons(toPipeOut(setsearchFIFO),nil));
 
    for(Integer i = 0; i < valueOf(p); i=i+1) begin
       ldrPipes[i] = rees[i].ldr;
@@ -86,32 +87,52 @@ module mkRegexp#(RegexpIndication indication)(Regexp#(64))
    rule ldrr;
       let rv <- toGet(ldr[0]).get;
       case (rv) matches
-	 tagged Ready  .r : readyFIFO.enq(r);
-	 tagged Done   .d : indication.searchResult(extend(d), -1);
-	 tagged Loc    .l : indication.searchResult(extend(tpl_1(l)), tpl_2(l));
-	 tagged Config .c : indication.setupComplete(extend(c));
+   	 tagged Ready  .r : readyFIFO.enq(r);
+   	 tagged Done   .d : indication.searchResult(extend(d), -1);
+   	 tagged Loc    .l : indication.searchResult(extend(tpl_1(l)), tpl_2(l));
+   	 tagged Config .c : indication.setupComplete(extend(c));
       endcase
    endrule
-      
+
+   let setupFIFO <- mkSizedFIFO(4);
+   rule setup_r;
+      match {.sglId, .len} <- toGet(setupFIFO).get;
+      $display("mkRegexp::setup(%d) %d %d %d", readyFIFO.first,sglId, len, state);
+      case (state) matches
+	 Config_charMap:  
+	 begin
+	    state <= Config_stateMap;
+	    setsearchFIFO.enq(tuple2(readyFIFO.first,tagged CharMap tuple2(sglId,len)));
+	 end
+	 Config_stateMap: 
+	 begin
+	    state <= Config_stateTransitions;
+	    setsearchFIFO.enq(tuple2(readyFIFO.first,tagged StateMap tuple2(sglId,len)));
+	 end
+	 Config_stateTransitions:  
+	 begin
+	    readyFIFO.deq;
+	    state <= Config_charMap;
+	    setsearchFIFO.enq(tuple2(readyFIFO.first,tagged StateTransitions tuple2(sglId,len)));
+	 end
+      endcase      
+   endrule
+
    interface config_read_client = config_re.dmaClient;
    interface haystack_read_client = haystack_re.dmaClient;
-
+      
    interface RegexpRequest request;
-      method Action setup(Bit#(32) sglId, Bit#(32) len) if (state != Search);
-	 setsearchFIFO.enq(tuple2(readyFIFO.first,tuple2(sglId,len)));
-	 case (state) matches
-	    Config_charMap:  state <= Config_stateMap;
-	    Config_stateMap: state <= Config_stateTransitions;
-	    Config_stateTransitions:  
-	    begin
-	       state <= Config_charMap;
-	       readyFIFO.deq;
-	    end
-	 endcase
+      method Action setup(Bit#(32) sglId, Bit#(32) len);	 
+	 setupFIFO.enq(tuple2(sglId,len));
       endmethod
       method Action search(Bit#(32) token, Bit#(32) sglId, Bit#(32) len);
 	 $display("mkRegexp::search %d %d %d", token, sglId, len);
-	 setsearchFIFO.enq(tuple2(truncate(token),tuple2(sglId,len)));
+	 setsearchFIFO.enq(tuple2(truncate(token),tagged Search tuple2(sglId,len)));
+      endmethod
+      method Action retire(Bit#(32) token);
+	 Bit#(lp) tok = truncate(token);
+	 $display("mkRegexp::retire(%d)", tok);
+	 setsearchFIFO.enq(tuple2(tok,tagged Retire tok));
       endmethod
    endinterface
 

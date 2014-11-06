@@ -9,7 +9,7 @@ import BRAM::*;
 import DefaultValue::*;
 import FloatingPoint::*;
 import Real::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MemTypes::*;
 import DmaVector::*;
 import Pipe::*;

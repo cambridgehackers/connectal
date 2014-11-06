@@ -29,7 +29,7 @@ import Assert::*;
 
 // CONNECTAL Libraries
 import MemTypes::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 import MMU::*;
 
 `ifdef BSIM
@@ -57,14 +57,14 @@ function Bool bad_pointer(SGLId p);
    return (p > fromInteger(valueOf(MaxNumSGLists)) || p == 0);
 endfunction
 
-typedef struct {ObjectRequest req;
+typedef struct {MemRequest req;
 		Bit#(6) rename_tag;
 		Bit#(addrWidth) pa;
 		DmaChannelId chan; } IRec#(type addrWidth) deriving(Bits);
 		 
-module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients, 
+module mkMemReadInternal#(Vector#(numReadClients, MemReadClient#(dataWidth)) readClients, 
 			     DmaIndication dmaIndication,
-			     Server#(Tuple2#(SGListId,Bit#(ObjectOffsetSize)),Bit#(addrWidth)) sgl) 
+			     Server#(Tuple2#(SGListId,Bit#(MemOffsetSize)),Bit#(addrWidth)) sgl) 
    (MemReadInternal#(addrWidth, dataWidth))
 
    provisos(Add#(b__, addrWidth, 64), 
@@ -100,7 +100,7 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
       
    for (Integer selectReg = 0; selectReg < valueOf(numReadClients); selectReg = selectReg + 1)
       rule loadChannel;
-	 ObjectRequest req <- readClients[selectReg].readReq.get();
+	 MemRequest req <- readClients[selectReg].readReq.get();
 	 //$display("dmaread.loadChannel activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.sglId, req.offset, req.burstLen);
 	 if (bad_pointer(req.sglId))
 	    dmaIndication.badPointer(req.sglId);
@@ -142,7 +142,7 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
 
    interface MemReadClient read_client;
       interface Get readReq;
-	 method ActionValue#(MemRequest#(addrWidth)) get;
+	 method ActionValue#(PhysMemRequest#(addrWidth)) get;
 	    let req = reqFifo.first.req;
 	    let physAddr = reqFifo.first.pa;
 	    let rename_tag = reqFifo.first.rename_tag;
@@ -151,7 +151,7 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
 	    if (False && physAddr[31:24] != 0)
 	       $display("req_ar: funny physAddr req.sglId=%d req.offset=%h physAddr=%h", req.sglId, req.offset, physAddr);
 	    dreqFifo.enq(reqFifo.first);
-	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
+	    return PhysMemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
 	 endmethod
       endinterface
       interface Put readData;
@@ -160,7 +160,7 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
 	    let req = dreqFifo.first.req;
 	    let rename_tag = dreqFifo.first.rename_tag;
 	    if (valueOf(numReadClients) > 0)
-	       readClients[activeChan].readData.put(ObjectData { data: response.data, tag: req.tag});
+	       readClients[activeChan].readData.put(MemData { data: response.data, tag: req.tag});
 
 	    let burstLen = burstReg;
 	    if (burstLen == 0)
@@ -195,9 +195,9 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
 endmodule
 
 
-module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients,
+module mkMemWriteInternal#(Vector#(numWriteClients, MemWriteClient#(dataWidth)) writeClients,
 			      DmaIndication dmaIndication, 
-			      Server#(Tuple2#(SGListId,Bit#(ObjectOffsetSize)),Bit#(addrWidth)) sgl)
+			      Server#(Tuple2#(SGListId,Bit#(MemOffsetSize)),Bit#(addrWidth)) sgl)
 
    (MemWriteInternal#(addrWidth, dataWidth))
    
@@ -223,7 +223,7 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
 
    for (Integer selectReg = 0; selectReg < valueOf(numWriteClients); selectReg = selectReg + 1)
        rule loadChannel;
-	  ObjectRequest req <- writeClients[selectReg].writeReq.get();
+	  MemRequest req <- writeClients[selectReg].writeReq.get();
 	  //$display("dmawrite.loadChannel activeChan=%d handle=%h addr=%h burst=%h debugReq=%d", selectReg, req.sglId, req.offset, req.burstLen, debugReg);
 	  if (bad_pointer(req.sglId))
 	     dmaIndication.badPointer(req.sglId);
@@ -259,7 +259,7 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
    
    interface MemWriteClient write_client;
       interface Get writeReq;
-	 method ActionValue#(MemRequest#(addrWidth)) get();
+	 method ActionValue#(PhysMemRequest#(addrWidth)) get();
 	    let req = reqFifo.first.req;
 	    let physAddr = reqFifo.first.pa;
 	    let rename_tag = reqFifo.first.rename_tag;
@@ -267,7 +267,7 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
 	    //$display("dmaWrite addr physAddr=%h burstReg=%d", physAddr, req.burstLen);
    
 	    dreqFifo.enq(reqFifo.first);
-	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
+	    return PhysMemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
 	 endmethod
       endinterface
       interface Get writeData;
@@ -275,7 +275,7 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
 	    let activeChan = dreqFifo.first.chan;
 	    let req = dreqFifo.first.req;
 	    let rename_tag = dreqFifo.first.rename_tag;
-	    ObjectData#(dataWidth) tagdata = unpack(0);
+	    MemData#(dataWidth) tagdata = unpack(0);
 	    if (valueOf(numWriteClients) > 0)
 	       tagdata <- writeClients[activeChan].writeData.get();
 	    let burstLen = burstReg;
@@ -322,8 +322,8 @@ endmodule
 // @param writeClients The writeclients.
 //
 module mkMemServer#(DmaIndication dmaIndication,
-		    Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
-		    Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
+		    Vector#(numReadClients, MemReadClient#(dataWidth)) readClients,
+		    Vector#(numWriteClients, MemWriteClient#(dataWidth)) writeClients)
 
    (MemServer#(addrWidth, dataWidth))
    
@@ -331,8 +331,8 @@ module mkMemServer#(DmaIndication dmaIndication,
 	     Add#(b__, TSub#(addrWidth, 12), 32),
 	     Add#(c__, 12, addrWidth),
 	     Add#(d__, addrWidth, 64),
-	     Add#(e__, TSub#(addrWidth, 12), ObjectOffsetSize),
-	     Add#(f__, c__, ObjectOffsetSize),
+	     Add#(e__, TSub#(addrWidth, 12), MemOffsetSize),
+	     Add#(f__, c__, MemOffsetSize),
 	     Add#(g__, addrWidth, 40),
 	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth));
    
@@ -377,7 +377,7 @@ module mkMemServer#(DmaIndication dmaIndication,
 	    dmaIndication.reportMemoryTraffic(rv);
 	 end
       endmethod
-      method Action sglist(Bit#(32) pref, Bit#(ObjectOffsetSize) addr, Bit#(32) len);
+      method Action sglist(Bit#(32) pref, Bit#(MemOffsetSize) addr, Bit#(32) len);
 	 if (bad_pointer(pref))
 	    dmaIndication.badPointer(pref);
 `ifdef BSIM

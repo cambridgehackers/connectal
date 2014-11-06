@@ -36,7 +36,6 @@ import Connectable::*;
 import ConfigReg::*;
 
 import MemUtils::*;
-import AxiMasterSlave::*;
 import MemTypes::*;
 import Dma2BRAM::*;
 import Pipe::*;
@@ -71,8 +70,8 @@ module mkMPEngine#(Pair#(MemreadServer#(busWidth)) readers)(MPEngine#(busWidth))
    
    
    FIFOF#(Int#(32)) locf <- mkFIFOF;
-   MemreadServer#(busWidth) haystackReader = tpl_1(readers);
-   MemreadServer#(busWidth) configReader = tpl_2(readers);
+   MemreadServer#(busWidth) configReader = tpl_1(readers);
+   MemreadServer#(busWidth) haystackReader = tpl_2(readers);
    FIFO#(Bool) conff <- mkSizedFIFO(1);
    
    let verbose = True;

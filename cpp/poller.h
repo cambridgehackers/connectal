@@ -44,6 +44,7 @@ public:
   void *portalExec_event(void);
   void portalExec_end(void);
   void portalExec_start();
+  void portalExec_stop();
   int portalExec_timeout;
   int stopping;
   sem_t sem_startup;
@@ -58,7 +59,10 @@ class PortalInternalCpp
 {
  public:
   PortalInternal pint;
-  PortalInternalCpp(int id, uint32_t reqsize) { init_portal_internal(&pint, id, NULL, reqsize); };
+  PortalInternalCpp(int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions* item, void *param, uint32_t reqsize) { 
+    init_portal_internal(&pint, id, handler, cb, item, param, reqsize); 
+    //fprintf(stderr, "PortalInternalCpp %d\n", pint.fpga_number);
+  };
   ~PortalInternalCpp() {
     if (pint.fpga_fd > 0) {
         ::close(pint.fpga_fd);
@@ -69,14 +73,23 @@ class PortalInternalCpp
 
 class Portal : public PortalInternalCpp
 {
+   void initPortal() {
+    if (pint.handler || pint.item == &socketfuncResp) {
+      if (pint.poller == 0)
+        pint.poller = defaultPoller;
+      pint.poller->registerInstance(this);
+    }
+  }
  public:
-  Portal(int id, uint32_t reqsize, PortalPoller *poller = 0) : PortalInternalCpp(id, reqsize) {
-    if (poller == 0)
-      poller = defaultPoller;
+  Portal(int id, uint32_t reqsize, PORTAL_INDFUNC handler, void *cb, PortalPoller *poller = 0) : PortalInternalCpp(id, handler, cb, NULL, NULL, reqsize) {
     pint.poller = poller;
-    pint.poller->registerInstance(this);
+    initPortal();
   };
-  ~Portal() { pint.poller->unregisterInstance(this); };
+  Portal(int id, uint32_t reqsize, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : PortalInternalCpp(id, handler, cb, item, param, reqsize) {
+    pint.poller = poller;
+    initPortal();
+  };
+  ~Portal() { if (pint.handler) pint.poller->unregisterInstance(this); };
 };
 
 #endif // __POLLER_H__

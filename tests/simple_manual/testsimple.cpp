@@ -23,8 +23,8 @@
 
 #include <stdio.h>
 #include <unistd.h>
-#include "SimpleIndicationWrapper.h"
-#include "SimpleRequestProxy.h"
+#include "SimpleIndication.h"
+#include "SimpleRequest.h"
 
 int v1a = 42;
 int v2a = 2;

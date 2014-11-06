@@ -1,6 +1,5 @@
 
-S2H = MemlatencyRequest
-H2S = MemlatencyIndication
+INTERFACES = MemlatencyRequest MemlatencyIndication
 BSVFILES = Memlatency.bsv Top.bsv
 CPPFILES=testmemlatency.cpp
 #CONNECTALFLAGS=--bscflags " -D TRACE_AXI"

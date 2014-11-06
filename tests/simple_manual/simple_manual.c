@@ -41,38 +41,29 @@ void SimpleIndicationWrapperheard2_cb (  struct PortalInternal *p, const uint32_
 static void manual_event(void)
 {
     int i;
-    for (i = 0; i < MAX_INDARRAY; i++) {
-      PortalInternal *instance = &intarr[i];
-      volatile unsigned int *map_base = instance->map_base;
-      unsigned int queue_status;
-      while ((queue_status= READL(instance, &map_base[IND_REG_QUEUE_STATUS]))) {
-        unsigned int int_src = READL(instance, &map_base[IND_REG_INTERRUPT_FLAG]);
-        unsigned int int_en  = READL(instance, &map_base[IND_REG_INTERRUPT_MASK]);
-        unsigned int ind_count  = READL(instance, &map_base[IND_REG_INTERRUPT_COUNT]);
-        PORTAL_PRINTF("(%d:fpga%d) about to receive messages int=%08x en=%08x qs=%08x ind_count %d\n", i, instance->fpga_number, int_src, int_en, queue_status, ind_count);
-        instance->handler(instance, queue_status-1);
-      }
-    }
+    for (i = 0; i < MAX_INDARRAY; i++)
+      portalCheckIndication(&intarr[i]);
 }
 
+SimpleIndicationCb SimpleIndication_cbTable = {
+   SimpleIndicationWrapperheard1_cb,
+   SimpleIndicationWrapperheard2_cb,
+};
 int main(int argc, const char **argv)
 {
+   init_portal_internal(&intarr[0], IfcNames_SimpleRequest, NULL, NULL, NULL, NULL, SimpleRequest_reqsize); // portal 1
+   init_portal_internal(&intarr[1], IfcNames_SimpleIndication, SimpleIndication_handleMessage, &SimpleIndication_cbTable, NULL, NULL, SimpleIndication_reqsize); // portal 2
 
-   init_portal_internal(&intarr[0], IfcNames_SimpleRequest, SimpleRequestProxy_handleMessage, SimpleRequestProxy_reqsize); // portal 1
-   init_portal_internal(&intarr[1], IfcNames_SimpleIndication, SimpleIndicationWrapper_handleMessage, SimpleIndicationWrapper_reqsize); // portal 2
-   //indfn[0] = SimpleRequestProxy_handleMessage;
-   //indfn[1] = SimpleIndicationWrapper_handleMessage;
-
-   WRITEL(&intarr[0], &intarr[0].map_base[IND_REG_INTERRUPT_MASK], 0);
-   WRITEL(&intarr[0], &intarr[1].map_base[IND_REG_INTERRUPT_MASK], 0);
+   intarr[0].item->enableint(&intarr[0], 0);
+   intarr[1].item->enableint(&intarr[1], 0);
    PORTAL_PRINTF("Main::calling say1(%d)\n", v1a);
    //device->say1(v1a);  
-   SimpleRequestProxy_say1 (&intarr[0], v1a);
+   SimpleRequest_say1 (&intarr[0], v1a);
    manual_event();
 
    PORTAL_PRINTF("Main::calling say2(%d, %d)\n", v2a,v2b);
    //device->say2(v2a,v2b);
-   SimpleRequestProxy_say2 (&intarr[0], v2a, v2b);
+   SimpleRequest_say2 (&intarr[0], v2a, v2b);
    manual_event();
    return 0;
 }

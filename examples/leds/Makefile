@@ -1,6 +1,5 @@
 
-S2H = LedControllerRequest
-H2S = 
+INTERFACES = LedControllerRequest
 BSVFILES = LedController.bsv Top.bsv
 CPPFILES= testleds.cpp
 NUMBER_OF_MASTERS =0

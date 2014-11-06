@@ -32,7 +32,7 @@ import BRAM::*;
 
 // CONNECTAL Libraries
 import MemTypes::*;
-import PortalMemory::*;
+import ConnectalMemory::*;
 
 interface TagGen#(numeric type numTags);
    method ActionValue#(Bit#(TLog#(numTags))) getTag;
