@@ -36,12 +36,8 @@ sizeofUint32_t = 4
 proxyClassPrefixTemplate='''
 class %(className)sProxy : public %(parentClass)s {
 public:
-    %(className)sProxy(int id, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, NULL, NULL, poller) {
-        //pint.parent = static_cast<void *>(this);
-    };
-    %(className)sProxy(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, NULL, NULL, item, param, poller) {
-        //pint.parent = static_cast<void *>(this);
-    };
+    %(className)sProxy(int id, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, NULL, NULL, poller) {};
+    %(className)sProxy(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, NULL, NULL, item, param, poller) {};
 '''
 
 wrapperClassPrefixTemplate='''
@@ -225,8 +221,7 @@ class ParamMixin:
 
 class TypeMixin:
     def cName(self):
-        cid = self.name
-        cid = cid.replace(' ', '')
+        cid = self.name.replace(' ', '')
         if cid == 'Bit':
             if self.params[0].numeric() <= 32:
                 return 'uint32_t'
@@ -402,9 +397,8 @@ def formalParameters(params, insertPortal):
         rc.insert(0, ' struct PortalInternal *p')
     return ', '.join(rc)
 
-def gatherMethodInfo(mitem, itemname):
+def gatherMethodInfo(mname, params, itemname, resultType):
     global fdName
-    params = mitem.params
     
     argAtoms = sum(map(functools.partial(collectMembers, ''), params), [])
     argAtoms.reverse();
@@ -429,21 +423,21 @@ def gatherMethodInfo(mitem, itemname):
     respParams = [p.name for p in params]
     respParams.insert(0, 'p')
     substs = {
-        'methodName': cName(mitem.name),
+        'methodName': cName(mname),
         'paramDeclarations': formalParameters(params, False),
         'paramProxyDeclarations': formalParameters(params, True),
         'paramStructDeclarations': '\n        '.join(paramStructDeclarations),
         'paramStructMarshall': '\n    '.join(paramStructMarshall),
         'paramStructDemarshall': '\n        '.join(paramStructDemarshall),
         'paramNames': ', '.join(['msg->%s' % p.name for p in params]),
-        'resultType': mitem.resultTypeName(),
+        'resultType': resultType,
         'wordLen': len(argWords),
         'wordLenP1': len(argWords) + 1,
         'fdName': fdName,
         'className': cName(itemname),
-        'channelNumber': 'CHAN_NUM_%s_%s' % (cName(itemname), cName(mitem.name)),
+        'channelNumber': 'CHAN_NUM_%s_%s' % (cName(itemname), cName(mname)),
         'responseCase': ('((%(className)sCb *)p->cb)->%(name)s(%(params)s);'
-                          % { 'name': mitem.name,
+                          % { 'name': mname,
                               'className' : cName(itemname),
                               'params': ', '.join(respParams)})
         }
@@ -464,61 +458,60 @@ def emitMethodDeclaration(mitem, f, className):
         f.write('{ %s_%s (' % (className, methodName))
         f.write(', '.join(paramValues) + '); };\n')
 
-def generate_class(item, generatedCFiles, create_cpp_file, generated_hpp, generated_cpp):
-    cppname = '%s.c' % item.name
-    hppname = '%s.h' % item.name
+def generate_class(className, declList, parentC, parentCC, generatedCFiles, create_cpp_file, generated_hpp, generated_cpp):
+    classCName = cName(className)
+    cppname = '%s.c' % className
+    hppname = '%s.h' % className
     if cppname in generatedCFiles:
         return
     generatedCFiles.append(cppname)
     hpp = create_cpp_file(hppname)
     cpp = create_cpp_file(cppname)
-    hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': item.name.upper()})
-    hpp.write('#include "%s.h"\n' % item.parentClass("portal"))
-    generated_cpp.write('\n/************** Start of %sWrapper CPP ***********/\n' % item.name)
+    hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': className.upper()})
+    hpp.write('#include "%s.h"\n' % parentC)
+    generated_cpp.write('\n/************** Start of %sWrapper CPP ***********/\n' % className)
     generated_cpp.write('#include "%s"\n' % hppname)
     maxSize = 0;
     reqChanNums = []
-    for mitem in item.decls:
-        substs, t = gatherMethodInfo(mitem, item.name)
+    for mitem in declList:
+        substs, t = gatherMethodInfo(mitem.name, mitem.params, className, mitem.resultTypeName())
         if t > maxSize:
             maxSize = t
         cpp.write((proxyMethodTemplateDecl + proxyMethodTemplate) % substs)
         generated_hpp.write((proxyMethodTemplateDecl % substs) + ';')
         reqChanNums.append(substs['channelNumber'])
-    subs = {'className': cName(item.name),
-            'maxSize': maxSize * sizeofUint32_t,
-            'parentClass': item.parentClass('Portal')}
+    subs = {'className': classCName, 'maxSize': maxSize * sizeofUint32_t, 'parentClass': parentCC}
     generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(className)s_reqsize %(maxSize)s\n' % subs)
     hpp.write(proxyClassPrefixTemplate % subs)
-    for d in item.decls:
-        emitMethodDeclaration(d, hpp, cName(item.name))
+    for d in declList:
+        emitMethodDeclaration(d, hpp, classCName)
     hpp.write('};\n')
     cpp.write((handleMessageTemplateDecl % subs))
     cpp.write(handleMessageTemplate1 % subs)
-    for mitem in item.decls:
-        substs, t = gatherMethodInfo(mitem, item.name)
+    for mitem in declList:
+        substs, t = gatherMethodInfo(mitem.name, mitem.params, className, mitem.resultTypeName())
         cpp.write(handleMessageCase % substs)
     cpp.write(handleMessageTemplate2 % subs)
     generated_hpp.write((handleMessageTemplateDecl % subs)+ ';\n')
     hpp.write(wrapperClassPrefixTemplate % subs)
-    for d in item.decls:
+    for d in declList:
         emitMethodDeclaration(d, hpp, '')
     hpp.write('};\n')
     generated_hpp.write('typedef struct {\n');
-    for d in item.decls:
+    for d in declList:
         paramValues = ', '.join([p.name for p in d.params])
         formalParamStr = formalParameters(d.params, True)
         methodName = cName(d.name)
         generated_hpp.write(('    void (*%s) ( ' % methodName) + formalParamStr + ' );\n')
-        generated_cpp.write(('void %s%s_cb ( ' % (cName(item.name), methodName)) + formalParamStr + ' ) {\n')
+        generated_cpp.write(('void %s%s_cb ( ' % (classCName, methodName)) + formalParamStr + ' ) {\n')
         indent(generated_cpp, 4)
-        generated_cpp.write(('(static_cast<%sWrapper *>(p->parent))->%s ( ' % (cName(item.name), methodName)) + paramValues + ');\n};\n')
-    generated_hpp.write('} %sCb;\n' % cName(item.name));
-    generated_cpp.write('%sCb %s_cbTable = {\n' % (cName(item.name), cName(item.name)));
-    for d in item.decls:
-        generated_cpp.write('    %s%s_cb,\n' % (cName(item.name), d.name));
+        generated_cpp.write(('(static_cast<%sWrapper *>(p->parent))->%s ( ' % (classCName, methodName)) + paramValues + ');\n};\n')
+    generated_hpp.write('} %sCb;\n' % classCName);
+    generated_cpp.write('%sCb %s_cbTable = {\n' % (classCName, classCName));
+    for d in declList:
+        generated_cpp.write('    %s%s_cb,\n' % (classCName, d.name));
     generated_cpp.write('};\n');
-    hpp.write('#endif // _%(name)s_H_\n' % {'name': item.name.upper()})
+    hpp.write('#endif // _%(name)s_H_\n' % {'name': className.upper()})
     hpp.close();
     cpp.close();
 
@@ -557,7 +550,7 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
     generatedCFiles.append(cppname)
     generated_cpp.write('\n#ifndef NO_CPP_PORTAL_CODE\n')
     for item in interfaces:
-        generate_class(item, generatedCFiles, create_cpp_file, generated_hpp, generated_cpp)
+        generate_class(item.name, item.decls, item.parentClass("portal"), item.parentClass("Portal"), generatedCFiles, create_cpp_file, generated_hpp, generated_cpp)
     generated_cpp.write('#endif //NO_CPP_PORTAL_CODE\n')
     generated_cpp.close();
     generated_hpp.write('#ifdef __cplusplus\n')
