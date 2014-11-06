@@ -33,15 +33,27 @@ static int daemon_trace = 1;
 class EchoIndication : public EchoIndicationWrapper
 {
 public:
-    void heard(uint32_t v) {
+    void heard(uint32_t id, uint32_t v) {
         if (daemon_trace)
-        fprintf(stderr, "daemon: heard an echo: %d\n", v);
-        sIndicationProxy->heard(v);
+        fprintf(stderr, "daemon: heard an echo: %u %u\n", id, v);
+		if (id == 1) {
+        	sIndicationProxy->heard(id, v);
+		} else if (id == 2) {
+        	sIndicationProxy2->heard(id, v);
+		} else {
+			fprintf (stderr, "id is wrong (%u)", id);
+		}
     }
-    void heard2(uint32_t a, uint32_t b) {
+    void heard2(uint32_t id, uint32_t a, uint32_t b) {
         if (daemon_trace)
-        fprintf(stderr, "daemon: heard an echo2: %d %d\n", a, b);
-        sIndicationProxy->heard2(a, b);
+        fprintf(stderr, "daemon: heard an echo2: %u %d %d\n", id, a, b);
+		if (id == 1) {
+        	sIndicationProxy->heard2(id, a, b);
+		} else if (id == 2) {
+        	sIndicationProxy2->heard2(id, a, b);
+		} else {
+			fprintf (stderr, "id is wrong (%u)", id);
+		}
     }
     EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
 };
@@ -49,19 +61,19 @@ public:
 class EchoRequest : public EchoRequestWrapper
 {
 public:
-    void say ( const uint32_t v ) {
+    void say (const uint32_t id, const uint32_t v ) {
         if (daemon_trace)
-        fprintf(stderr, "daemon[%s:%d] %u\n", __FUNCTION__, __LINE__, v);
-        echoRequestProxy->say(v);
+        fprintf(stderr, "daemon[%s:%d] %u %u\n", __FUNCTION__, __LINE__, id, v);
+        echoRequestProxy->say(id, v);
     }
-    void say2 ( const uint32_t a, const uint32_t b ) {
+    void say2 (const uint32_t id, const uint32_t a, const uint32_t b ) {
         if (daemon_trace)
-        fprintf(stderr, "daemon[%s:%d] %u %u\n", __FUNCTION__, __LINE__, a, b);
-        echoRequestProxy->say2(a, b);
+        fprintf(stderr, "daemon[%s:%d] %u %u %u\n", __FUNCTION__, __LINE__, id, a, b);
+        echoRequestProxy->say2(id, a, b);
     }
-    void setLeds ( const uint32_t v ) {
+    void setLeds (const uint32_t id, const uint32_t v ) {
         fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
-        echoRequestProxy->setLeds(v);
+        echoRequestProxy->setLeds(id, v);
         sleep(1);
         exit(1);
     }
@@ -72,12 +84,13 @@ int main(int argc, const char **argv)
 {
     PortalSocketParam param;
 
-	//int rc = getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
     sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &socketfuncResp, NULL);
     sIndicationProxy2 = new EchoIndicationProxy(IfcNames_EchoIndication2, &socketfuncResp, NULL);
-	//rc = getaddrinfo("127.0.0.1", "5001", NULL, &param.addr);
+
     EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &socketfuncResp, NULL);
     EchoRequest *sRequest2 = new EchoRequest(IfcNames_EchoRequest2, &socketfuncResp, NULL);
+
+
 
     EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, NULL, NULL);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
