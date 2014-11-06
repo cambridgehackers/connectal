@@ -29,14 +29,15 @@ import globalv
 import AST
 import util
 import functools
+import json
 import math
 
-def dtInfo(name, cName, bitWidth, params):
+def dtInfo(arg):
     rc = {}
-    rc['name'] = name
-    rc['cName'] = cName
-    rc['bitWidth'] = bitWidth
-    rc['params'] = params
+    rc['name'] = arg.name
+    rc['cName'] = arg.cName()
+    rc['bitWidth'] = arg.bitWidth()
+    rc['params'] = [dtInfo(p) for p in arg.params]
     return rc
 
 sizeofUint32_t = 4
@@ -270,7 +271,7 @@ class TypeMixin:
             return 0
 
 def cName(x):
-    if type(x) == str:
+    if type(x) == str or type(x) == unicode:
         x = x.replace(' ', '')
         x = x.replace('.', '$')
         return x
@@ -287,7 +288,7 @@ class paramInfo:
 
 # resurse interface types and flattening all structs into a list of types
 def collectMembers(scope, pitem):
-    membtype = dtInfo(pitem['type'].name, pitem['type'].cName(), pitem['type'].bitWidth(), pitem['type'].params)
+    membtype = pitem['type']
     while 1:
         if membtype['name'] == 'Bit':
             return [('%s%s'%(scope,pitem['name']),membtype)]
@@ -308,7 +309,7 @@ def collectMembers(scope, pitem):
                 ns = '%s%s.' % (scope,pitem['name'])
                 rv = map(functools.partial(collectMembers, ns), tdtype.elements)
                 return sum(rv,[])
-            membtype = dtInfo(tdtype.name, tdtype.cName(), tdtype.bitWidth(), tdtype.params if tdtype.type == 'Type' else None)
+            membtype = dtInfo(tdtype)
             if tdtype.type == 'Enum':
                 return [('%s%s'%(scope,pitem['name']),membtype)]
             #print 'resolved to type', membtype['type'], membtype['name'], membtype
@@ -390,7 +391,7 @@ def generate_demarshall(fmt, w):
     return '\n        '.join(word)
 
 def formalParameters(params, insertPortal):
-    rc = [ 'const %s %s' % (pitem['type'].cName(), pitem['name']) for pitem in params]
+    rc = [ 'const %s %s' % (pitem['type']['cName'], pitem['name']) for pitem in params]
     if insertPortal:
         rc.insert(0, ' struct PortalInternal *p')
     return ', '.join(rc)
@@ -415,7 +416,7 @@ def gatherMethodInfo(mname, params, itemname):
         paramStructDemarshall = map(functools.partial(generate_demarshall, paramStructDemarshallStr), argWords)
         paramStructDemarshall.reverse()
 
-    paramStructDeclarations = [ '%s %s;' % (pitem['type'].cName(), pitem['name']) for pitem in params]
+    paramStructDeclarations = [ '%s %s;' % (pitem['type']['cName'], pitem['name']) for pitem in params]
     if not params:
         paramStructDeclarations = ['        int padding;\n']
     respParams = [pitem['name'] for pitem in params]
@@ -514,7 +515,7 @@ def generate_class(className, declList, parentC, parentCC, generatedCFiles, crea
 def piInfo(name, type):
     rc = {}
     rc['name'] = name
-    rc['type'] = type
+    rc['type'] = dtInfo(type)
     return rc
 
 def declInfo(name, params):
@@ -547,6 +548,11 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
     itemlist = []
     for item in interfaces:
         itemlist.append(classInfo(item.name, item.decls, item.parentClass("portal"), item.parentClass("Portal")))
+    jfile = open('cppgen_intermediate_data.tmp', 'w')
+    json.dump(itemlist, jfile, sort_keys = True, indent = 4)
+    jfile.close()
+    j2file = open('cppgen_intermediate_data.tmp').read()
+    jsondata = json.loads(j2file)
     generatedCFiles = []
     hname = os.path.join(project_dir, 'jni', 'GeneratedTypes.h')
     generated_hpp = util.createDirAndOpen(hname, 'w')
@@ -572,7 +578,7 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
     generated_cpp = create_cpp_file(cppname)
     generatedCFiles.append(cppname)
     generated_cpp.write('\n#ifndef NO_CPP_PORTAL_CODE\n')
-    for item in itemlist:
+    for item in jsondata:
         generate_class(item['name'], item['decls'], item['parentLportal'], item['parentPortal'], generatedCFiles, create_cpp_file, generated_hpp, generated_cpp)
     generated_cpp.write('#endif //NO_CPP_PORTAL_CODE\n')
     generated_cpp.close()
