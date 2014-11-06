@@ -148,15 +148,15 @@ def collectMembers(scope, pitem):
         else:
             td = globalv_globalvars[membtype['name']]
             #print 'instantiate', membtype['params']
-            tdtype = td.tdtype.instantiate(dict(zip(td.params, membtype['params'])))
+            tdtype = td['tdtype']
+#.instantiate(dict(zip(td.params, membtype['params'])))
             #print '           ', membtype
-            if tdtype.type == 'Struct':
+            if tdtype['type'] == 'Struct':
                 ns = '%s%s.' % (scope,pitem['name'])
-                jsonlist = [piInfo(p.name, p.type) for p in tdtype.elements]
-                rv = map(functools.partial(collectMembers, ns), jsonlist)
+                rv = map(functools.partial(collectMembers, ns), tdtype['elements'])
                 return sum(rv,[])
-            membtype = dtInfo(tdtype)
-            if tdtype.type == 'Enum':
+            membtype = tdtype
+            if tdtype['type'] == 'Enum':
                 return [('%s%s'%(scope,pitem['name']),membtype)]
             #print 'resolved to type', membtype['type'], membtype['name'], membtype
 
@@ -369,7 +369,7 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, jsondata, globalvars):
         return f
 
     generatedCFiles = []
-    globalv_globalvars = globalvars
+    globalv_globalvars = jsondata['globalvars']
     hname = os.path.join(project_dir, 'jni', 'GeneratedTypes.h')
     generated_hpp = util.createDirAndOpen(hname, 'w')
     generated_hpp.write('#ifndef __GENERATED_TYPES__\n')

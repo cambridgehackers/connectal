@@ -34,12 +34,21 @@ import math
 
 def dtInfo(arg):
     rc = {}
-    rc['name'] = arg.name
-    if arg.type != 'Struct':
+    if hasattr(arg, 'name'):
+        rc['name'] = arg.name
+    if hasattr(arg, 'type'):
+        rc['type'] = arg.type
+    if hasattr(arg, 'cName'):
         rc['cName'] = arg.cName()
+    if hasattr(arg, 'bitWidth'):
         rc['bitWidth'] = arg.bitWidth()
-    if arg.type == 'Type':
+    if hasattr(arg, 'params'):
         rc['params'] = [dtInfo(p) for p in arg.params]
+    if hasattr(arg, 'elements'):
+        if arg.type == 'Enum':
+            rc['elements'] = arg.elements
+        else:
+            rc['elements'] = [piInfo(p.name, p.type) for p in arg.elements]
     return rc
 
 def indent(f, indentation):
@@ -246,6 +255,7 @@ def serialize_json(interfaces):
     for key, value in globalv.globalvars.iteritems():
         gvlist[key] = {'type': value.type}
         if value.type == 'TypeDef':
+            #print 'TYPEDEF globalvar:', key, value
             gvlist[key]['name'] = value.name
             gvlist[key]['tdtype'] = dtInfo(value.tdtype)
             gvlist[key]['params'] = value.params
