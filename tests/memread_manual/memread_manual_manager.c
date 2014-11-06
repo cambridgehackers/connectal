@@ -106,12 +106,12 @@ static void *pthread_worker(void *p)
     return rc;
 }
 
-MMUConfigIndicationWrapperCb MMUConfigIndicationWrapper_cbTable = {
+MMUConfigIndicationCb MMUConfigIndication_cbTable = {
     MMUConfigIndicationWrapperidResponse_cb,
     MMUConfigIndicationWrapperconfigResp_cb,
     MMUConfigIndicationWrappererror_cb,
 };
-MemreadIndicationWrapperCb MemreadIndicationWrapper_cbTable = {
+MemreadIndicationCb MemreadIndication_cbTable = {
     MemreadIndicationWrapperreadDone_cb,
 };
 int main(int argc, const char **argv)
@@ -122,10 +122,10 @@ int main(int argc, const char **argv)
   int rc = 0, i;
   pthread_t tid = 0;
 
-  init_portal_internal(&intarr[0], IfcNames_HostMMUConfigIndication, MMUConfigIndicationWrapper_handleMessage, &MMUConfigIndicationWrapper_cbTable, NULL, NULL, MMUConfigIndicationWrapper_reqsize);// fpga1
-  init_portal_internal(&intarr[1], IfcNames_MemreadIndication, MemreadIndicationWrapper_handleMessage, &MemreadIndicationWrapper_cbTable, NULL, NULL, MemreadIndicationWrapper_reqsize); // fpga2
-  init_portal_internal(&intarr[2], IfcNames_HostMMUConfigRequest, NULL, NULL, NULL, NULL, MMUConfigRequestProxy_reqsize); // fpga3
-  init_portal_internal(&intarr[3], IfcNames_MemreadRequest, NULL, NULL, NULL, NULL, MemreadRequestProxy_reqsize);    // fpga4
+  init_portal_internal(&intarr[0], IfcNames_HostMMUConfigIndication, MMUConfigIndication_handleMessage, &MMUConfigIndication_cbTable, NULL, NULL, MMUConfigIndication_reqsize);// fpga1
+  init_portal_internal(&intarr[1], IfcNames_MemreadIndication, MemreadIndication_handleMessage, &MemreadIndication_cbTable, NULL, NULL, MemreadIndication_reqsize); // fpga2
+  init_portal_internal(&intarr[2], IfcNames_HostMMUConfigRequest, NULL, NULL, NULL, NULL, MMUConfigRequest_reqsize); // fpga3
+  init_portal_internal(&intarr[3], IfcNames_MemreadRequest, NULL, NULL, NULL, NULL, MemreadRequest_reqsize);    // fpga4
 
   sem_init(&test_sem, 0, 0);
   DmaManager_init(&priv, NULL, &intarr[2]);
@@ -150,7 +150,7 @@ int main(int argc, const char **argv)
   PORTAL_PRINTF( "Main: before DmaManager_reference(%x)\n", srcAlloc);
   ref_srcAlloc = DmaManager_reference(&priv, srcAlloc);
   PORTAL_PRINTF( "Main: starting read %08x\n", numWords);
-  MemreadRequestProxy_startRead (&intarr[3], ref_srcAlloc, numWords, burstLen, 1);
+  MemreadRequest_startRead (&intarr[3], ref_srcAlloc, numWords, burstLen, 1);
   PORTAL_PRINTF( "Main: waiting for semaphore1\n");
   sem_wait(&test_sem);
 
@@ -158,7 +158,7 @@ int main(int argc, const char **argv)
   for (i = 0; i < numWords; i++)
     srcBuffer[i] = 1-i;
   portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
-  MemreadRequestProxy_startRead (&intarr[3], ref_srcAlloc, numWords, burstLen, 1);
+  MemreadRequest_startRead (&intarr[3], ref_srcAlloc, numWords, burstLen, 1);
   PORTAL_PRINTF( "Main: waiting for semaphore2\n");
   sem_wait(&test_sem);
 

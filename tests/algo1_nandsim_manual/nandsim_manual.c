@@ -129,13 +129,13 @@ static void *pthread_worker(void *p)
 #endif
     return rc;
 }
-NandSimIndicationWrapperCb NandSimIndication_cbTable = {
+NandSimIndicationCb NandSimIndication_cbTable = {
     NandSimIndicationWrappereraseDone_cb,
     NandSimIndicationWrapperwriteDone_cb,
     NandSimIndicationWrapperreadDone_cb,
     NandSimIndicationWrapperconfigureNandDone_cb,
 };
-MMUConfigIndicationWrapperCb MMUConfigIndication_cbTable = {
+MMUConfigIndicationCb MMUConfigIndication_cbTable = {
     MMUConfigIndicationWrapperconfigResp_cb,
     MMUConfigIndicationWrapperidResponse_cb,
     MMUConfigIndicationWrappererror_cb,
@@ -152,10 +152,10 @@ int main(int argc, const char **argv)
   pthread_t tid = 0;
 
 
-  init_portal_internal(&intarr[2], IfcNames_BackingStoreMMUConfigRequest, NULL, NULL, NULL, NULL, MMUConfigRequestProxy_reqsize);         // fpga3
-  init_portal_internal(&intarr[0], IfcNames_BackingStoreMMUConfigIndication, MMUConfigIndicationWrapper_handleMessage, MMUConfigIndication_cbTable, NULL, NULL, MMUConfigIndicationWrapper_reqsize);     // fpga1
-  init_portal_internal(&intarr[3], IfcNames_NandSimRequest, NULL, NULL, NULL, NULL, NandSimRequestProxy_reqsize);    // fpga4
-  init_portal_internal(&intarr[1], IfcNames_NandSimIndication, NandSimIndicationWrapper_handleMessage, NandSimIndication_cbTable, NULL, NULL, NandSimIndicationWrapper_reqsize); // fpga2
+  init_portal_internal(&intarr[2], IfcNames_BackingStoreMMUConfigRequest, NULL, NULL, NULL, NULL, MMUConfigRequest_reqsize);         // fpga3
+  init_portal_internal(&intarr[0], IfcNames_BackingStoreMMUConfigIndication, MMUConfigIndication_handleMessage, MMUConfigIndication_cbTable, NULL, NULL, MMUConfigIndication_reqsize);     // fpga1
+  init_portal_internal(&intarr[3], IfcNames_NandSimRequest, NULL, NULL, NULL, NULL, NandSimRequest_reqsize);    // fpga4
+  init_portal_internal(&intarr[1], IfcNames_NandSimIndication, NandSimIndication_handleMessage, NandSimIndication_cbTable, NULL, NULL, NandSimIndication_reqsize); // fpga2
 
   DmaManager_init(&priv, NULL, &intarr[2]);
   sem_init(&test_sem, 0, 0);
@@ -175,7 +175,7 @@ int main(int argc, const char **argv)
   backBuffer = (unsigned int*)portalMmap(backAlloc, back_sz); 
   portalDCacheFlushInval(backAlloc, back_sz, backBuffer);
 
-  NandSimRequestProxy_configureNand (&intarr[3], ref_backAlloc, back_sz);
+  NandSimRequest_configureNand (&intarr[3], ref_backAlloc, back_sz);
   PORTAL_PRINTF("Main::configure NAND fd=%d ref=%d\n", backAlloc, ref_backAlloc);
   sem_wait(&test_sem);
 
@@ -186,7 +186,7 @@ int main(int argc, const char **argv)
   PORTAL_PRINTF("about to start write\n");
   //write data to "flash" memory
   strcpy((char*)srcBuffer, "acabcabacababacababababababcacabcabacababacabababc\n012345678912");
-  NandSimRequestProxy_startWrite(&intarr[3], ref_srcAlloc, 0, 0, 1024, 8);
+  NandSimRequest_startWrite(&intarr[3], ref_srcAlloc, 0, 0, 1024, 8);
   sem_wait(&test_sem);
 
   // at this point, if we were synchronizing with the algo_exe, we
