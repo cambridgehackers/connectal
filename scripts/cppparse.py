@@ -35,9 +35,11 @@ import math
 def dtInfo(arg):
     rc = {}
     rc['name'] = arg.name
-    rc['cName'] = arg.cName()
-    rc['bitWidth'] = arg.bitWidth()
-    rc['params'] = [dtInfo(p) for p in arg.params]
+    if arg.type != 'Struct':
+        rc['cName'] = arg.cName()
+        rc['bitWidth'] = arg.bitWidth()
+    if arg.type == 'Type':
+        rc['params'] = [dtInfo(p) for p in arg.params]
     return rc
 
 def indent(f, indentation):
@@ -238,7 +240,19 @@ def serialize_json(interfaces):
     for item in interfaces:
         itemlist.append(classInfo(item.name, item.decls, item.parentClass("portal"), item.parentClass("Portal")))
     jfile = open('cppgen_intermediate_data.tmp', 'w')
-    json.dump(itemlist, jfile, sort_keys = True, indent = 4)
+    toplevel = {}
+    toplevel['interfaces'] = itemlist
+    gvlist = {}
+    for key, value in globalv.globalvars.iteritems():
+        gvlist[key] = {'type': value.type}
+        if value.type == 'TypeDef':
+            gvlist[key]['name'] = value.name
+            gvlist[key]['tdtype'] = dtInfo(value.tdtype)
+            gvlist[key]['params'] = value.params
+        else:
+            print 'Unprocessed globalvar:', key, value
+    toplevel['globalvars'] = gvlist
+    json.dump(toplevel, jfile, sort_keys = True, indent = 4)
     jfile.close()
     j2file = open('cppgen_intermediate_data.tmp').read()
     jsondata = json.loads(j2file)

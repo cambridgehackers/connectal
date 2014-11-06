@@ -394,7 +394,7 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, jsondata, globalvars):
     generated_cpp = create_cpp_file(cppname)
     generatedCFiles.append(cppname)
     generated_cpp.write('\n#ifndef NO_CPP_PORTAL_CODE\n')
-    for item in jsondata:
+    for item in jsondata['interfaces']:
         generate_class(item['name'], item['decls'], item['parentLportal'], item['parentPortal'], generatedCFiles, create_cpp_file, generated_hpp, generated_cpp)
     generated_cpp.write('#endif //NO_CPP_PORTAL_CODE\n')
     generated_cpp.close()
