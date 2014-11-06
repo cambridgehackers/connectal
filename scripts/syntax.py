@@ -219,7 +219,7 @@ def p_error(errtoken):
     if hasattr(errtoken, 'lineno'):
         sys.stderr.write("%s:%d: Syntax error, token=%s\n" % (globalfilename, errtoken.lineno, errtoken.type))
     else:
-        sys.stderr.write("%s: Syntax error, token=%s\n" % (globalfilename, errtoken.lineno, errtoken.type))
+        sys.stderr.write("%s: Syntax error, token=%s\n" % (globalfilename, errtoken))
     return None
     
 def t_VAR(t):
