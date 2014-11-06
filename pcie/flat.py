@@ -294,7 +294,7 @@ if __name__ == '__main__':
     if len(sys.argv) == 2:
         tlplog = open(sys.argv[1]).read().split('\n')
     else:
-        tlplog = subprocess.check_output(['connectalutil', 'tlp', '/dev/fpga0']).split('\n')
+        tlplog = subprocess.check_output(['connectalutil', 'tlp', '/dev/portal0']).split('\n')
     tlplog.sort()
     lf = open('tlp.log', 'w')
     f = open('tlp.vcd', 'w')

@@ -20,9 +20,9 @@
 #
 
 import math
-import cppgen, bsvgen, globalv
+import cppparse, bsvgen, globalv
 
-class Method(cppgen.MethodMixin,bsvgen.MethodMixin):
+class Method(cppparse.MethodMixin,bsvgen.MethodMixin):
     def __init__(self, name, return_type, params):
         self.type = 'Method'
         self.name = name
@@ -37,7 +37,7 @@ class Method(cppgen.MethodMixin,bsvgen.MethodMixin):
                       self.return_type.instantiate(paramBindings),
                       [ p.instantiate(paramBindings) for p in self.params])
 
-class Function(cppgen.NoCMixin):
+class Function(cppparse.NoCMixin):
     def __init__(self, name, return_type, params):
         self.type = 'Function'
         self.name = name
@@ -55,7 +55,7 @@ class Variable:
     def __repr__(self):
         return '<variable: %s : %s>' % (self.name, self.type)
 
-class Interface(cppgen.InterfaceMixin,bsvgen.InterfaceMixin):
+class Interface(cppparse.InterfaceMixin,bsvgen.InterfaceMixin):
     def __init__(self, name, params, decls, subinterfacename, packagename):
         self.type = 'Interface'
         self.name = name
@@ -95,7 +95,7 @@ class TypeclassInstance:
     def __repr__(self):
         return '{typeclassinstance %s %s}' % (self.name, self.params)
 
-class Module(cppgen.NoCMixin):
+class Module(cppparse.NoCMixin):
     def __init__(self, moduleContext, name, params, interface, provisos, decls):
         self.type = 'Module'
         self.name = name
@@ -113,14 +113,14 @@ class Module(cppgen.NoCMixin):
                 result.extend(d.collectTypes())
         return result
 
-class EnumElement(cppgen.EnumElementMixin):
+class EnumElement(cppparse.EnumElementMixin):
     def __init__(self, name, qualifiers, value):
         self.qualifiers = qualifiers
         self.value = value
     def __repr__(self):
         return '{enumelt: %s}' % (self.name)
 
-class Enum(cppgen.EnumMixin,bsvgen.EnumMixin):
+class Enum(cppparse.EnumMixin,bsvgen.EnumMixin):
     def __init__(self, elements):
         self.type = 'Enum'
         self.elements = elements
@@ -129,7 +129,7 @@ class Enum(cppgen.EnumMixin,bsvgen.EnumMixin):
     def instantiate(self, paramBindings):
         return self
 
-class StructMember(cppgen.StructMemberMixin):
+class StructMember(cppparse.StructMemberMixin):
     def __init__(self, t, name):
         self.type = t
         self.name = name
@@ -138,7 +138,7 @@ class StructMember(cppgen.StructMemberMixin):
     def instantiate(self, paramBindings):
         return StructMember(self.type.instantiate(paramBindings), self.name)
 
-class Struct(cppgen.StructMixin,bsvgen.StructMixin):
+class Struct(cppparse.StructMixin,bsvgen.StructMixin):
     def __init__(self, elements):
         self.type = 'Struct'
         self.elements = elements
@@ -147,7 +147,7 @@ class Struct(cppgen.StructMixin,bsvgen.StructMixin):
     def instantiate(self, paramBindings):
         return Struct([e.instantiate(paramBindings) for e in self.elements])
 
-class TypeDef(cppgen.TypeDefMixin):
+class TypeDef(cppparse.TypeDefMixin):
     def __init__(self, tdtype, name, params):
         self.name = name
         self.params = params
@@ -159,7 +159,7 @@ class TypeDef(cppgen.TypeDefMixin):
     def __repr__(self):
         return '{typedef: %s %s}' % (self.tdtype, self.name)
 
-class Param(cppgen.ParamMixin,bsvgen.ParamMixin):
+class Param(cppparse.ParamMixin,bsvgen.ParamMixin):
     def __init__(self, name, t):
         self.name = name
         self.type = t
@@ -169,7 +169,7 @@ class Param(cppgen.ParamMixin,bsvgen.ParamMixin):
         return Param(self.name,
                      self.type.instantiate(paramBindings))
 
-class Type(cppgen.TypeMixin,bsvgen.TypeMixin):
+class Type(cppparse.TypeMixin,bsvgen.TypeMixin):
     def __init__(self, name, params):
         self.type = 'Type'
         self.name = name

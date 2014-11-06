@@ -16,7 +16,7 @@ import Simple::*;
 // defined by user
 import SimpleIF::*;
 
-typedef enum {SimpleIndication, SimpleRequest} IfcNames deriving (Eq,Bits);
+typedef enum {SimpleRequest, SimpleIndication} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
 
@@ -26,8 +26,8 @@ module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
    SimpleWrapper simpleRequestWrapper <- mkSimpleWrapper(SimpleRequest,simpleRequest);
    
    Vector#(2,StdPortal) portals;
-   portals[0] = simpleRequestWrapper.portalIfc;
-   portals[1] = simpleIndicationProxy.portalIfc;
+   portals[0] = simpleIndicationProxy.portalIfc;
+   portals[1] = simpleRequestWrapper.portalIfc;
    let ctrl_mux <- mkSlaveMux(portals);
    
    interface interrupt = getInterruptVector(portals);

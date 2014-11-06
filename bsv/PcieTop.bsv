@@ -226,15 +226,15 @@ module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Cl
    end
 
    // going from level to edge-triggered interrupt
-   Vector#(15, Reg#(Bool)) interruptRequested <- replicateM(mkReg(False, clocked_by host.portalClock, reset_by host.portalReset));
+   Vector#(16, Reg#(Bool)) interruptRequested <- replicateM(mkReg(False, clocked_by host.portalClock, reset_by host.portalReset));
    rule interrupt_rule;
-     Integer intr_num = 0;
-     for (Integer i = 0; i < 15; i = i + 1) begin
-	 if (intr_num == 0 && portalTop.interrupt[i] && !interruptRequested[i])
-             intr_num = i;
+     Maybe#(Bit#(4)) intr = tagged Invalid;
+     for (Integer i = 0; i < 16; i = i + 1) begin
+	 if (portalTop.interrupt[i] && !interruptRequested[i])
+             intr = tagged Valid fromInteger(i);
 	 interruptRequested[i] <= portalTop.interrupt[i];
      end
-     if (intr_num != 0) begin // i= 0 for the directory
+     if (intr matches tagged Valid .intr_num) begin
         ReadOnly_MSIX_Entry msixEntry = host.tpciehost.msixEntry[intr_num];
         host.tpciehost.interruptRequest.put(tuple2({msixEntry.addr_hi, msixEntry.addr_lo}, msixEntry.msg_data));
      end
