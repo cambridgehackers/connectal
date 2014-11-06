@@ -32,9 +32,11 @@ import functools
 import math
 
 class dtInfo:
-    def __init__(self, cName, bitWidth):
+    def __init__(self, name, cName, bitWidth, elements):
+        self.name = name
         self.cName = cName
         self.bitWidth = bitWidth
+        self.elements = elements
 
 sizeofUint32_t = 4
 
@@ -279,39 +281,36 @@ class paramInfo:
         self.name = name
         self.width = width
         self.shifted = shifted
-        self.datatype = dtInfo(datatype.cName(), datatype.bitWidth())
+        self.datatype = datatype
         self.assignOp = assignOp
 
 # resurse interface types and flattening all structs into a list of types
 def collectMembers(scope, member):
-    membtype = member.type
-    mtypename = member.type.name
+    membtype = dtInfo(member.type.name, member.type.cName(), member.type.bitWidth(), None)
     while 1:
-        if mtypename == 'Bit':
+        if membtype.name == 'Bit':
             return [('%s%s'%(scope,member.name),membtype)]
-        elif mtypename == 'Int' or mtypename == 'UInt':
+        elif membtype.name == 'Int' or membtype.name == 'UInt':
             return [('%s%s'%(scope,member.name),membtype)]
-        elif mtypename == 'Float':
+        elif membtype.name == 'Float':
             return [('%s%s'%(scope,member.name),membtype)]
-        elif mtypename == 'Vector':
+        elif membtype.name == 'Vector':
             return [('%s%s'%(scope,member.name),membtype)]
-        elif mtypename == 'SpecialTypeForSendingFd':
+        elif membtype.name == 'SpecialTypeForSendingFd':
             return [('%s%s'%(scope,member.name),membtype)]
         else:
-            td = globalv.globalvars[mtypename]
+            td = globalv.globalvars[membtype.name]
             #print 'instantiate', membtype.params
             tdtype = td.tdtype.instantiate(dict(zip(td.params, membtype.params)))
-            #print '           ', tdtype
-            if tdtype.type == 'Struct':
+            membtype = dtInfo(tdtype.name, tdtype.cName(), tdtype.bitWidth(), tdtype.elements)
+            #print '           ', membtype
+            if membtype.type == 'Struct':
                 ns = '%s%s.' % (scope,member.name)
-                rv = map(functools.partial(collectMembers, ns), tdtype.elements)
+                rv = map(functools.partial(collectMembers, ns), membtype.elements)
                 return sum(rv,[])
-            elif tdtype.type == 'Enum':
-                return [('%s%s'%(scope,member.name),tdtype)]
-            else:
-                #print 'resolved to type', tdtype.type, tdtype.name, tdtype
-                membtype = tdtype
-                mtypename = tdtype.name
+            elif membtype.type == 'Enum':
+                return [('%s%s'%(scope,member.name),membtype)]
+            #print 'resolved to type', membtype.type, membtype.name, membtype
 
 # pack flattened struct-member list into 32-bit wide bins.  If a type is wider than 32-bits or
 # crosses a 32-bit boundary, it will appear in more than one bin (though with different ranges).
@@ -328,7 +327,7 @@ def accumWords(s, pro, memberList):
     mitem = memberList[0]
     name = mitem[0]
     thisType = mitem[1]
-    aw = thisType.bitWidth()
+    aw = thisType.bitWidth
     #print '%d %d %d' %(aw, pro, w)
     if (aw-pro+w == 32):
         s.append(paramInfo(name,aw,pro,thisType,'='))
