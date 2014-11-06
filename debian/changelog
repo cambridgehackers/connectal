@@ -1,3 +1,9 @@
+connectal (14.11.1-1trusty1) trusty; urgency=low
+
+  * Updated to connectal 14.11.1
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 06 Nov 2014 11:35:05 -0500
+
 connectal (14.10.2-7trusty4) trusty; urgency=medium
 
   * Specify CROSS_COMPILE and add to arm-linux-gnueabi-gcc to Build-Depends
