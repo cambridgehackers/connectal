@@ -238,8 +238,6 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "about to setup device %d %d\n", ref_needleAlloc, ref_mpNextAlloc);
   strstrRequest->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
-  strstrIndication->wait();
-
   fprintf(stderr, "about to invoke search %d\n", ref_haystackInNandMemory);
   strstrRequest->search(ref_haystackInNandMemory, haystack_len);
   strstrIndication->wait();  

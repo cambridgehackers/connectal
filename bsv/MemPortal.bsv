@@ -277,12 +277,14 @@ module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal
    MemreadEngineV#(64,2,2) readEngine <- mkMemreadEngine();
    MemwriteEngineV#(64,2,2) writeEngine <- mkMemwriteEngine();
 
+   Bool verbose = False;
+
    Reg#(Bit#(32)) sglIdReg <- mkReg(0);
    Reg#(Bool)     readyReg   <- mkReg(False);
 
    if (valueOf(numRequests) > 0) begin
       // read the head and tail pointers, if they are different, then read a request
-      Reg#(Bit#(32)) limitReg <- mkReg(0);
+      Reg#(Bit#(32)) reqLimitReg <- mkReg(0);
       Reg#(Bit#(32)) reqHeadReg <- mkReg(0);
       Reg#(Bit#(32)) reqTailReg <- mkReg(0);
       Reg#(Bit#(16)) wordCountReg <- mkReg(0);
@@ -292,7 +294,7 @@ module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal
       Reg#(SharedMemoryPortalState) reqState <- mkReg(Idle);
 
       rule updateReqHeadTail if (reqState == Idle && readyReg);
-	 $display("updateReqHeadTail");
+	 //$display("updateReqHeadTail");
 	 readEngine.readServers[0].request.put(MemengineCmd { sglId: sglIdReg,
 							     base: 0,
 							     burstLen: 16,
@@ -307,28 +309,40 @@ module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal
 	 let w1 = data[63:32];
 	 let head = reqHeadReg;
 	 let tail = reqTailReg;
-	 $display("receiveReqHeadTail state=%d w0=%x w1=%x", reqState, w0, w1);
 	 if (reqState == HeadRequested) begin
+	    reqLimitReg <= w0;
 	    reqHeadReg <= w1;
+	    head = w1;
 	    reqState <= TailRequested;
 	 end
 	 else begin
-	    tail = w0;
-	    if (reqTailReg == 0)
+	    if (reqTailReg == 0) begin
+	       tail = w0;
 	       reqTailReg <= tail;
-	     if (tail != reqHeadReg)
-		reqState <= RequestMessage;
-	     else
-		reqState <= Idle;
+	    end
+	    if (tail != reqHeadReg)
+	       reqState <= RequestMessage;
+	    else
+	       reqState <= Idle;
 	 end
+	 if (head != tail)
+	    $display("receiveReqHeadTail state=%d w0=%x w1=%x", reqState, w0, w1);
       endrule
 
       rule requestMessage if (reqState == RequestMessage);
 	 Bit#(32) wordCount = reqHeadReg - reqTailReg;
-	 if (reqTailReg < reqHeadReg)
+	 if ((reqTailReg & 1) == 1) begin
+	    $display("WARNING requestMessage: reqTail=%d is odd.", reqTailReg);
+	 end
+	 let tail = reqTailReg + wordCount;
+	 if (reqHeadReg < reqTailReg) begin
 	    $display("requestMessage wrapped: head=%d tail=%d", reqHeadReg, reqTailReg);
+	    wordCount = reqLimitReg - reqTailReg;
+	    tail = 4;
+	 end
 	 //$display("requestMessage id=%d tail=%h wordCount=%d", sglIdReg, reqTailReg, wordCount);
-	 reqTailReg <= reqTailReg + wordCount;
+
+	 reqTailReg <= tail;
 	 wordCountReg <= truncate(wordCount);
 	 demuxCountReg <= truncate(wordCount);
 	 let fetchCount = wordCount;
@@ -366,6 +380,7 @@ module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal
 	     let methodId = hdr[31:16];
 	     let messageWords = hdr[15:0];
 	     methodIdReg <= methodId;
+	    if (verbose)
 	     $display("receiveMessageHeader hdr=%x methodId=%x messageWords=%d wordCount=%d", hdr, methodId, messageWords, wordCountReg);
 	     wordCountReg <= wordCountReg - 1;
 	     messageWordsReg <= messageWords - 1;
@@ -377,7 +392,8 @@ module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal
 		reqState <= MessageRequested;
 	 end
 	 else begin
-	    $display("receiveMessageHeader tagged invalid %x", maybehdr);
+	    //$display("receiveMessageHeader tagged invalid %x wordCountReg", maybehdr, wordCountReg);
+	    reqState <= UpdateTail;
 	 end
       endrule
 
@@ -396,12 +412,13 @@ module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal
 		reqState <= UpdateTail;
 	 end
 	 else begin
-	    $display("receiveMessage tagged Invalid %x", maybedata);
+	    //$display("receiveMessage tagged Invalid %x", maybedata);
+	    reqState <= UpdateTail;
 	 end
       endrule
 
       rule updateTail if (reqState == UpdateTail);
-	 $display("updateTail: tail=%d", reqTailReg);
+	 //$display("updateTail: tail=%d", reqTailReg);
 	 // update the tail pointer
 	 writeEngine.writeServers[0].request.put(MemengineCmd {sglId: sglIdReg,
 							       base: 8,
@@ -413,7 +430,7 @@ module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal
       endrule
       rule waiting if (reqState == Waiting);
 	 let done <- writeEngine.writeServers[0].response.get();
-	 $display("done waiting for write");
+	 //$display("done waiting for write");
 	 reqState <= Idle;
       endrule
 

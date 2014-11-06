@@ -64,7 +64,7 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    // host memory dma server
    DmaDebugIndicationProxy hostDmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(HostDmaDebugIndication);
    let rcs = cons(strstr.config_read_client,cons(nandSim.readClient, nil));
-   MemServer#(PhysAddrWidth,64,1) hostDma <- mkMemServerRW(algoMMUConfigIndicationProxy.ifc, hostDmaDebugIndicationProxy.ifc, rcs, cons(nandSim.writeClient, nil), cons(backingStoreMMU,cons(algoMMU,nil)));
+   MemServer#(PhysAddrWidth,64,1) hostDma <- mkMemServerRW(backingStoreMMUConfigIndicationProxy.ifc, hostDmaDebugIndicationProxy.ifc, rcs, cons(nandSim.writeClient, nil), cons(backingStoreMMU,cons(algoMMU,nil)));
    DmaDebugRequestWrapper hostDmaDebugRequestWrapper <- mkDmaDebugRequestWrapper(HostDmaDebugRequest, hostDma.request);
 
    // nandsim memory dma server
@@ -90,11 +90,11 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    portals[8] = hostDmaDebugRequestWrapper.portalIfc;
    portals[9] = hostDmaDebugIndicationProxy.portalIfc; 
 
-   portals[10] = nandsimDmaRequestWrapper.portalIfc;
-   portals[11] = nandsimDmaDebugIndicationProxy.portalIfc; 
+   portals[10] = algoMMUConfigRequestWrapper.portalIfc;
+   portals[11] = algoMMUConfigIndicationProxy.portalIfc;
    
-   portals[12] = algoMMUConfigRequestWrapper.portalIfc;
-   portals[13] = algoMMUConfigIndicationProxy.portalIfc;
+   portals[12] = nandsimDmaRequestWrapper.portalIfc;
+   portals[13] = nandsimDmaDebugIndicationProxy.portalIfc; 
 
    let ctrl_mux <- mkSlaveMux(portals);
    
