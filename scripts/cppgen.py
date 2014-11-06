@@ -104,9 +104,6 @@ def indent(f, indentation):
     for i in xrange(indentation):
         f.write(' ')
 
-def capitalize(s):
-    return '%s%s' % (s[0].upper(), s[1:])
-
 class NoCMixin:
     def emitCDeclaration(self, f, indentation):
         pass
@@ -116,11 +113,6 @@ class MethodMixin:
         result = [self.return_type]
         result.append(AST.Type('Tuple', self.params))
         return result
-    def resultTypeName(self):
-        if (self.return_type):
-            return self.return_type.cName()
-        else:
-            return int
 
 class StructMemberMixin:
     def emitCDeclaration(self, f, indentation):
@@ -329,20 +321,21 @@ def accumWords(s, pro, atoms):
              return [s]
     w = sum([x.width-x.shifted for x in s])
     a = atoms[0]
+    name = a[0]
     thisType = a[1]
     aw = thisType.bitWidth();
     #print '%d %d %d' %(aw, pro, w)
     if (aw-pro+w == 32):
-        s.append(paramInfo(a[0],aw,pro,thisType,'='))
-        #print '%s (0)'% (a[0])
+        s.append(paramInfo(name,aw,pro,thisType,'='))
+        #print '%s (0)'% (name)
         return [s]+accumWords([],0,atoms[1:])
     if (aw-pro+w < 32):
-        s.append(paramInfo(a[0],aw,pro,thisType,'='))
-        #print '%s (1)'% (a[0])
+        s.append(paramInfo(name,aw,pro,thisType,'='))
+        #print '%s (1)'% (name)
         return accumWords(s,0,atoms[1:])
     else:
-        s.append(paramInfo(a[0],pro+(32-w),pro,thisType,'|='))
-        #print '%s (2)'% (a[0])
+        s.append(paramInfo(name,pro+(32-w),pro,thisType,'|='))
+        #print '%s (2)'% (name)
         return [s]+accumWords([],pro+(32-w), atoms)
 
 def generate_marshall(pfmt, w):
@@ -397,7 +390,7 @@ def formalParameters(params, insertPortal):
         rc.insert(0, ' struct PortalInternal *p')
     return ', '.join(rc)
 
-def gatherMethodInfo(mname, params, itemname, resultType):
+def gatherMethodInfo(mname, params, itemname):
     global fdName
     
     argAtoms = sum(map(functools.partial(collectMembers, ''), params), [])
@@ -430,7 +423,6 @@ def gatherMethodInfo(mname, params, itemname, resultType):
         'paramStructMarshall': '\n    '.join(paramStructMarshall),
         'paramStructDemarshall': '\n        '.join(paramStructDemarshall),
         'paramNames': ', '.join(['msg->%s' % p.name for p in params]),
-        'resultType': resultType,
         'wordLen': len(argWords),
         'wordLenP1': len(argWords) + 1,
         'fdName': fdName,
@@ -443,7 +435,7 @@ def gatherMethodInfo(mname, params, itemname, resultType):
         }
     return substs, len(argWords)
 
-def emitMethodDeclaration(mname, params, resultTypeName, f, className):
+def emitMethodDeclaration(mname, params, f, className):
     paramValues = [p.name for p in params]
     paramValues.insert(0, '&pint')
     methodName = cName(mname)
@@ -473,7 +465,7 @@ def generate_class(className, declList, parentC, parentCC, generatedCFiles, crea
     maxSize = 0;
     reqChanNums = []
     for mitem in declList:
-        substs, t = gatherMethodInfo(mitem.name, mitem.params, className, mitem.resultType)
+        substs, t = gatherMethodInfo(mitem.name, mitem.params, className)
         if t > maxSize:
             maxSize = t
         cpp.write((proxyMethodTemplateDecl + proxyMethodTemplate) % substs)
@@ -483,18 +475,18 @@ def generate_class(className, declList, parentC, parentCC, generatedCFiles, crea
     generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(className)s_reqsize %(maxSize)s\n' % subs)
     hpp.write(proxyClassPrefixTemplate % subs)
     for mitem in declList:
-        emitMethodDeclaration(mitem.name, mitem.params, mitem.resultType, hpp, classCName)
+        emitMethodDeclaration(mitem.name, mitem.params, hpp, classCName)
     hpp.write('};\n')
     cpp.write((handleMessageTemplateDecl % subs))
     cpp.write(handleMessageTemplate1 % subs)
     for mitem in declList:
-        substs, t = gatherMethodInfo(mitem.name, mitem.params, className, mitem.resultType)
+        substs, t = gatherMethodInfo(mitem.name, mitem.params, className)
         cpp.write(handleMessageCase % substs)
     cpp.write(handleMessageTemplate2 % subs)
     generated_hpp.write((handleMessageTemplateDecl % subs)+ ';\n')
     hpp.write(wrapperClassPrefixTemplate % subs)
     for mitem in declList:
-        emitMethodDeclaration(mitem.name, mitem.params, mitem.resultType, hpp, '')
+        emitMethodDeclaration(mitem.name, mitem.params, hpp, '')
     hpp.write('};\n')
     generated_hpp.write('typedef struct {\n');
     for mitem in declList:
@@ -515,10 +507,9 @@ def generate_class(className, declList, parentC, parentCC, generatedCFiles, crea
     cpp.close();
 
 class declInfo:
-    def __init__(self, name, params, resultType):
+    def __init__(self, name, params):
         self.name = name
         self.params = params
-        self.resultType = resultType
 
 class classInfo:
     def __init__(self, name, decls, parentLportal, parentPortal):
@@ -527,7 +518,7 @@ class classInfo:
         self.parentPortal = parentPortal
         self.decls = []
         for mitem in decls:
-            self.decls.append(declInfo(mitem.name, mitem.params, mitem.resultTypeName()))
+            self.decls.append(declInfo(mitem.name, mitem.params))
 
 def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
     def create_cpp_file(name):
