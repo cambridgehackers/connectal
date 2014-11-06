@@ -23,7 +23,8 @@
 #include "pcieportal.h"
 #define CONNECTAL_DRIVER_CODE
 #include "portal.h" // PORTAL_BASE_OFFSET
-#include "../../cpp/dmaSendFd.h"
+#include "dmaSendFd.h"
+#include "portalHardware.h"
 
 /* flag for adding 'direct call' interface to driver */
 //#define SUPPORT_MANUAL_INTERFACE
@@ -263,7 +264,8 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                 {
                 /* pushd down allocated fd */
 		tSendFd sendFd;
-                PortalInternal devptr = {.map_base = (volatile int *)(this_board->bar2io + PORTAL_BASE_OFFSET * this_portal->portal_number)};
+                PortalInternal devptr = {.map_base = (volatile int *)(this_board->bar2io + PORTAL_BASE_OFFSET * this_portal->portal_number),
+                    .item = &hardwarefunc};
 
                 err = copy_from_user(&sendFd, (void __user *) arg, sizeof(sendFd));
                 if (err)
