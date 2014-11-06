@@ -40,7 +40,7 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    MMUConfigRequestWrapper backingStoreMMUConfigRequestWrapper <- mkMMUConfigRequestWrapper(BackingStoreMMUConfigRequest, backingStoreSGList.request);
 
    DmaDebugIndicationProxy hostDmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(HostDmaDebugIndication);
-   MemServer#(PhysAddrWidth,64,1) hostDma <- mkMemServerRW(hostMMUConfigIndicationProxy.ifc, hostDmaDebugIndicationProxy.ifc, cons(nandSim.readClient, nil), cons(nandSim.writeClient, nil), cons(backingStoreSGList, nil));
+   MemServer#(PhysAddrWidth,64,1) hostDma <- mkMemServerRW(backingStoreMMUConfigIndicationProxy.ifc, hostDmaDebugIndicationProxy.ifc, cons(nandSim.readClient, nil), cons(nandSim.writeClient, nil), cons(backingStoreSGList, nil));
    DmaDebugRequestWrapper hostDmaDebugRequestWrapper <- mkDmaDebugRequestWrapper(HostDmaDebugRequest, hostDma.request);
    
    
