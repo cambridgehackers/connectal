@@ -32,11 +32,11 @@ import functools
 import math
 
 class dtInfo:
-    def __init__(self, name, cName, bitWidth, elements):
+    def __init__(self, name, cName, bitWidth, params):
         self.name = name
         self.cName = cName
         self.bitWidth = bitWidth
-        self.elements = elements
+        self.params = params
 
 sizeofUint32_t = 4
 
@@ -285,31 +285,31 @@ class paramInfo:
         self.assignOp = assignOp
 
 # resurse interface types and flattening all structs into a list of types
-def collectMembers(scope, member):
-    membtype = dtInfo(member.type.name, member.type.cName(), member.type.bitWidth(), None)
+def collectMembers(scope, pitem):
+    membtype = dtInfo(pitem.type.name, pitem.type.cName(), pitem.type.bitWidth(), pitem.type.params)
     while 1:
         if membtype.name == 'Bit':
-            return [('%s%s'%(scope,member.name),membtype)]
+            return [('%s%s'%(scope,pitem.name),membtype)]
         elif membtype.name == 'Int' or membtype.name == 'UInt':
-            return [('%s%s'%(scope,member.name),membtype)]
+            return [('%s%s'%(scope,pitem.name),membtype)]
         elif membtype.name == 'Float':
-            return [('%s%s'%(scope,member.name),membtype)]
+            return [('%s%s'%(scope,pitem.name),membtype)]
         elif membtype.name == 'Vector':
-            return [('%s%s'%(scope,member.name),membtype)]
+            return [('%s%s'%(scope,pitem.name),membtype)]
         elif membtype.name == 'SpecialTypeForSendingFd':
-            return [('%s%s'%(scope,member.name),membtype)]
+            return [('%s%s'%(scope,pitem.name),membtype)]
         else:
             td = globalv.globalvars[membtype.name]
             #print 'instantiate', membtype.params
             tdtype = td.tdtype.instantiate(dict(zip(td.params, membtype.params)))
-            membtype = dtInfo(tdtype.name, tdtype.cName(), tdtype.bitWidth(), tdtype.elements)
             #print '           ', membtype
-            if membtype.type == 'Struct':
-                ns = '%s%s.' % (scope,member.name)
-                rv = map(functools.partial(collectMembers, ns), membtype.elements)
+            if tdtype.type == 'Struct':
+                ns = '%s%s.' % (scope,pitem.name)
+                rv = map(functools.partial(collectMembers, ns), tdtype.elements)
                 return sum(rv,[])
-            elif membtype.type == 'Enum':
-                return [('%s%s'%(scope,member.name),membtype)]
+            membtype = dtInfo(tdtype.name, tdtype.cName(), tdtype.bitWidth(), tdtype.params if tdtype.type == 'Type' else None)
+            if tdtype.type == 'Enum':
+                return [('%s%s'%(scope,pitem.name),membtype)]
             #print 'resolved to type', membtype.type, membtype.name, membtype
 
 # pack flattened struct-member list into 32-bit wide bins.  If a type is wider than 32-bits or
@@ -389,7 +389,7 @@ def generate_demarshall(fmt, w):
     return '\n        '.join(word)
 
 def formalParameters(params, insertPortal):
-    rc = [ 'const %s %s' % (p.type.cName(), p.name) for p in params]
+    rc = [ 'const %s %s' % (pitem.type.cName(), pitem.name) for pitem in params]
     if insertPortal:
         rc.insert(0, ' struct PortalInternal *p')
     return ', '.join(rc)
@@ -414,10 +414,10 @@ def gatherMethodInfo(mname, params, itemname):
         paramStructDemarshall = map(functools.partial(generate_demarshall, paramStructDemarshallStr), argWords)
         paramStructDemarshall.reverse()
 
-    paramStructDeclarations = [ '%s %s;' % (p.type.cName(), p.name) for p in params]
+    paramStructDeclarations = [ '%s %s;' % (pitem.type.cName(), pitem.name) for pitem in params]
     if not params:
         paramStructDeclarations = ['        int padding;\n']
-    respParams = [p.name for p in params]
+    respParams = [pitem.name for pitem in params]
     respParams.insert(0, 'p')
     substs = {
         'methodName': cName(mname),
@@ -426,7 +426,7 @@ def gatherMethodInfo(mname, params, itemname):
         'paramStructDeclarations': '\n        '.join(paramStructDeclarations),
         'paramStructMarshall': '\n    '.join(paramStructMarshall),
         'paramStructDemarshall': '\n        '.join(paramStructDemarshall),
-        'paramNames': ', '.join(['msg->%s' % p.name for p in params]),
+        'paramNames': ', '.join(['msg->%s' % pitem.name for pitem in params]),
         'wordLen': len(argWords),
         'wordLenP1': len(argWords) + 1,
         'fdName': fdName,
@@ -440,7 +440,7 @@ def gatherMethodInfo(mname, params, itemname):
     return substs, len(argWords)
 
 def emitMethodDeclaration(mname, params, f, className):
-    paramValues = [p.name for p in params]
+    paramValues = [pitem.name for pitem in params]
     paramValues.insert(0, '&pint')
     methodName = cName(mname)
     indent(f, 4)
