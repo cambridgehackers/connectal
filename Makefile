@@ -92,7 +92,9 @@ spkg:
 	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu/precise --git-ignore-new -S -tc
 
 dpkg:
+	sed -i s/trusty/precise/g debian/changelog
 	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu/precise --git-ignore-new -tc -us -uc
+	sed -i s/precise/trusty/g debian/changelog
 
 ## PLY's home is http://www.dabeaz.com/ply/
 install-dependences:

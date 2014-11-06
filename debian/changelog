@@ -1,3 +1,9 @@
+connectal (14.11.1-2trusty1) trusty; urgency=low
+
+  * Update install-dkms
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 06 Nov 2014 13:03:40 -0500
+
 connectal (14.11.1-1trusty1) trusty; urgency=low
 
   * Updated to connectal 14.11.1
