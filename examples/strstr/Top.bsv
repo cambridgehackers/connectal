@@ -32,7 +32,7 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    Strstr#(64) strstr <- mkStrstr(strstrIndicationProxy.ifc);
    StrstrRequestWrapper strstrRequestWrapper <- mkStrstrRequestWrapper(StrstrRequest,strstr.request);
    
-   let readClients = cons(strstr.config_read_client, cons(strstr.haystack_read_client,nil));
+   let readClients = cons(strstr.config_read_client, strstr.haystack_read_clients);
    MMUConfigIndicationProxy hostMMUConfigIndicationProxy <- mkMMUConfigIndicationProxy(HostMMUConfigIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUConfigIndicationProxy.ifc);
    MMUConfigRequestWrapper hostMMUConfigRequestWrapper <- mkMMUConfigRequestWrapper(HostMMUConfigRequest, hostMMU.request);

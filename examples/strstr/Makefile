@@ -2,7 +2,9 @@
 INTERFACES = StrstrRequest StrstrIndication
 BSVFILES = ../../lib/bsv/Strstr.bsv Top.bsv
 CPPFILES=teststrstr.cpp
-CONNECTALFLAGS = -D DEGPAR=8
+CONNECTALFLAGS += -D DEGPAR=8
+CONNECTALFLAGS += -D HAYSTACKREADCLIENTS=1
+
 
 #CONNECTALFLAGS=--bscflags " -D TRACE_AXI"
 

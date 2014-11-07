@@ -233,14 +233,15 @@ int main(int argc, const char **argv)
     // open up the text file and read it into an allocated memory buffer
     int dataFile = open(filename, O_RDONLY);
     uint32_t data_len = lseek(dataFile, 0, SEEK_END);
-    data_len = data_len ^ 15; // because we are using a burst length of 16
+    data_len = data_len & ~15; // because we are using a burst length of 16
     lseek(dataFile, 0, SEEK_SET);
 
     int dataAlloc = portalAlloc(data_len);
     int ref_dataAlloc = hostDma->reference(dataAlloc);
     char *data = (char *)portalMmap(dataAlloc, data_len);
-    if(read(dataFile, data, data_len) != data_len) {
-      fprintf(stderr, "testnandsim::error reading %s %d\n", filename, (int)data_len);
+    int read_len = read(dataFile, data, data_len); 
+    if(read_len != data_len) {
+      fprintf(stderr, "testnandsim::error reading %s %d %d\n", filename, (int)data_len, (int) read_len);
       exit(-1);
     }
 

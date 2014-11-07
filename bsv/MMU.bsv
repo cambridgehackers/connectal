@@ -279,6 +279,7 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUConfigIndication mmuIndication)(MMU
    method Action idRequest(SpecialTypeForSendingFd fd);
       let nextId <- sglId_gen.getTag;
       let resp = (fromInteger(iid) << 16) | extend(nextId);
+      if (verbose) $display("mkMMU::idRequest %d", fd);
 `ifdef BSIM
       let va <- pareff_initfd(resp, fd);
 `endif

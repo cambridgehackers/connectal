@@ -46,92 +46,112 @@ interface NandSimIndication;
    method Action configureNandDone();
 endinterface
 
-interface NandSim;
+interface NandSim#(numeric type numSlaves);
    interface NandSimRequest request;
-   interface PhysMemSlave#(PhysAddrWidth,64) memSlave;
+   interface Vector#(numSlaves,PhysMemSlave#(PhysAddrWidth,64)) memSlaves;
    interface MemReadClient#(64) readClient;
    interface MemWriteClient#(64) writeClient;
 endinterface
 
-interface NandSimInternal;
+interface NandSimControl;
    interface NandSimRequest request;   
    interface ReadOnly#(Bit#(32)) nandPtr;
 endinterface
 
-module mkNandSim#(NandSimIndication indication) (NandSim);
+module mkNandSim#(NandSimIndication indication) (NandSim#(numSlaves))
+   provisos(
+      Add#(a__, TLog#(TAdd#(numSlaves, 3)), TAdd#(1, TLog#(TMul#(1,TAdd#(numSlaves, 3)))))
+      ,Pipe::FunnelPipesPipelined#(1, TAdd#(numSlaves, 3),Tuple2#(Bit#(TLog#(TAdd#(numSlaves, 3))), MemTypes::MemengineCmd),TMin#(2, TLog#(TAdd#(numSlaves, 3))))
+      ,Pipe::FunnelPipesPipelined#(1, TAdd#(numSlaves, 3), Tuple2#(Bit#(64),Bool), TMin#(2, TLog#(TAdd#(numSlaves, 3))))
+      ,Add#(b__, TLog#(TAdd#(numSlaves, 3)), TLog#(TMul#(1, TAdd#(numSlaves,3))))
+      ,Pipe::FunnelPipesPipelined#(1, TAdd#(numSlaves, 3), Tuple3#(Bit#(2),Bit#(64), Bool), TMin#(2, TLog#(TAdd#(numSlaves, 3))))
+      ,Pipe::FunnelPipesPipelined#(1, TAdd#(numSlaves, 3),Tuple3#(Bit#(TLog#(TAdd#(numSlaves, 3))), Bit#(64), Bool), TMin#(2,TLog#(TAdd#(numSlaves, 3))))
+      ,Add#(c__, TLog#(TAdd#(numSlaves, 2)), TAdd#(1, TLog#(TMul#(1,TAdd#(numSlaves, 2)))))
+      ,Pipe::FunnelPipesPipelined#(1, TAdd#(numSlaves, 2),Tuple2#(Bit#(TLog#(TAdd#(numSlaves, 2))), MemTypes::MemengineCmd),TMin#(2, TLog#(TAdd#(numSlaves, 2))))
+      ,Pipe::FunnelPipesPipelined#(1, TAdd#(numSlaves, 2), Tuple2#(Bit#(64),Bool), TMin#(2, TLog#(TAdd#(numSlaves, 2))))
+      ,Add#(d__, TLog#(TAdd#(numSlaves, 2)), TLog#(TMul#(1, TAdd#(numSlaves,2))))
+      );
+
    
    let verbose = False;
    
-   MemreadEngineV#(64, 1, 3)   re <- mkMemreadEngine();
-   MemwriteEngineV#(64, 1, 4)  we <- mkMemwriteEngine();
-   NandSimInternal ns <- mkNandSimInternal(take(re.readServers), take(re.dataPipes), take(we.writeServers), take(we.dataPipes), indication);
+   MemreadEngineV#(64, 1,  TAdd#(numSlaves,2))  re <- mkMemreadEngine();
+   MemwriteEngineV#(64, 1, TAdd#(numSlaves,3))  we <- mkMemwriteEngine();
+   NandSimControl ns <- mkNandSimControl(take(re.readServers), take(re.dataPipes), take(we.writeServers), take(we.dataPipes), indication);
    
-   let slave_read_server  = re.readServers[2];
-   let slave_read_pipe    = re.dataPipes[2];
-   let slave_write_server = we.writeServers[3];
-   let slave_write_pipe   = we.dataPipes[3];
-   FIFO#(Bit#(MemTagSize)) slaveWriteTags <- mkSizedFIFO(1);
-   FIFO#(Bit#(MemTagSize)) slaveReadTags <- mkSizedFIFO(1);
-   Reg#(Bit#(BurstLenSize)) slaveReadCnt <- mkReg(0);
+   Vector#(numSlaves,Server#(MemengineCmd,Bool)) slave_read_servers  = takeTail(re.readServers);
+   Vector#(numSlaves,PipeOut#(Bit#(64)))         slave_read_pipes    = takeTail(re.dataPipes);
+   Vector#(numSlaves,Server#(MemengineCmd,Bool)) slave_write_servers = takeTail(we.writeServers);
+   Vector#(numSlaves,PipeIn#(Bit#(64)))          slave_write_pipes   = takeTail(we.dataPipes);
+   Vector#(numSlaves,FIFO#(Bit#(MemTagSize)))    slaveWriteTags <- replicateM(mkSizedFIFO(1));
+   Vector#(numSlaves,FIFO#(Bit#(MemTagSize)))    slaveReadTags <- replicateM(mkSizedFIFO(1));
+   Vector#(numSlaves,Reg#(Bit#(BurstLenSize)))   slaveReadCnts <- replicateM(mkReg(0));
    
-   rule completeSlaveReadReq;
-      slaveReadTags.deq;
-      let rv <- slave_read_server.response.get;
-      if (verbose) $display("mkNandSim::completeSlaveReadReq");
-   endrule
-   interface PhysMemSlave memSlave;
+   for(Integer i = 0; i < valueOf(numSlaves); i=i+1)
+      rule completeSlaveReadReq;
+	 slaveReadTags[i].deq;
+	 let rv <- slave_read_servers[i].response.get;
+	 if (verbose) $display("mkNandSim::completeSlaveReadReq (%d)", i);
+      endrule
+
+   function PhysMemSlave#(PhysAddrWidth,64) mms(Integer i);
+      return (
+   interface PhysMemSlave;
       interface PhysMemWriteServer write_server; 
 	 interface Put writeReq;
 	    method Action put(PhysMemRequest#(PhysAddrWidth) req);
-	       slave_write_server.request.put(MemengineCmd{sglId:ns.nandPtr, base:extend(req.addr), burstLen:req.burstLen, len:extend(req.burstLen)});
-	       slaveWriteTags.enq(req.tag);
+	       slave_write_servers[i].request.put(MemengineCmd{sglId:ns.nandPtr, base:extend(req.addr), burstLen:req.burstLen, len:extend(req.burstLen)});
+	       slaveWriteTags[i].enq(req.tag);
             endmethod
 	 endinterface
 	 interface Put writeData;
 	    method Action put(MemData#(64) wdata);
-	       slave_write_pipe.enq(wdata.data);
+	       slave_write_pipes[i].enq(wdata.data);
             endmethod
 	 endinterface
 	 interface Get writeDone;
 	    method ActionValue#(Bit#(MemTagSize)) get();
-	       let rv <- slave_write_server.response.get;
-	       slaveWriteTags.deq;
-	       return slaveWriteTags.first;
+	       let rv <- slave_write_servers[i].response.get;
+	       slaveWriteTags[i].deq;
+	       return slaveWriteTags[i].first;
             endmethod
 	 endinterface
       endinterface
       interface PhysMemReadServer read_server;
 	 interface Put readReq;
 	    method Action put(PhysMemRequest#(PhysAddrWidth) req);
-	       if (verbose) $display("mkNandSim.memSlave::readReq %d %d %d", req.addr, req.burstLen, req.tag);
-	       slave_read_server.request.put(MemengineCmd{sglId:ns.nandPtr, base:extend(req.addr), burstLen:req.burstLen, len:extend(req.burstLen)});
-	       slaveReadTags.enq(req.tag);
-	       slaveReadCnt <= req.burstLen;
+	       if (verbose) $display("mkNandSim.memSlave::readReq %d %d %d (%d)", req.addr, req.burstLen, req.tag, i);
+	       slave_read_servers[i].request.put(MemengineCmd{sglId:ns.nandPtr, base:extend(req.addr), burstLen:req.burstLen, len:extend(req.burstLen)});
+	       slaveReadTags[i].enq(req.tag);
+	       slaveReadCnts[i] <= req.burstLen;
 	    endmethod
 	 endinterface
 	 interface Get  readData;
 	    method ActionValue#(MemData#(64)) get();
-	       let rv <- toGet(slave_read_pipe).get;
-	       let new_slaveReadCnt = slaveReadCnt-8;
+	       let rv <- toGet(slave_read_pipes[i]).get;
+	       let new_slaveReadCnt = slaveReadCnts[i]-8;
 	       let last = new_slaveReadCnt==0;
-	       slaveReadCnt <= new_slaveReadCnt;
-	       if (verbose) $display("mkNandSim.memSlave::readData %d %d %d (%d)", slaveReadTags.first, last, rv, slaveReadCnt);
-	       return MemData{data:rv, tag:slaveReadTags.first,last:last};
+	       slaveReadCnts[i] <= new_slaveReadCnt;
+	       if (verbose) $display("mkNandSim.memSlave::readData %d %d %d %d (%d)", slaveReadTags[i].first, last, rv, slaveReadCnts[i], i);
+	       return MemData{data:rv, tag:slaveReadTags[i].first,last:last};
             endmethod
 	 endinterface
       endinterface
-   endinterface : memSlave
+   endinterface
+	      );
+   endfunction
+   interface memSlaves = map(mms,genVector);
    interface request = ns.request;
    interface MemReadClient readClient = re.dmaClient;
    interface MemWriteClient writeClient = we.dmaClient;
    
 endmodule
 
-module mkNandSimInternal#(Vector#(2, Server#(MemengineCmd,Bool)) readServers,
+module mkNandSimControl#(Vector#(2, Server#(MemengineCmd,Bool)) readServers,
 			  Vector#(2, PipeOut#(Bit#(64))) readPipes,
 			  Vector#(3, Server#(MemengineCmd,Bool)) writeServers,
 			  Vector#(3, PipeIn#(Bit#(64))) writePipes,
-			  NandSimIndication indication) (NandSimInternal);
+			  NandSimIndication indication) (NandSimControl);
 
    Server#(MemengineCmd,Bool)  dramReadServer = readServers[0];
    Server#(MemengineCmd,Bool)  nandReadServer = readServers[1];
@@ -250,5 +270,4 @@ module mkNandSimInternal#(Vector#(2, Server#(MemengineCmd,Bool)) readServers,
       endmethod
    endinterface
 endmodule
-
 

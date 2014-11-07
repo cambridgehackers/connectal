@@ -170,9 +170,13 @@ int main(int argc, const char **argv)
   DmaManager *hostDma = new DmaManager(NULL, hostMMUConfigRequest);
   MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(hostDma, IfcNames_AlgoMMUConfigIndication);
 
-  MMUConfigRequestProxy *nandsimMMUConfigRequest = new MMUConfigRequestProxy(IfcNames_NandsimMMUConfigRequest);
-  DmaManager *nandsimDma = new DmaManager(NULL, nandsimMMUConfigRequest);
-  MMUConfigIndication *nandsimMMUConfigIndication = new MMUConfigIndication(nandsimDma,IfcNames_NandsimMMUConfigIndication);
+  MMUConfigRequestProxy *nandsimMMU0ConfigRequest = new MMUConfigRequestProxy(IfcNames_NandsimMMU0ConfigRequest);
+  DmaManager *nandsimDma0 = new DmaManager(NULL, nandsimMMU0ConfigRequest);
+  MMUConfigIndication *nandsimMMU0ConfigIndication = new MMUConfigIndication(nandsimDma0,IfcNames_NandsimMMU0ConfigIndication);
+
+  MMUConfigRequestProxy *nandsimMMU1ConfigRequest = new MMUConfigRequestProxy(IfcNames_NandsimMMU1ConfigRequest);
+  DmaManager *nandsimDma1 = new DmaManager(NULL, nandsimMMU1ConfigRequest);
+  MMUConfigIndication *nandsimMMU1ConfigIndication = new MMUConfigIndication(nandsimDma1,IfcNames_NandsimMMU1ConfigIndication);
 
   StrstrRequestProxy *strstrRequest = new StrstrRequestProxy(IfcNames_AlgoRequest);
   StrstrIndication *strstrIndication = new StrstrIndication(IfcNames_AlgoIndication);
@@ -216,21 +220,35 @@ int main(int argc, const char **argv)
   int haystack_base = read_from_nandsim_exe();
   int haystack_len  = read_from_nandsim_exe();
 
+  sleep(2);
+
   // request the next sglist identifier from the sglistMMU hardware module
   // which is used by the mem server accessing flash memory.
-  int id = 0;
-  MMUConfigRequest_idRequest(nandsimDma->priv.sglDevice, -1);
-  sem_wait(&nandsimDma->priv.sglIdSem);
-  id = nandsimDma->priv.sglId;
+  int id0 = 0;
+  MMUConfigRequest_idRequest(nandsimDma0->priv.sglDevice, -1);
+  sem_wait(&nandsimDma0->priv.sglIdSem);
+  id0 = nandsimDma0->priv.sglId;
+  printf("[%s:%d] %08x\n", __FUNCTION__, __LINE__, id0);
+
+  int id1 = 0;
+  MMUConfigRequest_idRequest(nandsimDma1->priv.sglDevice, -1);
+  sem_wait(&nandsimDma1->priv.sglIdSem);
+  id1 = nandsimDma1->priv.sglId;
+  printf("[%s:%d] %08x\n", __FUNCTION__, __LINE__, id1);
+
   // pairs of ('offset','size') pointing to space in nandsim memory
   // this is unsafe.  To do it properly, we should get this list from
   // nandsim_exe or from the kernel driver.  This code here might overrun
   // the backing store allocated by nandsim_exe.
   RegionRef region[] = {{0, 0x100000}, {0x100000, 0x100000}};
-  printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-  int ref_haystackInNandMemory = send_reference_to_portal(nandsimDma->priv.sglDevice, sizeof(region)/sizeof(region[0]), region, id);
-  sem_wait(&(nandsimDma->priv.confSem));
-  fprintf(stderr, "%08x\n", ref_haystackInNandMemory);
+  int ref_haystackInNandMemory0 = send_reference_to_portal(nandsimDma0->priv.sglDevice, sizeof(region)/sizeof(region[0]), region, id0);
+  int ref_haystackInNandMemory1 = send_reference_to_portal(nandsimDma1->priv.sglDevice, sizeof(region)/sizeof(region[0]), region, id1);
+  sem_wait(&(nandsimDma0->priv.confSem));
+  sem_wait(&(nandsimDma1->priv.confSem));
+  fprintf(stderr, "%08x\n", ref_haystackInNandMemory0);
+  fprintf(stderr, "%08x\n", ref_haystackInNandMemory1);
+
+  assert(ref_haystackInNandMemory1==ref_haystackInNandMemory0);
 
   // at this point, ref_needleAlloc and ref_mpNextAlloc are valid sgListIds for use by 
   // the host memory dma hardware, and ref_haystackInNandMemory is a valid sgListId for
@@ -238,8 +256,8 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "about to setup device %d %d\n", ref_needleAlloc, ref_mpNextAlloc);
   strstrRequest->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
-  fprintf(stderr, "about to invoke search %d\n", ref_haystackInNandMemory);
-  strstrRequest->search(ref_haystackInNandMemory, haystack_len);
+  fprintf(stderr, "about to invoke search %d\n", ref_haystackInNandMemory0);
+  strstrRequest->search(ref_haystackInNandMemory0, haystack_len);
   strstrIndication->wait();  
 
   exit(!(strstrIndication->match_cnt==3));
