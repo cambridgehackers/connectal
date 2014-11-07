@@ -289,14 +289,14 @@ def substsTemplate(self,name):
     dutName = util.decapitalize(name)
 
     # specific to wrappers
-    requestElements = collectRequestElements(self, name)
-    methodNames = collectMethodNames(self, name)
-    methodRules = collectMethodRules(self, name)
+    requestElements = collectElements(self, collectRequestElement, name)
+    methodNames = collectMethodNames(self, collectMethodRule, name)
+    methodRules = collectElements(self, collectMethodRule, name)
     
     # specific to proxies
-    responseElements = collectResponseElements(self, name)
-    indicationMethodRules = collectIndicationMethodRules(self, name)
-    indicationMethods = collectIndicationMethods(self, name)
+    responseElements = collectElements(self, collectResponseElement, name)
+    indicationMethodRules = collectElements(self, collectIndicationMethodRule, name)
+    indicationMethods = collectElements(self, collectIndicationMethod, name)
 
     substs = {
         'Package': os.path.splitext(os.path.basename(self.package))[0],
@@ -324,56 +324,24 @@ def substsTemplate(self,name):
     substs['methodAction'] = methodAction
     return substs
 
-def collectRequestElements(self, outerTypeName):
-    requestElements = []
+def collectElements(self, workerfn, outerTypeName):
+    methods = []
     for m in self.decls:
         if m.type == 'Method':
-            e = collectRequestElement(m, methsubsts(m, outerTypeName))
+            e = workerfn(m, methsubsts(m, outerTypeName))
             if e:
-                requestElements.append(e)
-    return requestElements
-def collectResponseElements(self, outerTypeName):
-    responseElements = []
-    for m in self.decls:
-        if m.type == 'Method':
-            e = collectResponseElement(m, methsubsts(m, outerTypeName))
-            if e:
-                responseElements.append(e)
-    return responseElements
-def collectMethodRules(self,outerTypeName):
-    methodRules = []
-    for m in self.decls:
-        if m.type == 'Method':
-            methodRule = collectMethodRule(m, methsubsts(m, outerTypeName))
-            if methodRule:
-                methodRules.append(methodRule)
-    return methodRules
-def collectMethodNames(self,outerTypeName):
+                methods.append(e)
+    return methods
+def collectMethodNames(self, workerfn, outerTypeName):
     methodRuleNames = []
     for m in self.decls:
         if m.type == 'Method':
-            methodRule = collectMethodRule(m, methsubsts(m, outerTypeName))
+            methodRule = workerfn(m, methsubsts(m, outerTypeName))
             if methodRule:
                 methodRuleNames.append(m.name)
             else:
                 print 'method %s has no rule' % m.name
     return methodRuleNames
-def collectIndicationMethodRules(self,outerTypeName):
-    methodRules = []
-    for m in self.decls:
-        if m.type == 'Method':
-            methodRule = collectIndicationMethodRule(m, methsubsts(m, outerTypeName))
-            if methodRule:
-                methodRules.append(methodRule)
-    return methodRules
-def collectIndicationMethods(self,outerTypeName):
-    methods = []
-    for m in self.decls:
-        if m.type == 'Method':
-            methodRule = collectIndicationMethod(m, methsubsts(m, outerTypeName))
-            if methodRule:
-                methods.append(methodRule)
-    return methods
 
 def fixupSubsts(substs):
     substs['requestOutputPipeInterfaces'] = ''.join([requestOutputPipeInterfaceTemplate % {'methodName': methodName,
