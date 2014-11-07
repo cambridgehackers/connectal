@@ -1,7 +1,7 @@
 
+CONNECTALDIR?=../..
 INTERFACES = PerfRequest PerfIndication
-BSVFILES = Perf.bsv Top.bsv ../../lib/deprecated/DmaUtils.bsv
+BSVFILES = Perf.bsv Top.bsv $(CONNECTALDIR)/lib/deprecated/DmaUtils.bsv
 CPPFILES=testperf.cpp
-#CONNECTALFLAGS=--bscflags " -D TRACE_AXI"
 
-include ../../Makefile.connectal
+include $(CONNECTALDIR)/Makefile.connectal

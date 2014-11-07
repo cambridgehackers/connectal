@@ -1,5 +1,5 @@
 
-CONNECTALDIR=../..
+CONNECTALDIR?=../..
 INTERFACES = AuroraRequest AuroraIndication
 BSVFILES = Aurora.bsv Top.bsv
 CPPFILES=testaurora.cpp

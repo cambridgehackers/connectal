@@ -1,4 +1,5 @@
 
+CONNECTALDIR?=../..
 INTERFACES = FpRequest FpIndication
 BSVFILES = Fp.bsv Top.bsv
 CPPFILES=testfp.cpp
@@ -23,6 +24,6 @@ endif
 ## Generate the import "BVI" from the generated stub for the core: fp_add_stub.v
 ##   Then, hand-modified so it works
 BviFpAdd.bsv:
-	../../scripts/importbvi.py -o BviFpAdd.bsv -c aclk -f s_axis_a -f s_axis_b -f m_axis_result -I BviFpAdd -P BviFpAdd $(FP_ADD_V)
+	$(CONNECTALDIR)/scripts/importbvi.py -o BviFpAdd.bsv -c aclk -f s_axis_a -f s_axis_b -f m_axis_result -I BviFpAdd -P BviFpAdd $(FP_ADD_V)
 
-include ../../Makefile.connectal
+include $(CONNECTALDIR)/Makefile.connectal

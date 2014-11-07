@@ -1,9 +1,11 @@
+
+CONNECTALDIR?=../..
 INTERFACES = Tiny3Request Tiny3Indication
 BSVFILES = TinyTestTypes.bsv Top.bsv
 CPPFILES=testtiny3.cpp
 NUMBER_OF_MASTERS =0
 
-include ../../Makefile.connectal
+include $(CONNECTALDIR)/Makefile.connectal
 
 
 testbench:

@@ -1,11 +1,9 @@
 
-
+CONNECTALDIR?=../..
 INTERFACES = PipeMulRequest PipeMulIndication
 BSVFILES = PipeMulTB.bsv  Top.bsv
 CPPFILES=testpipe_mul.cpp
-## uncomment the following line to enable AXI trace
-# CONNECTALFLAGS="--bscflags=-D TRACE_AXI"
 NUMBER_OF_MASTERS =0
 
-include ../../Makefile.connectal
+include $(CONNECTALDIR)/Makefile.connectal
 
