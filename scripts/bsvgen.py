@@ -354,17 +354,13 @@ class InterfaceMixin:
             'indicationMethods': indicationMethods,
             'indicationChannelCount': self.channelCount
             }
-        mkConnectionMethodRules = []
-        outputPipes = []
+        methodAction = []
         for m in self.decls:
             if m.type == 'Method' and m.return_type.name == 'Action':
-                paramsForCall = ['request.%s' % p.name for p in m.params]
-                msubs = {'methodName': m.name,
-                         'paramsForCall': ', '.join(paramsForCall)}
-                mkConnectionMethodRules.append(mkConnectionMethodTemplate % msubs)
-                outputPipes.append('    interface %(methodName)s_PipeOut = toPipeOut(%(methodName)s_requestFifo);' % msubs)
-        substs['mkConnectionMethodRules'] = mkConnectionMethodRules
-        substs['outputPipes'] = outputPipes
+                newitem = {'name': m.name}
+                newitem['params'] = [p.name for p in m.params]
+                methodAction.append(newitem)
+        substs['methodAction'] = methodAction
         return substs
 
     def collectRequestElements(self, outerTypeName):
@@ -424,8 +420,16 @@ def fixupSubsts(substs):
                                                        for methodName in substs['methodNames']])
     substs['portalIfc'] = portalIfcTemplate
     substs['requestElements'] = ''.join(substs['requestElements'])
-    substs['outputPipes'] = '\n'.join(substs['outputPipes'])
-    substs['mkConnectionMethodRules'] = ''.join(substs['mkConnectionMethodRules'])
+    mkConnectionMethodRules = []
+    outputPipes = []
+    for m in substs['methodAction']:
+        paramsForCall = ['request.%s' % p for p in m['params']]
+        msubs = {'methodName': m['name'],
+                 'paramsForCall': ', '.join(paramsForCall)}
+        mkConnectionMethodRules.append(mkConnectionMethodTemplate % msubs)
+        outputPipes.append('    interface %(methodName)s_PipeOut = toPipeOut(%(methodName)s_requestFifo);' % msubs)
+    substs['outputPipes'] = '\n'.join(outputPipes)
+    substs['mkConnectionMethodRules'] = ''.join(mkConnectionMethodRules)
     substs['methodRules'] = ''.join(substs['methodRules'])
     substs['responseElements'] = ''.join(substs['responseElements'])
     substs['indicationMethodRules'] = ''.join(substs['indicationMethodRules'])
