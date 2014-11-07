@@ -242,8 +242,8 @@ def classInfo(item):
     rc['parentLportal'] = item.parentClass("portal")
     rc['parentPortal'] = item.parentClass("Portal")
     rc['package'] = item.package
-    rc['Wrapper'] = item.substs('Wrapper',False)
-    rc['Proxy'] = item.substs('Proxy',True)
+    rc['Wrapper'] = item.substsTemplate(item.name+'Wrapper')
+    rc['Proxy'] = item.substsTemplate(item.name+'Proxy')
     rc['decls'] = []
     for mitem in item.decls:
         rc['decls'].append(declInfo(mitem.name, mitem.params))

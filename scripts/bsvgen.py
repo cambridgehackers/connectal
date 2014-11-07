@@ -67,7 +67,7 @@ exposedProxyInterfaceTemplate='''
 %(responseElements)s
 // exposed proxy interface
 interface %(Dut)sPortal;
-    interface PipePortal#(%(requestChannelCount)s, %(indicationChannelCount)s, 32) portalIfc;
+    interface PipePortal#(0, %(indicationChannelCount)s, 32) portalIfc;
     interface %(Package)s::%(Ifc)s ifc;
 endinterface
 interface %(Dut)s;
@@ -120,7 +120,7 @@ interface %(Dut)sPipes;
 %(requestOutputPipeInterfaces)s
 endinterface
 interface %(Dut)sPortal;
-    interface PipePortal#(%(requestChannelCount)s, %(indicationChannelCount)s, 32) portalIfc;
+    interface PipePortal#(%(requestChannelCount)s, 0, 32) portalIfc;
 endinterface
 // exposed wrapper MemPortal interface
 interface %(Dut)s;
@@ -324,8 +324,7 @@ class MethodMixin:
             return None
 
 class InterfaceMixin:
-    def substs(self,suffix,proxy):
-        name = "%s%s"%(self.name,suffix)
+    def substsTemplate(self,name):
         dutName = util.decapitalize(name)
 
         # specific to wrappers
@@ -338,32 +337,24 @@ class InterfaceMixin:
         indicationMethodRules = self.collectIndicationMethodRules(name)
         indicationMethods = self.collectIndicationMethods(name)
 
-        m = md5.new()
-        m.update(self.name)
-
         substs = {
             'Package': os.path.splitext(os.path.basename(self.package))[0],
             'Ifc': self.name,
             'dut': dutName,
             'Dut': util.capitalize(name),
-            'requestElements': ''.join(requestElements),
+            'requestElements': requestElements,
             'methodNames': methodNames,
-            'methodRules': ''.join(methodRules),
+            'methodRules': methodRules,
             'channelCount': self.channelCount,
             'moduleContext': '',
 
-            'requestChannelCount': len(methodRules) if not proxy else 0,
-            'responseElements': ''.join(responseElements),
-            'indicationMethodRules': ''.join(indicationMethodRules),
-            'indicationMethods': ''.join(indicationMethods),
-            'indicationChannelCount': self.channelCount if proxy else 0,
+            'requestChannelCount': len(methodRules),
+            'responseElements': responseElements,
+            'indicationMethodRules': indicationMethodRules,
+            'indicationMethods': indicationMethods,
+            'indicationChannelCount': self.channelCount,
             'indicationInterfaces': ''.join(indicationTemplate % { 'Indication': name }) if not self.hasSource else '',
             }
-
-        substs['portalIfc'] = portalIfcTemplate % substs
-        substs['requestOutputPipeInterfaces'] = ''.join([requestOutputPipeInterfaceTemplate % {'methodName': methodName,
-                                                       'MethodName': util.capitalize(methodName)}
-                                                       for methodName in methodNames])
         mkConnectionMethodRules = []
         outputPipes = []
         for m in self.decls:
@@ -373,8 +364,8 @@ class InterfaceMixin:
                          'paramsForCall': ', '.join(paramsForCall)}
                 mkConnectionMethodRules.append(mkConnectionMethodTemplate % msubs)
                 outputPipes.append('    interface %(methodName)s_PipeOut = toPipeOut(%(methodName)s_requestFifo);' % msubs)
-        substs['mkConnectionMethodRules'] = ''.join(mkConnectionMethodRules)
-        substs['outputPipes'] = '\n'.join(outputPipes)
+        substs['mkConnectionMethodRules'] = mkConnectionMethodRules
+        substs['outputPipes'] = outputPipes
         return substs
 
     def collectRequestElements(self, outerTypeName):
@@ -428,6 +419,20 @@ class InterfaceMixin:
                     methods.append(methodRule)
         return methods
 
+def fixupSubsts(substs):
+    substs['requestOutputPipeInterfaces'] = ''.join([requestOutputPipeInterfaceTemplate % {'methodName': methodName,
+                                                       'MethodName': util.capitalize(methodName)}
+                                                       for methodName in substs['methodNames']])
+    substs['portalIfc'] = portalIfcTemplate
+    substs['requestElements'] = ''.join(substs['requestElements'])
+    substs['outputPipes'] = '\n'.join(substs['outputPipes'])
+    substs['mkConnectionMethodRules'] = ''.join(substs['mkConnectionMethodRules'])
+    substs['methodRules'] = ''.join(substs['methodRules'])
+    substs['responseElements'] = ''.join(substs['responseElements'])
+    substs['indicationMethodRules'] = ''.join(substs['indicationMethodRules'])
+    substs['indicationMethods'] = ''.join(substs['indicationMethods'])
+    return substs
+
 def generate_bsv(project_dir, noisyFlag, jsondata):
     generatedPackageNames = []
     for item in jsondata['interfaces']:
@@ -443,8 +448,9 @@ def generate_bsv(project_dir, noisyFlag, jsondata):
         bsv_file.write(preambleTemplate % {'extraImports' : ''.join(extraImports)})
         if noisyFlag:
             print 'Writing file ', fname
-        bsv_file.write(exposedWrapperInterfaceTemplate % item['Wrapper'])
-        bsv_file.write(exposedProxyInterfaceTemplate % item['Proxy'])
+        
+        bsv_file.write(exposedWrapperInterfaceTemplate % fixupSubsts(item['Wrapper']))
+        bsv_file.write(exposedProxyInterfaceTemplate % fixupSubsts(item['Proxy']))
         bsv_file.write('endpackage: %s\n' % pname)
         bsv_file.close()
 
