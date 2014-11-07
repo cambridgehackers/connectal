@@ -38,7 +38,13 @@
 #include <assert.h>
 #include <netdb.h>
 
-int bsim_fpga_map[MAX_BSIM_PORTAL_ID];
+
+typedef struct bsim_fpga_map_entry{
+  int name;
+  int offset;
+  int valid;
+} bsim_fpga_map_entry;
+static bsim_fpga_map_entry bsim_fpga_map[MAX_BSIM_PORTAL_ID];
 static pthread_mutex_t socket_mutex;
 int global_sockfd = -1;
 static int trace_socket;// = 1;
@@ -110,8 +116,11 @@ void connect_to_bsim(void)
     unsigned int id = bsimfunc.read(&p, &idp);
     last = bsimfunc.read(&p, &topp);
     assert(id < MAX_BSIM_PORTAL_ID);
-    bsim_fpga_map[id] = idx++;
+    bsim_fpga_map[idx].name = id;
+    bsim_fpga_map[idx].offset = idx;
+    bsim_fpga_map[idx].valid = 1;
     //fprintf(stderr, "%s bsim_fpga_map[%d]=%d (%d)\n", __FUNCTION__, id, bsim_fpga_map[id], last);
+    idx++;
   }  
 }
 
@@ -346,10 +355,16 @@ void write_portal_fd_bsim(volatile unsigned int *addr, unsigned int v, int id)
 static int init_bsim(struct PortalInternal *pint, void *param)
 {
 #ifdef BSIM
-    extern int bsim_fpga_map[MAX_BSIM_PORTAL_ID];
     connect_to_bsim();
     assert(pint->fpga_number < MAX_BSIM_PORTAL_ID);
-    pint->fpga_number = bsim_fpga_map[pint->fpga_number];
+    bool found = false;
+    for (int i = 0; bsim_fpga_map[i].valid; i++)
+      if (bsim_fpga_map[i].name == pint->fpga_number){
+	found = true;
+	pint->fpga_number = bsim_fpga_map[i].offset;
+	break;
+      }
+    assert(found);
     pint->map_base = (volatile unsigned int*)(long)(pint->fpga_number * PORTAL_BASE_OFFSET);
     pint->item->enableint(pint, 1);
 #endif
