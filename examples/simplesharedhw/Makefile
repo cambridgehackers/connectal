@@ -1,6 +1,6 @@
 
 CONNECTALDIR?=../..
-INTERFACES = Simple MMUConfigRequest MMUConfigIndication DmaDebugRequest DmaDebugIndication SharedMemoryPortalConfig
+INTERFACES = Simple MMURequest MMUIndication MemServerRequest MemServerIndication SharedMemoryPortalConfig
 BSVFILES = SimpleIF.bsv Top.bsv
 CPPFILES=testsimple.cpp $(CONNECTALDIR)/cpp/portalShared.c
 

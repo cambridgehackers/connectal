@@ -34,8 +34,8 @@
 #include "StdDmaIndication.h"
 #include "RegexpIndication.h"
 #include "RegexpRequest.h"
-#include "DmaDebugRequest.h"
-#include "MMUConfigRequest.h"
+#include "MemServerRequest.h"
+#include "MMURequest.h"
 
 sem_t test_sem;
 int sw_match_cnt = 0;
@@ -55,7 +55,7 @@ typedef struct P {
 P haystackP[num_tests];
 
 DmaManager *dma;
-MMUConfigRequestProxy *dmap;
+MMURequestProxy *dmap;
 RegexpRequestProxy *device;
 
 using namespace std;
@@ -133,11 +133,11 @@ int main(int argc, const char **argv)
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
   device = new RegexpRequestProxy(IfcNames_RegexpRequest);
-  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
-  dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
-  dma = new DmaManager(hostDmaDebugRequest, dmap);
-  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
+  dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  dma = new DmaManager(dmap);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(dma, IfcNames_HostMemServerIndication);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
   RegexpIndication *deviceIndication = new RegexpIndication(IfcNames_RegexpIndication);
   
   if(sem_init(&test_sem, 1, 0)){

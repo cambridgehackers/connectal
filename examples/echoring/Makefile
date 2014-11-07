@@ -1,6 +1,6 @@
 
 CONNECTALDIR?=../..
-INTERFACES = Swallow EchoRequest EchoIndication MMUConfigRequest MMUConfigIndication DmaDebugRequest DmaDebugIndication SharedMemoryPortalConfig
+INTERFACES = Swallow EchoRequest EchoIndication MMURequest MMUIndication MemServerRequest MemServerIndication SharedMemoryPortalConfig
 ## all the BSV files to be scanned for types and interfaces
 BSVFILES = Echo.bsv SwallowIF.bsv Top.bsv
 ## the source files in the example
