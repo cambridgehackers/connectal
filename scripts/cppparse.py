@@ -236,20 +236,23 @@ def declInfo(name, params):
         rc['params'].append(piInfo(pitem.name, pitem.type))
     return rc
 
-def classInfo(name, decls, parentLportal, parentPortal):
+def classInfo(item):
     rc = {}
-    rc['name'] = name
-    rc['parentLportal'] = parentLportal
-    rc['parentPortal'] = parentPortal
+    rc['name'] = item.name
+    rc['parentLportal'] = item.parentClass("portal")
+    rc['parentPortal'] = item.parentClass("Portal")
+    rc['package'] = item.package
+    rc['Wrapper'] = item.substs('Wrapper',False)
+    rc['Proxy'] = item.substs('Proxy',True)
     rc['decls'] = []
-    for mitem in decls:
+    for mitem in item.decls:
         rc['decls'].append(declInfo(mitem.name, mitem.params))
     return rc
 
-def serialize_json(interfaces):
+def serialize_json(interfaces, globalimports, dutname):
     itemlist = []
     for item in interfaces:
-        itemlist.append(classInfo(item.name, item.decls, item.parentClass("portal"), item.parentClass("Portal")))
+        itemlist.append(classInfo(item))
     jfile = open('cppgen_intermediate_data.tmp', 'w')
     toplevel = {}
     toplevel['interfaces'] = itemlist
@@ -276,6 +279,8 @@ def serialize_json(interfaces):
             print 'Unprocessed globaldecl:', item, 'ZZZ', newitem
         gdlist.append(newitem)
     toplevel['globaldecls'] = gdlist
+    toplevel['globalimports'] = globalimports
+    toplevel['dutname'] = dutname
     json.dump(toplevel, jfile, sort_keys = True, indent = 4)
     jfile.close()
     j2file = open('cppgen_intermediate_data.tmp').read()

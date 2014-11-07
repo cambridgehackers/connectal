@@ -998,9 +998,9 @@ def generate_bsvcpp(filelist, project_dir, dutname, bsvdefines, interfaces, nf):
         ifc.assignRequestResponseChannels()
         ifc.ind.assignRequestResponseChannels()
         ilist.append(ifc)
-    jsondata = cppparse.serialize_json(ilist)
+    jsondata = cppparse.serialize_json(ilist, globalimports, dutname)
     cppgen.generate_cpp(project_dir, noisyFlag, jsondata)
-    bsvgen.generate_bsv(globalimports, project_dir, noisyFlag, ilist, dutname)
+    bsvgen.generate_bsv(project_dir, noisyFlag, jsondata)
     
 if __name__=='__main__':
     if len(sys.argv) == 1:
