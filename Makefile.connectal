@@ -37,6 +37,9 @@ bozotarget:
 gen.%:
 	make BOARD=$* --no-print-directory gentarget prebuild
 
+exe.%:
+	make BOARD=$* --no-print-directory gentarget prebuild exe
+
 build.%: gen.%
 	make -C $* BOARD=$* --no-print-directory all
 
