@@ -222,197 +222,158 @@ indicationMethodTemplate='''
         //$display(\"indicationMethod \'%(methodName)s\' invoked\");
     endmethod'''
 
-class ParamMixin:
-    def numBitsBSV(self):
-        return self.type.numBitsBSV();
+def toBsvType(self):
+    if len(self.params):
+        return '%s#(%s)' % (self.name, ','.join([str(toBsvType(p)) for p in self.params]))
+    else:
+        return self.name
 
-class TypeMixin:
-    def toBsvType(self):
-        if len(self.params):
-            return '%s#(%s)' % (self.name, ','.join([str(p.toBsvType()) for p in self.params]))
-        else:
-            return self.name
-    def numBitsBSV(self):
-        if (self.name == 'Bit'):
-            return self.params[0].numeric()
-        if (self.name == 'Vector'):
-            return self.params[0].numeric() * self.params[1].numBitsBSV()
-        if (self.name == 'Int' or self.name == 'UInt'):
-            return self.params[0].numeric()
-        if (self.name == 'Float'):
-            return 32
-        if (self.name == 'SpecialTypeForSendingFd'):
-            return 32
-	sdef = globalv.globalvars[self.name]
-        sdeftype = sdef.tdtype
-        #print 'Type.numBitsBSV()', sdef.type, sdef.name, sdef.params, sdef.tdtype
-        #print 'instantiating type parameters'
-        sdeftype = sdeftype.instantiate(dict(zip(sdef.params, self.params)))
-        #print 'resolved to', sdeftype.type
-        #print '           ', sdeftype
-        return sdeftype.numBitsBSV();
+def methsubsts(self, outerTypeName):
+    if self.return_type.name == 'ActionValue':
+        rt = toBsvType(self.return_type.params[0])
+    else:
+        rt = self.return_type.name
+    d = { 'dut': util.decapitalize(outerTypeName),
+          'Dut': util.capitalize(outerTypeName),
+          'methodName': self.name,
+          'MethodName': util.capitalize(self.name),
+          'channelNumber': self.channelNumber,
+          'ord': self.channelNumber,
+          'methodReturnType': rt}
+    return d
 
-class EnumMixin:
-    def numBitsBSV(self):
-        return int(math.ceil(math.log(len(self.elements),2)))
+def collectRequestElement(self, substs):
+    paramStructDeclarations = ['    %s %s;' % (toBsvType(p.type), p.name)
+                               for p in self.params]
+    if not self.params:
+        paramStructDeclarations = ['    %s %s;' % ('Bit#(32)', 'padding')]
 
-class StructMixin:
-    def numBitsBSV(self):
-        return sum([e.type.numBitsBSV() for e in self.elements])
+    substs['paramStructDeclarations'] = '\n'.join(paramStructDeclarations)
+    return requestStructTemplate % substs
 
-class MethodMixin:
-    def substs(self, outerTypeName):
-        if self.return_type.name == 'ActionValue':
-            rt = self.return_type.params[0].toBsvType()
-        else:
-            rt = self.return_type.name
-        d = { 'dut': util.decapitalize(outerTypeName),
-              'Dut': util.capitalize(outerTypeName),
-              'methodName': self.name,
-              'MethodName': util.capitalize(self.name),
-              'channelNumber': self.channelNumber,
-              'ord': self.channelNumber,
-              'methodReturnType': rt}
-        return d
+def collectResponseElement(self, substs):
+    paramStructDeclarations = ['    %s %s;' % (toBsvType(p.type), p.name)
+                               for p in self.params]
+    if not self.params:
+        paramStructDeclarations = ['    %s %s;' % ('Bit#(32)', 'padding')]
+    substs['paramStructDeclarations'] = '\n'.join(paramStructDeclarations)
+    return responseStructTemplate % substs
 
-    def collectRequestElement(self, outerTypeName):
-        substs = self.substs(outerTypeName)
-        paramStructDeclarations = ['    %s %s;' % (p.type.toBsvType(), p.name)
-                                   for p in self.params]
+def collectMethodRule(self, substs):
+    if self.return_type.name == 'Action':
+        return requestRuleTemplate % substs
+    else:
+        return None
+
+def collectIndicationMethodRule(self, substs):
+    if self.return_type.name == 'Action':
+        paramType = ['%s' % toBsvType(p.type) for p in self.params]
+        substs['paramType'] = ', '.join(paramType)
+        return indicationRuleTemplate % substs
+    else:
+        return None
+
+def collectIndicationMethod(self, substs):
+    if self.return_type.name == 'Action':
+        formal = ['%s %s' % (toBsvType(p.type), p.name) for p in self.params]
+        substs['formals'] = ', '.join(formal)
+        structElements = ['%s: %s' % (p.name, p.name) for p in self.params]
         if not self.params:
-            paramStructDeclarations = ['    %s %s;' % ('Bit#(32)', 'padding')]
+            structElements = ['padding: 0']
+        substs['structElements'] = ', '.join(structElements)
+        return indicationMethodTemplate % substs
+    else:
+        return None
 
-        substs['paramStructDeclarations'] = '\n'.join(paramStructDeclarations)
-        return requestStructTemplate % substs
+def substsTemplate(self,name):
+    dutName = util.decapitalize(name)
 
-    def collectResponseElement(self, outerTypeName):
-        substs = self.substs(outerTypeName)
-        paramStructDeclarations = ['    %s %s;' % (p.type.toBsvType(), p.name)
-                                   for p in self.params]
-        if not self.params:
-            paramStructDeclarations = ['    %s %s;' % ('Bit#(32)', 'padding')]
-        substs['paramStructDeclarations'] = '\n'.join(paramStructDeclarations)
-        return responseStructTemplate % substs
+    # specific to wrappers
+    requestElements = collectRequestElements(self, name)
+    methodNames = collectMethodNames(self, name)
+    methodRules = collectMethodRules(self, name)
+    
+    # specific to proxies
+    responseElements = collectResponseElements(self, name)
+    indicationMethodRules = collectIndicationMethodRules(self, name)
+    indicationMethods = collectIndicationMethods(self, name)
 
-    def collectMethodRule(self, outerTypeName, hidden=False):
-        substs = self.substs(outerTypeName)
-        if self.return_type.name == 'Action':
-            return requestRuleTemplate % substs
-        else:
-            return None
+    substs = {
+        'Package': os.path.splitext(os.path.basename(self.package))[0],
+        'Ifc': self.name,
+        'dut': dutName,
+        'Dut': util.capitalize(name),
+        'requestElements': requestElements,
+        'methodNames': methodNames,
+        'methodRules': methodRules,
+        'channelCount': self.channelCount,
+        'moduleContext': '',
 
-    def collectIndicationMethodRule(self, outerTypeName):
-        substs = self.substs(outerTypeName)
-        if self.return_type.name == 'Action':
-            paramType = ['%s' % p.type.toBsvType() for p in self.params]
-            substs['paramType'] = ', '.join(paramType)
-            return indicationRuleTemplate % substs
-        else:
-            return None
+        'requestChannelCount': len(methodRules),
+        'responseElements': responseElements,
+        'indicationMethodRules': indicationMethodRules,
+        'indicationMethods': indicationMethods,
+        'indicationChannelCount': self.channelCount
+        }
+    methodAction = []
+    for m in self.decls:
+        if m.type == 'Method' and m.return_type.name == 'Action':
+            newitem = {'name': m.name}
+            newitem['params'] = [p.name for p in m.params]
+            methodAction.append(newitem)
+    substs['methodAction'] = methodAction
+    return substs
 
-    def collectIndicationMethod(self, outerTypeName):
-        substs = self.substs(outerTypeName)
-        if self.return_type.name == 'Action':
-            formal = ['%s %s' % (p.type.toBsvType(), p.name) for p in self.params]
-            substs['formals'] = ', '.join(formal)
-            structElements = ['%s: %s' % (p.name, p.name) for p in self.params]
-            if not self.params:
-                structElements = ['padding: 0']
-            substs['structElements'] = ', '.join(structElements)
-            return indicationMethodTemplate % substs
-        else:
-            return None
-
-class InterfaceMixin:
-    def substsTemplate(self,name):
-        dutName = util.decapitalize(name)
-
-        # specific to wrappers
-        requestElements = self.collectRequestElements(name)
-        methodNames = self.collectMethodNames(name)
-        methodRules = self.collectMethodRules(name,False)
-        
-        # specific to proxies
-        responseElements = self.collectResponseElements(name)
-        indicationMethodRules = self.collectIndicationMethodRules(name)
-        indicationMethods = self.collectIndicationMethods(name)
-
-        substs = {
-            'Package': os.path.splitext(os.path.basename(self.package))[0],
-            'Ifc': self.name,
-            'dut': dutName,
-            'Dut': util.capitalize(name),
-            'requestElements': requestElements,
-            'methodNames': methodNames,
-            'methodRules': methodRules,
-            'channelCount': self.channelCount,
-            'moduleContext': '',
-
-            'requestChannelCount': len(methodRules),
-            'responseElements': responseElements,
-            'indicationMethodRules': indicationMethodRules,
-            'indicationMethods': indicationMethods,
-            'indicationChannelCount': self.channelCount
-            }
-        methodAction = []
-        for m in self.decls:
-            if m.type == 'Method' and m.return_type.name == 'Action':
-                newitem = {'name': m.name}
-                newitem['params'] = [p.name for p in m.params]
-                methodAction.append(newitem)
-        substs['methodAction'] = methodAction
-        return substs
-
-    def collectRequestElements(self, outerTypeName):
-        requestElements = []
-        for m in self.decls:
-            if m.type == 'Method':
-                e = m.collectRequestElement(outerTypeName)
-                if e:
-                    requestElements.append(e)
-        return requestElements
-    def collectResponseElements(self, outerTypeName):
-        responseElements = []
-        for m in self.decls:
-            if m.type == 'Method':
-                e = m.collectResponseElement(outerTypeName)
-                if e:
-                    responseElements.append(e)
-        return responseElements
-    def collectMethodRules(self,outerTypeName,hidden):
-        methodRules = []
-        for m in self.decls:
-            if m.type == 'Method':
-                methodRule = m.collectMethodRule(outerTypeName,hidden)
-                if methodRule:
-                    methodRules.append(methodRule)
-        return methodRules
-    def collectMethodNames(self,outerTypeName):
-        methodRuleNames = []
-        for m in self.decls:
-            if m.type == 'Method':
-                methodRule = m.collectMethodRule(outerTypeName)
-                if methodRule:
-                    methodRuleNames.append(m.name)
-                else:
-                    print 'method %s has no rule' % m.name
-        return methodRuleNames
-    def collectIndicationMethodRules(self,outerTypeName):
-        methodRules = []
-        for m in self.decls:
-            if m.type == 'Method':
-                methodRule = m.collectIndicationMethodRule(outerTypeName)
-                if methodRule:
-                    methodRules.append(methodRule)
-        return methodRules
-    def collectIndicationMethods(self,outerTypeName):
-        methods = []
-        for m in self.decls:
-            if m.type == 'Method':
-                methodRule = m.collectIndicationMethod(outerTypeName)
-                if methodRule:
-                    methods.append(methodRule)
-        return methods
+def collectRequestElements(self, outerTypeName):
+    requestElements = []
+    for m in self.decls:
+        if m.type == 'Method':
+            e = collectRequestElement(m, methsubsts(m, outerTypeName))
+            if e:
+                requestElements.append(e)
+    return requestElements
+def collectResponseElements(self, outerTypeName):
+    responseElements = []
+    for m in self.decls:
+        if m.type == 'Method':
+            e = collectResponseElement(m, methsubsts(m, outerTypeName))
+            if e:
+                responseElements.append(e)
+    return responseElements
+def collectMethodRules(self,outerTypeName):
+    methodRules = []
+    for m in self.decls:
+        if m.type == 'Method':
+            methodRule = collectMethodRule(m, methsubsts(m, outerTypeName))
+            if methodRule:
+                methodRules.append(methodRule)
+    return methodRules
+def collectMethodNames(self,outerTypeName):
+    methodRuleNames = []
+    for m in self.decls:
+        if m.type == 'Method':
+            methodRule = collectMethodRule(m, methsubsts(m, outerTypeName))
+            if methodRule:
+                methodRuleNames.append(m.name)
+            else:
+                print 'method %s has no rule' % m.name
+    return methodRuleNames
+def collectIndicationMethodRules(self,outerTypeName):
+    methodRules = []
+    for m in self.decls:
+        if m.type == 'Method':
+            methodRule = collectIndicationMethodRule(m, methsubsts(m, outerTypeName))
+            if methodRule:
+                methodRules.append(methodRule)
+    return methodRules
+def collectIndicationMethods(self,outerTypeName):
+    methods = []
+    for m in self.decls:
+        if m.type == 'Method':
+            methodRule = collectIndicationMethod(m, methsubsts(m, outerTypeName))
+            if methodRule:
+                methods.append(methodRule)
+    return methods
 
 def fixupSubsts(substs):
     substs['requestOutputPipeInterfaces'] = ''.join([requestOutputPipeInterfaceTemplate % {'methodName': methodName,

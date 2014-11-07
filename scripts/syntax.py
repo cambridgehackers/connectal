@@ -25,7 +25,7 @@ import AST
 import os, re, sys
 
 import globalv
-import cppparse, cppgen, bsvgen
+import cppgen, bsvgen
 
 scripthome = os.path.dirname(os.path.abspath(__file__))
 noisyFlag=True
@@ -998,7 +998,7 @@ def generate_bsvcpp(filelist, project_dir, dutname, bsvdefines, interfaces, nf):
         ifc.assignRequestResponseChannels()
         ifc.ind.assignRequestResponseChannels()
         ilist.append(ifc)
-    jsondata = cppparse.serialize_json(ilist, globalimports, dutname)
+    jsondata = AST.serialize_json(ilist, globalimports, dutname)
     cppgen.generate_cpp(project_dir, noisyFlag, jsondata)
     bsvgen.generate_bsv(project_dir, noisyFlag, jsondata)
     
