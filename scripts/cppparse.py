@@ -262,7 +262,8 @@ def serialize_json(interfaces):
             gvlist[key]['tdtype'] = dtInfo(value.tdtype)
             gvlist[key]['params'] = value.params
         else:
-            print 'Unprocessed globalvar:', key, value
+            print 'Unprocessed globalvar:', key
+#, value
     toplevel['globalvars'] = gvlist
     gdlist = []
     for item in globalv.globaldecls:
@@ -273,7 +274,7 @@ def serialize_json(interfaces):
             newitem['params'] = item.params
             #print 'TYPEDEF globaldecl:', item, 'ZZZ', newitem
         else:
-            print 'Unprocessed globaldecl:', item, 'ZZZ', newitem
+            print 'Unprocessed globaldecl:', 'ZZZ', newitem
         gdlist.append(newitem)
     toplevel['globaldecls'] = gdlist
     json.dump(toplevel, jfile, sort_keys = True, indent = 4)
