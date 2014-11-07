@@ -34,7 +34,7 @@
 #include <mp.h>
 
 #include "StdDmaIndication.h"
-#include "MMUConfigRequest.h"
+#include "MMURequest.h"
 #include "GeneratedTypes.h" 
 #include "NandSimIndication.h"
 #include "NandSimRequest.h"
@@ -123,13 +123,13 @@ int main(int argc, const char **argv)
 {
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
-  MMUConfigRequestProxy *hostMMUConfigRequest = new MMUConfigRequestProxy(IfcNames_AlgoMMUConfigRequest);
-  DmaManager *hostDma = new DmaManager(NULL, hostMMUConfigRequest);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(hostDma, IfcNames_AlgoMMUConfigIndication);
+  MMURequestProxy *hostMMURequest = new MMURequestProxy(IfcNames_AlgoMMURequest);
+  DmaManager *hostDma = new DmaManager(hostMMURequest);
+  MMUIndication *hostMMUIndication = new MMUIndication(hostDma, IfcNames_AlgoMMUIndication);
 
-  MMUConfigRequestProxy *nandsimMMUConfigRequest = new MMUConfigRequestProxy(IfcNames_NandsimMMUConfigRequest);
-  DmaManager *nandsimDma = new DmaManager(NULL, nandsimMMUConfigRequest);
-  MMUConfigIndication *nandsimMMUConfigIndication = new MMUConfigIndication(nandsimDma,IfcNames_NandsimMMUConfigIndication);
+  MMURequestProxy *nandsimMMURequest = new MMURequestProxy(IfcNames_NandsimMMURequest);
+  DmaManager *nandsimDma = new DmaManager(nandsimMMURequest);
+  MMUIndication *nandsimMMUIndication = new MMUIndication(nandsimDma,IfcNames_NandsimMMUIndication);
 
   StrstrRequestProxy *strstrRequest = new StrstrRequestProxy(IfcNames_AlgoRequest);
   StrstrIndication *strstrIndication = new StrstrIndication(IfcNames_AlgoIndication);
@@ -173,7 +173,7 @@ int main(int argc, const char **argv)
   // request the next sglist identifier from the sglistMMU hardware module
   // which is used by the mem server accessing flash memory.
   int id = 0;
-  MMUConfigRequestProxy_idRequest(nandsimDma->priv.sglDevice);
+  MMURequestProxy_idRequest(nandsimDma->priv.sglDevice);
   sem_wait(&nandsimDma->priv.sglIdSem);
   id = nandsimDma->priv.sglId;
   // pairs of ('offset','size') pointing to space in nandsim memory

@@ -16,7 +16,7 @@
 #include "ss.h"
 
 #include "StdDmaIndication.h"
-#include "MMUConfigRequest.h"
+#include "MMURequest.h"
 #include "GeneratedTypes.h" 
 #include "NandSimIndication.h"
 #include "NandSimRequest.h"

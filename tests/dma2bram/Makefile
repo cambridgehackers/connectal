@@ -1,6 +1,6 @@
 
 CONNECTALDIR?=../..
-INTERFACES = TestRequest MMUConfigRequest TestIndication MMUConfigIndication 
+INTERFACES = TestRequest MMURequest TestIndication MMUIndication 
 BSVFILES = Test.bsv Top.bsv
 CPPFILES=test.cpp
 

@@ -1,6 +1,6 @@
 
 CONNECTALDIR?=../..
-INTERFACES = Swallow EchoRequest EchoIndication MMUConfigRequest MMUConfigIndication
+INTERFACES = Swallow EchoRequest EchoIndication MMURequest MMUIndication
 BSVFILES = Echo.bsv SwallowIF.bsv Top.bsv
 BSVFILES += $(CONNECTALDIR)/bsv/ConnectalMemory.bsv
 CPPFILES=daemon.cpp
