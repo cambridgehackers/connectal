@@ -59,7 +59,7 @@ endif
 CONNECTALFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) -D PinType=$(PIN_TYPE) --ipdir=$(IPDIR)
 
 ifneq ($(NUMBER_OF_MASTERS), 0)
-INTERFACES += DmaDebugRequest MMUConfigRequest DmaDebugIndication MMUConfigIndication
+INTERFACES += MemServerRequest MMURequest MemServerIndication MMUIndication
 BSVFILES += $(CONNECTALDIR)/bsv/ConnectalMemory.bsv
 CPPFILES += $(CONNECTALDIR)/cpp/dmaManager.c
 ifneq ($(CPPFILES2),)

@@ -34,8 +34,8 @@
 
 #include "StrstrIndication.h"
 #include "StrstrRequest.h"
-#include "DmaDebugRequest.h"
-#include "MMUConfigRequest.h"
+#include "MemServerRequest.h"
+#include "MMURequest.h"
 
 
 sem_t test_sem;
@@ -65,11 +65,11 @@ int main(int argc, const char **argv)
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   device = new StrstrRequestProxy(IfcNames_StrstrRequest);
   deviceIndication = new StrstrIndication(IfcNames_StrstrIndication);
-  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
-  MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
-  DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
-  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  DmaManager *dma = new DmaManager(dmap);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
   if(sem_init(&test_sem, 1, 0)){
     fprintf(stderr, "failed to init test_sem\n");
@@ -136,7 +136,7 @@ int main(int argc, const char **argv)
     device->search(ref_haystackAlloc, haystack_len);
     sem_wait(&test_sem);
     uint64_t cycles = portalTimerLap(0);
-    uint64_t beats = dma->show_mem_stats(ChannelType_Read);
+    uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
     fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
 
     close(needleAlloc);
@@ -201,7 +201,7 @@ int main(int argc, const char **argv)
     device->search(ref_haystackAlloc, haystack_len);
     sem_wait(&test_sem);
     uint64_t hw_cycles = portalTimerLap(0);
-    uint64_t beats = dma->show_mem_stats(ChannelType_Read);
+    uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
     float read_util = (float)beats/(float)hw_cycles;
     fprintf(stderr, "hw_cycles:%llx\n", (long long)hw_cycles);
     fprintf(stderr, "memory read utilization (beats/cycle): %f\n", read_util);

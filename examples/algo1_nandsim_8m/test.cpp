@@ -34,7 +34,7 @@
 #include <mp.h>
 
 #include "StdDmaIndication.h"
-#include "MMUConfigRequest.h"
+#include "MMURequest.h"
 #include "GeneratedTypes.h" 
 #include "NandSimIndication.h"
 #include "NandSimRequest.h"
@@ -166,20 +166,24 @@ int main(int argc, const char **argv)
 {
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
-  MMUConfigRequestProxy *hostMMUConfigRequest = new MMUConfigRequestProxy(IfcNames_AlgoMMUConfigRequest);
-  DmaManager *hostDma = new DmaManager(NULL, hostMMUConfigRequest);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(hostDma, IfcNames_AlgoMMUConfigIndication);
+  MMURequestProxy *hostMMURequest = new MMURequestProxy(IfcNames_AlgoMMURequest);
+  DmaManager *hostDma = new DmaManager(hostMMURequest);
+  MMUIndication *hostMMUIndication = new MMUIndication(hostDma, IfcNames_AlgoMMUIndication);
 
-  MMUConfigRequestProxy *nandsimMMU0ConfigRequest = new MMUConfigRequestProxy(IfcNames_NandsimMMU0ConfigRequest);
-  DmaManager *nandsimDma0 = new DmaManager(NULL, nandsimMMU0ConfigRequest);
-  MMUConfigIndication *nandsimMMU0ConfigIndication = new MMUConfigIndication(nandsimDma0,IfcNames_NandsimMMU0ConfigIndication);
+  MMURequestProxy *nandsimMMU0Request = new MMURequestProxy(IfcNames_NandsimMMU0Request);
+  DmaManager *nandsimDma0 = new DmaManager(nandsimMMU0Request);
+  MMUIndication *nandsimMMU0Indication = new MMUIndication(nandsimDma0,IfcNames_NandsimMMU0Indication);
 
-  MMUConfigRequestProxy *nandsimMMU1ConfigRequest = new MMUConfigRequestProxy(IfcNames_NandsimMMU1ConfigRequest);
-  DmaManager *nandsimDma1 = new DmaManager(NULL, nandsimMMU1ConfigRequest);
-  MMUConfigIndication *nandsimMMU1ConfigIndication = new MMUConfigIndication(nandsimDma1,IfcNames_NandsimMMU1ConfigIndication);
+  MMURequestProxy *nandsimMMU1Request = new MMURequestProxy(IfcNames_NandsimMMU1Request);
+  DmaManager *nandsimDma1 = new DmaManager(nandsimMMU1Request);
+  MMUIndication *nandsimMMU1Indication = new MMUIndication(nandsimDma1,IfcNames_NandsimMMU1Indication);
 
   StrstrRequestProxy *strstrRequest = new StrstrRequestProxy(IfcNames_AlgoRequest);
   StrstrIndication *strstrIndication = new StrstrIndication(IfcNames_AlgoIndication);
+
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_HostMemServerIndication);
+  MemServerIndication *nandsimMemServer0Indication = new MemServerIndication(IfcNames_NandsimMemServer0Indication);
+  MemServerIndication *nandsimMemServer1Indication = new MemServerIndication(IfcNames_NandsimMemServer1Indication);
 
   portalExec_start();
   fprintf(stderr, "Main::allocating memory...\n");
@@ -225,13 +229,13 @@ int main(int argc, const char **argv)
   // request the next sglist identifier from the sglistMMU hardware module
   // which is used by the mem server accessing flash memory.
   int id0 = 0;
-  MMUConfigRequest_idRequest(nandsimDma0->priv.sglDevice, -1);
+  MMURequest_idRequest(nandsimDma0->priv.sglDevice, -1);
   sem_wait(&nandsimDma0->priv.sglIdSem);
   id0 = nandsimDma0->priv.sglId;
   printf("[%s:%d] %08x\n", __FUNCTION__, __LINE__, id0);
 
   int id1 = 0;
-  MMUConfigRequest_idRequest(nandsimDma1->priv.sglDevice, -1);
+  MMURequest_idRequest(nandsimDma1->priv.sglDevice, -1);
   sem_wait(&nandsimDma1->priv.sglIdSem);
   id1 = nandsimDma1->priv.sglId;
   printf("[%s:%d] %08x\n", __FUNCTION__, __LINE__, id1);

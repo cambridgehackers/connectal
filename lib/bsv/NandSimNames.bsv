@@ -2,23 +2,23 @@
 
 typedef enum {
    
-   HostDmaDebugIndication, 
-   HostDmaDebugRequest,
+   HostMemServerIndication, 
+   HostMemServerRequest,
 
-   NandsimDma0DebugIndication, 
-   NandsimDma0DebugRequest,
-   NandsimDma1DebugIndication, 
-   NandsimDma1DebugRequest,
+   NandsimMemServer0Indication, 
+   NandsimMemServer0Request,
+   NandsimMemServer1Indication, 
+   NandsimMemServer1Request,
 	      
-   BackingStoreMMUConfigRequest,
-   BackingStoreMMUConfigIndication,
-   AlgoMMUConfigRequest,
-   AlgoMMUConfigIndication,
+   BackingStoreMMURequest,
+   BackingStoreMMUIndication,
+   AlgoMMURequest,
+   AlgoMMUIndication,
 
-   NandsimMMU0ConfigRequest,
-   NandsimMMU0ConfigIndication,
-   NandsimMMU1ConfigRequest,
-   NandsimMMU1ConfigIndication,
+   NandsimMMU0Request,
+   NandsimMMU0Indication,
+   NandsimMMU1Request,
+   NandsimMMU1Indication,
 
    NandSimIndication, 
    NandSimRequest, 

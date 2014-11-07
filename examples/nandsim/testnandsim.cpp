@@ -30,7 +30,7 @@
 #include <sys/un.h>
 
 #include "StdDmaIndication.h"
-#include "MMUConfigRequest.h"
+#include "MMURequest.h"
 #include "GeneratedTypes.h" 
 #include "NandSimIndication.h"
 #include "NandSimRequest.h"
@@ -123,9 +123,9 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "testnandsim::%s %s\n", __DATE__, __TIME__);
 
-  MMUConfigRequestProxy *hostMMUConfigRequest = new MMUConfigRequestProxy(IfcNames_BackingStoreMMUConfigRequest);
-  DmaManager *hostDma = new DmaManager(NULL, hostMMUConfigRequest);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(hostDma, IfcNames_BackingStoreMMUConfigIndication);
+  MMURequestProxy *hostMMURequest = new MMURequestProxy(IfcNames_BackingStoreMMURequest);
+  DmaManager *hostDma = new DmaManager(hostMMURequest);
+  MMUIndication *hostMMUIndication = new MMUIndication(hostDma, IfcNames_BackingStoreMMUIndication);
 
   NandSimRequestProxy *nandsimRequest = new NandSimRequestProxy(IfcNames_NandSimRequest);
   NandSimIndication *nandsimIndication = new NandSimIndication(IfcNames_NandSimIndication);

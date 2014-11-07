@@ -34,7 +34,7 @@
 #include <mp.h>
 
 #include "StdDmaIndication.h"
-#include "MMUConfigRequest.h"
+#include "MMURequest.h"
 #include "GeneratedTypes.h" 
 #include "NandSimIndication.h"
 #include "NandSimRequest.h"
@@ -166,16 +166,19 @@ int main(int argc, const char **argv)
 {
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
-  MMUConfigRequestProxy *hostMMUConfigRequest = new MMUConfigRequestProxy(IfcNames_AlgoMMUConfigRequest);
-  DmaManager *hostDma = new DmaManager(NULL, hostMMUConfigRequest);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(hostDma, IfcNames_AlgoMMUConfigIndication);
+  MMURequestProxy *hostMMURequest = new MMURequestProxy(IfcNames_AlgoMMURequest);
+  DmaManager *hostDma = new DmaManager(hostMMURequest);
+  MMUIndication *hostMMUIndication = new MMUIndication(hostDma, IfcNames_AlgoMMUIndication);
 
-  MMUConfigRequestProxy *nandsimMMUConfigRequest = new MMUConfigRequestProxy(IfcNames_NandsimMMU0ConfigRequest);
-  DmaManager *nandsimDma = new DmaManager(NULL, nandsimMMUConfigRequest);
-  MMUConfigIndication *nandsimMMUConfigIndication = new MMUConfigIndication(nandsimDma,IfcNames_NandsimMMU0ConfigIndication);
+  MMURequestProxy *nandsimMMURequest = new MMURequestProxy(IfcNames_NandsimMMU0Request);
+  DmaManager *nandsimDma = new DmaManager(nandsimMMURequest);
+  MMUIndication *nandsimMMUIndication = new MMUIndication(nandsimDma,IfcNames_NandsimMMU0Indication);
 
   StrstrRequestProxy *strstrRequest = new StrstrRequestProxy(IfcNames_AlgoRequest);
   StrstrIndication *strstrIndication = new StrstrIndication(IfcNames_AlgoIndication);
+  
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_HostMemServerIndication);
+  MemServerIndication *nandsimMemServerIndication = new MemServerIndication(IfcNames_NandsimMemServer0Indication);
 
   portalExec_start();
   fprintf(stderr, "Main::allocating memory...\n");
@@ -219,7 +222,7 @@ int main(int argc, const char **argv)
   // request the next sglist identifier from the sglistMMU hardware module
   // which is used by the mem server accessing flash memory.
   int id = 0;
-  MMUConfigRequest_idRequest(nandsimDma->priv.sglDevice, 0);
+  MMURequest_idRequest(nandsimDma->priv.sglDevice, 0);
   sem_wait(&nandsimDma->priv.sglIdSem);
   id = nandsimDma->priv.sglId;
   // pairs of ('offset','size') pointing to space in nandsim memory

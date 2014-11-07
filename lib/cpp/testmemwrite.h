@@ -5,8 +5,8 @@
 
 #include "sock_utils.h"
 #include "StdDmaIndication.h"
-#include "DmaDebugRequest.h"
-#include "MMUConfigRequest.h"
+#include "MemServerRequest.h"
+#include "MMURequest.h"
 #include "MemwriteIndication.h"
 #include "MemwriteRequest.h"
 #include "dmaManager.h"
@@ -52,7 +52,7 @@ public:
 };
 
 MemwriteRequestProxy *device = 0;
-MMUConfigRequestProxy *dmap = 0;
+MMURequestProxy *dmap = 0;
 
 MemwriteIndication *deviceIndication = 0;
 
@@ -93,11 +93,11 @@ void parent(int rd_sock, int wr_sock)
 
   device = new MemwriteRequestProxy(IfcNames_MemwriteRequest);
   deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndication);
-  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
-  MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
-  DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
-  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  DmaManager *dma = new DmaManager(dmap);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_HostMemServerIndication);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
   
   fprintf(stderr, "parent::allocating memory...\n");
   dstAlloc = portalAlloc(alloc_sz);
@@ -138,7 +138,8 @@ void parent(int rd_sock, int wr_sock)
     sem_wait(&test_sem);
     //portalTrace_stop();
     uint64_t cycles = portalTimerLap(0);
-    uint64_t beats = dma->show_mem_stats(ChannelType_Write);
+    hostMemServerRequest->memoryTraffic(ChannelType_Write);
+    uint64_t beats = hostMemServerIndication->receiveMemoryTraffic();
     float write_util = (float)beats/(float)cycles;
     fprintf(stderr, "   beats: %"PRIx64"\n", beats);
     fprintf(stderr, "numWords: %x\n", numWords);
