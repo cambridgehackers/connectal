@@ -6,8 +6,8 @@
 #include <monkit.h>
 #include "StdDmaIndication.h"
 
-#include "DmaDebugRequest.h"
-#include "MMUConfigRequest.h"
+#include "MemServerRequest.h"
+#include "MMURequest.h"
 #include "MemreadIndication.h"
 #include "MemreadRequest.h"
 
@@ -55,11 +55,11 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
   device = new MemreadRequestProxy(IfcNames_MemreadRequest);
-  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
-  MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
-  DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
-  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  DmaManager *dma = new DmaManager(dmap);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(dma, IfcNames_HostMemServerIndication);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
 
   deviceIndication = new MemreadIndication(IfcNames_MemreadIndication);
