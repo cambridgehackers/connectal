@@ -43,7 +43,9 @@ def dtInfo(arg):
     if hasattr(arg, 'bitWidth'):
         rc['bitWidth'] = arg.bitWidth()
     if hasattr(arg, 'params'):
-        rc['params'] = [dtInfo(p) for p in arg.params]
+        #print 'OOO', arg.params
+        if arg.params is not None:
+            rc['params'] = [dtInfo(p) for p in arg.params]
     if hasattr(arg, 'elements'):
         if arg.type == 'Enum':
             rc['elements'] = arg.elements
@@ -262,6 +264,18 @@ def serialize_json(interfaces):
         else:
             print 'Unprocessed globalvar:', key, value
     toplevel['globalvars'] = gvlist
+    gdlist = []
+    for item in globalv.globaldecls:
+        newitem = {}
+        if item.type == 'TypeDef':
+            newitem['name'] = item.name
+            newitem['tdtype'] = dtInfo(item.tdtype)
+            newitem['params'] = item.params
+            #print 'TYPEDEF globaldecl:', item, 'ZZZ', newitem
+        else:
+            print 'Unprocessed globaldecl:', item, 'ZZZ', newitem
+        gdlist.append(newitem)
+    toplevel['globaldecls'] = gdlist
     json.dump(toplevel, jfile, sort_keys = True, indent = 4)
     jfile.close()
     j2file = open('cppgen_intermediate_data.tmp').read()

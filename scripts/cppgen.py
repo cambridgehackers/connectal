@@ -358,7 +358,7 @@ def generate_class(className, declList, parentC, parentCC, generatedCFiles, crea
     hpp.close()
     cpp.close()
 
-def generate_cpp(globaldecls, project_dir, noisyFlag, jsondata, globalvars):
+def generate_cpp(globaldecls, project_dir, noisyFlag, jsondata):
     global globalv_globalvars
     def create_cpp_file(name):
         fname = os.path.join(project_dir, 'jni', name)
