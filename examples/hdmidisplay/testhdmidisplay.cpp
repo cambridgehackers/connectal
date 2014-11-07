@@ -28,8 +28,8 @@
 #include "i2chdmi.h"
 #include "edid.h"
 
-#include "DmaDebugRequest.h"
-#include "MMUConfigRequest.h"
+#include "MemServerRequest.h"
+#include "MMURequest.h"
 #include "StdDmaIndication.h"
 #include "HdmiDisplayRequest.h"
 #include "HdmiDisplayIndication.h"
@@ -43,7 +43,7 @@
 static HdmiInternalRequestProxy *hdmiInternal;
 static HdmiDisplayRequestProxy *device;
 static DmaManager *dma;
-static MMUConfigRequestProxy *dmap;
+static MMURequestProxy *dmap;
 static int allocFrame[FRAME_COUNT];
 static unsigned int ref_srcAlloc[FRAME_COUNT];
 static int *dataptr[FRAME_COUNT];
@@ -141,11 +141,11 @@ int main(int argc, const char **argv)
 
     poller = new PortalPoller();
     device = new HdmiDisplayRequestProxy(IfcNames_HdmiDisplayRequest, poller);
-  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
-  dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
-  DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
-  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
+  dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  DmaManager *dma = new DmaManager(dmap);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
     HdmiInternalIndicationWrapper *hdmiIndication = new HdmiIndication(IfcNames_HdmiInternalIndication);
     HdmiDisplayIndicationWrapper *displayIndication = new DisplayIndication(IfcNames_HdmiDisplayIndication);
@@ -246,14 +246,16 @@ hblank--; // needed on zc702
         ref_srcAlloc[i] = dma->reference(allocFrame[i]);
     }
 
-    fprintf(stderr, "first mem_stats=%"PRIx64"\n", dma->show_mem_stats(ChannelType_Read));
+    uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
+    fprintf(stderr, "first mem_stats=%"PRIx64"\n", beats);
     sleep(3);
     fprintf(stderr, "Starting frame buffer ref=%d...", ref_srcAlloc[0]);
     fill_pixels(0);
     fprintf(stderr, "done\n");
     int limit = 30;
     while (limit-- > 0) {
-      fprintf(stderr, "mem_stats=%"PRIx64"\n", dma->show_mem_stats(ChannelType_Read));
+      uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
+      fprintf(stderr, "mem_stats=%"PRIx64"\n", beats);
       sleep(1);
     }
 }
