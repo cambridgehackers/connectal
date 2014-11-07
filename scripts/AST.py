@@ -65,7 +65,6 @@ class Interface(cppparse.InterfaceMixin,bsvgen.InterfaceMixin):
         self.decls = decls
         self.subinterfacename = subinterfacename
         self.typeClassInstances = []
-        self.hasSource = True
         self.package = packagename
     def interfaceType(self):
         return Type(self.name,self.params)
@@ -76,7 +75,6 @@ class Interface(cppparse.InterfaceMixin,bsvgen.InterfaceMixin):
                                  [d.instantiate(paramBindings) for d in self.decls],
                                  self.subinterfacename,
                                  self.package)
-        newInterface.hasSource = self.hasSource
         newInterface.typeClassInstances = self.typeClassInstances
         return newInterface
 

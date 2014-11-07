@@ -352,8 +352,7 @@ class InterfaceMixin:
             'responseElements': responseElements,
             'indicationMethodRules': indicationMethodRules,
             'indicationMethods': indicationMethods,
-            'indicationChannelCount': self.channelCount,
-            'indicationInterfaces': ''.join(indicationTemplate % { 'Indication': name }) if not self.hasSource else '',
+            'indicationChannelCount': self.channelCount
             }
         mkConnectionMethodRules = []
         outputPipes = []
