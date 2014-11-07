@@ -44,6 +44,8 @@ class Function(cppparse.NoCMixin):
         self.return_type = return_type
         self.params = params
     def __repr__(self):
+        if not self.params:
+            return '<function: %s %s NONE>' % (self.name, self.return_type)
         sparams = map(str, self.params)
         return '<function: %s %s %s>' % (self.name, self.return_type, sparams)
 
