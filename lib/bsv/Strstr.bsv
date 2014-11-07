@@ -95,6 +95,7 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(64))
 
    rule resr;
       let rv <- toGet(locdonePipe[0]).get;
+      if (verbose) $display("strstr search result %d", rv);
       if (rv == -1) begin  
 	 // notify the SW when the search is finished
 	 if (doneCnt+1 == nmpsv) begin
@@ -108,7 +109,6 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(64))
       else begin    
 	 // send results back to SW
 	 indication.searchResult(rv);
-	 if (verbose) $display("strstr search result %d", rv);
       end
    endrule
    

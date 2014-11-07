@@ -152,6 +152,7 @@ module mkMPEngine#(Pair#(MemreadServer#(busWidth)) readers)(MPEngine#(busWidth))
 	    // jReg points to the end of the haystack; we are done
 	    stage <= Config_needle;
 	    if (debug) $display("mkMPEngine::end of search %d", j);
+	    locf.enq(-1);
 	 end
 	 else if (i==m+1) begin
 	    // iReg points to the end of the needle; we have a match
@@ -273,7 +274,6 @@ module mkMPEngine#(Pair#(MemreadServer#(busWidth)) readers)(MPEngine#(busWidth))
       
    rule finish_search;
       let rv <- haystackReader.cmdServer.response.get;
-      locf.enq(-1);
       conff.deq;
       if (verbose) $display("mkMPEngine::finish_search");
    endrule
