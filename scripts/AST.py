@@ -241,8 +241,7 @@ def classInfo(item):
     rc['parentLportal'] = item.parentClass("portal")
     rc['parentPortal'] = item.parentClass("Portal")
     rc['package'] = item.package
-    rc['Wrapper'] = bsvgen.substsTemplate(item, item.name+'Wrapper')
-    rc['Proxy'] = bsvgen.substsTemplate(item, item.name+'Proxy')
+    rc['BSV'] = bsvgen.substsTemplate(item)
     rc['decls'] = []
     for mitem in item.decls:
         rc['decls'].append(declInfo(mitem.name, mitem.params))

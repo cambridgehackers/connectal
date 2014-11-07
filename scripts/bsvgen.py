@@ -222,29 +222,22 @@ indicationMethodTemplate='''
         //$display(\"indicationMethod \'%(methodName)s\' invoked\");
     endmethod'''
 
-def toBsvType(self):
-    if len(self.params):
-        return '%s#(%s)' % (self.name, ','.join([str(toBsvType(p)) for p in self.params]))
-    else:
-        return self.name
-
-def methsubsts(self, outerTypeName):
+def methsubsts(item, outerTypeName):
     sub = { 'dut': util.decapitalize(outerTypeName),
           'Dut': util.capitalize(outerTypeName),
-          'methodName': self.name,
-          'MethodName': util.capitalize(self.name),
-          'channelNumber': self.channelNumber,
-          'ord': self.channelNumber,
-          'methodReturnType': self.return_type.name}
-    paramStructDeclarations = ['    %s %s;' % (toBsvType(p.type), p.name) for p in self.params]
-    if not self.params:
+          'methodName': item['name'],
+          'MethodName': util.capitalize(item['name']),
+          'channelNumber': item['channelNumber'],
+          'ord': item['channelNumber'],
+          'methodReturnType': item['methodReturnType']}
+    paramStructDeclarations = ['    %s %s;' % (p['bsvType'], p['name']) for p in item['params']]
+    sub['paramType'] = ', '.join(['%s' % p['bsvType'] for p in item['params']])
+    sub['formals'] = ', '.join(['%s %s' % (p['bsvType'], p['name']) for p in item['params']])
+    structElements = ['%s: %s' % (p['name'], p['name']) for p in item['params']]
+    if not item['params']:
         paramStructDeclarations = ['    %s %s;' % ('Bit#(32)', 'padding')]
-    sub['paramStructDeclarations'] = '\n'.join(paramStructDeclarations)
-    sub['paramType'] = ', '.join(['%s' % toBsvType(p.type) for p in self.params])
-    sub['formals'] = ', '.join(['%s %s' % (toBsvType(p.type), p.name) for p in self.params])
-    structElements = ['%s: %s' % (p.name, p.name) for p in self.params]
-    if not self.params:
         structElements = ['padding: 0']
+    sub['paramStructDeclarations'] = '\n'.join(paramStructDeclarations)
     sub['structElements'] = ', '.join(structElements)
     return sub
 
@@ -263,47 +256,43 @@ def collectIndicationMethodRule(self, substs):
 def collectIndicationMethod(self, substs):
     return indicationMethodTemplate % substs
 
-def substsTemplate(self,name):
+def substsTemplate(self):
+    def toBsvType(self):
+        if len(self.params):
+            return '%s#(%s)' % (self.name, ','.join([str(toBsvType(p)) for p in self.params]))
+        else:
+            return self.name
     methodAction = []
     for m in self.decls:
         if m.type == 'Method':
             newitem = {'name': m.name, 'channelNumber': m.channelNumber, 'methodReturnType': m.return_type.name}
             newitem['params'] = [{'name': p.name, 'bsvType': toBsvType(p.type)} for p in m.params]
             methodAction.append(newitem)
-
     return {
         'Package': os.path.splitext(os.path.basename(self.package))[0],
         'Ifc': self.name,
-        'dut': util.decapitalize(name),
-        'Dut': util.capitalize(name),
         'methodAction': methodAction,
         'channelCount': self.channelCount,
         'moduleContext': '',
-
-        'requestElements': collectElements(self, collectRequestElement, name),
-        'methodRules': collectElements(self, collectMethodRule, name),
-        'responseElements': collectElements(self, collectResponseElement, name),
-        'indicationMethodRules': collectElements(self, collectIndicationMethodRule, name),
-        'indicationMethods': collectElements(self, collectIndicationMethod, name),
         }
 
-def collectElements(self, workerfn, outerTypeName):
+def collectElements(substs, workerfn):
     methods = []
-    for m in self.decls:
-        if m.type == 'Method':
-            e = workerfn(m, methsubsts(m, outerTypeName))
-            if e:
-                methods.append(e)
+    for m in substs['methodAction']:
+        e = workerfn(m, methsubsts(m, substs['name']))
+        if e:
+            methods.append(e)
     return methods
 
-def fixupSubsts(substs):
+def fixupSubsts(substs, suffix):
+    substs['name'] = substs['Ifc']+suffix
+    substs['dut'] = util.decapitalize(substs['name'])
+    substs['Dut'] = util.capitalize(substs['name'])
     substs['methodNames'] = [p['name'] for p in substs['methodAction']]
     substs['requestOutputPipeInterfaces'] = ''.join([requestOutputPipeInterfaceTemplate % {'methodName': methodName,
                                                        'MethodName': util.capitalize(methodName)}
                                                        for methodName in substs['methodNames']])
     substs['portalIfc'] = portalIfcTemplate
-    substs['requestElements'] = ''.join(substs['requestElements'])
-    substs['requestChannelCount'] = len(substs['methodRules'])
     mkConnectionMethodRules = []
     outputPipes = []
     for m in substs['methodAction']:
@@ -314,11 +303,20 @@ def fixupSubsts(substs):
         outputPipes.append('    interface %(methodName)s_PipeOut = toPipeOut(%(methodName)s_requestFifo);' % msubs)
     substs['outputPipes'] = '\n'.join(outputPipes)
     substs['mkConnectionMethodRules'] = ''.join(mkConnectionMethodRules)
-    substs['methodRules'] = ''.join(substs['methodRules'])
+
+    substs['indicationChannelCount'] = substs['channelCount']
+    substs['requestElements'] = collectElements(substs, collectRequestElement)
+    substs['methodRules'] = collectElements(substs, collectMethodRule)
+    substs['responseElements'] = collectElements(substs, collectResponseElement)
+    substs['indicationMethodRules'] = collectElements(substs, collectIndicationMethodRule)
+    substs['indicationMethods'] = collectElements(substs, collectIndicationMethod)
+
     substs['responseElements'] = ''.join(substs['responseElements'])
     substs['indicationMethodRules'] = ''.join(substs['indicationMethodRules'])
     substs['indicationMethods'] = ''.join(substs['indicationMethods'])
-    substs['indicationChannelCount'] = substs['channelCount']
+    substs['requestChannelCount'] = len(substs['methodRules'])
+    substs['requestElements'] = ''.join(substs['requestElements'])
+    substs['methodRules'] = ''.join(substs['methodRules'])
     return substs
 
 def generate_bsv(project_dir, noisyFlag, jsondata):
@@ -337,8 +335,8 @@ def generate_bsv(project_dir, noisyFlag, jsondata):
         if noisyFlag:
             print 'Writing file ', fname
         
-        bsv_file.write(exposedWrapperInterfaceTemplate % fixupSubsts(item['Wrapper']))
-        bsv_file.write(exposedProxyInterfaceTemplate % fixupSubsts(item['Proxy']))
+        bsv_file.write(exposedWrapperInterfaceTemplate % fixupSubsts(item['BSV'], 'Wrapper'))
+        bsv_file.write(exposedProxyInterfaceTemplate % fixupSubsts(item['BSV'], 'Proxy'))
         bsv_file.write('endpackage: %s\n' % pname)
         bsv_file.close()
 
