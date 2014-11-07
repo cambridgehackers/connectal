@@ -266,7 +266,7 @@ def serialize_json(interfaces):
     toplevel['globalvars'] = gvlist
     gdlist = []
     for item in globalv.globaldecls:
-        newitem = {}
+        newitem = {'type': item.type}
         if item.type == 'TypeDef':
             newitem['name'] = item.name
             newitem['tdtype'] = dtInfo(item.tdtype)

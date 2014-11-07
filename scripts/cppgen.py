@@ -358,7 +358,49 @@ def generate_class(className, declList, parentC, parentCC, generatedCFiles, crea
     hpp.close()
     cpp.close()
 
-def generate_cpp(globaldecls, project_dir, noisyFlag, jsondata):
+def emitStructMember(item, f, indentation):
+    indent(f, indentation)
+    f.write('%s %s' % (item['type']['cName'], item['name']))
+    if item['type'].get('bitWidth'):
+        f.write(' : %d' % item['type']['bitWidth'])
+    f.write(';\n')
+
+def emitStruct(item, name, f, indentation):
+    indent(f, indentation)
+    if (indentation == 0):
+        f.write('typedef ')
+    f.write('struct %s {\n' % name)
+    for e in item['elements']:
+        emitStructMember(e, f, indentation+4)
+    indent(f, indentation)
+    f.write('}')
+    if (indentation == 0):
+        f.write(' %s;' % name)
+    f.write('\n')
+
+def emitEnum(item, name, f, indentation):
+    indent(f, indentation)
+    if (indentation == 0):
+        f.write('typedef ')
+    f.write('enum %s { ' % name)
+    indent(f, indentation)
+    f.write(', '.join(['%s_%s' % (name, e) for e in item['elements']]))
+    indent(f, indentation)
+    f.write(' }')
+    if (indentation == 0):
+        f.write(' %s;' % name)
+    f.write('\n')
+
+def emitCD(item, generated_hpp, indentation):
+    n = item['name']
+    td = item['tdtype']
+    t = td['type']
+    if t == 'Enum':
+        emitEnum(td, n, generated_hpp, indentation)
+    elif t == 'Struct':
+        emitStruct(td, n, generated_hpp, indentation)
+
+def generate_cpp(project_dir, noisyFlag, jsondata):
     global globalv_globalvars
     def create_cpp_file(name):
         fname = os.path.join(project_dir, 'jni', name)
@@ -379,16 +421,12 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, jsondata):
     generated_hpp.write('extern "C" {\n')
     generated_hpp.write('#endif\n')
     # global type declarations used by interface mthods
-    for v in globaldecls:
-        if (v.type == 'TypeDef'):
-            if v.params:
+    for v in jsondata['globaldecls']:
+        if v['type'] == 'TypeDef':
+            if v['params']:
                 print 'Skipping C++ declaration for parameterized type', v.name
                 continue
-            try:
-                v.emitCDeclaration(generated_hpp, 0)
-            except:
-                print 'Skipping typedef', v.name
-                traceback.print_exc()
+            emitCD(v, generated_hpp, 0)
     generated_hpp.write('\n')
     cppname = 'GeneratedCppCallbacks.cpp'
     generated_cpp = create_cpp_file(cppname)
