@@ -22,7 +22,7 @@
 #include <stdio.h>
 #include "EchoRequest.h"
 #include "EchoIndication.h"
-#include "MMUConfigRequest.h"
+#include "MMURequest.h"
 #include "StdDmaIndication.h"
 #include "dmaManager.h"
 
@@ -61,9 +61,9 @@ int main(int argc, const char **argv)
     int alloc_sz = 64-4;
 //1000;
 
-    MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_MMUConfigRequest, &socketfuncInit, NULL);
+    MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequest, &socketfuncInit, NULL);
     DmaManager *dma = new DmaManager(dmap);
-    MMUConfigIndication *mIndication = new MMUConfigIndication(dma, IfcNames_MMUConfigIndication, &socketfuncInit, NULL);
+    MMUIndication *mIndication = new MMUIndication(dma, IfcNames_MMUIndication, &socketfuncInit, NULL);
 
     portalExec_start();
 

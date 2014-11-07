@@ -19,13 +19,13 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "MMUConfigRequest.h"
-#include "MMUConfigIndication.h"
+#include "MMURequest.h"
+#include "MMUIndication.h"
 
 #define MAX_SERVER_AREAS 20
 static int trace_mmuserver;// = 1;
 
-class MMUConfigServer : public MMUConfigRequestWrapper
+class MMUServer : public MMURequestWrapper
 {
     struct {
         int fd;
@@ -34,7 +34,7 @@ class MMUConfigServer : public MMUConfigRequestWrapper
     } memoryAreas[MAX_SERVER_AREAS];
     int memoryAreasIndex;
     PortalInternal *ifcarr[MAX_SERVER_AREAS];
-    MMUConfigIndicationProxy *mIndicationProxy;
+    MMUIndicationProxy *mIndicationProxy;
 public:
     void sglist (const uint32_t sglId, const uint32_t sglIndex, const uint64_t addr, const uint32_t len ) {
         if (trace_mmuserver)
@@ -74,6 +74,6 @@ exit(1);
     void registerInterface(uint32_t interfaceId, PortalInternal *p) {
         ifcarr[interfaceId] = p;
     }
-    MMUConfigServer(unsigned int id, MMUConfigIndicationProxy *mind, PortalItemFunctions *item, void *param) :
-        MMUConfigRequestWrapper(id, item, param), memoryAreasIndex(1), mIndicationProxy(mind) {}
+    MMUServer(unsigned int id, MMUIndicationProxy *mind, PortalItemFunctions *item, void *param) :
+        MMURequestWrapper(id, item, param), memoryAreasIndex(1), mIndicationProxy(mind) {}
 };

@@ -52,7 +52,7 @@ static int init_shared(struct PortalInternal *pint, void *aparam)
         pint->map_base[SHARED_READ] = SHARED_START;
         pint->map_base[SHARED_START] = 0;
         unsigned int ref = param->dma->reference(fd);
-        MMUConfigRequest_setInterface(param->dma->priv.sglDevice, pint->fpga_number, ref);
+        MMURequest_setInterface(param->dma->priv.sglDevice, pint->fpga_number, ref);
     }
     return 0;
 }
