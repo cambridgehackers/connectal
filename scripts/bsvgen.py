@@ -67,7 +67,7 @@ exposedProxyInterfaceTemplate='''
 %(responseElements)s
 // exposed proxy interface
 interface %(Dut)sPortal;
-    interface PipePortal#(0, %(indicationChannelCount)s, 32) portalIfc;
+    interface PipePortal#(0, %(channelCount)s, 32) portalIfc;
     interface %(Package)s::%(Ifc)s ifc;
 endinterface
 interface %(Dut)s;
@@ -222,11 +222,11 @@ indicationMethodTemplate='''
         //$display(\"indicationMethod \'%(methodName)s\' invoked\");
     endmethod'''
 
-def toBsvType(self):
-    if len(self.params):
-        return '%s#(%s)' % (self.name, ','.join([str(toBsvType(p)) for p in self.params]))
+def toBsvType(titem):
+    if len(titem['params']):
+        return '%s#(%s)' % (titem['name'], ','.join([str(toBsvType(p)) for p in titem['params']]))
     else:
-        return self.name
+        return titem['name']
 
 def collectElements(mlist, workerfn, name):
     methods = []
@@ -236,11 +236,10 @@ def collectElements(mlist, workerfn, name):
           'methodName': item['name'],
           'MethodName': util.capitalize(item['name']),
           'channelNumber': item['channelNumber'],
-          'ord': item['channelNumber'],
-          'methodReturnType': item['methodReturnType']}
-        paramStructDeclarations = ['    %s %s;' % (p['bsvType'], p['name']) for p in item['params']]
-        sub['paramType'] = ', '.join(['%s' % p['bsvType'] for p in item['params']])
-        sub['formals'] = ', '.join(['%s %s' % (p['bsvType'], p['name']) for p in item['params']])
+          'ord': item['channelNumber']}
+        paramStructDeclarations = ['    %s %s;' % (toBsvType(p['type']), p['name']) for p in item['params']]
+        sub['paramType'] = ', '.join(['%s' % toBsvType(p['type']) for p in item['params']])
+        sub['formals'] = ', '.join(['%s %s' % (toBsvType(p['type']), p['name']) for p in item['params']])
         structElements = ['%s: %s' % (p['name'], p['name']) for p in item['params']]
         if not item['params']:
             paramStructDeclarations = ['    %s %s;' % ('Bit#(32)', 'padding')]
@@ -254,6 +253,9 @@ def collectElements(mlist, workerfn, name):
 
 def fixupSubsts(item, suffix):
     name = item['name']+suffix
+    if item['channelCount'] != len(item['decls']):
+        print 'TTTTTTTTTTTTTTT', item
+        sys.exit(1)
     substs = {
         'Package': item['Package'],
         'channelCount': item['channelCount'],
@@ -278,7 +280,6 @@ def fixupSubsts(item, suffix):
     substs['outputPipes'] = '\n'.join(outputPipes)
     substs['mkConnectionMethodRules'] = ''.join(mkConnectionMethodRules)
 
-    substs['indicationChannelCount'] = substs['channelCount']
     substs['requestElements'] = collectElements(item['decls'], requestStructTemplate, name)
     substs['methodRules'] = collectElements(item['decls'], requestRuleTemplate, name)
     substs['responseElements'] = collectElements(item['decls'], responseStructTemplate, name)

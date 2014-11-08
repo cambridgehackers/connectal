@@ -29,65 +29,10 @@ import AST
 import util
 import functools
 import json
-import bsvgen
 
-def indent(f, indentation):
-    for i in xrange(indentation):
-        f.write(' ')
-
-class NoCMixin:
-    def emitCDeclaration(self, f, indentation):
-        pass
-
-class MethodMixin:
-    def collectTypes(self):
-        result = [self.return_type]
-        result.append(AST.Type('Tuple', self.params))
-        return result
-
-class StructMemberMixin:
-    def emitCDeclaration(self, f, indentation):
-        indent(f, indentation)
-        f.write('%s %s' % (self.type.cName(), self.name))
-        if self.type.isBitField():
-            f.write(' : %d' % self.type.bitWidth())
-        f.write(';\n')
-
-class TypeDefMixin:
-    def emitCDeclaration(self,f,indentation):
-        #print 'TypeDefMixin.emitCdeclaration', self.tdtype.type, self.name, self.tdtype
-        if self.tdtype.type == 'Struct' or self.tdtype.type == 'Enum':
-            self.tdtype.emitCDeclaration(self.name,f,indentation)
-        elif self.name == 'SpecialTypeForSendingFd':
-            pass
-        elif False and self.tdtype.type == 'Type':
-            tdtype = self.tdtype
-            #print 'resolving', tdtype.type, tdtype
-            while tdtype.type == 'Type' and globalv.globalvars.has_key(tdtype.name):
-                td = globalv.globalvars[tdtype.name]
-                tdtype = td.tdtype.instantiate(dict(zip(td.params, tdtype.params)))
-                #print 'resolved to', tdtype.type, tdtype
-            if tdtype.type != 'Type':
-                #print 'emitting declaration'
-                tdtype.emitCDeclaration(self.name,f,indentation)
-
-class StructMixin:
-    def collectTypes(self):
-        result = [self]
-        result.append(self.elements)
-        return result
-    def emitCDeclaration(self, name, f, indentation):
-        indent(f, indentation)
-        if (indentation == 0):
-            f.write('typedef ')
-        f.write('struct %s {\n' % name)
-        for e in self.elements:
-            e.emitCDeclaration(f, indentation+4)
-        indent(f, indentation)
-        f.write('}')
-        if (indentation == 0):
-            f.write(' %s;' % name)
-        f.write('\n')
+#def indent(f, indentation):
+#    for i in xrange(indentation):
+#        f.write(' ')
 
 class EnumElementMixin:
     def cName(self):
@@ -96,26 +41,10 @@ class EnumElementMixin:
 class EnumMixin:
     def cName(self):
         return self.name
-    def collectTypes(self):
-        return [self]
-    def emitCDeclaration(self, name, f, indentation):
-        indent(f, indentation)
-        if (indentation == 0):
-            f.write('typedef ')
-        f.write('enum %s { ' % name)
-        indent(f, indentation)
-        f.write(', '.join(['%s_%s' % (name, e) for e in self.elements]))
-        indent(f, indentation)
-        f.write(' }')
-        if (indentation == 0):
-            f.write(' %s;' % name)
-        f.write('\n')
     def bitWidth(self):
         return int(math.ceil(math.log(len(self.elements))))
 
 class InterfaceMixin:
-    def collectTypes(self):
-        return [d.collectTypes() for d in self.decls]
     def getSubinterface(self, name):
         subinterfaceName = name
         if not globalv.globalvars.has_key(subinterfaceName):
@@ -138,9 +67,6 @@ class InterfaceMixin:
 class ParamMixin:
     def cName(self):
         return self.name
-    def emitCDeclaration(self, f, indentation):
-        indent(f, indentation)
-        f.write('s %s' % (self.type, self.name))
 
 class TypeMixin:
     def cName(self):
@@ -225,13 +151,11 @@ def piInfo(pitem):
     rc = {}
     rc['name'] = pitem.name
     rc['type'] = dtInfo(pitem.type)
-    rc['bsvType'] = bsvgen.toBsvType(pitem.type)
     return rc
 
 def declInfo(mitem):
     rc = {}
     rc['name'] = mitem.name
-    rc['methodReturnType'] = mitem.return_type.name
     rc['channelNumber'] = mitem.channelNumber
     rc['params'] = []
     for pitem in mitem.params:
@@ -291,7 +215,7 @@ def serialize_json(interfaces, globalimports, dutname):
     jsondata = json.loads(j2file)
     return jsondata
 
-class Method(MethodMixin):
+class Method:
     def __init__(self, name, return_type, params):
         self.type = 'Method'
         self.name = name
@@ -306,7 +230,7 @@ class Method(MethodMixin):
                       self.return_type.instantiate(paramBindings),
                       [ p.instantiate(paramBindings) for p in self.params])
 
-class Function(NoCMixin):
+class Function:
     def __init__(self, name, return_type, params):
         self.type = 'Function'
         self.name = name
@@ -364,7 +288,7 @@ class TypeclassInstance:
     def __repr__(self):
         return '{typeclassinstance %s %s}' % (self.name, self.params)
 
-class Module(NoCMixin):
+class Module:
     def __init__(self, moduleContext, name, params, interface, provisos, decls):
         self.type = 'Module'
         self.name = name
@@ -375,12 +299,6 @@ class Module(NoCMixin):
         self.decls = decls
     def __repr__(self):
         return '{module: %s %s}' % (self.name, self.decls)
-    def collectTypes(self):
-        result = []
-        for d in self.decls:
-            if d:
-                result.extend(d.collectTypes())
-        return result
 
 class EnumElement(EnumElementMixin):
     def __init__(self, name, qualifiers, value):
@@ -398,7 +316,7 @@ class Enum(EnumMixin):
     def instantiate(self, paramBindings):
         return self
 
-class StructMember(StructMemberMixin):
+class StructMember:
     def __init__(self, t, name):
         self.type = t
         self.name = name
@@ -407,7 +325,7 @@ class StructMember(StructMemberMixin):
     def instantiate(self, paramBindings):
         return StructMember(self.type.instantiate(paramBindings), self.name)
 
-class Struct(StructMixin):
+class Struct:
     def __init__(self, elements):
         self.type = 'Struct'
         self.elements = elements
@@ -416,7 +334,7 @@ class Struct(StructMixin):
     def instantiate(self, paramBindings):
         return Struct([e.instantiate(paramBindings) for e in self.elements])
 
-class TypeDef(TypeDefMixin):
+class TypeDef:
     def __init__(self, tdtype, name, params):
         self.name = name
         self.params = params
