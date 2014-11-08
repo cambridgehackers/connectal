@@ -31,27 +31,6 @@ import functools
 import json
 import bsvgen
 
-def dtInfo(arg):
-    rc = {}
-    if hasattr(arg, 'name'):
-        rc['name'] = arg.name
-    if hasattr(arg, 'type'):
-        rc['type'] = arg.type
-    if hasattr(arg, 'cName'):
-        rc['cName'] = arg.cName()
-    if hasattr(arg, 'bitWidth'):
-        rc['bitWidth'] = arg.bitWidth()
-    if hasattr(arg, 'params'):
-        #print 'OOO', arg.params
-        if arg.params is not None:
-            rc['params'] = [dtInfo(p) for p in arg.params]
-    if hasattr(arg, 'elements'):
-        if arg.type == 'Enum':
-            rc['elements'] = arg.elements
-        else:
-            rc['elements'] = [piInfo(p.name, p.type) for p in arg.elements]
-    return rc
-
 def indent(f, indentation):
     for i in xrange(indentation):
         f.write(' ')
@@ -221,30 +200,64 @@ def cName(x):
     else:
         return x.cName()
 
-def piInfo(name, type):
+def dtInfo(arg):
     rc = {}
-    rc['name'] = name
-    rc['type'] = dtInfo(type)
+    if hasattr(arg, 'name'):
+        rc['name'] = arg.name
+    if hasattr(arg, 'type'):
+        rc['type'] = arg.type
+    if hasattr(arg, 'cName'):
+        rc['cName'] = arg.cName()
+    if hasattr(arg, 'bitWidth'):
+        rc['bitWidth'] = arg.bitWidth()
+    if hasattr(arg, 'params'):
+        #print 'OOO', arg.params
+        if arg.params is not None:
+            rc['params'] = [dtInfo(p) for p in arg.params]
+    if hasattr(arg, 'elements'):
+        if arg.type == 'Enum':
+            rc['elements'] = arg.elements
+        else:
+            rc['elements'] = [piInfo(p) for p in arg.elements]
     return rc
 
-def declInfo(name, params):
+def piInfo(pitem):
     rc = {}
-    rc['name'] = name
+    rc['name'] = pitem.name
+    rc['type'] = dtInfo(pitem.type)
+    rc['bsvType'] = bsvgen.toBsvType(pitem.type)
+    return rc
+
+def declInfo(mitem):
+    rc = {}
+    rc['name'] = mitem.name
+    rc['methodReturnType'] = mitem.return_type.name
+    rc['channelNumber'] = mitem.channelNumber
     rc['params'] = []
-    for pitem in params:
-        rc['params'].append(piInfo(pitem.name, pitem.type))
+    for pitem in mitem.params:
+        rc['params'].append(piInfo(pitem))
     return rc
 
 def classInfo(item):
-    rc = {}
-    rc['name'] = item.name
-    rc['parentLportal'] = item.parentClass("portal")
-    rc['parentPortal'] = item.parentClass("Portal")
-    rc['package'] = item.package
-    rc['BSV'] = bsvgen.substsTemplate(item)
-    rc['decls'] = []
+    rc = {
+        'Package': os.path.splitext(os.path.basename(item.package))[0],
+        'channelCount': item.channelCount,
+        'moduleContext': '',
+        'name': item.name,
+        'parentLportal': item.parentClass("portal"),
+        'parentPortal': item.parentClass("Portal"),
+        'package': item.package,
+        'decls': [],
+        'methodAction': []
+    }
     for mitem in item.decls:
-        rc['decls'].append(declInfo(mitem.name, mitem.params))
+        rc['decls'].append(declInfo(mitem))
+        if mitem.type == 'Method':
+            newitem = {'name': mitem.name, 'channelNumber': mitem.channelNumber, 'methodReturnType': mitem.return_type.name}
+            newitem['params'] = [{'name': p.name, 'bsvType': bsvgen.toBsvType(p.type)} for p in mitem.params]
+            rc['methodAction'].append(newitem)
+        else:
+            print 'QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ', mitem.type
     return rc
 
 def serialize_json(interfaces, globalimports, dutname):
