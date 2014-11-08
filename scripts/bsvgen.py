@@ -222,40 +222,6 @@ indicationMethodTemplate='''
         //$display(\"indicationMethod \'%(methodName)s\' invoked\");
     endmethod'''
 
-def methsubsts(item, outerTypeName):
-    sub = { 'dut': util.decapitalize(outerTypeName),
-          'Dut': util.capitalize(outerTypeName),
-          'methodName': item['name'],
-          'MethodName': util.capitalize(item['name']),
-          'channelNumber': item['channelNumber'],
-          'ord': item['channelNumber'],
-          'methodReturnType': item['methodReturnType']}
-    paramStructDeclarations = ['    %s %s;' % (p['bsvType'], p['name']) for p in item['params']]
-    sub['paramType'] = ', '.join(['%s' % p['bsvType'] for p in item['params']])
-    sub['formals'] = ', '.join(['%s %s' % (p['bsvType'], p['name']) for p in item['params']])
-    structElements = ['%s: %s' % (p['name'], p['name']) for p in item['params']]
-    if not item['params']:
-        paramStructDeclarations = ['    %s %s;' % ('Bit#(32)', 'padding')]
-        structElements = ['padding: 0']
-    sub['paramStructDeclarations'] = '\n'.join(paramStructDeclarations)
-    sub['structElements'] = ', '.join(structElements)
-    return sub
-
-def collectRequestElement(substs):
-    return requestStructTemplate % substs
-
-def collectResponseElement(substs):
-    return responseStructTemplate % substs
-
-def collectMethodRule(substs):
-    return requestRuleTemplate % substs
-
-def collectIndicationMethodRule(substs):
-    return indicationRuleTemplate % substs
-
-def collectIndicationMethod(substs):
-    return indicationMethodTemplate % substs
-
 def toBsvType(self):
     if len(self.params):
         return '%s#(%s)' % (self.name, ','.join([str(toBsvType(p)) for p in self.params]))
@@ -264,8 +230,24 @@ def toBsvType(self):
 
 def collectElements(mlist, workerfn, name):
     methods = []
-    for m in mlist:
-        e = workerfn(methsubsts(m, name))
+    for item in mlist:
+        sub = { 'dut': util.decapitalize(name),
+          'Dut': util.capitalize(name),
+          'methodName': item['name'],
+          'MethodName': util.capitalize(item['name']),
+          'channelNumber': item['channelNumber'],
+          'ord': item['channelNumber'],
+          'methodReturnType': item['methodReturnType']}
+        paramStructDeclarations = ['    %s %s;' % (p['bsvType'], p['name']) for p in item['params']]
+        sub['paramType'] = ', '.join(['%s' % p['bsvType'] for p in item['params']])
+        sub['formals'] = ', '.join(['%s %s' % (p['bsvType'], p['name']) for p in item['params']])
+        structElements = ['%s: %s' % (p['name'], p['name']) for p in item['params']]
+        if not item['params']:
+            paramStructDeclarations = ['    %s %s;' % ('Bit#(32)', 'padding')]
+            structElements = ['padding: 0']
+        sub['paramStructDeclarations'] = '\n'.join(paramStructDeclarations)
+        sub['structElements'] = ', '.join(structElements)
+        e = workerfn % sub
         if e:
             methods.append(e)
     return methods
@@ -280,14 +262,14 @@ def fixupSubsts(item, suffix):
         'dut': util.decapitalize(name),
         'Dut': util.capitalize(name),
         'portalIfc': portalIfcTemplate,
-        'methodNames': [p['name'] for p in item['methodAction']]
+        'methodNames': [p['name'] for p in item['decls']]
     }
     substs['requestOutputPipeInterfaces'] = ''.join([requestOutputPipeInterfaceTemplate % {'methodName': methodName,
                                                        'MethodName': util.capitalize(methodName)}
                                                        for methodName in substs['methodNames']])
     mkConnectionMethodRules = []
     outputPipes = []
-    for m in item['methodAction']:
+    for m in item['decls']:
         paramsForCall = ['request.%s' % p['name'] for p in m['params']]
         msubs = {'methodName': m['name'],
                  'paramsForCall': ', '.join(paramsForCall)}
@@ -297,11 +279,11 @@ def fixupSubsts(item, suffix):
     substs['mkConnectionMethodRules'] = ''.join(mkConnectionMethodRules)
 
     substs['indicationChannelCount'] = substs['channelCount']
-    substs['requestElements'] = collectElements(item['methodAction'], collectRequestElement, name)
-    substs['methodRules'] = collectElements(item['methodAction'], collectMethodRule, name)
-    substs['responseElements'] = collectElements(item['methodAction'], collectResponseElement, name)
-    substs['indicationMethodRules'] = collectElements(item['methodAction'], collectIndicationMethodRule, name)
-    substs['indicationMethods'] = collectElements(item['methodAction'], collectIndicationMethod, name)
+    substs['requestElements'] = collectElements(item['decls'], requestStructTemplate, name)
+    substs['methodRules'] = collectElements(item['decls'], requestRuleTemplate, name)
+    substs['responseElements'] = collectElements(item['decls'], responseStructTemplate, name)
+    substs['indicationMethodRules'] = collectElements(item['decls'], indicationRuleTemplate, name)
+    substs['indicationMethods'] = collectElements(item['decls'], indicationMethodTemplate, name)
 
     substs['responseElements'] = ''.join(substs['responseElements'])
     substs['indicationMethodRules'] = ''.join(substs['indicationMethodRules'])

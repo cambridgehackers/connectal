@@ -248,16 +248,9 @@ def classInfo(item):
         'parentPortal': item.parentClass("Portal"),
         'package': item.package,
         'decls': [],
-        'methodAction': []
     }
     for mitem in item.decls:
         rc['decls'].append(declInfo(mitem))
-        if mitem.type == 'Method':
-            newitem = {'name': mitem.name, 'channelNumber': mitem.channelNumber, 'methodReturnType': mitem.return_type.name}
-            newitem['params'] = [{'name': p.name, 'bsvType': bsvgen.toBsvType(p.type)} for p in mitem.params]
-            rc['methodAction'].append(newitem)
-        else:
-            print 'QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ', mitem.type
     return rc
 
 def serialize_json(interfaces, globalimports, dutname):
