@@ -52,12 +52,6 @@ class InterfaceMixin:
         subinterface = globalv.globalvars[subinterfaceName]
         #print 'subinterface', subinterface, subinterface
         return subinterface
-    def assignRequestResponseChannels(self, channelNumber=0):
-        for d in self.decls:
-            if d.__class__ == AST.Method:
-                d.channelNumber = channelNumber
-                channelNumber = channelNumber + 1
-        self.channelCount = channelNumber
     def parentClass(self, default):
         rv = default if (len(self.typeClassInstances)==0) else (self.typeClassInstances[0])
         return rv
@@ -156,7 +150,6 @@ def piInfo(pitem):
 def declInfo(mitem):
     rc = {}
     rc['name'] = mitem.name
-    rc['channelNumber'] = mitem.channelNumber
     rc['params'] = []
     for pitem in mitem.params:
         rc['params'].append(piInfo(pitem))
@@ -165,7 +158,6 @@ def declInfo(mitem):
 def classInfo(item):
     rc = {
         'Package': os.path.splitext(os.path.basename(item.package))[0],
-        'channelCount': item.channelCount,
         'moduleContext': '',
         'name': item.name,
         'parentLportal': item.parentClass("portal"),

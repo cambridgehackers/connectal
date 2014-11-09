@@ -116,11 +116,11 @@ exposedWrapperInterfaceTemplate='''
 %(requestElements)s
 // exposed wrapper portal interface
 interface %(Dut)sPipes;
-    interface Vector#(%(requestChannelCount)s, PipeIn#(Bit#(32))) inputPipes;
+    interface Vector#(%(channelCount)s, PipeIn#(Bit#(32))) inputPipes;
 %(requestOutputPipeInterfaces)s
 endinterface
 interface %(Dut)sPortal;
-    interface PipePortal#(%(requestChannelCount)s, 0, 32) portalIfc;
+    interface PipePortal#(%(channelCount)s, 0, 32) portalIfc;
 endinterface
 // exposed wrapper MemPortal interface
 interface %(Dut)s;
@@ -136,7 +136,7 @@ endinstance
 // exposed wrapper Portal implementation
 (* synthesize *)
 module mk%(Dut)sPipes#(Bit#(32) id)(%(Dut)sPipes);
-    Vector#(%(requestChannelCount)s, PipeIn#(Bit#(32))) requestPipeIn = newVector();
+    Vector#(%(channelCount)s, PipeIn#(Bit#(32))) requestPipeIn = newVector();
     Vector#(0, PipeOut#(Bit#(32))) indicationPipes = nil;
 %(methodRules)s
     interface Vector inputPipes = requestPipeIn;
@@ -163,7 +163,7 @@ module mk%(Dut)sMemPortalPipes#(Bit#(32) id)(%(Dut)sMemPortalPipes);
 
   let p <- mk%(Dut)sPipes(zeroExtend(pack(id)));
 
-  PipePortal#(%(requestChannelCount)s, 0, 32) portalifc = (interface PipePortal;
+  PipePortal#(%(channelCount)s, 0, 32) portalifc = (interface PipePortal;
         interface Vector requests = p.inputPipes;
         interface Vector indications = nil;
     endinterface);
@@ -230,13 +230,13 @@ def toBsvType(titem):
 
 def collectElements(mlist, workerfn, name):
     methods = []
+    mindex = 0
     for item in mlist:
         sub = { 'dut': util.decapitalize(name),
           'Dut': util.capitalize(name),
           'methodName': item['name'],
           'MethodName': util.capitalize(item['name']),
-          'channelNumber': item['channelNumber'],
-          'ord': item['channelNumber']}
+          'channelNumber': mindex}
         paramStructDeclarations = ['    %s %s;' % (toBsvType(p['type']), p['name']) for p in item['params']]
         sub['paramType'] = ', '.join(['%s' % toBsvType(p['type']) for p in item['params']])
         sub['formals'] = ', '.join(['%s %s' % (toBsvType(p['type']), p['name']) for p in item['params']])
@@ -246,52 +246,40 @@ def collectElements(mlist, workerfn, name):
             structElements = ['padding: 0']
         sub['paramStructDeclarations'] = '\n'.join(paramStructDeclarations)
         sub['structElements'] = ', '.join(structElements)
-        e = workerfn % sub
-        if e:
-            methods.append(e)
-    return methods
+        methods.append(workerfn % sub)
+        mindex = mindex + 1
+    return ''.join(methods)
 
 def fixupSubsts(item, suffix):
     name = item['name']+suffix
-    if item['channelCount'] != len(item['decls']):
-        print 'TTTTTTTTTTTTTTT', item
-        sys.exit(1)
-    substs = {
-        'Package': item['Package'],
-        'channelCount': item['channelCount'],
-        'moduleContext': item['moduleContext'],
-        'Ifc': item['name'],
-        'dut': util.decapitalize(name),
-        'Dut': util.capitalize(name),
-        'portalIfc': portalIfcTemplate,
-        'methodNames': [p['name'] for p in item['decls']]
-    }
-    substs['requestOutputPipeInterfaces'] = ''.join([requestOutputPipeInterfaceTemplate % {'methodName': methodName,
-                                                       'MethodName': util.capitalize(methodName)}
-                                                       for methodName in substs['methodNames']])
+    dlist = item['decls']
     mkConnectionMethodRules = []
     outputPipes = []
-    for m in item['decls']:
+    for m in dlist:
         paramsForCall = ['request.%s' % p['name'] for p in m['params']]
         msubs = {'methodName': m['name'],
                  'paramsForCall': ', '.join(paramsForCall)}
         mkConnectionMethodRules.append(mkConnectionMethodTemplate % msubs)
         outputPipes.append('    interface %(methodName)s_PipeOut = toPipeOut(%(methodName)s_requestFifo);' % msubs)
+    substs = {
+        'Package': item['Package'],
+        'channelCount': len(dlist),
+        'moduleContext': item['moduleContext'],
+        'Ifc': item['name'],
+        'dut': util.decapitalize(name),
+        'Dut': util.capitalize(name),
+        'portalIfc': portalIfcTemplate,
+    }
+    substs['requestOutputPipeInterfaces'] = ''.join(
+        [requestOutputPipeInterfaceTemplate % {'methodName': p['name'],
+                                               'MethodName': util.capitalize(p['name'])} for p in dlist])
     substs['outputPipes'] = '\n'.join(outputPipes)
     substs['mkConnectionMethodRules'] = ''.join(mkConnectionMethodRules)
-
-    substs['requestElements'] = collectElements(item['decls'], requestStructTemplate, name)
-    substs['methodRules'] = collectElements(item['decls'], requestRuleTemplate, name)
-    substs['responseElements'] = collectElements(item['decls'], responseStructTemplate, name)
-    substs['indicationMethodRules'] = collectElements(item['decls'], indicationRuleTemplate, name)
-    substs['indicationMethods'] = collectElements(item['decls'], indicationMethodTemplate, name)
-
-    substs['responseElements'] = ''.join(substs['responseElements'])
-    substs['indicationMethodRules'] = ''.join(substs['indicationMethodRules'])
-    substs['indicationMethods'] = ''.join(substs['indicationMethods'])
-    substs['requestChannelCount'] = len(substs['methodRules'])
-    substs['requestElements'] = ''.join(substs['requestElements'])
-    substs['methodRules'] = ''.join(substs['methodRules'])
+    substs['responseElements'] = collectElements(dlist, responseStructTemplate, name)
+    substs['indicationMethodRules'] = collectElements(dlist, indicationRuleTemplate, name)
+    substs['indicationMethods'] = collectElements(dlist, indicationMethodTemplate, name)
+    substs['requestElements'] = collectElements(dlist, requestStructTemplate, name)
+    substs['methodRules'] = collectElements(dlist, requestRuleTemplate, name)
     return substs
 
 def generate_bsv(project_dir, noisyFlag, jsondata):
