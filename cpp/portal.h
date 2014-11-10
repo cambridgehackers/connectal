@@ -85,14 +85,6 @@ typedef struct {
     EVENT       event;
 } PortalItemFunctions;
 
-typedef struct {
-    struct DmaManager *dma;
-    uint32_t    size;
-} PortalSharedParam; /* for ITEMINIT function */
-typedef struct PortalSocketParam {
-    struct addrinfo *addr;
-} PortalSocketParam; /* for ITEMINIT function */
-
 typedef struct PortalInternal {
   struct PortalPoller   *poller;
   int                    fpga_fd;
@@ -105,6 +97,20 @@ typedef struct PortalInternal {
   PortalItemFunctions    *item;
   void                   *cb;
 } PortalInternal;
+
+typedef struct {
+    PortalInternal       pint;
+} PortalMux;
+
+typedef struct {
+    struct DmaManager *dma;
+    uint32_t    size;
+} PortalSharedParam; /* for ITEMINIT function */
+
+typedef struct PortalSocketParam {
+    PortalMux       *mux;
+    struct addrinfo *addr;
+} PortalSocketParam; /* for ITEMINIT function */
 
 #ifdef __KERNEL__
 #include <linux/module.h>

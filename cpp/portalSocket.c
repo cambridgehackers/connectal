@@ -53,39 +53,27 @@ int init_connecting(const char *arg_name, PortalSocketParam *param)
 {
   int connect_attempts = 0;
   int sockfd;
+  struct sockaddr_un sa = {0};
+  struct addrinfo addrinfo = { 0, AF_UNIX, SOCK_STREAM, 0};
+  struct addrinfo *addr = &addrinfo;
 
-  if (param) {
+  sa.sun_family = AF_UNIX;
+  strcpy(sa.sun_path, arg_name);
+  addrinfo.ai_addrlen = sizeof(sa.sun_family) + strlen(sa.sun_path);
+  addrinfo.ai_addr = (struct sockaddr *)&sa;
+
+  if (param && param->addr) {
 printf("[%s:%d] TCP\n", __FUNCTION__, __LINE__);
-       sockfd = socket(param->addr->ai_family, param->addr->ai_socktype, param->addr->ai_protocol);
-       if (sockfd == -1) {
-           fprintf(stderr, "%s[%d]: socket error %s\n",__FUNCTION__, sockfd, strerror(errno));
-           exit(1);
-       }
-  if (trace_socket)
-    fprintf(stderr, "%s (%s) trying to connect...\n",__FUNCTION__, arg_name);
-  while (connect(sockfd, param->addr->ai_addr, param->addr->ai_addrlen) == -1) {
-    if(connect_attempts++ > 16){
-      fprintf(stderr,"%s (%s) connect error %s\n",__FUNCTION__, arg_name, strerror(errno));
-      exit(1);
-    }
-    if (trace_socket)
-      fprintf(stderr, "%s (%s) retrying connection\n",__FUNCTION__, arg_name);
-    sleep(1);
+      addr = param->addr;
   }
-  }
-  else {
-printf("[%s:%d] UNIX\n", __FUNCTION__, __LINE__);
-  if ((sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-    fprintf(stderr, "%s (%s) socket error %s\n",__FUNCTION__, arg_name, strerror(errno));
+  if ((sockfd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol)) == -1) {
+    fprintf(stderr, "%s[%d]: socket error %s\n",__FUNCTION__, sockfd, strerror(errno));
     exit(1);
   }
-
   if (trace_socket)
     fprintf(stderr, "%s (%s) trying to connect...\n",__FUNCTION__, arg_name);
-  struct sockaddr_un local;
-  local.sun_family = AF_UNIX;
-  strcpy(local.sun_path, arg_name);
-  while (connect(sockfd, (struct sockaddr *)&local, strlen(local.sun_path) + sizeof(local.sun_family)) == -1) {
+
+  while (connect(sockfd, addr->ai_addr, addr->ai_addrlen) == -1) {
     if(connect_attempts++ > 16){
       fprintf(stderr,"%s (%s) connect error %s\n",__FUNCTION__, arg_name, strerror(errno));
       exit(1);
@@ -93,7 +81,6 @@ printf("[%s:%d] UNIX\n", __FUNCTION__, __LINE__);
     if (trace_socket)
       fprintf(stderr, "%s (%s) retrying connection\n",__FUNCTION__, arg_name);
     sleep(1);
-  }
   }
   fprintf(stderr, "%s (%s) connected.  Attempts %d\n",__FUNCTION__, arg_name, connect_attempts);
   return sockfd;
