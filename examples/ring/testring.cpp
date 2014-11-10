@@ -37,7 +37,7 @@
 #include "MMURequest.h"
 
 RingRequestProxy *ring = 0;
-DmaConfigProxy *dmap = 0;
+MMURequestProxy *dmap = 0;
 
 int cmdAlloc;
 int statusAlloc;
