@@ -41,9 +41,9 @@ import MemTypes          :: *;
 import AxiMasterSlave    :: *;
 import DmaUtils          :: *;
 
-import DmaDebugRequestWrapper::*;
+import MemServerRequestWrapper::*;
 import SGListConfigRequestWrapper::*;
-import DmaDebugIndicationProxy::*;
+import MemServerIndicationProxy::*;
 import SGListConfigIndicationProxy::*;
 
 // copied from PCIE.bsv because connectalgen cannot handle TMul#()
@@ -133,7 +133,7 @@ interface PcieTestBench#(numeric type addrWidth, numeric type dataWidth);
    interface Vector#(1,MemMaster#(addrWidth,dataWidth)) masters;
 endinterface
 
-typedef enum {TestBenchIndication, TestBenchRequest, HostmemDmaDebugIndication, HostmemDmaDebugRequest, HostmemSGListConfigRequest, HostmemSGListConfigIndication} IfcNames deriving (Eq,Bits);
+typedef enum {TestBenchIndication, TestBenchRequest, HostmemMemServerIndication, HostmemMemServerRequest, HostmemSGListConfigRequest, HostmemSGListConfigIndication} IfcNames deriving (Eq,Bits);
 
 //`define SANITY
 
@@ -154,9 +154,9 @@ module mkPcieTestBench#(PcieTestBenchIndication indication)(PcieTestBench#(40,64
    SGListMMU#(PhysAddrWidth) hostmemSGList <- mkSGListMMU(0, True, hostmemSGListConfigIndicationProxy.ifc);
    SGListConfigRequestWrapper hostmemSGListConfigRequestWrapper <- mkSGListConfigRequestWrapper(HostmemSGListConfigRequest, hostmemSGList.request);
 
-   DmaDebugIndicationProxy hostmemDmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(HostmemDmaDebugIndication);
-   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerOOR(hostmemDmaDebugIndicationProxy.ifc, cons(rb.dmaClient,nil), hostmemSGList);
-   DmaDebugRequestWrapper hostmemDmaDebugRequestWrapper <- mkDmaDebugRequestWrapper(HostmemDmaDebugRequest, dma.request);
+   MemServerIndicationProxy hostmemMemServerIndicationProxy <- mkMemServerIndicationProxy(HostmemMemServerIndication);
+   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerOOR(hostmemMemServerIndicationProxy.ifc, cons(rb.dmaClient,nil), hostmemSGList);
+   MemServerRequestWrapper hostmemMemServerRequestWrapper <- mkMemServerRequestWrapper(HostmemMemServerRequest, dma.request);
 `ifdef SANITY
    Axi3Master#(40,64,6) m_axi = ?;
 `else   
@@ -221,8 +221,8 @@ module mkPcieTestBench#(PcieTestBenchIndication indication)(PcieTestBench#(40,64
 	 tlpin_fifo.enq(ttd);
       endmethod
    endinterface
-   interface StdPortal dmaConfig = hostmemDmaDebugRequestWrapper.portalIfc;
-   interface StdPortal dmaIndication = hostmemDmaDebugIndicationProxy.portalIfc;
+   interface StdPortal dmaConfig = hostmemMemServerRequestWrapper.portalIfc;
+   interface StdPortal dmaIndication = hostmemMemServerIndicationProxy.portalIfc;
    //portals[z] = hostmemSGListConfigRequestWrapper.portalIfc;
    //portals[z] = hostmemSGListConfigIndicationProxy.portalIfc;
 

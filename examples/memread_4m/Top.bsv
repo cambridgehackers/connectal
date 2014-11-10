@@ -60,7 +60,7 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,Empty,NumMasters));
    MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
 
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
-   MemServer#(PhysAddrWidth,64,NumMasters) dma <- mkMemServerR(hostMMUIndicationProxy.ifc, hostMemServerIndicationProxy.ifc, memread.dmaClients, cons(hostMMU,nil));
+   MemServer#(PhysAddrWidth,64,NumMasters) dma <- mkMemServerR(hostMemServerIndicationProxy.ifc, memread.dmaClients, cons(hostMMU,nil));
    MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
 
    Vector#(6,StdPortal) portals;

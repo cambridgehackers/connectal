@@ -51,7 +51,7 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
 
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
-   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerRW(hostMMUIndicationProxy.ifc, hostMemServerIndicationProxy.ifc, readClients, writeClients, cons(hostMMU,nil));
+   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerRW(hostMemServerIndicationProxy.ifc, readClients, writeClients, cons(hostMMU,nil));
    MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
 
    Vector#(8,StdPortal) portals;

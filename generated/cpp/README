@@ -1,5 +1,5 @@
 
-GeneratedTypes.h and MMUConfigRequest.c in this directory are taken from tests/memread_manual/bluesim/jni, without modification.
+GeneratedTypes.h and MMURequest.c in this directory are taken from tests/memread_manual/bluesim/jni, without modification.
 
 They are only used when compiling dmaSendFd.h for drivers/pcieportal/pcieportal.c and drivers/zynqportal/zynqportal.c
 

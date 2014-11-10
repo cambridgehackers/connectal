@@ -96,7 +96,7 @@ int main(int argc, const char **argv)
   hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
   dmap = new MMURequestProxy(IfcNames_HostMMURequest);
   dma = new DmaManager(dmap);
-  hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
+  hostMemServerIndication = new MemServerIndication(IfcNames_HostMemServerIndication);
   hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
   if(sem_init(&mul_sem, 1, 0)){

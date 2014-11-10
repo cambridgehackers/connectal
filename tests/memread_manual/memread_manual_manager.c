@@ -55,16 +55,16 @@ void MemreadIndicationWrapperreadDone_cb (  struct PortalInternal *p, const uint
          PORTAL_PRINTF( "Memread_readDone(mismatch = %x)\n", mismatchCount);
          sem_post(&test_sem);
 }
-void MMUConfigIndicationWrapperconfigResp_cb (  struct PortalInternal *p, const uint32_t pointer)
+void MMUIndicationWrapperconfigResp_cb (  struct PortalInternal *p, const uint32_t pointer)
 {
         //PORTAL_PRINTF("configResp %x\n", pointer);
         sem_post(&priv.confSem);
 }
-void MMUConfigIndicationWrapperidResponse_cb (  struct PortalInternal *p, const uint32_t sglId ) {
+void MMUIndicationWrapperidResponse_cb (  struct PortalInternal *p, const uint32_t sglId ) {
         priv.sglId = sglId;
         sem_post(&priv.sglIdSem);
 };
-void MMUConfigIndicationWrappererror_cb (  struct PortalInternal *p, const uint32_t code, const uint32_t pointer, const uint64_t offset, const uint64_t extra ) {
+void MMUIndicationWrappererror_cb (  struct PortalInternal *p, const uint32_t code, const uint32_t pointer, const uint64_t offset, const uint64_t extra ) {
 static int maxnumber = 10;
 if (maxnumber-- > 0)
         PORTAL_PRINTF("DmaIndication::dmaError(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
@@ -106,10 +106,10 @@ static void *pthread_worker(void *p)
     return rc;
 }
 
-MMUConfigIndicationCb MMUConfigIndication_cbTable = {
-    MMUConfigIndicationWrapperidResponse_cb,
-    MMUConfigIndicationWrapperconfigResp_cb,
-    MMUConfigIndicationWrappererror_cb,
+MMUIndicationCb MMUIndication_cbTable = {
+    MMUIndicationWrapperidResponse_cb,
+    MMUIndicationWrapperconfigResp_cb,
+    MMUIndicationWrappererror_cb,
 };
 MemreadIndicationCb MemreadIndication_cbTable = {
     MemreadIndicationWrapperreadDone_cb,
@@ -122,9 +122,9 @@ int main(int argc, const char **argv)
   int rc = 0, i;
   pthread_t tid = 0;
 
-  init_portal_internal(&intarr[0], IfcNames_HostMMUConfigIndication, MMUConfigIndication_handleMessage, &MMUConfigIndication_cbTable, NULL, NULL, MMUConfigIndication_reqsize);// fpga1
+  init_portal_internal(&intarr[0], IfcNames_HostMMUIndication, MMUIndication_handleMessage, &MMUIndication_cbTable, NULL, NULL, MMUIndication_reqsize);// fpga1
   init_portal_internal(&intarr[1], IfcNames_MemreadIndication, MemreadIndication_handleMessage, &MemreadIndication_cbTable, NULL, NULL, MemreadIndication_reqsize); // fpga2
-  init_portal_internal(&intarr[2], IfcNames_HostMMUConfigRequest, NULL, NULL, NULL, NULL, MMUConfigRequest_reqsize); // fpga3
+  init_portal_internal(&intarr[2], IfcNames_HostMMURequest, NULL, NULL, NULL, NULL, MMURequest_reqsize); // fpga3
   init_portal_internal(&intarr[3], IfcNames_MemreadRequest, NULL, NULL, NULL, NULL, MemreadRequest_reqsize);    // fpga4
 
   sem_init(&test_sem, 0, 0);
