@@ -1,5 +1,5 @@
 
-CONNECTALDIR?=$(shell cd ../..; /bin/pwd)
+CONNECTALDIR?=../..
 BSCFLAGS=-aggressive-conditions -show-schedule -keep-fires -p +:../paclib
 
 MMDIR=$(CONNECTALDIR)/examples/matmul
