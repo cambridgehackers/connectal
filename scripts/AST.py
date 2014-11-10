@@ -205,11 +205,11 @@ def serialize_json(interfaces, globalimports, dutname):
     toplevel['globaldecls'] = gdlist
     toplevel['globalimports'] = globalimports
     toplevel['dutname'] = dutname
-    json.dump(toplevel, jfile, sort_keys = True, indent = 4)
-    jfile.close()
-    j2file = open('cppgen_intermediate_data.tmp').read()
-    jsondata = json.loads(j2file)
-    return jsondata
+    #json.dump(toplevel, jfile, sort_keys = True, indent = 4)
+    #jfile.close()
+    #j2file = open('cppgen_intermediate_data.tmp').read()
+    #toplevel = json.loads(j2file)
+    return toplevel
 
 class Method:
     def __init__(self, name, return_type, params):
