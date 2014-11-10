@@ -49,16 +49,16 @@ class EchoRequest : public EchoRequestWrapper
 public:
     void say ( const uint32_t v ) {
         if (daemon_trace)
-        fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
+        fprintf(stderr, "daemon[%s] %d\n", __FUNCTION__, v);
         echoRequestProxy->say(v);
     }
     void say2 ( const uint32_t a, const uint32_t b ) {
         if (daemon_trace)
-        fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
+        fprintf(stderr, "daemon[%s] %d %d\n", __FUNCTION__, a, b);
         echoRequestProxy->say2(a, b);
     }
     void setLeds ( const uint32_t v ) {
-        fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
+        fprintf(stderr, "daemon[%s] %d\n", __FUNCTION__, __LINE__, v);
         echoRequestProxy->setLeds(v);
         sleep(1);
         exit(1);
@@ -71,7 +71,7 @@ int main(int argc, const char **argv)
     PortalSocketParam paramSocket = {};
     PortalMuxParam param = {};
 
-    EchoRequest *mcommon = new EchoRequest(IfcNames_EchoRequest, &socketfuncResp, &paramSocket);
+    EchoIndicationProxy *mcommon = new EchoIndicationProxy(IfcNames_EchoRequest, &socketfuncResp, &paramSocket);
     param.pint = &mcommon->pint;
     sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &muxfuncResp, &param);
     EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &muxfuncResp, &param);
