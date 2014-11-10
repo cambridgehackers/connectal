@@ -56,12 +56,13 @@ static void call_say2(int v, int v2)
 
 int main(int argc, const char **argv)
 {
-    PortalMux portalMux = {};
-    PortalSocketParam param = {};
+    PortalSocketParam paramSocket = {};
+    PortalMuxParam param = {};
 
-    param.mux = &portalMux;
-    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &socketfuncInit, &param);
-    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &socketfuncInit, &param);
+    EchoRequestProxy *mcommon = new EchoRequestProxy(IfcNames_EchoRequest, &socketfuncInit, &paramSocket);
+    param.pint = &mcommon->pint;
+    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &muxfuncInit, &param);
+    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &muxfuncInit, &param);
 
     portalExec_start();
 

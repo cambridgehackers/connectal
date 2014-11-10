@@ -68,13 +68,13 @@ public:
 
 int main(int argc, const char **argv)
 {
-    PortalMux portalMux = {};
-    PortalSocketParam param = {};
+    PortalSocketParam paramSocket = {};
+    PortalMuxParam param = {};
 
-    param.mux = &portalMux;
-
-    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &socketfuncResp, &param);
-    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &socketfuncResp, &param);
+    EchoRequest *mcommon = new EchoRequest(IfcNames_EchoRequest, &socketfuncResp, &paramSocket);
+    param.pint = &mcommon->pint;
+    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &muxfuncResp, &param);
+    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &muxfuncResp, &param);
 
     EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, NULL, NULL);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);

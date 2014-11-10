@@ -104,10 +104,11 @@ void %(className)s_%(methodName)s (%(paramProxyDeclarations)s )'''
 
 proxyMethodTemplate='''
 {
-    volatile unsigned int* temp_working_addr = p->item->mapchannelReq(p, %(channelNumber)s);
+    volatile unsigned int* temp_working_addr_start = p->item->mapchannelReq(p, %(channelNumber)s);
+    volatile unsigned int* temp_working_addr = temp_working_addr_start;
     if (p->item->busywait(p, temp_working_addr, "%(className)s_%(methodName)s")) return;
     %(paramStructMarshall)s
-    p->item->send(p, (%(channelNumber)s << 16) | %(wordLenP1)s, %(fdName)s);
+    p->item->send(p, temp_working_addr_start, (%(channelNumber)s << 16) | %(wordLenP1)s, %(fdName)s);
 };
 '''
 

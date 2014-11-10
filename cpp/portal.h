@@ -62,7 +62,7 @@ typedef int SpecialTypeForSendingFd;
 struct PortalInternal;
 typedef int (*ITEMINIT)(struct PortalInternal *pint, void *param);
 typedef int (*PORTAL_INDFUNC)(struct PortalInternal *p, unsigned int channel, int messageFd);
-typedef void (*SENDMSG)(struct PortalInternal *pint, unsigned int hdr, int sendFd);
+typedef void (*SENDMSG)(struct PortalInternal *pint, volatile unsigned int *buffer, unsigned int hdr, int sendFd);
 typedef int (*RECVMSG)(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd);
 typedef unsigned int (*READWORD)(struct PortalInternal *pint, volatile unsigned int **addr);
 typedef void (*WRITEWORD)(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
@@ -96,11 +96,8 @@ typedef struct PortalInternal {
   int                    accept_finished;
   PortalItemFunctions    *item;
   void                   *cb;
+  struct PortalInternal  *mux;
 } PortalInternal;
-
-typedef struct {
-    PortalInternal       pint;
-} PortalMux;
 
 typedef struct {
     struct DmaManager *dma;
@@ -108,9 +105,13 @@ typedef struct {
 } PortalSharedParam; /* for ITEMINIT function */
 
 typedef struct PortalSocketParam {
-    PortalMux       *mux;
     struct addrinfo *addr;
 } PortalSocketParam; /* for ITEMINIT function */
+
+typedef struct {
+    PortalInternal       *pint;
+    void                 *socketParam;
+} PortalMuxParam;
 
 #ifdef __KERNEL__
 #include <linux/module.h>
@@ -166,7 +167,7 @@ void portalTimerInit(void);
 uint64_t portalTimerCatch(unsigned int i);
 void portalTimerPrint(int loops);
 
-void send_portal_null(struct PortalInternal *pint, unsigned int hdr, int sendFd);
+void send_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, unsigned int hdr, int sendFd);
 int recv_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd);
 int busy_portal_null(struct PortalInternal *pint, volatile unsigned int *addr, const char *str);
 void enableint_portal_null(struct PortalInternal *pint, int val);
@@ -183,7 +184,7 @@ extern int global_pa_fd;
 extern int global_sockfd;
 extern PortalInternal *utility_portal;
 extern PortalItemFunctions bsimfunc, hardwarefunc,
-    socketfuncInit, socketfuncResp, sharedfunc;
+    socketfuncInit, socketfuncResp, sharedfunc, muxfuncInit, muxfuncResp;
 #ifdef __cplusplus
 }
 #endif

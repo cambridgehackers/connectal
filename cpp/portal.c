@@ -272,7 +272,7 @@ void portalCheckIndication(PortalInternal *pint)
   }
 }
 
-void send_portal_null(struct PortalInternal *pint, unsigned int hdr, int sendFd)
+void send_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, unsigned int hdr, int sendFd)
 {
 }
 int recv_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
