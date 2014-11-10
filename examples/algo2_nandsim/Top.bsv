@@ -67,7 +67,7 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    
    // nandsim memory dma server
    MemServerIndicationProxy nandsimMemServerIndicationProxy <- mkMemServerIndicationProxy(NandsimMemServer0Indication);
-   MemServer#(PhysAddrWidth,64,1) nandsimDma <- mkMemServerR(nandsimMemServerIndicationProxy.ifc, cons(regexp.haystack_read_cli[0],nil), cons(nandsimMMU,nil));
+   MemServer#(PhysAddrWidth,64,1) nandsimDma <- mkMemServerR(nandsimMemServerIndicationProxy.ifc, cons(regexp.haystack_read_client,nil), cons(nandsimMMU,nil));
    mkConnection(nandsimDma.masters[0], nandSim.memSlaves[0]);
    
    Vector#(12,StdPortal) portals;
