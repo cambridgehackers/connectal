@@ -97,6 +97,7 @@ typedef struct PortalInternal {
   PortalItemFunctions    *item;
   void                   *cb;
   struct PortalInternal  *mux;
+  int                    muxid;
 } PortalInternal;
 
 typedef struct {

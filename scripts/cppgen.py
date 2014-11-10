@@ -324,7 +324,7 @@ def generate_class(className, declList, parentC, parentCC, generatedCFiles, crea
         cpp.write((proxyMethodTemplateDecl + proxyMethodTemplate) % substs)
         generated_hpp.write((proxyMethodTemplateDecl % substs) + ';')
         reqChanNums.append(substs['channelNumber'])
-    subs = {'className': classCName, 'maxSize': maxSize * sizeofUint32_t, 'parentClass': parentCC}
+    subs = {'className': classCName, 'maxSize': (maxSize+1) * sizeofUint32_t, 'parentClass': parentCC}
     generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(className)s_reqsize %(maxSize)s\n' % subs)
     hpp.write(proxyClassPrefixTemplate % subs)
     for mitem in declList:

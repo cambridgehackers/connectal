@@ -70,6 +70,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
     pint->handler = handler;
     pint->cb = cb;
     pint->item = item;
+    pint->muxid = -1;
     if (!item) {
 #ifdef BSIM
         pint->item = &bsimfunc;

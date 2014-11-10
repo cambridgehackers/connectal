@@ -47,7 +47,7 @@ typedef struct bsim_fpga_map_entry{
 static bsim_fpga_map_entry bsim_fpga_map[MAX_BSIM_PORTAL_ID];
 static pthread_mutex_t socket_mutex;
 int global_sockfd = -1;
-static int trace_socket = 1;
+static int trace_socket;// = 1;
 
 int init_connecting(const char *arg_name, PortalSocketParam *param)
 {
@@ -162,7 +162,7 @@ int event_socket(struct PortalInternal *pint)
 printf("[%s:%d]beforeacc %d\n", __FUNCTION__, __LINE__, pint->fpga_fd);
         int sockfd = accept_socket(pint->fpga_fd);
         if (sockfd != -1) {
-printf("[%s:%d]afteracc %d\n", __FUNCTION__, __LINE__, sockfd);
+printf("[%s:%d]afteracc %p fd %d\n", __FUNCTION__, __LINE__, pint, sockfd);
             pint->accept_finished = 1;
             return sockfd;
         }
@@ -183,7 +183,7 @@ static int init_muxResp(struct PortalInternal *pint, void *aparam)
     if(trace_socket)
         printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     pint->mux = param->pint;
-    pint->mux->item->init(param->pint, param->socketParam);
+    //pint->mux->item->init(param->pint, param->socketParam);
     pint->map_base = (volatile unsigned int*)malloc(pint->reqsize);
     return 0;
 }
@@ -193,7 +193,7 @@ static int init_muxInit(struct PortalInternal *pint, void *aparam)
     if(trace_socket)
         printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     pint->mux = param->pint;
-    pint->mux->item->init(param->pint, param->socketParam);
+    //pint->mux->item->init(param->pint, param->socketParam);
     pint->map_base = (volatile unsigned int*)malloc(pint->reqsize);
     return 0;
 }
@@ -201,7 +201,7 @@ void send_mux(struct PortalInternal *pint, volatile unsigned int *data, unsigned
 {
     volatile unsigned int *buffer = data-1;
     if(trace_socket)
-        printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+        printf("[%s:%d] hdr %x\n", __FUNCTION__, __LINE__, hdr);
     buffer[0] = hdr;
     pint->mux->item->send(pint->mux, buffer, (pint->fpga_number << 16) | ((hdr + 1) & 0xffff), sendFd);
 }
@@ -213,18 +213,32 @@ int recv_mux(struct PortalInternal *pint, volatile unsigned int *buffer, int len
 }
 int event_mux(struct PortalInternal *pint)
 {
-    if(trace_socket)
+    if(0 && trace_socket)
         printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-return -1;
-    int event_mux_fd;
-    int len = portalRecvFd(pint->fpga_fd, (void *)pint->map_base, sizeof(uint32_t), &event_mux_fd);
-    if (len == 0 || (len == -1 && errno == EAGAIN))
-        return -1;
-    if (len <= 0) {
-        fprintf(stderr, "%s[%d]: read error %d\n",__FUNCTION__, pint->fpga_fd, errno);
-        exit(1);
+    int event_mux_fd, dummy;
+    int len = 0;
+    if (!pint->mux->accept_finished) { /* connection established */
+        int rc = pint->mux->item->event(pint->mux);
+        if (rc >= 0)
+            pint->mux->fpga_fd = rc;
     }
-    pint->handler(pint, *pint->map_base >> 16, event_mux_fd);
+    if (pint->mux->muxid == -1) {
+        len = portalRecvFd(pint->mux->fpga_fd, &pint->mux->muxid, sizeof(uint32_t), &event_mux_fd);
+        if (len == 0 || (len == -1 && errno == EAGAIN))
+            return -1;
+        if (len <= 0) {
+            fprintf(stderr, "%s[%d]: read error %d\n",__FUNCTION__, pint->fpga_fd, errno);
+            exit(1);
+        }
+    }
+    if (pint->mux->muxid == -1)
+        return -1;
+    portalRecvFd(pint->mux->fpga_fd, (void *)pint->map_base, sizeof(uint32_t), &dummy);
+//printf("[%s:%d] channel %x fpga_number %d\n", __FUNCTION__, __LINE__, pint->map_base[0], pint->fpga_number);
+    if (pint->mux->muxid >> 16 == pint->fpga_number) {
+        pint->mux->muxid = -1;
+        pint->handler(pint, *pint->map_base >> 16, event_mux_fd);
+    }
     return -1;
 }
 PortalItemFunctions muxfuncResp = {
