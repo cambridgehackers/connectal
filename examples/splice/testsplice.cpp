@@ -152,7 +152,7 @@ int main(int argc, const char **argv)
     device->start();
     sem_wait(&test_sem);
     uint64_t cycles = portalTimerLap(0);
-    uint64_t beats = dma->show_mem_stats(ChannelType_Read);
+    uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
     fprintf(stderr, "hw cycles: %f\n", (float)cycles);
     assert(result_len < alloc_len * alloc_len);
     //    device->fetch(ref_fetchAlloc, (result_len+7)& ~7);

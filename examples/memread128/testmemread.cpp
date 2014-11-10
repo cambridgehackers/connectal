@@ -91,7 +91,7 @@ int main(int argc, const char **argv)
   device->startRead(ref_srcAlloc, numWords, burstLen, iterCnt);
   sem_wait(&test_sem);
   uint64_t cycles = portalTimerLap(0);
-  uint64_t beats = dma->show_mem_stats(ChannelType_Read);
+  uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
   float read_util = (float)beats/(float)cycles;
   fprintf(stderr, "memory read utilization (beats/cycle): %f\n", read_util);
 
