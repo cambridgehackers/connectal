@@ -181,9 +181,9 @@ int main(int argc, const char **argv)
   StrstrRequestProxy *strstrRequest = new StrstrRequestProxy(IfcNames_AlgoRequest);
   StrstrIndication *strstrIndication = new StrstrIndication(IfcNames_AlgoIndication);
 
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_HostMemServerIndication);
-  MemServerIndication *nandsimMemServer0Indication = new MemServerIndication(IfcNames_NandsimMemServer0Indication);
-  MemServerIndication *nandsimMemServer1Indication = new MemServerIndication(IfcNames_NandsimMemServer1Indication);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
+  MemServerIndication *nandsimMemServer0Indication = new MemServerIndication(nandsimMemServer0Request, IfcNames_NandsimMemServer0Indication);
+  MemServerIndication *nandsimMemServer1Indication = new MemServerIndication(nandsimMemServerR1equest, IfcNames_NandsimMemServer1Indication);
 
   portalExec_start();
   fprintf(stderr, "Main::allocating memory...\n");

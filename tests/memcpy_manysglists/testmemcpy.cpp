@@ -79,7 +79,7 @@ int do_copy(int srcAlloc, int sgl_config_request_id, int sgl_config_indication_i
   MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
   MMURequestProxy *dmap = new MMURequestProxy(sgl_config_request_id);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_HostMemServerIndication, poller);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication, poller);
   MMUIndication *hostMMUIndication = new MMUIndication(dma, sgl_config_indication_id, poller);
 
   poller->portalExec_start();

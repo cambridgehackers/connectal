@@ -90,7 +90,7 @@ int main(int argc, const char **argv)
   MemServerRequestProxy *hostmemMemServerRequest = new MemServerRequestProxy(IfcNames_HostmemMemServerRequest);
   SGListConfigRequestProxy *dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostmemMemServerIndication = new MemServerIndication(dma, IfcNames_HostmemMemServerIndication);
+  MemServerIndication *hostmemMemServerIndication = new MemServerIndication(hostmemServerRequest, IfcNames_HostmemMemServerIndication);
   SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
 
   int srcAlloc;

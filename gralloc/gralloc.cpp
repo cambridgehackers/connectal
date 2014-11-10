@@ -360,7 +360,7 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
         dev->dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
         dev->dma = new DmaManager(hostmemMemServerRequest, dmap);
         dev->dmaIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
-  //MemServerIndication *hostmemMemServerIndication = new MemServerIndication(dma, IfcNames_HostmemMemServerIndication);
+  //MemServerIndication *hostmemMemServerIndication = new MemServerIndication(hostmemServerRequest, IfcNames_HostmemMemServerIndication);
   //MemServerRequestProxy *hostmemMemServerRequest = new MemServerRequestProxy(IfcNames_HostmemMemServerRequest);
         dev->nextSegmentNumber = 0;
 
