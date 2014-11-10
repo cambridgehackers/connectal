@@ -20,15 +20,16 @@
 #
 
 import math
-import globalv
-
+import re
+import functools
+import json
 import os
 import sys
 import traceback
+
 import AST
+import globalv
 import util
-import functools
-import json
 
 #def indent(f, indentation):
 #    for i in xrange(indentation):
@@ -106,7 +107,10 @@ class TypeMixin:
                     break
                 print 'Resolving width', width, decl.tdtype
                 width = decl.tdtype.name
-            return int(width)
+            if re.match('[0-9]+', width):
+                return int(width)
+            else:
+                return decl.tdtype.numeric()
         if self.name == 'Float':
             return 32
         else:
