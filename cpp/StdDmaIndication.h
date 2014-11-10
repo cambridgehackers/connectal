@@ -55,7 +55,7 @@ class MMUIndication : public MMUIndicationWrapper
 
 class MemServerIndication : public MemServerIndicationWrapper
 {
-  MemServerRequestProxy *msrp;
+  MemServerRequestProxy *memServerRequestProxy;
   sem_t mtSem;
   uint64_t mtCnt;
   void init(){
@@ -63,9 +63,9 @@ class MemServerIndication : public MemServerIndicationWrapper
       PORTAL_PRINTF("MemServerIndication::init failed to init mtSem\n");
   }
  public:
-  MemServerIndication(unsigned int  id, PortalPoller *poller) : MemServerIndicationWrapper(id,poller), msrp(NULL){init();}
-  MemServerIndication(unsigned int  id) : MemServerIndicationWrapper(id), msrp(NULL) {init();}
-  MemServerIndication(MemServerRequestProxy *p, unsigned int  id) : MemServerIndicationWrapper(id), msrp(p) {init();}
+  MemServerIndication(unsigned int  id, PortalPoller *poller) : MemServerIndicationWrapper(id,poller), memServerRequestProxy(NULL){init();}
+  MemServerIndication(unsigned int  id) : MemServerIndicationWrapper(id), memServerRequestProxy(NULL) {init();}
+  MemServerIndication(MemServerRequestProxy *p, unsigned int  id) : MemServerIndicationWrapper(id), memServerRequestProxy(p) {init();}
   virtual void addrResponse(uint64_t physAddr){
     fprintf(stderr, "DmaIndication::addrResponse(physAddr=%"PRIx64")\n", physAddr);
   }
@@ -87,7 +87,8 @@ class MemServerIndication : public MemServerIndicationWrapper
     return mtCnt; 
   }
   uint64_t getMemoryTraffic(const ChannelType rc){
-    msrp->memoryTraffic(rc);
+    assert(memServerRequestProxy);
+    memServerRequestProxy->memoryTraffic(rc);
     return receiveMemoryTraffic();
   }
 };
