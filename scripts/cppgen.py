@@ -77,8 +77,8 @@ handleMessageTemplate1='''
 handleMessageCase='''
     case %(channelNumber)s:
         {
-        p->item->recv(p, temp_working_addr, %(wordLen)s, &tmpfd);
         %(paramStructDeclarations)s
+        p->item->recv(p, temp_working_addr, %(wordLen)s, &tmpfd);
         %(paramStructDemarshall)s
         %(responseCase)s
         }

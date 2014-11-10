@@ -63,11 +63,11 @@ int MMURequest_handleMessage(struct PortalInternal *p, unsigned int channel, int
     switch (channel) {
     case CHAN_NUM_MMURequest_sglist:
         {
-        p->item->recv(p, temp_working_addr, 5, &tmpfd);
         uint32_t sglId;
         uint32_t sglIndex;
         uint64_t addr;
         uint32_t len;
+        p->item->recv(p, temp_working_addr, 5, &tmpfd);
         tmp = p->item->read(p, &temp_working_addr);
         sglId = (uint32_t)(((tmp)&0xfffffffful));
         tmp = p->item->read(p, &temp_working_addr);
@@ -83,7 +83,6 @@ int MMURequest_handleMessage(struct PortalInternal *p, unsigned int channel, int
         break;
     case CHAN_NUM_MMURequest_region:
         {
-        p->item->recv(p, temp_working_addr, 10, &tmpfd);
         uint32_t sglId;
         uint64_t barr8;
         uint32_t index8;
@@ -91,6 +90,7 @@ int MMURequest_handleMessage(struct PortalInternal *p, unsigned int channel, int
         uint32_t index4;
         uint64_t barr0;
         uint32_t index0;
+        p->item->recv(p, temp_working_addr, 10, &tmpfd);
         tmp = p->item->read(p, &temp_working_addr);
         sglId = (uint32_t)(((tmp)&0xfffffffful));
         tmp = p->item->read(p, &temp_working_addr);
@@ -116,8 +116,8 @@ int MMURequest_handleMessage(struct PortalInternal *p, unsigned int channel, int
         break;
     case CHAN_NUM_MMURequest_idRequest:
         {
-        p->item->recv(p, temp_working_addr, 1, &tmpfd);
         SpecialTypeForSendingFd fd;
+        p->item->recv(p, temp_working_addr, 1, &tmpfd);
         tmp = p->item->read(p, &temp_working_addr);
         fd = messageFd;
         ((MMURequestCb *)p->cb)->idRequest(p, fd);
@@ -125,8 +125,8 @@ int MMURequest_handleMessage(struct PortalInternal *p, unsigned int channel, int
         break;
     case CHAN_NUM_MMURequest_idReturn:
         {
-        p->item->recv(p, temp_working_addr, 1, &tmpfd);
         uint32_t sglId;
+        p->item->recv(p, temp_working_addr, 1, &tmpfd);
         tmp = p->item->read(p, &temp_working_addr);
         sglId = (uint32_t)(((tmp)&0xfffffffful));
         ((MMURequestCb *)p->cb)->idReturn(p, sglId);
@@ -134,9 +134,9 @@ int MMURequest_handleMessage(struct PortalInternal *p, unsigned int channel, int
         break;
     case CHAN_NUM_MMURequest_setInterface:
         {
-        p->item->recv(p, temp_working_addr, 2, &tmpfd);
         uint32_t interfaceId;
         uint32_t sglId;
+        p->item->recv(p, temp_working_addr, 2, &tmpfd);
         tmp = p->item->read(p, &temp_working_addr);
         interfaceId = (uint32_t)(((tmp)&0xfffffffful));
         tmp = p->item->read(p, &temp_working_addr);
