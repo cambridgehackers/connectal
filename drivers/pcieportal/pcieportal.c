@@ -337,6 +337,10 @@ static int board_activate(int activate, tBoard *this_board, struct pci_dev *dev)
         unsigned long long magic_num;
 	int num_entries = 16;
 	struct msix_entry msix_entries[16];
+	uint32_t reg_offset = 0xc000;
+	int fpn = 0;
+	uint32_t top = 0;
+
 printk("[%s:%d]\n", __FUNCTION__, __LINE__);
         for (i = 0; i < MAX_NUM_PORTALS; i++)
         	if (!this_board->portal[i].extra) {
@@ -440,16 +444,15 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		       DEV_NAME, num_entries, this_board->irq_num);
 		iowrite32(0, this_board->bar0io + CSR_MSIX_MASKED);
                 pci_set_master(dev); /* enable PCI bus master */
-		uint32_t reg_offset = 0xc000;
 
-		int fpn = 0;
-		uint32_t top = 0;
 		while(!top && err >= 0){
+		  int fpga_number;
+		  dev_t this_device_number;
 		  uint32_t iid = *(volatile uint32_t *)(this_board->bar2io + (fpn*PORTAL_BASE_OFFSET) + PCR_IID_OFFSET);
 		  top = *(volatile uint32_t *)(this_board->bar2io + (fpn*PORTAL_BASE_OFFSET) + PCR_TOP_OFFSET);
 		  printk("%s:%d fpn=%08x iid=%d top=%d\n", __func__, __LINE__, fpn, iid, top);
-		  int fpga_number = this_board->info.board_number * MAX_NUM_PORTALS + fpn;
-		  dev_t this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + fpga_number);
+		  fpga_number = this_board->info.board_number * MAX_NUM_PORTALS + fpn;
+		  this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + fpga_number);
 		  this_board->portal[fpn].portal_number = fpn;
 		  this_board->portal[fpn].device_name = iid;
 		  this_board->portal[fpn].board = this_board;
@@ -482,7 +485,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
         } /* end of if(activate) */
 
         /******** deactivate board *******/
-	int fpn = 0;
+	fpn = 0;
 	while(fpn < this_board->info.num_portals) {
     	        u32 iid = this_board->portal[fpn].device_name;
 		  /* remove device node in udev */
