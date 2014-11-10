@@ -14,8 +14,8 @@ INTERFACES += RbmRequest  SigmoidRequest RbmIndication SigmoidIndication
 CONNECTALFLAGS  +=  -D RBMDIR='\"'$(RBMDIR)'\"'
 CONNECTALFLAGS += -I$(RBMDIR)/cpp
 
-BSVFILES += $(RBMDIR)/bsv/Rbm.bsv
-CPPFILES += $(RBMDIR)/cpp/rbm.cpp
+BSVFILES += $(CONNECTALDIR)/lib/rbm/bsv/Rbm.bsv
+CPPFILES += $(CONNECTALDIR)/lib/rbm/cpp/rbm.cpp
 
 NUMBER_OF_MASTERS=1
 

@@ -1,9 +1,11 @@
 
 CONNECTALDIR?=../..
 INTERFACES = StrstrRequest StrstrIndication
-BSVFILES = Strstr.bsv Top.bsv
+BSVFILES = $(CONNECTALDIR)/lib/strstr/bsv/Strstr.bsv Top.bsv
 CPPFILES=teststrstr.cpp
 CONNECTALFLAGS += -D DEGPAR=8
 CONNECTALFLAGS += -D HAYSTACKREADCLIENTS=1
+CONNECTALFLAGS += -I $(CONNECTALDIR)/lib/strstr/cpp
+
 
 include $(CONNECTALDIR)/Makefile.connectal
