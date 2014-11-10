@@ -183,7 +183,7 @@ static int init_muxResp(struct PortalInternal *pint, void *aparam)
     if(trace_socket)
         printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     pint->mux = param->pint;
-    pint->mux->item->init(param->pint, param->socketParam);
+    //pint->mux->item->init(param->pint, param->socketParam);
     pint->map_base = (volatile unsigned int*)malloc(pint->reqsize);
     return 0;
 }
@@ -193,7 +193,7 @@ static int init_muxInit(struct PortalInternal *pint, void *aparam)
     if(trace_socket)
         printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     pint->mux = param->pint;
-    pint->mux->item->init(param->pint, param->socketParam);
+    //pint->mux->item->init(param->pint, param->socketParam);
     pint->map_base = (volatile unsigned int*)malloc(pint->reqsize);
     return 0;
 }
@@ -202,8 +202,10 @@ void send_mux(struct PortalInternal *pint, volatile unsigned int *data, unsigned
     volatile unsigned int *buffer = data-1;
     if(trace_socket)
         printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-    buffer[0] = hdr;
-    pint->mux->item->send(pint->mux, buffer, (pint->fpga_number << 16) | ((hdr + 1) & 0xffff), sendFd);
+    //buffer[0] = hdr;
+    //pint->mux->item->send(pint->mux, buffer, (pint->fpga_number << 16) | ((hdr + 1) & 0xffff), sendFd);
+printf("[%s:%d] passthrough\n", __FUNCTION__, __LINE__);
+    pint->mux->item->send(pint->mux, data, hdr, sendFd);
 }
 int recv_mux(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
 {
@@ -213,11 +215,10 @@ int recv_mux(struct PortalInternal *pint, volatile unsigned int *buffer, int len
 }
 int event_mux(struct PortalInternal *pint)
 {
-    if(trace_socket)
+    if(0 && trace_socket)
         printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-return -1;
     int event_mux_fd;
-    int len = portalRecvFd(pint->fpga_fd, (void *)pint->map_base, sizeof(uint32_t), &event_mux_fd);
+    int len = portalRecvFd(pint->mux->fpga_fd, (void *)pint->map_base, sizeof(uint32_t), &event_mux_fd);
     if (len == 0 || (len == -1 && errno == EAGAIN))
         return -1;
     if (len <= 0) {
