@@ -3,7 +3,7 @@ INTERFACES        +=  MmRequestTN MmRequestNT TimerRequest MmIndication TimerInd
 BSVFILES   +=  $(CONNECTALDIR)/lib/rbm/bsv/RbmTypes.bsv $(CONNECTALDIR)/lib/rbm/bsv/Timer.bsv $(DBNTOPBSV)
 CPPFILES   +=  $(CONNECTALDIR)/lib/matmul/cpp/portalmat.cpp $(TESTCPPFILES)
 CONNECTALFLAGS  +=  -D IMPORT_HOSTIF -D MATRIX_TN
-CONNECTALFLAGS  +=  --bscflags="+RTS -K26777216 -RTS -p +:$(MMDIR)/bsv"
+CONNECTALFLAGS  +=  --bscflags="+RTS -K26777216 -RTS -p +:$(CONNECTALDIR)/lib/matmul/bsv"
 CONNECTALFLAGS  +=  --bscflags " -Xc++ -DMATMUL_HACK" -D MATMUL_HACK
 
 Dma = Dma
@@ -36,7 +36,7 @@ CONNECTALFLAGS  += --clib opencv_core
 CONNECTALFLAGS  += --clib opencv_objdetect
 CONNECTALFLAGS  += --clib opencv_imgproc
 CONNECTALFLAGS  += --clib cublas
-CPPFILES   +=  $(MMDIR)/cpp/cuda.cpp 
+CPPFILES   +=  $(CONNECTALDIR)/lib/matmul/cpp/cuda.cpp 
 else
 CONNECTALFLAGS  +=  --clib opencv_core --stl=stlport_static
 endif
@@ -44,7 +44,7 @@ endif
 ifeq (zynq,$(FAMILY))
 NDK_DIR=$(shell ndk-which gcc | sed 's:toolchains.*::')
 OPENCVDIR=$(CONNECTALDIR)/../opencv-android-sdk/sdk/native/
-CONNECTALFLAGS += -I$(MMDIR)/cpp -I$(OPENCVDIR)/jni/include -L$(OPENCVDIR)/libs/armeabi-v7a -lz
+CONNECTALFLAGS += -I$(CONNECTALDIR)/lib/matmul/cpp -I$(OPENCVDIR)/jni/include -L$(OPENCVDIR)/libs/armeabi-v7a -lz
 CONNECTALFLAGS += -S$(NDK_DIR)/sources/cxx-stl/stlport/libs/armeabi-v7a/libstlport_static.a
 NUMBER_OF_MASTERS=2
 endif
