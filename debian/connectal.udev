@@ -1,4 +1,5 @@
-51-connectaltty.rules
-52-connectaltest.rules
-52-digilent-usb.rules
-99-pcieportal.rules
+# UDev rules for setting up Bluespec emulation device drivers
+
+ACTION=="add",SUBSYSTEM=="pci",ATTR{vendor}=="0x1be7", ATTR{device}="0xb100", RUN+="/sbin/modprobe -ba pcieportal portalmem"
+KERNEL=="portal*",MODE="666"
+KERNEL=="portalmem",MODE="666"
