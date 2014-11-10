@@ -29,7 +29,6 @@
 #include <string.h>
 #include <ctime>
 #include <monkit.h>
-#include <mp.h>
 #include "StdDmaIndication.h"
 
 #include "SpliceIndication.h"

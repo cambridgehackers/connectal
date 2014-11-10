@@ -5,5 +5,6 @@ BSVFILES = $(CONNECTALDIR)/lib/bsv/NandSim.bsv $(CONNECTALDIR)/lib/bsv/Strstr.bs
 CPPFILES=algo1.cpp
 CPPFILES2=nandsim_manual.c
 CONNECTALFLAGS += -D2 NO_CPP_PORTAL_CODE -lm -lblkid
+CONNECTALFLAGS += -I$(CONNECTALDIR)/examples/strstr
 
 include $(CONNECTALDIR)/Makefile.connectal
