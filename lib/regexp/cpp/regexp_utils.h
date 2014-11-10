@@ -55,9 +55,11 @@ public:
   virtual void searchResult (uint32_t t, int v){
     if (v == -1 ){
       fprintf(stderr, "searchComplete = (%d, %d)\n", t, v);
+#ifdef ALGO_NANDSIM
       munmap(haystackP[token_map[t]].mem, haystackP[token_map[t]].length);
       close(haystackP[token_map[t]].alloc);
       haystack_mmu->idReturn(haystackP[token_map[t]].ref);
+#endif
       regexp->retire(t);
       if(++done_cnt == num_tests){
 	fprintf(stderr, "donzo\n");

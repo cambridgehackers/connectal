@@ -66,16 +66,15 @@ int main(int argc, const char **argv)
   DmaManager *nandsimDma = new DmaManager(nandsimMMURequest);
   MMUIndication *nandsimMMUIndication = new MMUIndication(nandsimDma,IfcNames_NandsimMMU0Indication);
 
-  RegexpRequestProxy *regexpRequest = new RegexpRequestProxy(IfcNames_AlgoRequest);
-  RegexpIndication *regexpIndication = new RegexpIndication(IfcNames_AlgoIndication);
+  RegexpRequestProxy *device = new RegexpRequestProxy(IfcNames_AlgoRequest);
+  RegexpIndication *deviceIndication = new RegexpIndication(IfcNames_AlgoIndication);
   
   MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_HostMemServerIndication);
   MemServerIndication *nandsimMemServerIndication = new MemServerIndication(IfcNames_NandsimMemServer0Indication);
 
-
   haystack_dma = hostDma;
   haystack_mmu = hostMMURequest;
-  regexp = regexpRequest;
+  regexp = device;
 
   portalExec_start();
   fprintf(stderr, "Main::allocating memory...\n");
@@ -84,33 +83,8 @@ int main(int argc, const char **argv)
   assert(32 == MAX_NUM_STATES);
   assert(32 == MAX_NUM_CHARS);
 
-  // allocate memory for strstr data
-  int needleAlloc = portalAlloc(numBytes);
-  int mpNextAlloc = portalAlloc(numBytes);
-  int ref_needleAlloc = hostDma->reference(needleAlloc);
-  int ref_mpNextAlloc = hostDma->reference(mpNextAlloc);
-
-  fprintf(stderr, "%08x %08x\n", ref_needleAlloc, ref_mpNextAlloc);
-
-  char *needle = (char *)portalMmap(needleAlloc, numBytes);
-  int *mpNext = (int *)portalMmap(mpNextAlloc, numBytes);
-
-  const char *needle_text = "ababab";
-  int needle_len = strlen(needle_text);
-  strncpy(needle, needle_text, needle_len);
-  compute_MP_next(needle, mpNext, needle_len);
-
-  // fprintf(stderr, "mpNext=[");
-  // for(int i= 0; i <= needle_len; i++) 
-  //   fprintf(stderr, "%d ", mpNext[i]);
-  // fprintf(stderr, "]\nneedle=[");
-  // for(int i= 0; i < needle_len; i++) 
-  //   fprintf(stderr, "%d ", needle[i]);
-  // fprintf(stderr, "]\n");
-
-  portalDCacheFlushInval(needleAlloc, numBytes, needle);
-  portalDCacheFlushInval(mpNextAlloc, numBytes, mpNext);
-  fprintf(stderr, "Main::flush and invalidate complete\n");
+  ////////////////////////////////////////////////////////////////////
+  // 
 
   fprintf(stderr, "Main::waiting to connect to nandsim_exe\n");
   wait_for_connect_nandsim_exe();
@@ -136,15 +110,53 @@ int main(int argc, const char **argv)
   sem_wait(&(nandsimDma->priv.confSem));
   fprintf(stderr, "%08x\n", ref_haystackInNandMemory);
 
-  // at this point, ref_needleAlloc and ref_mpNextAlloc are valid sgListIds for use by 
-  // the host memory dma hardware, and ref_haystackInNandMemory is a valid sgListId for
-  // use by the nandsim dma hardware
+  // 
+  ////////////////////////////////////////////////////////////////////
 
-  fprintf(stderr, "about to setup device %d %d\n", ref_needleAlloc, ref_mpNextAlloc);
-  strstrRequest->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
-  fprintf(stderr, "about to invoke search %d\n", ref_haystackInNandMemory);
-  strstrRequest->search(ref_haystackInNandMemory, haystack_len);
-  strstrIndication->wait();  
+  if(1){
+    P charMapP;
+    P stateMapP;
+    P stateTransitionsP;
+    
+    readfile("jregexp.charMap", &charMapP);
+    readfile("jregexp.stateMap", &stateMapP);
+    readfile("jregexp.stateTransitions", &stateTransitionsP);
 
-  exit(!(strstrIndication->match_cnt==3));
+    portalDCacheFlushInval(charMapP.alloc,          charMapP.length,          charMapP.mem);
+    portalDCacheFlushInval(stateMapP.alloc,         stateMapP.length,         stateMapP.mem);
+    portalDCacheFlushInval(stateTransitionsP.alloc, stateTransitionsP.length, stateTransitionsP.mem);
+
+    for(int i = 0; i < num_tests; i++){
+
+      device->setup(charMapP.ref, charMapP.length);
+      device->setup(stateMapP.ref, stateMapP.length);
+      device->setup(stateTransitionsP.ref, stateTransitionsP.length);
+
+      // for this test, we are just re-usng the same haystack which 
+      // has been written to the nandsim backing store by nandsim_exe 
+      //
+      // readfile("test.bin", &haystackP[i]);
+      // portalDCacheFlushInval(haystackP[i].alloc, haystackP[i].length, haystackP[i].mem);
+
+      if(i==0)
+	sw_match_cnt = num_tests*sw_ref(&haystackP[0], &charMapP, &stateMapP, &stateTransitionsP);
+
+      sem_wait(&test_sem);
+      int token = deviceIndication->token;
+
+      assert(token < max_num_tokens);
+      token_map[token] = i;
+      fprintf(stderr, "Main::about to invoke search %08x %08x\n", ref_haystackInNandMemory, haystack_len);
+      // Regexp uses a data-bus width of 8 bytes.  length must be a multiple of this dimension
+      device->search(token, ref_haystackInNandMemory, haystack_len & ~((1<<3)-1));
+    }
+
+    sem_wait(&test_sem);
+    close(charMapP.alloc);
+    close(stateMapP.alloc);
+    close(stateTransitionsP.alloc);
+  }
+  portalExec_stop();
+  fprintf(stderr, "hw_match_cnt=%d, sw_match_cnt=%d\n", hw_match_cnt, sw_match_cnt);
+  return (hw_match_cnt == sw_match_cnt ? 0 : -1);
 }

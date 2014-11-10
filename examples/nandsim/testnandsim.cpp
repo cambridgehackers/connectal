@@ -136,16 +136,11 @@ int main(int argc, const char **argv)
   fprintf(stderr, "testnandsim::nandAlloc=%d\n", nandAlloc);
   int ref_nandAlloc = hostDma->reference(nandAlloc);
   fprintf(stderr, "ref_nandAlloc=%d\n", ref_nandAlloc);
-#ifdef SANITY0
-  unsigned int *nandBuffer = (unsigned int*)portalMmap(nandAlloc, nandBytes); 
-  fprintf(stderr, "testnandsim::nandBuffer=%p\n", nandBuffer);
-  portalDCacheFlushInval(nandAlloc, nandBytes, nandBuffer);
-#endif
   fprintf(stderr, "testnandsim::NAND alloc fd=%d ref=%d\n", nandAlloc, ref_nandAlloc);
   nandsimRequest->configureNand(ref_nandAlloc, nandBytes);
   nandsimIndication->wait();
 
-#ifndef ALGO1_NANDSIM
+#ifndef ALGO_NANDSIM
   if (argc == 1) {
 
     fprintf(stderr, "testnandsim::allocating memory...\n");
@@ -172,25 +167,6 @@ int main(int argc, const char **argv)
       loop+=srcBytes;
     }
     fprintf(stderr, "testnandsim:: write phase complete\n");
-
-#ifdef SANITY1
-    // see what was written to the backing store...
-    int mmc = 0;
-    loop = 0;
-    int j = 0;
-    while (loop < nandBytes) {
-      for (int i = 0; i < srcBytes/sizeof(srcBuffer[0]); i++){
-	if (nandBuffer[j] != loop+i){
-	  mmc++;
-	  fprintf(stderr, "testnandsim::sanity failed %d %d\n", i, nandBuffer[j]);
-	}
-	j++;
-      }
-      loop += srcBytes;
-    }
-    fprintf(stderr, "testnandsim::sanity complete %d\n", mmc);
-#endif
-
     loop = 0;
     while (loop < nandBytes) {
       fprintf(stderr, "testnandsim::starting read %08zx (%lu)\n", srcBytes, loop);
@@ -228,7 +204,7 @@ int main(int argc, const char **argv)
   {
 
     // else we were invoked by alg1_nandsim
-    const char *filename = "../haystack.txt";
+    const char *filename = "../test.bin";
     fprintf(stderr, "testnandsim::opening %s\n", filename);
     // open up the text file and read it into an allocated memory buffer
     int dataFile = open(filename, O_RDONLY);
@@ -250,13 +226,6 @@ int main(int argc, const char **argv)
     fprintf(stderr, "testnandsim::invoking write %08x %08x\n", ref_dataAlloc, data_len);
     nandsimRequest->startWrite(ref_dataAlloc, 0, 0, data_len, 16);
     nandsimIndication->wait();
-
-#ifdef SANITY2
-    // see what was written to the backing store...
-    for(int i = 0; i < data_len; i++)
-      fprintf(stderr, "%c", ((char*)nandBuffer)[i]);
-    fprintf(stderr, "\n");
-#endif
 
     fprintf(stderr, "testnandsim::connecting to algo_exe...\n");
     connect_to_algo_exe();
