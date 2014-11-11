@@ -80,6 +80,15 @@ int PortalPoller::unregisterInstance(Portal *portal)
   return 0;
 }
 
+void PortalPoller::addFd(int fd)
+{
+    numFds++;
+    portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
+    struct pollfd *pollfd = &portal_fds[numFds-1];
+    memset(pollfd, 0, sizeof(struct pollfd));
+    pollfd->fd = fd;
+    pollfd->events = POLLIN;
+}
 int PortalPoller::registerInstance(Portal *portal)
 {
     numWrappers++;
@@ -87,14 +96,10 @@ int PortalPoller::registerInstance(Portal *portal)
     portal_wrappers = (Portal **)realloc(portal_wrappers, numWrappers*sizeof(Portal *));
     portal_wrappers[numWrappers-1] = portal;
 
-    if (portal->pint.fpga_fd != -1) {
-        numFds++;
-        portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
-        struct pollfd *pollfd = &portal_fds[numFds-1];
-        memset(pollfd, 0, sizeof(struct pollfd));
-        pollfd->fd = portal->pint.fpga_fd;
-        pollfd->events = POLLIN;
-    }
+    if (portal->pint.fpga_fd != -1)
+        addFd(portal->pint.fpga_fd);
+    for (int i = 0; i < portal->pint.client_fd_number; i++)
+        addFd(portal->pint.client_fd[i]);
     return 0;
 }
 
@@ -103,14 +108,8 @@ void* PortalPoller::portalExec_init(void)
     portalExec_timeout = -1; // no interrupt timeout 
 #ifdef BSIM
     portalExec_timeout = 100;
-    if (global_sockfd != -1) {
-        numFds++;
-        portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
-        struct pollfd *pollfd = &portal_fds[numFds-1];
-        memset(pollfd, 0, sizeof(struct pollfd));
-        pollfd->fd = global_sockfd;
-        pollfd->events = POLLIN;
-    }
+    if (global_sockfd != -1)
+        addFd(global_sockfd);
 #endif
     if (!numFds) {
         ALOGE("portalExec No fds open numFds=%d\n", numFds);
@@ -168,6 +167,7 @@ void* PortalPoller::portalExec_event(void)
       int sockfd = instance->pint.item->event(&instance->pint);
       // re-enable interrupt which was disabled by portal_isr
       instance->pint.item->enableint(&instance->pint, 1);
+#if 0
       if (sockfd != -1) {
           for (int j = 0; j < numFds; j++)
               if (portal_fds[j].fd == instance->pint.fpga_fd) {
@@ -176,9 +176,16 @@ void* PortalPoller::portalExec_event(void)
               }
           instance->pint.fpga_fd = sockfd;
       }
+#endif
     }
     return NULL;
 }
+extern "C" void addFdToPoller(struct PortalPoller *poller, int fd)
+{
+    //(static_cast<EchoRequestWrapper *>(p->parent))->setLeds ( v);
+    poller->addFd(fd);
+}
+
 
 void* PortalPoller::portalExec(void* __x)
 {

@@ -45,6 +45,7 @@ public:
   void portalExec_end(void);
   void portalExec_start();
   void portalExec_stop();
+  void addFd(int fd);
   int portalExec_timeout;
   int stopping;
   sem_t sem_startup;

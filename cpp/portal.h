@@ -85,6 +85,7 @@ typedef struct {
     EVENT       event;
 } PortalItemFunctions;
 
+#define MAX_CLIENT_FD 10
 typedef struct PortalInternal {
   struct PortalPoller   *poller;
   int                    fpga_fd;
@@ -98,6 +99,9 @@ typedef struct PortalInternal {
   void                   *cb;
   struct PortalInternal  *mux;
   int                    muxid;
+  int                    client_index;
+  int                    client_fd_number;
+  int                    client_fd[MAX_CLIENT_FD];
 } PortalInternal;
 
 typedef struct {
@@ -179,6 +183,7 @@ volatile unsigned int *mapchannel_hardware(struct PortalInternal *pint, unsigned
 int busy_hardware(struct PortalInternal *pint, volatile unsigned int *addr, const char *str);
 void enableint_hardware(struct PortalInternal *pint, int val);
 int event_hardware(struct PortalInternal *pint);
+void addFdToPoller(struct PortalPoller *poller, int fd);
 
 extern int portalExec_timeout;
 extern int global_pa_fd;
