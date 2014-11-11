@@ -19,7 +19,7 @@ void MMUIndication_idResponse ( struct PortalInternal *p, const uint32_t sglId )
 void MMUIndication_configResp ( struct PortalInternal *p, const uint32_t sglId );
 void MMUIndication_error ( struct PortalInternal *p, const uint32_t code, const uint32_t sglId, const uint64_t offset, const uint64_t extra );
 enum { CHAN_NUM_MMUIndication_idResponse,CHAN_NUM_MMUIndication_configResp,CHAN_NUM_MMUIndication_error};
-#define MMUIndication_reqsize 24
+#define MMUIndication_reqsize 28
 
 int MMUIndication_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
 typedef struct {
@@ -33,7 +33,7 @@ void MemServerIndication_reportStateDbg ( struct PortalInternal *p, const DmaDbg
 void MemServerIndication_reportMemoryTraffic ( struct PortalInternal *p, const uint64_t words );
 void MemServerIndication_error ( struct PortalInternal *p, const uint32_t code, const uint32_t sglId, const uint64_t offset, const uint64_t extra );
 enum { CHAN_NUM_MemServerIndication_addrResponse,CHAN_NUM_MemServerIndication_reportStateDbg,CHAN_NUM_MemServerIndication_reportMemoryTraffic,CHAN_NUM_MemServerIndication_error};
-#define MemServerIndication_reqsize 24
+#define MemServerIndication_reqsize 28
 
 int MemServerIndication_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
 typedef struct {
@@ -49,7 +49,7 @@ void MMURequest_idRequest ( struct PortalInternal *p, const SpecialTypeForSendin
 void MMURequest_idReturn ( struct PortalInternal *p, const uint32_t sglId );
 void MMURequest_setInterface ( struct PortalInternal *p, const uint32_t interfaceId, const uint32_t sglId );
 enum { CHAN_NUM_MMURequest_sglist,CHAN_NUM_MMURequest_region,CHAN_NUM_MMURequest_idRequest,CHAN_NUM_MMURequest_idReturn,CHAN_NUM_MMURequest_setInterface};
-#define MMURequest_reqsize 40
+#define MMURequest_reqsize 44
 
 int MMURequest_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
 typedef struct {
@@ -62,7 +62,7 @@ typedef struct {
 
 void MemreadIndication_readDone ( struct PortalInternal *p, const uint32_t mismatchCount );
 enum { CHAN_NUM_MemreadIndication_readDone};
-#define MemreadIndication_reqsize 4
+#define MemreadIndication_reqsize 8
 
 int MemreadIndication_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
 typedef struct {
@@ -73,7 +73,7 @@ void MemServerRequest_addrTrans ( struct PortalInternal *p, const uint32_t sglId
 void MemServerRequest_stateDbg ( struct PortalInternal *p, const ChannelType rc );
 void MemServerRequest_memoryTraffic ( struct PortalInternal *p, const ChannelType rc );
 enum { CHAN_NUM_MemServerRequest_addrTrans,CHAN_NUM_MemServerRequest_stateDbg,CHAN_NUM_MemServerRequest_memoryTraffic};
-#define MemServerRequest_reqsize 8
+#define MemServerRequest_reqsize 12
 
 int MemServerRequest_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
 typedef struct {
@@ -84,7 +84,7 @@ typedef struct {
 
 void MemreadRequest_startRead ( struct PortalInternal *p, const uint32_t pointer, const uint32_t numWords, const uint32_t burstLen, const uint32_t iterCnt );
 enum { CHAN_NUM_MemreadRequest_startRead};
-#define MemreadRequest_reqsize 16
+#define MemreadRequest_reqsize 20
 
 int MemreadRequest_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
 typedef struct {
