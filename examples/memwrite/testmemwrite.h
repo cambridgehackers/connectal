@@ -3,6 +3,7 @@
 #ifndef _TESTMEMWRITE_H_
 #define _TESTMEMWRITE_H_
 
+#include <errno.h>
 #include "sock_utils.h"
 #include "StdDmaIndication.h"
 #include "MemServerRequest.h"
@@ -63,12 +64,22 @@ void child(int rd_sock)
 {
   int fd;
   bool mismatch = false;
-  fprintf(stderr, "[%s:%d] child waiting for fd\n", __FUNCTION__, __LINE__);
-  sock_fd_read(rd_sock, NULL, 0, &fd);
-  fprintf(stderr, "[%s:%d] child got fd %d\n", __FUNCTION__, __LINE__, fd);
+  int again = 0;
+  fprintf(stderr, "[%s:%d] child waiting for fd via rd_sock %d\n", __FUNCTION__, __LINE__, rd_sock);
+  do {
+    int msg;
+    sock_fd_read(rd_sock, &msg, sizeof(msg), &fd);
+    again = (fd < 0 && errno == EAGAIN);
+  } while (again);
+  fprintf(stderr, "[%s:%d] child got fd %d errno=%d\n", __FUNCTION__, __LINE__, fd, (fd >= 0) ? 0 : errno);
+
+  if (fd == -1)
+    exit(EINVAL);
 
   unsigned int *dstBuffer = (unsigned int *)portalMmap(fd, alloc_sz);
   fprintf(stderr, "child::dstBuffer = %p\n", dstBuffer);
+  if (dstBuffer == (unsigned int *)-1)
+    exit(ENODEV);
 
   unsigned int sg = 0;
   for (int i = 0; i < numWords; i++){
@@ -81,7 +92,7 @@ void child(int rd_sock)
   exit(mismatch);
 }
 
-void parent(int rd_sock, int wr_sock)
+void parent(int wr_sock)
 {
   
   if(sem_init(&test_sem, 1, 0)){
@@ -160,8 +171,9 @@ void parent(int rd_sock, int wr_sock)
     }
   }
 
-  fprintf(stderr, "[%s:%d] send fd to child %d\n", __FUNCTION__, __LINE__, (int)dstAlloc);
-  sock_fd_write(wr_sock, NULL, 0, (int)dstAlloc);
+  fprintf(stderr, "[%s:%d] send fd to child %d via wr_sock %d\n", __FUNCTION__, __LINE__, (int)dstAlloc, wr_sock);
+  int msg = 22;
+  sock_fd_write(wr_sock, &msg, sizeof(msg), (int)dstAlloc);
   munmap(dstBuffer, alloc_sz);
   close(dstAlloc);
 }
