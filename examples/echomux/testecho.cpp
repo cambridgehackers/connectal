@@ -21,13 +21,13 @@
 
 #include <stdio.h>
 #include <netdb.h>
-#include "EchoRequest.h"
-#include "EchoIndication.h"
+#include "EchoRequestSW.h"
+#include "EchoIndicationSW.h"
 
-EchoRequestProxy *sRequestProxy;
+EchoRequestSWProxy *sRequestProxy;
 static sem_t sem_heard2;
 
-class EchoIndication : public EchoIndicationWrapper
+class EchoIndication : public EchoIndicationSWWrapper
 {
 public:
     virtual void heard(uint32_t v) {
@@ -38,7 +38,7 @@ public:
         sem_post(&sem_heard2);
         //fprintf(stderr, "heard an s2: %ld %ld\n", a, b);
     }
-    EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
+    EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationSWWrapper(id, item, param) {}
 };
 
 static void call_say(int v)
@@ -62,7 +62,7 @@ int main(int argc, const char **argv)
     Portal *mcommon = new Portal(0, sizeof(uint32_t), NULL, NULL, &socketfuncInit, &paramSocket, 0);
     param.pint = &mcommon->pint;
     EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &muxfunc, &param);
-    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &muxfunc, &param);
+    sRequestProxy = new EchoRequestSWProxy(IfcNames_EchoRequest, &muxfunc, &param);
 
     portalExec_start();
 

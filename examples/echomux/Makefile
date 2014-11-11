@@ -1,6 +1,6 @@
 
 CONNECTALDIR?=../..
-INTERFACES = EchoRequest EchoIndication
+INTERFACES = EchoRequest EchoIndication EchoRequestSW EchoIndicationSW
 ## all the BSV files to be scanned for types and interfaces
 BSVFILES = Echo.bsv Top.bsv
 ## the source files in the example

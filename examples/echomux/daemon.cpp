@@ -23,47 +23,51 @@
 #include <netdb.h>
 #include "EchoRequest.h"
 #include "EchoIndication.h"
+#include "EchoRequestSW.h"
+#include "EchoIndicationSW.h"
 
 EchoRequestProxy *echoRequestProxy;
-EchoIndicationProxy *sIndicationProxy;
+EchoIndicationSWProxy *sIndicationProxy;
 static int daemon_trace = 1;
 
 class EchoIndication : public EchoIndicationWrapper
 {
 public:
-    void heard(uint32_t v) {
+    void heard(uint32_t id, uint32_t v) {
         if (daemon_trace)
         fprintf(stderr, "daemon: heard an echo: %d\n", v);
+        this->pint.request_index = id;
         sIndicationProxy->heard(v);
     }
-    void heard2(uint32_t a, uint32_t b) {
+    void heard2(uint32_t id, uint32_t a, uint32_t b) {
         if (daemon_trace)
         fprintf(stderr, "daemon: heard an echo2: %d %d\n", a, b);
+        this->pint.request_index = id;
         sIndicationProxy->heard2(a, b);
     }
     EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
 };
 
-class EchoRequest : public EchoRequestWrapper
+class EchoRequest : public EchoRequestSWWrapper
 {
 public:
     void say ( const uint32_t v ) {
         if (daemon_trace)
         fprintf(stderr, "daemon[%s] %d\n", __FUNCTION__, v);
-        echoRequestProxy->say(v);
+        echoRequestProxy->say(this->pint.indication_index, v);
     }
     void say2 ( const uint32_t a, const uint32_t b ) {
         if (daemon_trace)
         fprintf(stderr, "daemon[%s] %d %d\n", __FUNCTION__, a, b);
-        echoRequestProxy->say2(a, b);
+        echoRequestProxy->say2(this->pint.indication_index, a, b);
     }
     void setLeds ( const uint32_t v ) {
         fprintf(stderr, "daemon[%s] %d\n", __FUNCTION__, __LINE__, v);
-        echoRequestProxy->setLeds(v);
+        echoRequestProxy->setLeds(this->pint.indication_index, v);
         //sleep(1);
         //exit(1);
     }
-    EchoRequest(unsigned int id, PortalItemFunctions *item, void *param) : EchoRequestWrapper(id, item, param) {}
+    EchoRequest(unsigned int id, PortalItemFunctions *item, void *param) : EchoRequestSWWrapper(id, item, param) {}
 };
 
 int main(int argc, const char **argv)
@@ -73,7 +77,7 @@ int main(int argc, const char **argv)
 
     Portal *mcommon = new Portal(0, sizeof(uint32_t), NULL, NULL, &socketfuncResp, &paramSocket, 0);
     param.pint = &mcommon->pint;
-    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &muxfunc, &param);
+    sIndicationProxy = new EchoIndicationSWProxy(IfcNames_EchoIndication, &muxfunc, &param);
     EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &muxfunc, &param);
 
     EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, NULL, NULL);
