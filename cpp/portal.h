@@ -99,7 +99,8 @@ typedef struct PortalInternal {
   void                   *cb;
   struct PortalInternal  *mux;
   int                    muxid;
-  int                    client_index;
+  int                    indication_index;
+  int                    request_index;
   int                    client_fd_number;
   int                    client_fd[MAX_CLIENT_FD];
 } PortalInternal;
