@@ -137,17 +137,11 @@ static volatile unsigned int *mapchannel_socket(struct PortalInternal *pint, uns
 {
     return &pint->map_base[1];
 }
-void send_socket(struct PortalInternal *pint, volatile unsigned int *data, unsigned int hdr, int sendFd)
-{
-    volatile unsigned int *buffer = data-1;
-    buffer[0] = hdr;
-    portalSendFd(pint->client_fd[pint->client_index], (void *)buffer, (hdr & 0xffff) * sizeof(uint32_t), sendFd);
-}
-int recv_socket(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
+static int recv_socket(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
 {
     return portalRecvFd(pint->client_fd[pint->client_index], (void *)buffer, len * sizeof(uint32_t), recvfd);
 }
-int event_socket(struct PortalInternal *pint)
+static int event_socket(struct PortalInternal *pint)
 {
     int i, j, event_socket_fd;
     for (i = 0; i < pint->client_fd_number;) {
@@ -183,6 +177,14 @@ printf("[%s:%d]afteracc %p accfd %d fd %d\n", __FUNCTION__, __LINE__, pint, pint
         }
     }
     return -1;
+}
+static void send_socket(struct PortalInternal *pint, volatile unsigned int *data, unsigned int hdr, int sendFd)
+{
+    volatile unsigned int *buffer = data-1;
+    buffer[0] = hdr;
+    while (pint->client_fd_number == 0)
+        event_socket(pint);
+    portalSendFd(pint->client_fd[pint->client_index], (void *)buffer, (hdr & 0xffff) * sizeof(uint32_t), sendFd);
 }
 PortalItemFunctions socketfuncResp = {
     init_socketResp, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_socket,

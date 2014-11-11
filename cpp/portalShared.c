@@ -70,7 +70,7 @@ static inline unsigned int increment_shared(PortalInternal *pint, unsigned int n
         newp = SHARED_START;
     return newp;
 }
-static void send_shared(struct PortalInternal *pint, unsigned int hdr, int sendFd)
+static void send_shared(struct PortalInternal *pint, volatile unsigned int *buff, unsigned int hdr, int sendFd)
 {
     pint->map_base[pint->map_base[SHARED_WRITE]] = hdr;
     pint->map_base[SHARED_WRITE] = increment_shared(pint, pint->map_base[SHARED_WRITE] + (hdr & 0xffff));
