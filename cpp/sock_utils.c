@@ -116,7 +116,8 @@ ssize_t sock_fd_write(int sockfd, void *ptr, size_t nbytes, int sendfd)
     iov[0].iov_len = nbytes;
     msg.msg_iov = iov;
     msg.msg_iovlen = 1;
-    int rc = sendmsg(sockfd, &msg, MSG_DONTWAIT);
+    int rc = sendmsg(sockfd, &msg, 0);
+//MSG_DONTWAIT);
     if (rc != nbytes) {
         printf("[%s:%d] error in sendmsg %d %d\n", __FUNCTION__, __LINE__, rc, errno);
         exit(1);

@@ -59,10 +59,10 @@ int main(int argc, const char **argv)
     PortalSocketParam paramSocket = {};
     PortalMuxParam param = {};
 
-    EchoRequestProxy *mcommon = new EchoRequestProxy(IfcNames_EchoRequest, &socketfuncInit, &paramSocket);
+    Portal *mcommon = new Portal(0, sizeof(uint32_t), NULL, NULL, &socketfuncInit, &paramSocket, 0);
     param.pint = &mcommon->pint;
-    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &muxfuncInit, &param);
-    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &muxfuncInit, &param);
+    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &muxfunc, &param);
+    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &muxfunc, &param);
 
     portalExec_start();
 

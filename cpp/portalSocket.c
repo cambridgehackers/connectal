@@ -149,23 +149,29 @@ int recv_socket(struct PortalInternal *pint, volatile unsigned int *buffer, int 
 }
 int event_socket(struct PortalInternal *pint)
 {
-    int i, event_socket_fd;
-    /* sw portal */
-    //if (pint->accept_finished) { /* connection established */
-    for (i = 0; i < pint->client_fd_number; i++) {
-printf("[%s:%d] i %d fd %d\n", __FUNCTION__, __LINE__, i, pint->client_fd[i]);
+    int i, j, event_socket_fd;
+    for (i = 0; i < pint->client_fd_number;) {
        int len = portalRecvFd(pint->client_fd[i], (void *)pint->map_base, sizeof(uint32_t), &event_socket_fd);
-       if (len == 0 || (len == -1 && errno == EAGAIN))
-           return -1;
-       if (len <= 0) {
+       if (len == 0) { /* EOF */
+           close(pint->client_fd[i]);
+           pint->client_fd_number--;
+           for (j = i; j < pint->client_fd_number; j++)
+                pint->client_fd[j] = pint->client_fd[j+1];
+       }
+       else if (len == -1 && errno == EAGAIN) {
+           i++;
+           continue;
+       }
+       else if (len == -1) {
            fprintf(stderr, "%s[%d]: read error %d\n",__FUNCTION__, pint->client_fd[i], errno);
            exit(1);
        }
        pint->client_index = i;
-       pint->handler(pint, *pint->map_base >> 16, event_socket_fd);
+       if (pint->handler)
+           pint->handler(pint, *pint->map_base >> 16, event_socket_fd);
+       break;
     }
     if (pint->fpga_fd != -1) {
-//printf("[%s:%d]beforeacc %d\n", __FUNCTION__, __LINE__, pint->fpga_fd);
         int sockfd = accept_socket(pint->fpga_fd);
         if (sockfd != -1) {
 printf("[%s:%d]afteracc %p accfd %d fd %d\n", __FUNCTION__, __LINE__, pint, pint->fpga_fd, sockfd);
@@ -186,27 +192,16 @@ PortalItemFunctions socketfuncInit = {
     send_socket, recv_socket, busy_portal_null, enableint_portal_null, event_socket};
 
 
-static int init_muxResp(struct PortalInternal *pint, void *aparam)
+static int init_mux(struct PortalInternal *pint, void *aparam)
 {
     PortalMuxParam *param = (PortalMuxParam *)aparam;
     if(trace_socket)
         printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     pint->mux = param->pint;
-    //pint->mux->item->init(param->pint, param->socketParam);
     pint->map_base = (volatile unsigned int*)malloc(pint->reqsize);
     return 0;
 }
-static int init_muxInit(struct PortalInternal *pint, void *aparam)
-{
-    PortalMuxParam *param = (PortalMuxParam *)aparam;
-    if(trace_socket)
-        printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-    pint->mux = param->pint;
-    //pint->mux->item->init(param->pint, param->socketParam);
-    pint->map_base = (volatile unsigned int*)malloc(pint->reqsize);
-    return 0;
-}
-void send_mux(struct PortalInternal *pint, volatile unsigned int *data, unsigned int hdr, int sendFd)
+static void send_mux(struct PortalInternal *pint, volatile unsigned int *data, unsigned int hdr, int sendFd)
 {
     volatile unsigned int *buffer = data-1;
     if(trace_socket)
@@ -214,47 +209,31 @@ void send_mux(struct PortalInternal *pint, volatile unsigned int *data, unsigned
     buffer[0] = hdr;
     pint->mux->item->send(pint->mux, buffer, (pint->fpga_number << 16) | ((hdr + 1) & 0xffff), sendFd);
 }
-int recv_mux(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
+static int recv_mux(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
 {
     if(trace_socket)
         printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     return pint->mux->item->recv(pint->mux, buffer, len, recvfd);
 }
-int event_mux(struct PortalInternal *pint)
+static int event_mux(struct PortalInternal *pint)
 {
-    if(trace_socket)
-        printf("[%s:%d] muxid %d clientnum %d\n", __FUNCTION__, __LINE__, pint->mux->muxid, pint->mux->client_fd_number);
+    if(trace_socket) {
+        printf("[%s:%d] muxid %d clientnum %d\n", __FUNCTION__, __LINE__, pint->mux->map_base[0], pint->mux->client_fd_number);
+        sleep(1);
+    }
     int event_mux_fd, dummy;
-    int len = 0;
-    if (!pint->mux->accept_finished) { /* connection established */
-        int rc = pint->mux->item->event(pint->mux);
-        if (rc >= 0)
-            pint->mux->fpga_fd = rc;
-    }
-    if (pint->mux->muxid == -1 && pint->mux->client_fd_number > 0) {
-        len = portalRecvFd(pint->mux->client_fd[pint->client_index], &pint->mux->muxid, sizeof(uint32_t), &event_mux_fd);
-        if (len == 0 || (len == -1 && errno == EAGAIN))
-            return -1;
-        if (len <= 0) {
-            fprintf(stderr, "%s[%d]: read error %d\n",__FUNCTION__, pint->client_fd[pint->client_index], errno);
-            exit(1);
-        }
-    }
-    if (pint->mux->muxid == -1)
+    pint->mux->item->event(pint->mux);
+    if (pint->mux->map_base[0] == -1)
         return -1;
-    portalRecvFd(pint->mux->client_fd[pint->client_index], (void *)pint->map_base, sizeof(uint32_t), &dummy);
-//printf("[%s:%d] channel %x fpga_number %d\n", __FUNCTION__, __LINE__, pint->map_base[0], pint->fpga_number);
-    if (pint->mux->muxid >> 16 == pint->fpga_number) {
-        pint->mux->muxid = -1;
+    if (pint->mux->map_base[0] >> 16 == pint->fpga_number) {
+        pint->mux->map_base[0] = -1;
+        recv_mux(pint, pint->map_base, sizeof(uint32_t), &dummy);
         pint->handler(pint, *pint->map_base >> 16, event_mux_fd);
     }
     return -1;
 }
-PortalItemFunctions muxfuncResp = {
-    init_muxResp, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_socket,
-    send_mux, recv_mux, busy_portal_null, enableint_portal_null, event_mux};
-PortalItemFunctions muxfuncInit = {
-    init_muxInit, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_socket,
+PortalItemFunctions muxfunc = {
+    init_mux, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_socket,
     send_mux, recv_mux, busy_portal_null, enableint_portal_null, event_mux};
 
 /*

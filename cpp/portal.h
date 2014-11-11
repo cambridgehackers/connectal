@@ -190,7 +190,7 @@ extern int global_pa_fd;
 extern int global_sockfd;
 extern PortalInternal *utility_portal;
 extern PortalItemFunctions bsimfunc, hardwarefunc,
-    socketfuncInit, socketfuncResp, sharedfunc, muxfuncInit, muxfuncResp;
+    socketfuncInit, socketfuncResp, sharedfunc, muxfunc;
 #ifdef __cplusplus
 }
 #endif

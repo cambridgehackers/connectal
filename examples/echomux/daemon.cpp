@@ -26,7 +26,7 @@
 
 EchoRequestProxy *echoRequestProxy;
 EchoIndicationProxy *sIndicationProxy;
-static int daemon_trace;// = 1;
+static int daemon_trace = 1;
 
 class EchoIndication : public EchoIndicationWrapper
 {
@@ -60,8 +60,8 @@ public:
     void setLeds ( const uint32_t v ) {
         fprintf(stderr, "daemon[%s] %d\n", __FUNCTION__, __LINE__, v);
         echoRequestProxy->setLeds(v);
-        sleep(1);
-        exit(1);
+        //sleep(1);
+        //exit(1);
     }
     EchoRequest(unsigned int id, PortalItemFunctions *item, void *param) : EchoRequestWrapper(id, item, param) {}
 };
@@ -71,10 +71,10 @@ int main(int argc, const char **argv)
     PortalSocketParam paramSocket = {};
     PortalMuxParam param = {};
 
-    EchoIndicationProxy *mcommon = new EchoIndicationProxy(IfcNames_EchoRequest, &socketfuncResp, &paramSocket);
+    Portal *mcommon = new Portal(0, sizeof(uint32_t), NULL, NULL, &socketfuncResp, &paramSocket, 0);
     param.pint = &mcommon->pint;
-    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &muxfuncResp, &param);
-    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &muxfuncResp, &param);
+    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &muxfunc, &param);
+    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &muxfunc, &param);
 
     EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, NULL, NULL);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
