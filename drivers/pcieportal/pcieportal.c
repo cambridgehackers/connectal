@@ -33,7 +33,7 @@
 #define DEV_NAME "portal"
 
 /* version string for the driver */
-#define DEV_VERSION "1.0connectal"
+#define DEV_VERSION "14.11.3"
 
 /* Bluespec's standard vendor ID */
 #define BLUESPEC_VENDOR_ID 0x1be7
@@ -660,3 +660,4 @@ EXPORT_SYMBOL(get_pcie_portal_descriptor);
 MODULE_AUTHOR("Bluespec, Inc., Cambridge hackers");
 MODULE_DESCRIPTION("PCIe device driver for PCIe FPGA portals");
 MODULE_LICENSE("Dual BSD/GPL");
+MODULE_VERSION(DEV_VERSION);
