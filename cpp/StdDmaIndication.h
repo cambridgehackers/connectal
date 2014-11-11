@@ -22,32 +22,30 @@
 // SOFTWARE.
 
 #include "dmaManager.h"
-#include "DmaDebugIndication.h"
-#include "MMUConfigIndication.h"
+#include "MemServerIndication.h"
+#include "MMUIndication.h"
+#include "assert.h"
+#include "MemServerRequest.h"
 
 class PortalPoller;
 
-static int error_limit = 20;
-class MMUConfigIndication : public MMUConfigIndicationWrapper
+static int mmu_error_limit = 20;
+static int mem_error_limit = 20;
+class MMUIndication : public MMUIndicationWrapper
 {
   DmaManager *portalMemory;
  public:
-  MMUConfigIndication(DmaManager *pm, unsigned int  id) : MMUConfigIndicationWrapper(id), portalMemory(pm) {}
-  MMUConfigIndication(DmaManager *pm, unsigned int  id, PortalPoller *poller) : MMUConfigIndicationWrapper(id,poller), portalMemory(pm) {}
-  MMUConfigIndication(DmaManager *pm, unsigned int  id, PortalItemFunctions *item, void *param) : MMUConfigIndicationWrapper(id, item, param), portalMemory(pm) {}
-  MMUConfigIndication(DmaManager *pm, unsigned int  id, PortalItemFunctions *item, void *param, PortalPoller *poller) : MMUConfigIndicationWrapper(id,item, param, poller), portalMemory(pm) {}
+  MMUIndication(DmaManager *pm, unsigned int  id) : MMUIndicationWrapper(id), portalMemory(pm) {}
+  MMUIndication(DmaManager *pm, unsigned int  id, PortalPoller *poller) : MMUIndicationWrapper(id,poller), portalMemory(pm) {}
+  MMUIndication(DmaManager *pm, unsigned int  id, PortalItemFunctions *item, void *param) : MMUIndicationWrapper(id, item, param), portalMemory(pm) {}
+  MMUIndication(DmaManager *pm, unsigned int  id, PortalItemFunctions *item, void *param, PortalPoller *poller) : MMUIndicationWrapper(id,item, param, poller), portalMemory(pm) {}
   virtual void configResp(uint32_t pointer){
-    fprintf(stderr, "MMUConfigIndication::configResp: %x\n", pointer);
+    fprintf(stderr, "MMUIndication::configResp: %x\n", pointer);
     portalMemory->confResp(pointer);
   }
   virtual void error (uint32_t code, uint32_t pointer, uint64_t offset, uint64_t extra) {
-    fprintf(stderr, "MMUConfigIndication::error(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
-    if (--error_limit < 0)
-        exit(-1);
-  }
-  virtual void dmaError (uint32_t code, uint32_t pointer, uint64_t offset, uint64_t extra) {
-    fprintf(stderr, "MMUConfigIndication::dmaError(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
-    if (--error_limit < 0)
+    fprintf(stderr, "MMUIndication::error(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
+    if (--mmu_error_limit < 0)
         exit(-1);
   }
   virtual void idResponse(uint32_t sglId){
@@ -55,26 +53,42 @@ class MMUConfigIndication : public MMUConfigIndicationWrapper
   }
 };
 
-class DmaDebugIndication : public DmaDebugIndicationWrapper
+class MemServerIndication : public MemServerIndicationWrapper
 {
-  DmaManager *portalMemory;
+  MemServerRequestProxy *memServerRequestProxy;
+  sem_t mtSem;
+  uint64_t mtCnt;
+  void init(){
+    if (sem_init(&mtSem, 0, 0))
+      PORTAL_PRINTF("MemServerIndication::init failed to init mtSem\n");
+  }
  public:
-  DmaDebugIndication(DmaManager *pm, unsigned int  id, PortalPoller *poller) : DmaDebugIndicationWrapper(id,poller), portalMemory(pm) {}
-  DmaDebugIndication(DmaManager *pm, unsigned int  id) : DmaDebugIndicationWrapper(id), portalMemory(pm) {}
+  MemServerIndication(unsigned int  id, PortalPoller *poller) : MemServerIndicationWrapper(id,poller), memServerRequestProxy(NULL){init();}
+  MemServerIndication(unsigned int  id) : MemServerIndicationWrapper(id), memServerRequestProxy(NULL) {init();}
+  MemServerIndication(MemServerRequestProxy *p, unsigned int  id) : MemServerIndicationWrapper(id), memServerRequestProxy(p) {init();}
   virtual void addrResponse(uint64_t physAddr){
     fprintf(stderr, "DmaIndication::addrResponse(physAddr=%"PRIx64")\n", physAddr);
   }
   virtual void reportStateDbg(const DmaDbgRec rec){
-    //fprintf(stderr, "reportStateDbg: {x:%08x y:%08x z:%08x w:%08x}\n", rec.x,rec.y,rec.z,rec.w);
-    portalMemory->dbgResp(rec);
+    fprintf(stderr, "MemServerIndication::reportStateDbg: {x:%08x y:%08x z:%08x w:%08x}\n", rec.x,rec.y,rec.z,rec.w);
   }
   virtual void reportMemoryTraffic(uint64_t words){
     //fprintf(stderr, "reportMemoryTraffic: words=%"PRIx64"\n", words);
-    portalMemory->mtResp(words);
+    mtCnt = words;
+    sem_post(&mtSem);
   }
   virtual void error (uint32_t code, uint32_t pointer, uint64_t offset, uint64_t extra) {
-    fprintf(stderr, "DmaDebugIndication::error(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
-    if (--error_limit < 0)
-        exit(-1);
+    fprintf(stderr, "MemServerIndication::error(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
+    if (--mem_error_limit < 0)
+      exit(-1);
+  }
+  uint64_t receiveMemoryTraffic(){
+    sem_wait(&mtSem);
+    return mtCnt; 
+  }
+  uint64_t getMemoryTraffic(const ChannelType rc){
+    assert(memServerRequestProxy);
+    memServerRequestProxy->memoryTraffic(rc);
+    return receiveMemoryTraffic();
   }
 };

@@ -34,112 +34,28 @@
 #include "StdDmaIndication.h"
 #include "RegexpIndication.h"
 #include "RegexpRequest.h"
-#include "DmaDebugRequest.h"
-#include "MMUConfigRequest.h"
+#include "MemServerRequest.h"
+#include "MMURequest.h"
 
-sem_t test_sem;
-int sw_match_cnt = 0;
-int hw_match_cnt = 0;
-
-#define num_tests (DEGPAR*2)
-#define max_num_tokens (DEGPAR)
-int token_map[max_num_tokens];
-
-typedef struct P {
-  unsigned int ref;
-  int alloc;
-  int length;
-  char *mem;
-}P;
-
-P haystackP[num_tests];
-
-DmaManager *dma;
-MMUConfigRequestProxy *dmap;
-RegexpRequestProxy *device;
-
-using namespace std;
-
-class RegexpIndication : public RegexpIndicationWrapper
-{
-public:
-  RegexpIndication(unsigned int id) : RegexpIndicationWrapper(id),done_cnt(0){};
-  virtual void setupComplete(uint32_t t){
-    fprintf(stderr, "setupComplete = %d\n", t);
-    sem_post(&test_sem);
-    token = t;
-  }
-  virtual void searchResult (uint32_t t, int v){
-    if (v == -1 ){
-      fprintf(stderr, "searchComplete = (%d, %d)\n", t, v);
-      munmap(haystackP[token_map[t]].mem, haystackP[token_map[t]].length);
-      close(haystackP[token_map[t]].alloc);
-      dmap->idReturn(haystackP[token_map[t]].ref);
-      device->retire(t);
-      if(++done_cnt == num_tests){
-	fprintf(stderr, "donzo\n");
-	sem_post(&test_sem);
-      }
-    }else if (v >= 0){ 
-      fprintf(stderr, "searchResult = (%d, %d)\n", t, v);
-      hw_match_cnt++;
-    }
-  }
-  int token;
-  int done_cnt;
-};
-
-int readfile(const char *fname, P* pP)
-{
-  int rc = 0;
-  char buff[128];
-  sprintf(buff, "../%s", fname);
-  ifstream binFile(buff, ios::in|ios::binary|ios::ate);
-  pP->length = binFile.tellg();
-  pP->alloc = portalAlloc(pP->length);
-  pP->mem = (char *)portalMmap(pP->alloc, pP->length);
-  pP->ref = dma->reference(pP->alloc);
-  binFile.seekg (0, ios::beg);
-  if(!binFile.read(pP->mem, pP->length)){
-    fprintf(stderr, "error reading %s\n", fname);
-    rc = -1;
-  }
-  binFile.close();
-  return rc;
-}
-
-
-int sw_ref(P *haystack, P *charMap, P *stateMap, P *stateTransitions)
-{
-  int matches = 0;
-  int state = 0;
-  for(int i = 0; i < haystack->length; i++){
-    unsigned int c = haystack->mem[i];
-    unsigned int mapped_c = charMap->mem[c];
-    unsigned int mapped_state = stateMap->mem[state];
-    if (mapped_state & (1<<7)){
-      matches++;
-      mapped_state = 0;
-    }
-    state = stateTransitions->mem[(mapped_state<<5) | mapped_c];
-  }
-  return matches;
-}
-
+#include "regexp_utils.h"
 
 int main(int argc, const char **argv)
 {
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
-  device = new RegexpRequestProxy(IfcNames_RegexpRequest);
-  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
-  dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
-  dma = new DmaManager(hostDmaDebugRequest, dmap);
-  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
+  RegexpRequestProxy *device = new RegexpRequestProxy(IfcNames_RegexpRequest);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
+  MMURequestProxy *hostMMURequest = new MMURequestProxy(IfcNames_HostMMURequest);
+  DmaManager *hostDma = new DmaManager(hostMMURequest);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
+  MMUIndication *hostMMUIndication = new MMUIndication(hostDma, IfcNames_HostMMUIndication);
   RegexpIndication *deviceIndication = new RegexpIndication(IfcNames_RegexpIndication);
   
+  haystack_dma = hostDma;
+  haystack_mmu = hostMMURequest;
+  regexp = device;
+
   if(sem_init(&test_sem, 1, 0)){
     fprintf(stderr, "failed to init test_sem\n");
     return -1;
@@ -165,12 +81,12 @@ int main(int argc, const char **argv)
 
     for(int i = 0; i < num_tests; i++){
 
-      readfile("test.bin", &haystackP[i]);
       device->setup(charMapP.ref, charMapP.length);
       device->setup(stateMapP.ref, stateMapP.length);
       device->setup(stateTransitionsP.ref, stateTransitionsP.length);
-      portalDCacheFlushInval(haystackP[i].alloc, haystackP[i].length, haystackP[i].mem);
 
+      readfile("test.bin", &haystackP[i]);
+      portalDCacheFlushInval(haystackP[i].alloc, haystackP[i].length, haystackP[i].mem);
 
       if(i==0)
 	sw_match_cnt = num_tests*sw_ref(&haystackP[0], &charMapP, &stateMapP, &stateTransitionsP);
@@ -180,7 +96,8 @@ int main(int argc, const char **argv)
 
       assert(token < max_num_tokens);
       token_map[token] = i;
-      device->search(token, haystackP[i].ref, haystackP[i].length);
+      // Regexp uses a data-bus width of 8 bytes.  length must be a multiple of this dimension
+      device->search(token, haystackP[i].ref, haystackP[i].length & ~((1<<3)-1));
     }
 
     sem_wait(&test_sem);

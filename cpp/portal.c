@@ -70,6 +70,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
     pint->handler = handler;
     pint->cb = cb;
     pint->item = item;
+    pint->muxid = -1;
     if (!item) {
 #ifdef BSIM
         pint->item = &bsimfunc;
@@ -272,7 +273,7 @@ void portalCheckIndication(PortalInternal *pint)
   }
 }
 
-void send_portal_null(struct PortalInternal *pint, unsigned int hdr, int sendFd)
+void send_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, unsigned int hdr, int sendFd)
 {
 }
 int recv_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
@@ -370,7 +371,6 @@ static int init_hardware(struct PortalInternal *pint, void *param)
 	return -errno;
     }
     pint->map_base = (volatile unsigned int*)portalMmap(pint->fpga_fd, PORTAL_BASE_OFFSET);
-//mmap(0, PORTAL_BASE_OFFSET, PROT_READ|PROT_WRITE, MAP_SHARED, pint->fpga_fd, 0);
     if (pint->map_base == MAP_FAILED) {
         PORTAL_PRINTF("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", pint->fpga_fd, errno);
         return -errno;

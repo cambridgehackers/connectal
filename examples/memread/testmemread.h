@@ -21,8 +21,8 @@
 #define _TESTMEMREAD_H_
 
 #include "StdDmaIndication.h"
-#include "DmaDebugRequest.h"
-#include "MMUConfigRequest.h"
+#include "MemServerRequest.h"
+#include "MMURequest.h"
 #include "MemreadRequest.h"
 #include "MemreadIndication.h"
 
@@ -94,11 +94,11 @@ int runtest(int argc, const char ** argv)
 
   device = new MemreadRequestProxy(IfcNames_MemreadRequest);
   deviceIndication = new MemreadIndication(IfcNames_MemreadIndication);
-  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
-  MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
-  DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
-  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  DmaManager *dma = new DmaManager(dmap);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
   srcAlloc = portalAlloc(alloc_sz);
@@ -138,7 +138,8 @@ int runtest(int argc, const char ** argv)
       test_result++;     // failed
     }
     uint64_t cycles = portalTimerLap(0);
-    uint64_t beats = dma->show_mem_stats(ChannelType_Read);
+    hostMemServerRequest->memoryTraffic(ChannelType_Read);
+    uint64_t beats = hostMemServerIndication->receiveMemoryTraffic();
     float read_util = (float)beats/(float)cycles;
     fprintf(stderr, " iterCnt: %d\n", iterCnt);
     fprintf(stderr, "   beats: %"PRIx64"\n", beats);

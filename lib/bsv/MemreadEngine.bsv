@@ -182,10 +182,23 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
 		  interface Put request;
 		     method Action put(MemengineCmd c) if (outs0[i] < cmd_q_depth);
 			Bit#(32) bsb = fromInteger(bufferSizeBytes);
-			if(extend(c.burstLen) > bsb)
-			   $display("mkMemreadEngineBuff::unsupportedBurstLen %d %d", bsb, c.burstLen);
-	 		outs0[i] <= outs0[i]+1;
-			cmds_in[i].enq(tuple2(fromInteger(i),c));
+`ifdef BSIM	 
+			Bit#(32) dw = fromInteger(valueOf(dataWidthBytes));
+			let mdw = ((c.len)/dw)*dw != c.len;
+			let bbl = extend(c.burstLen) > bsb;
+			if(bbl || mdw) begin
+			   if (bbl)
+			      $display("XXXXXXXXXX mkMemreadEngineBuff::unsupported burstLen %d %d", bsb, c.burstLen);
+			   if (mdw)
+			      $display("XXXXXXXXXX mkMemreadEngineBuff::unsupported len %d", c.len);
+			end
+			else begin
+`endif
+	 		   outs0[i] <= outs0[i]+1;
+			   cmds_in[i].enq(tuple2(fromInteger(i),c));
+`ifdef BSIM
+			end
+`endif
  		     endmethod
 		  endinterface
 		  interface Get response;

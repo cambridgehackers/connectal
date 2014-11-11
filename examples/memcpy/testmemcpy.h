@@ -2,8 +2,8 @@
 #define _TESTMEMCPY_H_
 
 #include "StdDmaIndication.h"
-#include "DmaDebugRequest.h"
-#include "MMUConfigRequest.h"
+#include "MemServerRequest.h"
+#include "MMURequest.h"
 #include "MemcpyIndication.h"
 #include "MemcpyRequest.h"
 
@@ -70,11 +70,11 @@ int runtest(int argc, const char **argv)
 
   MemcpyRequestProxy *device = new MemcpyRequestProxy(IfcNames_MemcpyRequest);
   MemcpyIndication *deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndication);
-  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
-  MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
-  DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
-  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  DmaManager *dma = new DmaManager(dmap);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
 
@@ -129,8 +129,10 @@ int runtest(int argc, const char **argv)
   device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords, burstLen, iterCnt);
   sem_wait(&done_sem);
   uint64_t cycles = portalTimerLap(0);
-  uint64_t read_beats = dma->show_mem_stats(ChannelType_Read);
-  uint64_t write_beats = dma->show_mem_stats(ChannelType_Write);
+  hostMemServerRequest->memoryTraffic(ChannelType_Read);
+  uint64_t read_beats = hostMemServerIndication->receiveMemoryTraffic();
+  hostMemServerRequest->memoryTraffic(ChannelType_Write);
+  uint64_t write_beats = hostMemServerIndication->receiveMemoryTraffic();
   float read_util = (float)read_beats/(float)cycles;
   float write_util = (float)write_beats/(float)cycles;
   fprintf(stderr, "wr_beats: %"PRIx64"\n", write_beats);
@@ -158,11 +160,11 @@ int runtest_chunk(int argc, const char **argv)
 
   MemcpyRequestProxy *device = new MemcpyRequestProxy(IfcNames_MemcpyRequest);
   MemcpyIndication *deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndication);
-  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
-  MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
-  DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
-  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  DmaManager *dma = new DmaManager(dmap);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_HostMemServerIndication);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
   portalExec_start();
 

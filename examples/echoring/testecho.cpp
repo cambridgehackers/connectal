@@ -25,7 +25,7 @@
 #include <semaphore.h>
 #include <unistd.h>
 
-#include "MMUConfigRequest.h"
+#include "MMURequest.h"
 #include "StdDmaIndication.h"
 #include "dmaManager.h"
 
@@ -67,7 +67,7 @@ static void call_say2(int v, int v2)
     sem_wait(&sem_heard2);
 }
 
-int allocateShared(DmaManager *dma, MMUConfigRequestProxy *dmap, uint32_t interfaceId, PortalInternal *p, uint32_t size)
+int allocateShared(DmaManager *dma, MMURequestProxy *dmap, uint32_t interfaceId, PortalInternal *p, uint32_t size)
 {
     int fd = portalAlloc(size);
     fprintf(stderr, "%s:%d fd=%d\n", __FILE__, __LINE__, fd);
@@ -91,9 +91,9 @@ int main(int argc, const char **argv)
     int alloc_sz = 1024*1024;
 //1000;
 
-    MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_MMUConfigRequest);
+    MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequest);
     DmaManager *dma = new DmaManager(dmap);
-    MMUConfigIndication *mIndication = new MMUConfigIndication(dma, IfcNames_MMUConfigIndication);
+    MMUIndication *mIndication = new MMUIndication(dma, IfcNames_MMUIndication);
 
     SharedMemoryPortalConfigProxy *smpConfig = new SharedMemoryPortalConfigProxy(IfcNames_ConfigWrapper);
     EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication);

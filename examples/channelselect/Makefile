@@ -1,4 +1,5 @@
 
+CONNECTALDIR?=../..
 INTERFACES = ChannelSelectTestRequest DDSTestRequest ChannelSelectTestIndication DDSTestIndication
 BSVFILES = ChannelSelectTestInterfaces.bsv  DDSTestInterfaces.bsv Top.bsv
 CPPFILES=testchannelselecttest.cpp
@@ -15,4 +16,4 @@ sine.bin: sinetable
 sinetable: sinetable.c
 	cc -o sinetable sinetable.c -lm
 
-include ../../Makefile.connectal
+include $(CONNECTALDIR)/Makefile.connectal

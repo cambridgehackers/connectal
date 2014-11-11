@@ -75,22 +75,22 @@ void NandSimIndicationWrapperconfigureNandDone_cb (  struct PortalInternal *p )
   sem_post(&test_sem);
 }
 
-void MMUConfigIndicationWrapperconfigResp_cb (  struct PortalInternal *p, const uint32_t pointer )
+void MMUIndicationWrapperconfigResp_cb (  struct PortalInternal *p, const uint32_t pointer )
 {
-  PORTAL_PRINTF("cb: MMUConfigIndicationWrapperconfigResp_cb(physAddr=%x)\n", pointer);
+  PORTAL_PRINTF("cb: MMUIndicationWrapperconfigResp_cb(physAddr=%x)\n", pointer);
   sem_post(&priv.confSem);
 }
 
-void MMUConfigIndicationWrapperidResponse_cb (  struct PortalInternal *p, const uint32_t sglId ) 
+void MMUIndicationWrapperidResponse_cb (  struct PortalInternal *p, const uint32_t sglId ) 
 {
-  PORTAL_PRINTF("cb: MMUConfigIndicationWrapperidResponse_cb\n");
+  PORTAL_PRINTF("cb: MMUIndicationWrapperidResponse_cb\n");
   priv.sglId = sglId;
   sem_post(&priv.sglIdSem);
 }
 
-void MMUConfigIndicationWrappererror_cb (  struct PortalInternal *p, const uint32_t code, const uint32_t pointer, const uint64_t offset, const uint64_t extra ) 
+void MMUIndicationWrappererror_cb (  struct PortalInternal *p, const uint32_t code, const uint32_t pointer, const uint64_t offset, const uint64_t extra ) 
 {
-  PORTAL_PRINTF("cb: MMUConfigIndicationWrappererror_cb\n");
+  PORTAL_PRINTF("cb: MMUIndicationWrappererror_cb\n");
 }
 
 void manual_event(void)
@@ -135,10 +135,10 @@ NandSimIndicationCb NandSimIndication_cbTable = {
     NandSimIndicationWrapperreadDone_cb,
     NandSimIndicationWrapperconfigureNandDone_cb,
 };
-MMUConfigIndicationCb MMUConfigIndication_cbTable = {
-    MMUConfigIndicationWrapperconfigResp_cb,
-    MMUConfigIndicationWrapperidResponse_cb,
-    MMUConfigIndicationWrappererror_cb,
+MMUIndicationCb MMUIndication_cbTable = {
+    MMUIndicationWrapperconfigResp_cb,
+    MMUIndicationWrapperidResponse_cb,
+    MMUIndicationWrappererror_cb,
 };
 int main(int argc, const char **argv)
 {
@@ -152,8 +152,8 @@ int main(int argc, const char **argv)
   pthread_t tid = 0;
 
 
-  init_portal_internal(&intarr[2], IfcNames_BackingStoreMMUConfigRequest, NULL, NULL, NULL, NULL, MMUConfigRequest_reqsize);         // fpga3
-  init_portal_internal(&intarr[0], IfcNames_BackingStoreMMUConfigIndication, MMUConfigIndication_handleMessage, MMUConfigIndication_cbTable, NULL, NULL, MMUConfigIndication_reqsize);     // fpga1
+  init_portal_internal(&intarr[2], IfcNames_BackingStoreMMURequest, NULL, NULL, NULL, NULL, MMURequest_reqsize);         // fpga3
+  init_portal_internal(&intarr[0], IfcNames_BackingStoreMMUIndication, MMUIndication_handleMessage, MMUIndication_cbTable, NULL, NULL, MMUIndication_reqsize);     // fpga1
   init_portal_internal(&intarr[3], IfcNames_NandSimRequest, NULL, NULL, NULL, NULL, NandSimRequest_reqsize);    // fpga4
   init_portal_internal(&intarr[1], IfcNames_NandSimIndication, NandSimIndication_handleMessage, NandSimIndication_cbTable, NULL, NULL, NandSimIndication_reqsize); // fpga2
 

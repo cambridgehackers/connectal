@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <assert.h>
 
-#include "MMUConfigRequest.h"
+#include "MMURequest.h"
 #include "StdDmaIndication.h"
 #include "dmaManager.h"
 #include "SharedMemoryPortalConfig.h"
@@ -91,7 +91,7 @@ public:
   Simple(unsigned int id, unsigned int numtimes=1) : SimpleWrapper(id), cnt(0), times(numtimes){}
 };
 
-int allocateShared(DmaManager *dma, MMUConfigRequestProxy *dmap, uint32_t interfaceId, PortalInternal *p, uint32_t size)
+int allocateShared(DmaManager *dma, MMURequestProxy *dmap, uint32_t interfaceId, PortalInternal *p, uint32_t size)
 {
     int fd = portalAlloc(size);
     fprintf(stderr, "%s:%d fd=%d\n", __FILE__, __LINE__, fd);
@@ -109,9 +109,9 @@ int allocateShared(DmaManager *dma, MMUConfigRequestProxy *dmap, uint32_t interf
 int main(int argc, const char **argv)
 {
     int alloc_sz = 4096;
-    MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_MMUConfigRequest);
+    MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequest);
     DmaManager *dma = new DmaManager(dmap);
-    MMUConfigIndication *mIndication = new MMUConfigIndication(dma, IfcNames_MMUConfigIndication);
+    MMUIndication *mIndication = new MMUIndication(dma, IfcNames_MMUIndication);
     SharedMemoryPortalConfigProxy *smpConfig = new SharedMemoryPortalConfigProxy(IfcNames_ConfigWrapper);
 
   portalExec_start();

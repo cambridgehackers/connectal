@@ -45,6 +45,7 @@ public:
   void portalExec_end(void);
   void portalExec_start();
   void portalExec_stop();
+  void addFd(int fd);
   int portalExec_timeout;
   int stopping;
   sem_t sem_startup;
@@ -74,7 +75,7 @@ class PortalInternalCpp
 class Portal : public PortalInternalCpp
 {
    void initPortal() {
-    if (pint.handler || pint.item == &socketfuncResp) {
+    if (pint.handler || pint.item == &socketfuncResp || pint.item == &socketfuncInit) {
       if (pint.poller == 0)
         pint.poller = defaultPoller;
       pint.poller->registerInstance(this);

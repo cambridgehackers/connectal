@@ -34,28 +34,12 @@
 
 #include "StrstrIndication.h"
 #include "StrstrRequest.h"
-#include "DmaDebugRequest.h"
-#include "MMUConfigRequest.h"
+#include "MemServerRequest.h"
+#include "MMURequest.h"
 
+#include "strstr.h"
 
-sem_t test_sem;
 int sw_match_cnt = 0;
-int hw_match_cnt = 0;
-
-class StrstrIndication : public StrstrIndicationWrapper
-{
-public:
-  StrstrIndication(unsigned int id) : StrstrIndicationWrapper(id){};
-
-  virtual void searchResult (int v){
-    fprintf(stderr, "searchResult = %d\n", v);
-    if (v == -1)
-      sem_post(&test_sem);
-    else 
-      hw_match_cnt++;
-  }
-};
-
 
 int main(int argc, const char **argv)
 {
@@ -65,16 +49,11 @@ int main(int argc, const char **argv)
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   device = new StrstrRequestProxy(IfcNames_StrstrRequest);
   deviceIndication = new StrstrIndication(IfcNames_StrstrIndication);
-  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
-  MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
-  DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
-  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
-
-  if(sem_init(&test_sem, 1, 0)){
-    fprintf(stderr, "failed to init test_sem\n");
-    return -1;
-  }
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  DmaManager *dma = new DmaManager(dmap);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
   portalExec_start();
 
@@ -134,9 +113,9 @@ int main(int argc, const char **argv)
     device->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
     portalTimerStart(0);
     device->search(ref_haystackAlloc, haystack_len);
-    sem_wait(&test_sem);
+    deviceIndication->wait();
     uint64_t cycles = portalTimerLap(0);
-    uint64_t beats = dma->show_mem_stats(ChannelType_Read);
+    uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
     fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
 
     close(needleAlloc);
@@ -199,9 +178,9 @@ int main(int argc, const char **argv)
     device->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
     portalTimerStart(0);
     device->search(ref_haystackAlloc, haystack_len);
-    sem_wait(&test_sem);
+    deviceIndication->wait();
     uint64_t hw_cycles = portalTimerLap(0);
-    uint64_t beats = dma->show_mem_stats(ChannelType_Read);
+    uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
     float read_util = (float)beats/(float)hw_cycles;
     fprintf(stderr, "hw_cycles:%llx\n", (long long)hw_cycles);
     fprintf(stderr, "memory read utilization (beats/cycle): %f\n", read_util);
@@ -218,6 +197,7 @@ int main(int argc, const char **argv)
     close(mpNextAlloc);
   }
 
+  int hw_match_cnt = deviceIndication->match_cnt;
   fprintf(stderr, "sw_match_cnt=%d, hw_match_cnt=%d\n", sw_match_cnt, hw_match_cnt);
   return (sw_match_cnt != hw_match_cnt);
 }

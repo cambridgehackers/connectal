@@ -5,6 +5,7 @@
 #include "RbmIndication.h"
 #include "SigmoidRequest.h"
 #include "SigmoidIndication.h"
+#include "StdDmaIndication.h"
 
 class SigmoidIndication;
 class RbmIndication;
@@ -13,6 +14,7 @@ extern RbmRequestProxy *rbmdevice;
 extern SigmoidRequestProxy *sigmoiddevice;
 extern SigmoidIndication *sigmoidindication;
 extern RbmIndication *rbmDeviceIndication;
+extern MemServerIndication *hostMemServerIndication;
 
 class RbmIndication : public RbmIndicationWrapper
 {

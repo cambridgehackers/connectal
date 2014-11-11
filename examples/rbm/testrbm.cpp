@@ -23,9 +23,8 @@
 
 #include <RbmRequest.h>
 #include <RbmIndication.h>
-#include "DmaDebugRequest.h"
-#include "MMUConfigRequest.h"
-#include <StdDmaIndication.h>
+#include "MemServerRequest.h"
+#include "MMURequest.h"
 #include <stdio.h>
 #include <sys/mman.h>
 #include <string.h>
@@ -42,8 +41,8 @@
 
 MmRequestTNProxy *mmdevice = 0;
 DmaManager *dma = 0;
-MMUConfigRequestProxy *dmap = 0;
-DmaDebugRequestProxy *hostDmaDebugRequest;
+MMURequestProxy *dmap = 0;
+MemServerRequestProxy *hostMemServerRequest;
 MmIndication *mmdeviceIndication = 0;
 SigmoidIndication *sigmoidindication = 0;
 SigmoidRequestProxy *sigmoiddevice = 0;
@@ -51,6 +50,8 @@ RbmIndication *rbmDeviceIndication = 0;
 RbmRequestProxy *rbmdevice = 0;
 TimerIndication *timerdeviceIndication = 0;
 TimerRequestProxy *timerdevice = 0;
+MemServerIndication *hostMemServerIndication = 0;
+MMUIndication *hostMMUIndication = 0;
 
 long dotprod = 0;
 
@@ -71,7 +72,7 @@ void *dbgThread(void *)
     sleep(1);
     mmdevice->debug();
     //rbmdevice->sumOfErrorSquaredDebug();
-    if (hostDmaDebugRequest) hostDmaDebugRequest->getStateDbg(ChannelType_Read);
+    if (hostMemServerRequest) hostMemServerRequest->stateDbg(ChannelType_Read);
     sleep(5);
   }
   return 0;
@@ -92,11 +93,11 @@ int main(int argc, const char **argv)
   timerdevice = new TimerRequestProxy(IfcNames_TimerRequestPortal);
   timerdeviceIndication = new TimerIndication(IfcNames_TimerIndicationPortal);
 
-  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
-  dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
-  dma = new DmaManager(hostDmaDebugRequest, dmap);
-  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
+  hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
+  dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  dma = new DmaManager(dmap);
+  hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
+  hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
   if(sem_init(&mul_sem, 1, 0)){
     fprintf(stderr, "failed to init mul_sem\n");

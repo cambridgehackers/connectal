@@ -1,4 +1,5 @@
 
+CONNECTALDIR?=../..
 INTERFACES = FMComms1Request FMComms1Indication
 BSVFILES = FMComms1ADC.bsv FMComms1DAC.bsv FMComms1.bsv \
 	 Top.bsv
@@ -17,9 +18,9 @@ endif
 
 gentarget:: fmcomms1-$(BOARD).xdc
 
-fmcomms1-$(BOARD).xdc: fmcomms1-fmc.json ../../boardinfo/$(BOARD).json
-	../../scripts/generate-constraints.py ../../boardinfo/$(BOARD).json fmcomms1-fmc.json > fmcomms1-$(BOARD).xdc
+fmcomms1-$(BOARD).xdc: fmcomms1-fmc.json $(CONNECTALDIR)/boardinfo/$(BOARD).json
+	$(CONNECTALDIR)/scripts/generate-constraints.py $(CONNECTALDIR)/boardinfo/$(BOARD).json fmcomms1-fmc.json > fmcomms1-$(BOARD).xdc
 
 
-include ../../Makefile.connectal
+include $(CONNECTALDIR)/Makefile.connectal
 

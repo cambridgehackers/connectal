@@ -67,7 +67,7 @@ function  PhysMemReadClient#(addrWidth, busWidth) null_mem_read_client();
 endfunction
 
 interface MemServer#(numeric type addrWidth, numeric type dataWidth, numeric type nMasters);
-   interface DmaDebugRequest request;
+   interface MemServerRequest request;
    interface Vector#(nMasters,PhysMemMaster#(addrWidth, dataWidth)) masters;
 endinterface
 		 	 
@@ -77,8 +77,7 @@ typedef struct {
    Bit#(32) pref;
    } DmaError deriving (Bits);
 
-module mkMemServerRW#(MMUConfigIndication mmuIndication,
-		      DmaDebugIndication dmaIndication,
+module mkMemServerRW#(MemServerIndication indication,
 		      Vector#(numReadClients, MemReadClient#(dataWidth)) readClients,
 		      Vector#(numWriteClients, MemWriteClient#(dataWidth)) writeClients,
 		      Vector#(numMMUs,MMU#(PhysAddrWidth)) mmus)
@@ -93,36 +92,35 @@ module mkMemServerRW#(MMUConfigIndication mmuIndication,
 	     Add#(TLog#(TDiv#(dataWidth, 8)), d__, BurstLenSize)
 	     );
 
-   MemServer#(PhysAddrWidth,dataWidth,nMasters) reader <- mkMemServerR(mmuIndication, dmaIndication,  readClients, mmus);
-   MemServer#(PhysAddrWidth,dataWidth,nMasters) writer <- mkMemServerW(mmuIndication, dmaIndication, writeClients, mmus);
+   MemServer#(PhysAddrWidth,dataWidth,nMasters) reader <- mkMemServerR(indication,  readClients, mmus);
+   MemServer#(PhysAddrWidth,dataWidth,nMasters) writer <- mkMemServerW(indication, writeClients, mmus);
    
    function PhysMemMaster#(PhysAddrWidth,dataWidth) mkm(Integer i) = (interface PhysMemMaster#(PhysAddrWidth,dataWidth);
 								 interface PhysMemReadClient read_client = reader.masters[i].read_client;
 								 interface PhysMemWriteClient write_client = writer.masters[i].write_client;
 							      endinterface);
 
-   interface DmaDebugRequest request;
-      method Action getStateDbg(ChannelType rc);
+   interface MemServerRequest request;
+      method Action stateDbg(ChannelType rc);
 	 if (rc == Read)
-	    reader.request.getStateDbg(rc);
+	    reader.request.stateDbg(rc);
 	 else
-	    writer.request.getStateDbg(rc);
+	    writer.request.stateDbg(rc);
       endmethod
-      method Action getMemoryTraffic(ChannelType rc);
+      method Action memoryTraffic(ChannelType rc);
 	 if (rc == Read) 
-	    reader.request.getMemoryTraffic(rc);
+	    reader.request.memoryTraffic(rc);
 	 else 
-	    writer.request.getMemoryTraffic(rc);
+	    writer.request.memoryTraffic(rc);
       endmethod
-      method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
-	 writer.request.addrRequest(pointer,offset);
+      method Action addrTrans(Bit#(32) pointer, Bit#(32) offset);
+	 writer.request.addrTrans(pointer,offset);
       endmethod
    endinterface
    interface masters = map(mkm,genVector);
 endmodule
 	
-module mkMemServerR#(MMUConfigIndication mmuIndication,
-		     DmaDebugIndication dmaIndication,
+module mkMemServerR#(MemServerIndication indication,
 		     Vector#(numReadClients, MemReadClient#(dataWidth)) readClients,
 		     Vector#(numMMUs,MMU#(PhysAddrWidth)) mmus)
    (MemServer#(PhysAddrWidth, dataWidth, nMasters))
@@ -158,13 +156,13 @@ module mkMemServerR#(MMUConfigIndication mmuIndication,
       Vector#(numMMUs,Server#(ReqTup,Bit#(PhysAddrWidth))) ss;
       for(Integer j = 0; j < valueOf(numMMUs); j=j+1)
 	 ss[j] = mmu_servers[j].servers[i];
-      readers[i] <- mkMemReadInternal(client_bins[i], mmuIndication, ss);
+      readers[i] <- mkMemReadInternal(client_bins[i], indication, ss);
    end
    
    rule mmuEntry;
       addrReqFifo.deq;
       let physAddr <- mmus[addrReqFifo.first[31:16]].addr[0].response.get;
-      dmaIndication.addrResponse(zeroExtend(physAddr));
+      indication.addrResponse(zeroExtend(physAddr));
    endrule
    
    function PhysMemMaster#(PhysAddrWidth,dataWidth) mkm(Integer i) = (interface PhysMemMaster#(PhysAddrWidth,dataWidth);
@@ -176,7 +174,7 @@ module mkMemServerR#(MMUConfigIndication mmuIndication,
 		     for(dbgPtr <= 0; dbgPtr < fromInteger(valueOf(nMasters)); dbgPtr <= dbgPtr+1)
 			(action
 			    let rv <- readers[dbgPtr].dbg.dbg;
-			    dmaIndication.reportStateDbg(rv);
+			    indication.reportStateDbg(rv);
 			 endaction);
 		  endseq;
    FSM dbgFSM <- mkFSM(dbgStmt);
@@ -188,20 +186,20 @@ module mkMemServerR#(MMUConfigIndication mmuIndication,
 				let rv <- readers[trafficPtr].dbg.getMemoryTraffic();
 				trafficAccum <= trafficAccum + rv;
 			     endaction);
-			 dmaIndication.reportMemoryTraffic(trafficAccum);
+			 indication.reportMemoryTraffic(trafficAccum);
 		      endseq;
    FSM trafficFSM <- mkFSM(trafficStmt);
       
-   interface DmaDebugRequest request;
-      method Action getStateDbg(ChannelType rc);
+   interface MemServerRequest request;
+      method Action stateDbg(ChannelType rc);
 	 if (rc == Read)
 	    dbgFSM.start;
       endmethod
-      method Action getMemoryTraffic(ChannelType rc);
+      method Action memoryTraffic(ChannelType rc);
 	 if (rc == Read)
 	    trafficFSM.start;
       endmethod
-      method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
+      method Action addrTrans(Bit#(32) pointer, Bit#(32) offset);
 	 addrReqFifo.enq(pointer);
 	 mmus[pointer[31:16]].addr[0].request.put(ReqTup{id:truncate(pointer), off:extend(offset)});
       endmethod
@@ -209,8 +207,7 @@ module mkMemServerR#(MMUConfigIndication mmuIndication,
    interface masters = map(mkm,genVector);
 endmodule
 	
-module mkMemServerW#(MMUConfigIndication mmuIndication,
-		     DmaDebugIndication dmaIndication,
+module mkMemServerW#(MemServerIndication indication,
 		     Vector#(numWriteClients, MemWriteClient#(dataWidth)) writeClients,
 		     Vector#(numMMUs,MMU#(PhysAddrWidth)) mmus)
    (MemServer#(PhysAddrWidth, dataWidth, nMasters))
@@ -243,13 +240,13 @@ module mkMemServerW#(MMUConfigIndication mmuIndication,
       Vector#(numMMUs,Server#(ReqTup,Bit#(PhysAddrWidth))) ss;
       for(Integer j = 0; j < valueOf(numMMUs); j=j+1)
 	 ss[j] = mmu_servers[j].servers[i];
-      writers[i] <- mkMemWriteInternal(client_bins[i], mmuIndication, ss);
+      writers[i] <- mkMemWriteInternal(client_bins[i], indication, ss);
    end
    
    rule mmuEntry;
       addrReqFifo.deq;
       let physAddr <- mmus[addrReqFifo.first[31:16]].addr[1].response.get;
-      dmaIndication.addrResponse(zeroExtend(physAddr));
+      indication.addrResponse(zeroExtend(physAddr));
    endrule
 
    function PhysMemMaster#(PhysAddrWidth,dataWidth) mkm(Integer i) = (interface PhysMemMaster#(PhysAddrWidth,dataWidth);
@@ -261,7 +258,7 @@ module mkMemServerW#(MMUConfigIndication mmuIndication,
 		     for(dbgPtr <= 0; dbgPtr < fromInteger(valueOf(nMasters)); dbgPtr <= dbgPtr+1)
 			(action
 			    let rv <- writers[dbgPtr].dbg.dbg;
-			    dmaIndication.reportStateDbg(rv);
+			    indication.reportStateDbg(rv);
 			 endaction);
 		  endseq;
    FSM dbgFSM <- mkFSM(dbgStmt);
@@ -273,20 +270,20 @@ module mkMemServerW#(MMUConfigIndication mmuIndication,
 				let rv <- writers[trafficPtr].dbg.getMemoryTraffic();
 				trafficAccum <= trafficAccum + rv;
 			     endaction);
-			 dmaIndication.reportMemoryTraffic(trafficAccum);
+			 indication.reportMemoryTraffic(trafficAccum);
 		      endseq;
    FSM trafficFSM <- mkFSM(trafficStmt);
 
-   interface DmaDebugRequest request;
-      method Action getStateDbg(ChannelType rc);
+   interface MemServerRequest request;
+      method Action stateDbg(ChannelType rc);
 	 if (rc == Write)
 	    dbgFSM.start;
       endmethod
-      method Action getMemoryTraffic(ChannelType rc);
+      method Action memoryTraffic(ChannelType rc);
 	 if (rc == Write) 
 	    trafficFSM.start;
       endmethod
-      method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
+      method Action addrTrans(Bit#(32) pointer, Bit#(32) offset);
 	 addrReqFifo.enq(pointer);
 	 mmus[pointer[31:16]].addr[1].request.put(ReqTup{id:truncate(pointer), off:extend(offset)});
       endmethod

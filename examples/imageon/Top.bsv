@@ -50,10 +50,10 @@ import ImageonSensorRequest::*;
 import ImageonSensorIndication::*;
 import HdmiInternalRequest::*;
 import HdmiInternalIndication::*;
-import DmaDebugRequest::*;
-import MMUConfigRequest::*;
-import DmaDebugIndication::*;
-import MMUConfigIndication::*;
+import MemServerRequest::*;
+import MMURequest::*;
+import MemServerIndication::*;
+import MMUIndication::*;
 import ImageonCaptureRequest::*;
 
 // defined by user
@@ -66,7 +66,7 @@ import XilinxCells::*;
 import ConnectalXilinxCells::*;
 
 typedef enum { ImageonSerdesRequest, ImageonSensorRequest, HdmiInternalRequest, ImageonCapture,
-    ImageonSerdesIndication, ImageonSensorIndication, HdmiInternalIndication, HostDmaDebugIndication, HostDmaDebugRequest, HostMMUConfigRequest, HostMMUConfigIndication} IfcNames deriving (Eq,Bits);
+    ImageonSerdesIndication, ImageonSensorIndication, HdmiInternalIndication, HostMemServerIndication, HostMemServerRequest, HostMMURequest, HostMMUIndication} IfcNames deriving (Eq,Bits);
 
 interface ImageCapture;
    interface Vector#(11,StdPortal) portalif;
@@ -118,13 +118,13 @@ module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
 	    endmethod
        endinterface));
    Vector#(1, MemWriteClient#(64)) writeClients = cons(we.dmaClient,nil);
-   MMUConfigIndicationProxy hostMMUConfigIndicationProxy <- mkMMUConfigIndicationProxy(HostMMUConfigIndication);
-   MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUConfigIndicationProxy.ifc);
-   MMUConfigRequestWrapper hostMMUConfigRequestWrapper <- mkMMUConfigRequestWrapper(HostMMUConfigRequest, hostMMU.request);
+   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
+   MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUIndicationProxy.ifc);
+   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
 
-   DmaDebugIndicationProxy hostDmaDebugIndicationProxy <- mkDmaDebugIndicationProxy(HostDmaDebugIndication);
-   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerW(hostMMUConfigIndicationProxy.ifc, hostDmaDebugIndicationProxy.ifc, writeClients, cons(hostMMU,nil));
-   DmaDebugRequestWrapper hostDmaDebugRequestWrapper <- mkDmaDebugRequestWrapper(HostDmaDebugRequest, dma.request);
+   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
+   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerW(hostMemServerIndicationProxy.ifc, writeClients, cons(hostMMU,nil));
+   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
 
    // fromSensor: sensor specific processing of serdes input, resulting in pixels
    ImageonSensorIndicationProxy sensorIndicationProxy <- mkImageonSensorIndicationProxy(ImageonSensorIndication);
@@ -186,11 +186,11 @@ Reg#(Bit#(10)) xsvi <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
    portals[3] = sensorIndicationProxy.portalIfc; 
    portals[4] = hdmiRequestWrapper.portalIfc; 
    portals[5] = hdmiIndicationProxy.portalIfc; 
-   portals[6] = hostDmaDebugRequestWrapper.portalIfc;
-   portals[7] = hostDmaDebugIndicationProxy.portalIfc;
+   portals[6] = hostMemServerRequestWrapper.portalIfc;
+   portals[7] = hostMemServerIndicationProxy.portalIfc;
    portals[8] = imageonCaptureWrapper.portalIfc;
-   portals[9] = hostMMUConfigRequestWrapper.portalIfc;
-   portals[10] = hostMMUConfigIndicationProxy.portalIfc;
+   portals[9] = hostMMURequestWrapper.portalIfc;
+   portals[10] = hostMMUIndicationProxy.portalIfc;
    interface Vector portalif = portals;
 
    interface ImageonSensorPins sensorpins = fromSensor.pins;

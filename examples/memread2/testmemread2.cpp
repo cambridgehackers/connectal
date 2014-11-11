@@ -5,8 +5,8 @@
 #include <unistd.h>
 #include "StdDmaIndication.h"
 
-#include "DmaDebugRequest.h"
-#include "MMUConfigRequest.h"
+#include "MemServerRequest.h"
+#include "MMURequest.h"
 #include "Memread2Indication.h"
 #include "Memread2Request.h"
 
@@ -71,11 +71,11 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
   device = new Memread2RequestProxy(IfcNames_Memread2Request);
-  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
-  MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
-  DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
-  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  DmaManager *dma = new DmaManager(dmap);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
   deviceIndication = new Memread2Indication(IfcNames_Memread2Indication);
 
@@ -107,8 +107,8 @@ int main(int argc, const char **argv)
   while(true){
     sleep(3);
     device->getStateDbg();
-    uint64_t beats = dma->show_mem_stats(ChannelType_Read);
+    uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
     fprintf(stderr, "   beats: %"PRIx64"\n", beats);
-    hostDmaDebugRequest->getStateDbg(ChannelType_Read);
+    hostMemServerRequest->stateDbg(ChannelType_Read);
   }
 }

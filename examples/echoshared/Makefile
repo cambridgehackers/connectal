@@ -1,5 +1,6 @@
 
-INTERFACES = Swallow EchoRequest EchoIndication MMUConfigRequest MMUConfigIndication DmaDebugRequest DmaDebugIndication
+CONNECTALDIR?=../..
+INTERFACES = Swallow EchoRequest EchoIndication MMURequest MMUIndication MemServerRequest MemServerIndication
 ## all the BSV files to be scanned for types and interfaces
 BSVFILES = Echo.bsv SwallowIF.bsv Top.bsv
 BSVFILES += $(CONNECTALDIR)/bsv/ConnectalMemory.bsv
@@ -9,4 +10,4 @@ CPPFILES2=testecho.cpp $(CONNECTALDIR)/cpp/portalShared.c $(CONNECTALDIR)/cpp/dm
 
 NUMBER_OF_MASTERS =0
 
-include ../../Makefile.connectal
+include $(CONNECTALDIR)/Makefile.connectal

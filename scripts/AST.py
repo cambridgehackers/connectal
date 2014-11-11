@@ -20,9 +20,198 @@
 #
 
 import math
-import cppgen, bsvgen, globalv
+import re
+import functools
+import json
+import os
+import sys
+import traceback
 
-class Method(cppgen.MethodMixin,bsvgen.MethodMixin):
+import AST
+import globalv
+import util
+
+#def indent(f, indentation):
+#    for i in xrange(indentation):
+#        f.write(' ')
+
+class EnumElementMixin:
+    def cName(self):
+        return self.name
+
+class EnumMixin:
+    def cName(self):
+        return self.name
+    def bitWidth(self):
+        return int(math.ceil(math.log(len(self.elements))))
+
+class InterfaceMixin:
+    def getSubinterface(self, name):
+        subinterfaceName = name
+        if not globalv.globalvars.has_key(subinterfaceName):
+            return None
+        subinterface = globalv.globalvars[subinterfaceName]
+        #print 'subinterface', subinterface, subinterface
+        return subinterface
+    def parentClass(self, default):
+        rv = default if (len(self.typeClassInstances)==0) else (self.typeClassInstances[0])
+        return rv
+    def global_name(self, s, suffix):
+        return '%s%s_%s' % (cName(self.name), suffix, s)
+
+class ParamMixin:
+    def cName(self):
+        return self.name
+
+class TypeMixin:
+    def cName(self):
+        cid = self.name.replace(' ', '')
+        if cid == 'Bit':
+            if self.params[0].numeric() <= 32:
+                return 'uint32_t'
+            elif self.params[0].numeric() <= 64:
+                return 'uint64_t'
+            else:
+                return 'std::bitset<%d>' % (self.params[0].numeric())
+        elif cid == 'Int':
+            if self.params[0].numeric() == 32:
+                return 'int'
+            else:
+                assert(False)
+        elif cid == 'UInt':
+            if self.params[0].numeric() == 32:
+                return 'unsigned int'
+            else:
+                assert(False)
+        elif cid == 'Float':
+            return 'float'
+        elif cid == 'Vector':
+            return 'bsvvector<%d,%s>' % (self.params[0].numeric(), self.params[1].cName())
+        elif cid == 'Action':
+            return 'int'
+        elif cid == 'ActionValue':
+            return self.params[0].cName()
+        if self.params:
+            name = '%sL_%s_P' % (cid, '_'.join([cName(t) for t in self.params if t]))
+        else:
+            name = cid
+        return name
+    def isBitField(self):
+        return self.name == 'Bit' or self.name == 'Int' or self.name == 'UInt'
+    def bitWidth(self):
+        if self.name == 'Bit' or self.name == 'Int' or self.name == 'UInt':
+            width = self.params[0].name
+            while globalv.globalvars.has_key(width):
+                decl = globalv.globalvars[width]
+                if decl.type != 'TypeDef':
+                    break
+                print 'Resolving width', width, decl.tdtype
+                width = decl.tdtype.name
+            if re.match('[0-9]+', width):
+                return int(width)
+            else:
+                return decl.tdtype.numeric()
+        if self.name == 'Float':
+            return 32
+        else:
+            return 0
+
+def cName(x):
+    if type(x) == str or type(x) == unicode:
+        x = x.replace(' ', '')
+        x = x.replace('.', '$')
+        return x
+    else:
+        return x.cName()
+
+def dtInfo(arg):
+    rc = {}
+    if hasattr(arg, 'name'):
+        rc['name'] = arg.name
+    if hasattr(arg, 'type'):
+        rc['type'] = arg.type
+    if hasattr(arg, 'cName'):
+        rc['cName'] = arg.cName()
+    if hasattr(arg, 'bitWidth'):
+        rc['bitWidth'] = arg.bitWidth()
+    if hasattr(arg, 'params'):
+        #print 'OOO', arg.params
+        if arg.params is not None:
+            rc['params'] = [dtInfo(p) for p in arg.params]
+    if hasattr(arg, 'elements'):
+        if arg.type == 'Enum':
+            rc['elements'] = arg.elements
+        else:
+            rc['elements'] = [piInfo(p) for p in arg.elements]
+    return rc
+
+def piInfo(pitem):
+    rc = {}
+    rc['name'] = pitem.name
+    rc['type'] = dtInfo(pitem.type)
+    return rc
+
+def declInfo(mitem):
+    rc = {}
+    rc['name'] = mitem.name
+    rc['params'] = []
+    for pitem in mitem.params:
+        rc['params'].append(piInfo(pitem))
+    return rc
+
+def classInfo(item):
+    rc = {
+        'Package': os.path.splitext(os.path.basename(item.package))[0],
+        'moduleContext': '',
+        'name': item.name,
+        'parentLportal': item.parentClass("portal"),
+        'parentPortal': item.parentClass("Portal"),
+        'package': item.package,
+        'decls': [],
+    }
+    for mitem in item.decls:
+        rc['decls'].append(declInfo(mitem))
+    return rc
+
+def serialize_json(interfaces, globalimports, dutname):
+    itemlist = []
+    for item in interfaces:
+        itemlist.append(classInfo(item))
+    jfile = open('cppgen_intermediate_data.tmp', 'w')
+    toplevel = {}
+    toplevel['interfaces'] = itemlist
+    gvlist = {}
+    for key, value in globalv.globalvars.iteritems():
+        gvlist[key] = {'type': value.type}
+        if value.type == 'TypeDef':
+            #print 'TYPEDEF globalvar:', key, value
+            gvlist[key]['name'] = value.name
+            gvlist[key]['tdtype'] = dtInfo(value.tdtype)
+            gvlist[key]['params'] = value.params
+        else:
+            print 'Unprocessed globalvar:', key, value
+    toplevel['globalvars'] = gvlist
+    gdlist = []
+    for item in globalv.globaldecls:
+        newitem = {'type': item.type}
+        if item.type == 'TypeDef':
+            newitem['name'] = item.name
+            newitem['tdtype'] = dtInfo(item.tdtype)
+            newitem['params'] = item.params
+            #print 'TYPEDEF globaldecl:', item, 'ZZZ', newitem
+        else:
+            print 'Unprocessed globaldecl:', item, 'ZZZ', newitem
+        gdlist.append(newitem)
+    toplevel['globaldecls'] = gdlist
+    toplevel['globalimports'] = globalimports
+    toplevel['dutname'] = dutname
+    #json.dump(toplevel, jfile, sort_keys = True, indent = 4)
+    #jfile.close()
+    #j2file = open('cppgen_intermediate_data.tmp').read()
+    #toplevel = json.loads(j2file)
+    return toplevel
+
+class Method:
     def __init__(self, name, return_type, params):
         self.type = 'Method'
         self.name = name
@@ -37,13 +226,15 @@ class Method(cppgen.MethodMixin,bsvgen.MethodMixin):
                       self.return_type.instantiate(paramBindings),
                       [ p.instantiate(paramBindings) for p in self.params])
 
-class Function(cppgen.NoCMixin):
+class Function:
     def __init__(self, name, return_type, params):
         self.type = 'Function'
         self.name = name
         self.return_type = return_type
         self.params = params
     def __repr__(self):
+        if not self.params:
+            return '<function: %s %s NONE>' % (self.name, self.return_type)
         sparams = map(str, self.params)
         return '<function: %s %s %s>' % (self.name, self.return_type, sparams)
 
@@ -55,7 +246,7 @@ class Variable:
     def __repr__(self):
         return '<variable: %s : %s>' % (self.name, self.type)
 
-class Interface(cppgen.InterfaceMixin,bsvgen.InterfaceMixin):
+class Interface(InterfaceMixin):
     def __init__(self, name, params, decls, subinterfacename, packagename):
         self.type = 'Interface'
         self.name = name
@@ -63,7 +254,6 @@ class Interface(cppgen.InterfaceMixin,bsvgen.InterfaceMixin):
         self.decls = decls
         self.subinterfacename = subinterfacename
         self.typeClassInstances = []
-        self.hasSource = True
         self.package = packagename
     def interfaceType(self):
         return Type(self.name,self.params)
@@ -74,7 +264,6 @@ class Interface(cppgen.InterfaceMixin,bsvgen.InterfaceMixin):
                                  [d.instantiate(paramBindings) for d in self.decls],
                                  self.subinterfacename,
                                  self.package)
-        newInterface.hasSource = self.hasSource
         newInterface.typeClassInstances = self.typeClassInstances
         return newInterface
 
@@ -95,7 +284,7 @@ class TypeclassInstance:
     def __repr__(self):
         return '{typeclassinstance %s %s}' % (self.name, self.params)
 
-class Module(cppgen.NoCMixin):
+class Module:
     def __init__(self, moduleContext, name, params, interface, provisos, decls):
         self.type = 'Module'
         self.name = name
@@ -106,21 +295,15 @@ class Module(cppgen.NoCMixin):
         self.decls = decls
     def __repr__(self):
         return '{module: %s %s}' % (self.name, self.decls)
-    def collectTypes(self):
-        result = []
-        for d in self.decls:
-            if d:
-                result.extend(d.collectTypes())
-        return result
 
-class EnumElement(cppgen.EnumElementMixin):
+class EnumElement(EnumElementMixin):
     def __init__(self, name, qualifiers, value):
         self.qualifiers = qualifiers
         self.value = value
     def __repr__(self):
         return '{enumelt: %s}' % (self.name)
 
-class Enum(cppgen.EnumMixin,bsvgen.EnumMixin):
+class Enum(EnumMixin):
     def __init__(self, elements):
         self.type = 'Enum'
         self.elements = elements
@@ -129,7 +312,7 @@ class Enum(cppgen.EnumMixin,bsvgen.EnumMixin):
     def instantiate(self, paramBindings):
         return self
 
-class StructMember(cppgen.StructMemberMixin):
+class StructMember:
     def __init__(self, t, name):
         self.type = t
         self.name = name
@@ -138,7 +321,7 @@ class StructMember(cppgen.StructMemberMixin):
     def instantiate(self, paramBindings):
         return StructMember(self.type.instantiate(paramBindings), self.name)
 
-class Struct(cppgen.StructMixin,bsvgen.StructMixin):
+class Struct:
     def __init__(self, elements):
         self.type = 'Struct'
         self.elements = elements
@@ -147,7 +330,7 @@ class Struct(cppgen.StructMixin,bsvgen.StructMixin):
     def instantiate(self, paramBindings):
         return Struct([e.instantiate(paramBindings) for e in self.elements])
 
-class TypeDef(cppgen.TypeDefMixin):
+class TypeDef:
     def __init__(self, tdtype, name, params):
         self.name = name
         self.params = params
@@ -159,7 +342,7 @@ class TypeDef(cppgen.TypeDefMixin):
     def __repr__(self):
         return '{typedef: %s %s}' % (self.tdtype, self.name)
 
-class Param(cppgen.ParamMixin,bsvgen.ParamMixin):
+class Param(ParamMixin):
     def __init__(self, name, t):
         self.name = name
         self.type = t
@@ -169,7 +352,7 @@ class Param(cppgen.ParamMixin,bsvgen.ParamMixin):
         return Param(self.name,
                      self.type.instantiate(paramBindings))
 
-class Type(cppgen.TypeMixin,bsvgen.TypeMixin):
+class Type(TypeMixin):
     def __init__(self, name, params):
         self.type = 'Type'
         self.name = name

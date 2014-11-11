@@ -283,12 +283,31 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
 		  interface Put request;
 		     method Action put(MemengineCmd c) if (outs0[i] < cmd_q_depth);
 			Bit#(32) bsb = fromInteger(bufferSizeBytes);
-			if(extend(c.burstLen) > bsb)
-			   $display("mkMemwriteEngineV::unsupportedBurstLen");
-			outs0[i] <= outs0[i]+1;
-			cmds_in[i].enq(tuple2(fromInteger(i),c));
-			write_data_funnel.burstLen[i] <= c.burstLen >> beat_shift;
-			//$display("(%d) %h %h %h", i, c.base, c.len, c.burstLen);
+`ifdef BSIM	 
+			Bit#(32) dw = fromInteger(valueOf(dataWidthBytes));
+			Bit#(32) bl = extend(c.burstLen);
+			// this is because bsc lifts the divide operation (below) 
+			// and on startup the simulator gets a floating-point exception
+	  		if (bl ==0)
+			   bl = 1;
+			let mdw0 = ((c.len)/bl)*bl != c.len;
+			let mdw1 = ((c.len)/dw)*dw != c.len;
+			let bbl = extend(c.burstLen) > bsb;
+			if(bbl || mdw0 || mdw1 || c.len == 0) begin
+			   if (bbl)
+			      $display("XXXXXXXXXX mkMemwriteEngineBuff::unsupported burstLen %d %d", bsb, c.burstLen);
+			   if (mdw0 || mdw1 || c.len == 0)
+			      $display("XXXXXXXXXX mkMemwriteEngineBuff::unsupported len %h", c.len);
+			end
+			else begin
+`endif
+			   outs0[i] <= outs0[i]+1;
+			   cmds_in[i].enq(tuple2(fromInteger(i),c));
+			   write_data_funnel.burstLen[i] <= c.burstLen >> beat_shift;
+			   //$display("(%d) %h %h %h", i, c.base, c.len, c.burstLen);
+`ifdef BSIM
+			end
+`endif
  		     endmethod
 		  endinterface
 		  interface Get response;

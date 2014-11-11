@@ -3,10 +3,11 @@
 #ifndef _TESTMEMWRITE_H_
 #define _TESTMEMWRITE_H_
 
+#include <errno.h>
 #include "sock_utils.h"
 #include "StdDmaIndication.h"
-#include "DmaDebugRequest.h"
-#include "MMUConfigRequest.h"
+#include "MemServerRequest.h"
+#include "MMURequest.h"
 #include "MemwriteIndication.h"
 #include "MemwriteRequest.h"
 #include "dmaManager.h"
@@ -52,7 +53,7 @@ public:
 };
 
 MemwriteRequestProxy *device = 0;
-MMUConfigRequestProxy *dmap = 0;
+MMURequestProxy *dmap = 0;
 
 MemwriteIndication *deviceIndication = 0;
 
@@ -63,12 +64,22 @@ void child(int rd_sock)
 {
   int fd;
   bool mismatch = false;
-  fprintf(stderr, "[%s:%d] child waiting for fd\n", __FUNCTION__, __LINE__);
-  sock_fd_read(rd_sock, NULL, 0, &fd);
-  fprintf(stderr, "[%s:%d] child got fd %d\n", __FUNCTION__, __LINE__, fd);
+  int again = 0;
+  fprintf(stderr, "[%s:%d] child waiting for fd via rd_sock %d\n", __FUNCTION__, __LINE__, rd_sock);
+  do {
+    int msg;
+    sock_fd_read(rd_sock, &msg, sizeof(msg), &fd);
+    again = (fd < 0 && errno == EAGAIN);
+  } while (again);
+  fprintf(stderr, "[%s:%d] child got fd %d errno=%d\n", __FUNCTION__, __LINE__, fd, (fd >= 0) ? 0 : errno);
+
+  if (fd == -1)
+    exit(EINVAL);
 
   unsigned int *dstBuffer = (unsigned int *)portalMmap(fd, alloc_sz);
   fprintf(stderr, "child::dstBuffer = %p\n", dstBuffer);
+  if (dstBuffer == (unsigned int *)-1)
+    exit(ENODEV);
 
   unsigned int sg = 0;
   for (int i = 0; i < numWords; i++){
@@ -81,7 +92,7 @@ void child(int rd_sock)
   exit(mismatch);
 }
 
-void parent(int rd_sock, int wr_sock)
+void parent(int wr_sock)
 {
   
   if(sem_init(&test_sem, 1, 0)){
@@ -93,11 +104,11 @@ void parent(int rd_sock, int wr_sock)
 
   device = new MemwriteRequestProxy(IfcNames_MemwriteRequest);
   deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndication);
-  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
-  MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
-  DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
-  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  DmaManager *dma = new DmaManager(dmap);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
   
   fprintf(stderr, "parent::allocating memory...\n");
   dstAlloc = portalAlloc(alloc_sz);
@@ -138,7 +149,8 @@ void parent(int rd_sock, int wr_sock)
     sem_wait(&test_sem);
     //portalTrace_stop();
     uint64_t cycles = portalTimerLap(0);
-    uint64_t beats = dma->show_mem_stats(ChannelType_Write);
+    hostMemServerRequest->memoryTraffic(ChannelType_Write);
+    uint64_t beats = hostMemServerIndication->receiveMemoryTraffic();
     float write_util = (float)beats/(float)cycles;
     fprintf(stderr, "   beats: %"PRIx64"\n", beats);
     fprintf(stderr, "numWords: %x\n", numWords);
@@ -159,8 +171,9 @@ void parent(int rd_sock, int wr_sock)
     }
   }
 
-  fprintf(stderr, "[%s:%d] send fd to child %d\n", __FUNCTION__, __LINE__, (int)dstAlloc);
-  sock_fd_write(wr_sock, NULL, 0, (int)dstAlloc);
+  fprintf(stderr, "[%s:%d] send fd to child %d via wr_sock %d\n", __FUNCTION__, __LINE__, (int)dstAlloc, wr_sock);
+  int msg = 22;
+  sock_fd_write(wr_sock, &msg, sizeof(msg), (int)dstAlloc);
   munmap(dstBuffer, alloc_sz);
   close(dstAlloc);
 }

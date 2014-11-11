@@ -62,7 +62,7 @@ typedef int SpecialTypeForSendingFd;
 struct PortalInternal;
 typedef int (*ITEMINIT)(struct PortalInternal *pint, void *param);
 typedef int (*PORTAL_INDFUNC)(struct PortalInternal *p, unsigned int channel, int messageFd);
-typedef void (*SENDMSG)(struct PortalInternal *pint, unsigned int hdr, int sendFd);
+typedef void (*SENDMSG)(struct PortalInternal *pint, volatile unsigned int *buffer, unsigned int hdr, int sendFd);
 typedef int (*RECVMSG)(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd);
 typedef unsigned int (*READWORD)(struct PortalInternal *pint, volatile unsigned int **addr);
 typedef void (*WRITEWORD)(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
@@ -85,14 +85,7 @@ typedef struct {
     EVENT       event;
 } PortalItemFunctions;
 
-typedef struct {
-    struct DmaManager *dma;
-    uint32_t    size;
-} PortalSharedParam; /* for ITEMINIT function */
-typedef struct PortalSocketParam {
-    struct addrinfo *addr;
-} PortalSocketParam; /* for ITEMINIT function */
-
+#define MAX_CLIENT_FD 10
 typedef struct PortalInternal {
   struct PortalPoller   *poller;
   int                    fpga_fd;
@@ -104,7 +97,26 @@ typedef struct PortalInternal {
   int                    accept_finished;
   PortalItemFunctions    *item;
   void                   *cb;
+  struct PortalInternal  *mux;
+  int                    muxid;
+  int                    client_index;
+  int                    client_fd_number;
+  int                    client_fd[MAX_CLIENT_FD];
 } PortalInternal;
+
+typedef struct {
+    struct DmaManager *dma;
+    uint32_t    size;
+} PortalSharedParam; /* for ITEMINIT function */
+
+typedef struct PortalSocketParam {
+    struct addrinfo *addr;
+} PortalSocketParam; /* for ITEMINIT function */
+
+typedef struct {
+    PortalInternal       *pint;
+    void                 *socketParam;
+} PortalMuxParam;
 
 #ifdef __KERNEL__
 #include <linux/module.h>
@@ -160,7 +172,7 @@ void portalTimerInit(void);
 uint64_t portalTimerCatch(unsigned int i);
 void portalTimerPrint(int loops);
 
-void send_portal_null(struct PortalInternal *pint, unsigned int hdr, int sendFd);
+void send_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, unsigned int hdr, int sendFd);
 int recv_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd);
 int busy_portal_null(struct PortalInternal *pint, volatile unsigned int *addr, const char *str);
 void enableint_portal_null(struct PortalInternal *pint, int val);
@@ -171,13 +183,14 @@ volatile unsigned int *mapchannel_hardware(struct PortalInternal *pint, unsigned
 int busy_hardware(struct PortalInternal *pint, volatile unsigned int *addr, const char *str);
 void enableint_hardware(struct PortalInternal *pint, int val);
 int event_hardware(struct PortalInternal *pint);
+void addFdToPoller(struct PortalPoller *poller, int fd);
 
 extern int portalExec_timeout;
 extern int global_pa_fd;
 extern int global_sockfd;
 extern PortalInternal *utility_portal;
 extern PortalItemFunctions bsimfunc, hardwarefunc,
-    socketfuncInit, socketfuncResp, sharedfunc;
+    socketfuncInit, socketfuncResp, sharedfunc, muxfunc;
 #ifdef __cplusplus
 }
 #endif

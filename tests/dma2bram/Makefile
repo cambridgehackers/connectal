@@ -1,7 +1,7 @@
 
-INTERFACES = TestRequest MMUConfigRequest TestIndication MMUConfigIndication 
+CONNECTALDIR?=../..
+INTERFACES = TestRequest MMURequest TestIndication MMUIndication 
 BSVFILES = Test.bsv Top.bsv
 CPPFILES=test.cpp
-#CONNECTALFLAGS=--bscflags " -D TRACE_AXI"
 
-include ../../Makefile.connectal
+include $(CONNECTALDIR)/Makefile.connectal

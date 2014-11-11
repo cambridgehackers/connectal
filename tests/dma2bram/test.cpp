@@ -27,7 +27,7 @@
 #include <semaphore.h>
 
 #include "StdDmaIndication.h"
-#include "MMUConfigRequest.h"
+#include "MMURequest.h"
 #include "TestIndication.h"
 #include "TestRequest.h"
 
@@ -49,9 +49,9 @@ int main(int argc, const char **argv)
 {
 
   TestRequestProxy *testRequest = new TestRequestProxy(IfcNames_TestRequest);
-  MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
-  DmaManager *dma = new DmaManager(NULL, dmap);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  DmaManager *dma = new DmaManager(dmap);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
   TestIndication *testIndication = new TestIndication(IfcNames_TestIndication);
 
   if(sem_init(&test_sem, 1, 0)){

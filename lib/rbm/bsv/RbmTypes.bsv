@@ -53,7 +53,10 @@ typedef TDiv#(J,RowsPerTile) T;
 typedef TMul#(32,N) DmaSz;
 
 typedef enum {
-   HostDmaDebugIndication, HostDmaDebugRequest, HostMMUConfigRequest, HostMMUConfigIndication,
+   HostMemServerIndication, 
+   HostMemServerRequest, 
+   HostMMURequest, 
+   HostMMUIndication,
    MmIndicationPortal,
    MmRequestPortal,
    RbmIndicationPortal,

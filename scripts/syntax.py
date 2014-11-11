@@ -995,11 +995,10 @@ def generate_bsvcpp(filelist, project_dir, dutname, bsvdefines, interfaces, nf):
         ifc = ifc.instantiate(dict(zip(ifc.params, ifc.params)))
         ifc.ind = AST.Interface(i, [], [], None, ifc.package)
         ifc.ind.req = ifc
-        ifc.assignRequestResponseChannels()
-        ifc.ind.assignRequestResponseChannels()
         ilist.append(ifc)
-    cppgen.generate_cpp(globalv.globaldecls, project_dir, noisyFlag, ilist)
-    bsvgen.generate_bsv(globalimports, project_dir, noisyFlag, ilist, dutname)
+    jsondata = AST.serialize_json(ilist, globalimports, dutname)
+    cppgen.generate_cpp(project_dir, noisyFlag, jsondata)
+    bsvgen.generate_bsv(project_dir, noisyFlag, jsondata)
     
 if __name__=='__main__':
     if len(sys.argv) == 1:
