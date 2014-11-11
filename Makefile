@@ -50,13 +50,13 @@ install: $(INSTALL_SHARED)
 	for fname in $(UDEV_RULES) ; do \
 	    install -m644 etc/udev/rules.d/$$fname $(DESTDIR)$(UDEV_RULES_DIR) ; \
 	done
-	-if [ "$(DESTDIR)" == "" ]; then \
-	service udev restart; \
-	rmmod portalmem; \
-	rmmod pcieportal; \
-	modprobe portalmem; \
-	modprobe pcieportal; \
-	fi
+ifeq ( _$(DESTDIR), _)
+	service udev restart;
+	rmmod portalmem;
+	rmmod pcieportal;
+	modprobe portalmem;
+	modprobe pcieportal;
+endif
 
 INSTALL_DIRS = $(shell ls | grep -v debian)
 
