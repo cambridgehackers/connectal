@@ -134,12 +134,11 @@ int main(int argc, const char **argv)
 
       // for this test, we are just re-usng the same haystack which 
       // has been written to the nandsim backing store by nandsim_exe 
-      //
-      // readfile("test.bin", &haystackP[i]);
-      // portalDCacheFlushInval(haystackP[i].alloc, haystackP[i].length, haystackP[i].mem);
 
-      if(i==0)
+      if(i==0){
+	readfile("test.bin", &haystackP[0]);
 	sw_match_cnt = num_tests*sw_ref(&haystackP[0], &charMapP, &stateMapP, &stateTransitionsP);
+      }
 
       sem_wait(&test_sem);
       int token = deviceIndication->token;

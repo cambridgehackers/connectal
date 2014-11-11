@@ -55,7 +55,9 @@ public:
   virtual void searchResult (uint32_t t, int v){
     if (v == -1 ){
       fprintf(stderr, "searchComplete = (%d, %d)\n", t, v);
-#ifdef ALGO_NANDSIM
+#ifndef ALGO_NANDSIM
+      // in ALGO_NANDSIM we are just re-usng the same haystack which 
+      // has been written to the nandsim backing store by nandsim_exe 
       munmap(haystackP[token_map[t]].mem, haystackP[token_map[t]].length);
       close(haystackP[token_map[t]].alloc);
       haystack_mmu->idReturn(haystackP[token_map[t]].ref);
