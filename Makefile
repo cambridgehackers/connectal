@@ -408,4 +408,5 @@ distclean:
 	rm -rf drivers/*/.tmp_versions tests/memread_manual/kernel/.tmp_versions/
 	rm -rf pcie/connectalutil/connectalutil tests/memread_manual/kernel/bsim_relay
 	rm -rf out/ exit.status cpp/*.o scripts/*.pyc
+	rm -rf tests/*/train-images-idx3-ubyte examples/*/train-images-idx3-ubyte
 
