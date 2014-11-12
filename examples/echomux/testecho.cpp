@@ -23,19 +23,23 @@
 #include <netdb.h>
 #include "EchoRequestSW.h"
 #include "EchoIndicationSW.h"
+#include "SecondRequest.h"
+#include "SecondIndication.h"
+#include "ThirdRequest.h"
+#include "ThirdIndication.h"
 
-EchoRequestSWProxy *sRequestProxy;
-static sem_t sem_heard2;
+static sem_t semEcho;
+EchoRequestSWProxy *sEcho;
 
 class EchoIndication : public EchoIndicationSWWrapper
 {
 public:
     virtual void heard(uint32_t v) {
         fprintf(stderr, "heard an s: %d\n", v);
-	sRequestProxy->say2(v, 2*v);
+	sEcho->say2(v, 2*v);
     }
     virtual void heard2(uint32_t a, uint32_t b) {
-        sem_post(&sem_heard2);
+        sem_post(&semEcho);
         //fprintf(stderr, "heard an s2: %ld %ld\n", a, b);
     }
     EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationSWWrapper(id, item, param) {}
@@ -44,15 +48,39 @@ public:
 static void call_say(int v)
 {
     printf("[%s:%d] %d\n", __FUNCTION__, __LINE__, v);
-    sRequestProxy->say(v);
-    sem_wait(&sem_heard2);
+    sEcho->say(v);
+    sem_wait(&semEcho);
 }
 
 static void call_say2(int v, int v2)
 {
-    sRequestProxy->say2(v, v2);
-    sem_wait(&sem_heard2);
+    sEcho->say2(v, v2);
+    sem_wait(&semEcho);
 }
+
+static sem_t semSecond;
+SecondRequestProxy *sSecond;
+
+class SecondIndication : public SecondIndicationWrapper
+{
+public:
+    virtual void heard(uint32_t v, uint32_t a) {
+        fprintf(stderr, "Secondheard an s: %d %d\n", v, a);
+    }
+    SecondIndication(unsigned int id, PortalItemFunctions *item, void *param) : SecondIndicationWrapper(id, item, param) {}
+};
+
+static sem_t semThird;
+ThirdRequestProxy *sThird;
+
+class ThirdIndication : public ThirdIndicationWrapper
+{
+public:
+    virtual void heard() {
+        fprintf(stderr, "Thirdheard\n");
+    }
+    ThirdIndication(unsigned int id, PortalItemFunctions *item, void *param) : ThirdIndicationWrapper(id, item, param) {}
+};
 
 int main(int argc, const char **argv)
 {
@@ -62,19 +90,25 @@ int main(int argc, const char **argv)
     Portal *mcommon = new Portal(0, sizeof(uint32_t), NULL, NULL, &socketfuncInit, &paramSocket, 0);
     param.pint = &mcommon->pint;
     EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &muxfunc, &param);
-    sRequestProxy = new EchoRequestSWProxy(IfcNames_EchoRequest, &muxfunc, &param);
+    sEcho = new EchoRequestSWProxy(IfcNames_EchoRequest, &muxfunc, &param);
+    SecondIndication *sSecondIndication = new SecondIndication(IfcNames_SecondIndication, &muxfunc, &param);
+    sSecond = new SecondRequestProxy(IfcNames_SecondRequest, &muxfunc, &param);
+    ThirdIndication *sThirdIndication = new ThirdIndication(IfcNames_ThirdIndication, &muxfunc, &param);
+    sThird = new ThirdRequestProxy(IfcNames_ThirdRequest, &muxfunc, &param);
 
     portalExec_start();
 
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
     call_say(v);
+sSecond->say(v*99, v * 1000000000L, v*55);
     call_say(v*5);
+sThird->say();
     call_say(v*17);
     call_say(v*93);
     call_say2(v, v*3);
     printf("TEST TYPE: SEM\n");
-    sRequestProxy->setLeds(9);
+    sEcho->setLeds(9);
     portalExec_end();
     return 0;
 }

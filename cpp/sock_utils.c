@@ -117,7 +117,6 @@ ssize_t sock_fd_write(int sockfd, void *ptr, size_t nbytes, int sendfd)
     msg.msg_iov = iov;
     msg.msg_iovlen = 1;
     int rc = sendmsg(sockfd, &msg, 0);
-//MSG_DONTWAIT);
     if (rc != nbytes) {
         printf("[%s:%d] error in sendmsg %d %d\n", __FUNCTION__, __LINE__, rc, errno);
         exit(1);
@@ -159,6 +158,9 @@ ssize_t sock_fd_read(int sockfd, void *ptr, size_t nbytes, int *recvfd)
         int *foo = (int *)CMSG_DATA(cmptr);
         *recvfd = *foo;
 printf("[%s:%d] got fd %d\n", __FUNCTION__, __LINE__, *foo);
+    }
+    if (n != nbytes) {
+printf("[%s:%d] asked for %ld bytes, got %ld\n", __FUNCTION__, __LINE__, nbytes, n);
     }
     return n;
 }

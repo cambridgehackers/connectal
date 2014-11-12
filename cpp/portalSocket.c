@@ -39,6 +39,23 @@
 #include <assert.h>
 #include <netdb.h>
 
+void memdump(unsigned char *p, int len, const char *title)
+{
+int i;
+
+    i = 0;
+    while (len > 0) {
+        if (!(i & 0xf)) {
+            if (i > 0)
+                printf("\n");
+            printf("%s: ",title);
+        }
+        printf("%02x ", *p++);
+        i++;
+        len--;
+    }
+    printf("\n");
+}
 
 typedef struct bsim_fpga_map_entry{
   int name;
@@ -139,7 +156,16 @@ static volatile unsigned int *mapchannel_socket(struct PortalInternal *pint, uns
 }
 static int recv_socket(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
 {
-    return portalRecvFd(pint->client_fd[pint->indication_index], (void *)buffer, len * sizeof(uint32_t), recvfd);
+    int rc = portalRecvFd(pint->client_fd[pint->indication_index], (void *)buffer, len * sizeof(uint32_t), recvfd);
+    if(trace_socket) {
+        printf("[%s:%d] len %d fd %d rc %d\n", __FUNCTION__, __LINE__, len, pint->client_fd[pint->indication_index], rc);
+        if (rc > 0) {
+        char bname[100];
+        sprintf(bname,"RECV%d", pint->client_fd[pint->indication_index]);
+        memdump((uint8_t*)buffer, rc, bname);
+        }
+    }
+    return rc;
 }
 static int event_socket(struct PortalInternal *pint)
 {
@@ -181,9 +207,16 @@ printf("[%s:%d]afteracc %p accfd %d fd %d\n", __FUNCTION__, __LINE__, pint, pint
 static void send_socket(struct PortalInternal *pint, volatile unsigned int *data, unsigned int hdr, int sendFd)
 {
     volatile unsigned int *buffer = data-1;
+    if(trace_socket)
+        printf("[%s:%d] hdr %x fpga %x num %d\n", __FUNCTION__, __LINE__, hdr, pint->fpga_number, pint->client_fd_number);
     buffer[0] = hdr;
     while (pint->client_fd_number == 0)
         event_socket(pint);
+    if(trace_socket) {
+        char bname[100];
+        sprintf(bname,"SEND%d", pint->client_fd[pint->request_index]);
+        memdump((uint8_t*)buffer, (hdr & 0xffff) * sizeof(uint32_t), bname);
+    }
     portalSendFd(pint->client_fd[pint->request_index], (void *)buffer, (hdr & 0xffff) * sizeof(uint32_t), sendFd);
 }
 PortalItemFunctions socketfuncResp = {
@@ -201,37 +234,42 @@ static int init_mux(struct PortalInternal *pint, void *aparam)
         printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     pint->mux = param->pint;
     pint->map_base = (volatile unsigned int*)malloc(pint->reqsize);
+    pint->mux->map_base[0] = -1;
     return 0;
 }
 static void send_mux(struct PortalInternal *pint, volatile unsigned int *data, unsigned int hdr, int sendFd)
 {
     volatile unsigned int *buffer = data-1;
     if(trace_socket)
-        printf("[%s:%d] hdr %x\n", __FUNCTION__, __LINE__, hdr);
+        printf("[%s:%d] hdr %x fpga %x\n", __FUNCTION__, __LINE__, hdr, pint->fpga_number);
     buffer[0] = hdr;
     pint->mux->request_index = pint->request_index;
+//char bname[100];
+//sprintf(bname,"MSEND%d", pint->mux->client_fd[pint->mux->request_index]);
+//memdump((uint8_t*)buffer, ((hdr+1) & 0xffff) * sizeof(uint32_t), bname);
     pint->mux->item->send(pint->mux, buffer, (pint->fpga_number << 16) | ((hdr + 1) & 0xffff), sendFd);
 }
 static int recv_mux(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
 {
     if(trace_socket)
-        printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+        printf("[%s:%d] len %d\n", __FUNCTION__, __LINE__, len);
     return pint->mux->item->recv(pint->mux, buffer, len, recvfd);
 }
 static int event_mux(struct PortalInternal *pint)
 {
-    if(trace_socket) {
-        printf("[%s:%d] muxid %d clientnum %d\n", __FUNCTION__, __LINE__, pint->mux->map_base[0], pint->mux->client_fd_number);
-        sleep(1);
-    }
     int event_mux_fd, dummy;
-    pint->mux->item->event(pint->mux);
+    if (pint->mux->map_base[0] == -1)
+        pint->mux->item->event(pint->mux);
     if (pint->mux->map_base[0] == -1)
         return -1;
+    if(trace_socket) {
+        printf("[%s:%d] muxid %x clientnum %d this %d\n", __FUNCTION__, __LINE__, pint->mux->map_base[0], pint->mux->client_fd_number, pint->fpga_number);
+        sleep(1);
+    }
     if (pint->mux->map_base[0] >> 16 == pint->fpga_number) {
         pint->indication_index = pint->mux->indication_index;
         pint->mux->map_base[0] = -1;
-        recv_mux(pint, pint->map_base, sizeof(uint32_t), &dummy);
+        recv_mux(pint, pint->map_base, 1, &dummy);
         pint->handler(pint, *pint->map_base >> 16, event_mux_fd);
     }
     return -1;
