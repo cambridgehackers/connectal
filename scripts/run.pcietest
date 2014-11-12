@@ -24,9 +24,12 @@ if [ "$RUNPARAM" != "" ]; then
     EXENAME=`basename $2`
     ssh $SSHPARAM $RUNPARAM "fpgajtag $BOARD_SERIAL $TEMPDIR/$BINNAME"
     ssh $SSHPARAM $RUNPARAM "timeout $TIMELIMIT catchsegv $TEMPDIR/$EXENAME"
+    ssh $SSHPARAM $RUNPARAM "pcieflat > $TEMPDIR/pcieflat.txt"
+    scp $RUNPARAM:$TEMPDIR/pcieflat.txt `dirname $1`
     ssh $SSHPARAM $RUNPARAM "rm -rf $TEMPDIR"
 else
     fpgajtag $BOARD_SERIAL $1
     sleep 1
     timeout 3m catchsegv $2
+    pcieflat > bin/pcieflat.txt
 fi
