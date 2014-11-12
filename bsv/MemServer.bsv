@@ -151,7 +151,7 @@ module mkMemServerR#(MemServerIndication indication,
    endmodule
    Vector#(numMMUs,MMUAddrServer#(PhysAddrWidth,nMasters)) mmu_servers <- mapM(foo,genVector);
 
-   Vector#(nMasters,MemReadInternal#(PhysAddrWidth,dataWidth)) readers;
+   Vector#(nMasters,MemReadInternal#(PhysAddrWidth,dataWidth,MemServerTags)) readers;
    for(Integer i = 0; i < valueOf(nMasters); i = i+1) begin
       Vector#(numMMUs,Server#(ReqTup,Bit#(PhysAddrWidth))) ss;
       for(Integer j = 0; j < valueOf(numMMUs); j=j+1)
@@ -235,7 +235,7 @@ module mkMemServerW#(MemServerIndication indication,
    endmodule
    Vector#(numMMUs,MMUAddrServer#(PhysAddrWidth,nMasters)) mmu_servers <- mapM(foo,genVector);
 
-   Vector#(nMasters,MemWriteInternal#(PhysAddrWidth,dataWidth)) writers;
+   Vector#(nMasters,MemWriteInternal#(PhysAddrWidth,dataWidth,MemServerTags)) writers;
    for(Integer i = 0; i < valueOf(nMasters); i = i+1) begin
       Vector#(numMMUs,Server#(ReqTup,Bit#(PhysAddrWidth))) ss;
       for(Integer j = 0; j < valueOf(numMMUs); j=j+1)

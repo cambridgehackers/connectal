@@ -83,7 +83,7 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
 
    // nandsim 
    NandSimIndicationProxy nandSimIndicationProxy <- mkNandSimIndicationProxy(NandSimIndication);
-   NandSim#(1) nandSim <- mkNandSim(nandSimIndicationProxy.ifc, re.read_servers[0], we.write_servers[0]);
+   NandSimMod#(1,16) nandSim <- mkNandSimMod(nandSimIndicationProxy.ifc, re.read_servers[0], we.write_servers[0]);
    NandSimRequestWrapper nandSimRequestWrapper <- mkNandSimRequestWrapper(NandSimRequest,nandSim.request);
 
    // nandsim memory dma server
@@ -116,3 +116,5 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    interface leds = default_leds;
       
 endmodule : mkConnectalTop
+
+

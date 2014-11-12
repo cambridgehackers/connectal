@@ -44,6 +44,7 @@ module mkMemreadEngine(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
 	    ,Pipe::FunnelPipesPipelined#(1, numServers,Tuple2#(Bit#(TLog#(numServers)), MemTypes::MemengineCmd), TMin#(2,TLog#(numServers)))
 	    ,Pipe::FunnelPipesPipelined#(1, numServers, Tuple2#(Bit#(dataWidth), Bool),TMin#(2, TLog#(numServers)))
 	    ,Add#(c__, TLog#(numServers), TLog#(TMul#(cmdQDepth, numServers)))
+	    ,Add#(d__, TLog#(numServers), 6)
 	    );
    let rv <- mkMemreadEngineBuff(256);
    return rv;
@@ -65,7 +66,8 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
 	     Min#(2,TLog#(numServers),bpc),
 	     FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(serverIdxSz),MemengineCmd),bpc),
 	     FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(dataWidth),Bool),bpc),
-	     Add#(d__, TLog#(numServers), TAdd#(1, serverIdxSz)));
+	     Add#(d__, TLog#(numServers), TAdd#(1, serverIdxSz)),
+	     Add#(f__, serverIdxSz, 6));
    
 
    let verbose = False;
@@ -222,7 +224,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
 	    end
 	    workf.enq(tuple3(truncate(bl>>beat_shift), idx, last));
 	    //$display("readReq %d, %h %h %h", idx, cmd.base, bl, last);
-	    return MemRequest { sglId: cmd.sglId, offset: cmd.base, burstLen:bl, tag: 0 };
+	    return MemRequest { sglId: cmd.sglId, offset: cmd.base, burstLen:bl, tag: (cmd.tag << valueOf(serverIdxSz)) | extend(idx)};
 	 endmethod
       endinterface
       interface Put readData;

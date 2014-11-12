@@ -27,11 +27,12 @@ import ClientServer::*;
 import Vector::*;
 import RegFile::*;
 
+import MemTypes::*;
 
-import AuroraGearbox::*;
-import AuroraImportFmc1::*;
+// import AuroraGearbox::*;
+// import AuroraImportFmc1::*;
 import ControllerTypes::*;
-import FlashCtrlVirtex::*;
+// import FlashCtrlVirtex::*;
 import FlashBusModel::*;
 
 //simulator options
@@ -64,9 +65,11 @@ endinterface
 (* descending_urgency = "forwardReads, forwardReads_1, forwardReads_2, forwardReads_3, forwardReads_4, forwardReads_5, forwardReads_6, forwardReads_7" *) 
 (* descending_urgency = "forwardWrDataReq, forwardWrDataReq_1, forwardWrDataReq_2, forwardWrDataReq_3, forwardWrDataReq_4, forwardWrDataReq_5, forwardWrDataReq_6, forwardWrDataReq_7" *)
 (* descending_urgency = "forwardAck, forwardAck_1, forwardAck_2, forwardAck_3, forwardAck_4, forwardAck_5, forwardAck_6, forwardAck_7" *)
-module mkFlashCtrlModel#(
-	Clock gtx_clk_p, Clock gtx_clk_n, Clock clk250) (FlashCtrlVirtexIfc);
-
+// module mkFlashCtrlModel#(
+// 	Clock gtx_clk_p, Clock gtx_clk_n, Clock clk250) (FlashCtrlVirtexIfc);
+   
+module mkFlashCtrlModel(FlashCtrlUser);
+   
 	//Flash bus models
 	Vector#(NUM_BUSES, FlashBusModelIfc) flashBuses <- replicateM(mkFlashBusModel());
 
@@ -76,7 +79,7 @@ module mkFlashCtrlModel#(
 	FIFO#(Tuple2#(TagT, StatusT)) ackQ <- mkSizedFIFO(16);
 	
 	//GTX-GTP Aurora. Unused in model
-	AuroraIfc auroraIntra <- mkAuroraIntra(gtx_clk_p, gtx_clk_n, clk250);
+	// AuroraIfc auroraIntra <- mkAuroraIntra(gtx_clk_p, gtx_clk_n, clk250);
 
 
 	//handle reads, acks, writedataReq
@@ -98,7 +101,7 @@ module mkFlashCtrlModel#(
 	end
 
 
-	interface FlashCtrlUser user;
+	// interface FlashCtrlUser user;
 		method Action sendCmd (FlashCmd cmd);
 			tagTable.upd(cmd.tag, cmd);
 			flashBuses[cmd.bus].sendCmd(cmd);
@@ -123,11 +126,11 @@ module mkFlashCtrlModel#(
 			ackQ.deq();
 			return ackQ.first();
 		endmethod
-	endinterface
+	// endinterface
 
-	interface FCVirtexDebug debug = ?;
+	// interface FCVirtexDebug debug = ?;
 
-	interface Aurora_Pins aurora = auroraIntra.aurora;
+	// interface Aurora_Pins aurora = auroraIntra.aurora;
 
 endmodule
 
@@ -176,3 +179,4 @@ endmodule
 			cmd.tag, cmd.bus, cmd.chip, cmd.block, cmd.page);	
 	endrule
 	*/
+

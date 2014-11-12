@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import BRAMFIFO::*;
 import FIFO::*;
 import FIFOF::*;
 import GetPut::*;
@@ -31,10 +32,8 @@ import Pipe::*;
 import MemTypes::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;
-
-import FlashBusModel::*;
 import FlashCtrlModel::*;
-import ControllerTypes::*;
+
 
 interface NandSimRequest;
    method Action startRead(Bit#(32) drampointer, Bit#(32) dramOffset, Bit#(32) nandAddr, Bit#(32) numBytes, Bit#(32) burstLen);
@@ -48,7 +47,7 @@ interface NandSimIndication;
    method Action eraseDone(Bit#(32) tag);
 endinterface
 
-interface NandSim#(numeric type numSlaves);
+interface NandSimMod#(numeric type numSlaves, numeric type memengineOuts);
    interface NandSimRequest request;
    interface Vector#(numSlaves,PhysMemSlave#(PhysAddrWidth,64)) memSlaves;
 endinterface
@@ -57,35 +56,66 @@ interface NandSimControl;
    interface NandSimRequest request;   
 endinterface
 
-module connectEnginesToFlashModel#(MemReadClient#(64) rc, MemWriteClient#(64) wc)(Empty);
+
+module connectToFlashModel#(MemReadClient#(64) rc, MemWriteClient#(64) wc)(Empty);
 
    // instantiate the flash model here
    // connect rc and wc to this model
    // all addresses coming from rc and wc
    // are "physical" (offsets in the flash array)
+   // all tags are unique (this is enforced upstream)
+   
+   let fcm <- mkFlashCtrlModel;
    
 endmodule
 
-module mkNandSim#(NandSimIndication indication,
-		  MemreadServer#(64) nand_ctrl_host_rs,
-		  MemwriteServer#(64) nand_ctrl_host_ws) (NandSim#(numSlaves))
+
+module mkNandSimMod#(NandSimIndication indication,
+		     MemreadServer#(64) nand_ctrl_host_rs,
+		     MemwriteServer#(64) nand_ctrl_host_ws) (NandSimMod#(numSlaves,memengineOuts))
    provisos(
-     Add#(a__, TLog#(TAdd#(numSlaves, 1)), TLog#(TMul#(1, TAdd#(numSlaves,1))))
-,    Pipe::FunnelPipesPipelined#(1, TAdd#(numSlaves, 1), Tuple2#(Bit#(64), Bool), TMin#(2, TLog#(TAdd#(numSlaves, 1))))
-,    Pipe::FunnelPipesPipelined#(1, TAdd#(numSlaves, 1),Tuple2#(Bit#(TLog#(TAdd#(numSlaves, 1))), MemTypes::MemengineCmd),TMin#(2, TLog#(TAdd#(numSlaves, 1))))
-,    Add#(b__, TLog#(TAdd#(numSlaves, 1)), TAdd#(1, TLog#(TMul#(1,TAdd#(numSlaves, 1)))))
-,    Pipe::FunnelPipesPipelined#(1, TAdd#(numSlaves, 2),Tuple3#(Bit#(TLog#(TAdd#(numSlaves, 2))), Bit#(64), Bool), TMin#(2,TLog#(TAdd#(numSlaves, 2))))
-,    Pipe::FunnelPipesPipelined#(1, TAdd#(numSlaves, 2), Tuple3#(Bit#(2),Bit#(64), Bool), TMin#(2, TLog#(TAdd#(numSlaves, 2))))
-,    Add#(c__, TLog#(TAdd#(numSlaves, 2)), TLog#(TMul#(1, TAdd#(numSlaves,2))))
-,    Pipe::FunnelPipesPipelined#(1, TAdd#(numSlaves, 2), Tuple2#(Bit#(64),Bool), TMin#(2, TLog#(TAdd#(numSlaves, 2))))
-,    Pipe::FunnelPipesPipelined#(1, TAdd#(numSlaves, 2),Tuple2#(Bit#(TLog#(TAdd#(numSlaves, 2))), MemTypes::MemengineCmd),TMin#(2, TLog#(TAdd#(numSlaves, 2))))
-,    Add#(d__, TLog#(TAdd#(numSlaves, 2)), TAdd#(1, TLog#(TMul#(1,TAdd#(numSlaves, 2)))))
+
+    Add#(a__, TLog#(TAdd#(numSlaves, 1)), 6)
+,    Add#(b__, TLog#(TAdd#(numSlaves, 1)), TLog#(TMul#(4, TAdd#(numSlaves,
+    1))))
+,    Pipe::FunnelPipesPipelined#(1, TAdd#(numSlaves, 1), Tuple2#(Bit#(64),
+    Bool), TMin#(2, TLog#(TAdd#(numSlaves, 1))))
+,    Pipe::FunnelPipesPipelined#(1, TAdd#(numSlaves, 1),
+    Tuple2#(Bit#(TLog#(TAdd#(numSlaves, 1))), MemTypes::MemengineCmd),
+    TMin#(2, TLog#(TAdd#(numSlaves, 1))))
+,    Add#(c__, TLog#(TAdd#(numSlaves, 1)), TAdd#(1, TLog#(TMul#(4,
+    TAdd#(numSlaves, 1)))))
+,    Add#(d__, TLog#(TAdd#(numSlaves, 2)), 6)
+,    Pipe::FunnelPipesPipelined#(1, TAdd#(numSlaves, 2),
+    Tuple3#(Bit#(TLog#(TAdd#(numSlaves, 2))), Bit#(64), Bool), TMin#(2,
+    TLog#(TAdd#(numSlaves, 2))))
+,    Pipe::FunnelPipesPipelined#(1, TAdd#(numSlaves, 2), Tuple3#(Bit#(2),
+    Bit#(64), Bool), TMin#(2, TLog#(TAdd#(numSlaves, 2))))
+,    Add#(e__, TLog#(TAdd#(numSlaves, 2)), TLog#(TMul#(4, TAdd#(numSlaves,
+    2))))
+,    Pipe::FunnelPipesPipelined#(1, TAdd#(numSlaves, 2), Tuple2#(Bit#(64),
+    Bool), TMin#(2, TLog#(TAdd#(numSlaves, 2))))
+,    Pipe::FunnelPipesPipelined#(1, TAdd#(numSlaves, 2),
+    Tuple2#(Bit#(TLog#(TAdd#(numSlaves, 2))), MemTypes::MemengineCmd),
+    TMin#(2, TLog#(TAdd#(numSlaves, 2))))
+,    Add#(f__, TLog#(TAdd#(numSlaves, 2)), TAdd#(1, TLog#(TMul#(4,
+    TAdd#(numSlaves, 2)))))
+,   Add#(g__, TLog#(TAdd#(numSlaves, 1)), TLog#(TMul#(memengineOuts,
+						  TAdd#(numSlaves, 1))))
+,   Add#(h__, TLog#(TAdd#(numSlaves, 1)), TAdd#(1, TLog#(TMul#(memengineOuts,
+							   TAdd#(numSlaves, 1)))))
+,   Add#(i__, TLog#(TAdd#(numSlaves, 2)), TLog#(TMul#(memengineOuts,
+						  TAdd#(numSlaves, 2))))
+,   Add#(j__, TLog#(TAdd#(numSlaves, 2)), TAdd#(1, TLog#(TMul#(memengineOuts,
+							   TAdd#(numSlaves, 2)))))
+	    
+
       );
    
    let verbose = False;
    
-   MemreadEngineV#(64, 1,  TAdd#(numSlaves,1))  re <- mkMemreadEngine();
-   MemwriteEngineV#(64, 1, TAdd#(numSlaves,2))  we <- mkMemwriteEngine();
+   MemreadEngineV#(64, memengineOuts,  TAdd#(numSlaves,1))  re <- mkMemreadEngine();
+   MemwriteEngineV#(64, memengineOuts, TAdd#(numSlaves,2))  we <- mkMemwriteEngine();
    NandSimControl ns <- mkNandSimControl(nand_ctrl_host_rs, re.read_servers[0],
 					 nand_ctrl_host_ws, we.write_servers[0], we.write_servers[1],
 					 indication);
@@ -94,11 +124,11 @@ module mkNandSim#(NandSimIndication indication,
    Vector#(numSlaves,PipeOut#(Bit#(64)))         slave_read_pipes    = takeTail(re.dataPipes);
    Vector#(numSlaves,Server#(MemengineCmd,Bool)) slave_write_servers = takeTail(we.writeServers);
    Vector#(numSlaves,PipeIn#(Bit#(64)))          slave_write_pipes   = takeTail(we.dataPipes);
-   Vector#(numSlaves,FIFO#(Bit#(MemTagSize)))    slaveWriteTags <- replicateM(mkSizedFIFO(1));
-   Vector#(numSlaves,FIFO#(Bit#(MemTagSize)))    slaveReadTags <- replicateM(mkSizedFIFO(1));
+   Vector#(numSlaves,FIFO#(Bit#(MemTagSize)))    slaveWriteTags <- replicateM(mkSizedBRAMFIFO(valueOf(memengineOuts)));
+   Vector#(numSlaves,FIFO#(Bit#(MemTagSize)))    slaveReadTags <- replicateM(mkSizedBRAMFIFO(valueOf(memengineOuts)));
    Vector#(numSlaves,Reg#(Bit#(BurstLenSize)))   slaveReadCnts <- replicateM(mkReg(0));
 
-   connectEnginesToFlashModel(re.dmaClient,we.dmaClient);
+   connectToFlashModel(re.dmaClient,we.dmaClient);
    
    for(Integer i = 0; i < valueOf(numSlaves); i=i+1)
       rule completeSlaveReadReq;
@@ -113,7 +143,7 @@ module mkNandSim#(NandSimIndication indication,
       interface PhysMemWriteServer write_server; 
 	 interface Put writeReq;
 	    method Action put(PhysMemRequest#(PhysAddrWidth) req);
-	       slave_write_servers[i].request.put(MemengineCmd{sglId:0, base:extend(req.addr), burstLen:req.burstLen, len:extend(req.burstLen)});
+	       slave_write_servers[i].request.put(MemengineCmd{sglId:0, base:extend(req.addr), burstLen:req.burstLen, len:extend(req.burstLen), tag:req.tag});
 	       slaveWriteTags[i].enq(req.tag);
             endmethod
 	 endinterface
@@ -134,7 +164,7 @@ module mkNandSim#(NandSimIndication indication,
 	 interface Put readReq;
 	    method Action put(PhysMemRequest#(PhysAddrWidth) req);
 	       if (verbose) $display("mkNandSim.memSlave::readReq %d %d %d (%d)", req.addr, req.burstLen, req.tag, i);
-	       slave_read_servers[i].request.put(MemengineCmd{sglId:0, base:extend(req.addr), burstLen:req.burstLen, len:extend(req.burstLen)});
+	       slave_read_servers[i].request.put(MemengineCmd{sglId:0, base:extend(req.addr), burstLen:req.burstLen, len:extend(req.burstLen), tag:req.tag});
 	       slaveReadTags[i].enq(req.tag);
 	       slaveReadCnts[i] <= req.burstLen;
 	    endmethod
@@ -266,5 +296,6 @@ module mkNandSimControl#(MemreadServer#(64) dram_read_server,
       endmethod
    endinterface
 endmodule
+
 
 
