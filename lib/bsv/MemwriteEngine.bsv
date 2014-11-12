@@ -275,6 +275,12 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
 	     // 	end
 	  endmethod
        endinterface);
+   
+   function MemwriteServer#(dataWidth) toMemwriteServer(Server#(MemengineCmd,Bool) cs, PipeIn#(Bit#(dataWidth)) p) =
+      (interface MemwriteServer;
+	  interface cmdServer = cs;
+	  interface dataPipe  = p;
+       endinterface);
 
    
    Vector#(numServers, Server#(MemengineCmd,Bool)) rs;
@@ -364,6 +370,7 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
       endinterface
    endinterface 
    interface dataPipes = zipWith(check_in, write_data_buffs, genVector);
+   interface write_servers = zipWith(toMemwriteServer, rs, zipWith(check_in, write_data_buffs, genVector));
 endmodule
 
 
