@@ -27,11 +27,11 @@ all: pciedrivers scripts/syntax/parsetab.py
 
 pciedrivers:
 	(cd drivers/pcieportal; make)
-	make -C pcie/connectalutil
+	make -C pcie
 
 pciedrivers-clean:
 	(cd drivers/pcieportal; make clean)
-	make -C pcie/connectalutil clean
+	make -C pcie clean
 
 ifneq ("$(DESTDIR)", "")
 INSTALL_SHARED = install-shared
@@ -45,7 +45,7 @@ install: $(INSTALL_SHARED)
 	    done; \
 	fi
 	(cd drivers/pcieportal; make install)
-	make -C pcie/connectalutil install
+	make -C pcie install
 	install -d -m755 $(DESTDIR)$(UDEV_RULES_DIR)
 	for fname in $(UDEV_RULES) ; do \
 	    install -m644 etc/udev/rules.d/$$fname $(DESTDIR)$(UDEV_RULES_DIR) ; \
