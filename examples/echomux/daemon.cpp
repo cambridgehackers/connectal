@@ -68,8 +68,8 @@ public:
     void setLeds ( const uint32_t v ) {
         fprintf(stderr, "daemon[%s] id %d %d\n", __FUNCTION__, __LINE__, this->pint.indication_index, v);
         echoRequestProxy->setLeds(this->pint.indication_index, v);
-        //sleep(1);
-        //exit(1);
+        sleep(1);
+        exit(1);
     }
     EchoRequest(unsigned int id, PortalItemFunctions *item, void *param) : EchoRequestSWWrapper(id, item, param) {}
 };
@@ -105,7 +105,7 @@ int main(int argc, const char **argv)
     PortalSocketParam paramSocket = {};
     PortalMuxParam param = {};
 
-    Portal *mcommon = new Portal(0, sizeof(uint32_t), NULL, NULL, &socketfuncResp, &paramSocket, 0);
+    Portal *mcommon = new Portal(0, sizeof(uint32_t), portal_mux_handler, NULL, &socketfuncResp, &paramSocket, 0);
     param.pint = &mcommon->pint;
     sIndicationProxy = new EchoIndicationSWProxy(IfcNames_EchoIndication, &muxfunc, &param);
     EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &muxfunc, &param);

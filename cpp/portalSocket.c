@@ -235,6 +235,9 @@ static int init_mux(struct PortalInternal *pint, void *aparam)
     pint->mux = param->pint;
     pint->map_base = (volatile unsigned int*)malloc(pint->reqsize);
     pint->mux->map_base[0] = -1;
+    pint->mux->mux_ports_number++;
+    pint->mux->mux_ports = (PortalMuxHandler *)realloc(pint->mux->mux_ports, pint->mux->mux_ports_number * sizeof(PortalMuxHandler));
+    pint->mux->mux_ports[pint->mux->mux_ports_number-1].pint = pint;
     return 0;
 }
 static void send_mux(struct PortalInternal *pint, volatile unsigned int *data, unsigned int hdr, int sendFd)
@@ -244,33 +247,25 @@ static void send_mux(struct PortalInternal *pint, volatile unsigned int *data, u
         printf("[%s:%d] hdr %x fpga %x\n", __FUNCTION__, __LINE__, hdr, pint->fpga_number);
     buffer[0] = hdr;
     pint->mux->request_index = pint->request_index;
-//char bname[100];
-//sprintf(bname,"MSEND%d", pint->mux->client_fd[pint->mux->request_index]);
-//memdump((uint8_t*)buffer, ((hdr+1) & 0xffff) * sizeof(uint32_t), bname);
     pint->mux->item->send(pint->mux, buffer, (pint->fpga_number << 16) | ((hdr + 1) & 0xffff), sendFd);
 }
 static int recv_mux(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
 {
-    if(trace_socket)
-        printf("[%s:%d] len %d\n", __FUNCTION__, __LINE__, len);
     return pint->mux->item->recv(pint->mux, buffer, len, recvfd);
 }
 static int event_mux(struct PortalInternal *pint)
 {
-    int event_mux_fd, dummy;
-    if (pint->mux->map_base[0] == -1)
-        pint->mux->item->event(pint->mux);
-    if (pint->mux->map_base[0] == -1)
-        return -1;
-    if(trace_socket) {
-        printf("[%s:%d] muxid %x clientnum %d this %d\n", __FUNCTION__, __LINE__, pint->mux->map_base[0], pint->mux->client_fd_number, pint->fpga_number);
-        sleep(1);
-    }
-    if (pint->mux->map_base[0] >> 16 == pint->fpga_number) {
-        pint->indication_index = pint->mux->indication_index;
-        pint->mux->map_base[0] = -1;
-        recv_mux(pint, pint->map_base, 1, &dummy);
-        pint->handler(pint, *pint->map_base >> 16, event_mux_fd);
+    return -1;
+}
+int portal_mux_handler(struct PortalInternal *pint, unsigned int channel, int messageFd)
+{
+    int i, dummy;
+    for (i = 0; i < pint->mux_ports_number; i++) {
+        PortalInternal *p = pint->mux_ports[i].pint;
+        if (channel == p->fpga_number) {
+            p->item->recv(p, p->map_base, 1, &dummy);
+            p->handler(p, *p->map_base >> 16, messageFd);
+        }
     }
     return -1;
 }

@@ -87,7 +87,7 @@ int main(int argc, const char **argv)
     PortalSocketParam paramSocket = {};
     PortalMuxParam param = {};
 
-    Portal *mcommon = new Portal(0, sizeof(uint32_t), NULL, NULL, &socketfuncInit, &paramSocket, 0);
+    Portal *mcommon = new Portal(0, sizeof(uint32_t), portal_mux_handler, NULL, &socketfuncInit, &paramSocket, 0);
     param.pint = &mcommon->pint;
     EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &muxfunc, &param);
     sEcho = new EchoRequestSWProxy(IfcNames_EchoRequest, &muxfunc, &param);

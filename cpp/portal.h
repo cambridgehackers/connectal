@@ -85,6 +85,10 @@ typedef struct {
     EVENT       event;
 } PortalItemFunctions;
 
+typedef struct {
+  struct PortalInternal *pint;
+} PortalMuxHandler;
+
 #define MAX_CLIENT_FD 10
 typedef struct PortalInternal {
   struct PortalPoller   *poller;
@@ -103,6 +107,8 @@ typedef struct PortalInternal {
   int                    request_index;
   int                    client_fd_number;
   int                    client_fd[MAX_CLIENT_FD];
+  int                    mux_ports_number;
+  PortalMuxHandler       *mux_ports;
 } PortalInternal;
 
 typedef struct {
@@ -185,6 +191,7 @@ int busy_hardware(struct PortalInternal *pint, volatile unsigned int *addr, cons
 void enableint_hardware(struct PortalInternal *pint, int val);
 int event_hardware(struct PortalInternal *pint);
 void addFdToPoller(struct PortalPoller *poller, int fd);
+int portal_mux_handler(struct PortalInternal *p, unsigned int channel, int messageFd);
 
 extern int portalExec_timeout;
 extern int global_pa_fd;
