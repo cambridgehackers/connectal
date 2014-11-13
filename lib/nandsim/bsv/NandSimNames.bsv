@@ -25,23 +25,21 @@ typedef enum {
    HostMemServerIndication, 
    HostMemServerRequest,
 
-   NandsimMemServer0Indication, 
-   NandsimMemServer0Request,
-   NandsimMemServer1Indication, 
-   NandsimMemServer1Request,
+   NandsimMemServerIndication, 
+   NandsimMemServerRequest,
 	      
    BackingStoreMMURequest,
    BackingStoreMMUIndication,
+
    AlgoMMURequest,
    AlgoMMUIndication,
 
-   NandsimMMU0Request,
-   NandsimMMU0Indication,
-   NandsimMMU1Request,
-   NandsimMMU1Indication,
+   NandMMURequest,
+   NandMMUIndication,
 
    NandSimIndication, 
    NandSimRequest, 
+
    AlgoIndication, 
    AlgoRequest 
  

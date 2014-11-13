@@ -52,7 +52,7 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    Strstr#(64) strstr <- mkStrstr(strstrIndicationProxy.ifc);
    StrstrRequestWrapper strstrRequestWrapper <- mkStrstrRequestWrapper(StrstrRequest,strstr.request);
    
-   let readClients = cons(strstr.config_read_client, strstr.haystack_read_clients);
+   let readClients = cons(strstr.config_read_client, cons(strstr.haystack_read_client,nil));
    MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUIndicationProxy.ifc);
    MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
