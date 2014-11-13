@@ -38,6 +38,11 @@ typedef `NumEngineServers NumEngineServers;
 `else
 typedef 1 NumEngineServers;
 `endif
+`ifdef NumOutstandingRequests
+typedef `NumOutstandingRequests NumOutstandingRequests;
+`else
+typedef 2 NumOutstandingRequests;
+`endif
 
 interface MemreadRequest;
    method Action startRead(Bit#(32) pointer, Bit#(32) offset, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
@@ -70,7 +75,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    Vector#(NumEngineServers, Reg#(Bit#(32)))       iterCnts <- replicateM(mkReg(0));
    Vector#(NumEngineServers, Reg#(Bit#(32)))   valuesToRead <- replicateM(mkReg(0));
    Vector#(NumEngineServers, Reg#(Bit#(32))) mismatchCounts <- replicateM(mkReg(0));
-   MemreadEngineV#(DataBusWidth,2,NumEngineServers)                re <- mkMemreadEngine;
+   MemreadEngineV#(DataBusWidth,NumOutstandingRequests,NumEngineServers) re <- mkMemreadEngine;
    Vector#(NumEngineServers, FIFOF#(Bit#(32))) mismatchFifos <- replicateM(mkFIFOF);
    Bit#(MemOffsetSize) chunk = (extend(numWords)/fromInteger(valueOf(NumEngineServers)))*4;
    
