@@ -1,0 +1,5 @@
+
+DataBusWidth | BufferSize | NumServers | NumRequests | Utilization | Bandwidth
+     64      |    256     |    16      | 2           | 0.944658    | 0.995 GB/s
+    128      |    256     |    16      | 2           | 0.559449    | 1.119 GB/s
+    128      |    256     |    16      | 4           | locks up
