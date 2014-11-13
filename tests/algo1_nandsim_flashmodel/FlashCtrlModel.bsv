@@ -1,23 +1,3 @@
-/* Copyright (c) 2014 Quanta Research Cambridge, Inc
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
- * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- */
 import FIFOF::*;
 import FIFO::*;
 import BRAMFIFO::*;
@@ -27,12 +7,11 @@ import ClientServer::*;
 import Vector::*;
 import RegFile::*;
 
-import MemTypes::*;
 
-// import AuroraGearbox::*;
-// import AuroraImportFmc1::*;
+import AuroraGearbox::*;
+import AuroraImportFmc1::*;
 import ControllerTypes::*;
-// import FlashCtrlVirtex::*;
+import FlashCtrlVirtex::*;
 import FlashBusModel::*;
 
 //simulator options
@@ -65,11 +44,9 @@ endinterface
 (* descending_urgency = "forwardReads, forwardReads_1, forwardReads_2, forwardReads_3, forwardReads_4, forwardReads_5, forwardReads_6, forwardReads_7" *) 
 (* descending_urgency = "forwardWrDataReq, forwardWrDataReq_1, forwardWrDataReq_2, forwardWrDataReq_3, forwardWrDataReq_4, forwardWrDataReq_5, forwardWrDataReq_6, forwardWrDataReq_7" *)
 (* descending_urgency = "forwardAck, forwardAck_1, forwardAck_2, forwardAck_3, forwardAck_4, forwardAck_5, forwardAck_6, forwardAck_7" *)
-// module mkFlashCtrlModel#(
-// 	Clock gtx_clk_p, Clock gtx_clk_n, Clock clk250) (FlashCtrlVirtexIfc);
-   
-module mkFlashCtrlModel(FlashCtrlUser);
-   
+module mkFlashCtrlModel#(
+	Clock gtx_clk_p, Clock gtx_clk_n, Clock clk250) (FlashCtrlVirtexIfc);
+
 	//Flash bus models
 	Vector#(NUM_BUSES, FlashBusModelIfc) flashBuses <- replicateM(mkFlashBusModel());
 
@@ -79,7 +56,7 @@ module mkFlashCtrlModel(FlashCtrlUser);
 	FIFO#(Tuple2#(TagT, StatusT)) ackQ <- mkSizedFIFO(16);
 	
 	//GTX-GTP Aurora. Unused in model
-	// AuroraIfc auroraIntra <- mkAuroraIntra(gtx_clk_p, gtx_clk_n, clk250);
+	AuroraIfc auroraIntra <- mkAuroraIntra(gtx_clk_p, gtx_clk_n, clk250);
 
 
 	//handle reads, acks, writedataReq
@@ -101,7 +78,7 @@ module mkFlashCtrlModel(FlashCtrlUser);
 	end
 
 
-	// interface FlashCtrlUser user;
+	interface FlashCtrlUser user;
 		method Action sendCmd (FlashCmd cmd);
 			tagTable.upd(cmd.tag, cmd);
 			flashBuses[cmd.bus].sendCmd(cmd);
@@ -126,11 +103,11 @@ module mkFlashCtrlModel(FlashCtrlUser);
 			ackQ.deq();
 			return ackQ.first();
 		endmethod
-	// endinterface
+	endinterface
 
-	// interface FCVirtexDebug debug = ?;
+	interface FCVirtexDebug debug = ?;
 
-	// interface Aurora_Pins aurora = auroraIntra.aurora;
+	interface Aurora_Pins aurora = auroraIntra.aurora;
 
 endmodule
 
@@ -179,4 +156,3 @@ endmodule
 			cmd.tag, cmd.bus, cmd.chip, cmd.block, cmd.page);	
 	endrule
 	*/
-

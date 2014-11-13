@@ -57,19 +57,6 @@ interface NandSimControl;
 endinterface
 
 
-module connectToFlashModel#(MemReadClient#(64) rc, MemWriteClient#(64) wc)(Empty);
-
-   // instantiate the flash model here
-   // connect rc and wc to this model
-   // all addresses coming from rc and wc
-   // are "physical" (offsets in the flash array)
-   // all tags are unique (this is enforced upstream)
-   
-   let fcm <- mkFlashCtrlModel;
-   
-endmodule
-
-
 module mkNandSimMod#(NandSimIndication indication,
 		     MemreadServer#(64) nand_ctrl_host_rs,
 		     MemwriteServer#(64) nand_ctrl_host_ws) (NandSimMod#(numSlaves,memengineOuts))

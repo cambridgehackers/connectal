@@ -1,23 +1,3 @@
-/* Copyright (c) 2014 Quanta Research Cambridge, Inc
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
- * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- */
 import FIFOF::*;
 import FIFO::*;
 import BRAMFIFO::*;
@@ -30,7 +10,7 @@ import RegFile::*;
 import ControllerTypes::*;
 
 //For BSIM: use hashed read data (so we don't have to write before read)
-typedef 1 BSIM_USE_HASHED_DATA; 
+typedef 0 BSIM_USE_HASHED_DATA; 
 
 typedef enum {
 	ST_CMD,
@@ -103,8 +83,7 @@ module mkFlashBusModel(FlashBusModelIfc);
 	Integer burstDelay = 7; //read bursts 128 bits every 8 cycles //TODO adjust this 
 
 	//Create a regfile per chip
-	//FIXME: testing
-	//Vector#(ChipsPerBus, RegFile#(Bit#(TLog#(WordsPerChip)), Bit#(128))) flashArr <- replicateM(mkRegFileFull());
+	Vector#(ChipsPerBus, RegFile#(Bit#(TLog#(WordsPerChip)), Bit#(128))) flashArr <- replicateM(mkRegFileFull());
 
 	
 	//enq commands to each chip (emulated sb)
@@ -232,14 +211,11 @@ module mkFlashBusModel(FlashBusModelIfc);
 				end
 				else begin
 					//compute addr in regfile
-					//BEGIN FIXME
-					//let regAddr = getRegAddr(cmd.block, cmd.page, readBurstCnt); 
-					//let rdata = flashArr[c].sub(regAddr);
+					let regAddr = getRegAddr(cmd.block, cmd.page, readBurstCnt); 
+					let rdata = flashArr[c].sub(regAddr);
 
-					//busReadQ.enq(tuple2(rdata, cmd.tag));
-					//$display("@%d %m FlashBus chip[%d] read data tag=%d @ regAddr=%d [%d][%d][%d] = %x", cycleCnt, c, regAddr, cmd.tag, cmd.block, cmd.page, readBurstCnt, rdata);
-					//END FIXME
-
+					busReadQ.enq(tuple2(rdata, cmd.tag));
+					$display("@%d %m FlashBus chip[%d] read data tag=%d @ regAddr=%d [%d][%d][%d] = %x", cycleCnt, c, regAddr, cmd.tag, cmd.block, cmd.page, readBurstCnt, rdata);
 				end
 				if (readBurstCnt==fromInteger(pageWords-1)) begin
 					flashChipCmdQs[c].deq;
@@ -285,11 +261,9 @@ module mkFlashBusModel(FlashBusModelIfc);
 				wrDlyCnt <= fromInteger(burstDelay);
 				if (cmd.tag==tpl_2(writeBuffer.first)) begin
 					let regAddr = getRegAddr(cmd.block, cmd.page, writeBurstCnt); 
-					//BEGIN FIXME
-					//flashArr[c].upd(regAddr, tpl_1(writeBuffer.first));
-					//writeBuffer.deq;
-					//$display("@%d %m FlashBus chip[%d] wrote data @ regAddr=%d [%d][%d][%d] = %x", cycleCnt, c,regAddr, cmd.block, cmd.page, writeBurstCnt, tpl_1(writeBuffer.first));
-					//END FIXME
+					flashArr[c].upd(regAddr, tpl_1(writeBuffer.first));
+					writeBuffer.deq;
+					$display("@%d %m FlashBus chip[%d] wrote data @ regAddr=%d [%d][%d][%d] = %x", cycleCnt, c,regAddr, cmd.block, cmd.page, writeBurstCnt, tpl_1(writeBuffer.first));
 				end
 				else begin
 					$display("**ERROR: FlashBusModel incorrect burst received. Cmd tag=%d, burst tag=%d",
@@ -321,20 +295,30 @@ module mkFlashBusModel(FlashBusModelIfc);
 		endrule
 
 		//erase
+		Reg#(Bit#(16)) eraseWordCnt <- mkReg(0);
+		Reg#(Bit#(8)) erasePageCnt <- mkReg(0);
 		rule chipErase if (chipSt==ST_ERASE);
-			//TODO
-			/*
 			let cmd = flashChipCmdQs[c].first;
-			flashChipCmdQs[c].deq;
 			//erase entire block
-			for (Integer p=0; p<pagesPerBlock; p=p+1) begin 
-				for (Integer w=0; w<pageWords; w=w+1) begin
-					flashArr[c][cmd.block][p][w] <= -1; //FFF..
+			let regAddr = getRegAddr(cmd.block, erasePageCnt, eraseWordCnt);
+			flashArr[c].upd(regAddr, -1);
+			$display("%m FlashBus chip[%d] erasing tag=%d, blk = %d, pageCnt = %d, wordCnt = %d", c, cmd.tag, cmd.block, erasePageCnt, eraseWordCnt);
+
+			if (eraseWordCnt == fromInteger(pageWords-1)) begin //done page
+				eraseWordCnt <= 0;
+				if (erasePageCnt == fromInteger(pagesPerBlock-1)) begin //done block
+					flashChipCmdQs[c].deq;
+					erasePageCnt <= 0;
+					ackQ.enq(tuple2(cmd.tag, ERASE_DONE));
+					chipSt <= ST_CMD;
+				end
+				else begin
+					erasePageCnt <= erasePageCnt + 1;
 				end
 			end
-			ackQ.enq(tuple2(cmd.tag, ERASE_DONE));
-			chipSt <= ST_CMD;
-			*/
+			else begin
+				eraseWordCnt <= eraseWordCnt + 1;
+			end
 		endrule
 
 		rule errorState if (chipSt==ST_ERROR);
