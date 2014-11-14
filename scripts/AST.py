@@ -31,17 +31,7 @@ import AST
 import globalv
 import util
 
-#def indent(f, indentation):
-#    for i in xrange(indentation):
-#        f.write(' ')
-
-class EnumElementMixin:
-    def cName(self):
-        return self.name
-
 class EnumMixin:
-    def cName(self):
-        return self.name
     def bitWidth(self):
         return int(math.ceil(math.log(len(self.elements))))
 
@@ -58,10 +48,6 @@ class InterfaceMixin:
         return rv
     def global_name(self, s, suffix):
         return '%s%s_%s' % (cName(self.name), suffix, s)
-
-class ParamMixin:
-    def cName(self):
-        return self.name
 
 class TypeMixin:
     def cName(self):
@@ -130,10 +116,10 @@ def dtInfo(arg):
         rc['name'] = arg.name
     if hasattr(arg, 'type'):
         rc['type'] = arg.type
-    if hasattr(arg, 'cName'):
-        rc['cName'] = arg.cName()
-    if hasattr(arg, 'bitWidth'):
-        rc['bitWidth'] = arg.bitWidth()
+    #if hasattr(arg, 'cName'):
+    #    rc['cName'] = arg.cName()
+    #if hasattr(arg, 'bitWidth'):
+    #    rc['bitWidth'] = arg.bitWidth()
     if hasattr(arg, 'params'):
         #print 'OOO', arg.params
         if arg.params is not None:
@@ -173,13 +159,14 @@ def classInfo(item):
         rc['decls'].append(declInfo(mitem))
     return rc
 
-def serialize_json(interfaces, globalimports, dutname):
+def serialize_json(interfaces, globalimports, dutname, interfaceList):
     itemlist = []
     for item in interfaces:
         itemlist.append(classInfo(item))
     jfile = open('cppgen_intermediate_data.tmp', 'w')
     toplevel = {}
     toplevel['interfaces'] = itemlist
+    toplevel['interfacesList'] = interfaceList
     gvlist = {}
     for key, value in globalv.globalvars.iteritems():
         gvlist[key] = {'type': value.type}
@@ -296,7 +283,7 @@ class Module:
     def __repr__(self):
         return '{module: %s %s}' % (self.name, self.decls)
 
-class EnumElement(EnumElementMixin):
+class EnumElement:
     def __init__(self, name, qualifiers, value):
         self.qualifiers = qualifiers
         self.value = value
@@ -342,7 +329,7 @@ class TypeDef:
     def __repr__(self):
         return '{typedef: %s %s}' % (self.tdtype, self.name)
 
-class Param(ParamMixin):
+class Param:
     def __init__(self, name, t):
         self.name = name
         self.type = t

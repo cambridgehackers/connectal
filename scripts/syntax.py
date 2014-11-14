@@ -996,7 +996,7 @@ def generate_bsvcpp(filelist, project_dir, dutname, bsvdefines, interfaces, nf):
         ifc.ind = AST.Interface(i, [], [], None, ifc.package)
         ifc.ind.req = ifc
         ilist.append(ifc)
-    jsondata = AST.serialize_json(ilist, globalimports, dutname)
+    jsondata = AST.serialize_json(ilist, globalimports, dutname, interfaces)
     cppgen.generate_cpp(project_dir, noisyFlag, jsondata)
     bsvgen.generate_bsv(project_dir, noisyFlag, jsondata)
     
