@@ -368,21 +368,6 @@ def emitMethodDeclaration(mname, params, f, className):
         f.write('{ %s_%s (' % (className, methodName))
         f.write(', '.join(paramValues) + '); };\n')
 
-def generate_typedef(declList):
-    for mitem in declList:
-        for pitem in mitem['params']:
-            name = pitem['name']
-            thisType = pitem['type']
-            #print 'PPPP', name, thisType
-            #typeBitWidth(thisType)
-            if thisType['type'] != 'Type':
-                print 'NNN not type', thisType
-                sys.exit(1)
-            p = thisType['params']
-            t = globalv_globalvars.get(thisType['name'])
-            if p and t:
-                print 'PWWPWPWP', p, t
-
 def generate_class(className, declList, parentC, parentCC, generatedCFiles, create_cpp_file, generated_hpp, generated_cpp):
     classCName = cName(className)
     cppname = '%s.c' % className
@@ -502,9 +487,6 @@ def generate_cpp(project_dir, noisyFlag, jsondata):
     generated_hpp.write('#ifdef __cplusplus\n')
     generated_hpp.write('extern "C" {\n')
     generated_hpp.write('#endif\n')
-    # create typedefs for parameterized types
-    for item in jsondata['interfaces']:
-        generate_typedef(item['decls'])
     # global type declarations used by interface mthods
     for v in jsondata['globaldecls']:
         if v['type'] == 'TypeDef':

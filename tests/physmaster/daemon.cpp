@@ -29,17 +29,17 @@ static int daemon_trace = 1;
 class PhysMemMasterRequest : public PhysMemMasterRequestWrapper
 {
 public:
-    void readReq (  const PPhysMemRequest v ) {
+    void readReq (  const PhysMemRequestL_PhysAddrWidth_P v ) {
         if (daemon_trace)
         fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
         //sIndicationProxy->heard(v);
     }
-    void writeReq (  const PPhysMemRequest v ) {
+    void writeReq (  const PhysMemRequestL_PhysAddrWidth_P v ) {
         if (daemon_trace)
         fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
         //sIndicationProxy->heard2(a, b);
     }
-    void writeData (  const PMemData v ) {
+    void writeData (  const MemDataL_DataBusWidth_P v ) {
         fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
         sleep(1);
         exit(1);

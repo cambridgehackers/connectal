@@ -993,9 +993,17 @@ def generate_bsvcpp(filelist, project_dir, dutname, bsvdefines, interfaces, nf):
     for i in interfaces:
         ifc = globalv.globalvars[i]
         ifc = ifc.instantiate(dict(zip(ifc.params, ifc.params)))
-        ifc.ind = AST.Interface(i, [], [], None, ifc.package)
-        ifc.ind.req = ifc
         ilist.append(ifc)
+        for ditem in ifc.decls:
+            for pitem in ditem.params:
+                thisType = pitem.type
+                p = globalv.globalvars.get(thisType.name)
+                if p and thisType.params and p.params:
+                    print 'PQQ', thisType.name, p.type, thisType.params, p.params
+                    myName = '%sL_%s_P' % (thisType.name, '_'.join([t.name for t in thisType.params if t]))
+                    pitem.type = AST.Type(myName, [])
+                    if not globalv.globalvars.get(myName):
+                        globalv.add_new(AST.TypeDef(p.tdtype.instantiate(dict(zip(p.params, thisType.params))), myName, []))
     jsondata = AST.serialize_json(ilist, globalimports, dutname, interfaces)
     cppgen.generate_cpp(project_dir, noisyFlag, jsondata)
     bsvgen.generate_bsv(project_dir, noisyFlag, jsondata)

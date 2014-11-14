@@ -29,8 +29,8 @@ static sem_t sem_heard2;
 class PhysMemMasterIndication : public PhysMemMasterIndicationWrapper
 {
 public:
-    void readData (  const PMemData v ) {
-        fprintf(stderr, "heard an s: %d\n", v);
+    void readData (  const MemDataL_DataBusWidth_P v ) {
+        fprintf(stderr, "heard an s: %lld\n", (long long)v.data);
 	//sRequestProxy->say2(v, 2*v);
     }
     void writeDone (  const uint32_t v ) {
