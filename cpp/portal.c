@@ -313,10 +313,20 @@ int busy_hardware(struct PortalInternal *pint, volatile unsigned int *addr, cons
     volatile unsigned int *tempp = addr + 1;
     while (!pint->item->read(pint, &tempp) && count-- > 0)
         ; /* busy wait a bit on 'fifo not full' */
+#if 1
     if (count <= 0){
         PORTAL_PRINTF("putFailed: %s\n", str);
         return 1;
     }
+#else
+    if (count <= 0)
+    while (!pint->item->read(pint, &tempp)) {
+        struct timeval timeout;
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 10000;
+        select(0, NULL, NULL, NULL, &timeout);
+    }
+#endif
     return 0;
 }
 void enableint_hardware(struct PortalInternal *pint, int val)
