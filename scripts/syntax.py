@@ -1009,7 +1009,10 @@ if __name__=='__main__':
         parser = yacc.yacc(outputdir=parserdir,debugfile=parserdir+'/parser.out')
         import parsetab
         sys.exit(0)
-    generate_bsvcpp(sys.argv[1:], os.environ.get('DTOP'), os.environ.get('DUT_NAME'), \
-         os.environ.get('BSVDEFINES_LIST').split(), \
-         set(os.environ.get('INTERFACES').split()), os.environ.get('V') == '1')
+    ifitems = []
+    for item in os.environ.get('INTERFACES').split():
+        if item not in ifitems:
+            ifitems.append(item)
+    generate_bsvcpp(sys.argv[1:], os.environ.get('DTOP'), os.environ.get('DUT_NAME'),
+         os.environ.get('BSVDEFINES_LIST').split(), ifitems, os.environ.get('V') == '1')
 
