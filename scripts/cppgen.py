@@ -428,8 +428,7 @@ def generate_class(className, declList, parentC, parentCC, generatedCFiles, crea
 def emitStructMember(item, f, indentation):
     indent(f, indentation)
     f.write('%s %s' % (typeCName(item['type']), item['name']))
-    #if item['type'].get('bitWidth'):
-    if True:
+    if hasBitWidth(item):
         f.write(' : %d' % typeBitWidth(item['type']))
     f.write(';\n')
 
