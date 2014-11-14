@@ -119,13 +119,8 @@ class paramInfo:
 def collectMembers(scope, pitem):
     membtype = pitem['type']
     while 1:
-        if membtype['name'] == 'Bit':
-            return [('%s%s'%(scope,pitem['name']),membtype)]
-        elif membtype['name'] == 'Int' or membtype['name'] == 'UInt':
-            return [('%s%s'%(scope,pitem['name']),membtype)]
-        elif membtype['name'] == 'Float':
-            return [('%s%s'%(scope,pitem['name']),membtype)]
-        elif membtype['name'] == 'Vector':
+        if membtype['name'] == 'Bit' or membtype['name'] == 'Int' or membtype['name'] == 'UInt' \
+            or membtype['name'] == 'Float' or membtype['name'] == 'Vector' or membtype['name'] == 'Bool':
             return [('%s%s'%(scope,pitem['name']),membtype)]
         elif membtype['name'] == 'SpecialTypeForSendingFd':
             return [('%s%s'%(scope,pitem['name']),membtype)]
@@ -181,6 +176,8 @@ def typeCName(item):
                 return 'uint64_t'
             else:
                 return 'std::bitset<%d>' % (typeNumeric(item['params'][0]))
+        elif cid == 'Bool':
+            return 'int'
         elif cid == 'Int':
             if typeNumeric(item['params'][0]) == 32:
                 return 'int'
@@ -223,6 +220,8 @@ def typeBitWidth(item):
         if re.match('[0-9]+', width):
             return int(width)
         return decl['tdtype'].numeric()
+    if item['name'] == 'Bool':
+        return 1
     if item['name'] == 'Float':
         return 32
     return 0
