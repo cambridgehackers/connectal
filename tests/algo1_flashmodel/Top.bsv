@@ -89,9 +89,6 @@ module mkConnectalTop#(HostType host) (StdConnectalDmaTop#(PhysAddrWidth));
    Clock clk250 = host.doubleClock;
    Reset rst250 = host.doubleReset;
 	
-   Clock curClk <- exposeCurrentClock;
-   Reset curRst <- exposeCurrentReset;
-
    // strstr algo
    StrstrIndicationProxy strstrIndicationProxy <- mkStrstrIndicationProxy(AlgoIndication);
    Strstr#(64) strstr <- mkStrstr(strstrIndicationProxy.ifc);
