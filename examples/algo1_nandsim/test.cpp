@@ -61,15 +61,15 @@ int main(int argc, const char **argv)
   DmaManager *hostDma = new DmaManager(hostMMURequest);
   MMUIndication *hostMMUIndication = new MMUIndication(hostDma, IfcNames_AlgoMMUIndication);
 
-  MMURequestProxy *nandsimMMURequest = new MMURequestProxy(IfcNames_NandsimMMU0Request);
+  MMURequestProxy *nandsimMMURequest = new MMURequestProxy(IfcNames_NandMMURequest);
   DmaManager *nandsimDma = new DmaManager(nandsimMMURequest);
-  MMUIndication *nandsimMMUIndication = new MMUIndication(nandsimDma,IfcNames_NandsimMMU0Indication);
+  MMUIndication *nandsimMMUIndication = new MMUIndication(nandsimDma,IfcNames_NandMMUIndication);
 
   StrstrRequestProxy *strstrRequest = new StrstrRequestProxy(IfcNames_AlgoRequest);
   StrstrIndication *strstrIndication = new StrstrIndication(IfcNames_AlgoIndication);
   
   MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_HostMemServerIndication);
-  MemServerIndication *nandsimMemServerIndication = new MemServerIndication(IfcNames_NandsimMemServer0Indication);
+  MemServerIndication *nandsimMemServerIndication = new MemServerIndication(IfcNames_NandsimMemServerIndication);
 
   portalExec_start();
   fprintf(stderr, "Main::allocating memory...\n");

@@ -26,15 +26,26 @@ import FIFO::*;
 import Leds::*;
 import Vector::*;
 
-interface EchoIndication;
+interface EchoIndicationSW;
     method Action heard(Bit#(32) v);
     method Action heard2(Bit#(16) a, Bit#(16) b);
 endinterface
 
-interface EchoRequest;
+interface EchoRequestSW;
    method Action say(Bit#(32) v);
    method Action say2(Bit#(16) a, Bit#(16) b);
    method Action setLeds(Bit#(8) v);
+endinterface
+
+interface EchoIndication;
+    method Action heard(Bit#(32) id, Bit#(32) v);
+    method Action heard2(Bit#(32) id, Bit#(16) a, Bit#(16) b);
+endinterface
+
+interface EchoRequest;
+   method Action say(Bit#(32) id, Bit#(32) v);
+   method Action say2(Bit#(32) id, Bit#(16) a, Bit#(16) b);
+   method Action setLeds(Bit#(32) id, Bit#(8) v);
 endinterface
 
 interface EchoRequestInternal;
@@ -43,36 +54,42 @@ interface EchoRequestInternal;
 endinterface
 
 typedef struct {
+	Bit#(32) id;
+	Bit#(32) v;
+} EchoPair1 deriving (Bits);
+
+typedef struct {
+	Bit#(32) id;
 	Bit#(16) a;
 	Bit#(16) b;
-} EchoPair deriving (Bits);
+} EchoPair2 deriving (Bits);
 
 module mkEchoRequestInternal#(EchoIndication indication)(EchoRequestInternal);
 
-    FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
-    FIFO#(EchoPair) delay2 <- mkSizedFIFO(8);
+    FIFO#(EchoPair1) delay1 <- mkSizedFIFO(8);
+    FIFO#(EchoPair2) delay2 <- mkSizedFIFO(8);
     Reg#(Bit#(LedsWidth)) ledsReg <- mkReg(0);
 
     rule heard;
-        delay.deq;
-        indication.heard(delay.first);
+        delay1.deq;
+        indication.heard(delay1.first.id, delay1.first.v);
     endrule
 
     rule heard2;
         delay2.deq;
-        indication.heard2(delay2.first.b, delay2.first.a);
+        indication.heard2(delay2.first.id, delay2.first.b, delay2.first.a);
     endrule
    
    interface EchoRequest ifc;
-      method Action say(Bit#(32) v);
-	 delay.enq(v);
+      method Action say(Bit#(32) id, Bit#(32) v);
+	 delay1.enq(EchoPair1 { id: id, v: v});
       endmethod
       
-      method Action say2(Bit#(16) a, Bit#(16) b);
-	 delay2.enq(EchoPair { a: a, b: b});
+      method Action say2(Bit#(32) id, Bit#(16) a, Bit#(16) b);
+	 delay2.enq(EchoPair2 { id: id, a: a, b: b});
       endmethod
       
-      method Action setLeds(Bit#(8) v);
+      method Action setLeds(Bit#(32) id, Bit#(8) v);
 	 ledsReg <= pack(replicate(v[0]));
       endmethod
    endinterface

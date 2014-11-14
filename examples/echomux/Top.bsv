@@ -31,7 +31,8 @@ import EchoRequest::*;
 // defined by user
 import Echo::*;
 
-typedef enum {EchoIndication, EchoRequest} IfcNames deriving (Eq,Bits);
+typedef enum { EchoIndication, EchoRequest,
+   SecondIndication, SecondRequest, ThirdIndication, ThirdRequest} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
 

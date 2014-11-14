@@ -92,7 +92,7 @@ void PortalPoller::addFd(int fd)
 int PortalPoller::registerInstance(Portal *portal)
 {
     numWrappers++;
-    fprintf(stderr, "Portal::registerInstance fpga%d fd %d\n", portal->pint.fpga_number, portal->pint.fpga_fd);
+    fprintf(stderr, "Portal::registerInstance fpga%d fd %d clients %d\n", portal->pint.fpga_number, portal->pint.fpga_fd, portal->pint.client_fd_number);
     portal_wrappers = (Portal **)realloc(portal_wrappers, numWrappers*sizeof(Portal *));
     portal_wrappers[numWrappers-1] = portal;
 

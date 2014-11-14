@@ -54,7 +54,7 @@ rmmod:
 .PHONY: insmod
 insmod: rmmod
 	insmod pcieportal.ko
-	-chmod agu+rw /dev/fpga*
+	-chmod agu+rw /dev/portal*
 	insmod ../portalmem/portalmem.ko
 	chmod agu+rw /dev/portalmem
 
