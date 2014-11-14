@@ -20,37 +20,37 @@
  */
 
 #include <stdio.h>
-#include "EchoRequest.h"
-#include "EchoIndication.h"
+#include "PhysMemMasterRequest.h"
+#include "PhysMemMasterIndication.h"
 
-EchoIndicationProxy *sIndicationProxy;
+PhysMemMasterIndicationProxy *sIndicationProxy;
 static int daemon_trace = 1;
 
-class EchoRequest : public EchoRequestWrapper
+class PhysMemMasterRequest : public PhysMemMasterRequestWrapper
 {
 public:
-    void say ( const uint32_t v ) {
+    void readReq (  const PPhysMemRequest v ) {
         if (daemon_trace)
         fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
-        sIndicationProxy->heard(v);
+        //sIndicationProxy->heard(v);
     }
-    void say2 ( const uint32_t a, const uint32_t b ) {
+    void writeReq (  const PPhysMemRequest v ) {
         if (daemon_trace)
         fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
-        sIndicationProxy->heard2(a, b);
+        //sIndicationProxy->heard2(a, b);
     }
-    void setLeds ( const uint32_t v ) {
+    void writeData (  const PMemData v ) {
         fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
         sleep(1);
         exit(1);
     }
-    EchoRequest(unsigned int id, PortalItemFunctions *item, void *param) : EchoRequestWrapper(id, item, param) {}
+    PhysMemMasterRequest(unsigned int id, PortalItemFunctions *item, void *param) : PhysMemMasterRequestWrapper(id, item, param) {}
 };
 
 int main(int argc, const char **argv)
 {
-    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &socketfuncResp, NULL);
-    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &socketfuncResp, NULL);
+    sIndicationProxy = new PhysMemMasterIndicationProxy(IfcNames_PhysMemMasterIndication, &socketfuncResp, NULL);
+    PhysMemMasterRequest *sRequest = new PhysMemMasterRequest(IfcNames_PhysMemMasterRequest, &socketfuncResp, NULL);
 
     portalExec_start();
     printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);

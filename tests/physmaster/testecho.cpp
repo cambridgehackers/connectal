@@ -20,54 +20,38 @@
  */
 
 #include <stdio.h>
-#include "EchoRequest.h"
-#include "EchoIndication.h"
+#include "PhysMemMasterRequest.h"
+#include "PhysMemMasterIndication.h"
 
-EchoRequestProxy *sRequestProxy;
+PhysMemMasterRequestProxy *sRequestProxy;
 static sem_t sem_heard2;
 
-class EchoIndication : public EchoIndicationWrapper
+class PhysMemMasterIndication : public PhysMemMasterIndicationWrapper
 {
 public:
-    virtual void heard(uint32_t v) {
+    void readData (  const PMemData v ) {
         fprintf(stderr, "heard an s: %d\n", v);
-	sRequestProxy->say2(v, 2*v);
+	//sRequestProxy->say2(v, 2*v);
     }
-    virtual void heard2(uint32_t a, uint32_t b) {
+    void writeDone (  const uint32_t v ) {
         sem_post(&sem_heard2);
         //fprintf(stderr, "heard an s2: %ld %ld\n", a, b);
     }
-    EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
+
+    PhysMemMasterIndication(unsigned int id, PortalItemFunctions *item, void *param) : PhysMemMasterIndicationWrapper(id, item, param) {}
 };
 
-static void call_say(int v)
-{
-    printf("[%s:%d] %d\n", __FUNCTION__, __LINE__, v);
-    sRequestProxy->say(v);
-    sem_wait(&sem_heard2);
-}
-
-static void call_say2(int v, int v2)
-{
-    sRequestProxy->say2(v, v2);
-    sem_wait(&sem_heard2);
-}
+    //sem_wait(&sem_heard2);
 
 int main(int argc, const char **argv)
 {
-    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &socketfuncInit, NULL);
-    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &socketfuncInit, NULL);
+    PhysMemMasterIndication *sIndication = new PhysMemMasterIndication(IfcNames_PhysMemMasterIndication, &socketfuncInit, NULL);
+    sRequestProxy = new PhysMemMasterRequestProxy(IfcNames_PhysMemMasterRequest, &socketfuncInit, NULL);
     portalExec_start();
 
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
-    call_say(v);
-    call_say(v*5);
-    call_say(v*17);
-    call_say(v*93);
-    call_say2(v, v*3);
-    printf("TEST TYPE: SEM\n");
-    sRequestProxy->setLeds(9);
+    //call_say(v);
     portalExec_end();
     return 0;
 }
