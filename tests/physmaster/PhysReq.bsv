@@ -27,18 +27,6 @@ typedef 10 BurstLenSize;
 typedef 64 DataBusWidth;
 
 typedef struct {
-   Bit#(PhysAddrWidth) addr;
-   Bit#(BurstLenSize) burstLen;
-   Bit#(MemTagSize) tag;
-   } PPhysMemRequest deriving (Bits);
-
-typedef struct {
-   Bit#(DataBusWidth) data;
-   Bit#(MemTagSize) tag;
-   Bit#(1) last;
-   } PMemData deriving (Bits);
-
-typedef struct {
    Bit#(addrWidth) addr;
    Bit#(BurstLenSize) burstLen;
    Bit#(MemTagSize) tag;
@@ -49,7 +37,6 @@ typedef struct {
    Bit#(MemTagSize) tag;
    Bool last;
    } MemData#(numeric type dsz) deriving (Bits);
-
 
 interface PhysMemMasterRequest;
    method Action readReq(PhysMemRequest#(PhysAddrWidth) v);
