@@ -103,6 +103,5 @@ int main(int argc, const char **argv)
     echoRequestProxy->setLeds(9);
     poller->portalExec_end();
     portalExec_end();
-sleep(1000);
     return 0;
 }
