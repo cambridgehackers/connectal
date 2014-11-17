@@ -272,7 +272,7 @@ def generate_bsv(project_dir, noisyFlag, jsondata):
         fname = os.path.join(project_dir, 'sources', jsondata['dutname'].lower(), '%s.bsv' % pname)
         bsv_file = util.createDirAndOpen(fname, 'w')
         bsv_file.write('package %s;\n' % pname)
-        extraImports = (['import %s::*;\n' % os.path.splitext(os.path.basename(fn))[0] for fn in [item['package']] ]
+        extraImports = (['import %s::*;\n' % pn for pn in [item['Package']] ]
                    + ['import %s::*;\n' % i for i in jsondata['globalimports'] if not i in generatedPackageNames])
         bsv_file.write(preambleTemplate % {'extraImports' : ''.join(extraImports)})
         if noisyFlag:
