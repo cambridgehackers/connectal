@@ -42,10 +42,10 @@ interface StrstrIndication;
    method Action searchResult(Int#(32) v);
 endinterface
 
-interface Strstr#(numeric type busWidth);
+interface Strstr#(numeric type haystackBusWidth, numeric type configBusWidth);
    interface StrstrRequest request;
-   interface MemReadClient#(busWidth) config_read_client;
-   interface MemReadClient#(busWidth) haystack_read_client;
+   interface MemReadClient#(haystackBusWidth) haystack_read_client;
+   interface MemReadClient#(configBusWidth) config_read_client;
 endinterface
 
 // I can't belive we still have to do this shit
@@ -53,16 +53,33 @@ function Bool my_or(Bool a, Bool b) = a || b;
    
 typedef `DEGPAR DegPar;   
    
-module mkStrstr#(StrstrIndication indication)(Strstr#(64))
+module mkStrstr#(StrstrIndication indication)(Strstr#(haystackBusWidth, configBusWidth))
    provisos( Add#(0,DegPar,p)
 	    ,Log#(p,lp)
+
+
+   ,Mul#(TDiv#(configBusWidth, 8), 8, configBusWidth)
+   ,Mul#(TDiv#(haystackBusWidth, 8), 8, haystackBusWidth)
+   ,Add#(1, a__, TDiv#(haystackBusWidth, 8))
+   ,Add#(b__, TLog#(TDiv#(haystackBusWidth, 8)), 32)
+   ,Mul#(TDiv#(configBusWidth, 32), 32, configBusWidth)
+   ,Add#(1, c__, TDiv#(configBusWidth, 32))
+   ,Add#(d__, TLog#(TDiv#(configBusWidth, 32)), 32)
+   ,Add#(e__, TLog#(TDiv#(configBusWidth, 8)), 32)
+   ,Add#(1, f__, TDiv#(configBusWidth, 8))
+   ,Add#(g__, TLog#(TDiv#(haystackBusWidth, 32)), 32)
+   ,Mul#(TDiv#(haystackBusWidth, 32), 32, haystackBusWidth)
+   ,Add#(1, h__, TDiv#(haystackBusWidth, 32))
+   ,Add#(i__, 32, haystackBusWidth)
+   ,Add#(j__, 8, haystackBusWidth)
+   
 	    );
    
    let verbose = True;
 
    Reg#(Bit#(32)) needleLen <- mkReg(0);
-   MemreadEngineV#(64, 1, p) config_re <- mkMemreadEngineBuff(1024);
-   MemreadEngineV#(64, 1, p) haystack_re <- mkMemreadEngineBuff(1024);
+   MemreadEngineV#(haystackBusWidth, 1, p) haystack_re <- mkMemreadEngineBuff(1024);
+   MemreadEngineV#(configBusWidth, 1, p) config_re <- mkMemreadEngineBuff(1024);
    
    Reg#(Bit#(32)) needleSGLId <- mkReg(0);
    Reg#(Bit#(32)) mpNextSGLId <- mkReg(0);
@@ -73,8 +90,8 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(64))
    Reg#(Bit#(32)) setupCnt <- mkReg(0);
    Reg#(Bit#(32)) doneCnt <- mkReg(0);
 
-   let read_servers = zip(config_re.read_servers,haystack_re.read_servers);
-   Vector#(p, MPEngine#(64)) engines <- mapM(mkMPEngine,read_servers);
+   let read_servers = zip(haystack_re.read_servers,config_re.read_servers);
+   Vector#(p, MPEngine#(haystackBusWidth,configBusWidth)) engines <- mapM(uncurry(mkMPEngine),read_servers);
    Vector#(p, PipeOut#(Int#(32))) locdonePipes;
 
    FIFOF#(Tripple#(Bit#(32))) setsearchFIFO <- mkFIFOF;
@@ -167,5 +184,5 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(64))
    interface config_read_client = config_re.dmaClient;
    interface haystack_read_client = haystack_re.dmaClient;
 endmodule
-
-
+   
+   

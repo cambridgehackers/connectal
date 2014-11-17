@@ -62,7 +62,7 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    
    // strstr algo
    StrstrIndicationProxy strstrIndicationProxy <- mkStrstrIndicationProxy(AlgoIndication);
-   Strstr#(64) strstr <- mkStrstr(strstrIndicationProxy.ifc);
+   Strstr#(64,64) strstr <- mkStrstr(strstrIndicationProxy.ifc);
    StrstrRequestWrapper strstrRequestWrapper <- mkStrstrRequestWrapper(AlgoRequest,strstr.request);
    
    // backing store mmu

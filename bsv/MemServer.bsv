@@ -119,17 +119,25 @@ module mkMemServerRW#(MemServerIndication indication,
    endinterface
    interface masters = map(mkm,genVector);
 endmodule
-	
+
+
+
+
 module mkMemServerR#(MemServerIndication indication,
 		     Vector#(numReadClients, MemReadClient#(dataWidth)) readClients,
-		     Vector#(numMMUs,MMU#(PhysAddrWidth)) mmus)
-   (MemServer#(PhysAddrWidth, dataWidth, nMasters))
+		     Vector#(numMMUs,MMU#(addrWidth)) mmus)
+   (MemServer#(addrWidth, dataWidth, nMasters))
    
    provisos (Add#(1,a__,dataWidth),
 	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
 	     Mul#(nrc, nMasters, numReadClients),
 	     Add#(b__, TLog#(nrc), 6),
 	     Add#(TLog#(TDiv#(dataWidth, 8)), c__, BurstLenSize)
+	     ,Add#(d__, addrWidth, 64)
+	     ,Add#(e__, 12, addrWidth)
+	     ,Add#(1, e__, f__)
+	
+
 	     );
 
 
@@ -145,15 +153,15 @@ module mkMemServerR#(MemServerIndication indication,
    endfunction
    Vector#(nMasters,Vector#(nrc, MemReadClient#(dataWidth))) client_bins = genWith(selectClients(readClients));
 
-   module foo#(Integer i) (MMUAddrServer#(PhysAddrWidth,nMasters));
+   module foo#(Integer i) (MMUAddrServer#(addrWidth,nMasters));
       let rv <- mkMMUAddrServer(mmus[i].addr[0]);
       return rv;
    endmodule
-   Vector#(numMMUs,MMUAddrServer#(PhysAddrWidth,nMasters)) mmu_servers <- mapM(foo,genVector);
+   Vector#(numMMUs,MMUAddrServer#(addrWidth,nMasters)) mmu_servers <- mapM(foo,genVector);
 
-   Vector#(nMasters,MemReadInternal#(PhysAddrWidth,dataWidth,MemServerTags)) readers;
+   Vector#(nMasters,MemReadInternal#(addrWidth,dataWidth,MemServerTags)) readers;
    for(Integer i = 0; i < valueOf(nMasters); i = i+1) begin
-      Vector#(numMMUs,Server#(ReqTup,Bit#(PhysAddrWidth))) ss;
+      Vector#(numMMUs,Server#(ReqTup,Bit#(addrWidth))) ss;
       for(Integer j = 0; j < valueOf(numMMUs); j=j+1)
 	 ss[j] = mmu_servers[j].servers[i];
       readers[i] <- mkMemReadInternal(client_bins[i], indication, ss);
@@ -165,7 +173,7 @@ module mkMemServerR#(MemServerIndication indication,
       indication.addrResponse(zeroExtend(physAddr));
    endrule
    
-   function PhysMemMaster#(PhysAddrWidth,dataWidth) mkm(Integer i) = (interface PhysMemMaster#(PhysAddrWidth,dataWidth);
+   function PhysMemMaster#(addrWidth,dataWidth) mkm(Integer i) = (interface PhysMemMaster#(addrWidth,dataWidth);
 								 interface PhysMemReadClient read_client = readers[i].read_client;
 								 interface PhysMemWriteClient write_client = null_mem_write_client;
 							      endinterface);

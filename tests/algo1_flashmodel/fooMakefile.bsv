@@ -1,7 +1,7 @@
 
 CONNECTALDIR?=../..
-INTERFACES = StrstrRequest StrstrIndication FlashRequest FlashIndication
-BSVFILES = $(CONNECTALDIR)/lib/strstr/bsv/Strstr.bsv Top.bsv FlashTop.bsv
+INTERFACES = StrstrRequest StrstrIndication # FlashRequest FlashIndication
+BSVFILES = $(CONNECTALDIR)/lib/strstr/bsv/Strstr.bsv Top.bsv # FlashTop.bsv
 CPPFILES=$(CONNECTALDIR)/examples/algo1_nandsim/test.cpp
 CPPFILES2=$(CONNECTALDIR)/examples/nandsim/testnandsim.cpp
 CONNECTALFLAGS += -D ALGO_NANDSIM
@@ -9,10 +9,13 @@ CONNECTALFLAGS += -D DEGPAR=2
 CONNECTALFLAGS += -I$(CONNECTALDIR)/lib/strstr/cpp
 CONNECTALFLAGS += -I$(CONNECTALDIR)/lib/nandsim/cpp
 
-CONNECTALFLAGS += -D IMPORT_HOSTIF -D PinType=Top_Pins --bscflags " -D DataBusWidth=128 " --clib rt
+# CONNECTALFLAGS += -D IMPORT_HOSTIF -D PinType=Top_Pins --bscflags " -D DataBusWidth=128 " --clib rt
 CONNECTALFLAGS += -D BURST_LEN_SIZE=12
 
+
 include $(CONNECTALDIR)/Makefile.connectal
+
+
 
 # #Note: for some reason, xbsv can't parase ControllerTypes.bsv properly. So a soft link in current directory is created
 # BSVFILES = Main.bsv Top.bsv \
