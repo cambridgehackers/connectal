@@ -1,8 +1,9 @@
 #!/usr/bin/python
 
-import subprocess, sys
+import json, subprocess, sys
 from gmpy import mpz
 
+addressList = []
 # 64-bit BAR
 tlpdatalog = [
     '000000011184ffff4a000001020000040018001068470000',
@@ -227,7 +228,11 @@ def print_tlp(tlpdata, f=None):
         headerstr = headerstr + ' %3d' % (int(tlpdata[-27:-24],16) & 0x3ff)
         headerstr = headerstr + ' ' + tlpdata[-8:]
     elif TlpPacketFormat[pktformat] == 'MEM_READ__3DW     ' or TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA':
-        headerstr = headerstr + '  %s %4x'% (tlpdata[-16:-8], (int(tlpdata[-16:-8],16) >> 2) % 8192)
+        address = tlpdata[-16:-8]
+        if address not in addressList:
+            addressList.append(address)
+        headerstr = headerstr + '  ' + address
+        headerstr = headerstr + ' %4x'% ((int(address,16) >> 2) % 8192)
         headerstr = headerstr + ' be(' + tlpdata[-17:-16] + ' ' + tlpdata[-18:-17] + ')'
         headerstr = headerstr + ' tag:' + tlpdata[-20:-18]
         headerstr = headerstr + ' ' + tlpdata[-24:-20]
@@ -235,7 +240,10 @@ def print_tlp(tlpdata, f=None):
         if TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA':
             headerstr = headerstr + ' ' + tlpdata[-8:]
     elif TlpPacketFormat[pktformat] == 'MEM_READ__4DW     ' or TlpPacketFormat[pktformat] == 'MEM_WRITE_4DW_DATA':
-        headerstr = headerstr + ' address: ' + tlpdata[-16:]
+        address = tlpdata[-16:]
+        if address not in addressList:
+            addressList.append(address)
+        headerstr = headerstr + ' address: ' + address
         headerstr = headerstr + ' be(1st: ' + tlpdata[-17:-16] + ' last:' + tlpdata[-18:-17] + ')'
         headerstr = headerstr + ' tag:' + tlpdata[-20:-18]
         headerstr = headerstr + ' reqid:' + tlpdata[-24:-20]
@@ -291,8 +299,16 @@ def print_tlp_log(tlplog, f=None, lf=None):
         print_tlp(tlpdata, f)
 
 if __name__ == '__main__':
-    if len(sys.argv) == 2:
-        tlplog = open(sys.argv[1]).read().split('\n')
+    argindex = 1
+    argcount = len(sys.argv)
+    jsondata = {}
+    if argcount >= 2 and sys.argv[argindex] == '-j':
+        j2file = open(sys.argv[argindex + 1]).read()
+        jsondata = json.loads(j2file)
+        argindex = argindex + 2
+        argcount = argcount - 2
+    if argcount == 2:
+        tlplog = open(sys.argv[argindex]).read().split('\n')
     else:
         tlplog = subprocess.check_output(['connectalutil', 'tlp', '/dev/portal0']).split('\n')
     tlplog.sort()
@@ -301,5 +317,8 @@ if __name__ == '__main__':
     print_tlp_log(tlplog[0:-1], f, lf)
     print classCounts
     print sum([ classCounts[k] for k in classCounts])
+    if jsondata:
+        print 'ADDDRL', addressList
+        print 'KKKKKKKK', jsondata['interfaces']
     f.close()
     lf.close()
