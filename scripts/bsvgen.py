@@ -56,15 +56,14 @@ import Pipe::*;
 requestStructTemplate='''
 typedef struct {
 %(paramStructDeclarations)s
-} %(MethodName)s_Request deriving (Bits);
+} %(MethodName)s_Message deriving (Bits);
 '''
 
 requestOutputPipeInterfaceTemplate='''\
-    interface PipeOut#(%(MethodName)s_Request) %(methodName)s_PipeOut;
+    interface PipeOut#(%(MethodName)s_Message) %(methodName)s_PipeOut;
 '''
 
 exposedProxyInterfaceTemplate='''
-%(responseElements)s
 // exposed proxy interface
 interface %(Dut)sPortal;
     interface PipePortal#(0, %(channelCount)s, 32) portalIfc;
@@ -183,12 +182,6 @@ module mk%(Dut)s#(idType id, %(Ifc)s ifc)(%(Dut)s)
 endmodule
 '''
 
-responseStructTemplate='''
-typedef struct {
-%(paramStructDeclarations)s
-} %(MethodName)s_Response deriving (Bits);
-'''
-
 portalIfcTemplate='''
     interface PipePortal portalIfc;
         interface Vector requests = requestPipes;
@@ -197,7 +190,7 @@ portalIfcTemplate='''
 '''
 
 requestRuleTemplate='''
-    FromBit#(32,%(MethodName)s_Request) %(methodName)s_requestFifo <- mkFromBit();
+    FromBit#(32,%(MethodName)s_Message) %(methodName)s_requestFifo <- mkFromBit();
     requestPipeIn[%(channelNumber)s] = toPipeIn(%(methodName)s_requestFifo);
 '''
 
@@ -209,7 +202,7 @@ mkConnectionMethodTemplate='''
 '''
 
 indicationRuleTemplate='''
-    ToBit#(32,%(MethodName)s_Response) %(methodName)s_responseFifo <- mkToBit();
+    ToBit#(32,%(MethodName)s_Message) %(methodName)s_responseFifo <- mkToBit();
     indicationPipes[%(channelNumber)s] = toPipeOut(%(methodName)s_responseFifo);
 '''
 
@@ -218,7 +211,7 @@ indicationMethodDeclTemplate='''
 
 indicationMethodTemplate='''
     method Action %(methodName)s(%(formals)s);
-        %(methodName)s_responseFifo.enq(%(MethodName)s_Response {%(structElements)s});
+        %(methodName)s_responseFifo.enq(%(MethodName)s_Message {%(structElements)s});
         //$display(\"indicationMethod \'%(methodName)s\' invoked\");
     endmethod'''
 
@@ -275,7 +268,6 @@ def fixupSubsts(item, suffix):
                                                'MethodName': util.capitalize(p['name'])} for p in dlist])
     substs['outputPipes'] = '\n'.join(outputPipes)
     substs['mkConnectionMethodRules'] = ''.join(mkConnectionMethodRules)
-    substs['responseElements'] = collectElements(dlist, responseStructTemplate, name)
     substs['indicationMethodRules'] = collectElements(dlist, indicationRuleTemplate, name)
     substs['indicationMethods'] = collectElements(dlist, indicationMethodTemplate, name)
     substs['requestElements'] = collectElements(dlist, requestStructTemplate, name)
