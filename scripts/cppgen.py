@@ -22,25 +22,8 @@
 ## CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ## SOFTWARE.
 
-import os
-import sys
-import util
+import os, re, sys, util
 import functools
-
-def dtInfo(arg):
-    rc = {}
-    rc['name'] = arg.name
-    rc['cName'] = arg.cName()
-    rc['bitWidth'] = arg.bitWidth()
-    if arg.type == 'Type':
-        rc['params'] = [dtInfo(p) for p in arg.params]
-    return rc
-
-def piInfo(name, type):
-    rc = {}
-    rc['name'] = name
-    rc['type'] = dtInfo(type)
-    return rc
 
 sizeofUint32_t = 4
 
@@ -136,13 +119,8 @@ class paramInfo:
 def collectMembers(scope, pitem):
     membtype = pitem['type']
     while 1:
-        if membtype['name'] == 'Bit':
-            return [('%s%s'%(scope,pitem['name']),membtype)]
-        elif membtype['name'] == 'Int' or membtype['name'] == 'UInt':
-            return [('%s%s'%(scope,pitem['name']),membtype)]
-        elif membtype['name'] == 'Float':
-            return [('%s%s'%(scope,pitem['name']),membtype)]
-        elif membtype['name'] == 'Vector':
+        if membtype['name'] == 'Bit' or membtype['name'] == 'Int' or membtype['name'] == 'UInt' \
+            or membtype['name'] == 'Float' or membtype['name'] == 'Vector' or membtype['name'] == 'Bool':
             return [('%s%s'%(scope,pitem['name']),membtype)]
         elif membtype['name'] == 'SpecialTypeForSendingFd':
             return [('%s%s'%(scope,pitem['name']),membtype)]
@@ -161,6 +139,93 @@ def collectMembers(scope, pitem):
                 return [('%s%s'%(scope,pitem['name']),membtype)]
             #print 'resolved to type', membtype['type'], membtype['name'], membtype
 
+def typeNumeric(item):
+    if globalv_globalvars.has_key(item['name']):
+        decl = globalv_globalvars[item['name']]
+        if decl['type'] == 'TypeDef':
+            return typeNumeric(decl['tdtype'])
+    elif item['name'] in ['TAdd', 'TSub', 'TMul', 'TDiv', 'TLog', 'TExp', 'TMax', 'TMin']:
+        values = [typeNumeric(p) for p in item['params']]
+        if item['name'] == 'TAdd':
+            return values[0] + values[1]
+        elif item['name'] == 'TSub':
+            return values[0] - values[1]
+        elif item['name'] == 'TMul':
+            return values[0] * values[1]
+        elif item['name'] == 'TDiv':
+            return math.ceil(values[0] / float(values[1]))
+        elif item['name'] == 'TLog':
+            return math.ceil(math.log(values[0], 2))
+        elif item['name'] == 'TExp':
+            return math.pow(2, values[0])
+        elif item['name'] == 'TMax':
+            return max(values[0], values[1])
+        elif item['name'] == 'TMax':
+            return min(values[0], values[1])
+    return int(item['name'])
+
+def typeCName(item):
+    #print 'WWWW', item
+    if item['type'] == 'Type':
+        cid = item['name'].replace(' ', '')
+        if cid == 'Bit':
+            #print 'BBBBBB', item['params'][0]
+            if typeNumeric(item['params'][0]) <= 32:
+                return 'uint32_t'
+            elif typeNumeric(item['params'][0]) <= 64:
+                return 'uint64_t'
+            else:
+                return 'std::bitset<%d>' % (typeNumeric(item['params'][0]))
+        elif cid == 'Bool':
+            return 'int'
+        elif cid == 'Int':
+            if typeNumeric(item['params'][0]) == 32:
+                return 'int'
+            else:
+                assert(False)
+        elif cid == 'UInt':
+            if typeNumeric(item['params'][0]) == 32:
+                return 'unsigned int'
+            else:
+                assert(False)
+        elif cid == 'Float':
+            return 'float'
+        elif cid == 'Vector':
+            return 'bsvvector<%d,%s>' % (typeNumeric(item['params'][0]), item['params'][1].cName())
+        elif cid == 'Action':
+            return 'int'
+        elif cid == 'ActionValue':
+            assert(False)
+        if item['params']:
+            name = '%sL_%s_P' % (cid, '_'.join([typeCName(t) for t in item['params'] if t]))
+        else:
+            name = cid
+        return name
+    return item['name']
+
+def hasBitWidth(item):
+    return item['name'] == 'Bit' or item['name'] == 'Int' or item['name'] == 'UInt'
+
+def typeBitWidth(item):
+    #print 'WBBBBB', item
+    if hasBitWidth(item):
+        width = item['params'][0]['name']
+        #print 'OOO', width
+        while globalv_globalvars.has_key(width):
+            decl = globalv_globalvars[width]
+            if decl['type'] != 'TypeDef':
+                break
+            print 'Resolving width', width, decl['tdtype']
+            width = decl['tdtype']['name']
+        if re.match('[0-9]+', width):
+            return int(width)
+        return decl['tdtype'].numeric()
+    if item['name'] == 'Bool':
+        return 1
+    if item['name'] == 'Float':
+        return 32
+    return 0
+
 # pack flattened struct-member list into 32-bit wide bins.  If a type is wider than 32-bits or
 # crosses a 32-bit boundary, it will appear in more than one bin (though with different ranges).
 # This is intended to mimick exactly Bluespec struct packing.  The padding must match the code
@@ -176,7 +241,7 @@ def accumWords(s, pro, memberList):
     mitem = memberList[0]
     name = mitem[0]
     thisType = mitem[1]
-    aw = thisType['bitWidth']
+    aw = typeBitWidth(thisType)
     #print '%d %d %d' %(aw, pro, w)
     if (aw-pro+w == 32):
         s.append(paramInfo(name,aw,pro,thisType,'='))
@@ -198,17 +263,17 @@ def generate_marshall(pfmt, w):
     fmt = pfmt
     for e in w:
         field = e.name
-        if e.datatype['cName'] == 'float':
+        if typeCName(e.datatype) == 'float':
             return pfmt % ('*(int*)&' + e.name)
         if e.shifted:
             field = '(%s>>%s)' % (field, e.shifted)
         if off:
             field = '(%s<<%s)' % (field, off)
-        if e.datatype['bitWidth'] > 64:
-            field = '(const %s & std::bitset<%d>(0xFFFFFFFF)).to_ulong()' % (field, e.datatype['bitWidth'])
+        if typeBitWidth(e.datatype) > 64:
+            field = '(const %s & std::bitset<%d>(0xFFFFFFFF)).to_ulong()' % (field, typeBitWidth(e.datatype))
         word.append(field)
         off = off+e.width-e.shifted
-        if e.datatype['cName'] == 'SpecialTypeForSendingFd':
+        if typeCName(e.datatype) == 'SpecialTypeForSendingFd':
             fdName = field
             fmt = 'p->item->writefd(p, &temp_working_addr, %s);'
     return fmt % (''.join(util.intersperse('|', word)))
@@ -220,25 +285,25 @@ def generate_demarshall(fmt, w):
     for e in w:
         # print e.name+' (d)'
         field = 'tmp'
-        if e.datatype['cName'] == 'float':
+        if typeCName(e.datatype) == 'float':
             word.append('%s = *(float*)&(%s);'%(e.name,field))
             continue
         if off:
             field = '%s>>%s' % (field, off)
-        #print 'JJJ', e.name, '{{'+field+'}}', e.datatype['bitWidth'], e.shifted, e.assignOp, off
-        #if e.datatype['bitWidth'] < 32:
-        field = '((%s)&0x%xul)' % (field, ((1 << (e.datatype['bitWidth']-e.shifted))-1))
+        #print 'JJJ', e.name, '{{'+field+'}}', typeBitWidth(e.datatype), e.shifted, e.assignOp, off
+        #if typeBitWidth(e.datatype) < 32:
+        field = '((%s)&0x%xul)' % (field, ((1 << (typeBitWidth(e.datatype)-e.shifted))-1))
         if e.shifted:
-            field = '((%s)(%s)<<%s)' % (e.datatype['cName'],field, e.shifted)
-        if e.datatype['cName'] == 'SpecialTypeForSendingFd':
+            field = '((%s)(%s)<<%s)' % (typeCName(e.datatype),field, e.shifted)
+        if typeCName(e.datatype) == 'SpecialTypeForSendingFd':
             word.append('%s %s messageFd;'%(e.name, e.assignOp))
         else:
-            word.append('%s %s (%s)(%s);'%(e.name, e.assignOp, e.datatype['cName'], field))
+            word.append('%s %s (%s)(%s);'%(e.name, e.assignOp, typeCName(e.datatype), field))
         off = off+e.width-e.shifted
     return '\n        '.join(word)
 
 def formalParameters(params, insertPortal):
-    rc = [ 'const %s %s' % (pitem['type']['cName'], pitem['name']) for pitem in params]
+    rc = [ 'const %s %s' % (typeCName(pitem['type']), pitem['name']) for pitem in params]
     if insertPortal:
         rc.insert(0, ' struct PortalInternal *p')
     return ', '.join(rc)
@@ -263,7 +328,7 @@ def gatherMethodInfo(mname, params, itemname):
         paramStructDemarshall = map(functools.partial(generate_demarshall, paramStructDemarshallStr), argWords)
         paramStructDemarshall.reverse()
 
-    paramStructDeclarations = [ '%s %s;' % (pitem['type']['cName'], pitem['name']) for pitem in params]
+    paramStructDeclarations = [ '%s %s;' % (typeCName(pitem['type']), pitem['name']) for pitem in params]
     if not params:
         paramStructDeclarations = ['        int padding;\n']
     respParams = [pitem['name'] for pitem in params]
@@ -361,9 +426,9 @@ def generate_class(className, declList, parentC, parentCC, generatedCFiles, crea
 
 def emitStructMember(item, f, indentation):
     indent(f, indentation)
-    f.write('%s %s' % (item['type']['cName'], item['name']))
-    if item['type'].get('bitWidth'):
-        f.write(' : %d' % item['type']['bitWidth'])
+    f.write('%s %s' % (typeCName(item['type']), item['name']))
+    if hasBitWidth(item):
+        f.write(' : %d' % typeBitWidth(item['type']))
     f.write(';\n')
 
 def emitStruct(item, name, f, indentation):
@@ -425,7 +490,7 @@ def generate_cpp(project_dir, noisyFlag, jsondata):
     for v in jsondata['globaldecls']:
         if v['type'] == 'TypeDef':
             if v['params']:
-                print 'Skipping C++ declaration for parameterized type', v.name
+                print 'Skipping C++ declaration for parameterized type', v['name']
                 continue
             emitCD(v, generated_hpp, 0)
     generated_hpp.write('\n')

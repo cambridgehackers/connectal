@@ -31,17 +31,7 @@ import AST
 import globalv
 import util
 
-#def indent(f, indentation):
-#    for i in xrange(indentation):
-#        f.write(' ')
-
-class EnumElementMixin:
-    def cName(self):
-        return self.name
-
 class EnumMixin:
-    def cName(self):
-        return self.name
     def bitWidth(self):
         return int(math.ceil(math.log(len(self.elements))))
 
@@ -56,73 +46,6 @@ class InterfaceMixin:
     def parentClass(self, default):
         rv = default if (len(self.typeClassInstances)==0) else (self.typeClassInstances[0])
         return rv
-    def global_name(self, s, suffix):
-        return '%s%s_%s' % (cName(self.name), suffix, s)
-
-class ParamMixin:
-    def cName(self):
-        return self.name
-
-class TypeMixin:
-    def cName(self):
-        cid = self.name.replace(' ', '')
-        if cid == 'Bit':
-            if self.params[0].numeric() <= 32:
-                return 'uint32_t'
-            elif self.params[0].numeric() <= 64:
-                return 'uint64_t'
-            else:
-                return 'std::bitset<%d>' % (self.params[0].numeric())
-        elif cid == 'Int':
-            if self.params[0].numeric() == 32:
-                return 'int'
-            else:
-                assert(False)
-        elif cid == 'UInt':
-            if self.params[0].numeric() == 32:
-                return 'unsigned int'
-            else:
-                assert(False)
-        elif cid == 'Float':
-            return 'float'
-        elif cid == 'Vector':
-            return 'bsvvector<%d,%s>' % (self.params[0].numeric(), self.params[1].cName())
-        elif cid == 'Action':
-            return 'int'
-        elif cid == 'ActionValue':
-            return self.params[0].cName()
-        if self.params:
-            name = '%sL_%s_P' % (cid, '_'.join([cName(t) for t in self.params if t]))
-        else:
-            name = cid
-        return name
-    def isBitField(self):
-        return self.name == 'Bit' or self.name == 'Int' or self.name == 'UInt'
-    def bitWidth(self):
-        if self.name == 'Bit' or self.name == 'Int' or self.name == 'UInt':
-            width = self.params[0].name
-            while globalv.globalvars.has_key(width):
-                decl = globalv.globalvars[width]
-                if decl.type != 'TypeDef':
-                    break
-                print 'Resolving width', width, decl.tdtype
-                width = decl.tdtype.name
-            if re.match('[0-9]+', width):
-                return int(width)
-            else:
-                return decl.tdtype.numeric()
-        if self.name == 'Float':
-            return 32
-        else:
-            return 0
-
-def cName(x):
-    if type(x) == str or type(x) == unicode:
-        x = x.replace(' ', '')
-        x = x.replace('.', '$')
-        return x
-    else:
-        return x.cName()
 
 def dtInfo(arg):
     rc = {}
@@ -130,12 +53,7 @@ def dtInfo(arg):
         rc['name'] = arg.name
     if hasattr(arg, 'type'):
         rc['type'] = arg.type
-    if hasattr(arg, 'cName'):
-        rc['cName'] = arg.cName()
-    if hasattr(arg, 'bitWidth'):
-        rc['bitWidth'] = arg.bitWidth()
     if hasattr(arg, 'params'):
-        #print 'OOO', arg.params
         if arg.params is not None:
             rc['params'] = [dtInfo(p) for p in arg.params]
     if hasattr(arg, 'elements'):
@@ -173,13 +91,14 @@ def classInfo(item):
         rc['decls'].append(declInfo(mitem))
     return rc
 
-def serialize_json(interfaces, globalimports, dutname):
+def serialize_json(interfaces, globalimports, dutname, interfaceList):
     itemlist = []
     for item in interfaces:
         itemlist.append(classInfo(item))
     jfile = open('cppgen_intermediate_data.tmp', 'w')
     toplevel = {}
     toplevel['interfaces'] = itemlist
+    toplevel['interfacesList'] = interfaceList
     gvlist = {}
     for key, value in globalv.globalvars.iteritems():
         gvlist[key] = {'type': value.type}
@@ -205,10 +124,11 @@ def serialize_json(interfaces, globalimports, dutname):
     toplevel['globaldecls'] = gdlist
     toplevel['globalimports'] = globalimports
     toplevel['dutname'] = dutname
-    #json.dump(toplevel, jfile, sort_keys = True, indent = 4)
-    #jfile.close()
-    #j2file = open('cppgen_intermediate_data.tmp').read()
-    #toplevel = json.loads(j2file)
+    if True:
+        json.dump(toplevel, jfile, sort_keys = True, indent = 4)
+        jfile.close()
+        j2file = open('cppgen_intermediate_data.tmp').read()
+        toplevel = json.loads(j2file)
     return toplevel
 
 class Method:
@@ -296,7 +216,7 @@ class Module:
     def __repr__(self):
         return '{module: %s %s}' % (self.name, self.decls)
 
-class EnumElement(EnumElementMixin):
+class EnumElement:
     def __init__(self, name, qualifiers, value):
         self.qualifiers = qualifiers
         self.value = value
@@ -342,7 +262,7 @@ class TypeDef:
     def __repr__(self):
         return '{typedef: %s %s}' % (self.tdtype, self.name)
 
-class Param(ParamMixin):
+class Param:
     def __init__(self, name, t):
         self.name = name
         self.type = t
@@ -352,7 +272,7 @@ class Param(ParamMixin):
         return Param(self.name,
                      self.type.instantiate(paramBindings))
 
-class Type(TypeMixin):
+class Type:
     def __init__(self, name, params):
         self.type = 'Type'
         self.name = name

@@ -21,7 +21,7 @@
 import Portal::*;
 import MemTypes::*;
 
-typedef enum {EchoIndication, EchoRequest} IfcNames deriving (Eq,Bits);
+typedef enum {PhysMemMasterIndication, PhysMemMasterRequest} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
 endmodule : mkConnectalTop

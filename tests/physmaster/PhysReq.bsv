@@ -19,39 +19,32 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <stdio.h>
-#include "PhysMemMasterRequest.h"
-#include "PhysMemMasterIndication.h"
+import MemTypes::*;
 
-PhysMemMasterRequestProxy *sRequestProxy;
-static sem_t sem_heard2;
+typedef 6 MemTagSize;
+typedef 40 PhysAddrWidth;
+typedef 10 BurstLenSize;
+typedef 64 DataBusWidth;
 
-class PhysMemMasterIndication : public PhysMemMasterIndicationWrapper
-{
-public:
-    void readData (  const MemDataL_DataBusWidth_P v ) {
-        fprintf(stderr, "heard an s: %lld\n", (long long)v.data);
-	//sRequestProxy->say2(v, 2*v);
-    }
-    void writeDone (  const uint32_t v ) {
-        sem_post(&sem_heard2);
-        //fprintf(stderr, "heard an s2: %ld %ld\n", a, b);
-    }
+typedef struct {
+   Bit#(addrWidth) addr;
+   Bit#(BurstLenSize) burstLen;
+   Bit#(MemTagSize) tag;
+   } PhysMemRequest#(numeric type addrWidth) deriving (Bits);
 
-    PhysMemMasterIndication(unsigned int id, PortalItemFunctions *item, void *param) : PhysMemMasterIndicationWrapper(id, item, param) {}
-};
+typedef struct {
+   Bit#(dsz) data;
+   Bit#(MemTagSize) tag;
+   Bool last;
+   } MemData#(numeric type dsz) deriving (Bits);
 
-    //sem_wait(&sem_heard2);
+interface PhysMemMasterRequest;
+   method Action readReq(PhysMemRequest#(PhysAddrWidth) v);
+   method Action writeReq(PhysMemRequest#(PhysAddrWidth) v);
+   method Action writeData(MemData#(DataBusWidth) v);
+endinterface
 
-int main(int argc, const char **argv)
-{
-    PhysMemMasterIndication *sIndication = new PhysMemMasterIndication(IfcNames_PhysMemMasterIndication, &socketfuncInit, NULL);
-    sRequestProxy = new PhysMemMasterRequestProxy(IfcNames_PhysMemMasterRequest, &socketfuncInit, NULL);
-    portalExec_start();
-
-    int v = 42;
-    fprintf(stderr, "Saying %d\n", v);
-    //call_say(v);
-    portalExec_end();
-    return 0;
-}
+interface PhysMemMasterIndication;
+   method Action readData(MemData#(DataBusWidth) v);
+   method Action writeDone(Bit#(MemTagSize) v);
+endinterface

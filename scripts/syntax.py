@@ -993,10 +993,18 @@ def generate_bsvcpp(filelist, project_dir, dutname, bsvdefines, interfaces, nf):
     for i in interfaces:
         ifc = globalv.globalvars[i]
         ifc = ifc.instantiate(dict(zip(ifc.params, ifc.params)))
-        ifc.ind = AST.Interface(i, [], [], None, ifc.package)
-        ifc.ind.req = ifc
         ilist.append(ifc)
-    jsondata = AST.serialize_json(ilist, globalimports, dutname)
+        for ditem in ifc.decls:
+            for pitem in ditem.params:
+                thisType = pitem.type
+                p = globalv.globalvars.get(thisType.name)
+                if p and thisType.params and p.params:
+                    print 'PQQ', thisType.name, p.type, thisType.params, p.params
+                    myName = '%sL_%s_P' % (thisType.name, '_'.join([t.name for t in thisType.params if t]))
+                    pitem.type = AST.Type(myName, [])
+                    if not globalv.globalvars.get(myName):
+                        globalv.add_new(AST.TypeDef(p.tdtype.instantiate(dict(zip(p.params, thisType.params))), myName, []))
+    jsondata = AST.serialize_json(ilist, globalimports, dutname, interfaces)
     cppgen.generate_cpp(project_dir, noisyFlag, jsondata)
     bsvgen.generate_bsv(project_dir, noisyFlag, jsondata)
     
@@ -1009,7 +1017,10 @@ if __name__=='__main__':
         parser = yacc.yacc(outputdir=parserdir,debugfile=parserdir+'/parser.out')
         import parsetab
         sys.exit(0)
-    generate_bsvcpp(sys.argv[1:], os.environ.get('DTOP'), os.environ.get('DUT_NAME'), \
-         os.environ.get('BSVDEFINES_LIST').split(), \
-         set(os.environ.get('INTERFACES').split()), os.environ.get('V') == '1')
+    ifitems = []
+    for item in os.environ.get('INTERFACES').split():
+        if item not in ifitems:
+            ifitems.append(item)
+    generate_bsvcpp(sys.argv[1:], os.environ.get('DTOP'), os.environ.get('DUT_NAME'),
+         os.environ.get('BSVDEFINES_LIST').split(), ifitems, os.environ.get('V') == '1')
 
