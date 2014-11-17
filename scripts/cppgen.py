@@ -22,8 +22,7 @@
 ## CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ## SOFTWARE.
 
-import os, re, sys, util
-import functools
+import functools, math, os, re, sys, util
 
 sizeofUint32_t = 4
 
@@ -224,6 +223,8 @@ def typeBitWidth(item):
         return 1
     if item['name'] == 'Float':
         return 32
+    if item['type'] == 'Enum':
+        return int(math.ceil(math.log(len(item['elements']))))
     return 0
 
 # pack flattened struct-member list into 32-bit wide bins.  If a type is wider than 32-bits or
@@ -427,7 +428,7 @@ def generate_class(className, declList, parentC, parentCC, generatedCFiles, crea
 def emitStructMember(item, f, indentation):
     indent(f, indentation)
     f.write('%s %s' % (typeCName(item['type']), item['name']))
-    if hasBitWidth(item):
+    if hasBitWidth(item['type']):
         f.write(' : %d' % typeBitWidth(item['type']))
     f.write(';\n')
 
