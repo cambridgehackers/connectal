@@ -76,13 +76,15 @@ endinterface
 
 (* synthesize *)
 module %(moduleContext)s mk%(Dut)sPortalSynth#(Bit#(32) id) (%(Dut)sPortal);
-    Vector#(0, PipeIn#(Bit#(32))) requestPipes = nil;
     Vector#(%(channelCount)s, PipeOut#(Bit#(32))) indicationPipes = newVector();
 %(indicationMethodRules)s
     interface %(Package)s::%(Ifc)s ifc;
 %(indicationMethods)s
     endinterface
-%(portalIfc)s
+    interface PipePortal portalIfc;
+        interface Vector requests = nil;
+        interface Vector indications = indicationPipes;
+    endinterface
 endmodule
 
 // exposed proxy implementation
@@ -115,7 +117,7 @@ exposedWrapperInterfaceTemplate='''
 %(requestElements)s
 // exposed wrapper portal interface
 interface %(Dut)sPipes;
-    interface Vector#(%(channelCount)s, PipeIn#(Bit#(32))) inputPipes;
+    interface PipePortal#(%(channelCount)s, 0, 32) portalIfc;
 %(requestOutputPipeInterfaces)s
 endinterface
 interface %(Dut)sPortal;
@@ -136,9 +138,11 @@ endinstance
 (* synthesize *)
 module mk%(Dut)sPipes#(Bit#(32) id)(%(Dut)sPipes);
     Vector#(%(channelCount)s, PipeIn#(Bit#(32))) requestPipeIn = newVector();
-    Vector#(0, PipeOut#(Bit#(32))) indicationPipes = nil;
 %(methodRules)s
-    interface Vector inputPipes = requestPipeIn;
+    interface PipePortal portalIfc;
+        interface Vector requests = requestPipeIn;
+        interface Vector indications = nil;
+    endinterface
 %(outputPipes)s
 endmodule
 
@@ -147,9 +151,7 @@ module mk%(Dut)sPortal#(idType id, %(Ifc)s ifc)(%(Dut)sPortal)
               Add#(a__, __a, 32));
     let pipes <- mk%(Dut)sPipes(zeroExtend(pack(id)));
     mkConnection(pipes, ifc);
-    let requestPipes = pipes.inputPipes;
-    Vector#(0, PipeOut#(Bit#(32))) indicationPipes = nil;
-%(portalIfc)s
+    interface PipePortal portalIfc = pipes.portalIfc;
 endmodule
 
 interface %(Dut)sMemPortalPipes;
@@ -161,13 +163,7 @@ endinterface
 module mk%(Dut)sMemPortalPipes#(Bit#(32) id)(%(Dut)sMemPortalPipes);
 
   let p <- mk%(Dut)sPipes(zeroExtend(pack(id)));
-
-  PipePortal#(%(channelCount)s, 0, 32) portalifc = (interface PipePortal;
-        interface Vector requests = p.inputPipes;
-        interface Vector indications = nil;
-    endinterface);
-
-  let memPortal <- mkMemPortal(id, portalifc);
+  let memPortal <- mkMemPortal(id, p.portalIfc);
   interface %(Dut)sPipes pipes = p;
   interface MemPortal portalIfc = memPortal;
 endmodule
@@ -180,13 +176,6 @@ module mk%(Dut)s#(idType id, %(Ifc)s ifc)(%(Dut)s)
   mkConnection(dut.pipes, ifc);
   interface MemPortal portalIfc = dut.portalIfc;
 endmodule
-'''
-
-portalIfcTemplate='''
-    interface PipePortal portalIfc;
-        interface Vector requests = requestPipes;
-        interface Vector indications = indicationPipes;
-    endinterface
 '''
 
 requestRuleTemplate='''
@@ -261,7 +250,6 @@ def fixupSubsts(item, suffix):
         'Ifc': item['name'],
         'dut': util.decapitalize(name),
         'Dut': util.capitalize(name),
-        'portalIfc': portalIfcTemplate,
     }
     substs['requestOutputPipeInterfaces'] = ''.join(
         [requestOutputPipeInterfaceTemplate % {'methodName': p['name'],
