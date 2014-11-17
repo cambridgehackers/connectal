@@ -10,6 +10,8 @@ CONNECTALFLAGS += -I$(CONNECTALDIR)/lib/strstr/cpp
 CONNECTALFLAGS += -I$(CONNECTALDIR)/lib/nandsim/cpp
 
 CONNECTALFLAGS += -D IMPORT_HOSTIF -D PinType=Top_Pins --bscflags " -D DataBusWidth=128 " --clib rt
+CONNECTALFLAGS += -D BURST_LEN_SIZE=12
+
 
 include $(CONNECTALDIR)/Makefile.connectal
 

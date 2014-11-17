@@ -59,7 +59,11 @@ ifndef PIN_TYPE
 PIN_TYPE=Empty
 endif
 
-CONNECTALFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) -D PinType=$(PIN_TYPE) --ipdir=$(IPDIR)
+ifndef BURST_LEN_SIZE
+BURST_LEN_SIZE=8
+endif
+
+CONNECTALFLAGS += -D BurstLenSize=$(BURST_LEN_SIZE) -D NumberOfMasters=$(NUMBER_OF_MASTERS) -D PinType=$(PIN_TYPE) --ipdir=$(IPDIR)
 
 ifneq ($(NUMBER_OF_MASTERS), 0)
 INTERFACES += MemServerRequest MMURequest MemServerIndication MMUIndication

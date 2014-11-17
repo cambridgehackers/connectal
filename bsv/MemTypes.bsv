@@ -38,7 +38,7 @@ typedef Bit#(32) SGLId;
 typedef 40 MemOffsetSize;
 typedef `PhysAddrWidth PhysAddrWidth;
 typedef 6 MemTagSize;
-typedef 10 BurstLenSize;
+typedef `BurstLenSize BurstLenSize;
 typedef 32 MemServerTags;
 
 // memory request with physical addresses.
