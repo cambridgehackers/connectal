@@ -43,7 +43,7 @@ typedef `NumOutstandingRequests NumOutstandingRequests;
 `else
 typedef 2 NumOutstandingRequests;
 `endif
-`ifdef memreadEngineBufferSize
+`ifdef MemreadEngineBufferSize
 Integer memreadEngineBufferSize=`MemreadEngineBufferSize;
 `else
 Integer memreadEngineBufferSize=256;
