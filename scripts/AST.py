@@ -31,10 +31,6 @@ import AST
 import globalv
 import util
 
-class EnumMixin:
-    def bitWidth(self):
-        return int(math.ceil(math.log(len(self.elements))))
-
 class InterfaceMixin:
     def getSubinterface(self, name):
         subinterfaceName = name
@@ -125,10 +121,13 @@ def serialize_json(interfaces, globalimports, dutname, interfaceList):
     toplevel['globalimports'] = globalimports
     toplevel['dutname'] = dutname
     if True:
-        json.dump(toplevel, jfile, sort_keys = True, indent = 4)
-        jfile.close()
-        j2file = open('cppgen_intermediate_data.tmp').read()
-        toplevel = json.loads(j2file)
+        try:
+            json.dump(toplevel, jfile, sort_keys = True, indent = 4)
+            jfile.close()
+            j2file = open('cppgen_intermediate_data.tmp').read()
+            toplevelnew = json.loads(j2file)
+        except:
+            print 'Unable to write json file', 'cppgen_intermediate_data.tmp'
     return toplevel
 
 class Method:
@@ -223,7 +222,7 @@ class EnumElement:
     def __repr__(self):
         return '{enumelt: %s}' % (self.name)
 
-class Enum(EnumMixin):
+class Enum:
     def __init__(self, elements):
         self.type = 'Enum'
         self.elements = elements
