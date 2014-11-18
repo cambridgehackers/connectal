@@ -123,6 +123,9 @@ ifneq ($(OS),android)
 program:
 	fpgajtag bin/mkTop.bin.gz
 	sleep 1
+
+programflash:
+	vivado -mode batch -source $(dir $(FPGAMAKE))/tcl/program_bpi_flash.tcl
 endif
 endif
 

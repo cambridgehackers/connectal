@@ -46,6 +46,9 @@ build.%: gen.%
 run.%:
 	make -C $* BOARD=$* --no-print-directory run
 
+programflash.%:
+	make -C $* BOARD=$* --no-print-directory programflash
+
 %.gdb:
 	make CONNECTAL_DEBUG=1 --no-print-directory $*
 
