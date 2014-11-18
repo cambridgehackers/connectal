@@ -56,9 +56,9 @@ import Regexp::*;
 module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    
    // nandsim 
-   NandSimIndicationProxy nandSimIndicationProxy <- mkNandSimIndicationProxy(NandSimIndication);
+   NandSimIndicationProxy nandSimIndicationProxy <- mkNandSimIndicationProxy(NandCfgIndication);
    NandSim nandSim <- mkNandSim(nandSimIndicationProxy.ifc);
-   NandSimRequestWrapper nandSimRequestWrapper <- mkNandSimRequestWrapper(NandSimRequest,nandSim.request);
+   NandSimRequestWrapper nandSimRequestWrapper <- mkNandSimRequestWrapper(NandCfgRequest,nandSim.request);
    
    // regexp algo
    RegexpIndicationProxy regexpIndicationProxy <- mkRegexpIndicationProxy(AlgoIndication);
@@ -86,7 +86,7 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    MemServer#(PhysAddrWidth,64,1) hostDma <- mkMemServerRW(hostMemServerIndicationProxy.ifc, rcs, cons(nandSim.writeClient, nil), cons(backingStoreMMU,cons(algoMMU,nil)));
    
    // nandsim memory dma server
-   MemServerIndicationProxy nandsimMemServerIndicationProxy <- mkMemServerIndicationProxy(NandsimMemServerIndication);
+   MemServerIndicationProxy nandsimMemServerIndicationProxy <- mkMemServerIndicationProxy(NandMemServerIndication);
    MemServer#(PhysAddrWidth,64,1) nandsimDma <- mkMemServerR(nandsimMemServerIndicationProxy.ifc, cons(regexp.haystack_read_client,nil), cons(nandsimMMU,nil));
    mkConnection(nandsimDma.masters[0], nandSim.memSlave);
    

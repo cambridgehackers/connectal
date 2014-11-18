@@ -48,32 +48,12 @@ import MMUIndication::*;
 import StrstrIndication::*;
 
 
+import NandSimNames::*;
 import Strstr::*;
 import AuroraCommon::*;
 import FlashTop::*;
 import FlashRequest::*;
 import FlashIndication::*;
-
-typedef enum {
-   FlashIndication, 
-   FlashRequest, 
-
-   HostMemServerIndication, 
-   HostMemServerRequest, 
-   
-   FlashMemServerIndication, 
-   FlashMemServerRequest, 
-	      
-   HostMMURequest, 
-   HostMMUIndication, 
-
-   FlashMMURequest, 
-   FlashMMUIndication,
-
-   AlgoIndication, 
-   AlgoRequest 
-
-} IfcNames deriving (Eq,Bits);
 
 interface Top_Pins;
 	interface Aurora_Pins#(4) aurora_fmc1;
@@ -95,30 +75,30 @@ module mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,DataBusWidth,
    Strstr#(128,128) strstr <- mkStrstr(strstrIndicationProxy.ifc);
    StrstrRequestWrapper strstrRequestWrapper <- mkStrstrRequestWrapper(AlgoRequest,strstr.request);
    
-   // host mmu
-   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
-   MMU#(PhysAddrWidth) hostMMU <- mkMMU(1, True, hostMMUIndicationProxy.ifc);
-   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
+   // algo mmu
+   MMUIndicationProxy algoMMUIndicationProxy <- mkMMUIndicationProxy(AlgoMMUIndication);
+   MMU#(PhysAddrWidth) algoMMU <- mkMMU(1, True, algoMMUIndicationProxy.ifc);
+   MMURequestWrapper algoMMURequestWrapper <- mkMMURequestWrapper(AlgoMMURequest, algoMMU.request);
    
-   // flash mmu
-   MMUIndicationProxy flashMMUIndicationProxy <- mkMMUIndicationProxy(FlashMMUIndication);
-   MMU#(FlashAddrWidth) flashMMU <- mkMMU(0, False, flashMMUIndicationProxy.ifc);
-   MMURequestWrapper flashMMURequestWrapper <- mkMMURequestWrapper(FlashMMURequest, flashMMU.request);
+   // nand mmu
+   MMUIndicationProxy nandMMUIndicationProxy <- mkMMUIndicationProxy(NandMMUIndication);
+   MMU#(FlashAddrWidth) nandMMU <- mkMMU(0, False, nandMMUIndicationProxy.ifc);
+   MMURequestWrapper nandMMURequestWrapper <- mkMMURequestWrapper(NandMMURequest, nandMMU.request);
 
    // flash top
-   FlashIndicationProxy flashIndicationProxy <- mkFlashIndicationProxy(FlashIndication);
+   FlashIndicationProxy flashIndicationProxy <- mkFlashIndicationProxy(NandCfgIndication);
    FlashTop flashtop <- mkFlashTop(flashIndicationProxy.ifc, clk250, rst250);
-   FlashRequestWrapper flashRequestWrapper <- mkFlashRequestWrapper(FlashRequest,flashtop.request);
+   FlashRequestWrapper flashRequestWrapper <- mkFlashRequestWrapper(NandCfgRequest,flashtop.request);
    
    // host memory server
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
    let rcs = cons(strstr.config_read_client,cons(flashtop.hostMemReadClient,nil));
    let wcs = cons(flashtop.hostMemWriteClient,nil);
-   MemServer#(PhysAddrWidth,128,1) hostMemServer <- mkMemServerR(hostMemServerIndicationProxy.ifc, rcs, cons(hostMMU,nil));
+   MemServer#(PhysAddrWidth,128,1) hostMemServer <- mkMemServerR(hostMemServerIndicationProxy.ifc, rcs, cons(algoMMU,nil));
 
    // flash memory read server
-   MemServerIndicationProxy flashMemServerIndicationProxy <- mkMemServerIndicationProxy(FlashMemServerIndication);
-   MemServer#(FlashAddrWidth,FlashDataWidth,1) flashMemServer <- mkMemServerR(flashMemServerIndicationProxy.ifc, cons(strstr.haystack_read_client,nil),  cons(flashMMU,nil));
+   MemServerIndicationProxy flashMemServerIndicationProxy <- mkMemServerIndicationProxy(NandMemServerIndication);
+   MemServer#(FlashAddrWidth,FlashDataWidth,1) flashMemServer <- mkMemServerR(flashMemServerIndicationProxy.ifc, cons(strstr.haystack_read_client,nil),  cons(nandMMU,nil));
    mkConnection(flashMemServer.masters[0], flashtop.memSlave);
    
    Vector#(10,StdPortal) portals;
@@ -126,11 +106,11 @@ module mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,DataBusWidth,
    portals[0] = strstrRequestWrapper.portalIfc;
    portals[1] = strstrIndicationProxy.portalIfc; 
 
-   portals[2] = hostMMURequestWrapper.portalIfc;
-   portals[3] = hostMMUIndicationProxy.portalIfc;
+   portals[2] = algoMMURequestWrapper.portalIfc;
+   portals[3] = algoMMUIndicationProxy.portalIfc;
    
-   portals[4] = flashMMURequestWrapper.portalIfc;
-   portals[5] = flashMMUIndicationProxy.portalIfc; 
+   portals[4] = nandMMURequestWrapper.portalIfc;
+   portals[5] = nandMMUIndicationProxy.portalIfc; 
    
    portals[6] = flashRequestWrapper.portalIfc;
    portals[7] = flashIndicationProxy.portalIfc;

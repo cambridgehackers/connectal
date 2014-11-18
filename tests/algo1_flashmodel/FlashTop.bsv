@@ -61,8 +61,8 @@ interface FlashRequest;
 	method Action readPage(Bit#(32) bus, Bit#(32) chip, Bit#(32) block, Bit#(32) page, Bit#(32) tag);
 	method Action writePage(Bit#(32) bus, Bit#(32) chip, Bit#(32) block, Bit#(32) page, Bit#(32) tag);
 	method Action eraseBlock(Bit#(32) bus, Bit#(32) chip, Bit#(32) block, Bit#(32) tag);
-	method Action addDmaReadRefs(Bit#(32) pointer, Bit#(32) offset, Bit#(32) tag);
-	method Action addDmaWriteRefs(Bit#(32) pointer, Bit#(32) offset, Bit#(32) tag);
+	method Action addDmaReadRefs(Bit#(32) sglId, Bit#(32) offset, Bit#(32) tag);
+	method Action addDmaWriteRefs(Bit#(32) sglId, Bit#(32) offset, Bit#(32) tag);
 	method Action start(Bit#(32) dummy);
 	method Action debugDumpReq(Bit#(32) dummy);
 	method Action setDebugVals (Bit#(32) flag, Bit#(32) debugDelay); 
@@ -218,12 +218,12 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 		rule initiateDmaWrite;
 			dmaReqQs[b].deq;
 			let tag = dmaReqQs[b].first;
-			let base = tpl_1(dmaWriteRefs[tag]);
+			let sglId = tpl_1(dmaWriteRefs[tag]);
 			let offset = tpl_2(dmaWriteRefs[tag]);
 			Bit#(32) burstOffset = (dmaWrReqCnts[b]<<log2(dmaBurstBytes)) + offset;
 			let dmaCmd = MemengineCmd {
 								tag: ?, //TODO: this was added in the new connectal
-								sglId: base, 
+								sglId: sglId, 
 								base: zeroExtend(burstOffset),
 								len:fromInteger(dmaBurstBytes), 
 								burstLen:fromInteger(dmaBurstBytes)
@@ -232,7 +232,7 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 			dmaReq2RespQ[b].enq(tuple2(tag, dmaWrReqCnts[b]));
 			
 			$display("@%d Main.bsv: init dma write tag=%d, bus=%d, addr=0x%x 0x%x", 
-							cycleCnt, tag, b, base, burstOffset);
+							cycleCnt, tag, b, sglId, burstOffset);
 			if (dmaWrReqCnts[b] == fromInteger(dmaBurstsPerPage-1)) begin
 				dmaWrReqCnts[b] <= 0;
 			end
@@ -305,18 +305,18 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 	for (Integer b=0; b<valueOf(NUM_BUSES); b=b+1) begin
 		rule initDmaRead;
 			let tag = dmaReadReqQ[b].first;
-			let base = tpl_1(dmaReadRefs[tag]);
+			let sglId = tpl_1(dmaReadRefs[tag]);
 			let offset = tpl_2(dmaReadRefs[tag]);
 			Bit#(32) burstOffset = (dmaRdReqCnts[b]<<log2(dmaBurstBytes)) + offset;
 			let dmaCmd = MemengineCmd {
 								tag: ?, //TODO: this was added in the new connectal
-								sglId: base, 
+								sglId: sglId, 
 								base: zeroExtend(burstOffset),
 								len:fromInteger(dmaBurstBytes), 
 								burstLen:fromInteger(dmaBurstBytes)
 							};
 			re.readServers[b].request.put(dmaCmd);
-			$display("Main.bsv: dma read cmd issued: base=%x, burstOffset=%d", base, burstOffset);
+			$display("Main.bsv: dma read cmd issued: sglId=%x, burstOffset=%d", sglId, burstOffset);
 
 			if (dmaRdReqCnts[b] == fromInteger(dmaBurstsPerPage-1)) begin
 				dmaRdReqCnts[b] <= 0;
@@ -529,15 +529,15 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 			flashCmdQ.enq(tuple2(fcmd, SRC_HOST));
 		endmethod
 
-		method Action addDmaReadRefs(Bit#(32) pointer, Bit#(32) offset, Bit#(32) tag);
+		method Action addDmaReadRefs(Bit#(32) sglId, Bit#(32) offset, Bit#(32) tag);
 			//for (Integer b=0; b<valueOf(NUM_BUSES); b=b+1) begin
-			//	dmaReaders[b].addBuffer(truncate(tag), offset, pointer);
+			//	dmaReaders[b].addBuffer(truncate(tag), offset, sglId);
 			//end
-			dmaReadRefs[tag] <= tuple2(pointer, offset);
+			dmaReadRefs[tag] <= tuple2(sglId, offset);
 		endmethod
 
-		method Action addDmaWriteRefs(Bit#(32) pointer, Bit#(32) offset, Bit#(32) tag);
-			dmaWriteRefs[tag] <= tuple2(pointer, offset);
+		method Action addDmaWriteRefs(Bit#(32) sglId, Bit#(32) offset, Bit#(32) tag);
+			dmaWriteRefs[tag] <= tuple2(sglId, offset);
 		endmethod
 
 		method Action start(Bit#(32) dummy);

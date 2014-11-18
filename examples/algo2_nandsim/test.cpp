@@ -70,7 +70,7 @@ int main(int argc, const char **argv)
   RegexpIndication *deviceIndication = new RegexpIndication(IfcNames_AlgoIndication);
   
   MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_HostMemServerIndication);
-  MemServerIndication *nandsimMemServerIndication = new MemServerIndication(IfcNames_NandsimMemServerIndication);
+  MemServerIndication *nandsimMemServerIndication = new MemServerIndication(IfcNames_NandMemServerIndication);
 
   haystack_dma = hostDma;
   haystack_mmu = hostMMURequest;

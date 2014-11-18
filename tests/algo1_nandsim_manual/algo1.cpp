@@ -36,8 +36,8 @@
 #include "StdDmaIndication.h"
 #include "MMURequest.h"
 #include "GeneratedTypes.h" 
-#include "NandSimIndication.h"
-#include "NandSimRequest.h"
+#include "NandCfgIndication.h"
+#include "NandCfgRequest.h"
 #include "StrstrIndication.h"
 #include "StrstrRequest.h"
 
@@ -57,7 +57,7 @@ size_t nandBytes = 1 << 24;
 size_t nandBytes = 1 << 14;
 #endif
 
-class NandSimIndication : public NandSimIndicationWrapper
+class NandCfgIndication : public NandCfgIndicationWrapper
 {
 public:
   unsigned int rDataCnt;
@@ -78,7 +78,7 @@ public:
     sem_post(&sem);
   }
 
-  NandSimIndication(int id) : NandSimIndicationWrapper(id) {
+  NandCfgIndication(int id) : NandCfgIndicationWrapper(id) {
     sem_init(&sem, 0, 0);
   }
   void wait() {

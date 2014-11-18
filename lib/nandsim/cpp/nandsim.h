@@ -19,7 +19,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-static int sockfd;
+static int sockfd = -1;
 #define SOCK_NAME "socket_for_nandsim"
 void wait_for_connect_nandsim_exe()
 {
@@ -61,4 +61,49 @@ unsigned int read_from_nandsim_exe()
     exit(1);	  
   }
   return rv;
+}
+
+void connect_to_algo_exe(void)
+{
+  int connect_attempts = 0;
+
+  if (sockfd != -1)
+    return;
+  if ((sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+    fprintf(stderr, "%s (%s) socket error %s\n",__FUNCTION__, SOCK_NAME, strerror(errno));
+    exit(1);
+  }
+
+  //fprintf(stderr, "%s (%s) trying to connect...\n",__FUNCTION__, SOCK_NAME);
+  struct sockaddr_un local;
+  local.sun_family = AF_UNIX;
+  strcpy(local.sun_path, SOCK_NAME);
+  while (connect(sockfd, (struct sockaddr *)&local, strlen(local.sun_path) + sizeof(local.sun_family)) == -1) {
+    if(connect_attempts++ > 100){
+      fprintf(stderr,"%s (%s) connect error %s\n",__FUNCTION__, SOCK_NAME, strerror(errno));
+      exit(1);
+    }
+    fprintf(stderr, "%s (%s) retrying connection\n",__FUNCTION__, SOCK_NAME);
+    sleep(5);
+  }
+  fprintf(stderr, "%s (%s) connected\n",__FUNCTION__, SOCK_NAME);
+}
+
+
+void write_to_algo_exe(unsigned int x)
+{
+  int retry = 0;
+  while (retry++ < 10){
+    if (send(sockfd, &x, sizeof(x), 0) == -1) {
+      fprintf(stderr, "%s send error\n",__FUNCTION__);
+      sleep(1);
+    } else {
+      retry = 0;
+      break;
+    }
+  }
+  if(retry){
+    fprintf(stderr, "%s send failed\n",__FUNCTION__);
+    exit(1);
+  }
 }

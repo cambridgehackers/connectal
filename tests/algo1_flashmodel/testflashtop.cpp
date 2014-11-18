@@ -19,29 +19,32 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 
-typedef enum {
-   
-   HostMemServerIndication, 
-   HostMemServerRequest,
+#include "flashaccess.cpp"
 
-   NandMemServerIndication, 
-   NandMemServerRequest,
-	      
-   BackingStoreMMURequest,
-   BackingStoreMMUIndication,
+static int trace_memory = 0;
+extern "C" {
+#include "userReference.h"
+}
 
-   AlgoMMURequest,
-   AlgoMMUIndication,
+using namespace std;
 
-   NandMMURequest,
-   NandMMUIndication,
+// int main(int argc, const char **argv)
+// {
+//   MMURequestProxy *hostMMURequest = new MMURequestProxy(IfcNames_BackingStoreMMURequest);
+//   DmaManager *hostDma = new DmaManager(hostMMURequest);
+//   MMUIndication *hostMMUIndication = new MMUIndication(hostDma, IfcNames_BackingStoreMMUIndication);
 
-   NandCfgIndication, 
-   NandCfgRequest, 
+//   FlashRequestProxy *flashRequest = new FlashRequestProxy(IfcNames_NandCfgRequest);
+//   FlashIndication *flashIndication = new FlashIndication(IfcNames_NandCfgIndication);
 
-   AlgoIndication, 
-   AlgoRequest 
- 
-   } IfcNames deriving (Eq,Bits);
-
+// }

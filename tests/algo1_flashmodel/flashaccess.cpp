@@ -11,10 +11,10 @@
 #include <time.h>
 
 #include "StdDmaIndication.h"
-#include "DmaDebugRequestProxy.h"
-#include "MMUConfigRequestProxy.h"
-#include "FlashIndicationWrapper.h"
-#include "FlashRequestProxy.h"
+#include "MemServerRequest.h"
+#include "MMURequest.h"
+#include "FlashIndication.h"
+#include "FlashRequest.h"
 
 #define PAGE_SIZE 8192
 #define NUM_TAGS 128
@@ -250,16 +250,16 @@ void readPage(int bus, int chip, int block, int page, int tag) {
 int main(int argc, const char **argv)
 {
 
-	DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
-	MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
-	DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
-	DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
-	MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
+	MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
+	MMURequestProxy *dmap = new MMURequestProxy(IfcNames_BackingStoreMMURequest);
+	DmaManager *dma = new DmaManager(dmap);
+	MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_HostMemServerIndication);
+	MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_BackingStoreMMUIndication);
 
 	fprintf(stderr, "Main::allocating memory...\n");
 
-	device = new FlashRequestProxy(IfcNames_FlashRequest);
-	FlashIndication *deviceIndication = new FlashIndication(IfcNames_FlashIndication);
+	device = new FlashRequestProxy(IfcNames_NandCfgRequest);
+	FlashIndication *deviceIndication = new FlashIndication(IfcNames_NandCfgIndication);
 	
 	srcAlloc = portalAlloc(srcAlloc_sz);
 	dstAlloc = portalAlloc(dstAlloc_sz);

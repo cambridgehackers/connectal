@@ -51,9 +51,9 @@ import NandSimNames::*;
 
 module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    
-   NandSimIndicationProxy nandSimIndicationProxy <- mkNandSimIndicationProxy(NandSimIndication);   
-   NandSim#(2) nandSim <- mkNandSim(nandSimIndicationProxy.ifc);
-   NandSimRequestWrapper nandSimRequestWrapper <- mkNandSimRequestWrapper(NandSimRequest,nandSim.request);
+   NandSimIndicationProxy nandSimIndicationProxy <- mkNandSimIndicationProxy(NandCfgIndication);   
+   NandSim nandSim <- mkNandSim(nandSimIndicationProxy.ifc);
+   NandSimRequestWrapper nandSimRequestWrapper <- mkNandSimRequestWrapper(NandCfgRequest,nandSim.request);
    
    MMUIndicationProxy backingStoreMMUIndicationProxy <- mkMMUIndicationProxy(BackingStoreMMUIndication);
    MMU#(PhysAddrWidth) backingStoreSGList <- mkMMU(0, True, backingStoreMMUIndicationProxy.ifc);

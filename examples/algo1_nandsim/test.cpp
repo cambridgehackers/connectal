@@ -69,7 +69,7 @@ int main(int argc, const char **argv)
   StrstrIndication *strstrIndication = new StrstrIndication(IfcNames_AlgoIndication);
   
   MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_HostMemServerIndication);
-  MemServerIndication *nandsimMemServerIndication = new MemServerIndication(IfcNames_NandsimMemServerIndication);
+  MemServerIndication *nandsimMemServerIndication = new MemServerIndication(IfcNames_NandMemServerIndication);
 
   portalExec_start();
   fprintf(stderr, "Main::allocating memory...\n");
