@@ -123,19 +123,21 @@ static int process(const char* file, tMode mode, unsigned int strict)
   case TLP: {
     tTraceInfo traceInfo;
     //int seqno = 0;
-    int res, i;
+    int res, i, j;
 
     // disable tracing
     traceInfo.trace = 0;
     res = ioctl(fd,BNOC_TRACE,&traceInfo);
     // set pointer to 0
     //res = ioctl(fd,BNOC_SEQNO,&seqno);
+    for (i = 0; i < sizeof(traceInfo); i++)
+      printf("%08x", ((unsigned int *)&traceInfo)[i]);
+    printf("\n");
 
     for (i = 0; i < traceInfo.traceLength; i++) {
       tTlpData tlp;
       memset(&tlp, 0x5a, sizeof(tlp));
       res = ioctl(fd,BNOC_GET_TLP,&tlp);
-      int i;
       if (res == -1) {
 	if (strict) {
 	  perror("get_tlp ioctl");
@@ -143,8 +145,8 @@ static int process(const char* file, tMode mode, unsigned int strict)
 	}
 	goto exit_process;
       }
-      for (i = 5; i >= 0; i--)
-	printf("%08x", *(((unsigned *)&tlp)+i));
+      for (j = 5; j >= 0; j--)
+        printf("%08x", ((unsigned int*)&tlp)[j]);
       printf("\n");
     }
   } break;
