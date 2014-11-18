@@ -16,6 +16,11 @@
 #include "FlashIndication.h"
 #include "FlashRequest.h"
 
+static int trace_memory = 0;
+extern "C" {
+#include "userReference.h"
+}
+
 #define PAGE_SIZE 8192
 #define NUM_TAGS 128
 
@@ -250,7 +255,6 @@ void readPage(int bus, int chip, int block, int page, int tag) {
 int main(int argc, const char **argv)
 {
 
-	MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
 	MMURequestProxy *dmap = new MMURequestProxy(IfcNames_BackingStoreMMURequest);
 	DmaManager *dma = new DmaManager(dmap);
 	MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_HostMemServerIndication);
@@ -380,4 +384,5 @@ int main(int argc, const char **argv)
 			fprintf(stderr,  "%x %x %x\n", t, i, readBuffers[t][i] );
 		}
 	}
+
 }

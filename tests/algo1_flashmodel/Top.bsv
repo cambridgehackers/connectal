@@ -79,6 +79,11 @@ module mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,DataBusWidth,
    MMUIndicationProxy algoMMUIndicationProxy <- mkMMUIndicationProxy(AlgoMMUIndication);
    MMU#(PhysAddrWidth) algoMMU <- mkMMU(1, True, algoMMUIndicationProxy.ifc);
    MMURequestWrapper algoMMURequestWrapper <- mkMMURequestWrapper(AlgoMMURequest, algoMMU.request);
+
+   // backing store mmu
+   MMUIndicationProxy backingMMUIndicationProxy <- mkMMUIndicationProxy(BackingStoreMMUIndication);
+   MMU#(PhysAddrWidth) backingMMU <- mkMMU(1, True, backingMMUIndicationProxy.ifc);
+   MMURequestWrapper backingMMURequestWrapper <- mkMMURequestWrapper(BackingStoreMMURequest, backingMMU.request);
    
    // nand mmu
    MMUIndicationProxy nandMMUIndicationProxy <- mkMMUIndicationProxy(NandMMUIndication);
@@ -101,7 +106,7 @@ module mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,DataBusWidth,
    MemServer#(FlashAddrWidth,FlashDataWidth,1) flashMemServer <- mkMemServerR(flashMemServerIndicationProxy.ifc, cons(strstr.haystack_read_client,nil),  cons(nandMMU,nil));
    mkConnection(flashMemServer.masters[0], flashtop.memSlave);
    
-   Vector#(10,StdPortal) portals;
+   Vector#(12,StdPortal) portals;
 
    portals[0] = strstrRequestWrapper.portalIfc;
    portals[1] = strstrIndicationProxy.portalIfc; 
@@ -118,6 +123,9 @@ module mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,DataBusWidth,
    portals[8] = hostMemServerIndicationProxy.portalIfc;
    portals[9] = flashMemServerIndicationProxy.portalIfc;
    
+   portals[10] = backingMMURequestWrapper.portalIfc;
+   portals[11] = backingMMUIndicationProxy.portalIfc;
+
    let ctrl_mux <- mkSlaveMux(portals);
    
    interface interrupt = getInterruptVector(portals);
