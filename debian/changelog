@@ -1,3 +1,9 @@
+connectal (14.11.5-1trusty1) trusty; urgency=low
+
+  * Updated to 14.11.5
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 18 Nov 2014 08:43:29 -0500
+
 connectal (14.11.4-1trusty1) trusty; urgency=low
 
   * Updated to 14.11.4
