@@ -234,16 +234,19 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                 }
         case BNOC_TRACE:
                 {
-                /* copy board identification info to a user-space struct */
                 iowrite32(0, this_board->bar0io + CSR_TLPPCIEWRADDRREG);
-                traceInfo.oldTrace = ioread32(this_board->bar0io + CSR_TLPTRACINGREG);
+                traceInfo.trace = ioread32(this_board->bar0io + CSR_TLPTRACINGREG);
                 traceInfo.traceLength = ioread32(this_board->bar0io + CSR_TLPTRACELENGTHREG);
 		if (traceInfo.traceLength == 0xbad0add0) // unimplemented
 			 traceInfo.traceLength = 2048; // default value
-                iowrite32(traceInfo.trace, this_board->bar0io + CSR_TLPTRACINGREG); 
-                printk("new trace=%d old trace=%d\n", traceInfo.trace, traceInfo.oldTrace);
+                iowrite32(0, this_board->bar0io + CSR_TLPTRACINGREG);  // disable tracing
+                printk("disable tracing old trace=%d\n", traceInfo.trace);
                 err = copy_to_user((void __user *) arg, &traceInfo, sizeof(tTraceInfo));
                 }
+                break;
+        case BNOC_ENABLE_TRACE:
+                traceInfo.trace = ioread32(this_board->bar0io + CSR_TLPTRACINGREG);
+                iowrite32(1, this_board->bar0io + CSR_TLPTRACINGREG);  // disable tracing
                 break;
         case PCIE_SEND_FD:
                 {

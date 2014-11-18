@@ -325,9 +325,12 @@ if __name__ == '__main__':
         tlplog = open(sys.argv[argindex]).read().split('\n')
     else:
         tlplog = subprocess.check_output(['connectalutil', 'tlp', '/dev/portal0']).split('\n')
+    tlpfirst = tlplog.pop(0)
     tlplog.sort()
     lf = open('tlp.log', 'w')
     f = open('tlp.vcd', 'w')
+    print 'JJJ', tlpfirst
+    print 'JJJKK', tlpfirst[0:15]
     print_tlp_log(tlplog[0:-1], f, lf)
     print classCounts
     print sum([ classCounts[k] for k in classCounts])

@@ -149,16 +149,18 @@ static int process(const char* file, tMode mode, unsigned int strict)
         printf("%08x", ((unsigned int*)&tlp)[j]);
       printf("\n");
     }
+    i = 1;
+    res = ioctl(fd,BNOC_ENABLE_TRACE,&i);
   } break;
   case TRACE: {
     tTraceInfo traceInfo = { trace: 1 };
     int res = ioctl(fd,BNOC_TRACE,&traceInfo);
-    printf("old trace=%d traceLength=%d\n", traceInfo.oldTrace, traceInfo.traceLength);
+    printf("old trace=%d traceLength=%d\n", traceInfo.trace, traceInfo.traceLength);
   } break;
   case NOTRACE: {
     tTraceInfo traceInfo = { trace: 0 };
     int res = ioctl(fd,BNOC_TRACE,&traceInfo);
-    printf("old trace=%d traceLength=%d\n", traceInfo.oldTrace, traceInfo.traceLength);
+    printf("old trace=%d traceLength=%d\n", traceInfo.trace, traceInfo.traceLength);
   } break;
   case MMAP: {
     int *portal = (int *)mmap(NULL, 1<<16, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);

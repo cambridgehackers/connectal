@@ -63,10 +63,9 @@ typedef struct {
 } tDmaMap;
 
 typedef struct {
-  unsigned int trace;
-  unsigned int oldTrace;
-  unsigned int traceLength;
   unsigned long base;
+  unsigned int trace;
+  unsigned int traceLength;
   unsigned int intval[MAX_NUM_PORTALS];
   unsigned int name[MAX_NUM_PORTALS];
 } tTraceInfo;
@@ -84,6 +83,7 @@ typedef unsigned int tTlpData[6];
 #define BNOC_IDENTIFY_PORTAL _IOR(BNOC_IOC_MAGIC,6,tPortalInfo*)
 #define BNOC_GET_TLP         _IOR(BNOC_IOC_MAGIC,7,tTlpData*)
 #define BNOC_TRACE           _IOWR(BNOC_IOC_MAGIC,8,tTraceInfo*)
+#define BNOC_ENABLE_TRACE    _IOR(BNOC_IOC_MAGIC,8,int*)
 #define PCIE_SEND_FD         _IOR(BNOC_IOC_MAGIC,12,tSendFd*)
 
 /*
