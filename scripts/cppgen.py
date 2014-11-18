@@ -22,8 +22,7 @@
 ## CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ## SOFTWARE.
 
-import os, re, sys, util
-import functools
+import functools, math, os, re, sys, util
 
 sizeofUint32_t = 4
 
@@ -206,6 +205,31 @@ def typeCName(item):
 def hasBitWidth(item):
     return item['name'] == 'Bit' or item['name'] == 'Int' or item['name'] == 'UInt'
 
+def getNumeric(item):
+   if globalv_globalvars.has_key(item['name']):
+       decl = globalv_globalvars[item['name']]
+       if decl['type'] == 'TypeDef':
+           return getNumeric(decl['tdtype'])
+   elif item['name'] in ['TAdd', 'TSub', 'TMul', 'TDiv', 'TLog', 'TExp', 'TMax', 'TMin']:
+       values = [getNumeric(p) for p in item['params']]
+       if item['name'] == 'TAdd':
+           return values[0] + values[1]
+       elif item['name'] == 'TSub':
+           return values[0] - values[1]
+       elif item['name'] == 'TMul':
+           return values[0] * values[1]
+       elif item['name'] == 'TDiv':
+           return math.ceil(values[0] / float(values[1]))
+       elif item['name'] == 'TLog':
+           return math.ceil(math.log(values[0], 2))
+       elif item['name'] == 'TExp':
+           return math.pow(2, values[0])
+       elif item['name'] == 'TMax':
+           return max(values[0], values[1])
+       elif item['name'] == 'TMax':
+           return min(values[0], values[1])
+   return int(item['name'])
+
 def typeBitWidth(item):
     #print 'WBBBBB', item
     if hasBitWidth(item):
@@ -219,11 +243,13 @@ def typeBitWidth(item):
             width = decl['tdtype']['name']
         if re.match('[0-9]+', width):
             return int(width)
-        return decl['tdtype'].numeric()
+        return getNumeric(decl['tdtype'])
     if item['name'] == 'Bool':
         return 1
     if item['name'] == 'Float':
         return 32
+    if item['type'] == 'Enum':
+        return int(math.ceil(math.log(len(item['elements']))))
     return 0
 
 # pack flattened struct-member list into 32-bit wide bins.  If a type is wider than 32-bits or
@@ -427,7 +453,7 @@ def generate_class(className, declList, parentC, parentCC, generatedCFiles, crea
 def emitStructMember(item, f, indentation):
     indent(f, indentation)
     f.write('%s %s' % (typeCName(item['type']), item['name']))
-    if hasBitWidth(item):
+    if hasBitWidth(item['type']):
         f.write(' : %d' % typeBitWidth(item['type']))
     f.write(';\n')
 

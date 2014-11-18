@@ -68,6 +68,11 @@ typedef Bit#(TLog#(ChipsPerBus)) ChipT;
 typedef Bit#(TLog#(NUM_BUSES)) BusT;
 
 typedef enum {
+	SRC_HOST,
+	SRC_USER_HW
+} SourceT deriving (Bits, Eq, FShow);
+
+typedef enum {
 	ERASE_ERROR, 
    ERASE_DONE, 
 	WRITE_DONE
@@ -189,7 +194,6 @@ interface FlashCtrlUser;
 	method ActionValue#(TagT) writeDataReq(); 
 	method ActionValue#(Tuple2#(TagT, StatusT)) ackStatus (); 
 endinterface
-
 
 instance FShow#(BusOp);
 	function Fmt fshow (BusOp label);

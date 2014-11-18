@@ -57,12 +57,12 @@ class EchoIndication : public EchoIndicationWrapper
 {
 public:
     virtual void heard(uint32_t v) {
-        fprintf(stderr, "heard an echo: %d\n", v);
+        printf("heard an echo: %d\n", v);
 	echoRequestProxy->say2(v, 2*v);
     }
     virtual void heard2(uint32_t a, uint32_t b) {
         sem_post(&sem_heard2);
-        //fprintf(stderr, "heard an echo2: %ld %ld\n", a, b);
+        //printf("heard an echo2: %ld %ld\n", a, b);
     }
     EchoIndication(unsigned int id, PortalPoller *poller) : EchoIndicationWrapper(id, poller) {}
 };
@@ -93,7 +93,7 @@ int main(int argc, const char **argv)
     portalExec_start();
 
     int v = 42;
-    fprintf(stderr, "Saying %d\n", v);
+    printf("Saying %d\n", v);
     call_say(v);
     call_say(v*5);
     call_say(v*17);

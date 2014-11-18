@@ -41,7 +41,7 @@ import Dma2BRAM::*;
 import Pipe::*;
 import EHR::*;
 
-interface MPEngine#(numeric type busWidth);
+interface MPEngine#(numeric type haystackBusWidth, numeric type configBusWidth);
    interface PipeIn#(Tripple#(Bit#(32))) setsearch;
    interface PipeOut#(Int#(32)) locdone;
 endinterface
@@ -56,22 +56,32 @@ typedef Bit#(NeedleIdxWidth) NeedleIdx;
 
 typedef enum {Config_needle, Config_mpNext, Initialized, Search} Stage deriving (Eq, Bits);
 
-module mkMPEngine#(Pair#(MemreadServer#(busWidth)) readers)(MPEngine#(busWidth))
-   
-   provisos(Add#(a__, 8, busWidth),
-	    Div#(busWidth,8,nc),
-	    Mul#(nc,8,busWidth),
+
+
+module mkMPEngine#(MemreadServer#(haystackBusWidth) haystackReader,
+		   MemreadServer#(configBusWidth) configReader) (MPEngine#(haystackBusWidth,configBusWidth))
+
+   provisos(Add#(a__, 8, haystackBusWidth),
+	    Div#(haystackBusWidth,8,nc),
+	    Mul#(nc,8,haystackBusWidth),
 	    Add#(1, b__, nc),
-	    Add#(c__, 32, busWidth),
-	    Add#(1, d__, TDiv#(busWidth, 32)),
-	    Mul#(TDiv#(busWidth, 32), 32, busWidth),
+	    Add#(c__, 32, haystackBusWidth),
+	    Add#(1, d__, TDiv#(haystackBusWidth, 32)),
+	    Mul#(TDiv#(haystackBusWidth, 32), 32, haystackBusWidth),
 	    Add#(e__, TLog#(nc), 32),
-	    Add#(f__, TLog#(TDiv#(busWidth, 32)), 32));
+	    Add#(f__, TLog#(TDiv#(haystackBusWidth, 32)), 32)
+	    ,Mul#(TDiv#(configBusWidth, 8), 8, configBusWidth)
+	    ,Add#(1, g__, TDiv#(configBusWidth, 8))
+	    ,Add#(h__, TLog#(TDiv#(configBusWidth, 8)), 32)
+	    ,Add#(i__, TLog#(TDiv#(configBusWidth, 32)), 32)
+	    ,Add#(1, j__, TDiv#(configBusWidth, 32))
+	    ,Mul#(TDiv#(configBusWidth, 32), 32, configBusWidth)
+	    );
    
+
+
    
    FIFOF#(Int#(32)) locf <- mkFIFOF;
-   MemreadServer#(busWidth) configReader = tpl_1(readers);
-   MemreadServer#(busWidth) haystackReader = tpl_2(readers);
    FIFO#(Bool) conff <- mkSizedFIFO(1);
    
    let verbose = True;
@@ -94,8 +104,8 @@ module mkMPEngine#(Pair#(MemreadServer#(busWidth)) readers)(MPEngine#(busWidth))
    Reg#(Bit#(32)) iReg <- mkReg(0); // offset in needle
    Reg#(Bit#(2))  epochReg <- mkReg(0);
 
-   BRAMWriter#(NeedleIdxWidth,busWidth) n2b <- mkBRAMWriter(0, needle.portB, configReader.cmdServer, configReader.dataPipe);
-   BRAMWriter#(NeedleIdxWidth,busWidth) mp2b <- mkBRAMWriter(1, mpNext.portB, configReader.cmdServer, configReader.dataPipe);
+   BRAMWriter#(NeedleIdxWidth,configBusWidth) n2b <- mkBRAMWriter(0, needle.portB, configReader.cmdServer, configReader.dataPipe);
+   BRAMWriter#(NeedleIdxWidth,configBusWidth) mp2b <- mkBRAMWriter(1, mpNext.portB, configReader.cmdServer, configReader.dataPipe);
 
    FIFOF#(Tuple2#(Bit#(2),Bit#(32))) efifo <- mkSizedFIFOF(2);
    FIFOF#(Tripple#(Bit#(32))) ssfifo <- mkFIFOF;

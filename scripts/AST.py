@@ -31,9 +31,7 @@ import AST
 import globalv
 import util
 
-class EnumMixin:
-    def bitWidth(self):
-        return int(math.ceil(math.log(len(self.elements))))
+tempFilename = 'generatedDesignInterfaceFile.json'
 
 class InterfaceMixin:
     def getSubinterface(self, name):
@@ -84,7 +82,6 @@ def classInfo(item):
         'name': item.name,
         'parentLportal': item.parentClass("portal"),
         'parentPortal': item.parentClass("Portal"),
-        'package': item.package,
         'decls': [],
     }
     for mitem in item.decls:
@@ -95,7 +92,7 @@ def serialize_json(interfaces, globalimports, dutname, interfaceList):
     itemlist = []
     for item in interfaces:
         itemlist.append(classInfo(item))
-    jfile = open('cppgen_intermediate_data.tmp', 'w')
+    jfile = open(tempFilename, 'w')
     toplevel = {}
     toplevel['interfaces'] = itemlist
     toplevel['interfacesList'] = interfaceList
@@ -125,10 +122,13 @@ def serialize_json(interfaces, globalimports, dutname, interfaceList):
     toplevel['globalimports'] = globalimports
     toplevel['dutname'] = dutname
     if True:
-        json.dump(toplevel, jfile, sort_keys = True, indent = 4)
-        jfile.close()
-        j2file = open('cppgen_intermediate_data.tmp').read()
-        toplevel = json.loads(j2file)
+        try:
+            json.dump(toplevel, jfile, sort_keys = True, indent = 4)
+            jfile.close()
+            j2file = open(tempFilename).read()
+            toplevelnew = json.loads(j2file)
+        except:
+            print 'Unable to write json file', tempFilename
     return toplevel
 
 class Method:
@@ -223,7 +223,7 @@ class EnumElement:
     def __repr__(self):
         return '{enumelt: %s}' % (self.name)
 
-class Enum(EnumMixin):
+class Enum:
     def __init__(self, elements):
         self.type = 'Enum'
         self.elements = elements
@@ -289,27 +289,3 @@ class Type:
             return paramBindings[self.name]
         else:
             return Type(self.name, [p.instantiate(paramBindings) for p in self.params])
-    def numeric(self):
-        if globalv.globalvars.has_key(self.name):
-            decl = globalv.globalvars[self.name]
-            if decl.type == 'TypeDef':
-                return decl.tdtype.numeric()
-        elif self.name in ['TAdd', 'TSub', 'TMul', 'TDiv', 'TLog', 'TExp', 'TMax', 'TMin']:
-            values = [p.numeric() for p in self.params]
-            if self.name == 'TAdd':
-                return values[0] + values[1]
-            elif self.name == 'TSub':
-                return values[0] - values[1]
-            elif self.name == 'TMul':
-                return values[0] * values[1]
-            elif self.name == 'TDiv':
-                return math.ceil(values[0] / float(values[1]))
-            elif self.name == 'TLog':
-                return math.ceil(math.log(values[0], 2))
-            elif self.name == 'TExp':
-                return math.pow(2, values[0])
-            elif self.name == 'TMax':
-                return max(values[0], values[1])
-            elif self.name == 'TMax':
-                return min(values[0], values[1])
-        return int(self.name)

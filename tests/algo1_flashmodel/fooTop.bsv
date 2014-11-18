@@ -49,10 +49,10 @@ import StrstrIndication::*;
 
 
 import Strstr::*;
-import AuroraCommon::*;
-import FlashTop::*;
-import FlashRequest::*;
-import FlashIndication::*;
+// import AuroraCommon::*;
+// import FlashTop::*;
+// import FlashRequest::*;
+// import FlashIndication::*;
 
 typedef enum {
    FlashIndication, 
@@ -75,24 +75,23 @@ typedef enum {
 
 } IfcNames deriving (Eq,Bits);
 
-interface Top_Pins;
-	interface Aurora_Pins#(4) aurora_fmc1;
-	interface Aurora_Clock_Pins aurora_clk_fmc1;
-endinterface
+// interface Top_Pins;
+// 	interface Aurora_Pins#(4) aurora_fmc1;
+// 	interface Aurora_Clock_Pins aurora_clk_fmc1;
+// endinterface
 
 typedef 128 FlashDataWidth;
-typedef 40  FlashAddrWidth;
+typedef 30  FlashAddrWidth;
 
-//module mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,128,Empty,1));
-module mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,DataBusWidth, Top_Pins,1));
-	//(StdConnectalDmaTop#(PhysAddrWidth));
+//module mkConnectalTop#(HostType host) (StdConnectalDmaTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    
-   Clock clk250 = host.doubleClock;
-   Reset rst250 = host.doubleReset;
+   // Clock clk250 = host.doubleClock;
+   // Reset rst250 = host.doubleReset;
 	
    // strstr algo
    StrstrIndicationProxy strstrIndicationProxy <- mkStrstrIndicationProxy(AlgoIndication);
-   Strstr#(128,128) strstr <- mkStrstr(strstrIndicationProxy.ifc);
+   Strstr#(128,64) strstr <- mkStrstr(strstrIndicationProxy.ifc);
    StrstrRequestWrapper strstrRequestWrapper <- mkStrstrRequestWrapper(AlgoRequest,strstr.request);
    
    // host mmu
@@ -106,20 +105,23 @@ module mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,DataBusWidth,
    MMURequestWrapper flashMMURequestWrapper <- mkMMURequestWrapper(FlashMMURequest, flashMMU.request);
 
    // flash top
-   FlashIndicationProxy flashIndicationProxy <- mkFlashIndicationProxy(FlashIndication);
-   FlashTop flashtop <- mkFlashTop(flashIndicationProxy.ifc, clk250, rst250);
-   FlashRequestWrapper flashRequestWrapper <- mkFlashRequestWrapper(FlashRequest,flashtop.request);
+   // FlashIndicationProxy flashIndicationProxy <- mkFlashIndicationProxy(FlashIndication);
+   // FlashTop flashtop <- mkFlashTop(flashIndicationProxy.ifc, clk250, rst250);
+   // FlashRequestWrapper flashRequestWrapper <- mkFlashRequestWrapper(FlashRequest,flashtop.request);
    
    // host memory server
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
-   let rcs = cons(strstr.config_read_client,cons(flashtop.hostMemReadClient,nil));
-   let wcs = cons(flashtop.hostMemWriteClient,nil);
-   MemServer#(PhysAddrWidth,128,1) hostMemServer <- mkMemServerR(hostMemServerIndicationProxy.ifc, rcs, cons(hostMMU,nil));
+   let rcs = cons(strstr.config_read_client,nil);//cons(flashtop.hostMemReadClient,nil));
+   //let wcs = cons(flashtop.hostMemWriteClient,nil);
+   let mmus = cons(hostMMU,nil);
+   //MemServer#(PhysAddrWidth,64,1) hostMemServer <- mkMemServerRW(hostMemServerIndicationProxy.ifc, rcs, wcs, mmus);
+   MemServer#(PhysAddrWidth,64,1) hostMemServer <- mkMemServerR(hostMemServerIndicationProxy.ifc, rcs, mmus);
 
    // flash memory read server
    MemServerIndicationProxy flashMemServerIndicationProxy <- mkMemServerIndicationProxy(FlashMemServerIndication);
    MemServer#(FlashAddrWidth,FlashDataWidth,1) flashMemServer <- mkMemServerR(flashMemServerIndicationProxy.ifc, cons(strstr.haystack_read_client,nil),  cons(flashMMU,nil));
-   mkConnection(flashMemServer.masters[0], flashtop.memSlave);
+   //mkConnection(flashMemServer.masters[0], flashtop.memSlave);
+   
    
    Vector#(10,StdPortal) portals;
 
@@ -132,8 +134,8 @@ module mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,DataBusWidth,
    portals[4] = flashMMURequestWrapper.portalIfc;
    portals[5] = flashMMUIndicationProxy.portalIfc; 
    
-   portals[6] = flashRequestWrapper.portalIfc;
-   portals[7] = flashIndicationProxy.portalIfc;
+   portals[6] = ?; //flashRequestWrapper.portalIfc;
+   portals[7] = ?; //flashIndicationProxy.portalIfc;
    
    portals[8] = hostMemServerIndicationProxy.portalIfc;
    portals[9] = flashMemServerIndicationProxy.portalIfc;
@@ -144,10 +146,6 @@ module mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,DataBusWidth,
    interface slave = ctrl_mux;
    interface masters = hostMemServer.masters;
    interface leds = default_leds;
-	interface Top_Pins pins;
-		interface Aurora_Pins aurora_fmc1 = flashtop.aurora_fmc1;
-		interface Aurora_Clock_Pins aurora_clk_fmc1 = flashtop.aurora_clk_fmc1;
-	endinterface
       
 endmodule : mkConnectalTop
 

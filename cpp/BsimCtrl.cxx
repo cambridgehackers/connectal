@@ -85,8 +85,39 @@ extern "C" void interruptLevel(uint32_t ivalue)
     }
 }
 
+#if 0
+static unsigned long long int rdtsc(void)
+{
+   unsigned long long int x;
+   unsigned a, d;
+
+   __asm__ volatile("rdtsc" : "=a" (a), "=d" (d));
+
+   return ((unsigned long long)a) | (((unsigned long long)d) << 32);;
+}
+#endif
 extern "C" bool checkForRequest(uint32_t rr)
 {
+#if 0
+static int counter;
+static int timeoutcount;
+static int last_short;
+static long long last_val;
+long long this_val = rdtsc();
+last_val = (this_val - last_val)/1000;
+counter++;
+if (last_val <= 3)
+   last_short++;
+if (last_short == 2) {
+timeoutcount++;
+    last_short = 0;
+    struct timeval timeout;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 10000;
+    select(0, NULL, NULL, NULL, &timeout);
+}
+last_val = this_val;
+#endif
     if (!head.valid){
 	int rv = -1, i, recvfd;
         for (i = 0; i < fd_array_index; i++) {

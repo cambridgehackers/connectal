@@ -49,7 +49,7 @@ typedef enum {StrstrIndication, StrstrRequest, HostMemServerIndication, HostMemS
 module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
 
    StrstrIndicationProxy strstrIndicationProxy <- mkStrstrIndicationProxy(StrstrIndication);
-   Strstr#(64) strstr <- mkStrstr(strstrIndicationProxy.ifc);
+   Strstr#(64,64) strstr <- mkStrstr(strstrIndicationProxy.ifc);
    StrstrRequestWrapper strstrRequestWrapper <- mkStrstrRequestWrapper(StrstrRequest,strstr.request);
    
    let readClients = cons(strstr.config_read_client, cons(strstr.haystack_read_client,nil));
