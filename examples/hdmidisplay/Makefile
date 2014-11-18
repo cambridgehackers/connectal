@@ -5,7 +5,8 @@ GRALLOCDIR=$(CONNECTALDIR)/gralloc
 INTERFACES = HdmiDisplayRequest HdmiInternalRequest HdmiDisplayIndication HdmiInternalIndication
 BSVFILES = $(LIBBSVDIR)/HdmiDisplay.bsv $(LIBBSVDIR)/HDMI.bsv Top.bsv $(CONNECTALDIR)/lib/deprecated/DmaUtils.bsv
 CPPFILES= testhdmidisplay.cpp
-CONNECTALFLAGS = -C hdmidisplay-$(BOARD).xdc -D IMPORT_HOSTIF -D PinType=HDMI16
+CONNECTALFLAGS = -C hdmidisplay-$(BOARD).xdc -D IMPORT_HOSTIF
+PIN_TYPE = HDMI16
 ifeq ($(BOARD),zedboard)
 CONNECTALFLAGS += -D USE_I2C0
 endif

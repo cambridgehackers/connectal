@@ -5,7 +5,8 @@ BSVFILES = FMComms1ADC.bsv FMComms1DAC.bsv FMComms1.bsv \
 	 Top.bsv
 CPPFILES=testi2c.c
 CONNECTALFLAGS = -C fmcomms1-$(BOARD).xdc --tcl clock.tcl
-CONNECTALFLAGS +=  -D USE_I2C1 -D IMPORT_HOSTIF -D PinType=FMComms1Pins
+CONNECTALFLAGS +=  -D USE_I2C1 -D IMPORT_HOSTIF
+PIN_TYPE = FMComms1Pins
 
 ifeq ($(BOARD),zedboard)
 HAS_PS7=true

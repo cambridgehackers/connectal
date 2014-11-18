@@ -3,7 +3,7 @@ CONNECTALDIR?=../..
 INTERFACES = AuroraRequest AuroraIndication
 BSVFILES = Aurora.bsv Top.bsv
 CPPFILES=testaurora.cpp
-CONNECTALFLAGS +=  -D PinType=AuroraPins
+PIN_TYPE = AuroraPins
 NUMBER_OF_MASTERS =0
 CONNECTALFLAGS += -C $(BOARD)/sources/aurora-$(BOARD).xdc -C aurora-clocks.xdc --tcl clock.tcl
 
