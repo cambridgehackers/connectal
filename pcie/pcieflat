@@ -3,7 +3,6 @@
 import json, subprocess, sys
 from gmpy import mpz
 
-addressList = []
 # 64-bit BAR
 tlpdatalog = [
     '000000011184ffff4a000001020000040018001068470000',
@@ -215,6 +214,7 @@ def print_tlp(tlpdata, f=None):
         headerstr = headerstr + '                        '
     headerstr = headerstr + ' ' + tlpdata[-40:-38] + ' ' + hex(int(tlpdata[-40:-38],16) >> 1)
     headerstr = headerstr + ' tlp(%s %d %d %d)' % (tlpbe, tlphit, tlpeof, tlpsof)
+    address = -1
     if tlpsof == 0:
         headerstr = headerstr + '                            data:' + tlpdata[-32:]
     elif TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA' and TlpPacketType[pkttype] == 'COMP':
@@ -229,8 +229,6 @@ def print_tlp(tlpdata, f=None):
         headerstr = headerstr + ' ' + tlpdata[-8:]
     elif TlpPacketFormat[pktformat] == 'MEM_READ__3DW     ' or TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA':
         address = tlpdata[-16:-8]
-        if address not in addressList:
-            addressList.append(address)
         headerstr = headerstr + '  ' + address
         headerstr = headerstr + ' %4x'% ((int(address,16) >> 2) % 8192)
         headerstr = headerstr + ' be(' + tlpdata[-17:-16] + ' ' + tlpdata[-18:-17] + ')'
@@ -241,8 +239,6 @@ def print_tlp(tlpdata, f=None):
             headerstr = headerstr + ' ' + tlpdata[-8:]
     elif TlpPacketFormat[pktformat] == 'MEM_READ__4DW     ' or TlpPacketFormat[pktformat] == 'MEM_WRITE_4DW_DATA':
         address = tlpdata[-16:]
-        if address not in addressList:
-            addressList.append(address)
         headerstr = headerstr + ' address: ' + address
         headerstr = headerstr + ' be(1st: ' + tlpdata[-17:-16] + ' last:' + tlpdata[-18:-17] + ')'
         headerstr = headerstr + ' tag:' + tlpdata[-20:-18]
@@ -278,7 +274,21 @@ def print_tlp(tlpdata, f=None):
         dir = dir + 'pp'    # response
     else:
         dir = dir + 'qq'    # request
-    print dir, '%10d %10d %s' % (seqno, delta, headerstr)
+    smeth = ''
+    if address != -1 and address < 'df500000' and interfaceMap != {}:
+        aorig = int(address, 16) % 0x100000
+        interfaceNumber = aorig / 0x10000
+        offset = aorig - interfaceNumber * 0x10000
+        methodNumber = offset / 0x100
+        #print 'AA', "%6x" % aorig, "%2x" % interfaceNumber, "%2x" % methodNumber
+        t = interfaceMap[fooMap[interfaceNumber]]
+        if methodNumber == 0:
+            smeth = '/dir'
+        elif methodNumber <= len(t):
+            offset = offset - methodNumber * 0x100
+            smeth = '/'+t[methodNumber-1]
+        smeth = fooMap[interfaceNumber] + smeth + '/' + "%x" % (offset/4)
+    print dir, '%10d %10d %s' % (seqno, delta, headerstr), smeth
     #print '                      ' + tlpdata[0:8] + ' ' + tlpdata[8:]
     if len(tlpdata) != 48:
         print 'bogus len', len(tlpdata)
@@ -302,11 +312,15 @@ if __name__ == '__main__':
     argindex = 1
     argcount = len(sys.argv)
     jsondata = {}
+    interfaceMap = {}
     if argcount >= 2 and sys.argv[argindex] == '-j':
-        j2file = open(sys.argv[argindex + 1]).read()
+        fooMap = sys.argv[argindex+1].split(':')
+        j2file = open(sys.argv[argindex + 2]).read()
         jsondata = json.loads(j2file)
-        argindex = argindex + 2
-        argcount = argcount - 2
+        argindex = argindex + 3
+        argcount = argcount - 3
+        for item in jsondata['interfaces']:
+            interfaceMap[item['name']] = [mitem['name'] for mitem in item['decls']]
     if argcount == 2:
         tlplog = open(sys.argv[argindex]).read().split('\n')
     else:
@@ -317,8 +331,5 @@ if __name__ == '__main__':
     print_tlp_log(tlplog[0:-1], f, lf)
     print classCounts
     print sum([ classCounts[k] for k in classCounts])
-    if jsondata:
-        print 'ADDDRL', addressList
-        print 'KKKKKKKK', jsondata['interfaces']
     f.close()
     lf.close()
