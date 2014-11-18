@@ -8,10 +8,11 @@ import Vector::*;
 import RegFile::*;
 
 
+import AuroraCommon::*;
 import AuroraGearbox::*;
 import AuroraImportFmc1::*;
 import ControllerTypes::*;
-import FlashCtrlVirtex::*;
+//import FlashCtrlVirtex::*;
 import FlashBusModel::*;
 
 //simulator options
@@ -38,6 +39,17 @@ interface FlashCtrlVirtexIfc;
 endinterface
 */
 
+
+interface FCVirtexDebug;
+	method Tuple2#(DataIfc, PacketType) debugRecPacket();
+	method Tuple4#(Bit#(32), Bit#(32), Bit#(32), Bit#(32)) getDebugCnts;
+endinterface
+
+interface FlashCtrlVirtexIfc;
+	interface FlashCtrlUser user;
+	interface Aurora_Pins#(4) aurora;
+	interface FCVirtexDebug debug;
+endinterface
 
 
 (* synthesize *)
