@@ -326,7 +326,7 @@ if __name__ == '__main__':
     if argcount == 2:
         tlplog = open(sys.argv[argindex]).read().split('\n')
     else:
-        tlplog = subprocess.check_output(['connectalutil', 'tlp', '/dev/portal0']).split('\n')
+        tlplog = subprocess.check_output(['connectalutil', '/dev/portal0']).split('\n')
     tlpfirst = tlplog.pop(0)
     tlplog.sort()
     lf = open('tlp.log', 'w')
