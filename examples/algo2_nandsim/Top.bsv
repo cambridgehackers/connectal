@@ -57,7 +57,7 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    
    // nandsim 
    NandSimIndicationProxy nandSimIndicationProxy <- mkNandSimIndicationProxy(NandSimIndication);
-   NandSim#(1) nandSim <- mkNandSim(nandSimIndicationProxy.ifc);
+   NandSim nandSim <- mkNandSim(nandSimIndicationProxy.ifc);
    NandSimRequestWrapper nandSimRequestWrapper <- mkNandSimRequestWrapper(NandSimRequest,nandSim.request);
    
    // regexp algo
@@ -76,9 +76,9 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    MMURequestWrapper algoMMURequestWrapper <- mkMMURequestWrapper(AlgoMMURequest, algoMMU.request);
    
    // nandsim mmu
-   MMUIndicationProxy nandsimMMUIndicationProxy <- mkMMUIndicationProxy(NandsimMMU0Indication);
+   MMUIndicationProxy nandsimMMUIndicationProxy <- mkMMUIndicationProxy(NandMMUIndication);
    MMU#(PhysAddrWidth) nandsimMMU <- mkMMU(0, False, nandsimMMUIndicationProxy.ifc);
-   MMURequestWrapper nandsimMMURequestWrapper <- mkMMURequestWrapper(NandsimMMU0Request, nandsimMMU.request);
+   MMURequestWrapper nandsimMMURequestWrapper <- mkMMURequestWrapper(NandMMURequest, nandsimMMU.request);
    
    // host memory dma server
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
@@ -86,9 +86,9 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    MemServer#(PhysAddrWidth,64,1) hostDma <- mkMemServerRW(hostMemServerIndicationProxy.ifc, rcs, cons(nandSim.writeClient, nil), cons(backingStoreMMU,cons(algoMMU,nil)));
    
    // nandsim memory dma server
-   MemServerIndicationProxy nandsimMemServerIndicationProxy <- mkMemServerIndicationProxy(NandsimMemServer0Indication);
+   MemServerIndicationProxy nandsimMemServerIndicationProxy <- mkMemServerIndicationProxy(NandsimMemServerIndication);
    MemServer#(PhysAddrWidth,64,1) nandsimDma <- mkMemServerR(nandsimMemServerIndicationProxy.ifc, cons(regexp.haystack_read_client,nil), cons(nandsimMMU,nil));
-   mkConnection(nandsimDma.masters[0], nandSim.memSlaves[0]);
+   mkConnection(nandsimDma.masters[0], nandSim.memSlave);
    
    Vector#(12,StdPortal) portals;
 

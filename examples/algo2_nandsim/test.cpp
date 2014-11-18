@@ -62,15 +62,15 @@ int main(int argc, const char **argv)
   DmaManager *hostDma = new DmaManager(hostMMURequest);
   MMUIndication *hostMMUIndication = new MMUIndication(hostDma, IfcNames_AlgoMMUIndication);
 
-  MMURequestProxy *nandsimMMURequest = new MMURequestProxy(IfcNames_NandsimMMU0Request);
+  MMURequestProxy *nandsimMMURequest = new MMURequestProxy(IfcNames_NandMMURequest);
   DmaManager *nandsimDma = new DmaManager(nandsimMMURequest);
-  MMUIndication *nandsimMMUIndication = new MMUIndication(nandsimDma,IfcNames_NandsimMMU0Indication);
+  MMUIndication *nandsimMMUIndication = new MMUIndication(nandsimDma,IfcNames_NandMMUIndication);
 
   RegexpRequestProxy *device = new RegexpRequestProxy(IfcNames_AlgoRequest);
   RegexpIndication *deviceIndication = new RegexpIndication(IfcNames_AlgoIndication);
   
   MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_HostMemServerIndication);
-  MemServerIndication *nandsimMemServerIndication = new MemServerIndication(IfcNames_NandsimMemServer0Indication);
+  MemServerIndication *nandsimMemServerIndication = new MemServerIndication(IfcNames_NandsimMemServerIndication);
 
   haystack_dma = hostDma;
   haystack_mmu = hostMMURequest;

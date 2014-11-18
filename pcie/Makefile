@@ -30,7 +30,7 @@ all:
 
 install:
 	$(MAKE) -C connectalutil install
-	install -m755 flat.py $(DESTDIR)$(PREFIX)/bin/pcieflat
+	install -m755 pcieflat $(DESTDIR)$(PREFIX)/bin/pcieflat
 
 clean:
 	$(MAKE) -C connectalutil clean
