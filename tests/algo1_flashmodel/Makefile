@@ -2,8 +2,8 @@
 CONNECTALDIR?=../..
 INTERFACES = StrstrRequest StrstrIndication FlashRequest FlashIndication
 BSVFILES = $(CONNECTALDIR)/lib/strstr/bsv/Strstr.bsv $(CONNECTALDIR)/lib/nandsim/bsv/NandSimNames.bsv Top.bsv FlashTop.bsv
-CPPFILES=$(CONNECTALDIR)/examples/algo1_nandsim/test.cpp
-CPPFILES2=testflashtop.cpp
+#CPPFILES2=$(CONNECTALDIR)/examples/algo1_nandsim/test.cpp
+CPPFILES=flashaccess.cpp
 CONNECTALFLAGS += -D DEGPAR=2
 CONNECTALFLAGS += -I$(CONNECTALDIR)/lib/strstr/cpp
 CONNECTALFLAGS += -I$(CONNECTALDIR)/lib/nandsim/cpp
