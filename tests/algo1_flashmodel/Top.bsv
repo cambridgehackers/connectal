@@ -81,16 +81,18 @@ interface Top_Pins;
 endinterface
 
 typedef 128 FlashDataWidth;
-typedef 30  FlashAddrWidth;
+typedef 40  FlashAddrWidth;
 
-module mkConnectalTop#(HostType host) (StdConnectalDmaTop#(PhysAddrWidth));
+//module mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,128,Empty,1));
+module mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,DataBusWidth, Top_Pins,1));
+	//(StdConnectalDmaTop#(PhysAddrWidth));
    
    Clock clk250 = host.doubleClock;
    Reset rst250 = host.doubleReset;
 	
    // strstr algo
    StrstrIndicationProxy strstrIndicationProxy <- mkStrstrIndicationProxy(AlgoIndication);
-   Strstr#(128,64) strstr <- mkStrstr(strstrIndicationProxy.ifc);
+   Strstr#(128,128) strstr <- mkStrstr(strstrIndicationProxy.ifc);
    StrstrRequestWrapper strstrRequestWrapper <- mkStrstrRequestWrapper(AlgoRequest,strstr.request);
    
    // host mmu
@@ -112,7 +114,7 @@ module mkConnectalTop#(HostType host) (StdConnectalDmaTop#(PhysAddrWidth));
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
    let rcs = cons(strstr.config_read_client,cons(flashtop.hostMemReadClient,nil));
    let wcs = cons(flashtop.hostMemWriteClient,nil);
-   MemServer#(PhysAddrWidth,64,1) hostMemServer <- mkMemServerR(hostMemServerIndicationProxy.ifc, rcs, cons(hostMMU,nil));
+   MemServer#(PhysAddrWidth,128,1) hostMemServer <- mkMemServerR(hostMemServerIndicationProxy.ifc, rcs, cons(hostMMU,nil));
 
    // flash memory read server
    MemServerIndicationProxy flashMemServerIndicationProxy <- mkMemServerIndicationProxy(FlashMemServerIndication);
@@ -142,6 +144,10 @@ module mkConnectalTop#(HostType host) (StdConnectalDmaTop#(PhysAddrWidth));
    interface slave = ctrl_mux;
    interface masters = hostMemServer.masters;
    interface leds = default_leds;
+	interface Top_Pins pins;
+		interface Aurora_Pins aurora_fmc1 = flashtop.aurora_fmc1;
+		interface Aurora_Clock_Pins aurora_clk_fmc1 = flashtop.aurora_clk_fmc1;
+	endinterface
       
 endmodule : mkConnectalTop
 
