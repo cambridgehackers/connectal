@@ -82,5 +82,8 @@ for (int i = 0; i < 10; i++) {
 }
     sRequestProxy->setLeds(9);
 
+    while (1) {
+      sleep(1);
+    }
     return 0;
 }
