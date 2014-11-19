@@ -27,17 +27,16 @@
 #include <pthread.h>
 #include <string.h>
 
-#include "EchoIndication.h"
-#include "EchoRequest.h"
+#include "IpcTestIndication.h"
+#include "IpcTestRequest.h"
 #include "GeneratedTypes.h"
-#include "Swallow.h"
 #include <sys/ioctl.h>
 #include "zynqportal.h"
 #include <errno.h>
 
 #define LOOP_COUNT 5
 
-EchoRequestProxy *echoRequestProxy = 0;
+IpcTestRequestProxy *ipcTestRequestProxy = 0;
 
 static int silent;
 static int flag_heard;
@@ -49,12 +48,12 @@ static int use_mutex = 0;
 static int use_inline = 0;
 pthread_t threaddata;
 
-class EchoIndication : public EchoIndicationWrapper
+class IpcTestIndication : public IpcTestIndicationWrapper
 {
 public:
     virtual void heard(uint32_t v) {
         if (!silent)
-            fprintf(stderr, "heard an echo: %d\n", v);
+            fprintf(stderr, "heard an ipcTest: %d\n", v);
         flag_heard++;
         if (use_mutex)
             pthread_mutex_unlock(&mutex_heard);
@@ -62,7 +61,7 @@ public:
             sem_post(&sem_heard);
     }
     virtual void heard2(uint32_t v1, uint32_t v2) {}
-    EchoIndication(unsigned int id, PortalPoller *poller) : EchoIndicationWrapper(id, poller) {}
+    IpcTestIndication(unsigned int id, PortalPoller *poller) : IpcTestIndicationWrapper(id, poller) {}
 };
 
 static void run_test(void)
@@ -76,7 +75,7 @@ static void run_test(void)
   pcyc[0] = portalCycleCount();
   flag_heard = 0;
   pcyc[3] = portalCycleCount();
-    echoRequestProxy->say(22);
+    ipcTestRequestProxy->say(22);
   pcyc[8] = portalCycleCount();
   if (use_inline) {
     while (!flag_heard) {
@@ -93,9 +92,9 @@ static void run_test(void)
     pthread_mutex_lock(&mutex_heard);
   else
     sem_wait(&sem_heard);
-  if (echoRequestProxy->pint.fpga_fd >= 0) {
+  if (ipcTestRequestProxy->pint.fpga_fd >= 0) {
       PortalInterruptTime inttime;
-      ioctl(echoRequestProxy->pint.fpga_fd, PORTAL_INTERRUPT_TIME, &inttime);
+      ioctl(ipcTestRequestProxy->pint.fpga_fd, PORTAL_INTERRUPT_TIME, &inttime);
       pcyc[9] = (((uint64_t)inttime.msb)<<32) | ((uint64_t)inttime.lsb);
   }
   pcyc[12] = poll_return_time; // time after poll() returns
@@ -116,22 +115,14 @@ int main(int argc, const char **argv)
     int i;
 
     poller = new PortalPoller();
-    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, poller);
+    IpcTestIndication *ipcTestIndication = new IpcTestIndication(IfcNames_IpcTestIndication, poller);
     // these use the default poller
-    SwallowProxy *swallowProxy = new SwallowProxy(IfcNames_Swallow);
-    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
+    ipcTestRequestProxy = new IpcTestRequestProxy(IfcNames_IpcTestRequest);
     pthread_mutex_lock(&mutex_heard);
     sem_init(&sem_heard, 0, 0);
 
     poller->portalExec_start();
     portalExec_start();
-#ifdef ZYNQ
-    uint64_t portcyc2 = portalCycleCount();
-    unsigned int high_bits = ioctl(globalDirectory.fpga_fd, PORTAL_DIRECTORY_READ, ((unsigned long)PORTAL_DIRECTORY_COUNTER_MSB) - (unsigned long) &globalDirectory.map_base[0]);
-    unsigned int low_bits = ioctl(globalDirectory.fpga_fd, PORTAL_DIRECTORY_READ, ((unsigned long)PORTAL_DIRECTORY_COUNTER_LSB) - (unsigned long) &globalDirectory.map_base[0]);
-    uint64_t portcyc = portalCycleCount();
-    printf("kernel crossing fpga cycles IN: %lld BACK: %lld\n", (long long)low_bits - portcyc2, (long long)portcyc - low_bits);
-#endif
 
     run_test();
     printf("turn off printf in responder\n");
@@ -152,7 +143,7 @@ int main(int argc, const char **argv)
     printf("[%s:%d] scheduling policy changed to SCHED_RR\n", __FUNCTION__, __LINE__);
     for (i = 0; i < LOOP_COUNT; i++)
         run_test();
-    printf("disable interrupts for echoIndication\n");
+    printf("disable interrupts for ipcTestIndication\n");
     poller->portalExec_stop();
     printf("now try inline\n");
     use_inline = 1;
