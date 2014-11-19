@@ -275,8 +275,8 @@ typedef enum {
    } SharedMemoryPortalState deriving (Bits,Eq);
 
 module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32) portal,
-				    MemreadEngineV#(64,n,m) readEngine,
-				    MemwriteEngineV#(64,2,2) writeEngine,
+				    MemreadServer#(64) readEngine,
+				    MemwriteServer#(64) writeEngine,
 				    Reg#(Bit#(32)) sglIdReg,
 				    Reg#(Bool)     readyReg)(SharedMemoryPortal#(64));
       // read the head and tail pointers, if they are different, then read a request
@@ -291,16 +291,16 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
    let verbose = True;
 
       rule updateReqHeadTail if (reqState == Idle && readyReg);
-	 readEngine.readServers[0].request.put(MemengineCmd { sglId: sglIdReg,
-							     base: 0,
-							     burstLen: 16,
-							     len: 16
-							     });
+	 readEngine.cmdServer.request.put(MemengineCmd { sglId: sglIdReg,
+							base: 0,
+							burstLen: 16,
+							len: 16
+							});
 	 reqState <= HeadRequested;
       endrule
 
       rule receiveReqHeadTail if (reqState == HeadRequested || reqState == TailRequested);
-	 let data <- toGet(readEngine.dataPipes[0]).get();
+	 let data <- toGet(readEngine.dataPipe).get();
 	 let w0 = data[31:0];
 	 let w1 = data[63:32];
 	 let head = reqHeadReg;
@@ -340,17 +340,17 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
 
 	 reqTailReg <= tail;
 	 wordCountReg <= truncate(wordCount);
-	 readEngine.readServers[0].request.put(MemengineCmd {sglId: sglIdReg,
-							     base: extend(reqTailReg << 2),
-							     burstLen: 16,
-							     len: wordCount << 2
-							     });
+	 readEngine.cmdServer.request.put(MemengineCmd {sglId: sglIdReg,
+							base: extend(reqTailReg << 2),
+							burstLen: 16,
+							len: wordCount << 2
+							});
 	 reqState <= MessageHeaderRequested;
       endrule
 
       MIFO#(4,1,4,Bit#(32)) readMifo <- mkMIFO();
       rule demuxwords if (readMifo.enqReady());
-	 let data <- toGet(readEngine.dataPipes[0]).get();
+	 let data <- toGet(readEngine.dataPipe).get();
 	 Vector#(2,Bit#(32)) dvec = unpack(data);
 	 let enqCount = 2;
 	 Vector#(4,Bit#(32)) dvec4;
@@ -412,21 +412,21 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
 	 if (verbose)
 	    $display("updateTail: tail=%d", reqTailReg);
 	 // update the tail pointer
-	 writeEngine.writeServers[0].request.put(MemengineCmd {sglId: sglIdReg,
-							       base: 8,
-							       len: 8,
-							       burstLen: 8
-							       });
-	 writeEngine.dataPipes[0].enq(extend(reqTailReg));
+	 writeEngine.cmdServer.request.put(MemengineCmd {sglId: sglIdReg,
+							 base: 8,
+							 len: 8,
+							 burstLen: 8
+							 });
+	 writeEngine.dataPipe.enq(extend(reqTailReg));
 	 reqState <= Waiting;
       endrule
       rule waiting if (reqState == Waiting);
-	 let done <- writeEngine.writeServers[0].response.get();
+	 let done <- writeEngine.cmdServer.response.get();
 	 reqState <= Idle;
       endrule
 
       rule consumeResponse;
-	 let response <- readEngine.readServers[0].response.get();
+	 let response <- readEngine.cmdServer.response.get();
       endrule
 endmodule
 
@@ -441,7 +441,7 @@ module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal
    Reg#(Bool)     readyReg   <- mkReg(False);
 
    if (valueOf(numRequests) > 0) begin
-      let readPortal <- mkSharedMemoryRequestPortal(portal, readEngine, writeEngine, sglIdReg, readyReg);
+      let readPortal <- mkSharedMemoryRequestPortal(portal, readEngine.read_servers[0], writeEngine.write_servers[0], sglIdReg, readyReg);
    end
    if (valueOf(numIndications) > 0) begin
    end
