@@ -77,7 +77,7 @@ module mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,DataBusWidth,
    
    // algo mmu
    MMUIndicationProxy algoMMUIndicationProxy <- mkMMUIndicationProxy(AlgoMMUIndication);
-   MMU#(PhysAddrWidth) algoMMU <- mkMMU(1, True, algoMMUIndicationProxy.ifc);
+   MMU#(PhysAddrWidth) algoMMU <- mkMMU(0, True, algoMMUIndicationProxy.ifc);
    MMURequestWrapper algoMMURequestWrapper <- mkMMURequestWrapper(AlgoMMURequest, algoMMU.request);
 
    // backing store mmu
@@ -99,11 +99,12 @@ module mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,DataBusWidth,
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
    let rcs = cons(strstr.config_read_client,cons(flashtop.hostMemReadClient,nil));
    let wcs = cons(flashtop.hostMemWriteClient,nil);
-   MemServer#(PhysAddrWidth,128,1) hostMemServer <- mkMemServerR(hostMemServerIndicationProxy.ifc, rcs, cons(algoMMU,nil));
+   MemServer#(PhysAddrWidth,128,1) hostMemServer <- mkMemServerRW(hostMemServerIndicationProxy.ifc, rcs,wcs, cons(algoMMU, cons(backingMMU,nil)));
+	//MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, hostMemServer.request);
 
    // flash memory read server
    MemServerIndicationProxy flashMemServerIndicationProxy <- mkMemServerIndicationProxy(NandMemServerIndication);
-   MemServer_#(FlashAddrWidth,FlashDataWidth,1,16) flashMemServer <- mkMemServer(flashMemServerIndicationProxy.ifc, 
+   MemServer#(FlashAddrWidth,FlashDataWidth,1/*,16*/) flashMemServer <- mkMemServerR(flashMemServerIndicationProxy.ifc, 
 										 cons(strstr.haystack_read_client,nil),  
 										 cons(nandMMU,nil));
    mkConnection(flashMemServer.masters[0], flashtop.memSlave);
@@ -123,10 +124,12 @@ module mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,DataBusWidth,
    portals[7] = flashIndicationProxy.portalIfc;
    
    portals[8] = hostMemServerIndicationProxy.portalIfc;
+   //portals[9] = hostMemServerRequestWrapper.portalIfc;
    portals[9] = flashMemServerIndicationProxy.portalIfc;
    
    portals[10] = backingMMURequestWrapper.portalIfc;
    portals[11] = backingMMUIndicationProxy.portalIfc;
+
 
    let ctrl_mux <- mkSlaveMux(portals);
    
