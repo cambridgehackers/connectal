@@ -268,6 +268,7 @@ typedef enum {
    RequestMessage,
    MessageHeaderRequested,
    MessageRequested,
+   Drain,
    UpdateTail,
    Waiting,
    Stop
@@ -278,7 +279,7 @@ module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal
    MemreadEngineV#(64,2,2) readEngine <- mkMemreadEngine();
    MemwriteEngineV#(64,2,2) writeEngine <- mkMemwriteEngine();
 
-   Bool verbose = True;
+   Bool verbose = False;
 
    Reg#(Bit#(32)) sglIdReg <- mkReg(0);
    Reg#(Bool)     readyReg   <- mkReg(False);
@@ -294,7 +295,6 @@ module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal
       Reg#(SharedMemoryPortalState) reqState <- mkReg(Idle);
 
       rule updateReqHeadTail if (reqState == Idle && readyReg);
-	 $display("updateReqHeadTail");
 	 readEngine.readServers[0].request.put(MemengineCmd { sglId: sglIdReg,
 							     base: 0,
 							     burstLen: 16,
@@ -325,7 +325,7 @@ module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal
 	    else
 	       reqState <= Idle;
 	 end
-	 if (head != tail || verbose || True)
+	 if (verbose)
 	    $display("receiveReqHeadTail state=%d w0=%x w1=%x head=%d tail=%d limit=%d", reqState, w0, w1, head, tail, reqLimitReg);
       endrule
 
@@ -375,7 +375,13 @@ module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal
 	    $display("receiveMessageHeader hdr=%x methodId=%x messageWords=%d wordCount=%d", hdr, methodId, messageWords, wordCountReg);
 	 wordCountReg <= wordCountReg - 1;
 	 messageWordsReg <= messageWords - 1;
-	 if (wordCountReg <= messageWords)
+	 if (hdr == 0) begin
+	    if (wordCountReg == 1)
+	       reqState <= UpdateTail;
+	    else
+	       reqState <= Drain;
+	 end
+	 else if (wordCountReg <= messageWords)
 	    reqState <= UpdateTail;
 	 else if (messageWords == 1)
 	    reqState <= MessageHeaderRequested;
@@ -383,11 +389,18 @@ module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal
 	    reqState <= MessageRequested;
       endrule
 
-      //GearBox(Bit#(64),Bit#(32)) gb <- mkNto1Gearbox(defaultClock,defaultReset,defaultClock,defaultReset);
+      rule drain if (reqState == Drain);
+	 let vec <- toGet(readMifo).get();
+	 if (wordCountReg == 1)
+	    reqState <= UpdateTail;
+	 wordCountReg <= wordCountReg - 1;
+      endrule
+
       rule receiveMessage if (reqState == MessageRequested);
 	 let vec <- toGet(readMifo).get();
 	 let data = vec[0];
-	 $display("receiveMessage data=%x messageWords=%d wordCount=%d", data, messageWordsReg, wordCountReg);
+	 if (verbose)
+	    $display("receiveMessage data=%x messageWords=%d wordCount=%d", data, messageWordsReg, wordCountReg);
 	 if (methodIdReg != 16'hFFFF)
 	    portal.requests[methodIdReg].enq(data);
 
@@ -400,7 +413,8 @@ module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal
       endrule
 
       rule updateTail if (reqState == UpdateTail);
-	 $display("updateTail: tail=%d", reqTailReg);
+	 if (verbose)
+	    $display("updateTail: tail=%d", reqTailReg);
 	 // update the tail pointer
 	 writeEngine.writeServers[0].request.put(MemengineCmd {sglId: sglIdReg,
 							       base: 8,
@@ -412,7 +426,6 @@ module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal
       endrule
       rule waiting if (reqState == Waiting);
 	 let done <- writeEngine.writeServers[0].response.get();
-	 $display("done waiting for write");
 	 reqState <= Idle;
       endrule
 
@@ -425,7 +438,6 @@ module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal
    end
    interface SharedMemoryPortalConfig cfg;
       method Action setSglId(Bit#(32) id);
-	 $display("setSglId id=%d", id);
 	 sglIdReg <= id;
 	 readyReg <= True;
       endmethod
