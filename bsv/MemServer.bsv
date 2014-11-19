@@ -70,6 +70,11 @@ interface MemServer#(numeric type addrWidth, numeric type dataWidth, numeric typ
    interface MemServerRequest request;
    interface Vector#(nMasters,PhysMemMaster#(addrWidth, dataWidth)) masters;
 endinterface
+
+interface MemServer_#(numeric type addrWidth, numeric type dataWidth, numeric type nMasters, numeric type nTags);
+   interface MemServerRequest request;
+   interface Vector#(nMasters,PhysMemMaster#(addrWidth, dataWidth)) masters;
+endinterface
 		 	 
    
 typedef struct {
@@ -121,8 +126,6 @@ module mkMemServerRW#(MemServerIndication indication,
 endmodule
 
 
-
-
 module mkMemServerR#(MemServerIndication indication,
 		     Vector#(numReadClients, MemReadClient#(dataWidth)) readClients,
 		     Vector#(numMMUs,MMU#(addrWidth)) mmus)
@@ -136,8 +139,27 @@ module mkMemServerR#(MemServerIndication indication,
 	     ,Add#(d__, addrWidth, 64)
 	     ,Add#(e__, 12, addrWidth)
 	     ,Add#(1, e__, f__)
-	
+	     );
+   MemServer_#(addrWidth,dataWidth,nMasters,MemServerTags) rv <- mkMemServer_R(indication, readClients,mmus,False);
+   interface request = rv.request;
+   interface masters = rv.masters;
+endmodule
 
+module mkMemServer_R#(MemServerIndication indication,
+		       Vector#(numReadClients, MemReadClient#(dataWidth)) readClients,
+		       Vector#(numMMUs,MMU#(addrWidth)) mmus,
+		       Bool interleavedBursts)
+   (MemServer_#(addrWidth, dataWidth, nMasters, nTags))
+   
+   provisos (Add#(1,a__,dataWidth),
+	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
+	     Mul#(nrc, nMasters, numReadClients),
+	     Add#(b__, TLog#(nrc), 6),
+	     Add#(TLog#(TDiv#(dataWidth, 8)), c__, BurstLenSize)
+	     ,Add#(d__, addrWidth, 64)
+	     ,Add#(e__, 12, addrWidth)
+	     ,Add#(1, e__, f__)
+	     ,Add#(g__, TLog#(nTags), 6)
 	     );
 
 
@@ -159,12 +181,12 @@ module mkMemServerR#(MemServerIndication indication,
    endmodule
    Vector#(numMMUs,MMUAddrServer#(addrWidth,nMasters)) mmu_servers <- mapM(foo,genVector);
 
-   Vector#(nMasters,MemReadInternal#(addrWidth,dataWidth,MemServerTags)) readers;
+   Vector#(nMasters,MemReadInternal#(addrWidth,dataWidth,nTags)) readers;
    for(Integer i = 0; i < valueOf(nMasters); i = i+1) begin
       Vector#(numMMUs,Server#(ReqTup,Bit#(addrWidth))) ss;
       for(Integer j = 0; j < valueOf(numMMUs); j=j+1)
 	 ss[j] = mmu_servers[j].servers[i];
-      readers[i] <- mkMemReadInternal(client_bins[i], indication, ss);
+      readers[i] <- mkMemReadInternal(client_bins[i],indication,ss,interleavedBursts);
    end
    
    rule mmuEntry;

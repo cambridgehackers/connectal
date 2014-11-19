@@ -103,7 +103,9 @@ module mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,DataBusWidth,
 
    // flash memory read server
    MemServerIndicationProxy flashMemServerIndicationProxy <- mkMemServerIndicationProxy(NandMemServerIndication);
-   MemServer#(FlashAddrWidth,FlashDataWidth,1) flashMemServer <- mkMemServerR(flashMemServerIndicationProxy.ifc, cons(strstr.haystack_read_client,nil),  cons(nandMMU,nil));
+   MemServer_#(FlashAddrWidth,FlashDataWidth,1,16) flashMemServer <- mkMemServer_R(flashMemServerIndicationProxy.ifc, 
+										   cons(strstr.haystack_read_client,nil),  
+										   cons(nandMMU,nil), True);
    mkConnection(flashMemServer.masters[0], flashtop.memSlave);
    
    Vector#(12,StdPortal) portals;
