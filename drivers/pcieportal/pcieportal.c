@@ -177,7 +177,8 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
         int err = 0;
         tPortal *this_portal = (tPortal *) filp->private_data;
         tBoard *this_board = this_portal->board;
-        tBoardInfo info;
+        //tBoardInfo info;
+        static int trace_index;
 
         /* basic sanity checks */
         if (_IOC_TYPE(cmd) != BNOC_IOC_MAGIC)
@@ -188,29 +189,6 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                 err = !access_ok(VERIFY_READ, (void __user *) arg, _IOC_SIZE(cmd));
         if (!err)
         switch (cmd) {
-        case BNOC_IDENTIFY:
-                /* copy board identification info to a user-space struct */
-                info = this_board->info;
-		info.portal_number = this_portal->portal_number;
-                if (1) {        // msix info
-		  int i;
-		  for (i = 0; i < MAX_NUM_PORTALS; i++)
-                        printk("msix_entry[%d].addr %08x %08x data %08x\n",
-			       i,
-			       ioread32(this_board->bar0io + CSR_MSIX_ADDR_HI + 16*i),
-                             ioread32(this_board->bar0io + CSR_MSIX_ADDR_LO   + 16*i),
-                             ioread32(this_board->bar0io + CSR_MSIX_MSG_DATA  + 16*i));
-                }
-                err = copy_to_user((void __user *) arg, &info, sizeof(tBoardInfo));
-                break;
-        case BNOC_IDENTIFY_PORTAL:
-                {
-                /* copy board identification info to a user-space struct */
-                tPortalInfo portalinfo;
-                memset(&portalinfo, 0, sizeof(portalinfo));
-                err = copy_to_user((void __user *) arg, &portalinfo, sizeof(tPortalInfo));
-                break;
-                }
         case BNOC_GET_TLP:
                 {
                 /* copy board identification info to a user-space struct */
@@ -227,13 +205,14 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                 tlp[3] = ioread32(this_board->bar0io + CSR_TLPDATABRAMRESPONSESLICE3);
                 mb();
                 tlp[2] = ioread32(this_board->bar0io + CSR_TLPDATABRAMRESPONSESLICE2);
+                iowrite32(trace_index++, this_board->bar0io + CSR_TLPDATAFIFO_DEQ);
                 // now deq the tlpDataFifo
-                iowrite32(0, this_board->bar0io + CSR_TLPDATAFIFO_DEQ);
                 err = copy_to_user((void __user *) arg, tlp, sizeof(tTlpData));
                 break;
                 }
         case BNOC_TRACE:
                 {
+                trace_index = 0;
                 iowrite32(0, this_board->bar0io + CSR_TLPPCIEWRADDRREG);
                 traceInfo.trace = ioread32(this_board->bar0io + CSR_TLPTRACINGREG);
                 traceInfo.traceLength = ioread32(this_board->bar0io + CSR_TLPTRACELENGTHREG);
@@ -242,6 +221,7 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                 iowrite32(0, this_board->bar0io + CSR_TLPTRACINGREG);  // disable tracing
                 printk("disable tracing old trace=%d\n", traceInfo.trace);
                 err = copy_to_user((void __user *) arg, &traceInfo, sizeof(tTraceInfo));
+                iowrite32(trace_index++, this_board->bar0io + CSR_TLPDATAFIFO_DEQ);
                 }
                 break;
         case BNOC_ENABLE_TRACE:
