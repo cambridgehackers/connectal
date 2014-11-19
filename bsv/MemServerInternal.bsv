@@ -73,8 +73,7 @@ typedef struct {DmaErrorType errorType;
 
 module mkMemReadInternal#(Vector#(numClients, MemReadClient#(dataWidth)) readClients,
 			  MemServerIndication ind,
-			  Vector#(numMMUs,Server#(ReqTup,Bit#(addrWidth))) mmus,
-			  Bool interleavedBursts) 
+			  Vector#(numMMUs,Server#(ReqTup,Bit#(addrWidth))) mmus) 
    (MemReadInternal#(addrWidth, dataWidth, numTags))
 
    provisos(Add#(b__, addrWidth, 64), 
@@ -100,22 +99,10 @@ module mkMemReadInternal#(Vector#(numClients, MemReadClient#(dataWidth)) readCli
    
    let debug = False;
    
-   Vector#(numTags,Reg#(Bit#(BurstLenSize))) burstRegv <- replicateM(mkReg(0));
-   Vector#(numTags,Reg#(Bool))               firstRegv <- replicateM(mkReg(True));
-   Vector#(numTags,Reg#(Bool))                lastRegv <- replicateM(mkReg(False));
-
-   Reg#(Bit#(BurstLenSize)) burstRegs <- mkReg(0);
-   Reg#(Bool)               firstRegs <- mkReg(True);
-   Reg#(Bool)                lastRegs <- mkReg(False);
-   
-   function Action upd_burstReg(Bit#(MemTagSize) idx, Bit#(BurstLenSize) v) = (interleavedBursts) ? burstRegv[idx]._write(v) : burstRegs._write(v);
-   function Action upd_firstReg(Bit#(MemTagSize) idx, Bool v) = (interleavedBursts) ? firstRegv[idx]._write(v) : firstRegs._write(v);
-   function Action upd_lastReg(Bit#(MemTagSize) idx, Bool v) = (interleavedBursts) ? lastRegv[idx]._write(v) : lastRegs._write(v);
-   
-   function Bit#(BurstLenSize) read_burstReg(Bit#(MemTagSize) idx) = (interleavedBursts) ? burstRegv[idx] : burstRegs;
-   function Bool read_firstReg(Bit#(MemTagSize) idx) = (interleavedBursts) ? firstRegv[idx] : firstRegs;
-   function Bool read_lastReg(Bit#(MemTagSize) idx) = (interleavedBursts) ? lastRegv[idx] : lastRegs;
-      
+   Reg#(Bit#(BurstLenSize)) burstReg <- mkReg(0);
+   Reg#(Bool)               firstReg <- mkReg(True);
+   Reg#(Bool)                lastReg <- mkReg(False);
+         
    Reg#(Bit#(64))  beatCount <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
    TagGen#(numTags) tag_gen <- mkTagGen;
@@ -212,9 +199,9 @@ module mkMemReadInternal#(Vector#(numClients, MemReadClient#(dataWidth)) readCli
       Bit#(MemTagSize) response_tag = response.tag;
       let drq <- dreqFifos.portA.response.get;
       let otag = drq.req.tag;
-      let burstLen = read_burstReg(otag);
-      let first =    read_firstReg(otag);
-      let last  =    read_lastReg(otag);
+      let burstLen = burstReg;
+      let first =    firstReg;
+      let last  =    lastReg;
       if (first) begin
 	 burstLen = drq.req.burstLen >> beat_shift;
 	 last = drq.last;
@@ -228,9 +215,9 @@ module mkMemReadInternal#(Vector#(numClients, MemReadClient#(dataWidth)) readCli
       end
       last_readData <= cycle_cnt;
       if (debug) $display("read_data %d", cycle_cnt-last_readData);
-      upd_burstReg(otag, burstLen-1);
-      upd_firstReg(otag, burstLen-1 == 0);
-      upd_lastReg(otag,  burstLen-1 == 1);
+      burstReg <= burstLen-1;
+      firstReg <= burstLen-1 == 0;
+      lastReg  <= burstLen-1 == 1;
    endrule
 
    interface PhysMemReadClient read_client;
