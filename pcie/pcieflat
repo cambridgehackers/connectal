@@ -1,7 +1,14 @@
 #!/usr/bin/python
 
-import json, subprocess, sys
+import fcntl, json, struct, subprocess, sys
 from gmpy import mpz
+BNOC_TRACE = 0xc008b508
+Trace_len = 144
+struct_traceData = '@ L I I 16I 16I'
+BNOC_GET_TLP = 0x8008b507
+Tlp_len = 24
+BNOC_ENABLE_TRACE = 0x8008b508
+Enable_len = 4
 
 # 64-bit BAR
 tlpdatalog = [
@@ -325,14 +332,35 @@ if __name__ == '__main__':
             interfaceMap[item['name']] = [mitem['name'] for mitem in item['decls']]
     if argcount == 2:
         tlplog = open(sys.argv[argindex]).read().split('\n')
-    else:
+    elif False:
         tlplog = subprocess.check_output(['connectalutil', '/dev/portal0']).split('\n')
-    tlpfirst = tlplog.pop(0)
+        tlpfirst = tlplog.pop(0)
+        base = int(tlpfirst[0:16],16)
+        base = int(tlpfirst[0:8],16)
+    else:
+        fd = open('/dev/portal0', 'rw')
+        buf = fcntl.ioctl(fd, BNOC_TRACE, ' ' * Trace_len)
+        traceData = struct.unpack_from(struct_traceData, buf)
+        #print 'SSS', traceData
+        base = traceData[0]
+        #print ('base %x' % base), 'trace', traceData[1], 'len', traceData[2], 'intval', ['%x' % p for p in traceData[3:3+16]], 'name', traceData[19:19+16]
+        tlplog = []
+        tlplog.append('%016x' % traceData[0])
+        counter = traceData[2]
+        while counter > 0:
+            counter = counter - 1
+            buf = fcntl.ioctl(fd, BNOC_GET_TLP, ' ' * Tlp_len)
+            foo = ''
+            for x in buf:
+                foo = "%02x" % ord( x ) + foo
+            tlplog.append(foo)
+        fcntl.ioctl(fd, BNOC_ENABLE_TRACE, 1)
+        #for foo in tlplog:
+        #    print foo
+        #sys.exit(1)
     tlplog.sort()
     lf = open('tlp.log', 'w')
     f = open('tlp.vcd', 'w')
-    base = int(tlpfirst[0:16],16)
-    base = int(tlpfirst[0:8],16)
     baseLimit = base + 16 * 0x10000
     print_tlp_log(tlplog, f, lf)
     print classCounts
