@@ -274,17 +274,11 @@ typedef enum {
    Stop
    } SharedMemoryPortalState deriving (Bits,Eq);
 
-module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal)(SharedMemoryPortal#(64));
-
-   MemreadEngineV#(64,2,2) readEngine <- mkMemreadEngine();
-   MemwriteEngineV#(64,2,2) writeEngine <- mkMemwriteEngine();
-
-   Bool verbose = False;
-
-   Reg#(Bit#(32)) sglIdReg <- mkReg(0);
-   Reg#(Bool)     readyReg   <- mkReg(False);
-
-   if (valueOf(numRequests) > 0) begin
+module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32) portal,
+				    MemreadEngineV#(64,n,m) readEngine,
+				    MemwriteEngineV#(64,2,2) writeEngine,
+				    Reg#(Bit#(32)) sglIdReg,
+				    Reg#(Bool)     readyReg)(SharedMemoryPortal#(64));
       // read the head and tail pointers, if they are different, then read a request
       Reg#(Bit#(32)) reqLimitReg <- mkReg(0);
       Reg#(Bit#(32)) reqHeadReg <- mkReg(0);
@@ -293,6 +287,8 @@ module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal
       Reg#(Bit#(16)) messageWordsReg <- mkReg(0);
       Reg#(Bit#(16)) methodIdReg <- mkReg(0);
       Reg#(SharedMemoryPortalState) reqState <- mkReg(Idle);
+
+   let verbose = True;
 
       rule updateReqHeadTail if (reqState == Idle && readyReg);
 	 readEngine.readServers[0].request.put(MemengineCmd { sglId: sglIdReg,
@@ -432,7 +428,20 @@ module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal
       rule consumeResponse;
 	 let response <- readEngine.readServers[0].response.get();
       endrule
+endmodule
 
+module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal)(SharedMemoryPortal#(64));
+
+   MemreadEngineV#(64,2,2) readEngine <- mkMemreadEngine();
+   MemwriteEngineV#(64,2,2) writeEngine <- mkMemwriteEngine();
+
+   Bool verbose = False;
+
+   Reg#(Bit#(32)) sglIdReg <- mkReg(0);
+   Reg#(Bool)     readyReg   <- mkReg(False);
+
+   if (valueOf(numRequests) > 0) begin
+      let readPortal <- mkSharedMemoryRequestPortal(portal, readEngine, writeEngine, sglIdReg, readyReg);
    end
    if (valueOf(numIndications) > 0) begin
    end
