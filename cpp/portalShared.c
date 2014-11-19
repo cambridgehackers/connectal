@@ -64,6 +64,30 @@ static volatile unsigned int *mapchannel_sharedReq(struct PortalInternal *pint, 
 {
     return &pint->map_base[pint->map_base[SHARED_WRITE]+1];
 }
+static int busywait_shared(struct PortalInternal *pint, volatile unsigned int *addr, const char *str)
+{
+    int reqwords = pint->reqsize/sizeof(uint32_t) + 1;
+    reqwords = (reqwords + 1) & 0xfffe;
+    volatile unsigned int *map_base = pint->map_base;
+    int limit = map_base[SHARED_LIMIT];
+    while (1) {
+	int write = map_base[SHARED_WRITE];
+	int read = map_base[SHARED_READ];
+	int avail;
+	if (write >= read) {
+	    avail = limit - (write - read) - 4;
+	} else {
+	    avail = read - write;
+	}
+	int enqready = (avail > 2*reqwords); // might have to wrap
+	//fprintf(stderr, "busywait_shared limit=%d write=%d read=%d avail=%d enqready=%d\n", limit, write, read, avail, enqready);
+	if (avail < reqwords)
+	    fprintf(stderr, "****\n    not enough space available \n****\n");
+	if (enqready)
+	    return 0;
+    }
+    return 0;
+}
 static inline unsigned int increment_shared(PortalInternal *pint, unsigned int newp)
 {
     int reqwords = pint->reqsize/sizeof(uint32_t) + 1;
@@ -89,6 +113,6 @@ static int event_shared(struct PortalInternal *pint)
 }
 PortalItemFunctions sharedfunc = {
     init_shared, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_sharedInd, mapchannel_sharedReq,
-    send_shared, recv_portal_null, busy_portal_null, enableint_portal_null, event_shared};
+    send_shared, recv_portal_null, busywait_shared, enableint_portal_null, event_shared};
 
 
