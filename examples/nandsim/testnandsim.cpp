@@ -32,8 +32,8 @@
 #include "StdDmaIndication.h"
 #include "MMURequest.h"
 #include "GeneratedTypes.h" 
-#include "NandSimIndication.h"
-#include "NandSimRequest.h"
+#include "NandCfgIndication.h"
+#include "NandCfgRequest.h"
 
 #include "nandsim.h"
 
@@ -44,7 +44,7 @@ extern "C" {
 
 using namespace std;
 
-class NandSimIndication : public NandSimIndicationWrapper
+class NandCfgIndication : public NandCfgIndicationWrapper
 {
 public:
   unsigned int rDataCnt;
@@ -65,7 +65,7 @@ public:
     sem_post(&sem);
   }
 
-  NandSimIndication(int id) : NandSimIndicationWrapper(id) {
+  NandCfgIndication(int id) : NandCfgIndicationWrapper(id) {
     sem_init(&sem, 0, 0);
   }
   void wait() {
@@ -91,8 +91,8 @@ int main(int argc, const char **argv)
   DmaManager *hostDma = new DmaManager(hostMMURequest);
   MMUIndication *hostMMUIndication = new MMUIndication(hostDma, IfcNames_BackingStoreMMUIndication);
 
-  NandSimRequestProxy *nandsimRequest = new NandSimRequestProxy(IfcNames_NandCfgRequest);
-  NandSimIndication *nandsimIndication = new NandSimIndication(IfcNames_NandCfgIndication);
+  NandCfgRequestProxy *nandcfgRequest = new NandCfgRequestProxy(IfcNames_NandCfgRequest);
+  NandCfgIndication *nandcfgIndication = new NandCfgIndication(IfcNames_NandCfgIndication);
 
   portalExec_start();
 
@@ -101,8 +101,8 @@ int main(int argc, const char **argv)
   int ref_nandAlloc = hostDma->reference(nandAlloc);
   fprintf(stderr, "ref_nandAlloc=%d\n", ref_nandAlloc);
   fprintf(stderr, "testnandsim::NAND alloc fd=%d ref=%d\n", nandAlloc, ref_nandAlloc);
-  nandsimRequest->configureNand(ref_nandAlloc, nandBytes);
-  nandsimIndication->wait();
+  nandcfgRequest->configureNand(ref_nandAlloc, nandBytes);
+  nandcfgIndication->wait();
 
 #ifndef ALGO_NANDSIM
   if (argc == 1) {
@@ -126,8 +126,8 @@ int main(int argc, const char **argv)
 	srcBuffer[i] = loop+i;
       }
       portalDCacheFlushInval(srcAlloc, srcBytes, srcBuffer);
-      nandsimRequest->startWrite(ref_srcAlloc, 0, loop, srcBytes, 16);
-      nandsimIndication->wait();
+      nandcfgRequest->startWrite(ref_srcAlloc, 0, loop, srcBytes, 16);
+      nandcfgIndication->wait();
       loop+=srcBytes;
     }
     fprintf(stderr, "testnandsim:: write phase complete\n");
@@ -140,8 +140,8 @@ int main(int argc, const char **argv)
       }
 
       portalDCacheFlushInval(srcAlloc, srcBytes, srcBuffer);
-      nandsimRequest->startRead(ref_srcAlloc, 0, loop, srcBytes, 16);
-      nandsimIndication->wait();
+      nandcfgRequest->startRead(ref_srcAlloc, 0, loop, srcBytes, 16);
+      nandcfgIndication->wait();
       
       for (int i = 0; i < srcBytes/sizeof(srcBuffer[0]); i++) {
 	if (srcBuffer[i] != loop+i) {
@@ -188,8 +188,8 @@ int main(int argc, const char **argv)
     // write the contents of data into "flash" memory
     portalDCacheFlushInval(ref_dataAlloc, data_len, data);
     fprintf(stderr, "testnandsim::invoking write %08x %08x\n", ref_dataAlloc, data_len);
-    nandsimRequest->startWrite(ref_dataAlloc, 0, 0, data_len, 16);
-    nandsimIndication->wait();
+    nandcfgRequest->startWrite(ref_dataAlloc, 0, 0, data_len, 16);
+    nandcfgIndication->wait();
 
     fprintf(stderr, "testnandsim::connecting to algo_exe...\n");
     connect_to_algo_exe();
