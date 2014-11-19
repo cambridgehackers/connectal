@@ -344,6 +344,7 @@ if __name__ == '__main__':
     interfaceMap = {}
     if argcount >= 2 and sys.argv[argindex] == '-j':
         fooMap = sys.argv[argindex+1].split(':')
+        print 'FFF', fooMap
         j2file = open(sys.argv[argindex + 2]).read()
         jsondata = json.loads(j2file)
         argindex = argindex + 3
