@@ -65,7 +65,7 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
       Reg#(Bit#(16)) methodIdReg <- mkReg(0);
       Reg#(SharedMemoryPortalState) reqState <- mkReg(Idle);
 
-   let verbose = True;
+   let verbose = False;
 
       rule updateReqHeadTail if (reqState == Idle && readyReg);
 	 readEngine.cmdServer.request.put(MemengineCmd { sglId: sglIdReg,
@@ -207,10 +207,62 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
       endrule
 endmodule
 
+module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 32) portal,
+				    MemreadServer#(64) readEngine,
+				    MemwriteServer#(64) writeEngine,
+				    Reg#(Bit#(32)) sglIdReg,
+				    Reg#(Bool)     readyReg)(SharedMemoryPortal#(64));
+      // read the head and tail pointers, if they are different, then read a request
+      Reg#(Bit#(32)) indLimitReg <- mkReg(0);
+      Reg#(Bit#(32)) indHeadReg <- mkReg(0);
+      Reg#(Bit#(32)) indTailReg <- mkReg(0);
+      Reg#(Bit#(16)) wordCountReg <- mkReg(0);
+      Reg#(Bit#(16)) messageWordsReg <- mkReg(0);
+      Reg#(Bit#(16)) methodIdReg <- mkReg(0);
+      Reg#(SharedMemoryPortalState) indState <- mkReg(Idle);
+
+   let verbose = True;
+
+      rule updateIndHeadTail if (indState == Idle && readyReg);
+	 readEngine.cmdServer.request.put(MemengineCmd { sglId: sglIdReg,
+							base: 0,
+							burstLen: 16,
+							len: 16
+							});
+	 indState <= HeadRequested;
+      endrule
+
+      rule receiveIndHeadTail if (indState == HeadRequested || indState == TailRequested);
+	 let data <- toGet(readEngine.dataPipe).get();
+	 let w0 = data[31:0];
+	 let w1 = data[63:32];
+	 let head = indHeadReg;
+	 let tail = indTailReg;
+	 if (indState == HeadRequested) begin
+	    indLimitReg <= w0;
+	    indHeadReg <= w1;
+	    head = w1;
+	    indState <= TailRequested;
+	 end
+	 else begin
+	    if (indTailReg == 0) begin
+	       tail = w0;
+	       indTailReg <= tail;
+	    end
+	    if (tail != indHeadReg)
+	       indState <= RequestMessage;
+	    else
+	       indState <= Idle;
+	 end
+	 if (verbose)
+	    $display("receiveIndHeadTail state=%d w0=%x w1=%x head=%d tail=%d limit=%d", indState, w0, w1, head, tail, indLimitReg);
+      endrule
+endmodule
+
 module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal)(SharedMemoryPortal#(64));
 
-   MemreadEngineV#(64,2,2) readEngine <- mkMemreadEngine();
-   MemwriteEngineV#(64,2,2) writeEngine <- mkMemwriteEngine();
+   MemreadEngineV#(64,2,1) readEngine <- mkMemreadEngine();
+   MemwriteEngineV#(64,2,1) writeEngine <- mkMemwriteEngine();
 
    Bool verbose = False;
 
@@ -220,7 +272,8 @@ module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal
    if (valueOf(numRequests) > 0) begin
       let readPortal <- mkSharedMemoryRequestPortal(portal, readEngine.read_servers[0], writeEngine.write_servers[0], sglIdReg, readyReg);
    end
-   if (valueOf(numIndications) > 0) begin
+   else if (valueOf(numIndications) > 0) begin
+      let writePortal <- mkSharedMemoryIndicationPortal(portal, readEngine.read_servers[0], writeEngine.write_servers[0], sglIdReg, readyReg);
    end
    interface SharedMemoryPortalConfig cfg;
       method Action setSglId(Bit#(32) id);
