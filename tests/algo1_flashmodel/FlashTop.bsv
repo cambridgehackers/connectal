@@ -106,7 +106,7 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 	Vector#(NumTags, Reg#(Tuple2#(Bit#(32),Bit#(32)))) dmaWriteRefs <- replicateM(mkRegU());
 	Vector#(NumTags, Reg#(Tuple2#(Bit#(32),Bit#(32)))) dmaReadRefs <- replicateM(mkRegU());
 	Vector#(NUM_BUSES, FIFO#(Tuple2#(Bit#(WordSz), TagT))) dmaWriteBuf <- replicateM(mkSizedBRAMFIFO(dmaBurstWords*2));
-	FIFO#(Tuple2#(Bit#(WordSz), TagT)) memSlaveReadBuf <- mkSizedBRAMFIFO(128); //doesn't matter size?
+	FIFO#(Tuple3#(Bit#(WordSz), TagT, Bool)) memSlaveReadBuf <- mkSizedBRAMFIFO(128); //doesn't matter size?
 	Vector#(NUM_BUSES, FIFO#(Tuple2#(Bit#(WordSz), TagT))) dmaWriteBufOut <- replicateM(mkFIFO());
 
 	GtxClockImportIfc gtx_clk_fmc1 <- mkGtxClockImport;
@@ -122,6 +122,7 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 	//MemwriteEngineV#(WordSz, 2, NUM_BUSES) we <- mkMemwriteEngineBuff(1024);
 
 	Vector#(NUM_BUSES, Reg#(Bit#(16))) dmaWBurstCnts <- replicateM(mkReg(0));
+	Vector#(NUM_BUSES, Reg#(Bit#(16))) memSlaveCnts <- replicateM(mkReg(0));
 	Vector#(NUM_BUSES, FIFO#(TagT)) dmaReqQs <- replicateM(mkSizedFIFO(valueOf(NumTags)));//TODO make bigger?
 	Vector#(NUM_BUSES, FIFO#(Tuple2#(TagT, Bit#(32)))) dmaReq2RespQ <- replicateM(mkSizedFIFO(valueOf(NumTags))); //TODO make bigger?
 	Vector#(NUM_BUSES, Reg#(Bit#(32))) dmaWrReqCnts <- replicateM(mkReg(0));
@@ -165,7 +166,6 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 		end
 	endrule
 
-
 	rule doDistributeReadFromFlash;
 		let taggedRdata = dataFlash2DmaQ.first;
 		dataFlash2DmaQ.deq;
@@ -178,7 +178,15 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 			dmaWriteBuf[bus].enq(taggedRdata);
 		end
 		else if (src==SRC_USER_HW) begin
-			memSlaveReadBuf.enq(taggedRdata);
+			Bool last = False;
+			if (memSlaveCnts[bus]==fromInteger(pageWords-1)) begin
+				memSlaveCnts[bus] <= 0;
+				last = True;
+			end
+			else begin
+				memSlaveCnts[bus] <= memSlaveCnts[bus] + 1;
+			end
+			memSlaveReadBuf.enq(tuple3(data, tag, last));
 		end
 		else begin
 			$display("ERROR: flashTop: incorrect source");
@@ -445,15 +453,16 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 			endinterface
 			interface Get readData;
 				method ActionValue#(MemData#(128)) get();
-					let taggedRdata = memSlaveReadBuf.first;
-					Bit#(WordSz) data = tpl_1(taggedRdata);
-					TagT tag = tpl_2(taggedRdata);
+					let taggedRdataLast = memSlaveReadBuf.first;
+					Bit#(WordSz) data = tpl_1(taggedRdataLast);
+					TagT tag = tpl_2(taggedRdataLast);
+					Bool last = tpl_3(taggedRdataLast);
 
 					memSlaveReadBuf.deq;
 					MemData#(128) memData = MemData { 
 							data: data, 
 							tag: truncate(tag), 	//FIXME DANGEROUS
-							last: False				//Assuming unused
+							last: last				
 						};
 					/*
 					Bit#(64) data_64 = 0;
