@@ -328,6 +328,7 @@ void readPage(int bus, int chip, int block, int page, int tag) {
 int main(int argc, const char **argv)
 {
 
+	//MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
 	MMURequestProxy *dmap = new MMURequestProxy(IfcNames_BackingStoreMMURequest);
 	DmaManager *dma = new DmaManager(dmap);
 	MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_HostMemServerIndication);
