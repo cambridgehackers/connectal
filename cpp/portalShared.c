@@ -98,16 +98,29 @@ static inline unsigned int increment_shared(PortalInternal *pint, unsigned int n
 }
 static void send_shared(struct PortalInternal *pint, volatile unsigned int *buff, unsigned int hdr, int sendFd)
 {
+    int reqwords = hdr & 0xffff;
+    int needs_padding = (reqwords & 1);
+
     pint->map_base[pint->map_base[SHARED_WRITE]] = hdr;
-    pint->map_base[SHARED_WRITE] = increment_shared(pint, pint->map_base[SHARED_WRITE] + (hdr & 0xffff));
+    if (needs_padding) {
+	// pad req
+	pint->map_base[pint->map_base[SHARED_WRITE] + reqwords] = 0xffff0001;
+	reqwords = (reqwords + 1) & 0xfffe;
+    }
+    pint->map_base[SHARED_WRITE] = increment_shared(pint, pint->map_base[SHARED_WRITE] + reqwords);
+    //fprintf(stderr, "send_shared head=%d padded=%d hdr=%08x\n", pint->map_base[SHARED_WRITE], needs_padding, hdr);
     pint->map_base[pint->map_base[SHARED_WRITE]] = 0;
 }
 static int event_shared(struct PortalInternal *pint)
 {
     if (pint->map_base && pint->map_base[SHARED_READ] != pint->map_base[SHARED_WRITE]) {
         unsigned int hdr = pint->map_base[pint->map_base[SHARED_READ]];
-        pint->handler(pint, hdr >> 16, 0);
-        pint->map_base[SHARED_READ] = increment_shared(pint, pint->map_base[SHARED_READ] + (hdr & 0xffff));
+	unsigned short msg_num = hdr >> 16;
+	unsigned short msg_words = hdr & 0xffff;
+	msg_words = (msg_words + 1) & 0xfffe;
+	if (msg_num != 0xffff)
+	    pint->handler(pint, msg_num, 0);
+        pint->map_base[SHARED_READ] = increment_shared(pint, pint->map_base[SHARED_READ] + msg_words);
     }
     return -1;
 }
