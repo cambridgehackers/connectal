@@ -66,7 +66,9 @@ static volatile unsigned int *mapchannel_sharedReq(struct PortalInternal *pint, 
 }
 static inline unsigned int increment_shared(PortalInternal *pint, unsigned int newp)
 {
-    if (newp + pint->reqsize/sizeof(uint32_t) + 1 >= pint->map_base[SHARED_LIMIT])
+    int reqwords = pint->reqsize/sizeof(uint32_t) + 1;
+    reqwords = (reqwords + 1) & 0xfffe;
+    if (newp + reqwords >= pint->map_base[SHARED_LIMIT])
         newp = SHARED_START;
     return newp;
 }
@@ -79,9 +81,9 @@ static void send_shared(struct PortalInternal *pint, volatile unsigned int *buff
 static int event_shared(struct PortalInternal *pint)
 {
     if (pint->map_base && pint->map_base[SHARED_READ] != pint->map_base[SHARED_WRITE]) {
-        unsigned int rc = pint->map_base[pint->map_base[SHARED_READ]];
-        pint->handler(pint, rc >> 16, 0);
-        pint->map_base[SHARED_READ] = increment_shared(pint, pint->map_base[SHARED_READ] + (rc & 0xffff));
+        unsigned int hdr = pint->map_base[pint->map_base[SHARED_READ]];
+        pint->handler(pint, hdr >> 16, 0);
+        pint->map_base[SHARED_READ] = increment_shared(pint, pint->map_base[SHARED_READ] + (hdr & 0xffff));
     }
     return -1;
 }
