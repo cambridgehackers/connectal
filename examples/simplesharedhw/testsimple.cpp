@@ -137,7 +137,7 @@ int main(int argc, const char **argv)
   portalExec_start();
 
   int verbose = 0;
-  int numtimes = 80;
+  int numtimes = 40;
   Simple *indication = new Simple(IfcNames_SimpleIndication, numtimes);
     SimpleProxy *device = new SimpleProxy(IfcNames_SimpleRequest, &sharedfunc, NULL);
 

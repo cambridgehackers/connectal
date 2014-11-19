@@ -26,31 +26,31 @@ import FIFO::*;
 import Leds::*;
 import Vector::*;
 
-interface EchoIndication;
+interface IpcTestIndication;
     method Action heard(Bit#(32) v);
     method Action heard2(Bit#(16) a, Bit#(16) b);
 endinterface
 
-interface EchoRequest;
+interface IpcTestRequest;
    method Action say(Bit#(32) v);
    method Action say2(Bit#(16) a, Bit#(16) b);
    method Action setLeds(Bit#(8) v);
 endinterface
 
-interface EchoRequestInternal;
-   interface EchoRequest ifc;
+interface IpcTestRequestInternal;
+   interface IpcTestRequest ifc;
    interface LEDS leds;
 endinterface
 
 typedef struct {
 	Bit#(16) a;
 	Bit#(16) b;
-} EchoPair deriving (Bits);
+} IpcTestPair deriving (Bits);
 
-module mkEchoRequestInternal#(EchoIndication indication)(EchoRequestInternal);
+module mkIpcTestRequestInternal#(IpcTestIndication indication)(IpcTestRequestInternal);
 
     FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
-    FIFO#(EchoPair) delay2 <- mkSizedFIFO(8);
+    FIFO#(IpcTestPair) delay2 <- mkSizedFIFO(8);
     Reg#(Bit#(LedsWidth)) ledsReg <- mkReg(0);
 
     rule heard;
@@ -63,13 +63,13 @@ module mkEchoRequestInternal#(EchoIndication indication)(EchoRequestInternal);
         indication.heard2(delay2.first.b, delay2.first.a);
     endrule
    
-   interface EchoRequest ifc;
+   interface IpcTestRequest ifc;
       method Action say(Bit#(32) v);
 	 delay.enq(v);
       endmethod
       
       method Action say2(Bit#(16) a, Bit#(16) b);
-	 delay2.enq(EchoPair { a: a, b: b});
+	 delay2.enq(IpcTestPair { a: a, b: b});
       endmethod
       
       method Action setLeds(Bit#(8) v);

@@ -449,6 +449,13 @@ static int init_bsim(struct PortalInternal *pint, void *param)
 	pint->fpga_number = bsim_fpga_map[i].offset;
 	break;
       }
+    if (!found) {
+      fprintf(stderr, "Error: init_bsim: did not find fpga_number %d\n", pint->fpga_number);
+      fprintf(stderr, "    Found fpga numbers:");
+      for (int i = 0; bsim_fpga_map[i].valid; i++)
+	fprintf(stderr, " %d", bsim_fpga_map[i].name);
+      fprintf(stderr, "\n");
+    }
     assert(found);
     pint->map_base = (volatile unsigned int*)(long)(pint->fpga_number * PORTAL_BASE_OFFSET);
     pint->item->enableint(pint, 1);

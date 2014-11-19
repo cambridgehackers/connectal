@@ -30,7 +30,7 @@ import MemTypes::*;
 typedef struct {
    Bit#(addrWidth) addr;
    Bit#(BurstLenSize) bc;
-   Bit#(6) tag;
+   Bit#(MemTagSize) tag;
    Bool    last;
    } AddrBeat#(numeric type addrWidth) deriving (Bits);
 

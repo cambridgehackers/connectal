@@ -366,7 +366,7 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
 	 endmethod
       endinterface
       interface Put writeDone;
-	 method Action put(Bit#(6) tag);
+	 method Action put(Bit#(MemTagSize) tag);
 	    match {.idx, .last} <- toGet(donef).get;
 	    if (last)
 	       outfs[idx].enq(True);

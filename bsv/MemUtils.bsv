@@ -117,8 +117,8 @@ module mkMemWriter(MemWriter#(dataWidth))
 	    Log#(dataWidthBytes,beatShift));
 
    FIFOF#(MemData#(dataWidth)) writeBuffer <- mkFIFOF;
-   FIFOF#(MemRequest)        reqOutstanding <- mkFIFOF;
-   FIFOF#(Bit#(6))                        doneTags <- mkFIFOF();
+   FIFOF#(MemRequest)       reqOutstanding <- mkFIFOF;
+   FIFOF#(Bit#(MemTagSize))       doneTags <- mkFIFOF();
 
    interface MemWriteServer writeServer;
       interface Put writeReq = toPut(reqOutstanding);
@@ -150,8 +150,8 @@ module mkMemWriterBuff(MemWriterBuff#(dataWidth, bufferDepth))
    FIFOF#(MemData#(dataWidth))  writeBuffer <- mkSizedBRAMFIFOF(valueOf(bufferDepth));
    FIFOF#(MemRequest)        reqOutstanding <- mkFIFOF();
    FIFOF#(MemRequest)          reqCommitted <- mkFIFOF();
-   FIFOF#(Bit#(6))                    doneTags <- mkFIFOF();
-   ConfigCounter#(availableWidth)    available <- mkConfigCounter(0);
+   FIFOF#(Bit#(MemTagSize))        doneTags <- mkFIFOF();
+   ConfigCounter#(availableWidth) available <- mkConfigCounter(0);
    let beat_shift = fromInteger(valueOf(beatShift));
    
    // only issue the writeRequest when sufficient data is available.  This includes the data we have already comitted.
