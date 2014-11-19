@@ -26,11 +26,8 @@ PREFIX?=/usr
 endif
 
 all:
-	$(MAKE) -C connectalutil all
 
 install:
-	$(MAKE) -C connectalutil install
 	install -m755 pcieflat $(DESTDIR)$(PREFIX)/bin/pcieflat
 
 clean:
-	$(MAKE) -C connectalutil clean

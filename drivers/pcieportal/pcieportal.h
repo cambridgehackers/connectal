@@ -37,32 +37,6 @@
 /* Structures used with IOCTLs */
 
 typedef struct {
-  unsigned int       board_number;
-  unsigned int       portal_number;
-  unsigned int       num_portals;
-} tBoardInfo;
-
-typedef struct {
-  unsigned int interrupt_status;
-  unsigned int interrupt_enable;
-  unsigned int indication_channel_count;
-  unsigned int base_fifo_offset;
-  unsigned int request_fired_count;
-  unsigned int response_fired_count;
-  unsigned int magic;
-  unsigned int put_word_count;
-  unsigned int get_word_count;
-  unsigned int scratchpad;
-  unsigned int fifo_status;
-} tPortalInfo;
-
-typedef struct {
-  unsigned int size;
-  void *virt;
-  unsigned long dma_handle;
-} tDmaMap;
-
-typedef struct {
   unsigned long base;
   unsigned int trace;
   unsigned int traceLength;
@@ -79,8 +53,6 @@ typedef unsigned int tTlpData[6];
 
 /* IOCTL code definitions */
 
-#define BNOC_IDENTIFY        _IOR(BNOC_IOC_MAGIC,0,tBoardInfo*)
-#define BNOC_IDENTIFY_PORTAL _IOR(BNOC_IOC_MAGIC,6,tPortalInfo*)
 #define BNOC_GET_TLP         _IOR(BNOC_IOC_MAGIC,7,tTlpData*)
 #define BNOC_TRACE           _IOWR(BNOC_IOC_MAGIC,8,tTraceInfo*)
 #define BNOC_ENABLE_TRACE    _IOR(BNOC_IOC_MAGIC,8,int*)
@@ -105,7 +77,11 @@ typedef struct tBoard {
         void __iomem     *bar0io, *bar1io, *bar2io; /* bars */
         struct pci_dev   *pci_dev; /* pci device pointer */
         tPortal           portal[MAX_NUM_PORTALS];
-        tBoardInfo        info; /* board identification fields */
+        struct {
+          unsigned int board_number;
+          unsigned int portal_number;
+          unsigned int num_portals;
+        }                 info; /* board identification fields */
         unsigned int      irq_num;
         unsigned int      open_count;
 } tBoard;

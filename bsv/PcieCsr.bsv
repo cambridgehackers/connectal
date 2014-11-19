@@ -86,7 +86,6 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
    // Registers and their default values
    Vector#(16,MSIX_Entry) msix_entry              <- replicateM(mkMSIXEntry);
    Reg#(TimestampedTlpData) pcieTraceBramResponse <- mkReg(unpack(0));
-   //Reg#(Bit#(TAdd#(TlpTraceAddrSize,1))) bramMuxRdAddrReg <- mkReg(0);
 
    // Function to return a one-word slice of the tlpTraceBramResponse
    function Bit#(32) tlpTraceBramResponseSlice(Reg#(TimestampedTlpData) data, Bit#(3) i);
@@ -158,7 +157,6 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
 	  if (oneHotDecode[0]) data = 32'h65756c42; // Blue
 	  if (oneHotDecode[1]) data = 32'h63657073; // spec
 
-	  //if (oneHotDecode[768]) data = extend(bramMuxRdAddrReg);
 	  if (oneHotDecode[774]) data = fromInteger(2**valueOf(TAdd#(TlpTraceAddrSize,1)));
 	  if (oneHotDecode[775]) data = (tlpdata.tlpTracing ? 1 : 0);
 	  if (oneHotDecode[776]) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 0);
@@ -220,11 +218,8 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
          end
       else begin
 	 if (oneHotDecode[775]) tlpdata.tlpTracing <= (dword != 0) ? True : False;
-
-	 if (oneHotDecode[768]) begin
-		    bramRequestFifo.enq(BRAMRequest{ write: False, responseOnWrite: False, address: truncate(dword), datain: ?});
-		    //bramMuxRdAddrReg <= bramMuxRdAddrReg + 1;
-		 end
+	 if (oneHotDecode[768])
+	     bramRequestFifo.enq(BRAMRequest{ write: False, responseOnWrite: False, address: truncate(dword), datain: ?});
 	 if (oneHotDecode[792]) tlpdata.pcieTraceBramWrAddr <= truncate(dword);
 	 if (oneHotDecode[794]) tlpdata.tlpTraceLimit <= truncate(dword);
       end
