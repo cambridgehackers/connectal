@@ -187,27 +187,33 @@ endinterface
 module mkSerdesClock(SerdesClock);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
+`ifdef BSIM
     Wire#(Bit#(1)) vita_clk_p <- mkDWire(0);
     Wire#(Bit#(1)) vita_clk_n <- mkDWire(0);
-`ifdef BSIM
     interface Clock serdes_clkif = defaultClock;
     interface Reset serdes_resetif = defaultReset;
     interface Clock serdest_clkif = defaultClock;
+    method Action io_vita_clk_p(Bit#(1) v);
+    endmethod
+    method Action io_vita_clk_n(Bit#(1) v);
+    endmethod
 `else
-    Clock ibufds_clk <- mkClockIBUFDS(vita_clk_p, vita_clk_n);
+    B2C1 vita_clk_p <- mkB2C1();
+    B2C1 vita_clk_n <- mkB2C1();
+    Clock ibufds_clk <- mkClockIBUFDS(vita_clk_p.c, vita_clk_n.c);
     ClockGenIfc serdes_clk <- mkBUFR5(ibufds_clk);
     ClockGenIfc serdest_clk <- mkBUFIO(ibufds_clk);
     Reset serdes_reset <- mkAsyncReset(2, defaultReset, serdes_clk.gen_clk);
     interface Clock serdes_clkif = serdes_clk.gen_clk;
     interface Reset serdes_resetif = serdes_reset;
     interface Clock serdest_clkif = serdest_clk.gen_clk;
-`endif
     method Action io_vita_clk_p(Bit#(1) v);
-        vita_clk_p <= v;
+        vita_clk_p.inputclock(v);
     endmethod
     method Action io_vita_clk_n(Bit#(1) v);
-        vita_clk_n <= v;
+        vita_clk_n.inputclock(v);
     endmethod
+`endif
 endmodule
 
 interface ImageClocks;
