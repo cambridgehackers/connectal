@@ -121,6 +121,8 @@ def run_zedboard(bitfile, androidexe, additional_files):
     connection.Shell("insmod /mnt/sdcard/zynqportal.ko")
     connection.Shell("touch /mnt/sdcard/tmp/perf.monkit")
     connection.Shell("cat /dev/connectal")
+    #wait for driver to enumerate /dev/portalXXX entries
+    connection.Shell("sleep 1")
     print('Running android.exe with timelimit %d' % options.timelimit)
     for line in connection.StreamingShell("cd /mnt/sdcard/tmp/; rm -f /mnt/sdcard/tmp/exit.status; /mnt/sdcard/timelimit -t %d ./%s %s; echo $? > /mnt/sdcard/tmp/exit.status"
                                           % (options.timelimit, os.path.basename(androidexe), ' '.join([os.path.basename(f) for f in additional_files]))):
