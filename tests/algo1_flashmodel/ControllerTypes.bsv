@@ -33,6 +33,8 @@ typedef TMul#(8,WordBytes) 					WordSz;
 typedef TDiv#(PageSizeUser, WordBytes) 	PageWords;
 typedef TMul#(TMul#(BlocksPerCE, PagesPerBlock), PageWords) WordsPerChip;
 
+typedef WordSz FlashDataWidth;
+typedef 43  FlashAddrWidth;
 
 Integer pageSize 			= valueOf(PageSize); //bytes
 Integer pageSizeUser 	= valueOf(PageSizeUser); //usable page size is 8k
