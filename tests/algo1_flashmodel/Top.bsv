@@ -65,6 +65,7 @@ typedef 40  FlashAddrWidth;
 
 //module mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,128,Empty,1));
 module mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,DataBusWidth, Top_Pins,1));
+   // provisos (Add#(3, a__, 0)); //FIXME?
 	//(StdConnectalDmaTop#(PhysAddrWidth));
    
    Clock clk250 = host.doubleClock;

@@ -67,6 +67,9 @@ typedef Bit#(TLog#(NumTags)) TagT;
 typedef Bit#(TLog#(ChipsPerBus)) ChipT;
 typedef Bit#(TLog#(NUM_BUSES)) BusT;
 
+Integer num_tags = valueOf(NumTags);
+Integer num_buses = valueOf(NUM_BUSES);
+
 typedef enum {
 	SRC_HOST,
 	SRC_USER_HW
@@ -185,6 +188,13 @@ typedef struct {
 	Bit#(16) block;
 	Bit#(8) page;
 } FlashCmd deriving (Bits, Eq);
+
+typedef struct {
+	BusT bus;
+	ChipT chip;
+	Bit#(16) block;
+	Bit#(8) page;
+} FlashAddr deriving (Bits, Eq);
 
 // Flash Controller User Ifc
 interface FlashCtrlUser;
