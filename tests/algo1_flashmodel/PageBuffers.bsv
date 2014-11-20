@@ -14,7 +14,7 @@ import ControllerTypes::*;
 
 
 interface PageBuffers;
-	interface PhysMemSlave#(PhysAddrWidth, 128) memSlave; //to user hw
+	interface PhysMemSlave#(FlashAddrWidth, 128) memSlave; //to user hw
 	interface Get#(FlashCmd) flashReq;
 	interface Put#(Tuple2#(Bit#(WordSz), TagT)) readResp;
 endinterface
@@ -38,12 +38,12 @@ typedef struct {
 	Bit#(PageOffsetSz) offset;
 } PageAddrOff deriving (Bits, Eq);
 
-function PageAddrOff decodePhysMemAddr(Bit#(PhysAddrWidth) addr);
+function PageAddrOff decodePhysMemAddr(Bit#(FlashAddrWidth) addr);
 	//byte addressible
-	//Tuple2#(PageAddrOff, Bit#(TLog#(WordBytes))) decodedAddr = unpack(truncate(addr));
-	//return tpl_1(decodedAddr);
-	PageAddrOff decodedAddr = unpack(truncate(addr)); //FIXME FIXME FIXME
-	return decodedAddr;
+	Tuple2#(PageAddrOff, Bit#(TLog#(WordBytes))) decodedAddr = unpack(truncate(addr));
+	return tpl_1(decodedAddr);
+	//PageAddrOff decodedAddr = unpack(truncate(addr)); //FIXME FIXME FIXME
+	//return decodedAddr;
 endfunction
 
 
@@ -123,7 +123,7 @@ module mkPageBuffers(PageBuffers);
 	interface PhysMemSlave memSlave;
 		interface PhysMemReadServer read_server;
 			interface Put readReq;
-				method Action put(PhysMemRequest#(PhysAddrWidth) req);
+				method Action put(PhysMemRequest#(FlashAddrWidth) req);
 					//distribute each request to each buffer by bus
 					PageAddrOff decAddr = decodePhysMemAddr(req.addr);
 					pageBuffers[decAddr.faddr.bus].memSlave.read_server.readReq.put(req);
@@ -158,7 +158,7 @@ module mkSinglePageBuffer#(Integer busId)(PageBuffers);
 
 	FIFO#(MemData#(128)) slaveRespQ <- mkFIFO;
 	FIFO#(TagT) freeTagQ <- mkSizedFIFO(num_tags);
-	FIFO#(PhysMemRequest#(PhysAddrWidth)) slaveReqQ <- mkSizedFIFO(valueOf(NumTags)/valueOf(NUM_BUSES));
+	FIFO#(PhysMemRequest#(FlashAddrWidth)) slaveReqQ <- mkSizedFIFO(valueOf(NumTags)/valueOf(NUM_BUSES));
 	Reg#(BufOpState) state <- mkReg(ST_INIT);
 
 	//split tags among these buffers

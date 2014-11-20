@@ -88,7 +88,7 @@ interface FlashTop;
 	interface FlashRequest request;
 	interface MemWriteClient#(WordSz) hostMemWriteClient;
 	interface MemReadClient#(WordSz) hostMemReadClient;
-   interface PhysMemSlave#(PhysAddrWidth, 128) memSlave;    
+   interface PhysMemSlave#(FlashAddrWidth, 128) memSlave;    
 	interface Aurora_Pins#(4) aurora_fmc1;
 	interface Aurora_Clock_Pins aurora_clk_fmc1;
 endinterface
@@ -418,7 +418,7 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
    interface PhysMemSlave memSlave;
 		interface PhysMemReadServer read_server;
 			interface Put readReq;
-				method Action put(PhysMemRequest#(PhysAddrWidth) req);
+				method Action put(PhysMemRequest#(FlashAddrWidth) req);
 					//req.addr; //bus, chip, blk, page
 					//req.burstLen; //should always be 8k
 					//req.tag; //6 bit (64 tags)
