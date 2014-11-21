@@ -28,13 +28,14 @@ typedef 17 				PageECCBlks; //16 blocks of k=243; 1 block of k=208
 typedef 2											BusWordBytes;
 typedef TMul#(8, BusWordBytes) 				BusWordSz;
 typedef 16 											WordBytes;
+typedef TLog#(WordBytes)						WordBytesLog;
 typedef TMul#(8,WordBytes) 					WordSz;
 //Each burst is 128 bits via the controller interface
 typedef TDiv#(PageSizeUser, WordBytes) 	PageWords;
 typedef TMul#(TMul#(BlocksPerCE, PagesPerBlock), PageWords) WordsPerChip;
 
 typedef WordSz FlashDataWidth;
-typedef 43  FlashAddrWidth;
+typedef 44  FlashAddrWidth;
 
 Integer pageSize 			= valueOf(PageSize); //bytes
 Integer pageSizeUser 	= valueOf(PageSizeUser); //usable page size is 8k

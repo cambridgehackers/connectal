@@ -25,7 +25,8 @@ typedef enum {
 	ST_INIT,
 	ST_CMD,
 	ST_HIT,
-	ST_MISS
+	ST_MISS,
+	ST_MISS_READDATA
 } BufOpState deriving (Bits, Eq);
 
 typedef struct {
@@ -88,6 +89,7 @@ module mkPageBuffers(PageBuffers);
 		rule funnelFlashCmd;
 			let cmd <- pageBuffers[bus].flashReq.get();
 			flashCmdAggrQ.enq(cmd);
+			$display("PageBufferTop: flashCmdAggrQ enq");
 		endrule
 
 		//Handle mem slave read data arbitration
@@ -180,25 +182,34 @@ module mkSinglePageBuffer#(Integer busId)(PageBuffers);
 	let currReq = slaveReqQ.first;
 	PageAddrOff addrOff = decodePhysMemAddr(currReq.addr);
 	rule handleSlaveReq (state==ST_CMD); 
-		//slaveReqQ.deq;
+		$display("PageBuffers: Received slave command: addr=%x, len=%d, tag=%d", currReq.addr,
+			currReq.burstLen, currReq.tag);
+		//slaveReqQ.deq; //FIXME: debug
 		//look up in cache
 		let bus = addrOff.faddr.bus;
 		if (pageBufEntry.valid && pageBufEntry.faddr==addrOff.faddr) begin
 			//if hit, make request to BRAM
+			$display("PageBuffers: hit");
 			state <= ST_HIT;
-			reqRemain <= currReq.burstLen;
-			respRemain <= currReq.burstLen;
+			reqRemain <= currReq.burstLen>>fromInteger(valueOf(WordBytesLog));
+			respRemain <= currReq.burstLen>>fromInteger(valueOf(WordBytesLog));
 		end
 		else begin
 			//if miss, make request to flash controller
+			$display("PageBuffers: miss");
 			state <= ST_MISS;
 			pageBufEntry.valid <= False;
 		end
+		
 	endrule
 
 	rule handleHit (state==ST_HIT && reqRemain>0);
-		Bit#(PageOffsetSz) burstLenExt = zeroExtend(currReq.burstLen);
-		Bit#(PageOffsetSz) baddr = addrOff.offset + burstLenExt - zeroExtend(reqRemain);
+		Bit#(32) burstOffset = zeroExtend((currReq.burstLen>>fromInteger(valueOf(WordBytesLog))) - reqRemain);
+		if (burstOffset >= fromInteger(pageWords)) begin
+			$display("PageBuffer: **ERROR burstOffset exceeds number of pageWords");
+		end
+		Bit#(PageOffsetSz) baddr = addrOff.offset + truncate(burstOffset); //safe truncation
+		$display("PageBuffer: portB read req addrOff=%x, burstOffset=%x, baddr= %x", addrOff.offset, burstOffset, baddr);
 		pageBuffer.portB.request.put(
 			BRAMRequest{
 				write: False,
@@ -213,9 +224,10 @@ module mkSinglePageBuffer#(Integer busId)(PageBuffers);
 		let data <- pageBuffer.portB.response.get();	
 		Bool last = (respRemain==1);
 		slaveRespQ.enq( MemData { data: data, tag: currReq.tag, last: last} );
+		$display("PageBuffer: hit data=%x, tag=%d, last=%d", data, currReq.tag, last);
 		if (respRemain==1) begin
 			state <= ST_CMD;
-			slaveReqQ.deq;
+			slaveReqQ.deq; 
 		end
 		else begin
 			respRemain <= respRemain - 1;
@@ -236,13 +248,17 @@ module mkSinglePageBuffer#(Integer busId)(PageBuffers);
 			page: addrOff.faddr.page
 		};
 		flashCmdQ.enq(fcmd);
+		$display("PageBuffers: missFlashRequest issued for: ftag=%d, bus=%d, chip=%d, blk=%d, page=%d", 
+					ftag, addrOff.faddr.bus, addrOff.faddr.chip, addrOff.faddr.block, addrOff.faddr.page);
+		state <= ST_MISS_READDATA;
 	endrule
 
-	rule missGetFlashRead (state==ST_MISS);
+	rule missGetFlashRead (state==ST_MISS_READDATA);
 		//TODO: only one buffer, so no reordering per bus
 		flashReadQ.deq;
 		let data = tpl_1(flashReadQ.first);
 		let tag = tpl_2(flashReadQ.first);
+		$display("PageBuffers: got read data from flash: tag=%d, data=%x", tag, data);
 		pageBuffer.portA.request.put(
 				BRAMRequest{ write:True, 
 							responseOnWrite:False, 

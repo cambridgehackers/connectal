@@ -137,13 +137,13 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 		cycleCnt <= cycleCnt + 1;
 	endrule
 
-	rule driveFlashCmd (started);
+	rule driveFlashCmd/* (started)*/;
 		let cmdNsrc = flashCmdQ.first;
 		flashCmdQ.deq;
 		let cmd = tpl_1(cmdNsrc);
 		let src = tpl_2(cmdNsrc);
 		tag2busNsrcTable[cmd.tag] <= tuple2(cmd.bus, src);
-		flashCtrl.user.sendCmd(cmd); //forward cmd to flash ctrl
+		flashCtrl.user.sendCmd(cmd); //forward cmd to flash ctrl FIXME DEBUG
 		$display("@%d: Main.bsv: received cmd tag=%d @%x %x %x %x", 
 						cycleCnt, cmd.tag, cmd.bus, cmd.chip, cmd.block, cmd.page);
 	endrule
@@ -381,6 +381,7 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 	//--------------------------------------------
 	rule pageBufFlashReq; 
 		let cmd <- pageBufs.flashReq.get;
+		$display("FlashTop: page buf cmd received");
 		flashCmdQ.enq(tuple2(cmd, SRC_USER_HW));
 	endrule
 
