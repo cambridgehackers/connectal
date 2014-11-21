@@ -1,13 +1,11 @@
-// bsv libraries
+
 import Vector::*;
 import FIFO::*;
 import Connectable::*;
-
-// portz libraries
 import CtrlMux::*;
 import Portal::*;
+import HostInterface::*;
 import Leds::*;
-import MemTypes::*;
 import MemPortal::*;
 
 import TinyTestTypes::*;
