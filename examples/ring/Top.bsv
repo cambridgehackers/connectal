@@ -18,17 +18,14 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-// bsv libraries
 import SpecialFIFOs::*;
 import Vector::*;
 import StmtFSM::*;
 import FIFO::*;
-
-// portz libraries
 import CtrlMux::*;
 import Portal::*;
+import HostInterface::*;
 import ConnectalMemory::*;
-import MemTypes::*;
 import DmaUtils::*;
 import MemServer::*;
 import MMU::*;
