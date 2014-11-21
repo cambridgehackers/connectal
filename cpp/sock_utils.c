@@ -160,7 +160,7 @@ ssize_t sock_fd_read(int sockfd, void *ptr, size_t nbytes, int *recvfd)
 printf("[%s:%d] got fd %d\n", __FUNCTION__, __LINE__, *foo);
     }
     if (n != nbytes) {
-printf("[%s:%d] asked for %ld bytes, got %ld\n", __FUNCTION__, __LINE__, nbytes, n);
+printf("[%s:%d] asked for %ld bytes, got %ld\n", __FUNCTION__, __LINE__, (long)nbytes, (long)n);
     }
     return n;
 }
