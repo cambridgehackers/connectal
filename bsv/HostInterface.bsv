@@ -103,4 +103,5 @@ export PS7LIB::*;
 export HostType;
 export DataBusWidth;
 export NumberOfMasters;
+export PhysAddrWidth;
 `endif
