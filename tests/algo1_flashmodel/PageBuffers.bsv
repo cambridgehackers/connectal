@@ -204,7 +204,7 @@ module mkSinglePageBuffer#(Integer busId)(PageBuffers);
 	endrule
 
 	rule handleHit (state==ST_HIT && reqRemain>0);
-		Bit#(32) burstOffset = (currReq.burstLen>>fromInteger(valueOf(WordBytesLog))) - reqRemain;
+		Bit#(32) burstOffset = zeroExtend((currReq.burstLen>>fromInteger(valueOf(WordBytesLog))) - reqRemain);
 		if (burstOffset >= fromInteger(pageWords)) begin
 			$display("PageBuffer: **ERROR burstOffset exceeds number of pageWords");
 		end
