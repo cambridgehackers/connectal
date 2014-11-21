@@ -29,6 +29,7 @@ import GetPut::*;
 import Connectable::*;
 import Pipe::*;
 import MemTypes::*;
+import HostInterface::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;
 
