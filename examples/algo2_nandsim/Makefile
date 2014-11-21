@@ -1,6 +1,6 @@
 
 CONNECTALDIR?=../..
-INTERFACES = NandSimRequest RegexpRequest RegexpIndication NandSimIndication
+INTERFACES = NandSim Regexp
 BSVFILES = $(CONNECTALDIR)/lib/nandsim/bsv/NandSim.bsv $(CONNECTALDIR)/lib/regexp/bsv/Regexp.bsv $(CONNECTALDIR)/lib/nandsim/bsv/NandSimNames.bsv Top.bsv 
 CPPFILES=test.cpp
 CPPFILES2=../nandsim/testnandsim.cpp

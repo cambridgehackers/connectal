@@ -18,7 +18,6 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-// bsv libraries
 import SpecialFIFOs::*;
 import Vector::*;
 import StmtFSM::*;
@@ -26,13 +25,10 @@ import FIFO::*;
 import BRAM::*;
 import DefaultValue::*;
 import Connectable::*;
-
-// portz libraries
 import Leds::*;
 import CtrlMux::*;
 import Portal::*;
 import ConnectalMemory::*;
-import MemTypes::*;
 import MemServer::*;
 import MemServerInternal::*;
 import MMU::*;
