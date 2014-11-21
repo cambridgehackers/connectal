@@ -35,10 +35,9 @@ import Pipe::*;
 import ConnectalMemory::*;
 
 typedef Bit#(32) SGLId;
-typedef 40 MemOffsetSize;
-typedef `PhysAddrWidth PhysAddrWidth;
+typedef 44 MemOffsetSize;
 typedef 6 MemTagSize;
-typedef `BurstLenSize BurstLenSize;
+typedef 8 BurstLenSize;
 typedef 32 MemServerTags;
 
 // memory request with physical addresses.

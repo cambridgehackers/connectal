@@ -8,10 +8,7 @@ CONNECTALFLAGS += -D DEGPAR=2
 CONNECTALFLAGS += -I$(CONNECTALDIR)/lib/strstr/cpp
 CONNECTALFLAGS += -I$(CONNECTALDIR)/lib/nandsim/cpp
 PIN_TYPE = Top_Pins
-
 CONNECTALFLAGS += -D IMPORT_HOSTIF --bscflags " -D DataBusWidth=128 " --clib rt
-CONNECTALFLAGS += -D BURST_LEN_SIZE=12 
-CONNECTALFLAGS += -D PhysAddrWidth=43 
 include $(CONNECTALDIR)/Makefile.connectal
 
 # #Note: for some reason, xbsv can't parase ControllerTypes.bsv properly. So a soft link in current directory is created

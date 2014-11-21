@@ -62,11 +62,7 @@ interface Top_Pins;
 	interface Aurora_Clock_Pins aurora_clk_fmc1;
 endinterface
 
-
-//module mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,128,Empty,1));
 module mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,DataBusWidth, Top_Pins,1));
-   // provisos (Add#(3, a__, 0)); //FIXME?
-	//(StdConnectalDmaTop#(PhysAddrWidth));
    
    Clock clk250 = host.doubleClock;
    Reset rst250 = host.doubleReset;
@@ -100,8 +96,7 @@ module mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,DataBusWidth,
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
    let rcs = cons(strstr.config_read_client,cons(flashtop.hostMemReadClient,nil));
    let wcs = cons(flashtop.hostMemWriteClient,nil);
-   MemServer#(PhysAddrWidth,128,1) hostMemServer <- mkMemServerRW(hostMemServerIndicationProxy.ifc, rcs,wcs, cons(algoMMU, cons(backingMMU,nil)));
-	//MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, hostMemServer.request);
+   MemServer#(PhysAddrWidth,DataBusWidth,1) hostMemServer <- mkMemServerRW(hostMemServerIndicationProxy.ifc, rcs,wcs, cons(algoMMU, cons(backingMMU,nil)));
 
    // flash memory read server
    MemServerIndicationProxy flashMemServerIndicationProxy <- mkMemServerIndicationProxy(NandMemServerIndication);

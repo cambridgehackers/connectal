@@ -26,6 +26,7 @@
 `define DataBusWidth 64
 `endif
 
+typedef `PhysAddrWidth PhysAddrWidth;
 typedef `DataBusWidth DataBusWidth;
 typedef `NumberOfMasters NumberOfMasters;
 
