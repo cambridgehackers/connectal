@@ -54,7 +54,7 @@ typedef HDMI#(Bit#(16)) HDMI16;
 module mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,64,HDMI#(Bit#(16)),1));
 
 `ifdef ZynqHostTypeIF
-   Clock clk1 = host.fclkclk[1];
+   Clock clk1 = host.ps7.fclkclk[1];
 `else
    Clock clk1 <- exposeCurrentClock();
 `endif

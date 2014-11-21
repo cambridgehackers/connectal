@@ -65,7 +65,7 @@ endinterface
 
 module mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,64,FMComms1Pins,1));
 
-   Clock clk1 = host.fclkclk[1];
+   Clock clk1 = host.ps7.fclkclk[1];
    C2B ref_clk_as_bit <- mkC2B(clk1);
    Wire#(Bit#(1)) ref_clk_wire <- mkDWire(0);
    

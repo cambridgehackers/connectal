@@ -96,12 +96,17 @@ typedef PcieHostTop HostType;
 ////////////////////////////// Zynq /////////////////////////////////
 `ifdef ZynqHostTypeIF
 import PS7LIB::*;
+import Bscan::*;
 
-typedef PS7 HostType;
+interface HostType;
+    interface PS7 ps7;
+    interface BscanTop bscan;
+endinterface
 
-export PS7LIB::*;
-export HostType;
-export DataBusWidth;
-export NumberOfMasters;
-export PhysAddrWidth;
+//export PS7LIB::*;
+//export BscanTop;
+//export HostType;
+//export DataBusWidth;
+//export NumberOfMasters;
+//export PhysAddrWidth;
 `endif
