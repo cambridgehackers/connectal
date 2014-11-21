@@ -18,14 +18,13 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-// bsv libraries
 import Vector::*;
 import FIFO::*;
 import Connectable::*;
 import Portal::*;
+import HostInterface::*;
 import CtrlMux::*;
 import Leds::*;
-import MemTypes::*;
 import MMU::*;
 import MemServer::*;
 import MemPortal::*;
@@ -38,6 +37,7 @@ import Swallow::*;
 import MMURequest::*;
 import MMUIndication::*;
 import MMUIndication::*;
+import SharedMemoryPortal::*;
 import SharedMemoryPortalConfig::*;
 import MemServerIndication::*;
 
