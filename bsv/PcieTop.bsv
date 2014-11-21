@@ -51,11 +51,6 @@ import HostInterface    :: *;
 `define PinType Empty
 `endif
 
-`ifdef USES_BSCAN
-`define BSCAN_ARG  local_bscan
-`else
-`define BSCAN_ARG
-`endif
 typedef `PinType PinType;
 
 // implemented in TlpReplay.cxx

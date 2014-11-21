@@ -19,8 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
-// bsv libraries
 import Vector::*;
 import GetPut::*;
 import Connectable :: *;
@@ -33,11 +31,9 @@ import MemServer::*;
 import MMU::*;
 import ClientServer::*;
 import Pipe::*;
-import MemTypes::*;
 import MemwriteEngine::*;
-
-// portz libraries
 import Portal::*;
+import HostInterface::*;
 import CtrlMux::*;
 import Portal::*;
 import Leds::*;

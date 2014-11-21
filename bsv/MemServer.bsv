@@ -30,6 +30,7 @@ import Assert::*;
 import StmtFSM::*;
 
 // CONNECTAL Libraries
+import HostInterface::*;
 import MemTypes::*;
 import ConnectalMemory::*;
 import MMU::*;

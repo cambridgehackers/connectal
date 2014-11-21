@@ -11,11 +11,6 @@ NUMBER_OF_MASTERS = 1
 
 ifeq ($(BOARD),zedboard)
   CONNECTALFLAGS += -D USE_I2C0
-else
-  ifneq ($(BOARD),zc702)
-    TOP=ImageonPcieTop.bsv
-    MKTOP=mkImageonPcieTop
-  endif
 endif
 
 gentarget:: $(BOARD)/sources/imageon-$(BOARD).xdc

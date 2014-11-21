@@ -39,11 +39,6 @@ import Top               :: *;
 import Bscan             :: *;
 import HostInterface::*;
 
-`ifdef USES_BSCAN
-`define BSCAN_ARG  lbscan.loc[0],
-`else
-`define BSCAN_ARG
-`endif
 `ifndef PinType
 `define PinType Empty
 `endif
@@ -102,9 +97,13 @@ module mkZynqTop(ZynqTop);
    BscanTop bscan <- mkBscanTop(3, clocked_by mainclock, reset_by mainreset); // Use USER3  (JTAG IDCODE address 0x22)
    BscanLocal lbscan <- mkBscanLocal(bscan, clocked_by bscan.tck, reset_by bscan.rst);
 `ifdef IMPORT_HOSTIF
-   ConnectalTop#(PhysAddrWidth, 64, PinType, NumberOfMasters) top <- mkConnectalTop(ps7, clocked_by mainclock, reset_by mainreset);
+   ConnectalTop#(PhysAddrWidth, 64, PinType, NumberOfMasters) top <- mkConnectalTop(
+      (interface HostType;
+          interface ps7 = ps7;
+          interface bscan = lbscan.loc[0];
+      endinterface), clocked_by mainclock, reset_by mainreset);
 `else
-   ConnectalTop#(PhysAddrWidth, 64, PinType, NumberOfMasters) top <- mkConnectalTop(`BSCAN_ARG clocked_by mainclock, reset_by mainreset);
+   ConnectalTop#(PhysAddrWidth, 64, PinType, NumberOfMasters) top <- mkConnectalTop(clocked_by mainclock, reset_by mainreset);
 `endif
    mkConnectionWithTrace(ps7, top, lbscan.loc[1], clocked_by mainclock, reset_by mainreset);
 

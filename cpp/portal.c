@@ -120,18 +120,6 @@ static void init_portal_hw(void)
 #ifdef __KERNEL__
   tboard = get_pcie_portal_descriptor();
 #endif
-#ifdef ZYNQ /* There is no way to set userclock freq from host on PCIE */
-  // start by setting the clock frequency (this only has any effect on the zynq platform)
-  PortalClockRequest request;
-  long reqF = 100000000; // 100 Mhz
-  request.clknum = 0;
-  request.requested_rate = reqF;
-  assert(false);
-  int status = -1;//ioctl(globalDirectory.fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
-  if (status < 0)
-    PORTAL_PRINTF("init_portal: error setting fclk0, errno=%d\n", errno);
-  PORTAL_PRINTF("init_portal: set fclk0 (%ld,%ld)\n", reqF, request.actual_rate);
-#endif
 }
 
 void portalTrace_start()

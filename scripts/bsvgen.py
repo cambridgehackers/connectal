@@ -82,6 +82,10 @@ module %(moduleContext)s mk%(Dut)sPortalSynth#(Bit#(32) id) (%(Dut)sPortal);
 %(indicationMethods)s
     endinterface
     interface PipePortal portalIfc;
+        method Bit#(16) messageSize(Bit#(16) methodNumber);
+            case (methodNumber)%(messageSizes)s
+            endcase
+        endmethod
         interface Vector requests = nil;
         interface Vector indications = indicationPipes;
     endinterface
@@ -140,6 +144,10 @@ module mk%(Dut)sPipes#(Bit#(32) id)(%(Dut)sPipes);
     Vector#(%(channelCount)s, PipeIn#(Bit#(32))) requestPipeIn = newVector();
 %(methodRules)s
     interface PipePortal portalIfc;
+        method Bit#(16) messageSize(Bit#(16) methodNumber);
+            case (methodNumber)%(messageSizes)s
+            endcase
+        endmethod
         interface Vector requests = requestPipeIn;
         interface Vector indications = nil;
     endinterface
@@ -182,6 +190,9 @@ requestRuleTemplate='''
     FromBit#(32,%(MethodName)s_Message) %(methodName)s_requestFifo <- mkFromBit();
     requestPipeIn[%(channelNumber)s] = toPipeIn(%(methodName)s_requestFifo);
 '''
+
+messageSizeTemplate='''
+            %(channelNumber)s: return fromInteger(valueOf(SizeOf#(%(MethodName)s_Message)));'''
 
 mkConnectionMethodTemplate='''
     rule handle_%(methodName)s_request;
@@ -260,6 +271,7 @@ def fixupSubsts(item, suffix):
     substs['indicationMethods'] = collectElements(dlist, indicationMethodTemplate, name)
     substs['requestElements'] = collectElements(dlist, requestStructTemplate, name)
     substs['methodRules'] = collectElements(dlist, requestRuleTemplate, name)
+    substs['messageSizes'] = collectElements(dlist, messageSizeTemplate, name)
     return substs
 
 def generate_bsv(project_dir, noisyFlag, jsondata):
