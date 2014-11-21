@@ -991,7 +991,12 @@ def generate_bsvcpp(filelist, project_dir, dutname, bsvdefines, interfaces, nf):
     ## code generation pass
     ilist = []
     for i in interfaces:
-        ifc = globalv.globalvars[i]
+        ifc = globalv.globalvars.get(i)
+        if not ifc:
+            print 'Connectal: Unable to locate the interface:', i
+            for keys in globalv.globalvars:
+                print '    ', keys
+            sys.exit(1)
         ifc = ifc.instantiate(dict(zip(ifc.params, ifc.params)))
         ilist.append(ifc)
         for ditem in ifc.decls:
