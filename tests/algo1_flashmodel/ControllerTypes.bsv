@@ -193,10 +193,10 @@ typedef struct {
 } FlashCmd deriving (Bits, Eq);
 
 typedef struct {
-	BusT bus;
-	ChipT chip;
-	Bit#(16) block;
 	Bit#(8) page;
+	Bit#(16) block;
+	ChipT chip;
+	BusT bus;
 } FlashAddr deriving (Bits, Eq);
 
 // Flash Controller User Ifc
