@@ -41,10 +41,10 @@ typedef struct {
 
 function PageAddrOff decodePhysMemAddr(Bit#(FlashAddrWidth) addr);
 	//byte addressible
-	//Tuple2#(PageAddrOff, Bit#(TLog#(WordBytes))) decodedAddr = unpack(truncate(addr));
-	//return tpl_1(decodedAddr);
-	PageAddrOff decodedAddr = unpack(truncate(addr)); //FIXME FIXME FIXME
-	return decodedAddr;
+	Tuple2#(PageAddrOff, Bit#(TLog#(WordBytes))) decodedAddr = unpack(truncate(addr));
+	return tpl_1(decodedAddr);
+	//PageAddrOff decodedAddr = unpack(truncate(addr)); //FIXME FIXME FIXME
+	//return decodedAddr;
 endfunction
 
 
@@ -204,7 +204,7 @@ module mkSinglePageBuffer#(Integer busId)(PageBuffers);
 	endrule
 
 	rule handleHit (state==ST_HIT && reqRemain>0);
-		Bit#(BurstLenSize) burstOffset = (currReq.burstLen>>fromInteger(valueOf(WordBytesLog))) - reqRemain;
+		Bit#(32) burstOffset = (currReq.burstLen>>fromInteger(valueOf(WordBytesLog))) - reqRemain;
 		if (burstOffset >= fromInteger(pageWords)) begin
 			$display("PageBuffer: **ERROR burstOffset exceeds number of pageWords");
 		end
