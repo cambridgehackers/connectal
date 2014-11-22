@@ -301,7 +301,7 @@ int busy_hardware(struct PortalInternal *pint, volatile unsigned int *addr, cons
     volatile unsigned int *tempp = addr + 1;
     while (!pint->item->read(pint, &tempp) && count-- > 0)
         ; /* busy wait a bit on 'fifo not full' */
-#if 1
+#if 0
     if (count <= 0){
         PORTAL_PRINTF("putFailed: %s\n", str);
         return 1;
