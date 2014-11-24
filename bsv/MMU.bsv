@@ -45,7 +45,7 @@ typedef Bit#(TLog#(MaxNumSGLists)) RegionsIdx;
 typedef 8 IndexWidth;
 
 typedef struct {
-   SGListId               id;
+   SGListId             id;
    Bit#(MemOffsetSize) off;
 } ReqTup deriving (Eq,Bits,FShow);
 
@@ -71,7 +71,7 @@ typedef Bit#(TSub#(MemOffsetSize,SGListPageShift4)) Page4;
 typedef Bit#(TSub#(MemOffsetSize,SGListPageShift8)) Page8;
 
 typedef struct {
-   Bit#(28) barrier;
+   Bit#(TSub#(MemOffsetSize,SGListPageShift0)) barrier;
    Bit#(IndexWidth) idxOffset;
    } SingleRegion deriving (Eq,Bits,FShow);
 
@@ -90,8 +90,9 @@ typedef struct {DmaErrorType errorType;
 module mkMMU#(Integer iid, Bool bsimMMap, MMUIndication mmuIndication)(MMU#(addrWidth))
    provisos(Log#(MaxNumSGLists, listIdxSize),
 	    Add#(listIdxSize,8, entryIdxSize),
-	    Add#(c__, addrWidth, MemOffsetSize));
+	    Add#(a__,addrWidth,MemOffsetSize));
    
+	    
    let verbose = False;
    TagGen#(MaxNumSGLists) sglId_gen <- mkTagGen;
    rule complete_sglId_gen;

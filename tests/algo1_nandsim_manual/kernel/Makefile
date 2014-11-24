@@ -31,8 +31,8 @@ kernel_exe-y := ../nandsim_manual.o \
      $(BOARDDIR)/MMUIndicationWrapper.o \
      $(BOARDDIR)/MemServerRequestProxy.o \
      $(BOARDDIR)/MemServerIndicationWrapper.o \
-     $(BOARDDIR)/NandSimIndicationWrapper.o \
-     $(BOARDDIR)/NandSimRequestProxy.o \
+     $(BOARDDIR)/NandCfgIndicationWrapper.o \
+     $(BOARDDIR)/NandCfgRequestProxy.o \
      $(CPPDIR)/portal.o \
      $(CPPDIR)/dmaManager.o \
      $(CPPDIR)/kernel_module.o

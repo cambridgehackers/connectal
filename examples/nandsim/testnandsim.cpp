@@ -32,8 +32,10 @@
 #include "StdDmaIndication.h"
 #include "MMURequest.h"
 #include "GeneratedTypes.h" 
-#include "NandSimIndication.h"
-#include "NandSimRequest.h"
+#include "NandCfgIndication.h"
+#include "NandCfgRequest.h"
+
+#include "nandsim.h"
 
 static int trace_memory = 1;
 extern "C" {
@@ -42,7 +44,7 @@ extern "C" {
 
 using namespace std;
 
-class NandSimIndication : public NandSimIndicationWrapper
+class NandCfgIndication : public NandCfgIndicationWrapper
 {
 public:
   unsigned int rDataCnt;
@@ -63,7 +65,7 @@ public:
     sem_post(&sem);
   }
 
-  NandSimIndication(int id) : NandSimIndicationWrapper(id) {
+  NandCfgIndication(int id) : NandCfgIndicationWrapper(id) {
     sem_init(&sem, 0, 0);
   }
   void wait() {
@@ -73,44 +75,6 @@ public:
 private:
   sem_t sem;
 };
-
-static int sockfd = -1;
-#define SOCK_NAME "socket_for_nandsim"
-void connect_to_algo_exe(void)
-{
-  int connect_attempts = 0;
-
-  if (sockfd != -1)
-    return;
-  if ((sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-    fprintf(stderr, "%s (%s) socket error %s\n",__FUNCTION__, SOCK_NAME, strerror(errno));
-    exit(1);
-  }
-
-  //fprintf(stderr, "%s (%s) trying to connect...\n",__FUNCTION__, SOCK_NAME);
-  struct sockaddr_un local;
-  local.sun_family = AF_UNIX;
-  strcpy(local.sun_path, SOCK_NAME);
-  while (connect(sockfd, (struct sockaddr *)&local, strlen(local.sun_path) + sizeof(local.sun_family)) == -1) {
-    if(connect_attempts++ > 100){
-      fprintf(stderr,"%s (%s) connect error %s\n",__FUNCTION__, SOCK_NAME, strerror(errno));
-      exit(1);
-    }
-    fprintf(stderr, "%s (%s) retrying connection\n",__FUNCTION__, SOCK_NAME);
-    sleep(5);
-  }
-  fprintf(stderr, "%s (%s) connected\n",__FUNCTION__, SOCK_NAME);
-}
-
-
-void write_to_algo_exe(unsigned int x)
-{
-  if (send(sockfd, &x, sizeof(x), 0) == -1) {
-    fprintf(stderr, "%s send error\n",__FUNCTION__);
-    exit(1);
-  }
-}
-
 
 int main(int argc, const char **argv)
 {
@@ -127,8 +91,8 @@ int main(int argc, const char **argv)
   DmaManager *hostDma = new DmaManager(hostMMURequest);
   MMUIndication *hostMMUIndication = new MMUIndication(hostDma, IfcNames_BackingStoreMMUIndication);
 
-  NandSimRequestProxy *nandsimRequest = new NandSimRequestProxy(IfcNames_NandSimRequest);
-  NandSimIndication *nandsimIndication = new NandSimIndication(IfcNames_NandSimIndication);
+  NandCfgRequestProxy *nandcfgRequest = new NandCfgRequestProxy(IfcNames_NandCfgRequest);
+  NandCfgIndication *nandcfgIndication = new NandCfgIndication(IfcNames_NandCfgIndication);
 
   portalExec_start();
 
@@ -137,8 +101,8 @@ int main(int argc, const char **argv)
   int ref_nandAlloc = hostDma->reference(nandAlloc);
   fprintf(stderr, "ref_nandAlloc=%d\n", ref_nandAlloc);
   fprintf(stderr, "testnandsim::NAND alloc fd=%d ref=%d\n", nandAlloc, ref_nandAlloc);
-  nandsimRequest->configureNand(ref_nandAlloc, nandBytes);
-  nandsimIndication->wait();
+  nandcfgRequest->configureNand(ref_nandAlloc, nandBytes);
+  nandcfgIndication->wait();
 
 #ifndef ALGO_NANDSIM
   if (argc == 1) {
@@ -162,8 +126,8 @@ int main(int argc, const char **argv)
 	srcBuffer[i] = loop+i;
       }
       portalDCacheFlushInval(srcAlloc, srcBytes, srcBuffer);
-      nandsimRequest->startWrite(ref_srcAlloc, 0, loop, srcBytes, 16);
-      nandsimIndication->wait();
+      nandcfgRequest->startWrite(ref_srcAlloc, 0, loop, srcBytes, 16);
+      nandcfgIndication->wait();
       loop+=srcBytes;
     }
     fprintf(stderr, "testnandsim:: write phase complete\n");
@@ -176,8 +140,8 @@ int main(int argc, const char **argv)
       }
 
       portalDCacheFlushInval(srcAlloc, srcBytes, srcBuffer);
-      nandsimRequest->startRead(ref_srcAlloc, 0, loop, srcBytes, 16);
-      nandsimIndication->wait();
+      nandcfgRequest->startRead(ref_srcAlloc, 0, loop, srcBytes, 16);
+      nandcfgIndication->wait();
       
       for (int i = 0; i < srcBytes/sizeof(srcBuffer[0]); i++) {
 	if (srcBuffer[i] != loop+i) {
@@ -224,8 +188,8 @@ int main(int argc, const char **argv)
     // write the contents of data into "flash" memory
     portalDCacheFlushInval(ref_dataAlloc, data_len, data);
     fprintf(stderr, "testnandsim::invoking write %08x %08x\n", ref_dataAlloc, data_len);
-    nandsimRequest->startWrite(ref_dataAlloc, 0, 0, data_len, 16);
-    nandsimIndication->wait();
+    nandcfgRequest->startWrite(ref_dataAlloc, 0, 0, data_len, 16);
+    nandcfgIndication->wait();
 
     fprintf(stderr, "testnandsim::connecting to algo_exe...\n");
     connect_to_algo_exe();

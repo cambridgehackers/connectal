@@ -28,11 +28,14 @@ typedef 17 				PageECCBlks; //16 blocks of k=243; 1 block of k=208
 typedef 2											BusWordBytes;
 typedef TMul#(8, BusWordBytes) 				BusWordSz;
 typedef 16 											WordBytes;
+typedef TLog#(WordBytes)						WordBytesLog;
 typedef TMul#(8,WordBytes) 					WordSz;
 //Each burst is 128 bits via the controller interface
 typedef TDiv#(PageSizeUser, WordBytes) 	PageWords;
 typedef TMul#(TMul#(BlocksPerCE, PagesPerBlock), PageWords) WordsPerChip;
 
+typedef WordSz FlashDataWidth;
+typedef 44  FlashAddrWidth;
 
 Integer pageSize 			= valueOf(PageSize); //bytes
 Integer pageSizeUser 	= valueOf(PageSizeUser); //usable page size is 8k
@@ -66,6 +69,9 @@ typedef 128 NumTags;
 typedef Bit#(TLog#(NumTags)) TagT;
 typedef Bit#(TLog#(ChipsPerBus)) ChipT;
 typedef Bit#(TLog#(NUM_BUSES)) BusT;
+
+Integer num_tags = valueOf(NumTags);
+Integer num_buses = valueOf(NUM_BUSES);
 
 typedef enum {
 	SRC_HOST,
@@ -185,6 +191,13 @@ typedef struct {
 	Bit#(16) block;
 	Bit#(8) page;
 } FlashCmd deriving (Bits, Eq);
+
+typedef struct {
+	Bit#(8) page;
+	Bit#(16) block;
+	ChipT chip;
+	BusT bus;
+} FlashAddr deriving (Bits, Eq);
 
 // Flash Controller User Ifc
 interface FlashCtrlUser;

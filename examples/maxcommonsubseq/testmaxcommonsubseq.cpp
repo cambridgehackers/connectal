@@ -169,7 +169,7 @@ int main(int argc, const char **argv)
     device->start(0);
     sem_wait(&test_sem);
     cycles = portalTimerLap(0);
-    beats = dma->show_mem_stats(ChannelType_Read);
+    beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
     fprintf(stderr, "hw cycles: %f\n", (float)cycles);
     device->fetch(ref_fetchAlloc, 0, 0, fetch_len / 2);
     sem_wait(&test_sem);

@@ -63,6 +63,7 @@ argparser.add_argument('--floorplan', help='Floorplan XDC', default=None)
 argparser.add_argument('-P', '--partition-module', default=[], help='Modules to separately synthesize/place/route', action='append')
 argparser.add_argument('--cachedir', default=None, help='Cache directory for fpgamake to use')
 argparser.add_argument('-v', '--verbose', help='Display verbose information messages', action='store_true')
+argparser.add_argument(      '--dump_map', help='List of portals passed to pcieflat for PCIe trace debug info')
 
 noisyFlag=False
 
@@ -136,6 +137,7 @@ export DUT_NAME = %(Dut)s
 %(runsource2)s
 
 %(mdefines)s
+%(dump_map)s
 
 include $(CONNECTALDIR)/scripts/Makefile.connectal.build
 
@@ -366,6 +368,7 @@ if __name__=='__main__':
                                    'clibs': ' '.join(['-l%s' % l for l in options.clib]),
                                    'cdefines': ' '.join([ '-D%s' % d for d in bsvdefines ]),
                                    'mdefines': '\n'.join(['%s="%s"' % (var,val) for (var,val) in map(util.splitBinding, bsvdefines)]),
+                                   'dump_map': ('export PORTAL_DUMP_MAP=' + options.dump_map + '\n') if options.dump_map else '',
                                    'bscflags': ' '.join(options.bscflags),
                                    'xelabflags': ' '.join(options.xelabflags),
                                    'xsimflags': ' '.join(options.xsimflags),

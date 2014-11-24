@@ -56,13 +56,14 @@ import ControllerTypes::*;
 import ControllerTypes::*;
 //import FlashCtrlVirtex::*;
 import FlashCtrlModel::*;
+import PageBuffers::*;
 
 interface FlashRequest;
 	method Action readPage(Bit#(32) bus, Bit#(32) chip, Bit#(32) block, Bit#(32) page, Bit#(32) tag);
 	method Action writePage(Bit#(32) bus, Bit#(32) chip, Bit#(32) block, Bit#(32) page, Bit#(32) tag);
 	method Action eraseBlock(Bit#(32) bus, Bit#(32) chip, Bit#(32) block, Bit#(32) tag);
-	method Action addDmaReadRefs(Bit#(32) pointer, Bit#(32) offset, Bit#(32) tag);
-	method Action addDmaWriteRefs(Bit#(32) pointer, Bit#(32) offset, Bit#(32) tag);
+	method Action addDmaReadRefs(Bit#(32) sglId, Bit#(32) offset, Bit#(32) tag);
+	method Action addDmaWriteRefs(Bit#(32) sglId, Bit#(32) offset, Bit#(32) tag);
 	method Action start(Bit#(32) dummy);
 	method Action debugDumpReq(Bit#(32) dummy);
 	method Action setDebugVals (Bit#(32) flag, Bit#(32) debugDelay); 
@@ -87,7 +88,7 @@ interface FlashTop;
 	interface FlashRequest request;
 	interface MemWriteClient#(WordSz) hostMemWriteClient;
 	interface MemReadClient#(WordSz) hostMemReadClient;
-   interface PhysMemSlave#(PhysAddrWidth, 128) memSlave;    
+   interface PhysMemSlave#(FlashAddrWidth, 128) memSlave;    
 	interface Aurora_Pins#(4) aurora_fmc1;
 	interface Aurora_Clock_Pins aurora_clk_fmc1;
 endinterface
@@ -106,7 +107,7 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 	Vector#(NumTags, Reg#(Tuple2#(Bit#(32),Bit#(32)))) dmaWriteRefs <- replicateM(mkRegU());
 	Vector#(NumTags, Reg#(Tuple2#(Bit#(32),Bit#(32)))) dmaReadRefs <- replicateM(mkRegU());
 	Vector#(NUM_BUSES, FIFO#(Tuple2#(Bit#(WordSz), TagT))) dmaWriteBuf <- replicateM(mkSizedBRAMFIFO(dmaBurstWords*2));
-	FIFO#(Tuple2#(Bit#(WordSz), TagT)) memSlaveReadBuf <- mkSizedBRAMFIFO(128); //doesn't matter size?
+	//FIFO#(Tuple3#(Bit#(WordSz), TagT, Bool)) memSlaveReadBuf <- mkSizedBRAMFIFO(128); //doesn't matter size?
 	Vector#(NUM_BUSES, FIFO#(Tuple2#(Bit#(WordSz), TagT))) dmaWriteBufOut <- replicateM(mkFIFO());
 
 	GtxClockImportIfc gtx_clk_fmc1 <- mkGtxClockImport;
@@ -116,12 +117,16 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 		FlashCtrlVirtexIfc flashCtrl <- mkFlashCtrlVirtex(gtx_clk_fmc1.gtx_clk_p_ifc, gtx_clk_fmc1.gtx_clk_n_ifc, clk250);
 	`endif
 
+	//Page Buffers for MemSlave
+	PageBuffers pageBufs <- mkPageBuffers();
+
+
 	//Create read/write engines with NUM_BUSES memservers
 	MemreadEngineV#(WordSz, 1, NUM_BUSES) re <- mkMemreadEngine;
 	MemwriteEngineV#(WordSz, 1, NUM_BUSES) we <- mkMemwriteEngine;
-	//MemwriteEngineV#(WordSz, 2, NUM_BUSES) we <- mkMemwriteEngineBuff(1024);
 
 	Vector#(NUM_BUSES, Reg#(Bit#(16))) dmaWBurstCnts <- replicateM(mkReg(0));
+	Vector#(NUM_BUSES, Reg#(Bit#(16))) memSlaveCnts <- replicateM(mkReg(0));
 	Vector#(NUM_BUSES, FIFO#(TagT)) dmaReqQs <- replicateM(mkSizedFIFO(valueOf(NumTags)));//TODO make bigger?
 	Vector#(NUM_BUSES, FIFO#(Tuple2#(TagT, Bit#(32)))) dmaReq2RespQ <- replicateM(mkSizedFIFO(valueOf(NumTags))); //TODO make bigger?
 	Vector#(NUM_BUSES, Reg#(Bit#(32))) dmaWrReqCnts <- replicateM(mkReg(0));
@@ -132,13 +137,13 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 		cycleCnt <= cycleCnt + 1;
 	endrule
 
-	rule driveFlashCmd (started);
+	rule driveFlashCmd/* (started)*/;
 		let cmdNsrc = flashCmdQ.first;
 		flashCmdQ.deq;
 		let cmd = tpl_1(cmdNsrc);
 		let src = tpl_2(cmdNsrc);
 		tag2busNsrcTable[cmd.tag] <= tuple2(cmd.bus, src);
-		flashCtrl.user.sendCmd(cmd); //forward cmd to flash ctrl
+		flashCtrl.user.sendCmd(cmd); //forward cmd to flash ctrl FIXME DEBUG
 		$display("@%d: Main.bsv: received cmd tag=%d @%x %x %x %x", 
 						cycleCnt, cmd.tag, cmd.bus, cmd.chip, cmd.block, cmd.page);
 	endrule
@@ -165,7 +170,6 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 		end
 	endrule
 
-
 	rule doDistributeReadFromFlash;
 		let taggedRdata = dataFlash2DmaQ.first;
 		dataFlash2DmaQ.deq;
@@ -178,7 +182,18 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 			dmaWriteBuf[bus].enq(taggedRdata);
 		end
 		else if (src==SRC_USER_HW) begin
-			memSlaveReadBuf.enq(taggedRdata);
+			pageBufs.readResp.put(taggedRdata);
+			/*
+			Bool last = False;
+			if (memSlaveCnts[bus]==fromInteger(pageWords-1)) begin
+				memSlaveCnts[bus] <= 0;
+				last = True;
+			end
+			else begin
+				memSlaveCnts[bus] <= memSlaveCnts[bus] + 1;
+			end
+			memSlaveReadBuf.enq(tuple3(data, tag, last));
+			*/
 		end
 		else begin
 			$display("ERROR: flashTop: incorrect source");
@@ -218,12 +233,12 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 		rule initiateDmaWrite;
 			dmaReqQs[b].deq;
 			let tag = dmaReqQs[b].first;
-			let base = tpl_1(dmaWriteRefs[tag]);
+			let sglId = tpl_1(dmaWriteRefs[tag]);
 			let offset = tpl_2(dmaWriteRefs[tag]);
 			Bit#(32) burstOffset = (dmaWrReqCnts[b]<<log2(dmaBurstBytes)) + offset;
 			let dmaCmd = MemengineCmd {
 								tag: ?, //TODO: this was added in the new connectal
-								sglId: base, 
+								sglId: sglId, 
 								base: zeroExtend(burstOffset),
 								len:fromInteger(dmaBurstBytes), 
 								burstLen:fromInteger(dmaBurstBytes)
@@ -232,7 +247,7 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 			dmaReq2RespQ[b].enq(tuple2(tag, dmaWrReqCnts[b]));
 			
 			$display("@%d Main.bsv: init dma write tag=%d, bus=%d, addr=0x%x 0x%x", 
-							cycleCnt, tag, b, base, burstOffset);
+							cycleCnt, tag, b, sglId, burstOffset);
 			if (dmaWrReqCnts[b] == fromInteger(dmaBurstsPerPage-1)) begin
 				dmaWrReqCnts[b] <= 0;
 			end
@@ -269,15 +284,6 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 	// Writes to Flash (DMA Reads)
 	//--------------------------------------------
 
-	/*
-	//Instantiate dma readers (in DMABurstHelper)
-	Vector#(NUM_BUSES, DMAReadEngineIfc#(WordSz)) dmaReaders;
-	for (Integer b=0; b<valueOf(NUM_BUSES); b=b+1) begin
-		DMAReadEngineIfc#(WordSz) reader <- mkDmaReadEngine(re.readServers[b], re.dataPipes[b]);
-		dmaReaders[b] = reader; 
-	end //For NUM_BUSES
-	*/
-
 	FIFO#(Tuple2#(TagT, BusT)) wrToDmaReqQ <- mkFIFO();
 	Vector#(NUM_BUSES, FIFO#(TagT)) dmaRdReq2RespQ <- replicateM(mkSizedFIFO(valueOf(NumTags))); //TODO sz
 	Vector#(NUM_BUSES, Reg#(Bit#(32))) dmaReadBurstCount <- replicateM(mkReg(0));
@@ -299,24 +305,23 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 		let bus = tpl_2(r);
 		dmaReadReqQ[bus].enq(tag);
 		dmaRdReq2RespQ[bus].enq(tag);
-		//dmaReaders[bus].startRead(tag, fromInteger(pageWords));
 	endrule
 
 	for (Integer b=0; b<valueOf(NUM_BUSES); b=b+1) begin
 		rule initDmaRead;
 			let tag = dmaReadReqQ[b].first;
-			let base = tpl_1(dmaReadRefs[tag]);
+			let sglId = tpl_1(dmaReadRefs[tag]);
 			let offset = tpl_2(dmaReadRefs[tag]);
 			Bit#(32) burstOffset = (dmaRdReqCnts[b]<<log2(dmaBurstBytes)) + offset;
 			let dmaCmd = MemengineCmd {
 								tag: ?, //TODO: this was added in the new connectal
-								sglId: base, 
+								sglId: sglId, 
 								base: zeroExtend(burstOffset),
 								len:fromInteger(dmaBurstBytes), 
 								burstLen:fromInteger(dmaBurstBytes)
 							};
 			re.readServers[b].request.put(dmaCmd);
-			$display("Main.bsv: dma read cmd issued: base=%x, burstOffset=%d", base, burstOffset);
+			$display("Main.bsv: dma read cmd issued: sglId=%x, burstOffset=%d", sglId, burstOffset);
 
 			if (dmaRdReqCnts[b] == fromInteger(dmaBurstsPerPage-1)) begin
 				dmaRdReqCnts[b] <= 0;
@@ -348,23 +353,6 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 			end
 		endrule
 	end //for each bus
-	
-	//Handle read data/done from each DMA reader port
-	/*
-	for (Integer b=0; b<valueOf(NUM_BUSES); b=b+1) begin
-		rule dmaReadDone;
-			let trashTag <- dmaReaders[b].done; //ignore this return tag
-		endrule
-
-		rule dmaReadData;
-			let r <- dmaReaders[b].read;
-			let data = tpl_1(r);
-			let tag = tpl_2(r);
-			flashCtrl.user.writeWord(tuple2(data, tag));
-		endrule
-	end
-	*/
-
 
 	//--------------------------------------------
 	// Writes/Erase Acks
@@ -388,6 +376,14 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 		endcase
 	endrule
 
+	//--------------------------------------------
+	// PageBuffer flash cmd requests
+	//--------------------------------------------
+	rule pageBufFlashReq; 
+		let cmd <- pageBufs.flashReq.get;
+		$display("FlashTop: page buf cmd received");
+		flashCmdQ.enq(tuple2(cmd, SRC_USER_HW));
+	endrule
 
 
 
@@ -416,13 +412,14 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 	//Vector#(1, MemReadClient#(WordSz)) dmaReadClientVec;
 	//dmaWriteClientVec[0] = we.dmaClient;
 	//dmaReadClientVec[0] = re.dmaClient;
-		
+	
+	/*
 	Reg#(Bit#(1)) getPhase <- mkReg(0);
 
    interface PhysMemSlave memSlave;
 		interface PhysMemReadServer read_server;
 			interface Put readReq;
-				method Action put(PhysMemRequest#(PhysAddrWidth) req);
+				method Action put(PhysMemRequest#(FlashAddrWidth) req);
 					//req.addr; //bus, chip, blk, page
 					//req.burstLen; //should always be 8k
 					//req.tag; //6 bit (64 tags)
@@ -445,50 +442,26 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 			endinterface
 			interface Get readData;
 				method ActionValue#(MemData#(128)) get();
-					let taggedRdata = memSlaveReadBuf.first;
-					Bit#(WordSz) data = tpl_1(taggedRdata);
-					TagT tag = tpl_2(taggedRdata);
+					let taggedRdataLast = memSlaveReadBuf.first;
+					Bit#(WordSz) data = tpl_1(taggedRdataLast);
+					TagT tag = tpl_2(taggedRdataLast);
+					Bool last = tpl_3(taggedRdataLast);
 
 					memSlaveReadBuf.deq;
 					MemData#(128) memData = MemData { 
 							data: data, 
 							tag: truncate(tag), 	//FIXME DANGEROUS
-							last: False				//Assuming unused
+							last: last				
 						};
-					/*
-					Bit#(64) data_64 = 0;
-					if (getPhase==0) begin
-						getPhase <= 1;
-						data_64 = truncateLSB(data);
-					end
-					else begin
-						getPhase <= 0;
-						data_64 = truncate(data);
-						memSlaveReadBuf.deq;
-					end
-					MemData#(64) memData = MemData { 
-							data: data_64, 
-							tag: truncate(tag), 	//FIXME DANGEROUS
-							last: False				//Assuming unused
-						};
-						*/
 					return memData;
 				endmethod
 			endinterface
 		endinterface
 		interface PhysMemWriteServer write_server = ?;
-		/*
-		interface PhysMemWriteServer write_server;
-			interface Put writeReq;
-				method 
-			endinterface
-			interface Get writeData = ?;
-			endinterface
-			interface Get writeDone = ?;
-			endinterface
-		endinterface
-		*/
 	endinterface
+	*/
+
+	interface PhysMemSlave memSlave = pageBufs.memSlave;
 
    interface FlashRequest request;
 		method Action readPage(Bit#(32) bus, Bit#(32) chip, Bit#(32) block, Bit#(32) page, Bit#(32) tag);
@@ -529,15 +502,12 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 			flashCmdQ.enq(tuple2(fcmd, SRC_HOST));
 		endmethod
 
-		method Action addDmaReadRefs(Bit#(32) pointer, Bit#(32) offset, Bit#(32) tag);
-			//for (Integer b=0; b<valueOf(NUM_BUSES); b=b+1) begin
-			//	dmaReaders[b].addBuffer(truncate(tag), offset, pointer);
-			//end
-			dmaReadRefs[tag] <= tuple2(pointer, offset);
+		method Action addDmaReadRefs(Bit#(32) sglId, Bit#(32) offset, Bit#(32) tag);
+			dmaReadRefs[tag] <= tuple2(sglId, offset);
 		endmethod
 
-		method Action addDmaWriteRefs(Bit#(32) pointer, Bit#(32) offset, Bit#(32) tag);
-			dmaWriteRefs[tag] <= tuple2(pointer, offset);
+		method Action addDmaWriteRefs(Bit#(32) sglId, Bit#(32) offset, Bit#(32) tag);
+			dmaWriteRefs[tag] <= tuple2(sglId, offset);
 		endmethod
 
 		method Action start(Bit#(32) dummy);

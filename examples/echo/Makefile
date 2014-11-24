@@ -14,5 +14,7 @@ NUMBER_OF_MASTERS =0
 ## for testing fpgamake:
 FPGAMAKE_CONNECTALFLAGS += -P mkEchoIndicationProxySynth -P mkEchoRequestWrapperMemPortalPipes
 
+PORTAL_DUMP_MAP = "Swallow:EchoRequest:EchoIndication"
+
 include $(CONNECTALDIR)/Makefile.connectal
 

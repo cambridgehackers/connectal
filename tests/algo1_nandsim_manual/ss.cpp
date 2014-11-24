@@ -38,8 +38,8 @@
 #include "StdDmaIndication.h"
 #include "MMURequest.h"
 #include "GeneratedTypes.h" 
-#include "NandSimIndication.h"
-#include "NandSimRequest.h"
+#include "NandCfgIndication.h"
+#include "NandCfgRequest.h"
 #include "StrstrIndication.h"
 #include "StrstrRequest.h"
 

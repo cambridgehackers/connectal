@@ -61,7 +61,7 @@ public:
         fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
         echoRequestProxy->setLeds(v);
         sleep(1);
-        exit(1);
+        exit(0);
     }
     EchoRequest(unsigned int id, PortalItemFunctions *item, void *param) : EchoRequestWrapper(id, item, param) {}
 };

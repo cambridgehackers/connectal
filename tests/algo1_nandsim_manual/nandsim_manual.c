@@ -51,25 +51,25 @@ static int burstLen = 16;
 static long back_sz  = numWords*sizeof(unsigned int);
 static DmaManagerPrivate priv;
 
-void NandSimIndicationWrappereraseDone_cb (  struct PortalInternal *p, const uint32_t tag )
+void NandCfgIndicationWrappereraseDone_cb (  struct PortalInternal *p, const uint32_t tag )
 {
   PORTAL_PRINTF( "cb: NandSim_eraseDone(tag = %x)\n", tag);
   sem_post(&test_sem);
 }
 
-void NandSimIndicationWrapperwriteDone_cb (  struct PortalInternal *p, const uint32_t tag )
+void NandCfgIndicationWrapperwriteDone_cb (  struct PortalInternal *p, const uint32_t tag )
 {
   PORTAL_PRINTF( "cb: NandSim_writeDone(tag = %x)\n", tag);
   sem_post(&test_sem);
 }
 
-void NandSimIndicationWrapperreadDone_cb (  struct PortalInternal *p, const uint32_t tag )
+void NandCfgIndicationWrapperreadDone_cb (  struct PortalInternal *p, const uint32_t tag )
 {
   PORTAL_PRINTF( "cb: NandSim_readDone(tag = %x)\n", tag);
   sem_post(&test_sem);
 }
 
-void NandSimIndicationWrapperconfigureNandDone_cb (  struct PortalInternal *p )
+void NandCfgIndicationWrapperconfigureNandDone_cb (  struct PortalInternal *p )
 {
   PORTAL_PRINTF( "cb: NandSim_NandDone\n");
   sem_post(&test_sem);
@@ -129,11 +129,11 @@ static void *pthread_worker(void *p)
 #endif
     return rc;
 }
-NandSimIndicationCb NandSimIndication_cbTable = {
-    NandSimIndicationWrappereraseDone_cb,
-    NandSimIndicationWrapperwriteDone_cb,
-    NandSimIndicationWrapperreadDone_cb,
-    NandSimIndicationWrapperconfigureNandDone_cb,
+NandCfgIndicationCb NandCfgIndication_cbTable = {
+    NandCfgIndicationWrappereraseDone_cb,
+    NandCfgIndicationWrapperwriteDone_cb,
+    NandCfgIndicationWrapperreadDone_cb,
+    NandCfgIndicationWrapperconfigureNandDone_cb,
 };
 MMUIndicationCb MMUIndication_cbTable = {
     MMUIndicationWrapperconfigResp_cb,
@@ -154,8 +154,8 @@ int main(int argc, const char **argv)
 
   init_portal_internal(&intarr[2], IfcNames_BackingStoreMMURequest, NULL, NULL, NULL, NULL, MMURequest_reqsize);         // fpga3
   init_portal_internal(&intarr[0], IfcNames_BackingStoreMMUIndication, MMUIndication_handleMessage, MMUIndication_cbTable, NULL, NULL, MMUIndication_reqsize);     // fpga1
-  init_portal_internal(&intarr[3], IfcNames_NandSimRequest, NULL, NULL, NULL, NULL, NandSimRequest_reqsize);    // fpga4
-  init_portal_internal(&intarr[1], IfcNames_NandSimIndication, NandSimIndication_handleMessage, NandSimIndication_cbTable, NULL, NULL, NandSimIndication_reqsize); // fpga2
+  init_portal_internal(&intarr[3], IfcNames_NandCfgRequest, NULL, NULL, NULL, NULL, NandCfgRequest_reqsize);    // fpga4
+  init_portal_internal(&intarr[1], IfcNames_NandCfgIndication, NandCfgIndication_handleMessage, NandCfgIndication_cbTable, NULL, NULL, NandCfgIndication_reqsize); // fpga2
 
   DmaManager_init(&priv, NULL, &intarr[2]);
   sem_init(&test_sem, 0, 0);
@@ -175,7 +175,7 @@ int main(int argc, const char **argv)
   backBuffer = (unsigned int*)portalMmap(backAlloc, back_sz); 
   portalDCacheFlushInval(backAlloc, back_sz, backBuffer);
 
-  NandSimRequest_configureNand (&intarr[3], ref_backAlloc, back_sz);
+  NandCfgRequest_configureNand (&intarr[3], ref_backAlloc, back_sz);
   PORTAL_PRINTF("Main::configure NAND fd=%d ref=%d\n", backAlloc, ref_backAlloc);
   sem_wait(&test_sem);
 
@@ -186,7 +186,7 @@ int main(int argc, const char **argv)
   PORTAL_PRINTF("about to start write\n");
   //write data to "flash" memory
   strcpy((char*)srcBuffer, "acabcabacababacababababababcacabcabacababacabababc\n012345678912");
-  NandSimRequest_startWrite(&intarr[3], ref_srcAlloc, 0, 0, 1024, 8);
+  NandCfgRequest_startWrite(&intarr[3], ref_srcAlloc, 0, 0, 1024, 8);
   sem_wait(&test_sem);
 
   // at this point, if we were synchronizing with the algo_exe, we

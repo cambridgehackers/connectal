@@ -1,7 +1,34 @@
 #!/usr/bin/python
+# Copyright (c) 2014 Quanta Research Cambridge, Inc
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+#
 
-import json, subprocess, sys
+import fcntl, json, struct, subprocess, sys
 from gmpy import mpz
+BNOC_TRACE = 0xc008b508
+Trace_len = 144
+struct_traceData = '@ L I I 16I 16I'
+BNOC_GET_TLP = 0x8008b507
+Tlp_len = 24
+BNOC_ENABLE_TRACE = 0x8008b508
+Enable_len = 4
 
 # 64-bit BAR
 tlpdatalog = [
@@ -177,25 +204,25 @@ def print_tlp(tlpdata, f=None):
 
     words = map(segment, [0,1,2,3,4,5])
 
-    seqno = mpz(tlpdata[-48:-40],16)
+    seqno = mpz(tlpdata[0:8],16)
     if last_seqno >= 0:
         delta = seqno - last_seqno
     else:
         delta = 0
-    tlpsof = int(tlpdata[-39:-38],16) & 1
-    tlpeof = int(tlpdata[-38:-36],16) >> 7
-    tlpbe  = tlpdata[-36:-32]
-    tlphit = int(tlpdata[-38:-36],16) & 0x7f
-    pktformat = (int(tlpdata[-32:-31],16) >> 1) & 3
-    pkttype = (int(tlpdata[-32:-30],16) & 0x1f)
+    tlpsof = int(tlpdata[9:10],16) & 1
+    tlpeof = int(tlpdata[10:12],16) >> 7
+    tlpbe  = tlpdata[12:16]
+    tlphit = int(tlpdata[10:12],16) & 0x7f
+    pktformat = (int(tlpdata[16:17],16) >> 1) & 3
+    pkttype = (int(tlpdata[16:18],16) & 0x1f)
 
     address=0
     if TlpPacketFormat[pktformat] == 'MEM_READ__4DW     ' or TlpPacketFormat[pktformat] == 'MEM_WRITE_4DW_DATA':
-        address = tlpdata[-16:]
+        address = tlpdata[32:]
     elif TlpPacketFormat[pktformat] == 'MEM_READ__3DW     ' or TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA':
-        address = tlpdata[-16:-8]
+        address = tlpdata[32:40]
 
-    portnum = int(tlpdata[-40:-38],16) >> 1
+    portnum = int(tlpdata[8:10],16) >> 1
     pktclass = pktClassification(tlpsof, tlpeof, tlpbe, pktformat, pkttype, portnum, address)
     if classCounts.has_key(pktclass):
        classCounts[pktclass] += 1
@@ -212,56 +239,58 @@ def print_tlp(tlpdata, f=None):
         headerstr = headerstr + ':%4s:%18s' % (TlpPacketType[pkttype], TlpPacketFormat[pktformat])
     else:
         headerstr = headerstr + '                        '
-    headerstr = headerstr + ' ' + tlpdata[-40:-38] + ' ' + hex(int(tlpdata[-40:-38],16) >> 1)
+    headerstr = headerstr + ' ' + tlpdata[8:10] + ' ' + hex(int(tlpdata[8:10],16) >> 1)
     headerstr = headerstr + ' tlp(%s %d %d %d)' % (tlpbe, tlphit, tlpeof, tlpsof)
     address = -1
     if tlpsof == 0:
-        headerstr = headerstr + '                            data:' + tlpdata[-32:]
+        headerstr = headerstr + '                            data:' + tlpdata[16:]
     elif TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA' and TlpPacketType[pkttype] == 'COMP':
-        headerstr = headerstr + '                        tag:' + tlpdata[-12:-10]
-        headerstr = headerstr + ' ' + tlpdata[-16:-12]
-        headerstr = headerstr + ' ' + tlpdata[-24:-20]
-        headerstr = headerstr + ' ' + tlpdata[-20:-19]
-        headerstr = headerstr + ' ' + tlpdata[-28:-27] + str(int(tlpdata[-28:-27],16) >> 3)
-        headerstr = headerstr + ' ' + tlpdata[-19:-16]
-        headerstr = headerstr + ' ' + tlpdata[-10:-8]
-        headerstr = headerstr + ' %3d' % (int(tlpdata[-27:-24],16) & 0x3ff)
-        headerstr = headerstr + ' ' + tlpdata[-8:]
+        headerstr = headerstr + '                        tag:' + tlpdata[36:38]
+        headerstr = headerstr + ' ' + tlpdata[32:36]
+        headerstr = headerstr + ' ' + tlpdata[24:28]
+        headerstr = headerstr + ' ' + tlpdata[28:29]
+        headerstr = headerstr + ' ' + tlpdata[20:21] + str(int(tlpdata[20:21],16) >> 3)
+        headerstr = headerstr + ' ' + tlpdata[29:32]
+        headerstr = headerstr + ' ' + tlpdata[38:40]
+        headerstr = headerstr + ' %3d' % (int(tlpdata[21:24],16) & 0x3ff)
+        headerstr = headerstr + ' ' + tlpdata[40:]
     elif TlpPacketFormat[pktformat] == 'MEM_READ__3DW     ' or TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA':
-        address = tlpdata[-16:-8]
+        address = tlpdata[32:40]
         headerstr = headerstr + '  ' + address
-        headerstr = headerstr + ' %4x'% ((int(address,16) >> 2) % 8192)
-        headerstr = headerstr + ' be(' + tlpdata[-17:-16] + ' ' + tlpdata[-18:-17] + ')'
-        headerstr = headerstr + ' tag:' + tlpdata[-20:-18]
-        headerstr = headerstr + ' ' + tlpdata[-24:-20]
-        headerstr = headerstr + '                  %3d' % (int(tlpdata[-27:-24],16) & 0x3ff)
+        address = int(address,16)
+        headerstr = headerstr + ' %4x'% ((address >> 2) % 8192)
+        headerstr = headerstr + ' be(' + tlpdata[31:32] + ' ' + tlpdata[30:31] + ')'
+        headerstr = headerstr + ' tag:' + tlpdata[28:30]
+        headerstr = headerstr + ' ' + tlpdata[24:28]
+        headerstr = headerstr + '                  %3d' % (int(tlpdata[21:24],16) & 0x3ff)
         if TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA':
-            headerstr = headerstr + ' ' + tlpdata[-8:]
+            headerstr = headerstr + ' ' + tlpdata[40:]
     elif TlpPacketFormat[pktformat] == 'MEM_READ__4DW     ' or TlpPacketFormat[pktformat] == 'MEM_WRITE_4DW_DATA':
-        address = tlpdata[-16:]
+        address = tlpdata[32:]
         headerstr = headerstr + ' address: ' + address
-        headerstr = headerstr + ' be(1st: ' + tlpdata[-17:-16] + ' last:' + tlpdata[-18:-17] + ')'
-        headerstr = headerstr + ' tag:' + tlpdata[-20:-18]
-        headerstr = headerstr + ' reqid:' + tlpdata[-24:-20]
-        headerstr = headerstr + ' length:' + str(int(tlpdata[-27:-24],16) & 0x3ff)
+        address = int(address,16)
+        headerstr = headerstr + ' be(1st: ' + tlpdata[31:32] + ' last:' + tlpdata[30:31] + ')'
+        headerstr = headerstr + ' tag:' + tlpdata[28:30]
+        headerstr = headerstr + ' reqid:' + tlpdata[24:28]
+        headerstr = headerstr + ' length:' + str(int(tlpdata[21:24],16) & 0x3ff)
     else:
-        headerstr = headerstr + '  tlp data:', tlpdata[-8:]
-        headerstr = headerstr + 'lower addr:' + tlpdata[-10:-8]
-        headerstr = headerstr + '       tag:' + tlpdata[-12:-10]
-        headerstr = headerstr + '     reqid:' + tlpdata[-14:-12]
-        headerstr = headerstr + ' bytecount:' + '0x' + tlpdata[-15:-14]
-        headerstr = headerstr + '       bcm:' + str(int(tlpdata[-16:-15], 16) & 1)
-        headerstr = headerstr + '   cstatus:' + str((int(tlpdata[-16:-15], 16) >> 1) & 7)
-        headerstr = headerstr + '    cmplid:' + tlpdata[-18:-16]
-        headerstr = headerstr + '    cmplen:' + tlpdata[-21:-18]
-        headerstr = headerstr + '   nosnoop:' + str(int(tlpdata[-22:-21],16) & 1)
-        headerstr = headerstr + '   relaxed:' + str(int(tlpdata[-22:-21],16) & 2)
-        headerstr = headerstr + '   poison:' + str(int(tlpdata[-22:-21],16) & 4)
-        headerstr = headerstr + '   digest:' + str(int(tlpdata[-22:-21],16) & 8)
-        headerstr = headerstr + '     zero:' + tlpdata[-23:-22]
-        headerstr = headerstr + '   tclass:' + tlpdata[-24:-23]
-        headerstr = headerstr + '  pkttype:' + str(int(tlpdata[-26:-24],16) & 0x1f) + ' ' + TlpPacketType[int(tlpdata[-26:-24],16) & 0x1f]
-        headerstr = headerstr + '  format:' + str((int(tlpdata[-26:-24],16) >> 1) & 3) + ' ' + TlpPacketFormat[(int(tlpdata[-26:-24],16) >> 1) & 3]
+        headerstr = headerstr + '  tlp data:', tlpdata[40:]
+        headerstr = headerstr + 'lower addr:' + tlpdata[38:40]
+        headerstr = headerstr + '       tag:' + tlpdata[36:38]
+        headerstr = headerstr + '     reqid:' + tlpdata[34:36]
+        headerstr = headerstr + ' bytecount:' + '0x' + tlpdata[33:34]
+        headerstr = headerstr + '       bcm:' + str(int(tlpdata[32:33], 16) & 1)
+        headerstr = headerstr + '   cstatus:' + str((int(tlpdata[32:33], 16) >> 1) & 7)
+        headerstr = headerstr + '    cmplid:' + tlpdata[30:32]
+        headerstr = headerstr + '    cmplen:' + tlpdata[27:30]
+        headerstr = headerstr + '   nosnoop:' + str(int(tlpdata[26:27],16) & 1)
+        headerstr = headerstr + '   relaxed:' + str(int(tlpdata[26:27],16) & 2)
+        headerstr = headerstr + '   poison:' + str(int(tlpdata[26:27],16) & 4)
+        headerstr = headerstr + '   digest:' + str(int(tlpdata[26:27],16) & 8)
+        headerstr = headerstr + '     zero:' + tlpdata[25:26]
+        headerstr = headerstr + '   tclass:' + tlpdata[24:25]
+        headerstr = headerstr + '  pkttype:' + str(int(tlpdata[22:24],16) & 0x1f) + ' ' + TlpPacketType[int(tlpdata[22:24],16) & 0x1f]
+        headerstr = headerstr + '  format:' + str((int(tlpdata[22:24],16) >> 1) & 3) + ' ' + TlpPacketFormat[(int(tlpdata[22:24],16) >> 1) & 3]
     if portnum == 4:
         dir = 'RX'
     elif portnum == 8:
@@ -275,12 +304,12 @@ def print_tlp(tlpdata, f=None):
     else:
         dir = dir + 'qq'    # request
     smeth = ''
-    if address != -1 and address < 'df500000' and interfaceMap != {}:
-        aorig = int(address, 16) % 0x100000
-        interfaceNumber = aorig / 0x10000
-        offset = aorig - interfaceNumber * 0x10000
+    if address != -1 and address < baseLimit and interfaceMap != {}:
+        address = address - base
+        interfaceNumber = address / 0x10000
+        offset = address - interfaceNumber * 0x10000
         methodNumber = offset / 0x100
-        #print 'AA', "%6x" % aorig, "%2x" % interfaceNumber, "%2x" % methodNumber
+        #print 'AA', "%6x" % address, "%2x" % interfaceNumber, "%2x" % methodNumber
         t = interfaceMap[fooMap[interfaceNumber]]
         if methodNumber == 0:
             smeth = '/dir'
@@ -315,6 +344,7 @@ if __name__ == '__main__':
     interfaceMap = {}
     if argcount >= 2 and sys.argv[argindex] == '-j':
         fooMap = sys.argv[argindex+1].split(':')
+        print 'FFF', fooMap
         j2file = open(sys.argv[argindex + 2]).read()
         jsondata = json.loads(j2file)
         argindex = argindex + 3
@@ -323,12 +353,37 @@ if __name__ == '__main__':
             interfaceMap[item['name']] = [mitem['name'] for mitem in item['decls']]
     if argcount == 2:
         tlplog = open(sys.argv[argindex]).read().split('\n')
+    elif False:
+        tlplog = subprocess.check_output(['connectalutil', '/dev/portal0']).split('\n')
+        tlpfirst = tlplog.pop(0)
+        base = int(tlpfirst[0:16],16)
+        base = int(tlpfirst[0:8],16)
     else:
-        tlplog = subprocess.check_output(['connectalutil', 'tlp', '/dev/portal0']).split('\n')
+        fd = open('/dev/portal0', 'rw')
+        buf = fcntl.ioctl(fd, BNOC_TRACE, ' ' * Trace_len)
+        traceData = struct.unpack_from(struct_traceData, buf)
+        #print 'SSS', traceData
+        base = traceData[0]
+        #print ('base %x' % base), 'trace', traceData[1], 'len', traceData[2], 'intval', ['%x' % p for p in traceData[3:3+16]], 'name', traceData[19:19+16]
+        tlplog = []
+        tlplog.append('%016x' % traceData[0])
+        counter = traceData[2]
+        while counter > 0:
+            counter = counter - 1
+            buf = fcntl.ioctl(fd, BNOC_GET_TLP, ' ' * Tlp_len)
+            foo = ''
+            for x in buf:
+                foo = "%02x" % ord( x ) + foo
+            tlplog.append(foo)
+        fcntl.ioctl(fd, BNOC_ENABLE_TRACE, 1)
+        #for foo in tlplog:
+        #    print foo
+        #sys.exit(1)
     tlplog.sort()
     lf = open('tlp.log', 'w')
     f = open('tlp.vcd', 'w')
-    print_tlp_log(tlplog[0:-1], f, lf)
+    baseLimit = base + 16 * 0x10000
+    print_tlp_log(tlplog, f, lf)
     print classCounts
     print sum([ classCounts[k] for k in classCounts])
     f.close()

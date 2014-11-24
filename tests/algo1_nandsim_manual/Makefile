@@ -1,6 +1,6 @@
 
 CONNECTALDIR?=../..
-INTERFACES = NandSimRequest StrstrRequest NandSimIndication StrstrIndication
+INTERFACES = NandCfgRequest StrstrRequest NandCfgIndication StrstrIndication
 BSVFILES = $(CONNECTALDIR)/examples/nandsim/NandSim.bsv $(CONNECTALDIR)/examples/strstr/Strstr.bsv $(CONNECTALDIR)/examples/algo1_nandsim/Top.bsv $(CONNECTALDIR)/examples/nandsim/NandSimNames.bsv
 CPPFILES=algo1.cpp
 CPPFILES2=nandsim_manual.c

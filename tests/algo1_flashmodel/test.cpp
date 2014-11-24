@@ -36,8 +36,6 @@
 #include "StdDmaIndication.h"
 #include "MMURequest.h"
 #include "GeneratedTypes.h" 
-#include "NandCfgIndication.h"
-#include "NandCfgRequest.h"
 #include "StrstrIndication.h"
 #include "StrstrRequest.h"
 
@@ -50,74 +48,10 @@ extern "C" {
 #include "userReference.h"
 }
 
-size_t numBytes = 1 << 12;
-#ifndef BOARD_bluesim
-size_t nandBytes = 1 << 24;
-#else
-size_t nandBytes = 1 << 14;
-#endif
+#include "nandsim.h"
+#include "strstr.h"
 
-class NandCfgIndication : public NandCfgIndicationWrapper
-{
-public:
-  unsigned int rDataCnt;
-  virtual void readDone(uint32_t v){
-    fprintf(stderr, "NandSim::readDone v=%x\n", v);
-    sem_post(&sem);
-  }
-  virtual void writeDone(uint32_t v){
-    fprintf(stderr, "NandSim::writeDone v=%x\n", v);
-    sem_post(&sem);
-  }
-  virtual void eraseDone(uint32_t v){
-    fprintf(stderr, "NandSim::eraseDone v=%x\n", v);
-    sem_post(&sem);
-  }
-  virtual void configureNandDone(){
-    fprintf(stderr, "NandSim::configureNandDone\n");
-    sem_post(&sem);
-  }
-
-  NandCfgIndication(int id) : NandCfgIndicationWrapper(id) {
-    sem_init(&sem, 0, 0);
-  }
-  void wait() {
-    fprintf(stderr, "NandSim::wait for semaphore\n");
-    sem_wait(&sem);
-  }
-private:
-  sem_t sem;
-};
-
-class StrstrIndication : public StrstrIndicationWrapper
-{
-public:
-  StrstrIndication(unsigned int id) : StrstrIndicationWrapper(id){
-    sem_init(&sem, 0, 0);
-    match_cnt = 0;
-  };
-  virtual void setupComplete() {
-    fprintf(stderr, "Strstr::setupComplete\n");
-    sem_post(&sem);
-  }
-  virtual void searchResult (int v){
-    fprintf(stderr, "searchResult = %d\n", v);
-    if (v == -1)
-      sem_post(&sem);
-    else 
-      match_cnt++;
-  }
-  void wait() {
-    fprintf(stderr, "Strstr::wait for semaphore\n");
-    sem_wait(&sem);
-  }
-  int match_cnt;
-private:
-  sem_t sem;
-};
-
-
-
+size_t numBytes = 1 << 10;
 
 int main(int argc, const char **argv)
 {
@@ -127,12 +61,15 @@ int main(int argc, const char **argv)
   DmaManager *hostDma = new DmaManager(hostMMURequest);
   MMUIndication *hostMMUIndication = new MMUIndication(hostDma, IfcNames_AlgoMMUIndication);
 
-  MMURequestProxy *nandsimMMURequest = new MMURequestProxy(IfcNames_NandsimMMURequest);
+  MMURequestProxy *nandsimMMURequest = new MMURequestProxy(IfcNames_NandMMURequest);
   DmaManager *nandsimDma = new DmaManager(nandsimMMURequest);
-  MMUIndication *nandsimMMUIndication = new MMUIndication(nandsimDma,IfcNames_NandsimMMUIndication);
+  MMUIndication *nandsimMMUIndication = new MMUIndication(nandsimDma,IfcNames_NandMMUIndication);
 
   StrstrRequestProxy *strstrRequest = new StrstrRequestProxy(IfcNames_AlgoRequest);
   StrstrIndication *strstrIndication = new StrstrIndication(IfcNames_AlgoIndication);
+  
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_HostMemServerIndication);
+  MemServerIndication *nandsimMemServerIndication = new MemServerIndication(IfcNames_NandMemServerIndication);
 
   portalExec_start();
   fprintf(stderr, "Main::allocating memory...\n");
@@ -165,22 +102,27 @@ int main(int argc, const char **argv)
   portalDCacheFlushInval(mpNextAlloc, numBytes, mpNext);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
+ // fprintf(stderr, "Main::waiting to connect to nandsim_exe\n");
+ // wait_for_connect_nandsim_exe();
+ // fprintf(stderr, "Main::connected to nandsim_exe\n");
   // base of haystack in "flash" memory
   // this is read from nandsim_exe, but could also come from kernel driver
-  int haystack_base = 0;
-  int haystack_len  = 64;
+  //int haystack_base = read_from_nandsim_exe();
+  //int haystack_len  = read_from_nandsim_exe();
+  int haystack_len  = 0x100;
 
   // request the next sglist identifier from the sglistMMU hardware module
   // which is used by the mem server accessing flash memory.
   int id = 0;
-  MMURequestProxy_idRequest(nandsimDma->priv.sglDevice);
+  MMURequest_idRequest(nandsimDma->priv.sglDevice, 0);
   sem_wait(&nandsimDma->priv.sglIdSem);
   id = nandsimDma->priv.sglId;
   // pairs of ('offset','size') pointing to space in nandsim memory
   // this is unsafe.  To do it properly, we should get this list from
   // nandsim_exe or from the kernel driver.  This code here might overrun
   // the backing store allocated by nandsim_exe.
-  RegionRef region[] = {{0, 0x100000}, {0x100000, 0x100000}};
+ // RegionRef region[] = {{0, 0x100000}, {0x100000, 0x100000}};
+  RegionRef region[] = {{0x100000, 0x100000}};
   printf("[%s:%d]\n", __FUNCTION__, __LINE__);
   int ref_haystackInNandMemory = send_reference_to_portal(nandsimDma->priv.sglDevice, sizeof(region)/sizeof(region[0]), region, id);
   sem_wait(&(nandsimDma->priv.confSem));
@@ -192,10 +134,8 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "about to setup device %d %d\n", ref_needleAlloc, ref_mpNextAlloc);
   strstrRequest->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
-  strstrIndication->wait();
-
   fprintf(stderr, "about to invoke search %d\n", ref_haystackInNandMemory);
-  strstrRequest->search(ref_haystackInNandMemory, haystack_len, 1);
+  strstrRequest->search(ref_haystackInNandMemory, haystack_len);
   strstrIndication->wait();  
 
   exit(!(strstrIndication->match_cnt==3));

@@ -108,7 +108,7 @@ public:
     assert(v.e1 == v7b);
     incr_cnt();
   }
-  Simple(unsigned int id, unsigned int numtimes=1) : SimpleWrapper(id), cnt(0), times(numtimes){}
+    Simple(unsigned int id, unsigned int numtimes=1, PortalItemFunctions *item=0, void *param = 0) : SimpleWrapper(id, item, param), cnt(0), times(numtimes){}
 };
 
 int allocateShared(DmaManager *dma, MMURequestProxy *dmap, uint32_t interfaceId, PortalInternal *p, uint32_t size)
@@ -132,18 +132,23 @@ int main(int argc, const char **argv)
     MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequest);
     DmaManager *dma = new DmaManager(dmap);
     MMUIndication *mIndication = new MMUIndication(dma, IfcNames_MMUIndication);
-    SharedMemoryPortalConfigProxy *smpConfig = new SharedMemoryPortalConfigProxy(IfcNames_ConfigWrapper);
+    SharedMemoryPortalConfigProxy *reqConfig = new SharedMemoryPortalConfigProxy(IfcNames_ReqConfigWrapper);
+    SharedMemoryPortalConfigProxy *indConfig = new SharedMemoryPortalConfigProxy(IfcNames_IndConfigWrapper);
 
-  portalExec_start();
+    portalExec_start();
 
-  int verbose = 0;
-  int numtimes = 80;
-  Simple *indication = new Simple(IfcNames_SimpleIndication, numtimes);
+    int verbose = 0;
+    int numtimes = 40;
+    Simple *indication = new Simple(IfcNames_SimpleIndication, numtimes, &sharedfunc, NULL);
     SimpleProxy *device = new SimpleProxy(IfcNames_SimpleRequest, &sharedfunc, NULL);
 
-    int fd = allocateShared(dma, dmap, IfcNames_SimpleRequest, &device->pint, alloc_sz);
-    unsigned int ref = dma->reference(fd);
-    smpConfig->setSglId(ref);
+    int reqfd = allocateShared(dma, dmap, IfcNames_SimpleRequest, &device->pint, alloc_sz);
+    unsigned int reqref = dma->reference(reqfd);
+    reqConfig->setSglId(reqref);
+
+    int indfd = allocateShared(dma, dmap, IfcNames_SimpleIndication, &device->pint, alloc_sz);
+    unsigned int indref = dma->reference(indfd);
+    indConfig->setSglId(indref);
 
     for (int i = 0; i < numtimes; i++) {
       if (verbose) fprintf(stderr, "Main::calling say1(%d)\n", v1a);

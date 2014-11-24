@@ -29,17 +29,18 @@ import GetPut::*;
 import Connectable::*;
 import Pipe::*;
 import MemTypes::*;
+import HostInterface::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;
 
-interface NandSimRequest;
+interface NandCfgRequest;
    method Action startRead(Bit#(32) drampointer, Bit#(32) dramOffset, Bit#(32) nandAddr, Bit#(32) numBytes, Bit#(32) burstLen);
    method Action startWrite(Bit#(32) drampointer, Bit#(32) dramOffset, Bit#(32) nandAddr, Bit#(32) numBytes, Bit#(32) burstLen);
    method Action startErase(Bit#(32) nandAddr, Bit#(32) numBytes);
    method Action configureNand(Bit#(32) ptr, Bit#(32) numBytes);
 endinterface
 
-interface NandSimIndication;
+interface NandCfgIndication;
    method Action readDone(Bit#(32) tag);
    method Action writeDone(Bit#(32) tag);
    method Action eraseDone(Bit#(32) tag);
@@ -47,24 +48,24 @@ interface NandSimIndication;
 endinterface
 
 interface NandSim;
-   interface NandSimRequest request;
+   interface NandCfgRequest request;
    interface PhysMemSlave#(PhysAddrWidth,64) memSlave;
    interface MemReadClient#(64) readClient;
    interface MemWriteClient#(64) writeClient;
 endinterface
 
 interface NandSimControl;
-   interface NandSimRequest request;   
+   interface NandCfgRequest request;
    interface ReadOnly#(Bit#(32)) nandPtr;
 endinterface
 
-module mkNandSim#(NandSimIndication indication) (NandSim);
+module mkNandSim#(NandCfgIndication indication) (NandSim);
    let verbose = False;
-   
+
    MemreadEngineV#(64, 1,  3)  re <- mkMemreadEngine();
    MemwriteEngineV#(64, 1, 4)  we <- mkMemwriteEngine();
    NandSimControl ns <- mkNandSimControl(take(re.readServers), take(re.dataPipes), take(we.writeServers), take(we.dataPipes), indication);
-   
+
    Server#(MemengineCmd,Bool) slave_read_server  = re.readServers[2];
    PipeOut#(Bit#(64))         slave_read_pipe    = re.dataPipes[2];
    Server#(MemengineCmd,Bool) slave_write_server = we.writeServers[3];
@@ -72,7 +73,7 @@ module mkNandSim#(NandSimIndication indication) (NandSim);
    FIFO#(Bit#(MemTagSize))    slaveWriteTag <- mkSizedFIFO(1);
    FIFO#(Bit#(MemTagSize))    slaveReadTag <- mkSizedFIFO(1);
    Reg#(Bit#(BurstLenSize))   slaveReadCnt <- mkReg(0);
-   
+
    rule completeSlaveReadReq;
       slaveReadTag.deq;
       let rv <- slave_read_server.response.get;
@@ -80,7 +81,7 @@ module mkNandSim#(NandSimIndication indication) (NandSim);
    endrule
 
    interface PhysMemSlave memSlave;
-      interface PhysMemWriteServer write_server; 
+      interface PhysMemWriteServer write_server;
 	 interface Put writeReq;
 	    method Action put(PhysMemRequest#(PhysAddrWidth) req);
 	       slave_write_server.request.put(MemengineCmd{sglId:ns.nandPtr, base:extend(req.addr), burstLen:req.burstLen, len:extend(req.burstLen)});
@@ -124,14 +125,14 @@ module mkNandSim#(NandSimIndication indication) (NandSim);
    interface request = ns.request;
    interface MemReadClient readClient = re.dmaClient;
    interface MemWriteClient writeClient = we.dmaClient;
-   
+
 endmodule
 
 module mkNandSimControl#(Vector#(2, Server#(MemengineCmd,Bool)) readServers,
 			  Vector#(2, PipeOut#(Bit#(64))) readPipes,
 			  Vector#(3, Server#(MemengineCmd,Bool)) writeServers,
 			  Vector#(3, PipeIn#(Bit#(64))) writePipes,
-			  NandSimIndication indication) (NandSimControl);
+			  NandCfgIndication indication) (NandSimControl);
 
    Server#(MemengineCmd,Bool)  dramReadServer = readServers[0];
    Server#(MemengineCmd,Bool)  nandReadServer = readServers[1];
@@ -194,7 +195,7 @@ module mkNandSimControl#(Vector#(2, Server#(MemengineCmd,Bool)) readServers,
       $display("eraseDone");
       indication.eraseDone(0);
    endrule
-   
+
    rule writeDone;
       let nandWriteDone <- nandWriteServer.response.get();
       let dramReadDone <- dramReadServer.response.get();
@@ -210,8 +211,8 @@ module mkNandSimControl#(Vector#(2, Server#(MemengineCmd,Bool)) readServers,
       $display("readDone");
       indication.readDone(0);
    endrule
-   
-   interface NandSimRequest request;
+
+   interface NandCfgRequest request;
       /*!
       * Reads from NAND and writes to DRAM
       */

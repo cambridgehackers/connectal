@@ -35,29 +35,29 @@ import MemwriteEngine::*;
 import FlashCtrlModel::*;
 
 
-interface NandSimRequest;
+interface NandCfgRequest;
    method Action startRead(Bit#(32) drampointer, Bit#(32) dramOffset, Bit#(32) nandAddr, Bit#(32) numBytes, Bit#(32) burstLen);
    method Action startWrite(Bit#(32) drampointer, Bit#(32) dramOffset, Bit#(32) nandAddr, Bit#(32) numBytes, Bit#(32) burstLen);
    method Action startErase(Bit#(32) nandAddr, Bit#(32) numBytes);
 endinterface
 
-interface NandSimIndication;
+interface NandCfgIndication;
    method Action readDone(Bit#(32) tag);
    method Action writeDone(Bit#(32) tag);
    method Action eraseDone(Bit#(32) tag);
 endinterface
 
 interface NandSimMod#(numeric type numSlaves, numeric type memengineOuts);
-   interface NandSimRequest request;
+   interface NandCfgRequest request;
    interface Vector#(numSlaves,PhysMemSlave#(PhysAddrWidth,64)) memSlaves;
 endinterface
 
 interface NandSimControl;
-   interface NandSimRequest request;   
+   interface NandCfgRequest request;   
 endinterface
 
 
-module mkNandSimMod#(NandSimIndication indication,
+module mkNandSimMod#(NandCfgIndication indication,
 		     MemreadServer#(64) nand_ctrl_host_rs,
 		     MemwriteServer#(64) nand_ctrl_host_ws) (NandSimMod#(numSlaves,memengineOuts))
    provisos(
@@ -179,7 +179,7 @@ module mkNandSimControl#(MemreadServer#(64) dram_read_server,
 			 MemwriteServer#(64) dram_write_server,
 			 MemwriteServer#(64) nand_write_server,
 			 MemwriteServer#(64) nand_erase_server,
-			 NandSimIndication indication) (NandSimControl);
+			 NandCfgIndication indication) (NandSimControl);
 
    Server#(MemengineCmd,Bool)  dramReadServer = dram_read_server.cmdServer;
    Server#(MemengineCmd,Bool)  nandReadServer = nand_read_server.cmdServer;
@@ -256,7 +256,7 @@ module mkNandSimControl#(MemreadServer#(64) dram_read_server,
       indication.readDone(0);
    endrule
    
-   interface NandSimRequest request;
+   interface NandCfgRequest request;
       /*!
       * Reads from NAND and writes to DRAM
       */

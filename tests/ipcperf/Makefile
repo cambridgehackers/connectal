@@ -1,14 +1,14 @@
 
 CONNECTALDIR?=../..
-INTERFACES = Swallow EchoRequest EchoIndication
-BSVFILES = Echo.bsv SwallowIF.bsv Top.bsv
-CPPFILES=testecho.cpp
+INTERFACES = IpcTestRequest IpcTestIndication
+BSVFILES = IpcTest.bsv Top.bsv
+CPPFILES=testipctest.cpp
 
 CONNECTALFLAGS += -D IMPORT_HOSTIF
 NUMBER_OF_MASTERS =0
 
 ## for testing fpgamake:
-FPGAMAKE_CONNECTALFLAGS += -P mkEchoIndicationProxySynth -P mkEchoRequestWrapperMemPortalPipes
+FPGAMAKE_CONNECTALFLAGS += -P mkIpcTestIndicationProxySynth -P mkIpcTestRequestWrapperMemPortalPipes
 
 include $(CONNECTALDIR)/Makefile.connectal
 
