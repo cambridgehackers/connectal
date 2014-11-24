@@ -39,11 +39,11 @@ ifeq ($(CONNECTAL_DEBUG),1)
 GDB=gdb
 GDB2=gdb
 else
-GDB= LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so SEGFAULT_USE_ALTSTACK=1 SEGFAULT_OUTPUT_NAME=bin/bsimexe-segv-output.txt
-GDB2= LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so SEGFAULT_USE_ALTSTACK=1 SEGFAULT_OUTPUT_NAME=bin/bsimexe2-segv-output.txt
+GDB= LD_PRELOAD=libSegFault.so SEGFAULT_USE_ALTSTACK=1 SEGFAULT_OUTPUT_NAME=bin/bsimexe-segv-output.txt
+GDB2= LD_PRELOAD=libSegFault.so SEGFAULT_USE_ALTSTACK=1 SEGFAULT_OUTPUT_NAME=bin/bsimexe2-segv-output.txt
 endif
 
-GDB_BSIM= LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so SEGFAULT_USE_ALTSTACK=1 SEGFAULT_OUTPUT_NAME=bin/bsim-segv-output.txt
+GDB_BSIM= LD_PRELOAD=libSegFault.so SEGFAULT_USE_ALTSTACK=1 SEGFAULT_OUTPUT_NAME=bin/bsim-segv-output.txt
 
 
 BSCVERSION=$(shell bsc -v |grep Compiler | sed -e "s/.*version //" -e "s/ .*//")
