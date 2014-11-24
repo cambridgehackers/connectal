@@ -100,6 +100,10 @@ module mkZynqTop(ZynqTop);
    ConnectalTop#(PhysAddrWidth, 64, PinType, NumberOfMasters) top <- mkConnectalTop(
       (interface HostType;
           interface ps7 = ps7;
+	  interface portalClock = mainclock;
+	  interface portalReset = mainreset;
+	  interface doubleClock = ps7.doubleClock;
+	  interface doubleReset = ps7.doubleReset;
           interface bscan = lbscan.loc[0];
       endinterface), clocked_by mainclock, reset_by mainreset);
 `else

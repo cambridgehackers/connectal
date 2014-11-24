@@ -100,6 +100,10 @@ import Bscan::*;
 
 interface HostType;
     interface PS7 ps7;
+    interface Clock portalClock;
+    interface Reset portalReset;
+    interface Clock doubleClock;
+    interface Reset doubleReset;
     interface BscanTop bscan;
 endinterface
 
