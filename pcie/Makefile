@@ -28,6 +28,7 @@ endif
 all:
 
 install:
+	install -D -m755 $(DESTDIR)$(PREFIX)/bin
 	install -m755 pcieflat $(DESTDIR)$(PREFIX)/bin/pcieflat
 
 clean:
