@@ -146,10 +146,12 @@ include $(CONNECTALDIR)/scripts/Makefile.connectal.build
 
 androidmk_template='''
 include $(CLEAR_VARS)
+DTOP?=%(project_dir)s
+CONNECTALDIR?=%(connectaldir)s
 LOCAL_ARM_MODE := arm
-include %(project_dir)s/jni/Makefile.generated_files
-APP_SRC_FILES := $(addprefix %(project_dir)s/jni/,  $(GENERATED_CPP)) %(source)s
-PORTAL_SRC_FILES := $(addprefix %(connectaldir)s/cpp/, portal.c portalSocket.c poller.cpp sock_utils.c timer.c)
+include $(DTOP)/jni/Makefile.generated_files
+APP_SRC_FILES := $(addprefix $(DTOP)/jni/,  $(GENERATED_CPP)) %(source)s
+PORTAL_SRC_FILES := $(addprefix $(CONNECTALDIR)/cpp/, portal.c portalSocket.c poller.cpp sock_utils.c timer.c)
 LOCAL_SRC_FILES := $(APP_SRC_FILES) $(PORTAL_SRC_FILES)
 
 LOCAL_PATH :=
@@ -157,14 +159,16 @@ LOCAL_MODULE := android.exe
 LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS := -llog %(clibdirs)s %(clibs)s %(clibfiles)s
 LOCAL_CPPFLAGS := "-march=armv7-a"
-LOCAL_CFLAGS := -DZYNQ -I%(connectaldir)s -I%(connectaldir)s/cpp -I%(connectaldir)s/lib/cpp -I%(connectaldir)s/drivers/zynqportal -I%(project_dir)s/jni %(cincludes)s %(cdefines)s -I%(connectaldir)s/drivers/portalmem
-LOCAL_CXXFLAGS := -DZYNQ -I%(connectaldir)s -I%(connectaldir)s/cpp -I%(connectaldir)s/lib/cpp -I%(connectaldir)s/drivers/zynqportal -I%(project_dir)s/jni %(cincludes)s %(cdefines)s -I%(connectaldir)s/drivers/portalmem
+LOCAL_CFLAGS := -DZYNQ %(cflags)s
+LOCAL_CXXFLAGS := -DZYNQ %(cflags)s
 LOCAL_CFLAGS2 := $(cdefines2)s
 
 include $(BUILD_EXECUTABLE)
 '''
 
 linuxmakefile_template='''
+CONNECTALDIR?=%(connectaldir)s
+DTOP?=%(project_dir)s
 export V=0
 ifeq ($(V),0)
 Q=@
@@ -172,18 +176,18 @@ else
 Q=
 endif
 
-CFLAGS_COMMON = -O -g -I%(project_dir)s/jni -I%(connectaldir)s -I%(connectaldir)s/cpp -I%(connectaldir)s/lib/cpp %(sourceincludes)s %(cincludes)s %(cdefines)s -I%(connectaldir)s/drivers/portalmem -I%(connectaldir)s/drivers/pcieportal -I%(connectaldir)s/drivers/zynqportal
+CFLAGS_COMMON = -O -g %(cflagsl)s
 CFLAGS = $(CFLAGS_COMMON)
 CFLAGS2 = %(cdefines2)s
 
-PORTAL_CPP_FILES = $(addprefix %(connectaldir)s/cpp/, portal.c portalSocket.c poller.cpp sock_utils.c timer.c)
-include %(project_dir)s/jni/Makefile.generated_files
-SOURCES = $(addprefix %(project_dir)s/jni/,  $(GENERATED_CPP)) %(source)s $(PORTAL_CPP_FILES)
-SOURCES2 = $(addprefix %(project_dir)s/jni/,  $(GENERATED_CPP)) %(source2)s $(PORTAL_CPP_FILES)
+PORTAL_CPP_FILES = $(addprefix $(CONNECTALDIR)/cpp/, portal.c portalSocket.c poller.cpp sock_utils.c timer.c)
+include $(DTOP)/jni/Makefile.generated_files
+SOURCES = $(addprefix $(DTOP)/jni/,  $(GENERATED_CPP)) %(source)s $(PORTAL_CPP_FILES)
+SOURCES2 = $(addprefix $(DTOP)/jni/,  $(GENERATED_CPP)) %(source2)s $(PORTAL_CPP_FILES)
 LDLIBS := %(clibdirs)s %(clibs)s %(clibfiles)s -pthread 
 
 BSIM_EXE_CXX_FILES = BsimDma.cxx BsimCtrl.cxx TlpReplay.cxx
-BSIM_EXE_CXX = $(addprefix %(connectaldir)s/cpp/, $(BSIM_EXE_CXX_FILES))
+BSIM_EXE_CXX = $(addprefix $(CONNECTALDIR)/cpp/, $(BSIM_EXE_CXX_FILES))
 
 ubuntu.exe: $(SOURCES)
 	$(Q)g++ $(CFLAGS) -o ubuntu.exe $(SOURCES) $(LDLIBS)
@@ -238,14 +242,14 @@ if __name__=='__main__':
     os.path.exists('./out/parsetab.py')  and os.remove('./out/parsetab.py')
     
     bsvdefines = options.bsvdefine
-    bsvdefines.append('project_dir=%s' % project_dir)
+    bsvdefines.append('project_dir=$(DTOP)')
 
     option_info['needs_pcie_7x_gen1x8'] = option_info['needs_pcie_7x_gen1x8'] == 'True'
     if option_info['rewireclockstring'] != '':
         option_info['rewireclockstring'] = tclzynqrewireclock
 
     dutname = 'mk' + option_info['TOP']
-    topbsv = connectaldir + '/bsv/' + option_info['TOP'] + '.bsv'
+    topbsv = '$(CONNECTALDIR)' + '/bsv/' + option_info['TOP'] + '.bsv'
         
     rewireclockstring = option_info['rewireclockstring']
     needs_pcie_7x_gen1x8 = option_info['needs_pcie_7x_gen1x8']
@@ -289,6 +293,8 @@ if __name__=='__main__':
         'cdefines2': ' '.join([ '-D%s' % d for d in options.bsvdefine2 ]),
 	'cincludes': ' '.join([ '-I%s' % os.path.abspath(i) for i in options.cinclude ])
     }
+    substs['cflags'] = '-I$(CONNECTALDIR) -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR)/lib/cpp -I$(CONNECTALDIR)/drivers/zynqportal -I$(DTOP)/jni %(cincludes)s %(cdefines)s -I$(CONNECTALDIR)/drivers/portalmem' % substs
+    substs['cflagsl'] = '-I$(DTOP)/jni -I$(CONNECTALDIR) -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR)/lib/cpp %(sourceincludes)s %(cincludes)s %(cdefines)s -I$(CONNECTALDIR)/drivers/portalmem -I$(CONNECTALDIR)/drivers/pcieportal -I$(CONNECTALDIR)/drivers/zynqportal' % substs
     f = util.createDirAndOpen(androidmkname, 'w')
     f.write(androidmk_template % substs)
     f.close()
@@ -348,9 +354,9 @@ if __name__=='__main__':
 
     make.write(makefileTemplate % {'connectaldir': connectaldir,
                                    'bsvpath': ':'.join(list(set([os.path.dirname(os.path.abspath(bsvfile)) for bsvfile in options.bsvfile]
-                                                                + [os.path.join(connectaldir, 'bsv')]
-                                                                + [os.path.join(connectaldir, 'lib/bsv')]
-                                                                + [os.path.join(connectaldir, 'generated/xilinx')]))),
+                                                                + [os.path.join('$(CONNECTALDIR)', 'bsv')]
+                                                                + [os.path.join('$(CONNECTALDIR)', 'lib/bsv')]
+                                                                + [os.path.join('$(CONNECTALDIR)', 'generated/xilinx')]))),
                                    'bsvdefines': util.foldl((lambda e,a: e+' -D '+a), '', bsvdefines),
                                    'boardname': boardname,
                                    'OS': options.os,
@@ -361,7 +367,7 @@ if __name__=='__main__':
                                    'includepath': ' '.join(['-I%s' % os.path.dirname(os.path.abspath(source)) for source in options.source]) if options.source else '',
                                    'runsource2': 'RUNSOURCE2=1' if options.source2 else '',
                                    'project_dir': project_dir,
-                                   'topbsvfile' : os.path.abspath(topbsv),
+                                   'topbsvfile' : topbsv,
                                    'topbsvmod'  : dutname,
                                    'dut' : dutname.lower(),
                                    'Dut': dutname,
