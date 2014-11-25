@@ -2,7 +2,7 @@ obj-m += zynqportal.o
 
 export KROOT=$(DEVICE_XILINX_KERNEL)
 
-CROSS_COMPILE=arm-none-linux-gnueabi-
+CROSS_COMPILE?=arm-none-linux-gnueabi-
 DRIVER_VERSION=$(shell git log -n 1 --oneline -- zynqportal.c zynqportal.h ../../cpp/dmaSendFd.h | cut -f 1 -d " ")
 
 ccflags-y := -I$(src)/../portalmem -I$(src)/../../cpp -I$(src)/../../generated/cpp -D DRIVER_VERSION_RAW="$(DRIVER_VERSION)"
