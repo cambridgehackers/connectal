@@ -176,7 +176,7 @@ else
 Q=
 endif
 
-CFLAGS_COMMON = -O -g %(cflagsl)s
+CFLAGS_COMMON = -O -g %(cflags)s
 CFLAGS = $(CFLAGS_COMMON)
 CFLAGS2 = %(cdefines2)s
 
@@ -293,8 +293,10 @@ if __name__=='__main__':
         'cdefines2': ' '.join([ '-D%s' % d for d in options.bsvdefine2 ]),
 	'cincludes': ' '.join([ '-I%s' % os.path.abspath(i) for i in options.cinclude ])
     }
-    substs['cflags'] = '-I$(CONNECTALDIR) -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR)/lib/cpp -I$(CONNECTALDIR)/drivers/zynqportal -I$(DTOP)/jni %(cincludes)s %(cdefines)s -I$(CONNECTALDIR)/drivers/portalmem' % substs
-    substs['cflagsl'] = '-I$(DTOP)/jni -I$(CONNECTALDIR) -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR)/lib/cpp %(sourceincludes)s %(cincludes)s %(cdefines)s -I$(CONNECTALDIR)/drivers/portalmem -I$(CONNECTALDIR)/drivers/pcieportal -I$(CONNECTALDIR)/drivers/zynqportal' % substs
+    includelist = ['-I$(DTOP)/jni', '-I$(CONNECTALDIR)', \
+                   '-I$(CONNECTALDIR)/cpp', '-I$(CONNECTALDIR)/lib/cpp', \
+                   '%(sourceincludes)s', '%(cincludes)s', '%(cdefines)s']
+    substs['cflags'] = ' '.join(includelist) % substs
     f = util.createDirAndOpen(androidmkname, 'w')
     f.write(androidmk_template % substs)
     f.close()

@@ -197,8 +197,10 @@ static int event_socket(struct PortalInternal *pint)
 printf("[%s:%d]afteracc %p accfd %d fd %d\n", __FUNCTION__, __LINE__, pint, pint->fpga_fd, sockfd);
             pint->client_fd[pint->client_fd_number++] = sockfd;
             pint->accept_finished = 1;
+#ifndef NO_POLLER_SUPPORT
             if (pint->poller)
                 addFdToPoller(pint->poller, sockfd);
+#endif
             //return sockfd;
         }
     }

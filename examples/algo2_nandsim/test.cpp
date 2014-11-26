@@ -43,7 +43,7 @@
 static int trace_memory = 1;
 extern "C" {
 #include "sys/ioctl.h"
-#include "portalmem.h"
+#include "drivers/portalmem/portalmem.h"
 #include "sock_utils.h"
 #include "dmaManager.h"
 #include "userReference.h"

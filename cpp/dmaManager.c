@@ -32,9 +32,9 @@
 #include <sys/mman.h>
 
 #if defined(__arm__)
-#include "zynqportal.h"
+#include "drivers/zynqportal/zynqportal.h"
 #else
-#include "pcieportal.h"
+#include "drivers/pcieportal/pcieportal.h"
 #endif
 #endif
 

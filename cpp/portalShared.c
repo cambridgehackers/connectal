@@ -39,7 +39,7 @@
 #include <sys/ioctl.h>
 #include <time.h> // ctime
 #endif
-#include "portalmem.h" // PA_MALLOC
+#include "drivers/portalmem/portalmem.h" // PA_MALLOC
 
 static int init_shared(struct PortalInternal *pint, void *aparam)
 {

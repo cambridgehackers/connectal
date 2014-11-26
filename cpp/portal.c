@@ -41,13 +41,13 @@
 #include <sys/ioctl.h>
 #include <time.h> // ctime
 #endif
-#include "portalmem.h" // PA_MALLOC
+#include "drivers/portalmem/portalmem.h" // PA_MALLOC
 
 #ifdef ZYNQ
 #include <android/log.h>
-#include <zynqportal.h>
+#include "drivers/zynqportal/zynqportal.h"
 #else
-#include <pcieportal.h> // BNOC_TRACE
+#include "drivers/pcieportal/pcieportal.h" // BNOC_TRACE
 #endif
 
 static void init_portal_hw(void);
