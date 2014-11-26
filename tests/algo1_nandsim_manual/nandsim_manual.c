@@ -34,7 +34,7 @@
 #include "sock_utils.h"  // bsim_poll_interrupt()
 #include "GeneratedTypes.h" 
 
-#include "portalmem.h"
+#include "drivers/portalmem/portalmem.h"
 
 static int trace_memory;// = 1;
 
@@ -153,9 +153,9 @@ int main(int argc, const char **argv)
 
 
   init_portal_internal(&intarr[2], IfcNames_BackingStoreMMURequest, NULL, NULL, NULL, NULL, MMURequest_reqsize);         // fpga3
-  init_portal_internal(&intarr[0], IfcNames_BackingStoreMMUIndication, MMUIndication_handleMessage, MMUIndication_cbTable, NULL, NULL, MMUIndication_reqsize);     // fpga1
+  init_portal_internal(&intarr[0], IfcNames_BackingStoreMMUIndication, MMUIndication_handleMessage, &MMUIndication_cbTable, NULL, NULL, MMUIndication_reqsize);     // fpga1
   init_portal_internal(&intarr[3], IfcNames_NandCfgRequest, NULL, NULL, NULL, NULL, NandCfgRequest_reqsize);    // fpga4
-  init_portal_internal(&intarr[1], IfcNames_NandCfgIndication, NandCfgIndication_handleMessage, NandCfgIndication_cbTable, NULL, NULL, NandCfgIndication_reqsize); // fpga2
+  init_portal_internal(&intarr[1], IfcNames_NandCfgIndication, NandCfgIndication_handleMessage, &NandCfgIndication_cbTable, NULL, NULL, NandCfgIndication_reqsize); // fpga2
 
   DmaManager_init(&priv, NULL, &intarr[2]);
   sem_init(&test_sem, 0, 0);
