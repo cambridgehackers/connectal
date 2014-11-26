@@ -40,6 +40,7 @@ argparser.add_argument('-interfaces', '--interfaces', help='BSV interface', acti
 argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps project directory')
 argparser.add_argument('-s', '--source', help='C++ source files', action='append')
 argparser.add_argument(      '--source2', help='C++ second program source files', action='append')
+argparser.add_argument(      '--cflags', help='C++ CFLAGS', action='append')
 argparser.add_argument(      '--contentid', help='Specify 64-bit contentid for PCIe designs')
 argparser.add_argument('-I', '--cinclude', help='Specify C++ include directories', default=[], action='append')
 argparser.add_argument('-V', '--verilog', default=[], help='Additional verilog sources', action='append')
@@ -229,9 +230,10 @@ if __name__=='__main__':
         options.tcl = []
     if not options.xsimflags:
         options.xsimflags = ['-R']
-
     if not options.interfaces:
         options.interfaces = []
+    if not options.cflags:
+        options.cflags = []
 
     project_dir = os.path.abspath(os.path.expanduser(options.project_dir))
 
@@ -296,7 +298,7 @@ if __name__=='__main__':
     includelist = ['-I$(DTOP)/jni', '-I$(CONNECTALDIR)', \
                    '-I$(CONNECTALDIR)/cpp', '-I$(CONNECTALDIR)/lib/cpp', \
                    '%(sourceincludes)s', '%(cincludes)s', '%(cdefines)s']
-    substs['cflags'] = ' '.join(includelist) % substs
+    substs['cflags'] = (' '.join(includelist) % substs) + ' '.join(options.cflags)
     f = util.createDirAndOpen(androidmkname, 'w')
     f.write(androidmk_template % substs)
     f.close()
