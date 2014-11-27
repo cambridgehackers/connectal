@@ -139,6 +139,9 @@ programflash:
 endif
 endif
 
+ifeq ($(CONNECTAL_NOHARDWARE),1)
+bits:
+else
 ifeq ($(BOARD),bluesim)
 bits: bsim
 else
@@ -150,6 +153,7 @@ else
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
 endif
 	$(CONNECTALDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
+endif
 endif
 
 android.exe: prepare_bin_target

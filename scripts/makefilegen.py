@@ -42,6 +42,7 @@ argparser.add_argument('-s', '--source', help='C++ source files', action='append
 argparser.add_argument(      '--source2', help='C++ second program source files', action='append')
 argparser.add_argument(      '--cflags', help='C++ CFLAGS', action='append')
 argparser.add_argument(      '--shared', help='Make a shared library', action='store_true')
+argparser.add_argument(      '--nohardware', help='Do not generate hardware for the design', action='store_true')
 argparser.add_argument(      '--contentid', help='Specify 64-bit contentid for PCIe designs')
 argparser.add_argument('-I', '--cinclude', help='Specify C++ include directories', default=[], action='append')
 argparser.add_argument('-V', '--verilog', default=[], help='Additional verilog sources', action='append')
@@ -138,6 +139,7 @@ export BSVDEFINES_LIST = %(bsvdefines_list)s
 export DUT_NAME = %(Dut)s
 %(runsource2)s
 %(shared)s
+%(nohardware)s
 
 %(mdefines)s
 %(dump_map)s
@@ -390,6 +392,7 @@ if __name__=='__main__':
                                    'xsimflags': ' '.join(options.xsimflags),
                                    'bsvdefines_list': ' '.join(bsvdefines),
                                    'shared': 'CONNECTAL_SHARED=1' if options.shared else '',
+                                   'nohardware': 'CONNECTAL_NOHARDWARE=1' if options.nohardware else '',
                                    'bitsmake': bitsmake
                                    })
     make.close()
