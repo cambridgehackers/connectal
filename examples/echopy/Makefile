@@ -5,7 +5,8 @@ INTERFACES = Swallow EchoRequest EchoIndication
 BSVFILES = Echo.bsv SwallowIF.bsv Top.bsv
 ## the source files in the example
 CPPFILES=testecho.cpp
-CONNECTALFLAGS += --cflags " -shared -fpic"
+CONNECTALFLAGS += --shared
+# --cflags " -fpic"
 
 CONNECTALFLAGS += -D IMPORT_HOSTIF
 ## uncomment the following line to enable AXI trace

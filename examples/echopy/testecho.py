@@ -21,19 +21,19 @@
 #
 
 import os, sys, threading
-import myModule
+import connectal
 
 def call_say(a):
-    myModule.call_say(a)
+    connectal.call_say(a)
     #sem_heard2.acquire()
 
 def call_say2(a, b):
-    myModule.call_say2(a, b)
+    connectal.call_say2(a, b)
     #sem_heard2.acquire()
 
 def heard(a):
     print 'heard called!!!', a
-    myModule.call_say2(a, 2*a);
+    connectal.call_say2(a, 2*a);
 
 def heard2(a, b):
     print 'heard2 called!!!', a, b
@@ -43,13 +43,13 @@ IfcNames_EchoIndication = 0
 IfcNames_EchoRequest = 1
 IfcNames_Swallow = 2
 sem_heard2 = threading.Semaphore(0)
-myModule.tmain()
+connectal.tmain()
 #    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication);
 #    SwallowProxy *swallowProxy = new SwallowProxy(IfcNames_Swallow);
 #    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
-myModule.myHeard(heard, 0)
-myModule.myHeard(heard2, 1)
-myModule.portalExec_start()
+connectal.myHeard(heard, 0)
+connectal.myHeard(heard2, 1)
+connectal.portalExec_start()
 print 'after tmain'
 v = 42
 print "Saying %d" % v

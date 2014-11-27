@@ -41,6 +41,7 @@ argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps pro
 argparser.add_argument('-s', '--source', help='C++ source files', action='append')
 argparser.add_argument(      '--source2', help='C++ second program source files', action='append')
 argparser.add_argument(      '--cflags', help='C++ CFLAGS', action='append')
+argparser.add_argument(      '--shared', help='Make a shared library', action='store_true')
 argparser.add_argument(      '--contentid', help='Specify 64-bit contentid for PCIe designs')
 argparser.add_argument('-I', '--cinclude', help='Specify C++ include directories', default=[], action='append')
 argparser.add_argument('-V', '--verilog', default=[], help='Additional verilog sources', action='append')
@@ -136,6 +137,7 @@ QTUSED = %(qtused)s
 export BSVDEFINES_LIST = %(bsvdefines_list)s
 export DUT_NAME = %(Dut)s
 %(runsource2)s
+%(shared)s
 
 %(mdefines)s
 %(dump_map)s
@@ -192,6 +194,9 @@ BSIM_EXE_CXX = $(addprefix $(CONNECTALDIR)/cpp/, $(BSIM_EXE_CXX_FILES))
 
 ubuntu.exe: $(SOURCES)
 	$(Q)g++ $(CFLAGS) -o ubuntu.exe $(SOURCES) $(LDLIBS)
+
+connectal.so: $(SOURCES)
+	$(Q)g++ -shared -fpic $(CFLAGS) -o connectal.so %(bsimcxx)s $(SOURCES) $(LDLIBS)
 
 ubuntu.exe2: $(SOURCES2)
 	$(Q)g++ $(CFLAGS) $(CFLAGS2) -o ubuntu.exe2 $(SOURCES2) $(LDLIBS)
@@ -293,7 +298,8 @@ if __name__=='__main__':
 	'clibdirs': ' '.join([ '-L%s' % os.path.abspath(l) for l in options.clibdir ]),
 	'cdefines': ' '.join([ '-D%s' % d for d in bsvdefines ]),
         'cdefines2': ' '.join([ '-D%s' % d for d in options.bsvdefine2 ]),
-	'cincludes': ' '.join([ '-I%s' % os.path.abspath(i) for i in options.cinclude ])
+	'cincludes': ' '.join([ '-I%s' % os.path.abspath(i) for i in options.cinclude ]),
+        'bsimcxx': '-DBSIM $(BSIM_EXE_CXX)' if boardname == 'bluesim' else ''
     }
     includelist = ['-I$(DTOP)/jni', '-I$(CONNECTALDIR)', \
                    '-I$(CONNECTALDIR)/cpp', '-I$(CONNECTALDIR)/lib/cpp', \
@@ -383,6 +389,7 @@ if __name__=='__main__':
                                    'xelabflags': ' '.join(options.xelabflags),
                                    'xsimflags': ' '.join(options.xsimflags),
                                    'bsvdefines_list': ' '.join(bsvdefines),
+                                   'shared': 'CONNECTAL_SHARED=1' if options.shared else '',
                                    'bitsmake': bitsmake
                                    })
     make.close()

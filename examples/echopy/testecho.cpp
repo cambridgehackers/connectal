@@ -94,8 +94,8 @@ static PyMethodDef myModule_methods[] = {
     {NULL, NULL}
 };
 
-void initmyModule()
+void initconnectal()
 {
-    Py_InitModule("myModule", myModule_methods);
+    Py_InitModule("connectal", myModule_methods);
 }
 } // extern "C"
