@@ -22,34 +22,37 @@
 
 import ctypes, os, sys, threading, time
 connectal = ctypes.CDLL('./connectal.so')
-stopPolling = False
 
 def call_say(a):
-    connectal.call_say(a)
+    connectal.EchoRequest_say(ctypes.c_void_p(treq), a)
     sem_heard2.acquire()
 
 def call_say2(a, b):
-    connectal.call_say2(a, b)
+    connectal.EchoRequest_say2(ctypes.c_void_p(treq), a, b)
 
 def heard(a):
     print 'heard called!!!', a
-    connectal.call_say2(a, 2*a);
+    call_say2(a, 2*a);
 
 def heard2(a, b):
     print 'heard2 called!!!', a, b
     sem_heard2.release()
 
 def worker():
-    print 'Starting worker'
     while not stopPolling:
-        #print 'check'
-        connectal.checkInd()
-        #time.sleep(1)
+        connectal.portalCheckIndication(ctypes.c_void_p(tind))
 
+stopPolling = False
 connectal.jcabozo(ctypes.py_object(heard), 0)
 connectal.jcabozo(ctypes.py_object(heard2), 1)
 sem_heard2 = threading.Semaphore(0)
-connectal.tmain()
+tr = connectal.trequest
+tr.restype = ctypes.c_void_p
+ti = connectal.tindication
+ti.restype = ctypes.c_void_p
+treq = tr()
+tind = ti()
+print 'JJ', '%x' % treq, '%x' % tind
 t1 = threading.Thread(target=worker)
 t1.start()
 v = 42

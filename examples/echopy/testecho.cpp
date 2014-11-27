@@ -24,9 +24,7 @@
 #include <python2.7/Python.h>
 
 static PyObject *heardCallback[20];
-#define MAX_INDARRAY 2
-static PortalInternal erequest;
-static PortalInternal eindication;
+static PortalInternal erequest, eindication;
 
 extern "C" {
 void jcabozo(PyObject *param, int ind)
@@ -45,25 +43,17 @@ static void heard2_cb(struct PortalInternal *p,uint32_t a, uint32_t b) {
     PyEval_CallFunction(heardCallback[1], "(ii)", a, b);
     PyGILState_Release(gstate);
 }
-EchoIndicationCb EchoInd_cbTable = { heard_cb, heard2_cb};
+static EchoIndicationCb EchoInd_cbTable = { heard_cb, heard2_cb};
 
-void call_say(int v)
+void *trequest()
 {
-    EchoRequest_say(&erequest, v);
+    init_portal_internal(&erequest, IfcNames_EchoRequest, NULL, NULL, NULL, NULL, EchoRequest_reqsize);
+    return &erequest;
 }
-void call_say2(int v, int v2)
+void *tindication()
 {
-    EchoRequest_say2(&erequest, v, v2);
-}
-
-void checkInd(void)
-{
-    portalCheckIndication(&eindication);
-}
-void tmain()
-{
-init_portal_internal(&erequest, IfcNames_EchoRequest, NULL, NULL, NULL, NULL, EchoRequest_reqsize);
-init_portal_internal(&eindication, IfcNames_EchoIndication,
-    EchoIndication_handleMessage, &EchoInd_cbTable, NULL, NULL, EchoIndication_reqsize);
+    init_portal_internal(&eindication, IfcNames_EchoIndication,
+        EchoIndication_handleMessage, &EchoInd_cbTable, NULL, NULL, EchoIndication_reqsize);
+    return &eindication;
 }
 } // extern "C"
