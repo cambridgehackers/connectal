@@ -67,10 +67,11 @@ typedef int (*RECVMSG)(struct PortalInternal *pint, volatile unsigned int *buffe
 typedef unsigned int (*READWORD)(struct PortalInternal *pint, volatile unsigned int **addr);
 typedef void (*WRITEWORD)(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 typedef void (*WRITEFDWORD)(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
-typedef int (*BUSYWAIT)(struct PortalInternal *pint, volatile unsigned int *addr, const char *str);
+typedef int (*BUSYWAIT)(struct PortalInternal *pint, unsigned int v, const char *str);
 typedef void (*ENABLEINT)(struct PortalInternal *pint, int val);
 typedef volatile unsigned int *(*MAPCHANNEL)(struct PortalInternal *pint, unsigned int v);
 typedef int (*EVENT)(struct PortalInternal *pint);
+typedef int (*NOTFULL)(struct PortalInternal *pint, unsigned int v);
 typedef struct {
     ITEMINIT    init;
     READWORD    read;
@@ -83,6 +84,7 @@ typedef struct {
     BUSYWAIT    busywait;
     ENABLEINT   enableint;
     EVENT       event;
+    NOTFULL     notFull;
 } PortalItemFunctions;
 
 typedef struct {
@@ -186,17 +188,19 @@ void portalTimerPrint(int loops);
 
 void send_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, unsigned int hdr, int sendFd);
 int recv_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd);
-int busy_portal_null(struct PortalInternal *pint, volatile unsigned int *addr, const char *str);
+int busy_portal_null(struct PortalInternal *pint, unsigned int v, const char *str);
 void enableint_portal_null(struct PortalInternal *pint, int val);
 unsigned int read_portal_memory(PortalInternal *pint, volatile unsigned int **addr);
 void write_portal_memory(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 void write_fd_portal_memory(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 volatile unsigned int *mapchannel_hardware(struct PortalInternal *pint, unsigned int v);
-int busy_hardware(struct PortalInternal *pint, volatile unsigned int *addr, const char *str);
+int busy_hardware(struct PortalInternal *pint, unsigned int v, const char *str);
 void enableint_hardware(struct PortalInternal *pint, int val);
 int event_hardware(struct PortalInternal *pint);
 void addFdToPoller(struct PortalPoller *poller, int fd);
 int portal_mux_handler(struct PortalInternal *p, unsigned int channel, int messageFd);
+int notfull_null(PortalInternal *pint, unsigned int v);
+int notfull_hardware(PortalInternal *pint, unsigned int v);
 
 extern int portalExec_timeout;
 extern int global_pa_fd;

@@ -64,7 +64,7 @@ static volatile unsigned int *mapchannel_sharedReq(struct PortalInternal *pint, 
 {
     return &pint->map_base[pint->map_base[SHARED_WRITE]+1];
 }
-static int busywait_shared(struct PortalInternal *pint, volatile unsigned int *addr, const char *str)
+static int busywait_shared(struct PortalInternal *pint, unsigned int v, const char *str)
 {
     int reqwords = pint->reqsize/sizeof(uint32_t) + 1;
     reqwords = (reqwords + 1) & 0xfffe;
@@ -126,6 +126,6 @@ static int event_shared(struct PortalInternal *pint)
 }
 PortalItemFunctions sharedfunc = {
     init_shared, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_sharedInd, mapchannel_sharedReq,
-    send_shared, recv_portal_null, busywait_shared, enableint_portal_null, event_shared};
+    send_shared, recv_portal_null, busywait_shared, enableint_portal_null, event_shared, notfull_null};
 
 

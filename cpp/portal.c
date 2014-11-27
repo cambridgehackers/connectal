@@ -268,7 +268,11 @@ int recv_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer,
 {
     return 0;
 }
-int busy_portal_null(struct PortalInternal *pint, volatile unsigned int *addr, const char *str)
+int notfull_null(PortalInternal *pint, unsigned int v)
+{
+    return 0;
+}
+int busy_portal_null(struct PortalInternal *pint, unsigned int v, const char *str)
 {
     return 0;
 }
@@ -295,15 +299,19 @@ volatile unsigned int *mapchannel_hardware(struct PortalInternal *pint, unsigned
 {
     return &pint->map_base[PORTAL_IND_FIFO(v)];
 }
-int busy_hardware(struct PortalInternal *pint, volatile unsigned int *addr, const char *str)
+int notfull_hardware(PortalInternal *pint, unsigned int v)
+{
+    volatile unsigned int *tempp = mapchannel_hardware(pint, v) + 1;
+    return pint->item->read(pint, &tempp);
+}
+int busy_hardware(struct PortalInternal *pint, unsigned int v, const char *str)
 {
     int count = 50;
-    volatile unsigned int *tempp = addr + 1;
-    while (!pint->item->read(pint, &tempp) && ((pint->busyType == BUSY_SPIN) || count-- > 0))
+    while (!pint->item->notFull(pint, v) && ((pint->busyType == BUSY_SPIN) || count-- > 0))
         ; /* busy wait a bit on 'fifo not full' */
     if (count <= 0) {
         if (pint->busyType == BUSY_TIMEWAIT)
-            while (!pint->item->read(pint, &tempp)) {
+            while (!pint->item->notFull(pint, v)) {
                 struct timeval timeout;
                 timeout.tv_sec = 0;
                 timeout.tv_usec = 10000;
@@ -392,4 +400,4 @@ static void write_fd_hardware(PortalInternal *pint, volatile unsigned int **addr
 
 PortalItemFunctions hardwarefunc = {
     init_hardware, read_hardware, write_hardware, write_fd_hardware, mapchannel_hardware, mapchannel_hardware,
-    send_portal_null, recv_portal_null, busy_hardware, enableint_hardware, event_hardware};
+    send_portal_null, recv_portal_null, busy_hardware, enableint_hardware, event_hardware, notfull_hardware};

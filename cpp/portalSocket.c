@@ -223,10 +223,10 @@ static void send_socket(struct PortalInternal *pint, volatile unsigned int *data
 }
 PortalItemFunctions socketfuncResp = {
     init_socketResp, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_socket,
-    send_socket, recv_socket, busy_portal_null, enableint_portal_null, event_socket};
+    send_socket, recv_socket, busy_portal_null, enableint_portal_null, event_socket, notfull_null};
 PortalItemFunctions socketfuncInit = {
     init_socketInit, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_socket,
-    send_socket, recv_socket, busy_portal_null, enableint_portal_null, event_socket};
+    send_socket, recv_socket, busy_portal_null, enableint_portal_null, event_socket, notfull_null};
 
 
 static int init_mux(struct PortalInternal *pint, void *aparam)
@@ -273,7 +273,7 @@ int portal_mux_handler(struct PortalInternal *pint, unsigned int channel, int me
 }
 PortalItemFunctions muxfunc = {
     init_mux, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_socket,
-    send_mux, recv_mux, busy_portal_null, enableint_portal_null, event_mux};
+    send_mux, recv_mux, busy_portal_null, enableint_portal_null, event_mux, notfull_null};
 
 /*
  * BSIM
@@ -474,4 +474,4 @@ int event_portal_bsim(struct PortalInternal *pint)
 }
 PortalItemFunctions bsimfunc = {
     init_bsim, read_portal_bsim, write_portal_bsim, write_portal_fd_bsim, mapchannel_hardware, mapchannel_hardware,
-    send_portal_null, recv_portal_null, busy_hardware, enableint_hardware, event_portal_bsim};
+    send_portal_null, recv_portal_null, busy_hardware, enableint_hardware, event_portal_bsim, notfull_hardware};

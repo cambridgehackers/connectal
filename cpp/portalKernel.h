@@ -75,4 +75,4 @@ static void write_fd_portal_kernel(PortalInternal *pint, volatile unsigned int *
 
 PortalItemFunctions kernelfunc = {
     init_portal_kernel, read_portal_kernel, write_portal_kernel, write_fd_portal_kernel, mapchannel_portal_kernel, mapchannel_portal_kernel,
-    send_portal_null, recv_portal_null, busy_portal_kernel, enableint_portal_kernel, event_portal_kernel};
+    send_portal_null, recv_portal_null, busy_portal_kernel, enableint_portal_kernel, event_portal_kernel, notfull_null};
