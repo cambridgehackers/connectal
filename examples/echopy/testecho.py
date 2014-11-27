@@ -20,11 +20,12 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
-import ctypes, os, sys, threading
+import ctypes, os, sys, threading, time
 connectal = ctypes.CDLL('./connectal.so')
+stopPolling = False
 
 def call_say(a):
-    connectal.call_say(ctypes.c_int(a))
+    connectal.call_say(a)
     sem_heard2.acquire()
 
 def call_say2(a, b):
@@ -38,17 +39,19 @@ def heard2(a, b):
     print 'heard2 called!!!', a, b
     sem_heard2.release()
 
-IfcNames_EchoIndication = 0
-IfcNames_EchoRequest = 1
-IfcNames_Swallow = 2
+def worker():
+    print 'Starting worker'
+    while not stopPolling:
+        #print 'check'
+        connectal.checkInd()
+        #time.sleep(1)
+
 connectal.jcabozo(ctypes.py_object(heard), 0)
 connectal.jcabozo(ctypes.py_object(heard2), 1)
 sem_heard2 = threading.Semaphore(0)
 connectal.tmain()
-#    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication);
-#    SwallowProxy *swallowProxy = new SwallowProxy(IfcNames_Swallow);
-#    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
-connectal.portalExec_start()
+t1 = threading.Thread(target=worker)
+t1.start()
 v = 42
 print "Saying %d" % v
 call_say(v);
@@ -56,4 +59,4 @@ call_say(v*5);
 call_say(v*17);
 call_say(v*93);
 call_say2(v, v*3);
-print 'HOHOH'
+stopPolling = True

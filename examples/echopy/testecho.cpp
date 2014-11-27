@@ -20,51 +20,50 @@
  */
 
 #include <stdio.h>
-#include "EchoIndication.h"
-#include "EchoRequest.h"
 #include "GeneratedTypes.h"
-#include "Swallow.h"
 #include <python2.7/Python.h>
 
-extern "C" {
-EchoRequestProxy *echoRequestProxy = 0;
-PyObject *heardCallback[20];
+static PyObject *heardCallback[20];
+#define MAX_INDARRAY 2
+static PortalInternal erequest;
+static PortalInternal eindication;
 
+extern "C" {
 void jcabozo(PyObject *param, int ind)
 {
     Py_INCREF(param);
     heardCallback[ind] = param;
 }
 
-class EchoIndication : public EchoIndicationWrapper
-{
-public:
-    virtual void heard(uint32_t v) {
-        PyGILState_STATE gstate = PyGILState_Ensure();
-        PyEval_CallFunction(heardCallback[0], "(i)", v, NULL);
-        PyGILState_Release(gstate);
-    }
-    virtual void heard2(uint32_t a, uint32_t b) {
-        PyGILState_STATE gstate = PyGILState_Ensure();
-        PyEval_CallFunction(heardCallback[1], "(ii)", a, b);
-        PyGILState_Release(gstate);
-    }
-    EchoIndication(unsigned int id) : EchoIndicationWrapper(id) {}
-};
+static void heard_cb(struct PortalInternal *p,uint32_t v) {
+    PyGILState_STATE gstate = PyGILState_Ensure();
+    PyEval_CallFunction(heardCallback[0], "(i)", v, NULL);
+    PyGILState_Release(gstate);
+}
+static void heard2_cb(struct PortalInternal *p,uint32_t a, uint32_t b) {
+    PyGILState_STATE gstate = PyGILState_Ensure();
+    PyEval_CallFunction(heardCallback[1], "(ii)", a, b);
+    PyGILState_Release(gstate);
+}
+EchoIndicationCb EchoInd_cbTable = { heard_cb, heard2_cb};
 
 void call_say(int v)
 {
-    echoRequestProxy->say(v);
+    EchoRequest_say(&erequest, v);
 }
 void call_say2(int v, int v2)
 {
-    echoRequestProxy->say2(v, v2);
+    EchoRequest_say2(&erequest, v, v2);
 }
 
+void checkInd(void)
+{
+    portalCheckIndication(&eindication);
+}
 void tmain()
 {
-    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication);
-    SwallowProxy *swallowProxy = new SwallowProxy(IfcNames_Swallow);
-    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
+init_portal_internal(&erequest, IfcNames_EchoRequest, NULL, NULL, NULL, NULL, EchoRequest_reqsize);
+init_portal_internal(&eindication, IfcNames_EchoIndication,
+    EchoIndication_handleMessage, &EchoInd_cbTable, NULL, NULL, EchoIndication_reqsize);
 }
 } // extern "C"
