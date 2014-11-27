@@ -28,12 +28,10 @@
 
 extern "C" {
 EchoRequestProxy *echoRequestProxy = 0;
-static sem_t sem_heard2;
 PyObject *heardCallback[20];
 
 void jcabozo(PyObject *param, int ind)
 {
-printf("[%s:%d] [%d] %p\n", __FUNCTION__, __LINE__, ind, param);
     Py_INCREF(param);
     heardCallback[ind] = param;
 }
@@ -42,37 +40,29 @@ class EchoIndication : public EchoIndicationWrapper
 {
 public:
     virtual void heard(uint32_t v) {
-//printf("[%s:%d] %p\n", __FUNCTION__, __LINE__, heardCallback[0]);
         PyGILState_STATE gstate = PyGILState_Ensure();
         PyEval_CallFunction(heardCallback[0], "(i)", v, NULL);
         PyGILState_Release(gstate);
     }
     virtual void heard2(uint32_t a, uint32_t b) {
-//printf("[%s:%d] %p\n", __FUNCTION__, __LINE__, heardCallback[1]);
-        sem_post(&sem_heard2);
         PyGILState_STATE gstate = PyGILState_Ensure();
         PyEval_CallFunction(heardCallback[1], "(ii)", a, b);
         PyGILState_Release(gstate);
-        //printf("heard an echo2: %ld %ld\n", a, b);
     }
     EchoIndication(unsigned int id) : EchoIndicationWrapper(id) {}
 };
 
 void call_say(int v)
 {
-//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     echoRequestProxy->say(v);
-    sem_wait(&sem_heard2);
 }
 void call_say2(int v, int v2)
 {
-//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     echoRequestProxy->say2(v, v2);
 }
 
 void tmain()
 {
-//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication);
     SwallowProxy *swallowProxy = new SwallowProxy(IfcNames_Swallow);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);

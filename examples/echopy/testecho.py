@@ -25,11 +25,10 @@ connectal = ctypes.CDLL('./connectal.so')
 
 def call_say(a):
     connectal.call_say(ctypes.c_int(a))
-    #sem_heard2.acquire()
+    sem_heard2.acquire()
 
 def call_say2(a, b):
     connectal.call_say2(a, b)
-    #sem_heard2.acquire()
 
 def heard(a):
     print 'heard called!!!', a
@@ -37,7 +36,7 @@ def heard(a):
 
 def heard2(a, b):
     print 'heard2 called!!!', a, b
-    #sem_heard2.release()
+    sem_heard2.release()
 
 IfcNames_EchoIndication = 0
 IfcNames_EchoRequest = 1
