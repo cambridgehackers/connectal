@@ -103,6 +103,11 @@ typedef struct PortalInternal {
   void                   *cb;
   struct PortalInternal  *mux;
   int                    muxid;
+  int                    busyType;
+#define BUSY_TIMEWAIT 0
+#define BUSY_SPIN     1
+#define BUSY_EXIT     2
+#define BUSY_ERROR    3
   int                    indication_index;
   int                    request_index;
   int                    client_fd_number;
