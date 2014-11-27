@@ -20,7 +20,6 @@
  */
 
 #include <stdio.h>
-
 #include "EchoIndication.h"
 #include "EchoRequest.h"
 #include "GeneratedTypes.h"
@@ -28,74 +27,54 @@
 #include <python2.7/Python.h>
 
 extern "C" {
-PyObject *heardCallback[20];
-static PyObject* py_myHeard(PyObject* self, PyObject* args)
-{
-    PyObject *cb;
-    int ind;
-    PyArg_ParseTuple(args, "Oi", &cb, &ind);
-    Py_INCREF(cb);
-printf("[%s:%d] [%d] = %p\n", __FUNCTION__, __LINE__, ind, cb);
-    heardCallback[ind] = cb;
-    return Py_BuildValue("d", 0);
-}
-
 EchoRequestProxy *echoRequestProxy = 0;
 static sem_t sem_heard2;
+PyObject *heardCallback[20];
+
+void jcabozo(PyObject *param, int ind)
+{
+printf("[%s:%d] [%d] %p\n", __FUNCTION__, __LINE__, ind, param);
+    Py_INCREF(param);
+    heardCallback[ind] = param;
+}
 
 class EchoIndication : public EchoIndicationWrapper
 {
 public:
     virtual void heard(uint32_t v) {
-        PyEval_CallFunction(heardCallback[0], "(i)", v);
+//printf("[%s:%d] %p\n", __FUNCTION__, __LINE__, heardCallback[0]);
+        PyGILState_STATE gstate = PyGILState_Ensure();
+        PyEval_CallFunction(heardCallback[0], "(i)", v, NULL);
+        PyGILState_Release(gstate);
     }
     virtual void heard2(uint32_t a, uint32_t b) {
+//printf("[%s:%d] %p\n", __FUNCTION__, __LINE__, heardCallback[1]);
         sem_post(&sem_heard2);
+        PyGILState_STATE gstate = PyGILState_Ensure();
         PyEval_CallFunction(heardCallback[1], "(ii)", a, b);
+        PyGILState_Release(gstate);
         //printf("heard an echo2: %ld %ld\n", a, b);
     }
     EchoIndication(unsigned int id) : EchoIndicationWrapper(id) {}
 };
 
-static PyObject* py_call_say(PyObject* self, PyObject* args)
+void call_say(int v)
 {
-    int v;
-    PyArg_ParseTuple(args, "i", &v);
+//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     echoRequestProxy->say(v);
     sem_wait(&sem_heard2);
-    return Py_BuildValue("d", 0);
 }
-static PyObject* py_call_say2(PyObject* self, PyObject* args)
+void call_say2(int v, int v2)
 {
-    int v, v2;
-    PyArg_ParseTuple(args, "ii", &v, &v2);
+//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     echoRequestProxy->say2(v, v2);
-    return Py_BuildValue("d", 0);
 }
-static PyObject* py_portalExec_start(PyObject* self, PyObject* args)
+
+void tmain()
 {
-    portalExec_start();
-    return Py_BuildValue("d", 0);
-}
-static PyObject* py_tmain(PyObject* self, PyObject* args)
-{
+//printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication);
     SwallowProxy *swallowProxy = new SwallowProxy(IfcNames_Swallow);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
-    return Py_BuildValue("d", 0);
-}
-
-static PyMethodDef myModule_methods[] = {
-    {"myHeard", py_myHeard, METH_VARARGS},
-    {"tmain", py_tmain, METH_VARARGS},
-    {"call_say", py_call_say, METH_VARARGS},
-    {"call_say2", py_call_say2, METH_VARARGS},
-    {"portalExec_start", py_portalExec_start, METH_VARARGS},
-    {NULL, NULL}
-};
-
-void initconnectal()
-{
-    Py_InitModule("connectal", myModule_methods);
 }
 } // extern "C"

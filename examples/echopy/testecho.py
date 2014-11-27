@@ -20,11 +20,11 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
-import os, sys, threading
-import connectal
+import ctypes, os, sys, threading
+connectal = ctypes.CDLL('./connectal.so')
 
 def call_say(a):
-    connectal.call_say(a)
+    connectal.call_say(ctypes.c_int(a))
     #sem_heard2.acquire()
 
 def call_say2(a, b):
@@ -42,15 +42,14 @@ def heard2(a, b):
 IfcNames_EchoIndication = 0
 IfcNames_EchoRequest = 1
 IfcNames_Swallow = 2
+connectal.jcabozo(ctypes.py_object(heard), 0)
+connectal.jcabozo(ctypes.py_object(heard2), 1)
 sem_heard2 = threading.Semaphore(0)
 connectal.tmain()
 #    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication);
 #    SwallowProxy *swallowProxy = new SwallowProxy(IfcNames_Swallow);
 #    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
-connectal.myHeard(heard, 0)
-connectal.myHeard(heard2, 1)
 connectal.portalExec_start()
-print 'after tmain'
 v = 42
 print "Saying %d" % v
 call_say(v);
