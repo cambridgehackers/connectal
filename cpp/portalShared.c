@@ -51,8 +51,8 @@ static int init_shared(struct PortalInternal *pint, void *aparam)
         pint->map_base[SHARED_WRITE] = SHARED_START;
         pint->map_base[SHARED_READ] = SHARED_START;
         pint->map_base[SHARED_START] = 0;
-        unsigned int ref = param->dma->reference(fd);
-        MMURequest_setInterface(param->dma->priv.sglDevice, pint->fpga_number, ref);
+        if (param->dma)
+            MMURequest_setInterface(param->dma->priv.sglDevice, pint->fpga_number, param->dma->reference(fd));
     }
     return 0;
 }
@@ -127,5 +127,25 @@ static int event_shared(struct PortalInternal *pint)
 PortalItemFunctions sharedfunc = {
     init_shared, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_sharedInd, mapchannel_sharedReq,
     send_shared, recv_portal_null, busywait_shared, enableint_portal_null, event_shared, notfull_null};
+static volatile unsigned int *mapchannel_traceInd(struct PortalInternal *pint, unsigned int v)
+{
+    return &pint->map_base[pint->map_base[SHARED_READ]];
+}
+static volatile unsigned int *mapchannel_traceReq(struct PortalInternal *pint, unsigned int v)
+{
+    return &pint->map_base[pint->map_base[SHARED_WRITE]];
+}
+extern void memdump(uint8_t *p, int len, const char *title);
+static void send_trace(struct PortalInternal *pint, volatile unsigned int *buff, unsigned int hdr, int sendFd)
+{
+    int reqwords = hdr & 0xffff;
+    pint->map_base[pint->map_base[SHARED_WRITE]+reqwords-1] = hdr;
+    pint->map_base[SHARED_WRITE] = increment_shared(pint, pint->map_base[SHARED_WRITE] + reqwords);
+    //fprintf(stderr, "send_shared head=%d padded=%d hdr=%08x\n", pint->map_base[SHARED_WRITE], needs_padding, hdr);
+    pint->map_base[pint->map_base[SHARED_WRITE]] = 0;
+}
+PortalItemFunctions tracefunc = {
+    init_shared, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_traceInd, mapchannel_traceReq,
+    send_trace, recv_portal_null, busywait_shared, enableint_portal_null, event_shared, notfull_null};
 
 
