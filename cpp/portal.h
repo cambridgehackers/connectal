@@ -88,34 +88,34 @@ typedef struct {
 } PortalItemFunctions;
 
 typedef struct {
-  struct PortalInternal *pint;
+    struct PortalInternal *pint;
 } PortalMuxHandler;
 
 #define MAX_CLIENT_FD 10
 typedef struct PortalInternal {
-  struct PortalPoller   *poller;
-  int                    fpga_fd;
-  int                    fpga_number;
-  volatile unsigned int *map_base;
-  void                  *parent;
-  PORTAL_INDFUNC         handler;
-  uint32_t               reqinfo;
-  int                    accept_finished;
-  PortalItemFunctions    *item;
-  void                   *cb;
-  struct PortalInternal  *mux;
-  int                    muxid;
-  int                    busyType;
+    struct PortalPoller   *poller;
+    int                    fpga_fd;
+    int                    fpga_number;
+    volatile unsigned int *map_base;
+    void                  *parent;
+    PORTAL_INDFUNC         handler;
+    uint32_t               reqinfo;
+    int                    accept_finished;
+    PortalItemFunctions    *item;
+    void                   *cb;
+    struct PortalInternal  *mux;
+    int                    muxid;
+    int                    busyType;
 #define BUSY_TIMEWAIT 0
 #define BUSY_SPIN     1
 #define BUSY_EXIT     2
 #define BUSY_ERROR    3
-  int                    indication_index;
-  int                    request_index;
-  int                    client_fd_number;
-  int                    client_fd[MAX_CLIENT_FD];
-  int                    mux_ports_number;
-  PortalMuxHandler       *mux_ports;
+    int                    indication_index;
+    int                    request_index;
+    int                    client_fd_number;
+    int                    client_fd[MAX_CLIENT_FD];
+    int                    mux_ports_number;
+    PortalMuxHandler       *mux_ports;
 } PortalInternal;
 
 typedef struct {

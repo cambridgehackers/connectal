@@ -301,7 +301,7 @@ volatile unsigned int *mapchannel_hardware(struct PortalInternal *pint, unsigned
 }
 int notfull_hardware(PortalInternal *pint, unsigned int v)
 {
-    volatile unsigned int *tempp = mapchannel_hardware(pint, v) + 1;
+    volatile unsigned int *tempp = pint->item->mapchannelReq(pint, v) + 1;
     return pint->item->read(pint, &tempp);
 }
 int busy_hardware(struct PortalInternal *pint, unsigned int v, const char *str)
