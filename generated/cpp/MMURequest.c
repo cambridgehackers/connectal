@@ -1,23 +1,24 @@
 #include "GeneratedTypes.h"
 
-void MMURequest_sglist ( struct PortalInternal *p, const uint32_t sglId, const uint32_t sglIndex, const uint64_t addr, const uint32_t len )
+int MMURequest_sglist ( struct PortalInternal *p, const uint32_t sglId, const uint32_t sglIndex, const uint64_t addr, const uint32_t len )
 {
     volatile unsigned int* temp_working_addr_start = p->item->mapchannelReq(p, CHAN_NUM_MMURequest_sglist);
     volatile unsigned int* temp_working_addr = temp_working_addr_start;
-    if (p->item->busywait(p, temp_working_addr, "MMURequest_sglist")) return;
+    if (p->item->busywait(p, CHAN_NUM_MMURequest_sglist, "MMURequest_sglist")) return 1;
     p->item->write(p, &temp_working_addr, sglId);
     p->item->write(p, &temp_working_addr, sglIndex);
     p->item->write(p, &temp_working_addr, (addr>>32));
     p->item->write(p, &temp_working_addr, addr);
     p->item->write(p, &temp_working_addr, len);
     p->item->send(p, temp_working_addr_start, (CHAN_NUM_MMURequest_sglist << 16) | 6, -1);
+    return 0;
 };
 
-void MMURequest_region ( struct PortalInternal *p, const uint32_t sglId, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 )
+int MMURequest_region ( struct PortalInternal *p, const uint32_t sglId, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 )
 {
     volatile unsigned int* temp_working_addr_start = p->item->mapchannelReq(p, CHAN_NUM_MMURequest_region);
     volatile unsigned int* temp_working_addr = temp_working_addr_start;
-    if (p->item->busywait(p, temp_working_addr, "MMURequest_region")) return;
+    if (p->item->busywait(p, CHAN_NUM_MMURequest_region, "MMURequest_region")) return 1;
     p->item->write(p, &temp_working_addr, sglId);
     p->item->write(p, &temp_working_addr, (barr8>>32));
     p->item->write(p, &temp_working_addr, barr8);
@@ -29,34 +30,38 @@ void MMURequest_region ( struct PortalInternal *p, const uint32_t sglId, const u
     p->item->write(p, &temp_working_addr, barr0);
     p->item->write(p, &temp_working_addr, index0);
     p->item->send(p, temp_working_addr_start, (CHAN_NUM_MMURequest_region << 16) | 11, -1);
+    return 0;
 };
 
-void MMURequest_idRequest ( struct PortalInternal *p, const SpecialTypeForSendingFd fd )
+int MMURequest_idRequest ( struct PortalInternal *p, const SpecialTypeForSendingFd fd )
 {
     volatile unsigned int* temp_working_addr_start = p->item->mapchannelReq(p, CHAN_NUM_MMURequest_idRequest);
     volatile unsigned int* temp_working_addr = temp_working_addr_start;
-    if (p->item->busywait(p, temp_working_addr, "MMURequest_idRequest")) return;
+    if (p->item->busywait(p, CHAN_NUM_MMURequest_idRequest, "MMURequest_idRequest")) return 1;
     p->item->writefd(p, &temp_working_addr, fd);
     p->item->send(p, temp_working_addr_start, (CHAN_NUM_MMURequest_idRequest << 16) | 2, fd);
+    return 0;
 };
 
-void MMURequest_idReturn ( struct PortalInternal *p, const uint32_t sglId )
+int MMURequest_idReturn ( struct PortalInternal *p, const uint32_t sglId )
 {
     volatile unsigned int* temp_working_addr_start = p->item->mapchannelReq(p, CHAN_NUM_MMURequest_idReturn);
     volatile unsigned int* temp_working_addr = temp_working_addr_start;
-    if (p->item->busywait(p, temp_working_addr, "MMURequest_idReturn")) return;
+    if (p->item->busywait(p, CHAN_NUM_MMURequest_idReturn, "MMURequest_idReturn")) return 1;
     p->item->write(p, &temp_working_addr, sglId);
     p->item->send(p, temp_working_addr_start, (CHAN_NUM_MMURequest_idReturn << 16) | 2, -1);
+    return 0;
 };
 
-void MMURequest_setInterface ( struct PortalInternal *p, const uint32_t interfaceId, const uint32_t sglId )
+int MMURequest_setInterface ( struct PortalInternal *p, const uint32_t interfaceId, const uint32_t sglId )
 {
     volatile unsigned int* temp_working_addr_start = p->item->mapchannelReq(p, CHAN_NUM_MMURequest_setInterface);
     volatile unsigned int* temp_working_addr = temp_working_addr_start;
-    if (p->item->busywait(p, temp_working_addr, "MMURequest_setInterface")) return;
+    if (p->item->busywait(p, CHAN_NUM_MMURequest_setInterface, "MMURequest_setInterface")) return 1;
     p->item->write(p, &temp_working_addr, interfaceId);
     p->item->write(p, &temp_working_addr, sglId);
     p->item->send(p, temp_working_addr_start, (CHAN_NUM_MMURequest_setInterface << 16) | 3, -1);
+    return 0;
 };
 
 int MMURequest_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd)

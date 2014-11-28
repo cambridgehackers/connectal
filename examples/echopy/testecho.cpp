@@ -47,13 +47,13 @@ static EchoIndicationCb EchoInd_cbTable = { heard_cb, heard2_cb};
 
 void *trequest()
 {
-    init_portal_internal(&erequest, IfcNames_EchoRequest, NULL, NULL, NULL, NULL, EchoRequest_reqsize);
+    init_portal_internal(&erequest, IfcNames_EchoRequest, NULL, NULL, NULL, NULL, EchoRequest_reqinfo);
     return &erequest;
 }
 void *tindication()
 {
     init_portal_internal(&eindication, IfcNames_EchoIndication,
-        EchoIndication_handleMessage, &EchoInd_cbTable, NULL, NULL, EchoIndication_reqsize);
+        EchoIndication_handleMessage, &EchoInd_cbTable, NULL, NULL, EchoIndication_reqinfo);
     return &eindication;
 }
 } // extern "C"

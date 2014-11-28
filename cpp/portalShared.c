@@ -66,7 +66,7 @@ static volatile unsigned int *mapchannel_sharedReq(struct PortalInternal *pint, 
 }
 static int busywait_shared(struct PortalInternal *pint, unsigned int v, const char *str)
 {
-    int reqwords = pint->reqsize/sizeof(uint32_t) + 1;
+    int reqwords = REQINFO_SIZE(pint->reqinfo)/sizeof(uint32_t) + 1;
     reqwords = (reqwords + 1) & 0xfffe;
     volatile unsigned int *map_base = pint->map_base;
     int limit = map_base[SHARED_LIMIT];
@@ -90,7 +90,7 @@ static int busywait_shared(struct PortalInternal *pint, unsigned int v, const ch
 }
 static inline unsigned int increment_shared(PortalInternal *pint, unsigned int newp)
 {
-    int reqwords = pint->reqsize/sizeof(uint32_t) + 1;
+    int reqwords = REQINFO_SIZE(pint->reqinfo)/sizeof(uint32_t) + 1;
     reqwords = (reqwords + 1) & 0xfffe;
     if (newp + reqwords >= pint->map_base[SHARED_LIMIT])
         newp = SHARED_START;

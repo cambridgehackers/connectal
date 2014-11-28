@@ -58,7 +58,7 @@ PortalInternal *utility_portal = 0x0;
 static tBoard* tboard;
 #endif
 
-void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param, uint32_t reqsize)
+void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param, uint32_t reqinfo)
 {
     int rc;
     init_portal_hw();
@@ -78,7 +78,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
         pint->item = &hardwarefunc;
 #endif
     }
-    pint->reqsize = reqsize;
+    pint->reqinfo = reqinfo;
     rc = pint->item->init(pint, param);
     if (rc != 0) {
       PORTAL_PRINTF("%s: failed to open Portal portal%d\n", __FUNCTION__, pint->fpga_number);

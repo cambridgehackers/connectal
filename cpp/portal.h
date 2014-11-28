@@ -99,7 +99,7 @@ typedef struct PortalInternal {
   volatile unsigned int *map_base;
   void                  *parent;
   PORTAL_INDFUNC         handler;
-  uint32_t               reqsize;
+  uint32_t               reqinfo;
   int                    accept_finished;
   PortalItemFunctions    *item;
   void                   *cb;
@@ -156,7 +156,7 @@ int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *
 #ifdef __cplusplus
 extern "C" {
 #endif
-void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param, uint32_t reqsize);
+void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param, uint32_t reqinfo);
 void portalCheckIndication(PortalInternal *pint);
 uint64_t portalCycleCount(void);
 void write_portal_fd_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
@@ -221,5 +221,7 @@ extern PortalItemFunctions bsimfunc, hardwarefunc,
 #define SHARED_WRITE  1
 #define SHARED_READ   2
 #define SHARED_START  4
+#define REQINFO_SIZE(A) ((A) & 0xffff)
+#define REQINFO_COUNT(A) (((A) >> 16) & 0xffff)
 
 #endif /* __PORTAL_OFFSETS_H__ */

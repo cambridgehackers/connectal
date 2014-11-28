@@ -51,8 +51,8 @@ SimpleIndicationCb SimpleIndication_cbTable = {
 };
 int main(int argc, const char **argv)
 {
-   init_portal_internal(&intarr[0], IfcNames_SimpleRequest, NULL, NULL, NULL, NULL, SimpleRequest_reqsize); // portal 1
-   init_portal_internal(&intarr[1], IfcNames_SimpleIndication, SimpleIndication_handleMessage, &SimpleIndication_cbTable, NULL, NULL, SimpleIndication_reqsize); // portal 2
+   init_portal_internal(&intarr[0], IfcNames_SimpleRequest, NULL, NULL, NULL, NULL, SimpleRequest_reqinfo); // portal 1
+   init_portal_internal(&intarr[1], IfcNames_SimpleIndication, SimpleIndication_handleMessage, &SimpleIndication_cbTable, NULL, NULL, SimpleIndication_reqinfo); // portal 2
 
    intarr[0].item->enableint(&intarr[0], 0);
    intarr[1].item->enableint(&intarr[1], 0);
