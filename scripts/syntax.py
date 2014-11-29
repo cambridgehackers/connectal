@@ -29,6 +29,7 @@ import cppgen, bsvgen
 
 scripthome = os.path.dirname(os.path.abspath(__file__))
 noisyFlag=True
+parseDebugFlag=False
 
 tokens = (
     'AMPER',
@@ -346,7 +347,7 @@ def p_term(p):
             | term QUESTION expression
             | term QUESTION expression COLON expression
             | LPAREN expression RPAREN
-            | TOKINTERFACE VAR SEMICOLON expressionStmts TOKENDINTERFACE colonVar
+            | TOKINTERFACE VAR interfaceHashParams SEMICOLON expressionStmts TOKENDINTERFACE colonVar
             | TOKINTERFACE VAR expressionStmts TOKENDINTERFACE colonVar
             | BUILTINVAR
             | TOKCLOCKED_BY expression
@@ -405,10 +406,15 @@ def p_exportDecls(p):
     '''exportDecls :
                    | exportDecls exportDecl'''
 
+#jcajca
 def p_interfaceFormalParam(p):
     '''interfaceFormalParam : TOKTYPE VAR
+                            | VAR interfaceHashParams
+                            | NUM
                             | TOKNUMERIC TOKTYPE VAR'''
-    if len(p) == 3:
+    if len(p) == 2:
+        p[0] = p[1]
+    elif len(p) == 3:
         p[0] = p[2]
     else:
         p[0] = p[3]
@@ -981,6 +987,8 @@ def syntax_parse(argdata, inputfilename, bsvdefines):
     parser = yacc.yacc(optimize=1,errorlog=yacc.NullLogger(),outputdir=parserdir,debugfile=parserdir+'/parser.out')
     if noisyFlag:
         print 'Parsing:', inputfilename
+    if parseDebugFlag:
+        return  parser.parse(data,debug=1)
     return  parser.parse(data)
 
 def generate_bsvcpp(filelist, project_dir, dutname, bsvdefines, interfaces, nf):
