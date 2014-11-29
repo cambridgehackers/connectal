@@ -1010,8 +1010,9 @@ def generate_bsvcpp(filelist, project_dir, dutname, bsvdefines, interfaces, nf):
                     if not globalv.globalvars.get(myName):
                         globalv.add_new(AST.TypeDef(p.tdtype.instantiate(dict(zip(p.params, thisType.params))), myName, []))
     jsondata = AST.serialize_json(ilist, globalimports, dutname, interfaces)
-    cppgen.generate_cpp(project_dir, noisyFlag, jsondata)
-    bsvgen.generate_bsv(project_dir, noisyFlag, jsondata)
+    if project_dir:
+        cppgen.generate_cpp(project_dir, noisyFlag, jsondata)
+        bsvgen.generate_bsv(project_dir, noisyFlag, jsondata)
     
 if __name__=='__main__':
     if len(sys.argv) == 1:
@@ -1023,9 +1024,16 @@ if __name__=='__main__':
         import parsetab
         sys.exit(0)
     ifitems = []
-    for item in os.environ.get('INTERFACES').split():
-        if item not in ifitems:
-            ifitems.append(item)
+    t = os.environ.get('INTERFACES')
+    if t:
+        t = t.split()
+        for item in t:
+            if item not in ifitems:
+                ifitems.append(item)
+    deflist = []
+    t = os.environ.get('BSVDEFINES_LIST')
+    if t:
+        deflist = t.split()
     generate_bsvcpp(sys.argv[1:], os.environ.get('DTOP'), os.environ.get('DUT_NAME'),
-         os.environ.get('BSVDEFINES_LIST').split(), ifitems, os.environ.get('V') == '1')
+         deflist, ifitems, os.environ.get('V') == '1')
 
