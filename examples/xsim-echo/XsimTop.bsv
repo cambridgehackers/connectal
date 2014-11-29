@@ -27,7 +27,7 @@ import Leds::*;
 import StmtFSM::*;
 import Echo::*;
 
-typedef enum {EchoIndication, EchoRequest} IfcNames deriving (Eq,Bits);
+typedef enum {EchoIndicationIF, EchoRequestIF} IfcNames deriving (Eq,Bits);
 
 interface VEcho;
    method Bit#(32) heard();
@@ -43,7 +43,7 @@ module mkVEcho#(Bit#(32) say)(VEcho);
 endmodule
 
 module mkXsim(Empty);
-   let indication = (interface Echo::EchoIndication;
+   let indication = (interface EchoIndication;
 	  method Action heard(Bit#(32) v);
 	     $display("heard v=%d", v);
 	  endmethod
