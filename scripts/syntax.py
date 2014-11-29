@@ -406,7 +406,6 @@ def p_exportDecls(p):
     '''exportDecls :
                    | exportDecls exportDecl'''
 
-#jcajca
 def p_interfaceFormalParam(p):
     '''interfaceFormalParam : TOKTYPE VAR
                             | VAR interfaceHashParams
@@ -492,6 +491,7 @@ def p_lvalue(p):
     '''lvalue : VAR
               | LPAREN lvalue RPAREN
               | lvalue DOT VAR
+              | TOKACTION fsmStmts TOKENDACTION
               | lvalue LBRACKET expression RBRACKET
               | lvalue LBRACKET expression COLON expression RBRACKET
               | TOKMATCH pattern '''
@@ -568,6 +568,7 @@ def p_expressionStmt(p):
                       | TOKACTION colonVar expressionStmts TOKENDACTION colonVar
                       | typeDef
                       | instanceAttributes rule
+                      | TOKACTION fsmStmts TOKENDACTION
                       | TOKSEQ fsmStmts TOKENDSEQ
                       '''
 
@@ -1042,6 +1043,8 @@ if __name__=='__main__':
     t = os.environ.get('BSVDEFINES_LIST')
     if t:
         deflist = t.split()
+    if os.environ.get('D'):
+        parseDebugFlag=True
     generate_bsvcpp(sys.argv[1:], os.environ.get('DTOP'), os.environ.get('DUT_NAME'),
          deflist, ifitems, os.environ.get('V') == '1')
 
