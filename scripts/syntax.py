@@ -712,9 +712,17 @@ def p_enumDef(p):
     '''enumDef : TOKENUM LBRACE enumElements RBRACE'''
     p[0] = AST.Enum(p[3])
 
+def p_vardot(p):
+    '''vardot : VAR
+            | vardot DOT VAR'''
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        p[0] = p[3]
+
 def p_vars(p):
-    '''vars : VAR
-            | vars COMMA VAR'''
+    '''vars : vardot
+            | vars COMMA vardot'''
     if len(p) == 2:
         p[0] = [p[1]]
     else:
@@ -860,9 +868,13 @@ def p_bviExpressionStmt(p):
                          | TOKDEFAULT_CLOCK VAR LPAREN RPAREN SEMICOLON
                          | TOKDEFAULT_CLOCK VAR LPAREN VAR RPAREN SEMICOLON
                          | TOKDEFAULT_RESET VAR LPAREN RPAREN SEMICOLON
+                         | TOKDEFAULT_RESET TOKNO_RESET SEMICOLON
                          | TOKDEFAULT_RESET VAR LPAREN VAR RPAREN SEMICOLON
                          | TOKINPUT_CLOCK VAR LPAREN VAR RPAREN EQUAL expression SEMICOLON
+                         | TOKINPUT_RESET VAR LPAREN VAR RPAREN EQUAL expression SEMICOLON
+                         | TOKINPUT_RESET VAR LPAREN RPAREN EQUAL expression SEMICOLON
                          | TOKOUTPUT_CLOCK VAR LPAREN VAR RPAREN SEMICOLON
+                         | TOKOUTPUT_RESET VAR LPAREN VAR RPAREN SEMICOLON
                          | TOKSCHEDULE LPAREN vars RPAREN schedOp LPAREN vars RPAREN SEMICOLON'''
 
 def p_schedOp(p):
@@ -974,6 +986,14 @@ def preprocess(source, defs):
             new_cond = not cond
             stack.pop()
             stack.append((new_cond,valid))
+        elif tok == 'elsif':
+            stack.pop()
+            k = re.search('\s', s)
+            sym = s[:k.start()]
+            s = s[k.end():]
+            new_cond = sym in defs
+            new_valid = new_cond and valid
+            stack.append((new_cond,new_valid))
         elif tok == 'endif':
             stack.pop()
         elif tok == 'define':
