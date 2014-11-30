@@ -30,6 +30,7 @@ import cppgen, bsvgen
 scripthome = os.path.dirname(os.path.abspath(__file__))
 noisyFlag=True
 parseDebugFlag=False
+parseTrace=False
 
 tokens = (
     'AMPER',
@@ -83,6 +84,7 @@ tokens = (
 
 reserved = {
     'action': 'TOKACTION',
+    'Action': 'TOKUACTION',
     'actionvalue': 'TOKACTIONVALUE',
     'BDPI': 'TOKBDPI',
     'begin': 'TOKBEGIN',
@@ -262,6 +264,7 @@ def p_type(p):
     '''type : VAR
             | VAR COLONCOLON VAR
             | NUM
+            | TOKUACTION
             | VAR HASH LPAREN typeParams RPAREN
             | VAR COLONCOLON VAR HASH LPAREN typeParams RPAREN'''
     if len(p) == 2:
@@ -339,10 +342,10 @@ def p_unaryExpression(p):
                        | TOKACTION colonVar expressionStmts TOKENDACTION colonVar'''
 
 def p_term(p):
-    '''term : NUM
+    '''term : type
+            | type LBRACKET expression RBRACKET
+            | type LBRACKET expression COLON expression RBRACKET
             | STR
-            | VAR
-            | VAR COLONCOLON VAR
             | QUESTION
             | term QUESTION expression
             | term QUESTION expression COLON expression
@@ -361,7 +364,7 @@ def p_term(p):
             | term DOT VAR
             | term LBRACKET expression RBRACKET
             | term LBRACKET expression COLON expression RBRACKET
-            | term LPAREN expressions RPAREN'''
+            | term LPAREN params RPAREN'''
 
 def p_structInits(p):
     '''structInits : 
@@ -487,6 +490,10 @@ def p_varDecl(p):
     p[0] = AST.Variable(p[2], p[1])
     
 
+def p_params(p):
+    '''params : expressions
+              | TOKSEQ fsmStmts TOKENDSEQ'''
+
 def p_lvalue(p):
     '''lvalue : VAR
               | LPAREN lvalue RPAREN
@@ -520,8 +527,8 @@ def p_rule(p):
             | TOKRULE VAR ruleCond implicitCond SEMICOLON expressionStmts TOKENDRULE colonVar'''
 
 def p_ifStmt(p):
-    '''ifStmt : TOKIF LPAREN expression RPAREN expressionStmt
-              | TOKIF LPAREN expression RPAREN expressionStmt TOKELSE expressionStmt'''
+    '''ifStmt : TOKIF LPAREN expression RPAREN fsmStmt
+              | TOKIF LPAREN expression RPAREN fsmStmt TOKELSE fsmStmt'''
 
 def p_caseItem(p):
     '''caseItem : expressions COLON expressionStmt'''
@@ -540,7 +547,7 @@ def p_caseStmt(p):
                 | TOKCASE LPAREN expression RPAREN TOKMATCHES caseItems defaultItem TOKENDCASE'''
 
 def p_forStmt(p):
-    '''forStmt : TOKFOR LPAREN varAssign SEMICOLON expression SEMICOLON varAssign RPAREN expressionStmt'''
+    '''forStmt : TOKFOR LPAREN varAssign SEMICOLON expression SEMICOLON varAssign RPAREN fsmStmt'''
 
 def p_whenStmt(p):
     '''whenStmt : TOKWHEN LPAREN expression RPAREN LPAREN expression RPAREN SEMICOLON'''
@@ -553,7 +560,7 @@ def p_expressionStmt(p):
                       | fsmStmtDef
                       | whenStmt
                       | lvalue SEMICOLON
-                      | lvalue LPAREN expressions RPAREN SEMICOLON
+                      | lvalue LPAREN params RPAREN SEMICOLON
                       | BUILTINVAR LPAREN expressions RPAREN SEMICOLON
                       | varAssign SEMICOLON
                       | varDecl SEMICOLON
@@ -569,8 +576,9 @@ def p_expressionStmt(p):
                       | typeDef
                       | instanceAttributes rule
                       | TOKACTION fsmStmts TOKENDACTION
-                      | TOKSEQ fsmStmts TOKENDSEQ
                       '''
+    if parseTrace:
+        print 'ENDSTATEMENT', [pitem for pitem in p]
 
 def p_expressionStmts(p):
     '''expressionStmts : expressionStmts expressionStmt
@@ -744,6 +752,8 @@ def p_interfaceDef(p):
     '''interfaceDef : TOKINTERFACE type VAR SEMICOLON expressionStmts TOKENDINTERFACE colonVar
                     | TOKINTERFACE type VAR EQUAL expression SEMICOLON
                     | TOKINTERFACE VAR EQUAL expression SEMICOLON'''
+    if parseTrace:
+        print 'ENDINTERFACE', [pitem for pitem in p]
 
 def p_formalParam(p):
     '''formalParam : type VAR'''
@@ -805,11 +815,16 @@ def p_moduleContext(p):
 
 def p_moduleDef(p):
     '''moduleDef : instanceAttributes TOKMODULE moduleContext VAR moduleParamsArgs provisos SEMICOLON expressionStmts TOKENDMODULE colonVar'''
+    if parseTrace:
+        print 'ENDMODULE', [pitem for pitem in p]
     p[0] = AST.Module(p[3], p[4], p[5][0], p[5][1], p[6], p[8])
 
 def p_importBviDef(p):
-    '''importBviDef : TOKIMPORT STR VAR EQUAL bviModuleDef'''
+    '''importBviDef : TOKIMPORT STR VAR EQUAL bviModuleDef
+            | TOKIMPORT STR TOKFUNCTION TOKUACTION VAR LPAREN functionFormals RPAREN SEMICOLON'''
     p[0] = p[5]
+    if len(p) > 6:
+        p[0] = AST.Module(None, p[5], None, None, None, None)
 
 def p_bviModuleDef(p):
     '''bviModuleDef : instanceAttributes TOKMODULE moduleContext VAR moduleParamsArgs provisos SEMICOLON bviExpressionStmts TOKENDMODULE colonVar'''
@@ -933,7 +948,7 @@ def preprocess(source, defs):
     def pp(s):
         cond  = stack[-1][0]
         valid = stack[-1][1]
-        i = re.search('\n`', s)
+        i = re.search('\n[ \t]*`', s)
         if i == None:
             return s
         pre = s[:i.end()-1]
@@ -989,7 +1004,7 @@ def syntax_parse(argdata, inputfilename, bsvdefines):
     if noisyFlag:
         print 'Parsing:', inputfilename
     if parseDebugFlag:
-        return  parser.parse(data,debug=1)
+        return parser.parse(data,debug=1)
     return  parser.parse(data)
 
 def generate_bsvcpp(filelist, project_dir, dutname, bsvdefines, interfaces, nf):
@@ -1013,7 +1028,6 @@ def generate_bsvcpp(filelist, project_dir, dutname, bsvdefines, interfaces, nf):
                 thisType = pitem.type
                 p = globalv.globalvars.get(thisType.name)
                 if p and thisType.params and p.params:
-                    print 'PQQ', thisType.name, p.type, thisType.params, p.params
                     myName = '%sL_%s_P' % (thisType.name, '_'.join([t.name for t in thisType.params if t]))
                     pitem.type = AST.Type(myName, [])
                     if not globalv.globalvars.get(myName):
