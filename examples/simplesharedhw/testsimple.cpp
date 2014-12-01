@@ -28,11 +28,9 @@
 #include "StdDmaIndication.h"
 #include "dmaManager.h"
 #include "SharedMemoryPortalConfig.h"
-
 #include "Simple.h"
-#include "GeneratedTypes.h"
 
-#if 1
+#if 0
 #define TEST_ASSERT(A) assert(A)
 #else
 #define TEST_ASSERT(A) {}
@@ -59,6 +57,7 @@ uint32_t v7a = 0xDADADADA;
 E1 v7b = E1_E1Choice2;
 S3 s3 = { a: v7a, e1: v7b };
 
+int did_nothing;
 
 class Simple : public SimpleWrapper
 {  
@@ -66,6 +65,7 @@ public:
   uint32_t cnt;
   uint32_t times;
   void incr_cnt(){
+    did_nothing = 0;
     if (++cnt == 7*times)
       exit(0);
   }
@@ -131,6 +131,16 @@ int allocateShared(DmaManager *dma, MMURequestProxy *dmap, uint32_t interfaceId,
     return fd;
 }
 
+void dump_buf(volatile unsigned int *data, const char *name, int len)
+{
+    int i = 0;
+    fprintf(stderr, "%s=%p", name, data);
+    while (i < len) {
+        fprintf(stderr, " %08x", data[i]);
+        i++;
+    }
+    fprintf(stderr, "\n");
+}
 int main(int argc, const char **argv)
 {
     int alloc_sz = 4096;
@@ -156,12 +166,16 @@ int main(int argc, const char **argv)
     indConfig->setSglId(indref);
 
     portalExec_stop();
+printf("[%s:%d] stop\n", __FUNCTION__, __LINE__); sleep(1);
+    dump_buf(device->pint.map_base, "Breq->map_base", 4);
+    dump_buf(indication->pint.map_base, "Bind->map_base", 8);
 
     for (int i = 0; i < numtimes; i++) {
       if (verbose) fprintf(stderr, "Main::calling say1(%d)\n", v1a);
       device->say1(v1a);  
       if (verbose) fprintf(stderr, "Main::calling say2(%d, %d)\n", v2a,v2b);
       device->say2(v2a,v2b);
+#if 0
       if (verbose) fprintf(stderr, "Main::calling say3(S1{a:%d,b:%d})\n", s1.a,s1.b);
       device->say3(s1);
       if (verbose) fprintf(stderr, "Main::calling say4(S2{a:%d,b:%d,c:%d})\n", s2.a,s2.b,s2.c);
@@ -172,24 +186,17 @@ int main(int argc, const char **argv)
       device->say6(v6a, v6b, v6c);  
       if (verbose) fprintf(stderr, "Main::calling say7(%08x, %08x)\n", s3.a, s3.e1);
       device->say7(s3);  
+#endif
     }
   fprintf(stderr, "Main::about to call portalExec_event\n");
+  dump_buf(device->pint.map_base, "Areq->map_base", 8);
+  dump_buf(indication->pint.map_base, "Aind->map_base", 4);
   while(true){
-    fprintf(stderr, "req->map_base=%p %08x %08x %08x %08x\n", device->pint.map_base,
-	    device->pint.map_base[0],
-	    device->pint.map_base[1],
-	    device->pint.map_base[2],
-	    device->pint.map_base[3]);
-    fprintf(stderr, "ind->map_base=%p %08x %08x %08x %08x %08x %08x %08x %08x\n", indication->pint.map_base,
-	    indication->pint.map_base[0],
-	    indication->pint.map_base[1],
-	    indication->pint.map_base[2],
-	    indication->pint.map_base[3],
-	    indication->pint.map_base[4],
-	    indication->pint.map_base[5],
-	    indication->pint.map_base[6],
-	    indication->pint.map_base[7]);
+    dump_buf(device->pint.map_base, "req->map_base", 4);
+    dump_buf(indication->pint.map_base, "ind->map_base", 8);
+    did_nothing++;
     portalExec_event();
+    if (did_nothing > 3) break;
     sleep(2);
   }
 }
