@@ -225,6 +225,9 @@ public:
     B operator[] (int i) const {
 	return v[i];
     }
+    B &operator[] (int i) {
+	return v[i];
+    }
 };
 #endif
 
