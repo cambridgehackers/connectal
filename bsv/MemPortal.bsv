@@ -72,7 +72,7 @@ module mkPortalCtrlMemSlave#(Bit#(dataWidth) ifcId,
    Reg#(Bit#(dataWidth))    snapshot <- mkReg(0);
    
    Bit#(dataWidth)  readyChannel = -1;
-   for (Integer i = 0; i < valueOf(numIndications); i = i + 1) begin
+   for (Integer i = valueOf(numIndications) - 1; i >= 0; i = i - 1) begin
       if (readyBits[i]) begin
          interruptStatus = True;
          readyChannel = fromInteger(i);
