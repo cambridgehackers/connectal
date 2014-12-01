@@ -189,7 +189,9 @@ def typeCName(item):
         elif cid == 'Float':
             return 'float'
         elif cid == 'Vector':
-            return 'bsvvector<%d,%s>' % (typeNumeric(item['params'][0]), item['params'][1].cName())
+            print 'KJJJJ', item['params'][0]
+            print 'KJMMM', item['params'][1]
+            return 'bsvvector<%d,%s>' % (typeNumeric(item['params'][0]), typeCName(item['params'][1]))
         elif cid == 'Action':
             return 'int'
         elif cid == 'ActionValue':

@@ -213,6 +213,10 @@ extern PortalItemFunctions bsimfunc, hardwarefunc,
 #endif
 #ifdef __cplusplus
 #include "poller.h"
+template bsvvector<int N, B>
+    class Bsvvector {
+        B v[N];
+    };
 #endif
 
 #define MAX_TIMERS 50
