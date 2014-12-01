@@ -30,7 +30,7 @@
 #include "SharedMemoryPortalConfig.h"
 #include "Simple.h"
 
-#if 0
+#if 1
 #define TEST_ASSERT(A) assert(A)
 #else
 #define TEST_ASSERT(A) {}
@@ -134,10 +134,12 @@ int allocateShared(DmaManager *dma, MMURequestProxy *dmap, uint32_t interfaceId,
 void dump_buf(volatile unsigned int *data, const char *name, int len)
 {
     int i = 0;
-    fprintf(stderr, "%s=%p", name, data);
+    fprintf(stderr, "%s", name);
     while (i < len) {
         fprintf(stderr, " %08x", data[i]);
         i++;
+        if (i != len && (i % 8) == 0)
+            fprintf(stderr, "\n        ");
     }
     fprintf(stderr, "\n");
 }
@@ -153,7 +155,7 @@ int main(int argc, const char **argv)
     portalExec_start();
 
     int verbose = 1;
-    int numtimes = 1;
+    int numtimes = 10;
     Simple *indication = new Simple(IfcNames_SimpleIndication, numtimes, &sharedfunc, NULL);
     SimpleProxy *device = new SimpleProxy(IfcNames_SimpleRequest, &sharedfunc, NULL);
 
@@ -165,17 +167,18 @@ int main(int argc, const char **argv)
     unsigned int indref = dma->reference(indfd);
     indConfig->setSglId(indref);
 
+#if 0
     portalExec_stop();
 printf("[%s:%d] stop\n", __FUNCTION__, __LINE__); sleep(1);
     dump_buf(device->pint.map_base, "Breq->map_base", 4);
     dump_buf(indication->pint.map_base, "Bind->map_base", 8);
+#endif
 
     for (int i = 0; i < numtimes; i++) {
       if (verbose) fprintf(stderr, "Main::calling say1(%d)\n", v1a);
       device->say1(v1a);  
       if (verbose) fprintf(stderr, "Main::calling say2(%d, %d)\n", v2a,v2b);
       device->say2(v2a,v2b);
-#if 0
       if (verbose) fprintf(stderr, "Main::calling say3(S1{a:%d,b:%d})\n", s1.a,s1.b);
       device->say3(s1);
       if (verbose) fprintf(stderr, "Main::calling say4(S2{a:%d,b:%d,c:%d})\n", s2.a,s2.b,s2.c);
@@ -186,17 +189,19 @@ printf("[%s:%d] stop\n", __FUNCTION__, __LINE__); sleep(1);
       device->say6(v6a, v6b, v6c);  
       if (verbose) fprintf(stderr, "Main::calling say7(%08x, %08x)\n", s3.a, s3.e1);
       device->say7(s3);  
-#endif
     }
+#if 0
   fprintf(stderr, "Main::about to call portalExec_event\n");
   dump_buf(device->pint.map_base, "Areq->map_base", 8);
   dump_buf(indication->pint.map_base, "Aind->map_base", 4);
   while(true){
     dump_buf(device->pint.map_base, "req->map_base", 4);
-    dump_buf(indication->pint.map_base, "ind->map_base", 8);
+    dump_buf(indication->pint.map_base, "ind->map_base", 16);
     did_nothing++;
     portalExec_event();
     if (did_nothing > 3) break;
     sleep(2);
   }
+#endif
+  sleep(10);
 }
