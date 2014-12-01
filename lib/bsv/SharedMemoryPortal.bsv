@@ -293,7 +293,7 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 
       if (numWords[0] == 0)
 	 totalWords = numWords + 2;
       paddingReg <= numWords[0] == 0;
-      Bit#(32) hdr = extend(readyChannel) << 16 | extend(totalWords);
+      Bit#(32) hdr = extend(readyChannel) << 16 | extend(numWords + 1);
       $display("sendHeader hdr=%h messageBits=%d numWords=%d totalWords=%d paddingReg=%d indHeadReg=%h", hdr, messageBits, numWords, totalWords, paddingReg, indHeadReg);
 
       indHeadReg <= indHeadReg + totalWords;
