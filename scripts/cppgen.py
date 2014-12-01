@@ -120,14 +120,24 @@ def collectMembers(scope, pitem):
     membtype = pitem['type']
     while 1:
         if membtype['name'] == 'Bit' or membtype['name'] == 'Int' or membtype['name'] == 'UInt' \
-            or membtype['name'] == 'Float' or membtype['name'] == 'Vector' or membtype['name'] == 'Bool':
+            or membtype['name'] == 'Float' or membtype['name'] == 'Bool':
             return [('%s%s'%(scope,pitem['name']),membtype)]
         elif membtype['name'] == 'SpecialTypeForSendingFd':
             return [('%s%s'%(scope,pitem['name']),membtype)]
+        elif membtype['name'] == 'Vector':
+            print 'JJJKMM', membtype
+            nElt = int(membtype['params'][0]['name'])
+            retitem = []
+            ind = 0;
+            while ind < nElt:
+                retitem.append([('%s%s'%(scope,pitem['name']+'['+str(ind)+']'),membtype['params'][1])])
+                ind = ind + 1
+            return sum(retitem, [])
         else:
             td = globalv_globalvars[membtype['name']]
             #print 'instantiate', membtype['params']
             tdtype = td['tdtype']
+            print 'JJJKKK', membtype['name'], tdtype['type']
 #.instantiate(dict(zip(td.params, membtype['params'])))
             #print '           ', membtype
             if tdtype['type'] == 'Struct':
@@ -189,8 +199,6 @@ def typeCName(item):
         elif cid == 'Float':
             return 'float'
         elif cid == 'Vector':
-            print 'KJJJJ', item['params'][0]
-            print 'KJMMM', item['params'][1]
             return 'bsvvector<%d,%s>' % (typeNumeric(item['params'][0]), typeCName(item['params'][1]))
         elif cid == 'Action':
             return 'int'

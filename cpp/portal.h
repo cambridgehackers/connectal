@@ -216,14 +216,14 @@ extern PortalItemFunctions bsimfunc, hardwarefunc,
 template<int N, class B>
 class bsvvector {
 private:
-    int v[N * sizeof(B) / sizeof(int)];
+    B v[N];
 public:
     bsvvector() {}
-    bsvvector(int i) {}
+    //bsvvector(int i) {}
     ~bsvvector() {}
-    operator const int () const { return v[0]; }
+    //operator const int () const { return v[0]; }
     B operator[] (int i) const {
-	return *(B *)&v[i * sizeof(B) / sizeof(int)];
+	return v[i];
     }
 };
 #endif
