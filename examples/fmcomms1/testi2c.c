@@ -8,6 +8,7 @@
 #include "/usr/include/linux/i2c-dev.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 
 
@@ -31,18 +32,14 @@ int fmcomms1_read_eeprom(int fd, int device, unsigned char *datap, int size)
   datap[0] = 1;
   status = ioctl(fd, I2C_RDWR, &arg);
   if (status != 0) {
-    fprintf(stderr, "[%s:%d]: ioctl I2C_RW write status=%d errno=%d\n", __FILE__, __LINE__, status, errno);
-  }
-  status = ioctl(fd, I2C_RDWR, &arg);
-  if (status != 0) {
-    fprintf(stderr, "[%s:%d]: ioctl I2C_RW write status=%d errno=%d\n", __FILE__, __LINE__, status, errno);
+    fprintf(stderr, "[%s:%d]: ioctl I2C_RW write status=%d errno=%d [%s]\n", __FILE__, __LINE__, status, errno, strerror(errno));
   }
   msgs[0] = msgs[1];
   for (i = 0; i < 16; i += 1) {
     msgs[0].buf = &datap[i];
     status = ioctl(fd, I2C_RDWR, &arg);
     if (status != 0) {
-      fprintf(stderr, "[%s:%d]: loop %d ioctl I2C_RW read status=%d errno=%d\n", __FILE__, __LINE__, i, status, errno);
+      fprintf(stderr, "[%s:%d]: loop %d ioctl I2C_RW read status=%d errno=%d [%]\n", __FILE__, __LINE__, i, status, errno, strerror(errno));
     }
   }
   return status;
@@ -67,15 +64,13 @@ int fmcomms1_get_version(int fd, int device, unsigned char *datap, int size)
   datap[0] = 1;
   status = ioctl(fd, I2C_RDWR, &arg);
   if (status != 0) {
-    fprintf(stderr, "[%s:%d]: ioctl I2C_RW write status=%d errno=%d\n", __FILE__, __LINE__, status, errno);
+    fprintf(stderr, "[%s:%d]: ioctl I2C_RW write status=%d errno=%d [%s]\n", __FILE__, __LINE__, status, errno, strerror(errno));
   }
-  /*
   msgs[0] = msgs[1];
   status = ioctl(fd, I2C_RDWR, &arg);
   if (status != 0) {
-    fprintf(stderr, "[%s:%d]: ioctl I2C_RW read status=%d errno=%d\n", __FILE__, __LINE__, status, errno);
+    fprintf(stderr, "[%s:%d]: ioctl I2C_RW read status=%d errno=%d [%s]\n", __FILE__, __LINE__, status, errno, strerror(errno));
   }
-  */
   return status;
 }
 
@@ -95,6 +90,7 @@ int main(int argc, char *argv[])
       exit(1);
     }
     // start version query
+    memset(version_data, 0, 128);
     res = fmcomms1_read_eeprom(fd, 0x50, version_data, 128);
     printf ("getversion result %d\n", res);
     for (i = 0; i < 16; i += 1) {
@@ -102,6 +98,7 @@ int main(int argc, char *argv[])
       printf(" %2x", version_data[i]);
     }
     printf("\n");
+    memset(version_data, 0, 128);
     res = fmcomms1_get_version(fd, (int) strtol(argv[2], NULL, 0), version_data, 128);
     printf ("getversion result %d\n", res);
     for (i = 0; i < 32; i += 1) {
