@@ -213,10 +213,19 @@ extern PortalItemFunctions bsimfunc, hardwarefunc,
 #endif
 #ifdef __cplusplus
 #include "poller.h"
-template bsvvector<int N, B>
-    class Bsvvector {
-        B v[N];
-    };
+template<int N, class B>
+class bsvvector {
+private:
+    int v[N * sizeof(B) / sizeof(int)];
+public:
+    bsvvector() {}
+    bsvvector(int i) {}
+    ~bsvvector() {}
+    operator const int () const { return v[0]; }
+    B operator[] (int i) const {
+	return *(B *)&v[i * sizeof(B) / sizeof(int)];
+    }
+};
 #endif
 
 #define MAX_TIMERS 50
