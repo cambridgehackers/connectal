@@ -82,6 +82,9 @@ vfile=verilog/$(MKTOP).v
 
 all: exe bits
 
+ifeq ($(CONNECTAL_SHARED),1)
+  exe: connectal.so
+else
 ifeq ($(BOARD),bluesim)
 ifeq ($(RUNSOURCE2),)
   exe: bsim_exe
@@ -103,6 +106,7 @@ else
     endif
   endif
 endif
+endif
 
 bsim_exe: prepare_bin_target
 	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk bsim_exe
@@ -120,6 +124,10 @@ ubuntu.exe2: prepare_bin_target
 	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk ubuntu.exe2
 	@cp -v jni/ubuntu.exe2 bin
 
+connectal.so: prepare_bin_target
+	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk connectal.so
+	@cp -v jni/connectal.so bin
+
 ifneq ($(BOARD),bluesim)
 ifneq ($(OS),android)
 program:
@@ -131,6 +139,9 @@ programflash:
 endif
 endif
 
+ifeq ($(CONNECTAL_NOHARDWARE),1)
+bits:
+else
 ifeq ($(BOARD),bluesim)
 bits: bsim
 else
@@ -142,6 +153,7 @@ else
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
 endif
 	$(CONNECTALDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
+endif
 endif
 
 android.exe: prepare_bin_target

@@ -29,18 +29,18 @@ sizeofUint32_t = 4
 proxyClassPrefixTemplate='''
 class %(className)sProxy : public %(parentClass)s {
 public:
-    %(className)sProxy(int id, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, NULL, NULL, poller) {};
-    %(className)sProxy(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, NULL, NULL, item, param, poller) {};
+    %(className)sProxy(int id, PortalPoller *poller = 0) : Portal(id, %(className)s_reqinfo, NULL, NULL, poller) {};
+    %(className)sProxy(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(className)s_reqinfo, NULL, NULL, item, param, poller) {};
 '''
 
 wrapperClassPrefixTemplate='''
 extern %(className)sCb %(className)s_cbTable;
 class %(className)sWrapper : public %(parentClass)s {
 public:
-    %(className)sWrapper(int id, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, %(className)s_handleMessage, (void *)&%(className)s_cbTable, poller) {
+    %(className)sWrapper(int id, PortalPoller *poller = 0) : Portal(id, %(className)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, poller) {
         pint.parent = static_cast<void *>(this);
     };
-    %(className)sWrapper(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, %(className)s_handleMessage, (void *)&%(className)s_cbTable, item, param, poller) {
+    %(className)sWrapper(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(className)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, item, param, poller) {
         pint.parent = static_cast<void *>(this);
     };
 '''
@@ -82,15 +82,16 @@ handleMessageTemplate2='''
 '''
 
 proxyMethodTemplateDecl='''
-void %(className)s_%(methodName)s (%(paramProxyDeclarations)s )'''
+int %(className)s_%(methodName)s (%(paramProxyDeclarations)s )'''
 
 proxyMethodTemplate='''
 {
     volatile unsigned int* temp_working_addr_start = p->item->mapchannelReq(p, %(channelNumber)s);
     volatile unsigned int* temp_working_addr = temp_working_addr_start;
-    if (p->item->busywait(p, temp_working_addr, "%(className)s_%(methodName)s")) return;
+    if (p->item->busywait(p, %(channelNumber)s, "%(className)s_%(methodName)s")) return 1;
     %(paramStructMarshall)s
     p->item->send(p, temp_working_addr_start, (%(channelNumber)s << 16) | %(wordLenP1)s, %(fdName)s);
+    return 0;
 };
 '''
 
@@ -119,10 +120,18 @@ def collectMembers(scope, pitem):
     membtype = pitem['type']
     while 1:
         if membtype['name'] == 'Bit' or membtype['name'] == 'Int' or membtype['name'] == 'UInt' \
-            or membtype['name'] == 'Float' or membtype['name'] == 'Vector' or membtype['name'] == 'Bool':
+            or membtype['name'] == 'Float' or membtype['name'] == 'Bool':
             return [('%s%s'%(scope,pitem['name']),membtype)]
         elif membtype['name'] == 'SpecialTypeForSendingFd':
             return [('%s%s'%(scope,pitem['name']),membtype)]
+        elif membtype['name'] == 'Vector':
+            nElt = int(membtype['params'][0]['name'])
+            retitem = []
+            ind = 0;
+            while ind < nElt:
+                retitem.append([('%s%s'%(scope,pitem['name']+'['+str(ind)+']'),membtype['params'][1])])
+                ind = ind + 1
+            return sum(retitem, [])
         else:
             td = globalv_globalvars[membtype['name']]
             #print 'instantiate', membtype['params']
@@ -164,11 +173,9 @@ def typeNumeric(item):
     return int(item['name'])
 
 def typeCName(item):
-    #print 'WWWW', item
     if item['type'] == 'Type':
         cid = item['name'].replace(' ', '')
         if cid == 'Bit':
-            #print 'BBBBBB', item['params'][0]
             if typeNumeric(item['params'][0]) <= 32:
                 return 'uint32_t'
             elif typeNumeric(item['params'][0]) <= 64:
@@ -190,7 +197,7 @@ def typeCName(item):
         elif cid == 'Float':
             return 'float'
         elif cid == 'Vector':
-            return 'bsvvector<%d,%s>' % (typeNumeric(item['params'][0]), item['params'][1].cName())
+            return 'bsvvector<%d,%s>' % (typeNumeric(item['params'][0]), typeCName(item['params'][1]))
         elif cid == 'Action':
             return 'int'
         elif cid == 'ActionValue':
@@ -231,10 +238,8 @@ def getNumeric(item):
    return int(item['name'])
 
 def typeBitWidth(item):
-    #print 'WBBBBB', item
     if hasBitWidth(item):
         width = item['params'][0]['name']
-        #print 'OOO', width
         while globalv_globalvars.has_key(width):
             decl = globalv_globalvars[width]
             if decl['type'] != 'TypeDef':
@@ -385,12 +390,14 @@ def emitMethodDeclaration(mname, params, f, className):
     methodName = cName(mname)
     indent(f, 4)
     if className == '':
-        f.write('virtual ')
-    f.write(('void %s ( ' % methodName) + formalParameters(params, False) + ' ) ')
+        f.write('virtual void')
+    else:
+        f.write('int')
+    f.write((' %s ( ' % methodName) + formalParameters(params, False) + ' ) ')
     if className == '':
         f.write('= 0;\n')
     else:
-        f.write('{ %s_%s (' % (className, methodName))
+        f.write('{ return %s_%s (' % (className, methodName))
         f.write(', '.join(paramValues) + '); };\n')
 
 def generate_class(className, declList, parentC, parentCC, generatedCFiles, create_cpp_file, generated_hpp, generated_cpp):
@@ -415,8 +422,9 @@ def generate_class(className, declList, parentC, parentCC, generatedCFiles, crea
         cpp.write((proxyMethodTemplateDecl + proxyMethodTemplate) % substs)
         generated_hpp.write((proxyMethodTemplateDecl % substs) + ';')
         reqChanNums.append(substs['channelNumber'])
-    subs = {'className': classCName, 'maxSize': (maxSize+1) * sizeofUint32_t, 'parentClass': parentCC}
-    generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(className)s_reqsize %(maxSize)s\n' % subs)
+    subs = {'className': classCName, 'maxSize': (maxSize+1) * sizeofUint32_t, 'parentClass': parentCC, \
+            'reqInfo': '0x%x' % ((len(declList) << 16) + (maxSize+1) * sizeofUint32_t) }
+    generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(className)s_reqinfo %(reqInfo)s\n' % subs)
     hpp.write(proxyClassPrefixTemplate % subs)
     for mitem in declList:
         emitMethodDeclaration(mitem['name'], mitem['params'], hpp, classCName)

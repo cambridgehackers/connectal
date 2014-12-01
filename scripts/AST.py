@@ -256,7 +256,7 @@ class TypeDef:
         self.params = params
         self.type = 'TypeDef'
         self.tdtype = tdtype
-        if tdtype.type != 'Type':
+        if tdtype and tdtype.type != 'Type':
             tdtype.name = name
         self.type = 'TypeDef'
     def __repr__(self):

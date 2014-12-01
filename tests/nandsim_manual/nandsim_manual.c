@@ -143,10 +143,10 @@ int main(int argc, const char **argv)
   int rc = 0, i;
   pthread_t tid = 0;
 
-  init_portal_internal(&intarr[0], IfcNames_DmaIndication, DmaIndication_handleMessage, NULL, NULL, DmaIndication_reqsize);     // fpga1
-  init_portal_internal(&intarr[1], IfcNames_NandSimIndication, NandSimIndication_handleMessage, NULL, NULL, NandSimIndication_reqsize); // fpga2
-  init_portal_internal(&intarr[2], IfcNames_DmaConfig, NULL, NULL, NULL, DmaConfig_reqsize);         // fpga3
-  init_portal_internal(&intarr[3], IfcNames_NandSimRequest, NULL, NULL, NULL, NandSimRequest_reqsize);    // fpga4
+  init_portal_internal(&intarr[0], IfcNames_DmaIndication, DmaIndication_handleMessage, NULL, NULL, DmaIndication_reqinfo);     // fpga1
+  init_portal_internal(&intarr[1], IfcNames_NandSimIndication, NandSimIndication_handleMessage, NULL, NULL, NandSimIndication_reqinfo); // fpga2
+  init_portal_internal(&intarr[2], IfcNames_DmaConfig, NULL, NULL, NULL, DmaConfig_reqinfo);         // fpga3
+  init_portal_internal(&intarr[3], IfcNames_NandSimRequest, NULL, NULL, NULL, NandSimRequest_reqinfo);    // fpga4
 
   sem_init(&test_sem, 0, 0);
   DmaManager_init(&priv, &intarr[2]);

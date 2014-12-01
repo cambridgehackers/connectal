@@ -114,9 +114,9 @@ public:
 int allocateShared(DmaManager *dma, MMURequestProxy *dmap, uint32_t interfaceId, PortalInternal *p, uint32_t size)
 {
     int fd = portalAlloc(size);
-    fprintf(stderr, "%s:%d fd=%d\n", __FILE__, __LINE__, fd);
+    fprintf(stderr, "%s:%d allocateShared pint=%p fd=%d\n", __FUNCTION__, __LINE__, p, fd);
     p->map_base = (volatile unsigned int *)portalMmap(fd, size);
-    fprintf(stderr, "%s:%d map_base=%p\n", __FILE__, __LINE__, p->map_base);
+    fprintf(stderr, "%s:%d pint=%p map_base=%p\n", __FILE__, __LINE__, p, p->map_base);
     p->map_base[SHARED_LIMIT] = size/sizeof(uint32_t);
     p->map_base[SHARED_WRITE] = SHARED_START;
     p->map_base[SHARED_READ] = SHARED_START;
@@ -137,8 +137,8 @@ int main(int argc, const char **argv)
 
     portalExec_start();
 
-    int verbose = 0;
-    int numtimes = 40;
+    int verbose = 1;
+    int numtimes = 1;
     Simple *indication = new Simple(IfcNames_SimpleIndication, numtimes, &sharedfunc, NULL);
     SimpleProxy *device = new SimpleProxy(IfcNames_SimpleRequest, &sharedfunc, NULL);
 
@@ -146,9 +146,11 @@ int main(int argc, const char **argv)
     unsigned int reqref = dma->reference(reqfd);
     reqConfig->setSglId(reqref);
 
-    int indfd = allocateShared(dma, dmap, IfcNames_SimpleIndication, &device->pint, alloc_sz);
+    int indfd = allocateShared(dma, dmap, IfcNames_SimpleIndication, &indication->pint, alloc_sz);
     unsigned int indref = dma->reference(indfd);
     indConfig->setSglId(indref);
+
+    portalExec_stop();
 
     for (int i = 0; i < numtimes; i++) {
       if (verbose) fprintf(stderr, "Main::calling say1(%d)\n", v1a);
@@ -166,6 +168,23 @@ int main(int argc, const char **argv)
       if (verbose) fprintf(stderr, "Main::calling say7(%08x, %08x)\n", s3.a, s3.e1);
       device->say7(s3);  
     }
-  fprintf(stderr, "Main::about to go to sleep\n");
-  while(true){sleep(2);}
+  fprintf(stderr, "Main::about to call portalExec_event\n");
+  while(true){
+    fprintf(stderr, "req->map_base=%p %08x %08x %08x %08x\n", device->pint.map_base,
+	    device->pint.map_base[0],
+	    device->pint.map_base[1],
+	    device->pint.map_base[2],
+	    device->pint.map_base[3]);
+    fprintf(stderr, "ind->map_base=%p %08x %08x %08x %08x %08x %08x %08x %08x\n", indication->pint.map_base,
+	    indication->pint.map_base[0],
+	    indication->pint.map_base[1],
+	    indication->pint.map_base[2],
+	    indication->pint.map_base[3],
+	    indication->pint.map_base[4],
+	    indication->pint.map_base[5],
+	    indication->pint.map_base[6],
+	    indication->pint.map_base[7]);
+    portalExec_event();
+    sleep(2);
+  }
 }

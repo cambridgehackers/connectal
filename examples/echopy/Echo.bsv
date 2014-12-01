@@ -22,6 +22,10 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import FIFO::*;
+import Leds::*;
+import Vector::*;
+
 interface EchoIndication;
     method Action heard(Bit#(32) v);
     method Action heard2(Bit#(16) a, Bit#(16) b);
@@ -32,3 +36,49 @@ interface EchoRequest;
    method Action say2(Bit#(16) a, Bit#(16) b);
    method Action setLeds(Bit#(8) v);
 endinterface
+
+interface EchoRequestInternal;
+   interface EchoRequest ifc;
+   interface LEDS leds;
+endinterface
+
+typedef struct {
+	Bit#(16) a;
+	Bit#(16) b;
+} EchoPair deriving (Bits);
+
+module mkEchoRequestInternal#(EchoIndication indication)(EchoRequestInternal);
+
+    FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
+    FIFO#(EchoPair) delay2 <- mkSizedFIFO(8);
+    Reg#(Bit#(LedsWidth)) ledsReg <- mkReg(0);
+
+    rule heard;
+        delay.deq;
+        indication.heard(delay.first);
+    endrule
+
+    rule heard2;
+        delay2.deq;
+        indication.heard2(delay2.first.b, delay2.first.a);
+    endrule
+   
+   interface EchoRequest ifc;
+      method Action say(Bit#(32) v);
+	 delay.enq(v);
+      endmethod
+      
+      method Action say2(Bit#(16) a, Bit#(16) b);
+	 delay2.enq(EchoPair { a: a, b: b});
+      endmethod
+      
+      method Action setLeds(Bit#(8) v);
+	 ledsReg <= pack(replicate(v[0]));
+      endmethod
+   endinterface
+   interface LEDS leds;
+      method Bit#(LedsWidth) leds();
+         return ledsReg;
+      endmethod
+   endinterface
+endmodule

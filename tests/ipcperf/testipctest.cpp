@@ -31,7 +31,7 @@
 #include "IpcTestRequest.h"
 #include "GeneratedTypes.h"
 #include <sys/ioctl.h>
-#include "zynqportal.h"
+#include "drivers/zynqportal/zynqportal.h"
 #include <errno.h>
 
 #define LOOP_COUNT 5

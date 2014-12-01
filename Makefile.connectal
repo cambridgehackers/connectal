@@ -36,6 +36,7 @@ bozotarget:
 ## use "make gen.board" to generate the build directory
 gen.%:
 	make BOARD=$* --no-print-directory gentarget prebuild
+	make -C $* BOARD=$* --no-print-directory prepare_bin_target
 
 exe.%:
 	make BOARD=$* --no-print-directory gentarget prebuild exe

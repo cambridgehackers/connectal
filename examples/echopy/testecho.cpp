@@ -20,54 +20,40 @@
  */
 
 #include <stdio.h>
-#include "EchoIndication.h"
-#include "EchoRequest.h"
 #include "GeneratedTypes.h"
+#include <python2.7/Python.h>
 
-static EchoRequestProxy *echoRequestProxy = 0;
-static sem_t sem_heard2;
+static PyObject *heardCallback[20];
+static PortalInternal erequest, eindication;
 
-class EchoIndication : public EchoIndicationWrapper
+extern "C" {
+void jcabozo(PyObject *param, int ind)
 {
-public:
-    virtual void heard(uint32_t v) {
-        printf("heard an echo: %d\n", v);
-	echoRequestProxy->say2(v, 2*v);
-    }
-    virtual void heard2(uint32_t a, uint32_t b) {
-        sem_post(&sem_heard2);
-        //printf("heard an echo2: %ld %ld\n", a, b);
-    }
-    EchoIndication(unsigned int id) : EchoIndicationWrapper(id) {}
-};
-
-static void call_say(int v)
-{
-    printf("[%s:%d] %d\n", __FUNCTION__, __LINE__, v);
-    echoRequestProxy->say(v);
-    sem_wait(&sem_heard2);
+    Py_INCREF(param);
+    heardCallback[ind] = param;
 }
 
-static void call_say2(int v, int v2)
-{
-    echoRequestProxy->say2(v, v2);
-    sem_wait(&sem_heard2);
+static void heard_cb(struct PortalInternal *p,uint32_t v) {
+    PyGILState_STATE gstate = PyGILState_Ensure();
+    PyEval_CallFunction(heardCallback[0], "(i)", v, NULL);
+    PyGILState_Release(gstate);
 }
-
-int main(int argc, const char **argv)
-{
-    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication);
-    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
-    portalExec_start();
-
-    int v = 42;
-    printf("Saying %d\n", v);
-    call_say(v);
-    call_say(v*5);
-    call_say(v*17);
-    call_say(v*93);
-    call_say2(v, v*3);
-    printf("TEST TYPE: SEM\n");
-    echoRequestProxy->setLeds(9);
-    return 0;
+static void heard2_cb(struct PortalInternal *p,uint32_t a, uint32_t b) {
+    PyGILState_STATE gstate = PyGILState_Ensure();
+    PyEval_CallFunction(heardCallback[1], "(ii)", a, b);
+    PyGILState_Release(gstate);
 }
+static EchoIndicationCb EchoInd_cbTable = { heard_cb, heard2_cb};
+
+void *trequest()
+{
+    init_portal_internal(&erequest, IfcNames_EchoRequest, NULL, NULL, NULL, NULL, EchoRequest_reqinfo);
+    return &erequest;
+}
+void *tindication()
+{
+    init_portal_internal(&eindication, IfcNames_EchoIndication,
+        EchoIndication_handleMessage, &EchoInd_cbTable, NULL, NULL, EchoIndication_reqinfo);
+    return &eindication;
+}
+} // extern "C"

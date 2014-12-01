@@ -30,15 +30,6 @@
 #include "portal.h"
 #include "sock_utils.h"
 
-#ifdef ZYNQ
-#include <android/log.h>
-#define ALOGD(fmt, ...) __android_log_print(ANDROID_LOG_DEBUG, "PORTAL", fmt, __VA_ARGS__)
-#define ALOGE(fmt, ...) __android_log_print(ANDROID_LOG_ERROR, "PORTAL", fmt, __VA_ARGS__)
-#else
-#define ALOGD(fmt, ...) fprintf(stderr, "PORTAL: " fmt, __VA_ARGS__)
-#define ALOGE(fmt, ...) fprintf(stderr, "PORTAL: " fmt, __VA_ARGS__)
-#endif
-
 #ifndef NO_CPP_PORTAL_CODE
 PortalPoller *defaultPoller = new PortalPoller();
 uint64_t poll_enter_time, poll_return_time; // for performance measurement
@@ -112,7 +103,7 @@ void* PortalPoller::portalExec_init(void)
         addFd(global_sockfd);
 #endif
     if (!numFds) {
-        ALOGE("portalExec No fds open numFds=%d\n", numFds);
+        fprintf(stderr, "portalExec No fds open numFds=%d\n", numFds);
         return (void*)-ENODEV;
     }
     for (int i = 0; i < numWrappers; i++) {
@@ -142,12 +133,8 @@ void PortalPoller::portalExec_end(void)
 void* PortalPoller::portalExec_poll(int timeout)
 {
     long rc = 0;
-    // LCS bypass the call to poll if the timeout is 0
-    if (timeout != 0) {
-      //poll_enter_time = portalCycleCount();
+    if (timeout != 0)
       rc = poll(portal_fds, numFds, timeout);
-      //poll_return_time = portalCycleCount();
-    }
     if(rc < 0) {
       // return only in error case
       fprintf(stderr, "poll returned rc=%ld errno=%d:%s\n", rc, errno, strerror(errno));
@@ -158,34 +145,21 @@ void* PortalPoller::portalExec_poll(int timeout)
 void* PortalPoller::portalExec_event(void)
 {
     for (int i = 0; i < numWrappers; i++) {
-      if (!portal_wrappers) {
-        fprintf(stderr, "No portal_instances revents=%d\n", portal_fds[i].revents);
-      }
-      Portal *instance = portal_wrappers[i];
-      if (!instance->pint.handler)
-          continue;    /* skip polling if no event handler */
-      int sockfd = instance->pint.item->event(&instance->pint);
-      // re-enable interrupt which was disabled by portal_isr
-      instance->pint.item->enableint(&instance->pint, 1);
-#if 0
-      if (sockfd != -1) {
-          for (int j = 0; j < numFds; j++)
-              if (portal_fds[j].fd == instance->pint.fpga_fd) {
-                  portal_fds[j].fd = sockfd;
-                  break;
-              }
-          instance->pint.fpga_fd = sockfd;
-      }
-#endif
+       if (!portal_wrappers)
+           fprintf(stderr, "No portal_instances revents=%d\n", portal_fds[i].revents);
+       Portal *instance = portal_wrappers[i];
+       if (instance->pint.handler) {
+           instance->pint.item->event(&instance->pint);
+           // re-enable interrupt which was disabled by portal_isr
+           instance->pint.item->enableint(&instance->pint, 1);
+       }
     }
     return NULL;
 }
 extern "C" void addFdToPoller(struct PortalPoller *poller, int fd)
 {
-    //(static_cast<EchoRequestWrapper *>(p->parent))->setLeds ( v);
     poller->addFd(fd);
 }
-
 
 void* PortalPoller::portalExec(void* __x)
 {

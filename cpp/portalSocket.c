@@ -137,7 +137,7 @@ static int init_socketResp(struct PortalInternal *pint, void *aparam)
     sprintf(buff, "SWSOCK%d", pint->fpga_number);
     pint->fpga_fd = init_listening(buff, param);
     ioctl(pint->fpga_fd, FIONBIO, &on);
-    pint->map_base = (volatile unsigned int*)malloc(pint->reqsize);
+    pint->map_base = (volatile unsigned int*)malloc(REQINFO_SIZE(pint->reqinfo));
     return 0;
 }
 static int init_socketInit(struct PortalInternal *pint, void *aparam)
@@ -147,7 +147,7 @@ static int init_socketInit(struct PortalInternal *pint, void *aparam)
     sprintf(buff, "SWSOCK%d", pint->fpga_number);
     pint->client_fd[pint->client_fd_number++] = init_connecting(buff, param);
     pint->accept_finished = 1;
-    pint->map_base = (volatile unsigned int*)malloc(pint->reqsize);
+    pint->map_base = (volatile unsigned int*)malloc(REQINFO_SIZE(pint->reqinfo));
     return 0;
 }
 static volatile unsigned int *mapchannel_socket(struct PortalInternal *pint, unsigned int v)
@@ -197,8 +197,12 @@ static int event_socket(struct PortalInternal *pint)
 printf("[%s:%d]afteracc %p accfd %d fd %d\n", __FUNCTION__, __LINE__, pint, pint->fpga_fd, sockfd);
             pint->client_fd[pint->client_fd_number++] = sockfd;
             pint->accept_finished = 1;
+#ifndef NO_CPP_PORTAL_CODE
+#ifndef NO_POLLER_SUPPORT
             if (pint->poller)
                 addFdToPoller(pint->poller, sockfd);
+#endif
+#endif
             //return sockfd;
         }
     }
@@ -221,10 +225,10 @@ static void send_socket(struct PortalInternal *pint, volatile unsigned int *data
 }
 PortalItemFunctions socketfuncResp = {
     init_socketResp, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_socket,
-    send_socket, recv_socket, busy_portal_null, enableint_portal_null, event_socket};
+    send_socket, recv_socket, busy_portal_null, enableint_portal_null, event_socket, notfull_null};
 PortalItemFunctions socketfuncInit = {
     init_socketInit, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_socket,
-    send_socket, recv_socket, busy_portal_null, enableint_portal_null, event_socket};
+    send_socket, recv_socket, busy_portal_null, enableint_portal_null, event_socket, notfull_null};
 
 
 static int init_mux(struct PortalInternal *pint, void *aparam)
@@ -233,7 +237,7 @@ static int init_mux(struct PortalInternal *pint, void *aparam)
     if(trace_socket)
         printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     pint->mux = param->pint;
-    pint->map_base = (volatile unsigned int*)malloc(pint->reqsize);
+    pint->map_base = (volatile unsigned int*)malloc(REQINFO_SIZE(pint->reqinfo));
     pint->mux->map_base[0] = -1;
     pint->mux->mux_ports_number++;
     pint->mux->mux_ports = (PortalMuxHandler *)realloc(pint->mux->mux_ports, pint->mux->mux_ports_number * sizeof(PortalMuxHandler));
@@ -271,7 +275,7 @@ int portal_mux_handler(struct PortalInternal *pint, unsigned int channel, int me
 }
 PortalItemFunctions muxfunc = {
     init_mux, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_socket,
-    send_mux, recv_mux, busy_portal_null, enableint_portal_null, event_mux};
+    send_mux, recv_mux, busy_portal_null, enableint_portal_null, event_mux, notfull_null};
 
 /*
  * BSIM
@@ -472,4 +476,4 @@ int event_portal_bsim(struct PortalInternal *pint)
 }
 PortalItemFunctions bsimfunc = {
     init_bsim, read_portal_bsim, write_portal_bsim, write_portal_fd_bsim, mapchannel_hardware, mapchannel_hardware,
-    send_portal_null, recv_portal_null, busy_hardware, enableint_hardware, event_portal_bsim};
+    send_portal_null, recv_portal_null, busy_hardware, enableint_hardware, event_portal_bsim, notfull_hardware};

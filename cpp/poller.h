@@ -60,8 +60,8 @@ class PortalInternalCpp
 {
  public:
   PortalInternal pint;
-  PortalInternalCpp(int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions* item, void *param, uint32_t reqsize) { 
-    init_portal_internal(&pint, id, handler, cb, item, param, reqsize); 
+  PortalInternalCpp(int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions* item, void *param, uint32_t reqinfo) { 
+    init_portal_internal(&pint, id, handler, cb, item, param, reqinfo); 
     //fprintf(stderr, "PortalInternalCpp %d\n", pint.fpga_number);
   };
   ~PortalInternalCpp() {
@@ -82,11 +82,11 @@ class Portal : public PortalInternalCpp
     }
   }
  public:
-  Portal(int id, uint32_t reqsize, PORTAL_INDFUNC handler, void *cb, PortalPoller *poller = 0) : PortalInternalCpp(id, handler, cb, NULL, NULL, reqsize) {
+  Portal(int id, uint32_t reqinfo, PORTAL_INDFUNC handler, void *cb, PortalPoller *poller = 0) : PortalInternalCpp(id, handler, cb, NULL, NULL, reqinfo) {
     pint.poller = poller;
     initPortal();
   };
-  Portal(int id, uint32_t reqsize, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : PortalInternalCpp(id, handler, cb, item, param, reqsize) {
+  Portal(int id, uint32_t reqinfo, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : PortalInternalCpp(id, handler, cb, item, param, reqinfo) {
     pint.poller = poller;
     initPortal();
   };

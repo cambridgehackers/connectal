@@ -419,4 +419,7 @@ distclean:
 	rm -rf pcie/connectalutil/connectalutil tests/memread_manual/kernel/bsim_relay
 	rm -rf out/ exit.status cpp/*.o scripts/*.pyc
 	rm -rf tests/*/train-images-idx3-ubyte examples/*/train-images-idx3-ubyte
+	rm -f drivers/pcieportal/.*.o.cmd drivers/pcieportal/.*.ko.cmd
+	rm -f drivers/portalmem/.*.o.cmd drivers/portalmem/.*.ko.cmd
+	rm -f drivers/zynqportal/.*.o.cmd drivers/zynqportal/.*.ko.cmd
 
