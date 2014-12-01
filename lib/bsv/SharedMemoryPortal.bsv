@@ -54,6 +54,7 @@ typedef enum {
    Waiting,
    SendHeader,
    SendMessage,
+   SendPadding,
    Stop
    } SharedMemoryPortalState deriving (Bits,Eq);
 
@@ -160,7 +161,7 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
 	    else
 	       reqState <= Drain;
 	 end
-	 else if (wordCountReg <= messageWords)
+	 else if (wordCountReg == 1)
 	    reqState <= UpdateTail;
 	 else if (messageWords == 1)
 	    reqState <= MessageHeaderRequested;
@@ -225,6 +226,7 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 
       Reg#(Bit#(16)) wordCountReg <- mkReg(0);
       Reg#(Bit#(16)) messageWordsReg <- mkReg(0);
       Reg#(Bit#(16)) methodIdReg <- mkReg(0);
+      Reg#(Bool) paddingReg <- mkReg(False);
       Reg#(SharedMemoryPortalState) indState <- mkReg(Idle);
 
    let verbose = True;
@@ -233,7 +235,7 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 
    Vector#(numIndications, Bool) readyBits = map(pipeOutNotEmpty, portal.indications);
    Bool      interruptStatus = False;
    Bit#(16)  readyChannel = -1;
-   for (Integer i = 0; i < valueOf(numIndications); i = i + 1) begin
+   for (Integer i = valueOf(numIndications) - 1; i >= 0; i = i - 1) begin
       if (readyBits[i]) begin
          interruptStatus = True;
          readyChannel = fromInteger(i);
@@ -284,12 +286,15 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 
       writeEngine.dataPipe.enq(pack(v));
    endrule
    rule sendHeader if (indState == SendHeader && interruptStatus);
-      Bit#(16) numWords = portal.messageSize(readyChannel) >> 5;
+      Bit#(16) messageBits = portal.messageSize(readyChannel);
+      Bit#(16) roundup = messageBits[4:0] == 0 ? 0 : 1;
+      Bit#(16) numWords = (messageBits >> 5) + roundup;
       Bit#(16) totalWords = numWords + 1;
       if (numWords[0] == 0)
 	 totalWords = numWords + 2;
+      paddingReg <= numWords[0] == 0;
       Bit#(32) hdr = extend(readyChannel) << 16 | extend(totalWords);
-      $display("sendHeader hdr=%h numWords=%d", hdr, numWords);
+      $display("sendHeader hdr=%h messageBits=%d numWords=%d totalWords=%d paddingReg=%d indHeadReg=%h", hdr, messageBits, numWords, totalWords, paddingReg, indHeadReg);
 
       indHeadReg <= indHeadReg + totalWords;
       messageWordsReg <= numWords;
@@ -308,8 +313,17 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 
       gb.enq(replicate(v));
       $display("sendMessage v=%h messageWords=%d", v, messageWordsReg);
 
-      if (messageWordsReg == 1)
-	 indState <= UpdateHead;
+      if (messageWordsReg == 1) begin
+	 if (paddingReg)
+	    indState <= SendPadding;
+	 else
+	    indState <= UpdateHead;
+      end
+   endrule
+   rule sendPadding if (indState == SendPadding);
+      $display("sendPadding");
+      gb.enq(replicate(32'hffff0001));
+      indState <= UpdateHead;
    endrule
    rule updateHead if (indState == UpdateHead);
       $display("updateIndHead limit=%d head=%d", indLimitReg, indHeadReg);
