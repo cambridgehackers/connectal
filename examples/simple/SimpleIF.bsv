@@ -22,6 +22,7 @@
 // SOFTWARE.
 
 import FIFO::*;
+import Vector::*;
 
 typedef struct{
    Bit#(32) a;
@@ -53,6 +54,7 @@ interface Simple;
     method Action say5(Bit#(32)a, Bit#(64) b, Bit#(32) c);
     method Action say6(Bit#(32)a, Bit#(40) b, Bit#(32) c);
     method Action say7(S3 v);
+    method Action say8(Vector#(128, Bit#(32)) v);
 endinterface
 
 typedef struct {
@@ -99,6 +101,11 @@ module mkSimple#(Simple indication)(Simple);
    method Action say7(S3 v);
       if (verbose) $display("mkSimple::say7");
       indication.say7(v);
+   endmethod
+
+   method Action say8(Vector#(128, Bit#(32)) v);
+      if (verbose) $display("mkSimple::say8");
+      indication.say8(v);
    endmethod
 
 endmodule

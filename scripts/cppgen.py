@@ -125,7 +125,6 @@ def collectMembers(scope, pitem):
         elif membtype['name'] == 'SpecialTypeForSendingFd':
             return [('%s%s'%(scope,pitem['name']),membtype)]
         elif membtype['name'] == 'Vector':
-            print 'JJJKMM', membtype
             nElt = int(membtype['params'][0]['name'])
             retitem = []
             ind = 0;
@@ -137,7 +136,6 @@ def collectMembers(scope, pitem):
             td = globalv_globalvars[membtype['name']]
             #print 'instantiate', membtype['params']
             tdtype = td['tdtype']
-            print 'JJJKKK', membtype['name'], tdtype['type']
 #.instantiate(dict(zip(td.params, membtype['params'])))
             #print '           ', membtype
             if tdtype['type'] == 'Struct':

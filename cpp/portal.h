@@ -218,10 +218,6 @@ class bsvvector {
 private:
     B v[N];
 public:
-    bsvvector() {}
-    //bsvvector(int i) {}
-    ~bsvvector() {}
-    //operator const int () const { return v[0]; }
     B operator[] (int i) const {
 	return v[i];
     }
