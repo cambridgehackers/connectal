@@ -1,3 +1,23 @@
+/* Copyright (c) 2014 Quanta Research Cambridge, Inc
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
 #include <stdio.h>
 #include <sys/mman.h>
 #include <string.h>
@@ -5,8 +25,8 @@
 #include <unistd.h>
 #include "StdDmaIndication.h"
 
-#include "DmaDebugRequest.h"
-#include "MMUConfigRequest.h"
+#include "MemServerRequest.h"
+#include "MMURequest.h"
 #include "Memread2Indication.h"
 #include "Memread2Request.h"
 
@@ -71,11 +91,11 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
   device = new Memread2RequestProxy(IfcNames_Memread2Request);
-  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
-  MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
-  DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
-  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  DmaManager *dma = new DmaManager(dmap);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
   deviceIndication = new Memread2Indication(IfcNames_Memread2Indication);
 
@@ -107,8 +127,8 @@ int main(int argc, const char **argv)
   while(true){
     sleep(3);
     device->getStateDbg();
-    uint64_t beats = dma->show_mem_stats(ChannelType_Read);
+    uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
     fprintf(stderr, "   beats: %"PRIx64"\n", beats);
-    hostDmaDebugRequest->getStateDbg(ChannelType_Read);
+    hostMemServerRequest->stateDbg(ChannelType_Read);
   }
 }

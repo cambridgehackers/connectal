@@ -30,6 +30,7 @@ import ConnectalMemory::*;
 
 // implementation of a Portal as a group of Pipes
 interface PipePortal#(numeric type numRequests, numeric type numIndications, numeric type slaveDataWidth);
+   method Bit#(16) messageSize(Bit#(16) methodNumber);
    interface Vector#(numRequests, PipeIn#(Bit#(slaveDataWidth))) requests;
    interface Vector#(numIndications, PipeOut#(Bit#(slaveDataWidth))) indications;
 endinterface

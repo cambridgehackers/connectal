@@ -64,7 +64,7 @@ typedef struct {
 
 module mkSimple#(Simple indication)(Simple);
    
-   let verbose = False;
+   let verbose = True;
    
    method Action say1(Bit#(32) v);
       if (verbose) $display("mkSimple::say1");

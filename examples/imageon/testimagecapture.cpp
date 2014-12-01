@@ -35,8 +35,8 @@
 #include "ImageonSerdesIndication.h"
 #include "HdmiInternalRequest.h"
 #include "HdmiInternalIndication.h"
-#include "DmaDebugRequest.h"
-#include "MMUConfigRequest.h"
+#include "MemServerRequest.h"
+#include "MMURequest.h"
 
 static ImageonSensorRequestProxy *sensordevice;
 static ImageonSerdesRequestProxy *serdesdevice;
@@ -430,11 +430,11 @@ int main(int argc, const char **argv)
     init_local_semaphores();
     PortalPoller *poller = new PortalPoller();
 
-  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
-  MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
-  DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
-  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  DmaManager *dma = new DmaManager(dmap);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
     serdesdevice = new ImageonSerdesRequestProxy(IfcNames_ImageonSerdesRequest, poller);
     sensordevice = new ImageonSensorRequestProxy(IfcNames_ImageonSensorRequest, poller);

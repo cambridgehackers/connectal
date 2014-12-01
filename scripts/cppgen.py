@@ -22,39 +22,25 @@
 ## CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ## SOFTWARE.
 
-import os
-import sys
-import traceback
-import globalv
-import AST
-import util
-import functools
-import math
-
-class dtInfo:
-    def __init__(self, name, cName, bitWidth, params):
-        self.name = name
-        self.cName = cName
-        self.bitWidth = bitWidth
-        self.params = params
+import functools, math, os, re, sys, util
 
 sizeofUint32_t = 4
 
 proxyClassPrefixTemplate='''
 class %(className)sProxy : public %(parentClass)s {
 public:
-    %(className)sProxy(int id, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, NULL, NULL, poller) {};
-    %(className)sProxy(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, NULL, NULL, item, param, poller) {};
+    %(className)sProxy(int id, PortalPoller *poller = 0) : Portal(id, %(className)s_reqinfo, NULL, NULL, poller) {};
+    %(className)sProxy(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(className)s_reqinfo, NULL, NULL, item, param, poller) {};
 '''
 
 wrapperClassPrefixTemplate='''
 extern %(className)sCb %(className)s_cbTable;
 class %(className)sWrapper : public %(parentClass)s {
 public:
-    %(className)sWrapper(int id, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, %(className)s_handleMessage, (void *)&%(className)s_cbTable, poller) {
+    %(className)sWrapper(int id, PortalPoller *poller = 0) : Portal(id, %(className)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, poller) {
         pint.parent = static_cast<void *>(this);
     };
-    %(className)sWrapper(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(className)s_reqsize, %(className)s_handleMessage, (void *)&%(className)s_cbTable, item, param, poller) {
+    %(className)sWrapper(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(className)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, item, param, poller) {
         pint.parent = static_cast<void *>(this);
     };
 '''
@@ -73,8 +59,8 @@ handleMessageTemplate1='''
 handleMessageCase='''
     case %(channelNumber)s:
         {
-        p->item->recv(p, temp_working_addr, %(wordLen)s, &tmpfd);
         %(paramStructDeclarations)s
+        p->item->recv(p, temp_working_addr, %(wordLen)s, &tmpfd);
         %(paramStructDemarshall)s
         %(responseCase)s
         }
@@ -96,14 +82,16 @@ handleMessageTemplate2='''
 '''
 
 proxyMethodTemplateDecl='''
-void %(className)s_%(methodName)s (%(paramProxyDeclarations)s )'''
+int %(className)s_%(methodName)s (%(paramProxyDeclarations)s )'''
 
 proxyMethodTemplate='''
 {
-    volatile unsigned int* temp_working_addr = p->item->mapchannelReq(p, %(channelNumber)s);
-    if (p->item->busywait(p, temp_working_addr, "%(className)s_%(methodName)s")) return;
+    volatile unsigned int* temp_working_addr_start = p->item->mapchannelReq(p, %(channelNumber)s);
+    volatile unsigned int* temp_working_addr = temp_working_addr_start;
+    if (p->item->busywait(p, %(channelNumber)s, "%(className)s_%(methodName)s")) return 1;
     %(paramStructMarshall)s
-    p->item->send(p, (%(channelNumber)s << 16) | %(wordLenP1)s, %(fdName)s);
+    p->item->send(p, temp_working_addr_start, (%(channelNumber)s << 16) | %(wordLenP1)s, %(fdName)s);
+    return 0;
 };
 '''
 
@@ -111,165 +99,8 @@ def indent(f, indentation):
     for i in xrange(indentation):
         f.write(' ')
 
-class NoCMixin:
-    def emitCDeclaration(self, f, indentation):
-        pass
-
-class MethodMixin:
-    def collectTypes(self):
-        result = [self.return_type]
-        result.append(AST.Type('Tuple', self.params))
-        return result
-
-class StructMemberMixin:
-    def emitCDeclaration(self, f, indentation):
-        indent(f, indentation)
-        f.write('%s %s' % (self.type.cName(), self.name))
-        if self.type.isBitField():
-            f.write(' : %d' % self.type.bitWidth())
-        f.write(';\n')
-
-class TypeDefMixin:
-    def emitCDeclaration(self,f,indentation):
-        #print 'TypeDefMixin.emitCdeclaration', self.tdtype.type, self.name, self.tdtype
-        if self.tdtype.type == 'Struct' or self.tdtype.type == 'Enum':
-            self.tdtype.emitCDeclaration(self.name,f,indentation)
-        elif self.name == 'SpecialTypeForSendingFd':
-            pass
-        elif False and self.tdtype.type == 'Type':
-            tdtype = self.tdtype
-            #print 'resolving', tdtype.type, tdtype
-            while tdtype.type == 'Type' and globalv.globalvars.has_key(tdtype.name):
-                td = globalv.globalvars[tdtype.name]
-                tdtype = td.tdtype.instantiate(dict(zip(td.params, tdtype.params)))
-                #print 'resolved to', tdtype.type, tdtype
-            if tdtype.type != 'Type':
-                #print 'emitting declaration'
-                tdtype.emitCDeclaration(self.name,f,indentation)
-
-class StructMixin:
-    def collectTypes(self):
-        result = [self]
-        result.append(self.elements)
-        return result
-    def emitCDeclaration(self, name, f, indentation):
-        indent(f, indentation)
-        if (indentation == 0):
-            f.write('typedef ')
-        f.write('struct %s {\n' % name)
-        for e in self.elements:
-            e.emitCDeclaration(f, indentation+4)
-        indent(f, indentation)
-        f.write('}')
-        if (indentation == 0):
-            f.write(' %s;' % name)
-        f.write('\n')
-
-class EnumElementMixin:
-    def cName(self):
-        return self.name
-
-class EnumMixin:
-    def cName(self):
-        return self.name
-    def collectTypes(self):
-        return [self]
-    def emitCDeclaration(self, name, f, indentation):
-        indent(f, indentation)
-        if (indentation == 0):
-            f.write('typedef ')
-        f.write('enum %s { ' % name)
-        indent(f, indentation)
-        f.write(', '.join(['%s_%s' % (name, e) for e in self.elements]))
-        indent(f, indentation)
-        f.write(' }')
-        if (indentation == 0):
-            f.write(' %s;' % name)
-        f.write('\n')
-    def bitWidth(self):
-        return int(math.ceil(math.log(len(self.elements))))
-
-class InterfaceMixin:
-    def collectTypes(self):
-        return [d.collectTypes() for d in self.decls]
-    def getSubinterface(self, name):
-        subinterfaceName = name
-        if not globalv.globalvars.has_key(subinterfaceName):
-            return None
-        subinterface = globalv.globalvars[subinterfaceName]
-        #print 'subinterface', subinterface, subinterface
-        return subinterface
-    def assignRequestResponseChannels(self, channelNumber=0):
-        for d in self.decls:
-            if d.__class__ == AST.Method:
-                d.channelNumber = channelNumber
-                channelNumber = channelNumber + 1
-        self.channelCount = channelNumber
-    def parentClass(self, default):
-        rv = default if (len(self.typeClassInstances)==0) else (self.typeClassInstances[0])
-        return rv
-    def global_name(self, s, suffix):
-        return '%s%s_%s' % (cName(self.name), suffix, s)
-
-class ParamMixin:
-    def cName(self):
-        return self.name
-    def emitCDeclaration(self, f, indentation):
-        indent(f, indentation)
-        f.write('s %s' % (self.type, self.name))
-
-class TypeMixin:
-    def cName(self):
-        cid = self.name.replace(' ', '')
-        if cid == 'Bit':
-            if self.params[0].numeric() <= 32:
-                return 'uint32_t'
-            elif self.params[0].numeric() <= 64:
-                return 'uint64_t'
-            else:
-                return 'std::bitset<%d>' % (self.params[0].numeric())
-        elif cid == 'Int':
-            if self.params[0].numeric() == 32:
-                return 'int'
-            else:
-                assert(False)
-        elif cid == 'UInt':
-            if self.params[0].numeric() == 32:
-                return 'unsigned int'
-            else:
-                assert(False)
-        elif cid == 'Float':
-            return 'float'
-        elif cid == 'Vector':
-            return 'bsvvector<%d,%s>' % (self.params[0].numeric(), self.params[1].cName())
-        elif cid == 'Action':
-            return 'int'
-        elif cid == 'ActionValue':
-            return self.params[0].cName()
-        if self.params:
-            name = '%sL_%s_P' % (cid, '_'.join([cName(t) for t in self.params if t]))
-        else:
-            name = cid
-        return name
-    def isBitField(self):
-        return self.name == 'Bit' or self.name == 'Int' or self.name == 'UInt'
-    def bitWidth(self):
-        if self.name == 'Bit' or self.name == 'Int' or self.name == 'UInt':
-            width = self.params[0].name
-            while globalv.globalvars.has_key(width):
-                decl = globalv.globalvars[width]
-                if decl.type != 'TypeDef':
-                    break
-                print 'Resolving width', width, decl.tdtype
-                width = decl.tdtype.name
-            return int(width)
-        if self.name == 'Float':
-            return 32
-        else:
-            return 0
-
 def cName(x):
-    if type(x) == str:
+    if type(x) == str or type(x) == unicode:
         x = x.replace(' ', '')
         x = x.replace('.', '$')
         return x
@@ -286,31 +117,139 @@ class paramInfo:
 
 # resurse interface types and flattening all structs into a list of types
 def collectMembers(scope, pitem):
-    membtype = dtInfo(pitem.type.name, pitem.type.cName(), pitem.type.bitWidth(), pitem.type.params)
+    membtype = pitem['type']
     while 1:
-        if membtype.name == 'Bit':
-            return [('%s%s'%(scope,pitem.name),membtype)]
-        elif membtype.name == 'Int' or membtype.name == 'UInt':
-            return [('%s%s'%(scope,pitem.name),membtype)]
-        elif membtype.name == 'Float':
-            return [('%s%s'%(scope,pitem.name),membtype)]
-        elif membtype.name == 'Vector':
-            return [('%s%s'%(scope,pitem.name),membtype)]
-        elif membtype.name == 'SpecialTypeForSendingFd':
-            return [('%s%s'%(scope,pitem.name),membtype)]
+        if membtype['name'] == 'Bit' or membtype['name'] == 'Int' or membtype['name'] == 'UInt' \
+            or membtype['name'] == 'Float' or membtype['name'] == 'Vector' or membtype['name'] == 'Bool':
+            return [('%s%s'%(scope,pitem['name']),membtype)]
+        elif membtype['name'] == 'SpecialTypeForSendingFd':
+            return [('%s%s'%(scope,pitem['name']),membtype)]
         else:
-            td = globalv.globalvars[membtype.name]
-            #print 'instantiate', membtype.params
-            tdtype = td.tdtype.instantiate(dict(zip(td.params, membtype.params)))
+            td = globalv_globalvars[membtype['name']]
+            #print 'instantiate', membtype['params']
+            tdtype = td['tdtype']
+#.instantiate(dict(zip(td.params, membtype['params'])))
             #print '           ', membtype
-            if tdtype.type == 'Struct':
-                ns = '%s%s.' % (scope,pitem.name)
-                rv = map(functools.partial(collectMembers, ns), tdtype.elements)
+            if tdtype['type'] == 'Struct':
+                ns = '%s%s.' % (scope,pitem['name'])
+                rv = map(functools.partial(collectMembers, ns), tdtype['elements'])
                 return sum(rv,[])
-            membtype = dtInfo(tdtype.name, tdtype.cName(), tdtype.bitWidth(), tdtype.params if tdtype.type == 'Type' else None)
-            if tdtype.type == 'Enum':
-                return [('%s%s'%(scope,pitem.name),membtype)]
-            #print 'resolved to type', membtype.type, membtype.name, membtype
+            membtype = tdtype
+            if tdtype['type'] == 'Enum':
+                return [('%s%s'%(scope,pitem['name']),membtype)]
+            #print 'resolved to type', membtype['type'], membtype['name'], membtype
+
+def typeNumeric(item):
+    if globalv_globalvars.has_key(item['name']):
+        decl = globalv_globalvars[item['name']]
+        if decl['type'] == 'TypeDef':
+            return typeNumeric(decl['tdtype'])
+    elif item['name'] in ['TAdd', 'TSub', 'TMul', 'TDiv', 'TLog', 'TExp', 'TMax', 'TMin']:
+        values = [typeNumeric(p) for p in item['params']]
+        if item['name'] == 'TAdd':
+            return values[0] + values[1]
+        elif item['name'] == 'TSub':
+            return values[0] - values[1]
+        elif item['name'] == 'TMul':
+            return values[0] * values[1]
+        elif item['name'] == 'TDiv':
+            return math.ceil(values[0] / float(values[1]))
+        elif item['name'] == 'TLog':
+            return math.ceil(math.log(values[0], 2))
+        elif item['name'] == 'TExp':
+            return math.pow(2, values[0])
+        elif item['name'] == 'TMax':
+            return max(values[0], values[1])
+        elif item['name'] == 'TMax':
+            return min(values[0], values[1])
+    return int(item['name'])
+
+def typeCName(item):
+    if item['type'] == 'Type':
+        cid = item['name'].replace(' ', '')
+        if cid == 'Bit':
+            if typeNumeric(item['params'][0]) <= 32:
+                return 'uint32_t'
+            elif typeNumeric(item['params'][0]) <= 64:
+                return 'uint64_t'
+            else:
+                return 'std::bitset<%d>' % (typeNumeric(item['params'][0]))
+        elif cid == 'Bool':
+            return 'int'
+        elif cid == 'Int':
+            if typeNumeric(item['params'][0]) == 32:
+                return 'int'
+            else:
+                assert(False)
+        elif cid == 'UInt':
+            if typeNumeric(item['params'][0]) == 32:
+                return 'unsigned int'
+            else:
+                assert(False)
+        elif cid == 'Float':
+            return 'float'
+        elif cid == 'Vector':
+            print 'KJJJJ', item['params'][0]
+            print 'KJMMM', item['params'][1]
+            return 'bsvvector<%d,%s>' % (typeNumeric(item['params'][0]), typeCName(item['params'][1]))
+        elif cid == 'Action':
+            return 'int'
+        elif cid == 'ActionValue':
+            assert(False)
+        if item['params']:
+            name = '%sL_%s_P' % (cid, '_'.join([typeCName(t) for t in item['params'] if t]))
+        else:
+            name = cid
+        return name
+    return item['name']
+
+def hasBitWidth(item):
+    return item['name'] == 'Bit' or item['name'] == 'Int' or item['name'] == 'UInt'
+
+def getNumeric(item):
+   if globalv_globalvars.has_key(item['name']):
+       decl = globalv_globalvars[item['name']]
+       if decl['type'] == 'TypeDef':
+           return getNumeric(decl['tdtype'])
+   elif item['name'] in ['TAdd', 'TSub', 'TMul', 'TDiv', 'TLog', 'TExp', 'TMax', 'TMin']:
+       values = [getNumeric(p) for p in item['params']]
+       if item['name'] == 'TAdd':
+           return values[0] + values[1]
+       elif item['name'] == 'TSub':
+           return values[0] - values[1]
+       elif item['name'] == 'TMul':
+           return values[0] * values[1]
+       elif item['name'] == 'TDiv':
+           return math.ceil(values[0] / float(values[1]))
+       elif item['name'] == 'TLog':
+           return math.ceil(math.log(values[0], 2))
+       elif item['name'] == 'TExp':
+           return math.pow(2, values[0])
+       elif item['name'] == 'TMax':
+           return max(values[0], values[1])
+       elif item['name'] == 'TMax':
+           return min(values[0], values[1])
+   return int(item['name'])
+
+def typeBitWidth(item):
+    if hasBitWidth(item):
+        width = item['params'][0]['name']
+        while globalv_globalvars.has_key(width):
+            decl = globalv_globalvars[width]
+            if decl['type'] != 'TypeDef':
+                break
+            print 'Resolving width', width, decl['tdtype']
+            width = decl['tdtype']['name']
+        if re.match('[0-9]+', width):
+            return int(width)
+        return getNumeric(decl['tdtype'])
+    if item['name'] == 'Bool':
+        return 1
+    if item['name'] == 'Float':
+        return 32
+    if item['type'] == 'Enum':
+        return int(math.ceil(math.log(len(item['elements']))))
+    return 0
 
 # pack flattened struct-member list into 32-bit wide bins.  If a type is wider than 32-bits or
 # crosses a 32-bit boundary, it will appear in more than one bin (though with different ranges).
@@ -327,7 +266,7 @@ def accumWords(s, pro, memberList):
     mitem = memberList[0]
     name = mitem[0]
     thisType = mitem[1]
-    aw = thisType.bitWidth
+    aw = typeBitWidth(thisType)
     #print '%d %d %d' %(aw, pro, w)
     if (aw-pro+w == 32):
         s.append(paramInfo(name,aw,pro,thisType,'='))
@@ -349,17 +288,17 @@ def generate_marshall(pfmt, w):
     fmt = pfmt
     for e in w:
         field = e.name
-        if e.datatype.cName == 'float':
+        if typeCName(e.datatype) == 'float':
             return pfmt % ('*(int*)&' + e.name)
         if e.shifted:
             field = '(%s>>%s)' % (field, e.shifted)
         if off:
             field = '(%s<<%s)' % (field, off)
-        if e.datatype.bitWidth > 64:
-            field = '(const %s & std::bitset<%d>(0xFFFFFFFF)).to_ulong()' % (field, e.datatype.bitWidth)
+        if typeBitWidth(e.datatype) > 64:
+            field = '(const %s & std::bitset<%d>(0xFFFFFFFF)).to_ulong()' % (field, typeBitWidth(e.datatype))
         word.append(field)
         off = off+e.width-e.shifted
-        if e.datatype.cName == 'SpecialTypeForSendingFd':
+        if typeCName(e.datatype) == 'SpecialTypeForSendingFd':
             fdName = field
             fmt = 'p->item->writefd(p, &temp_working_addr, %s);'
     return fmt % (''.join(util.intersperse('|', word)))
@@ -371,25 +310,25 @@ def generate_demarshall(fmt, w):
     for e in w:
         # print e.name+' (d)'
         field = 'tmp'
-        if e.datatype.cName == 'float':
+        if typeCName(e.datatype) == 'float':
             word.append('%s = *(float*)&(%s);'%(e.name,field))
             continue
         if off:
             field = '%s>>%s' % (field, off)
-        #print 'JJJ', e.name, '{{'+field+'}}', e.datatype.bitWidth, e.shifted, e.assignOp, off
-        #if e.datatype.bitWidth < 32:
-        field = '((%s)&0x%xul)' % (field, ((1 << (e.datatype.bitWidth-e.shifted))-1))
+        #print 'JJJ', e.name, '{{'+field+'}}', typeBitWidth(e.datatype), e.shifted, e.assignOp, off
+        #if typeBitWidth(e.datatype) < 32:
+        field = '((%s)&0x%xul)' % (field, ((1 << (typeBitWidth(e.datatype)-e.shifted))-1))
         if e.shifted:
-            field = '((%s)(%s)<<%s)' % (e.datatype.cName,field, e.shifted)
-        if e.datatype.cName == 'SpecialTypeForSendingFd':
+            field = '((%s)(%s)<<%s)' % (typeCName(e.datatype),field, e.shifted)
+        if typeCName(e.datatype) == 'SpecialTypeForSendingFd':
             word.append('%s %s messageFd;'%(e.name, e.assignOp))
         else:
-            word.append('%s %s (%s)(%s);'%(e.name, e.assignOp, e.datatype.cName, field))
+            word.append('%s %s (%s)(%s);'%(e.name, e.assignOp, typeCName(e.datatype), field))
         off = off+e.width-e.shifted
     return '\n        '.join(word)
 
 def formalParameters(params, insertPortal):
-    rc = [ 'const %s %s' % (pitem.type.cName(), pitem.name) for pitem in params]
+    rc = [ 'const %s %s' % (typeCName(pitem['type']), pitem['name']) for pitem in params]
     if insertPortal:
         rc.insert(0, ' struct PortalInternal *p')
     return ', '.join(rc)
@@ -414,10 +353,10 @@ def gatherMethodInfo(mname, params, itemname):
         paramStructDemarshall = map(functools.partial(generate_demarshall, paramStructDemarshallStr), argWords)
         paramStructDemarshall.reverse()
 
-    paramStructDeclarations = [ '%s %s;' % (pitem.type.cName(), pitem.name) for pitem in params]
+    paramStructDeclarations = [ '%s %s;' % (typeCName(pitem['type']), pitem['name']) for pitem in params]
     if not params:
         paramStructDeclarations = ['        int padding;\n']
-    respParams = [pitem.name for pitem in params]
+    respParams = [pitem['name'] for pitem in params]
     respParams.insert(0, 'p')
     substs = {
         'methodName': cName(mname),
@@ -426,7 +365,7 @@ def gatherMethodInfo(mname, params, itemname):
         'paramStructDeclarations': '\n        '.join(paramStructDeclarations),
         'paramStructMarshall': '\n    '.join(paramStructMarshall),
         'paramStructDemarshall': '\n        '.join(paramStructDemarshall),
-        'paramNames': ', '.join(['msg->%s' % pitem.name for pitem in params]),
+        'paramNames': ', '.join(['msg->%s' % pitem['name'] for pitem in params]),
         'wordLen': len(argWords),
         'wordLenP1': len(argWords) + 1,
         'fdName': fdName,
@@ -440,17 +379,19 @@ def gatherMethodInfo(mname, params, itemname):
     return substs, len(argWords)
 
 def emitMethodDeclaration(mname, params, f, className):
-    paramValues = [pitem.name for pitem in params]
+    paramValues = [pitem['name'] for pitem in params]
     paramValues.insert(0, '&pint')
     methodName = cName(mname)
     indent(f, 4)
     if className == '':
-        f.write('virtual ')
-    f.write(('void %s ( ' % methodName) + formalParameters(params, False) + ' ) ')
+        f.write('virtual void')
+    else:
+        f.write('int')
+    f.write((' %s ( ' % methodName) + formalParameters(params, False) + ' ) ')
     if className == '':
         f.write('= 0;\n')
     else:
-        f.write('{ %s_%s (' % (className, methodName))
+        f.write('{ return %s_%s (' % (className, methodName))
         f.write(', '.join(paramValues) + '); };\n')
 
 def generate_class(className, declList, parentC, parentCC, generatedCFiles, create_cpp_file, generated_hpp, generated_cpp):
@@ -469,34 +410,35 @@ def generate_class(className, declList, parentC, parentCC, generatedCFiles, crea
     maxSize = 0
     reqChanNums = []
     for mitem in declList:
-        substs, t = gatherMethodInfo(mitem.name, mitem.params, className)
+        substs, t = gatherMethodInfo(mitem['name'], mitem['params'], className)
         if t > maxSize:
             maxSize = t
         cpp.write((proxyMethodTemplateDecl + proxyMethodTemplate) % substs)
         generated_hpp.write((proxyMethodTemplateDecl % substs) + ';')
         reqChanNums.append(substs['channelNumber'])
-    subs = {'className': classCName, 'maxSize': maxSize * sizeofUint32_t, 'parentClass': parentCC}
-    generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(className)s_reqsize %(maxSize)s\n' % subs)
+    subs = {'className': classCName, 'maxSize': (maxSize+1) * sizeofUint32_t, 'parentClass': parentCC, \
+            'reqInfo': '0x%x' % ((len(declList) << 16) + (maxSize+1) * sizeofUint32_t) }
+    generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(className)s_reqinfo %(reqInfo)s\n' % subs)
     hpp.write(proxyClassPrefixTemplate % subs)
     for mitem in declList:
-        emitMethodDeclaration(mitem.name, mitem.params, hpp, classCName)
+        emitMethodDeclaration(mitem['name'], mitem['params'], hpp, classCName)
     hpp.write('};\n')
     cpp.write((handleMessageTemplateDecl % subs))
     cpp.write(handleMessageTemplate1 % subs)
     for mitem in declList:
-        substs, t = gatherMethodInfo(mitem.name, mitem.params, className)
+        substs, t = gatherMethodInfo(mitem['name'], mitem['params'], className)
         cpp.write(handleMessageCase % substs)
     cpp.write(handleMessageTemplate2 % subs)
     generated_hpp.write((handleMessageTemplateDecl % subs)+ ';\n')
     hpp.write(wrapperClassPrefixTemplate % subs)
     for mitem in declList:
-        emitMethodDeclaration(mitem.name, mitem.params, hpp, '')
+        emitMethodDeclaration(mitem['name'], mitem['params'], hpp, '')
     hpp.write('};\n')
     generated_hpp.write('typedef struct {\n')
     for mitem in declList:
-        paramValues = ', '.join([p.name for p in mitem.params])
-        formalParamStr = formalParameters(mitem.params, True)
-        methodName = cName(mitem.name)
+        paramValues = ', '.join([pitem['name'] for pitem in mitem['params']])
+        formalParamStr = formalParameters(mitem['params'], True)
+        methodName = cName(mitem['name'])
         generated_hpp.write(('    void (*%s) ( ' % methodName) + formalParamStr + ' );\n')
         generated_cpp.write(('void %s%s_cb ( ' % (classCName, methodName)) + formalParamStr + ' ) {\n')
         indent(generated_cpp, 4)
@@ -504,34 +446,56 @@ def generate_class(className, declList, parentC, parentCC, generatedCFiles, crea
     generated_hpp.write('} %sCb;\n' % classCName)
     generated_cpp.write('%sCb %s_cbTable = {\n' % (classCName, classCName))
     for mitem in declList:
-        generated_cpp.write('    %s%s_cb,\n' % (classCName, mitem.name))
+        generated_cpp.write('    %s%s_cb,\n' % (classCName, mitem['name']))
     generated_cpp.write('};\n')
     hpp.write('#endif // _%(name)s_H_\n' % {'name': className.upper()})
     hpp.close()
     cpp.close()
 
-class piInfo:
-    def __init__(self, name, type):
-        self.name = name
-        self.type = type
+def emitStructMember(item, f, indentation):
+    indent(f, indentation)
+    f.write('%s %s' % (typeCName(item['type']), item['name']))
+    if hasBitWidth(item['type']):
+        f.write(' : %d' % typeBitWidth(item['type']))
+    f.write(';\n')
 
-class declInfo:
-    def __init__(self, name, params):
-        self.name = name
-        self.params = []
-        for pitem in params:
-            self.params.append(piInfo(pitem.name, pitem.type))
+def emitStruct(item, name, f, indentation):
+    indent(f, indentation)
+    if (indentation == 0):
+        f.write('typedef ')
+    f.write('struct %s {\n' % name)
+    for e in item['elements']:
+        emitStructMember(e, f, indentation+4)
+    indent(f, indentation)
+    f.write('}')
+    if (indentation == 0):
+        f.write(' %s;' % name)
+    f.write('\n')
 
-class classInfo:
-    def __init__(self, name, decls, parentLportal, parentPortal):
-        self.name = name
-        self.parentLportal = parentLportal
-        self.parentPortal = parentPortal
-        self.decls = []
-        for mitem in decls:
-            self.decls.append(declInfo(mitem.name, mitem.params))
+def emitEnum(item, name, f, indentation):
+    indent(f, indentation)
+    if (indentation == 0):
+        f.write('typedef ')
+    f.write('enum %s { ' % name)
+    indent(f, indentation)
+    f.write(', '.join(['%s_%s' % (name, e) for e in item['elements']]))
+    indent(f, indentation)
+    f.write(' }')
+    if (indentation == 0):
+        f.write(' %s;' % name)
+    f.write('\n')
 
-def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
+def emitCD(item, generated_hpp, indentation):
+    n = item['name']
+    td = item['tdtype']
+    t = td['type']
+    if t == 'Enum':
+        emitEnum(td, n, generated_hpp, indentation)
+    elif t == 'Struct':
+        emitStruct(td, n, generated_hpp, indentation)
+
+def generate_cpp(project_dir, noisyFlag, jsondata):
+    global globalv_globalvars
     def create_cpp_file(name):
         fname = os.path.join(project_dir, 'jni', name)
         f = util.createDirAndOpen(fname, 'w')
@@ -540,10 +504,8 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
         f.write('#include "GeneratedTypes.h"\n')
         return f
 
-    itemlist = []
-    for item in interfaces:
-        itemlist.append(classInfo(item.name, item.decls, item.parentClass("portal"), item.parentClass("Portal")))
     generatedCFiles = []
+    globalv_globalvars = jsondata['globalvars']
     hname = os.path.join(project_dir, 'jni', 'GeneratedTypes.h')
     generated_hpp = util.createDirAndOpen(hname, 'w')
     generated_hpp.write('#ifndef __GENERATED_TYPES__\n')
@@ -553,23 +515,19 @@ def generate_cpp(globaldecls, project_dir, noisyFlag, interfaces):
     generated_hpp.write('extern "C" {\n')
     generated_hpp.write('#endif\n')
     # global type declarations used by interface mthods
-    for v in globaldecls:
-        if (v.type == 'TypeDef'):
-            if v.params:
-                print 'Skipping C++ declaration for parameterized type', v.name
+    for v in jsondata['globaldecls']:
+        if v['type'] == 'TypeDef':
+            if v['params']:
+                print 'Skipping C++ declaration for parameterized type', v['name']
                 continue
-            try:
-                v.emitCDeclaration(generated_hpp, 0)
-            except:
-                print 'Skipping typedef', v.name
-                traceback.print_exc()
+            emitCD(v, generated_hpp, 0)
     generated_hpp.write('\n')
     cppname = 'GeneratedCppCallbacks.cpp'
     generated_cpp = create_cpp_file(cppname)
     generatedCFiles.append(cppname)
     generated_cpp.write('\n#ifndef NO_CPP_PORTAL_CODE\n')
-    for item in itemlist:
-        generate_class(item.name, item.decls, item.parentLportal, item.parentPortal, generatedCFiles, create_cpp_file, generated_hpp, generated_cpp)
+    for item in jsondata['interfaces']:
+        generate_class(item['name'], item['decls'], item['parentLportal'], item['parentPortal'], generatedCFiles, create_cpp_file, generated_hpp, generated_cpp)
     generated_cpp.write('#endif //NO_CPP_PORTAL_CODE\n')
     generated_cpp.close()
     generated_hpp.write('#ifdef __cplusplus\n')

@@ -1,9 +1,10 @@
 
+CONNECTALDIR?=../..
 INTERFACES = StrstrRequest StrstrIndication
-BSVFILES = ../../lib/bsv/Strstr.bsv Top.bsv
+BSVFILES = $(CONNECTALDIR)/lib/strstr/bsv/Strstr.bsv Top.bsv
 CPPFILES=teststrstr.cpp
-CONNECTALFLAGS = -D DEGPAR=8
+CONNECTALFLAGS += -D DEGPAR=2
+CONNECTALFLAGS += -I $(CONNECTALDIR)/lib/strstr/cpp
 
-#CONNECTALFLAGS=--bscflags " -D TRACE_AXI"
 
-include ../../Makefile.connectal
+include $(CONNECTALDIR)/Makefile.connectal

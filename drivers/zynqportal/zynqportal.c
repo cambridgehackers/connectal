@@ -32,6 +32,7 @@
 #include "zynqportal.h"
 #define CONNECTAL_DRIVER_CODE
 #include "../../cpp/dmaSendFd.h"
+#include "../../cpp/portalKernel.h"
 
 #define DRIVER_NAME        "zynqportal"
 #define DRIVER_DESCRIPTION "Generic userspace hardware bridge"
@@ -175,7 +176,7 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
         case PORTAL_SEND_FD: {
                 /* pushd down allocated fd */
                 PortalSendFd sendFd;
-                PortalInternal devptr = {.map_base = portal_data->map_base};
+                PortalInternal devptr = {.map_base = portal_data->map_base, .item=&kernelfunc};
 
                 int err = copy_from_user(&sendFd, (void __user *) arg, sizeof(sendFd));
                 if (err)

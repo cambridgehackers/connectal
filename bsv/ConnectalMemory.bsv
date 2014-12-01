@@ -55,27 +55,27 @@ typedef enum {
 //
 // @brief Events sent from a Dma engine
 //
-interface DmaDebugIndication;
+interface MemServerIndication;
    method Action addrResponse(Bit#(64) physAddr);
    method Action reportStateDbg(DmaDbgRec rec);
    method Action reportMemoryTraffic(Bit#(64) words);
+   method Action error(Bit#(32) code, Bit#(32) sglId, Bit#(64) offset, Bit#(64) extra);
 endinterface
 
 //
 // @brief Events sent from a MMU
 //
-interface MMUConfigIndication;
+interface MMUIndication;
    method Action idResponse(Bit#(32) sglId);
    method Action configResp(Bit#(32) sglId);
    method Action error(Bit#(32) code, Bit#(32) sglId, Bit#(64) offset, Bit#(64) extra);
-   method Action dmaError(Bit#(32) code, Bit#(32) sglId, Bit#(64) offset, Bit#(64) extra);
 endinterface
 
 typedef Bit#(32) SpecialTypeForSendingFd;
 //
 // @brief Configuration interface to an MMU
 //
-interface MMUConfigRequest;
+interface MMURequest;
    //
    // @brief Adds an address translation entry to the scatter-gather list for an object
    //
@@ -93,16 +93,16 @@ endinterface
 //
 // @brief Debug interface to Dma engine
 //
-interface DmaDebugRequest;
+interface MemServerRequest;
    //
    // @brief Requests an address translation
    //
-   method Action addrRequest(Bit#(32) sglId, Bit#(32) offset);
+   method Action addrTrans(Bit#(32) sglId, Bit#(32) offset);
    //
    // @brief Requests debug info for the specified channel type
    //
-   method Action getStateDbg(ChannelType rc);
-   method Action getMemoryTraffic(ChannelType rc);
+   method Action stateDbg(ChannelType rc);
+   method Action memoryTraffic(ChannelType rc);
 endinterface
 
 interface SharedMemoryPortalConfig;

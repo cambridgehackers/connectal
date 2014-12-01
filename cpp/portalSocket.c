@@ -30,6 +30,7 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/ioctl.h>      // FIONBIO
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -38,7 +39,30 @@
 #include <assert.h>
 #include <netdb.h>
 
-int bsim_fpga_map[MAX_BSIM_PORTAL_ID];
+void memdump(unsigned char *p, int len, const char *title)
+{
+int i;
+
+    i = 0;
+    while (len > 0) {
+        if (!(i & 0xf)) {
+            if (i > 0)
+                printf("\n");
+            printf("%s: ",title);
+        }
+        printf("%02x ", *p++);
+        i++;
+        len--;
+    }
+    printf("\n");
+}
+
+typedef struct bsim_fpga_map_entry{
+  int name;
+  int offset;
+  int valid;
+} bsim_fpga_map_entry;
+static bsim_fpga_map_entry bsim_fpga_map[MAX_BSIM_PORTAL_ID];
 static pthread_mutex_t socket_mutex;
 int global_sockfd = -1;
 static int trace_socket;// = 1;
@@ -47,39 +71,27 @@ int init_connecting(const char *arg_name, PortalSocketParam *param)
 {
   int connect_attempts = 0;
   int sockfd;
+  struct sockaddr_un sa = {0};
+  struct addrinfo addrinfo = { 0, AF_UNIX, SOCK_STREAM, 0};
+  struct addrinfo *addr = &addrinfo;
 
-  if (param) {
+  sa.sun_family = AF_UNIX;
+  strcpy(sa.sun_path, arg_name);
+  addrinfo.ai_addrlen = sizeof(sa.sun_family) + strlen(sa.sun_path);
+  addrinfo.ai_addr = (struct sockaddr *)&sa;
+
+  if (param && param->addr) {
 printf("[%s:%d] TCP\n", __FUNCTION__, __LINE__);
-       sockfd = socket(param->addr->ai_family, param->addr->ai_socktype, param->addr->ai_protocol);
-       if (sockfd == -1) {
-           fprintf(stderr, "%s[%d]: socket error %s\n",__FUNCTION__, sockfd, strerror(errno));
-           exit(1);
-       }
-  if (trace_socket)
-    fprintf(stderr, "%s (%s) trying to connect...\n",__FUNCTION__, arg_name);
-  while (connect(sockfd, param->addr->ai_addr, param->addr->ai_addrlen) == -1) {
-    if(connect_attempts++ > 16){
-      fprintf(stderr,"%s (%s) connect error %s\n",__FUNCTION__, arg_name, strerror(errno));
-      exit(1);
-    }
-    if (trace_socket)
-      fprintf(stderr, "%s (%s) retrying connection\n",__FUNCTION__, arg_name);
-    sleep(1);
+      addr = param->addr;
   }
-  }
-  else {
-printf("[%s:%d] UNIX\n", __FUNCTION__, __LINE__);
-  if ((sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-    fprintf(stderr, "%s (%s) socket error %s\n",__FUNCTION__, arg_name, strerror(errno));
+  if ((sockfd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol)) == -1) {
+    fprintf(stderr, "%s[%d]: socket error %s\n",__FUNCTION__, sockfd, strerror(errno));
     exit(1);
   }
-
   if (trace_socket)
     fprintf(stderr, "%s (%s) trying to connect...\n",__FUNCTION__, arg_name);
-  struct sockaddr_un local;
-  local.sun_family = AF_UNIX;
-  strcpy(local.sun_path, arg_name);
-  while (connect(sockfd, (struct sockaddr *)&local, strlen(local.sun_path) + sizeof(local.sun_family)) == -1) {
+
+  while (connect(sockfd, addr->ai_addr, addr->ai_addrlen) == -1) {
     if(connect_attempts++ > 16){
       fprintf(stderr,"%s (%s) connect error %s\n",__FUNCTION__, arg_name, strerror(errno));
       exit(1);
@@ -87,7 +99,6 @@ printf("[%s:%d] UNIX\n", __FUNCTION__, __LINE__);
     if (trace_socket)
       fprintf(stderr, "%s (%s) retrying connection\n",__FUNCTION__, arg_name);
     sleep(1);
-  }
   }
   fprintf(stderr, "%s (%s) connected.  Attempts %d\n",__FUNCTION__, arg_name, connect_attempts);
   return sockfd;
@@ -110,8 +121,11 @@ void connect_to_bsim(void)
     unsigned int id = bsimfunc.read(&p, &idp);
     last = bsimfunc.read(&p, &topp);
     assert(id < MAX_BSIM_PORTAL_ID);
-    bsim_fpga_map[id] = idx++;
+    bsim_fpga_map[idx].name = id;
+    bsim_fpga_map[idx].offset = idx;
+    bsim_fpga_map[idx].valid = 1;
     //fprintf(stderr, "%s bsim_fpga_map[%d]=%d (%d)\n", __FUNCTION__, id, bsim_fpga_map[id], last);
+    idx++;
   }  
 }
 
@@ -119,9 +133,11 @@ static int init_socketResp(struct PortalInternal *pint, void *aparam)
 {
     PortalSocketParam *param = (PortalSocketParam *)aparam;
     char buff[128];
+    int on = 1;
     sprintf(buff, "SWSOCK%d", pint->fpga_number);
     pint->fpga_fd = init_listening(buff, param);
-    pint->map_base = (volatile unsigned int*)malloc(pint->reqsize);
+    ioctl(pint->fpga_fd, FIONBIO, &on);
+    pint->map_base = (volatile unsigned int*)malloc(REQINFO_SIZE(pint->reqinfo));
     return 0;
 }
 static int init_socketInit(struct PortalInternal *pint, void *aparam)
@@ -129,55 +145,137 @@ static int init_socketInit(struct PortalInternal *pint, void *aparam)
     PortalSocketParam *param = (PortalSocketParam *)aparam;
     char buff[128];
     sprintf(buff, "SWSOCK%d", pint->fpga_number);
-    pint->fpga_fd = init_connecting(buff, param);
+    pint->client_fd[pint->client_fd_number++] = init_connecting(buff, param);
     pint->accept_finished = 1;
-    pint->map_base = (volatile unsigned int*)malloc(pint->reqsize);
+    pint->map_base = (volatile unsigned int*)malloc(REQINFO_SIZE(pint->reqinfo));
     return 0;
 }
 static volatile unsigned int *mapchannel_socket(struct PortalInternal *pint, unsigned int v)
 {
     return &pint->map_base[1];
 }
-void send_socket(struct PortalInternal *pint, unsigned int hdr, int sendFd)
+static int recv_socket(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
 {
-    pint->map_base[0] = hdr;
-    portalSendFd(pint->fpga_fd, (void *)pint->map_base, (hdr & 0xffff) * sizeof(uint32_t), sendFd);
+    int rc = portalRecvFd(pint->client_fd[pint->indication_index], (void *)buffer, len * sizeof(uint32_t), recvfd);
+    if(trace_socket) {
+        printf("[%s:%d] len %d fd %d rc %d\n", __FUNCTION__, __LINE__, len, pint->client_fd[pint->indication_index], rc);
+        if (rc > 0) {
+        char bname[100];
+        sprintf(bname,"RECV%d", pint->client_fd[pint->indication_index]);
+        memdump((uint8_t*)buffer, rc, bname);
+        }
+    }
+    return rc;
 }
-int recv_socket(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
+static int event_socket(struct PortalInternal *pint)
 {
-    return portalRecvFd(pint->fpga_fd, (void *)buffer, len * sizeof(uint32_t), recvfd);
-}
-int event_socket(struct PortalInternal *pint)
-{
-    int event_socket_fd;
-    /* sw portal */
-    if (pint->accept_finished) { /* connection established */
-       int len = portalRecvFd(pint->fpga_fd, (void *)pint->map_base, sizeof(uint32_t), &event_socket_fd);
-       if (len == 0 || (len == -1 && errno == EAGAIN))
-           return -1;
-       if (len <= 0) {
-           fprintf(stderr, "%s[%d]: read error %d\n",__FUNCTION__, pint->fpga_fd, errno);
+    int i, j, event_socket_fd;
+    for (i = 0; i < pint->client_fd_number;) {
+       int len = portalRecvFd(pint->client_fd[i], (void *)pint->map_base, sizeof(uint32_t), &event_socket_fd);
+       if (len == 0) { /* EOF */
+           close(pint->client_fd[i]);
+           pint->client_fd_number--;
+           for (j = i; j < pint->client_fd_number; j++)
+                pint->client_fd[j] = pint->client_fd[j+1];
+       }
+       else if (len == -1 && errno == EAGAIN) {
+           i++;
+           continue;
+       }
+       else if (len == -1) {
+           fprintf(stderr, "%s[%d]: read error %d\n",__FUNCTION__, pint->client_fd[i], errno);
            exit(1);
        }
-       pint->handler(pint, *pint->map_base >> 16, event_socket_fd);
+       pint->indication_index = i;
+       if (pint->handler)
+           pint->handler(pint, *pint->map_base >> 16, event_socket_fd);
+       break;
     }
-    else { /* have not received connection yet */
-printf("[%s:%d]beforeacc %d\n", __FUNCTION__, __LINE__, pint->fpga_fd);
+    if (pint->fpga_fd != -1) {
         int sockfd = accept_socket(pint->fpga_fd);
         if (sockfd != -1) {
-printf("[%s:%d]afteracc %d\n", __FUNCTION__, __LINE__, sockfd);
+printf("[%s:%d]afteracc %p accfd %d fd %d\n", __FUNCTION__, __LINE__, pint, pint->fpga_fd, sockfd);
+            pint->client_fd[pint->client_fd_number++] = sockfd;
             pint->accept_finished = 1;
-            return sockfd;
+#ifndef NO_CPP_PORTAL_CODE
+#ifndef NO_POLLER_SUPPORT
+            if (pint->poller)
+                addFdToPoller(pint->poller, sockfd);
+#endif
+#endif
+            //return sockfd;
         }
     }
     return -1;
 }
+static void send_socket(struct PortalInternal *pint, volatile unsigned int *data, unsigned int hdr, int sendFd)
+{
+    volatile unsigned int *buffer = data-1;
+    if(trace_socket)
+        printf("[%s:%d] hdr %x fpga %x num %d\n", __FUNCTION__, __LINE__, hdr, pint->fpga_number, pint->client_fd_number);
+    buffer[0] = hdr;
+    while (pint->client_fd_number == 0)
+        event_socket(pint);
+    if(trace_socket) {
+        char bname[100];
+        sprintf(bname,"SEND%d", pint->client_fd[pint->request_index]);
+        memdump((uint8_t*)buffer, (hdr & 0xffff) * sizeof(uint32_t), bname);
+    }
+    portalSendFd(pint->client_fd[pint->request_index], (void *)buffer, (hdr & 0xffff) * sizeof(uint32_t), sendFd);
+}
 PortalItemFunctions socketfuncResp = {
     init_socketResp, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_socket,
-    send_socket, recv_socket, busy_portal_null, enableint_portal_null, event_socket};
+    send_socket, recv_socket, busy_portal_null, enableint_portal_null, event_socket, notfull_null};
 PortalItemFunctions socketfuncInit = {
     init_socketInit, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_socket,
-    send_socket, recv_socket, busy_portal_null, enableint_portal_null, event_socket};
+    send_socket, recv_socket, busy_portal_null, enableint_portal_null, event_socket, notfull_null};
+
+
+static int init_mux(struct PortalInternal *pint, void *aparam)
+{
+    PortalMuxParam *param = (PortalMuxParam *)aparam;
+    if(trace_socket)
+        printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+    pint->mux = param->pint;
+    pint->map_base = (volatile unsigned int*)malloc(REQINFO_SIZE(pint->reqinfo));
+    pint->mux->map_base[0] = -1;
+    pint->mux->mux_ports_number++;
+    pint->mux->mux_ports = (PortalMuxHandler *)realloc(pint->mux->mux_ports, pint->mux->mux_ports_number * sizeof(PortalMuxHandler));
+    pint->mux->mux_ports[pint->mux->mux_ports_number-1].pint = pint;
+    return 0;
+}
+static void send_mux(struct PortalInternal *pint, volatile unsigned int *data, unsigned int hdr, int sendFd)
+{
+    volatile unsigned int *buffer = data-1;
+    if(trace_socket)
+        printf("[%s:%d] hdr %x fpga %x\n", __FUNCTION__, __LINE__, hdr, pint->fpga_number);
+    buffer[0] = hdr;
+    pint->mux->request_index = pint->request_index;
+    pint->mux->item->send(pint->mux, buffer, (pint->fpga_number << 16) | ((hdr + 1) & 0xffff), sendFd);
+}
+static int recv_mux(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
+{
+    return pint->mux->item->recv(pint->mux, buffer, len, recvfd);
+}
+static int event_mux(struct PortalInternal *pint)
+{
+    return -1;
+}
+int portal_mux_handler(struct PortalInternal *pint, unsigned int channel, int messageFd)
+{
+    int i, dummy;
+    for (i = 0; i < pint->mux_ports_number; i++) {
+        PortalInternal *p = pint->mux_ports[i].pint;
+        if (channel == p->fpga_number) {
+            p->item->recv(p, p->map_base, 1, &dummy);
+            p->handler(p, *p->map_base >> 16, messageFd);
+        }
+    }
+    return -1;
+}
+PortalItemFunctions muxfunc = {
+    init_mux, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_socket,
+    send_mux, recv_mux, busy_portal_null, enableint_portal_null, event_mux, notfull_null};
 
 /*
  * BSIM
@@ -346,10 +444,23 @@ void write_portal_fd_bsim(volatile unsigned int *addr, unsigned int v, int id)
 static int init_bsim(struct PortalInternal *pint, void *param)
 {
 #ifdef BSIM
-    extern int bsim_fpga_map[MAX_BSIM_PORTAL_ID];
     connect_to_bsim();
     assert(pint->fpga_number < MAX_BSIM_PORTAL_ID);
-    pint->fpga_number = bsim_fpga_map[pint->fpga_number];
+    bool found = false;
+    for (int i = 0; bsim_fpga_map[i].valid; i++)
+      if (bsim_fpga_map[i].name == pint->fpga_number){
+	found = true;
+	pint->fpga_number = bsim_fpga_map[i].offset;
+	break;
+      }
+    if (!found) {
+      fprintf(stderr, "Error: init_bsim: did not find fpga_number %d\n", pint->fpga_number);
+      fprintf(stderr, "    Found fpga numbers:");
+      for (int i = 0; bsim_fpga_map[i].valid; i++)
+	fprintf(stderr, " %d", bsim_fpga_map[i].name);
+      fprintf(stderr, "\n");
+    }
+    assert(found);
     pint->map_base = (volatile unsigned int*)(long)(pint->fpga_number * PORTAL_BASE_OFFSET);
     pint->item->enableint(pint, 1);
 #endif
@@ -365,4 +476,4 @@ int event_portal_bsim(struct PortalInternal *pint)
 }
 PortalItemFunctions bsimfunc = {
     init_bsim, read_portal_bsim, write_portal_bsim, write_portal_fd_bsim, mapchannel_hardware, mapchannel_hardware,
-    send_portal_null, recv_portal_null, busy_hardware, enableint_hardware, event_portal_bsim};
+    send_portal_null, recv_portal_null, busy_hardware, enableint_hardware, event_portal_bsim, notfull_hardware};

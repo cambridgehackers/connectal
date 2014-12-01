@@ -1,7 +1,8 @@
 
+CONNECTALDIR?=../..
 INTERFACES = SmithwatermanRequest SmithwatermanIndication
-BSVFILES = Smithwaterman.bsv Top.bsv ../../lib/deprecated/DmaUtils.bsv
+BSVFILES = Smithwaterman.bsv Top.bsv $(CONNECTALDIR)/lib/deprecated/DmaUtils.bsv
 CPPFILES=testsmithwaterman.cpp
-#CONNECTALFLAGS=--bscflags " -D TRACE_AXI"
+CONNECTALFLAGS += -I $(CONNECTALDIR)/lib/strstr/cpp
 
-include ../../Makefile.connectal
+include $(CONNECTALDIR)/Makefile.connectal

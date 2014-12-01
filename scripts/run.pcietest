@@ -22,11 +22,24 @@ if [ "$RUNPARAM" != "" ]; then
     scp $1 $2 $RUNPARAM:$TEMPDIR
     BINNAME=`basename $1`
     EXENAME=`basename $2`
-    ssh $SSHPARAM $RUNPARAM "fpgajtag $BOARD_SERIAL $TEMPDIR/$BINNAME"
+    if [ "$NOPROGRAM" != "1" ]; then
+        ssh $SSHPARAM $RUNPARAM "fpgajtag $BOARD_SERIAL $TEMPDIR/$BINNAME"
+    else
+        echo "not programming $BOARD"
+    fi
     ssh $SSHPARAM $RUNPARAM "timeout $TIMELIMIT catchsegv $TEMPDIR/$EXENAME"
+    ssh $SSHPARAM $RUNPARAM "pcieflat > $TEMPDIR/pcieflat.txt"
+    scp $RUNPARAM:$TEMPDIR/pcieflat.txt `dirname $1`
     ssh $SSHPARAM $RUNPARAM "rm -rf $TEMPDIR"
 else
-    fpgajtag $BOARD_SERIAL $1
-    sleep 1
+    if [ "$NOPROGRAM" != "1" ]; then
+        fpgajtag $BOARD_SERIAL $1
+        sleep 1
+    fi
     timeout 3m catchsegv $2
+    if [ "$PORTAL_DUMP_MAP" != "" ]; then
+        pcieflat -j $PORTAL_DUMP_MAP generatedDesignInterfaceFile.json > bin/pcieflat.txt
+    else
+        pcieflat > bin/pcieflat.txt
+    fi
 fi

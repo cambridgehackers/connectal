@@ -44,6 +44,7 @@ module mkMemreadEngine(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
 	    ,Pipe::FunnelPipesPipelined#(1, numServers,Tuple2#(Bit#(TLog#(numServers)), MemTypes::MemengineCmd), TMin#(2,TLog#(numServers)))
 	    ,Pipe::FunnelPipesPipelined#(1, numServers, Tuple2#(Bit#(dataWidth), Bool),TMin#(2, TLog#(numServers)))
 	    ,Add#(c__, TLog#(numServers), TLog#(TMul#(cmdQDepth, numServers)))
+	    ,Add#(d__, TLog#(numServers), 6)
 	    );
    let rv <- mkMemreadEngineBuff(256);
    return rv;
@@ -65,7 +66,8 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
 	     Min#(2,TLog#(numServers),bpc),
 	     FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(serverIdxSz),MemengineCmd),bpc),
 	     FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(dataWidth),Bool),bpc),
-	     Add#(d__, TLog#(numServers), TAdd#(1, serverIdxSz)));
+	     Add#(d__, TLog#(numServers), TAdd#(1, serverIdxSz)),
+	     Add#(f__, serverIdxSz, 6));
    
 
    let verbose = False;
@@ -182,10 +184,23 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
 		  interface Put request;
 		     method Action put(MemengineCmd c) if (outs0[i] < cmd_q_depth);
 			Bit#(32) bsb = fromInteger(bufferSizeBytes);
-			if(extend(c.burstLen) > bsb)
-			   $display("mkMemreadEngineBuff::unsupportedBurstLen %d %d", bsb, c.burstLen);
-	 		outs0[i] <= outs0[i]+1;
-			cmds_in[i].enq(tuple2(fromInteger(i),c));
+`ifdef BSIM	 
+			Bit#(32) dw = fromInteger(valueOf(dataWidthBytes));
+			let mdw = ((c.len)/dw)*dw != c.len;
+			let bbl = extend(c.burstLen) > bsb;
+			if(bbl || mdw) begin
+			   if (bbl)
+			      $display("XXXXXXXXXX mkMemreadEngineBuff::unsupported burstLen %d %d", bsb, c.burstLen);
+			   if (mdw)
+			      $display("XXXXXXXXXX mkMemreadEngineBuff::unsupported len %d", c.len);
+			end
+			else begin
+`endif
+	 		   outs0[i] <= outs0[i]+1;
+			   cmds_in[i].enq(tuple2(fromInteger(i),c));
+`ifdef BSIM
+			end
+`endif
  		     endmethod
 		  endinterface
 		  interface Get response;
@@ -209,7 +224,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
 	    end
 	    workf.enq(tuple3(truncate(bl>>beat_shift), idx, last));
 	    //$display("readReq %d, %h %h %h", idx, cmd.base, bl, last);
-	    return MemRequest { sglId: cmd.sglId, offset: cmd.base, burstLen:bl, tag: 0 };
+	    return MemRequest { sglId: cmd.sglId, offset: cmd.base, burstLen:bl, tag: (cmd.tag << valueOf(serverIdxSz)) | extend(idx)};
 	 endmethod
       endinterface
       interface Put readData;

@@ -35,10 +35,10 @@ import Pipe::*;
 import ConnectalMemory::*;
 
 typedef Bit#(32) SGLId;
-typedef 40 MemOffsetSize;
-typedef `PhysAddrWidth PhysAddrWidth;
+typedef 44 MemOffsetSize;
 typedef 6 MemTagSize;
-typedef 10 BurstLenSize;
+typedef 8 BurstLenSize;
+typedef 32 MemServerTags;
 
 // memory request with physical addresses.
 // these can be transmitted directly to the bus master
@@ -72,12 +72,19 @@ typedef struct {SGLId sglId;
 		Bit#(MemOffsetSize) base;
 		Bit#(BurstLenSize) burstLen;
 		Bit#(32) len;
+		Bit#(MemTagSize) tag;
 		} MemengineCmd deriving (Eq,Bits);
+
+interface MemwriteServer#(numeric type dataWidth);
+   interface Server#(MemengineCmd,Bool) cmdServer;
+   interface PipeIn#(Bit#(dataWidth)) dataPipe;
+endinterface
 
 interface MemwriteEngineV#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers);
    interface MemWriteClient#(dataWidth) dmaClient;
    interface Vector#(numServers, Server#(MemengineCmd,Bool)) writeServers;
    interface Vector#(numServers, PipeIn#(Bit#(dataWidth))) dataPipes;
+   interface Vector#(numServers, MemwriteServer#(dataWidth)) write_servers;
 endinterface
 typedef MemwriteEngineV#(dataWidth, cmdQDepth, 1) MemwriteEngine#(numeric type dataWidth, numeric type cmdQDepth);
 

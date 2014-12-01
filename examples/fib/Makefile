@@ -1,4 +1,5 @@
 
+CONNECTALDIR?=../..
 INTERFACES = FibRequest FibIndication
 ## all the BSV files to be scanned for types and interfaces
 BSVFILES = FibWide.bsv Top.bsv
@@ -8,5 +9,5 @@ CPPFILES=testfib.cpp
 # CONNECTALFLAGS="--bscflags=-D TRACE_AXI"
 NUMBER_OF_MASTERS =0
 
-include ../../Makefile.connectal
+include $(CONNECTALDIR)/Makefile.connectal
 

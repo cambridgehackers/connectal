@@ -67,7 +67,7 @@ module mkSlaveMux#(Vector#(numPortals,MemPortal#(aw,dataWidth)) portals) (PhysMe
    function Get#(MemData#(dataWidth)) getMemPortalReadData(PhysMemSlave#(aw,dataWidth) x) = x.read_server.readData;
    function Put#(MemData#(dataWidth)) getMemPortalWriteData(PhysMemSlave#(aw,dataWidth) x) = x.write_server.writeData;
    
-   FIFO#(Bit#(6))        doneFifo <- mkFIFO1();
+   FIFO#(Bit#(MemTagSize))        doneFifo <- mkFIFO1();
 
    FIFO#(PhysMemRequest#(aw)) req_ars <- mkSizedFIFO(1);
    FIFO#(Bit#(TLog#(numPortals))) rs <- mkFIFO1();
@@ -117,7 +117,7 @@ module mkSlaveMux#(Vector#(numPortals,MemPortal#(aw,dataWidth)) portals) (PhysMe
 	 endmethod
       endinterface
       interface Get writeDone;
-	 method ActionValue#(Bit#(6)) get();
+	 method ActionValue#(Bit#(MemTagSize)) get();
 	    let rv <- toGet(doneFifo).get();
 	    return rv;
 	 endmethod
@@ -158,7 +158,7 @@ module mkMemSlaveMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves) (Ph
       return a[(port_sel_low-1):0];
    endfunction
 
-   FIFO#(Bit#(6)) doneFifo          <- mkFIFO1();
+   FIFO#(Bit#(MemTagSize)) doneFifo          <- mkFIFO1();
 
    FIFO#(PhysMemRequest#(aw))   req_ars <- mkFIFO1();
    FIFO#(Bit#(TLog#(numSlaves))) rs <- mkFIFO1();
@@ -198,7 +198,7 @@ module mkMemSlaveMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves) (Ph
 	 endmethod
       endinterface
       interface Get writeDone;
-	 method ActionValue#(Bit#(6)) get();
+	 method ActionValue#(Bit#(MemTagSize)) get();
 	    let rv <- toGet(doneFifo).get();
 	    return rv;
 	 endmethod

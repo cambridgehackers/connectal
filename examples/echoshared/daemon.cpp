@@ -22,7 +22,7 @@
 #include <stdio.h>
 #include "EchoRequest.h"
 #include "EchoIndication.h"
-#include "MMUConfigServer.h"
+#include "MMUServer.h"
 
 static EchoRequestProxy *echoRequestProxy;
 static EchoIndicationProxy *sIndicationProxy;
@@ -61,7 +61,7 @@ public:
         fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
         echoRequestProxy->setLeds(v);
         sleep(1);
-        exit(1);
+        exit(0);
     }
     EchoRequest(unsigned int id, PortalItemFunctions *item, void *param) : EchoRequestWrapper(id, item, param) {}
 };
@@ -70,8 +70,8 @@ static EchoRequest *sRequest;
 
 int main(int argc, const char **argv)
 {
-    MMUConfigServer *mServer = new MMUConfigServer(IfcNames_MMUConfigRequest,
-        new MMUConfigIndicationProxy(IfcNames_MMUConfigIndication, &socketfuncResp, NULL), &socketfuncResp, NULL);
+    MMUServer *mServer = new MMUServer(IfcNames_MMURequest,
+        new MMUIndicationProxy(IfcNames_MMUIndication, &socketfuncResp, NULL), &socketfuncResp, NULL);
 
     EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, NULL, NULL);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);

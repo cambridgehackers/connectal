@@ -27,12 +27,12 @@ KBUILD_EXTRA_SYMBOLS := $(DRIVERDIR)/pcieportal/Module.symvers $(DRIVERDIR)/port
 
 
 kernel_exe-y := ../nandsim_manual.o \
-     $(BOARDDIR)/MMUConfigRequestProxy.o \
-     $(BOARDDIR)/MMUConfigIndicationWrapper.o \
-     $(BOARDDIR)/DmaDebugRequestProxy.o \
-     $(BOARDDIR)/DmaDebugIndicationWrapper.o \
-     $(BOARDDIR)/NandSimIndicationWrapper.o \
-     $(BOARDDIR)/NandSimRequestProxy.o \
+     $(BOARDDIR)/MMURequestProxy.o \
+     $(BOARDDIR)/MMUIndicationWrapper.o \
+     $(BOARDDIR)/MemServerRequestProxy.o \
+     $(BOARDDIR)/MemServerIndicationWrapper.o \
+     $(BOARDDIR)/NandCfgIndicationWrapper.o \
+     $(BOARDDIR)/NandCfgRequestProxy.o \
      $(CPPDIR)/portal.o \
      $(CPPDIR)/dmaManager.o \
      $(CPPDIR)/kernel_module.o

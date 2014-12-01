@@ -6,12 +6,12 @@ obj-m += pcieportal.o
 
 KVERSION=$(shell uname -r)
 export KROOT=/lib/modules/$(KVERSION)/build
-export BS_MOD_DIR=$(DESTDIR)/lib/modules/$(KVERSION)/bluespec
+export BS_MOD_DIR=$(DESTDIR)/lib/modules/$(KVERSION)/connectal
 
 .PHONY: default
 default: pcieportal.ko ../portalmem/portalmem.ko
 
-EXTRA_CFLAGS = -I$(PWD) -I$(PWD)/../../cpp -I$(PWD)/../portalmem -I$(PWD)/../../generated/cpp
+EXTRA_CFLAGS = -I$(PWD) -I$(PWD)/../../cpp -I$(PWD)/../.. -I$(PWD)/../portalmem -I$(PWD)/../../generated/cpp
 cflags-y += -I$(PWD)
 
 ../portalmem/portalmem.ko: ../portalmem/portalmem.c
@@ -55,13 +55,18 @@ rmmod:
 .PHONY: insmod
 insmod: rmmod
 	insmod pcieportal.ko
-	-chmod agu+rw /dev/fpga*
+	-chmod agu+rw /dev/portal*
 	insmod ../portalmem/portalmem.ko
 	chmod agu+rw /dev/portalmem
 
 .PHONY: install-dkms
 install-dkms:
-	mkdir -p /usr/src/pcieportal-$(VERSION)
-	cp -fv pcieportal.c pcieportal.h dkms.conf /usr/src/pcieportal-$(VERSION)
-	cp -fv ../portalmem/portalmem.h ../portalmem/portalmem.c /usr/src/pcieportal-$(VERSION)
-	cp -fv Makefile.dkms /usr/src/pcieportal-$(VERSION)/Makefile
+	mkdir -p $(DESTDIR)//usr/src/connectal-$(VERSION)
+	sed "s/@VERSION@/$(VERSION)/" dkms.conf > dkms.conf.out
+	cp -fv dkms.conf.out $(DESTDIR)/usr/src/connectal-$(VERSION)/dkms.conf
+	cp -fv pcieportal.c pcieportal.h $(DESTDIR)/usr/src/connectal-$(VERSION)
+	cp -fv ../../cpp/*.[ch] ../portalmem/*.[ch] \
+	../../generated/cpp/*.[ch] \
+	$(DESTDIR)/usr/src/connectal-$(VERSION)
+	sed -i 's|../../cpp/||g' $(DESTDIR)/usr/src/connectal-$(VERSION)/*.[ch]
+	cp -fv Makefile.dkms $(DESTDIR)/usr/src/connectal-$(VERSION)/Makefile

@@ -29,8 +29,8 @@
 
 #include "poller.h"
 #include "StdDmaIndication.h"
-#include "DmaDebugRequest.h"
-#include "MMUConfigRequest.h"
+#include "MemServerRequest.h"
+#include "MMURequest.h"
 #include "MemcpyIndication.h"
 #include "MemcpyRequest.h"
 
@@ -76,11 +76,11 @@ int do_copy(int srcAlloc, int sgl_config_request_id, int sgl_config_indication_i
   PortalPoller *poller = new PortalPoller();
   MemcpyRequestProxy *device = new MemcpyRequestProxy(IfcNames_MemcpyRequest);
   MemcpyIndication *deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndication, poller);
-  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
-  MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(sgl_config_request_id);
-  DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
-  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication, poller);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, sgl_config_indication_id, poller);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
+  MMURequestProxy *dmap = new MMURequestProxy(sgl_config_request_id);
+  DmaManager *dma = new DmaManager(dmap);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_HostMemServerIndication, poller);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, sgl_config_indication_id, poller);
 
   poller->portalExec_start();
 

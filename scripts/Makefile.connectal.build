@@ -37,11 +37,13 @@ endif
 
 ifeq ($(CONNECTAL_DEBUG),1)
 GDB=gdb
+GDB2=gdb
 else
-GDB= LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so SEGFAULT_USE_ALTSTACK=1 SEGFAULT_OUTPUT_NAME=bin/bsimexe-segv-output.txt
+GDB= LD_PRELOAD=libSegFault.so SEGFAULT_USE_ALTSTACK=1 SEGFAULT_OUTPUT_NAME=bin/bsimexe-segv-output.txt
+GDB2= LD_PRELOAD=libSegFault.so SEGFAULT_USE_ALTSTACK=1 SEGFAULT_OUTPUT_NAME=bin/bsimexe2-segv-output.txt
 endif
 
-GDB_BSIM= LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so SEGFAULT_USE_ALTSTACK=1 SEGFAULT_OUTPUT_NAME=bin/bsim-segv-output.txt
+GDB_BSIM= LD_PRELOAD=libSegFault.so SEGFAULT_USE_ALTSTACK=1 SEGFAULT_OUTPUT_NAME=bin/bsim-segv-output.txt
 
 
 BSCVERSION=$(shell bsc -v |grep Compiler | sed -e "s/.*version //" -e "s/ .*//")
@@ -80,6 +82,9 @@ vfile=verilog/$(MKTOP).v
 
 all: exe bits
 
+ifeq ($(CONNECTAL_SHARED),1)
+  exe: connectal.so
+else
 ifeq ($(BOARD),bluesim)
 ifeq ($(RUNSOURCE2),)
   exe: bsim_exe
@@ -101,6 +106,7 @@ else
     endif
   endif
 endif
+endif
 
 bsim_exe: prepare_bin_target
 	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk bsim_exe
@@ -118,14 +124,24 @@ ubuntu.exe2: prepare_bin_target
 	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk ubuntu.exe2
 	@cp -v jni/ubuntu.exe2 bin
 
+connectal.so: prepare_bin_target
+	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk connectal.so
+	@cp -v jni/connectal.so bin
+
 ifneq ($(BOARD),bluesim)
 ifneq ($(OS),android)
 program:
 	fpgajtag bin/mkTop.bin.gz
 	sleep 1
+
+programflash:
+	vivado -mode batch -source $(dir $(FPGAMAKE))/tcl/program_bpi_flash.tcl
 endif
 endif
 
+ifeq ($(CONNECTAL_NOHARDWARE),1)
+bits:
+else
 ifeq ($(BOARD),bluesim)
 bits: bsim
 else
@@ -137,6 +153,7 @@ else
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
 endif
 	$(CONNECTALDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
+endif
 endif
 
 android.exe: prepare_bin_target
@@ -152,7 +169,7 @@ ifeq ($(BOARD),bluesim)
     ifeq ($(RUNSOURCE2),)
 	$(GDB_BSIM) ./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
     else
-	./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; ./bin/bsim_exe2& bsim2pid=$$!; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid $$bsim2pid; exit $$retcode
+	./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB2) ./bin/bsim_exe2& bsim2pid=$$!; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid $$bsim2pid; exit $$retcode
     endif
 else
     ifeq ($(OS),android)

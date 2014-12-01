@@ -1,10 +1,30 @@
+/* Copyright (c) 2014 Quanta Research Cambridge, Inc
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <assert.h>
 
-#include "MMUConfigRequest.h"
+#include "MMURequest.h"
 #include "StdDmaIndication.h"
 #include "dmaManager.h"
 #include "SharedMemoryPortalConfig.h"
@@ -88,15 +108,15 @@ public:
     assert(v.e1 == v7b);
     incr_cnt();
   }
-  Simple(unsigned int id, unsigned int numtimes=1) : SimpleWrapper(id), cnt(0), times(numtimes){}
+    Simple(unsigned int id, unsigned int numtimes=1, PortalItemFunctions *item=0, void *param = 0) : SimpleWrapper(id, item, param), cnt(0), times(numtimes){}
 };
 
-int allocateShared(DmaManager *dma, MMUConfigRequestProxy *dmap, uint32_t interfaceId, PortalInternal *p, uint32_t size)
+int allocateShared(DmaManager *dma, MMURequestProxy *dmap, uint32_t interfaceId, PortalInternal *p, uint32_t size)
 {
     int fd = portalAlloc(size);
-    fprintf(stderr, "%s:%d fd=%d\n", __FILE__, __LINE__, fd);
+    fprintf(stderr, "%s:%d allocateShared pint=%p fd=%d\n", __FUNCTION__, __LINE__, p, fd);
     p->map_base = (volatile unsigned int *)portalMmap(fd, size);
-    fprintf(stderr, "%s:%d map_base=%p\n", __FILE__, __LINE__, p->map_base);
+    fprintf(stderr, "%s:%d pint=%p map_base=%p\n", __FILE__, __LINE__, p, p->map_base);
     p->map_base[SHARED_LIMIT] = size/sizeof(uint32_t);
     p->map_base[SHARED_WRITE] = SHARED_START;
     p->map_base[SHARED_READ] = SHARED_START;
@@ -109,21 +129,28 @@ int allocateShared(DmaManager *dma, MMUConfigRequestProxy *dmap, uint32_t interf
 int main(int argc, const char **argv)
 {
     int alloc_sz = 4096;
-    MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_MMUConfigRequest);
+    MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequest);
     DmaManager *dma = new DmaManager(dmap);
-    MMUConfigIndication *mIndication = new MMUConfigIndication(dma, IfcNames_MMUConfigIndication);
-    SharedMemoryPortalConfigProxy *smpConfig = new SharedMemoryPortalConfigProxy(IfcNames_ConfigWrapper);
+    MMUIndication *mIndication = new MMUIndication(dma, IfcNames_MMUIndication);
+    SharedMemoryPortalConfigProxy *reqConfig = new SharedMemoryPortalConfigProxy(IfcNames_ReqConfigWrapper);
+    SharedMemoryPortalConfigProxy *indConfig = new SharedMemoryPortalConfigProxy(IfcNames_IndConfigWrapper);
 
-  portalExec_start();
+    portalExec_start();
 
-  int verbose = 0;
-  int numtimes = 80;
-  Simple *indication = new Simple(IfcNames_SimpleIndication, numtimes);
+    int verbose = 1;
+    int numtimes = 1;
+    Simple *indication = new Simple(IfcNames_SimpleIndication, numtimes, &sharedfunc, NULL);
     SimpleProxy *device = new SimpleProxy(IfcNames_SimpleRequest, &sharedfunc, NULL);
 
-    int fd = allocateShared(dma, dmap, IfcNames_SimpleRequest, &device->pint, alloc_sz);
-    unsigned int ref = dma->reference(fd);
-    smpConfig->setSglId(ref);
+    int reqfd = allocateShared(dma, dmap, IfcNames_SimpleRequest, &device->pint, alloc_sz);
+    unsigned int reqref = dma->reference(reqfd);
+    reqConfig->setSglId(reqref);
+
+    int indfd = allocateShared(dma, dmap, IfcNames_SimpleIndication, &indication->pint, alloc_sz);
+    unsigned int indref = dma->reference(indfd);
+    indConfig->setSglId(indref);
+
+    portalExec_stop();
 
     for (int i = 0; i < numtimes; i++) {
       if (verbose) fprintf(stderr, "Main::calling say1(%d)\n", v1a);
@@ -141,6 +168,23 @@ int main(int argc, const char **argv)
       if (verbose) fprintf(stderr, "Main::calling say7(%08x, %08x)\n", s3.a, s3.e1);
       device->say7(s3);  
     }
-  fprintf(stderr, "Main::about to go to sleep\n");
-  while(true){sleep(2);}
+  fprintf(stderr, "Main::about to call portalExec_event\n");
+  while(true){
+    fprintf(stderr, "req->map_base=%p %08x %08x %08x %08x\n", device->pint.map_base,
+	    device->pint.map_base[0],
+	    device->pint.map_base[1],
+	    device->pint.map_base[2],
+	    device->pint.map_base[3]);
+    fprintf(stderr, "ind->map_base=%p %08x %08x %08x %08x %08x %08x %08x %08x\n", indication->pint.map_base,
+	    indication->pint.map_base[0],
+	    indication->pint.map_base[1],
+	    indication->pint.map_base[2],
+	    indication->pint.map_base[3],
+	    indication->pint.map_base[4],
+	    indication->pint.map_base[5],
+	    indication->pint.map_base[6],
+	    indication->pint.map_base[7]);
+    portalExec_event();
+    sleep(2);
+  }
 }

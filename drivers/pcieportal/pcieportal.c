@@ -1,3 +1,23 @@
+/* Copyright (c) 2014 Quanta Research Cambridge, Inc
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
 /*
  * Linux device driver for CONNECTAL portals on FPGAs connected via PCIe.
  */
@@ -23,16 +43,14 @@
 #include "pcieportal.h"
 #define CONNECTAL_DRIVER_CODE
 #include "portal.h" // PORTAL_BASE_OFFSET
-#include "../../cpp/dmaSendFd.h"
-
-/* flag for adding 'direct call' interface to driver */
-//#define SUPPORT_MANUAL_INTERFACE
+#include "dmaSendFd.h"
+#include "portalKernel.h"
 
 /* stem used for module and device names */
 #define DEV_NAME "portal"
 
 /* version string for the driver */
-#define DEV_VERSION "1.0connectal"
+#define DEV_VERSION "14.11.3"
 
 /* Bluespec's standard vendor ID */
 #define BLUESPEC_VENDOR_ID 0x1be7
@@ -75,6 +93,7 @@ static unsigned long long expected_magic = 'B' | ((unsigned long long) 'l' << 8)
     | ((unsigned long long) 'u' << 16) | ((unsigned long long) 'e' << 24)
     | ((unsigned long long) 's' << 32) | ((unsigned long long) 'p' << 40)
     | ((unsigned long long) 'e' << 48) | ((unsigned long long) 'c' << 56);
+static tTraceInfo traceInfo;
 
 /*
  * interrupt handler
@@ -158,45 +177,18 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
         int err = 0;
         tPortal *this_portal = (tPortal *) filp->private_data;
         tBoard *this_board = this_portal->board;
-        tBoardInfo info;
+        //tBoardInfo info;
+        static int trace_index;
 
         /* basic sanity checks */
         if (_IOC_TYPE(cmd) != BNOC_IOC_MAGIC)
                 return -ENOTTY;
-        if (_IOC_NR(cmd) > BNOC_IOC_MAXNR) {
-                printk("cmd=%x io_nr=%d maxnr=%d\n", cmd, _IOC_NR(cmd),
-                       BNOC_IOC_MAXNR);
-                return -ENOTTY;
-        }
         if (_IOC_DIR(cmd) & _IOC_READ)
                 err = !access_ok(VERIFY_WRITE, (void __user *) arg, _IOC_SIZE(cmd));
         else if (_IOC_DIR(cmd) & _IOC_WRITE)
                 err = !access_ok(VERIFY_READ, (void __user *) arg, _IOC_SIZE(cmd));
         if (!err)
         switch (cmd) {
-        case BNOC_IDENTIFY:
-                /* copy board identification info to a user-space struct */
-                info = this_board->info;
-		info.portal_number = this_portal->portal_number;
-                if (1) {        // msix info
-		  int i;
-		  for (i = 0; i < 16; i++)
-                        printk("msix_entry[%d].addr %08x %08x data %08x\n",
-			       i,
-			       ioread32(this_board->bar0io + CSR_MSIX_ADDR_HI + 16*i),
-                             ioread32(this_board->bar0io + CSR_MSIX_ADDR_LO   + 16*i),
-                             ioread32(this_board->bar0io + CSR_MSIX_MSG_DATA  + 16*i));
-                }
-                err = copy_to_user((void __user *) arg, &info, sizeof(tBoardInfo));
-                break;
-        case BNOC_IDENTIFY_PORTAL:
-                {
-                /* copy board identification info to a user-space struct */
-                tPortalInfo portalinfo;
-                memset(&portalinfo, 0, sizeof(portalinfo));
-                err = copy_to_user((void __user *) arg, &portalinfo, sizeof(tPortalInfo));
-                break;
-                }
         case BNOC_GET_TLP:
                 {
                 /* copy board identification info to a user-space struct */
@@ -213,57 +205,35 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                 tlp[3] = ioread32(this_board->bar0io + CSR_TLPDATABRAMRESPONSESLICE3);
                 mb();
                 tlp[2] = ioread32(this_board->bar0io + CSR_TLPDATABRAMRESPONSESLICE2);
+                iowrite32(trace_index++, this_board->bar0io + CSR_TLPDATAFIFO_DEQ);
                 // now deq the tlpDataFifo
-                iowrite32(0, this_board->bar0io + CSR_TLPDATAFIFO_DEQ);
                 err = copy_to_user((void __user *) arg, tlp, sizeof(tTlpData));
                 break;
                 }
         case BNOC_TRACE:
                 {
-                /* copy board identification info to a user-space struct */
-		tTraceInfo traceInfo;
-                err = copy_from_user(&traceInfo, (void __user *) arg, sizeof(tTraceInfo));
-                if (!err) {
-                         // update tlpBramWrAddr, which also writes the scratchpad to BRAM
-                         iowrite32(0, this_board->bar0io + CSR_TLPPCIEWRADDRREG);
-                         traceInfo.oldTrace = ioread32(this_board->bar0io + CSR_TLPTRACINGREG);
-                         traceInfo.traceLength = ioread32(this_board->bar0io + CSR_TLPTRACELENGTHREG);
-			 if (traceInfo.traceLength == 0xbad0add0) // unimplemented
-				 traceInfo.traceLength = 2048; // default value
-                         iowrite32(traceInfo.trace, this_board->bar0io + CSR_TLPTRACINGREG); 
-                         printk("new trace=%d old trace=%d\n", traceInfo.trace, traceInfo.oldTrace);
-                         err = copy_to_user((void __user *) arg, &traceInfo, sizeof(tTraceInfo));
-                }
+                trace_index = 0;
+                iowrite32(0, this_board->bar0io + CSR_TLPPCIEWRADDRREG);
+                traceInfo.trace = ioread32(this_board->bar0io + CSR_TLPTRACINGREG);
+                traceInfo.traceLength = ioread32(this_board->bar0io + CSR_TLPTRACELENGTHREG);
+		if (traceInfo.traceLength == 0xbad0add0) // unimplemented
+			 traceInfo.traceLength = 2048; // default value
+                iowrite32(0, this_board->bar0io + CSR_TLPTRACINGREG);  // disable tracing
+                printk("disable tracing old trace=%d\n", traceInfo.trace);
+                err = copy_to_user((void __user *) arg, &traceInfo, sizeof(tTraceInfo));
+                iowrite32(trace_index++, this_board->bar0io + CSR_TLPDATAFIFO_DEQ);
                 }
                 break;
-#ifdef SUPPORT_MANUAL_INTERFACE
-        case PCIE_MANUAL_READ:
-                {
-                /* read 32 bit value from specified offset in bar2 */
-		tReadInfo readInfo;
-                err = copy_from_user(&readInfo, (void __user *) arg, sizeof(readInfo));
-                if (!err) {
-                         readInfo.value = ioread32(this_board->bar2io + readInfo.offset);
-                         err = copy_to_user((void __user *) arg, &readInfo, sizeof(readInfo));
-                }
+        case BNOC_ENABLE_TRACE:
+                traceInfo.trace = ioread32(this_board->bar0io + CSR_TLPTRACINGREG);
+                iowrite32(1, this_board->bar0io + CSR_TLPTRACINGREG);  // disable tracing
                 break;
-                }
-        case PCIE_MANUAL_WRITE:
-                {
-                /* write 32 bit value to specified offset in bar2 */
-		tWriteInfo writeInfo;
-                err = copy_from_user(&writeInfo, (void __user *) arg, sizeof(writeInfo));
-                if (!err) {
-                         iowrite32(writeInfo.value, this_board->bar2io + writeInfo.offset);
-                }
-                }
-                break;
-#endif
         case PCIE_SEND_FD:
                 {
                 /* pushd down allocated fd */
 		tSendFd sendFd;
-                PortalInternal devptr = {.map_base = (volatile int *)(this_board->bar2io + PORTAL_BASE_OFFSET * this_portal->portal_number)};
+                PortalInternal devptr = {.map_base = (volatile int *)(this_board->bar2io + PORTAL_BASE_OFFSET * this_portal->portal_number),
+                    .item = &kernelfunc};
 
                 err = copy_from_user(&sendFd, (void __user *) arg, sizeof(sendFd));
                 if (err)
@@ -333,8 +303,12 @@ static int board_activate(int activate, tBoard *this_board, struct pci_dev *dev)
 	int i;
         int rc, err = 0;
         unsigned long long magic_num;
-	int num_entries = 16;
-	struct msix_entry msix_entries[16];
+	int num_entries = MAX_NUM_PORTALS;
+	struct msix_entry msix_entries[MAX_NUM_PORTALS];
+	uint32_t reg_offset = 0xc000;
+	int fpn = 0;
+	uint32_t top = 0;
+
 printk("[%s:%d]\n", __FUNCTION__, __LINE__);
         for (i = 0; i < MAX_NUM_PORTALS; i++)
         	if (!this_board->portal[i].extra) {
@@ -360,6 +334,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
                              (unsigned long) dev->resource[i].start,
                              (unsigned long) dev->resource[i].end,
                              dev->resource[i].flags);
+                traceInfo.base = dev->resource[2].start; /* remember physical address of bar2 */
                 if ((rc = pci_request_region(dev, 0, "bar0"))) {
                         printk("failed to request region bar0 rc=%d\n", rc);
                         err = -EBUSY;
@@ -370,9 +345,6 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
                 rc = pci_request_region(dev, 2, "bar2");
                 printk("reserving region bar2 rc=%d\n", rc);
                 /* map BARs */
-#ifdef SUPPORT_MANUAL_INTERFACE
-// map all of bar2
-#endif
                 this_board->bar0io = pci_iomap(dev, 0, 0);
                 printk("bar0io=%p\n", this_board->bar0io);
                 this_board->bar1io = pci_iomap(dev, 1, 0);
@@ -438,16 +410,17 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		       DEV_NAME, num_entries, this_board->irq_num);
 		iowrite32(0, this_board->bar0io + CSR_MSIX_MASKED);
                 pci_set_master(dev); /* enable PCI bus master */
-		uint32_t reg_offset = 0xc000;
 
-		int fpn = 0;
-		uint32_t top = 0;
-		while(!top && err >= 0){
+		while(!top && err >= 0 && fpn < MAX_NUM_PORTALS){
+		  int fpga_number;
+		  dev_t this_device_number;
 		  uint32_t iid = *(volatile uint32_t *)(this_board->bar2io + (fpn*PORTAL_BASE_OFFSET) + PCR_IID_OFFSET);
 		  top = *(volatile uint32_t *)(this_board->bar2io + (fpn*PORTAL_BASE_OFFSET) + PCR_TOP_OFFSET);
 		  printk("%s:%d fpn=%08x iid=%d top=%d\n", __func__, __LINE__, fpn, iid, top);
-		  int fpga_number = this_board->info.board_number * MAX_NUM_PORTALS + fpn;
-		  dev_t this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + fpga_number);
+                  traceInfo.intval[fpn] = ioread32(this_board->bar0io + CSR_MSIX_MSG_DATA  + 16*fpn);
+                  traceInfo.name[fpn] = iid;
+		  fpga_number = this_board->info.board_number * MAX_NUM_PORTALS + fpn;
+		  this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + fpga_number);
 		  this_board->portal[fpn].portal_number = fpn;
 		  this_board->portal[fpn].device_name = iid;
 		  this_board->portal[fpn].board = this_board;
@@ -480,7 +453,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
         } /* end of if(activate) */
 
         /******** deactivate board *******/
-	int fpn = 0;
+	fpn = 0;
 	while(fpn < this_board->info.num_portals) {
     	        u32 iid = this_board->portal[fpn].device_name;
 		  /* remove device node in udev */
@@ -497,7 +470,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
         /* set MSIX Entry 0 Vector Control value to 1 (masked) */
         iowrite32(1, this_board->bar0io + CSR_MSIX_MASKED);
         disable_irq(this_board->irq_num);
-	for (i = 0; i < 16; i++) 
+	for (i = 0; i < MAX_NUM_PORTALS; i++) 
 		free_irq(this_board->irq_num + i, (void *) &this_board->portal[i]);
 MSI_ENABLED_label:
         /* disable MSI/MSIX */
@@ -655,3 +628,4 @@ EXPORT_SYMBOL(get_pcie_portal_descriptor);
 MODULE_AUTHOR("Bluespec, Inc., Cambridge hackers");
 MODULE_DESCRIPTION("PCIe device driver for PCIe FPGA portals");
 MODULE_LICENSE("Dual BSD/GPL");
+MODULE_VERSION(DEV_VERSION);

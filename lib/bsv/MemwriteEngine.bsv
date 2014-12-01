@@ -46,6 +46,7 @@ module mkMemwriteEngine(MemwriteEngineV#(dataWidth, cmdQDepth, numServers))
 	    ,Add#(1, d__, dataWidth)
 	    ,FunnelPipesPipelined#(1, numServers, Tuple3#(Bit#(2),Bit#(dataWidth),Bool), TMin#(2, TLog#(numServers)))
 	    ,FunnelPipesPipelined#(1, numServers,Tuple3#(Bit#(TLog#(numServers)), Bit#(dataWidth), Bool), TMin#(2,TLog#(numServers)))
+	    ,Add#(e__, TLog#(numServers), 6)
 	    );
    let rv <- mkMemwriteEngineBuff(256);
    return rv;
@@ -178,6 +179,7 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
 	     ,Add#(1, d__, dataWidth)
 	     ,FunnelPipesPipelined#(1, numServers, Tuple3#(Bit#(serverIdxSz),Bit#(dataWidth), Bool), TMin#(2, serverIdxSz))
 	     ,Add#(f__, TLog#(numServers), TAdd#(1, serverIdxSz))
+	     ,Add#(g__, serverIdxSz, 6)
 	     );
    
    
@@ -190,10 +192,10 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
    Reg#(Bool) load_in_progress <- mkReg(False);
    FIFO#(Tuple3#(MemengineCmd,Bool,Bool))         loadf_b <- mkSizedFIFO(1);
    FIFO#(Tuple2#(Bit#(serverIdxSz),MemengineCmd)) loadf_c <- mkSizedFIFO(1);
-   FIFO#(Tuple3#(Bit#(8),Bit#(serverIdxSz),Bool))   workf <- mkSizedFIFO(32); // is this the right size?
+   FIFO#(Tuple3#(Bit#(8),Bit#(MemTagSize),Bool))    workf <- mkSizedFIFO(32); // is this the right size?
    FIFO#(Tuple2#(Bit#(serverIdxSz),Bool))           donef <- mkSizedFIFO(32); // is this the right size?
    
-   Vector#(numServers, FIFO#(void))              outfs <- replicateM(mkSizedFIFO(1));
+   Vector#(numServers, FIFO#(Bool))              outfs <- replicateM(mkSizedFIFO(1));
    Vector#(numServers, FIFOF#(Tuple2#(Bit#(serverIdxSz), MemengineCmd))) cmds_in <- replicateM(mkSizedFIFOF(1));
    FunnelPipe#(1, numServers, Tuple2#(Bit#(serverIdxSz), MemengineCmd),bpc) cmds_in_funnel <- mkFunnelPipesPipelined(map(toPipeOut,cmds_in));
    Vector#(numServers, FIFOF#(Bit#(dataWidth)))  write_data_buffs <- replicateM(mkSizedBRAMFIFOF(bufferSizeBeats));
@@ -275,6 +277,12 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
 	     // 	end
 	  endmethod
        endinterface);
+   
+   function MemwriteServer#(dataWidth) toMemwriteServer(Server#(MemengineCmd,Bool) cs, PipeIn#(Bit#(dataWidth)) p) =
+      (interface MemwriteServer;
+	  interface cmdServer = cs;
+	  interface dataPipe  = p;
+       endinterface);
 
    
    Vector#(numServers, Server#(MemengineCmd,Bool)) rs;
@@ -283,19 +291,38 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
 		  interface Put request;
 		     method Action put(MemengineCmd c) if (outs0[i] < cmd_q_depth);
 			Bit#(32) bsb = fromInteger(bufferSizeBytes);
-			if(extend(c.burstLen) > bsb)
-			   $display("mkMemwriteEngineV::unsupportedBurstLen");
-			outs0[i] <= outs0[i]+1;
-			cmds_in[i].enq(tuple2(fromInteger(i),c));
-			write_data_funnel.burstLen[i] <= c.burstLen >> beat_shift;
-			//$display("(%d) %h %h %h", i, c.base, c.len, c.burstLen);
+`ifdef BSIM	 
+			Bit#(32) dw = fromInteger(valueOf(dataWidthBytes));
+			Bit#(32) bl = extend(c.burstLen);
+			// this is because bsc lifts the divide operation (below) 
+			// and on startup the simulator gets a floating-point exception
+	  		if (bl ==0)
+			   bl = 1;
+			let mdw0 = ((c.len)/bl)*bl != c.len;
+			let mdw1 = ((c.len)/dw)*dw != c.len;
+			let bbl = extend(c.burstLen) > bsb;
+			if(bbl || mdw0 || mdw1 || c.len == 0) begin
+			   if (bbl)
+			      $display("XXXXXXXXXX mkMemwriteEngineBuff::unsupported burstLen %d %d", bsb, c.burstLen);
+			   if (mdw0 || mdw1 || c.len == 0)
+			      $display("XXXXXXXXXX mkMemwriteEngineBuff::unsupported len %h mdw0=%d mdw1=%d", c.len, mdw0, mdw1);
+			end
+			else begin
+`endif
+			   outs0[i] <= outs0[i]+1;
+			   cmds_in[i].enq(tuple2(fromInteger(i),c));
+			   write_data_funnel.burstLen[i] <= c.burstLen >> beat_shift;
+			   //$display("(%d) %h %h %h", i, c.base, c.len, c.burstLen);
+`ifdef BSIM
+			end
+`endif
  		     endmethod
 		  endinterface
 		  interface Get response;
 		     method ActionValue#(Bool) get;
-			outfs[i].deq;
+			let rv <- toGet(outfs[i]).get;
 	 		outs0[i] <= outs0[i]-1;
-			return True;
+			return rv;
 		     endmethod
 		  endinterface
 	       endinterface);
@@ -310,14 +337,16 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
 	       last = True;
 	       bl = truncate(cmd.len);
 	    end
-	    workf.enq(tuple3(truncate(bl>>beat_shift), idx, last));
+	    let new_tag = (cmd.tag << valueOf(serverIdxSz)) | extend(idx);
+	    workf.enq(tuple3(truncate(bl>>beat_shift), new_tag, last));
 	    //$display("writeReq %d, %h %h %h", idx, cmd.base, bl, last);
-	    return MemRequest { sglId: cmd.sglId, offset: cmd.base, burstLen:bl, tag: 0 };
+	    return MemRequest { sglId: cmd.sglId, offset: cmd.base, burstLen:bl, tag: new_tag};
 	 endmethod
       endinterface
       interface Get writeData;
 	 method ActionValue#(MemData#(dataWidth)) get;
-	    match {.rc, .idx, .last} = workf.first;
+	    match {.rc, .new_tag, .last} = workf.first;
+	    Bit#(serverIdxSz) idx = truncate(new_tag);
 	    let new_respCnt = respCnt+1;
 	    if (new_respCnt == rc) begin
 	       respCnt <= 0;
@@ -332,19 +361,21 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
 	       $display("ERROR mkMemwriteEngineBuf: bursts oo %d %d", idx, _idx);
 	       $finish;
 	    end
-	    return MemData{data:wd, tag:0, last: False};
+	    // TODO: this last field should be set correctly to mark the end of bursts
+	    return MemData{data:wd, tag:new_tag, last:False};
 	 endmethod
       endinterface
       interface Put writeDone;
-	 method Action put(Bit#(6) tag);
+	 method Action put(Bit#(MemTagSize) tag);
 	    match {.idx, .last} <- toGet(donef).get;
 	    if (last)
-	       outfs[idx].enq(?);
+	       outfs[idx].enq(True);
 	    //$display("writeDone %d %d", idx, last);
 	 endmethod
       endinterface
    endinterface 
    interface dataPipes = zipWith(check_in, write_data_buffs, genVector);
+   interface write_servers = zipWith(toMemwriteServer, rs, zipWith(check_in, write_data_buffs, genVector));
 endmodule
 
 

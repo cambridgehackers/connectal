@@ -56,12 +56,18 @@ static void call_say2(int v, int v2)
 
 int main(int argc, const char **argv)
 {
-    PortalSocketParam param;
+    PortalSocketParam param = {0};
+//#define USE_UNIX_SOCKET
+#ifdef USE_UNIX_SOCKET
+#define PARAM NULL
+#else
+#define PARAM &param
+#endif
 
     int rc = getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
-    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &socketfuncInit, &param);
+    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &socketfuncInit, PARAM);
     rc = getaddrinfo("127.0.0.1", "5001", NULL, &param.addr);
-    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &socketfuncInit, &param);
+    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &socketfuncInit, PARAM);
 
     portalExec_start();
 

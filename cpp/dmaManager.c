@@ -32,9 +32,9 @@
 #include <sys/mman.h>
 
 #if defined(__arm__)
-#include "zynqportal.h"
+#include "drivers/zynqportal/zynqportal.h"
 #else
-#include "pcieportal.h"
+#include "drivers/pcieportal/pcieportal.h"
 #endif
 #endif
 
@@ -57,26 +57,11 @@ void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *dmaDevice, PortalI
   if (sem_init(&priv->confSem, 0, 0)){
     PORTAL_PRINTF("failed to init confSem\n");
   }
-  if (sem_init(&priv->mtSem, 0, 0)){
-    PORTAL_PRINTF("failed to init mtSem\n");
-  }
-  if (sem_init(&priv->dbgSem, 0, 0)){
-    PORTAL_PRINTF("failed to init dbgSem\n");
-  }
-}
-
-uint64_t DmaManager_show_mem_stats(DmaManagerPrivate *priv, ChannelType rc)
-{
-  uint64_t rv = 0;
-  DmaDebugRequest_getMemoryTraffic(priv->dmaDevice, rc);
-  sem_wait(&priv->mtSem);
-  rv += priv->mtCnt;
-  return rv;
 }
 
 void DmaManager_dereference(DmaManagerPrivate *priv, int ref)
 {
-  MMUConfigRequest_idReturn(priv->sglDevice, ref);
+  MMURequest_idReturn(priv->sglDevice, ref);
 }
 
 int DmaManager_reference(DmaManagerPrivate *priv, int fd)
@@ -84,7 +69,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, int fd)
   int id = 0;
   int rc = 0;
   init_portal_memory();
-  MMUConfigRequest_idRequest(priv->sglDevice, (SpecialTypeForSendingFd)fd);
+  MMURequest_idRequest(priv->sglDevice, (SpecialTypeForSendingFd)fd);
   sem_wait(&priv->sglIdSem);
   id = priv->sglId;
 #if defined(KERNEL_REFERENCE) && !defined(BSIM) && !defined(__KERNEL__)

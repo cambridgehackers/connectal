@@ -25,8 +25,8 @@
 
 #include "dmaManager.h"
 #include "StdDmaIndication.h"
-#include "DmaDebugRequest.h"
-#include "MMUConfigRequest.h"
+#include "MemServerRequest.h"
+#include "MMURequest.h"
 #include "MemwriteIndication.h"
 #include "MemwriteRequest.h"
 
@@ -65,11 +65,11 @@ int main(int argc, const char **argv)
   size_t alloc_sz = 0x1240;
   MemwriteRequestProxy *device = new MemwriteRequestProxy(IfcNames_MemwriteRequest);
   MemwriteIndication *deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndication);
-  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
-  MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
-  DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
-  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  DmaManager *dma = new DmaManager(dmap);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
   sem_init(&done_sem, 1, 0);
   portalExec_start();

@@ -36,12 +36,19 @@ bozotarget:
 ## use "make gen.board" to generate the build directory
 gen.%:
 	make BOARD=$* --no-print-directory gentarget prebuild
+	make -C $* BOARD=$* --no-print-directory prepare_bin_target
+
+exe.%:
+	make BOARD=$* --no-print-directory gentarget prebuild exe
 
 build.%: gen.%
 	make -C $* BOARD=$* --no-print-directory all
 
 run.%:
 	make -C $* BOARD=$* --no-print-directory run
+
+programflash.%:
+	make -C $* BOARD=$* --no-print-directory programflash
 
 %.gdb:
 	make CONNECTAL_DEBUG=1 --no-print-directory $*
@@ -59,7 +66,7 @@ endif
 CONNECTALFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) -D PinType=$(PIN_TYPE) --ipdir=$(IPDIR)
 
 ifneq ($(NUMBER_OF_MASTERS), 0)
-INTERFACES += DmaDebugRequest MMUConfigRequest DmaDebugIndication MMUConfigIndication
+INTERFACES += MemServerRequest MMURequest MemServerIndication MMUIndication
 BSVFILES += $(CONNECTALDIR)/bsv/ConnectalMemory.bsv
 CPPFILES += $(CONNECTALDIR)/cpp/dmaManager.c
 ifneq ($(CPPFILES2),)
@@ -86,7 +93,9 @@ endif
 
 CONNECTALFLAGS += $(FPGAMAKE_CONNECTALFLAGS)
 ifeq ($(USE_BUILDCACHE),1)
-CONNECTALFLAGS += --cache=$(CONNECTALDIR)/../fpgamake-cache/$(shell basename `/bin/pwd`)/$(BOARD)
+BUILDCACHE?=$(CONNECTALDIR)/../buildcache/buildcache
+BUILDCACHE_CACHEDIR?=$(CONNECTALDIR)/../fpgamake-cache/$(shell basename `/bin/pwd`)/$(BOARD)
+CONNECTALFLAGS += --cache=$(BUILDCACHE_CACHEDIR)
 endif
 
 CONNECTALFLAGS += $(EXTRA_CONNECTALFLAGS)
@@ -109,10 +118,11 @@ endif
 	$(foreach interfaces, $(INTERFACES), -interfaces $(interfaces)) \
 	$(foreach f, $(CPPFILES), --source $f) \
 	$(foreach f, $(CPPFILES2), --source2 $f) \
+	$(foreach f, $(PORTAL_DUMP_MAP), --dump_map $f) \
         $(CONNECTALFLAGS) $(BSVFILES) $(PRINTF_EXTRA) $(VERBOSE_SWITCH)
 
 prebuild::
 	@# additional steps needed before making verilog etc
 ifeq ($(NEEDSPCIE_$(BOARD)),1)
-	cd $(BOARD); vivado -notrace -mode batch -source $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
+	cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) vivado -notrace -mode batch -source $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
 endif

@@ -34,17 +34,17 @@
 #include <mp.h>
 
 #include "StdDmaIndication.h"
-#include "MMUConfigRequest.h"
+#include "MMURequest.h"
 #include "GeneratedTypes.h" 
-#include "NandSimIndication.h"
-#include "NandSimRequest.h"
+#include "NandCfgIndication.h"
+#include "NandCfgRequest.h"
 #include "StrstrIndication.h"
 #include "StrstrRequest.h"
 
 static int trace_memory = 1;
 extern "C" {
 #include "sys/ioctl.h"
-#include "portalmem.h"
+#include "drivers/portalmem/portalmem.h"
 #include "sock_utils.h"
 #include "dmaManager.h"
 #include "userReference.h"
@@ -57,7 +57,7 @@ size_t nandBytes = 1 << 24;
 size_t nandBytes = 1 << 14;
 #endif
 
-class NandSimIndication : public NandSimIndicationWrapper
+class NandCfgIndication : public NandCfgIndicationWrapper
 {
 public:
   unsigned int rDataCnt;
@@ -78,7 +78,7 @@ public:
     sem_post(&sem);
   }
 
-  NandSimIndication(int id) : NandSimIndicationWrapper(id) {
+  NandCfgIndication(int id) : NandCfgIndicationWrapper(id) {
     sem_init(&sem, 0, 0);
   }
   void wait() {
@@ -123,13 +123,13 @@ int main(int argc, const char **argv)
 {
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
-  MMUConfigRequestProxy *hostMMUConfigRequest = new MMUConfigRequestProxy(IfcNames_AlgoMMUConfigRequest);
-  DmaManager *hostDma = new DmaManager(NULL, hostMMUConfigRequest);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(hostDma, IfcNames_AlgoMMUConfigIndication);
+  MMURequestProxy *hostMMURequest = new MMURequestProxy(IfcNames_AlgoMMURequest);
+  DmaManager *hostDma = new DmaManager(hostMMURequest);
+  MMUIndication *hostMMUIndication = new MMUIndication(hostDma, IfcNames_AlgoMMUIndication);
 
-  MMUConfigRequestProxy *nandsimMMUConfigRequest = new MMUConfigRequestProxy(IfcNames_NandsimMMUConfigRequest);
-  DmaManager *nandsimDma = new DmaManager(NULL, nandsimMMUConfigRequest);
-  MMUConfigIndication *nandsimMMUConfigIndication = new MMUConfigIndication(nandsimDma,IfcNames_NandsimMMUConfigIndication);
+  MMURequestProxy *nandMMURequest = new MMURequestProxy(IfcNames_NandMMURequest);
+  DmaManager *nandsimDma = new DmaManager(nandMMURequest);
+  MMUIndication *nandMMUIndication = new MMUIndication(nandsimDma,IfcNames_NandMMUIndication);
 
   StrstrRequestProxy *strstrRequest = new StrstrRequestProxy(IfcNames_AlgoRequest);
   StrstrIndication *strstrIndication = new StrstrIndication(IfcNames_AlgoIndication);
@@ -173,7 +173,7 @@ int main(int argc, const char **argv)
   // request the next sglist identifier from the sglistMMU hardware module
   // which is used by the mem server accessing flash memory.
   int id = 0;
-  MMUConfigRequestProxy_idRequest(nandsimDma->priv.sglDevice);
+  MMURequest_idRequest(nandsimDma->priv.sglDevice, -1);
   sem_wait(&nandsimDma->priv.sglIdSem);
   id = nandsimDma->priv.sglId;
   // pairs of ('offset','size') pointing to space in nandsim memory
@@ -195,7 +195,7 @@ int main(int argc, const char **argv)
   strstrIndication->wait();
 
   fprintf(stderr, "about to invoke search %d\n", ref_haystackInNandMemory);
-  strstrRequest->search(ref_haystackInNandMemory, haystack_len, 1);
+  strstrRequest->search(ref_haystackInNandMemory, haystack_len);
   strstrIndication->wait();  
 
   exit(!(strstrIndication->match_cnt==3));

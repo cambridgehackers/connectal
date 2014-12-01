@@ -1,4 +1,3 @@
-
 // Copyright (c) 2013-2014 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
@@ -47,10 +46,7 @@ typedef struct semaphore sem_t;
 
 typedef struct {
   sem_t confSem;
-  sem_t mtSem;
-  sem_t dbgSem;
   sem_t sglIdSem;
-  uint64_t mtCnt;
   uint32_t sglId;
   PortalInternal *dmaDevice;
   PortalInternal *sglDevice;
@@ -70,14 +66,10 @@ void DmaManager_dereference(DmaManagerPrivate *priv, int ref);
 #ifndef NO_CPP_PORTAL_CODE
 #ifdef __cplusplus
 #include "GeneratedTypes.h" //ChannelType!!
-extern "C" uint64_t DmaManager_show_mem_stats(DmaManagerPrivate *priv, ChannelType rc);
 class DmaManager
 {
  public:
   DmaManagerPrivate priv;
-  DmaManager(PortalInternalCpp *dbgDevice, PortalInternalCpp *sglDevice) {
-    DmaManager_init(&priv, &dbgDevice->pint, &sglDevice->pint);
-  };
   DmaManager(PortalInternalCpp *sglDevice) {
     DmaManager_init(&priv, NULL, &sglDevice->pint);
   };
@@ -87,9 +79,6 @@ class DmaManager
   void dereference(int ref){
     DmaManager_dereference(&priv, ref);
   }
-  uint64_t show_mem_stats(ChannelType rc) {
-    return DmaManager_show_mem_stats(&priv, rc);
-  };
   void sglIdResp(uint32_t sglId) {
     priv.sglId = sglId;
     sem_post(&priv.sglIdSem);
@@ -97,14 +86,6 @@ class DmaManager
   void confResp(uint32_t channelId) {
     //fprintf(stderr, "configResp %d\n", channelId);
     sem_post(&priv.confSem);
-  };
-  void mtResp(uint64_t words) {
-    priv.mtCnt = words;
-    sem_post(&priv.mtSem);
-  };
-  void dbgResp(const DmaDbgRec& dbgRec) {
-    fprintf(stderr, "dbgResp: %08x %08x %08x %08x\n", dbgRec.x, dbgRec.y, dbgRec.z, dbgRec.w);
-    sem_post(&priv.dbgSem);
   };
 };
 #endif

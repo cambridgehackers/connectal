@@ -56,18 +56,17 @@ import Pipe::*;
 requestStructTemplate='''
 typedef struct {
 %(paramStructDeclarations)s
-} %(MethodName)s_Request deriving (Bits);
+} %(MethodName)s_Message deriving (Bits);
 '''
 
 requestOutputPipeInterfaceTemplate='''\
-    interface PipeOut#(%(MethodName)s_Request) %(methodName)s_PipeOut;
+    interface PipeOut#(%(MethodName)s_Message) %(methodName)s_PipeOut;
 '''
 
 exposedProxyInterfaceTemplate='''
-%(responseElements)s
 // exposed proxy interface
 interface %(Dut)sPortal;
-    interface PipePortal#(%(requestChannelCount)s, %(indicationChannelCount)s, 32) portalIfc;
+    interface PipePortal#(0, %(channelCount)s, 32) portalIfc;
     interface %(Package)s::%(Ifc)s ifc;
 endinterface
 interface %(Dut)s;
@@ -77,13 +76,19 @@ endinterface
 
 (* synthesize *)
 module %(moduleContext)s mk%(Dut)sPortalSynth#(Bit#(32) id) (%(Dut)sPortal);
-    Vector#(0, PipeIn#(Bit#(32))) requestPipes = nil;
     Vector#(%(channelCount)s, PipeOut#(Bit#(32))) indicationPipes = newVector();
 %(indicationMethodRules)s
     interface %(Package)s::%(Ifc)s ifc;
 %(indicationMethods)s
     endinterface
-%(portalIfc)s
+    interface PipePortal portalIfc;
+        method Bit#(16) messageSize(Bit#(16) methodNumber);
+            case (methodNumber)%(messageSizes)s
+            endcase
+        endmethod
+        interface Vector requests = nil;
+        interface Vector indications = indicationPipes;
+    endinterface
 endmodule
 
 // exposed proxy implementation
@@ -116,11 +121,11 @@ exposedWrapperInterfaceTemplate='''
 %(requestElements)s
 // exposed wrapper portal interface
 interface %(Dut)sPipes;
-    interface Vector#(%(requestChannelCount)s, PipeIn#(Bit#(32))) inputPipes;
+    interface PipePortal#(%(channelCount)s, 0, 32) portalIfc;
 %(requestOutputPipeInterfaces)s
 endinterface
 interface %(Dut)sPortal;
-    interface PipePortal#(%(requestChannelCount)s, %(indicationChannelCount)s, 32) portalIfc;
+    interface PipePortal#(%(channelCount)s, 0, 32) portalIfc;
 endinterface
 // exposed wrapper MemPortal interface
 interface %(Dut)s;
@@ -136,10 +141,16 @@ endinstance
 // exposed wrapper Portal implementation
 (* synthesize *)
 module mk%(Dut)sPipes#(Bit#(32) id)(%(Dut)sPipes);
-    Vector#(%(requestChannelCount)s, PipeIn#(Bit#(32))) requestPipeIn = newVector();
-    Vector#(0, PipeOut#(Bit#(32))) indicationPipes = nil;
+    Vector#(%(channelCount)s, PipeIn#(Bit#(32))) requestPipeIn = newVector();
 %(methodRules)s
-    interface Vector inputPipes = requestPipeIn;
+    interface PipePortal portalIfc;
+        method Bit#(16) messageSize(Bit#(16) methodNumber);
+            case (methodNumber)%(messageSizes)s
+            endcase
+        endmethod
+        interface Vector requests = requestPipeIn;
+        interface Vector indications = nil;
+    endinterface
 %(outputPipes)s
 endmodule
 
@@ -148,9 +159,7 @@ module mk%(Dut)sPortal#(idType id, %(Ifc)s ifc)(%(Dut)sPortal)
               Add#(a__, __a, 32));
     let pipes <- mk%(Dut)sPipes(zeroExtend(pack(id)));
     mkConnection(pipes, ifc);
-    let requestPipes = pipes.inputPipes;
-    Vector#(0, PipeOut#(Bit#(32))) indicationPipes = nil;
-%(portalIfc)s
+    interface PipePortal portalIfc = pipes.portalIfc;
 endmodule
 
 interface %(Dut)sMemPortalPipes;
@@ -162,13 +171,7 @@ endinterface
 module mk%(Dut)sMemPortalPipes#(Bit#(32) id)(%(Dut)sMemPortalPipes);
 
   let p <- mk%(Dut)sPipes(zeroExtend(pack(id)));
-
-  PipePortal#(%(requestChannelCount)s, 0, 32) portalifc = (interface PipePortal;
-        interface Vector requests = p.inputPipes;
-        interface Vector indications = nil;
-    endinterface);
-
-  let memPortal <- mkMemPortal(id, portalifc);
+  let memPortal <- mkMemPortal(id, p.portalIfc);
   interface %(Dut)sPipes pipes = p;
   interface MemPortal portalIfc = memPortal;
 endmodule
@@ -183,23 +186,13 @@ module mk%(Dut)s#(idType id, %(Ifc)s ifc)(%(Dut)s)
 endmodule
 '''
 
-responseStructTemplate='''
-typedef struct {
-%(paramStructDeclarations)s
-} %(MethodName)s_Response deriving (Bits);
-'''
-
-portalIfcTemplate='''
-    interface PipePortal portalIfc;
-        interface Vector requests = requestPipes;
-        interface Vector indications = indicationPipes;
-    endinterface
-'''
-
 requestRuleTemplate='''
-    FromBit#(32,%(MethodName)s_Request) %(methodName)s_requestFifo <- mkFromBit();
+    FromBit#(32,%(MethodName)s_Message) %(methodName)s_requestFifo <- mkFromBit();
     requestPipeIn[%(channelNumber)s] = toPipeIn(%(methodName)s_requestFifo);
 '''
+
+messageSizeTemplate='''
+            %(channelNumber)s: return fromInteger(valueOf(SizeOf#(%(MethodName)s_Message)));'''
 
 mkConnectionMethodTemplate='''
     rule handle_%(methodName)s_request;
@@ -209,7 +202,7 @@ mkConnectionMethodTemplate='''
 '''
 
 indicationRuleTemplate='''
-    ToBit#(32,%(MethodName)s_Response) %(methodName)s_responseFifo <- mkToBit();
+    ToBit#(32,%(MethodName)s_Message) %(methodName)s_responseFifo <- mkToBit();
     indicationPipes[%(channelNumber)s] = toPipeOut(%(methodName)s_responseFifo);
 '''
 
@@ -218,233 +211,87 @@ indicationMethodDeclTemplate='''
 
 indicationMethodTemplate='''
     method Action %(methodName)s(%(formals)s);
-        %(methodName)s_responseFifo.enq(%(MethodName)s_Response {%(structElements)s});
+        %(methodName)s_responseFifo.enq(%(MethodName)s_Message {%(structElements)s});
         //$display(\"indicationMethod \'%(methodName)s\' invoked\");
     endmethod'''
 
-class ParamMixin:
-    def numBitsBSV(self):
-        return self.type.numBitsBSV();
+def toBsvType(titem):
+    if len(titem['params']):
+        return '%s#(%s)' % (titem['name'], ','.join([str(toBsvType(p)) for p in titem['params']]))
+    else:
+        return titem['name']
 
-class TypeMixin:
-    def toBsvType(self):
-        if len(self.params):
-            return '%s#(%s)' % (self.name, ','.join([str(p.toBsvType()) for p in self.params]))
-        else:
-            return self.name
-    def numBitsBSV(self):
-        if (self.name == 'Bit'):
-            return self.params[0].numeric()
-        if (self.name == 'Vector'):
-            return self.params[0].numeric() * self.params[1].numBitsBSV()
-        if (self.name == 'Int' or self.name == 'UInt'):
-            return self.params[0].numeric()
-        if (self.name == 'Float'):
-            return 32
-        if (self.name == 'SpecialTypeForSendingFd'):
-            return 32
-	sdef = globalv.globalvars[self.name]
-        sdeftype = sdef.tdtype
-        #print 'Type.numBitsBSV()', sdef.type, sdef.name, sdef.params, sdef.tdtype
-        #print 'instantiating type parameters'
-        sdeftype = sdeftype.instantiate(dict(zip(sdef.params, self.params)))
-        #print 'resolved to', sdeftype.type
-        #print '           ', sdeftype
-        return sdeftype.numBitsBSV();
-
-class EnumMixin:
-    def numBitsBSV(self):
-        return int(math.ceil(math.log(len(self.elements),2)))
-
-class StructMixin:
-    def numBitsBSV(self):
-        return sum([e.type.numBitsBSV() for e in self.elements])
-
-class MethodMixin:
-    def substs(self, outerTypeName):
-        if self.return_type.name == 'ActionValue':
-            rt = self.return_type.params[0].toBsvType()
-        else:
-            rt = self.return_type.name
-        d = { 'dut': util.decapitalize(outerTypeName),
-              'Dut': util.capitalize(outerTypeName),
-              'methodName': self.name,
-              'MethodName': util.capitalize(self.name),
-              'channelNumber': self.channelNumber,
-              'ord': self.channelNumber,
-              'methodReturnType': rt}
-        return d
-
-    def collectRequestElement(self, outerTypeName):
-        substs = self.substs(outerTypeName)
-        paramStructDeclarations = ['    %s %s;' % (p.type.toBsvType(), p.name)
-                                   for p in self.params]
-        if not self.params:
+def collectElements(mlist, workerfn, name):
+    methods = []
+    mindex = 0
+    for item in mlist:
+        sub = { 'dut': util.decapitalize(name),
+          'Dut': util.capitalize(name),
+          'methodName': item['name'],
+          'MethodName': util.capitalize(item['name']),
+          'channelNumber': mindex}
+        paramStructDeclarations = ['    %s %s;' % (toBsvType(p['type']), p['name']) for p in item['params']]
+        sub['paramType'] = ', '.join(['%s' % toBsvType(p['type']) for p in item['params']])
+        sub['formals'] = ', '.join(['%s %s' % (toBsvType(p['type']), p['name']) for p in item['params']])
+        structElements = ['%s: %s' % (p['name'], p['name']) for p in item['params']]
+        if not item['params']:
             paramStructDeclarations = ['    %s %s;' % ('Bit#(32)', 'padding')]
+            structElements = ['padding: 0']
+        sub['paramStructDeclarations'] = '\n'.join(paramStructDeclarations)
+        sub['structElements'] = ', '.join(structElements)
+        methods.append(workerfn % sub)
+        mindex = mindex + 1
+    return ''.join(methods)
 
-        substs['paramStructDeclarations'] = '\n'.join(paramStructDeclarations)
-        return requestStructTemplate % substs
+def fixupSubsts(item, suffix):
+    name = item['name']+suffix
+    dlist = item['decls']
+    mkConnectionMethodRules = []
+    outputPipes = []
+    for m in dlist:
+        paramsForCall = ['request.%s' % p['name'] for p in m['params']]
+        msubs = {'methodName': m['name'],
+                 'paramsForCall': ', '.join(paramsForCall)}
+        mkConnectionMethodRules.append(mkConnectionMethodTemplate % msubs)
+        outputPipes.append('    interface %(methodName)s_PipeOut = toPipeOut(%(methodName)s_requestFifo);' % msubs)
+    substs = {
+        'Package': item['Package'],
+        'channelCount': len(dlist),
+        'moduleContext': item['moduleContext'],
+        'Ifc': item['name'],
+        'dut': util.decapitalize(name),
+        'Dut': util.capitalize(name),
+    }
+    substs['requestOutputPipeInterfaces'] = ''.join(
+        [requestOutputPipeInterfaceTemplate % {'methodName': p['name'],
+                                               'MethodName': util.capitalize(p['name'])} for p in dlist])
+    substs['outputPipes'] = '\n'.join(outputPipes)
+    substs['mkConnectionMethodRules'] = ''.join(mkConnectionMethodRules)
+    substs['indicationMethodRules'] = collectElements(dlist, indicationRuleTemplate, name)
+    substs['indicationMethods'] = collectElements(dlist, indicationMethodTemplate, name)
+    substs['requestElements'] = collectElements(dlist, requestStructTemplate, name)
+    substs['methodRules'] = collectElements(dlist, requestRuleTemplate, name)
+    substs['messageSizes'] = collectElements(dlist, messageSizeTemplate, name)
+    return substs
 
-    def collectResponseElement(self, outerTypeName):
-        substs = self.substs(outerTypeName)
-        paramStructDeclarations = ['    %s %s;' % (p.type.toBsvType(), p.name)
-                                   for p in self.params]
-        if not self.params:
-            paramStructDeclarations = ['    %s %s;' % ('Bit#(32)', 'padding')]
-        substs['paramStructDeclarations'] = '\n'.join(paramStructDeclarations)
-        return responseStructTemplate % substs
-
-    def collectMethodRule(self, outerTypeName, hidden=False):
-        substs = self.substs(outerTypeName)
-        if self.return_type.name == 'Action':
-            return requestRuleTemplate % substs
-        else:
-            return None
-
-    def collectIndicationMethodRule(self, outerTypeName):
-        substs = self.substs(outerTypeName)
-        if self.return_type.name == 'Action':
-            paramType = ['%s' % p.type.toBsvType() for p in self.params]
-            substs['paramType'] = ', '.join(paramType)
-            return indicationRuleTemplate % substs
-        else:
-            return None
-
-    def collectIndicationMethod(self, outerTypeName):
-        substs = self.substs(outerTypeName)
-        if self.return_type.name == 'Action':
-            formal = ['%s %s' % (p.type.toBsvType(), p.name) for p in self.params]
-            substs['formals'] = ', '.join(formal)
-            structElements = ['%s: %s' % (p.name, p.name) for p in self.params]
-            if not self.params:
-                structElements = ['padding: 0']
-            substs['structElements'] = ', '.join(structElements)
-            return indicationMethodTemplate % substs
-        else:
-            return None
-
-class InterfaceMixin:
-    def substs(self,suffix,proxy):
-        name = "%s%s"%(self.name,suffix)
-        dutName = util.decapitalize(name)
-
-        # specific to wrappers
-        requestElements = self.collectRequestElements(name)
-        methodNames = self.collectMethodNames(name)
-        methodRules = self.collectMethodRules(name,False)
-        
-        # specific to proxies
-        responseElements = self.collectResponseElements(name)
-        indicationMethodRules = self.collectIndicationMethodRules(name)
-        indicationMethods = self.collectIndicationMethods(name)
-
-        m = md5.new()
-        m.update(self.name)
-
-        substs = {
-            'Package': os.path.splitext(os.path.basename(self.package))[0],
-            'Ifc': self.name,
-            'dut': dutName,
-            'Dut': util.capitalize(name),
-            'requestElements': ''.join(requestElements),
-            'methodNames': methodNames,
-            'methodRules': ''.join(methodRules),
-            'channelCount': self.channelCount,
-            'moduleContext': '',
-
-            'requestChannelCount': len(methodRules) if not proxy else 0,
-            'responseElements': ''.join(responseElements),
-            'indicationMethodRules': ''.join(indicationMethodRules),
-            'indicationMethods': ''.join(indicationMethods),
-            'indicationChannelCount': self.channelCount if proxy else 0,
-            'indicationInterfaces': ''.join(indicationTemplate % { 'Indication': name }) if not self.hasSource else '',
-            }
-
-        substs['portalIfc'] = portalIfcTemplate % substs
-        substs['requestOutputPipeInterfaces'] = ''.join([requestOutputPipeInterfaceTemplate % {'methodName': methodName,
-                                                       'MethodName': util.capitalize(methodName)}
-                                                       for methodName in methodNames])
-        mkConnectionMethodRules = []
-        outputPipes = []
-        for m in self.decls:
-            if m.type == 'Method' and m.return_type.name == 'Action':
-                paramsForCall = ['request.%s' % p.name for p in m.params]
-                msubs = {'methodName': m.name,
-                         'paramsForCall': ', '.join(paramsForCall)}
-                mkConnectionMethodRules.append(mkConnectionMethodTemplate % msubs)
-                outputPipes.append('    interface %(methodName)s_PipeOut = toPipeOut(%(methodName)s_requestFifo);' % msubs)
-        substs['mkConnectionMethodRules'] = ''.join(mkConnectionMethodRules)
-        substs['outputPipes'] = '\n'.join(outputPipes)
-        return substs
-
-    def collectRequestElements(self, outerTypeName):
-        requestElements = []
-        for m in self.decls:
-            if m.type == 'Method':
-                e = m.collectRequestElement(outerTypeName)
-                if e:
-                    requestElements.append(e)
-        return requestElements
-    def collectResponseElements(self, outerTypeName):
-        responseElements = []
-        for m in self.decls:
-            if m.type == 'Method':
-                e = m.collectResponseElement(outerTypeName)
-                if e:
-                    responseElements.append(e)
-        return responseElements
-    def collectMethodRules(self,outerTypeName,hidden):
-        methodRules = []
-        for m in self.decls:
-            if m.type == 'Method':
-                methodRule = m.collectMethodRule(outerTypeName,hidden)
-                if methodRule:
-                    methodRules.append(methodRule)
-        return methodRules
-    def collectMethodNames(self,outerTypeName):
-        methodRuleNames = []
-        for m in self.decls:
-            if m.type == 'Method':
-                methodRule = m.collectMethodRule(outerTypeName)
-                if methodRule:
-                    methodRuleNames.append(m.name)
-                else:
-                    print 'method %s has no rule' % m.name
-        return methodRuleNames
-    def collectIndicationMethodRules(self,outerTypeName):
-        methodRules = []
-        for m in self.decls:
-            if m.type == 'Method':
-                methodRule = m.collectIndicationMethodRule(outerTypeName)
-                if methodRule:
-                    methodRules.append(methodRule)
-        return methodRules
-    def collectIndicationMethods(self,outerTypeName):
-        methods = []
-        for m in self.decls:
-            if m.type == 'Method':
-                methodRule = m.collectIndicationMethod(outerTypeName)
-                if methodRule:
-                    methods.append(methodRule)
-        return methods
-
-def generate_bsv(globalimports, project_dir, noisyFlag, interfaces, dutname):
+def generate_bsv(project_dir, noisyFlag, jsondata):
     generatedPackageNames = []
-    for item in interfaces:
-        pname = item.name
+    for item in jsondata['interfaces']:
+        pname = item['name']
         if pname in generatedPackageNames:
             continue
         generatedPackageNames.append(pname)
-        fname = os.path.join(project_dir, 'sources', dutname.lower(), '%s.bsv' % pname)
+        fname = os.path.join(project_dir, 'sources', jsondata['dutname'].lower(), '%s.bsv' % pname)
         bsv_file = util.createDirAndOpen(fname, 'w')
         bsv_file.write('package %s;\n' % pname)
-        extraImports = (['import %s::*;\n' % os.path.splitext(os.path.basename(fn))[0] for fn in [item.package] ]
-                   + ['import %s::*;\n' % i for i in globalimports if not i in generatedPackageNames])
+        extraImports = (['import %s::*;\n' % pn for pn in [item['Package']] ]
+                   + ['import %s::*;\n' % i for i in jsondata['globalimports'] if not i in generatedPackageNames])
         bsv_file.write(preambleTemplate % {'extraImports' : ''.join(extraImports)})
         if noisyFlag:
             print 'Writing file ', fname
-        bsv_file.write(exposedWrapperInterfaceTemplate % item.substs('Wrapper',False))
-        bsv_file.write(exposedProxyInterfaceTemplate % item.substs("Proxy",True))
+        
+        bsv_file.write(exposedWrapperInterfaceTemplate % fixupSubsts(item, 'Wrapper'))
+        bsv_file.write(exposedProxyInterfaceTemplate % fixupSubsts(item, 'Proxy'))
         bsv_file.write('endpackage: %s\n' % pname)
         bsv_file.close()
 

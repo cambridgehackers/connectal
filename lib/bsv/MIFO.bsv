@@ -39,6 +39,17 @@ interface MIFO#(numeric type max_in, numeric type n_out, numeric type size, type
    method    Bool                        deqReady();
 endinterface
    
+instance ToGet #(MIFO #(max_in, n_out, size, a), Vector#(n_out, a));
+   function Get #(Vector#(n_out, a)) toGet (MIFO #(max_in, n_out, size, a) mifo);
+      return (interface Get;
+                 method ActionValue #(Vector#(n_out, a)) get ();
+                    mifo.deq ();
+                    return mifo.first ();
+                 endmethod
+              endinterface);
+   endfunction
+endinstance
+
 module mkMIFO(MIFO#(max_in, n_out, size, t))
    provisos (Log#(max_in, max_in_sz),
 	     Log#(n_out, n_out_sz),

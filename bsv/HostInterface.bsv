@@ -26,6 +26,7 @@
 `define DataBusWidth 64
 `endif
 
+typedef `PhysAddrWidth PhysAddrWidth;
 typedef `DataBusWidth DataBusWidth;
 typedef `NumberOfMasters NumberOfMasters;
 
@@ -95,11 +96,21 @@ typedef PcieHostTop HostType;
 ////////////////////////////// Zynq /////////////////////////////////
 `ifdef ZynqHostTypeIF
 import PS7LIB::*;
+import Bscan::*;
 
-typedef PS7 HostType;
+interface HostType;
+    interface PS7 ps7;
+    interface Clock portalClock;
+    interface Reset portalReset;
+    interface Clock doubleClock;
+    interface Reset doubleReset;
+    interface BscanTop bscan;
+endinterface
 
-export PS7LIB::*;
-export HostType;
-export DataBusWidth;
-export NumberOfMasters;
+//export PS7LIB::*;
+//export BscanTop;
+//export HostType;
+//export DataBusWidth;
+//export NumberOfMasters;
+//export PhysAddrWidth;
 `endif

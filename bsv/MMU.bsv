@@ -45,7 +45,7 @@ typedef Bit#(TLog#(MaxNumSGLists)) RegionsIdx;
 typedef 8 IndexWidth;
 
 typedef struct {
-   SGListId               id;
+   SGListId             id;
    Bit#(MemOffsetSize) off;
 } ReqTup deriving (Eq,Bits,FShow);
 
@@ -57,7 +57,7 @@ import "BDPI" function ActionValue#(Bit#(32)) pareff_initfd(Bit#(32) id, Bit#(32
 `endif
 
 interface MMU#(numeric type addrWidth);
-   interface MMUConfigRequest request;
+   interface MMURequest request;
    interface Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addr;
 endinterface
 
@@ -71,7 +71,7 @@ typedef Bit#(TSub#(MemOffsetSize,SGListPageShift4)) Page4;
 typedef Bit#(TSub#(MemOffsetSize,SGListPageShift8)) Page8;
 
 typedef struct {
-   Bit#(28) barrier;
+   Bit#(TSub#(MemOffsetSize,SGListPageShift0)) barrier;
    Bit#(IndexWidth) idxOffset;
    } SingleRegion deriving (Eq,Bits,FShow);
 
@@ -87,11 +87,12 @@ typedef struct {DmaErrorType errorType;
    } DmaError deriving (Bits);
 
 // the address translation servers (addr[0], addr[1]) have a latency of 8 and are fully pipelined
-module mkMMU#(Integer iid, Bool bsimMMap, MMUConfigIndication mmuIndication)(MMU#(addrWidth))
+module mkMMU#(Integer iid, Bool bsimMMap, MMUIndication mmuIndication)(MMU#(addrWidth))
    provisos(Log#(MaxNumSGLists, listIdxSize),
 	    Add#(listIdxSize,8, entryIdxSize),
-	    Add#(c__, addrWidth, MemOffsetSize));
+	    Add#(a__,addrWidth,MemOffsetSize));
    
+	    
    let verbose = False;
    TagGen#(MaxNumSGLists) sglId_gen <- mkTagGen;
    rule complete_sglId_gen;
@@ -275,10 +276,11 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUConfigIndication mmuIndication)(MMU
 	  endinterface
        endinterface);
       
-   interface MMUConfigRequest request;
+   interface MMURequest request;
    method Action idRequest(SpecialTypeForSendingFd fd);
       let nextId <- sglId_gen.getTag;
       let resp = (fromInteger(iid) << 16) | extend(nextId);
+      if (verbose) $display("mkMMU::idRequest %d", fd);
 `ifdef BSIM
       let va <- pareff_initfd(resp, fd);
 `endif

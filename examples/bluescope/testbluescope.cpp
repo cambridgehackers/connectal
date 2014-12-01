@@ -30,8 +30,8 @@
 
 #include "BlueScopeIndication.h"
 #include "BlueScopeRequest.h"
-#include "DmaDebugRequest.h"
-#include "MMUConfigRequest.h"
+#include "MemServerRequest.h"
+#include "MMURequest.h"
 #include "MemcpyIndication.h"
 #include "MemcpyRequest.h"
 
@@ -138,11 +138,11 @@ int main(int argc, const char **argv)
 
   device = new MemcpyRequestProxy(IfcNames_MemcpyRequest);
   bluescope = new BlueScopeRequestProxy(IfcNames_BluescopeRequest);
-  DmaDebugRequestProxy *hostDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostDmaDebugRequest);
-  MMUConfigRequestProxy *dmap = new MMUConfigRequestProxy(IfcNames_HostMMUConfigRequest);
-  DmaManager *dma = new DmaManager(hostDmaDebugRequest, dmap);
-  DmaDebugIndication *hostDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostDmaDebugIndication);
-  MMUConfigIndication *hostMMUConfigIndication = new MMUConfigIndication(dma, IfcNames_HostMMUConfigIndication);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  DmaManager *dma = new DmaManager(dmap);
+  //MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
   deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndication);
   bluescopeIndication = new BlueScopeIndication(IfcNames_BluescopeIndication);
@@ -188,11 +188,11 @@ int main(int argc, const char **argv)
   bluescope->start(ref_bsAlloc, alloc_sz);
 
   sleep(1);
-  hostDmaDebugRequest->addrRequest(ref_srcAlloc, 1*sizeof(unsigned int));
+  //hostMemServerRequest->addrRequest(ref_srcAlloc, 1*sizeof(unsigned int));
   sleep(1);
-  hostDmaDebugRequest->addrRequest(ref_dstAlloc, 2*sizeof(unsigned int));
+  //hostMemServerRequest->addrRequest(ref_dstAlloc, 2*sizeof(unsigned int));
   sleep(1);
-  hostDmaDebugRequest->addrRequest(ref_bsAlloc, 3*sizeof(unsigned int));
+  //hostMemServerRequest->addrRequest(ref_bsAlloc, 3*sizeof(unsigned int));
   sleep(1);
   
   fprintf(stderr, "Main::starting mempcy numWords:%d\n", numWords);

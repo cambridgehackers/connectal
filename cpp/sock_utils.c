@@ -42,31 +42,26 @@ static int trace_socket;// = 1;
 int init_listening(const char *arg_name, PortalSocketParam *param)
 {
   int listening_socket;
+  struct sockaddr_un sa = {0};
+  sa.sun_family = AF_UNIX;
+  strcpy(sa.sun_path, arg_name);
+  struct addrinfo addrinfo = { 0, AF_UNIX, SOCK_STREAM, 0};
+  addrinfo.ai_addrlen = sizeof(sa.sun_family) + strlen(sa.sun_path);
+  addrinfo.ai_addr = (struct sockaddr *)&sa;
+  struct addrinfo *addr = &addrinfo;
 
   if (trace_socket)
     printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-  if (param) {
-       listening_socket = socket(param->addr->ai_family, param->addr->ai_socktype, param->addr->ai_protocol);
-       if (listening_socket == -1 || bind(listening_socket, param->addr->ai_addr, param->addr->ai_addrlen) == -1) {
-           fprintf(stderr, "%s[%d]: bind error %s\n",__FUNCTION__, listening_socket, strerror(errno));
-           exit(1);
-       }
+  if (param && param->addr) {
+printf("[%s:%d] TCP\n", __FUNCTION__, __LINE__);
+      addr = param->addr;
   }
-  else {
-  if ((listening_socket = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-    fprintf(stderr, "%s: socket error %s",__FUNCTION__, strerror(errno));
-    exit(1);
-  }
-
-  struct sockaddr_un local;
-  local.sun_family = AF_UNIX;
-  strcpy(local.sun_path, arg_name);
-  unlink(local.sun_path);
-  int len = strlen(local.sun_path) + sizeof(local.sun_family);
-  if (bind(listening_socket, (struct sockaddr *)&local, len) == -1) {
-    fprintf(stderr, "%s[%d]: bind error %s\n",__FUNCTION__, listening_socket, strerror(errno));
-    exit(1);
-  }
+  else
+      unlink(sa.sun_path);
+  listening_socket = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
+  if (listening_socket == -1 || bind(listening_socket, addr->ai_addr, addr->ai_addrlen) == -1) {
+      fprintf(stderr, "%s[%d]: bind error %s\n",__FUNCTION__, listening_socket, strerror(errno));
+      exit(1);
   }
 
   if (listen(listening_socket, 5) == -1) {
@@ -121,7 +116,7 @@ ssize_t sock_fd_write(int sockfd, void *ptr, size_t nbytes, int sendfd)
     iov[0].iov_len = nbytes;
     msg.msg_iov = iov;
     msg.msg_iovlen = 1;
-    int rc = sendmsg(sockfd, &msg, MSG_DONTWAIT);
+    int rc = sendmsg(sockfd, &msg, 0);
     if (rc != nbytes) {
         printf("[%s:%d] error in sendmsg %d %d\n", __FUNCTION__, __LINE__, rc, errno);
         exit(1);
@@ -163,6 +158,9 @@ ssize_t sock_fd_read(int sockfd, void *ptr, size_t nbytes, int *recvfd)
         int *foo = (int *)CMSG_DATA(cmptr);
         *recvfd = *foo;
 printf("[%s:%d] got fd %d\n", __FUNCTION__, __LINE__, *foo);
+    }
+    if (n != nbytes) {
+printf("[%s:%d] asked for %ld bytes, got %ld\n", __FUNCTION__, __LINE__, (long)nbytes, (long)n);
     }
     return n;
 }

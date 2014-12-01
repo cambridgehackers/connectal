@@ -1,4 +1,5 @@
 
+CONNECTALDIR?=../..
 INTERFACES = Swallow EchoRequest EchoIndication
 ## all the BSV files to be scanned for types and interfaces
 BSVFILES = Echo.bsv SwallowIF.bsv Top.bsv
@@ -13,5 +14,7 @@ NUMBER_OF_MASTERS =0
 ## for testing fpgamake:
 FPGAMAKE_CONNECTALFLAGS += -P mkEchoIndicationProxySynth -P mkEchoRequestWrapperMemPortalPipes
 
-include ../../Makefile.connectal
+PORTAL_DUMP_MAP = "Swallow:EchoRequest:EchoIndication"
+
+include $(CONNECTALDIR)/Makefile.connectal
 

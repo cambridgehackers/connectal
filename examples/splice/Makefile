@@ -1,6 +1,7 @@
 
+CONNECTALDIR?=../..
 INTERFACES = SpliceRequest SpliceIndication
-BSVFILES = Splice.bsv Top.bsv ../../lib/deprecated/DmaUtils.bsv
+BSVFILES = Splice.bsv Top.bsv $(CONNECTALDIR)/lib/deprecated/DmaUtils.bsv
 CPPFILES=testsplice.cpp
 
-include ../../Makefile.connectal
+include $(CONNECTALDIR)/Makefile.connectal

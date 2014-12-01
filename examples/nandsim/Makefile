@@ -1,7 +1,9 @@
 
-INTERFACES = NandSimRequest NandSimIndication
-BSVFILES = ../../lib/bsv/NandSim.bsv Top.bsv ../../lib/bsv/NandSimNames.bsv
+CONNECTALDIR?=../..
+INTERFACES = NandCfgRequest NandCfgIndication
+BSVFILES = $(CONNECTALDIR)/lib/nandsim/bsv/NandSim.bsv $(CONNECTALDIR)/lib/nandsim/bsv/NandSimNames.bsv Top.bsv
 CPPFILES=testnandsim.cpp
-CONNECTALFLAGS=--bscflags " -D TRACE_AXI"
+#CONNECTALFLAGS=--bscflags " -D TRACE_AXI"
+CONNECTALFLAGS += -I$(CONNECTALDIR)/lib/nandsim/cpp
 
-include ../../Makefile.connectal
+include $(CONNECTALDIR)/Makefile.connectal

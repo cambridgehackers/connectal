@@ -27,11 +27,11 @@ all: pciedrivers scripts/syntax/parsetab.py
 
 pciedrivers:
 	(cd drivers/pcieportal; make)
-	make -C pcie/connectalutil
+	make -C pcie
 
 pciedrivers-clean:
 	(cd drivers/pcieportal; make clean)
-	make -C pcie/connectalutil clean
+	make -C pcie clean
 
 ifneq ("$(DESTDIR)", "")
 INSTALL_SHARED = install-shared
@@ -45,18 +45,18 @@ install: $(INSTALL_SHARED)
 	    done; \
 	fi
 	(cd drivers/pcieportal; make install)
-	make -C pcie/connectalutil install
+	make -C pcie install
 	install -d -m755 $(DESTDIR)$(UDEV_RULES_DIR)
 	for fname in $(UDEV_RULES) ; do \
 	    install -m644 etc/udev/rules.d/$$fname $(DESTDIR)$(UDEV_RULES_DIR) ; \
 	done
-	-if [ "$(DESTDIR)" == "" ]; then \
-	service udev restart; \
-	rmmod portalmem; \
-	rmmod pcieportal; \
-	modprobe portalmem; \
-	modprobe pcieportal; \
-	fi
+ifeq ( _$(DESTDIR), _)
+	service udev restart;
+	rmmod portalmem;
+	rmmod pcieportal;
+	modprobe portalmem;
+	modprobe pcieportal;
+endif
 
 INSTALL_DIRS = $(shell ls | grep -v debian)
 
@@ -408,4 +408,8 @@ distclean:
 	rm -rf drivers/*/.tmp_versions tests/memread_manual/kernel/.tmp_versions/
 	rm -rf pcie/connectalutil/connectalutil tests/memread_manual/kernel/bsim_relay
 	rm -rf out/ exit.status cpp/*.o scripts/*.pyc
+	rm -rf tests/*/train-images-idx3-ubyte examples/*/train-images-idx3-ubyte
+	rm -f drivers/pcieportal/.*.o.cmd drivers/pcieportal/.*.ko.cmd
+	rm -f drivers/portalmem/.*.o.cmd drivers/portalmem/.*.ko.cmd
+	rm -f drivers/zynqportal/.*.o.cmd drivers/zynqportal/.*.ko.cmd
 

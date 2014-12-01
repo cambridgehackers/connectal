@@ -45,25 +45,25 @@ static void manual_event(void)
       portalCheckIndication(&intarr[i]);
 }
 
-SimpleIndicationWrapperCb SimpleIndication_cbTable = {
+SimpleIndicationCb SimpleIndication_cbTable = {
    SimpleIndicationWrapperheard1_cb,
    SimpleIndicationWrapperheard2_cb,
 };
 int main(int argc, const char **argv)
 {
-   init_portal_internal(&intarr[0], IfcNames_SimpleRequest, NULL, NULL, NULL, NULL, SimpleRequestProxy_reqsize); // portal 1
-   init_portal_internal(&intarr[1], IfcNames_SimpleIndication, SimpleIndicationWrapper_handleMessage, &SimpleIndication_cbTable, NULL, NULL, SimpleIndicationWrapper_reqsize); // portal 2
+   init_portal_internal(&intarr[0], IfcNames_SimpleRequest, NULL, NULL, NULL, NULL, SimpleRequest_reqinfo); // portal 1
+   init_portal_internal(&intarr[1], IfcNames_SimpleIndication, SimpleIndication_handleMessage, &SimpleIndication_cbTable, NULL, NULL, SimpleIndication_reqinfo); // portal 2
 
    intarr[0].item->enableint(&intarr[0], 0);
    intarr[1].item->enableint(&intarr[1], 0);
    PORTAL_PRINTF("Main::calling say1(%d)\n", v1a);
    //device->say1(v1a);  
-   SimpleRequestProxy_say1 (&intarr[0], v1a);
+   SimpleRequest_say1 (&intarr[0], v1a);
    manual_event();
 
    PORTAL_PRINTF("Main::calling say2(%d, %d)\n", v2a,v2b);
    //device->say2(v2a,v2b);
-   SimpleRequestProxy_say2 (&intarr[0], v2a, v2b);
+   SimpleRequest_say2 (&intarr[0], v2a, v2b);
    manual_event();
    return 0;
 }

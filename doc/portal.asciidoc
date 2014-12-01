@@ -248,18 +248,19 @@ any additional hardware modules.
 
 Rather than constructing the `connectalgen` command line from
 scratch, the examples in connectal use include
-[Makefile.connectal](../Makefile.connectal) and define some `make`
+[Makefile.connectal] and define some `make`
 variables.
 
 Here is the Makefile for the `simple` example:
 
 [source,makefile]
 ---------------------------------
+    CONNECTALDIR?=../..
     INTERFACES = SimpleRequest SimpleIndication
     BSVFILES = Simple.bsv Top.bsv
     CPPFILES=testsimple.cpp
 
-    include ../../Makefile.connectal
+    include $(CONNECTALDIR)/Makefile.connectal
 ---------------------------------
 
 
@@ -268,10 +269,11 @@ Designs outside the connectal directory using `connectal` may also include `Make
 [source,makefile]
 ---------------------------------
     
+    CONNECTALDIR?=/scratch/connectal
     INTERFACES = ...
     BSVFILES = ...
     CPPFILES = ...
-    include /scratch/connectal/Makefile.connectal
+    include $(CONNECTALDIR)/Makefile.connectal
 ---------------------------------
 
 

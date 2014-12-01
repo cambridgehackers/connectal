@@ -41,13 +41,13 @@
 #include <sys/ioctl.h>
 #include <time.h> // ctime
 #endif
-#include "portalmem.h" // PA_MALLOC
+#include "drivers/portalmem/portalmem.h" // PA_MALLOC
 
 #ifdef ZYNQ
 #include <android/log.h>
-#include <zynqportal.h>
+#include "drivers/zynqportal/zynqportal.h"
 #else
-#include <pcieportal.h> // BNOC_TRACE
+#include "drivers/pcieportal/pcieportal.h" // BNOC_TRACE
 #endif
 
 static void init_portal_hw(void);
@@ -58,7 +58,7 @@ PortalInternal *utility_portal = 0x0;
 static tBoard* tboard;
 #endif
 
-void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param, uint32_t reqsize)
+void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param, uint32_t reqinfo)
 {
     int rc;
     init_portal_hw();
@@ -70,6 +70,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
     pint->handler = handler;
     pint->cb = cb;
     pint->item = item;
+    pint->muxid = -1;
     if (!item) {
 #ifdef BSIM
         pint->item = &bsimfunc;
@@ -77,7 +78,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
         pint->item = &hardwarefunc;
 #endif
     }
-    pint->reqsize = reqsize;
+    pint->reqinfo = reqinfo;
     rc = pint->item->init(pint, param);
     if (rc != 0) {
       PORTAL_PRINTF("%s: failed to open Portal portal%d\n", __FUNCTION__, pint->fpga_number);
@@ -118,18 +119,6 @@ static void init_portal_hw(void)
   once = 1;
 #ifdef __KERNEL__
   tboard = get_pcie_portal_descriptor();
-#endif
-#ifdef ZYNQ /* There is no way to set userclock freq from host on PCIE */
-  // start by setting the clock frequency (this only has any effect on the zynq platform)
-  PortalClockRequest request;
-  long reqF = 100000000; // 100 Mhz
-  request.clknum = 0;
-  request.requested_rate = reqF;
-  assert(false);
-  int status = -1;//ioctl(globalDirectory.fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
-  if (status < 0)
-    PORTAL_PRINTF("init_portal: error setting fclk0, errno=%d\n", errno);
-  PORTAL_PRINTF("init_portal: set fclk0 (%ld,%ld)\n", reqF, request.actual_rate);
 #endif
 }
 
@@ -272,14 +261,18 @@ void portalCheckIndication(PortalInternal *pint)
   }
 }
 
-void send_portal_null(struct PortalInternal *pint, unsigned int hdr, int sendFd)
+void send_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, unsigned int hdr, int sendFd)
 {
 }
 int recv_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
 {
     return 0;
 }
-int busy_portal_null(struct PortalInternal *pint, volatile unsigned int *addr, const char *str)
+int notfull_null(PortalInternal *pint, unsigned int v)
+{
+    return 0;
+}
+int busy_portal_null(struct PortalInternal *pint, unsigned int v, const char *str)
 {
     return 0;
 }
@@ -306,15 +299,30 @@ volatile unsigned int *mapchannel_hardware(struct PortalInternal *pint, unsigned
 {
     return &pint->map_base[PORTAL_IND_FIFO(v)];
 }
-int busy_hardware(struct PortalInternal *pint, volatile unsigned int *addr, const char *str)
+int notfull_hardware(PortalInternal *pint, unsigned int v)
+{
+    volatile unsigned int *tempp = pint->item->mapchannelReq(pint, v) + 1;
+    return pint->item->read(pint, &tempp);
+}
+int busy_hardware(struct PortalInternal *pint, unsigned int v, const char *str)
 {
     int count = 50;
-    volatile unsigned int *tempp = addr + 1;
-    while (!pint->item->read(pint, &tempp) && count-- > 0)
+    while (!pint->item->notFull(pint, v) && ((pint->busyType == BUSY_SPIN) || count-- > 0))
         ; /* busy wait a bit on 'fifo not full' */
-    if (count <= 0){
-        PORTAL_PRINTF("putFailed: %s\n", str);
-        return 1;
+    if (count <= 0) {
+        if (pint->busyType == BUSY_TIMEWAIT)
+            while (!pint->item->notFull(pint, v)) {
+                struct timeval timeout;
+                timeout.tv_sec = 0;
+                timeout.tv_usec = 10000;
+                select(0, NULL, NULL, NULL, &timeout);
+            }
+        else {
+            PORTAL_PRINTF("putFailed: %s\n", str);
+            if (pint->busyType == BUSY_EXIT)
+                exit(1);
+            return 1;
+        }
     }
     return 0;
 }
@@ -370,7 +378,6 @@ static int init_hardware(struct PortalInternal *pint, void *param)
 	return -errno;
     }
     pint->map_base = (volatile unsigned int*)portalMmap(pint->fpga_fd, PORTAL_BASE_OFFSET);
-//mmap(0, PORTAL_BASE_OFFSET, PROT_READ|PROT_WRITE, MAP_SHARED, pint->fpga_fd, 0);
     if (pint->map_base == MAP_FAILED) {
         PORTAL_PRINTF("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", pint->fpga_fd, errno);
         return -errno;
@@ -393,4 +400,4 @@ static void write_fd_hardware(PortalInternal *pint, volatile unsigned int **addr
 
 PortalItemFunctions hardwarefunc = {
     init_hardware, read_hardware, write_hardware, write_fd_hardware, mapchannel_hardware, mapchannel_hardware,
-    send_portal_null, recv_portal_null, busy_hardware, enableint_hardware, event_hardware};
+    send_portal_null, recv_portal_null, busy_hardware, enableint_hardware, event_hardware, notfull_hardware};

@@ -20,18 +20,21 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import FIFO    ::*;
-import FIFOF   ::*;
-import Vector  ::*;
-import StmtFSM ::*;
-import GetPut::*;
+import FIFO::*;
+import FIFOF::*;
+import Vector::*;
 import ClientServer::*;
+import GetPut::*;
 import MemTypes::*;
 import MemwriteEngine::*;
 import Pipe::*;
+import Arith::*;
+import MemUtils::*;
+import HostInterface::*;
+import StmtFSM ::*;
 
 interface MemwriteRequest;
-   method Action startWrite(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
+   method Action startWrite(Bit#(32) pointer, Bit#(32) offset, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
    method Action getStateDbg();   
 endinterface
 
@@ -102,7 +105,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite#(4));
    function MemWriteClient#(64) dc(MemwriteEngine#(64,1) we) = we.dmaClient;
    interface dmaClients = map(dc,wes);
    interface MemwriteRequest request;
-       method Action startWrite(Bit#(32) wp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
+      method Action startWrite(Bit#(32) wp, Bit#(32) ofs, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
 	  $display("startWrite pointer=%d numWords=%h burstLen=%d iterCnt=%d", pointer, nw, bl, ic);
 	  indication.started(nw);
 	  pointer <= wp;

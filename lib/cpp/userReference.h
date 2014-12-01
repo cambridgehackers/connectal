@@ -25,7 +25,7 @@
 static int shifts[] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0, 0};
 
 #include "dmaManager.h"
-#include "portalmem.h" // PortalAlloc
+#include "drivers/portalmem/portalmem.h" // PortalAlloc
 
 #ifdef CONNECTAL_DRIVER_CODE
 #include "DmaConfigProxy.c"
@@ -33,8 +33,8 @@ static int trace_memory = 1;
 #endif
 
 #include "GeneratedTypes.h" // generated in project directory
-#define DMAsglist(P, A, B, C, D) MMUConfigRequest_sglist((P), (A), (B), (C), (D));
-#define DMAregion(P, PTR, B8, I8, B4, I4, B0, I0) MMUConfigRequest_region((P), (PTR), (B8), (I8), (B4), (I4), (B0), (I0))
+#define DMAsglist(P, A, B, C, D) MMURequest_sglist((P), (A), (B), (C), (D));
+#define DMAregion(P, PTR, B8, I8, B4, I4, B0, I0) MMURequest_region((P), (PTR), (B8), (I8), (B4), (I4), (B0), (I0))
 
 typedef struct {
     long dma_address;

@@ -38,7 +38,7 @@
 #include "gralloc_priv.h"
 #include "gr.h"
 
-#include "DmaDebugRequest.h"
+#include "MemServerRequest.h"
 #include "SGListConfigRequest.h"
 #include "DmaIndication.h"
 #include "HdmiDisplayRequest.h"
@@ -358,10 +358,10 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
         dev->hdmiDisplay = new HdmiDisplayRequestProxy(IfcNames_HdmiDisplayRequest, dev->poller);
         dev->hdmiInternal = new HdmiInternalRequestProxy(IfcNames_HdmiInternalRequest, dev->poller);
         dev->dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
-        dev->dma = new DmaManager(hostmemDmaDebugRequest, dmap);
+        dev->dma = new DmaManager(hostmemMemServerRequest, dmap);
         dev->dmaIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
-  //DmaDebugIndication *hostmemDmaDebugIndication = new DmaDebugIndication(dma, IfcNames_HostmemDmaDebugIndication);
-  //DmaDebugRequestProxy *hostmemDmaDebugRequest = new DmaDebugRequestProxy(IfcNames_HostmemDmaDebugRequest);
+  //MemServerIndication *hostmemMemServerIndication = new MemServerIndication(hostmemServerRequest, IfcNames_HostmemMemServerIndication);
+  //MemServerRequestProxy *hostmemMemServerRequest = new MemServerRequestProxy(IfcNames_HostmemMemServerRequest);
         dev->nextSegmentNumber = 0;
 
         status = 0;
