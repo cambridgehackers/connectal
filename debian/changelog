@@ -1,3 +1,9 @@
+connectal (14.12.1-1trusty1) trusty; urgency=medium
+
+  * Added support for Vector in portal interfaces.
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 01 Dec 2014 11:48:25 -0500
+
 connectal (14.11.6-2trusty3) trusty; urgency=low
 
   * Tweak install of pcieflat
