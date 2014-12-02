@@ -106,6 +106,7 @@ typedef struct PortalInternal {
     struct PortalInternal  *mux;
     int                    muxid;
     int                    busyType;
+    int                    sharedMem;
 #define BUSY_TIMEWAIT 0
 #define BUSY_SPIN     1
 #define BUSY_EXIT     2
@@ -213,18 +214,6 @@ extern PortalItemFunctions bsimfunc, hardwarefunc,
 #endif
 #ifdef __cplusplus
 #include "poller.h"
-template<int N, class B>
-class bsvvector {
-private:
-    B v[N];
-public:
-    B operator[] (int i) const {
-	return v[i];
-    }
-    B &operator[] (int i) {
-	return v[i];
-    }
-};
 #endif
 
 #define MAX_TIMERS 50
