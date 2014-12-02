@@ -15,13 +15,17 @@ Contents:
    :members:
    :undoc-members:
 
+
+.. cpp:class Portal
+
+
 .. bsv:interface:: Simple
 
-
-.. bsv:method:: say
+.. bsv:method:: Simple.say
      :returntype: Action
      :parameter: Bit#(32) v
                  Bit#(32) v2
+     :package: SimpleIF
 
      method content?
 
@@ -33,5 +37,6 @@ Indices and tables
 
 * :ref:`genindex`
 * :ref:`modindex`
+* :ref:`pkgindex`
 * :ref:`search`
 
