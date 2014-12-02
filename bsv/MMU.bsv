@@ -32,7 +32,7 @@ import MemTypes::*;
 import StmtFSM::*;
 import ClientServer::*;
 import ConnectalMemory::*;
-import ConnectalCompletionBuffer::**;
+import ConnectalCompletionBuffer::*;
 
 
 typedef 32 MaxNumSGLists;

@@ -29,7 +29,7 @@ import ClientServer::*;
 
 import ConnectalMemory::*;
 import MemTypes::*;
-import ConnectalCompletionBuffer::**;
+import ConnectalCompletionBuffer::*;
 
 import RingTypes::*;
 import RingBuffer::*;
