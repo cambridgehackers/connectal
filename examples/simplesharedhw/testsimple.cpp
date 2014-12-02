@@ -116,21 +116,6 @@ public:
     Simple(unsigned int id, unsigned int numtimes=1, PortalItemFunctions *item=0, void *param = 0) : SimpleWrapper(id, item, param), cnt(0), times(numtimes){}
 };
 
-int allocateShared(DmaManager *dma, MMURequestProxy *dmap, uint32_t interfaceId, PortalInternal *p, uint32_t size)
-{
-    int fd = portalAlloc(size);
-    fprintf(stderr, "%s:%d allocateShared pint=%p fd=%d\n", __FUNCTION__, __LINE__, p, fd);
-    p->map_base = (volatile unsigned int *)portalMmap(fd, size);
-    fprintf(stderr, "%s:%d pint=%p map_base=%p\n", __FILE__, __LINE__, p, p->map_base);
-    p->map_base[SHARED_LIMIT] = size/sizeof(uint32_t);
-    p->map_base[SHARED_WRITE] = SHARED_START;
-    p->map_base[SHARED_READ] = SHARED_START;
-    p->map_base[SHARED_START] = 0;
-    unsigned int ref = dma->reference(fd);
-    dmap->setInterface(interfaceId, ref);
-    return fd;
-}
-
 void dump_buf(volatile unsigned int *data, const char *name, int len)
 {
     int i = 0;
@@ -145,34 +130,22 @@ void dump_buf(volatile unsigned int *data, const char *name, int len)
 }
 int main(int argc, const char **argv)
 {
+    int verbose = 1;
+    int numtimes = 10;
     int alloc_sz = 4096;
     MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequest);
     DmaManager *dma = new DmaManager(dmap);
     MMUIndication *mIndication = new MMUIndication(dma, IfcNames_MMUIndication);
-    SharedMemoryPortalConfigProxy *reqConfig = new SharedMemoryPortalConfigProxy(IfcNames_ReqConfigWrapper);
-    SharedMemoryPortalConfigProxy *indConfig = new SharedMemoryPortalConfigProxy(IfcNames_IndConfigWrapper);
 
     portalExec_start();
 
-    int verbose = 1;
-    int numtimes = 10;
-    Simple *indication = new Simple(IfcNames_SimpleIndication, numtimes, &sharedfunc, NULL);
-    SimpleProxy *device = new SimpleProxy(IfcNames_SimpleRequest, &sharedfunc, NULL);
-
-    int reqfd = allocateShared(dma, dmap, IfcNames_SimpleRequest, &device->pint, alloc_sz);
-    unsigned int reqref = dma->reference(reqfd);
-    reqConfig->setSglId(reqref);
-
-    int indfd = allocateShared(dma, dmap, IfcNames_SimpleIndication, &indication->pint, alloc_sz);
-    unsigned int indref = dma->reference(indfd);
-    indConfig->setSglId(indref);
-
-#if 0
-    portalExec_stop();
-printf("[%s:%d] stop\n", __FUNCTION__, __LINE__); sleep(1);
-    dump_buf(device->pint.map_base, "Breq->map_base", 4);
-    dump_buf(indication->pint.map_base, "Bind->map_base", 8);
-#endif
+    PortalSharedParam param = {dma, alloc_sz};
+    Simple *indication = new Simple(IfcNames_SimpleIndication, numtimes, &sharedfunc, &param);
+    SimpleProxy *device = new SimpleProxy(IfcNames_SimpleRequest, &sharedfunc, &param);
+    SharedMemoryPortalConfigProxy *reqConfig = new SharedMemoryPortalConfigProxy(IfcNames_ReqConfigWrapper);
+    reqConfig->setSglId(device->pint.sharedMem);
+    SharedMemoryPortalConfigProxy *indConfig = new SharedMemoryPortalConfigProxy(IfcNames_IndConfigWrapper);
+    indConfig->setSglId(indication->pint.sharedMem);
 
     for (int i = 0; i < numtimes; i++) {
       if (verbose) fprintf(stderr, "Main::calling say1(%d)\n", v1a);
@@ -190,18 +163,6 @@ printf("[%s:%d] stop\n", __FUNCTION__, __LINE__); sleep(1);
       if (verbose) fprintf(stderr, "Main::calling say7(%08x, %08x)\n", s3.a, s3.e1);
       device->say7(s3);  
     }
-#if 0
-  fprintf(stderr, "Main::about to call portalExec_event\n");
-  dump_buf(device->pint.map_base, "Areq->map_base", 8);
-  dump_buf(indication->pint.map_base, "Aind->map_base", 4);
-  while(true){
-    dump_buf(device->pint.map_base, "req->map_base", 4);
-    dump_buf(indication->pint.map_base, "ind->map_base", 16);
-    did_nothing++;
-    portalExec_event();
-    if (did_nothing > 3) break;
-    sleep(2);
-  }
-#endif
-  sleep(10);
+  while(1)
+    sleep(10);
 }

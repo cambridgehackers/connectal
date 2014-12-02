@@ -106,6 +106,7 @@ typedef struct PortalInternal {
     struct PortalInternal  *mux;
     int                    muxid;
     int                    busyType;
+    int                    sharedMem;
 #define BUSY_TIMEWAIT 0
 #define BUSY_SPIN     1
 #define BUSY_EXIT     2

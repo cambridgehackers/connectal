@@ -51,8 +51,10 @@ static int init_shared(struct PortalInternal *pint, void *aparam)
         pint->map_base[SHARED_WRITE] = SHARED_START;
         pint->map_base[SHARED_READ] = SHARED_START;
         pint->map_base[SHARED_START] = 0;
-        if (param->dma)
-            MMURequest_setInterface(param->dma->priv.sglDevice, pint->fpga_number, param->dma->reference(fd));
+        if (param->dma) {
+            pint->sharedMem = param->dma->reference(fd);
+            MMURequest_setInterface(param->dma->priv.sglDevice, pint->fpga_number, pint->sharedMem);
+        }
     }
     return 0;
 }
