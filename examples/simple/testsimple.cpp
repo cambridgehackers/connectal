@@ -20,13 +20,11 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <assert.h>
 
 #include "Simple.h"
-#include "GeneratedTypes.h"
 
+#define NUMBER_OF_TESTS 8
 
 int v1a = 42;
 
@@ -55,7 +53,7 @@ class Simple : public SimpleWrapper
 public:
   uint32_t cnt;
   void incr_cnt(){
-    if (++cnt == 7)
+    if (++cnt == NUMBER_OF_TESTS)
       exit(0);
   }
   virtual void say1(uint32_t a) {
