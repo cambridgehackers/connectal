@@ -21,7 +21,6 @@ import os
 #sys.path.insert(0, os.path.abspath('.'))
 
 sys.path.insert(0, os.path.abspath('../../scripts'))
-sys.path.insert(0, os.path.abspath('../../cpp'))
 sys.path.insert(0, os.path.abspath('.'))
 
 # -- General configuration ------------------------------------------------
@@ -160,10 +159,10 @@ html_static_path = ['_static']
 #html_additional_pages = {}
 
 # If false, no module index is generated.
-#html_domain_indices = True
+html_domain_indices = True
 
 # If false, no index is generated.
-#html_use_index = True
+html_use_index = True
 
 # If true, the index is split into individual pages for each letter.
 #html_split_index = False
@@ -267,4 +266,3 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
 
-bsv_include_bsvs = True

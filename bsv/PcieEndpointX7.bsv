@@ -194,7 +194,16 @@ typedef struct {
 `ifdef Artix7
 typedef 4 PcieLanes;
 typedef 4 NumLeds;
-`else
+`endif
+`ifdef BOARD_zc706
+typedef 4 PcieLanes;
+typedef 4 NumLeds;
+`endif
+`ifdef BOARD_vc707
+typedef 8 PcieLanes;
+typedef 8 NumLeds;
+`endif
+`ifdef BOARD_kc705
 typedef 8 PcieLanes;
 typedef 8 NumLeds;
 `endif

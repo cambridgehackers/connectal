@@ -1,0 +1,22 @@
+
+CONNECTALDIR?=../..
+INTERFACES = Simple
+BSVFILES = SimpleIF.bsv Top.bsv
+CPPFILES=testsimple.cpp
+NUMBER_OF_MASTERS =0
+PIN_TYPE=ZynqPcie
+CONNECTALFLAGS += -D PcieHostIF=1 -D PCIE_NO_BSCAN=1 --bscflags="+RTS -K96000000 -RTS"
+CONNECTALFLAGS += --xci=$(CONNECTALDIR)/out/$(BOARD)/pcie_7x_0/pcie_7x_0.xci -C $(BOARD)/sources/zynqpcie.xdc
+CONNECTALFLAGS += -P mkPcieHostTopSynth -P mkMemSlaveEngine
+
+gentarget:: $(BOARD)/sources/zynqpcie.xdc
+
+prebuild:: synth-ip.tcl
+	(cd $(BOARD); vivado -mode batch -source ../synth-ip.tcl)
+
+$(BOARD)/sources/zynqpcie.xdc: zynqpcie.json $(CONNECTALDIR)/boardinfo/$(BOARD).json
+	mkdir -p $(BOARD)/sources
+	$(CONNECTALDIR)/scripts/generate-constraints.py $(CONNECTALDIR)/boardinfo/$(BOARD).json zynqpcie.json > $(BOARD)/sources/zynqpcie.xdc
+
+
+include $(CONNECTALDIR)/Makefile.connectal
