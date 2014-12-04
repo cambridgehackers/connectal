@@ -19,7 +19,7 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
-VERSION=14.12.2
+VERSION=14.12.2a
 
 export UDEV_RULES_DIR=/etc/udev/rules.d
 UDEV_RULES=$(shell ls etc/udev/rules.d)

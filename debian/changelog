@@ -1,3 +1,9 @@
+connectal (14.12.2-3trusty1) trusty; urgency=medium
+
+  * Fix include paths for dkms
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 04 Dec 2014 13:16:48 -0500
+
 connectal (14.12.2-2trusty1) trusty; urgency=medium
 
   * Bump kernel version to fix DKMS error
