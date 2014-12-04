@@ -2,7 +2,7 @@ Source: connectal
 Section: devel
 Priority: extra
 Maintainer: Jamey Hicks <jamey.hicks@gmail.com>
-Build-Depends: debhelper (>= 8.0.0), python (>= 2.7), python-ply, python-support (>= 0.90), dkms, connectal-zynq-linux-headers, gcc-arm-linux-gnueabi, cpp-arm-linux-gnueabi, libc6-dev-armel-cross
+Build-Depends: debhelper (>= 8.0.0), python (>= 2.7), python-ply, python-support (>= 0.90), dkms
 Standards-Version: 3.9.2
 Homepage: https://github.com/cambridgehackers/connectal
 #Vcs-Git: git://git.debian.org/collab-maint/connectal.git
@@ -22,12 +22,6 @@ Description: Software-driven hardware development framework
  from software to hardware are called requests and events from
  hardware to software are called indications, but in fact they are
  symmetric.
-
-Package: connectal-zynqdrivers
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: Connectal kernel modules for Zynq boards
- .
 
 Package: connectal-doc
 Section: doc

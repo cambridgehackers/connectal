@@ -1,3 +1,9 @@
+connectal (14.12.2-1wheezy1) wheezy; urgency=medium
+
+  * Removed zynqdrivers build and install until I find the cross arm toolchain for wheezy
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 04 Dec 2014 12:37:57 -0500
+
 connectal (14.12.2-1trusty1) trusty; urgency=medium
 
   * Fixed Vector compilation in C
