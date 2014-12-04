@@ -26,7 +26,7 @@ import FIFO::*;
 import BRAM::*;
 import DefaultValue::*;
 
-// portz libraries
+// Connectal libraries
 import Leds::*;
 import CtrlMux::*;
 import Portal::*;

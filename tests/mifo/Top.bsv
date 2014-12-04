@@ -23,7 +23,7 @@ import Vector::*;
 import FIFO::*;
 import Connectable::*;
 
-// portz libraries
+// Connectal libraries
 import CtrlMux::*;
 import Portal::*;
 import Leds::*;

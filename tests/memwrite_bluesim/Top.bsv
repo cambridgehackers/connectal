@@ -28,7 +28,7 @@ import ClientServer::*;
 import Connectable::*;
 import PCIE::*;
 
-// portz libraries
+// Connectal libraries
 import Leds::*;
 import CtrlMux::*;
 import Portal::*;

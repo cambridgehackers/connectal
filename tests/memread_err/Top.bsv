@@ -26,7 +26,7 @@ import Vector::*;
 import StmtFSM::*;
 import FIFO::*;
 
-// portz libraries
+// Connectal libraries
 import MemServer::*;
 import MMU::*;
 import CtrlMux::*;
