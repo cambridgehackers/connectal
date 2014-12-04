@@ -1,10 +1,10 @@
-connectal (14.12.2-3trusty1) trusty; urgency=medium
+connectal (14.12.2-4wheezy1) wheezy; urgency=medium
 
   * Fix include paths for dkms
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 04 Dec 2014 13:16:48 -0500
 
-connectal (14.12.2-2trusty1) trusty; urgency=medium
+connectal (14.12.2-2wheezy1) wheezy; urgency=medium
 
   * Bump kernel version to fix DKMS error
 
@@ -16,145 +16,145 @@ connectal (14.12.2-1wheezy1) wheezy; urgency=medium
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 04 Dec 2014 12:37:57 -0500
 
-connectal (14.12.2-1trusty1) trusty; urgency=medium
+connectal (14.12.2-1wheezy1) wheezy; urgency=medium
 
   * Fixed Vector compilation in C
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 02 Dec 2014 09:40:36 -0500
 
-connectal (14.12.1-1trusty1) trusty; urgency=medium
+connectal (14.12.1-1wheezy1) wheezy; urgency=medium
 
   * Added support for Vector in portal interfaces.
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 01 Dec 2014 11:48:25 -0500
 
-connectal (14.11.6-2trusty3) trusty; urgency=low
+connectal (14.11.6-2wheezy3) wheezy; urgency=low
 
   * Tweak install of pcieflat
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 24 Nov 2014 16:55:21 -0500
 
-connectal (14.11.6-1trusty1) trusty; urgency=low
+connectal (14.11.6-1wheezy1) wheezy; urgency=low
 
   * Updated to 14.11.6
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 24 Nov 2014 15:54:34 -0500
 
-connectal (14.11.5-1trusty1) trusty; urgency=low
+connectal (14.11.5-1wheezy1) wheezy; urgency=low
 
   * Updated to 14.11.5
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 18 Nov 2014 08:43:29 -0500
 
-connectal (14.11.4-1trusty1) trusty; urgency=low
+connectal (14.11.4-1wheezy1) wheezy; urgency=low
 
   * Updated to 14.11.4
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 17 Nov 2014 12:00:21 -0500
 
-connectal (14.11.3-2trusty2) trusty; urgency=low
+connectal (14.11.3-2wheezy2) wheezy; urgency=low
 
   * Updated to 14.11.3
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 14 Nov 2014 11:38:22 -0500
 
-connectal (14.11.2-1trusty1) trusty; urgency=low
+connectal (14.11.2-1wheezy1) wheezy; urgency=low
 
   * Update to 14.11.2
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 07 Nov 2014 09:07:26 -0500
 
-connectal (14.11.1-2trusty1) trusty; urgency=low
+connectal (14.11.1-2wheezy1) wheezy; urgency=low
 
   * Update install-dkms
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 06 Nov 2014 13:03:40 -0500
 
-connectal (14.11.1-1trusty1) trusty; urgency=low
+connectal (14.11.1-1wheezy1) wheezy; urgency=low
 
   * Updated to connectal 14.11.1
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 06 Nov 2014 11:35:05 -0500
 
-connectal (14.10.2-7trusty4) trusty; urgency=medium
+connectal (14.10.2-7wheezy4) wheezy; urgency=medium
 
   * Specify CROSS_COMPILE and add to arm-linux-gnueabi-gcc to Build-Depends
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 27 Oct 2014 08:27:24 -0400
 
-connectal (14.10.2-7trusty2) trusty; urgency=medium
+connectal (14.10.2-7wheezy2) wheezy; urgency=medium
 
   * Specify driver version
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Sat, 25 Oct 2014 14:34:22 -0400
 
-connectal (14.10.2-6trusty1) trusty; urgency=medium
+connectal (14.10.2-6wheezy1) wheezy; urgency=medium
 
   * Added the build depdences on zynqdrivers and zynqdrivers-install
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 24 Oct 2014 16:19:17 -0400
 
-connectal (14.10.2-5trusty1) trusty; urgency=medium
+connectal (14.10.2-5wheezy1) wheezy; urgency=medium
 
   * Build zynqdrivers and package in connectal-zynqdrivers
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 24 Oct 2014 13:23:21 -0400
 
-connectal (14.10.2-4trusty1) trusty; urgency=medium
+connectal (14.10.2-4wheezy1) wheezy; urgency=medium
 
   * Depend on fpgamake, buildcache, and fpgajtag
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 23 Oct 2014 14:09:00 -0400
 
-connectal (14.10.2-3trusty1) trusty; urgency=medium
+connectal (14.10.2-3wheezy1) wheezy; urgency=medium
 
   * Fix DKMS install
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 23 Oct 2014 12:26:54 -0400
 
-connectal (14.10.2-2trusty1) trusty; urgency=high
+connectal (14.10.2-2wheezy1) wheezy; urgency=high
 
   * Depends on vim for xxd
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 23 Oct 2014 11:18:06 -0400
 
-connectal (14.10.2-1trusty1) trusty; urgency=high
+connectal (14.10.2-1wheezy1) wheezy; urgency=high
 
   * Updated to 14.10.2
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 23 Oct 2014 11:15:16 -0400
 
-connectal (14.10.01-5trusty1) trusty; urgency=low
+connectal (14.10.01-5wheezy1) wheezy; urgency=low
 
   * DKMS
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 23 Oct 2014 09:09:02 -0400
 
-connectal (14.10.01-4trusty2) trusty; urgency=low
+connectal (14.10.01-4wheezy2) wheezy; urgency=low
 
   * Do not build kernel modules
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 22 Oct 2014 17:43:44 -0400
 
-connectal (14.10.01-3trusty1) trusty; urgency=low
+connectal (14.10.01-3wheezy1) wheezy; urgency=low
 
   * Depends on python-ply
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 22 Oct 2014 17:29:22 -0400
 
-connectal (14.10.01-2trusty2) trusty; urgency=low
+connectal (14.10.01-2wheezy2) wheezy; urgency=low
 
   * Include the source tarball
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 22 Oct 2014 08:11:22 -0400
 
-connectal (14.10.01-2trusty1) trusty; urgency=low
+connectal (14.10.01-2wheezy1) wheezy; urgency=low
 
   * Missed some files
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 21 Oct 2014 16:44:23 -0400
 
-connectal (14.10.01-1trusty1) trusty; urgency=low
+connectal (14.10.01-1wheezy1) wheezy; urgency=low
 
   * Initial release
 
