@@ -1,3 +1,9 @@
+connectal (14.12.2-2trusty1) trusty; urgency=medium
+
+  * Bump kernel version to fix DKMS error
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 04 Dec 2014 12:59:07 -0500
+
 connectal (14.12.2-1wheezy1) wheezy; urgency=medium
 
   * Removed zynqdrivers build and install until I find the cross arm toolchain for wheezy
