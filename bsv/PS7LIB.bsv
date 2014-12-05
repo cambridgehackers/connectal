@@ -812,12 +812,20 @@ module mkPS7(PS7);
 
    ClockGenerator7Params clockParams = defaultValue;
    // input clock 200MHz for speed grade -2, 100MHz for speed grade -1
-   // Muliplying by 6.0 keeps the clock in the required range 600MHz - 1200MHz for either input clock
+   // fpll needs to be in the range 600MHz - 1200MHz for either input clock
+   //
+   // fclkin = 1e9 / mainClockPeriod
+   // fpll = 1e9 = mult_f * 1e9 / mainClockPeriod
+   // mult_f = mainClockPeriod
+   //
+   // fclkout0 = 1e9 / divide_f = 1e9 / derivedClockPeriod
+   // divide_f = derivedClockPeriod
+   //
    clockParams.clkfbout_mult_f       = mainClockPeriod;
    clockParams.clkfbout_phase     = 0.0;
    clockParams.clkfbout_phase     = 0.0;
    clockParams.clkin1_period      = mainClockPeriod;
-   clockParams.clkout0_divide_f   = mainClockPeriod/derivedClockPeriod;
+   clockParams.clkout0_divide_f   = derivedClockPeriod;
    clockParams.clkout0_duty_cycle = 0.5;
    clockParams.clkout0_phase      = 0.0000;
    clockParams.clkout0_buffer     = True;
