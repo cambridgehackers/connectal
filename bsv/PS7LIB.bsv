@@ -789,8 +789,8 @@ interface PS7;
     interface Vector#(4, Clock) fclkclk;
     interface Vector#(4, Reset) fclkreset;
     interface Vector#(2, Pps7Emioi2c)  i2c;
-    interface Clock doubleClock;
-    interface Reset doubleReset;
+    interface Clock derivedClock;
+    interface Reset derivedReset;
 endinterface
 
 module mkPS7(PS7);
@@ -822,9 +822,9 @@ module mkPS7(PS7);
    clockParams.clkout0_buffer     = True;
    clockParams.clkin_buffer = False;
    ClockGenerator7   clockGen <- mkClockGenerator7(clockParams, clocked_by single_clock, reset_by single_reset);
-   let double_clock = clockGen.clkout0;
-   let double_reset_unbuffered <- mkAsyncReset(2, single_reset, double_clock);
-   let double_reset <- mkResetBUFG(clocked_by double_clock, reset_by double_reset_unbuffered);
+   let derived_clock = clockGen.clkout0;
+   let derived_reset_unbuffered <- mkAsyncReset(2, single_reset, derived_clock);
+   let derived_reset <- mkResetBUFG(clocked_by derived_clock, reset_by derived_reset_unbuffered);
 
    PS7LIB ps7 <- mkPS7LIB(single_clock, single_reset, clocked_by single_clock, reset_by single_reset);
 
@@ -872,8 +872,8 @@ module mkPS7(PS7);
     interface AxiSlaveHighSpeed s_axi_hp = ps7.s_axi_hp;
     interface fclkclk = fclk;
     interface fclkreset = freset;
-    interface doubleClock = double_clock;
-    interface doubleReset = double_reset;
+    interface derivedClock = derived_clock;
+    interface derivedReset = derived_reset;
     method Action interrupt(Bit#(1) v);
         ps7.irq.f2p({19'b0, v});
     endmethod

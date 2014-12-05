@@ -43,8 +43,8 @@ interface BsimHost#(numeric type clientAddrWidth, numeric type clientBusWidth, n
 		    numeric type nSlaves);
    interface PhysMemMaster#(clientAddrWidth, clientBusWidth)  mem_client;
    interface Vector#(nSlaves,PhysMemSlave#(serverAddrWidth,  serverBusWidth))  mem_servers;
-   interface Clock doubleClock;
-   interface Reset doubleReset;
+   interface Clock derivedClock;
+   interface Reset derivedReset;
 endinterface
 
 typedef BsimHost#(32,32,12,40,DataBusWidth,6,NumberOfMasters) HostType;
@@ -93,8 +93,8 @@ interface PcieHostTop;
 `endif
    interface Clock portalClock;
    interface Reset portalReset;
-   interface Clock doubleClock;
-   interface Reset doubleReset;
+   interface Clock derivedClock;
+   interface Reset derivedReset;
 endinterface
 `endif
 
@@ -111,8 +111,8 @@ interface HostType;
     interface PS7 ps7;
     interface Clock portalClock;
     interface Reset portalReset;
-    interface Clock doubleClock;
-    interface Reset doubleReset;
+    interface Clock derivedClock;
+    interface Reset derivedReset;
     interface BscanTop bscan;
 endinterface
 

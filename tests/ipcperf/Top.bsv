@@ -56,7 +56,7 @@ module mkConnectalTop#(HostType host)(StdConnectalTop#(PhysAddrWidth));
    IpcTestRequestWrapper echoRequestWrapper <- mkIpcTestRequestWrapper(IpcTestRequest,echoRequestInternal.ifc);
    
    // let cnt0 <- mkCntr(0);
-   // let cnt1 <- mkCntr(1, clocked_by host.doubleClock, reset_by host.doubleReset);
+   // let cnt1 <- mkCntr(1, clocked_by host.derivedClock, reset_by host.derivedReset);
 
    Vector#(2,StdPortal) portals;
    portals[0] = echoRequestWrapper.portalIfc; 

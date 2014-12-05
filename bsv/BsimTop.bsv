@@ -312,7 +312,7 @@ module mkBsimDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
 endmodule
 
 
-module  mkBsimHost#(Clock double_clock, Reset double_reset)(BsimHost#(clientAddrWidth, clientBusWidth, clientIdWidth,
+module  mkBsimHost#(Clock derived_clock, Reset derived_reset)(BsimHost#(clientAddrWidth, clientBusWidth, clientIdWidth,
 			      serverAddrWidth, serverBusWidth, serverIdWidth,
 			      nSlaves))
    provisos (SelectBsimRdmaReadWrite#(serverBusWidth),
@@ -324,19 +324,19 @@ module  mkBsimHost#(Clock double_clock, Reset double_reset)(BsimHost#(clientAddr
 
    interface mem_servers = servers;
    interface PhysMemMaster mem_client = crw;
-   interface doubleClock = double_clock;
-   interface doubleReset = double_reset;
+   interface derivedClock = derived_clock;
+   interface derivedReset = derived_reset;
 endmodule
 
 module  mkBsimTop(Empty)
    provisos (SelectBsimRdmaReadWrite#(DataBusWidth));
    let divider <- mkClockDivider(2);
-   Clock doubleClock = divider.fastClock;
+   Clock derivedClock = divider.fastClock;
    Clock singleClock = divider.slowClock;
-   Reset doubleReset <- exposeCurrentReset;
+   Reset derivedReset <- exposeCurrentReset;
    let single_reset <- mkReset(2, True, singleClock);
    Reset singleReset = single_reset.new_rst;
-   BsimHost#(32,32,12,PhysAddrWidth,DataBusWidth,6,NumberOfMasters) host <- mkBsimHost(clocked_by singleClock, reset_by singleReset, doubleClock, doubleReset);
+   BsimHost#(32,32,12,PhysAddrWidth,DataBusWidth,6,NumberOfMasters) host <- mkBsimHost(clocked_by singleClock, reset_by singleReset, derivedClock, derivedReset);
    ConnectalTop#(PhysAddrWidth,DataBusWidth,PinType,NumberOfMasters) top <- mkConnectalTop(
 `ifdef IMPORT_HOSTIF
        host,
