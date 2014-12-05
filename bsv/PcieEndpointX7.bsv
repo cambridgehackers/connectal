@@ -19,7 +19,9 @@ import FIFO              ::*;
 import FIFOF             ::*;
 import SpecialFIFOs      ::*;
 import ClientServer      ::*;
+import Real              ::*;
 
+import ConnectalClocks   ::*;
 import ConnectalXilinxCells   ::*;
 import XilinxCells       ::*;
 import PCIE              ::*;
@@ -176,6 +178,8 @@ interface PcieEndpointX7#(numeric type lanes);
    interface Reset epReset125;
    interface Clock epClock250;
    interface Reset epReset250;
+   interface Clock epDerivedClock;
+   interface Reset epDerivedReset;
 endinterface
 
 typedef struct {
@@ -229,7 +233,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    clockParams.clkout1_divide     = 4;
    clockParams.clkout1_duty_cycle = 0.5;
    clockParams.clkout1_phase      = 0.0000;
-   clockParams.clkout2_divide     = 4;
+   clockParams.clkout2_divide     = round(derivedClockPeriod);
    clockParams.clkout2_duty_cycle = 0.5;
    clockParams.clkout2_phase      = 0.0000;
    clockParams.divclk_divide      = 1;
@@ -339,6 +343,8 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    ClockGenerator7           clkgen <- mkClockGenerator7(clkgenParams, clocked_by clock250, reset_by user_reset_n);
    Clock clock125 = clkgen.clkout0; /* half speed user_clk */
    Reset reset125 <- mkAsyncReset(4, user_reset_n, clock125);
+   Clock derivedClock = clkgen.clkout2;
+   Reset derivedReset <- mkAsyncReset(4, user_reset_n, derivedClock);
 
    Server#(TLPData#(8), TLPData#(8)) tlp8 = (interface Server;
 						interface Put request;
@@ -384,6 +390,8 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    interface Reset epReset125 = reset125;
    interface Clock epClock250 = clock250;
    interface Reset epReset250 = reset250;
+   interface Clock epDerivedClock = derivedClock;
+   interface Reset epDerivedReset = derivedReset;
 endmodule: mkPcieEndpointX7
 
 endpackage: PcieEndpointX7

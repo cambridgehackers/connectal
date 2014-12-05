@@ -35,6 +35,7 @@ import AxiMasterSlave::*;
 import AxiDma::*;
 import XilinxCells::*;
 import ConnectalXilinxCells::*;
+import ConnectalClocks::*;
 
 interface AxiMasterCommon;
     method Bit#(1)            aresetn();
@@ -812,11 +813,11 @@ module mkPS7(PS7);
    ClockGenerator7Params clockParams = defaultValue;
    // input clock 200MHz for speed grade -2, 100MHz for speed grade -1
    // Muliplying by 6.0 keeps the clock in the required range 600MHz - 1200MHz for either input clock
-   clockParams.clkfbout_mult_f       = 6.000;
+   clockParams.clkfbout_mult_f       = mainClockPeriod;
    clockParams.clkfbout_phase     = 0.0;
    clockParams.clkfbout_phase     = 0.0;
-   clockParams.clkin1_period      = 5.000;
-   clockParams.clkout0_divide_f   = 3.000;
+   clockParams.clkin1_period      = mainClockPeriod;
+   clockParams.clkout0_divide_f   = mainClockPeriod/derivedClockPeriod;
    clockParams.clkout0_duty_cycle = 0.5;
    clockParams.clkout0_phase      = 0.0000;
    clockParams.clkout0_buffer     = True;
