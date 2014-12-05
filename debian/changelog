@@ -1,3 +1,9 @@
+connectal (14.12.3-1trusty1) trusty; urgency=medium
+
+  * Added support for setting derivedClock frequency
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 05 Dec 2014 16:24:47 -0500
+
 connectal (14.12.2-4wheezy1) wheezy; urgency=medium
 
   * Fix include paths for dkms
