@@ -311,9 +311,9 @@ module  mkDmaMatrixMultiply#(MemReadServer#(TMul#(N,32)) sA,
    let defaultClock <- exposeCurrentClock();
    let defaultReset <- exposeCurrentReset();
 
-   let doubleClock = host.doubleClock;
+   let derivedClock = host.derivedClock;
    let currentReset <- exposeCurrentReset;
-   let doubleReset <- mkAsyncReset(2, currentReset, doubleClock);
+   let derivedReset <- mkAsyncReset(2, currentReset, derivedClock);
 
    Reg#(UInt#(32)) cycles <- mkReg(0);
    Reg#(MatrixDescriptor#(UInt#(addrwidth))) descriptorC <- mkReg(unpack(0));
@@ -327,25 +327,25 @@ module  mkDmaMatrixMultiply#(MemReadServer#(TMul#(N,32)) sA,
    RowColSource#(TMul#(N,32), Vector#(N,MmToken)) sourceB <- mkRowSource(sB, numRowsBReg, 1);
    RowColSink#(TMul#(N,32),   Vector#(N,MmToken))    sink <- mkRowColSink(ss, 0);
 
-   PipeOut#(MmToken) aPipe <- mkFunnelGB1(defaultClock, defaultReset, doubleClock, doubleReset, sourceA.pipe);
-   UnFunnelPipe#(1,J,MmToken,1) aPipes <- mkUnFunnelPipesPipelinedRR(clocked_by doubleClock, reset_by doubleReset, cons(aPipe,nil), 1);
-   PipeOut#(MmToken) bFunnel <- mkFunnelGB1(defaultClock, defaultReset, doubleClock, doubleReset, sourceB.pipe);
-   Vector#(J, PipeOut#(MmToken)) bPipes <- mkForkVector(bFunnel, clocked_by doubleClock, reset_by doubleReset);
+   PipeOut#(MmToken) aPipe <- mkFunnelGB1(defaultClock, defaultReset, derivedClock, derivedReset, sourceA.pipe);
+   UnFunnelPipe#(1,J,MmToken,1) aPipes <- mkUnFunnelPipesPipelinedRR(clocked_by derivedClock, reset_by derivedReset, cons(aPipe,nil), 1);
+   PipeOut#(MmToken) bFunnel <- mkFunnelGB1(defaultClock, defaultReset, derivedClock, derivedReset, sourceB.pipe);
+   Vector#(J, PipeOut#(MmToken)) bPipes <- mkForkVector(bFunnel, clocked_by derivedClock, reset_by derivedReset);
    
    rule countCycles;
       cycles <= cycles+1;
    endrule
 
    UInt#(TAdd#(TLog#(K),1)) repetitions = fromInteger(valueOf(K));
-   Vector#(J, PipeOut#(MmToken)) aRepeaters <- mapM(mkRepeat(repetitions), aPipes, clocked_by doubleClock, reset_by doubleReset);
+   Vector#(J, PipeOut#(MmToken)) aRepeaters <- mapM(mkRepeat(repetitions), aPipes, clocked_by derivedClock, reset_by derivedReset);
 
-   Vector#(T, MmTile) mmTiles <- mapM(mkMmTile(defaultClock, defaultReset), map(fromInteger,genVector), clocked_by doubleClock, reset_by doubleReset);
+   Vector#(T, MmTile) mmTiles <- mapM(mkMmTile(defaultClock, defaultReset), map(fromInteger,genVector), clocked_by derivedClock, reset_by derivedReset);
    Vector#(J, PipeOut#(Vector#(N,MmToken))) fxpipes;
    for (Integer t = 0; t < valueOf(T); t = t+1) begin
       for (Integer i = 0; i < valueof(RowsPerTile); i = i+1) begin
    	 let j = t*valueOf(RowsPerTile) + i;
-   	 mkConnection(toGet(aRepeaters[j]), mmTiles[t].aInputs[i], clocked_by doubleClock, reset_by doubleReset);
-   	 mkConnection(toGet(bPipes[j]), mmTiles[t].bInputs[i], clocked_by doubleClock, reset_by doubleReset);
+   	 mkConnection(toGet(aRepeaters[j]), mmTiles[t].aInputs[i], clocked_by derivedClock, reset_by derivedReset);
+   	 mkConnection(toGet(bPipes[j]), mmTiles[t].bInputs[i], clocked_by derivedClock, reset_by derivedReset);
    	 fxpipes[j] = mmTiles[t].fxPipes[i];
       end
    end
@@ -402,7 +402,7 @@ module  mkDmaMatrixMultiply#(MemReadServer#(TMul#(N,32)) sA,
    endrule
 
    function PipeOut#(Bit#(32)) mmTileMacCount(MmTile mmtile); return mmtile.debug.macCount; endfunction
-   Vector#(T, PipeOut#(Vector#(2,Bit#(32)))) macCountPipes <- mapM(mkUnfunnelGB(defaultClock, defaultReset, doubleClock, doubleReset),
+   Vector#(T, PipeOut#(Vector#(2,Bit#(32)))) macCountPipes <- mapM(mkUnfunnelGB(defaultClock, defaultReset, derivedClock, derivedReset),
 								   map(mapPipe(replicate),
 								       map(mmTileMacCount, mmTiles)));
    PipeOut#(Bit#(32)) macCountPipe <- mkReducePipes(uncurry(add), map(mapPipe(head),macCountPipes));

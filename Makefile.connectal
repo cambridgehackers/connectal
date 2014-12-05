@@ -62,8 +62,26 @@ endif
 ifndef PIN_TYPE
 PIN_TYPE=Empty
 endif
+ifndef MAIN_CLOCK_PERIOD
+    ifeq ($(BOARD),vc707)
+    MAIN_CLOCK_PERIOD=8
+    endif
+    ifeq ($(BOARD),kc705)
+    MAIN_CLOCK_PERIOD=8
+    endif
+    ifeq ($(BOARD),zc706)
+    MAIN_CLOCK_PERIOD=5
+    endif
+    ifndef MAIN_CLOCK_PERIOD
+    MAIN_CLOCK_PERIOD=10
+    endif
+endif
+ifndef DERIVED_CLOCK_PERIOD
+DERIVED_CLOCK_PERIOD=$(MAIN_CLOCK_PERIOD)
+endif
 
-CONNECTALFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) -D PinType=$(PIN_TYPE) --ipdir=$(IPDIR)
+CONNECTALFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) -D PinType=$(PIN_TYPE) -D MainClockPeriod=$(MAIN_CLOCK_PERIOD) -D DerivedClockPeriod=$(DERIVED_CLOCK_PERIOD)
+CONNECTALFLAGS += --ipdir=$(IPDIR)
 
 ifneq ($(NUMBER_OF_MASTERS), 0)
 INTERFACES += MemServerRequest MMURequest MemServerIndication MMUIndication

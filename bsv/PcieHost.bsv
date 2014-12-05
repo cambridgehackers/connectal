@@ -198,8 +198,8 @@ module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p
    //once the dot product server makes timing, replace epClock125 with ep7.epclock250
    interface portalClock = portalClock_;
    interface portalReset = portalReset_;
-   interface doubleClock = epClock250;
-   interface doubleReset = epReset250;
-      
+   interface derivedClock = ep7.epDerivedClock;
+   interface derivedReset = ep7.epDerivedReset;
+
 endmodule
 `endif

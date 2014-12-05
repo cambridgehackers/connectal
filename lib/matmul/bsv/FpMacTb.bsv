@@ -30,7 +30,7 @@ import GetPut::*;
 import DefaultValue::*;
 import FIFOF::*;
 
-// portz libraries
+// Connectal libraries
 import RbmTypes::*;
 import FpMac::*;
 import FloatOps::*;
