@@ -233,7 +233,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    clockParams.clkout1_divide     = 4;
    clockParams.clkout1_duty_cycle = 0.5;
    clockParams.clkout1_phase      = 0.0000;
-   clockParams.clkout2_divide     = round(derivedClockPeriod);
+   clockParams.clkout2_divide     = 4;
    clockParams.clkout2_duty_cycle = 0.5;
    clockParams.clkout2_phase      = 0.0000;
    clockParams.divclk_divide      = 1;
@@ -336,14 +336,18 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    Reset reset250 <- mkAsyncReset(4, user_reset_n, clock250);
 
    ClockGenerator7Params     clkgenParams = defaultValue;
+   clkgenParams.clkin1_period    = 4.000; //  250MHz
    clkgenParams.clkin1_period    = 4.000;
    clkgenParams.clkin_buffer     = False;
-   clkgenParams.clkfbout_mult_f  = 4.000;
-   clkgenParams.clkout0_divide_f = 8.000;
+   clkgenParams.clkfbout_mult_f  = 4.000; // 1000MHz
+   clkgenParams.clkout0_divide_f = 8.000; //  125MHz
+   clkgenParams.clkout1_divide     = round(derivedClockPeriod);
+   clkgenParams.clkout1_duty_cycle = 0.5;
+   clkgenParams.clkout1_phase      = 0.0000;
    ClockGenerator7           clkgen <- mkClockGenerator7(clkgenParams, clocked_by clock250, reset_by user_reset_n);
    Clock clock125 = clkgen.clkout0; /* half speed user_clk */
    Reset reset125 <- mkAsyncReset(4, user_reset_n, clock125);
-   Clock derivedClock = clkgen.clkout2;
+   Clock derivedClock = clkgen.clkout1;
    Reset derivedReset <- mkAsyncReset(4, user_reset_n, derivedClock);
 
    Server#(TLPData#(8), TLPData#(8)) tlp8 = (interface Server;
