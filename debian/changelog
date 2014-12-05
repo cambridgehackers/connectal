@@ -1,4 +1,4 @@
-connectal (14.12.3-1trusty1) trusty; urgency=medium
+connectal (14.12.3-2trusty1) trusty; urgency=medium
 
   * Added support for setting derivedClock frequency
 
