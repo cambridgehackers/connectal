@@ -27,6 +27,7 @@ import os
 import socket
 import subprocess
 import sys
+import discover
 
 scriptdir=os.path.dirname(sys.argv[0])
 sys.path.append(scriptdir)
