@@ -43,15 +43,21 @@ interface BsimHost#(numeric type clientAddrWidth, numeric type clientBusWidth, n
 		    numeric type nSlaves);
    interface PhysMemMaster#(clientAddrWidth, clientBusWidth)  mem_client;
    interface Vector#(nSlaves,PhysMemSlave#(serverAddrWidth,  serverBusWidth))  mem_servers;
-   interface Clock doubleClock;
-   interface Reset doubleReset;
+   interface Clock derivedClock;
+   interface Reset derivedReset;
 endinterface
 
 typedef BsimHost#(32,32,12,40,DataBusWidth,6,NumberOfMasters) HostType;
 `endif
 
 ////////////////////////////// PciE /////////////////////////////////
+`ifndef PcieHostIF
 `ifdef PcieHostTypeIF
+`define PcieHostIF
+`endif
+`endif
+
+`ifdef PcieHostIF
 
 import Vector            :: *;
 import GetPut            :: *;
@@ -65,10 +71,11 @@ import Bscan             :: *;
 import PcieEndpointX7    :: *;
 `endif
 
+typedef 40 PciePhysAddrWidth;
 interface PcieHost#(numeric type dsz, numeric type nSlaves);
    interface Vector#(16,ReadOnly_MSIX_Entry)     msixEntry;
    interface PhysMemMaster#(32,32)                   master;
-   interface Vector#(nSlaves,PhysMemSlave#(40,dsz))  slave;
+   interface Vector#(nSlaves,PhysMemSlave#(PciePhysAddrWidth,dsz))  slave;
    interface Put#(Tuple2#(Bit#(64),Bit#(32)))    interruptRequest;
    interface Client#(TLPData#(16), TLPData#(16)) pci;
    interface BscanTop bscanif;
@@ -86,10 +93,12 @@ interface PcieHostTop;
 `endif
    interface Clock portalClock;
    interface Reset portalReset;
-   interface Clock doubleClock;
-   interface Reset doubleReset;
+   interface Clock derivedClock;
+   interface Reset derivedReset;
 endinterface
+`endif
 
+`ifdef PcieHostTypeIF
 typedef PcieHostTop HostType;
 `endif
 
@@ -102,8 +111,8 @@ interface HostType;
     interface PS7 ps7;
     interface Clock portalClock;
     interface Reset portalReset;
-    interface Clock doubleClock;
-    interface Reset doubleReset;
+    interface Clock derivedClock;
+    interface Reset derivedReset;
     interface BscanTop bscan;
 endinterface
 

@@ -320,9 +320,9 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
    let defaultClock <- exposeCurrentClock();
    let defaultReset <- exposeCurrentReset();
 
-   let doubleClock = host.doubleClock;
+   let derivedClock = host.derivedClock;
    let currentReset <- exposeCurrentReset;
-   let doubleReset <- mkAsyncReset(2, currentReset, doubleClock);
+   let derivedReset <- mkAsyncReset(2, currentReset, derivedClock);
 
    Reg#(UInt#(32)) cycles <- mkReg(0);
    Reg#(Bool) doneReg <- mkReg(False);
@@ -337,25 +337,25 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
    Vector#(J, RowColSource#(TMul#(N,32), Vector#(N,MmToken))) sourceA <- mapM(mkRowSource, sA);
    Vector#(K, RowColSource#(TMul#(N,32), Vector#(N,MmToken))) sourceB <- mapM(mkColSource, sB);
    Vector#(J, RowColSink#(TMul#(N,32),   Vector#(N,MmToken))) sinks   <- mapM(mkRowColSink,ss);
-   Vector#(J, PipeOut#(MmToken))       aPipes <- mapM(mkFunnelGB1(defaultClock, defaultReset, doubleClock, doubleReset), map(getRowColSourcePipe, sourceA));
-   Vector#(K, PipeOut#(MmToken))       bPipes <- mapM(mkFunnelGB1(defaultClock, defaultReset, doubleClock, doubleReset), map(getRowColSourcePipe, sourceB));
-   PipeOut#(MmToken)                  bFunnel <- mkFunnelPipes1(bPipes, clocked_by doubleClock, reset_by doubleReset);
-   Vector#(J, PipeOut#(MmToken)) bFunnelPipes <- mkForkVector(bFunnel, clocked_by doubleClock, reset_by doubleReset);
+   Vector#(J, PipeOut#(MmToken))       aPipes <- mapM(mkFunnelGB1(defaultClock, defaultReset, derivedClock, derivedReset), map(getRowColSourcePipe, sourceA));
+   Vector#(K, PipeOut#(MmToken))       bPipes <- mapM(mkFunnelGB1(defaultClock, defaultReset, derivedClock, derivedReset), map(getRowColSourcePipe, sourceB));
+   PipeOut#(MmToken)                  bFunnel <- mkFunnelPipes1(bPipes, clocked_by derivedClock, reset_by derivedReset);
+   Vector#(J, PipeOut#(MmToken)) bFunnelPipes <- mkForkVector(bFunnel, clocked_by derivedClock, reset_by derivedReset);
 
    rule countCycles;
       cycles <= cycles+1;
    endrule
 
    UInt#(TAdd#(TLog#(K),1)) repetitions = fromInteger(valueOf(K));
-   Vector#(J, PipeOut#(MmToken)) aRepeaters <- mapM(mkRepeat(repetitions), aPipes, clocked_by doubleClock, reset_by doubleReset);
+   Vector#(J, PipeOut#(MmToken)) aRepeaters <- mapM(mkRepeat(repetitions), aPipes, clocked_by derivedClock, reset_by derivedReset);
 
-   Vector#(T, MmTile) mmTiles <- mapM(mkMmTile(defaultClock, defaultReset), map(fromInteger,genVector), clocked_by doubleClock, reset_by doubleReset);
+   Vector#(T, MmTile) mmTiles <- mapM(mkMmTile(defaultClock, defaultReset), map(fromInteger,genVector), clocked_by derivedClock, reset_by derivedReset);
    Vector#(J, PipeOut#(Vector#(N,MmToken))) fxpipes;
    for (Integer t = 0; t < valueOf(T); t = t+1) begin
       for (Integer i = 0; i < valueof(RowsPerTile); i = i+1) begin
 	 let j = t*valueOf(RowsPerTile) + i;
-	 mkConnection(toGet(aRepeaters[j]), mmTiles[t].aInputs[i], clocked_by doubleClock, reset_by doubleReset);
-	 mkConnection(toGet(bFunnelPipes[j]), mmTiles[t].bInputs[i], clocked_by doubleClock, reset_by doubleReset);
+	 mkConnection(toGet(aRepeaters[j]), mmTiles[t].aInputs[i], clocked_by derivedClock, reset_by derivedReset);
+	 mkConnection(toGet(bFunnelPipes[j]), mmTiles[t].bInputs[i], clocked_by derivedClock, reset_by derivedReset);
 	 fxpipes[j] = mmTiles[t].fxPipes[i];
       end
    end
@@ -498,7 +498,7 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
   endrule
 
    function PipeOut#(Bit#(32)) mmTileMacCount(MmTile mmtile); return mmtile.debug.macCount; endfunction
-   Vector#(T, PipeOut#(Vector#(2,Bit#(32)))) macCountPipes <- mapM(mkUnfunnelGB(defaultClock, defaultReset, doubleClock, doubleReset),
+   Vector#(T, PipeOut#(Vector#(2,Bit#(32)))) macCountPipes <- mapM(mkUnfunnelGB(defaultClock, defaultReset, derivedClock, derivedReset),
 								   map(mapPipe(replicate),
 								       map(mmTileMacCount, mmTiles)));
    PipeOut#(Bit#(32)) macCountPipe <- mkReducePipes(uncurry(add), map(mapPipe(head),macCountPipes));

@@ -28,10 +28,13 @@
 #include "StdDmaIndication.h"
 #include "dmaManager.h"
 #include "SharedMemoryPortalConfig.h"
-
 #include "Simple.h"
-#include "GeneratedTypes.h"
 
+#if 1
+#define TEST_ASSERT(A) assert(A)
+#else
+#define TEST_ASSERT(A) {}
+#endif
 
 int v1a = 42;
 
@@ -54,6 +57,7 @@ uint32_t v7a = 0xDADADADA;
 E1 v7b = E1_E1Choice2;
 S3 s3 = { a: v7a, e1: v7b };
 
+int did_nothing;
 
 class Simple : public SimpleWrapper
 {  
@@ -61,96 +65,87 @@ public:
   uint32_t cnt;
   uint32_t times;
   void incr_cnt(){
+    did_nothing = 0;
     if (++cnt == 7*times)
       exit(0);
   }
   virtual void say1(uint32_t a) {
     fprintf(stderr, "say1(%d)\n", a);
-    assert(a == v1a);
+    TEST_ASSERT(a == v1a);
     incr_cnt();
   }
   virtual void say2(uint32_t a, uint32_t b) {
     fprintf(stderr, "say2(%d %d)\n", a, b);
-    assert(a == v2a);
-    assert(b == v2b);
+    TEST_ASSERT(a == v2a);
+    TEST_ASSERT(b == v2b);
     incr_cnt();
   }
   virtual void say3(S1 s){
     fprintf(stderr, "say3(S1{a:%d,b:%d})\n", s.a, s.b);
-    assert(s.a == s1.a);
-    assert(s.b == s1.b);
+    TEST_ASSERT(s.a == s1.a);
+    TEST_ASSERT(s.b == s1.b);
     incr_cnt();
   }
   virtual void say4(S2 s){
     fprintf(stderr, "say4(S2{a:%d,b:%d,c:%d})\n", s.a,s.b,s.c);
-    assert(s.a == s2.a);
-    assert(s.b == s2.b);
-    assert(s.c == s2.c);
+    TEST_ASSERT(s.a == s2.a);
+    TEST_ASSERT(s.b == s2.b);
+    TEST_ASSERT(s.c == s2.c);
     incr_cnt();
   }
   virtual void say5(uint32_t a, uint64_t b, uint32_t c) {
     fprintf(stderr, "say5(%08x, %016llx, %08x)\n", a, (long long)b, c);
-    assert(a == v5a);
-    assert(b == v5b);
-    assert(c == v5c);
+    TEST_ASSERT(a == v5a);
+    TEST_ASSERT(b == v5b);
+    TEST_ASSERT(c == v5c);
     incr_cnt();
   }
   virtual void say6(uint32_t a, uint64_t b, uint32_t c) {
     fprintf(stderr, "say6(%08x, %016llx, %08x)\n", a, (long long)b, c);
-    assert(a == v6a);
-    assert(b == v6b);
-    assert(c == v6c);
+    TEST_ASSERT(a == v6a);
+    TEST_ASSERT(b == v6b);
+    TEST_ASSERT(c == v6c);
     incr_cnt();
   }
   virtual void say7(S3 v) {
     fprintf(stderr, "say7(%08x, %08x)\n", v.a, v.e1);
-    assert(v.a == v7a);
-    assert(v.e1 == v7b);
+    TEST_ASSERT(v.a == v7a);
+    TEST_ASSERT(v.e1 == v7b);
     incr_cnt();
   }
     Simple(unsigned int id, unsigned int numtimes=1, PortalItemFunctions *item=0, void *param = 0) : SimpleWrapper(id, item, param), cnt(0), times(numtimes){}
 };
 
-int allocateShared(DmaManager *dma, MMURequestProxy *dmap, uint32_t interfaceId, PortalInternal *p, uint32_t size)
+void dump_buf(volatile unsigned int *data, const char *name, int len)
 {
-    int fd = portalAlloc(size);
-    fprintf(stderr, "%s:%d allocateShared pint=%p fd=%d\n", __FUNCTION__, __LINE__, p, fd);
-    p->map_base = (volatile unsigned int *)portalMmap(fd, size);
-    fprintf(stderr, "%s:%d pint=%p map_base=%p\n", __FILE__, __LINE__, p, p->map_base);
-    p->map_base[SHARED_LIMIT] = size/sizeof(uint32_t);
-    p->map_base[SHARED_WRITE] = SHARED_START;
-    p->map_base[SHARED_READ] = SHARED_START;
-    p->map_base[SHARED_START] = 0;
-    unsigned int ref = dma->reference(fd);
-    dmap->setInterface(interfaceId, ref);
-    return fd;
+    int i = 0;
+    fprintf(stderr, "%s", name);
+    while (i < len) {
+        fprintf(stderr, " %08x", data[i]);
+        i++;
+        if (i != len && (i % 8) == 0)
+            fprintf(stderr, "\n        ");
+    }
+    fprintf(stderr, "\n");
 }
-
 int main(int argc, const char **argv)
 {
+    int verbose = 1;
+    int numtimes = 10;
     int alloc_sz = 4096;
     MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequest);
     DmaManager *dma = new DmaManager(dmap);
     MMUIndication *mIndication = new MMUIndication(dma, IfcNames_MMUIndication);
-    SharedMemoryPortalConfigProxy *reqConfig = new SharedMemoryPortalConfigProxy(IfcNames_ReqConfigWrapper);
-    SharedMemoryPortalConfigProxy *indConfig = new SharedMemoryPortalConfigProxy(IfcNames_IndConfigWrapper);
 
     portalExec_start();
 
-    int verbose = 1;
-    int numtimes = 1;
-    Simple *indication = new Simple(IfcNames_SimpleIndication, numtimes, &sharedfunc, NULL);
-    SimpleProxy *device = new SimpleProxy(IfcNames_SimpleRequest, &sharedfunc, NULL);
-
-    int reqfd = allocateShared(dma, dmap, IfcNames_SimpleRequest, &device->pint, alloc_sz);
-    unsigned int reqref = dma->reference(reqfd);
-    reqConfig->setSglId(reqref);
-
-    int indfd = allocateShared(dma, dmap, IfcNames_SimpleIndication, &indication->pint, alloc_sz);
-    unsigned int indref = dma->reference(indfd);
-    indConfig->setSglId(indref);
-
-    portalExec_stop();
+    PortalSharedParam param = {dma, alloc_sz};
+    Simple *indication = new Simple(IfcNames_SimpleIndication, numtimes, &sharedfunc, &param);
+    SimpleProxy *device = new SimpleProxy(IfcNames_SimpleRequest, &sharedfunc, &param);
+    SharedMemoryPortalConfigProxy *reqConfig = new SharedMemoryPortalConfigProxy(IfcNames_ReqConfigWrapper);
+    reqConfig->setSglId(device->pint.sharedMem);
+    SharedMemoryPortalConfigProxy *indConfig = new SharedMemoryPortalConfigProxy(IfcNames_IndConfigWrapper);
+    indConfig->setSglId(indication->pint.sharedMem);
 
     for (int i = 0; i < numtimes; i++) {
       if (verbose) fprintf(stderr, "Main::calling say1(%d)\n", v1a);
@@ -168,23 +163,6 @@ int main(int argc, const char **argv)
       if (verbose) fprintf(stderr, "Main::calling say7(%08x, %08x)\n", s3.a, s3.e1);
       device->say7(s3);  
     }
-  fprintf(stderr, "Main::about to call portalExec_event\n");
-  while(true){
-    fprintf(stderr, "req->map_base=%p %08x %08x %08x %08x\n", device->pint.map_base,
-	    device->pint.map_base[0],
-	    device->pint.map_base[1],
-	    device->pint.map_base[2],
-	    device->pint.map_base[3]);
-    fprintf(stderr, "ind->map_base=%p %08x %08x %08x %08x %08x %08x %08x %08x\n", indication->pint.map_base,
-	    indication->pint.map_base[0],
-	    indication->pint.map_base[1],
-	    indication->pint.map_base[2],
-	    indication->pint.map_base[3],
-	    indication->pint.map_base[4],
-	    indication->pint.map_base[5],
-	    indication->pint.map_base[6],
-	    indication->pint.map_base[7]);
-    portalExec_event();
-    sleep(2);
-  }
+  while(1)
+    sleep(10);
 }

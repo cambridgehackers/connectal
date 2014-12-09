@@ -19,7 +19,9 @@ import FIFO              ::*;
 import FIFOF             ::*;
 import SpecialFIFOs      ::*;
 import ClientServer      ::*;
+import Real              ::*;
 
+import ConnectalClocks   ::*;
 import ConnectalXilinxCells   ::*;
 import XilinxCells       ::*;
 import PCIE              ::*;
@@ -176,6 +178,8 @@ interface PcieEndpointX7#(numeric type lanes);
    interface Reset epReset125;
    interface Clock epClock250;
    interface Reset epReset250;
+   interface Clock epDerivedClock;
+   interface Reset epDerivedReset;
 endinterface
 
 typedef struct {
@@ -194,7 +198,16 @@ typedef struct {
 `ifdef Artix7
 typedef 4 PcieLanes;
 typedef 4 NumLeds;
-`else
+`endif
+`ifdef BOARD_zc706
+typedef 4 PcieLanes;
+typedef 4 NumLeds;
+`endif
+`ifdef BOARD_vc707
+typedef 8 PcieLanes;
+typedef 8 NumLeds;
+`endif
+`ifdef BOARD_kc705
 typedef 8 PcieLanes;
 typedef 8 NumLeds;
 `endif
@@ -323,13 +336,19 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    Reset reset250 <- mkAsyncReset(4, user_reset_n, clock250);
 
    ClockGenerator7Params     clkgenParams = defaultValue;
+   clkgenParams.clkin1_period    = 4.000; //  250MHz
    clkgenParams.clkin1_period    = 4.000;
    clkgenParams.clkin_buffer     = False;
-   clkgenParams.clkfbout_mult_f  = 4.000;
-   clkgenParams.clkout0_divide_f = 8.000;
+   clkgenParams.clkfbout_mult_f  = 4.000; // 1000MHz
+   clkgenParams.clkout0_divide_f = 8.000; //  125MHz
+   clkgenParams.clkout1_divide     = round(derivedClockPeriod);
+   clkgenParams.clkout1_duty_cycle = 0.5;
+   clkgenParams.clkout1_phase      = 0.0000;
    ClockGenerator7           clkgen <- mkClockGenerator7(clkgenParams, clocked_by clock250, reset_by user_reset_n);
    Clock clock125 = clkgen.clkout0; /* half speed user_clk */
    Reset reset125 <- mkAsyncReset(4, user_reset_n, clock125);
+   Clock derivedClock = clkgen.clkout1;
+   Reset derivedReset <- mkAsyncReset(4, user_reset_n, derivedClock);
 
    Server#(TLPData#(8), TLPData#(8)) tlp8 = (interface Server;
 						interface Put request;
@@ -375,6 +394,8 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    interface Reset epReset125 = reset125;
    interface Clock epClock250 = clock250;
    interface Reset epReset250 = reset250;
+   interface Clock epDerivedClock = derivedClock;
+   interface Reset epDerivedReset = derivedReset;
 endmodule: mkPcieEndpointX7
 
 endpackage: PcieEndpointX7

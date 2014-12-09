@@ -3,7 +3,7 @@ import Vector::*;
 import FIFO::*;
 import Connectable::*;
 
-// portz libraries
+// Connectal libraries
 import Directory::*;
 import CtrlMux::*;
 import Portal::*;

@@ -24,7 +24,7 @@ import Vector::*;
 import StmtFSM::*;
 import FIFO::*;
 
-// portz libraries
+// Connectal libraries
 import CtrlMux::*;
 import Portal::*;
 import Leds::*;

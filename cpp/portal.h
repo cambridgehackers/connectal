@@ -106,6 +106,7 @@ typedef struct PortalInternal {
     struct PortalInternal  *mux;
     int                    muxid;
     int                    busyType;
+    int                    sharedMem;
 #define BUSY_TIMEWAIT 0
 #define BUSY_SPIN     1
 #define BUSY_EXIT     2
@@ -213,19 +214,6 @@ extern PortalItemFunctions bsimfunc, hardwarefunc,
 #endif
 #ifdef __cplusplus
 #include "poller.h"
-template<int N, class B>
-class bsvvector {
-private:
-    int v[N * sizeof(B) / sizeof(int)];
-public:
-    bsvvector() {}
-    bsvvector(int i) {}
-    ~bsvvector() {}
-    operator const int () const { return v[0]; }
-    B operator[] (int i) const {
-	return *(B *)&v[i * sizeof(B) / sizeof(int)];
-    }
-};
 #endif
 
 #define MAX_TIMERS 50

@@ -25,6 +25,7 @@
 import functools, math, os, re, sys, util
 
 sizeofUint32_t = 4
+generatedVectors = []
 
 proxyClassPrefixTemplate='''
 class %(className)sProxy : public %(parentClass)s {
@@ -120,10 +121,18 @@ def collectMembers(scope, pitem):
     membtype = pitem['type']
     while 1:
         if membtype['name'] == 'Bit' or membtype['name'] == 'Int' or membtype['name'] == 'UInt' \
-            or membtype['name'] == 'Float' or membtype['name'] == 'Vector' or membtype['name'] == 'Bool':
+            or membtype['name'] == 'Float' or membtype['name'] == 'Bool':
             return [('%s%s'%(scope,pitem['name']),membtype)]
         elif membtype['name'] == 'SpecialTypeForSendingFd':
             return [('%s%s'%(scope,pitem['name']),membtype)]
+        elif membtype['name'] == 'Vector':
+            nElt = int(membtype['params'][0]['name'])
+            retitem = []
+            ind = 0;
+            while ind < nElt:
+                retitem.append([('%s%s'%(scope,pitem['name']+'['+str(ind)+']'),membtype['params'][1])])
+                ind = ind + 1
+            return sum(retitem, [])
         else:
             td = globalv_globalvars[membtype['name']]
             #print 'instantiate', membtype['params']
@@ -165,6 +174,7 @@ def typeNumeric(item):
     return int(item['name'])
 
 def typeCName(item):
+    global generatedVectors
     if item['type'] == 'Type':
         cid = item['name'].replace(' ', '')
         if cid == 'Bit':
@@ -189,9 +199,10 @@ def typeCName(item):
         elif cid == 'Float':
             return 'float'
         elif cid == 'Vector':
-            print 'KJJJJ', item['params'][0]
-            print 'KJMMM', item['params'][1]
-            return 'bsvvector<%d,%s>' % (typeNumeric(item['params'][0]), typeCName(item['params'][1]))
+            t = [typeNumeric(item['params'][0]), typeCName(item['params'][1])]
+            if t not in generatedVectors:
+                generatedVectors.append(t)
+            return 'bsvvector_L%s_L%d' % (t[1], t[0])
         elif cid == 'Action':
             return 'int'
         elif cid == 'ActionValue':
@@ -395,6 +406,7 @@ def emitMethodDeclaration(mname, params, f, className):
         f.write(', '.join(paramValues) + '); };\n')
 
 def generate_class(className, declList, parentC, parentCC, generatedCFiles, create_cpp_file, generated_hpp, generated_cpp):
+    global generatedVectors
     classCName = cName(className)
     cppname = '%s.c' % className
     hppname = '%s.h' % className
@@ -414,6 +426,10 @@ def generate_class(className, declList, parentC, parentCC, generatedCFiles, crea
         if t > maxSize:
             maxSize = t
         cpp.write((proxyMethodTemplateDecl + proxyMethodTemplate) % substs)
+        for t in generatedVectors:
+            #'Vector'
+            generated_hpp.write('\ntypedef %s bsvvector_L%s_L%d[%d];' % (t[1], t[1], t[0], t[0]))
+        generatedVectors = []
         generated_hpp.write((proxyMethodTemplateDecl % substs) + ';')
         reqChanNums.append(substs['channelNumber'])
     subs = {'className': classCName, 'maxSize': (maxSize+1) * sizeofUint32_t, 'parentClass': parentCC, \

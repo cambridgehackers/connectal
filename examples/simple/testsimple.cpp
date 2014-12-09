@@ -20,13 +20,11 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <assert.h>
 
 #include "Simple.h"
-#include "GeneratedTypes.h"
 
+#define NUMBER_OF_TESTS 8
 
 int v1a = 42;
 
@@ -55,7 +53,7 @@ class Simple : public SimpleWrapper
 public:
   uint32_t cnt;
   void incr_cnt(){
-    if (++cnt == 7)
+    if (++cnt == NUMBER_OF_TESTS)
       exit(0);
   }
   virtual void say1(uint32_t a) {
@@ -102,6 +100,12 @@ public:
     assert(v.e1 == v7b);
     incr_cnt();
   }
+  virtual void say8 ( const bsvvector_Luint32_t_L128 v ) {
+    fprintf(stderr, "say8\n");
+    for (int i = 0; i < 128; i++)
+        fprintf(stderr, "    [%d] = 0x%x\n", i, v[i]);
+    incr_cnt();
+  }
   Simple(unsigned int id) : SimpleWrapper(id), cnt(0){}
 };
 
@@ -111,6 +115,7 @@ int main(int argc, const char **argv)
 {
   Simple *indication = new Simple(IfcNames_SimpleIndication);
   SimpleProxy *device = new SimpleProxy(IfcNames_SimpleRequest);
+  device->pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
 
   portalExec_start();
 
@@ -128,6 +133,11 @@ int main(int argc, const char **argv)
   device->say6(v6a, v6b, v6c);  
   fprintf(stderr, "Main::calling say7(%08x, %08x)\n", s3.a, s3.e1);
   device->say7(s3);  
+  bsvvector_Luint32_t_L128 vect;
+  for (int i = 0; i < 128; i++)
+    vect[i] = -i*32;
+  fprintf(stderr, "Main::calling say8\n");
+  device->say8(vect);  
 
   fprintf(stderr, "Main::about to go to sleep\n");
   while(true){sleep(2);}

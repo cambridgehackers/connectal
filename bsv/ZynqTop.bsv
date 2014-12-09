@@ -102,8 +102,8 @@ module mkZynqTop(ZynqTop);
           interface ps7 = ps7;
 	  interface portalClock = mainclock;
 	  interface portalReset = mainreset;
-	  interface doubleClock = ps7.doubleClock;
-	  interface doubleReset = ps7.doubleReset;
+	  interface derivedClock = ps7.derivedClock;
+	  interface derivedReset = ps7.derivedReset;
           interface bscan = lbscan.loc[0];
       endinterface), clocked_by mainclock, reset_by mainreset);
 `else
