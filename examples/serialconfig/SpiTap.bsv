@@ -19,7 +19,6 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import RegC::*;
 import Connectable::*;
 
 /* This is a simple serial bus
