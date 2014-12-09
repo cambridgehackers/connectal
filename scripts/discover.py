@@ -44,7 +44,9 @@ def connect_with_adb(ipaddr):
         except socket.error:
             pass
     if 'hostname' in connection.Shell('ls /mnt/sdcard/'):
-        print connection.Shell('cat /mnt/sdcard/hostname')
+        name = connection.Shell('cat /mnt/sdcard/hostname') 
+        print name
+        return (ipaddr, name)
     else:
         print "/mnt/sdcard/hostname not found"
 
@@ -71,7 +73,7 @@ def receive_ping(timeout):
         type, code, checksum, packetID, sequence = struct.unpack(
             "bbHHh", icmpHeader
         )
-        if packetID == icmp_ID:
+        if packetID == icmp_id:
             return addr
         rem = rem - c
         if rem <= 0:
@@ -79,10 +81,10 @@ def receive_ping(timeout):
 
 def send_ping(dest_addr):
     dest_addr  =  socket.gethostbyname(dest_addr)
-    header = struct.pack("bbHHh", 8, 0, 0, icmp_ID, 1)
+    header = struct.pack("bbHHh", 8, 0, 0, icmp_id, 1)
     data = "AAAAAAAA"
     cs = calcsum(header + data)
-    header = struct.pack("bbHHh", 8, 0, socket.htons(cs), icmp_ID, 1)
+    header = struct.pack("bbHHh", 8, 0, socket.htons(cs), icmp_id, 1)
     packet = header + data
     icmp_socket.sendto(packet, (dest_addr, 1))
 
@@ -120,23 +122,27 @@ def get_pings():
     while (not stop):
         ping_response(0)
 
-argparser = argparse.ArgumentParser("Discover Zedboards on a network")
-argparser.add_argument('-n', '--network', help='xxx.xxx.xxx.xxx/N')
+def do_work(network):
+    global responders
+    global stop
+    global low_addr
+    global high_addr
+    global icmp_socket
+    global icmp_id
+    global zedboards
 
-if __name__ ==  '__main__':
+    zedboards = []
     responders = []
     stop = False
-    options = argparser.parse_args()
-    nw = options.network.split("/")
-    low_addr = ip2int(nw[0])
-    num_addrs = (1<<int(nw[1]))-2
+    low_addr = ip2int(network[0])
+    num_addrs = (1<<int(network[1]))-2
     high_addr = low_addr+num_addrs
     low_addr = low_addr+1
     print "pinging "+int2ip(low_addr)+" to "+int2ip(high_addr)
 
     icmp = socket.getprotobyname("icmp")
     icmp_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmp)
-    icmp_ID = os.getpid() & 0xFFFF
+    icmp_id = os.getpid() & 0xFFFF
 
     t0 = threading.Thread(target=send_pings)
     t1 = threading.Thread(target=get_pings)
@@ -153,7 +159,17 @@ if __name__ ==  '__main__':
     for r in responders:
         if check_adb_port(r):
             open.append(r)
+
     for o in open:
-        connect_with_adb(o)
+        zedboards.append(connect_with_adb(o))
 
     icmp_socket.close()
+
+
+argparser = argparse.ArgumentParser("Discover Zedboards on a network")
+argparser.add_argument('-n', '--network', help='xxx.xxx.xxx.xxx/N')
+
+if __name__ ==  '__main__':
+    options = argparser.parse_args()
+    nw = options.network.split("/")
+    do_work(nw)
