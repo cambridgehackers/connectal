@@ -70,6 +70,21 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,ZynqPcie,0));
    portals[1] = simpleRequestWrapper.portalIfc;
    let ctrl_mux <- mkSlaveMux(portals);
    
+   Reg#(Bit#(8)) ledsValue <- mkReg(5);
+   Reg#(Bit#(32)) remainingDuration <- mkReg(100000000);
+
+   rule updateLeds;
+      let duration = remainingDuration;
+      if (duration == 0) begin
+	 ledsValue <= ~ledsValue;
+	 duration = 100000000;
+      end
+      else begin
+	 duration = duration - 1;
+      end
+      remainingDuration <= duration;
+   endrule
+
    Clock defaultClock <- exposeCurrentClock();
 
    B2C1 b2c_pcie_sys_clk_p <- mkB2C1();
@@ -99,10 +114,12 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,ZynqPcie,0));
 		     interface Clock deleteme_unused_clock100mhz = host.tpci_clk_100mhz_buf;
 		     endinterface);
 
+   LEDS ledsIF = (interface LEDS; method Bit#(LedsWidth) leds(); return truncate(ledsValue); endmethod endinterface);
+
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
    interface masters = nil;
-   interface leds = default_leds;
+   interface leds = ledsIF;
    interface pins = zpcie;
 
 endmodule : mkConnectalTop
