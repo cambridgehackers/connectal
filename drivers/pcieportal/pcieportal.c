@@ -495,7 +495,7 @@ err_exit:
 
 /* driver PCI operations */
 
-static int __init pcieportal_probe(struct pci_dev *dev, const struct pci_device_id *id)
+static int pcieportal_probe(struct pci_dev *dev, const struct pci_device_id *id)
 {
         tBoard *this_board = NULL;
         int i, board_number = 0;
@@ -523,7 +523,7 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
         return board_activate(1, this_board, dev);
 }
 
-static void __exit pcieportal_remove(struct pci_dev *dev)
+static void pcieportal_remove(struct pci_dev *dev)
 {
         tBoard *this_board = pci_get_drvdata(dev);
 printk("*****[%s:%d] getdrv %p\n", __FUNCTION__, __LINE__, this_board);
@@ -545,7 +545,7 @@ static struct pci_driver pcieportal_ops = {
         .name = DEV_NAME,
         .id_table = pcieportal_id_table,
         .probe = pcieportal_probe,
-        .remove = __exit_p(pcieportal_remove)
+        .remove = pcieportal_remove
 };
 
 /*
@@ -569,7 +569,7 @@ tBoard* get_pcie_portal_descriptor(void)
  */
 
 /* first routine called on module load */
-static int __init pcieportal_init(void)
+static int pcieportal_init(void)
 {
         int status;
 
@@ -604,7 +604,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 }
 
 /* routine called on module unload */
-static void __exit pcieportal_exit(void)
+static void pcieportal_exit(void)
 {
         /* unregister the driver with the PCI subsystem */
         pci_unregister_driver(&pcieportal_ops);
