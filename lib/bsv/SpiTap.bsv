@@ -19,7 +19,6 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import RegC::*;
 import Connectable::*;
 
 /* This is a simple serial bus
@@ -69,14 +68,9 @@ module mkSpiReg#(Bit#(32) id)(SpiReg#(a))
    Reg#(Bool) iswrite <- mkReg(False);
    Reg#(Bit#(asize)) data <- mkReg(0);
    
-   rule handleFrame;
-      if (frameinbit == 0)
-	 begin
-            count <= 0;
-	    addressmatch <= False;
-	 end
-      else
-	 count <= count + 1;
+   rule handleFrame (frameinbit == 0);
+      count <= 0;
+      addressmatch <= False;
    endrule
    
    rule handleShift (frameinbit == 1);
@@ -103,6 +97,7 @@ module mkSpiReg#(Bit#(32) id)(SpiReg#(a))
 	  end
       else
 	 dataoutwire <= datainbit;
+      count <= count + 1;
    endrule
 
    interface SpiTap tap;

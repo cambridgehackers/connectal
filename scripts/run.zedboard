@@ -27,6 +27,7 @@ import os
 import socket
 import subprocess
 import sys
+import discover
 
 scriptdir=os.path.dirname(sys.argv[0])
 sys.path.append(scriptdir)
@@ -69,15 +70,28 @@ argparser.add_argument('-a', '--ipaddr', default=ipaddr, help='IP address of tar
 argparser.add_argument('-u', '--buildbot-url', default=buildbot_url, help='Base URL of buildbot.')
 argparser.add_argument('-p', '--project', help='Name of project on buildbot.')
 argparser.add_argument('-b', '--build-number', help='Build number on buildbot.')
+argparser.add_argument('-n', '--board-name', help='String in \'hostname\' on the SDCard')
 
 def run_zedboard(bitfile, androidexe, additional_files):
-
     ipaddr = options.ipaddr
+
     if not ipaddr:
-        p = subprocess.Popen('checkip')
-        ipaddr = p.stdout.read()
-        ipaddr = ipaddr.replace('\n', '')
-        ipaddr = ipaddr.replace('\r', '')
+        if (options.board_name):
+            found = False
+            discover.detect_network()
+            for ip,name in discover.zedboards:
+                if options.board_name == name:
+                    ipaddr = ip
+                    found = True
+                    print "found %s at %s" %(name,ip)
+            if not found:
+                print "unable to find %s on your subnet" % name
+        else:
+            p = subprocess.Popen('checkip')
+            ipaddr = p.stdout.read()
+            ipaddr = ipaddr.replace('\n', '')
+            ipaddr = ipaddr.replace('\r', '')
+
     device_serial = '%s:5555' % (ipaddr)
 
     print 'connecting to %s' % device_serial
