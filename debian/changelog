@@ -1,3 +1,9 @@
+connectal (14.12.4-2trusty1) trusty; urgency=medium
+
+  * Add python-netifaces to dependences
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 10 Dec 2014 11:34:47 -0500
+
 connectal (14.12.4-1trusty1) trusty; urgency=medium
 
   * Updated to 14.12.4
