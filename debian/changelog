@@ -1,3 +1,9 @@
+connectal (14.12.4-1trusty1) trusty; urgency=medium
+
+  * Updated to 14.12.4
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 10 Dec 2014 11:28:17 -0500
+
 connectal (14.12.3-4trusty1) trusty; urgency=medium
 
   * Second try to add pciescan
