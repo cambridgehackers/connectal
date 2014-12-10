@@ -1,3 +1,9 @@
+connectal (14.12.4-2trusty1ubuntu1) trusty; urgency=medium
+
+  * Added python-gmpy to dependences
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 10 Dec 2014 12:34:39 -0500
+
 connectal (14.12.4-2trusty1) trusty; urgency=medium
 
   * Add python-netifaces to dependences
