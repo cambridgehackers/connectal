@@ -132,7 +132,6 @@ def do_work(start, end):
     global icmp_id
     global zedboards
 
-    zedboards = []
     responders = []
     stop = False
     low_addr = start
@@ -168,6 +167,8 @@ argparser = argparse.ArgumentParser("Discover Zedboards on a network")
 argparser.add_argument('-n', '--network', help='xxx.xxx.xxx.xxx/N')
 
 def detect_network():
+    global zedboards
+    zedboards = []
     for ifc in netifaces.interfaces():
         ifaddrs = netifaces.ifaddresses(ifc)
         if netifaces.AF_INET in ifaddrs.keys():
