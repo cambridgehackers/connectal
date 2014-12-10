@@ -22,6 +22,7 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import sys
 import os
 import socket
 import struct
@@ -62,6 +63,7 @@ def calcsum(source_string):
     return sum >> 8 | (sum << 8 & 0xFF00)
 
 def receive_ping(timeout):
+    global recv_cnt
     rem = timeout
     while True:
         a = time.time()
@@ -75,20 +77,29 @@ def receive_ping(timeout):
             "bbHHh", icmpHeader
         )
         if packetID == icmp_id:
+            recv_cnt = recv_cnt+1
+            # print "recv_cnt: %x" % recv_cnt
             return addr
         rem = rem - c
         if rem <= 0:
             return
 
+
 def send_ping(dest_addr):
+    global send_cnt
+    send_cnt = send_cnt+1
     dest_addr  =  socket.gethostbyname(dest_addr)
     header = struct.pack("bbHHh", 8, 0, 0, icmp_id, 1)
-    data = "AAAAAAAA"
-    cs = calcsum(header + data)
-    header = struct.pack("bbHHh", 8, 0, socket.htons(cs), icmp_id, 1)
-    packet = header + data
-    icmp_socket.sendto(packet, (dest_addr, 1))
-
+    header = struct.pack("bbHHh", 8, 0, socket.htons(calcsum(header)), icmp_id, 1)
+    try:
+        # print header.encode('hex')
+        # if (send_cnt > 1024):
+        #     time.sleep(0.1)
+        icmp_socket.sendto(header, (dest_addr, 1))
+    except socket.error, e:
+        print (dest_addr,e)
+        raise
+      
 def check_adb_port(dest_addr):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.settimeout(0.1)
@@ -131,7 +142,11 @@ def do_work(start, end):
     global icmp_socket
     global icmp_id
     global zedboards
+    global send_cnt
+    global recv_cnt
 
+    send_cnt = 0
+    recv_cnt = 0
     responders = []
     stop = False
     low_addr = start
@@ -140,6 +155,7 @@ def do_work(start, end):
 
     icmp = socket.getprotobyname("icmp")
     icmp_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmp)
+    icmp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, (start-end)*64)
     icmp_id = os.getpid() & 0xFFFF
 
     t0 = threading.Thread(target=send_pings)
@@ -185,13 +201,12 @@ def detect_network():
                     do_work(start, end) 
 
 if __name__ ==  '__main__':
+    zedboards = []
     options = argparser.parse_args()
     if options.network == None:
         detect_network()
     else:
         nw = options.network.split("/")
         start = ip2int(nw[0])
-        na = (1<<int(nw[1]))-2
-        end = start+na
-        end = end+1
-        do_work(start,end)
+        end = start+(1<<int(nw[1]))-2
+        do_work(start+1,end)
