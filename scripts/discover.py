@@ -29,6 +29,7 @@ import select
 import time
 import threading
 import argparse
+import netifaces
 
 from adb import adb_commands
 from adb import common
@@ -122,7 +123,7 @@ def get_pings():
     while (not stop):
         ping_response(0)
 
-def do_work(network):
+def do_work(start, end):
     global responders
     global stop
     global low_addr
@@ -134,10 +135,8 @@ def do_work(network):
     zedboards = []
     responders = []
     stop = False
-    low_addr = ip2int(network[0])
-    num_addrs = (1<<int(network[1]))-2
-    high_addr = low_addr+num_addrs
-    low_addr = low_addr+1
+    low_addr = start
+    high_addr = end
     print "pinging "+int2ip(low_addr)+" to "+int2ip(high_addr)
 
     icmp = socket.getprotobyname("icmp")
@@ -165,11 +164,33 @@ def do_work(network):
 
     icmp_socket.close()
 
-
 argparser = argparse.ArgumentParser("Discover Zedboards on a network")
 argparser.add_argument('-n', '--network', help='xxx.xxx.xxx.xxx/N')
 
+def detect_network():
+    for ifc in netifaces.interfaces():
+        ifaddrs = netifaces.ifaddresses(ifc)
+        if netifaces.AF_INET in ifaddrs.keys():
+            af_inet = ifaddrs[netifaces.AF_INET]
+            for i in af_inet: 
+                if i.get('addr') == '127.0.0.1':
+                    print 'skipping localhost'
+                else:
+                    addr = ip2int(i.get('addr'))
+                    netmask = ip2int(i.get('netmask'))
+                    start = addr & netmask
+                    end = start + (netmask ^ 0xffffffff) 
+                    print (int2ip(start), int2ip(end)) 
+                    do_work(start, end) 
+
 if __name__ ==  '__main__':
     options = argparser.parse_args()
-    nw = options.network.split("/")
-    do_work(nw)
+    if options.network == None:
+        detect_network()
+    else:
+        nw = options.network.split("/")
+        start = ip2int(nw[0])
+        na = (1<<int(nw[1]))-2
+        end = start+na
+        end = end+1
+        do_work(start,end)

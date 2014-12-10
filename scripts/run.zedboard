@@ -78,7 +78,7 @@ def run_zedboard(bitfile, androidexe, additional_files):
     if not ipaddr:
         if (options.board_name):
             found = False
-            discover.do_work(['172.17.1.0', '8'])
+            discover.detect_network()
             for ip,name in discover.zedboards:
                 if options.board_name == name:
                     ipaddr = ip
