@@ -1,7 +1,7 @@
 
 CONNECTALDIR?=../..
-INTERFACES = Simple
-BSVFILES = SimpleIF.bsv Top.bsv
+INTERFACES = Simple ZynqPcieTestIndication ZynqPcieTestRequest
+BSVFILES = SimpleIF.bsv ZynqPcieTestIF.bsv Top.bsv
 CPPFILES=testsimple.cpp
 NUMBER_OF_MASTERS =0
 PIN_TYPE=ZynqPcie
