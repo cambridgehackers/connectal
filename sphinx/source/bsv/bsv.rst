@@ -6,6 +6,8 @@ Connectal BSV Libraries
    :maxdepth: 2
    :numbered:
 
+   hostinterface.rst
+
 .. cpp:class Portal
 
 
