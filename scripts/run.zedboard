@@ -27,7 +27,7 @@ import os
 import socket
 import subprocess
 import sys
-import discover
+import discover_tcp
 
 scriptdir=os.path.dirname(sys.argv[0])
 sys.path.append(scriptdir)
@@ -78,8 +78,8 @@ def run_zedboard(bitfile, androidexe, additional_files):
     if not ipaddr:
         if (options.board_name):
             found = False
-            discover.detect_network()
-            for ip,name in discover.zedboards:
+            discover_tcp.detect_network()
+            for ip,name in discover_tcp.zedboards:
                 if options.board_name == name:
                     ipaddr = ip
                     found = True
