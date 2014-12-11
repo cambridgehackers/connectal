@@ -3,6 +3,9 @@ Portal Package
 
 .. bsv:package:: Portal
 
+PipePortal Interface
+--------------------
+
 .. bsv:interface:: PipePortal
    :parameter: numeric type numRequests, numeric type numIndications, numeric type slaveDataWidth
 
@@ -18,6 +21,9 @@ Portal Package
   .. bsv:subinterface:: indications
      :returntype: Vector#(numIndications, PipeOut#(Bit#(slaveDataWidth)))
 
+
+MemPortal Interface
+-------------------
 
 .. bsv:interface:: MemPortal
    :parameter: numeric type slaveAddrWidth, numeric type slaveDataWidth
@@ -42,3 +48,24 @@ Portal Package
 .. bsv:function:: getInterruptVector
    :parameter: Vector#(numPortals, MemPortal#(_a,_d)) portals
    :returntype: Vector#(16, ReadOnly#(Bool))
+
+ShareMemoryPortal Interface
+---------------------------
+
+.. bsv:interface:: SharedMemoryPortal
+   :parameter: numeric type dataBusWidth
+
+   Should be in SharedMemoryPortal.bsv
+
+   .. bsv:subinterface:: readClient;
+      :returntype: MemReadClient(dataBusWidth)
+
+   .. bsv:subinterface:: writeClient
+      :returntype: MemWriteClient#(dataBusWidth)
+
+   .. bsv:interface:: cfg
+      :returntype: SharedMemoryPortalConfig
+
+   .. bsv:subinterface:: interrupt
+      :returntype: ReadOnly#(Bool)
+
