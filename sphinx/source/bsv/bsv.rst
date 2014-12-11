@@ -8,12 +8,7 @@ Connectal BSV Libraries
 
    hostinterface.rst
    leds.rst
+   ctrlmux.rst
+   portal.rst
+   memportal.rst
 
-
-.. bsv:method:: Simple.say
-     :returntype: Action
-     :parameter: Bit#(32) v
-                 Bit#(32) v2
-     :package: SimpleIF
-
-     method content?

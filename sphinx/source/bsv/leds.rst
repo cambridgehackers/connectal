@@ -1,8 +1,6 @@
 Leds Package
 =====================
 
-The HostInterface package provides host-specific typedefs and interfaces.
-
 .. bsv:package:: Leds
 
 .. bsv:interface:: LEDS
