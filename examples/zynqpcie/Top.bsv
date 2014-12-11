@@ -22,6 +22,7 @@ import Clocks::*;
 import Vector::*;
 import FIFO::*;
 import Connectable::*;
+import GetPutWithClocks::*;
 import CtrlMux::*;
 import Portal::*;
 import HostInterface::*;
@@ -82,6 +83,8 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,ZynqPcie,0));
    ZynqPcieTestIndicationProxy zynqPcieTestIndicationProxy <- mkZynqPcieTestIndicationProxy(ZynqPcieTestIndication);
    ZynqPcieTest zynqPcieTest <- mkZynqPcieTest(linkUpBit, resetBit, zynqPcieTestIndicationProxy.ifc);
    ZynqPcieTestRequestWrapper zynqPcieTestRequestWrapper <- mkZynqPcieTestRequestWrapper(ZynqPcieTestRequest,zynqPcieTest.request);
+
+   mkConnectionWithClocks(zynqPcieTest.traceBramClient, host.tpciehost.traceBramServer, defaultClock, defaultReset, host.portalClock, host.portalReset);
 
    Vector#(2,StdPortal) portals;
    portals[0] = zynqPcieTestIndicationProxy.portalIfc;

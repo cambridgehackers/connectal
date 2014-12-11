@@ -25,6 +25,8 @@ import FIFO::*;
 import Vector::*;
 import Clocks::*;
 import BRAM::*;
+import PCIE::*;
+import PcieTracer::*;
 
 interface ZynqPcieTestRequest;
    method Action getStatus(Bit#(32) v);
@@ -40,7 +42,7 @@ interface ZynqPcieTest;
    interface BRAMClient#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) traceBramClient;
 endinterface
 
-module mkZynqPcieTest#(SyncBitIfc#(Bit#(1)) lnk_up, SyncBitIfc#(Bit#(1)) resetBit, ZynqPcieTestIndication indication)(ZynqPcieTestRequest);
+module mkZynqPcieTest#(SyncBitIfc#(Bit#(1)) lnk_up, SyncBitIfc#(Bit#(1)) resetBit, ZynqPcieTestIndication indication)(ZynqPcieTest);
 
    FIFO#(BRAMRequest#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData)) requestFifo <- mkFIFO();
    FIFO#(TimestampedTlpData) responseFifo <- mkFIFO();
@@ -51,15 +53,15 @@ module mkZynqPcieTest#(SyncBitIfc#(Bit#(1)) lnk_up, SyncBitIfc#(Bit#(1)) resetBi
    endrule
 
    interface ZynqPcieTestRequest request;
-      method Action status(Bit#(32) v);
+      method Action getStatus(Bit#(32) v);
 	 indication.status(extend({lnk_up.read(), resetBit.read()}));
       endmethod
-      method Action status(Bit#(32) v);
+      method Action getTrace(Bit#(32) v);
 	 requestFifo.enq(BRAMRequest {
 	    write: False,
 	    responseOnWrite: False,
-	    addr: truncate(v),
-	    datain: 0
+	    address: truncate(v),
+	    datain: unpack(0)
 	 });
       endmethod
    endinterface
