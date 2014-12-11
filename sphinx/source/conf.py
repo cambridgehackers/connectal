@@ -33,6 +33,7 @@ sys.path.insert(0, os.path.abspath('.'))
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
@@ -102,6 +103,9 @@ pygments_style = 'sphinx'
 # If true, keep warnings as "system message" paragraphs in the built documents.
 #keep_warnings = False
 
+autosummary_generate = True
+autoclass_content = 'both'
+autodoc_default_flags = ['members', 'undoc-members', 'show-inheritance']
 
 # -- Options for HTML output ----------------------------------------------
 

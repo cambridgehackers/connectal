@@ -2,6 +2,12 @@
 Python
 ======
 
-.. automodule:: AST
-   :members:
-   :undoc-members:
+.. autosummary::
+   :toctree: python
+
+   AST
+   bsvgen
+   cppgen
+   discover_tcp
+   makefilegen
+   util
