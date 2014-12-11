@@ -213,7 +213,7 @@ class BsvObject(ObjectDescription):
             signode['ids'].append(fullname)
             signode['first'] = (not self.names)
             self.state.document.note_explicit_target(signode)
-            objects = self.env.domaindata['py']['objects']
+            objects = self.env.domaindata['bsv']['objects']
             if fullname in objects:
                 self.state_machine.reporter.warning(
                     'duplicate object description of %s, ' % fullname +
@@ -426,12 +426,12 @@ class BsvPackage(Directive):
         env.temp_data['bsv:package'] = modname
         ret = []
         if not noindex:
-            env.domaindata['py']['packages'][modname] = \
+            env.domaindata['bsv']['packages'][modname] = \
                 (env.docname, self.options.get('synopsis', ''),
                  self.options.get('platform', ''), 'deprecated' in self.options)
             # make a duplicate entry in 'objects' to facilitate searching for
             # the package in BsvDomain.find_obj()
-            env.domaindata['py']['objects'][modname] = (env.docname, 'package')
+            env.domaindata['bsv']['objects'][modname] = (env.docname, 'package')
             targetnode = nodes.target('', '', ids=['package-' + modname],
                                       ismod=True)
             self.state.document.note_explicit_target(targetnode)
