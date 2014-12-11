@@ -7,11 +7,8 @@ Connectal BSV Libraries
    :numbered:
 
    hostinterface.rst
+   leds.rst
 
-.. cpp:class Portal
-
-
-.. bsv:interface:: Simple
 
 .. bsv:method:: Simple.say
      :returntype: Action
@@ -20,7 +17,3 @@ Connectal BSV Libraries
      :package: SimpleIF
 
      method content?
-
-
-See :ref:`say`
-
