@@ -35,9 +35,12 @@ public:
     };
     ZynqPcieTestIndication(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : ZynqPcieTestIndicationWrapper(id, item, param, poller) {
     };
-    virtual void say1 ( const uint32_t v ) {
-	fprintf(stderr, "ZynqPcieTestIndicationWrapper.say1 v=%x\n", v);
+  virtual void status ( const uint32_t v ) {
+	fprintf(stderr, "ZynqPcieTestIndicationWrapper.status v=%x\n", v);
     }
+  virtual void trace ( const uint32_t *v ) {
+      fprintf(stderr, "ZynqPcieTestIndicationWrapper.trace %08x %08x %08x %08x %08x %08x\n", v[0], v[1], v[2], v[3], v[4], v[5]);
+  }
 };
 
 
@@ -48,8 +51,13 @@ int main(int argc, const char **argv)
   device->pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
 
   portalExec_start();
-  while(true){
-      device->say1(0);
+  for (int i = 0; i < 100; i++) {
+      device->getStatus(0);
       sleep(2);
   }
+  for (int i = 0; i < 100; i++) {
+      device->getTrace(i);
+      sleep(1);
+  }
 }
+

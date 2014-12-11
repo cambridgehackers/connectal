@@ -80,9 +80,9 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,ZynqPcie,0));
    SyncBitIfc#(Bit#(1)) resetBit <- mkSyncBit(b2c_pcie_sys_reset_n.c, b2c_pcie_sys_reset_n.r, defaultClock);
    SyncBitIfc#(Bit#(1)) linkUpBit <- mkSyncBit(host.portalClock, host.portalReset, defaultClock);
    ZynqPcieTestIndicationProxy zynqPcieTestIndicationProxy <- mkZynqPcieTestIndicationProxy(ZynqPcieTestIndication);
-   ZynqPcieTestRequest zynqPcieTestRequest <- mkZynqPcieTest(linkUpBit, resetBit, zynqPcieTestIndicationProxy.ifc);
-   ZynqPcieTestRequestWrapper zynqPcieTestRequestWrapper <- mkZynqPcieTestRequestWrapper(ZynqPcieTestRequest,zynqPcieTestRequest);
-   
+   ZynqPcieTest zynqPcieTest <- mkZynqPcieTest(linkUpBit, resetBit, zynqPcieTestIndicationProxy.ifc);
+   ZynqPcieTestRequestWrapper zynqPcieTestRequestWrapper <- mkZynqPcieTestRequestWrapper(ZynqPcieTestRequest,zynqPcieTest.request);
+
    Vector#(2,StdPortal) portals;
    portals[0] = zynqPcieTestIndicationProxy.portalIfc;
    portals[1] = zynqPcieTestRequestWrapper.portalIfc;
