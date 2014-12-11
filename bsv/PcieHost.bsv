@@ -26,6 +26,7 @@ import GetPut            :: *;
 import FIFO              :: *;
 import Connectable       :: *;
 import ClientServer      :: *;
+import BRAM              :: *;
 import DefaultValue      :: *;
 import PcieSplitter      :: *;
 import PcieTracer        :: *;
@@ -41,7 +42,6 @@ import Bscan             :: *;
 `ifndef BSIM
 import PcieEndpointX7    :: *;
 `endif
-`define PcieHostIF
 import HostInterface     :: *;
 
 // implemented in TlpReplay.cxx
@@ -49,7 +49,6 @@ import "BDPI" function Action put_tlp(TLPData#(16) d);
 import "BDPI" function ActionValue#(TLPData#(16)) get_tlp();
 import "BDPI" function Bool can_put_tlp();
 import "BDPI" function Bool can_get_tlp();
-		 
 		 
 //(* synthesize *) commented out so that the guards in MemServer aren't destroyed (mdk)
 module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
@@ -111,10 +110,7 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
 `ifndef PCIE_NO_BSCAN
    interface BscanTop bscanif = lbscan.loc[0];
 `else
-   interface BscanTop bscanif;
-      interface Clock tck = epClock125;
-      interface Rest rst = epReset125;
-   endinterface
+   interface BRAMServer traceBramServer = traceif.tlpdata.bscanBramServer;
 `endif
 endmodule: mkPcieHost
 

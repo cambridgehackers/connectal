@@ -62,9 +62,11 @@ typedef BsimHost#(32,32,12,40,DataBusWidth,6,NumberOfMasters) HostType;
 import Vector            :: *;
 import GetPut            :: *;
 import ClientServer      :: *;
-import PCIE               :: *;
+import BRAM              :: *;
+import PCIE              :: *;
 import PCIEWRAPPER       :: *;
 import PcieCsr           :: *;
+import PcieTracer        :: *;
 import MemTypes          :: *;
 import Bscan             :: *;
 `ifndef BSIM
@@ -78,7 +80,11 @@ interface PcieHost#(numeric type dsz, numeric type nSlaves);
    interface Vector#(nSlaves,PhysMemSlave#(PciePhysAddrWidth,dsz))  slave;
    interface Put#(Tuple2#(Bit#(64),Bit#(32)))    interruptRequest;
    interface Client#(TLPData#(16), TLPData#(16)) pci;
+`ifndef PCIE_NO_BSCAN
    interface BscanTop bscanif;
+`else
+   interface BRAMServer#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) traceBramServer;
+`endif
 endinterface
 
 interface PcieHostTop;
