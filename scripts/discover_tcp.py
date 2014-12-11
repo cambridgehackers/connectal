@@ -70,7 +70,7 @@ def open_adb_socket(dest_addr):
     sock.connect_ex((dest_addr,5555))
     return sock
 
-def do_work(start, end):
+def do_work_poll(start, end):
     print "scanning "+int2ip(start)+" to "+int2ip(end)
     connected = []
     total = end-start
@@ -111,9 +111,54 @@ def do_work(start, end):
     for c in connected:
         connect_with_adb(c)
 
+def do_work_kqueue(start, end):
+    print "scanning "+int2ip(start)+" to "+int2ip(end)
+    connected = []
+    total = end-start
+
+    while (start <= end):
+
+        kq = select.kqueue()
+        fd_map = {}
+        kevents = []
+        while (start <= end):
+            try:
+                s = open_adb_socket(int2ip(start))
+            except:
+                break
+            else:
+                fd_map[s.fileno()] = (start,s)
+                start = start+1
+                kevents.append(select.kevent(s,filter=select.KQ_FILTER_WRITE))
+
+        kq.control(kevents,0,0)
+        time.sleep(0.2)
+
+        for k in kq.control([],len(kevents),0.1):
+            w = fd_map[k.ident][1]
+            addr = fd_map[w.fileno()][0]
+            if w.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR) == 0:
+                connected.append(addr)
+
+        for fd,t in fd_map.iteritems():
+            t[1].close()
+
+        sys.stdout.write("\r%d/%d" % (total-(end-start),total))
+        sys.stdout.flush()
+
+    print
+    for c in connected:
+        connect_with_adb(c)
+
 
 argparser = argparse.ArgumentParser("Discover Zedboards on a network")
 argparser.add_argument('-n', '--network', help='xxx.xxx.xxx.xxx/N')
+
+def do_work(start,end):
+    if sys.platform == 'darwin':
+        do_work_kqueue(start,end)
+    else:
+        do_work_poll(start,end)
 
 def detect_network():
     global zedboards
