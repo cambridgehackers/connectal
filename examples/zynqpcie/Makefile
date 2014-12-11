@@ -2,7 +2,7 @@
 CONNECTALDIR?=../..
 INTERFACES = Simple ZynqPcieTestIndication ZynqPcieTestRequest
 BSVFILES = SimpleIF.bsv ZynqPcieTestIF.bsv Top.bsv
-CPPFILES=testsimple.cpp
+CPPFILES=testzynqpcie.cpp
 NUMBER_OF_MASTERS =0
 PIN_TYPE=ZynqPcie
 CONNECTALFLAGS += -D PcieHostIF=1 -D PCIE_NO_BSCAN=1 --bscflags="+RTS -K96000000 -RTS"
