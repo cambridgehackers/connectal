@@ -110,6 +110,12 @@ class BsvObject(ObjectDescription):
               names=('rtype',)),
     ]
 
+    def get_signatures(self):
+        print 'BsvObject.get_signatures'
+        sig = ObjectDescription.get_signatures(self)
+        print 'BsvObject.get_signatures got ', sig
+        return sig
+
     def get_signature_prefix(self, sig):
         """May return a prefix to put before the object name in the
         signature.
@@ -131,6 +137,7 @@ class BsvObject(ObjectDescription):
         * it is stripped from the displayed name if present
         * it is added to the full name (return value) if not present
         """
+        print 'BsvObject.handle_signature', sig
         m = py_sig_re.match(sig)
         if m is None:
             raise ValueError
@@ -184,14 +191,16 @@ class BsvObject(ObjectDescription):
         anno = self.options.get('annotation')
 
         signode += addnodes.desc_name(name, name)
+        print 'arglist', arglist
         if not arglist:
             if self.needs_arglist():
                 # for callables, add an empty parameter list
-                signode += addnodes.desc_parameterlist()
-            if retann:
-                signode += addnodes.desc_returns(retann, retann)
+                signode += addnodes.desc_parameterlist(text=self.options.get('parameter'))
+            if self.options.get('returntype'):
+                signode += addnodes.desc_returns(text=self.options.get('returntype'))
             if anno:
                 signode += addnodes.desc_annotation(' ' + anno, ' ' + anno)
+            print 'signode', signode
             return fullname, name_prefix
 
         _pseudo_parse_arglist(signode, arglist)
@@ -382,6 +391,7 @@ class BsvDecoratorMixin(object):
     Mixin for decorator directives.
     """
     def handle_signature(self, sig, signode):
+        print 'BsvDecoratorMixin.handle_signature', sig
         ret = super(BsvDecoratorMixin, self).handle_signature(sig, signode)
         signode.insert(0, addnodes.desc_addname('@', '@'))
         return ret
@@ -575,6 +585,7 @@ class BsvDomain(Domain):
         'interface':        ObjType(l_('interface'),         'interface', 'exc', 'obj'),
         'exception':    ObjType(l_('exception'),     'exc', 'interface', 'obj'),
         'method':       ObjType(l_('method'),        'meth', 'obj'),
+        'subinterface': ObjType(l_('subinterface'),  'ifc', 'obj'),
         'interfacemethod':  ObjType(l_('interface method'),  'meth', 'obj'),
         'staticmethod': ObjType(l_('static method'), 'meth', 'obj'),
         'attribute':    ObjType(l_('attribute'),     'attr', 'obj'),
@@ -592,6 +603,7 @@ class BsvDomain(Domain):
         'interfacemethod':     BsvInterfacemember,
         'staticmethod':    BsvInterfacemember,
         'attribute':       BsvInterfacemember,
+        'subinterface':    BsvInterfacemember,
         'package':          BsvPackage,
         'currentpackage':   BsvCurrentPackage,
         'decorator':       BsvDecoratorFunction,
