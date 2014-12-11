@@ -87,6 +87,8 @@ class BsvObject(ObjectDescription):
         'noindex': directives.flag,
         'package': directives.unchanged,
         'annotation': directives.unchanged,
+        'parameter': directives.unchanged,
+        'returntype': directives.unchanged,
     }
 
     doc_field_types = [
@@ -250,6 +252,10 @@ class BsvPackagelevel(BsvObject):
             if not modname:
                 return _('%s() (built-in function)') % name_cls[0]
             return _('%s() (in package %s)') % (name_cls[0], modname)
+        elif self.objtype == 'module':
+            if not modname:
+                return _('%s (BSV module)') % name_cls[0]
+            return _('%s (in package %s)') % (name_cls[0], modname)
         elif self.objtype == 'data':
             if not modname:
                 return _('%s (built-in variable)') % name_cls[0]
@@ -572,12 +578,14 @@ class BsvDomain(Domain):
         'interfacemethod':  ObjType(l_('interface method'),  'meth', 'obj'),
         'staticmethod': ObjType(l_('static method'), 'meth', 'obj'),
         'attribute':    ObjType(l_('attribute'),     'attr', 'obj'),
-        'package':       ObjType(l_('package'),        'mod', 'obj'),
+        'package':       ObjType(l_('package'),      'pkg', 'obj'),
+        'module':       ObjType(l_('module'),        'mod', 'obj'),
     }
 
     directives = {
         'function':        BsvPackagelevel,
         'data':            BsvPackagelevel,
+        'module':          BsvPackagelevel,
         'interface':           BsvInterfacelike,
         'exception':       BsvInterfacelike,
         'method':          BsvInterfacemember,
@@ -598,6 +606,7 @@ class BsvDomain(Domain):
         'attr':  BsvXRefRole(),
         'meth':  BsvXRefRole(fix_parens=True),
         'mod':   BsvXRefRole(),
+        'pkg':   BsvXRefRole(),
         'obj':   BsvXRefRole(),
     }
     initial_data = {
