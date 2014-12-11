@@ -28,7 +28,6 @@ import Connectable       :: *;
 import ClientServer      :: *;
 import DefaultValue      :: *;
 import PcieSplitter      :: *;
-import PcieTracer        :: *;
 import Xilinx            :: *;
 import PCIEWRAPPER       :: *;
 import Portal            :: *;
