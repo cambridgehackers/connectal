@@ -11,9 +11,10 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   intro
-   bsv
-   python
+   intro.rst
+   bsv/bsv.rst
+   examples/index.rst
+   python.rst
 
 Indices and tables
 ==================
