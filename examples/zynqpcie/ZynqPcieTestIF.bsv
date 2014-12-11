@@ -23,6 +23,7 @@
 
 import FIFO::*;
 import Vector::*;
+import Clocks::*;
 
 interface ZynqPcieTestRequest;
     method Action say1(Bit#(32) v);
@@ -31,9 +32,9 @@ interface ZynqPcieTestIndication;
     method Action say1(Bit#(32) v);
 endinterface
 
-module mkZynqPcieTest#(Bit#(1) lnk_up, Wire#(Bit#(1)) resetBit, ZynqPcieTestIndication indication)(ZynqPcieTestRequest);
+module mkZynqPcieTest#(SyncBitIfc#(Bit#(1)) lnk_up, SyncBitIfc#(Bit#(1)) resetBit, ZynqPcieTestIndication indication)(ZynqPcieTestRequest);
    method Action say1(Bit#(32) v);
-      indication.say1(extend({lnk_up,resetBit}));
+      indication.say1(extend({lnk_up.read(), resetBit.read()}));
    endmethod
 
 endmodule

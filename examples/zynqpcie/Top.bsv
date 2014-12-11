@@ -66,6 +66,7 @@ endmodule
 module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,ZynqPcie,0));
 
    Clock defaultClock <- exposeCurrentClock();
+   Reset defaultReset <- exposeCurrentReset();
 
    B2C1 b2c_pcie_sys_clk_p <- mkB2C1();
    B2C1 b2c_pcie_sys_clk_n <- mkB2C1();
@@ -76,9 +77,10 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,ZynqPcie,0));
    PcieHostTop host <- mkPcieHostTopSynth(b2c_pcie_sys_clk_p.c, b2c_pcie_sys_clk_n.c, b2c_sys_clk_p.c, b2c_sys_clk_n.c, b2c_pcie_sys_reset_n.r);
 
    // instantiate user portals
-   Wire#(Bit#(1)) resetBit <- mkDWire(0);
+   SyncBitIfc#(Bit#(1)) resetBit <- mkSyncBit(b2c_pcie_sys_reset_n.c, b2c_pcie_sys_reset_n.r, defaultClock);
+   SyncBitIfc#(Bit#(1)) linkUpBit <- mkSyncBit(host.portalClock, host.portalReset, defaultClock);
    ZynqPcieTestIndicationProxy zynqPcieTestIndicationProxy <- mkZynqPcieTestIndicationProxy(ZynqPcieTestIndication);
-   ZynqPcieTestRequest zynqPcieTestRequest <- mkZynqPcieTest(host.tep7.user.lnk_up(), resetBit, zynqPcieTestIndicationProxy.ifc);
+   ZynqPcieTestRequest zynqPcieTestRequest <- mkZynqPcieTest(linkUpBit, resetBit, zynqPcieTestIndicationProxy.ifc);
    ZynqPcieTestRequestWrapper zynqPcieTestRequestWrapper <- mkZynqPcieTestRequestWrapper(ZynqPcieTestRequest,zynqPcieTestRequest);
    
    Vector#(2,StdPortal) portals;
@@ -101,6 +103,9 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,ZynqPcie,0));
       remainingDuration <= duration;
    endrule
 
+   rule updateLinkBit;
+      linkUpBit.send(host.tep7.user.lnk_up());
+   endrule
    SimpleProxy simpleIndicationProxy <- mkSimpleProxy(SimpleIndication, clocked_by host.portalClock, reset_by host.portalReset);
    Simple simpleRequest <- mkSimple(simpleIndicationProxy.ifc, clocked_by host.portalClock, reset_by host.portalReset);
    SimpleWrapper simpleRequestWrapper <- mkSimpleWrapper(SimpleRequest,simpleRequest, clocked_by host.portalClock, reset_by host.portalReset);
@@ -108,7 +113,7 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,ZynqPcie,0));
    Vector#(2,StdPortal) pcieportals;
    pcieportals[0] = simpleIndicationProxy.portalIfc;
    pcieportals[1] = simpleRequestWrapper.portalIfc;
-   PhysMemSlave#(32,32) pcie_ctrl_mux <- mkSlaveMux(pcieportals);
+   PhysMemSlave#(32,32) pcie_ctrl_mux <- mkSlaveMux(pcieportals, clocked_by host.portalClock, reset_by host.portalReset);
    mkConnection(host.tpciehost.master, pcie_ctrl_mux, clocked_by host.portalClock, reset_by host.portalReset);
 
    ZynqPcie zpcie = (interface ZynqPcie;
@@ -121,7 +126,7 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,ZynqPcie,0));
 			b2c_sys_clk_n.inputclock(n);
 		     endmethod
 		     method Action pcie_sys_reset(Bit#(1) n);
-			resetBit <= n;
+			resetBit.send(n);
 			b2c_pcie_sys_reset_n.inputreset(n);
 		     endmethod
 		     interface pcie = host.tep7.pcie;
