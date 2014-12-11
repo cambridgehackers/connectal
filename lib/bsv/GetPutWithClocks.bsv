@@ -22,6 +22,7 @@
 // SOFTWARE.
 
 import GetPut :: *;
+import ClientServer :: *;
 import Clocks :: *;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -47,6 +48,19 @@ instance ConnectableWithClocks#(Get#(a), Put#(a)) provisos (Bits#(a, awidth));
        endrule
    endmodule: mkConnectionWithClocks
 endinstance: ConnectableWithClocks
+
+instance ConnectableWithClocks#(Client#(a,b), Server#(a,b)) provisos (Bits#(a, awidth), Bits#(b, bwidth));
+   module mkConnectionWithClocks#(Client#(a,b) client, Server#(a,b) server,
+                                  Clock sourceClock, Reset sourceReset,
+                                  Clock destClock, Reset destReset)(Empty)
+      provisos (ConnectableWithClocks#(Get#(a), Put#(a)),
+		ConnectableWithClocks#(Get#(b), Put#(b)),
+		Bits#(a, awidth),
+		Bits#(b, bwidth));
+      mkConnectionWithClocks(client.request, server.request, sourceClock, sourceReset, destClock, destReset);
+      mkConnectionWithClocks(server.response, client.response, destClock, destReset, sourceClock, sourceReset);
+   endmodule
+endinstance
 
 module mkClockBinder#(a ifc) (a);
    return ifc;
