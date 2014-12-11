@@ -2,6 +2,10 @@
 Connectal BSV Libraries
 =======================
 
+.. toctree::
+   :maxdepth: 2
+   :numbered:
+
 .. cpp:class Portal
 
 
