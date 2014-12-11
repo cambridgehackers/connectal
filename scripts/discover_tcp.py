@@ -75,30 +75,34 @@ def do_work(start, end):
     connected = []
     total = end-start
 
+    READ_ONLY = select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLERR
+    READ_WRITE = READ_ONLY | select.POLLOUT
+    poller = select.poll()
+
     while (start <= end):
-        opened = []
-        addrs = {}
-        cnt = 0
+        fd_map = {}
         while (start <= end):
             try:
                 s = open_adb_socket(int2ip(start))
             except:
                 break
             else:
-                addrs[s.fileno()] = start
-                opened.append(s)
+                fd_map[s.fileno()] = (start,s)
                 start = start+1
-                cnt = cnt+1
+                poller.register(s, READ_WRITE)
 
         time.sleep(0.2)
-        ready_to_read, ready_to_write, in_error = select.select([],opened,[],0.1)
-        for w in ready_to_write:
+        events = poller.poll(0.1)
+
+        for fd,flag in events:
+            w = fd_map[fd][1]
             if w.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR) == 0:
-                addr = addrs[w.fileno()]
+                addr = fd_map[w.fileno()][0]
                 connected.append(addr)
 
-        for o in opened:
-            o.close()
+        for fd,t in fd_map.iteritems():
+            poller.unregister(t[1])
+            t[1].close()
 
         sys.stdout.write("\r%d/%d" % (total-(end-start),total))
         sys.stdout.flush()
