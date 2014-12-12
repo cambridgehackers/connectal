@@ -512,7 +512,7 @@ class BsvPackageIndex(Index):
 
     name = 'pkgindex'
     localname = l_('Bsv Package Index')
-    shortname = l_('packages')
+    shortname = l_('bsvpkgs')
 
     def generate(self, docnames=None):
         content = {}
@@ -574,6 +574,75 @@ class BsvPackageIndex(Index):
 
         return content, collapse
 
+class BsvModuleIndex(Index):
+    """
+    Index subinterface to provide the Bsv module index.
+    """
+
+    name = 'bsvmodules'
+    localname = l_('Bsv Module Index')
+    shortname = l_('bsvmodules')
+
+    def generate(self, docnames=None):
+        content = {}
+        # list of prefixes to ignore
+        ignores = self.domain.env.config['pkgindex_common_prefix']
+        ignores = sorted(ignores, key=len, reverse=True)
+        # list of all packages, sorted by package name
+        modules = sorted(self.domain.data['modules'].iteritems(),
+                         key=lambda x: x[0].lower())
+        # sort out collapsable modules
+        prev_modname = ''
+        num_toplevels = 0
+        for modname, (docname, synopsis, platforms, deprecated) in modules:
+            if docnames and docname not in docnames:
+                continue
+
+            for ignore in ignores:
+                if modname.startswith(ignore):
+                    modname = modname[len(ignore):]
+                    stripped = ignore
+                    break
+            else:
+                stripped = ''
+
+            # we stripped the whole module name?
+            if not modname:
+                modname, stripped = stripped, ''
+
+            entries = content.setdefault(modname[0].lower(), [])
+
+            module = modname.split('.')[0]
+            if module != modname:
+                # it's a submodule
+                if prev_modname == module:
+                    # first submodule - make parent a group head
+                    if entries:
+                        entries[-1][1] = 1
+                elif not prev_modname.startswith(module):
+                    # submodule without parent in list, add dummy entry
+                    entries.append([stripped + module, 1, '', '', '', '', ''])
+                subtype = 2
+            else:
+                num_toplevels += 1
+                subtype = 0
+
+            qualifier = deprecated and _('Deprecated') or ''
+            entries.append([stripped + modname, subtype, docname,
+                            'module-' + stripped + modname, platforms,
+                            qualifier, synopsis])
+            prev_modname = modname
+
+        # apply heuristics when to collapse pkgindex at page load:
+        # only collapse if number of toplevel modules is larger than
+        # number of submodules
+        collapse = len(modules) - num_toplevels < num_toplevels
+
+        # sort by first letter
+        content = sorted(content.iteritems())
+
+        return content, collapse
+
 
 class BsvDomain(Domain):
     """Bsv language domain."""
@@ -624,6 +693,7 @@ class BsvDomain(Domain):
     initial_data = {
         'objects': {},  # fullname -> docname, objtype
         'packages': {},  # modname -> docname, synopsis, platform, deprecated
+        'modules': {},  # modname -> docname, synopsis, platform, deprecated
         'labels': {         # labelname -> docname, labelid, sectionname
             'pkgindex': ('bsv-pkgindex', '', l_('Package Index')),
         },
@@ -633,6 +703,7 @@ class BsvDomain(Domain):
     }
     indices = [
         BsvPackageIndex,
+        BsvModuleIndex
     ]
 
     def clear_doc(self, docname):
