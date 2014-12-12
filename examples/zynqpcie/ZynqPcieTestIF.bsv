@@ -42,7 +42,7 @@ interface ZynqPcieTest;
    interface BRAMClient#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) traceBramClient;
 endinterface
 
-module mkZynqPcieTest#(SyncBitIfc#(Bit#(1)) lnk_up, SyncBitIfc#(Bit#(1)) resetBit, ZynqPcieTestIndication indication)(ZynqPcieTest);
+module mkZynqPcieTest#(SyncBitIfc#(Bit#(1)) lnk_up, SyncBitIfc#(Bit#(1)) resetBit, SyncBitIfc#(Bit#(1)) resetSeenBit, ZynqPcieTestIndication indication)(ZynqPcieTest);
 
    FIFO#(BRAMRequest#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData)) requestFifo <- mkFIFO();
    FIFO#(TimestampedTlpData) responseFifo <- mkFIFO();
@@ -54,7 +54,7 @@ module mkZynqPcieTest#(SyncBitIfc#(Bit#(1)) lnk_up, SyncBitIfc#(Bit#(1)) resetBi
 
    interface ZynqPcieTestRequest request;
       method Action getStatus(Bit#(32) v);
-	 indication.status(extend({lnk_up.read(), resetBit.read()}));
+	 indication.status(extend({lnk_up.read(), resetBit.read(), resetSeenBit.read()}));
       endmethod
       method Action getTrace(Bit#(32) v);
 	 requestFifo.enq(BRAMRequest {

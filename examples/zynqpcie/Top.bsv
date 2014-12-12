@@ -79,9 +79,10 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,ZynqPcie,0));
 
    // instantiate user portals
    SyncBitIfc#(Bit#(1)) resetBit <- mkSyncBit(b2c_pcie_sys_reset_n.c, b2c_pcie_sys_reset_n.r, defaultClock);
+   SyncBitIfc#(Bit#(1)) resetSeenBit <- mkSyncBit(b2c_pcie_sys_reset_n.c, b2c_pcie_sys_reset_n.r, defaultClock);
    SyncBitIfc#(Bit#(1)) linkUpBit <- mkSyncBit(host.portalClock, host.portalReset, defaultClock);
    ZynqPcieTestIndicationProxy zynqPcieTestIndicationProxy <- mkZynqPcieTestIndicationProxy(ZynqPcieTestIndication);
-   ZynqPcieTest zynqPcieTest <- mkZynqPcieTest(linkUpBit, resetBit, zynqPcieTestIndicationProxy.ifc);
+   ZynqPcieTest zynqPcieTest <- mkZynqPcieTest(linkUpBit, resetBit, resetSeenBit, zynqPcieTestIndicationProxy.ifc);
    ZynqPcieTestRequestWrapper zynqPcieTestRequestWrapper <- mkZynqPcieTestRequestWrapper(ZynqPcieTestRequest,zynqPcieTest.request);
 
    mkConnectionWithClocks(zynqPcieTest.traceBramClient, host.tpciehost.traceBramServer, defaultClock, defaultReset, host.portalClock, host.portalReset);
@@ -96,13 +97,19 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,ZynqPcie,0));
 
    rule updateLeds;
       let duration = remainingDuration;
+      let bits = ledsValue;
+      bits[3] = resetSeenBit.read();
+      bits[2] = resetBit.read();
+      bits[1] = linkUpBit.read();
+      
       if (duration == 0) begin
-	 ledsValue <= ~ledsValue;
+	 bits[0] = ~bits[0];
 	 duration = 100000000;
       end
       else begin
 	 duration = duration - 1;
       end
+      ledsValue <= bits;
       remainingDuration <= duration;
    endrule
 
@@ -119,6 +126,7 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,ZynqPcie,0));
    PhysMemSlave#(32,32) pcie_ctrl_mux <- mkSlaveMux(pcieportals, clocked_by host.portalClock, reset_by host.portalReset);
    mkConnection(host.tpciehost.master, pcie_ctrl_mux, clocked_by host.portalClock, reset_by host.portalReset);
 
+   Reg#(Bit#(1)) resetSeenReg <- mkReg(0);
    ZynqPcie zpcie = (interface ZynqPcie;
 		     method Action pcie_sys_clk(Bit#(1) p, Bit#(1) n);
 			b2c_pcie_sys_clk_p.inputclock(p);
@@ -129,6 +137,9 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,ZynqPcie,0));
 			b2c_sys_clk_n.inputclock(n);
 		     endmethod
 		     method Action pcie_sys_reset(Bit#(1) n);
+			if (n == 1)
+			   resetSeenReg <= 1;
+			resetSeenBit.send(resetSeenReg);
 			resetBit.send(n);
 			b2c_pcie_sys_reset_n.inputreset(n);
 		     endmethod
