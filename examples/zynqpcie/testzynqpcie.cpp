@@ -51,7 +51,7 @@ int main(int argc, const char **argv)
   device->pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
 
   portalExec_start();
-  for (int i = 0; i < 100; i++) {
+  for (int i = 0; i < 10; i++) {
       device->getStatus(0);
       sleep(2);
   }
