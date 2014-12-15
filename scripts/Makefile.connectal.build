@@ -152,6 +152,7 @@ ifeq ($(OS),android)
 else
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
 endif
+	gzip -c hw/mkTop.ll > bin/mkTop.ll.gz
 	$(CONNECTALDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
 endif
 endif
