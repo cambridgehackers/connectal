@@ -22,96 +22,66 @@
 #include <sys/mman.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <monkit.h>
 #include <semaphore.h>
 
 #include "StdDmaIndication.h"
 
-#include "BlueScopeIndication.h"
-#include "BlueScopeRequest.h"
+#include "BlueScopeEventIndication.h"
+#include "BlueScopeEventRequest.h"
 #include "MemServerRequest.h"
 #include "MMURequest.h"
-#include "MemcpyIndication.h"
-#include "MemcpyRequest.h"
+#include "SignalGenIndication.h"
+#include "SignalGenRequest.h"
 
 sem_t done_sem;
-int srcAlloc;
-int dstAlloc;
+sem_t cv_sem;
+unsigned int coounter_value = 0;
 int bsAlloc;
-unsigned int *srcBuffer = 0;
-unsigned int *dstBuffer = 0;
-unsigned int *bsBuffer  = 0;
-int numWords = 128; //16 << 10;
-size_t alloc_sz = numWords*sizeof(unsigned int);
-bool trigger_fired = false;
+uint64_t *bsBuffer  = 0;
+int numWords = 512; //16 << 10;
+size_t alloc_sz = numWords*sizeof(uint64_t);
+
 bool finished = false;
-bool memcmp_fail = false;
-unsigned int memcmp_count = 0;
 
-static void memdump(void *p, int len, const char *title)
-{
-int i;
-
-    i = 0;
-    while (len > 0) {
-        if (!(i & 0xf)) {
-            if (i > 0)
-                fprintf(stderr, "\n");
-            fprintf(stderr, "%s: ",title);
-        }
-        fprintf(stderr, "%02x ", *(unsigned char *)p);
-        p = (unsigned char *)p + 1;
-        i++;
-        len--;
-    }
-    fprintf(stderr, "\n");
-}
 
 void exit_test()
 {
-  fprintf(stderr, "testmemcpy finished count=%d memcmp_fail=%d, trigger_fired=%d\n", memcmp_count, memcmp_fail, trigger_fired);
-  exit(memcmp_fail || !trigger_fired);
+  fprintf(stderr, "test finished\n");
+  exit(0);
 }
 
-class MemcpyIndication : public MemcpyIndicationWrapper
+class BlueScopeEventIndication : public BlueScopeEventIndicationWrapper
 {
-
 public:
-  MemcpyIndication(unsigned int id) : MemcpyIndicationWrapper(id){}
+  BlueScopeEventIndication(unsigned int id) : BlueScopeEventIndicationWrapper(id){}
 
-
-  virtual void started(){
-    fprintf(stderr, "started");
-  }
-  virtual void done() {
+  virtual void dmaDone( ){
     sem_post(&done_sem);
     finished = true;
-    unsigned int mcf = memcmp(srcBuffer, dstBuffer, numWords*sizeof(unsigned int));
-    memcmp_fail |= mcf;
-    fprintf(stderr, "memcpy done:\n");
-    fprintf(stderr, "(%d) memcmp src=%lx dst=%lx success=%s\n", memcmp_count, (long)srcBuffer, (long)dstBuffer, mcf == 0 ? "pass" : "fail");
-    memdump(srcBuffer, 128, "src");
-    memdump(dstBuffer, 128, "dst");
-    memdump(bsBuffer,  128, "dbg");
+    fprintf(stderr, "BlueScopeEvent::dmaDone\n");
+  }
+  virtual void counterValue(uint64_t v){
+    counter_value = v;
+    sem_post(&cv_sem);
+    fprintf(stderr, "BlueScopeEvent::counterValue value=%" PRIu64 "\n", value);
+    
   }
 };
 
-class BlueScopeIndication : public BlueScopeIndicationWrapper
+class SignalGenIndication : public SignalGenIndicationWrapper
 {
 public:
-  BlueScopeIndication(unsigned int id) : BlueScopeIndicationWrapper(id){}
+  SignalGenIndication(unsigned int id) : SignalGenIndicationWrapper(id){}
 
-  virtual void done( ){
-    fprintf(stderr, "BlueScope::done\n");
+  virtual void ack1(unsigned int d1 ){
+    fprintf(stderr, "SignalGen::ack1(%d)\n", d1);
   }
-  virtual void triggerFired( ){
-    fprintf(stderr, "BlueScope::triggerFired\n");
-    trigger_fired = true;
-  }
-  virtual void reportStateDbg(uint64_t mask, uint64_t value){
-    fprintf(stderr, "BlueScope::reportStateDbg mask=%" PRIu64 ", value=%" PRIu64 "\n", mask, value);
-  }
+  virtual void counterValue(unsigned int d1, unsigned int d2){ 
+    fprintf(stderr, "SignalGen::ack2(%d, %d)\n", d1, d2);
+ }
 };
 
 // we can use the data synchronization barrier instead of flushing the 
@@ -124,81 +94,72 @@ public:
 
 int main(int argc, const char **argv)
 {
-  MemcpyRequestProxy *device = 0;
-  BlueScopeRequestProxy *bluescope = 0;
-  MemcpyIndication *deviceIndication = 0;
-  BlueScopeIndication *bluescopeIndication = 0;
+  BlueScopeEventRequestProxy *bluescope = 0;
+  BlueScopeEventIndication *bluescopeIndication = 0;
+  SignalGenEventRequestProxy *signalgen = 0;
+  SignalGenEventIndication *signalgenIndication = 0;
+  int i;
 
   if(sem_init(&done_sem, 1, 0)){
     fprintf(stderr, "failed to init done_sem\n");
     exit(1);
   }
+  if(sem_init(&cv_sem, 1, 0)){
+    fprintf(stderr, "failed to init cv_sem\n");
+    exit(1);
+  }
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
-  device = new MemcpyRequestProxy(IfcNames_MemcpyRequest);
-  bluescope = new BlueScopeRequestProxy(IfcNames_BluescopeRequest);
+  bluescope = new BlueScopeEventRequestProxy(IfcNames_BluescopeRequest);
   MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
   MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
   DmaManager *dma = new DmaManager(dmap);
   //MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
-  deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndication);
-  bluescopeIndication = new BlueScopeIndication(IfcNames_BluescopeIndication);
+  bluescopeIndication = new BlueScopeEventIndication(IfcNames_BluescopeIndication);
+
+
+  signalgen = new SignalGenRequestProxy(IfcNames_SignalGenRequest);
+  signalgenIndication = new SignalGenIndication(IfcNames_SignalGenIndication);
+
 
   fprintf(stderr, "Main::allocating memory of size=%d...\n", (int)alloc_sz);
 
-  srcAlloc = portalAlloc(alloc_sz);
-  dstAlloc = portalAlloc(alloc_sz);
   bsAlloc = portalAlloc(alloc_sz);
-
-  // for(int i = 0; i < srcAlloc->header.numEntries; i++)
-  //   fprintf(stderr, "%lx %lx\n", srcAlloc->entries[i].dma_address, srcAlloc->entries[i].length);
-  // for(int i = 0; i < dstAlloc->header.numEntries; i++)
-  //   fprintf(stderr, "%lx %lx\n", dstAlloc->entries[i].dma_address, dstAlloc->entries[i].length);
-  // for(int i = 0; i < bsAlloc->header.numEntries; i++)
-  //   fprintf(stderr, "%lx %lx\n", bsAlloc->entries[i].dma_address, bsAlloc->entries[i].length);
-
-
-  srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
-  dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
-  bsBuffer  = (unsigned int *)portalMmap(bsAlloc, alloc_sz);
+  bsBuffer  = (uint64_t *)portalMmap(bsAlloc, alloc_sz);
 
   portalExec_start();
 
-  for (int i = 0; i < numWords; i++){
-    srcBuffer[i] = i;
-    dstBuffer[i] = 0x5a5abeef;
-    bsBuffer[i]  = 0x5a5abeef;
-  }
-
   portalDCacheFlushInval(bsAlloc, alloc_sz,  bsBuffer);
-  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
-  portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
-  unsigned int ref_srcAlloc = dma->reference(srcAlloc);
-  unsigned int ref_dstAlloc = dma->reference(dstAlloc);
   unsigned int ref_bsAlloc  = dma->reference(bsAlloc);
   
-  bluescope->reset();
+  bluescope->doReset();
   bluescope->setTriggerMask (0xFFFFFFFF);
-  bluescope->setTriggerValue(0x00000008);
-  bluescope->start(ref_bsAlloc, alloc_sz);
+  bluescope->getCounterValue();
+  sem_wait(&cv_sem);
+  fprintf(stderr, "Main::initial BlueScopeEvent counterValue: %d\n", counter_value);
 
   sleep(1);
-  //hostMemServerRequest->addrRequest(ref_srcAlloc, 1*sizeof(unsigned int));
-  sleep(1);
-  //hostMemServerRequest->addrRequest(ref_dstAlloc, 2*sizeof(unsigned int));
-  sleep(1);
-  //hostMemServerRequest->addrRequest(ref_bsAlloc, 3*sizeof(unsigned int));
-  sleep(1);
-  
-  fprintf(stderr, "Main::starting mempcy numWords:%d\n", numWords);
-  int burstLen = 16;
-  device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords, burstLen);
+  signalgen.send1(0x1);
+  signalgen.send1(0x2);
+  signalgen.send1(0x3);
+  signalgen.send1(0x4);
+  bluescope->getCounterValue();
+  sem_wait(&cv_sem);
+  fprintf(stderr, "Main::final BlueScopeEvent counterValue: %d\n", counter_value);
+
+  // test here
+  if (counter_value != 4) counter_value = 4;
+  bluescope->startDma(ref_bsAlloc, counter_value * sizeof(uint64_t));
   sem_wait(&done_sem);
+  for (i = 0; i < 5; i += 1) {
+    fprintf(stderr, "event %3d: %08x\n", bsBuffer[i]);
+  }
+  // XXX print event buffer
   sleep(2);
   exit_test();
 }
