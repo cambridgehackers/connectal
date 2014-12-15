@@ -168,6 +168,7 @@ examples =  echo                 \
 	    strstr_nandsim       \
             flowcontrol          \
             bluescope            \
+            bluescopeevent       \
 	    splice               \
 	    maxcommonsubseq      \
 	    smithwaterman        \
