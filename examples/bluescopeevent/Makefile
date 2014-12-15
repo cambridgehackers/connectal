@@ -1,8 +1,8 @@
 
 CONNECTALDIR?=../..
-INTERFACES = SerialConfigRequest SerialConfigIndication \
+INTERFACES = SignalGenRequest SignalGenIndication \
 	BlueScopeEventRequest BlueScopeEventIndication
-BSVFILES = $(CONNECTALDIR)/lib/bsv/BlueScopeEvent.bsv Top.bsv
+BSVFILES = SignalGen.bsv Top.bsv
 CPPFILES=testbluescopeevent.cpp
 #CONNECTALFLAGS=--bscflags " -D TRACE_AXI"
 
