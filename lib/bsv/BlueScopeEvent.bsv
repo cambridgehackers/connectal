@@ -67,10 +67,10 @@ endinterface
 interface BlueScopeEvent#(numeric type dataWidth);
    method Action dataIn(Bit#(dataWidth) d);
    interface BlueScopeRequest requestIfc;
-   interface MemWriteClient#(dataWidth) writeClient;
+   interface MemWriteClient#(Bits#(64)) writeClient;
 endinterface
 
-module mkBlueScopeEvent#(Integer samples, BlueScopeIndication indication)(BlueScope#(dataWidth))
+module mkBlueScopeEvent#(Integer samples, BlueScopeIndication indication)(BlueScopeEvent#(dataWidth))
    provisos(Add#(0,dataWidth,32));
    
    let clk <- exposeCurrentClock;
@@ -102,7 +102,7 @@ module mkSyncBlueScopeEvent#(Integer samples, BlueScopeEventIndication indicatio
    Reg#(Bit#(dataWidth)) olddata <- mkReg(0, clocked_by sClk, reset_by sRst);
 
 
-   MemwriteEngine#(dataWidth, 2) mwriter <- mkMemwriteEngine;
+   MemwriteEngine#(Bits#(64), 2) mwriter <- mkMemwriteEngine;
    
    (* descending_urgency = "resetState, startState" *)
 
