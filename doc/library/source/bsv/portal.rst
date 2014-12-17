@@ -6,8 +6,7 @@ Portal Package
 PipePortal Interface
 --------------------
 
-.. bsv:interface:: PipePortal
-   :parameter: numeric type numRequests, numeric type numIndications, numeric type slaveDataWidth
+.. bsv:interface:: PipePortal#(numeric type numRequests, numeric type numIndications, numeric type slaveDataWidth)
 
    .. bsv:method:: messageSize
       :parameter: Bit#(16) methodNumber
@@ -25,8 +24,7 @@ PipePortal Interface
 MemPortal Interface
 -------------------
 
-.. bsv:interface:: MemPortal
-   :parameter: numeric type slaveAddrWidth, numeric type slaveDataWidth
+.. bsv:interface:: MemPortal#(numeric type slaveAddrWidth, numeric type slaveDataWidth)
 
    .. bsv:subinterface:: slave
       :returntype: PhysMemSlave#(slaveAddrWidth,slaveDataWidth)
@@ -52,8 +50,7 @@ MemPortal Interface
 ShareMemoryPortal Interface
 ---------------------------
 
-.. bsv:interface:: SharedMemoryPortal
-   :parameter: numeric type dataBusWidth
+.. bsv:interface:: SharedMemoryPortal#(numeric type dataBusWidth)
 
    Should be in SharedMemoryPortal.bsv
 
@@ -63,7 +60,7 @@ ShareMemoryPortal Interface
    .. bsv:subinterface:: writeClient
       :returntype: MemWriteClient#(dataBusWidth)
 
-   .. bsv:interface:: cfg
+   .. bsv:subinterface:: cfg
       :returntype: SharedMemoryPortalConfig
 
    .. bsv:subinterface:: interrupt
@@ -72,8 +69,7 @@ ShareMemoryPortal Interface
 ConnectalTop Interface
 ----------------------
 
-.. bsv:interface:: ConnectalTop
-   :parameter: numeric type addrWidth, numeric type dataWidth, type pins, numeric type numMasters
+.. bsv:interface:: ConnectalTop#(numeric type addrWidth, numeric type dataWidth, type pins, numeric type numMasters)
 
    Interface ConnectalTop is the interface exposed by the top module of a Connectal hardware design.
 
