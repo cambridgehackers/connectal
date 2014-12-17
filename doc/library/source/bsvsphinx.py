@@ -133,7 +133,7 @@ class BsvObject(ObjectDescription):
         name = sig
         arglist = ''
         retann = ''
-        if self.objtype in ['interface', 'instance']:
+        if self.objtype in ['interface', 'instance', 'typeclass']:
             split = sig.split('#', 1)
             name = split[0]
             if len(split) > 1:
@@ -294,7 +294,7 @@ class BsvPackagelevel(BsvObject):
         return self.objtype + ' '
 
     def needs_arglist(self):
-        return self.objtype.endswith('method') or self.objtype in ['typedef', 'function', 'interface']
+        return self.objtype.endswith('method') or self.objtype in ['typedef', 'function', 'interface', 'typeclass']
 
     def get_index_text(self, modname, name_cls):
         if modname:
@@ -689,6 +689,7 @@ class BsvDomain(Domain):
         'module':       ObjType(l_('module'),        'mod', 'obj'),
         'struct':        ObjType(l_('struct'),       'struct', 'obj'),
         'typedef':       ObjType(l_('typedef'),      'mod', 'obj'),
+        'typeclass':        ObjType(l_('typeclass'),         'typeclass', 'obj'),
     }
 
     directives = {
@@ -697,6 +698,7 @@ class BsvDomain(Domain):
         'module':          BsvPackagelevel,
         'typedef':         BsvPackagelevel,
         'interface':       BsvInterfacelike,
+        'typeclass':       BsvInterfacelike,
         'instance':        BsvInterfacelike,
         'struct':          BsvInterfacelike,
         'method':          BsvInterfacemember,
