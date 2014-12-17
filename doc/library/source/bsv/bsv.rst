@@ -13,5 +13,6 @@ Connectal BSV Libraries
    memportal.rst
    memreadengine.rst
    memtypes.rst
+   mmu.rst
    pipe.rst
    portal.rst
