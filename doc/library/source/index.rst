@@ -14,7 +14,6 @@ Contents:
    intro.rst
    bsv/bsv.rst
    examples/index.rst
-   python.rst
 
 Indices and tables
 ==================
