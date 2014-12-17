@@ -1,6 +1,8 @@
 MemTypes Package
 ================
 
+.. bsv:package:: MemTypes
+
 Constants
 ------------------
 

@@ -1,6 +1,9 @@
 MemPortal Package
 =================
 
+.. bsv:package:: MemPortal
+
+
 mkMemPortal Module
 ------------------
 
