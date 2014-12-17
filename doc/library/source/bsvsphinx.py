@@ -195,7 +195,8 @@ class BsvObject(ObjectDescription):
         if not arglist:
             if self.needs_arglist():
                 # for callables, add an empty parameter list
-                signode += addnodes.desc_parameterlist(text=self.options.get('parameter'))
+                if self.options.get('parameter'):
+                    signode += addnodes.desc_parameterlist(text=self.options.get('parameter'))
             if self.options.get('returntype'):
                 signode += addnodes.desc_returns(text=self.options.get('returntype'))
             if anno:
@@ -254,7 +255,7 @@ class BsvPackagelevel(BsvObject):
     """
 
     def needs_arglist(self):
-        return self.objtype == 'function'
+        return self.objtype.endswith('method') or self.objtype in ['typedef', 'function', 'interface']
 
     def get_index_text(self, modname, name_cls):
         if self.objtype == 'function':
@@ -312,7 +313,7 @@ class BsvInterfacemember(BsvObject):
         }
 
     def needs_arglist(self):
-        return self.objtype.endswith('method')
+        return self.objtype.endswith('method') or self.objtype in ['typedef', 'interface', 'subinterface']
 
     def get_signature_prefix(self, sig):
         if self.objtype == 'staticmethod':
@@ -660,12 +661,14 @@ class BsvDomain(Domain):
         'attribute':    ObjType(l_('attribute'),     'attr', 'obj'),
         'package':       ObjType(l_('package'),      'pkg', 'obj'),
         'module':       ObjType(l_('module'),        'mod', 'obj'),
+        'typedef':       ObjType(l_('typedef'),      'mod', 'obj'),
     }
 
     directives = {
         'function':        BsvPackagelevel,
         'data':            BsvPackagelevel,
         'module':          BsvPackagelevel,
+        'typedef':         BsvPackagelevel,
         'interface':           BsvInterfacelike,
         'exception':       BsvInterfacelike,
         'method':          BsvInterfacemember,
