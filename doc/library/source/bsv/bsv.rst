@@ -10,5 +10,6 @@ Connectal BSV Libraries
    hostinterface.rst
    leds.rst
    memportal.rst
+   memreadengine.rst
    memtypes.rst
    portal.rst
