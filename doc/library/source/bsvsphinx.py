@@ -140,7 +140,7 @@ class BsvObject(ObjectDescription):
                 arglist = split[1]
                 m = bsv_param_re.match(arglist)
                 if m: arglist = m.group(1)
-        elif self.objtype in ['subinterface']:
+        elif self.objtype in ['subinterface', 'field']:
             split = sig.rsplit(' ', 1)
             print 'rsplit', split
             name = split[-1]
@@ -326,7 +326,7 @@ class BsvInterfacelike(BsvObject):
 
 class BsvInterfacemember(BsvObject):
     """
-    Description of a interface member (methods, attributes).
+    Description of a interface member (methods, fields).
     """
 
     option_spec = {
@@ -338,7 +338,7 @@ class BsvInterfacemember(BsvObject):
         }
 
     def needs_arglist(self):
-        return self.objtype.endswith('method') or self.objtype in ['typedef', 'interface', 'subinterface']
+        return self.objtype.endswith('method') or self.objtype in ['typedef', 'interface', 'subinterface', 'field']
 
     def get_signature_prefix(self, sig):
         if self.objtype == 'staticmethod':
@@ -681,11 +681,12 @@ class BsvDomain(Domain):
         'exception':    ObjType(l_('exception'),     'exc', 'interface', 'obj'),
         'method':       ObjType(l_('method'),        'meth', 'obj'),
         'subinterface': ObjType(l_('subinterface'),  'ifc', 'obj'),
+        'field': ObjType(l_('field'),  'fld', 'obj'),
         'interfacemethod':  ObjType(l_('interface method'),  'meth', 'obj'),
         'staticmethod': ObjType(l_('static method'), 'meth', 'obj'),
-        'attribute':    ObjType(l_('attribute'),     'attr', 'obj'),
         'package':       ObjType(l_('package'),      'pkg', 'obj'),
         'module':       ObjType(l_('module'),        'mod', 'obj'),
+        'struct':        ObjType(l_('struct'),       'struct', 'obj'),
         'typedef':       ObjType(l_('typedef'),      'mod', 'obj'),
     }
 
@@ -694,12 +695,13 @@ class BsvDomain(Domain):
         'data':            BsvPackagelevel,
         'module':          BsvPackagelevel,
         'typedef':         BsvPackagelevel,
-        'interface':           BsvInterfacelike,
+        'interface':       BsvInterfacelike,
+        'struct':          BsvInterfacelike,
         'method':          BsvInterfacemember,
         'interfacemethod':     BsvInterfacemember,
         'staticmethod':    BsvInterfacemember,
-        'attribute':       BsvInterfacemember,
         'subinterface':    BsvInterfacemember,
+        'field':           BsvInterfacemember,
         'package':          BsvPackage,
         'currentpackage':   BsvCurrentPackage,
         'decorator':       BsvDecoratorFunction,
