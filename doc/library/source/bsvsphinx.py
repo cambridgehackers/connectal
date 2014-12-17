@@ -23,14 +23,7 @@ from sphinx.util.docfields import Field, GroupedField, TypedField
 
 
 # REs for Bsv signatures
-py_sig_re = re.compile(
-    r'''^ ([\w.]*\.)?            # interface name(s)
-          (\w+)  \s*             # thing name
-          (?: \((.*)\)           # optional: arguments
-           (?:\s* -> \s* (.*))?  #           return annotation
-          )? $                   # and nothing more
-          ''', re.VERBOSE)
-
+bsv_param_re = re.compile('^\((.*)\)$')
 
 def _pseudo_parse_arglist(signode, arglist):
     """"Parse" a list of arguments separated by commas.
@@ -112,9 +105,9 @@ class BsvObject(ObjectDescription):
 
     def get_signatures(self):
         print 'BsvObject.get_signatures'
-        sig = ObjectDescription.get_signatures(self)
-        print 'BsvObject.get_signatures got ', sig
-        return sig
+        siglines = ObjectDescription.get_signatures(self)
+        print 'BsvObject.get_signatures(', siglines, ')'
+        return siglines
 
     def get_signature_prefix(self, sig):
         """May return a prefix to put before the object name in the
@@ -138,10 +131,15 @@ class BsvObject(ObjectDescription):
         * it is added to the full name (return value) if not present
         """
         print 'BsvObject.handle_signature', sig
-        m = py_sig_re.match(sig)
-        if m is None:
-            raise ValueError
-        name_prefix, name, arglist, retann = m.groups()
+        split = sig.split('#', 1)
+        name_prefix = ''
+        name = split[0]
+        arglist = ''
+        retann = ''
+        if len(split) > 1:
+            arglist = split[1]
+            m = bsv_param_re.match(arglist)
+            if m: arglist = m.group(1)
 
         # determine package and interface name (if applicable), as well as full name
         modname = self.options.get(
@@ -195,6 +193,8 @@ class BsvObject(ObjectDescription):
         if not arglist:
             if self.needs_arglist():
                 # for callables, add an empty parameter list
+                if arglist:
+                    signode += addnodes.desc_parameterlist(text=arglist)
                 if self.options.get('parameter'):
                     signode += addnodes.desc_parameterlist(text=self.options.get('parameter'))
             if self.options.get('returntype'):
