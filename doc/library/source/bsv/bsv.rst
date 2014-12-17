@@ -6,6 +6,7 @@ Connectal BSV Libraries
    :maxdepth: 2
    :numbered:
 
+   arith.rst
    ctrlmux.rst
    hostinterface.rst
    leds.rst
