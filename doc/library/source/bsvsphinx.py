@@ -133,7 +133,7 @@ class BsvObject(ObjectDescription):
         name = sig
         arglist = ''
         retann = ''
-        if self.objtype in ['interface']:
+        if self.objtype in ['interface', 'instance']:
             split = sig.split('#', 1)
             name = split[0]
             if len(split) > 1:
@@ -678,6 +678,7 @@ class BsvDomain(Domain):
         'function':     ObjType(l_('function'),      'func', 'obj'),
         'data':         ObjType(l_('data'),          'data', 'obj'),
         'interface':        ObjType(l_('interface'),         'interface', 'exc', 'obj'),
+        'instance':     ObjType(l_('instance'),         'instance', 'obj'),
         'exception':    ObjType(l_('exception'),     'exc', 'interface', 'obj'),
         'method':       ObjType(l_('method'),        'meth', 'obj'),
         'subinterface': ObjType(l_('subinterface'),  'ifc', 'obj'),
@@ -696,6 +697,7 @@ class BsvDomain(Domain):
         'module':          BsvPackagelevel,
         'typedef':         BsvPackagelevel,
         'interface':       BsvInterfacelike,
+        'instance':        BsvInterfacelike,
         'struct':          BsvInterfacelike,
         'method':          BsvInterfacemember,
         'interfacemethod':     BsvInterfacemember,
