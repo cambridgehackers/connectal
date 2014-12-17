@@ -104,9 +104,7 @@ class BsvObject(ObjectDescription):
     ]
 
     def get_signatures(self):
-        print 'BsvObject.get_signatures'
         siglines = ObjectDescription.get_signatures(self)
-        print 'BsvObject.get_signatures(', siglines, ')'
         return siglines
 
     def get_signature_prefix(self, sig):
@@ -142,12 +140,40 @@ class BsvObject(ObjectDescription):
                 arglist = split[1]
                 m = bsv_param_re.match(arglist)
                 if m: arglist = m.group(1)
-        if self.objtype in ['subinterface']:
+        elif self.objtype in ['subinterface']:
             split = sig.rsplit(' ', 1)
             print 'rsplit', split
             name = split[-1]
             if len(split) > 1:
                 retann = split[0]
+        elif self.objtype in ['method', 'function']:
+            split = sig.split(' ', 1)
+            retann = split[0]
+            nameparams = split[1]
+            split = nameparams.split('(', 1)
+            name = split[0]
+            if len(split) > 1:
+                arglist = split[1][0:-1]
+        elif self.objtype in ['module']:
+            split = sig.split('#', 1)
+            name = split[0]
+            if len(split) > 1:
+                depth = 0
+                paramreturn = split[1]
+                #print 'module', paramreturn, len(paramreturn)
+                for i in range(0,len(paramreturn)):
+                    c = paramreturn[i]
+                    if c == '(': depth = depth+1
+                    elif c == ')': depth = depth-1
+                    
+                    #print i, c, depth
+                    if depth==0:
+                        endofparam=i
+                        break
+                arglist = paramreturn[1:endofparam]
+                retann = paramreturn[endofparam+1:-1]
+                #print arglist
+                #print endofparam, retann
 
         # determine package and interface name (if applicable), as well as full name
         modname = self.options.get(
@@ -197,7 +223,7 @@ class BsvObject(ObjectDescription):
         anno = self.options.get('annotation')
 
         signode += addnodes.desc_name(name, name)
-        print 'arglist', arglist
+        #print 'arglist', arglist
         if not arglist:
             if self.needs_arglist():
                 # for callables, add an empty parameter list
@@ -211,7 +237,7 @@ class BsvObject(ObjectDescription):
                 signode += addnodes.desc_returns(text=self.options.get('returntype'))
             if anno:
                 signode += addnodes.desc_annotation(' ' + anno, ' ' + anno)
-            print 'signode', signode
+            #print 'signode', signode
             return fullname, name_prefix
 
         _pseudo_parse_arglist(signode, arglist)
@@ -264,43 +290,32 @@ class BsvPackagelevel(BsvObject):
     Description of an object on package level (functions, data).
     """
 
+    def get_signature_prefix(self, sig):
+        return self.objtype + ' '
+
     def needs_arglist(self):
         return self.objtype.endswith('method') or self.objtype in ['typedef', 'function', 'interface']
 
     def get_index_text(self, modname, name_cls):
-        if self.objtype == 'function':
-            if not modname:
-                return _('%s() (built-in function)') % name_cls[0]
-            return _('%s() (in package %s)') % (name_cls[0], modname)
-        elif self.objtype == 'module':
-            if not modname:
-                return _('%s (BSV module)') % name_cls[0]
-            return _('%s (in package %s)') % (name_cls[0], modname)
-        elif self.objtype == 'data':
-            if not modname:
-                return _('%s (built-in variable)') % name_cls[0]
-            return _('%s (in package %s)') % (name_cls[0], modname)
+        if modname:
+            return _('%s (%s in package %s)') % (name_cls[0], self.objtype, modname)
         else:
-            return ''
+            return _('%s (%s)') % (name_cls[0], self.objtype)
 
 
 class BsvInterfacelike(BsvObject):
     """
-    Description of a interface-like object (interfacees, interfaces, exceptions).
+    Description of a interface-like object (interfacees).
     """
 
     def get_signature_prefix(self, sig):
         return self.objtype + ' '
 
     def get_index_text(self, modname, name_cls):
-        if self.objtype == 'interface':
-            if not modname:
-                return _('%s (built-in interface)') % name_cls[0]
-            return _('%s (interface in %s)') % (name_cls[0], modname)
-        elif self.objtype == 'exception':
-            return name_cls[0]
+        if modname:
+            return _('%s (%s in package %s)') % (name_cls[0], self.objtype, modname)
         else:
-            return ''
+            return _('%s (%s)') % (name_cls[0], self.objtype)
 
     def before_content(self):
         BsvObject.before_content(self)
@@ -680,7 +695,6 @@ class BsvDomain(Domain):
         'module':          BsvPackagelevel,
         'typedef':         BsvPackagelevel,
         'interface':           BsvInterfacelike,
-        'exception':       BsvInterfacelike,
         'method':          BsvInterfacemember,
         'interfacemethod':     BsvInterfacemember,
         'staticmethod':    BsvInterfacemember,

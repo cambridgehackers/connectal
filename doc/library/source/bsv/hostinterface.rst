@@ -5,15 +5,15 @@ The HostInterface package provides host-specific typedefs and interfaces.
 
 .. bsv:package:: HostInterface
 
-.. bsv:data:: DataBusWidth
+.. bsv:typedef:: DataBusWidth
 
    Width in bits of the data bus connected to host shared memory.
 
-.. bsv:data:: PhysAddrWidth
+.. bsv:typedef:: PhysAddrWidth
 
    Width in bits of physical addresses on the data bus connected to host shared memory.
 
-.. bsv:data:: NumberOfMasters
+.. bsv:typedef:: NumberOfMasters
 
    Number of memory interfaces used for connecting to host shared memory.
 

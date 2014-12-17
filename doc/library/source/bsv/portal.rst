@@ -8,9 +8,7 @@ PipePortal Interface
 
 .. bsv:interface:: PipePortal#(numeric type numRequests, numeric type numIndications, numeric type slaveDataWidth)
 
-   .. bsv:method:: messageSize
-      :parameter: Bit#(16) methodNumber
-      :returntype: Bit#(16)
+   .. bsv:method:: Bit#(16) messageSize(Bit#(16) methodNumber)
 
       Returns the message size of the methodNumber method of the portal.
 
@@ -30,17 +28,12 @@ MemPortal Interface
 
    .. bsv:subinterface:: WriteOnly#(Bool) top
 
-.. bsv:function:: getSlave
-   :parameter: MemPortal#(_a,_d) p
-   :returnType: PhysMemSlave(_a,_d)
+.. bsv:function:: PhysMemSlave(_a,_d) getSlave(MemPortal#(_a,_d) p)
 
-.. bsv:function:: getInterrupt
-   :parameter: MemPortal#(_a,_d) p
-   :returntype: ReadOnly#(Bool)
+.. bsv:function:: ReadOnly#(Bool) getInterrupt(MemPortal#(_a,_d) p)
 
-.. bsv:function:: getInterruptVector
-   :parameter: Vector#(numPortals, MemPortal#(_a,_d)) portals
-   :returntype: Vector#(16, ReadOnly#(Bool))
+.. bsv:function:: Vector#(16,ReadOnly#(Bool)) getInterruptVector(Vector#(numPortals, MemPortal#(_a,_d)) portals)
+
 
 ShareMemoryPortal Interface
 ---------------------------
