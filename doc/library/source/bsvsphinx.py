@@ -131,15 +131,23 @@ class BsvObject(ObjectDescription):
         * it is added to the full name (return value) if not present
         """
         print 'BsvObject.handle_signature', sig
-        split = sig.split('#', 1)
         name_prefix = ''
-        name = split[0]
+        name = sig
         arglist = ''
         retann = ''
-        if len(split) > 1:
-            arglist = split[1]
-            m = bsv_param_re.match(arglist)
-            if m: arglist = m.group(1)
+        if self.objtype in ['interface']:
+            split = sig.split('#', 1)
+            name = split[0]
+            if len(split) > 1:
+                arglist = split[1]
+                m = bsv_param_re.match(arglist)
+                if m: arglist = m.group(1)
+        if self.objtype in ['subinterface']:
+            split = sig.rsplit(' ', 1)
+            print 'rsplit', split
+            name = split[-1]
+            if len(split) > 1:
+                retann = split[0]
 
         # determine package and interface name (if applicable), as well as full name
         modname = self.options.get(
@@ -195,9 +203,11 @@ class BsvObject(ObjectDescription):
                 # for callables, add an empty parameter list
                 if arglist:
                     signode += addnodes.desc_parameterlist(text=arglist)
-                if self.options.get('parameter'):
+                elif self.options.get('parameter'):
                     signode += addnodes.desc_parameterlist(text=self.options.get('parameter'))
-            if self.options.get('returntype'):
+            if retann:
+                signode += addnodes.desc_returns(text=retann)
+            elif self.options.get('returntype'):
                 signode += addnodes.desc_returns(text=self.options.get('returntype'))
             if anno:
                 signode += addnodes.desc_annotation(' ' + anno, ' ' + anno)

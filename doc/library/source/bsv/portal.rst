@@ -14,11 +14,9 @@ PipePortal Interface
 
       Returns the message size of the methodNumber method of the portal.
 
-  .. bsv:subinterface:: requests
-     :returntype: Vector#(numRequests, PipeIn#(Bit#(slaveDataWidth)))
+  .. bsv:subinterface:: Vector#(numRequests, PipeIn#(Bit#(slaveDataWidth))) requests
 
-  .. bsv:subinterface:: indications
-     :returntype: Vector#(numIndications, PipeOut#(Bit#(slaveDataWidth)))
+  .. bsv:subinterface:: Vector#(numIndications, PipeOut#(Bit#(slaveDataWidth))) indications
 
 
 MemPortal Interface
@@ -26,14 +24,11 @@ MemPortal Interface
 
 .. bsv:interface:: MemPortal#(numeric type slaveAddrWidth, numeric type slaveDataWidth)
 
-   .. bsv:subinterface:: slave
-      :returntype: PhysMemSlave#(slaveAddrWidth,slaveDataWidth)
+   .. bsv:subinterface:: PhysMemSlave#(slaveAddrWidth,slaveDataWidth) slave
    
-   .. bsv:subinterface:: interrupt
-      :returntype: ReadOnly#(Bool)
+   .. bsv:subinterface:: ReadOnly#(Bool) interrupt
 
-   .. bsv:subinterface:: top
-      :returntype: WriteOnly#(Bool)
+   .. bsv:subinterface:: WriteOnly#(Bool) top
 
 .. bsv:function:: getSlave
    :parameter: MemPortal#(_a,_d) p
@@ -54,17 +49,13 @@ ShareMemoryPortal Interface
 
    Should be in SharedMemoryPortal.bsv
 
-   .. bsv:subinterface:: readClient
-      :returntype: MemReadClient(dataBusWidth)
+   .. bsv:subinterface:: MemReadClient(dataBusWidth) readClient
 
-   .. bsv:subinterface:: writeClient
-      :returntype: MemWriteClient#(dataBusWidth)
+   .. bsv:subinterface:: MemWriteClient#(dataBusWidth) writeClient
 
-   .. bsv:subinterface:: cfg
-      :returntype: SharedMemoryPortalConfig
+   .. bsv:subinterface:: SharedMemoryPortalConfig cfg
 
-   .. bsv:subinterface:: interrupt
-      :returntype: ReadOnly#(Bool)
+   .. bsv:subinterface:: ReadOnly#(Bool) interrupt
 
 ConnectalTop Interface
 ----------------------
@@ -73,20 +64,15 @@ ConnectalTop Interface
 
    Interface ConnectalTop is the interface exposed by the top module of a Connectal hardware design.
 
-   .. bsv:subinterface:: slave
-      :returntype: PhysMemSlave#(32,32)
+   .. bsv:subinterface:: PhysMemSlave#(32,32) slave
 
-   .. bsv:subinterface:: masters
-      :returntype: Vector#(numMasters,PhysMemMaster#(addrWidth, dataWidth))
+   .. bsv:subinterface:: Vector#(numMasters,PhysMemMaster#(addrWidth, dataWidth)) masters
 
-   .. bsv:subinterface:: interrupt		   
-      :returntype: Vector#(16,ReadOnly#(Bool))
+   .. bsv:subinterface:: Vector#(16,ReadOnly#(Bool)) interrupt		   
 
-   .. bsv:subinterface:: leds
-      :returntype: LEDS
+   .. bsv:subinterface:: LEDS leds
 
-   .. bsv:subinterface:: pins
-      :returntype: pins
+   .. bsv:subinterface:: pins pins
 
 StdConnectalTop Typedef
 -----------------------
