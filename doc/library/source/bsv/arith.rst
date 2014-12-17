@@ -3,7 +3,7 @@ Arith Package
 
 .. bsv:package:: Arith
 
-   Implements some functions that correspond to infix operators.
+The Arith package implements some functions that correspond to infix operators.
 
 .. bsv:function:: Bool booland(Bool x1, Bool x2)
 
