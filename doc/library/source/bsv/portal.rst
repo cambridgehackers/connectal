@@ -57,7 +57,7 @@ ShareMemoryPortal Interface
 
    Should be in SharedMemoryPortal.bsv
 
-   .. bsv:subinterface:: readClient;
+   .. bsv:subinterface:: readClient
       :returntype: MemReadClient(dataBusWidth)
 
    .. bsv:subinterface:: writeClient
@@ -69,3 +69,44 @@ ShareMemoryPortal Interface
    .. bsv:subinterface:: interrupt
       :returntype: ReadOnly#(Bool)
 
+ConnectalTop Interface
+----------------------
+
+.. bsv:interface:: ConnectalTop
+   :parameter: numeric type addrWidth, numeric type dataWidth, type pins, numeric type numMasters
+
+   Interface ConnectalTop is the interface exposed by the top module of a Connectal hardware design.
+
+   .. bsv:subinterface:: slave
+      :returntype: PhysMemSlave#(32,32)
+
+   .. bsv:subinterface:: masters
+      :returntype: Vector#(numMasters,PhysMemMaster#(addrWidth, dataWidth))
+
+   .. bsv:subinterface:: interrupt		   
+      :returntype: Vector#(16,ReadOnly#(Bool))
+
+   .. bsv:subinterface:: leds
+      :returntype: LEDS
+
+   .. bsv:subinterface:: pins
+      :returntype: pins
+
+StdConnectalTop Typedef
+-----------------------
+
+.. bsv:typedef:: StdConnectalTop
+   :parameter: numeric type addrWidth	 
+   :returntype: ConnectalTop#(addrWidth,64,Empty,0)
+
+   Type StdConnectalTop indicates a Connectal hardware design with no
+   user defined pins and no user of host shared memory. The "pins"
+   interface is Empty and the number of masters is 0.
+
+.. bsv:typedef:: StdConnectalDmaTop
+   :parameter: numeric type addrWidth
+   :returnType:  ConnectalTop#(addrWidth,64,Empty,1)
+
+   Type StdConnectalDmaTop indicates a Connectal hardware design with
+   no user defined pins and a single client of host shared memory. The
+   "pins" interface is Empty and the number of masters is 1.
