@@ -6,9 +6,9 @@ Connectal BSV Libraries
    :maxdepth: 2
    :numbered:
 
+   ctrlmux.rst
    hostinterface.rst
    leds.rst
-   ctrlmux.rst
-   portal.rst
    memportal.rst
-
+   memtypes.rst
+   portal.rst
