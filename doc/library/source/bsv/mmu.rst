@@ -15,6 +15,18 @@ MMU Package
 Address Translation
 -------------------
 
+.. bsv:struct:: ReqTup
+
+   Address translation request type
+
+   .. bsv:field:: SGListId             id
+
+      Which SGList to use.
+
+   .. bsv:field:: Bit#(MemOffsetSize) off
+
+      The address to translate.
+
 .. bsv:interface:: MMU#(numeric type addrWidth)
 
    An address translator
