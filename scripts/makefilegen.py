@@ -275,7 +275,7 @@ if __name__=='__main__':
     bsvdefines += ['BOARD_'+boardname]
 
     options.verilog.append(os.path.join(connectaldir, 'verilog'))
-    options.constraint.append(os.path.join(connectaldir, 'xilinx/constraints/%s.xdc' % boardname))
+    options.constraint.append(os.path.join(connectaldir, 'constraints/xilinx/%s.xdc' % boardname))
 
     tclboardname = os.path.join(project_dir, 'board.tcl')
     tclsynthname = os.path.join(project_dir, '%s-synth.tcl' % dutname.lower())
