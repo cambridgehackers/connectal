@@ -61,6 +61,85 @@ Data Types
 
       Indicates that this is the last beat of a burst.
 
+Physical Memory Clients and Servers
+-----------------------------------
+
+.. bsv:interface:: PhysMemSlave#(numeric type addrWidth, numeric type dataWidth)
+
+   .. bsv:subinterface:: PhysMemReadServer#(addrWidth, dataWidth) read_server
+
+   .. bsv:subinterface:: PhysMemWriteServer#(addrWidth, dataWidth) write_server 
+
+.. bsv:interface:: PhysMemMaster#(numeric type addrWidth, numeric type dataWidth)
+
+   .. bsv:subinterface:: PhysMemReadClient#(addrWidth, dataWidth) read_client
+
+   .. bsv:subinterface:: PhysMemWriteClient#(addrWidth, dataWidth) write_client 
+
+.. bsv:interface:: PhysMemReadClient#(numeric type asz, numeric type dsz)
+
+   .. bsv:subinterface:: Get#(PhysMemRequest#(asz))    readReq
+
+   .. bsv:subinterface:: Put#(MemData#(dsz)) readData
+
+.. bsv:interface:: PhysMemWriteClient#(numeric type asz, numeric type dsz)
+
+   .. bsv:subinterface:: Get#(PhysMemRequest#(asz))    writeReq
+
+   .. bsv:subinterface:: Get#(MemData#(dsz)) writeData
+
+   .. bsv:subinterface:: Put#(Bit#(MemTagSize))       writeDone
+
+.. bsv:interface:: PhysMemReadServer#(numeric type asz, numeric type dsz)
+
+   .. bsv:subinterface:: Put#(PhysMemRequest#(asz)) readReq
+
+   .. bsv:subinterface:: Get#(MemData#(dsz))     readData
+
+
+.. bsv:interface:: PhysMemWriteServer#(numeric type asz, numeric type dsz)
+
+   .. bsv:subinterface:: Put#(PhysMemRequest#(asz)) writeReq
+
+   .. bsv:subinterface:: Put#(MemData#(dsz))     writeData
+
+   .. bsv:subinterface:: Get#(Bit#(MemTagSize))           writeDone
+
+
+Memory Clients and Servers
+--------------------------
+
+.. bsv:interface:: MemReadClient#(numeric type dsz)
+
+   .. bsv:subinterface:: Get#(MemRequest)    readReq
+
+   .. bsv:subinterface:: Put#(MemData#(dsz)) readData
+
+
+.. bsv:interface:: MemWriteClient#(numeric type dsz)
+
+   .. bsv:subinterface:: Get#(MemRequest)    writeReq
+
+   .. bsv:subinterface:: Get#(MemData#(dsz)) writeData
+
+   .. bsv:subinterface:: Put#(Bit#(MemTagSize))       writeDone
+
+.. bsv:interface:: MemReadServer#(numeric type dsz)
+
+   .. bsv:subinterface:: Put#(MemRequest) readReq
+
+   .. bsv:subinterface:: Get#(MemData#(dsz))     readData
+
+
+.. bsv:interface:: MemWriteServer#(numeric type dsz)
+
+   .. bsv:subinterface:: Put#(MemRequest) writeReq
+
+   .. bsv:subinterface:: Put#(MemData#(dsz))     writeData
+
+   .. bsv:subinterface:: Get#(Bit#(MemTagSize)) writeDone
+
+
 Memory Engine Types
 -------------------
 
@@ -90,3 +169,63 @@ Memory Engine Types
 
 Memory Engine Interfaces
 ------------------------
+
+.. bsv:interface:: MemwriteServer#(numeric type dataWidth)
+
+   .. bsv:subinterface:: Server#(MemengineCmd,Bool) cmdServer
+
+   .. bsv:subinterface:: PipeIn#(Bit#(dataWidth)) dataPipe
+
+.. bsv:interface:: MemwriteEngineV#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers)
+
+   .. bsv:subinterface:: MemWriteClient#(dataWidth) dmaClient
+
+   .. bsv:subinterface:: Vector#(numServers, Server#(MemengineCmd,Bool)) writeServers
+
+   .. bsv:subinterface:: Vector#(numServers, PipeIn#(Bit#(dataWidth))) dataPipes
+
+   .. bsv:subinterface:: Vector#(numServers, MemwriteServer#(dataWidth)) write_servers
+
+.. bsv:typedef:: MemwriteEngineV#(dataWidth,cmdQDepth,1) MemwriteEngine#(numeric type dataWidth, numeric type cmdQDepth)
+
+.. bsv:interface:: MemreadServer#(numeric type dataWidth)
+
+   .. bsv:subinterface:: Server#(MemengineCmd,Bool) cmdServer
+
+   .. bsv:subinterface:: PipeOut#(Bit#(dataWidth)) dataPipe
+      
+.. bsv:interface:: MemreadEngineV#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers)
+
+   .. bsv:subinterface:: MemReadClient#(dataWidth) dmaClient
+
+   .. bsv:subinterface:: Vector#(numServers, Server#(MemengineCmd,Bool)) readServers
+
+   .. bsv:subinterface:: Vector#(numServers, PipeOut#(Bit#(dataWidth))) dataPipes
+
+   .. bsv:subinterface:: Vector#(numServers, MemreadServer#(dataWidth)) read_servers
+
+.. bsv:typedef:: MemreadEngineV#(dataWidth,cmdQDepth,1) MemreadEngine#(numeric type dataWidth, numeric type cmdQDepth)
+
+Memory Traffic Interfaces
+-------------------------
+
+
+.. bsv:interface:: DmaDbg
+
+   .. bsv:method:: ActionValue#(Bit#(64)) getMemoryTraffic()
+   .. bsv:method:: ActionValue#(DmaDbgRec) dbg()
+
+Connectable Instances
+---------------------
+
+.. bsv:instance:: Connectable#(MemReadClient#(dsz), MemReadServer#(dsz))
+
+.. bsv:instance:: Connectable#(MemWriteClient#(dsz), MemWriteServer#(dsz))
+
+.. bsv:instance:: Connectable#(PhysMemMaster#(addrWidth, busWidth), PhysMemSlave#(addrWidth, busWidth))
+
+.. bsv:instance:: Connectable#(PhysMemMaster#(32, busWidth), PhysMemSlave#(40, busWidth))
+
+
+
+
