@@ -24,9 +24,25 @@
 from __future__ import print_function
 import sys
 import json
+import argparse
 
-boardfile = sys.argv[1]
-pinoutfile = sys.argv[2]
+argparser = argparse.ArgumentParser("Generate constraints file for board.")
+argparser.add_argument('boardfile', help='Board description file (json)')
+argparser.add_argument('pinoutfile', help='Project description file (json)')
+argparser.add_argument('-b', '--bind', default=[], help='Bind signal group to pin group', action='append')
+
+options = argparser.parse_args()
+boardfile = options.boardfile
+pinoutfile = options.pinoutfile
+
+bindings = {
+    'pins': 'pins',
+    'pin_name': 'pins' # legacy
+    }
+for binding in options.bind:
+    split = binding.split(':')
+    bindings[split[0]] = split[1]
+
 
 pinstr = open(pinoutfile).read()
 pinout = json.loads(pinstr)
@@ -46,18 +62,11 @@ for pin in pinout:
     pinInfo = pinout[pin]
     loc = 'TBD'
     iostandard = 'TBD'
-    if pinInfo.has_key('fmc'):
-        pinName = pinInfo['fmc']
-        if boardInfo.has_key('fmc2'):
-            boardFmcInfo = boardInfo['fmc2']
-        else:
-            boardFmcInfo = boardInfo['fmc']
-    elif pinInfo.has_key('pmoda'):
-        pinName = pinInfo['pmoda']
-        boardFmcInfo = boardInfo['pmoda']
-    else:
-        pinName = pinInfo['pin_name']
-        boardFmcInfo = boardInfo['pins']
+    for key in bindings:
+        if pinInfo.has_key(key):
+            pinName = pinInfo[key]
+            boardFmcInfo = boardInfo[bindings[key]]
+            break
     if boardFmcInfo.has_key(pinName):
         if boardFmcInfo[pinName].has_key('LOC'):
             loc = boardFmcInfo[pinName]['LOC']
