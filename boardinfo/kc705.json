@@ -8,7 +8,7 @@
         "CONNECTALFLAGS" : [],
         "rewireclockstring" : ""
     },
-    "fmc": {
+    "fmc1": {
     "LA00_p_CC": {
         "LOC": "C25",
         "IOSTANDARD": "LVCMOS25"

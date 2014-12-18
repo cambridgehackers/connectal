@@ -9,7 +9,7 @@
         "CONNECTALFLAGS" : [],
         "needs_pcie_7x_gen1x8" : "False"
     },
-    "fmc": {
+    "fmc1": {
     "LA00_p_CC": {
         "LOC": "M19",
         "IOSTANDARD": "LVCMOS25"
