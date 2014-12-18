@@ -52,6 +52,9 @@ for pin in pinout:
             boardFmcInfo = boardInfo['fmc2']
         else:
             boardFmcInfo = boardInfo['fmc']
+    elif pinInfo.has_key('pmoda'):
+        pinName = pinInfo['pmoda']
+        boardFmcInfo = boardInfo['pmoda']
     else:
         pinName = pinInfo['pin_name']
         boardFmcInfo = boardInfo['pins']
