@@ -140,7 +140,7 @@ def run_zedboard(bitfile, androidexe, additional_files):
     print('Running android.exe with timelimit %d' % options.timelimit)
     for line in connection.StreamingShell("cd /mnt/sdcard/tmp/; rm -f /mnt/sdcard/tmp/exit.status; /mnt/sdcard/timelimit -t %d ./%s %s; echo $? > /mnt/sdcard/tmp/exit.status"
                                           % (options.timelimit, os.path.basename(androidexe), ' '.join([os.path.basename(f) for f in additional_files]))):
-        print line
+        sys.stdout.write(line)
     connection.Pull('/mnt/sdcard/tmp/exit.status', 'exit.status')
     connection.Pull('/mnt/sdcard/tmp/perf.monkit', 'perf.monkit')
     connection.Shell('rm -vf %s' % ' '.join([os.path.basename(f) for f in [bitfile, androidexe] + additional_files]))
