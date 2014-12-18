@@ -89,8 +89,9 @@ module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Cl
 `ifndef BSIM
    interface pcie = host.tep7.pcie;
    method Bit#(NumLeds) leds();
-      return extend({host.tep7.user.lnk_up(),3'd2});
+      return portalTop.leds.leds();
    endmethod
+   interface Clock deleteme_unused_clockLeds = host.tep7.epClock125;
    interface pins = portalTop.pins;
 `endif
 endmodule
