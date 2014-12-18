@@ -30,6 +30,7 @@ argparser = argparse.ArgumentParser("Generate constraints file for board.")
 argparser.add_argument('boardfile', help='Board description file (json)')
 argparser.add_argument('pinoutfile', help='Project description file (json)')
 argparser.add_argument('-b', '--bind', default=[], help='Bind signal group to pin group', action='append')
+argparser.add_argument('-o', '--output', default=None, help='Write output to file')
 
 options = argparser.parse_args()
 boardfile = options.boardfile
@@ -58,6 +59,10 @@ setPropertyTemplate='''\
 set_property %(prop)s "%(val)s" [get_ports "%(name)s"]
 '''
 
+out = sys.stdout
+if options.output:
+    out = open(options.output, 'w')
+
 for pin in pinout:
     pinInfo = pinout[pin]
     loc = 'TBD'
@@ -78,15 +83,15 @@ for pin in pinout:
         loc = 'fmc.%s' % (pinName)
     if pinInfo.has_key('IOSTANDARD'):
         iostandard = pinInfo['IOSTANDARD']
-    print(template % {
-        'name': pin,
-        'LOC': loc,
-        'IOSTANDARD': iostandard,
-        'PIO_DIRECTION': pinInfo['PIO_DIRECTION']
-        })
+    out.write(template % {
+            'name': pin,
+            'LOC': loc,
+            'IOSTANDARD': iostandard,
+            'PIO_DIRECTION': pinInfo['PIO_DIRECTION']
+            })
     for k in pinInfo:
         if k in ['fmc', 'IOSTANDARD', 'PIO_DIRECTION']: continue
-        print (setPropertyTemplate % {
+        out.write(setPropertyTemplate % {
                 'name': pin,
                 'prop': k,
                 'val': pinInfo[k],
