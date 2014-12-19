@@ -1,0 +1,12 @@
+{
+    "range_ctrl" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmod" : "J2"
+    },
+    "pulse_width_v" : {
+	"PIO_DIRECTION": "INPUT",
+	"pmod" : "J4"
+    }
+}
+
+

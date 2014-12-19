@@ -25,6 +25,7 @@ public:
 #define CW   0
 #define CCW  1
 
+
 #define POWER_0  0x0000
 #define POWER_1  0x0200
 #define POWER_2  0x0400
@@ -34,7 +35,6 @@ public:
 #define POWER_6  0x0700
 #define POWER_7  0x0780
 #define POWER_8  0x07FF
-
 
 void slow_start(int idx, int direction, HBridgeCtrlRequestProxy *device){
   device->ctrl(idx,POWER_1,direction);
@@ -76,20 +76,13 @@ int main(int argc, const char **argv)
   sleep(1);
   quick_stop(RIGHT,CCW,device);
 
-  if(1){
-    quick_start(RIGHT,CW,device);
-    sleep(1);
-    quick_stop(RIGHT,CW,device);
-    quick_start(RIGHT,CCW,device);
-    sleep(1);
-    quick_stop(RIGHT,CCW,device);
+  slow_start(LEFT,CW,device);
+  sleep(1);
+  quick_stop(LEFT,CW,device);
 
-    quick_start(LEFT,CW,device);
-    sleep(1);
-    quick_stop(LEFT,CW,device);
-    quick_start(LEFT,CCW,device);
-    sleep(1);
-    quick_stop(LEFT,CCW,device);
-  }
+  slow_start(RIGHT,CW,device);
+  sleep(1);
+  quick_stop(RIGHT,CW,device);
+
   sleep(1);
 }

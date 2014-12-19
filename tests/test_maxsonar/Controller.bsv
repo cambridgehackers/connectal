@@ -25,61 +25,46 @@ import Leds::*;
 import Vector::*;
 
 interface PmodPins;
-   method Bit#(2) hbridge0();
-   method Bit#(2) hbridge1();
+   method Bit#(1) range_ctrl();
+   method Action pulse_width(Bit#(1) v);
 endinterface
 
-interface HBridgeCtrlRequest;
-   method Action ctrl(Bit#(16) idx, Bit#(16) power, Bit#(1) direction);
+interface MaxSonarCtrlRequest;
+   method Action range_ctrl(Bit#(1) v);
 endinterface
 
-interface HBridgeCtrlIndication;
-   method Action ctrl(Bit#(16) idx, Bit#(16) power, Bit#(1) direction);
+interface MaxSonarCtrlIndication;
+   method Action range_ctrl(Bit#(1) v);
 endinterface
 
 interface Controller;
-   interface HBridgeCtrlRequest req;
+   interface MaxSonarCtrlRequest req;
    interface PmodPins pins;
    interface LEDS leds;
 endinterface
 
-module mkController#(HBridgeCtrlIndication ind)(Controller);
+module mkController#(MaxSonarCtrlIndication ind)(Controller);
    
-   Vector#(2, Reg#(Bit#(1))) direction <- replicateM(mkReg(0));
-   Vector#(2, Reg#(Bit#(1)))   enabled <- replicateM(mkReg(0));
-   Vector#(2, Reg#(Bit#(11)))    power <- replicateM(mkReg(0));
-   Bit#(8) leds_val =  extend({direction[0],direction[1]});   
-   
-   // frequency of design: 100 mHz  
-   // frequency of PWM System: 2 kHz 
-   // 2k design cycles == 1 PWM cycle
-   Reg#(Bit#(11)) fcnt <- mkReg(0);
-   
-   rule pwm;
-      for(Integer i = 0; i < 2; i=i+1)
-	 enabled[i] <= ((power[i] > 0) && (fcnt <= power[i])) ? 1 : 0;
-      fcnt <= fcnt+1;
-   endrule
-   
-   interface HBridgeCtrlRequest req;
-      method Action ctrl(Bit#(16) i, Bit#(16) p, Bit#(1) d);
-	 direction[i] <= d;
-	 power[i] <= truncate(p);
-	 ind.ctrl(i,p,d);
+   Reg#(Bit#(1)) range_ctrl_reg <- mkReg(0);
+
+   interface MaxSonarCtrlRequest req;
+      method Action range_ctrl(Bit#(1) v);
+	 range_ctrl_reg <= v;
+	 ind.range_ctrl(v);
       endmethod
    endinterface
    
    interface PmodPins pins;
-      method Bit#(2) hbridge0();
-	 return {enabled[0],direction[0]};
+      method Bit#(1) range_ctrl();
+	 return range_ctrl_reg;
       endmethod
-      method Bit#(2) hbridge1();
-	 return {enabled[1],direction[1]};
+      method Action pulse_width(Bit#(1) v);
+	 noAction;
       endmethod
    endinterface
    
    interface LEDS leds;
-      method Bit#(LedsWidth) leds() = leds_val;
+      method Bit#(LedsWidth) leds() = extend(range_ctrl_reg);
    endinterface
 
 endmodule
