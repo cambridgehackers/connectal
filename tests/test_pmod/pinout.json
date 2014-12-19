@@ -1,33 +1,33 @@
 {
-    "pmoda[0]" : {
+    "pmod[0]" : {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod" : "J1"
     },
-    "pmoda[1]" : {
+    "pmod[1]" : {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod" : "J2"
     },
-    "pmoda[2]" : {
+    "pmod[2]" : {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod" : "J3"
     },
-    "pmoda[3]" : {
+    "pmod[3]" : {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod" : "J4"
     },
-    "pmoda[4]" : {
+    "pmod[4]" : {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod" : "J5"
     },
-    "pmoda[5]" : {
+    "pmod[5]" : {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod" : "J6"
     },
-    "pmoda[6]" : {
+    "pmod[6]" : {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod" : "J7"
     },
-    "pmoda[7]" : {
+    "pmod[7]" : {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod" : "J8"
     }

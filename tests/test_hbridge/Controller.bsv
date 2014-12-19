@@ -22,55 +22,64 @@
 // SOFTWARE.
 
 import Leds::*;
+import Vector::*;
 
 interface PmodPins;
-   method Bit#(8) pmod();
+   method Bit#(2) hbridge0();
+   method Bit#(2) hbridge1();
 endinterface
 
-interface PmodControllerRequest;
-   method Action rst(Bit#(32) v);
+interface HBridgeCtrlRequest;
+   method Action ctrl(Bit#(16) idx, Bit#(16) power, Bit#(1) direction);
 endinterface
 
-interface PmodControllerIndication;
-   method Action rst(Bit#(32) v);
+interface HBridgeCtrlIndication;
+   method Action ctrl(Bit#(16) idx, Bit#(16) power, Bit#(1) direction);
 endinterface
 
 interface Controller;
-   interface PmodControllerRequest req;
+   interface HBridgeCtrlRequest req;
    interface PmodPins pins;
    interface LEDS leds;
 endinterface
 
-module mkController#(PmodControllerIndication ind)(Controller);
+module mkController#(HBridgeCtrlIndication ind)(Controller);
    
-   Reg#(Bit#(8)) data_reg <- mkReg(0);
-   Reg#(Bit#(8)) leds_reg <- mkReg(0);
-   Reg#(Bool)     rst_reg <- mkReg(False);
+   Vector#(2, Reg#(Bit#(1))) direction <- replicateM(mkReg(0));
+   Vector#(2, Reg#(Bit#(1)))   enabled <- replicateM(mkReg(0));
+   Vector#(2, Reg#(Bit#(11)))    power <- replicateM(mkReg(0));
+   Bit#(8) leds_val =  extend({direction[0],direction[1]});   
    
-   rule count;
-      if (rst_reg) begin
-	 rst_reg <= False;
-	 data_reg <= 0;
-	 leds_reg <= data_reg;
-      end
-      else begin
-	 data_reg <= data_reg+1;
-      end
+   // frequency of design: 100 mHz  
+   // frequency of PWM System: 2 kHz 
+   // 2k design cycles == 1 PWM cycle
+   Reg#(Bit#(11)) fcnt <- mkReg(0);
+   
+   rule pwm;
+      for(Integer i = 0; i < 2; i=i+1)
+	 enabled[i] <= ((power[i] > 0) && (fcnt <= power[i])) ? 1 : 0;
+      fcnt <= fcnt+1;
    endrule
    
-   interface PmodControllerRequest req;
-      method Action rst(Bit#(32) v);
-	 rst_reg <= True;
-	 ind.rst(v);
+   interface HBridgeCtrlRequest req;
+      method Action ctrl(Bit#(16) i, Bit#(16) p, Bit#(1) d);
+	 direction[i] <= d;
+	 power[i] <= truncate(p);
+	 ind.ctrl(i,p,d);
       endmethod
    endinterface
    
    interface PmodPins pins;
-      method Bit#(8) pmod() = data_reg._read;
+      method Bit#(2) hbridge0();
+	 return {direction[0],enabled[0]};
+      endmethod
+      method Bit#(2) hbridge1();
+	 return {direction[1],enabled[1]};
+      endmethod
    endinterface
    
    interface LEDS leds;
-      method Bit#(LedsWidth) leds() = truncate(leds_reg);
+      method Bit#(LedsWidth) leds() = leds_val;
    endinterface
 
 endmodule
