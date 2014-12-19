@@ -67,17 +67,19 @@ for pin in pinout:
     pinInfo = pinout[pin]
     loc = 'TBD'
     iostandard = 'TBD'
+    used = []
     for key in bindings:
         if pinInfo.has_key(key):
+            used.append(key)
             pinName = pinInfo[key]
-            boardFmcInfo = boardInfo[bindings[key]]
+            boardGroupInfo = boardInfo[bindings[key]]
             break
-    if boardFmcInfo.has_key(pinName):
-        if boardFmcInfo[pinName].has_key('LOC'):
-            loc = boardFmcInfo[pinName]['LOC']
+    if boardGroupInfo.has_key(pinName):
+        if boardGroupInfo[pinName].has_key('LOC'):
+            loc = boardGroupInfo[pinName]['LOC']
         else:
-            loc = boardFmcInfo[pinName]['PACKAGE_PIN']
-        iostandard = boardFmcInfo[pinName]['IOSTANDARD']
+            loc = boardGroupInfo[pinName]['PACKAGE_PIN']
+        iostandard = boardGroupInfo[pinName]['IOSTANDARD']
     else:
         print('Missing pin description for', pinName, file=sys.stderr)
         loc = 'fmc.%s' % (pinName)
@@ -90,7 +92,7 @@ for pin in pinout:
             'PIO_DIRECTION': pinInfo['PIO_DIRECTION']
             })
     for k in pinInfo:
-        if k in ['fmc', 'IOSTANDARD', 'PIO_DIRECTION']: continue
+        if k in used+['IOSTANDARD', 'PIO_DIRECTION']: continue
         out.write(setPropertyTemplate % {
                 'name': pin,
                 'prop': k,
