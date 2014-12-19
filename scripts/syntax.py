@@ -351,7 +351,9 @@ def p_term(p):
             | term QUESTION expression COLON expression
             | LPAREN expression RPAREN
             | TOKINTERFACE VAR interfaceHashParams SEMICOLON expressionStmts TOKENDINTERFACE colonVar
+            | TOKINTERFACE VAR COLONCOLON VAR interfaceHashParams SEMICOLON expressionStmts TOKENDINTERFACE colonVar
             | TOKINTERFACE VAR expressionStmts TOKENDINTERFACE colonVar
+            | TOKINTERFACE VAR COLONCOLON VAR expressionStmts TOKENDINTERFACE colonVar
             | BUILTINVAR
             | TOKCLOCKED_BY expression
             | TOKRESET_BY expression
