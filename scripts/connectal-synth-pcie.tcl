@@ -1,7 +1,7 @@
 source "board.tcl"
 source "$connectaldir/scripts/connectal-synth-ip.tcl"
 
-if $needspcie {
+if $need_xilinx_pcie {
     set pcieversion {3.0}
     set maxlinkwidth {X8}
     if {$boardname == {zc706}} {
@@ -18,3 +18,65 @@ if $needspcie {
 # Xilinx/Vivado/2013.2/data/ip/xilinx/pcie_7x_v2_1/xgui/pcie_7x_v2_1.tcl
 # (it is byteoffset/8, expressed in hex)
 }
+
+set altera_pcie_config [ dict create ]
+dict set altera_pcie_config lane_mask_hwtcl                      "x8"
+dict set altera_pcie_config gen123_lane_rate_mode_hwtcl          "Gen2 (5.0 Gbps)"
+dict set altera_pcie_config port_type_hwtcl                      "Native endpoint"
+dict set altera_pcie_config pcie_spec_version_hwtcl              "2.1"
+dict set altera_pcie_config ast_width_hwtcl                      "Avalon-ST 128-bit"
+dict set altera_pcie_config rxbuffer_rxreq_hwtcl                 "Low"
+dict set altera_pcie_config pll_refclk_freq_hwtcl                "100 MHz"
+dict set altera_pcie_config set_pld_clk_x1_625MHz_hwtcl          0
+dict set altera_pcie_config use_rx_st_be_hwtcl                   0
+dict set altera_pcie_config use_ast_parity                       0
+dict set altera_pcie_config multiple_packets_per_cycle_hwtcl     0
+dict set altera_pcie_config in_cvp_mode_hwtcl                    0
+dict set altera_pcie_config use_tx_cons_cred_sel_hwtcl           0
+dict set altera_pcie_config use_config_bypass_hwtcl              0
+dict set altera_pcie_config hip_reconfig_hwtcl                   0
+dict set altera_pcie_config hip_tag_checking_hwtcl               1
+dict set altera_pcie_config enable_power_on_rst_pulse_hwtcl      0
+
+dict set altera_pcie_config bar0_type_hwtcl                      1
+dict set altera_pcie_config bar0_size_mask_hwtcl                 28
+dict set altera_pcie_config bar0_io_space_hwtcl                  "Disabled"
+dict set altera_pcie_config bar0_64bit_mem_space_hwtcl           "Enabled"
+
+dict set altera_pcie_config bar1_type_hwtcl                      0
+dict set altera_pcie_config bar1_size_mask_hwtcl                 0
+dict set altera_pcie_config bar1_io_space_hwtcl                  "Disabled"
+dict set altera_pcie_config bar1_prefetchable_hwtcl              "Disabled"
+
+dict set altera_pcie_config bar2_type_hwtcl                      0
+dict set altera_pcie_config bar2_size_mask_hwtcl                 0
+dict set altera_pcie_config bar2_io_space_hwtcl                  "Disabled"
+dict set altera_pcie_config bar2_64bit_mem_space_hwtcl           "Disabled"
+dict set altera_pcie_config bar2_prefetchable_hwtcl              "Disabled"
+
+set component_parameters {}
+foreach item [dict keys $altera_pcie_config] {
+    set val [dict get $altera_pcie_config $item]
+    lappend component_parameters --component-parameter=$item=$val
+}
+
+if $need_altera_pcie {
+    puts $connectal_dut
+    exec -ignorestderr -- ip-generate --project-directory=$ipdir/$boardname        \
+            --output-directory=$ipdir/$boardname/synthesis                         \
+            --file-set=QUARTUS_SYNTH                                               \
+            --report-file=html:$ipdir/$boardname/$connectal_dut.html               \
+            --report-file=sopcinfo:$ipdir/$boardname/$connectal_dut.sopcinfo       \
+            --report-file=cmp:$ipdir/$boardname/$connectal_dut.cmp                 \
+            --report-file=qip:$ipdir/$boardname/synthesis/$connectal_dut.qip       \
+            --report-file=svd:$ipdir/$boardname/synthesis/$connectal_dut.svd       \
+            --report-file=regmap:$ipdir/$boardname/synthesis/$connectal_dut.regmap \
+            --report-file=xml:$ipdir/$boardname/$connectal_dut.xml                 \
+            --system-info=DEVICE_FAMILY=StratixV                                   \
+            --system-info=DEVICE=$partname                                         \
+            --system-info=DEVICE_SPEEDGRADE=2_H2                                   \
+            --language=VERILOG                                                     \
+            {*}$component_parameters \
+            --component-name=altera_pcie_sv_hip_ast
+}
+

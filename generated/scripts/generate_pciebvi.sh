@@ -1,7 +1,7 @@
 #
 set -x
 set -e
-scripts/importbvi.py -o PCIEWRAPPER.bsv -I PcieWrap -P PcieWrap \
+./importbvi.py -o PCIEWRAPPER.bsv -I PcieWrap -P PcieWrap \
     -n pl_link_partner_gen2_supported \
     -n cfg_mgmt_wr_rw1c_as_rw \
     -n pipe_gen3_out \
@@ -15,6 +15,6 @@ scripts/importbvi.py -o PCIEWRAPPER.bsv -I PcieWrap -P PcieWrap \
     -f cfg_root_control \
     -f pipe -f pl_link -f pci_exp -f pcie_drp \
     -p lanes \
-    ../../import_components/Xilinx/generated/kc705/pcie_7x_0/synth/pcie_7x_0.v
+    ../../out/vc707/pcie_7x_0/synth/pcie_7x_0.v
 
 #    xilinx/pcie_7x_v2_1/synth/pcie_7x_0.v

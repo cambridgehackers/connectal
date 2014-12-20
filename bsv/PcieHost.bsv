@@ -40,7 +40,11 @@ import PcieCsr           :: *;
 import MemTypes          :: *;
 import Bscan             :: *;
 `ifndef BSIM
+`ifdef XILINX
 import PcieEndpointX7    :: *;
+`elsif ALTERA
+import PcieEndpointS5    :: *;
+`endif
 `endif
 import HostInterface     :: *;
 
@@ -165,10 +169,15 @@ module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p
 `endif
        True, pci_sys_clk_p, pci_sys_clk_n);
    // Instantiate the PCIE endpoint
+`ifdef XILINX
    PcieEndpointX7#(PcieLanes) ep7 <- mkPcieEndpointX7( clocked_by pci_clk_100mhz_buf
 						      , reset_by pci_sys_reset_n
 						       );
-
+`elsif ALTERA
+   PcieEndpointS5#(PcieLanes) ep7 <- mkPcieEndpointS5( clocked_by pci_clk_100mhz_buf
+						      , reset_by pci_sys_reset_n
+						       );
+`endif
    Clock epClock125 = ep7.epClock125;
    Reset epReset125 = ep7.epReset125;
    Clock epClock250 = ep7.epClock250;
@@ -187,7 +196,11 @@ module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p
    interface Clock tsys_clk_200mhz = sys_clk_200mhz;
    interface Clock tsys_clk_200mhz_buf = sys_clk_200mhz_buf;
    interface Clock tpci_clk_100mhz_buf = pci_clk_100mhz_buf;
+`ifdef XILINX
    interface PcieEndpointX7 tep7 = ep7;
+`elsif ALTERA
+   interface PcieEndpointS5 tep7 = ep7;
+`endif
    interface Clock tepClock125 = epClock125;
    interface Reset tepReset125 = epReset125;
    interface PcieHost tpciehost = pciehost;

@@ -1,6 +1,6 @@
 {
     "options": {
-        "bsvdefines" : ["Kintex7", "PCIE", "PcieHostTypeIF", "PhysAddrWidth=40"],
+        "bsvdefines" : ["XILINX", "Kintex7", "PCIE", "PcieHostTypeIF", "PhysAddrWidth=40"],
         "os" : "ubuntu",
         "partname" : "xc7k325tffg900-2",
         "needs_pcie_7x_gen1x8" : "True",
