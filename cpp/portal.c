@@ -111,7 +111,6 @@ int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency
 
 static void init_portal_hw(void)
 {
-  unsigned int i;
   static int once = 0;
 
   if (once)
@@ -128,7 +127,7 @@ void portalTrace_start()
 #if !defined(ZYNQ) && !defined(__KERNEL__)
   tTraceInfo traceInfo;
   traceInfo.trace = 1;
-  assert(false);
+  assert(0);
   int res = 0; //ioctl(globalDirectory.fpga_fd,BNOC_TRACE,&traceInfo);
   if (res)
     PORTAL_PRINTF("Failed to start tracing. errno=%d\n", errno);
@@ -140,7 +139,7 @@ void portalTrace_stop()
 #if !defined(ZYNQ) && !defined(__KERNEL__)
   tTraceInfo traceInfo;
   traceInfo.trace = 0;
-  assert(false);
+  assert(0);
   int res = 0; //ioctl(globalDirectory.fpga_fd,BNOC_TRACE,&traceInfo);
   if (res)
     PORTAL_PRINTF("Failed to stop tracing. errno=%d\n", errno);
@@ -150,11 +149,12 @@ void portalTrace_stop()
 uint64_t portalCycleCount()
 {
   unsigned int high_bits, low_bits;
+  volatile unsigned int *msb, *lsb;
   if(!utility_portal)
     return 0;
   init_portal_hw();
-  volatile unsigned int *msb = &utility_portal->map_base[PORTAL_CTRL_REG_COUNTER_MSB];
-  volatile unsigned int *lsb = &utility_portal->map_base[PORTAL_CTRL_REG_COUNTER_LSB];
+  msb = &utility_portal->map_base[PORTAL_CTRL_REG_COUNTER_MSB];
+  lsb = &utility_portal->map_base[PORTAL_CTRL_REG_COUNTER_LSB];
   high_bits = utility_portal->item->read(utility_portal, &msb);
   low_bits  = utility_portal->item->read(utility_portal, &lsb);
   return (((uint64_t)high_bits)<<32) | ((uint64_t)low_bits);
@@ -251,11 +251,13 @@ void portalCheckIndication(PortalInternal *pint)
     if(0) {
       unsigned int int_src = pint->item->read(pint, &srcp);
       unsigned int int_en  = pint->item->read(pint, &enp);
-      fprintf(stderr, "%s: (fpga%d) about to receive messages int=%08x en=%08x qs=%08x\n", __FUNCTION__, pint->fpga_number, int_src, int_en, queue_status);
+      PORTAL_PRINTF( "%s: (fpga%d) about to receive messages int=%08x en=%08x qs=%08x\n", __FUNCTION__, pint->fpga_number, int_src, int_en, queue_status);
     }
     if (!pint->handler) {
-        printf("[%s:%d] missing handler!!!!\n", __FUNCTION__, __LINE__);
+        PORTAL_PRINTF("[%s:%d] missing handler!!!!\n", __FUNCTION__, __LINE__);
+#ifndef __KERNEL__
         exit(1);
+#endif
     }
     pint->handler(pint, queue_status-1, 0);
   }
@@ -312,15 +314,19 @@ int busy_hardware(struct PortalInternal *pint, unsigned int v, const char *str)
     if (count <= 0) {
         if (pint->busyType == BUSY_TIMEWAIT)
             while (!pint->item->notFull(pint, v)) {
+#ifndef __KERNEL__
                 struct timeval timeout;
                 timeout.tv_sec = 0;
                 timeout.tv_usec = 10000;
                 select(0, NULL, NULL, NULL, &timeout);
+#endif
             }
         else {
             PORTAL_PRINTF("putFailed: %s\n", str);
+#ifndef __KERNEL__
             if (pint->busyType == BUSY_EXIT)
                 exit(1);
+#endif
             return 1;
         }
     }
