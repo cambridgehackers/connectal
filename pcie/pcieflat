@@ -96,6 +96,9 @@ first_vcd_timestamp = mpz(0)
 last_vcd_timestamp = mpz(0)
 last_vcd_pktclass_code = None
 
+def byteswap(be):
+    return '%s%s%s%s' % (be[6:8],be[4:6],be[2:4],be[0:2])
+
 pktclassCodes = {
     'CpuRReq': 'S',
     'CpuWReq': 'T',
@@ -253,7 +256,7 @@ def print_tlp(tlpdata, f=None):
         headerstr = headerstr + ' ' + tlpdata[29:32]
         headerstr = headerstr + ' ' + tlpdata[38:40]
         headerstr = headerstr + ' %3d' % (int(tlpdata[21:24],16) & 0x3ff)
-        headerstr = headerstr + ' ' + tlpdata[40:]
+        headerstr = headerstr + ' ' + byteswap(tlpdata[40:])
     elif TlpPacketFormat[pktformat] == 'MEM_READ__3DW     ' or TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA':
         address = tlpdata[32:40]
         headerstr = headerstr + '  ' + address
@@ -264,7 +267,7 @@ def print_tlp(tlpdata, f=None):
         headerstr = headerstr + ' ' + tlpdata[24:28]
         headerstr = headerstr + '                  %3d' % (int(tlpdata[21:24],16) & 0x3ff)
         if TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA':
-            headerstr = headerstr + ' ' + tlpdata[40:]
+            headerstr = headerstr + ' ' + byteswap(tlpdata[40:])
     elif TlpPacketFormat[pktformat] == 'MEM_READ__4DW     ' or TlpPacketFormat[pktformat] == 'MEM_WRITE_4DW_DATA':
         address = tlpdata[32:]
         headerstr = headerstr + ' address: ' + address
