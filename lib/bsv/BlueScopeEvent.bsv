@@ -120,7 +120,7 @@ module mkSyncBlueScopeEvent#(Integer samples, BlueScopeEventIndication indicatio
    endrule
 
    rule freeClock;
-      freeClockReg <= freeClockreg + 1;
+      freeClockReg <= freeClockReg + 1;
    endrule
    
    interface BlueScopeEvent bse;
