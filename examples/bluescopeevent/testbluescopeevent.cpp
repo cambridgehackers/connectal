@@ -38,7 +38,7 @@
 
 sem_t done_sem;
 sem_t cv_sem;
-unsigned int coounter_value = 0;
+unsigned int counter_value = 0;
 int bsAlloc;
 uint64_t *bsBuffer  = 0;
 int numWords = 512; //16 << 10;
@@ -63,10 +63,10 @@ public:
     finished = true;
     fprintf(stderr, "BlueScopeEvent::dmaDone\n");
   }
-  virtual void counterValue(uint64_t v){
+  virtual void counterValue(uint32_t v){
     counter_value = v;
     sem_post(&cv_sem);
-    fprintf(stderr, "BlueScopeEvent::counterValue value=%" PRIu64 "\n", value);
+    fprintf(stderr, "BlueScopeEvent::counterValue value=%u\n", v);
     
   }
 };
@@ -79,7 +79,7 @@ public:
   virtual void ack1(unsigned int d1 ){
     fprintf(stderr, "SignalGen::ack1(%d)\n", d1);
   }
-  virtual void counterValue(unsigned int d1, unsigned int d2){ 
+  virtual void ack2(unsigned int d1, unsigned int d2){ 
     fprintf(stderr, "SignalGen::ack2(%d, %d)\n", d1, d2);
  }
 };
@@ -96,8 +96,8 @@ int main(int argc, const char **argv)
 {
   BlueScopeEventRequestProxy *bluescope = 0;
   BlueScopeEventIndication *bluescopeIndication = 0;
-  SignalGenEventRequestProxy *signalgen = 0;
-  SignalGenEventIndication *signalgenIndication = 0;
+  SignalGenRequestProxy *signalgen = 0;
+  SignalGenIndication *signalgenIndication = 0;
   int i;
 
   if(sem_init(&done_sem, 1, 0)){
@@ -111,14 +111,14 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
-  bluescope = new BlueScopeEventRequestProxy(IfcNames_BluescopeRequest);
+  bluescope = new BlueScopeEventRequestProxy(IfcNames_BlueScopeEventRequest);
   MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
   MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
   DmaManager *dma = new DmaManager(dmap);
   //MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
-  bluescopeIndication = new BlueScopeEventIndication(IfcNames_BluescopeIndication);
+  bluescopeIndication = new BlueScopeEventIndication(IfcNames_BlueScopeEventIndication);
 
 
   signalgen = new SignalGenRequestProxy(IfcNames_SignalGenRequest);
@@ -144,11 +144,17 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::initial BlueScopeEvent counterValue: %d\n", counter_value);
 
   sleep(1);
-  signalgen.send1(0x1);
-  signalgen.send1(0x2);
-  signalgen.send1(0x3);
-  signalgen.send1(0x4);
+  signalgen->send1(0x1);
+  fprintf(stderr, "Main::send1\n");
+  signalgen->send1(0x2);
+  fprintf(stderr, "Main::send1\n");
+  signalgen->send1(0x3);
+  fprintf(stderr, "Main::send1\n");
+  signalgen->send1(0x4);
+  fprintf(stderr, "Main::send1\n");
   bluescope->getCounterValue();
+  fprintf(stderr, "Main::getCounter\n");
+ 
   sem_wait(&cv_sem);
   fprintf(stderr, "Main::final BlueScopeEvent counterValue: %d\n", counter_value);
 
@@ -157,7 +163,7 @@ int main(int argc, const char **argv)
   bluescope->startDma(ref_bsAlloc, counter_value * sizeof(uint64_t));
   sem_wait(&done_sem);
   for (i = 0; i < 5; i += 1) {
-    fprintf(stderr, "event %3d: %08x\n", bsBuffer[i]);
+    fprintf(stderr, "event %3d: %08lx\n", i, bsBuffer[i]);
   }
   // XXX print event buffer
   sleep(2);

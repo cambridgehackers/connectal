@@ -19,28 +19,24 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import BlueScopeEvent::*;
+
 interface SignalGenIndication;
    method Action ack1(Bit#(32) d1);
    method Action ack2(Bit#(32) d1, Bit#(32) d2);
 endinterface
       
-interface SignalgenRequest;
+interface SignalGenRequest;
    method Action send1(Bit#(32) d1);
-   method Action send2(Bit#(32) d1, Bit#(32) d2);
 endinterface
 
 
-module mkSignalgenRequest#(method Action dataIn(Bit#(32)), SignalgenIndication indication)(Signalgen Request);
+module mkSignalGen#(BlueScopeEvent#(32) bse, SignalGenIndication indication)(SignalGenRequest);
  
    method Action send1(Bit#(32) d1);
-      dataIn(d1);
+      bse.dataIn(d1);
       indication.ack1(d1);
    endmethod
   
-   method Action send2(Bit#(32) d1, Bit#(32) d2);
-      dataIn(d1);
-      dataIn(d2);
-      indication.ack2(d1, d2);
-   endmethod
    
 endmodule
