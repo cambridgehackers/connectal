@@ -169,6 +169,8 @@ examples =  echo                 \
             flowcontrol          \
             bluescope            \
             bluescopeevent       \
+            bluescopeevent       \
+            bluescopeeventpio    \
 	    splice               \
 	    maxcommonsubseq      \
 	    smithwaterman        \
