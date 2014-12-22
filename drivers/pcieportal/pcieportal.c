@@ -305,7 +305,6 @@ static int board_activate(int activate, tBoard *this_board, struct pci_dev *dev)
         unsigned long long magic_num;
 	int num_entries = MAX_NUM_PORTALS;
 	struct msix_entry msix_entries[MAX_NUM_PORTALS];
-	uint32_t reg_offset = 0xc000;
 	int fpn = 0;
 	uint32_t top = 0;
 
@@ -425,7 +424,8 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		  this_board->portal[fpn].device_name = iid;
 		  this_board->portal[fpn].board = this_board;
 		  if (this_board->bar2io) {
-		    this_board->portal[fpn].regs = (volatile uint32_t *)(this_board->bar2io + 0x10000 * fpn + reg_offset);
+		    this_board->portal[fpn].regs = (volatile uint32_t *)(this_board->bar2io
+                        + PORTAL_BASE_OFFSET * fpn + PORTAL_REG_OFFSET);
 		  }
 		  /* add the device operations */
 		  cdev_init(&this_board->portal[fpn].extra->cdev, &pcieportal_fops);
