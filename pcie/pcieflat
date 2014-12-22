@@ -319,7 +319,7 @@ def print_tlp(tlpdata, f=None):
         elif methodNumber <= len(t):
             offset = offset - methodNumber * 0x100
             smeth = '/'+t[methodNumber-1]
-        smeth = fooMap[interfaceNumber] + smeth + '/' + "%x" % (offset/4)
+        smeth = ('%02d' % interfaceNumber) + '/' + fooMap[interfaceNumber] + smeth + '/' + "%x" % (offset/4)
     print dir, '%10d %10d %s' % (seqno, delta, headerstr), smeth
     #print '                      ' + tlpdata[0:8] + ' ' + tlpdata[8:]
     if len(tlpdata) != 48:
