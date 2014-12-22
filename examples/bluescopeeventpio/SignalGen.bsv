@@ -23,13 +23,11 @@ import BlueScopeEvent::*;
 
 interface SignalGenIndication;
    method Action ack1(Bit#(32) d1);
-   method Action ack2(Bit#(32) d1, Bit#(32) d2);
 endinterface
       
 interface SignalGenRequest;
    method Action send1(Bit#(32) d1);
 endinterface
-
 
 module mkSignalGen#(BlueScopeEvent#(32) bse, SignalGenIndication indication)(SignalGenRequest);
  
@@ -37,6 +35,5 @@ module mkSignalGen#(BlueScopeEvent#(32) bse, SignalGenIndication indication)(Sig
       bse.dataIn(d1);
       indication.ack1(d1);
    endmethod
-  
    
 endmodule
