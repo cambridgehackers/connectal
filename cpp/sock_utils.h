@@ -53,7 +53,6 @@ ssize_t sock_fd_write(int sockfd, void *ptr, size_t nbytes, int sendfd);
 ssize_t sock_fd_read(int sockfd, void *ptr, size_t nbytes, int *recvfd);
 int pareff_fd(int *fd);
 void init_pareff(void);
-unsigned int bsim_poll_interrupt(void);
 int init_connecting(const char *arg_name, struct PortalSocketParam *param);
 int init_listening(const char *arg_name, struct PortalSocketParam *param);
 int accept_socket(int arg_listening);

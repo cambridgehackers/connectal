@@ -11,6 +11,10 @@ BOARD=vc707
 BOARD=bluesim
 ###################### End of target h/w flags ###################
 
+ifeq ($(BOARD),bluesim)
+    HARDWARE_FLAGS=-DBSIM
+endif
+
 export KROOT=/lib/modules/$(shell uname -r)/build
 CPPDIR=../../../cpp
 BOARDDIR=../$(BOARD)/jni
@@ -23,13 +27,14 @@ kernel_exe-y := ../simple_manual.o \
      $(BOARDDIR)/SimpleIndication.o \
      $(BOARDDIR)/SimpleRequest.o \
      $(CPPDIR)/portal.o \
+     $(CPPDIR)/portalSocket.o \
      $(CPPDIR)/kernel_module.o
 
 kernel_exe-n := $(CPPDIR)/dmaManager.o
 
 obj-m := kernel_exe.o
 
-ccflags-y := -I$(src)/.. -I$(DRIVERDIR) -I$(src)/$(CPPDIR) -I$(src)/$(BOARDDIR)
+ccflags-y := -I$(src)/.. -I$(DRIVERDIR) -I$(src)/$(CPPDIR) -I$(src)/$(BOARDDIR) $(HARDWARE_FLAGS)
 
 default:
 	$(MAKE) -C $(KROOT) M=$(PWD) modules

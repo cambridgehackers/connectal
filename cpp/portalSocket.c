@@ -24,6 +24,14 @@
 #include "portal.h"
 #include "sock_utils.h"
 
+static unsigned int tag_counter;
+typedef struct bsim_fpga_map_entry{
+  int name;
+  int offset;
+  int valid;
+} bsim_fpga_map_entry;
+static bsim_fpga_map_entry bsim_fpga_map[MAX_BSIM_PORTAL_ID];
+
 #ifndef __KERNEL__
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,12 +65,6 @@ int i;
     printf("\n");
 }
 
-typedef struct bsim_fpga_map_entry{
-  int name;
-  int offset;
-  int valid;
-} bsim_fpga_map_entry;
-static bsim_fpga_map_entry bsim_fpga_map[MAX_BSIM_PORTAL_ID];
 static pthread_mutex_t socket_mutex;
 int global_sockfd = -1;
 static int trace_socket;// = 1;
@@ -85,22 +87,22 @@ printf("[%s:%d] TCP\n", __FUNCTION__, __LINE__);
       addr = param->addr;
   }
   if ((sockfd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol)) == -1) {
-    fprintf(stderr, "%s[%d]: socket error %s\n",__FUNCTION__, sockfd, strerror(errno));
+    PORTAL_PRINTF( "%s[%d]: socket error %s\n",__FUNCTION__, sockfd, strerror(errno));
     exit(1);
   }
   if (trace_socket)
-    fprintf(stderr, "%s (%s) trying to connect...\n",__FUNCTION__, arg_name);
+    PORTAL_PRINTF( "%s (%s) trying to connect...\n",__FUNCTION__, arg_name);
 
   while (connect(sockfd, addr->ai_addr, addr->ai_addrlen) == -1) {
     if(connect_attempts++ > 16){
-      fprintf(stderr,"%s (%s) connect error %s\n",__FUNCTION__, arg_name, strerror(errno));
+      PORTAL_PRINTF( "%s (%s) connect error %s\n",__FUNCTION__, arg_name, strerror(errno));
       exit(1);
     }
     if (trace_socket)
-      fprintf(stderr, "%s (%s) retrying connection\n",__FUNCTION__, arg_name);
+      PORTAL_PRINTF( "%s (%s) retrying connection\n",__FUNCTION__, arg_name);
     sleep(1);
   }
-  fprintf(stderr, "%s (%s) connected.  Attempts %d\n",__FUNCTION__, arg_name, connect_attempts);
+  PORTAL_PRINTF( "%s (%s) connected.  Attempts %d\n",__FUNCTION__, arg_name, connect_attempts);
   return sockfd;
 }
 
@@ -124,7 +126,7 @@ void connect_to_bsim(void)
     bsim_fpga_map[idx].name = id;
     bsim_fpga_map[idx].offset = idx;
     bsim_fpga_map[idx].valid = 1;
-    //fprintf(stderr, "%s bsim_fpga_map[%d]=%d (%d)\n", __FUNCTION__, id, bsim_fpga_map[id], last);
+    //PORTAL_PRINTF( "%s bsim_fpga_map[%d]=%d (%d)\n", __FUNCTION__, id, bsim_fpga_map[id], last);
     idx++;
   }  
 }
@@ -183,7 +185,7 @@ static int event_socket(struct PortalInternal *pint)
            continue;
        }
        else if (len == -1) {
-           fprintf(stderr, "%s[%d]: read error %d\n",__FUNCTION__, pint->client_fd[i], errno);
+           PORTAL_PRINTF( "%s[%d]: read error %d\n",__FUNCTION__, pint->client_fd[i], errno);
            exit(1);
        }
        pint->indication_index = i;
@@ -306,7 +308,6 @@ unsigned int bsim_poll_interrupt(void)
   return interrupt_value;
 }
 /* functions called by READL() and WRITEL() macros in application software */
-unsigned int tag_counter;
 static unsigned int read_portal_bsim(PortalInternal *pint, volatile unsigned int **addr)
 {
   struct memrequest foo = {pint->fpga_number, 0,*addr,0};
@@ -401,12 +402,41 @@ void connect_to_bsim(void)
     down_interruptible(&bsim_start);
 }
 
-static unsigned int read_portal_bsim(volatile unsigned int *addr, int id)
+static struct memresponse shared_response;
+static int shared_response_valid;
+static uint32_t interrupt_value;
+static int poll_response(int id)
 {
-    struct memrequest foo = {id, 0,addr,0};
-    //printk("[%s:%d]\n", __FUNCTION__, __LINE__);
+  //int recvFd;
+  if (!shared_response_valid) {
+#if 0
+      if (portalRecvFd(global_sockfd, &shared_response, sizeof(shared_response), &recvFd) == sizeof(shared_response)) {
+          if (shared_response.portal == MAGIC_PORTAL_FOR_SENDING_INTERRUPT)
+              interrupt_value = shared_response.data;
+          else
+              shared_response_valid = 1;
+      }
+#endif
+  }
+  return shared_response_valid && shared_response.portal == id;
+}
+static unsigned int bsim_poll_interrupt(void)
+{
+  if (global_sockfd == -1)
+      return 0;
+  //pthread_mutex_lock(&socket_mutex);
+  poll_response(-1);
+  //pthread_mutex_unlock(&socket_mutex);
+  return interrupt_value;
+}
+
+static unsigned int read_portal_bsim(PortalInternal *pint, volatile unsigned int **addr)
+{
+  struct memrequest foo = {pint->fpga_number, 0,*addr,0};
+
     if (main_program_finished)
         return 0;
+    foo.data_or_tag = tag_counter++;
     down_interruptible(&bsim_avail);
     memcpy(&upreq, &foo, sizeof(upreq));
     have_request = 1;
@@ -414,9 +444,9 @@ static unsigned int read_portal_bsim(volatile unsigned int *addr, int id)
     return downresp.data;
 }
 
-static void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int id)
+static void write_portal_bsim(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
 {
-    struct memrequest foo = {id, 1,addr,v};
+    struct memrequest foo = {pint->fpga_number, 1,*addr,v};
     //printk("[%s:%d]\n", __FUNCTION__, __LINE__);
     if (main_program_finished)
         return;
@@ -424,9 +454,9 @@ static void write_portal_bsim(volatile unsigned int *addr, unsigned int v, int i
     memcpy(&upreq, &foo, sizeof(upreq));
     have_request = 1;
 }
-void write_portal_fd_bsim(volatile unsigned int *addr, unsigned int v, int id)
+void write_portal_fd_bsim(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
 {
-    struct memrequest foo = {id, MAGIC_PORTAL_FOR_SENDING_FD,addr,v};
+    struct memrequest foo = {pint->fpga_number, MAGIC_PORTAL_FOR_SENDING_FD,*addr,v};
     struct file *fmem;
 
     if (main_program_finished)
@@ -443,24 +473,29 @@ void write_portal_fd_bsim(volatile unsigned int *addr, unsigned int v, int id)
 #endif
 static int init_bsim(struct PortalInternal *pint, void *param)
 {
+    int found = 0;
+    int i;
 #ifdef BSIM
     connect_to_bsim();
+#ifndef __KERNEL__
     assert(pint->fpga_number < MAX_BSIM_PORTAL_ID);
-    bool found = false;
-    for (int i = 0; bsim_fpga_map[i].valid; i++)
-      if (bsim_fpga_map[i].name == pint->fpga_number){
-	found = true;
+#endif
+    for (i = 0; bsim_fpga_map[i].valid; i++)
+      if (bsim_fpga_map[i].name == pint->fpga_number) {
+	found = 1;
 	pint->fpga_number = bsim_fpga_map[i].offset;
 	break;
       }
     if (!found) {
-      fprintf(stderr, "Error: init_bsim: did not find fpga_number %d\n", pint->fpga_number);
-      fprintf(stderr, "    Found fpga numbers:");
-      for (int i = 0; bsim_fpga_map[i].valid; i++)
-	fprintf(stderr, " %d", bsim_fpga_map[i].name);
-      fprintf(stderr, "\n");
+      PORTAL_PRINTF( "Error: init_bsim: did not find fpga_number %d\n", pint->fpga_number);
+      PORTAL_PRINTF( "    Found fpga numbers:");
+      for (i = 0; bsim_fpga_map[i].valid; i++)
+	PORTAL_PRINTF( " %d", bsim_fpga_map[i].name);
+      PORTAL_PRINTF( "\n");
     }
+#ifndef __KERNEL__
     assert(found);
+#endif
     pint->map_base = (volatile unsigned int*)(long)(pint->fpga_number * PORTAL_BASE_OFFSET);
     pint->item->enableint(pint, 1);
 #endif
