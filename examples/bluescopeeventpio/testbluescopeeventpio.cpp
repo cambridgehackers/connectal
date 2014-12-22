@@ -1,4 +1,4 @@
-/* Copyright (c) 2013 Quanta Research Cambridge, Inc
+n/* Copyright (c) 2013 Quanta Research Cambridge, Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -29,20 +29,14 @@
 
 #include "StdDmaIndication.h"
 
-#include "BlueScopeEventIndication.h"
-#include "BlueScopeEventRequest.h"
-#include "MemServerRequest.h"
-#include "MMURequest.h"
+#include "BlueScopeEventPIOIndication.h"
+#include "BlueScopeEventPIORequest.h"
 #include "SignalGenIndication.h"
 #include "SignalGenRequest.h"
 
 sem_t done_sem;
 sem_t cv_sem;
 unsigned int counter_value = 0;
-int bsAlloc;
-uint64_t *bsBuffer  = 0;
-int numWords = 512; //16 << 10;
-size_t alloc_sz = numWords*sizeof(uint64_t);
 
 bool finished = false;
 
@@ -53,20 +47,18 @@ void exit_test()
   exit(0);
 }
 
-class BlueScopeEventIndication : public BlueScopeEventIndicationWrapper
+class BlueScopeEventPIOIndication : public BlueScopeEventPIOIndicationWrapper
 {
 public:
-  BlueScopeEventIndication(unsigned int id) : BlueScopeEventIndicationWrapper(id){}
+  BlueScopeEventPIOIndication(unsigned int id) : BlueScopeEventPIOIndicationWrapper(id){}
 
-  virtual void dmaDone( ){
-    sem_post(&done_sem);
-    finished = true;
-    fprintf(stderr, "BlueScopeEvent::dmaDone\n");
+  virtual void event(uint32_t v, uint32_t timestamp ){
+    fprintf(stderr, "BlueScopeEventPIO::event(%08x, %08x)\n", v, timestamp);
   }
   virtual void counterValue(uint32_t v){
     counter_value = v;
     sem_post(&cv_sem);
-    fprintf(stderr, "BlueScopeEvent::counterValue value=%u\n", v);
+    fprintf(stderr, "BlueScopeEventPIO::counterValue value=%u\n", v);
     
   }
 };
@@ -79,9 +71,6 @@ public:
   virtual void ack1(unsigned int d1 ){
     fprintf(stderr, "SignalGen::ack1(%d)\n", d1);
   }
-  virtual void ack2(unsigned int d1, unsigned int d2){ 
-    fprintf(stderr, "SignalGen::ack2(%d, %d)\n", d1, d2);
- }
 };
 
 // we can use the data synchronization barrier instead of flushing the 
@@ -94,8 +83,8 @@ public:
 
 int main(int argc, const char **argv)
 {
-  BlueScopeEventRequestProxy *bluescope = 0;
-  BlueScopeEventIndication *bluescopeIndication = 0;
+  BlueScopeEventPIORequestProxy *bluescope = 0;
+  BlueScopeEventPIOIndication *bluescopeIndication = 0;
   SignalGenRequestProxy *signalgen = 0;
   SignalGenIndication *signalgenIndication = 0;
   int i;
@@ -111,37 +100,21 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
-  bluescope = new BlueScopeEventRequestProxy(IfcNames_BlueScopeEventRequest);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
-  DmaManager *dma = new DmaManager(dmap);
-  //MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
+  bluescope = new BlueScopeEventPIORequestProxy(IfcNames_BlueScopeEventPIORequest);
 
-  bluescopeIndication = new BlueScopeEventIndication(IfcNames_BlueScopeEventIndication);
-
+  bluescopeIndication = new BlueScopeEventPIOIndication(IfcNames_BlueScopeEventPIOIndication);
 
   signalgen = new SignalGenRequestProxy(IfcNames_SignalGenRequest);
   signalgenIndication = new SignalGenIndication(IfcNames_SignalGenIndication);
 
-
-  fprintf(stderr, "Main::allocating memory of size=%d...\n", (int)alloc_sz);
-
-  bsAlloc = portalAlloc(alloc_sz);
-  bsBuffer  = (uint64_t *)portalMmap(bsAlloc, alloc_sz);
-
   portalExec_start();
 
-  portalDCacheFlushInval(bsAlloc, alloc_sz,  bsBuffer);
-  fprintf(stderr, "Main::flush and invalidate complete\n");
-
-  unsigned int ref_bsAlloc  = dma->reference(bsAlloc);
-  
   bluescope->doReset();
   bluescope->setTriggerMask (0xFFFFFFFF);
   bluescope->getCounterValue();
+  bluescope->enable(1);
   sem_wait(&cv_sem);
-  fprintf(stderr, "Main::initial BlueScopeEvent counterValue: %d\n", counter_value);
+  fprintf(stderr, "Main::initial BlueScopeEventPIO counterValue: %d\n", counter_value);
 
   sleep(1);
   signalgen->send1(0x1);
@@ -156,15 +129,9 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::getCounter\n");
  
   sem_wait(&cv_sem);
-  fprintf(stderr, "Main::final BlueScopeEvent counterValue: %d\n", counter_value);
+  fprintf(stderr, "Main::final BlueScopeEventPIO counterValue: %d\n", counter_value);
 
   // test here
-  if (counter_value != 4) counter_value = 4;
-  bluescope->startDma(ref_bsAlloc, counter_value * sizeof(uint64_t));
-  sem_wait(&done_sem);
-  for (i = 0; i < 5; i += 1) {
-    fprintf(stderr, "event %3d: %08lx\n", i, bsBuffer[i]);
-  }
   // XXX print event buffer
   sleep(2);
   exit_test();
