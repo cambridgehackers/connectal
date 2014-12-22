@@ -56,6 +56,8 @@ ifneq ("$(CURRENTMOD)", "")
 	sudo rmmod kernel_exe
 	#sudo rmmod bdbm_drv
 endif
+	sudo modprobe pcieportal
+	sudo modprobe portalmem
 	sudo insmod kernel_exe.ko
 	#sudo insmod bdbm_drv.ko
 ifeq ($(BOARD),bluesim)
