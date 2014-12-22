@@ -1,26 +1,35 @@
 
 # grep get_pcie_portal_descriptor /proc/kallsyms 
 
+###################### Flags for using KC705   ###################
 BOARD=kc705
+###################### Flags for using VC707   ###################
+BOARD=vc707
+###################### Flags for using zedboard ##################
+#BOARD=zedboard
+###################### Flags for using Bluesim ###################
+BOARD=bluesim
+###################### End of target h/w flags ###################
 
 export KROOT=/lib/modules/$(shell uname -r)/build
 CPPDIR=../../../cpp
 BOARDDIR=../$(BOARD)/jni
-DRIVERDIR=$(src)/../../../drivers
+DRIVERDIR=$(src)/../../../
 
-KBUILD_EXTRA_SYMBOLS := $(DRIVERDIR)/pcieportal/Module.symvers
+KBUILD_EXTRA_SYMBOLS := $(DRIVERDIR)/drivers/pcieportal/Module.symvers \
+      $(DRIVERDIR)/drivers/portalmem/Module.symvers
 
-testme-y := ../simple_manual.o \
-     $(BOARDDIR)/SimpleIndicationWrapper.o \
-     $(BOARDDIR)/SimpleRequestProxy.o \
+kernel_exe-y := ../simple_manual.o \
+     $(BOARDDIR)/SimpleIndication.o \
+     $(BOARDDIR)/SimpleRequest.o \
      $(CPPDIR)/portal.o \
      $(CPPDIR)/kernel_module.o
 
-testme-n := $(CPPDIR)/dmaManager.o
+kernel_exe-n := $(CPPDIR)/dmaManager.o
 
-obj-m := testme.o
+obj-m := kernel_exe.o
 
-ccflags-y := -I$(src)/.. -I$(DRIVERDIR)/pcieportal -I$(DRIVERDIR)/portalmem -I$(src)/$(CPPDIR) -I$(src)/$(BOARDDIR)
+ccflags-y := -I$(src)/.. -I$(DRIVERDIR) -I$(src)/$(CPPDIR) -I$(src)/$(BOARDDIR)
 
 default:
 	$(MAKE) -C $(KROOT) M=$(PWD) modules
@@ -29,3 +38,37 @@ clean:
 	$(MAKE) -C $(KROOT) M=$(PWD) clean
 	rm -f a.out
 
+CURRENTMOD=$(shell lsmod | grep kernel_exe)
+
+run: host
+ifeq ($(BOARD),bluesim)
+	@echo running bsim
+	../bluesim/bin/bsim& echo $$! >tmp.bluesim.makefile.pid
+else
+	fpgajtag ../$(BOARD)/bin/mkTop.bin.gz
+endif
+ifneq ("$(CURRENTMOD)", "")
+	sudo rmmod kernel_exe
+	#sudo rmmod bdbm_drv
+endif
+	sudo insmod kernel_exe.ko
+	#sudo insmod bdbm_drv.ko
+ifeq ($(BOARD),bluesim)
+	./bsim_relay
+	kill `cat tmp.bluesim.makefile.pid`
+	#killall bluetcl
+endif
+	sudo rmmod kernel_exe
+	#sudo rmmod bdbm_drv
+	dmesg | tail -30
+	@rm -f tmp.bluesim.makefile.pid
+
+#
+# Target for making userspace bsim_relay program
+CINCL=../../..
+HOSTSOURCES=$(CPPDIR)/bsim_relay.c $(CPPDIR)/sock_utils.c $(CPPDIR)/portalSocket.c $(CPPDIR)/portal.c
+
+host: $(HOSTSOURCES)
+ifeq ($(BOARD),bluesim)
+	gcc -o bsim_relay -g -I$(CINCL)/cpp -I$(CINCL) -DNO_CPP_PORTAL_CODE -DNO_POLLER_SUPPORT $(HOSTSOURCES) -lpthread
+endif
