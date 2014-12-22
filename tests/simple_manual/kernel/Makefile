@@ -2,13 +2,13 @@
 # grep get_pcie_portal_descriptor /proc/kallsyms 
 
 ###################### Flags for using KC705   ###################
-BOARD=kc705
+#BOARD=kc705
 ###################### Flags for using VC707   ###################
 BOARD=vc707
 ###################### Flags for using zedboard ##################
 #BOARD=zedboard
 ###################### Flags for using Bluesim ###################
-BOARD=bluesim
+#BOARD=bluesim
 ###################### End of target h/w flags ###################
 
 ifeq ($(BOARD),bluesim)

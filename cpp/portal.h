@@ -31,6 +31,7 @@
 
 /* Offset of each /dev/fpgaxxx device in the address space */
 #define PORTAL_BASE_OFFSET         (1 << 16)
+#define PORTAL_REG_OFFSET          0xc000
 
 /* Offsets of mapped registers within an /dev/fpgaxxx device */
 #define PORTAL_REQ_FIFO(A)         (((0<<14) + (A) * 256 + 256)/sizeof(uint32_t))

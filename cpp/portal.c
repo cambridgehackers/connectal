@@ -312,7 +312,7 @@ int busy_hardware(struct PortalInternal *pint, unsigned int v, const char *str)
     while (!pint->item->notFull(pint, v) && ((pint->busyType == BUSY_SPIN) || count-- > 0))
         ; /* busy wait a bit on 'fifo not full' */
     if (count <= 0) {
-        if (pint->busyType == BUSY_TIMEWAIT)
+        if (0 && pint->busyType == BUSY_TIMEWAIT)
             while (!pint->item->notFull(pint, v)) {
 #ifndef __KERNEL__
                 struct timeval timeout;
@@ -347,7 +347,18 @@ int event_hardware(struct PortalInternal *pint)
 static int init_hardware(struct PortalInternal *pint, void *param)
 {
 #if defined(__KERNEL__)
-    pint->map_base = (volatile unsigned int*)(tboard->bar2io + pint->fpga_number * PORTAL_BASE_OFFSET);
+    int i;
+    pint->map_base = NULL;
+    for (i = 0; i < MAX_NUM_PORTALS; i++) {
+      if (tboard->portal[i].device_name == pint->fpga_number) {
+        pint->map_base = (volatile unsigned int*)(tboard->bar2io + i * PORTAL_BASE_OFFSET);
+        break;
+      }
+    }
+    if (!pint->map_base) {
+	PORTAL_PRINTF("init_hardware: portal not found %d.\n", pint->fpga_number);
+        return -1;
+    }
 #else
     int rc = 0;
     char read_status;
