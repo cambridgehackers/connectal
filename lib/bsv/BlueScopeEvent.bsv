@@ -66,11 +66,15 @@ endinterface
 
 interface BlueScopeEvent#(numeric type dataWidth);
    method Action dataIn(Bit#(dataWidth) d);
-   interface BlueScopeRequest requestIfc;
-   interface MemWriteClient#(Bits#(64)) writeClient;
+endinterface
+   
+interface BlueScopeEventControl#(numeric type dataWidth);
+   interface BlueScopeEvent#(dataWidth) bse;
+   interface BlueScopeEventRequest requestIfc;
+   interface MemWriteClient#(64) writeClient;
 endinterface
 
-module mkBlueScopeEvent#(Integer samples, BlueScopeIndication indication)(BlueScopeEvent#(dataWidth))
+module mkBlueScopeEvent#(Integer samples, BlueScopeEventIndication indication)(BlueScopeEventControl#(dataWidth))
    provisos(Add#(0,dataWidth,32));
    
    let clk <- exposeCurrentClock;
@@ -82,54 +86,63 @@ endmodule
 // sClk is the source? sample? side, input samples come here
 // dClk is the destination? dma? side, this will generally be the system clock
 
-module mkSyncBlueScopeEvent#(Integer samples, BlueScopeEventIndication indication, Clock sClk, Reset sRst, Clock dClk, Reset dRst)(BlueScopeEvent#(dataWidth))
+module mkSyncBlueScopeEvent#(Integer samples, BlueScopeEventIndication indication, Clock sClk, Reset sRst, Clock dClk, Reset dRst)(BlueScopeEventControl#(dataWidth))
    provisos(Add#(0, dataWidth, 32));
 
    // the idea here is that we let events pour into the Bram continually,
    // then reset them before starting an acquisition interval
    // we reset both halves of the fifo, not clear that is needed
-   MakeResetIfc sFifoReset = mkReset(2, True, sClk);
-   MakeResetIfc dFifoReset = mkReset(2, True, dClk);
+   MakeResetIfc sFifoReset <- mkReset(2, True, sClk);
+   MakeResetIfc dFifoReset <- mkReset(2, True, dClk);
    SyncFIFOIfc#(Bit#(64)) dfifo <- mkSyncBRAMFIFO(samples, sClk, sFifoReset.new_rst, dClk, dFifoReset.new_rst);
    // mask reg is set from a request in the dClk domain but used in the
    // sClk domain to determine triggering
    Reg#(Bit#(dataWidth))       maskReg <- mkSyncReg(0, dClk, dRst, sClk);
+   // freeClockReg counts cycles to timestamp events
+   Reg#(Bit#(32)) freeClockReg <- mkReg(0, clocked_by sClk, reset_by sRst);
    // countReg counts accumulated samples
-   Reg#(Bit#(32)) countReg <- mkReg(0, clocked by sClk, reset_by sRst);
+   Reg#(Bit#(32)) countReg <- mkReg(0, clocked_by sClk, reset_by sRst);
    // countSyncReg repeats that value into the dClk domain
-   Reg#(Bit#(32)) countSyncReg <- mkSyncReg(0 sClk, sFifoReset.new_rst);
+   Reg#(Bit#(32)) countSyncReg <- mkSyncReg(0, sClk, sFifoReset.new_rst, dClk);
    // oldData is used in the sample domain, to save the previous value
    Reg#(Bit#(dataWidth)) olddata <- mkReg(0, clocked_by sClk, reset_by sRst);
 
 
-   MemwriteEngine#(Bits#(64), 2) mwriter <- mkMemwriteEngine;
+   MemwriteEngine#(64, 2) mwriter <- mkMemwriteEngine;
    
-   (* descending_urgency = "resetState, startState" *)
+//   (* descending_urgency = "resetState, startState" *)
 
    mkConnection(toGet(dfifo), toPut(mwriter.dataPipes[0]));
 
    rule writeDone;
       let tag <- mwriter.writeServers[0].response.get();
-      indication.done;
+      indication.dmaDone;
+   endrule
+
+   rule freeClock;
+      freeClockReg <= freeClockreg + 1;
    endrule
    
-   method Action dataIn(Bit#(dataWidth) data;// if (stateReg != Idle);
-      let c = countReg;
-      if (maskReg & (data ^ olddata))
-         begin
-	 if (dfifo.notFull())
-	    begin
-	       dfifo.enq({data, c});
-	       countReg <= c + 1;
-               countSyncReg <= c + 1;
-	    end
-	 else
-	    $display("bluescope.stall c=%d", c);
-	 end
-      end
-      olddata <= data;
-   endmethod
+   interface BlueScopeEvent bse;
    
+      method Action dataIn(Bit#(dataWidth) data);// if (stateReg != Idle);
+	 let c = countReg;
+	 if ((maskReg & (data ^ olddata)) != 0)
+            begin
+	       if (dfifo.notFull())
+		  begin
+		     dfifo.enq({data, freeClockReg});
+		     countReg <= c + 1;
+		     countSyncReg <= c + 1;
+		  end
+	       else
+		  $display("bluescope.stall c=%d", c);
+	    end
+	 olddata <= data;
+      endmethod
+
+     endinterface
+      
    interface BlueScopeEventRequest requestIfc;
 
       method Action doReset();
@@ -146,7 +159,7 @@ module mkSyncBlueScopeEvent#(Integer samples, BlueScopeEventIndication indicatio
       endmethod
 
       method Action startDma(Bit#(32) pointer, Bit#(32) len);
-	 mwriter.writeServers[0].request.put(MemengineCmd {sglId: pointer, base: 0, burstLen: 8*fromInteger(valueOf(TDiv#(dataWidth,8))), len: len});
+	 mwriter.writeServers[0].request.put(MemengineCmd {sglId: pointer, base: 0, burstLen: 8*fromInteger(valueOf(TDiv#(dataWidth,8))), len: len, tag: ?});
       endmethod
 
    endinterface
