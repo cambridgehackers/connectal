@@ -48,14 +48,14 @@ interface BlueScopeEventPIORequest;
    // generate a report pointer indication
    method Action getCounterValue();
    // copy from fifo to memory
-   method Action enableIndications(Bit#(32) enable);
+   method Action enableIndications(Bit#(32) en);
 endinterface
 
 interface BlueScopeEventPIOIndication;
    // report number of events since last reset,
    method Action counterValue(Bit#(32) v);
    // report an event
-   method Action event(Bit#(32) value, Bit#(32) timestamp);
+   method Action reportEvent(Bit#(32) value, Bit#(32) timestamp);
 endinterface
 
 // This interface is used by the device under test to report events
@@ -102,11 +102,11 @@ module mkSyncBlueScopeEventPIO#(Integer samples, BlueScopeEventPIOIndication ind
    Reg#(Bit#(32)) countSyncReg <- mkSyncReg(0, sClk, sFifoReset.new_rst, dClk);
    // oldData is used in the sample domain, to save the previous value
    Reg#(Bit#(dataWidth)) olddata <- mkReg(0, clocked_by sClk, reset_by sRst);
-   Reg#(Bit#(1)) enableIndicationReg <= mkReg(0);
+   Reg#(Bit#(1)) enableIndicationReg <- mkReg(0);
    
    rule doIndication (enableIndicationReg == 1);
       let v = dfifo.first();
-      indication.event(v[63:32], v[31:0]);
+      indication.reportEvent(v[63:32], v[31:0]);
       dfifo.deq();
    endrule
   
@@ -149,11 +149,10 @@ module mkSyncBlueScopeEventPIO#(Integer samples, BlueScopeEventPIOIndication ind
          indication.counterValue(countSyncReg);
       endmethod
 
-      method Action enableIndication(Bit#(32) v);
-	 enableIndicationReg <= v[0];
+      method Action enableIndications(Bit#(32) en);
+	 enableIndicationReg <= en[0];
       endmethod
 
    endinterface
-   interface writeClient = mwriter.dmaClient;
 endmodule
 

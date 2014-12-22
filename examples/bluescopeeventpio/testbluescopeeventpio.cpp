@@ -1,4 +1,4 @@
-n/* Copyright (c) 2013 Quanta Research Cambridge, Inc
+/* Copyright (c) 2013 Quanta Research Cambridge, Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -19,15 +19,12 @@ n/* Copyright (c) 2013 Quanta Research Cambridge, Inc
  * DEALINGS IN THE SOFTWARE.
  */
 #include <stdio.h>
-#include <sys/mman.h>
+#include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <unistd.h>
 #include <monkit.h>
 #include <semaphore.h>
-
-#include "StdDmaIndication.h"
 
 #include "BlueScopeEventPIOIndication.h"
 #include "BlueScopeEventPIORequest.h"
@@ -52,8 +49,8 @@ class BlueScopeEventPIOIndication : public BlueScopeEventPIOIndicationWrapper
 public:
   BlueScopeEventPIOIndication(unsigned int id) : BlueScopeEventPIOIndicationWrapper(id){}
 
-  virtual void event(uint32_t v, uint32_t timestamp ){
-    fprintf(stderr, "BlueScopeEventPIO::event(%08x, %08x)\n", v, timestamp);
+  virtual void reportEvent(uint32_t v, uint32_t timestamp ){
+    fprintf(stderr, "BlueScopeEventPIO::reportEvent(%08x, %08x)\n", v, timestamp);
   }
   virtual void counterValue(uint32_t v){
     counter_value = v;
@@ -112,7 +109,7 @@ int main(int argc, const char **argv)
   bluescope->doReset();
   bluescope->setTriggerMask (0xFFFFFFFF);
   bluescope->getCounterValue();
-  bluescope->enable(1);
+  bluescope->enableIndications(1);
   sem_wait(&cv_sem);
   fprintf(stderr, "Main::initial BlueScopeEventPIO counterValue: %d\n", counter_value);
 

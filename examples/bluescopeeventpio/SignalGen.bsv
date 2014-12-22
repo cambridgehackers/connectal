@@ -19,7 +19,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import BlueScopeEvent::*;
+import BlueScopeEventPIO::*;
 
 interface SignalGenIndication;
    method Action ack1(Bit#(32) d1);
@@ -29,7 +29,7 @@ interface SignalGenRequest;
    method Action send1(Bit#(32) d1);
 endinterface
 
-module mkSignalGen#(BlueScopeEvent#(32) bse, SignalGenIndication indication)(SignalGenRequest);
+module mkSignalGen#(BlueScopeEventPIO#(32) bse, SignalGenIndication indication)(SignalGenRequest);
  
    method Action send1(Bit#(32) d1);
       bse.dataIn(d1);

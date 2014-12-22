@@ -1,9 +1,8 @@
-
 CONNECTALDIR?=../..
 INTERFACES = SignalGenRequest SignalGenIndication \
-	BlueScopeEventRequest BlueScopeEventIndication
-BSVFILES = ../../lib/bsv/BlueScopeEvent.bsv SignalGen.bsv Top.bsv
-CPPFILES=testbluescopeevent.cpp
-#CONNECTALFLAGS=--bscflags " -D TRACE_AXI"
+	BlueScopeEventPIORequest BlueScopeEventPIOIndication
+BSVFILES = ../../lib/bsv/BlueScopeEventPIO.bsv SignalGen.bsv Top.bsv
+CPPFILES=testbluescopeeventpio.cpp
+NUMBER_OF_MASTERS =0
 
 include $(CONNECTALDIR)/Makefile.connectal
