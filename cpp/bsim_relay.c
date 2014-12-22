@@ -74,12 +74,10 @@ printf("[%s:%d] opened bsim\n", __FUNCTION__, __LINE__);
             memdump((unsigned char *)&req, sizeof(req), "RX");
         }
         rv.portal = req.portal;
-pint.fpga_number = req.portal;
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+        pint.fpga_number = req.portal;
         if (req.portal == MAGIC_PORTAL_FOR_SENDING_FD) {
-            //bluesim_sock_fd_write((long)req.addr);
+printf("[%s:%d] sending fd %d\n", __FUNCTION__, __LINE__, req.data_or_tag);
             bsimfunc.writefd(&pint, &req.addr, req.data_or_tag);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
             rv.data = 0xdead;
             write(fd, &rv, sizeof(rv));
         }

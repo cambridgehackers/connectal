@@ -32,7 +32,7 @@ typedef struct bsim_fpga_map_entry{
 } bsim_fpga_map_entry;
 static bsim_fpga_map_entry bsim_fpga_map[MAX_BSIM_PORTAL_ID];
 
-static void initialize_bsim_map()
+static void initialize_bsim_map(void)
 {
     unsigned int last = 0, idx = 0;
     while (!last && idx < 32) {
@@ -40,8 +40,9 @@ static void initialize_bsim_map()
         volatile unsigned int *ptr=(volatile unsigned int *)(long)(idx * PORTAL_BASE_OFFSET);
         volatile unsigned int *idp = &ptr[PORTAL_CTRL_REG_PORTAL_ID];
         volatile unsigned int *topp = &ptr[PORTAL_CTRL_REG_TOP];
+        unsigned int id;
         p.fpga_number = idx;
-        unsigned int id = bsimfunc.read(&p, &idp);
+        id = bsimfunc.read(&p, &idp);
         last = bsimfunc.read(&p, &topp);
         if (id >= MAX_BSIM_PORTAL_ID) {
             PORTAL_PRINTF("%s: [%d] readid too large %d\n", __FUNCTION__, idx, id);
