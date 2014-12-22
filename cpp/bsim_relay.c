@@ -49,6 +49,7 @@ int i;
 int main(int argc, char *argv[])
 {
 struct memrequest req;
+PortalInternal pint;
 int rc;
 
     int fd = open("/dev/connectaltest", O_RDWR);
@@ -73,18 +74,19 @@ printf("[%s:%d] opened bsim\n", __FUNCTION__, __LINE__);
             memdump((unsigned char *)&req, sizeof(req), "RX");
         }
         rv.portal = req.portal;
+pint.fpga_number = req.portal;
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-        if (req.portal == 666) {
+        if (req.portal == MAGIC_PORTAL_FOR_SENDING_FD) {
             //bluesim_sock_fd_write((long)req.addr);
-            //bsimfunc.writefd(req.addr, req.data_or_tag, req.portal);
+            bsimfunc.writefd(&pint, &req.addr, req.data_or_tag);
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
             rv.data = 0xdead;
             write(fd, &rv, sizeof(rv));
         }
         else if (req.write_flag)
-            bsimfunc.write(req.addr, req.data_or_tag, req.portal);
+            bsimfunc.write(&pint, &req.addr, req.data_or_tag);
         else {
-            rv.data = bsimfunc.read(req.addr, req.portal);
+            rv.data = bsimfunc.read(&pint, &req.addr);
             write(fd, &rv, sizeof(rv));
         }
     }
