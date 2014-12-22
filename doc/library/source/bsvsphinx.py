@@ -23,14 +23,7 @@ from sphinx.util.docfields import Field, GroupedField, TypedField
 
 
 # REs for Bsv signatures
-py_sig_re = re.compile(
-    r'''^ ([\w.]*\.)?            # interface name(s)
-          (\w+)  \s*             # thing name
-          (?: \((.*)\)           # optional: arguments
-           (?:\s* -> \s* (.*))?  #           return annotation
-          )? $                   # and nothing more
-          ''', re.VERBOSE)
-
+bsv_param_re = re.compile('^\((.*)\)$')
 
 def _pseudo_parse_arglist(signode, arglist):
     """"Parse" a list of arguments separated by commas.
@@ -87,6 +80,8 @@ class BsvObject(ObjectDescription):
         'noindex': directives.flag,
         'package': directives.unchanged,
         'annotation': directives.unchanged,
+        'parameter': directives.unchanged,
+        'returntype': directives.unchanged,
     }
 
     doc_field_types = [
@@ -107,6 +102,10 @@ class BsvObject(ObjectDescription):
         Field('returntype', label=l_('Return type'), has_arg=False,
               names=('rtype',)),
     ]
+
+    def get_signatures(self):
+        siglines = ObjectDescription.get_signatures(self)
+        return siglines
 
     def get_signature_prefix(self, sig):
         """May return a prefix to put before the object name in the
@@ -129,10 +128,52 @@ class BsvObject(ObjectDescription):
         * it is stripped from the displayed name if present
         * it is added to the full name (return value) if not present
         """
-        m = py_sig_re.match(sig)
-        if m is None:
-            raise ValueError
-        name_prefix, name, arglist, retann = m.groups()
+        print 'BsvObject.handle_signature', sig
+        name_prefix = ''
+        name = sig
+        arglist = ''
+        retann = ''
+        if self.objtype in ['interface', 'instance', 'typeclass']:
+            split = sig.split('#', 1)
+            name = split[0]
+            if len(split) > 1:
+                arglist = split[1]
+                m = bsv_param_re.match(arglist)
+                if m: arglist = m.group(1)
+        elif self.objtype in ['subinterface', 'field']:
+            split = sig.rsplit(' ', 1)
+            print 'rsplit', split
+            name = split[-1]
+            if len(split) > 1:
+                retann = split[0]
+        elif self.objtype in ['method', 'function']:
+            split = sig.split(' ', 1)
+            retann = split[0]
+            nameparams = split[1]
+            split = nameparams.split('(', 1)
+            name = split[0]
+            if len(split) > 1:
+                arglist = split[1][0:-1]
+        elif self.objtype in ['module']:
+            split = sig.split('#', 1)
+            name = split[0]
+            if len(split) > 1:
+                depth = 0
+                paramreturn = split[1]
+                #print 'module', paramreturn, len(paramreturn)
+                for i in range(0,len(paramreturn)):
+                    c = paramreturn[i]
+                    if c == '(': depth = depth+1
+                    elif c == ')': depth = depth-1
+                    
+                    #print i, c, depth
+                    if depth==0:
+                        endofparam=i
+                        break
+                arglist = paramreturn[1:endofparam]
+                retann = paramreturn[endofparam+1:-1]
+                #print arglist
+                #print endofparam, retann
 
         # determine package and interface name (if applicable), as well as full name
         modname = self.options.get(
@@ -182,14 +223,21 @@ class BsvObject(ObjectDescription):
         anno = self.options.get('annotation')
 
         signode += addnodes.desc_name(name, name)
+        #print 'arglist', arglist
         if not arglist:
             if self.needs_arglist():
                 # for callables, add an empty parameter list
-                signode += addnodes.desc_parameterlist()
+                if arglist:
+                    signode += addnodes.desc_parameterlist(text=arglist)
+                elif self.options.get('parameter'):
+                    signode += addnodes.desc_parameterlist(text=self.options.get('parameter'))
             if retann:
-                signode += addnodes.desc_returns(retann, retann)
+                signode += addnodes.desc_returns(text=retann)
+            elif self.options.get('returntype'):
+                signode += addnodes.desc_returns(text=self.options.get('returntype'))
             if anno:
                 signode += addnodes.desc_annotation(' ' + anno, ' ' + anno)
+            #print 'signode', signode
             return fullname, name_prefix
 
         _pseudo_parse_arglist(signode, arglist)
@@ -213,7 +261,7 @@ class BsvObject(ObjectDescription):
             signode['ids'].append(fullname)
             signode['first'] = (not self.names)
             self.state.document.note_explicit_target(signode)
-            objects = self.env.domaindata['py']['objects']
+            objects = self.env.domaindata['bsv']['objects']
             if fullname in objects:
                 self.state_machine.reporter.warning(
                     'duplicate object description of %s, ' % fullname +
@@ -242,39 +290,32 @@ class BsvPackagelevel(BsvObject):
     Description of an object on package level (functions, data).
     """
 
+    def get_signature_prefix(self, sig):
+        return self.objtype + ' '
+
     def needs_arglist(self):
-        return self.objtype == 'function'
+        return self.objtype.endswith('method') or self.objtype in ['typedef', 'function', 'interface', 'typeclass']
 
     def get_index_text(self, modname, name_cls):
-        if self.objtype == 'function':
-            if not modname:
-                return _('%s() (built-in function)') % name_cls[0]
-            return _('%s() (in package %s)') % (name_cls[0], modname)
-        elif self.objtype == 'data':
-            if not modname:
-                return _('%s (built-in variable)') % name_cls[0]
-            return _('%s (in package %s)') % (name_cls[0], modname)
+        if modname:
+            return _('%s (%s in package %s)') % (name_cls[0], self.objtype, modname)
         else:
-            return ''
+            return _('%s (%s)') % (name_cls[0], self.objtype)
 
 
 class BsvInterfacelike(BsvObject):
     """
-    Description of a interface-like object (interfacees, interfaces, exceptions).
+    Description of a interface-like object (interfacees).
     """
 
     def get_signature_prefix(self, sig):
         return self.objtype + ' '
 
     def get_index_text(self, modname, name_cls):
-        if self.objtype == 'interface':
-            if not modname:
-                return _('%s (built-in interface)') % name_cls[0]
-            return _('%s (interface in %s)') % (name_cls[0], modname)
-        elif self.objtype == 'exception':
-            return name_cls[0]
+        if modname:
+            return _('%s (%s in package %s)') % (name_cls[0], self.objtype, modname)
         else:
-            return ''
+            return _('%s (%s)') % (name_cls[0], self.objtype)
 
     def before_content(self):
         BsvObject.before_content(self)
@@ -285,7 +326,7 @@ class BsvInterfacelike(BsvObject):
 
 class BsvInterfacemember(BsvObject):
     """
-    Description of a interface member (methods, attributes).
+    Description of a interface member (methods, fields).
     """
 
     option_spec = {
@@ -297,7 +338,7 @@ class BsvInterfacemember(BsvObject):
         }
 
     def needs_arglist(self):
-        return self.objtype.endswith('method')
+        return self.objtype.endswith('method') or self.objtype in ['typedef', 'interface', 'subinterface', 'field']
 
     def get_signature_prefix(self, sig):
         if self.objtype == 'staticmethod':
@@ -376,6 +417,7 @@ class BsvDecoratorMixin(object):
     Mixin for decorator directives.
     """
     def handle_signature(self, sig, signode):
+        print 'BsvDecoratorMixin.handle_signature', sig
         ret = super(BsvDecoratorMixin, self).handle_signature(sig, signode)
         signode.insert(0, addnodes.desc_addname('@', '@'))
         return ret
@@ -426,12 +468,12 @@ class BsvPackage(Directive):
         env.temp_data['bsv:package'] = modname
         ret = []
         if not noindex:
-            env.domaindata['py']['packages'][modname] = \
+            env.domaindata['bsv']['packages'][modname] = \
                 (env.docname, self.options.get('synopsis', ''),
                  self.options.get('platform', ''), 'deprecated' in self.options)
             # make a duplicate entry in 'objects' to facilitate searching for
             # the package in BsvDomain.find_obj()
-            env.domaindata['py']['objects'][modname] = (env.docname, 'package')
+            env.domaindata['bsv']['objects'][modname] = (env.docname, 'package')
             targetnode = nodes.target('', '', ids=['package-' + modname],
                                       ismod=True)
             self.state.document.note_explicit_target(targetnode)
@@ -496,7 +538,7 @@ class BsvPackageIndex(Index):
 
     name = 'pkgindex'
     localname = l_('Bsv Package Index')
-    shortname = l_('packages')
+    shortname = l_('bsvpkgs')
 
     def generate(self, docnames=None):
         content = {}
@@ -558,6 +600,75 @@ class BsvPackageIndex(Index):
 
         return content, collapse
 
+class BsvModuleIndex(Index):
+    """
+    Index subinterface to provide the Bsv module index.
+    """
+
+    name = 'bsvmodules'
+    localname = l_('Bsv Module Index')
+    shortname = l_('bsvmodules')
+
+    def generate(self, docnames=None):
+        content = {}
+        # list of prefixes to ignore
+        ignores = self.domain.env.config['pkgindex_common_prefix']
+        ignores = sorted(ignores, key=len, reverse=True)
+        # list of all packages, sorted by package name
+        modules = sorted(self.domain.data['modules'].iteritems(),
+                         key=lambda x: x[0].lower())
+        # sort out collapsable modules
+        prev_modname = ''
+        num_toplevels = 0
+        for modname, (docname, synopsis, platforms, deprecated) in modules:
+            if docnames and docname not in docnames:
+                continue
+
+            for ignore in ignores:
+                if modname.startswith(ignore):
+                    modname = modname[len(ignore):]
+                    stripped = ignore
+                    break
+            else:
+                stripped = ''
+
+            # we stripped the whole module name?
+            if not modname:
+                modname, stripped = stripped, ''
+
+            entries = content.setdefault(modname[0].lower(), [])
+
+            module = modname.split('.')[0]
+            if module != modname:
+                # it's a submodule
+                if prev_modname == module:
+                    # first submodule - make parent a group head
+                    if entries:
+                        entries[-1][1] = 1
+                elif not prev_modname.startswith(module):
+                    # submodule without parent in list, add dummy entry
+                    entries.append([stripped + module, 1, '', '', '', '', ''])
+                subtype = 2
+            else:
+                num_toplevels += 1
+                subtype = 0
+
+            qualifier = deprecated and _('Deprecated') or ''
+            entries.append([stripped + modname, subtype, docname,
+                            'module-' + stripped + modname, platforms,
+                            qualifier, synopsis])
+            prev_modname = modname
+
+        # apply heuristics when to collapse pkgindex at page load:
+        # only collapse if number of toplevel modules is larger than
+        # number of submodules
+        collapse = len(modules) - num_toplevels < num_toplevels
+
+        # sort by first letter
+        content = sorted(content.iteritems())
+
+        return content, collapse
+
 
 class BsvDomain(Domain):
     """Bsv language domain."""
@@ -567,23 +678,34 @@ class BsvDomain(Domain):
         'function':     ObjType(l_('function'),      'func', 'obj'),
         'data':         ObjType(l_('data'),          'data', 'obj'),
         'interface':        ObjType(l_('interface'),         'interface', 'exc', 'obj'),
+        'instance':     ObjType(l_('instance'),         'instance', 'obj'),
         'exception':    ObjType(l_('exception'),     'exc', 'interface', 'obj'),
         'method':       ObjType(l_('method'),        'meth', 'obj'),
+        'subinterface': ObjType(l_('subinterface'),  'ifc', 'obj'),
+        'field': ObjType(l_('field'),  'fld', 'obj'),
         'interfacemethod':  ObjType(l_('interface method'),  'meth', 'obj'),
         'staticmethod': ObjType(l_('static method'), 'meth', 'obj'),
-        'attribute':    ObjType(l_('attribute'),     'attr', 'obj'),
-        'package':       ObjType(l_('package'),        'mod', 'obj'),
+        'package':       ObjType(l_('package'),      'pkg', 'obj'),
+        'module':       ObjType(l_('module'),        'mod', 'obj'),
+        'struct':        ObjType(l_('struct'),       'struct', 'obj'),
+        'typedef':       ObjType(l_('typedef'),      'mod', 'obj'),
+        'typeclass':        ObjType(l_('typeclass'),         'typeclass', 'obj'),
     }
 
     directives = {
         'function':        BsvPackagelevel,
         'data':            BsvPackagelevel,
-        'interface':           BsvInterfacelike,
-        'exception':       BsvInterfacelike,
+        'module':          BsvPackagelevel,
+        'typedef':         BsvPackagelevel,
+        'interface':       BsvInterfacelike,
+        'typeclass':       BsvInterfacelike,
+        'instance':        BsvInterfacelike,
+        'struct':          BsvInterfacelike,
         'method':          BsvInterfacemember,
         'interfacemethod':     BsvInterfacemember,
         'staticmethod':    BsvInterfacemember,
-        'attribute':       BsvInterfacemember,
+        'subinterface':    BsvInterfacemember,
+        'field':           BsvInterfacemember,
         'package':          BsvPackage,
         'currentpackage':   BsvCurrentPackage,
         'decorator':       BsvDecoratorFunction,
@@ -598,11 +720,13 @@ class BsvDomain(Domain):
         'attr':  BsvXRefRole(),
         'meth':  BsvXRefRole(fix_parens=True),
         'mod':   BsvXRefRole(),
+        'pkg':   BsvXRefRole(),
         'obj':   BsvXRefRole(),
     }
     initial_data = {
         'objects': {},  # fullname -> docname, objtype
         'packages': {},  # modname -> docname, synopsis, platform, deprecated
+        'modules': {},  # modname -> docname, synopsis, platform, deprecated
         'labels': {         # labelname -> docname, labelid, sectionname
             'pkgindex': ('bsv-pkgindex', '', l_('Package Index')),
         },
@@ -612,6 +736,7 @@ class BsvDomain(Domain):
     }
     indices = [
         BsvPackageIndex,
+        BsvModuleIndex
     ]
 
     def clear_doc(self, docname):

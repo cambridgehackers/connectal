@@ -275,7 +275,7 @@ if __name__=='__main__':
     bsvdefines += ['BOARD_'+boardname]
 
     options.verilog.append(os.path.join(connectaldir, 'verilog'))
-    options.constraint.append(os.path.join(connectaldir, 'xilinx/constraints/%s.xdc' % boardname))
+    options.constraint.append(os.path.join(connectaldir, 'constraints/xilinx/%s.xdc' % boardname))
 
     tclboardname = os.path.join(project_dir, 'board.tcl')
     tclsynthname = os.path.join(project_dir, '%s-synth.tcl' % dutname.lower())
@@ -357,7 +357,7 @@ if __name__=='__main__':
 
     bitsmake=fpgamakeRuleTemplate % {'partitions': ' '.join(['-s %s' % p for p in options.partition_module]),
 					 'floorplan': os.path.abspath(options.floorplan) if options.floorplan else '',
-					 'xdc': ' '.join(['--xdc=%s' % os.path.abspath(xdc) for xdc in options.constraint]),
+					 'xdc': ' '.join(['--constraint=%s' % os.path.abspath(xdc) for xdc in options.constraint]),
 					 'xci': ' '.join(['--xci=%s' % os.path.abspath(xci) for xci in options.xci]),
 					 'sourceTcl': ' '.join(['--tcl=%s' % os.path.abspath(tcl) for tcl in options.tcl]),
                                          'verilog': ' '.join([os.path.abspath(f) for f in options.verilog]),

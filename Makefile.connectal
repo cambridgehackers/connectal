@@ -53,9 +53,7 @@ programflash.%:
 %.gdb:
 	make CONNECTAL_DEBUG=1 --no-print-directory $*
 
-#ifeq ($(origin IPDIR),undefined)
-IPDIR=$(CONNECTALDIR)/out
-#endif
+IPDIR?=$(CONNECTALDIR)/out
 ifndef NUMBER_OF_MASTERS
 NUMBER_OF_MASTERS=1
 endif

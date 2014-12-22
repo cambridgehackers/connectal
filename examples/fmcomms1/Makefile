@@ -16,11 +16,12 @@ ifeq ($(BOARD),zc702)
 HAS_PS7=true
 endif
 
+PIN_BINDINGS ?= -b fmc:fmc1
 
 gentarget:: fmcomms1-$(BOARD).xdc
 
 fmcomms1-$(BOARD).xdc: fmcomms1-fmc.json $(CONNECTALDIR)/boardinfo/$(BOARD).json
-	$(CONNECTALDIR)/scripts/generate-constraints.py $(CONNECTALDIR)/boardinfo/$(BOARD).json fmcomms1-fmc.json > fmcomms1-$(BOARD).xdc
+	$(CONNECTALDIR)/scripts/generate-constraints.py $(PIN_BINDINGS) -o fmcomms1-$(BOARD).xdc $(CONNECTALDIR)/boardinfo/$(BOARD).json fmcomms1-fmc.json
 
 
 include $(CONNECTALDIR)/Makefile.connectal

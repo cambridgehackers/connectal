@@ -11,32 +11,13 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-.. automodule:: AST
-   :members:
-   :undoc-members:
-
-
-.. cpp:class Portal
-
-
-.. bsv:interface:: Simple
-
-.. bsv:method:: Simple.say
-     :returntype: Action
-     :parameter: Bit#(32) v
-                 Bit#(32) v2
-     :package: SimpleIF
-
-     method content?
-
-
-See :ref:`say`
+   bsv/bsv.rst
+   examples/index.rst
 
 Indices and tables
 ==================
 
 * :ref:`genindex`
 * :ref:`modindex`
-* :ref:`pkgindex`
 * :ref:`search`
 

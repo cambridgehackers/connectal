@@ -120,6 +120,7 @@ interface PcieTop#(type ipins);
    interface PciewrapPci_exp#(PcieLanes) pcie;
    (* always_ready *)
    method Bit#(NumLeds) leds();
+   interface Clock deleteme_unused_clockLeds;
    (* prefix="" *)
    interface ipins       pins;
 `endif
