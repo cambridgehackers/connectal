@@ -48,9 +48,9 @@ int i;
 
 int main(int argc, char *argv[])
 {
-struct memrequest req;
-PortalInternal pint;
-int rc;
+    struct memrequest req;
+    static PortalInternal pint;
+    int rc;
 
     int fd = open("/dev/connectaltest", O_RDWR);
     if (fd == -1) {

@@ -32,6 +32,29 @@ typedef struct bsim_fpga_map_entry{
 } bsim_fpga_map_entry;
 static bsim_fpga_map_entry bsim_fpga_map[MAX_BSIM_PORTAL_ID];
 
+static void initialize_bsim_map()
+{
+    unsigned int last = 0, idx = 0;
+    while (!last && idx < 32) {
+        static PortalInternal p;
+        volatile unsigned int *ptr=(volatile unsigned int *)(long)(idx * PORTAL_BASE_OFFSET);
+        volatile unsigned int *idp = &ptr[PORTAL_CTRL_REG_PORTAL_ID];
+        volatile unsigned int *topp = &ptr[PORTAL_CTRL_REG_TOP];
+        p.fpga_number = idx;
+        unsigned int id = bsimfunc.read(&p, &idp);
+        last = bsimfunc.read(&p, &topp);
+        if (id >= MAX_BSIM_PORTAL_ID) {
+            PORTAL_PRINTF("%s: [%d] readid too large %d\n", __FUNCTION__, idx, id);
+            break;
+        }
+        bsim_fpga_map[idx].name = id;
+        bsim_fpga_map[idx].offset = idx;
+        bsim_fpga_map[idx].valid = 1;
+        //PORTAL_PRINTF("%s: bsim_fpga_map[%d]=%d (%d)\n", __FUNCTION__, id, bsim_fpga_map[id], last);
+        idx++;
+    }  
+}
+
 #ifndef __KERNEL__
 #include <stdio.h>
 #include <stdlib.h>
@@ -108,27 +131,11 @@ printf("[%s:%d] TCP\n", __FUNCTION__, __LINE__);
 
 void connect_to_bsim(void)
 {
-  static PortalInternal p;
   if (global_sockfd != -1)
     return;
   global_sockfd = init_connecting(SOCKET_NAME, NULL);
   pthread_mutex_init(&socket_mutex, NULL);
-  unsigned int last = 0;
-  unsigned int idx = 0;
-  while(!last && idx < 32){
-    volatile unsigned int *ptr=(volatile unsigned int *)(long)(idx * PORTAL_BASE_OFFSET);
-    volatile unsigned int *idp = &ptr[PORTAL_CTRL_REG_PORTAL_ID];
-    volatile unsigned int *topp = &ptr[PORTAL_CTRL_REG_TOP];
-    p.fpga_number = idx;
-    unsigned int id = bsimfunc.read(&p, &idp);
-    last = bsimfunc.read(&p, &topp);
-    assert(id < MAX_BSIM_PORTAL_ID);
-    bsim_fpga_map[idx].name = id;
-    bsim_fpga_map[idx].offset = idx;
-    bsim_fpga_map[idx].valid = 1;
-    //PORTAL_PRINTF( "%s bsim_fpga_map[%d]=%d (%d)\n", __FUNCTION__, id, bsim_fpga_map[id], last);
-    idx++;
-  }  
+  initialize_bsim_map();
 }
 
 static int init_socketResp(struct PortalInternal *pint, void *aparam)
@@ -399,6 +406,8 @@ void connect_to_bsim(void)
         return;
     sema_init (&bsim_avail, 1);
     sema_init (&bsim_have_response, 0);
+    initialize_bsim_map();
+    printk("[%s:%d]\n", __FUNCTION__, __LINE__);
     down_interruptible(&bsim_start);
 }
 
