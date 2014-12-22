@@ -73,13 +73,16 @@ printf("[%s:%d] opened bsim\n", __FUNCTION__, __LINE__);
             memdump((unsigned char *)&req, sizeof(req), "RX");
         }
         rv.portal = req.portal;
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
         if (req.portal == 666) {
-            bluesim_sock_fd_write((long)req.addr);
+            //bluesim_sock_fd_write((long)req.addr);
+            //bsimfunc.writefd(req.addr, req.data_or_tag, req.portal);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
             rv.data = 0xdead;
             write(fd, &rv, sizeof(rv));
         }
         else if (req.write_flag)
-            bsimfunc.write(req.addr, req.data, req.portal);
+            bsimfunc.write(req.addr, req.data_or_tag, req.portal);
         else {
             rv.data = bsimfunc.read(req.addr, req.portal);
             write(fd, &rv, sizeof(rv));

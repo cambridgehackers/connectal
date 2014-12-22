@@ -21,7 +21,9 @@
 
 #ifndef __PORTAL_OFFSETS_H__
 #define __PORTAL_OFFSETS_H__
-#ifndef __KERNEL__
+#ifdef __KERNEL__
+#include <linux/types.h>
+#else
 #include <stdint.h>
 #include <sys/types.h>
 #include <sys/socket.h> // for send()/recv()
@@ -123,10 +125,6 @@ typedef struct {
     struct DmaManager *dma;
     uint32_t    size;
 } PortalSharedParam; /* for ITEMINIT function */
-
-typedef struct PortalSocketParam {
-    struct addrinfo *addr;
-} PortalSocketParam; /* for ITEMINIT function */
 
 typedef struct {
     PortalInternal       *pint;

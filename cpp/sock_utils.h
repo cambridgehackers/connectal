@@ -29,6 +29,10 @@
 #define MAGIC_PORTAL_FOR_SENDING_INTERRUPT          999
 #define SOCKET_NAME                 "socket_for_bluesim"
 
+typedef struct PortalSocketParam {
+    struct addrinfo *addr;
+} PortalSocketParam; /* for ITEMINIT function */
+
 struct memrequest{
   int portal;
   int write_flag;
