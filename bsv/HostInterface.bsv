@@ -70,9 +70,12 @@ import PcieTracer        :: *;
 import MemTypes          :: *;
 import Bscan             :: *;
 `ifndef BSIM
+`ifdef XILINX
 import PcieEndpointX7    :: *;
+`elsif ALTERA
+import PcieEndpointS5    :: *;
 `endif
-
+`endif
 typedef 40 PciePhysAddrWidth;
 interface PcieHost#(numeric type dsz, numeric type nSlaves);
    interface Vector#(16,ReadOnly_MSIX_Entry)     msixEntry;
@@ -91,11 +94,17 @@ interface PcieHostTop;
    interface Clock tepClock125;
    interface Reset tepReset125;
    interface PcieHost#(DataBusWidth, NumberOfMasters) tpciehost;
-`ifndef BSIM
+`ifdef XILINX
    interface Clock tsys_clk_200mhz;
    interface Clock tsys_clk_200mhz_buf;
    interface Clock tpci_clk_100mhz_buf;
    interface PcieEndpointX7#(PcieLanes) tep7;
+`endif
+`ifdef ALTERA
+   interface Clock tsys_clk_200mhz;
+   interface Clock tsys_clk_200mhz_buf;
+   interface Clock tpci_clk_100mhz_buf;
+   interface PcieEndpointS5#(PcieLanes) tep7;
 `endif
    interface Clock portalClock;
    interface Reset portalReset;

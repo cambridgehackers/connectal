@@ -70,7 +70,7 @@ module vMkXilinx7PCIExpress#(PCIEParams params, Clock clk_125mhz, Clock pipe_use
 
    interface PciewrapUser     user;
       output_clock            clk_out(user_clk_out);
-      output_reset    reset_out(user_reset_out);
+      output_reset            reset_out(user_reset_out);
       method user_lnk_up      lnk_up   clocked_by(no_clock) reset_by(no_reset); /* semi-static */
       method user_app_rdy     app_rdy   clocked_by(no_clock) reset_by(no_reset);
    endinterface

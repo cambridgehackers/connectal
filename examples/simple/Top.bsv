@@ -41,12 +41,12 @@ module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
    SimpleProxy simpleIndicationProxy <- mkSimpleProxy(SimpleIndication);
    Simple simpleRequest <- mkSimple(simpleIndicationProxy.ifc);
    SimpleWrapper simpleRequestWrapper <- mkSimpleWrapper(SimpleRequest,simpleRequest);
-   
+
    Vector#(2,StdPortal) portals;
    portals[0] = simpleIndicationProxy.portalIfc;
    portals[1] = simpleRequestWrapper.portalIfc;
    let ctrl_mux <- mkSlaveMux(portals);
-   
+
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
    interface masters = nil;

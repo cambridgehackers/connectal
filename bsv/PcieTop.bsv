@@ -38,8 +38,10 @@ import MemMasterEngine   :: *;
 import PcieCsr           :: *;
 import MemTypes          :: *;
 import Bscan             :: *;
-`ifndef BSIM
+`ifdef XILINX
 import PcieEndpointX7    :: *;
+`elsif ALTERA
+import PcieEndpointS5    :: *;
 `endif
 import PcieHost         :: *;
 import HostInterface    :: *;
@@ -95,5 +97,4 @@ module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Cl
    interface pins = portalTop.pins;
 `endif
 endmodule
-		 
-		 
+

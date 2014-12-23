@@ -244,6 +244,7 @@ def processline(line, phase):
            item = item[:-3].strip()
         if item != '' and item != 'integer' and item != '=':
             f.append(item)
+    #print("ARR", f, file=sys.stderr)
     if len(f) > 0:
         if f[0][-1] == ';':
             return True
@@ -252,20 +253,36 @@ def processline(line, phase):
         if f[0] == 'module':
             modulename = f[1]
         if f[0] == 'input' or f[0] == 'output' or f[0] == 'inout':
-            if len(f) == 2:
-                f = [f[0], '1', f[1]]
+            if len(f) == 3:
+                f = [f[0], f[1], '1', f[2]]
             # check for parameterized declarations
-            pname = f[1].strip('0123456789/')
+            pname = f[2].strip('0123456789/')
             if len(pname) > 0 and pname not in paramnames and pname[:4] != 'TDiv':
                 print('Missing parameter declaration', pname, file=sys.stderr)
                 paramnames.append(pname)
-            f[1] = 'Bit#(' + f[1] + ')'
-            if options.delete and f[2] in options.delete:
+            f[2] = 'Bit#(' + f[2] + ')'
+            if options.delete and f[3] in options.delete:
                 return False
-            if options.clock and f[2] in options.clock:
-                f[1] = 'Clock'
-            if options.reset and f[2] in options.reset:
-                f[1] = 'Reset'
+            if options.clock and f[3] in options.clock:
+                f[2] = 'Clock'
+            if options.reset and f[3] in options.reset:
+                f[2] = 'Reset'
+            #print('FF', f, file=sys.stderr)
+        elif f[0].startswith('input') or f[0].startswith('output') or f[0].startswith('inout'):
+            if len(f) == 3:
+                f = [f[0].split()[0], f[0].split()[1], f[1], f[2]]
+            # check for parameterized declarations
+            pname = f[2].strip('0123456789/')
+            if len(pname) > 0 and pname not in paramnames and pname[:4] != 'TDiv':
+                print('Missing parameter declaration', pname, file=sys.stderr)
+                paramnames.append(pname)
+            f[2] = 'Bit#(' + f[2] + ')'
+            if options.delete and f[3] in options.delete:
+                return False
+            if options.clock and f[3] in options.clock:
+                f[2] = 'Clock'
+            if options.reset and f[3] in options.reset:
+                f[2] = 'Reset'
             #print('FF', f, file=sys.stderr)
         elif phase == 2:
             return True
@@ -280,8 +297,8 @@ def processline(line, phase):
             if not itemfound:
                 print('UNK not found', f)
             return False
-        if len(f) == 3:
-            masterlist.append(PinType(f[0], f[1], f[2], f[2]))
+        if len(f) == 4:
+            masterlist.append(PinType(f[0], f[2], f[3], f[3]))
         elif len(f) == 2:
             print('FFDDDDD2', f, file=sys.stderr)
             masterlist.append(PinType(f[0], '', f[1], f[1]))
@@ -363,7 +380,9 @@ def regroup_items(masterlist):
     prevlist = []
     for item in masterlist:
         if item.mode != 'input' and item.mode != 'output' and item.mode != 'inout':
-            newlist.append(item)
+            pass
+            #newlist.append(item)
+            #print("DD", item.name)
         else:
             litem = item.origname
             titem = litem.replace('ZZ', 'ZZA')
@@ -372,6 +391,7 @@ def regroup_items(masterlist):
             titem = titem.replace('F2P', 'ZZD')
             #m = re.search('(.+?)(\d+)_(.+)', litem)
             m = re.search('(.+?)(\d+)(_?)(.+)', titem)
+            #print('OA', titem)
             separator = '_'
             indexname = ''
             if prevlist != [] and not litem.startswith(currentgroup):
@@ -392,7 +412,8 @@ def regroup_items(masterlist):
                     if litem.startswith(checkitem):
                         skipcheck = True
                 if skipcheck:
-                    newlist.append(item)
+                    #newlist.append(item)
+                    #print('OB', item.name)
                     continue
                 groupname = goback(m.group(1))
                 indexname = goback(m.group(2))
@@ -402,13 +423,23 @@ def regroup_items(masterlist):
             elif separator != '':
                 m = re.search('(.+?)_(.+)', litem)
                 if not m:
-                    newlist.append(item)
+                    #newlist.append(item)
+                    #print('OD', item.name)
                     continue
                 if len(m.group(1)) == 1: # if only 1 character prefix, get more greedy
                     m = re.search('(.+)_(.+)', litem)
                 #print('OJ', item.name, m.groups(), file=sys.stderr)
                 fieldname = m.group(2)
                 groupname = m.group(1)
+
+            skipcheck = False
+            for checkitem in options.notfactor:
+                if litem.startswith(checkitem):
+                    skipcheck = True
+            if skipcheck:
+                #newlist.append(item)
+                #print('OI', item.name, file=sys.stderr)
+                continue
             itemname = (groupname + indexname).lower()
             if itemname in ['event']:
                 itemname = itemname + '_'

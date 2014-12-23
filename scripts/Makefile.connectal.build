@@ -117,8 +117,10 @@ bsim_exe2: prepare_bin_target
 	@cp -v jni/bsim_exe2 bin
 
 ubuntu.exe: prepare_bin_target
+	@echo "ubuntu.exe"
 	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk ubuntu.exe
 	@cp -v jni/ubuntu.exe bin
+	@echo "ubuntu.exe done"
 
 ubuntu.exe2: prepare_bin_target
 	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk ubuntu.exe2
@@ -215,11 +217,13 @@ syntax.timestamp: $(BSVFILES)
 	$(Q)touch syntax.timestamp
 
 verilog: $(vfile)
+	@echo "verilog"
 
 lint: $(vfile)
 	verilator --error-limit 200 --lint-only -Isources/$(DUT) -Isources/source $(vfile)
 
 prepare_bin_target: syntax.timestamp
+	@echo "prepare_bin_target"
 	@mkdir -p bin
 	@(git rev-parse HEAD || echo not a git repo) > bin/githash
 	@(git diff || echo not a git repo) | gzip -c > bin/gitdiff.patch.gz

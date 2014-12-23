@@ -29,6 +29,7 @@ examples/*/kc705
 examples/*/vc707
 examples/*/zc702
 examples/*/zc706
+examples/*/de5
 examples/*/zedboard
 examples/*/zybo
 generated/xilinx/*

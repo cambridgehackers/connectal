@@ -149,6 +149,8 @@ tests    =  $(memtests)          \
 
 examples =  echo                 \
 	    hdmidisplay          \
+	    led2                 \
+		alterajtaguart       \
             memcpy               \
             memlatency           \
             memread              \
@@ -249,7 +251,7 @@ cppalllist =     $(bsimalllist) \
     tests/testmm2.2.2 \
     tests/testmm2.4.2 \
 
-allarchlist = ac701 zedboard zc702 zc706 kc705 vc707 zynq100 v2000t bluesim miniitx100
+allarchlist = ac701 zedboard zc702 zc706 kc705 vc707 zynq100 v2000t bluesim miniitx100 de5
 
 #################################################################################################
 # gdb
