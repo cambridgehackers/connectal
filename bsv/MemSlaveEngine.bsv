@@ -32,10 +32,12 @@ import Vector       :: *;
 import ClientServer :: *;
 import MemTypes     :: *;
 import Probe        :: *;
+import PcieTracer   :: *;
 
 interface MemSlaveEngine#(numeric type buswidth);
     interface Client#(TLPData#(16), TLPData#(16)) tlp;
     interface PhysMemSlave#(40,buswidth) slave;
+    interface Get#(TimestampedTlpData) trace;
     method Bool tlpOutFifoNotEmpty();
     interface Reg#(Bool) use4dw;
 endinterface: MemSlaveEngine
@@ -178,6 +180,13 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    Reg#(TLPTag) lastTag <- mkReg(0);
    FIFOF#(TLPData#(16)) tlpDecodeFifo <- mkFIFOF();
    Reg#(TLPLength) wordCountReg <- mkReg(0);
+   FIFO#(TimestampedTlpData) tlpTraceFifo <- mkFIFO();
+   Reg#(Bit#(6)) tlpAgeReg <- mkReg(0);
+   Reg#(Bit#(32)) cycles <- mkReg(0);
+   rule count;
+      cycles <= cycles + 1;
+   endrule
+
    rule tlpInRule;
       let tlp <- toGet(tlpInFifo).get();
       tlpDecodeFifo.enq(tlp);
@@ -185,6 +194,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 
    rule handleTlpRule;
       let tlp = tlpDecodeFifo.first;
+      let tlpAge = tlpAgeReg + 1;
       Bool handled = False;
       TLPMemoryIO3DWHeader h = unpack(tlp.data);
       hitReg <= tlp.hit;
@@ -198,13 +208,13 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	 // The MIMO implicit guard only checks for space to enqueue 1 element
 	 // so we explicitly check for the number of elements required
 	 // otherwise elements in the queue will be overwritten.
+	 UInt#(3) count = 4;
+	 if (tlp.eof) begin
+	    count = truncate(unpack(wordCountReg));
+	 end
 	 if (completionMimo.enqReady()
 	    && completionTagMimo.enqReady())
 	    begin
-	       UInt#(3) count = 4;
-	       if (tlp.eof) begin
-		  count = truncate(unpack(wordCountReg));
-	       end
 	       wordCount = wordCountReg - extend(pack(count));
 	       completionMimo.enq(count, vec);
 	       Vector#(4, TLPTag) tagvec = replicate(lastTag);
@@ -226,9 +236,16 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       end
       wordCountReg <= wordCount;
       //$display("tlpIn handled=%d tlp=%h\n", handled, tlp);
+      if (tlpAge == 15 && !handled) begin
+	 let ttd = TimestampedTlpData { timestamp: cycles, source: 48, tlp: tlp };
+	 tlpTraceFifo.enq(ttd);
+	 handled = True;
+      end
       if (handled) begin
 	 tlpDecodeFifo.deq();
+	 tlpAge = 0;
       end
+      tlpAgeReg <= tlpAge;
    endrule
 
    FIFO#(PhysMemRequest#(40)) readReqFifo <- mkFIFO();
@@ -376,5 +393,6 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
     endinterface: slave
    method Bool tlpOutFifoNotEmpty() = tlpOutFifo.notEmpty;
    interface Reg use4dw = use4dwReg;
+   interface Get trace = fifoToGet(tlpTraceFifo);
 endmodule: mkMemSlaveEngine
 
