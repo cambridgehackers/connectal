@@ -25,18 +25,18 @@ import Leds::*;
 import Vector::*;
 
 interface PmodPins;
-   method Bit#(1) range_ctrl();
-   method Action pulse_width(Bit#(1) v);
+   method Bit#(2) range_ctrl();
+   method Action pulse(Bit#(2) v);
 endinterface
 
 interface MaxSonarCtrlRequest;
-   method Action range_ctrl(Bit#(1) v);
+   method Action range_ctrl(Bit#(2) v);
    method Action pulse_width();
 endinterface
 
 interface MaxSonarCtrlIndication;
-   method Action range_ctrl(Bit#(1) v);
-   method Action pulse_width(Bit#(32) v);
+   method Action range_ctrl(Bit#(2) v);
+   method Action pulse_width(Vector#(2,Bit#(32)) v);
 endinterface
 
 interface Controller;
@@ -47,32 +47,34 @@ endinterface
 
 module mkController#(MaxSonarCtrlIndication ind)(Controller);
    
-   Reg#(Bit#(1)) range_ctrl_reg <- mkReg(0);
-   Vector#(2,Reg#(Bit#(32))) high_cnt <- replicateM(mkReg(0));
-   Reg#(Bit#(1)) last_pulse <- mkReg(0);
+   Reg#(Bit#(2)) range_ctrl_reg <- mkReg(0);
+   Vector#(2,Vector#(2,Reg#(Bit#(32)))) high_cnt <- replicateM(replicateM(mkReg(0)));
+   Vector#(2,Reg#(Bit#(1))) last_pulse <- replicateM(mkReg(0));
 
    interface MaxSonarCtrlRequest req;
-      method Action range_ctrl(Bit#(1) v);
+      method Action range_ctrl(Bit#(2) v);
 	 range_ctrl_reg <= v;
 	 ind.range_ctrl(v);
       endmethod
       method Action pulse_width();
-	 ind.pulse_width(high_cnt[1]);
+	 ind.pulse_width(readVReg(map(last,high_cnt)));
       endmethod
    endinterface
    
    interface PmodPins pins;
-      method Bit#(1) range_ctrl();
+      method Bit#(2) range_ctrl();
 	 return range_ctrl_reg;
       endmethod
-      method Action pulse_width(Bit#(1) v);
-	 last_pulse <= v;
-	 if (last_pulse == 1 && v == 0) begin // end of pulse
-	    high_cnt[1] <= high_cnt[0];
-	    high_cnt[0] <= 0;
-	 end
-	 else if (v == 1) begin
-	    high_cnt[0] <= high_cnt[0]+1;
+      method Action pulse(Bit#(2) v);
+	 for(Integer i = 0; i < 2; i=i+1) begin
+	    last_pulse[i] <= v[i];
+	    if (last_pulse[i] == 1 && v[i] == 0) begin // end of pulse
+	       high_cnt[i][1] <= high_cnt[i][0];
+	       high_cnt[i][0] <= 0;
+	    end
+	    else if (v[i] == 1) begin
+	       high_cnt[i][0] <= high_cnt[i][0]+1;
+	    end
 	 end
       endmethod
    endinterface

@@ -40,11 +40,12 @@ public:
   virtual void range_ctrl ( const uint32_t v){
     fprintf(stderr, "MaxSonarCtrlIndication::range_ctrl(v=%0d)\n", v);
   }
-  virtual void pulse_width( const uint32_t v){
+  virtual void pulse_width( const uint32_t* v){
     // MaxSonar uses a scaling factor of 147 microseconds/inch
     // in its pulse-width output.  This design will be clocked
     // at 100 mHz on the zedboard.  We count accordingly
-    fprintf(stderr, "(%d microseconds == %f inches)\n", v/100, ((float)v)/100.0/147.0);
+    for(int i = 0; i < 2; i++)
+      fprintf(stderr, "[%d](%d microseconds == %f inches)\n", i, v[i]/100, ((float)v[i])/100.0/147.0);
   }
 };
 
@@ -60,7 +61,7 @@ int main(int argc, const char **argv)
   setClockFrequency(0, req_freq, &freq);
   fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
 
-  device->range_ctrl(true);
+  device->range_ctrl(0xFFFFFFFF);
   while(true){
     device->pulse_width();
     sleep(1);
