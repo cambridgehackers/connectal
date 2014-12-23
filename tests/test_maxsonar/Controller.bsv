@@ -31,10 +31,12 @@ endinterface
 
 interface MaxSonarCtrlRequest;
    method Action range_ctrl(Bit#(1) v);
+   method Action pulse_width();
 endinterface
 
 interface MaxSonarCtrlIndication;
    method Action range_ctrl(Bit#(1) v);
+   method Action pulse_width(Bit#(32) v);
 endinterface
 
 interface Controller;
@@ -46,11 +48,16 @@ endinterface
 module mkController#(MaxSonarCtrlIndication ind)(Controller);
    
    Reg#(Bit#(1)) range_ctrl_reg <- mkReg(0);
+   Vector#(2,Reg#(Bit#(32))) high_cnt <- replicateM(mkReg(0));
+   Reg#(Bit#(1)) last_pulse <- mkReg(0);
 
    interface MaxSonarCtrlRequest req;
       method Action range_ctrl(Bit#(1) v);
 	 range_ctrl_reg <= v;
 	 ind.range_ctrl(v);
+      endmethod
+      method Action pulse_width();
+	 ind.pulse_width(high_cnt[1]);
       endmethod
    endinterface
    
@@ -59,7 +66,14 @@ module mkController#(MaxSonarCtrlIndication ind)(Controller);
 	 return range_ctrl_reg;
       endmethod
       method Action pulse_width(Bit#(1) v);
-	 noAction;
+	 last_pulse <= v;
+	 if (last_pulse == 1 && v == 0) begin // end of pulse
+	    high_cnt[1] <= high_cnt[0];
+	    high_cnt[0] <= 0;
+	 end
+	 else if (v == 1) begin
+	    high_cnt[0] <= high_cnt[0]+1;
+	 end
       endmethod
    endinterface
    
