@@ -1,0 +1,20 @@
+{
+    "mosi": {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmod": "J2"
+    },
+    "miso_v": {
+	"PIO_DIRECTION": "INPUT",
+	"pmod": "J3"
+    },
+    "sel_n": {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmod": "J1"
+    },
+    "CLK_invertedClock": {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmod": "J4"
+    }
+}
+
+

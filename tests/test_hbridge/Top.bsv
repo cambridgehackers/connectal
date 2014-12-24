@@ -40,7 +40,7 @@ import Controller::*;
 
 typedef enum {ControllerRequest, ControllerIndication} IfcNames deriving (Eq,Bits);
 
-module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,PmodPins,0));
+module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,HBridge2,0));
 
    HBridgeCtrlIndicationProxy cp <- mkHBridgeCtrlIndicationProxy(ControllerIndication);
    Controller controller <- mkController(cp.ifc);

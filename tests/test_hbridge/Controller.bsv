@@ -24,7 +24,7 @@
 import Leds::*;
 import Vector::*;
 
-interface PmodPins;
+interface HBridge2;
    method Bit#(2) hbridge0();
    method Bit#(2) hbridge1();
 endinterface
@@ -39,7 +39,7 @@ endinterface
 
 interface Controller;
    interface HBridgeCtrlRequest req;
-   interface PmodPins pins;
+   interface HBridge2 pins;
    interface LEDS leds;
 endinterface
 
@@ -69,7 +69,7 @@ module mkController#(HBridgeCtrlIndication ind)(Controller);
       endmethod
    endinterface
    
-   interface PmodPins pins;
+   interface HBridge2 pins;
       method Bit#(2) hbridge0();
 	 return {enabled[0],direction[0]};
       endmethod

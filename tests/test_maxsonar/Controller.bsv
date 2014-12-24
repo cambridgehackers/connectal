@@ -24,7 +24,7 @@
 import Leds::*;
 import Vector::*;
 
-interface PmodPins;
+interface MaxSonar2;
    method Bit#(2) range_ctrl();
    method Action pulse(Bit#(2) v);
 endinterface
@@ -41,7 +41,7 @@ endinterface
 
 interface Controller;
    interface MaxSonarCtrlRequest req;
-   interface PmodPins pins;
+   interface MaxSonar2 pins;
    interface LEDS leds;
 endinterface
 
@@ -61,7 +61,7 @@ module mkController#(MaxSonarCtrlIndication ind)(Controller);
       endmethod
    endinterface
    
-   interface PmodPins pins;
+   interface MaxSonar2 pins;
       method Bit#(2) range_ctrl();
 	 return range_ctrl_reg;
       endmethod

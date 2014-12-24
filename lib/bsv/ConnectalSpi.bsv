@@ -59,7 +59,7 @@ module mkSpiShifter(SPI#(a)) provisos(Bits#(a,awidth),Add#(1,awidth1,awidth),Log
    Reset spiReset <-  mkAsyncResetFromCR(2, clockInverter.slowClock);
    Reg#(Bit#(awidth)) shiftreg <- mkReg(unpack(0));
    Reg#(Bit#(1)) selreg <- mkReg(1);
-   Reg#(Bit#(logawidth)) countreg <- mkReg(0);
+   Reg#(Bit#(TAdd#(logawidth,1))) countreg <- mkReg(0);
    FIFOF#(a) resultFifo <- mkFIFOF;
 
    Wire#(Bit#(1)) misoWire <- mkDWire(0);

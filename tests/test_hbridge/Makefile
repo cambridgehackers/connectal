@@ -4,7 +4,7 @@ INTERFACES = HBridgeCtrlRequest HBridgeCtrlIndication
 BSVFILES = Controller.bsv Top.bsv 
 CPPFILES= test_hbridge.cpp
 NUMBER_OF_MASTERS =0
-PIN_TYPE = PmodPins
+PIN_TYPE = HBridge2
 CONNECTALFLAGS = -C $(BOARD)/sources/pinout-$(BOARD).xdc
 
 PIN_BINDING ?= -b pmod:pmodc
