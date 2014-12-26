@@ -283,7 +283,7 @@ def processline(line, phase):
                 f[2] = 'Clock'
             if options.reset and f[3] in options.reset:
                 f[2] = 'Reset'
-            #print('FF', f, file=sys.stderr)
+            #print('FE', f, file=sys.stderr)
         elif phase == 2:
             return True
         if phase == 2:
@@ -298,6 +298,7 @@ def processline(line, phase):
                 print('UNK not found', f)
             return False
         if len(f) == 4:
+            #print('FFDDDDD3', f, file=sys.stderr)
             masterlist.append(PinType(f[0], f[2], f[3], f[3]))
         elif len(f) == 2:
             print('FFDDDDD2', f, file=sys.stderr)
@@ -330,6 +331,7 @@ def generate_interface(interfacename, paramlist, paramval, ilist, cname):
     print('(* always_ready, always_enabled *)', file=options.outfile)
     methodfound = False
     for item in ilist:
+        #print("GG", item.name, item.type, item.mode)
         if item.mode == 'input' and (item.type != 'Clock' and item.type != 'Reset'):
             methodfound = True
         elif item.mode == 'output':
@@ -365,11 +367,25 @@ def generate_interface(interfacename, paramlist, paramval, ilist, cname):
     if cflag:
         print('`endif', file=options.outfile)
 
+def fixname(arg):
+    titem = arg.replace('ZZ', 'ZZA')
+    titem = titem.replace('I2C', 'ZZB')
+    titem = titem.replace('P2F', 'ZZC')
+    titem = titem.replace('F2P', 'ZZD')
+    titem = titem.replace('ev128', 'ZZE')
+    titem = titem.replace('ev1', 'ZZF')
+    titem = titem.replace('l2', 'ZZG')
+    return titem
+
 def goback(arg):
     titem = arg.replace('ZZB', 'I2C')
     titem = titem.replace('ZZC', 'P2F')
     titem = titem.replace('ZZD', 'F2P')
-    return titem.replace('ZZA', 'ZZ')
+    titem = titem.replace('ZZA', 'ZZ')
+    titem = titem.replace('ZZE', 'ev128')
+    titem = titem.replace('ZZF', 'ev1')
+    titem = titem.replace('ZZG', 'l2')
+    return titem
 
 def regroup_items(masterlist):
     global paramnames, commoninterfaces
@@ -380,15 +396,12 @@ def regroup_items(masterlist):
     prevlist = []
     for item in masterlist:
         if item.mode != 'input' and item.mode != 'output' and item.mode != 'inout':
-            pass
-            #newlist.append(item)
+            #pass
+            newlist.append(item)
             #print("DD", item.name)
         else:
             litem = item.origname
-            titem = litem.replace('ZZ', 'ZZA')
-            titem = titem.replace('I2C', 'ZZB')
-            titem = titem.replace('P2F', 'ZZC')
-            titem = titem.replace('F2P', 'ZZD')
+            titem = fixname(litem)
             #m = re.search('(.+?)(\d+)_(.+)', litem)
             m = re.search('(.+?)(\d+)(_?)(.+)', titem)
             #print('OA', titem)
@@ -403,8 +416,11 @@ def regroup_items(masterlist):
                         fieldname = litem[len(tstring):]
                         if fieldname[0] == '_':
                             fieldname = fieldname[1:]
-                        separator = ''
+                            separator = '_'
+                        else:
+                            separator = ''
                         m = None
+                        #print('OM', titem, groupname, fieldname, separator)
                         break
             if m:
                 skipcheck = False
@@ -412,7 +428,7 @@ def regroup_items(masterlist):
                     if litem.startswith(checkitem):
                         skipcheck = True
                 if skipcheck:
-                    #newlist.append(item)
+                    newlist.append(item)
                     #print('OB', item.name)
                     continue
                 groupname = goback(m.group(1))
@@ -423,7 +439,7 @@ def regroup_items(masterlist):
             elif separator != '':
                 m = re.search('(.+?)_(.+)', litem)
                 if not m:
-                    #newlist.append(item)
+                    newlist.append(item)
                     #print('OD', item.name)
                     continue
                 if len(m.group(1)) == 1: # if only 1 character prefix, get more greedy
@@ -437,7 +453,7 @@ def regroup_items(masterlist):
                 if litem.startswith(checkitem):
                     skipcheck = True
             if skipcheck:
-                #newlist.append(item)
+                newlist.append(item)
                 #print('OI', item.name, file=sys.stderr)
                 continue
             itemname = (groupname + indexname).lower()
@@ -449,8 +465,10 @@ def regroup_items(masterlist):
             if not commoninterfaces[interfacename].get(indexname):
                 commoninterfaces[interfacename][indexname] = []
                 t = PinType('interface', interfacename, itemname, groupname+indexname+separator)
+                #print('OZ', interfacename, itemname, groupname+indexname+separator, file=sys.stderr)
                 t.separator = separator
                 newlist.append(t)
+            #print('OH', itemname, separator, file=sys.stder)
             foo = copy.copy(item)
             foo.origname = fieldname
             lfield = fieldname.lower()
@@ -546,6 +564,7 @@ def generate_instance(item, indent, prefix, clockedby_arg):
             return ''
         clockedby_name = ''
         for titem in baseitem:
+            #print("BB", titem.mode, titem.type, titem.name)
             if titem.mode == 'input' and titem.type == 'Clock':
                 clockedby_name = ' clocked_by (' + (item.origname+titem.name).lower() + ') reset_by (' + (item.origname+titem.name).lower() + '_reset)'
         templist = ''
