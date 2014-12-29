@@ -14,8 +14,6 @@
    -f
    reconfig_mgmt
    -f
-   reconfig
-   -f
    mgmt
    ../../out/de5/synthesis/alt_xcvr_reconfig.v
 */
@@ -47,24 +45,24 @@ interface XcvrReconfigWrap;
     interface XcvrreconfigwrapReconfig_mgmt     reconfig_mgmt;
 endinterface
 import "BVI" alt_xcvr_reconfig =
-module mkXcvrReconfigWrap#(Clock mgmtclk_clk, Reset mgmtclk_clk_reset, Reset mgmtrst_reset)(XcvrReconfigWrap);
+module mkXcvrReconfigWrap#(Clock mgmt_clk_clk, Reset mgmt_clk_clk_reset, Reset mgmt_rst_reset)(XcvrReconfigWrap);
     default_clock clk();
     default_reset rst();
-        input_clock mgmtclk_clk(mgmtclk_clk) = mgmtclk_clk;
-        input_reset mgmtclk_clk_reset() = mgmtclk_clk_reset; /* from clock*/
-        input_reset mgmtrst_reset(mgmtrst_reset) = mgmtrst_reset;
+        input_clock mgmt_clk_clk(mgmt_clk_clk) = mgmt_clk_clk;
+        input_reset mgmt_clk_clk_reset() = mgmt_clk_clk_reset; /* from clock*/
+        input_reset mgmt_rst_reset(mgmt_rst_reset) = mgmt_rst_reset;
     interface XcvrreconfigwrapReconfig     reconfig;
-        method reconfigbusy busy();
-        method from_xcvr(reconfigfrom_xcvr) enable((*inhigh*) EN_reconfigfrom_xcvr);
-        method reconfigto_xcvr to_xcvr();
+        method reconfig_busy busy();
+        method from_xcvr(reconfig_from_xcvr) enable((*inhigh*) EN_reconfig_from_xcvr);
+        method reconfig_to_xcvr to_xcvr();
     endinterface
     interface XcvrreconfigwrapReconfig_mgmt     reconfig_mgmt;
-        method address(reconfig_mgmtaddress) enable((*inhigh*) EN_reconfig_mgmtaddress);
-        method read(reconfig_mgmtread) enable((*inhigh*) EN_reconfig_mgmtread);
-        method reconfig_mgmtreaddata readdata();
-        method reconfig_mgmtwaitrequest waitrequest();
-        method write(reconfig_mgmtwrite) enable((*inhigh*) EN_reconfig_mgmtwrite);
-        method writedata(reconfig_mgmtwritedata) enable((*inhigh*) EN_reconfig_mgmtwritedata);
+        method address(reconfig_mgmt_address) enable((*inhigh*) EN_reconfig_mgmt_address);
+        method read(reconfig_mgmt_read) enable((*inhigh*) EN_reconfig_mgmt_read);
+        method reconfig_mgmt_readdata readdata();
+        method reconfig_mgmt_waitrequest waitrequest();
+        method write(reconfig_mgmt_write) enable((*inhigh*) EN_reconfig_mgmt_write);
+        method writedata(reconfig_mgmt_writedata) enable((*inhigh*) EN_reconfig_mgmt_writedata);
     endinterface
     schedule (reconfig.busy, reconfig.from_xcvr, reconfig.to_xcvr, reconfig_mgmt.address, reconfig_mgmt.read, reconfig_mgmt.readdata, reconfig_mgmt.waitrequest, reconfig_mgmt.write, reconfig_mgmt.writedata) CF (reconfig.busy, reconfig.from_xcvr, reconfig.to_xcvr, reconfig_mgmt.address, reconfig_mgmt.read, reconfig_mgmt.readdata, reconfig_mgmt.waitrequest, reconfig_mgmt.write, reconfig_mgmt.writedata);
 endmodule

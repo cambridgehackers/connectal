@@ -50,17 +50,47 @@ if $need_altera_pcie {
 	dict set altera_pcie_config bar1_io_space_hwtcl                  "Disabled"
 	dict set altera_pcie_config bar1_prefetchable_hwtcl              "Disabled"
 
-	dict set altera_pcie_config bar2_type_hwtcl                      0
-	dict set altera_pcie_config bar2_size_mask_hwtcl                 0
+	dict set altera_pcie_config bar2_type_hwtcl                      1
+	dict set altera_pcie_config bar2_size_mask_hwtcl                 10
 	dict set altera_pcie_config bar2_io_space_hwtcl                  "Disabled"
 	dict set altera_pcie_config bar2_64bit_mem_space_hwtcl           "Disabled"
 	dict set altera_pcie_config bar2_prefetchable_hwtcl              "Disabled"
+
+	dict set altera_pcie_config bar3_type_hwtcl                          0
+	dict set altera_pcie_config	bar3_size_mask_hwtcl                     0
+	dict set altera_pcie_config	bar3_io_space_hwtcl                      "Disabled"
+	dict set altera_pcie_config	bar3_prefetchable_hwtcl                  "Disabled"
+
+	dict set altera_pcie_config	bar4_size_mask_hwtcl                     0
+	dict set altera_pcie_config	bar4_io_space_hwtcl                      "Disabled"
+	dict set altera_pcie_config	bar4_64bit_mem_space_hwtcl               "Disabled"
+	dict set altera_pcie_config	bar4_prefetchable_hwtcl                  "Disabled"
+
+	dict set altera_pcie_config	bar5_size_mask_hwtcl                     0
+	dict set altera_pcie_config	bar5_io_space_hwtcl                      "Disabled"
+	dict set altera_pcie_config	bar5_prefetchable_hwtcl                  "Disabled"
+	dict set altera_pcie_config	expansion_base_address_register_hwtcl    0
+	dict set altera_pcie_config	io_window_addr_width_hwtcl               0
+	dict set altera_pcie_config	prefetchable_mem_window_addr_width_hwtcl 0
+
+	dict set altera_pcie_config	vendor_id_hwtcl                          4466
+	dict set altera_pcie_config	device_id_hwtcl                          57345
+	dict set altera_pcie_config	revision_id_hwtcl                        1
+	dict set altera_pcie_config	class_code_hwtcl                         16711680
+	dict set altera_pcie_config	subsystem_vendor_id_hwtcl                4466
+	dict set altera_pcie_config	subsystem_device_id_hwtcl                57345
+	dict set altera_pcie_config	max_payload_size_hwtcl                   256
+	dict set altera_pcie_config	extend_tag_field_hwtcl                   "32"
+	dict set altera_pcie_config	completion_timeout_hwtcl                 "ABCD"
+	dict set altera_pcie_config	enable_completion_timeout_disable_hwtcl  1
 
 	set component_parameters {}
 	foreach item [dict keys $altera_pcie_config] {
 		set val [dict get $altera_pcie_config $item]
 		lappend component_parameters --component-parameter=$item=$val
 	}
+
+	puts $component_parameters
 
     exec -ignorestderr -- ip-generate --project-directory=$ipdir/$boardname        \
             --output-directory=$ipdir/$boardname/synthesis                         \
@@ -78,6 +108,7 @@ if $need_altera_pcie {
             --language=VERILOG                                                     \
             {*}$component_parameters \
             --component-name=altera_pcie_sv_hip_ast
+
 
  	set altera_xcvr_reconfig_config [ dict create ]
 	dict set altera_xcvr_reconfig_config number_of_reconfig_interfaces 10

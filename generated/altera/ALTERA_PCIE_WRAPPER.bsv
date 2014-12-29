@@ -16,15 +16,11 @@
    -c
    refclk
    -c
-   pld_clk
-   -c
    coreclkout_hip
    -f
    serdes
    -f
-   pld_clk
-   -f
-   pld_cor
+   pld
    -f
    dl
    -f
@@ -46,13 +42,53 @@
    -f
    reconfig
    -f
-   in
+   tx_cred
    -f
-   aer
+   tx_par
    -f
-   pex
+   tx_s
    -f
-   serr
+   txd
+   -f
+   txe
+   -f
+   txc
+   -f
+   txm
+   -f
+   txs
+   -f
+   tx
+   -f
+   tx_cred
+   -f
+   rx_par
+   -f
+   rx_s
+   -f
+   rxd
+   -f
+   rxr
+   -f
+   rxe
+   -f
+   rxp
+   -f
+   rxs
+   -f
+   rxv
+   -f
+   rx
+   -f
+   cfg_par
+   -f
+   eidle
+   -f
+   power
+   -f
+   phy
+   -f
+   int_s
    -f
    cpl
    -f
@@ -64,23 +100,7 @@
    -f
    pm
    -f
-   tx_cred
-   -f
-   tx_par
-   -f
-   rx_par
-   -f
-   cfg_par
-   -f
-   tx
-   -f
-   rx
-   -f
-   eidle
-   -f
-   power
-   -f
-   phy
+   simu
    -f
    sim
    -f
@@ -158,8 +178,8 @@ interface PciewrapHpg;
     method Action      ctrler(Bit#(5) v);
 endinterface
 (* always_ready, always_enabled *)
-interface PciewrapIn;
-    method Bit#(4)     t_status();
+interface PciewrapInt_s;
+    method Bit#(4)     tatus();
 endinterface
 (* always_ready, always_enabled *)
 interface PciewrapKo;
@@ -200,13 +220,10 @@ interface PciewrapPhy;
 endinterface
 (* always_ready, always_enabled *)
 (* always_ready, always_enabled *)
-(* always_ready, always_enabled *)
-interface PciewrapPld_clk;
-    method Bit#(1)     inuse();
-endinterface
-(* always_ready, always_enabled *)
-interface PciewrapPld_cor;
-    method Action      e_ready(Bit#(1) v);
+interface PciewrapPld;
+    method Action      clk(Bit#(1) v);
+    method Bit#(1)     clk_inuse();
+    method Action      core_ready(Bit#(1) v);
 endinterface
 (* always_ready, always_enabled *)
 interface PciewrapPm;
@@ -252,67 +269,85 @@ interface PciewrapRx;
     method Action      in5(Bit#(1) v);
     method Action      in6(Bit#(1) v);
     method Action      in7(Bit#(1) v);
-    method Bit#(8)     st_bar();
-    method Bit#(128)     st_data();
-    method Bit#(2)     st_empty();
-    method Bit#(1)     st_eop();
-    method Bit#(1)     st_err();
-    method Action      st_mask(Bit#(1) v);
-    method Action      st_ready(Bit#(1) v);
-    method Bit#(1)     st_sop();
-    method Bit#(1)     st_valid();
-    method Action      data0(Bit#(8) v);
-    method Action      data1(Bit#(8) v);
-    method Action      data2(Bit#(8) v);
-    method Action      data3(Bit#(8) v);
-    method Action      data4(Bit#(8) v);
-    method Action      data5(Bit#(8) v);
-    method Action      data6(Bit#(8) v);
-    method Action      data7(Bit#(8) v);
-    method Action      datak0(Bit#(1) v);
-    method Action      datak1(Bit#(1) v);
-    method Action      datak2(Bit#(1) v);
-    method Action      datak3(Bit#(1) v);
-    method Action      datak4(Bit#(1) v);
-    method Action      datak5(Bit#(1) v);
-    method Action      datak6(Bit#(1) v);
-    method Action      datak7(Bit#(1) v);
-    method Action      elecidle0(Bit#(1) v);
-    method Action      elecidle1(Bit#(1) v);
-    method Action      elecidle2(Bit#(1) v);
-    method Action      elecidle3(Bit#(1) v);
-    method Action      elecidle4(Bit#(1) v);
-    method Action      elecidle5(Bit#(1) v);
-    method Action      elecidle6(Bit#(1) v);
-    method Action      elecidle7(Bit#(1) v);
-    method Bit#(1)     polarity0();
-    method Bit#(1)     polarity1();
-    method Bit#(1)     polarity2();
-    method Bit#(1)     polarity3();
-    method Bit#(1)     polarity4();
-    method Bit#(1)     polarity5();
-    method Bit#(1)     polarity6();
-    method Bit#(1)     polarity7();
-    method Action      status0(Bit#(3) v);
-    method Action      status1(Bit#(3) v);
-    method Action      status2(Bit#(3) v);
-    method Action      status3(Bit#(3) v);
-    method Action      status4(Bit#(3) v);
-    method Action      status5(Bit#(3) v);
-    method Action      status6(Bit#(3) v);
-    method Action      status7(Bit#(3) v);
-    method Action      valid0(Bit#(1) v);
-    method Action      valid1(Bit#(1) v);
-    method Action      valid2(Bit#(1) v);
-    method Action      valid3(Bit#(1) v);
-    method Action      valid4(Bit#(1) v);
-    method Action      valid5(Bit#(1) v);
-    method Action      valid6(Bit#(1) v);
-    method Action      valid7(Bit#(1) v);
 endinterface
 (* always_ready, always_enabled *)
 interface PciewrapRx_par;
     method Bit#(1)     err();
+endinterface
+(* always_ready, always_enabled *)
+interface PciewrapRx_s;
+    method Bit#(8)     t_bar();
+    method Bit#(128)     t_data();
+    method Bit#(2)     t_empty();
+    method Bit#(1)     t_eop();
+    method Bit#(1)     t_err();
+    method Action      t_mask(Bit#(1) v);
+    method Action      t_ready(Bit#(1) v);
+    method Bit#(1)     t_sop();
+    method Bit#(1)     t_valid();
+endinterface
+(* always_ready, always_enabled *)
+interface PciewrapRxd;
+    method Action      ata0(Bit#(8) v);
+    method Action      ata1(Bit#(8) v);
+    method Action      ata2(Bit#(8) v);
+    method Action      ata3(Bit#(8) v);
+    method Action      ata4(Bit#(8) v);
+    method Action      ata5(Bit#(8) v);
+    method Action      ata6(Bit#(8) v);
+    method Action      ata7(Bit#(8) v);
+    method Action      atak0(Bit#(1) v);
+    method Action      atak1(Bit#(1) v);
+    method Action      atak2(Bit#(1) v);
+    method Action      atak3(Bit#(1) v);
+    method Action      atak4(Bit#(1) v);
+    method Action      atak5(Bit#(1) v);
+    method Action      atak6(Bit#(1) v);
+    method Action      atak7(Bit#(1) v);
+endinterface
+(* always_ready, always_enabled *)
+interface PciewrapRxe;
+    method Action      lecidle0(Bit#(1) v);
+    method Action      lecidle1(Bit#(1) v);
+    method Action      lecidle2(Bit#(1) v);
+    method Action      lecidle3(Bit#(1) v);
+    method Action      lecidle4(Bit#(1) v);
+    method Action      lecidle5(Bit#(1) v);
+    method Action      lecidle6(Bit#(1) v);
+    method Action      lecidle7(Bit#(1) v);
+endinterface
+(* always_ready, always_enabled *)
+interface PciewrapRxp;
+    method Bit#(1)     olarity0();
+    method Bit#(1)     olarity1();
+    method Bit#(1)     olarity2();
+    method Bit#(1)     olarity3();
+    method Bit#(1)     olarity4();
+    method Bit#(1)     olarity5();
+    method Bit#(1)     olarity6();
+    method Bit#(1)     olarity7();
+endinterface
+(* always_ready, always_enabled *)
+interface PciewrapRxs;
+    method Action      tatus0(Bit#(3) v);
+    method Action      tatus1(Bit#(3) v);
+    method Action      tatus2(Bit#(3) v);
+    method Action      tatus3(Bit#(3) v);
+    method Action      tatus4(Bit#(3) v);
+    method Action      tatus5(Bit#(3) v);
+    method Action      tatus6(Bit#(3) v);
+    method Action      tatus7(Bit#(3) v);
+endinterface
+(* always_ready, always_enabled *)
+interface PciewrapRxv;
+    method Action      alid0(Bit#(1) v);
+    method Action      alid1(Bit#(1) v);
+    method Action      alid2(Bit#(1) v);
+    method Action      alid3(Bit#(1) v);
+    method Action      alid4(Bit#(1) v);
+    method Action      alid5(Bit#(1) v);
+    method Action      alid6(Bit#(1) v);
+    method Action      alid7(Bit#(1) v);
 endinterface
 (* always_ready, always_enabled *)
 interface PciewrapSerdes;
@@ -323,7 +358,10 @@ interface PciewrapSim;
     method Bit#(5)     ltssmstate();
     method Action      pipe_pclk_in(Bit#(1) v);
     method Bit#(2)     pipe_rate();
-    method Action      u_mode_pipe(Bit#(1) v);
+endinterface
+(* always_ready, always_enabled *)
+interface PciewrapSimu;
+    method Action      mode_pipe(Bit#(1) v);
 endinterface
 (* always_ready, always_enabled *)
 interface PciewrapTest;
@@ -349,77 +387,6 @@ interface PciewrapTx;
     method Bit#(1)     out5();
     method Bit#(1)     out6();
     method Bit#(1)     out7();
-    method Action      st_data(Bit#(128) v);
-    method Action      st_empty(Bit#(2) v);
-    method Action      st_eop(Bit#(1) v);
-    method Action      st_err(Bit#(1) v);
-    method Bit#(1)     st_ready();
-    method Action      st_sop(Bit#(1) v);
-    method Action      st_valid(Bit#(1) v);
-    method Bit#(1)     compl0();
-    method Bit#(1)     compl1();
-    method Bit#(1)     compl2();
-    method Bit#(1)     compl3();
-    method Bit#(1)     compl4();
-    method Bit#(1)     compl5();
-    method Bit#(1)     compl6();
-    method Bit#(1)     compl7();
-    method Bit#(8)     data0();
-    method Bit#(8)     data1();
-    method Bit#(8)     data2();
-    method Bit#(8)     data3();
-    method Bit#(8)     data4();
-    method Bit#(8)     data5();
-    method Bit#(8)     data6();
-    method Bit#(8)     data7();
-    method Bit#(1)     datak0();
-    method Bit#(1)     datak1();
-    method Bit#(1)     datak2();
-    method Bit#(1)     datak3();
-    method Bit#(1)     datak4();
-    method Bit#(1)     datak5();
-    method Bit#(1)     datak6();
-    method Bit#(1)     datak7();
-    method Bit#(1)     deemph0();
-    method Bit#(1)     deemph1();
-    method Bit#(1)     deemph2();
-    method Bit#(1)     deemph3();
-    method Bit#(1)     deemph4();
-    method Bit#(1)     deemph5();
-    method Bit#(1)     deemph6();
-    method Bit#(1)     deemph7();
-    method Bit#(1)     detectrx0();
-    method Bit#(1)     detectrx1();
-    method Bit#(1)     detectrx2();
-    method Bit#(1)     detectrx3();
-    method Bit#(1)     detectrx4();
-    method Bit#(1)     detectrx5();
-    method Bit#(1)     detectrx6();
-    method Bit#(1)     detectrx7();
-    method Bit#(1)     elecidle0();
-    method Bit#(1)     elecidle1();
-    method Bit#(1)     elecidle2();
-    method Bit#(1)     elecidle3();
-    method Bit#(1)     elecidle4();
-    method Bit#(1)     elecidle5();
-    method Bit#(1)     elecidle6();
-    method Bit#(1)     elecidle7();
-    method Bit#(3)     margin0();
-    method Bit#(3)     margin1();
-    method Bit#(3)     margin2();
-    method Bit#(3)     margin3();
-    method Bit#(3)     margin4();
-    method Bit#(3)     margin5();
-    method Bit#(3)     margin6();
-    method Bit#(3)     margin7();
-    method Bit#(1)     swing0();
-    method Bit#(1)     swing1();
-    method Bit#(1)     swing2();
-    method Bit#(1)     swing3();
-    method Bit#(1)     swing4();
-    method Bit#(1)     swing5();
-    method Bit#(1)     swing6();
-    method Bit#(1)     swing7();
 endinterface
 (* always_ready, always_enabled *)
 interface PciewrapTx_cred;
@@ -437,6 +404,95 @@ interface PciewrapTx_par;
     method Bit#(2)     err();
 endinterface
 (* always_ready, always_enabled *)
+interface PciewrapTx_s;
+    method Action      t_data(Bit#(128) v);
+    method Action      t_empty(Bit#(2) v);
+    method Action      t_eop(Bit#(1) v);
+    method Action      t_err(Bit#(1) v);
+    method Bit#(1)     t_ready();
+    method Action      t_sop(Bit#(1) v);
+    method Action      t_valid(Bit#(1) v);
+endinterface
+(* always_ready, always_enabled *)
+interface PciewrapTxc;
+    method Bit#(1)     ompl0();
+    method Bit#(1)     ompl1();
+    method Bit#(1)     ompl2();
+    method Bit#(1)     ompl3();
+    method Bit#(1)     ompl4();
+    method Bit#(1)     ompl5();
+    method Bit#(1)     ompl6();
+    method Bit#(1)     ompl7();
+endinterface
+(* always_ready, always_enabled *)
+interface PciewrapTxd;
+    method Bit#(8)     ata0();
+    method Bit#(8)     ata1();
+    method Bit#(8)     ata2();
+    method Bit#(8)     ata3();
+    method Bit#(8)     ata4();
+    method Bit#(8)     ata5();
+    method Bit#(8)     ata6();
+    method Bit#(8)     ata7();
+    method Bit#(1)     atak0();
+    method Bit#(1)     atak1();
+    method Bit#(1)     atak2();
+    method Bit#(1)     atak3();
+    method Bit#(1)     atak4();
+    method Bit#(1)     atak5();
+    method Bit#(1)     atak6();
+    method Bit#(1)     atak7();
+    method Bit#(1)     eemph0();
+    method Bit#(1)     eemph1();
+    method Bit#(1)     eemph2();
+    method Bit#(1)     eemph3();
+    method Bit#(1)     eemph4();
+    method Bit#(1)     eemph5();
+    method Bit#(1)     eemph6();
+    method Bit#(1)     eemph7();
+    method Bit#(1)     etectrx0();
+    method Bit#(1)     etectrx1();
+    method Bit#(1)     etectrx2();
+    method Bit#(1)     etectrx3();
+    method Bit#(1)     etectrx4();
+    method Bit#(1)     etectrx5();
+    method Bit#(1)     etectrx6();
+    method Bit#(1)     etectrx7();
+endinterface
+(* always_ready, always_enabled *)
+interface PciewrapTxe;
+    method Bit#(1)     lecidle0();
+    method Bit#(1)     lecidle1();
+    method Bit#(1)     lecidle2();
+    method Bit#(1)     lecidle3();
+    method Bit#(1)     lecidle4();
+    method Bit#(1)     lecidle5();
+    method Bit#(1)     lecidle6();
+    method Bit#(1)     lecidle7();
+endinterface
+(* always_ready, always_enabled *)
+interface PciewrapTxm;
+    method Bit#(3)     argin0();
+    method Bit#(3)     argin1();
+    method Bit#(3)     argin2();
+    method Bit#(3)     argin3();
+    method Bit#(3)     argin4();
+    method Bit#(3)     argin5();
+    method Bit#(3)     argin6();
+    method Bit#(3)     argin7();
+endinterface
+(* always_ready, always_enabled *)
+interface PciewrapTxs;
+    method Bit#(1)     wing0();
+    method Bit#(1)     wing1();
+    method Bit#(1)     wing2();
+    method Bit#(1)     wing3();
+    method Bit#(1)     wing4();
+    method Bit#(1)     wing5();
+    method Bit#(1)     wing6();
+    method Bit#(1)     wing7();
+endinterface
+(* always_ready, always_enabled *)
 interface PcieWrap;
     interface PciewrapApp     app;
     interface PciewrapCfg_par     cfg_par;
@@ -450,15 +506,14 @@ interface PcieWrap;
     interface PciewrapEv1     ev1;
     interface PciewrapHotrst     hotrst;
     interface PciewrapHpg     hpg;
-    interface PciewrapIn     in;
+    interface PciewrapInt_s     int_s;
     interface PciewrapKo     ko;
     interface PciewrapL2     l2;
     interface PciewrapLane     lane;
     interface PciewrapLmi     lmi;
     interface PciewrapLtssm     ltssm;
     interface PciewrapPhy     phy;
-    interface PciewrapPld_clk     pld_clk;
-    interface PciewrapPld_cor     pld_cor;
+    interface PciewrapPld     pld;
     interface PciewrapPm     pm;
     interface PciewrapPm_e     pm_e;
     interface PciewrapPme     pme;
@@ -467,23 +522,34 @@ interface PcieWrap;
     interface PciewrapReset     reset;
     interface PciewrapRx     rx;
     interface PciewrapRx_par     rx_par;
+    interface PciewrapRx_s     rx_s;
+    interface PciewrapRxd     rxd;
+    interface PciewrapRxe     rxe;
+    interface PciewrapRxp     rxp;
+    interface PciewrapRxs     rxs;
+    interface PciewrapRxv     rxv;
     interface PciewrapSerdes     serdes;
     interface PciewrapSim     sim;
+    interface PciewrapSimu     simu;
     interface PciewrapTest     test;
     interface PciewrapTestin     testin;
     interface PciewrapTl     tl;
     interface PciewrapTx_cred     tx_cred;
     interface PciewrapTx     tx;
     interface PciewrapTx_par     tx_par;
+    interface PciewrapTx_s     tx_s;
+    interface PciewrapTxc     txc;
+    interface PciewrapTxd     txd;
+    interface PciewrapTxe     txe;
+    interface PciewrapTxm     txm;
+    interface PciewrapTxs     txs;
 endinterface
 import "BVI" altera_pcie_sv_hip_ast =
-module mkPcieWrap#(Clock pld_clk, Clock refclk, Reset npor, Reset pin_perst, Reset pld_clk_reset, Reset refclk_reset)(PcieWrap);
+module mkPcieWrap#(Clock refclk, Reset npor, Reset pin_perst, Reset refclk_reset)(PcieWrap);
     default_clock clk();
     default_reset rst();
     input_reset npor(npor) = npor;
         input_reset pin_perst(pin_perst) = pin_perst;
-        input_clock pld_clk(pld_clk) = pld_clk;
-        input_reset pld_clk_reset() = pld_clk_reset; /* from clock*/
     input_clock refclk(refclk) = refclk;
     input_reset refclk_reset() = refclk_reset; /* from clock*/
     interface PciewrapApp     app;
@@ -495,22 +561,22 @@ module mkPcieWrap#(Clock pld_clk, Clock refclk, Reset npor, Reset pin_perst, Res
         method msi_tc(app_msi_tc) enable((*inhigh*) EN_app_msi_tc);
     endinterface
     interface PciewrapCfg_par     cfg_par;
-        method cfg_parerr err();
+        method cfg_par_err err();
     endinterface
     interface PciewrapCoreclkout     coreclkout;
         output_clock hip(coreclkout_hip);
     endinterface
     interface PciewrapCpl     cpl;
-        method err(cplerr) enable((*inhigh*) EN_cplerr);
-        method pending(cplpending) enable((*inhigh*) EN_cplpending);
+        method err(cpl_err) enable((*inhigh*) EN_cpl_err);
+        method pending(cpl_pending) enable((*inhigh*) EN_cpl_pending);
     endinterface
     interface PciewrapCurrent     current;
         method currentspeed speed();
     endinterface
     interface PciewrapDerr     derr;
-        method derrcor_ext_rcv cor_ext_rcv();
-        method derrcor_ext_rpl cor_ext_rpl();
-        method derrrpl rpl();
+        method derr_cor_ext_rcv cor_ext_rcv();
+        method derr_cor_ext_rpl cor_ext_rpl();
+        method derr_rpl rpl();
     endinterface
     interface PciewrapDl     dl;
         method dlup up();
@@ -533,23 +599,23 @@ module mkPcieWrap#(Clock pld_clk, Clock refclk, Reset npor, Reset pin_perst, Res
         method ev1us us();
     endinterface
     interface PciewrapHotrst     hotrst;
-        method hotrstexit exit();
+        method hotrst_exit exit();
     endinterface
     interface PciewrapHpg     hpg;
         method ctrler(hpg_ctrler) enable((*inhigh*) EN_hpg_ctrler);
     endinterface
-    interface PciewrapIn     in;
-        method int_status t_status();
+    interface PciewrapInt_s     int_s;
+        method int_status tatus();
     endinterface
     interface PciewrapKo     ko;
         method ko_cpl_spc_data cpl_spc_data();
         method ko_cpl_spc_header cpl_spc_header();
     endinterface
     interface PciewrapL2     l2;
-        method l2exit exit();
+        method l2_exit exit();
     endinterface
     interface PciewrapLane     lane;
-        method laneact act();
+        method lane_act act();
     endinterface
     interface PciewrapLmi     lmi;
         method lmi_ack ack();
@@ -572,22 +638,21 @@ module mkPcieWrap#(Clock pld_clk, Clock refclk, Reset npor, Reset pin_perst, Res
         method status6(phystatus6) enable((*inhigh*) EN_phystatus6);
         method status7(phystatus7) enable((*inhigh*) EN_phystatus7);
     endinterface
-    interface PciewrapPld_clk     pld_clk;
-        method pld_clkinuse inuse();
-    endinterface
-    interface PciewrapPld_cor     pld_cor;
-        method e_ready(pld_core_ready) enable((*inhigh*) EN_pld_core_ready);
+    interface PciewrapPld     pld;
+        method clk(pld_clk) enable((*inhigh*) EN_pld_clk);
+        method pld_clk_inuse clk_inuse();
+        method core_ready(pld_core_ready) enable((*inhigh*) EN_pld_core_ready);
     endinterface
     interface PciewrapPm     pm;
-        method auxpwr(pmauxpwr) enable((*inhigh*) EN_pmauxpwr);
-        method data(pmdata) enable((*inhigh*) EN_pmdata);
+        method auxpwr(pm_auxpwr) enable((*inhigh*) EN_pm_auxpwr);
+        method data(pm_data) enable((*inhigh*) EN_pm_data);
     endinterface
     interface PciewrapPm_e     pm_e;
         method vent(pm_event) enable((*inhigh*) EN_pm_event);
     endinterface
     interface PciewrapPme     pme;
-        method to_cr(pmeto_cr) enable((*inhigh*) EN_pmeto_cr);
-        method pmeto_sr to_sr();
+        method to_cr(pme_to_cr) enable((*inhigh*) EN_pme_to_cr);
+        method pme_to_sr to_sr();
     endinterface
     interface PciewrapPower     power;
         method powerdown0 down0();
@@ -600,90 +665,104 @@ module mkPcieWrap#(Clock pld_clk, Clock refclk, Reset npor, Reset pin_perst, Res
         method powerdown7 down7();
     endinterface
     interface PciewrapReconfig     reconfig;
-        method reconfigfrom_xcvr from_xcvr();
-        method to_xcvr(reconfigto_xcvr) enable((*inhigh*) EN_reconfigto_xcvr);
+        method reconfig_from_xcvr from_xcvr();
+        method to_xcvr(reconfig_to_xcvr) enable((*inhigh*) EN_reconfig_to_xcvr);
     endinterface
     interface PciewrapReset     reset;
         output_reset status(reset_status);
     endinterface
     interface PciewrapRx     rx;
-        method in0(rxin0) enable((*inhigh*) EN_rxin0);
-        method in1(rxin1) enable((*inhigh*) EN_rxin1);
-        method in2(rxin2) enable((*inhigh*) EN_rxin2);
-        method in3(rxin3) enable((*inhigh*) EN_rxin3);
-        method in4(rxin4) enable((*inhigh*) EN_rxin4);
-        method in5(rxin5) enable((*inhigh*) EN_rxin5);
-        method in6(rxin6) enable((*inhigh*) EN_rxin6);
-        method in7(rxin7) enable((*inhigh*) EN_rxin7);
-        method rxst_bar st_bar();
-        method rxst_data st_data();
-        method rxst_empty st_empty();
-        method rxst_eop st_eop();
-        method rxst_err st_err();
-        method st_mask(rxst_mask) enable((*inhigh*) EN_rxst_mask);
-        method st_ready(rxst_ready) enable((*inhigh*) EN_rxst_ready);
-        method rxst_sop st_sop();
-        method rxst_valid st_valid();
-        method data0(rxdata0) enable((*inhigh*) EN_rxdata0);
-        method data1(rxdata1) enable((*inhigh*) EN_rxdata1);
-        method data2(rxdata2) enable((*inhigh*) EN_rxdata2);
-        method data3(rxdata3) enable((*inhigh*) EN_rxdata3);
-        method data4(rxdata4) enable((*inhigh*) EN_rxdata4);
-        method data5(rxdata5) enable((*inhigh*) EN_rxdata5);
-        method data6(rxdata6) enable((*inhigh*) EN_rxdata6);
-        method data7(rxdata7) enable((*inhigh*) EN_rxdata7);
-        method datak0(rxdatak0) enable((*inhigh*) EN_rxdatak0);
-        method datak1(rxdatak1) enable((*inhigh*) EN_rxdatak1);
-        method datak2(rxdatak2) enable((*inhigh*) EN_rxdatak2);
-        method datak3(rxdatak3) enable((*inhigh*) EN_rxdatak3);
-        method datak4(rxdatak4) enable((*inhigh*) EN_rxdatak4);
-        method datak5(rxdatak5) enable((*inhigh*) EN_rxdatak5);
-        method datak6(rxdatak6) enable((*inhigh*) EN_rxdatak6);
-        method datak7(rxdatak7) enable((*inhigh*) EN_rxdatak7);
-        method elecidle0(rxelecidle0) enable((*inhigh*) EN_rxelecidle0);
-        method elecidle1(rxelecidle1) enable((*inhigh*) EN_rxelecidle1);
-        method elecidle2(rxelecidle2) enable((*inhigh*) EN_rxelecidle2);
-        method elecidle3(rxelecidle3) enable((*inhigh*) EN_rxelecidle3);
-        method elecidle4(rxelecidle4) enable((*inhigh*) EN_rxelecidle4);
-        method elecidle5(rxelecidle5) enable((*inhigh*) EN_rxelecidle5);
-        method elecidle6(rxelecidle6) enable((*inhigh*) EN_rxelecidle6);
-        method elecidle7(rxelecidle7) enable((*inhigh*) EN_rxelecidle7);
-        method rxpolarity0 polarity0();
-        method rxpolarity1 polarity1();
-        method rxpolarity2 polarity2();
-        method rxpolarity3 polarity3();
-        method rxpolarity4 polarity4();
-        method rxpolarity5 polarity5();
-        method rxpolarity6 polarity6();
-        method rxpolarity7 polarity7();
-        method status0(rxstatus0) enable((*inhigh*) EN_rxstatus0);
-        method status1(rxstatus1) enable((*inhigh*) EN_rxstatus1);
-        method status2(rxstatus2) enable((*inhigh*) EN_rxstatus2);
-        method status3(rxstatus3) enable((*inhigh*) EN_rxstatus3);
-        method status4(rxstatus4) enable((*inhigh*) EN_rxstatus4);
-        method status5(rxstatus5) enable((*inhigh*) EN_rxstatus5);
-        method status6(rxstatus6) enable((*inhigh*) EN_rxstatus6);
-        method status7(rxstatus7) enable((*inhigh*) EN_rxstatus7);
-        method valid0(rxvalid0) enable((*inhigh*) EN_rxvalid0);
-        method valid1(rxvalid1) enable((*inhigh*) EN_rxvalid1);
-        method valid2(rxvalid2) enable((*inhigh*) EN_rxvalid2);
-        method valid3(rxvalid3) enable((*inhigh*) EN_rxvalid3);
-        method valid4(rxvalid4) enable((*inhigh*) EN_rxvalid4);
-        method valid5(rxvalid5) enable((*inhigh*) EN_rxvalid5);
-        method valid6(rxvalid6) enable((*inhigh*) EN_rxvalid6);
-        method valid7(rxvalid7) enable((*inhigh*) EN_rxvalid7);
+        method in0(rx_in0) enable((*inhigh*) EN_rx_in0);
+        method in1(rx_in1) enable((*inhigh*) EN_rx_in1);
+        method in2(rx_in2) enable((*inhigh*) EN_rx_in2);
+        method in3(rx_in3) enable((*inhigh*) EN_rx_in3);
+        method in4(rx_in4) enable((*inhigh*) EN_rx_in4);
+        method in5(rx_in5) enable((*inhigh*) EN_rx_in5);
+        method in6(rx_in6) enable((*inhigh*) EN_rx_in6);
+        method in7(rx_in7) enable((*inhigh*) EN_rx_in7);
     endinterface
     interface PciewrapRx_par     rx_par;
-        method rx_parerr err();
+        method rx_par_err err();
+    endinterface
+    interface PciewrapRx_s     rx_s;
+        method rx_st_bar t_bar();
+        method rx_st_data t_data();
+        method rx_st_empty t_empty();
+        method rx_st_eop t_eop();
+        method rx_st_err t_err();
+        method t_mask(rx_st_mask) enable((*inhigh*) EN_rx_st_mask);
+        method t_ready(rx_st_ready) enable((*inhigh*) EN_rx_st_ready);
+        method rx_st_sop t_sop();
+        method rx_st_valid t_valid();
+    endinterface
+    interface PciewrapRxd     rxd;
+        method ata0(rxdata0) enable((*inhigh*) EN_rxdata0);
+        method ata1(rxdata1) enable((*inhigh*) EN_rxdata1);
+        method ata2(rxdata2) enable((*inhigh*) EN_rxdata2);
+        method ata3(rxdata3) enable((*inhigh*) EN_rxdata3);
+        method ata4(rxdata4) enable((*inhigh*) EN_rxdata4);
+        method ata5(rxdata5) enable((*inhigh*) EN_rxdata5);
+        method ata6(rxdata6) enable((*inhigh*) EN_rxdata6);
+        method ata7(rxdata7) enable((*inhigh*) EN_rxdata7);
+        method atak0(rxdatak0) enable((*inhigh*) EN_rxdatak0);
+        method atak1(rxdatak1) enable((*inhigh*) EN_rxdatak1);
+        method atak2(rxdatak2) enable((*inhigh*) EN_rxdatak2);
+        method atak3(rxdatak3) enable((*inhigh*) EN_rxdatak3);
+        method atak4(rxdatak4) enable((*inhigh*) EN_rxdatak4);
+        method atak5(rxdatak5) enable((*inhigh*) EN_rxdatak5);
+        method atak6(rxdatak6) enable((*inhigh*) EN_rxdatak6);
+        method atak7(rxdatak7) enable((*inhigh*) EN_rxdatak7);
+    endinterface
+    interface PciewrapRxe     rxe;
+        method lecidle0(rxelecidle0) enable((*inhigh*) EN_rxelecidle0);
+        method lecidle1(rxelecidle1) enable((*inhigh*) EN_rxelecidle1);
+        method lecidle2(rxelecidle2) enable((*inhigh*) EN_rxelecidle2);
+        method lecidle3(rxelecidle3) enable((*inhigh*) EN_rxelecidle3);
+        method lecidle4(rxelecidle4) enable((*inhigh*) EN_rxelecidle4);
+        method lecidle5(rxelecidle5) enable((*inhigh*) EN_rxelecidle5);
+        method lecidle6(rxelecidle6) enable((*inhigh*) EN_rxelecidle6);
+        method lecidle7(rxelecidle7) enable((*inhigh*) EN_rxelecidle7);
+    endinterface
+    interface PciewrapRxp     rxp;
+        method rxpolarity0 olarity0();
+        method rxpolarity1 olarity1();
+        method rxpolarity2 olarity2();
+        method rxpolarity3 olarity3();
+        method rxpolarity4 olarity4();
+        method rxpolarity5 olarity5();
+        method rxpolarity6 olarity6();
+        method rxpolarity7 olarity7();
+    endinterface
+    interface PciewrapRxs     rxs;
+        method tatus0(rxstatus0) enable((*inhigh*) EN_rxstatus0);
+        method tatus1(rxstatus1) enable((*inhigh*) EN_rxstatus1);
+        method tatus2(rxstatus2) enable((*inhigh*) EN_rxstatus2);
+        method tatus3(rxstatus3) enable((*inhigh*) EN_rxstatus3);
+        method tatus4(rxstatus4) enable((*inhigh*) EN_rxstatus4);
+        method tatus5(rxstatus5) enable((*inhigh*) EN_rxstatus5);
+        method tatus6(rxstatus6) enable((*inhigh*) EN_rxstatus6);
+        method tatus7(rxstatus7) enable((*inhigh*) EN_rxstatus7);
+    endinterface
+    interface PciewrapRxv     rxv;
+        method alid0(rxvalid0) enable((*inhigh*) EN_rxvalid0);
+        method alid1(rxvalid1) enable((*inhigh*) EN_rxvalid1);
+        method alid2(rxvalid2) enable((*inhigh*) EN_rxvalid2);
+        method alid3(rxvalid3) enable((*inhigh*) EN_rxvalid3);
+        method alid4(rxvalid4) enable((*inhigh*) EN_rxvalid4);
+        method alid5(rxvalid5) enable((*inhigh*) EN_rxvalid5);
+        method alid6(rxvalid6) enable((*inhigh*) EN_rxvalid6);
+        method alid7(rxvalid7) enable((*inhigh*) EN_rxvalid7);
     endinterface
     interface PciewrapSerdes     serdes;
-        method serdespll_locked pll_locked();
+        method serdes_pll_locked pll_locked();
     endinterface
     interface PciewrapSim     sim;
-        method simltssmstate ltssmstate();
-        method pipe_pclk_in(simpipe_pclk_in) enable((*inhigh*) EN_simpipe_pclk_in);
-        method simpipe_rate pipe_rate();
-        method u_mode_pipe(simu_mode_pipe) enable((*inhigh*) EN_simu_mode_pipe);
+        method sim_ltssmstate ltssmstate();
+        method pipe_pclk_in(sim_pipe_pclk_in) enable((*inhigh*) EN_sim_pipe_pclk_in);
+        method sim_pipe_rate pipe_rate();
+    endinterface
+    interface PciewrapSimu     simu;
+        method mode_pipe(simu_mode_pipe) enable((*inhigh*) EN_simu_mode_pipe);
     endinterface
     interface PciewrapTest     test;
         method in(test_in) enable((*inhigh*) EN_test_in);
@@ -692,103 +771,115 @@ module mkPcieWrap#(Clock pld_clk, Clock refclk, Reset npor, Reset pin_perst, Res
         method testin_zero zero();
     endinterface
     interface PciewrapTl     tl;
-        method tlcfg_add cfg_add();
-        method tlcfg_ctl cfg_ctl();
-        method tlcfg_sts cfg_sts();
+        method tl_cfg_add cfg_add();
+        method tl_cfg_ctl cfg_ctl();
+        method tl_cfg_sts cfg_sts();
     endinterface
     interface PciewrapTx_cred     tx_cred;
-        method tx_creddatafccp datafccp();
-        method tx_creddatafcnp datafcnp();
-        method tx_creddatafcp datafcp();
-        method tx_credfchipcons fchipcons();
-        method tx_credfcinfinite fcinfinite();
-        method tx_credhdrfccp hdrfccp();
-        method tx_credhdrfcnp hdrfcnp();
-        method tx_credhdrfcp hdrfcp();
+        method tx_cred_datafccp datafccp();
+        method tx_cred_datafcnp datafcnp();
+        method tx_cred_datafcp datafcp();
+        method tx_cred_fchipcons fchipcons();
+        method tx_cred_fcinfinite fcinfinite();
+        method tx_cred_hdrfccp hdrfccp();
+        method tx_cred_hdrfcnp hdrfcnp();
+        method tx_cred_hdrfcp hdrfcp();
     endinterface
     interface PciewrapTx     tx;
-        method txout0 out0();
-        method txout1 out1();
-        method txout2 out2();
-        method txout3 out3();
-        method txout4 out4();
-        method txout5 out5();
-        method txout6 out6();
-        method txout7 out7();
-        method st_data(txst_data) enable((*inhigh*) EN_txst_data);
-        method st_empty(txst_empty) enable((*inhigh*) EN_txst_empty);
-        method st_eop(txst_eop) enable((*inhigh*) EN_txst_eop);
-        method st_err(txst_err) enable((*inhigh*) EN_txst_err);
-        method txst_ready st_ready();
-        method st_sop(txst_sop) enable((*inhigh*) EN_txst_sop);
-        method st_valid(txst_valid) enable((*inhigh*) EN_txst_valid);
-        method txcompl0 compl0();
-        method txcompl1 compl1();
-        method txcompl2 compl2();
-        method txcompl3 compl3();
-        method txcompl4 compl4();
-        method txcompl5 compl5();
-        method txcompl6 compl6();
-        method txcompl7 compl7();
-        method txdata0 data0();
-        method txdata1 data1();
-        method txdata2 data2();
-        method txdata3 data3();
-        method txdata4 data4();
-        method txdata5 data5();
-        method txdata6 data6();
-        method txdata7 data7();
-        method txdatak0 datak0();
-        method txdatak1 datak1();
-        method txdatak2 datak2();
-        method txdatak3 datak3();
-        method txdatak4 datak4();
-        method txdatak5 datak5();
-        method txdatak6 datak6();
-        method txdatak7 datak7();
-        method txdeemph0 deemph0();
-        method txdeemph1 deemph1();
-        method txdeemph2 deemph2();
-        method txdeemph3 deemph3();
-        method txdeemph4 deemph4();
-        method txdeemph5 deemph5();
-        method txdeemph6 deemph6();
-        method txdeemph7 deemph7();
-        method txdetectrx0 detectrx0();
-        method txdetectrx1 detectrx1();
-        method txdetectrx2 detectrx2();
-        method txdetectrx3 detectrx3();
-        method txdetectrx4 detectrx4();
-        method txdetectrx5 detectrx5();
-        method txdetectrx6 detectrx6();
-        method txdetectrx7 detectrx7();
-        method txelecidle0 elecidle0();
-        method txelecidle1 elecidle1();
-        method txelecidle2 elecidle2();
-        method txelecidle3 elecidle3();
-        method txelecidle4 elecidle4();
-        method txelecidle5 elecidle5();
-        method txelecidle6 elecidle6();
-        method txelecidle7 elecidle7();
-        method txmargin0 margin0();
-        method txmargin1 margin1();
-        method txmargin2 margin2();
-        method txmargin3 margin3();
-        method txmargin4 margin4();
-        method txmargin5 margin5();
-        method txmargin6 margin6();
-        method txmargin7 margin7();
-        method txswing0 swing0();
-        method txswing1 swing1();
-        method txswing2 swing2();
-        method txswing3 swing3();
-        method txswing4 swing4();
-        method txswing5 swing5();
-        method txswing6 swing6();
-        method txswing7 swing7();
+        method tx_out0 out0();
+        method tx_out1 out1();
+        method tx_out2 out2();
+        method tx_out3 out3();
+        method tx_out4 out4();
+        method tx_out5 out5();
+        method tx_out6 out6();
+        method tx_out7 out7();
     endinterface
     interface PciewrapTx_par     tx_par;
-        method tx_parerr err();
+        method tx_par_err err();
     endinterface
-    schedule (app.int_ack, app.int_sts, app.msi_ack, app.msi_num, app.msi_req, app.msi_tc, cfg_par.err, cpl.err, cpl.pending, current.speed, derr.cor_ext_rcv, derr.cor_ext_rpl, derr.rpl, dl.up, dl.up_exit, eidle.infersel0, eidle.infersel1, eidle.infersel2, eidle.infersel3, eidle.infersel4, eidle.infersel5, eidle.infersel6, eidle.infersel7, ev128.ns, ev1.us, hotrst.exit, hpg.ctrler, in.t_status, ko.cpl_spc_data, ko.cpl_spc_header, l2.exit, lane.act, lmi.ack, lmi.addr, lmi.din, lmi.dout, lmi.rden, lmi.wren, ltssm.state, phy.status0, phy.status1, phy.status2, phy.status3, phy.status4, phy.status5, phy.status6, phy.status7, pld_clk.inuse, pld_cor.e_ready, pm.auxpwr, pm.data, pm_e.vent, pme.to_cr, pme.to_sr, power.down0, power.down1, power.down2, power.down3, power.down4, power.down5, power.down6, power.down7, reconfig.from_xcvr, reconfig.to_xcvr, rx.in0, rx.in1, rx.in2, rx.in3, rx.in4, rx.in5, rx.in6, rx.in7, rx.st_bar, rx.st_data, rx.st_empty, rx.st_eop, rx.st_err, rx.st_mask, rx.st_ready, rx.st_sop, rx.st_valid, rx.data0, rx.data1, rx.data2, rx.data3, rx.data4, rx.data5, rx.data6, rx.data7, rx.datak0, rx.datak1, rx.datak2, rx.datak3, rx.datak4, rx.datak5, rx.datak6, rx.datak7, rx.elecidle0, rx.elecidle1, rx.elecidle2, rx.elecidle3, rx.elecidle4, rx.elecidle5, rx.elecidle6, rx.elecidle7, rx.polarity0, rx.polarity1, rx.polarity2, rx.polarity3, rx.polarity4, rx.polarity5, rx.polarity6, rx.polarity7, rx.status0, rx.status1, rx.status2, rx.status3, rx.status4, rx.status5, rx.status6, rx.status7, rx.valid0, rx.valid1, rx.valid2, rx.valid3, rx.valid4, rx.valid5, rx.valid6, rx.valid7, rx_par.err, serdes.pll_locked, sim.ltssmstate, sim.pipe_pclk_in, sim.pipe_rate, sim.u_mode_pipe, test.in, testin.zero, tl.cfg_add, tl.cfg_ctl, tl.cfg_sts, tx_cred.datafccp, tx_cred.datafcnp, tx_cred.datafcp, tx_cred.fchipcons, tx_cred.fcinfinite, tx_cred.hdrfccp, tx_cred.hdrfcnp, tx_cred.hdrfcp, tx.out0, tx.out1, tx.out2, tx.out3, tx.out4, tx.out5, tx.out6, tx.out7, tx.st_data, tx.st_empty, tx.st_eop, tx.st_err, tx.st_ready, tx.st_sop, tx.st_valid, tx.compl0, tx.compl1, tx.compl2, tx.compl3, tx.compl4, tx.compl5, tx.compl6, tx.compl7, tx.data0, tx.data1, tx.data2, tx.data3, tx.data4, tx.data5, tx.data6, tx.data7, tx.datak0, tx.datak1, tx.datak2, tx.datak3, tx.datak4, tx.datak5, tx.datak6, tx.datak7, tx.deemph0, tx.deemph1, tx.deemph2, tx.deemph3, tx.deemph4, tx.deemph5, tx.deemph6, tx.deemph7, tx.detectrx0, tx.detectrx1, tx.detectrx2, tx.detectrx3, tx.detectrx4, tx.detectrx5, tx.detectrx6, tx.detectrx7, tx.elecidle0, tx.elecidle1, tx.elecidle2, tx.elecidle3, tx.elecidle4, tx.elecidle5, tx.elecidle6, tx.elecidle7, tx.margin0, tx.margin1, tx.margin2, tx.margin3, tx.margin4, tx.margin5, tx.margin6, tx.margin7, tx.swing0, tx.swing1, tx.swing2, tx.swing3, tx.swing4, tx.swing5, tx.swing6, tx.swing7, tx_par.err) CF (app.int_ack, app.int_sts, app.msi_ack, app.msi_num, app.msi_req, app.msi_tc, cfg_par.err, cpl.err, cpl.pending, current.speed, derr.cor_ext_rcv, derr.cor_ext_rpl, derr.rpl, dl.up, dl.up_exit, eidle.infersel0, eidle.infersel1, eidle.infersel2, eidle.infersel3, eidle.infersel4, eidle.infersel5, eidle.infersel6, eidle.infersel7, ev128.ns, ev1.us, hotrst.exit, hpg.ctrler, in.t_status, ko.cpl_spc_data, ko.cpl_spc_header, l2.exit, lane.act, lmi.ack, lmi.addr, lmi.din, lmi.dout, lmi.rden, lmi.wren, ltssm.state, phy.status0, phy.status1, phy.status2, phy.status3, phy.status4, phy.status5, phy.status6, phy.status7, pld_clk.inuse, pld_cor.e_ready, pm.auxpwr, pm.data, pm_e.vent, pme.to_cr, pme.to_sr, power.down0, power.down1, power.down2, power.down3, power.down4, power.down5, power.down6, power.down7, reconfig.from_xcvr, reconfig.to_xcvr, rx.in0, rx.in1, rx.in2, rx.in3, rx.in4, rx.in5, rx.in6, rx.in7, rx.st_bar, rx.st_data, rx.st_empty, rx.st_eop, rx.st_err, rx.st_mask, rx.st_ready, rx.st_sop, rx.st_valid, rx.data0, rx.data1, rx.data2, rx.data3, rx.data4, rx.data5, rx.data6, rx.data7, rx.datak0, rx.datak1, rx.datak2, rx.datak3, rx.datak4, rx.datak5, rx.datak6, rx.datak7, rx.elecidle0, rx.elecidle1, rx.elecidle2, rx.elecidle3, rx.elecidle4, rx.elecidle5, rx.elecidle6, rx.elecidle7, rx.polarity0, rx.polarity1, rx.polarity2, rx.polarity3, rx.polarity4, rx.polarity5, rx.polarity6, rx.polarity7, rx.status0, rx.status1, rx.status2, rx.status3, rx.status4, rx.status5, rx.status6, rx.status7, rx.valid0, rx.valid1, rx.valid2, rx.valid3, rx.valid4, rx.valid5, rx.valid6, rx.valid7, rx_par.err, serdes.pll_locked, sim.ltssmstate, sim.pipe_pclk_in, sim.pipe_rate, sim.u_mode_pipe, test.in, testin.zero, tl.cfg_add, tl.cfg_ctl, tl.cfg_sts, tx_cred.datafccp, tx_cred.datafcnp, tx_cred.datafcp, tx_cred.fchipcons, tx_cred.fcinfinite, tx_cred.hdrfccp, tx_cred.hdrfcnp, tx_cred.hdrfcp, tx.out0, tx.out1, tx.out2, tx.out3, tx.out4, tx.out5, tx.out6, tx.out7, tx.st_data, tx.st_empty, tx.st_eop, tx.st_err, tx.st_ready, tx.st_sop, tx.st_valid, tx.compl0, tx.compl1, tx.compl2, tx.compl3, tx.compl4, tx.compl5, tx.compl6, tx.compl7, tx.data0, tx.data1, tx.data2, tx.data3, tx.data4, tx.data5, tx.data6, tx.data7, tx.datak0, tx.datak1, tx.datak2, tx.datak3, tx.datak4, tx.datak5, tx.datak6, tx.datak7, tx.deemph0, tx.deemph1, tx.deemph2, tx.deemph3, tx.deemph4, tx.deemph5, tx.deemph6, tx.deemph7, tx.detectrx0, tx.detectrx1, tx.detectrx2, tx.detectrx3, tx.detectrx4, tx.detectrx5, tx.detectrx6, tx.detectrx7, tx.elecidle0, tx.elecidle1, tx.elecidle2, tx.elecidle3, tx.elecidle4, tx.elecidle5, tx.elecidle6, tx.elecidle7, tx.margin0, tx.margin1, tx.margin2, tx.margin3, tx.margin4, tx.margin5, tx.margin6, tx.margin7, tx.swing0, tx.swing1, tx.swing2, tx.swing3, tx.swing4, tx.swing5, tx.swing6, tx.swing7, tx_par.err);
+    interface PciewrapTx_s     tx_s;
+        method t_data(tx_st_data) enable((*inhigh*) EN_tx_st_data);
+        method t_empty(tx_st_empty) enable((*inhigh*) EN_tx_st_empty);
+        method t_eop(tx_st_eop) enable((*inhigh*) EN_tx_st_eop);
+        method t_err(tx_st_err) enable((*inhigh*) EN_tx_st_err);
+        method tx_st_ready t_ready();
+        method t_sop(tx_st_sop) enable((*inhigh*) EN_tx_st_sop);
+        method t_valid(tx_st_valid) enable((*inhigh*) EN_tx_st_valid);
+    endinterface
+    interface PciewrapTxc     txc;
+        method txcompl0 ompl0();
+        method txcompl1 ompl1();
+        method txcompl2 ompl2();
+        method txcompl3 ompl3();
+        method txcompl4 ompl4();
+        method txcompl5 ompl5();
+        method txcompl6 ompl6();
+        method txcompl7 ompl7();
+    endinterface
+    interface PciewrapTxd     txd;
+        method txdata0 ata0();
+        method txdata1 ata1();
+        method txdata2 ata2();
+        method txdata3 ata3();
+        method txdata4 ata4();
+        method txdata5 ata5();
+        method txdata6 ata6();
+        method txdata7 ata7();
+        method txdatak0 atak0();
+        method txdatak1 atak1();
+        method txdatak2 atak2();
+        method txdatak3 atak3();
+        method txdatak4 atak4();
+        method txdatak5 atak5();
+        method txdatak6 atak6();
+        method txdatak7 atak7();
+        method txdeemph0 eemph0();
+        method txdeemph1 eemph1();
+        method txdeemph2 eemph2();
+        method txdeemph3 eemph3();
+        method txdeemph4 eemph4();
+        method txdeemph5 eemph5();
+        method txdeemph6 eemph6();
+        method txdeemph7 eemph7();
+        method txdetectrx0 etectrx0();
+        method txdetectrx1 etectrx1();
+        method txdetectrx2 etectrx2();
+        method txdetectrx3 etectrx3();
+        method txdetectrx4 etectrx4();
+        method txdetectrx5 etectrx5();
+        method txdetectrx6 etectrx6();
+        method txdetectrx7 etectrx7();
+    endinterface
+    interface PciewrapTxe     txe;
+        method txelecidle0 lecidle0();
+        method txelecidle1 lecidle1();
+        method txelecidle2 lecidle2();
+        method txelecidle3 lecidle3();
+        method txelecidle4 lecidle4();
+        method txelecidle5 lecidle5();
+        method txelecidle6 lecidle6();
+        method txelecidle7 lecidle7();
+    endinterface
+    interface PciewrapTxm     txm;
+        method txmargin0 argin0();
+        method txmargin1 argin1();
+        method txmargin2 argin2();
+        method txmargin3 argin3();
+        method txmargin4 argin4();
+        method txmargin5 argin5();
+        method txmargin6 argin6();
+        method txmargin7 argin7();
+    endinterface
+    interface PciewrapTxs     txs;
+        method txswing0 wing0();
+        method txswing1 wing1();
+        method txswing2 wing2();
+        method txswing3 wing3();
+        method txswing4 wing4();
+        method txswing5 wing5();
+        method txswing6 wing6();
+        method txswing7 wing7();
+    endinterface
+    schedule (app.int_ack, app.int_sts, app.msi_ack, app.msi_num, app.msi_req, app.msi_tc, cfg_par.err, cpl.err, cpl.pending, current.speed, derr.cor_ext_rcv, derr.cor_ext_rpl, derr.rpl, dl.up, dl.up_exit, eidle.infersel0, eidle.infersel1, eidle.infersel2, eidle.infersel3, eidle.infersel4, eidle.infersel5, eidle.infersel6, eidle.infersel7, ev128.ns, ev1.us, hotrst.exit, hpg.ctrler, int_s.tatus, ko.cpl_spc_data, ko.cpl_spc_header, l2.exit, lane.act, lmi.ack, lmi.addr, lmi.din, lmi.dout, lmi.rden, lmi.wren, ltssm.state, phy.status0, phy.status1, phy.status2, phy.status3, phy.status4, phy.status5, phy.status6, phy.status7, pld.clk, pld.clk_inuse, pld.core_ready, pm.auxpwr, pm.data, pm_e.vent, pme.to_cr, pme.to_sr, power.down0, power.down1, power.down2, power.down3, power.down4, power.down5, power.down6, power.down7, reconfig.from_xcvr, reconfig.to_xcvr, rx.in0, rx.in1, rx.in2, rx.in3, rx.in4, rx.in5, rx.in6, rx.in7, rx_par.err, rx_s.t_bar, rx_s.t_data, rx_s.t_empty, rx_s.t_eop, rx_s.t_err, rx_s.t_mask, rx_s.t_ready, rx_s.t_sop, rx_s.t_valid, rxd.ata0, rxd.ata1, rxd.ata2, rxd.ata3, rxd.ata4, rxd.ata5, rxd.ata6, rxd.ata7, rxd.atak0, rxd.atak1, rxd.atak2, rxd.atak3, rxd.atak4, rxd.atak5, rxd.atak6, rxd.atak7, rxe.lecidle0, rxe.lecidle1, rxe.lecidle2, rxe.lecidle3, rxe.lecidle4, rxe.lecidle5, rxe.lecidle6, rxe.lecidle7, rxp.olarity0, rxp.olarity1, rxp.olarity2, rxp.olarity3, rxp.olarity4, rxp.olarity5, rxp.olarity6, rxp.olarity7, rxs.tatus0, rxs.tatus1, rxs.tatus2, rxs.tatus3, rxs.tatus4, rxs.tatus5, rxs.tatus6, rxs.tatus7, rxv.alid0, rxv.alid1, rxv.alid2, rxv.alid3, rxv.alid4, rxv.alid5, rxv.alid6, rxv.alid7, serdes.pll_locked, sim.ltssmstate, sim.pipe_pclk_in, sim.pipe_rate, simu.mode_pipe, test.in, testin.zero, tl.cfg_add, tl.cfg_ctl, tl.cfg_sts, tx_cred.datafccp, tx_cred.datafcnp, tx_cred.datafcp, tx_cred.fchipcons, tx_cred.fcinfinite, tx_cred.hdrfccp, tx_cred.hdrfcnp, tx_cred.hdrfcp, tx.out0, tx.out1, tx.out2, tx.out3, tx.out4, tx.out5, tx.out6, tx.out7, tx_par.err, tx_s.t_data, tx_s.t_empty, tx_s.t_eop, tx_s.t_err, tx_s.t_ready, tx_s.t_sop, tx_s.t_valid, txc.ompl0, txc.ompl1, txc.ompl2, txc.ompl3, txc.ompl4, txc.ompl5, txc.ompl6, txc.ompl7, txd.ata0, txd.ata1, txd.ata2, txd.ata3, txd.ata4, txd.ata5, txd.ata6, txd.ata7, txd.atak0, txd.atak1, txd.atak2, txd.atak3, txd.atak4, txd.atak5, txd.atak6, txd.atak7, txd.eemph0, txd.eemph1, txd.eemph2, txd.eemph3, txd.eemph4, txd.eemph5, txd.eemph6, txd.eemph7, txd.etectrx0, txd.etectrx1, txd.etectrx2, txd.etectrx3, txd.etectrx4, txd.etectrx5, txd.etectrx6, txd.etectrx7, txe.lecidle0, txe.lecidle1, txe.lecidle2, txe.lecidle3, txe.lecidle4, txe.lecidle5, txe.lecidle6, txe.lecidle7, txm.argin0, txm.argin1, txm.argin2, txm.argin3, txm.argin4, txm.argin5, txm.argin6, txm.argin7, txs.wing0, txs.wing1, txs.wing2, txs.wing3, txs.wing4, txs.wing5, txs.wing6, txs.wing7) CF (app.int_ack, app.int_sts, app.msi_ack, app.msi_num, app.msi_req, app.msi_tc, cfg_par.err, cpl.err, cpl.pending, current.speed, derr.cor_ext_rcv, derr.cor_ext_rpl, derr.rpl, dl.up, dl.up_exit, eidle.infersel0, eidle.infersel1, eidle.infersel2, eidle.infersel3, eidle.infersel4, eidle.infersel5, eidle.infersel6, eidle.infersel7, ev128.ns, ev1.us, hotrst.exit, hpg.ctrler, int_s.tatus, ko.cpl_spc_data, ko.cpl_spc_header, l2.exit, lane.act, lmi.ack, lmi.addr, lmi.din, lmi.dout, lmi.rden, lmi.wren, ltssm.state, phy.status0, phy.status1, phy.status2, phy.status3, phy.status4, phy.status5, phy.status6, phy.status7, pld.clk, pld.clk_inuse, pld.core_ready, pm.auxpwr, pm.data, pm_e.vent, pme.to_cr, pme.to_sr, power.down0, power.down1, power.down2, power.down3, power.down4, power.down5, power.down6, power.down7, reconfig.from_xcvr, reconfig.to_xcvr, rx.in0, rx.in1, rx.in2, rx.in3, rx.in4, rx.in5, rx.in6, rx.in7, rx_par.err, rx_s.t_bar, rx_s.t_data, rx_s.t_empty, rx_s.t_eop, rx_s.t_err, rx_s.t_mask, rx_s.t_ready, rx_s.t_sop, rx_s.t_valid, rxd.ata0, rxd.ata1, rxd.ata2, rxd.ata3, rxd.ata4, rxd.ata5, rxd.ata6, rxd.ata7, rxd.atak0, rxd.atak1, rxd.atak2, rxd.atak3, rxd.atak4, rxd.atak5, rxd.atak6, rxd.atak7, rxe.lecidle0, rxe.lecidle1, rxe.lecidle2, rxe.lecidle3, rxe.lecidle4, rxe.lecidle5, rxe.lecidle6, rxe.lecidle7, rxp.olarity0, rxp.olarity1, rxp.olarity2, rxp.olarity3, rxp.olarity4, rxp.olarity5, rxp.olarity6, rxp.olarity7, rxs.tatus0, rxs.tatus1, rxs.tatus2, rxs.tatus3, rxs.tatus4, rxs.tatus5, rxs.tatus6, rxs.tatus7, rxv.alid0, rxv.alid1, rxv.alid2, rxv.alid3, rxv.alid4, rxv.alid5, rxv.alid6, rxv.alid7, serdes.pll_locked, sim.ltssmstate, sim.pipe_pclk_in, sim.pipe_rate, simu.mode_pipe, test.in, testin.zero, tl.cfg_add, tl.cfg_ctl, tl.cfg_sts, tx_cred.datafccp, tx_cred.datafcnp, tx_cred.datafcp, tx_cred.fchipcons, tx_cred.fcinfinite, tx_cred.hdrfccp, tx_cred.hdrfcnp, tx_cred.hdrfcp, tx.out0, tx.out1, tx.out2, tx.out3, tx.out4, tx.out5, tx.out6, tx.out7, tx_par.err, tx_s.t_data, tx_s.t_empty, tx_s.t_eop, tx_s.t_err, tx_s.t_ready, tx_s.t_sop, tx_s.t_valid, txc.ompl0, txc.ompl1, txc.ompl2, txc.ompl3, txc.ompl4, txc.ompl5, txc.ompl6, txc.ompl7, txd.ata0, txd.ata1, txd.ata2, txd.ata3, txd.ata4, txd.ata5, txd.ata6, txd.ata7, txd.atak0, txd.atak1, txd.atak2, txd.atak3, txd.atak4, txd.atak5, txd.atak6, txd.atak7, txd.eemph0, txd.eemph1, txd.eemph2, txd.eemph3, txd.eemph4, txd.eemph5, txd.eemph6, txd.eemph7, txd.etectrx0, txd.etectrx1, txd.etectrx2, txd.etectrx3, txd.etectrx4, txd.etectrx5, txd.etectrx6, txd.etectrx7, txe.lecidle0, txe.lecidle1, txe.lecidle2, txe.lecidle3, txe.lecidle4, txe.lecidle5, txe.lecidle6, txe.lecidle7, txm.argin0, txm.argin1, txm.argin2, txm.argin3, txm.argin4, txm.argin5, txm.argin6, txm.argin7, txs.wing0, txs.wing1, txs.wing2, txs.wing3, txs.wing4, txs.wing5, txs.wing6, txs.wing7);
 endmodule

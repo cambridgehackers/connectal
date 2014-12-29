@@ -30,21 +30,25 @@
    -f
    hotrst
    -f
-   int_status
+   int_s
    -f
-   l2_exit
+   l2
    -f
-   lane_act
+   lane
    -f
    ltssmstate
    -f
    dlup
    -f
-   rx_par_err
+   rx
    -f
-   tx_par_err
+   tx
    -f
-   cfg_par_err
+   tx
+   -f
+   rx
+   -f
+   cfg
    -f
    ko
    ../../out/de5/synthesis/altera_pcie_reconfig_driver.v
@@ -56,8 +60,8 @@ import XilinxCells::*;
 import GetPut::*;
 
 (* always_ready, always_enabled *)
-interface PciereconfigwrapCfg_par_err;
-    method Action      drv(Bit#(1) v);
+interface PciereconfigwrapCfg;
+    method Action      par_err_drv(Bit#(1) v);
 endinterface
 (* always_ready, always_enabled *)
 interface PciereconfigwrapCurrent;
@@ -87,8 +91,8 @@ interface PciereconfigwrapHotrst;
     method Action      exit_drv(Bit#(1) v);
 endinterface
 (* always_ready, always_enabled *)
-interface PciereconfigwrapInt_status;
-    method Action      drv(Bit#(4) v);
+interface PciereconfigwrapInt_s;
+    method Action      tatus_drv(Bit#(4) v);
 endinterface
 (* always_ready, always_enabled *)
 interface PciereconfigwrapKo;
@@ -96,12 +100,12 @@ interface PciereconfigwrapKo;
     method Action      cpl_spc_header_drv(Bit#(8) v);
 endinterface
 (* always_ready, always_enabled *)
-interface PciereconfigwrapL2_exit;
-    method Action      drv(Bit#(1) v);
+interface PciereconfigwrapL2;
+    method Action      exit_drv(Bit#(1) v);
 endinterface
 (* always_ready, always_enabled *)
-interface PciereconfigwrapLane_act;
-    method Action      drv(Bit#(4) v);
+interface PciereconfigwrapLane;
+    method Action      act_drv(Bit#(4) v);
 endinterface
 (* always_ready, always_enabled *)
 interface PciereconfigwrapLtssmstate;
@@ -123,31 +127,31 @@ interface PciereconfigwrapReconfig_mgmt;
     method Bit#(32)     writedata();
 endinterface
 (* always_ready, always_enabled *)
-interface PciereconfigwrapRx_par_err;
-    method Action      drv(Bit#(1) v);
+interface PciereconfigwrapRx;
+    method Action      par_err_drv(Bit#(1) v);
 endinterface
 (* always_ready, always_enabled *)
-interface PciereconfigwrapTx_par_err;
-    method Action      drv(Bit#(2) v);
+interface PciereconfigwrapTx;
+    method Action      par_err_drv(Bit#(2) v);
 endinterface
 (* always_ready, always_enabled *)
 interface PcieReconfigWrap;
-    interface PciereconfigwrapCfg_par_err     cfg_par_err;
+    interface PciereconfigwrapCfg     cfg;
     interface PciereconfigwrapCurrent     current;
     interface PciereconfigwrapDerr     derr;
     interface PciereconfigwrapDlup     dlup;
     interface PciereconfigwrapEv128ns     ev128ns;
     interface PciereconfigwrapEv1us     ev1us;
     interface PciereconfigwrapHotrst     hotrst;
-    interface PciereconfigwrapInt_status     int_status;
+    interface PciereconfigwrapInt_s     int_s;
     interface PciereconfigwrapKo     ko;
-    interface PciereconfigwrapL2_exit     l2_exit;
-    interface PciereconfigwrapLane_act     lane_act;
+    interface PciereconfigwrapL2     l2;
+    interface PciereconfigwrapLane     lane;
     interface PciereconfigwrapLtssmstate     ltssmstate;
     interface PciereconfigwrapReconfig_b     reconfig_b;
     interface PciereconfigwrapReconfig_mgmt     reconfig_mgmt;
-    interface PciereconfigwrapRx_par_err     rx_par_err;
-    interface PciereconfigwrapTx_par_err     tx_par_err;
+    interface PciereconfigwrapRx     rx;
+    interface PciereconfigwrapTx     tx;
 endinterface
 import "BVI" altera_pcie_reconfig_driver =
 module mkPcieReconfigWrap#(Clock pld_clk, Clock reconfig_xcvr_clk, Reset pld_clk_reset, Reset reconfig_xcvr_clk_reset, Reset reconfig_xcvr_rst)(PcieReconfigWrap);
@@ -158,62 +162,62 @@ module mkPcieReconfigWrap#(Clock pld_clk, Clock reconfig_xcvr_clk, Reset pld_clk
         input_clock reconfig_xcvr_clk(reconfig_xcvr_clk) = reconfig_xcvr_clk;
         input_reset reconfig_xcvr_clk_reset() = reconfig_xcvr_clk_reset; /* from clock*/
         input_reset reconfig_xcvr_rst(reconfig_xcvr_rst) = reconfig_xcvr_rst;
-    interface PciereconfigwrapCfg_par_err     cfg_par_err;
-        method drv(cfg_par_errdrv) enable((*inhigh*) EN_cfg_par_errdrv);
+    interface PciereconfigwrapCfg     cfg;
+        method par_err_drv(cfg_par_err_drv) enable((*inhigh*) EN_cfg_par_err_drv);
     endinterface
     interface PciereconfigwrapCurrent     current;
         method speed(currentspeed) enable((*inhigh*) EN_currentspeed);
     endinterface
     interface PciereconfigwrapDerr     derr;
-        method cor_ext_rcv_drv(derrcor_ext_rcv_drv) enable((*inhigh*) EN_derrcor_ext_rcv_drv);
-        method cor_ext_rpl_drv(derrcor_ext_rpl_drv) enable((*inhigh*) EN_derrcor_ext_rpl_drv);
-        method rpl_drv(derrrpl_drv) enable((*inhigh*) EN_derrrpl_drv);
+        method cor_ext_rcv_drv(derr_cor_ext_rcv_drv) enable((*inhigh*) EN_derr_cor_ext_rcv_drv);
+        method cor_ext_rpl_drv(derr_cor_ext_rpl_drv) enable((*inhigh*) EN_derr_cor_ext_rpl_drv);
+        method rpl_drv(derr_rpl_drv) enable((*inhigh*) EN_derr_rpl_drv);
     endinterface
     interface PciereconfigwrapDlup     dlup;
-        method drv(dlupdrv) enable((*inhigh*) EN_dlupdrv);
-        method exit_drv(dlupexit_drv) enable((*inhigh*) EN_dlupexit_drv);
+        method drv(dlup_drv) enable((*inhigh*) EN_dlup_drv);
+        method exit_drv(dlup_exit_drv) enable((*inhigh*) EN_dlup_exit_drv);
     endinterface
     interface PciereconfigwrapEv128ns     ev128ns;
-        method drv(ev128nsdrv) enable((*inhigh*) EN_ev128nsdrv);
+        method drv(ev128ns_drv) enable((*inhigh*) EN_ev128ns_drv);
     endinterface
     interface PciereconfigwrapEv1us     ev1us;
-        method drv(ev1usdrv) enable((*inhigh*) EN_ev1usdrv);
+        method drv(ev1us_drv) enable((*inhigh*) EN_ev1us_drv);
     endinterface
     interface PciereconfigwrapHotrst     hotrst;
-        method exit_drv(hotrstexit_drv) enable((*inhigh*) EN_hotrstexit_drv);
+        method exit_drv(hotrst_exit_drv) enable((*inhigh*) EN_hotrst_exit_drv);
     endinterface
-    interface PciereconfigwrapInt_status     int_status;
-        method drv(int_statusdrv) enable((*inhigh*) EN_int_statusdrv);
+    interface PciereconfigwrapInt_s     int_s;
+        method tatus_drv(int_status_drv) enable((*inhigh*) EN_int_status_drv);
     endinterface
     interface PciereconfigwrapKo     ko;
-        method cpl_spc_data_drv(kocpl_spc_data_drv) enable((*inhigh*) EN_kocpl_spc_data_drv);
-        method cpl_spc_header_drv(kocpl_spc_header_drv) enable((*inhigh*) EN_kocpl_spc_header_drv);
+        method cpl_spc_data_drv(ko_cpl_spc_data_drv) enable((*inhigh*) EN_ko_cpl_spc_data_drv);
+        method cpl_spc_header_drv(ko_cpl_spc_header_drv) enable((*inhigh*) EN_ko_cpl_spc_header_drv);
     endinterface
-    interface PciereconfigwrapL2_exit     l2_exit;
-        method drv(l2_exitdrv) enable((*inhigh*) EN_l2_exitdrv);
+    interface PciereconfigwrapL2     l2;
+        method exit_drv(l2_exit_drv) enable((*inhigh*) EN_l2_exit_drv);
     endinterface
-    interface PciereconfigwrapLane_act     lane_act;
-        method drv(lane_actdrv) enable((*inhigh*) EN_lane_actdrv);
+    interface PciereconfigwrapLane     lane;
+        method act_drv(lane_act_drv) enable((*inhigh*) EN_lane_act_drv);
     endinterface
     interface PciereconfigwrapLtssmstate     ltssmstate;
-        method drv(ltssmstatedrv) enable((*inhigh*) EN_ltssmstatedrv);
+        method drv(ltssmstate_drv) enable((*inhigh*) EN_ltssmstate_drv);
     endinterface
     interface PciereconfigwrapReconfig_b     reconfig_b;
         method usy(reconfig_busy) enable((*inhigh*) EN_reconfig_busy);
     endinterface
     interface PciereconfigwrapReconfig_mgmt     reconfig_mgmt;
-        method reconfig_mgmtaddress address();
-        method reconfig_mgmtread read();
-        method readdata(reconfig_mgmtreaddata) enable((*inhigh*) EN_reconfig_mgmtreaddata);
-        method waitrequest(reconfig_mgmtwaitrequest) enable((*inhigh*) EN_reconfig_mgmtwaitrequest);
-        method reconfig_mgmtwrite write();
-        method reconfig_mgmtwritedata writedata();
+        method reconfig_mgmt_address address();
+        method reconfig_mgmt_read read();
+        method readdata(reconfig_mgmt_readdata) enable((*inhigh*) EN_reconfig_mgmt_readdata);
+        method waitrequest(reconfig_mgmt_waitrequest) enable((*inhigh*) EN_reconfig_mgmt_waitrequest);
+        method reconfig_mgmt_write write();
+        method reconfig_mgmt_writedata writedata();
     endinterface
-    interface PciereconfigwrapRx_par_err     rx_par_err;
-        method drv(rx_par_errdrv) enable((*inhigh*) EN_rx_par_errdrv);
+    interface PciereconfigwrapRx     rx;
+        method par_err_drv(rx_par_err_drv) enable((*inhigh*) EN_rx_par_err_drv);
     endinterface
-    interface PciereconfigwrapTx_par_err     tx_par_err;
-        method drv(tx_par_errdrv) enable((*inhigh*) EN_tx_par_errdrv);
+    interface PciereconfigwrapTx     tx;
+        method par_err_drv(tx_par_err_drv) enable((*inhigh*) EN_tx_par_err_drv);
     endinterface
-    schedule (cfg_par_err.drv, current.speed, derr.cor_ext_rcv_drv, derr.cor_ext_rpl_drv, derr.rpl_drv, dlup.drv, dlup.exit_drv, ev128ns.drv, ev1us.drv, hotrst.exit_drv, int_status.drv, ko.cpl_spc_data_drv, ko.cpl_spc_header_drv, l2_exit.drv, lane_act.drv, ltssmstate.drv, reconfig_b.usy, reconfig_mgmt.address, reconfig_mgmt.read, reconfig_mgmt.readdata, reconfig_mgmt.waitrequest, reconfig_mgmt.write, reconfig_mgmt.writedata, rx_par_err.drv, tx_par_err.drv) CF (cfg_par_err.drv, current.speed, derr.cor_ext_rcv_drv, derr.cor_ext_rpl_drv, derr.rpl_drv, dlup.drv, dlup.exit_drv, ev128ns.drv, ev1us.drv, hotrst.exit_drv, int_status.drv, ko.cpl_spc_data_drv, ko.cpl_spc_header_drv, l2_exit.drv, lane_act.drv, ltssmstate.drv, reconfig_b.usy, reconfig_mgmt.address, reconfig_mgmt.read, reconfig_mgmt.readdata, reconfig_mgmt.waitrequest, reconfig_mgmt.write, reconfig_mgmt.writedata, rx_par_err.drv, tx_par_err.drv);
+    schedule (cfg.par_err_drv, current.speed, derr.cor_ext_rcv_drv, derr.cor_ext_rpl_drv, derr.rpl_drv, dlup.drv, dlup.exit_drv, ev128ns.drv, ev1us.drv, hotrst.exit_drv, int_s.tatus_drv, ko.cpl_spc_data_drv, ko.cpl_spc_header_drv, l2.exit_drv, lane.act_drv, ltssmstate.drv, reconfig_b.usy, reconfig_mgmt.address, reconfig_mgmt.read, reconfig_mgmt.readdata, reconfig_mgmt.waitrequest, reconfig_mgmt.write, reconfig_mgmt.writedata, rx.par_err_drv, tx.par_err_drv) CF (cfg.par_err_drv, current.speed, derr.cor_ext_rcv_drv, derr.cor_ext_rpl_drv, derr.rpl_drv, dlup.drv, dlup.exit_drv, ev128ns.drv, ev1us.drv, hotrst.exit_drv, int_s.tatus_drv, ko.cpl_spc_data_drv, ko.cpl_spc_header_drv, l2.exit_drv, lane.act_drv, ltssmstate.drv, reconfig_b.usy, reconfig_mgmt.address, reconfig_mgmt.read, reconfig_mgmt.readdata, reconfig_mgmt.waitrequest, reconfig_mgmt.write, reconfig_mgmt.writedata, rx.par_err_drv, tx.par_err_drv);
 endmodule
