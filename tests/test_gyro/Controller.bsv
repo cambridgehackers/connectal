@@ -44,19 +44,19 @@ endinterface
 
 module mkController#(GyroCtrlIndication ind)(Controller);
 
-   SPI#(Bit#(16)) spiController <- mkSPI(1000);
+   SPI#(Bit#(16)) spiController <- mkSPI(1000, True);
    
    rule spi_response;
       let rv <- spiController.response.get;
-      ind.read_reg_resp(extend(rv));
+      ind.read_reg_resp(extend(rv[7:0]));
    endrule
    
    interface GyroCtrlRequest req;
       method Action write_reg(Bit#(32) addr, Bit#(32) val);
-	 spiController.request.put({1'b1,1'b0,addr[5:0],val[7:0]});
+	 spiController.request.put({1'b0,1'b0,addr[5:0],val[7:0]});
       endmethod
       method Action read_reg_req(Bit#(32) addr);
-	 spiController.request.put({1'b0,1'b0,addr[5:0],8'h00});
+	 spiController.request.put({1'b1,1'b0,addr[5:0],8'h00});
       endmethod
    endinterface
    interface LEDS leds;

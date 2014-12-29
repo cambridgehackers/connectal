@@ -32,6 +32,7 @@
 #include "GyroCtrlIndication.h"
 #include "GeneratedTypes.h"
 
+#include "gyro.h"
 
 class GyroCtrlIndication : public GyroCtrlIndicationWrapper
 {
@@ -41,6 +42,7 @@ public:
     fprintf(stderr, "GyroCtrlIndication::read_reg_resp(v=%0d)\n", v);
   }
 };
+
 
 int main(int argc, const char **argv)
 {
@@ -53,5 +55,20 @@ int main(int argc, const char **argv)
   long freq = 0;
   setClockFrequency(0, req_freq, &freq);
   fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
+  sleep(1);
+
+  // setup
+  device->write_reg(CTRL_REG3, 0);
+  device->write_reg(CTRL_REG1, CTRL_REG1_PD | CTRL_REG1_ZEN | CTRL_REG1_YEN | CTRL_REG1_XEN);
+
+  sleep(1);
+
+  while(true){
+    fprintf(stderr, "emitting request\n");
+    device->read_reg_req(OUT_X_L);
+    sleep(2);
+  }
+
+  while(true) sleep(1);
 
 }

@@ -11,7 +11,7 @@
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod": "J1"
     },
-    "CLK_invertedClock": {
+    "CLK_clock": {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod": "J4"
     }

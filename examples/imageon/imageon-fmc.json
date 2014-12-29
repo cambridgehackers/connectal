@@ -27,7 +27,7 @@
 	"PIO_DIRECTION": "INPUT",
 	"fmc": "LA15_n"
     },
-    "CLK_pins_spi_invertedClock": {
+    "CLK_pins_spi_clock": {
         "original_name": "io_vita_spi_sclk",
 	"PIO_DIRECTION": "OUTPUT",
 	"fmc": "LA12_p"
