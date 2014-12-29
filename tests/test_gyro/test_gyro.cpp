@@ -34,12 +34,17 @@
 
 #include "gyro.h"
 
+bool twos_compliment = false;
 class GyroCtrlIndication : public GyroCtrlIndicationWrapper
 {
 public:
   GyroCtrlIndication(int id) : GyroCtrlIndicationWrapper(id) {}
   virtual void read_reg_resp ( const uint32_t v){
-    fprintf(stderr, "GyroCtrlIndication::read_reg_resp(v=%0d)\n", v);
+    if(twos_compliment) {
+      fprintf(stderr, "GyroCtrlIndication::read_reg_resp(v=%d)\n", (short)v);
+    }else{
+      fprintf(stderr, "GyroCtrlIndication::read_reg_resp(v=%04x)\n", v);
+    }
   }
 };
 
@@ -60,14 +65,12 @@ int main(int argc, const char **argv)
   // setup
   device->write_reg(CTRL_REG3, 0);
   device->write_reg(CTRL_REG1, CTRL_REG1_PD | CTRL_REG1_ZEN | CTRL_REG1_YEN | CTRL_REG1_XEN);
-
+  sleep(1);
+  device->read_reg_req(OUT_X_L);
   sleep(1);
 
-  while(true){
-    fprintf(stderr, "emitting request\n");
-    device->read_reg_req(OUT_X_L);
-    sleep(2);
-  }
+  twos_compliment = true;
+  device->start_sampling(req_freq*2); 
 
   while(true) sleep(1);
 

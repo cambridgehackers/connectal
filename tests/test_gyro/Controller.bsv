@@ -28,12 +28,13 @@ import Leds::*;
 import ConnectalSpi::*;
 
 interface GyroCtrlRequest;
-   method Action write_reg(Bit#(32) addr, Bit#(32) val);
-   method Action read_reg_req(Bit#(32) addr);
+   method Action write_reg(Bit#(8) addr, Bit#(8) val);
+   method Action read_reg_req(Bit#(8) addr);
+   method Action start_sampling(Bit#(32) freq);
 endinterface
 
 interface GyroCtrlIndication;
-   method Action read_reg_resp(Bit#(32) val);
+   method Action read_reg_resp(Bit#(16) val);
 endinterface
 
 interface Controller;
@@ -42,21 +43,50 @@ interface Controller;
    interface LEDS leds;
 endinterface
 
+
+
 module mkController#(GyroCtrlIndication ind)(Controller);
 
    SPI#(Bit#(16)) spiController <- mkSPI(1000, True);
+   Reg#(Bit#(32)) sampleFreq <- mkReg(0);
+   Reg#(Bit#(32)) sampleCnt  <- mkReg(0);
    
+   let out_X_L = 'h28;
+   let out_X_H = 'h29;
+   let out_Y_L = 'h2A;
+   let out_Y_H = 'h2B;
+   let out_Z_L = 'h2C;
+   let out_Z_H = 'h2D;
+
    rule spi_response;
       let rv <- spiController.response.get;
-      ind.read_reg_resp(extend(rv[7:0]));
+      ind.read_reg_resp(rv);
+   endrule
+   
+   rule sample (sampleFreq > 0);
+      let new_sampleCnt = sampleCnt+1; 
+      if (sampleCnt == sampleFreq) begin
+	 spiController.request.put({1'b1,1'b1,out_X_L,8'h00});
+	 new_sampleCnt = 0;
+      end
+      else if (sampleCnt == sampleFreq-1) 
+	 spiController.request.put({1'b1,1'b1,out_Y_L,8'h00});
+      else if (sampleCnt == sampleFreq-2) 
+	 spiController.request.put({1'b1,1'b1,out_Z_L,8'h00});
+      else
+	 noAction;
+      sampleCnt <= new_sampleCnt;
    endrule
    
    interface GyroCtrlRequest req;
-      method Action write_reg(Bit#(32) addr, Bit#(32) val);
-	 spiController.request.put({1'b0,1'b0,addr[5:0],val[7:0]});
+      method Action write_reg(Bit#(8) addr, Bit#(8) val);
+	 spiController.request.put({1'b0,1'b0,addr[5:0],val});
       endmethod
-      method Action read_reg_req(Bit#(32) addr);
+      method Action read_reg_req(Bit#(8) addr);
 	 spiController.request.put({1'b1,1'b0,addr[5:0],8'h00});
+      endmethod
+      method Action start_sampling(Bit#(32) freq);
+	 sampleFreq <= freq;
       endmethod
    endinterface
    interface LEDS leds;
