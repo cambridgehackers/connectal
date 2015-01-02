@@ -162,6 +162,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	    iterCnts[i] <= ic;
 	    mismatchCounts[i] <= 0;
 	    valuesToRead[i] <= truncate(chunk/4);
+	    finishedReg[i] <= False;
 	 end
       endmethod
       method Action getStateDbg();
