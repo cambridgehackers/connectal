@@ -83,6 +83,7 @@ interface PcieHost#(numeric type dsz, numeric type nSlaves);
    interface Vector#(nSlaves,PhysMemSlave#(PciePhysAddrWidth,dsz))  slave;
    interface Put#(Tuple2#(Bit#(64),Bit#(32)))    interruptRequest;
    interface Client#(TLPData#(16), TLPData#(16)) pci;
+   interface Put#(TimestampedTlpData) trace;
 `ifndef PCIE_NO_BSCAN
    interface BscanTop bscanif;
 `else
