@@ -61,7 +61,7 @@ endinterface
 
 interface MemreadIndication;
    method Action started(Bit#(32) numWords);
-   method Action reportStateDbg(Bit#(32) streamRdCnt, Bit#(32) mismatchCount, Bit#(32) finished);
+   method Action reportStateDbg(Bit#(32) streamRdCnt, Bit#(32) mismatchCount, Bit#(32) finished, Bit#(32) dataPipeNotEmpty);
    method Action readDone(Bit#(32) mismatchCount);
 endinterface
 
@@ -165,7 +165,10 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 end
       endmethod
       method Action getStateDbg();
-	 indication.reportStateDbg(0, 0, extend(pack(readVReg(finishedReg))));
+	 Vector#(NumEngineServers, Bool) notEmpty = map(pipeOutNotEmpty, re.dataPipes);
+	 indication.reportStateDbg(0, 0,
+				   extend(pack(readVReg(finishedReg))),
+				   extend(pack(notEmpty)));
       endmethod
    endinterface
 endmodule
