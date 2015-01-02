@@ -23,6 +23,8 @@
 
 import Leds::*;
 import Vector::*;
+import FIFOF::*;
+import Arith::*;
 
 interface HBridge2;
    method Bit#(2) hbridge0();
@@ -30,11 +32,13 @@ interface HBridge2;
 endinterface
 
 interface HBridgeCtrlRequest;
-   method Action ctrl(Bit#(16) idx, Bit#(16) power, Bit#(1) direction);
+   method Action ctrl(Vector#(2,Bit#(11)) power, Vector#(2,Bit#(1)) direction);
 endinterface
 
+typedef enum {Stopped, Started} HBridgeCtrlEvent deriving (Eq,Bits);
+
 interface HBridgeCtrlIndication;
-   method Action ctrl(Bit#(16) idx, Bit#(16) power, Bit#(1) direction);
+   method Action hbc_event(Bit#(32) e);
 endinterface
 
 interface Controller;
@@ -48,12 +52,33 @@ module mkController#(HBridgeCtrlIndication ind)(Controller);
    Vector#(2, Reg#(Bit#(1))) direction <- replicateM(mkReg(0));
    Vector#(2, Reg#(Bit#(1)))   enabled <- replicateM(mkReg(0));
    Vector#(2, Reg#(Bit#(11)))    power <- replicateM(mkReg(0));
-   Bit#(8) leds_val =  extend({direction[0],direction[1]});   
+   Vector#(2, Reg#(Bool))           pz <- replicateM(mkReg(True));
+   FIFOF#(Bit#(32))         event_fifo <- mkSizedFIFOF(4);
+   Bit#(8) leds_val =  extend({direction[0],direction[1]});  
    
    // frequency of design: 100 mHz  
    // frequency of PWM System: 2 kHz 
    // 2k design cycles == 1 PWM cycle
    Reg#(Bit#(11)) fcnt <- mkReg(0);
+      
+   rule detect_event;
+      Vector#(2,Bool) npz;
+      for(int i = 0; i < 2; i=i+1) 
+	 npz[i] = power[i]==0;
+      Bool started =  fold(booland, readVReg(pz)) && !fold(booland, npz);
+      Bool stopped = !fold(booland, readVReg(pz)) &&  fold(booland, npz);
+      Bit#(32) e = 0;
+      e = e | (extend(pack(stopped)) << pack(Stopped));
+      e = e | (extend(pack(started)) << pack(Started));
+      if (e != 0 && event_fifo.notFull) 
+	 event_fifo.enq(e);
+      writeVReg(pz,npz);
+   endrule
+   
+   rule report_event;
+      ind.hbc_event(event_fifo.first);
+      event_fifo.deq;
+   endrule
    
    rule pwm;
       for(Integer i = 0; i < 2; i=i+1)
@@ -62,10 +87,11 @@ module mkController#(HBridgeCtrlIndication ind)(Controller);
    endrule
    
    interface HBridgeCtrlRequest req;
-      method Action ctrl(Bit#(16) i, Bit#(16) p, Bit#(1) d);
-	 direction[i] <= d;
-	 power[i] <= truncate(p);
-	 ind.ctrl(i,p,d);
+      method Action ctrl(Vector#(2,Bit#(11)) p, Vector#(2,Bit#(1)) d);
+	 for(Integer i = 0; i < 2; i=i+1) begin
+	    direction[i] <= d[i];
+	    power[i]     <= p[i];
+	 end
       endmethod
    endinterface
    

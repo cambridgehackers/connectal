@@ -8,16 +8,23 @@
 #include "HBridgeCtrlRequest.h"
 #include "HBridgeCtrlIndication.h"
 #include "GeneratedTypes.h"
-
-
+ 
+ 
 class HBridgeCtrlIndication : public HBridgeCtrlIndicationWrapper
 {
 public:
   HBridgeCtrlIndication(int id) : HBridgeCtrlIndicationWrapper(id) {}
-  virtual void ctrl ( const uint32_t i, const uint32_t p, const uint32_t d ) {
-    fprintf(stderr, "HBridgeCtrlIndication::ctrl(i=%04x, p=%04x, d=%d)\n", i,p,d);
+  virtual void hbc_event( uint32_t e){
+    fprintf(stderr, "hbc_event: {");
+    if (e & (1 << HBridgeCtrlEvent_Started))
+      fprintf(stderr, "Started");
+    if (e & (1 << HBridgeCtrlEvent_Stopped))
+      fprintf(stderr, "Stopped");
+    fprintf(stderr, "}\n");
   }
 };
+
+
 
 #define RIGHT 1
 #define LEFT  0
@@ -36,53 +43,39 @@ public:
 #define POWER_7  0x0780
 #define POWER_8  0x07FF
 
-void slow_start(int idx, int direction, HBridgeCtrlRequestProxy *device){
-  device->ctrl(idx,POWER_1,direction);
-  sleep(1);
-  device->ctrl(idx,POWER_2,direction);
-  sleep(1);
-  device->ctrl(idx,POWER_3,direction);
-  sleep(1);
-  device->ctrl(idx,POWER_4,direction);
-  sleep(1);
-  device->ctrl(idx,POWER_5,direction);
-  sleep(1);
-  device->ctrl(idx,POWER_6,direction);
-  sleep(1);
-  device->ctrl(idx,POWER_7,direction);
-  sleep(1);
-  device->ctrl(idx,POWER_8,direction);
-}
+#define STOP {power[RIGHT] = POWER_0;  power[LEFT] = POWER_0; device->ctrl(power,direction);}
+#define MOVE_FOREWARD(p) { direction[RIGHT] = CW;  direction[LEFT]  = CCW; power[RIGHT] = (p); power[LEFT] = (p); device->ctrl(power,direction);}
+#define MOVE_BACKWARD(p) { direction[RIGHT] = CCW; direction[LEFT]  = CW;  power[RIGHT] = (p); power[LEFT] = (p); device->ctrl(power,direction);}
+#define TURN_RIGHT(p)    { direction[RIGHT] = CCW; direction[LEFT]  = CCW; power[RIGHT] = (p); power[LEFT] = (p); device->ctrl(power,direction);}
+#define TURN_LEFT(p)     { direction[RIGHT] = CW;  direction[LEFT]  = CW;  power[RIGHT] = (p); power[LEFT] = (p); device->ctrl(power,direction);}
 
-void quick_start(int idx, int direction, HBridgeCtrlRequestProxy *device){
-  device->ctrl(idx,POWER_8,direction);
-}
-void quick_stop(int idx, int direction, HBridgeCtrlRequestProxy *device){
-  device->ctrl(idx,POWER_0,direction);
-}
 
 int main(int argc, const char **argv)
 {
   HBridgeCtrlIndication *ind = new HBridgeCtrlIndication(IfcNames_ControllerIndication);
   HBridgeCtrlRequestProxy *device = new HBridgeCtrlRequestProxy(IfcNames_ControllerRequest);
-
   portalExec_start();
 
-  slow_start(LEFT,CCW,device);
-  sleep(1);
-  quick_stop(LEFT,CCW,device);
-
-  slow_start(RIGHT,CCW,device);
-  sleep(1);
-  quick_stop(RIGHT,CCW,device);
-
-  slow_start(LEFT,CW,device);
-  sleep(1);
-  quick_stop(LEFT,CW,device);
-
-  slow_start(RIGHT,CW,device);
-  sleep(1);
-  quick_stop(RIGHT,CW,device);
+  uint32_t direction[2];
+  uint32_t power[2];
 
   sleep(1);
+
+  MOVE_FOREWARD(POWER_5);
+  usleep(1000000);
+  STOP;
+
+  MOVE_BACKWARD(POWER_5);
+  usleep(1000000);
+  STOP;
+
+  TURN_RIGHT(POWER_5);
+  usleep(1000000);
+  STOP;
+
+  TURN_LEFT(POWER_5);
+  usleep(1000000);
+  STOP;
+
+  sleep(2);
 }
