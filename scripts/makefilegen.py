@@ -295,10 +295,11 @@ if __name__=='__main__':
         fpga_vendor = 'xilinx'
         suffix = 'xdc'
     else:
-        fpga_vendor = 'bluesim'
-        suffix = '.bdc'
+        fpga_vendor = None
+        suffix = None
 
-    options.constraint.append(os.path.join(connectaldir, 'constraints/', '%s/%s.%s' % (fpga_vendor, boardname, suffix)))
+    if fpga_vendor:
+        options.constraint.append(os.path.join(connectaldir, 'constraints/', '%s/%s.%s' % (fpga_vendor, boardname, suffix)))
 
     if noisyFlag:
         pprint.pprint(options.__dict__)
