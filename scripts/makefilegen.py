@@ -294,6 +294,9 @@ if __name__=='__main__':
     elif 'XILINX' in bsvdefines:
         fpga_vendor = 'xilinx'
         suffix = 'xdc'
+    else:
+        fpga_vendor = 'bluesim'
+        suffix = '.bdc'
 
     options.constraint.append(os.path.join(connectaldir, 'constraints/', '%s/%s.%s' % (fpga_vendor, boardname, suffix)))
 
