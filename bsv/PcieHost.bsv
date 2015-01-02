@@ -54,13 +54,19 @@ import "BDPI" function ActionValue#(TLPData#(16)) get_tlp();
 import "BDPI" function Bool can_put_tlp();
 import "BDPI" function Bool can_get_tlp();
 		 
+(* synthesize *)
+module mkMemSlaveEngineSynth#(PciId my_id)(MemSlaveEngine#(DataBusWidth));
+   let memSlaveEngine <- mkMemSlaveEngine(my_id);
+   return memSlaveEngine;
+endmodule
+
 //(* synthesize *) commented out so that the guards in MemServer aren't destroyed (mdk)
 module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    Clock epClock125 <- exposeCurrentClock();
    Reset epReset125 <- exposeCurrentReset();
    let dispatcher <- mkTLPDispatcher;
    let arbiter    <- mkTLPArbiter;
-   Vector#(NumberOfMasters,MemSlaveEngine#(DataBusWidth)) sEngine <- replicateM(mkMemSlaveEngine(my_pciId));
+   Vector#(NumberOfMasters,MemSlaveEngine#(DataBusWidth)) sEngine <- replicateM(mkMemSlaveEngineSynth(my_pciId));
    Vector#(NumberOfMasters,PhysMemSlave#(PciePhysAddrWidth,DataBusWidth)) slavearr;
    MemInterrupt intr <- mkMemInterrupt(my_pciId);
 `ifndef PCIE_NO_BSCAN
