@@ -194,7 +194,7 @@ $(vfile): $(TOPBSVFILE) $(BSVFILES)
 	@echo BSCVERILOG [$(DTOP)]
 	$(Q)cd sources; $(RUN_BSC) -remove-dollar -verilog -u -g $(MKTOP) $(TOPBSVFILE)
 	$(Q)sed -i 's|// On .*|// timestamp removed|' verilog/*.v
-	$(Q)for v in verilog/*.v; do echo $(v); $(CONNECTALDIR)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
+	$(Q)for v in verilog/*.v; do $(CONNECTALDIR)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
 
 $(DTOP)/jni/%.cpp: $(CONNECTALDIR)/cpp/%.cpp
 	$(Q)cp $< $@
