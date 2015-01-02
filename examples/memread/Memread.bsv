@@ -51,7 +51,7 @@ Integer memreadEngineBufferSize=256;
 
 interface MemreadRequest;
    method Action startRead(Bit#(32) pointer, Bit#(32) offset, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
-   method Action getStateDbg();   
+   method Action getStateDbg();
 endinterface
 
 interface Memread;
@@ -61,7 +61,7 @@ endinterface
 
 interface MemreadIndication;
    method Action started(Bit#(32) numWords);
-   method Action reportStateDbg(Bit#(32) streamRdCnt, Bit#(32) mismatchCount);
+   method Action reportStateDbg(Bit#(32) streamRdCnt, Bit#(32) mismatchCount, Bit#(32) finished);
    method Action readDone(Bit#(32) mismatchCount);
 endinterface
 
@@ -96,6 +96,8 @@ module mkMemread#(MemreadIndication indication) (Memread);
    endfunction
    Vector#(NumEngineServers, PipeOut#(Vector#(DataBusWords, Bool)))  mismatchPipes <- mapM(uncurry(mkJoinBuffered(vcompare)), zip(readPipes, srcGenPipes));
    
+   Vector#(NumEngineServers, Reg#(Bool)) finishedReg <- replicateM(mkReg(False));
+
    for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
       rule start (iterCnts[i] > 0);
 	 re.readServers[i].request.put(MemengineCmd{sglId:pointer, base:extend(readOffset)+(fromInteger(i)*chunk), len:truncate(chunk), burstLen:truncate(burstLen*4)});
@@ -109,6 +111,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
       rule finish;
 	 $display("finish %d", i);
 	 let rv <- re.readServers[i].response.get;
+	 finishedReg[i] <= True;
       endrule
       rule check;
 	 let bv <- toGet(mismatchPipes[i]).get();
@@ -160,6 +163,9 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	    mismatchCounts[i] <= 0;
 	    valuesToRead[i] <= truncate(chunk/4);
 	 end
+      endmethod
+      method Action getStateDbg();
+	 indication.reportStateDbg(0, 0, extend(pack(readVReg(finishedReg))));
       endmethod
    endinterface
 endmodule

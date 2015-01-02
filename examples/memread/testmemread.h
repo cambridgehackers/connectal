@@ -94,8 +94,8 @@ public:
     fprintf(stderr, "rData(%08x): ", rDataCnt++);
     dump("", (char*)&v, sizeof(v));
   }
-  virtual void reportStateDbg(uint32_t streamRdCnt, uint32_t dataMismatch){
-    fprintf(stderr, "Memread::reportStateDbg(%08x, %d)\n", streamRdCnt, dataMismatch);
+  virtual void reportStateDbg(uint32_t streamRdCnt, uint32_t dataMismatch, uint32_t finished){
+    fprintf(stderr, "Memread::reportStateDbg(%08x, %d, finished=%08x)\n", streamRdCnt, dataMismatch, finished);
   }  
   MemreadIndication(int id) : MemreadIndicationWrapper(id){}
 };
