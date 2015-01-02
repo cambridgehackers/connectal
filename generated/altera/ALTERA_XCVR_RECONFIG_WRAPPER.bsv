@@ -15,7 +15,7 @@
    reconfig_mgmt
    -f
    mgmt
-   ../../out/de5/synthesis/alt_xcvr_reconfig.v
+   ../../out/de5/synthesis/alt_xcvr_reconfig_wrapper.v
 */
 
 import Clocks::*;
@@ -44,7 +44,7 @@ interface XcvrReconfigWrap;
     interface XcvrreconfigwrapReconfig     reconfig;
     interface XcvrreconfigwrapReconfig_mgmt     reconfig_mgmt;
 endinterface
-import "BVI" alt_xcvr_reconfig =
+import "BVI" alt_xcvr_reconfig_wrapper =
 module mkXcvrReconfigWrap#(Clock mgmt_clk_clk, Reset mgmt_clk_clk_reset, Reset mgmt_rst_reset)(XcvrReconfigWrap);
     default_clock clk();
     default_reset rst();

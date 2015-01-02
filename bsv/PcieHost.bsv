@@ -31,17 +31,17 @@ import DefaultValue      :: *;
 import PcieSplitter      :: *;
 import PcieTracer        :: *;
 import Xilinx            :: *;
-import PCIEWRAPPER       :: *;
+import Bscan             :: *;
 import Portal            :: *;
 import Leds              :: *;
 import MemSlaveEngine    :: *;
 import MemMasterEngine   :: *;
 import PcieCsr           :: *;
 import MemTypes          :: *;
-import Bscan             :: *;
 `ifndef BSIM
 `ifdef XILINX
 import PcieEndpointX7    :: *;
+import PCIEWRAPPER       :: *;
 `elsif ALTERA
 import PcieEndpointS5    :: *;
 `endif
@@ -134,9 +134,8 @@ interface PcieTop#(type ipins);
 `endif
 endinterface
 
-
 `ifdef BSIM
-module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)(PcieHostTop);
+module mkBsimPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)(PcieHostTop);
    let dc <- exposeCurrentClock;
    let dr <- exposeCurrentReset;
    Clock epClock125 = dc;
@@ -157,10 +156,13 @@ module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p
    interface Reset tepReset125 = epReset125;
    interface PcieHost tpciehost = pciehost;
 endmodule
-`else // not BSIM
-//(* synthesize, no_default_clock, no_default_reset *)
+`endif
+
+`ifdef XILINX
 (* no_default_clock, no_default_reset *)
-module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)(PcieHostTop);
+module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)(PcieHostTop);
+
+// Clock and PcieEndpoint for Xilinx
    Clock sys_clk_200mhz <- mkClockIBUFDS(
 `ifdef ClockDefaultParam
        defaultValue,
@@ -173,15 +175,8 @@ module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p
 `endif
        True, pci_sys_clk_p, pci_sys_clk_n);
    // Instantiate the PCIE endpoint
-`ifdef XILINX
-   PcieEndpointX7#(PcieLanes) ep7 <- mkPcieEndpointX7( clocked_by pci_clk_100mhz_buf
-						      , reset_by pci_sys_reset_n
-						       );
-`elsif ALTERA
-   PcieEndpointS5#(PcieLanes) ep7 <- mkPcieEndpointS5( clocked_by pci_clk_100mhz_buf
-						      , reset_by pci_sys_reset_n
-						       );
-`endif
+   PcieEndpointX7#(PcieLanes) ep7 <- mkPcieEndpointX7( clocked_by pci_clk_100mhz_buf, reset_by pci_sys_reset_n);
+
    Clock epClock125 = ep7.epClock125;
    Reset epReset125 = ep7.epReset125;
    Clock epClock250 = ep7.epClock250;
@@ -200,11 +195,8 @@ module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p
    interface Clock tsys_clk_200mhz = sys_clk_200mhz;
    interface Clock tsys_clk_200mhz_buf = sys_clk_200mhz_buf;
    interface Clock tpci_clk_100mhz_buf = pci_clk_100mhz_buf;
-`ifdef XILINX
+
    interface PcieEndpointX7 tep7 = ep7;
-`elsif ALTERA
-   interface PcieEndpointS5 tep7 = ep7;
-`endif
    interface Clock tepClock125 = epClock125;
    interface Reset tepReset125 = epReset125;
    interface PcieHost tpciehost = pciehost;
@@ -214,6 +206,60 @@ module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p
    interface portalReset = portalReset_;
    interface derivedClock = ep7.epDerivedClock;
    interface derivedReset = ep7.epDerivedReset;
-
 endmodule
 `endif
+
+`ifdef ALTERA
+(* no_default_clock, no_default_reset *)
+module mkAlteraPcieHostTop #(Clock pci_sys_clk_p, Reset pci_sys_reset_n)(PcieHostTop);
+
+   PcieEndpointS5#(PcieLanes) ep7 <- mkPcieEndpointS5( clocked_by pci_sys_clk_p, reset_by pci_sys_reset_n);
+
+   Clock epClock125 = ep7.epClock125;
+   Reset epReset125 = ep7.epReset125;
+   Clock epClock250 = ep7.epClock250;
+   Reset epReset250 = ep7.epReset250;
+
+`ifdef PCIE_250MHZ
+   Clock portalClock_ = epClock250;
+   Reset portalReset_ = epReset250;
+`else
+   Clock portalClock_ = epClock125;
+   Reset portalReset_ = epReset125;
+`endif
+
+   PcieHost#(DataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(
+         PciId{ bus:  ep7.cfg.bus_number(), dev: ep7.cfg.device_number(), func: ep7.cfg.function_number()},
+         clocked_by portalClock_, reset_by portalReset_);
+   mkConnection(ep7.tlp, pciehost.pci, clocked_by portalClock_, reset_by portalReset_);
+
+   interface PcieEndpointS5 tep7 = ep7;
+   interface Clock tepClock125 = epClock125;
+   interface Reset tepReset125 = epReset125;
+   interface PcieHost tpciehost = pciehost;
+
+   //once the dot product server makes timing, replace epClock125 with ep7.epclock250
+   interface portalClock = portalClock_;
+   interface portalReset = portalReset_;
+   interface derivedClock = ep7.epDerivedClock;
+   interface derivedReset = ep7.epDerivedReset;
+endmodule
+`endif
+
+`ifdef BSIM
+   module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)(PcieHostTop);
+   PcieHostTop _a <- mkXilinxPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n); return _a;
+   endmodule
+`elsif XILINX // XILINX
+   //(* synthesize, no_default_clock, no_default_reset *)
+   (* no_default_clock, no_default_reset *)
+   module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)(PcieHostTop);
+      PcieHostTop _a <- mkXilinxPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n); return _a;
+   endmodule
+`elsif ALTERA
+   //(* synthesize, no_default_clock, no_default_reset *)
+   (* no_default_clock, no_default_reset *)
+   module mkPcieHostTop #(Clock pci_sys_clk_p, Reset pci_sys_reset_n)(PcieHostTop);
+      PcieHostTop _a <- mkAlteraPcieHostTop(pci_sys_clk_p, pci_sys_reset_n); return _a;
+   endmodule
+`endif // NOT ALTERA

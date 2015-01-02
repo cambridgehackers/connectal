@@ -113,8 +113,11 @@ ifeq ($(NEED_XILINX_PCIE_$(BOARD)),1)
 endif
 
 ifeq ($(NEED_ALTERA_PCIE_$(BOARD)),1)
-    FPGAMAKE_CONNECTALFLAGS += -P mkPcieEndpointS5 -P mkPcieHost
-    CONNECTALFLAGS += --bscflags="+RTS -K46777216 -RTS"
+	FPGAMAKE_CONNECTALFLAGS += --qsf=$(CONNECTALDIR)/constraints/altera/$(BOARD).qsf
+	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/altera_pcie_reconfig_driver_wrapper.qip
+	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/altera_pcie_sv_hip_ast_wrapper.qip
+	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/alt_xcvr_reconfig_wrapper.qip
+	CONNECTALFLAGS += --bscflags="+RTS -K46777216 -RTS -demote-errors G0066:G0045 -suppress-warnings G0046:G0020:S0015:S0080:S0039"
 endif
 
 CONNECTALFLAGS += $(FPGAMAKE_CONNECTALFLAGS)

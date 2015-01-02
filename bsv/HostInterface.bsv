@@ -64,14 +64,14 @@ import GetPut            :: *;
 import ClientServer      :: *;
 import BRAM              :: *;
 import PCIE              :: *;
-import PCIEWRAPPER       :: *;
+import Bscan             :: *;
 import PcieCsr           :: *;
 import PcieTracer        :: *;
 import MemTypes          :: *;
-import Bscan             :: *;
 `ifndef BSIM
 `ifdef XILINX
 import PcieEndpointX7    :: *;
+import PCIEWRAPPER       :: *;
 `elsif ALTERA
 import PcieEndpointS5    :: *;
 `endif
@@ -99,11 +99,10 @@ interface PcieHostTop;
    interface Clock tsys_clk_200mhz_buf;
    interface Clock tpci_clk_100mhz_buf;
    interface PcieEndpointX7#(PcieLanes) tep7;
-`endif
-`ifdef ALTERA
-   interface Clock tsys_clk_200mhz;
-   interface Clock tsys_clk_200mhz_buf;
-   interface Clock tpci_clk_100mhz_buf;
+`elsif ALTERA
+//   interface Clock tsys_clk_200mhz;
+//   interface Clock tsys_clk_200mhz_buf;
+//   interface Clock tpci_clk_100mhz_buf;
    interface PcieEndpointS5#(PcieLanes) tep7;
 `endif
    interface Clock portalClock;
