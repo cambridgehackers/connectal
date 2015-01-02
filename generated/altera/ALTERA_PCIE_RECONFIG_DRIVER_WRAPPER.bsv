@@ -51,7 +51,7 @@
    cfg
    -f
    ko
-   ../../out/de5/synthesis/altera_pcie_reconfig_driver.v
+   ../../out/de5/synthesis/altera_pcie_reconfig_driver_wrapper.v
 */
 
 import Clocks::*;
@@ -153,7 +153,7 @@ interface PcieReconfigWrap;
     interface PciereconfigwrapRx     rx;
     interface PciereconfigwrapTx     tx;
 endinterface
-import "BVI" altera_pcie_reconfig_driver =
+import "BVI" altera_pcie_reconfig_driver_wrapper =
 module mkPcieReconfigWrap#(Clock pld_clk, Clock reconfig_xcvr_clk, Reset pld_clk_reset, Reset reconfig_xcvr_clk_reset, Reset reconfig_xcvr_rst)(PcieReconfigWrap);
     default_clock clk();
     default_reset rst();

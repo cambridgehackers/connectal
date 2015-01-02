@@ -29,7 +29,6 @@ import ClientServer      :: *;
 import DefaultValue      :: *;
 import PcieSplitter      :: *;
 import Xilinx            :: *;
-import PCIEWRAPPER       :: *;
 import Portal            :: *;
 import Leds              :: *;
 import Top               :: *;
@@ -58,16 +57,23 @@ typedef `PinType PinType;
 `ifndef BSIM
 (* no_default_clock, no_default_reset *)
 `endif
-module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)
-   (PcieTop#(PinType));
-
+`ifdef BSIM
+module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n) (PcieTop#(PinType));
    PcieHostTop host <- mkPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n);
+`elsif XILINX
+module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n) (PcieTop#(PinType));
+   PcieHostTop host <- mkPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n);
+`elsif ALTERA
+module mkPcieTop #(Clock pci_sys_clk_p, Reset pci_sys_reset_n) (PcieTop#(PinType));
+   PcieHostTop host <- mkPcieHostTop(pci_sys_clk_p, pci_sys_reset_n);
+`endif
 
 `ifdef IMPORT_HOSTIF
    ConnectalTop#(PhysAddrWidth, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkConnectalTop(host, clocked_by host.portalClock, reset_by host.portalReset);
 `else
    ConnectalTop#(PhysAddrWidth, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkConnectalTop(clocked_by host.portalClock, reset_by host.portalReset);
 `endif
+
    mkConnection(host.tpciehost.master, portalTop.slave, clocked_by host.portalClock, reset_by host.portalReset);
    if (valueOf(NumberOfMasters) > 0) begin
       mapM(uncurry(mkConnection),zip(portalTop.masters, host.tpciehost.slave));

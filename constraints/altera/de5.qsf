@@ -1,0 +1,77 @@
+#============================================================
+# BUTTON
+#============================================================
+set_instance_assignment -name IO_STANDARD "2.5 V" -to btn_pin
+set_instance_assignment -name IO_STANDARD "2.5 V" -to rxd_pin
+set_instance_assignment -name IO_STANDARD "2.5 V" -to rst_pin
+#============================================================
+# HEX0
+#============================================================
+set_instance_assignment -name IO_STANDARD "1.5 V" -to led_pins[0]
+set_instance_assignment -name IO_STANDARD "1.5 V" -to led_pins[1]
+set_instance_assignment -name IO_STANDARD "1.5 V" -to led_pins[2]
+set_instance_assignment -name IO_STANDARD "1.5 V" -to led_pins[3]
+set_instance_assignment -name IO_STANDARD "1.5 V" -to led_pins[4]
+set_instance_assignment -name IO_STANDARD "1.5 V" -to led_pins[5]
+set_instance_assignment -name IO_STANDARD "1.5 V" -to led_pins[6]
+set_instance_assignment -name IO_STANDARD "1.5 V" -to led_pins[7]
+#============================================================
+# OSC
+#============================================================
+set_instance_assignment -name IO_STANDARD "2.5 V" -to clk_pin
+set_instance_assignment -name IO_STANDARD "1.8 V" -to OSC_50_B3D
+set_instance_assignment -name IO_STANDARD "1.8 V" -to OSC_50_B4A
+set_instance_assignment -name IO_STANDARD "1.8 V" -to OSC_50_B4D
+set_instance_assignment -name IO_STANDARD "1.5 V" -to OSC_50_B7A
+set_instance_assignment -name IO_STANDARD "1.5 V" -to OSC_50_B7D
+set_instance_assignment -name IO_STANDARD "1.5 V" -to OSC_50_B8A
+set_instance_assignment -name IO_STANDARD "1.8 V" -to OSC_50_B8D
+#============================================================
+# SW
+#============================================================
+set_instance_assignment -name IO_STANDARD "1.8 V" -to SW[0]
+set_instance_assignment -name IO_STANDARD "1.8 V" -to SW[1]
+set_instance_assignment -name IO_STANDARD "1.8 V" -to SW[2]
+set_instance_assignment -name IO_STANDARD "1.8 V" -to SW[3]
+#============================================================
+# End of pin assignments by Terasic System Builder
+#============================================================
+
+set_global_assignment -name CYCLONEII_RESERVE_NCEO_AFTER_CONFIGURATION "USE AS REGULAR IO"
+set_location_assignment PIN_AK15 -to btn_pin
+set_location_assignment PIN_AK14 -to rxd_pin
+set_location_assignment PIN_AL14 -to rst_pin
+set_location_assignment PIN_G8 -to led_pins[0]
+set_location_assignment PIN_H8 -to led_pins[1]
+set_location_assignment PIN_J9 -to led_pins[2]
+set_location_assignment PIN_K10 -to led_pins[3]
+set_location_assignment PIN_K8 -to led_pins[4]
+set_location_assignment PIN_K9 -to led_pins[5]
+set_location_assignment PIN_N8 -to led_pins[6]
+set_location_assignment PIN_P8 -to led_pins[7]
+set_location_assignment PIN_AW35 -to clk_pin
+set_location_assignment PIN_BC28 -to OSC_50_B3D
+set_location_assignment PIN_AP10 -to OSC_50_B4A
+set_location_assignment PIN_AY18 -to OSC_50_B4D
+set_location_assignment PIN_M8 -to OSC_50_B7A
+set_location_assignment PIN_J18 -to OSC_50_B7D
+set_location_assignment PIN_R36 -to OSC_50_B8A
+set_location_assignment PIN_R25 -to OSC_50_B8D
+set_location_assignment PIN_B25 -to SW[0]
+set_location_assignment PIN_A25 -to SW[1]
+set_location_assignment PIN_B23 -to SW[2]
+set_location_assignment PIN_A23 -to SW[3]
+
+#============================================================
+
+set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
+set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
+set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
+set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "2.5 V"
+set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
+set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
+set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 200 LFPM AIRFLOW"
+set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
+
+set_location_assignment PIN_PIN -to NETName
+set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

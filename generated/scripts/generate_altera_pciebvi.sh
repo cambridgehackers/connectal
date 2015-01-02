@@ -14,7 +14,7 @@ set -e
     -f int_s -f cpl -f tl -f pm_e -f pme -f pm \
     -f simu -f sim \
     -f test_in \
-    ../../out/de5/synthesis/altera_pcie_sv_hip_ast.v
+    ../../out/de5/synthesis/altera_pcie_sv_hip_ast_wrapper.v
 
     #-f rxdata -f rxpolarity -f rxdatak -f rxelecidle -f rxstatus -f rxvalid \
     #-f txdata -f tx_cred -f tx_out -f txcompl -f txdatak -f txdetectrx -f txelecidle -f txdeemph -f txmargin -f txswing \
@@ -24,12 +24,12 @@ set -e
   -f reconfig_mgmt -f reconfig_b -f current -f derr -f dlup -f ev128ns -f ev1us -f hotrst \
   -f int_s -f l2 -f lane -f ltssmstate -f dlup -f rx -f tx \
   -f tx -f rx -f cfg -f ko \
-  ../../out/de5/synthesis/altera_pcie_reconfig_driver.v
+  ../../out/de5/synthesis/altera_pcie_reconfig_driver_wrapper.v
 
 ./importbvi.py -o ALTERA_XCVR_RECONFIG_WRAPPER.bsv -I XcvrReconfigWrap -P XcvrReconfigWrap \
 	-c mgmt_clk_clk -r mgmt_rst_reset \
       -f reconfig_mgmt -f mgmt \
-      ../../out/de5/synthesis/alt_xcvr_reconfig.v
+      ../../out/de5/synthesis/alt_xcvr_reconfig_wrapper.v
 
 #./importbvi.py -o ALTERA_PCIE_ED_WRAPPER.bsv -I PcieEdWrap -P PcieEdWrap \
 #	-c coreclkout_hip -c pld_clk_hip \

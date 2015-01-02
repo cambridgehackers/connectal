@@ -48,6 +48,8 @@ argparser.add_argument(      '--contentid', help='Specify 64-bit contentid for P
 argparser.add_argument('-I', '--cinclude', help='Specify C++ include directories', default=[], action='append')
 argparser.add_argument('-V', '--verilog', default=[], help='Additional verilog sources', action='append')
 argparser.add_argument('--xci', default=[], help='Additional IP sources', action='append')
+argparser.add_argument('--qip', default=[], help='Additional QIP sources', action='append')
+argparser.add_argument('--qsf', default=[], help='Altera Quartus settings', action='append')
 argparser.add_argument('-C', '--constraint', help='Additional constraint files', action='append')
 argparser.add_argument('-M', '--make', help='Run make on the specified targets', action='append')
 argparser.add_argument('-D', '--bsvdefine', default=[], help='BSV define', action='append')
@@ -105,7 +107,7 @@ fpgamakeRuleTemplate='''
 FPGAMAKE=$(CONNECTALDIR)/../fpgamake/fpgamake
 fpgamake.mk: $(vfile) Makefile prepare_bin_target
 	$(Q)mkdir -p hw
-	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk --board=%(boardname)s --part=%(partname)s %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s -t $(MKTOP) %(cachedir)s -b hw/mkTop.bit verilog $(CONNECTALDIR)/verilog %(verilog)s
+	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk --board=%(boardname)s --part=%(partname)s %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s %(qsf)s -t $(MKTOP) %(cachedir)s -b hw/mkTop.bit verilog $(CONNECTALDIR)/verilog %(verilog)s
 
 hw/mkTop.bit: fpgamake.mk prepare_bin_target
 	$(Q)make -f fpgamake.mk
@@ -287,9 +289,13 @@ if __name__=='__main__':
     options.verilog.append(os.path.join(connectaldir, 'verilog'))
 
     if 'ALTERA' in bsvdefines:
-        options.constraint.append(os.path.join(connectaldir, 'constraints/altera/%s.sdc' % boardname))
+        fpga_vendor = 'altera'
+        suffix = 'sdc'
     elif 'XILINX' in bsvdefines:
-        options.constraint.append(os.path.join(connectaldir, 'constraints/xilinx/%s.xdc' % boardname))
+        fpga_vendor = 'xilinx'
+        suffix = 'xdc'
+
+    options.constraint.append(os.path.join(connectaldir, 'constraints/', '%s/%s.%s' % (fpga_vendor, boardname, suffix)))
 
     if noisyFlag:
         pprint.pprint(options.__dict__)
@@ -379,6 +385,7 @@ if __name__=='__main__':
 					 'floorplan': os.path.abspath(options.floorplan) if options.floorplan else '',
 					 'xdc': ' '.join(['--constraint=%s' % os.path.abspath(xdc) for xdc in options.constraint]),
 					 'xci': ' '.join(['--xci=%s' % os.path.abspath(xci) for xci in options.xci]),
+					 'qsf': ' '.join(['--qsf=%s' % os.path.abspath(qsf) for qsf in options.qsf]),
 					 'sourceTcl': ' '.join(['--tcl=%s' % os.path.abspath(tcl) for tcl in options.tcl]),
                                          'verilog': ' '.join([os.path.abspath(f) for f in options.verilog]),
 					 'cachedir': '--cachedir=%s' % os.path.abspath(options.cachedir) if options.cachedir else ''
@@ -388,7 +395,8 @@ if __name__=='__main__':
                                    'bsvpath': ':'.join(list(set([os.path.dirname(os.path.abspath(bsvfile)) for bsvfile in options.bsvfile])
                                                             | set([os.path.join(connectaldir, 'bsv')])
                                                             | set([os.path.join(connectaldir, 'lib/bsv')])
-                                                            | set([os.path.join(connectaldir, 'generated/xilinx')]))),
+                                                            | set([os.path.join(connectaldir, 'generated/xilinx')])
+                                                            | set([os.path.join(connectaldir, 'generated/altera')]))),
                                    'bsvdefines': util.foldl((lambda e,a: e+' -D '+a), '', bsvdefines),
                                    'boardname': boardname,
                                    'OS': options.os,

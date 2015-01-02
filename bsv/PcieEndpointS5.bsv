@@ -55,6 +55,8 @@ interface PcieEndpointS5#(numeric type lanes);
    interface Reset epReset125;
    interface Clock epClock250;
    interface Reset epReset250;
+   interface Clock epDerivedClock;
+   interface Reset epDerivedReset;
 endinterface
 
 typedef struct {
@@ -76,7 +78,7 @@ typedef 8 PcieLanes;
 typedef 8 NumLeds;
 `endif
 
-(* synthesize *)
+//(* synthesize *)
 module mkPcieEndpointS5(PcieEndpointS5#(PcieLanes));
 
    PCIEParams params = defaultValue;
@@ -95,38 +97,6 @@ module mkPcieEndpointS5(PcieEndpointS5#(PcieLanes));
 
    FIFOF#(AvalonStTx#(16)) fAvalonStTx <- mkBypassFIFOF(clocked_by pcie_ep.coreclkout_hip, reset_by noReset);
    FIFOF#(AvalonStRx#(16)) fAvalonStRx <- mkBypassFIFOF(clocked_by pcie_ep.coreclkout_hip, reset_by noReset);
-
-   // The PCIE endpoint is processing TLPData#(16)s at 125MHz.  The
-   // AXI bridge is accepting TLPData#(16)s at 125 MHz. For gen1 and
-   // gen2, there is no need for gearbox conversion.
-   // coreclkout_hip depends on link width, data rate and width of APP/TL interface
-   // Link Width  |  Link Rate  |   Avalon Interface Width  |  coreclkout_hip
-   //     x8            gen1                128 bit               125 Mhz
-   //     x8            gen2                128 bit               250 Mhz
-   //     x8            gen3                256 bit               250 Mhz
-   Server#(TLPData#(16), TLPData#(16)) tlp = (interface Server;
-      interface Put request;
-         method Action put(TLPData#(16) data);
-            fAvalonStTx.enq(AvalonStTx {
-               eop: pack(data.eof),
-               sop: pack(data.sof),
-               be:  pack(data.be),
-               data: pack(data.data)
-            });
-         endmethod
-      endinterface
-      interface Get response;
-         method ActionValue#(TLPData#(16)) get();
-            let info <- toGet(fAvalonStRx).get;
-            TLPData#(16) retval = defaultValue;
-            retval.sof = (info.sop == 1);
-            retval.eof = (info.eop == 1);
-            retval.be = info.be;
-            retval.data = info.data;
-            return retval;
-         endmethod
-      endinterface
-   endinterface);
 
    let txready = (pcie_ep.tx_st.ready != 0 && fAvalonStTx.notEmpty);
 
@@ -201,6 +171,49 @@ module mkPcieEndpointS5(PcieEndpointS5#(PcieLanes));
          endaction
       endmethod
    endinterface
+
+   // The PCIE endpoint is processing TLPData#(16)s at 125MHz.  The
+   // AXI bridge is accepting TLPData#(16)s at 125 MHz. For gen1 and
+   // gen2, there is no need for gearbox conversion.
+   // coreclkout_hip depends on link width, data rate and width of APP/TL interface
+   // Link Width  |  Link Rate  |   Avalon Interface Width  |  coreclkout_hip
+   //     x8            gen1                128 bit               125 Mhz
+   //     x8            gen2                128 bit               250 Mhz
+   //     x8            gen3                256 bit               250 Mhz
+   interface Server tlp;
+     // #(TLPData#(16), TLPData#(16)) tlp = (interface Server;
+      interface Put request;
+         method Action put(TLPData#(16) data);
+            fAvalonStTx.enq(AvalonStTx {
+               eop: pack(data.eof),
+               sop: pack(data.sof),
+               be:  pack(data.be),
+               data: pack(data.data)
+            });
+         endmethod
+      endinterface
+      interface Get response;
+         method ActionValue#(TLPData#(16)) get();
+            let info <- toGet(fAvalonStRx).get;
+            TLPData#(16) retval = defaultValue;
+            retval.sof = (info.sop == 1);
+            retval.eof = (info.eop == 1);
+            retval.be = info.be;
+            retval.data = info.data;
+            return retval;
+         endmethod
+      endinterface
+   endinterface
+
+   //FIXME: verify epClock250 is needed.
+   interface Clock epClock250 = pcie_ep.coreclkout_hip;
+   interface Clock epReset250 = hip_rs.app_rstn;
+   interface Clock epClock125 = pcie_ep.coreclkout_hip;
+   interface Clock epReset125 = hip_rs.app_rstn;
+
+   //FIXME: verify derivedClock value
+   interface Clock epDerivedClock = pcie_ep.coreclkout_hip;
+   interface Reset epDerivedReset = hip_rs.app_rstn;
 
 endmodule: mkPcieEndpointS5
 

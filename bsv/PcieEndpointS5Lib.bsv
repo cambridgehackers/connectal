@@ -328,7 +328,7 @@ interface PcieS5Wrap#(numeric type address_width, numeric type data_width, numer
    interface Clock coreclkout_hip;
 endinterface
 
-(* synthesize *)
+//(* synthesize *)
 module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_perst, Reset clk_50_rst_n)(PcieS5Wrap#(12, 32, 128));
 
    PcieWrap         pcie     <- mkPcieWrap(clk_100Mhz, npor, pin_perst, clk_50_rst_n);

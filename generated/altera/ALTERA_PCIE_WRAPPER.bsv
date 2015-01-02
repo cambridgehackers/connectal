@@ -105,7 +105,7 @@
    sim
    -f
    test_in
-   ../../out/de5/synthesis/altera_pcie_sv_hip_ast.v
+   ../../out/de5/synthesis/altera_pcie_sv_hip_ast_wrapper.v
 */
 
 import Clocks::*;
@@ -545,7 +545,7 @@ interface PcieWrap;
     interface PciewrapTxm     txm;
     interface PciewrapTxs     txs;
 endinterface
-import "BVI" altera_pcie_sv_hip_ast =
+import "BVI" altera_pcie_sv_hip_ast_wrapper =
 module mkPcieWrap#(Clock refclk, Reset npor, Reset pin_perst, Reset refclk_reset)(PcieWrap);
     default_clock clk();
     default_reset rst();

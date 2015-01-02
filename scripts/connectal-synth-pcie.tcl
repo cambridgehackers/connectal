@@ -91,8 +91,7 @@ if $need_altera_pcie {
 		lappend component_parameters --component-parameter=$item=$val
 	}
 
-	puts $component_parameters
-
+    set connectal_dut "altera_pcie_sv_hip_ast_wrapper"
     exec -ignorestderr -- ip-generate --project-directory=$ipdir/$boardname        \
             --output-directory=$ipdir/$boardname/synthesis                         \
             --file-set=QUARTUS_SYNTH                                               \
@@ -108,7 +107,8 @@ if $need_altera_pcie {
             --system-info=DEVICE_SPEEDGRADE=2_H2                                   \
             --language=VERILOG                                                     \
             {*}$component_parameters \
-            --component-name=altera_pcie_sv_hip_ast
+            --component-name=altera_pcie_sv_hip_ast \
+            --output-name=${connectal_dut}
 
 
  	set altera_xcvr_reconfig_config [ dict create ]
@@ -120,6 +120,7 @@ if $need_altera_pcie {
 		lappend component_parameters --component-parameter=$item=$val
 	}
 
+    set connectal_dut "alt_xcvr_reconfig_wrapper"
     exec -ignorestderr -- ip-generate --project-directory=$ipdir/$boardname        \
             --output-directory=$ipdir/$boardname/synthesis                         \
             --file-set=QUARTUS_SYNTH                                               \
@@ -135,9 +136,10 @@ if $need_altera_pcie {
             --system-info=DEVICE_SPEEDGRADE=2_H2                                   \
             --language=VERILOG                                                     \
             {*}$component_parameters \
-            --component-name=alt_xcvr_reconfig
+            --component-name=alt_xcvr_reconfig \
+            --output-name=${connectal_dut}
 
-    set connectal_dut "altera_pcie_reconfig_driver"
+    set connectal_dut "altera_pcie_reconfig_driver_wrapper"
     exec -ignorestderr -- ip-generate --project-directory=$ipdir/$boardname        \
             --output-directory=$ipdir/$boardname/synthesis                         \
             --file-set=QUARTUS_SYNTH                                               \
@@ -152,6 +154,7 @@ if $need_altera_pcie {
             --system-info=DEVICE=$partname                                         \
             --system-info=DEVICE_SPEEDGRADE=2_H2                                   \
             --language=VERILOG                                                     \
-            --component-name=altera_pcie_reconfig_driver
+            --component-name=altera_pcie_reconfig_driver \
+            --output-name=${connectal_dut}
 }
 

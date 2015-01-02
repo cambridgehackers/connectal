@@ -1,6 +1,6 @@
 {
     "options": {
-        "bsvdefines" : ["ALTERA", "StratixV", "PCIE", "PcieHostTypeIF", "PhysAddrWidth=40"],
+        "bsvdefines" : ["ALTERA", "StratixV", "PCIE", "PCIE_NO_BSCAN", "PcieHostTypeIF", "PhysAddrWidth=40"],
         "os" : "ubuntu",
         "partname" : "5SGXEA7N2F45C2",
         "needs_pcie_s5_gen2x8" : "True",
