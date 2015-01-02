@@ -196,6 +196,18 @@ def pktClassification(tlpsof, tlpeof, tlpbe, pktformat, pkttype, portnum, addres
 classCounts = {}
 last_seqno = mpz(-1)
 
+def interfaceId(interfaceNumber):
+    if (interfaceNumber >= 0 and interfaceNumber < len(fooMap)):
+        return fooMap[interfaceNumber]
+    else:
+        return '%x' % interfaceNumber
+
+def interfaceName(interfaceNumber):
+    if (interfaceNumber >= 0 and interfaceNumber < len(fooMap)):
+        return interfaceMap[fooMap[interfaceNumber]]
+    else:
+        return '%x' % interfaceNumber
+
 def print_tlp(tlpdata, f=None):
     global last_seqno
     def segment(i):
@@ -313,13 +325,13 @@ def print_tlp(tlpdata, f=None):
         offset = address - interfaceNumber * 0x10000
         methodNumber = offset / 0x100
         #print 'AA', "%6x" % address, "%2x" % interfaceNumber, "%2x" % methodNumber
-        t = interfaceMap[fooMap[interfaceNumber]]
+        t = interfaceName(interfaceNumber)
         if methodNumber == 0:
             smeth = '/dir'
         elif methodNumber <= len(t):
             offset = offset - methodNumber * 0x100
             smeth = '/'+t[methodNumber-1]
-        smeth = ('%02d' % interfaceNumber) + '/' + fooMap[interfaceNumber] + smeth + '/' + "%x" % (offset/4)
+        smeth = ('%02d' % interfaceNumber) + '/' + interfaceId(interfaceNumber) + smeth + '/' + "%x" % (offset/4)
     print dir, '%10d %10d %s' % (seqno, delta, headerstr), smeth
     #print '                      ' + tlpdata[0:8] + ' ' + tlpdata[8:]
     if len(tlpdata) != 48:
