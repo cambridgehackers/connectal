@@ -30,7 +30,8 @@ if $need_altera_pcie {
 	dict set altera_pcie_config rxbuffer_rxreq_hwtcl                 "Low"
 	dict set altera_pcie_config pll_refclk_freq_hwtcl                "100 MHz"
 	dict set altera_pcie_config set_pld_clk_x1_625MHz_hwtcl          0
-	dict set altera_pcie_config use_rx_st_be_hwtcl                   0
+    # use_rx_be_hwtcl is a deprecated signal
+	dict set altera_pcie_config use_rx_st_be_hwtcl                   1
 	dict set altera_pcie_config use_ast_parity                       0
 	dict set altera_pcie_config multiple_packets_per_cycle_hwtcl     0
 	dict set altera_pcie_config in_cvp_mode_hwtcl                    0

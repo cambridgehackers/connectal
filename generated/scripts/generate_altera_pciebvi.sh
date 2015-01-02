@@ -19,18 +19,18 @@ set -e
     #-f rxdata -f rxpolarity -f rxdatak -f rxelecidle -f rxstatus -f rxvalid \
     #-f txdata -f tx_cred -f tx_out -f txcompl -f txdatak -f txdetectrx -f txelecidle -f txdeemph -f txmargin -f txswing \
 
-#./importbvi.py -o ALTERA_PCIE_RECONFIG_DRIVER_WRAPPER.bsv -I PcieReconfigWrap -P PcieReconfigWrap \
-#  -c reconfig_xcvr_clk -c pld_clk -r reconfig_xcvr_rst \
-#  -f reconfig_mgmt -f reconfig_b -f current -f derr -f dlup -f ev128ns -f ev1us -f hotrst \
-#  -f int_s -f l2 -f lane -f ltssmstate -f dlup -f rx -f tx \
-#  -f tx -f rx -f cfg -f ko \
-#  ../../out/de5/synthesis/altera_pcie_reconfig_driver.v
-#
-#./importbvi.py -o ALTERA_XCVR_RECONFIG_WRAPPER.bsv -I XcvrReconfigWrap -P XcvrReconfigWrap \
-#	-c mgmt_clk_clk -r mgmt_rst_reset \
-#      -f reconfig_mgmt -f mgmt \
-#      ../../out/de5/synthesis/alt_xcvr_reconfig.v
-#
+./importbvi.py -o ALTERA_PCIE_RECONFIG_DRIVER_WRAPPER.bsv -I PcieReconfigWrap -P PcieReconfigWrap \
+  -c reconfig_xcvr_clk -c pld_clk -r reconfig_xcvr_rst \
+  -f reconfig_mgmt -f reconfig_b -f current -f derr -f dlup -f ev128ns -f ev1us -f hotrst \
+  -f int_s -f l2 -f lane -f ltssmstate -f dlup -f rx -f tx \
+  -f tx -f rx -f cfg -f ko \
+  ../../out/de5/synthesis/altera_pcie_reconfig_driver.v
+
+./importbvi.py -o ALTERA_XCVR_RECONFIG_WRAPPER.bsv -I XcvrReconfigWrap -P XcvrReconfigWrap \
+	-c mgmt_clk_clk -r mgmt_rst_reset \
+      -f reconfig_mgmt -f mgmt \
+      ../../out/de5/synthesis/alt_xcvr_reconfig.v
+
 #./importbvi.py -o ALTERA_PCIE_ED_WRAPPER.bsv -I PcieEdWrap -P PcieEdWrap \
 #	-c coreclkout_hip -c pld_clk_hip \
 #    -f serdes -f reset -f pld -f dl -f ev128 -f ev1 -f hotrst -f l2 -f current \
