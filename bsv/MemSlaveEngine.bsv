@@ -49,9 +49,11 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
             Log#(busWidthBytes,beatShift),
 	     Add#(aaa, 32, buswidth),
 	     Add#(bbb, buswidth, 256),
-	     Add#(ccc, TMul#(8, busWidthWords), 64),
+	     Add#(bbbb, buswidth, 1024),
+	     Add#(ccc, TMul#(8, busWidthWords), 256),
 	     Add#(ddd, TMul#(32, busWidthWords), 256),
 	     Add#(eee, busWidthWords, 8),
+      	     Add#(fff, busWidthWords, 32),
 	     Add#(1, a__, busWidthWords),
 	     Add#(busWidthWords, b__, 4),
 	     Add#(c__, busWidthWords, 16)
@@ -72,10 +74,10 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
     // default configuration for MIMO is for guarded enq() and deq().
     // However, the implicit guard only checks for space for 1 element for enq(), and availability of 1 element for deq().
     MIMOConfiguration mimoCfg = defaultValue;
-   MIFO#(4,busWidthWords,16,Bit#(32)) completionMimo <- mkMIFO();
-   MIFO#(4,busWidthWords,16,TLPTag) completionTagMimo <- mkMIFO();
+    MIMO#(4,busWidthWords,32,Bit#(32)) completionMimo <- mkMIMO(mimoCfg);
+    MIMO#(4,busWidthWords,32,TLPTag) completionTagMimo <- mkMIMO(mimoCfg);
 
-    MIMO#(busWidthWords,4,16,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
+    MIMO#(busWidthWords,4,32,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
     Reg#(Bit#(10)) writeBurstCount <- mkReg(0);
    FIFO#(Bit#(10)) writeBurstCountFifo <- mkFIFO();
     Reg#(TLPLength)  writeDwCount <- mkReg(0); // how many 4 byte (double) words to send
@@ -212,8 +214,8 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	 if (tlp.eof) begin
 	    count = truncate(unpack(wordCountReg));
 	 end
-	 if (completionMimo.enqReady()
-	    && completionTagMimo.enqReady())
+	 if (completionMimo.enqReadyN(count)
+	    && completionTagMimo.enqReadyN(count))
 	    begin
 	       wordCount = wordCountReg - extend(pack(count));
 	       completionMimo.enq(count, vec);
@@ -381,8 +383,8 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 							   && completionTagMimo.deqReady());
 	      let data_v = completionMimo.first;
 	      let tag_v = completionTagMimo.first;
-	      completionMimo.deq();
-	      completionTagMimo.deq();
+	      completionMimo.deq(fromInteger(valueOf(busWidthWords)));
+	      completionTagMimo.deq(fromInteger(valueOf(busWidthWords)));
               Bit#(buswidth) v = 0;
 	      for (Integer i = 0; i < valueOf(busWidthWords); i = i+1)
 		 v[(i+1)*32-1:i*32] = byteSwap(data_v[i]);
