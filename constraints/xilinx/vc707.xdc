@@ -161,8 +161,8 @@ set_property LOC RAMB36_X14Y19 [get_cells {*/pcie_7x_v2_1_i/pcie_top_i/pcie_7x_i
 ######################################################################################################
 # TIMING CONSTRAINTS
 ######################################################################################################
-create_clock -name bscan_refclk_user -period 20 [get_pins */*bscanRequest_bscan_bscan/TCK]
-create_clock -name bscan_refclk -period 20 [get_pins pciehost/traceif/*_bscan/TCK]
+ 
+create_clock -name bscan_refclk -period 20 [get_pins host_pciehost_bscan_bscan/TCK]
 create_clock -name pci_refclk -period 10 [get_pins *pci_clk_100mhz_buf/O]
 
 ## no longer needed?
