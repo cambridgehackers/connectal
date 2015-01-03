@@ -182,7 +182,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    Reg#(TLPTag) lastTag <- mkReg(0);
    FIFOF#(TLPData#(16)) tlpDecodeFifo <- mkFIFOF();
    Reg#(TLPLength) wordCountReg <- mkReg(0);
-   FIFO#(TimestampedTlpData) tlpTraceFifo <- mkFIFO();
+   FIFOF#(TimestampedTlpData) tlpTraceFifo <- mkSizedFIFOF(8);
    Reg#(Bit#(6)) tlpAgeReg <- mkReg(0);
    Reg#(Bool) tlpAgeStartReg <- mkReg(False);
    Reg#(Bit#(32)) cycles <- mkReg(0);
@@ -246,6 +246,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	 let ttd = TimestampedTlpData { timestamp: cycles, source: 38, tlp: tlp };
 	 if (tlpTraceFifo.notFull())
 	    tlpTraceFifo.enq(ttd);
+	 tlpAge = 0;
 	 //handled = True;
       end
       if (handled) begin
@@ -402,6 +403,6 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
     endinterface: slave
    method Bool tlpOutFifoNotEmpty() = tlpOutFifo.notEmpty;
    interface Reg use4dw = use4dwReg;
-   interface Get trace = fifoToGet(tlpTraceFifo);
+   interface Get trace = toGet(tlpTraceFifo);
 endmodule: mkMemSlaveEngine
 
