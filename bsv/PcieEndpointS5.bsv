@@ -23,8 +23,8 @@ import PcieEndpointS5Lib ::*;
 
 (* always_ready, always_enabled *)
 interface PciewrapPci_exp#(numeric type lanes);
-   method Bit#(lanes) txout();
-(* prefix="", result="rxin" *)   method Action rxin(Bit#(lanes) rxin);
+(* prefix="", result="tx_p" *) method Bit#(lanes) tx_p();
+(* prefix="", result="rx_p" *) method Action rx_p(Bit#(lanes) rx_p);
 endinterface
 
 (* always_ready, always_enabled *)
@@ -75,18 +75,15 @@ typedef struct {
 
 `ifdef BOARD_de5
 typedef 8 PcieLanes;
-typedef 8 NumLeds;
+typedef 4 NumLeds;
 `endif
 
 //(* synthesize *)
-module mkPcieEndpointS5(PcieEndpointS5#(PcieLanes));
+module mkPcieEndpointS5#(Clock clk_100, Clock clk_50, Reset npor)(PcieEndpointS5#(PcieLanes));
 
    PCIEParams params = defaultValue;
 
-   Clock clk_100 <- exposeCurrentClock();
-   Clock clk_50 <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
-   Reset npor <- exposeCurrentReset();
    Reset pin_perst <- exposeCurrentReset();
    Reset clk_50_rst_n <- exposeCurrentReset();
 
@@ -155,10 +152,10 @@ module mkPcieEndpointS5(PcieEndpointS5#(PcieLanes));
 
    interface PciewrapPci_exp pcie;
       Bit#(PcieLanes) vt = {pcie_ep.tx.out7, pcie_ep.tx.out6, pcie_ep.tx.out5, pcie_ep.tx.out4, pcie_ep.tx.out3, pcie_ep.tx.out2, pcie_ep.tx.out1, pcie_ep.tx.out0};
-      method Bit#(PcieLanes) txout();
+      method Bit#(PcieLanes) tx_p();
          return vt;
       endmethod
-      method Action rxin(Bit#(PcieLanes) v);
+      method Action rx_p(Bit#(PcieLanes) v);
          action
             pcie_ep.rx.in0(v[0]);
             pcie_ep.rx.in1(v[1]);

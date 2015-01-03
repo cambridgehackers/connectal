@@ -53,7 +53,7 @@ import "BDPI" function Action put_tlp(TLPData#(16) d);
 import "BDPI" function ActionValue#(TLPData#(16)) get_tlp();
 import "BDPI" function Bool can_put_tlp();
 import "BDPI" function Bool can_get_tlp();
-		 
+
 //(* synthesize *) commented out so that the guards in MemServer aren't destroyed (mdk)
 module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    Clock epClock125 <- exposeCurrentClock();
@@ -211,9 +211,9 @@ endmodule
 
 `ifdef ALTERA
 (* no_default_clock, no_default_reset *)
-module mkAlteraPcieHostTop #(Clock pci_sys_clk_p, Reset pci_sys_reset_n)(PcieHostTop);
+module mkAlteraPcieHostTop #(Clock pci_sys_clk_p, Clock sys_clk_p, Reset pci_sys_reset_n)(PcieHostTop);
 
-   PcieEndpointS5#(PcieLanes) ep7 <- mkPcieEndpointS5( clocked_by pci_sys_clk_p, reset_by pci_sys_reset_n);
+   PcieEndpointS5#(PcieLanes) ep7 <- mkPcieEndpointS5(pci_sys_clk_p, sys_clk_p, pci_sys_reset_n, clocked_by pci_sys_clk_p, reset_by pci_sys_reset_n);
 
    Clock epClock125 = ep7.epClock125;
    Reset epReset125 = ep7.epReset125;
@@ -259,7 +259,7 @@ endmodule
 `elsif ALTERA
    //(* synthesize, no_default_clock, no_default_reset *)
    (* no_default_clock, no_default_reset *)
-   module mkPcieHostTop #(Clock pci_sys_clk_p, Reset pci_sys_reset_n)(PcieHostTop);
-      PcieHostTop _a <- mkAlteraPcieHostTop(pci_sys_clk_p, pci_sys_reset_n); return _a;
+   module mkPcieHostTop #(Clock pci_sys_clk_p, Clock sys_clk_p, Reset pci_sys_reset_n)(PcieHostTop);
+      PcieHostTop _a <- mkAlteraPcieHostTop(pci_sys_clk_p, sys_clk_p, pci_sys_reset_n); return _a;
    endmodule
 `endif // NOT ALTERA

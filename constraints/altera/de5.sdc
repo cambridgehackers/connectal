@@ -3,7 +3,8 @@
 # Create Clock
 #**************************************************************
 
-create_clock -period 20 [get_ports clk_pin]
+create_clock -period 10 [get_ports pcie_refclk_p]
+create_clock -period 20 [get_ports osc_50_b3b]
 
 
 
