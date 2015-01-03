@@ -184,6 +184,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    Reg#(TLPLength) wordCountReg <- mkReg(0);
    FIFO#(TimestampedTlpData) tlpTraceFifo <- mkFIFO();
    Reg#(Bit#(6)) tlpAgeReg <- mkReg(0);
+   Reg#(Bool) tlpAgeStartReg <- mkReg(False);
    Reg#(Bit#(32)) cycles <- mkReg(0);
    rule count;
       cycles <= cycles + 1;
@@ -197,6 +198,9 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    rule handleTlpRule;
       let tlp = tlpDecodeFifo.first;
       let tlpAge = tlpAgeReg + 1;
+      if (tlpAgeStartReg) // first cycle for this TLP
+	 tlpAge = 1;
+      Bool tlpAgeStart = False;
       Bool handled = False;
       TLPMemoryIO3DWHeader h = unpack(tlp.data);
       hitReg <= tlp.hit;
@@ -239,15 +243,18 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       wordCountReg <= wordCount;
       //$display("tlpIn handled=%d tlp=%h\n", handled, tlp);
       if (tlpAge == 15 && !handled) begin
-	 let ttd = TimestampedTlpData { timestamp: cycles, source: 48, tlp: tlp };
-	 tlpTraceFifo.enq(ttd);
-	 handled = True;
+	 let ttd = TimestampedTlpData { timestamp: cycles, source: 38, tlp: tlp };
+	 if (tlpTraceFifo.notFull())
+	    tlpTraceFifo.enq(ttd);
+	 //handled = True;
       end
       if (handled) begin
 	 tlpDecodeFifo.deq();
 	 tlpAge = 0;
+	 tlpAgeStart = True;
       end
       tlpAgeReg <= tlpAge;
+      tlpAgeStartReg <= tlpAgeStart;
    endrule
 
    FIFO#(PhysMemRequest#(40)) readReqFifo <- mkFIFO();
