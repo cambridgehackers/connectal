@@ -53,7 +53,7 @@ import "BDPI" function Action put_tlp(TLPData#(16) d);
 import "BDPI" function ActionValue#(TLPData#(16)) get_tlp();
 import "BDPI" function Bool can_put_tlp();
 import "BDPI" function Bool can_get_tlp();
-		 
+
 (* synthesize *)
 module mkMemSlaveEngineSynth#(PciId my_id)(MemSlaveEngine#(DataBusWidth));
    let memSlaveEngine <- mkMemSlaveEngine(my_id);
