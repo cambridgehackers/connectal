@@ -55,7 +55,7 @@ import HostInterface    :: *;
 typedef `PinType PinType;
 
 `ifndef BSIM
-(* no_default_clock, no_default_reset *)
+(* synthesize, no_default_clock, no_default_reset *)
 `endif
 `ifdef BSIM
 module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n) (PcieTop#(PinType));
@@ -64,8 +64,9 @@ module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Cl
 module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n) (PcieTop#(PinType));
    PcieHostTop host <- mkPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n);
 `elsif ALTERA
-module mkPcieTop #(Clock pci_sys_clk_p, Reset pci_sys_reset_n) (PcieTop#(PinType));
-   PcieHostTop host <- mkPcieHostTop(pci_sys_clk_p, pci_sys_reset_n);
+(* clock_prefix="", reset_prefix="" *)
+module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (PcieTop#(PinType));
+   PcieHostTop host <- mkPcieHostTop(pcie_refclk_p, osc_50_b3b, pcie_perst_n);
 `endif
 
 `ifdef IMPORT_HOSTIF
