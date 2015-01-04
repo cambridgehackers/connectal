@@ -242,7 +242,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       end
       wordCountReg <= wordCount;
       //$display("tlpIn handled=%d tlp=%h\n", handled, tlp);
-      if (tlpAge == 15 && !handled) begin
+      if (False && tlpAge == 15 && !handled) begin
 	 let ttd = TimestampedTlpData { timestamp: cycles, source: 38, tlp: tlp };
 	 if (tlpTraceFifo.notFull())
 	    tlpTraceFifo.enq(ttd);
