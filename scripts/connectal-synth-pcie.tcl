@@ -23,12 +23,8 @@ proc create_pcie_sv_hip_ast {} {
     global boardname
     set pcieversion {3.0}
     set maxlinkwidth {x8}
-    if {$boardname == {de5}} {
-        puts $boardname
-        set maxlinkwidth {x4}
-    }
     set core_name {altera_pcie_sv_hip_ast}
-    set core_version {1.0}
+    set core_version {14.0}
     set ip_name {altera_pcie_sv_hip_ast_wrapper}
 
     set vendor_id {0x1172}
@@ -36,7 +32,7 @@ proc create_pcie_sv_hip_ast {} {
     set class_code {0xff0000}
 
 	set params [ dict create ]
-	dict set params lane_mask_hwtcl                      "x8"
+	dict set params lane_mask_hwtcl                      $maxlinkwidth
 	dict set params gen123_lane_rate_mode_hwtcl          "Gen2 (5.0 Gbps)"
 	dict set params port_type_hwtcl                      "Native endpoint"
 	dict set params pcie_spec_version_hwtcl              $pcieversion
@@ -108,25 +104,9 @@ proc create_pcie_sv_hip_ast {} {
     fpgamake_altera_ipcore $core_name $core_version $ip_name $component_parameters
 }
 
-proc create_xcvr_reconfig {} {
-    set core_name {alt_xcvr_reconfig}
-    set core_version {1.0}
-    set ip_name {alt_xcvr_reconfig_wrapper}
-
- 	set params [ dict create ]
-	dict set params number_of_reconfig_interfaces 10
-
-	set component_parameters {}
-	foreach item [dict keys $params] {
-		set val [dict get $params $item]
-		lappend component_parameters --component-parameter=$item=$val
-	}
-    fpgamake_altera_ipcore $core_name $core_version $ip_name $component_parameters
-}
-
 proc create_pcie_reconfig {} {
     set core_name {altera_pcie_reconfig_driver}
-    set core_version {1.0}
+    set core_version {14.0}
     set ip_name {altera_pcie_reconfig_driver_wrapper}
 
     set params [ dict create ]
@@ -142,7 +122,7 @@ proc create_pcie_reconfig {} {
 
 if $need_altera_pcie {
     create_pcie_sv_hip_ast
-    create_xcvr_reconfig
+    create_xcvr_reconfig alt_xcvr_reconfig 14.0 alt_xcvr_reconfig_wrapper 10
     create_pcie_reconfig
 }
 
