@@ -111,7 +111,11 @@ fpgamake.mk: $(vfile) Makefile prepare_bin_target
 
 hw/mkTop.bit: fpgamake.mk prepare_bin_target
 	$(Q)make -f fpgamake.mk
+ifeq ($(XILINX),"")
 	$(Q)cp -f Impl/*/*.rpt bin
+else ifeq ($(ALTERA),"")
+	$(Q)echo "copy report files"
+endif
 '''
 
 makefileTemplate='''
