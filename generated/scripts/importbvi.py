@@ -403,7 +403,7 @@ def regroup_items(masterlist):
             titem = fixname(litem)
             #m = re.search('(.+?)(\d+)_(.+)', litem)
             m = re.search('(.+?)(\d+)(_?)(.+)', titem)
-            print('OA', titem)
+            #print('OA', titem)
             separator = '_'
             indexname = ''
             skipParse = False;
@@ -421,7 +421,7 @@ def regroup_items(masterlist):
                             separator = ''
                         m = None
                         skipParse = True
-                        print('OM', titem, groupname, fieldname, separator)
+                        #print('OM', titem, groupname, fieldname, separator)
                         break
             if m:
                 skipcheck = False
@@ -430,22 +430,22 @@ def regroup_items(masterlist):
                         skipcheck = True
                 if skipcheck:
                     newlist.append(item)
-                    print('OB', item.name)
+                    #print('OB', item.name)
                     continue
                 groupname = goback(m.group(1))
                 indexname = goback(m.group(2))
                 separator = goback(m.group(3))
                 fieldname = goback(m.group(4))
-                print('OO', item.name, [groupname, indexname, fieldname], file=sys.stderr)
+                #print('OO', item.name, [groupname, indexname, fieldname], file=sys.stderr)
             elif separator != '' and skipParse != True:
                 m = re.search('(.+?)_(.+)', litem)
                 if not m:
                     newlist.append(item)
-                    print('OD', item.name)
+                    #print('OD', item.name)
                     continue
                 if len(m.group(1)) == 1: # if only 1 character prefix, get more greedy
                     m = re.search('(.+)_(.+)', litem)
-                print('OJ', item.name, m.groups(), file=sys.stderr)
+                #print('OJ', item.name, m.groups(), file=sys.stderr)
                 fieldname = m.group(2)
                 groupname = m.group(1)
 
@@ -455,7 +455,7 @@ def regroup_items(masterlist):
                     skipcheck = True
             if skipcheck:
                 newlist.append(item)
-                print('OI', item.name, file=sys.stderr)
+                #print('OI', item.name, file=sys.stderr)
                 continue
             itemname = (groupname + indexname).lower()
             if itemname in ['event']:
@@ -466,10 +466,10 @@ def regroup_items(masterlist):
             if not commoninterfaces[interfacename].get(indexname):
                 commoninterfaces[interfacename][indexname] = []
                 t = PinType('interface', interfacename, itemname, groupname+indexname+separator)
-                print('OZ', interfacename, itemname, groupname+indexname+separator, file=sys.stderr)
+                #print('OZ', interfacename, itemname, groupname+indexname+separator, file=sys.stderr)
                 t.separator = separator
                 newlist.append(t)
-            print('OH', itemname, separator, file=sys.stderr)
+            #print('OH', itemname, separator, file=sys.stderr)
             foo = copy.copy(item)
             foo.origname = fieldname
             lfield = fieldname.lower()
@@ -565,7 +565,7 @@ def generate_instance(item, indent, prefix, clockedby_arg):
             return ''
         clockedby_name = ''
         for titem in baseitem:
-            print("BB", titem.mode, titem.type, titem.name)
+            #print("BB", titem.mode, titem.type, titem.name)
             if titem.mode == 'input' and titem.type == 'Clock':
                 clockedby_name = ' clocked_by (' + (item.origname+titem.name).lower() + ') reset_by (' + (item.origname+titem.name).lower() + '_reset)'
         templist = ''
