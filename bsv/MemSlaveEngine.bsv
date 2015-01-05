@@ -32,12 +32,10 @@ import Vector       :: *;
 import ClientServer :: *;
 import MemTypes     :: *;
 import Probe        :: *;
-import PcieTracer   :: *;
 
 interface MemSlaveEngine#(numeric type buswidth);
     interface Client#(TLPData#(16), TLPData#(16)) tlp;
     interface PhysMemSlave#(40,buswidth) slave;
-    interface Get#(TimestampedTlpData) trace;
     method Bool tlpOutFifoNotEmpty();
     interface Reg#(Bool) use4dw;
 endinterface: MemSlaveEngine
@@ -49,11 +47,9 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
             Log#(busWidthBytes,beatShift),
 	     Add#(aaa, 32, buswidth),
 	     Add#(bbb, buswidth, 256),
-	     Add#(bbbb, buswidth, 1024),
-	     Add#(ccc, TMul#(8, busWidthWords), 256),
+	     Add#(ccc, TMul#(8, busWidthWords), 64),
 	     Add#(ddd, TMul#(32, busWidthWords), 256),
 	     Add#(eee, busWidthWords, 8),
-      	     Add#(fff, busWidthWords, 32),
 	     Add#(1, a__, busWidthWords),
 	     Add#(busWidthWords, b__, 4),
 	     Add#(c__, busWidthWords, 16)
@@ -74,10 +70,10 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
     // default configuration for MIMO is for guarded enq() and deq().
     // However, the implicit guard only checks for space for 1 element for enq(), and availability of 1 element for deq().
     MIMOConfiguration mimoCfg = defaultValue;
-    MIMO#(4,busWidthWords,32,Bit#(32)) completionMimo <- mkMIMO(mimoCfg);
-    MIMO#(4,busWidthWords,32,TLPTag) completionTagMimo <- mkMIMO(mimoCfg);
+   MIFO#(4,busWidthWords,16,Bit#(32)) completionMimo <- mkMIFO();
+   MIFO#(4,busWidthWords,16,TLPTag) completionTagMimo <- mkMIFO();
 
-    MIMO#(busWidthWords,4,32,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
+    MIMO#(busWidthWords,4,16,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
     Reg#(Bit#(10)) writeBurstCount <- mkReg(0);
    FIFO#(Bit#(10)) writeBurstCountFifo <- mkFIFO();
     Reg#(TLPLength)  writeDwCount <- mkReg(0); // how many 4 byte (double) words to send
@@ -182,14 +178,6 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    Reg#(TLPTag) lastTag <- mkReg(0);
    FIFOF#(TLPData#(16)) tlpDecodeFifo <- mkFIFOF();
    Reg#(TLPLength) wordCountReg <- mkReg(0);
-   FIFOF#(TimestampedTlpData) tlpTraceFifo <- mkSizedFIFOF(8);
-   Reg#(Bit#(6)) tlpAgeReg <- mkReg(0);
-   Reg#(Bool) tlpAgeStartReg <- mkReg(False);
-   Reg#(Bit#(32)) cycles <- mkReg(0);
-   rule count;
-      cycles <= cycles + 1;
-   endrule
-
    rule tlpInRule;
       let tlp <- toGet(tlpInFifo).get();
       tlpDecodeFifo.enq(tlp);
@@ -197,10 +185,6 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 
    rule handleTlpRule;
       let tlp = tlpDecodeFifo.first;
-      let tlpAge = tlpAgeReg + 1;
-      if (tlpAgeStartReg) // first cycle for this TLP
-	 tlpAge = 1;
-      Bool tlpAgeStart = False;
       Bool handled = False;
       TLPMemoryIO3DWHeader h = unpack(tlp.data);
       hitReg <= tlp.hit;
@@ -214,13 +198,13 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	 // The MIMO implicit guard only checks for space to enqueue 1 element
 	 // so we explicitly check for the number of elements required
 	 // otherwise elements in the queue will be overwritten.
-	 UInt#(3) count = 4;
-	 if (tlp.eof) begin
-	    count = truncate(unpack(wordCountReg));
-	 end
-	 if (completionMimo.enqReadyN(count)
-	    && completionTagMimo.enqReadyN(count))
+	 if (completionMimo.enqReady()
+	    && completionTagMimo.enqReady())
 	    begin
+	       UInt#(3) count = 4;
+	       if (tlp.eof) begin
+		  count = truncate(unpack(wordCountReg));
+	       end
 	       wordCount = wordCountReg - extend(pack(count));
 	       completionMimo.enq(count, vec);
 	       Vector#(4, TLPTag) tagvec = replicate(lastTag);
@@ -242,20 +226,9 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       end
       wordCountReg <= wordCount;
       //$display("tlpIn handled=%d tlp=%h\n", handled, tlp);
-      if (False && tlpAge == 15 && !handled) begin
-	 let ttd = TimestampedTlpData { timestamp: cycles, source: 38, tlp: tlp };
-	 if (tlpTraceFifo.notFull())
-	    tlpTraceFifo.enq(ttd);
-	 tlpAge = 0;
-	 //handled = True;
-      end
       if (handled) begin
 	 tlpDecodeFifo.deq();
-	 tlpAge = 0;
-	 tlpAgeStart = True;
       end
-      tlpAgeReg <= tlpAge;
-      tlpAgeStartReg <= tlpAgeStart;
    endrule
 
    FIFO#(PhysMemRequest#(40)) readReqFifo <- mkFIFO();
@@ -391,8 +364,8 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 							   && completionTagMimo.deqReady());
 	      let data_v = completionMimo.first;
 	      let tag_v = completionTagMimo.first;
-	      completionMimo.deq(fromInteger(valueOf(busWidthWords)));
-	      completionTagMimo.deq(fromInteger(valueOf(busWidthWords)));
+	      completionMimo.deq();
+	      completionTagMimo.deq();
               Bit#(buswidth) v = 0;
 	      for (Integer i = 0; i < valueOf(busWidthWords); i = i+1)
 		 v[(i+1)*32-1:i*32] = byteSwap(data_v[i]);
@@ -403,6 +376,5 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
     endinterface: slave
    method Bool tlpOutFifoNotEmpty() = tlpOutFifo.notEmpty;
    interface Reg use4dw = use4dwReg;
-   interface Get trace = toGet(tlpTraceFifo);
 endmodule: mkMemSlaveEngine
 

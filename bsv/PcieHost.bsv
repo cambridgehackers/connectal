@@ -98,9 +98,6 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
                                  interface request = arbiter.outToBus;
                                  interface response = dispatcher.inFromBus;
                               endinterface));
-   if (valueOf(NumberOfMasters) > 0) begin
-      mkConnection(sEngine[0].trace, traceif.trace);
-   end
 
 `ifndef BSIM
 `ifndef PCIE_NO_BSCAN
