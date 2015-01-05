@@ -61,7 +61,7 @@ endinterface
 
 interface MemreadIndication;
    method Action started(Bit#(32) numWords);
-   method Action reportStateDbg(Bit#(32) streamRdCnt, Bit#(32) mismatchCount, Bit#(32) finished, Bit#(32) dataPipeNotEmpty);
+   method Action reportStateDbg(Bit#(32) reportType, Bit#(32) finished, Bit#(32) dataPipeNotEmpty);
    method Action readDone(Bit#(32) mismatchCount);
 endinterface
 
@@ -107,6 +107,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 let rangeConfig = RangeConfig { xbase: base, xlimit: limit, xstep: 1 };
 	 rangePipeIfcs[i].start(rangeConfig);
 	 $display("start %d, %d, %h", i, iterCnts[i], readOffset);
+	 finishedReg[i] <= False;
       endrule
       rule finish;
 	 $display("finish %d", i);
@@ -136,6 +137,15 @@ module mkMemread#(MemreadIndication indication) (Memread);
    PipeOut#(Vector#(NumEngineServers, Bit#(32))) mismatchCountsPipe <- mkJoinVector(id, map(toPipeOut, mismatchFifos));
    PipeOut#(Bit#(32)) mismatchCountPipe <- mkReducePipe(uncurry(add), mismatchCountsPipe);
    
+   FIFO#(Bit#(2)) reportStateFifo <- mkFIFO();
+   rule reportState;
+      let v <- toGet(reportStateFifo).get();
+	 Vector#(NumEngineServers, Bool) notEmpty = map(pipeOutNotEmpty, re.dataPipes);
+	 indication.reportStateDbg(extend(v),
+				   extend(pack(readVReg(finishedReg))),
+				   extend(pack(notEmpty)));
+   endrule
+
    rule indicate_finish;
       let mc <- toGet(mismatchCountPipe).get();
       mc = mc + mismatchCnt;
@@ -145,6 +155,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 mc = 0;
       end
       mismatchCnt <= mc;
+      reportStateFifo.enq(1);
       iterCnt <= iterCnt - 1;
    endrule
    
@@ -164,12 +175,10 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	    valuesToRead[i] <= truncate(chunk/4);
 	    finishedReg[i] <= False;
 	 end
+	 reportStateFifo.enq(0);
       endmethod
       method Action getStateDbg();
-	 Vector#(NumEngineServers, Bool) notEmpty = map(pipeOutNotEmpty, re.dataPipes);
-	 indication.reportStateDbg(0, 0,
-				   extend(pack(readVReg(finishedReg))),
-				   extend(pack(notEmpty)));
+	 reportStateFifo.enq(2);
       endmethod
    endinterface
 endmodule

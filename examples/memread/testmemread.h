@@ -94,8 +94,8 @@ public:
     fprintf(stderr, "rData(%08x): ", rDataCnt++);
     dump("", (char*)&v, sizeof(v));
   }
-  virtual void reportStateDbg(uint32_t streamRdCnt, uint32_t dataMismatch, uint32_t finished, uint32_t dataPipeNotEmpty){
-    fprintf(stderr, "Memread::reportStateDbg(%08x, %d, finished=%08x dataPipeNotEmpty=%08x)\n", streamRdCnt, dataMismatch, finished, dataPipeNotEmpty);
+  virtual void reportStateDbg(uint32_t reportTYpe, uint32_t finished, uint32_t dataPipeNotEmpty){
+    fprintf(stderr, "Memread::reportStateDbg(%08x, %d, finished=%08x dataPipeNotEmpty=%08x)\n", reportType, finished, dataPipeNotEmpty);
   }  
   MemreadIndication(int id) : MemreadIndicationWrapper(id){}
 };
@@ -108,7 +108,7 @@ void *debugWorker(void *ptr)
 {
   while (running) {
     device->getStateDbg();
-    sleep(10);
+    sleep(1);
   }
 }
 
