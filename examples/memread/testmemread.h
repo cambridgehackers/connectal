@@ -94,7 +94,7 @@ public:
     fprintf(stderr, "rData(%08x): ", rDataCnt++);
     dump("", (char*)&v, sizeof(v));
   }
-  virtual void reportStateDbg(uint32_t reportTYpe, uint32_t finished, uint32_t dataPipeNotEmpty){
+  virtual void reportStateDbg(uint32_t reportType, uint32_t finished, uint32_t dataPipeNotEmpty){
     fprintf(stderr, "Memread::reportStateDbg(%08x, %d, finished=%08x dataPipeNotEmpty=%08x)\n", reportType, finished, dataPipeNotEmpty);
   }  
   MemreadIndication(int id) : MemreadIndicationWrapper(id){}
