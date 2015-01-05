@@ -9,18 +9,25 @@
 #include "HBridgeCtrlIndication.h"
 #include "GeneratedTypes.h"
  
+
+bool finished = false;
+
  
 class HBridgeCtrlIndication : public HBridgeCtrlIndicationWrapper
 {
+private:
+  int hbc_event_cnt;
 public:
-  HBridgeCtrlIndication(int id) : HBridgeCtrlIndicationWrapper(id) {}
+  HBridgeCtrlIndication(int id) : HBridgeCtrlIndicationWrapper(id), hbc_event_cnt(0){}
   virtual void hbc_event( uint32_t e){
-    fprintf(stderr, "hbc_event: {");
+    hbc_event_cnt++;
+    fprintf(stderr, "(%d) hbc_event: {", hbc_event_cnt);
     if (e & (1 << HBridgeCtrlEvent_Started))
       fprintf(stderr, "Started");
     if (e & (1 << HBridgeCtrlEvent_Stopped))
       fprintf(stderr, "Stopped");
     fprintf(stderr, "}\n");
+    finished = (hbc_event_cnt >= 8);
   }
 };
 
@@ -31,7 +38,6 @@ public:
 
 #define CW   0
 #define CCW  1
-
 
 #define POWER_0  0x0000
 #define POWER_1  0x0200
@@ -58,24 +64,25 @@ int main(int argc, const char **argv)
 
   uint32_t direction[2];
   uint32_t power[2];
-
-  sleep(1);
-
-  MOVE_FOREWARD(POWER_5);
-  usleep(1000000);
-  STOP;
-
-  MOVE_BACKWARD(POWER_5);
-  usleep(1000000);
-  STOP;
-
-  TURN_RIGHT(POWER_5);
-  usleep(1000000);
-  STOP;
-
-  TURN_LEFT(POWER_5);
-  usleep(1000000);
-  STOP;
-
   sleep(2);
+
+  while(!finished){
+    MOVE_FOREWARD(POWER_5);
+    usleep(1000000);
+    STOP;
+    
+    MOVE_BACKWARD(POWER_5);
+    usleep(1000000);
+    STOP;
+    
+    TURN_RIGHT(POWER_5);
+    usleep(1000000);
+    STOP;
+    
+    TURN_LEFT(POWER_5);
+    usleep(1000000);
+    STOP;
+    sleep(1);
+  }
+
 }
