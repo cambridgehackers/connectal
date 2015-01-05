@@ -119,9 +119,9 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 if (mismatch) $display("mismatch bv[0] %d bv[1] %d\n", bv[0], bv[1]);
 	 let mc = mismatchCounts[i] + (mismatch ? 1 : 0);
 
-	 let newValuesToRead = valuesToRead[i] - 2;
+	 let newValuesToRead = valuesToRead[i] - fromInteger(valueOf(DataBusWords));
 
-	 if (valuesToRead[i] <= 2) begin
+	 if (valuesToRead[i] <= fromInteger(valueOf(DataBusWords))) begin
 	    $display("mismatch count %d", mc);
 	    mismatchFifos[i].enq(mc);
 	    mc = 0; // restart count
