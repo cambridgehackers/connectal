@@ -26,26 +26,26 @@ import Vector::*;
 import FIFOF::*;
 import Arith::*;
 
-interface HBridge2;
-   method Bit#(2) hbridge0();
-   method Bit#(2) hbridge1();
-endinterface
-
 interface HBridgeCtrlRequest;
    method Action ctrl(Vector#(2,Bit#(11)) power, Vector#(2,Bit#(1)) direction);
 endinterface
-
-typedef enum {Stopped, Started} HBridgeCtrlEvent deriving (Eq,Bits);
 
 interface HBridgeCtrlIndication;
    method Action hbc_event(Bit#(32) e);
 endinterface
 
+interface HBridge2;
+   method Bit#(2) hbridge0();
+   method Bit#(2) hbridge1();
+endinterface
+ 
 interface Controller;
    interface HBridgeCtrlRequest req;
    interface HBridge2 pins;
    interface LEDS leds;
 endinterface
+
+typedef enum {Stopped, Started} HBridgeCtrlEvent deriving (Eq,Bits);
 
 module mkController#(HBridgeCtrlIndication ind)(Controller);
    
