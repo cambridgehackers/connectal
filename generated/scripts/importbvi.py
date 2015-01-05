@@ -253,6 +253,8 @@ def processline(line, phase):
         if f[0] == 'module':
             modulename = f[1]
         if f[0] == 'input' or f[0] == 'output' or f[0] == 'inout':
+            if len(f) == 2:
+                f = [f[0], 'wire', '1', f[1]]
             if len(f) == 3:
                 f = [f[0], f[1], '1', f[2]]
             # check for parameterized declarations
@@ -289,9 +291,14 @@ def processline(line, phase):
         if phase == 2:
             itemfound = False
             for item in masterlist:
-                if item.origname == f[2]:
+                if item.origname == f[3]:
                     item.mode = f[0]
-                    item.type = f[1]
+                    if options.clock and f[3] in options.clock:
+                        item.type = 'Clock'
+                    elif options.reset and f[3] in options.reset:
+                        item.type = 'Reset'
+                    else:
+                        item.type = f[1]
                     itemfound = True
                     break
             if not itemfound:
@@ -301,7 +308,7 @@ def processline(line, phase):
             #print('FFDDDDD3', f, file=sys.stderr)
             masterlist.append(PinType(f[0], f[2], f[3], f[3]))
         elif len(f) == 2:
-            print('FFDDDDD2', f, file=sys.stderr)
+            #print('FFDDDDD2', f, file=sys.stderr)
             masterlist.append(PinType(f[0], '', f[1], f[1]))
         else:
             #print('FFDDDDDE', f, file=sys.stderr)
