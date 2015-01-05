@@ -189,7 +189,9 @@ int runtest(int argc, const char ** argv)
     device->startRead(ref_srcAlloc, 0, numWords, burstLen, iterCnt);
     sem_wait(&test_sem);
     if (mismatchCount != 3/*number of errors introduced above*/ * iterCnt) {
-      fprintf(stderr, "Main::second test failed to match mismatchCount=%d iterCnt=%d numWords=%d.\n", mismatchCount, iterCnt, numWords);
+      fprintf(stderr, "Main::second test failed to match mismatchCount=%d (expected %d) iterCnt=%d numWords=%d.\n",
+	      mismatchCount, 3*iterCnt,
+	      iterCnt, numWords);
       test_result++;     // failed
     }
 
