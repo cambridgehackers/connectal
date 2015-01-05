@@ -56,6 +56,9 @@ module mkController#(HBridgeCtrlIndication ind)(Controller);
    FIFOF#(Bit#(32))         event_fifo <- mkSizedFIFOF(4);
    Bit#(8) leds_val =  extend({direction[0],direction[1]});  
    
+   // more information on the Digilent PmodHB5:
+   // https://digilentinc.com/Data/Products/PMOD-HB5/PmodHB5_RevD_rm.pdf
+
    // frequency of design: 100 mHz  
    // frequency of PWM System: 2 kHz 
    // 2k design cycles == 1 PWM cycle
