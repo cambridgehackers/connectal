@@ -78,11 +78,11 @@ module mkMemread#(MemreadIndication indication) (Memread);
    Reg#(Bit#(32))                                   iterCnt <- mkReg(0);
    Reg#(Bit#(32))                                readOffset <- mkReg(0);
    Vector#(NumEngineServers, Reg#(Bit#(32)))       iterCnts <- replicateM(mkReg(0));
-   Vector#(NumEngineServers, Reg#(Bit#(32)))   valuesToRead <- replicateM(mkReg(0));
+   Vector#(NumEngineServers, Reg#(Bit#(32)))    wordsToRead <- replicateM(mkReg(0));
    Vector#(NumEngineServers, Reg#(Bit#(32))) mismatchCounts <- replicateM(mkReg(0));
    MemreadEngineV#(DataBusWidth,NumOutstandingRequests,NumEngineServers) re <- mkMemreadEngineBuff(memreadEngineBufferSize);
    Vector#(NumEngineServers, FIFOF#(Bit#(32))) mismatchFifos <- replicateM(mkFIFOF);
-   Bit#(MemOffsetSize) chunk = (extend(numWords)/fromInteger(valueOf(NumEngineServers)))*4;
+   Bit#(MemOffsetSize) chunkBytes = (extend(numWords)/fromInteger(valueOf(NumEngineServers)))*4;
    
    Vector#(NumEngineServers, RangePipeIfc#(Bit#(32)))     rangePipeIfcs <- replicateM(mkRangePipeOut);
    function PipeOut#(a) getRangePipePipe(RangePipeIfc#(a) rpi); return rpi.pipe; endfunction
@@ -100,10 +100,10 @@ module mkMemread#(MemreadIndication indication) (Memread);
 
    for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
       rule start (iterCnts[i] > 0);
-	 re.readServers[i].request.put(MemengineCmd{sglId:pointer, base:extend(readOffset)+(fromInteger(i)*chunk), len:truncate(chunk), burstLen:truncate(burstLen*4)});
+	 re.readServers[i].request.put(MemengineCmd{sglId:pointer, base:extend(readOffset)+(fromInteger(i)*chunkBytes), len:truncate(chunkBytes), burstLen:truncate(burstLen*4)});
 	 iterCnts[i] <= iterCnts[i]-1;
-	 Bit#(32) base = (readOffset/4)+(fromInteger(i)*(truncate(chunk)/4));
-	 Bit#(32) limit = base + truncate(chunk)/4;
+	 Bit#(32) base = (readOffset/4)+(fromInteger(i)*(truncate(chunkBytes)/4));
+	 Bit#(32) limit = base + truncate(chunkBytes)/4;
 	 let rangeConfig = RangeConfig { xbase: base, xlimit: limit, xstep: 1 };
 	 rangePipeIfcs[i].start(rangeConfig);
 	 $display("start %d, %d, %h", i, iterCnts[i], readOffset);
@@ -120,16 +120,16 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 if (mismatch) $display("mismatch bv[0] %d bv[1] %d\n", bv[0], bv[1]);
 	 let mc = mismatchCounts[i] + (mismatch ? 1 : 0);
 
-	 let newValuesToRead = valuesToRead[i] - fromInteger(valueOf(DataBusWords));
+	 let newValuesToRead = wordsToRead[i] - fromInteger(valueOf(DataBusWords));
 
-	 if (valuesToRead[i] <= fromInteger(valueOf(DataBusWords))) begin
+	 if (wordsToRead[i] <= fromInteger(valueOf(DataBusWords))) begin
 	    $display("mismatch count %d", mc);
 	    mismatchFifos[i].enq(mc);
 	    mc = 0; // restart count
-	    newValuesToRead = truncate(chunk/4);
+	    newValuesToRead = truncate(chunkBytes/4);
 	 end
 	 mismatchCounts[i] <= mc;
-	 valuesToRead[i] <= newValuesToRead;
+	 wordsToRead[i] <= newValuesToRead;
 
       endrule
    end
@@ -172,7 +172,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
 	    iterCnts[i] <= ic;
 	    mismatchCounts[i] <= 0;
-	    valuesToRead[i] <= truncate(chunk/4);
+	    wordsToRead[i] <= truncate(chunkBytes/4);
 	    finishedReg[i] <= False;
 	 end
 	 reportStateFifo.enq(0);
