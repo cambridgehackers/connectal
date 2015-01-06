@@ -251,7 +251,7 @@ endmodule
 
 `ifdef BSIM
    module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)(PcieHostTop);
-   PcieHostTop _a <- mkXilinxPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n); return _a;
+   PcieHostTop _a <- mkBsimPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n); return _a;
    endmodule
 `elsif XILINX // XILINX
    //(* synthesize, no_default_clock, no_default_reset *)
