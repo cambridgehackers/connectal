@@ -28,23 +28,25 @@
 #include <assert.h>
 #include <string.h>
 
+#include "StdDmaIndication.h"
+#include "MemServerRequest.h"
+#include "MMURequest.h"
+#include "dmaManager.h"
+
 #include "GyroCtrlRequest.h"
 #include "GyroCtrlIndication.h"
 #include "GeneratedTypes.h"
 
 #include "gyro.h"
 
-bool twos_compliment = false;
+int alloc_sz = 256;
+
 class GyroCtrlIndication : public GyroCtrlIndicationWrapper
 {
 public:
   GyroCtrlIndication(int id) : GyroCtrlIndicationWrapper(id) {}
   virtual void read_reg_resp ( const uint32_t v){
-    if(twos_compliment) {
-      fprintf(stderr, "GyroCtrlIndication::read_reg_resp(v=%d)\n", (short)v);
-    }else{
-      fprintf(stderr, "GyroCtrlIndication::read_reg_resp(v=%04x)\n", v);
-    }
+    fprintf(stderr, "GyroCtrlIndication::read_reg_resp(v=%04x)\n", v);
   }
 };
 
@@ -53,8 +55,16 @@ int main(int argc, const char **argv)
 {
   GyroCtrlIndication *ind = new GyroCtrlIndication(IfcNames_ControllerIndication);
   GyroCtrlRequestProxy *device = new GyroCtrlRequestProxy(IfcNames_ControllerRequest);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  DmaManager *dma = new DmaManager(dmap);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
   portalExec_start();
+  int dstAlloc = portalAlloc(alloc_sz);
+  unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
+  unsigned int ref_dstAlloc = dma->reference(dstAlloc);
 
   long req_freq = 100000000; // 100 mHz
   long freq = 0;
@@ -65,13 +75,15 @@ int main(int argc, const char **argv)
   // setup
   device->write_reg(CTRL_REG3, 0);
   device->write_reg(CTRL_REG1, CTRL_REG1_PD | CTRL_REG1_ZEN | CTRL_REG1_YEN | CTRL_REG1_XEN);
-  sleep(1);
   device->read_reg_req(OUT_X_L);
   sleep(1);
 
-  twos_compliment = true;
-  device->start_sampling(req_freq*2); 
+  // sample has one two-byte component for each axis (x,y,z).  I want the 
+  // wrap-around to work so that the X component always lands in offset 0
+  int sample_size = 6;
+  int bus_data_width = 8;
+  int wrap_limit = alloc_sz-(alloc_sz%(sample_size*bus_data_width));
 
-  while(true) sleep(1);
-
+  device->sample(ref_dstAlloc, wrap_limit, 10000);
+  sleep(10);
 }

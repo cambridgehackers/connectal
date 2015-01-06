@@ -3,7 +3,7 @@ CONNECTALDIR ?= ../..
 INTERFACES = GyroCtrlRequest GyroCtrlIndication
 BSVFILES = Controller.bsv Top.bsv
 CPPFILES= test_gyro.cpp
-NUMBER_OF_MASTERS =0
+NUMBER_OF_MASTERS = 1
 PIN_TYPE = SpiPins
 CONNECTALFLAGS = -C $(BOARD)/sources/pinout-$(BOARD).xdc #--tcl clock.tcl
 
