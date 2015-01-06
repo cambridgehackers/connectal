@@ -26,6 +26,7 @@ import Clocks        ::*;
 import Vector        ::*;
 import Connectable   ::*;
 import ConnectalAlteraCells ::*;
+import ConnectalClocks      ::*;
 
 import ALTERA_XCVR_RECONFIG_WRAPPER        ::*;
 import ALTERA_PCIE_RECONFIG_DRIVER_WRAPPER ::*;
