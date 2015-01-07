@@ -39,7 +39,7 @@
 
 #include "gyro.h"
 
-int alloc_sz = 64;
+int alloc_sz = 1024;
 int wrapped = false;
 
 class GyroCtrlIndication : public GyroCtrlIndicationWrapper
@@ -50,7 +50,7 @@ public:
     fprintf(stderr, "GyroCtrlIndication::read_reg_resp(v=%x)\n", v);
   }
   virtual void sample_wrap(const uint32_t v){
-    fprintf(stderr, "GyroCtrlIndication::sample_wrap(v=%08x)\n", v);
+    //fprintf(stderr, "GyroCtrlIndication::sample_wrap(v=%08x)\n", v);
     wrapped = true;
   }
 };
@@ -90,28 +90,26 @@ int main(int argc, const char **argv)
   int cnt = 0;
 
 #ifdef BSIM
-  device->sample(ref_dstAlloc, wrap_limit, 1000);
+  device->sample(ref_dstAlloc, wrap_limit, 100);
 #else
-  device->sample(ref_dstAlloc, wrap_limit, req_freq/10);
+  device->sample(ref_dstAlloc, wrap_limit, 1000);
 #endif
 
-  while(!wrapped) usleep(1000);
+  while(true){
 
-  hostMemServerRequest->memoryTraffic(ChannelType_Write);
-  uint64_t beats = hostMemServerIndication->receiveMemoryTraffic();
-  fprintf(stderr, "%"PRIx64"\n", beats);
-
-  int s[3] = {0,0,0};
-  portalDCacheInval(dstAlloc, alloc_sz, dstBuffer);
-  for(int i = 0; i < wrap_limit; i+=6){
-    short* foo = (short*)(((char*)(dstBuffer))+i);
-    for(int j = 0; j < 3; j++)
-      s[j] += (int)(foo[j]);
+    while(!wrapped) usleep(1000);
+    wrapped = false;
+    int s[3] = {0,0,0};
+    portalDCacheInval(dstAlloc, alloc_sz, dstBuffer);
+    for(int i = 0; i < wrap_limit; i+=6){
+      short* foo = (short*)(((char*)(dstBuffer))+i);
+      for(int j = 0; j < 3; j++)
+	s[j] += (int)(foo[j]);
+    }
+    for(int j = 0; j < 3; j++){
+      s[j] = s[j]/(wrap_limit/6);
+    }
+    fprintf(stderr, "x:%8d, y:%8d, z:%8d\n", s[0], s[1], s[2]);
   }
-  for(int j = 0; j < 3; j++){
-    s[j] = s[j]/(wrap_limit/6);
-  }
-
-  fprintf(stderr, "(%d) x:%d, y:%d, z:%d\n", cnt++, s[0], s[1], s[2]);
 
 }

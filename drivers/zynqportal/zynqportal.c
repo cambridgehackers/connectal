@@ -81,6 +81,7 @@ struct connectal_data{
 
 static void *directory_virt;  /* anyone should be able to get PORTAL_DIRECTORY_COUNTER */
 static PortalInterruptTime inttime;
+static int flush = 0;
 
 /*
  * Local helper functions
@@ -188,6 +189,9 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
                 return 0;
                 }
         case PORTAL_DCACHE_FLUSH_INVAL: {
+  	        flush = 1;
+	}
+	case PORTAL_DCACHE_INVAL: {
                 struct scatterlist *sg;
                 struct file *fmem = fget((int)arg);
                 struct sg_table *sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
@@ -197,10 +201,11 @@ printk("[%s:%d] flush %d\n", __FUNCTION__, __LINE__, (int)arg);
                     unsigned int length = sg->length;
                     dma_addr_t start_addr = sg_phys(sg), end_addr = start_addr+length;
 printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start_addr, (long)end_addr, length);
-                    outer_clean_range(start_addr, end_addr);
+                    if(flush) outer_clean_range(start_addr, end_addr);
                     outer_inv_range(start_addr, end_addr);
                 }
                 fput(fmem);
+		flush = 0;
                 return 0;
                 }
         case PORTAL_DIRECTORY_READ:

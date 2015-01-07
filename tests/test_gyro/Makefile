@@ -7,7 +7,7 @@ NUMBER_OF_MASTERS = 1
 PIN_TYPE = SpiPins
 CONNECTALFLAGS = -C $(BOARD)/sources/pinout-$(BOARD).xdc #--tcl clock.tcl
 
-PIN_BINDING ?= -b pmod:pmodb
+PIN_BINDING ?= -b pmod:pmodd
 
 gentarget:: $(BOARD)/sources/pinout-$(BOARD).xdc
 $(BOARD)/sources/pinout-$(BOARD).xdc: pinout.json $(CONNECTALDIR)/boardinfo/$(BOARD).json
