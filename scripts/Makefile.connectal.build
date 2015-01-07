@@ -86,49 +86,27 @@ all: exe bits
 ifeq ($(CONNECTAL_SHARED),1)
   exe: connectal.so
 else
-ifeq ($(BOARD),bluesim)
-  ifeq ($(RUNSOURCE2),)
-    exe: bsim_exe
-  else
-    exe: bsim_exe bsim_exe2
-  endif
-else
-  ifneq ($(OS),android)
+  ifeq ($(BOARD),bluesim)
     ifeq ($(RUNSOURCE2),)
-      exe: ubuntu.exe
+      exe: bsim_exe
     else
-      exe: ubuntu.exe ubuntu.exe2
+      exe: bsim_exe bsim_exe2
     endif
   else
-    ifeq ($(CONNECTAL_DEBUG),1)
-      exe: android.debug.exe
+    ifneq ($(OS),android)
+      ifeq ($(RUNSOURCE2),)
+        exe: ubuntu.exe
+      else
+        exe: ubuntu.exe ubuntu.exe2
+      endif
     else
-      exe: android.exe
+      ifeq ($(CONNECTAL_DEBUG),1)
+        exe: android.debug.exe
+      else
+        exe: android.exe
+      endif
     endif
   endif
-endif
-
-ifeq ($(BOARD),xsim)
-  ifeq ($(RUNSOURCE2),)
-    exe: bsim_exe
-  else
-    exe: bsim_exe bsim_exe2
-  endif
-else
-  ifneq ($(OS),android)
-    ifeq ($(RUNSOURCE2),)
-      exe: ubuntu.exe
-    else
-      exe: ubuntu.exe ubuntu.exe2
-    endif
-  else
-    ifeq ($(CONNECTAL_DEBUG),1)
-      exe: android.debug.exe
-    else
-      exe: android.exe
-    endif
-  endif
-endif
 endif
 
 bsim_exe: prepare_bin_target
@@ -204,9 +182,9 @@ ifeq ($(BOARD),bluesim)
 else
   ifeq ($(BOARD),xsim)
     ifeq ($(RUNSOURCE2),)
-	LD_LIBRARY_PATH=$(VIVADODIR)/lib/lnx64.o $(GDB_BSIM) ./bin/xsim -w & xsimpid=$$!; echo xsimpid $$xsimpid; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$xsimpid; exit $$retcode
+	LD_LIBRARY_PATH=$(VIVADODIR)/lib/lnx64.o $(GDB_BSIM) ./bin/xsim -w & xsimpid=$$!; echo xsimpid $$xsimpid; $(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; kill $$xsimpid; exit $$retcode
     else
-	LD_LIBRARY_PATH=$(VIVADODIR)/lib/lnx64.o ./bin/xsim -w & xsimpid=$$!; echo xsimpid $$xsimpid; $(GDB2) ./bin/bsim_exe2& xsim2pid=$$!; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$xsimpid $$xsim2pid; exit $$retcode
+	LD_LIBRARY_PATH=$(VIVADODIR)/lib/lnx64.o ./bin/xsim -w & xsimpid=$$!; echo xsimpid $$xsimpid; $(GDB2) ./bin/ubuntu.exe2& xsim2pid=$$!; $(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; kill $$xsimpid $$xsim2pid; exit $$retcode
     endif
   else
     ifeq ($(OS),android)

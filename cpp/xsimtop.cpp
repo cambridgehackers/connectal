@@ -50,6 +50,18 @@ void xsiport::write(int val)
     xsiInstance.put_value(port, &val);
 }
 
+class XsimMemSlaveRequest : public XsimMemSlaveRequestWrapper {
+public:
+  XsimMemSlaveRequest(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : XsimMemSlaveRequestWrapper(id, item, param, poller) { }
+  ~XsimMemSlaveRequest() {}
+  virtual void read ( const uint32_t addr ) {
+    fprintf(stderr, "FIXME [%s:%d]\n addr=%08x", __FUNCTION__, __LINE__, addr);
+  }
+  virtual void write ( const uint32_t addr, const uint32_t data ) {
+    fprintf(stderr, "FIXME [%s:%d]\n addr=%08x", __FUNCTION__, __LINE__, addr);
+  }
+};
+
 int main(int argc, char **argv)
 {
     std::string cwd = getcurrentdir();
@@ -77,8 +89,7 @@ int main(int argc, char **argv)
     Portal *mcommon = new Portal(0, sizeof(uint32_t), portal_mux_handler, NULL, &socketfuncResp, &paramSocket, 0);
     param.pint = &mcommon->pint;
     XsimMemSlaveIndicationProxy *memSlaveIndicationProxy = new XsimMemSlaveIndicationProxy(XsimIfcNames_XsimMemSlaveIndication, &muxfunc, &param);
-    sleep(10);
-
+    XsimMemSlaveRequest *memSlaveRequest = new XsimMemSlaveRequest(XsimIfcNames_XsimMemSlaveRequest, &muxfunc, &param);
     // start low clock
     clk.write(0);
     rst_n.write(0);
