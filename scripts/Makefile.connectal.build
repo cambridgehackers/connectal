@@ -67,6 +67,7 @@ BSC_CXXFLAGS= -I $(CONNECTALDIR)/cpp -I $(CONNECTALDIR) -D BSIM
 BSIM_CXX_COMMON = $(CONNECTALDIR)/cpp/BsimCtrl.cxx $(CONNECTALDIR)/cpp/TlpReplay.cxx $(CONNECTALDIR)/cpp/BsimDma.cxx $(CONNECTALDIR)/cpp/sock_utils.c
 BSIM_CXX_LOCAL = $(DTOP)/jni/BsimCtrl.cxx $(DTOP)/jni/TlpReplay.cxx $(DTOP)/jni/BsimDma.cxx $(DTOP)/jni/sock_utils.c
 
+VIVADODIR=$(shell dirname $(shell dirname $(shell which vivado)))
 VIVADOFLAGS= -notrace
 XVLOGFLAGS =
 
@@ -86,11 +87,33 @@ ifeq ($(CONNECTAL_SHARED),1)
   exe: connectal.so
 else
 ifeq ($(BOARD),bluesim)
-ifeq ($(RUNSOURCE2),)
-  exe: bsim_exe
+  ifeq ($(RUNSOURCE2),)
+    exe: bsim_exe
+  else
+    exe: bsim_exe bsim_exe2
+  endif
 else
-  exe: bsim_exe bsim_exe2
+  ifneq ($(OS),android)
+    ifeq ($(RUNSOURCE2),)
+      exe: ubuntu.exe
+    else
+      exe: ubuntu.exe ubuntu.exe2
+    endif
+  else
+    ifeq ($(CONNECTAL_DEBUG),1)
+      exe: android.debug.exe
+    else
+      exe: android.exe
+    endif
+  endif
 endif
+
+ifeq ($(BOARD),xsim)
+  ifeq ($(RUNSOURCE2),)
+    exe: bsim_exe
+  else
+    exe: bsim_exe bsim_exe2
+  endif
 else
   ifneq ($(OS),android)
     ifeq ($(RUNSOURCE2),)
@@ -147,15 +170,19 @@ else
 ifeq ($(BOARD),bluesim)
 bits: bsim
 else
+ifeq ($(BOARD),xsim)
+bits: xsim
+else
 bits: hw/mkTop.bit prepare_bin_target
-ifeq ($(OS),android)
+    ifeq ($(OS),android)
 	xxd hw/mkTop.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r > bin/mkTop.xdevcfg.bin
 	gzip -f bin/mkTop.xdevcfg.bin
-else
+    else
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
-endif
+    endif
 	gzip -c Impl/TopDown/mkTop.ll > bin/mkTop.ll.gz
 	$(CONNECTALDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
+endif
 endif
 endif
 
@@ -175,19 +202,32 @@ ifeq ($(BOARD),bluesim)
 	./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB2) ./bin/bsim_exe2& bsim2pid=$$!; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid $$bsim2pid; exit $$retcode
     endif
 else
+  ifeq ($(BOARD),xsim)
+    ifeq ($(RUNSOURCE2),)
+	LD_LIBRARY_PATH=$(VIVADODIR)/lib/lnx64.o $(GDB_BSIM) ./bin/xsim -w & xsimpid=$$!; echo xsimpid $$xsimpid; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$xsimpid; exit $$retcode
+    else
+	LD_LIBRARY_PATH=$(VIVADODIR)/lib/lnx64.o ./bin/xsim -w & xsimpid=$$!; echo xsimpid $$xsimpid; $(GDB2) ./bin/bsim_exe2& xsim2pid=$$!; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$xsimpid $$xsim2pid; exit $$retcode
+    endif
+  else
     ifeq ($(OS),android)
 	$(CONNECTALDIR)/scripts/run.zedboard bin/mkTop.xdevcfg.bin.gz bin/android.exe $(RUN_ARGS)
     else
 	$(CONNECTALDIR)/scripts/run.pcietest bin/mk*.bin.gz bin/ubuntu.exe $(RUN_ARGS)
     endif
+  endif
 endif
 
-xsim: verilog
-	xvlog $(XVLOGFLAGS) verilog/*.v
-	xelab $(XELABFLAGS) work.$(MKTOP)
+XSI_INCLUDE_DIR=$(VIVADODIR)/data/xsim/include
+XSI_EXAMPLE_DIR=$(VIVADODIR)/examples/xsim/verilog/xsi/counter/
 
-xsimrun: xsim
-	xsim $(XSIMFLAGS) work.$(MKTOP)
+bin/xsim: $(CONNECTALDIR)/cpp/xsimtop.cpp $(XSI_EXAMPLE_DIR)/xsi_loader.cpp
+	  g++ -I$(XSI_INCLUDE_DIR) -I$(XSI_EXAMPLE_DIR) -O -c -o xsi_loader.o $(CONNECTALDIR)/cpp/xsi_loader.cpp
+	  g++ -I$(XSI_INCLUDE_DIR) -I$(XSI_EXAMPLE_DIR) -O -c -o xsimtop.o $(CONNECTALDIR)/cpp/xsimtop.cpp
+	  g++ -o bin/xsim xsimtop.o xsi_loader.o -ldl -lrt
+
+xsim: verilog bin/xsim
+	xvlog $(XVLOGFLAGS) verilog/*.v
+	xelab $(XELABFLAGS) work.$(MKTOP) -dll -s $(MKTOP)
 
 $(vfile): $(TOPBSVFILE) $(BSVFILES)
 	$(Q)mkdir -p verilog/portal $(DTOP)/obj
