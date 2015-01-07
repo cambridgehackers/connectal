@@ -219,11 +219,19 @@ endif
 
 XSI_INCLUDE_DIR=$(VIVADODIR)/data/xsim/include
 XSI_EXAMPLE_DIR=$(VIVADODIR)/examples/xsim/verilog/xsi/counter/
+XSIM_INCLUDES = -I$(XSI_INCLUDE_DIR) -I$(XSI_EXAMPLE_DIR) -Ijni -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR)
 
 bin/xsim: $(CONNECTALDIR)/cpp/xsimtop.cpp $(XSI_EXAMPLE_DIR)/xsi_loader.cpp
-	  g++ -I$(XSI_INCLUDE_DIR) -I$(XSI_EXAMPLE_DIR) -O -c -o xsi_loader.o $(CONNECTALDIR)/cpp/xsi_loader.cpp
-	  g++ -I$(XSI_INCLUDE_DIR) -I$(XSI_EXAMPLE_DIR) -O -c -o xsimtop.o $(CONNECTALDIR)/cpp/xsimtop.cpp
-	  g++ -o bin/xsim xsimtop.o xsi_loader.o -ldl -lrt
+	  g++ $(XSIM_INCLUDES) -O -c -o xsi_loader.o $(XSI_EXAMPLE_DIR)/xsi_loader.cpp
+	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -c -o portal.o $(CONNECTALDIR)/cpp/portal.c
+	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -c -o poller.o $(CONNECTALDIR)/cpp/poller.cpp
+	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -c -o sock_utils.o $(CONNECTALDIR)/cpp/sock_utils.c
+	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -c -o timer.o $(CONNECTALDIR)/cpp/timer.c
+	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -c -o portalSocket.o $(CONNECTALDIR)/cpp/portalSocket.c
+	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -c -o xsimtop.o $(CONNECTALDIR)/cpp/xsimtop.cpp
+	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -c -o XsimMemSlaveIndication.o jni/XsimMemSlaveIndication.c
+	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -c -o XsimMemSlaveRequest.o jni/XsimMemSlaveRequest.c
+	  g++ -o bin/xsim xsimtop.o xsi_loader.o portal.o portalSocket.o poller.o sock_utils.o timer.o XsimMemSlaveRequest.o XsimMemSlaveIndication.o -ldl -lrt -pthread
 
 xsim: verilog bin/xsim
 	xvlog $(XVLOGFLAGS) verilog/*.v

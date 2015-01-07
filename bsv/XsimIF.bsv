@@ -20,6 +20,8 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+typedef enum { XsimMemSlaveRequest, XsimMemSlaveIndication } XsimIfcNames;
+
 interface XsimMemSlaveRequest;
    method Action read(Bit#(32) addr);
    method Action write(Bit#(32) addr, Bit#(32) data);

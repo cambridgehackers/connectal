@@ -74,6 +74,8 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
     if (!item) {
 #ifdef BSIM
         pint->item = &bsimfunc;
+#elif defined(XSIM)
+        pint->item = &xsimfunc;
 #else
         pint->item = &hardwarefunc;
 #endif
