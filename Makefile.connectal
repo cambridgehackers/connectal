@@ -98,6 +98,11 @@ CPPFILES2 += $(CONNECTALDIR)/cpp/dmaManager.c
 endif
 endif
 
+ifeq ($(BOARD),xsim)
+INTERFACES += XsimMemSlaveRequest XsimMemSlaveIndication
+BSVFILES += $(CONNECTALDIR)/bsv/XsimIF.bsv
+endif
+
 all bits verilog implementation bsim xsim xsimrun: gentarget prebuild
 	make -C $(BOARD) --no-print-directory $@
 
