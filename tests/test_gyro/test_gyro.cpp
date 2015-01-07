@@ -39,14 +39,19 @@
 
 #include "gyro.h"
 
-int alloc_sz = 256;
+int alloc_sz = 64;
+int wrapped = false;
 
 class GyroCtrlIndication : public GyroCtrlIndicationWrapper
 {
 public:
   GyroCtrlIndication(int id) : GyroCtrlIndicationWrapper(id) {}
   virtual void read_reg_resp ( const uint32_t v){
-    fprintf(stderr, "GyroCtrlIndication::read_reg_resp(v=%04x)\n", v);
+    fprintf(stderr, "GyroCtrlIndication::read_reg_resp(v=%x)\n", v);
+  }
+  virtual void sample_wrap(const uint32_t v){
+    fprintf(stderr, "GyroCtrlIndication::sample_wrap(v=%08x)\n", v);
+    wrapped = true;
   }
 };
 
@@ -75,15 +80,38 @@ int main(int argc, const char **argv)
   // setup
   device->write_reg(CTRL_REG3, 0);
   device->write_reg(CTRL_REG1, CTRL_REG1_PD | CTRL_REG1_ZEN | CTRL_REG1_YEN | CTRL_REG1_XEN);
-  device->read_reg_req(OUT_X_L);
-  sleep(1);
+  sleep(2);
 
   // sample has one two-byte component for each axis (x,y,z).  I want the 
   // wrap-around to work so that the X component always lands in offset 0
   int sample_size = 6;
   int bus_data_width = 8;
-  int wrap_limit = alloc_sz-(alloc_sz%(sample_size*bus_data_width));
+  int wrap_limit = alloc_sz-(alloc_sz%(sample_size*bus_data_width)); // want lcm
+  int cnt = 0;
 
-  device->sample(ref_dstAlloc, wrap_limit, 10000);
-  sleep(10);
+#ifdef BSIM
+  device->sample(ref_dstAlloc, wrap_limit, 1000);
+#else
+  device->sample(ref_dstAlloc, wrap_limit, req_freq/10);
+#endif
+
+  while(!wrapped) usleep(1000);
+
+  hostMemServerRequest->memoryTraffic(ChannelType_Write);
+  uint64_t beats = hostMemServerIndication->receiveMemoryTraffic();
+  fprintf(stderr, "%"PRIx64"\n", beats);
+
+  int s[3] = {0,0,0};
+  portalDCacheInval(dstAlloc, alloc_sz, dstBuffer);
+  for(int i = 0; i < wrap_limit; i+=6){
+    short* foo = (short*)(((char*)(dstBuffer))+i);
+    for(int j = 0; j < 3; j++)
+      s[j] += (int)(foo[j]);
+  }
+  for(int j = 0; j < 3; j++){
+    s[j] = s[j]/(wrap_limit/6);
+  }
+
+  fprintf(stderr, "(%d) x:%d, y:%d, z:%d\n", cnt++, s[0], s[1], s[2]);
+
 }

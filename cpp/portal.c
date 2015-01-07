@@ -160,7 +160,7 @@ uint64_t portalCycleCount()
   return (((uint64_t)high_bits)<<32) | ((uint64_t)low_bits);
 }
 
-int portalDCacheFlushInval(int fd, long size, void *__p)
+int portalDCacheFlushInvalInternal(int fd, long size, void *__p, int flush)
 {
     int i;
 #if defined(__arm__)
@@ -173,14 +173,18 @@ printk("[%s:%d] flush %d\n", __FUNCTION__, __LINE__, fd);
         unsigned int length = sg->length;
         dma_addr_t start_addr = sg_phys(sg), end_addr = start_addr+length;
 printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start_addr, (long)end_addr, length);
-        outer_clean_range(start_addr, end_addr);
+        if(flush) outer_clean_range(start_addr, end_addr);
         outer_inv_range(start_addr, end_addr);
     }
     fput(fmem);
 #else
   int rc;
-  if (utility_portal)
-    rc = ioctl(utility_portal->fpga_fd, PORTAL_DCACHE_FLUSH_INVAL, fd);
+  if (utility_portal){
+    if(flush)
+      rc = ioctl(utility_portal->fpga_fd, PORTAL_DCACHE_FLUSH_INVAL, fd);
+    else
+      rc = ioctl(utility_portal->fpga_fd, PORTAL_DCACHE_INVAL, fd);
+  }
   else
     rc = -1;
   if (rc){
@@ -201,6 +205,18 @@ printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start
   //PORTAL_PRINTF("dcache flush\n");
   return 0;
 }
+
+int portalDCacheInval(int fd, long size, void *__p)
+{
+  portalDCacheFlushInvalInternal(fd,size,__p,0);
+}
+
+int portalDCacheFlushInval(int fd, long size, void *__p)
+{
+  portalDCacheFlushInvalInternal(fd,size,__p,1);
+}
+
+
 
 void init_portal_memory(void)
 {

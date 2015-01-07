@@ -39,6 +39,7 @@ endinterface
 
 interface GyroCtrlIndication;
    method Action read_reg_resp(Bit#(8) val);
+   method Action sample_wrap(Bit#(32) v);
 endinterface
 
 interface Controller;
@@ -50,15 +51,17 @@ endinterface
 
 module mkController#(GyroCtrlIndication ind)(Controller);
 
-   SPI#(Bit#(16)) spiController <- mkSPI(1000, True);
-   Reg#(Bit#(32)) sampleFreq    <- mkReg(0);
-   Reg#(Bit#(32)) sampleCnt     <- mkReg(0);
-   Reg#(Bit#(32)) sglId         <- mkReg(0);
-   Reg#(Bit#(32)) allocSz       <- mkReg(0);
-   Reg#(Bit#(32)) writePtr      <- mkReg(0);
-
-   FIFO#(void)    read_reg_ctrl_fifo <- mkSizedFIFO(1);
-   FIFO#(void)    sample_ctrl_fifo   <- mkSizedFIFO(1);
+   SPI#(Bit#(16))  spiCtrl    <- mkSPI(1000, True);
+   Reg#(Bit#(32))  sampleFreq <- mkReg(0);
+   Reg#(Bit#(32))  sampleCnt  <- mkReg(0);
+   Reg#(Bit#(32))  sglId      <- mkReg(0);
+   Reg#(Bit#(32))  allocSz    <- mkReg(0);
+   Reg#(Bit#(32))  writePtr   <- mkReg(0);
+   FIFO#(Bool)     rc_fifo    <- mkSizedFIFO(1);
+   FIFO#(Bit#(64)) sa_fifo    <- mkFIFO();
+`ifdef BSIM
+   Reg#(Bit#(16))  bsim_cnt   <- mkReg(0);
+`endif
 
    let clk <- exposeCurrentClock;
    let rst <- exposeCurrentReset;
@@ -70,53 +73,57 @@ module mkController#(GyroCtrlIndication ind)(Controller);
    let out_Y_H = 'h2B;
    let out_Z_L = 'h2C;
    let out_Z_H = 'h2D;
-   
    let verbose = True;
    
    rule read_reg_resp;
-      let rv <- spiController.response.get;
-      ind.read_reg_resp(truncate(rv));
-      read_reg_ctrl_fifo.deq;
+      let rv <- spiCtrl.response.get;
+      if (rc_fifo.first)
+	 ind.read_reg_resp(truncate(rv));
+      rc_fifo.deq;
    endrule
 
    rule sample_req(sampleFreq > 0);
       let new_sampleCnt = sampleCnt+1; 
-      let e = True;
-      if (sampleCnt == sampleFreq) begin
-	 if(verbose) $display("sample_req %d", sampleCnt);
-	 spiController.request.put({1'b1,1'b1,out_X_L,8'h00});
+      if (new_sampleCnt == sampleFreq-2) begin
+	 spiCtrl.request.put({1'b1,1'b1,out_X_L,8'h00});
+	 if(verbose) $display("sample_x");
+      end
+      else if (new_sampleCnt == sampleFreq-1) begin
+	 spiCtrl.request.put({1'b1,1'b1,out_Y_L,8'h00});
+	 if(verbose) $display("sample_y");
+      end
+      else if (new_sampleCnt >= sampleFreq) begin
+	 spiCtrl.request.put({1'b1,1'b1,out_Z_L,8'h00});
+	 if(verbose) $display("sample_z");
 	 new_sampleCnt = 0;
       end
-      else if (sampleCnt == sampleFreq-1) 
-	 spiController.request.put({1'b1,1'b1,out_Y_L,8'h00});
-      else if (sampleCnt == sampleFreq-2) 
-	 spiController.request.put({1'b1,1'b1,out_Z_L,8'h00});
-      else begin
-	 e = False;
-	 noAction;
-      end 
-      if (e)
-	 sample_ctrl_fifo.enq(?);
       sampleCnt <= new_sampleCnt;
    endrule
    
-   rule sample_resp(allocSz > 0);
-      sample_ctrl_fifo.deq;
-      let rv <- spiController.response.get;
+   rule sample_resp(sampleFreq > 0);
+      if(verbose) $display("sample_resp");
+      let rv <- spiCtrl.response.get;
+`ifdef BSIM
+      bsim_cnt <= (bsim_cnt == 2) ? 0 : bsim_cnt+1;
+      gb.enq(cons(bsim_cnt+1,nil));
+`else
       gb.enq(cons(rv,nil));
+`endif
    endrule
    
    interface GyroCtrlRequest req;
       method Action write_reg(Bit#(8) addr, Bit#(8) val);
-	 spiController.request.put({1'b0,1'b0,addr[5:0],val});
+	 spiCtrl.request.put({1'b0,1'b0,addr[5:0],val});
+	 rc_fifo.enq(False);
       endmethod
       method Action read_reg_req(Bit#(8) addr);
-	 spiController.request.put({1'b1,1'b0,addr[5:0],8'h00});
-	 read_reg_ctrl_fifo.enq(?);
+	 spiCtrl.request.put({1'b1,1'b0,addr[5:0],8'h00});
+	 rc_fifo.enq(True);
       endmethod
       method Action sample(Bit#(32) sgl_id, Bit#(32) alloc_sz, Bit#(32) sample_freq);
-	 if (verbose) $display("sample %d %d %d", sgl_id, alloc_sz, sample_freq);
+	 $display("sample %d %d %d", sgl_id, alloc_sz, sample_freq);
 	 sampleFreq <= sample_freq;
+	 sampleCnt <= 0;
 	 allocSz <= alloc_sz;
 	 sglId <= sgl_id;
       endmethod
@@ -126,29 +133,33 @@ module mkController#(GyroCtrlIndication ind)(Controller);
       method Bit#(LedsWidth) leds() = 0;
    endinterface
 
-   interface SpiPins spi = spiController.pins;
+   interface SpiPins spi = spiCtrl.pins;
 
    interface MemWriteClient dmaClient;
       interface Get writeReq;
 	 method ActionValue#(MemRequest) get if (allocSz > 0);
 	    let new_writePtr = writePtr + 8;
-	    if (new_writePtr == allocSz)
+	    if (new_writePtr == allocSz) begin
 	       new_writePtr = 0;
+	       ind.sample_wrap(allocSz);
+	    end
 	    writePtr <= new_writePtr;
 	    if (verbose) $display("writeReq %d", writePtr);
+	    sa_fifo.enq(pack(gb.first));
+	    gb.deq;
 	    return MemRequest {sglId:sglId, offset:extend(writePtr), burstLen:8, tag:0};
 	 endmethod
       endinterface
       interface Get writeData;
 	 method ActionValue#(MemData#(64)) get;
-	    gb.deq();
-	    if(verbose) $display("writeData");
-	    return MemData{data:0, tag:0, last:False};
+	    let rv <- toGet(sa_fifo).get;
+	    if(verbose) $display("writeData %h", rv);
+	    return MemData{data:rv, tag:0, last:True};
 	 endmethod
       endinterface
       interface Put writeDone;
 	 method Action put(Bit#(MemTagSize) tag);
-	    noAction;
+	    if(verbose) $display("writeDone");
 	 endmethod
       endinterface
    endinterface
