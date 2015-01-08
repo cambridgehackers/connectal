@@ -42,6 +42,10 @@ interface GyroCtrlIndication;
    method Action sample_wrap(Bit#(32) v);
 endinterface
 
+interface Sample;
+   method Action sample(Bit#(32) s);
+endinterface
+
 interface Controller;
    interface GyroCtrlRequest req;
    interface SpiPins spi;
@@ -73,7 +77,7 @@ module mkController#(GyroCtrlIndication ind)(Controller);
    let out_Y_H = 'h2B;
    let out_Z_L = 'h2C;
    let out_Z_H = 'h2D;
-   let verbose = True;
+   let verbose = False;
    
    rule read_reg_resp;
       let rv <- spiCtrl.response.get;

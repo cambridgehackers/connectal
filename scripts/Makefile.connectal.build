@@ -84,7 +84,11 @@ vfile=verilog/$(MKTOP).v
 all: exe bits
 
 ifeq ($(CONNECTAL_SHARED),1)
-  exe: connectal.so
+  ifeq ($(RUNSOURCE2),)
+    exe: connectal.so
+  else
+    exe: connectal.so bsim_exe2
+  endif
 else
   ifeq ($(BOARD),bluesim)
     ifeq ($(RUNSOURCE2),)
@@ -173,6 +177,9 @@ android.debug.exe: prepare_bin_target
 	@cp -v libs/armeabi/android.exe bin
 
 run:
+ifeq ($(CONNECTAL_SHARED),1)
+	$(GDB_BSIM) ./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe2 $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
+else 
 ifeq ($(BOARD),bluesim)
     ifeq ($(RUNSOURCE2),)
 	$(GDB_BSIM) ./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
@@ -193,6 +200,7 @@ else
 	$(CONNECTALDIR)/scripts/run.pcietest bin/mk*.bin.gz bin/ubuntu.exe $(RUN_ARGS)
     endif
   endif
+endif
 endif
 
 XSI_INCLUDE_DIR=$(VIVADODIR)/data/xsim/include

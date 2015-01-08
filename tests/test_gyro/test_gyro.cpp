@@ -27,20 +27,29 @@
 #include <unistd.h>
 #include <assert.h>
 #include <string.h>
+#include <pthread.h>
+#include <netdb.h>
 
 #include "StdDmaIndication.h"
 #include "MemServerRequest.h"
 #include "MMURequest.h"
 #include "dmaManager.h"
+#include "sock_utils.h"
 
+#include "Sample.h"
 #include "GyroCtrlRequest.h"
 #include "GyroCtrlIndication.h"
 #include "GeneratedTypes.h"
 
 #include "gyro.h"
 
+#ifdef BSIM
+int alloc_sz = 64;
+#else
 int alloc_sz = 1024;
+#endif
 int wrapped = false;
+int ss[3];
 
 class GyroCtrlIndication : public GyroCtrlIndicationWrapper
 {
@@ -55,6 +64,18 @@ public:
   }
 };
 
+static void* snapshot(void *foo)
+{
+  PortalSocketParam param;
+  int rc = getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
+  SampleProxy *sp = new SampleProxy(IfcNames_Sample, &socketfuncResp, &param);
+  while(1){
+    sp->sample(ss[0]);
+    sp->sample(ss[1]);
+    sp->sample(ss[2]);
+  }
+  return 0;
+}
 
 int main(int argc, const char **argv)
 {
@@ -65,6 +86,12 @@ int main(int argc, const char **argv)
   DmaManager *dma = new DmaManager(dmap);
   MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
+
+  PortalSocketParam param;
+  int rc = getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
+  SampleProxy *sp = new SampleProxy(IfcNames_Sample, &socketfuncResp, &param);
+  // pthread_t threaddata;
+  // pthread_create(&threaddata, NULL, &snapshot, NULL);
 
   portalExec_start();
   int dstAlloc = portalAlloc(alloc_sz);
@@ -90,7 +117,7 @@ int main(int argc, const char **argv)
   int cnt = 0;
 
 #ifdef BSIM
-  device->sample(ref_dstAlloc, wrap_limit, 100);
+  device->sample(ref_dstAlloc, wrap_limit, 10);
 #else
   device->sample(ref_dstAlloc, wrap_limit, 1000);
 #endif
@@ -107,9 +134,10 @@ int main(int argc, const char **argv)
 	s[j] += (int)(foo[j]);
     }
     for(int j = 0; j < 3; j++){
-      s[j] = s[j]/(wrap_limit/6);
+      ss[j] = s[j]/(wrap_limit/6);
+      sp->sample(ss[j]);
     }
-    fprintf(stderr, "x:%8d, y:%8d, z:%8d\n", s[0], s[1], s[2]);
+    fprintf(stderr, "x:%8d, y:%8d, z:%8d\n", ss[0], ss[1], ss[2]);
   }
 
 }

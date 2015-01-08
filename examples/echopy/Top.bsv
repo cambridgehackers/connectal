@@ -35,7 +35,7 @@ import SwallowIF::*;
 
 typedef enum {EchoIndication, EchoRequest, Swallow} IfcNames deriving (Eq,Bits);
 
-module mkConnectalTop#(HostType host)(StdConnectalTop#(PhysAddrWidth));
+module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
 
    // instantiate user portals
    EchoIndicationProxy echoIndicationProxy <- mkEchoIndicationProxy(EchoIndication);

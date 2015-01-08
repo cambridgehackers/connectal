@@ -1,12 +1,14 @@
 
 CONNECTALDIR ?= ../..
-INTERFACES = GyroCtrlRequest GyroCtrlIndication
+INTERFACES = GyroCtrlRequest GyroCtrlIndication Sample
 BSVFILES = Controller.bsv Top.bsv
-CPPFILES= test_gyro.cpp
+CPPFILES  = test_sample.cpp
+CPPFILES2 = test_gyro.cpp
 NUMBER_OF_MASTERS = 1
-PIN_TYPE = SpiPins
-CONNECTALFLAGS = -C $(BOARD)/sources/pinout-$(BOARD).xdc #--tcl clock.tcl
+CONNECTALFLAGS += -C $(BOARD)/sources/pinout-$(BOARD).xdc #--tcl clock.tcl
+CONNECTALFLAGS += --shared
 
+PIN_TYPE = SpiPins
 PIN_BINDING ?= -b pmod:pmodd
 
 gentarget:: $(BOARD)/sources/pinout-$(BOARD).xdc
