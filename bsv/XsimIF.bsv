@@ -24,8 +24,8 @@ typedef enum { XsimMemSlaveRequest, XsimMemSlaveIndication } XsimIfcNames;
 
 interface XsimMemSlaveRequest;
    method Action connect();
-   method Action read(Bit#(32) addr);
-   method Action write(Bit#(32) addr, Bit#(32) data);
+   method Action read(Bit#(32) fpgaId, Bit#(32) addr);
+   method Action write(Bit#(32) fpgaId, Bit#(32) addr, Bit#(32) data);
 endinterface
 interface XsimMemSlaveIndication;
    method Action directory(Bit#(32) fpgaNumber, Bit#(32) fpgaId, Bit#(1) last);
