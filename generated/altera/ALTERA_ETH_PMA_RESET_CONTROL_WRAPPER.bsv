@@ -14,6 +14,10 @@
    -f
    pll
    -f
+   rx_r
+   -f
+   tx_r
+   -f
    tx
    -f
    rx
@@ -37,20 +41,28 @@ interface EthxcvrresetwrapRx;
     method Action      cal_busy(Bit#(4) v);
     method Bit#(4)     digitalreset();
     method Action      is_lockedtodata(Bit#(4) v);
-    method Bit#(4)     ready();
+endinterface
+(* always_ready, always_enabled *)
+interface EthxcvrresetwrapRx_r;
+    method Bit#(4)     eady();
 endinterface
 (* always_ready, always_enabled *)
 interface EthxcvrresetwrapTx;
     method Bit#(4)     analogreset();
     method Action      cal_busy(Bit#(4) v);
     method Bit#(4)     digitalreset();
-    method Bit#(4)     ready();
+endinterface
+(* always_ready, always_enabled *)
+interface EthxcvrresetwrapTx_r;
+    method Bit#(4)     eady();
 endinterface
 (* always_ready, always_enabled *)
 interface EthXcvrResetWrap;
     interface EthxcvrresetwrapPll     pll;
     interface EthxcvrresetwrapRx     rx;
+    interface EthxcvrresetwrapRx_r     rx_r;
     interface EthxcvrresetwrapTx     tx;
+    interface EthxcvrresetwrapTx_r     tx_r;
 endinterface
 import "BVI" altera_xcvr_reset_control_wrapper =
 module mkEthXcvrResetWrap#(Clock clock, Reset clock_reset, Reset reset)(EthXcvrResetWrap);
@@ -69,13 +81,17 @@ module mkEthXcvrResetWrap#(Clock clock, Reset clock_reset, Reset reset)(EthXcvrR
         method cal_busy(rx_cal_busy) enable((*inhigh*) EN_rx_cal_busy);
         method rx_digitalreset digitalreset();
         method is_lockedtodata(rx_is_lockedtodata) enable((*inhigh*) EN_rx_is_lockedtodata);
-        method rx_ready ready();
+    endinterface
+    interface EthxcvrresetwrapRx_r     rx_r;
+        method rx_ready eady();
     endinterface
     interface EthxcvrresetwrapTx     tx;
         method tx_analogreset analogreset();
         method cal_busy(tx_cal_busy) enable((*inhigh*) EN_tx_cal_busy);
         method tx_digitalreset digitalreset();
-        method tx_ready ready();
     endinterface
-    schedule (pll.locked, pll.powerdown, pll.select, rx.analogreset, rx.cal_busy, rx.digitalreset, rx.is_lockedtodata, rx.ready, tx.analogreset, tx.cal_busy, tx.digitalreset, tx.ready) CF (pll.locked, pll.powerdown, pll.select, rx.analogreset, rx.cal_busy, rx.digitalreset, rx.is_lockedtodata, rx.ready, tx.analogreset, tx.cal_busy, tx.digitalreset, tx.ready);
+    interface EthxcvrresetwrapTx_r     tx_r;
+        method tx_ready eady();
+    endinterface
+    schedule (pll.locked, pll.powerdown, pll.select, rx.analogreset, rx.cal_busy, rx.digitalreset, rx.is_lockedtodata, rx_r.eady, tx.analogreset, tx.cal_busy, tx.digitalreset, tx_r.eady) CF (pll.locked, pll.powerdown, pll.select, rx.analogreset, rx.cal_busy, rx.digitalreset, rx.is_lockedtodata, rx_r.eady, tx.analogreset, tx.cal_busy, tx.digitalreset, tx_r.eady);
 endmodule
