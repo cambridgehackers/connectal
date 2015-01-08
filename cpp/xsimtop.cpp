@@ -40,7 +40,7 @@ public:
 int xsiport::read()
 {
     xsiInstance.get_value(port, &value);
-    int mask = ((1 << width) - 1);
+    int mask = (width == 32) ? -1 : ((1 << width) - 1);
     if (value.bVal != 0) {
       char charval[] = { '0', '1', 'Z', 'X' };
       int encoding = (value.aVal & mask) | ((value.bVal & mask) << 1);
