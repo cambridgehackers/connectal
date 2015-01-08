@@ -23,6 +23,7 @@
 typedef enum { XsimMemSlaveRequest, XsimMemSlaveIndication } XsimIfcNames;
 
 interface XsimMemSlaveRequest;
+   method Action connect();
    method Action read(Bit#(32) addr);
    method Action write(Bit#(32) addr, Bit#(32) data);
 endinterface

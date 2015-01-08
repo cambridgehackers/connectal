@@ -12,9 +12,13 @@ static void connect_to_xsim()
     PortalSocketParam paramSocket = {};
     PortalMuxParam param = {};
 
-    Portal *mcommon = new Portal(0, sizeof(uint32_t), portal_mux_handler, NULL, &socketfuncResp, &paramSocket, 0);
+    Portal *mcommon = new Portal(0, sizeof(uint32_t), portal_mux_handler, NULL, &socketfuncInit, &paramSocket, 0);
     param.pint = &mcommon->pint;
+  fprintf(stderr, "[%s:%d]\n", __FUNCTION__, __LINE__);
     memSlaveRequestProxy = new XsimMemSlaveRequestProxy(XsimIfcNames_XsimMemSlaveRequest, &muxfunc, &param);
+  fprintf(stderr, "[%s:%d] calling connect()\n", __FUNCTION__, __LINE__);
+    memSlaveRequestProxy->connect();
+  fprintf(stderr, "[%s:%d]()\n", __FUNCTION__, __LINE__);
   }
 }
 
@@ -52,4 +56,4 @@ int event_portal_xsim(struct PortalInternal *pint)
 
 PortalItemFunctions xsimfunc = {
     init_xsim, read_portal_xsim, write_portal_xsim, write_portal_fd_xsim, mapchannel_hardware, mapchannel_hardware,
-    send_portal_null, recv_portal_null, busy_hardware, enableint_hardware, event_portal_xsim, notfull_hardware};
+    send_portal_null, recv_portal_null, busy_hardware, enableint_hardware, event_portal_xsim, notfull_null};

@@ -54,11 +54,14 @@ class XsimMemSlaveRequest : public XsimMemSlaveRequestWrapper {
 public:
   XsimMemSlaveRequest(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : XsimMemSlaveRequestWrapper(id, item, param, poller) { }
   ~XsimMemSlaveRequest() {}
+  virtual void connect () {
+    fprintf(stderr, "FIXME [%s:%d]", __FUNCTION__, __LINE__);
+  }
   virtual void read ( const uint32_t addr ) {
-    fprintf(stderr, "FIXME [%s:%d]\n addr=%08x", __FUNCTION__, __LINE__, addr);
+    fprintf(stderr, "FIXME [%s:%d] addr=%08x\n", __FUNCTION__, __LINE__, addr);
   }
   virtual void write ( const uint32_t addr, const uint32_t data ) {
-    fprintf(stderr, "FIXME [%s:%d]\n addr=%08x", __FUNCTION__, __LINE__, addr);
+    fprintf(stderr, "FIXME [%s:%d] addr=%08x\n", __FUNCTION__, __LINE__, addr);
   }
 };
 
@@ -90,19 +93,26 @@ int main(int argc, char **argv)
     param.pint = &mcommon->pint;
     XsimMemSlaveIndicationProxy *memSlaveIndicationProxy = new XsimMemSlaveIndicationProxy(XsimIfcNames_XsimMemSlaveIndication, &muxfunc, &param);
     XsimMemSlaveRequest *memSlaveRequest = new XsimMemSlaveRequest(XsimIfcNames_XsimMemSlaveRequest, &muxfunc, &param);
+
+    portalExec_init();
+
     // start low clock
     clk.write(0);
     rst_n.write(0);
     xsiInstance.run(10);
+
     for (int i = 0; i < 100; i++) {
+
+      portalExec_event();
 
       if (i > 2)
 	rst_n.write(1);
       clk.write(1);
-      rdy_read.read();
+      //rdy_read.read();
       xsiInstance.run(10);
 
       clk.write(0);
       xsiInstance.run(10);
     }
+    portalExec_end();
 }
