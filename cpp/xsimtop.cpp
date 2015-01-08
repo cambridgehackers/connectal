@@ -101,7 +101,7 @@ int main(int argc, char **argv)
     rst_n.write(0);
     xsiInstance.run(10);
 
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 1000; i++) {
 
       portalExec_event();
 
@@ -114,5 +114,6 @@ int main(int argc, char **argv)
       clk.write(0);
       xsiInstance.run(10);
     }
+    sleep(100);
     portalExec_end();
 }
