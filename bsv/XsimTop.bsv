@@ -58,14 +58,13 @@ interface XsimTop;
    interface Reset singleReset;
 endinterface
 
-module  mkXsimTop(XsimTop)
-   ; //provisos (SelectXsimRdmaReadWrite#(DataBusWidth));
-   let divider <- mkClockDivider(2);
-   Clock derivedClock = divider.fastClock;
-   Clock single_clock = divider.slowClock;
+module  mkXsimTop(XsimTop);
+   //let divider <- mkClockDivider(2);
+   Clock derivedClock <- exposeCurrentClock; //= divider.fastClock;
+   Clock single_clock = derivedClock; //divider.slowClock;
    Reset derivedReset <- exposeCurrentReset;
-   let sr <- mkReset(2, True, single_clock);
-   Reset single_reset = sr.new_rst;
+   //let sr <- mkReset(2, True, single_clock);
+   Reset single_reset = derivedReset; //sr.new_rst;
 
    XsimHost host <- mkXsimHost(clocked_by single_clock, reset_by single_reset, derivedClock, derivedReset);
    ConnectalTop#(PhysAddrWidth,DataBusWidth,PinType,NumberOfMasters) top <- mkConnectalTop(
@@ -81,11 +80,13 @@ module  mkXsimTop(XsimTop)
    endrule
 
    method Action read(Bit#(32) addr);
+      $display("read addr=%h", addr);
       top.slave.read_server.readReq.put(PhysMemRequest { addr: addr, burstLen: 4, tag: 0 });
    endmethod
 
    method ActionValue#(Bit#(32)) readData();
       let memData <- top.slave.read_server.readData.get();
+      $display("read data=%h", memData.data);
       return memData.data;
    endmethod
 
@@ -97,6 +98,6 @@ module  mkXsimTop(XsimTop)
 `ifdef BSIMRESPONDER
    `BSIMRESPONDER (top.pins);
 `endif
-   interface Clock singleClock = divider.slowClock;
+   interface Clock singleClock = single_clock;
    interface Reset singleReset = single_reset;
 endmodule
