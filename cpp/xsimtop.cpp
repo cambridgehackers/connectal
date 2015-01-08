@@ -78,6 +78,7 @@ public:
     uint32_t data;
   };
   std::queue<readreq> readreqs;
+  std::queue<uint32_t> readdata;
   std::queue<writereq> writereqs;
 
   int connected;
@@ -108,9 +109,9 @@ void XsimMemSlaveRequest::read ( const uint32_t fpgaId, const uint32_t addr )
 void XsimMemSlaveRequest::write ( const uint32_t fpgaId, const uint32_t addr, const uint32_t data )
 {
   int number = fpgaNumber(fpgaId);
-  fprintf(stderr, "[%s:%d] id=%d number=%d addr=%08x data=%08x\n", __FUNCTION__, __LINE__, fpgaId, fpgaNumber(fpgaId), addr, data);
   uint32_t hwaddr = number << 16 | addr;
   writereq req = { hwaddr, data };
+  fprintf(stderr, "[%s:%d] id=%d number=%d addr=%08x/%08x data=%08x\n", __FUNCTION__, __LINE__, fpgaId, fpgaNumber(fpgaId), addr, hwaddr, data);
   writereqs.push(req);
 }
 
@@ -229,18 +230,23 @@ int main(int argc, char **argv)
 	if (rdy_directoryEntry.read() && !portal_count) {
 	  fprintf(stderr, "directoryEntry %08x\n", directoryEntry.read());
 	  unsigned int val = directoryEntry.read();
-	  portal_ids[portal_number++] = val & 0x7fffffff;
+	  bool last = (val & 0x80000000) != 0;
+	  uint32_t id = val & 0x7fffffff;
+	  memSlaveRequest->directory(portal_number, id, last);
+
+	  portal_ids[portal_number++] = id;
 	  if (val & 0x80000000) {
 	      portal_count = portal_number;
 	      portal_number = 0;
+	      fprintf(stderr, "portal_count=%d\n", portal_count);
 	  }
+
 	  en_directoryEntry.write(1);
 	} else {
 	  en_directoryEntry.write(0);
 	}
 	  
 	if (memSlaveRequest->connected && (portal_number < portal_count)) {
-	    memSlaveRequest->directory(portal_number, portal_ids[portal_number], portal_number == (portal_count-1));
 	    memSlaveIndicationProxy->directory(portal_number, portal_ids[portal_number], portal_number == (portal_count-1));
 	    portal_number++;
 	}
@@ -254,6 +260,14 @@ int main(int argc, char **argv)
 	    read_addr.write(readreq.addr);
 	  } else {
 	    en_read.write(0);
+	  }
+	  if (rdy_readData.read()) {
+	    en_readData.write(1);
+	    uint32_t data = readData.read();
+	    fprintf(stderr, "Reading data %08x\n", data);
+	    memSlaveIndicationProxy->readData(data);
+	  } else {
+	    en_readData.write(0);
 	  }
 	  if (memSlaveRequest->writereqs.size() && rdy_write.read()) {
 	    XsimMemSlaveRequest::writereq writereq = memSlaveRequest->writereqs.front();
