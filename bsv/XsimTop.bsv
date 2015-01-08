@@ -118,6 +118,12 @@ module  mkXsimTop(XsimTop);
       token <= t;
    endrule
 
+   FIFO#(Bit#(32)) writeDataFifo <- mkFIFO();
+   rule writedatarule;
+      let data <- toGet(writeDataFifo).get();
+      top.slave.write_server.writeData.put(MemData { data: data, tag: 0, last: True });
+   endrule
+
    method Bit#(1) rd();
       return readingDirectory ? 1 : 0;
    endmethod
@@ -141,7 +147,7 @@ module  mkXsimTop(XsimTop);
 
    method Action write(Bit#(32) addr, Bit#(32) data);
       top.slave.write_server.writeReq.put(PhysMemRequest { addr: addr, burstLen: 4, tag: 0});
-      top.slave.write_server.writeData.put(MemData { data: data, tag: 0, last: True });
+      writeDataFifo.enq(data);
    endmethod
    
 `ifdef BSIMRESPONDER
