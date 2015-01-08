@@ -254,7 +254,7 @@ def processline(line, phase):
             modulename = f[1]
         if f[0] == 'input' or f[0] == 'output' or f[0] == 'inout':
             if len(f) == 2:
-                f = [f[0], 'wire', '1', f[1]]
+                f = [f[0], '', '1', f[1]]
             if len(f) == 3:
                 f = [f[0], f[1], '1', f[2]]
             # check for parameterized declarations
@@ -298,7 +298,7 @@ def processline(line, phase):
                     elif options.reset and f[3] in options.reset:
                         item.type = 'Reset'
                     else:
-                        item.type = f[1]
+                        item.type = f[2]
                     itemfound = True
                     break
             if not itemfound:
