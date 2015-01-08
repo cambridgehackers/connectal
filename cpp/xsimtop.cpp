@@ -62,8 +62,7 @@ public:
   XsimMemSlaveRequest(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : XsimMemSlaveRequestWrapper(id, item, param, poller), connected(0) { }
   ~XsimMemSlaveRequest() {}
   virtual void connect () {
-    fprintf(stderr, "FIXME [%s:%d]\n", __FUNCTION__, __LINE__);
-    // send back directory info
+      connected = 1;
   }
   virtual void read ( const uint32_t addr ) {
     fprintf(stderr, "FIXME [%s:%d] addr=%08x\n", __FUNCTION__, __LINE__, addr);
@@ -135,9 +134,10 @@ int main(int argc, char **argv)
     int waiting_for_read = 0;
     int read_dir_val = 0;
     int portal_ids[16];
+    int portal_count = 0;
     int offset = 0x00;
 
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < 1000; i++)
     {
 
 	void *rc = portalExec_poll(1);
@@ -150,45 +150,28 @@ int main(int argc, char **argv)
 	if (i > 2)
 	    rst_n.write(1);
 
-	if (rdy_directoryEntry.read()) {
+	if (rdy_directoryEntry.read() && !portal_count) {
 	  fprintf(stderr, "directoryEntry %08x\n", directoryEntry.read());
+	  unsigned int val = directoryEntry.read();
+	  portal_ids[portal_number++] = val & 0x7fffffff;
+	  if (val & 0x80000000) {
+	      portal_count = portal_number;
+	      portal_number = 0;
+	  }
 	  en_directoryEntry.write(1);
 	} else {
 	  en_directoryEntry.write(0);
+	}
+	  
+	if (memSlaveRequest->connected && (portal_number < portal_count)) {
+	    memSlaveIndicationProxy->directory(portal_number, portal_ids[portal_number], portal_number == (portal_count-1));
+	    portal_number++;
 	}
 
 	switch (state) {
 	case xt_reset:
 	    if (i > 2) {
 		//rst_n.write(1);
-		state = xt_read_directory;
-	    }
-	    break;
-	case xt_read_directory:
-	    if (portal_number < 16) {
-		if (!waiting_for_read && rdy_read.read()) {
-		    unsigned int addr = offset + portal_number * 0x10000;
-		    fprintf(stderr, "Reading %08x rdy_readdata=%d\n", addr, rdy_readData.read());
-		    en_read.write(1);
-		    read_addr.write(addr);
-		    waiting_for_read = 1;
-		} else if (waiting_for_read && rdy_readData.read()) {
-		    fprintf(stderr, "Read ID %08x for portal %d\n", readData.read(), portal_number);
-		    en_readData.write(1);
-		    waiting_for_read = 0;
-		    read_dir_val = 1;
-		    portal_ids[portal_number] = readData.read();
-		    if (offset <= 0x20) {
-			offset += 4;
-		    } else {
-			portal_number++;
-			offset = 0x10;
-		    }
-		} else {
-		    en_read.write(0);
-		    en_readData.write(0);
-		}
-	    } else {
 		state = xt_active;
 	    }
 	    break;
