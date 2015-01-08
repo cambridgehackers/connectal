@@ -92,6 +92,7 @@ public:
 
   void directory( const uint32_t fpgaNumber, const uint32_t fpgaId, const uint32_t last );
   int fpgaNumber(int fpgaId);
+  int fpgaId(int fpgaNumber);
 
 };
 
@@ -137,6 +138,10 @@ int XsimMemSlaveRequest::fpgaNumber(int fpgaId)
 
     return 0;
 }
+int XsimMemSlaveRequest::fpgaId(int fpgaNumber)
+{
+  return ids[fpgaNumber].id;
+}
 
 enum xsimtop_state {
   xt_reset, xt_read_directory, xt_active
@@ -161,7 +166,10 @@ int main(int argc, char **argv)
 
     xsiport rst_n(xsiInstance, "RST_N");
     xsiport clk(xsiInstance, "CLK");
-    xsiport readingDirectory(xsiInstance, "rd");
+    xsiport en_interrupt(xsiInstance, "EN_interrupt");
+    xsiport rdy_interrupt(xsiInstance, "RDY_interrupt");
+    xsiport interrupt(xsiInstance, "interrupt", 4);
+
     xsiport en_directoryEntry(xsiInstance, "EN_directoryEntry");
     xsiport rdy_directoryEntry(xsiInstance, "RDY_directoryEntry");
     xsiport directoryEntry(xsiInstance, "directoryEntry", 32);
@@ -237,13 +245,7 @@ int main(int argc, char **argv)
 	    portal_number++;
 	}
 
-	if (0)
-	if (memSlaveRequest->readreqs.size() || memSlaveRequest->writereqs.size())
-	  fprintf(stderr, "rdy_read=%d rdy_write=%d\n", rdy_read.read(), rdy_write.read());
-
-	switch (state) {
-	case xt_active: {
-
+	if (state == xt_active) {
 	  if (memSlaveRequest->readreqs.size() && rdy_read.read()) {
 	    XsimMemSlaveRequest::readreq readreq = memSlaveRequest->readreqs.front();
 	    memSlaveRequest->readreqs.pop();
@@ -263,8 +265,17 @@ int main(int argc, char **argv)
 	  } else {
 	    en_write.write(0);
 	  }
-	} break;
 	}
+	if (memSlaveRequest->connected && rdy_interrupt.read()) {
+	  en_interrupt.write(1);
+	  int intr = interrupt.read();
+	  int id = memSlaveRequest->fpgaId(intr);
+	  fprintf(stderr, "Got interrupt number %d id %d\n", intr, id);
+	  //memSlaveIndicationProxy->interrupt(id);
+	} else {
+	  en_interrupt.write(0);
+	}
+
 	clk.write(1);
 	xsiInstance.run(10);
 

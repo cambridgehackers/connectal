@@ -30,5 +30,6 @@ endinterface
 interface XsimMemSlaveIndication;
    method Action directory(Bit#(32) fpgaNumber, Bit#(32) fpgaId, Bit#(1) last);
    method Action readData(Bit#(32) data);
+   method Action interrupt(Bit#(4) intrNum);
 endinterface
 

@@ -1,3 +1,4 @@
+#include <queue>
 #include <string.h>
 #include <portal.h>
 #include <sock_utils.h>
@@ -17,6 +18,7 @@ class XsimMemSlaveIndication : public XsimMemSlaveIndicationWrapper {
   } ids[16];
   int portal_count;
 public:
+  std::queue<int> intrs;
 
   XsimMemSlaveIndication(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0)
     : XsimMemSlaveIndicationWrapper(id, item, param, poller),
@@ -34,6 +36,10 @@ public:
     ids[fpgaNumber] = info;
     if (last)
       portal_count = fpgaNumber+1;
+  }
+  virtual void interrupt (const uint32_t intrNumber )	{
+    fprintf(stderr, "[%s:%d] fpga=%d\n", __FUNCTION__, __LINE__, intrNumber);
+    intrs.push(intrNumber);
   }
 
     int fpgaNumber(int fpgaId);

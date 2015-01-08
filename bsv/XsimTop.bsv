@@ -50,7 +50,7 @@ module  mkXsimHost#(Clock derivedClock, Reset derivedReset)(XsimHost);
 endmodule
 
 interface XsimTop;
-   method Bit#(1) rd();
+   method ActionValue#(Bit#(4)) interrupt();
    method ActionValue#(Bit#(32)) directoryEntry();
    method Action read(Bit#(32) addr);
    method ActionValue#(Bit#(32)) readData();
@@ -76,9 +76,23 @@ module  mkXsimTop(XsimTop);
        clocked_by single_clock, reset_by single_reset);
    //mapM(uncurry(mkConnection),zip(top.masters, host.mem_servers), clocked_by single_clock, reset_by single_reset);
 
-   let intr_mux <- mkInterruptMux(top.interrupt);
+   Vector#(16,Reg#(Bool)) interruptSent <- replicateM(mkReg(False));
+   FIFO#(Bit#(4)) interruptFifo <- mkFIFO();
    rule int_rule;
-      //interruptLevel(truncate(pack(intr_mux)));
+      Bool found = False;
+      Bit#(4) intrNum = 0;
+      for (Integer i = 0; i < 16; i = i + 1) begin
+	 if (top.interrupt[i] && !interruptSent[i] && !found) begin
+	    found = True;
+	    intrNum = fromInteger(i);
+	 end
+	 if (!top.interrupt[i])
+	    interruptSent[i] <= False;
+      end
+      if (found) begin
+	 interruptSent[intrNum] <= True;
+	 interruptFifo.enq(intrNum);
+      end
    endrule
 
    Reg#(Bool) readingDirectory <- mkReg(True);
@@ -124,8 +138,9 @@ module  mkXsimTop(XsimTop);
       top.slave.write_server.writeData.put(MemData { data: data, tag: 0, last: True });
    endrule
 
-   method Bit#(1) rd();
-      return readingDirectory ? 1 : 0;
+   method ActionValue#(Bit#(4)) interrupt();
+      let i <- toGet(interruptFifo).get();
+      return i;
    endmethod
    method ActionValue#(Bit#(32)) directoryEntry() if (readingDirectory);
       let v <- toGet(directoryFifo).get();
