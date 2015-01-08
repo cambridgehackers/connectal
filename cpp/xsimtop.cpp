@@ -44,7 +44,7 @@ int xsiport::read()
     if (value.bVal != 0) {
       char charval[] = { '0', '1', 'Z', 'X' };
       int encoding = (value.aVal & mask) | ((value.bVal & mask) << 1);
-      printf("port %2d.%16s value=%08x.%08x %c\n", port, name, value.aVal, value.bVal, charval[encoding]);
+      fprintf(stderr, "port %2d.%16s value=%08x.%08x mask=%08x width=%2d %c\n", port, name, value.aVal, value.bVal, mask, width, charval[encoding]);
     }
     return value.aVal & mask;
 }
@@ -96,6 +96,10 @@ int main(int argc, char **argv)
 
     xsiport rst_n(xsiInstance, "RST_N");
     xsiport clk(xsiInstance, "CLK");
+    xsiport readingDirectory(xsiInstance, "rd");
+    xsiport en_directoryEntry(xsiInstance, "EN_directoryEntry");
+    xsiport rdy_directoryEntry(xsiInstance, "RDY_directoryEntry");
+    xsiport directoryEntry(xsiInstance, "directoryEntry", 32);
     xsiport read_addr(xsiInstance, "read_addr", 32);
     xsiport en_read(xsiInstance, "EN_read");
     xsiport rdy_read(xsiInstance, "RDY_read");
@@ -118,7 +122,7 @@ int main(int argc, char **argv)
 
     // start low clock
     clk.write(0);
-    rst_n.write(1);
+    rst_n.write(0);
 
     read_addr.write(0);
     en_read.write(0);
@@ -145,6 +149,13 @@ int main(int argc, char **argv)
 	//en_read.write(0);
 	if (i > 2)
 	    rst_n.write(1);
+
+	if (rdy_directoryEntry.read()) {
+	  fprintf(stderr, "directoryEntry %08x\n", directoryEntry.read());
+	  en_directoryEntry.write(1);
+	} else {
+	  en_directoryEntry.write(0);
+	}
 
 	switch (state) {
 	case xt_reset:
@@ -187,13 +198,7 @@ int main(int argc, char **argv)
 	clk.write(1);
 	//rdy_read.read();
 	xsiInstance.run(10);
-	if (waiting_for_read)
-	    fprintf(stderr, "rdy_read=%d rdy_readData=%d readData=%x\n", rdy_read.read(), rdy_readData.read(), readData.read());
 
-	if (read_dir_val) {
-	    fprintf(stderr, "after posedge,  ID %08x for portal %d\n", readData.read(), portal_number);
-	    read_dir_val = 0;
-	}
 	if (0) {
 	    // clock is divided by two
 	    clk.write(0);
