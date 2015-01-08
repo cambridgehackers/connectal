@@ -286,7 +286,7 @@ if __name__=='__main__':
 
     cstr = option_info.get('constraints')
     if cstr:
-        options.constraint.prepend(os.path.join(connectaldir, cstr))
+        options.constraint.insert(0, os.path.join(connectaldir, cstr))
 
     bsvdefines += ['BOARD_'+boardname]
 
@@ -303,7 +303,7 @@ if __name__=='__main__':
         suffix = None
 
     if fpga_vendor:
-        options.constraint.prepend(os.path.join(connectaldir, 'constraints/', '%s/%s.%s' % (fpga_vendor, boardname, suffix)))
+        options.constraint.insert(0, os.path.join(connectaldir, 'constraints/', '%s/%s.%s' % (fpga_vendor, boardname, suffix)))
 
     if noisyFlag:
         pprint.pprint(options.__dict__)
