@@ -65,8 +65,6 @@ int main(int argc, const char **argv)
     DmaManager *dma = new DmaManager(dmap);
     MMUIndication *mIndication = new MMUIndication(dma, IfcNames_MMUIndication, &socketfuncInit, NULL);
 
-    portalExec_start();
-
     PortalSharedParam param = {dma, alloc_sz};
     EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &sharedfunc, &param);
     sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &sharedfunc, &param);

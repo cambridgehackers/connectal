@@ -26,13 +26,16 @@
 
 #include <semaphore.h>
 #include <unistd.h>
+#include <pthread.h> // pthread_mutex_t
 #include "portal.h"
 
 class Portal;
 class PortalPoller {
 private:
   Portal **portal_wrappers;
+  pthread_mutex_t mutex;
   struct pollfd *portal_fds;
+  int inited;
   int numWrappers;
   int numFds;
 public:
