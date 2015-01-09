@@ -119,3 +119,8 @@ module mkPortalMsgSource#(PipePortal#(0, numIndications, 32) portal)(MsgSource#(
 
    return fifoMsgSource.source;
 endmodule
+
+interface BluenocTop#(numeric type numRequests, numeric type numIndications);
+   interface Vector#(numRequests, MsgSink#(4)) requests;
+   interface Vector#(numIndications, MsgSource#(3)) indications;
+endinterface
