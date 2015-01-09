@@ -100,7 +100,7 @@ int PortalPoller::registerInstance(Portal *portal)
     for (int i = 0; i < portal->pint.client_fd_number; i++)
         addFd(portal->pint.client_fd[i]);
     pthread_mutex_unlock(&mutex);
-    portalExec_start();
+    //portalExec_start();
     return 0;
 }
 
