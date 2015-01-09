@@ -23,6 +23,7 @@ class XsimMemSlaveIndication : public XsimMemSlaveIndicationWrapper {
   PortalPoller *poller;
 public:
   std::queue<int> intrs;
+  std::queue<uint32_t> srcbeats;
 
   XsimMemSlaveIndication(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0)
     : XsimMemSlaveIndicationWrapper(id, item, param, poller),
@@ -48,6 +49,11 @@ public:
   virtual void interrupt (const uint32_t intrNumber )	{
     fprintf(stderr, "[%s:%d] fpga=%d\n", __FUNCTION__, __LINE__, intrNumber);
     intrs.push(intrNumber);
+  }
+
+  void msgSource ( const uint32_t data ) {
+    fprintf(stderr, "[%s:%d] data=%d\n", __FUNCTION__, __LINE__, data);
+    srcbeats.push(data);
   }
 
     int fpgaNumber(int fpgaId);
