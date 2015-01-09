@@ -430,7 +430,7 @@ static int poll_response(int id)
   }
   return shared_response_valid && shared_response.portal == id;
 }
-static unsigned int bsim_poll_interrupt(void)
+unsigned int bsim_poll_interrupt(void)
 {
   if (global_sockfd == -1)
       return 0;

@@ -203,6 +203,7 @@ void addFdToPoller(struct PortalPoller *poller, int fd);
 int portal_mux_handler(struct PortalInternal *p, unsigned int channel, int messageFd);
 int notfull_null(PortalInternal *pint, unsigned int v);
 int notfull_hardware(PortalInternal *pint, unsigned int v);
+unsigned int bsim_poll_interrupt(void);
 
 extern int portalExec_timeout;
 extern int global_pa_fd;
