@@ -122,5 +122,5 @@ endmodule
 
 interface BluenocTop#(numeric type numRequests, numeric type numIndications);
    interface Vector#(numRequests, MsgSink#(4)) requests;
-   interface Vector#(numIndications, MsgSource#(3)) indications;
+   interface Vector#(numIndications, MsgSource#(4)) indications;
 endinterface
