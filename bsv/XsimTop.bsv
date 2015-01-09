@@ -196,6 +196,11 @@ module mkXsimTop(XsimTop);
    //let sr <- mkReset(2, True, single_clock);
    Reset single_reset = derivedReset; //sr.new_rst;
 
+   Reg#(Bool) dumpstarted <- mkReg(False);
+   rule startdump if (!dumpstarted);
+      $dumpfile("dump.vcd");
+      $dumpvars;
+   endrule
    XsimHost host <- mkXsimHost(clocked_by single_clock, reset_by single_reset, derivedClock, derivedReset);
    BluenocTop#(1,1) top <- mkBluenocTop(
 `ifdef IMPORT_HOSTIF
