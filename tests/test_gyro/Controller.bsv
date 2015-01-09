@@ -42,10 +42,6 @@ interface GyroCtrlIndication;
    method Action sample_wrap(Bit#(32) v);
 endinterface
 
-interface Sample;
-   method Action sample(Bit#(32) s);
-endinterface
-
 interface Controller;
    interface GyroCtrlRequest req;
    interface SpiPins spi;

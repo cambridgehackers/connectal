@@ -36,7 +36,6 @@
 #include "dmaManager.h"
 #include "sock_utils.h"
 
-#include "Sample.h"
 #include "GyroCtrlRequest.h"
 #include "GyroCtrlIndication.h"
 #include "GeneratedTypes.h"
@@ -64,19 +63,6 @@ public:
   }
 };
 
-static void* snapshot(void *foo)
-{
-  PortalSocketParam param;
-  int rc = getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
-  SampleProxy *sp = new SampleProxy(IfcNames_Sample, &socketfuncResp, &param);
-  while(1){
-    sp->sample(ss[0]);
-    sp->sample(ss[1]);
-    sp->sample(ss[2]);
-  }
-  return 0;
-}
-
 int main(int argc, const char **argv)
 {
   GyroCtrlIndication *ind = new GyroCtrlIndication(IfcNames_ControllerIndication);
@@ -86,12 +72,6 @@ int main(int argc, const char **argv)
   DmaManager *dma = new DmaManager(dmap);
   MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
-
-  PortalSocketParam param;
-  int rc = getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
-  SampleProxy *sp = new SampleProxy(IfcNames_Sample, &socketfuncResp, &param);
-  // pthread_t threaddata;
-  // pthread_create(&threaddata, NULL, &snapshot, NULL);
 
   portalExec_start();
   int dstAlloc = portalAlloc(alloc_sz);
@@ -133,10 +113,9 @@ int main(int argc, const char **argv)
       for(int j = 0; j < 3; j++)
 	s[j] += (int)(foo[j]);
     }
-    for(int j = 0; j < 3; j++){
+    for(int j = 0; j < 3; j++)
       ss[j] = s[j]/(wrap_limit/6);
-      sp->sample(ss[j]);
-    }
+
     fprintf(stderr, "x:%8d, y:%8d, z:%8d\n", ss[0], ss[1], ss[2]);
   }
 
