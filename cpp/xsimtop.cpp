@@ -296,7 +296,7 @@ int main(int argc, char **argv)
 	  int intr = interrupt.read();
 	  int id = memSlaveRequest->fpgaId(intr);
 	  fprintf(stderr, "Got interrupt number %d id %d\n", intr, id);
-	  //memSlaveIndicationProxy->interrupt(id);
+	  memSlaveIndicationProxy->interrupt(id);
 	} else {
 	  en_interrupt.write(0);
 	}
