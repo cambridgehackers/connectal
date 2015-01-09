@@ -95,7 +95,7 @@ static volatile unsigned int *mapchannel_xsim(struct PortalInternal *pint, unsig
 
 static unsigned int read_portal_xsim(PortalInternal *pint, volatile unsigned int **addr)
 {
-  fprintf(stderr, "FIXME [%s:%d] %08lx\n", __FUNCTION__, __LINE__, (long)*addr);
+  fprintf(stderr, "FIXME [%s:%d] id=%d addr=%08lx\n", __FUNCTION__, __LINE__, pint->fpga_number, (long)*addr);
   memSlaveRequestProxy->read(pint->fpga_number, (uint32_t)(long)*addr);
   //FIXME: wait for response
   return 0;
@@ -103,13 +103,19 @@ static unsigned int read_portal_xsim(PortalInternal *pint, volatile unsigned int
 
 static void write_portal_xsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
 {
-  fprintf(stderr, "[%s:%d] fd %08lx %08x\n", __FUNCTION__, __LINE__, (long)*addr, v);
+  fprintf(stderr, "[%s:%d] id=%d addr=%08lx data=%08x\n", __FUNCTION__, __LINE__, pint->fpga_number, (long)*addr, v);
   memSlaveRequestProxy->write(pint->fpga_number, (uint32_t)(long)*addr, v);
 }
 void write_portal_fd_xsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
 {
   fprintf(stderr, "FIXME [%s:%d] fd %d\n", __FUNCTION__, __LINE__, v);
 //FIXME
+}
+
+static void enableint_portal_xsim(struct PortalInternal *pint, int val)
+{
+  fprintf(stderr, "[%s:%d] id %d val %d\n", __FUNCTION__, __LINE__, pint->fpga_number, val);
+  memSlaveRequestProxy->enableint(pint->fpga_number, val);
 }
 
 int event_portal_xsim(struct PortalInternal *pint)
@@ -120,4 +126,4 @@ int event_portal_xsim(struct PortalInternal *pint)
 
 PortalItemFunctions xsimfunc = {
     init_xsim, read_portal_xsim, write_portal_xsim, write_portal_fd_xsim, mapchannel_hardware, mapchannel_hardware,
-    send_portal_null, recv_portal_null, busy_portal_null, enableint_portal_null, event_portal_xsim, notfull_null};
+    send_portal_null, recv_portal_null, busy_portal_null, enableint_portal_xsim, event_portal_xsim, notfull_null};
