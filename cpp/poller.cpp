@@ -106,7 +106,10 @@ int PortalPoller::registerInstance(Portal *portal)
 
 void* PortalPoller::portalExec_init(void)
 {
-    portalExec_timeout = -1; // no interrupt timeout 
+  portalExec_timeout = -1; // no interrupt timeout
+#ifdef XSIM
+    portalExec_timeout = 100;
+#endif
 #ifdef BSIM
     portalExec_timeout = 100;
     if (global_sockfd != -1)
