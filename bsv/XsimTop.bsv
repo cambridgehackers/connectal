@@ -137,6 +137,9 @@ module  mkXsimTop(XsimTop);
       let data <- toGet(writeDataFifo).get();
       top.slave.write_server.writeData.put(MemData { data: data, tag: 0, last: True });
    endrule
+   rule writedonerule;
+      let done <- top.slave.write_server.writeDone.get();
+   endrule
 
    method ActionValue#(Bit#(4)) interrupt();
       let i <- toGet(interruptFifo).get();
