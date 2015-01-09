@@ -88,6 +88,7 @@ public:
   virtual void connect () {
       connected = 1;
   }
+  virtual void enableint( const uint32_t fpgaId, const uint32_t val);
   virtual void read ( const uint32_t fpgaId, const uint32_t addr );
   virtual void write ( const uint32_t fpgaId, const uint32_t addr, const uint32_t data );
 
@@ -96,6 +97,15 @@ public:
   int fpgaId(int fpgaNumber);
 
 };
+
+void XsimMemSlaveRequest::enableint( const uint32_t fpgaId, const uint32_t val)
+{
+  int number = fpgaNumber(fpgaId);
+  uint32_t hwaddr = number << 16 | 4;
+  writereq req = { hwaddr, val };
+  fprintf(stderr, "[%s:%d] id=%d number=%d addr=%08x\n", __FUNCTION__, __LINE__, fpgaId, number, hwaddr);
+  writereqs.push(req);
+}
 
 void XsimMemSlaveRequest::read ( const uint32_t fpgaId, const uint32_t addr )
 {
