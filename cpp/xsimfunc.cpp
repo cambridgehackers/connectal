@@ -1,3 +1,4 @@
+#include <pthread.h>
 #include <queue>
 #include <string.h>
 #include <portal.h>
@@ -17,17 +18,24 @@ class XsimMemSlaveIndication : public XsimMemSlaveIndicationWrapper {
     int valid;
   } ids[16];
   int portal_count;
+  std::queue<uint32_t> readDataQueue;
+  pthread_mutex_t readDataMutex;
+  PortalPoller *poller;
 public:
   std::queue<int> intrs;
 
   XsimMemSlaveIndication(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0)
     : XsimMemSlaveIndicationWrapper(id, item, param, poller),
-      portal_count(0)
+      portal_count(0), poller(poller)
   {
     memset(ids, 0, sizeof(ids));
+    pthread_mutex_init(&readDataMutex, NULL);
   }
   virtual void readData ( const uint32_t data ) {
     fprintf(stderr, "[%s:%d] FIXME data=%d\n", __FUNCTION__, __LINE__, data);
+    pthread_mutex_lock(&readDataMutex);
+    readDataQueue.push(data);
+    pthread_mutex_unlock(&readDataMutex);
   }
   virtual void directory ( const uint32_t fpgaNumber, const uint32_t fpgaId, const uint32_t last )
   {
@@ -43,6 +51,7 @@ public:
   }
 
     int fpgaNumber(int fpgaId);
+    int getReadData(uint32_t *data);
 };
 
 int XsimMemSlaveIndication::fpgaNumber(int fpgaId)
@@ -61,6 +70,19 @@ int XsimMemSlaveIndication::fpgaNumber(int fpgaId)
     return 0;
 }
 
+int XsimMemSlaveIndication::getReadData(uint32_t *data)
+{
+  if (poller) poller->portalExec_event();
+  pthread_mutex_lock(&readDataMutex);
+  int hasData = readDataQueue.size();
+  if (hasData && data) {
+    *data = readDataQueue.size();
+    readDataQueue.pop();
+  }
+  pthread_mutex_unlock(&readDataMutex);
+  return hasData;
+}
+
 
 Portal *mcommon;
 static void connect_to_xsim()
@@ -69,11 +91,13 @@ static void connect_to_xsim()
     PortalSocketParam paramSocket = {};
     PortalMuxParam param = {};
 
-    mcommon = new Portal(0, sizeof(uint32_t), portal_mux_handler, NULL, &socketfuncInit, &paramSocket, 0);
+    mcommon = new Portal(0, sizeof(uint32_t), portal_mux_handler, NULL, &socketfuncInit, &paramSocket, defaultPoller);
     param.pint = &mcommon->pint;
+    fprintf(stderr, "[%s:%d] adding fd %d\n", __FUNCTION__, __LINE__, mcommon->pint.client_fd[0]);
+
   fprintf(stderr, "[%s:%d]\n", __FUNCTION__, __LINE__);
-    memSlaveIndication = new XsimMemSlaveIndication(XsimIfcNames_XsimMemSlaveIndication, &muxfunc, &param);
-    memSlaveRequestProxy = new XsimMemSlaveRequestProxy(XsimIfcNames_XsimMemSlaveRequest, &muxfunc, &param);
+  memSlaveIndication = new XsimMemSlaveIndication(XsimIfcNames_XsimMemSlaveIndication, &muxfunc, &param, defaultPoller);
+  memSlaveRequestProxy = new XsimMemSlaveRequestProxy(XsimIfcNames_XsimMemSlaveRequest, &muxfunc, &param);
   fprintf(stderr, "[%s:%d] calling connect()\n", __FUNCTION__, __LINE__);
     memSlaveRequestProxy->connect();
   fprintf(stderr, "[%s:%d] called connect\n", __FUNCTION__, __LINE__);
@@ -97,8 +121,15 @@ static unsigned int read_portal_xsim(PortalInternal *pint, volatile unsigned int
 {
   fprintf(stderr, "FIXME [%s:%d] id=%d addr=%08lx\n", __FUNCTION__, __LINE__, pint->fpga_number, (long)*addr);
   memSlaveRequestProxy->read(pint->fpga_number, (uint32_t)(long)*addr);
-  //FIXME: wait for response
-  return 0;
+  while (1) {
+    uint32_t data;
+    int hasData = memSlaveIndication->getReadData(&data);
+    if (hasData) {
+      fprintf(stderr, "[%s:%d] id=%d addr=%08lx got data %08lx\n", __FUNCTION__, __LINE__, pint->fpga_number, (long)*addr, data);
+      return data;
+    }
+  }
+  return 0xDeadBeef;
 }
 
 static void write_portal_xsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
