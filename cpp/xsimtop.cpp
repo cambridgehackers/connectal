@@ -227,11 +227,12 @@ int main(int argc, char **argv)
     clk.write(0);
     rst_n.write(0);
 
-    read_addr.write(0);
-    en_read.write(0);
-    en_readData.write(0);
-    en_write.write(0);
-
+    if (read_addr.valid()) {
+      read_addr.write(0);
+      en_read.write(0);
+      en_readData.write(0);
+      en_write.write(0);
+    }
     xsiInstance.run(10);
 
     int portal_number = 0;
