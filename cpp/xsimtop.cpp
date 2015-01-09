@@ -206,10 +206,10 @@ int main(int argc, char **argv)
 
     xsiport msgSource_src_rdy(xsiInstance, "msgSource_src_rdy");
     xsiport msgSource_dst_rdy_b(xsiInstance, "msgSource_dst_rdy_b");
-    xsiport msgSource_beat(xsiInstance, "msgSource_beat");
+    xsiport msgSource_beat(xsiInstance, "msgSource_beat", 32);
     xsiport msgSink_dst_rdy(xsiInstance, "msgSink_dst_rdy");
     xsiport msgSink_src_rdy_b(xsiInstance, "msgSink_src_rdy_b");
-    xsiport msgSink_beat_v(xsiInstance, "msgSink_beat_v");
+    xsiport msgSink_beat_v(xsiInstance, "msgSink_beat_v", 32);
 
     PortalSocketParam paramSocket = {};
     PortalMuxParam param = {};
