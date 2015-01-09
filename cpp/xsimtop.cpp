@@ -263,6 +263,7 @@ int main(int argc, char **argv)
 	}
 
 	if (state == xt_active) {
+
 	  if (memSlaveRequest->readreqs.size() && rdy_read.read()) {
 	    XsimMemSlaveRequest::readreq readreq = memSlaveRequest->readreqs.front();
 	    memSlaveRequest->readreqs.pop();
@@ -272,14 +273,16 @@ int main(int argc, char **argv)
 	  } else {
 	    en_read.write(0);
 	  }
+
 	  if (rdy_readData.read()) {
 	    en_readData.write(1);
 	    uint32_t data = readData.read();
-	    fprintf(stderr, "Reading data %08x\n", data);
+	    fprintf(stderr, "Read data %08x\n", data);
 	    memSlaveIndicationProxy->readData(data);
 	  } else {
 	    en_readData.write(0);
 	  }
+
 	  if (memSlaveRequest->writereqs.size() && rdy_write.read()) {
 	    XsimMemSlaveRequest::writereq writereq = memSlaveRequest->writereqs.front();
 	    memSlaveRequest->writereqs.pop();
@@ -291,6 +294,7 @@ int main(int argc, char **argv)
 	    en_write.write(0);
 	  }
 	}
+
 	if (memSlaveRequest->connected && rdy_interrupt.read()) {
 	  en_interrupt.write(1);
 	  int intr = interrupt.read();
