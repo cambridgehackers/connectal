@@ -120,7 +120,14 @@ static void enableint_portal_xsim(struct PortalInternal *pint, int val)
 
 int event_portal_xsim(struct PortalInternal *pint)
 {
-  fprintf(stderr, "[%s:%d]\n", __FUNCTION__, __LINE__);
+  fprintf(stderr, "[%s:%d] num_intrs=%d\n", __FUNCTION__, __LINE__, memSlaveIndication->intrs.size());
+  if (memSlaveIndication->intrs.size()) {
+    volatile unsigned int *map_base = 0;
+    volatile unsigned int *statp = &map_base[PORTAL_CTRL_REG_IND_QUEUE_STATUS];
+    for (int fpgaId = memSlaveIndication->intrs.front(); memSlaveIndication->intrs.size(); memSlaveIndication->intrs.pop()) {
+      int status = read_portal_xsim(pint, &statp);
+    }
+  }
   return -1;
 }
 
