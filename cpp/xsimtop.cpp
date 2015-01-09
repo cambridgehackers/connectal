@@ -328,9 +328,12 @@ int main(int argc, char **argv)
 	} else {
 	  // mkBluenocTop
 
+	  //fprintf(stderr, "msgSource ready %d msgSink ready %d\n", msgSource_src_rdy.read(), msgSink_dst_rdy.read());
+
 	  if (msgSource_src_rdy.read()) {
 	    uint32_t beat = msgSource_beat.read();
 	    msgSource_dst_rdy_b.write(1);
+	    fprintf(stderr, "[%s:%d] source message beat %08x\n", __FUNCTION__, __LINE__, beat);
 	    memSlaveIndicationProxy->msgSource(beat);
 	  } else {
 	    msgSource_dst_rdy_b.write(0);
@@ -340,6 +343,7 @@ int main(int argc, char **argv)
 	    uint32_t beat = memSlaveRequest->sinkbeats.front();
 	    memSlaveRequest->sinkbeats.pop();
 
+	    fprintf(stderr, "[%s:%d] sink message beat %08x\n", __FUNCTION__, __LINE__, beat);
 	    msgSink_beat_v.write(beat);
 	    msgSink_src_rdy_b.write(1);
 
