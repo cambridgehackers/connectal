@@ -49,6 +49,7 @@ module  mkXsimHost#(Clock derivedClock, Reset derivedReset)(XsimHost);
    interface derivedReset = derivedReset;
 endmodule
 
+`ifndef BluenocTop
 interface XsimTop;
    method ActionValue#(Bit#(4)) interrupt();
    method ActionValue#(Bit#(32)) directoryEntry();
@@ -174,3 +175,38 @@ module  mkXsimTop(XsimTop);
    interface Clock singleClock = single_clock;
    interface Reset singleReset = single_reset;
 endmodule
+
+`else
+import BlueNoC::*;
+import BnocPortal::*;
+
+interface XsimTop;
+   interface MsgSource#(4) msgSource;
+   interface MsgSink#(4) msgSink;
+
+   interface Clock singleClock;
+   interface Reset singleReset;
+endinterface
+
+module mkXsimTop(XsimTop);
+   //let divider <- mkClockDivider(2);
+   Clock derivedClock <- exposeCurrentClock; //= divider.fastClock;
+   Clock single_clock = derivedClock; //divider.slowClock;
+   Reset derivedReset <- exposeCurrentReset;
+   //let sr <- mkReset(2, True, single_clock);
+   Reset single_reset = derivedReset; //sr.new_rst;
+
+   XsimHost host <- mkXsimHost(clocked_by single_clock, reset_by single_reset, derivedClock, derivedReset);
+   BluenocTop#(1,1) top <- mkBluenocTop(
+`ifdef IMPORT_HOSTIF
+       host,
+`endif
+       clocked_by single_clock, reset_by single_reset);
+
+   interface msgSink = top.requests[0];
+   interface msgSource = top.indications[0];
+
+   interface Clock singleClock = single_clock;
+   interface Reset singleReset = single_reset;
+endmodule
+`endif
