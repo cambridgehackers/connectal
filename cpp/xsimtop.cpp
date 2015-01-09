@@ -160,7 +160,7 @@ int main(int argc, char **argv)
     // See xsi.h header for more details on how Verilog values are stored as aVal/bVal pairs
     Xsi::Loader xsiInstance(design_libname, simengine_libname);
     s_xsi_setup_info info;
-    info.logFileName = "/tmp/xsim.log";
+    info.logFileName = (char *)"xsim.log";
     xsiInstance.open(&info);
     
     xsimtop_state state = xt_reset;
@@ -224,7 +224,6 @@ int main(int argc, char **argv)
 
 	if (i > 2) {
 	    rst_n.write(1);
-	    state = xt_active;
 	}
 
 	if (rdy_directoryEntry.read() && !portal_count) {
@@ -235,10 +234,12 @@ int main(int argc, char **argv)
 	  memSlaveRequest->directory(portal_number, id, last);
 
 	  portal_ids[portal_number++] = id;
-	  if (val & 0x80000000) {
+	  if (last) {
 	      portal_count = portal_number;
 	      portal_number = 0;
 	      fprintf(stderr, "portal_count=%d\n", portal_count);
+
+	      state = xt_active;
 	  }
 
 	  en_directoryEntry.write(1);
