@@ -27,10 +27,13 @@ interface XsimMemSlaveRequest;
    method Action enableint(Bit#(32) fpgaId, Bit#(1) val);
    method Action read(Bit#(32) fpgaId, Bit#(32) addr);
    method Action write(Bit#(32) fpgaId, Bit#(32) addr, Bit#(32) data);
+   // for bluenoc top
+   method Action msgSink(Bit#(32) data);
 endinterface
 interface XsimMemSlaveIndication;
    method Action directory(Bit#(32) fpgaNumber, Bit#(32) fpgaId, Bit#(1) last);
    method Action readData(Bit#(32) data);
    method Action interrupt(Bit#(4) intrNum);
+   // for bluenoc top
+   method Action msgSource(Bit#(32) data);
 endinterface
-
