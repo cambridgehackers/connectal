@@ -65,3 +65,21 @@ module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
    interface leds = default_leds;
 
 endmodule : mkConnectalTop
+
+module mkBluenocTop(BluenocTop#(1,1));
+   // instantiate user portals
+   // the indications from simpleRequest will be connected to the request interface to simpleReuqest2
+   SimpleProxyPortal simple1Proxy <- mkSimpleProxyPortal(SimpleIndication);
+   Simple simple1 <- mkSimple(simple1Proxy.ifc);
+   SimpleWrapperPortal simple1Wrapper <- mkSimpleWrapperPortal(SimpleRequest,simple1);
+
+   // now connect them via a BlueNoC link
+   MsgSource#(4) simpleMsgSource <- mkPortalMsgSource(simple1Proxy.portalIfc);
+   MsgSink#(4) simpleMsgSink <- mkPortalMsgSink(simple1Wrapper.portalIfc);
+
+   Vector#(1,MsgSink#(4)) rs = cons(simpleMsgSink, nil);
+   Vector#(1,MsgSource#(4)) is = cons(simpleMsgSource, nil);
+
+   interface requests = rs;
+   interface indications = is;
+endmodule
