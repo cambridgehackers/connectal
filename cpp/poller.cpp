@@ -26,6 +26,7 @@
 #include <poll.h>
 #include <errno.h>
 #include <pthread.h>
+#include <fcntl.h>
 
 #include "portal.h"
 #include "sock_utils.h"
@@ -38,7 +39,10 @@ PortalPoller::PortalPoller()
   : portal_wrappers(0), portal_fds(0), numFds(0), inited(0), numWrappers(0), stopping(0)
 {
     sem_init(&sem_startup, 0, 0);
+    pipe(pipefd);
     pthread_mutex_init(&mutex, NULL);
+    fcntl(pipefd[0], F_SETFL, O_NONBLOCK);
+    addFd(pipefd[0]);
 }
 
 int PortalPoller::unregisterInstance(Portal *portal)
@@ -89,6 +93,7 @@ void PortalPoller::addFd(int fd)
 }
 int PortalPoller::registerInstance(Portal *portal)
 {
+    uint8_t ch = 0;
     pthread_mutex_lock(&mutex);
     numWrappers++;
     fprintf(stderr, "Portal::registerInstance fpga%d fd %d clients %d\n", portal->pint.fpga_number, portal->pint.fpga_fd, portal->pint.client_fd_number);
@@ -99,22 +104,28 @@ int PortalPoller::registerInstance(Portal *portal)
         addFd(portal->pint.fpga_fd);
     for (int i = 0; i < portal->pint.client_fd_number; i++)
         addFd(portal->pint.client_fd[i]);
+    portal->pint.item->enableint(&portal->pint, 1);
+    write(pipefd[1], &ch, 1);
     pthread_mutex_unlock(&mutex);
-    //portalExec_start();
+    portalExec_start();
     return 0;
 }
 
 void* PortalPoller::portalExec_init(void)
 {
-  portalExec_timeout = -1; // no interrupt timeout
+    portalExec_timeout = -1; // no interrupt timeout
 #ifdef XSIM
     portalExec_timeout = 100;
 #endif
 #ifdef BSIM
     portalExec_timeout = 100;
-    if (global_sockfd != -1)
+    if (global_sockfd != -1) {
+        pthread_mutex_lock(&mutex);
         addFd(global_sockfd);
+        pthread_mutex_unlock(&mutex);
+    }
 #endif
+#if 0
     pthread_mutex_lock(&mutex);
     if (!numFds) {
         fprintf(stderr, "portalExec No fds open numFds=%d\n", numFds);
@@ -126,6 +137,7 @@ void* PortalPoller::portalExec_init(void)
       instance->pint.item->enableint(&instance->pint, 1);
     }
     pthread_mutex_unlock(&mutex);
+#endif
     fprintf(stderr, "portalExec::about to enter loop, numFds=%d\n", numFds);
     return NULL;
 }
@@ -161,7 +173,9 @@ void* PortalPoller::portalExec_poll(int timeout)
 
 void* PortalPoller::portalExec_event(void)
 {
+    uint8_t ch;
     pthread_mutex_lock(&mutex);
+    read(pipefd[0], &ch, 1);
     for (int i = 0; i < numWrappers; i++) {
        if (!portal_wrappers)
            fprintf(stderr, "No portal_instances revents=%d\n", portal_fds[i].revents);

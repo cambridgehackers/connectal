@@ -35,6 +35,7 @@ private:
   Portal **portal_wrappers;
   pthread_mutex_t mutex;
   struct pollfd *portal_fds;
+  int pipefd[2];
   int inited;
   int numWrappers;
   int numFds;
