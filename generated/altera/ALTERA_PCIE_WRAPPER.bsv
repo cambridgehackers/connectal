@@ -562,26 +562,26 @@ module mkPcieWrap#(Clock refclk, Reset npor, Reset pin_perst, Reset refclk_reset
         method msi_tc(app_msi_tc) enable((*inhigh*) EN_app_msi_tc);
     endinterface
     interface PciewrapCfg_par     cfg_par;
-        method cfg_par_err err();
+        method cfg_par_err err()clocked_by(coreclkout.hip);
     endinterface
     interface PciewrapCoreclkout     coreclkout;
         output_clock hip(coreclkout_hip);
     endinterface
     interface PciewrapCpl     cpl;
-        method err(cpl_err) enable((*inhigh*) EN_cpl_err);
+        method err(cpl_err)clocked_by(coreclkout.hip) enable((*inhigh*) EN_cpl_err);
         method pending(cpl_pending) enable((*inhigh*) EN_cpl_pending);
     endinterface
     interface PciewrapCurrent     current;
-        method currentspeed speed();
+        method currentspeed speed()clocked_by(coreclkout.hip);
     endinterface
     interface PciewrapDerr     derr;
-        method derr_cor_ext_rcv cor_ext_rcv();
-        method derr_cor_ext_rpl cor_ext_rpl();
-        method derr_rpl rpl();
+        method derr_cor_ext_rcv cor_ext_rcv()clocked_by(coreclkout.hip);
+        method derr_cor_ext_rpl cor_ext_rpl()clocked_by(coreclkout.hip);
+        method derr_rpl rpl()clocked_by(coreclkout.hip);
     endinterface
     interface PciewrapDl     dl;
-        method dlup up();
-        method dlup_exit up_exit();
+        method dlup up()clocked_by(coreclkout.hip);
+        method dlup_exit up_exit()clocked_by(coreclkout.hip);
     endinterface
     interface PciewrapEidle     eidle;
         method eidleinfersel0 infersel0();
@@ -594,29 +594,29 @@ module mkPcieWrap#(Clock refclk, Reset npor, Reset pin_perst, Reset refclk_reset
         method eidleinfersel7 infersel7();
     endinterface
     interface PciewrapEv128     ev128;
-        method ev128ns ns();
+        method ev128ns ns()clocked_by(coreclkout.hip);
     endinterface
     interface PciewrapEv1     ev1;
-        method ev1us us();
+        method ev1us us()clocked_by(coreclkout.hip);
     endinterface
     interface PciewrapHotrst     hotrst;
-        method hotrst_exit exit();
+        method hotrst_exit exit()clocked_by(coreclkout.hip);
     endinterface
     interface PciewrapHpg     hpg;
         method ctrler(hpg_ctrler) enable((*inhigh*) EN_hpg_ctrler);
     endinterface
     interface PciewrapInt_s     int_s;
-        method int_status tatus();
+        method int_status tatus()clocked_by(coreclkout.hip);
     endinterface
     interface PciewrapKo     ko;
-        method ko_cpl_spc_data cpl_spc_data();
-        method ko_cpl_spc_header cpl_spc_header();
+        method ko_cpl_spc_data cpl_spc_data()clocked_by(coreclkout.hip);
+        method ko_cpl_spc_header cpl_spc_header()clocked_by(coreclkout.hip);
     endinterface
     interface PciewrapL2     l2;
-        method l2_exit exit();
+        method l2_exit exit()clocked_by(coreclkout.hip);
     endinterface
     interface PciewrapLane     lane;
-        method lane_act act();
+        method lane_act act()clocked_by(coreclkout.hip);
     endinterface
     interface PciewrapLmi     lmi;
         method lmi_ack ack();
@@ -627,7 +627,7 @@ module mkPcieWrap#(Clock refclk, Reset npor, Reset pin_perst, Reset refclk_reset
         method wren(lmi_wren) enable((*inhigh*) EN_lmi_wren);
     endinterface
     interface PciewrapLtssm     ltssm;
-        method ltssmstate state();
+        method ltssmstate state()clocked_by(coreclkout.hip);
     endinterface
     interface PciewrapPhy     phy;
         method status0(phystatus0) enable((*inhigh*) EN_phystatus0);
@@ -641,7 +641,7 @@ module mkPcieWrap#(Clock refclk, Reset npor, Reset pin_perst, Reset refclk_reset
     endinterface
     interface PciewrapPld     pld;
         method clk(pld_clk) enable((*inhigh*) EN_pld_clk);
-        method pld_clk_inuse clk_inuse();
+        method pld_clk_inuse clk_inuse()clocked_by(coreclkout.hip);
         method core_ready(pld_core_ready) enable((*inhigh*) EN_pld_core_ready);
     endinterface
     interface PciewrapPm     pm;
@@ -683,7 +683,7 @@ module mkPcieWrap#(Clock refclk, Reset npor, Reset pin_perst, Reset refclk_reset
         method in7(rx_in7) enable((*inhigh*) EN_rx_in7);
     endinterface
     interface PciewrapRx_par     rx_par;
-        method rx_par_err err();
+        method rx_par_err err()clocked_by(coreclkout.hip);
     endinterface
     interface PciewrapRx_s     rx_s;
         method rx_st_bar t_bar() clocked_by(coreclkout.hip);
@@ -798,7 +798,7 @@ module mkPcieWrap#(Clock refclk, Reset npor, Reset pin_perst, Reset refclk_reset
         method tx_out7 out7();
     endinterface
     interface PciewrapTx_par     tx_par;
-        method tx_par_err err();
+        method tx_par_err err()clocked_by(coreclkout.hip);
     endinterface
     interface PciewrapTx_s     tx_s;
         method t_data(tx_st_data) clocked_by(coreclkout.hip) enable((*inhigh*) EN_tx_st_data);
