@@ -108,6 +108,7 @@ module mkPcieEndpointS5#(Clock clk_100, Clock clk_50, Reset npor)(PcieEndpointS5
 
    PcieS5Wrap#(12, 32, 128) pcie_ep <- mkPcieS5Wrap(clk_100, clk_50, npor, pin_perst, clk_50_rst_n);
 
+   //FIXME: fix reset signal.
    AlteraPcieHipRs hip_rs <- mkAlteraPcieHipRs(pcie_ep.coreclkout_hip, npor);
    AlteraPcieTlCfgSample tl_cfg <- mkAlteraPcieTlCfgSample(pcie_ep.coreclkout_hip, hip_rs.app_rstn);
 
@@ -140,6 +141,19 @@ module mkPcieEndpointS5#(Clock clk_100, Clock clk_50, Reset npor)(PcieEndpointS5
          eop: pcie_ep.rx_st.eop,
          be:  pcie_ep.rx_st.be,
          data: pcie_ep.rx_st.data });
+   endrule
+
+   rule connect_configuration_signals;
+      tl_cfg.tl_cfg_add(pcie_ep.tl.cfg_add);
+      tl_cfg.tl_cfg_ctl(pcie_ep.tl.cfg_ctl);
+      tl_cfg.tl_cfg_sts(pcie_ep.tl.cfg_sts);
+   endrule
+
+   rule connect_hip_rs;
+      hip_rs.dlup_exit(pcie_ep.hip_status.dlup_exit);
+      hip_rs.hotrst_exit(pcie_ep.hip_status.hotrst);
+      hip_rs.l2_exit(pcie_ep.hip_status.l2_exit);
+      hip_rs.ltssm(pcie_ep.hip_status.ltssmstate);
    endrule
 
    interface PciewrapCfg cfg;

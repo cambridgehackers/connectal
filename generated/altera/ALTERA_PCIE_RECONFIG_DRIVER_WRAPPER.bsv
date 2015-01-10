@@ -163,44 +163,44 @@ module mkPcieReconfigWrap#(Clock pld_clk, Clock reconfig_xcvr_clk, Reset pld_clk
         input_reset reconfig_xcvr_clk_reset() = reconfig_xcvr_clk_reset; /* from clock*/
         input_reset reconfig_xcvr_rst(reconfig_xcvr_rst) = reconfig_xcvr_rst;
     interface PciereconfigwrapCfg     cfg;
-        method par_err_drv(cfg_par_err_drv) enable((*inhigh*) EN_cfg_par_err_drv);
+        method par_err_drv(cfg_par_err_drv) clocked_by(pld_clk) enable((*inhigh*) EN_cfg_par_err_drv);
     endinterface
     interface PciereconfigwrapCurrent     current;
-        method speed(currentspeed) enable((*inhigh*) EN_currentspeed);
+        method speed(currentspeed) clocked_by(pld_clk) enable((*inhigh*) EN_currentspeed);
     endinterface
     interface PciereconfigwrapDerr     derr;
-        method cor_ext_rcv_drv(derr_cor_ext_rcv_drv) enable((*inhigh*) EN_derr_cor_ext_rcv_drv);
-        method cor_ext_rpl_drv(derr_cor_ext_rpl_drv) enable((*inhigh*) EN_derr_cor_ext_rpl_drv);
-        method rpl_drv(derr_rpl_drv) enable((*inhigh*) EN_derr_rpl_drv);
+        method cor_ext_rcv_drv(derr_cor_ext_rcv_drv) clocked_by(pld_clk) enable((*inhigh*) EN_derr_cor_ext_rcv_drv);
+        method cor_ext_rpl_drv(derr_cor_ext_rpl_drv) clocked_by(pld_clk) enable((*inhigh*) EN_derr_cor_ext_rpl_drv);
+        method rpl_drv(derr_rpl_drv) clocked_by(pld_clk) enable((*inhigh*) EN_derr_rpl_drv);
     endinterface
     interface PciereconfigwrapDlup     dlup;
-        method drv(dlup_drv) enable((*inhigh*) EN_dlup_drv);
-        method exit_drv(dlup_exit_drv) enable((*inhigh*) EN_dlup_exit_drv);
+        method drv(dlup_drv) clocked_by(pld_clk) enable((*inhigh*) EN_dlup_drv);
+        method exit_drv(dlup_exit_drv) clocked_by(pld_clk) enable((*inhigh*) EN_dlup_exit_drv);
     endinterface
     interface PciereconfigwrapEv128ns     ev128ns;
-        method drv(ev128ns_drv) enable((*inhigh*) EN_ev128ns_drv);
+        method drv(ev128ns_drv) clocked_by(pld_clk) enable((*inhigh*) EN_ev128ns_drv);
     endinterface
     interface PciereconfigwrapEv1us     ev1us;
-        method drv(ev1us_drv) enable((*inhigh*) EN_ev1us_drv);
+        method drv(ev1us_drv) clocked_by(pld_clk) enable((*inhigh*) EN_ev1us_drv);
     endinterface
     interface PciereconfigwrapHotrst     hotrst;
-        method exit_drv(hotrst_exit_drv) enable((*inhigh*) EN_hotrst_exit_drv);
+        method exit_drv(hotrst_exit_drv) clocked_by(pld_clk) enable((*inhigh*) EN_hotrst_exit_drv);
     endinterface
     interface PciereconfigwrapInt_s     int_s;
-        method tatus_drv(int_status_drv) enable((*inhigh*) EN_int_status_drv);
+        method tatus_drv(int_status_drv) clocked_by(pld_clk) enable((*inhigh*) EN_int_status_drv);
     endinterface
     interface PciereconfigwrapKo     ko;
-        method cpl_spc_data_drv(ko_cpl_spc_data_drv) enable((*inhigh*) EN_ko_cpl_spc_data_drv);
-        method cpl_spc_header_drv(ko_cpl_spc_header_drv) enable((*inhigh*) EN_ko_cpl_spc_header_drv);
+        method cpl_spc_data_drv(ko_cpl_spc_data_drv) clocked_by(pld_clk) enable((*inhigh*) EN_ko_cpl_spc_data_drv);
+        method cpl_spc_header_drv(ko_cpl_spc_header_drv) clocked_by(pld_clk) enable((*inhigh*) EN_ko_cpl_spc_header_drv);
     endinterface
     interface PciereconfigwrapL2     l2;
-        method exit_drv(l2_exit_drv) enable((*inhigh*) EN_l2_exit_drv);
+        method exit_drv(l2_exit_drv) clocked_by(pld_clk) enable((*inhigh*) EN_l2_exit_drv);
     endinterface
     interface PciereconfigwrapLane     lane;
-        method act_drv(lane_act_drv) enable((*inhigh*) EN_lane_act_drv);
+        method act_drv(lane_act_drv) clocked_by(pld_clk) enable((*inhigh*) EN_lane_act_drv);
     endinterface
     interface PciereconfigwrapLtssmstate     ltssmstate;
-        method drv(ltssmstate_drv) enable((*inhigh*) EN_ltssmstate_drv);
+        method drv(ltssmstate_drv) clocked_by(pld_clk) enable((*inhigh*) EN_ltssmstate_drv);
     endinterface
     interface PciereconfigwrapReconfig_b     reconfig_b;
         method usy(reconfig_busy) enable((*inhigh*) EN_reconfig_busy);
@@ -214,10 +214,10 @@ module mkPcieReconfigWrap#(Clock pld_clk, Clock reconfig_xcvr_clk, Reset pld_clk
         method reconfig_mgmt_writedata writedata();
     endinterface
     interface PciereconfigwrapRx     rx;
-        method par_err_drv(rx_par_err_drv) enable((*inhigh*) EN_rx_par_err_drv);
+        method par_err_drv(rx_par_err_drv) clocked_by(pld_clk) enable((*inhigh*) EN_rx_par_err_drv);
     endinterface
     interface PciereconfigwrapTx     tx;
-        method par_err_drv(tx_par_err_drv) enable((*inhigh*) EN_tx_par_err_drv);
+        method par_err_drv(tx_par_err_drv) clocked_by(pld_clk) enable((*inhigh*) EN_tx_par_err_drv);
     endinterface
     schedule (cfg.par_err_drv, current.speed, derr.cor_ext_rcv_drv, derr.cor_ext_rpl_drv, derr.rpl_drv, dlup.drv, dlup.exit_drv, ev128ns.drv, ev1us.drv, hotrst.exit_drv, int_s.tatus_drv, ko.cpl_spc_data_drv, ko.cpl_spc_header_drv, l2.exit_drv, lane.act_drv, ltssmstate.drv, reconfig_b.usy, reconfig_mgmt.address, reconfig_mgmt.read, reconfig_mgmt.readdata, reconfig_mgmt.waitrequest, reconfig_mgmt.write, reconfig_mgmt.writedata, rx.par_err_drv, tx.par_err_drv) CF (cfg.par_err_drv, current.speed, derr.cor_ext_rcv_drv, derr.cor_ext_rpl_drv, derr.rpl_drv, dlup.drv, dlup.exit_drv, ev128ns.drv, ev1us.drv, hotrst.exit_drv, int_s.tatus_drv, ko.cpl_spc_data_drv, ko.cpl_spc_header_drv, l2.exit_drv, lane.act_drv, ltssmstate.drv, reconfig_b.usy, reconfig_mgmt.address, reconfig_mgmt.read, reconfig_mgmt.readdata, reconfig_mgmt.waitrequest, reconfig_mgmt.write, reconfig_mgmt.writedata, rx.par_err_drv, tx.par_err_drv);
 endmodule

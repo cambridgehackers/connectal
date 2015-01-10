@@ -21,7 +21,7 @@ if $need_xilinx_pcie {
 
 proc create_pcie_sv_hip_ast {} {
     global boardname
-    set pcieversion {3.0}
+    set pcieversion {2.1}
     set maxlinkwidth {x8}
     set core_name {altera_pcie_sv_hip_ast}
     set core_version {14.0}
