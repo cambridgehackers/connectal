@@ -773,9 +773,9 @@ module mkPcieWrap#(Clock refclk, Reset npor, Reset pin_perst, Reset refclk_reset
         method testin_zero zero();
     endinterface
     interface PciewrapTl     tl;
-        method tl_cfg_add cfg_add();
-        method tl_cfg_ctl cfg_ctl();
-        method tl_cfg_sts cfg_sts();
+        method tl_cfg_add cfg_add() clocked_by(coreclkout_hip);
+        method tl_cfg_ctl cfg_ctl() clocked_by(coreclkout_hip);
+        method tl_cfg_sts cfg_sts() clocked_by(coreclkout_hip);
     endinterface
     interface PciewrapTx_cred     tx_cred;
         method tx_cred_datafccp datafccp();
