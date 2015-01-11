@@ -167,7 +167,7 @@ if __name__ == '__main__':
         if status != 0:
             #print 'curl returned error', status
             sys.exit(status)
-    if not options.bitfile or not options.androidexe or not options.file:
+    if not options.bitfile or not options.androidexe:
         argparser.print_help()
         sys.exit(1)
     run_zedboard(options.bitfile, options.androidexe, options.file)
