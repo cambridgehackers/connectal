@@ -574,9 +574,9 @@ static int pcieportal_init(void)
         int status;
 
 printk("[%s:%d]\n", __FUNCTION__, __LINE__);
-        pcieportal_class = class_create(THIS_MODULE, "Bluespec");
+        pcieportal_class = class_create(THIS_MODULE, "Connectal");
         if (IS_ERR(pcieportal_class)) {
-                printk(KERN_ERR "%s: failed to create class Bluespec\n", DEV_NAME);
+                printk(KERN_ERR "%s: failed to create class Connectal\n", DEV_NAME);
                 return PTR_ERR(pcieportal_class);
         }
         /* dynamically allocate a device number */
@@ -595,7 +595,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
                 return status;
         }
         /* log the fact that we loaded the driver module */
-        printk(KERN_INFO "%s: Registered Bluespec Pcieportal driver %s\n", DEV_NAME, DEV_VERSION);
+        printk(KERN_INFO "%s: Registered Connectal Pcieportal driver %s\n", DEV_NAME, DEV_VERSION);
         printk(KERN_INFO "%s: Major = %d  Minors = %d to %d\n", DEV_NAME,
                MAJOR(device_number), MINOR(device_number),
                MINOR(device_number) + NUM_BOARDS * NUM_BOARDS - 1);
@@ -612,7 +612,7 @@ static void pcieportal_exit(void)
         unregister_chrdev_region(device_number, NUM_BOARDS * MAX_NUM_PORTALS);
         class_destroy(pcieportal_class);
         /* log that the driver module has been unloaded */
-        printk(KERN_INFO "%s: Unregistered Bluespec Pcieportal driver %s\n", DEV_NAME, DEV_VERSION);
+        printk(KERN_INFO "%s: Unregistered Connectal Pcieportal driver %s\n", DEV_NAME, DEV_VERSION);
 }
 
 
