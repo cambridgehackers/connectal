@@ -38,8 +38,8 @@ uint64_t poll_enter_time, poll_return_time; // for performance measurement
 PortalPoller::PortalPoller()
   : portal_wrappers(0), portal_fds(0), numFds(0), inited(0), numWrappers(0), stopping(0)
 {
+    int rc = pipe(pipefd);
     sem_init(&sem_startup, 0, 0);
-    pipe(pipefd);
     pthread_mutex_init(&mutex, NULL);
     fcntl(pipefd[0], F_SETFL, O_NONBLOCK);
     addFd(pipefd[0]);
@@ -94,7 +94,9 @@ void PortalPoller::addFd(int fd)
 int PortalPoller::registerInstance(Portal *portal)
 {
     uint8_t ch = 0;
+    int rc;
     pthread_mutex_lock(&mutex);
+    rc = write(pipefd[1], &ch, 1); // get poll to return, so that it is no long using portal_fds (which gets realloc'ed)
     numWrappers++;
     fprintf(stderr, "Portal::registerInstance fpga%d fd %d clients %d\n", portal->pint.fpga_number, portal->pint.fpga_fd, portal->pint.client_fd_number);
     portal_wrappers = (Portal **)realloc(portal_wrappers, numWrappers*sizeof(Portal *));
@@ -105,7 +107,6 @@ int PortalPoller::registerInstance(Portal *portal)
     for (int i = 0; i < portal->pint.client_fd_number; i++)
         addFd(portal->pint.client_fd[i]);
     portal->pint.item->enableint(&portal->pint, 1);
-    write(pipefd[1], &ch, 1);
     pthread_mutex_unlock(&mutex);
     portalExec_start();
     return 0;
@@ -143,7 +144,10 @@ void* PortalPoller::portalExec_init(void)
 }
 void PortalPoller::portalExec_stop(void)
 {
+    uint8_t ch = 0;
+    int rc;
     stopping = 1;
+    rc = write(pipefd[1], &ch, 1);
 }
 void PortalPoller::portalExec_end(void)
 {
@@ -174,8 +178,9 @@ void* PortalPoller::portalExec_poll(int timeout)
 void* PortalPoller::portalExec_event(void)
 {
     uint8_t ch;
+    int rc;
     pthread_mutex_lock(&mutex);
-    read(pipefd[0], &ch, 1);
+    rc = read(pipefd[0], &ch, 1);
     for (int i = 0; i < numWrappers; i++) {
        if (!portal_wrappers)
            fprintf(stderr, "No portal_instances revents=%d\n", portal_fds[i].revents);
