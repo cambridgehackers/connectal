@@ -568,8 +568,8 @@ module mkPcieWrap#(Clock refclk, Reset npor, Reset pin_perst, Reset refclk_reset
         output_clock hip(coreclkout_hip);
     endinterface
     interface PciewrapCpl     cpl;
-        method err(cpl_err)clocked_by(coreclkout.hip) enable((*inhigh*) EN_cpl_err);
-        method pending(cpl_pending) enable((*inhigh*) EN_cpl_pending);
+        method err(cpl_err) clocked_by(coreclkout.hip) enable((*inhigh*) EN_cpl_err);
+        method pending(cpl_pending) clocked_by(coreclkout_hip) enable((*inhigh*) EN_cpl_pending);
     endinterface
     interface PciewrapCurrent     current;
         method currentspeed speed()clocked_by(coreclkout.hip);
@@ -619,12 +619,12 @@ module mkPcieWrap#(Clock refclk, Reset npor, Reset pin_perst, Reset refclk_reset
         method lane_act act()clocked_by(coreclkout.hip);
     endinterface
     interface PciewrapLmi     lmi;
-        method lmi_ack ack();
-        method addr(lmi_addr) enable((*inhigh*) EN_lmi_addr);
-        method din(lmi_din) enable((*inhigh*) EN_lmi_din);
-        method lmi_dout dout();
-        method rden(lmi_rden) enable((*inhigh*) EN_lmi_rden);
-        method wren(lmi_wren) enable((*inhigh*) EN_lmi_wren);
+        method lmi_ack ack() clocked_by(coreclkout_hip);
+        method addr(lmi_addr) clocked_by(coreclkout_hip) enable((*inhigh*) EN_lmi_addr);
+        method din(lmi_din) clocked_by(coreclkout_hip) enable((*inhigh*) EN_lmi_din);
+        method lmi_dout dout() clocked_by(coreclkout_hip);
+        method rden(lmi_rden) clocked_by(coreclkout_hip) enable((*inhigh*) EN_lmi_rden);
+        method wren(lmi_wren) clocked_by(coreclkout_hip) enable((*inhigh*) EN_lmi_wren);
     endinterface
     interface PciewrapLtssm     ltssm;
         method ltssmstate state()clocked_by(coreclkout.hip);
@@ -641,8 +641,8 @@ module mkPcieWrap#(Clock refclk, Reset npor, Reset pin_perst, Reset refclk_reset
     endinterface
     interface PciewrapPld     pld;
         method clk(pld_clk) enable((*inhigh*) EN_pld_clk);
-        method pld_clk_inuse clk_inuse()clocked_by(coreclkout.hip);
-        method core_ready(pld_core_ready) enable((*inhigh*) EN_pld_core_ready);
+        method pld_clk_inuse clk_inuse() clocked_by(coreclkout.hip);
+        method core_ready(pld_core_ready) clocked_by(coreclkout_hip) enable((*inhigh*) EN_pld_core_ready);
     endinterface
     interface PciewrapPm     pm;
         method auxpwr(pm_auxpwr) enable((*inhigh*) EN_pm_auxpwr);
@@ -756,7 +756,7 @@ module mkPcieWrap#(Clock refclk, Reset npor, Reset pin_perst, Reset refclk_reset
         method alid7(rxvalid7) enable((*inhigh*) EN_rxvalid7);
     endinterface
     interface PciewrapSerdes     serdes;
-        method serdes_pll_locked pll_locked();
+        method serdes_pll_locked pll_locked()clocked_by(coreclkout_hip);
     endinterface
     interface PciewrapSim     sim;
         method sim_ltssmstate ltssmstate();
@@ -804,7 +804,7 @@ module mkPcieWrap#(Clock refclk, Reset npor, Reset pin_perst, Reset refclk_reset
         method t_data(tx_st_data) clocked_by(coreclkout.hip) enable((*inhigh*) EN_tx_st_data);
         method t_empty(tx_st_empty) clocked_by(coreclkout.hip) enable((*inhigh*) EN_tx_st_empty);
         method t_eop(tx_st_eop) clocked_by(coreclkout.hip) enable((*inhigh*) EN_tx_st_eop);
-        method t_err(tx_st_err) enable((*inhigh*) EN_tx_st_err);
+        method t_err(tx_st_err) clocked_by(coreclkout_hip) enable((*inhigh*) EN_tx_st_err);
         method tx_st_ready t_ready() clocked_by(coreclkout.hip);
         method t_sop(tx_st_sop) clocked_by(coreclkout.hip) enable((*inhigh*) EN_tx_st_sop);
         method t_valid(tx_st_valid) clocked_by(coreclkout.hip) enable((*inhigh*) EN_tx_st_valid);
