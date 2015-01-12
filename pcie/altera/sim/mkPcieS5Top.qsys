@@ -108,14 +108,14 @@
   <parameter name="INTENDED_DEVICE_FAMILY" value="Stratix V" />
   <parameter name="pcie_qsys" value="1" />
   <parameter name="lane_mask_hwtcl" value="x8" />
-  <parameter name="gen123_lane_rate_mode_hwtcl" value="Gen1 (2.5 Gbps)" />
+  <parameter name="gen123_lane_rate_mode_hwtcl" value="Gen2 (5.0 Gbps)" />
   <parameter name="port_type_hwtcl" value="Native endpoint" />
   <parameter name="pcie_spec_version_hwtcl" value="2.1" />
   <parameter name="ast_width_hwtcl" value="Avalon-ST 128-bit" />
   <parameter name="rxbuffer_rxreq_hwtcl" value="Low" />
   <parameter name="pll_refclk_freq_hwtcl" value="100 MHz" />
   <parameter name="set_pld_clk_x1_625MHz_hwtcl" value="0" />
-  <parameter name="use_rx_st_be_hwtcl" value="0" />
+  <parameter name="use_rx_st_be_hwtcl" value="1" />
   <parameter name="use_ast_parity" value="0" />
   <parameter name="multiple_packets_per_cycle_hwtcl" value="0" />
   <parameter name="in_cvp_mode_hwtcl" value="0" />
@@ -517,7 +517,7 @@
   <parameter name="extend_tag_field_hwtcl" value="32" />
   <parameter name="max_payload_size_hwtcl" value="256" />
   <parameter name="num_of_func_hwtcl" value="1" />
-  <parameter name="use_rx_st_be_hwtcl" value="0" />
+  <parameter name="use_rx_st_be_hwtcl" value="1" />
   <parameter name="multiple_packets_per_cycle_hwtcl" value="0" />
   <parameter name="track_rxfc_cplbuf_ovf_hwtcl" value="0" />
   <parameter name="avalon_waddr_hwltcl" value="12" />

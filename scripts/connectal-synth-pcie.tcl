@@ -120,9 +120,43 @@ proc create_pcie_reconfig {} {
     fpgamake_altera_ipcore $core_name $core_version $ip_name $component_parameters
 }
 
+proc create_pcie_hip_ast_ed {} {
+    set core_name {altera_pcie_hip_ast_ed}
+    set core_version {14.0}
+    set ip_name {altera_pcie_hip_ast_ed}
+
+    set params [ dict create ]
+
+    dict set params device_family_hwtcl              "Stratix V"
+    dict set params lane_mask_hwtcl                  "x8"
+    dict set params gen123_lane_rate_mode_hwtcl      "Gen2 (5.0 Gbps)"
+    dict set params pld_clockrate_hwtcl              250000000
+    dict set params port_type_hwtcl                  "Native endpoint"
+    dict set params ast_width_hwtcl                  "Avalon-ST 128-bit"
+    dict set params extend_tag_field_hwtcl           32
+    dict set params max_payload_size_hwtcl           256
+    dict set params num_of_func_hwtcl                1
+    dict set params multiple_packets_per_cycle_hwtcl 0
+    dict set params port_width_be_hwtcl              16
+    dict set params port_width_data_hwtcl            128
+    dict set params avalon_waddr_hwltcl              12
+    dict set params check_bus_master_ena_hwtcl       1
+    dict set params check_rx_buffer_cpl_hwtcl        1
+    dict set params use_crc_forwarding_hwtcl         0
+
+	set component_parameters {}
+	foreach item [dict keys $params ] {
+		set val [dict get $params $item]
+		lappend component_parameters --component-parameter=$item=$val
+	}
+
+    fpgamake_altera_ipcore $core_name $core_version $ip_name $component_parameters
+}
+
 if $need_altera_pcie {
     create_pcie_sv_hip_ast
     create_xcvr_reconfig alt_xcvr_reconfig 14.0 alt_xcvr_reconfig_wrapper 10
     create_pcie_reconfig
+    create_pcie_hip_ast_ed
 }
 
