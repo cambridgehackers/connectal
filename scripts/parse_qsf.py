@@ -74,6 +74,6 @@ for line in qsflines:
                     pins.update({name:{'LOC': location}})
 
 for n in pins:
-    groups[pins[n]['GROUP']].update({n: {'IO_STANDARD': pins[n]['IO_STANDARD'], 'LOC': pins[n]['LOC']}})
+    groups[pins[n]['GROUP']].update({n: {'IOSTANDARD': pins[n]['IO_STANDARD'], 'LOC': pins[n]['LOC']}})
 
 print(json.dumps(groups, indent=4, sort_keys=True), file=out)
