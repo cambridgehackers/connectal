@@ -44,13 +44,14 @@ import MMUIndication::*;
 // defined by user
 import XilinxCells::*;
 import ConnectalXilinxCells::*;
+import BlueScopeEventPIO::*;
 
 import FMComms1ADC::*;
 import FMComms1DAC::*;
 import FMComms1::*;
 import extraXilinxCells::*;
 
-typedef enum { FMComms1Request, FMComms1Indication, HostMemServerIndication, HostMemServerRequest, HostMMURequest, HostMMUIndication} IfcNames deriving (Eq,Bits);
+typedef enum { BlueScopeEventPIORequest, BlueScopeEventPIOIndication, FMComms1Request, FMComms1Indication, HostMemServerIndication, HostMemServerRequest, HostMMURequest, HostMMUIndication} IfcNames deriving (Eq,Bits);
 
 interface FMComms1Pins;
    interface FMComms1ADCPins adcpins;
@@ -78,6 +79,10 @@ module mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,64,FMComms1Pin
    FMComms1ADC adc <- mkFMComms1ADC();
    FMComms1DAC dac <- mkFMComms1DAC();
    
+   BlueScopeEventPIOIndicationProxy blueScopeEventPIOIndicationProxy <- mkBlueScopeEventPIOIndicationProxy(BlueScopeEventPIOIndication);
+   BlueScopeEventPIOControl#(32) bs <- mkBlueScopeEventPIO(`BlueScopeEventPIOSampleLength, blueScopeEventPIOIndicationProxy.ifc);
+   BlueScopeEventPIORequestWrapper blueScopeEventPIORequestWrapper <- mkBlueScopeEventPIORequestWrapper(BlueScopeEventPIORequest,bs.requestIfc);
+
    FMComms1IndicationProxy fmcomms1IndicationProxy <- mkFMComms1IndicationProxy(FMComms1Indication);
    FMComms1 fmcomms1 <- mkFMComms1(fmcomms1IndicationProxy.ifc, dac.dac, adc.adc);
    FMComms1RequestWrapper fmcomms1RequestWrapper <- mkFMComms1RequestWrapper(FMComms1Request, fmcomms1.request);
@@ -109,8 +114,8 @@ module mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,64,FMComms1Pin
    interface masters = dma.masters;
    interface leds = default_leds;
    interface FMComms1Pins pins;
-      interface FMCOmms1ADCPins adcpins = adc.pins;
-      interface FMCOmms1ADCPins dacpins = dac.pins;
+      interface FMComms1ADCPins adcpins = adc.pins;
+      interface FMComms1ADCPins dacpins = dac.pins;
       method Bit#(1) ad9548_ref_p();
 	 return(ref_clk.read_p());
       endmethod
