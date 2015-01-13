@@ -43,6 +43,8 @@ interface PipeOut#(type a);
    method Bool notEmpty();
 endinterface
 
+function Bool pipeInNotFull(PipeIn#(a) pipein); return pipein.notFull(); endfunction
+function Bool pipeOutNotEmpty(PipeOut#(a) pipein); return pipein.notEmpty(); endfunction
 
 typeclass ToPipeIn#(type a, type b);
    function PipeIn#(a) toPipeIn(b in);
@@ -659,9 +661,8 @@ module mkJoinVector#(function b f(Vector#(n, a) av), Vector#(n, PipeOut#(a)) api
 	 apipes[i].deq();
    endmethod
    method Bool notEmpty();
-      function Bool getNotEmpty(PipeOut#(a) pipein); return pipein.notEmpty(); endfunction	 
       function Bool myand(Bool a, Bool b); return a && b; endfunction
-      return foldl(myand, True, map(getNotEmpty, apipes));
+      return foldl(myand, True, map(pipeOutNotEmpty, apipes));
    endmethod
 endmodule
 

@@ -64,7 +64,6 @@ int main(int argc, const char **argv)
     MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequest, &socketfuncInit, NULL);
     DmaManager *dma = new DmaManager(dmap);
     MMUIndication *mIndication = new MMUIndication(dma, IfcNames_MMUIndication, &socketfuncInit, NULL);
-
     portalExec_start();
 
     PortalSharedParam param = {dma, alloc_sz};

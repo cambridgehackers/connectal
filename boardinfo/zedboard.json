@@ -1,6 +1,6 @@
 {
     "options": {
-        "bsvdefines" : ["ZYNQ", "ZynqHostTypeIF", "PhysAddrWidth=32"],
+        "bsvdefines" : ["XILINX", "ZYNQ", "ZynqHostTypeIF", "PhysAddrWidth=32"],
         "os" : "android",
         "partname" : "xc7z020clg484-1",
         "rewireclockstring" : "tclzynqrewireclock",

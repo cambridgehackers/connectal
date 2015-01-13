@@ -32,7 +32,7 @@ endif
 
 bozotarget:
 	@echo "Makefile.connectal: please invoke with make gen.boardname"
-
+#
 ## use "make gen.board" to generate the build directory
 gen.%:
 	make BOARD=$* --no-print-directory gentarget prebuild
@@ -63,19 +63,27 @@ endif
 ifndef MAIN_CLOCK_PERIOD
     ifeq ($(BOARD),vc707)
     MAIN_CLOCK_PERIOD=8
+    DEFAULT_DERIVED_CLOCK_PERIOD=4
     endif
     ifeq ($(BOARD),kc705)
     MAIN_CLOCK_PERIOD=8
+    DEFAULT_DERIVED_CLOCK_PERIOD=4
     endif
     ifeq ($(BOARD),zc706)
     MAIN_CLOCK_PERIOD=5
+    DEFAULT_DERIVED_CLOCK_PERIOD=2.5
+    endif
+    ifeq ($(BOARD),de5)
+    MAIN_CLOCK_PERIOD=8
+    DEFAULT_DERIVED_CLOCK_PERIOD=4
     endif
     ifndef MAIN_CLOCK_PERIOD
     MAIN_CLOCK_PERIOD=10
+    DEFAULT_DERIVED_CLOCK_PERIOD=5
     endif
 endif
 ifndef DERIVED_CLOCK_PERIOD
-DERIVED_CLOCK_PERIOD=$(MAIN_CLOCK_PERIOD)
+DERIVED_CLOCK_PERIOD?=$(DEFAULT_DERIVED_CLOCK_PERIOD)
 endif
 
 CONNECTALFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) -D PinType=$(PIN_TYPE) -D MainClockPeriod=$(MAIN_CLOCK_PERIOD) -D DerivedClockPeriod=$(DERIVED_CLOCK_PERIOD)
@@ -90,21 +98,38 @@ CPPFILES2 += $(CONNECTALDIR)/cpp/dmaManager.c
 endif
 endif
 
+ifeq ($(BOARD),xsim)
+INTERFACES += XsimMemSlaveRequest XsimMemSlaveIndication
+CPPFILES += $(CONNECTALDIR)/cpp/xsimfunc.cpp
+BSVFILES += $(CONNECTALDIR)/bsv/XsimIF.bsv
+endif
+
 all bits verilog implementation bsim xsim xsimrun: gentarget prebuild
 	make -C $(BOARD) --no-print-directory $@
 
 android.exe bsim_exe ubuntu.exe exe: gentarget
 	make -C $(BOARD) --no-print-directory $@
 
-NEEDSPCIE_ac701=1
-NEEDSPCIE_kc705=1
-NEEDSPCIE_vc707=1
-NEEDSPCIE_v2000t=1
+NEED_XILINX_PCIE_ac701=1
+NEED_XILINX_PCIE_kc705=1
+NEED_XILINX_PCIE_vc707=1
+NEED_XILINX_PCIE_v2000t=1
 
-ifeq ($(NEEDSPCIE_$(BOARD)),1)
+NEED_ALTERA_PCIE_de5=1
+NEED_ALTERA_ETH_de5=1
+
+ifeq ($(NEED_XILINX_PCIE_$(BOARD)),1)
     FPGAMAKE_CONNECTALFLAGS += -P mkPcieEndpointX7 -P mkPcieHost
     CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/pcie_7x_0/pcie_7x_0.xci
     CONNECTALFLAGS += --bscflags="+RTS -K46777216 -RTS"
+endif
+
+ifeq ($(NEED_ALTERA_PCIE_$(BOARD)),1)
+	FPGAMAKE_CONNECTALFLAGS += --qsf=$(CONNECTALDIR)/constraints/altera/$(BOARD).qsf
+	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/altera_pcie_reconfig_driver_wrapper.qip
+	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/altera_pcie_sv_hip_ast_wrapper.qip
+	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/alt_xcvr_reconfig_wrapper.qip
+	CONNECTALFLAGS += --bscflags="+RTS -K46777216 -RTS -demote-errors G0066:G0045 -suppress-warnings G0046:G0020:S0015:S0080:S0039"
 endif
 
 CONNECTALFLAGS += $(FPGAMAKE_CONNECTALFLAGS)
@@ -139,6 +164,19 @@ endif
 
 prebuild::
 	@# additional steps needed before making verilog etc
-ifeq ($(NEEDSPCIE_$(BOARD)),1)
+ifeq ($(NEED_XILINX_PCIE_$(BOARD)),1)
+	@echo "building ..."
 	cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) vivado -notrace -mode batch -source $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
+endif
+
+# Synthesis Altera PCIe Core
+ifeq ($(NEED_ALTERA_PCIE_$(BOARD)),1)
+	@echo "building ..."
+	cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) quartus_sh -t $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
+endif
+
+# Synthesize Altera Ethernet Core
+ifeq ($(NEED_ALTERA_ETH_$(BOARD)), 1)
+	@echo "generating 10GbE cores ..."
+	cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) quartus_sh -t $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-eth.tcl
 endif

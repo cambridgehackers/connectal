@@ -3,7 +3,7 @@ CONNECTALDIR?=../..
 INTERFACES = Swallow EchoRequest EchoIndication
 BSVFILES = Echo.bsv SwallowIF.bsv Top.bsv
 CPPFILES = testecho.cpp
-CONNECTALFLAGS += --shared -D IMPORT_HOSTIF
+CONNECTALFLAGS += --shared
 NUMBER_OF_MASTERS =0
 
 include $(CONNECTALDIR)/Makefile.connectal

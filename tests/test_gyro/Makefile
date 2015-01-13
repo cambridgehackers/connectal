@@ -1,13 +1,15 @@
 
 CONNECTALDIR ?= ../..
-INTERFACES = HBridgeCtrlRequest HBridgeCtrlIndication
-BSVFILES = Controller.bsv Top.bsv 
-CPPFILES= testpmod.cpp
-NUMBER_OF_MASTERS =0
-PIN_TYPE = PmodPins
-CONNECTALFLAGS = -C $(BOARD)/sources/pinout-$(BOARD).xdc
+INTERFACES = GyroCtrlRequest GyroCtrlIndication Sample
+BSVFILES = Controller.bsv Top.bsv
+CPPFILES  = test_sample.cpp
+CPPFILES2 = test_gyro.cpp
+NUMBER_OF_MASTERS = 1
+CONNECTALFLAGS += -C $(BOARD)/sources/pinout-$(BOARD).xdc #--tcl clock.tcl
+CONNECTALFLAGS += --shared
 
-PIN_BINDING ?= -b pmod:pmodc
+PIN_TYPE = SpiPins
+PIN_BINDING ?= -b pmod:pmodd
 
 gentarget:: $(BOARD)/sources/pinout-$(BOARD).xdc
 $(BOARD)/sources/pinout-$(BOARD).xdc: pinout.json $(CONNECTALDIR)/boardinfo/$(BOARD).json

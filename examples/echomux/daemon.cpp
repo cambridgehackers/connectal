@@ -21,6 +21,9 @@
 
 #include <stdio.h>
 #include <netdb.h>
+
+#include "sock_utils.h"
+
 #include "EchoRequest.h"
 #include "EchoIndication.h"
 #include "EchoRequestSW.h"
@@ -29,6 +32,7 @@
 #include "SecondIndication.h"
 #include "ThirdRequest.h"
 #include "ThirdIndication.h"
+
 
 EchoIndicationSWProxy *sIndicationProxy;
 EchoRequestProxy *echoRequestProxy;

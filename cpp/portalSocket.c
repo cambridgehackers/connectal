@@ -247,7 +247,7 @@ static int init_mux(struct PortalInternal *pint, void *aparam)
     if(trace_socket)
         printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     pint->mux = param->pint;
-    pint->map_base = (volatile unsigned int*)malloc(REQINFO_SIZE(pint->reqinfo));
+    pint->map_base = ((volatile unsigned int*)malloc(REQINFO_SIZE(pint->reqinfo) + sizeof(uint32_t))) + 1;
     pint->mux->map_base[0] = -1;
     pint->mux->mux_ports_number++;
     pint->mux->mux_ports = (PortalMuxHandler *)realloc(pint->mux->mux_ports, pint->mux->mux_ports_number * sizeof(PortalMuxHandler));
@@ -430,7 +430,7 @@ static int poll_response(int id)
   }
   return shared_response_valid && shared_response.portal == id;
 }
-static unsigned int bsim_poll_interrupt(void)
+unsigned int bsim_poll_interrupt(void)
 {
   if (global_sockfd == -1)
       return 0;

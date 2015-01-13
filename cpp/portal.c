@@ -74,6 +74,8 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
     if (!item) {
 #ifdef BSIM
         pint->item = &bsimfunc;
+#elif defined(XSIM)
+        pint->item = &xsimfunc;
 #else
         pint->item = &hardwarefunc;
 #endif
@@ -160,7 +162,7 @@ uint64_t portalCycleCount()
   return (((uint64_t)high_bits)<<32) | ((uint64_t)low_bits);
 }
 
-int portalDCacheFlushInval(int fd, long size, void *__p)
+int portalDCacheFlushInvalInternal(int fd, long size, void *__p, int flush)
 {
     int i;
 #if defined(__arm__)
@@ -173,14 +175,18 @@ printk("[%s:%d] flush %d\n", __FUNCTION__, __LINE__, fd);
         unsigned int length = sg->length;
         dma_addr_t start_addr = sg_phys(sg), end_addr = start_addr+length;
 printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start_addr, (long)end_addr, length);
-        outer_clean_range(start_addr, end_addr);
+        if(flush) outer_clean_range(start_addr, end_addr);
         outer_inv_range(start_addr, end_addr);
     }
     fput(fmem);
 #else
   int rc;
-  if (utility_portal)
-    rc = ioctl(utility_portal->fpga_fd, PORTAL_DCACHE_FLUSH_INVAL, fd);
+  if (utility_portal){
+    if(flush)
+      rc = ioctl(utility_portal->fpga_fd, PORTAL_DCACHE_FLUSH_INVAL, fd);
+    else
+      rc = ioctl(utility_portal->fpga_fd, PORTAL_DCACHE_INVAL, fd);
+  }
   else
     rc = -1;
   if (rc){
@@ -201,6 +207,18 @@ printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start
   //PORTAL_PRINTF("dcache flush\n");
   return 0;
 }
+
+int portalDCacheInval(int fd, long size, void *__p)
+{
+  portalDCacheFlushInvalInternal(fd,size,__p,0);
+}
+
+int portalDCacheFlushInval(int fd, long size, void *__p)
+{
+  portalDCacheFlushInvalInternal(fd,size,__p,1);
+}
+
+
 
 void init_portal_memory(void)
 {
@@ -312,7 +330,7 @@ int busy_hardware(struct PortalInternal *pint, unsigned int v, const char *str)
     while (!pint->item->notFull(pint, v) && ((pint->busyType == BUSY_SPIN) || count-- > 0))
         ; /* busy wait a bit on 'fifo not full' */
     if (count <= 0) {
-        if (pint->busyType == BUSY_TIMEWAIT)
+        if (0 && pint->busyType == BUSY_TIMEWAIT)
             while (!pint->item->notFull(pint, v)) {
 #ifndef __KERNEL__
                 struct timeval timeout;
@@ -347,7 +365,18 @@ int event_hardware(struct PortalInternal *pint)
 static int init_hardware(struct PortalInternal *pint, void *param)
 {
 #if defined(__KERNEL__)
-    pint->map_base = (volatile unsigned int*)(tboard->bar2io + pint->fpga_number * PORTAL_BASE_OFFSET);
+    int i;
+    pint->map_base = NULL;
+    for (i = 0; i < MAX_NUM_PORTALS; i++) {
+      if (tboard->portal[i].device_name == pint->fpga_number) {
+        pint->map_base = (volatile unsigned int*)(tboard->bar2io + i * PORTAL_BASE_OFFSET);
+        break;
+      }
+    }
+    if (!pint->map_base) {
+	PORTAL_PRINTF("init_hardware: portal not found %d.\n", pint->fpga_number);
+        return -1;
+    }
 #else
     int rc = 0;
     char read_status;

@@ -5,8 +5,8 @@
         "rewireclockstring" : "tclzynqrewireclock",
         "constraints": "constraints/xilinx/zc7z045ffg900.xdc",
         "TOP" : "ZynqTop",
-        "bsvdefines" : ["ZynqHostTypeIF", "PhysAddrWidth=32", "NUMBER_OF_LEDS=4"],
-	"CONNECTALFLAGS": [],
+        "bsvdefines" : ["XILINX", "ZynqHostTypeIF", "PhysAddrWidth=32", "NUMBER_OF_LEDS=4"],
+	    "CONNECTALFLAGS": [],
         "needs_pcie_7x_gen1x8" : "False"
     },
     "fmc1": {

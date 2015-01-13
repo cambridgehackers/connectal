@@ -27,7 +27,7 @@
 class MonkitFile {
  public:
  
- MonkitFile(const char *name) : name(name) {}
+  MonkitFile(const char *name) : name(name), hw_cycles(1), sw_cycles(0), hw_read_bw_util(0), hw_write_bw_util(0) {}
   ~MonkitFile() {}
   MonkitFile &setHwCycles(float cycles) { this->hw_cycles = cycles; return *this; }
   MonkitFile &setSwCycles(float cycles) { this->sw_cycles = cycles; return *this; }
@@ -43,7 +43,7 @@ class MonkitFile {
   float hw_write_bw_util;
 };
 
-const char *monkit = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
+#define monkit "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
 <categories>\n\
     <category name=\"time\" scale=\"cycles\">\n\
         <observations>\n\
@@ -63,7 +63,7 @@ const char *monkit = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
             <observation name=\"hw_speedup\">%f</observation>\n\
         </observations>\n\
     </category>\n\
-</categories>\n";
+</categories>\n"
 
 void MonkitFile::writeFile()
 {

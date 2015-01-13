@@ -31,6 +31,7 @@
 
 /* Offset of each /dev/fpgaxxx device in the address space */
 #define PORTAL_BASE_OFFSET         (1 << 16)
+#define PORTAL_REG_OFFSET          0xc000
 
 /* Offsets of mapped registers within an /dev/fpgaxxx device */
 #define PORTAL_REQ_FIFO(A)         (((0<<14) + (A) * 256 + 256)/sizeof(uint32_t))
@@ -172,7 +173,9 @@ void portalExec_end(void);
 void portalTrace_start(void);
 void portalTrace_stop(void);
 int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
+  int portalDCacheFlushInvalInternal(int fd, long size, void *__p, int flush);
 int portalDCacheFlushInval(int fd, long size, void *__p);
+int portalDCacheInval(int fd, long size, void *__p);
 void init_portal_memory(void);
 int portalAlloc(size_t size);
 void *portalMmap(int fd, size_t size);
@@ -200,13 +203,14 @@ void addFdToPoller(struct PortalPoller *poller, int fd);
 int portal_mux_handler(struct PortalInternal *p, unsigned int channel, int messageFd);
 int notfull_null(PortalInternal *pint, unsigned int v);
 int notfull_hardware(PortalInternal *pint, unsigned int v);
+unsigned int bsim_poll_interrupt(void);
 
 extern int portalExec_timeout;
 extern int global_pa_fd;
 extern int global_sockfd;
 extern PortalInternal *utility_portal;
 extern PortalItemFunctions bsimfunc, hardwarefunc,
-    socketfuncInit, socketfuncResp, sharedfunc, muxfunc, tracefunc;
+  socketfuncInit, socketfuncResp, sharedfunc, muxfunc, tracefunc, xsimfunc;
 #ifdef __cplusplus
 }
 #endif

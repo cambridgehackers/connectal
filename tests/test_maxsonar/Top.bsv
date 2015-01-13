@@ -40,7 +40,7 @@ import Controller::*;
 
 typedef enum {ControllerRequest, ControllerIndication} IfcNames deriving (Eq,Bits);
 
-module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,PmodPins,0));
+module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,MaxSonar2,0));
 
    MaxSonarCtrlIndicationProxy cp <- mkMaxSonarCtrlIndicationProxy(ControllerIndication);
    Controller controller <- mkController(cp.ifc);
