@@ -275,7 +275,7 @@ if __name__=='__main__':
     rewireclockstring = option_info['rewireclockstring']
 
     dutname = 'mk' + option_info['TOP']
-    topbsv = '$(CONNECTALDIR)' + '/bsv/' + option_info['TOP'] + '.bsv'
+    topbsv = connectaldir + '/bsv/' + option_info['TOP'] + '.bsv'
     if not os.path.isfile(topbsv):
         topbsv = project_dir + "/../" + option_info['TOP'] + '.bsv'
         if not os.path.isfile(topbsv):
