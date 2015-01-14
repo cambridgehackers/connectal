@@ -275,7 +275,12 @@ if __name__=='__main__':
     rewireclockstring = option_info['rewireclockstring']
 
     dutname = 'mk' + option_info['TOP']
-    topbsv = '$(CONNECTALDIR)' + '/bsv/' + option_info['TOP'] + '.bsv'
+    topbsv = connectaldir + '/bsv/' + option_info['TOP'] + '.bsv'
+    if not os.path.isfile(topbsv):
+        topbsv = project_dir + "/../" + option_info['TOP'] + '.bsv'
+        if not os.path.isfile(topbsv):
+            print "ERROR: File %s not found" % (option_info['TOP'] + '.bsv')
+            sys.exit(1)
 
     needs_pcie_7x_gen1x8 = None
     needs_pcie_s5_gen2x8 = None
