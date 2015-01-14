@@ -8,8 +8,3114 @@
         "CONNECTALFLAGS" : [],
         "rewireclockstring" : ""
     },
-    "fmc": {
+    "BUTTON": {
+        "BUTTON[0]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AK15"
+        }, 
+        "BUTTON[1]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AK14"
+        }, 
+        "BUTTON[2]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AL14"
+        }, 
+        "BUTTON[3]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AL15"
+        }
+    }, 
+    "CLOCK": {
+        "CLOCK_SCL": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AE15"
+        }, 
+        "CLOCK_SDA": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AE16"
+        }
+    }, 
+    "CPU": {
+        "CPU_RESET_n": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_BC37"
+        }
+    }, 
+    "DDR3A": {
+        "DDR3A_A[0]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_M39"
+        }, 
+        "DDR3A_A[10]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_M38"
+        }, 
+        "DDR3A_A[11]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_C37"
+        }, 
+        "DDR3A_A[12]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_K36"
+        }, 
+        "DDR3A_A[13]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_M33"
+        }, 
+        "DDR3A_A[14]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_K34"
+        }, 
+        "DDR3A_A[15]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_B38"
+        }, 
+        "DDR3A_A[1]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_L35"
+        }, 
+        "DDR3A_A[2]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_N38"
+        }, 
+        "DDR3A_A[3]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_L36"
+        }, 
+        "DDR3A_A[4]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_H36"
+        }, 
+        "DDR3A_A[5]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_K29"
+        }, 
+        "DDR3A_A[6]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_D37"
+        }, 
+        "DDR3A_A[7]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_K35"
+        }, 
+        "DDR3A_A[8]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_K32"
+        }, 
+        "DDR3A_A[9]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_K37"
+        }, 
+        "DDR3A_BA[0]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_M37"
+        }, 
+        "DDR3A_BA[1]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_P39"
+        }, 
+        "DDR3A_BA[2]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_J36"
+        }, 
+        "DDR3A_CAS_n": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_M36"
+        }, 
+        "DDR3A_CKE[0]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_E36"
+        }, 
+        "DDR3A_CKE[1]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_B35"
+        }, 
+        "DDR3A_CK[0]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_G37"
+        }, 
+        "DDR3A_CK[1]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_J37"
+        }, 
+        "DDR3A_CK_n[0]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_F36"
+        }, 
+        "DDR3A_CK_n[1]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_H37"
+        }, 
+        "DDR3A_CS_n[0]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_P36"
+        }, 
+        "DDR3A_CS_n[1]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_R28"
+        }, 
+        "DDR3A_DM[0]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_C36"
+        }, 
+        "DDR3A_DM[1]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_E32"
+        }, 
+        "DDR3A_DM[2]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_H34"
+        }, 
+        "DDR3A_DM[3]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_L32"
+        }, 
+        "DDR3A_DM[4]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_N32"
+        }, 
+        "DDR3A_DM[5]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_W32"
+        }, 
+        "DDR3A_DM[6]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_K30"
+        }, 
+        "DDR3A_DM[7]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_T28"
+        }, 
+        "DDR3A_DQS[0]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_C34"
+        }, 
+        "DDR3A_DQS[1]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_C31"
+        }, 
+        "DDR3A_DQS[2]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_H35"
+        }, 
+        "DDR3A_DQS[3]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_U35"
+        }, 
+        "DDR3A_DQS[4]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_T33"
+        }, 
+        "DDR3A_DQS[5]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_T30"
+        }, 
+        "DDR3A_DQS[6]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_J30"
+        }, 
+        "DDR3A_DQS[7]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_Y30"
+        }, 
+        "DDR3A_DQS_n[0]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_B34"
+        }, 
+        "DDR3A_DQS_n[1]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_B31"
+        }, 
+        "DDR3A_DQS_n[2]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_G35"
+        }, 
+        "DDR3A_DQS_n[3]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_T35"
+        }, 
+        "DDR3A_DQS_n[4]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_T32"
+        }, 
+        "DDR3A_DQS_n[5]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_R30"
+        }, 
+        "DDR3A_DQS_n[6]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_H30"
+        }, 
+        "DDR3A_DQS_n[7]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_Y29"
+        }, 
+        "DDR3A_DQ[0]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_A35"
+        }, 
+        "DDR3A_DQ[10]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_C30"
+        }, 
+        "DDR3A_DQ[11]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_D30"
+        }, 
+        "DDR3A_DQ[12]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_B29"
+        }, 
+        "DDR3A_DQ[13]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_E30"
+        }, 
+        "DDR3A_DQ[14]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_F31"
+        }, 
+        "DDR3A_DQ[15]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_G31"
+        }, 
+        "DDR3A_DQ[16]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_F35"
+        }, 
+        "DDR3A_DQ[17]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_G34"
+        }, 
+        "DDR3A_DQ[18]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_J33"
+        }, 
+        "DDR3A_DQ[19]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_J34"
+        }, 
+        "DDR3A_DQ[1]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_A34"
+        }, 
+        "DDR3A_DQ[20]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_F34"
+        }, 
+        "DDR3A_DQ[21]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_E35"
+        }, 
+        "DDR3A_DQ[22]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_J31"
+        }, 
+        "DDR3A_DQ[23]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_K31"
+        }, 
+        "DDR3A_DQ[24]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_P34"
+        }, 
+        "DDR3A_DQ[25]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_R33"
+        }, 
+        "DDR3A_DQ[26]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_M34"
+        }, 
+        "DDR3A_DQ[27]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_L33"
+        }, 
+        "DDR3A_DQ[28]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_R34"
+        }, 
+        "DDR3A_DQ[29]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_T34"
+        }, 
+        "DDR3A_DQ[2]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_D36"
+        }, 
+        "DDR3A_DQ[30]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_W34"
+        }, 
+        "DDR3A_DQ[31]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_V35"
+        }, 
+        "DDR3A_DQ[32]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_P33"
+        }, 
+        "DDR3A_DQ[33]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_P32"
+        }, 
+        "DDR3A_DQ[34]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_V33"
+        }, 
+        "DDR3A_DQ[35]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_V34"
+        }, 
+        "DDR3A_DQ[36]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_N31"
+        }, 
+        "DDR3A_DQ[37]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_M31"
+        }, 
+        "DDR3A_DQ[38]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_U32"
+        }, 
+        "DDR3A_DQ[39]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_U33"
+        }, 
+        "DDR3A_DQ[3]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_C33"
+        }, 
+        "DDR3A_DQ[40]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_R31"
+        }, 
+        "DDR3A_DQ[41]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_W31"
+        }, 
+        "DDR3A_DQ[42]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_U30"
+        }, 
+        "DDR3A_DQ[43]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_P31"
+        }, 
+        "DDR3A_DQ[44]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_T31"
+        }, 
+        "DDR3A_DQ[45]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_Y32"
+        }, 
+        "DDR3A_DQ[46]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_T29"
+        }, 
+        "DDR3A_DQ[47]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_P30"
+        }, 
+        "DDR3A_DQ[48]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_H32"
+        }, 
+        "DDR3A_DQ[49]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_H31"
+        }, 
+        "DDR3A_DQ[4]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_B32"
+        }, 
+        "DDR3A_DQ[50]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_L30"
+        }, 
+        "DDR3A_DQ[51]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_L29"
+        }, 
+        "DDR3A_DQ[52]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_F32"
+        }, 
+        "DDR3A_DQ[53]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_G32"
+        }, 
+        "DDR3A_DQ[54]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_M30"
+        }, 
+        "DDR3A_DQ[55]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_N29"
+        }, 
+        "DDR3A_DQ[56]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_U29"
+        }, 
+        "DDR3A_DQ[57]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_V28"
+        }, 
+        "DDR3A_DQ[58]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_Y28"
+        }, 
+        "DDR3A_DQ[59]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_W29"
+        }, 
+        "DDR3A_DQ[5]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_D35"
+        }, 
+        "DDR3A_DQ[60]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_V30"
+        }, 
+        "DDR3A_DQ[61]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_V29"
+        }, 
+        "DDR3A_DQ[62]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_W28"
+        }, 
+        "DDR3A_DQ[63]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_Y27"
+        }, 
+        "DDR3A_DQ[6]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_D33"
+        }, 
+        "DDR3A_DQ[7]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_E33"
+        }, 
+        "DDR3A_DQ[8]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_A32"
+        }, 
+        "DDR3A_DQ[9]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_A31"
+        }, 
+        "DDR3A_EVENT_n": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_K19"
+        }, 
+        "DDR3A_ODT[0]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_V36"
+        }, 
+        "DDR3A_ODT[1]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_W35"
+        }, 
+        "DDR3A_RAS_n": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_P38"
+        }, 
+        "DDR3A_RESET_n": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_H33"
+        }, 
+        "DDR3A_SCL": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_C15"
+        }, 
+        "DDR3A_SDA": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_P15"
+        }, 
+        "DDR3A_WE_n": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_N37"
+        }
+    }, 
+    "DDR3B": {
+        "DDR3B_A[0]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_G17"
+        }, 
+        "DDR3B_A[10]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_C19"
+        }, 
+        "DDR3B_A[11]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_R18"
+        }, 
+        "DDR3B_A[12]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_K18"
+        }, 
+        "DDR3B_A[13]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_E18"
+        }, 
+        "DDR3B_A[14]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_T19"
+        }, 
+        "DDR3B_A[15]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_R19"
+        }, 
+        "DDR3B_A[1]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_F17"
+        }, 
+        "DDR3B_A[2]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_N17"
+        }, 
+        "DDR3B_A[3]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_F19"
+        }, 
+        "DDR3B_A[4]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_N19"
+        }, 
+        "DDR3B_A[5]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_H16"
+        }, 
+        "DDR3B_A[6]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_M17"
+        }, 
+        "DDR3B_A[7]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_T18"
+        }, 
+        "DDR3B_A[8]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_H17"
+        }, 
+        "DDR3B_A[9]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_J19"
+        }, 
+        "DDR3B_BA[0]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_C18"
+        }, 
+        "DDR3B_BA[1]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_G19"
+        }, 
+        "DDR3B_BA[2]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_M20"
+        }, 
+        "DDR3B_CAS_n": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_A17"
+        }, 
+        "DDR3B_CKE[0]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_P17"
+        }, 
+        "DDR3B_CKE[1]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_V18"
+        }, 
+        "DDR3B_CK[0]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_B16"
+        }, 
+        "DDR3B_CK[1]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_E17"
+        }, 
+        "DDR3B_CK_n[0]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_A16"
+        }, 
+        "DDR3B_CK_n[1]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_D17"
+        }, 
+        "DDR3B_CS_n[0]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_B19"
+        }, 
+        "DDR3B_CS_n[1]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_B17"
+        }, 
+        "DDR3B_DM[0]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_R15"
+        }, 
+        "DDR3B_DM[1]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_K15"
+        }, 
+        "DDR3B_DM[2]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_V12"
+        }, 
+        "DDR3B_DM[3]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_G10"
+        }, 
+        "DDR3B_DM[4]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_T12"
+        }, 
+        "DDR3B_DM[5]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_C16"
+        }, 
+        "DDR3B_DM[6]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_H15"
+        }, 
+        "DDR3B_DM[7]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_B11"
+        }, 
+        "DDR3B_DQS[0]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_Y16"
+        }, 
+        "DDR3B_DQS[1]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_V17"
+        }, 
+        "DDR3B_DQS[2]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_P14"
+        }, 
+        "DDR3B_DQS[3]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_K11"
+        }, 
+        "DDR3B_DQS[4]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_U9"
+        }, 
+        "DDR3B_DQS[5]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_E15"
+        }, 
+        "DDR3B_DQS[6]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_L15"
+        }, 
+        "DDR3B_DQS[7]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_D12"
+        }, 
+        "DDR3B_DQS_n[0]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_W16"
+        }, 
+        "DDR3B_DQS_n[1]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_U17"
+        }, 
+        "DDR3B_DQS_n[2]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_N14"
+        }, 
+        "DDR3B_DQS_n[3]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_L11"
+        }, 
+        "DDR3B_DQS_n[4]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_T9"
+        }, 
+        "DDR3B_DQS_n[5]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_D15"
+        }, 
+        "DDR3B_DQS_n[6]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_K14"
+        }, 
+        "DDR3B_DQS_n[7]": {
+            "IOSTANDARD": "DIFFERENTIAL 1.5-V SSTL CLASS I", 
+            "LOC": "PIN_C12"
+        }, 
+        "DDR3B_DQ[0]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_Y17"
+        }, 
+        "DDR3B_DQ[10]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_R16"
+        }, 
+        "DDR3B_DQ[11]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_P16"
+        }, 
+        "DDR3B_DQ[12]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_N16"
+        }, 
+        "DDR3B_DQ[13]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_M15"
+        }, 
+        "DDR3B_DQ[14]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_M14"
+        }, 
+        "DDR3B_DQ[15]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_L14"
+        }, 
+        "DDR3B_DQ[16]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_T14"
+        }, 
+        "DDR3B_DQ[17]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_U14"
+        }, 
+        "DDR3B_DQ[18]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_U11"
+        }, 
+        "DDR3B_DQ[19]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_T13"
+        }, 
+        "DDR3B_DQ[1]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_W17"
+        }, 
+        "DDR3B_DQ[20]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_U12"
+        }, 
+        "DDR3B_DQ[21]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_R13"
+        }, 
+        "DDR3B_DQ[22]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_P13"
+        }, 
+        "DDR3B_DQ[23]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_N13"
+        }, 
+        "DDR3B_DQ[24]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_K12"
+        }, 
+        "DDR3B_DQ[25]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_J12"
+        }, 
+        "DDR3B_DQ[26]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_J10"
+        }, 
+        "DDR3B_DQ[27]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_H12"
+        }, 
+        "DDR3B_DQ[28]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_N11"
+        }, 
+        "DDR3B_DQ[29]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_M11"
+        }, 
+        "DDR3B_DQ[2]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_V15"
+        }, 
+        "DDR3B_DQ[30]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_H10"
+        }, 
+        "DDR3B_DQ[31]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_H11"
+        }, 
+        "DDR3B_DQ[32]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_T10"
+        }, 
+        "DDR3B_DQ[33]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_R10"
+        }, 
+        "DDR3B_DQ[34]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_M12"
+        }, 
+        "DDR3B_DQ[35]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_L12"
+        }, 
+        "DDR3B_DQ[36]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_V10"
+        }, 
+        "DDR3B_DQ[37]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_V9"
+        }, 
+        "DDR3B_DQ[38]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_R12"
+        }, 
+        "DDR3B_DQ[39]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_P12"
+        }, 
+        "DDR3B_DQ[3]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_T15"
+        }, 
+        "DDR3B_DQ[40]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_D14"
+        }, 
+        "DDR3B_DQ[41]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_C13"
+        }, 
+        "DDR3B_DQ[42]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_B14"
+        }, 
+        "DDR3B_DQ[43]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_B13"
+        }, 
+        "DDR3B_DQ[44]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_E14"
+        }, 
+        "DDR3B_DQ[45]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_F14"
+        }, 
+        "DDR3B_DQ[46]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_A14"
+        }, 
+        "DDR3B_DQ[47]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_A13"
+        }, 
+        "DDR3B_DQ[48]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_K13"
+        }, 
+        "DDR3B_DQ[49]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_K16"
+        }, 
+        "DDR3B_DQ[4]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_V13"
+        }, 
+        "DDR3B_DQ[50]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_H13"
+        }, 
+        "DDR3B_DQ[51]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_H14"
+        }, 
+        "DDR3B_DQ[52]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_J13"
+        }, 
+        "DDR3B_DQ[53]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_J16"
+        }, 
+        "DDR3B_DQ[54]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_G13"
+        }, 
+        "DDR3B_DQ[55]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_F13"
+        }, 
+        "DDR3B_DQ[56]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_D11"
+        }, 
+        "DDR3B_DQ[57]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_C10"
+        }, 
+        "DDR3B_DQ[58]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_A10"
+        }, 
+        "DDR3B_DQ[59]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_B10"
+        }, 
+        "DDR3B_DQ[5]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_V16"
+        }, 
+        "DDR3B_DQ[60]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_G11"
+        }, 
+        "DDR3B_DQ[61]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_F11"
+        }, 
+        "DDR3B_DQ[62]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_E11"
+        }, 
+        "DDR3B_DQ[63]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_E12"
+        }, 
+        "DDR3B_DQ[6]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_W14"
+        }, 
+        "DDR3B_DQ[7]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_U15"
+        }, 
+        "DDR3B_DQ[8]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_T17"
+        }, 
+        "DDR3B_DQ[9]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_T16"
+        }, 
+        "DDR3B_EVENT_n": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_K17"
+        }, 
+        "DDR3B_ODT[0]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_M18"
+        }, 
+        "DDR3B_ODT[1]": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_A19"
+        }, 
+        "DDR3B_RAS_n": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_H19"
+        }, 
+        "DDR3B_RESET_n": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_T20"
+        }, 
+        "DDR3B_SCL": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_P18"
+        }, 
+        "DDR3B_SDA": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_P19"
+        }, 
+        "DDR3B_WE_n": {
+            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "LOC": "PIN_D18"
+        }
+    }, 
+    "FAN": {
+        "FAN_CTRL": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AR32"
+        }
+    }, 
+    "FLASH": {
+        "FLASH_ADV_n": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AK29"
+        }, 
+        "FLASH_CE_n[0]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AE27"
+        }, 
+        "FLASH_CE_n[1]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_BA31"
+        }, 
+        "FLASH_CLK": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AL29"
+        }, 
+        "FLASH_OE_n": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AY30"
+        }, 
+        "FLASH_RDY_BSY_n[0]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_BA29"
+        }, 
+        "FLASH_RDY_BSY_n[1]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_BB32"
+        }, 
+        "FLASH_RESET_n": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AE28"
+        }, 
+        "FLASH_WE_n": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AR31"
+        }
+    }, 
+    "FSM": {
+        "FSM_A[0]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AU32"
+        }, 
+        "FSM_A[10]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AN30"
+        }, 
+        "FSM_A[11]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AH33"
+        }, 
+        "FSM_A[12]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AK32"
+        }, 
+        "FSM_A[13]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AM32"
+        }, 
+        "FSM_A[14]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AM31"
+        }, 
+        "FSM_A[15]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AL31"
+        }, 
+        "FSM_A[16]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AN33"
+        }, 
+        "FSM_A[17]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AP33"
+        }, 
+        "FSM_A[18]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AT32"
+        }, 
+        "FSM_A[19]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AT29"
+        }, 
+        "FSM_A[1]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AH30"
+        }, 
+        "FSM_A[20]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AP31"
+        }, 
+        "FSM_A[21]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AR30"
+        }, 
+        "FSM_A[22]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AU30"
+        }, 
+        "FSM_A[23]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AJ31"
+        }, 
+        "FSM_A[24]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AP30"
+        }, 
+        "FSM_A[25]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AN31"
+        }, 
+        "FSM_A[26]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AT30"
+        }, 
+        "FSM_A[2]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AJ30"
+        }, 
+        "FSM_A[3]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AH31"
+        }, 
+        "FSM_A[4]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AK30"
+        }, 
+        "FSM_A[5]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AJ32"
+        }, 
+        "FSM_A[6]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AG33"
+        }, 
+        "FSM_A[7]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AL30"
+        }, 
+        "FSM_A[8]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AK33"
+        }, 
+        "FSM_A[9]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AJ33"
+        }, 
+        "FSM_D[0]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AG26"
+        }, 
+        "FSM_D[10]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AE33"
+        }, 
+        "FSM_D[11]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AE31"
+        }, 
+        "FSM_D[12]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AF28"
+        }, 
+        "FSM_D[13]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AE30"
+        }, 
+        "FSM_D[14]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AG29"
+        }, 
+        "FSM_D[15]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AG27"
+        }, 
+        "FSM_D[16]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AP28"
+        }, 
+        "FSM_D[17]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AN28"
+        }, 
+        "FSM_D[18]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AU31"
+        }, 
+        "FSM_D[19]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AW32"
+        }, 
+        "FSM_D[1]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AD33"
+        }, 
+        "FSM_D[20]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_BD32"
+        }, 
+        "FSM_D[21]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AY31"
+        }, 
+        "FSM_D[22]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_BA30"
+        }, 
+        "FSM_D[23]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_BB30"
+        }, 
+        "FSM_D[24]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AM29"
+        }, 
+        "FSM_D[25]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AR29"
+        }, 
+        "FSM_D[26]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AV31"
+        }, 
+        "FSM_D[27]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AV32"
+        }, 
+        "FSM_D[28]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_BC31"
+        }, 
+        "FSM_D[29]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AW30"
+        }, 
+        "FSM_D[2]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AE34"
+        }, 
+        "FSM_D[30]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_BC32"
+        }, 
+        "FSM_D[31]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_BD31"
+        }, 
+        "FSM_D[3]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AF31"
+        }, 
+        "FSM_D[4]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AG28"
+        }, 
+        "FSM_D[5]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AG30"
+        }, 
+        "FSM_D[6]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AF29"
+        }, 
+        "FSM_D[7]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AE29"
+        }, 
+        "FSM_D[8]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AG25"
+        }, 
+        "FSM_D[9]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AF34"
+        }
+    }, 
+    "HEX0": {
+        "HEX0_DP": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_P8"
+        }, 
+        "HEX0_D[0]": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_G8"
+        }, 
+        "HEX0_D[1]": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_H8"
+        }, 
+        "HEX0_D[2]": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_J9"
+        }, 
+        "HEX0_D[3]": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_K10"
+        }, 
+        "HEX0_D[4]": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_K8"
+        }, 
+        "HEX0_D[5]": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_K9"
+        }, 
+        "HEX0_D[6]": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_N8"
+        }
+    }, 
+    "HEX1": {
+        "HEX1_DP": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_E9"
+        }, 
+        "HEX1_D[0]": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_H18"
+        }, 
+        "HEX1_D[1]": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_G16"
+        }, 
+        "HEX1_D[2]": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_F16"
+        }, 
+        "HEX1_D[3]": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_A7"
+        }, 
+        "HEX1_D[4]": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_B7"
+        }, 
+        "HEX1_D[5]": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_C9"
+        }, 
+        "HEX1_D[6]": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_D10"
+        }
+    }, 
+    "LED": {
+        "LED[0]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AW37"
+        }, 
+        "LED[1]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AV37"
+        }, 
+        "LED[2]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_BB36"
+        }, 
+        "LED[3]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_BB39"
+        }, 
+        "LED_BRACKET[0]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AH15"
+        }, 
+        "LED_BRACKET[1]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AH13"
+        }, 
+        "LED_BRACKET[2]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AJ13"
+        }, 
+        "LED_BRACKET[3]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AJ14"
+        }, 
+        "LED_RJ45_L": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AG15"
+        }, 
+        "LED_RJ45_R": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AG16"
+        }
+    }, 
+    "MAX2": {}, 
+    "OSC": {
+        "OSC_50_B3B": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AW35"
+        }, 
+        "OSC_50_B3D": {
+            "IOSTANDARD": "1.8 V", 
+            "LOC": "PIN_BC28"
+        }, 
+        "OSC_50_B4A": {
+            "IOSTANDARD": "1.8 V", 
+            "LOC": "PIN_AP10"
+        }, 
+        "OSC_50_B4D": {
+            "IOSTANDARD": "1.8 V", 
+            "LOC": "PIN_AY18"
+        }, 
+        "OSC_50_B7A": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_M8"
+        }, 
+        "OSC_50_B7D": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_J18"
+        }, 
+        "OSC_50_B8A": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_R36"
+        }, 
+        "OSC_50_B8D": {
+            "IOSTANDARD": "1.8 V", 
+            "LOC": "PIN_R25"
+        }
+    }, 
+    "PCIE": {
+        "PCIE_PERST_n": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AU33"
+        }, 
+        "PCIE_REFCLK_p": {
+            "IOSTANDARD": "HCSL", 
+            "LOC": "PIN_AK38"
+        }, 
+        "PCIE_RX_p[0]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_BB43"
+        }, 
+        "PCIE_RX_p[1]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_BA41"
+        }, 
+        "PCIE_RX_p[2]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AW41"
+        }, 
+        "PCIE_RX_p[3]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AY43"
+        }, 
+        "PCIE_RX_p[4]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AT43"
+        }, 
+        "PCIE_RX_p[5]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AP43"
+        }, 
+        "PCIE_RX_p[6]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AM43"
+        }, 
+        "PCIE_RX_p[7]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AK43"
+        }, 
+        "PCIE_SMBCLK": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_BD34"
+        }, 
+        "PCIE_SMBDAT": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AT33"
+        }, 
+        "PCIE_TX_p[0]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AY39"
+        }, 
+        "PCIE_TX_p[1]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AV39"
+        }, 
+        "PCIE_TX_p[2]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AT39"
+        }, 
+        "PCIE_TX_p[3]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AU41"
+        }, 
+        "PCIE_TX_p[4]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AN41"
+        }, 
+        "PCIE_TX_p[5]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AL41"
+        }, 
+        "PCIE_TX_p[6]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AJ41"
+        }, 
+        "PCIE_TX_p[7]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AG41"
+        }, 
+        "PCIE_WAKE_n": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_BD35"
+        }
+    }, 
+    "PLL": {
+        "\"PCIE_REFCLK_p(n)\"": {
+            "IOSTANDARD": "HCSL", 
+            "LOC": "PIN_AK39"
+        }, 
+        "\"PCIE_RX_p[0](n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_BB44"
+        }, 
+        "\"PCIE_RX_p[1](n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_BA42"
+        }, 
+        "\"PCIE_RX_p[2](n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AW42"
+        }, 
+        "\"PCIE_RX_p[3](n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AY44"
+        }, 
+        "\"PCIE_RX_p[4](n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AT44"
+        }, 
+        "\"PCIE_RX_p[5](n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AP44"
+        }, 
+        "\"PCIE_RX_p[6](n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AM44"
+        }, 
+        "\"PCIE_RX_p[7](n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AK44"
+        }, 
+        "\"PCIE_TX_p[0](n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AY40"
+        }, 
+        "\"PCIE_TX_p[1](n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AV40"
+        }, 
+        "\"PCIE_TX_p[2](n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AT40"
+        }, 
+        "\"PCIE_TX_p[3](n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AU42"
+        }, 
+        "\"PCIE_TX_p[4](n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AN42"
+        }, 
+        "\"PCIE_TX_p[5](n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AL42"
+        }, 
+        "\"PCIE_TX_p[6](n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AJ42"
+        }, 
+        "\"PCIE_TX_p[7](n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AG42"
+        }, 
+        "\"SATA_DEVICE_REFCLK_p(n)\"": {
+            "IOSTANDARD": "HCSL", 
+            "LOC": "PIN_V40"
+        }, 
+        "\"SATA_DEVICE_RX_p[0](n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_K44"
+        }, 
+        "\"SATA_DEVICE_RX_p[1](n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_H44"
+        }, 
+        "\"SATA_DEVICE_TX_p[0](n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_K40"
+        }, 
+        "\"SATA_DEVICE_TX_p[1](n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_H40"
+        }, 
+        "\"SATA_HOST_REFCLK_p(n)\"": {
+            "IOSTANDARD": "HCSL", 
+            "LOC": "PIN_V5"
+        }, 
+        "\"SATA_HOST_RX_p[0](n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_K1"
+        }, 
+        "\"SATA_HOST_RX_p[1](n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_H1"
+        }, 
+        "\"SATA_HOST_TX_p[0](n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_K5"
+        }, 
+        "\"SATA_HOST_TX_p[1](n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_H5"
+        }, 
+        "\"SFP1G_REFCLK_p(n)\"": {
+            "IOSTANDARD": "HCSL", 
+            "LOC": "PIN_AH5"
+        }, 
+        "\"SFPA_RX_p(n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AK1"
+        }, 
+        "\"SFPA_TX_p(n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AG3"
+        }, 
+        "\"SFPB_RX_p(n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AP1"
+        }, 
+        "\"SFPB_TX_p(n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AL3"
+        }, 
+        "\"SFPC_RX_p(n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AW3"
+        }, 
+        "\"SFPC_TX_p(n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AT5"
+        }, 
+        "\"SFPD_RX_p(n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_BB1"
+        }, 
+        "\"SFPD_TX_p(n)\"": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AY5"
+        }, 
+        "\"SFP_REFCLK_P(n)\"": {
+            "IOSTANDARD": "HCSL", 
+            "LOC": "PIN_AK6"
+        }, 
+        "PLL_SCL": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AF32"
+        }, 
+        "PLL_SDA": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AG32"
+        }, 
+        "SFP_REFCLK_P": {
+            "IOSTANDARD": "HCSL", 
+            "LOC": "PIN_AK7"
+        }
+    }, 
+    "QDRIIA": {
+        "QDRIIA_A[0]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AU29"
+        }, 
+        "QDRIIA_A[10]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AW27"
+        }, 
+        "QDRIIA_A[11]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AY28"
+        }, 
+        "QDRIIA_A[12]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BD28"
+        }, 
+        "QDRIIA_A[13]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AV29"
+        }, 
+        "QDRIIA_A[14]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AW29"
+        }, 
+        "QDRIIA_A[15]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BB29"
+        }, 
+        "QDRIIA_A[16]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BD29"
+        }, 
+        "QDRIIA_A[17]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AL27"
+        }, 
+        "QDRIIA_A[18]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AR27"
+        }, 
+        "QDRIIA_A[19]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AL28"
+        }, 
+        "QDRIIA_A[1]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BA28"
+        }, 
+        "QDRIIA_A[20]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AR28"
+        }, 
+        "QDRIIA_A[2]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AP27"
+        }, 
+        "QDRIIA_A[3]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AK27"
+        }, 
+        "QDRIIA_A[4]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AN27"
+        }, 
+        "QDRIIA_A[5]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AM28"
+        }, 
+        "QDRIIA_A[6]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AV28"
+        }, 
+        "QDRIIA_A[7]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AY27"
+        }, 
+        "QDRIIA_A[8]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BC29"
+        }, 
+        "QDRIIA_A[9]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AU28"
+        }, 
+        "QDRIIA_BWS_n[0]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AJ24"
+        }, 
+        "QDRIIA_BWS_n[1]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AT27"
+        }, 
+        "QDRIIA_CQ_n": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BA25"
+        }, 
+        "QDRIIA_CQ_p": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AH22"
+        }, 
+        "QDRIIA_DOFF_n": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AR23"
+        }, 
+        "QDRIIA_D[0]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AH28"
+        }, 
+        "QDRIIA_D[10]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AM26"
+        }, 
+        "QDRIIA_D[11]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AM25"
+        }, 
+        "QDRIIA_D[12]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AL26"
+        }, 
+        "QDRIIA_D[13]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AK26"
+        }, 
+        "QDRIIA_D[14]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AU27"
+        }, 
+        "QDRIIA_D[15]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AU26"
+        }, 
+        "QDRIIA_D[16]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AV26"
+        }, 
+        "QDRIIA_D[17]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AW26"
+        }, 
+        "QDRIIA_D[1]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AH27"
+        }, 
+        "QDRIIA_D[2]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AH25"
+        }, 
+        "QDRIIA_D[3]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AJ28"
+        }, 
+        "QDRIIA_D[4]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AJ27"
+        }, 
+        "QDRIIA_D[5]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AJ26"
+        }, 
+        "QDRIIA_D[6]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AJ25"
+        }, 
+        "QDRIIA_D[7]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AL25"
+        }, 
+        "QDRIIA_D[8]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AH24"
+        }, 
+        "QDRIIA_D[9]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AN25"
+        }, 
+        "QDRIIA_K_n": {
+            "IOSTANDARD": "DIFFERENTIAL 1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AR26"
+        }, 
+        "QDRIIA_K_p": {
+            "IOSTANDARD": "DIFFERENTIAL 1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AP25"
+        }, 
+        "QDRIIA_ODT": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AN23"
+        }, 
+        "QDRIIA_QVLD": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AM23"
+        }, 
+        "QDRIIA_Q[0]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AK23"
+        }, 
+        "QDRIIA_Q[10]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BC26"
+        }, 
+        "QDRIIA_Q[11]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AY25"
+        }, 
+        "QDRIIA_Q[12]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AU24"
+        }, 
+        "QDRIIA_Q[13]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AV25"
+        }, 
+        "QDRIIA_Q[14]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AU25"
+        }, 
+        "QDRIIA_Q[15]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AR25"
+        }, 
+        "QDRIIA_Q[16]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AP24"
+        }, 
+        "QDRIIA_Q[17]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AL24"
+        }, 
+        "QDRIIA_Q[1]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BB26"
+        }, 
+        "QDRIIA_Q[2]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BD26"
+        }, 
+        "QDRIIA_Q[3]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BA24"
+        }, 
+        "QDRIIA_Q[4]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AL23"
+        }, 
+        "QDRIIA_Q[5]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AJ23"
+        }, 
+        "QDRIIA_Q[6]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AL21"
+        }, 
+        "QDRIIA_Q[7]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AK21"
+        }, 
+        "QDRIIA_Q[8]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AJ22"
+        }, 
+        "QDRIIA_Q[9]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AW24"
+        }, 
+        "QDRIIA_RPS_n": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AT26"
+        }, 
+        "QDRIIA_WPS_n": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AK24"
+        }
+    }, 
+    "QDRIIB": {
+        "QDRIIB_A[0]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AR24"
+        }, 
+        "QDRIIB_A[10]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AJ20"
+        }, 
+        "QDRIIB_A[11]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AG20"
+        }, 
+        "QDRIIB_A[12]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AW23"
+        }, 
+        "QDRIIB_A[13]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BB24"
+        }, 
+        "QDRIIB_A[14]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AY24"
+        }, 
+        "QDRIIB_A[15]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BD23"
+        }, 
+        "QDRIIB_A[16]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BC23"
+        }, 
+        "QDRIIB_A[17]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AG21"
+        }, 
+        "QDRIIB_A[18]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AM20"
+        }, 
+        "QDRIIB_A[19]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AK18"
+        }, 
+        "QDRIIB_A[1]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BB23"
+        }, 
+        "QDRIIB_A[20]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AN22"
+        }, 
+        "QDRIIB_A[2]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AK20"
+        }, 
+        "QDRIIB_A[3]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AJ19"
+        }, 
+        "QDRIIB_A[4]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AL20"
+        }, 
+        "QDRIIB_A[5]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AG19"
+        }, 
+        "QDRIIB_A[6]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AT23"
+        }, 
+        "QDRIIB_A[7]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AU23"
+        }, 
+        "QDRIIB_A[8]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AV23"
+        }, 
+        "QDRIIB_A[9]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AM22"
+        }, 
+        "QDRIIB_BWS_n[0]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AV20"
+        }, 
+        "QDRIIB_BWS_n[1]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AU21"
+        }, 
+        "QDRIIB_CQ_n": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AP18"
+        }, 
+        "QDRIIB_CQ_p": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AJ15"
+        }, 
+        "QDRIIB_DOFF_n": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AH19"
+        }, 
+        "QDRIIB_D[0]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BB21"
+        }, 
+        "QDRIIB_D[10]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AR21"
+        }, 
+        "QDRIIB_D[11]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AP21"
+        }, 
+        "QDRIIB_D[12]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BD22"
+        }, 
+        "QDRIIB_D[13]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BC22"
+        }, 
+        "QDRIIB_D[14]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BA22"
+        }, 
+        "QDRIIB_D[15]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AV22"
+        }, 
+        "QDRIIB_D[16]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AY22"
+        }, 
+        "QDRIIB_D[17]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AW22"
+        }, 
+        "QDRIIB_D[1]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BD20"
+        }, 
+        "QDRIIB_D[2]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BC20"
+        }, 
+        "QDRIIB_D[3]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AR22"
+        }, 
+        "QDRIIB_D[4]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BB20"
+        }, 
+        "QDRIIB_D[5]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AU22"
+        }, 
+        "QDRIIB_D[6]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BA21"
+        }, 
+        "QDRIIB_D[7]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AY21"
+        }, 
+        "QDRIIB_D[8]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AW21"
+        }, 
+        "QDRIIB_D[9]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AT21"
+        }, 
+        "QDRIIB_K_n": {
+            "IOSTANDARD": "DIFFERENTIAL 1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AT20"
+        }, 
+        "QDRIIB_K_p": {
+            "IOSTANDARD": "DIFFERENTIAL 1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AR20"
+        }, 
+        "QDRIIB_ODT": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AH18"
+        }, 
+        "QDRIIB_QVLD": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AJ16"
+        }, 
+        "QDRIIB_Q[0]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AR19"
+        }, 
+        "QDRIIB_Q[10]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AJ18"
+        }, 
+        "QDRIIB_Q[11]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AJ17"
+        }, 
+        "QDRIIB_Q[12]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AG18"
+        }, 
+        "QDRIIB_Q[13]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AU19"
+        }, 
+        "QDRIIB_Q[14]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AW19"
+        }, 
+        "QDRIIB_Q[15]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AV19"
+        }, 
+        "QDRIIB_Q[16]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AP19"
+        }, 
+        "QDRIIB_Q[17]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AN20"
+        }, 
+        "QDRIIB_Q[1]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AM19"
+        }, 
+        "QDRIIB_Q[2]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AL19"
+        }, 
+        "QDRIIB_Q[3]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AM17"
+        }, 
+        "QDRIIB_Q[4]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AL18"
+        }, 
+        "QDRIIB_Q[5]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AN19"
+        }, 
+        "QDRIIB_Q[6]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AU18"
+        }, 
+        "QDRIIB_Q[7]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AK17"
+        }, 
+        "QDRIIB_Q[8]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AL17"
+        }, 
+        "QDRIIB_Q[9]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AG17"
+        }, 
+        "QDRIIB_RPS_n": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AW20"
+        }, 
+        "QDRIIB_WPS_n": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AU20"
+        }
+    }, 
+    "QDRIIC": {
+        "QDRIIC_A[0]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AV16"
+        }, 
+        "QDRIIC_A[10]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AH21"
+        }, 
+        "QDRIIC_A[11]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AU17"
+        }, 
+        "QDRIIC_A[12]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AU16"
+        }, 
+        "QDRIIC_A[13]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BB8"
+        }, 
+        "QDRIIC_A[14]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AT18"
+        }, 
+        "QDRIIC_A[15]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AW17"
+        }, 
+        "QDRIIC_A[16]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AV17"
+        }, 
+        "QDRIIC_A[17]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AU8"
+        }, 
+        "QDRIIC_A[18]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AT9"
+        }, 
+        "QDRIIC_A[19]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AV8"
+        }, 
+        "QDRIIC_A[1]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AW16"
+        }, 
+        "QDRIIC_A[20]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AN17"
+        }, 
+        "QDRIIC_A[2]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AP16"
+        }, 
+        "QDRIIC_A[3]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AW9"
+        }, 
+        "QDRIIC_A[4]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BD7"
+        }, 
+        "QDRIIC_A[5]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BC7"
+        }, 
+        "QDRIIC_A[6]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AR17"
+        }, 
+        "QDRIIC_A[7]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AR18"
+        }, 
+        "QDRIIC_A[8]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AT17"
+        }, 
+        "QDRIIC_A[9]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BB9"
+        }, 
+        "QDRIIC_BWS_n[0]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AJ11"
+        }, 
+        "QDRIIC_BWS_n[1]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AJ10"
+        }, 
+        "QDRIIC_CQ_n": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AF13"
+        }, 
+        "QDRIIC_CQ_p": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BC11"
+        }, 
+        "QDRIIC_DOFF_n": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AE14"
+        }, 
+        "QDRIIC_D[0]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AG9"
+        }, 
+        "QDRIIC_D[10]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AM13"
+        }, 
+        "QDRIIC_D[11]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AR12"
+        }, 
+        "QDRIIC_D[12]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AR13"
+        }, 
+        "QDRIIC_D[13]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AU9"
+        }, 
+        "QDRIIC_D[14]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AU10"
+        }, 
+        "QDRIIC_D[15]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AU11"
+        }, 
+        "QDRIIC_D[16]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AV11"
+        }, 
+        "QDRIIC_D[17]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AT12"
+        }, 
+        "QDRIIC_D[1]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AG10"
+        }, 
+        "QDRIIC_D[2]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AG12"
+        }, 
+        "QDRIIC_D[3]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AG11"
+        }, 
+        "QDRIIC_D[4]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AV10"
+        }, 
+        "QDRIIC_D[5]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AH12"
+        }, 
+        "QDRIIC_D[6]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AK12"
+        }, 
+        "QDRIIC_D[7]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AL12"
+        }, 
+        "QDRIIC_D[8]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AJ12"
+        }, 
+        "QDRIIC_D[9]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AN12"
+        }, 
+        "QDRIIC_K_n": {
+            "IOSTANDARD": "DIFFERENTIAL 1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AP13"
+        }, 
+        "QDRIIC_K_p": {
+            "IOSTANDARD": "DIFFERENTIAL 1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AP12"
+        }, 
+        "QDRIIC_ODT": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BD10"
+        }, 
+        "QDRIIC_QVLD": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BD11"
+        }, 
+        "QDRIIC_Q[0]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BA12"
+        }, 
+        "QDRIIC_Q[10]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AW11"
+        }, 
+        "QDRIIC_Q[11]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AF10"
+        }, 
+        "QDRIIC_Q[12]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AY12"
+        }, 
+        "QDRIIC_Q[13]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AW10"
+        }, 
+        "QDRIIC_Q[14]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AY10"
+        }, 
+        "QDRIIC_Q[15]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BB12"
+        }, 
+        "QDRIIC_Q[16]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BC10"
+        }, 
+        "QDRIIC_Q[17]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BA10"
+        }, 
+        "QDRIIC_Q[1]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AF14"
+        }, 
+        "QDRIIC_Q[2]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AE13"
+        }, 
+        "QDRIIC_Q[3]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AD14"
+        }, 
+        "QDRIIC_Q[4]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AE12"
+        }, 
+        "QDRIIC_Q[5]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AF11"
+        }, 
+        "QDRIIC_Q[6]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AE11"
+        }, 
+        "QDRIIC_Q[7]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AE10"
+        }, 
+        "QDRIIC_Q[8]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AE9"
+        }, 
+        "QDRIIC_Q[9]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_BB11"
+        }, 
+        "QDRIIC_RPS_n": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AH10"
+        }, 
+        "QDRIIC_WPS_n": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_AL11"
+        }
+    }, 
+    "QDRIID": {
+        "QDRIID_A[0]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_N26"
+        }, 
+        "QDRIID_A[10]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_U27"
+        }, 
+        "QDRIID_A[11]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_R27"
+        }, 
+        "QDRIID_A[12]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_P27"
+        }, 
+        "QDRIID_A[13]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_V25"
+        }, 
+        "QDRIID_A[14]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_V26"
+        }, 
+        "QDRIID_A[15]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_T25"
+        }, 
+        "QDRIID_A[16]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_P26"
+        }, 
+        "QDRIID_A[17]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_M27"
+        }, 
+        "QDRIID_A[18]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_M28"
+        }, 
+        "QDRIID_A[19]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_P29"
+        }, 
+        "QDRIID_A[1]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_P28"
+        }, 
+        "QDRIID_A[20]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_D29"
+        }, 
+        "QDRIID_A[2]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_N28"
+        }, 
+        "QDRIID_A[3]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_L26"
+        }, 
+        "QDRIID_A[4]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_K27"
+        }, 
+        "QDRIID_A[5]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_L27"
+        }, 
+        "QDRIID_A[6]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_U26"
+        }, 
+        "QDRIID_A[7]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_T26"
+        }, 
+        "QDRIID_A[8]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_T27"
+        }, 
+        "QDRIID_A[9]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_V27"
+        }, 
+        "QDRIID_BWS_n[0]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_E26"
+        }, 
+        "QDRIID_BWS_n[1]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_K26"
+        }, 
+        "QDRIID_CQ_n": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_H27"
+        }, 
+        "QDRIID_CQ_p": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_E29"
+        }, 
+        "QDRIID_DOFF_n": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_E27"
+        }, 
+        "QDRIID_D[0]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_H25"
+        }, 
+        "QDRIID_D[10]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_P24"
+        }, 
+        "QDRIID_D[11]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_P23"
+        }, 
+        "QDRIID_D[12]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_L24"
+        }, 
+        "QDRIID_D[13]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_R24"
+        }, 
+        "QDRIID_D[14]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_U23"
+        }, 
+        "QDRIID_D[15]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_U24"
+        }, 
+        "QDRIID_D[16]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_T24"
+        }, 
+        "QDRIID_D[17]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_T23"
+        }, 
+        "QDRIID_D[1]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_H24"
+        }, 
+        "QDRIID_D[2]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_H23"
+        }, 
+        "QDRIID_D[3]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_J25"
+        }, 
+        "QDRIID_D[4]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_J24"
+        }, 
+        "QDRIID_D[5]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_K25"
+        }, 
+        "QDRIID_D[6]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_D26"
+        }, 
+        "QDRIID_D[7]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_F25"
+        }, 
+        "QDRIID_D[8]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_G25"
+        }, 
+        "QDRIID_D[9]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_N23"
+        }, 
+        "QDRIID_K_n": {
+            "IOSTANDARD": "DIFFERENTIAL 1.8-V HSTL CLASS I", 
+            "LOC": "PIN_K24"
+        }, 
+        "QDRIID_K_p": {
+            "IOSTANDARD": "DIFFERENTIAL 1.8-V HSTL CLASS I", 
+            "LOC": "PIN_L23"
+        }, 
+        "QDRIID_ODT": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_H26"
+        }, 
+        "QDRIID_QVLD": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_J27"
+        }, 
+        "QDRIID_Q[0]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_C27"
+        }, 
+        "QDRIID_Q[10]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_F28"
+        }, 
+        "QDRIID_Q[11]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_D27"
+        }, 
+        "QDRIID_Q[12]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_G29"
+        }, 
+        "QDRIID_Q[13]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_F29"
+        }, 
+        "QDRIID_Q[14]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_H28"
+        }, 
+        "QDRIID_Q[15]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_K28"
+        }, 
+        "QDRIID_Q[16]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_J28"
+        }, 
+        "QDRIID_Q[17]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_H29"
+        }, 
+        "QDRIID_Q[1]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_A26"
+        }, 
+        "QDRIID_Q[2]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_B26"
+        }, 
+        "QDRIID_Q[3]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_F26"
+        }, 
+        "QDRIID_Q[4]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_G26"
+        }, 
+        "QDRIID_Q[5]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_C28"
+        }, 
+        "QDRIID_Q[6]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_A29"
+        }, 
+        "QDRIID_Q[7]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_A28"
+        }, 
+        "QDRIID_Q[8]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_B28"
+        }, 
+        "QDRIID_Q[9]": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_G28"
+        }, 
+        "QDRIID_RPS_n": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_F24"
+        }, 
+        "QDRIID_WPS_n": {
+            "IOSTANDARD": "1.8-V HSTL CLASS I", 
+            "LOC": "PIN_M23"
+        }
+    }, 
+    "RS422": {
+        "RS422_DE": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AG14"
+        }, 
+        "RS422_DIN": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AE18"
+        }, 
+        "RS422_DOUT": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AE17"
+        }, 
+        "RS422_RE_n": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AF17"
+        }, 
+        "RS422_TE": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AF16"
+        }
+    }, 
+    "RZQ": {
+        "RZQ_0": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_BA36"
+        }, 
+        "RZQ_1": {
+            "IOSTANDARD": "1.8 V", 
+            "LOC": "PIN_AR8"
+        }, 
+        "RZQ_4": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_H9"
+        }, 
+        "RZQ_5": {
+            "IOSTANDARD": "1.5 V", 
+            "LOC": "PIN_P35"
+        }
+    }, 
+    "SATA": {
+        "SATA_DEVICE_REFCLK_p": {
+            "IOSTANDARD": "HCSL", 
+            "LOC": "PIN_V39"
+        }, 
+        "SATA_DEVICE_RX_p[0]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_K43"
+        }, 
+        "SATA_DEVICE_RX_p[1]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_H43"
+        }, 
+        "SATA_DEVICE_TX_p[0]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_K39"
+        }, 
+        "SATA_DEVICE_TX_p[1]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_H39"
+        }, 
+        "SATA_HOST_REFCLK_p": {
+            "IOSTANDARD": "HCSL", 
+            "LOC": "PIN_V6"
+        }, 
+        "SATA_HOST_RX_p[0]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_K2"
+        }, 
+        "SATA_HOST_RX_p[1]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_H2"
+        }, 
+        "SATA_HOST_TX_p[0]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_K6"
+        }, 
+        "SATA_HOST_TX_p[1]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_H6"
+        }
+    }, 
+    "SFP1G": {
+        "SFP1G_REFCLK_p": {
+            "IOSTANDARD": "HCSL", 
+            "LOC": "PIN_AH6"
+        }
+    }, 
+    "SFPA": {
+        "SFPA_LOS": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_F22"
+        }, 
+        "SFPA_MOD0_PRSNT_n": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_E21"
+        }, 
+        "SFPA_MOD1_SCL": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_B20"
+        }, 
+        "SFPA_MOD2_SDA": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_A20"
+        }, 
+        "SFPA_RATESEL[0]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_E20"
+        }, 
+        "SFPA_RATESEL[1]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_G22"
+        }, 
+        "SFPA_RX_p": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AK2"
+        }, 
+        "SFPA_TXDISABLE": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_B22"
+        }, 
+        "SFPA_TXFAULT": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_A22"
+        }, 
+        "SFPA_TX_p": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AG4"
+        }
+    }, 
+    "SFPB": {
+        "SFPB_LOS": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_R22"
+        }, 
+        "SFPB_MOD0_PRSNT_n": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_K22"
+        }, 
+        "SFPB_MOD1_SCL": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_K21"
+        }, 
+        "SFPB_MOD2_SDA": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_K20"
+        }, 
+        "SFPB_RATESEL[0]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_R21"
+        }, 
+        "SFPB_RATESEL[1]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_T22"
+        }, 
+        "SFPB_RX_p": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AP2"
+        }, 
+        "SFPB_TXDISABLE": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_H22"
+        }, 
+        "SFPB_TXFAULT": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_H20"
+        }, 
+        "SFPB_TX_p": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AL4"
+        }
+    }, 
+    "SFPC": {
+        "SFPC_LOS": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_L21"
+        }, 
+        "SFPC_MOD0_PRSNT_n": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_J21"
+        }, 
+        "SFPC_MOD1_SCL": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_H21"
+        }, 
+        "SFPC_MOD2_SDA": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_G20"
+        }, 
+        "SFPC_RATESEL[0]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_J22"
+        }, 
+        "SFPC_RATESEL[1]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_P21"
+        }, 
+        "SFPC_RX_p": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AW4"
+        }, 
+        "SFPC_TXDISABLE": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_F21"
+        }, 
+        "SFPC_TXFAULT": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_F20"
+        }, 
+        "SFPC_TX_p": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AT6"
+        }
+    }, 
+    "SFPD": {
+        "SFPD_LOS": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_N22"
+        }, 
+        "SFPD_MOD0_PRSNT_n": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_V20"
+        }, 
+        "SFPD_MOD1_SCL": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_U21"
+        }, 
+        "SFPD_MOD2_SDA": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_V19"
+        }, 
+        "SFPD_RATESEL[0]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_V21"
+        }, 
+        "SFPD_RATESEL[1]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_M22"
+        }, 
+        "SFPD_RX_p": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_BB2"
+        }, 
+        "SFPD_TXDISABLE": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_U20"
+        }, 
+        "SFPD_TXFAULT": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_T21"
+        }, 
+        "SFPD_TX_p": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AY6"
+        }, 
+        "SFP_REFCLK_p": {
+            "IOSTANDARD": "HCSL", 
+            "LOC": "PIN_AK7"
+        }
+    }, 
+    "SMA": {
+        "SMA_CLKIN": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_BB33"
+        }, 
+        "SMA_CLKOUT": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AV34"
+        }
+    }, 
+    "SW": {
+        "SW[0]": {
+            "IOSTANDARD": "1.8 V", 
+            "LOC": "PIN_B25"
+        }, 
+        "SW[1]": {
+            "IOSTANDARD": "1.8 V", 
+            "LOC": "PIN_A25"
+        }, 
+        "SW[2]": {
+            "IOSTANDARD": "1.8 V", 
+            "LOC": "PIN_B23"
+        }, 
+        "SW[3]": {
+            "IOSTANDARD": "1.8 V", 
+            "LOC": "PIN_A23"
+        }
+    }, 
+    "TEMP": {
+        "TEMP_CLK": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_D21"
+        }, 
+        "TEMP_DATA": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_D20"
+        }, 
+        "TEMP_INT_n": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_C21"
+        }, 
+        "TEMP_OVERT_n": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_C22"
+        }
     }
+
 }
 
 
