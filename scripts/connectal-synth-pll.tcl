@@ -2,6 +2,7 @@ source "board.tcl"
 source "$connectaldir/scripts/connectal-synth-ip.tcl"
 
 proc create_custom_pll {refclk args} {
+    global ipdir boardname partname
     set num [llength $args]
 
     if {$num == 0} {
@@ -45,7 +46,25 @@ proc create_custom_pll {refclk args} {
     set core_name {altera_pll}
     set core_version {14.0}
     set ip_name {altera_pll_wrapper}
-    fpgamake_altera_ipcore $core_name $core_version $ip_name $component_parameters
+
+    exec -ignorestderr -- ip-generate \
+            --project-directory=$ipdir/$boardname                            \
+            --output-directory=$ipdir/$boardname/synthesis                   \
+            --file-set=QUARTUS_SYNTH                                         \
+            --report-file=html:$ipdir/$boardname/$ip_name.html               \
+            --report-file=sopcinfo:$ipdir/$boardname/$ip_name.sopcinfo       \
+            --report-file=cmp:$ipdir/$boardname/$ip_name.cmp                 \
+            --report-file=svd:$ipdir/$boardname/synthesis/$ip_name.svd       \
+            --report-file=qip:$ipdir/$boardname/synthesis/altera_pll.qip     \
+            --report-file=regmap:$ipdir/$boardname/synthesis/$ip_name.regmap \
+            --report-file=xml:$ipdir/$boardname/$ip_name.xml                 \
+            --system-info=DEVICE_FAMILY=StratixV                             \
+            --system-info=DEVICE=$partname                                   \
+            --system-info=DEVICE_SPEEDGRADE=2_H2                             \
+            --language=VERILOG                                               \
+            {*}$component_parameters\
+            --component-name=$core_name                                      \
+            --output-name=$ip_name
 }
 
 create_custom_pll 50.0 125.0 156.25

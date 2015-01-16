@@ -1,5 +1,6 @@
 source "board.tcl"
 source "$connectaldir/scripts/connectal-synth-ip.tcl"
+source "$scriptsdir/../../fpgamake/tcl/ipcore.tcl"
 
 if $need_xilinx_pcie {
     set pcieversion {3.0}
@@ -110,6 +111,9 @@ proc create_pcie_reconfig {} {
     set ip_name {altera_pcie_reconfig_driver_wrapper}
 
     set params [ dict create ]
+	dict set params INTENDED_DEVICE_FAMILY        "Stratix V"
+	dict set params gen123_lane_rate_mode_hwtcl   "Gen2 (5.0 Gbps)"
+	dict set params number_of_reconfig_interfaces 10
 
 	set component_parameters {}
 	foreach item [dict keys $params ] {
@@ -153,9 +157,34 @@ proc create_pcie_hip_ast_ed {} {
     fpgamake_altera_ipcore $core_name $core_version $ip_name $component_parameters
 }
 
+proc create_pcie_xcvr_reconfig {core_name core_version ip_name n_interface} {
+ 	set params [ dict create ]
+	dict set params number_of_reconfig_interfaces $n_interface
+	dict set params device_family                 "Stratix V"
+	dict set params enable_offset                 1
+	dict set params enable_lc                     1
+	dict set params enable_dcd                    0
+	dict set params enable_dcd_power_up           1
+	dict set params enable_analog                 1
+	dict set params enable_eyemon                 0
+	dict set params enable_ber                    0
+	dict set params enable_dfe                    0
+	dict set params enable_adce                   1
+	dict set params enable_mif                    0
+	dict set params enable_pll                    0
+
+	set component_parameters {}
+	foreach item [dict keys $params] {
+		set val [dict get $params $item]
+		lappend component_parameters --component-parameter=$item=$val
+	}
+    fpgamake_altera_ipcore $core_name $core_version $ip_name $component_parameters
+}
+
+
 if $need_altera_pcie {
     create_pcie_sv_hip_ast
-    create_xcvr_reconfig alt_xcvr_reconfig 14.0 alt_xcvr_reconfig_wrapper 10
+    create_pcie_xcvr_reconfig alt_xcvr_reconfig 14.0 alt_xcvr_reconfig_wrapper 10
     create_pcie_reconfig
     create_pcie_hip_ast_ed
 }
