@@ -9,7 +9,7 @@
    PciePllWrap
    -c
    refclk
-   -f
+   -r
    rst
    -f
    out
@@ -32,19 +32,18 @@ endinterface
 interface PciePllWrap;
     method Bit#(1)     locked();
     interface PciepllwrapOut     out;
-    method Action      rst(Bit#(1) v);
 endinterface
-import "BVI" altera_pll_wrapper( =
-module mkPciePllWrap#(Clock refclk, Reset refclk_reset)(PciePllWrap);
+import "BVI" altera_pll_wrapper =
+module mkPciePllWrap#(Clock refclk, Reset refclk_reset, Reset rst)(PciePllWrap);
     default_clock clk();
     default_reset rst();
     input_clock refclk(refclk) = refclk;
     input_reset refclk_reset() = refclk_reset; /* from clock*/
+    input_reset reset(rst) = rst;
     method locked locked();
     interface PciepllwrapOut     out;
         method outclk_0 clk_0();
         method outclk_1 clk_1();
     endinterface
-    method rst(rst) enable((*inhigh*) EN_rst);
-    schedule (locked, out.clk_0, out.clk_1, rst) CF (locked, out.clk_0, out.clk_1, rst);
+    schedule (locked, out.clk_0, out.clk_1) CF (locked, out.clk_0, out.clk_1);
 endmodule

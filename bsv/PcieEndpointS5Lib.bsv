@@ -31,6 +31,7 @@ import ConnectalClocks      ::*;
 import ALTERA_XCVR_RECONFIG_WRAPPER        ::*;
 import ALTERA_PCIE_RECONFIG_DRIVER_WRAPPER ::*;
 import ALTERA_PCIE_WRAPPER                 ::*;
+import ALTERA_PLL_WRAPPER                  ::*;
 
 (* always_ready, always_enabled *)
 interface PcieS5Lmi#(numeric type address_width, numeric type data_width);
@@ -111,26 +112,12 @@ endinterface
 
 (* always_ready, always_enabled *)
 interface PcieS5Rxin;
-(* prefix="", result="in0" *)   method Action in0(Bit#(1)in0);
-(* prefix="", result="in1" *)   method Action in1(Bit#(1)in1);
-(* prefix="", result="in2" *)   method Action in2(Bit#(1)in2);
-(* prefix="", result="in3" *)   method Action in3(Bit#(1)in3);
-(* prefix="", result="in4" *)   method Action in4(Bit#(1)in4);
-(* prefix="", result="in5" *)   method Action in5(Bit#(1)in5);
-(* prefix="", result="in6" *)   method Action in6(Bit#(1)in6);
-(* prefix="", result="in7" *)   method Action in7(Bit#(1)in7);
+(* prefix="", result="in" *)   method Action in(Vector#(8, Bit#(1)) a);
 endinterface
 
 (* always_ready, always_enabled *)
 interface PcieS5Txout;
-   method Bit#(1) out0();
-   method Bit#(1) out1();
-   method Bit#(1) out2();
-   method Bit#(1) out3();
-   method Bit#(1) out4();
-   method Bit#(1) out5();
-   method Bit#(1) out6();
-   method Bit#(1) out7();
+   method Vector#(8, Bit#(1)) out();
 endinterface
 
 (* always_ready, always_enabled *)
@@ -161,144 +148,25 @@ endinterface
 
 `ifdef PCIES5_SIM
 interface PcieS5HipPipe;
-(* prefix="", result="rxdata0" *)     method Action     rxdata0(Bit#(8) rxdata0);
-(* prefix="", result="rxdata1" *)     method Action     rxdata1(Bit#(8) rxdata1);
-(* prefix="", result="rxdata2" *)     method Action     rxdata2(Bit#(8) rxdata2);
-(* prefix="", result="rxdata3" *)     method Action     rxdata3(Bit#(8) rxdata3);
-(* prefix="", result="rxdata4" *)     method Action     rxdata4(Bit#(8) rxdata4);
-(* prefix="", result="rxdata5" *)     method Action     rxdata5(Bit#(8) rxdata5);
-(* prefix="", result="rxdata6" *)     method Action     rxdata6(Bit#(8) rxdata6);
-(* prefix="", result="rxdata7" *)     method Action     rxdata7(Bit#(8) rxdata7);
-(* prefix="", result="rxdatak0" *)    method Action     rxdatak0(Bit#(1) rxdatak0);
-(* prefix="", result="rxdatak1" *)    method Action     rxdatak1(Bit#(1) rxdatak1);
-(* prefix="", result="rxdatak2" *)    method Action     rxdatak2(Bit#(1) rxdatak2);
-(* prefix="", result="rxdatak3" *)    method Action     rxdatak3(Bit#(1) rxdatak3);
-(* prefix="", result="rxdatak4" *)    method Action     rxdatak4(Bit#(1) rxdatak4);
-(* prefix="", result="rxdatak5" *)    method Action     rxdatak5(Bit#(1) rxdatak5);
-(* prefix="", result="rxdatak6" *)    method Action     rxdatak6(Bit#(1) rxdatak6);
-(* prefix="", result="rxdatak7" *)    method Action     rxdatak7(Bit#(1) rxdatak7);
-(* prefix="", result="rxelecidle0" *) method Action     rxelecidle0(Bit#(1) rxelecidle0);
-(* prefix="", result="rxelecidle1" *) method Action     rxelecidle1(Bit#(1) rxelecidle1);
-(* prefix="", result="rxelecidle2" *) method Action     rxelecidle2(Bit#(1) rxelecidle2);
-(* prefix="", result="rxelecidle3" *) method Action     rxelecidle3(Bit#(1) rxelecidle3);
-(* prefix="", result="rxelecidle4" *) method Action     rxelecidle4(Bit#(1) rxelecidle4);
-(* prefix="", result="rxelecidle5" *) method Action     rxelecidle5(Bit#(1) rxelecidle5);
-(* prefix="", result="rxelecidle6" *) method Action     rxelecidle6(Bit#(1) rxelecidle6);
-(* prefix="", result="rxelecidle7" *) method Action     rxelecidle7(Bit#(1) rxelecidle7);
-    method Bit#(1)    rxpolarity0();
-    method Bit#(1)    rxpolarity1();
-    method Bit#(1)    rxpolarity2();
-    method Bit#(1)    rxpolarity3();
-    method Bit#(1)    rxpolarity4();
-    method Bit#(1)    rxpolarity5();
-    method Bit#(1)    rxpolarity6();
-    method Bit#(1)    rxpolarity7();
-(* prefix="", result="rxstatus0" *)   method Action     rxstatus0(Bit#(3) rxstatus0);
-(* prefix="", result="rxstatus1" *)   method Action     rxstatus1(Bit#(3) rxstatus1);
-(* prefix="", result="rxstatus2" *)   method Action     rxstatus2(Bit#(3) rxstatus2);
-(* prefix="", result="rxstatus3" *)   method Action     rxstatus3(Bit#(3) rxstatus3);
-(* prefix="", result="rxstatus4" *)   method Action     rxstatus4(Bit#(3) rxstatus4);
-(* prefix="", result="rxstatus5" *)   method Action     rxstatus5(Bit#(3) rxstatus5);
-(* prefix="", result="rxstatus6" *)   method Action     rxstatus6(Bit#(3) rxstatus6);
-(* prefix="", result="rxstatus7" *)   method Action     rxstatus7(Bit#(3) rxstatus7);
-(* prefix="", result="rxvalid0" *)    method Action     rxvalid0(Bit#(1) rxvalid0);
-(* prefix="", result="rxvalid1" *)    method Action     rxvalid1(Bit#(1) rxvalid1);
-(* prefix="", result="rxvalid2" *)    method Action     rxvalid2(Bit#(1) rxvalid2);
-(* prefix="", result="rxvalid3" *)    method Action     rxvalid3(Bit#(1) rxvalid3);
-(* prefix="", result="rxvalid4" *)    method Action     rxvalid4(Bit#(1) rxvalid4);
-(* prefix="", result="rxvalid5" *)    method Action     rxvalid5(Bit#(1) rxvalid5);
-(* prefix="", result="rxvalid6" *)    method Action     rxvalid6(Bit#(1) rxvalid6);
-(* prefix="", result="rxvalid7" *)    method Action     rxvalid7(Bit#(1) rxvalid7);
-    method Bit#(1)    txcompl0();
-    method Bit#(1)    txcompl1();
-    method Bit#(1)    txcompl2();
-    method Bit#(1)    txcompl3();
-    method Bit#(1)    txcompl4();
-    method Bit#(1)    txcompl5();
-    method Bit#(1)    txcompl6();
-    method Bit#(1)    txcompl7();
-    method Bit#(8)    txdata0();
-    method Bit#(8)    txdata1();
-    method Bit#(8)    txdata2();
-    method Bit#(8)    txdata3();
-    method Bit#(8)    txdata4();
-    method Bit#(8)    txdata5();
-    method Bit#(8)    txdata6();
-    method Bit#(8)    txdata7();
-    method Bit#(1)    txdatak0();
-    method Bit#(1)    txdatak1();
-    method Bit#(1)    txdatak2();
-    method Bit#(1)    txdatak3();
-    method Bit#(1)    txdatak4();
-    method Bit#(1)    txdatak5();
-    method Bit#(1)    txdatak6();
-    method Bit#(1)    txdatak7();
-    method Bit#(1)    txdeemph0();
-    method Bit#(1)    txdeemph1();
-    method Bit#(1)    txdeemph2();
-    method Bit#(1)    txdeemph3();
-    method Bit#(1)    txdeemph4();
-    method Bit#(1)    txdeemph5();
-    method Bit#(1)    txdeemph6();
-    method Bit#(1)    txdeemph7();
-    method Bit#(1)    txdetectrx0();
-    method Bit#(1)    txdetectrx1();
-    method Bit#(1)    txdetectrx2();
-    method Bit#(1)    txdetectrx3();
-    method Bit#(1)    txdetectrx4();
-    method Bit#(1)    txdetectrx5();
-    method Bit#(1)    txdetectrx6();
-    method Bit#(1)    txdetectrx7();
-    method Bit#(1)    txelecidle0();
-    method Bit#(1)    txelecidle1();
-    method Bit#(1)    txelecidle2();
-    method Bit#(1)    txelecidle3();
-    method Bit#(1)    txelecidle4();
-    method Bit#(1)    txelecidle5();
-    method Bit#(1)    txelecidle6();
-    method Bit#(1)    txelecidle7();
-    method Bit#(3)    txmargin0();
-    method Bit#(3)    txmargin1();
-    method Bit#(3)    txmargin2();
-    method Bit#(3)    txmargin3();
-    method Bit#(3)    txmargin4();
-    method Bit#(3)    txmargin5();
-    method Bit#(3)    txmargin6();
-    method Bit#(3)    txmargin7();
-    method Bit#(1)    txswing0();
-    method Bit#(1)    txswing1();
-    method Bit#(1)    txswing2();
-    method Bit#(1)    txswing3();
-    method Bit#(1)    txswing4();
-    method Bit#(1)    txswing5();
-    method Bit#(1)    txswing6();
-    method Bit#(1)    txswing7();
-    method Bit#(2)    powerdown0();
-    method Bit#(2)    powerdown1();
-    method Bit#(2)    powerdown2();
-    method Bit#(2)    powerdown3();
-    method Bit#(2)    powerdown4();
-    method Bit#(2)    powerdown5();
-    method Bit#(2)    powerdown6();
-    method Bit#(2)    powerdown7();
-(* prefix="", result="phystatus0" *) method Action     phystatus0(Bit#(1)phystatus0);
-(* prefix="", result="phystatus1" *) method Action     phystatus1(Bit#(1)phystatus1);
-(* prefix="", result="phystatus2" *) method Action     phystatus2(Bit#(1)phystatus2);
-(* prefix="", result="phystatus3" *) method Action     phystatus3(Bit#(1)phystatus3);
-(* prefix="", result="phystatus4" *) method Action     phystatus4(Bit#(1)phystatus4);
-(* prefix="", result="phystatus5" *) method Action     phystatus5(Bit#(1)phystatus5);
-(* prefix="", result="phystatus6" *) method Action     phystatus6(Bit#(1)phystatus6);
-(* prefix="", result="phystatus7" *) method Action     phystatus7(Bit#(1)phystatus7);
-    method Bit#(3)    eidleinfersel0();
-    method Bit#(3)    eidleinfersel1();
-    method Bit#(3)    eidleinfersel2();
-    method Bit#(3)    eidleinfersel3();
-    method Bit#(3)    eidleinfersel4();
-    method Bit#(3)    eidleinfersel5();
-    method Bit#(3)    eidleinfersel6();
-    method Bit#(3)    eidleinfersel7();
-    method Bit#(5)    sim_ltssmstate();
+(* prefix="", result="rxdata" *)     method Action     rxdata    (Vector#(8, Bit#(8)) rxdata);
+(* prefix="", result="rxdatak" *)    method Action     rxdatak   (Vector#(8, Bit#(1)) rxdatak);
+(* prefix="", result="rxelecidle" *) method Action     rxelecidle(Vector#(8, Bit#(1)) rxelecidle);
+(* prefix="", result="rxstatus" *)   method Action     rxstatus  (Vector#(8, Bit#(3)) rxstatus);
+(* prefix="", result="rxvalid" *)    method Action     rxvalid   (Vector#(8, Bit#(1)) rxvalid);
+(* prefix="", result="phystatus" *)  method Action     phystatus (Vector#(8, Bit#(1)) phystatus);
 (* prefix="", result="sim_pipe_pclk_in" *) method Action sim_pipe_pclk_in(Bit#(1) sim_pipe_pclk_in);
+    method Vector#(8, Bit#(1))    rxpolarity();
+    method Vector#(8, Bit#(1))    txcompl();
+    method Vector#(8, Bit#(8))    txdata();
+    method Vector#(8, Bit#(1))    txdatak();
+    method Vector#(8, Bit#(1))    txdeemph();
+    method Vector#(8, Bit#(1))    txdetectrx();
+    method Vector#(8, Bit#(1))    txelecidle();
+    method Vector#(8, Bit#(3))    txmargin();
+    method Vector#(8, Bit#(1))    txswing();
+    method Vector#(8, Bit#(2))    powerdown();
+    method Vector#(8, Bit#(3))    eidleinfersel();
+    method Bit#(5)    sim_ltssmstate();
     method Bit#(2)    sim_pipe_rate();
 endinterface
 `endif
@@ -329,14 +197,118 @@ interface PcieS5Wrap#(numeric type address_width, numeric type data_width, numer
    interface Clock coreclkout_hip;
 endinterface
 
-//(* synthesize *)
-module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_perst, Reset clk_50_rst_n)(PcieS5Wrap#(12, 32, 128));
+(* synthesize *)
+module mkPcieS5Wrap#(Clock clk_100MHz, Clock clk_50MHz, Reset npor, Reset pin_perst)(PcieS5Wrap#(12, 32, 128));
 
-   PcieWrap         pcie     <- mkPcieWrap(clk_100Mhz, npor, pin_perst, clk_50_rst_n);
+   Vector#(8, Wire#(Bit#(1))) rx_in_wires <- replicateM(mkDWire(0));
+   Vector#(8, Wire#(Bit#(8))) rxdata_wires <- replicateM(mkDWire(0));
+   Vector#(8, Wire#(Bit#(1))) rxdatak_wires <- replicateM(mkDWire(0));
+   Vector#(8, Wire#(Bit#(1))) rxelecidle_wires <- replicateM(mkDWire(0));
+   Vector#(8, Wire#(Bit#(3))) rxstatus_wires  <- replicateM(mkDWire(0));
+   Vector#(8, Wire#(Bit#(1))) rxvalid_wires   <- replicateM(mkDWire(0));
+   Vector#(8, Wire#(Bit#(1))) phystatus_wires <- replicateM(mkDWire(0));
+
+   Clock default_clock <- exposeCurrentClock;
+   Reset default_reset <- exposeCurrentReset;
+   Reset reset_high <- invertCurrentReset;
+
+   B2C1 clk_125MHz<- mkB2C1();
+
+   PcieWrap         pcie     <- mkPcieWrap(clk_100MHz, npor, pin_perst, noReset());
+   PciePllWrap      pll      <- mkPciePllWrap(clk_50MHz, noReset(), reset_high);
 
    Clock coreclk = pcie.coreclkout.hip;
-   PcieReconfigWrap pcie_cfg <- mkPcieReconfigWrap(coreclk, clk_50Mhz, clk_50_rst_n, clk_50_rst_n, clk_50_rst_n);
-   XcvrReconfigWrap xcvr_cfg <- mkXcvrReconfigWrap(clk_50Mhz, clk_50_rst_n, clk_50_rst_n);
+   PcieReconfigWrap pcie_cfg <- mkPcieReconfigWrap(coreclk, clk_50MHz, npor, noReset(), reset_high);
+   XcvrReconfigWrap xcvr_cfg <- mkXcvrReconfigWrap(clk_50MHz, noReset(), reset_high);
+
+   rule pll_clk;
+      clk_125MHz.inputclock(pll.out.clk_0);
+   endrule
+
+   (* no_implicit_conditions *)
+   rule pcie_rx;
+      pcie.rx.in0(rx_in_wires[0]);
+      pcie.rx.in1(rx_in_wires[1]);
+      pcie.rx.in2(rx_in_wires[2]);
+      pcie.rx.in3(rx_in_wires[3]);
+      pcie.rx.in4(rx_in_wires[4]);
+      pcie.rx.in5(rx_in_wires[5]);
+      pcie.rx.in6(rx_in_wires[6]);
+      pcie.rx.in7(rx_in_wires[7]);
+   endrule
+
+   (* no_implicit_conditions *)
+   rule pcie_rxdata;
+      pcie.rxd.ata0(rxdata_wires[0]);
+      pcie.rxd.ata1(rxdata_wires[1]);
+      pcie.rxd.ata2(rxdata_wires[2]);
+      pcie.rxd.ata3(rxdata_wires[3]);
+      pcie.rxd.ata4(rxdata_wires[4]);
+      pcie.rxd.ata5(rxdata_wires[5]);
+      pcie.rxd.ata6(rxdata_wires[6]);
+      pcie.rxd.ata7(rxdata_wires[7]);
+   endrule
+
+   (* no_implicit_conditions *)
+   rule pcie_rxdatak;
+      pcie.rxd.atak0(rxdatak_wires[0]);
+      pcie.rxd.atak1(rxdatak_wires[1]);
+      pcie.rxd.atak2(rxdatak_wires[2]);
+      pcie.rxd.atak3(rxdatak_wires[3]);
+      pcie.rxd.atak4(rxdatak_wires[4]);
+      pcie.rxd.atak5(rxdatak_wires[5]);
+      pcie.rxd.atak6(rxdatak_wires[6]);
+      pcie.rxd.atak7(rxdatak_wires[7]);
+   endrule
+
+   (* no_implicit_conditions *)
+   rule pcie_rxelecidle;
+      pcie.rxe.lecidle0(rxelecidle_wires[0]);
+      pcie.rxe.lecidle1(rxelecidle_wires[1]);
+      pcie.rxe.lecidle2(rxelecidle_wires[2]);
+      pcie.rxe.lecidle3(rxelecidle_wires[3]);
+      pcie.rxe.lecidle4(rxelecidle_wires[4]);
+      pcie.rxe.lecidle5(rxelecidle_wires[5]);
+      pcie.rxe.lecidle6(rxelecidle_wires[6]);
+      pcie.rxe.lecidle7(rxelecidle_wires[7]);
+   endrule
+
+   (* no_implicit_conditions *)
+   rule pcie_rxstatus;
+      pcie.rxs.tatus0(rxstatus_wires[0]);
+      pcie.rxs.tatus1(rxstatus_wires[1]);
+      pcie.rxs.tatus2(rxstatus_wires[2]);
+      pcie.rxs.tatus3(rxstatus_wires[3]);
+      pcie.rxs.tatus4(rxstatus_wires[4]);
+      pcie.rxs.tatus5(rxstatus_wires[5]);
+      pcie.rxs.tatus6(rxstatus_wires[6]);
+      pcie.rxs.tatus7(rxstatus_wires[7]);
+   endrule
+
+   (* no_implicit_conditions *)
+   rule pcie_rxvalid;
+      pcie.rxv.alid0(rxvalid_wires[0]);
+      pcie.rxv.alid1(rxvalid_wires[1]);
+      pcie.rxv.alid2(rxvalid_wires[2]);
+      pcie.rxv.alid3(rxvalid_wires[3]);
+      pcie.rxv.alid4(rxvalid_wires[4]);
+      pcie.rxv.alid5(rxvalid_wires[5]);
+      pcie.rxv.alid6(rxvalid_wires[6]);
+      pcie.rxv.alid7(rxvalid_wires[7]);
+   endrule
+
+   (* no_implicit_conditions *)
+   rule pcie_phystatus;
+      pcie.phy.status0(phystatus_wires[0]);
+      pcie.phy.status1(phystatus_wires[1]);
+      pcie.phy.status2(phystatus_wires[2]);
+      pcie.phy.status3(phystatus_wires[3]);
+      pcie.phy.status4(phystatus_wires[4]);
+      pcie.phy.status5(phystatus_wires[5]);
+      pcie.phy.status6(phystatus_wires[6]);
+      pcie.phy.status7(phystatus_wires[7]);
+   endrule
+
 
    (* no_implicit_conditions *)
    rule connectReconfigMgmt;
@@ -486,25 +458,24 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
    endinterface
 
    interface PcieS5Rxin rx;
-      method in0 = pcie.rx.in0;
-      method in1 = pcie.rx.in1;
-      method in2 = pcie.rx.in2;
-      method in3 = pcie.rx.in3;
-      method in4 = pcie.rx.in4;
-      method in5 = pcie.rx.in5;
-      method in6 = pcie.rx.in6;
-      method in7 = pcie.rx.in7;
+      method Action in(Vector#(8, Bit#(1)) a);
+         writeVReg(rx_in_wires, a);
+      endmethod
    endinterface
 
    interface PcieS5Txout tx;
-      method Bit#(1) out0(); return pcie.tx.out0; endmethod
-      method Bit#(1) out1(); return pcie.tx.out1; endmethod
-      method Bit#(1) out2(); return pcie.tx.out2; endmethod
-      method Bit#(1) out3(); return pcie.tx.out3; endmethod
-      method Bit#(1) out4(); return pcie.tx.out4; endmethod
-      method Bit#(1) out5(); return pcie.tx.out5; endmethod
-      method Bit#(1) out6(); return pcie.tx.out6; endmethod
-      method Bit#(1) out7(); return pcie.tx.out7; endmethod
+      method Vector#(8, Bit#(1)) out();
+         Vector#(8, Bit#(1)) ret_val;
+         ret_val[0] = pcie.tx.out0;
+         ret_val[1] = pcie.tx.out1;
+         ret_val[2] = pcie.tx.out2;
+         ret_val[3] = pcie.tx.out3;
+         ret_val[4] = pcie.tx.out4;
+         ret_val[5] = pcie.tx.out5;
+         ret_val[6] = pcie.tx.out6;
+         ret_val[7] = pcie.tx.out7;
+         return ret_val;
+      endmethod
    endinterface
 
    interface PcieS5HipStatus hip_status;
@@ -529,143 +500,87 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
 
 `ifdef PCIES5_SIM
    interface PcieS5HipPipe hip_pipe;
-      method rxdata0 = pcie.rxd.ata0;
-      method rxdata1 = pcie.rxd.ata1;
-      method rxdata2 = pcie.rxd.ata2;
-      method rxdata3 = pcie.rxd.ata3;
-      method rxdata4 = pcie.rxd.ata4;
-      method rxdata5 = pcie.rxd.ata5;
-      method rxdata6 = pcie.rxd.ata6;
-      method rxdata7 = pcie.rxd.ata7;
-      method rxdatak0 = pcie.rxd.atak0;
-      method rxdatak1 = pcie.rxd.atak1;
-      method rxdatak2 = pcie.rxd.atak2;
-      method rxdatak3 = pcie.rxd.atak3;
-      method rxdatak4 = pcie.rxd.atak4;
-      method rxdatak5 = pcie.rxd.atak5;
-      method rxdatak6 = pcie.rxd.atak6;
-      method rxdatak7 = pcie.rxd.atak7;
-      method rxelecidle0 = pcie.rxe.lecidle0;
-      method rxelecidle1 = pcie.rxe.lecidle1;
-      method rxelecidle2 = pcie.rxe.lecidle2;
-      method rxelecidle3 = pcie.rxe.lecidle3;
-      method rxelecidle4 = pcie.rxe.lecidle4;
-      method rxelecidle5 = pcie.rxe.lecidle5;
-      method rxelecidle6 = pcie.rxe.lecidle6;
-      method rxelecidle7 = pcie.rxe.lecidle7;
-      method rxpolarity0(); return pcie.rxp.olarity0; endmethod
-      method rxpolarity1(); return pcie.rxp.olarity1; endmethod
-      method rxpolarity2(); return pcie.rxp.olarity2; endmethod
-      method rxpolarity3(); return pcie.rxp.olarity3; endmethod
-      method rxpolarity4(); return pcie.rxp.olarity4; endmethod
-      method rxpolarity5(); return pcie.rxp.olarity5; endmethod
-      method rxpolarity6(); return pcie.rxp.olarity6; endmethod
-      method rxpolarity7(); return pcie.rxp.olarity7; endmethod
-      method rxstatus0 = pcie.rxs.tatus0;
-      method rxstatus1 = pcie.rxs.tatus1;
-      method rxstatus2 = pcie.rxs.tatus2;
-      method rxstatus3 = pcie.rxs.tatus3;
-      method rxstatus4 = pcie.rxs.tatus4;
-      method rxstatus5 = pcie.rxs.tatus5;
-      method rxstatus6 = pcie.rxs.tatus6;
-      method rxstatus7 = pcie.rxs.tatus7;
-      method rxvalid0 = pcie.rxv.alid0;
-      method rxvalid1 = pcie.rxv.alid1;
-      method rxvalid2 = pcie.rxv.alid2;
-      method rxvalid3 = pcie.rxv.alid3;
-      method rxvalid4 = pcie.rxv.alid4;
-      method rxvalid5 = pcie.rxv.alid5;
-      method rxvalid6 = pcie.rxv.alid6;
-      method rxvalid7 = pcie.rxv.alid7;
-      method txcompl0(); return pcie.txc.ompl0; endmethod
-      method txcompl1(); return pcie.txc.ompl1; endmethod
-      method txcompl2(); return pcie.txc.ompl2; endmethod
-      method txcompl3(); return pcie.txc.ompl3; endmethod
-      method txcompl4(); return pcie.txc.ompl4; endmethod
-      method txcompl5(); return pcie.txc.ompl5; endmethod
-      method txcompl6(); return pcie.txc.ompl6; endmethod
-      method txcompl7(); return pcie.txc.ompl7; endmethod
-      method txdata0(); return pcie.txd.ata0; endmethod
-      method txdata1(); return pcie.txd.ata1; endmethod
-      method txdata2(); return pcie.txd.ata2; endmethod
-      method txdata3(); return pcie.txd.ata3; endmethod
-      method txdata4(); return pcie.txd.ata4; endmethod
-      method txdata5(); return pcie.txd.ata5; endmethod
-      method txdata6(); return pcie.txd.ata6; endmethod
-      method txdata7(); return pcie.txd.ata7; endmethod
-      method txdatak0(); return pcie.txd.atak0; endmethod
-      method txdatak1(); return pcie.txd.atak1; endmethod
-      method txdatak2(); return pcie.txd.atak2; endmethod
-      method txdatak3(); return pcie.txd.atak3; endmethod
-      method txdatak4(); return pcie.txd.atak4; endmethod
-      method txdatak5(); return pcie.txd.atak5; endmethod
-      method txdatak6(); return pcie.txd.atak6; endmethod
-      method txdatak7(); return pcie.txd.atak7; endmethod
-      method txdeemph0(); return pcie.txd.eemph0; endmethod
-      method txdeemph1(); return pcie.txd.eemph1; endmethod
-      method txdeemph2(); return pcie.txd.eemph2; endmethod
-      method txdeemph3(); return pcie.txd.eemph3; endmethod
-      method txdeemph4(); return pcie.txd.eemph4; endmethod
-      method txdeemph5(); return pcie.txd.eemph5; endmethod
-      method txdeemph6(); return pcie.txd.eemph6; endmethod
-      method txdeemph7(); return pcie.txd.eemph7; endmethod
-      method txdetectrx0(); return pcie.txd.etectrx0; endmethod
-      method txdetectrx1(); return pcie.txd.etectrx1; endmethod
-      method txdetectrx2(); return pcie.txd.etectrx2; endmethod
-      method txdetectrx3(); return pcie.txd.etectrx3; endmethod
-      method txdetectrx4(); return pcie.txd.etectrx4; endmethod
-      method txdetectrx5(); return pcie.txd.etectrx5; endmethod
-      method txdetectrx6(); return pcie.txd.etectrx6; endmethod
-      method txdetectrx7(); return pcie.txd.etectrx7; endmethod
-      method txelecidle0(); return pcie.txe.lecidle0; endmethod
-      method txelecidle1(); return pcie.txe.lecidle1; endmethod
-      method txelecidle2(); return pcie.txe.lecidle2; endmethod
-      method txelecidle3(); return pcie.txe.lecidle3; endmethod
-      method txelecidle4(); return pcie.txe.lecidle4; endmethod
-      method txelecidle5(); return pcie.txe.lecidle5; endmethod
-      method txelecidle6(); return pcie.txe.lecidle6; endmethod
-      method txelecidle7(); return pcie.txe.lecidle7; endmethod
-      method txmargin0(); return pcie.txm.argin0; endmethod
-      method txmargin1(); return pcie.txm.argin1; endmethod
-      method txmargin2(); return pcie.txm.argin2; endmethod
-      method txmargin3(); return pcie.txm.argin3; endmethod
-      method txmargin4(); return pcie.txm.argin4; endmethod
-      method txmargin5(); return pcie.txm.argin5; endmethod
-      method txmargin6(); return pcie.txm.argin6; endmethod
-      method txmargin7(); return pcie.txm.argin7; endmethod
-      method txswing0(); return pcie.txs.wing0; endmethod
-      method txswing1(); return pcie.txs.wing1; endmethod
-      method txswing2(); return pcie.txs.wing2; endmethod
-      method txswing3(); return pcie.txs.wing3; endmethod
-      method txswing4(); return pcie.txs.wing4; endmethod
-      method txswing5(); return pcie.txs.wing5; endmethod
-      method txswing6(); return pcie.txs.wing6; endmethod
-      method txswing7(); return pcie.txs.wing7; endmethod
-      method powerdown0(); return pcie.power.down0; endmethod
-      method powerdown1(); return pcie.power.down1; endmethod
-      method powerdown2(); return pcie.power.down2; endmethod
-      method powerdown3(); return pcie.power.down3; endmethod
-      method powerdown4(); return pcie.power.down4; endmethod
-      method powerdown5(); return pcie.power.down5; endmethod
-      method powerdown6(); return pcie.power.down6; endmethod
-      method powerdown7(); return pcie.power.down7; endmethod
-      method phystatus0 = pcie.phy.status0;
-      method phystatus1 = pcie.phy.status1;
-      method phystatus2 = pcie.phy.status2;
-      method phystatus3 = pcie.phy.status3;
-      method phystatus4 = pcie.phy.status4;
-      method phystatus5 = pcie.phy.status5;
-      method phystatus6 = pcie.phy.status6;
-      method phystatus7 = pcie.phy.status7;
-      method eidleinfersel0(); return pcie.eidle.infersel0; endmethod
-      method eidleinfersel1(); return pcie.eidle.infersel1; endmethod
-      method eidleinfersel2(); return pcie.eidle.infersel2; endmethod
-      method eidleinfersel3(); return pcie.eidle.infersel3; endmethod
-      method eidleinfersel4(); return pcie.eidle.infersel4; endmethod
-      method eidleinfersel5(); return pcie.eidle.infersel5; endmethod
-      method eidleinfersel6(); return pcie.eidle.infersel6; endmethod
-      method eidleinfersel7(); return pcie.eidle.infersel7; endmethod
+      method Action rxdata(Vector#(8, Bit#(8)) a);
+         writeVReg(rxdata_wires, a);
+      endmethod
+
+      method Action rxdatak(Vector#(8, Bit#(1)) a);
+         writeVReg(rxdatak_wires, a);
+      endmethod
+
+      method Action rxelecidle(Vector#(8, Bit#(1)) a);
+         writeVReg(rxelecidle_wires, a);
+      endmethod
+
+      method Action rxstatus(Vector#(8, Bit#(3)) a);
+         writeVReg(rxstatus_wires, a);
+      endmethod
+
+      method Action rxvalid(Vector#(8, Bit#(1)) a);
+         writeVReg(rxvalid_wires, a);
+      endmethod
+
+      method Action phystatus(Vector#(8, Bit#(1)) a);
+         writeVReg(phystatus_wires, a);
+      endmethod
+
+      method rxpolarity();
+         Vector#(8, Bit#(1)) retval = unpack({pcie.rxp.olarity7, pcie.rxp.olarity6, pcie.rxp.olarity5, pcie.rxp.olarity4, pcie.rxp.olarity3, pcie.rxp.olarity2, pcie.rxp.olarity1, pcie.rxp.olarity0});
+         return retval;
+      endmethod
+
+      method txcompl();
+         Vector#(8, Bit#(1)) retval = unpack({pcie.txc.ompl7, pcie.txc.ompl6, pcie.txc.ompl5, pcie.txc.ompl4, pcie.txc.ompl3, pcie.txc.ompl2, pcie.txc.ompl1, pcie.txc.ompl0});
+         return retval;
+      endmethod
+
+      method txdata();
+         Vector#(8, Bit#(8)) retval = unpack({pcie.txd.ata7, pcie.txd.ata6, pcie.txd.ata5, pcie.txd.ata4, pcie.txd.ata3, pcie.txd.ata2, pcie.txd.ata1, pcie.txd.ata0});
+         return retval;
+      endmethod
+
+      method txdatak();
+         Vector#(8, Bit#(1)) retval = unpack({pcie.txd.atak7, pcie.txd.atak6, pcie.txd.atak5, pcie.txd.atak4, pcie.txd.atak3, pcie.txd.atak2, pcie.txd.atak1, pcie.txd.atak0});
+         return retval;
+      endmethod
+
+      method txdeemph();
+         Vector#(8, Bit#(1)) retval = unpack({pcie.txd.eemph7, pcie.txd.eemph6, pcie.txd.eemph5, pcie.txd.eemph4, pcie.txd.eemph3, pcie.txd.eemph2, pcie.txd.eemph1, pcie.txd.eemph0});
+         return retval;
+      endmethod
+
+      method txdetectrx();
+         Vector#(8, Bit#(1)) retval = unpack({pcie.txd.etectrx7, pcie.txd.etectrx6, pcie.txd.etectrx5, pcie.txd.etectrx4, pcie.txd.etectrx3, pcie.txd.etectrx2, pcie.txd.etectrx1, pcie.txd.etectrx0});
+         return retval;
+      endmethod
+
+      method txelecidle();
+         Vector#(8, Bit#(1)) retval = unpack({pcie.txe.lecidle7, pcie.txe.lecidle6, pcie.txe.lecidle5, pcie.txe.lecidle4, pcie.txe.lecidle3, pcie.txe.lecidle2, pcie.txe.lecidle1, pcie.txe.lecidle0});
+         return retval;
+      endmethod
+
+      method txmargin();
+         Vector#(8, Bit#(3)) retval = unpack({pcie.txm.argin7, pcie.txm.argin6, pcie.txm.argin5, pcie.txm.argin4, pcie.txm.argin3, pcie.txm.argin2, pcie.txm.argin1, pcie.txm.argin0});
+         return retval;
+      endmethod
+
+      method txswing();
+         Vector#(8, Bit#(1)) retval = unpack({pcie.txs.wing7, pcie.txs.wing6, pcie.txs.wing5, pcie.txs.wing4, pcie.txs.wing3, pcie.txs.wing2, pcie.txs.wing1, pcie.txs.wing0});
+         return retval;
+      endmethod
+
+      method powerdown();
+         Vector#(8, Bit#(2)) retval = unpack({pcie.power.down7, pcie.power.down6, pcie.power.down5, pcie.power.down4, pcie.power.down3, pcie.power.down2, pcie.power.down1, pcie.power.down0});
+         return retval;
+      endmethod
+
+      method eidleinfersel();
+         Vector#(8, Bit#(3)) retval = unpack({pcie.eidle.infersel7, pcie.eidle.infersel6, pcie.eidle.infersel5, pcie.eidle.infersel4, pcie.eidle.infersel3, pcie.eidle.infersel2, pcie.eidle.infersel1, pcie.eidle.infersel0});
+         return retval;
+      endmethod
+
       method sim_pipe_pclk_in = pcie.sim.pipe_pclk_in;
+
       method sim_ltssmstate(); return pcie.sim.ltssmstate; endmethod
       method sim_pipe_rate(); return pcie.sim.pipe_rate; endmethod
    endinterface
