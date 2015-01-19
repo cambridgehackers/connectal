@@ -286,12 +286,12 @@ module mkPcieEdWrap#(Clock coreclkout_hip, Reset coreclkout_hip_reset)(PcieEdWra
         input_clock coreclkout_hip(coreclkout_hip) = coreclkout_hip;
         input_reset coreclkout_hip_reset() = coreclkout_hip_reset; /* from clock*/
     interface PcieedwrapApp     app;
-        method int_ack(app_int_ack) enable((*inhigh*) EN_app_int_ack);
-        method app_int_sts int_sts();
-        method msi_ack(app_msi_ack) enable((*inhigh*) EN_app_msi_ack);
-        method app_msi_num msi_num();
-        method app_msi_req msi_req();
-        method app_msi_tc msi_tc();
+        method int_ack(app_int_ack) clocked_by(coreclkout_hip) enable((*inhigh*) EN_app_int_ack);
+        method app_int_sts int_sts() clocked_by(coreclkout_hip);
+        method msi_ack(app_msi_ack) clocked_by(coreclkout_hip) enable((*inhigh*) EN_app_msi_ack);
+        method app_msi_num msi_num() clocked_by(coreclkout_hip);
+        method app_msi_req msi_req() clocked_by(coreclkout_hip);
+        method app_msi_tc msi_tc() clocked_by(coreclkout_hip);
     endinterface
     interface PcieedwrapCfg_par     cfg_par;
         method err(cfg_par_err)clocked_by(coreclkout_hip) enable((*inhigh*) EN_cfg_par_err);
@@ -407,14 +407,14 @@ module mkPcieEdWrap#(Clock coreclkout_hip, Reset coreclkout_hip_reset)(PcieEdWra
         method cfg_sts(tl_cfg_sts) clocked_by(coreclkout_hip) enable((*inhigh*) EN_tl_cfg_sts);
     endinterface
     interface PcieedwrapTx_cred     tx_cred;
-        method datafccp(tx_cred_datafccp) enable((*inhigh*) EN_tx_cred_datafccp);
-        method datafcnp(tx_cred_datafcnp) enable((*inhigh*) EN_tx_cred_datafcnp);
-        method datafcp(tx_cred_datafcp) enable((*inhigh*) EN_tx_cred_datafcp);
-        method fchipcons(tx_cred_fchipcons) enable((*inhigh*) EN_tx_cred_fchipcons);
-        method fcinfinite(tx_cred_fcinfinite) enable((*inhigh*) EN_tx_cred_fcinfinite);
-        method hdrfccp(tx_cred_hdrfccp) enable((*inhigh*) EN_tx_cred_hdrfccp);
-        method hdrfcnp(tx_cred_hdrfcnp) enable((*inhigh*) EN_tx_cred_hdrfcnp);
-        method hdrfcp(tx_cred_hdrfcp) enable((*inhigh*) EN_tx_cred_hdrfcp);
+        method datafccp(tx_cred_datafccp) clocked_by(coreclkout_hip) enable((*inhigh*) EN_tx_cred_datafccp);
+        method datafcnp(tx_cred_datafcnp) clocked_by(coreclkout_hip) enable((*inhigh*) EN_tx_cred_datafcnp);
+        method datafcp(tx_cred_datafcp) clocked_by(coreclkout_hip) enable((*inhigh*) EN_tx_cred_datafcp);
+        method fchipcons(tx_cred_fchipcons) clocked_by(coreclkout_hip) enable((*inhigh*) EN_tx_cred_fchipcons);
+        method fcinfinite(tx_cred_fcinfinite) clocked_by(coreclkout_hip) enable((*inhigh*) EN_tx_cred_fcinfinite);
+        method hdrfccp(tx_cred_hdrfccp) clocked_by(coreclkout_hip) enable((*inhigh*) EN_tx_cred_hdrfccp);
+        method hdrfcnp(tx_cred_hdrfcnp) clocked_by(coreclkout_hip) enable((*inhigh*) EN_tx_cred_hdrfcnp);
+        method hdrfcp(tx_cred_hdrfcp) clocked_by(coreclkout_hip) enable((*inhigh*) EN_tx_cred_hdrfcp);
     endinterface
     interface PcieedwrapTx_par     tx_par;
         method err(tx_par_err) clocked_by(coreclkout_hip) enable((*inhigh*) EN_tx_par_err);

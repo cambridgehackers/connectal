@@ -214,9 +214,9 @@ endmodule
 
 `ifdef ALTERA
 (* no_default_clock, no_default_reset *)
-module mkAlteraPcieHostTop #(Clock pci_sys_clk_p, Clock sys_clk_p, Reset pci_sys_reset_n)(PcieHostTop);
+module mkAlteraPcieHostTop #(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieHostTop);
 
-   PcieEndpointS5#(PcieLanes) ep7 <- mkPcieEndpointS5(pci_sys_clk_p, sys_clk_p, pci_sys_reset_n, clocked_by pci_sys_clk_p, reset_by pci_sys_reset_n);
+   PcieEndpointS5#(PcieLanes) ep7 <- mkPcieEndpointS5(clk_100MHz, clk_50MHz, perst_n, clocked_by clk_100MHz, reset_by perst_n);
 
    Clock epClock125 = ep7.epClock125;
    Reset epReset125 = ep7.epReset125;
@@ -246,6 +246,7 @@ module mkAlteraPcieHostTop #(Clock pci_sys_clk_p, Clock sys_clk_p, Reset pci_sys
    interface portalReset = portalReset_;
    interface derivedClock = ep7.epDerivedClock;
    interface derivedReset = ep7.epDerivedReset;
+
 endmodule
 `endif
 
@@ -262,7 +263,7 @@ endmodule
 `elsif ALTERA
    //(* synthesize, no_default_clock, no_default_reset *)
    (* no_default_clock, no_default_reset *)
-   module mkPcieHostTop #(Clock pci_sys_clk_p, Clock sys_clk_p, Reset pci_sys_reset_n)(PcieHostTop);
-      PcieHostTop _a <- mkAlteraPcieHostTop(pci_sys_clk_p, sys_clk_p, pci_sys_reset_n); return _a;
+   module mkPcieHostTop #(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieHostTop);
+      PcieHostTop _a <- mkAlteraPcieHostTop(clk_100MHz, clk_50MHz, perst_n); return _a;
    endmodule
 `endif // NOT ALTERA
