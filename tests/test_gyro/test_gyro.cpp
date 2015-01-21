@@ -63,6 +63,57 @@ public:
   }
 };
 
+int clientsockfd = -1;
+int serversockfd = -1;
+int portno = 1234;
+
+void* connect_to_client(void *_x)
+{
+  int n;
+  socklen_t clilen;
+  struct sockaddr_in serv_addr, cli_addr;
+  int *x = (int*)_x;
+
+  serversockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (serversockfd < 0) {
+    fprintf(stderr, "ERROR opening socket");
+    *x = -1;
+    return NULL;
+  }
+  bzero((char *) &serv_addr, sizeof(serv_addr));
+  serv_addr.sin_family = AF_INET;
+  serv_addr.sin_addr.s_addr = INADDR_ANY;
+  serv_addr.sin_port = htons(portno);
+  if (bind(serversockfd, (struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) {
+    fprintf(stderr, "ERROR on binding");
+    *x = -1;
+    return NULL;
+  }
+  listen(serversockfd,5);
+  clilen = sizeof(cli_addr);
+  clientsockfd = accept(serversockfd, (struct sockaddr *) &cli_addr, &clilen);
+  if (clientsockfd < 0){ 
+    fprintf(stderr, "ERROR on accept");
+    *x = -1;
+    return NULL;
+  }
+  *x = 0;
+  return NULL;
+}
+
+void disconnect_client()
+{
+  close(clientsockfd);
+  close(serversockfd);
+}
+
+void start_server()
+{
+  pthread_t threaddata;
+  int *rv;
+  pthread_create(&threaddata, NULL, &connect_to_client, &rv);
+}
+
 int main(int argc, const char **argv)
 {
   GyroCtrlIndication *ind = new GyroCtrlIndication(IfcNames_ControllerIndication);
@@ -101,9 +152,8 @@ int main(int argc, const char **argv)
 #else
   device->sample(ref_dstAlloc, wrap_limit, 1000);
 #endif
-
+  start_server();
   while(true){
-
     while(!wrapped) usleep(1000);
     wrapped = false;
     int s[3] = {0,0,0};
@@ -113,10 +163,14 @@ int main(int argc, const char **argv)
       for(int j = 0; j < 3; j++)
 	s[j] += (int)(foo[j]);
     }
-    for(int j = 0; j < 3; j++)
+    for(int j = 0; j < 3; j++){
       ss[j] = s[j]/(wrap_limit/6);
-
+      if (clientsockfd != -1){
+	int32_t conv = htonl(s[j]);
+	size_t rv = write(clientsockfd, &conv, sizeof(conv));
+	assert(rv == sizeof(conv));
+      }
+    }
     fprintf(stderr, "x:%8d, y:%8d, z:%8d\n", ss[0], ss[1], ss[2]);
   }
-
 }
