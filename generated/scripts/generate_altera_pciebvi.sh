@@ -31,12 +31,17 @@ set -e
 #      -f reconfig_mgmt -f mgmt \
 #      ../../out/de5/synthesis/alt_xcvr_reconfig_wrapper.v
 
-./importbvi.py -o ALTERA_PCIE_ED_WRAPPER.bsv -I PcieEdWrap -P PcieEdWrap \
-	-c coreclkout_hip -c pld_clk_hip \
-    -f serdes -f reset -f pld -f dl -f ev128 -f ev1 -f hotrst -f l2 -f current \
-    -f derr -f lane -f ltssm -f reconfig \
-    -f int_s -f aer -f pex -f serr -f cpl -f tl -f pm_e -f pme -f pm\
-    -f tx_s -f rx_s \
-	-f tx_cred \
-    -f tx_par -f rx_par -f cfg_par \
-    ../../out/de5/synthesis/altera_pcie_hip_ast_ed.v
+#./importbvi.py -o ALTERA_PCIE_ED_WRAPPER.bsv -I PcieEdWrap -P PcieEdWrap \
+#	-c coreclkout_hip -c pld_clk_hip \
+#    -f serdes -f reset -f pld -f dl -f ev128 -f ev1 -f hotrst -f l2 -f current \
+#    -f derr -f lane -f ltssm -f reconfig \
+#    -f int_s -f aer -f pex -f serr -f cpl -f tl -f pm_e -f pme -f pm\
+#    -f tx_s -f rx_s \
+#	-f tx_cred \
+#    -f tx_par -f rx_par -f cfg_par \
+#    ../../out/de5/synthesis/altera_pcie_hip_ast_ed.v 
+
+./importbvi.py -o ALTERA_PLL_WRAPPER.bsv -I PciePllWrap -P PciePllWrap \
+    -c refclk -r rst \
+    -f out -f locked \
+    ../../out/de5/synthesis/altera_pll_wrapper.v

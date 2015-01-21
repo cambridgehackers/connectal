@@ -30,6 +30,7 @@ import syntax
 import util
 import boardinfo
 import pprint
+import json
 
 supported_os = ['android', 'ubuntu']
 
@@ -39,6 +40,7 @@ argparser.add_argument('-B', '--board', default='zc702', help='Target Board for 
 argparser.add_argument('-O', '--OS', default=None, choices=supported_os, help='Target operating system')
 argparser.add_argument('-interfaces', '--interfaces', help='BSV interface', action='append')
 argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps project directory')
+argparser.add_argument(      '--pinfo', default=None, help='Project description file (json)')
 argparser.add_argument('-s', '--source', help='C++ source files', action='append')
 argparser.add_argument(      '--source2', help='C++ second program source files', action='append')
 argparser.add_argument(      '--cflags', help='C++ CFLAGS', action='append')
@@ -47,10 +49,10 @@ argparser.add_argument(      '--nohardware', help='Do not generate hardware for 
 argparser.add_argument(      '--contentid', help='Specify 64-bit contentid for PCIe designs')
 argparser.add_argument('-I', '--cinclude', help='Specify C++ include directories', default=[], action='append')
 argparser.add_argument('-V', '--verilog', default=[], help='Additional verilog sources', action='append')
-argparser.add_argument('--xci', default=[], help='Additional IP sources', action='append')
-argparser.add_argument('--qip', default=[], help='Additional QIP sources', action='append')
-argparser.add_argument('--qsf', default=[], help='Altera Quartus settings', action='append')
-argparser.add_argument('--chipscope', default=[], help='Onchip scope settings', action='append')
+argparser.add_argument(      '--xci', default=[], help='Additional IP sources', action='append')
+argparser.add_argument(      '--qip', default=[], help='Additional QIP sources', action='append')
+argparser.add_argument(      '--qsf', default=[], help='Altera Quartus settings', action='append')
+argparser.add_argument(      '--chipscope', default=[], help='Onchip scope settings', action='append')
 argparser.add_argument('-C', '--constraint', help='Additional constraint files', action='append')
 argparser.add_argument('-M', '--make', help='Run make on the specified targets', action='append')
 argparser.add_argument('-D', '--bsvdefine', default=[], help='BSV define', action='append')
@@ -225,6 +227,12 @@ if __name__=='__main__':
 
     boardname = options.board.lower()
     option_info = boardinfo.attribute(boardname, 'options')
+
+    if options.pinfo:
+        pinstr = open(options.pinfo).read()
+        pinout = json.loads(pinstr)
+        option_info.update(pinout['options'])
+
     # parse additional options together with sys.argv
     if option_info['CONNECTALFLAGS']:
         options=argparser.parse_args(option_info['CONNECTALFLAGS'] + sys.argv[1:])
@@ -267,7 +275,12 @@ if __name__=='__main__':
     rewireclockstring = option_info['rewireclockstring']
 
     dutname = 'mk' + option_info['TOP']
-    topbsv = '$(CONNECTALDIR)' + '/bsv/' + option_info['TOP'] + '.bsv'
+    topbsv = connectaldir + '/bsv/' + option_info['TOP'] + '.bsv'
+    if not os.path.isfile(topbsv):
+        topbsv = project_dir + "/../" + option_info['TOP'] + '.bsv'
+        if not os.path.isfile(topbsv):
+            print "ERROR: File %s not found" % (option_info['TOP'] + '.bsv')
+            sys.exit(1)
 
     needs_pcie_7x_gen1x8 = None
     needs_pcie_s5_gen2x8 = None

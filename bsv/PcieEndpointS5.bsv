@@ -39,6 +39,7 @@ import Real              ::*;
 
 import PCIE              ::*;
 import PcieEndpointS5Lib ::*;
+import PcieEndpointS5Test ::*;
 
 (* always_ready, always_enabled *)
 interface PciewrapPci_exp#(numeric type lanes);
@@ -98,18 +99,22 @@ typedef 4 NumLeds;
 `endif
 
 //(* synthesize *)
-module mkPcieEndpointS5#(Clock clk_100, Clock clk_50, Reset npor)(PcieEndpointS5#(PcieLanes));
+module mkPcieEndpointS5#(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieEndpointS5#(PcieLanes));
 
    PCIEParams params = defaultValue;
 
-   Reset defaultReset <- exposeCurrentReset();
-   Reset pin_perst <- exposeCurrentReset();
-   Reset clk_50_rst_n <- exposeCurrentReset();
+   Clock default_clock <- exposeCurrentClock;
+   Reset default_reset <- exposeCurrentReset;
+   Reset reset_high <- invertCurrentReset;
+   Reset npor = perst_n; //No soft reset signal from Application
 
-   PcieS5Wrap#(12, 32, 128) pcie_ep <- mkPcieS5Wrap(clk_100, clk_50, npor, pin_perst, clk_50_rst_n);
+   PcieS5Wrap#(12, 32, 128) pcie_ep <- mkPcieS5Wrap(clk_100MHz, clk_50MHz, npor, perst_n);
 
-   //FIXME: fix reset signal.
-   AlteraPcieHipRs hip_rs <- mkAlteraPcieHipRs(pcie_ep.coreclkout_hip, npor);
+   // Test Altera Application
+//   PcieS5App pcie_app <- mkPcieS5App(pcie_ep.coreclkout_hip, reset_high);
+//   mkConnection(pcie_app, pcie_ep);
+
+   AlteraPcieHipRs hip_rs <- mkAlteraPcieHipRs(pcie_ep.coreclkout_hip, perst_n);
    AlteraPcieTlCfgSample tl_cfg <- mkAlteraPcieTlCfgSample(pcie_ep.coreclkout_hip, hip_rs.app_rstn);
 
    FIFOF#(AvalonStTx#(16)) fAvalonStTx <- mkBypassFIFOF(clocked_by pcie_ep.coreclkout_hip, reset_by noReset);
@@ -184,20 +189,22 @@ module mkPcieEndpointS5#(Clock clk_100, Clock clk_50, Reset npor)(PcieEndpointS5
    endinterface
 
    interface PciewrapPci_exp pcie;
-      Bit#(PcieLanes) vt = {pcie_ep.tx.out7, pcie_ep.tx.out6, pcie_ep.tx.out5, pcie_ep.tx.out4, pcie_ep.tx.out3, pcie_ep.tx.out2, pcie_ep.tx.out1, pcie_ep.tx.out0};
+      Bit#(PcieLanes) vt = pack(pcie_ep.tx.out);
+      //{pcie_ep.tx.out7, pcie_ep.tx.out6, pcie_ep.tx.out5, pcie_ep.tx.out4, pcie_ep.tx.out3, pcie_ep.tx.out2, pcie_ep.tx.out1, pcie_ep.tx.out0};
       method Bit#(PcieLanes) tx_p();
          return vt;
       endmethod
       method Action rx_p(Bit#(PcieLanes) v);
          action
-            pcie_ep.rx.in0(v[0]);
-            pcie_ep.rx.in1(v[1]);
-            pcie_ep.rx.in2(v[2]);
-            pcie_ep.rx.in3(v[3]);
-            pcie_ep.rx.in4(v[4]);
-            pcie_ep.rx.in5(v[5]);
-            pcie_ep.rx.in6(v[6]);
-            pcie_ep.rx.in7(v[7]);
+            pcie_ep.rx.in(unpack(v));
+//            pcie_ep.rx.in0(v[0]);
+//            pcie_ep.rx.in1(v[1]);
+//            pcie_ep.rx.in2(v[2]);
+//            pcie_ep.rx.in3(v[3]);
+//            pcie_ep.rx.in4(v[4]);
+//            pcie_ep.rx.in5(v[5]);
+//            pcie_ep.rx.in6(v[6]);
+//            pcie_ep.rx.in7(v[7]);
          endaction
       endmethod
    endinterface

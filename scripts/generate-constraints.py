@@ -31,6 +31,7 @@ argparser.add_argument('boardfile', help='Board description file (json)')
 argparser.add_argument('pinoutfile', help='Project description file (json)')
 argparser.add_argument('-b', '--bind', default=[], help='Bind signal group to pin group', action='append')
 argparser.add_argument('-o', '--output', default=None, help='Write output to file')
+argparser.add_argument('-f', '--fpga', default="xilinx", help='Target FPGA Vendor')
 
 options = argparser.parse_args()
 boardfile = options.boardfile
@@ -50,14 +51,21 @@ pinout = json.loads(pinstr)
 
 boardInfo = json.loads(open(boardfile).read())
 
-template='''\
+if options.fpga == "xilinx":
+    template='''\
 set_property LOC "%(LOC)s" [get_ports "%(name)s"]
 set_property IOSTANDARD "%(IOSTANDARD)s" [get_ports "%(name)s"]
 set_property PIO_DIRECTION "%(PIO_DIRECTION)s" [get_ports "%(name)s"]
+    '''
+    setPropertyTemplate='''\
+    set_property %(prop)s "%(val)s" [get_ports "%(name)s"]
+    '''
+elif options.fpga == "altera":
+    template='''\
+set_instance_assignment -name IO_STANDARD "%(IOSTANDARD)s" -to "%(name)s"
+set_location_assignment "%(LOC)s" -to "%(name)s"
 '''
-setPropertyTemplate='''\
-set_property %(prop)s "%(val)s" [get_ports "%(name)s"]
-'''
+    setPropertyTemplate=""
 
 out = sys.stdout
 if options.output:

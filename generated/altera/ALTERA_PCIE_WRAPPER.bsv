@@ -554,15 +554,15 @@ module mkPcieWrap#(Clock refclk, Reset npor, Reset pin_perst, Reset refclk_reset
     input_clock refclk(refclk) = refclk;
     input_reset refclk_reset() = refclk_reset; /* from clock*/
     interface PciewrapApp     app;
-        method app_int_ack int_ack();
-        method int_sts(app_int_sts) enable((*inhigh*) EN_app_int_sts);
-        method app_msi_ack msi_ack();
-        method msi_num(app_msi_num) enable((*inhigh*) EN_app_msi_num);
-        method msi_req(app_msi_req) enable((*inhigh*) EN_app_msi_req);
-        method msi_tc(app_msi_tc) enable((*inhigh*) EN_app_msi_tc);
+        method app_int_ack int_ack() clocked_by(coreclkout.hip);
+        method int_sts(app_int_sts) clocked_by(coreclkout.hip) enable((*inhigh*) EN_app_int_sts);
+        method app_msi_ack msi_ack() clocked_by(coreclkout.hip);
+        method msi_num(app_msi_num) clocked_by(coreclkout.hip) enable((*inhigh*) EN_app_msi_num);
+        method msi_req(app_msi_req) clocked_by(coreclkout.hip) enable((*inhigh*) EN_app_msi_req);
+        method msi_tc(app_msi_tc) clocked_by(coreclkout.hip) enable((*inhigh*) EN_app_msi_tc);
     endinterface
     interface PciewrapCfg_par     cfg_par;
-        method cfg_par_err err()clocked_by(coreclkout.hip);
+        method cfg_par_err err() clocked_by(coreclkout.hip);
     endinterface
     interface PciewrapCoreclkout     coreclkout;
         output_clock hip(coreclkout_hip);
@@ -778,14 +778,14 @@ module mkPcieWrap#(Clock refclk, Reset npor, Reset pin_perst, Reset refclk_reset
         method tl_cfg_sts cfg_sts() clocked_by(coreclkout_hip);
     endinterface
     interface PciewrapTx_cred     tx_cred;
-        method tx_cred_datafccp datafccp();
-        method tx_cred_datafcnp datafcnp();
-        method tx_cred_datafcp datafcp();
-        method tx_cred_fchipcons fchipcons();
-        method tx_cred_fcinfinite fcinfinite();
-        method tx_cred_hdrfccp hdrfccp();
-        method tx_cred_hdrfcnp hdrfcnp();
-        method tx_cred_hdrfcp hdrfcp();
+        method tx_cred_datafccp datafccp()clocked_by(coreclkout.hip);
+        method tx_cred_datafcnp datafcnp()clocked_by(coreclkout.hip);
+        method tx_cred_datafcp datafcp()clocked_by(coreclkout.hip);
+        method tx_cred_fchipcons fchipcons()clocked_by(coreclkout.hip);
+        method tx_cred_fcinfinite fcinfinite()clocked_by(coreclkout.hip);
+        method tx_cred_hdrfccp hdrfccp()clocked_by(coreclkout.hip);
+        method tx_cred_hdrfcnp hdrfcnp()clocked_by(coreclkout.hip);
+        method tx_cred_hdrfcp hdrfcp()clocked_by(coreclkout.hip);
     endinterface
     interface PciewrapTx     tx;
         method tx_out0 out0();
