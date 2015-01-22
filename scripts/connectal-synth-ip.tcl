@@ -30,10 +30,18 @@ proc create_xcvr_reconfig {core_name core_version ip_name n_interface} {
 		set val [dict get $params $item]
 		lappend component_parameters --component-parameter=$item=$val
 	}
-    fpgamake_altera_ipcore $core_name $core_version $ip_name $component_parameters
+    fpgamake_altera_ipcore $core_name $core_version $ip_name QUARTUS_SYNTH $component_parameters
 }
-
 
 proc connectal_synth_ip {core_name core_version ip_name params} {
    fpgamake_ipcore $core_name $core_version $ip_name $params
 }
+
+proc connectal_altera_synth_ip {core_name core_version ip_name params} {
+   fpgamake_altera_ipcore $core_name $core_version $ip_name QUARTUS_SYNTH $params
+}
+
+proc connectal_altera_simu_ip {core_name core_version ip_name params} {
+   fpgamake_altera_ipcore $core_name $core_version $ip_name SIM_VERILOG $params
+}
+

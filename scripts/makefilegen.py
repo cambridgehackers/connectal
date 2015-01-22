@@ -231,7 +231,11 @@ if __name__=='__main__':
     if options.pinfo:
         pinstr = open(options.pinfo).read()
         pinout = json.loads(pinstr)
-        option_info.update(pinout['options'])
+        for key in pinout['options']:
+            if isinstance(option_info[key], (list)):
+                option_info[key] += pinout['options'][key]
+            else:
+                option_info[key] = pinout['options'][key]
 
     # parse additional options together with sys.argv
     if option_info['CONNECTALFLAGS']:
