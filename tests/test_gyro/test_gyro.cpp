@@ -29,6 +29,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <netdb.h>
+#include <netinet/in.h>
 
 #include "StdDmaIndication.h"
 #include "MemServerRequest.h"
@@ -66,29 +67,13 @@ public:
 int clientsockfd = -1;
 int serversockfd = -1;
 int portno = 1234;
+int connecting_to_client = 0;
 
 void* connect_to_client(void *_x)
 {
-  int n;
-  socklen_t clilen;
-  struct sockaddr_in serv_addr, cli_addr;
+  struct sockaddr_in cli_addr;
+  int clilen;
   int *x = (int*)_x;
-
-  serversockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (serversockfd < 0) {
-    fprintf(stderr, "ERROR opening socket");
-    *x = -1;
-    return NULL;
-  }
-  bzero((char *) &serv_addr, sizeof(serv_addr));
-  serv_addr.sin_family = AF_INET;
-  serv_addr.sin_addr.s_addr = INADDR_ANY;
-  serv_addr.sin_port = htons(portno);
-  if (bind(serversockfd, (struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) {
-    fprintf(stderr, "ERROR on binding");
-    *x = -1;
-    return NULL;
-  }
   listen(serversockfd,5);
   clilen = sizeof(cli_addr);
   clientsockfd = accept(serversockfd, (struct sockaddr *) &cli_addr, &clilen);
@@ -98,6 +83,7 @@ void* connect_to_client(void *_x)
     return NULL;
   }
   *x = 0;
+  connecting_to_client = 0;
   return NULL;
 }
 
@@ -107,12 +93,28 @@ void disconnect_client()
   close(serversockfd);
 }
 
-void start_server()
+int start_server()
 {
-  pthread_t threaddata;
-  int *rv;
-  pthread_create(&threaddata, NULL, &connect_to_client, &rv);
+  int n;
+  socklen_t clilen;
+  struct sockaddr_in serv_addr;
+
+  serversockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (serversockfd < 0) {
+    fprintf(stderr, "ERROR opening socket");
+    return -1;
+  }
+  bzero((char *) &serv_addr, sizeof(serv_addr));
+  serv_addr.sin_family = AF_INET;
+  serv_addr.sin_addr.s_addr = INADDR_ANY;
+  serv_addr.sin_port = htons(portno);
+  if (bind(serversockfd, (struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) {
+    fprintf(stderr, "ERROR on binding");
+    return -1;
+  }
+  return 0;
 }
+
 
 int main(int argc, const char **argv)
 {
@@ -125,6 +127,8 @@ int main(int argc, const char **argv)
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
   portalExec_start();
+  start_server();
+
   int dstAlloc = portalAlloc(alloc_sz);
   unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
@@ -152,7 +156,10 @@ int main(int argc, const char **argv)
 #else
   device->sample(ref_dstAlloc, wrap_limit, 1000);
 #endif
-  start_server();
+
+  pthread_t threaddata;
+  int *rv;
+
   while(true){
     while(!wrapped) usleep(1000);
     wrapped = false;
@@ -163,12 +170,18 @@ int main(int argc, const char **argv)
       for(int j = 0; j < 3; j++)
 	s[j] += (int)(foo[j]);
     }
+    if (clientsockfd == -1 && !connecting_to_client){
+      connecting_to_client = 1;
+      pthread_create(&threaddata, NULL, &connect_to_client, &rv);
+    }
     for(int j = 0; j < 3; j++){
       ss[j] = s[j]/(wrap_limit/6);
       if (clientsockfd != -1){
-	int32_t conv = htonl(s[j]);
-	size_t rv = write(clientsockfd, &conv, sizeof(conv));
-	assert(rv == sizeof(conv));
+	size_t rv = write(clientsockfd, &(ss[j]), sizeof(ss[j]));
+	if(rv != sizeof(ss[j])){
+	  shutdown(clientsockfd, 2);
+	  clientsockfd = -1;
+	}
       }
     }
     fprintf(stderr, "x:%8d, y:%8d, z:%8d\n", ss[0], ss[1], ss[2]);
