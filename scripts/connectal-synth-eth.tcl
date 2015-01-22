@@ -115,7 +115,7 @@ proc create_altera_10gbe_pma {channels} {
 		lappend component_parameters --component-parameter=$item=$val
 	}
 
-    fpgamake_altera_ipcore $core_name $core_version $ip_name $component_parameters
+    connectal_altera_synth_ip $core_name $core_version $ip_name $component_parameters
 }
 
 proc create_xcvr_reset {channels} {
@@ -146,7 +146,7 @@ proc create_xcvr_reset {channels} {
 		lappend component_parameters --component-parameter=$item=$val
 	}
 
-    fpgamake_altera_ipcore $core_name $core_version $ip_name $component_parameters
+    connectal_altera_synth_ip $core_name $core_version $ip_name $component_parameters
 }
 
 create_altera_10gbe_pma 4
