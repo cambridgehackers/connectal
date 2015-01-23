@@ -27,6 +27,7 @@ import socket
 import struct
 import ctypes
 import os
+import pandas as pd
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -39,40 +40,64 @@ def setup_backend(backend='TkAgg'):
     import matplotlib.pyplot as plt
     return plt
 
-plt = setup_backend()
-fig = plt.figure()
-win = fig.canvas.manager.window
+display_graph = False
+
+if (display_graph):
+    plt = setup_backend()
+    fig = plt.figure()
+    win = fig.canvas.manager.window
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((os.environ['RUNPARAM'], 1234))
-msglen = ctypes.sizeof(ctypes.c_int);
+llen = ctypes.sizeof(ctypes.c_int);
 
 def sample():
-    ss = []
-    for i in range(0,3):
-        bytes_recd = 0
-        while bytes_recd < msglen:
-            chunk = s.recv(msglen)
-            bytes_recd = len(chunk)
-        ss.append(struct.unpack("@i", chunk)[0])
-    return ss
+    bytes_recd = 0
+    while bytes_recd < llen:
+        chunk = s.recv(llen)
+        bytes_recd = len(chunk)
+    blen = struct.unpack("@i", chunk)[0]
+    bytes_recd = 0
+    buffer = []
+    while bytes_recd < blen:
+        chunk = s.recv(blen)
+        bytes_recd += len(chunk) 
+        buffer.append(chunk)
+    rv = buffer[0]
+    for b in buffer[1:]:
+        rv = rv + b
+    return rv
 
 def animate():
-    N = 3
-    rects = plt.bar(range(N), [abs(i)*2 for i in sample()], align='center')
+    if (display_graph):
+        N = 3
+        rects = plt.bar(range(N), [200,200,200], align='center')
     try:
         while (True):
             ss = sample()
-            for rect, h in zip(rects, map(abs,ss)):
-                rect.set_height(h)
-                fig.canvas.draw()
+            num_samples = len(ss)/2
+            fmt = ""
+            for i in range(0,num_samples):
+                fmt = fmt+"h"
+            samples = struct.unpack(fmt,ss)
+            window_sz = 100
+            xs = pd.rolling_mean(pd.Series(samples[0::3]),window=window_sz)[window_sz:]
+            ys = pd.rolling_mean(pd.Series(samples[1::3]),window=window_sz)[window_sz:]
+            zs = pd.rolling_mean(pd.Series(samples[2::3]),window=window_sz)[window_sz:]
+            if (display_graph):
+                for x,y,z in zip(xs,ys,zs):
+                    for rect, h in zip(rects, map(abs,[x,y,z])):
+                        rect.set_height(h)
+                        fig.canvas.draw()
     except KeyboardInterrupt:
         s.close()
         sys.exit() 
 
-win.after(10, animate)
-plt.show()
-
+if(display_graph):
+    win.after(10, animate)
+    plt.show()
+else:
+    animate()
 
 
 

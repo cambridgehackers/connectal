@@ -43,12 +43,8 @@
 
 #include "gyro.h"
 
-#ifdef BSIM
-int alloc_sz = 64;
-#else
-int alloc_sz = 1024;
-#endif
-int wrapped = false;
+int alloc_sz = 1<<12;
+static sem_t wrap_sem;
 int ss[3];
 
 class GyroCtrlIndication : public GyroCtrlIndicationWrapper
@@ -59,8 +55,8 @@ public:
     fprintf(stderr, "GyroCtrlIndication::read_reg_resp(v=%x)\n", v);
   }
   virtual void sample_wrap(const uint32_t v){
-    //fprintf(stderr, "GyroCtrlIndication::sample_wrap(v=%08x)\n", v);
-    wrapped = true;
+    fprintf(stderr, "GyroCtrlIndication::sample_wrap(v=%08x)\n", v);
+    sem_post(&wrap_sem);
   }
 };
 
@@ -126,6 +122,7 @@ int main(int argc, const char **argv)
   MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
+  sem_init(&wrap_sem,1,0);
   portalExec_start();
   start_server();
 
@@ -161,29 +158,24 @@ int main(int argc, const char **argv)
   int *rv;
 
   while(true){
-    while(!wrapped) usleep(1000);
-    wrapped = false;
-    int s[3] = {0,0,0};
+    sem_wait(&wrap_sem);
     portalDCacheInval(dstAlloc, alloc_sz, dstBuffer);
-    for(int i = 0; i < wrap_limit; i+=6){
-      short* foo = (short*)(((char*)(dstBuffer))+i);
-      for(int j = 0; j < 3; j++)
-	s[j] += (int)(foo[j]);
-    }
     if (clientsockfd == -1 && !connecting_to_client){
       connecting_to_client = 1;
       pthread_create(&threaddata, NULL, &connect_to_client, &rv);
     }
-    for(int j = 0; j < 3; j++){
-      ss[j] = s[j]/(wrap_limit/6);
-      if (clientsockfd != -1){
-	size_t rv = write(clientsockfd, &(ss[j]), sizeof(ss[j]));
-	if(rv != sizeof(ss[j])){
-	  shutdown(clientsockfd, 2);
-	  clientsockfd = -1;
-	}
+    if (clientsockfd != -1){
+      int failed = 0;
+      if(write(clientsockfd, &(wrap_limit), sizeof(int)) != sizeof(int)){
+	failed = 1;
+      } else if(write(clientsockfd, dstBuffer,  wrap_limit) != wrap_limit) {
+	failed = 1;
+      }
+      if (failed){
+	fprintf(stderr, "write to clientsockfd failed\n");
+	shutdown(clientsockfd, 2);
+	clientsockfd = -1;
       }
     }
-    fprintf(stderr, "x:%8d, y:%8d, z:%8d\n", ss[0], ss[1], ss[2]);
   }
 }
