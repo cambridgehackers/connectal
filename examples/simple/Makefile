@@ -5,10 +5,12 @@ BSVFILES = SimpleIF.bsv Top.bsv
 CPPFILES=testsimple.cpp
 NUMBER_OF_MASTERS =0
 
+ifeq ($(BOARD),de5)
 ALTERA_de5=1
 PIN_BINDINGS?=-b PCIE:PCIE -b LED:LED -b OSC:OSC
 
 gentarget:: $(BOARD)/sources/altera.qsf
+endif
 
 $(BOARD)/sources/altera.qsf: altera.json $(CONNECTALDIR)/boardinfo/$(BOARD).json
 ifeq ($(ALTERA_$(BOARD)), 1)
