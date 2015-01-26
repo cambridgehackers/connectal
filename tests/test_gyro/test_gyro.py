@@ -40,13 +40,12 @@ def setup_backend(backend='TkAgg'):
     import matplotlib.pyplot as plt
     return plt
 
-display_graph = False
 
+display_graph = True
 if (display_graph):
     plt = setup_backend()
     fig = plt.figure()
     win = fig.canvas.manager.window
-
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((os.environ['RUNPARAM'], 1234))
 llen = ctypes.sizeof(ctypes.c_int);
@@ -66,6 +65,7 @@ def sample():
     rv = buffer[0]
     for b in buffer[1:]:
         rv = rv + b
+    print len(rv)
     return rv
 
 def animate():

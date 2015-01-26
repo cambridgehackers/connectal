@@ -55,7 +55,7 @@ public:
     fprintf(stderr, "GyroCtrlIndication::read_reg_resp(v=%x)\n", v);
   }
   virtual void sample_wrap(const uint32_t v){
-    fprintf(stderr, "GyroCtrlIndication::sample_wrap(v=%08x)\n", v);
+    //fprintf(stderr, "GyroCtrlIndication::sample_wrap(v=%08x)\n", v);
     sem_post(&wrap_sem);
   }
 };
@@ -74,19 +74,14 @@ void* connect_to_client(void *_x)
   clilen = sizeof(cli_addr);
   clientsockfd = accept(serversockfd, (struct sockaddr *) &cli_addr, &clilen);
   if (clientsockfd < 0){ 
-    fprintf(stderr, "ERROR on accept");
+    fprintf(stderr, "ERROR on accept\n");
     *x = -1;
     return NULL;
   }
   *x = 0;
+  fprintf(stderr, "connected to client\n");
   connecting_to_client = 0;
   return NULL;
-}
-
-void disconnect_client()
-{
-  close(clientsockfd);
-  close(serversockfd);
 }
 
 int start_server()
@@ -154,8 +149,9 @@ int main(int argc, const char **argv)
   device->sample(ref_dstAlloc, wrap_limit, 1000);
 #endif
 
+  signal(SIGPIPE, SIG_IGN);
   pthread_t threaddata;
-  int *rv;
+  int rv;
 
   while(true){
     sem_wait(&wrap_sem);
@@ -174,6 +170,7 @@ int main(int argc, const char **argv)
       if (failed){
 	fprintf(stderr, "write to clientsockfd failed\n");
 	shutdown(clientsockfd, 2);
+	close(clientsockfd);
 	clientsockfd = -1;
       }
     }
