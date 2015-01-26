@@ -29,6 +29,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <netdb.h>
+#include <netinet/in.h>
 
 #include "StdDmaIndication.h"
 #include "MemServerRequest.h"
@@ -42,12 +43,8 @@
 
 #include "gyro.h"
 
-#ifdef BSIM
-int alloc_sz = 64;
-#else
-int alloc_sz = 1024;
-#endif
-int wrapped = false;
+int alloc_sz = 1<<12;
+static sem_t wrap_sem;
 int ss[3];
 
 class GyroCtrlIndication : public GyroCtrlIndicationWrapper
@@ -58,10 +55,62 @@ public:
     fprintf(stderr, "GyroCtrlIndication::read_reg_resp(v=%x)\n", v);
   }
   virtual void sample_wrap(const uint32_t v){
-    //fprintf(stderr, "GyroCtrlIndication::sample_wrap(v=%08x)\n", v);
-    wrapped = true;
+    fprintf(stderr, "GyroCtrlIndication::sample_wrap(v=%08x)\n", v);
+    sem_post(&wrap_sem);
   }
 };
+
+int clientsockfd = -1;
+int serversockfd = -1;
+int portno = 1234;
+int connecting_to_client = 0;
+
+void* connect_to_client(void *_x)
+{
+  struct sockaddr_in cli_addr;
+  int clilen;
+  int *x = (int*)_x;
+  listen(serversockfd,5);
+  clilen = sizeof(cli_addr);
+  clientsockfd = accept(serversockfd, (struct sockaddr *) &cli_addr, &clilen);
+  if (clientsockfd < 0){ 
+    fprintf(stderr, "ERROR on accept");
+    *x = -1;
+    return NULL;
+  }
+  *x = 0;
+  connecting_to_client = 0;
+  return NULL;
+}
+
+void disconnect_client()
+{
+  close(clientsockfd);
+  close(serversockfd);
+}
+
+int start_server()
+{
+  int n;
+  socklen_t clilen;
+  struct sockaddr_in serv_addr;
+
+  serversockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (serversockfd < 0) {
+    fprintf(stderr, "ERROR opening socket");
+    return -1;
+  }
+  bzero((char *) &serv_addr, sizeof(serv_addr));
+  serv_addr.sin_family = AF_INET;
+  serv_addr.sin_addr.s_addr = INADDR_ANY;
+  serv_addr.sin_port = htons(portno);
+  if (bind(serversockfd, (struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) {
+    fprintf(stderr, "ERROR on binding");
+    return -1;
+  }
+  return 0;
+}
+
 
 int main(int argc, const char **argv)
 {
@@ -73,7 +122,10 @@ int main(int argc, const char **argv)
   MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
+  sem_init(&wrap_sem,1,0);
   portalExec_start();
+  start_server();
+
   int dstAlloc = portalAlloc(alloc_sz);
   unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
@@ -102,21 +154,28 @@ int main(int argc, const char **argv)
   device->sample(ref_dstAlloc, wrap_limit, 1000);
 #endif
 
+  pthread_t threaddata;
+  int *rv;
+
   while(true){
-
-    while(!wrapped) usleep(1000);
-    wrapped = false;
-    int s[3] = {0,0,0};
+    sem_wait(&wrap_sem);
     portalDCacheInval(dstAlloc, alloc_sz, dstBuffer);
-    for(int i = 0; i < wrap_limit; i+=6){
-      short* foo = (short*)(((char*)(dstBuffer))+i);
-      for(int j = 0; j < 3; j++)
-	s[j] += (int)(foo[j]);
+    if (clientsockfd == -1 && !connecting_to_client){
+      connecting_to_client = 1;
+      pthread_create(&threaddata, NULL, &connect_to_client, &rv);
     }
-    for(int j = 0; j < 3; j++)
-      ss[j] = s[j]/(wrap_limit/6);
-
-    fprintf(stderr, "x:%8d, y:%8d, z:%8d\n", ss[0], ss[1], ss[2]);
+    if (clientsockfd != -1){
+      int failed = 0;
+      if(write(clientsockfd, &(wrap_limit), sizeof(int)) != sizeof(int)){
+	failed = 1;
+      } else if(write(clientsockfd, dstBuffer,  wrap_limit) != wrap_limit) {
+	failed = 1;
+      }
+      if (failed){
+	fprintf(stderr, "write to clientsockfd failed\n");
+	shutdown(clientsockfd, 2);
+	clientsockfd = -1;
+      }
+    }
   }
-
 }

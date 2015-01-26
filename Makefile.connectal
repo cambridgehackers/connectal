@@ -118,6 +118,8 @@ NEED_XILINX_PCIE_v2000t=1
 NEED_ALTERA_PCIE_de5=1
 NEED_ALTERA_ETH_de5=1
 
+NEED_ALTERA_PCIE_SIM_vsim=1
+
 ifeq ($(NEED_XILINX_PCIE_$(BOARD)),1)
     FPGAMAKE_CONNECTALFLAGS += -P mkPcieEndpointX7 -P mkPcieHost
     CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/pcie_7x_0/pcie_7x_0.xci
@@ -130,6 +132,7 @@ ifeq ($(NEED_ALTERA_PCIE_$(BOARD)),1)
 	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/alt_xcvr_reconfig_wrapper.qip
 	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/altera_pll.qip
 	FPGAMAKE_CONNECTALFLAGS += --tcl=$(BOARD)/sources/$(BOARD).qsf
+	FPGAMAKE_CONNECTALFLAGS += --tcl=$(CONNECTALDIR)/constraints/altera/$(BOARD).sdc
 	CONNECTALFLAGS += --bscflags="+RTS -K46777216 -RTS -demote-errors G0066:G0045 -suppress-warnings G0046:G0020:S0015:S0080:S0039"
 endif
 
@@ -180,3 +183,8 @@ endif
 ifeq ($(NEED_ALTERA_ETH_$(BOARD)), 1)
 	cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) quartus_sh -t $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-eth.tcl
 endif
+
+ifeq ($(NEED_ALTERA_PCIE_SIM_$(BOARD)), 1)
+	cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) quartus_sh -t $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
+endif
+

@@ -1430,7 +1430,6 @@
             "LOC": "PIN_AG16"
         }
     }, 
-    "MAX2": {}, 
     "OSC": {
         "OSC_50_B3B": {
             "IOSTANDARD": "2.5 V", 
@@ -1549,157 +1548,137 @@
         "PCIE_WAKE_n": {
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_BD35"
-        }
-    }, 
-    "PLL": {
-        "\"PCIE_REFCLK_p(n)\"": {
+        },
+        "PCIE_REFCLK_p(n)": {
             "IOSTANDARD": "HCSL", 
             "LOC": "PIN_AK39"
         }, 
-        "\"PCIE_RX_p[0](n)\"": {
+        "PCIE_RX_p[0](n)": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_BB44"
         }, 
-        "\"PCIE_RX_p[1](n)\"": {
+        "PCIE_RX_p[1](n)": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_BA42"
         }, 
-        "\"PCIE_RX_p[2](n)\"": {
+        "PCIE_RX_p[2](n)": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AW42"
         }, 
-        "\"PCIE_RX_p[3](n)\"": {
+        "PCIE_RX_p[3](n)": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AY44"
         }, 
-        "\"PCIE_RX_p[4](n)\"": {
+        "PCIE_RX_p[4](n)": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AT44"
         }, 
-        "\"PCIE_RX_p[5](n)\"": {
+        "PCIE_RX_p[5](n)": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AP44"
         }, 
-        "\"PCIE_RX_p[6](n)\"": {
+        "PCIE_RX_p[6](n)": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AM44"
         }, 
-        "\"PCIE_RX_p[7](n)\"": {
+        "PCIE_RX_p[7](n)": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AK44"
         }, 
-        "\"PCIE_TX_p[0](n)\"": {
+        "PCIE_TX_p[0](n)": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AY40"
         }, 
-        "\"PCIE_TX_p[1](n)\"": {
+        "PCIE_TX_p[1](n)": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AV40"
         }, 
-        "\"PCIE_TX_p[2](n)\"": {
+        "PCIE_TX_p[2](n)": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AT40"
         }, 
-        "\"PCIE_TX_p[3](n)\"": {
+        "PCIE_TX_p[3](n)": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AU42"
         }, 
-        "\"PCIE_TX_p[4](n)\"": {
+        "PCIE_TX_p[4](n)": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AN42"
         }, 
-        "\"PCIE_TX_p[5](n)\"": {
+        "PCIE_TX_p[5](n)": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AL42"
         }, 
-        "\"PCIE_TX_p[6](n)\"": {
+        "PCIE_TX_p[6](n)": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AJ42"
         }, 
-        "\"PCIE_TX_p[7](n)\"": {
+        "PCIE_TX_p[7](n)": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AG42"
-        }, 
-        "\"SATA_DEVICE_REFCLK_p(n)\"": {
+        }
+    }, 
+    "SATA": {
+        "SATA_DEVICE_REFCLK_p(n)": {
             "IOSTANDARD": "HCSL", 
             "LOC": "PIN_V40"
         }, 
-        "\"SATA_DEVICE_RX_p[0](n)\"": {
+        "SATA_DEVICE_RX_p[0](n)": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_K44"
         }, 
-        "\"SATA_DEVICE_RX_p[1](n)\"": {
+        "SATA_DEVICE_RX_p[1](n)": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_H44"
         }, 
-        "\"SATA_DEVICE_TX_p[0](n)\"": {
+        "SATA_DEVICE_TX_p[0](n)": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_K40"
         }, 
-        "\"SATA_DEVICE_TX_p[1](n)\"": {
+        "SATA_DEVICE_TX_p[1](n)": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_H40"
         }, 
-        "\"SATA_HOST_REFCLK_p(n)\"": {
+        "SATA_HOST_REFCLK_p(n)": {
             "IOSTANDARD": "HCSL", 
             "LOC": "PIN_V5"
         }, 
-        "\"SATA_HOST_RX_p[0](n)\"": {
+        "SATA_HOST_RX_p[0](n)": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_K1"
         }, 
-        "\"SATA_HOST_RX_p[1](n)\"": {
+        "SATA_HOST_RX_p[1](n)": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_H1"
         }, 
-        "\"SATA_HOST_TX_p[0](n)\"": {
+        "SATA_HOST_TX_p[0](n)": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_K5"
         }, 
-        "\"SATA_HOST_TX_p[1](n)\"": {
+        "SATA_HOST_TX_p[1](n)": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_H5"
-        }, 
-        "\"SFP1G_REFCLK_p(n)\"": {
+        }
+    }, 
+    "SFP": {
+        "SFP1G_REFCLK_p": {
+            "IOSTANDARD": "HCSL", 
+            "LOC": "PIN_AH6"
+        },
+        "SFP1G_REFCLK_p(n)": {
             "IOSTANDARD": "HCSL", 
             "LOC": "PIN_AH5"
         }, 
-        "\"SFPA_RX_p(n)\"": {
-            "IOSTANDARD": "1.4-V PCML", 
-            "LOC": "PIN_AK1"
-        }, 
-        "\"SFPA_TX_p(n)\"": {
-            "IOSTANDARD": "1.4-V PCML", 
-            "LOC": "PIN_AG3"
-        }, 
-        "\"SFPB_RX_p(n)\"": {
-            "IOSTANDARD": "1.4-V PCML", 
-            "LOC": "PIN_AP1"
-        }, 
-        "\"SFPB_TX_p(n)\"": {
-            "IOSTANDARD": "1.4-V PCML", 
-            "LOC": "PIN_AL3"
-        }, 
-        "\"SFPC_RX_p(n)\"": {
-            "IOSTANDARD": "1.4-V PCML", 
-            "LOC": "PIN_AW3"
-        }, 
-        "\"SFPC_TX_p(n)\"": {
-            "IOSTANDARD": "1.4-V PCML", 
-            "LOC": "PIN_AT5"
-        }, 
-        "\"SFPD_RX_p(n)\"": {
-            "IOSTANDARD": "1.4-V PCML", 
-            "LOC": "PIN_BB1"
-        }, 
-        "\"SFPD_TX_p(n)\"": {
-            "IOSTANDARD": "1.4-V PCML", 
-            "LOC": "PIN_AY5"
-        }, 
-        "\"SFP_REFCLK_P(n)\"": {
+        "SFP_REFCLK_p(n)": {
             "IOSTANDARD": "HCSL", 
             "LOC": "PIN_AK6"
-        }, 
+        },
+        "SFP_REFCLK_p": {
+            "IOSTANDARD": "HCSL", 
+            "LOC": "PIN_AK7"
+        }
+    }, 
+    "PLL": {
         "PLL_SCL": {
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_AF32"
@@ -1707,11 +1686,7 @@
         "PLL_SDA": {
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_AG32"
-        }, 
-        "SFP_REFCLK_P": {
-            "IOSTANDARD": "HCSL", 
-            "LOC": "PIN_AK7"
-        }
+        } 
     }, 
     "QDRIIA": {
         "QDRIIA_A[0]": {
@@ -2891,12 +2866,6 @@
             "LOC": "PIN_H6"
         }
     }, 
-    "SFP1G": {
-        "SFP1G_REFCLK_p": {
-            "IOSTANDARD": "HCSL", 
-            "LOC": "PIN_AH6"
-        }
-    }, 
     "SFPA": {
         "SFPA_LOS": {
             "IOSTANDARD": "2.5 V", 
@@ -2937,7 +2906,15 @@
         "SFPA_TX_p": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AG4"
-        }
+        },
+        "SFPA_RX_p(n)": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AK1"
+        }, 
+        "SFPA_TX_p(n)": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AG3"
+        } 
     }, 
     "SFPB": {
         "SFPB_LOS": {
@@ -2979,7 +2956,15 @@
         "SFPB_TX_p": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AL4"
-        }
+        },
+        "SFPB_RX_p(n)": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AP1"
+        }, 
+        "SFPB_TX_p(n)": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AL3"
+        } 
     }, 
     "SFPC": {
         "SFPC_LOS": {
@@ -3021,6 +3006,14 @@
         "SFPC_TX_p": {
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AT6"
+        },
+        "SFPC_RX_p(n)": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AW3"
+        }, 
+        "SFPC_TX_p(n)": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AT5"
         }
     }, 
     "SFPD": {
@@ -3064,9 +3057,13 @@
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AY6"
         }, 
-        "SFP_REFCLK_p": {
-            "IOSTANDARD": "HCSL", 
-            "LOC": "PIN_AK7"
+        "SFPD_RX_p(n)": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_BB1"
+        }, 
+        "SFPD_TX_p(n)": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AY5"
         }
     }, 
     "SMA": {

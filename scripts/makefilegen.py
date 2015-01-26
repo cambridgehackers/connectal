@@ -231,7 +231,11 @@ if __name__=='__main__':
     if options.pinfo:
         pinstr = open(options.pinfo).read()
         pinout = json.loads(pinstr)
-        option_info.update(pinout['options'])
+        for key in pinout['options']:
+            if isinstance(option_info[key], (list)):
+                option_info[key] += pinout['options'][key]
+            else:
+                option_info[key] = pinout['options'][key]
 
     # parse additional options together with sys.argv
     if option_info['CONNECTALFLAGS']:
@@ -375,7 +379,7 @@ if __name__=='__main__':
                                                   for f in options.constraint ]),
                  'read_verilog': '\n'.join([tclReadVerilogTemplate
                                             % { 'verilog': os.path.abspath(f),
-                                                'pattern': '/*.v' if os.path.isdir(f) else ''} for f in options.verilog]),
+                                                'pattern': '/*.*v' if os.path.isdir(f) else ''} for f in options.verilog]),
                  'read_xci': '\n'.join([tclReadXciTemplate
                                         % { 'xci': f } for f in options.xci]),
                  'need_xilinx_pcie': 1 if needs_pcie_7x_gen1x8 else 0,

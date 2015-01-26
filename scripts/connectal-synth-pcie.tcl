@@ -102,7 +102,7 @@ proc create_pcie_sv_hip_ast {} {
 		lappend component_parameters --component-parameter=$item=$val
 	}
 
-    fpgamake_altera_ipcore $core_name $core_version $ip_name $component_parameters
+    connectal_altera_synth_ip $core_name $core_version $ip_name $component_parameters
 }
 
 proc create_pcie_reconfig {} {
@@ -121,7 +121,7 @@ proc create_pcie_reconfig {} {
 		lappend component_parameters --component-parameter=$item=$val
 	}
 
-    fpgamake_altera_ipcore $core_name $core_version $ip_name $component_parameters
+    connectal_altera_synth_ip $core_name $core_version $ip_name $component_parameters
 }
 
 proc create_pcie_hip_ast_ed {} {
@@ -154,7 +154,7 @@ proc create_pcie_hip_ast_ed {} {
 		lappend component_parameters --component-parameter=$item=$val
 	}
 
-    fpgamake_altera_ipcore $core_name $core_version $ip_name $component_parameters
+    connectal_altera_synth_ip $core_name $core_version $ip_name $component_parameters
 }
 
 proc create_pcie_xcvr_reconfig {core_name core_version ip_name n_interface} {
@@ -178,9 +178,8 @@ proc create_pcie_xcvr_reconfig {core_name core_version ip_name n_interface} {
 		set val [dict get $params $item]
 		lappend component_parameters --component-parameter=$item=$val
 	}
-    fpgamake_altera_ipcore $core_name $core_version $ip_name $component_parameters
+    connectal_altera_synth_ip $core_name $core_version $ip_name $component_parameters
 }
-
 
 if $need_altera_pcie {
     create_pcie_sv_hip_ast
