@@ -162,7 +162,7 @@ bits: hw/mkTop.bit prepare_bin_target
     else
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
     endif
-	gzip -c Impl/TopDown/mkTop.ll > bin/mkTop.ll.gz
+	if [ -f Impl/TopDown/top-post-route.dcp ]; then cp -f Impl/TopDown/top-post-route.dcp bin; fi
 	$(CONNECTALDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
 endif
 endif

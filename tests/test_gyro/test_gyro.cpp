@@ -30,6 +30,7 @@
 #include <pthread.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <signal.h>
 
 #include "StdDmaIndication.h"
 #include "MemServerRequest.h"
@@ -43,7 +44,11 @@
 
 #include "gyro.h"
 
-int alloc_sz = 1<<12;
+#ifdef BSIM
+int alloc_sz = 1<<8;
+#else
+int alloc_sz = 1<<14;
+#endif
 static sem_t wrap_sem;
 int ss[3];
 
@@ -55,7 +60,9 @@ public:
     fprintf(stderr, "GyroCtrlIndication::read_reg_resp(v=%x)\n", v);
   }
   virtual void sample_wrap(const uint32_t v){
+#ifdef BSIM
     fprintf(stderr, "GyroCtrlIndication::sample_wrap(v=%08x)\n", v);
+#endif
     sem_post(&wrap_sem);
   }
 };
@@ -67,26 +74,21 @@ int connecting_to_client = 0;
 
 void* connect_to_client(void *_x)
 {
-  struct sockaddr_in cli_addr;
-  int clilen;
+  struct sockaddr cli_addr;
+  socklen_t clilen;
   int *x = (int*)_x;
   listen(serversockfd,5);
   clilen = sizeof(cli_addr);
-  clientsockfd = accept(serversockfd, (struct sockaddr *) &cli_addr, &clilen);
+  clientsockfd = accept(serversockfd, &cli_addr, &clilen);
   if (clientsockfd < 0){ 
-    fprintf(stderr, "ERROR on accept");
+    fprintf(stderr, "ERROR on accept\n");
     *x = -1;
     return NULL;
   }
   *x = 0;
+  fprintf(stderr, "connected to client\n");
   connecting_to_client = 0;
   return NULL;
-}
-
-void disconnect_client()
-{
-  close(clientsockfd);
-  close(serversockfd);
 }
 
 int start_server()
@@ -148,14 +150,18 @@ int main(int argc, const char **argv)
   int wrap_limit = alloc_sz-(alloc_sz%(sample_size*bus_data_width)); // want lcm
   int cnt = 0;
 
+  fprintf(stderr, "wrap_limit:%08x\n", wrap_limit);
+
 #ifdef BSIM
   device->sample(ref_dstAlloc, wrap_limit, 10);
 #else
-  device->sample(ref_dstAlloc, wrap_limit, 1000);
+  device->sample(ref_dstAlloc, wrap_limit, 10);
 #endif
 
+
+  signal(SIGPIPE, SIG_IGN);
   pthread_t threaddata;
-  int *rv;
+  int rv;
 
   while(true){
     sem_wait(&wrap_sem);
@@ -174,6 +180,7 @@ int main(int argc, const char **argv)
       if (failed){
 	fprintf(stderr, "write to clientsockfd failed\n");
 	shutdown(clientsockfd, 2);
+	close(clientsockfd);
 	clientsockfd = -1;
       }
     }
