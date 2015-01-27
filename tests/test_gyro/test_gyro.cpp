@@ -60,9 +60,7 @@ public:
     fprintf(stderr, "GyroCtrlIndication::read_reg_resp(v=%x)\n", v);
   }
   virtual void sample_wrap(const uint32_t v){
-#ifdef BSIM
     fprintf(stderr, "GyroCtrlIndication::sample_wrap(v=%08x)\n", v);
-#endif
     sem_post(&wrap_sem);
   }
 };
@@ -139,9 +137,28 @@ int main(int argc, const char **argv)
   sleep(1);
 
   // setup
-  device->write_reg(CTRL_REG3, 0);
-  device->write_reg(CTRL_REG1, CTRL_REG1_PD | CTRL_REG1_ZEN | CTRL_REG1_YEN | CTRL_REG1_XEN);
-  sleep(2);
+  // Enable x, y, z and turn off power down:
+  device->write_reg(CTRL_REG1, 0b11001111);
+  sleep(1);
+
+  // If you'd like to adjust/use the HPF, you can edit the line below to configure CTRL_REG2:
+  device->write_reg(CTRL_REG2, 0b00000000);
+  sleep(1);
+
+  // Configure CTRL_REG3 to generate data ready interrupt on INT2
+  // No interrupts used on INT1, if you'd like to configure INT1
+  // or INT2 otherwise, consult the datasheet:
+  device->write_reg(CTRL_REG3, 0b00001000);
+  sleep(1);
+
+  // CTRL_REG4 controls the full-scale range, among other things:
+  device->write_reg(CTRL_REG4, 0b00110000);
+  sleep(1);
+
+  // CTRL_REG5 controls high-pass filtering of outputs, use it
+  // if you'd like:
+  device->write_reg(CTRL_REG5, 0b00000000);
+  sleep(1);
 
   // sample has one two-byte component for each axis (x,y,z).  I want the 
   // wrap-around to work so that the X component always lands in offset 0
@@ -155,7 +172,7 @@ int main(int argc, const char **argv)
 #ifdef BSIM
   device->sample(ref_dstAlloc, wrap_limit, 10);
 #else
-  device->sample(ref_dstAlloc, wrap_limit, 10);
+  device->sample(ref_dstAlloc, wrap_limit, 200);
 #endif
 
 
@@ -169,6 +186,13 @@ int main(int argc, const char **argv)
     if (clientsockfd == -1 && !connecting_to_client){
       connecting_to_client = 1;
       pthread_create(&threaddata, NULL, &connect_to_client, &rv);
+    }
+    if (0) {
+      short *ss = (short*)dstBuffer;
+      for(int i = 0; i < wrap_limit/2; i+=3){
+	fprintf(stderr, "%d %d %d\r", ss[i], ss[i+1], ss[i+2]);
+	usleep(100);
+      }
     }
     if (clientsockfd != -1){
       int failed = 0;
