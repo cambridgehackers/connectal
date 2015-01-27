@@ -44,7 +44,7 @@ class MMUIndication : public MMUIndicationWrapper
     portalMemory->confResp(pointer);
   }
   virtual void error (uint32_t code, uint32_t pointer, uint64_t offset, uint64_t extra) {
-    fprintf(stderr, "MMUIndication::error(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
+    fprintf(stderr, "MMUIndication::error(code=0x%x, pointer=0x%x, offset=0x%"PRIx64" extra=-0x%"PRIx64"\n", code, pointer, offset, extra);
     if (--mmu_error_limit < 0)
         exit(-1);
   }

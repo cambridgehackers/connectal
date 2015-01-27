@@ -58,7 +58,8 @@ module mkController#(GyroCtrlIndication ind)(Controller);
    Reg#(Bit#(32))  allocSz    <- mkReg(0);
    Reg#(Bit#(32))  writePtr   <- mkReg(0);
    FIFO#(Bool)     rc_fifo    <- mkSizedFIFO(1);
-   FIFO#(Bit#(64)) sa_fifo    <- mkFIFO();
+   FIFO#(Bit#(8))  wr_queue   <- mkSizedFIFO(4);
+   Reg#(Bit#(8))   wr_reg     <- mkReg(0);
 `ifdef BSIM
    Reg#(Bit#(16))  bsim_cnt   <- mkReg(0);
 `endif
@@ -138,23 +139,31 @@ module mkController#(GyroCtrlIndication ind)(Controller);
    interface MemWriteClient dmaClient;
       interface Get writeReq;
 	 method ActionValue#(MemRequest) get if (allocSz > 0);
-	    let new_writePtr = writePtr + 8;
-	    if (new_writePtr == allocSz) begin
+	    Bit#(8) bl = 128;	    
+	    let new_writePtr = writePtr + extend(bl);
+	    if (new_writePtr >= allocSz) begin
 	       new_writePtr = 0;
+	       bl =  truncate(allocSz-writePtr);
 	       ind.sample_wrap(allocSz);
 	    end
 	    writePtr <= new_writePtr;
 	    if (verbose) $display("writeReq %d", writePtr);
-	    sa_fifo.enq(pack(gb.first));
-	    gb.deq;
-	    return MemRequest {sglId:sglId, offset:extend(writePtr), burstLen:8, tag:0};
+	    wr_queue.enq(bl);
+	    return MemRequest {sglId:sglId, offset:extend(writePtr), burstLen:bl, tag:0};
 	 endmethod
       endinterface
       interface Get writeData;
 	 method ActionValue#(MemData#(64)) get;
-	    let rv <- toGet(sa_fifo).get;
+	    gb.deq;
+	    let new_wr_reg = wr_reg-8;
+	    if (wr_reg == 0) begin
+	       let wrv <- toGet(wr_queue).get;
+	       new_wr_reg = wrv-8;
+	    end
+	    wr_reg <= new_wr_reg;
+	    let rv = pack(gb.first);
 	    if(verbose) $display("writeData %h", rv);
-	    return MemData{data:rv, tag:0, last:True};
+	    return MemData{data:rv, tag:0, last:(new_wr_reg==0)};
 	 endmethod
       endinterface
       interface Put writeDone;
