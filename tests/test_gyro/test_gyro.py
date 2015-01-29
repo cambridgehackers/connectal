@@ -29,28 +29,12 @@ import ctypes
 import os
 import pandas as pd
 
-import matplotlib.pyplot as plt
-import numpy as np
-def setup_backend(backend='TkAgg'):
-    import sys
-    del sys.modules['matplotlib.backends']
-    del sys.modules['matplotlib.pyplot']
-    import matplotlib as mpl
-    mpl.use(backend)  # do this before importing pyplot
-    import matplotlib.pyplot as plt
-    return plt
-
-display_graph = False
 write_octave = True
 octave_length = 5
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((os.environ['RUNPARAM'], 1234))
 llen = ctypes.sizeof(ctypes.c_int);
 
-if (display_graph):
-    plt = setup_backend()
-    fig = plt.figure()
-    win = fig.canvas.manager.window
 
 def sample():
     bytes_recd = 0
@@ -74,9 +58,6 @@ def animate():
     if (write_octave):
         octave_file = open("x.m", "w");
         octave_file.write("#! /usr/bin/octave --persist \nv = [");
-    if (display_graph):
-        N = 3
-        rects = plt.bar(range(N), [200,200,200], align='center')
     try:
         while (True):
             print times
@@ -94,10 +75,6 @@ def animate():
             for x,y,z in zip(xs,ys,zs):
                 if (write_octave and times <= octave_length):
                     octave_file.write("%8d, %8d, %8d; \n" % (x,y,z));
-                if (display_graph):
-                    for rect, h in zip(rects, map(abs,[x,y,z])):
-                        rect.set_height(h)
-                        fig.canvas.draw()
             if (times == octave_length):
                 octave_file.write("];\n");
                 octave_file.write("plot(v(:,1),color=\"r\");\n");
@@ -106,18 +83,13 @@ def animate():
                 octave_file.write("plot(v(:,3),color=\"b\");\n");
                 octave_file.close()
                 print "done writing octave_file"
-                
 
     except KeyboardInterrupt:
         s.close()
         sys.exit() 
 
-if(display_graph):
-    win.after(10, animate)
-    plt.show()
-else:
-    animate()
 
+animate()
 
 
 
