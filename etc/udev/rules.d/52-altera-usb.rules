@@ -1,2 +1,3 @@
 
-ACTION=="add", ATTR{idVendor}=="09fb", ATTR{manufacturer}=="Altera", MODE:="666"
+# Allow users to access Altera Jtag device
+ACTION=="add", ATTR{idVendor}=="09fb", MODE:="666"
