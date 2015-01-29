@@ -1,0 +1,2 @@
+
+ACTION=="add", ATTR{idVendor}=="09fb", ATTR{manufacturer}=="Altera", MODE:="666"
