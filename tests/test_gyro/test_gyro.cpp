@@ -68,7 +68,7 @@ public:
     sem_post(&write_sem);
   }
   virtual void sample_wrap(const uint32_t v){
-    fprintf(stderr, "GyroCtrlIndication::sample_wrap(v=%08x)\n", v);
+    //fprintf(stderr, "GyroCtrlIndication::sample_wrap(v=%08x)\n", v);
     sem_post(&wrap_sem);
   }
 };
@@ -200,7 +200,7 @@ int main(int argc, const char **argv)
 #ifdef BSIM
   device->sample(ref_dstAlloc, wrap_limit, 10);
 #else
-  // sampling rate of 100Hz. Model running at 100 MHz.  Sample every   
+  // sampling rate of 100Hz. Model running at 100 MHz. 
   device->sample(ref_dstAlloc, wrap_limit, 1000000);
 #endif
 
@@ -215,7 +215,7 @@ int main(int argc, const char **argv)
       connecting_to_client = 1;
       pthread_create(&threaddata, NULL, &connect_to_client, &rv);
     }
-    if(1){
+    if(0){
       short *ss = (short*)dstBuffer;
       for(int i = 0; i < wrap_limit/2; i+=3){
 	fprintf(stderr, "%8d %8d %8d\n", ss[i], ss[i+1], ss[i+2]);

@@ -23,7 +23,7 @@
 
 from visual import *
 
-class gyroVisualize:
+class gv:
     def __init__(self):
         self.roll_bar = []
         self.pitch_bar = []
@@ -61,29 +61,28 @@ class gyroVisualize:
         self.p_line = box(length=1,height=0.08,width=0.1,color=color.yellow)
         self.plat_arrow = arrow(color=color.green,axis=(1,0,0), shaftwidth=0.06, fixedwidth=1)
 
-    def animate(self):
-        for i in range(0,100):
-            roll = i
-            pitch = 3
-            yaw = 3
-            axis=(cos(pitch)*cos(yaw),-cos(pitch)*sin(yaw),sin(pitch)) 
-            up=(sin(roll)*sin(yaw)+cos(roll)*sin(pitch)*cos(yaw),sin(roll)*cos(yaw)-cos(roll)*sin(pitch)*sin(yaw),-cos(roll)*cos(pitch))
-            self.platform.axis=axis
-            self.platform.up=up
-            self.platform.length=1.0
-            self.platform.width=0.65
-            self.plat_arrow.axis=axis
-            self.plat_arrow.up=up
-            self.plat_arrow.length=0.8
-            self.p_line.axis=axis
-            self.p_line.up=up
-            self.roll_bar[0].axis=(0.2*cos(roll),0.2*sin(roll),0)
-            self.roll_bar[1].axis=(-0.2*cos(roll),-0.2*sin(roll),0)
-            self.pitch_bar[0].axis=(0.2*cos(pitch),0.2*sin(pitch),0)
-            self.pitch_bar[1].axis=(-0.2*cos(pitch),-0.2*sin(pitch),0)
-            self.yaw_arrow.axis=(0.2*sin(yaw),0.2*cos(yaw),0)
+    def update(self,roll,pitch,yaw):
+        axis=(cos(pitch)*cos(yaw),-cos(pitch)*sin(yaw),sin(pitch)) 
+        up=(sin(roll)*sin(yaw)+cos(roll)*sin(pitch)*cos(yaw),sin(roll)*cos(yaw)-cos(roll)*sin(pitch)*sin(yaw),-cos(roll)*cos(pitch))
+        self.platform.axis=axis
+        self.platform.up=up
+        self.platform.length=1.0
+        self.platform.width=0.65
+        self.plat_arrow.axis=axis
+        self.plat_arrow.up=up
+        self.plat_arrow.length=0.8
+        self.p_line.axis=axis
+        self.p_line.up=up
+        self.roll_bar[0].axis=(0.2*cos(roll),0.2*sin(roll),0)
+        self.roll_bar[1].axis=(-0.2*cos(roll),-0.2*sin(roll),0)
+        self.pitch_bar[0].axis=(0.2*cos(pitch),0.2*sin(pitch),0)
+        self.pitch_bar[1].axis=(-0.2*cos(pitch),-0.2*sin(pitch),0)
+        self.yaw_arrow.axis=(0.2*sin(yaw),0.2*cos(yaw),0)
 
 
 
-v = gyroVisualize()
-v.animate()
+if __name__ == "__main__":
+    v = gv()
+    for i in range(1,1000):
+        v.update(i,i,i)
+        time.sleep(0.01)
