@@ -355,12 +355,7 @@ static int init_hardware(struct PortalInternal *pint, void *param)
     char read_status;
     char buff[128];
     snprintf(buff, sizeof(buff), "/dev/portal%d", pint->fpga_number);
-#ifdef ZYNQ
     pint->fpga_fd = open(buff, O_RDWR);
-#else
-    // FIXME: bluenoc driver only opens readonly for some reason
-    pint->fpga_fd = open(buff, O_RDONLY);
-#endif
     if (pint->fpga_fd < 0) {
 	PORTAL_PRINTF("Failed to open %s fd=%d errno=%d\n", buff, pint->fpga_fd, errno);
 	return -errno;
