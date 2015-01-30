@@ -123,31 +123,6 @@ static void init_portal_hw(void)
 #endif
 }
 
-void portalTrace_start()
-{
-  init_portal_hw();
-#if !defined(ZYNQ) && !defined(__KERNEL__)
-  tTraceInfo traceInfo;
-  traceInfo.trace = 1;
-  assert(0);
-  int res = 0; //ioctl(globalDirectory.fpga_fd,BNOC_TRACE,&traceInfo);
-  if (res)
-    PORTAL_PRINTF("Failed to start tracing. errno=%d\n", errno);
-#endif
-}
-void portalTrace_stop()
-{
-  init_portal_hw();
-#if !defined(ZYNQ) && !defined(__KERNEL__)
-  tTraceInfo traceInfo;
-  traceInfo.trace = 0;
-  assert(0);
-  int res = 0; //ioctl(globalDirectory.fpga_fd,BNOC_TRACE,&traceInfo);
-  if (res)
-    PORTAL_PRINTF("Failed to stop tracing. errno=%d\n", errno);
-#endif
-}
-
 uint64_t portalCycleCount()
 {
   unsigned int high_bits, low_bits;
@@ -217,8 +192,6 @@ int portalDCacheFlushInval(int fd, long size, void *__p)
 {
   portalDCacheFlushInvalInternal(fd,size,__p,1);
 }
-
-
 
 void init_portal_memory(void)
 {
@@ -383,27 +356,7 @@ static int init_hardware(struct PortalInternal *pint, void *param)
     char buff[128];
     snprintf(buff, sizeof(buff), "/dev/portal%d", pint->fpga_number);
 #ifdef ZYNQ
-    PortalEnableInterrupt intsettings = {3 << 14, (3 << 14) + 4};
-    int pgfile = open("/sys/devices/amba.0/f8007000.devcfg/prog_done", O_RDONLY);
-    if (pgfile == -1) {
-        // 3.9 kernel uses amba.2
-        pgfile = open("/sys/devices/amba.2/f8007000.devcfg/prog_done", O_RDONLY);
-        if (pgfile == -1) {
-            // miniitx100 uses different name!
-            pgfile = open("/sys/devices/amba.0/f8007000.ps7-dev-cfg/prog_done", O_RDONLY);
-        }
-    }
-    if (pgfile == -1) {
-	PORTAL_PRINTF("failed to open /sys/devices/amba.[02]/f8007000.devcfg/prog_done %d\n", errno);
-	return -1;
-    }
-    if (read(pgfile, &read_status, 1) != 1 || read_status != '1') {
-	PORTAL_PRINTF("FPGA not programmed: %x\n", read_status);
-	return -ENODEV;
-    }
-    close(pgfile);
     pint->fpga_fd = open(buff, O_RDWR);
-    ioctl(pint->fpga_fd, PORTAL_ENABLE_INTERRUPT, &intsettings);
 #else
     // FIXME: bluenoc driver only opens readonly for some reason
     pint->fpga_fd = open(buff, O_RDONLY);
