@@ -52,31 +52,32 @@ int alloc_sz = 1<<8;
 static sem_t wrap_sem;
 static sem_t read_sem;
 static sem_t write_sem;
-static uint32_t read_val;
+static uint32_t read_reg_val;
+static int verbose = 1;
+int clientsockfd = -1;
+int serversockfd = -1;
+int portno = 1234;
+int connecting_to_client = 0;
 
 class GyroCtrlIndication : public GyroCtrlIndicationWrapper
 {
 public:
   GyroCtrlIndication(int id) : GyroCtrlIndicationWrapper(id) {}
   virtual void read_reg_resp ( const uint32_t v){
-    //fprintf(stderr, "GyroCtrlIndication::read_reg_resp(v=%x)\n", v);
-    read_val = v;
+    if (verbose) fprintf(stderr, "GyroCtrlIndication::read_reg_resp(v=%x)\n", v);
+    read_reg_val = v;
     sem_post(&read_sem);
   }
   virtual void write_reg_resp ( const uint32_t v){
-    //fprintf(stderr, "GyroCtrlIndication::write_reg_resp(v=%x)\n", v);
+    if (verbose) fprintf(stderr, "GyroCtrlIndication::write_reg_resp(v=%x)\n", v);
     sem_post(&write_sem);
   }
   virtual void sample_wrap(const uint32_t v){
-    //fprintf(stderr, "GyroCtrlIndication::sample_wrap(v=%08x)\n", v);
+    if (verbose) fprintf(stderr, "GyroCtrlIndication::sample_wrap(v=%08x)\n", v);
     sem_post(&wrap_sem);
   }
 };
 
-int clientsockfd = -1;
-int serversockfd = -1;
-int portno = 1234;
-int connecting_to_client = 0;
 
 void* connect_to_client(void *_x)
 {
@@ -108,7 +109,7 @@ int start_server()
     fprintf(stderr, "ERROR opening socket");
     return -1;
   }
-  bzero((char *) &serv_addr, sizeof(serv_addr));
+  memset((char *) &serv_addr, 0x0, sizeof(serv_addr));
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_addr.s_addr = INADDR_ANY;
   serv_addr.sin_port = htons(portno);
@@ -167,34 +168,11 @@ int main(int argc, const char **argv)
   write_reg(device, CTRL_REG5, 0b00000000);
   
   
-  if(0){
-    for(int i = 0; i < 128; i++){
-      short int tmp;
-      read_reg(device, OUT_X_H);
-      tmp = read_val << 8;
-      read_reg(device, OUT_X_L);
-      tmp |= read_val;
-      fprintf(stderr, "%8d, ", (short int)tmp);
-      
-      read_reg(device, OUT_Y_H);
-      tmp = read_val << 8;
-      read_reg(device, OUT_Y_L);
-      tmp |= read_val;
-      fprintf(stderr, "%8d, ", (short int)tmp);
-      
-      read_reg(device, OUT_Z_H);
-      tmp = read_val << 8;
-      read_reg(device, OUT_Z_L);
-      tmp |= read_val;
-      fprintf(stderr, "%8d\n", (short int)tmp);
-    }
-  }
-
-  // sample has one two-byte component for each axis (x,y,z).  I want the 
-  // wrap-around to work so that the X component always lands in offset 0
+  // sample has one two-byte component for each axis (x,y,z).  This is to ensure 
+  // that the X component always lands in offset 0 when the HW wraps around
   int sample_size = 6;
   int bus_data_width = 8;
-  int wrap_limit = alloc_sz-(alloc_sz%(sample_size*bus_data_width)); // want lcm
+  int wrap_limit = alloc_sz-(alloc_sz%(sample_size*bus_data_width)); 
   fprintf(stderr, "wrap_limit:%08x\n", wrap_limit);
 
 #ifdef BSIM
@@ -204,23 +182,17 @@ int main(int argc, const char **argv)
   device->sample(ref_dstAlloc, wrap_limit, 1000000);
 #endif
 
-  signal(SIGPIPE, SIG_IGN);
+  // this is because I don't want the server to abort when the client goes offline
+  signal(SIGPIPE, SIG_IGN); 
   pthread_t threaddata;
   int rv;
-
+  
   while(true){
     sem_wait(&wrap_sem);
     portalDCacheInval(dstAlloc, alloc_sz, dstBuffer);
     if (clientsockfd == -1 && !connecting_to_client){
       connecting_to_client = 1;
       pthread_create(&threaddata, NULL, &connect_to_client, &rv);
-    }
-    if(0){
-      short *ss = (short*)dstBuffer;
-      for(int i = 0; i < wrap_limit/2; i+=3){
-	fprintf(stderr, "%8d %8d %8d\n", ss[i], ss[i+1], ss[i+2]);
-	usleep(100);
-      }
     }
     if (clientsockfd != -1){
       int failed = 0;
