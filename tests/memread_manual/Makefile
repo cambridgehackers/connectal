@@ -1,7 +1,7 @@
 
 CONNECTALDIR?=../..
-INTERFACES = MemreadRequest MemreadIndication
-BSVFILES = Memread.bsv Top.bsv
+INTERFACES = RtestRequest RtestIndication
+BSVFILES = Rtest.bsv Top.bsv
 #CPPFILES=testmemread.cpp
 #CPPFILES=memread_manual.cpp
 CPPFILES=memread_manual_manager.c
