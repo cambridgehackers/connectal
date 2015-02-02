@@ -225,7 +225,7 @@ int event_portal_xsim(struct PortalInternal *pint)
 
     fprintf(stderr, "[%s:%d] pint=%p srcbeats=%d methodwords=%d methodId=%d hdr=%08x\n",
 	    __FUNCTION__, __LINE__, pint, memSlaveIndication->srcbeats.size(), numwords, methodId, bluenoc_hdr);
-    if (memSlaveIndication->srcbeats.size() > numwords+1) {
+    if (memSlaveIndication->srcbeats.size() >= numwords+1) {
           memSlaveIndication->srcbeats.pop();
 	  if (pint->handler)
 	    pint->handler(pint, methodId, 0);
