@@ -41,15 +41,13 @@
 #include "GyroCtrlRequest.h"
 #include "GyroCtrlIndication.h"
 #include "GeneratedTypes.h"
-
 #include "gyro.h"
 
 #ifdef BSIM
-int alloc_sz = 1<<6;
-#else
 int alloc_sz = 1<<8;
+#else
+int alloc_sz = 1<<12;
 #endif
-static sem_t wrap_sem;
 static sem_t read_sem;
 static sem_t write_sem;
 static uint32_t read_reg_val;
@@ -58,26 +56,10 @@ int clientsockfd = -1;
 int serversockfd = -1;
 int portno = 1234;
 int connecting_to_client = 0;
-
-class GyroCtrlIndication : public GyroCtrlIndicationWrapper
-{
-public:
-  GyroCtrlIndication(int id) : GyroCtrlIndicationWrapper(id) {}
-  virtual void read_reg_resp ( const uint32_t v){
-    if (verbose) fprintf(stderr, "GyroCtrlIndication::read_reg_resp(v=%x)\n", v);
-    read_reg_val = v;
-    sem_post(&read_sem);
-  }
-  virtual void write_reg_resp ( const uint32_t v){
-    if (verbose) fprintf(stderr, "GyroCtrlIndication::write_reg_resp(v=%x)\n", v);
-    sem_post(&write_sem);
-  }
-  virtual void sample_wrap(const uint32_t v){
-    if (verbose) fprintf(stderr, "GyroCtrlIndication::sample_wrap(v=%08x)\n", v);
-    sem_post(&wrap_sem);
-  }
-};
-
+pthread_t threaddata;
+int dstAlloc = 0;
+unsigned int *dstBuffer = NULL;
+int wrap_limit = 0;
 
 void* connect_to_client(void *_x)
 {
@@ -97,6 +79,72 @@ void* connect_to_client(void *_x)
   connecting_to_client = 0;
   return NULL;
 }
+
+class GyroCtrlIndication : public GyroCtrlIndicationWrapper
+{
+  uint32_t read_ptr;
+public:
+  GyroCtrlIndication(int id) : GyroCtrlIndicationWrapper(id), read_ptr(0) {}
+  virtual void read_reg_resp ( const uint32_t v){
+    if (verbose) fprintf(stderr, "GyroCtrlIndication::read_reg_resp(v=%x)\n", v);
+    read_reg_val = v;
+    sem_post(&read_sem);
+  }
+  virtual void write_reg_resp ( const uint32_t v){
+    if (verbose) fprintf(stderr, "GyroCtrlIndication::write_reg_resp(v=%x)\n", v);
+    sem_post(&write_sem);
+  }
+  virtual void timer(const uint32_t addr, const uint32_t wrapped){
+    int datalen, two, top, bottom = 0;
+    if(read_ptr < addr){
+      if(wrapped){
+	datalen = wrap_limit;
+	two = 1;
+	top = addr;
+	bottom = addr;
+      } else {
+	datalen = addr - read_ptr;
+	two = 0;
+	top = addr;
+	bottom = read_ptr;
+      }
+    } else { // read_ptr >= addr
+      if(wrapped){
+	datalen = wrap_limit - read_ptr + addr;
+	two = 1;
+	top = read_ptr;
+	bottom = addr;
+      } else { // hw hasn't made forward progress (only in bsim)
+	assert(addr == read_ptr);
+      } 
+    }
+    if (verbose) fprintf(stderr, "GyroCtrlIndication::timer(addr=%08x, wrapped=%d) (%d)\n", addr, wrapped, datalen);
+    if (!datalen) return;
+    portalDCacheInval(dstAlloc, alloc_sz, dstBuffer);
+    if (clientsockfd != -1){
+      int failed = 0;
+      if(write(clientsockfd, &(datalen), sizeof(int)) != sizeof(int)){
+	failed = 1;
+      } else {
+	if(two){
+	  if (write(clientsockfd, dstBuffer+top,  datalen-bottom) != datalen-bottom) failed = 1;
+	  else if (write(clientsockfd, dstBuffer,  bottom) != bottom) failed = 1;
+	} else {
+	  if(write(clientsockfd, dstBuffer+bottom,  datalen) != datalen) failed = 1;
+	}
+      }
+      if (failed){
+	fprintf(stderr, "write to clientsockfd failed\n");
+	shutdown(clientsockfd, 2);
+	close(clientsockfd);
+	clientsockfd = -1;
+      }
+    }
+    read_ptr = addr;
+  }
+};
+
+
 
 int start_server()
 {
@@ -121,10 +169,11 @@ int start_server()
 }
 
 
-void read_reg(GyroCtrlRequestProxy *device, unsigned short addr)
+unsigned short read_reg(GyroCtrlRequestProxy *device, unsigned short addr)
 {
   device->read_reg_req(addr);
   sem_wait(&read_sem);
+  return read_reg_val;
 }
 
 void write_reg(GyroCtrlRequestProxy *device, unsigned short addr, unsigned short val)
@@ -144,15 +193,14 @@ int main(int argc, const char **argv)
   MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
-  sem_init(&wrap_sem,1,0);
   sem_init(&read_sem,1,0);
   sem_init(&write_sem,1,0);
 
   portalExec_start();
   start_server();
 
-  int dstAlloc = portalAlloc(alloc_sz);
-  unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
+  dstAlloc = portalAlloc(alloc_sz);
+  dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
 
   long req_freq = 100000000; // 100 mHz
@@ -172,41 +220,31 @@ int main(int argc, const char **argv)
   // that the X component always lands in offset 0 when the HW wraps around
   int sample_size = 6;
   int bus_data_width = 8;
-  int wrap_limit = alloc_sz-(alloc_sz%(sample_size*bus_data_width)); 
-  fprintf(stderr, "wrap_limit:%08x\n", wrap_limit);
+  wrap_limit = alloc_sz-(alloc_sz%(sample_size*bus_data_width)); 
+  fprintf(stderr, "alloc_sz:%d\n", alloc_sz);
+  fprintf(stderr, "wrap_limit:%d\n", wrap_limit);
 
+  // set the frequency at which the fpga logic samples
+  // the pmod gyro by specifying the period in fpga cycles
 #ifdef BSIM
-  device->sample(ref_dstAlloc, wrap_limit, 10);
+  int gyro_sample_period = 6;
+  int timer_period = gyro_sample_period * 100000;
 #else
-  // sampling rate of 100Hz. Model running at 100 MHz. 
-  device->sample(ref_dstAlloc, wrap_limit, 1000000);
+  // Gyro sampling at a rate of 100Hz. 
+  // FPGA logic running at 100 MHz. 
+  int gyro_sample_period = 1000000;
+  int timer_period = gyro_sample_period * 100;
 #endif
+  device->sample(ref_dstAlloc, wrap_limit, gyro_sample_period, timer_period);
+
 
   // this is because I don't want the server to abort when the client goes offline
   signal(SIGPIPE, SIG_IGN); 
-  pthread_t threaddata;
-  int rv;
-  
-  while(true){
-    sem_wait(&wrap_sem);
-    portalDCacheInval(dstAlloc, alloc_sz, dstBuffer);
+  while(true) {
     if (clientsockfd == -1 && !connecting_to_client){
       connecting_to_client = 1;
-      pthread_create(&threaddata, NULL, &connect_to_client, &rv);
+      pthread_create(&threaddata, NULL, &connect_to_client, NULL);
     }
-    if (clientsockfd != -1){
-      int failed = 0;
-      if(write(clientsockfd, &(wrap_limit), sizeof(int)) != sizeof(int)){
-	failed = 1;
-      } else if(write(clientsockfd, dstBuffer,  wrap_limit) != wrap_limit) {
-	failed = 1;
-      }
-      if (failed){
-	fprintf(stderr, "write to clientsockfd failed\n");
-	shutdown(clientsockfd, 2);
-	close(clientsockfd);
-	clientsockfd = -1;
-      }
-    }
+    sleep(1);
   }
 }
