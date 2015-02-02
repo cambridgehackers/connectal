@@ -177,7 +177,7 @@ static void send_portal_xsim(struct PortalInternal *pint, volatile unsigned int 
 #ifdef BluenocTop
   // send a BlueNoc header
   uint32_t methodId = (hdr >> 16) & 0xFF;
-  uint32_t numwords = hdr & 0xFF;
+  uint32_t numwords = (hdr & 0xFF) - 1;
   //FIXME, probably should have portal number in dst (bits 7:0)
   uint32_t bluenoc_hdr = (methodId << 24) | (numwords << 16);
   memSlaveRequestProxy->msgSink(bluenoc_hdr);
