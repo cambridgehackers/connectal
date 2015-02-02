@@ -155,7 +155,7 @@ static unsigned int read_portal_xsim(PortalInternal *pint, volatile unsigned int
   size_t numwords = memSlaveIndication->srcbeats.size();
   uint32_t beat = memSlaveIndication->srcbeats.front();
   memSlaveIndication->srcbeats.pop();
-  fprintf(stderr, "FIXME [%s:%d] id=%d addr=%08lx data=%08x numwords=%d\n", __FUNCTION__, __LINE__, pint->fpga_number, (long)*addr, beat, numwords);
+  fprintf(stderr, "[%s:%d] id=%d addr=%08lx data=%08x numwords=%d\n", __FUNCTION__, __LINE__, pint->fpga_number, (long)*addr, beat, numwords);
   return beat;
 #endif
 
@@ -223,9 +223,9 @@ int event_portal_xsim(struct PortalInternal *pint)
     uint32_t numwords = (bluenoc_hdr >> 16) & 0xFF;
     uint32_t methodId = (bluenoc_hdr >> 24) & 0xFF;
 
-    fprintf(stderr, "[%s:%d] pint=%p srcbeats=%d methodwords=%d methodId=%d hdr=%08x\n",
-	    __FUNCTION__, __LINE__, pint, memSlaveIndication->srcbeats.size(), numwords, methodId, bluenoc_hdr);
     if (memSlaveIndication->srcbeats.size() >= numwords+1) {
+      fprintf(stderr, "[%s:%d] pint=%p srcbeats=%d methodwords=%d methodId=%d hdr=%08x\n",
+	      __FUNCTION__, __LINE__, pint, memSlaveIndication->srcbeats.size(), numwords, methodId, bluenoc_hdr);
           memSlaveIndication->srcbeats.pop();
 	  if (pint->handler)
 	    pint->handler(pint, methodId, 0);
