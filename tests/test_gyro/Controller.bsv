@@ -34,13 +34,13 @@ import ConnectalSpi::*;
 interface GyroCtrlRequest;
    method Action write_reg_req(Bit#(8) addr, Bit#(8) val);
    method Action read_reg_req(Bit#(8) addr);
-   method Action sample(Bit#(32) sgl_id, Bit#(32) alloc_sz, Bit#(32) gyro_sample_period, Bit#(32) timer_period);
+   method Action sample(Bit#(32) sgl_id, Bit#(32) alloc_sz, Bit#(32) sample_freq);
 endinterface
 
 interface GyroCtrlIndication;
    method Action read_reg_resp(Bit#(8) val);
    method Action write_reg_resp(Bit#(8) addr);
-   method Action timer(Bit#(32) addr, Bit#(32) wrapped);
+   method Action sample_wrap(Bit#(32) v);
 endinterface
 
 interface Controller;
@@ -52,26 +52,21 @@ endinterface
 
 module mkController#(GyroCtrlIndication ind)(Controller);
 
-   Reg#(Bool)      wrapped      <- mkReg(False);
-   SPI#(Bit#(16))  spiCtrl      <- mkSPI(1000, True);
-   Reg#(Bit#(32))  samplePeriod <- mkReg(0);
-   Reg#(Bit#(32))  timerPeriod  <- mkReg(0);
-   Reg#(Bit#(32))  sampleCnt    <- mkReg(0);
-   Reg#(Bit#(32))  timerCnt     <- mkReg(0);
-   Reg#(Bit#(32))  sglId        <- mkReg(0);
-   Reg#(Bit#(32))  allocSz      <- mkReg(0);
-   Vector#(2,Reg#(Bit#(32))) writePtr <- replicateM(mkReg(0));
-   FIFO#(Bool)     rc_fifo      <- mkSizedFIFO(1);
-   FIFO#(Bit#(8))  wr_queue     <- mkSizedFIFO(4);
-   Reg#(Bit#(8))   wr_reg       <- mkReg(0);
+   SPI#(Bit#(16))  spiCtrl    <- mkSPI(1000, True);
+   Reg#(Bit#(32))  sampleFreq <- mkReg(0);
+   Reg#(Bit#(32))  sampleCnt  <- mkReg(0);
+   Reg#(Bit#(32))  sglId      <- mkReg(0);
+   Reg#(Bit#(32))  allocSz    <- mkReg(0);
+   Reg#(Bit#(32))  writePtr   <- mkReg(0);
+   FIFO#(Bool)     rc_fifo    <- mkSizedFIFO(1);
+   FIFO#(Bit#(8))  wr_queue   <- mkSizedFIFO(4);
+   Reg#(Bit#(8))   wr_reg     <- mkReg(0);
 `ifdef BSIM
-   Reg#(Bit#(8))   bsim_cnt     <- mkReg(0);
+   Reg#(Bit#(8))   bsim_cnt   <- mkReg(0);
 `endif
    let clk <- exposeCurrentClock;
    let rst <- exposeCurrentReset;
    Gearbox#(1,8,Bit#(8)) gb     <- mk1toNGearbox(clk,rst,clk,rst);
-   Bit#(8) burst_len = 128;	  
-   
    
    let out_X_L = 'h28;
    let out_X_H = 'h29;
@@ -88,29 +83,29 @@ module mkController#(GyroCtrlIndication ind)(Controller);
       rc_fifo.deq;
    endrule
 
-   rule sample_req(samplePeriod > 0);
+   rule sample_req(sampleFreq > 0);
       let new_sampleCnt = sampleCnt+1; 
-      if (new_sampleCnt == samplePeriod-5) begin
+      if (new_sampleCnt == sampleFreq-5) begin
 	 spiCtrl.request.put({1'b1,1'b0,out_X_L,8'h00});
 	 if(verbose) $display("sample_x_l");
       end
-      else if (new_sampleCnt == samplePeriod-4) begin
+      else if (new_sampleCnt == sampleFreq-4) begin
 	 spiCtrl.request.put({1'b1,1'b0,out_X_H,8'h00});
 	 if(verbose) $display("sample_x_h");
       end
-      else if (new_sampleCnt == samplePeriod-3) begin
+      else if (new_sampleCnt == sampleFreq-3) begin
 	 spiCtrl.request.put({1'b1,1'b0,out_Y_L,8'h00});
 	 if(verbose) $display("sample_y_l");
       end
-      else if (new_sampleCnt == samplePeriod-2) begin
+      else if (new_sampleCnt == sampleFreq-2) begin
 	 spiCtrl.request.put({1'b1,1'b0,out_Y_H,8'h00});
 	 if(verbose) $display("sample_y_h");
       end
-      else if (new_sampleCnt == samplePeriod-1) begin
+      else if (new_sampleCnt == sampleFreq-1) begin
 	 spiCtrl.request.put({1'b1,1'b0,out_Z_L,8'h00});
 	 if(verbose) $display("sample_z_l");
       end
-      else if (new_sampleCnt >= samplePeriod-0) begin
+      else if (new_sampleCnt >= sampleFreq-0) begin
 	 spiCtrl.request.put({1'b1,1'b0,out_Z_H,8'h00});
 	 if(verbose) $display("sample_z_h");
 	 new_sampleCnt = 0;
@@ -118,7 +113,7 @@ module mkController#(GyroCtrlIndication ind)(Controller);
       sampleCnt <= new_sampleCnt;
    endrule
    
-   rule sample_resp(samplePeriod > 0);
+   rule sample_resp(sampleFreq > 0);
       if(verbose) $display("sample_resp");
       let rv <- spiCtrl.response.get;
 `ifdef BSIM
@@ -128,16 +123,6 @@ module mkController#(GyroCtrlIndication ind)(Controller);
 `else
       gb.enq(cons(truncate(rv),nil));
 `endif
-   endrule
-   
-   rule timer_rule_a(timerPeriod > 0 && timerCnt < timerPeriod);
-      timerCnt <= timerCnt+1;
-   endrule
-
-   rule timer_rule_b(timerPeriod > 0 && timerCnt >= timerPeriod);
-      timerCnt <= 0;
-      ind.timer(writePtr[1], extend(pack(wrapped)));
-      wrapped <=  False;
    endrule
    
    interface GyroCtrlRequest req;
@@ -150,10 +135,9 @@ module mkController#(GyroCtrlIndication ind)(Controller);
 	 spiCtrl.request.put({1'b1,1'b0,addr[5:0],8'h00});
 	 rc_fifo.enq(True);
       endmethod
-      method Action sample(Bit#(32) sgl_id, Bit#(32) alloc_sz, Bit#(32) gyro_sample_period, Bit#(32) timer_period);
-	 $display("sample %d %d %d %d", sgl_id, alloc_sz, gyro_sample_period, timer_period);
-	 samplePeriod <= gyro_sample_period;
-	 timerPeriod <= timer_period;
+      method Action sample(Bit#(32) sgl_id, Bit#(32) alloc_sz, Bit#(32) sample_freq);
+	 $display("sample %d %d %d", sgl_id, alloc_sz, sample_freq);
+	 sampleFreq <= sample_freq;
 	 sampleCnt <= 0;
 	 allocSz <= alloc_sz;
 	 sglId <= sgl_id;
@@ -165,27 +149,25 @@ module mkController#(GyroCtrlIndication ind)(Controller);
    endinterface
 
    interface SpiPins spi = spiCtrl.pins;
+
    interface MemWriteClient dmaClient;
       interface Get writeReq;
 	 method ActionValue#(MemRequest) get if (allocSz > 0);
-	    let bl = burst_len;
-	    let new_writePtr = writePtr[0] + extend(bl);
+	    Bit#(8) bl = 128;	    
+	    let new_writePtr = writePtr + extend(bl);
 	    if (new_writePtr >= allocSz) begin
 	       new_writePtr = 0;
-	       bl =  truncate(allocSz-writePtr[0]);
-	       wrapped <= True;
+	       bl =  truncate(allocSz-writePtr);
+	       ind.sample_wrap(allocSz);
 	    end
-	    writePtr[0] <= new_writePtr;
-	    if (verbose) $display("writeReq %d", writePtr[0]);
+	    writePtr <= new_writePtr;
+	    if (verbose) $display("writeReq %d", writePtr);
 	    wr_queue.enq(bl);
-	    return MemRequest {sglId:sglId, offset:extend(writePtr[0]), burstLen:bl, tag:0};
+	    return MemRequest {sglId:sglId, offset:extend(writePtr), burstLen:bl, tag:0};
 	 endmethod
       endinterface
       interface Get writeData;
 	 method ActionValue#(MemData#(64)) get;
-	    let new_writePtr = writePtr[1] + extend(burst_len);
-	    if (new_writePtr >= allocSz) new_writePtr = 0;
-	    writePtr[1] <= new_writePtr;
 	    gb.deq;
 	    let new_wr_reg = wr_reg-8;
 	    if (wr_reg == 0) begin
