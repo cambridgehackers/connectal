@@ -5,16 +5,15 @@ Connectal connects software and hardware via portals, where each portal is
 an interface that allows one side to invoke methods on the other side.
 
 We generally call a portal from software to hardware to be a "request"
-and from hardware to software to be an "indication" interface.
+and from hardware to software to be an "indication" interface::
 
-["seqdiag",target="request-response-21.png"]
----------------------------------------------------------------------
-{
-  SW; HW
-  SW -> HW [label = "request"];
-  SW <- HW [label = "indication"];
-}
----------------------------------------------------------------------
+    Sequence Diagram to be drawn
+    {
+      SW; HW
+      SW -> HW [label = "request"];
+      SW <- HW [label = "indication"];
+    }
+
 
 A portal is conceptually a FIFO, where the arguments to a method are
 packaged as a message. CONNECTAL generates a "proxy" that marshalls the
@@ -82,21 +81,30 @@ register region and then per-method FIFOs.
 For request portals, the FIFOs are from software to hardware, and for
 indication portals the FIFOs are from hardware to software.
 
-=== Portal FIFOs
+Portal FIFOs
+------------
 
-=== Portal Control Registers
+============== ==========
+ Base address   Function
+============== ==========
+ 0x0000        FIFO data (write request data, read indication data)
+ 0x0004        Request FIFO not full / Indication FIFO not empty
+============== ==========
 
+Portal Control Registers
+------------------------
 
 ============= ============================= =========================================================
 Base address  Function                      Description
 ============= ============================= =========================================================
-      0xc000  Interrupt status register     1 if this portal has any messages ready, 0 otherwise
-      0xC004  Interrupt enable register     Write 1 to enable interrupts, 0 to disable
-      0xC008  7                             Fixed value
-      0xC00C  Underflow read count reg      
-      0xC010  Out of range read count reg   
-      0xC014  Out of range write count reg  
-      0xC018  Ready channel indication      channel number + 1 if message is available, 0 otherwise
+      0x0000  Interrupt status register     1 if this portal has any messages ready, 0 otherwise
+      0x0004  Interrupt enable register     Write 1 to enable interrupts, 0 to disable
+      0x0008  7                             Fixed value
+      0x000C  Ready Channel number + 1      Reads as zero if no indication channel ready
+      0x0010  Interface Id
+      0x0014  Last portal                   1 if this is the last portal defined
+      0x0018  Cycle count LSW               Snapshots MSW when read
+      0x001C  Cycle count MSW               MSW of cycle count when LSW was read
 ============= ============================= =========================================================
 
 
