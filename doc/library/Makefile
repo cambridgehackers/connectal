@@ -175,3 +175,12 @@ pseudoxml:
 	$(SPHINXBUILD) -b pseudoxml $(ALLSPHINXOPTS) $(BUILDDIR)/pseudoxml
 	@echo
 	@echo "Build finished. The pseudo-XML files are in $(BUILDDIR)/pseudoxml."
+
+source/devguide/connectalbuild-1.png: source/devguide/connectalbuild.pdf
+	pdftoppm -png source/devguide/connectalbuild.pdf source/devguide/connectalbuild
+
+images: source/devguide/connectalbuild-1.png
+
+publish: images html latexpdf
+	rsync -avz build/html/* ../../../doc/current/ref
+	rsync -av build/latex/connectal.pdf ../../../doc/current/ref
