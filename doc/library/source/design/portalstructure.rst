@@ -87,8 +87,8 @@ Portal FIFOs
 ============== ==========
  Base address   Function
 ============== ==========
- 0x0000        FIFO data (write request data, read indication data)
- 0x0004        Request FIFO not full / Indication FIFO not empty
+   0x00        FIFO data (write request data, read indication data)
+   0x04        Request FIFO not full / Indication FIFO not empty
 ============== ==========
 
 Portal Control Registers
@@ -97,14 +97,14 @@ Portal Control Registers
 ============= ============================= =========================================================
 Base address  Function                      Description
 ============= ============================= =========================================================
-      0x0000  Interrupt status register     1 if this portal has any messages ready, 0 otherwise
-      0x0004  Interrupt enable register     Write 1 to enable interrupts, 0 to disable
-      0x0008  7                             Fixed value
-      0x000C  Ready Channel number + 1      Reads as zero if no indication channel ready
-      0x0010  Interface Id
-      0x0014  Last portal                   1 if this is the last portal defined
-      0x0018  Cycle count LSW               Snapshots MSW when read
-      0x001C  Cycle count MSW               MSW of cycle count when LSW was read
+	0x00  Interrupt status register     1 if this portal has any messages ready, 0 otherwise
+	0x04  Interrupt enable register     Write 1 to enable interrupts, 0 to disable
+	0x08  7                             Fixed value
+	0x0C  Ready Channel number + 1      Reads as zero if no indication channel ready
+	0x10  Interface Id
+	0x14  Last portal                   1 if this is the last portal defined
+	0x18  Cycle count LSW               Snapshots MSW when read
+	0x1C  Cycle count MSW               MSW of cycle count when LSW was read
 ============= ============================= =========================================================
 
 
