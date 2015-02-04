@@ -48,7 +48,7 @@ makefile can be included.  This brings in the default definitions of
 all project build parameters as well as the Connectal hardware and
 software libraries.  When running the toolchain on AWS, this varible
 is set automatically in the build environment.
-(\hyperref[compiling_a_project]{Section~\ref{compiling_a_project}})
+(See :ref:`compiling_a_project`)
 
 Project Source
 ==============
@@ -98,7 +98,7 @@ in ``LedControllerRequest.h`` which is included, along with C++
 implementations of all additional interface types in
 ``GeneratedTypes.h``. Line 9 instantiates the proxy through which
 the software invokes the hardware methods
-(\hyperref[flow_control]{Section~\ref{flow_control}}).
+(See also :ref:`flow_control`)
 
 Hardware
 =========
@@ -108,7 +108,7 @@ interface declarations and module definitions.  The implementation of
 the interfaces and all supporting infrastructure is standard BSV.
 Interfaces being used as portals are subject to the type restrictions
 described earlier
-(\hyperref[interface_definitions]{Section~\ref{interface_definitions}}).
+(See also :ref:`interface_definitions`)
 
 Top.bsv
 -------

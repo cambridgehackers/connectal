@@ -1,3 +1,5 @@
+.. _compiling_a_project:
+
 ***************************************
 Compiling and Running Connectal Project
 ***************************************

@@ -7,11 +7,13 @@
 Welcome to connectal's documentation!
 =====================================
 
-Contents:
+Contents
+--------
 
 .. toctree::
    :maxdepth: 2
 
+   design/portalstructure.rst
    devguide/devguide.rst
    bsv/bsv.rst
    examples/index.rst
