@@ -183,12 +183,12 @@ printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start
   return 0;
 }
 
-int portalDCacheInval(int fd, long size, void *__p)
+void portalDCacheInval(int fd, long size, void *__p)
 {
   portalDCacheFlushInvalInternal(fd,size,__p,0);
 }
 
-int portalDCacheFlushInval(int fd, long size, void *__p)
+void portalDCacheFlushInval(int fd, long size, void *__p)
 {
   portalDCacheFlushInvalInternal(fd,size,__p,1);
 }
