@@ -81,8 +81,9 @@ static struct file_operations pa_fops = {
   };
 static struct miscdevice miscdev = {
   .minor = MISC_DYNAMIC_MINOR,  // Must be < 256!
-  .name = "connectaltest",
+  .name = "connectal_unknown",
   .fops = &pa_fops,
+  .mode = S_IRUGO | S_IWUGO,
 };
 
 void *main_start(void *arg)
@@ -97,8 +98,6 @@ void *main_start(void *arg)
 static int __init pa_init(void)
 {
   pthread_t pid;
-  if (!makepid)
-    makepid = "makep";
   printk("TestProgram::pa_init minor %d makepid %s\n", miscdev.minor, makepid);
   miscdev.name = makepid;
   misc_register(&miscdev);

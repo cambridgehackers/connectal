@@ -53,10 +53,10 @@ int main(int argc, char *argv[])
     struct memrequest req;
     static PortalInternal pint;
     int rc;
-    char *bashpid = getenv("CONNECTAL_BASHPID");
+    char *bashpid = getenv("CONNECTAL_MODULE_NAME");
 
     if (!bashpid) {
-        printf("bsim_relay: define environment variable CONNECTAL_BASHPID\n");
+        printf("bsim_relay: define environment variable CONNECTAL_MODULE_NAME\n");
         return -1;
     }
     sprintf(devicename, "/dev/%s", bashpid);
