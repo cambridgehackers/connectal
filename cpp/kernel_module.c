@@ -34,9 +34,6 @@
 
 #include "portal.h"   // pthread_t
 
-static char *makepid = "makepid";
-module_param(makepid, charp, 0);
-
 extern int main(int argc, char *argv[]);
 int bsim_relay_running;
 struct semaphore bsim_start;
@@ -98,8 +95,8 @@ void *main_start(void *arg)
 static int __init pa_init(void)
 {
   pthread_t pid;
-  printk("TestProgram::pa_init minor %d makepid %s\n", miscdev.minor, makepid);
-  miscdev.name = makepid;
+  printk("TestProgram::pa_init minor %d thisname %s\n", miscdev.minor, THIS_MODULE->name);
+  miscdev.name = THIS_MODULE->name;
   misc_register(&miscdev);
   sema_init (&bsim_start, 0);
   pthread_create(&pid, NULL, main_start, NULL);
@@ -108,7 +105,7 @@ static int __init pa_init(void)
 
 static void __exit pa_exit(void)
 {
-  printk("TestProgram::pa_exit makepid %s\n", makepid);
+  printk("TestProgram::pa_exit %s\n", THIS_MODULE->name);
 #ifdef BOARD_bluesim
   if (!bsim_relay_running) {
     printk("TestProgram::pa_exit terminate main program\n");
