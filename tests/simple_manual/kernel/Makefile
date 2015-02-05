@@ -19,6 +19,8 @@ export KROOT=/lib/modules/$(shell uname -r)/build
 CPPDIR=../../../cpp
 BOARDDIR=../$(BOARD)/jni
 DRIVERDIR=$(src)/../../../
+CONNECTAL_BASHPID:=$$PPID
+export CONNECTAL_BASHPID
 
 KBUILD_EXTRA_SYMBOLS := $(DRIVERDIR)/drivers/pcieportal/Module.symvers \
       $(DRIVERDIR)/drivers/portalmem/Module.symvers
@@ -58,9 +60,10 @@ ifneq ("$(CURRENTMOD)", "")
 endif
 	sudo modprobe pcieportal
 	sudo modprobe portalmem
-	sudo insmod kernel_exe.ko
+	sudo insmod kernel_exe.ko makepid=$(CONNECTAL_BASHPID)
 	#sudo insmod bdbm_drv.ko
 ifeq ($(BOARD),bluesim)
+	sudo chmod a+rw /dev/$(CONNECTAL_BASHPID)
 	./bsim_relay
 	kill `cat tmp.bluesim.makefile.pid`
 	#killall bluetcl

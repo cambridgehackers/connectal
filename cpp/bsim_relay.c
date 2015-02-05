@@ -19,6 +19,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
 #include <sys/select.h>
@@ -46,15 +47,22 @@ int i;
     printf("\n");
 }
 
+static char devicename[1000];
 int main(int argc, char *argv[])
 {
     struct memrequest req;
     static PortalInternal pint;
     int rc;
+    char *bashpid = getenv("CONNECTAL_BASHPID");
 
-    int fd = open("/dev/connectaltest", O_RDWR);
+    if (!bashpid) {
+        printf("bsim_relay: define environment variable CONNECTAL_BASHPID\n");
+        return -1;
+    }
+    sprintf(devicename, "/dev/%s", bashpid);
+    int fd = open(devicename, O_RDWR);
     if (fd == -1) {
-        printf("bsimhost: /dev/connectaltest not found\n");
+        printf("bsimhost: '%s' not found\n", devicename);
         return -1;
     }
 printf("[%s:%d] trying to connect to bsim\n", __FUNCTION__, __LINE__);
