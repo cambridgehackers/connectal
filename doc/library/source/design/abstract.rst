@@ -27,4 +27,4 @@ the repetitive work of processor bus interfacing from project tasks.
 This framework is released as open software under an MIT license, making
 it available for use in any projects.
 
-.. Connectal: http://www.connectal.org/
+.. _Connectal: http://www.connectal.org/
