@@ -28,7 +28,7 @@ sizeofUint32_t = 4
 generatedVectors = []
 
 proxyClassPrefixTemplate='''
-class %(className)sProxy : public %(parentClass)s {
+class %(className)sJsonProxy : public %(parentClass)s {
 public:
     %(className)sProxy(int id, PortalPoller *poller = 0) : Portal(id, %(className)s_reqinfo, NULL, NULL, poller) {};
     %(className)sProxy(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(className)s_reqinfo, NULL, NULL, item, param, poller) {};
@@ -36,18 +36,18 @@ public:
 
 wrapperClassPrefixTemplate='''
 extern %(className)sCb %(className)s_cbTable;
-class %(className)sWrapper : public %(parentClass)s {
+class %(className)sJsonWrapper : public %(parentClass)s {
 public:
-    %(className)sWrapper(int id, PortalPoller *poller = 0) : Portal(id, %(className)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, poller) {
+    %(className)sJsonWrapper(int id, PortalPoller *poller = 0) : Portal(id, %(className)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, poller) {
         pint.parent = static_cast<void *>(this);
     };
-    %(className)sWrapper(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(className)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, item, param, poller) {
+    %(className)sJsonWrapper(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(className)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, item, param, poller) {
         pint.parent = static_cast<void *>(this);
     };
 '''
 
 handleMessageTemplateDecl='''
-int %(className)s_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd)'''
+int %(className)sJson_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd)'''
 
 handleMessageTemplate1='''
 {
@@ -55,16 +55,13 @@ handleMessageTemplate1='''
     int tmpfd;
     unsigned int tmp;
     volatile unsigned int* temp_working_addr = p->item->mapchannelInd(p, channel);
+    %(className)sData tempdata;
+    connnectalJsonDecode(&tempdata, temp_working_addr, &%(className)sInfo);
     switch (channel) {'''
 
 handleMessageCase='''
     case %(channelNumber)s:
-        {
-        %(paramStructDeclarations)s
-        p->item->recv(p, temp_working_addr, %(wordLen)s, &tmpfd);
-        %(paramStructDemarshall)s
         %(responseCase)s
-        }
         break;'''
 
 handleMessageTemplate2='''
@@ -82,14 +79,27 @@ handleMessageTemplate2='''
 }
 '''
 
+jsonStructTemplateDecl='''
+static ConnectalParamJsonInfo %(channelName)sInfo = {
+    %(paramJsonDeclarations)s
+    {}
+};'''
+
+jsonMethodTemplateDecl='''
+static ConnectalMethodJsonInfo %(className)sInfo = {
+    %(methodJsonDeclarations)s
+    {}
+};'''
+
 proxyMethodTemplateDecl='''
-int %(className)s_%(methodName)s (%(paramProxyDeclarations)s )'''
+int %(className)sJson_%(methodName)s (%(paramProxyDeclarations)s )'''
 
 proxyMethodTemplate='''
 {
     volatile unsigned int* temp_working_addr_start = p->item->mapchannelReq(p, %(channelNumber)s);
-    volatile unsigned int* temp_working_addr = temp_working_addr_start;
+    %(channelName)sData tempdata;
     %(paramStructMarshall)s
+    connectalJsonEncode(temp_working_addr_start, "%(methodName)s", &tempdata, &%(channelName)sInfo);
     p->item->send(p, temp_working_addr_start, (%(channelNumber)s << 16) | %(wordLenP1)s, %(fdName)s);
     return 0;
 };
@@ -244,7 +254,8 @@ def generate_marshall(pfmt, w):
         outstr += '\n    ' + fmt % (e.name, e.name)
     return outstr
 
-def generate_demarshall(fmt, w):
+def generate_demarshall(argStruct, w):
+    fmt, methodName = argStruct
     word = []
     for e in w:
         # print e.name+' (d)'
@@ -254,9 +265,9 @@ def generate_demarshall(fmt, w):
             continue
         field = '(%s)' % (field)
         if typeCName(e.datatype) == 'SpecialTypeForSendingFd':
-            word.append('%s %s messageFd;'%(e.name, e.assignOp))
+            word.append('tempdata.%s.%s %s messageFd;'%(methodName, e.name, e.assignOp))
         else:
-            word.append('%s %s (%s)%s;'%(e.name, e.assignOp, typeCName(e.datatype), fmt % e.name))
+            word.append('tempdata.%s.%s %s (%s)(%s);'%(methodName, e.name, e.assignOp, typeCName(e.datatype), field))
     return '\n        '.join(word)
 
 def formalParameters(params, insertPortal):
@@ -268,44 +279,43 @@ def formalParameters(params, insertPortal):
 def gatherMethodInfo(mname, params, itemname):
     global fdName
 
+    className = cName(itemname)
+    methodName = cName(mname)
     argAtoms = sum(map(functools.partial(collectMembers, ''), params), [])
     argAtoms.reverse()
     argWords  = accumWords([], 0, argAtoms)
     fdName = '-1'
 
-    paramStructMarshallStr = 'p->item->write(p, &temp_working_addr, "%s", %s);'
-    paramStructDemarshallStr = 'p->item->read(p, "%s", &temp_working_addr)'
+    paramStructMarshallStr = 'tempdata.%s = %s;'
 
     if argWords == []:
         paramStructMarshall = [paramStructMarshallStr % ('NULLNAME','0')]
-        paramStructDemarshall = [paramStructDemarshallStr]
     else:
         paramStructMarshall = map(functools.partial(generate_marshall, paramStructMarshallStr), argWords)
         paramStructMarshall.reverse()
-        paramStructDemarshall = map(functools.partial(generate_demarshall, paramStructDemarshallStr), argWords)
-        paramStructDemarshall.reverse()
 
-    paramStructDeclarations = [ '%s %s;' % (typeCName(pitem['type']), pitem['name']) for pitem in params]
+    chname = '%s_%s' % (className, methodName)
+    paramJsonDeclarations = [ '{"%s", Connectaloffsetof(%s,%s)},' % (pitem['name'], chname, pitem['name']) for pitem in params]
     if not params:
-        paramStructDeclarations = ['        int padding;\n']
-    respParams = [pitem['name'] for pitem in params]
+        paramJsonDeclarations = ['    int padding;\n']
+    respParams = ['tempdata.%s.%s' % (methodName, pitem['name']) for pitem in params]
     respParams.insert(0, 'p')
     substs = {
-        'methodName': cName(mname),
+        'methodName': methodName,
         'paramDeclarations': formalParameters(params, False),
         'paramProxyDeclarations': formalParameters(params, True),
-        'paramStructDeclarations': '\n        '.join(paramStructDeclarations),
+        'paramJsonDeclarations': '\n    '.join(paramJsonDeclarations),
         'paramStructMarshall': '\n    '.join(paramStructMarshall),
-        'paramStructDemarshall': '\n        '.join(paramStructDemarshall),
         'paramNames': ', '.join(['msg->%s' % pitem['name'] for pitem in params]),
         'wordLen': len(argWords),
         'wordLenP1': len(argWords) + 1,
         'fdName': fdName,
-        'className': cName(itemname),
-        'channelNumber': 'CHAN_NUM_%s_%s' % (cName(itemname), cName(mname)),
+        'className': className,
+        'channelName': chname,
+        'channelNumber': 'CHAN_NUM_%s' % chname,
         'responseCase': ('((%(className)sCb *)p->cb)->%(name)s(%(params)s);'
                           % { 'name': mname,
-                              'className' : cName(itemname),
+                              'className' : className,
                               'params': ', '.join(respParams)})
         }
     return substs, len(argWords)
@@ -329,26 +339,30 @@ def emitMethodDeclaration(mname, params, f, className):
 def generate_class(className, declList, parentC, parentCC, generatedCFiles, create_cpp_file, generated_cpp):
     global generatedVectors
     classCName = cName(className)
-    cppname = '%s.c' % className
-    hppname = '%s.h' % className
+    cppname = '%sJson.c' % className
+    hppname = '%sJson.h' % className
     if cppname in generatedCFiles:
         return
     generatedCFiles.append(cppname)
     hpp = create_cpp_file(hppname)
     cpp = create_cpp_file(cppname)
-    hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': className.upper()})
+    hpp.write('#ifndef _%(name)sJson_H_\n#define _%(name)sJson_H_\n' % {'name': className.upper()})
     hpp.write('#include "%s.h"\n' % parentC)
     generated_cpp.write('\n/************** Start of %sWrapper CPP ***********/\n' % className)
     generated_cpp.write('#include "%s"\n' % hppname)
     maxSize = 0
     reqChanNums = []
+    methodJsonDeclarations = []
     for mitem in declList:
         substs, t = gatherMethodInfo(mitem['name'], mitem['params'], className)
         if t > maxSize:
             maxSize = t
+        cpp.write((jsonStructTemplateDecl) % substs)
         cpp.write((proxyMethodTemplateDecl + proxyMethodTemplate) % substs)
+        methodJsonDeclarations.append('{"%(methodName)s", &%(className)s_%(methodName)sInfo},' % substs)
         generatedVectors = []
         reqChanNums.append(substs['channelNumber'])
+    cpp.write(jsonMethodTemplateDecl % {'className': classCName, 'methodJsonDeclarations': '\n    '.join(methodJsonDeclarations)})
     subs = {'className': classCName, 'maxSize': (maxSize+1) * sizeofUint32_t, 'parentClass': parentCC, \
             'reqInfo': '0x%x' % ((len(declList) << 16) + (maxSize+1) * sizeofUint32_t) }
     hpp.write(proxyClassPrefixTemplate % subs)
@@ -429,7 +443,7 @@ def generate_cppjson(project_dir, noisyFlag, jsondata):
     generatedCFiles.append(cppname)
     generated_cpp.write('\n#ifndef NO_CPP_PORTAL_CODE\n')
     for item in jsondata['interfaces']:
-        generate_class(item['name']+'Json', item['decls'], item['parentLportal'], item['parentPortal'], generatedCFiles, create_cpp_file, generated_cpp)
+        generate_class(item['name'], item['decls'], item['parentLportal'], item['parentPortal'], generatedCFiles, create_cpp_file, generated_cpp)
     generated_cpp.write('#endif //NO_CPP_PORTAL_CODE\n')
     generated_cpp.close()
     gen_makefile = util.createDirAndOpen(os.path.join(project_dir, 'jni', 'Makefile.generated_filesJson'), 'w')

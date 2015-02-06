@@ -132,6 +132,17 @@ typedef struct {
     void                 *socketParam;
 } PortalMuxParam;
 
+typedef struct {
+    const char *name;
+    size_t      offset;
+} ConnectalParamJsonInfo;
+typedef struct {
+    const char *name;
+    ConnectalParamJsonInfo *param;
+} ConnectalMethodJsonInfo;
+
+#define Connectaloffsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
+
 #ifdef __KERNEL__
 #include <linux/module.h>
 #include <linux/kernel.h>

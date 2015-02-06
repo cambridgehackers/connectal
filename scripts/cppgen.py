@@ -54,22 +54,25 @@ typedef struct {
     %(paramStructDeclarations)s
 } %(channelName)sData;'''
 
+portalStructTemplate='''
+typedef union {
+    %(messageStructDeclarations)s
+} %(className)sData;'''
+
 handleMessageTemplate1='''
 {
     static int runaway = 0;
     int tmpfd;
     unsigned int tmp;
     volatile unsigned int* temp_working_addr = p->item->mapchannelInd(p, channel);
+    %(className)sData tempdata;
     switch (channel) {'''
 
 handleMessageCase='''
     case %(channelNumber)s:
-        {
-        %(channelName)sData tempdata;
         p->item->recv(p, temp_working_addr, %(wordLen)s, &tmpfd);
         %(paramStructDemarshall)s
         %(responseCase)s
-        }
         break;'''
 
 handleMessageTemplate2='''
@@ -319,7 +322,8 @@ def generate_marshall(pfmt, w):
             fmt = 'p->item->writefd(p, &temp_working_addr, %s);'
     return fmt % (''.join(util.intersperse('|', word)))
 
-def generate_demarshall(fmt, w):
+def generate_demarshall(argStruct, w):
+    fmt, methodName = argStruct
     off = 0
     word = []
     word.append(fmt)
@@ -337,9 +341,9 @@ def generate_demarshall(fmt, w):
         if e.shifted:
             field = '((%s)(%s)<<%s)' % (typeCName(e.datatype),field, e.shifted)
         if typeCName(e.datatype) == 'SpecialTypeForSendingFd':
-            word.append('tempdata.%s %s messageFd;'%(e.name, e.assignOp))
+            word.append('tempdata.%s.%s %s messageFd;'%(methodName, e.name, e.assignOp))
         else:
-            word.append('tempdata.%s %s (%s)(%s);'%(e.name, e.assignOp, typeCName(e.datatype), field))
+            word.append('tempdata.%s.%s %s (%s)(%s);'%(methodName, e.name, e.assignOp, typeCName(e.datatype), field))
         off = off+e.width-e.shifted
     return '\n        '.join(word)
 
@@ -352,6 +356,8 @@ def formalParameters(params, insertPortal):
 def gatherMethodInfo(mname, params, itemname):
     global fdName
 
+    className = cName(itemname)
+    methodName = cName(mname)
     argAtoms = sum(map(functools.partial(collectMembers, ''), params), [])
     argAtoms.reverse()
     argWords  = accumWords([], 0, argAtoms)
@@ -366,17 +372,17 @@ def gatherMethodInfo(mname, params, itemname):
     else:
         paramStructMarshall = map(functools.partial(generate_marshall, paramStructMarshallStr), argWords)
         paramStructMarshall.reverse()
-        paramStructDemarshall = map(functools.partial(generate_demarshall, paramStructDemarshallStr), argWords)
+        paramStructDemarshall = map(functools.partial(generate_demarshall, [paramStructDemarshallStr, methodName]), argWords)
         paramStructDemarshall.reverse()
 
+    chname = '%s_%s' % (className, methodName)
     paramStructDeclarations = [ '%s %s;' % (typeCName(pitem['type']), pitem['name']) for pitem in params]
     if not params:
         paramStructDeclarations = ['    int padding;\n']
-    respParams = ['tempdata.' + pitem['name'] for pitem in params]
+    respParams = ['tempdata.%s.%s' % (methodName, pitem['name']) for pitem in params]
     respParams.insert(0, 'p')
-    chname = '%s_%s' % (cName(itemname), cName(mname))
     substs = {
-        'methodName': cName(mname),
+        'methodName': methodName,
         'paramDeclarations': formalParameters(params, False),
         'paramProxyDeclarations': formalParameters(params, True),
         'paramStructDeclarations': '\n    '.join(paramStructDeclarations),
@@ -386,12 +392,12 @@ def gatherMethodInfo(mname, params, itemname):
         'wordLen': len(argWords),
         'wordLenP1': len(argWords) + 1,
         'fdName': fdName,
-        'className': cName(itemname),
+        'className': className,
         'channelName': chname,
         'channelNumber': 'CHAN_NUM_%s' % chname,
         'responseCase': ('((%(className)sCb *)p->cb)->%(name)s(%(params)s);'
                           % { 'name': mname,
-                              'className' : cName(itemname),
+                              'className' : className,
                               'params': ', '.join(respParams)})
         }
     return substs, len(argWords)
@@ -452,6 +458,11 @@ def generate_class(className, declList, parentC, parentCC, generatedCFiles, crea
         substs, t = gatherMethodInfo(mitem['name'], mitem['params'], className)
         generated_hpp.write(messageStructTemplate % substs)
         cpp.write(handleMessageCase % substs)
+    elemList = []
+    for mitem in declList:
+        substs, t = gatherMethodInfo(mitem['name'], mitem['params'], className)
+        elemList.append('%(channelName)sData %(methodName)s;' % substs)
+    generated_hpp.write(portalStructTemplate % {'className': classCName, 'messageStructDeclarations': '\n    '.join(elemList)})
     cpp.write(handleMessageTemplate2 % subs)
     generated_hpp.write((handleMessageTemplateDecl % subs)+ ';\n')
     hpp.write(wrapperClassPrefixTemplate % subs)
