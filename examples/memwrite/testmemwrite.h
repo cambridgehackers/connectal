@@ -164,10 +164,8 @@ void parent(int wr_sock)
   if (orig_test){
     fprintf(stderr, "parent::starting write %08x\n", numWords);
     portalTimerStart(0);
-    //portalTrace_start();
     device->startWrite(ref_dstAlloc, 0, numWords, burstLen, iterCnt);
     sem_wait(&test_sem);
-    //portalTrace_stop();
     uint64_t cycles = portalTimerLap(0);
     hostMemServerRequest->memoryTraffic(ChannelType_Write);
     uint64_t beats = hostMemServerIndication->receiveMemoryTraffic();

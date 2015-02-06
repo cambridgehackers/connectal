@@ -32,14 +32,16 @@ import Leds::*;
 import ConnectalSpi::*;
 
 interface GyroCtrlRequest;
-   method Action write_reg(Bit#(8) addr, Bit#(8) val);
+   method Action write_reg_req(Bit#(8) addr, Bit#(8) val);
    method Action read_reg_req(Bit#(8) addr);
    method Action sample(Bit#(32) sgl_id, Bit#(32) alloc_sz, Bit#(32) sample_freq);
+   method Action set_en(Bit#(32) en);
 endinterface
 
 interface GyroCtrlIndication;
    method Action read_reg_resp(Bit#(8) val);
-   method Action sample_wrap(Bit#(32) v);
+   method Action write_reg_resp(Bit#(8) addr);
+   method Action memwrite_status(Bit#(32) addr, Bit#(32) wrap_cnt);
 endinterface
 
 interface Controller;
@@ -51,9 +53,11 @@ endinterface
 
 module mkController#(GyroCtrlIndication ind)(Controller);
 
+   Reg#(Bit#(32))  en_memwr   <- mkReg(0);
    SPI#(Bit#(16))  spiCtrl    <- mkSPI(1000, True);
    Reg#(Bit#(32))  sampleFreq <- mkReg(0);
    Reg#(Bit#(32))  sampleCnt  <- mkReg(0);
+   Reg#(Bit#(32))  wrapCnt    <- mkReg(0);
    Reg#(Bit#(32))  sglId      <- mkReg(0);
    Reg#(Bit#(32))  allocSz    <- mkReg(0);
    Reg#(Bit#(32))  writePtr   <- mkReg(0);
@@ -61,12 +65,11 @@ module mkController#(GyroCtrlIndication ind)(Controller);
    FIFO#(Bit#(8))  wr_queue   <- mkSizedFIFO(4);
    Reg#(Bit#(8))   wr_reg     <- mkReg(0);
 `ifdef BSIM
-   Reg#(Bit#(16))  bsim_cnt   <- mkReg(0);
+   Reg#(Bit#(8))   bsim_cnt   <- mkReg(0);
 `endif
-
    let clk <- exposeCurrentClock;
    let rst <- exposeCurrentReset;
-   Gearbox#(1,4,Bit#(16)) gb    <- mk1toNGearbox(clk,rst,clk,rst);
+   Gearbox#(1,8,Bit#(8)) gb   <- mk1toNGearbox(clk,rst,clk,rst);
    
    let out_X_L = 'h28;
    let out_X_H = 'h29;
@@ -82,20 +85,32 @@ module mkController#(GyroCtrlIndication ind)(Controller);
 	 ind.read_reg_resp(truncate(rv));
       rc_fifo.deq;
    endrule
-
+      
    rule sample_req(sampleFreq > 0);
       let new_sampleCnt = sampleCnt+1; 
-      if (new_sampleCnt == sampleFreq-2) begin
-	 spiCtrl.request.put({1'b1,1'b1,out_X_L,8'h00});
-	 if(verbose) $display("sample_x");
+      if (new_sampleCnt == sampleFreq-5) begin
+	 spiCtrl.request.put({1'b1,1'b0,out_X_L,8'h00});
+	 if(verbose) $display("sample_x_l");
+      end
+      else if (new_sampleCnt == sampleFreq-4) begin
+	 spiCtrl.request.put({1'b1,1'b0,out_X_H,8'h00});
+	 if(verbose) $display("sample_x_h");
+      end
+      else if (new_sampleCnt == sampleFreq-3) begin
+	 spiCtrl.request.put({1'b1,1'b0,out_Y_L,8'h00});
+	 if(verbose) $display("sample_y_l");
+      end
+      else if (new_sampleCnt == sampleFreq-2) begin
+	 spiCtrl.request.put({1'b1,1'b0,out_Y_H,8'h00});
+	 if(verbose) $display("sample_y_h");
       end
       else if (new_sampleCnt == sampleFreq-1) begin
-	 spiCtrl.request.put({1'b1,1'b1,out_Y_L,8'h00});
-	 if(verbose) $display("sample_y");
+	 spiCtrl.request.put({1'b1,1'b0,out_Z_L,8'h00});
+	 if(verbose) $display("sample_z_l");
       end
-      else if (new_sampleCnt >= sampleFreq) begin
-	 spiCtrl.request.put({1'b1,1'b1,out_Z_L,8'h00});
-	 if(verbose) $display("sample_z");
+      else if (new_sampleCnt >= sampleFreq-0) begin
+	 spiCtrl.request.put({1'b1,1'b0,out_Z_H,8'h00});
+	 if(verbose) $display("sample_z_h");
 	 new_sampleCnt = 0;
       end
       sampleCnt <= new_sampleCnt;
@@ -105,16 +120,18 @@ module mkController#(GyroCtrlIndication ind)(Controller);
       if(verbose) $display("sample_resp");
       let rv <- spiCtrl.response.get;
 `ifdef BSIM
-      bsim_cnt <= (bsim_cnt == 2) ? 0 : bsim_cnt+1;
-      gb.enq(cons(bsim_cnt+1,nil));
+      bsim_cnt <= (bsim_cnt == 5) ? 0 : bsim_cnt+1;
+      let bsim_val = bsim_cnt[0]==1'b0 ? bsim_cnt+1 : 0;
+      gb.enq(cons(bsim_val,nil));
 `else
-      gb.enq(cons(rv,nil));
+      gb.enq(cons(truncate(rv),nil));
 `endif
    endrule
    
    interface GyroCtrlRequest req;
-      method Action write_reg(Bit#(8) addr, Bit#(8) val);
+      method Action write_reg_req(Bit#(8) addr, Bit#(8) val);
 	 spiCtrl.request.put({1'b0,1'b0,addr[5:0],val});
+	 ind.write_reg_resp(addr);
 	 rc_fifo.enq(False);
       endmethod
       method Action read_reg_req(Bit#(8) addr);
@@ -128,6 +145,10 @@ module mkController#(GyroCtrlIndication ind)(Controller);
 	 allocSz <= alloc_sz;
 	 sglId <= sgl_id;
       endmethod
+      method Action set_en(Bit#(32) en);
+	 en_memwr <= en;
+	 if(en == 0) ind.memwrite_status(writePtr, wrapCnt);
+      endmethod
    endinterface
    
    interface LEDS leds;
@@ -138,13 +159,14 @@ module mkController#(GyroCtrlIndication ind)(Controller);
 
    interface MemWriteClient dmaClient;
       interface Get writeReq;
-	 method ActionValue#(MemRequest) get if (allocSz > 0);
-	    Bit#(8) bl = 128;	    
-	    let new_writePtr = writePtr + extend(bl);
+	 method ActionValue#(MemRequest) get if (allocSz > 0); // && en_memwr > 0);
+	    Bit#(8) bl = 128;
+	    Bit#(32) new_writePtr = writePtr + extend(bl);
 	    if (new_writePtr >= allocSz) begin
 	       new_writePtr = 0;
 	       bl =  truncate(allocSz-writePtr);
-	       ind.sample_wrap(allocSz);
+	       wrapCnt <= wrapCnt+1;
+	       //en_memwr <= en_memwr-1;
 	    end
 	    writePtr <= new_writePtr;
 	    if (verbose) $display("writeReq %d", writePtr);

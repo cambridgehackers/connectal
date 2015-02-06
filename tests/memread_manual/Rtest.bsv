@@ -31,20 +31,20 @@ import MemTypes::*;
 import MemreadEngine::*;
 import Pipe::*;
 
-interface MemreadRequest;
+interface RtestRequest;
    method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
 endinterface
 
-interface Memread;
-   interface MemreadRequest request;
+interface Rtest;
+   interface RtestRequest request;
    interface MemReadClient#(64) dmaClient;
 endinterface
 
-interface MemreadIndication;
+interface RtestIndication;
    method Action readDone(Bit#(32) mismatchCount);
 endinterface
 
-module mkMemread#(MemreadIndication indication) (Memread);
+module mkRtest#(RtestIndication indication) (Rtest);
 
    Reg#(SGLId)   pointer <- mkReg(0);
    Reg#(Bit#(32))       numWords <- mkReg(0);
@@ -84,7 +84,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    endrule
    
    interface dmaClient = re.dmaClient;
-   interface MemreadRequest request;
+   interface RtestRequest request;
       method Action startRead(Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic) if (itersToStart == 0 && itersToFinish == 0);
 	 pointer <= rp;
 	 cf.enq(?);

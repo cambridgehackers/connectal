@@ -27,8 +27,8 @@ kernel_exe-y := ../memread_manual_manager.o \
      $(BOARDDIR)/MMUIndicationWrapper.o \
      $(BOARDDIR)/MemServerRequestProxy.o \
      $(BOARDDIR)/MemServerIndicationWrapper.o \
-     $(BOARDDIR)/MemreadIndicationWrapper.o \
-     $(BOARDDIR)/MemreadRequestProxy.o \
+     $(BOARDDIR)/RtestIndicationWrapper.o \
+     $(BOARDDIR)/RtestRequestProxy.o \
      $(CPPDIR)/portal.o \
      $(CPPDIR)/dmaManager.o \
      $(CPPDIR)/kernel_module.o

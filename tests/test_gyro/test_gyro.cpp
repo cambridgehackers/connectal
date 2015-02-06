@@ -44,33 +44,40 @@
 
 #include "gyro.h"
 
-#ifdef BSIM
-int alloc_sz = 1<<8;
-#else
-int alloc_sz = 1<<14;
-#endif
-static sem_t wrap_sem;
-int ss[3];
+static int alloc_sz = 1<<10;
+static sem_t status_sem;
+static sem_t read_sem;
+static sem_t write_sem;
+static uint32_t read_reg_val;
+static int verbose = 1;
+static int clientsockfd = -1;
+static int serversockfd = -1;
+static int portno = 1234;
+static int connecting_to_client = 0;
+static uint32_t write_addr = 0;
+static int write_wrap_cnt = 0;
 
 class GyroCtrlIndication : public GyroCtrlIndicationWrapper
 {
 public:
   GyroCtrlIndication(int id) : GyroCtrlIndicationWrapper(id) {}
   virtual void read_reg_resp ( const uint32_t v){
-    fprintf(stderr, "GyroCtrlIndication::read_reg_resp(v=%x)\n", v);
+    //fprintf(stderr, "GyroCtrlIndication::read_reg_resp(v=%x)\n", v);
+    read_reg_val = v;
+    sem_post(&read_sem);
   }
-  virtual void sample_wrap(const uint32_t v){
-#ifdef BSIM
-    fprintf(stderr, "GyroCtrlIndication::sample_wrap(v=%08x)\n", v);
-#endif
-    sem_post(&wrap_sem);
+  virtual void write_reg_resp ( const uint32_t v){
+    //fprintf(stderr, "GyroCtrlIndication::write_reg_resp(v=%x)\n", v);
+    sem_post(&write_sem);
+  }
+  virtual void memwrite_status(const uint32_t addr, const uint32_t wrap_cnt){
+    //fprintf(stderr, "GyroCtrlIndication::memwrite_status(addr=%08x, wrap_cnt=%d)\n", addr, wrap_cnt);
+    write_addr = addr;
+    write_wrap_cnt = wrap_cnt;
+    sem_post(&status_sem);
   }
 };
 
-int clientsockfd = -1;
-int serversockfd = -1;
-int portno = 1234;
-int connecting_to_client = 0;
 
 void* connect_to_client(void *_x)
 {
@@ -102,7 +109,7 @@ int start_server()
     fprintf(stderr, "ERROR opening socket");
     return -1;
   }
-  bzero((char *) &serv_addr, sizeof(serv_addr));
+  memset((char *) &serv_addr, 0x0, sizeof(serv_addr));
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_addr.s_addr = INADDR_ANY;
   serv_addr.sin_port = htons(portno);
@@ -114,6 +121,26 @@ int start_server()
 }
 
 
+void read_reg(GyroCtrlRequestProxy *device, unsigned short addr)
+{
+  device->read_reg_req(addr);
+  sem_wait(&read_sem);
+}
+
+void write_reg(GyroCtrlRequestProxy *device, unsigned short addr, unsigned short val)
+{
+  device->write_reg_req(addr,val);
+  sem_wait(&write_sem);
+}
+
+
+void display(void *b, int len){
+  short *ss = (short*)b;
+  for(int i = 0; i < len/2; i+=3){
+    fprintf(stderr, "%8d %8d %8d\n", ss[i], ss[i+1], ss[i+2]);
+  }
+}
+
 int main(int argc, const char **argv)
 {
   GyroCtrlIndication *ind = new GyroCtrlIndication(IfcNames_ControllerIndication);
@@ -124,65 +151,148 @@ int main(int argc, const char **argv)
   MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
-  sem_init(&wrap_sem,1,0);
+  sem_init(&status_sem,1,0);
+  sem_init(&read_sem,1,0);
+  sem_init(&write_sem,1,0);
+
   portalExec_start();
   start_server();
 
   int dstAlloc = portalAlloc(alloc_sz);
-  unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
+  char *dstBuffer = (char *)portalMmap(dstAlloc, alloc_sz);
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
 
   long req_freq = 100000000; // 100 mHz
   long freq = 0;
   setClockFrequency(0, req_freq, &freq);
   fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
-  sleep(1);
 
   // setup
-  device->write_reg(CTRL_REG3, 0);
-  device->write_reg(CTRL_REG1, CTRL_REG1_PD | CTRL_REG1_ZEN | CTRL_REG1_YEN | CTRL_REG1_XEN);
-  sleep(2);
+  write_reg(device, CTRL_REG1, 0b00001111);  // ODR:100Hz Cutoff:30
+  write_reg(device, CTRL_REG2, 0b00000000);
+  write_reg(device, CTRL_REG3, 0b00000000);
+  write_reg(device, CTRL_REG4, 0b10100000);  // BDU:1, Range:2000 dps
+  write_reg(device, CTRL_REG5, 0b00000000);
+  
 
-  // sample has one two-byte component for each axis (x,y,z).  I want the 
-  // wrap-around to work so that the X component always lands in offset 0
+#ifndef BSIM
+  if(verbose){
+    for(int i = 0; i < 32; i++){
+      short int tmp;
+      read_reg(device, OUT_X_H);
+      tmp = read_reg_val << 8;
+      read_reg(device, OUT_X_L);
+      tmp |= read_reg_val;
+      fprintf(stderr, "XXX %8d, ", (short int)tmp);
+
+      read_reg(device, OUT_Y_H);
+      tmp = read_reg_val << 8;
+      read_reg(device, OUT_Y_L);
+      tmp |= read_reg_val;
+      fprintf(stderr, "%8d, ", (short int)tmp);
+
+      read_reg(device, OUT_Z_H);
+      tmp = read_reg_val << 8;
+      read_reg(device, OUT_Z_L);
+      tmp |= read_reg_val;
+      fprintf(stderr, "%8d\n", (short int)tmp);
+    }
+  }
+#endif
+  
+  // sample has one two-byte component for each axis (x,y,z).  This is to ensure 
+  // that the X component always lands in offset 0 when the HW wraps around
   int sample_size = 6;
   int bus_data_width = 8;
-  int wrap_limit = alloc_sz-(alloc_sz%(sample_size*bus_data_width)); // want lcm
-  int cnt = 0;
-
+  int wrap_limit = alloc_sz-(alloc_sz%(sample_size*bus_data_width)); 
   fprintf(stderr, "wrap_limit:%08x\n", wrap_limit);
 
 #ifdef BSIM
   device->sample(ref_dstAlloc, wrap_limit, 10);
 #else
-  device->sample(ref_dstAlloc, wrap_limit, 10);
+  // sampling rate of 100Hz. Model running at 100 MHz. 
+  device->sample(ref_dstAlloc, wrap_limit, 1000000);
 #endif
 
-
-  signal(SIGPIPE, SIG_IGN);
+  // this is because I don't want the server to abort when the client goes offline
+  signal(SIGPIPE, SIG_IGN); 
   pthread_t threaddata;
   int rv;
 
+  uint32_t addr = 0;
+  int wrap_cnt = 0;
+
   while(true){
-    sem_wait(&wrap_sem);
-    portalDCacheInval(dstAlloc, alloc_sz, dstBuffer);
-    if (clientsockfd == -1 && !connecting_to_client){
-      connecting_to_client = 1;
-      pthread_create(&threaddata, NULL, &connect_to_client, &rv);
+#ifdef BSIM
+    sleep(5);
+#else
+    usleep(1000000);
+#endif
+    device->set_en(0);
+    sem_wait(&status_sem);
+    int dwc = write_wrap_cnt - wrap_cnt;
+    int two,top,bottom,datalen=0;
+    if(dwc == 0){
+      assert(addr <= write_addr);
+      two = false;
+      top = write_addr;
+      bottom = addr;
+      datalen = write_addr - addr;
+    } else if (dwc == 1 && addr > write_addr) {
+      two = true;
+      top = addr;
+      bottom = write_addr;
+      datalen = (wrap_limit-top)+bottom;
+    } else if (write_addr == 0) {
+      two = false;
+      top = wrap_limit;
+      bottom = 0;
+      datalen = wrap_limit;
+    } else {
+      two = true;
+      top = write_addr;
+      bottom = write_addr;
+      datalen = wrap_limit;
     }
-    if (clientsockfd != -1){
-      int failed = 0;
-      if(write(clientsockfd, &(wrap_limit), sizeof(int)) != sizeof(int)){
-	failed = 1;
-      } else if(write(clientsockfd, dstBuffer,  wrap_limit) != wrap_limit) {
-	failed = 1;
+    top = (top/6)*6;
+    bottom = (bottom/6)*6;
+
+    if (verbose) fprintf(stderr, "two:%d, top:%x, bottom:%x, datalen:%x\n", two,top,bottom,datalen);
+    if (datalen){
+      portalDCacheInval(dstAlloc, alloc_sz, dstBuffer);
+      if (clientsockfd == -1 && !connecting_to_client){
+	connecting_to_client = 1;
+	pthread_create(&threaddata, NULL, &connect_to_client, &rv);
       }
-      if (failed){
-	fprintf(stderr, "write to clientsockfd failed\n");
-	shutdown(clientsockfd, 2);
-	close(clientsockfd);
-	clientsockfd = -1;
+      if (two){
+      	if (verbose) display(dstBuffer+top, wrap_limit-top);
+      	if (verbose) display(dstBuffer, bottom);
+      } else {
+      	if (verbose) display(dstBuffer+bottom, datalen);
+      }
+      if (clientsockfd != -1 && datalen > 0){
+	int failed = 0;
+	if(write(clientsockfd, &(datalen), sizeof(int)) != sizeof(int)){
+	  failed = 1;
+	} else if (two) {
+	  if (write(clientsockfd, dstBuffer+top,  datalen-bottom) != datalen-bottom) {
+	    failed = 1;
+	  } else if (write(clientsockfd, dstBuffer,  bottom) != bottom) {
+	    failed = 1;
+	  }
+	} else if (write(clientsockfd, dstBuffer+bottom,  datalen) != datalen) {
+	  failed = 1;
+	}
+	if (failed){
+	  fprintf(stderr, "write to clientsockfd failed\n");
+	  shutdown(clientsockfd, 2);
+	  close(clientsockfd);
+	  clientsockfd = -1;
+	}
       }
     }
-  }
+    device->set_en(1);
+    addr = write_addr;
+    wrap_cnt = write_wrap_cnt;
+  } 
 }
