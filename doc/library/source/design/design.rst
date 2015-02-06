@@ -11,6 +11,8 @@ Connectal Design
    implementing-string-search.rst
    toolchain.rst
    performance.rst
+   related-work.rst
+   conclusion.rst
 
    portalstructure.rst
    portal.rst
