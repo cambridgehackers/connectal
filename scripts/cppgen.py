@@ -49,6 +49,11 @@ public:
 handleMessageTemplateDecl='''
 int %(className)s_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd)'''
 
+messageStructTemplate='''
+typedef struct {
+    %(paramStructDeclarations)s
+} %(channelName)sData;'''
+
 handleMessageTemplate1='''
 {
     static int runaway = 0;
@@ -60,7 +65,7 @@ handleMessageTemplate1='''
 handleMessageCase='''
     case %(channelNumber)s:
         {
-        %(paramStructDeclarations)s
+        %(channelName)sData tempdata;
         p->item->recv(p, temp_working_addr, %(wordLen)s, &tmpfd);
         %(paramStructDemarshall)s
         %(responseCase)s
@@ -332,9 +337,9 @@ def generate_demarshall(fmt, w):
         if e.shifted:
             field = '((%s)(%s)<<%s)' % (typeCName(e.datatype),field, e.shifted)
         if typeCName(e.datatype) == 'SpecialTypeForSendingFd':
-            word.append('%s %s messageFd;'%(e.name, e.assignOp))
+            word.append('tempdata.%s %s messageFd;'%(e.name, e.assignOp))
         else:
-            word.append('%s %s (%s)(%s);'%(e.name, e.assignOp, typeCName(e.datatype), field))
+            word.append('tempdata.%s %s (%s)(%s);'%(e.name, e.assignOp, typeCName(e.datatype), field))
         off = off+e.width-e.shifted
     return '\n        '.join(word)
 
@@ -366,14 +371,15 @@ def gatherMethodInfo(mname, params, itemname):
 
     paramStructDeclarations = [ '%s %s;' % (typeCName(pitem['type']), pitem['name']) for pitem in params]
     if not params:
-        paramStructDeclarations = ['        int padding;\n']
-    respParams = [pitem['name'] for pitem in params]
+        paramStructDeclarations = ['    int padding;\n']
+    respParams = ['tempdata.' + pitem['name'] for pitem in params]
     respParams.insert(0, 'p')
+    chname = '%s_%s' % (cName(itemname), cName(mname))
     substs = {
         'methodName': cName(mname),
         'paramDeclarations': formalParameters(params, False),
         'paramProxyDeclarations': formalParameters(params, True),
-        'paramStructDeclarations': '\n        '.join(paramStructDeclarations),
+        'paramStructDeclarations': '\n    '.join(paramStructDeclarations),
         'paramStructMarshall': '\n    '.join(paramStructMarshall),
         'paramStructDemarshall': '\n        '.join(paramStructDemarshall),
         'paramNames': ', '.join(['msg->%s' % pitem['name'] for pitem in params]),
@@ -381,7 +387,8 @@ def gatherMethodInfo(mname, params, itemname):
         'wordLenP1': len(argWords) + 1,
         'fdName': fdName,
         'className': cName(itemname),
-        'channelNumber': 'CHAN_NUM_%s_%s' % (cName(itemname), cName(mname)),
+        'channelName': chname,
+        'channelNumber': 'CHAN_NUM_%s' % chname,
         'responseCase': ('((%(className)sCb *)p->cb)->%(name)s(%(params)s);'
                           % { 'name': mname,
                               'className' : cName(itemname),
@@ -443,6 +450,7 @@ def generate_class(className, declList, parentC, parentCC, generatedCFiles, crea
     cpp.write(handleMessageTemplate1 % subs)
     for mitem in declList:
         substs, t = gatherMethodInfo(mitem['name'], mitem['params'], className)
+        generated_hpp.write(messageStructTemplate % substs)
         cpp.write(handleMessageCase % substs)
     cpp.write(handleMessageTemplate2 % subs)
     generated_hpp.write((handleMessageTemplateDecl % subs)+ ';\n')
