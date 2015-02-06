@@ -13,7 +13,8 @@ Contents
 .. toctree::
    :maxdepth: 2
 
-   design/portalstructure.rst
+   intro.rst
+   design/design.rst
    devguide/devguide.rst
    bsv/bsv.rst
    examples/index.rst
