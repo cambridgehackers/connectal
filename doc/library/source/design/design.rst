@@ -5,8 +5,9 @@ Connectal Design
    :maxdepth: 2
 
    abstract.rst
+   introduction.rst
+   portalstructure.rst
    portal.rst
    interface_definitions.rst
-   portalstructure.rst
    flowcontrol.rst
    host_interface.rst
