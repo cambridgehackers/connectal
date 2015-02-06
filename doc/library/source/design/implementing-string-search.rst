@@ -84,11 +84,17 @@ is invoked remotely from software.  Direct access to the memory mapped
 hardware FIFOs by the generated proxy running in user-mode is key to
 the efficiency of our implementation strategy.
 
-.. image:: images/msc1.*
+.. only:: html
+
+   .. image:: images/msc1.*
+
+.. only:: latexpdf
+
+   .. image:: design/images/msc1.png
 
 .. _Fig-msc1: 
 
-.. figure:: .. image:: images/msc1.*
+.. figure:: images/msc1.png
 
    SW invokes HW: *main* and *app HW* are implemented by the user.
 
@@ -134,11 +140,17 @@ Figure :ref:Fig-msc0 shows how all the pieces of an application
 collaborate when software functionality is being invoked from
 hardware.
 
-.. image:: images/msc0.*
+.. only:: html
+
+   .. image:: images/msc0.*
+
+.. only:: latexpdf
+
+   .. image:: images/msc0.png
 
 .. _Fig-msc0:
 
-.. figure:: msc0.*
+.. figure:: images/msc0.png
 
        HW invokes SW: `main', `ind::wrapper', and `app HW' are implemented by the user.
 
@@ -228,11 +240,17 @@ the corresponding wrapper method is invoked to read/marshal the
 arguments and invoke the actual user-defined methods.
 Figure :ref:`Fig-msc2` shows this process.
 
-.. image:: images/msc2.*
+.. only:: html
+
+   .. image:: images/msc2.*
+
+.. only:: latexpdf
+
+   .. image:: images/msc2.png
 
 .. _Fig-msc2:
 
-.. figure:: msc2.*
+.. figure:: 
 
     HW invokes SW using interrupts
 
