@@ -17,6 +17,7 @@ Contents
    design/design.rst
    devguide/devguide.rst
    bsv/bsv.rst
+   c/c.rst
    examples/index.rst
 
 Indices and tables
