@@ -10,6 +10,8 @@ Connectal Design
    connectal-framework.rst
    implementing-string-search.rst
    toolchain.rst
+   performance.rst
+
    portalstructure.rst
    portal.rst
    interface_definitions.rst
