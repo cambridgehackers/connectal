@@ -1,11 +1,11 @@
-.. Sec:Impl:
+.. Sec-Impl:
 
 Implementing String Search
 ==========================
 
 Having covered the features of the Connectal at a high level, we now
 explain more specifically how the framework can be applied to
-implement the refinements outlined in Section :ref:`Sec:StrStr`.
+implement the refinements outlined in Section :ref:`Sec-StrStr`.
 
 Initial Implementation
 ----------------------
@@ -38,7 +38,7 @@ assigned to each logical interface method.
 In our initial implementation the accelerator does not access system
 memory directly, so the search string is transmitted to the
 accelerator one character at a time via the {\tt setupNeedle}
-method. We will see in Section~\ref{Sec:StringSearchSystemMemory} how
+method. We will see in Section~\ref{Sec-StringSearchSystemMemory} how
 to use a pointer to system memory instead. 
 
 Invoking Hardware from Software
@@ -243,16 +243,16 @@ each portal.  This feature can be used to grant different users or
 processes exclusive access and prevent unauthorized access to specific
 pieces of hardware functionality.
 
-.. Sec:StringSearchSystemMemory:
+.. Sec-StringSearchSystemMemory:
 
 Shared Access to Host Memory
 ----------------------------
 
 
-In the first three refinements presented in Section~\ref{Sec:StrStr},
+In the first three refinements presented in Section~\ref{Sec-StrStr},
 all communication between hardware and software takes place through
 register-mapped IO.  The final refinement in
-Section :ref:`Sec:StrStrDma` is to grant hardware and software shared
+Section :ref:`Sec-StrStrDma` is to grant hardware and software shared
 access to host memory.  The interface to the search accelerator shown
 below has been updated to use direct access to system memory for the
 search strings:
@@ -305,7 +305,7 @@ taking care of address translation transparently.
 To fully exploit the data parallelism, {\tt mkStrStr} partitions the
 search space into $p$ partitions. It instantiates two memory read
 trees from the Connectal library ({\tt MemreadEngineV}, discussed in
-Section~\ref{Sec:MemreadEngine}), each with $p$ read servers.  One set
+Section~\ref{Sec-MemreadEngine}), each with $p$ read servers.  One set
 is used by the search kernels to read the configuration data from the
 host memory, while the other is used to read the ``haystack'' from
 flash.
@@ -324,7 +324,7 @@ transmit the messages. This separation enables ``swappable''
 application-specific transport libraries.  In light of this, a large
 number of transport mechanism can be considered. Switching between
 mechanism requires a simple directive in the project Makefile (more
-details are given in Section~\ref{Sec:ToolChain}).
+details are given in Section~\ref{Sec-ToolChain}).
 
 By default, each portal is mapped to a region of address space and a
 memory-mapped FIFO channel is generated for each method. Though

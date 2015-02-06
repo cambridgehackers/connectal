@@ -1,4 +1,4 @@
-.. _Sec:StrStr:
+.. _Sec-StrStr:
 
 Accelerating String Search
 ==========================

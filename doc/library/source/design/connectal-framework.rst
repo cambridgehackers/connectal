@@ -1,10 +1,10 @@
-.. _Sec:Framework:
+.. _Sec-Framework:
 
 The Connectal Framework
 =======================
 
 In and of themselves, none of the HW/SW interfaces considered in
-Section :ref:`Sec:StrStr` are particularly complex.  On the other hand,
+Section :ref:`Sec-StrStr` are particularly complex.  On the other hand,
 implementing the complete set and maintaining correctness as the
 application evolves is a considerable amount of care, requiring deep
 understanding of both the application and the platform.  The Connectal
@@ -140,7 +140,7 @@ aggregates, Connectal provides address translation support to hardware
 accelerators in the FPGA, similar to the MMU functionality on the CPU
 side.
 
-.. _Sec:MemreadEngine:
+.. _Sec-MemreadEngine:
 
 Distributed Access to Memory Ports
 ----------------------------------

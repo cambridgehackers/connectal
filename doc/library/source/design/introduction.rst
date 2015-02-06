@@ -1,4 +1,4 @@
-.. Sec:Introduction:
+.. Sec-Introduction:
 
 Introduction
 ************
@@ -76,12 +76,12 @@ connected FPGAs and CPUs.
 Document Organization
 =====================
 
-In Section :ref:`Sec:StrStr`, we present an example running in a
+In Section :ref:`Sec-StrStr`, we present an example running in a
 number of different execution environments. In Section
-:ref:`Sec:Framework`, we give an overview of the Connectal framework
-and its design goals.  In Section :ref:`Sec:Impl` we discuss the
+:ref:`Sec-Framework`, we give an overview of the Connectal framework
+and its design goals.  In Section :ref:`Sec-Impl` we discuss the
 details of Connectal and how it can be used to implement the
-example. Section :ref:`Sec:ToolChain` describes the implementation of
+example. Section :ref:`Sec-ToolChain` describes the implementation of
 Connectal, supported platforms, and the tool chain used to coordinate
 the various parts of the framework.  The paper concludes with a
 discussion of performance metrics and related work.

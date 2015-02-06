@@ -1,4 +1,4 @@
-.. _Sec:Performance:
+.. _Sec-Performance:
 
 Performance of Generated Systems
 ================================

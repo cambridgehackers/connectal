@@ -1,4 +1,4 @@
-.. _Sec:Conclusion:
+.. _Sec-Conclusion:
 
 Conclusion
 ==========
