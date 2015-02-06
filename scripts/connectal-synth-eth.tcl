@@ -16,6 +16,7 @@ proc create_altera_10gbe_pma {channels} {
     dict set params data_path_select                    "pma_direct"
     dict set params channels                            4
     dict set params bonded_mode                         "non_bonded"
+    dict set params enable_simple_interface             1
     dict set params set_data_rate                       "10312.5"
     dict set params pma_direct_width                    40
     dict set params tx_pma_clk_div                      1
