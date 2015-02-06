@@ -1,4 +1,4 @@
-.. Sec:StrStr:
+.. _Sec:StrStr:
 
 Accelerating String Search
 ==========================
@@ -28,7 +28,7 @@ memory.  The FPGA board was designed as a platform to accelerate ``big
 data'' analytics by moving more processing power closer to the storage
 device.
 
-.. Sec:StrStrInitial:
+.. _Sec:StrStrInitial:
 
 Initial Implementation
 ----------------------
@@ -92,7 +92,7 @@ in software as well.  As shown in Figure~\ref{Fig:StringSearch1}, a
 mutex is used to coordinate access to the shared hardware resource
 between user-level processes.
 
-.. Sec:StrStrRefiningInterfaces:
+.. _Sec:StrStrRefiningInterfaces:
 
 Refining the Interfaces
 -----------------------
@@ -134,7 +134,7 @@ each thread uncontested access to its own dedicated HW resources
 mapped into disjoint address regions. (There will of course be
 implicit synchronization through the file system.)
 
-.. Sec:StrStrDma:
+.. _Sec:StrStrDma:
 
 Shared Access to Host Memory
 ----------------------------

@@ -8,6 +8,8 @@ Connectal Design
    introduction.rst
    string-search.rst
    connectal-framework.rst
+   implementing-string-search.rst
+   toolchain.rst
    portalstructure.rst
    portal.rst
    interface_definitions.rst
