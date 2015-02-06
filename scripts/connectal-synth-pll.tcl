@@ -1,7 +1,7 @@
 source "board.tcl"
 source "$connectaldir/scripts/connectal-synth-ip.tcl"
 
-proc create_custom_pll {refclk args} {
+proc create_custom_pll {name refclk args} {
     global ipdir boardname partname
     set num [llength $args]
 
@@ -45,7 +45,7 @@ proc create_custom_pll {refclk args} {
 
     set core_name {altera_pll}
     set core_version {14.0}
-    set ip_name {altera_pll_wrapper}
+    set ip_name $name
 
     exec -ignorestderr -- ip-generate \
             --project-directory=$ipdir/$boardname                            \
@@ -55,7 +55,7 @@ proc create_custom_pll {refclk args} {
             --report-file=sopcinfo:$ipdir/$boardname/$ip_name.sopcinfo       \
             --report-file=cmp:$ipdir/$boardname/$ip_name.cmp                 \
             --report-file=svd:$ipdir/$boardname/synthesis/$ip_name.svd       \
-            --report-file=qip:$ipdir/$boardname/synthesis/altera_pll.qip     \
+            --report-file=qip:$ipdir/$boardname/synthesis/altera_$ip_name.qip     \
             --report-file=regmap:$ipdir/$boardname/synthesis/$ip_name.regmap \
             --report-file=xml:$ipdir/$boardname/$ip_name.xml                 \
             --system-info=DEVICE_FAMILY=StratixV                             \
@@ -67,4 +67,5 @@ proc create_custom_pll {refclk args} {
             --output-name=$ip_name
 }
 
-create_custom_pll 50.0 125.0 156.25
+create_custom_pll pll_156 50.0 156.25
+create_custom_pll pll_644 156.25 644.53125
