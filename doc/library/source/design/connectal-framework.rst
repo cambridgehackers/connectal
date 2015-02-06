@@ -170,7 +170,7 @@ are connected.  The software and hardware libraries are largely
 platform independent.  As a result, applications implemented in the
 framework can be compiled to run on the range of different platforms.
 
-Supported platforms are shown in Figure~\ref{Fig:platforms}.
+Supported platforms are shown in Figure :ref:`Fig-platforms`.
 Application software can be executed on x86 and ARM CPUs running
 either Ubuntu or Android operating systems. A range of different
 Xilinx FPGAs can be connected to the CPU and system memory via PCI
@@ -182,8 +182,8 @@ resources (for example, a block device or a network interface), the
 application may run in kernel mode with the logic run either in an
 FPGA or in Bluesim.
 
-    \begin{figure}[htb]
-      \centering
-      \includegraphics[width=0.47\textwidth]{platforms.pdf}
-      \caption{\label{Fig:platforms} Platforms supported by Connectal}
-    \end{figure}
+.. image:: images/platforms.*
+
+.. _Fig-platforms: Platforms supported by Connectal
+   
+
