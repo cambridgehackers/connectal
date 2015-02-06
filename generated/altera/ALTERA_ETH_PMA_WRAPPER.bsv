@@ -42,10 +42,9 @@ interface EthxcvrwrapRx;
     method Bit#(4)     is_lockedtodata();
     method Bit#(4)     is_lockedtoref();
     method Bit#(4)     pma_clkout();
-    method Bit#(320)     pma_parallel_data();
+    method Bit#(160)     pma_parallel_data();
     method Action      serial_data(Bit#(4) v);
-    method Action      set_locktodata(Bit#(4) v);
-    method Action      set_locktoref(Bit#(4) v);
+    method Action      seriallpbken(Bit#(4) v);
 endinterface
 (* always_ready, always_enabled *)
 interface EthxcvrwrapTx;
@@ -54,8 +53,13 @@ interface EthxcvrwrapTx;
     method Action      digitalreset(Bit#(4) v);
     method Action      pll_refclk(Bit#(1) v);
     method Bit#(4)     pma_clkout();
-    method Action      pma_parallel_data(Bit#(320) v);
+    method Action      pma_parallel_data(Bit#(160) v);
     method Bit#(4)     serial_data();
+endinterface
+(* always_ready, always_enabled *)
+interface EthxcvrwrapUnused;
+    method Bit#(160)     rx_pma_parallel_data();
+    method Action      tx_pma_parallel_data(Bit#(160) v);
 endinterface
 (* always_ready, always_enabled *)
 interface EthXcvrWrap;
@@ -63,6 +67,7 @@ interface EthXcvrWrap;
     interface EthxcvrwrapReconfig     reconfig;
     interface EthxcvrwrapRx     rx;
     interface EthxcvrwrapTx     tx;
+    interface EthxcvrwrapUnused     unused;
 endinterface
 import "BVI" altera_xcvr_native_sv_wrapper =
 module mkEthXcvrWrap(EthXcvrWrap);
@@ -86,8 +91,7 @@ module mkEthXcvrWrap(EthXcvrWrap);
         method rx_pma_clkout pma_clkout();
         method rx_pma_parallel_data pma_parallel_data();
         method serial_data(rx_serial_data) enable((*inhigh*) EN_rx_serial_data);
-        method set_locktodata(rx_set_locktodata) enable((*inhigh*) EN_rx_set_locktodata);
-        method set_locktoref(rx_set_locktoref) enable((*inhigh*) EN_rx_set_locktoref);
+        method seriallpbken(rx_seriallpbken) enable((*inhigh*) EN_rx_seriallpbken);
     endinterface
     interface EthxcvrwrapTx     tx;
         method analogreset(tx_analogreset) enable((*inhigh*) EN_tx_analogreset);
@@ -98,5 +102,9 @@ module mkEthXcvrWrap(EthXcvrWrap);
         method pma_parallel_data(tx_pma_parallel_data) enable((*inhigh*) EN_tx_pma_parallel_data);
         method tx_serial_data serial_data();
     endinterface
-    schedule (pll.locked, pll.powerdown, reconfig.from_xcvr, reconfig.to_xcvr, rx.analogreset, rx.cal_busy, rx.cdr_refclk, rx.digitalreset, rx.is_lockedtodata, rx.is_lockedtoref, rx.pma_clkout, rx.pma_parallel_data, rx.serial_data, rx.set_locktodata, rx.set_locktoref, tx.analogreset, tx.cal_busy, tx.digitalreset, tx.pll_refclk, tx.pma_clkout, tx.pma_parallel_data, tx.serial_data) CF (pll.locked, pll.powerdown, reconfig.from_xcvr, reconfig.to_xcvr, rx.analogreset, rx.cal_busy, rx.cdr_refclk, rx.digitalreset, rx.is_lockedtodata, rx.is_lockedtoref, rx.pma_clkout, rx.pma_parallel_data, rx.serial_data, rx.set_locktodata, rx.set_locktoref, tx.analogreset, tx.cal_busy, tx.digitalreset, tx.pll_refclk, tx.pma_clkout, tx.pma_parallel_data, tx.serial_data);
+    interface EthxcvrwrapUnused     unused;
+        method unused_rx_pma_parallel_data rx_pma_parallel_data();
+        method tx_pma_parallel_data(unused_tx_pma_parallel_data) enable((*inhigh*) EN_unused_tx_pma_parallel_data);
+    endinterface
+    schedule (pll.locked, pll.powerdown, reconfig.from_xcvr, reconfig.to_xcvr, rx.analogreset, rx.cal_busy, rx.cdr_refclk, rx.digitalreset, rx.is_lockedtodata, rx.is_lockedtoref, rx.pma_clkout, rx.pma_parallel_data, rx.serial_data, rx.seriallpbken, tx.analogreset, tx.cal_busy, tx.digitalreset, tx.pll_refclk, tx.pma_clkout, tx.pma_parallel_data, tx.serial_data, unused.rx_pma_parallel_data, unused.tx_pma_parallel_data) CF (pll.locked, pll.powerdown, reconfig.from_xcvr, reconfig.to_xcvr, rx.analogreset, rx.cal_busy, rx.cdr_refclk, rx.digitalreset, rx.is_lockedtodata, rx.is_lockedtoref, rx.pma_clkout, rx.pma_parallel_data, rx.serial_data, rx.seriallpbken, tx.analogreset, tx.cal_busy, tx.digitalreset, tx.pll_refclk, tx.pma_clkout, tx.pma_parallel_data, tx.serial_data, unused.rx_pma_parallel_data, unused.tx_pma_parallel_data);
 endmodule
