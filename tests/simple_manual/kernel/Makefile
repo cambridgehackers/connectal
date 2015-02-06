@@ -4,11 +4,11 @@
 ###################### Flags for using KC705   ###################
 #BOARD=kc705
 ###################### Flags for using VC707   ###################
-BOARD=vc707
+#BOARD=vc707
 ###################### Flags for using zedboard ##################
 #BOARD=zedboard
 ###################### Flags for using Bluesim ###################
-#BOARD=bluesim
+BOARD=bluesim
 ###################### End of target h/w flags ###################
 
 ifeq ($(BOARD),bluesim)
@@ -19,20 +19,21 @@ export KROOT=/lib/modules/$(shell uname -r)/build
 CPPDIR=../../../cpp
 BOARDDIR=../$(BOARD)/jni
 DRIVERDIR=$(src)/../../../
+CONNECTAL_MODULE_NAME:=connectaluser_$(USER)
 
 KBUILD_EXTRA_SYMBOLS := $(DRIVERDIR)/drivers/pcieportal/Module.symvers \
       $(DRIVERDIR)/drivers/portalmem/Module.symvers
 
-kernel_exe-y := ../simple_manual.o \
+$(CONNECTAL_MODULE_NAME)-y := ../simple_manual.o \
      $(BOARDDIR)/SimpleIndication.o \
      $(BOARDDIR)/SimpleRequest.o \
      $(CPPDIR)/portal.o \
      $(CPPDIR)/portalSocket.o \
      $(CPPDIR)/kernel_module.o
 
-kernel_exe-n := $(CPPDIR)/dmaManager.o
+$(CONNECTAL_MODULE_NAME)-n := $(CPPDIR)/dmaManager.o
 
-obj-m := kernel_exe.o
+obj-m := $(CONNECTAL_MODULE_NAME).o
 
 ccflags-y := -I$(src)/.. -I$(DRIVERDIR) -I$(src)/$(CPPDIR) -I$(src)/$(BOARDDIR) $(HARDWARE_FLAGS)
 
@@ -41,9 +42,9 @@ default:
 
 clean:
 	$(MAKE) -C $(KROOT) M=$(PWD) clean
-	rm -f a.out
+	rm -f a.out bsim_relay socket_for_bluesim tmp.bluesim.makefile.pid
 
-CURRENTMOD=$(shell lsmod | grep kernel_exe)
+CURRENTMOD=$(shell lsmod | grep $(CONNECTAL_MODULE_NAME))
 
 run: host
 ifeq ($(BOARD),bluesim)
@@ -53,19 +54,19 @@ else
 	fpgajtag ../$(BOARD)/bin/mkTop.bin.gz
 endif
 ifneq ("$(CURRENTMOD)", "")
-	sudo rmmod kernel_exe
+	sudo rmmod $(CONNECTAL_MODULE_NAME)
 	#sudo rmmod bdbm_drv
 endif
 	sudo modprobe pcieportal
 	sudo modprobe portalmem
-	sudo insmod kernel_exe.ko
+	sudo insmod $(CONNECTAL_MODULE_NAME).ko
 	#sudo insmod bdbm_drv.ko
 ifeq ($(BOARD),bluesim)
-	./bsim_relay
+	CONNECTAL_MODULE_NAME=$(CONNECTAL_MODULE_NAME) ./bsim_relay
 	kill `cat tmp.bluesim.makefile.pid`
 	#killall bluetcl
 endif
-	sudo rmmod kernel_exe
+	sudo rmmod $(CONNECTAL_MODULE_NAME)
 	#sudo rmmod bdbm_drv
 	dmesg | tail -30
 	@rm -f tmp.bluesim.makefile.pid

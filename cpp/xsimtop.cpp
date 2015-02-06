@@ -353,6 +353,8 @@ int main(int argc, char **argv)
 
 	}
 
+	// setup time
+	xsiInstance.run(10);
 	clk.write(1);
 	xsiInstance.run(10);
 

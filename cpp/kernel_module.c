@@ -78,8 +78,9 @@ static struct file_operations pa_fops = {
   };
 static struct miscdevice miscdev = {
   .minor = MISC_DYNAMIC_MINOR,  // Must be < 256!
-  .name = "connectaltest",
+  .name = "connectal_unknown",
   .fops = &pa_fops,
+  .mode = S_IRUGO | S_IWUGO,
 };
 
 void *main_start(void *arg)
@@ -94,7 +95,8 @@ void *main_start(void *arg)
 static int __init pa_init(void)
 {
   pthread_t pid;
-  printk("TestProgram::pa_init minor %d\n", miscdev.minor);
+  printk("TestProgram::pa_init minor %d thisname %s\n", miscdev.minor, THIS_MODULE->name);
+  miscdev.name = THIS_MODULE->name;
   misc_register(&miscdev);
   sema_init (&bsim_start, 0);
   pthread_create(&pid, NULL, main_start, NULL);
@@ -103,7 +105,7 @@ static int __init pa_init(void)
 
 static void __exit pa_exit(void)
 {
-  printk("TestProgram::pa_exit\n");
+  printk("TestProgram::pa_exit %s\n", THIS_MODULE->name);
 #ifdef BOARD_bluesim
   if (!bsim_relay_running) {
     printk("TestProgram::pa_exit terminate main program\n");
