@@ -38,7 +38,7 @@ assigned to each logical interface method.
 In our initial implementation the accelerator does not access system
 memory directly, so the search string is transmitted to the
 accelerator one character at a time via the {\tt setupNeedle}
-method. We will see in Section~\ref{Sec-StringSearchSystemMemory} how
+method. We will see in Section :ref:Sec-StringSearchSystemMemory` how
 to use a pointer to system memory instead. 
 
 Invoking Hardware from Software
@@ -47,7 +47,7 @@ Invoking Hardware from Software
 
 Because the StrStrRequest functionality is implemented in hardware,
 the Connectal interface compiler generates a C++ \textbf{proxy} with
-the following interface to be invoked by the application software:
+the following interface to be invoked by the application software::
 
     class StrStrRequestProxy : public Portal {
     public:
@@ -60,7 +60,7 @@ The implementation of StrStrRequestProxy marshals the arguments of
 each method and en-queues them directly into their dedicated hardware
 FIFOs. To execute searches in the FPGA fabric over data stored in
 flash memory, the software developer simply instantiates
-*StrStrRequestProxy* and invokes its methods:
+*StrStrRequestProxy* and invokes its methods::
 
     StrStrRequestProxy *proxy = 
 		new StrStrRequestProxy(...);
@@ -72,24 +72,26 @@ the interface compiler to connect this module to the hardware
 FIFOs. The wrapper unmarshals messages that it receives and then
 invokes the appropriate method in the StrStrRequest interface.  Here
 is the BSV code that instantiates the generated wrapper and connects
-it to the user's \texttt{mkStrStr} module.
+it to the user's \texttt{mkStrStr} module::
 
     StrStrRequest strStr <- mkStrStr(...);
     StrStrRequestWrapper wrapper <-
 	mkStrStrRequestWrapper(strStr);
 
-Figure~\ref{Fig:msc1} shows how all the pieces of an application
+Figure :ref:`Fig-msc1`_ shows how all the pieces of an application
 implemented using Connectal work together when hardware functionality
 is invoked remotely from software.  Direct access to the memory mapped
 hardware FIFOs by the generated proxy running in user-mode is key to
 the efficiency of our implementation strategy.
 
-    \begin{figure}[h]
-      \centering
-      \includegraphics[width=0.48\textwidth]{msc1.pdf}
-      \caption{\label{Fig:msc1} SW invokes HW: `main' and `app HW'
-	are implemented by the user.}
-    \end{figure}
+.. image:: images/msc1.*
+
+.. _Fig-msc1: 
+
+.. figure:: .. image:: images/msc1.*
+
+   SW invokes HW: *main* and *app HW* are implemented by the user.
+
 
 Invoking Software from Hardware
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -128,16 +130,17 @@ the application logic instantiates and invokes directly::
     StrStrRequest strStr <- 
 	 mkStrStr(... proxy.ifc ...);
 
-Figure~\ref{Fig:msc0} shows how all the pieces of an application
+Figure :ref:Fig-msc0 shows how all the pieces of an application
 collaborate when software functionality is being invoked from
 hardware.
 
-    \begin{figure}[h]
-      \centering
-      \includegraphics[width=0.48\textwidth]{msc0.pdf}
-      \caption{\label{Fig:msc0} HW invokes SW: `main', `ind::wrapper', and `app HW' 
-	are implemented by the user.}
-    \end{figure}
+.. image:: images/msc0.*
+
+.. _Fig-msc0:
+
+.. figure:: msc0.*
+
+       HW invokes SW: `main', `ind::wrapper', and `app HW' are implemented by the user.
 
 The simplest software execution environment for the string search accelerator
 is to have a single thread making requests and waiting for responses as
@@ -188,7 +191,7 @@ often use a separate thread to execute hardware-to-software
 asynchronous invocations, since dedicated thread can put itself to sleep until the
 hardware raises an interrupt.  The ``main'' thread is free to do other
 work and can communicate with the ``indication'' thread using a
-semaphore as shown below:
+semaphore as shown below::
 
     class StrStrResponse:
 	public StrStrResponseWrapper {
@@ -223,13 +226,15 @@ hardware proxy, an interrupt is raised, waking the indication thread.
 A register is read which indicates which method is being called and
 the corresponding wrapper method is invoked to read/marshal the
 arguments and invoke the actual user-defined methods.
-Figure~\ref{Fig:msc2} shows this process.
+Figure :ref:`Fig-msc2` shows this process.
 
-    \begin{figure}[h]
-      \centering
-      \includegraphics[width=0.48\textwidth]{msc2.pdf}
-      \caption{\label{Fig:msc2} HW invokes SW using interrupts}
-    \end{figure}
+.. image:: images/msc2.*
+
+.. _Fig-msc2:
+
+.. figure:: msc2.*
+
+    HW invokes SW using interrupts
 
 Multithreading often leads to simultaneous access to shared
 hardware resources.  If a software solution to protect
@@ -249,13 +254,13 @@ Shared Access to Host Memory
 ----------------------------
 
 
-In the first three refinements presented in Section~\ref{Sec-StrStr},
+In the first three refinements presented in Section :ref:`Sec-StrStr`,
 all communication between hardware and software takes place through
 register-mapped IO.  The final refinement in
 Section :ref:`Sec-StrStrDma` is to grant hardware and software shared
 access to host memory.  The interface to the search accelerator shown
 below has been updated to use direct access to system memory for the
-search strings:
+search strings::
 
     interface StrstrRequest;
       method Action setup(Bit#(32) needlePtr,
@@ -272,7 +277,7 @@ search strings:
 
 In order to share memory with hardware accelerators, it needs to be
 allocated using :c:func:portalAlloc(). Here is the search function updated
-accordingly:
+accordingly::
 
     int search(char *str){
       int size = strlen(str)+1;
@@ -305,7 +310,7 @@ taking care of address translation transparently.
 To fully exploit the data parallelism, {\tt mkStrStr} partitions the
 search space into $p$ partitions. It instantiates two memory read
 trees from the Connectal library ({\tt MemreadEngineV}, discussed in
-Section~\ref{Sec-MemreadEngine}), each with $p$ read servers.  One set
+Section :ref:`Sec-MemreadEngine`, each with $p$ read servers.  One set
 is used by the search kernels to read the configuration data from the
 host memory, while the other is used to read the ``haystack'' from
 flash.
@@ -324,7 +329,7 @@ transmit the messages. This separation enables ``swappable''
 application-specific transport libraries.  In light of this, a large
 number of transport mechanism can be considered. Switching between
 mechanism requires a simple directive in the project Makefile (more
-details are given in Section~\ref{Sec-ToolChain}).
+details are given in Section :ref:`Sec-ToolChain`).
 
 By default, each portal is mapped to a region of address space and a
 memory-mapped FIFO channel is generated for each method. Though
