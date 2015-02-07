@@ -30,9 +30,10 @@ generatedVectors = []
 proxyClassPrefixTemplate='''
 extern %(className)sCb %(className)sProxyReq;
 class %(className)sProxy : public %(parentClass)s {
+    %(className)sCb *cb;
 public:
-    %(className)sProxy(int id, PortalPoller *poller = 0) : Portal(id, %(classNameOrig)s_reqinfo, NULL, NULL, poller) {};
-    %(className)sProxy(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(classNameOrig)s_reqinfo, NULL, NULL, item, param, poller) {};
+    %(className)sProxy(int id, PortalPoller *poller = 0) : Portal(id, %(classNameOrig)s_reqinfo, NULL, NULL, poller), cb(&%(className)sProxyReq) {};
+    %(className)sProxy(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(classNameOrig)s_reqinfo, NULL, NULL, item, param, poller), cb(&%(className)sProxyReq) {};
 '''
 
 wrapperClassPrefixTemplate='''
@@ -336,7 +337,7 @@ def emitMethodDeclaration(mname, params, f, className):
     if className == '':
         f.write('= 0;\n')
     else:
-        f.write('{ return %s_%s (' % (className, methodName))
+        f.write('{ return cb->%s (' % methodName)
         f.write(', '.join(paramValues) + '); };\n')
 
 def generate_class(classNameOrig, declList, parentC, parentCC, generatedCFiles, create_cpp_file):
