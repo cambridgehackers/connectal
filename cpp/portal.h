@@ -134,16 +134,16 @@ typedef struct {
 
 typedef struct {
     const char *name;
-    size_t      offset;
+    int         offset;
 } ConnectalParamJsonInfo;
 typedef struct {
     const char *name;
     ConnectalParamJsonInfo *param;
 } ConnectalMethodJsonInfo;
-void connectalJsonEncode(volatile unsigned int *data, void *tempdata, ConnectalParamJsonInfo *info);
-void connnectalJsonDecode(int channel, void *tempdata, volatile unsigned int *data, ConnectalMethodJsonInfo *info);
+void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalParamJsonInfo *info);
+void connnectalJsonDecode(PortalInternal *pint, void *tempdata, ConnectalMethodJsonInfo *info);
 
-#define Connectaloffsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
+#define Connectaloffsetof(TYPE, MEMBER) ((unsigned long)&((TYPE *)0)->MEMBER)
 
 #ifdef __KERNEL__
 #include <linux/module.h>

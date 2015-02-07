@@ -54,9 +54,8 @@ handleMessageTemplate1='''
     static int runaway = 0;
     int tmpfd;
     unsigned int tmp;
-    volatile unsigned int* temp_working_addr = p->item->mapchannelInd(p, channel);
     %(classNameOrig)sData tempdata;
-    connnectalJsonDecode(channel, &tempdata, temp_working_addr, %(classNameOrig)sInfo);
+    connnectalJsonDecode(p, &tempdata, %(classNameOrig)sInfo);
     switch (channel) {'''
 
 handleMessageCase='''
@@ -82,7 +81,7 @@ handleMessageTemplate2='''
 jsonStructTemplateDecl='''
 static ConnectalParamJsonInfo %(channelName)sInfo[] = {
     %(paramJsonDeclarations)s
-    {NULL, 0},
+    {NULL, %(channelNumber)s},
 };'''
 
 jsonMethodTemplateDecl='''
@@ -96,11 +95,8 @@ int %(className)s_%(methodName)s (%(paramProxyDeclarations)s )'''
 
 proxyMethodTemplate='''
 {
-    volatile unsigned int* temp_working_addr_start = p->item->mapchannelReq(p, %(channelNumber)s);
-    %(channelName)sData tempdata;
-    %(paramStructMarshall)s
-    connectalJsonEncode(temp_working_addr_start, &tempdata, %(channelName)sInfo);
-    p->item->send(p, temp_working_addr_start, (%(channelNumber)s << 16) | %(wordLenP1)s, %(fdName)s);
+    %(channelName)sData tempdata;%(paramStructMarshall)s
+    connectalJsonEncode(p, &tempdata, %(channelName)sInfo);
     return 0;
 };
 '''
@@ -289,7 +285,7 @@ def gatherMethodInfo(mname, params, itemname, classNameOrig):
     paramStructMarshallStr = 'tempdata.%s = %s;'
 
     if argWords == []:
-        paramStructMarshall = [paramStructMarshallStr % ('NULLNAME','0')]
+        paramStructMarshall = ['']
     else:
         paramStructMarshall = map(functools.partial(generate_marshall, paramStructMarshallStr), argWords)
         paramStructMarshall.reverse()

@@ -23,10 +23,12 @@
 
 #include "portal.h"
 
-void connectalJsonEncode(volatile unsigned int *data, void *tempdata, ConnectalParamJsonInfo *info)
+void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalParamJsonInfo *info)
 {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 }
 
-void connnectalJsonDecode(int channel, void *tempdata, volatile unsigned int *data, ConnectalMethodJsonInfo *info)
+void connnectalJsonDecode(PortalInternal *pint, void *tempdata, ConnectalMethodJsonInfo *info)
 {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 }
