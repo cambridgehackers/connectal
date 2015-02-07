@@ -28,6 +28,7 @@ sizeofUint32_t = 4
 generatedVectors = []
 
 proxyClassPrefixTemplate='''
+extern %(className)sCb %(className)sProxyReq;
 class %(className)sProxy : public %(parentClass)s {
 public:
     %(className)sProxy(int id, PortalPoller *poller = 0) : Portal(id, %(classNameOrig)s_reqinfo, NULL, NULL, poller) {};
@@ -88,6 +89,11 @@ jsonMethodTemplateDecl='''
 static ConnectalMethodJsonInfo %(className)sInfo[] = {
     %(methodJsonDeclarations)s
     {NULL, NULL},
+};'''
+
+proxyMethodTableDecl='''
+%(classNameOrig)sCb %(className)sProxyReq[] = {
+    %(methodTable)s
 };'''
 
 proxyMethodTemplateDecl='''
@@ -348,17 +354,19 @@ def generate_class(classNameOrig, declList, parentC, parentCC, generatedCFiles, 
     hpp.write('#include "%s.h"\n' % parentC)
     maxSize = 0
     reqChanNums = []
-    methodJsonDeclarations = []
+    methodList = []
     for mitem in declList:
         substs, t = gatherMethodInfo(mitem['name'], mitem['params'], className, classNameOrig)
         if t > maxSize:
             maxSize = t
         cpp.write((jsonStructTemplateDecl) % substs)
         cpp.write((proxyMethodTemplateDecl + proxyMethodTemplate) % substs)
-        methodJsonDeclarations.append('{"%(methodName)s", %(classNameOrig)s_%(methodName)sInfo},' % substs)
-        generatedVectors = []
+        methodList.append(substs['methodName'])
         reqChanNums.append(substs['channelNumber'])
+    methodJsonDeclarations = ['{"%(methodName)s", %(classNameOrig)s_%(methodName)sInfo},' % {'methodName': p, 'classNameOrig': classNameOrig} for p in methodList]
     cpp.write(jsonMethodTemplateDecl % {'className': classNameOrig, 'methodJsonDeclarations': '\n    '.join(methodJsonDeclarations)})
+    methodTable = ['%(className)s_%(methodName)s,' % {'methodName': p, 'className': className} for p in methodList]
+    cpp.write(proxyMethodTableDecl % {'className': className, 'classNameOrig': classNameOrig, 'methodTable': '\n    '.join(methodTable)})
     subs = {'className': classCName, 'maxSize': (maxSize+1) * sizeofUint32_t, 'parentClass': parentCC,
             'reqInfo': '0x%x' % ((len(declList) << 16) + (maxSize+1) * sizeofUint32_t),
             'classNameOrig': classNameOrig }

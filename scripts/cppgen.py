@@ -28,6 +28,7 @@ sizeofUint32_t = 4
 generatedVectors = []
 
 proxyClassPrefixTemplate='''
+extern %(className)sCb %(className)sProxyReq;
 class %(className)sProxy : public %(parentClass)s {
 public:
     %(className)sProxy(int id, PortalPoller *poller = 0) : Portal(id, %(className)s_reqinfo, NULL, NULL, poller) {};
@@ -89,6 +90,11 @@ handleMessageTemplate2='''
     return 0;
 }
 '''
+
+proxyMethodTableDecl='''
+%(className)sCb %(className)sProxyReq[] = {
+    %(methodTable)s
+};'''
 
 proxyMethodTemplateDecl='''
 int %(className)s_%(methodName)s (%(paramProxyDeclarations)s )'''
@@ -434,6 +440,7 @@ def generate_class(className, declList, parentC, parentCC, generatedCFiles, crea
     generated_cpp.write('#include "%s"\n' % hppname)
     maxSize = 0
     reqChanNums = []
+    methodList = []
     for mitem in declList:
         substs, t = gatherMethodInfo(mitem['name'], mitem['params'], className)
         if t > maxSize:
@@ -444,7 +451,10 @@ def generate_class(className, declList, parentC, parentCC, generatedCFiles, crea
             generated_hpp.write('\ntypedef %s bsvvector_L%s_L%d[%d];' % (t[1], t[1], t[0], t[0]))
         generatedVectors = []
         generated_hpp.write((proxyMethodTemplateDecl % substs) + ';')
+        methodList.append(substs['methodName'])
         reqChanNums.append(substs['channelNumber'])
+    methodTable = ['%(className)s_%(methodName)s,' % {'methodName': p, 'className': className} for p in methodList]
+    cpp.write(proxyMethodTableDecl % {'className': className, 'methodTable': '\n    '.join(methodTable)})
     subs = {'className': classCName, 'maxSize': (maxSize+1) * sizeofUint32_t, 'parentClass': parentCC, \
             'reqInfo': '0x%x' % ((len(declList) << 16) + (maxSize+1) * sizeofUint32_t) }
     generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(className)s_reqinfo %(reqInfo)s\n' % subs)
@@ -474,8 +484,8 @@ def generate_class(className, declList, parentC, parentCC, generatedCFiles, crea
         paramValues = ', '.join([pitem['name'] for pitem in mitem['params']])
         formalParamStr = formalParameters(mitem['params'], True)
         methodName = cName(mitem['name'])
-        generated_hpp.write(('    void (*%s) ( ' % methodName) + formalParamStr + ' );\n')
-        generated_cpp.write(('void %s%s_cb ( ' % (classCName, methodName)) + formalParamStr + ' ) {\n')
+        generated_hpp.write(('    int (*%s) ( ' % methodName) + formalParamStr + ' );\n')
+        generated_cpp.write(('int %s%s_cb ( ' % (classCName, methodName)) + formalParamStr + ' ) {\n')
         indent(generated_cpp, 4)
         generated_cpp.write(('(static_cast<%sWrapper *>(p->parent))->%s ( ' % (classCName, methodName)) + paramValues + ');\n};\n')
     generated_hpp.write('} %sCb;\n' % classCName)
