@@ -28,7 +28,7 @@ void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalParamJso
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 }
 
-void connnectalJsonDecode(PortalInternal *pint, void *tempdata, ConnectalMethodJsonInfo *info)
+void connnectalJsonDecode(PortalInternal *pint, void *tempdata, ConnectalParamJsonInfo *info)
 {
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 }

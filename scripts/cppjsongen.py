@@ -55,7 +55,7 @@ handleMessageTemplate1='''
     int tmpfd;
     unsigned int tmp;
     %(classNameOrig)sData tempdata;
-    connnectalJsonDecode(p, &tempdata, %(classNameOrig)sInfo);
+    connnectalJsonDecode(p, &tempdata, %(classNameOrig)sInfo[channel].param);
     switch (channel) {'''
 
 handleMessageCase='''
@@ -333,7 +333,7 @@ def emitMethodDeclaration(mname, params, f, className):
         f.write('{ return %s_%s (' % (className, methodName))
         f.write(', '.join(paramValues) + '); };\n')
 
-def generate_class(classNameOrig, declList, parentC, parentCC, generatedCFiles, create_cpp_file, generated_cpp):
+def generate_class(classNameOrig, declList, parentC, parentCC, generatedCFiles, create_cpp_file):
     global generatedVectors
     className = classNameOrig + 'Json'
     classCName = cName(className)
@@ -346,8 +346,6 @@ def generate_class(classNameOrig, declList, parentC, parentCC, generatedCFiles, 
     cpp = create_cpp_file(cppname)
     hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': className.upper()})
     hpp.write('#include "%s.h"\n' % parentC)
-    generated_cpp.write('\n/************** Start of %sWrapper CPP ***********/\n' % className)
-    generated_cpp.write('#include "%s"\n' % hppname)
     maxSize = 0
     reqChanNums = []
     methodJsonDeclarations = []
@@ -382,13 +380,6 @@ def generate_class(classNameOrig, declList, parentC, parentCC, generatedCFiles, 
         paramValues = ', '.join([pitem['name'] for pitem in mitem['params']])
         formalParamStr = formalParameters(mitem['params'], True)
         methodName = cName(mitem['name'])
-        generated_cpp.write(('void %s%s_cb ( ' % (classCName, methodName)) + formalParamStr + ' ) {\n')
-        indent(generated_cpp, 4)
-        generated_cpp.write(('(static_cast<%sWrapper *>(p->parent))->%s ( ' % (classCName, methodName)) + paramValues + ');\n};\n')
-    generated_cpp.write('%sCb %s_cbTable = {\n' % (classCName, classCName))
-    for mitem in declList:
-        generated_cpp.write('    %s%s_cb,\n' % (classCName, mitem['name']))
-    generated_cpp.write('};\n')
     hpp.write('#endif // _%(name)s_H_\n' % {'name': className.upper()})
     hpp.close()
     cpp.close()
@@ -437,14 +428,8 @@ def generate_cppjson(project_dir, noisyFlag, jsondata):
     generatedCFiles = []
     globalv_globalvars = jsondata['globalvars']
     hname = os.path.join(project_dir, 'jni', 'GeneratedTypes.h')
-    cppname = 'GeneratedCppCallbacksJson.cpp'
-    generated_cpp = create_cpp_file(cppname)
-    generatedCFiles.append(cppname)
-    generated_cpp.write('\n#ifndef NO_CPP_PORTAL_CODE\n')
     for item in jsondata['interfaces']:
-        generate_class(item['name'], item['decls'], item['parentLportal'], item['parentPortal'], generatedCFiles, create_cpp_file, generated_cpp)
-    generated_cpp.write('#endif //NO_CPP_PORTAL_CODE\n')
-    generated_cpp.close()
+        generate_class(item['name'], item['decls'], item['parentLportal'], item['parentPortal'], generatedCFiles, create_cpp_file)
     gen_makefile = util.createDirAndOpen(os.path.join(project_dir, 'jni', 'Makefile.generated_filesJson'), 'w')
     gen_makefile.write('\nGENERATED_CPP=' + ' '.join(generatedCFiles)+'\n')
     gen_makefile.close()

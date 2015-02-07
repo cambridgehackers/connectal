@@ -141,7 +141,7 @@ typedef struct {
     ConnectalParamJsonInfo *param;
 } ConnectalMethodJsonInfo;
 void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalParamJsonInfo *info);
-void connnectalJsonDecode(PortalInternal *pint, void *tempdata, ConnectalMethodJsonInfo *info);
+void connnectalJsonDecode(PortalInternal *pint, void *tempdata, ConnectalParamJsonInfo *info);
 
 #define Connectaloffsetof(TYPE, MEMBER) ((unsigned long)&((TYPE *)0)->MEMBER)
 
