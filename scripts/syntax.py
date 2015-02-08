@@ -25,7 +25,7 @@ import AST
 import os, re, sys
 
 import globalv
-import cppgen, bsvgen, cppjsongen
+import cppgen, bsvgen
 
 scripthome = os.path.dirname(os.path.abspath(__file__))
 noisyFlag=True
@@ -1057,7 +1057,6 @@ def generate_bsvcpp(filelist, project_dir, dutname, bsvdefines, interfaces, nf):
     jsondata = AST.serialize_json(ilist, globalimports, dutname, interfaces)
     if project_dir:
         cppgen.generate_cpp(project_dir, noisyFlag, jsondata)
-        #cppjsongen.generate_cpp(project_dir, noisyFlag, jsondata)
         bsvgen.generate_bsv(project_dir, noisyFlag, jsondata)
     
 if __name__=='__main__':
