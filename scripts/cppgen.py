@@ -31,8 +31,8 @@ proxyClassPrefixTemplate='''
 class %(className)sProxy : public %(parentClass)s {
     %(classNameOrig)sCb *cb;
 public:
-    %(className)sProxy(int id, PortalPoller *poller = 0) : Portal(id, %(classNameOrig)s_reqinfo, NULL, NULL, poller), cb(&%(className)sProxyReq) {};
-    %(className)sProxy(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(classNameOrig)s_reqinfo, NULL, NULL, item, param, poller), cb(&%(className)sProxyReq) {};
+    %(className)sProxy(int id, %(classNameOrig)sCb *cbarg = &%(className)sProxyReq, PortalPoller *poller = 0) : Portal(id, %(classNameOrig)s_reqinfo, NULL, NULL, poller), cb(cbarg) {};
+    %(className)sProxy(int id, PortalItemFunctions *item, void *param, %(classNameOrig)sCb *cbarg = &%(className)sProxyReq, PortalPoller *poller = 0) : Portal(id, %(classNameOrig)s_reqinfo, NULL, NULL, item, param, poller), cb(cbarg) {};
 '''
 
 wrapperClassPrefixTemplate='''
@@ -470,12 +470,13 @@ def generate_class(classNameOrig, classVariant, declList, parentC, parentCC, gen
     if cppname in generatedCFiles:
         return
     generatedCFiles.append(cppname)
-    hpp = create_cpp_file(hppname)
     cpp = create_cpp_file(cppname)
-    hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': className.upper()})
-    hpp.write('#include "%s.h"\n' % parentC)
-    generated_cpp.write('\n/************** Start of %sWrapper CPP ***********/\n' % className)
-    generated_cpp.write('#include "%s"\n' % hppname)
+    if not classVariant:
+        hpp = create_cpp_file(hppname)
+        hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': className.upper()})
+        hpp.write('#include "%s.h"\n' % parentC)
+        generated_cpp.write('\n/************** Start of %sWrapper CPP ***********/\n' % className)
+        generated_cpp.write('#include "%s.h"\n' % classNameOrig)
     maxSize = 0
     reqChanNums = []
     methodList = []
@@ -511,10 +512,10 @@ def generate_class(classNameOrig, classVariant, declList, parentC, parentCC, gen
     else:
         subs['handleStartup'] = 'volatile unsigned int* temp_working_addr = p->item->mapchannelInd(p, channel);'
         generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(className)s_reqinfo %(reqInfo)s\n' % subs)
-    hpp.write(proxyClassPrefixTemplate % subs)
-    for mitem in declList:
-        emitMethodDeclaration(mitem['name'], mitem['params'], hpp, classCName)
-    hpp.write('};\n')
+        hpp.write(proxyClassPrefixTemplate % subs)
+        for mitem in declList:
+            emitMethodDeclaration(mitem['name'], mitem['params'], hpp, classCName)
+        hpp.write('};\n')
     cpp.write((handleMessageTemplateDecl % subs))
     cpp.write(handleMessageTemplate1 % subs)
     for mitem in declList:
@@ -530,30 +531,29 @@ def generate_class(classNameOrig, classVariant, declList, parentC, parentCC, gen
         generated_hpp.write(portalStructTemplate % {'className': classCName, 'messageStructDeclarations': '\n    '.join(elemList)})
     cpp.write(handleMessageTemplate2 % subs)
     generated_hpp.write((handleMessageTemplateDecl % subs)+ ';\n')
-    hpp.write(wrapperClassPrefixTemplate % subs)
-    for mitem in declList:
-        emitMethodDeclaration(mitem['name'], mitem['params'], hpp, '')
-    hpp.write('};\n')
     if not classVariant:
+        hpp.write(wrapperClassPrefixTemplate % subs)
+        for mitem in declList:
+            emitMethodDeclaration(mitem['name'], mitem['params'], hpp, '')
+        hpp.write('};\n')
         generated_hpp.write('typedef struct {\n')
-    for mitem in declList:
-        paramValues = ', '.join([pitem['name'] for pitem in mitem['params']])
-        formalParamStr = formalParameters(mitem['params'], True)
-        methodName = cName(mitem['name'])
-        if not classVariant:
+        for mitem in declList:
+            paramValues = ', '.join([pitem['name'] for pitem in mitem['params']])
+            formalParamStr = formalParameters(mitem['params'], True)
+            methodName = cName(mitem['name'])
             generated_hpp.write(('    int (*%s) ( ' % methodName) + formalParamStr + ' );\n')
             generated_cpp.write(('int %s%s_cb ( ' % (classCName, methodName)) + formalParamStr + ' ) {\n')
             indent(generated_cpp, 4)
             generated_cpp.write(('(static_cast<%sWrapper *>(p->parent))->%s ( ' % (classCName, methodName)) + paramValues + ');\n};\n')
-    if not classVariant:
         generated_hpp.write('} %sCb;\n' % classCName)
         generated_cpp.write('%sCb %s_cbTable = {\n' % (classCName, classCName))
         for mitem in declList:
             generated_cpp.write('    %s%s_cb,\n' % (classCName, mitem['name']))
         generated_cpp.write('};\n')
     generated_hpp.write('extern %(classNameOrig)sCb %(className)sProxyReq;\n' % subs)
-    hpp.write('#endif // _%(name)s_H_\n' % {'name': className.upper()})
-    hpp.close()
+    if not classVariant:
+        hpp.write('#endif // _%(name)s_H_\n' % {'name': className.upper()})
+        hpp.close()
     cpp.close()
 
 def emitStructMember(item, f, indentation):
