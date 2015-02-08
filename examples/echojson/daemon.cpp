@@ -66,7 +66,7 @@ public:
         sleep(1);
         exit(1);
     }
-    EchoRequest(unsigned int id, PortalItemFunctions *item, void *param) : EchoRequestWrapper(id, item, param, &EchoRequestJson_handleMessage) {}
+    EchoRequest(unsigned int id, PortalItemFunctions *item, void *param) : EchoRequestWrapper(id, item, param, &EchoRequestJson_handleMessage, 1000) {}
 };
 
 int main(int argc, const char **argv)
@@ -80,7 +80,7 @@ int main(int argc, const char **argv)
 #endif
 
     int rc = getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
-    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &socketfuncResp, PARAM, &EchoIndicationJsonProxyReq);
+    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &socketfuncResp, PARAM, &EchoIndicationJsonProxyReq, 1000);
     rc = getaddrinfo("127.0.0.1", "5001", NULL, &param.addr);
     EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &socketfuncResp, PARAM);
 
