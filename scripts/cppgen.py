@@ -26,6 +26,7 @@ import functools, math, os, re, sys, util
 
 sizeofUint32_t = 4
 generatedVectors = []
+itypeNames = ['uint32_t', 'uint64_t', 'SpecialTypeForSendingFd', 'ChannelType', 'DmaDbgRec']
 
 proxyClassPrefixTemplate='''
 class %(className)sProxy : public %(parentClass)s {
@@ -408,8 +409,12 @@ def gatherMethodInfo(mname, params, itemname, classNameOrig, classVariant):
     if classVariant:
         paramStructMarshall = ['tempdata.%s = %s;' % (pitem['name'],pitem['name']) for pitem in params]
     paramStructDeclarations = [ '%s %s;' % (typeCName(pitem['type']), pitem['name']) for pitem in params]
-    paramJsonDeclarations = [ '{"%s", Connectaloffsetof(%sData,%s), ITYPE_%s},' % \
-        (pitem['name'], chname, pitem['name'], typeCName(pitem['type'])) for pitem in params]
+    paramJsonDeclarations = []
+    for pitem in params:
+        tname = typeCName(pitem['type'])
+        if tname not in itypeNames:
+            tname = 'other'
+        paramJsonDeclarations.append('{"%s", Connectaloffsetof(%sData,%s), ITYPE_%s},' % (pitem['name'], chname, pitem['name'], tname))
     if not params:
         paramStructDeclarations = ['    int padding;\n']
         paramJsonDeclarations = ['']
