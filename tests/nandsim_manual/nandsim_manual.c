@@ -51,47 +51,47 @@ static DmaManagerPrivate priv;
 size_t numBytes = 1 << 12;
 size_t nandBytes = 1 << 24;
 
-void NandSimIndicationWrappereraseDone_cb (  struct PortalInternal *p, const uint32_t tag )
+int NandSimIndicationWrappereraseDone_cb (  struct PortalInternal *p, const uint32_t tag )
 {
          PORTAL_PRINTF( "NandSim_eraseDone(tag = %x)\n", tag);
          sem_post(&test_sem);
 }
-void NandSimIndicationWrapperwriteDone_cb (  struct PortalInternal *p, const uint32_t tag )
+int NandSimIndicationWrapperwriteDone_cb (  struct PortalInternal *p, const uint32_t tag )
 {
          PORTAL_PRINTF( "NandSim_writeDone(tag = %x)\n", tag);
          sem_post(&test_sem);
 }
-void NandSimIndicationWrapperreadDone_cb (  struct PortalInternal *p, const uint32_t tag )
+int NandSimIndicationWrapperreadDone_cb (  struct PortalInternal *p, const uint32_t tag )
 {
          PORTAL_PRINTF( "NandSim_readDone(tag = %x)\n", tag);
          sem_post(&test_sem);
 }
-void NandSimIndicationWrapperconfigureNandDone_cb (  struct PortalInternal *p )
+int NandSimIndicationWrapperconfigureNandDone_cb (  struct PortalInternal *p )
 {
          PORTAL_PRINTF( "NandSim_NandDone\n");
 		 sem_post(&test_sem);
 }
-void DmaIndicationWrapperconfigResp_cb (  struct PortalInternal *p, const uint32_t pointer )
+int DmaIndicationWrapperconfigResp_cb (  struct PortalInternal *p, const uint32_t pointer )
 {
         PORTAL_PRINTF("DmaIndication_configResp(physAddr=%x)\n", pointer);
         sem_post(&priv.confSem);
 }
-void DmaIndicationWrapperaddrResponse_cb (  struct PortalInternal *p, const uint64_t physAddr )
+int DmaIndicationWrapperaddrResponse_cb (  struct PortalInternal *p, const uint64_t physAddr )
 {
         PORTAL_PRINTF("DmaIndication_addrResponse(physAddr=%"PRIx64")\n", physAddr);
 }
-void DmaIndicationWrapperreportStateDbg_cb (  struct PortalInternal *p, const DmaDbgRec rec )
+int DmaIndicationWrapperreportStateDbg_cb (  struct PortalInternal *p, const DmaDbgRec rec )
 {
         PORTAL_PRINTF("reportStateDbg: {x:%08x y:%08x z:%08x w:%08x}\n", rec.x,rec.y,rec.z,rec.w);
         sem_post(&priv.dbgSem);
 }
-void DmaIndicationWrapperreportMemoryTraffic_cb (  struct PortalInternal *p, const uint64_t words )
+int DmaIndicationWrapperreportMemoryTraffic_cb (  struct PortalInternal *p, const uint64_t words )
 {
         //PORTAL_PRINTF("reportMemoryTraffic: words=%"PRIx64"\n", words);
         priv.mtCnt = words;
         sem_post(&priv.mtSem);
 }
-void DmaIndicationWrapperdmaError_cb (  struct PortalInternal *p, const uint32_t code, const uint32_t pointer, const uint64_t offset, const uint64_t extra ) 
+int DmaIndicationWrapperdmaError_cb (  struct PortalInternal *p, const uint32_t code, const uint32_t pointer, const uint64_t offset, const uint64_t extra ) 
 {
         PORTAL_PRINTF("DmaIndication::dmaError(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
 }

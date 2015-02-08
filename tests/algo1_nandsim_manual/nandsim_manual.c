@@ -51,44 +51,44 @@ static int burstLen = 16;
 static long back_sz  = numWords*sizeof(unsigned int);
 static DmaManagerPrivate priv;
 
-void NandCfgIndicationWrappereraseDone_cb (  struct PortalInternal *p, const uint32_t tag )
+int NandCfgIndicationWrappereraseDone_cb (  struct PortalInternal *p, const uint32_t tag )
 {
   PORTAL_PRINTF( "cb: NandSim_eraseDone(tag = %x)\n", tag);
   sem_post(&test_sem);
 }
 
-void NandCfgIndicationWrapperwriteDone_cb (  struct PortalInternal *p, const uint32_t tag )
+int NandCfgIndicationWrapperwriteDone_cb (  struct PortalInternal *p, const uint32_t tag )
 {
   PORTAL_PRINTF( "cb: NandSim_writeDone(tag = %x)\n", tag);
   sem_post(&test_sem);
 }
 
-void NandCfgIndicationWrapperreadDone_cb (  struct PortalInternal *p, const uint32_t tag )
+int NandCfgIndicationWrapperreadDone_cb (  struct PortalInternal *p, const uint32_t tag )
 {
   PORTAL_PRINTF( "cb: NandSim_readDone(tag = %x)\n", tag);
   sem_post(&test_sem);
 }
 
-void NandCfgIndicationWrapperconfigureNandDone_cb (  struct PortalInternal *p )
+int NandCfgIndicationWrapperconfigureNandDone_cb (  struct PortalInternal *p )
 {
   PORTAL_PRINTF( "cb: NandSim_NandDone\n");
   sem_post(&test_sem);
 }
 
-void MMUIndicationWrapperconfigResp_cb (  struct PortalInternal *p, const uint32_t pointer )
+int MMUIndicationWrapperconfigResp_cb (  struct PortalInternal *p, const uint32_t pointer )
 {
   PORTAL_PRINTF("cb: MMUIndicationWrapperconfigResp_cb(physAddr=%x)\n", pointer);
   sem_post(&priv.confSem);
 }
 
-void MMUIndicationWrapperidResponse_cb (  struct PortalInternal *p, const uint32_t sglId ) 
+int MMUIndicationWrapperidResponse_cb (  struct PortalInternal *p, const uint32_t sglId ) 
 {
   PORTAL_PRINTF("cb: MMUIndicationWrapperidResponse_cb\n");
   priv.sglId = sglId;
   sem_post(&priv.sglIdSem);
 }
 
-void MMUIndicationWrappererror_cb (  struct PortalInternal *p, const uint32_t code, const uint32_t pointer, const uint64_t offset, const uint64_t extra ) 
+int MMUIndicationWrappererror_cb (  struct PortalInternal *p, const uint32_t code, const uint32_t pointer, const uint64_t offset, const uint64_t extra ) 
 {
   PORTAL_PRINTF("cb: MMUIndicationWrappererror_cb\n");
 }
