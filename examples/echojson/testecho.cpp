@@ -38,8 +38,8 @@ public:
 	sRequestProxy->say2(v, 2*v);
     }
     virtual void heard2(uint32_t a, uint32_t b) {
+        fprintf(stderr, "heard an s2: %ld %ld\n", (long)a, (long)b);
         sem_post(&sem_heard2);
-        //fprintf(stderr, "heard an s2: %ld %ld\n", a, b);
     }
     EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationWrapper(id, item, param, &EchoIndicationJson_handleMessage, 1000) {}
 };
