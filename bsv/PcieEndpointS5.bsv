@@ -190,21 +190,12 @@ module mkPcieEndpointS5#(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieE
 
    interface PciewrapPci_exp pcie;
       Bit#(PcieLanes) vt = pack(pcie_ep.tx.out);
-      //{pcie_ep.tx.out7, pcie_ep.tx.out6, pcie_ep.tx.out5, pcie_ep.tx.out4, pcie_ep.tx.out3, pcie_ep.tx.out2, pcie_ep.tx.out1, pcie_ep.tx.out0};
       method Bit#(PcieLanes) tx_p();
          return vt;
       endmethod
       method Action rx_p(Bit#(PcieLanes) v);
          action
             pcie_ep.rx.in(unpack(v));
-//            pcie_ep.rx.in0(v[0]);
-//            pcie_ep.rx.in1(v[1]);
-//            pcie_ep.rx.in2(v[2]);
-//            pcie_ep.rx.in3(v[3]);
-//            pcie_ep.rx.in4(v[4]);
-//            pcie_ep.rx.in5(v[5]);
-//            pcie_ep.rx.in6(v[6]);
-//            pcie_ep.rx.in7(v[7]);
          endaction
       endmethod
    endinterface
