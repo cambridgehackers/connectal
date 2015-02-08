@@ -474,8 +474,6 @@ def generate_class(classNameOrig, classVariant, declList, parentC, parentCC, gen
     cpp = create_cpp_file(cppname)
     hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': className.upper()})
     hpp.write('#include "%s.h"\n' % parentC)
-    if classVariant:
-        hpp.write('#include "%s.h"\n' % classNameOrig)
     generated_cpp.write('\n/************** Start of %sWrapper CPP ***********/\n' % className)
     generated_cpp.write('#include "%s"\n' % hppname)
     maxSize = 0
