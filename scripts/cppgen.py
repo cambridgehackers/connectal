@@ -28,7 +28,6 @@ sizeofUint32_t = 4
 generatedVectors = []
 
 proxyClassPrefixTemplate='''
-extern %(classNameOrig)sCb %(className)sProxyReq;
 class %(className)sProxy : public %(parentClass)s {
     %(classNameOrig)sCb *cb;
 public:
@@ -107,7 +106,7 @@ static ConnectalMethodJsonInfo %(className)sInfo[] = {
 };'''
 
 proxyMethodTableDecl='''
-%(classNameOrig)sCb %(className)sProxyReq[] = {
+%(classNameOrig)sCb %(className)sProxyReq = {
     %(methodTable)s
 };'''
 
@@ -496,9 +495,11 @@ def generate_class(classNameOrig, classVariant, declList, parentC, parentCC, gen
                 #'Vector'
                 generated_hpp.write('\ntypedef %s bsvvector_L%s_L%d[%d];' % (t[1], t[1], t[0], t[0]))
             generatedVectors = []
-            generated_hpp.write((proxyMethodTemplateDecl % substs) + ';')
         methodList.append(substs['methodName'])
         reqChanNums.append(substs['channelNumber'])
+    for mitem in declList:
+        substs, t = gatherMethodInfo(mitem['name'], mitem['params'], className, classNameOrig, classVariant)
+        generated_hpp.write((proxyMethodTemplateDecl % substs) + ';')
     methodJsonDeclarations = ['{"%(methodName)s", %(classNameOrig)s_%(methodName)sInfo},' % {'methodName': p, 'classNameOrig': classNameOrig} for p in methodList]
     if classVariant:
         cpp.write(jsonMethodTemplateDecl % {'className': classNameOrig, 'methodJsonDeclarations': '\n    '.join(methodJsonDeclarations)})
@@ -552,6 +553,7 @@ def generate_class(classNameOrig, classVariant, declList, parentC, parentCC, gen
         for mitem in declList:
             generated_cpp.write('    %s%s_cb,\n' % (classCName, mitem['name']))
         generated_cpp.write('};\n')
+    generated_hpp.write('extern %(classNameOrig)sCb %(className)sProxyReq;\n' % subs)
     hpp.write('#endif // _%(name)s_H_\n' % {'name': className.upper()})
     hpp.close()
     cpp.close()
