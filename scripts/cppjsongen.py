@@ -424,7 +424,7 @@ def emitEnum(item, name, f, indentation):
         f.write(' %s;' % name)
     f.write('\n')
 
-def generate_cppjson(project_dir, noisyFlag, jsondata):
+def generate_cpp(project_dir, noisyFlag, jsondata):
     global globalv_globalvars
     def create_cpp_file(name):
         fname = os.path.join(project_dir, 'jni', name)
