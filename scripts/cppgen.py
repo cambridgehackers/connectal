@@ -126,7 +126,8 @@ proxyMethodTemplate='''
 
 proxyJMethodTemplate='''
 {
-    %(channelName)sData tempdata;%(paramStructMarshall)s
+    %(channelName)sData tempdata;
+    %(paramStructMarshall)s
     connectalJsonEncode(p, &tempdata, %(channelName)sInfo);
     return 0;
 };
@@ -327,9 +328,8 @@ def accumWords(s, pro, memberList):
         #print '%s (2)'% (name)
         return [s]+accumWords([],pro+(32-w), memberList)
 
-def generate_marshall(argStruct, w):
+def generate_marshall(pfmt, w):
     global fdName
-    pfmt, classVariant = argStruct
     off = 0
     word = []
     fmt = pfmt
@@ -349,10 +349,6 @@ def generate_marshall(argStruct, w):
         if typeCName(e.datatype) == 'SpecialTypeForSendingFd':
             fdName = field
             fmt = 'p->item->writefd(p, &temp_working_addr, %s);'
-        if classVariant:
-            outstr += '\n    ' + fmt % (e.name, e.name)
-    if classVariant:
-        return outstr
     return fmt % (''.join(util.intersperse('|', word)))
 
 def generate_demarshall(argStruct, w):
@@ -396,22 +392,21 @@ def gatherMethodInfo(mname, params, itemname, classNameOrig, classVariant):
     argWords  = accumWords([], 0, argAtoms)
     fdName = '-1'
 
-    if classVariant:
-        paramStructMarshallStr = 'tempdata.%s = %s;'
-    else:
-        paramStructMarshallStr = 'p->item->write(p, &temp_working_addr, %s);'
+    paramStructMarshallStr = 'p->item->write(p, &temp_working_addr, %s);'
     paramStructDemarshallStr = 'tmp = p->item->read(p, &temp_working_addr);'
 
     if argWords == []:
         paramStructMarshall = [paramStructMarshallStr % '0']
         paramStructDemarshall = [paramStructDemarshallStr]
     else:
-        paramStructMarshall = map(functools.partial(generate_marshall, [paramStructMarshallStr, classVariant]), argWords)
+        paramStructMarshall = map(functools.partial(generate_marshall, paramStructMarshallStr), argWords)
         paramStructMarshall.reverse()
         paramStructDemarshall = map(functools.partial(generate_demarshall, [paramStructDemarshallStr, methodName]), argWords)
         paramStructDemarshall.reverse()
 
     chname = '%s_%s' % (classNameOrig, methodName)
+    if classVariant:
+        paramStructMarshall = ['tempdata.%s = %s;' % (pitem['name'],pitem['name']) for pitem in params]
     paramStructDeclarations = [ '%s %s;' % (typeCName(pitem['type']), pitem['name']) for pitem in params]
     paramJsonDeclarations = [ '{"%s", Connectaloffsetof(%sData,%s)},' % (pitem['name'], chname, pitem['name']) for pitem in params]
     if not params:
@@ -486,7 +481,6 @@ def generate_class(classNameOrig, classVariant, declList, parentC, parentCC, gen
             maxSize = t
         if classVariant:
             cpp.write((jsonStructTemplateDecl) % substs)
-        if classVariant:
             cpp.write((proxyMethodTemplateDecl + proxyJMethodTemplate) % substs)
         else:
             cpp.write((proxyMethodTemplateDecl + proxyMethodTemplate) % substs)
@@ -550,10 +544,9 @@ def generate_class(classNameOrig, classVariant, declList, parentC, parentCC, gen
         for mitem in declList:
             generated_cpp.write('    %s%s_cb,\n' % (classCName, mitem['name']))
         generated_cpp.write('};\n')
-    generated_hpp.write('extern %(classNameOrig)sCb %(className)sProxyReq;\n' % subs)
-    if not classVariant:
         hpp.write('#endif // _%(name)s_H_\n' % {'name': className.upper()})
         hpp.close()
+    generated_hpp.write('extern %(classNameOrig)sCb %(className)sProxyReq;\n' % subs)
     cpp.close()
 
 def emitStructMember(item, f, indentation):
