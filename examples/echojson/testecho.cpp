@@ -41,7 +41,7 @@ public:
         sem_post(&sem_heard2);
         //fprintf(stderr, "heard an s2: %ld %ld\n", a, b);
     }
-    EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
+    EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationWrapper(id, item, param, &EchoIndicationJson_handleMessage) {}
 };
 
 static void call_say(int v)
@@ -70,7 +70,7 @@ int main(int argc, const char **argv)
     int rc = getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
     EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &socketfuncInit, PARAM);
     rc = getaddrinfo("127.0.0.1", "5001", NULL, &param.addr);
-    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &socketfuncInit, PARAM);
+    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &socketfuncInit, PARAM, &EchoRequestJsonProxyReq);
 
     portalExec_start();
 

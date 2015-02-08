@@ -39,10 +39,12 @@ wrapperClassPrefixTemplate='''
 extern %(classNameOrig)sCb %(className)s_cbTable;
 class %(className)sWrapper : public %(parentClass)s {
 public:
-    %(className)sWrapper(int id, PortalPoller *poller = 0) : Portal(id, %(classNameOrig)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, poller) {
+    %(className)sWrapper(int id, PORTAL_INDFUNC cba = %(className)s_handleMessage, PortalPoller *poller = 0) :
+           Portal(id, %(classNameOrig)s_reqinfo, cba, (void *)&%(className)s_cbTable, poller) {
         pint.parent = static_cast<void *>(this);
     };
-    %(className)sWrapper(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : Portal(id, %(classNameOrig)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, item, param, poller) {
+    %(className)sWrapper(int id, PortalItemFunctions *item, void *param, PORTAL_INDFUNC cba = %(className)s_handleMessage, PortalPoller *poller=0):
+           Portal(id, %(classNameOrig)s_reqinfo, cba, (void *)&%(className)s_cbTable, item, param, poller) {
         pint.parent = static_cast<void *>(this);
     };
 '''
