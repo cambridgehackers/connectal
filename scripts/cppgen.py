@@ -96,16 +96,12 @@ handleMessageTemplate2='''
 '''
 
 jsonStructTemplateDecl='''
-static ConnectalParamJsonInfo %(channelName)sInfo[] = {
-    %(paramJsonDeclarations)s
-    {}
-};'''
+    {"%(channelName)s", ((ConnectalParamJsonInfo[]){
+        %(paramJsonDeclarations)s
+        {}}) },'''
 
 jsonMethodTemplateDecl='''
-static ConnectalMethodJsonInfo %(className)sInfo[] = {
-    %(methodJsonDeclarations)s
-    {},
-};'''
+static ConnectalMethodJsonInfo %(className)sInfo[] = {'''
 
 proxyMethodTableDecl='''
 %(classNameOrig)sCb %(className)sProxyReq = {
@@ -414,7 +410,7 @@ def gatherMethodInfo(mname, params, itemname, classNameOrig, classVariant):
         (pitem['name'], chname, pitem['name'], typeCName(pitem['type'])) for pitem in params]
     if not params:
         paramStructDeclarations = ['    int padding;\n']
-        paramJsonDeclarations = ['    int padding;\n']
+        paramJsonDeclarations = ['']
     respParams = ['tempdata.%s.%s' % (methodName, pitem['name']) for pitem in params]
     respParams.insert(0, 'p')
     substs = {
@@ -423,7 +419,7 @@ def gatherMethodInfo(mname, params, itemname, classNameOrig, classVariant):
         'paramProxyDeclarations': formalParameters(params, True),
         'paramStructDeclarations': '\n    '.join(paramStructDeclarations),
         'paramStructMarshall': '\n    '.join(paramStructMarshall),
-        'paramJsonDeclarations': '\n    '.join(paramJsonDeclarations),
+        'paramJsonDeclarations': '\n        '.join(paramJsonDeclarations),
         'paramStructDemarshall': '\n        '.join(paramStructDemarshall),
         'paramNames': ', '.join(['msg->%s' % pitem['name'] for pitem in params]),
         'wordLen': len(argWords),
@@ -469,15 +465,17 @@ def generate_class(classNameOrig, classVariant, declList, parentC, parentCC, gen
         return
     generatedCFiles.append(cppname)
     cpp = create_cpp_file(cppname)
-    if not classVariant:
+    maxSize = 0
+    reqChanNums = []
+    methodList = []
+    if classVariant:
+        cpp.write(jsonMethodTemplateDecl % {'className': classNameOrig})
+    else:
         hpp = create_cpp_file(hppname)
         hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': className.upper()})
         hpp.write('#include "%s.h"\n' % parentC)
         generated_cpp.write('\n/************** Start of %sWrapper CPP ***********/\n' % className)
         generated_cpp.write('#include "%s.h"\n' % classNameOrig)
-    maxSize = 0
-    reqChanNums = []
-    methodList = []
     for mitem in declList:
         substs, t = gatherMethodInfo(mitem['name'], mitem['params'], className, classNameOrig, classVariant)
         if t > maxSize:
@@ -488,7 +486,7 @@ def generate_class(classNameOrig, classVariant, declList, parentC, parentCC, gen
         reqChanNums.append(substs['channelNumber'])
     methodJsonDeclarations = ['{"%(methodName)s", %(classNameOrig)s_%(methodName)sInfo},' % {'methodName': p, 'classNameOrig': classNameOrig} for p in methodList]
     if classVariant:
-        cpp.write(jsonMethodTemplateDecl % {'className': classNameOrig, 'methodJsonDeclarations': '\n    '.join(methodJsonDeclarations)})
+        cpp.write('{}};\n')
     for mitem in declList:
         substs, t = gatherMethodInfo(mitem['name'], mitem['params'], className, classNameOrig, classVariant)
         if classVariant:

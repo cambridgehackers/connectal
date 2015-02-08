@@ -25,11 +25,22 @@
 
 void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJsonInfo *info)
 {
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-    //int         itype;
+printf("[%s:%d] %s\n", __FUNCTION__, __LINE__, info->name);
     ConnectalParamJsonInfo *iparam = info->param;
     while(iparam->name) {
-        printf("%s: %x\n", iparam->name, *(uint32_t *)((unsigned long)tempdata + iparam->offset));
+        switch(iparam->itype) {
+        case ITYPE_uint32_t:
+            printf("%s: uint32_t %x\n", iparam->name, *(uint32_t *)((unsigned long)tempdata + iparam->offset));
+            break;
+        case ITYPE_uint64_t:
+            printf("%s: uint64_t %lx\n", iparam->name, (unsigned long)*(uint64_t *)((unsigned long)tempdata + iparam->offset));
+            break;
+        case ITYPE_SpecialTypeForSendingFd:
+            printf("%s: int %x\n", iparam->name, *(int *)((unsigned long)tempdata + iparam->offset));
+            break;
+        default:
+            printf("%s: %x type %d\n", iparam->name, *(uint32_t *)((unsigned long)tempdata + iparam->offset), iparam->itype);
+        }
         iparam++;
     }
 }
