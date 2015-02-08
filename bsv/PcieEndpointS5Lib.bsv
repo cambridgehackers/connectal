@@ -197,8 +197,8 @@ interface PcieS5Wrap#(numeric type address_width, numeric type data_width, numer
    interface Clock coreclkout_hip;
 endinterface
 
-(* synthesize *)
-module mkPcieS5Wrap#(Clock clk_100MHz, Clock clk_50MHz, Reset npor, Reset pin_perst)(PcieS5Wrap#(12, 32, 128));
+//(* synthesize *)
+module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_perst)(PcieS5Wrap#(12, 32, 128));
 
    Vector#(8, Wire#(Bit#(1))) rx_in_wires <- replicateM(mkDWire(0));
    Vector#(8, Wire#(Bit#(8))) rxdata_wires <- replicateM(mkDWire(0));
@@ -212,18 +212,11 @@ module mkPcieS5Wrap#(Clock clk_100MHz, Clock clk_50MHz, Reset npor, Reset pin_pe
    Reset default_reset <- exposeCurrentReset;
    Reset reset_high <- invertCurrentReset;
 
-   B2C1 clk_125MHz<- mkB2C1();
-
-   PcieWrap         pcie     <- mkPcieWrap(clk_100MHz, npor, pin_perst, noReset());
-   PciePllWrap      pll      <- mkPciePllWrap(clk_50MHz, noReset(), reset_high);
+   PcieWrap         pcie     <- mkPcieWrap(clk_100Mhz, npor, pin_perst, reset_high);
 
    Clock coreclk = pcie.coreclkout.hip;
-   PcieReconfigWrap pcie_cfg <- mkPcieReconfigWrap(coreclk, clk_50MHz, npor, noReset(), reset_high);
-   XcvrReconfigWrap xcvr_cfg <- mkXcvrReconfigWrap(clk_50MHz, noReset(), reset_high);
-
-   rule pll_clk;
-      clk_125MHz.inputclock(pll.out.clk_0);
-   endrule
+   PcieReconfigWrap pcie_cfg <- mkPcieReconfigWrap(coreclk, clk_50Mhz, npor, reset_high, reset_high);
+   XcvrReconfigWrap xcvr_cfg <- mkXcvrReconfigWrap(clk_50Mhz, reset_high, reset_high);
 
    (* no_implicit_conditions *)
    rule pcie_rx;
@@ -308,7 +301,6 @@ module mkPcieS5Wrap#(Clock clk_100MHz, Clock clk_50MHz, Reset npor, Reset pin_pe
       pcie.phy.status6(phystatus_wires[6]);
       pcie.phy.status7(phystatus_wires[7]);
    endrule
-
 
    (* no_implicit_conditions *)
    rule connectReconfigMgmt;

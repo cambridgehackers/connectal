@@ -335,6 +335,7 @@ module mkPcieS5App#(Clock core_clk, Reset core_clk_rst) (PcieS5App);
    endinterface
 endmodule
 
+`ifdef PCIES5_SIM
 // PcieS5Top
 // Used for simulation with Default Pcie Application
 (* always_ready, always_enabled *)
@@ -362,3 +363,4 @@ module mkPcieS5Top #(Clock clk_50_clk, Clock clk_100_clk, Reset clk_50_rst_reset
    interface PcieS5HipPipe hip_pipe = pcie.hip_pipe;
    interface PcieS5HipCtrl hip_ctrl = pcie.hip_ctrl;
 endmodule
+`endif
