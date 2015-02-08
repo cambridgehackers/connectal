@@ -23,12 +23,18 @@
 
 #include "portal.h"
 
-void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalParamJsonInfo *info)
+void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJsonInfo *info)
 {
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+    //int         itype;
+    ConnectalParamJsonInfo *iparam = info->param;
+    while(iparam->name) {
+        printf("%s: %x\n", iparam->name, *(uint32_t *)((unsigned long)tempdata + iparam->offset));
+        iparam++;
+    }
 }
 
-void connnectalJsonDecode(PortalInternal *pint, void *tempdata, ConnectalParamJsonInfo *info)
+void connnectalJsonDecode(PortalInternal *pint, void *tempdata, ConnectalMethodJsonInfo *info)
 {
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 }

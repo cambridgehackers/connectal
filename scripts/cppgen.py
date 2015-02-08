@@ -98,13 +98,13 @@ handleMessageTemplate2='''
 jsonStructTemplateDecl='''
 static ConnectalParamJsonInfo %(channelName)sInfo[] = {
     %(paramJsonDeclarations)s
-    {NULL, %(channelNumber)s},
+    {}
 };'''
 
 jsonMethodTemplateDecl='''
 static ConnectalMethodJsonInfo %(className)sInfo[] = {
     %(methodJsonDeclarations)s
-    {NULL, NULL},
+    {},
 };'''
 
 proxyMethodTableDecl='''
@@ -130,7 +130,7 @@ proxyJMethodTemplate='''
 {
     %(channelName)sData tempdata;
     %(paramStructMarshall)s
-    connectalJsonEncode(p, &tempdata, %(channelName)sInfo);
+    connectalJsonEncode(p, &tempdata, &%(classNameOrig)sInfo[%(channelNumber)s]);
     return 0;
 };
 '''
@@ -410,7 +410,8 @@ def gatherMethodInfo(mname, params, itemname, classNameOrig, classVariant):
     if classVariant:
         paramStructMarshall = ['tempdata.%s = %s;' % (pitem['name'],pitem['name']) for pitem in params]
     paramStructDeclarations = [ '%s %s;' % (typeCName(pitem['type']), pitem['name']) for pitem in params]
-    paramJsonDeclarations = [ '{"%s", Connectaloffsetof(%sData,%s)},' % (pitem['name'], chname, pitem['name']) for pitem in params]
+    paramJsonDeclarations = [ '{"%s", Connectaloffsetof(%sData,%s), ITYPE_%s},' % \
+        (pitem['name'], chname, pitem['name'], typeCName(pitem['type'])) for pitem in params]
     if not params:
         paramStructDeclarations = ['    int padding;\n']
         paramJsonDeclarations = ['    int padding;\n']
@@ -483,6 +484,14 @@ def generate_class(classNameOrig, classVariant, declList, parentC, parentCC, gen
             maxSize = t
         if classVariant:
             cpp.write((jsonStructTemplateDecl) % substs)
+        methodList.append(substs['methodName'])
+        reqChanNums.append(substs['channelNumber'])
+    methodJsonDeclarations = ['{"%(methodName)s", %(classNameOrig)s_%(methodName)sInfo},' % {'methodName': p, 'classNameOrig': classNameOrig} for p in methodList]
+    if classVariant:
+        cpp.write(jsonMethodTemplateDecl % {'className': classNameOrig, 'methodJsonDeclarations': '\n    '.join(methodJsonDeclarations)})
+    for mitem in declList:
+        substs, t = gatherMethodInfo(mitem['name'], mitem['params'], className, classNameOrig, classVariant)
+        if classVariant:
             cpp.write((proxyMethodTemplateDecl + proxyJMethodTemplate) % substs)
         else:
             cpp.write((proxyMethodTemplateDecl + proxyMethodTemplate) % substs)
@@ -490,21 +499,16 @@ def generate_class(classNameOrig, classVariant, declList, parentC, parentCC, gen
                 #'Vector'
                 generated_hpp.write('\ntypedef %s bsvvector_L%s_L%d[%d];' % (t[1], t[1], t[0], t[0]))
             generatedVectors = []
-        methodList.append(substs['methodName'])
-        reqChanNums.append(substs['channelNumber'])
     for mitem in declList:
         substs, t = gatherMethodInfo(mitem['name'], mitem['params'], className, classNameOrig, classVariant)
         generated_hpp.write((proxyMethodTemplateDecl % substs) + ';')
-    methodJsonDeclarations = ['{"%(methodName)s", %(classNameOrig)s_%(methodName)sInfo},' % {'methodName': p, 'classNameOrig': classNameOrig} for p in methodList]
-    if classVariant:
-        cpp.write(jsonMethodTemplateDecl % {'className': classNameOrig, 'methodJsonDeclarations': '\n    '.join(methodJsonDeclarations)})
     methodTable = ['%(className)s_%(methodName)s,' % {'methodName': p, 'className': className} for p in methodList]
     cpp.write(proxyMethodTableDecl % {'className': className, 'classNameOrig': classNameOrig, 'methodTable': '\n    '.join(methodTable)})
     subs = {'className': classCName, 'maxSize': (maxSize+1) * sizeofUint32_t, 'parentClass': parentCC,
             'reqInfo': '0x%x' % ((len(declList) << 16) + (maxSize+1) * sizeofUint32_t),
             'classNameOrig': classNameOrig }
     if classVariant:
-        subs['handleStartup'] = 'connnectalJsonDecode(p, &tempdata, %(classNameOrig)sInfo[channel].param);' % subs
+        subs['handleStartup'] = 'connnectalJsonDecode(p, &tempdata, &%(classNameOrig)sInfo[channel]);' % subs
     else:
         subs['handleStartup'] = 'volatile unsigned int* temp_working_addr = p->item->mapchannelInd(p, channel);'
         generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(className)s_reqinfo %(reqInfo)s\n' % subs)

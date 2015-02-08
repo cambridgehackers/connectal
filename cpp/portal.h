@@ -132,16 +132,18 @@ typedef struct {
     void                 *socketParam;
 } PortalMuxParam;
 
+enum {ITYPE_uint32_t, ITYPE_uint64_t, ITYPE_SpecialTypeForSendingFd};
 typedef struct {
     const char *name;
     int         offset;
+    int         itype;
 } ConnectalParamJsonInfo;
 typedef struct {
     const char *name;
     ConnectalParamJsonInfo *param;
 } ConnectalMethodJsonInfo;
-void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalParamJsonInfo *info);
-void connnectalJsonDecode(PortalInternal *pint, void *tempdata, ConnectalParamJsonInfo *info);
+void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJsonInfo *info);
+void connnectalJsonDecode(PortalInternal *pint, void *tempdata, ConnectalMethodJsonInfo *info);
 
 #define Connectaloffsetof(TYPE, MEMBER) ((unsigned long)&((TYPE *)0)->MEMBER)
 
