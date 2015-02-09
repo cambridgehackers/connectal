@@ -43,7 +43,11 @@ import HostInterface::*;
 
 typedef enum {%(enumList)s} IfcNames deriving (Eq,Bits);
 
-module mkConnectalTop#(HostType host)(StdConnectalTop#(PhysAddrWidth));
+module mkConnectalTop
+`ifdef IMPORT_HOSTIF
+       #(HostType host)
+`endif
+       (StdConnectalTop#(PhysAddrWidth));
 %(portalInstantiate)s
 
    Vector#(%(portalCount)s,StdPortal) portals;
