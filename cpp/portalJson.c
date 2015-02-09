@@ -28,24 +28,24 @@ void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJs
 {
     ConnectalParamJsonInfo *iparam = info->param;
     char *data = (char *)pint->map_base;
-    data += sprintf(data, "{\"name\":\"%s\",", info->name);
+    data += sprintf(data, "{\"name\":\"%s\"", info->name);
     while(iparam->name) {
         uint32_t tmp32;
         uint64_t tmp64;
         int      tmpint;
-        data += sprintf(data, "\"%s\":", iparam->name);
+        data += sprintf(data, ",\"%s\":", iparam->name);
         switch(iparam->itype) {
         case ITYPE_uint32_t:
             tmp32 = *(uint32_t *)((unsigned long)tempdata + iparam->offset);
-            data += sprintf(data, "0x%x,", tmp32);
+            data += sprintf(data, "0x%x", tmp32);
             break;
         case ITYPE_uint64_t:
             tmp64 = *(uint64_t *)((unsigned long)tempdata + iparam->offset);
-            data += sprintf(data, "0x%lx,", (unsigned long)tmp64);
+            data += sprintf(data, "0x%lx", (unsigned long)tmp64);
             break;
         case ITYPE_SpecialTypeForSendingFd:
             tmpint = *(int *)((unsigned long)tempdata + iparam->offset);
-            data += sprintf(data, "%d,", tmpint);
+            data += sprintf(data, "%d", tmpint);
             break;
         default:
             printf("%x type %d\n", *(uint32_t *)((unsigned long)tempdata + iparam->offset), iparam->itype);
