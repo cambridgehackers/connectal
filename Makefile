@@ -417,4 +417,6 @@ distclean:
 	rm -f drivers/pcieportal/.*.o.cmd drivers/pcieportal/.*.ko.cmd
 	rm -f drivers/portalmem/.*.o.cmd drivers/portalmem/.*.ko.cmd
 	rm -f drivers/zynqportal/.*.o.cmd drivers/zynqportal/.*.ko.cmd
+	rm -rf doc/library/build/ examples/rbm/datasets/
+	rm -f doc/library/source/devguide/connectalbuild-1.png
 
