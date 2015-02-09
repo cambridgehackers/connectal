@@ -23,18 +23,14 @@
 
 import os, sys, shutil, string
 import argparse
-#import subprocess
-#import glob
-#import time
-#import syntax
 import util
-#import boardinfo
-#import pprint
-#import json
 
 argparser = argparse.ArgumentParser("Generate Top.bsv for an project.")
 argparser.add_argument('-p', '--project-dir', help='project directory')
 argparser.add_argument('-v', '--verbose', help='Display verbose information messages', action='store_true')
+argparser.add_argument('-l', '--leds', help='module that exports led interface')
+argparser.add_argument('-w', '--wrapper', help='exported wrapper interfaces', action='append')
+argparser.add_argument('-y', '--proxy', help='exported proxy interfaces', action='append')
 
 noisyFlag=True
 
@@ -45,7 +41,7 @@ import CtrlMux::*;
 import HostInterface::*;
 %(generatedImport)s
 
-typedef enum {%(ifEnum)s} IfcNames deriving (Eq,Bits);
+typedef enum {%(enumList)s} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop#(HostType host)(StdConnectalTop#(PhysAddrWidth));
 %(portalInstantiate)s
@@ -56,9 +52,9 @@ module mkConnectalTop#(HostType host)(StdConnectalTop#(PhysAddrWidth));
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
    interface masters = nil;
-   //interface leds = echoRequestInternal.leds;
    interface Empty pins;
    endinterface
+%(portalLeds)s
 endmodule : mkConnectalTop
 '''
 
@@ -70,30 +66,35 @@ if __name__=='__main__':
     if not options.project_dir:
         print "topgen: -p option missing"
         sys.exit(1)
-
     project_dir = os.path.abspath(os.path.expanduser(options.project_dir))
-    topFilename = project_dir + 'Top.xxx'
+    topFilename = project_dir + '/Top.bsv'
     if noisyFlag:
         print 'Writing Top:', topFilename
-    wrappers = [['EchoRequest', 'EchoRequestInternal'], ['Swallow', 'Swallow']]
-    proxies = [['EchoIndication', 'EchoRequestInternal']]
-    userFiles = ['Echo', 'SwallowIF']
-    #importfiles = proxies + wrappers + userFiles
-
+    wrappers = []
+    proxies = []
+    userFiles = []
     portalInstantiate = []
     portalList = []
     portalCount = 0
     instantiatedModules = []
     importfiles = []
+    portalLeds = ''
+
+    if options.leds:
+        portalLeds = '   interface leds = l%s.leds;' % options.leds
+    for p in options.wrapper:
+        wrappers.append(p.split(':'))
+    for p in options.proxy:
+        proxies.append(p.split(':'))
     for p in proxies:
         pmap = {'name': p[0], 'consume': p[1], 'count': portalCount}
         portalList.append('   portals[%(count)s] = l%(name)sProxy.portalIfc;' % pmap)
         portalInstantiate.append('   %(name)sProxy l%(name)sProxy <- mk%(name)sProxy(%(name)s);' % pmap)
         portalInstantiate.append('   %(consume)s l%(consume)s <- mk%(consume)s(l%(name)sProxy.ifc);' % pmap)
-        instantiatedModules.append(pmap['name'])
+        instantiatedModules.append(pmap['name'] + 'Proxy')
         instantiatedModules.append(pmap['consume'])
         portalCount = portalCount + 1
-        importfiles.append(pmap['name'] + 'Proxy')
+        importfiles.append(pmap['name'])
         importfiles.append(pmap['consume'])
     for p in wrappers:
         pmap = {'name': p[0], 'produce': p[1], 'count': portalCount}
@@ -103,15 +104,16 @@ if __name__=='__main__':
             instantiatedModules.append(pmap['produce'])
             importfiles.append(pmap['produce'])
         importfiles.append(pmap['name'])
-        portalInstantiate.append('   %(name)s l%(name)sWrapper <- mk%(name)sWrapper(%(name)s, l%(produce)s.ifc);' % pmap)
+        portalInstantiate.append('   %(name)sWrapper l%(name)sWrapper <- mk%(name)sWrapper(%(name)s, l%(produce)s.ifc);' % pmap)
         instantiatedModules.append(pmap['name'] + 'Wrapper')
         portalCount = portalCount + 1
 
-    topsubsts = {'ifEnum': ','.join(p[0] for p in wrappers + proxies),
+    topsubsts = {'enumList': ','.join(p[0] for p in wrappers + proxies),
                  'generatedImport': '\n'.join(['import %s::*;' % p for p in importfiles]),
                  'portalInstantiate' : '\n'.join(portalInstantiate),
                  'portalList': '\n'.join(portalList),
                  'portalCount': portalCount,
+                 'portalLeds' : portalLeds,
                  }
     print 'TOPFN', topFilename
     top = util.createDirAndOpen(topFilename, 'w')

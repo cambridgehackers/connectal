@@ -150,7 +150,11 @@ else
 PRINTF_EXTRA=$(CONNECTALDIR)/bsv/DisplayInd.bsv
 endif
 
-gentarget::
+ifneq ($(AUTOTOP),)
+GENTOP = $(BOARD)/Top.bsv
+endif
+
+gentarget:: process_autotop
 	@[ -e $(CONNECTALDIR)/scripts/syntax/parsetab.py ] || make -C $(CONNECTALDIR) scripts/syntax/parsetab.py
 	$(Q)[ -e $(IPDIR) ] || mkdir -p $(IPDIR)
 	$(Q)[ -e $(BOARD)/sources ] || mkdir -p $(BOARD)/sources
@@ -163,7 +167,12 @@ endif
 	$(foreach f, $(CPPFILES), --source $f) \
 	$(foreach f, $(CPPFILES2), --source2 $f) \
 	$(foreach f, $(PORTAL_DUMP_MAP), --dump_map $f) \
-        $(CONNECTALFLAGS) $(BSVFILES) $(PRINTF_EXTRA) $(VERBOSE_SWITCH)
+        $(CONNECTALFLAGS) $(BSVFILES) $(GENTOP) $(PRINTF_EXTRA) $(VERBOSE_SWITCH)
+
+process_autotop::
+ifneq ($(AUTOTOP),)
+	$(Q)$(CONNECTALDIR)/scripts/topgen.py -p $(BOARD) $(AUTOTOP)
+endif
 
 prebuild::
 	@# additional steps needed before making verilog etc
