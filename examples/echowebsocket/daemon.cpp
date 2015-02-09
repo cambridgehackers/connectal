@@ -82,9 +82,9 @@ int main(int argc, const char **argv)
     EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, NULL, NULL);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
     int rc = getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
-    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &socketfuncResp, PARAM, &EchoIndicationJsonProxyReq, 1000);
+    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &websocketfuncResp, PARAM, &EchoIndicationJsonProxyReq, 1000);
     rc = getaddrinfo("127.0.0.1", "5001", NULL, &param.addr);
-    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &socketfuncResp, PARAM);
+    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &websocketfuncResp, PARAM);
 
     printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);
     while(1)
