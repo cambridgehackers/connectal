@@ -68,6 +68,8 @@ int connnectalJsonDecode(PortalInternal *pint, int channel, void *tempdata, Conn
     int tmpfd;
     int len = pint->item->recv(pint, pint->map_base, (header & 0xffff)-1, &tmpfd);
     datap[len] = 0;
+    if (trace_json)
+        printf("[%s] message '%s'\n", __FUNCTION__, (char *)pint->map_base);
     while ((ch = *datap++)) {
         if (ch == '\"') {
             if (!attr)
@@ -97,6 +99,8 @@ int connnectalJsonDecode(PortalInternal *pint, int channel, void *tempdata, Conn
                     if (trace_json)
                         printf("[%s] attr '%s' val '%s'\n", __FUNCTION__, attr, val);
                     uint64_t tmp64 = strtol(val, &endptr, 0);
+                    if (endptr != &val[strlen(val)])
+                        printf("[%s:%d] strtol didn't use all characters %p != %p\n", __FUNCTION__, __LINE__, endptr, val+strlen(val));
                     switch(iparam->itype) {
                     case ITYPE_uint32_t:
                         *(uint32_t *)((unsigned long)tempdata + iparam->offset) = tmp64;
