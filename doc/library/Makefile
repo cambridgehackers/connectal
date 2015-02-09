@@ -180,6 +180,7 @@ source/devguide/connectalbuild-1.png: source/devguide/connectalbuild.pdf
 	pdftoppm -png source/devguide/connectalbuild.pdf source/devguide/connectalbuild
 
 images: source/devguide/connectalbuild-1.png
+	make -C source/design all
 
 publish: images html latexpdf
 	rsync -avz build/html/* ../../../doc/current/ref

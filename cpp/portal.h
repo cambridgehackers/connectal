@@ -28,6 +28,7 @@
 #include <sys/types.h>
 #include <sys/socket.h> // for send()/recv()
 #endif
+#include <string.h> // memcpy
 
 /* Offset of each /dev/fpgaxxx device in the address space */
 #define PORTAL_BASE_OFFSET         (1 << 16)
@@ -132,6 +133,22 @@ typedef struct {
     void                 *socketParam;
 } PortalMuxParam;
 
+enum {ITYPE_other, ITYPE_uint32_t, ITYPE_uint64_t, ITYPE_SpecialTypeForSendingFd,
+      ITYPE_ChannelType, ITYPE_DmaDbgRec};
+typedef struct {
+    const char *name;
+    int         offset;
+    int         itype;
+} ConnectalParamJsonInfo;
+typedef struct {
+    const char *name;
+    ConnectalParamJsonInfo *param;
+} ConnectalMethodJsonInfo;
+void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJsonInfo *info);
+int connnectalJsonDecode(PortalInternal *pint, int channel, void *tempdata, ConnectalMethodJsonInfo *info);
+
+#define Connectaloffsetof(TYPE, MEMBER) ((unsigned long)&((TYPE *)0)->MEMBER)
+
 #ifdef __KERNEL__
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -208,7 +225,7 @@ extern int global_pa_fd;
 extern int global_sockfd;
 extern PortalInternal *utility_portal;
 extern PortalItemFunctions bsimfunc, hardwarefunc,
-  socketfuncInit, socketfuncResp, sharedfunc, muxfunc, tracefunc, xsimfunc;
+  socketfuncInit, socketfuncResp, sharedfunc, muxfunc, tracefunc, xsimfunc, websocketfuncResp;
 #ifdef __cplusplus
 }
 #endif

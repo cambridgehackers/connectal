@@ -26,7 +26,6 @@ import GetPut::*;
 (* always_ready, always_enabled *)
 interface PciepllwrapOut;
     method Bit#(1)     clk_0();
-    method Bit#(1)     clk_1();
 endinterface
 (* always_ready, always_enabled *)
 interface PciePllWrap;
@@ -43,7 +42,6 @@ module mkPciePllWrap#(Clock refclk, Reset refclk_reset, Reset rst)(PciePllWrap);
     method locked locked();
     interface PciepllwrapOut     out;
         method outclk_0 clk_0();
-        method outclk_1 clk_1();
     endinterface
-    schedule (locked, out.clk_0, out.clk_1) CF (locked, out.clk_0, out.clk_1);
+    schedule (locked, out.clk_0) CF (locked, out.clk_0);
 endmodule

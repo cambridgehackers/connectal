@@ -29,11 +29,11 @@ static int v2b = 4;
 static PortalInternal intarr[MAX_INDARRAY];
 //static PORTAL_INDFUNC indfn[MAX_INDARRAY];
 
-void SimpleIndicationWrapperheard1_cb (  struct PortalInternal *p, const uint32_t v )
+int SimpleIndicationWrapperheard1_cb (  struct PortalInternal *p, const uint32_t v )
 {
     PORTAL_PRINTF("heard1(%d)\n", v);
 }
-void SimpleIndicationWrapperheard2_cb (  struct PortalInternal *p, const uint32_t a, const uint32_t b )
+int SimpleIndicationWrapperheard2_cb (  struct PortalInternal *p, const uint32_t a, const uint32_t b )
 {
     PORTAL_PRINTF("heard2(%d %d)\n", a, b);
 }

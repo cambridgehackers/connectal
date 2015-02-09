@@ -148,9 +148,10 @@ tests    =  $(memtests)          \
 # examples
 
 examples =  echo                 \
+	    echojson             \
 	    hdmidisplay          \
 	    led2                 \
-		alterajtaguart       \
+	    alterajtaguart       \
             memcpy               \
             memlatency           \
             memread              \
