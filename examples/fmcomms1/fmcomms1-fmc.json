@@ -431,12 +431,12 @@
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA27_n"
     },
-    "I2C1_scl": {
+    "*I2C1_scl": {
 	"PIO_DIRECTION": "BIDIR",
 	"IOSTANDARD": "LVCMOS33",
 	"fmc": "SCL"
     },
-    "I2C1_sda": {
+    "*I2C1_sda": {
 	"PIO_DIRECTION": "BIDIR",
 	"IOSTANDARD": "LVCMOS33",
 	"fmc": "SDA"
