@@ -51,13 +51,24 @@ callback_connectal(struct libwebsocket_context *context,
 		   enum libwebsocket_callback_reasons reason, void *user, void *in, size_t len)
 {
     wsc->wsi = wsi;
-    wsc->pss = (struct per_session_data_connectal *)user;
     switch (reason) {
+    case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION: {
+	fprintf(stderr, "[%s:%d] pss=%p\n", __FUNCTION__, __LINE__, wsc->pss);
+    } break;
     case LWS_CALLBACK_SERVER_WRITEABLE: {
+	wsc->pss = (struct per_session_data_connectal *)user;
 	int n = libwebsocket_write(wsi, &wsc->pss->txbuf[LWS_SEND_BUFFER_PRE_PADDING], wsc->pss->txlen, LWS_WRITE_TEXT);
 	libwebsocket_callback_on_writable(wsc->context, wsi);
     } break;
     case LWS_CALLBACK_RECEIVE: {
+	wsc->pss = (struct per_session_data_connectal *)user;
+	fprintf(stderr, "[%s:%d] msg={%s} len=%ld\n", __FUNCTION__, __LINE__, (char *)in, len);
+	fprintf(stderr, "[%s:%d] in=%p out=%p\n", __FUNCTION__, __LINE__, in, wsc->pss->rxbuf);
+	fprintf(stderr, "[%s:%d] *in=%x\n", __FUNCTION__, __LINE__, (int)*(char *)in);
+	memcpy(wsc->pss->rxbuf, in, len);
+	fprintf(stderr, "[%s:%d] msg={%s} len=%ld\n", __FUNCTION__, __LINE__, (char *)wsc->pss->rxbuf, len);
+	fprintf(stderr, "[%s:%d] *msg=%x\n", __FUNCTION__, __LINE__, (int)*(char *)wsc->pss->rxbuf);
+	wsc->pss->rxlen = len;
     } break;
     }
     return 0;
@@ -98,8 +109,10 @@ static int init_webSocketResp(struct PortalInternal *pint, void *aparam)
 
     int debug_level = LLL_ERR|LLL_WARN|LLL_NOTICE|LLL_INFO|LLL_CLIENT|LLL_LATENCY;
 
+    pint->map_base = (volatile unsigned int *)malloc(4+MAX_ZEDBOARD_PAYLOAD+1);
+
     wsc = (struct webSocketContext *)malloc(sizeof(struct webSocketContext));
-    memset(wsc, 0, sizeof(*wsc));
+    memset(wsc, 0, sizeof(struct webSocketContext));
 #ifndef LWS_NO_CLIENT
     lwsl_notice("Built to support client operations\n");
 #endif
@@ -131,6 +144,19 @@ static int init_webSocketResp(struct PortalInternal *pint, void *aparam)
 
 static int event_webSocket(struct PortalInternal *pint)
 {
+  int rxlen = 0;
+  if (wsc && wsc->pss) {
+    rxlen = wsc->pss->rxlen;
+  }
+  if (rxlen) {
+      fprintf(stderr, "[%s:%d] pint=%p pint->map_base=%p rxlen=%d\n", __FUNCTION__, __LINE__, pint, pint->map_base, rxlen);
+      int portal_number = 0;
+      if (pint->handler) {
+	  int hdr = rxlen+1;
+	  pint->map_base[0] = hdr;
+	  pint->handler(pint, portal_number, 0);
+      }
+  }
 }
 
 volatile unsigned int *mapchannel_webSocket(struct PortalInternal *pint, unsigned int v)
@@ -145,15 +171,23 @@ static void send_webSocket(struct PortalInternal *pint, volatile unsigned int *d
 {
     int n;
     wsc->pss->txlen = (hdr & 0xffff) * sizeof(uint32_t);
-    memcpy((void *)data, &wsc->pss->txbuf[LWS_SEND_BUFFER_PRE_PADDING], wsc->pss->txlen);
+    memcpy(&wsc->pss->txbuf[LWS_SEND_BUFFER_PRE_PADDING], (void *)data, wsc->pss->txlen);
     // next writeable callback will send it
 }
 static int recv_webSocket(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
 {
+    fprintf(stderr, "[%s:%d] wsc=%p len=%d\n", __FUNCTION__, __LINE__, wsc, len);
+    fprintf(stderr, "[%s:%d] wsc->pss=%p\n", __FUNCTION__, __LINE__, wsc->pss);
+    fprintf(stderr, "[%s:%d] wsc->pss->rxlen=%ld len=%d\n", __FUNCTION__, __LINE__, wsc->pss->rxlen, len);
+    fprintf(stderr, "[%s:%d] recv msg=%s\n", __FUNCTION__, __LINE__, (char *)wsc->pss->rxbuf);
+    int rxlen = wsc->pss->rxlen;
     if (wsc->pss->rxlen > len)
-	fprintf(stderr, "[%s:%d] packet too long wsc->pss->rxlen=%ld\n", __FUNCTION__, __LINE__, wsc->pss->rxlen);
-    memcpy(&wsc->pss->rxbuf[LWS_SEND_BUFFER_PRE_PADDING], (void *)buffer, wsc->pss->rxlen);
+	fprintf(stderr, "[%s:%d] packet too long wsc->pss->rxlen=%ld len=%d\n", __FUNCTION__, __LINE__, wsc->pss->rxlen, len);
+    memcpy((void *)buffer, wsc->pss->rxbuf, wsc->pss->rxlen);
     wsc->pss->rxlen = 0;
+    if (recvfd)
+	*recvfd = 0;
+    return rxlen;
 }
 
 PortalItemFunctions websocketfuncResp = {
