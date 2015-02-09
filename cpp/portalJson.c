@@ -58,8 +58,10 @@ void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJs
     pint->item->send(pint, pint->map_base, (iparam->offset << 16) | strlen((char *)pint->map_base), -1);
 }
 
-void connnectalJsonDecode(PortalInternal *pint, int channel, void *tempdata, ConnectalMethodJsonInfo *info)
+int connnectalJsonDecode(PortalInternal *pint, int channel, void *tempdata, ConnectalMethodJsonInfo *infoa)
 {
+    ConnectalMethodJsonInfo *info = NULL;
+//&infoa[channel];
     uint32_t header = *(uint32_t *)pint->map_base;
     char *datap = (char *)pint->map_base;
     char ch, *attr = NULL, *val = NULL;
@@ -77,6 +79,17 @@ void connnectalJsonDecode(PortalInternal *pint, int channel, void *tempdata, Con
             val = datap;
         else if ((ch == ',' || ch == '}') && attr && val) {
             *(datap - 1) = 0;
+            if (!strcmp(attr, "name")) {
+                info = infoa;
+                val++; /* skip leading '"' */
+                val[strlen(val) - 1] = 0; /* delete trailing '"' */
+                while (info->name && strcmp(info->name, val))
+                    info++;
+                if (!info->name) {
+                    printf("[%s:%d] unknown method name '%s'\n", __FUNCTION__, __LINE__, val);
+                    exit(1);
+                }
+            }
             ConnectalParamJsonInfo *iparam = info->param;
             while (iparam->name) {
                 if (!strcmp(iparam->name, attr)) {
@@ -105,4 +118,5 @@ void connnectalJsonDecode(PortalInternal *pint, int channel, void *tempdata, Con
             val = NULL;
         }
     }
+    return channel;
 }

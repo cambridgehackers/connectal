@@ -522,7 +522,7 @@ def generate_class(classNameOrig, classVariant, declList, parentC, parentCC, gen
             'reqInfo': '0x%x' % ((len(declList) << 16) + (maxSize+1) * sizeofUint32_t),
             'classNameOrig': classNameOrig }
     if classVariant:
-        subs['handleStartup'] = 'connnectalJsonDecode(p, channel, &tempdata, &%(classNameOrig)sInfo[channel]);' % subs
+        subs['handleStartup'] = 'channel = connnectalJsonDecode(p, channel, &tempdata, %(classNameOrig)sInfo);' % subs
     else:
         subs['handleStartup'] = 'volatile unsigned int* temp_working_addr = p->item->mapchannelInd(p, channel);'
         generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(className)s_reqinfo %(reqInfo)s\n' % subs)
