@@ -21,6 +21,9 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
 #include "signal.h"
 #include "pthread.h"
 #include "portal.h"
@@ -103,7 +106,15 @@ static int init_webSocketResp(struct PortalInternal *pint, void *aparam)
     lwsl_notice("Built to support server operations\n");
 #endif
     
-    int port = 5050;
+    unsigned short port = 5050;
+    if (param->addr->ai_family == AF_INET) {
+	struct sockaddr_in *sa = (struct sockaddr_in *)param->addr->ai_addr;
+	port = htons(sa->sin_port);
+    } else if (param->addr->ai_family == AF_INET6) {
+	struct sockaddr_in6 *sa = (struct sockaddr_in6 *)param->addr->ai_addr;
+	port = htons(sa->sin6_port);
+    }
+    fprintf(stderr, "[%s:%d] listening on addr=%p ai_family=%d port %d\n", __FUNCTION__, __LINE__, param->addr->ai_addr, param->addr->ai_family, port);
     wsc->info.port = port;
     wsc->info.protocols = protocols;
     wsc->info.gid = -1;
