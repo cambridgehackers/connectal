@@ -60,6 +60,7 @@ callback_connectal(struct libwebsocket_context *context,
     case LWS_CALLBACK_RECEIVE: {
     } break;
     }
+    return 0;
 }
 
 static struct libwebsocket_protocols protocols[] = {
