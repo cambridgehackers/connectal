@@ -22,16 +22,21 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-interface Swallow;
+interface SwallowRequest;
    method Action swallow(Bit#(32) v);
 endinterface
 
-module mkSwallow (Swallow);
+interface Swallow;
+   interface SwallowRequest ifc;
+endinterface
+module mkSwallow(Swallow);
 
    Reg#(Bit#(32)) sink <- mkReg(0);
    
+   interface SwallowRequest ifc;
    method Action swallow(Bit#(32) v);
       sink <= v;
    endmethod
+   endinterface
 
 endmodule
