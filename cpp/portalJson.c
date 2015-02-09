@@ -1,5 +1,4 @@
-// Copyright (c) 2012 Nokia, Inc.
-// Copyright (c) 2013-2014 Quanta Research Cambridge, Inc.
+// Copyright (c) 2014 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -24,42 +23,38 @@
 #include <string.h>
 #include "portal.h"
 
+static int trace_json ;//= 1;
 void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJsonInfo *info)
 {
     ConnectalParamJsonInfo *iparam = info->param;
     char *data = (char *)pint->map_base;
-    sprintf(data, "{'name': '%s',", info->name);
-    data += strlen(data);
+    data += sprintf(data, "{\"name\":\"%s\",", info->name);
     while(iparam->name) {
         uint32_t tmp32;
         uint64_t tmp64;
         int      tmpint;
-        sprintf(data, "'%s':", iparam->name);
-        data += strlen(data);
+        data += sprintf(data, "\"%s\":", iparam->name);
         switch(iparam->itype) {
         case ITYPE_uint32_t:
             tmp32 = *(uint32_t *)((unsigned long)tempdata + iparam->offset);
-            sprintf(data, "0x%x,", tmp32);
-            data += strlen(data);
+            data += sprintf(data, "0x%x,", tmp32);
             break;
         case ITYPE_uint64_t:
             tmp64 = *(uint64_t *)((unsigned long)tempdata + iparam->offset);
-            sprintf(data, "0x%lx,", (unsigned long)tmp64);
-            data += strlen(data);
+            data += sprintf(data, "0x%lx,", (unsigned long)tmp64);
             break;
         case ITYPE_SpecialTypeForSendingFd:
             tmpint = *(int *)((unsigned long)tempdata + iparam->offset);
-            sprintf(data, "%d,", tmpint);
-            data += strlen(data);
+            data += sprintf(data, "%d,", tmpint);
             break;
         default:
             printf("%x type %d\n", *(uint32_t *)((unsigned long)tempdata + iparam->offset), iparam->itype);
         }
         iparam++;
     }
-    sprintf(data, "}");
-    data += strlen(data);
-//printf("[%s:%d] num %d message \"%s\"\n", __FUNCTION__, __LINE__, iparam->offset, (char *)pint->map_base);
+    data += sprintf(data, "}");
+    if (trace_json)
+        printf("[%s] num %d message '%s'\n", __FUNCTION__, iparam->offset, (char *)pint->map_base);
     pint->item->send(pint, pint->map_base, (iparam->offset << 16) | strlen((char *)pint->map_base), -1);
 }
 
@@ -69,11 +64,10 @@ void connnectalJsonDecode(PortalInternal *pint, int channel, void *tempdata, Con
     char *datap = (char *)pint->map_base;
     char ch, *attr = NULL, *val = NULL;
     int tmpfd;
-//printf("[%s:%d] header %x name %s\n", __FUNCTION__, __LINE__, header, info->name);
     int len = pint->item->recv(pint, pint->map_base, (header & 0xffff)-1, &tmpfd);
     datap[len] = 0;
     while ((ch = *datap++)) {
-        if (ch == '\'') {
+        if (ch == '\"') {
             if (!attr)
                 attr = datap;
             else if (!val)
@@ -87,6 +81,8 @@ void connnectalJsonDecode(PortalInternal *pint, int channel, void *tempdata, Con
             while (iparam->name) {
                 if (!strcmp(iparam->name, attr)) {
                     char *endptr;
+                    if (trace_json)
+                        printf("[%s] attr '%s' val '%s'\n", __FUNCTION__, attr, val);
                     uint64_t tmp64 = strtol(val, &endptr, 0);
                     switch(iparam->itype) {
                     case ITYPE_uint32_t:

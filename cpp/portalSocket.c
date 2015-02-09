@@ -204,7 +204,8 @@ static int event_socket(struct PortalInternal *pint)
     if (pint->fpga_fd != -1) {
         int sockfd = accept_socket(pint->fpga_fd);
         if (sockfd != -1) {
-printf("[%s:%d]afteracc %p accfd %d fd %d\n", __FUNCTION__, __LINE__, pint, pint->fpga_fd, sockfd);
+            if (trace_socket)
+                printf("[%s:%d]afteracc %p accfd %d fd %d\n", __FUNCTION__, __LINE__, pint, pint->fpga_fd, sockfd);
             pint->client_fd[pint->client_fd_number++] = sockfd;
             pint->accept_finished = 1;
 #ifndef NO_CPP_PORTAL_CODE
