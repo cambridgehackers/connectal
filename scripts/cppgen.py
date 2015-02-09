@@ -251,6 +251,12 @@ def typeCName(item):
         return name
     return item['name']
 
+def typeJson(item):
+    tname = typeCName(item)
+    if tname not in itypeNames:
+        return 'other'
+    return tname
+
 def hasBitWidth(item):
     return item['name'] == 'Bit' or item['name'] == 'Int' or item['name'] == 'UInt'
 
@@ -407,14 +413,17 @@ def gatherMethodInfo(mname, params, itemname, classNameOrig, classVariant):
 
     chname = '%s_%s' % (classNameOrig, methodName)
     if classVariant:
-        paramStructMarshall = ['tempdata.%s = %s;' % (pitem['name'],pitem['name']) for pitem in params]
+        paramStructMarshall = []
+        for pitem in params:
+            pname = pitem['name']
+            if typeJson(pitem['type']) == 'other':
+                titem = 'memcpy(&tempdata.%s, &%s, sizeof(tempdata.%s));' % (pname,pname,pname)
+            else:
+                titem = 'tempdata.%s = %s;' % (pname,pname)
+            paramStructMarshall.append(titem)
     paramStructDeclarations = [ '%s %s;' % (typeCName(pitem['type']), pitem['name']) for pitem in params]
-    paramJsonDeclarations = []
-    for pitem in params:
-        tname = typeCName(pitem['type'])
-        if tname not in itypeNames:
-            tname = 'other'
-        paramJsonDeclarations.append('{"%s", Connectaloffsetof(%sData,%s), ITYPE_%s},' % (pitem['name'], chname, pitem['name'], tname))
+    paramJsonDeclarations = [ '{"%s", Connectaloffsetof(%sData,%s), ITYPE_%s},' % \
+        (pitem['name'], chname, pitem['name'], typeJson(pitem['type'])) for pitem in params]
     if not params:
         paramStructDeclarations = ['    int padding;\n']
         paramJsonDeclarations = ['']
