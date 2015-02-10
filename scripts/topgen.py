@@ -64,13 +64,12 @@ endmodule : mkConnectalTop
 '''
 
 memTemplate='''
-   Vector#(1, MemReadClient#(DataBusWidth)) readClients = cons(lMemread.dmaClient, nil);
    MMUIndicationProxy lMMUIndicationProxy <- mkMMUIndicationProxy(MMUIndicationProxy);
    MMU#(PhysAddrWidth) lMMU <- mkMMU(0, True, lMMUIndicationProxy.ifc);
    MMURequestWrapper lMMURequestWrapper <- mkMMURequestWrapper(MMURequestWrapper, lMMU.request);
 
    MemServerIndicationProxy lMemServerIndicationProxy <- mkMemServerIndicationProxy(MemServerIndicationProxy);
-   MemServer#(PhysAddrWidth,DataBusWidth,1) dma <- %(serverType)s(lMemServerIndicationProxy.ifc, readClients, cons(lMMU,nil));
+   MemServer#(PhysAddrWidth,DataBusWidth,`NumberOfMasters) dma <- %(serverType)s(lMemServerIndicationProxy.ifc, %(clientList)s, cons(lMMU,nil));
    MemServerRequestWrapper lMemServerRequestWrapper <- mkMemServerRequestWrapper(MemServerRequestWrapper, dma.request);
 '''
 
@@ -102,33 +101,19 @@ if __name__=='__main__':
     portalMaster = 'nil'
     moduleParam = 'StdConnectalTop#(PhysAddrWidth)'
     enumList = []
+    clientList = 'cons(lMemread.dmaClient, nil)'
 
     if options.leds:
         portalLeds = '   interface leds = l%s.leds;' % options.leds
-    if options.mem:
-        print 'MEM', options.mem
-        enumList.append('MemServerRequestWrapper')
-        enumList.append('MemServerIndicationProxy')
-        enumList.append('MMURequestWrapper')
-        enumList.append('MMUIndicationProxy')
-        importfiles = ['SpecialFIFOs', 'StmtFSM', 'FIFO', 'MemTypes', 'MemServer',
-            'MMU', 'ConnectalMemory', 'Leds', 'MemServerRequest',
-            'MMURequest', 'MemServerIndication', 'MMUIndication']
-        for p in options.mem:
-            portalMem = portalMem + memTemplate % {'serverType': p}
-        moduleParam = 'ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,1)'
-        portalMaster = 'dma.masters'
-        addPortal('lMemServerIndicationProxy')
-        addPortal('lMemServerRequestWrapper')
-        addPortal('lMMURequestWrapper')
-        addPortal('lMMUIndicationProxy')
     for pitem in options.proxy:
         p = pitem.split(':')
+        print 'PROXY', p, len(p)
         pmap = {'name': p[0], 'consume': p[1], 'count': portalCount, 'param': '', 'tparam': ''}
         if len(p) > 2 and p[2]:
             pmap['param'] = p[2] + ', '
         if len(p) > 3 and p[3]:
             pmap['tparam'] = '#(' + p[3] + ')'
+            clientList = 'lMemread.dmaClients'
         addPortal('l%(name)sProxy' % pmap)
         portalInstantiate.append('   %(name)sProxy l%(name)sProxy <- mk%(name)sProxy(%(name)sProxy);' % pmap)
         portalInstantiate.append('   %(consume)s%(tparam)s l%(consume)s <- mk%(consume)s(%(param)sl%(name)sProxy.ifc);' % pmap)
@@ -138,6 +123,7 @@ if __name__=='__main__':
         importfiles.append(pmap['consume'])
         enumList.append(pmap['name'] + 'Proxy')
     for pitem in options.wrapper:
+        print 'WRAPPER', p, len(p)
         p = pitem.split(':')
         pmap = {'name': p[0], 'produce': p[1], 'count': portalCount, 'param': '', 'tparam': ''}
         if len(p) > 2 and p[2]:
@@ -146,13 +132,30 @@ if __name__=='__main__':
             pmap['tparam'] = '#(' + p[3] + ')'
         addPortal('l%(name)sWrapper' % pmap)
         if pmap['produce'] not in instantiatedModules:
-            portalInstantiate.append('   %(produce)s%(tparam)s l%(produce)s <- mk%(produce)s(%(param));' % pmap)
+            portalInstantiate.append('   %(produce)s%(tparam)s l%(produce)s <- mk%(produce)s(%(param)s);' % pmap)
             instantiatedModules.append(pmap['produce'])
             importfiles.append(pmap['produce'])
         importfiles.append(pmap['name'])
         portalInstantiate.append('   %(name)sWrapper l%(name)sWrapper <- mk%(name)sWrapper(%(name)sWrapper, l%(produce)s.ifc);' % pmap)
         instantiatedModules.append(pmap['name'] + 'Wrapper')
         enumList.append(pmap['name'] + 'Wrapper')
+    if options.mem:
+        print 'MEM', options.mem
+        enumList.append('MemServerRequestWrapper')
+        enumList.append('MemServerIndicationProxy')
+        enumList.append('MMURequestWrapper')
+        enumList.append('MMUIndicationProxy')
+        importfiles.extend(['SpecialFIFOs', 'StmtFSM', 'FIFO', 'MemTypes', 'MemServer',
+            'MMU', 'ConnectalMemory', 'Leds', 'MemServerRequest',
+            'MMURequest', 'MemServerIndication', 'MMUIndication'])
+        for p in options.mem:
+            portalMem = portalMem + memTemplate % {'serverType': p, 'clientList': clientList}
+        moduleParam = 'ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,`NumberOfMasters)'
+        portalMaster = 'dma.masters'
+        addPortal('lMemServerIndicationProxy')
+        addPortal('lMemServerRequestWrapper')
+        addPortal('lMMURequestWrapper')
+        addPortal('lMMUIndicationProxy')
 
     topsubsts = {'enumList': ','.join(enumList),
                  'generatedImport': '\n'.join(['import %s::*;' % p for p in importfiles]),
