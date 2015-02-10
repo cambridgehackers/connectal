@@ -351,7 +351,7 @@ $(android_exetests):
 # and the parallella kernel needs to be parallel to connectal and built
 parallelladrivers:
 	(cd drivers/zynqportal/; CROSS_COMPILE=arm-linux-gnueabihf- DEVICE_XILINX_KERNEL=`pwd`/../../../parallella-linux/ make parallellazynqportal.ko)
-	(cd drivers/portalmem/;   CROSS_COMPILE=arm-linux-gnueabihf- DEVICE_XILINX_KERNEL=`pwd`/../../../parallella-linux/ make portalmem.ko)
+	(cd drivers/portalmem/;   CROSS_COMPILE=arm-linux-gnueabihf- DEVICE_XILINX_KERNEL=`pwd`/../../../parallella-linux/ make parallellaportalmem.ko)
 
 parallelladrivers-clean:
 	(cd drivers/zynqportal/;  CROSS_COMPILE=arm-linux-gnueabihf- DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make clean)
