@@ -37,7 +37,7 @@ interface EchoRequest;
    method Action setLeds(Bit#(8) v);
 endinterface
 
-interface EchoRequestInternal;
+interface Echo;
    interface EchoRequest ifc;
    interface LEDS leds;
 endinterface
@@ -47,7 +47,7 @@ typedef struct {
 	Bit#(16) b;
 } EchoPair deriving (Bits);
 
-module mkEchoRequestInternal#(EchoIndication indication)(EchoRequestInternal);
+module mkEcho#(EchoIndication indication)(Echo);
 
     FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
     FIFO#(EchoPair) delay2 <- mkSizedFIFO(8);

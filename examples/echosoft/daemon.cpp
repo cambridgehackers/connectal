@@ -79,15 +79,13 @@ int main(int argc, const char **argv)
 #define PARAM &param
 #endif
 
+    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, NULL, NULL);
+    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
     int rc = getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
     sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &socketfuncResp, PARAM);
     rc = getaddrinfo("127.0.0.1", "5001", NULL, &param.addr);
     EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &socketfuncResp, PARAM);
 
-    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, NULL, NULL);
-    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
-
-    portalExec_start();
     printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);
     while(1)
         sleep(100);
