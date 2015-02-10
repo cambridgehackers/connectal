@@ -37,14 +37,14 @@ int i;
     while (len > 0) {
         if (!(i & 0xf)) {
             if (i > 0)
-                printf("\n");
-            printf("%s: ",title);
+                fprintf(stderr, "\n");
+            fprintf(stderr, "%s: ",title);
         }
-        printf("%02x ", *p++);
+        fprintf(stderr, "%02x ", *p++);
         i++;
         len--;
     }
-    printf("\n");
+    fprintf(stderr, "\n");
 }
 
 static char devicename[1000];
@@ -56,18 +56,18 @@ int main(int argc, char *argv[])
     char *bashpid = getenv("CONNECTAL_MODULE_NAME");
 
     if (!bashpid) {
-        printf("bsim_relay: define environment variable CONNECTAL_MODULE_NAME\n");
+        fprintf(stderr, "bsim_relay: define environment variable CONNECTAL_MODULE_NAME\n");
         return -1;
     }
     sprintf(devicename, "/dev/%s", bashpid);
     int fd = open(devicename, O_RDWR);
     if (fd == -1) {
-        printf("bsimhost: '%s' not found\n", devicename);
+        fprintf(stderr, "bsimhost: '%s' not found\n", devicename);
         return -1;
     }
-printf("[%s:%d] trying to connect to bsim\n", __FUNCTION__, __LINE__);
+fprintf(stderr, "[%s:%d] trying to connect to bsim\n", __FUNCTION__, __LINE__);
     connect_to_bsim();
-printf("[%s:%d] opened bsim\n", __FUNCTION__, __LINE__);
+fprintf(stderr, "[%s:%d] opened bsim\n", __FUNCTION__, __LINE__);
     while ((rc = read(fd, &req, sizeof(req)))) {
         struct memresponse rv;
         if (rc == -1) {
@@ -78,13 +78,13 @@ printf("[%s:%d] opened bsim\n", __FUNCTION__, __LINE__);
             continue;
         }
         if (rc != sizeof(req)) {
-            printf("[%s:%d] rc = %d.\n", __FUNCTION__, __LINE__, rc);
+            fprintf(stderr, "[%s:%d] rc = %d.\n", __FUNCTION__, __LINE__, rc);
             memdump((unsigned char *)&req, sizeof(req), "RX");
         }
         rv.portal = req.portal;
         pint.fpga_number = req.portal;
         if (req.portal == MAGIC_PORTAL_FOR_SENDING_FD) {
-printf("[%s:%d] sending fd %d\n", __FUNCTION__, __LINE__, req.data_or_tag);
+fprintf(stderr, "[%s:%d] sending fd %d\n", __FUNCTION__, __LINE__, req.data_or_tag);
             bsimfunc.writefd(&pint, &req.addr, req.data_or_tag);
             rv.data = 0xdead;
             write(fd, &rv, sizeof(rv));

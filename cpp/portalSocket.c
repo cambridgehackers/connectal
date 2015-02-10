@@ -79,14 +79,14 @@ int i;
     while (len > 0) {
         if (!(i & 0xf)) {
             if (i > 0)
-                printf("\n");
-            printf("%s: ",title);
+                fprintf(stderr, "\n");
+            fprintf(stderr, "%s: ",title);
         }
-        printf("%02x ", *p++);
+        fprintf(stderr, "%02x ", *p++);
         i++;
         len--;
     }
-    printf("\n");
+    fprintf(stderr, "\n");
 }
 
 static pthread_mutex_t socket_mutex;
@@ -107,7 +107,7 @@ int init_connecting(const char *arg_name, PortalSocketParam *param)
   addrinfo.ai_addr = (struct sockaddr *)&sa;
 
   if (param && param->addr) {
-printf("[%s:%d] TCP\n", __FUNCTION__, __LINE__);
+fprintf(stderr, "[%s:%d] TCP\n", __FUNCTION__, __LINE__);
       addr = param->addr;
   }
   if ((sockfd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol)) == -1) {
@@ -168,7 +168,7 @@ static int recv_socket(struct PortalInternal *pint, volatile unsigned int *buffe
 {
     int rc = portalRecvFd(pint->client_fd[pint->indication_index], (void *)buffer, len * sizeof(uint32_t), recvfd);
     if(trace_socket) {
-        printf("[%s:%d] len %d fd %d rc %d\n", __FUNCTION__, __LINE__, len, pint->client_fd[pint->indication_index], rc);
+        fprintf(stderr, "[%s:%d] len %d fd %d rc %d\n", __FUNCTION__, __LINE__, len, pint->client_fd[pint->indication_index], rc);
         if (rc > 0) {
         char bname[100];
         sprintf(bname,"RECV%d", pint->client_fd[pint->indication_index]);
@@ -205,7 +205,7 @@ static int event_socket(struct PortalInternal *pint)
         int sockfd = accept_socket(pint->fpga_fd);
         if (sockfd != -1) {
             if (trace_socket)
-                printf("[%s:%d]afteracc %p accfd %d fd %d\n", __FUNCTION__, __LINE__, pint, pint->fpga_fd, sockfd);
+                fprintf(stderr, "[%s:%d]afteracc %p accfd %d fd %d\n", __FUNCTION__, __LINE__, pint, pint->fpga_fd, sockfd);
             pint->client_fd[pint->client_fd_number++] = sockfd;
             pint->accept_finished = 1;
 #ifndef NO_CPP_PORTAL_CODE
@@ -223,7 +223,7 @@ static void send_socket(struct PortalInternal *pint, volatile unsigned int *data
 {
     volatile unsigned int *buffer = data-1;
     if(trace_socket)
-        printf("[%s:%d] hdr %x fpga %x num %d\n", __FUNCTION__, __LINE__, hdr, pint->fpga_number, pint->client_fd_number);
+        fprintf(stderr, "[%s:%d] hdr %x fpga %x num %d\n", __FUNCTION__, __LINE__, hdr, pint->fpga_number, pint->client_fd_number);
     buffer[0] = hdr;
     while (pint->client_fd_number == 0)
         event_socket(pint);
@@ -246,7 +246,7 @@ static int init_mux(struct PortalInternal *pint, void *aparam)
 {
     PortalMuxParam *param = (PortalMuxParam *)aparam;
     if(trace_socket)
-        printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+        fprintf(stderr, "[%s:%d]\n", __FUNCTION__, __LINE__);
     pint->mux = param->pint;
     pint->map_base = ((volatile unsigned int*)malloc(REQINFO_SIZE(pint->reqinfo) + sizeof(uint32_t))) + 1;
     pint->mux->map_base[0] = -1;
@@ -259,7 +259,7 @@ static void send_mux(struct PortalInternal *pint, volatile unsigned int *data, u
 {
     volatile unsigned int *buffer = data-1;
     if(trace_socket)
-        printf("[%s:%d] hdr %x fpga %x\n", __FUNCTION__, __LINE__, hdr, pint->fpga_number);
+        fprintf(stderr, "[%s:%d] hdr %x fpga %x\n", __FUNCTION__, __LINE__, hdr, pint->fpga_number);
     buffer[0] = hdr;
     pint->mux->request_index = pint->request_index;
     pint->mux->item->send(pint->mux, buffer, (pint->fpga_number << 16) | ((hdr + 1) & 0xffff), sendFd);
@@ -345,7 +345,7 @@ void write_portal_fd_bsim(PortalInternal *pint, volatile unsigned int **addr, un
 {
   struct memrequest foo = {pint->fpga_number, 1,*addr,v};
 
-printf("[%s:%d] fd %d\n", __FUNCTION__, __LINE__, v);
+fprintf(stderr, "[%s:%d] fd %d\n", __FUNCTION__, __LINE__, v);
   portalSendFd(global_sockfd, &foo, sizeof(foo), v);
 }
 #else // __KERNEL__

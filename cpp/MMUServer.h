@@ -38,13 +38,13 @@ class MMUServer : public MMURequestWrapper
 public:
     void sglist (const uint32_t sglId, const uint32_t sglIndex, const uint64_t addr, const uint32_t len ) {
         if (trace_mmuserver)
-            printf("daemon[%s:%d](%x, %x, %lx, %x)\n", __FUNCTION__, __LINE__, sglId, sglIndex, addr, len);
+            fprintf(stderr, "daemon[%s:%d](%x, %x, %lx, %x)\n", __FUNCTION__, __LINE__, sglId, sglIndex, addr, len);
         memoryAreas[sglId].len += len;
     }
     void region (const uint32_t sglId, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 ) {
         memoryAreas[sglId].ptr = portalMmap(memoryAreas[sglId].fd, memoryAreas[sglId].len);
         //if (trace_mmuserver)
-            printf("daemon[%s:%d] fd %d ptr %p len %x\n", __FUNCTION__, __LINE__, memoryAreas[sglId].fd, memoryAreas[sglId].ptr, memoryAreas[sglId].len);
+            fprintf(stderr, "daemon[%s:%d] fd %d ptr %p len %x\n", __FUNCTION__, __LINE__, memoryAreas[sglId].fd, memoryAreas[sglId].ptr, memoryAreas[sglId].len);
         mIndicationProxy->configResp(0);
     }
     void idRequest(SpecialTypeForSendingFd fd) {
@@ -52,21 +52,21 @@ public:
         memoryAreas[memoryAreasIndex].ptr = NULL;
         memoryAreas[memoryAreasIndex].len = 0;
         //if (trace_mmuserver)
-            printf("daemon[%s:%d] fd %d\n", __FUNCTION__, __LINE__, fd);
+            fprintf(stderr, "daemon[%s:%d] fd %d\n", __FUNCTION__, __LINE__, fd);
 if (fd <= 0) {
-printf("[%s:%d] bogus fd value %d\n", __FUNCTION__, __LINE__, fd);
+fprintf(stderr, "[%s:%d] bogus fd value %d\n", __FUNCTION__, __LINE__, fd);
 exit(1);
 }
         mIndicationProxy->idResponse(memoryAreasIndex++);
     }
     void setInterface(uint32_t interfaceId, uint32_t sglId) {
         if (trace_mmuserver)
-            printf("[%s:%d] ifc %d sgl %d\n", __FUNCTION__, __LINE__, interfaceId, sglId);
+            fprintf(stderr, "[%s:%d] ifc %d sgl %d\n", __FUNCTION__, __LINE__, interfaceId, sglId);
         ifcarr[interfaceId]->map_base = (volatile unsigned int *)memoryAreas[sglId].ptr;
     }
     void idReturn (const uint32_t sglId ) {
         if (trace_mmuserver)
-            printf("daemon[%s:%d] sglId %d\n", __FUNCTION__, __LINE__, sglId);
+            fprintf(stderr, "daemon[%s:%d] sglId %d\n", __FUNCTION__, __LINE__, sglId);
     }
     void *getPtr (const uint32_t sglId ) {
         return memoryAreas[sglId].ptr;

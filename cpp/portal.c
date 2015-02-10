@@ -50,6 +50,8 @@
 #include "drivers/pcieportal/pcieportal.h" // BNOC_TRACE
 #endif
 
+int debug_portal = 0;
+
 static void init_portal_hw(void);
 int global_pa_fd = -1;
 PortalInternal *utility_portal = 0x0;

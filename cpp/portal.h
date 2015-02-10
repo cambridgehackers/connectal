@@ -167,7 +167,8 @@ int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
-#define PORTAL_PRINTF printf
+extern int debug_portal;
+#define PORTAL_PRINTF if (debug_portal) printf
 #endif
 
 #ifdef __cplusplus

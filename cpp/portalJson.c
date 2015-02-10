@@ -48,13 +48,13 @@ void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJs
             data += sprintf(data, "%d", tmpint);
             break;
         default:
-            printf("%x type %d\n", *(uint32_t *)((unsigned long)tempdata + iparam->offset), iparam->itype);
+            fprintf(stderr, "%x type %d\n", *(uint32_t *)((unsigned long)tempdata + iparam->offset), iparam->itype);
         }
         iparam++;
     }
     data += sprintf(data, "}");
     if (trace_json)
-        printf("[%s] num %d message '%s'\n", __FUNCTION__, iparam->offset, (char *)pint->map_base);
+        fprintf(stderr, "[%s] num %d message '%s'\n", __FUNCTION__, iparam->offset, (char *)pint->map_base);
     pint->item->send(pint, pint->map_base, (iparam->offset << 16) | strlen((char *)pint->map_base), -1);
 }
 
@@ -69,7 +69,7 @@ int connnectalJsonDecode(PortalInternal *pint, int channel, void *tempdata, Conn
     int len = pint->item->recv(pint, pint->map_base, (header & 0xffff)-1, &tmpfd);
     datap[len] = 0;
     if (trace_json)
-        printf("[%s] message '%s'\n", __FUNCTION__, (char *)pint->map_base);
+        fprintf(stderr, "[%s] message '%s'\n", __FUNCTION__, (char *)pint->map_base);
     while ((ch = *datap++)) {
         if (ch == '\"') {
             if (!attr)
@@ -88,7 +88,7 @@ int connnectalJsonDecode(PortalInternal *pint, int channel, void *tempdata, Conn
                 while (info->name && strcmp(info->name, val))
                     info++;
                 if (!info->name) {
-                    printf("[%s:%d] unknown method name '%s'\n", __FUNCTION__, __LINE__, val);
+                    fprintf(stderr, "[%s:%d] unknown method name '%s'\n", __FUNCTION__, __LINE__, val);
                     exit(1);
                 }
             }
@@ -97,10 +97,10 @@ int connnectalJsonDecode(PortalInternal *pint, int channel, void *tempdata, Conn
                 if (!strcmp(iparam->name, attr)) {
                     char *endptr;
                     if (trace_json)
-                        printf("[%s] attr '%s' val '%s'\n", __FUNCTION__, attr, val);
+                        fprintf(stderr, "[%s] attr '%s' val '%s'\n", __FUNCTION__, attr, val);
                     uint64_t tmp64 = strtol(val, &endptr, 0);
                     if (endptr != &val[strlen(val)])
-                        printf("[%s:%d] strtol didn't use all characters %p != %p\n", __FUNCTION__, __LINE__, endptr, val+strlen(val));
+                        fprintf(stderr, "[%s:%d] strtol didn't use all characters %p != %p\n", __FUNCTION__, __LINE__, endptr, val+strlen(val));
                     switch(iparam->itype) {
                     case ITYPE_uint32_t:
                         *(uint32_t *)((unsigned long)tempdata + iparam->offset) = tmp64;
@@ -112,7 +112,7 @@ int connnectalJsonDecode(PortalInternal *pint, int channel, void *tempdata, Conn
                         *(int *)((unsigned long)tempdata + iparam->offset) = tmp64;
                         break;
                     default:
-                        printf("%x type %d\n", *(uint32_t *)((unsigned long)tempdata + iparam->offset), iparam->itype);
+                        fprintf(stderr, "%x type %d\n", *(uint32_t *)((unsigned long)tempdata + iparam->offset), iparam->itype);
                     }
                     break;
                 }
