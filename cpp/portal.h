@@ -27,8 +27,8 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <sys/socket.h> // for send()/recv()
-#endif
 #include <string.h> // memcpy
+#endif
 
 /* Offset of each /dev/fpgaxxx device in the address space */
 #define PORTAL_BASE_OFFSET         (1 << 16)
