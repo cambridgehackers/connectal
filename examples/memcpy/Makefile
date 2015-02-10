@@ -1,8 +1,10 @@
 
 CONNECTALDIR?=../..
 INTERFACES = MemcpyRequest MemcpyIndication
-BSVFILES = Memcpy.bsv Top.bsv
+BSVFILES = Memcpy.bsv
 CPPFILES=testmemcpy.cpp
-#CONNECTALFLAGS=--bscflags " -D TRACE_AXI"
+
+AUTOTOP = -w MemcpyRequest:Memcpy -y MemcpyIndication:Memcpy
+AUTOTOP += -m mkMemServerRW:Memcpy:Memcpy
 
 include $(CONNECTALDIR)/Makefile.connectal

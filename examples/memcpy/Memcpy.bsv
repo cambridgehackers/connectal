@@ -42,7 +42,7 @@ interface MemcpyIndication;
 endinterface
 
 interface Memcpy;
-   interface MemcpyRequest request;
+   interface MemcpyRequest ifc;
    interface MemReadClient#(64) dmaReadClient;
    interface MemWriteClient#(64) dmaWriteClient;
 endinterface
@@ -122,7 +122,7 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
       //$display("                    drain_buffer %h", buffer.first);
    endrule
 
-   interface MemcpyRequest request;
+   interface MemcpyRequest ifc;
    method Action startCopy(Bit#(32) wp, Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
       $display("startCopy wrPointer=%d rdPointer=%d numWords=%h burstLen=%d iterCnt=%d", wp, rp, nw, bl, ic);
       indication.started;
