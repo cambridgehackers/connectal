@@ -4,8 +4,8 @@ INTERFACES = MemreadRequest MemreadIndication
 BSVFILES = Memread.bsv
 CPPFILES=testmemread.cpp
 
-AUTOTOP = -w MemreadRequest:Memread -y MemreadIndication:Memread
-AUTOTOP += -m mkMemServerR:Memread
+AUTOTOP = -w MemreadRequest:Memread -p MemreadIndication:Memread
+AUTOTOP += -m mkMemServerR:Memread.dmaClient
 
 include $(CONNECTALDIR)/Makefile.connectal
 

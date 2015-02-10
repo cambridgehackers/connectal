@@ -26,11 +26,11 @@ import argparse
 import util
 
 argparser = argparse.ArgumentParser("Generate Top.bsv for an project.")
-argparser.add_argument('-p', '--project-dir', help='project directory')
+argparser.add_argument('--project-dir', help='project directory')
 argparser.add_argument('-v', '--verbose', help='Display verbose information messages', action='store_true')
 argparser.add_argument('-l', '--leds', help='module that exports led interface')
 argparser.add_argument('-w', '--wrapper', help='exported wrapper interfaces', action='append')
-argparser.add_argument('-y', '--proxy', help='exported proxy interfaces', action='append')
+argparser.add_argument('-p', '--proxy', help='exported proxy interfaces', action='append')
 argparser.add_argument('-m', '--mem', help='exported memory interfaces', action='append')
 
 noisyFlag=True
@@ -84,7 +84,7 @@ if __name__=='__main__':
     if options.verbose:
         noisyFlag = True
     if not options.project_dir:
-        print "topgen: -p option missing"
+        print "topgen: --project-dir option missing"
         sys.exit(1)
     project_dir = os.path.abspath(os.path.expanduser(options.project_dir))
     topFilename = project_dir + '/Top.bsv'
@@ -101,7 +101,7 @@ if __name__=='__main__':
     portalMaster = 'nil'
     moduleParam = 'StdConnectalTop#(PhysAddrWidth)'
     enumList = []
-    clientList = 'cons(l%(elementType)s.%(port)s, nil)'
+    clientList = 'cons(l%(elementType)s, nil)'
 
     if options.leds:
         portalLeds = '   interface leds = l%s.leds;' % options.leds
@@ -113,7 +113,7 @@ if __name__=='__main__':
             pmap['param'] = p[2] + ', '
         if len(p) > 3 and p[3]:
             pmap['tparam'] = '#(' + p[3] + ')'
-            clientList = 'l%(elementType)s.%(port)ss'
+            clientList = 'l%(elementType)s'
         addPortal('l%(name)sProxy' % pmap)
         portalInstantiate.append('   %(name)sProxy l%(name)sProxy <- mk%(name)sProxy(%(name)sProxy);' % pmap)
         portalInstantiate.append('   %(consume)s%(tparam)s l%(consume)s <- mk%(consume)s(%(param)sl%(name)sProxy.ifc);' % pmap)
@@ -150,9 +150,7 @@ if __name__=='__main__':
             'MMURequest', 'MemServerIndication', 'MMUIndication'])
         for pitem in options.mem:
             p = pitem.split(':')
-            ctemp = [clientList % {'elementType': p[1], 'port': 'dmaClient'}]
-            if len(p) > 2:
-                ctemp = [clientList % {'elementType': p[1], 'port': 'dmaReadClient'}, clientList % {'elementType': p[2], 'port': 'dmaWriteClient'}]
+            ctemp = [clientList % {'elementType': pname} for pname in p[1:]]
             portalMem = portalMem + memTemplate % {'serverType': p[0], 'clientList': ','.join(ctemp)}
         moduleParam = 'ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,`NumberOfMasters)'
         portalMaster = 'dma.masters'
