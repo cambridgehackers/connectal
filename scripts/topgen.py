@@ -101,7 +101,7 @@ if __name__=='__main__':
     portalMaster = 'nil'
     moduleParam = 'StdConnectalTop#(PhysAddrWidth)'
     enumList = []
-    clientList = 'cons(lMemread.dmaClient, nil)'
+    clientList = 'cons(l%(elementType)s.dmaClient, nil)'
 
     if options.leds:
         portalLeds = '   interface leds = l%s.leds;' % options.leds
@@ -113,7 +113,7 @@ if __name__=='__main__':
             pmap['param'] = p[2] + ', '
         if len(p) > 3 and p[3]:
             pmap['tparam'] = '#(' + p[3] + ')'
-            clientList = 'lMemread.dmaClients'
+            clientList = 'l%(elementType)s.dmaClients'
         addPortal('l%(name)sProxy' % pmap)
         portalInstantiate.append('   %(name)sProxy l%(name)sProxy <- mk%(name)sProxy(%(name)sProxy);' % pmap)
         portalInstantiate.append('   %(consume)s%(tparam)s l%(consume)s <- mk%(consume)s(%(param)sl%(name)sProxy.ifc);' % pmap)
@@ -148,8 +148,9 @@ if __name__=='__main__':
         importfiles.extend(['SpecialFIFOs', 'StmtFSM', 'FIFO', 'MemTypes', 'MemServer',
             'MMU', 'ConnectalMemory', 'Leds', 'MemServerRequest',
             'MMURequest', 'MemServerIndication', 'MMUIndication'])
-        for p in options.mem:
-            portalMem = portalMem + memTemplate % {'serverType': p, 'clientList': clientList}
+        for pitem in options.mem:
+            p = pitem.split(':')
+            portalMem = portalMem + memTemplate % {'serverType': p[0], 'clientList': clientList % {'elementType': p[1]}}
         moduleParam = 'ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,`NumberOfMasters)'
         portalMaster = 'dma.masters'
         addPortal('lMemServerIndicationProxy')

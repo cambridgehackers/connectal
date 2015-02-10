@@ -5,7 +5,7 @@ BSVFILES = Memread.bsv
 CPPFILES=testmemread.cpp
 
 AUTOTOP = -w MemreadRequest:Memread -y MemreadIndication:Memread
-AUTOTOP += -m mkMemServerR
+AUTOTOP += -m mkMemServerR:Memread
 
 include $(CONNECTALDIR)/Makefile.connectal
 

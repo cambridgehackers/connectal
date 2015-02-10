@@ -122,13 +122,13 @@ void parent(int wr_sock)
 
   fprintf(stderr, "parent::%s %s\n", __DATE__, __TIME__);
 
-  device = new MemwriteRequestProxy(IfcNames_MemwriteRequest);
-  deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndication);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  device = new MemwriteRequestProxy(IfcNames_MemwriteRequestWrapper);
+  deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndicationProxy);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestWrapper);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestWrapper);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationProxy);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationProxy);
   
   fprintf(stderr, "parent::allocating memory...\n");
   dstAlloc = portalAlloc(alloc_sz);
