@@ -31,6 +31,7 @@ argparser.add_argument('-v', '--verbose', help='Display verbose information mess
 argparser.add_argument('-l', '--leds', help='module that exports led interface')
 argparser.add_argument('-w', '--wrapper', help='exported wrapper interfaces', action='append')
 argparser.add_argument('-y', '--proxy', help='exported proxy interfaces', action='append')
+argparser.add_argument('-m', '--mem', help='exported memory interfaces', action='append')
 
 noisyFlag=True
 
@@ -47,7 +48,7 @@ module mkConnectalTop
 `ifdef IMPORT_HOSTIF
        #(HostType host)
 `endif
-       (StdConnectalTop#(PhysAddrWidth));
+       (%(moduleParam)s);
 %(portalInstantiate)s
 
    Vector#(%(portalCount)s,StdPortal) portals;
@@ -55,12 +56,28 @@ module mkConnectalTop
    let ctrl_mux <- mkSlaveMux(portals);
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
-   interface masters = nil;
+   interface masters = %(portalMaster)s;
    interface Empty pins;
    endinterface
 %(portalLeds)s
 endmodule : mkConnectalTop
 '''
+
+memTemplate='''
+   Vector#(1, MemReadClient#(DataBusWidth)) readClients = cons(lMemread.dmaClient, nil);
+   MMUIndicationProxy lMMUIndicationProxy <- mkMMUIndicationProxy(MMUIndicationProxy);
+   MMU#(PhysAddrWidth) lMMU <- mkMMU(0, True, lMMUIndicationProxy.ifc);
+   MMURequestWrapper lMMURequestWrapper <- mkMMURequestWrapper(MMURequestWrapper, lMMU.request);
+
+   MemServerIndicationProxy lMemServerIndicationProxy <- mkMemServerIndicationProxy(MemServerIndicationProxy);
+   MemServer#(PhysAddrWidth,DataBusWidth,1) dma <- %(serverType)s(lMemServerIndicationProxy.ifc, readClients, cons(lMMU,nil));
+   MemServerRequestWrapper lMemServerRequestWrapper <- mkMemServerRequestWrapper(MemServerRequestWrapper, dma.request);
+'''
+
+def addPortal(name):
+    global portalCount
+    portalList.append('   portals[%(count)s] = %(name)s.portalIfc;' % {'count': portalCount, 'name': name})
+    portalCount = portalCount + 1
 
 if __name__=='__main__':
     options = argparser.parse_args()
@@ -81,42 +98,71 @@ if __name__=='__main__':
     instantiatedModules = []
     importfiles = []
     portalLeds = ''
+    portalMem = ''
+    portalMaster = 'nil'
+    moduleParam = 'StdConnectalTop#(PhysAddrWidth)'
     enumList = []
 
     if options.leds:
         portalLeds = '   interface leds = l%s.leds;' % options.leds
+    if options.mem:
+        print 'MEM', options.mem
+        enumList.append('MemServerRequestWrapper')
+        enumList.append('MemServerIndicationProxy')
+        enumList.append('MMURequestWrapper')
+        enumList.append('MMUIndicationProxy')
+        importfiles = ['SpecialFIFOs', 'StmtFSM', 'FIFO', 'MemTypes', 'MemServer',
+            'MMU', 'ConnectalMemory', 'Leds', 'MemServerRequest',
+            'MMURequest', 'MemServerIndication', 'MMUIndication']
+        for p in options.mem:
+            portalMem = portalMem + memTemplate % {'serverType': p}
+        moduleParam = 'ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,1)'
+        portalMaster = 'dma.masters'
+        addPortal('lMemServerIndicationProxy')
+        addPortal('lMemServerRequestWrapper')
+        addPortal('lMMURequestWrapper')
+        addPortal('lMMUIndicationProxy')
     for pitem in options.proxy:
         p = pitem.split(':')
-        pmap = {'name': p[0], 'consume': p[1], 'count': portalCount}
-        portalList.append('   portals[%(count)s] = l%(name)sProxy.portalIfc;' % pmap)
+        pmap = {'name': p[0], 'consume': p[1], 'count': portalCount, 'param': '', 'tparam': ''}
+        if len(p) > 2 and p[2]:
+            pmap['param'] = p[2] + ', '
+        if len(p) > 3 and p[3]:
+            pmap['tparam'] = '#(' + p[3] + ')'
+        addPortal('l%(name)sProxy' % pmap)
         portalInstantiate.append('   %(name)sProxy l%(name)sProxy <- mk%(name)sProxy(%(name)sProxy);' % pmap)
-        portalInstantiate.append('   %(consume)s l%(consume)s <- mk%(consume)s(l%(name)sProxy.ifc);' % pmap)
+        portalInstantiate.append('   %(consume)s%(tparam)s l%(consume)s <- mk%(consume)s(%(param)sl%(name)sProxy.ifc);' % pmap)
         instantiatedModules.append(pmap['name'] + 'Proxy')
         instantiatedModules.append(pmap['consume'])
-        portalCount = portalCount + 1
         importfiles.append(pmap['name'])
         importfiles.append(pmap['consume'])
         enumList.append(pmap['name'] + 'Proxy')
     for pitem in options.wrapper:
         p = pitem.split(':')
-        pmap = {'name': p[0], 'produce': p[1], 'count': portalCount}
-        portalList.append('   portals[%(count)s] = l%(name)sWrapper.portalIfc;' % pmap)
+        pmap = {'name': p[0], 'produce': p[1], 'count': portalCount, 'param': '', 'tparam': ''}
+        if len(p) > 2 and p[2]:
+            pmap['param'] = p[2] + ', '
+        if len(p) > 3 and p[3]:
+            pmap['tparam'] = '#(' + p[3] + ')'
+        addPortal('l%(name)sWrapper' % pmap)
         if pmap['produce'] not in instantiatedModules:
-            portalInstantiate.append('   %(produce)s l%(produce)s <- mk%(produce)s();' % pmap)
+            portalInstantiate.append('   %(produce)s%(tparam)s l%(produce)s <- mk%(produce)s(%(param));' % pmap)
             instantiatedModules.append(pmap['produce'])
             importfiles.append(pmap['produce'])
         importfiles.append(pmap['name'])
         portalInstantiate.append('   %(name)sWrapper l%(name)sWrapper <- mk%(name)sWrapper(%(name)sWrapper, l%(produce)s.ifc);' % pmap)
         instantiatedModules.append(pmap['name'] + 'Wrapper')
         enumList.append(pmap['name'] + 'Wrapper')
-        portalCount = portalCount + 1
 
     topsubsts = {'enumList': ','.join(enumList),
                  'generatedImport': '\n'.join(['import %s::*;' % p for p in importfiles]),
-                 'portalInstantiate' : '\n'.join(portalInstantiate),
+                 'portalInstantiate' : '\n'.join(portalInstantiate) + portalMem,
                  'portalList': '\n'.join(portalList),
                  'portalCount': portalCount,
                  'portalLeds' : portalLeds,
+                 'portalMem' : portalMem,
+                 'portalMaster' : portalMaster,
+                 'moduleParam' : moduleParam,
                  }
     print 'TOPFN', topFilename
     top = util.createDirAndOpen(topFilename, 'w')
