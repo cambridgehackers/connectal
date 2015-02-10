@@ -52,7 +52,7 @@ int send_reference_to_portal(PortalInternal *device, int numEntries, RegionRef *
     uint32_t indexVal[3];
     unsigned char idxOffset;
   rc = id;
-printf("[%s:%d] num %d\n", __FUNCTION__, __LINE__, numEntries);
+  PORTAL_PRINTF("[%s:%d] num %d\n", __FUNCTION__, __LINE__, numEntries);
   for(i = 0; i < numEntries; i++) {
     long addr = data[i].dma_address;
     long len = data[i].length;
