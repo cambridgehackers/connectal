@@ -1,130 +1,136 @@
-connectal (14.11.6-2trusty3) trusty; urgency=low
+connectal (15.02.1-1precise3) precise; urgency=medium
+
+  * Updated to 15.02.1
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 10 Feb 2015 09:53:44 -0500
+
+connectal (14.11.6-2precise3) precise; urgency=low
 
   * Tweak install of pcieflat
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 24 Nov 2014 16:55:21 -0500
 
-connectal (14.11.6-1trusty1) trusty; urgency=low
+connectal (14.11.6-1precise1) precise; urgency=low
 
   * Updated to 14.11.6
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 24 Nov 2014 15:54:34 -0500
 
-connectal (14.11.5-1trusty1) trusty; urgency=low
+connectal (14.11.5-1precise1) precise; urgency=low
 
   * Updated to 14.11.5
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 18 Nov 2014 08:43:29 -0500
 
-connectal (14.11.4-1trusty1) trusty; urgency=low
+connectal (14.11.4-1precise1) precise; urgency=low
 
   * Updated to 14.11.4
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 17 Nov 2014 12:00:21 -0500
 
-connectal (14.11.3-2trusty2) trusty; urgency=low
+connectal (14.11.3-2precise2) precise; urgency=low
 
   * Updated to 14.11.3
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 14 Nov 2014 11:38:22 -0500
 
-connectal (14.11.2-1trusty1) trusty; urgency=low
+connectal (14.11.2-1precise1) precise; urgency=low
 
   * Update to 14.11.2
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 07 Nov 2014 09:07:26 -0500
 
-connectal (14.11.1-2trusty1) trusty; urgency=low
+connectal (14.11.1-2precise1) precise; urgency=low
 
   * Update install-dkms
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 06 Nov 2014 13:03:40 -0500
 
-connectal (14.11.1-1trusty1) trusty; urgency=low
+connectal (14.11.1-1precise1) precise; urgency=low
 
   * Updated to connectal 14.11.1
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 06 Nov 2014 11:35:05 -0500
 
-connectal (14.10.2-7trusty4) trusty; urgency=medium
+connectal (14.10.2-7precise4) precise; urgency=medium
 
   * Specify CROSS_COMPILE and add to arm-linux-gnueabi-gcc to Build-Depends
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 27 Oct 2014 08:27:24 -0400
 
-connectal (14.10.2-7trusty2) trusty; urgency=medium
+connectal (14.10.2-7precise2) precise; urgency=medium
 
   * Specify driver version
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Sat, 25 Oct 2014 14:34:22 -0400
 
-connectal (14.10.2-6trusty1) trusty; urgency=medium
+connectal (14.10.2-6precise1) precise; urgency=medium
 
   * Added the build depdences on zynqdrivers and zynqdrivers-install
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 24 Oct 2014 16:19:17 -0400
 
-connectal (14.10.2-5trusty1) trusty; urgency=medium
+connectal (14.10.2-5precise1) precise; urgency=medium
 
   * Build zynqdrivers and package in connectal-zynqdrivers
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 24 Oct 2014 13:23:21 -0400
 
-connectal (14.10.2-4trusty1) trusty; urgency=medium
+connectal (14.10.2-4precise1) precise; urgency=medium
 
   * Depend on fpgamake, buildcache, and fpgajtag
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 23 Oct 2014 14:09:00 -0400
 
-connectal (14.10.2-3trusty1) trusty; urgency=medium
+connectal (14.10.2-3precise1) precise; urgency=medium
 
   * Fix DKMS install
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 23 Oct 2014 12:26:54 -0400
 
-connectal (14.10.2-2trusty1) trusty; urgency=high
+connectal (14.10.2-2precise1) precise; urgency=high
 
   * Depends on vim for xxd
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 23 Oct 2014 11:18:06 -0400
 
-connectal (14.10.2-1trusty1) trusty; urgency=high
+connectal (14.10.2-1precise1) precise; urgency=high
 
   * Updated to 14.10.2
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 23 Oct 2014 11:15:16 -0400
 
-connectal (14.10.01-5trusty1) trusty; urgency=low
+connectal (14.10.01-5precise1) precise; urgency=low
 
   * DKMS
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 23 Oct 2014 09:09:02 -0400
 
-connectal (14.10.01-4trusty2) trusty; urgency=low
+connectal (14.10.01-4precise2) precise; urgency=low
 
   * Do not build kernel modules
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 22 Oct 2014 17:43:44 -0400
 
-connectal (14.10.01-3trusty1) trusty; urgency=low
+connectal (14.10.01-3precise1) precise; urgency=low
 
   * Depends on python-ply
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 22 Oct 2014 17:29:22 -0400
 
-connectal (14.10.01-2trusty2) trusty; urgency=low
+connectal (14.10.01-2precise2) precise; urgency=low
 
   * Include the source tarball
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 22 Oct 2014 08:11:22 -0400
 
-connectal (14.10.01-2trusty1) trusty; urgency=low
+connectal (14.10.01-2precise1) precise; urgency=low
 
   * Missed some files
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 21 Oct 2014 16:44:23 -0400
 
-connectal (14.10.01-1trusty1) trusty; urgency=low
+connectal (14.10.01-1precise1) precise; urgency=low
 
   * Initial release
 
