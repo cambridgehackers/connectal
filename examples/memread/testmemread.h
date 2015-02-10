@@ -95,7 +95,7 @@ public:
     dump("", (char*)&v, sizeof(v));
   }
   virtual void reportStateDbg(uint32_t reportType, uint32_t finished, uint32_t dataPipeNotEmpty){
-    fprintf(stderr, "Memread::reportStateDbg(%08x, %d, finished=%08x dataPipeNotEmpty=%08x)\n", reportType, finished, dataPipeNotEmpty);
+    fprintf(stderr, "Memread::reportStateDbg(%d, finished=%08x dataPipeNotEmpty=%08x)\n", reportType, finished, dataPipeNotEmpty);
   }  
   void reportStateDbg ( const uint32_t streamRdCnt, const uint32_t mismatchCount ) {
   }
