@@ -47,7 +47,9 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
     uint64_t borderVal[3];
     uint32_t indexVal[3];
     unsigned char idxOffset;
+#ifdef (BSIM)
     int size_accum = 0;
+#endif
 #ifdef __KERNEL__
     struct scatterlist *sg;
     struct file *fmem;
