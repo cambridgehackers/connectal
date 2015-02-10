@@ -1,3 +1,9 @@
+connectal (15.02.2-1trusty1) trusty; urgency=medium
+
+  * Fixed include string.h for zynqdrivers
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 10 Feb 2015 10:09:21 -0500
+
 connectal (15.02.1-1precise3) precise; urgency=medium
 
   * Updated to 15.02.1
