@@ -122,9 +122,9 @@ static void call_say2(int v, int v2)
 int main(int argc, const char **argv)
 {
     poller = new PortalPoller();
-    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, poller);
+    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndicationIF, poller);
     // these use the default poller
-    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
+    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestIF);
 
     poller->portalExec_init();
     init_thread();

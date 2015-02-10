@@ -1,0 +1,78 @@
+{
+    "*PCIE_txp[0]": {
+	"PIO_DIRECTION": "OUTPUT",
+	"pcie": "PCIE_tx0_p"
+    },
+    "*PCIE_txn[0]": {
+	"PIO_DIRECTION": "OUTPUT",
+	"pcie": "PCIE_tx0_n"
+    },
+    "*PCIE_txp[1]": {
+	"PIO_DIRECTION": "OUTPUT",
+	"pcie": "PCIE_tx1_p"
+    },
+    "*PCIE_txn[1]": {
+	"PIO_DIRECTION": "OUTPUT",
+	"pcie": "PCIE_tx1_n"
+    },
+    "*PCIE_txp[1]": {
+	"PIO_DIRECTION": "OUTPUT",
+	"pcie": "PCIE_tx1_p"
+    },
+    "*PCIE_txn[2]": {
+	"PIO_DIRECTION": "OUTPUT",
+	"pcie": "PCIE_tx2_n"
+    },
+    "*PCIE_txp[3]": {
+	"PIO_DIRECTION": "OUTPUT",
+	"pcie": "PCIE_tx3_p"
+    },
+    "*PCIE_txn[3]": {
+	"PIO_DIRECTION": "OUTPUT",
+	"pcie": "PCIE_tx3_n"
+    },
+    "*PCIE_rxp[0]": {
+	"PIO_DIRECTION": "INPUT",
+	"pcie": "PCIE_rx0_n"
+    },
+    "*PCIE_rxn[0]": {
+	"PIO_DIRECTION": "INPUT",
+	"pcie": "PCIE_rx0_n"
+    },
+    "*PCIE_rxp[1]": {
+	"PIO_DIRECTION": "INPUT",
+	"pcie": "PCIE_rx1_n"
+    },
+    "*PCIE_rxn[1]": {
+	"PIO_DIRECTION": "INPUT",
+	"pcie": "PCIE_rx1_n"
+    },
+    "*PCIE_rxp[2]": {
+	"PIO_DIRECTION": "INPUT",
+	"pcie": "PCIE_rx2_n"
+    },
+    "*PCIE_rxn[2]": {
+	"PIO_DIRECTION": "INPUT",
+	"pcie": "PCIE_rx2_n"
+    },
+    "*PCIE_rxp[3]": {
+	"PIO_DIRECTION": "INPUT",
+	"pcie": "PCIE_rx3_n"
+    },
+    "*PCIE_rxn[3]": {
+	"PIO_DIRECTION": "INPUT",
+	"pcie": "PCIE_rx3_n"
+    },
+    "pcie_sys_clk_p": {
+	"PIO_DIRECTION": "INPUT",
+	"pcie": "PCIE_clk_q0_p"
+    },
+    "pcie_sys_clk_n": {
+	"PIO_DIRECTION": "INPUT",
+	"pcie": "PCIE_clk_q0_n"
+    },
+    "pcie_sys_reset_n": {
+	"PIO_DIRECTION": "INPUT",
+	"pcie": "PCIE_perst"
+    }
+}

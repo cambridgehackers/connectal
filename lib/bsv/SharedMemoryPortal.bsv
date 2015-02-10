@@ -27,6 +27,8 @@ import FIFOF::*;
 import GetPut::*;
 import ClientServer::*;
 import CtrlMux::*;
+import Gearbox::*;
+import Clocks::*;
 
 import MIFO::*;
 import Pipe::*;
@@ -47,7 +49,12 @@ typedef enum {
    MessageRequested,
    Drain,
    UpdateTail,
+   UpdateHead,
+   UpdateHead2,
    Waiting,
+   SendHeader,
+   SendMessage,
+   SendPadding,
    Stop
    } SharedMemoryPortalState deriving (Bits,Eq);
 
@@ -154,7 +161,7 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
 	    else
 	       reqState <= Drain;
 	 end
-	 else if (wordCountReg <= messageWords)
+	 else if (wordCountReg == 1)
 	    reqState <= UpdateTail;
 	 else if (messageWords == 1)
 	    reqState <= MessageHeaderRequested;
@@ -208,20 +215,32 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
 endmodule
 
 module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 32) portal,
-				    MemreadServer#(64) readEngine,
-				    MemwriteServer#(64) writeEngine,
-				    Reg#(Bit#(32)) sglIdReg,
-				    Reg#(Bool)     readyReg)(SharedMemoryPortal#(64));
+				       MemreadServer#(64) readEngine,
+				       MemwriteServer#(64) writeEngine,
+				       Reg#(Bit#(32)) sglIdReg,
+				       Reg#(Bool)     readyReg)(SharedMemoryPortal#(64));
       // read the head and tail pointers, if they are different, then read a request
-      Reg#(Bit#(32)) indLimitReg <- mkReg(0);
-      Reg#(Bit#(32)) indHeadReg <- mkReg(0);
-      Reg#(Bit#(32)) indTailReg <- mkReg(0);
+      Reg#(Bit#(16)) indLimitReg <- mkReg(0);
+      Reg#(Bit#(16)) indHeadReg <- mkReg(0);
+      Reg#(Bit#(16)) indTailReg <- mkReg(0);
       Reg#(Bit#(16)) wordCountReg <- mkReg(0);
       Reg#(Bit#(16)) messageWordsReg <- mkReg(0);
       Reg#(Bit#(16)) methodIdReg <- mkReg(0);
+      Reg#(Bool) paddingReg <- mkReg(False);
       Reg#(SharedMemoryPortalState) indState <- mkReg(Idle);
 
    let verbose = True;
+
+   function Bool pipeOutNotEmpty(PipeOut#(a) po); return po.notEmpty(); endfunction
+   Vector#(numIndications, Bool) readyBits = map(pipeOutNotEmpty, portal.indications);
+   Bool      interruptStatus = False;
+   Bit#(16)  readyChannel = -1;
+   for (Integer i = valueOf(numIndications) - 1; i >= 0; i = i - 1) begin
+      if (readyBits[i]) begin
+         interruptStatus = True;
+         readyChannel = fromInteger(i);
+      end
+   end
 
       rule updateIndHeadTail if (indState == Idle && readyReg);
 	 readEngine.cmdServer.request.put(MemengineCmd { sglId: sglIdReg,
@@ -239,24 +258,91 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 
 	 let head = indHeadReg;
 	 let tail = indTailReg;
 	 if (indState == HeadRequested) begin
-	    indLimitReg <= w0;
-	    indHeadReg <= w1;
-	    head = w1;
+	    indLimitReg <= truncate(w0);
+	    indHeadReg <= truncate(w1);
+	    head = truncate(w1);
 	    indState <= TailRequested;
 	 end
 	 else begin
 	    if (indTailReg == 0) begin
-	       tail = w0;
+	       tail = truncate(w0);
 	       indTailReg <= tail;
 	    end
-	    if (tail != indHeadReg)
-	       indState <= RequestMessage;
-	    else
-	       indState <= Idle;
+	    //if (tail != indHeadReg)
+	       indState <= SendHeader;
+	    //else
+	       //indState <= Idle;
 	 end
 	 if (verbose)
 	    $display("receiveIndHeadTail state=%d w0=%x w1=%x head=%d tail=%d limit=%d", indState, w0, w1, head, tail, indLimitReg);
       endrule
+
+   let defaultClock <- exposeCurrentClock;
+   let defaultReset <- exposeCurrentReset;
+   Gearbox#(1,2,Bit#(32)) gb <- mk1toNGearbox(defaultClock, defaultReset, defaultClock, defaultReset);
+   rule send64bits;
+      let v = gb.first;
+      gb.deq();
+      writeEngine.dataPipe.enq(pack(v));
+   endrule
+   rule sendHeader if (indState == SendHeader && interruptStatus);
+      Bit#(16) messageBits = portal.messageSize(readyChannel);
+      Bit#(16) roundup = messageBits[4:0] == 0 ? 0 : 1;
+      Bit#(16) numWords = (messageBits >> 5) + roundup;
+      Bit#(16) totalWords = numWords + 1;
+      if (numWords[0] == 0)
+	 totalWords = numWords + 2;
+      paddingReg <= numWords[0] == 0;
+      Bit#(32) hdr = extend(readyChannel) << 16 | extend(numWords + 1);
+      $display("sendHeader hdr=%h messageBits=%d numWords=%d totalWords=%d paddingReg=%d indHeadReg=%h", hdr, messageBits, numWords, totalWords, paddingReg, indHeadReg);
+
+      indHeadReg <= indHeadReg + totalWords;
+      messageWordsReg <= numWords;
+      methodIdReg <= readyChannel;
+      gb.enq(replicate(hdr));
+      writeEngine.cmdServer.request.put(MemengineCmd { sglId: sglIdReg,
+						      base: extend(indHeadReg) << 2,
+						      burstLen: 8,
+						      len: extend(totalWords) << 2 });
+      indState <= SendMessage;
+   endrule
+   rule sendMessage if (indState == SendMessage);
+      messageWordsReg <= messageWordsReg - 1;
+      let v = portal.indications[methodIdReg].first;
+      portal.indications[methodIdReg].deq();
+      gb.enq(replicate(v));
+      $display("sendMessage v=%h messageWords=%d", v, messageWordsReg);
+
+      if (messageWordsReg == 1) begin
+	 if (paddingReg)
+	    indState <= SendPadding;
+	 else
+	    indState <= UpdateHead;
+      end
+   endrule
+   rule sendPadding if (indState == SendPadding);
+      $display("sendPadding");
+      gb.enq(replicate(32'hffff0001));
+      indState <= UpdateHead;
+   endrule
+   rule updateHead if (indState == UpdateHead);
+      $display("updateIndHead limit=%d head=%d", indLimitReg, indHeadReg);
+      gb.enq(replicate(extend(indLimitReg)));
+      writeEngine.cmdServer.request.put(MemengineCmd { sglId: sglIdReg,
+						      base: 0 << 2,
+						      burstLen: 8,
+						      len: 2 << 2 });
+      indState <= UpdateHead2;
+   endrule
+   rule updateHead2 if (indState == UpdateHead2);
+      $display("updateIndHead2");
+      gb.enq(replicate(extend(indHeadReg)));
+      indState <= SendHeader;
+   endrule
+   rule done;
+      let done <- writeEngine.cmdServer.response.get();
+   endrule
+
 endmodule
 
 module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal)(SharedMemoryPortal#(64));

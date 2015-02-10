@@ -44,7 +44,7 @@
 static int trace_memory = 1;
 extern "C" {
 #include "sys/ioctl.h"
-#include "portalmem.h"
+#include "drivers/portalmem/portalmem.h"
 #include "sock_utils.h"
 #include "dmaManager.h"
 #include "userReference.h"
@@ -127,9 +127,9 @@ int main(int argc, const char **argv)
   DmaManager *hostDma = new DmaManager(hostMMURequest);
   MMUIndication *hostMMUIndication = new MMUIndication(hostDma, IfcNames_AlgoMMUIndication);
 
-  MMURequestProxy *nandsimMMURequest = new MMURequestProxy(IfcNames_NandsimMMURequest);
-  DmaManager *nandsimDma = new DmaManager(nandsimMMURequest);
-  MMUIndication *nandsimMMUIndication = new MMUIndication(nandsimDma,IfcNames_NandsimMMUIndication);
+  MMURequestProxy *nandMMURequest = new MMURequestProxy(IfcNames_NandMMURequest);
+  DmaManager *nandsimDma = new DmaManager(nandMMURequest);
+  MMUIndication *nandMMUIndication = new MMUIndication(nandsimDma,IfcNames_NandMMUIndication);
 
   StrstrRequestProxy *strstrRequest = new StrstrRequestProxy(IfcNames_AlgoRequest);
   StrstrIndication *strstrIndication = new StrstrIndication(IfcNames_AlgoIndication);
@@ -173,7 +173,7 @@ int main(int argc, const char **argv)
   // request the next sglist identifier from the sglistMMU hardware module
   // which is used by the mem server accessing flash memory.
   int id = 0;
-  MMURequestProxy_idRequest(nandsimDma->priv.sglDevice);
+  MMURequest_idRequest(nandsimDma->priv.sglDevice, -1);
   sem_wait(&nandsimDma->priv.sglIdSem);
   id = nandsimDma->priv.sglId;
   // pairs of ('offset','size') pointing to space in nandsim memory
@@ -195,7 +195,7 @@ int main(int argc, const char **argv)
   strstrIndication->wait();
 
   fprintf(stderr, "about to invoke search %d\n", ref_haystackInNandMemory);
-  strstrRequest->search(ref_haystackInNandMemory, haystack_len, 1);
+  strstrRequest->search(ref_haystackInNandMemory, haystack_len);
   strstrIndication->wait();  
 
   exit(!(strstrIndication->match_cnt==3));

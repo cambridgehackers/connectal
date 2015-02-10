@@ -39,7 +39,7 @@
 #include <sys/ioctl.h>
 #include <time.h> // ctime
 #endif
-#include "portalmem.h" // PA_MALLOC
+#include "drivers/portalmem/portalmem.h" // PA_MALLOC
 
 static int init_shared(struct PortalInternal *pint, void *aparam)
 {
@@ -51,8 +51,10 @@ static int init_shared(struct PortalInternal *pint, void *aparam)
         pint->map_base[SHARED_WRITE] = SHARED_START;
         pint->map_base[SHARED_READ] = SHARED_START;
         pint->map_base[SHARED_START] = 0;
-        unsigned int ref = param->dma->reference(fd);
-        MMURequest_setInterface(param->dma->priv.sglDevice, pint->fpga_number, ref);
+        if (param->dma) {
+            pint->sharedMem = param->dma->reference(fd);
+            MMURequest_setInterface(param->dma->priv.sglDevice, pint->fpga_number, pint->sharedMem);
+        }
     }
     return 0;
 }
@@ -64,9 +66,9 @@ static volatile unsigned int *mapchannel_sharedReq(struct PortalInternal *pint, 
 {
     return &pint->map_base[pint->map_base[SHARED_WRITE]+1];
 }
-static int busywait_shared(struct PortalInternal *pint, volatile unsigned int *addr, const char *str)
+static int busywait_shared(struct PortalInternal *pint, unsigned int v, const char *str)
 {
-    int reqwords = pint->reqsize/sizeof(uint32_t) + 1;
+    int reqwords = REQINFO_SIZE(pint->reqinfo)/sizeof(uint32_t) + 1;
     reqwords = (reqwords + 1) & 0xfffe;
     volatile unsigned int *map_base = pint->map_base;
     int limit = map_base[SHARED_LIMIT];
@@ -90,7 +92,7 @@ static int busywait_shared(struct PortalInternal *pint, volatile unsigned int *a
 }
 static inline unsigned int increment_shared(PortalInternal *pint, unsigned int newp)
 {
-    int reqwords = pint->reqsize/sizeof(uint32_t) + 1;
+    int reqwords = REQINFO_SIZE(pint->reqinfo)/sizeof(uint32_t) + 1;
     reqwords = (reqwords + 1) & 0xfffe;
     if (newp + reqwords >= pint->map_base[SHARED_LIMIT])
         newp = SHARED_START;
@@ -126,6 +128,26 @@ static int event_shared(struct PortalInternal *pint)
 }
 PortalItemFunctions sharedfunc = {
     init_shared, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_sharedInd, mapchannel_sharedReq,
-    send_shared, recv_portal_null, busywait_shared, enableint_portal_null, event_shared};
+    send_shared, recv_portal_null, busywait_shared, enableint_portal_null, event_shared, notfull_null};
+static volatile unsigned int *mapchannel_traceInd(struct PortalInternal *pint, unsigned int v)
+{
+    return &pint->map_base[pint->map_base[SHARED_READ]];
+}
+static volatile unsigned int *mapchannel_traceReq(struct PortalInternal *pint, unsigned int v)
+{
+    return &pint->map_base[pint->map_base[SHARED_WRITE]];
+}
+extern void memdump(uint8_t *p, int len, const char *title);
+static void send_trace(struct PortalInternal *pint, volatile unsigned int *buff, unsigned int hdr, int sendFd)
+{
+    int reqwords = hdr & 0xffff;
+    pint->map_base[pint->map_base[SHARED_WRITE]+reqwords-1] = hdr;
+    pint->map_base[SHARED_WRITE] = increment_shared(pint, pint->map_base[SHARED_WRITE] + reqwords);
+    //fprintf(stderr, "send_shared head=%d padded=%d hdr=%08x\n", pint->map_base[SHARED_WRITE], needs_padding, hdr);
+    pint->map_base[pint->map_base[SHARED_WRITE]] = 0;
+}
+PortalItemFunctions tracefunc = {
+    init_shared, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_traceInd, mapchannel_traceReq,
+    send_trace, recv_portal_null, busywait_shared, enableint_portal_null, event_shared, notfull_null};
 
 

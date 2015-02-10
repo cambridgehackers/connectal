@@ -26,32 +26,29 @@
 #include <poll.h>
 #include <errno.h>
 #include <pthread.h>
+#include <fcntl.h>
 
 #include "portal.h"
 #include "sock_utils.h"
-
-#ifdef ZYNQ
-#include <android/log.h>
-#define ALOGD(fmt, ...) __android_log_print(ANDROID_LOG_DEBUG, "PORTAL", fmt, __VA_ARGS__)
-#define ALOGE(fmt, ...) __android_log_print(ANDROID_LOG_ERROR, "PORTAL", fmt, __VA_ARGS__)
-#else
-#define ALOGD(fmt, ...) fprintf(stderr, "PORTAL: " fmt, __VA_ARGS__)
-#define ALOGE(fmt, ...) fprintf(stderr, "PORTAL: " fmt, __VA_ARGS__)
-#endif
 
 #ifndef NO_CPP_PORTAL_CODE
 PortalPoller *defaultPoller = new PortalPoller();
 uint64_t poll_enter_time, poll_return_time; // for performance measurement
 
 PortalPoller::PortalPoller()
-  : portal_wrappers(0), portal_fds(0), numFds(0), numWrappers(0), stopping(0)
+  : portal_wrappers(0), portal_fds(0), numFds(0), inited(0), numWrappers(0), stopping(0)
 {
+    int rc = pipe(pipefd);
     sem_init(&sem_startup, 0, 0);
+    pthread_mutex_init(&mutex, NULL);
+    fcntl(pipefd[0], F_SETFL, O_NONBLOCK);
+    addFd(pipefd[0]);
 }
 
 int PortalPoller::unregisterInstance(Portal *portal)
 {
   int i = 0;
+  pthread_mutex_lock(&mutex);
   while(i < numWrappers){
     if(portal_wrappers[i]->pint.fpga_number == portal->pint.fpga_number) {
       fprintf(stderr, "PortalPoller::unregisterInstance %d %d\n", i, portal->pint.fpga_number);
@@ -77,11 +74,16 @@ int PortalPoller::unregisterInstance(Portal *portal)
     i++;
   }
   numFds--;
+  pthread_mutex_unlock(&mutex);
   return 0;
 }
 
 void PortalPoller::addFd(int fd)
 {
+    /* this internal function assumes mutex locked by caller.
+     * since it can be called from addFdToPoller(), which was called under mutex lock
+     * portalExec_event().
+     */
     numFds++;
     portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
     struct pollfd *pollfd = &portal_fds[numFds-1];
@@ -91,6 +93,10 @@ void PortalPoller::addFd(int fd)
 }
 int PortalPoller::registerInstance(Portal *portal)
 {
+    uint8_t ch = 0;
+    int rc;
+    pthread_mutex_lock(&mutex);
+    rc = write(pipefd[1], &ch, 1); // get poll to return, so that it is no long using portal_fds (which gets realloc'ed)
     numWrappers++;
     fprintf(stderr, "Portal::registerInstance fpga%d fd %d clients %d\n", portal->pint.fpga_number, portal->pint.fpga_fd, portal->pint.client_fd_number);
     portal_wrappers = (Portal **)realloc(portal_wrappers, numWrappers*sizeof(Portal *));
@@ -100,19 +106,30 @@ int PortalPoller::registerInstance(Portal *portal)
         addFd(portal->pint.fpga_fd);
     for (int i = 0; i < portal->pint.client_fd_number; i++)
         addFd(portal->pint.client_fd[i]);
+    portal->pint.item->enableint(&portal->pint, 1);
+    pthread_mutex_unlock(&mutex);
+    portalExec_start();
     return 0;
 }
 
 void* PortalPoller::portalExec_init(void)
 {
-    portalExec_timeout = -1; // no interrupt timeout 
+    portalExec_timeout = -1; // no interrupt timeout
+#ifdef XSIM
+    portalExec_timeout = 100;
+#endif
 #ifdef BSIM
     portalExec_timeout = 100;
-    if (global_sockfd != -1)
+    if (global_sockfd != -1) {
+        pthread_mutex_lock(&mutex);
         addFd(global_sockfd);
+        pthread_mutex_unlock(&mutex);
+    }
 #endif
+#if 0
+    pthread_mutex_lock(&mutex);
     if (!numFds) {
-        ALOGE("portalExec No fds open numFds=%d\n", numFds);
+        fprintf(stderr, "portalExec No fds open numFds=%d\n", numFds);
         return (void*)-ENODEV;
     }
     for (int i = 0; i < numWrappers; i++) {
@@ -120,34 +137,37 @@ void* PortalPoller::portalExec_init(void)
       //fprintf(stderr, "portalExec::enabling interrupts portal %d fpga%d\n", i, instance->pint.fpga_number);
       instance->pint.item->enableint(&instance->pint, 1);
     }
+    pthread_mutex_unlock(&mutex);
+#endif
     fprintf(stderr, "portalExec::about to enter loop, numFds=%d\n", numFds);
     return NULL;
 }
 void PortalPoller::portalExec_stop(void)
 {
+    uint8_t ch = 0;
+    int rc;
     stopping = 1;
+    rc = write(pipefd[1], &ch, 1);
 }
 void PortalPoller::portalExec_end(void)
 {
     stopping = 1;
     printf("%s: don't disable interrupts when stopping\n", __FUNCTION__);
     return;
+    pthread_mutex_lock(&mutex);
     for (int i = 0; i < numWrappers; i++) {
       Portal *instance = portal_wrappers[i];
       fprintf(stderr, "portalExec::disabling interrupts portal %d fpga%d\n", i, instance->pint.fpga_number);
       instance->pint.item->enableint(&instance->pint, 0);
     }
+    pthread_mutex_unlock(&mutex);
 }
 
 void* PortalPoller::portalExec_poll(int timeout)
 {
     long rc = 0;
-    // LCS bypass the call to poll if the timeout is 0
-    if (timeout != 0) {
-      //poll_enter_time = portalCycleCount();
+    if (timeout != 0)
       rc = poll(portal_fds, numFds, timeout);
-      //poll_return_time = portalCycleCount();
-    }
     if(rc < 0) {
       // return only in error case
       fprintf(stderr, "poll returned rc=%ld errno=%d:%s\n", rc, errno, strerror(errno));
@@ -157,35 +177,27 @@ void* PortalPoller::portalExec_poll(int timeout)
 
 void* PortalPoller::portalExec_event(void)
 {
+    uint8_t ch;
+    int rc;
+    pthread_mutex_lock(&mutex);
+    rc = read(pipefd[0], &ch, 1);
     for (int i = 0; i < numWrappers; i++) {
-      if (!portal_wrappers) {
-        fprintf(stderr, "No portal_instances revents=%d\n", portal_fds[i].revents);
-      }
-      Portal *instance = portal_wrappers[i];
-      if (!instance->pint.handler)
-          continue;    /* skip polling if no event handler */
-      int sockfd = instance->pint.item->event(&instance->pint);
-      // re-enable interrupt which was disabled by portal_isr
-      instance->pint.item->enableint(&instance->pint, 1);
-#if 0
-      if (sockfd != -1) {
-          for (int j = 0; j < numFds; j++)
-              if (portal_fds[j].fd == instance->pint.fpga_fd) {
-                  portal_fds[j].fd = sockfd;
-                  break;
-              }
-          instance->pint.fpga_fd = sockfd;
-      }
-#endif
+       if (!portal_wrappers)
+           fprintf(stderr, "No portal_instances revents=%d\n", portal_fds[i].revents);
+       Portal *instance = portal_wrappers[i];
+       if (instance->pint.handler) {
+           instance->pint.item->event(&instance->pint);
+           // re-enable interrupt which was disabled by portal_isr
+           instance->pint.item->enableint(&instance->pint, 1);
+       }
     }
+    pthread_mutex_unlock(&mutex);
     return NULL;
 }
 extern "C" void addFdToPoller(struct PortalPoller *poller, int fd)
 {
-    //(static_cast<EchoRequestWrapper *>(p->parent))->setLeds ( v);
     poller->addFd(fd);
 }
-
 
 void* PortalPoller::portalExec(void* __x)
 {
@@ -234,6 +246,13 @@ static void *pthread_worker(void *__x)
 void PortalPoller::portalExec_start()
 {
     pthread_t threaddata;
+    pthread_mutex_lock(&mutex);
+    if (inited) {
+        pthread_mutex_unlock(&mutex);
+        return;
+    }
+    inited = 1;
+    pthread_mutex_unlock(&mutex);
     pthread_create(&threaddata, NULL, &pthread_worker, (void *)this);
     sem_wait(&sem_startup);
 }

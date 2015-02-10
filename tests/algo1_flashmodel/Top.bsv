@@ -64,8 +64,8 @@ endinterface
 
 module mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,DataBusWidth, Top_Pins,1));
    
-   Clock clk250 = host.doubleClock;
-   Reset rst250 = host.doubleReset;
+   Clock clk250 = host.derivedClock;
+   Reset rst250 = host.derivedReset;
 	
    // strstr algo
    StrstrIndicationProxy strstrIndicationProxy <- mkStrstrIndicationProxy(AlgoIndication);

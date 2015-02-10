@@ -18,10 +18,5 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-import Portal::*;
-import MemTypes::*;
 
 typedef enum {PhysMemMasterIndication, PhysMemMasterRequest} IfcNames deriving (Eq,Bits);
-
-module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
-endmodule : mkConnectalTop

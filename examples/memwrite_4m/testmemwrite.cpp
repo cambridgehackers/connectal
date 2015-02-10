@@ -51,7 +51,7 @@ int main(int argc, const char **argv)
     perror("error: fork");
     exit(1);
   default:
-    parent(sv[1],sv[0]);
+    parent(sv[0]);
     waitpid(pid, &status, 0);
     break;
   }

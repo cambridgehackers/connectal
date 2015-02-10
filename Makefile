@@ -157,7 +157,10 @@ tests    =  $(memtests)          \
 # examples
 
 examples =  echo                 \
+	    echojson             \
 	    hdmidisplay          \
+	    led2                 \
+	    alterajtaguart       \
             memcpy               \
             memlatency           \
             memread              \
@@ -177,6 +180,8 @@ examples =  echo                 \
 	    strstr_nandsim       \
             flowcontrol          \
             bluescope            \
+            bluescopeevent       \
+            bluescopeeventpio    \
 	    splice               \
 	    maxcommonsubseq      \
 	    smithwaterman        \
@@ -256,7 +261,7 @@ cppalllist =     $(bsimalllist) \
     tests/testmm2.2.2 \
     tests/testmm2.4.2 \
 
-allarchlist = ac701 zedboard zc702 zc706 kc705 vc707 zynq100 v2000t bluesim miniitx100
+allarchlist = ac701 zedboard zc702 zc706 kc705 vc707 zynq100 v2000t bluesim miniitx100 de5 vsim
 
 #################################################################################################
 # gdb
@@ -419,4 +424,9 @@ distclean:
 	rm -rf pcie/connectalutil/connectalutil tests/memread_manual/kernel/bsim_relay
 	rm -rf out/ exit.status cpp/*.o scripts/*.pyc
 	rm -rf tests/*/train-images-idx3-ubyte examples/*/train-images-idx3-ubyte
+	rm -f drivers/pcieportal/.*.o.cmd drivers/pcieportal/.*.ko.cmd
+	rm -f drivers/portalmem/.*.o.cmd drivers/portalmem/.*.ko.cmd
+	rm -f drivers/zynqportal/.*.o.cmd drivers/zynqportal/.*.ko.cmd
+	rm -rf doc/library/build/ examples/rbm/datasets/
+	rm -f doc/library/source/devguide/connectalbuild-1.png
 

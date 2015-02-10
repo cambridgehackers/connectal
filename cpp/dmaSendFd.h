@@ -25,7 +25,7 @@
 static int shifts[] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0, 0};
 
 #include "dmaManager.h"
-#include "portalmem.h" // PortalAlloc
+#include "drivers/portalmem/portalmem.h" // PortalAlloc
 
 #ifdef CONNECTAL_DRIVER_CODE
 #define NO_WRAPPER_FUNCTIONS

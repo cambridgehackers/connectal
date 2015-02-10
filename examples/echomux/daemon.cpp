@@ -21,6 +21,9 @@
 
 #include <stdio.h>
 #include <netdb.h>
+
+#include "sock_utils.h"
+
 #include "EchoRequest.h"
 #include "EchoIndication.h"
 #include "EchoRequestSW.h"
@@ -29,6 +32,7 @@
 #include "SecondIndication.h"
 #include "ThirdRequest.h"
 #include "ThirdIndication.h"
+
 
 EchoIndicationSWProxy *sIndicationProxy;
 EchoRequestProxy *echoRequestProxy;
@@ -66,7 +70,7 @@ public:
         echoRequestProxy->say2(this->pint.indication_index, a, b);
     }
     void setLeds ( const uint32_t v ) {
-        fprintf(stderr, "daemon[%s] id %d %d\n", __FUNCTION__, __LINE__, this->pint.indication_index, v);
+        fprintf(stderr, "daemon[%s] id %d %d\n", __FUNCTION__, this->pint.indication_index, v);
         echoRequestProxy->setLeds(this->pint.indication_index, v);
         sleep(1);
         exit(1);

@@ -29,6 +29,8 @@ import time
 import syntax
 import util
 import boardinfo
+import pprint
+import json
 
 supported_os = ['android', 'ubuntu']
 
@@ -38,12 +40,19 @@ argparser.add_argument('-B', '--board', default='zc702', help='Target Board for 
 argparser.add_argument('-O', '--OS', default=None, choices=supported_os, help='Target operating system')
 argparser.add_argument('-interfaces', '--interfaces', help='BSV interface', action='append')
 argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps project directory')
+argparser.add_argument(      '--pinfo', default=None, help='Project description file (json)')
 argparser.add_argument('-s', '--source', help='C++ source files', action='append')
 argparser.add_argument(      '--source2', help='C++ second program source files', action='append')
+argparser.add_argument(      '--cflags', help='C++ CFLAGS', action='append')
+argparser.add_argument(      '--shared', help='Make a shared library', action='store_true')
+argparser.add_argument(      '--nohardware', help='Do not generate hardware for the design', action='store_true')
 argparser.add_argument(      '--contentid', help='Specify 64-bit contentid for PCIe designs')
 argparser.add_argument('-I', '--cinclude', help='Specify C++ include directories', default=[], action='append')
 argparser.add_argument('-V', '--verilog', default=[], help='Additional verilog sources', action='append')
-argparser.add_argument('--xci', default=[], help='Additional IP sources', action='append')
+argparser.add_argument(      '--xci', default=[], help='Additional IP sources', action='append')
+argparser.add_argument(      '--qip', default=[], help='Additional QIP sources', action='append')
+argparser.add_argument(      '--qsf', default=[], help='Altera Quartus settings', action='append')
+argparser.add_argument(      '--chipscope', default=[], help='Onchip scope settings', action='append')
 argparser.add_argument('-C', '--constraint', help='Additional constraint files', action='append')
 argparser.add_argument('-M', '--make', help='Run make on the specified targets', action='append')
 argparser.add_argument('-D', '--bsvdefine', default=[], help='BSV define', action='append')
@@ -82,8 +91,9 @@ set boardname {%(boardname)s}
 set xbsvipdir {%(ipdir)s}
 set ipdir {%(ipdir)s}
 set connectaldir {%(connectaldir)s}
-set needspcie {%(needspcie)s}
-set connectal_dut { %(Dut)s }
+set need_xilinx_pcie {%(need_xilinx_pcie)s}
+set need_altera_pcie {%(need_altera_pcie)s}
+set connectal_dut {%(Dut)s}
 %(tcldefines)s
 '''
 
@@ -100,11 +110,15 @@ fpgamakeRuleTemplate='''
 FPGAMAKE=$(CONNECTALDIR)/../fpgamake/fpgamake
 fpgamake.mk: $(vfile) Makefile prepare_bin_target
 	$(Q)mkdir -p hw
-	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s -t $(MKTOP) %(cachedir)s -b hw/mkTop.bit verilog $(CONNECTALDIR)/verilog %(verilog)s
+	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk --board=%(boardname)s --part=%(partname)s %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s %(qsf)s %(chipscope)s -t $(MKTOP) %(cachedir)s -b hw/mkTop.bit verilog $(CONNECTALDIR)/verilog %(verilog)s
 
 hw/mkTop.bit: fpgamake.mk prepare_bin_target
 	$(Q)make -f fpgamake.mk
+ifeq ($(XILINX),"")
 	$(Q)cp -f Impl/*/*.rpt bin
+else ifeq ($(ALTERA),"")
+	$(Q)echo "copy report files"
+endif
 '''
 
 makefileTemplate='''
@@ -135,6 +149,8 @@ QTUSED = %(qtused)s
 export BSVDEFINES_LIST = %(bsvdefines_list)s
 export DUT_NAME = %(Dut)s
 %(runsource2)s
+%(shared)s
+%(nohardware)s
 
 %(mdefines)s
 %(dump_map)s
@@ -146,10 +162,12 @@ include $(CONNECTALDIR)/scripts/Makefile.connectal.build
 
 androidmk_template='''
 include $(CLEAR_VARS)
+DTOP?=%(project_dir)s
+CONNECTALDIR?=%(connectaldir)s
 LOCAL_ARM_MODE := arm
-include %(project_dir)s/jni/Makefile.generated_files
-APP_SRC_FILES := $(addprefix %(project_dir)s/jni/,  $(GENERATED_CPP)) %(source)s
-PORTAL_SRC_FILES := $(addprefix %(connectaldir)s/cpp/, portal.c portalSocket.c poller.cpp sock_utils.c timer.c)
+include $(DTOP)/jni/Makefile.generated_files
+APP_SRC_FILES := $(addprefix $(DTOP)/jni/,  $(GENERATED_CPP)) %(source)s
+PORTAL_SRC_FILES := $(addprefix $(CONNECTALDIR)/cpp/, portal.c portalSocket.c portalJson.c poller.cpp sock_utils.c timer.c)
 LOCAL_SRC_FILES := $(APP_SRC_FILES) $(PORTAL_SRC_FILES)
 
 LOCAL_PATH :=
@@ -157,14 +175,16 @@ LOCAL_MODULE := android.exe
 LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS := -llog %(clibdirs)s %(clibs)s %(clibfiles)s
 LOCAL_CPPFLAGS := "-march=armv7-a"
-LOCAL_CFLAGS := -DZYNQ -I%(connectaldir)s -I%(connectaldir)s/cpp -I%(connectaldir)s/lib/cpp -I%(connectaldir)s/drivers/zynqportal -I%(project_dir)s/jni %(cincludes)s %(cdefines)s -I%(connectaldir)s/drivers/portalmem
-LOCAL_CXXFLAGS := -DZYNQ -I%(connectaldir)s -I%(connectaldir)s/cpp -I%(connectaldir)s/lib/cpp -I%(connectaldir)s/drivers/zynqportal -I%(project_dir)s/jni %(cincludes)s %(cdefines)s -I%(connectaldir)s/drivers/portalmem
+LOCAL_CFLAGS := -DZYNQ %(cflags)s
+LOCAL_CXXFLAGS := -DZYNQ %(cflags)s
 LOCAL_CFLAGS2 := $(cdefines2)s
 
 include $(BUILD_EXECUTABLE)
 '''
 
 linuxmakefile_template='''
+CONNECTALDIR?=%(connectaldir)s
+DTOP?=%(project_dir)s
 export V=0
 ifeq ($(V),0)
 Q=@
@@ -172,21 +192,24 @@ else
 Q=
 endif
 
-CFLAGS_COMMON = -O -g -I%(project_dir)s/jni -I%(connectaldir)s -I%(connectaldir)s/cpp -I%(connectaldir)s/lib/cpp %(sourceincludes)s %(cincludes)s %(cdefines)s -I%(connectaldir)s/drivers/portalmem -I%(connectaldir)s/drivers/pcieportal -I%(connectaldir)s/drivers/zynqportal
+CFLAGS_COMMON = -O -g %(cflags)s
 CFLAGS = $(CFLAGS_COMMON)
 CFLAGS2 = %(cdefines2)s
 
-PORTAL_CPP_FILES = $(addprefix %(connectaldir)s/cpp/, portal.c portalSocket.c poller.cpp sock_utils.c timer.c)
-include %(project_dir)s/jni/Makefile.generated_files
-SOURCES = $(addprefix %(project_dir)s/jni/,  $(GENERATED_CPP)) %(source)s $(PORTAL_CPP_FILES)
-SOURCES2 = $(addprefix %(project_dir)s/jni/,  $(GENERATED_CPP)) %(source2)s $(PORTAL_CPP_FILES)
+PORTAL_CPP_FILES = $(addprefix $(CONNECTALDIR)/cpp/, portal.c portalSocket.c portalJson.c poller.cpp sock_utils.c timer.c)
+include $(DTOP)/jni/Makefile.generated_files
+SOURCES = $(addprefix $(DTOP)/jni/,  $(GENERATED_CPP)) %(source)s $(PORTAL_CPP_FILES)
+SOURCES2 = $(addprefix $(DTOP)/jni/,  $(GENERATED_CPP)) %(source2)s $(PORTAL_CPP_FILES)
 LDLIBS := %(clibdirs)s %(clibs)s %(clibfiles)s -pthread 
 
 BSIM_EXE_CXX_FILES = BsimDma.cxx BsimCtrl.cxx TlpReplay.cxx
-BSIM_EXE_CXX = $(addprefix %(connectaldir)s/cpp/, $(BSIM_EXE_CXX_FILES))
+BSIM_EXE_CXX = $(addprefix $(CONNECTALDIR)/cpp/, $(BSIM_EXE_CXX_FILES))
 
 ubuntu.exe: $(SOURCES)
 	$(Q)g++ $(CFLAGS) -o ubuntu.exe $(SOURCES) $(LDLIBS)
+
+connectal.so: $(SOURCES)
+	$(Q)g++ -shared -fpic $(CFLAGS) -o connectal.so %(bsimcxx)s $(SOURCES) $(LDLIBS)
 
 ubuntu.exe2: $(SOURCES2)
 	$(Q)g++ $(CFLAGS) $(CFLAGS2) -o ubuntu.exe2 $(SOURCES2) $(LDLIBS)
@@ -199,15 +222,24 @@ bsim_exe2: $(SOURCES2)
 '''
 
 if __name__=='__main__':
-    connectaldir = os.path.dirname(os.path.abspath(sys.argv[0]))+'/../'
+    connectaldir = os.path.dirname((os.path.normpath(os.path.abspath(sys.argv[0])+'/../')))
     options = argparser.parse_args()
 
     boardname = options.board.lower()
     option_info = boardinfo.attribute(boardname, 'options')
+
+    if options.pinfo:
+        pinstr = open(options.pinfo).read()
+        pinout = json.loads(pinstr)
+        for key in pinout['options']:
+            if isinstance(option_info[key], (list)):
+                option_info[key] += pinout['options'][key]
+            else:
+                option_info[key] = pinout['options'][key]
+
     # parse additional options together with sys.argv
     if option_info['CONNECTALFLAGS']:
         options=argparser.parse_args(option_info['CONNECTALFLAGS'] + sys.argv[1:])
-    print options
 
     if options.verbose:
         noisyFlag = True
@@ -225,10 +257,13 @@ if __name__=='__main__':
         options.tcl = []
     if not options.xsimflags:
         options.xsimflags = ['-R']
-
     if not options.interfaces:
         options.interfaces = []
+    if not options.cflags:
+        options.cflags = []
 
+    if noisyFlag:
+        pprint.pprint(option_info)
     project_dir = os.path.abspath(os.path.expanduser(options.project_dir))
 
     # remove intermediate files generated by parser generator
@@ -236,33 +271,62 @@ if __name__=='__main__':
     os.path.exists('./out/parser.out')   and os.remove('./out/parser.out')
     os.path.exists('./out/parsetab.pyc') and os.remove('./out/parsetab.pyc')
     os.path.exists('./out/parsetab.py')  and os.remove('./out/parsetab.py')
-    
-    bsvdefines = options.bsvdefine
-    bsvdefines.append('project_dir=%s' % project_dir)
 
-    option_info['needs_pcie_7x_gen1x8'] = option_info['needs_pcie_7x_gen1x8'] == 'True'
+    bsvdefines = options.bsvdefine
+    bsvdefines.append('project_dir=$(DTOP)')
+
     if option_info['rewireclockstring'] != '':
         option_info['rewireclockstring'] = tclzynqrewireclock
+    rewireclockstring = option_info['rewireclockstring']
 
     dutname = 'mk' + option_info['TOP']
     topbsv = connectaldir + '/bsv/' + option_info['TOP'] + '.bsv'
-        
-    rewireclockstring = option_info['rewireclockstring']
-    needs_pcie_7x_gen1x8 = option_info['needs_pcie_7x_gen1x8']
+    if not os.path.isfile(topbsv):
+        topbsv = project_dir + "/../" + option_info['TOP'] + '.bsv'
+        if not os.path.isfile(topbsv):
+            print "ERROR: File %s not found" % (option_info['TOP'] + '.bsv')
+            sys.exit(1)
+
+    needs_pcie_7x_gen1x8 = None
+    needs_pcie_s5_gen2x8 = None
+    if 'needs_pcie_7x_gen1x8' in option_info:
+        needs_pcie_7x_gen1x8 = option_info['needs_pcie_7x_gen1x8']
+    elif 'needs_pcie_s5_gen2x8' in option_info:
+        needs_pcie_s5_gen2x8 = option_info['needs_pcie_s5_gen2x8']
+
     partname = option_info['partname']
+    if noisyFlag:
+        print 'makefilegen: partname', partname
     if not 'os' in options:
         options.os = option_info['os']
+
     bdef = option_info.get('bsvdefines')
     if bdef:
         bsvdefines += bdef
+
     cstr = option_info.get('constraints')
     if cstr:
-        options.constraint.append(os.path.join(connectaldir, cstr))
+        options.constraint.insert(0, os.path.join(connectaldir, cstr))
 
     bsvdefines += ['BOARD_'+boardname]
 
     options.verilog.append(os.path.join(connectaldir, 'verilog'))
-    options.constraint.append(os.path.join(connectaldir, 'xilinx/constraints/%s.xdc' % boardname))
+
+    if 'ALTERA' in bsvdefines:
+        fpga_vendor = 'altera'
+        suffix = 'sdc'
+    elif 'XILINX' in bsvdefines:
+        fpga_vendor = 'xilinx'
+        suffix = 'xdc'
+    else:
+        fpga_vendor = None
+        suffix = None
+
+    if fpga_vendor:
+        options.constraint.insert(0, os.path.join(connectaldir, 'constraints/', '%s/%s.%s' % (fpga_vendor, boardname, suffix)))
+
+    if noisyFlag:
+        pprint.pprint(options.__dict__)
 
     tclboardname = os.path.join(project_dir, 'board.tcl')
     tclsynthname = os.path.join(project_dir, '%s-synth.tcl' % dutname.lower())
@@ -270,25 +334,30 @@ if __name__=='__main__':
 
     androidmkname = os.path.join(project_dir, 'jni', 'Android.mk')
     linuxmkname = os.path.join(project_dir, 'jni', 'Ubuntu.mk')
- 
+
     if noisyFlag:
         print 'Writing Android.mk', androidmkname
     substs = {
         #android
-	'project_dir': project_dir,
+        'project_dir': project_dir,
         #ubuntu
         'sourceincludes': ' '.join(['-I%s' % os.path.dirname(os.path.abspath(sf)) for sf in options.source]) if options.source else '',
         #common
         'source': ' '.join([os.path.abspath(sf) for sf in options.source]) if options.source else '',
         'source2': ' '.join([os.path.abspath(sf) for sf in options.source2]) if options.source2 else '',
         'connectaldir': connectaldir,
-	'clibs': ' '.join(['-l%s' % l for l in options.clib]),
-	'clibfiles': ' '.join(['%s' % l for l in options.clibfiles]),
-	'clibdirs': ' '.join([ '-L%s' % os.path.abspath(l) for l in options.clibdir ]),
-	'cdefines': ' '.join([ '-D%s' % d for d in bsvdefines ]),
+        'clibs': ' '.join(['-l%s' % l for l in options.clib]),
+        'clibfiles': ' '.join(['%s' % l for l in options.clibfiles]),
+        'clibdirs': ' '.join([ '-L%s' % os.path.abspath(l) for l in options.clibdir ]),
+        'cdefines': ' '.join([ '-D%s' % d for d in bsvdefines ]),
         'cdefines2': ' '.join([ '-D%s' % d for d in options.bsvdefine2 ]),
-	'cincludes': ' '.join([ '-I%s' % os.path.abspath(i) for i in options.cinclude ])
+        'cincludes': ' '.join([ '-I%s' % os.path.abspath(i) for i in options.cinclude ]),
+        'bsimcxx': '-DBSIM $(BSIM_EXE_CXX)' if boardname == 'bluesim' else ''
     }
+    includelist = ['-I$(DTOP)/jni', '-I$(CONNECTALDIR)', \
+                   '-I$(CONNECTALDIR)/cpp', '-I$(CONNECTALDIR)/lib/cpp', \
+                   '%(sourceincludes)s', '%(cincludes)s', '%(cdefines)s']
+    substs['cflags'] = (' '.join(includelist) % substs) + ' '.join(options.cflags)
     f = util.createDirAndOpen(androidmkname, 'w')
     f.write(androidmk_template % substs)
     f.close()
@@ -312,10 +381,11 @@ if __name__=='__main__':
                                                   for f in options.constraint ]),
                  'read_verilog': '\n'.join([tclReadVerilogTemplate
                                             % { 'verilog': os.path.abspath(f),
-						'pattern': '/*.v' if os.path.isdir(f) else ''} for f in options.verilog]),
+                                                'pattern': '/*.*v' if os.path.isdir(f) else ''} for f in options.verilog]),
                  'read_xci': '\n'.join([tclReadXciTemplate
                                         % { 'xci': f } for f in options.xci]),
-                 'needspcie': 1 if needs_pcie_7x_gen1x8 else 0,
+                 'need_xilinx_pcie': 1 if needs_pcie_7x_gen1x8 else 0,
+                 'need_altera_pcie': 1 if needs_pcie_s5_gen2x8 else 0,
                  'tcldefines': '\n'.join(['set %s {%s}' % (var,val) for (var,val) in map(util.splitBinding, bsvdefines)]),
                  'ipdir': os.path.abspath(options.ipdir) if options.ipdir else connectaldir
                  }
@@ -338,19 +408,24 @@ if __name__=='__main__':
     make = util.createDirAndOpen(makename, 'w')
 
     bitsmake=fpgamakeRuleTemplate % {'partitions': ' '.join(['-s %s' % p for p in options.partition_module]),
+					 'boardname': boardname,
+					 'partname': partname,
 					 'floorplan': os.path.abspath(options.floorplan) if options.floorplan else '',
-					 'xdc': ' '.join(['--xdc=%s' % os.path.abspath(xdc) for xdc in options.constraint]),
+					 'xdc': ' '.join(['--constraint=%s' % os.path.abspath(xdc) for xdc in options.constraint]),
 					 'xci': ' '.join(['--xci=%s' % os.path.abspath(xci) for xci in options.xci]),
+					 'qsf': ' '.join(['--qsf=%s' % os.path.abspath(qsf) for qsf in options.qsf]),
+					 'chipscope': ' '.join(['--chipscope=%s' % os.path.abspath(chipscope) for chipscope in options.chipscope]),
 					 'sourceTcl': ' '.join(['--tcl=%s' % os.path.abspath(tcl) for tcl in options.tcl]),
                                          'verilog': ' '.join([os.path.abspath(f) for f in options.verilog]),
 					 'cachedir': '--cachedir=%s' % os.path.abspath(options.cachedir) if options.cachedir else ''
 					 }
 
     make.write(makefileTemplate % {'connectaldir': connectaldir,
-                                   'bsvpath': ':'.join(list(set([os.path.dirname(os.path.abspath(bsvfile)) for bsvfile in options.bsvfile]
-                                                                + [os.path.join(connectaldir, 'bsv')]
-                                                                + [os.path.join(connectaldir, 'lib/bsv')]
-                                                                + [os.path.join(connectaldir, 'generated/xilinx')]))),
+                                   'bsvpath': ':'.join(list(set([os.path.dirname(os.path.abspath(bsvfile)) for bsvfile in options.bsvfile])
+                                                            | set([os.path.join(connectaldir, 'bsv')])
+                                                            | set([os.path.join(connectaldir, 'lib/bsv')])
+                                                            | set([os.path.join(connectaldir, 'generated/xilinx')])
+                                                            | set([os.path.join(connectaldir, 'generated/altera')]))),
                                    'bsvdefines': util.foldl((lambda e,a: e+' -D '+a), '', bsvdefines),
                                    'boardname': boardname,
                                    'OS': options.os,
@@ -361,7 +436,7 @@ if __name__=='__main__':
                                    'includepath': ' '.join(['-I%s' % os.path.dirname(os.path.abspath(source)) for source in options.source]) if options.source else '',
                                    'runsource2': 'RUNSOURCE2=1' if options.source2 else '',
                                    'project_dir': project_dir,
-                                   'topbsvfile' : os.path.abspath(topbsv),
+                                   'topbsvfile' : topbsv,
                                    'topbsvmod'  : dutname,
                                    'dut' : dutname.lower(),
                                    'Dut': dutname,
@@ -373,6 +448,8 @@ if __name__=='__main__':
                                    'xelabflags': ' '.join(options.xelabflags),
                                    'xsimflags': ' '.join(options.xsimflags),
                                    'bsvdefines_list': ' '.join(bsvdefines),
+                                   'shared': 'CONNECTAL_SHARED=1' if options.shared else '',
+                                   'nohardware': 'CONNECTAL_NOHARDWARE=1' if options.nohardware else '',
                                    'bitsmake': bitsmake
                                    })
     make.close()

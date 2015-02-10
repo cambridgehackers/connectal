@@ -34,7 +34,6 @@ import SharedMemoryPortal::*;
 import Simple::*;
 import MMURequest::*;
 import MMUIndication::*;
-import MMUIndication::*;
 import SharedMemoryPortalConfig::*;
 import MemServerIndication::*;
 
@@ -45,42 +44,44 @@ typedef enum {SimpleIndication, SimpleRequest,
 	      MMURequest, MMUIndication, MemServerIndication, ReqConfigWrapper, IndConfigWrapper} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
-
-   // instantiate user portals
-   SimpleProxyPortal simpleIndicationProxy <- mkSimpleProxyPortal(SimpleIndication);
-   Simple simpleRequest <- mkSimple(simpleIndicationProxy.ifc);
-   SimpleWrapperPortal simpleRequestWrapper <- mkSimpleWrapperPortal(SimpleRequest,simpleRequest);
+   // instantiate DUT
+   SimpleProxyPortal indProxy <- mkSimpleProxyPortal(SimpleIndication);
+   Simple reqDUT <- mkSimple(indProxy.ifc);
+   SimpleWrapperPortal reqWrap <- mkSimpleWrapperPortal(SimpleRequest,reqDUT);
    
-   SharedMemoryPortal#(64) echoRequestSharedMemoryPortal <- mkSharedMemoryPortal(simpleRequestWrapper.portalIfc);
-   SharedMemoryPortalConfigWrapper reqConfigWrapper <- mkSharedMemoryPortalConfigWrapper(ReqConfigWrapper, echoRequestSharedMemoryPortal.cfg);
+   // Use shared memory for DUT requests
+   SharedMemoryPortal#(64) reqPortal <- mkSharedMemoryPortal(reqWrap.portalIfc);
+   SharedMemoryPortalConfigWrapper reqConfig <-
+       mkSharedMemoryPortalConfigWrapper(ReqConfigWrapper, reqPortal.cfg);
 
-   SharedMemoryPortal#(64) echoIndicationSharedMemoryPortal <- mkSharedMemoryPortal(simpleIndicationProxy.portalIfc);
-   SharedMemoryPortalConfigWrapper indConfigWrapper <- mkSharedMemoryPortalConfigWrapper(IndConfigWrapper, echoIndicationSharedMemoryPortal.cfg);
+   // Use shared memory for DUT indications
+   SharedMemoryPortal#(64) indPortal <- mkSharedMemoryPortal(indProxy.portalIfc);
+   SharedMemoryPortalConfigWrapper indConfig <-
+       mkSharedMemoryPortalConfigWrapper(IndConfigWrapper, indPortal.cfg);
 
-   let readClients = cons(echoRequestSharedMemoryPortal.readClient,
-			  cons(echoIndicationSharedMemoryPortal.readClient, nil));
-   let writeClients = cons(echoRequestSharedMemoryPortal.writeClient,
-			   cons(echoIndicationSharedMemoryPortal.writeClient, nil));
+   // MMU used for shared memory buffer mapping
+   MMUIndicationProxy indMMU <- mkMMUIndicationProxy(MMUIndication);
+   MMU#(PhysAddrWidth) mmu <- mkMMU(0, True, indMMU.ifc);
+   MMURequestWrapper reqMMU <- mkMMURequestWrapper(MMURequest, mmu.request);
 
-   MemServerIndicationProxy memServerIndicationProxy <- mkMemServerIndicationProxy(MemServerIndication);
-   MMUIndicationProxy mmuIndicationProxy <- mkMMUIndicationProxy(MMUIndication);
-   MMU#(PhysAddrWidth) mmu <- mkMMU(0, True, mmuIndicationProxy.ifc);
-   MMURequestWrapper mmuRequestWrapper <- mkMMURequestWrapper(MMURequest, mmu.request);
-   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerRW(memServerIndicationProxy.ifc, readClients, writeClients, cons(mmu,nil));
+   let readClients = cons(reqPortal.readClient,
+                     cons(indPortal.readClient, nil));
+   let writeClients = cons(reqPortal.writeClient,
+                      cons(indPortal.writeClient, nil));
+   // MemServer used for shared memory buffer access
+   MemServerIndicationProxy indMem <- mkMemServerIndicationProxy(MemServerIndication);
+   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerRW(indMem.ifc, readClients, writeClients, cons(mmu,nil));
 
    Vector#(5,StdPortal) portals;
-   portals[0] = mmuRequestWrapper.portalIfc;
-   portals[1] = mmuIndicationProxy.portalIfc;
-   portals[2] = reqConfigWrapper.portalIfc;
-   portals[3] = indConfigWrapper.portalIfc;
-   portals[4] = memServerIndicationProxy.portalIfc;
+   portals[0] = reqMMU.portalIfc;
+   portals[1] = indMMU.portalIfc;
+   portals[2] = reqConfig.portalIfc;
+   portals[3] = indConfig.portalIfc;
+   portals[4] = indMem.portalIfc;
    let ctrl_mux <- mkSlaveMux(portals);
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
    interface masters = dma.masters;
    interface leds = default_leds;
-
 endmodule : mkConnectalTop
-
-

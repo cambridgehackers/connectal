@@ -31,11 +31,15 @@ volatile unsigned int *mapchannel_portal_kernel(struct PortalInternal *pint, uns
 {
     return &pint->map_base[PORTAL_IND_FIFO(v)];
 }
-int busy_portal_kernel(struct PortalInternal *pint, volatile unsigned int *addr, const char *str)
+int notfull_kernel(PortalInternal *pint, unsigned int v)
+{
+    volatile unsigned int *tempp = pint->item->mapchannelReq(pint, v) + 1;
+    return pint->item->read(pint, &tempp);
+}
+int busy_portal_kernel(struct PortalInternal *pint, unsigned int v, const char *str)
 {
     int count = 50;
-    volatile unsigned int *tempp = addr + 1;
-    while (!pint->item->read(pint, &tempp) && count-- > 0)
+    while (!pint->item->notFull(pint, v) && count-- > 0)
         ; /* busy wait a bit on 'fifo not full' */
     if (count <= 0){
         PORTAL_PRINTF("putFailed: %s\n", str);
@@ -75,4 +79,4 @@ static void write_fd_portal_kernel(PortalInternal *pint, volatile unsigned int *
 
 PortalItemFunctions kernelfunc = {
     init_portal_kernel, read_portal_kernel, write_portal_kernel, write_fd_portal_kernel, mapchannel_portal_kernel, mapchannel_portal_kernel,
-    send_portal_null, recv_portal_null, busy_portal_kernel, enableint_portal_kernel, event_portal_kernel};
+    send_portal_null, recv_portal_null, busy_portal_kernel, enableint_portal_kernel, event_portal_kernel, notfull_kernel};

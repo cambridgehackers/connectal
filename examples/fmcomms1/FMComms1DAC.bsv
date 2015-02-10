@@ -22,6 +22,7 @@
 
 import XilinxCells::*;
 import ConnectalXilinxCells::*;
+import ConnectalClocks::*;
 import Gearbox::*;
 import Pipe::*;
 import FIFO::*;
@@ -125,6 +126,11 @@ module mkFMComms1DAC(FMComms1DAC);
       gb.deq();
       dac_ddr.d1(d[0].data_i[15:2]);
       dac_ddr.d2(d[0].data_q[15:2]);
+   endrule
+
+   rule alwaysenable;
+      dac_ddr.ce(True);
+      dac_ddr.s(False);
    endrule
 
    function Bit#(1) foo_p(DiffOut v);

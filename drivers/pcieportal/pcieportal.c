@@ -305,7 +305,6 @@ static int board_activate(int activate, tBoard *this_board, struct pci_dev *dev)
         unsigned long long magic_num;
 	int num_entries = MAX_NUM_PORTALS;
 	struct msix_entry msix_entries[MAX_NUM_PORTALS];
-	uint32_t reg_offset = 0xc000;
 	int fpn = 0;
 	uint32_t top = 0;
 
@@ -425,7 +424,8 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		  this_board->portal[fpn].device_name = iid;
 		  this_board->portal[fpn].board = this_board;
 		  if (this_board->bar2io) {
-		    this_board->portal[fpn].regs = (volatile uint32_t *)(this_board->bar2io + 0x10000 * fpn + reg_offset);
+		    this_board->portal[fpn].regs = (volatile uint32_t *)(this_board->bar2io
+                        + PORTAL_BASE_OFFSET * fpn + PORTAL_REG_OFFSET);
 		  }
 		  /* add the device operations */
 		  cdev_init(&this_board->portal[fpn].extra->cdev, &pcieportal_fops);
@@ -495,7 +495,7 @@ err_exit:
 
 /* driver PCI operations */
 
-static int __init pcieportal_probe(struct pci_dev *dev, const struct pci_device_id *id)
+static int pcieportal_probe(struct pci_dev *dev, const struct pci_device_id *id)
 {
         tBoard *this_board = NULL;
         int i, board_number = 0;
@@ -523,7 +523,7 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
         return board_activate(1, this_board, dev);
 }
 
-static void __exit pcieportal_remove(struct pci_dev *dev)
+static void pcieportal_remove(struct pci_dev *dev)
 {
         tBoard *this_board = pci_get_drvdata(dev);
 printk("*****[%s:%d] getdrv %p\n", __FUNCTION__, __LINE__, this_board);
@@ -545,7 +545,7 @@ static struct pci_driver pcieportal_ops = {
         .name = DEV_NAME,
         .id_table = pcieportal_id_table,
         .probe = pcieportal_probe,
-        .remove = __exit_p(pcieportal_remove)
+        .remove = pcieportal_remove
 };
 
 /*
@@ -569,14 +569,14 @@ tBoard* get_pcie_portal_descriptor(void)
  */
 
 /* first routine called on module load */
-static int __init pcieportal_init(void)
+static int pcieportal_init(void)
 {
         int status;
 
 printk("[%s:%d]\n", __FUNCTION__, __LINE__);
-        pcieportal_class = class_create(THIS_MODULE, "Bluespec");
+        pcieportal_class = class_create(THIS_MODULE, "Connectal");
         if (IS_ERR(pcieportal_class)) {
-                printk(KERN_ERR "%s: failed to create class Bluespec\n", DEV_NAME);
+                printk(KERN_ERR "%s: failed to create class Connectal\n", DEV_NAME);
                 return PTR_ERR(pcieportal_class);
         }
         /* dynamically allocate a device number */
@@ -595,7 +595,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
                 return status;
         }
         /* log the fact that we loaded the driver module */
-        printk(KERN_INFO "%s: Registered Bluespec Pcieportal driver %s\n", DEV_NAME, DEV_VERSION);
+        printk(KERN_INFO "%s: Registered Connectal Pcieportal driver %s\n", DEV_NAME, DEV_VERSION);
         printk(KERN_INFO "%s: Major = %d  Minors = %d to %d\n", DEV_NAME,
                MAJOR(device_number), MINOR(device_number),
                MINOR(device_number) + NUM_BOARDS * NUM_BOARDS - 1);
@@ -604,7 +604,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 }
 
 /* routine called on module unload */
-static void __exit pcieportal_exit(void)
+static void pcieportal_exit(void)
 {
         /* unregister the driver with the PCI subsystem */
         pci_unregister_driver(&pcieportal_ops);
@@ -612,7 +612,7 @@ static void __exit pcieportal_exit(void)
         unregister_chrdev_region(device_number, NUM_BOARDS * MAX_NUM_PORTALS);
         class_destroy(pcieportal_class);
         /* log that the driver module has been unloaded */
-        printk(KERN_INFO "%s: Unregistered Bluespec Pcieportal driver %s\n", DEV_NAME, DEV_VERSION);
+        printk(KERN_INFO "%s: Unregistered Connectal Pcieportal driver %s\n", DEV_NAME, DEV_VERSION);
 }
 
 

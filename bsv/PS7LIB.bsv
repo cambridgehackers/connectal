@@ -35,6 +35,7 @@ import AxiMasterSlave::*;
 import AxiDma::*;
 import XilinxCells::*;
 import ConnectalXilinxCells::*;
+import ConnectalClocks::*;
 
 interface AxiMasterCommon;
     method Bit#(1)            aresetn();
@@ -789,8 +790,8 @@ interface PS7;
     interface Vector#(4, Clock) fclkclk;
     interface Vector#(4, Reset) fclkreset;
     interface Vector#(2, Pps7Emioi2c)  i2c;
-    interface Clock doubleClock;
-    interface Reset doubleReset;
+    interface Clock derivedClock;
+    interface Reset derivedReset;
 endinterface
 
 module mkPS7(PS7);
@@ -811,20 +812,28 @@ module mkPS7(PS7);
 
    ClockGenerator7Params clockParams = defaultValue;
    // input clock 200MHz for speed grade -2, 100MHz for speed grade -1
-   // Muliplying by 6.0 keeps the clock in the required range 600MHz - 1200MHz for either input clock
-   clockParams.clkfbout_mult_f       = 6.000;
+   // fpll needs to be in the range 600MHz - 1200MHz for either input clock
+   //
+   // fclkin = 1e9 / mainClockPeriod
+   // fpll = 1e9 = mult_f * 1e9 / mainClockPeriod
+   // mult_f = mainClockPeriod
+   //
+   // fclkout0 = 1e9 / divide_f = 1e9 / derivedClockPeriod
+   // divide_f = derivedClockPeriod
+   //
+   clockParams.clkfbout_mult_f       = mainClockPeriod;
    clockParams.clkfbout_phase     = 0.0;
    clockParams.clkfbout_phase     = 0.0;
-   clockParams.clkin1_period      = 5.000;
-   clockParams.clkout0_divide_f   = 3.000;
+   clockParams.clkin1_period      = mainClockPeriod;
+   clockParams.clkout0_divide_f   = derivedClockPeriod;
    clockParams.clkout0_duty_cycle = 0.5;
    clockParams.clkout0_phase      = 0.0000;
    clockParams.clkout0_buffer     = True;
    clockParams.clkin_buffer = False;
    ClockGenerator7   clockGen <- mkClockGenerator7(clockParams, clocked_by single_clock, reset_by single_reset);
-   let double_clock = clockGen.clkout0;
-   let double_reset_unbuffered <- mkAsyncReset(2, single_reset, double_clock);
-   let double_reset <- mkResetBUFG(clocked_by double_clock, reset_by double_reset_unbuffered);
+   let derived_clock = clockGen.clkout0;
+   let derived_reset_unbuffered <- mkAsyncReset(2, single_reset, derived_clock);
+   let derived_reset <- mkResetBUFG(clocked_by derived_clock, reset_by derived_reset_unbuffered);
 
    PS7LIB ps7 <- mkPS7LIB(single_clock, single_reset, clocked_by single_clock, reset_by single_reset);
 
@@ -872,8 +881,8 @@ module mkPS7(PS7);
     interface AxiSlaveHighSpeed s_axi_hp = ps7.s_axi_hp;
     interface fclkclk = fclk;
     interface fclkreset = freset;
-    interface doubleClock = double_clock;
-    interface doubleReset = double_reset;
+    interface derivedClock = derived_clock;
+    interface derivedReset = derived_reset;
     method Action interrupt(Bit#(1) v);
         ps7.irq.f2p({19'b0, v});
     endmethod

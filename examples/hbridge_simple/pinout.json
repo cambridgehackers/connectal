@@ -1,0 +1,20 @@
+{
+    "hbridge0[0]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmod" : "J1"
+    },
+    "hbridge0[1]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmod" : "J2"
+    },
+    "hbridge1[0]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmod" : "J5"
+    },
+    "hbridge1[1]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmod" : "J6"
+    }
+  }
+
+

@@ -257,7 +257,7 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
 	    cmdBuf.deq(truncate(loadIdx));
 	 end
 	 else begin
-	    let new_cmd = MemengineCmd{sglId:cmd.sglId, base:cmd.base+extend(cmd.burstLen), burstLen:cmd.burstLen, len:cmd.len-extend(cmd.burstLen)};
+	    let new_cmd = MemengineCmd{sglId:cmd.sglId, base:cmd.base+extend(cmd.burstLen), burstLen:cmd.burstLen, len:cmd.len-extend(cmd.burstLen), tag: ?};
 	    cmdBuf.upd_head(truncate(loadIdx),new_cmd);
 	 end
       end
@@ -305,7 +305,7 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
 			   if (bbl)
 			      $display("XXXXXXXXXX mkMemwriteEngineBuff::unsupported burstLen %d %d", bsb, c.burstLen);
 			   if (mdw0 || mdw1 || c.len == 0)
-			      $display("XXXXXXXXXX mkMemwriteEngineBuff::unsupported len %h", c.len);
+			      $display("XXXXXXXXXX mkMemwriteEngineBuff::unsupported len %h mdw0=%d mdw1=%d", c.len, mdw0, mdw1);
 			end
 			else begin
 `endif

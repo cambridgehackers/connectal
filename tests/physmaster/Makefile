@@ -6,5 +6,6 @@ CPPFILES=daemon.cpp
 CPPFILES2=testecho.cpp
 
 NUMBER_OF_MASTERS =0
+CONNECTALFLAGS += --nohardware
 
 include $(CONNECTALDIR)/Makefile.connectal

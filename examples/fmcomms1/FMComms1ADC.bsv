@@ -148,6 +148,13 @@ module mkFMComms1ADC(FMComms1ADC);
       adc_sdr_or.d(adc_or);
    endrule
    
+   rule alwaysenable;
+      adc_sdr_data.ce(True);
+      adc_sdr_data.s(False);
+      adc_sdr_or.ce(True);
+      adc_sdr_or.s(False);
+   endrule
+   
    Gearbox#(1, 2, IQ) gb <- mk1toNGearbox(adc_dco, adc_reset, adc_dco, adc_reset);
    SyncFIFOIfc#(Vector#(2, IQ)) infifo <- mkSyncBRAMFIFO(128, adc_dco, adc_reset, def_clock, def_reset);
    

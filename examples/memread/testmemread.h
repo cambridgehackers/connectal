@@ -94,11 +94,25 @@ public:
     fprintf(stderr, "rData(%08x): ", rDataCnt++);
     dump("", (char*)&v, sizeof(v));
   }
-  virtual void reportStateDbg(uint32_t streamRdCnt, uint32_t dataMismatch){
-    fprintf(stderr, "Memread::reportStateDbg(%08x, %d)\n", streamRdCnt, dataMismatch);
+  virtual void reportStateDbg(uint32_t reportType, uint32_t finished, uint32_t dataPipeNotEmpty){
+    fprintf(stderr, "Memread::reportStateDbg(%d, finished=%08x dataPipeNotEmpty=%08x)\n", reportType, finished, dataPipeNotEmpty);
   }  
+  void reportStateDbg ( const uint32_t streamRdCnt, const uint32_t mismatchCount ) {
+  }
   MemreadIndication(int id) : MemreadIndicationWrapper(id){}
 };
+
+MemreadRequestProxy *device = 0;
+
+static int running = 1;
+
+void *debugWorker(void *ptr)
+{
+  while (running) {
+    device->getStateDbg();
+    sleep(1);
+  }
+}
 
 int runtest(int argc, const char ** argv)
 {
@@ -107,7 +121,6 @@ int runtest(int argc, const char ** argv)
   int srcAlloc;
   unsigned int *srcBuffer = 0;
 
-  MemreadRequestProxy *device = 0;
   MemreadIndication *deviceIndication = 0;
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
@@ -125,6 +138,8 @@ int runtest(int argc, const char ** argv)
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
 
   portalExec_start();
+  pthread_t debug_thread;
+  pthread_create(&debug_thread, 0, debugWorker, 0);
 
 #ifdef FPGA0_CLOCK_FREQ
   long req_freq = FPGA0_CLOCK_FREQ;
@@ -176,7 +191,9 @@ int runtest(int argc, const char ** argv)
     device->startRead(ref_srcAlloc, 0, numWords, burstLen, iterCnt);
     sem_wait(&test_sem);
     if (mismatchCount != 3/*number of errors introduced above*/ * iterCnt) {
-      fprintf(stderr, "Main::second test failed to match mismatchCount=%d iterCnt=%d numWords=%d.\n", mismatchCount, iterCnt, numWords);
+      fprintf(stderr, "Main::second test failed to match mismatchCount=%d (expected %d) iterCnt=%d numWords=%d.\n",
+	      mismatchCount, 3*iterCnt,
+	      iterCnt, numWords);
       test_result++;     // failed
     }
 
@@ -185,6 +202,7 @@ int runtest(int argc, const char ** argv)
       .setReadBwUtil(read_util)
       .writeFile();
 
+    running = 0;
     return test_result; 
   } else {
     fprintf(stderr, "Main::new_test read %08x\n", numWords);
@@ -197,6 +215,7 @@ int runtest(int argc, const char ** argv)
       fprintf(stderr, "Main::new_test failed to match %08x.\n", mismatchCount);
       test_result++;     // failed
     }
+    running = 0;
     return test_result;
   }
 }

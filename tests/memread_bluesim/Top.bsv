@@ -31,7 +31,7 @@ import Connectable::*;
 import PCIE::*;
 import DefaultValue::*;
 
-// portz libraries
+// Connectal libraries
 import MemServer::*;
 import MMU::*;
 import CtrlMux::*;

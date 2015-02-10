@@ -67,6 +67,7 @@ BSC_CXXFLAGS= -I $(CONNECTALDIR)/cpp -I $(CONNECTALDIR) -D BSIM
 BSIM_CXX_COMMON = $(CONNECTALDIR)/cpp/BsimCtrl.cxx $(CONNECTALDIR)/cpp/TlpReplay.cxx $(CONNECTALDIR)/cpp/BsimDma.cxx $(CONNECTALDIR)/cpp/sock_utils.c
 BSIM_CXX_LOCAL = $(DTOP)/jni/BsimCtrl.cxx $(DTOP)/jni/TlpReplay.cxx $(DTOP)/jni/BsimDma.cxx $(DTOP)/jni/sock_utils.c
 
+VIVADODIR=$(shell dirname $(shell dirname $(shell which vivado)))
 VIVADOFLAGS= -notrace
 XVLOGFLAGS =
 
@@ -82,24 +83,32 @@ vfile=verilog/$(MKTOP).v
 
 all: exe bits
 
-ifeq ($(BOARD),bluesim)
-ifeq ($(RUNSOURCE2),)
-  exe: bsim_exe
+ifeq ($(CONNECTAL_SHARED),1)
+  ifeq ($(RUNSOURCE2),)
+    exe: connectal.so
+  else
+    exe: connectal.so bsim_exe2
+  endif
 else
-  exe: bsim_exe bsim_exe2
-endif
-else
-  ifneq ($(OS),android)
+  ifeq ($(BOARD),bluesim)
     ifeq ($(RUNSOURCE2),)
-      exe: ubuntu.exe
+      exe: bsim_exe
     else
-      exe: ubuntu.exe ubuntu.exe2
+      exe: bsim_exe bsim_exe2
     endif
   else
-    ifeq ($(CONNECTAL_DEBUG),1)
-      exe: android.debug.exe
+    ifneq ($(OS),android)
+      ifeq ($(RUNSOURCE2),)
+        exe: ubuntu.exe
+      else
+        exe: ubuntu.exe ubuntu.exe2
+      endif
     else
-      exe: android.exe
+      ifeq ($(CONNECTAL_DEBUG),1)
+        exe: android.debug.exe
+      else
+        exe: android.exe
+      endif
     endif
   endif
 endif
@@ -113,12 +122,18 @@ bsim_exe2: prepare_bin_target
 	@cp -v jni/bsim_exe2 bin
 
 ubuntu.exe: prepare_bin_target
+	@echo "ubuntu.exe"
 	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk ubuntu.exe
 	@cp -v jni/ubuntu.exe bin
+	@echo "ubuntu.exe done"
 
 ubuntu.exe2: prepare_bin_target
 	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk ubuntu.exe2
 	@cp -v jni/ubuntu.exe2 bin
+
+connectal.so: prepare_bin_target
+	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk connectal.so
+	@cp -v jni/connectal.so bin
 
 ifneq ($(BOARD),bluesim)
 ifneq ($(OS),android)
@@ -131,17 +146,26 @@ programflash:
 endif
 endif
 
+ifeq ($(CONNECTAL_NOHARDWARE),1)
+bits:
+else
 ifeq ($(BOARD),bluesim)
 bits: bsim
 else
+ifeq ($(BOARD),xsim)
+bits: xsim
+else
 bits: hw/mkTop.bit prepare_bin_target
-ifeq ($(OS),android)
+    ifeq ($(OS),android)
 	xxd hw/mkTop.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r > bin/mkTop.xdevcfg.bin
 	gzip -f bin/mkTop.xdevcfg.bin
-else
+    else
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
-endif
+    endif
+	if [ -f Impl/TopDown/top-post-route.dcp ]; then cp -f Impl/TopDown/top-post-route.dcp bin; fi
 	$(CONNECTALDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
+endif
+endif
 endif
 
 android.exe: prepare_bin_target
@@ -153,6 +177,9 @@ android.debug.exe: prepare_bin_target
 	@cp -v libs/armeabi/android.exe bin
 
 run:
+ifeq ($(CONNECTAL_SHARED),1)
+	$(GDB_BSIM) ./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe2 $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
+else 
 ifeq ($(BOARD),bluesim)
     ifeq ($(RUNSOURCE2),)
 	$(GDB_BSIM) ./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
@@ -160,19 +187,54 @@ ifeq ($(BOARD),bluesim)
 	./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB2) ./bin/bsim_exe2& bsim2pid=$$!; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid $$bsim2pid; exit $$retcode
     endif
 else
+  ifeq ($(BOARD),xsim)
+    ifeq ($(RUNSOURCE2),)
+	LD_LIBRARY_PATH=$(VIVADODIR)/lib/lnx64.o $(GDB_BSIM) ./bin/xsim -w & xsimpid=$$!; echo xsimpid $$xsimpid; $(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; kill $$xsimpid; exit $$retcode
+    else
+	LD_LIBRARY_PATH=$(VIVADODIR)/lib/lnx64.o ./bin/xsim -w & xsimpid=$$!; echo xsimpid $$xsimpid; $(GDB2) ./bin/ubuntu.exe2& xsim2pid=$$!; $(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; kill $$xsimpid $$xsim2pid; exit $$retcode
+    endif
+  else
     ifeq ($(OS),android)
 	$(CONNECTALDIR)/scripts/run.zedboard bin/mkTop.xdevcfg.bin.gz bin/android.exe $(RUN_ARGS)
     else
 	$(CONNECTALDIR)/scripts/run.pcietest bin/mk*.bin.gz bin/ubuntu.exe $(RUN_ARGS)
     endif
+  endif
+endif
 endif
 
-xsim: verilog
-	xvlog $(XVLOGFLAGS) verilog/*.v
-	xelab $(XELABFLAGS) work.$(MKTOP)
+ifeq ($(BOARD), xsim)
+XSI_INCLUDE_DIR=$(VIVADODIR)/data/xsim/include
+XSI_EXAMPLE_DIR=$(VIVADODIR)/examples/xsim/verilog/xsi/counter/
+XSIM_INCLUDES = -I$(XSI_INCLUDE_DIR) -I$(XSI_EXAMPLE_DIR) -Ijni -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR)
+endif
 
-xsimrun: xsim
-	xsim $(XSIMFLAGS) work.$(MKTOP)
+bin/xsim: $(CONNECTALDIR)/cpp/xsimtop.cpp $(XSI_EXAMPLE_DIR)/xsi_loader.cpp
+	  g++ $(XSIM_INCLUDES) -O -g -c -o xsi_loader.o $(XSI_EXAMPLE_DIR)/xsi_loader.cpp
+	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o portal.o $(CONNECTALDIR)/cpp/portal.c
+	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o poller.o $(CONNECTALDIR)/cpp/poller.cpp
+	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o sock_utils.o $(CONNECTALDIR)/cpp/sock_utils.c
+	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o timer.o $(CONNECTALDIR)/cpp/timer.c
+	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o portalSocket.o $(CONNECTALDIR)/cpp/portalSocket.c
+	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o portalJson.o $(CONNECTALDIR)/cpp/portalJson.c
+	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o xsimtop.o $(CONNECTALDIR)/cpp/xsimtop.cpp
+	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o XsimMemSlaveIndication.o jni/XsimMemSlaveIndication.c
+	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o XsimMemSlaveRequest.o jni/XsimMemSlaveRequest.c
+	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o GeneratedCppCallbacks.o jni/GeneratedCppCallbacks.cpp
+	  g++ -o bin/xsim xsimtop.o xsi_loader.o portal.o portalSocket.o portalJson.o poller.o sock_utils.o timer.o XsimMemSlaveRequest.o XsimMemSlaveIndication.o GeneratedCppCallbacks.o -ldl -lrt -pthread
+
+xsim: verilog bin/xsim
+	xvlog $(XVLOGFLAGS) verilog/*.v
+	xelab $(XELABFLAGS) work.$(MKTOP) -dll -s $(MKTOP)
+
+bin/vsim:
+	echo $@
+
+vsim: verilog bin/vsim
+#	$(Q)bsc -D BSV_TIMESCALE=1ns/1ns -verilog -vsearch +:$(QSYS_SIMDIR)/simulation/submodules/ \
+#		-vsim ./bsc_build_vsim_modelsim -e tb -o run_simulation -Xv "+incdir+$(QSYS_SIMDIR)/simulation/submodules/" \
+#		$(BSV_VERILOG_FILES)
+	echo $@ 
 
 $(vfile): $(TOPBSVFILE) $(BSVFILES)
 	$(Q)mkdir -p verilog/portal $(DTOP)/obj
@@ -202,11 +264,13 @@ syntax.timestamp: $(BSVFILES)
 	$(Q)touch syntax.timestamp
 
 verilog: $(vfile)
+	@echo "verilog"
 
 lint: $(vfile)
 	verilator --error-limit 200 --lint-only -Isources/$(DUT) -Isources/source $(vfile)
 
 prepare_bin_target: syntax.timestamp
+	@echo "prepare_bin_target"
 	@mkdir -p bin
 	@(git rev-parse HEAD || echo not a git repo) > bin/githash
 	@(git diff || echo not a git repo) | gzip -c > bin/gitdiff.patch.gz

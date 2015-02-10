@@ -1,11 +1,13 @@
 
 CONNECTALDIR?=../..
-INTERFACES = FMComms1Request FMComms1Indication
-BSVFILES = FMComms1ADC.bsv FMComms1DAC.bsv FMComms1.bsv \
+INTERFACES = FMComms1Request FMComms1Indication \
+	BlueScopeEventPIORequest  BlueScopeEventPIOIndication
+BSVFILES = ../../lib/bsv/BlueScopeEventPIO.bsv \
+	FMComms1ADC.bsv FMComms1DAC.bsv FMComms1.bsv \
 	 Top.bsv
 CPPFILES=testi2c.c
 CONNECTALFLAGS = -C fmcomms1-$(BOARD).xdc --tcl clock.tcl
-CONNECTALFLAGS +=  -D USE_I2C1 -D IMPORT_HOSTIF
+CONNECTALFLAGS +=  -D USE_FMC_I2C1 -D IMPORT_HOSTIF
 PIN_TYPE = FMComms1Pins
 
 ifeq ($(BOARD),zedboard)
@@ -16,11 +18,12 @@ ifeq ($(BOARD),zc702)
 HAS_PS7=true
 endif
 
+PIN_BINDINGS ?= -b fmc:fmc1
 
 gentarget:: fmcomms1-$(BOARD).xdc
 
 fmcomms1-$(BOARD).xdc: fmcomms1-fmc.json $(CONNECTALDIR)/boardinfo/$(BOARD).json
-	$(CONNECTALDIR)/scripts/generate-constraints.py $(CONNECTALDIR)/boardinfo/$(BOARD).json fmcomms1-fmc.json > fmcomms1-$(BOARD).xdc
+	$(CONNECTALDIR)/scripts/generate-constraints.py $(PIN_BINDINGS) -o fmcomms1-$(BOARD).xdc $(CONNECTALDIR)/boardinfo/$(BOARD).json fmcomms1-fmc.json
 
 
 include $(CONNECTALDIR)/Makefile.connectal

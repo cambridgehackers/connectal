@@ -101,6 +101,8 @@ module mkSlaveMux#(Vector#(numPortals,MemPortal#(aw,dataWidth)) portals) (PhysMe
       ws.deq();
       doneFifo.enq(rv);
    endrule
+      
+   let verbose = False;
 
    interface PhysMemWriteServer write_server;
       interface Put writeReq;
@@ -108,12 +110,13 @@ module mkSlaveMux#(Vector#(numPortals,MemPortal#(aw,dataWidth)) portals) (PhysMe
 	    req_aws.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
 	    if (req.burstLen > 4) $display("**** \n\n mkSlaveMux.writeReq len=%d \n\n ****", req.burstLen);
 	    ws.enq(truncate(psel(req.addr)));
-	    //$display("mkSlaveMux.writeReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));
+	    if(verbose) $display("mkSlaveMux.writeReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));
 	 endmethod
       endinterface
       interface Put writeData;
 	 method Action put(MemData#(dataWidth) wdata);
 	    write_data.enq(tuple2(ws.first,wdata));
+	    if(verbose) $display("mkSlaveMux.writeData dst=%h wdata=%h", ws.first,wdata);
 	 endmethod
       endinterface
       interface Get writeDone;

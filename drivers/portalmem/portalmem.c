@@ -34,7 +34,7 @@
 
 #include <asm/cacheflush.h>
 
-#include "portalmem.h"
+#include "drivers/portalmem/portalmem.h"
 
 #ifdef DEBUG // was KERN_DEBUG
 #define driver_devel(format, ...)		\

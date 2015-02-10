@@ -51,7 +51,7 @@ Integer memreadEngineBufferSize=256;
 
 interface MemreadRequest;
    method Action startRead(Bit#(32) pointer, Bit#(32) offset, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
-   method Action getStateDbg();   
+   method Action getStateDbg();
 endinterface
 
 interface Memread;
@@ -61,7 +61,7 @@ endinterface
 
 interface MemreadIndication;
    method Action started(Bit#(32) numWords);
-   method Action reportStateDbg(Bit#(32) streamRdCnt, Bit#(32) mismatchCount);
+   method Action reportStateDbg(Bit#(32) reportType, Bit#(32) finished, Bit#(32) dataPipeNotEmpty);
    method Action readDone(Bit#(32) mismatchCount);
 endinterface
 
@@ -78,11 +78,11 @@ module mkMemread#(MemreadIndication indication) (Memread);
    Reg#(Bit#(32))                                   iterCnt <- mkReg(0);
    Reg#(Bit#(32))                                readOffset <- mkReg(0);
    Vector#(NumEngineServers, Reg#(Bit#(32)))       iterCnts <- replicateM(mkReg(0));
-   Vector#(NumEngineServers, Reg#(Bit#(32)))   valuesToRead <- replicateM(mkReg(0));
+   Vector#(NumEngineServers, Reg#(Bit#(32)))    wordsToRead <- replicateM(mkReg(0));
    Vector#(NumEngineServers, Reg#(Bit#(32))) mismatchCounts <- replicateM(mkReg(0));
    MemreadEngineV#(DataBusWidth,NumOutstandingRequests,NumEngineServers) re <- mkMemreadEngineBuff(memreadEngineBufferSize);
    Vector#(NumEngineServers, FIFOF#(Bit#(32))) mismatchFifos <- replicateM(mkFIFOF);
-   Bit#(MemOffsetSize) chunk = (extend(numWords)/fromInteger(valueOf(NumEngineServers)))*4;
+   Bit#(MemOffsetSize) chunkBytes = (extend(numWords)/fromInteger(valueOf(NumEngineServers)))*4;
    
    Vector#(NumEngineServers, RangePipeIfc#(Bit#(32)))     rangePipeIfcs <- replicateM(mkRangePipeOut);
    function PipeOut#(a) getRangePipePipe(RangePipeIfc#(a) rpi); return rpi.pipe; endfunction
@@ -96,19 +96,23 @@ module mkMemread#(MemreadIndication indication) (Memread);
    endfunction
    Vector#(NumEngineServers, PipeOut#(Vector#(DataBusWords, Bool)))  mismatchPipes <- mapM(uncurry(mkJoinBuffered(vcompare)), zip(readPipes, srcGenPipes));
    
+   Vector#(NumEngineServers, Reg#(Bool)) finishedReg <- replicateM(mkReg(False));
+
    for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
       rule start (iterCnts[i] > 0);
-	 re.readServers[i].request.put(MemengineCmd{sglId:pointer, base:extend(readOffset)+(fromInteger(i)*chunk), len:truncate(chunk), burstLen:truncate(burstLen*4)});
+	 re.readServers[i].request.put(MemengineCmd{sglId:pointer, base:extend(readOffset)+(fromInteger(i)*chunkBytes), len:truncate(chunkBytes), burstLen:truncate(burstLen*4)});
 	 iterCnts[i] <= iterCnts[i]-1;
-	 Bit#(32) base = (readOffset/4)+(fromInteger(i)*(truncate(chunk)/4));
-	 Bit#(32) limit = base + truncate(chunk)/4;
+	 Bit#(32) base = (readOffset/4)+(fromInteger(i)*(truncate(chunkBytes)/4));
+	 Bit#(32) limit = base + truncate(chunkBytes)/4;
 	 let rangeConfig = RangeConfig { xbase: base, xlimit: limit, xstep: 1 };
 	 rangePipeIfcs[i].start(rangeConfig);
 	 $display("start %d, %d, %h", i, iterCnts[i], readOffset);
+	 finishedReg[i] <= False;
       endrule
       rule finish;
 	 $display("finish %d", i);
 	 let rv <- re.readServers[i].response.get;
+	 finishedReg[i] <= True;
       endrule
       rule check;
 	 let bv <- toGet(mismatchPipes[i]).get();
@@ -116,16 +120,16 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 if (mismatch) $display("mismatch bv[0] %d bv[1] %d\n", bv[0], bv[1]);
 	 let mc = mismatchCounts[i] + (mismatch ? 1 : 0);
 
-	 let newValuesToRead = valuesToRead[i] - 2;
+	 let newValuesToRead = wordsToRead[i] - fromInteger(valueOf(DataBusWords));
 
-	 if (valuesToRead[i] <= 2) begin
+	 if (wordsToRead[i] <= fromInteger(valueOf(DataBusWords))) begin
 	    $display("mismatch count %d", mc);
 	    mismatchFifos[i].enq(mc);
 	    mc = 0; // restart count
-	    newValuesToRead = truncate(chunk/4);
+	    newValuesToRead = truncate(chunkBytes/4);
 	 end
 	 mismatchCounts[i] <= mc;
-	 valuesToRead[i] <= newValuesToRead;
+	 wordsToRead[i] <= newValuesToRead;
 
       endrule
    end
@@ -133,6 +137,15 @@ module mkMemread#(MemreadIndication indication) (Memread);
    PipeOut#(Vector#(NumEngineServers, Bit#(32))) mismatchCountsPipe <- mkJoinVector(id, map(toPipeOut, mismatchFifos));
    PipeOut#(Bit#(32)) mismatchCountPipe <- mkReducePipe(uncurry(add), mismatchCountsPipe);
    
+   FIFO#(Bit#(2)) reportStateFifo <- mkFIFO();
+   rule reportState;
+      let v <- toGet(reportStateFifo).get();
+	 Vector#(NumEngineServers, Bool) notEmpty = map(pipeOutNotEmpty, re.dataPipes);
+	 indication.reportStateDbg(extend(v),
+				   extend(pack(readVReg(finishedReg))),
+				   extend(pack(notEmpty)));
+   endrule
+
    rule indicate_finish;
       let mc <- toGet(mismatchCountPipe).get();
       mc = mc + mismatchCnt;
@@ -142,6 +155,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 mc = 0;
       end
       mismatchCnt <= mc;
+      reportStateFifo.enq(1);
       iterCnt <= iterCnt - 1;
    endrule
    
@@ -158,8 +172,13 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
 	    iterCnts[i] <= ic;
 	    mismatchCounts[i] <= 0;
-	    valuesToRead[i] <= truncate(chunk/4);
+	    wordsToRead[i] <= truncate(chunkBytes/4);
+	    finishedReg[i] <= False;
 	 end
+	 reportStateFifo.enq(0);
+      endmethod
+      method Action getStateDbg();
+	 reportStateFifo.enq(2);
       endmethod
    endinterface
 endmodule

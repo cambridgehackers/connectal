@@ -14,9 +14,10 @@ import Clocks          :: *;
 import DefaultValue    :: *;
 import TieOff          :: *;
 import XilinxCells     :: *;
-import PCIEWRAPPER     :: *;
 import ClientServer    :: *;
-
+`ifdef XILINX
+import PCIEWRAPPER     :: *;
+`endif
 import Connectable     ::*;
 import Reserved        ::*;
 import DReg            ::*;

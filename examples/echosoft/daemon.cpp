@@ -21,6 +21,9 @@
 
 #include <stdio.h>
 #include <netdb.h>
+
+#include "sock_utils.h"
+
 #include "EchoRequest.h"
 #include "EchoIndication.h"
 
@@ -76,15 +79,13 @@ int main(int argc, const char **argv)
 #define PARAM &param
 #endif
 
+    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndicationProxy, NULL, NULL);
+    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestWrapper);
     int rc = getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
-    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &socketfuncResp, PARAM);
+    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndicationProxy, &socketfuncResp, PARAM);
     rc = getaddrinfo("127.0.0.1", "5001", NULL, &param.addr);
-    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &socketfuncResp, PARAM);
+    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequestWrapper, &socketfuncResp, PARAM);
 
-    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, NULL, NULL);
-    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
-
-    portalExec_start();
     printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);
     while(1)
         sleep(100);

@@ -28,8 +28,8 @@
 #include "StdDmaIndication.h"
 #include "MemServerRequest.h"
 #include "MMURequest.h"
-#include "MemreadRequest.h"
-#include "MemreadIndication.h"
+#include "RtestRequest.h"
+#include "RtestIndication.h"
 
 sem_t test_sem;
 
@@ -48,21 +48,21 @@ void dump(const char *prefix, char *buf, size_t len)
     printf( "\n");
 }
 
-class MemreadIndication : public MemreadIndicationWrapper
+class RtestIndication : public RtestIndicationWrapper
 {
 public:
   unsigned int rDataCnt;
   virtual void readDone(uint32_t v){
-    printf( "Memread::readDone(mismatch = %x)\n", v);
+    printf( "Rtest::readDone(mismatch = %x)\n", v);
     sem_post(&test_sem);
   }
-  MemreadIndication(int id) : MemreadIndicationWrapper(id){}
+  RtestIndication(int id) : RtestIndicationWrapper(id){}
 };
 
 int main(int argc, const char **argv)
 {
-  MemreadRequestProxy *device = new MemreadRequestProxy(IfcNames_MemreadRequest);
-  MemreadIndication *deviceIndication = new MemreadIndication(IfcNames_MemreadIndication);
+  RtestRequestProxy *device = new RtestRequestProxy(IfcNames_RtestRequest);
+  RtestIndication *deviceIndication = new RtestIndication(IfcNames_RtestIndication);
   MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
   MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
   DmaManager *dma = new DmaManager(dmap);

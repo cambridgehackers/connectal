@@ -24,57 +24,84 @@
 from __future__ import print_function
 import sys
 import json
+import argparse
 
-boardfile = sys.argv[1]
-pinoutfile = sys.argv[2]
+argparser = argparse.ArgumentParser("Generate constraints file for board.")
+argparser.add_argument('boardfile', help='Board description file (json)')
+argparser.add_argument('pinoutfile', help='Project description file (json)')
+argparser.add_argument('-b', '--bind', default=[], help='Bind signal group to pin group', action='append')
+argparser.add_argument('-o', '--output', default=None, help='Write output to file')
+argparser.add_argument('-f', '--fpga', default="xilinx", help='Target FPGA Vendor')
+
+options = argparser.parse_args()
+boardfile = options.boardfile
+pinoutfile = options.pinoutfile
+
+bindings = {
+    'pins': 'pins',
+    'pin_name': 'pins' # legacy
+    }
+for binding in options.bind:
+    split = binding.split(':')
+    bindings[split[0]] = split[1]
+
 
 pinstr = open(pinoutfile).read()
 pinout = json.loads(pinstr)
 
 boardInfo = json.loads(open(boardfile).read())
 
-template='''\
+if options.fpga == "xilinx":
+    template='''\
 set_property LOC "%(LOC)s" [get_ports "%(name)s"]
 set_property IOSTANDARD "%(IOSTANDARD)s" [get_ports "%(name)s"]
 set_property PIO_DIRECTION "%(PIO_DIRECTION)s" [get_ports "%(name)s"]
+    '''
+    setPropertyTemplate='''\
+    set_property %(prop)s "%(val)s" [get_ports "%(name)s"]
+    '''
+elif options.fpga == "altera":
+    template='''\
+set_instance_assignment -name IO_STANDARD "%(IOSTANDARD)s" -to "%(name)s"
+set_location_assignment "%(LOC)s" -to "%(name)s"
 '''
-setPropertyTemplate='''\
-set_property %(prop)s "%(val)s" [get_ports "%(name)s"]
-'''
+    setPropertyTemplate=""
+
+out = sys.stdout
+if options.output:
+    out = open(options.output, 'w')
 
 for pin in pinout:
     pinInfo = pinout[pin]
     loc = 'TBD'
     iostandard = 'TBD'
-    if pinInfo.has_key('fmc'):
-        pinName = pinInfo['fmc']
-        if boardInfo.has_key('fmc2'):
-            boardFmcInfo = boardInfo['fmc2']
+    used = []
+    for key in bindings:
+        if pinInfo.has_key(key):
+            used.append(key)
+            pinName = pinInfo[key]
+            boardGroupInfo = boardInfo[bindings[key]]
+            break
+    if boardGroupInfo.has_key(pinName):
+        if boardGroupInfo[pinName].has_key('LOC'):
+            loc = boardGroupInfo[pinName]['LOC']
         else:
-            boardFmcInfo = boardInfo['fmc']
-    else:
-        pinName = pinInfo['pin_name']
-        boardFmcInfo = boardInfo['pins']
-    if boardFmcInfo.has_key(pinName):
-        if boardFmcInfo[pinName].has_key('LOC'):
-            loc = boardFmcInfo[pinName]['LOC']
-        else:
-            loc = boardFmcInfo[pinName]['PACKAGE_PIN']
-        iostandard = boardFmcInfo[pinName]['IOSTANDARD']
+            loc = boardGroupInfo[pinName]['PACKAGE_PIN']
+        iostandard = boardGroupInfo[pinName]['IOSTANDARD']
     else:
         print('Missing pin description for', pinName, file=sys.stderr)
         loc = 'fmc.%s' % (pinName)
     if pinInfo.has_key('IOSTANDARD'):
         iostandard = pinInfo['IOSTANDARD']
-    print(template % {
-        'name': pin,
-        'LOC': loc,
-        'IOSTANDARD': iostandard,
-        'PIO_DIRECTION': pinInfo['PIO_DIRECTION']
-        })
+    out.write(template % {
+            'name': pin,
+            'LOC': loc,
+            'IOSTANDARD': iostandard,
+            'PIO_DIRECTION': pinInfo['PIO_DIRECTION']
+            })
     for k in pinInfo:
-        if k in ['fmc', 'IOSTANDARD', 'PIO_DIRECTION']: continue
-        print (setPropertyTemplate % {
+        if k in used+['IOSTANDARD', 'PIO_DIRECTION']: continue
+        out.write(setPropertyTemplate % {
                 'name': pin,
                 'prop': k,
                 'val': pinInfo[k],

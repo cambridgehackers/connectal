@@ -20,38 +20,12 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <pthread.h>
-#include <semaphore.h>
-#include <unistd.h>
-
 #include "EchoIndication.h"
 #include "EchoRequest.h"
 #include "GeneratedTypes.h"
-#include "Swallow.h"
 
-EchoRequestProxy *echoRequestProxy = 0;
-
+static EchoRequestProxy *echoRequestProxy = 0;
 static sem_t sem_heard2;
-
-PortalPoller *poller = 0;
-
-static void *pthread_worker(void *p)
-{
-    void *rc = NULL;
-    while (!rc && !poller->stopping) {
-        rc = poller->portalExec_poll(poller->portalExec_timeout);
-        if ((long) rc >= 0)
-            rc = poller->portalExec_event();
-    }
-    return rc;
-}
-static void init_thread()
-{
-    pthread_t threaddata;
-    sem_init(&sem_heard2, 0, 0);
-    pthread_create(&threaddata, NULL, &pthread_worker, (void*)poller);
-}
 
 class EchoIndication : public EchoIndicationWrapper
 {
@@ -64,7 +38,7 @@ public:
         sem_post(&sem_heard2);
         //printf("heard an echo2: %ld %ld\n", a, b);
     }
-    EchoIndication(unsigned int id, PortalPoller *poller) : EchoIndicationWrapper(id, poller) {}
+    EchoIndication(unsigned int id) : EchoIndicationWrapper(id) {}
 };
 
 static void call_say(int v)
@@ -82,14 +56,8 @@ static void call_say2(int v, int v2)
 
 int main(int argc, const char **argv)
 {
-    poller = new PortalPoller();
-    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, poller);
-    // these use the default poller
-    SwallowProxy *swallowProxy = new SwallowProxy(IfcNames_Swallow);
-    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
-
-    poller->portalExec_init();
-    init_thread();
+    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndicationProxy);
+    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestWrapper);
     portalExec_start();
 
     int v = 42;
@@ -101,7 +69,5 @@ int main(int argc, const char **argv)
     call_say2(v, v*3);
     printf("TEST TYPE: SEM\n");
     echoRequestProxy->setLeds(9);
-    poller->portalExec_end();
-    portalExec_end();
     return 0;
 }

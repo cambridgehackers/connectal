@@ -31,6 +31,7 @@ import AST
 import globalv
 import util
 
+verbose = False
 tempFilename = 'generatedDesignInterfaceFile.json'
 
 class InterfaceMixin:
@@ -89,6 +90,7 @@ def classInfo(item):
     return rc
 
 def serialize_json(interfaces, globalimports, dutname, interfaceList):
+    global verbose
     itemlist = []
     for item in interfaces:
         itemlist.append(classInfo(item))
@@ -104,7 +106,7 @@ def serialize_json(interfaces, globalimports, dutname, interfaceList):
             gvlist[key]['name'] = value.name
             gvlist[key]['tdtype'] = dtInfo(value.tdtype)
             gvlist[key]['params'] = value.params
-        else:
+        elif verbose:
             print 'Unprocessed globalvar:', key, value
     toplevel['globalvars'] = gvlist
     gdlist = []
@@ -115,7 +117,7 @@ def serialize_json(interfaces, globalimports, dutname, interfaceList):
             newitem['tdtype'] = dtInfo(item.tdtype)
             newitem['params'] = item.params
             #print 'TYPEDEF globaldecl:', item, 'ZZZ', newitem
-        else:
+        elif verbose:
             print 'Unprocessed globaldecl:', item, 'ZZZ', newitem
         gdlist.append(newitem)
     toplevel['globaldecls'] = gdlist
@@ -256,7 +258,7 @@ class TypeDef:
         self.params = params
         self.type = 'TypeDef'
         self.tdtype = tdtype
-        if tdtype.type != 'Type':
+        if tdtype and tdtype.type != 'Type':
             tdtype.name = name
         self.type = 'TypeDef'
     def __repr__(self):

@@ -36,15 +36,15 @@ class MMUIndication : public MMUIndicationWrapper
   DmaManager *portalMemory;
  public:
   MMUIndication(DmaManager *pm, unsigned int  id) : MMUIndicationWrapper(id), portalMemory(pm) {}
-  MMUIndication(DmaManager *pm, unsigned int  id, PortalPoller *poller) : MMUIndicationWrapper(id,poller), portalMemory(pm) {}
+  //MMUIndication(DmaManager *pm, unsigned int  id, PortalPoller *poller) : MMUIndicationWrapper(id,poller), portalMemory(pm) {}
   MMUIndication(DmaManager *pm, unsigned int  id, PortalItemFunctions *item, void *param) : MMUIndicationWrapper(id, item, param), portalMemory(pm) {}
-  MMUIndication(DmaManager *pm, unsigned int  id, PortalItemFunctions *item, void *param, PortalPoller *poller) : MMUIndicationWrapper(id,item, param, poller), portalMemory(pm) {}
+  //MMUIndication(DmaManager *pm, unsigned int  id, PortalItemFunctions *item, void *param, PortalPoller *poller) : MMUIndicationWrapper(id,item, param, poller), portalMemory(pm) {}
   virtual void configResp(uint32_t pointer){
     fprintf(stderr, "MMUIndication::configResp: %x\n", pointer);
     portalMemory->confResp(pointer);
   }
   virtual void error (uint32_t code, uint32_t pointer, uint64_t offset, uint64_t extra) {
-    fprintf(stderr, "MMUIndication::error(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
+    fprintf(stderr, "MMUIndication::error(code=0x%x, pointer=0x%x, offset=0x%"PRIx64" extra=-0x%"PRIx64"\n", code, pointer, offset, extra);
     if (--mmu_error_limit < 0)
         exit(-1);
   }
@@ -63,7 +63,7 @@ class MemServerIndication : public MemServerIndicationWrapper
       PORTAL_PRINTF("MemServerIndication::init failed to init mtSem\n");
   }
  public:
-  MemServerIndication(unsigned int  id, PortalPoller *poller) : MemServerIndicationWrapper(id,poller), memServerRequestProxy(NULL){init();}
+  //MemServerIndication(unsigned int  id, PortalPoller *poller) : MemServerIndicationWrapper(id,poller), memServerRequestProxy(NULL){init();}
   MemServerIndication(unsigned int  id) : MemServerIndicationWrapper(id), memServerRequestProxy(NULL) {init();}
   MemServerIndication(MemServerRequestProxy *p, unsigned int  id) : MemServerIndicationWrapper(id), memServerRequestProxy(p) {init();}
   virtual void addrResponse(uint64_t physAddr){

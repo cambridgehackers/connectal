@@ -64,40 +64,40 @@ typedef struct {
 
 module mkSimple#(Simple indication)(Simple);
    
-   let verbose = False;
+   let verbose = True;
    
    method Action say1(Bit#(32) v);
-      if (verbose) $display("mkSimple::say1");
+      if (verbose) $display("mkSimple::say1", v);
       indication.say1(v);
    endmethod
    
    method Action say2(Bit#(16) a, Bit#(16) b);
-      if (verbose) $display("mkSimple::say2");
+      if (verbose) $display("mkSimple::say2", a, b);
       indication.say2(a,b);
    endmethod
       
    method Action say3(S1 v);
-      if (verbose) $display("mkSimple::say3");
+      if (verbose) $display("mkSimple::say3", v);
       indication.say3(v);
    endmethod
    
    method Action say4(S2 v);
-      if (verbose) $display("mkSimple::say4");
+      if (verbose) $display("mkSimple::say4", v);
       indication.say4(v);
    endmethod
       
    method Action say5(Bit#(32) a, Bit#(64) b, Bit#(32) c);
-      if (verbose) $display("mkSimple::say5");
+      if (verbose) $display("mkSimple::say5", a, b, c);
       indication.say5(a, b, c);
    endmethod
 
    method Action say6(Bit#(32) a, Bit#(40) b, Bit#(32) c);
-      if (verbose) $display("mkSimple::say6");
+      if (verbose) $display("mkSimple::say6", a, b, c);
       indication.say6(a, b, c);
    endmethod
 
    method Action say7(S3 v);
-      if (verbose) $display("mkSimple::say7");
+      if (verbose) $display("mkSimple::say7", v);
       indication.say7(v);
    endmethod
 

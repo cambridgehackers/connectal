@@ -73,7 +73,7 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
     Reg#(Bit#(32)) tcounter <- mkReg(0);
     Reg#(Bit#(1))  remapkernel_reg <- mkReg(0);
     Gearbox#(4, 1, Bit#(10)) dataGearbox <- mkNto1Gearbox(defaultClock, defaultReset, hdmi_clock, hdmi_reset);
-    SPI#(Bit#(26)) spiController <- mkSPI(1000, clocked_by axi_clock, reset_by axi_reset);
+    SPI#(Bit#(26)) spiController <- mkSPI(1000, True, clocked_by axi_clock, reset_by axi_reset);
     Reg#(Bit#(1)) i2c_mux_reset_n_reg <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
     ImageonVita vitaItem <- mkImageonVita(imageon_oe, trigger_active, serdes.reset);
 

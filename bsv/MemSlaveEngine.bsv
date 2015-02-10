@@ -83,21 +83,6 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
     FIFOF#(TLPTag) writeTag <- mkSizedFIFOF(16);
     FIFOF#(TLPTag) doneTag <- mkSizedFIFOF(16);
 
-    function LUInt#(4) tlpWordCount(TLPData#(16) tlp);
-       if (tlp.be == 16'h0000)
-	  return 0;
-       else if (tlp.be == 16'h000f || tlp.be == 16'hf000)
-	  return 1;
-       else if (tlp.be == 16'h00ff || tlp.be == 16'hff00)
-	  return 2;
-       else if (tlp.be == 16'h0fff || tlp.be == 16'hfff0)
-	  return 3;
-       else if (tlp.be == 16'hffff)
-	  return 4;
-       else
-	  return 0;
-    endfunction
-
    Wire#(Bool) writeHeaderTlpWire <- mkDWire(False);
    Probe#(Bool) writeHeaderAvailableProbe <- mkProbe;
    Wire#(Bool) writeDataMimoEnqWire <- mkDWire(False);
@@ -192,16 +177,14 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 
    Reg#(TLPTag) lastTag <- mkReg(0);
    FIFOF#(TLPData#(16)) tlpDecodeFifo <- mkFIFOF();
-   FIFOF#(LUInt#(4))    tlpWordCountFifo <- mkFIFOF();
+   Reg#(TLPLength) wordCountReg <- mkReg(0);
    rule tlpInRule;
       let tlp <- toGet(tlpInFifo).get();
-      tlpWordCountFifo.enq(tlpWordCount(tlp));
       tlpDecodeFifo.enq(tlp);
    endrule
 
    rule handleTlpRule;
       let tlp = tlpDecodeFifo.first;
-      let count = tlpWordCountFifo.first;
       Bool handled = False;
       TLPMemoryIO3DWHeader h = unpack(tlp.data);
       hitReg <= tlp.hit;
@@ -209,7 +192,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       TLPCompletionHeader hdr_completion = unpack(tlp.data);
       Vector#(4, Bit#(32)) vec = unpack(0);
       Vector#(4, Bit#(32)) tlpvec = unpack(tlp.data);
-
+      let wordCount = wordCountReg;
       if (!tlp.sof) begin
 	 vec = reverse(tlpvec);
 	 // The MIMO implicit guard only checks for space to enqueue 1 element
@@ -218,6 +201,11 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	 if (completionMimo.enqReady()
 	    && completionTagMimo.enqReady())
 	    begin
+	       UInt#(3) count = 4;
+	       if (tlp.eof) begin
+		  count = truncate(unpack(wordCountReg));
+	       end
+	       wordCount = wordCountReg - extend(pack(count));
 	       completionMimo.enq(count, vec);
 	       Vector#(4, TLPTag) tagvec = replicate(lastTag);
 	       completionTagMimo.enq(count, tagvec);
@@ -229,16 +217,17 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	       && completionMimo.enqReady()
 	       && completionTagMimo.enqReady()) begin
 	    vec[0] = hdr_3dw.data;
+            wordCount = hdr_3dw.length - 1;
 	    completionMimo.enq(1, vec);
             TLPTag tag = hdr_completion.tag;
 	    lastTag <= tag;
 	    completionTagMimo.enq(1, replicate(tag));
 	    handled = True;
       end
+      wordCountReg <= wordCount;
       //$display("tlpIn handled=%d tlp=%h\n", handled, tlp);
       if (handled) begin
 	 tlpDecodeFifo.deq();
-	 tlpWordCountFifo.deq();
       end
    endrule
 

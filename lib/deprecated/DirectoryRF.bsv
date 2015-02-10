@@ -27,7 +27,7 @@ import FIFO::*;
 import RegFile::*;
 import SpecialFIFOs::*;
 
-//portz libraries
+//Connectal libraries
 import Portal::*;
 import MemTypes::*;
 import RegFileA::*;

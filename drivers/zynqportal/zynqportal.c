@@ -44,6 +44,8 @@
 #define DRIVER_VERSION     "0.1"
 #endif
 #define PORTAL_BASE_OFFSET         (1 << 16)
+#define STATUS_OFFSET 0x000
+#define MASK_OFFSET 0x004
 #define IID_OFFSET 0x010
 #define TOP_OFFSET 0x014
 #define MSB_OFFSET 0x018
@@ -64,8 +66,6 @@ struct portal_data {
         struct miscdevice misc; /* must be first element (pointer passed to misc_register) */
         wait_queue_head_t wait_queue;
         dma_addr_t        dev_base_phys;
-        void             *interrupt_virt;
-        void             *mask_virt;
         void             *map_base;
         unsigned int      portal_irq;
         int               irq_is_registered;
@@ -81,6 +81,7 @@ struct connectal_data{
 
 static void *directory_virt;  /* anyone should be able to get PORTAL_DIRECTORY_COUNTER */
 static PortalInterruptTime inttime;
+static int flush = 0;
 
 /*
  * Local helper functions
@@ -91,13 +92,13 @@ static irqreturn_t portal_isr(int irq, void *dev_id)
         struct portal_data *portal_data = (struct portal_data *)dev_id;
         irqreturn_t rc = IRQ_NONE;
 
-        //driver_devel("%s %s %d basevirt %p\n", __func__, portal_data->misc.name, irq, portal_data->interrupt_virt);
-        if (readl(portal_data->interrupt_virt)) {
+        //driver_devel("%s %s %d\n", __func__, portal_data->misc.name, irq);
+        if (readl((void *)(STATUS_OFFSET + (unsigned long) portal_data->map_base))) {
                 inttime.msb = readl(directory_virt + MSB_OFFSET);
                 inttime.lsb = readl(directory_virt + LSB_OFFSET);
                 // disable interrupt.  this will be re-enabled by user mode
                 // driver  after all the HW->SW FIFOs have been emptied
-                writel(0, portal_data->mask_virt);
+                writel(0, (void *)(MASK_OFFSET + (unsigned long) portal_data->map_base));
                 wake_up_interruptible(&portal_data->wait_queue);
                 rc = IRQ_HANDLED;
         }
@@ -143,36 +144,6 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
                 return 0;
                 }
                 break;
-        case PORTAL_ENABLE_INTERRUPT: {
-                PortalEnableInterrupt request;
-                if (copy_from_user(&request, (void __user *)arg, sizeof(request)))
-                        return -EFAULT;
-                printk(KERN_INFO "%s: interrupt %lx mask %lx\n",
-                    __FUNCTION__, request.interrupt_offset, request.mask_offset);
-                if (!portal_data->interrupt_virt)
-                        portal_data->interrupt_virt = ioremap_nocache(
-                                portal_data->dev_base_phys + request.interrupt_offset, sizeof(long));
-                if (!portal_data->mask_virt)
-                        portal_data->mask_virt = ioremap_nocache(
-                                portal_data->dev_base_phys + request.mask_offset, sizeof(long));
-                if (!portal_data->map_base)
-                        portal_data->map_base = ioremap_nocache(
-                                portal_data->dev_base_phys, PORTAL_BASE_OFFSET);
-                if (!portal_data->irq_is_registered) {
-                        // read the interrupt as a sanity check (to force segv if hw not present)
-                        u32 int_status = readl(portal_data->interrupt_virt);
-                        u32 int_en  = readl(portal_data->mask_virt);
-                        driver_devel("%s IRQ %s basev %p status %x en %x\n", __func__, portal_data->misc.name, portal_data->interrupt_virt, int_status, int_en);
-                        if (request_irq(portal_data->portal_irq, portal_isr,
-                                IRQF_TRIGGER_HIGH | IRQF_SHARED , portal_data->misc.name, portal_data)) {
-                                portal_data->portal_irq = 0;
-                                printk("%s err_bb\n", __func__);
-                                return -EFAULT;
-                        }
-                        portal_data->irq_is_registered = 1;
-                }
-                return 0;
-                }
         case PORTAL_SEND_FD: {
                 /* pushd down allocated fd */
                 PortalSendFd sendFd;
@@ -188,6 +159,9 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
                 return 0;
                 }
         case PORTAL_DCACHE_FLUSH_INVAL: {
+  	        flush = 1;
+	}
+	case PORTAL_DCACHE_INVAL: {
                 struct scatterlist *sg;
                 struct file *fmem = fget((int)arg);
                 struct sg_table *sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
@@ -197,10 +171,11 @@ printk("[%s:%d] flush %d\n", __FUNCTION__, __LINE__, (int)arg);
                     unsigned int length = sg->length;
                     dma_addr_t start_addr = sg_phys(sg), end_addr = start_addr+length;
 printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start_addr, (long)end_addr, length);
-                    outer_clean_range(start_addr, end_addr);
+                    if(flush) outer_clean_range(start_addr, end_addr);
                     outer_inv_range(start_addr, end_addr);
                 }
                 fput(fmem);
+		flush = 0;
                 return 0;
                 }
         case PORTAL_DIRECTORY_READ:
@@ -236,12 +211,9 @@ int portal_mmap(struct file *filep, struct vm_area_struct *vma)
 
 unsigned int portal_poll (struct file *filep, poll_table *poll_table)
 {
-	u32 int_status = 0;
         struct portal_data *portal_data = filep->private_data;
         poll_wait(filep, &portal_data->wait_queue, poll_table);
-	if(portal_data->interrupt_virt)
-	  int_status = readl(portal_data->interrupt_virt);
-	if (int_status)
+	if (readl((void *)(STATUS_OFFSET + (unsigned long) portal_data->map_base)))
 	  return POLLIN | POLLRDNORM; /* when we wake up, always return back to user */
 	else
 	  return 0;
@@ -253,7 +225,7 @@ static int portal_release(struct inode *inode, struct file *filep)
         driver_devel("%s inode=%p filep=%p\n", __func__, inode, filep);
         if (portal_data->irq_is_registered) {
                 // disable interrupt
-                writel(0, portal_data->interrupt_virt);
+                writel(0, (void *)(STATUS_OFFSET + (unsigned long) portal_data->map_base));
                 free_irq(portal_data->portal_irq, portal_data);
         }
         portal_data->irq_is_registered = 0;
@@ -327,11 +299,19 @@ static void connectal_work_handler(struct work_struct *__xxx)
     portal_data->misc.minor = MISC_DYNAMIC_MINOR;
     portal_data->misc.fops = &portal_fops;
     portal_data->dev_base_phys = bar;
+    portal_data->map_base = ioremap_nocache(portal_data->dev_base_phys, PORTAL_BASE_OFFSET);
     portal_data->portal_irq = ws.irq_res->start;
     portal_data->top = top;
     driver_devel("%s:%d name=%s\n", __func__, __LINE__, portal_data->misc.name);
     rc = misc_register( &portal_data->misc);
     driver_devel("%s:%d rc=%d minor=%d\n", __func__, __LINE__, rc, portal_data->misc.minor);
+    if (request_irq(portal_data->portal_irq, portal_isr,
+            IRQF_TRIGGER_HIGH | IRQF_SHARED , portal_data->misc.name, portal_data)) {
+            portal_data->portal_irq = 0;
+            printk("%s Failed to register irq\n", __func__);
+            return;
+    }
+    portal_data->irq_is_registered = 1;
     
     if (++fpn >= MAX_NUM_PORTALS){
       printk(KERN_INFO "%s: MAX_NUM_PORTALS exceeded", __func__);

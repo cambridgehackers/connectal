@@ -43,53 +43,93 @@ interface BsimHost#(numeric type clientAddrWidth, numeric type clientBusWidth, n
 		    numeric type nSlaves);
    interface PhysMemMaster#(clientAddrWidth, clientBusWidth)  mem_client;
    interface Vector#(nSlaves,PhysMemSlave#(serverAddrWidth,  serverBusWidth))  mem_servers;
-   interface Clock doubleClock;
-   interface Reset doubleReset;
+   interface Clock derivedClock;
+   interface Reset derivedReset;
 endinterface
 
 typedef BsimHost#(32,32,12,40,DataBusWidth,6,NumberOfMasters) HostType;
 `endif
 
+////////////////////////////// Xsim /////////////////////////////////
+`ifdef XsimHostTypeIF
+
+import Vector            :: *;
+import AxiMasterSlave    :: *;
+import MemTypes          :: *;
+
+// this interface should allow for different master and slave bus paraters;
+interface XsimHost;
+   interface Clock derivedClock;
+   interface Reset derivedReset;
+endinterface
+
+typedef XsimHost HostType;
+`endif
+
 ////////////////////////////// PciE /////////////////////////////////
+`ifndef PcieHostIF
 `ifdef PcieHostTypeIF
+`define PcieHostIF
+`endif
+`endif
+
+`ifdef PcieHostIF
 
 import Vector            :: *;
 import GetPut            :: *;
 import ClientServer      :: *;
-import PCIE               :: *;
-import PCIEWRAPPER       :: *;
-import PcieCsr           :: *;
-import MemTypes          :: *;
+import BRAM              :: *;
+import PCIE              :: *;
 import Bscan             :: *;
+import PcieCsr           :: *;
+import PcieTracer        :: *;
+import MemTypes          :: *;
 `ifndef BSIM
+`ifdef XILINX
 import PcieEndpointX7    :: *;
+import PCIEWRAPPER       :: *;
+`elsif ALTERA
+import PcieEndpointS5    :: *;
 `endif
-
+`endif
+typedef 40 PciePhysAddrWidth;
 interface PcieHost#(numeric type dsz, numeric type nSlaves);
    interface Vector#(16,ReadOnly_MSIX_Entry)     msixEntry;
    interface PhysMemMaster#(32,32)                   master;
-   interface Vector#(nSlaves,PhysMemSlave#(40,dsz))  slave;
+   interface Vector#(nSlaves,PhysMemSlave#(PciePhysAddrWidth,dsz))  slave;
    interface Put#(Tuple2#(Bit#(64),Bit#(32)))    interruptRequest;
    interface Client#(TLPData#(16), TLPData#(16)) pci;
+   interface Put#(TimestampedTlpData) trace;
+`ifndef PCIE_NO_BSCAN
    interface BscanTop bscanif;
+`else
+   interface BRAMServer#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) traceBramServer;
+`endif
 endinterface
 
 interface PcieHostTop;
    interface Clock tepClock125;
    interface Reset tepReset125;
    interface PcieHost#(DataBusWidth, NumberOfMasters) tpciehost;
-`ifndef BSIM
+`ifdef XILINX
    interface Clock tsys_clk_200mhz;
    interface Clock tsys_clk_200mhz_buf;
    interface Clock tpci_clk_100mhz_buf;
    interface PcieEndpointX7#(PcieLanes) tep7;
+`elsif ALTERA
+//   interface Clock tsys_clk_200mhz;
+//   interface Clock tsys_clk_200mhz_buf;
+//   interface Clock tpci_clk_100mhz_buf;
+   interface PcieEndpointS5#(PcieLanes) tep7;
 `endif
    interface Clock portalClock;
    interface Reset portalReset;
-   interface Clock doubleClock;
-   interface Reset doubleReset;
+   interface Clock derivedClock;
+   interface Reset derivedReset;
 endinterface
+`endif
 
+`ifdef PcieHostTypeIF
 typedef PcieHostTop HostType;
 `endif
 
@@ -102,8 +142,8 @@ interface HostType;
     interface PS7 ps7;
     interface Clock portalClock;
     interface Reset portalReset;
-    interface Clock doubleClock;
-    interface Reset doubleReset;
+    interface Clock derivedClock;
+    interface Reset derivedReset;
     interface BscanTop bscan;
 endinterface
 

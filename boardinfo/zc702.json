@@ -1,10 +1,10 @@
 {
     "options": {
-        "bsvdefines" : ["ZYNQ", "ZynqHostTypeIF", "PhysAddrWidth=32"],
+        "bsvdefines" : ["XILINX", "ZYNQ", "ZynqHostTypeIF", "PhysAddrWidth=32"],
         "os" : "android",
         "partname" : "xc7z020clg484-1",
         "rewireclockstring" : "tclzynqrewireclock",
-        "constraints": "xilinx/constraints/zc7z020clg484.xdc",
+        "constraints": "constraints/xilinx/zc7z020clg484.xdc",
         "TOP" : "ZynqTop",
         "CONNECTALFLAGS" : [],
         "needs_pcie_7x_gen1x8" : "False"

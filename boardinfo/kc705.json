@@ -1,6 +1,6 @@
 {
     "options": {
-        "bsvdefines" : ["Kintex7", "PCIE", "PcieHostTypeIF", "PhysAddrWidth=40"],
+        "bsvdefines" : ["XILINX", "Kintex7", "PCIE", "PcieHostTypeIF", "PhysAddrWidth=40"],
         "os" : "ubuntu",
         "partname" : "xc7k325tffg900-2",
         "needs_pcie_7x_gen1x8" : "True",
@@ -8,7 +8,7 @@
         "CONNECTALFLAGS" : [],
         "rewireclockstring" : ""
     },
-    "fmc": {
+    "fmc1": {
     "LA00_p_CC": {
         "LOC": "C25",
         "IOSTANDARD": "LVCMOS25"
@@ -176,63 +176,74 @@
     "CLK0_M2C_n": {
         "LOC": "bogus",
         "IOSTANDARD": "LVCMOS25"
-        },
-
-    "userClk_p": {
-	"PACKAGE_PIN": "K29",
-	"IOSTANDARD": "LVDS_25",
-	"DIFF_TERM": "TRUE",
-	"PIO_DIRECTION": "INPUT"
+        }
     },
-    "userClk_n": {
-	"PACKAGE_PIN": "K28",
-	"IOSTANDARD": "LVDS_25",
-	"DIFF_TERM": "TRUE",
-	"PIO_DIRECTION": "INPUT"
-    },
-    "smaUserClk_p": {
-	"PACKAGE_PIN": "L25",
-	"IOSTANDARD": "LVDS_25",
-	"DIFF_TERM": "TRUE",
-	"PIO_DIRECTION": "OUTPUT"
-    },
-    "smaUserClk_n": {
-	"PACKAGE_PIN": "K25",
-	"IOSTANDARD": "LVDS_25",
-	"DIFF_TERM": "TRUE",
-	"PIO_DIRECTION": "OUTPUT"
-    },
-    "mgtRefClk_p": {
-	"PACKAGE_PIN": "J8",
-	"IOSTANDARD": "LVDS_25",
-	"DIFF_TERM": "TRUE",
-	"PIO_DIRECTION": "INPUT"
-    },
-    "mgtRefClk_n": {
-	"PACKAGE_PIN": "J7",
-	"IOSTANDARD": "LVDS_25",
-	"DIFF_TERM": "TRUE",
-	"PIO_DIRECTION": "INPUT"
-    },
-    "mgtRx_p": {
-	"PACKAGE_PIN": "K6",
-	"DIFF_TERM": "TRUE",
-	"PIO_DIRECTION": "INPUT"
-    },
-    "mgtRx_n": {
-	"PACKAGE_PIN": "K5",
-	"DIFF_TERM": "TRUE",
-	"PIO_DIRECTION": "INPUT"
-    },
-    "mgtTx_p": {
-	"PACKAGE_PIN": "K2",
-	"DIFF_TERM": "TRUE",
-	"PIO_DIRECTION": "OUTPUT"
-    },
-    "mgtTx_n": {
-	"PACKAGE_PIN": "K1",
-	"DIFF_TERM": "TRUE",
-	"PIO_DIRECTION": "OUTPUT"
+    "pins": {
+	"userClk_p": {
+	    "PACKAGE_PIN": "K29",
+	    "IOSTANDARD": "LVDS_25",
+	    "DIFF_TERM": "TRUE",
+	    "PIO_DIRECTION": "INPUT"
+	},
+	"userClk_n": {
+	    "PACKAGE_PIN": "K28",
+	    "IOSTANDARD": "LVDS_25",
+	    "DIFF_TERM": "TRUE",
+	    "PIO_DIRECTION": "INPUT"
+	},
+	"smaUserClk_p": {
+	    "PACKAGE_PIN": "L25",
+	    "IOSTANDARD": "LVDS_25",
+	    "DIFF_TERM": "TRUE",
+	    "PIO_DIRECTION": "OUTPUT"
+	},
+	"smaUserClk_n": {
+	    "PACKAGE_PIN": "K25",
+	    "IOSTANDARD": "LVDS_25",
+	    "DIFF_TERM": "TRUE",
+	    "PIO_DIRECTION": "OUTPUT"
+	},
+	"mgtRefClk_p": {
+	    "PACKAGE_PIN": "J8",
+	    "IOSTANDARD": "LVDS_25",
+	    "DIFF_TERM": "TRUE",
+	    "PIO_DIRECTION": "INPUT"
+	},
+	"mgtRefClk_n": {
+	    "PACKAGE_PIN": "J7",
+	    "IOSTANDARD": "LVDS_25",
+	    "DIFF_TERM": "TRUE",
+	    "PIO_DIRECTION": "INPUT"
+	},
+	"mgtRx_p": {
+	    "PACKAGE_PIN": "K6",
+	    "DIFF_TERM": "TRUE",
+	    "PIO_DIRECTION": "INPUT"
+	},
+	"mgtRx_n": {
+	    "PACKAGE_PIN": "K5",
+	    "DIFF_TERM": "TRUE",
+	    "PIO_DIRECTION": "INPUT"
+	},
+	"mgtTx_p": {
+	    "PACKAGE_PIN": "K2",
+	    "DIFF_TERM": "TRUE",
+	    "PIO_DIRECTION": "OUTPUT"
+	},
+	"mgtTx_n": {
+	    "PACKAGE_PIN": "K1",
+	    "DIFF_TERM": "TRUE",
+	    "PIO_DIRECTION": "OUTPUT"
+	},
+	"uart_d_in": {
+	    "PACKAGE_PIN": "M19",
+	    "IOSTANDARD": "LVCMOS25",
+	    "PIO_DIRECTION": "INPUT"
+	},
+	"uart_d_out": {
+	    "PACKAGE_PIN": "K24",
+	    "IOSTANDARD": "LVCMOS25",
+	    "PIO_DIRECTION": "OUTPUT"
+	}
     }
-}
 }

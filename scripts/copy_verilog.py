@@ -37,7 +37,10 @@ def addPaoEntry(paoname, mod):
 def updatePao(vinput, libdirs):
     destdir = os.path.dirname(vinput)
     if os.environ.has_key('BLUESPECDIR'):
-        libdirs.append(os.path.join(os.environ['BLUESPECDIR'], 'Verilog.Vivado'))
+        if 'ALTERA' in os.environ['BSVDEFINES_LIST']:
+            libdirs.append(os.path.join(os.environ['BLUESPECDIR'], 'Verilog.Quartus'))
+        if 'XILINX' in os.environ['BSVDEFINES_LIST']:
+            libdirs.append(os.path.join(os.environ['BLUESPECDIR'], 'Verilog.Vivado'))
         libdirs.append(os.path.join(os.environ['BLUESPECDIR'], 'Verilog'))
     #print 'destdir', destdir
     #print 'libdirs', libdirs
@@ -56,6 +59,7 @@ def updatePao(vinput, libdirs):
                     for n in newmodules:
                         if not (n in modules):
                             modules.append(n)
+                    break
 
 if __name__=='__main__':
     updatePao(sys.argv[1], sys.argv[2:])

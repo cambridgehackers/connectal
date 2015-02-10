@@ -34,7 +34,7 @@ import BRAM::*;
 import MemTypes::*;
 import ConnectalMemory::*;
 import MMU::*;
-import CompletionBuffer::*;
+import ConnectalCompletionBuffer::*;
 
 typedef 9 MMU_PIPELINE_DEPTH;
 
