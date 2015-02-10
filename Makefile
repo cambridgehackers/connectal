@@ -19,13 +19,13 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
-VERSION=14.11.1
+VERSION=15.02.2
 
 export UDEV_RULES_DIR=/etc/udev/rules.d
 UDEV_RULES=$(shell ls etc/udev/rules.d)
 MODULES_LOAD_D_DIR=/etc/modules-load.d
 
-all: pciedrivers scripts/syntax/parsetab.py zynqdrivers
+all: pciedrivers scripts/syntax/parsetab.py
 	echo version "$(VERSION)"
 
 pciedrivers:
@@ -64,7 +64,7 @@ endif
 
 INSTALL_DIRS = $(shell ls | grep -v debian)
 
-install-shared: zynqdrivers-install
+install-shared:
 	find $(INSTALL_DIRS) -type d -exec install -d -m755 $(DESTDIR)/usr/share/connectal/{} \; -print
 	find $(INSTALL_DIRS) -type f -exec install -m644 {} $(DESTDIR)/usr/share/connectal/{} \; -print
 	chmod agu+rx $(DESTDIR)/usr/share/connectal/scripts/*
@@ -88,7 +88,10 @@ spkg:
 	sed -i s/trusty/precise/g debian/changelog
 	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu/precise --git-ignore-new -S -tc
 	git clean -fdx
-	sed -i s/precise/trusty/g debian/changelog
+	sed -i s/precise/wheezy/g debian/changelog
+	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu/precise --git-ignore-new -S -tc
+	git clean -fdx
+	sed -i s/wheezy/trusty/g debian/changelog
 	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu/precise --git-ignore-new -S -tc
 
 dpkg:
