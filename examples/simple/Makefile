@@ -1,9 +1,11 @@
 
 CONNECTALDIR?=../..
-INTERFACES = Simple
-BSVFILES = SimpleIF.bsv Top.bsv
+INTERFACES = SimpleRequest
+BSVFILES = Simple.bsv
 CPPFILES=testsimple.cpp
 NUMBER_OF_MASTERS =0
+
+AUTOTOP = -w SimpleRequest:Simple -y SimpleRequest:Simple
 
 ifeq ($(BOARD),de5)
 ALTERA_de5=1

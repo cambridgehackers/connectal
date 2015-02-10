@@ -22,7 +22,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "Simple.h"
+#include "SimpleRequest.h"
 
 #define NUMBER_OF_TESTS 8
 
@@ -48,7 +48,7 @@ E1 v7b = E1_E1Choice2;
 S3 s3 = { a: v7a, e1: v7b };
 
 
-class Simple : public SimpleWrapper
+class Simple : public SimpleRequestWrapper
 {  
 public:
   uint32_t cnt;
@@ -106,15 +106,15 @@ public:
         fprintf(stderr, "    [%d] = 0x%x\n", i, v[i]);
     incr_cnt();
   }
-  Simple(unsigned int id) : SimpleWrapper(id), cnt(0){}
+  Simple(unsigned int id) : SimpleRequestWrapper(id), cnt(0){}
 };
 
 
 
 int main(int argc, const char **argv)
 {
-  Simple *indication = new Simple(IfcNames_SimpleIndication);
-  SimpleProxy *device = new SimpleProxy(IfcNames_SimpleRequest);
+  Simple *indication = new Simple(IfcNames_SimpleRequestProxy);
+  SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequestWrapper);
   device->pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
 
   portalExec_start();

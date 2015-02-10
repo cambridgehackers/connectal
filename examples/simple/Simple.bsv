@@ -46,7 +46,7 @@ typedef struct{
    E1 e1;
    } S3 deriving (Bits);
 
-interface Simple;
+interface SimpleRequest;
     method Action say1(Bit#(32) v);
     method Action say2(Bit#(16) a, Bit#(16) b);
     method Action say3(S1 v);
@@ -63,31 +63,34 @@ typedef struct {
     Bit#(32) c;
 } Say6ReqSimple deriving (Bits);
 
+interface Simple;
+   interface SimpleRequest ifc;
+endinterface
 
-module mkSimple#(Simple indication)(Simple);
-   
+module mkSimple#(SimpleRequest indication)(Simple);
    let verbose = False;
-   
+
+   interface SimpleRequest ifc;
    method Action say1(Bit#(32) v);
       if (verbose) $display("mkSimple::say1");
       indication.say1(v);
    endmethod
-   
+
    method Action say2(Bit#(16) a, Bit#(16) b);
       if (verbose) $display("mkSimple::say2");
       indication.say2(a,b);
    endmethod
-      
+
    method Action say3(S1 v);
       if (verbose) $display("mkSimple::say3");
       indication.say3(v);
    endmethod
-   
+
    method Action say4(S2 v);
       if (verbose) $display("mkSimple::say4");
       indication.say4(v);
    endmethod
-      
+
    method Action say5(Bit#(32) a, Bit#(64) b, Bit#(32) c);
       if (verbose) $display("mkSimple::say5");
       indication.say5(a, b, c);
@@ -107,5 +110,5 @@ module mkSimple#(Simple indication)(Simple);
       if (verbose) $display("mkSimple::say8");
       indication.say8(v);
    endmethod
-
+   endinterface
 endmodule

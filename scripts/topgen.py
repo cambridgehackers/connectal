@@ -74,8 +74,6 @@ if __name__=='__main__':
     topFilename = project_dir + '/Top.bsv'
     if noisyFlag:
         print 'Writing Top:', topFilename
-    wrappers = []
-    proxies = []
     userFiles = []
     portalInstantiate = []
     portalList = []
@@ -83,24 +81,24 @@ if __name__=='__main__':
     instantiatedModules = []
     importfiles = []
     portalLeds = ''
+    enumList = []
 
     if options.leds:
         portalLeds = '   interface leds = l%s.leds;' % options.leds
-    for p in options.wrapper:
-        wrappers.append(p.split(':'))
-    for p in options.proxy:
-        proxies.append(p.split(':'))
-    for p in proxies:
+    for pitem in options.proxy:
+        p = pitem.split(':')
         pmap = {'name': p[0], 'consume': p[1], 'count': portalCount}
         portalList.append('   portals[%(count)s] = l%(name)sProxy.portalIfc;' % pmap)
-        portalInstantiate.append('   %(name)sProxy l%(name)sProxy <- mk%(name)sProxy(%(name)s);' % pmap)
+        portalInstantiate.append('   %(name)sProxy l%(name)sProxy <- mk%(name)sProxy(%(name)sProxy);' % pmap)
         portalInstantiate.append('   %(consume)s l%(consume)s <- mk%(consume)s(l%(name)sProxy.ifc);' % pmap)
         instantiatedModules.append(pmap['name'] + 'Proxy')
         instantiatedModules.append(pmap['consume'])
         portalCount = portalCount + 1
         importfiles.append(pmap['name'])
         importfiles.append(pmap['consume'])
-    for p in wrappers:
+        enumList.append(pmap['name'] + 'Proxy')
+    for pitem in options.wrapper:
+        p = pitem.split(':')
         pmap = {'name': p[0], 'produce': p[1], 'count': portalCount}
         portalList.append('   portals[%(count)s] = l%(name)sWrapper.portalIfc;' % pmap)
         if pmap['produce'] not in instantiatedModules:
@@ -108,11 +106,12 @@ if __name__=='__main__':
             instantiatedModules.append(pmap['produce'])
             importfiles.append(pmap['produce'])
         importfiles.append(pmap['name'])
-        portalInstantiate.append('   %(name)sWrapper l%(name)sWrapper <- mk%(name)sWrapper(%(name)s, l%(produce)s.ifc);' % pmap)
+        portalInstantiate.append('   %(name)sWrapper l%(name)sWrapper <- mk%(name)sWrapper(%(name)sWrapper, l%(produce)s.ifc);' % pmap)
         instantiatedModules.append(pmap['name'] + 'Wrapper')
+        enumList.append(pmap['name'] + 'Wrapper')
         portalCount = portalCount + 1
 
-    topsubsts = {'enumList': ','.join(p[0] for p in wrappers + proxies),
+    topsubsts = {'enumList': ','.join(enumList),
                  'generatedImport': '\n'.join(['import %s::*;' % p for p in importfiles]),
                  'portalInstantiate' : '\n'.join(portalInstantiate),
                  'portalList': '\n'.join(portalList),

@@ -56,8 +56,8 @@ static void call_say2(int v, int v2)
 
 int main(int argc, const char **argv)
 {
-    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication);
-    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
+    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndicationProxy);
+    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestWrapper);
     portalExec_start();
 
     int v = 42;
