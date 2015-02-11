@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import Vector::*;
 import FIFOF::*;
 import FIFO::*;
 import BRAMFIFO::*;
@@ -43,8 +44,8 @@ endinterface
 
 interface Memcpy;
    interface MemcpyRequest request;
-   interface MemReadClient#(64) dmaReadClient;
-   interface MemWriteClient#(64) dmaWriteClient;
+   interface Vector#(1, MemReadClient#(64)) dmaReadClient;
+   interface Vector#(1, MemWriteClient#(64)) dmaWriteClient;
 endinterface
 
 
@@ -135,6 +136,6 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
       burstLen  <= bl;
    endmethod
    endinterface
-   interface MemReadClient dmaReadClient = re.dmaClient;
-   interface MemWriteClient dmaWriteClient = we.dmaClient;
+   interface MemReadClient dmaReadClient = cons(re.dmaClient, nil);
+   interface MemWriteClient dmaWriteClient = cons(we.dmaClient, nil);
 endmodule

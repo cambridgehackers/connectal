@@ -198,6 +198,7 @@ CFLAGS2 = %(cdefines2)s
 
 PORTAL_CPP_FILES = $(addprefix $(CONNECTALDIR)/cpp/, portal.c portalSocket.c portalJson.c poller.cpp sock_utils.c timer.c)
 include $(DTOP)/jni/Makefile.generated_files
+include $(DTOP)/Makefile.autotop
 SOURCES = $(addprefix $(DTOP)/jni/,  $(GENERATED_CPP)) %(source)s $(PORTAL_CPP_FILES)
 SOURCES2 = $(addprefix $(DTOP)/jni/,  $(GENERATED_CPP)) %(source2)s $(PORTAL_CPP_FILES)
 LDLIBS := %(clibdirs)s %(clibs)s %(clibfiles)s -pthread 

@@ -27,13 +27,13 @@ interface SwallowRequest;
 endinterface
 
 interface Swallow;
-   interface SwallowRequest ifc;
+   interface SwallowRequest request;
 endinterface
 module mkSwallow(Swallow);
 
    Reg#(Bit#(32)) sink <- mkReg(0);
    
-   interface SwallowRequest ifc;
+   interface SwallowRequest request;
    method Action swallow(Bit#(32) v);
       sink <= v;
    endmethod
