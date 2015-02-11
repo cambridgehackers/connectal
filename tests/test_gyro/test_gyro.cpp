@@ -50,6 +50,7 @@ static sem_t read_sem;
 static sem_t write_sem;
 static uint32_t read_reg_val;
 static int verbose = 1;
+static int spew = 1;
 static int clientsockfd = -1;
 static int serversockfd = -1;
 static int portno = 1234;
@@ -133,6 +134,11 @@ void write_reg(GyroCtrlRequestProxy *device, unsigned short addr, unsigned short
   sem_wait(&write_sem);
 }
 
+void set_en(GyroCtrlRequestProxy *device, unsigned int v)
+{
+  device->set_en(v);
+  if(!v) sem_wait(&status_sem);
+}
 
 void display(void *b, int len){
   short *ss = (short*)b;
@@ -221,6 +227,7 @@ int main(int argc, const char **argv)
 
   uint32_t addr = 0;
   int wrap_cnt = 0;
+  char* snapshot = (char*)malloc(alloc_sz);
 
   while(true){
 #ifdef BSIM
@@ -228,8 +235,7 @@ int main(int argc, const char **argv)
 #else
     usleep(500000);
 #endif
-    device->set_en(0);
-    sem_wait(&status_sem);
+    set_en(device, 0);
     int dwc = write_wrap_cnt - wrap_cnt;
     int two,top,bottom,datalen=0;
     if(dwc == 0){
@@ -256,31 +262,33 @@ int main(int argc, const char **argv)
     }
     top = (top/6)*6;
     bottom = (bottom/6)*6;
-
-    if (verbose) fprintf(stderr, "two:%d, top:%x, bottom:%x, datalen:%x, dwc:%d\n", two,top,bottom,datalen,dwc);
+    portalDCacheInval(dstAlloc, alloc_sz, dstBuffer);    
+    int changed = memcmp(snapshot,dstBuffer,wrap_limit);
+    memcpy(snapshot,dstBuffer,wrap_limit);
+    set_en(device, 2);
+    if (verbose) fprintf(stderr, "two:%d, top:%4x, bottom:%4x, datalen:%4x, dwc:%d, changed:%d\n", two,top,bottom,datalen,dwc,changed);
     if (datalen){
-      portalDCacheInval(dstAlloc, alloc_sz, dstBuffer);
       if (clientsockfd == -1 && !connecting_to_client){
 	connecting_to_client = 1;
 	pthread_create(&threaddata, NULL, &connect_to_client, &rv);
       }
       if (two){
-      	if (verbose) display(dstBuffer+top, wrap_limit-top);
-      	if (verbose) display(dstBuffer, bottom);
+      	if (spew) display(snapshot+top, wrap_limit-top);
+      	if (spew) display(snapshot, bottom);
       } else {
-      	if (verbose) display(dstBuffer+bottom, datalen);
+      	if (spew) display(snapshot+bottom, datalen);
       }
       if (clientsockfd != -1 && datalen > 0){
 	int failed = 0;
 	if(write(clientsockfd, &(datalen), sizeof(int)) != sizeof(int)){
 	  failed = 1;
 	} else if (two) {
-	  if (write(clientsockfd, dstBuffer+top,  datalen-bottom) != datalen-bottom) {
+	  if (write(clientsockfd, snapshot+top,  datalen-bottom) != datalen-bottom) {
 	    failed = 1;
-	  } else if (write(clientsockfd, dstBuffer,  bottom) != bottom) {
+	  } else if (write(clientsockfd, snapshot,  bottom) != bottom) {
 	    failed = 1;
 	  }
-	} else if (write(clientsockfd, dstBuffer+bottom,  datalen) != datalen) {
+	} else if (write(clientsockfd, snapshot+bottom,  datalen) != datalen) {
 	  failed = 1;
 	}
 	if (failed){
@@ -291,7 +299,6 @@ int main(int argc, const char **argv)
 	}
       }
     }
-    device->set_en(2);
     addr = write_addr;
     wrap_cnt = write_wrap_cnt;
   } 
