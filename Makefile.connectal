@@ -173,7 +173,12 @@ process_autotop::
 	$(Q)[ -e $(BOARD) ] || mkdir -p $(BOARD)
 	touch $(BOARD)/Makefile.autotop
 ifneq ($(AUTOTOP),)
-	$(Q)$(CONNECTALDIR)/scripts/topgen.py --project-dir $(BOARD) $(AUTOTOP)
+	$(Q)$(CONNECTALDIR)/scripts/topgen.py --project-dir $(BOARD) $(AUTOTOP) \
+	    $(foreach f, $(H2S_INTERFACES), --wrapper $f) \
+	    $(foreach f, $(S2H_INTERFACES), --proxy $f)
+	echo JJJJ \
+	    $(foreach f, $(H2S_INTERFACES), $(patsubst %\:%,%,$f)) \
+	    $(foreach f, $(S2H_INTERFACES), $(f:%\:%=%))
 endif
 
 prebuild::
