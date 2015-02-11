@@ -43,8 +43,11 @@
 #endif
 #include "drivers/portalmem/portalmem.h" // PA_MALLOC
 
+
 #ifdef ZYNQ
+#ifndef PARALLELLA
 #include <android/log.h>
+#endif
 #include "drivers/zynqportal/zynqportal.h"
 #else
 #include "drivers/pcieportal/pcieportal.h" // BNOC_TRACE
