@@ -49,7 +49,8 @@ static sem_t status_sem;
 static sem_t read_sem;
 static sem_t write_sem;
 static uint32_t read_reg_val;
-static int verbose = 1;
+static int verbose = 0;
+static int spew = 0;
 static int clientsockfd = -1;
 static int serversockfd = -1;
 static int portno = 1234;
@@ -83,16 +84,13 @@ void* connect_to_client(void *_x)
 {
   struct sockaddr cli_addr;
   socklen_t clilen;
-  int *x = (int*)_x;
   listen(serversockfd,5);
   clilen = sizeof(cli_addr);
   clientsockfd = accept(serversockfd, &cli_addr, &clilen);
   if (clientsockfd < 0){ 
     fprintf(stderr, "ERROR on accept\n");
-    *x = -1;
     return NULL;
   }
-  *x = 0;
   fprintf(stderr, "connected to client\n");
   connecting_to_client = 0;
   return NULL;
@@ -120,7 +118,6 @@ int start_server()
   return 0;
 }
 
-
 void read_reg(GyroCtrlRequestProxy *device, unsigned short addr)
 {
   device->read_reg_req(addr);
@@ -133,6 +130,11 @@ void write_reg(GyroCtrlRequestProxy *device, unsigned short addr, unsigned short
   sem_wait(&write_sem);
 }
 
+void set_en(GyroCtrlRequestProxy *device, unsigned int v)
+{
+  device->set_en(v);
+  if(!v) sem_wait(&status_sem);
+}
 
 void display(void *b, int len){
   short *ss = (short*)b;
@@ -168,7 +170,7 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
 
   // setup
-  write_reg(device, CTRL_REG1, 0b00001111);  // ODR:100Hz Cutoff:30
+  write_reg(device, CTRL_REG1, 0b11001111);  // ODR:800Hz Cutoff:30
   write_reg(device, CTRL_REG2, 0b00000000);
   write_reg(device, CTRL_REG3, 0b00000000);
   write_reg(device, CTRL_REG4, 0b10100000);  // BDU:1, Range:2000 dps
@@ -207,29 +209,30 @@ int main(int argc, const char **argv)
   int wrap_limit = alloc_sz-(alloc_sz%(sample_size*bus_data_width)); 
   fprintf(stderr, "wrap_limit:%08x\n", wrap_limit);
 
+  // make sure the memwrite is disabled before we start
+  set_en(device,0); 
 #ifdef BSIM
   device->sample(ref_dstAlloc, wrap_limit, 10);
 #else
-  // sampling rate of 100Hz. Model running at 100 MHz. 
-  device->sample(ref_dstAlloc, wrap_limit, 1000000);
+  // sampling rate of 800Hz. Model running at 100 MHz. 
+  device->sample(ref_dstAlloc, wrap_limit, 1000000/8);
 #endif
 
   // this is because I don't want the server to abort when the client goes offline
   signal(SIGPIPE, SIG_IGN); 
   pthread_t threaddata;
-  int rv;
 
   uint32_t addr = 0;
   int wrap_cnt = 0;
+  char* snapshot = (char*)malloc(alloc_sz);
 
   while(true){
 #ifdef BSIM
     sleep(5);
 #else
-    usleep(1000000);
+    usleep(50000);
 #endif
-    device->set_en(0);
-    sem_wait(&status_sem);
+    set_en(device, 0);
     int dwc = write_wrap_cnt - wrap_cnt;
     int two,top,bottom,datalen=0;
     if(dwc == 0){
@@ -256,31 +259,32 @@ int main(int argc, const char **argv)
     }
     top = (top/6)*6;
     bottom = (bottom/6)*6;
-
-    if (verbose) fprintf(stderr, "two:%d, top:%x, bottom:%x, datalen:%x\n", two,top,bottom,datalen);
+    portalDCacheInval(dstAlloc, alloc_sz, dstBuffer);    
+    memcpy(snapshot,dstBuffer,wrap_limit); // we can copy fewer bytes if need be
+    set_en(device, 2);
+    if (verbose) fprintf(stderr, "two:%d, top:%4x, bottom:%4x, datalen:%4x, dwc:%d\n", two,top,bottom,datalen,dwc);
     if (datalen){
-      portalDCacheInval(dstAlloc, alloc_sz, dstBuffer);
       if (clientsockfd == -1 && !connecting_to_client){
 	connecting_to_client = 1;
-	pthread_create(&threaddata, NULL, &connect_to_client, &rv);
+	pthread_create(&threaddata, NULL, &connect_to_client, NULL);
       }
       if (two){
-      	if (verbose) display(dstBuffer+top, wrap_limit-top);
-      	if (verbose) display(dstBuffer, bottom);
+      	if (spew) display(snapshot+top, wrap_limit-top);
+      	if (spew) display(snapshot, bottom);
       } else {
-      	if (verbose) display(dstBuffer+bottom, datalen);
+      	if (spew) display(snapshot+bottom, datalen);
       }
       if (clientsockfd != -1 && datalen > 0){
 	int failed = 0;
 	if(write(clientsockfd, &(datalen), sizeof(int)) != sizeof(int)){
 	  failed = 1;
 	} else if (two) {
-	  if (write(clientsockfd, dstBuffer+top,  datalen-bottom) != datalen-bottom) {
+	  if (write(clientsockfd, snapshot+top,  datalen-bottom) != datalen-bottom) {
 	    failed = 1;
-	  } else if (write(clientsockfd, dstBuffer,  bottom) != bottom) {
+	  } else if (write(clientsockfd, snapshot,  bottom) != bottom) {
 	    failed = 1;
 	  }
-	} else if (write(clientsockfd, dstBuffer+bottom,  datalen) != datalen) {
+	} else if (write(clientsockfd, snapshot+bottom,  datalen) != datalen) {
 	  failed = 1;
 	}
 	if (failed){
@@ -291,7 +295,6 @@ int main(int argc, const char **argv)
 	}
       }
     }
-    device->set_en(1);
     addr = write_addr;
     wrap_cnt = write_wrap_cnt;
   } 

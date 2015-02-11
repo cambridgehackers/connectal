@@ -25,6 +25,7 @@ import GetPut::*;
 import Vector::*;
 import StmtFSM::*;
 import FIFO::*;
+import SpecialFIFOs::*;
 import Gearbox::*;
 
 import MemTypes::*;
@@ -53,8 +54,9 @@ endinterface
 
 module mkController#(GyroCtrlIndication ind)(Controller);
 
-   Reg#(Bit#(32))  en_memwr   <- mkReg(0);
+   Reg#(Bit#(32))  en_memwr   <- mkReg(maxBound);
    SPI#(Bit#(16))  spiCtrl    <- mkSPI(1000, True);
+   FIFO#(Bool)     spi_aux    <- mkPipelineFIFO;
    Reg#(Bit#(32))  sampleFreq <- mkReg(0);
    Reg#(Bit#(32))  sampleCnt  <- mkReg(0);
    Reg#(Bit#(32))  wrapCnt    <- mkReg(0);
@@ -88,6 +90,7 @@ module mkController#(GyroCtrlIndication ind)(Controller);
       
    rule sample_req(sampleFreq > 0);
       let new_sampleCnt = sampleCnt+1; 
+      let sampling = True;
       if (new_sampleCnt == sampleFreq-5) begin
 	 spiCtrl.request.put({1'b1,1'b0,out_X_L,8'h00});
 	 if(verbose) $display("sample_x_l");
@@ -113,10 +116,15 @@ module mkController#(GyroCtrlIndication ind)(Controller);
 	 if(verbose) $display("sample_z_h");
 	 new_sampleCnt = 0;
       end
+      else begin
+	 sampling = False;
+      end
+      if(sampling) spi_aux.enq(True);
       sampleCnt <= new_sampleCnt;
    endrule
    
    rule sample_resp(sampleFreq > 0);
+      spi_aux.deq;
       if(verbose) $display("sample_resp");
       let rv <- spiCtrl.response.get;
 `ifdef BSIM
@@ -127,7 +135,7 @@ module mkController#(GyroCtrlIndication ind)(Controller);
       gb.enq(cons(truncate(rv),nil));
 `endif
    endrule
-   
+      
    interface GyroCtrlRequest req;
       method Action write_reg_req(Bit#(8) addr, Bit#(8) val);
 	 spiCtrl.request.put({1'b0,1'b0,addr[5:0],val});
@@ -159,14 +167,14 @@ module mkController#(GyroCtrlIndication ind)(Controller);
 
    interface MemWriteClient dmaClient;
       interface Get writeReq;
-	 method ActionValue#(MemRequest) get if (allocSz > 0); // && en_memwr > 0);
+	 method ActionValue#(MemRequest) get if (allocSz > 0 && en_memwr > 0);
 	    Bit#(8) bl = 128;
 	    Bit#(32) new_writePtr = writePtr + extend(bl);
 	    if (new_writePtr >= allocSz) begin
 	       new_writePtr = 0;
 	       bl =  truncate(allocSz-writePtr);
 	       wrapCnt <= wrapCnt+1;
-	       //en_memwr <= en_memwr-1;
+	       en_memwr <= en_memwr-1;
 	    end
 	    writePtr <= new_writePtr;
 	    if (verbose) $display("writeReq %d", writePtr);

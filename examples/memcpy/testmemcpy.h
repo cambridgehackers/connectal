@@ -88,13 +88,13 @@ int runtest(int argc, const char **argv)
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
-  MemcpyRequestProxy *device = new MemcpyRequestProxy(IfcNames_MemcpyRequestWrapper);
-  MemcpyIndication *deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndicationProxy);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestWrapper);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestWrapper);
+  MemcpyRequestProxy *device = new MemcpyRequestProxy(IfcNames_MemcpyRequestS2H);
+  MemcpyIndication *deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndicationH2S);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationProxy);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationProxy);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
 
   fprintf(stderr, "Main::allocating memory...\n");
 
@@ -178,13 +178,13 @@ int runtest_chunk(int argc, const char **argv)
     exit(1);
   }
 
-  MemcpyRequestProxy *device = new MemcpyRequestProxy(IfcNames_MemcpyRequestWrapper);
-  MemcpyIndication *deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndicationProxy);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestWrapper);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestWrapper);
+  MemcpyRequestProxy *device = new MemcpyRequestProxy(IfcNames_MemcpyRequestS2H);
+  MemcpyIndication *deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndicationH2S);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_MemServerIndicationProxy);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationProxy);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_MemServerIndicationH2S);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
 
   portalExec_start();
 

@@ -25,8 +25,10 @@ MODULES_LOAD_D_DIR=/etc/modules-load.d
 
 all: pciedrivers scripts/syntax/parsetab.py
 
+VERSION=15.02.3
+
 pciedrivers:
-	(cd drivers/pcieportal; make)
+	(cd drivers/pcieportal; make DRIVER_VERSION=$(VERSION))
 	make -C pcie
 
 pciedrivers-clean:
@@ -78,8 +80,6 @@ uninstall:
 
 docs:
 	doxygen scripts/Doxyfile
-
-VERSION=14.10.01
 
 dpkg:
 	git archive --format=tar -o dpkg.tar --prefix=connectal-$(VERSION)/ HEAD
@@ -351,16 +351,16 @@ $(android_exetests):
 # For the parallella build to work, the cross compilers need to be in your path
 # and the parallella kernel needs to be parallel to connectal and built
 parallelladrivers:
-	(cd drivers/zynqportal/; CROSS_COMPILE=arm-linux-gnueabihf- DEVICE_XILINX_KERNEL=`pwd`/../../../parallella-linux/ make parallellazynqportal.ko)
-	(cd drivers/portalmem/;   CROSS_COMPILE=arm-linux-gnueabihf- DEVICE_XILINX_KERNEL=`pwd`/../../../parallella-linux/ make parallellaportalmem.ko)
+	(cd drivers/zynqportal/; DRIVER_VERSION=$(VERSION) CROSS_COMPILE=arm-linux-gnueabihf- DEVICE_XILINX_KERNEL=`pwd`/../../../parallella-linux/ make parallellazynqportal.ko)
+	(cd drivers/portalmem/; DRIVER_VERSION=$(VERSION) CROSS_COMPILE=arm-linux-gnueabihf- DEVICE_XILINX_KERNEL=`pwd`/../../../parallella-linux/ make parallellaportalmem.ko)
 
 parallelladrivers-clean:
 	(cd drivers/zynqportal/;  CROSS_COMPILE=arm-linux-gnueabihf- DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make clean)
 	(cd drivers/portalmem/;   CROSS_COMPILE=arm-linux-gnueabihf- DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make clean)
 
 zynqdrivers:
-	(cd drivers/zynqportal/; DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make zynqportal.ko)
-	(cd drivers/portalmem/;  DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make portalmem.ko)
+	(cd drivers/zynqportal/; DRIVER_VERSION=$(VERSION) DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make zynqportal.ko)
+	(cd drivers/portalmem/;  DRIVER_VERSION=$(VERSION) DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make portalmem.ko)
 
 zynqdrivers-clean:
 	(cd drivers/zynqportal/; DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make clean)

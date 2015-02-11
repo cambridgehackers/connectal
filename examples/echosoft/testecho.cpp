@@ -68,9 +68,9 @@ int main(int argc, const char **argv)
 #endif
 
     int rc = getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
-    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndicationProxy, &socketfuncInit, PARAM);
+    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndicationH2S, &socketfuncInit, PARAM);
     rc = getaddrinfo("127.0.0.1", "5001", NULL, &param.addr);
-    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestWrapper, &socketfuncInit, PARAM);
+    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H, &socketfuncInit, PARAM);
 
     portalExec_start();
 
