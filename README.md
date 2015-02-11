@@ -114,25 +114,11 @@ CONNECTAL for Zynq also works with 2013.4 and 2014.1.
 
        PATH=$PATH:$PWD/android-sdk-linux/platform-tools
 
-3. git clone git://github.com/cambridgehackers/zynq-boot.git
+3. Create/obtain a boot.bin and SD card image for your board
 
-The boot.bin is board-specific, because the first stage boot loader
-(fsbl) and the devicetree are both board-specific.
+Follow the instructions at https://github.com/cambridgehackers/zynq-boot
 
-To build a boot.bin for a zedboard:
-
-    make BOARD=zedboard all
-
-Then copy sdcard-zedboard/* /media/sdcard
-
-To build a boot.bin for a zc702:
-
-   make BOARD=zc702 all
-
-Then copy sdcard-zc702/* /media/sdcard
-
-Eject the card and plug it into the zedboard/zc702 and boot.
-
+Copy the files to the SD card, eject the card from the PC, and plug it into the zedboard/zc702/zc706 and boot.
 
 
 Preparation for Kintex and Virtex boards
