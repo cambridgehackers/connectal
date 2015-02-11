@@ -44,10 +44,6 @@ class gv:
         label(pos=(0.6,-0.22,0),text="S",box=0,opacity=0,color=color.yellow)
         label(pos=(0.38,0,0),text="W",box=0,opacity=0,color=color.yellow)
         label(pos=(0.82,0,0),text="E",box=0,opacity=0,color=color.yellow)
-        label(pos=(0.75,0.15,0),height=7,text="NE",box=0,color=color.yellow)
-        label(pos=(0.45,0.15,0),height=7,text="NW",box=0,color=color.yellow)
-        label(pos=(0.75,-0.15,0),height=7,text="SE",box=0,color=color.yellow)
-        label(pos=(0.45,-0.15,0),height=7,text="SW",box=0,color=color.yellow)
 
         self.main_window.select()
         arrow(color=color.green,axis=(1,0,0), shaftwidth=0.02, fixedwidth=1)
