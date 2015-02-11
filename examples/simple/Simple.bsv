@@ -64,13 +64,13 @@ typedef struct {
 } Say6ReqSimple deriving (Bits);
 
 interface Simple;
-   interface SimpleRequest ifc;
+   interface SimpleRequest request;
 endinterface
 
 module mkSimple#(SimpleRequest indication)(Simple);
    let verbose = False;
 
-   interface SimpleRequest ifc;
+   interface SimpleRequest request;
    method Action say1(Bit#(32) v);
       if (verbose) $display("mkSimple::say1");
       indication.say1(v);

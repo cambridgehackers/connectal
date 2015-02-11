@@ -7,6 +7,6 @@ CPPFILES2=daemon.cpp
 
 NUMBER_OF_MASTERS =0
 
-AUTOTOP = -l Echo -w EchoRequest:Echo -w SwallowRequest:Swallow -p EchoIndication:Echo
+AUTOTOP = -l Echo -w EchoRequest:Echo.request -w SwallowRequest:Swallow.request -p EchoIndication:Echo
 
 include $(CONNECTALDIR)/Makefile.connectal

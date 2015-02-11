@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import Vector::*;
 import FIFOF::*;
 import FIFO::*;
 import BRAMFIFO::*;
@@ -42,9 +43,9 @@ interface MemcpyIndication;
 endinterface
 
 interface Memcpy;
-   interface MemcpyRequest ifc;
-   interface MemReadClient#(64) dmaReadClient;
-   interface MemWriteClient#(64) dmaWriteClient;
+   interface MemcpyRequest request;
+   interface Vector#(1, MemReadClient#(64)) dmaReadClient;
+   interface Vector#(1, MemWriteClient#(64)) dmaWriteClient;
 endinterface
 
 
@@ -122,7 +123,7 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
       //$display("                    drain_buffer %h", buffer.first);
    endrule
 
-   interface MemcpyRequest ifc;
+   interface MemcpyRequest request;
    method Action startCopy(Bit#(32) wp, Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
       $display("startCopy wrPointer=%d rdPointer=%d numWords=%h burstLen=%d iterCnt=%d", wp, rp, nw, bl, ic);
       indication.started;
@@ -135,6 +136,6 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
       burstLen  <= bl;
    endmethod
    endinterface
-   interface MemReadClient dmaReadClient = re.dmaClient;
-   interface MemWriteClient dmaWriteClient = we.dmaClient;
+   interface MemReadClient dmaReadClient = cons(re.dmaClient, nil);
+   interface MemWriteClient dmaWriteClient = cons(we.dmaClient, nil);
 endmodule

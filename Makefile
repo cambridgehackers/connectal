@@ -149,6 +149,7 @@ tests    =  $(memtests)          \
 
 examples =  echo                 \
 	    echojson             \
+	    echosoft             \
 	    hdmidisplay          \
 	    led2                 \
 	    alterajtaguart       \

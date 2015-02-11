@@ -101,7 +101,7 @@ if __name__=='__main__':
     portalMaster = 'nil'
     moduleParam = 'StdConnectalTop#(PhysAddrWidth)'
     enumList = []
-    clientList = 'cons(l%(elementType)s, nil)'
+    clientList = 'l%(elementType)s'
 
     if options.leds:
         portalLeds = '   interface leds = l%s.leds;' % options.leds
@@ -113,7 +113,6 @@ if __name__=='__main__':
             pmap['param'] = p[2] + ', '
         if len(p) > 3 and p[3]:
             pmap['tparam'] = '#(' + p[3] + ')'
-            clientList = 'l%(elementType)s'
         addPortal('l%(name)sProxy' % pmap)
         portalInstantiate.append('   %(name)sProxy l%(name)sProxy <- mk%(name)sProxy(%(name)sProxy);' % pmap)
         portalInstantiate.append('   %(consume)s%(tparam)s l%(consume)s <- mk%(consume)s(%(param)sl%(name)sProxy.ifc);' % pmap)
@@ -123,9 +122,10 @@ if __name__=='__main__':
         importfiles.append(pmap['consume'])
         enumList.append(pmap['name'] + 'Proxy')
     for pitem in options.wrapper:
-        print 'WRAPPER', p, len(p)
         p = pitem.split(':')
-        pmap = {'name': p[0], 'produce': p[1], 'count': portalCount, 'param': '', 'tparam': ''}
+        pr = p[1].split('.')
+        print 'WRAPPER', p, pr, len(p)
+        pmap = {'name': p[0], 'produce': pr[0], 'produceIf': p[1], 'count': portalCount, 'param': '', 'tparam': ''}
         if len(p) > 2 and p[2]:
             pmap['param'] = p[2] + ', '
         if len(p) > 3 and p[3]:
@@ -136,7 +136,7 @@ if __name__=='__main__':
             instantiatedModules.append(pmap['produce'])
             importfiles.append(pmap['produce'])
         importfiles.append(pmap['name'])
-        portalInstantiate.append('   %(name)sWrapper l%(name)sWrapper <- mk%(name)sWrapper(%(name)sWrapper, l%(produce)s.ifc);' % pmap)
+        portalInstantiate.append('   %(name)sWrapper l%(name)sWrapper <- mk%(name)sWrapper(%(name)sWrapper, l%(produceIf)s);' % pmap)
         instantiatedModules.append(pmap['name'] + 'Wrapper')
         enumList.append(pmap['name'] + 'Wrapper')
     if options.mem:

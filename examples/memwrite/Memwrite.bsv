@@ -46,8 +46,8 @@ interface MemwriteRequest;
 endinterface
 
 interface Memwrite;
-   interface MemwriteRequest ifc;
-   interface MemWriteClient#(DataBusWidth) dmaClient;
+   interface MemwriteRequest request;
+   interface Vector#(1,MemWriteClient#(64)) dmaClient;
 endinterface
 
 interface MemwriteIndication;
@@ -112,8 +112,8 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
       iterCnt <= iterCnt - 1;
    endrule
    
-   interface MemWriteClient dmaClient = we.dmaClient;
-   interface MemwriteRequest ifc;
+   interface MemWriteClient dmaClient = cons(we.dmaClient, nil);
+   interface MemwriteRequest request;
        method Action startWrite(Bit#(32) wp, Bit#(32) off, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
 	  $display("startWrite pointer=%d offset=%d numWords=%h burstLen=%d iterCnt=%d", pointer, off, nw, bl, ic);
 	  indication.started(nw);
@@ -195,8 +195,8 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
       end
    endrule
        
-   interface MemWriteClient dmaClient = we.writeClient;
-   interface MemwriteRequest ifc;
+   interface MemWriteClient dmaClient = cons(we.writeClient, nil);
+   interface MemwriteRequest request;
        method Action startWrite(Bit#(32) wp, Bit#(32) off, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
 	  indication.started(nw);
 	  if (verbose) $display("startWrite pointer=%d offset=%d numWords=%h burstLen=%d iterCnt=%d", pointer, off, nw, bl, ic);

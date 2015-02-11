@@ -4,7 +4,7 @@ INTERFACES = MemreadRequest MemreadIndication
 BSVFILES = Memread.bsv
 CPPFILES=testmemread.cpp
 
-AUTOTOP = -w MemreadRequest:Memread::\`NumberOfMasters -p MemreadIndication:Memread::\`NumberOfMasters
+AUTOTOP = -w MemreadRequest:Memread.request::\`NumberOfMasters -p MemreadIndication:Memread::\`NumberOfMasters
 AUTOTOP += -m mkMemServerR:Memread.dmaClients
 
 NUMBER_OF_MASTERS =4

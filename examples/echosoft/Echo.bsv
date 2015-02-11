@@ -38,7 +38,7 @@ interface EchoRequest;
 endinterface
 
 interface Echo;
-   interface EchoRequest ifc;
+   interface EchoRequest request;
    interface LEDS leds;
 endinterface
 
@@ -63,7 +63,7 @@ module mkEcho#(EchoIndication indication)(Echo);
         indication.heard2(delay2.first.b, delay2.first.a);
     endrule
    
-   interface EchoRequest ifc;
+   interface EchoRequest request;
       method Action say(Bit#(32) v);
 	 delay.enq(v);
       endmethod
