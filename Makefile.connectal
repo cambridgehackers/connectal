@@ -170,6 +170,8 @@ endif
         $(CONNECTALFLAGS) $(BSVFILES) $(GENTOP) $(PRINTF_EXTRA) $(VERBOSE_SWITCH)
 
 process_autotop::
+	$(Q)[ -e $(BOARD) ] || mkdir -p $(BOARD)
+	touch $(BOARD)/Makefile.autotop
 ifneq ($(AUTOTOP),)
 	$(Q)$(CONNECTALDIR)/scripts/topgen.py --project-dir $(BOARD) $(AUTOTOP)
 endif

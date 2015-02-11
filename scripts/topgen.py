@@ -104,7 +104,7 @@ if __name__=='__main__':
     clientList = 'l%(elementType)s'
 
     if options.leds:
-        portalLeds = '   interface leds = l%s.leds;' % options.leds
+        portalLeds = '   interface leds = l%s;' % options.leds
     for pitem in options.proxy:
         p = pitem.split(':')
         print 'PROXY', p, len(p)
