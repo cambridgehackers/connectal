@@ -148,7 +148,7 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
   DMAregion(device, id, borderVal[0], indexVal[0], borderVal[1], indexVal[1], borderVal[2], indexVal[2]);
   /* ifdefs here to supress warning during kernel build */
 #ifdef __KERNEL__
-#elif !defined(BSIM)
+#else
 retlab:
 #endif
     return rc;
