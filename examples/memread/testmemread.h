@@ -125,13 +125,13 @@ int runtest(int argc, const char ** argv)
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
-  device = new MemreadRequestProxy(IfcNames_MemreadRequestWrapper);
-  deviceIndication = new MemreadIndication(IfcNames_MemreadIndicationProxy);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestWrapper);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestWrapper);
+  device = new MemreadRequestProxy(IfcNames_MemreadRequestS2H);
+  deviceIndication = new MemreadIndication(IfcNames_MemreadIndicationH2S);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationProxy);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationProxy);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
 
   fprintf(stderr, "Main::allocating memory...\n");
   srcAlloc = portalAlloc(alloc_sz);

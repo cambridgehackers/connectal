@@ -64,13 +64,13 @@ endmodule : mkConnectalTop
 '''
 
 memTemplate='''
-   MMUIndicationProxy lMMUIndicationProxy <- mkMMUIndicationProxy(MMUIndicationProxy);
+   MMUIndicationProxy lMMUIndicationProxy <- mkMMUIndicationProxy(MMUIndicationH2S);
    MMU#(PhysAddrWidth) lMMU <- mkMMU(0, True, lMMUIndicationProxy.ifc);
-   MMURequestWrapper lMMURequestWrapper <- mkMMURequestWrapper(MMURequestWrapper, lMMU.request);
+   MMURequestWrapper lMMURequestWrapper <- mkMMURequestWrapper(MMURequestS2H, lMMU.request);
 
-   MemServerIndicationProxy lMemServerIndicationProxy <- mkMemServerIndicationProxy(MemServerIndicationProxy);
+   MemServerIndicationProxy lMemServerIndicationProxy <- mkMemServerIndicationProxy(MemServerIndicationH2S);
    MemServer#(PhysAddrWidth,DataBusWidth,`NumberOfMasters) dma <- %(serverType)s(lMemServerIndicationProxy.ifc, %(clientList)s, cons(lMMU,nil));
-   MemServerRequestWrapper lMemServerRequestWrapper <- mkMemServerRequestWrapper(MemServerRequestWrapper, dma.request);
+   MemServerRequestWrapper lMemServerRequestWrapper <- mkMemServerRequestWrapper(MemServerRequestS2H, dma.request);
 '''
 
 def addPortal(name):
@@ -114,13 +114,13 @@ if __name__=='__main__':
         if len(p) > 3 and p[3]:
             pmap['tparam'] = '#(' + p[3] + ')'
         addPortal('l%(name)sProxy' % pmap)
-        portalInstantiate.append('   %(name)sProxy l%(name)sProxy <- mk%(name)sProxy(%(name)sProxy);' % pmap)
+        portalInstantiate.append('   %(name)sProxy l%(name)sProxy <- mk%(name)sProxy(%(name)sH2S);' % pmap)
         portalInstantiate.append('   %(consume)s%(tparam)s l%(consume)s <- mk%(consume)s(%(param)sl%(name)sProxy.ifc);' % pmap)
         instantiatedModules.append(pmap['name'] + 'Proxy')
         instantiatedModules.append(pmap['consume'])
         importfiles.append(pmap['name'])
         importfiles.append(pmap['consume'])
-        enumList.append(pmap['name'] + 'Proxy')
+        enumList.append(pmap['name'] + 'H2S')
     for pitem in options.wrapper:
         p = pitem.split(':')
         pr = p[1].split('.')
@@ -136,15 +136,15 @@ if __name__=='__main__':
             instantiatedModules.append(pmap['produce'])
             importfiles.append(pmap['produce'])
         importfiles.append(pmap['name'])
-        portalInstantiate.append('   %(name)sWrapper l%(name)sWrapper <- mk%(name)sWrapper(%(name)sWrapper, l%(produceIf)s);' % pmap)
+        portalInstantiate.append('   %(name)sWrapper l%(name)sWrapper <- mk%(name)sWrapper(%(name)sS2H, l%(produceIf)s);' % pmap)
         instantiatedModules.append(pmap['name'] + 'Wrapper')
-        enumList.append(pmap['name'] + 'Wrapper')
+        enumList.append(pmap['name'] + 'S2H')
     if options.mem:
         print 'MEM', options.mem
-        enumList.append('MemServerRequestWrapper')
-        enumList.append('MemServerIndicationProxy')
-        enumList.append('MMURequestWrapper')
-        enumList.append('MMUIndicationProxy')
+        enumList.append('MemServerRequestS2H')
+        enumList.append('MemServerIndicationH2S')
+        enumList.append('MMURequestS2H')
+        enumList.append('MMUIndicationH2S')
         importfiles.extend(['SpecialFIFOs', 'StmtFSM', 'FIFO', 'MemTypes', 'MemServer',
             'MMU', 'ConnectalMemory', 'Leds', 'MemServerRequest',
             'MMURequest', 'MemServerIndication', 'MMUIndication'])

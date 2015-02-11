@@ -79,12 +79,12 @@ int main(int argc, const char **argv)
 #define PARAM &param
 #endif
 
-    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndicationProxy, NULL, NULL);
-    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestWrapper);
+    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndicationH2S, NULL, NULL);
+    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H);
     int rc = getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
-    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndicationProxy, &socketfuncResp, PARAM);
+    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndicationH2S, &socketfuncResp, PARAM);
     rc = getaddrinfo("127.0.0.1", "5001", NULL, &param.addr);
-    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequestWrapper, &socketfuncResp, PARAM);
+    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequestS2H, &socketfuncResp, PARAM);
 
     printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);
     while(1)
