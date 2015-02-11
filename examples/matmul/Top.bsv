@@ -67,15 +67,12 @@ module  mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,TMul#(32,N),E
 `endif
    TimerRequestWrapper timerRequestWrapper <- mkTimerRequestWrapper(TimerRequestPortal,mm.timerRequest);
    
-   Vector#(2,MemReadClient#(TMul#(32,N)))  readClients  = mm.readClients;
-   Vector#(2,MemWriteClient#(TMul#(32,N))) writeClients = mm.writeClients;
-
    MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUIndicationProxy.ifc);
    MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
 
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
-   MemServer#(PhysAddrWidth, TMul#(32,N), NumberOfMasters) dma <- mkMemServerRW(hostMemServerIndicationProxy.ifc, readClients, writeClients, cons(hostMMU,nil));
+   MemServer#(PhysAddrWidth, TMul#(32,N), NumberOfMasters) dma <- mkMemServerRW(hostMemServerIndicationProxy.ifc, mm.readClients, mm.writeClients, cons(hostMMU,nil));
    MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
 
    Vector#(8,StdPortal) portals;

@@ -47,7 +47,9 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
     uint64_t borderVal[3];
     uint32_t indexVal[3];
     unsigned char idxOffset;
+#if defined(BSIM)
     int size_accum = 0;
+#endif
 #ifdef __KERNEL__
     struct scatterlist *sg;
     struct file *fmem;
@@ -144,6 +146,9 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
     PORTAL_PRINTF("borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borderVal[0], borderVal[1], borderVal[2]);
   }
   DMAregion(device, id, borderVal[0], indexVal[0], borderVal[1], indexVal[1], borderVal[2], indexVal[2]);
+  /* ifdefs here to supress warning during kernel build */
+#ifndef __KERNEL__
 retlab:
+#endif
     return rc;
 }

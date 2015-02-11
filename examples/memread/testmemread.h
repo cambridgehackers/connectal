@@ -95,7 +95,7 @@ public:
     dump("", (char*)&v, sizeof(v));
   }
   virtual void reportStateDbg(uint32_t reportType, uint32_t finished, uint32_t dataPipeNotEmpty){
-    fprintf(stderr, "Memread::reportStateDbg(%d, finished=%08x dataPipeNotEmpty=%08x)\n", reportType, finished, dataPipeNotEmpty);
+    fprintf(stderr, "Memread::reportStateDbg(%08x, finished=%08x dataPipeNotEmpty=%08x)\n", reportType, finished, dataPipeNotEmpty);
   }  
   void reportStateDbg ( const uint32_t streamRdCnt, const uint32_t mismatchCount ) {
   }
@@ -125,13 +125,13 @@ int runtest(int argc, const char ** argv)
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
-  device = new MemreadRequestProxy(IfcNames_MemreadRequest);
-  deviceIndication = new MemreadIndication(IfcNames_MemreadIndication);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  device = new MemreadRequestProxy(IfcNames_MemreadRequestS2H);
+  deviceIndication = new MemreadIndication(IfcNames_MemreadIndicationH2S);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
 
   fprintf(stderr, "Main::allocating memory...\n");
   srcAlloc = portalAlloc(alloc_sz);

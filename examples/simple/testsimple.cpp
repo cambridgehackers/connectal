@@ -113,8 +113,8 @@ public:
 
 int main(int argc, const char **argv)
 {
-  Simple *indication = new Simple(IfcNames_SimpleRequestProxy);
-  SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequestWrapper);
+  Simple *indication = new Simple(IfcNames_SimpleRequestH2S);
+  SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequestS2H);
   device->pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
 
   portalExec_start();

@@ -5,7 +5,7 @@ BSVFILES = Simple.bsv
 CPPFILES=testsimple.cpp
 NUMBER_OF_MASTERS =0
 
-AUTOTOP = -w SimpleRequest:Simple -y SimpleRequest:Simple
+AUTOTOP = -w SimpleRequest:Simple.request -p SimpleRequest:Simple
 
 ifeq ($(BOARD),de5)
 ALTERA_de5=1

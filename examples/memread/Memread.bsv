@@ -56,7 +56,7 @@ endinterface
 
 interface Memread;
    interface MemreadRequest request;
-   interface MemReadClient#(DataBusWidth) dmaClient;
+   interface Vector#(1,MemReadClient#(64)) dmaClient;
 endinterface
 
 interface MemreadIndication;
@@ -159,7 +159,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
       iterCnt <= iterCnt - 1;
    endrule
    
-   interface dmaClient = re.dmaClient;
+   interface dmaClient = cons(re.dmaClient, nil);
    interface MemreadRequest request;
       method Action startRead(Bit#(32) rp, Bit#(32) off, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
 	 indication.started(nw);

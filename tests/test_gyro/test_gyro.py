@@ -33,11 +33,11 @@ import math
 from gyroVisualize import *
 
 write_octave = True
-octave_length = 5
+octave_length = 20
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((os.environ['RUNPARAM'], 1234))
 llen = ctypes.sizeof(ctypes.c_int);
-window_sz = 50
+window_sz = 10
 v = gv()
 
 def sample():
@@ -68,7 +68,6 @@ def animate():
         octave_file.write("#! /usr/bin/octave --persist \nv = [");
     try:
         while (True):
-            print times
             times += 1
             ss = sample()
             num_samples = len(ss)/2
@@ -83,6 +82,10 @@ def animate():
             tails[1] = y[-window_sz:]
             tails[2] = z[-window_sz:]
                 
+
+            if (times <= octave_length):
+                print times
+
             for x,y,z in zip(xs,ys,zs):
                 if (times <= octave_length):
                     calibrate_window += 1
@@ -92,10 +95,10 @@ def animate():
                     if (write_octave):
                         octave_file.write("%8d, %8d, %8d; \n" % (x,y,z));
                 else:
-                    # sampling rate of 100 Hz. sensitivity is 70 mdps
-                    pos[0] += (x-means[0])*70.0/100.0/1000.0
-                    pos[1] -= (y-means[1])*70.0/100.0/1000.0
-                    pos[2] -= (z-means[2])*70.0/100.0/1000.0
+                    # sampling rate of 800 Hz. sensitivity is 70 mdps/digit
+                    pos[0] += (x-means[0])*70.0/800.0/1000.0
+                    pos[1] -= (y-means[1])*70.0/800.0/1000.0
+                    pos[2] -= (z-means[2])*70.0/800.0/1000.0
                     v.update(math.radians(pos[0]),math.radians(pos[1]),math.radians(pos[2]))
                     
                 

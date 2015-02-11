@@ -28,8 +28,10 @@ MODULES_LOAD_D_DIR=/etc/modules-load.d
 all: pciedrivers scripts/syntax/parsetab.py
 	echo version "$(VERSION)"
 
+VERSION=15.02.3
+
 pciedrivers:
-	#(cd drivers/pcieportal; make)
+	#(cd drivers/pcieportal; make DRIVER_VERSION=$(VERSION))
 	make -C pcie
 
 pciedrivers-clean:
@@ -161,6 +163,7 @@ tests    =  $(memtests)          \
 
 examples =  echo                 \
 	    echojson             \
+	    echosoft             \
 	    hdmidisplay          \
 	    led2                 \
 	    alterajtaguart       \
@@ -264,7 +267,7 @@ cppalllist =     $(bsimalllist) \
     tests/testmm2.2.2 \
     tests/testmm2.4.2 \
 
-allarchlist = ac701 zedboard zc702 zc706 kc705 vc707 zynq100 v2000t bluesim miniitx100 de5 vsim
+allarchlist = ac701 zedboard zc702 zc706 kc705 vc707 zynq100 v2000t bluesim miniitx100 de5 vsim parallella
 
 #################################################################################################
 # gdb
@@ -359,9 +362,19 @@ android_exetests: $(android_exetests)
 $(android_exetests):
 	make BOARD=zedboard -C $(basename $@) exe
 
+# For the parallella build to work, the cross compilers need to be in your path
+# and the parallella kernel needs to be parallel to connectal and built
+parallelladrivers:
+	(cd drivers/zynqportal/; DRIVER_VERSION=$(VERSION) CROSS_COMPILE=arm-linux-gnueabihf- DEVICE_XILINX_KERNEL=`pwd`/../../../parallella-linux/ make parallellazynqportal.ko)
+	(cd drivers/portalmem/; DRIVER_VERSION=$(VERSION) CROSS_COMPILE=arm-linux-gnueabihf- DEVICE_XILINX_KERNEL=`pwd`/../../../parallella-linux/ make parallellaportalmem.ko)
+
+parallelladrivers-clean:
+	(cd drivers/zynqportal/;  CROSS_COMPILE=arm-linux-gnueabihf- DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make clean)
+	(cd drivers/portalmem/;   CROSS_COMPILE=arm-linux-gnueabihf- DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make clean)
+
 zynqdrivers:
-	(cd drivers/zynqportal/; make MAKEKERNEL=true DRIVER_VERSION=$(VERSION) CROSS_COMPILE=arm-linux-gnueabi- DEVICE_XILINX_KERNEL=/usr/src/connectal-zynq-linux-headers zynqportal.ko)
-	(cd drivers/portalmem/;  make MAKEKERNEL=true DRIVER_VERSION=$(VERSION) CROSS_COMPILE=arm-linux-gnueabi- DEVICE_XILINX_KERNEL=/usr/src/connectal-zynq-linux-headers portalmem.ko)
+	(cd drivers/zynqportal/; DRIVER_VERSION=$(VERSION) DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make zynqportal.ko)
+	(cd drivers/portalmem/;  DRIVER_VERSION=$(VERSION) DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make portalmem.ko)
 
 zynqdrivers-clean:
 	(cd drivers/zynqportal/; MAKEKERNEL=true DEVICE_XILINX_KERNEL=/usr/src/connectal-zynq-linux-headers make clean)
