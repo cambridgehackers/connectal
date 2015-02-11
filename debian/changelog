@@ -1,3 +1,9 @@
+connectal (15.02.3-1trusty1) trusty; urgency=medium
+
+  * Updated to 15.02.3
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 11 Feb 2015 11:48:40 -0500
+
 connectal (15.02.2-2trusty2) trusty; urgency=medium
 
   * For Wheezy
