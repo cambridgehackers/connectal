@@ -79,11 +79,15 @@ def addPortal(name):
     portalCount = portalCount + 1
 
 def instMod(fmt, modname, modext):
-    pmap['modname'] = modname
-    pmap['modext'] = modext
+    pmap['modname'] = modname + modext
     portalInstantiate.append(('   %(modname)s%(tparam)s l%(modname)s <- mk%(modname)s(' + fmt + ');') % pmap)
-    instantiatedModules.append(modname)
+    instantiatedModules.append(pmap['modname'])
     importfiles.append(modname)
+    tstr = 'S2H'
+    if modext:
+        if modext == 'Proxy':
+            tstr = 'H2S'
+        enumList.append(modname + tstr)
 
 if __name__=='__main__':
     options = argparser.parse_args()
@@ -119,10 +123,7 @@ if __name__=='__main__':
         if len(p) > 2 and p[2]:
             pmap['param'] = p[2] + ', '
         addPortal('l%(name)sProxy' % pmap)
-        portalInstantiate.append('   %(name)sProxy l%(name)sProxy <- mk%(name)sProxy(%(name)sH2S);' % pmap)
-        instantiatedModules.append(pmap['name'] + 'Proxy')
-        importfiles.append(pmap['name'])
-        enumList.append(pmap['name'] + 'H2S')
+        instMod('%(name)sH2S', pmap['name'], 'Proxy')
         if len(p) > 3 and p[3]:
             pmap['tparam'] = '#(' + p[3] + ')'
         instMod('%(param)sl%(name)sProxy.ifc', pmap['usermod'], '')
