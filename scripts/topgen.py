@@ -78,6 +78,13 @@ def addPortal(name):
     portalList.append('   portals[%(count)s] = %(name)s.portalIfc;' % {'count': portalCount, 'name': name})
     portalCount = portalCount + 1
 
+def instMod(fmt, modname, modext):
+    pmap['modname'] = modname
+    pmap['modext'] = modext
+    portalInstantiate.append(('   %(modname)s%(tparam)s l%(modname)s <- mk%(modname)s(' + fmt + ');') % pmap)
+    instantiatedModules.append(modname)
+    importfiles.append(modname)
+
 if __name__=='__main__':
     options = argparser.parse_args()
 
@@ -118,10 +125,7 @@ if __name__=='__main__':
         enumList.append(pmap['name'] + 'H2S')
         if len(p) > 3 and p[3]:
             pmap['tparam'] = '#(' + p[3] + ')'
-        #instMod('mk%(usermod)s(%(param)sl%(name)sProxy.ifc);', p[usermod], '')
-        portalInstantiate.append('   %(usermod)s%(tparam)s l%(usermod)s <- mk%(usermod)s(%(param)sl%(name)sProxy.ifc);' % pmap)
-        instantiatedModules.append(pmap['usermod'])
-        importfiles.append(pmap['usermod'])
+        instMod('%(param)sl%(name)sProxy.ifc', pmap['usermod'], '')
     for pitem in options.wrapper:
         p = pitem.split(':')
         pr = p[1].split('.')
