@@ -226,7 +226,7 @@ int main(int argc, const char **argv)
 #ifdef BSIM
     sleep(5);
 #else
-    usleep(1000000);
+    usleep(500000);
 #endif
     device->set_en(0);
     sem_wait(&status_sem);
@@ -257,7 +257,7 @@ int main(int argc, const char **argv)
     top = (top/6)*6;
     bottom = (bottom/6)*6;
 
-    if (verbose) fprintf(stderr, "two:%d, top:%x, bottom:%x, datalen:%x\n", two,top,bottom,datalen);
+    if (verbose) fprintf(stderr, "two:%d, top:%x, bottom:%x, datalen:%x, dwc:%d\n", two,top,bottom,datalen,dwc);
     if (datalen){
       portalDCacheInval(dstAlloc, alloc_sz, dstBuffer);
       if (clientsockfd == -1 && !connecting_to_client){
@@ -291,7 +291,7 @@ int main(int argc, const char **argv)
 	}
       }
     }
-    device->set_en(1);
+    device->set_en(2);
     addr = write_addr;
     wrap_cnt = write_wrap_cnt;
   } 

@@ -53,7 +53,7 @@ endinterface
 
 module mkController#(GyroCtrlIndication ind)(Controller);
 
-   Reg#(Bit#(32))  en_memwr   <- mkReg(0);
+   Reg#(Bit#(32))  en_memwr   <- mkReg(maxBound);
    SPI#(Bit#(16))  spiCtrl    <- mkSPI(1000, True);
    Reg#(Bit#(32))  sampleFreq <- mkReg(0);
    Reg#(Bit#(32))  sampleCnt  <- mkReg(0);
@@ -127,7 +127,7 @@ module mkController#(GyroCtrlIndication ind)(Controller);
       gb.enq(cons(truncate(rv),nil));
 `endif
    endrule
-   
+      
    interface GyroCtrlRequest req;
       method Action write_reg_req(Bit#(8) addr, Bit#(8) val);
 	 spiCtrl.request.put({1'b0,1'b0,addr[5:0],val});
@@ -159,14 +159,14 @@ module mkController#(GyroCtrlIndication ind)(Controller);
 
    interface MemWriteClient dmaClient;
       interface Get writeReq;
-	 method ActionValue#(MemRequest) get if (allocSz > 0); // && en_memwr > 0);
+	 method ActionValue#(MemRequest) get if (allocSz > 0 && en_memwr > 0);
 	    Bit#(8) bl = 128;
 	    Bit#(32) new_writePtr = writePtr + extend(bl);
 	    if (new_writePtr >= allocSz) begin
 	       new_writePtr = 0;
 	       bl =  truncate(allocSz-writePtr);
 	       wrapCnt <= wrapCnt+1;
-	       //en_memwr <= en_memwr-1;
+	       en_memwr <= en_memwr-1;
 	    end
 	    writePtr <= new_writePtr;
 	    if (verbose) $display("writeReq %d", writePtr);
