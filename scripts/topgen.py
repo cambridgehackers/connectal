@@ -109,9 +109,6 @@ if __name__=='__main__':
 
     if options.leds:
         portalLeds = '   interface leds = l%s;' % options.leds
-    if options.mem:
-        options.proxy.append('MMUIndication:MMU.request:0,True:PhysAddrWidth')
-        options.wrapper.append('MMURequest:MMU.request:0,True:PhysAddrWidth')
     for pitem in options.proxy:
         param = ''
         p = pitem.split(':')
@@ -158,7 +155,7 @@ if __name__=='__main__':
                  'portalList': '\n'.join(portalList),
                  'portalCount': portalCount,
                  'portalLeds' : portalLeds,
-                 'portalMaster' : 'dma.masters' if options.mem else 'nil',
+                 'portalMaster' : 'lMemServer.masters' if options.mem else 'nil',
                  'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,`NumberOfMasters)' if options.mem else \
                                  'StdConnectalTop#(PhysAddrWidth)'
                  }

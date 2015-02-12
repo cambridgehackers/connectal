@@ -96,6 +96,10 @@ CPPFILES += $(CONNECTALDIR)/cpp/dmaManager.c
 ifneq ($(CPPFILES2),)
 CPPFILES2 += $(CONNECTALDIR)/cpp/dmaManager.c
 endif
+ifneq ($(AUTOTOP),)
+S2H_INTERFACES += MMURequest:MMU.request:0,True:PhysAddrWidth
+H2S_INTERFACES += MMUIndication:MMU.request:0,True:PhysAddrWidth
+endif
 endif
 
 ifeq ($(BOARD),xsim)
@@ -166,8 +170,8 @@ endif
 	$(foreach interfaces, $(INTERFACES), -interfaces $(interfaces)) \
 	$(foreach f, $(CPPFILES), --source $f) \
 	$(foreach f, $(CPPFILES2), --source2 $f) \
-	$(foreach f, $(H2S_INTERFACES), -interfaces $(firstword $(subst :, , $f))) \
 	$(foreach f, $(S2H_INTERFACES), -interfaces $(firstword $(subst :, , $f))) \
+	$(foreach f, $(H2S_INTERFACES), -interfaces $(firstword $(subst :, , $f))) \
 	$(foreach f, $(PORTAL_DUMP_MAP), --dump_map $f) \
         $(CONNECTALFLAGS) $(BSVFILES) $(GENTOP) $(PRINTF_EXTRA) $(VERBOSE_SWITCH)
 
@@ -176,8 +180,8 @@ process_autotop::
 	touch $(BOARD)/Makefile.autotop
 ifneq ($(AUTOTOP),)
 	$(Q)$(CONNECTALDIR)/scripts/topgen.py --project-dir $(BOARD) $(AUTOTOP) \
-	    $(foreach f, $(H2S_INTERFACES), --wrapper $f) \
-	    $(foreach f, $(S2H_INTERFACES), --proxy $f)
+	    $(foreach f, $(S2H_INTERFACES), --wrapper $f) \
+	    $(foreach f, $(H2S_INTERFACES), --proxy $f)
 endif
 
 prebuild::

@@ -1,7 +1,7 @@
 
 CONNECTALDIR?=../..
-H2S_INTERFACES = EchoRequest:Echo.request SwallowRequest:Swallow.request
-S2H_INTERFACES = EchoIndication:Echo
+S2H_INTERFACES = EchoRequest:Echo.request SwallowRequest:Swallow.request
+H2S_INTERFACES = EchoIndication:Echo
 BSVFILES = Echo.bsv Swallow.bsv
 CPPFILES=testecho.cpp
 
