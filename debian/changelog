@@ -9,7 +9,7 @@ connectal (15.02.2-2trusty2) trusty; urgency=medium
   * For Wheezy
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 10 Feb 2015 10:33:22 -0500
-	
+
 connectal (15.02.2-1trusty1) trusty; urgency=medium
 
   * Fixed include string.h for zynqdrivers
@@ -21,6 +21,54 @@ connectal (15.02.1-1trusty3) trusty; urgency=medium
   * Updated to 15.02.1
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 10 Feb 2015 09:53:44 -0500
+
+connectal (14.12.3-4trusty1) trusty; urgency=medium
+
+  * Second try to add pciescan
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 10 Dec 2014 08:22:10 -0500
+
+connectal (14.12.3-3trusty1) trusty; urgency=medium
+
+  * Added dependence on pciescan
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 10 Dec 2014 08:03:00 -0500
+
+connectal (14.12.3-2trusty1) trusty; urgency=medium
+
+  * Added support for setting derivedClock frequency
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 05 Dec 2014 16:24:47 -0500
+
+connectal (14.12.2-4trusty1) trusty; urgency=medium
+
+  * Fix include paths for dkms
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 04 Dec 2014 13:16:48 -0500
+
+connectal (14.12.2-2trusty1) trusty; urgency=medium
+
+  * Bump kernel version to fix DKMS error
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 04 Dec 2014 12:59:07 -0500
+
+connectal (14.12.2-1trusty1) trusty; urgency=medium
+
+  * Removed zynqdrivers build and install until I find the cross arm toolchain for trusty
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 04 Dec 2014 12:37:57 -0500
+
+connectal (14.12.2-1trusty1) trusty; urgency=medium
+
+  * Fixed Vector compilation in C
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 02 Dec 2014 09:40:36 -0500
+
+connectal (14.12.1-1trusty1) trusty; urgency=medium
+
+  * Added support for Vector in portal interfaces.
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 01 Dec 2014 11:48:25 -0500
 
 connectal (14.11.6-2trusty3) trusty; urgency=low
 

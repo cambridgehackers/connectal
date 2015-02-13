@@ -87,6 +87,7 @@ docs:
 
 spkg:
 	git clean -fdx
+	git checkout debian
 	sed -i s/trusty/precise/g debian/changelog
 	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu/precise --git-ignore-new -S -tc
 	git clean -fdx
@@ -94,6 +95,10 @@ spkg:
 	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu/precise --git-ignore-new -S -tc
 	git clean -fdx
 	sed -i s/wheezy/trusty/g debian/changelog
+	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu/precise --git-ignore-new -S -tc
+	git clean -fdx
+	git checkout debian
+	sed -i s/trusty/wheezy/g debian/changelog
 	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu/precise --git-ignore-new -S -tc
 
 dpkg:
