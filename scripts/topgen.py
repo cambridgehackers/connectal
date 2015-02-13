@@ -79,12 +79,24 @@ def instMod(args, modname, modext, constructor):
             args += ', l%(userIf)s'
         enumList.append(modname + tstr)
         addPortal('l%(modname)s' % pmap)
-    if not constructor:
-        constructor = 'mk' + pmap['modname']
-    pmap['constructor'] = constructor
-    portalInstantiate.append(('   %(modname)s%(tparam)s l%(modname)s <- %(constructor)s(' + args + ');') % pmap)
+    pmap['constr'] = pmap['constructor']
+    if not pmap['constructor'] or modext:
+        pmap['constr'] = 'mk' + pmap['modname']
+    portalInstantiate.append(('   %(modname)s%(tparam)s l%(modname)s <- %(constr)s(' + args + ');') % pmap)
     instantiatedModules.append(pmap['modname'])
     importfiles.append(modname)
+
+def parseParam(pitem):
+    p = pitem.split(':')
+    pr = p[1].split('.')
+    pmap = {'name': p[0], 'usermod': pr[0], 'userIf': p[1], 'tparam': '', 'xparam': '', 'uparam': '', 'constructor': ''}
+    if len(p) > 2 and p[2]:
+        pmap['uparam'] = p[2] + ', '
+    if len(p) > 3 and p[3]:
+        pmap['xparam'] = '#(' + p[3] + ')'
+    if len(p) > 4:
+        pmap['constructor'] = p[4]
+    return pmap
 
 if __name__=='__main__':
     options = argparser.parse_args()
@@ -109,45 +121,30 @@ if __name__=='__main__':
 
     if options.leds:
         portalLeds = '   interface leds = l%s;' % options.leds
-    for pitem in options.proxy:
-        param = ''
-        p = pitem.split(':')
-        pr = p[1].split('.')
-        print 'PROXY', p, pr, len(p)
-        pmap = {'name': p[0], 'usermod': pr[0], 'userIf': p[1], 'tparam': ''}
-        if len(p) > 2 and p[2]:
-            param = p[2] + ', '
-        instMod('', pmap['name'], 'Proxy', '')
-        if len(p) > 3 and p[3]:
-            pmap['tparam'] = '#(' + p[3] + ')'
-        instMod(param + 'l%(name)sProxy.ifc', pmap['usermod'], '', '')
-    for pitem in options.wrapper:
-        param = ''
-        p = pitem.split(':')
-        pr = p[1].split('.')
-        print 'WRAPPER', p, pr, len(p)
-        pmap = {'name': p[0], 'usermod': pr[0], 'userIf': p[1], 'tparam': ''}
-        if len(p) > 2 and p[2]:
-            param = p[2] + ', '
-        if len(p) > 3 and p[3]:
-            pmap['tparam'] = '#(' + p[3] + ')'
-        if pmap['usermod'] not in instantiatedModules:
-            instMod(param, pmap['usermod'], '', '')
-        pmap['tparam'] = ''
-        instMod('', pmap['name'], 'Wrapper', '')
     if options.mem:
         print 'MEM', options.mem
         importfiles.extend(['SpecialFIFOs', 'StmtFSM', 'FIFO', 'MemTypes', 'ConnectalMemory', 'Leds'])
         for pitem in options.mem:
-            pmap = {'name': 'MemServerIndication', 'usermod': '', 'userIf': '', 'tparam': ''}
-            instMod('', pmap['name'], 'Proxy', '')
-            pmap = {'name': 'MemServerIndication', 'usermod': 'MemServer', 'userIf': '', 'tparam': '#(PhysAddrWidth,DataBusWidth,`NumberOfMasters)'}
             p = pitem.split(':')
-            ctemp = ['l' + pname for pname in p[1:]]
-            instMod('l%(name)sProxy.ifc' + ', %(clientList)s, cons(lMMU,nil)' % {'clientList': ','.join(ctemp)} \
-                , pmap['usermod'], '', p[0])
-            pmap = {'name': 'MemServerRequest', 'usermod': 'MemServer', 'userIf': 'MemServer.request', 'tparam': ''}
-            instMod('', pmap['name'], 'Wrapper', '')
+            ctemp = '/' + ', '.join(['l' + pname for pname in p[1:]] + ['cons(lMMU,nil)'])
+            param = ':MemServer.request:%(param)s:PhysAddrWidth,DataBusWidth,`NumberOfMasters:%(constructor)s' % {'param': ctemp, 'constructor': p[0]}
+            options.proxy.append('MemServerIndication' + param)
+            options.wrapper.append('MemServerRequest' + param)
+    for pitem in options.proxy:
+        pmap = parseParam(pitem)
+        instMod('', pmap['name'], 'Proxy', '')
+        pmap['tparam'] = pmap['xparam']
+        argstr = pmap['uparam'] + 'l%(name)sProxy.ifc'
+        if pmap['uparam'] and pmap['uparam'][0] == '/':
+            argstr = 'l%(name)sProxy.ifc, ' + pmap['uparam'][1:-2]
+        instMod(argstr, pmap['usermod'], '', '')
+    for pitem in options.wrapper:
+        pmap = parseParam(pitem)
+        pmap['tparam'] = pmap['xparam']
+        if pmap['usermod'] not in instantiatedModules:
+            instMod(pmap['uparam'], pmap['usermod'], '', '')
+        pmap['tparam'] = ''
+        instMod('', pmap['name'], 'Wrapper', '')
 
     topsubsts = {'enumList': ','.join(enumList),
                  'generatedImport': '\n'.join(['import %s::*;' % p for p in importfiles]),
