@@ -60,7 +60,8 @@ try:
       def GetPublicKey(self):
         return self.public_key
 except:
-  print 'Install M2Crypto in order to use adb debug'
+  #print 'Install M2Crypto in order to use adb debug'
+  pass
 
 class AdbCommands(object):
   """Exposes adb-like methods for use.
