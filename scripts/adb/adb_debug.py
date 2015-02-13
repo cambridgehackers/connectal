@@ -36,11 +36,14 @@ FLAGS = gflags.FLAGS
 
 def GetRSAKwargs():
   if FLAGS.rsa_key_path:
-    return {
+    try:
+      return {
         'rsa_keys': [adb_commands.M2CryptoSigner(os.path.expanduser(path))
                      for path in FLAGS.rsa_key_path],
         'auth_timeout_ms': int(FLAGS.auth_timeout_s * 1000.0),
-    }
+        }
+    except:
+        print 'Install M2Crypto in order to use adb debug'
   return {}
 
 

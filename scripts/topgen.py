@@ -63,20 +63,40 @@ module mkConnectalTop
 endmodule : mkConnectalTop
 '''
 
-memTemplate='''
-   MMUIndicationProxy lMMUIndicationProxy <- mkMMUIndicationProxy(MMUIndicationH2S);
-   MMU#(PhysAddrWidth) lMMU <- mkMMU(0, True, lMMUIndicationProxy.ifc);
-   MMURequestWrapper lMMURequestWrapper <- mkMMURequestWrapper(MMURequestS2H, lMMU.request);
-
-   MemServerIndicationProxy lMemServerIndicationProxy <- mkMemServerIndicationProxy(MemServerIndicationH2S);
-   MemServer#(PhysAddrWidth,DataBusWidth,`NumberOfMasters) dma <- %(serverType)s(lMemServerIndicationProxy.ifc, %(clientList)s, cons(lMMU,nil));
-   MemServerRequestWrapper lMemServerRequestWrapper <- mkMemServerRequestWrapper(MemServerRequestS2H, dma.request);
-'''
-
 def addPortal(name):
     global portalCount
     portalList.append('   portals[%(count)s] = %(name)s.portalIfc;' % {'count': portalCount, 'name': name})
     portalCount = portalCount + 1
+
+def instMod(args, modname, modext, constructor):
+    pmap['modname'] = modname + modext
+    tstr = 'S2H'
+    if modext:
+        if modext == 'Proxy':
+            tstr = 'H2S'
+        args = modname + tstr
+        if modext != 'Proxy':
+            args += ', l%(userIf)s'
+        enumList.append(modname + tstr)
+        addPortal('l%(modname)s' % pmap)
+    pmap['constr'] = pmap['constructor']
+    if not pmap['constructor'] or modext:
+        pmap['constr'] = 'mk' + pmap['modname']
+    portalInstantiate.append(('   %(modname)s%(tparam)s l%(modname)s <- %(constr)s(' + args + ');') % pmap)
+    instantiatedModules.append(pmap['modname'])
+    importfiles.append(modname)
+
+def parseParam(pitem):
+    p = pitem.split(':')
+    pr = p[1].split('.')
+    pmap = {'name': p[0], 'usermod': pr[0], 'userIf': p[1], 'tparam': '', 'xparam': '', 'uparam': '', 'constructor': ''}
+    if len(p) > 2 and p[2]:
+        pmap['uparam'] = p[2] + ', '
+    if len(p) > 3 and p[3]:
+        pmap['xparam'] = '#(' + p[3] + ')'
+    if len(p) > 4:
+        pmap['constructor'] = p[4]
+    return pmap
 
 if __name__=='__main__':
     options = argparser.parse_args()
@@ -97,77 +117,44 @@ if __name__=='__main__':
     instantiatedModules = []
     importfiles = []
     portalLeds = ''
-    portalMem = ''
-    portalMaster = 'nil'
-    moduleParam = 'StdConnectalTop#(PhysAddrWidth)'
     enumList = []
-    clientList = 'l%(elementType)s'
 
     if options.leds:
         portalLeds = '   interface leds = l%s;' % options.leds
-    for pitem in options.proxy:
-        p = pitem.split(':')
-        print 'PROXY', p, len(p)
-        pmap = {'name': p[0], 'consume': p[1], 'count': portalCount, 'param': '', 'tparam': ''}
-        if len(p) > 2 and p[2]:
-            pmap['param'] = p[2] + ', '
-        if len(p) > 3 and p[3]:
-            pmap['tparam'] = '#(' + p[3] + ')'
-        addPortal('l%(name)sProxy' % pmap)
-        portalInstantiate.append('   %(name)sProxy l%(name)sProxy <- mk%(name)sProxy(%(name)sH2S);' % pmap)
-        portalInstantiate.append('   %(consume)s%(tparam)s l%(consume)s <- mk%(consume)s(%(param)sl%(name)sProxy.ifc);' % pmap)
-        instantiatedModules.append(pmap['name'] + 'Proxy')
-        instantiatedModules.append(pmap['consume'])
-        importfiles.append(pmap['name'])
-        importfiles.append(pmap['consume'])
-        enumList.append(pmap['name'] + 'H2S')
-    for pitem in options.wrapper:
-        p = pitem.split(':')
-        pr = p[1].split('.')
-        print 'WRAPPER', p, pr, len(p)
-        pmap = {'name': p[0], 'produce': pr[0], 'produceIf': p[1], 'count': portalCount, 'param': '', 'tparam': ''}
-        if len(p) > 2 and p[2]:
-            pmap['param'] = p[2] + ', '
-        if len(p) > 3 and p[3]:
-            pmap['tparam'] = '#(' + p[3] + ')'
-        addPortal('l%(name)sWrapper' % pmap)
-        if pmap['produce'] not in instantiatedModules:
-            portalInstantiate.append('   %(produce)s%(tparam)s l%(produce)s <- mk%(produce)s(%(param)s);' % pmap)
-            instantiatedModules.append(pmap['produce'])
-            importfiles.append(pmap['produce'])
-        importfiles.append(pmap['name'])
-        portalInstantiate.append('   %(name)sWrapper l%(name)sWrapper <- mk%(name)sWrapper(%(name)sS2H, l%(produceIf)s);' % pmap)
-        instantiatedModules.append(pmap['name'] + 'Wrapper')
-        enumList.append(pmap['name'] + 'S2H')
     if options.mem:
         print 'MEM', options.mem
-        enumList.append('MemServerRequestS2H')
-        enumList.append('MemServerIndicationH2S')
-        enumList.append('MMURequestS2H')
-        enumList.append('MMUIndicationH2S')
-        importfiles.extend(['SpecialFIFOs', 'StmtFSM', 'FIFO', 'MemTypes', 'MemServer',
-            'MMU', 'ConnectalMemory', 'Leds', 'MemServerRequest',
-            'MMURequest', 'MemServerIndication', 'MMUIndication'])
+        importfiles.extend(['SpecialFIFOs', 'StmtFSM', 'FIFO', 'MemTypes', 'ConnectalMemory', 'Leds'])
         for pitem in options.mem:
             p = pitem.split(':')
-            ctemp = [clientList % {'elementType': pname} for pname in p[1:]]
-            portalMem = portalMem + memTemplate % {'serverType': p[0], 'clientList': ','.join(ctemp)}
-        moduleParam = 'ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,`NumberOfMasters)'
-        portalMaster = 'dma.masters'
-        addPortal('lMemServerIndicationProxy')
-        addPortal('lMemServerRequestWrapper')
-        addPortal('lMMURequestWrapper')
-        addPortal('lMMUIndicationProxy')
+            ctemp = '/' + ', '.join(['l' + pname for pname in p[1:]] + ['cons(lMMU,nil)'])
+            param = ':MemServer.request:%(param)s:PhysAddrWidth,DataBusWidth,`NumberOfMasters:%(constructor)s' % {'param': ctemp, 'constructor': p[0]}
+            options.proxy.append('MemServerIndication' + param)
+            options.wrapper.append('MemServerRequest' + param)
+    for pitem in options.proxy:
+        pmap = parseParam(pitem)
+        instMod('', pmap['name'], 'Proxy', '')
+        pmap['tparam'] = pmap['xparam']
+        argstr = pmap['uparam'] + 'l%(name)sProxy.ifc'
+        if pmap['uparam'] and pmap['uparam'][0] == '/':
+            argstr = 'l%(name)sProxy.ifc, ' + pmap['uparam'][1:-2]
+        instMod(argstr, pmap['usermod'], '', '')
+    for pitem in options.wrapper:
+        pmap = parseParam(pitem)
+        pmap['tparam'] = pmap['xparam']
+        if pmap['usermod'] not in instantiatedModules:
+            instMod(pmap['uparam'], pmap['usermod'], '', '')
+        pmap['tparam'] = ''
+        instMod('', pmap['name'], 'Wrapper', '')
 
     topsubsts = {'enumList': ','.join(enumList),
                  'generatedImport': '\n'.join(['import %s::*;' % p for p in importfiles]),
-                 'portalInstantiate' : '\n'.join(portalInstantiate) + portalMem,
+                 'portalInstantiate' : '\n'.join(portalInstantiate),
                  'portalList': '\n'.join(portalList),
                  'portalCount': portalCount,
                  'portalLeds' : portalLeds,
-                 'portalMem' : portalMem,
-                 'portalMaster' : portalMaster,
-                 'moduleParam' : moduleParam,
+                 'portalMaster' : 'lMemServer.masters' if options.mem else 'nil',
+                 'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,`NumberOfMasters)' if options.mem else \
+                                 'StdConnectalTop#(PhysAddrWidth)'
                  }
     print 'TOPFN', topFilename
     top = util.createDirAndOpen(topFilename, 'w')
