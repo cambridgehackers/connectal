@@ -48,7 +48,7 @@ module mkMemwriteEngine(MemwriteEngineV#(dataWidth, cmdQDepth, numServers))
 	    ,FunnelPipesPipelined#(1, numServers,Tuple3#(Bit#(TLog#(numServers)), Bit#(dataWidth), Bool), TMin#(2,TLog#(numServers)))
 	    ,Add#(e__, TLog#(numServers), 6)
 	    );
-   let rv <- mkMemwriteEngineBuff(256);
+   let rv <- mkMemwriteEngineBuff(valueOf(TExp#(BurstLenSize)));
    return rv;
 endmodule
 
