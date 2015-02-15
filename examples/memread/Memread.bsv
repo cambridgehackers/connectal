@@ -56,7 +56,7 @@ endinterface
 
 interface Memread;
    interface MemreadRequest request;
-   interface Vector#(1,MemReadClient#(64)) dmaClient;
+   interface Vector#(1,MemReadClient#(DataBusWidth)) dmaClient;
 endinterface
 
 interface MemreadIndication;

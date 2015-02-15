@@ -2,10 +2,9 @@
 CONNECTALDIR?=../..
 S2H_INTERFACES = MemwriteRequest:Memwrite.request::\`NumberOfMasters
 H2S_INTERFACES = MemwriteIndication:Memwrite::\`NumberOfMasters
+MEM_INTERFACES = MemServer.request:/lMemwrite.dmaClients,cons\(lMMU,nil\):PhysAddrWidth,DataBusWidth,\`NumberOfMasters:mkMemServerW
 BSVFILES = Memwrite.bsv
 CPPFILES=testmemwrite.cpp
-
-AUTOTOP += -m mkMemServerW:Memwrite.dmaClients
 
 NUMBER_OF_MASTERS =4
 CONNECTALFLAGS += -I$(CONNECTALDIR)/examples/memwrite

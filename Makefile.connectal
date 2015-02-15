@@ -97,6 +97,9 @@ endif
 ifneq ($(H2S_INTERFACES),)
 USE_AUTOTOP = 1
 endif
+ifneq ($(MEM_INTERFACES),)
+USE_AUTOTOP = 1
+endif
 
 ifneq ($(NUMBER_OF_MASTERS), 0)
 INTERFACES += MemServerRequest MMURequest MemServerIndication MMUIndication
@@ -190,7 +193,9 @@ process_autotop::
 ifneq ($(USE_AUTOTOP),)
 	$(Q)$(CONNECTALDIR)/scripts/topgen.py --project-dir $(BOARD) $(AUTOTOP) \
 	    $(foreach f, $(S2H_INTERFACES), --wrapper $f) \
-	    $(foreach f, $(H2S_INTERFACES), --proxy $f)
+	    $(foreach f, $(H2S_INTERFACES), --proxy $f)   \
+	    $(foreach f, $(MEM_INTERFACES), --wrapper MemServerRequest:$f) \
+	    $(foreach f, $(MEM_INTERFACES), --proxy MemServerIndication:$f)
 endif
 
 prebuild::

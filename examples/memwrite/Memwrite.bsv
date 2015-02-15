@@ -47,7 +47,7 @@ endinterface
 
 interface Memwrite;
    interface MemwriteRequest request;
-   interface Vector#(1,MemWriteClient#(64)) dmaClient;
+   interface Vector#(1,MemWriteClient#(DataBusWidth)) dmaClient;
 endinterface
 
 interface MemwriteIndication;

@@ -1,14 +1,13 @@
 
 CONNECTALDIR?=../..
 MEMWRITEDIR=$(CONNECTALDIR)/examples/memwrite
-INTERFACES = MemwriteRequest MemwriteIndication
+S2H_INTERFACES = MemwriteRequest:Memwrite.request
+H2S_INTERFACES = MemwriteIndication:Memwrite
+MEM_INTERFACES = MemServer.request:/lMemwrite.dmaClient,cons\(lMMU,nil\):PhysAddrWidth,DataBusWidth,\`NumberOfMasters:mkMemServerW
 BSVFILES = $(MEMWRITEDIR)/Memwrite.bsv
 CPPFILES = $(MEMWRITEDIR)/testmemwrite.cpp
 CONNECTALFLAGS += -D NumEngineServers=16
 CONNECTALFLAGS += --bscflags " -show-schedule"
 #CONNECTALFLAGS += --bscflags " -ddumpschedule"
-
-AUTOTOP = -w MemwriteRequest:Memwrite.request -p MemwriteIndication:Memwrite
-AUTOTOP += -m mkMemServerW:Memwrite.dmaClient
 
 include $(CONNECTALDIR)/Makefile.connectal

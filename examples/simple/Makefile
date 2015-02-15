@@ -6,8 +6,6 @@ BSVFILES = Simple.bsv
 CPPFILES=testsimple.cpp
 NUMBER_OF_MASTERS =0
 
-AUTOTOP = 
-
 ifeq ($(BOARD),de5)
 ALTERA_de5=1
 PIN_BINDINGS?=-b PCIE:PCIE -b LED:LED -b OSC:OSC
