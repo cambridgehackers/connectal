@@ -88,6 +88,15 @@ endif
 
 CONNECTALFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) -D PinType=$(PIN_TYPE) -D MainClockPeriod=$(MAIN_CLOCK_PERIOD) -D DerivedClockPeriod=$(DERIVED_CLOCK_PERIOD)
 CONNECTALFLAGS += --ipdir=$(IPDIR)
+ifneq ($(AUTOTOP),)
+USE_AUTOTOP = 1
+endif
+ifneq ($(S2H_INTERFACES),)
+USE_AUTOTOP = 1
+endif
+ifneq ($(H2S_INTERFACES),)
+USE_AUTOTOP = 1
+endif
 
 ifneq ($(NUMBER_OF_MASTERS), 0)
 INTERFACES += MemServerRequest MMURequest MemServerIndication MMUIndication
@@ -96,7 +105,7 @@ CPPFILES += $(CONNECTALDIR)/cpp/dmaManager.c
 ifneq ($(CPPFILES2),)
 CPPFILES2 += $(CONNECTALDIR)/cpp/dmaManager.c
 endif
-ifneq ($(AUTOTOP),)
+ifneq ($(USE_AUTOTOP),)
 S2H_INTERFACES += MMURequest:MMU.request:0,True:PhysAddrWidth
 H2S_INTERFACES += MMUIndication:MMU.request:0,True:PhysAddrWidth
 endif
@@ -154,7 +163,7 @@ else
 PRINTF_EXTRA=$(CONNECTALDIR)/bsv/DisplayInd.bsv
 endif
 
-ifneq ($(AUTOTOP),)
+ifneq ($(USE_AUTOTOP),)
 GENTOP = $(BOARD)/Top.bsv
 endif
 
@@ -178,7 +187,7 @@ endif
 process_autotop::
 	$(Q)[ -e $(BOARD) ] || mkdir -p $(BOARD)
 	touch $(BOARD)/Makefile.autotop
-ifneq ($(AUTOTOP),)
+ifneq ($(USE_AUTOTOP),)
 	$(Q)$(CONNECTALDIR)/scripts/topgen.py --project-dir $(BOARD) $(AUTOTOP) \
 	    $(foreach f, $(S2H_INTERFACES), --wrapper $f) \
 	    $(foreach f, $(H2S_INTERFACES), --proxy $f)

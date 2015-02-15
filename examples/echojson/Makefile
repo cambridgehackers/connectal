@@ -1,12 +1,13 @@
 
 CONNECTALDIR?=../..
-INTERFACES = SwallowRequest EchoRequest EchoIndication
+S2H_INTERFACES = EchoRequest:Echo.request SwallowRequest:Swallow.request
+H2S_INTERFACES = EchoIndication:Echo
 BSVFILES = Echo.bsv Swallow.bsv
 CPPFILES=testecho.cpp
 CPPFILES2=daemon.cpp
 
 NUMBER_OF_MASTERS =0
 
-AUTOTOP = -l Echo.leds -w EchoRequest:Echo.request -w SwallowRequest:Swallow.request -p EchoIndication:Echo
+AUTOTOP = -l Echo.leds
 
 include $(CONNECTALDIR)/Makefile.connectal

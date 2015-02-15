@@ -182,6 +182,3 @@ module mkMemread#(MemreadIndication indication) (Memread);
       endmethod
    endinterface
 endmodule
-
-
-
