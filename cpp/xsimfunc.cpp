@@ -1,3 +1,24 @@
+/* Copyright (c) 2014 Quanta Research Cambridge, Inc
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
+
 #include <pthread.h>
 #include <queue>
 #include <string.h>
@@ -146,7 +167,7 @@ static unsigned int read_portal_xsim(PortalInternal *pint, volatile unsigned int
     uint32_t data;
     int hasData = memSlaveIndication->getReadData(&data);
     if (hasData) {
-      fprintf(stderr, "[%s:%d] id=%d addr=%08lx got data %08lx\n", __FUNCTION__, __LINE__, pint->fpga_number, (long)*addr, data);
+      fprintf(stderr, "[%s:%d] id=%d addr=%08lx got data %08x\n", __FUNCTION__, __LINE__, pint->fpga_number, (long)*addr, data);
       return data;
     }
   }
@@ -207,7 +228,7 @@ static void enableint_portal_xsim(struct PortalInternal *pint, int val)
 int event_portal_xsim(struct PortalInternal *pint)
 {
 #ifndef BluenocTop
-  fprintf(stderr, "[%s:%d] num_intrs=%d\n", __FUNCTION__, __LINE__, memSlaveIndication->intrs.size());
+  fprintf(stderr, "[%s:%d] num_intrs=%ld\n", __FUNCTION__, __LINE__, (long)memSlaveIndication->intrs.size());
   if (memSlaveIndication->intrs.size()) {
     volatile unsigned int *map_base = 0;
     volatile unsigned int *statp = &map_base[PORTAL_CTRL_REG_IND_QUEUE_STATUS];

@@ -50,6 +50,14 @@ public:
            Portal(id, bufsize, cba, (void *)&%(className)s_cbTable, item, param, poller) {
         pint.parent = static_cast<void *>(this);
     };
+    %(className)sWrapper(int id, PortalPoller *poller) :
+           Portal(id, %(classNameOrig)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, poller) {
+        pint.parent = static_cast<void *>(this);
+    };
+    %(className)sWrapper(int id, PortalItemFunctions *item, void *param, PortalPoller *poller):
+           Portal(id, %(classNameOrig)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, item, param, poller) {
+        pint.parent = static_cast<void *>(this);
+    };
 '''
 
 handleMessageTemplateDecl='''

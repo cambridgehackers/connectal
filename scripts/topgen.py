@@ -122,12 +122,11 @@ if __name__=='__main__':
     if options.leds:
         portalLeds = '   interface leds = l%s;' % options.leds
     if options.mem:
-        print 'MEM', options.mem
-        importfiles.extend(['SpecialFIFOs', 'StmtFSM', 'FIFO', 'MemTypes', 'ConnectalMemory', 'Leds'])
         for pitem in options.mem:
             p = pitem.split(':')
-            ctemp = '/' + ', '.join(['l' + pname for pname in p[1:]] + ['cons(lMMU,nil)'])
+            ctemp = '/' + ','.join(['l' + pname for pname in p[1:]] + ['cons(lMMU,nil)'])
             param = ':MemServer.request:%(param)s:PhysAddrWidth,DataBusWidth,`NumberOfMasters:%(constructor)s' % {'param': ctemp, 'constructor': p[0]}
+            print 'JJJJJJJJ', param
             options.proxy.append('MemServerIndication' + param)
             options.wrapper.append('MemServerRequest' + param)
     for pitem in options.proxy:
@@ -146,14 +145,17 @@ if __name__=='__main__':
         pmap['tparam'] = ''
         instMod('', pmap['name'], 'Wrapper', '')
 
+    memory_flag = 'MemServer' in instantiatedModules
+    if memory_flag:
+        importfiles.extend(['SpecialFIFOs', 'StmtFSM', 'FIFO', 'MemTypes', 'ConnectalMemory', 'Leds'])
     topsubsts = {'enumList': ','.join(enumList),
                  'generatedImport': '\n'.join(['import %s::*;' % p for p in importfiles]),
                  'portalInstantiate' : '\n'.join(portalInstantiate),
                  'portalList': '\n'.join(portalList),
                  'portalCount': portalCount,
                  'portalLeds' : portalLeds,
-                 'portalMaster' : 'lMemServer.masters' if options.mem else 'nil',
-                 'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,`NumberOfMasters)' if options.mem else \
+                 'portalMaster' : 'lMemServer.masters' if memory_flag else 'nil',
+                 'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,`NumberOfMasters)' if memory_flag else \
                                  'StdConnectalTop#(PhysAddrWidth)'
                  }
     print 'TOPFN', topFilename
