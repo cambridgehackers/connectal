@@ -1,10 +1,10 @@
 
 CONNECTALDIR?=../..
-INTERFACES = MemwriteRequest MemwriteIndication
+S2H_INTERFACES = MemwriteRequest:Memwrite.request
+H2S_INTERFACES = MemwriteIndication:Memwrite
 BSVFILES = Memwrite.bsv
 CPPFILES=testmemwrite.cpp
 
-AUTOTOP = -w MemwriteRequest:Memwrite.request -p MemwriteIndication:Memwrite
 AUTOTOP += -m mkMemServerW:Memwrite.dmaClient
 CONNECTALFLAGS += --bscflags " -show-schedule"
 

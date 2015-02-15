@@ -1,10 +1,10 @@
 
 CONNECTALDIR?=../..
-INTERFACES = MemwriteRequest MemwriteIndication
+S2H_INTERFACES = MemwriteRequest:Memwrite.request::\`NumberOfMasters
+H2S_INTERFACES = MemwriteIndication:Memwrite::\`NumberOfMasters
 BSVFILES = Memwrite.bsv
 CPPFILES=testmemwrite.cpp
 
-AUTOTOP = -w MemwriteRequest:Memwrite.request::\`NumberOfMasters -p MemwriteIndication:Memwrite::\`NumberOfMasters
 AUTOTOP += -m mkMemServerW:Memwrite.dmaClients
 
 NUMBER_OF_MASTERS =4

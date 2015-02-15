@@ -1,10 +1,10 @@
 
 CONNECTALDIR?=../..
-INTERFACES = MemreadRequest MemreadIndication
+S2H_INTERFACES = MemreadRequest:Memread.request::\`NumberOfMasters
+H2S_INTERFACES = MemreadIndication:Memread::\`NumberOfMasters
 BSVFILES = Memread.bsv
 CPPFILES=testmemread.cpp
 
-AUTOTOP = -w MemreadRequest:Memread.request::\`NumberOfMasters -p MemreadIndication:Memread::\`NumberOfMasters
 AUTOTOP += -m mkMemServerR:Memread.dmaClients
 
 NUMBER_OF_MASTERS =4
