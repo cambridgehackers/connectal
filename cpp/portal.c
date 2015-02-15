@@ -40,6 +40,7 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <time.h> // ctime
+#include <stdarg.h> // for portal_printf
 #endif
 #include "drivers/portalmem/portalmem.h" // PA_MALLOC
 
@@ -258,6 +259,15 @@ void portalCheckIndication(PortalInternal *pint)
     pint->handler(pint, queue_status-1, 0);
   }
 }
+
+#ifndef __KERNEL__
+int portal_printf(const char *format, ...)
+{
+    va_list ap;
+    va_start(ap, format);
+    return vfprintf(stderr, format, ap);
+}
+#endif
 
 void send_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, unsigned int hdr, int sendFd)
 {

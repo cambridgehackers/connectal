@@ -168,11 +168,14 @@ int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *
 #include <inttypes.h>
 
 extern int debug_portal;
-#define PORTAL_PRINTF if (debug_portal) printf
+#define PORTAL_PRINTF portal_printf
 #endif
 
 #ifdef __cplusplus
 extern "C" {
+#endif
+#ifndef __KERNEL__
+int portal_printf(const char *format, ...); // outputs to stderr
 #endif
 void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param, uint32_t reqinfo);
 void portalCheckIndication(PortalInternal *pint);
