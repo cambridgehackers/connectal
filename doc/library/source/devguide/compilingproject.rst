@@ -43,6 +43,18 @@ connectal source tree, enter the command ``make``
 Running the Design
 ==================
 
+When preparing a zedboard:
+
+ * Following the directions in the zynq-boot git repo, create an Android boot SD card files.
+ * Write the SD card files into the first partition of an SD card (FAT format).
+ * Verify that the boot mode jumpers on the board are JP8/9/10 (MIO3/4/5) == 110 for booting from SD card.
+ * Connect a USB cable to the 'UART' connector.  Use the 'connectable' program from the connectable git repo to display linux console output.
+ * Connect an ethernet cable (linux uses DHCP to get an IP address during boot).
+
+When preparing a PCIe board:
+
+ * Attach a USB cable to the JTAG port
+
 
 .. _git://: git://
 .. _git://github.com/connectal-examples/leds.git: git://github.com/connectal-examples/leds.git
