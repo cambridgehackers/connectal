@@ -32,6 +32,7 @@ import pandas as pd
 import math
 from gyroVisualize import *
 
+perforate = 3
 write_octave = True
 octave_length = 20
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -85,6 +86,10 @@ def animate():
 
             if (times <= octave_length):
                 print times
+                
+            xs = xs[::perforate]
+            ys = ys[::perforate]
+            zs = zs[::perforate]
 
             for x,y,z in zip(xs,ys,zs):
                 if (times <= octave_length):
@@ -96,11 +101,12 @@ def animate():
                         octave_file.write("%8d, %8d, %8d; \n" % (x,y,z));
                 else:
                     # sampling rate of 800 Hz. sensitivity is 70 mdps/digit
-                    pos[0] += (x-means[0])*70.0/800.0/1000.0
-                    pos[1] -= (y-means[1])*70.0/800.0/1000.0
-                    pos[2] -= (z-means[2])*70.0/800.0/1000.0
+                    pos[0] += perforate*(x-means[0])*70.0/800.0/1000.0
+                    pos[1] -= perforate*(y-means[1])*70.0/800.0/1000.0
+                    pos[2] -= perforate*(z-means[2])*70.0/800.0/1000.0
                     v.update(math.radians(pos[0]),math.radians(pos[1]),math.radians(pos[2]))
-                    
+                    sleep(perforate/800)
+
                 
             if (times == octave_length):
                 for i in range (0,len(means)):
