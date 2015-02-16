@@ -111,6 +111,10 @@ if __name__=='__main__':
     instantiatedModules = []
     importfiles = []
     enumList = []
+    if not options.proxy:
+        options.proxy = []
+    if not options.wrapper:
+        options.wrapper = []
 
     for pitem in options.proxy:
         pmap = parseParam(pitem)
