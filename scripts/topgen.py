@@ -27,13 +27,9 @@ import util
 
 argparser = argparse.ArgumentParser("Generate Top.bsv for an project.")
 argparser.add_argument('--project-dir', help='project directory')
-argparser.add_argument('-v', '--verbose', help='Display verbose information messages', action='store_true')
 argparser.add_argument('-l', '--leds', help='module that exports led interface')
 argparser.add_argument('-w', '--wrapper', help='exported wrapper interfaces', action='append')
 argparser.add_argument('-p', '--proxy', help='exported proxy interfaces', action='append')
-argparser.add_argument('-m', '--mem', help='exported memory interfaces', action='append')
-
-noisyFlag=True
 
 topTemplate='''
 import Vector::*;
@@ -68,7 +64,8 @@ def addPortal(name):
     portalList.append('   portals[%(count)s] = %(name)s.portalIfc;' % {'count': portalCount, 'name': name})
     portalCount = portalCount + 1
 
-def instMod(args, modname, modext, constructor):
+def instMod(args, modname, modext, constructor, tparam):
+    pmap['tparam'] = tparam
     pmap['modname'] = modname + modext
     tstr = 'S2H'
     if modext:
@@ -101,62 +98,43 @@ def parseParam(pitem):
 if __name__=='__main__':
     options = argparser.parse_args()
 
-    if options.verbose:
-        noisyFlag = True
     if not options.project_dir:
         print "topgen: --project-dir option missing"
         sys.exit(1)
     project_dir = os.path.abspath(os.path.expanduser(options.project_dir))
     topFilename = project_dir + '/Top.bsv'
-    if noisyFlag:
-        print 'Writing Top:', topFilename
+    print 'Writing Top:', topFilename
     userFiles = []
     portalInstantiate = []
     portalList = []
     portalCount = 0
     instantiatedModules = []
     importfiles = []
-    portalLeds = ''
     enumList = []
 
-    if options.leds:
-        portalLeds = '   interface leds = l%s;' % options.leds
-    if options.mem:
-        for pitem in options.mem:
-            p = pitem.split(':')
-            ctemp = '/' + ','.join(['l' + pname for pname in p[1:]] + ['cons(lMMU,nil)'])
-            param = ':MemServer.request:%(param)s:PhysAddrWidth,DataBusWidth,`NumberOfMasters:%(constructor)s' % {'param': ctemp, 'constructor': p[0]}
-            print 'JJJJJJJJ', param
-            options.proxy.append('MemServerIndication' + param)
-            options.wrapper.append('MemServerRequest' + param)
     for pitem in options.proxy:
         pmap = parseParam(pitem)
-        instMod('', pmap['name'], 'Proxy', '')
-        pmap['tparam'] = pmap['xparam']
+        instMod('', pmap['name'], 'Proxy', '', '')
         argstr = pmap['uparam'] + 'l%(name)sProxy.ifc'
         if pmap['uparam'] and pmap['uparam'][0] == '/':
             argstr = 'l%(name)sProxy.ifc, ' + pmap['uparam'][1:-2]
-        instMod(argstr, pmap['usermod'], '', '')
+        instMod(argstr, pmap['usermod'], '', '', pmap['xparam'])
     for pitem in options.wrapper:
         pmap = parseParam(pitem)
-        pmap['tparam'] = pmap['xparam']
         if pmap['usermod'] not in instantiatedModules:
-            instMod(pmap['uparam'], pmap['usermod'], '', '')
-        pmap['tparam'] = ''
-        instMod('', pmap['name'], 'Wrapper', '')
+            instMod(pmap['uparam'], pmap['usermod'], '', '', pmap['xparam'])
+        instMod('', pmap['name'], 'Wrapper', '', '')
 
     memory_flag = 'MemServer' in instantiatedModules
-    if memory_flag:
-        importfiles.extend(['SpecialFIFOs', 'StmtFSM', 'FIFO', 'MemTypes', 'ConnectalMemory', 'Leds'])
     topsubsts = {'enumList': ','.join(enumList),
                  'generatedImport': '\n'.join(['import %s::*;' % p for p in importfiles]),
                  'portalInstantiate' : '\n'.join(portalInstantiate),
                  'portalList': '\n'.join(portalList),
                  'portalCount': portalCount,
-                 'portalLeds' : portalLeds,
+                 'portalLeds' : ('   interface leds = l%s;' % options.leds) if options.leds else '',
                  'portalMaster' : 'lMemServer.masters' if memory_flag else 'nil',
-                 'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,`NumberOfMasters)' if memory_flag else \
-                                 'StdConnectalTop#(PhysAddrWidth)'
+                 'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,`NumberOfMasters)' \
+                     if memory_flag else 'StdConnectalTop#(PhysAddrWidth)'
                  }
     print 'TOPFN', topFilename
     top = util.createDirAndOpen(topFilename, 'w')
