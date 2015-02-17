@@ -309,7 +309,7 @@ static void connectal_work_handler(struct work_struct *__xxx)
   }
 
 
-  while (!top){
+  for (fpn = 0; fpn <= MAX_NUM_PORTALS; fpn++) {
     int rc;
     resource_size_t dev_base_phys;
     void* dev_base_virt;
@@ -340,10 +340,11 @@ static void connectal_work_handler(struct work_struct *__xxx)
     }
     portal_data->irq_is_registered = 1;
 
-    if (++fpn >= MAX_NUM_PORTALS){
-      printk(KERN_INFO "%s: MAX_NUM_PORTALS exceeded", __func__);
-      break;
-    }
+    if (top)
+	    break;
+  }
+  if (!top) {
+	  printk(KERN_INFO "%s: MAX_NUM_PORTALS exceeded", __func__);
   }
 }
 
