@@ -268,21 +268,38 @@ static int remove_portal_devices(struct portal_data *portal_data)
 
 
 struct connectal_work_struct {
-  struct platform_dev *pdev;
-  void *drvdata;
+  struct platform_device *pdev;
+  struct connectal_data *connectal_data;
+  struct portal_data *portal_data;
 };
 
 static struct connectal_work_struct ws;
 
 static void connectal_work_handler(struct work_struct *__xxx)
 {
-  struct portal_data *portal_data;
   u32 top = 0;
   u32 iid = 0;
   u32 fpn = 0;
 
   struct resource *reg_res = 0;
   struct resource *irq_res = 0;
+
+  if (ws.portal_data) {
+	  driver_devel("%s:%d removing portal devices portal_data=%p\n", __func__, __LINE__, ws.portal_data);
+	  remove_portal_devices(ws.portal_data);
+	  ws.portal_data = 0;
+	  ws.connectal_data->portal_data = 0;
+  }
+
+  if (!ws.portal_data) {
+	  ws.portal_data = kzalloc(sizeof(struct portal_data)*MAX_NUM_PORTALS, GFP_KERNEL);
+	  driver_devel("%s:%d allocated portal_data=%p\n", __func__, __LINE__, ws.portal_data);
+	  ws.connectal_data->portal_data = ws.portal_data;
+
+	  // FIXME
+	  directory_virt = ws.portal_data;
+  }
+
   reg_res = platform_get_resource(ws.pdev, IORESOURCE_MEM, 0);
   irq_res = platform_get_resource(ws.pdev, IORESOURCE_IRQ, 0);
 
@@ -296,7 +313,7 @@ static void connectal_work_handler(struct work_struct *__xxx)
     int rc;
     resource_size_t dev_base_phys;
     void* dev_base_virt;
-    portal_data = ws.drvdata+(fpn*sizeof(struct portal_data));
+    struct portal_data *portal_data = &ws.portal_data[fpn];
     dev_base_phys = reg_res->start+(fpn*PORTAL_BASE_OFFSET);
     dev_base_virt = ioremap_nocache(dev_base_phys, sizeof(PAGE_SIZE));
     iid = readl(dev_base_virt+IID_OFFSET);
@@ -312,7 +329,7 @@ static void connectal_work_handler(struct work_struct *__xxx)
     portal_data->map_base = ioremap_nocache(portal_data->dev_base_phys, PORTAL_BASE_OFFSET);
     portal_data->portal_irq = irq_res->start;
     portal_data->top = top;
-    driver_devel("%s:%d name=%s\n", __func__, __LINE__, portal_data->misc.name);
+    driver_devel("%s:%d name=%s misc=%p\n", __func__, __LINE__, portal_data->misc.name, &portal_data->misc);
     rc = misc_register( &portal_data->misc);
     driver_devel("%s:%d rc=%d minor=%d\n", __func__, __LINE__, rc, portal_data->misc.minor);
     if (request_irq(portal_data->portal_irq, portal_isr,
@@ -322,7 +339,7 @@ static void connectal_work_handler(struct work_struct *__xxx)
             return;
     }
     portal_data->irq_is_registered = 1;
-    
+
     if (++fpn >= MAX_NUM_PORTALS){
       printk(KERN_INFO "%s: MAX_NUM_PORTALS exceeded", __func__);
       break;
@@ -341,26 +358,18 @@ static int connectal_open(struct inode *inode, struct file *filep)
   unsigned long delay;
   struct connectal_data *connectal_data = filep->private_data;
   struct platform_device *pdev = connectal_data->pdev;
-  struct resource *reg_res, *irq_res;
-  void *drvdata;
 
   driver_devel("%s:%d\n", __func__, __LINE__);
   
-  if(connectal_data->portal_data)
-    remove_portal_devices(connectal_data->portal_data);
-
-  drvdata = kzalloc(sizeof(struct portal_data)*MAX_NUM_PORTALS, GFP_KERNEL);
-
   delay = msecs_to_jiffies(0);
   ws.pdev = pdev;
-  ws.drvdata = drvdata;
+  ws.connectal_data = connectal_data;
   if (!wq)
     wq = create_singlethread_workqueue("connectal");
   if (wq)
     queue_delayed_work(wq, &connectal_work, delay);
 
-  connectal_data->portal_data = drvdata;
-  directory_virt = drvdata;
+  driver_devel("%s:%d exit\n", __func__, __LINE__);
   return 0;
 }
 
@@ -445,6 +454,7 @@ static struct platform_driver connectal_of_driver = {
  */
 static int __init connectal_of_init(void)
 {
+	ws.portal_data = 0;
         if (platform_driver_register(&connectal_of_driver)) {
                 pr_err("Error portal driver registration\n");
                 return -ENODEV;
