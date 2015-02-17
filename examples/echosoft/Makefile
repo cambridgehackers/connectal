@@ -8,6 +8,6 @@ CPPFILES2=daemon.cpp
 
 NUMBER_OF_MASTERS =0
 
-AUTOTOP = -l Echo.leds
+AUTOTOP = --interface leds:Echo.leds
 
 include $(CONNECTALDIR)/Makefile.connectal

@@ -27,7 +27,7 @@ import util
 
 argparser = argparse.ArgumentParser("Generate Top.bsv for an project.")
 argparser.add_argument('--project-dir', help='project directory')
-argparser.add_argument('-l', '--leds', help='module that exports led interface')
+argparser.add_argument('--interface', help='exported interface declaration', action='append')
 argparser.add_argument('-w', '--wrapper', help='exported wrapper interfaces', action='append')
 argparser.add_argument('-p', '--proxy', help='exported proxy interfaces', action='append')
 
@@ -37,6 +37,11 @@ import Portal::*;
 import CtrlMux::*;
 import HostInterface::*;
 %(generatedImport)s
+
+`ifndef PinType
+`define PinType Empty
+`endif
+typedef `PinType PinType;
 
 typedef enum {%(enumList)s} IfcNames deriving (Eq,Bits);
 
@@ -53,9 +58,9 @@ module mkConnectalTop
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
    interface masters = %(portalMaster)s;
-   interface Empty pins;
+   interface PinType  pins;
    endinterface
-%(portalLeds)s
+%(exportedInterfaces)s
 endmodule : mkConnectalTop
 '''
 
@@ -111,10 +116,13 @@ if __name__=='__main__':
     instantiatedModules = []
     importfiles = []
     enumList = []
+    interfaceList = []
     if not options.proxy:
         options.proxy = []
     if not options.wrapper:
         options.wrapper = []
+    if not options.interface:
+        options.interface = []
 
     for pitem in options.proxy:
         pmap = parseParam(pitem)
@@ -128,6 +136,9 @@ if __name__=='__main__':
         if pmap['usermod'] not in instantiatedModules:
             instMod(pmap['uparam'], pmap['usermod'], '', '', pmap['xparam'])
         instMod('', pmap['name'], 'Wrapper', '', '')
+    for pitem in options.interface:
+        p = pitem.split(':')
+        interfaceList.append('   interface %s = l%s;' % (p[0], p[1]))
 
     memory_flag = 'MemServer' in instantiatedModules
     topsubsts = {'enumList': ','.join(enumList),
@@ -135,7 +146,7 @@ if __name__=='__main__':
                  'portalInstantiate' : '\n'.join(portalInstantiate),
                  'portalList': '\n'.join(portalList),
                  'portalCount': portalCount,
-                 'portalLeds' : ('   interface leds = l%s;' % options.leds) if options.leds else '',
+                 'exportedInterfaces' : '\n'.join(interfaceList),
                  'portalMaster' : 'lMemServer.masters' if memory_flag else 'nil',
                  'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,`NumberOfMasters)' \
                      if memory_flag else 'StdConnectalTop#(PhysAddrWidth)'
