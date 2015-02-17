@@ -404,6 +404,7 @@ static int connectal_of_probe(struct platform_device *pdev)
     pr_err("Error %s getting device-name\n", DRIVER_NAME);
     return -EINVAL;
   }
+  mutex_lock(&connectal_mutex);
   drvdata = kzalloc(sizeof(struct connectal_data), GFP_KERNEL);
   connectal_data = drvdata;
   connectal_data->misc.name = dname;
@@ -414,6 +415,7 @@ static int connectal_of_probe(struct platform_device *pdev)
   rc = misc_register(&connectal_data->misc);
   driver_devel("%s:%d name=%s rc=%d minor=%d\n", __func__, __LINE__, connectal_data->misc.name, rc, connectal_data->misc.minor);
   dev_set_drvdata(&pdev->dev, drvdata);
+  mutex_unlock(&connectal_mutex);
   return 0;
 }
 
