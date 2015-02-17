@@ -422,6 +422,7 @@ static int connectal_of_remove(struct platform_device *pdev)
   void *drvdata = dev_get_drvdata(&pdev->dev);
   struct connectal_data* connectal_data = drvdata;
   driver_devel("%s:%s\n",__FUNCTION__, pdev->name);
+  mutex_lock(&connectal_mutex);
   if(connectal_data->portal_data)
     remove_portal_devices(connectal_data->portal_data);
   misc_deregister(&connectal_data->misc);
@@ -431,6 +432,7 @@ static int connectal_of_remove(struct platform_device *pdev)
     cancel_delayed_work_sync(&connectal_work);
     destroy_workqueue(wq);
   }
+  mutex_unlock(&connectal_mutex);
   return 0;
 }
 
