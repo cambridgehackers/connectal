@@ -329,7 +329,7 @@ static void connectal_work_handler(struct work_struct *__xxx)
     portal_data->map_base = ioremap_nocache(portal_data->dev_base_phys, PORTAL_BASE_OFFSET);
     portal_data->portal_irq = irq_res->start;
     portal_data->top = top;
-    driver_devel("%s:%d name=%s misc=%p\n", __func__, __LINE__, portal_data->misc.name, &portal_data->misc);
+    driver_devel("%s:%d name=%s\n", __func__, __LINE__, portal_data->misc.name);
     rc = misc_register( &portal_data->misc);
     driver_devel("%s:%d rc=%d minor=%d\n", __func__, __LINE__, rc, portal_data->misc.minor);
     if (request_irq(portal_data->portal_irq, portal_isr,
@@ -369,7 +369,6 @@ static int connectal_open(struct inode *inode, struct file *filep)
   if (wq)
     queue_delayed_work(wq, &connectal_work, delay);
 
-  driver_devel("%s:%d exit\n", __func__, __LINE__);
   return 0;
 }
 
