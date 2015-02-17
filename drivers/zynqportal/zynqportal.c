@@ -277,8 +277,6 @@ static struct connectal_work_struct ws;
 
 static void connectal_work_handler(struct work_struct *__xxx)
 {
-  void* foo;
-  resource_size_t bar;
   struct portal_data *portal_data;
   u32 top = 0;
   u32 iid = 0;
@@ -286,19 +284,21 @@ static void connectal_work_handler(struct work_struct *__xxx)
 
   while (!top){
     int rc;
+    resource_size_t dev_base_phys;
+    void* dev_base_virt;
     portal_data = ws.drvdata+(fpn*sizeof(struct portal_data));
-    bar = ws.reg_res->start+(fpn*PORTAL_BASE_OFFSET);
-    foo = ioremap_nocache(bar, sizeof(PAGE_SIZE));
-    iid = readl(foo+IID_OFFSET);
-    top = readl(foo+TOP_OFFSET);
+    dev_base_phys = ws.reg_res->start+(fpn*PORTAL_BASE_OFFSET);
+    dev_base_virt = ioremap_nocache(dev_base_phys, sizeof(PAGE_SIZE));
+    iid = readl(dev_base_virt+IID_OFFSET);
+    top = readl(dev_base_virt+TOP_OFFSET);
     
-    driver_devel("%s:%d bar=%08x fpn=%08x iid=%d top=%d\n", __func__, __LINE__, bar, fpn, iid, top);
+    driver_devel("%s:%d dev_base_phys=%08x fpn=%08x iid=%d top=%d\n", __func__, __LINE__, dev_base_phys, fpn, iid, top);
 
     sprintf(portal_data->name, "portal%d", iid);
     portal_data->misc.name = portal_data->name;
     portal_data->misc.minor = MISC_DYNAMIC_MINOR;
     portal_data->misc.fops = &portal_fops;
-    portal_data->dev_base_phys = bar;
+    portal_data->dev_base_phys = dev_base_phys;
     portal_data->map_base = ioremap_nocache(portal_data->dev_base_phys, PORTAL_BASE_OFFSET);
     portal_data->portal_irq = ws.irq_res->start;
     portal_data->top = top;
