@@ -268,8 +268,7 @@ static int remove_portal_devices(struct portal_data *portal_data)
 
 
 struct connectal_work_struct {
-  struct resource *reg_res;
-  struct resource *irq_res;
+  struct platform_dev *pdev;
   void *drvdata;
 };
 
@@ -282,12 +281,23 @@ static void connectal_work_handler(struct work_struct *__xxx)
   u32 iid = 0;
   u32 fpn = 0;
 
+  struct resource *reg_res = 0;
+  struct resource *irq_res = 0;
+  reg_res = platform_get_resource(ws.pdev, IORESOURCE_MEM, 0);
+  irq_res = platform_get_resource(ws.pdev, IORESOURCE_IRQ, 0);
+
+  if (!reg_res || !irq_res) {
+    pr_err("Error portal resources\n");
+    return;
+  }
+
+
   while (!top){
     int rc;
     resource_size_t dev_base_phys;
     void* dev_base_virt;
     portal_data = ws.drvdata+(fpn*sizeof(struct portal_data));
-    dev_base_phys = ws.reg_res->start+(fpn*PORTAL_BASE_OFFSET);
+    dev_base_phys = reg_res->start+(fpn*PORTAL_BASE_OFFSET);
     dev_base_virt = ioremap_nocache(dev_base_phys, sizeof(PAGE_SIZE));
     iid = readl(dev_base_virt+IID_OFFSET);
     top = readl(dev_base_virt+TOP_OFFSET);
@@ -300,7 +310,7 @@ static void connectal_work_handler(struct work_struct *__xxx)
     portal_data->misc.fops = &portal_fops;
     portal_data->dev_base_phys = dev_base_phys;
     portal_data->map_base = ioremap_nocache(portal_data->dev_base_phys, PORTAL_BASE_OFFSET);
-    portal_data->portal_irq = ws.irq_res->start;
+    portal_data->portal_irq = irq_res->start;
     portal_data->top = top;
     driver_devel("%s:%d name=%s\n", __func__, __LINE__, portal_data->misc.name);
     rc = misc_register( &portal_data->misc);
@@ -341,17 +351,8 @@ static int connectal_open(struct inode *inode, struct file *filep)
 
   drvdata = kzalloc(sizeof(struct portal_data)*MAX_NUM_PORTALS, GFP_KERNEL);
 
-  reg_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-  irq_res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-
-  if (!reg_res || !irq_res) {
-    pr_err("Error portal resources\n");
-    return -ENODEV;
-  }
-
   delay = msecs_to_jiffies(0);
-  ws.reg_res = reg_res;
-  ws.irq_res = irq_res;
+  ws.pdev = pdev;
   ws.drvdata = drvdata;
   if (!wq)
     wq = create_singlethread_workqueue("connectal");
