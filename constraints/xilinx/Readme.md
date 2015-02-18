@@ -17,6 +17,9 @@ Create new project
   In Add Constraints
      click next
   In Default Part
+
+If the board type is known to Vivado, select board and choose the right board
+otherwise 
      Specify Parts
      Search for desired part
      click next
@@ -45,7 +48,10 @@ Right click Design top level
    Select Generate HDL wrapper
 
 In Flow navigator
-  Run Implementation (and automatically, Snthesis
+  Run Synthesis
+ 
+(The file you need should be there now)
+  Run Implementation
   Run Generate Bitstream
 
 Exit Vivado
