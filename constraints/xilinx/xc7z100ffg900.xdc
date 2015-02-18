@@ -1,3 +1,5 @@
+#created using vivado see readme.md
+# create_clock manually commented out
 ############################################################################
 ##
 ##  Xilinx, Inc. 2006            www.xilinx.com
