@@ -19,6 +19,7 @@
 #include <linux/poll.h>
 #include <linux/uaccess.h>
 #include <linux/miscdevice.h>
+#include <linux/mutex.h>
 #include <linux/platform_device.h>
 #include <linux/sched.h>
 #include <linux/clk.h>
@@ -79,6 +80,7 @@ struct connectal_data{
   struct portal_data *portal_data;
 };
 
+static DEFINE_MUTEX(connectal_mutex);
 static void *directory_virt;  /* anyone should be able to get PORTAL_DIRECTORY_COUNTER */
 static PortalInterruptTime inttime;
 static int flush = 0;
@@ -305,7 +307,7 @@ static void connectal_work_handler(struct work_struct *__xxx)
 
   if (!reg_res || !irq_res) {
     pr_err("Error portal resources\n");
-    return;
+    goto out;
   }
 
 
@@ -336,7 +338,7 @@ static void connectal_work_handler(struct work_struct *__xxx)
             IRQF_TRIGGER_HIGH | IRQF_SHARED , portal_data->misc.name, portal_data)) {
             portal_data->portal_irq = 0;
             printk("%s Failed to register irq\n", __func__);
-            return;
+	    goto out;
     }
     portal_data->irq_is_registered = 1;
 
@@ -346,6 +348,9 @@ static void connectal_work_handler(struct work_struct *__xxx)
   if (!top) {
 	  printk(KERN_INFO "%s: MAX_NUM_PORTALS exceeded", __func__);
   }
+ out:
+  mutex_unlock(&connectal_mutex);
+
 }
 
 static struct workqueue_struct *wq = 0;
@@ -361,6 +366,7 @@ static int connectal_open(struct inode *inode, struct file *filep)
   struct platform_device *pdev = connectal_data->pdev;
 
   driver_devel("%s:%d\n", __func__, __LINE__);
+  mutex_lock(&connectal_mutex);
   
   delay = msecs_to_jiffies(0);
   ws.pdev = pdev;
@@ -398,6 +404,7 @@ static int connectal_of_probe(struct platform_device *pdev)
     pr_err("Error %s getting device-name\n", DRIVER_NAME);
     return -EINVAL;
   }
+  mutex_lock(&connectal_mutex);
   drvdata = kzalloc(sizeof(struct connectal_data), GFP_KERNEL);
   connectal_data = drvdata;
   connectal_data->misc.name = dname;
@@ -408,6 +415,7 @@ static int connectal_of_probe(struct platform_device *pdev)
   rc = misc_register(&connectal_data->misc);
   driver_devel("%s:%d name=%s rc=%d minor=%d\n", __func__, __LINE__, connectal_data->misc.name, rc, connectal_data->misc.minor);
   dev_set_drvdata(&pdev->dev, drvdata);
+  mutex_unlock(&connectal_mutex);
   return 0;
 }
 
@@ -416,6 +424,7 @@ static int connectal_of_remove(struct platform_device *pdev)
   void *drvdata = dev_get_drvdata(&pdev->dev);
   struct connectal_data* connectal_data = drvdata;
   driver_devel("%s:%s\n",__FUNCTION__, pdev->name);
+  mutex_lock(&connectal_mutex);
   if(connectal_data->portal_data)
     remove_portal_devices(connectal_data->portal_data);
   misc_deregister(&connectal_data->misc);
@@ -425,6 +434,7 @@ static int connectal_of_remove(struct platform_device *pdev)
     cancel_delayed_work_sync(&connectal_work);
     destroy_workqueue(wq);
   }
+  mutex_unlock(&connectal_mutex);
   return 0;
 }
 
