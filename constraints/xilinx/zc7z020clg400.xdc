@@ -1,6 +1,7 @@
 # This file pulled from a Vidado manual run of a minimal design
 # using PS7.  It was named 
 # project/project_srcs/sources_1/bd/design_1/ip/design_1_processing_system7_0_0/design_1_processing_system7_0_0.xdc
+# clocking manually commented out
 ############################################################################
 ##
 ##  Xilinx, Inc. 2006            www.xilinx.com
