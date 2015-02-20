@@ -7,7 +7,7 @@ NUMBER_OF_MASTERS =0
 PIN_TYPE = MaxSonar2
 CONNECTALFLAGS = -C $(BOARD)/sources/pinout-$(BOARD).xdc
 
-PIN_BINDING ?= -b pmod:pmodd
+PIN_BINDING ?= -b pmod:pmodb
 
 gentarget:: $(BOARD)/sources/pinout-$(BOARD).xdc
 $(BOARD)/sources/pinout-$(BOARD).xdc: pinout.json $(CONNECTALDIR)/boardinfo/$(BOARD).json
