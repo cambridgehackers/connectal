@@ -5,9 +5,15 @@ A Connectal design imports Makefile.connectal into its Makefile in order to driv
 
 A number of variables are used to control the build and parameters of the design.
 
+Environment Variables
+---------------------
+
 .. envvar:: CONNECTALDIR
 
    Points to the location where Makefile.connectal and the connectal tools are installed.
+
+Make Variables
+--------------
 
 .. make:var:: V
 
@@ -58,4 +64,25 @@ A number of variables are used to control the build and parameters of the design
 
    Specifies for which interfaces to generate c/c++/bsv proxies and wrappers.
 
+.. make:var:: RUNPARAM
+
+   Specifies the name or IP address of the machine on which to run the application, e.g.::
+
+      make RUNPARAM=192.168.168.100 run.zedboard
+
+
+Make Targets
+------------
+
+.. make:target:: build.%
+
+   Builds software and bitfile for the specified board name, e.g.,::
+
+     make build.zedboard
+
+.. make:target:: run.%
+
+   Programs the FPGA and runs the application using the build for the specified board name. Uses :make:var:RUNPARAM. For example,::
+
+      make RUNPARAM=sj10 run.vc707
 
