@@ -22,8 +22,27 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from sonarVisualize import *
+from visual import *
 
+class sv:
+    def __init__(self):
+        self.main_window=display(title="test_maxsonar", forward=(0,0,-1), width=500, up=(0,1,0), range=(1.2,1.2,1.2))
+        self.main_window.select()
+        self.cnt = 0
+
+    def label_last(self):
+        label(pos=self.last,text="%d"%(self.cnt),box=0,opacity=0)
+        self.cnt = self.cnt+1
+
+    def add_line(self,start,end):
+        curve(pos=[start,end])
+        self.last = end
+        self.label_last()
+
+    def extend_line(self,end):
+        curve(pos=[self.last,end])
+        self.last = end
+        self.label_last()
 
 if __name__ == "__main__":
     v = sv()
