@@ -182,6 +182,9 @@ source/devguide/connectalbuild-1.png: source/devguide/connectalbuild.pdf
 images: source/devguide/connectalbuild-1.png
 	make -C source/design all
 
+install:
+	pip install sphinx sphinxcontrib-makedomain
+
 publish: images html latexpdf
 	rsync -avz build/html/* ../../../doc/current/ref
 	rsync -av build/latex/connectal.pdf ../../../doc/current/ref
