@@ -12,21 +12,16 @@ Environment Variables
 
    Points to the location where Makefile.connectal and the connectal tools are installed.
 
-Make Variables
---------------
-
-.. make:var:: V
-
-   Controls verbosity of the build. V=1 for verbose.
+Make Variables Defining the Application
+---------------------------------------
 
 .. make:var:: BOARD
 
    This is typically set from the suffix of the build target, e.g., make build.zedbard defines BOARD=zedboard.
 
-.. make:var:: IPDIR
+.. make:var:: INTERFACES
 
-   Specifies into which directory to generate IP cores. This allows generated cores to be shared between designs when the FPGA part and core parameters match.
-
+   Specifies for which interfaces to generate c/c++/bsv proxies and wrappers.
 
 .. make:var:: NUMBER_OF_MASTERS
 
@@ -35,6 +30,62 @@ Make Variables
 .. make:var:: PIN_TYPE
 
    BSV interface of exported pins. Defaults to Empty.
+
+.. make:var:: BSVFILES
+
+   Lists the BSV files to scan when processing INTERFACES.
+
+.. make:var:: CPPFILES
+
+   Lists the C/C++ files that implement the application.
+
+.. make:var:: CPPFILES2
+
+   Lists the C/C++ files that implement the (optional) second executable of an application. For example, a daemon that coordinates access to the hardware.
+
+.. make:var:: PORTAL_DUMP_MAP
+
+   Specifies the option to provide to pcieflat to annotate PCIe traces with portal numbers and method names. Uses generatedDesignInterfaceFile.json.
+
+
+Auto Top
+--------
+
+.. make:var:: S2H_INTERFACES
+
+.. make:var:: H2S_INTERFACES
+
+.. make:var:: MEM_INTERFACES
+
+
+
+Controlling the Build
+---------------------
+
+.. make:var:: CONNECTALFLAGS
+
+   Flags to pass to makefilegen.py
+
+.. make:var:: V
+
+   Controls verbosity of the build. V=1 for verbose.
+
+.. make:var:: USE_BUILDCACHE
+
+   Define USE_BUILDCACHE=1 to use buildcache. Except fpgamake seems to use buildcache anyway.
+
+.. make:var:: BUILDCACHE
+
+   Location of buildcache script.
+
+.. make:var:: BUILDCACHE_CACHEDIR
+
+   To specify an alternate location for the buildcache cache files.
+
+.. make:var:: IPDIR
+
+   Specifies into which directory to generate IP cores. This allows generated cores to be shared between designs when the FPGA part and core parameters match.
+
 
 .. make:var:: MAIN_CLOCK_PERIOD
 
@@ -60,10 +111,6 @@ Make Variables
 
    Controls width of fields specifying memory request burst lengths. Defaults to 8.
 
-.. make:var:: INTERFACES
-
-   Specifies for which interfaces to generate c/c++/bsv proxies and wrappers.
-
 .. make:var:: RUNPARAM
 
    Specifies the name or IP address of the machine on which to run the application, e.g.::
@@ -71,8 +118,8 @@ Make Variables
       make RUNPARAM=192.168.168.100 run.zedboard
 
 
-Make Targets
-------------
+Top Level Make Targets
+----------------------
 
 .. make:target:: build.%
 
@@ -86,3 +133,44 @@ Make Targets
 
       make RUNPARAM=sj10 run.vc707
 
+Intermediate Make Targets
+-------------------------
+
+.. make:target:: verilog
+
+   Runs the build up through generation of verilog from BSV. Requires BOARD to be defined.
+
+.. make:target:: bits
+
+   Generates the FPGA bit file from the design. Requires BOARD to be defined.
+
+.. make:target:: bsim
+
+   For BOARD=bluesim, generates the simulation executable.
+
+.. make:target:: xsim
+
+   For BOARD=xsim, generates the simulation executable.
+
+.. make:target:: android.exe
+
+   Builds the software executable for boards using Android.
+
+.. make:target:: ubuntu.exe
+
+   Builds the software executable for boards using Ubunto/CentOS.
+
+.. make:target:: bsim_exe
+
+   Builds the software executable for bluesim.
+
+.. make:target:: gentarget
+
+   This step creates the board directory and Makefile.
+
+.. make:target:: prebuild
+
+   Additional steps needed before making verilog, etc.  Use this
+   target for dependences such as constraint file and IP core
+   generation that need to be run before the design is built. This is
+   a :: dependence, so you can specify it multiple times.
