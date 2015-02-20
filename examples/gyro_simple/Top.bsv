@@ -42,7 +42,7 @@ import MemServerIndication::*;
 import MMUIndication::*;
 
 // defined by user
-import Controller::*;
+import GyroController::*;
 import ConnectalSpi::*;
 
 typedef enum {ControllerRequest, ControllerIndication, HostMemServerIndication, HostMemServerRequest, HostMMURequest, HostMMUIndication} IfcNames deriving (Eq,Bits);
@@ -50,7 +50,7 @@ typedef enum {ControllerRequest, ControllerIndication, HostMemServerIndication, 
 module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,SpiPins,1));
 
    GyroCtrlIndicationProxy cp <- mkGyroCtrlIndicationProxy(ControllerIndication);
-   Controller controller <- mkController(cp.ifc);
+   Controller controller <- mkGyroController(cp.ifc);
    GyroCtrlRequestWrapper cw <- mkGyroCtrlRequestWrapper(ControllerRequest, controller.req);
    
    MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
@@ -78,7 +78,7 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,SpiPins,1));
 
 endmodule : mkConnectalTop
 
-export Controller::*;
+export GyroController::*;
 export ConnectalSpi::*;
 export mkConnectalTop;
 

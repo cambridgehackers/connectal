@@ -1,7 +1,7 @@
 
 CONNECTALDIR ?= ../..
 INTERFACES = HBridgeCtrlRequest HBridgeCtrlIndication
-BSVFILES = Controller.bsv Top.bsv 
+BSVFILES = HBridgeController.bsv Top.bsv 
 CPPFILES= test_hbridge.cpp
 NUMBER_OF_MASTERS =0
 PIN_TYPE = HBridge2

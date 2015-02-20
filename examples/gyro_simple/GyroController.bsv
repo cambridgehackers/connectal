@@ -52,7 +52,7 @@ interface Controller;
    interface MemWriteClient#(64) dmaClient;
 endinterface
 
-module mkController#(GyroCtrlIndication ind)(Controller);
+module mkGyroController#(GyroCtrlIndication ind)(Controller);
 
    Reg#(Bit#(32))  en_memwr   <- mkReg(maxBound);
    SPI#(Bit#(16))  spiCtrl    <- mkSPI(1000, True);

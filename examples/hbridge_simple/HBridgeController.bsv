@@ -47,7 +47,7 @@ endinterface
 
 typedef enum {Stopped, Started} HBridgeCtrlEvent deriving (Eq,Bits);
 
-module mkController#(HBridgeCtrlIndication ind)(Controller);
+module mkHBridgeController#(HBridgeCtrlIndication ind)(Controller);
    
    Vector#(2, Reg#(Bit#(1))) direction <- replicateM(mkReg(0));
    Vector#(2, Reg#(Bit#(1)))   enabled <- replicateM(mkReg(0));

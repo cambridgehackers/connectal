@@ -36,14 +36,14 @@ import MaxSonarCtrlRequest::*;
 import MaxSonarCtrlIndication::*;
 
 // defined by user
-import Controller::*;
+import MaxSonarController::*;
 
 typedef enum {ControllerRequest, ControllerIndication} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,MaxSonar2,0));
 
    MaxSonarCtrlIndicationProxy cp <- mkMaxSonarCtrlIndicationProxy(ControllerIndication);
-   Controller controller <- mkController(cp.ifc);
+   Controller controller <- mkMaxSonarController(cp.ifc);
    MaxSonarCtrlRequestWrapper cw <- mkMaxSonarCtrlRequestWrapper(ControllerRequest, controller.req);
    
    Vector#(2,StdPortal) portals;
@@ -59,6 +59,6 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,MaxSonar2,0));
 
 endmodule : mkConnectalTop
 
-export Controller::*;
+export MaxSonarController::*;
 export mkConnectalTop;
 
