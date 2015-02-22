@@ -105,7 +105,7 @@ def animate():
                     pos[1] -= perforate*(y-means[1])*70.0/800.0/1000.0
                     pos[2] -= perforate*(z-means[2])*70.0/800.0/1000.0
                     v.update(math.radians(pos[0]),math.radians(pos[1]),math.radians(pos[2]))
-                    sleep(perforate/800)
+                    time.sleep(perforate/800)
 
                 
             if (times == octave_length):

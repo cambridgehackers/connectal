@@ -45,14 +45,14 @@ interface GyroCtrlIndication;
    method Action memwrite_status(Bit#(32) addr, Bit#(32) wrap_cnt);
 endinterface
 
-interface Controller;
+interface GyroController;
    interface GyroCtrlRequest req;
    interface SpiPins spi;
    interface LEDS leds;
    interface MemWriteClient#(64) dmaClient;
 endinterface
 
-module mkGyroController#(GyroCtrlIndication ind)(Controller);
+module mkGyroController#(GyroCtrlIndication ind)(GyroController);
 
    Reg#(Bit#(32))  en_memwr   <- mkReg(maxBound);
    SPI#(Bit#(16))  spiCtrl    <- mkSPI(1000, True);

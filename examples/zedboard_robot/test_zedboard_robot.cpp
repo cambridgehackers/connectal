@@ -27,32 +27,17 @@
 #include <unistd.h>
 #include <assert.h>
 #include <string.h>
+#include "maxsonar_simple.h"
 
 #include "MaxSonarCtrlRequest.h"
 #include "MaxSonarCtrlIndication.h"
 #include "GeneratedTypes.h"
 
 
-class MaxSonarCtrlIndication : public MaxSonarCtrlIndicationWrapper
-{
-public:
-  MaxSonarCtrlIndication(int id) : MaxSonarCtrlIndicationWrapper(id) {}
-  virtual void range_ctrl ( const uint32_t v){
-    fprintf(stderr, "MaxSonarCtrlIndication::range_ctrl(v=%0d)\n", v);
-  }
-  virtual void pulse_width( const uint32_t* v){
-    // MaxSonar uses a scaling factor of 147 microseconds/inch
-    // in its pulse-width output.  This design will be clocked
-    // at 100 mHz on the zedboard.  We count accordingly
-    for(int i = 0; i < 2; i++)
-      fprintf(stderr, "[%d](%d microseconds == %f inches)\n", i, v[i]/100, ((float)v[i])/100.0/147.0);
-  }
-};
-
 int main(int argc, const char **argv)
 {
-  MaxSonarCtrlIndication *ind = new MaxSonarCtrlIndication(IfcNames_ControllerIndication);
-  MaxSonarCtrlRequestProxy *device = new MaxSonarCtrlRequestProxy(IfcNames_ControllerRequest);
+  MaxSonarCtrlIndication *ind = new MaxSonarCtrlIndication(IfcNames_MaxSonarControllerIndication);
+  MaxSonarCtrlRequestProxy *device = new MaxSonarCtrlRequestProxy(IfcNames_MaxSonarControllerRequest);
 
   portalExec_start();
 
@@ -61,7 +46,7 @@ int main(int argc, const char **argv)
   setClockFrequency(0, req_freq, &freq);
   fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
 
-  device->range_ctrl(0xFFFFFFFF);
+  device->range_ctrl(0xFFFFFFFF); // turn the sonar device on
   while(true){
     device->pulse_width();
     sleep(1);

@@ -1,19 +1,11 @@
 {
-    "range_ctrl[0]" : {
+    "range_ctrl" : {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod" : "J2"
     },
-    "pulse_v[0]" : {
+    "pulse_v" : {
 	"PIO_DIRECTION": "INPUT",
 	"pmod" : "J4"
-    },
-    "range_ctrl[1]" : {
-	"PIO_DIRECTION": "OUTPUT",
-	"pmod" : "J6"
-    },
-    "pulse_v[1]" : {
-	"PIO_DIRECTION": "INPUT",
-	"pmod" : "J8"
     }
 }
 

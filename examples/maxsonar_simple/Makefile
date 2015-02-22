@@ -4,7 +4,7 @@ INTERFACES = MaxSonarCtrlRequest MaxSonarCtrlIndication
 BSVFILES = MaxSonarController.bsv Top.bsv 
 CPPFILES= test_maxsonar.cpp
 NUMBER_OF_MASTERS =0
-PIN_TYPE = MaxSonar2
+PIN_TYPE = MaxSonarPins
 CONNECTALFLAGS = -C $(BOARD)/sources/pinout-$(BOARD).xdc
 
 PIN_BINDING ?= -b pmod:pmodb

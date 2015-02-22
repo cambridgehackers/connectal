@@ -40,18 +40,25 @@ import MemServerRequest::*;
 import MMURequest::*;
 import MemServerIndication::*;
 import MMUIndication::*;
+import MaxSonarCtrlRequest::*;
+import MaxSonarCtrlIndication::*;
 
 // defined by user
-import GyroController::*;
-import ConnectalSpi::*;
+import Controller::*;
 
-typedef enum {ControllerRequest, ControllerIndication, HostMemServerIndication, HostMemServerRequest, HostMMURequest, HostMMUIndication} IfcNames deriving (Eq,Bits);
+typedef enum {MaxSonarControllerRequest, MaxSonarControllerIndication, 
+	      GyroControllerRequest,     GyroControllerIndication, 
+	      HostMemServerRequest,      HostMemServerIndication,   
+	      HostMMURequest,            HostMMUIndication} IfcNames deriving (Eq,Bits);
 
-module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,SpiPins,1));
+module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,ZedboardRobotPins,1));
 
-   GyroCtrlIndicationProxy cp <- mkGyroCtrlIndicationProxy(ControllerIndication);
-   GyroController controller <- mkGyroController(cp.ifc);
-   GyroCtrlRequestWrapper cw <- mkGyroCtrlRequestWrapper(ControllerRequest, controller.req);
+
+   GyroCtrlIndicationProxy gcp <- mkGyroCtrlIndicationProxy(GyroControllerIndication);
+   MaxSonarCtrlIndicationProxy mscp <- mkMaxSonarCtrlIndicationProxy(MaxSonarControllerIndication);
+   Controller controller <- mkController(mscp.ifc, gcp.ifc);
+   GyroCtrlRequestWrapper gcw <- mkGyroCtrlRequestWrapper(GyroControllerRequest, controller.gyro_req);
+   MaxSonarCtrlRequestWrapper mscw <- mkMaxSonarCtrlRequestWrapper(MaxSonarControllerRequest, controller.maxsonar_req);
    
    MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUIndicationProxy.ifc);
@@ -60,25 +67,26 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,SpiPins,1));
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
    MemServer#(PhysAddrWidth,DataBusWidth,1) dma <- mkMemServerW(hostMemServerIndicationProxy.ifc, cons(controller.dmaClient,nil), cons(hostMMU,nil));
    MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
-   
-   Vector#(6,StdPortal) portals;
-   portals[0] = cp.portalIfc;
-   portals[1] = cw.portalIfc;
-   portals[2] = hostMemServerRequestWrapper.portalIfc;
-   portals[3] = hostMemServerIndicationProxy.portalIfc; 
-   portals[4] = hostMMURequestWrapper.portalIfc;
-   portals[5] = hostMMUIndicationProxy.portalIfc;
+
+   Vector#(8,StdPortal) portals;
+   portals[0] = gcp.portalIfc;
+   portals[1] = gcw.portalIfc;
+   portals[2] = mscp.portalIfc;
+   portals[3] = mscw.portalIfc;
+   portals[4] = hostMemServerRequestWrapper.portalIfc;
+   portals[5] = hostMemServerIndicationProxy.portalIfc; 
+   portals[6] = hostMMURequestWrapper.portalIfc;
+   portals[7] = hostMMUIndicationProxy.portalIfc;
    let ctrl_mux <- mkSlaveMux(portals);
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
    interface masters = dma.masters;
    interface leds = controller.leds;
-   interface pins = controller.spi;
+   interface pins = controller.pins;
 
 endmodule : mkConnectalTop
 
-export GyroController::*;
-export ConnectalSpi::*;
+export Controller::*;
 export mkConnectalTop;
 

@@ -34,14 +34,14 @@ interface HBridgeCtrlIndication;
    method Action hbc_event(Bit#(32) e);
 endinterface
 
-interface HBridge2;
+interface HBridge2Pins;
    method Bit#(2) hbridge0();
    method Bit#(2) hbridge1();
 endinterface
  
 interface Controller;
    interface HBridgeCtrlRequest req;
-   interface HBridge2 pins;
+   interface HBridge2Pins pins;
    interface LEDS leds;
 endinterface
 
@@ -98,7 +98,7 @@ module mkHBridgeController#(HBridgeCtrlIndication ind)(Controller);
       endmethod
    endinterface
    
-   interface HBridge2 pins;
+   interface HBridge2Pins pins;
       method Bit#(2) hbridge0();
 	 return {enabled[0],direction[0]};
       endmethod
