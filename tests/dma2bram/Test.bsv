@@ -43,12 +43,12 @@ endinterface
 
 interface Test;
    interface TestRequest request;
-   interface MemReadClient#(64) readClient;
+   interface Vector#(1, MemReadClient#(64)) dmaClient;
 endinterface
 
-module mkTestRequest#(TestIndication indication)(Test);
+module mkTest#(TestIndication indication)(Test);
    
-   MemreadEngine#(64,1)  re <- mkMemreadEngine;
+   MemreadEngineV#(64,1,1)  re <- mkMemreadEngine;
    BRAM1Port#(Bit#(10),Bit#(8)) bram <- mkBRAM1Server(defaultValue);
    BRAMWriter#(10,64) bramWriter <- mkBRAMWriter(2, bram.portA, re.read_servers[0].cmdServer, re.read_servers[0].dataPipe);
       
@@ -62,6 +62,6 @@ module mkTestRequest#(TestIndication indication)(Test);
 	 bramWriter.start(sglId, 0, minBound, maxBound);
       endmethod
    endinterface
-   interface readClient = re.dmaClient;
+   interface dmaClient = cons(re.dmaClient, nil);
 endmodule
 
