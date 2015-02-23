@@ -50,7 +50,13 @@ module mkMaxSonarController#(MaxSonarCtrlIndication ind)(MaxSonarController);
    Reg#(Bit#(1)) range_ctrl_reg <- mkReg(0);
    Vector#(2,Reg#(Bit#(32))) high_cnt <- replicateM(mkReg(0));
    Reg#(Bit#(1)) last_pulse <- mkReg(0);
-
+   Reg#(Bool) end_pulse <- mkReg(False);
+   
+   rule foo if(end_pulse && range_ctrl_reg == 1);
+      end_pulse <= False;
+      ind.pulse_width(high_cnt[1]);
+   endrule
+   
    interface MaxSonarCtrlRequest req;
       method Action range_ctrl(Bit#(1) v);
 	 range_ctrl_reg <= v;
@@ -71,6 +77,7 @@ module mkMaxSonarController#(MaxSonarCtrlIndication ind)(MaxSonarController);
 	 if (last_pulse == 1 && v == 0) begin // end of pulse
 	    high_cnt[1] <= high_cnt[0];
 	    high_cnt[0] <= 0;
+	    end_pulse <= True;
 	 end
 	 else if (v == 1) begin
 	    high_cnt[0] <= high_cnt[0]+1;

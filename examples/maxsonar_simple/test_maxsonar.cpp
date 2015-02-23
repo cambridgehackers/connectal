@@ -44,9 +44,10 @@ int main(int argc, const char **argv)
   setClockFrequency(0, req_freq, &freq);
   fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
 
+  device->pulse_width();
+  sleep(1);
   device->range_ctrl(0xFFFFFFFF);
   while(true){
-    device->pulse_width();
     sleep(1);
   }
 }
