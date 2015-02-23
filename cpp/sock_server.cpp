@@ -36,6 +36,9 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include "sock_server.h"
+#include <signal.h>
+
+#include "dmaManager.h"
 
 sock_server::sock_server(int p)
 {
@@ -113,4 +116,3 @@ void* connect_to_client_wrapper(void *server)
 {
   return ((sock_server*)server)->connect_to_client();
 }
-

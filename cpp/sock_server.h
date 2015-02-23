@@ -39,5 +39,4 @@ class sock_server
   bool disconnected();
 };
 void* connect_to_client_wrapper(void *server);
-
 #endif //_SOCK_SERVER_H_

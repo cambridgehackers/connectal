@@ -2,11 +2,11 @@
 CONNECTALDIR ?= ../..
 INTERFACES = MaxSonarCtrlRequest MaxSonarCtrlIndication
 BSVFILES = MaxSonarController.bsv Top.bsv 
-CPPFILES= test_maxsonar.cpp
-NUMBER_OF_MASTERS =0
-PIN_TYPE = MaxSonarPins
+CPPFILES= test_maxsonar.cpp $(CONNECTALDIR)/cpp/sock_server.cpp
+NUMBER_OF_MASTERS =1
 CONNECTALFLAGS = -C $(BOARD)/sources/pinout-$(BOARD).xdc
 
+PIN_TYPE = MaxSonarPins
 PIN_BINDING ?= -b pmod:pmodb
 
 gentarget:: $(BOARD)/sources/pinout-$(BOARD).xdc

@@ -28,6 +28,12 @@
 #include <assert.h>
 #include <string.h>
 
+#include "StdDmaIndication.h"
+#include "MemServerRequest.h"
+#include "MMURequest.h"
+#include "dmaManager.h"
+#include "sock_server.h"
+
 #include "maxsonar_simple.h"
 #include "MaxSonarCtrlRequest.h"
 #include "GeneratedTypes.h"
@@ -36,17 +42,32 @@ int main(int argc, const char **argv)
 {
   MaxSonarCtrlIndication *ind = new MaxSonarCtrlIndication(IfcNames_ControllerIndication);
   MaxSonarCtrlRequestProxy *device = new MaxSonarCtrlRequestProxy(IfcNames_ControllerRequest);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  DmaManager *dma = new DmaManager(dmap);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
+  sem_init(&status_sem,1,0);
   portalExec_start();
+
+  int dstAlloc = portalAlloc(alloc_sz);
+  char *dstBuffer = (char *)portalMmap(dstAlloc, alloc_sz);
+  unsigned int ref_dstAlloc = dma->reference(dstAlloc);
 
   long req_freq = 100000000; // 100 mHz
   long freq = 0;
   setClockFrequency(0, req_freq, &freq);
   fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
 
+  char* snapshot = (char*)malloc(alloc_sz);
+  sock_server *ss = new sock_server(1234);
+  ss->start_server();
+
   device->pulse_width();
   sleep(1);
   device->range_ctrl(0xFFFFFFFF);
+  device->sample(ref_dstAlloc, alloc_sz);
   while(true){
     sleep(1);
   }
