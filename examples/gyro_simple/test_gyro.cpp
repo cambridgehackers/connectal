@@ -85,7 +85,9 @@ int main(int argc, const char **argv)
 #else
     usleep(50000);
 #endif
+    set_en(device, 0);
     int datalen = sample_gyro(wrap_limit, device, ref_dstAlloc, dstAlloc, dstBuffer, snapshot); 
+    set_en(device, 2);
     if (spew) display(snapshot, datalen);
     ss->send_data(snapshot, datalen);
   }

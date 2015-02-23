@@ -37,6 +37,7 @@ class sock_server
   void send_data(char* data, int len);
   int start_server();
   bool disconnected();
+  int read_circ_buff(int buff_len, unsigned int ref_dstAlloc, int dstAlloc, char* dstBuffer, char *snapshot);
+  void* connect_to_client_wrapper(void *server);
 };
-void* connect_to_client_wrapper(void *server);
 #endif //_SOCK_SERVER_H_

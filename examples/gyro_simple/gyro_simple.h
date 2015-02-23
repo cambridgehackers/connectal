@@ -112,49 +112,4 @@ void setup_registers(GyroCtrlRequestProxy *device, int ref_dstAlloc, int wrap_li
 #endif
 }
 
-int sample_gyro(int wrap_limit, GyroCtrlRequestProxy *device, unsigned int ref_dstAlloc, 
-		int dstAlloc, char* dstBuffer, char *snapshot)
-{
-  set_en(device, 0);
-  int dwc = write_wrap_cnt - wrap_cnt;
-  int two,top,bottom,datalen=0;
-  if(dwc == 0){
-    assert(addr <= write_addr);
-    two = false;
-    top = write_addr;
-    bottom = addr;
-    datalen = write_addr - addr;
-  } else if (dwc == 1 && addr > write_addr) {
-    two = true;
-    top = addr;
-    bottom = write_addr;
-    datalen = (wrap_limit-top)+bottom;
-  } else if (write_addr == 0) {
-    two = false;
-    top = wrap_limit;
-    bottom = 0;
-    datalen = wrap_limit;
-  } else {
-    two = true;
-    top = write_addr;
-    bottom = write_addr;
-    datalen = wrap_limit;
-  }
-  top = (top/6)*6;
-  bottom = (bottom/6)*6;
-  portalDCacheInval(dstAlloc, alloc_sz, dstBuffer);    
-  if (verbose) fprintf(stderr, "two:%d, top:%4x, bottom:%4x, datalen:%4x, dwc:%d\n", two,top,bottom,datalen,dwc);
-  if (datalen){
-    if (two) {
-      memcpy(snapshot,                  dstBuffer+top,    datalen-bottom);
-      memcpy(snapshot+(datalen-bottom), dstBuffer,        bottom        );
-    } else {
-      memcpy(snapshot,                  dstBuffer+bottom, datalen       );
-  }
-  }
-  addr = write_addr;
-  wrap_cnt = write_wrap_cnt;
-  set_en(device, 2);
-  return datalen;
-}
 
