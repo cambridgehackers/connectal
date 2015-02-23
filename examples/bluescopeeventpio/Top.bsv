@@ -43,7 +43,7 @@ typedef enum {BlueScopeEventPIOIndication, BlueScopeEventPIORequest, SignalGenIn
 module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
 
    BlueScopeEventPIOIndicationProxy blueScopeEventPIOIndicationProxy <- mkBlueScopeEventPIOIndicationProxy(BlueScopeEventPIOIndication);
-   BlueScopeEventPIOControl#(32) bs <- mkBlueScopeEventPIO(BlueScopeEventPIOSampleLength, blueScopeEventPIOIndicationProxy.ifc);
+   BlueScopeEventPIOControl#(32) bs <- mkBlueScopeEventPIO('BlueScopeEventPIOSampleLength, blueScopeEventPIOIndicationProxy.ifc);
    BlueScopeEventPIORequestWrapper blueScopeEventPIORequestWrapper <- mkBlueScopeEventPIORequestWrapper(BlueScopeEventPIORequest,bs.requestIfc);
 
    SignalGenIndicationProxy signalGenIndicationProxy <- mkSignalGenIndicationProxy(SignalGenIndication);
