@@ -38,14 +38,13 @@ interface Controller;
    interface GyroCtrlRequest gyro_req;
    interface ZedboardRobotPins pins;
    interface LEDS leds;
-   interface MemWriteClient#(64) dmaClient;
+   interface Vector#(2,MemWriteClient#(64)) dmaClients;
 endinterface
 
 module mkController#(MaxSonarCtrlIndication maxsonar_ind, GyroCtrlIndication gyro_ind)(Controller);
 
    MaxSonarController msc <- mkMaxSonarController(maxsonar_ind);
    GyroController gc <- mkGyroController(gyro_ind);
-   
    
    interface MaxSonarCtrlRequest maxsonar_req = msc.req;
    interface GyroCtrlRequest gyro_req = gc.req;
@@ -54,6 +53,6 @@ module mkController#(MaxSonarCtrlIndication maxsonar_ind, GyroCtrlIndication gyr
       interface SpiPins spi_pins = gc.spi;
    endinterface
    interface LEDS leds = msc.leds;
-   interface MemWriteClient dmaClient = gc.dmaClient;
+   interface dmaClients = cons(gc.dmaClient, cons(msc.dmaClient,nil));
 
 endmodule

@@ -37,22 +37,24 @@
 #include "GeneratedTypes.h"
 #include "gyro.h"
 
-static int spew = 0;
-static int alloc_sz = 1<<10;
-static sem_t status_sem;
-static sem_t read_sem;
-static sem_t write_sem;
-static uint32_t read_reg_val;
-static int verbose = 0;
-static uint32_t write_addr = 0;
-static int write_wrap_cnt = 0;
-static uint32_t addr = 0;
-static int wrap_cnt = 0;
 
 class GyroCtrlIndication : public GyroCtrlIndicationWrapper
 {
-public:
-  GyroCtrlIndication(int id) : GyroCtrlIndicationWrapper(id) {}
+ public:
+  sem_t status_sem;
+  sem_t read_sem;
+  sem_t write_sem;
+  uint32_t read_reg_val;
+  uint32_t write_addr;
+  int write_wrap_cnt;
+
+  GyroCtrlIndication(int id) : GyroCtrlIndicationWrapper(id) {
+    sem_init(&status_sem,1,0);
+    sem_init(&read_sem,1,0);
+    sem_init(&write_sem,1,0);
+    write_addr = 0;
+    write_wrap_cnt = 0;
+  }
   virtual void read_reg_resp ( const uint32_t v){
     //fprintf(stderr, "GyroCtrlIndication::read_reg_resp(v=%x)\n", v);
     read_reg_val = v;
@@ -70,22 +72,22 @@ public:
   }
 };
 
-void read_reg(GyroCtrlRequestProxy *device, unsigned short addr)
+void read_reg(GyroCtrlIndication *ind, GyroCtrlRequestProxy *device, unsigned short addr)
 {
   device->read_reg_req(addr);
-  sem_wait(&read_sem);
+  sem_wait(&(ind->read_sem));
 }
 
-void write_reg(GyroCtrlRequestProxy *device, unsigned short addr, unsigned short val)
+void write_reg(GyroCtrlIndication *ind, GyroCtrlRequestProxy *device, unsigned short addr, unsigned short val)
 {
   device->write_reg_req(addr,val);
-  sem_wait(&write_sem);
+  sem_wait(&(ind->write_sem));
 }
 
-void set_en(GyroCtrlRequestProxy *device, unsigned int v)
+void set_en(GyroCtrlIndication *ind, GyroCtrlRequestProxy *device, unsigned int v)
 {
   device->set_en(v);
-  if(!v) sem_wait(&status_sem);
+  if(!v) sem_wait(&(ind->status_sem));
 }
 
 void display(void *b, int len){
@@ -95,15 +97,15 @@ void display(void *b, int len){
   }
 }
 
-void setup_registers(GyroCtrlRequestProxy *device, int ref_dstAlloc, int wrap_limit)
+void setup_registers(GyroCtrlIndication *ind, GyroCtrlRequestProxy *device, int ref_dstAlloc, int wrap_limit)
 {
-  write_reg(device, CTRL_REG1, 0b11001111);  // ODR:800Hz Cutoff:30
-  write_reg(device, CTRL_REG2, 0b00000000);
-  write_reg(device, CTRL_REG3, 0b00000000);
-  write_reg(device, CTRL_REG4, 0b10100000);  // BDU:1, Range:2000 dps
-  write_reg(device, CTRL_REG5, 0b00000000);
+  write_reg(ind,device, CTRL_REG1, 0b11001111);  // ODR:800Hz Cutoff:30
+  write_reg(ind,device, CTRL_REG2, 0b00000000);
+  write_reg(ind,device, CTRL_REG3, 0b00000000);
+  write_reg(ind,device, CTRL_REG4, 0b10100000);  // BDU:1, Range:2000 dps
+  write_reg(ind,device, CTRL_REG5, 0b00000000);
   // make sure the memwrite is disabled before we start
-  set_en(device,0); 
+  set_en(ind,device,0); 
 #ifdef BSIM
   device->sample(ref_dstAlloc, wrap_limit, 10);
 #else

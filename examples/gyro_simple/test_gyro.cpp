@@ -42,6 +42,9 @@
 #include "gyro_simple.h"
 #include "sock_server.h"
 
+static int spew = 1;
+static int alloc_sz = 1<<10;
+
 int main(int argc, const char **argv)
 {
   GyroCtrlIndication *ind = new GyroCtrlIndication(IfcNames_ControllerIndication);
@@ -52,9 +55,6 @@ int main(int argc, const char **argv)
   MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
-  sem_init(&status_sem,1,0);
-  sem_init(&read_sem,1,0);
-  sem_init(&write_sem,1,0);
   portalExec_start();
 
   int dstAlloc = portalAlloc(alloc_sz);
@@ -77,7 +77,7 @@ int main(int argc, const char **argv)
   ss->start_server();
 
   // setup gyro registers and dma infra
-  setup_registers(device, ref_dstAlloc, wrap_limit);  
+  setup_registers(ind,device, ref_dstAlloc, wrap_limit);  
 
   while(true){
 #ifdef BSIM
@@ -85,9 +85,9 @@ int main(int argc, const char **argv)
 #else
     usleep(50000);
 #endif
-    set_en(device, 0);
-    int datalen = ss->read_circ_buff(wrap_limit, ref_dstAlloc, dstAlloc, dstBuffer, snapshot, write_addr, write_wrap_cnt); 
-    set_en(device, 2);
+    set_en(ind,device, 0);
+    int datalen = ss->read_circ_buff(wrap_limit, ref_dstAlloc, dstAlloc, dstBuffer, snapshot, ind->write_addr, ind->write_wrap_cnt, 6); 
+    set_en(ind,device, 2);
     if (spew) display(snapshot, datalen);
     ss->send_data(snapshot, datalen);
   }

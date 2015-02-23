@@ -67,23 +67,34 @@ module mkMaxSonarController#(MaxSonarCtrlIndication ind)(MaxSonarController);
    Reg#(Bit#(32))  sglId      <- mkReg(0);
    FIFO#(Bool)     pw_fifo    <- mkSizedFIFO(1);
    Reg#(Bit#(8))   wr_reg     <- mkReg(0);
-   FIFO#(Bit#(8))  wr_queue   <- mkSizedFIFO(4);
 `ifdef BSIM
-   Reg#(Bit#(32))   bsim_cnt   <- mkReg(0);
+   Reg#(Bit#(32))  bsim_cnt   <- mkReg(0);
+   Reg#(Bit#(32))  bsim_pulse <- mkReg(0);
 `endif
+   FIFO#(Bit#(8))  wr_queue   <- mkSizedFIFO(1);
+
    let clk <- exposeCurrentClock;
    let rst <- exposeCurrentReset;
    Gearbox#(1,2,Bit#(32)) gb   <- mk1toNGearbox(clk,rst,clk,rst);
    let verbose = True;
-
-   rule fill_gb if (end_pulse && range_ctrl_reg == 1);
-      end_pulse <= False;
+   
 `ifdef BSIM
-      bsim_cnt <= bsim_cnt+1;
-      gb.enq(cons(bsim_cnt,nil));
-`else
+   rule bsim_pulse_rule if (!end_pulse);
+      if (bsim_pulse[10] == 1) begin
+	 bsim_cnt <= bsim_cnt+1;
+	 high_cnt[1] <= bsim_cnt+1;
+	 end_pulse <= True;
+	 bsim_pulse <= 0;
+      end 
+      else begin
+	 bsim_pulse <= bsim_pulse+1;
+      end
+   endrule
+`endif   
+
+   rule fill_gb if (end_pulse);
+      end_pulse <= False;
       gb.enq(cons(high_cnt[1],nil));
-`endif
    endrule
    
    interface MaxSonarCtrlRequest req;
@@ -131,7 +142,7 @@ module mkMaxSonarController#(MaxSonarCtrlIndication ind)(MaxSonarController);
    interface MemWriteClient dmaClient;
       interface Get writeReq;
 	 method ActionValue#(MemRequest) get if (allocSz > 0 && en_memwr > 0);
-	    Bit#(8) bl = 128;
+	    Bit#(8) bl = 8;
 	    Bit#(32) new_writePtr = writePtr + extend(bl);
 	    if (new_writePtr >= allocSz) begin
 	       new_writePtr = 0;

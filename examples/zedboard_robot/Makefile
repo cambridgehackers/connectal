@@ -2,7 +2,7 @@
 CONNECTALDIR ?= ../..
 INTERFACES = MaxSonarCtrlRequest MaxSonarCtrlIndication GyroCtrlRequest GyroCtrlIndication
 BSVFILES = Controller.bsv Top.bsv ../gyro_simple/GyroController.bsv ../maxsonar_simple/MaxSonarController.bsv
-CPPFILES= test_zedboard_robot.cpp ../maxsonar_simple/maxsonar_simple.h ../gyro_simple/gyro_simple.h
+CPPFILES= test_zedboard_robot.cpp ../maxsonar_simple/maxsonar_simple.h ../gyro_simple/gyro_simple.h $(CONNECTALDIR)/cpp/sock_server.cpp
 NUMBER_OF_MASTERS =1
 PIN_TYPE = ZedboardRobotPins
 CONNECTALFLAGS = -C $(BOARD)/sources/pinout-$(BOARD).xdc

@@ -38,6 +38,9 @@
 #include "MaxSonarCtrlRequest.h"
 #include "GeneratedTypes.h"
 
+int spew = 1;
+int alloc_sz = 1<<8;
+
 int main(int argc, const char **argv)
 {
   MaxSonarCtrlIndication *ind = new MaxSonarCtrlIndication(IfcNames_ControllerIndication);
@@ -48,7 +51,6 @@ int main(int argc, const char **argv)
   MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
-  sem_init(&status_sem,1,0);
   portalExec_start();
 
   int dstAlloc = portalAlloc(alloc_sz);
@@ -63,12 +65,22 @@ int main(int argc, const char **argv)
   char* snapshot = (char*)malloc(alloc_sz);
   sock_server *ss = new sock_server(1234);
   ss->start_server();
-
-  device->pulse_width();
-  sleep(1);
   device->range_ctrl(0xFFFFFFFF);
+
+#define MEM_PATH
+#ifdef MEM_PATH
   device->sample(ref_dstAlloc, alloc_sz);
+  while (true){
+    usleep(1);
+    set_en(ind,device, 0);
+    int datalen = ss->read_circ_buff(alloc_sz, ref_dstAlloc, dstAlloc, dstBuffer, snapshot, ind->write_addr, ind->write_wrap_cnt, 1); 
+    set_en(ind,device, 2);
+    if (spew) display((uint32_t*)snapshot, datalen/4);
+  }
+#else
   while(true){
+    device->pulse_width();
     sleep(1);
   }
+#endif
 }
