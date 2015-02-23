@@ -23,7 +23,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <pthread.h>
 #include <semaphore.h>
 
 #include "StdDmaIndication.h"
@@ -31,9 +30,12 @@
 #include "MMURequest.h"
 #include "FMComms1Request.h"
 #include "FMComms1Indication.h"
+#include "BlueScopeEventPIORequest.h"
+#include "BlueScopeEventPIOIndication.h"
 
 sem_t read_sem;
 sem_t write_sem;
+sem_t cv_sem;
 
 int readBurstLen = 16;
 int writeBurstLen = 16;
@@ -64,30 +66,48 @@ public:
   }
 };
 
-static void *thread_routine(void *data)
+uint32_t counter_value = 0;
+
+class BlueScopeEventPIOIndication : public BlueScopeEventPIOIndicationWrapper
 {
-    fprintf(stderr, "Calling portalExec\n");
-    portalExec(0);
-    fprintf(stderr, "portalExec returned ???\n");
-    return data;
-}
+public:
+  BlueScopeEventPIOIndication(unsigned int id) : BlueScopeEventPIOIndicationWrapper(id){}
+
+  virtual void reportEvent(uint32_t v, uint32_t timestamp ){
+    fprintf(stderr, "BlueScopeEventPIO::reportEvent(%08x, %08x)\n", v, timestamp);
+  }
+  virtual void counterValue(uint32_t v){
+    counter_value = v;
+    sem_post(&cv_sem);
+    fprintf(stderr, "BlueScopeEventPIO::counterValue value=%u\n", v);
+    
+  }
+};
+
 
 int main(int argc, const char **argv)
 {
-  PortalPoller *poller = 0;
   int srcAlloc;
   int dstAlloc;
   unsigned int *srcBuffer = 0;
   unsigned int *dstBuffer = 0;
 
+
   FMComms1RequestProxy *device = 0;
   FMComms1Indication *deviceIndication = 0;
+  BlueScopeEventPIORequestProxy *bluescope = 0;
+  BlueScopeEventPIOIndication *bluescopeIndication = 0;
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
-  poller = new PortalPoller();
+  if(sem_init(&cv_sem, 1, 0)){
+    fprintf(stderr, "failed to init cv_sem\n");
+    exit(1);
+  }
 
-  device = new FMComms1RequestProxy(IfcNames_FMComms1Request, poller);
+  device = new FMComms1RequestProxy(IfcNames_FMComms1Request);
+
+
   MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
   MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
   DmaManager *dma = new DmaManager(dmap);
@@ -96,6 +116,12 @@ int main(int argc, const char **argv)
 
   deviceIndication = new FMComms1Indication(IfcNames_FMComms1Indication);
 
+  bluescope = new BlueScopeEventPIORequestProxy(IfcNames_BlueScopeEventPIORequest);
+  bluescopeIndication = new BlueScopeEventPIOIndication(IfcNames_BlueScopeEventPIOIndication);
+
+  fprintf(stderr, "Main::portalExec_start()...\n");
+  portalExec_start();
+
   fprintf(stderr, "Main::allocating memory...\n");
   srcAlloc = portalAlloc(alloc_sz);
 
@@ -103,11 +129,6 @@ int main(int argc, const char **argv)
   dstAlloc = portalAlloc(alloc_sz);
 
   dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
-
-  pthread_t thread;
-  pthread_attr_t attr;
-  pthread_attr_init(&attr);
-  pthread_create(&thread, &attr, thread_routine, 0);
 
   int status;
   status = setClockFrequency(0, 100000000, 0);
@@ -118,6 +139,12 @@ int main(int argc, const char **argv)
   portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
+  bluescope->doReset();
+  bluescope->setTriggerMask (0xFFFFFFFF);
+  bluescope->getCounterValue();
+  bluescope->enableIndications(1);
+  sem_wait(&cv_sem);
+  fprintf(stderr, "Main::initial BlueScopeEventPIO counterValue: %d\n", counter_value);
 
   device->getReadStatus();
   device->getWriteStatus();
@@ -150,6 +177,12 @@ int main(int argc, const char **argv)
   device->startWrite(ref_dstAlloc, numWords, writeBurstLen, 0);
   sem_wait(&read_sem);
   sem_wait(&write_sem);
+
+  bluescope->getCounterValue();
+  fprintf(stderr, "Main::getCounter\n");
+ 
+  sem_wait(&cv_sem);
+  fprintf(stderr, "Main::final BlueScopeEventPIO counterValue: %d\n", counter_value);
 
   exit(0);
 }
