@@ -2,7 +2,7 @@
 CONNECTALDIR ?= ../..
 INTERFACES = GyroCtrlRequest GyroCtrlIndication
 BSVFILES = GyroController.bsv Top.bsv
-CPPFILES = test_gyro.cpp
+CPPFILES = test_gyro.cpp $(CONNECTALDIR)/cpp/sock_server.cpp
 NUMBER_OF_MASTERS = 1
 CONNECTALFLAGS += -C $(BOARD)/sources/pinout-$(BOARD).xdc #--tcl clock.tcl
 
