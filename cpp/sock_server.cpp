@@ -42,6 +42,9 @@
 
 sock_server::sock_server(int p)
 {
+  verbose = 0;
+  wrap_cnt = 0;
+  addr = 0;
   clientsockfd = -1;
   serversockfd = -1;
   connecting_to_client = 0;
@@ -117,7 +120,7 @@ void* connect_to_client_wrapper(void *server)
   return ((sock_server*)server)->connect_to_client();
 }
 
-int sock_server::read_circ_buff(int buff_len, unsigned int ref_dstAlloc, int dstAlloc, char* dstBuffer, char *snapshot)
+int sock_server::read_circ_buff(int buff_len, unsigned int ref_dstAlloc, int dstAlloc, char* dstBuffer, char *snapshot, int write_addr, int write_wrap_cnt)
 {
   int dwc = write_wrap_cnt - wrap_cnt;
   int two,top,bottom,datalen=0;
@@ -131,21 +134,21 @@ int sock_server::read_circ_buff(int buff_len, unsigned int ref_dstAlloc, int dst
     two = true;
     top = addr;
     bottom = write_addr;
-    datalen = (wrap_limit-top)+bottom;
+    datalen = (buff_len-top)+bottom;
   } else if (write_addr == 0) {
     two = false;
-    top = wrap_limit;
+    top = buff_len;
     bottom = 0;
-    datalen = wrap_limit;
+    datalen = buff_len;
   } else {
     two = true;
     top = write_addr;
     bottom = write_addr;
-    datalen = wrap_limit;
+    datalen = buff_len;
   }
   top = (top/6)*6;
   bottom = (bottom/6)*6;
-  portalDCacheInval(dstAlloc, alloc_sz, dstBuffer);    
+  portalDCacheInval(dstAlloc, buff_len, dstBuffer);    
   if (verbose) fprintf(stderr, "two:%d, top:%4x, bottom:%4x, datalen:%4x, dwc:%d\n", two,top,bottom,datalen,dwc);
   if (datalen){
     if (two) {

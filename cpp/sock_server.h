@@ -26,6 +26,10 @@
 
 class sock_server
 {
+ private:
+  int wrap_cnt;
+  int addr;
+  int verbose;
  public:
   sock_server(int p);
   int clientsockfd;
@@ -37,7 +41,7 @@ class sock_server
   void send_data(char* data, int len);
   int start_server();
   bool disconnected();
-  int read_circ_buff(int buff_len, unsigned int ref_dstAlloc, int dstAlloc, char* dstBuffer, char *snapshot);
-  void* connect_to_client_wrapper(void *server);
+  int read_circ_buff(int buff_len, unsigned int ref_dstAlloc, int dstAlloc, char* dstBuffer,char *snapshot, int write_addr, int write_wrap_cnt); 
 };
+void* connect_to_client_wrapper(void *server);
 #endif //_SOCK_SERVER_H_
