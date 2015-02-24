@@ -67,7 +67,6 @@ int main(int argc, const char **argv)
   ss->start_server();
   device->range_ctrl(0xFFFFFFFF);
 
-#define MEM_PATH
 #ifdef MEM_PATH
   device->sample(ref_dstAlloc, alloc_sz);
   while (true){
@@ -83,7 +82,7 @@ int main(int argc, const char **argv)
     device->pulse_width();
     sem_wait(&(ind->pulse_width_sem));
     float distance = ((float)ind->useconds)/147.0;
-    fprintf(stderr, "(%d microseconds == %f inches)\n", ind->useconds, distance);
+    fprintf(stderr, "(%8d microseconds == %8f inches)\r", ind->useconds, distance);
   }
 #endif
 }

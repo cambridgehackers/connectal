@@ -131,7 +131,8 @@ class gyro_stream:
                 return rv
 
 
-visualize = False
+visualize = True
+spew = False
 if __name__ == "__main__":
     if (visualize):
         v  = gv()
@@ -146,8 +147,7 @@ if __name__ == "__main__":
                     if (visualize):
                         v.update(math.radians(pos[0]),math.radians(pos[1]),math.radians(pos[2]))
                         time.sleep(gs.perforate/800)
-                    else:
-                        print "%f %f %f" % (pos[0],pos[1],pos[2])
+                    if (spew): print "%f %f %f" % (pos[0],pos[1],pos[2])
     except KeyboardInterrupt:
         sc.s.close()
         sys.exit() 

@@ -93,7 +93,7 @@ void set_en(GyroCtrlIndication *ind, GyroCtrlRequestProxy *device, unsigned int 
 void display(void *b, int len){
   short *ss = (short*)b;
   for(int i = 0; i < len/2; i+=3){
-    fprintf(stderr, "%8d %8d %8d\n", ss[i], ss[i+1], ss[i+2]);
+    fprintf(stderr, "%8d %8d %8d\r", ss[i], ss[i+1], ss[i+2]);
   }
 }
 
