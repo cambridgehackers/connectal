@@ -126,9 +126,14 @@ int main(int argc, const char **argv)
   srcAlloc = portalAlloc(alloc_sz);
 
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
+  if ((char *) srcBuffer == MAP_FAILED) perror("srcBuffer mmap failed");
+  assert ((char *) srcBuffer != MAP_FAILED);
+
   dstAlloc = portalAlloc(alloc_sz);
 
   dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
+  if ((char *) dstBuffer == MAP_FAILED) perror("dstBuffer mmap failed");
+  assert ((char *) dstBuffer != MAP_FAILED);
 
   int status;
   status = setClockFrequency(0, 100000000, 0);
