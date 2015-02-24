@@ -42,9 +42,9 @@ int writeBurstLen = 16;
 
 
 #ifndef BSIM
-int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
+int numWords = 0x4096; // make sure to allocate at least one entry of each size
 #else
-int numWords = 0x124000/4;
+int numWords = 0x4096;
 #endif
 
 size_t test_sz  = numWords*sizeof(unsigned int);
