@@ -32,86 +32,93 @@ import pandas as pd
 import math
 from gyroVisualize import *
 
-perforate = 3
-write_octave = True
-octave_length = 20
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.connect((os.environ['RUNPARAM'], 1234))
-llen = ctypes.sizeof(ctypes.c_int);
-window_sz = 10
-v = gv()
 
-def sample():
-    bytes_recd = 0
-    while bytes_recd < llen:
-        chunk = s.recv(llen)
-        bytes_recd = len(chunk)
-    blen = struct.unpack("@i", chunk)[0]
-    bytes_recd = 0
-    buffer = []
-    while bytes_recd < blen:
-        chunk = s.recv(blen)
-        bytes_recd += len(chunk) 
-        buffer.append(chunk)
-    rv = buffer[0]
-    for b in buffer[1:]:
-        rv = rv + b
-    return rv
+class socket_client:
+    def __init__(self):
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.s.connect((os.environ['RUNPARAM'], 1234))
+        self.llen = ctypes.sizeof(ctypes.c_int);
+    def sample(self):
+        bytes_recd = 0
+        while bytes_recd < self.llen:
+            chunk = self.s.recv(self.llen)
+            bytes_recd = len(chunk)
+        blen = struct.unpack("@i", chunk)[0]
+        bytes_recd = 0
+        buffer = []
+        while bytes_recd < blen:
+            chunk = self.s.recv(blen)
+            bytes_recd += len(chunk) 
+            buffer.append(chunk)
+        rv = buffer[0]
+        for b in buffer[1:]:
+            rv = rv + b
+        return rv
 
-def animate():    
-    times = 0
-    tails = [[],[],[]]
-    means = [0.0,0.0,0.0]
-    pos = [0.0,0.0,0.0]
-    calibrate_window = 0
-    if (write_octave):
-        octave_file = open("x.m", "w");
-        octave_file.write("#! /usr/bin/octave --persist \nv = [");
-    try:
-        while (True):
-            times += 1
-            ss = sample()
+
+class gyro_stream:
+    def __init__(self):
+        self.times = 0
+        self.tails = [[],[],[]]
+        self.means = [0.0,0.0,0.0]
+        self.calibrate_window = 0
+        self.perforate = 3
+
+    def next_samples(self,ss):
+        smoothe = True;
+        octave_length = 20
+        window_sz = 10
+        pos = [0.0,0.0,0.0]
+        rv = []
+        write_octave = True
+        if (write_octave):
+            octave_file = open("x.m", "w");
+            octave_file.write("#! /usr/bin/octave --persist \nv = [");
+            self.times += 1
             num_samples = len(ss)/2
             samples = struct.unpack(''.join(['h' for i in range(0,num_samples)]),ss)
-            x = numpy.concatenate((tails[0],samples[0::3]),0)
-            y = numpy.concatenate((tails[1],samples[1::3]),0)
-            z = numpy.concatenate((tails[2],samples[2::3]),0)
-            xs = pd.rolling_mean(pd.Series(x),window=window_sz)[window_sz:]
-            ys = pd.rolling_mean(pd.Series(y),window=window_sz)[window_sz:]
-            zs = pd.rolling_mean(pd.Series(z),window=window_sz)[window_sz:]
-            tails[0] = x[-window_sz:]
-            tails[1] = y[-window_sz:]
-            tails[2] = z[-window_sz:]
-                
+            if (smoothe):
+                x = numpy.concatenate((self.tails[0],samples[0::3]),0)
+                y = numpy.concatenate((self.tails[1],samples[1::3]),0)
+                z = numpy.concatenate((self.tails[2],samples[2::3]),0)
+                xs = pd.rolling_mean(pd.Series(x),window=window_sz)[window_sz:]
+                ys = pd.rolling_mean(pd.Series(y),window=window_sz)[window_sz:]
+                zs = pd.rolling_mean(pd.Series(z),window=window_sz)[window_sz:]
+                self.tails[0] = x[-window_sz:]
+                self.tails[1] = y[-window_sz:]
+                self.tails[2] = z[-window_sz:]
+            else:
+                xs = samples[0::3]
+                ys = samples[1::3]
+                zs = samples[2::3]
 
-            if (times <= octave_length):
-                print times
+
+            if (self.times <= octave_length):
+                print self.times
                 
-            xs = xs[::perforate]
-            ys = ys[::perforate]
-            zs = zs[::perforate]
+            xs = xs[::self.perforate]
+            ys = ys[::self.perforate]
+            zs = zs[::self.perforate]
 
             for x,y,z in zip(xs,ys,zs):
-                if (times <= octave_length):
-                    calibrate_window += 1
-                    means[0] += x;
-                    means[1] += y;
-                    means[2] += z;
+                if (self.times <= octave_length):
+                    self.calibrate_window += 1
+                    self.means[0] += x;
+                    self.means[1] += y;
+                    self.means[2] += z;
                     if (write_octave):
                         octave_file.write("%8d, %8d, %8d; \n" % (x,y,z));
                 else:
                     # sampling rate of 800 Hz. sensitivity is 70 mdps/digit
-                    pos[0] += perforate*(x-means[0])*70.0/800.0/1000.0
-                    pos[1] -= perforate*(y-means[1])*70.0/800.0/1000.0
-                    pos[2] -= perforate*(z-means[2])*70.0/800.0/1000.0
-                    v.update(math.radians(pos[0]),math.radians(pos[1]),math.radians(pos[2]))
-                    time.sleep(perforate/800)
-
+                    pos[0] += self.perforate*(x-self.means[0])*70.0/800.0/1000.0
+                    pos[1] -= self.perforate*(y-self.means[1])*70.0/800.0/1000.0
+                    pos[2] -= self.perforate*(z-self.means[2])*70.0/800.0/1000.0
+                    rv.append(pos)
                 
-            if (times == octave_length):
-                for i in range (0,len(means)):
-                    means[i] = means[i]/calibrate_window
-                print "x_mean:%f y_mean:%f, z_mean:%f\n" % (means[0],means[1],means[2])
+            if (self.times == octave_length):
+                for i in range (0,len(self.means)):
+                    self.means[i] = self.means[i]/self.calibrate_window
+                print "x_mean:%f y_mean:%f, z_mean:%f\n" % (self.means[0],self.means[1],self.means[2])
                 if (write_octave):
                     octave_file.write("];\n");
                     octave_file.write("plot(v(:,1),color=\"r\");\n");
@@ -120,13 +127,30 @@ def animate():
                     octave_file.write("plot(v(:,3),color=\"b\");\n");
                     octave_file.close()
                     print "done writing octave_file"
+            if (self.times > octave_length):
+                return rv
 
+
+visualize = False
+if __name__ == "__main__":
+    if (visualize):
+        v  = gv()
+    gs = gyro_stream()
+    sc = socket_client()
+    try:
+        while (True):
+            ss = sc.sample()
+            poss = gs.next_samples(ss)
+            if poss is not None:
+                for pos in poss:
+                    if (visualize):
+                        v.update(math.radians(pos[0]),math.radians(pos[1]),math.radians(pos[2]))
+                        time.sleep(gs.perforate/800)
+                    else:
+                        print "%f %f %f" % (pos[0],pos[1],pos[2])
     except KeyboardInterrupt:
-        s.close()
+        sc.s.close()
         sys.exit() 
-
-
-animate()
 
 
 

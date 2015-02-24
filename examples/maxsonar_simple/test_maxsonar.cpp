@@ -71,7 +71,7 @@ int main(int argc, const char **argv)
 #ifdef MEM_PATH
   device->sample(ref_dstAlloc, alloc_sz);
   while (true){
-    usleep(1);
+    usleep(50000);
     set_en(ind,device, 0);
     int datalen = ss->read_circ_buff(alloc_sz, ref_dstAlloc, dstAlloc, dstBuffer, snapshot, ind->write_addr, ind->write_wrap_cnt, 1); 
     set_en(ind,device, 2);
@@ -79,8 +79,11 @@ int main(int argc, const char **argv)
   }
 #else
   while(true){
+    usleep(50000);
     device->pulse_width();
-    sleep(1);
+    sem_wait(&(ind->pulse_width_sem));
+    float distance = ((float)ind->useconds)/147.0;
+    fprintf(stderr, "(%d microseconds == %f inches)\n", ind->useconds, distance);
   }
 #endif
 }

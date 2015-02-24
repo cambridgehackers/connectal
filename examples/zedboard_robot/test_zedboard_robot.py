@@ -22,11 +22,38 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import struct
+import sys
+import os
+sys.path.append(os.path.abspath('../gyro_simple'))
+
 from sonarVisualize import *
+from gyroVisualize  import *
+from test_gyro      import *
 
-
+visualize = False
+spew = False
 if __name__ == "__main__":
-    v = sv()
-    v.add_line((0,0,0),(1,1,0))
-    v.extend_line((1,0,0))
-    v.extend_line((0,0,0))
+    if (visualize):
+        g_v  = gv()
+        s_v  = sv()
+    gs = gyro_stream()
+    sc = socket_client()
+    try:
+        while (True):
+            gyro_ss = sc.sample()
+            sonar_ss = sc.sample()
+            poss = gs.next_samples(gyro_ss)
+            sonar_distance = (struct.unpack('I',sonar_ss)[0])/147.0
+            if (spew): print "sonar_distance: %f" % (sonar_distance)
+            if poss is not None:
+                for pos in poss:
+                    if (visualize):
+                        g_v.update(math.radians(pos[0]),math.radians(pos[1]),math.radians(pos[2]))
+                        time.sleep(gs.perforate/800)
+                        s_v.add_ray(math.radians(pos[2]),sonar_distance)
+                    if (spew):
+                        print "%f %f %f" % (pos[0],pos[1],pos[2])
+    except KeyboardInterrupt:
+        sc.s.close()
+        sys.exit() 
