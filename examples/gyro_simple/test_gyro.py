@@ -136,10 +136,6 @@ class gyro_stream:
             return rv
 
                 
-                
-
-visualize = True
-spew = False
 smoothe = False
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser('Display gyroscope data')
@@ -157,17 +153,10 @@ if __name__ == "__main__":
     sc = socket_client(options.address)
     summ = [0,0,0]
     try:
-        print 'here', time.clock()
-        t = time.clock()
         while (True):
             ss = sc.sample()
             poss = gs.next_samples(ss)
             if poss is not None:
-                printsample = False
-                #print time.clock(), t, (time.clock() - t) > 0.5
-                if (time.clock() - t) > 0.01:
-                    printsample = True
-                    t = time.clock()
                 for pos in poss:
                     if (spew): print "%f %f %f" % (pos[0],pos[1],pos[2])
                     summ[0] = summ[0]+pos[0]
