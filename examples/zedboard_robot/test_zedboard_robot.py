@@ -31,15 +31,22 @@ from sonarVisualize import *
 from gyroVisualize  import *
 from test_gyro      import *
 
-visualize = True
-spew = True
 smoothe = False
 if __name__ == "__main__":
+    argparser = argparse.ArgumentParser('Display gyroscope data')
+    argparser.add_argument('-v', '--visualize', help='Display gyro orientation in 3D rendering', default=False, action='store_true')
+    argparser.add_argument('-a', '--address', help='Device address', default=None)
+    options = argparser.parse_args()
+    spew = not options.visualize;
+    visualize = options.visualize;
+    print options.address
+    if not options.address:
+        options.address = os.environ['RUNPARAM']
     if (visualize):
         g_v  = gv()
         s_v  = sv()
     gs = gyro_stream()
-    sc = socket_client()
+    sc = socket_client(options.address)
     summ = [0,0,0]
     try:
         while (True):
