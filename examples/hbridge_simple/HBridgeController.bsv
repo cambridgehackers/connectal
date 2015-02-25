@@ -39,7 +39,7 @@ interface HBridge2Pins;
    method Bit#(2) hbridge1();
 endinterface
  
-interface HBridgeController;
+interface Controller;
    interface HBridgeCtrlRequest req;
    interface HBridge2Pins pins;
    interface LEDS leds;
@@ -47,7 +47,7 @@ endinterface
 
 typedef enum {Stopped, Started} HBridgeCtrlEvent deriving (Eq,Bits);
 
-module mkHBridgeController#(HBridgeCtrlIndication ind)(HBridgeController);
+module mkHBridgeController#(HBridgeCtrlIndication ind)(Controller);
    
    Vector#(2, Reg#(Bit#(1))) direction <- replicateM(mkReg(0));
    Vector#(2, Reg#(Bit#(1)))   enabled <- replicateM(mkReg(0));

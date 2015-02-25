@@ -25,7 +25,6 @@ import Leds::*;
 import Vector::*;
 import MaxSonarController::*;
 import GyroController::*;
-import HBridgeController::*;
 import ConnectalSpi::*;
 import MemTypes::*;
 
@@ -34,22 +33,19 @@ interface ZedboardRobotPins;
    interface SpiPins spi_pins;
 endinterface
 
-interface ZedboardRobotController;
+interface Controller;
    interface MaxSonarCtrlRequest maxsonar_req;
    interface GyroCtrlRequest gyro_req;
-   interface HBridgeCtrlRequest hbridge_req;
    interface ZedboardRobotPins pins;
    interface LEDS leds;
    interface Vector#(2,MemWriteClient#(64)) dmaClients;
 endinterface
 
-module mkZedboardRobotController#(MaxSonarCtrlIndication maxsonar_ind, GyroCtrlIndication gyro_ind, HBridgeCtrlIndication hbridge_ind)(ZedboardRobotController);
+module mkController#(MaxSonarCtrlIndication maxsonar_ind, GyroCtrlIndication gyro_ind)(Controller);
 
    MaxSonarController msc <- mkMaxSonarController(maxsonar_ind);
    GyroController gc <- mkGyroController(gyro_ind);
-   HBridgeController hbc <- mkHBridgeController(hbridge_ind);
    
-   interface HBridgeCtrlRequest hbridge_req = hbc.req;
    interface MaxSonarCtrlRequest maxsonar_req = msc.req;
    interface GyroCtrlRequest gyro_req = gc.req;
    interface ZedboardRobotPins pins;
@@ -60,4 +56,3 @@ module mkZedboardRobotController#(MaxSonarCtrlIndication maxsonar_ind, GyroCtrlI
    interface dmaClients = cons(gc.dmaClient, cons(msc.dmaClient,nil));
 
 endmodule
-
