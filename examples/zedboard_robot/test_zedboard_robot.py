@@ -57,7 +57,7 @@ if __name__ == "__main__":
             if (spew): print "sonar_distance: %f" % (sonar_distance)
             if poss is not None:
                 for pos in poss:
-                    #if (spew): print "%f %f %f" % (pos[0],pos[1],pos[2])
+                    if (spew): print "%f %f %f" % (pos[0],pos[1],pos[2])
                     summ[0] = summ[0]+pos[0]
                     summ[1] = summ[1]+pos[1]
                     summ[2] = summ[2]+pos[2]
@@ -68,7 +68,6 @@ if __name__ == "__main__":
                 if (visualize and (not smoothe)):
                     g_v.update(summ)
                     s_v.add_ray(summ[2],sonar_distance)
-                if (not spew): print "%f %f %f" % (summ[0], summ[1], summ[2])
     except KeyboardInterrupt:
         sc.s.close()
         sys.exit() 
