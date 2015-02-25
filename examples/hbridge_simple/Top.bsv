@@ -43,7 +43,7 @@ typedef enum {ControllerRequest, ControllerIndication} IfcNames deriving (Eq,Bit
 module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,HBridge2Pins,0));
 
    HBridgeCtrlIndicationProxy cp <- mkHBridgeCtrlIndicationProxy(ControllerIndication);
-   Controller controller <- mkHBridgeController(cp.ifc);
+   HBridgeController controller <- mkHBridgeController(cp.ifc);
    HBridgeCtrlRequestWrapper cw <- mkHBridgeCtrlRequestWrapper(ControllerRequest, controller.req);
    
    Vector#(2,StdPortal) portals;
