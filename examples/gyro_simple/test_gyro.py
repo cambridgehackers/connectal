@@ -25,18 +25,20 @@
 import sys
 import socket
 import struct
+import time
 import ctypes
 import os
 import numpy
 import pandas as pd
 import math
 from gyroVisualize import *
+import argparse
 
 
 class socket_client:
-    def __init__(self):
+    def __init__(self, devaddr):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s.connect((os.environ['RUNPARAM'], 1234))
+        self.s.connect((devaddr, 1234))
         self.llen = ctypes.sizeof(ctypes.c_int);
     def sample(self):
         bytes_recd = 0
@@ -134,20 +136,38 @@ class gyro_stream:
 visualize = True
 spew = False
 if __name__ == "__main__":
+    argparser = argparse.ArgumentParser('Display gyroscope data')
+    argparser.add_argument('-v', '--visualize', help='Display gyro orientation in 3D rendering', default=False, action='store_true')
+    argparser.add_argument('-a', '--address', help='Device address', default=None)
+    options = argparser.parse_args()
+    spew = not options.visualize;
+    visualize = options.visualize;
+    print options.address
+    if not options.address:
+        options.address = os.environ['RUNPARAM']
     if (visualize):
         v  = gv()
     gs = gyro_stream()
-    sc = socket_client()
+    sc = socket_client(options.address)
     try:
+        print 'here', time.clock()
+        t = time.clock()
         while (True):
             ss = sc.sample()
             poss = gs.next_samples(ss)
             if poss is not None:
+                printsample = False
+                #print time.clock(), t, (time.clock() - t) > 0.5
+                if (time.clock() - t) > 0.01:
+                    printsample = True
+                    t = time.clock()
                 for pos in poss:
                     if (visualize):
                         v.update(math.radians(pos[0]),math.radians(pos[1]),math.radians(pos[2]))
                         time.sleep(gs.perforate/800)
-                    if (spew): print "%f %f %f" % (pos[0],pos[1],pos[2])
+                    if (spew and printsample):
+                            print "%f %f %f" % (pos[0],pos[1],pos[2])
+                            printsample = False
     except KeyboardInterrupt:
         sc.s.close()
         sys.exit() 
