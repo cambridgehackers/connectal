@@ -29,8 +29,8 @@ class sock_server
  private:
   int wrap_cnt;
   int addr;
-  int verbose;
  public:
+  int verbose;
   sock_server(int p);
   int clientsockfd;
   int serversockfd;

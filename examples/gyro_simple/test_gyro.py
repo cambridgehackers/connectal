@@ -62,79 +62,85 @@ class gyro_stream:
     def __init__(self):
         self.times = 0
         self.tails = [[],[],[]]
-        self.means = [0.0,0.0,0.0]
+        self.means = [0,0,0]
         self.calibrate_window = 0
-        self.perforate = 3
+        self.sample_freq_hz = 800
+
+    def radians(self, sample):
+        # sensitivity of sample is 70 milli-degrees-per-second/digit.  
+        # multiply sample by 70 to get milli-degrees-per-second                       
+        # divide by sample_freq_hz to get milli-degrees
+        # divide by 1000 to get degrees  
+        return (math.radians(sample[0]*70.0/self.sample_freq_hz/1000.0),
+                math.radians(-sample[1]*70.0/self.sample_freq_hz/1000.0),
+                math.radians(-sample[2]*70.0/self.sample_freq_hz/1000.0))
 
     def next_samples(self,ss):
-        smoothe = True;
         octave_length = 20
         window_sz = 10
-        pos = [0.0,0.0,0.0]
         rv = []
         write_octave = True
+        lpf = True
         if (write_octave):
             octave_file = open("x.m", "w");
             octave_file.write("#! /usr/bin/octave --persist \nv = [");
-            self.times += 1
-            num_samples = len(ss)/2
-            samples = struct.unpack(''.join(['h' for i in range(0,num_samples)]),ss)
-            if (smoothe):
-                x = numpy.concatenate((self.tails[0],samples[0::3]),0)
-                y = numpy.concatenate((self.tails[1],samples[1::3]),0)
-                z = numpy.concatenate((self.tails[2],samples[2::3]),0)
-                xs = pd.rolling_mean(pd.Series(x),window=window_sz)[window_sz:]
-                ys = pd.rolling_mean(pd.Series(y),window=window_sz)[window_sz:]
-                zs = pd.rolling_mean(pd.Series(z),window=window_sz)[window_sz:]
-                self.tails[0] = x[-window_sz:]
-                self.tails[1] = y[-window_sz:]
-                self.tails[2] = z[-window_sz:]
-            else:
-                xs = samples[0::3]
-                ys = samples[1::3]
-                zs = samples[2::3]
+        self.times += 1
+        num_samples = len(ss)/2
+        samples = struct.unpack(''.join(['h' for i in range(0,num_samples)]),ss)
+        if (lpf):
+            x = numpy.concatenate((self.tails[0],samples[0::3]),0)
+            y = numpy.concatenate((self.tails[1],samples[1::3]),0)
+            z = numpy.concatenate((self.tails[2],samples[2::3]),0)
+            xs = pd.rolling_mean(pd.Series(x),window=window_sz)[window_sz:]
+            ys = pd.rolling_mean(pd.Series(y),window=window_sz)[window_sz:]
+            zs = pd.rolling_mean(pd.Series(z),window=window_sz)[window_sz:]
+            self.tails[0] = x[-window_sz:]
+            self.tails[1] = y[-window_sz:]
+            self.tails[2] = z[-window_sz:]
+        else:
+            xs = samples[0::3]
+            ys = samples[1::3]
+            zs = samples[2::3]
 
-
+        if (self.times <= octave_length):
+            print self.times
+                
+        for x,y,z in zip(xs,ys,zs):
+            #print "%d %d %d" % (x,y,z)
             if (self.times <= octave_length):
-                print self.times
-                
-            xs = xs[::self.perforate]
-            ys = ys[::self.perforate]
-            zs = zs[::self.perforate]
-
-            for x,y,z in zip(xs,ys,zs):
-                if (self.times <= octave_length):
-                    self.calibrate_window += 1
-                    self.means[0] += x;
-                    self.means[1] += y;
-                    self.means[2] += z;
-                    if (write_octave):
-                        octave_file.write("%8d, %8d, %8d; \n" % (x,y,z));
-                else:
-                    # sampling rate of 800 Hz. sensitivity is 70 mdps/digit
-                    pos[0] += self.perforate*(x-self.means[0])*70.0/800.0/1000.0
-                    pos[1] -= self.perforate*(y-self.means[1])*70.0/800.0/1000.0
-                    pos[2] -= self.perforate*(z-self.means[2])*70.0/800.0/1000.0
-                    rv.append(pos)
-                
-            if (self.times == octave_length):
-                for i in range (0,len(self.means)):
-                    self.means[i] = self.means[i]/self.calibrate_window
-                print "x_mean:%f y_mean:%f, z_mean:%f\n" % (self.means[0],self.means[1],self.means[2])
+                self.calibrate_window += 1
+                self.means[0] += x;
+                self.means[1] += y;
+                self.means[2] += z;
                 if (write_octave):
-                    octave_file.write("];\n");
-                    octave_file.write("plot(v(:,1),color=\"r\");\n");
-                    octave_file.write("hold on;\n");
-                    octave_file.write("plot(v(:,2),color=\"g\");\n");
-                    octave_file.write("plot(v(:,3),color=\"b\");\n");
-                    octave_file.close()
-                    print "done writing octave_file"
-            if (self.times > octave_length):
-                return rv
+                    octave_file.write("%d, %d, %d; \n" % (x,y,z));
+            else:
+                pos = (x-self.means[0],y-self.means[1],z-self.means[2])
+                rv.append(self.radians(pos))
+                #print "%d %d %d" %(pos[0],pos[1],pos[2])
 
+        if (self.times == octave_length):
+            for i in range (0,len(self.means)):
+                self.means[i] = self.means[i]/self.calibrate_window
+            print "x_mean:%d y_mean:%d, z_mean:%d\n" % (self.means[0],self.means[1],self.means[2])
+            if (write_octave):
+                octave_file.write("];\n");
+                octave_file.write("plot(v(:,1),color=\"r\");\n");
+                octave_file.write("hold on;\n");
+                octave_file.write("plot(v(:,2),color=\"g\");\n");
+                octave_file.write("plot(v(:,3),color=\"b\");\n");
+                octave_file.close()
+                print "done writing octave_file"
+
+        if (self.times > octave_length):
+            return rv
+
+                
+                
 
 visualize = True
 spew = False
+smoothe = False
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser('Display gyroscope data')
     argparser.add_argument('-v', '--visualize', help='Display gyro orientation in 3D rendering', default=False, action='store_true')
@@ -149,6 +155,7 @@ if __name__ == "__main__":
         v  = gv()
     gs = gyro_stream()
     sc = socket_client(options.address)
+    summ = [0,0,0]
     try:
         print 'here', time.clock()
         t = time.clock()
@@ -162,12 +169,16 @@ if __name__ == "__main__":
                     printsample = True
                     t = time.clock()
                 for pos in poss:
-                    if (visualize):
-                        v.update(math.radians(pos[0]),math.radians(pos[1]),math.radians(pos[2]))
-                        time.sleep(gs.perforate/800)
-                    if (spew and printsample):
-                            print "%f %f %f" % (pos[0],pos[1],pos[2])
-                            printsample = False
+                    if (spew): print "%f %f %f" % (pos[0],pos[1],pos[2])
+                    summ[0] = summ[0]+pos[0]
+                    summ[1] = summ[1]+pos[1]
+                    summ[2] = summ[2]+pos[2]
+                    if (visualize and smoothe):
+                        v.update(pos)
+                        time.sleep(1/gs.sample_freq_hz)
+                if (visualize and (not smoothe)):
+                    v.update(summ)
+                if (not spew): print "%f %f %f" % (summ[0], summ[1], summ[2])
     except KeyboardInterrupt:
         sc.s.close()
         sys.exit() 

@@ -40,7 +40,7 @@
 #include "dmaManager.h"
 #include "sock_server.h"
 
-static int spew = 1;
+static int spew = 0;
 static int alloc_sz = 1<<10;
 
 int main(int argc, const char **argv)
@@ -75,10 +75,12 @@ int main(int argc, const char **argv)
   char* snapshot = (char*)malloc(alloc_sz);
   sock_server *ss = new sock_server(1234);
   ss->start_server();
+  //ss->verbose = 1;
 
   // setup gyro registers and dma infra
   setup_registers(gyro_ind,gyro_ctrl, ref_dstAlloc, wrap_limit);  
   maxsonar_ctrl->range_ctrl(0xFFFFFFFF);
+  int discard = 40;
 
   while(true){
 #ifdef BSIM
@@ -89,14 +91,18 @@ int main(int argc, const char **argv)
     maxsonar_ctrl->pulse_width();
     sem_wait(&(maxsonar_ind->pulse_width_sem));
     float distance = ((float)maxsonar_ind->useconds)/147.0;
-    if(spew) fprintf(stderr, "(%d microseconds == %f inches)\n", maxsonar_ind->useconds, distance);
 
     set_en(gyro_ind,gyro_ctrl, 0);
     int datalen = ss->read_circ_buff(wrap_limit, ref_dstAlloc, dstAlloc, dstBuffer, snapshot, gyro_ind->write_addr, gyro_ind->write_wrap_cnt, 6); 
     set_en(gyro_ind,gyro_ctrl, 2);
-
-    if (spew) display(snapshot, datalen);
-    ss->send_data(snapshot, datalen);
-    ss->send_data((char*)&(maxsonar_ind->useconds), sizeof(int));
+    
+    if (!discard){
+      if (spew) fprintf(stderr, "(%d microseconds == %f inches)\n", maxsonar_ind->useconds, distance);
+      if (spew) display(snapshot, datalen);
+      ss->send_data(snapshot, datalen);
+      ss->send_data((char*)&(maxsonar_ind->useconds), sizeof(int));
+    } else {
+      discard--;
+    }
   }
 }

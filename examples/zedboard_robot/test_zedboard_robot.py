@@ -31,14 +31,16 @@ from sonarVisualize import *
 from gyroVisualize  import *
 from test_gyro      import *
 
-visualize = False
-spew = False
+visualize = True
+spew = True
+smoothe = False
 if __name__ == "__main__":
     if (visualize):
         g_v  = gv()
         s_v  = sv()
     gs = gyro_stream()
     sc = socket_client()
+    summ = [0,0,0]
     try:
         while (True):
             gyro_ss = sc.sample()
@@ -48,12 +50,19 @@ if __name__ == "__main__":
             if (spew): print "sonar_distance: %f" % (sonar_distance)
             if poss is not None:
                 for pos in poss:
-                    if (visualize):
-                        g_v.update(math.radians(pos[0]),math.radians(pos[1]),math.radians(pos[2]))
-                        time.sleep(gs.perforate/800)
-                        s_v.add_ray(math.radians(pos[2]),sonar_distance)
-                    if (spew):
-                        print "%f %f %f" % (pos[0],pos[1],pos[2])
+                    #if (spew): print "%f %f %f" % (pos[0],pos[1],pos[2])
+                    summ[0] = summ[0]+pos[0]
+                    summ[1] = summ[1]+pos[1]
+                    summ[2] = summ[2]+pos[2]
+                    if (visualize and smoothe):
+                        g_v.update(pos)
+                        s_v.add_ray(summ[2],sonar_distance)
+                        time.sleep(1/gs.sample_freq_hz)
+                if (visualize and (not smoothe)):
+                    g_v.update(summ)
+                    s_v.add_ray(summ[2],sonar_distance)
+                if (not spew): print "%f %f %f" % (summ[0], summ[1], summ[2])
     except KeyboardInterrupt:
         sc.s.close()
         sys.exit() 
+

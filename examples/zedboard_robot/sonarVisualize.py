@@ -30,7 +30,6 @@ class sv:
         self.main_window=display(title="test_maxsonar", forward=(0,0,-1), width=500, up=(0,1,0), range=(1.2,1.2,1.2))
         self.main_window.select()
         self.cnt = 0
-        self.heading = 0
 
     def label_last(self):
         label(pos=self.last,text="%d"%(self.cnt),box=0,opacity=0)
@@ -46,11 +45,10 @@ class sv:
         self.last = end
         self.label_last()
 
-    def add_ray(self,delta,length):
-        self.heading = self.heading + delta
-        end_point_x = length*math.cos(self.heading)
-        end_point_y = length*math.sin(self.heading)
-        curve(pos=[(0,0), (end_point_x,end_point_y)])
+    def add_ray(self,heading,length):
+        end_point_x = length*math.cos(heading)
+        end_point_y = length*math.sin(heading)
+        curve(pos=[(0,0), (end_point_x/100,end_point_y/50)])
 
 if __name__ == "__main__":
     v = sv()

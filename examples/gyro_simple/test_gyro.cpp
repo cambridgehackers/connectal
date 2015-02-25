@@ -42,7 +42,7 @@
 #include "gyro_simple.h"
 #include "sock_server.h"
 
-static int spew = 1;
+static int spew = 0;
 static int alloc_sz = 1<<10;
 
 int main(int argc, const char **argv)
@@ -75,20 +75,26 @@ int main(int argc, const char **argv)
   char* snapshot = (char*)malloc(alloc_sz);
   sock_server *ss = new sock_server(1234);
   ss->start_server();
+  ss->verbose = 1;
 
   // setup gyro registers and dma infra
   setup_registers(ind,device, ref_dstAlloc, wrap_limit);  
+  int discard = 40;
 
   while(true){
 #ifdef BSIM
     sleep(5);
 #else
-    usleep(50000);
+    usleep(20000);
 #endif
     set_en(ind,device, 0);
     int datalen = ss->read_circ_buff(wrap_limit, ref_dstAlloc, dstAlloc, dstBuffer, snapshot, ind->write_addr, ind->write_wrap_cnt, 6); 
     set_en(ind,device, 2);
-    if (spew) display(snapshot, datalen);
-    ss->send_data(snapshot, datalen);
+    if (!discard){
+      ss->send_data(snapshot, datalen);
+      if (spew) display(snapshot, datalen);
+    } else {
+      discard--;
+    }
   }
 }

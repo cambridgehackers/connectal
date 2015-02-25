@@ -55,7 +55,7 @@ class MaxSonarCtrlIndication : public MaxSonarCtrlIndicationWrapper
   }
   virtual void pulse_width ( const uint32_t v){
     if (verbose) fprintf(stderr, "MaxSonarCtrlIndication::pulse_width(v=%x)\n", v);
-    useconds = v;
+    useconds = v/100;
     sem_post(&pulse_width_sem);
   }
   virtual void memwrite_status(const uint32_t addr, const uint32_t wrap_cnt){

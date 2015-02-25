@@ -82,7 +82,7 @@ int main(int argc, const char **argv)
     device->pulse_width();
     sem_wait(&(ind->pulse_width_sem));
     float distance = ((float)ind->useconds)/147.0;
-    fprintf(stderr, "(%8d microseconds == %8f inches)\r", ind->useconds, distance);
+    fprintf(stderr, "(%8d microseconds == %8f inches)\n", ind->useconds, distance);
   }
 #endif
 }

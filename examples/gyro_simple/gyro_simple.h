@@ -93,13 +93,19 @@ void set_en(GyroCtrlIndication *ind, GyroCtrlRequestProxy *device, unsigned int 
 void display(void *b, int len){
   short *ss = (short*)b;
   for(int i = 0; i < len/2; i+=3){
-    fprintf(stderr, "%8d %8d %8d\r", ss[i], ss[i+1], ss[i+2]);
+    fprintf(stderr, "%8d %8d %8d\n", ss[i], ss[i+1], ss[i+2]);
   }
 }
 
+
+#define HIGH_SAMPLE_RATE
 void setup_registers(GyroCtrlIndication *ind, GyroCtrlRequestProxy *device, int ref_dstAlloc, int wrap_limit)
 {
+#ifdef HIGH_SAMPLE_RATE
   write_reg(ind,device, CTRL_REG1, 0b11001111);  // ODR:800Hz Cutoff:30
+#else
+  write_reg(ind,device, CTRL_REG1, 0b00001111);  // ODR:100Hz Cutoff:12.5
+#endif
   write_reg(ind,device, CTRL_REG2, 0b00000000);
   write_reg(ind,device, CTRL_REG3, 0b00000000);
   write_reg(ind,device, CTRL_REG4, 0b10100000);  // BDU:1, Range:2000 dps
@@ -109,8 +115,13 @@ void setup_registers(GyroCtrlIndication *ind, GyroCtrlRequestProxy *device, int 
 #ifdef BSIM
   device->sample(ref_dstAlloc, wrap_limit, 10);
 #else
+#ifdef HIGH_SAMPLE_RATE
   // sampling rate of 800Hz. Model running at 100 MHz. 
   device->sample(ref_dstAlloc, wrap_limit, 1000000/8);
+#else
+  // sampling rate of 100Hz. Model running at 100 MHz. 
+  device->sample(ref_dstAlloc, wrap_limit, 1000000);
+#endif
 #endif
 }
 
