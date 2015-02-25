@@ -1,7 +1,8 @@
 
 CONNECTALDIR ?= ../..
+ZBLD = $(CONNECTALDIR)/lib/zedboard_robot/bsv
 INTERFACES = HBridgeCtrlRequest HBridgeCtrlIndication
-BSVFILES = HBridgeController.bsv Top.bsv 
+BSVFILES = $(ZBLD)/HBridgeController.bsv Top.bsv 
 CPPFILES= test_hbridge.cpp
 NUMBER_OF_MASTERS =0
 PIN_TYPE = HBridge2Pins
