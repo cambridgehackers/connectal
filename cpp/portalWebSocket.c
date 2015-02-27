@@ -39,6 +39,7 @@ struct per_session_data_connectal {
 
 #define WEB(P) ((struct per_session_data_connectal *)(P)->websock)
 static int connect_proceed;
+static int websock_trace ;//= 1;
 static int
 callback_connectal(struct libwebsocket_context *context,
 		   struct libwebsocket *wsi,
@@ -47,6 +48,7 @@ callback_connectal(struct libwebsocket_context *context,
     PortalInternal *pint = (PortalInternal *)libwebsocket_context_user(context);
     switch (reason) {
     case LWS_CALLBACK_CLIENT_ESTABLISHED:
+        if (websock_trace)
         fprintf(stderr, "LWS_CALLBACK_CLIENT_ESTABLISHED context %p pint %p wsi %p user %p in %p len %ld\n", context, pint, wsi, user, in, (long)len);
         pint->websock = user;
         connect_proceed = 1;
@@ -63,12 +65,14 @@ callback_connectal(struct libwebsocket_context *context,
         connect_proceed = 1;
         break;
     case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION:
-        //fprintf(stderr, "LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION context %p pint %p\n", context, pint);
+        if (websock_trace)
+        fprintf(stderr, "LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION context %p pint %p\n", context, pint);
         break;
     case LWS_CALLBACK_SERVER_WRITEABLE:
     case LWS_CALLBACK_CLIENT_WRITEABLE: {
 	struct per_session_data_connectal *pss = (struct per_session_data_connectal *)user;
-        //fprintf(stderr, "LWS_CALLBACK_SERVER_WRITEABLE context %p pint %p user %p txlen %lx\n", context, pint, user, (long)pss->txlen);
+        if (websock_trace)
+        fprintf(stderr, "LWS_CALLBACK_SERVER_WRITEABLE context %p pint %p user %p txlen %lx\n", context, pint, user, (long)pss->txlen);
         if (pss->txlen) {
 	    int n = libwebsocket_write(wsi, &pss->txbuf[LWS_SEND_BUFFER_PRE_PADDING], pss->txlen, LWS_WRITE_TEXT);
             pss->txlen = 0;
@@ -78,36 +82,45 @@ callback_connectal(struct libwebsocket_context *context,
         }
     case LWS_CALLBACK_RECEIVE:
     case LWS_CALLBACK_CLIENT_RECEIVE: {
-        //fprintf(stderr, "LWS_CALLBACK_RECEIVE context %p pint %p user %p len %ld\n", context, pint, user, (long)len);
+        if (websock_trace)
+        fprintf(stderr, "LWS_CALLBACK_RECEIVE context %p pint %p user %p len %ld\n", context, pint, user, (long)len);
 	struct per_session_data_connectal *pss = (struct per_session_data_connectal *)user;
 	memcpy(pss->rxbuf, in, len);
 	pss->rxlen = len;
         break;
         }
     case LWS_CALLBACK_ESTABLISHED:
+        if (websock_trace)
         fprintf(stderr, "LWS_CALLBACK_ESTABLISHED context %p pint %p wsi %p user %p in %p len %ld\n", context, pint, wsi, user, in, (long)len);
         pint->websock = user;
 	libwebsocket_callback_on_writable(context, wsi);
         break;
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
-        //fprintf(stderr, "LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED context %p pint %p wsi %p user %p\n", context, pint, wsi, user);
+        if (websock_trace)
+        fprintf(stderr, "LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED context %p pint %p wsi %p user %p\n", context, pint, wsi, user);
         break;
     case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH:
-        //fprintf(stderr, "LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH %p pint %p\n", context, pint);
+        if (websock_trace)
+        fprintf(stderr, "LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH %p pint %p\n", context, pint);
         break;
     case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:
-        //fprintf(stderr, "LWS_CALLBACK_FILTER_NETWORK_CONNECTION %p pint %p\n", context, pint);
+        if (websock_trace)
+        fprintf(stderr, "LWS_CALLBACK_FILTER_NETWORK_CONNECTION %p pint %p\n", context, pint);
         break;
     case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER:
+        if (websock_trace)
         fprintf(stderr, "LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER %p pint %p\n", context, pint);
         break;
     case LWS_CALLBACK_PROTOCOL_INIT:
-        //fprintf(stderr, "LWS_CALLBACK_PROTOCOL_INIT %p\n", context);
+        if (websock_trace)
+        fprintf(stderr, "LWS_CALLBACK_PROTOCOL_INIT %p\n", context);
         break;
     case LWS_CALLBACK_WSI_CREATE:
-        //fprintf(stderr, "LWS_CALLBACK_WSI_CREATE %p pint %p\n", context, pint);
+        if (websock_trace)
+        fprintf(stderr, "LWS_CALLBACK_WSI_CREATE %p pint %p\n", context, pint);
         break;
     case LWS_CALLBACK_WSI_DESTROY:
+        if (websock_trace)
         fprintf(stderr, "LWS_CALLBACK_WSI_DESTROY %p pint %p\n", context, pint);
         break;
     case LWS_CALLBACK_GET_THREAD_ID:
@@ -167,6 +180,7 @@ static int init_webSocketInit(struct PortalInternal *pint, void *aparam)
 	struct sockaddr_in6 *sa = (struct sockaddr_in6 *)param->addr->ai_addr;
 	port = htons(sa->sin6_port);
     }
+    if (websock_trace)
     fprintf(stderr, "[%s:%d] connecting addr=%p ai_family=%d port %d\n", __FUNCTION__, __LINE__, param->addr->ai_addr, param->addr->ai_family, port);
     struct lws_context_creation_info info = {0};
     info.port = CONTEXT_PORT_NO_LISTEN;
@@ -189,7 +203,8 @@ static int init_webSocketInit(struct PortalInternal *pint, void *aparam)
     connect_proceed = 0;
     struct libwebsocket *lsock = libwebsocket_client_connect(context, addresss, port, 0,
          "/", hosts, origins, protocols[pint->fpga_number][0].name, -1);
-printf("[%s:%d] pint %p = %p address %s name %s\n", __FUNCTION__, __LINE__, pint, lsock, buffer, protocols[pint->fpga_number][0].name);
+    if (websock_trace)
+        printf("[%s:%d] pint %p = %p address %s name %s\n", __FUNCTION__, __LINE__, pint, lsock, buffer, protocols[pint->fpga_number][0].name);
     pthread_t pid;
     pthread_create(&pid, NULL, webSocketWorker, context);
     while(!connect_proceed) {
@@ -212,6 +227,7 @@ static int init_webSocketResp(struct PortalInternal *pint, void *aparam)
 	struct sockaddr_in6 *sa = (struct sockaddr_in6 *)param->addr->ai_addr;
 	port = htons(sa->sin6_port);
     }
+    if (websock_trace)
     fprintf(stderr, "[%s:%d] listening on addr=%p ai_family=%d port %d\n", __FUNCTION__, __LINE__, param->addr->ai_addr, param->addr->ai_family, port);
     struct lws_context_creation_info info = {0};
     info.port = port;
@@ -225,6 +241,7 @@ static int init_webSocketResp(struct PortalInternal *pint, void *aparam)
 	return -1;
     }
     pthread_t pid;
+    if (websock_trace)
     fprintf(stderr, "[%s:%d] pint %p context %p\n", __FUNCTION__, __LINE__, pint, context);
     pthread_create(&pid, NULL, webSocketWorker, context);
     return 0;
@@ -237,7 +254,8 @@ static int event_webSocket(struct PortalInternal *pint)
     rxlen = WEB(pint)->rxlen;
   }
   if (rxlen) {
-      //fprintf(stderr, "[%s:%d] pint=%p handler %p pint->map_base=%p rxlen=%d\n", __FUNCTION__, __LINE__, pint, pint->handler, pint->map_base, rxlen);
+      if (websock_trace)
+      fprintf(stderr, "[%s:%d] pint=%p handler %p pint->map_base=%p rxlen=%d\n", __FUNCTION__, __LINE__, pint, pint->handler, pint->map_base, rxlen);
       int portal_number = 0;
       if (pint->handler) {
 	  int hdr = rxlen+1;
@@ -259,6 +277,7 @@ static void send_webSocket(struct PortalInternal *pint, volatile unsigned int *d
 {
     int n;
     uint32_t len = (hdr & 0xffff);
+    if (websock_trace)
 printf("[%s:%d] pint %p websock %p len %d data %s\n", __FUNCTION__, __LINE__, pint, WEB(pint), len, (char*)data);
     memcpy(&WEB(pint)->txbuf[LWS_SEND_BUFFER_PRE_PADDING], (void *)data, len);
     WEB(pint)->txlen = len;
@@ -267,6 +286,7 @@ printf("[%s:%d] pint %p websock %p len %d data %s\n", __FUNCTION__, __LINE__, pi
 static int recv_webSocket(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
 {
     //fprintf(stderr, "[%s:%d] pint %p websock=%p\n", __FUNCTION__, __LINE__, pint, WEB(pint));
+    if (websock_trace)
     fprintf(stderr, "[%s:%d] recv msg=%s\n", __FUNCTION__, __LINE__, (char *)WEB(pint)->rxbuf);
     int rxlen = WEB(pint)->rxlen;
     if (WEB(pint)->rxlen > len)

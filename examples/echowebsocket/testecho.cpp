@@ -29,14 +29,12 @@
 
 EchoRequestProxy *sRequestProxy;
 static sem_t sem_heard2;
-int limit = 10;
 
 class EchoIndication : public EchoIndicationWrapper
 {
 public:
     virtual void heard(uint32_t v) {
         fprintf(stderr, "heard an s: %d\n", v);
-if (limit-- > 0)
 	sRequestProxy->say2(v, 2*v);
     }
     virtual void heard2(uint32_t a, uint32_t b) {
