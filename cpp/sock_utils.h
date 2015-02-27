@@ -27,7 +27,7 @@
 #define MAX_BSIM_PORTAL_ID 128
 #define MAGIC_PORTAL_FOR_SENDING_FD                 666
 #define MAGIC_PORTAL_FOR_SENDING_INTERRUPT          999
-#define SOCKET_NAME                 "socket_for_bluesim"
+#define SOCKET_NAME                 bluesimSocketName()
 
 typedef struct PortalSocketParam {
     struct addrinfo *addr;
@@ -48,6 +48,7 @@ struct memresponse{
 #ifdef __cplusplus
 extern "C" {
 #endif
+const char *bluesimSocketName();
 void connect_to_bsim(void);
 ssize_t sock_fd_write(int sockfd, void *ptr, size_t nbytes, int sendfd);
 ssize_t sock_fd_read(int sockfd, void *ptr, size_t nbytes, int *recvfd);

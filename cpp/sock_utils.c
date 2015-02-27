@@ -39,6 +39,12 @@
 
 static int trace_socket;// = 1;
 
+const char *bluesimSocketName()
+{
+  char *name = getenv("BLUESIM_SOCKET_NAME");
+  return name ? name : "socket_for_bluesim";
+}
+
 int init_listening(const char *arg_name, PortalSocketParam *param)
 {
   int listening_socket;
