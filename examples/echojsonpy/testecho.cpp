@@ -28,55 +28,59 @@
 #include "EchoIndication.h"
 
 EchoRequestProxy *sRequestProxy;
+static sem_t sem_heard;
 static sem_t sem_heard2;
 
 class EchoIndication : public EchoIndicationWrapper
 {
 public:
-    virtual void heard(uint32_t v) {
-        fprintf(stderr, "heard an s: %d\n", v);
-	sRequestProxy->say2(v, 2*v);
-    }
-    virtual void heard2(uint32_t a, uint32_t b) {
-        fprintf(stderr, "heard an s2: %ld %ld\n", (long)a, (long)b);
-        sem_post(&sem_heard2);
-    }
-    EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationWrapper(id, item, param, &EchoIndicationJson_handleMessage, 1000) {}
+  virtual void heard(uint32_t v) {
+    fprintf(stderr, "heard an s: %d\n", v);
+    sem_post(&sem_heard);
+  }
+  virtual void heard2(uint32_t a, uint32_t b) {
+    fprintf(stderr, "heard an s2: %ld %ld\n", (long)a, (long)b);
+    sem_post(&sem_heard2);
+  }
+  EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationWrapper(id, item, param, &EchoIndicationJson_handleMessage, 1000) {}
 };
 
 static void call_say(int v)
 {
-    printf("[%s:%d] %d\n", __FUNCTION__, __LINE__, v);
-    sRequestProxy->say(v);
-    sem_wait(&sem_heard2);
+  sRequestProxy->say(v);
+  //sem_wait(&sem_heard);
 }
 
 static void call_say2(int v, int v2)
 {
-    sRequestProxy->say2(v, v2);
-    sem_wait(&sem_heard2);
+  sRequestProxy->say2(v, v2);
+  //sem_wait(&sem_heard2);
+}
+
+static void set_leds(int v)
+{
+  sRequestProxy->setLeds(v);
 }
 
 int main(int argc, const char **argv)
 {
-    PortalSocketParam param = {0};
-
-    int rc = getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
-    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndicationH2S, &socketfuncInit, &param);
-    rc = getaddrinfo("127.0.0.1", "5001", NULL, &param.addr);
-    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H, &socketfuncInit, &param, &EchoRequestJsonProxyReq, 1000);
-    portalExec_start();
-
-    int v = 42;
-    fprintf(stderr, "Saying %d\n", v);
-    call_say(v);
-    call_say(v*5);
-    call_say(v*17);
-    call_say(v*93);
-    call_say2(v, v*3);
-    printf("TEST TYPE: SEM\n");
-    sRequestProxy->setLeds(9);
-    portalExec_end();
-    //freeaddrinfo(param.addr);
-    return 0;
+  sem_init(&sem_heard, 1,0);
+  sem_init(&sem_heard2, 1,0);
+  PortalSocketParam param = {0};
+  
+  int rc = getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
+  EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndicationH2S, &socketfuncInit, &param);
+  rc = getaddrinfo("127.0.0.1", "5001", NULL, &param.addr);
+  sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H, &socketfuncInit, &param, &EchoRequestJsonProxyReq, 1000);
+  portalExec_start();
+  
+  int v = 42;
+  call_say(v);
+  sleep(1);
+  call_say2(v,v+1);
+  sleep(1);
+  set_leds(v);
+  sleep(1);
+  portalExec_end();
+  return 0;
 }

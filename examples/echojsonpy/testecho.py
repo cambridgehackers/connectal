@@ -30,50 +30,96 @@ import ctypes
 import os
 import argparse
 import json
-import pprint
+import math
 
-# ind_addr = 127.0.0.1
-# ind_port = 5000
+class socket_client:
+    def __init__(self, devaddr, devport):
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.s.connect((devaddr, devport))
+        self.llen = ctypes.sizeof(ctypes.c_int);
+    def recv_frame(self):
+        bytes_recd = 0
+        while bytes_recd < self.llen:
+            chunk = self.s.recv(self.llen)
+            bytes_recd = len(chunk)
+        blen = struct.unpack("!i", chunk)[0]
+        bytes_recd = 0
+        buffer = []
+        while bytes_recd < blen:
+            chunk = self.s.recv(blen)
+            bytes_recd += len(chunk) 
+            buffer.append(chunk)
+        rv = buffer[0]
+        for b in buffer[1:]:
+            rv = rv + b
+        return rv
+    def send_frame(self, data):
+        liw = math.ceil(len(data)/4.0)+1
+        print "send_frame %d %s" % (liw, data)
+        self.s.send(struct.pack("@i", liw)+data)
+    def shutdown(self):
+        self.s.shutdown(socket.SHUT_RDWR)
+        self.s.close()
 
-# req_addr = 127.0.0.1
-# req_port = 5001
+ind_addr = "127.0.0.1"
+ind_port = 5000
 
-# ind_s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# ind_s.connect((ind_addr, ind_port))
+req_addr = "127.0.0.1"
+req_port = 5001
 
-# req_s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# req_s.connect((req_addr, req_port))
+ind_s = socket_client(ind_addr, ind_port)
+req_s = socket_client(req_addr, req_port)
 
 json_data=open('./bluesim/generatedDesignInterfaceFile.json')
 data = json.load(json_data)
-pprint.pprint(data['interfaces'])
 json_data.close()
 
-def createMethod((methname, param)):
+def toascii(u):
+    return u.encode('ascii', 'replace')
+
+def createSendMethod((methname, params)):
     def method(self, *args):
-        print ' '.join([(str(p)+':'+str(a)) for p,a, in zip(param,args)])
+        d = zip(params,args)
+        d.insert(0,('name',methname))
+        js = json.dumps(dict(d), separators=(',',':'), sort_keys=True)
+        self.s.send_frame(js)
     return (methname,method)
 
 class BaseClass(object):
     def __init__(self, classtype):
         self._type = classtype
 
-def ClassFactory(name, argnames, BaseClass=BaseClass):
-    def __init__(self, classtype):
-        self._type = classtype
-
-def ClassFactory(name, meths, BaseClass=BaseClass):
+def ProxyClassFactoryy(name, meths, BaseClass=BaseClass):
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
         BaseClass.__init__(self, name[:-len("Class")])
-    newclass = type(name, (BaseClass,),dict([("__init__",__init__)]+map(createMethod, meths)))
+    newclass = type(toascii(name), (BaseClass,),dict([("__init__",__init__)]+map(createSendMethod, meths)))
     return newclass
 
-Foo = ClassFactory("Foo", [("m1",['a', 'b', 'c']),("m2", ['d','e','f'])])
-s = Foo()
-s.m1(1,2,3)
-s.m2(4,5,6)
+def intersperse(e, l):
+    return reduce(lambda x,y: x+y, zip(l, [e]*len(l)))[:-1]
+
+classes = []
+for ifc in data['interfaces']:
+    print ifc['name']
+    methods = []
+    for decl in ifc['decls']:
+        param_names = [param['name'] for param in decl['params']]
+        sys.stdout.write(" "+decl['name']+'(')
+        sys.stdout.write(''.join(intersperse(',', param_names)))
+        sys.stdout.write(")\n")
+        methods.append((decl['name'], param_names))
+    classes.append(ProxyClassFactoryy(ifc['name'], methods))
 
 
+EchoRequest = classes[0]
+SwallowRequest = classes[1]
+EchoIndication = classes[2]
 
+er = EchoRequest(s = req_s)
+er.say(1)
+er.say2(2,1)
+er.setLeds(0)
+time.sleep(1)
+req_s.shutdown()

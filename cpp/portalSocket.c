@@ -182,6 +182,7 @@ static int event_socket(struct PortalInternal *pint)
     int i, j, event_socket_fd;
     for (i = 0; i < pint->client_fd_number;) {
        int len = portalRecvFd(pint->client_fd[i], (void *)pint->map_base, sizeof(uint32_t), &event_socket_fd);
+       //fprintf(stderr, "XXXXX %d\n", pint->map_base[0]);
        if (len == 0) { /* EOF */
            close(pint->client_fd[i]);
            pint->client_fd_number--;

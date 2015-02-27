@@ -23,7 +23,7 @@
 #include <string.h>
 #include "portal.h"
 
-static int trace_json = 1;
+static int trace_json;// = 1;
 void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJsonInfo *info)
 {
     ConnectalParamJsonInfo *iparam = info->param;
@@ -58,10 +58,11 @@ void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJs
     pint->item->send(pint, pint->map_base, (iparam->offset << 16) | strlen((char *)pint->map_base), -1);
 }
 
-int connnectalJsonDecode(PortalInternal *pint, int channel, void *tempdata, ConnectalMethodJsonInfo *infoa)
+int connnectalJsonDecode(PortalInternal *pint, int _unused_channel, void *tempdata, ConnectalMethodJsonInfo *infoa)
 {
+    int channel = 0;
     ConnectalMethodJsonInfo *info = NULL;
-//&infoa[channel];
+    //&infoa[channel];
     uint32_t header = *(uint32_t *)pint->map_base;
     char *datap = (char *)pint->map_base;
     char ch, *attr = NULL, *val = NULL;
@@ -70,6 +71,7 @@ int connnectalJsonDecode(PortalInternal *pint, int channel, void *tempdata, Conn
     datap[len] = 0;
     if (trace_json)
         fprintf(stderr, "[%s] message '%s'\n", __FUNCTION__, (char *)pint->map_base);
+
     while ((ch = *datap++)) {
         if (ch == '\"') {
             if (!attr)
@@ -85,8 +87,10 @@ int connnectalJsonDecode(PortalInternal *pint, int channel, void *tempdata, Conn
                 info = infoa;
                 val++; /* skip leading '"' */
                 val[strlen(val) - 1] = 0; /* delete trailing '"' */
-                while (info->name && strcmp(info->name, val))
+                while (info->name && strcmp(info->name, val)){
                     info++;
+		    channel++;
+		}
                 if (!info->name) {
                     fprintf(stderr, "[%s:%d] unknown method name '%s'\n", __FUNCTION__, __LINE__, val);
                     exit(1);
