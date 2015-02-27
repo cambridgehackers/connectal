@@ -39,9 +39,11 @@
 #include "sock_utils.h"
 
 #include "GeneratedTypes.h"
-#include "gyro.h"
 #include "gyro_simple.h"
+#include "sock_server.h"
 
+static int spew = 0;
+static int alloc_sz = 1<<10;
 
 int main(int argc, const char **argv)
 {
@@ -53,12 +55,7 @@ int main(int argc, const char **argv)
   MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
-  sem_init(&status_sem,1,0);
-  sem_init(&read_sem,1,0);
-  sem_init(&write_sem,1,0);
-
   portalExec_start();
-  start_server();
 
   int dstAlloc = portalAlloc(alloc_sz);
   char *dstBuffer = (char *)portalMmap(dstAlloc, alloc_sz);
@@ -68,34 +65,6 @@ int main(int argc, const char **argv)
   long freq = 0;
   setClockFrequency(0, req_freq, &freq);
   fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
-
-  // setup
-  setup_registers(device);  
-
-#ifndef BSIM
-  if(verbose){
-    for(int i = 0; i < 32; i++){
-      short int tmp;
-      read_reg(device, OUT_X_H);
-      tmp = read_reg_val << 8;
-      read_reg(device, OUT_X_L);
-      tmp |= read_reg_val;
-      fprintf(stderr, "XXX %8d, ", (short int)tmp);
-
-      read_reg(device, OUT_Y_H);
-      tmp = read_reg_val << 8;
-      read_reg(device, OUT_Y_L);
-      tmp |= read_reg_val;
-      fprintf(stderr, "%8d, ", (short int)tmp);
-
-      read_reg(device, OUT_Z_H);
-      tmp = read_reg_val << 8;
-      read_reg(device, OUT_Z_L);
-      tmp |= read_reg_val;
-      fprintf(stderr, "%8d\n", (short int)tmp);
-    }
-  }
-#endif
   
   // sample has one two-byte component for each axis (x,y,z).  This is to ensure 
   // that the X component always lands in offset 0 when the HW wraps around
@@ -103,6 +72,29 @@ int main(int argc, const char **argv)
   int bus_data_width = 8;
   int wrap_limit = alloc_sz-(alloc_sz%(sample_size*bus_data_width)); 
   fprintf(stderr, "wrap_limit:%08x\n", wrap_limit);
-  sample_gyro(wrap_limit, device, ref_dstAlloc, dstAlloc, dstBuffer);
- 
+  char* snapshot = (char*)malloc(alloc_sz);
+  sock_server *ss = new sock_server(1234);
+  ss->start_server();
+  ss->verbose = 1;
+
+  // setup gyro registers and dma infra
+  setup_registers(ind,device, ref_dstAlloc, wrap_limit);  
+  int discard = 40;
+
+  while(true){
+#ifdef BSIM
+    sleep(5);
+#else
+    usleep(20000);
+#endif
+    set_en(ind,device, 0);
+    int datalen = ss->read_circ_buff(wrap_limit, ref_dstAlloc, dstAlloc, dstBuffer, snapshot, ind->write_addr, ind->write_wrap_cnt, 6); 
+    set_en(ind,device, 2);
+    if (!discard){
+      ss->send_data(snapshot, datalen);
+      if (spew) display(snapshot, datalen);
+    } else {
+      discard--;
+    }
+  }
 }

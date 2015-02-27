@@ -23,6 +23,7 @@
 # SOFTWARE.
 
 from visual import *
+import math
 
 class sv:
     def __init__(self):
@@ -44,8 +45,20 @@ class sv:
         self.last = end
         self.label_last()
 
+    def add_ray(self,heading,length):
+        end_point_x = length*math.cos(heading)
+        end_point_y = length*math.sin(heading)
+        curve(pos=[(0,0), (end_point_x/100,end_point_y/50)])
+
 if __name__ == "__main__":
     v = sv()
     v.add_line((0,0,0),(1,1,0))
     v.extend_line((1,0,0))
     v.extend_line((0,0,0))
+
+    v.add_ray(0.1,1);
+    v.add_ray(0.1,1);
+    v.add_ray(0.1,1);
+    v.add_ray(0.1,1);
+    v.add_ray(0.1,1);
+    v.add_ray(0.1,1);

@@ -23,7 +23,7 @@
 #include <string.h>
 #include "portal.h"
 
-static int trace_json ;//= 1;
+static int trace_json = 1;
 void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJsonInfo *info)
 {
     ConnectalParamJsonInfo *iparam = info->param;
