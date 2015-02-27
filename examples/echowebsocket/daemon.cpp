@@ -29,7 +29,7 @@
 
 EchoRequestProxy *echoRequestProxy;
 EchoIndicationProxy *sIndicationProxy;
-static int daemon_trace ;//= 1;
+static int daemon_trace = 1;
 
 class EchoIndication : public EchoIndicationWrapper
 {

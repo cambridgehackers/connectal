@@ -121,6 +121,7 @@ typedef struct PortalInternal {
     int                    client_fd[MAX_CLIENT_FD];
     int                    mux_ports_number;
     PortalMuxHandler       *mux_ports;
+    void                   *websock;
 } PortalInternal;
 
 typedef struct {
@@ -229,7 +230,8 @@ extern int global_pa_fd;
 extern int global_sockfd;
 extern PortalInternal *utility_portal;
 extern PortalItemFunctions bsimfunc, hardwarefunc,
-  socketfuncInit, socketfuncResp, sharedfunc, muxfunc, tracefunc, xsimfunc, websocketfuncResp;
+  socketfuncInit, socketfuncResp, sharedfunc, muxfunc, tracefunc, xsimfunc,
+  websocketfuncInit, websocketfuncResp;
 #ifdef __cplusplus
 }
 #endif
