@@ -54,6 +54,21 @@ callback_connectal(struct libwebsocket_context *context,
         pint->fpga_fd = libwebsocket_get_socket_fd(wsi);
 	libwebsocket_callback_on_writable(context, wsi);
         break;
+    case LWS_CALLBACK_ESTABLISHED:
+        if (websock_trace)
+        fprintf(stderr, "LWS_CALLBACK_ESTABLISHED context %p pint %p wsi %p user %p in %p len %ld fd %d.\n", context, pint, wsi, user, in, (long)len, libwebsocket_get_socket_fd(wsi));
+        pint->websock = user;
+        addFdToPoller(pint->poller, libwebsocket_get_socket_fd(wsi));
+	libwebsocket_callback_on_writable(context, wsi);
+        break;
+    case LWS_CALLBACK_ADD_POLL_FD:
+        if (websock_trace)
+        fprintf(stderr, "LWS_CALLBACK_ADD_POLL_FD %p wsi %p poller %p fd %d.\n", context, wsi, pint->poller, libwebsocket_get_socket_fd(wsi));
+        if (pint->poller)
+            addFdToPoller(pint->poller, libwebsocket_get_socket_fd(wsi));
+        else
+            pint->fpga_fd = libwebsocket_get_socket_fd(wsi);
+        break;
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
         fprintf(stderr, "LWS_CALLBACK_CLIENT_CONNECTION_ERROR context %p wsi %p user %p in %p len %ld\n", context, wsi, user, in, (long)len);
         pint->websock = user;
@@ -63,10 +78,6 @@ callback_connectal(struct libwebsocket_context *context,
         fprintf(stderr, "LWS_CALLBACK_CLOSED context %p pint %p\n", context, pint);
         pint->websock = user;
         connect_proceed = 1;
-        break;
-    case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION:
-        if (websock_trace)
-        fprintf(stderr, "LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION context %p pint %p\n", context, pint);
         break;
     case LWS_CALLBACK_SERVER_WRITEABLE:
     case LWS_CALLBACK_CLIENT_WRITEABLE: {
@@ -89,55 +100,16 @@ callback_connectal(struct libwebsocket_context *context,
 	pss->rxlen = len;
         break;
         }
-    case LWS_CALLBACK_ESTABLISHED:
-        if (websock_trace)
-        fprintf(stderr, "LWS_CALLBACK_ESTABLISHED context %p pint %p wsi %p user %p in %p len %ld fd %d.\n", context, pint, wsi, user, in, (long)len, libwebsocket_get_socket_fd(wsi));
-        pint->websock = user;
-        addFdToPoller(pint->poller, libwebsocket_get_socket_fd(wsi));
-	libwebsocket_callback_on_writable(context, wsi);
-        break;
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
-        if (websock_trace)
-        fprintf(stderr, "LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED context %p pint %p wsi %p user %p\n", context, pint, wsi, user);
-        break;
     case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH:
-        if (websock_trace)
-        fprintf(stderr, "LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH %p pint %p\n", context, pint);
-        break;
-    case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:
-        if (websock_trace)
-        fprintf(stderr, "LWS_CALLBACK_FILTER_NETWORK_CONNECTION %p pint %p\n", context, pint);
-        break;
     case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER:
-        if (websock_trace)
-        fprintf(stderr, "LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER %p pint %p\n", context, pint);
-        break;
+    case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:
+    case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION:
     case LWS_CALLBACK_PROTOCOL_INIT:
-        if (websock_trace)
-        fprintf(stderr, "LWS_CALLBACK_PROTOCOL_INIT %p wsi %p\n", context, wsi);
-        break;
     case LWS_CALLBACK_WSI_CREATE:
-        if (websock_trace)
-        fprintf(stderr, "LWS_CALLBACK_WSI_CREATE %p pint %p\n", context, pint);
-        break;
     case LWS_CALLBACK_WSI_DESTROY:
-        if (websock_trace)
-        fprintf(stderr, "LWS_CALLBACK_WSI_DESTROY %p pint %p\n", context, pint);
-        break;
     case LWS_CALLBACK_CLOSED_HTTP:
-        fprintf(stderr, "LWS_CALLBACK_CLOSED_HTTP %p wsi %p\n", context, wsi);
-        break;
     case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS:
-        fprintf(stderr, "LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS %p wsi %p\n", context, wsi);
-        break;
-    case LWS_CALLBACK_ADD_POLL_FD:
-        if (websock_trace)
-        fprintf(stderr, "LWS_CALLBACK_ADD_POLL_FD %p wsi %p poller %p fd %d.\n", context, wsi, pint->poller, libwebsocket_get_socket_fd(wsi));
-        if (pint->poller)
-            addFdToPoller(pint->poller, libwebsocket_get_socket_fd(wsi));
-        else
-            pint->fpga_fd = libwebsocket_get_socket_fd(wsi);
-        break;
     case LWS_CALLBACK_GET_THREAD_ID:
     case LWS_CALLBACK_LOCK_POLL:
     case LWS_CALLBACK_UNLOCK_POLL:
