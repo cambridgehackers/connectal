@@ -79,7 +79,8 @@ class PortalInternalCpp
 class Portal : public PortalInternalCpp
 {
    void initPortal() {
-    if (pint.handler || pint.item == &socketfuncResp || pint.item == &socketfuncInit) {
+    if (pint.handler || pint.item == &socketfuncResp || pint.item == &socketfuncInit
+        || pint.item == &websocketfuncResp || pint.item == &websocketfuncInit) {
       if (pint.poller == 0)
         pint.poller = defaultPoller;
       pint.poller->registerInstance(this);

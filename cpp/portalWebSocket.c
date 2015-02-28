@@ -52,6 +52,7 @@ callback_connectal(struct libwebsocket_context *context,
         fprintf(stderr, "LWS_CALLBACK_CLIENT_ESTABLISHED context %p pint %p wsi %p user %p in %p len %ld\n", context, pint, wsi, user, in, (long)len);
         pint->websock = user;
         connect_proceed = 1;
+        pint->fpga_fd = libwebsocket_get_socket_fd(wsi);
 	libwebsocket_callback_on_writable(context, wsi);
         break;
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
@@ -71,7 +72,7 @@ callback_connectal(struct libwebsocket_context *context,
     case LWS_CALLBACK_SERVER_WRITEABLE:
     case LWS_CALLBACK_CLIENT_WRITEABLE: {
 	struct per_session_data_connectal *pss = (struct per_session_data_connectal *)user;
-        if (websock_trace)
+        if (0 && websock_trace)
         fprintf(stderr, "LWS_CALLBACK_SERVER_WRITEABLE context %p pint %p user %p txlen %lx\n", context, pint, user, (long)pss->txlen);
         if (pss->txlen) {
 	    int n = libwebsocket_write(wsi, &pss->txbuf[LWS_SEND_BUFFER_PRE_PADDING], pss->txlen, LWS_WRITE_TEXT);
@@ -93,6 +94,7 @@ callback_connectal(struct libwebsocket_context *context,
         if (websock_trace)
         fprintf(stderr, "LWS_CALLBACK_ESTABLISHED context %p pint %p wsi %p user %p in %p len %ld\n", context, pint, wsi, user, in, (long)len);
         pint->websock = user;
+        addFdToPoller(pint->poller, libwebsocket_get_socket_fd(wsi));
 	libwebsocket_callback_on_writable(context, wsi);
         break;
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
