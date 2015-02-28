@@ -46,19 +46,16 @@ callback_connectal(struct libwebsocket_context *context,
     PortalInternal *pint = (PortalInternal *)libwebsocket_context_user(context);
     switch (reason) {
     case LWS_CALLBACK_CLIENT_ESTABLISHED:
-        if (websock_trace)
-        fprintf(stderr, "LWS_CALLBACK_CLIENT_ESTABLISHED context %p pint %p wsi %p user %p in %p len %ld fd %d\n", context, pint, wsi, user, in, (long)len, libwebsocket_get_socket_fd(wsi));
-        pint->websock = user;
-        pint->websock_wsi = wsi;
         connect_proceed = 1;
-        pint->fpga_fd = libwebsocket_get_socket_fd(wsi);
-        break;
     case LWS_CALLBACK_ESTABLISHED:
         if (websock_trace)
-        fprintf(stderr, "LWS_CALLBACK_ESTABLISHED context %p pint %p wsi %p user %p in %p len %ld fd %d.\n", context, pint, wsi, user, in, (long)len, libwebsocket_get_socket_fd(wsi));
+        fprintf(stderr, "LWS/ESTABLISHED %d context %p pint %p wsi %p user %p in %p len %ld fd %d\n", reason, context, pint, wsi, user, in, (long)len, libwebsocket_get_socket_fd(wsi));
         pint->websock = user;
         pint->websock_wsi = wsi;
-        addFdToPoller(pint->poller, libwebsocket_get_socket_fd(wsi));
+        if (pint->poller)
+            addFdToPoller(pint->poller, libwebsocket_get_socket_fd(wsi));
+        else
+            pint->fpga_fd = libwebsocket_get_socket_fd(wsi);
         break;
     case LWS_CALLBACK_ADD_POLL_FD:
         if (websock_trace)
@@ -72,13 +69,11 @@ callback_connectal(struct libwebsocket_context *context,
         fprintf(stderr, "LWS_CALLBACK_CLIENT_CONNECTION_ERROR context %p wsi %p user %p in %p len %ld\n", context, wsi, user, in, (long)len);
         pint->websock = user;
         pint->websock_wsi = wsi;
-        connect_proceed = 1;
         break;
     case LWS_CALLBACK_CLOSED:
         fprintf(stderr, "LWS_CALLBACK_CLOSED context %p pint %p\n", context, pint);
         pint->websock = user;
         pint->websock_wsi = wsi;
-        connect_proceed = 1;
         break;
     case LWS_CALLBACK_RECEIVE:
     case LWS_CALLBACK_CLIENT_RECEIVE: {
@@ -148,8 +143,9 @@ static void get_context(PortalInternal *pint, int port)
 static int init_webSocketInit(struct PortalInternal *pint, void *aparam)
 {
     PortalSocketParam *param = (PortalSocketParam *)aparam;
-    int debug_level = LLL_ERR|LLL_WARN|LLL_NOTICE|LLL_INFO|LLL_CLIENT|LLL_LATENCY;
     unsigned short port = 5050;
+    char buffer[INET6_ADDRSTRLEN];
+
     pint->map_base = (volatile unsigned int *)malloc(4+MAX_ZEDBOARD_PAYLOAD+1);
     if (param->addr->ai_family == AF_INET) {
 	struct sockaddr_in *sa = (struct sockaddr_in *)param->addr->ai_addr;
@@ -161,7 +157,6 @@ static int init_webSocketInit(struct PortalInternal *pint, void *aparam)
     if (websock_trace)
     fprintf(stderr, "[%s:%d] connecting addr=%p ai_family=%d port %d\n", __FUNCTION__, __LINE__, param->addr->ai_addr, param->addr->ai_family, port);
     get_context(pint, CONTEXT_PORT_NO_LISTEN);
-    char buffer[INET6_ADDRSTRLEN];
     int err=getnameinfo(param->addr->ai_addr, param->addr->ai_addrlen, buffer, sizeof(buffer),
         0, 0, NI_NUMERICHOST);
     connect_proceed = 0;
@@ -177,7 +172,6 @@ static int init_webSocketInit(struct PortalInternal *pint, void *aparam)
 static int init_webSocketResp(struct PortalInternal *pint, void *aparam)
 {
     PortalSocketParam *param = (PortalSocketParam *)aparam;
-    int debug_level = LLL_ERR|LLL_WARN|LLL_NOTICE|LLL_INFO|LLL_CLIENT|LLL_LATENCY;
     unsigned short port = 5050;
 
     pint->map_base = (volatile unsigned int *)malloc(4+MAX_ZEDBOARD_PAYLOAD+1);
