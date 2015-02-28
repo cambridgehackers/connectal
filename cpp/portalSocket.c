@@ -160,7 +160,7 @@ static int init_socketInit(struct PortalInternal *pint, void *aparam)
     pint->map_base = (volatile unsigned int*)malloc(REQINFO_SIZE(pint->reqinfo));
     return 0;
 }
-static volatile unsigned int *mapchannel_socket(struct PortalInternal *pint, unsigned int v)
+volatile unsigned int *mapchannel_socket(struct PortalInternal *pint, unsigned int v)
 {
     return &pint->map_base[1];
 }

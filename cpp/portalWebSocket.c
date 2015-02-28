@@ -40,8 +40,8 @@ static int connect_proceed;
 static int websock_trace ;//= 1;
 static int
 callback_connectal(struct libwebsocket_context *context,
-		   struct libwebsocket *wsi,
-		   enum libwebsocket_callback_reasons reason, void *user, void *in, size_t len)
+                   struct libwebsocket *wsi,
+                   enum libwebsocket_callback_reasons reason, void *user, void *in, size_t len)
 {
     PortalInternal *pint = (PortalInternal *)libwebsocket_context_user(context);
     switch (reason) {
@@ -79,9 +79,16 @@ callback_connectal(struct libwebsocket_context *context,
     case LWS_CALLBACK_CLIENT_RECEIVE: {
         if (websock_trace)
         fprintf(stderr, "LWS_CALLBACK_RECEIVE context %p pint %p user %p len %ld\n", context, pint, user, (long)len);
-	struct per_session_data_connectal *pss = (struct per_session_data_connectal *)user;
-	memcpy(pss->rxbuf, in, len);
-	pss->rxlen = len;
+        struct per_session_data_connectal *pss = (struct per_session_data_connectal *)user;
+        memcpy(pss->rxbuf, in, len);
+        pss->rxlen = len;
+        if (websock_trace)
+            fprintf(stderr, "[%s:%d] pint=%p handler %p pint->map_base=%p len=%ld\n", __FUNCTION__, __LINE__, pint, pint->handler, pint->map_base, (long)len);
+        if (pint->handler) {
+            pint->map_base[0] = len+1;
+            memcpy((void *)&pint->map_base[1], in, len);
+            pint->handler(pint, 0, 0);
+        }
         break;
         }
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
@@ -107,6 +114,11 @@ callback_connectal(struct libwebsocket_context *context,
         break;
     }
     return 0;
+}
+
+static int event_webSocket(struct PortalInternal *pint)
+{
+    libwebsocket_service((struct libwebsocket_context *)pint->websock_context, 1);
 }
 
 #define HANDLE(A) \
@@ -135,8 +147,8 @@ static void get_context(PortalInternal *pint, int port)
     info.user = pint;
     pint->websock_context = libwebsocket_create_context(&info);
     if (!pint->websock_context) {
-	lwsl_err("libwebsocket init failed\n");
-	exit(-1);
+        lwsl_err("libwebsocket init failed\n");
+        exit(-1);
     }
 }
 
@@ -148,11 +160,11 @@ static int init_webSocketInit(struct PortalInternal *pint, void *aparam)
 
     pint->map_base = (volatile unsigned int *)malloc(4+MAX_ZEDBOARD_PAYLOAD+1);
     if (param->addr->ai_family == AF_INET) {
-	struct sockaddr_in *sa = (struct sockaddr_in *)param->addr->ai_addr;
-	port = htons(sa->sin_port);
+        struct sockaddr_in *sa = (struct sockaddr_in *)param->addr->ai_addr;
+        port = htons(sa->sin_port);
     } else if (param->addr->ai_family == AF_INET6) {
-	struct sockaddr_in6 *sa = (struct sockaddr_in6 *)param->addr->ai_addr;
-	port = htons(sa->sin6_port);
+        struct sockaddr_in6 *sa = (struct sockaddr_in6 *)param->addr->ai_addr;
+        port = htons(sa->sin6_port);
     }
     if (websock_trace)
     fprintf(stderr, "[%s:%d] connecting addr=%p ai_family=%d port %d\n", __FUNCTION__, __LINE__, param->addr->ai_addr, param->addr->ai_family, port);
@@ -165,7 +177,7 @@ static int init_webSocketInit(struct PortalInternal *pint, void *aparam)
     if (websock_trace)
         printf("[%s:%d] pint %p = %p address %s name %s\n", __FUNCTION__, __LINE__, pint, lsock, buffer, protocols[pint->fpga_number][0].name);
     while(!connect_proceed)
-	libwebsocket_service((libwebsocket_context *)pint->websock_context, 10);
+        event_webSocket(pint);
     return 0;
 }
 
@@ -176,11 +188,11 @@ static int init_webSocketResp(struct PortalInternal *pint, void *aparam)
 
     pint->map_base = (volatile unsigned int *)malloc(4+MAX_ZEDBOARD_PAYLOAD+1);
     if (param->addr->ai_family == AF_INET) {
-	struct sockaddr_in *sa = (struct sockaddr_in *)param->addr->ai_addr;
-	port = htons(sa->sin_port);
+        struct sockaddr_in *sa = (struct sockaddr_in *)param->addr->ai_addr;
+        port = htons(sa->sin_port);
     } else if (param->addr->ai_family == AF_INET6) {
-	struct sockaddr_in6 *sa = (struct sockaddr_in6 *)param->addr->ai_addr;
-	port = htons(sa->sin6_port);
+        struct sockaddr_in6 *sa = (struct sockaddr_in6 *)param->addr->ai_addr;
+        port = htons(sa->sin6_port);
     }
     if (websock_trace)
     fprintf(stderr, "[%s:%d] listening on addr=%p ai_family=%d port %d\n", __FUNCTION__, __LINE__, param->addr->ai_addr, param->addr->ai_family, port);
@@ -188,35 +200,6 @@ static int init_webSocketResp(struct PortalInternal *pint, void *aparam)
     if (websock_trace)
     fprintf(stderr, "[%s:%d] pint %p context %p fd %d.\n", __FUNCTION__, __LINE__, pint, pint->websock_context, pint->fpga_fd);
     return 0;
-}
-
-static int event_webSocket(struct PortalInternal *pint)
-{
-    int rxlen = 0;
-    if (pint->websock_context)
-	libwebsocket_service((struct libwebsocket_context *)pint->websock_context, 1);
-    if (WEB(pint)) {
-        rxlen = WEB(pint)->rxlen;
-    }
-    if (rxlen) {
-        if (websock_trace)
-            fprintf(stderr, "[%s:%d] pint=%p handler %p pint->map_base=%p rxlen=%d\n", __FUNCTION__, __LINE__, pint, pint->handler, pint->map_base, rxlen);
-        int portal_number = 0;
-        if (pint->handler) {
-	    int hdr = rxlen+1;
-	    pint->map_base[0] = hdr;
-	    pint->handler(pint, portal_number, 0);
-        }
-    }
-}
-
-volatile unsigned int *mapchannel_webSocket(struct PortalInternal *pint, unsigned int v)
-{
-    return &pint->map_base[PORTAL_IND_FIFO(v)];
-}
-int notfull_webSocket(PortalInternal *pint, unsigned int v)
-{
-    return 1;
 }
 static void send_webSocket(struct PortalInternal *pint, volatile unsigned int *data, unsigned int hdr, int sendFd)
 {
@@ -228,6 +211,7 @@ printf("[%s:%d] pint %p websock %p len %d data %s\n", __FUNCTION__, __LINE__, pi
     memcpy(&txbuf[LWS_SEND_BUFFER_PRE_PADDING], (void *)data, len);
     n = libwebsocket_write((libwebsocket *)pint->websock_wsi, &txbuf[LWS_SEND_BUFFER_PRE_PADDING], len, LWS_WRITE_TEXT);
 }
+#if 1
 static int recv_webSocket(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
 {
     //fprintf(stderr, "[%s:%d] pint %p websock=%p\n", __FUNCTION__, __LINE__, pint, WEB(pint));
@@ -235,18 +219,19 @@ static int recv_webSocket(struct PortalInternal *pint, volatile unsigned int *bu
     fprintf(stderr, "[%s:%d] recv msg=%s\n", __FUNCTION__, __LINE__, (char *)WEB(pint)->rxbuf);
     int rxlen = WEB(pint)->rxlen;
     if (WEB(pint)->rxlen > len)
-	fprintf(stderr, "[%s:%d] packet too long websock->rxlen=%ld len=%d\n", __FUNCTION__, __LINE__, WEB(pint)->rxlen, len);
+        fprintf(stderr, "[%s:%d] packet too long websock->rxlen=%ld len=%d\n", __FUNCTION__, __LINE__, WEB(pint)->rxlen, len);
     memcpy((void *)buffer, WEB(pint)->rxbuf, WEB(pint)->rxlen);
     WEB(pint)->rxlen = 0;
     if (recvfd)
-	*recvfd = 0;
+        *recvfd = 0;
     return rxlen;
 }
+#endif
 
 PortalItemFunctions websocketfuncInit = {
-    init_webSocketInit, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_webSocket, mapchannel_webSocket,
-    send_webSocket, recv_webSocket, busy_portal_null, enableint_portal_null, event_webSocket, notfull_webSocket};
+    init_webSocketInit, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_socket,
+    send_webSocket, recv_webSocket, busy_portal_null, enableint_portal_null, event_webSocket, notfull_null};
 
 PortalItemFunctions websocketfuncResp = {
-    init_webSocketResp, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_webSocket, mapchannel_webSocket,
-    send_webSocket, recv_webSocket, busy_portal_null, enableint_portal_null, event_webSocket, notfull_webSocket};
+    init_webSocketResp, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_socket,
+    send_webSocket, recv_webSocket, busy_portal_null, enableint_portal_null, event_webSocket, notfull_null};
