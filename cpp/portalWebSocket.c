@@ -31,9 +31,8 @@
 #define MAX_ZEDBOARD_PAYLOAD 4096
 
 struct per_session_data_connectal {
-    unsigned char txbuf[LWS_SEND_BUFFER_PRE_PADDING + MAX_ZEDBOARD_PAYLOAD + LWS_SEND_BUFFER_POST_PADDING];
     unsigned char rxbuf[LWS_SEND_BUFFER_PRE_PADDING + MAX_ZEDBOARD_PAYLOAD + LWS_SEND_BUFFER_POST_PADDING];
-    size_t txlen, rxlen;
+    size_t rxlen;
 };
 
 #define WEB(P) ((struct per_session_data_connectal *)(P)->websock)
@@ -50,6 +49,7 @@ callback_connectal(struct libwebsocket_context *context,
         if (websock_trace)
         fprintf(stderr, "LWS_CALLBACK_CLIENT_ESTABLISHED context %p pint %p wsi %p user %p in %p len %ld fd %d\n", context, pint, wsi, user, in, (long)len, libwebsocket_get_socket_fd(wsi));
         pint->websock = user;
+        pint->websock_wsi = wsi;
         connect_proceed = 1;
         pint->fpga_fd = libwebsocket_get_socket_fd(wsi);
 	libwebsocket_callback_on_writable(context, wsi);
@@ -58,6 +58,7 @@ callback_connectal(struct libwebsocket_context *context,
         if (websock_trace)
         fprintf(stderr, "LWS_CALLBACK_ESTABLISHED context %p pint %p wsi %p user %p in %p len %ld fd %d.\n", context, pint, wsi, user, in, (long)len, libwebsocket_get_socket_fd(wsi));
         pint->websock = user;
+        pint->websock_wsi = wsi;
         addFdToPoller(pint->poller, libwebsocket_get_socket_fd(wsi));
 	libwebsocket_callback_on_writable(context, wsi);
         break;
@@ -72,25 +73,15 @@ callback_connectal(struct libwebsocket_context *context,
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
         fprintf(stderr, "LWS_CALLBACK_CLIENT_CONNECTION_ERROR context %p wsi %p user %p in %p len %ld\n", context, wsi, user, in, (long)len);
         pint->websock = user;
+        pint->websock_wsi = wsi;
         connect_proceed = 1;
         break;
     case LWS_CALLBACK_CLOSED:
         fprintf(stderr, "LWS_CALLBACK_CLOSED context %p pint %p\n", context, pint);
         pint->websock = user;
+        pint->websock_wsi = wsi;
         connect_proceed = 1;
         break;
-    case LWS_CALLBACK_SERVER_WRITEABLE:
-    case LWS_CALLBACK_CLIENT_WRITEABLE: {
-	struct per_session_data_connectal *pss = (struct per_session_data_connectal *)user;
-        if (0 && websock_trace)
-        fprintf(stderr, "LWS_CALLBACK_SERVER_WRITEABLE context %p pint %p user %p txlen %lx\n", context, pint, user, (long)pss->txlen);
-        if (pss->txlen) {
-	    int n = libwebsocket_write(wsi, &pss->txbuf[LWS_SEND_BUFFER_PRE_PADDING], pss->txlen, LWS_WRITE_TEXT);
-            pss->txlen = 0;
-        }
-	libwebsocket_callback_on_writable(context, wsi);
-        break;
-        }
     case LWS_CALLBACK_RECEIVE:
     case LWS_CALLBACK_CLIENT_RECEIVE: {
         if (websock_trace)
@@ -101,6 +92,8 @@ callback_connectal(struct libwebsocket_context *context,
         break;
         }
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
+    case LWS_CALLBACK_SERVER_WRITEABLE:
+    case LWS_CALLBACK_CLIENT_WRITEABLE:
     case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH:
     case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER:
     case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:
@@ -245,19 +238,17 @@ volatile unsigned int *mapchannel_webSocket(struct PortalInternal *pint, unsigne
 }
 int notfull_webSocket(PortalInternal *pint, unsigned int v)
 {
-    return WEB(pint)->txlen == 0;
+    return 1;
 }
 static void send_webSocket(struct PortalInternal *pint, volatile unsigned int *data, unsigned int hdr, int sendFd)
 {
     int n;
     uint32_t len = (hdr & 0xffff);
+    unsigned char txbuf[LWS_SEND_BUFFER_PRE_PADDING + MAX_ZEDBOARD_PAYLOAD + LWS_SEND_BUFFER_POST_PADDING];
     if (websock_trace)
 printf("[%s:%d] pint %p websock %p len %d data %s\n", __FUNCTION__, __LINE__, pint, WEB(pint), len, (char*)data);
-    memcpy(&WEB(pint)->txbuf[LWS_SEND_BUFFER_PRE_PADDING], (void *)data, len);
-    WEB(pint)->txlen = len;
-    // next writeable callback will send it
-    while(WEB(pint)->txlen)
-	libwebsocket_service((struct libwebsocket_context *)pint->websock_context, 1);
+    memcpy(&txbuf[LWS_SEND_BUFFER_PRE_PADDING], (void *)data, len);
+    n = libwebsocket_write((libwebsocket *)pint->websock_wsi, &txbuf[LWS_SEND_BUFFER_PRE_PADDING], len, LWS_WRITE_TEXT);
 }
 static int recv_webSocket(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
 {
