@@ -1,5 +1,5 @@
 
-// Copyright (c) 2013-2014 Quanta Research Cambridge, Inc.
+// Copyright (c) 2014 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -24,7 +24,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
-#include "pthread.h"
 #include "portal.h"
 #include "sock_utils.h"
 #include "libwebsockets.h"
@@ -49,7 +48,7 @@ callback_connectal(struct libwebsocket_context *context,
     switch (reason) {
     case LWS_CALLBACK_CLIENT_ESTABLISHED:
         if (websock_trace)
-        fprintf(stderr, "LWS_CALLBACK_CLIENT_ESTABLISHED context %p pint %p wsi %p user %p in %p len %ld\n", context, pint, wsi, user, in, (long)len);
+        fprintf(stderr, "LWS_CALLBACK_CLIENT_ESTABLISHED context %p pint %p wsi %p user %p in %p len %ld fd %d\n", context, pint, wsi, user, in, (long)len, libwebsocket_get_socket_fd(wsi));
         pint->websock = user;
         connect_proceed = 1;
         pint->fpga_fd = libwebsocket_get_socket_fd(wsi);
@@ -92,7 +91,7 @@ callback_connectal(struct libwebsocket_context *context,
         }
     case LWS_CALLBACK_ESTABLISHED:
         if (websock_trace)
-        fprintf(stderr, "LWS_CALLBACK_ESTABLISHED context %p pint %p wsi %p user %p in %p len %ld\n", context, pint, wsi, user, in, (long)len);
+        fprintf(stderr, "LWS_CALLBACK_ESTABLISHED context %p pint %p wsi %p user %p in %p len %ld fd %d.\n", context, pint, wsi, user, in, (long)len, libwebsocket_get_socket_fd(wsi));
         pint->websock = user;
         addFdToPoller(pint->poller, libwebsocket_get_socket_fd(wsi));
 	libwebsocket_callback_on_writable(context, wsi);
@@ -115,7 +114,7 @@ callback_connectal(struct libwebsocket_context *context,
         break;
     case LWS_CALLBACK_PROTOCOL_INIT:
         if (websock_trace)
-        fprintf(stderr, "LWS_CALLBACK_PROTOCOL_INIT %p\n", context);
+        fprintf(stderr, "LWS_CALLBACK_PROTOCOL_INIT %p wsi %p\n", context, wsi);
         break;
     case LWS_CALLBACK_WSI_CREATE:
         if (websock_trace)
@@ -125,13 +124,24 @@ callback_connectal(struct libwebsocket_context *context,
         if (websock_trace)
         fprintf(stderr, "LWS_CALLBACK_WSI_DESTROY %p pint %p\n", context, pint);
         break;
+    case LWS_CALLBACK_CLOSED_HTTP:
+        fprintf(stderr, "LWS_CALLBACK_CLOSED_HTTP %p wsi %p\n", context, wsi);
+        break;
+    case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS:
+        fprintf(stderr, "LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS %p wsi %p\n", context, wsi);
+        break;
+    case LWS_CALLBACK_ADD_POLL_FD:
+        if (websock_trace)
+        fprintf(stderr, "LWS_CALLBACK_ADD_POLL_FD %p wsi %p poller %p fd %d.\n", context, wsi, pint->poller, libwebsocket_get_socket_fd(wsi));
+        if (pint->poller)
+            addFdToPoller(pint->poller, libwebsocket_get_socket_fd(wsi));
+        else
+            pint->fpga_fd = libwebsocket_get_socket_fd(wsi);
+        break;
     case LWS_CALLBACK_GET_THREAD_ID:
-    case LWS_CALLBACK_CHANGE_MODE_POLL_FD:
     case LWS_CALLBACK_LOCK_POLL:
     case LWS_CALLBACK_UNLOCK_POLL:
-    case LWS_CALLBACK_CLOSED_HTTP:
-    case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS:
-    case LWS_CALLBACK_ADD_POLL_FD:
+    case LWS_CALLBACK_CHANGE_MODE_POLL_FD:
     case LWS_CALLBACK_DEL_POLL_FD:
         break;
     default:
@@ -156,15 +166,6 @@ static struct libwebsocket_protocols *protocols[] = {
     NHANDLE(0),  NHANDLE(1),  NHANDLE(2),  NHANDLE(3),  NHANDLE(4),  NHANDLE(5),
     NHANDLE(6),  NHANDLE(7),  NHANDLE(8),  NHANDLE(9),  NHANDLE(10), NHANDLE(11),
     NHANDLE(12), NHANDLE(13), NHANDLE(14), NHANDLE(15) };
-
-void *webSocketWorker(void *p)
-{
-    int n = 0;
-    while (n >= 0) {
-	n = libwebsocket_service((struct libwebsocket_context *)p, 10);
-    }
-    libwebsocket_context_destroy((struct libwebsocket_context *)p);
-}
 
 static int init_webSocketInit(struct PortalInternal *pint, void *aparam)
 {
@@ -240,10 +241,8 @@ static int init_webSocketResp(struct PortalInternal *pint, void *aparam)
 	lwsl_err("libwebsocket init failed\n");
 	return -1;
     }
-    pthread_t pid;
     if (websock_trace)
-    fprintf(stderr, "[%s:%d] pint %p context %p\n", __FUNCTION__, __LINE__, pint, context);
-    pthread_create(&pid, NULL, webSocketWorker, context);
+    fprintf(stderr, "[%s:%d] pint %p context %p fd %d.\n", __FUNCTION__, __LINE__, pint, context, pint->fpga_fd);
     pint->websock_context = context;
     return 0;
 }

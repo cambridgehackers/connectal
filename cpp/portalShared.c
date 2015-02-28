@@ -120,7 +120,7 @@ static int event_shared(struct PortalInternal *pint)
 	unsigned short msg_num = hdr >> 16;
 	unsigned short msg_words = hdr & 0xffff;
 	msg_words = (msg_words + 1) & 0xfffe;
-	if (msg_num != 0xffff)
+	if (msg_num != 0xffff && pint->handler)
 	    pint->handler(pint, msg_num, 0);
         pint->map_base[SHARED_READ] = increment_shared(pint, pint->map_base[SHARED_READ] + msg_words);
     }

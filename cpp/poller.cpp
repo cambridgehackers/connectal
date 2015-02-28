@@ -185,8 +185,8 @@ void* PortalPoller::portalExec_event(void)
        if (!portal_wrappers)
            fprintf(stderr, "No portal_instances revents=%d\n", portal_fds[i].revents);
        Portal *instance = portal_wrappers[i];
+       instance->pint.item->event(&instance->pint);
        if (instance->pint.handler) {
-           instance->pint.item->event(&instance->pint);
            // re-enable interrupt which was disabled by portal_isr
            instance->pint.item->enableint(&instance->pint, 1);
        }

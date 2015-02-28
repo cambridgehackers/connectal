@@ -278,7 +278,7 @@ int portal_mux_handler(struct PortalInternal *pint, unsigned int channel, int me
     int i, dummy;
     for (i = 0; i < pint->mux_ports_number; i++) {
         PortalInternal *p = pint->mux_ports[i].pint;
-        if (channel == p->fpga_number) {
+        if (channel == p->fpga_number && p->handler) {
             p->item->recv(p, p->map_base, 1, &dummy);
             p->handler(p, *p->map_base >> 16, messageFd);
         }
