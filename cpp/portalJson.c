@@ -23,11 +23,12 @@
 #include <string.h>
 #include "portal.h"
 
-static int trace_json;// = 1;
+static int trace_json ;//= 1;
 void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJsonInfo *info)
 {
     ConnectalParamJsonInfo *iparam = info->param;
-    char *data = (char *)pint->map_base;
+    char *datap = (char *)pint->item->mapchannelReq(pint, 0);
+    char *data = (char *)datap;
     data += sprintf(data, "{\"name\":\"%s\"", info->name);
     while(iparam->name) {
         uint32_t tmp32;
@@ -54,8 +55,8 @@ void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJs
     }
     data += sprintf(data, "}");
     if (trace_json)
-        fprintf(stderr, "[%s] num %d message '%s'\n", __FUNCTION__, iparam->offset, (char *)pint->map_base);
-    pint->item->send(pint, pint->map_base, (iparam->offset << 16) | strlen((char *)pint->map_base), -1);
+        fprintf(stderr, "[%s] num %d message '%s'\n", __FUNCTION__, iparam->offset, (char *)datap);
+    pint->item->send(pint, (volatile unsigned int*)datap, (iparam->offset << 16) | strlen((char *)datap), -1);
 }
 
 int connnectalJsonDecode(PortalInternal *pint, int _unused_channel, void *tempdata, ConnectalMethodJsonInfo *infoa)
@@ -64,13 +65,14 @@ int connnectalJsonDecode(PortalInternal *pint, int _unused_channel, void *tempda
     ConnectalMethodJsonInfo *info = NULL;
     //&infoa[channel];
     uint32_t header = *(uint32_t *)pint->map_base;
-    char *datap = (char *)pint->map_base;
+    char *datap = (char *)pint->item->mapchannelInd(pint, 0);
     char ch, *attr = NULL, *val = NULL;
     int tmpfd;
-    int len = pint->item->recv(pint, pint->map_base, (header & 0xffff)-1, &tmpfd);
+    int len = (header & 0xffff)-1;
+    int rc = pint->item->recv(pint, (volatile unsigned int*)datap, len, &tmpfd);
     datap[len] = 0;
     if (trace_json)
-        fprintf(stderr, "[%s] message '%s'\n", __FUNCTION__, (char *)pint->map_base);
+        fprintf(stderr, "[%s] message '%s'\n", __FUNCTION__, (char *)datap);
 
     while ((ch = *datap++)) {
         if (ch == '\"') {
