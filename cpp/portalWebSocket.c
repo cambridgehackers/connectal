@@ -207,11 +207,9 @@ static int init_webSocketInit(struct PortalInternal *pint, void *aparam)
          "/", hosts, origins, protocols[pint->fpga_number][0].name, -1);
     if (websock_trace)
         printf("[%s:%d] pint %p = %p address %s name %s\n", __FUNCTION__, __LINE__, pint, lsock, buffer, protocols[pint->fpga_number][0].name);
-    pthread_t pid;
-    pthread_create(&pid, NULL, webSocketWorker, context);
-    while(!connect_proceed) {
-        sleep(1);
-    }
+    pint->websock_context = context;
+    while(!connect_proceed)
+	libwebsocket_service(context, 10);
     return 0;
 }
 
@@ -246,25 +244,28 @@ static int init_webSocketResp(struct PortalInternal *pint, void *aparam)
     if (websock_trace)
     fprintf(stderr, "[%s:%d] pint %p context %p\n", __FUNCTION__, __LINE__, pint, context);
     pthread_create(&pid, NULL, webSocketWorker, context);
+    pint->websock_context = context;
     return 0;
 }
 
 static int event_webSocket(struct PortalInternal *pint)
 {
-  int rxlen = 0;
-  if (WEB(pint)) {
-    rxlen = WEB(pint)->rxlen;
-  }
-  if (rxlen) {
-      if (websock_trace)
-      fprintf(stderr, "[%s:%d] pint=%p handler %p pint->map_base=%p rxlen=%d\n", __FUNCTION__, __LINE__, pint, pint->handler, pint->map_base, rxlen);
-      int portal_number = 0;
-      if (pint->handler) {
-	  int hdr = rxlen+1;
-	  pint->map_base[0] = hdr;
-	  pint->handler(pint, portal_number, 0);
-      }
-  }
+    int rxlen = 0;
+    if (pint->websock_context)
+	libwebsocket_service((struct libwebsocket_context *)pint->websock_context, 1);
+    if (WEB(pint)) {
+        rxlen = WEB(pint)->rxlen;
+    }
+    if (rxlen) {
+        if (websock_trace)
+            fprintf(stderr, "[%s:%d] pint=%p handler %p pint->map_base=%p rxlen=%d\n", __FUNCTION__, __LINE__, pint, pint->handler, pint->map_base, rxlen);
+        int portal_number = 0;
+        if (pint->handler) {
+	    int hdr = rxlen+1;
+	    pint->map_base[0] = hdr;
+	    pint->handler(pint, portal_number, 0);
+        }
+    }
 }
 
 volatile unsigned int *mapchannel_webSocket(struct PortalInternal *pint, unsigned int v)
@@ -284,6 +285,8 @@ printf("[%s:%d] pint %p websock %p len %d data %s\n", __FUNCTION__, __LINE__, pi
     memcpy(&WEB(pint)->txbuf[LWS_SEND_BUFFER_PRE_PADDING], (void *)data, len);
     WEB(pint)->txlen = len;
     // next writeable callback will send it
+    while(WEB(pint)->txlen)
+	libwebsocket_service((struct libwebsocket_context *)pint->websock_context, 1);
 }
 static int recv_webSocket(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
 {

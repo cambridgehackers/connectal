@@ -122,6 +122,7 @@ typedef struct PortalInternal {
     int                    mux_ports_number;
     PortalMuxHandler       *mux_ports;
     void                   *websock;
+    void                   *websock_context;
 } PortalInternal;
 
 typedef struct {
