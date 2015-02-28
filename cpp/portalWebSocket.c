@@ -52,7 +52,6 @@ callback_connectal(struct libwebsocket_context *context,
         pint->websock_wsi = wsi;
         connect_proceed = 1;
         pint->fpga_fd = libwebsocket_get_socket_fd(wsi);
-	libwebsocket_callback_on_writable(context, wsi);
         break;
     case LWS_CALLBACK_ESTABLISHED:
         if (websock_trace)
@@ -60,7 +59,6 @@ callback_connectal(struct libwebsocket_context *context,
         pint->websock = user;
         pint->websock_wsi = wsi;
         addFdToPoller(pint->poller, libwebsocket_get_socket_fd(wsi));
-	libwebsocket_callback_on_writable(context, wsi);
         break;
     case LWS_CALLBACK_ADD_POLL_FD:
         if (websock_trace)
@@ -132,15 +130,27 @@ static struct libwebsocket_protocols *protocols[] = {
     NHANDLE(6),  NHANDLE(7),  NHANDLE(8),  NHANDLE(9),  NHANDLE(10), NHANDLE(11),
     NHANDLE(12), NHANDLE(13), NHANDLE(14), NHANDLE(15) };
 
+static void get_context(PortalInternal *pint, int port)
+{
+    struct lws_context_creation_info info = {0};
+    info.port = port;
+    info.protocols = protocols[pint->fpga_number];
+    info.gid = -1;
+    info.uid = -1;
+    info.user = pint;
+    pint->websock_context = libwebsocket_create_context(&info);
+    if (!pint->websock_context) {
+	lwsl_err("libwebsocket init failed\n");
+	exit(-1);
+    }
+}
+
 static int init_webSocketInit(struct PortalInternal *pint, void *aparam)
 {
     PortalSocketParam *param = (PortalSocketParam *)aparam;
-
     int debug_level = LLL_ERR|LLL_WARN|LLL_NOTICE|LLL_INFO|LLL_CLIENT|LLL_LATENCY;
-
-    pint->map_base = (volatile unsigned int *)malloc(4+MAX_ZEDBOARD_PAYLOAD+1);
-
     unsigned short port = 5050;
+    pint->map_base = (volatile unsigned int *)malloc(4+MAX_ZEDBOARD_PAYLOAD+1);
     if (param->addr->ai_family == AF_INET) {
 	struct sockaddr_in *sa = (struct sockaddr_in *)param->addr->ai_addr;
 	port = htons(sa->sin_port);
@@ -150,32 +160,17 @@ static int init_webSocketInit(struct PortalInternal *pint, void *aparam)
     }
     if (websock_trace)
     fprintf(stderr, "[%s:%d] connecting addr=%p ai_family=%d port %d\n", __FUNCTION__, __LINE__, param->addr->ai_addr, param->addr->ai_family, port);
-    struct lws_context_creation_info info = {0};
-    info.port = CONTEXT_PORT_NO_LISTEN;
-    info.protocols = protocols[pint->fpga_number];
-    info.gid = -1;
-    info.uid = -1;
-    info.user = pint;
-    struct libwebsocket_context *context = libwebsocket_create_context(&info);
-    if (!context) {
-	lwsl_err("libwebsocket init failed\n");
-	return -1;
-    }
-    const char *addresss, *hosts, *origins;
+    get_context(pint, CONTEXT_PORT_NO_LISTEN);
     char buffer[INET6_ADDRSTRLEN];
     int err=getnameinfo(param->addr->ai_addr, param->addr->ai_addrlen, buffer, sizeof(buffer),
         0, 0, NI_NUMERICHOST);
-    addresss = buffer;
-    hosts = "hostname";
-    origins = "originname";
     connect_proceed = 0;
-    struct libwebsocket *lsock = libwebsocket_client_connect(context, addresss, port, 0,
-         "/", hosts, origins, protocols[pint->fpga_number][0].name, -1);
+    struct libwebsocket *lsock = libwebsocket_client_connect((libwebsocket_context *)pint->websock_context, buffer, port, 0,
+         "/", "hostname", "originname", protocols[pint->fpga_number][0].name, -1);
     if (websock_trace)
         printf("[%s:%d] pint %p = %p address %s name %s\n", __FUNCTION__, __LINE__, pint, lsock, buffer, protocols[pint->fpga_number][0].name);
-    pint->websock_context = context;
     while(!connect_proceed)
-	libwebsocket_service(context, 10);
+	libwebsocket_service((libwebsocket_context *)pint->websock_context, 10);
     return 0;
 }
 
@@ -195,20 +190,9 @@ static int init_webSocketResp(struct PortalInternal *pint, void *aparam)
     }
     if (websock_trace)
     fprintf(stderr, "[%s:%d] listening on addr=%p ai_family=%d port %d\n", __FUNCTION__, __LINE__, param->addr->ai_addr, param->addr->ai_family, port);
-    struct lws_context_creation_info info = {0};
-    info.port = port;
-    info.protocols = protocols[pint->fpga_number];
-    info.gid = -1;
-    info.uid = -1;
-    info.user = pint;
-    struct libwebsocket_context *context = libwebsocket_create_context(&info);
-    if (!context) {
-	lwsl_err("libwebsocket init failed\n");
-	return -1;
-    }
+    get_context(pint, port);
     if (websock_trace)
-    fprintf(stderr, "[%s:%d] pint %p context %p fd %d.\n", __FUNCTION__, __LINE__, pint, context, pint->fpga_fd);
-    pint->websock_context = context;
+    fprintf(stderr, "[%s:%d] pint %p context %p fd %d.\n", __FUNCTION__, __LINE__, pint, pint->websock_context, pint->fpga_fd);
     return 0;
 }
 
