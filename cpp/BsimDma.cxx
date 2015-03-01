@@ -41,7 +41,7 @@ static DMAINFO dma_info[MAX_DMA_PORTS];
 static int dma_trace ;//= 1;
 
 #define BUFFER_CHECK \
-    if (!dma_info[id][pref].buffer || offset > dma_info[id][pref].buffer_len) { \
+    if (!dma_info[id][pref].buffer || offset >= dma_info[id][pref].buffer_len) { \
       fprintf(stderr, "BsimDma: buffer %p len %d; reference id %d pref %d offset %d\n", dma_info[id][pref].buffer, dma_info[id][pref].buffer_len, id, pref, offset); \
       exit(-1); \
     }
