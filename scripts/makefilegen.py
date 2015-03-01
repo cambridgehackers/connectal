@@ -203,7 +203,7 @@ SOURCES = $(addprefix $(DTOP)/jni/,  $(GENERATED_CPP)) %(source)s $(PORTAL_CPP_F
 SOURCES2 = $(addprefix $(DTOP)/jni/,  $(GENERATED_CPP)) %(source2)s $(PORTAL_CPP_FILES)
 LDLIBS := %(clibdirs)s %(clibs)s %(clibfiles)s -pthread 
 
-BSIM_EXE_CXX_FILES = BsimDma.cxx BsimCtrl.cxx TlpReplay.cxx
+BSIM_EXE_CXX_FILES = TlpReplay.cxx
 BSIM_EXE_CXX = $(addprefix $(CONNECTALDIR)/cpp/, $(BSIM_EXE_CXX_FILES))
 
 ubuntu.exe: $(SOURCES)
