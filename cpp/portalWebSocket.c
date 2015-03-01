@@ -134,6 +134,7 @@ static struct libwebsocket_protocols *protocols[] = {
 static void get_context(PortalInternal *pint, int port)
 {
     struct lws_context_creation_info info = {0};
+    pint->poller_register = 1;
     info.port = port;
     info.protocols = protocols[pint->fpga_number];
     info.gid = -1;

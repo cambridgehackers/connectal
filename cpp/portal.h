@@ -124,6 +124,7 @@ typedef struct PortalInternal {
     void                   *websock;
     void                   *websock_context;
     void                   *websock_wsi;
+    int                    poller_register;
 } PortalInternal;
 
 typedef struct {
