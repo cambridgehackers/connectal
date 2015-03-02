@@ -59,12 +59,13 @@ class socket_client:
 
 
 class gyro_stream:
-    def __init__(self):
+    def __init__(self, lpf=False):
         self.times = 0
         self.tails = [[],[],[]]
         self.means = [0,0,0]
         self.calibrate_window = 0
         self.sample_freq_hz = 100
+        self.lpf = lpf
 
     def radians(self, sample):
         # sensitivity of sample is 70 milli-degrees-per-second/digit.  
@@ -80,14 +81,13 @@ class gyro_stream:
         window_sz = 10
         rv = []
         write_octave = True
-        lpf = True
         if (write_octave):
             octave_file = open("x.m", "w");
             octave_file.write("#! /usr/bin/octave --persist \nv = [");
         self.times += 1
         num_samples = len(ss)/2
         samples = struct.unpack(''.join(['h' for i in range(0,num_samples)]),ss)
-        if (lpf):
+        if (self.lpf):
             x = numpy.concatenate((self.tails[0],samples[0::3]),0)
             y = numpy.concatenate((self.tails[1],samples[1::3]),0)
             z = numpy.concatenate((self.tails[2],samples[2::3]),0)
