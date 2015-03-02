@@ -52,14 +52,14 @@ def connect_with_adb(ipaddr):
         except socket.error:
             pass
         else:
-            if 'hostname' in connection.Shell('ls /mnt/sdcard/'):
-                name = connection.Shell('cat /mnt/sdcard/hostname') 
+            if 'hostname.txt' in connection.Shell('ls /mnt/sdcard/'):
+                name = connection.Shell('cat /mnt/sdcard/hostname.txt') 
                 connection.Close()
                 print name
                 zedboards.append((ipaddr, name))
                 return
             else:
-                print "/mnt/sdcard/hostname not found"
+                print "/mnt/sdcard/hostname.txt not found"
                 return
         cnt = cnt+1
     print "failed to connect"
