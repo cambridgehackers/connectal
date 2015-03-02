@@ -24,7 +24,26 @@
     "CLK_spi_pins_clock": {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod_gyro": "J4"
+    },
+
+    "hbridge_pins_hbridge0[0]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmod_hbridge" : "J1"
+    },
+    "hbridge_pins_hbridge0[1]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmod_hbridge" : "J2"
+    },
+    "hbridge_pins_hbridge1[0]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmod_hbridge" : "J5"
+    },
+    "hbridge_pins_hbridge1[1]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmod_hbridge" : "J6"
     }
+
+
 }
 
 

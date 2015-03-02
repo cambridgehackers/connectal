@@ -3,12 +3,12 @@ CONNECTALDIR ?= ../..
 ZBLD = $(CONNECTALDIR)/lib/zedboard_robot/bsv
 INTERFACES = MaxSonarCtrlRequest MaxSonarCtrlIndication GyroCtrlRequest GyroCtrlIndication HBridgeCtrlRequest HBridgeCtrlIndication
 BSVFILES = Controller.bsv Top.bsv $(ZBLD)/GyroController.bsv $(ZBLD)/MaxSonarController.bsv $(ZBLD)/HBridgeController.bsv
-CPPFILES= test_zedboard_robot.cpp ../maxsonar_simple/maxsonar_simple.h ../gyro_simple/gyro_simple.h $(CONNECTALDIR)/cpp/sock_server.cpp
+CPPFILES= test_zedboard_robot.cpp ../maxsonar_simple/maxsonar_simple.h ../hbridge_simple/hbridge_simple.h ../gyro_simple/gyro_simple.h $(CONNECTALDIR)/cpp/sock_server.cpp
 NUMBER_OF_MASTERS =1
 PIN_TYPE = ZedboardRobotPins
 CONNECTALFLAGS = -C $(BOARD)/sources/pinout-$(BOARD).xdc
 
-PIN_BINDING ?= -b pmod_sonar:pmodb -b pmod_gyro:pmodd
+PIN_BINDING ?= -b pmod_sonar:pmodb -b pmod_gyro:pmodd -b pmod_hbridge:pmodc
 
 gentarget:: $(BOARD)/sources/pinout-$(BOARD).xdc
 $(BOARD)/sources/pinout-$(BOARD).xdc: pinout.json $(CONNECTALDIR)/boardinfo/$(BOARD).json

@@ -30,9 +30,11 @@
 
 #include "maxsonar_simple.h"
 #include "gyro_simple.h"
+#include "hbridge_simple.h"
 
+#include "HBridgeCtrlRequest.h"
 #include "MaxSonarCtrlRequest.h"
-#include "MaxSonarCtrlIndication.h"
+#include "GyroCtrlRequest.h"
 #include "GeneratedTypes.h"
 #include "StdDmaIndication.h"
 #include "MemServerRequest.h"
@@ -40,11 +42,39 @@
 #include "dmaManager.h"
 #include "sock_server.h"
 
-static int spew = 1;
+static int spew = 0;
 static int alloc_sz = 1<<10;
+
+void* drive_hbridges(void *_x)
+{
+  HBridgeCtrlRequestProxy *device = (HBridgeCtrlRequestProxy*)_x;
+  sleep(2);
+
+  for(int i = 0; i < 2; i++){
+    MOVE_FOREWARD(POWER_5);
+    sleep(1);
+    STOP;
+    
+    MOVE_BACKWARD(POWER_5);
+    sleep(1);
+    STOP;
+    
+    TURN_RIGHT(POWER_5);
+    sleep(1);
+    STOP;
+    
+    TURN_LEFT(POWER_5);
+    sleep(1);
+    STOP;
+
+    sleep(1);
+  }
+}
 
 int main(int argc, const char **argv)
 {
+  HBridgeCtrlIndication *hbridge_ind = new HBridgeCtrlIndication(IfcNames_HBridgeControllerIndication);
+  HBridgeCtrlRequestProxy *hbridge_ctrl = new HBridgeCtrlRequestProxy(IfcNames_HBridgeControllerRequest);
   MaxSonarCtrlIndication *maxsonar_ind = new MaxSonarCtrlIndication(IfcNames_MaxSonarControllerIndication);
   MaxSonarCtrlRequestProxy *maxsonar_ctrl = new MaxSonarCtrlRequestProxy(IfcNames_MaxSonarControllerRequest);
   GyroCtrlIndication *gyro_ind = new GyroCtrlIndication(IfcNames_GyroControllerIndication);
@@ -80,13 +110,17 @@ int main(int argc, const char **argv)
   // setup gyro registers and dma infra
   setup_registers(gyro_ind,gyro_ctrl, ref_dstAlloc, wrap_limit);  
   maxsonar_ctrl->range_ctrl(0xFFFFFFFF);
-  int discard = 40;
+  int discard = 20;
 
+  // start up the thread to drive the hbridges
+  pthread_t threaddata;
+  pthread_create(&threaddata, NULL, &drive_hbridges, (void*)hbridge_ctrl);
+  
   while(true){
 #ifdef BSIM
     sleep(5);
 #else
-    usleep(50000);
+    usleep(50000*2);
 #endif
     maxsonar_ctrl->pulse_width();
     sem_wait(&(maxsonar_ind->pulse_width_sem));
