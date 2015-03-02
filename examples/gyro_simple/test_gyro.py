@@ -64,7 +64,7 @@ class gyro_stream:
         self.tails = [[],[],[]]
         self.means = [0,0,0]
         self.calibrate_window = 0
-        self.sample_freq_hz = 800
+        self.sample_freq_hz = 100
 
     def radians(self, sample):
         # sensitivity of sample is 70 milli-degrees-per-second/digit.  

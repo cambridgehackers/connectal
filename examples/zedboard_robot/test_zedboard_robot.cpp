@@ -40,7 +40,7 @@
 #include "dmaManager.h"
 #include "sock_server.h"
 
-static int spew = 0;
+static int spew = 1;
 static int alloc_sz = 1<<10;
 
 int main(int argc, const char **argv)
@@ -99,8 +99,10 @@ int main(int argc, const char **argv)
     if (!discard){
       if (spew) fprintf(stderr, "(%d microseconds == %f inches)\n", maxsonar_ind->useconds, distance);
       if (spew) display(snapshot, datalen);
-      ss->send_data(snapshot, datalen);
-      ss->send_data((char*)&(maxsonar_ind->useconds), sizeof(int));
+      if(datalen){
+	ss->send_data(snapshot, datalen);
+	ss->send_data((char*)&(maxsonar_ind->useconds), sizeof(int));
+      }
     } else {
       discard--;
     }

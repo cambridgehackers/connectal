@@ -145,6 +145,7 @@ int sock_server::read_circ_buff(int buff_len, unsigned int ref_dstAlloc, int dst
     top = write_addr;
     bottom = write_addr;
     datalen = buff_len;
+    fprintf(stderr, "WARNING: sock_server::read_circ_buffer dwc>1\n");
   }
   top = (top/align)*align;
   bottom = (bottom/align)*align;

@@ -98,7 +98,7 @@ void display(void *b, int len){
 }
 
 
-#define HIGH_SAMPLE_RATE
+//#define HIGH_SAMPLE_RATE
 void setup_registers(GyroCtrlIndication *ind, GyroCtrlRequestProxy *device, int ref_dstAlloc, int wrap_limit)
 {
 #ifdef HIGH_SAMPLE_RATE
