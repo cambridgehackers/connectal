@@ -42,33 +42,43 @@
 #include "dmaManager.h"
 #include "sock_server.h"
 
-static int spew = 0;
+static int spew = 1;
 static int alloc_sz = 1<<10;
 
 void* drive_hbridges(void *_x)
 {
   HBridgeCtrlRequestProxy *device = (HBridgeCtrlRequestProxy*)_x;
-  sleep(2);
+  sleep(20);
 
-  for(int i = 0; i < 2; i++){
-    MOVE_FOREWARD(POWER_5);
-    sleep(1);
-    STOP;
+  // for(int i = 0; i < 2; i++){
+  //   MOVE_FOREWARD(POWER_5);
+  //   sleep(1);
+  //   STOP;
     
-    MOVE_BACKWARD(POWER_5);
-    sleep(1);
-    STOP;
+  //   MOVE_BACKWARD(POWER_5);
+  //   sleep(1);
+  //   STOP;
     
-    TURN_RIGHT(POWER_5);
-    sleep(1);
-    STOP;
+  //   TURN_RIGHT(POWER_5);
+  //   sleep(1);
+  //   STOP;
     
-    TURN_LEFT(POWER_5);
-    sleep(1);
-    STOP;
+  //   TURN_LEFT(POWER_5);
+  //   sleep(1);
+  //   STOP;
 
+  //   sleep(1);
+  // }
+
+  for(int i = 0; i < 30; i++){
+    TURN_RIGHT(POWER_4);
+    usleep(100000);
+    STOP;
     sleep(1);
   }
+  STOP;
+
+
 }
 
 int main(int argc, const char **argv)
