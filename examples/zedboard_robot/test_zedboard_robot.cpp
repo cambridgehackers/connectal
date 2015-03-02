@@ -42,7 +42,7 @@
 #include "dmaManager.h"
 #include "sock_server.h"
 
-static int spew = 1;
+static int spew = 0;
 static int alloc_sz = 1<<10;
 
 void* drive_hbridges(void *_x)
