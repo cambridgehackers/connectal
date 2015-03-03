@@ -37,7 +37,7 @@
 #include <assert.h>
 #include <netdb.h>
 
-static int trace_socket;// = 1;
+static int trace_socket ;//= 1;
 
 const char *bluesimSocketName()
 {
@@ -168,7 +168,11 @@ ssize_t sock_fd_read(int sockfd, void *ptr, size_t nbytes, int *recvfd)
 	fprintf(stderr, "[%s:%d] got fd %d\n", __FUNCTION__, __LINE__, *foo);
     }
     if (n != nbytes) {
-      fprintf(stderr, "[%s:%d] asked for %ld bytes, got %ld\n", __FUNCTION__, __LINE__, (long)nbytes, (long)n);
+      //fprintf(stderr, "[%s:%d] asked for %ld bytes, got %ld\n", __FUNCTION__, __LINE__, (long)nbytes, (long)n);
+      iov[0].iov_base = (void *)((unsigned long)iov[0].iov_base + n);
+      iov[0].iov_len -= n;
+      if ( (n = recvmsg(sockfd, &msg, 0)) <= 0)
+          return n;
     }
     return n;
 }
