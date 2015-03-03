@@ -48,13 +48,13 @@ public:
 static void call_say(int v)
 {
   sRequestProxy->say(v);
-  //sem_wait(&sem_heard);
+  sem_wait(&sem_heard);
 }
 
 static void call_say2(int v, int v2)
 {
   sRequestProxy->say2(v, v2);
-  //sem_wait(&sem_heard2);
+  sem_wait(&sem_heard2);
 }
 
 static void set_leds(int v)

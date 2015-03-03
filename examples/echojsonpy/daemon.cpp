@@ -35,11 +35,11 @@ class EchoRequest : public EchoRequestWrapper
 public:
   void say ( const uint32_t v ) {
     if (daemon_trace) fprintf(stderr, "daemon say(%d)\n", v);
-    //sIndicationProxy->heard(v);
+    sIndicationProxy->heard(v);
   }
   void say2 ( const uint32_t a, const uint32_t b ) {
     if (daemon_trace) fprintf(stderr, "daemon say2(%d, %d)\n", a,b);
-    //sIndicationProxy->heard2(a, b);
+    sIndicationProxy->heard2(a, b);
   }
   void setLeds ( const uint32_t v ) {
     if (daemon_trace) fprintf(stderr, "daemon setLeds(%d)\n", v);

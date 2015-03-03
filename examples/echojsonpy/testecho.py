@@ -32,6 +32,10 @@ import argparse
 import json
 import math
 
+class BaseClass(object):
+    def __init__(self, classtype):
+        self._type = classtype
+
 class socket_client:
     def __init__(self, devaddr, devport):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -42,7 +46,8 @@ class socket_client:
         while bytes_recd < self.llen:
             chunk = self.s.recv(self.llen)
             bytes_recd = len(chunk)
-        blen = struct.unpack("!i", chunk)[0]
+        liw = struct.unpack("hh", chunk)[0]
+        blen = (liw-1)*self.llen
         bytes_recd = 0
         buffer = []
         while bytes_recd < blen:
@@ -54,42 +59,38 @@ class socket_client:
             rv = rv + b
         return rv
     def send_frame(self, data):
-        liw = math.ceil(len(data)/4.0)+1
-        print "send_frame %d %s" % (liw, data)
-        self.s.send(struct.pack("@i", liw)+data)
+        liw = math.ceil(len(data)/4.0)
+        padding = ''.join([' ' for i in range(len(data), int(liw*4))])
+        print "send_frame (%d) %d %s" % (len(data),liw, data)
+        self.s.send(struct.pack("@i", (1+liw))+data+padding)
     def shutdown(self):
         self.s.shutdown(socket.SHUT_RDWR)
         self.s.close()
 
-ind_addr = "127.0.0.1"
-ind_port = 5000
-
-req_addr = "127.0.0.1"
-req_port = 5001
-
-ind_s = socket_client(ind_addr, ind_port)
-req_s = socket_client(req_addr, req_port)
-
-json_data=open('./bluesim/generatedDesignInterfaceFile.json')
-data = json.load(json_data)
-json_data.close()
-
 def toascii(u):
     return u.encode('ascii', 'replace')
 
-def createSendMethod((methname, params)):
-    def method(self, *args):
-        d = zip(params,args)
-        d.insert(0,('name',methname))
-        js = json.dumps(dict(d), separators=(',',':'), sort_keys=True)
+def createSendMethod(methname):
+    def method(self, d):
+        d['name'] = methname
+        js = json.dumps(d, separators=(',',':'), sort_keys=True)
         self.s.send_frame(js)
     return (methname,method)
 
-class BaseClass(object):
-    def __init__(self, classtype):
-        self._type = classtype
+def createDefaultCallbackMethod(methname):
+    def method(self, d):
+        print "default %s(%s)" %(methname, str(d))
+    return (methname,method)
 
-def ProxyClassFactoryy(name, meths, BaseClass=BaseClass):
+def createWrapperEvent(meths):
+    def method(self):
+        msg = self.s.recv_frame()
+        d = json.loads(msg)
+        n = d.pop('name')
+        getattr(self, n)(d)
+    return method
+
+def ProxyClassFactory(name, meths, BaseClass=BaseClass):
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -97,29 +98,49 @@ def ProxyClassFactoryy(name, meths, BaseClass=BaseClass):
     newclass = type(toascii(name), (BaseClass,),dict([("__init__",__init__)]+map(createSendMethod, meths)))
     return newclass
 
-def intersperse(e, l):
-    return reduce(lambda x,y: x+y, zip(l, [e]*len(l)))[:-1]
+def WrapperClassFactory(name, meths, BaseClass=BaseClass):
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+        BaseClass.__init__(self, name[:-len("Class")])
+    newclass = type(toascii(name), (BaseClass,),dict([("__init__",__init__), ("event", createWrapperEvent(meths))]+map(createDefaultCallbackMethod, meths)))
+    return newclass
 
-classes = []
-for ifc in data['interfaces']:
-    print ifc['name']
-    methods = []
-    for decl in ifc['decls']:
-        param_names = [param['name'] for param in decl['params']]
-        sys.stdout.write(" "+decl['name']+'(')
-        sys.stdout.write(''.join(intersperse(',', param_names)))
-        sys.stdout.write(")\n")
-        methods.append((decl['name'], param_names))
-    classes.append(ProxyClassFactoryy(ifc['name'], methods))
+if __name__ == "__main__":
+    ind_addr = "127.0.0.1"
+    ind_port = 5000
+    
+    req_addr = "127.0.0.1"
+    req_port = 5001
+    
+    ind_s = socket_client(ind_addr, ind_port)
+    req_s = socket_client(req_addr, req_port)
+    
+    json_data=open('./bluesim/generatedDesignInterfaceFile.json')
+    data = json.load(json_data)
+    json_data.close()
+    
+    proxy_classes = {}
+    wrapper_classes = {}
+    for ifc in data['interfaces']:
+        methods = [decl['name'] for decl in ifc['decls']]
+        proxy_classes[ifc['name']] = ProxyClassFactory(ifc['name'], methods)
+        wrapper_classes[ifc['name']] = WrapperClassFactory(ifc['name'], methods)
+        
+    ei = wrapper_classes['EchoIndication'](s=ind_s)
+    er = proxy_classes['EchoRequest'](s=req_s)
+    
+    def new_heard(d):
+        print "new heard(%s)" %(str(d))
 
-
-EchoRequest = classes[0]
-SwallowRequest = classes[1]
-EchoIndication = classes[2]
-
-er = EchoRequest(s = req_s)
-er.say(1)
-er.say2(2,1)
-er.setLeds(0)
-time.sleep(1)
-req_s.shutdown()
+    er.say({'x':1})
+    ei.event()
+    er.say({'x':1})
+    setattr(ei,'heard', new_heard)
+    ei.event()
+    er.say2({'x':2,'y':1})
+    ei.event()
+    er.setLeds({'x':0})
+    time.sleep(1)
+    req_s.shutdown()
+    ind_s.shutdown()

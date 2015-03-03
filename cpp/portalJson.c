@@ -23,7 +23,7 @@
 #include <string.h>
 #include "portal.h"
 
-static int trace_json ;//= 1;
+static int trace_json;// = 1;
 void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJsonInfo *info)
 {
     ConnectalParamJsonInfo *iparam = info->param;
@@ -38,11 +38,11 @@ void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJs
         switch(iparam->itype) {
         case ITYPE_uint32_t:
             tmp32 = *(uint32_t *)((unsigned long)tempdata + iparam->offset);
-            data += sprintf(data, "0x%x", tmp32);
+            data += sprintf(data, "%d", tmp32);
             break;
         case ITYPE_uint64_t:
             tmp64 = *(uint64_t *)((unsigned long)tempdata + iparam->offset);
-            data += sprintf(data, "0x%lx", (unsigned long)tmp64);
+            data += sprintf(data, "%ld", (unsigned long)tmp64);
             break;
         case ITYPE_SpecialTypeForSendingFd:
             tmpint = *(int *)((unsigned long)tempdata + iparam->offset);
@@ -56,7 +56,12 @@ void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJs
     data += sprintf(data, "}");
     if (trace_json)
         fprintf(stderr, "[%s] num %d message '%s'\n", __FUNCTION__, iparam->offset, (char *)datap);
-    pint->item->send(pint, (volatile unsigned int*)datap, (iparam->offset << 16) | strlen((char *)datap), -1);
+    int ll = strlen(datap);
+    int xx = sizeof(uint32_t);
+    int ll_u = (ll+(xx-1))/xx;
+    while (ll++ < ll_u*xx)
+      *data++ = ' ';
+    pint->item->send(pint, (volatile unsigned int*)datap, (iparam->offset << 16) | 1+ll_u, -1);
 }
 
 int connnectalJsonDecode(PortalInternal *pint, int _unused_channel, void *tempdata, ConnectalMethodJsonInfo *infoa)
@@ -70,7 +75,7 @@ int connnectalJsonDecode(PortalInternal *pint, int _unused_channel, void *tempda
     int tmpfd;
     int len = (header & 0xffff)-1;
     int rc = pint->item->recv(pint, (volatile unsigned int*)datap, len, &tmpfd);
-    datap[len] = 0;
+    datap[len*sizeof(uint32_t)] = 0;
     if (trace_json)
         fprintf(stderr, "[%s] message '%s'\n", __FUNCTION__, (char *)datap);
 
