@@ -39,7 +39,7 @@ class socket_client:
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.connect((devaddr, devport))
         self.llen = ctypes.sizeof(ctypes.c_int);
-    def recv(self):
+    def recv_frame(self):
         bytes_recd = 0
         while bytes_recd < self.llen:
             chunk = self.s.recv(self.llen)
@@ -56,14 +56,53 @@ class socket_client:
         for b in buffer[1:]:
             rv = rv + b
         return rv
-    def send(self, d):
-        data = json.dumps(d, separators=(',',':'), sort_keys=True)
+    def send_frame(self, data):
         liw = math.ceil(len(data)/4.0)
         padding = ''.join([' ' for i in range(len(data), int(liw*4))])
+        print "send_frame (%d) %d %s" % (len(data),liw, data)
         self.s.send(struct.pack("@i", (1+liw))+data+padding)
     def shutdown(self):
         self.s.shutdown(socket.SHUT_RDWR)
         self.s.close()
+
+def toascii(u):
+    return u.encode('ascii', 'replace')
+
+def createSendMethod(methname):
+    def method(self, d):
+        d['name'] = methname
+        js = json.dumps(d, separators=(',',':'), sort_keys=True)
+        self.s.send_frame(js)
+    return (methname,method)
+
+def createDefaultCallbackMethod(methname):
+    def method(self, d):
+        print "default %s(%s)" %(methname, str(d))
+    return (methname,method)
+
+def createWrapperEvent(meths):
+    def method(self):
+        msg = self.s.recv_frame()
+        d = json.loads(msg)
+        n = d.pop('name')
+        getattr(self, n)(d)
+    return method
+
+def ProxyClassFactory(name, meths, BaseClass=BaseClass):
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+        BaseClass.__init__(self, name[:-len("Class")])
+    newclass = type(toascii(name), (BaseClass,),dict([("__init__",__init__)]+map(createSendMethod, meths)))
+    return newclass
+
+def WrapperClassFactory(name, meths, BaseClass=BaseClass):
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+        BaseClass.__init__(self, name[:-len("Class")])
+    newclass = type(toascii(name), (BaseClass,),dict([("__init__",__init__), ("event", createWrapperEvent(meths))]+map(createDefaultCallbackMethod, meths)))
+    return newclass
 
 
 if __name__ == "__main__":
@@ -76,13 +115,31 @@ if __name__ == "__main__":
     ind_s = socket_client(ind_addr, ind_port)
     req_s = socket_client(req_addr, req_port)
     
-    req_s.send({'name':'say','x':1})
-    print ind_s.recv()
-    req_s.send({'name':'say','x':1})
-    print ind_s.recv()
-    req_s.send({'name':'say2','x':2,'y':1})
-    print ind_s.recv()
-    req_s.send({'name':'setLeds','x':0})
+    json_data=open('./bluesim/generatedDesignInterfaceFile.json')
+    data = json.load(json_data)
+    json_data.close()
+    
+    proxy_classes = {}
+    wrapper_classes = {}
+    for ifc in data['interfaces']:
+        methods = [decl['name'] for decl in ifc['decls']]
+        proxy_classes[ifc['name']] = ProxyClassFactory(ifc['name'], methods)
+        wrapper_classes[ifc['name']] = WrapperClassFactory(ifc['name'], methods)
+        
+    ei = wrapper_classes['EchoIndication'](s=ind_s)
+    er = proxy_classes['EchoRequest'](s=req_s)
+    
+    def new_heard(d):
+        print "new heard(%s)" %(str(d))
+
+    er.say({'x':1})
+    ei.event()
+    er.say({'x':1})
+    setattr(ei,'heard', new_heard)
+    ei.event()
+    er.say2({'x':2,'y':1})
+    ei.event()
+    er.setLeds({'x':0})
     time.sleep(1)
     req_s.shutdown()
     ind_s.shutdown()
