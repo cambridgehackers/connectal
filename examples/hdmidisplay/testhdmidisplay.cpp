@@ -140,7 +140,7 @@ int main(int argc, const char **argv)
     PortalPoller *poller = 0;
 
     poller = new PortalPoller();
-    device = new HdmiDisplayRequestProxy(IfcNames_HdmiDisplayRequest, poller);
+    device = new HdmiDisplayRequestProxy(IfcNames_HdmiDisplayRequest);
   MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
   dmap = new MMURequestProxy(IfcNames_HostMMURequest);
   DmaManager *dma = new DmaManager(dmap);
