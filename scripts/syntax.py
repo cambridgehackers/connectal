@@ -339,7 +339,9 @@ def p_unaryExpression(p):
                        | TILDEBAR term
                        | CARET term
                        | TILDECARET term
-                       | TOKACTION colonVar expressionStmts TOKENDACTION colonVar'''
+                       | TOKACTION colonVar expressionStmts TOKENDACTION colonVar
+                       | TOKACTIONVALUE colonVar expressionStmts TOKENDACTIONVALUE colonVar
+                       '''
 
 def p_term(p):
     '''term : type
@@ -575,6 +577,7 @@ def p_expressionStmt(p):
                       | methodDef
                       | moduleDef
                       | TOKACTION colonVar expressionStmts TOKENDACTION colonVar
+                      | TOKACTIONVALUE colonVar expressionStmts TOKENDACTIONVALUE colonVar
                       | typeDef
                       | instanceAttributes rule
                       | TOKACTION fsmStmts TOKENDACTION
