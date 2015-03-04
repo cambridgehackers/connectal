@@ -616,6 +616,7 @@ def p_functionFormals(p):
                        | functionFormals COMMA functionFormal '''
 def p_fsmStmt(p):
     '''fsmStmt : TOKSEQ fsmStmts TOKENDSEQ
+               | TOKPAR fsmStmts TOKENDPAR
                | TOKWHILE ruleCond fsmStmt
                | expressionStmt'''
 
