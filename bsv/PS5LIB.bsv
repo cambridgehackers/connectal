@@ -512,57 +512,145 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
       endmethod
 
       method rxpolarity();
-         Vector#(8, Bit#(1)) retval = unpack({pcie.rxp.olarity7, pcie.rxp.olarity6, pcie.rxp.olarity5, pcie.rxp.olarity4, pcie.rxp.olarity3, pcie.rxp.olarity2, pcie.rxp.olarity1, pcie.rxp.olarity0});
+         Vector#(8, Bit#(1)) retval;
+         retval = unpack({pcie.rxp.olarity7,
+                          pcie.rxp.olarity6,
+                          pcie.rxp.olarity5,
+                          pcie.rxp.olarity4,
+                          pcie.rxp.olarity3,
+                          pcie.rxp.olarity2,
+                          pcie.rxp.olarity1,
+                          pcie.rxp.olarity0});
          return retval;
       endmethod
 
       method txcompl();
-         Vector#(8, Bit#(1)) retval = unpack({pcie.txc.ompl7, pcie.txc.ompl6, pcie.txc.ompl5, pcie.txc.ompl4, pcie.txc.ompl3, pcie.txc.ompl2, pcie.txc.ompl1, pcie.txc.ompl0});
+         Vector#(8, Bit#(1)) retval;
+         retval = unpack({pcie.txc.ompl7,
+                          pcie.txc.ompl6,
+                          pcie.txc.ompl5,
+                          pcie.txc.ompl4,
+                          pcie.txc.ompl3,
+                          pcie.txc.ompl2,
+                          pcie.txc.ompl1,
+                          pcie.txc.ompl0});
          return retval;
       endmethod
 
       method txdata();
-         Vector#(8, Bit#(8)) retval = unpack({pcie.txd.ata7, pcie.txd.ata6, pcie.txd.ata5, pcie.txd.ata4, pcie.txd.ata3, pcie.txd.ata2, pcie.txd.ata1, pcie.txd.ata0});
+         Vector#(8, Bit#(8)) retval;
+         retval = unpack({pcie.txd.ata7,
+                          pcie.txd.ata6,
+                          pcie.txd.ata5,
+                          pcie.txd.ata4,
+                          pcie.txd.ata3,
+                          pcie.txd.ata2,
+                          pcie.txd.ata1,
+                          pcie.txd.ata0});
          return retval;
       endmethod
 
       method txdatak();
-         Vector#(8, Bit#(1)) retval = unpack({pcie.txd.atak7, pcie.txd.atak6, pcie.txd.atak5, pcie.txd.atak4, pcie.txd.atak3, pcie.txd.atak2, pcie.txd.atak1, pcie.txd.atak0});
+         Vector#(8, Bit#(1)) retval;
+         retval = unpack({pcie.txd.atak7,
+                          pcie.txd.atak6,
+                          pcie.txd.atak5,
+                          pcie.txd.atak4,
+                          pcie.txd.atak3,
+                          pcie.txd.atak2,
+                          pcie.txd.atak1,
+                          pcie.txd.atak0});
          return retval;
       endmethod
 
       method txdeemph();
-         Vector#(8, Bit#(1)) retval = unpack({pcie.txd.eemph7, pcie.txd.eemph6, pcie.txd.eemph5, pcie.txd.eemph4, pcie.txd.eemph3, pcie.txd.eemph2, pcie.txd.eemph1, pcie.txd.eemph0});
+         Vector#(8, Bit#(1)) retval;
+         retval = unpack({pcie.txd.eemph7,
+                          pcie.txd.eemph6,
+                          pcie.txd.eemph5,
+                          pcie.txd.eemph4,
+                          pcie.txd.eemph3,
+                          pcie.txd.eemph2,
+                          pcie.txd.eemph1,
+                          pcie.txd.eemph0});
          return retval;
       endmethod
 
       method txdetectrx();
-         Vector#(8, Bit#(1)) retval = unpack({pcie.txd.etectrx7, pcie.txd.etectrx6, pcie.txd.etectrx5, pcie.txd.etectrx4, pcie.txd.etectrx3, pcie.txd.etectrx2, pcie.txd.etectrx1, pcie.txd.etectrx0});
+         Vector#(8, Bit#(1)) retval;
+         retval = unpack({pcie.txd.etectrx7,
+                          pcie.txd.etectrx6,
+                          pcie.txd.etectrx5,
+                          pcie.txd.etectrx4,
+                          pcie.txd.etectrx3,
+                          pcie.txd.etectrx2,
+                          pcie.txd.etectrx1,
+                          pcie.txd.etectrx0});
          return retval;
       endmethod
 
       method txelecidle();
-         Vector#(8, Bit#(1)) retval = unpack({pcie.txe.lecidle7, pcie.txe.lecidle6, pcie.txe.lecidle5, pcie.txe.lecidle4, pcie.txe.lecidle3, pcie.txe.lecidle2, pcie.txe.lecidle1, pcie.txe.lecidle0});
+         Vector#(8, Bit#(1)) retval;
+         retval = unpack({pcie.txe.lecidle7,
+                          pcie.txe.lecidle6,
+                          pcie.txe.lecidle5,
+                          pcie.txe.lecidle4,
+                          pcie.txe.lecidle3,
+                          pcie.txe.lecidle2,
+                          pcie.txe.lecidle1,
+                          pcie.txe.lecidle0});
          return retval;
       endmethod
 
       method txmargin();
-         Vector#(8, Bit#(3)) retval = unpack({pcie.txm.argin7, pcie.txm.argin6, pcie.txm.argin5, pcie.txm.argin4, pcie.txm.argin3, pcie.txm.argin2, pcie.txm.argin1, pcie.txm.argin0});
+         Vector#(8, Bit#(3)) retval;
+         retval = unpack({pcie.txm.argin7,
+                          pcie.txm.argin6,
+                          pcie.txm.argin5,
+                          pcie.txm.argin4,
+                          pcie.txm.argin3,
+                          pcie.txm.argin2,
+                          pcie.txm.argin1,
+                          pcie.txm.argin0});
          return retval;
       endmethod
 
       method txswing();
-         Vector#(8, Bit#(1)) retval = unpack({pcie.txs.wing7, pcie.txs.wing6, pcie.txs.wing5, pcie.txs.wing4, pcie.txs.wing3, pcie.txs.wing2, pcie.txs.wing1, pcie.txs.wing0});
+         Vector#(8, Bit#(1)) retval;
+         retval = unpack({pcie.txs.wing7,
+                          pcie.txs.wing6,
+                          pcie.txs.wing5,
+                          pcie.txs.wing4,
+                          pcie.txs.wing3,
+                          pcie.txs.wing2,
+                          pcie.txs.wing1,
+                          pcie.txs.wing0});
          return retval;
       endmethod
 
       method powerdown();
-         Vector#(8, Bit#(2)) retval = unpack({pcie.power.down7, pcie.power.down6, pcie.power.down5, pcie.power.down4, pcie.power.down3, pcie.power.down2, pcie.power.down1, pcie.power.down0});
+         Vector#(8, Bit#(2)) retval;
+         retval = unpack({pcie.power.down7,
+                          pcie.power.down6,
+                          pcie.power.down5,
+                          pcie.power.down4,
+                          pcie.power.down3,
+                          pcie.power.down2,
+                          pcie.power.down1,
+                          pcie.power.down0});
          return retval;
       endmethod
 
       method eidleinfersel();
-         Vector#(8, Bit#(3)) retval = unpack({pcie.eidle.infersel7, pcie.eidle.infersel6, pcie.eidle.infersel5, pcie.eidle.infersel4, pcie.eidle.infersel3, pcie.eidle.infersel2, pcie.eidle.infersel1, pcie.eidle.infersel0});
+         Vector#(8, Bit#(3)) retval;
+         retval = unpack({pcie.eidle.infersel7,
+                          pcie.eidle.infersel6,
+                          pcie.eidle.infersel5,
+                          pcie.eidle.infersel4,
+                          pcie.eidle.infersel3,
+                          pcie.eidle.infersel2,
+                          pcie.eidle.infersel1,
+                          pcie.eidle.infersel0});
          return retval;
       endmethod
 
