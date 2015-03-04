@@ -222,23 +222,34 @@ def typeCName(item):
     global generatedVectors
     if item['type'] == 'Type':
         cid = item['name'].replace(' ', '')
+        numbits = typeNumeric(item['params'][0])
         if cid == 'Bit':
-            if typeNumeric(item['params'][0]) <= 32:
+            if numbits <= 16:
+                return 'uint16_t'
+            elif numbits <= 32:
                 return 'uint32_t'
-            elif typeNumeric(item['params'][0]) <= 64:
+            elif numbits <= 64:
                 return 'uint64_t'
             else:
-                return 'std::bitset<%d>' % (typeNumeric(item['params'][0]))
+                return 'std::bitset<%d>' % (numbits)
         elif cid == 'Bool':
             return 'int'
         elif cid == 'Int':
-            if typeNumeric(item['params'][0]) == 32:
-                return 'int'
+            if numbits <= 16:
+                return 'int16_t'
+            elif numbits <= 32:
+                return 'int32_t'
+            elif numbits <= 64:
+                return 'int64_t'
             else:
                 assert(False)
         elif cid == 'UInt':
-            if typeNumeric(item['params'][0]) == 32:
-                return 'unsigned int'
+            if numbits <= 16:
+                return 'uint16_t'
+            elif numbits <= 32:
+                return 'uint32_t'
+            elif numbits <= 64:
+                return 'uint64_t'
             else:
                 assert(False)
         elif cid == 'Float':
