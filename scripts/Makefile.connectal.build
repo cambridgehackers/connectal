@@ -179,7 +179,7 @@ android.debug.exe: prepare_bin_target
 run:
 ifeq ($(CONNECTAL_SHARED),1)
 	$(GDB_BSIM) ./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe2 $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
-else 
+else
 ifeq ($(BOARD),bluesim)
     ifeq ($(RUNSOURCE2),)
 	$(GDB_BSIM) ./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
@@ -228,13 +228,11 @@ xsim: verilog bin/xsim
 	xelab $(XELABFLAGS) work.$(MKTOP) -dll -s $(MKTOP)
 
 bin/vsim:
-	echo $@
+	python $(CONNECTALDIR)/scripts/sim-gen.py -o vsim/Makefile -s ~/dev/connectal/out/vsim/synthesis/ -d ~/dev/sonic-lite/vsim/modelsim -p ~/dev/sonic-lite -c $(CONNECTALDIR) -g ~/dev/connectal/out/vsim/synthesis/ -t ~/dev/connectal/out/vsim/synthesis/ -T mkSonicSimTop
 
 vsim: verilog bin/vsim
-#	$(Q)bsc -D BSV_TIMESCALE=1ns/1ns -verilog -vsearch +:$(QSYS_SIMDIR)/simulation/submodules/ \
-#		-vsim ./bsc_build_vsim_modelsim -e tb -o run_simulation -Xv "+incdir+$(QSYS_SIMDIR)/simulation/submodules/" \
-#		$(BSV_VERILOG_FILES)
-	echo $@ 
+	make -C vsim all
+	make -C vsim simulate
 
 $(vfile): $(TOPBSVFILE) $(BSVFILES)
 	$(Q)mkdir -p verilog/portal $(DTOP)/obj
