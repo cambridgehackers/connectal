@@ -38,7 +38,7 @@ import ClientServer      ::*;
 import Real              ::*;
 
 import PCIE              ::*;
-import PcieEndpointS5Lib ::*;
+import PS5LIB            ::*;
 import PcieEndpointS5Test ::*;
 
 (* always_ready, always_enabled *)

@@ -27,7 +27,7 @@ import Connectable   ::*;
 import ConnectalAlteraCells   ::*;
 
 import ALTERA_PCIE_ED_WRAPPER ::*;
-import PcieEndpointS5Lib      ::*;
+import PS5LIB ::*;
 
 // Default Pcie Application
 
