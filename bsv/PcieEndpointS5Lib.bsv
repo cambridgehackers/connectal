@@ -146,10 +146,9 @@ interface PcieS5HipSerial;
    interface PcieS5Txout tx;
 endinterface
 
-`ifdef PCIES5_SIM
 interface PcieS5HipPipe;
 (* prefix="", result="rxdata" *)     method Action     rxdata    (Vector#(8, Bit#(8)) rxdata);
-(* prefix="", result="rxdatak" *)    method Action     rxdatak   (Vector#(9, Bit#(1)) rxdatak);
+(* prefix="", result="rxdatak" *)    method Action     rxdatak   (Vector#(8, Bit#(1)) rxdatak);
 (* prefix="", result="rxelecidle" *) method Action     rxelecidle(Vector#(8, Bit#(1)) rxelecidle);
 (* prefix="", result="rxstatus" *)   method Action     rxstatus  (Vector#(8, Bit#(3)) rxstatus);
 (* prefix="", result="rxvalid" *)    method Action     rxvalid   (Vector#(8, Bit#(1)) rxvalid);
@@ -169,7 +168,6 @@ interface PcieS5HipPipe;
     method Bit#(5)    sim_ltssmstate();
     method Bit#(2)    sim_pipe_rate();
 endinterface
-`endif
 
 (* always_ready, always_enabled *)
 interface PcieS5HipCtrl;
@@ -190,9 +188,7 @@ interface PcieS5Wrap#(numeric type address_width, numeric type data_width, numer
    interface PcieS5Rxin rx;
    interface PcieS5Txout tx;
    interface PcieS5HipStatus hip_status;
-`ifdef PCIES5_SIM
    interface PcieS5HipPipe hip_pipe;
-`endif
    interface PcieS5HipCtrl hip_ctrl;
    interface Clock coreclkout_hip;
 endinterface
@@ -201,15 +197,12 @@ endinterface
 module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_perst)(PcieS5Wrap#(12, 32, 128));
 
    Vector#(8, Wire#(Bit#(1))) rx_in_wires <- replicateM(mkDWire(0));
-
-//`ifdef PCIES5_SIM
    Vector#(8, Wire#(Bit#(8))) rxdata_wires <- replicateM(mkDWire(0));
    Vector#(8, Wire#(Bit#(1))) rxdatak_wires <- replicateM(mkDWire(0));
    Vector#(8, Wire#(Bit#(1))) rxelecidle_wires <- replicateM(mkDWire(0));
    Vector#(8, Wire#(Bit#(3))) rxstatus_wires  <- replicateM(mkDWire(0));
    Vector#(8, Wire#(Bit#(1))) rxvalid_wires   <- replicateM(mkDWire(0));
    Vector#(8, Wire#(Bit#(1))) phystatus_wires <- replicateM(mkDWire(0));
-//`endif
 
    Clock default_clock <- exposeCurrentClock;
    Reset default_reset <- exposeCurrentReset;
@@ -282,7 +275,6 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
       pcie.pld.clk(c2b.o());
    endrule
 
-//`ifdef PCIES5_SIM
    (* no_implicit_conditions *)
    rule pcie_rx;
       pcie.rx.in0(rx_in_wires[0]);
@@ -366,7 +358,6 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
       pcie.phy.status6(phystatus_wires[6]);
       pcie.phy.status7(phystatus_wires[7]);
    endrule
-//`endif
 
    method Clock coreclkout_hip;
       return pcie.coreclkout.hip;
@@ -495,7 +486,6 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
       method Bit#(8) ko_cpl_spc_header;return pcie.ko.cpl_spc_header;endmethod
    endinterface
 
-`ifdef PCIES5_SIM
    interface PcieS5HipPipe hip_pipe;
       method Action rxdata(Vector#(8, Bit#(8)) a);
          writeVReg(rxdata_wires, a);
@@ -581,7 +571,6 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
       method sim_ltssmstate(); return pcie.sim.ltssmstate; endmethod
       method sim_pipe_rate(); return pcie.sim.pipe_rate; endmethod
    endinterface
-`endif
 
    interface PcieS5HipCtrl hip_ctrl;
       method test_in = pcie.test.in;
