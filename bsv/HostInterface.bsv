@@ -90,6 +90,8 @@ import PcieEndpointX7    :: *;
 import PCIEWRAPPER       :: *;
 `elsif ALTERA
 import PcieEndpointS5    :: *;
+`elsif VSIM
+import PcieEndpointS5    :: *;
 `endif
 `endif
 typedef 40 PciePhysAddrWidth;
@@ -120,6 +122,8 @@ interface PcieHostTop;
 //   interface Clock tsys_clk_200mhz;
 //   interface Clock tsys_clk_200mhz_buf;
 //   interface Clock tpci_clk_100mhz_buf;
+   interface PcieEndpointS5#(PcieLanes) tep7;
+`elsif VSIM
    interface PcieEndpointS5#(PcieLanes) tep7;
 `endif
    interface Clock portalClock;

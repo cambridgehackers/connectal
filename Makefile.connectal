@@ -138,8 +138,6 @@ NEED_XILINX_PCIE_v2000t=1
 NEED_ALTERA_PCIE_de5=1
 NEED_ALTERA_ETH_de5=1
 
-NEED_ALTERA_PCIE_SIM_vsim=1
-
 ifeq ($(NEED_XILINX_PCIE_$(BOARD)),1)
     FPGAMAKE_CONNECTALFLAGS += -P mkPcieEndpointX7 -P mkPcieHost
     CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/pcie_7x_0/pcie_7x_0.xci
@@ -216,10 +214,6 @@ endif
 
 # Synthesize Altera Ethernet Core
 ifeq ($(NEED_ALTERA_ETH_$(BOARD)), 1)
-	cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) quartus_sh -t $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-eth.tcl
-endif
-
-ifeq ($(NEED_ALTERA_PCIE_SIM_$(BOARD)), 1)
-	cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) quartus_sh -t $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
+#	cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) quartus_sh -t $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-eth.tcl
 endif
 

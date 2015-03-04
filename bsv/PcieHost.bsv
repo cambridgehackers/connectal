@@ -44,6 +44,8 @@ import PcieEndpointX7    :: *;
 import PCIEWRAPPER       :: *;
 `elsif ALTERA
 import PcieEndpointS5    :: *;
+`elsif VSIM
+import PcieEndpointS5    :: *;
 `endif
 `endif
 import HostInterface     :: *;
@@ -213,6 +215,12 @@ endmodule
 `endif
 
 `ifdef ALTERA
+`define ALTERA_TOP
+`elsif VSIM
+`define ALTERA_TOP
+`endif
+
+`ifdef ALTERA_TOP
 (* no_default_clock, no_default_reset *)
 module mkAlteraPcieHostTop #(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieHostTop);
 
@@ -231,9 +239,7 @@ module mkAlteraPcieHostTop #(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(P
    Reset portalReset_ = epReset125;
 `endif
 
-   PcieHost#(DataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(
-         PciId{ bus:  ep7.cfg.bus_number(), dev: ep7.cfg.device_number(), func: ep7.cfg.function_number()},
-         clocked_by portalClock_, reset_by portalReset_);
+   PcieHost#(DataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(ep7.device, clocked_by portalClock_, reset_by portalReset_);
    mkConnection(ep7.tlp, pciehost.pci, clocked_by portalClock_, reset_by portalReset_);
 
    interface PcieEndpointS5 tep7 = ep7;
@@ -260,7 +266,7 @@ endmodule
    module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)(PcieHostTop);
       PcieHostTop _a <- mkXilinxPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n); return _a;
    endmodule
-`elsif ALTERA
+`elsif ALTERA_TOP
    //(* synthesize, no_default_clock, no_default_reset *)
    (* no_default_clock, no_default_reset *)
    module mkPcieHostTop #(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieHostTop);
