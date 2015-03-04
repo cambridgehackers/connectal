@@ -7,4 +7,3 @@ BSVFILES = Memread.bsv
 CPPFILES=testmemread.cpp
 
 include $(CONNECTALDIR)/Makefile.connectal
-

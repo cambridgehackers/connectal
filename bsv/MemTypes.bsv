@@ -37,7 +37,7 @@ import ConnectalMemory::*;
 typedef Bit#(32) SGLId;
 typedef 44 MemOffsetSize;
 typedef 6 MemTagSize;
-typedef 8 BurstLenSize;
+typedef `BurstLenSize BurstLenSize;
 typedef 32 MemServerTags;
 
 // memory request with physical addresses.

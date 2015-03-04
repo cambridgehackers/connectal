@@ -36,14 +36,14 @@ import HBridgeCtrlRequest::*;
 import HBridgeCtrlIndication::*;
 
 // defined by user
-import Controller::*;
+import HBridgeController::*;
 
 typedef enum {ControllerRequest, ControllerIndication} IfcNames deriving (Eq,Bits);
 
-module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,HBridge2,0));
+module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,HBridge2Pins,0));
 
    HBridgeCtrlIndicationProxy cp <- mkHBridgeCtrlIndicationProxy(ControllerIndication);
-   Controller controller <- mkController(cp.ifc);
+   HBridgeController controller <- mkHBridgeController(cp.ifc);
    HBridgeCtrlRequestWrapper cw <- mkHBridgeCtrlRequestWrapper(ControllerRequest, controller.req);
    
    Vector#(2,StdPortal) portals;
@@ -59,6 +59,6 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,HBridge2,0));
 
 endmodule : mkConnectalTop
 
-export Controller::*;
+export HBridgeController::*;
 export mkConnectalTop;
 

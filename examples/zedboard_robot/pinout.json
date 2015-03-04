@@ -1,0 +1,49 @@
+{
+
+    "maxsonar_pins_range_ctrl" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmod_sonar" : "J2"
+    },
+    "maxsonar_pins_pulse_v" : {
+	"PIO_DIRECTION": "INPUT",
+	"pmod_sonar" : "J4"
+    },
+
+    "spi_pins_mosi": {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmod_gyro": "J2"
+    },
+    "spi_pins_miso_v": {
+	"PIO_DIRECTION": "INPUT",
+	"pmod_gyro": "J3"
+    },
+    "spi_pins_sel_n": {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmod_gyro": "J1"
+    },
+    "CLK_spi_pins_clock": {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmod_gyro": "J4"
+    },
+
+    "hbridge_pins_hbridge0[0]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmod_hbridge" : "J1"
+    },
+    "hbridge_pins_hbridge0[1]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmod_hbridge" : "J2"
+    },
+    "hbridge_pins_hbridge1[0]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmod_hbridge" : "J5"
+    },
+    "hbridge_pins_hbridge1[1]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmod_hbridge" : "J6"
+    }
+
+
+}
+
+

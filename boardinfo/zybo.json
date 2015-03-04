@@ -4,6 +4,7 @@
         "os" : "android",
         "partname" : "xc7z010clg400-1",
         "rewireclockstring" : "tclzynqrewireclock",
+        "constraints": "constraints/xilinx/xc7z010clg400.xdc",
         "TOP" : "ZynqTop",
         "CONNECTALFLAGS" : [],
         "needs_pcie_7x_gen1x8" : "False"

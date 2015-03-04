@@ -39,7 +39,7 @@ interface LedController;
    interface LEDS leds;
 endinterface
 
-module mkLedControllerRequest(LedController);
+module mkLedController(LedController);
 
    Reg#(Bit#(8)) ledsValue <- mkReg(0);
    Reg#(Bit#(32)) remainingDuration <- mkReg(0);

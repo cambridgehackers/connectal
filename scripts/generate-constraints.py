@@ -76,10 +76,13 @@ for pin in pinout:
     loc = 'TBD'
     iostandard = 'TBD'
     used = []
+    boardGroupInfo = {}
+    pinName = ''
     for key in bindings:
         if pinInfo.has_key(key):
             used.append(key)
             pinName = pinInfo[key]
+            #print('LLL', key, pinName, bindings[key])
             boardGroupInfo = boardInfo[bindings[key]]
             break
     if boardGroupInfo.has_key(pinName):

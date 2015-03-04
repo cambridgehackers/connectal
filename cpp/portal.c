@@ -250,13 +250,8 @@ void portalCheckIndication(PortalInternal *pint)
       unsigned int int_en  = pint->item->read(pint, &enp);
       PORTAL_PRINTF( "%s: (fpga%d) about to receive messages int=%08x en=%08x qs=%08x\n", __FUNCTION__, pint->fpga_number, int_src, int_en, queue_status);
     }
-    if (!pint->handler) {
-        PORTAL_PRINTF("[%s:%d] missing handler!!!!\n", __FUNCTION__, __LINE__);
-#ifndef __KERNEL__
-        exit(1);
-#endif
-    }
-    pint->handler(pint, queue_status-1, 0);
+    if (pint->handler)
+        pint->handler(pint, queue_status-1, 0);
   }
 }
 

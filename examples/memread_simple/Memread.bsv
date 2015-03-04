@@ -30,6 +30,7 @@ import Pipe::*;
 import MemTypes::*;
 import MemreadEngine::*;
 import Pipe::*;
+import HostInterface::*; // for DataBusWidth
 
 interface MemreadRequest;
    method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
@@ -37,7 +38,7 @@ endinterface
 
 interface Memread;
    interface MemreadRequest request;
-   interface MemReadClient#(64) dmaClient;
+   interface Vector#(1,MemReadClient#(DataBusWidth)) dmaClient;
 endinterface
 
 interface MemreadIndication;
@@ -54,7 +55,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    Reg#(Bit#(32))   itersToStart <- mkReg(0);
    Reg#(Bit#(32))        srcGens <- mkReg(0);
    Reg#(Bit#(32)) mismatchCounts <- mkReg(0);
-   MemreadEngineV#(64,2,1)        re <- mkMemreadEngine;
+   MemreadEngineV#(DataBusWidth,2,1) re <- mkMemreadEngine;
    Bit#(MemOffsetSize) chunk = extend(numWords)*4;
    
    
@@ -83,7 +84,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
       itersToFinish <= itersToFinish - 1;
    endrule
    
-   interface dmaClient = re.dmaClient;
+   interface dmaClient = cons(re.dmaClient, nil);
    interface MemreadRequest request;
       method Action startRead(Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic) if (itersToStart == 0 && itersToFinish == 0);
 	 pointer <= rp;

@@ -161,6 +161,23 @@ instance SelectBsimRdmaReadWrite#(128);
        endmethod
    endmodule
 endinstance
+instance SelectBsimRdmaReadWrite#(256);
+   module selectBsimRdmaReadWrite(BsimRdmaReadWrite#(256) ifc);
+       method Action write_pareff(Bit#(32) handle, Bit#(32) addr, Bit#(256) v);
+	  write_pareff64(handle, addr, v[63:0]);
+	  write_pareff64(handle, addr+8, v[127:64]);
+	  write_pareff64(handle, addr+16, v[191:128]);
+	  write_pareff64(handle, addr+24, v[255:192]);
+       endmethod
+       method ActionValue#(Bit#(256)) read_pareff(Bit#(32) handle, Bit#(32) addr);
+	  let v0 <- read_pareff64(handle, addr);
+	  let v1 <- read_pareff64(handle, addr+8);
+	  let v2 <- read_pareff64(handle, addr+16);
+	  let v3 <- read_pareff64(handle, addr+24);
+	  return {v3,v2,v1,v0};
+       endmethod
+   endmodule
+endinstance
 
 module mkBsimDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
    provisos(Div#(serverBusWidth,8,dataWidthBytes),

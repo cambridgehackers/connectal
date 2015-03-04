@@ -28,42 +28,43 @@
 #include <assert.h>
 #include <string.h>
 
-#include "MaxSonarCtrlRequest.h"
+
+
 #include "MaxSonarCtrlIndication.h"
 #include "GeneratedTypes.h"
 
-
 class MaxSonarCtrlIndication : public MaxSonarCtrlIndicationWrapper
 {
-public:
-  MaxSonarCtrlIndication(int id) : MaxSonarCtrlIndicationWrapper(id) {}
-  virtual void range_ctrl ( const uint32_t v){
-    fprintf(stderr, "MaxSonarCtrlIndication::range_ctrl(v=%0d)\n", v);
+ public:
+  sem_t status_sem;
+  sem_t pulse_width_sem;
+  uint32_t write_addr;
+  int write_wrap_cnt;
+  int verbose;
+  int useconds;
+
+  MaxSonarCtrlIndication(int id) : MaxSonarCtrlIndicationWrapper(id) {
+    sem_init(&status_sem,1,0);
+    sem_init(&pulse_width_sem,1,0);
+    write_addr = 0;
+    write_wrap_cnt = 0;
+    verbose = 0;
   }
-  virtual void pulse_width( const uint32_t* v){
-    // MaxSonar uses a scaling factor of 147 microseconds/inch
-    // in its pulse-width output.  This design will be clocked
-    // at 100 mHz on the zedboard.  We count accordingly
-    for(int i = 0; i < 2; i++)
-      fprintf(stderr, "[%d](%d microseconds == %f inches)\n", i, v[i]/100, ((float)v[i])/100.0/147.0);
+  virtual void range_ctrl ( const uint32_t v){
+    if (verbose) fprintf(stderr, "MaxSonarCtrlIndication::range_ctrl(v=%x)\n", v);
+  }
+  virtual void pulse_width ( const uint32_t v){
+    if (verbose) fprintf(stderr, "MaxSonarCtrlIndication::pulse_width(v=%x)\n", v);
+    useconds = v/100;
+    sem_post(&pulse_width_sem);
+  }
+  virtual void memwrite_status(const uint32_t addr, const uint32_t wrap_cnt){
+    if (verbose) fprintf(stderr, "MaxSonarCtrlIndication::memwrite_status(addr=%08x, wrap_cnt=%d)\n", addr, wrap_cnt);
+    write_addr = addr;
+    write_wrap_cnt = wrap_cnt;
+    sem_post(&status_sem);
   }
 };
 
-int main(int argc, const char **argv)
-{
-  MaxSonarCtrlIndication *ind = new MaxSonarCtrlIndication(IfcNames_ControllerIndication);
-  MaxSonarCtrlRequestProxy *device = new MaxSonarCtrlRequestProxy(IfcNames_ControllerRequest);
 
-  portalExec_start();
 
-  long req_freq = 100000000; // 100 mHz
-  long freq = 0;
-  setClockFrequency(0, req_freq, &freq);
-  fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
-
-  device->range_ctrl(0xFFFFFFFF);
-  while(true){
-    device->pulse_width();
-    sleep(1);
-  }
-}

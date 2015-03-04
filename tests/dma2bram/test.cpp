@@ -48,11 +48,11 @@ public:
 int main(int argc, const char **argv)
 {
 
-  TestRequestProxy *testRequest = new TestRequestProxy(IfcNames_TestRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  TestRequestProxy *testRequest = new TestRequestProxy(IfcNames_TestRequestS2H);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
-  TestIndication *testIndication = new TestIndication(IfcNames_TestIndication);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
+  TestIndication *testIndication = new TestIndication(IfcNames_TestIndicationH2S);
 
   if(sem_init(&test_sem, 1, 0)){
     fprintf(stderr, "failed to init test_sem\n");

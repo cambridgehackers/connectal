@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <netdb.h>
+#include "sock_utils.h"
 #include "EchoRequest.h"
 #include "EchoIndication.h"
 

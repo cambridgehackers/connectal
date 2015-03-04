@@ -1,13 +1,14 @@
 
 CONNECTALDIR ?= ../..
+ZBLD = $(CONNECTALDIR)/lib/zedboard_robot/bsv
 INTERFACES = MaxSonarCtrlRequest MaxSonarCtrlIndication
-BSVFILES = Controller.bsv Top.bsv 
-CPPFILES= test_maxsonar.cpp
-NUMBER_OF_MASTERS =0
-PIN_TYPE = MaxSonar2
+BSVFILES = $(ZBLD)/MaxSonarController.bsv Top.bsv 
+CPPFILES= test_maxsonar.cpp $(CONNECTALDIR)/cpp/sock_server.cpp
+NUMBER_OF_MASTERS =1
 CONNECTALFLAGS = -C $(BOARD)/sources/pinout-$(BOARD).xdc
 
-PIN_BINDING ?= -b pmod:pmodd
+PIN_TYPE = MaxSonarPins
+PIN_BINDING ?= -b pmod:pmodb
 
 gentarget:: $(BOARD)/sources/pinout-$(BOARD).xdc
 $(BOARD)/sources/pinout-$(BOARD).xdc: pinout.json $(CONNECTALDIR)/boardinfo/$(BOARD).json

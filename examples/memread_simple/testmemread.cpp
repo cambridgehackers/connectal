@@ -65,13 +65,13 @@ public:
 
 int main(int argc, const char **argv)
 {
-  MemreadRequestProxy *device = new MemreadRequestProxy(IfcNames_MemreadRequest);
-  MemreadIndication *deviceIndication = new MemreadIndication(IfcNames_MemreadIndication);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  MemreadRequestProxy *device = new MemreadRequestProxy(IfcNames_MemreadRequestS2H);
+  MemreadIndication *deviceIndication = new MemreadIndication(IfcNames_MemreadIndicationH2S);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
 
   int srcAlloc;
   srcAlloc = portalAlloc(alloc_sz);
