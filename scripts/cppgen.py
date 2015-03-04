@@ -222,8 +222,8 @@ def typeCName(item):
     global generatedVectors
     if item['type'] == 'Type':
         cid = item['name'].replace(' ', '')
-        numbits = typeNumeric(item['params'][0])
         if cid == 'Bit':
+            numbits = typeNumeric(item['params'][0])
             if numbits <= 16:
                 return 'uint16_t'
             elif numbits <= 32:
@@ -235,6 +235,7 @@ def typeCName(item):
         elif cid == 'Bool':
             return 'int'
         elif cid == 'Int':
+            numbits = typeNumeric(item['params'][0])
             if numbits <= 16:
                 return 'int16_t'
             elif numbits <= 32:
@@ -244,6 +245,7 @@ def typeCName(item):
             else:
                 assert(False)
         elif cid == 'UInt':
+            numbits = typeNumeric(item['params'][0])
             if numbits <= 16:
                 return 'uint16_t'
             elif numbits <= 32:
