@@ -20,7 +20,7 @@ if $need_xilinx_pcie {
 # (it is byteoffset/8, expressed in hex)
 }
 
-proc create_pcie_sv_hip_ast {} {
+proc create_pcie_sv_hip_ast {mode} {
     global boardname
     set pcieversion {2.1}
     set maxlinkwidth {x8}
@@ -28,9 +28,9 @@ proc create_pcie_sv_hip_ast {} {
     set core_version {14.0}
     set ip_name {altera_pcie_sv_hip_ast_wrapper}
 
-    set vendor_id {0x1172}
-    set device_id {0xee01}
-    set class_code {0xff0000}
+    set vendor_id {0x1be7}
+    set device_id {0xc100}
+    set class_code {0xde5000}
 
 	set params [ dict create ]
 	dict set params lane_mask_hwtcl                      $maxlinkwidth
@@ -53,9 +53,10 @@ proc create_pcie_sv_hip_ast {} {
 	dict set params enable_power_on_rst_pulse_hwtcl      0
 
 	dict set params bar0_type_hwtcl                      1
-	dict set params bar0_size_mask_hwtcl                 28
+	dict set params bar0_size_mask_hwtcl                 14
 	dict set params bar0_io_space_hwtcl                  "Disabled"
 	dict set params bar0_64bit_mem_space_hwtcl           "Enabled"
+	dict set params bar0_prefetchable_hwtcl              "Disabled"
 
 	dict set params bar1_type_hwtcl                      0
 	dict set params bar1_size_mask_hwtcl                 0
@@ -63,9 +64,9 @@ proc create_pcie_sv_hip_ast {} {
 	dict set params bar1_prefetchable_hwtcl              "Disabled"
 
 	dict set params bar2_type_hwtcl                      1
-	dict set params bar2_size_mask_hwtcl                 10
+	dict set params bar2_size_mask_hwtcl                 20
 	dict set params bar2_io_space_hwtcl                  "Disabled"
-	dict set params bar2_64bit_mem_space_hwtcl           "Disabled"
+	dict set params bar2_64bit_mem_space_hwtcl           "Enabled"
 	dict set params bar2_prefetchable_hwtcl              "Disabled"
 
 	dict set params bar3_type_hwtcl                          0
@@ -102,10 +103,14 @@ proc create_pcie_sv_hip_ast {} {
 		lappend component_parameters --component-parameter=$item=$val
 	}
 
-    connectal_altera_synth_ip $core_name $core_version $ip_name $component_parameters
+    if { [string match "SIMULATION" $mode]} {
+        connectal_altera_simu_ip $core_name $core_version $ip_name $component_parameters
+    } else {
+        connectal_altera_synth_ip $core_name $core_version $ip_name $component_parameters
+    }
 }
 
-proc create_pcie_reconfig {} {
+proc create_pcie_reconfig {mode} {
     set core_name {altera_pcie_reconfig_driver}
     set core_version {14.0}
     set ip_name {altera_pcie_reconfig_driver_wrapper}
@@ -121,7 +126,11 @@ proc create_pcie_reconfig {} {
 		lappend component_parameters --component-parameter=$item=$val
 	}
 
-    connectal_altera_synth_ip $core_name $core_version $ip_name $component_parameters
+    if {[string match "SIMULATION" $mode]} {
+        connectal_altera_simu_ip $core_name $core_version $ip_name $component_parameters
+    } else {
+        connectal_altera_synth_ip $core_name $core_version $ip_name $component_parameters
+    }
 }
 
 proc create_pcie_hip_ast_ed {} {
@@ -157,7 +166,7 @@ proc create_pcie_hip_ast_ed {} {
     connectal_altera_synth_ip $core_name $core_version $ip_name $component_parameters
 }
 
-proc create_pcie_xcvr_reconfig {core_name core_version ip_name n_interface} {
+proc create_pcie_xcvr_reconfig {mode core_name core_version ip_name n_interface} {
  	set params [ dict create ]
 	dict set params number_of_reconfig_interfaces $n_interface
 	dict set params device_family                 "Stratix V"
@@ -178,13 +187,17 @@ proc create_pcie_xcvr_reconfig {core_name core_version ip_name n_interface} {
 		set val [dict get $params $item]
 		lappend component_parameters --component-parameter=$item=$val
 	}
-    connectal_altera_synth_ip $core_name $core_version $ip_name $component_parameters
+    if {[string match "SIMULATION" $mode]} {
+        connectal_altera_simu_ip $core_name $core_version $ip_name $component_parameters
+    } else {
+        connectal_altera_synth_ip $core_name $core_version $ip_name $component_parameters
+    }
 }
 
 if $need_altera_pcie {
-    create_pcie_sv_hip_ast
-    create_pcie_xcvr_reconfig alt_xcvr_reconfig 14.0 alt_xcvr_reconfig_wrapper 10
-    create_pcie_reconfig
+    create_pcie_sv_hip_ast SYNTHESIS
+    create_pcie_xcvr_reconfig SYNTHESIS alt_xcvr_reconfig 14.0 alt_xcvr_reconfig_wrapper 10
+    create_pcie_reconfig SYNTHESIS
     create_pcie_hip_ast_ed
 }
 

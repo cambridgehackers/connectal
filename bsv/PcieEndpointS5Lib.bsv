@@ -48,7 +48,6 @@ interface PcieS5RxSt#(numeric type data_width);
    method Bit#(1)          sop;
    method Bit#(1)          eop;
    method Bit#(data_width) data;
-   method Bit#(16)         be;
    method Action           ready(Bit#(1) ready);
    method Bit#(1)          valid;
    method Bit#(1)          err;
@@ -77,9 +76,10 @@ interface PcieS5Msi;
 endinterface
 
 (* always_ready, always_enabled *)
-interface PcieS5RxBar;
+interface PcieS5RxSpecific;
    method Action   mask(Bit#(1) mask);
    method Bit#(8)  bar();
+   method Bit#(16) be();
 endinterface
 
 (* always_ready, always_enabled *)
@@ -149,7 +149,7 @@ endinterface
 `ifdef PCIES5_SIM
 interface PcieS5HipPipe;
 (* prefix="", result="rxdata" *)     method Action     rxdata    (Vector#(8, Bit#(8)) rxdata);
-(* prefix="", result="rxdatak" *)    method Action     rxdatak   (Vector#(8, Bit#(1)) rxdatak);
+(* prefix="", result="rxdatak" *)    method Action     rxdatak   (Vector#(9, Bit#(1)) rxdatak);
 (* prefix="", result="rxelecidle" *) method Action     rxelecidle(Vector#(8, Bit#(1)) rxelecidle);
 (* prefix="", result="rxstatus" *)   method Action     rxstatus  (Vector#(8, Bit#(3)) rxstatus);
 (* prefix="", result="rxvalid" *)    method Action     rxvalid   (Vector#(8, Bit#(1)) rxvalid);
@@ -183,7 +183,7 @@ interface PcieS5Wrap#(numeric type address_width, numeric type data_width, numer
    interface PcieS5RxSt#(app_width) rx_st;
    interface PcieS5TxSt#(app_width) tx_st;
    interface PcieS5Msi msi;
-   interface PcieS5RxBar rx_bar;
+   interface PcieS5RxSpecific rx_specific;
    interface PcieS5TlCfg tl;
    interface PcieS5HipRst hip_rst;
    interface PcieS5TxCred tx_cred;
@@ -201,12 +201,15 @@ endinterface
 module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_perst)(PcieS5Wrap#(12, 32, 128));
 
    Vector#(8, Wire#(Bit#(1))) rx_in_wires <- replicateM(mkDWire(0));
+
+//`ifdef PCIES5_SIM
    Vector#(8, Wire#(Bit#(8))) rxdata_wires <- replicateM(mkDWire(0));
    Vector#(8, Wire#(Bit#(1))) rxdatak_wires <- replicateM(mkDWire(0));
    Vector#(8, Wire#(Bit#(1))) rxelecidle_wires <- replicateM(mkDWire(0));
    Vector#(8, Wire#(Bit#(3))) rxstatus_wires  <- replicateM(mkDWire(0));
    Vector#(8, Wire#(Bit#(1))) rxvalid_wires   <- replicateM(mkDWire(0));
    Vector#(8, Wire#(Bit#(1))) phystatus_wires <- replicateM(mkDWire(0));
+//`endif
 
    Clock default_clock <- exposeCurrentClock;
    Reset default_reset <- exposeCurrentReset;
@@ -218,6 +221,68 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
    PcieReconfigWrap pcie_cfg <- mkPcieReconfigWrap(coreclk, clk_50Mhz, npor, reset_high, reset_high);
    XcvrReconfigWrap xcvr_cfg <- mkXcvrReconfigWrap(clk_50Mhz, reset_high, reset_high);
 
+   (* no_implicit_conditions *)
+   rule connectReconfigMgmt;
+      xcvr_cfg.reconfig_mgmt.read(pcie_cfg.reconfig_mgmt.read);
+      xcvr_cfg.reconfig_mgmt.write(pcie_cfg.reconfig_mgmt.write);
+      xcvr_cfg.reconfig_mgmt.address(pcie_cfg.reconfig_mgmt.address);
+      xcvr_cfg.reconfig_mgmt.writedata(pcie_cfg.reconfig_mgmt.writedata);
+      pcie_cfg.reconfig_mgmt.readdata(xcvr_cfg.reconfig_mgmt.readdata);
+      pcie_cfg.reconfig_mgmt.waitrequest(xcvr_cfg.reconfig_mgmt.waitrequest);
+   endrule
+
+   (* no_implicit_conditions *)
+   rule connectCurrentSpeed;
+      pcie_cfg.current.speed(pcie.current.speed);
+   endrule
+
+   (* no_implicit_conditions *)
+   rule connect_xcvr_reconfig;
+      pcie.reconfig.to_xcvr(xcvr_cfg.reconfig.to_xcvr);
+      xcvr_cfg.reconfig.from_xcvr(pcie.reconfig.from_xcvr);
+   endrule
+
+   (* no_implicit_conditions *)
+   rule connectBusy;
+      pcie_cfg.reconfig_b.usy(xcvr_cfg.reconfig.busy);
+   endrule
+
+   (* no_implicit_conditions *)
+   rule connectHipStatus;
+      pcie_cfg.derr.cor_ext_rcv_drv(pcie.derr.cor_ext_rcv);
+      pcie_cfg.derr.cor_ext_rpl_drv(pcie.derr.cor_ext_rpl);
+      pcie_cfg.derr.rpl_drv(pcie.derr.rpl);
+      pcie_cfg.dlup.drv(pcie.dl.up);
+      pcie_cfg.dlup.exit_drv(pcie.dl.up_exit);
+      pcie_cfg.ev128ns.drv(pcie.ev128.ns);
+      pcie_cfg.ev1us.drv(pcie.ev1.us);
+      pcie_cfg.hotrst.exit_drv(pcie.hotrst.exit);
+      pcie_cfg.int_s.tatus_drv(pcie.int_s.tatus);
+      pcie_cfg.lane.act_drv(pcie.lane.act);
+      pcie_cfg.l2.exit_drv(pcie.l2.exit);
+      pcie_cfg.ltssmstate.drv(pcie.ltssm.state);
+      pcie_cfg.tx.par_err_drv(pcie.tx_par.err);
+      pcie_cfg.rx.par_err_drv(pcie.rx_par.err);
+      pcie_cfg.cfg.par_err_drv(pcie.cfg_par.err);
+      pcie_cfg.ko.cpl_spc_data_drv(pcie.ko.cpl_spc_data);
+      pcie_cfg.ko.cpl_spc_header_drv(pcie.ko.cpl_spc_header);
+   endrule
+
+   (* no_implicit_conditions *)
+   rule power_mgmt;
+      pcie.pm.auxpwr(0);
+      pcie.pm.data(10'b0);
+      pcie.pm_e.vent(0);
+      pcie.pme.to_cr(0);
+      pcie.hpg.ctrler(5'b0);
+   endrule
+
+   C2B c2b <- mkC2B(pcie.coreclkout.hip);
+   rule pld_clk_rule;
+      pcie.pld.clk(c2b.o());
+   endrule
+
+//`ifdef PCIES5_SIM
    (* no_implicit_conditions *)
    rule pcie_rx;
       pcie.rx.in0(rx_in_wires[0]);
@@ -301,67 +366,7 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
       pcie.phy.status6(phystatus_wires[6]);
       pcie.phy.status7(phystatus_wires[7]);
    endrule
-
-   (* no_implicit_conditions *)
-   rule connectReconfigMgmt;
-      xcvr_cfg.reconfig_mgmt.read(pcie_cfg.reconfig_mgmt.read);
-      xcvr_cfg.reconfig_mgmt.write(pcie_cfg.reconfig_mgmt.write);
-      xcvr_cfg.reconfig_mgmt.address(pcie_cfg.reconfig_mgmt.address);
-      xcvr_cfg.reconfig_mgmt.writedata(pcie_cfg.reconfig_mgmt.writedata);
-      pcie_cfg.reconfig_mgmt.readdata(xcvr_cfg.reconfig_mgmt.readdata);
-      pcie_cfg.reconfig_mgmt.waitrequest(xcvr_cfg.reconfig_mgmt.waitrequest);
-   endrule
-
-   (* no_implicit_conditions *)
-   rule connectCurrentSpeed;
-      pcie_cfg.current.speed(pcie.current.speed);
-   endrule
-
-   (* no_implicit_conditions *)
-   rule connect_xcvr_reconfig;
-      pcie.reconfig.to_xcvr(xcvr_cfg.reconfig.to_xcvr);
-      xcvr_cfg.reconfig.from_xcvr(pcie.reconfig.from_xcvr);
-   endrule
-
-   (* no_implicit_conditions *)
-   rule connectBusy;
-      pcie_cfg.reconfig_b.usy(xcvr_cfg.reconfig.busy);
-   endrule
-
-   (* no_implicit_conditions *)
-   rule connectHipStatus;
-      pcie_cfg.derr.cor_ext_rcv_drv(pcie.derr.cor_ext_rcv);
-      pcie_cfg.derr.cor_ext_rpl_drv(pcie.derr.cor_ext_rpl);
-      pcie_cfg.derr.rpl_drv(pcie.derr.rpl);
-      pcie_cfg.dlup.drv(pcie.dl.up);
-      pcie_cfg.dlup.exit_drv(pcie.dl.up_exit);
-      pcie_cfg.ev128ns.drv(pcie.ev128.ns);
-      pcie_cfg.ev1us.drv(pcie.ev1.us);
-      pcie_cfg.hotrst.exit_drv(pcie.hotrst.exit);
-      pcie_cfg.int_s.tatus_drv(pcie.int_s.tatus);
-      pcie_cfg.lane.act_drv(pcie.lane.act);
-      pcie_cfg.l2.exit_drv(pcie.l2.exit);
-      pcie_cfg.ltssmstate.drv(pcie.ltssm.state);
-      pcie_cfg.tx.par_err_drv(pcie.tx_par.err);
-      pcie_cfg.rx.par_err_drv(pcie.rx_par.err);
-      pcie_cfg.cfg.par_err_drv(pcie.cfg_par.err);
-      pcie_cfg.ko.cpl_spc_data_drv(pcie.ko.cpl_spc_data);
-      pcie_cfg.ko.cpl_spc_header_drv(pcie.ko.cpl_spc_header);
-   endrule
-
-   (* no_implicit_conditions *)
-   rule power_mgmt;
-      pcie.pm.auxpwr(0);
-      pcie.pm.data(10'b0);
-      pcie.pm_e.vent(0);
-      pcie.pme.to_cr(0);
-      pcie.hpg.ctrler(5'b0);
-   endrule
-
-   C2B c2b <- mkC2B(pcie.coreclkout.hip);
-   rule pld_clk_rule;
-      pcie.pld.clk(c2b.o());
-   endrule
+//`endif
 
    method Clock coreclkout_hip;
       return pcie.coreclkout.hip;
@@ -400,7 +405,6 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
       method Bit#(1)   sop();   return pcie.rx_s.t_sop;   endmethod
       method Bit#(1)   eop();   return pcie.rx_s.t_eop;   endmethod
       method Bit#(128) data();  return pcie.rx_s.t_data;  endmethod
-      method Bit#(16)  be();    return pcie.rx_s.t_be;    endmethod
       method Bit#(1)   valid(); return pcie.rx_s.t_valid; endmethod
       method Bit#(1)   err();   return pcie.rx_s.t_err;   endmethod
       method Bit#(2)   empty(); return pcie.rx_s.t_empty; endmethod
@@ -427,9 +431,10 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
       method msi_tc = pcie.app.msi_tc;
    endinterface
 
-   interface PcieS5RxBar rx_bar;
+   interface PcieS5RxSpecific rx_specific;
       method mask = pcie.rx_s.t_mask;
       method Bit#(8) bar (); return pcie.rx_s.t_bar; endmethod
+      method Bit#(16) be();  return pcie.rx_s.t_be;  endmethod
    endinterface
 
    interface PcieS5HipRst hip_rst;
