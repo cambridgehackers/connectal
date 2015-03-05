@@ -31,14 +31,14 @@
 # I/O STANDARDS and Location Constraints                                   #
 ############################################################################
 
-set_property iostandard "SSTL15_T_DCI" [get_ports "DDR_VRP"]
-set_property PACKAGE_PIN "H5" [get_ports "DDR_VRP"]
-set_property slew "FAST" [get_ports "DDR_VRP"]
-set_property PIO_DIRECTION "BIDIR" [get_ports "DDR_VRP"]
-set_property iostandard "SSTL15_T_DCI" [get_ports "DDR_VRN"]
-set_property PACKAGE_PIN "G5" [get_ports "DDR_VRN"]
-set_property slew "FAST" [get_ports "DDR_VRN"]
-set_property PIO_DIRECTION "BIDIR" [get_ports "DDR_VRN"]
+set_property iostandard "SSTL15_T_DCI" [get_ports "FIXED_IO_ddr_vrp"]
+set_property PACKAGE_PIN "H5" [get_ports "FIXED_IO_ddr_vrp"]
+set_property slew "FAST" [get_ports "FIXED_IO_ddr_vrp"]
+set_property PIO_DIRECTION "BIDIR" [get_ports "FIXED_IO_ddr_vrp"]
+set_property iostandard "SSTL15_T_DCI" [get_ports "FIXED_IO_ddr_vrn"]
+set_property PACKAGE_PIN "G5" [get_ports "FIXED_IO_ddr_vrn"]
+set_property slew "FAST" [get_ports "FIXED_IO_ddr_vrn"]
+set_property PIO_DIRECTION "BIDIR" [get_ports "FIXED_IO_ddr_vrn"]
 set_property iostandard "SSTL15" [get_ports "DDR_WEB"]
 set_property PACKAGE_PIN "M5" [get_ports "DDR_WEB"]
 set_property slew "SLOW" [get_ports "DDR_WEB"]
