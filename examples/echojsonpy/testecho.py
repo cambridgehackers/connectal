@@ -37,24 +37,24 @@ if __name__ == "__main__":
     req_addr = "127.0.0.1"
     req_port = 5001
     
-    ind_s = portalJson.socket_client(ind_addr, ind_port)
-    req_s = portalJson.socket_client(req_addr, req_port)
+    ind_p = portalJson.portal(ind_addr, ind_port)
+    req_p = portalJson.portal(req_addr, req_port)
     
     d = {'name':'say','x':1}
     print d
-    req_s.send(d)
-    print ind_s.recv()
+    req_p.send(d)
+    print ind_p.recv()
     d = {'name':'say','x':3}
     print d
-    req_s.send(d)
-    print ind_s.recv()
+    req_p.send(d)
+    print ind_p.recv()
     d = {'name':'say2','x':2,'y':1}
     print d
-    req_s.send(d)
-    print ind_s.recv()
+    req_p.send(d)
+    print ind_p.recv()
     d = {'name':'setLeds','x':0}
     print d
-    req_s.send(d)
+    req_p.send(d)
     time.sleep(1)
-    req_s.shutdown()
-    ind_s.shutdown()
+    req_p.shutdown()
+    ind_p.shutdown()

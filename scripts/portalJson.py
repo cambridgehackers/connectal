@@ -28,7 +28,7 @@ import struct
 import ctypes
 import json
 
-class socket_client:
+class portal:
     def __init__(self, devaddr, devport):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.connect((devaddr, devport))
