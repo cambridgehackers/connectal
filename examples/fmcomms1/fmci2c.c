@@ -87,11 +87,13 @@ void testi2c(char *i2cdevice, int deviceid)
     }
 
     printf ("getversion result %d\n", res);
-    for (i = 0; i < 256; i += 1) {
-      if ((i != 0) && ((i % 16) == 0)) printf("\n");
-      printf(" %2x[%c]", version_data[i],isalnum(version_data[i]) ? version_data[i]:' ');
+    for (i = 0; i < 256; i += 16) {
+      int j;
+      for (j=0; j < 16; j += 1) {
+	printf(" %2x[%c]", version_data[i+j],isalnum(version_data[i+j]) ? version_data[i+j]:' ');
+      }
+      printf("\n");
     }
-    printf("\n");
     /*
     memset(version_data, 0, 128);
     res = fmcomms1_get_version(fd, deviceid, version_data, 128);
