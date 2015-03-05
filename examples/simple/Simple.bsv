@@ -55,6 +55,9 @@ interface SimpleRequest;
     method Action say6(Bit#(32)a, Bit#(40) b, Bit#(32) c);
     method Action say7(S3 v);
     method Action say8(Vector#(128, Bit#(32)) v);
+    method Action sayv1 (Vector#(4, Int#(32)) arg1, Vector#(4, Int#(32)) arg2);
+    method Action sayv2 (Vector#(16, Int#(16)) v);
+    method Action sayv3 (Vector#(16, Int#(16)) v, Int#(16) count);
 endinterface
 
 typedef struct {
@@ -109,6 +112,18 @@ module mkSimple#(SimpleRequest indication)(Simple);
    method Action say8(Vector#(128, Bit#(32)) v);
       if (verbose) $display("mkSimple::say8");
       indication.say8(v);
+   endmethod
+   method Action sayv1 (Vector#(4, Int#(32)) arg1, Vector#(4, Int#(32)) arg2);
+      if (verbose) $display("mkSimple::sayv1");
+      indication.sayv1(arg1, arg2);
+   endmethod
+   method Action sayv2 (Vector#(16, Int#(16)) v);
+      if (verbose) $display("mkSimple::sayv2");
+      indication.sayv2(v);
+   endmethod
+   method Action sayv3 (Vector#(16, Int#(16)) v, Int#(16) count);
+      if (verbose) $display("mkSimple::sayv3");
+      indication.sayv3(v, count);
    endmethod
    endinterface
 endmodule
