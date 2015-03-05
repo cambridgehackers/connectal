@@ -78,7 +78,7 @@ void testi2c(char *i2cdevice, int deviceid)
 
     // start version query
     memset(version_data, 0, 256);
-    for (i = 0; i < 256; i += 1) {
+    for (i = 0; i < 256; i += 16) {
       res = I2C_Read(0x50, i, 16, &version_data[i]);
       if (res < 0) {
 	fprintf(stdout, "testi2c failed eeprom read at %d\n", i);
