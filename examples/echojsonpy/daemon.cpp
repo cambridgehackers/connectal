@@ -37,11 +37,11 @@ public:
     if (daemon_trace) fprintf(stderr, "daemon say(%d)\n", v);
     sIndicationProxy->heard(v);
   }
-  void say2 ( const uint32_t a, const uint32_t b ) {
+  void say2 ( const uint16_t a, const uint16_t b ) {
     if (daemon_trace) fprintf(stderr, "daemon say2(%d, %d)\n", a,b);
     sIndicationProxy->heard2(a, b);
   }
-  void setLeds ( const uint32_t v ) {
+  void setLeds ( const uint16_t v ) {
     if (daemon_trace) fprintf(stderr, "daemon setLeds(%d)\n", v);
     sleep(1);
     exit(1);

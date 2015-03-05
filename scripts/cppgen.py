@@ -26,7 +26,7 @@ import functools, math, os, re, sys, util
 
 sizeofUint32_t = 4
 generatedVectors = []
-itypeNames = ['uint32_t', 'uint64_t', 'SpecialTypeForSendingFd', 'ChannelType', 'DmaDbgRec']
+itypeNames = ['uint16_t', 'uint32_t', 'uint64_t', 'SpecialTypeForSendingFd', 'ChannelType', 'DmaDbgRec']
 
 proxyClassPrefixTemplate='''
 class %(className)sProxy : public %(parentClass)s {

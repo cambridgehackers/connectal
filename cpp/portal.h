@@ -137,7 +137,7 @@ typedef struct {
     void                 *socketParam;
 } PortalMuxParam;
 
-enum {ITYPE_other, ITYPE_uint32_t, ITYPE_uint64_t, ITYPE_SpecialTypeForSendingFd,
+enum {ITYPE_other, ITYPE_uint16_t, ITYPE_uint32_t, ITYPE_uint64_t, ITYPE_SpecialTypeForSendingFd,
       ITYPE_ChannelType, ITYPE_DmaDbgRec};
 typedef struct {
     const char *name;

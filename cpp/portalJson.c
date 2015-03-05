@@ -33,9 +33,14 @@ void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJs
     while(iparam->name) {
         uint32_t tmp32;
         uint64_t tmp64;
+	uint16_t tmp16;
         int      tmpint;
         data += sprintf(data, ",\"%s\":", iparam->name);
         switch(iparam->itype) {
+        case ITYPE_uint16_t:
+            tmp16 = *(uint16_t *)((unsigned long)tempdata + iparam->offset);
+            data += sprintf(data, "%d", tmp16);
+            break;
         case ITYPE_uint32_t:
             tmp32 = *(uint32_t *)((unsigned long)tempdata + iparam->offset);
             data += sprintf(data, "%d", tmp32);
@@ -113,6 +118,9 @@ int connnectalJsonDecode(PortalInternal *pint, int _unused_channel, void *tempda
                     if (endptr != &val[strlen(val)])
                         fprintf(stderr, "[%s:%d] strtol didn't use all characters %p != %p\n", __FUNCTION__, __LINE__, endptr, val+strlen(val));
                     switch(iparam->itype) {
+                    case ITYPE_uint16_t:
+                        *(uint16_t *)((unsigned long)tempdata + iparam->offset) = tmp64;
+                        break;
                     case ITYPE_uint32_t:
                         *(uint32_t *)((unsigned long)tempdata + iparam->offset) = tmp64;
                         break;
