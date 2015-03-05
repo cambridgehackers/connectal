@@ -70,6 +70,10 @@ interface PcieEndpointS5#(numeric type lanes);
    interface PciewrapPci_exp#(lanes)   pcie;
    interface PciewrapUser#(lanes)      user;
    interface Server#(TLPData#(16), TLPData#(16)) tlp;
+`ifdef VSIM
+   interface PcieS5HipPipe pipe;
+   interface PcieS5HipCtrl ctrl;
+`endif
    interface Clock epClock125;
    interface Reset epReset125;
    interface Clock epClock250;
@@ -114,15 +118,20 @@ module mkPcieEndpointS5#(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieE
 
    PcieS5Wrap#(12, 32, 128) pcie_ep <- mkPcieS5Wrap(clk_100MHz, clk_50MHz, npor, perst_n);
 
+   Clock core_clk = pcie_ep.coreclkout_hip;
+   Reset core_reset = pcie_ep.core_reset;
+   Reset core_resetn <- mkResetInverter(pcie_ep.core_reset, clocked_by core_clk);
+
    // Test Altera Application
-//   PcieS5App pcie_app <- mkPcieS5App(pcie_ep.coreclkout_hip, reset_high);
+//   PcieS5App pcie_app <- mkPcieS5App(core_clk, reset_high);
 //   mkConnection(pcie_app, pcie_ep);
 
-   AlteraPcieHipRs hip_rs <- mkAlteraPcieHipRs(pcie_ep.coreclkout_hip, perst_n);
+   AlteraPcieHipRs hip_rs <- mkAlteraPcieHipRs(core_clk, core_resetn);
 
-   Reg#(PciId) deviceReg <- mkReg(?, clocked_by pcie_ep.coreclkout_hip, reset_by hip_rs.app_rstn);
-   FIFOF#(AvalonStTx#(16)) fAvalonStTx <- mkBypassFIFOF(clocked_by pcie_ep.coreclkout_hip, reset_by noReset);
-   FIFOF#(AvalonStRx#(16)) fAvalonStRx <- mkBypassFIFOF(clocked_by pcie_ep.coreclkout_hip, reset_by noReset);
+   Reg#(PciId) deviceReg <- mkReg(?, clocked_by core_clk, reset_by core_resetn);
+
+   FIFOF#(AvalonStTx#(16)) fAvalonStTx <- mkBypassFIFOF(clocked_by core_clk, reset_by noReset);
+   FIFOF#(AvalonStRx#(16)) fAvalonStRx <- mkBypassFIFOF(clocked_by core_clk, reset_by noReset);
 
    let txready = (pcie_ep.tx_st.ready != 0 && fAvalonStTx.notEmpty);
 
@@ -226,7 +235,7 @@ module mkPcieEndpointS5#(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieE
          return hip_rs.app_rstn;
       endmethod
       method Clock clk_out();
-         return pcie_ep.coreclkout_hip;
+         return core_clk;
       endmethod
       method Bit#(1) lnk_up();
          return pcie_ep.hip_rst.serdes_pll_locked;
@@ -250,14 +259,19 @@ module mkPcieEndpointS5#(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieE
 
    interface tlp = tlp16;
    //FIXME: verify epClock250 is needed.
-   interface Clock epClock250 = pcie_ep.coreclkout_hip;
-   interface Clock epReset250 = hip_rs.app_rstn;
-   interface Clock epClock125 = pcie_ep.coreclkout_hip;
-   interface Clock epReset125 = hip_rs.app_rstn;
+   interface Clock epClock250 = core_clk;
+   interface Clock epReset250 = core_resetn;
+   interface Clock epClock125 = core_clk;
+   interface Clock epReset125 = core_resetn;
 
    //FIXME: verify derivedClock value
-   interface Clock epDerivedClock = pcie_ep.coreclkout_hip;
-   interface Reset epDerivedReset = hip_rs.app_rstn;
+   interface Clock epDerivedClock = core_clk;
+   interface Reset epDerivedReset = core_resetn;
+
+`ifdef VSIM
+   interface pipe = pcie_ep.hip_pipe;
+   interface ctrl = pcie_ep.hip_ctrl;
+`endif
 
 endmodule: mkPcieEndpointS5
 

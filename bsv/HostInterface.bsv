@@ -119,9 +119,6 @@ interface PcieHostTop;
    interface Clock tpci_clk_100mhz_buf;
    interface PcieEndpointX7#(PcieLanes) tep7;
 `elsif ALTERA
-//   interface Clock tsys_clk_200mhz;
-//   interface Clock tsys_clk_200mhz_buf;
-//   interface Clock tpci_clk_100mhz_buf;
    interface PcieEndpointS5#(PcieLanes) tep7;
 `elsif VSIM
    interface PcieEndpointS5#(PcieLanes) tep7;

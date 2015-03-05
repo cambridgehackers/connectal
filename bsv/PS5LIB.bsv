@@ -191,6 +191,7 @@ interface PcieS5Wrap#(numeric type address_width, numeric type data_width, numer
    interface PcieS5HipPipe hip_pipe;
    interface PcieS5HipCtrl hip_ctrl;
    interface Clock coreclkout_hip;
+   interface Reset core_reset;
 endinterface
 
 //(* synthesize *)
@@ -211,6 +212,7 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
    PcieWrap         pcie     <- mkPcieWrap(clk_100Mhz, npor, pin_perst, reset_high);
 
    Clock coreclk = pcie.coreclkout.hip;
+   Reset corerst <- mkSyncReset(1, pcie.reset.status, coreclk);
    PcieReconfigWrap pcie_cfg <- mkPcieReconfigWrap(coreclk, clk_50Mhz, npor, reset_high, reset_high);
    XcvrReconfigWrap xcvr_cfg <- mkXcvrReconfigWrap(clk_50Mhz, reset_high, reset_high);
 
@@ -363,6 +365,10 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
       return pcie.coreclkout.hip;
    endmethod
 
+   method Reset core_reset;
+      return corerst;
+   endmethod
+
    interface PcieS5TlCfg tl;
       method Bit#(4) cfg_add();
          return pcie.tl.cfg_add;
@@ -404,12 +410,12 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
 
    interface PcieS5TxSt tx_st;
       method Bit#(1) ready (); return pcie.tx_s.t_ready; endmethod
-      method sop   = pcie.tx_s.t_sop;
-      method eop   = pcie.tx_s.t_eop;
-      method valid = pcie.tx_s.t_valid;
-      method err   = pcie.tx_s.t_err;
-      method empty = pcie.tx_s.t_empty;
-      method data  = pcie.tx_s.t_data;
+      method sop   = pcie.tx_s.t_sop    ;
+      method eop   = pcie.tx_s.t_eop    ;
+      method valid = pcie.tx_s.t_valid  ;
+      method err   = pcie.tx_s.t_err    ;
+      method empty = pcie.tx_s.t_empty  ;
+      method data  = pcie.tx_s.t_data   ;
    endinterface
 
    interface PcieS5Msi msi;
@@ -656,8 +662,13 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
 
       method sim_pipe_pclk_in = pcie.sim.pipe_pclk_in;
 
-      method sim_ltssmstate(); return pcie.sim.ltssmstate; endmethod
-      method sim_pipe_rate(); return pcie.sim.pipe_rate; endmethod
+      method sim_ltssmstate();
+         return pcie.sim.ltssmstate;
+      endmethod
+
+      method sim_pipe_rate();
+         return pcie.sim.pipe_rate;
+      endmethod
    endinterface
 
    interface PcieS5HipCtrl hip_ctrl;
