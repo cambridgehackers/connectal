@@ -61,7 +61,7 @@ public:
     assert(a == v1a);
     incr_cnt();
   }
-  virtual void say2(uint32_t a, uint32_t b) {
+  virtual void say2(uint16_t a, uint16_t b) {
     fprintf(stderr, "say2(%d %d)\n", a, b);
     assert(a == v2a);
     assert(b == v2b);
