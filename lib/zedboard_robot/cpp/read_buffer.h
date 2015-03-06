@@ -1,4 +1,3 @@
-
 // Copyright (c) 2013-2014 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
@@ -21,27 +20,13 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef _SOCK_SERVER_H_
-#define _SOCK_SERVER_H_
-
-class sock_server
+class reader
 {
  private:
   int wrap_cnt;
   int addr;
  public:
   int verbose;
-  sock_server(int p);
-  int clientsockfd;
-  int serversockfd;
-  int portno;
-  pthread_t threaddata;
-  int connecting_to_client;
-  void* connect_to_client();
-  void send_data(char* data, int len);
-  int start_server();
-  bool disconnected();
-  int read_circ_buff(int buff_len, unsigned int ref_dstAlloc, int dstAlloc, char* dstBuffer,char *snapshot, int write_addr, int write_wrap_cnt, int align); 
+  reader(): wrap_cnt(0), addr(0){}
+  int read_circ_buff(int buff_len, unsigned int ref_dstAlloc, int dstAlloc, char* dstBuffer,char *snapshot, int write_addr, int write_wrap_cnt, int align);
 };
-void* connect_to_client_wrapper(void *server);
-#endif //_SOCK_SERVER_H_

@@ -34,29 +34,8 @@ import math
 from gyroVisualize import *
 import argparse
 
-
-class socket_client:
-    def __init__(self, devaddr):
-        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s.connect((devaddr, 1234))
-        self.llen = ctypes.sizeof(ctypes.c_int);
-    def sample(self):
-        bytes_recd = 0
-        while bytes_recd < self.llen:
-            chunk = self.s.recv(self.llen)
-            bytes_recd = len(chunk)
-        blen = struct.unpack("@i", chunk)[0]
-        bytes_recd = 0
-        buffer = []
-        while bytes_recd < blen:
-            chunk = self.s.recv(blen)
-            bytes_recd += len(chunk) 
-            buffer.append(chunk)
-        rv = buffer[0]
-        for b in buffer[1:]:
-            rv = rv + b
-        return rv
-
+sys.path.append(os.path.abspath('../../scripts'))
+import portalJson
 
 class gyro_stream:
     def __init__(self, lpf=False):
@@ -150,12 +129,14 @@ if __name__ == "__main__":
     if (visualize):
         v  = gv()
     gs = gyro_stream()
-    sc = socket_client(options.address)
+    jp = portalJson.portal(options.address, 5000)
     summ = [0,0,0]
     try:
         while (True):
             ss = sc.sample()
-            poss = gs.next_samples(ss)
+            poss = None
+            for i in range(0,48):
+                print jp.recv()
             if poss is not None:
                 for pos in poss:
                     if (spew): print "%f %f %f" % (pos[0],pos[1],pos[2])

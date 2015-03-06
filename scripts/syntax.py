@@ -958,7 +958,7 @@ def p_endPackage(p):
                   | TOKENDPACKAGE colonVar'''
 
 def p_package(p):
-    '''package : beginPackage exportDecls importDecls packageStmts endPackage'''
+    '''package : beginPackage exportDecls importDecls packageStmts exportDecls endPackage'''
     p[0] = p[4]
 
 def preprocess(source, defs):

@@ -1,9 +1,10 @@
 
 CONNECTALDIR ?= ../..
-ZBLD = $(CONNECTALDIR)/lib/zedboard_robot/bsv
-INTERFACES = GyroCtrlRequest GyroCtrlIndication
-BSVFILES = $(ZBLD)/GyroController.bsv Top.bsv
-CPPFILES = test_gyro.cpp $(CONNECTALDIR)/cpp/sock_server.cpp
+ZBR_BSV = $(CONNECTALDIR)/lib/zedboard_robot/bsv
+ZBR_CPP = $(CONNECTALDIR)/lib/zedboard_robot/cpp
+INTERFACES = GyroCtrlRequest GyroCtrlIndication GyroSampleStream
+BSVFILES = $(ZBR_BSV)/GyroController.bsv Top.bsv
+CPPFILES = test_gyro.cpp $(ZBR_CPP)/read_buffer.cpp
 NUMBER_OF_MASTERS = 1
 CONNECTALFLAGS += -C $(BOARD)/sources/pinout-$(BOARD).xdc #--tcl clock.tcl
 

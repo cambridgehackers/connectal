@@ -25,20 +25,26 @@
 import time
 import sys
 import os
+import argparse
 
 sys.path.append(os.path.abspath('../../scripts'))
 import portalJson
 
-
 if __name__ == "__main__":
-    ind_addr = "127.0.0.1"
+
+    argparser = argparse.ArgumentParser('Display gyroscope data')
+    argparser.add_argument('-a', '--address', help='Device address', default=None)
+    options = argparser.parse_args()
+
+    print options.address
+    if not options.address:
+        options.address = os.environ['RUNPARAM']
+
     ind_port = 5000
-    
-    req_addr = "127.0.0.1"
     req_port = 5001
     
-    ind_p = portalJson.portal(ind_addr, ind_port)
-    req_p = portalJson.portal(req_addr, req_port)
+    ind_p = portalJson.portal(options.address, ind_port)
+    req_p = portalJson.portal(options.address, req_port)
     
     d = {'name':'say','x':1}
     print d

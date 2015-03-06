@@ -1,4 +1,3 @@
-
 // Copyright (c) 2013-2014 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
@@ -35,92 +34,13 @@
 #include <assert.h>
 #include <netdb.h>
 #include <arpa/inet.h>
-#include "sock_server.h"
 #include <signal.h>
 
 #include "dmaManager.h"
+#include "read_buffer.h"
 
-sock_server::sock_server(int p)
-{
-  verbose = 0;
-  wrap_cnt = 0;
-  addr = 0;
-  clientsockfd = -1;
-  serversockfd = -1;
-  connecting_to_client = 0;
-  portno = p;
-  // this is because I don't want the server to abort when the client goes offline
-  signal(SIGPIPE, SIG_IGN); 
-}
 
-void* sock_server::connect_to_client()
-{
-  connecting_to_client = 1;
-  struct sockaddr cli_addr;
-  socklen_t clilen;
-  listen(serversockfd,5);
-  clilen = sizeof(cli_addr);
-  clientsockfd = accept(serversockfd, &cli_addr, &clilen);
-  if (clientsockfd < 0){ 
-    fprintf(stderr, "ERROR on accept\n");
-    return NULL;
-  }
-  fprintf(stderr, "connected to client\n");
-  connecting_to_client = 0;
-  return NULL;
-}
-
-int sock_server::start_server()
-{
-  int n;
-  socklen_t clilen;
-  struct sockaddr_in serv_addr;
-  serversockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (serversockfd < 0) {
-    fprintf(stderr, "ERROR opening socket");
-    return -1;
-  }
-  memset((char *) &serv_addr, 0x0, sizeof(serv_addr));
-  serv_addr.sin_family = AF_INET;
-  serv_addr.sin_addr.s_addr = INADDR_ANY;
-  serv_addr.sin_port = htons(portno);
-  if (bind(serversockfd, (struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) {
-    fprintf(stderr, "ERROR on binding");
-    return -1;
-  }
-  return 0;
-}
-
-void sock_server::send_data(char *snapshot, int datalen)
-{
-  if (clientsockfd == -1 && !connecting_to_client){
-    connecting_to_client = 1;
-    pthread_create(&threaddata, NULL, &connect_to_client_wrapper, this);
-  }
-  if (datalen){
-    if (clientsockfd != -1){
-      int failed = 0;
-      if(write(clientsockfd, &(datalen), sizeof(int)) != sizeof(int)){
-	failed = 1;
-      } else if (write(clientsockfd, snapshot,  datalen) != datalen) {
-	failed = 1;
-      }
-      if (failed){
-	fprintf(stderr, "write to clientsockfd failed\n");
-	shutdown(clientsockfd, 2);
-	close(clientsockfd);
-	clientsockfd = -1;
-      }
-    }
-  }
-}
-
-void* connect_to_client_wrapper(void *server)
-{
-  return ((sock_server*)server)->connect_to_client();
-}
-
-int sock_server::read_circ_buff(int buff_len, unsigned int ref_dstAlloc, int dstAlloc, char* dstBuffer, char *snapshot, int write_addr, int write_wrap_cnt, int align)
+int reader::read_circ_buff(int buff_len, unsigned int ref_dstAlloc, int dstAlloc, char* dstBuffer, char *snapshot, int write_addr, int write_wrap_cnt, int align)
 {
   int dwc = write_wrap_cnt - wrap_cnt;
   int two,top,bottom,datalen=0;
