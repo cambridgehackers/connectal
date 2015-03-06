@@ -135,12 +135,22 @@ module mkPcieEndpointS5#(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieE
 
    let txready = (pcie_ep.tx_st.ready != 0 && fAvalonStTx.notEmpty);
 
+   function Bit#(2) getTxStEmpty (Bit#(16) be);
+      if (be == 16'h000f || be == 16'h00ff) begin
+         return 2'b1;
+      end
+      else begin
+         return 2'b0;
+      end
+   endfunction
+
    rule drive_avalon_tx if (txready);
       let info = fAvalonStTx.first; fAvalonStTx.deq;
       pcie_ep.tx_st.valid(1);
       pcie_ep.tx_st.sop(info.sop);
       pcie_ep.tx_st.eop(info.eop);
-      pcie_ep.tx_st.empty(0); //FIXME
+      let txStEmpty = getTxStEmpty(info.be);
+      pcie_ep.tx_st.empty(txStEmpty);
       pcie_ep.tx_st.err(0);
       pcie_ep.tx_st.data(info.data);
    endrule
@@ -167,7 +177,15 @@ module mkPcieEndpointS5#(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieE
       // 128-bit interface
       // when rx_st_empty==1, rx_st_data[63:0] are valid
       if (pcie_ep.rx_st.empty[0] == 1 && pcie_ep.rx_st.eop == 1) begin
-         beat.data = {64'h0, pcie_ep.rx_st.data[63:0]};
+         if (pcie_ep.rx_specific.be == 16'h000f) begin
+            beat.data = {96'h0, pcie_ep.rx_st.data[31:0]};
+         end
+         else if (pcie_ep.rx_specific.be == 16'h00ff) begin
+            beat.data = {64'h0, pcie_ep.rx_st.data[63:0]};
+         end
+         else begin
+            beat.data = pcie_ep.rx_st.data;
+         end
       end
       // else, rx_st_data[127:0] are valid
       else begin

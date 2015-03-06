@@ -92,10 +92,29 @@ proc create_pcie_sv_hip_ast {mode} {
 	dict set params	class_code_hwtcl                         $class_code
 	dict set params	subsystem_vendor_id_hwtcl                $vendor_id
 	dict set params	subsystem_device_id_hwtcl                $device_id
-	dict set params	max_payload_size_hwtcl                   256
-	dict set params	extend_tag_field_hwtcl                   "32"
+	dict set params	max_payload_size_hwtcl                   512
+	dict set params	extend_tag_field_hwtcl                   "64"
 	dict set params	completion_timeout_hwtcl                 "ABCD"
 	dict set params	enable_completion_timeout_disable_hwtcl  1
+
+	dict set params use_aer_hwtcl                            0
+	dict set params ecrc_check_capable_hwtcl                 0
+	dict set params ecrc_gen_capable_hwtcl                   0
+	dict set params use_crc_forwarding_hwtcl                 0
+	dict set params port_link_number_hwtcl                   1
+	dict set params dll_active_report_support_hwtcl          0
+	dict set params surprise_down_error_support_hwtcl        0
+	dict set params slotclkcfg_hwtcl                         1
+	dict set params msi_multi_message_capable_hwtcl          "1"
+	dict set params msi_64bit_addressing_capable_hwtcl       "true"
+	dict set params msi_masking_capable_hwtcl                "false"
+	dict set params msi_support_hwtcl                        "true"
+	dict set params enable_function_msix_support_hwtcl       1
+	dict set params msix_table_size_hwtcl                    16
+	dict set params msix_table_offset_hwtcl                  "512"
+	dict set params msix_table_bir_hwtcl                     0
+	dict set params msix_pba_offset_hwtcl                    "496"
+	dict set params msix_pba_bir_hwtcl                       0
 
 	set component_parameters {}
 	foreach item [dict keys $params] {
