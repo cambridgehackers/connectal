@@ -34,6 +34,8 @@
 #include "hbridge_simple.h"
 #include "sock_utils.h"
 
+#include "MaxSonarSampleStream.h"
+#include "GyroSampleStream.h"
 #include "HBridgeCtrlRequest.h"
 #include "MaxSonarCtrlRequest.h"
 #include "GyroCtrlRequest.h"
@@ -97,9 +99,13 @@ int main(int argc, const char **argv)
   MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
-  PortalSocketParam param;
-  int rc = getaddrinfo("0.0.0.0", "5000", NULL, &param.addr);
-  GyroSampleStreamProxy *gssp = new GyroSampleStreamProxy(IfcNames_GyroSampleStream, &socketfuncResp, &param, &GyroSampleStreamJsonProxyReq, 1000);
+  PortalSocketParam param0;
+  int rc0 = getaddrinfo("0.0.0.0", "5000", NULL, &param0.addr);
+  GyroSampleStreamProxy *gssp = new GyroSampleStreamProxy(IfcNames_GyroSampleStream, &socketfuncResp, &param0, &GyroSampleStreamJsonProxyReq, 1000);
+
+  PortalSocketParam param1;
+  int rc1 = getaddrinfo("0.0.0.0", "5001", NULL, &param1.addr);
+  MaxSonarSampleStreamProxy *msssp = new MaxSonarSampleStreamProxy(IfcNames_MaxSonarSampleStream, &socketfuncResp, &param1, &MaxSonarSampleStreamJsonProxyReq, 1000);
 
   portalExec_start();
 
@@ -149,8 +155,12 @@ int main(int argc, const char **argv)
       if (spew) fprintf(stderr, "(%d microseconds == %f inches)\n", maxsonar_ind->useconds, distance);
       if (spew) display(snapshot, datalen);
       if(datalen){
-	send(gssp, snapshot, datalen);
-	//ss->send_data((char*)&(maxsonar_ind->useconds), sizeof(int));
+	int16_t *ss = (int16_t*)snapshot;
+	for(int i = 0; i < datalen/2; i+=3){
+	  gssp->sample(ss[i+0], ss[i+1], ss[i+2]);
+	  // this is a bit wasteful, but it simplifies test_zedboard_robot.py
+	  msssp->sample(maxsonar_ind->useconds);
+	}
       }
     } else {
       discard--;

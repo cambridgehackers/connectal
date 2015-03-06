@@ -46,6 +46,10 @@ interface MaxSonarCtrlIndication;
    method Action memwrite_status(Bit#(32) addr, Bit#(32) wrap_cnt);
 endinterface
 
+interface MaxSonarSampleStream;
+   method Action sample(Bit#(32) v);
+endinterface
+
 interface MaxSonarController;
    interface MaxSonarCtrlRequest req;
    interface MaxSonarPins pins;

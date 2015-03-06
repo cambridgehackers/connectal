@@ -54,18 +54,21 @@ if __name__ == "__main__":
     if (visualize_sonar):
         s_v  = sv()
     gs = gyro_stream(smoothe)
-    jp = portalJson.portal(options.address, 5000)
+    gjp = portalJson.portal(options.address, 5000)
+    msjp = portalJson.portal(options.address, 5001)
     summ = [0,0,0]
     try:
         while (True):
             samples = []
             for i in range(0,48):
-                d = json.loads(jp.recv())
+                d = json.loads(gjp.recv())
                 samples.append(d['x'])
                 samples.append(d['y'])
                 samples.append(d['z'])
+                d = json.loads(msjp.recv())
+                sonar_distance = d['v']
             poss = gs.next_samples(samples)
-            sonar_distance = 0 # TODO add another json portal for sonar distance
+            sonar_distance = sonar_distance/147.0
             if (spew_sonar): print "sonar_distance: %f" % (sonar_distance)
             if poss is not None:
                 for pos in poss:
