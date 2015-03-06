@@ -59,9 +59,9 @@ int main(int argc, const char **argv)
   MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
-  // PortalSocketParam param;
-  // int rc = getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
-  // GyroSampleStreamProxy *gssp = new GyroSampleStreamProxy(IfcNames_SampleStream, &socketfuncResp, &param, &GyroSampleStreamJsonProxyReq, 1000);
+  PortalSocketParam param;
+  int rc = getaddrinfo("0.0.0.0", "5000", NULL, &param.addr);
+  GyroSampleStreamProxy *gssp = new GyroSampleStreamProxy(IfcNames_SampleStream, &socketfuncResp, &param, &GyroSampleStreamJsonProxyReq, 1000);
 
   portalExec_start();
 
@@ -97,7 +97,7 @@ int main(int argc, const char **argv)
     int datalen = r->read_circ_buff(wrap_limit, ref_dstAlloc, dstAlloc, dstBuffer, snapshot, ind->write_addr, ind->write_wrap_cnt, 6); 
     set_en(ind,device, 2);
     if (!discard){
-      //send(gssp, snapshot, datalen);
+      send(gssp, snapshot, datalen);
       if (spew) display(snapshot, datalen);
     } else {
       discard--;

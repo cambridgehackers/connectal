@@ -33,6 +33,7 @@ import pandas as pd
 import math
 from gyroVisualize import *
 import argparse
+import json
 
 sys.path.append(os.path.abspath('../../scripts'))
 import portalJson
@@ -55,7 +56,8 @@ class gyro_stream:
                 math.radians(-sample[1]*70.0/self.sample_freq_hz/1000.0),
                 math.radians(-sample[2]*70.0/self.sample_freq_hz/1000.0))
 
-    def next_samples(self,ss):
+    def next_samples(self,samples):
+        self.times = self.times+1
         octave_length = 20
         window_sz = 10
         rv = []
@@ -63,9 +65,7 @@ class gyro_stream:
         if (write_octave):
             octave_file = open("x.m", "w");
             octave_file.write("#! /usr/bin/octave --persist \nv = [");
-        self.times += 1
-        num_samples = len(ss)/2
-        samples = struct.unpack(''.join(['h' for i in range(0,num_samples)]),ss)
+        num_samples = len(samples)
         if (self.lpf):
             x = numpy.concatenate((self.tails[0],samples[0::3]),0)
             y = numpy.concatenate((self.tails[1],samples[1::3]),0)
@@ -133,10 +133,13 @@ if __name__ == "__main__":
     summ = [0,0,0]
     try:
         while (True):
-            ss = sc.sample()
-            poss = None
+            samples = []
             for i in range(0,48):
-                print jp.recv()
+                d = json.loads(jp.recv())
+                samples.append(d['x'])
+                samples.append(d['y'])
+                samples.append(d['z'])
+            poss = gs.next_samples(samples)
             if poss is not None:
                 for pos in poss:
                     if (spew): print "%f %f %f" % (pos[0],pos[1],pos[2])
@@ -144,13 +147,13 @@ if __name__ == "__main__":
                     summ[1] = summ[1]+pos[1]
                     summ[2] = summ[2]+pos[2]
                     if (visualize and smoothe):
-                        v.update(pos)
+                        v.update(summ, gs.sample_freq_hz)
                         time.sleep(1/gs.sample_freq_hz)
                 if (visualize and (not smoothe)):
-                    v.update(summ)
+                    v.update(summ, gs.sample_freq_hz)
                 if (not spew): print "%f %f %f" % (summ[0], summ[1], summ[2])
     except KeyboardInterrupt:
-        sc.s.close()
+        jp.shutdown()
         sys.exit() 
 
 
