@@ -17,6 +17,10 @@ Approach
  * For virtualization, device-driver in the host OS controls the actual hardware
  * Device-driver in the guest OS requests resources from the host OS, i.e., a tile
 
+ * Misbehaviour in a tile cannot affect other tiles:
+   * PCIe transactions buffered.  If tile logic not ready, then TLP deleted.  
+   * If worried about integrity of bitfile contents, perhaps only load ones that have been signed by an authorized build server
+
 Tasks
 -----
 
