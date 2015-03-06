@@ -52,7 +52,8 @@ typedef enum {MaxSonarControllerRequest, MaxSonarControllerIndication,
 	      GyroControllerRequest,     GyroControllerIndication, 
 	      HBridgeControllerRequest,  HBridgeControllerIndication, 
 	      HostMemServerRequest,      HostMemServerIndication,   
-	      HostMMURequest,            HostMMUIndication} IfcNames deriving (Eq,Bits);
+	      HostMMURequest,            HostMMUIndication,
+	      GyroSampleStream,          MaxsonarSampleStream } IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,ZedboardRobotPins,1));
 

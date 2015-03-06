@@ -1,9 +1,10 @@
 
 CONNECTALDIR ?= ../..
-ZBLD = $(CONNECTALDIR)/lib/zedboard_robot/bsv
+ZBR_BSV = $(CONNECTALDIR)/lib/zedboard_robot/bsv
+ZBR_CPP = $(CONNECTALDIR)/lib/zedboard_robot/cpp
 INTERFACES = MaxSonarCtrlRequest MaxSonarCtrlIndication
-BSVFILES = $(ZBLD)/MaxSonarController.bsv Top.bsv 
-CPPFILES= test_maxsonar.cpp $(CONNECTALDIR)/cpp/sock_server.cpp
+BSVFILES = $(ZBR_BSV)/MaxSonarController.bsv Top.bsv 
+CPPFILES= test_maxsonar.cpp $(ZBR_CPP)/read_buffer.cpp
 NUMBER_OF_MASTERS =1
 CONNECTALFLAGS = -C $(BOARD)/sources/pinout-$(BOARD).xdc
 

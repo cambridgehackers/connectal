@@ -31,6 +31,10 @@ from sonarVisualize import *
 from gyroVisualize  import *
 from test_gyro      import *
 
+sys.path.append(os.path.abspath('../../scripts'))
+import portalJson
+import json
+
 smoothe = False
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser('Display gyroscope data')
@@ -50,14 +54,18 @@ if __name__ == "__main__":
     if (visualize_sonar):
         s_v  = sv()
     gs = gyro_stream(smoothe)
-    sc = socket_client(options.address)
+    jp = portalJson.portal(options.address, 5000)
     summ = [0,0,0]
     try:
         while (True):
-            gyro_ss = sc.sample()
-            sonar_ss = sc.sample()
-            poss = gs.next_samples(gyro_ss)
-            sonar_distance = (struct.unpack('I',sonar_ss)[0])/147.0
+            samples = []
+            for i in range(0,48):
+                d = json.loads(jp.recv())
+                samples.append(d['x'])
+                samples.append(d['y'])
+                samples.append(d['z'])
+            poss = gs.next_samples(samples)
+            sonar_distance = 0 # TODO add another json portal for sonar distance
             if (spew_sonar): print "sonar_distance: %f" % (sonar_distance)
             if poss is not None:
                 for pos in poss:
