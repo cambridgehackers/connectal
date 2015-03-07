@@ -324,6 +324,7 @@ compile-generated-testbench:
 	vlog %(timescale)s +incdir+%(generated_testbench)s/submodules/ %(generated_testbench)s/submodules/altpcie_tbed_sv_hwtcl.v -work %(sim_dir_path)s/pcie_hip_pcie_tb
 	vlog %(timescale)s +incdir+%(generated_testbench)s/submodules/ %(generated_testbench)s/submodules/altpcietb_bfm_top_rp.v -work %(sim_dir_path)s/pcie_hip_pcie_tb
 	vlog %(timescale)s +incdir+%(generated_testbench)s/submodules/ %(generated_testbench)s/submodules/altpcietb_bfm_rp_gen2_x8.v -work %(sim_dir_path)s/pcie_hip_pcie_tb
+	cp %(sim_dir_path)s/../../verilog/altpcietb_bfm_driver_chaining.v %(generated_testbench)s/submodules/altpcietb_bfm_driver_chaining.v
 	vlog %(timescale)s +incdir+%(generated_testbench)s/submodules/ %(generated_testbench)s/submodules/altpcietb_bfm_driver_chaining.v -work %(sim_dir_path)s/pcie_hip_pcie_tb
 
 simulate:
