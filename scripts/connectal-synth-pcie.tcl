@@ -2,7 +2,7 @@ source "board.tcl"
 source "$connectaldir/scripts/connectal-synth-ip.tcl"
 source "$scriptsdir/../../fpgamake/tcl/ipcore.tcl"
 
-if $need_xilinx_pcie {
+if {$need_pcie == "x7_gen1x8"} {
     set pcieversion {3.0}
     set maxlinkwidth {X8}
     if {$boardname == {zc706}} {
@@ -213,10 +213,13 @@ proc create_pcie_xcvr_reconfig {mode core_name core_version ip_name n_interface}
     }
 }
 
-if $need_altera_pcie {
+if {$need_pcie == "s5_gen2x8"} {
     create_pcie_sv_hip_ast SYNTHESIS
     create_pcie_xcvr_reconfig SYNTHESIS alt_xcvr_reconfig 14.0 alt_xcvr_reconfig_wrapper 10
     create_pcie_reconfig SYNTHESIS
     create_pcie_hip_ast_ed
 }
 
+if {$need_pcie == "s4_gen2x8"} {
+
+}
