@@ -220,6 +220,7 @@ if {$need_pcie == "s5_gen2x8"} {
     create_pcie_hip_ast_ed
 }
 
+# Stratix IV PCIe requires use of Megawizard
 if {$need_pcie == "s4_gen2x8"} {
-
+	fpgamake_altera_qmegawiz $connectaldir/verilog/altera/siv_gen2x8 siv_gen2x8
 }
