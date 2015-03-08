@@ -410,26 +410,26 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
    endinterface
 
    interface PcieRxSt rx_st;
-      method Bit#(1)   sop();   return pcie.rx_s.t_sop;   endmethod
-      method Bit#(1)   eop();   return pcie.rx_s.t_eop;   endmethod
-      method Bit#(128) data();  return pcie.rx_s.t_data;  endmethod
-      method Bit#(1)   valid(); return pcie.rx_s.t_valid; endmethod
-      method Bit#(1)   err();   return pcie.rx_s.t_err;   endmethod
-      method Bit#(2)   empty(); return pcie.rx_s.t_empty; endmethod
-      method Bit#(8)   bar ();  return pcie.rx_s.t_bar; endmethod
-      method Bit#(16)  be();    return pcie.rx_s.t_be;  endmethod
-      method ready = pcie.rx_s.t_ready;
-      method mask = pcie.rx_s.t_mask;
+      method Bit#(1)   sop();   return pcie.rx_st.sop0;   endmethod
+      method Bit#(1)   eop();   return pcie.rx_st.eop0;   endmethod
+      method Bit#(128) data();  return pcie.rx_st.data0;  endmethod
+      method Bit#(1)   valid(); return pcie.rx_st.valid0; endmethod
+      method Bit#(1)   err();   return pcie.rx_st.err0;   endmethod
+      method Bit#(2)   empty(); return pcie.rx_st.empty0; endmethod
+      method Bit#(8)   bar ();  return pcie.rx_st.bar0; endmethod
+      method Bit#(16)  be();    return pcie.rx_st.be0;  endmethod
+      method ready = pcie.rx_st.ready0;
+      method mask  = pcie.rx_st.mask0;
    endinterface
 
    interface PcieTxSt tx_st;
-      method Bit#(1) ready (); return pcie.tx_s.t_ready; endmethod
-      method sop   = pcie.tx_s.t_sop    ;
-      method eop   = pcie.tx_s.t_eop    ;
-      method valid = pcie.tx_s.t_valid  ;
-      method err   = pcie.tx_s.t_err    ;
-      method empty = pcie.tx_s.t_empty  ;
-      method data  = pcie.tx_s.t_data   ;
+      method Bit#(1) ready (); return pcie.tx_st.ready0; endmethod
+      method sop   = pcie.tx_st.sop0    ;
+      method eop   = pcie.tx_st.eop0    ;
+      method valid = pcie.tx_st.valid0  ;
+      method err   = pcie.tx_st.err0    ;
+      method empty = pcie.tx_st.empty0  ;
+      method data  = pcie.tx_st.data0   ;
    endinterface
 
    interface PcieMsi msi;
