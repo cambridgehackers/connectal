@@ -369,6 +369,19 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
       return corerst;
    endmethod
 
+   interface PcieS4Msi msi;
+      method Bit#(1) int_ack;
+         return pcie.app.int_ack;
+      endmethod
+      method Bit#(1) msi_ack;
+         return pcie.app.msi_ack;
+      endmethod
+      method msi_num = pcie.app.msi_num;
+      method msi_req = pcie.app.msi_req;
+      method msi_tc  = pcie.app.msi_tc;
+      method int_sts = pcie.app.int_sts;
+   endinterface
+
    interface PcieS5TlCfg tl;
       method Bit#(4) cfg_add();
          return pcie.tl.cfg_add;
