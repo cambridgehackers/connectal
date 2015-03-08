@@ -2,7 +2,7 @@
 #
 set -x
 set -e
-#./importbvi.py -o ALTERA_PCIE_WRAPPER.bsv -I PcieWrap -P PcieWrap \
+#./importbvi.py -o ALTERA_PCIE_SV_WRAPPER.bsv -I PcieWrap -P PcieWrap \
 #    -r pin_perst -r npor -r reset_status \
 #    -c refclk -c coreclkout_hip \
 #    -f serdes -f pld -f dl -f ev128 -f ev1 -f hotrst -f l2 -f current \

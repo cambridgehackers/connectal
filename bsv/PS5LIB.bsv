@@ -31,7 +31,7 @@ import ConnectalClocks      ::*;
 
 import ALTERA_XCVR_RECONFIG_WRAPPER        ::*;
 import ALTERA_PCIE_RECONFIG_DRIVER_WRAPPER ::*;
-import ALTERA_PCIE_WRAPPER                 ::*;
+import ALTERA_PCIE_SV_WRAPPER              ::*;
 //import ALTERA_PLL_WRAPPER                  ::*;
 
 (* always_ready, always_enabled *)

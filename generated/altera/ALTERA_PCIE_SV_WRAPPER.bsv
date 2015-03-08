@@ -2,7 +2,7 @@
 /*
    ./importbvi.py
    -o
-   ALTERA_PCIE_WRAPPER.bsv
+   ALTERA_PCIE_SV_WRAPPER.bsv
    -I
    PcieWrap
    -P
