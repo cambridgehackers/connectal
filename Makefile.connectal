@@ -208,11 +208,11 @@ ifneq ($(USE_AUTOTOP),)
 	    $(foreach f, $(MEM_INTERFACES), --proxy MemServerIndication:$f)
 endif
 
-generate_altera_custom:: altera.json $(CONNECTALDIR)/boardinfo/$(BOARD).json
-	$(Q)[ -e $(BOARD)/sources ] || mkdir -p $(BOARD)/sources
+generate_altera_custom::
 ifneq ($(PIN_BINDINGS), )
 ifneq ($(filter $(BOARD), de5 htg4), )
-	$(CONNECTALDIR)/scripts/generate-constraints.py -f altera $(PIN_BINDINGS) -o $(BOARD)/sources/$(BOARD).qsf $(CONNECTALDIR)/boardinfo/$(BOARD).json altera.json
+	$(Q)[ -e $(BOARD)/sources ] || mkdir -p $(BOARD)/sources
+	$(CONNECTALDIR)/scripts/generate-constraints.py -f altera $(PIN_BINDINGS) -o $(BOARD)/sources/$(BOARD).qsf $(CONNECTALDIR)/boardinfo/$(BOARD).json boards/$(BOARD).json
 endif
 endif
 
