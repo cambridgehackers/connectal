@@ -155,6 +155,7 @@ ifeq ($(NEED_ALTERA_PCIE_$(BOARD)),1)
 	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/altera_pcie_reconfig_driver_wrapper.qip
 	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/altera_pcie_sv_hip_ast_wrapper.qip
 	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/alt_xcvr_reconfig_wrapper.qip
+	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/siv_gen2x8/siv_gen2x8.qip
 	FPGAMAKE_CONNECTALFLAGS += --tcl=$(BOARD)/sources/$(BOARD).qsf
 	FPGAMAKE_CONNECTALFLAGS += --tcl=$(CONNECTALDIR)/constraints/altera/$(BOARD).sdc
 	CONNECTALFLAGS += --bscflags="+RTS -K46777216 -RTS -demote-errors G0066:G0045 -suppress-warnings G0046:G0020:S0015:S0080:S0039"
@@ -179,7 +180,7 @@ ifneq ($(USE_AUTOTOP),)
 GENTOP = $(BOARD)/Top.bsv
 endif
 
-gentarget:: process_autotop
+gentarget:: process_autotop generate_altera_custom
 	@[ -e $(CONNECTALDIR)/scripts/syntax/parsetab.py ] || make -C $(CONNECTALDIR) scripts/syntax/parsetab.py
 	$(Q)[ -e $(IPDIR) ] || mkdir -p $(IPDIR)
 	$(Q)[ -e $(BOARD)/sources ] || mkdir -p $(BOARD)/sources
@@ -205,6 +206,14 @@ ifneq ($(USE_AUTOTOP),)
 	    $(foreach f, $(H2S_INTERFACES), --proxy $f)   \
 	    $(foreach f, $(MEM_INTERFACES), --wrapper MemServerRequest:$f) \
 	    $(foreach f, $(MEM_INTERFACES), --proxy MemServerIndication:$f)
+endif
+
+generate_altera_custom:: altera.json $(CONNECTALDIR)/boardinfo/$(BOARD).json
+	$(Q)[ -e $(BOARD)/sources ] || mkdir -p $(BOARD)/sources
+ifneq ($(PIN_BINDINGS), )
+ifneq ($(filter $(BOARD), de5 htg4), )
+	$(CONNECTALDIR)/scripts/generate-constraints.py -f altera $(PIN_BINDINGS) -o $(BOARD)/sources/$(BOARD).qsf $(CONNECTALDIR)/boardinfo/$(BOARD).json altera.json
+endif
 endif
 
 prebuild::
