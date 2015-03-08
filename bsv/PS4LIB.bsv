@@ -22,6 +22,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+// Stratix IV PCIe Wrapper.
 import Clocks        ::*;
 import Vector        ::*;
 import Connectable   ::*;
@@ -31,7 +32,7 @@ import ConnectalClocks      ::*;
 import ALTERA_PCIE_SIV_WRAPPER                 ::*;
 
 (* always_ready, always_enabled *)
-interface PcieS4Lmi#(numeric type address_width, numeric type data_width);
+interface PcieLmi#(numeric type address_width, numeric type data_width);
    method Action           rden(Bit#(1) rden);
    method Action           wren(Bit#(1) wren);
    method Action           addr(Bit#(address_width) addr);
@@ -41,21 +42,21 @@ interface PcieS4Lmi#(numeric type address_width, numeric type data_width);
 endinterface
 
 (* always_ready, always_enabled *)
-interface PcieS4RxSt#(numeric type data_width);
-   method Bit#(1)          sop;
-   method Bit#(1)          eop;
-   method Bit#(data_width) data;
-   method Bit#(1)          valid;
-   method Bit#(1)          err;
-   method Bit#(1)          empty;
-   method Bit#(8)          bardec;
-   method Bit#(16)         be;
-   method Action           ready(Bit#(1) ready);
-   method Action           mask(Bit#(1) mask);
+interface PcieRxSt#(numeric type data_width);
+   method Bit#(1)          sop   ;
+   method Bit#(1)          eop   ;
+   method Bit#(data_width) data  ;
+   method Bit#(1)          valid ;
+   method Bit#(1)          err   ;
+   method Bit#(1)          empty ;
+   method Bit#(8)          bar   ;
+   method Bit#(16)         be    ;
+   method Action           ready(Bit#(1) ready) ;
+   method Action           mask(Bit#(1) mask)   ;
 endinterface
 
 (* always_ready, always_enabled *)
-interface PcieS4TxSt#(numeric type data_width);
+interface PcieTxSt#(numeric type data_width);
    method Action           sop(Bit#(1) sop);
    method Action           eop(Bit#(1) eop);
    method Action           valid(Bit#(1) valid);
@@ -66,7 +67,7 @@ interface PcieS4TxSt#(numeric type data_width);
 endinterface
 
 (* always_ready, always_enabled *)
-interface PcieS4Msi;
+interface PcieMsi;
    method Bit#(1)  int_ack();
    method Action   int_sts (Bit#(1) int_sts);
    method Bit#(1)  msi_ack();
@@ -77,7 +78,7 @@ interface PcieS4Msi;
 endinterface
 
 (* always_ready, always_enabled *)
-interface PcieS4TlCfg;
+interface PcieTlCfg;
    method Bit#(4)  add();
    method Bit#(32) ctl();
    method Bit#(1)  ctl_wr();
@@ -88,34 +89,34 @@ interface PcieS4TlCfg;
 endinterface
 
 (* always_ready, always_enabled *)
-interface PcieS4HipRst;
+interface PcieHipRst;
    method Bit#(1) serdes_pll_locked();
    method Action  reconfig_clk_locked(Bit#(1) locked);
 endinterface
 
 (* always_ready, always_enabled *)
-interface PcieS4TxCred;
+interface PcieTxCred;
    method Bit#(36) cred();
 endinterface
 
 (* always_ready, always_enabled *)
-interface PcieS4Rxin;
-(* prefix="", result="in" *)   method Action in(Vector#(8, Bit#(1)) a);
+interface PcieRxin;
+(* prefix="", result="in" *)   method Action in((* port="in" *) Vector#(8, Bit#(1)) a);
 endinterface
 
 (* always_ready, always_enabled *)
-interface PcieS4Txout;
+interface PcieTxout;
    method Vector#(8, Bit#(1)) out();
 endinterface
 
-interface PcieS4HipSerial;
-   interface PcieS4Rxin rx;
-   interface PcieS4Txout tx;
+interface PcieHipSerial;
+   interface PcieRxin rx;
+   interface PcieTxout tx;
 endinterface
 
-interface PcieS4HipPipe;
+interface PcieHipPipe;
 (* prefix="", result="rxdata" *)     method Action     rxdata    (Vector#(8, Bit#(8)) rxdata);
-(* prefix="", result="rxdatak" *)    method Action     rxdatak   (Vector#(8, Bit#(1)) rxdatak);
+(* prefix="", result="rxdatak" *)    method Action     rxdatak   ((* port="rxdatak" *) Vector#(8, Bit#(1)) rxdatak);
 (* prefix="", result="rxelecidle" *) method Action     rxelecidle(Vector#(8, Bit#(1)) rxelecidle);
 (* prefix="", result="rxstatus" *)   method Action     rxstatus  (Vector#(8, Bit#(3)) rxstatus);
 (* prefix="", result="rxvalid" *)    method Action     rxvalid   (Vector#(8, Bit#(1)) rxvalid);
@@ -123,7 +124,7 @@ interface PcieS4HipPipe;
 (* prefix="", result="sim_pipe_pclk_in" *) method Action sim_pipe_pclk_in(Bit#(1) sim_pipe_pclk_in);
     method Vector#(8, Bit#(1))    rxpolarity();
     method Vector#(8, Bit#(1))    txcompl();
-    method Vector#(8, Bit#(8))    txdata();
+(* prefix="", result="txdata" *)     method Vector#(8, Bit#(8))    txdata();
     method Vector#(8, Bit#(1))    txdatak();
     method Vector#(1, Bit#(1))    txdetectrx();
     method Vector#(8, Bit#(1))    txelecidle();
@@ -133,28 +134,30 @@ interface PcieS4HipPipe;
 endinterface
 
 (* always_ready, always_enabled *)
-interface PcieS4HipCtrl;
+interface PcieHipCtrl;
 (* prefix="", result="test_in" *)        method Action test_in(Bit#(40) test_in);
 (* prefix="", result="simu_mode_pipe" *) method Action simu_mode_pipe(Bit#(1) simu_mode_pipe);
 endinterface
 
 (* always_ready, always_enabled *)
-interface PS4#(numeric type address_width, numeric type data_width, numeric type app_width);
-   interface PcieS4Lmi#(address_width, data_width) lmi;
-   interface PcieS4RxSt#(app_width) rx_st;
-   interface PcieS4TxSt#(app_width) tx_st;
-   interface PcieS4Msi msi;
-   interface PcieS4TlCfg tl_cfg;
-   interface PcieS4HipRst hip_rst;
-   interface PcieS4TxCred tx_cred;
-   interface PcieS4Rxin rx;
-   interface PcieS4Txout tx;
-   interface PcieS4HipPipe hip_pipe;
-   interface PcieS4HipCtrl hip_ctrl;
+interface PcieWrap#(numeric type address_width, numeric type data_width, numeric type app_width);
+   interface PcieLmi#(address_width, data_width) lmi;
+   interface PcieRxSt#(app_width) rx_st;
+   interface PcieTxSt#(app_width) tx_st;
+   interface PcieMsi msi;
+   interface PcieTlCfg tl_cfg;
+   interface PcieHipRst hip_rst;
+   interface PcieTxCred tx_cred;
+   interface PcieRxin rx;
+   interface PcieTxout tx;
+   interface PcieHipPipe hip_pipe;
+   interface PcieHipCtrl hip_ctrl;
+   interface Clock coreclkout_hip;
+   interface Reset core_reset;
 endinterface
 
-(* synthesize *)
-module mkPS4#(Clock refclk, Clock reconfig_clk, Clock serdes_clk, Clock pld_clk, Reset pcie_rstn, Reset local_rstn)(PS4#(12, 32, 128));
+//(* synthesize *)
+module mkPcieS4Wrap#(Clock refclk, Clock reconfig_clk, Clock serdes_clk, Reset pcie_rstn, Reset local_rstn)(PcieWrap#(12, 32, 128));
 
    Vector#(8, Wire#(Bit#(1))) rx_in_wires <- replicateM(mkDWire(0));
    Vector#(8, Wire#(Bit#(8))) rxdata_wires <- replicateM(mkDWire(0));
@@ -167,7 +170,7 @@ module mkPS4#(Clock refclk, Clock reconfig_clk, Clock serdes_clk, Clock pld_clk,
    Reset default_reset <- exposeCurrentReset;
    Reset reset_high <- invertCurrentReset;
 
-   PcieS4Wrap pcie <- mkPcieS4Wrap(refclk, reconfig_clk, serdes_clk, pld_clk, pcie_rstn, local_rstn);
+   PcieS4Wrap pcie <- mkPPS4Wrap(refclk, reconfig_clk, serdes_clk, pcie_rstn, local_rstn);
 
    Clock coreclk = pcie.core.clk_out;
    Reset corerst <- mkSyncReset(1, pcie.sr.stn, coreclk);
@@ -257,7 +260,20 @@ module mkPS4#(Clock refclk, Clock reconfig_clk, Clock serdes_clk, Clock pld_clk,
       pcie.pm.e_to_cr(0);
    endrule
 
-   interface PcieS4Lmi lmi;
+   C2B c2b <- mkC2B(coreclk);
+   rule pld_clk_rule;
+      pcie.pld.clk(c2b.o());
+   endrule
+
+   method Clock coreclkout_hip;
+      return coreclk;
+   endmethod
+
+   method Reset core_reset;
+      return corerst;
+   endmethod
+
+   interface PcieLmi lmi;
       method Bit#(32) dout();
          return pcie.lmi.dout;
       endmethod
@@ -272,7 +288,7 @@ module mkPS4#(Clock refclk, Clock reconfig_clk, Clock serdes_clk, Clock pld_clk,
       method din = pcie.lmi.din;
    endinterface
 
-   interface PcieS4Msi msi;
+   interface PcieMsi msi;
       method Bit#(1) int_ack;
          return pcie.app.int_ack;
       endmethod
@@ -286,7 +302,7 @@ module mkPS4#(Clock refclk, Clock reconfig_clk, Clock serdes_clk, Clock pld_clk,
       method pex_msi_num = pcie.pex_msi.num;
    endinterface
 
-   interface PcieS4TlCfg tl_cfg;
+   interface PcieTlCfg tl_cfg;
       method Bit#(4) add();
          return pcie.tl_cfg.add;
       endmethod
@@ -306,20 +322,20 @@ module mkPS4#(Clock refclk, Clock reconfig_clk, Clock serdes_clk, Clock pld_clk,
       method cpl_err = pcie.cpl.err;
    endinterface
 
-   interface PcieS4RxSt rx_st;
+   interface PcieRxSt rx_st;
       method Bit#(1)   sop();   return pcie.rx_st.sop0;   endmethod
       method Bit#(1)   eop();   return pcie.rx_st.eop0;   endmethod
       method Bit#(128) data();  return pcie.rx_st.data0;  endmethod
       method Bit#(1)   valid(); return pcie.rx_st.valid0; endmethod
       method Bit#(1)   err();   return pcie.rx_st.err0;   endmethod
       method Bit#(1)   empty(); return pcie.rx_st.empty0; endmethod
-      method Bit#(8)   bardec(); return pcie.rx_st.bardec0; endmethod
+      method Bit#(8)   bar();   return pcie.rx_st.bardec0; endmethod
       method Bit#(16)  be();    return pcie.rx_st.be0; endmethod
       method ready = pcie.rx_st.ready0;
       method mask = pcie.rx_st.mask0;
    endinterface
 
-   interface PcieS4TxSt tx_st;
+   interface PcieTxSt tx_st;
       method Bit#(1) ready (); return pcie.tx_st.ready0; endmethod
       method sop   = pcie.tx_st.sop0    ;
       method eop   = pcie.tx_st.eop0    ;
@@ -329,13 +345,13 @@ module mkPS4#(Clock refclk, Clock reconfig_clk, Clock serdes_clk, Clock pld_clk,
       method data  = pcie.tx_st.data0   ;
    endinterface
 
-   interface PcieS4Rxin rx;
+   interface PcieRxin rx;
       method Action in(Vector#(8, Bit#(1)) a);
          writeVReg(rx_in_wires, a);
       endmethod
    endinterface
 
-   interface PcieS4Txout tx;
+   interface PcieTxout tx;
       method Vector#(8, Bit#(1)) out();
          Vector#(8, Bit#(1)) ret_val;
          ret_val[0] = pcie.tx.out0;
@@ -350,7 +366,7 @@ module mkPS4#(Clock refclk, Clock reconfig_clk, Clock serdes_clk, Clock pld_clk,
       endmethod
    endinterface
 
-   interface PcieS4HipPipe hip_pipe;
+   interface PcieHipPipe hip_pipe;
       method Action rxdata(Vector#(8, Bit#(8)) a);
          writeVReg(rxdata_wires, a);
       endmethod
@@ -463,12 +479,12 @@ module mkPS4#(Clock refclk, Clock reconfig_clk, Clock serdes_clk, Clock pld_clk,
       endmethod
    endinterface
 
-   interface PcieS4HipCtrl hip_ctrl;
+   interface PcieHipCtrl hip_ctrl;
       method test_in = pcie.test.in;
       method simu_mode_pipe = pcie.pipe.mode;
    endinterface
 
-   interface PcieS4HipRst hip_rst;
+   interface PcieHipRst hip_rst;
       method Bit#(1) serdes_pll_locked;
          return pcie.rc_pll.locked;
       endmethod
@@ -476,7 +492,7 @@ module mkPS4#(Clock refclk, Clock reconfig_clk, Clock serdes_clk, Clock pld_clk,
       method reconfig_clk_locked = pcie.reconfig.clk_locked;
    endinterface
 
-   interface PcieS4TxCred tx_cred;
+   interface PcieTxCred tx_cred;
       method cred();
          return pcie.tx.cred0;
       endmethod

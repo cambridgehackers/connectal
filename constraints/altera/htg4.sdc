@@ -3,17 +3,17 @@
 # Create Clock
 #**************************************************************
 
-create_clock -period 10 [get_ports pcie_refclk_p]
-create_clock -period 10 [get_ports sfp_refclk]
-create_clock -period 20 [get_ports osc_50_b3b]
-create_clock -period 20 [get_ports osc_50_b3d]
-create_clock -period 20 [get_ports osc_50_b4d]
-create_clock -period 20 [get_ports osc_50_b4a]
-create_clock -period 20 [get_ports osc_50_b7a]
-create_clock -period 20 [get_ports osc_50_b7d]
-create_clock -period 20 [get_ports osc_50_b8d]
-create_clock -period 20 [get_ports osc_50_b8a]
-
+#create_clock -period 10 [get_ports pcie_refclk_p]
+#create_clock -period 10 [get_ports sfp_refclk]
+#create_clock -period 20 [get_ports osc_50_b3b]
+#create_clock -period 20 [get_ports osc_50_b3d]
+#create_clock -period 20 [get_ports osc_50_b4d]
+#create_clock -period 20 [get_ports osc_50_b4a]
+#create_clock -period 20 [get_ports osc_50_b7a]
+#create_clock -period 20 [get_ports osc_50_b7d]
+#create_clock -period 20 [get_ports osc_50_b8d]
+#create_clock -period 20 [get_ports osc_50_b8a]
+#
 set_clock_groups -exclusive -group [get_clocks { *central_clk_div0* }] -group [get_clocks { *_hssi_pcie_hip* }]
 set_clock_groups -exclusive -group [get_clocks { refclk*clkout }] -group [get_clocks { *div0*coreclkout }]
 

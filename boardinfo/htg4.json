@@ -7,5 +7,207 @@
         "TOP" : "PcieTop",
         "CONNECTALFLAGS" : [],
         "rewireclockstring" : ""
-    }
+    },
+    "PCIE": {
+        "PCIE_PERST_n": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_AG24"
+        }, 
+        "PCIE_REFCLK_p": {
+            "IOSTANDARD": "DIFFERENTIAL LVPECL", 
+            "LOC": "PIN_AA38"
+        }, 
+        "PCIE_RX_p[0]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AU38"
+        }, 
+        "PCIE_RX_p[1]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AR38"
+        }, 
+        "PCIE_RX_p[2]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AJ38"
+        }, 
+        "PCIE_RX_p[3]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AG38"
+        }, 
+        "PCIE_RX_p[4]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AE38"
+        }, 
+        "PCIE_RX_p[5]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AC38"
+        }, 
+        "PCIE_RX_p[6]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_U38"
+        }, 
+        "PCIE_RX_p[7]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_R38"
+        }, 
+        "PCIE_SMBCLK": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_W35"
+        }, 
+        "PCIE_SMBDAT": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_W34"
+        }, 
+        "PCIE_TX_p[0]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AT36"
+        }, 
+        "PCIE_TX_p[1]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AP36"
+        }, 
+        "PCIE_TX_p[2]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AH36"
+        }, 
+        "PCIE_TX_p[3]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AF36"
+        }, 
+        "PCIE_TX_p[4]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AD36"
+        }, 
+        "PCIE_TX_p[5]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AB36"
+        }, 
+        "PCIE_TX_p[6]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_T36"
+        }, 
+        "PCIE_TX_p[7]": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_P36"
+        }, 
+        "PCIE_WAKE_n": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_R33"
+        },
+        "PCIE_REFCLK_p(n)": {
+            "IOSTANDARD": "HCSL", 
+            "LOC": "PIN_AA39"
+        }, 
+        "PCIE_RX_p[0](n)": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AU39"
+        }, 
+        "PCIE_RX_p[1](n)": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AR39"
+        }, 
+        "PCIE_RX_p[2](n)": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AJ39"
+        }, 
+        "PCIE_RX_p[3](n)": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AG39"
+        }, 
+        "PCIE_RX_p[4](n)": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AE39"
+        }, 
+        "PCIE_RX_p[5](n)": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AC39"
+        }, 
+        "PCIE_RX_p[6](n)": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_U39"
+        }, 
+        "PCIE_RX_p[7](n)": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_R39"
+        }, 
+        "PCIE_TX_p[0](n)": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AT37"
+        }, 
+        "PCIE_TX_p[1](n)": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AP37"
+        }, 
+        "PCIE_TX_p[2](n)": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AH37"
+        }, 
+        "PCIE_TX_p[3](n)": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AF37"
+        }, 
+        "PCIE_TX_p[4](n)": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AO37"
+        }, 
+        "PCIE_TX_p[5](n)": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_AB37"
+        }, 
+        "PCIE_TX_p[6](n)": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_T37"
+        }, 
+        "PCIE_TX_p[7](n)": {
+            "IOSTANDARD": "1.4-V PCML", 
+            "LOC": "PIN_P37"
+        }
+    },
+    "LED": {
+        "LED[0]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_D33"
+        }, 
+        "LED[1]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_C34"
+        }, 
+        "LED[2]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_M28"
+        }, 
+        "LED[3]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_D34"
+        },
+        "LED[4]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_E34"
+        }, 
+        "LED[5]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_R27"
+        }, 
+        "LED[6]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_F34"
+        }, 
+        "LED[7]": {
+            "IOSTANDARD": "2.5 V", 
+            "LOC": "PIN_N28"
+        } 
+	},
+    "OSC": {
+        "CLK200": {
+            "IOSTANDARD": "LVDS", 
+            "LOC": "PIN_K34"
+        }, 
+        "CLK644": {
+            "IOSTANDARD": "DIFFERENTIAL LVPECL", 
+            "LOC": "PIN_J2"
+        },
+        "CLK100": {
+            "IOSTANDARD": "DIFFERENTIAL LVPECL", 
+            "LOC": "PIN_J2"
+        }
+	}
 }
