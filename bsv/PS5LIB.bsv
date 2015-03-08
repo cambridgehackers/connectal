@@ -22,6 +22,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+// Stratix V PCIe Wrapper
 import Clocks        ::*;
 import Vector        ::*;
 import Connectable   ::*;
@@ -31,10 +32,10 @@ import ConnectalClocks      ::*;
 import ALTERA_XCVR_RECONFIG_WRAPPER        ::*;
 import ALTERA_PCIE_RECONFIG_DRIVER_WRAPPER ::*;
 import ALTERA_PCIE_WRAPPER                 ::*;
-import ALTERA_PLL_WRAPPER                  ::*;
+//import ALTERA_PLL_WRAPPER                  ::*;
 
 (* always_ready, always_enabled *)
-interface PcieS5Lmi#(numeric type address_width, numeric type data_width);
+interface PcieLmi#(numeric type address_width, numeric type data_width);
    method Action           rden(Bit#(1) rden);
    method Action           wren(Bit#(1) wren);
    method Action           addr(Bit#(address_width) addr);
@@ -44,7 +45,7 @@ interface PcieS5Lmi#(numeric type address_width, numeric type data_width);
 endinterface
 
 (* always_ready, always_enabled *)
-interface PcieS5RxSt#(numeric type data_width);
+interface PcieRxSt#(numeric type data_width);
    method Bit#(1)          sop;
    method Bit#(1)          eop;
    method Bit#(data_width) data;
@@ -52,10 +53,13 @@ interface PcieS5RxSt#(numeric type data_width);
    method Bit#(1)          valid;
    method Bit#(1)          err;
    method Bit#(2)          empty;
+   method Action           mask(Bit#(1) mask);
+   method Bit#(8)          bar();
+   method Bit#(16)         be();
 endinterface
 
 (* always_ready, always_enabled *)
-interface PcieS5TxSt#(numeric type data_width);
+interface PcieTxSt#(numeric type data_width);
    method Action           sop(Bit#(1) sop);
    method Action           eop(Bit#(1) eop);
    method Action           valid(Bit#(1) valid);
@@ -66,7 +70,7 @@ interface PcieS5TxSt#(numeric type data_width);
 endinterface
 
 (* always_ready, always_enabled *)
-interface PcieS5Msi;
+interface PcieMsi;
    method Bit#(1)  int_ack();
    method Action   int_sts (Bit#(1) int_sts);
    method Bit#(1)  msi_ack();
@@ -76,30 +80,23 @@ interface PcieS5Msi;
 endinterface
 
 (* always_ready, always_enabled *)
-interface PcieS5RxSpecific;
-   method Action   mask(Bit#(1) mask);
-   method Bit#(8)  bar();
-   method Bit#(16) be();
-endinterface
-
-(* always_ready, always_enabled *)
-interface PcieS5TlCfg;
-   method Bit#(4)  cfg_add();
-   method Bit#(32) cfg_ctl();
-   method Bit#(53) cfg_sts();
+interface PcieTlCfg;
+   method Bit#(4)  add();
+   method Bit#(32) ctl();
+   method Bit#(53) sts();
    method Action   cpl_pending(Bit#(1) cpl_pending);
    method Action   cpl_err(Bit#(7) cpl_err);
 endinterface
 
 (* always_ready, always_enabled *)
-interface PcieS5HipRst;
+interface PcieHipRst;
    method Bit#(1) serdes_pll_locked();
    method Bit#(1) pld_clk_inuse();
    method Action  core_ready(Bit#(1) core_ready);
 endinterface
 
 (* always_ready, always_enabled *)
-interface PcieS5TxCred;
+interface PcieTxCred;
    method Bit#(12) datafccp();
    method Bit#(12) datafcnp();
    method Bit#(12) datafcp();
@@ -111,17 +108,17 @@ interface PcieS5TxCred;
 endinterface
 
 (* always_ready, always_enabled *)
-interface PcieS5Rxin;
+interface PcieRxin;
 (* prefix="", result="in" *)   method Action in(Vector#(8, Bit#(1)) a);
 endinterface
 
 (* always_ready, always_enabled *)
-interface PcieS5Txout;
+interface PcieTxout;
    method Vector#(8, Bit#(1)) out();
 endinterface
 
 (* always_ready, always_enabled *)
-interface PcieS5HipStatus;
+interface PcieHipStatus;
    method Bit#(1) cor_ext_rcv;
    method Bit#(1) cor_ext_rpl;
    method Bit#(1) rpl;
@@ -141,12 +138,12 @@ interface PcieS5HipStatus;
    method Bit#(8) ko_cpl_spc_header;
 endinterface
 
-interface PcieS5HipSerial;
-   interface PcieS5Rxin rx;
-   interface PcieS5Txout tx;
+interface PcieHipSerial;
+   interface PcieRxin rx;
+   interface PcieTxout tx;
 endinterface
 
-interface PcieS5HipPipe;
+interface PcieHipPipe;
 (* prefix="", result="rxdata" *)     method Action     rxdata    (Vector#(8, Bit#(8)) rxdata);
 (* prefix="", result="rxdatak" *)    method Action     rxdatak   (Vector#(8, Bit#(1)) rxdatak);
 (* prefix="", result="rxelecidle" *) method Action     rxelecidle(Vector#(8, Bit#(1)) rxelecidle);
@@ -170,32 +167,31 @@ interface PcieS5HipPipe;
 endinterface
 
 (* always_ready, always_enabled *)
-interface PcieS5HipCtrl;
+interface PcieHipCtrl;
 (* prefix="", result="test_in" *)        method Action test_in(Bit#(32) test_in);
 (* prefix="", result="simu_mode_pipe" *) method Action simu_mode_pipe(Bit#(1) simu_mode_pipe);
 endinterface
 
 (* always_ready, always_enabled *)
-interface PcieS5Wrap#(numeric type address_width, numeric type data_width, numeric type app_width);
-   interface PcieS5Lmi#(address_width, data_width) lmi;
-   interface PcieS5RxSt#(app_width) rx_st;
-   interface PcieS5TxSt#(app_width) tx_st;
-   interface PcieS5Msi msi;
-   interface PcieS5RxSpecific rx_specific;
-   interface PcieS5TlCfg tl;
-   interface PcieS5HipRst hip_rst;
-   interface PcieS5TxCred tx_cred;
-   interface PcieS5Rxin rx;
-   interface PcieS5Txout tx;
-   interface PcieS5HipStatus hip_status;
-   interface PcieS5HipPipe hip_pipe;
-   interface PcieS5HipCtrl hip_ctrl;
+interface PcieWrap#(numeric type address_width, numeric type data_width, numeric type app_width);
+   interface PcieLmi#(address_width, data_width) lmi;
+   interface PcieRxSt#(app_width) rx_st;
+   interface PcieTxSt#(app_width) tx_st;
+   interface PcieMsi msi;
+   interface PcieTlCfg tl_cfg;
+   interface PcieHipRst hip_rst;
+   interface PcieTxCred tx_cred;
+   interface PcieRxin rx;
+   interface PcieTxout tx;
+   interface PcieHipStatus hip_status;
+   interface PcieHipPipe hip_pipe;
+   interface PcieHipCtrl hip_ctrl;
    interface Clock coreclkout_hip;
    interface Reset core_reset;
 endinterface
 
 //(* synthesize *)
-module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_perst)(PcieS5Wrap#(12, 32, 128));
+module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_perst)(PcieWrap#(12, 32, 128));
 
    Vector#(8, Wire#(Bit#(1))) rx_in_wires <- replicateM(mkDWire(0));
    Vector#(8, Wire#(Bit#(8))) rxdata_wires <- replicateM(mkDWire(0));
@@ -209,12 +205,27 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
    Reset default_reset <- exposeCurrentReset;
    Reset reset_high <- invertCurrentReset;
 
-   PcieWrap         pcie     <- mkPcieWrap(clk_100Mhz, npor, pin_perst, reset_high);
+   PcieS5Wrap         pcie     <- mkPPS5Wrap(clk_100Mhz, npor, pin_perst, reset_high);
 
    Clock coreclk = pcie.coreclkout.hip;
    Reset corerst <- mkSyncReset(1, pcie.reset.status, coreclk);
+
+   Reset core_resetn <- mkResetInverter(corerst, clocked_by coreclk);
+   AlteraPcieHipRs  hip_rs   <- mkAlteraPcieHipRs(coreclk, core_resetn);
+
    PcieReconfigWrap pcie_cfg <- mkPcieReconfigWrap(coreclk, clk_50Mhz, npor, reset_high, reset_high);
    XcvrReconfigWrap xcvr_cfg <- mkXcvrReconfigWrap(clk_50Mhz, reset_high, reset_high);
+
+   rule pertick1;
+      pcie.pld.core_ready(pcie.serdes.pll_locked);
+   endrule
+
+   rule pertick3;
+      hip_rs.dlup_exit(pcie.dl.up_exit);
+      hip_rs.hotrst_exit(pcie.hotrst.exit);
+      hip_rs.l2_exit(pcie.l2.exit);
+      hip_rs.ltssm(pcie.ltssm.state);
+   endrule
 
    (* no_implicit_conditions *)
    rule connectReconfigMgmt;
@@ -291,62 +302,62 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
 
    (* no_implicit_conditions *)
    rule pcie_rxdata;
-      pcie.rxd.ata0(rxdata_wires[0]);
-      pcie.rxd.ata1(rxdata_wires[1]);
-      pcie.rxd.ata2(rxdata_wires[2]);
-      pcie.rxd.ata3(rxdata_wires[3]);
-      pcie.rxd.ata4(rxdata_wires[4]);
-      pcie.rxd.ata5(rxdata_wires[5]);
-      pcie.rxd.ata6(rxdata_wires[6]);
-      pcie.rxd.ata7(rxdata_wires[7]);
+      pcie.rx.data0(rxdata_wires[0]);
+      pcie.rx.data1(rxdata_wires[1]);
+      pcie.rx.data2(rxdata_wires[2]);
+      pcie.rx.data3(rxdata_wires[3]);
+      pcie.rx.data4(rxdata_wires[4]);
+      pcie.rx.data5(rxdata_wires[5]);
+      pcie.rx.data6(rxdata_wires[6]);
+      pcie.rx.data7(rxdata_wires[7]);
    endrule
 
    (* no_implicit_conditions *)
    rule pcie_rxdatak;
-      pcie.rxd.atak0(rxdatak_wires[0]);
-      pcie.rxd.atak1(rxdatak_wires[1]);
-      pcie.rxd.atak2(rxdatak_wires[2]);
-      pcie.rxd.atak3(rxdatak_wires[3]);
-      pcie.rxd.atak4(rxdatak_wires[4]);
-      pcie.rxd.atak5(rxdatak_wires[5]);
-      pcie.rxd.atak6(rxdatak_wires[6]);
-      pcie.rxd.atak7(rxdatak_wires[7]);
+      pcie.rx.datak0(rxdatak_wires[0]);
+      pcie.rx.datak1(rxdatak_wires[1]);
+      pcie.rx.datak2(rxdatak_wires[2]);
+      pcie.rx.datak3(rxdatak_wires[3]);
+      pcie.rx.datak4(rxdatak_wires[4]);
+      pcie.rx.datak5(rxdatak_wires[5]);
+      pcie.rx.datak6(rxdatak_wires[6]);
+      pcie.rx.datak7(rxdatak_wires[7]);
    endrule
 
    (* no_implicit_conditions *)
    rule pcie_rxelecidle;
-      pcie.rxe.lecidle0(rxelecidle_wires[0]);
-      pcie.rxe.lecidle1(rxelecidle_wires[1]);
-      pcie.rxe.lecidle2(rxelecidle_wires[2]);
-      pcie.rxe.lecidle3(rxelecidle_wires[3]);
-      pcie.rxe.lecidle4(rxelecidle_wires[4]);
-      pcie.rxe.lecidle5(rxelecidle_wires[5]);
-      pcie.rxe.lecidle6(rxelecidle_wires[6]);
-      pcie.rxe.lecidle7(rxelecidle_wires[7]);
+      pcie.rx.elecidle0(rxelecidle_wires[0]);
+      pcie.rx.elecidle1(rxelecidle_wires[1]);
+      pcie.rx.elecidle2(rxelecidle_wires[2]);
+      pcie.rx.elecidle3(rxelecidle_wires[3]);
+      pcie.rx.elecidle4(rxelecidle_wires[4]);
+      pcie.rx.elecidle5(rxelecidle_wires[5]);
+      pcie.rx.elecidle6(rxelecidle_wires[6]);
+      pcie.rx.elecidle7(rxelecidle_wires[7]);
    endrule
 
    (* no_implicit_conditions *)
    rule pcie_rxstatus;
-      pcie.rxs.tatus0(rxstatus_wires[0]);
-      pcie.rxs.tatus1(rxstatus_wires[1]);
-      pcie.rxs.tatus2(rxstatus_wires[2]);
-      pcie.rxs.tatus3(rxstatus_wires[3]);
-      pcie.rxs.tatus4(rxstatus_wires[4]);
-      pcie.rxs.tatus5(rxstatus_wires[5]);
-      pcie.rxs.tatus6(rxstatus_wires[6]);
-      pcie.rxs.tatus7(rxstatus_wires[7]);
+      pcie.rx.status0(rxstatus_wires[0]);
+      pcie.rx.status1(rxstatus_wires[1]);
+      pcie.rx.status2(rxstatus_wires[2]);
+      pcie.rx.status3(rxstatus_wires[3]);
+      pcie.rx.status4(rxstatus_wires[4]);
+      pcie.rx.status5(rxstatus_wires[5]);
+      pcie.rx.status6(rxstatus_wires[6]);
+      pcie.rx.status7(rxstatus_wires[7]);
    endrule
 
    (* no_implicit_conditions *)
    rule pcie_rxvalid;
-      pcie.rxv.alid0(rxvalid_wires[0]);
-      pcie.rxv.alid1(rxvalid_wires[1]);
-      pcie.rxv.alid2(rxvalid_wires[2]);
-      pcie.rxv.alid3(rxvalid_wires[3]);
-      pcie.rxv.alid4(rxvalid_wires[4]);
-      pcie.rxv.alid5(rxvalid_wires[5]);
-      pcie.rxv.alid6(rxvalid_wires[6]);
-      pcie.rxv.alid7(rxvalid_wires[7]);
+      pcie.rx.valid0(rxvalid_wires[0]);
+      pcie.rx.valid1(rxvalid_wires[1]);
+      pcie.rx.valid2(rxvalid_wires[2]);
+      pcie.rx.valid3(rxvalid_wires[3]);
+      pcie.rx.valid4(rxvalid_wires[4]);
+      pcie.rx.valid5(rxvalid_wires[5]);
+      pcie.rx.valid6(rxvalid_wires[6]);
+      pcie.rx.valid7(rxvalid_wires[7]);
    endrule
 
    (* no_implicit_conditions *)
@@ -369,34 +380,21 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
       return corerst;
    endmethod
 
-   interface PcieS4Msi msi;
-      method Bit#(1) int_ack;
-         return pcie.app.int_ack;
-      endmethod
-      method Bit#(1) msi_ack;
-         return pcie.app.msi_ack;
-      endmethod
-      method msi_num = pcie.app.msi_num;
-      method msi_req = pcie.app.msi_req;
-      method msi_tc  = pcie.app.msi_tc;
-      method int_sts = pcie.app.int_sts;
-   endinterface
-
-   interface PcieS5TlCfg tl;
-      method Bit#(4) cfg_add();
+   interface PcieTlCfg tl_cfg;
+      method Bit#(4) add();
          return pcie.tl.cfg_add;
       endmethod
-      method Bit#(32) cfg_ctl();
+      method Bit#(32) ctl();
          return pcie.tl.cfg_ctl;
       endmethod
-      method Bit#(53) cfg_sts();
+      method Bit#(53) sts();
          return pcie.tl.cfg_sts;
       endmethod
       method cpl_pending = pcie.cpl.pending;
       method cpl_err = pcie.cpl.err;
    endinterface
 
-   interface PcieS5Lmi lmi;
+   interface PcieLmi lmi;
       method Bit#(32) dout();
          return pcie.lmi.dout;
       endmethod
@@ -411,17 +409,20 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
       method din = pcie.lmi.din;
    endinterface
 
-   interface PcieS5RxSt rx_st;
+   interface PcieRxSt rx_st;
       method Bit#(1)   sop();   return pcie.rx_s.t_sop;   endmethod
       method Bit#(1)   eop();   return pcie.rx_s.t_eop;   endmethod
       method Bit#(128) data();  return pcie.rx_s.t_data;  endmethod
       method Bit#(1)   valid(); return pcie.rx_s.t_valid; endmethod
       method Bit#(1)   err();   return pcie.rx_s.t_err;   endmethod
       method Bit#(2)   empty(); return pcie.rx_s.t_empty; endmethod
+      method Bit#(8)   bar ();  return pcie.rx_s.t_bar; endmethod
+      method Bit#(16)  be();    return pcie.rx_s.t_be;  endmethod
       method ready = pcie.rx_s.t_ready;
+      method mask = pcie.rx_s.t_mask;
    endinterface
 
-   interface PcieS5TxSt tx_st;
+   interface PcieTxSt tx_st;
       method Bit#(1) ready (); return pcie.tx_s.t_ready; endmethod
       method sop   = pcie.tx_s.t_sop    ;
       method eop   = pcie.tx_s.t_eop    ;
@@ -431,7 +432,7 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
       method data  = pcie.tx_s.t_data   ;
    endinterface
 
-   interface PcieS5Msi msi;
+   interface PcieMsi msi;
       method Bit#(1) int_ack(); return pcie.app.int_ack; endmethod
       method Bit#(1) msi_ack(); return pcie.app.msi_ack; endmethod
 
@@ -441,19 +442,13 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
       method msi_tc = pcie.app.msi_tc;
    endinterface
 
-   interface PcieS5RxSpecific rx_specific;
-      method mask = pcie.rx_s.t_mask;
-      method Bit#(8) bar (); return pcie.rx_s.t_bar; endmethod
-      method Bit#(16) be();  return pcie.rx_s.t_be;  endmethod
-   endinterface
-
-   interface PcieS5HipRst hip_rst;
+   interface PcieHipRst hip_rst;
       method Bit#(1) serdes_pll_locked(); return pcie.serdes.pll_locked; endmethod
       method Bit#(1) pld_clk_inuse(); return pcie.pld.clk_inuse; endmethod
-      method core_ready = pcie.pld.core_ready;
+      //method core_ready = pcie.pld.core_ready;
    endinterface
 
-   interface PcieS5TxCred tx_cred;
+   interface PcieTxCred tx_cred;
       method Bit#(12) datafccp(); return pcie.tx_cred.datafccp; endmethod
       method Bit#(12) datafcnp(); return pcie.tx_cred.datafcnp; endmethod
       method Bit#(12) datafcp();  return pcie.tx_cred.datafcp;  endmethod
@@ -464,13 +459,13 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
       method Bit#(6) fcinfinite();return pcie.tx_cred.fcinfinite;endmethod
    endinterface
 
-   interface PcieS5Rxin rx;
+   interface PcieRxin rx;
       method Action in(Vector#(8, Bit#(1)) a);
          writeVReg(rx_in_wires, a);
       endmethod
    endinterface
 
-   interface PcieS5Txout tx;
+   interface PcieTxout tx;
       method Vector#(8, Bit#(1)) out();
          Vector#(8, Bit#(1)) ret_val;
          ret_val[0] = pcie.tx.out0;
@@ -485,7 +480,7 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
       endmethod
    endinterface
 
-   interface PcieS5HipStatus hip_status;
+   interface PcieHipStatus hip_status;
       method Bit#(1) cor_ext_rcv; return pcie.derr.cor_ext_rcv; endmethod
       method Bit#(1) cor_ext_rpl; return pcie.derr.cor_ext_rpl; endmethod
       method Bit#(1) rpl;         return pcie.derr.rpl;         endmethod
@@ -505,7 +500,7 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
       method Bit#(8) ko_cpl_spc_header;return pcie.ko.cpl_spc_header;endmethod
    endinterface
 
-   interface PcieS5HipPipe hip_pipe;
+   interface PcieHipPipe hip_pipe;
       method Action rxdata(Vector#(8, Bit#(8)) a);
          writeVReg(rxdata_wires, a);
       endmethod
@@ -532,118 +527,118 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
 
       method rxpolarity();
          Vector#(8, Bit#(1)) retval;
-         retval = unpack({pcie.rxp.olarity7,
-                          pcie.rxp.olarity6,
-                          pcie.rxp.olarity5,
-                          pcie.rxp.olarity4,
-                          pcie.rxp.olarity3,
-                          pcie.rxp.olarity2,
-                          pcie.rxp.olarity1,
-                          pcie.rxp.olarity0});
+         retval = unpack({pcie.rx.polarity7,
+                          pcie.rx.polarity6,
+                          pcie.rx.polarity5,
+                          pcie.rx.polarity4,
+                          pcie.rx.polarity3,
+                          pcie.rx.polarity2,
+                          pcie.rx.polarity1,
+                          pcie.rx.polarity0});
          return retval;
       endmethod
 
       method txcompl();
          Vector#(8, Bit#(1)) retval;
-         retval = unpack({pcie.txc.ompl7,
-                          pcie.txc.ompl6,
-                          pcie.txc.ompl5,
-                          pcie.txc.ompl4,
-                          pcie.txc.ompl3,
-                          pcie.txc.ompl2,
-                          pcie.txc.ompl1,
-                          pcie.txc.ompl0});
+         retval = unpack({pcie.tx.compl7,
+                          pcie.tx.compl6,
+                          pcie.tx.compl5,
+                          pcie.tx.compl4,
+                          pcie.tx.compl3,
+                          pcie.tx.compl2,
+                          pcie.tx.compl1,
+                          pcie.tx.compl0});
          return retval;
       endmethod
 
       method txdata();
          Vector#(8, Bit#(8)) retval;
-         retval = unpack({pcie.txd.ata7,
-                          pcie.txd.ata6,
-                          pcie.txd.ata5,
-                          pcie.txd.ata4,
-                          pcie.txd.ata3,
-                          pcie.txd.ata2,
-                          pcie.txd.ata1,
-                          pcie.txd.ata0});
+         retval = unpack({pcie.tx.data7,
+                          pcie.tx.data6,
+                          pcie.tx.data5,
+                          pcie.tx.data4,
+                          pcie.tx.data3,
+                          pcie.tx.data2,
+                          pcie.tx.data1,
+                          pcie.tx.data0});
          return retval;
       endmethod
 
       method txdatak();
          Vector#(8, Bit#(1)) retval;
-         retval = unpack({pcie.txd.atak7,
-                          pcie.txd.atak6,
-                          pcie.txd.atak5,
-                          pcie.txd.atak4,
-                          pcie.txd.atak3,
-                          pcie.txd.atak2,
-                          pcie.txd.atak1,
-                          pcie.txd.atak0});
+         retval = unpack({pcie.tx.datak7,
+                          pcie.tx.datak6,
+                          pcie.tx.datak5,
+                          pcie.tx.datak4,
+                          pcie.tx.datak3,
+                          pcie.tx.datak2,
+                          pcie.tx.datak1,
+                          pcie.tx.datak0});
          return retval;
       endmethod
 
       method txdeemph();
          Vector#(8, Bit#(1)) retval;
-         retval = unpack({pcie.txd.eemph7,
-                          pcie.txd.eemph6,
-                          pcie.txd.eemph5,
-                          pcie.txd.eemph4,
-                          pcie.txd.eemph3,
-                          pcie.txd.eemph2,
-                          pcie.txd.eemph1,
-                          pcie.txd.eemph0});
+         retval = unpack({pcie.tx.deemph7,
+                          pcie.tx.deemph6,
+                          pcie.tx.deemph5,
+                          pcie.tx.deemph4,
+                          pcie.tx.deemph3,
+                          pcie.tx.deemph2,
+                          pcie.tx.deemph1,
+                          pcie.tx.deemph0});
          return retval;
       endmethod
 
       method txdetectrx();
          Vector#(8, Bit#(1)) retval;
-         retval = unpack({pcie.txd.etectrx7,
-                          pcie.txd.etectrx6,
-                          pcie.txd.etectrx5,
-                          pcie.txd.etectrx4,
-                          pcie.txd.etectrx3,
-                          pcie.txd.etectrx2,
-                          pcie.txd.etectrx1,
-                          pcie.txd.etectrx0});
+         retval = unpack({pcie.tx.detectrx7,
+                          pcie.tx.detectrx6,
+                          pcie.tx.detectrx5,
+                          pcie.tx.detectrx4,
+                          pcie.tx.detectrx3,
+                          pcie.tx.detectrx2,
+                          pcie.tx.detectrx1,
+                          pcie.tx.detectrx0});
          return retval;
       endmethod
 
       method txelecidle();
          Vector#(8, Bit#(1)) retval;
-         retval = unpack({pcie.txe.lecidle7,
-                          pcie.txe.lecidle6,
-                          pcie.txe.lecidle5,
-                          pcie.txe.lecidle4,
-                          pcie.txe.lecidle3,
-                          pcie.txe.lecidle2,
-                          pcie.txe.lecidle1,
-                          pcie.txe.lecidle0});
+         retval = unpack({pcie.tx.elecidle7,
+                          pcie.tx.elecidle6,
+                          pcie.tx.elecidle5,
+                          pcie.tx.elecidle4,
+                          pcie.tx.elecidle3,
+                          pcie.tx.elecidle2,
+                          pcie.tx.elecidle1,
+                          pcie.tx.elecidle0});
          return retval;
       endmethod
 
       method txmargin();
          Vector#(8, Bit#(3)) retval;
-         retval = unpack({pcie.txm.argin7,
-                          pcie.txm.argin6,
-                          pcie.txm.argin5,
-                          pcie.txm.argin4,
-                          pcie.txm.argin3,
-                          pcie.txm.argin2,
-                          pcie.txm.argin1,
-                          pcie.txm.argin0});
+         retval = unpack({pcie.tx.margin7,
+                          pcie.tx.margin6,
+                          pcie.tx.margin5,
+                          pcie.tx.margin4,
+                          pcie.tx.margin3,
+                          pcie.tx.margin2,
+                          pcie.tx.margin1,
+                          pcie.tx.margin0});
          return retval;
       endmethod
 
       method txswing();
          Vector#(8, Bit#(1)) retval;
-         retval = unpack({pcie.txs.wing7,
-                          pcie.txs.wing6,
-                          pcie.txs.wing5,
-                          pcie.txs.wing4,
-                          pcie.txs.wing3,
-                          pcie.txs.wing2,
-                          pcie.txs.wing1,
-                          pcie.txs.wing0});
+         retval = unpack({pcie.tx.swing7,
+                          pcie.tx.swing6,
+                          pcie.tx.swing5,
+                          pcie.tx.swing4,
+                          pcie.tx.swing3,
+                          pcie.tx.swing2,
+                          pcie.tx.swing1,
+                          pcie.tx.swing0});
          return retval;
       endmethod
 
@@ -684,7 +679,7 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
       endmethod
    endinterface
 
-   interface PcieS5HipCtrl hip_ctrl;
+   interface PcieHipCtrl hip_ctrl;
       method test_in = pcie.test.in;
       method simu_mode_pipe = pcie.simu.mode_pipe;
    endinterface
