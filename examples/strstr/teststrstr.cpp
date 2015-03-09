@@ -47,13 +47,13 @@ int main(int argc, const char **argv)
   StrstrIndication *deviceIndication = 0;
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
-  device = new StrstrRequestProxy(IfcNames_StrstrRequest);
-  deviceIndication = new StrstrIndication(IfcNames_StrstrIndication);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  device = new StrstrRequestProxy(IfcNames_StrstrRequestS2H);
+  deviceIndication = new StrstrIndication(IfcNames_StrstrIndicationH2S);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
 
   portalExec_start();
 
@@ -198,6 +198,6 @@ int main(int argc, const char **argv)
   }
 
   int hw_match_cnt = deviceIndication->match_cnt;
-  fprintf(stderr, "sw_match_cnt=%d, hw_match_cnt=%d\n", sw_match_cnt, hw_match_cnt);
+  fprintf(stderr, "teststrstr: Done, sw_match_cnt=%d, hw_match_cnt=%d\n", sw_match_cnt, hw_match_cnt);
   return (sw_match_cnt != hw_match_cnt);
 }
