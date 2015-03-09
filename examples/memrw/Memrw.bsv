@@ -25,6 +25,7 @@ import FIFO::*;
 import ClientServer::*;
 import GetPut::*;
 import Pipe::*;
+import Vector::*;
 
 import ConnectalMemory::*;
 import MemTypes::*;
@@ -43,8 +44,8 @@ endinterface
 
 interface Memrw;
    interface MemrwRequest request;
-   interface MemReadClient#(64) dmaReadClient;
-   interface MemWriteClient#(64) dmaWriteClient;
+   interface Vector#(1, MemReadClient#(64)) dmaReadClient;
+   interface Vector#(1, MemWriteClient#(64)) dmaWriteClient;
 endinterface
 
 module mkMemrw#(MemrwIndication indication)(Memrw);
@@ -105,7 +106,7 @@ module mkMemrw#(MemrwIndication indication)(Memrw);
       burstLen  <= bl;
    endmethod
    endinterface
-   interface MemReadClient dmaReadClient = re.dmaClient;
-   interface MemWriteClient dmaWriteClient = we.dmaClient;
+   interface MemReadClient dmaReadClient = cons(re.dmaClient, nil);
+   interface MemWriteClient dmaWriteClient = cons(we.dmaClient, nil);
    
 endmodule
