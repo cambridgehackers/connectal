@@ -39,7 +39,7 @@ public:
         fprintf(stderr, "daemon: %p heard an echo: %d\n", sIndicationProxy, v);
         sIndicationProxy->heard(v);
     }
-    void heard2(uint32_t a, uint32_t b) {
+    void heard2(uint16_t a, uint16_t b) {
         if (daemon_trace)
         fprintf(stderr, "daemon: %p heard an echo2: %d %d\n", sIndicationProxy, a, b);
         sIndicationProxy->heard2(a, b);
@@ -55,12 +55,12 @@ public:
         fprintf(stderr, "daemon[%s:%d] proxy %p\n", __FUNCTION__, __LINE__, echoRequestProxy);
         echoRequestProxy->say(v);
     }
-    void say2 ( const uint32_t a, const uint32_t b ) {
+    void say2 ( const uint16_t a, const uint16_t b ) {
         if (daemon_trace)
         fprintf(stderr, "daemon[%s:%d] proxy %p\n", __FUNCTION__, __LINE__, echoRequestProxy);
         echoRequestProxy->say2(a, b);
     }
-    void setLeds ( const uint32_t v ) {
+    void setLeds ( const uint16_t v ) {
         fprintf(stderr, "daemon[%s:%d] proxy %p\n", __FUNCTION__, __LINE__, echoRequestProxy);
         echoRequestProxy->setLeds(v);
         sleep(1);
