@@ -35,6 +35,7 @@
 #include "GyroCtrlRequest.h"
 #include "GyroCtrlIndication.h"
 #include "GeneratedTypes.h"
+#include "GyroSampleStream.h"
 #include "gyro.h"
 
 
@@ -55,12 +56,12 @@ class GyroCtrlIndication : public GyroCtrlIndicationWrapper
     write_addr = 0;
     write_wrap_cnt = 0;
   }
-  virtual void read_reg_resp ( const uint32_t v){
+  virtual void read_reg_resp ( const uint16_t v){
     //fprintf(stderr, "GyroCtrlIndication::read_reg_resp(v=%x)\n", v);
     read_reg_val = v;
     sem_post(&read_sem);
   }
-  virtual void write_reg_resp ( const uint32_t v){
+  virtual void write_reg_resp ( const uint16_t v){
     //fprintf(stderr, "GyroCtrlIndication::write_reg_resp(v=%x)\n", v);
     sem_post(&write_sem);
   }
@@ -90,15 +91,21 @@ void set_en(GyroCtrlIndication *ind, GyroCtrlRequestProxy *device, unsigned int 
   if(!v) sem_wait(&(ind->status_sem));
 }
 
-void display(void *b, int len){
-  short *ss = (short*)b;
-  for(int i = 0; i < len/2; i+=3){
+void display(void *b, int len)
+{
+  int16_t *ss = (int16_t*)b;
+  for(int i = 0; i < len/2; i+=3)
     fprintf(stderr, "%8d %8d %8d\n", ss[i], ss[i+1], ss[i+2]);
-  }
 }
 
+void send(GyroSampleStreamProxy *gssp, void*b, int len)
+{
+  int16_t *ss = (int16_t*)b;
+  for(int i = 0; i < len/2; i+=3)
+    gssp->sample(ss[i+0], ss[i+1], ss[i+2]);
+}
 
-#define HIGH_SAMPLE_RATE
+//#define HIGH_SAMPLE_RATE
 void setup_registers(GyroCtrlIndication *ind, GyroCtrlRequestProxy *device, int ref_dstAlloc, int wrap_limit)
 {
 #ifdef HIGH_SAMPLE_RATE

@@ -46,7 +46,7 @@ public:
         fprintf(stderr, "heard an echo: %d\n", v);
 	echoRequestProxy->say2(v, 2*v);
     }
-    virtual void heard2(uint32_t a, uint32_t b) {
+    virtual void heard2(uint16_t a, uint16_t b) {
         sem_post(&sem_heard2);
         //fprintf(stderr, "heard an echo2: %ld %ld\n", a, b);
     }

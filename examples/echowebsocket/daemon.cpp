@@ -39,7 +39,7 @@ public:
         fprintf(stderr, "daemon: %p heard an echo: %d\n", sIndicationProxy, v);
         sIndicationProxy->heard(v);
     }
-    void heard2(uint32_t a, uint32_t b) {
+    void heard2(uint16_t a, uint16_t b) {
         if (daemon_trace)
         fprintf(stderr, "daemon: %p heard an echo2: %d %d\n", sIndicationProxy, a, b);
         sIndicationProxy->heard2(a, b);
@@ -55,12 +55,12 @@ public:
         fprintf(stderr, "daemon[%s:%d] proxy %p\n", __FUNCTION__, __LINE__, echoRequestProxy);
         echoRequestProxy->say(v);
     }
-    void say2 ( const uint32_t a, const uint32_t b ) {
+    void say2 ( const uint16_t a, const uint16_t b ) {
         if (daemon_trace)
         fprintf(stderr, "daemon[%s:%d] proxy %p\n", __FUNCTION__, __LINE__, echoRequestProxy);
         echoRequestProxy->say2(a, b);
     }
-    void setLeds ( const uint32_t v ) {
+    void setLeds ( const uint16_t v ) {
         fprintf(stderr, "daemon[%s:%d] proxy %p\n", __FUNCTION__, __LINE__, echoRequestProxy);
         echoRequestProxy->setLeds(v);
         sleep(1);
@@ -79,12 +79,12 @@ int main(int argc, const char **argv)
 #define PARAM &param
 #endif
 
-    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, NULL, NULL);
-    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
+    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndicationH2S, NULL, NULL);
+    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H);
     int rc = getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
-    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &websocketfuncResp, PARAM, &EchoIndicationJsonProxyReq, 1000);
+    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndicationH2S, &websocketfuncResp, PARAM, &EchoIndicationJsonProxyReq, 1000);
     rc = getaddrinfo("127.0.0.1", "5001", NULL, &param.addr);
-    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &websocketfuncResp, PARAM);
+    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequestS2H, &websocketfuncResp, PARAM);
 
     printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);
     while(1)

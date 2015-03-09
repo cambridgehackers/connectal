@@ -39,14 +39,18 @@
 #include "sock_utils.h"
 
 #include "GeneratedTypes.h"
+#include "GyroSampleStream.h"
 #include "gyro_simple.h"
-#include "sock_server.h"
+#include "read_buffer.h"
 
-static int spew = 0;
+static int spew = 1;
 static int alloc_sz = 1<<10;
 
 int main(int argc, const char **argv)
 {
+  // this is because I don't want the server to abort when the client goes offline
+  signal(SIGPIPE, SIG_IGN); 
+
   GyroCtrlIndication *ind = new GyroCtrlIndication(IfcNames_ControllerIndication);
   GyroCtrlRequestProxy *device = new GyroCtrlRequestProxy(IfcNames_ControllerRequest);
   MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
@@ -54,6 +58,10 @@ int main(int argc, const char **argv)
   DmaManager *dma = new DmaManager(dmap);
   MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
+
+  PortalSocketParam param;
+  int rc = getaddrinfo("0.0.0.0", "5000", NULL, &param.addr);
+  GyroSampleStreamProxy *gssp = new GyroSampleStreamProxy(IfcNames_SampleStream, &socketfuncResp, &param, &GyroSampleStreamJsonProxyReq, 1000);
 
   portalExec_start();
 
@@ -73,9 +81,7 @@ int main(int argc, const char **argv)
   int wrap_limit = alloc_sz-(alloc_sz%(sample_size*bus_data_width)); 
   fprintf(stderr, "wrap_limit:%08x\n", wrap_limit);
   char* snapshot = (char*)malloc(alloc_sz);
-  sock_server *ss = new sock_server(1234);
-  ss->start_server();
-  ss->verbose = 1;
+  reader* r = new reader();
 
   // setup gyro registers and dma infra
   setup_registers(ind,device, ref_dstAlloc, wrap_limit);  
@@ -88,10 +94,10 @@ int main(int argc, const char **argv)
     usleep(20000);
 #endif
     set_en(ind,device, 0);
-    int datalen = ss->read_circ_buff(wrap_limit, ref_dstAlloc, dstAlloc, dstBuffer, snapshot, ind->write_addr, ind->write_wrap_cnt, 6); 
+    int datalen = r->read_circ_buff(wrap_limit, ref_dstAlloc, dstAlloc, dstBuffer, snapshot, ind->write_addr, ind->write_wrap_cnt, 6); 
     set_en(ind,device, 2);
     if (!discard){
-      ss->send_data(snapshot, datalen);
+      send(gssp, snapshot, datalen);
       if (spew) display(snapshot, datalen);
     } else {
       discard--;

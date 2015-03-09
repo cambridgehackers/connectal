@@ -32,11 +32,11 @@
 #include "MemServerRequest.h"
 #include "MMURequest.h"
 #include "dmaManager.h"
-#include "sock_server.h"
 
 #include "maxsonar_simple.h"
 #include "MaxSonarCtrlRequest.h"
 #include "GeneratedTypes.h"
+#include "read_buffer.h"
 
 int spew = 1;
 int alloc_sz = 1<<8;
@@ -63,16 +63,14 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
 
   char* snapshot = (char*)malloc(alloc_sz);
-  sock_server *ss = new sock_server(1234);
-  ss->start_server();
-  device->range_ctrl(0xFFFFFFFF);
+  reader* r = new reader();
 
 #ifdef MEM_PATH
   device->sample(ref_dstAlloc, alloc_sz);
   while (true){
     usleep(50000);
     set_en(ind,device, 0);
-    int datalen = ss->read_circ_buff(alloc_sz, ref_dstAlloc, dstAlloc, dstBuffer, snapshot, ind->write_addr, ind->write_wrap_cnt, 1); 
+    int datalen = r->read_circ_buff(alloc_sz, ref_dstAlloc, dstAlloc, dstBuffer, snapshot, ind->write_addr, ind->write_wrap_cnt, 1); 
     set_en(ind,device, 2);
     if (spew) display((uint32_t*)snapshot, datalen/4);
   }

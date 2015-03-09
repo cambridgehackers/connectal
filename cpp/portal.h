@@ -121,6 +121,10 @@ typedef struct PortalInternal {
     int                    client_fd[MAX_CLIENT_FD];
     int                    mux_ports_number;
     PortalMuxHandler       *mux_ports;
+    void                   *websock;
+    void                   *websock_context;
+    void                   *websock_wsi;
+    int                    poller_register;
 } PortalInternal;
 
 typedef struct {
@@ -133,7 +137,7 @@ typedef struct {
     void                 *socketParam;
 } PortalMuxParam;
 
-enum {ITYPE_other, ITYPE_uint32_t, ITYPE_uint64_t, ITYPE_SpecialTypeForSendingFd,
+enum {ITYPE_other, ITYPE_int16_t, ITYPE_uint16_t, ITYPE_uint32_t, ITYPE_uint64_t, ITYPE_SpecialTypeForSendingFd,
       ITYPE_ChannelType, ITYPE_DmaDbgRec};
 typedef struct {
     const char *name;
@@ -222,6 +226,7 @@ void addFdToPoller(struct PortalPoller *poller, int fd);
 int portal_mux_handler(struct PortalInternal *p, unsigned int channel, int messageFd);
 int notfull_null(PortalInternal *pint, unsigned int v);
 int notfull_hardware(PortalInternal *pint, unsigned int v);
+volatile unsigned int *mapchannel_socket(struct PortalInternal *pint, unsigned int v);
 unsigned int bsim_poll_interrupt(void);
 
 extern int portalExec_timeout;
@@ -229,7 +234,8 @@ extern int global_pa_fd;
 extern int global_sockfd;
 extern PortalInternal *utility_portal;
 extern PortalItemFunctions bsimfunc, hardwarefunc,
-  socketfuncInit, socketfuncResp, sharedfunc, muxfunc, tracefunc, xsimfunc, websocketfuncResp;
+  socketfuncInit, socketfuncResp, sharedfunc, muxfunc, tracefunc, xsimfunc,
+  websocketfuncInit, websocketfuncResp;
 #ifdef __cplusplus
 }
 #endif

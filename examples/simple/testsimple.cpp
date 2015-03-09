@@ -24,7 +24,7 @@
 
 #include "SimpleRequest.h"
 
-#define NUMBER_OF_TESTS 8
+#define NUMBER_OF_TESTS 11
 
 int v1a = 42;
 
@@ -61,7 +61,7 @@ public:
     assert(a == v1a);
     incr_cnt();
   }
-  virtual void say2(uint32_t a, uint32_t b) {
+  virtual void say2(uint16_t a, uint16_t b) {
     fprintf(stderr, "say2(%d %d)\n", a, b);
     assert(a == v2a);
     assert(b == v2b);
@@ -106,6 +106,24 @@ public:
         fprintf(stderr, "    [%d] = 0x%x\n", i, v[i]);
     incr_cnt();
   }
+  void sayv1(const int32_t*arg1, const int32_t*arg2) {
+    fprintf(stderr, "sayv1\n");
+    for (int i = 0; i < 4; i++)
+        fprintf(stderr, "    [%d] = 0x%x, 0x%x\n", i, arg1[i], arg2[i]);
+    incr_cnt();
+  }
+  void sayv2(const int16_t* v) {
+    fprintf(stderr, "sayv2\n");
+    for (int i = 0; i < 16; i++)
+        fprintf(stderr, "    [%d] = 0x%x\n", i, v[i] & 0xffff);
+    incr_cnt();
+  }
+  void sayv3(const int16_t* v, int16_t count) {
+    fprintf(stderr, "sayv3: count 0x%x\n", count);
+    for (int i = 0; i < 16; i++)
+        fprintf(stderr, "    [%d] = 0x%x\n", i, v[i] & 0xffff);
+    incr_cnt();
+  }
   Simple(unsigned int id) : SimpleRequestWrapper(id), cnt(0){}
 };
 
@@ -138,7 +156,22 @@ int main(int argc, const char **argv)
     vect[i] = -i*32;
   fprintf(stderr, "Main::calling say8\n");
   device->say8(vect);  
-
+int32_t v1arg1[4], v1arg2[4];
+int32_t testval = 0x1234abcd;
+  for (int i = 0; i < 4; i++) {
+     v1arg1[i] = testval;
+     v1arg2[i] = ~testval;
+     testval = (testval << 4) | ((testval >> 28) & 0xf);
+  }
+  device->sayv1(v1arg1, v1arg2);
+int16_t v2v[16], v3count;
+  testval = 0x12349876;
+  for (int i = 0; i < 16; i++) {
+     v2v[i] = testval;
+     testval = (testval << 4) | ((testval >> 28) & 0xf);
+  }
+  device->sayv2(v2v);
+  device->sayv3(v2v, 44);
   fprintf(stderr, "Main::about to go to sleep\n");
   while(true){sleep(2);}
 }

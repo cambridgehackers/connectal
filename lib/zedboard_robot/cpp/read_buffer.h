@@ -1,6 +1,4 @@
-
-// Copyright (c) 2013 Nokia, Inc.
-// Copyright (c) 2013 Quanta Research Cambridge, Inc.
+// Copyright (c) 2013-2014 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -22,16 +20,13 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-interface Swallow;
-   method Action swallow(Bit#(32) v);
-endinterface
-
-module mkSwallow (Swallow);
-
-   Reg#(Bit#(32)) sink <- mkReg(0);
-   
-   method Action swallow(Bit#(32) v);
-      sink <= v;
-   endmethod
-
-endmodule
+class reader
+{
+ private:
+  int wrap_cnt;
+  int addr;
+ public:
+  int verbose;
+  reader(): wrap_cnt(0), addr(0){}
+  int read_circ_buff(int buff_len, unsigned int ref_dstAlloc, int dstAlloc, char* dstBuffer,char *snapshot, int write_addr, int write_wrap_cnt, int align);
+};

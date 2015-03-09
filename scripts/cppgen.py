@@ -26,7 +26,7 @@ import functools, math, os, re, sys, util
 
 sizeofUint32_t = 4
 generatedVectors = []
-itypeNames = ['uint32_t', 'uint64_t', 'SpecialTypeForSendingFd', 'ChannelType', 'DmaDbgRec']
+itypeNames = ['int16_t', 'uint16_t', 'uint32_t', 'uint64_t', 'SpecialTypeForSendingFd', 'ChannelType', 'DmaDbgRec']
 
 proxyClassPrefixTemplate='''
 class %(className)sProxy : public %(parentClass)s {
@@ -223,22 +223,41 @@ def typeCName(item):
     if item['type'] == 'Type':
         cid = item['name'].replace(' ', '')
         if cid == 'Bit':
-            if typeNumeric(item['params'][0]) <= 32:
+            numbits = typeNumeric(item['params'][0])
+            if numbits <= 8:
+                return 'uint8_t'
+            elif numbits <= 16:
+                return 'uint16_t'
+            elif numbits <= 32:
                 return 'uint32_t'
-            elif typeNumeric(item['params'][0]) <= 64:
+            elif numbits <= 64:
                 return 'uint64_t'
             else:
-                return 'std::bitset<%d>' % (typeNumeric(item['params'][0]))
+                return 'std::bitset<%d>' % (numbits)
         elif cid == 'Bool':
             return 'int'
         elif cid == 'Int':
-            if typeNumeric(item['params'][0]) == 32:
-                return 'int'
+            numbits = typeNumeric(item['params'][0])
+            if numbits <= 8:
+                return 'int8_t'
+            elif numbits <= 16:
+                return 'int16_t'
+            elif numbits <= 32:
+                return 'int32_t'
+            elif numbits <= 64:
+                return 'int64_t'
             else:
                 assert(False)
         elif cid == 'UInt':
-            if typeNumeric(item['params'][0]) == 32:
-                return 'unsigned int'
+            numbits = typeNumeric(item['params'][0])
+            if numbits <= 8:
+                return 'uint8_t'
+            if numbits <= 16:
+                return 'uint16_t'
+            elif numbits <= 32:
+                return 'uint32_t'
+            elif numbits <= 64:
+                return 'uint64_t'
             else:
                 assert(False)
         elif cid == 'Float':
@@ -258,6 +277,20 @@ def typeCName(item):
             name = cid
         return name
     return item['name']
+
+def signCName(item):
+    global generatedVectors
+    if item['type'] == 'Type':
+        cid = item['name'].replace(' ', '')
+        if cid == 'Bool':
+            return '1L'
+        elif cid == 'Int':
+            numbits = typeNumeric(item['params'][0])
+            if numbits <= 16:
+                return '0xffffL'
+            elif numbits <= 32:
+                return '0xffffffffL'
+    return None
 
 def typeJson(item):
     tname = typeCName(item)
@@ -353,10 +386,13 @@ def generate_marshall(pfmt, w):
         field = e.name
         if typeCName(e.datatype) == 'float':
             return pfmt % ('*(int*)&' + e.name)
+        mask = signCName(e.datatype)
+        if mask:
+            field = '(%s & %s)' % (field, mask)
         if e.shifted:
             field = '(%s>>%s)' % (field, e.shifted)
         if off:
-            field = '(%s<<%s)' % (field, off)
+            field = '(((unsigned long)%s)<<%s)' % (field, off)
         if typeBitWidth(e.datatype) > 64:
             field = '(const %s & std::bitset<%d>(0xFFFFFFFF)).to_ulong()' % (field, typeBitWidth(e.datatype))
         word.append(field)

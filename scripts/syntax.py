@@ -339,7 +339,9 @@ def p_unaryExpression(p):
                        | TILDEBAR term
                        | CARET term
                        | TILDECARET term
-                       | TOKACTION colonVar expressionStmts TOKENDACTION colonVar'''
+                       | TOKACTION colonVar expressionStmts TOKENDACTION colonVar
+                       | TOKACTIONVALUE colonVar expressionStmts TOKENDACTIONVALUE colonVar
+                       '''
 
 def p_term(p):
     '''term : type
@@ -575,6 +577,7 @@ def p_expressionStmt(p):
                       | methodDef
                       | moduleDef
                       | TOKACTION colonVar expressionStmts TOKENDACTION colonVar
+                      | TOKACTIONVALUE colonVar expressionStmts TOKENDACTIONVALUE colonVar
                       | typeDef
                       | instanceAttributes rule
                       | TOKACTION fsmStmts TOKENDACTION
@@ -613,6 +616,7 @@ def p_functionFormals(p):
                        | functionFormals COMMA functionFormal '''
 def p_fsmStmt(p):
     '''fsmStmt : TOKSEQ fsmStmts TOKENDSEQ
+               | TOKPAR fsmStmts TOKENDPAR
                | TOKWHILE ruleCond fsmStmt
                | expressionStmt'''
 
@@ -954,7 +958,7 @@ def p_endPackage(p):
                   | TOKENDPACKAGE colonVar'''
 
 def p_package(p):
-    '''package : beginPackage exportDecls importDecls packageStmts endPackage'''
+    '''package : beginPackage exportDecls importDecls packageStmts exportDecls endPackage'''
     p[0] = p[4]
 
 def preprocess(source, defs):

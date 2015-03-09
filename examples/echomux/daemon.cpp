@@ -47,7 +47,7 @@ public:
         this->pint.request_index = id;
         sIndicationProxy->heard(v);
     }
-    void heard2(uint32_t id, uint32_t a, uint32_t b) {
+    void heard2(uint32_t id, uint16_t a, uint16_t b) {
         if (daemon_trace)
         fprintf(stderr, "daemon: heard an echo2: id %d %d %d\n", id, a, b);
         this->pint.request_index = id;
@@ -64,12 +64,12 @@ public:
         fprintf(stderr, "daemon[%s] id %d %d\n", __FUNCTION__, this->pint.indication_index, v);
         echoRequestProxy->say(this->pint.indication_index, v);
     }
-    void say2 ( const uint32_t a, const uint32_t b ) {
+    void say2 ( const uint16_t a, const uint16_t b ) {
         if (daemon_trace)
         fprintf(stderr, "daemon[%s] id %d %d %d\n", __FUNCTION__, this->pint.indication_index, a, b);
         echoRequestProxy->say2(this->pint.indication_index, a, b);
     }
-    void setLeds ( const uint32_t v ) {
+    void setLeds ( const uint16_t v ) {
         fprintf(stderr, "daemon[%s] id %d %d\n", __FUNCTION__, this->pint.indication_index, v);
         echoRequestProxy->setLeds(this->pint.indication_index, v);
         sleep(1);
@@ -109,13 +109,13 @@ int main(int argc, const char **argv)
     PortalSocketParam paramSocket = {};
     PortalMuxParam param = {};
 
+    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, NULL, NULL);
+    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
+
     Portal *mcommon = new Portal(0, sizeof(uint32_t), portal_mux_handler, NULL, &socketfuncResp, &paramSocket, 0);
     param.pint = &mcommon->pint;
     sIndicationProxy = new EchoIndicationSWProxy(IfcNames_EchoIndication, &muxfunc, &param);
     EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &muxfunc, &param);
-
-    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, NULL, NULL);
-    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
 
     sSecondIndicationProxy = new SecondIndicationProxy(IfcNames_SecondIndication, &muxfunc, &param);
     SecondRequest *sSecondRequest = new SecondRequest(IfcNames_SecondRequest, &muxfunc, &param);

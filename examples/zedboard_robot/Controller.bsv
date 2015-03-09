@@ -32,6 +32,7 @@ import MemTypes::*;
 interface ZedboardRobotPins;
    interface MaxSonarPins maxsonar_pins;
    interface SpiPins spi_pins;
+   interface HBridge2Pins hbridge_pins;
 endinterface
 
 interface Controller;
@@ -55,6 +56,7 @@ module mkController#(MaxSonarCtrlIndication maxsonar_ind, GyroCtrlIndication gyr
    interface ZedboardRobotPins pins;
       interface MaxSonarPins maxsonar_pins = msc.pins;
       interface SpiPins spi_pins = gc.spi;
+      interface HBridge2Pins hbridge_pins = hbc.pins;
    endinterface
    interface LEDS leds = msc.leds;
    interface dmaClients = cons(gc.dmaClient, cons(msc.dmaClient,nil));

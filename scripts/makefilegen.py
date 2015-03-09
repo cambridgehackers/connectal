@@ -203,7 +203,7 @@ SOURCES = $(addprefix $(DTOP)/jni/,  $(GENERATED_CPP)) %(source)s $(PORTAL_CPP_F
 SOURCES2 = $(addprefix $(DTOP)/jni/,  $(GENERATED_CPP)) %(source2)s $(PORTAL_CPP_FILES)
 LDLIBS := %(clibdirs)s %(clibs)s %(clibfiles)s -pthread 
 
-BSIM_EXE_CXX_FILES = BsimDma.cxx BsimCtrl.cxx TlpReplay.cxx
+BSIM_EXE_CXX_FILES = TlpReplay.cxx
 BSIM_EXE_CXX = $(addprefix $(CONNECTALDIR)/cpp/, $(BSIM_EXE_CXX_FILES))
 
 ubuntu.exe: $(SOURCES)
@@ -385,8 +385,8 @@ if __name__=='__main__':
                                                 'pattern': '/*.*v' if os.path.isdir(f) else ''} for f in options.verilog]),
                  'read_xci': '\n'.join([tclReadXciTemplate
                                         % { 'xci': f } for f in options.xci]),
-                 'need_xilinx_pcie': 1 if needs_pcie_7x_gen1x8 else 0,
-                 'need_altera_pcie': 1 if needs_pcie_s5_gen2x8 else 0,
+                 'need_xilinx_pcie': 1 if needs_pcie_7x_gen1x8 in ["True", "true"] else 0,
+                 'need_altera_pcie': 1 if needs_pcie_s5_gen2x8 in ["True", "true"] else 0,
                  'tcldefines': '\n'.join(['set %s {%s}' % (var,val) for (var,val) in map(util.splitBinding, bsvdefines)]),
                  'ipdir': os.path.abspath(options.ipdir) if options.ipdir else connectaldir
                  }

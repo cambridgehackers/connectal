@@ -37,7 +37,7 @@ public:
         fprintf(stderr, "heard an s: %d\n", v);
 	sRequestProxy->say2(v, 2*v);
     }
-    virtual void heard2(uint32_t a, uint32_t b) {
+    virtual void heard2(uint16_t a, uint16_t b) {
         fprintf(stderr, "heard an s2: %ld %ld\n", (long)a, (long)b);
         sem_post(&sem_heard2);
     }
@@ -60,12 +60,17 @@ static void call_say2(int v, int v2)
 int main(int argc, const char **argv)
 {
     PortalSocketParam param = {0};
+//#define USE_UNIX_SOCKET
+#ifdef USE_UNIX_SOCKET
+#define PARAM NULL
+#else
+#define PARAM &param
+#endif
 
     int rc = getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
-    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndicationH2S, &socketfuncInit, &param);
+    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndicationH2S, &websocketfuncInit, PARAM);
     rc = getaddrinfo("127.0.0.1", "5001", NULL, &param.addr);
-    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H, &socketfuncInit, &param, &EchoRequestJsonProxyReq, 1000);
-    portalExec_start();
+    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H, &websocketfuncInit, PARAM, &EchoRequestJsonProxyReq, 1000);
 
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);

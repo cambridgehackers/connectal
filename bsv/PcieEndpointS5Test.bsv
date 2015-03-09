@@ -27,7 +27,7 @@ import Connectable   ::*;
 import ConnectalAlteraCells   ::*;
 
 import ALTERA_PCIE_ED_WRAPPER ::*;
-import PcieEndpointS5Lib      ::*;
+import PS5LIB ::*;
 
 // Default Pcie Application
 
@@ -164,8 +164,8 @@ instance Connectable#(PcieS5App, PcieS5Wrap#(12, 32, 128));
       endrule
 
       rule rx_bar;
-         a.rx_bar.bar(b.rx_bar.bar);
-         b.rx_bar.mask(a.rx_bar.mask);
+         a.rx_bar.bar(b.rx_specific.bar);
+         b.rx_specific.mask(a.rx_bar.mask);
       endrule
 
       rule tx_cred;

@@ -36,8 +36,15 @@
 #include <pthread.h>
 #include <assert.h>
 #include <netdb.h>
+#include <arpa/inet.h>
 
-static int trace_socket;// = 1;
+static int trace_socket ;//= 1;
+
+const char *bluesimSocketName()
+{
+  char *name = getenv("BLUESIM_SOCKET_NAME");
+  return name ? name : "socket_for_bluesim";
+}
 
 int init_listening(const char *arg_name, PortalSocketParam *param)
 {
@@ -50,15 +57,21 @@ int init_listening(const char *arg_name, PortalSocketParam *param)
   addrinfo.ai_addr = (struct sockaddr *)&sa;
   struct addrinfo *addr = &addrinfo;
 
+
+
   if (trace_socket)
     fprintf(stderr, "[%s:%d]\n", __FUNCTION__, __LINE__);
   if (param && param->addr) {
-fprintf(stderr, "[%s:%d] TCP\n", __FUNCTION__, __LINE__);
-      addr = param->addr;
+    fprintf(stderr, "[%s:%d] TCP\n", __FUNCTION__, __LINE__);
+    addr = param->addr;
+    // added these for android
+    addr->ai_socktype = SOCK_STREAM;
+    addr->ai_protocol = 0;
   }
   else
       unlink(sa.sun_path);
   listening_socket = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
+  
   int tmp = 1;
   setsockopt(listening_socket, SOL_SOCKET, SO_REUSEADDR, &tmp, sizeof(tmp));
   if (listening_socket == -1 || bind(listening_socket, addr->ai_addr, addr->ai_addrlen) == -1) {
@@ -159,10 +172,14 @@ ssize_t sock_fd_read(int sockfd, void *ptr, size_t nbytes, int *recvfd)
         }
         int *foo = (int *)CMSG_DATA(cmptr);
         *recvfd = *foo;
-fprintf(stderr, "[%s:%d] got fd %d\n", __FUNCTION__, __LINE__, *foo);
+	fprintf(stderr, "[%s:%d] got fd %d\n", __FUNCTION__, __LINE__, *foo);
     }
     if (n != nbytes) {
-fprintf(stderr, "[%s:%d] asked for %ld bytes, got %ld\n", __FUNCTION__, __LINE__, (long)nbytes, (long)n);
+      //fprintf(stderr, "[%s:%d] asked for %ld bytes, got %ld\n", __FUNCTION__, __LINE__, (long)nbytes, (long)n);
+      iov[0].iov_base = (void *)((unsigned long)iov[0].iov_base + n);
+      iov[0].iov_len -= n;
+      if ( (n = recvmsg(sockfd, &msg, 0)) <= 0)
+          return n;
     }
     return n;
 }

@@ -38,7 +38,13 @@ typedef struct {
     int size_accum;
 } DMAINFO[MAX_DMA_IDS];
 static DMAINFO dma_info[MAX_DMA_PORTS];
-static int dma_trace;// = 1;
+static int dma_trace ;//= 1;
+
+#define BUFFER_CHECK \
+    if (!dma_info[id][pref].buffer || offset >= dma_info[id][pref].buffer_len) { \
+      fprintf(stderr, "BsimDma: buffer %p len %d; reference id %d pref %d offset %d\n", dma_info[id][pref].buffer, dma_info[id][pref].buffer_len, id, pref, offset); \
+      exit(-1); \
+    }
 
 extern "C" void write_pareff32(uint32_t pref, uint32_t offset, unsigned int data)
 {
@@ -46,6 +52,7 @@ extern "C" void write_pareff32(uint32_t pref, uint32_t offset, unsigned int data
     pref -= id<<5; 
     if (dma_trace)
       fprintf(stderr, "%s: %d %d %d\n", __FUNCTION__, id, pref, offset);
+    BUFFER_CHECK
     *(unsigned int *)&dma_info[id][pref].buffer[offset] = data;
 }
 
@@ -55,6 +62,7 @@ extern "C" unsigned int read_pareff32(uint32_t pref, uint32_t offset)
     pref -= id<<5; 
     if (dma_trace)
       fprintf(stderr, "%s: %d %d %d\n", __FUNCTION__, id, pref, offset);
+    BUFFER_CHECK
     return *(unsigned int *)&dma_info[id][pref].buffer[offset];
 }
 
@@ -64,6 +72,7 @@ extern "C" void write_pareff64(uint32_t pref, uint32_t offset, uint64_t data)
     pref -= id<<5; 
     if (dma_trace)
       fprintf(stderr, "%s: %d %d %d\n", __FUNCTION__, id, pref, offset);
+    BUFFER_CHECK
     *(uint64_t *)&dma_info[id][pref].buffer[offset] = data;
 }
 
@@ -72,7 +81,8 @@ extern "C" uint64_t read_pareff64(uint32_t pref, uint32_t offset)
     uint32_t id = pref>>5;
     pref -= id<<5; 
     if (dma_trace)
-      fprintf(stderr, "%s: %d %d %d\n", __FUNCTION__, id, pref, offset);
+      fprintf(stderr, "%s: %d %d %d buffer_len %d\n", __FUNCTION__, id, pref, offset, dma_info[id][pref].buffer_len);
+    BUFFER_CHECK
     return *(uint64_t *)&dma_info[id][pref].buffer[offset];
 }
 

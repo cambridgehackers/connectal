@@ -22,58 +22,45 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import sys
-import socket
-import struct
 import time
-import ctypes
+import sys
 import os
 import argparse
-import json
-import pprint
 
-# ind_addr = 127.0.0.1
-# ind_port = 5000
+sys.path.append(os.path.abspath('../../scripts'))
+import portalJson
 
-# req_addr = 127.0.0.1
-# req_port = 5001
+if __name__ == "__main__":
 
-# ind_s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# ind_s.connect((ind_addr, ind_port))
+    argparser = argparse.ArgumentParser('Display gyroscope data')
+    argparser.add_argument('-a', '--address', help='Device address', default=None)
+    options = argparser.parse_args()
 
-# req_s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# req_s.connect((req_addr, req_port))
+    print options.address
+    if not options.address:
+        options.address = os.environ['RUNPARAM']
 
-json_data=open('./bluesim/generatedDesignInterfaceFile.json')
-data = json.load(json_data)
-pprint.pprint(data['interfaces'])
-json_data.close()
-
-def createMethod((methname, param)):
-    def method(self, *args):
-        print ' '.join([(str(p)+':'+str(a)) for p,a, in zip(param,args)])
-    return (methname,method)
-
-class BaseClass(object):
-    def __init__(self, classtype):
-        self._type = classtype
-
-def ClassFactory(name, argnames, BaseClass=BaseClass):
-    def __init__(self, classtype):
-        self._type = classtype
-
-def ClassFactory(name, meths, BaseClass=BaseClass):
-    def __init__(self, **kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-        BaseClass.__init__(self, name[:-len("Class")])
-    newclass = type(name, (BaseClass,),dict([("__init__",__init__)]+map(createMethod, meths)))
-    return newclass
-
-Foo = ClassFactory("Foo", [("m1",['a', 'b', 'c']),("m2", ['d','e','f'])])
-s = Foo()
-s.m1(1,2,3)
-s.m2(4,5,6)
-
-
-
+    ind_port = 5000
+    req_port = 5001
+    
+    ind_p = portalJson.portal(options.address, ind_port)
+    req_p = portalJson.portal(options.address, req_port)
+    
+    d = {'name':'say','x':1}
+    print d
+    req_p.send(d)
+    print ind_p.recv()
+    d = {'name':'say','x':3}
+    print d
+    req_p.send(d)
+    print ind_p.recv()
+    d = {'name':'say2','x':2,'y':1}
+    print d
+    req_p.send(d)
+    print ind_p.recv()
+    d = {'name':'setLeds','x':0}
+    print d
+    req_p.send(d)
+    time.sleep(1)
+    req_p.shutdown()
+    ind_p.shutdown()

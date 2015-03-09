@@ -20,67 +20,54 @@
  */
 
 #include <stdio.h>
-#include "EchoRequest.h"
 #include "EchoIndication.h"
-#include "MMURequest.h"
-#include "StdDmaIndication.h"
-#include "dmaManager.h"
+#include "EchoRequest.h"
+#include "GeneratedTypes.h"
 
-#define LOOP_COUNT 2
-EchoRequestProxy *sRequestProxy;
+static EchoRequestProxy *echoRequestProxy = 0;
 static sem_t sem_heard2;
 
 class EchoIndication : public EchoIndicationWrapper
 {
 public:
     virtual void heard(uint32_t v) {
-        fprintf(stderr, "heard an s: %d\n", v);
-	sRequestProxy->say2(v, 2*v);
+        printf("heard an echo: %d\n", v);
+	echoRequestProxy->say2(v, 2*v);
     }
-    virtual void heard2(uint16_t a, uint16_t b) {
+    virtual void heard2(uint32_t a, uint32_t b) {
         sem_post(&sem_heard2);
-        //fprintf(stderr, "heard an s2: %d %d\n", a, b);
+        //printf("heard an echo2: %ld %ld\n", a, b);
     }
-    EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
+    EchoIndication(unsigned int id) : EchoIndicationWrapper(id) {}
 };
 
 static void call_say(int v)
 {
     printf("[%s:%d] %d\n", __FUNCTION__, __LINE__, v);
-    sRequestProxy->say(v);
+    echoRequestProxy->say(v);
     sem_wait(&sem_heard2);
 }
 
 static void call_say2(int v, int v2)
 {
-    sRequestProxy->say2(v, v2);
+    echoRequestProxy->say2(v, v2);
     sem_wait(&sem_heard2);
 }
 
 int main(int argc, const char **argv)
 {
-    int alloc_sz = 64-4;
-//1000;
+    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndicationH2S);
+    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H);
+    portalExec_start();
 
-    MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequest, &socketfuncInit, NULL);
-    DmaManager *dma = new DmaManager(dmap);
-    MMUIndication *mIndication = new MMUIndication(dma, IfcNames_MMUIndication, &socketfuncInit, NULL);
-
-    PortalSharedParam param = {dma, alloc_sz};
-    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &sharedfunc, &param);
-    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &sharedfunc, &param);
-
-for (int i = 0; i < LOOP_COUNT; i++) {
     int v = 42;
-    fprintf(stderr, "Saying %d\n", v);
+    printf("Saying %d\n", v);
     call_say(v);
     call_say(v*5);
     call_say(v*17);
     call_say(v*93);
     call_say2(v, v*3);
-}
-
-    sRequestProxy->setLeds(9);
-    sleep(2);
+    printf("TEST TYPE: SEM\n");
+    echoRequestProxy->setLeds(9);
     return 0;
 }

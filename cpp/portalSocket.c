@@ -91,7 +91,7 @@ int i;
 
 static pthread_mutex_t socket_mutex;
 int global_sockfd = -1;
-static int trace_socket;// = 1;
+static int trace_socket; // = 1;
 
 int init_connecting(const char *arg_name, PortalSocketParam *param)
 {
@@ -107,8 +107,8 @@ int init_connecting(const char *arg_name, PortalSocketParam *param)
   addrinfo.ai_addr = (struct sockaddr *)&sa;
 
   if (param && param->addr) {
-fprintf(stderr, "[%s:%d] TCP\n", __FUNCTION__, __LINE__);
-      addr = param->addr;
+    fprintf(stderr, "[%s:%d] TCP\n", __FUNCTION__, __LINE__);
+    addr = param->addr;
   }
   if ((sockfd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol)) == -1) {
     PORTAL_PRINTF( "%s[%d]: socket error %s\n",__FUNCTION__, sockfd, strerror(errno));
@@ -148,6 +148,7 @@ static int init_socketResp(struct PortalInternal *pint, void *aparam)
     pint->fpga_fd = init_listening(buff, param);
     ioctl(pint->fpga_fd, FIONBIO, &on);
     pint->map_base = (volatile unsigned int*)malloc(REQINFO_SIZE(pint->reqinfo));
+    pint->poller_register = 1;
     return 0;
 }
 static int init_socketInit(struct PortalInternal *pint, void *aparam)
@@ -158,9 +159,10 @@ static int init_socketInit(struct PortalInternal *pint, void *aparam)
     pint->client_fd[pint->client_fd_number++] = init_connecting(buff, param);
     pint->accept_finished = 1;
     pint->map_base = (volatile unsigned int*)malloc(REQINFO_SIZE(pint->reqinfo));
+    pint->poller_register = 1;
     return 0;
 }
-static volatile unsigned int *mapchannel_socket(struct PortalInternal *pint, unsigned int v)
+volatile unsigned int *mapchannel_socket(struct PortalInternal *pint, unsigned int v)
 {
     return &pint->map_base[1];
 }
@@ -182,6 +184,7 @@ static int event_socket(struct PortalInternal *pint)
     int i, j, event_socket_fd;
     for (i = 0; i < pint->client_fd_number;) {
        int len = portalRecvFd(pint->client_fd[i], (void *)pint->map_base, sizeof(uint32_t), &event_socket_fd);
+       if (len==sizeof(uint32_t) && trace_socket) fprintf(stderr, "[%s:%d] %d\n", __FUNCTION__, __LINE__, pint->map_base[0]);
        if (len == 0) { /* EOF */
            close(pint->client_fd[i]);
            pint->client_fd_number--;
@@ -277,7 +280,7 @@ int portal_mux_handler(struct PortalInternal *pint, unsigned int channel, int me
     int i, dummy;
     for (i = 0; i < pint->mux_ports_number; i++) {
         PortalInternal *p = pint->mux_ports[i].pint;
-        if (channel == p->fpga_number) {
+        if (channel == p->fpga_number && p->handler) {
             p->item->recv(p, p->map_base, 1, &dummy);
             p->handler(p, *p->map_base >> 16, messageFd);
         }
