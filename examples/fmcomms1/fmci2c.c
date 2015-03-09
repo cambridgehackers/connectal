@@ -65,6 +65,7 @@ int fmcomms1_get_version(int fd, int device, unsigned char *datap, int size)
 
 
 unsigned char version_data[256];
+unsigned char msgbuf[256];
 void testi2c(char *i2cdevice, int deviceid)
 {
    
@@ -79,21 +80,19 @@ void testi2c(char *i2cdevice, int deviceid)
     // start version query
     memset(version_data, 0, 256);
     for (i = 0; i < 256; i += 16) {
-      res = I2C_Read(0x50, i, 16, &version_data[i]);
+      int j;
+      res = I2C_Read(0x50, i, 64, msgbuf);
+      printf("returned %d bytes\n", msgbuf[0]);
+      for (j=0; j < 17; j += 1) {
+	printf(" %2x[%c]", msgbuf[j],isalnum(msgbuf[j]) ? msgbuf[j]:' ');
+      }
+      printf("\n");
       if (res < 0) {
 	fprintf(stdout, "testi2c failed eeprom read at %d\n", i);
 	return;
       }
     }
 
-    printf ("getversion result %d\n", res);
-    for (i = 0; i < 256; i += 16) {
-      int j;
-      for (j=0; j < 16; j += 1) {
-	printf(" %2x[%c]", version_data[i+j],isalnum(version_data[i+j]) ? version_data[i+j]:' ');
-      }
-      printf("\n");
-    }
     /*
     memset(version_data, 0, 128);
     res = fmcomms1_get_version(fd, deviceid, version_data, 128);

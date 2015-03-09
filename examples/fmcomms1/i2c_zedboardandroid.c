@@ -128,11 +128,11 @@ uint32_t I2C_Read(uint32_t i2cAddr, uint32_t regAddr,
   struct i2c_rdwr_ioctl_data arg;
   msgs[0].addr = i2cAddr;
   msgs[0].flags = I2C_M_RD | I2C_M_RECV_LEN;
-  msgs[0].len = rxSize + 1;
+  msgs[0].len = rxSize;
   msgs[0].buf = buf;
   arg.msgs = msgs;
   arg.nmsgs = 1;
-  buf[0] = 1;
+  buf[0] = 64;
   if (regAddr != 0xffffffff) I2C_Write(i2cAddr, regAddr, 0, NULL);
   fprintf(stdout, "I2C_Read(0x%02x, 0x%02x, %d)\n", i2cAddr, regAddr, rxSize);
   dump_i2c_rdwr(&arg);

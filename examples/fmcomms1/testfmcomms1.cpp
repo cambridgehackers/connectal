@@ -68,6 +68,7 @@ public:
   }
 };
 
+#define NUMEVENTS 4096
 uint32_t counter_value = 0;
 uint32_t events[NUMEVENTS];
 uint32_t timestamps[NUMEVENTS];
@@ -83,7 +84,7 @@ public:
       events[eventcount] = v;
       timestamps[eventcount] = timestamp;
       eventcount += 1;
-    //  
+    }
   }
   virtual void counterValue(uint32_t v){
     counter_value = v;
