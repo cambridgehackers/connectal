@@ -7,6 +7,6 @@
         "TOP" : "ZynqTop",
         "bsvdefines" : ["ZynqHostTypeIF", "PhysAddrWidth=32", "NUMBER_OF_LEDS=8"],
 	"CONNECTALFLAGS": [],
-        "needs_pcie_7x_gen1x8" : "False"
+        "need_pcie" : "unused"
     }
 }

@@ -4,7 +4,7 @@
         "partname" : "xxx",
         "TOP" : "VsimTop",
 		"bsvdefines": ["VSIM", "PCIE", "PCIE_NO_BSCAN", "PcieHostTypeIF", "PhysAddrWidth=40"],
-        "needs_pcie_s5_gen2x8" : "False",
+        "need_pcie" : "unused",
         "CONNECTALFLAGS" : [],
         "rewireclockstring" : ""
     }

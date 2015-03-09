@@ -6,7 +6,7 @@
         "TOP" : "XsimTop",
 	"bsvdefines": ["XsimHostTypeIF", "PhysAddrWidth=40", "XSIM"],
         "CONNECTALFLAGS" : [],
-        "needs_pcie_7x_gen1x8" : "False"
+        "need_pcie" : "unused"
     }
 }
 

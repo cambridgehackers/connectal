@@ -7,6 +7,6 @@
         "rewireclockstring" : "tclzynqrewireclock",
         "TOP" : "ZynqTop",
         "CONNECTALFLAGS" : [],
-        "needs_pcie_7x_gen1x8" : "False"
+        "need_pcie" : "unused"
     }
 }

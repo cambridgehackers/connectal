@@ -77,6 +77,10 @@ ifndef MAIN_CLOCK_PERIOD
     MAIN_CLOCK_PERIOD=8
     DEFAULT_DERIVED_CLOCK_PERIOD=4
     endif
+    ifeq ($(BOARD),htg4)
+    MAIN_CLOCK_PERIOD=8
+    DEFAULT_DERIVED_CLOCK_PERIOD=4
+    endif
     ifndef MAIN_CLOCK_PERIOD
     MAIN_CLOCK_PERIOD=10
     DEFAULT_DERIVED_CLOCK_PERIOD=5
@@ -136,7 +140,10 @@ NEED_XILINX_PCIE_vc707=1
 NEED_XILINX_PCIE_v2000t=1
 
 NEED_ALTERA_PCIE_de5=1
+NEED_ALTERA_PCIE_htg4=1
+
 NEED_ALTERA_ETH_de5=1
+NEED_ALTERA_ETH_htg4=1
 
 ifeq ($(NEED_XILINX_PCIE_$(BOARD)),1)
     FPGAMAKE_CONNECTALFLAGS += -P mkPcieEndpointX7 -P mkPcieHost
@@ -148,6 +155,7 @@ ifeq ($(NEED_ALTERA_PCIE_$(BOARD)),1)
 	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/altera_pcie_reconfig_driver_wrapper.qip
 	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/altera_pcie_sv_hip_ast_wrapper.qip
 	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/alt_xcvr_reconfig_wrapper.qip
+	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/siv_gen2x8/siv_gen2x8.qip
 	FPGAMAKE_CONNECTALFLAGS += --tcl=$(BOARD)/sources/$(BOARD).qsf
 	FPGAMAKE_CONNECTALFLAGS += --tcl=$(CONNECTALDIR)/constraints/altera/$(BOARD).sdc
 	CONNECTALFLAGS += --bscflags="+RTS -K46777216 -RTS -demote-errors G0066:G0045 -suppress-warnings G0046:G0020:S0015:S0080:S0039"
@@ -172,7 +180,7 @@ ifneq ($(USE_AUTOTOP),)
 GENTOP = $(BOARD)/Top.bsv
 endif
 
-gentarget:: process_autotop
+gentarget:: process_autotop generate_altera_custom
 	@[ -e $(CONNECTALDIR)/scripts/syntax/parsetab.py ] || make -C $(CONNECTALDIR) scripts/syntax/parsetab.py
 	$(Q)[ -e $(IPDIR) ] || mkdir -p $(IPDIR)
 	$(Q)[ -e $(BOARD)/sources ] || mkdir -p $(BOARD)/sources
@@ -198,6 +206,14 @@ ifneq ($(USE_AUTOTOP),)
 	    $(foreach f, $(H2S_INTERFACES), --proxy $f)   \
 	    $(foreach f, $(MEM_INTERFACES), --wrapper MemServerRequest:$f) \
 	    $(foreach f, $(MEM_INTERFACES), --proxy MemServerIndication:$f)
+endif
+
+generate_altera_custom::
+ifneq ($(PIN_BINDINGS), )
+ifneq ($(filter $(BOARD), de5 htg4), )
+	$(Q)[ -e $(BOARD)/sources ] || mkdir -p $(BOARD)/sources
+	$(CONNECTALDIR)/scripts/generate-constraints.py -f altera $(PIN_BINDINGS) -o $(BOARD)/sources/$(BOARD).qsf $(CONNECTALDIR)/boardinfo/$(BOARD).json boards/$(BOARD).json
+endif
 endif
 
 prebuild::
