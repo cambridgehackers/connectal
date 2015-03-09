@@ -29,8 +29,9 @@ argparser = argparse.ArgumentParser("Generate Top.bsv for an project.")
 argparser.add_argument('--project-dir', help='project directory')
 argparser.add_argument('--interface', help='exported interface declaration', action='append')
 argparser.add_argument('--importfiles', help='added imports', action='append')
-argparser.add_argument('-w', '--wrapper', help='exported wrapper interfaces', action='append')
-argparser.add_argument('-p', '--proxy', help='exported proxy interfaces', action='append')
+argparser.add_argument('--portname', help='added portal names to enum list', action='append')
+argparser.add_argument('--wrapper', help='exported wrapper interfaces', action='append')
+argparser.add_argument('--proxy', help='exported proxy interfaces', action='append')
 
 topTemplate='''
 import Vector::*;
@@ -51,8 +52,8 @@ module mkConnectalTop
        #(HostType host)
 `endif
        (%(moduleParam)s);
-    Clock defaultClock <- exposeCurrentClock();
-    Reset defaultReset <- exposeCurrentReset();
+   Clock defaultClock <- exposeCurrentClock();
+   Reset defaultReset <- exposeCurrentReset();
 %(portalInstantiate)s
 
    Vector#(%(portalCount)s,StdPortal) portals;
@@ -77,6 +78,8 @@ class iReq:
         self.args = []
 
 def instMod(args, modname, modext, constructor, tparam):
+    if not modname:
+        return
     pmap['tparam'] = tparam
     pmap['modname'] = modname + modext
     tstr = 'S2H'
@@ -136,6 +139,8 @@ if __name__=='__main__':
         for item in options.importfiles:
              exportedNames.append('export %s::*;' % item)
     enumList = []
+    if options.portname:
+        enumList = options.portname
     interfaceList = []
     if not options.proxy:
         options.proxy = []

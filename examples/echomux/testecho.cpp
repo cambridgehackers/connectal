@@ -92,8 +92,8 @@ int main(int argc, const char **argv)
 
     Portal *mcommon = new Portal(0, sizeof(uint32_t), portal_mux_handler, NULL, &socketfuncInit, &paramSocket, 0);
     param.pint = &mcommon->pint;
-    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &muxfunc, &param);
-    sEcho = new EchoRequestSWProxy(IfcNames_EchoRequest, &muxfunc, &param);
+    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndicationH2S, &muxfunc, &param);
+    sEcho = new EchoRequestSWProxy(IfcNames_EchoRequestS2H, &muxfunc, &param);
     SecondIndication *sSecondIndication = new SecondIndication(IfcNames_SecondIndication, &muxfunc, &param);
     sSecond = new SecondRequestProxy(IfcNames_SecondRequest, &muxfunc, &param);
     ThirdIndication *sThirdIndication = new ThirdIndication(IfcNames_ThirdIndication, &muxfunc, &param);
