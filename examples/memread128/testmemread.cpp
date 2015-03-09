@@ -74,15 +74,15 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
-  device = new MemreadRequestProxy(IfcNames_MemreadRequest);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  device = new MemreadRequestProxy(IfcNames_MemreadRequestS2H);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
 
 
-  deviceIndication = new MemreadIndication(IfcNames_MemreadIndication);
+  deviceIndication = new MemreadIndication(IfcNames_MemreadIndicationH2S);
 
   fprintf(stderr, "Main::allocating memory...\n");
   srcAlloc = portalAlloc(alloc_sz);

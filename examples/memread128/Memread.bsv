@@ -25,7 +25,7 @@ import FIFOF::*;
 import GetPut::*;
 import ClientServer::*;
 import Vector::*;
-
+import HostInterface::*;
 import MemTypes::*;
 import MemreadEngine::*;
 import Pipe::*;
@@ -37,7 +37,7 @@ endinterface
 
 interface Memread;
    interface MemreadRequest request;
-   interface MemReadClient#(128) dmaClient;
+   interface Vector#(1,MemReadClient#(DataBusWidth)) dmaClient;
 endinterface
 
 interface MemreadIndication;
@@ -79,7 +79,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 srcGen <= srcGen+4;
    endrule
    
-   interface MemReadClient dmaClient = re.dmaClient;
+   interface MemReadClient dmaClient = cons(re.dmaClient, nil);
    interface MemreadRequest request;
       method Action startRead(Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
 	 $display("startRead rdPointer=%d numWords=%h burstLen=%d iterCnt=%d", rp, nw, bl, ic);
