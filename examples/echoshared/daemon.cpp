@@ -57,7 +57,7 @@ public:
         fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
         echoRequestProxy->say2(a, b);
     }
-    void setLeds ( const uint16_t v ) {
+    void setLeds ( const uint8_t v ) {
         fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
         echoRequestProxy->setLeds(v);
         sleep(1);
@@ -70,15 +70,15 @@ static EchoRequest *sRequest;
 
 int main(int argc, const char **argv)
 {
-    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, NULL, NULL);
-    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
-    sRequest = new EchoRequest(IfcNames_EchoRequest, &sharedfunc, NULL);
-    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &sharedfunc, NULL);
+    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndicationH2S, NULL, NULL);
+    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H);
+    sRequest = new EchoRequest(IfcNames_EchoRequestS2H, &sharedfunc, NULL);
+    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndicationH2S, &sharedfunc, NULL);
 
-    MMUServer *mServer = new MMUServer(IfcNames_MMURequest,
-        new MMUIndicationProxy(IfcNames_MMUIndication, &socketfuncResp, NULL), &socketfuncResp, NULL);
-    mServer->registerInterface(IfcNames_EchoRequest, &sRequest->pint);
-    mServer->registerInterface(IfcNames_EchoIndication, &sIndicationProxy->pint);
+    MMUServer *mServer = new MMUServer(IfcNames_MMURequestS2H,
+        new MMUIndicationProxy(IfcNames_MMUIndicationH2S, &socketfuncResp, NULL), &socketfuncResp, NULL);
+    mServer->registerInterface(IfcNames_EchoRequestS2H, &sRequest->pint);
+    mServer->registerInterface(IfcNames_EchoIndicationH2S, &sIndicationProxy->pint);
 
     printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);
     while(1)
