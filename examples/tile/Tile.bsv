@@ -1,5 +1,3 @@
-
-// Copyright (c) 2013 Nokia, Inc.
 // Copyright (c) 2013 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
@@ -22,16 +20,32 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-interface Swallow;
-   method Action swallow(Bit#(32) v);
+import Vector::*;
+import Portal::*;
+import MemTypes::*;
+import HostInterface::*;
+
+typedef Empty TilePins;
+typedef Empty ITilePins;
+typedef 4 MaxTileMemClients;
+
+interface TileSocket;
+   interface PhysMemMaster#(PhysAddrWidth,DataBusWidth) portals;
+   interface WriteOnly#(Bool) interrupt;
+   interface Vector#(MaxTileMemClients, MemReadServer#(DataBusWidth)) readers;
+   interface Vector#(MaxTileMemClients, MemWriteServer#(DataBusWidth)) writers;
+   interface ITilePins pins;
 endinterface
 
-module mkSwallow (Swallow);
+interface Tile;
+   interface PhysMemSlave#(PhysAddrWidth,DataBusWidth) portals;
+   interface ReadOnly#(Bool) interrupt;
+   interface Vector#(MaxTileMemClients, MemReadClient#(DataBusWidth)) readers;
+   interface Vector#(MaxTileMemClients, MemWriteClient#(DataBusWidth)) writers;
+   interface TilePins pins;
+endinterface
 
-   Reg#(Bit#(32)) sink <- mkReg(0);
-   
-   method Action swallow(Bit#(32) v);
-      sink <= v;
-   endmethod
+interface Framework#(numeric type numTiles);
+   interface Vector#(numTiles, TileSocket) sockets;
+endinterface
 
-endmodule

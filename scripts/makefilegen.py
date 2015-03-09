@@ -91,8 +91,7 @@ set boardname {%(boardname)s}
 set xbsvipdir {%(ipdir)s}
 set ipdir {%(ipdir)s}
 set connectaldir {%(connectaldir)s}
-set need_xilinx_pcie {%(need_xilinx_pcie)s}
-set need_altera_pcie {%(need_altera_pcie)s}
+set need_pcie {%(need_pcie)s}
 set connectal_dut {%(Dut)s}
 %(tcldefines)s
 '''
@@ -288,12 +287,9 @@ if __name__=='__main__':
             print "ERROR: File %s not found" % (option_info['TOP'] + '.bsv')
             sys.exit(1)
 
-    needs_pcie_7x_gen1x8 = None
-    needs_pcie_s5_gen2x8 = None
-    if 'needs_pcie_7x_gen1x8' in option_info:
-        needs_pcie_7x_gen1x8 = option_info['needs_pcie_7x_gen1x8']
-    elif 'needs_pcie_s5_gen2x8' in option_info:
-        needs_pcie_s5_gen2x8 = option_info['needs_pcie_s5_gen2x8']
+    need_pcie = None
+    if 'need_pcie' in option_info:
+        need_pcie = option_info['need_pcie']
 
     partname = option_info['partname']
     if noisyFlag:
@@ -385,8 +381,7 @@ if __name__=='__main__':
                                                 'pattern': '/*.*v' if os.path.isdir(f) else ''} for f in options.verilog]),
                  'read_xci': '\n'.join([tclReadXciTemplate
                                         % { 'xci': f } for f in options.xci]),
-                 'need_xilinx_pcie': 1 if needs_pcie_7x_gen1x8 else 0,
-                 'need_altera_pcie': 1 if needs_pcie_s5_gen2x8 else 0,
+                 'need_pcie': need_pcie,
                  'tcldefines': '\n'.join(['set %s {%s}' % (var,val) for (var,val) in map(util.splitBinding, bsvdefines)]),
                  'ipdir': os.path.abspath(options.ipdir) if options.ipdir else connectaldir
                  }

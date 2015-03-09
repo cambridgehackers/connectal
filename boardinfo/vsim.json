@@ -2,11 +2,11 @@
     "options": {
         "os" : "ubuntu",
         "partname" : "xxx",
-        "rewireclockstring" : "tclzynqrewireclock",
-        "TOP" : "BsimTop",
-	"bsvdefines": ["BsimHostTypeIF", "PhysAddrWidth=40", "BSIM"],
+        "TOP" : "VsimTop",
+		"bsvdefines": ["VSIM", "PCIE", "PCIE_NO_BSCAN", "PcieHostTypeIF", "PhysAddrWidth=40"],
+        "need_pcie" : "unused",
         "CONNECTALFLAGS" : [],
-        "needs_pcie_7x_gen1x8" : "False"
+        "rewireclockstring" : ""
     }
 }
 

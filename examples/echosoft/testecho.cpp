@@ -37,7 +37,7 @@ public:
         fprintf(stderr, "heard an s: %d\n", v);
 	sRequestProxy->say2(v, 2*v);
     }
-    virtual void heard2(uint32_t a, uint32_t b) {
+    virtual void heard2(uint16_t a, uint16_t b) {
         sem_post(&sem_heard2);
         //fprintf(stderr, "heard an s2: %ld %ld\n", a, b);
     }

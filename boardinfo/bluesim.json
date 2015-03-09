@@ -6,7 +6,7 @@
         "TOP" : "BsimTop",
 	"bsvdefines": ["BsimHostTypeIF", "PhysAddrWidth=40"],
         "CONNECTALFLAGS" : [],
-        "needs_pcie_7x_gen1x8" : "False"
+        "need_pcie" : "unused"
     },
     "fmc": {
     "CLK0_M2C_n": { "LOC": "ZZZ", "IOSTANDARD": "YY" },

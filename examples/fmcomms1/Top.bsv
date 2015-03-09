@@ -131,13 +131,15 @@ module mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,64,FMComms1Pin
    MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerRW(hostMemServerIndicationProxy.ifc, readClients, writeClients, cons(hostMMU,nil));
    MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
 
-   Vector#(6,StdPortal) portals;
+   Vector#(8,StdPortal) portals;
    portals[0] = fmcomms1RequestWrapper.portalIfc;
    portals[1] = fmcomms1IndicationProxy.portalIfc; 
    portals[2] = hostMemServerRequestWrapper.portalIfc;
    portals[3] = hostMemServerIndicationProxy.portalIfc; 
    portals[4] = hostMMURequestWrapper.portalIfc;
    portals[5] = hostMMUIndicationProxy.portalIfc;
+   portals[6] = blueScopeEventPIORequestWrapper.portalIfc;
+   portals[7] = blueScopeEventPIOIndicationProxy.portalIfc; 
    let ctrl_mux <- mkSlaveMux(portals);
    
 

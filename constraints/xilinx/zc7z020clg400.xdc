@@ -21,24 +21,29 @@
 ############################################################################
 # Clock constraints                                                        #
 ############################################################################
-# clocking manually commented out here
-#create_clock -name clk_fpga_0 -period "20" [get_pins "PS7_i/FCLKCLK[0]"]
-#set_input_jitter clk_fpga_0 0.6
-#The clocks are asynchronous, user should constrain them appropriately.#
+create_clock -name clk_fpga_0 -period "10" [get_pins "*ps7_foo/FCLKCLK[0]"]
+set_input_jitter clk_fpga_0 0.6
+set_clock_groups -asynchronous -group {clk_fpga_0}
+create_clock -name clk_fpga_1 -period "6" [get_pins "*ps7_foo/FCLKCLK[1]"]
+set_input_jitter clk_fpga_1 0.6
+set_clock_groups -asynchronous -group {clk_fpga_1}
+create_clock -name clk_fpga_3 -period "5" [get_pins "*ps7_foo/FCLKCLK[3]"]
+set_input_jitter clk_fpga_3 0.6
+set_clock_groups -asynchronous -group {clk_fpga_3}
 
 
 ############################################################################
 # I/O STANDARDS and Location Constraints                                   #
 ############################################################################
 
-set_property iostandard "SSTL15_T_DCI" [get_ports "DDR_VRP"]
-set_property PACKAGE_PIN "H5" [get_ports "DDR_VRP"]
-set_property slew "FAST" [get_ports "DDR_VRP"]
-set_property PIO_DIRECTION "BIDIR" [get_ports "DDR_VRP"]
-set_property iostandard "SSTL15_T_DCI" [get_ports "DDR_VRN"]
-set_property PACKAGE_PIN "G5" [get_ports "DDR_VRN"]
-set_property slew "FAST" [get_ports "DDR_VRN"]
-set_property PIO_DIRECTION "BIDIR" [get_ports "DDR_VRN"]
+set_property iostandard "SSTL15_T_DCI" [get_ports "FIXED_IO_ddr_vrp"]
+set_property PACKAGE_PIN "H5" [get_ports "FIXED_IO_ddr_vrp"]
+set_property slew "FAST" [get_ports "FIXED_IO_ddr_vrp"]
+set_property PIO_DIRECTION "BIDIR" [get_ports "FIXED_IO_ddr_vrp"]
+set_property iostandard "SSTL15_T_DCI" [get_ports "FIXED_IO_ddr_vrn"]
+set_property PACKAGE_PIN "G5" [get_ports "FIXED_IO_ddr_vrn"]
+set_property slew "FAST" [get_ports "FIXED_IO_ddr_vrn"]
+set_property PIO_DIRECTION "BIDIR" [get_ports "FIXED_IO_ddr_vrn"]
 set_property iostandard "SSTL15" [get_ports "DDR_WEB"]
 set_property PACKAGE_PIN "M5" [get_ports "DDR_WEB"]
 set_property slew "SLOW" [get_ports "DDR_WEB"]
@@ -55,22 +60,22 @@ set_property iostandard "SSTL15" [get_ports "DDR_DRSTB"]
 set_property PACKAGE_PIN "B4" [get_ports "DDR_DRSTB"]
 set_property slew "FAST" [get_ports "DDR_DRSTB"]
 set_property PIO_DIRECTION "BIDIR" [get_ports "DDR_DRSTB"]
-set_property iostandard "DIFF_SSTL15_T_DCI" [get_ports "DDR_DQS[3]"]
-set_property PACKAGE_PIN "W5" [get_ports "DDR_DQS[3]"]
-set_property slew "FAST" [get_ports "DDR_DQS[3]"]
-set_property PIO_DIRECTION "BIDIR" [get_ports "DDR_DQS[3]"]
-set_property iostandard "DIFF_SSTL15_T_DCI" [get_ports "DDR_DQS[2]"]
-set_property PACKAGE_PIN "R2" [get_ports "DDR_DQS[2]"]
-set_property slew "FAST" [get_ports "DDR_DQS[2]"]
-set_property PIO_DIRECTION "BIDIR" [get_ports "DDR_DQS[2]"]
-set_property iostandard "DIFF_SSTL15_T_DCI" [get_ports "DDR_DQS[1]"]
-set_property PACKAGE_PIN "G2" [get_ports "DDR_DQS[1]"]
-set_property slew "FAST" [get_ports "DDR_DQS[1]"]
-set_property PIO_DIRECTION "BIDIR" [get_ports "DDR_DQS[1]"]
-set_property iostandard "DIFF_SSTL15_T_DCI" [get_ports "DDR_DQS[0]"]
-set_property PACKAGE_PIN "C2" [get_ports "DDR_DQS[0]"]
-set_property slew "FAST" [get_ports "DDR_DQS[0]"]
-set_property PIO_DIRECTION "BIDIR" [get_ports "DDR_DQS[0]"]
+set_property iostandard "DIFF_SSTL15_T_DCI" [get_ports "DDR_DQS_p[3]"]
+set_property PACKAGE_PIN "W5" [get_ports "DDR_DQS_p[3]"]
+set_property slew "FAST" [get_ports "DDR_DQS_p[3]"]
+set_property PIO_DIRECTION "BIDIR" [get_ports "DDR_DQS_p[3]"]
+set_property iostandard "DIFF_SSTL15_T_DCI" [get_ports "DDR_DQS_p[2]"]
+set_property PACKAGE_PIN "R2" [get_ports "DDR_DQS_p[2]"]
+set_property slew "FAST" [get_ports "DDR_DQS_p[2]"]
+set_property PIO_DIRECTION "BIDIR" [get_ports "DDR_DQS_p[2]"]
+set_property iostandard "DIFF_SSTL15_T_DCI" [get_ports "DDR_DQS_p[1]"]
+set_property PACKAGE_PIN "G2" [get_ports "DDR_DQS_p[1]"]
+set_property slew "FAST" [get_ports "DDR_DQS_p[1]"]
+set_property PIO_DIRECTION "BIDIR" [get_ports "DDR_DQS_p[1]"]
+set_property iostandard "DIFF_SSTL15_T_DCI" [get_ports "DDR_DQS_p[0]"]
+set_property PACKAGE_PIN "C2" [get_ports "DDR_DQS_p[0]"]
+set_property slew "FAST" [get_ports "DDR_DQS_p[0]"]
+set_property PIO_DIRECTION "BIDIR" [get_ports "DDR_DQS_p[0]"]
 set_property iostandard "DIFF_SSTL15_T_DCI" [get_ports "DDR_DQS_n[3]"]
 set_property PACKAGE_PIN "W4" [get_ports "DDR_DQS_n[3]"]
 set_property slew "FAST" [get_ports "DDR_DQS_n[3]"]
@@ -239,10 +244,10 @@ set_property iostandard "SSTL15" [get_ports "DDR_CKE"]
 set_property PACKAGE_PIN "N3" [get_ports "DDR_CKE"]
 set_property slew "SLOW" [get_ports "DDR_CKE"]
 set_property PIO_DIRECTION "OUTPUT" [get_ports "DDR_CKE"]
-set_property iostandard "DIFF_SSTL15" [get_ports "DDR_Clk"]
-set_property PACKAGE_PIN "L2" [get_ports "DDR_Clk"]
-set_property slew "FAST" [get_ports "DDR_Clk"]
-set_property PIO_DIRECTION "INPUT" [get_ports "DDR_Clk"]
+set_property iostandard "DIFF_SSTL15" [get_ports "DDR_Clk_p"]
+set_property PACKAGE_PIN "L2" [get_ports "DDR_Clk_p"]
+set_property slew "FAST" [get_ports "DDR_Clk_p"]
+set_property PIO_DIRECTION "INPUT" [get_ports "DDR_Clk_p"]
 set_property iostandard "DIFF_SSTL15" [get_ports "DDR_Clk_n"]
 set_property PACKAGE_PIN "M2" [get_ports "DDR_Clk_n"]
 set_property slew "FAST" [get_ports "DDR_Clk_n"]

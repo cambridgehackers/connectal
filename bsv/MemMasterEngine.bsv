@@ -39,6 +39,17 @@ interface MemMasterEngine;
     interface PhysMemMaster#(32,32) master;
 endinterface
 
+`ifdef XILINX
+   `define AXI
+`elsif BSIM
+   `define AXI
+`elsif ALTERA
+   `define AVALON
+`elsif VSIM
+   `define AVALON
+`endif
+
+
 (* synthesize *)
 module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
     Reg#(Bit#(7)) hitReg <- mkReg(0);
@@ -55,13 +66,29 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
    Reg#(LUInt#(4))     completionMimoDeqCount <- mkReg(0);
    Reg#(Bool)      readBurstCountGreaterThan4 <- mkReg(False);
    Reg#(Bool)                  readInProgress <- mkReg(False);
+   Reg#(Bool)                  debugQuadWord  <- mkReg(False);
+   Reg#(Bit#(7))               address <- mkReg(0);
+
+   function Bool isQuarWordAligned(Bit#(7) lower_addr);
+      return (lower_addr[2:0]==3'b0);
+   endfunction
+
    rule completionHeader if (!readInProgress && readDataFifo.notEmpty() && completionMimo.deqReadyN(1));
       let hdr = readDataFifo.first;
       TLPLength rbc = hdr.length;
 
-      Vector#(4, Bit#(32)) dvec = completionMimo.first();
+      Vector#(4, Bit#(32)) dvec = unpack(0);
+`ifdef AXI
+      dvec = completionMimo.first();
       completionMimo.deq(1);
-
+`elsif AVALON
+      let quadWordAligned = isQuarWordAligned(getLowerAddr(hdr.addr, hdr.firstbe));
+      // if quad-word aligned, insert bubble.
+      if (!quadWordAligned) begin
+         dvec = completionMimo.first();
+         completionMimo.deq(1);
+      end
+`endif
       //$display("completionHeader length=%d rbc=%d addr=%x", hdr.length, rbc, hdr.addr);
       TLPCompletionHeader completion = defaultValue;
       completion.format = MEM_WRITE_3DW_DATA;
@@ -75,16 +102,36 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
       completion.bytecount = 4;
       completion.reqid = hdr.reqid;
       completion.loweraddr = getLowerAddr(hdr.addr, hdr.firstbe);
+`ifdef AXI
       completion.data = byteSwap(dvec[0]);
+`elsif AVALON
+      if (!quadWordAligned) begin
+         completion.data = (dvec[0]);
+      end
+      else begin
+         completion.data = unpack(0);
+      end
+`endif
       TLPData#(16) tlp = defaultValue;
       tlp.data = pack(completion);
       tlp.sof = True;
+
+`ifdef AXI
       tlp.eof = (rbc == 1) ? True : False;
+`elsif AVALON
+      tlp.eof = (rbc == 1 && !quadWordAligned) ? True : False;
+`endif
       tlp.be = 16'hFFFF;
       tlp.hit = hitReg;
       tlpOutFifo.enq(tlp);
 
+`ifdef AXI
       rbc = rbc - 1;
+`elsif AVALON
+      if (!quadWordAligned) begin
+         rbc = rbc - 1;
+      end
+`endif
       readBurstCount <= rbc;
       completionMimoDeqCount <= truncate(min(4,unpack(rbc)));
       readInProgress <= (rbc != 0);
@@ -135,7 +182,12 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
 	 readInProgress <= False;
       end
       for (Integer i = 0; i < 4; i = i + 1)
+`ifdef AXI
 	 tlp.data[(i+1)*32-1:i*32] = byteSwap(dvec[3-i]);
+`elsif AVALON
+	 tlp.data[(i+1)*32-1:i*32] = (dvec[3-i]);
+         tlp.hit = hitReg;
+`endif
       tlpOutFifo.enq(tlp);
    endrule
 
@@ -146,7 +198,7 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
 	    TLPMemoryIO3DWHeader h = unpack(tlp.data);
 	    hitReg <= tlp.hit;
 	    TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
-	    if (hdr_3dw.format == MEM_READ_3DW_NO_DATA) begin
+	    if (tlp.sof && hdr_3dw.format == MEM_READ_3DW_NO_DATA) begin
 	       if (readHeaderFifo.notFull())
 	          readHeaderFifo.enq(hdr_3dw);
 	       else begin

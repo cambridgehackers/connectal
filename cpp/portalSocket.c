@@ -91,7 +91,7 @@ int i;
 
 static pthread_mutex_t socket_mutex;
 int global_sockfd = -1;
-static int trace_socket;// = 1;
+static int trace_socket; // = 1;
 
 int init_connecting(const char *arg_name, PortalSocketParam *param)
 {
@@ -107,8 +107,8 @@ int init_connecting(const char *arg_name, PortalSocketParam *param)
   addrinfo.ai_addr = (struct sockaddr *)&sa;
 
   if (param && param->addr) {
-fprintf(stderr, "[%s:%d] TCP\n", __FUNCTION__, __LINE__);
-      addr = param->addr;
+    fprintf(stderr, "[%s:%d] TCP\n", __FUNCTION__, __LINE__);
+    addr = param->addr;
   }
   if ((sockfd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol)) == -1) {
     PORTAL_PRINTF( "%s[%d]: socket error %s\n",__FUNCTION__, sockfd, strerror(errno));
@@ -184,7 +184,7 @@ static int event_socket(struct PortalInternal *pint)
     int i, j, event_socket_fd;
     for (i = 0; i < pint->client_fd_number;) {
        int len = portalRecvFd(pint->client_fd[i], (void *)pint->map_base, sizeof(uint32_t), &event_socket_fd);
-       if (len==sizeof(uint32_t) && trace_socket) fprintf(stderr, "XXXXX %d\n", pint->map_base[0]);
+       if (len==sizeof(uint32_t) && trace_socket) fprintf(stderr, "[%s:%d] %d\n", __FUNCTION__, __LINE__, pint->map_base[0]);
        if (len == 0) { /* EOF */
            close(pint->client_fd[i]);
            pint->client_fd_number--;

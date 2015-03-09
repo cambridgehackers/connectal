@@ -92,7 +92,7 @@ for pin in pinout:
             loc = boardGroupInfo[pinName]['PACKAGE_PIN']
         iostandard = boardGroupInfo[pinName]['IOSTANDARD']
     else:
-        print('Missing pin description for', pinName, file=sys.stderr)
+        print('Missing pin description for', pinName, pinInfo, file=sys.stderr)
         loc = 'fmc.%s' % (pinName)
     if pinInfo.has_key('IOSTANDARD'):
         iostandard = pinInfo['IOSTANDARD']

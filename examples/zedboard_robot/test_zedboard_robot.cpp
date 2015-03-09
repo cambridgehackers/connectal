@@ -27,11 +27,15 @@
 #include <unistd.h>
 #include <assert.h>
 #include <string.h>
+#include <netinet/in.h>
 
 #include "maxsonar_simple.h"
 #include "gyro_simple.h"
 #include "hbridge_simple.h"
+#include "sock_utils.h"
 
+#include "MaxSonarSampleStream.h"
+#include "GyroSampleStream.h"
 #include "HBridgeCtrlRequest.h"
 #include "MaxSonarCtrlRequest.h"
 #include "GyroCtrlRequest.h"
@@ -40,7 +44,7 @@
 #include "MemServerRequest.h"
 #include "MMURequest.h"
 #include "dmaManager.h"
-#include "sock_server.h"
+#include "read_buffer.h"
 
 static int spew = 0;
 static int alloc_sz = 1<<10;
@@ -95,6 +99,14 @@ int main(int argc, const char **argv)
   MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
+  PortalSocketParam param0;
+  int rc0 = getaddrinfo("0.0.0.0", "5000", NULL, &param0.addr);
+  GyroSampleStreamProxy *gssp = new GyroSampleStreamProxy(IfcNames_GyroSampleStream, &socketfuncResp, &param0, &GyroSampleStreamJsonProxyReq, 1000);
+
+  PortalSocketParam param1;
+  int rc1 = getaddrinfo("0.0.0.0", "5001", NULL, &param1.addr);
+  MaxSonarSampleStreamProxy *msssp = new MaxSonarSampleStreamProxy(IfcNames_MaxSonarSampleStream, &socketfuncResp, &param1, &MaxSonarSampleStreamJsonProxyReq, 1000);
+
   portalExec_start();
 
   int dstAlloc = portalAlloc(alloc_sz);
@@ -113,13 +125,12 @@ int main(int argc, const char **argv)
   int wrap_limit = alloc_sz-(alloc_sz%(sample_size*bus_data_width)); 
   fprintf(stderr, "wrap_limit:%08x\n", wrap_limit);
   char* snapshot = (char*)malloc(alloc_sz);
-  sock_server *ss = new sock_server(1234);
-  ss->start_server();
-  //ss->verbose = 1;
+  reader* r = new reader();
+  //r->verbose = 1;
 
   // setup gyro registers and dma infra
   setup_registers(gyro_ind,gyro_ctrl, ref_dstAlloc, wrap_limit);  
-  maxsonar_ctrl->range_ctrl(0xFFFFFFFF);
+  maxsonar_ctrl->range_ctrl(0xFFFF);
   int discard = 20;
 
   // start up the thread to drive the hbridges
@@ -137,15 +148,19 @@ int main(int argc, const char **argv)
     float distance = ((float)maxsonar_ind->useconds)/147.0;
 
     set_en(gyro_ind,gyro_ctrl, 0);
-    int datalen = ss->read_circ_buff(wrap_limit, ref_dstAlloc, dstAlloc, dstBuffer, snapshot, gyro_ind->write_addr, gyro_ind->write_wrap_cnt, 6); 
+    int datalen = r->read_circ_buff(wrap_limit, ref_dstAlloc, dstAlloc, dstBuffer, snapshot, gyro_ind->write_addr, gyro_ind->write_wrap_cnt, 6); 
     set_en(gyro_ind,gyro_ctrl, 2);
     
     if (!discard){
       if (spew) fprintf(stderr, "(%d microseconds == %f inches)\n", maxsonar_ind->useconds, distance);
       if (spew) display(snapshot, datalen);
       if(datalen){
-	ss->send_data(snapshot, datalen);
-	ss->send_data((char*)&(maxsonar_ind->useconds), sizeof(int));
+	int16_t *ss = (int16_t*)snapshot;
+	for(int i = 0; i < datalen/2; i+=3){
+	  gssp->sample(ss[i+0], ss[i+1], ss[i+2]);
+	  // this is a bit wasteful, but it simplifies test_zedboard_robot.py
+	  msssp->sample(maxsonar_ind->useconds);
+	}
       }
     } else {
       discard--;

@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <netdb.h>
+#include <arpa/inet.h>
 
 #include "sock_utils.h"
 
@@ -37,11 +38,11 @@ public:
     if (daemon_trace) fprintf(stderr, "daemon say(%d)\n", v);
     sIndicationProxy->heard(v);
   }
-  void say2 ( const uint32_t a, const uint32_t b ) {
+  void say2 ( const uint16_t a, const uint16_t b ) {
     if (daemon_trace) fprintf(stderr, "daemon say2(%d, %d)\n", a,b);
     sIndicationProxy->heard2(a, b);
   }
-  void setLeds ( const uint32_t v ) {
+  void setLeds ( const uint16_t v ) {
     if (daemon_trace) fprintf(stderr, "daemon setLeds(%d)\n", v);
     sleep(1);
     exit(1);
@@ -53,10 +54,10 @@ int main(int argc, const char **argv)
 {
     PortalSocketParam param;
 
-    // talk to testecho.py
-    int rc = getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
+    //talk to testecho.py
+    int rc = getaddrinfo("0.0.0.0", "5000", NULL, &param.addr);
     sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndicationH2S, &socketfuncResp, &param, &EchoIndicationJsonProxyReq, 1000);
-    rc = getaddrinfo("127.0.0.1", "5001", NULL, &param.addr);
+    rc = getaddrinfo("0.0.0.0", "5001", NULL, &param.addr);
     EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequestS2H, &socketfuncResp, &param);
 
     printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);

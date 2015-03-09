@@ -336,13 +336,13 @@
 	"fmc": "LA13_n"
     },
     "*ad9548_ref_p": {
-        "PIO_DIRECTION": "INPUT",
+        "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA17_p_CC"
     },
     "*ad9548_ref_n": {
-        "PIO_DIRECTION": "INPUT",
+        "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA17_n_CC"
@@ -431,12 +431,12 @@
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA27_n"
     },
-    "*I2C1_scl": {
+    "*i2c1_scl": {
 	"PIO_DIRECTION": "BIDIR",
 	"IOSTANDARD": "LVCMOS33",
 	"fmc": "SCL"
     },
-    "*I2C1_sda": {
+    "*i2c1_sda": {
 	"PIO_DIRECTION": "BIDIR",
 	"IOSTANDARD": "LVCMOS33",
 	"fmc": "SDA"

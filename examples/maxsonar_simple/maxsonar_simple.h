@@ -50,7 +50,7 @@ class MaxSonarCtrlIndication : public MaxSonarCtrlIndicationWrapper
     write_wrap_cnt = 0;
     verbose = 0;
   }
-  virtual void range_ctrl ( const uint32_t v){
+  virtual void range_ctrl ( const uint16_t v){
     if (verbose) fprintf(stderr, "MaxSonarCtrlIndication::range_ctrl(v=%x)\n", v);
   }
   virtual void pulse_width ( const uint32_t v){

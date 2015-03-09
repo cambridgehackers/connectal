@@ -3,7 +3,7 @@
         "bsvdefines" : ["XILINX", "Artix7",  "PCIE", "PcieHostTypeIF", "PhysAddrWidth=40"],
         "os" : "ubuntu",
         "partname" : "xc7a200tfbg676-2",
-        "needs_pcie_7x_gen1x8" : "True",
+        "need_pcie" : "x7_gen1x8",
         "TOP" : "PcieTop",
         "CONNECTALFLAGS" : [],
         "rewireclockstring" : ""

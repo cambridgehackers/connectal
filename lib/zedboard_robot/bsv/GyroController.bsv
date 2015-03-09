@@ -45,6 +45,10 @@ interface GyroCtrlIndication;
    method Action memwrite_status(Bit#(32) addr, Bit#(32) wrap_cnt);
 endinterface
 
+interface GyroSampleStream;
+   method Action sample(Int#(16) x, Int#(16) y, Int#(16) z);
+endinterface
+
 interface GyroController;
    interface GyroCtrlRequest req;
    interface SpiPins spi;

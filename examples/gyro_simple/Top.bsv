@@ -45,7 +45,7 @@ import MMUIndication::*;
 import GyroController::*;
 import ConnectalSpi::*;
 
-typedef enum {ControllerRequest, ControllerIndication, HostMemServerIndication, HostMemServerRequest, HostMMURequest, HostMMUIndication} IfcNames deriving (Eq,Bits);
+typedef enum {ControllerRequest, ControllerIndication, HostMemServerIndication, HostMemServerRequest, HostMMURequest, HostMMUIndication, SampleStream} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,SpiPins,1));
 

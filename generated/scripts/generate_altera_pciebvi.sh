@@ -2,7 +2,7 @@
 #
 set -x
 set -e
-#./importbvi.py -o ALTERA_PCIE_WRAPPER.bsv -I PcieWrap -P PcieWrap \
+#./importbvi.py -o ALTERA_PCIE_SV_WRAPPER.bsv -I PcieWrap -P PcieWrap \
 #    -r pin_perst -r npor -r reset_status \
 #    -c refclk -c coreclkout_hip \
 #    -f serdes -f pld -f dl -f ev128 -f ev1 -f hotrst -f l2 -f current \
@@ -39,9 +39,37 @@ set -e
 #    -f tx_s -f rx_s \
 #	-f tx_cred \
 #    -f tx_par -f rx_par -f cfg_par \
-#    ../../out/de5/synthesis/altera_pcie_hip_ast_ed.v 
+#    ../../out/de5/synthesis/altera_pcie_hip_ast_ed.v
 
-./importbvi.py -o ALTERA_PLL_WRAPPER.bsv -I PciePllWrap -P PciePllWrap \
-    -c refclk -r rst \
-    -f out -f locked \
-    ../../out/de5/synthesis/altera_pll_wrapper.v
+#./importbvi.py -o ALTERA_PLL_WRAPPER.bsv -I PciePllWrap -P PciePllWrap \
+#    -c refclk -r rst \
+#    -f out -f locked \
+#    ../../out/de5/synthesis/altera_pll_wrapper.v
+
+./importbvi.py -o ALTERA_PCIE_SIV_WRAPPER.bsv -I PcieS4Wrap -P PcieS4Wrap \
+    -r pin_perst -r npor -r reset_status -r pcie_rstn -r srstn \
+    -c refclk -c core_clk_out -c reconfig_clk -c fixedclk_serdes \
+	-f app -f pex_msi \
+	-f cpl \
+	-f pclk_in \
+	-f clk250_out \
+	-f clk500_out \
+	-f rx_st \
+	-f tx_st \
+	-f fixedclk \
+	-f lmi \
+    -f tx \
+    -f rx \
+	-f phystatus \
+	-f pipe \
+	-f pm \
+	-f pme \
+	-f reconfig \
+	-f test \
+	-f lane \
+	-f ltssm \
+	-f powerdown \
+	-f rate \
+	-f rc_pll \
+	-f tl_cfg \
+    ../../out/htg4/siv_gen2x8/siv_gen2x8_examples/chaining_dma/siv_gen2x8_plus.v

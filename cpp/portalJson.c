@@ -33,9 +33,19 @@ void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJs
     while(iparam->name) {
         uint32_t tmp32;
         uint64_t tmp64;
+	uint16_t tmp16;
+	int16_t stmp16;
         int      tmpint;
         data += sprintf(data, ",\"%s\":", iparam->name);
         switch(iparam->itype) {
+	case ITYPE_int16_t:
+            stmp16 = *(int16_t *)((unsigned long)tempdata + iparam->offset);
+            data += sprintf(data, "%d", stmp16);
+            break;
+        case ITYPE_uint16_t:
+            tmp16 = *(uint16_t *)((unsigned long)tempdata + iparam->offset);
+            data += sprintf(data, "%d", tmp16);
+            break;
         case ITYPE_uint32_t:
             tmp32 = *(uint32_t *)((unsigned long)tempdata + iparam->offset);
             data += sprintf(data, "%d", tmp32);
@@ -56,12 +66,12 @@ void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJs
     data += sprintf(data, "}");
     if (trace_json)
         fprintf(stderr, "[%s] num %d message '%s'\n", __FUNCTION__, iparam->offset, (char *)datap);
-    int ll = strlen(datap);
-    int xx = sizeof(uint32_t);
-    int ll_u = (ll+(xx-1))/xx;
-    while (ll++ < ll_u*xx)
-      *data++ = ' ';
-    pint->item->send(pint, (volatile unsigned int*)datap, (iparam->offset << 16) | 1+ll_u, -1);
+    int slength = strlen(datap);
+    int rounded_size = (slength + sizeof(uint32_t) - 1) / sizeof(uint32_t);
+    while (slength++ < rounded_size*sizeof(uint32_t))
+        *data++ = ' ';
+    *data++ = 0;
+    pint->item->send(pint, (volatile unsigned int*)datap, (iparam->offset << 16) | 1 + rounded_size, -1);
 }
 
 int connnectalJsonDecode(PortalInternal *pint, int _unused_channel, void *tempdata, ConnectalMethodJsonInfo *infoa)
@@ -113,6 +123,12 @@ int connnectalJsonDecode(PortalInternal *pint, int _unused_channel, void *tempda
                     if (endptr != &val[strlen(val)])
                         fprintf(stderr, "[%s:%d] strtol didn't use all characters %p != %p\n", __FUNCTION__, __LINE__, endptr, val+strlen(val));
                     switch(iparam->itype) {
+                    case ITYPE_int16_t:
+                        *(int16_t *)((unsigned long)tempdata + iparam->offset) = tmp64;
+                        break;
+                    case ITYPE_uint16_t:
+                        *(uint16_t *)((unsigned long)tempdata + iparam->offset) = tmp64;
+                        break;
                     case ITYPE_uint32_t:
                         *(uint32_t *)((unsigned long)tempdata + iparam->offset) = tmp64;
                         break;

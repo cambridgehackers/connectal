@@ -7,7 +7,7 @@
         "TOP" : "ZynqTop",
         "bsvdefines" : ["XILINX", "ZynqHostTypeIF", "PhysAddrWidth=32", "NUMBER_OF_LEDS=4"],
 	    "CONNECTALFLAGS": [],
-        "needs_pcie_7x_gen1x8" : "False"
+        "need_pcie" : "unused"
     },
     "fmc1": {
     "LA00_p_CC": {
