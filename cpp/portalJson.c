@@ -66,12 +66,12 @@ void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJs
     data += sprintf(data, "}");
     if (trace_json)
         fprintf(stderr, "[%s] num %d message '%s'\n", __FUNCTION__, iparam->offset, (char *)datap);
-    int ll = strlen(datap);
-    int xx = sizeof(uint32_t);
-    int ll_u = (ll+(xx-1))/xx;
-    while (ll++ < ll_u*xx)
-      *data++ = ' ';
-    pint->item->send(pint, (volatile unsigned int*)datap, (iparam->offset << 16) | 1+ll_u, -1);
+    int slength = strlen(datap);
+    int rounded_size = (slength + sizeof(uint32_t) - 1) / sizeof(uint32_t);
+    while (slength++ < rounded_size*sizeof(uint32_t))
+        *data++ = ' ';
+    *data++ = 0;
+    pint->item->send(pint, (volatile unsigned int*)datap, (iparam->offset << 16) | 1 + rounded_size, -1);
 }
 
 int connnectalJsonDecode(PortalInternal *pint, int _unused_channel, void *tempdata, ConnectalMethodJsonInfo *infoa)
