@@ -1,3 +1,9 @@
+connectal (15.03.2-1trusty1) trusty; urgency=medium
+
+  * Updated to 15.03.2
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 09 Mar 2015 15:21:08 -0400
+
 connectal (15.03.1-1trusty1) trusty; urgency=medium
 
   * Updated to 15.03.1
