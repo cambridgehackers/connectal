@@ -272,6 +272,20 @@ def typeCName(item):
         return name
     return item['name']
 
+def signCName(item):
+    global generatedVectors
+    if item['type'] == 'Type':
+        cid = item['name'].replace(' ', '')
+        if cid == 'Bool':
+            return '1L'
+        elif cid == 'Int':
+            numbits = typeNumeric(item['params'][0])
+            if numbits <= 16:
+                return '0xffffL'
+            elif numbits <= 32:
+                return '0xffffffffL'
+    return None
+
 def typeJson(item):
     tname = typeCName(item)
     if tname not in itypeNames:
@@ -366,10 +380,13 @@ def generate_marshall(pfmt, w):
         field = e.name
         if typeCName(e.datatype) == 'float':
             return pfmt % ('*(int*)&' + e.name)
+        mask = signCName(e.datatype)
+        if mask:
+            field = '(%s & %s)' % (field, mask)
         if e.shifted:
             field = '(%s>>%s)' % (field, e.shifted)
         if off:
-            field = '(%s<<%s)' % (field, off)
+            field = '(((unsigned long)%s)<<%s)' % (field, off)
         if typeBitWidth(e.datatype) > 64:
             field = '(const %s & std::bitset<%d>(0xFFFFFFFF)).to_ulong()' % (field, typeBitWidth(e.datatype))
         word.append(field)

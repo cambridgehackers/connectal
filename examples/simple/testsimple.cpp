@@ -115,13 +115,13 @@ public:
   void sayv2(const int16_t* v) {
     fprintf(stderr, "sayv2\n");
     for (int i = 0; i < 16; i++)
-        fprintf(stderr, "    [%d] = 0x%x\n", i, v[i]);
+        fprintf(stderr, "    [%d] = 0x%x\n", i, v[i] & 0xffff);
     incr_cnt();
   }
   void sayv3(const int16_t* v, int16_t count) {
     fprintf(stderr, "sayv3: count 0x%x\n", count);
     for (int i = 0; i < 16; i++)
-        fprintf(stderr, "    [%d] = 0x%x\n", i, v[i]);
+        fprintf(stderr, "    [%d] = 0x%x\n", i, v[i] & 0xffff);
     incr_cnt();
   }
   Simple(unsigned int id) : SimpleRequestWrapper(id), cnt(0){}
@@ -165,7 +165,7 @@ int32_t testval = 0x1234abcd;
   }
   device->sayv1(v1arg1, v1arg2);
 int16_t v2v[16], v3count;
-  testval = 0x9876;
+  testval = 0x12349876;
   for (int i = 0; i < 16; i++) {
      v2v[i] = testval;
      testval = (testval << 4) | ((testval >> 28) & 0xf);
