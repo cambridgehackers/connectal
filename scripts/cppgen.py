@@ -224,7 +224,9 @@ def typeCName(item):
         cid = item['name'].replace(' ', '')
         if cid == 'Bit':
             numbits = typeNumeric(item['params'][0])
-            if numbits <= 16:
+            if numbits <= 8:
+                return 'uint8_t'
+            elif numbits <= 16:
                 return 'uint16_t'
             elif numbits <= 32:
                 return 'uint32_t'
@@ -236,7 +238,9 @@ def typeCName(item):
             return 'int'
         elif cid == 'Int':
             numbits = typeNumeric(item['params'][0])
-            if numbits <= 16:
+            if numbits <= 8:
+                return 'int8_t'
+            elif numbits <= 16:
                 return 'int16_t'
             elif numbits <= 32:
                 return 'int32_t'
@@ -246,6 +250,8 @@ def typeCName(item):
                 assert(False)
         elif cid == 'UInt':
             numbits = typeNumeric(item['params'][0])
+            if numbits <= 8:
+                return 'uint8_t'
             if numbits <= 16:
                 return 'uint16_t'
             elif numbits <= 32:
