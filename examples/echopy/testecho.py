@@ -20,7 +20,7 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
-import ctypes, os, sys, threading, time
+import ctypes, json, os, sys, threading, time
 connectal = ctypes.CDLL('./connectal.so')
 
 def call_say(a):
@@ -30,21 +30,28 @@ def call_say(a):
 def call_say2(a, b):
     connectal.EchoRequest_say2(ctypes.c_void_p(treq), a, b)
 
-def heard(a):
-    print 'heard called!!!', a
-    call_say2(a, 2*a);
+def heard(v):
+    print 'heard called!!!', v
+    call_say2(v, 2*v);
 
 def heard2(a, b):
     print 'heard2 called!!!', a, b
     sem_heard2.release()
+
+def callback(a):
+    dict = json.loads(a.strip())
+    #print 'callback called!!!', a, dict
+    if dict['name'] == 'heard':
+        heard(dict['v'])
+    elif dict['name'] == 'heard2':
+        heard2(dict['a'], dict['b'])
 
 def worker():
     while not stopPolling:
         connectal.portalCheckIndication(ctypes.c_void_p(tind))
 
 stopPolling = False
-connectal.jcabozo(ctypes.py_object(heard), 0)
-connectal.jcabozo(ctypes.py_object(heard2), 1)
+connectal.set_callback(ctypes.py_object(callback))
 sem_heard2 = threading.Semaphore(0)
 tr = connectal.trequest
 tr.restype = ctypes.c_void_p

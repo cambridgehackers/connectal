@@ -23,27 +23,58 @@
 #include "GeneratedTypes.h"
 #include <python2.7/Python.h>
 
-static PyObject *heardCallback[20];
+static PyObject *callbackFunction;
 static PortalInternal erequest, eindication;
+static PortalInternal dummy;
 
-extern "C" {
-void jcabozo(PyObject *param, int ind)
-{
-    Py_INCREF(param);
-    heardCallback[ind] = param;
+#define STUB \
+{ \
+    printf("[%s:%d]\n", __FUNCTION__, __LINE__); \
+    exit(-1); \
 }
+static volatile unsigned int *dummyMAPCHANNEL(struct PortalInternal *pint, unsigned int v)
+{
+    return &dummy.map_base[0];
+}
+static void dummySENDMSG(struct PortalInternal *pint, volatile unsigned int *buffer, unsigned int hdr, int sendFd)
+{
+}
+static int dummyITEMINIT(struct PortalInternal *pint, void *param) STUB
+static unsigned int dummyREADWORD(struct PortalInternal *pint, volatile unsigned int **addr) STUB
+static void dummyWRITEWORD(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v) STUB
+static void dummyWRITEFDWORD(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v) STUB
+static int dummyRECVMSG(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd) STUB
+static int dummyBUSYWAIT(struct PortalInternal *pint, unsigned int v, const char *str) STUB
+static void dummyENABLEINT(struct PortalInternal *pint, int val) STUB
+static int dummyEVENT(struct PortalInternal *pint) STUB
+static int dummyNOTFULL(struct PortalInternal *pint, unsigned int v) STUB
+PortalItemFunctions callbackItem = {
+    dummyITEMINIT, dummyREADWORD, dummyWRITEWORD, dummyWRITEFDWORD,
+    dummyMAPCHANNEL, dummyMAPCHANNEL, dummySENDMSG, dummyRECVMSG,
+    dummyBUSYWAIT, dummyENABLEINT, dummyEVENT, dummyNOTFULL};
 
 static int heard_cb(struct PortalInternal *p,uint32_t v) {
+    EchoIndicationJson_heard (&dummy, v);
     PyGILState_STATE gstate = PyGILState_Ensure();
-    PyEval_CallFunction(heardCallback[0], "(i)", v, NULL);
+    PyEval_CallFunction(callbackFunction, "(s)", dummy.map_base, NULL);
     PyGILState_Release(gstate);
 }
 static int heard2_cb(struct PortalInternal *p,uint16_t a, uint16_t b) {
+    EchoIndicationJson_heard2 (&dummy, a, b);
     PyGILState_STATE gstate = PyGILState_Ensure();
-    PyEval_CallFunction(heardCallback[1], "(ii)", a, b);
+    PyEval_CallFunction(callbackFunction, "(s)", dummy.map_base, NULL);
     PyGILState_Release(gstate);
 }
 static EchoIndicationCb EchoInd_cbTable = { heard_cb, heard2_cb};
+
+extern "C" {
+void set_callback(PyObject *param)
+{
+    Py_INCREF(param);
+    callbackFunction = param;
+    dummy.item = &callbackItem;
+    dummy.map_base = (volatile unsigned int *)malloc(1000);
+}
 
 void *trequest()
 {
