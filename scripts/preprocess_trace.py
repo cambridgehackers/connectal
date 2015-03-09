@@ -36,7 +36,7 @@ for filename in sys.argv[2:]:
         if line.find('printfInd') >= 0:
             hasdispind = True
     if hasdisplay and hasdispind:
-        fname = sys.argv[1] + '/sources/' + filename
+        fname = sys.argv[1] + '/generatedbsv/' + filename
         fh = open(fname, 'w')
         for line in data:
             ind = line.find('$display')
@@ -109,7 +109,7 @@ if cppind != []:
     fh.write('};\n')
     fh.close()
 if bsvind != []:
-    fname = sys.argv[1] + '/sources/DisplayInd.bsv'
+    fname = sys.argv[1] + '/generatedbsv/DisplayInd.bsv'
     fh = open(fname, 'w')
     fh.write('interface DisplayInd;\n')
     for item in bsvind:

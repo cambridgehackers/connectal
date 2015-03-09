@@ -140,16 +140,16 @@ int main(int argc, const char **argv)
     PortalPoller *poller = 0;
 
     poller = new PortalPoller();
-    device = new HdmiDisplayRequestProxy(IfcNames_HdmiDisplayRequest);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+    device = new HdmiDisplayRequestProxy(IfcNames_HdmiDisplayRequestS2H);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
+  dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
 
-    HdmiInternalIndicationWrapper *hdmiIndication = new HdmiIndication(IfcNames_HdmiInternalIndication);
-    HdmiDisplayIndicationWrapper *displayIndication = new DisplayIndication(IfcNames_HdmiDisplayIndication);
-    hdmiInternal = new HdmiInternalRequestProxy(IfcNames_HdmiInternalRequest);
+    HdmiInternalIndicationWrapper *hdmiIndication = new HdmiIndication(IfcNames_HdmiInternalIndicationH2S);
+    HdmiDisplayIndicationWrapper *displayIndication = new DisplayIndication(IfcNames_HdmiDisplayIndicationH2S);
+    hdmiInternal = new HdmiInternalRequestProxy(IfcNames_HdmiInternalRequestS2H);
 
 #ifndef BOARD_bluesim
     // read out monitor EDID from ADV7511

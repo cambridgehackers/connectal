@@ -156,7 +156,7 @@ ifeq ($(NEED_ALTERA_PCIE_$(BOARD)),1)
 	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/altera_pcie_sv_hip_ast_wrapper.qip
 	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/alt_xcvr_reconfig_wrapper.qip
 	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/siv_gen2x8/siv_gen2x8.qip
-	FPGAMAKE_CONNECTALFLAGS += --tcl=$(BOARD)/sources/$(BOARD).qsf
+	FPGAMAKE_CONNECTALFLAGS += --tcl=$(BOARD)/generatedbsv/$(BOARD).qsf
 	FPGAMAKE_CONNECTALFLAGS += --tcl=$(CONNECTALDIR)/constraints/altera/$(BOARD).sdc
 	CONNECTALFLAGS += --bscflags="+RTS -K46777216 -RTS -demote-errors G0066:G0045 -suppress-warnings G0046:G0020:S0015:S0080:S0039"
 endif
@@ -171,19 +171,20 @@ endif
 CONNECTALFLAGS += $(EXTRA_CONNECTALFLAGS)
 
 ifeq ($(USE_PRINTF),1)
-PRINTF_EXTRA=$(BOARD)/sources/DisplayInd.bsv
+PRINTF_EXTRA=$(BOARD)/generatedbsv/DisplayInd.bsv
 else
 PRINTF_EXTRA=$(CONNECTALDIR)/bsv/DisplayInd.bsv
 endif
 
 ifneq ($(USE_AUTOTOP),)
-GENTOP = $(BOARD)/Top.bsv
+GPROJ = $(BOARD)/generatedbsv
+GENTOP = $(GPROJ)/Top.bsv
 endif
 
 gentarget:: process_autotop generate_altera_custom
 	@[ -e $(CONNECTALDIR)/scripts/syntax/parsetab.py ] || make -C $(CONNECTALDIR) scripts/syntax/parsetab.py
 	$(Q)[ -e $(IPDIR) ] || mkdir -p $(IPDIR)
-	$(Q)[ -e $(BOARD)/sources ] || mkdir -p $(BOARD)/sources
+	$(Q)[ -e $(BOARD)/generatedbsv ] || mkdir -p $(BOARD)/generatedbsv
 	$(Q)[ -e $(BOARD)/jni ] || mkdir -p $(BOARD)/jni
 ifeq ($(USE_PRINTF),1)
 	$(CONNECTALDIR)/scripts/preprocess_trace.py $(BOARD) $(BSVFILES)
@@ -201,7 +202,8 @@ process_autotop::
 	$(Q)[ -e $(BOARD) ] || mkdir -p $(BOARD)
 	touch $(BOARD)/Makefile.autotop
 ifneq ($(USE_AUTOTOP),)
-	$(Q)$(CONNECTALDIR)/scripts/topgen.py --project-dir $(BOARD) $(AUTOTOP) \
+	$(Q)[ -e $(GPROJ) ] || mkdir -p $(GPROJ)
+	$(Q)$(CONNECTALDIR)/scripts/topgen.py --project-dir $(GPROJ) $(AUTOTOP) \
 	    $(foreach f, $(S2H_INTERFACES), --wrapper $f) \
 	    $(foreach f, $(H2S_INTERFACES), --proxy $f)   \
 	    $(foreach f, $(MEM_INTERFACES), --wrapper MemServerRequest:$f) \

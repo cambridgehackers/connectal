@@ -78,7 +78,7 @@ BUILDCACHE_CACHEDIR=$(shell cd $(CONNECTALDIR)/..; /bin/pwd)/fpgamake-cache
 endif
 endif
 
-RUN_BSC = BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) bsc $(BSC_QUIET) $(BSVDEFINES) $(BSCFLAGS_COMMON) $(BSCFLAGS_PROJECT) -p +:$(BSVPATH):$(DUT)/
+RUN_BSC = BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) bsc $(BSC_QUIET) $(BSVDEFINES) $(BSCFLAGS_COMMON) $(BSCFLAGS_PROJECT) -p +:$(BSVPATH)
 vfile=verilog/$(MKTOP).v
 
 all: exe bits
@@ -237,7 +237,7 @@ vsim: verilog bin/vsim
 $(vfile): $(TOPBSVFILE) $(BSVFILES)
 	$(Q)mkdir -p verilog/portal $(DTOP)/obj
 	@echo BSCVERILOG [$(DTOP)]
-	$(Q)cd sources; $(RUN_BSC) -remove-dollar -verilog -u -g $(MKTOP) $(TOPBSVFILE)
+	$(Q)cd generatedbsv; $(RUN_BSC) -remove-dollar -verilog -u -g $(MKTOP) $(TOPBSVFILE)
 	$(Q)sed -i 's|// On .*|// timestamp removed|' verilog/*.v
 	$(Q)for v in verilog/*.v; do $(CONNECTALDIR)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
 
@@ -251,9 +251,9 @@ $(DTOP)/jni/%.c: $(CONNECTALDIR)/cpp/%.c
 bsim: prepare_bin_target $(DTOP)/jni/TlpReplay.cxx $(BSIM_CXX_LOCAL)
 	$(Q)mkdir -p $(DTOP)/obj verilog
 	@echo BSCBSIM [$(DTOP)]
-	$(Q)cd sources; $(RUN_BSC) -D BSIM -sim -u -g $(MKTOP) $(TOPBSVFILE)
-	$(Q)cd sources; $(RUN_BSC) $(BSC_CXXFLAGS) -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX_LOCAL) $(BSIM_CXX_PROJECT)
-	$(Q)cp -v sources/bsim* bin
+	$(Q)cd generatedbsv; $(RUN_BSC) -D BSIM -sim -u -g $(MKTOP) $(TOPBSVFILE)
+	$(Q)cd generatedbsv; $(RUN_BSC) $(BSC_CXXFLAGS) -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX_LOCAL) $(BSIM_CXX_PROJECT)
+	$(Q)cp -v generatedbsv/bsim* bin
 	$(QTUSED)
 
 syntax.timestamp: $(BSVFILES)
@@ -265,7 +265,7 @@ verilog: $(vfile)
 	@echo "verilog"
 
 lint: $(vfile)
-	verilator --error-limit 200 --lint-only -Isources/$(DUT) -Isources/source $(vfile)
+	verilator --error-limit 200 --lint-only -Igeneratedbsv -Igeneratedbsv/source $(vfile)
 
 prepare_bin_target: syntax.timestamp
 	@echo "prepare_bin_target"

@@ -1,9 +1,16 @@
 
 CONNECTALDIR?=../..
 LIBBSVDIR=$(CONNECTALDIR)/lib/bsv
-GRALLOCDIR=$(CONNECTALDIR)/gralloc
-INTERFACES = HdmiDisplayRequest HdmiInternalRequest HdmiDisplayIndication HdmiInternalIndication
-BSVFILES = $(LIBBSVDIR)/HdmiDisplay.bsv $(LIBBSVDIR)/HDMI.bsv Top.bsv $(CONNECTALDIR)/lib/deprecated/DmaUtils.bsv
+ifeq ($(BOARD),bluesim)
+H2S_INTERFACES = HdmiDisplayIndication:HdmiDisplay:defaultClock HdmiInternalIndication:HdmiDisplay
+else
+H2S_INTERFACES = HdmiDisplayIndication:HdmiDisplay:host.ps7.fclkclk\[1\] HdmiInternalIndication:HdmiDisplay:host.ps7.fclkclk\[1\]
+endif
+S2H_INTERFACES = HdmiDisplayRequest:HdmiDisplay.displayRequest HdmiInternalRequest:HdmiDisplay.internalRequest
+MEM_INTERFACES = MemServer.request:/cons\(lHdmiDisplay.dmaClient,nil\),cons\(lMMU,nil\):PhysAddrWidth,DataBusWidth,\`NumberOfMasters:mkMemServerR
+AUTOTOP = --importfiles HDMI --importfiles HDMI16 --interface pins:HdmiDisplay.hdmi
+
+BSVFILES = $(LIBBSVDIR)/HdmiDisplay.bsv $(LIBBSVDIR)/HDMI.bsv $(CONNECTALDIR)/lib/deprecated/DmaUtils.bsv HDMI16.bsv
 CPPFILES= testhdmidisplay.cpp
 CONNECTALFLAGS = -C hdmidisplay-$(BOARD).xdc -D IMPORT_HOSTIF
 PIN_TYPE = HDMI16

@@ -281,7 +281,7 @@ def generate_bsv(project_dir, noisyFlag, jsondata):
         if pname in generatedPackageNames:
             continue
         generatedPackageNames.append(pname)
-        fname = os.path.join(project_dir, 'sources', jsondata['dutname'].lower(), '%s.bsv' % pname)
+        fname = os.path.join(project_dir, 'generatedbsv', '%s.bsv' % pname)
         bsv_file = util.createDirAndOpen(fname, 'w')
         bsv_file.write('package %s;\n' % pname)
         extraImports = (['import %s::*;\n' % pn for pn in [item['Package']] ]

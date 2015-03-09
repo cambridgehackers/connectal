@@ -28,6 +28,7 @@ import util
 argparser = argparse.ArgumentParser("Generate Top.bsv for an project.")
 argparser.add_argument('--project-dir', help='project directory')
 argparser.add_argument('--interface', help='exported interface declaration', action='append')
+argparser.add_argument('--importfiles', help='added imports', action='append')
 argparser.add_argument('-w', '--wrapper', help='exported wrapper interfaces', action='append')
 argparser.add_argument('-p', '--proxy', help='exported proxy interfaces', action='append')
 
@@ -50,6 +51,8 @@ module mkConnectalTop
        #(HostType host)
 `endif
        (%(moduleParam)s);
+    Clock defaultClock <- exposeCurrentClock();
+    Reset defaultReset <- exposeCurrentReset();
 %(portalInstantiate)s
 
    Vector#(%(portalCount)s,StdPortal) portals;
@@ -58,16 +61,20 @@ module mkConnectalTop
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
    interface masters = %(portalMaster)s;
-   interface PinType  pins;
-   endinterface
 %(exportedInterfaces)s
 endmodule : mkConnectalTop
+%(exportedNames)s
 '''
 
 def addPortal(name):
     global portalCount
     portalList.append('   portals[%(count)s] = %(name)s.portalIfc;' % {'count': portalCount, 'name': name})
     portalCount = portalCount + 1
+
+class iReq:
+    def __init__(self):
+        self.inst = ''
+        self.args = []
 
 def instMod(args, modname, modext, constructor, tparam):
     pmap['tparam'] = tparam
@@ -84,8 +91,15 @@ def instMod(args, modname, modext, constructor, tparam):
     pmap['constr'] = pmap['constructor']
     if not pmap['constructor'] or modext:
         pmap['constr'] = 'mk' + pmap['modname']
-    portalInstantiate.append(('   %(modname)s%(tparam)s l%(modname)s <- %(constr)s(' + args + ');') % pmap)
-    instantiatedModules.append(pmap['modname'])
+    if modext:
+        portalInstantiate.append(('   %(modname)s%(tparam)s l%(modname)s <- %(constr)s(' + args + ');') % pmap)
+    else:
+        if not instantiateRequest.get(pmap['modname']):
+            instantiateRequest[pmap['modname']] = iReq()
+            instantiateRequest[pmap['modname']].inst = '   %(modname)s%(tparam)s l%(modname)s <- %(constr)s(%%s);' % pmap
+        instantiateRequest[pmap['modname']].args.append(args % pmap)
+    if pmap['modname'] not in instantiatedModules:
+        instantiatedModules.append(pmap['modname'])
     importfiles.append(modname)
 
 def parseParam(pitem):
@@ -111,10 +125,16 @@ if __name__=='__main__':
     print 'Writing Top:', topFilename
     userFiles = []
     portalInstantiate = []
+    instantiateRequest = {}
     portalList = []
     portalCount = 0
     instantiatedModules = []
     importfiles = []
+    exportedNames = ['export mkConnectalTop;']
+    if options.importfiles:
+        importfiles = options.importfiles
+        for item in options.importfiles:
+             exportedNames.append('export %s::*;' % item)
     enumList = []
     interfaceList = []
     if not options.proxy:
@@ -135,6 +155,12 @@ if __name__=='__main__':
         pmap = parseParam(pitem)
         if pmap['usermod'] not in instantiatedModules:
             instMod(pmap['uparam'], pmap['usermod'], '', '', pmap['xparam'])
+    for key in instantiatedModules:
+        temp = instantiateRequest.get(key)
+        if temp:
+            portalInstantiate.append(temp.inst % ','.join(temp.args))
+    for pitem in options.wrapper:
+        pmap = parseParam(pitem)
         instMod('', pmap['name'], 'Wrapper', '', '')
     for pitem in options.interface:
         p = pitem.split(':')
@@ -147,8 +173,9 @@ if __name__=='__main__':
                  'portalList': '\n'.join(portalList),
                  'portalCount': portalCount,
                  'exportedInterfaces' : '\n'.join(interfaceList),
+                 'exportedNames' : '\n'.join(exportedNames),
                  'portalMaster' : 'lMemServer.masters' if memory_flag else 'nil',
-                 'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,`NumberOfMasters)' \
+                 'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,`PinType,`NumberOfMasters)' \
                      if memory_flag else 'StdConnectalTop#(PhysAddrWidth)'
                  }
     print 'TOPFN', topFilename
