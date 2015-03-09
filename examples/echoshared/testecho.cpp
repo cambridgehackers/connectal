@@ -26,6 +26,7 @@
 #include "StdDmaIndication.h"
 #include "dmaManager.h"
 
+#define LOOP_COUNT 2
 EchoRequestProxy *sRequestProxy;
 static sem_t sem_heard2;
 
@@ -36,7 +37,7 @@ public:
         fprintf(stderr, "heard an s: %d\n", v);
 	sRequestProxy->say2(v, 2*v);
     }
-    virtual void heard2(uint32_t a, uint32_t b) {
+    virtual void heard2(uint16_t a, uint16_t b) {
         sem_post(&sem_heard2);
         //fprintf(stderr, "heard an s2: %d %d\n", a, b);
     }
@@ -64,13 +65,12 @@ int main(int argc, const char **argv)
     MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequest, &socketfuncInit, NULL);
     DmaManager *dma = new DmaManager(dmap);
     MMUIndication *mIndication = new MMUIndication(dma, IfcNames_MMUIndication, &socketfuncInit, NULL);
-    portalExec_start();
 
     PortalSharedParam param = {dma, alloc_sz};
     EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &sharedfunc, &param);
     sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &sharedfunc, &param);
 
-for (int i = 0; i < 10; i++) {
+for (int i = 0; i < LOOP_COUNT; i++) {
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
     call_say(v);
@@ -79,10 +79,8 @@ for (int i = 0; i < 10; i++) {
     call_say(v*93);
     call_say2(v, v*3);
 }
-    sRequestProxy->setLeds(9);
 
-    while (1) {
-      sleep(1);
-    }
+    sRequestProxy->setLeds(9);
+    sleep(2);
     return 0;
 }
