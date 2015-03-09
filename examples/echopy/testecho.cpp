@@ -38,7 +38,7 @@ static void heard_cb(struct PortalInternal *p,uint32_t v) {
     PyEval_CallFunction(heardCallback[0], "(i)", v, NULL);
     PyGILState_Release(gstate);
 }
-static void heard2_cb(struct PortalInternal *p,uint32_t a, uint32_t b) {
+static void heard2_cb(struct PortalInternal *p,uint16_t a, uint16_t b) {
     PyGILState_STATE gstate = PyGILState_Ensure();
     PyEval_CallFunction(heardCallback[1], "(ii)", a, b);
     PyGILState_Release(gstate);
