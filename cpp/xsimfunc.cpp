@@ -59,7 +59,7 @@ public:
     readDataQueue.push(data);
     pthread_mutex_unlock(&readDataMutex);
   }
-  virtual void directory ( const uint32_t fpgaNumber, const uint32_t fpgaId, const uint32_t last )
+  virtual void directory ( const uint32_t fpgaNumber, const uint32_t fpgaId, const uint8_t last )
   {
     fprintf(stderr, "[%s:%d] fpga=%d id=%d last=%d\n", __FUNCTION__, __LINE__, fpgaNumber, fpgaId, last);
     struct idInfo info = { fpgaNumber, fpgaId, 1 };
@@ -67,7 +67,7 @@ public:
     if (last)
       portal_count = fpgaNumber+1;
   }
-  virtual void interrupt (const uint32_t intrNumber )	{
+  virtual void interrupt (const uint8_t intrNumber )	{
     fprintf(stderr, "[%s:%d] fpga=%d\n", __FUNCTION__, __LINE__, intrNumber);
     intrs.push(intrNumber);
   }

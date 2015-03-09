@@ -34,7 +34,8 @@ public:
   xsiport(Xsi::Loader &loader, const char *name, int bits = 1)
     : xsiInstance(loader), port(-1), name(name), width(bits)
   {
-    value = {1, 1};
+    value.aVal = 1;
+    value.bVal = 1;
     port = xsiInstance.get_port_number(name);
     //width = xsiInstance.get_int_port(port, xsiHDLValueSize);
     std::cout << "Port name=" << name << " number=" << port << std::endl;
@@ -89,7 +90,7 @@ public:
   virtual void connect () {
       connected = 1;
   }
-  virtual void enableint( const uint32_t fpgaId, const uint32_t val);
+  virtual void enableint( const uint32_t fpgaId, const uint8_t val);
   virtual void read ( const uint32_t fpgaId, const uint32_t addr );
   virtual void write ( const uint32_t fpgaId, const uint32_t addr, const uint32_t data );
   virtual void msgSink ( const uint32_t data );
@@ -100,7 +101,7 @@ public:
 
 };
 
-void XsimMemSlaveRequest::enableint( const uint32_t fpgaId, const uint32_t val)
+void XsimMemSlaveRequest::enableint( const uint32_t fpgaId, const uint8_t val)
 {
   int number = fpgaNumber(fpgaId);
   uint32_t hwaddr = number << 16 | 4;
