@@ -255,15 +255,6 @@ void portalCheckIndication(PortalInternal *pint)
   }
 }
 
-#ifndef __KERNEL__
-int portal_printf(const char *format, ...)
-{
-    va_list ap;
-    va_start(ap, format);
-    return vfprintf(stderr, format, ap);
-}
-#endif
-
 void send_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, unsigned int hdr, int sendFd)
 {
 }
