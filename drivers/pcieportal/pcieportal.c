@@ -141,7 +141,11 @@ static int pcieportal_open(struct inode *inode, struct file *filp)
 static int pcieportal_release(struct inode *inode, struct file *filp)
 {
         tPortal *this_portal = (tPortal *) filp->private_data;
+	tBoard  *this_board  = this_portal->board;
 	struct list_head *pmlist;
+	PortalInternal devptr = {.map_base = (volatile int *)(this_board->bar2io + PORTAL_BASE_OFFSET * this_portal->portal_number),
+				 .item = &kernelfunc};
+
         /* decrement the open file count */
         init_waitqueue_head(&(this_portal->extra->wait_queue));
         this_portal->board->open_count -= 1;
@@ -149,8 +153,11 @@ static int pcieportal_release(struct inode *inode, struct file *filp)
 	printk("%s_%d: Closed device file\n", DEV_NAME, this_portal->portal_number);
 	list_for_each(pmlist, &this_portal->pmlist) {
 		struct pmentry *pmentry = list_entry(pmlist, struct pmentry, pmlist);
-		printk("    id=%d fmem=%p\n", pmentry->id, pmentry->fmem);
+		printk("    returning id=%d fmem=%p\n", pmentry->id, pmentry->fmem);
+		MMURequest_idReturn(&devptr, pmentry->id);
+		kfree(pmentry);
 	}
+	INIT_LIST_HEAD(&this_portal->pmlist);
         return 0;                /* success */
 }
 
@@ -257,6 +264,22 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                 err = 0;
                 }
                 break;
+        case PCIE_DEREFERENCE: {
+		int id = arg;
+		struct list_head *pmlist;
+		PortalInternal devptr = {.map_base = (volatile int *)(this_board->bar2io + PORTAL_BASE_OFFSET * this_portal->portal_number),
+					 .item = &kernelfunc};
+		MMURequest_idReturn(&devptr, id);
+		list_for_each(pmlist, &this_portal->pmlist) {
+			struct pmentry *pmentry = list_entry(pmlist, struct pmentry, pmlist);
+			if (pmentry->id == id) {
+				printk("%s:%d releasing portalmem object %d fmem=%p\n", __FUNCTION__, __LINE__, id, pmentry->fmem);
+				list_del(&pmentry->pmlist);
+				fput(pmentry->fmem);
+				kfree(pmentry);
+			}
+		}
+	} break;
         default:
                 return -ENOTTY;
         }

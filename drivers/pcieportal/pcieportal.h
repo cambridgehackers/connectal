@@ -57,6 +57,7 @@ typedef unsigned int tTlpData[6];
 #define BNOC_TRACE           _IOWR(BNOC_IOC_MAGIC,8,tTraceInfo*)
 #define BNOC_ENABLE_TRACE    _IOR(BNOC_IOC_MAGIC,8,int*)
 #define PCIE_SEND_FD         _IOR(BNOC_IOC_MAGIC,12,tSendFd*)
+#define PCIE_DEREFERENCE     _IOR(BNOC_IOC_MAGIC,13,int)
 
 /*
  * Per-device data
