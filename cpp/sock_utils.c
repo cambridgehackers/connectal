@@ -102,6 +102,43 @@ int accept_socket(int arg_listening)
     return sockfd;
 }
 
+int init_connecting(const char *arg_name, PortalSocketParam *param)
+{
+  int connect_attempts = 0;
+  int sockfd;
+  struct sockaddr_un sa = {0};
+  struct addrinfo addrinfo = { 0, AF_UNIX, SOCK_STREAM, 0};
+  struct addrinfo *addr = &addrinfo;
+
+  sa.sun_family = AF_UNIX;
+  strcpy(sa.sun_path, arg_name);
+  addrinfo.ai_addrlen = sizeof(sa.sun_family) + strlen(sa.sun_path);
+  addrinfo.ai_addr = (struct sockaddr *)&sa;
+
+  if (param && param->addr) {
+    fprintf(stderr, "[%s:%d] TCP\n", __FUNCTION__, __LINE__);
+    addr = param->addr;
+  }
+  if ((sockfd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol)) == -1) {
+    PORTAL_PRINTF( "%s[%d]: socket error %s\n",__FUNCTION__, sockfd, strerror(errno));
+    exit(1);
+  }
+  if (trace_socket)
+    PORTAL_PRINTF( "%s (%s) trying to connect...\n",__FUNCTION__, arg_name);
+
+  while (connect(sockfd, addr->ai_addr, addr->ai_addrlen) == -1) {
+    if(connect_attempts++ > 16){
+      PORTAL_PRINTF( "%s (%s) connect error %s\n",__FUNCTION__, arg_name, strerror(errno));
+      exit(1);
+    }
+    if (trace_socket)
+      PORTAL_PRINTF( "%s (%s) retrying connection\n",__FUNCTION__, arg_name);
+    sleep(1);
+  }
+  PORTAL_PRINTF( "%s (%s) connected.  Attempts %d\n",__FUNCTION__, arg_name, connect_attempts);
+  return sockfd;
+}
+
 // Taken from: UNIX Network Programming, Richard Stevens
 // http://www.kohala.com/start/unpv12e.html
 ssize_t sock_fd_write(int sockfd, void *ptr, size_t nbytes, int sendfd)
