@@ -149,7 +149,7 @@ static int pcieportal_release(struct inode *inode, struct file *filp)
 	printk("%s_%d: Closed device file\n", DEV_NAME, this_portal->portal_number);
 	list_for_each(pmlist, &this_portal->pmlist) {
 		struct pmentry *pmentry = list_entry(pmlist, struct pmentry, pmlist);
-		printk("    struct file *fmem=%p\n", pmentry->fmem);
+		printk("    id=%d fmem=%p\n", pmentry->id, pmentry->fmem);
 	}
         return 0;                /* success */
 }
@@ -249,6 +249,7 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
 		pmentry = (struct pmentry *)kzalloc(sizeof(struct pmentry), GFP_KERNEL);
 		INIT_LIST_HEAD(&pmentry->pmlist);
 		pmentry->fmem = fget(sendFd.fd);
+		pmentry->id   = sendFd.id;
 		list_add(&pmentry->pmlist, &this_portal->pmlist);
                 err = send_fd_to_portal(&devptr, sendFd.fd, sendFd.id, 0);
                 if (err < 0)

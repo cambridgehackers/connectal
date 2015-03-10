@@ -58,6 +58,7 @@
 
 struct pmentry {
 	struct file *fmem;
+	int          id;
 	struct list_head pmlist;
 };
 
@@ -168,6 +169,7 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
 		INIT_LIST_HEAD(&pmentry->pmlist);
 		mutex_lock(&connectal_mutex);
 		pmentry->fmem = fget(sendFd.fd);
+		pmentry->id   = sendFd.id;
 		list_add(&pmentry->pmlist, &portal_data->pmlist);
                 err = send_fd_to_portal(&devptr, sendFd.fd, sendFd.id, 0);
 		mutex_unlock(&connectal_mutex);

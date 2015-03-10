@@ -73,6 +73,7 @@ typedef struct {
 
 struct pmentry {
 	struct file     *fmem;
+	int              id;
 	struct list_head pmlist;
 };
 
