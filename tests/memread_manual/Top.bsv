@@ -48,13 +48,14 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    RtestRequestWrapper memreadRequestWrapper <- mkRtestRequestWrapper(RtestRequest,memread.request);
 
    Vector#(1, MemReadClient#(64)) readClients = cons(memread.dmaClient, nil);
-   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
-   MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUIndicationProxy.ifc);
-   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
 
+   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
-   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerR(hostMemServerIndicationProxy.ifc, readClients, cons(hostMMU,nil));
-   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
+
+   SimpleMemServer#(PhysAddrWidth,64,1) dma <- mkSimpleMemServer(readClients, nil, hostMemServerIndicationProxy.ifc, hostMMUIndicationProxy.ifc);
+
+   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, dma.mmuRequest);
+   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.memServerRequest);
 
    Vector#(6,StdPortal) portals;
    portals[0] = hostMemServerIndicationProxy.portalIfc; 
