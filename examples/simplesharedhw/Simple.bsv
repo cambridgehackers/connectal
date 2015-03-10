@@ -22,6 +22,7 @@
 // SOFTWARE.
 
 import FIFO::*;
+import Vector::*;
 
 typedef struct{
    Bit#(32) a;
@@ -45,7 +46,7 @@ typedef struct{
    E1 e1;
    } S3 deriving (Bits);
 
-interface Simple;
+interface SimpleRequest;
     method Action say1(Bit#(32) v);
     method Action say2(Bit#(16) a, Bit#(16) b);
     method Action say3(S1 v);
@@ -53,6 +54,10 @@ interface Simple;
     method Action say5(Bit#(32)a, Bit#(64) b, Bit#(32) c);
     method Action say6(Bit#(32)a, Bit#(40) b, Bit#(32) c);
     method Action say7(S3 v);
+    method Action say8(Vector#(128, Bit#(32)) v);
+    method Action sayv1 (Vector#(4, Int#(32)) arg1, Vector#(4, Int#(32)) arg2);
+    method Action sayv2 (Vector#(16, Int#(16)) v);
+    method Action sayv3 (Vector#(16, Int#(16)) v, Int#(16) count);
 endinterface
 
 typedef struct {
@@ -61,44 +66,64 @@ typedef struct {
     Bit#(32) c;
 } Say6ReqSimple deriving (Bits);
 
+interface Simple;
+   interface SimpleRequest request;
+endinterface
 
-module mkSimple#(Simple indication)(Simple);
-   
-   let verbose = True;
-   
+module mkSimple#(SimpleRequest indication)(Simple);
+   let verbose = False;
+
+   interface SimpleRequest request;
    method Action say1(Bit#(32) v);
-      if (verbose) $display("mkSimple::say1", v);
+      if (verbose) $display("mkSimple::say1");
       indication.say1(v);
    endmethod
-   
+
    method Action say2(Bit#(16) a, Bit#(16) b);
-      if (verbose) $display("mkSimple::say2", a, b);
+      if (verbose) $display("mkSimple::say2");
       indication.say2(a,b);
    endmethod
-      
+
    method Action say3(S1 v);
-      if (verbose) $display("mkSimple::say3", v);
+      if (verbose) $display("mkSimple::say3");
       indication.say3(v);
    endmethod
-   
+
    method Action say4(S2 v);
-      if (verbose) $display("mkSimple::say4", v);
+      if (verbose) $display("mkSimple::say4");
       indication.say4(v);
    endmethod
-      
+
    method Action say5(Bit#(32) a, Bit#(64) b, Bit#(32) c);
-      if (verbose) $display("mkSimple::say5", a, b, c);
+      if (verbose) $display("mkSimple::say5");
       indication.say5(a, b, c);
    endmethod
 
    method Action say6(Bit#(32) a, Bit#(40) b, Bit#(32) c);
-      if (verbose) $display("mkSimple::say6", a, b, c);
+      if (verbose) $display("mkSimple::say6");
       indication.say6(a, b, c);
    endmethod
 
    method Action say7(S3 v);
-      if (verbose) $display("mkSimple::say7", v);
+      if (verbose) $display("mkSimple::say7");
       indication.say7(v);
    endmethod
 
+   method Action say8(Vector#(128, Bit#(32)) v);
+      if (verbose) $display("mkSimple::say8");
+      indication.say8(v);
+   endmethod
+   method Action sayv1 (Vector#(4, Int#(32)) arg1, Vector#(4, Int#(32)) arg2);
+      if (verbose) $display("mkSimple::sayv1");
+      indication.sayv1(arg1, arg2);
+   endmethod
+   method Action sayv2 (Vector#(16, Int#(16)) v);
+      if (verbose) $display("mkSimple::sayv2");
+      indication.sayv2(v);
+   endmethod
+   method Action sayv3 (Vector#(16, Int#(16)) v, Int#(16) count);
+      if (verbose) $display("mkSimple::sayv3");
+      indication.sayv3(v, count);
+   endmethod
+   endinterface
 endmodule
