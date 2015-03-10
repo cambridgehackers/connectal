@@ -60,7 +60,15 @@ void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *dmaDevice, PortalI
 
 void DmaManager_dereference(DmaManagerPrivate *priv, int ref)
 {
+#if  !defined(BSIM) && !defined(__KERNEL__)
+#ifdef ZYNQ
+  rc = ioctl(priv->sglDevice->fpga_fd, PORTAL_DEREFERENCE, ref);
+#else
+  rc = ioctl(priv->sglDevice->fpga_fd, PCIE_DEREFERENCE, ref);
+#endif
+#else
   MMURequest_idReturn(priv->sglDevice, ref);
+#endif
 }
 
 int DmaManager_reference(DmaManagerPrivate *priv, int fd)
