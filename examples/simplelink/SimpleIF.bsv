@@ -57,12 +57,9 @@ interface Simple;
     method Action say8(Vector#(128, Bit#(32)) v);
 endinterface
 
-typedef struct {
-    Bit#(32) a;
-    Bit#(40) b;
-    Bit#(32) c;
-} Say6ReqSimple deriving (Bits);
-
+interface Link;
+   method Action start(Bool listening);
+endinterface
 
 module mkSimple#(Simple indication)(Simple);
    
@@ -77,17 +74,17 @@ module mkSimple#(Simple indication)(Simple);
       if (verbose) $display("mkSimple::say2");
       indication.say2(a,b);
    endmethod
-      
+
    method Action say3(S1 v);
       if (verbose) $display("mkSimple::say3");
       indication.say3(v);
    endmethod
-   
+
    method Action say4(S2 v);
       if (verbose) $display("mkSimple::say4");
       indication.say4(v);
    endmethod
-      
+
    method Action say5(Bit#(32) a, Bit#(64) b, Bit#(32) c);
       if (verbose) $display("mkSimple::say5");
       indication.say5(a, b, c);
@@ -107,5 +104,4 @@ module mkSimple#(Simple indication)(Simple);
       if (verbose) $display("mkSimple::say8");
       indication.say8(v);
    endmethod
-
 endmodule
