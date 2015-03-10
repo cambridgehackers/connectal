@@ -39,7 +39,6 @@
 #endif
 
 #include "GeneratedTypes.h" // generated in project directory
-#define KERNEL_REFERENCE
 
 static int trace_memory = 1;
 
@@ -72,7 +71,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, int fd)
   MMURequest_idRequest(priv->sglDevice, (SpecialTypeForSendingFd)fd);
   sem_wait(&priv->sglIdSem);
   id = priv->sglId;
-#if defined(KERNEL_REFERENCE) && !defined(BSIM) && !defined(__KERNEL__)
+#if  !defined(BSIM) && !defined(__KERNEL__)
 #ifdef ZYNQ
   PortalSendFd sendFd;
   sendFd.fd = fd;
@@ -87,12 +86,12 @@ int DmaManager_reference(DmaManagerPrivate *priv, int fd)
   if (!rc)
     sem_wait(&priv->confSem);
   rc = id;
-#else // KERNEL_REFERENCE 
+#else // defined(BSIM) || defined(__KERNEL__)
   rc = send_fd_to_portal(priv->sglDevice, fd, id, global_pa_fd);
   if (rc <= 0) {
     //PORTAL_PRINTF("%s:%d sem_wait\n", __FUNCTION__, __LINE__);
     sem_wait(&priv->confSem);
   }
-#endif // KERNEL_REFERENCE
+#endif // defined(BSIM) || defined(__KERNEL__)
   return rc;
 }
