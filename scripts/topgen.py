@@ -77,7 +77,15 @@ class iReq:
         self.inst = ''
         self.args = []
 
-def instMod(args, modname, modext, constructor, tparam):
+moduleInstantiation = '''
+   %(modname)s%(memFlag)s%(tparam)s l%(modname)s%(memFlag)s <- %(constr)s%(memFlag)s(%(args)s);
+   SharedMemoryPortal#(64) l%(modname)s%(memFlag)sMem <- mkSharedMemoryPortal(l%(modname)s%(memFlag)s.portalIfc);
+   SharedMemoryPortalConfigWrapper l%(modname)s <-
+       mkSharedMemoryPortalConfigWrapper(%(argsConfig)s, l%(modname)s%(memFlag)sMem.cfg);
+'''
+#SimpleRequestProxy lSimpleRequestProxy <- mkSimpleRequestProxy(SimpleRequestH2S);
+
+def instMod(args, modname, modext, constructor, tparam, memFlag):
     if not modname:
         return
     pmap['tparam'] = tparam
@@ -90,25 +98,39 @@ def instMod(args, modname, modext, constructor, tparam):
         if modext != 'Proxy':
             args += ', l%(userIf)s'
         enumList.append(modname + tstr)
+        pmap['argsConfig'] = modname + memFlag + tstr
+        if memFlag:
+            enumList.append(modname + memFlag + tstr)
         addPortal('l%(modname)s' % pmap)
     pmap['constr'] = pmap['constructor']
     if not pmap['constructor'] or modext:
         pmap['constr'] = 'mk' + pmap['modname']
+    pmap['args'] = args % pmap
     if modext:
-        portalInstantiate.append(('   %(modname)s%(tparam)s l%(modname)s <- %(constr)s(' + args + ');') % pmap)
+        if memFlag:
+            portalInstantiate.append(moduleInstantiation % pmap)
+        else:
+            portalInstantiate.append(('   %(modname)s%(tparam)s l%(modname)s <- %(constr)s(%(args)s);') % pmap)
     else:
         if not instantiateRequest.get(pmap['modname']):
             instantiateRequest[pmap['modname']] = iReq()
             instantiateRequest[pmap['modname']].inst = '   %(modname)s%(tparam)s l%(modname)s <- %(constr)s(%%s);' % pmap
-        instantiateRequest[pmap['modname']].args.append(args % pmap)
+        instantiateRequest[pmap['modname']].args.append(pmap['args'])
     if pmap['modname'] not in instantiatedModules:
         instantiatedModules.append(pmap['modname'])
     importfiles.append(modname)
 
+def flushModules(key):
+        temp = instantiateRequest.get(key)
+        if temp:
+            portalInstantiate.append(temp.inst % ','.join(temp.args))
+            del instantiateRequest[key]
+
 def parseParam(pitem):
     p = pitem.split(':')
     pr = p[1].split('.')
-    pmap = {'name': p[0], 'usermod': pr[0], 'userIf': p[1], 'tparam': '', 'xparam': '', 'uparam': '', 'constructor': ''}
+    pmap = {'name': p[0].replace('/',''), 'usermod': pr[0], 'userIf': p[1], 'tparam': '', \
+        'xparam': '', 'uparam': '', 'constructor': '', 'memFlag': 'Portal' if p[0][0] == '/' else ''}
     if len(p) > 2 and p[2]:
         pmap['uparam'] = p[2] + ', '
     if len(p) > 3 and p[3]:
@@ -151,22 +173,19 @@ if __name__=='__main__':
 
     for pitem in options.proxy:
         pmap = parseParam(pitem)
-        instMod('', pmap['name'], 'Proxy', '', '')
-        argstr = pmap['uparam'] + 'l%(name)sProxy.ifc'
+        instMod('', pmap['name'], 'Proxy', '', '', pmap['memFlag'])
+        argstr = pmap['uparam'] + 'l%(name)sProxy%(memFlag)s.ifc'
         if pmap['uparam'] and pmap['uparam'][0] == '/':
-            argstr = 'l%(name)sProxy.ifc, ' + pmap['uparam'][1:-2]
-        instMod(argstr, pmap['usermod'], '', '', pmap['xparam'])
+            argstr = 'l%(name)sProxy%(memFlag)s.ifc, ' + pmap['uparam'][1:-2]
+        instMod(argstr, pmap['usermod'], '', '', pmap['xparam'], False)
     for pitem in options.wrapper:
         pmap = parseParam(pitem)
         if pmap['usermod'] not in instantiatedModules:
-            instMod(pmap['uparam'], pmap['usermod'], '', '', pmap['xparam'])
+            instMod(pmap['uparam'], pmap['usermod'], '', '', pmap['xparam'], False)
+        flushModules(pmap['usermod'])
+        instMod('', pmap['name'], 'Wrapper', '', '', pmap['memFlag'])
     for key in instantiatedModules:
-        temp = instantiateRequest.get(key)
-        if temp:
-            portalInstantiate.append(temp.inst % ','.join(temp.args))
-    for pitem in options.wrapper:
-        pmap = parseParam(pitem)
-        instMod('', pmap['name'], 'Wrapper', '', '')
+        flushModules(key)
     for pitem in options.interface:
         p = pitem.split(':')
         interfaceList.append('   interface %s = l%s;' % (p[0], p[1]))
@@ -180,8 +199,8 @@ if __name__=='__main__':
                  'exportedInterfaces' : '\n'.join(interfaceList),
                  'exportedNames' : '\n'.join(exportedNames),
                  'portalMaster' : 'lMemServer.masters' if memory_flag else 'nil',
-                 'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,`PinType,`NumberOfMasters)' \
-                     if memory_flag else 'StdConnectalTop#(PhysAddrWidth)'
+                 'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,`PinType,`NumberOfMasters)' 
+#\ if memory_flag else 'StdConnectalTop#(PhysAddrWidth)'
                  }
     print 'TOPFN', topFilename
     top = util.createDirAndOpen(topFilename, 'w')

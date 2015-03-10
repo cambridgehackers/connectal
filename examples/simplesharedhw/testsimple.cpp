@@ -147,9 +147,9 @@ int main(int argc, const char **argv)
     PortalSharedParam param = {dma, alloc_sz};
     Simple *indication = new Simple(IfcNames_SimpleRequestH2S, numtimes, &sharedfunc, &param);
     SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequestS2H, &sharedfunc, &param);
-    SharedMemoryPortalConfigProxy *reqConfig = new SharedMemoryPortalConfigProxy(IfcNames_ReqConfigWrapper);
+    SharedMemoryPortalConfigProxy *reqConfig = new SharedMemoryPortalConfigProxy(IfcNames_SimpleRequestPortalS2H);
     reqConfig->setSglId(device->pint.sharedMem);
-    SharedMemoryPortalConfigProxy *indConfig = new SharedMemoryPortalConfigProxy(IfcNames_IndConfigWrapper);
+    SharedMemoryPortalConfigProxy *indConfig = new SharedMemoryPortalConfigProxy(IfcNames_SimpleRequestPortalH2S);
     indConfig->setSglId(indication->pint.sharedMem);
 
     for (int i = 0; i < numtimes; i++) {
