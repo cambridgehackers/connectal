@@ -59,6 +59,7 @@ typedef unsigned int tTlpData[6];
 #define PCIE_SEND_FD         _IOR(BNOC_IOC_MAGIC,12,tSendFd*)
 #define PCIE_DEREFERENCE     _IOR(BNOC_IOC_MAGIC,13,int)
 
+#ifdef __KERNEL__
 /*
  * Per-device data
  */
@@ -78,9 +79,6 @@ struct pmentry {
 	struct list_head pmlist;
 };
 
-#ifndef __KERNEL__
-#define __iomem
-#endif
 typedef struct tBoard {
         void __iomem     *bar0io, *bar1io, *bar2io; /* bars */
         struct pci_dev   *pci_dev; /* pci device pointer */
@@ -94,7 +92,6 @@ typedef struct tBoard {
         unsigned int      open_count;
 } tBoard;
 
-#ifdef __KERNEL__
 extern tBoard* get_pcie_portal_descriptor(void);
 #endif
 
