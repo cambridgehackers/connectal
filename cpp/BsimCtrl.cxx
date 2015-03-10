@@ -167,8 +167,8 @@ extern "C" void readResponse32(unsigned int data, unsigned int tag)
 struct linkInfo {
     char name[128];
     int listening;
-    int socket;
-    int fd;
+    int socket[2];
+    int fd[2];
     int rxdata[1];
     int txdata[1];
     pthread_mutex_t mutex;
@@ -193,21 +193,25 @@ struct linkInfo *getLinkInfo(const char *name, int listening)
 static void *bsimLinkWorker(void *p)
 {
     struct linkInfo *li = (struct linkInfo *)p;
-    if (li->listening) {
-	li->socket = init_listening(li->name, NULL);
-	li->fd = accept(li->socket, NULL, NULL);
-	if (li->fd == -1) {
-	    fprintf(stderr, "%s:%d[%d]: accept error %s\n",__FUNCTION__, __LINE__, li->socket, strerror(errno));
-	    exit(1);
+    char iname[128];
+    int i;
+    for (i = 0; i < 2; i++) {
+	snprintf(iname, sizeof(iname), "%s.%s", li->name, (i == 0) ? "l2r" : "r2l");
+	if (li->listening) {
+	    li->socket[i] = init_listening(iname, NULL);
+	    li->fd[i] = accept(li->socket[i], NULL, NULL);
+	    if (li->fd[i] == -1) {
+		fprintf(stderr, "%s:%d[%d]: accept error %s\n",__FUNCTION__, __LINE__, li->socket, strerror(errno));
+		exit(1);
+	    }
+	    fprintf(stderr, "%s:%d[%d]: accept ok fd=%d\n",__FUNCTION__, __LINE__, li->socket, li->fd[i]);
+	} else {
+	    li->socket[i] = 0;
+	    li->fd[i] = init_connecting(iname, NULL);
+	    fprintf(stderr, "%s:%d[%d]: connect ok fd=%d\n",__FUNCTION__, __LINE__, li->socket, li->fd[i]);
 	}
-	fprintf(stderr, "%s:%d[%d]: accept ok fd=%d\n",__FUNCTION__, __LINE__, li->socket, li->fd);
-    } else {
-	li->socket = 0;
-	li->fd = init_connecting(li->name, NULL);
-	fprintf(stderr, "%s:%d[%d]: connect ok fd=%d\n",__FUNCTION__, __LINE__, li->socket, li->fd);
+	fcntl(li->fd[i], F_SETFL, O_NONBLOCK);
     }
-    fcntl(li->fd, F_SETFL, O_NONBLOCK);
-
     return 0;
 }
 
@@ -226,9 +230,10 @@ extern "C" int bsimLinkCanReceive(const char *name, int listening)
 {
     struct linkInfo *li = getLinkInfo(name, listening);
     struct pollfd pollfd[1];
-    if (!li->fd)
+    int i = (listening) ? 0 : 1;
+    if (!li->fd[i])
 	return 0;
-    pollfd[0].fd = li->fd;
+    pollfd[0].fd = li->fd[i];
     pollfd[0].events = POLLIN|POLLRDHUP;
     int status = poll(pollfd, 1, 0);
     if (status)
@@ -240,9 +245,10 @@ extern "C" int bsimLinkCanTransmit(const char *name, int listening)
 {
     struct linkInfo *li = getLinkInfo(name, listening);
     struct pollfd pollfd[1];
-    if (!li->fd)
+    int i = (listening) ? 1 : 0;
+    if (!li->fd[i])
 	return 0;
-    pollfd[0].fd = li->fd;
+    pollfd[0].fd = li->fd[i];
     pollfd[0].events = POLLOUT|POLLHUP;
     int status = poll(pollfd, 1, 0);
     if (status && !printedCanTransmit) {
@@ -257,7 +263,8 @@ extern "C" int bsimLinkReceive(const char *name, int listening)
 {
     struct linkInfo *li = getLinkInfo(name, listening);
     fprintf(stderr, "%s:%d name=%s listening=%d data=%d\n", __func__, __LINE__, name, listening, li->rxdata[0]);
-    int numBytes = read(li->fd, li->rxdata, 4);
+    int i = (listening) ? 0 : 1;
+    int numBytes = read(li->fd[i], li->rxdata, 4);
     if (numBytes > 0)
 	fprintf(stderr, "%s:%d name=%s listening=%d numBytes=%d\n", __func__, __LINE__, name, listening, numBytes);
     return *(int*)&li->rxdata;
@@ -266,7 +273,8 @@ extern "C" int bsimLinkTransmit(const char *name, int listening, int val)
 {
     struct linkInfo *li = getLinkInfo(name, listening);
     fprintf(stderr, "%s:%d name=%s listening=%d val=%d\n", __func__, __LINE__, name, listening, val);
-    int numBytes = write(li->fd, &val, 4);
+    int i = (listening) ? 1 : 0;
+    int numBytes = write(li->fd[i], &val, 4);
     fprintf(stderr, "%s:%d name=%s val=%d numBytes=%d\n", __func__, __LINE__, name, val, numBytes);
     return 0;
 }
