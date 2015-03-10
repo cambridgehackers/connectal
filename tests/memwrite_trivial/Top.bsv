@@ -29,6 +29,7 @@ import Leds::*;
 import CtrlMux::*;
 import Portal::*;
 import ConnectalMemory::*;
+import HostInterface::*;
 import MemTypes::*;
 import MemServer::*;
 import MMU::*;
@@ -53,13 +54,14 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    MemwriteRequestWrapper memwriteRequestWrapper <- mkMemwriteRequestWrapper(MemwriteRequest,memwrite.request);
 
    Vector#(1, MemWriteClient#(64)) writeClients = cons(memwrite.dmaClient,nil);
-   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
-   MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUIndicationProxy.ifc);
-   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
 
+   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
-   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerW(hostMemServerIndicationProxy.ifc, writeClients, cons(hostMMU,nil));
-   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
+
+   SimpleMemServer#(PhysAddrWidth,64,1) dma <- mkSimpleMemServer(nil, writeClients, hostMemServerIndicationProxy.ifc, hostMMUIndicationProxy.ifc);
+
+   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, dma.mmuRequest);
+   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.memServerRequest);
    
    Vector#(6,StdPortal) portals;
    portals[0] = memwriteRequestWrapper.portalIfc;
