@@ -213,8 +213,8 @@ endif
 generate_altera_custom::
 ifneq ($(PIN_BINDINGS), )
 ifneq ($(filter $(BOARD), de5 htg4), )
-	$(Q)[ -e $(BOARD)/sources ] || mkdir -p $(BOARD)/sources
-	$(CONNECTALDIR)/scripts/generate-constraints.py -f altera $(PIN_BINDINGS) -o $(BOARD)/sources/$(BOARD).qsf $(CONNECTALDIR)/boardinfo/$(BOARD).json boards/$(BOARD).json
+	$(Q)[ -e $(BOARD)/generatedbsv ] || mkdir -p $(BOARD)/generatedbsv
+	$(CONNECTALDIR)/scripts/generate-constraints.py -f altera $(PIN_BINDINGS) -o $(BOARD)/generatedbsv/$(BOARD).qsf $(CONNECTALDIR)/boardinfo/$(BOARD).json boards/$(BOARD).json
 endif
 endif
 
