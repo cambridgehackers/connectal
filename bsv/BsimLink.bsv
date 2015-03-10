@@ -21,9 +21,12 @@
 // SOFTWARE.
 
 import GetPut            :: *;
+import Connectable       :: *;
 import FIFOF             :: *;
 import Pipe              :: *;
-
+import Portal            :: *;
+import MsgFormat         :: *;
+import BnocPortal        :: *;
 
 interface BsimLink#(numeric type dataWidth);
    method Action start(Bool listening);
@@ -100,3 +103,32 @@ module mkBsimLink#(String name)(BsimLink#(dataWidth)) provisos (SelectLinkWidth#
       listening <= l;
    endmethod
 endmodule
+
+instance Connectable#(PipePortal#(0,numIndications,32),BsimLink#(32));
+   module mkConnection#(PipePortal#(0,numIndications,32) pp, BsimLink#(32) link)(Empty);
+      MsgSource#(4) msgSource <- mkPortalMsgSource(pp);
+      (* fire_when_enabled *)
+      rule tx;
+	 msgSource.dst_rdy(link.tx.notFull());
+	 if (link.tx.notFull() && msgSource.src_rdy()) begin
+	    let v = msgSource.beat();
+	    link.tx.enq(v);
+	 end
+      endrule
+   endmodule
+endinstance
+
+instance Connectable#(BsimLink#(32),PipePortal#(numRequests,0,32));
+   module mkConnection#(BsimLink#(32) link,PipePortal#(numRequests,0,32) pp)(Empty);
+      MsgSink#(4) msgSink <- mkPortalMsgSink(pp);
+      (* fire_when_enabled *)
+      rule rx;
+	 msgSink.src_rdy(link.rx.notEmpty());
+	 if (link.rx.notEmpty() && msgSink.dst_rdy()) begin
+	    let v <- toGet(link.rx).get();
+	    msgSink.beat(v);
+	 end
+      endrule
+
+   endmodule
+endinstance
