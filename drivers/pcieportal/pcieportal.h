@@ -68,7 +68,13 @@ typedef struct {
         void             *virt;
         volatile uint32_t *regs;
         struct extra_info *extra;
+	struct list_head pmlist;
 } tPortal;
+
+struct pmentry {
+	struct file     *fmem;
+	struct list_head pmlist;
+};
 
 #ifndef __KERNEL__
 #define __iomem

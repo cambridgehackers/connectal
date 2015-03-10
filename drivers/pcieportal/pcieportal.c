@@ -141,10 +141,16 @@ static int pcieportal_open(struct inode *inode, struct file *filp)
 static int pcieportal_release(struct inode *inode, struct file *filp)
 {
         tPortal *this_portal = (tPortal *) filp->private_data;
+	struct list_head *pmlist;
         /* decrement the open file count */
         init_waitqueue_head(&(this_portal->extra->wait_queue));
         this_portal->board->open_count -= 1;
         //printk(KERN_INFO "%s_%d: Closed device file\n", DEV_NAME, this_board_number);
+	printk("%s_%d: Closed device file\n", DEV_NAME, this_portal->portal_number);
+	list_for_each(pmlist, &this_portal->pmlist) {
+		struct pmentry *pmentry = list_entry(pmlist, struct pmentry, pmlist);
+		printk("    struct file *fmem=%p\n", pmentry->fmem);
+	}
         return 0;                /* success */
 }
 
@@ -232,6 +238,7 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                 {
                 /* pushd down allocated fd */
 		tSendFd sendFd;
+		struct pmentry *pmentry;
                 PortalInternal devptr = {.map_base = (volatile int *)(this_board->bar2io + PORTAL_BASE_OFFSET * this_portal->portal_number),
                     .item = &kernelfunc};
 
@@ -239,6 +246,10 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                 if (err)
                     break;
                 printk("[%s:%d] PCIE_SEND_FD %x %x  **\n", __FUNCTION__, __LINE__, sendFd.fd, sendFd.id);
+		pmentry = (struct pmentry *)kzalloc(sizeof(struct pmentry), GFP_KERNEL);
+		INIT_LIST_HEAD(&pmentry->pmlist);
+		pmentry->fmem = fget(sendFd.fd);
+		list_add(&pmentry->pmlist, &this_portal->pmlist);
                 err = send_fd_to_portal(&devptr, sendFd.fd, sendFd.id, 0);
                 if (err < 0)
                     break;
@@ -517,8 +528,10 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
         this_board = &board_map[board_number];
         printk(KERN_INFO "%s: board_number = %d\n", DEV_NAME, board_number);
         memset(this_board, 0, sizeof(tBoard));
-        for (i = 0; i < MAX_NUM_PORTALS; i++)
+        for (i = 0; i < MAX_NUM_PORTALS; i++) {
                 this_board->portal[i].extra = &extra_portal_info[board_number * MAX_NUM_PORTALS + i];
+		INIT_LIST_HEAD(&this_board->portal[i].pmlist);
+	}
         this_board->info.board_number = board_number;
         return board_activate(1, this_board, dev);
 }

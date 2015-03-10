@@ -56,6 +56,11 @@
 #define driver_devel(format, ...)
 #endif
 
+struct pmentry {
+	struct file *fmem;
+	struct list_head pmlist;
+};
+
 struct portal_data {
         struct miscdevice misc; /* must be first element (pointer passed to misc_register) */
         wait_queue_head_t wait_queue;
@@ -64,6 +69,7 @@ struct portal_data {
         u32               top;
         char              name[128];
         char              irqname[128];
+	struct list_head pmlist;;
 };
 
 struct connectal_data{
@@ -151,13 +157,20 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
         case PORTAL_SEND_FD: {
                 /* pushd down allocated fd */
                 PortalSendFd sendFd;
+		struct pmentry *pmentry;
                 PortalInternal devptr = {.map_base = portal_data->map_base, .item=&kernelfunc};
 
                 int err = copy_from_user(&sendFd, (void __user *) arg, sizeof(sendFd));
                 if (err)
                     break;
                 printk("[%s:%d] PORTAL_SEND_FD %x %x  **\n", __FUNCTION__, __LINE__, sendFd.fd, sendFd.id);
+		pmentry = (struct pmentry *)kzalloc(sizeof(struct pmentry), GFP_KERNEL);
+		INIT_LIST_HEAD(&pmentry->pmlist);
+		mutex_lock(&connectal_mutex);
+		pmentry->fmem = fget(sendFd.fd);
+		list_add(&pmentry->pmlist, &portal_data->pmlist);
                 err = send_fd_to_portal(&devptr, sendFd.fd, sendFd.id, 0);
+		mutex_unlock(&connectal_mutex);
                 if (err < 0)
                     break;
                 return 0;
@@ -328,6 +341,7 @@ static int connectal_of_probe(struct platform_device *pdev)
     portal_data->map_base = ioremap_nocache(portal_data->dev_base_phys, PORTAL_BASE_OFFSET);
     portal_data->misc.name = portal_data->name;
     portal_data->misc.fops = &portal_fops;
+    INIT_LIST_HEAD(&portal_data->pmlist);
     sprintf(portal_data->irqname, "zynqportal%d", fpn);
     if (request_irq(connectal_data->portal_irq, portal_isr,
             IRQF_TRIGGER_HIGH | IRQF_SHARED , portal_data->irqname, portal_data)) {
