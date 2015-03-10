@@ -26,7 +26,7 @@ import Pipe              :: *;
 
 
 interface BsimLink;
-   method Action start(String name, Bool listening);
+   method Action start(Bool listening);
    interface PipeOut#(Bit#(32)) rx;
    interface PipeIn#(Bit#(32)) tx;
 endinterface
@@ -46,7 +46,6 @@ module mkBsimLink#(String name)(BsimLink);
 
    rule open if (!opened && started);
       bsimLinkOpen(name, listening);
-      bsimLinkOpen(name, listening);
       opened <= True;
    endrule
 
@@ -62,7 +61,7 @@ module mkBsimLink#(String name)(BsimLink);
 
    interface rx = toPipeOut(rxFifo);
    interface tx = toPipeIn(txFifo);
-   method Action start(String n, Bool l);
+   method Action start(Bool l);
       started <= True;
       listening <= l;
    endmethod
