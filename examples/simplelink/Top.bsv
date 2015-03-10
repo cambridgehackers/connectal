@@ -54,26 +54,9 @@ module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
    SimpleWrapperPortal simple2RequestWrapper <- mkSimpleWrapperPortal(SimpleRequest, simple2);
 
    // now connect them via a BlueNoC link
-   MsgSource#(4) simpleMsgSource <- mkPortalMsgSource(simple1IndicationProxy.portalIfc);
-   MsgSink#(4) simpleMsgSink <- mkPortalMsgSink(simple2RequestWrapper.portalIfc);
-
    BsimLink#(32) link <- mkBsimLink("simplelink");
-   (* fire_when_enabled *)
-   rule tx;
-      simpleMsgSource.dst_rdy(link.tx.notFull());
-      if (link.tx.notFull() && simpleMsgSource.src_rdy()) begin
-	 let v = simpleMsgSource.beat(); 
-	 link.tx.enq(v);
-      end
-   endrule	    
-   (* fire_when_enabled *)
-   rule rx;
-      simpleMsgSink.src_rdy(link.rx.notEmpty());
-      if (link.rx.notEmpty() && simpleMsgSink.dst_rdy()) begin
-	 let v <- toGet(link.rx).get();
-	 simpleMsgSink.beat(v);
-      end
-   endrule	    
+   mkConnection(simple1IndicationProxy.portalIfc, link);
+   mkConnection(link, simple2RequestWrapper.portalIfc);
 
    Link linkRequest = (interface Link;
 		       method Action start(Bool l);
