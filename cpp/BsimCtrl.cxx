@@ -25,12 +25,14 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/un.h>
 #include <pthread.h>
 #include <assert.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <poll.h>
 
 #include "portal.h"
 #include "sock_utils.h"
@@ -159,3 +161,113 @@ extern "C" void readResponse32(unsigned int data, unsigned int tag)
     respitem.tag = tag;
     portalSendFd(head.sockfd, &respitem, sizeof(respitem), -1);
 }
+
+#define NUM_LINKS 16
+
+struct linkInfo {
+    char name[128];
+    int listening;
+    int socket;
+    int fd;
+    int rxdata[1];
+    int txdata[1];
+    pthread_mutex_t mutex;
+} linkInfo[NUM_LINKS];
+
+struct linkInfo *getLinkInfo(const char *name, int listening)
+{
+    for (int i = 0; i < NUM_LINKS; i++) {
+	struct linkInfo *li = &linkInfo[i];
+	if (li->name[0] == 0) {
+	    strncpy(li->name, name, sizeof(li->name));;
+	    li->listening = listening;
+	    return li;
+	} else if ((strcmp(li->name, name) == 0)
+		   && li->listening == listening) {
+	    return li;
+	}
+    }
+    return 0;
+}
+
+static void *bsimLinkWorker(void *p)
+{
+    struct linkInfo *li = (struct linkInfo *)p;
+    if (li->listening) {
+	li->socket = init_listening(li->name, NULL);
+	li->fd = accept(li->socket, NULL, NULL);
+	if (li->fd == -1) {
+	    fprintf(stderr, "%s:%d[%d]: accept error %s\n",__FUNCTION__, __LINE__, li->socket, strerror(errno));
+	    exit(1);
+	}
+	fprintf(stderr, "%s:%d[%d]: accept ok fd=%d\n",__FUNCTION__, __LINE__, li->socket, li->fd);
+    } else {
+	li->socket = 0;
+	li->fd = init_connecting(li->name, NULL);
+	fprintf(stderr, "%s:%d[%d]: connect ok fd=%d\n",__FUNCTION__, __LINE__, li->socket, li->fd);
+    }
+    fcntl(li->fd, F_SETFL, O_NONBLOCK);
+
+    return 0;
+}
+
+extern "C" void bsimLinkOpen(const char *name, int listening)
+{
+    fprintf(stderr, "%s:%d name=%s listening=%d\n", __func__, __LINE__, name, listening);
+    struct linkInfo *li = getLinkInfo(name, listening);
+    if (li) {
+	li->listening = listening;
+	pthread_mutex_init(&li->mutex, NULL);
+	pthread_t threaddata;
+	pthread_create(&threaddata, NULL, &bsimLinkWorker, li);
+    }
+}
+extern "C" int bsimLinkCanReceive(const char *name, int listening)
+{
+    struct linkInfo *li = getLinkInfo(name, listening);
+    struct pollfd pollfd[1];
+    if (!li->fd)
+	return 0;
+    pollfd[0].fd = li->fd;
+    pollfd[0].events = POLLIN|POLLRDHUP;
+    int status = poll(pollfd, 1, 0);
+    if (status)
+      fprintf(stderr, "%s:%d name=%s listening=%d status=%d revents=%d\n", __func__, __LINE__, name, listening, status, pollfd[0].revents);
+    return status;
+}
+static int printedCanTransmit;
+extern "C" int bsimLinkCanTransmit(const char *name, int listening)
+{
+    struct linkInfo *li = getLinkInfo(name, listening);
+    struct pollfd pollfd[1];
+    if (!li->fd)
+	return 0;
+    pollfd[0].fd = li->fd;
+    pollfd[0].events = POLLOUT|POLLHUP;
+    int status = poll(pollfd, 1, 0);
+    if (status && !printedCanTransmit) {
+      fprintf(stderr, "%s:%d name=%s listening=%d status=%d revents=%d\n", __func__, __LINE__, name, listening, status, pollfd[0].revents);
+      printedCanTransmit = 1;
+    }
+    if (!status)
+      printedCanTransmit = 0;
+    return status;
+}
+extern "C" int bsimLinkReceive(const char *name, int listening)
+{
+    struct linkInfo *li = getLinkInfo(name, listening);
+    fprintf(stderr, "%s:%d name=%s listening=%d data=%d\n", __func__, __LINE__, name, listening, li->rxdata[0]);
+    int numBytes = read(li->fd, li->rxdata, 4);
+    if (numBytes > 0)
+	fprintf(stderr, "%s:%d name=%s listening=%d numBytes=%d\n", __func__, __LINE__, name, listening, numBytes);
+    return *(int*)&li->rxdata;
+}
+extern "C" int bsimLinkTransmit(const char *name, int listening, int val)
+{
+    struct linkInfo *li = getLinkInfo(name, listening);
+    fprintf(stderr, "%s:%d name=%s listening=%d val=%d\n", __func__, __LINE__, name, listening, val);
+    int numBytes = write(li->fd, &val, 4);
+    fprintf(stderr, "%s:%d name=%s val=%d numBytes=%d\n", __func__, __LINE__, name, val, numBytes);
+    return 0;
+}
+
