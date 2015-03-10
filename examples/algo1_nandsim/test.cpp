@@ -136,5 +136,7 @@ int main(int argc, const char **argv)
   strstrRequest->search(ref_haystackInNandMemory, haystack_len);
   strstrIndication->wait();  
 
+  fprintf(stderr, "algo1_nandsim: Done %d\n",  (strstrIndication->match_cnt==3));
+  sleep(2);
   exit(!(strstrIndication->match_cnt==3));
 }
