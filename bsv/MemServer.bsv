@@ -331,7 +331,8 @@ module mkSimpleMemServer#(Vector#(numReadClients, MemReadClient#(dataWidth)) rea
 	     Add#(d__, TLog#(b__), 6),
 	     Add#(e__, TLog#(a__), 6),
 	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
-	     Add#(1, f__, dataWidth)
+	     Add#(1, f__, dataWidth),
+	     Add#(TLog#(TDiv#(dataWidth, 8)), g__, 8)
 	     );
 
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, mmuIndication);
