@@ -52,7 +52,7 @@ function Get#(t) null_get();
            endinterface);
 endfunction
 
-function  PhysMemWriteClient#(addrWidth, busWidth) null_mem_write_client();
+function  PhysMemWriteClient#(addrWidth, busWidth) null_phys_mem_write_client();
    return (interface PhysMemWriteClient;
               interface Get writeReq = null_get;
               interface Get writeData = null_get;
@@ -60,8 +60,23 @@ function  PhysMemWriteClient#(addrWidth, busWidth) null_mem_write_client();
            endinterface);
 endfunction
 
-function  PhysMemReadClient#(addrWidth, busWidth) null_mem_read_client();
+function  PhysMemReadClient#(addrWidth, busWidth) null_phys_mem_read_client();
    return (interface PhysMemReadClient;
+              interface Get readReq = null_get;
+              interface Put readData = null_put;
+           endinterface);
+endfunction
+
+function  MemWriteClient#(busWidth) null_mem_write_client();
+   return (interface MemWriteClient;
+              interface Get writeReq = null_get;
+              interface Get writeData = null_get;
+              interface Put writeDone = null_put;
+           endinterface);
+endfunction
+
+function  MemReadClient#(busWidth) null_mem_read_client();
+   return (interface MemReadClient;
               interface Get readReq = null_get;
               interface Put readData = null_put;
            endinterface);
@@ -171,7 +186,7 @@ module mkMemServerR#(MemServerIndication indication,
    
    function PhysMemMaster#(addrWidth,dataWidth) mkm(Integer i) = (interface PhysMemMaster#(addrWidth,dataWidth);
 								 interface PhysMemReadClient read_client = readers[i].read_client;
-								 interface PhysMemWriteClient write_client = null_mem_write_client;
+								 interface PhysMemWriteClient write_client = null_phys_mem_write_client;
 							      endinterface);
 
    Stmt dbgStmt = seq
@@ -254,7 +269,7 @@ module mkMemServerW#(MemServerIndication indication,
    endrule
 
    function PhysMemMaster#(PhysAddrWidth,dataWidth) mkm(Integer i) = (interface PhysMemMaster#(PhysAddrWidth,dataWidth);
-								 interface PhysMemReadClient read_client = null_mem_read_client;
+								 interface PhysMemReadClient read_client = null_phys_mem_read_client;
 								 interface PhysMemWriteClient write_client = writers[i].write_client;
 							      endinterface);
    
@@ -295,3 +310,41 @@ module mkMemServerW#(MemServerIndication indication,
    interface masters = map(mkm,genVector);
 endmodule
 
+interface SimpleMemServer#(numeric type addrWidth, numeric type dataWidth, numeric type nMasters);
+   interface MemServerRequest memServerRequest;
+   interface MMURequest mmuRequest;
+   interface Vector#(nMasters,PhysMemMaster#(addrWidth, dataWidth)) masters;
+   interface Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addr;
+endinterface
+
+module mkSimpleMemServer#(Vector#(numReadClients, MemReadClient#(dataWidth)) readClients,
+			  Vector#(numWriteClients, MemWriteClient#(dataWidth)) writeClients,
+			  MemServerIndication indication,
+			  MMUIndication mmuIndication)(SimpleMemServer#(PhysAddrWidth, dataWidth,nMasters))
+   provisos (Max#(nMasters,numReadClients,numReadClientsActual),
+	     Add#(numReadClients,numReadClientsNull,numReadClientsActual),
+	     Mul#(a__, nMasters, numReadClientsActual),
+	     Max#(nMasters,numWriteClients,numWriteClientsActual),
+	     Add#(numWriteClients,numWriteClientsNull,numWriteClientsActual),
+	     Mul#(b__, nMasters, numWriteClientsActual),
+	     Add#(TLog#(TDiv#(dataWidth, 8)), c__, 10),
+	     Add#(d__, TLog#(b__), 6),
+	     Add#(e__, TLog#(a__), 6),
+	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
+	     Add#(1, f__, dataWidth)
+	     );
+
+   MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, mmuIndication);
+
+   Vector#(numReadClientsNull, MemReadClient#(dataWidth)) nullReadClients = replicate(null_mem_read_client());
+   Vector#(numWriteClientsNull, MemWriteClient#(dataWidth)) nullWriteClients = replicate(null_mem_write_client());
+
+   MemServer#(PhysAddrWidth,dataWidth,nMasters) dma <- mkMemServerRW(indication, append(readClients,nullReadClients),
+								     append(writeClients,nullWriteClients),
+								     cons(hostMMU,nil));
+
+   interface MemServerRequest memServerRequest = dma.request;
+   interface MMURequest mmuRequest = hostMMU.request;
+   interface Vector masters = dma.masters;
+   interface Vector addr = hostMMU.addr;
+endmodule
