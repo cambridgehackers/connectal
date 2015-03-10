@@ -26,6 +26,7 @@ import Pipe              :: *;
 
 
 interface BsimLink;
+   method Action start(String name, Bool listening);
    interface PipeOut#(Bit#(32)) rx;
    interface PipeIn#(Bit#(32)) tx;
 endinterface
@@ -36,12 +37,15 @@ import "BDPI" function Bool                   bsimLinkCanTransmit(String name, B
 import "BDPI" function ActionValue#(Bit#(32)) bsimLinkReceive(String name, Bool listening);
 import "BDPI" function Action                 bsimLinkTransmit(String name, Bool listening, Bit#(32) value);
 
-module mkBsimLink#(String name, Bool listening)(BsimLink);
+module mkBsimLink#(String name)(BsimLink);
    FIFOF#(Bit#(32)) rxFifo <- mkFIFOF();
    FIFOF#(Bit#(32)) txFifo <- mkFIFOF();
-   Reg#(Bool) opened <- mkReg(False);
+   Reg#(Bool) opened    <- mkReg(False);
+   Reg#(Bool) listening <- mkReg(False);
+   Reg#(Bool) started   <- mkReg(False);
 
-   rule open if (!opened);
+   rule open if (!opened && started);
+      bsimLinkOpen(name, listening);
       bsimLinkOpen(name, listening);
       opened <= True;
    endrule
@@ -58,4 +62,8 @@ module mkBsimLink#(String name, Bool listening)(BsimLink);
 
    interface rx = toPipeOut(rxFifo);
    interface tx = toPipeIn(txFifo);
+   method Action start(String n, Bool l);
+      started <= True;
+      listening <= l;
+   endmethod
 endmodule
