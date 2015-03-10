@@ -57,7 +57,7 @@ module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
    MsgSource#(4) simpleMsgSource <- mkPortalMsgSource(simple1IndicationProxy.portalIfc);
    MsgSink#(4) simpleMsgSink <- mkPortalMsgSink(simple2RequestWrapper.portalIfc);
 
-   BsimLink link <- mkBsimLink("simplelink");
+   BsimLink#(32) link <- mkBsimLink("simplelink");
    (* fire_when_enabled *)
    rule tx;
       simpleMsgSource.dst_rdy(link.tx.notFull());

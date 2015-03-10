@@ -25,21 +25,55 @@ import FIFOF             :: *;
 import Pipe              :: *;
 
 
-interface BsimLink;
+interface BsimLink#(numeric type dataWidth);
    method Action start(Bool listening);
-   interface PipeOut#(Bit#(32)) rx;
-   interface PipeIn#(Bit#(32)) tx;
+   interface PipeOut#(Bit#(dataWidth)) rx;
+   interface PipeIn#(Bit#(dataWidth)) tx;
 endinterface
 
 import "BDPI" function Action                 bsimLinkOpen(String name, Bool listening);
 import "BDPI" function Bool                   bsimLinkCanReceive(String name, Bool listening);
 import "BDPI" function Bool                   bsimLinkCanTransmit(String name, Bool listening);
-import "BDPI" function ActionValue#(Bit#(32)) bsimLinkReceive(String name, Bool listening);
-import "BDPI" function Action                 bsimLinkTransmit(String name, Bool listening, Bit#(32) value);
+import "BDPI" function ActionValue#(Bit#(32)) bsimLinkReceive32(String name, Bool listening);
+import "BDPI" function Action                 bsimLinkTransmit32(String name, Bool listening, Bit#(32) value);
+import "BDPI" function ActionValue#(Bit#(64)) bsimLinkReceive64(String name, Bool listening);
+import "BDPI" function Action                 bsimLinkTransmit64(String name, Bool listening, Bit#(64) value);
 
-module mkBsimLink#(String name)(BsimLink);
-   FIFOF#(Bit#(32)) rxFifo <- mkFIFOF();
-   FIFOF#(Bit#(32)) txFifo <- mkFIFOF();
+typeclass SelectLinkWidth#(numeric type dsz);
+   function ActionValue#(Bit#(dsz)) bsimLinkReceive(String name, Bool listening);
+   function Action bsimLinkTransmit(String name, Bool listening, Bit#(dsz) value);
+endtypeclass
+
+instance SelectLinkWidth#(32);
+   function ActionValue#(Bit#(32)) bsimLinkReceive(String name, Bool listening);
+   actionvalue
+      let v <- bsimLinkReceive32(name, listening);
+      return v;
+   endactionvalue
+   endfunction
+   function Action bsimLinkTransmit(String name, Bool listening, Bit#(32) value);
+   action
+      bsimLinkTransmit32(name, listening, value);
+   endaction
+   endfunction
+endinstance
+instance SelectLinkWidth#(64);
+   function ActionValue#(Bit#(64)) bsimLinkReceive(String name, Bool listening);
+   actionvalue
+      let v <- bsimLinkReceive64(name, listening);
+      return v;
+   endactionvalue
+   endfunction
+   function Action bsimLinkTransmit(String name, Bool listening, Bit#(64) value);
+   action
+      bsimLinkTransmit64(name, listening, value);
+   endaction
+   endfunction
+endinstance
+
+module mkBsimLink#(String name)(BsimLink#(dataWidth)) provisos (SelectLinkWidth#(dataWidth));
+   FIFOF#(Bit#(dataWidth)) rxFifo <- mkFIFOF();
+   FIFOF#(Bit#(dataWidth)) txFifo <- mkFIFOF();
    Reg#(Bool) opened    <- mkReg(False);
    Reg#(Bool) listening <- mkReg(False);
    Reg#(Bool) started   <- mkReg(False);
