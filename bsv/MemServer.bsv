@@ -98,17 +98,26 @@ module mkMemServerRW#(MemServerIndication indication,
 		      Vector#(numMMUs,MMU#(PhysAddrWidth)) mmus)
    (MemServer#(PhysAddrWidth, dataWidth, nMasters))
    
-   provisos (Add#(1,a__,dataWidth),
+   provisos (Max#(nMasters,numReadClients,numReadClientsActual),
+	     Add#(numReadClients,numReadClientsNull,numReadClientsActual),
+	     Mul#(a__, nMasters, numReadClientsActual),
+	     Max#(nMasters,numWriteClients,numWriteClientsActual),
+	     Add#(numWriteClients,numWriteClientsNull,numWriteClientsActual),
+	     Mul#(b__, nMasters, numWriteClientsActual),
+	     Add#(1,c__,dataWidth),
 	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
-	     Mul#(nwc, nMasters, numWriteClients),
-	     Mul#(nrc, nMasters, numReadClients),
-	     Add#(b__, TLog#(nrc), 6),
-	     Add#(c__, TLog#(nwc), 6),
-	     Add#(TLog#(TDiv#(dataWidth, 8)), d__, BurstLenSize)
-	     );
+	     Add#(TLog#(TDiv#(dataWidth, 8)), d__, BurstLenSize),
+	     Mul#(h__, nMasters, TMax#(nMasters, numReadClientsActual)),
+	     Mul#(i__, nMasters, TMax#(nMasters, numWriteClientsActual)),
+	     Add#(e__, TLog#(b__), 6),
+	     Add#(f__, TLog#(a__), 6)
+      );
 
-   MemServer#(PhysAddrWidth,dataWidth,nMasters) reader <- mkMemServerR(indication,  readClients, mmus);
-   MemServer#(PhysAddrWidth,dataWidth,nMasters) writer <- mkMemServerW(indication, writeClients, mmus);
+   Vector#(numReadClientsNull, MemReadClient#(dataWidth)) nullReadClients = replicate(null_mem_read_client());
+   Vector#(numWriteClientsNull, MemWriteClient#(dataWidth)) nullWriteClients = replicate(null_mem_write_client());
+
+   MemServer#(PhysAddrWidth,dataWidth,nMasters) reader <- mkMemServerR(indication, append(readClients,nullReadClients), mmus);
+   MemServer#(PhysAddrWidth,dataWidth,nMasters) writer <- mkMemServerW(indication, append(writeClients,nullWriteClients), mmus);
    
    function PhysMemMaster#(PhysAddrWidth,dataWidth) mkm(Integer i) = (interface PhysMemMaster#(PhysAddrWidth,dataWidth);
 								 interface PhysMemReadClient read_client = reader.masters[i].read_client;
@@ -321,28 +330,20 @@ module mkSimpleMemServer#(Vector#(numReadClients, MemReadClient#(dataWidth)) rea
 			  Vector#(numWriteClients, MemWriteClient#(dataWidth)) writeClients,
 			  MemServerIndication indication,
 			  MMUIndication mmuIndication)(SimpleMemServer#(PhysAddrWidth, dataWidth,nMasters))
-   provisos (Max#(nMasters,numReadClients,numReadClientsActual),
-	     Add#(numReadClients,numReadClientsNull,numReadClientsActual),
-	     Mul#(a__, nMasters, numReadClientsActual),
-	     Max#(nMasters,numWriteClients,numWriteClientsActual),
-	     Add#(numWriteClients,numWriteClientsNull,numWriteClientsActual),
-	     Mul#(b__, nMasters, numWriteClientsActual),
-	     Add#(TLog#(TDiv#(dataWidth, 8)), c__, 10),
-	     Add#(d__, TLog#(b__), 6),
-	     Add#(e__, TLog#(a__), 6),
+   provisos (Mul#(a__, nMasters, TMax#(nMasters, numReadClients)),
+	     Mul#(b__, nMasters, TMax#(nMasters, numWriteClients)),
+	     Add#(1, c__, dataWidth),
 	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
-	     Add#(1, f__, dataWidth),
-	     Add#(TLog#(TDiv#(dataWidth, 8)), g__, 8)
+	     Add#(TLog#(TDiv#(dataWidth, 8)), d__, BurstLenSize),
+	     Mul#(e__, nMasters, TMax#(nMasters, TMax#(nMasters, numReadClients))),
+	     Mul#(f__, nMasters, TMax#(nMasters, TMax#(nMasters, numWriteClients))),
+	     Add#(g__, TLog#(b__), 6),
+	     Add#(h__, TLog#(a__), 6)
 	     );
 
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, mmuIndication);
 
-   Vector#(numReadClientsNull, MemReadClient#(dataWidth)) nullReadClients = replicate(null_mem_read_client());
-   Vector#(numWriteClientsNull, MemWriteClient#(dataWidth)) nullWriteClients = replicate(null_mem_write_client());
-
-   MemServer#(PhysAddrWidth,dataWidth,nMasters) dma <- mkMemServerRW(indication, append(readClients,nullReadClients),
-								     append(writeClients,nullWriteClients),
-								     cons(hostMMU,nil));
+   MemServer#(PhysAddrWidth,dataWidth,nMasters) dma <- mkMemServerRW(indication, readClients, writeClients, cons(hostMMU,nil));
 
    interface MemServerRequest memServerRequest = dma.request;
    interface MMURequest mmuRequest = hostMMU.request;
