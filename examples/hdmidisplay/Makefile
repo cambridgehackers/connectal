@@ -2,9 +2,9 @@
 CONNECTALDIR?=../..
 LIBBSVDIR=$(CONNECTALDIR)/lib/bsv
 ifeq ($(BOARD),bluesim)
-H2S_INTERFACES = HdmiDisplay:HdmiDisplayIndication:defaultClock HdmiDisplay:HdmiInternalIndication
+H2S_INTERFACES = HdmiDisplay:HdmiDisplayIndication,HdmiInternalIndication:defaultClock
 else
-H2S_INTERFACES = HdmiDisplay:HdmiDisplayIndication:host.ps7.fclkclk\[1\] HdmiDisplay:HdmiInternalIndication:host.ps7.fclkclk\[1\]
+H2S_INTERFACES = HdmiDisplay:HdmiDisplayIndication,HdmiInternalIndication:host.ps7.fclkclk\[1\]
 endif
 S2H_INTERFACES = HdmiDisplayRequest:HdmiDisplay.displayRequest HdmiInternalRequest:HdmiDisplay.internalRequest
 MEM_INTERFACES = mkMemServerR:cons\(lHdmiDisplay.dmaClient,nil\)

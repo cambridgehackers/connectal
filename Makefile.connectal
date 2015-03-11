@@ -117,7 +117,7 @@ ifneq ($(CPPFILES2),)
 CPPFILES2 += $(CONNECTALDIR)/cpp/dmaManager.c
 endif
 ifneq ($(USE_AUTOTOP),)
-S2H_INTERFACES += MMURequest:MMU.request:0,True:PhysAddrWidth
+S2H_INTERFACES += MMURequest:MMU.request MemServerRequest:MemServer.request
 H2S_INTERFACES += MMU:MMUIndication:0,True:PhysAddrWidth
 endif
 endif
@@ -181,6 +181,7 @@ GPROJ = $(BOARD)/generatedbsv
 GENTOP = $(GPROJ)/Top.bsv
 endif
 
+comma := ,
 gentarget:: process_autotop generate_altera_custom
 	@[ -e $(CONNECTALDIR)/scripts/syntax/parsetab.py ] || make -C $(CONNECTALDIR) scripts/syntax/parsetab.py
 	$(Q)[ -e $(IPDIR) ] || mkdir -p $(IPDIR)
@@ -194,7 +195,7 @@ endif
 	$(foreach f, $(CPPFILES), --source $f) \
 	$(foreach f, $(CPPFILES2), --source2 $f) \
 	$(foreach f, $(S2H_INTERFACES), -interfaces $(word 1, $(subst /,, $(subst :, , $f)))) \
-	$(foreach f, $(H2S_INTERFACES), -interfaces $(word 2, $(subst /,, $(subst :, , $f)))) \
+	$(foreach f, $(H2S_INTERFACES), $(foreach g, $(subst $(comma), , $(word 2, $(subst :, , $f))), -interfaces $g)) \
 	$(foreach f, $(PORTAL_DUMP_MAP), --dump_map $f) \
         $(CONNECTALFLAGS) $(BSVFILES) $(GENTOP) $(PRINTF_EXTRA) $(VERBOSE_SWITCH)
 
@@ -206,8 +207,7 @@ ifneq ($(USE_AUTOTOP),)
 	$(Q)$(CONNECTALDIR)/scripts/topgen.py --project-dir $(GPROJ) $(AUTOTOP) \
 	    $(foreach f, $(S2H_INTERFACES), --wrapper $f) \
 	    $(foreach f, $(H2S_INTERFACES), --proxy $f)   \
-	    $(foreach f, $(MEM_INTERFACES), --wrapper MemServerRequest:MemServer.request:$(word 2, $(subst /,, $(subst :, , $f))),cons\(lMMU,nil\)) \
-	    $(foreach f, $(MEM_INTERFACES), --proxy MemServer:MemServerIndication:/$(word 2, $(subst /,, $(subst :, , $f))),cons\(lMMU,nil\):PhysAddrWidth,DataBusWidth,\`NumberOfMasters:$(word 1, $(subst /,, $(subst :, , $f))))
+	    $(foreach f, $(MEM_INTERFACES), --proxy MemServer:MemServerIndication:/$(word 2, $(subst :, , $f)),cons\(lMMU,nil\):PhysAddrWidth,DataBusWidth,\`NumberOfMasters:$(word 1, $(subst /,, $(subst :, , $f))))
 endif
 
 generate_altera_custom::

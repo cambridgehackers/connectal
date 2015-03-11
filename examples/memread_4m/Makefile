@@ -1,6 +1,6 @@
 
 CONNECTALDIR?=../..
-S2H_INTERFACES = MemreadRequest:Memread.request::\`NumberOfMasters
+S2H_INTERFACES = MemreadRequest:Memread.request
 H2S_INTERFACES = Memread:MemreadIndication::\`NumberOfMasters
 MEM_INTERFACES = mkMemServerR:lMemread.dmaClients
 BSVFILES = Memread.bsv

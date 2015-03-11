@@ -128,14 +128,8 @@ def flushModules(key):
 def parseParam(pitem, proxy):
     p = pitem.split(':')
     pmap = {'tparam': '', 'xparam': '', 'uparam': '', 'constructor': '', 'memFlag': 'Portal' if p[0][0] == '/' else ''}
-    if proxy:
-        pmap['usermod'] = p[0].replace('/','')
-        pmap['name'] = p[1]
-    else:  # wrapper
-        pmap['name'] = p[0].replace('/','')
-        pmap['userIf'] = p[1]
-        pr = p[1].split('.')
-        pmap['usermod'] = pr[0]
+    pmap['usermod'] = p[0].replace('/','')
+    pmap['name'] = p[1]
     if len(p) > 2 and p[2]:
         pmap['uparam'] = p[2] + ', '
     if len(p) > 3 and p[3]:
@@ -178,13 +172,20 @@ if __name__=='__main__':
 
     for pitem in options.proxy:
         pmap = parseParam(pitem, True)
-        instMod('', pmap['name'], 'Proxy', '', '', pmap['memFlag'])
-        argstr = pmap['uparam'] + 'l%(name)sProxy%(memFlag)s.ifc'
-        if pmap['uparam'] and pmap['uparam'][0] == '/':
-            argstr = 'l%(name)sProxy%(memFlag)s.ifc, ' + pmap['uparam'][1:-2]
-        instMod(argstr, pmap['usermod'], '', '', pmap['xparam'], False)
+        ptemp = pmap['name']
+        for pmap['name'] in ptemp.split(','):
+            instMod('', pmap['name'], 'Proxy', '', '', pmap['memFlag'])
+            argstr = pmap['uparam'] + 'l%(name)sProxy%(memFlag)s.ifc'
+            if pmap['uparam'] and pmap['uparam'][0] == '/':
+                argstr = 'l%(name)sProxy%(memFlag)s.ifc, ' + pmap['uparam'][1:-2]
+            instMod(argstr, pmap['usermod'], '', '', pmap['xparam'], False)
+            pmap['uparam'] = ''
     for pitem in options.wrapper:
         pmap = parseParam(pitem, False)
+        pmap['userIf'] = pmap['name']
+        pmap['name'] = pmap['usermod']
+        pr = pmap['userIf'].split('.')
+        pmap['usermod'] = pr[0]
         if pmap['usermod'] not in instantiatedModules:
             instMod(pmap['uparam'], pmap['usermod'], '', '', pmap['xparam'], False)
         flushModules(pmap['usermod'])

@@ -1,6 +1,6 @@
 
 CONNECTALDIR?=../..
-S2H_INTERFACES = MemwriteRequest:Memwrite.request::\`NumberOfMasters
+S2H_INTERFACES = MemwriteRequest:Memwrite.request
 H2S_INTERFACES = Memwrite:MemwriteIndication::\`NumberOfMasters
 MEM_INTERFACES = mkMemServerW:lMemwrite.dmaClients
 BSVFILES = Memwrite.bsv
