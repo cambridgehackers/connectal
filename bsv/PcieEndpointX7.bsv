@@ -211,6 +211,10 @@ typedef 8 NumLeds;
 typedef 8 PcieLanes;
 typedef 8 NumLeds;
 `endif
+`ifdef BOARD_netfpgasume
+typedef 8 PcieLanes;
+typedef 2 NumLeds;
+`endif
 
 (* synthesize *)
 module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
