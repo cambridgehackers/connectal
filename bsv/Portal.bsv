@@ -58,8 +58,8 @@ function Vector#(16, ReadOnly#(Bool)) getInterruptVector(Vector#(numPortals, Mem
 endfunction
 
 interface SharedMemoryPortal#(numeric type dataBusWidth);
-   interface MemReadClient#(dataBusWidth)  readClient;
-   interface MemWriteClient#(dataBusWidth) writeClient;
+   interface Vector#(1, MemReadClient#(dataBusWidth))  readClient;
+   interface Vector#(1, MemWriteClient#(dataBusWidth)) writeClient;
    interface SharedMemoryPortalConfig cfg;
    interface ReadOnly#(Bool) interrupt;
 endinterface

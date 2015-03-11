@@ -4,7 +4,7 @@ CONNECTALDIR?=../..
 INTERFACES = SharedMemoryPortalConfig
 S2H_INTERFACES = /SimpleRequest:Simple.request
 H2S_INTERFACES = /Simple:SimpleRequest
-MEM_INTERFACES = "cons(lSimpleRequestWrapperPortalMem.readClient,cons(lSimpleRequestProxyPortalMem.readClient,nil)),cons(lSimpleRequestWrapperPortalMem.writeClient,cons(lSimpleRequestProxyPortalMem.writeClient,nil))"
+MEM_INTERFACES = "append(lSimpleRequestWrapperPortalMem.readClient,lSimpleRequestProxyPortalMem.readClient),append(lSimpleRequestWrapperPortalMem.writeClient,lSimpleRequestProxyPortalMem.writeClient)"
 
 BSVFILES = Simple.bsv
 #BSVFILES += Top.bsv
