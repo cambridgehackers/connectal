@@ -233,7 +233,7 @@ interface Pcie3Wrap;
     interface Pcie3wrapSys     sys;
     interface Pcie3wrapUser     user;
 endinterface
-import "BVI" pcie3_7x_0(pci_exp_txn, =
+import "BVI" pcie3_7x_0 =
 module mkPcie3Wrap(Pcie3Wrap);
     default_clock clk();
     default_reset rst();
