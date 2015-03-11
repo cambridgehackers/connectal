@@ -7,7 +7,7 @@ else
 H2S_INTERFACES = HdmiDisplay:HdmiDisplayIndication,HdmiInternalIndication:host.ps7.fclkclk\[1\]
 endif
 S2H_INTERFACES = HdmiDisplayRequest:HdmiDisplay.displayRequest HdmiInternalRequest:HdmiDisplay.internalRequest
-MEM_INTERFACES = cons\(lHdmiDisplay.dmaClient,nil\),nil
+MEM_INTERFACES = "cons(lHdmiDisplay.dmaClient,nil),nil"
 AUTOTOP = --importfiles HDMI --importfiles HDMI16 --interface pins:HdmiDisplay.hdmi
 
 BSVFILES = $(LIBBSVDIR)/HdmiDisplay.bsv $(LIBBSVDIR)/HDMI.bsv $(CONNECTALDIR)/lib/deprecated/DmaUtils.bsv HDMI16.bsv

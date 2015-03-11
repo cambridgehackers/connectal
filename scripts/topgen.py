@@ -130,6 +130,11 @@ def parseParam(pitem, proxy):
     pmap = {'tparam': '', 'xparam': '', 'uparam': '', 'constructor': '', 'memFlag': 'Portal' if p[0][0] == '/' else ''}
     pmap['usermod'] = p[0].replace('/','')
     pmap['name'] = p[1]
+    ind = pmap['usermod'].find('#')
+    if ind > 0:
+        pmap['xparam'] = pmap['usermod'][ind:]
+        pmap['usermod'] = pmap['usermod'][:ind]
+        print 'JJJ', pmap['usermod'], pmap['xparam']
     if len(p) > 2 and p[2]:
         pmap['uparam'] = p[2] + ', '
     if len(p) > 3 and p[3]:
