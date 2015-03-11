@@ -18,5 +18,5 @@ set -e
    -f \
    cfg_req_pm_transition_l23 \
    -o \
-   ../xilinx/PCIE3.bsv \
+   ../xilinx/PCIEWRAPPER3.bsv \
    ../../out/netfpgasume/pcie3_7x_0/pcie3_7x_0_stub.v
