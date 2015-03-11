@@ -62,15 +62,15 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
    MemServer#(PhysAddrWidth,DataBusWidth,1) dma <- mkMemServer(memread.dmaClient, nil, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
    MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(MemServerRequestS2H, dma.request);
 
-   MemMaster#(PhysAddrWidth,DataBusWidth) dma1 = (interface MemMaster;
-	  interface MemReadClient read_client;
+   PhysMemMaster#(PhysAddrWidth,DataBusWidth) dma1 = (interface PhysMemMaster;
+	  interface PhysMemReadClient read_client;
 	     interface Get readReq;
 		method ActionValue#(PhysMemRequest#(PhysAddrWidth)) get() if (False);
 		   return ?;
 	        endmethod
 	     endinterface
 	  endinterface
-	  interface MemWriteClient write_client;
+	  interface PhysMemWriteClient write_client;
 	     interface Get writeReq;
 		method ActionValue#(PhysMemRequest#(PhysAddrWidth)) get() if (False);
 		   return ?;
@@ -125,7 +125,7 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
 	 $display("unknown tlp %h", tlp);
       end
 
-      addrGenerator.request.put(PhysMemRequest {addr: addr, burstLen: burstLen<<2, tag: truncate(tag) });
+      addrGenerator.request.put(PhysMemRequest {addr: addr, burstLen: truncate(pack(burstLen<<2)), tag: truncate(tag) });
       reqCycles <= newReqCycles;
       tlpFifo.enq(tlp);
 

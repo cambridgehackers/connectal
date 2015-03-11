@@ -58,24 +58,23 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
    Memwrite memwrite <- mkMemwrite(memwriteIndicationProxy.ifc);
    MemwriteRequestWrapper memwriteRequestWrapper <- mkMemwriteRequestWrapper(MemwriteRequestS2H,memwrite.request);
 
-   Vector#(1, MemWriteClient#(DataBusWidth)) writeClients = cons(memwrite.dmaClient,nil);
    MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(MMUIndicationH2S);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUIndicationProxy.ifc);
    MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(MMURequestS2H, hostMMU.request);
 
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(MemServerIndicationH2S);
-   MemServer#(PhysAddrWidth,DataBusWidth,1) dma <- mkMemServer(nil, writeClients, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
+   MemServer#(PhysAddrWidth,DataBusWidth,1) dma <- mkMemServer(nil, memwrite.dmaClient, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
    MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(MemServerRequestS2H, dma.request);
 
-   MemMaster#(PhysAddrWidth,DataBusWidth) dma1 = (interface MemMaster;
-	  interface MemReadClient read_client;
+   PhysMemMaster#(PhysAddrWidth,DataBusWidth) dma1 = (interface PhysMemMaster;
+	  interface PhysMemReadClient read_client;
 	     interface Get readReq;
 		method ActionValue#(PhysMemRequest#(PhysAddrWidth)) get() if (False);
 		   return ?;
 	        endmethod
 	     endinterface
 	  endinterface
-	  interface MemWriteClient write_client;
+	  interface PhysMemWriteClient write_client;
 	     interface Get writeReq;
 		method ActionValue#(PhysMemRequest#(PhysAddrWidth)) get() if (False);
 		   return ?;
