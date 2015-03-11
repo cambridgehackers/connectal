@@ -96,13 +96,12 @@ module mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,DataBusWidth,
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
    let rcs = cons(strstr.config_read_client,cons(flashtop.hostMemReadClient,nil));
    let wcs = cons(flashtop.hostMemWriteClient,nil);
-   MemServer#(PhysAddrWidth,DataBusWidth,1) hostMemServer <- mkMemServerRW(hostMemServerIndicationProxy.ifc, rcs,wcs, cons(algoMMU, cons(backingMMU,nil)));
+   MemServer#(PhysAddrWidth,DataBusWidth,1) hostMemServer <- mkMemServer(rcs,wcs, cons(algoMMU, cons(backingMMU,nil)), hostMemServerIndicationProxy.ifc);
 
    // flash memory read server
    MemServerIndicationProxy flashMemServerIndicationProxy <- mkMemServerIndicationProxy(NandMemServerIndication);
-   MemServer#(FlashAddrWidth,FlashDataWidth,1) flashMemServer <- mkMemServerR(flashMemServerIndicationProxy.ifc, 
-									      cons(strstr.haystack_read_client,nil),  
-									      cons(nandMMU,nil));
+   MemServer#(FlashAddrWidth,FlashDataWidth,1) flashMemServer <- mkMemServer(cons(strstr.haystack_read_client,nil), nil, cons(nandMMU,nil),
+                                                                      flashMemServerIndicationProxy.ifc);
    mkConnection(flashMemServer.masters[0], flashtop.memSlave);
    
    Vector#(12,StdPortal) portals;

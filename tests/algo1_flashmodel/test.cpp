@@ -137,6 +137,8 @@ int main(int argc, const char **argv)
   fprintf(stderr, "about to invoke search %d\n", ref_haystackInNandMemory);
   strstrRequest->search(ref_haystackInNandMemory, haystack_len);
   strstrIndication->wait();  
+  fprintf(stderr, "algo1_flashmodel: Done\n");
+  sleep(2);
 
   exit(!(strstrIndication->match_cnt==3));
 }

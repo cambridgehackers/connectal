@@ -25,7 +25,7 @@
 #include "HBridgeCtrlIndication.h"
 #include "GeneratedTypes.h"
 
-uint16_t direction[2];
+uint8_t direction[2];
 uint16_t power[2];
 
 #define RIGHT 1

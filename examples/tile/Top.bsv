@@ -54,7 +54,7 @@ module mkConnectalTop
    MMUIndicationProxy lMMUIndicationProxy <- mkMMUIndicationProxy(MMUIndicationH2S);
    MMU#(PhysAddrWidth) lMMU <- mkMMU(0,True, lMMUIndicationProxy.ifc);
    MemServerIndicationProxy lMemServerIndicationProxy <- mkMemServerIndicationProxy(MemServerIndicationH2S);
-   MemServer#(PhysAddrWidth,DataBusWidth,`NumberOfMasters) lMemServer <- mkMemServerR(lMemServerIndicationProxy.ifc, lMemread.dmaClient,cons(lMMU,nil));
+   MemServer#(PhysAddrWidth,DataBusWidth,`NumberOfMasters) lMemServer <- mkMemServer(lMemread.dmaClient,nil,cons(lMMU,nil), lMemServerIndicationProxy.ifc);
    MemreadRequestWrapper lMemreadRequestWrapper <- mkMemreadRequestWrapper(MemreadRequestS2H, lMemread.request);
    MMURequestWrapper lMMURequestWrapper <- mkMMURequestWrapper(MMURequestS2H, lMMU.request);
    MemServerRequestWrapper lMemServerRequestWrapper <- mkMemServerRequestWrapper(MemServerRequestS2H, lMemServer.request);

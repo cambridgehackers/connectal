@@ -130,7 +130,7 @@ int main(int argc, const char **argv)
 
   // setup gyro registers and dma infra
   setup_registers(gyro_ind,gyro_ctrl, ref_dstAlloc, wrap_limit);  
-  maxsonar_ctrl->range_ctrl(0xFFFF);
+  maxsonar_ctrl->range_ctrl(0xFF);
   int discard = 20;
 
   // start up the thread to drive the hbridges

@@ -134,13 +134,12 @@ def parseParam(pitem, proxy):
     if ind > 0:
         pmap['xparam'] = pmap['usermod'][ind:]
         pmap['usermod'] = pmap['usermod'][:ind]
-        print 'JJJ', pmap['usermod'], pmap['xparam']
     if len(p) > 2 and p[2]:
         pmap['uparam'] = p[2] + ', '
-    if len(p) > 3 and p[3]:
-        pmap['xparam'] = '#(' + p[3] + ')'
-    if len(p) > 4:
-        pmap['constructor'] = p[4]
+    #if len(p) > 3 and p[3]:
+    #    pmap['xparam'] = '#(' + p[3] + ')'
+    #if len(p) > 4:
+    #    pmap['constructor'] = p[4]
     return pmap
 
 if __name__=='__main__':

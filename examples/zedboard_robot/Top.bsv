@@ -71,7 +71,7 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,ZedboardRobotPins
    MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
    
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
-   MemServer#(PhysAddrWidth,DataBusWidth,1) dma <- mkMemServerW(hostMemServerIndicationProxy.ifc, controller.dmaClients, cons(hostMMU,nil));
+   MemServer#(PhysAddrWidth,DataBusWidth,1) dma <- mkMemServer(nil, controller.dmaClients, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
    MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
 
    Vector#(10,StdPortal) portals;

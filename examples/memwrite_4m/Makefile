@@ -1,7 +1,7 @@
 
 CONNECTALDIR?=../..
 S2H_INTERFACES = MemwriteRequest:Memwrite.request
-H2S_INTERFACES = Memwrite:MemwriteIndication::\`NumberOfMasters
+H2S_INTERFACES = Memwrite\#\(\`NumberOfMasters\):MemwriteIndication
 MEM_INTERFACES = nil,lMemwrite.dmaClients
 BSVFILES = Memwrite.bsv
 CPPFILES=testmemwrite.cpp

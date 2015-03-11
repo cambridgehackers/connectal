@@ -50,15 +50,12 @@ module  mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,TMul#(32,N),E
    let reader <- mkMemReader();
    let writer <- mkMemWriter();
 
-   Vector#(1,MemReadClient#(TMul#(32,N)))  readClients  = cons(reader.readClient, nil);
-   Vector#(1,MemWriteClient#(TMul#(32,N))) writeClients = cons(writer.writeClient, nil);
-
    MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUIndicationProxy.ifc);
    MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
 
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
-   MemServer#(PhysAddrWidth,TMul#(32,N), NumberOfMasters) dma <- mkMemServerRW(hostMemServerIndicationProxy.ifc, readClients, writeClients, cons(hostMMU,nil));
+   MemServer#(PhysAddrWidth,TMul#(32,N), NumberOfMasters) dma <- mkMemServer(cons(reader.readClient, nil), cons(writer.writeClient, nil), cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
    MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
 
    Vector#(4,StdPortal) portals;

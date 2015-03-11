@@ -63,7 +63,7 @@ DECL(spi_response)
 
 class ImageonSerdesIndication : public ImageonSerdesIndicationWrapper {
 public:
-    ImageonSerdesIndication(int id, PortalPoller *poller = 0) : ImageonSerdesIndicationWrapper(id, poller) {}
+    ImageonSerdesIndication(int id) : ImageonSerdesIndicationWrapper(id) {}
     virtual void iserdes_control_value ( uint32_t v ){
         cv_iserdes_control = v;
         sem_post(&sem_iserdes_control);
@@ -75,7 +75,7 @@ printf("[%s:%d] 0x%x ***********************************************************
 
 class ImageonSensorIndication : public ImageonSensorIndicationWrapper {
 public:
-    ImageonSensorIndication(int id, PortalPoller *poller = 0) : ImageonSensorIndicationWrapper(id, poller) {}
+    ImageonSensorIndication(int id) : ImageonSensorIndicationWrapper(id) {}
     void spi_response(uint32_t v){
         //fprintf(stderr, "spi_response: %x\n", v);
         cv_spi_response = v;
@@ -86,7 +86,7 @@ public:
 class HdmiInternalIndication: public HdmiInternalIndicationWrapper {
     HdmiInternalRequestProxy *hdmiRequest;
 public:
-    HdmiInternalIndication(int id, HdmiInternalRequestProxy *proxy, PortalPoller *poller = 0) : HdmiInternalIndicationWrapper(id, poller), hdmiRequest(proxy) {}
+    HdmiInternalIndication(int id, HdmiInternalRequestProxy *proxy) : HdmiInternalIndicationWrapper(id), hdmiRequest(proxy) {}
     virtual void vsync ( uint64_t v, uint32_t w ) {
         fprintf(stderr, "[%s:%d] v=%d w=%d\n", __FUNCTION__, __LINE__, (uint32_t) v, w);
         hdmiRequest->waitForVsync(v+1);
@@ -428,7 +428,6 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
 int main(int argc, const char **argv)
 {
     init_local_semaphores();
-    PortalPoller *poller = new PortalPoller();
 
   MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
   MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
@@ -436,8 +435,8 @@ int main(int argc, const char **argv)
   MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
-    serdesdevice = new ImageonSerdesRequestProxy(IfcNames_ImageonSerdesRequest, poller);
-    sensordevice = new ImageonSensorRequestProxy(IfcNames_ImageonSensorRequest, poller);
+    serdesdevice = new ImageonSerdesRequestProxy(IfcNames_ImageonSerdesRequest);
+    sensordevice = new ImageonSensorRequestProxy(IfcNames_ImageonSensorRequest);
     hdmidevice = new HdmiInternalRequestProxy(IfcNames_HdmiInternalRequest);
     ImageonCaptureRequestProxy *idevice = new ImageonCaptureRequestProxy(IfcNames_ImageonCapture);
     

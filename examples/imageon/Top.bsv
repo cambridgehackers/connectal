@@ -59,7 +59,8 @@ import ImageonVita::*;
 import HDMI::*;
 import YUV::*;
 import XilinxCells::*;
-import ConnectalXilinxCells::*;
+import ConnectalClocks::*;
+//import ConnectalXilinxCells::*;
 
 typedef enum { ImageonSerdesRequest, ImageonSensorRequest, HdmiInternalRequest, ImageonCapture,
     ImageonSerdesIndication, ImageonSensorIndication, HdmiInternalIndication, HostMemServerIndication, HostMemServerRequest, HostMMURequest, HostMMUIndication} IfcNames deriving (Eq,Bits);
@@ -119,7 +120,7 @@ module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
    MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
 
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
-   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerW(hostMemServerIndicationProxy.ifc, writeClients, cons(hostMMU,nil));
+   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(nil, writeClients, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
    MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
 
    // fromSensor: sensor specific processing of serdes input, resulting in pixels

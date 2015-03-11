@@ -80,11 +80,11 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    // host memory dma server
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
    let rcs = cons(strstr.config_read_client,cons(nandSim.readClient, nil));
-   MemServer#(PhysAddrWidth,64,1) hostDma <- mkMemServerRW(hostMemServerIndicationProxy.ifc, rcs, cons(nandSim.writeClient, nil), cons(backingStoreMMU,cons(algoMMU,nil)));
+   MemServer#(PhysAddrWidth,64,1) hostDma <- mkMemServer(rcs, cons(nandSim.writeClient, nil), cons(backingStoreMMU,cons(algoMMU,nil)), hostMemServerIndicationProxy.ifc);
 
    // nandsim memory dma server
    MemServerIndicationProxy nandsimMemServerIndicationProxy <- mkMemServerIndicationProxy(NandMemServerIndication);
-   MemServer#(PhysAddrWidth,64,1) nandsimDma <- mkMemServerR(nandsimMemServerIndicationProxy.ifc, cons(strstr.haystack_read_client,nil), cons(nandMMU,nil));
+   MemServer#(PhysAddrWidth,64,1) nandsimDma <- mkMemServer(cons(strstr.haystack_read_client,nil), nil, cons(nandMMU,nil), nandsimMemServerIndicationProxy.ifc);
    mkConnection(nandsimDma.masters[0], nandSim.memSlave);
    
    Vector#(12,StdPortal) portals;
