@@ -2,8 +2,8 @@
 CONNECTALDIR?=../..
 MEMWRITEDIR=$(CONNECTALDIR)/examples/memwrite
 S2H_INTERFACES = MemwriteRequest:Memwrite.request
-H2S_INTERFACES = MemwriteIndication:Memwrite
-MEM_INTERFACES = MemServer.request:/lMemwrite.dmaClient,cons\(lMMU,nil\):PhysAddrWidth,DataBusWidth,\`NumberOfMasters:mkMemServerW
+H2S_INTERFACES = Memwrite:MemwriteIndication
+MEM_INTERFACES = mkMemServerW:lMemwrite.dmaClient
 BSVFILES = $(MEMWRITEDIR)/Memwrite.bsv
 CPPFILES = $(MEMWRITEDIR)/testmemwrite.cpp
 CONNECTALFLAGS += -D NumEngineServers=16

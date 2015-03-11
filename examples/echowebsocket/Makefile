@@ -1,7 +1,7 @@
 
 CONNECTALDIR?=../..
 S2H_INTERFACES = EchoRequest:Echo.request SwallowRequest:Swallow.request
-H2S_INTERFACES = EchoIndication:Echo
+H2S_INTERFACES = Echo:EchoIndication
 BSVFILES = Echo.bsv Swallow.bsv
 CONNECTALFLAGS += -lwebsockets
 CPPFILES=testecho.cpp $(CONNECTALDIR)/cpp/portalWebSocket.c

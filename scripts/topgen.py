@@ -83,7 +83,6 @@ moduleInstantiation = '''
    SharedMemoryPortalConfigWrapper l%(modname)s <-
        mkSharedMemoryPortalConfigWrapper(%(argsConfig)s, l%(modname)s%(memFlag)sMem.cfg);
 '''
-#SimpleRequestProxy lSimpleRequestProxy <- mkSimpleRequestProxy(SimpleRequestH2S);
 
 def instMod(args, modname, modext, constructor, tparam, memFlag):
     if not modname:
@@ -126,11 +125,17 @@ def flushModules(key):
             portalInstantiate.append(temp.inst % ','.join(temp.args))
             del instantiateRequest[key]
 
-def parseParam(pitem):
+def parseParam(pitem, proxy):
     p = pitem.split(':')
-    pr = p[1].split('.')
-    pmap = {'name': p[0].replace('/',''), 'usermod': pr[0], 'userIf': p[1], 'tparam': '', \
-        'xparam': '', 'uparam': '', 'constructor': '', 'memFlag': 'Portal' if p[0][0] == '/' else ''}
+    pmap = {'tparam': '', 'xparam': '', 'uparam': '', 'constructor': '', 'memFlag': 'Portal' if p[0][0] == '/' else ''}
+    if proxy:
+        pmap['usermod'] = p[0].replace('/','')
+        pmap['name'] = p[1]
+    else:  # wrapper
+        pmap['name'] = p[0].replace('/','')
+        pmap['userIf'] = p[1]
+        pr = p[1].split('.')
+        pmap['usermod'] = pr[0]
     if len(p) > 2 and p[2]:
         pmap['uparam'] = p[2] + ', '
     if len(p) > 3 and p[3]:
@@ -172,14 +177,14 @@ if __name__=='__main__':
         options.interface = []
 
     for pitem in options.proxy:
-        pmap = parseParam(pitem)
+        pmap = parseParam(pitem, True)
         instMod('', pmap['name'], 'Proxy', '', '', pmap['memFlag'])
         argstr = pmap['uparam'] + 'l%(name)sProxy%(memFlag)s.ifc'
         if pmap['uparam'] and pmap['uparam'][0] == '/':
             argstr = 'l%(name)sProxy%(memFlag)s.ifc, ' + pmap['uparam'][1:-2]
         instMod(argstr, pmap['usermod'], '', '', pmap['xparam'], False)
     for pitem in options.wrapper:
-        pmap = parseParam(pitem)
+        pmap = parseParam(pitem, False)
         if pmap['usermod'] not in instantiatedModules:
             instMod(pmap['uparam'], pmap['usermod'], '', '', pmap['xparam'], False)
         flushModules(pmap['usermod'])

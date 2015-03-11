@@ -1,7 +1,7 @@
 
 CONNECTALDIR?=../..
 S2H_INTERFACES = EchoRequest:Echo.request
-H2S_INTERFACES = EchoIndication:Echo
+H2S_INTERFACES = Echo:EchoIndication
 INTERFACES = MMURequest MMUIndication MemServerRequest MemServerIndication
 BSVFILES = Echo.bsv
 BSVFILES += $(CONNECTALDIR)/bsv/ConnectalMemory.bsv

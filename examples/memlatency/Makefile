@@ -1,8 +1,8 @@
 
 CONNECTALDIR?=../..
 S2H_INTERFACES = MemlatencyRequest:Memlatency.request
-H2S_INTERFACES = MemlatencyIndication:Memlatency
-MEM_INTERFACES = MemServer.request:/lMemlatency.dmaReadClient,lMemlatency.dmaWriteClient,cons\(lMMU,nil\):PhysAddrWidth,DataBusWidth,\`NumberOfMasters:mkMemServerRW
+H2S_INTERFACES = Memlatency:MemlatencyIndication
+MEM_INTERFACES = mkMemServerRW:lMemlatency.dmaReadClient,lMemlatency.dmaWriteClient
 BSVFILES = Memlatency.bsv
 CPPFILES = testmemlatency.cpp
 

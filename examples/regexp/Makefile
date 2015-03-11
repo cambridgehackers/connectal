@@ -1,8 +1,8 @@
 
 CONNECTALDIR?=../..
 S2H_INTERFACES = RegexpRequest:Regexp.request::64
-H2S_INTERFACES = RegexpIndication:Regexp::64
-MEM_INTERFACES = MemServer.request:/cons\(lRegexp.config_read_client,cons\(lRegexp.haystack_read_client,nil\)\),cons\(lMMU,nil\):PhysAddrWidth,DataBusWidth,\`NumberOfMasters:mkMemServerR
+H2S_INTERFACES = Regexp:RegexpIndication::64
+MEM_INTERFACES = mkMemServerR:cons\(lRegexp.config_read_client,cons\(lRegexp.haystack_read_client,nil\)\)
 
 BSVFILES = $(CONNECTALDIR)/lib/regexp/bsv/Regexp.bsv
 CPPFILES=testregexp.cpp

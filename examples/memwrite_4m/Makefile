@@ -1,8 +1,8 @@
 
 CONNECTALDIR?=../..
 S2H_INTERFACES = MemwriteRequest:Memwrite.request::\`NumberOfMasters
-H2S_INTERFACES = MemwriteIndication:Memwrite::\`NumberOfMasters
-MEM_INTERFACES = MemServer.request:/lMemwrite.dmaClients,cons\(lMMU,nil\):PhysAddrWidth,DataBusWidth,\`NumberOfMasters:mkMemServerW
+H2S_INTERFACES = Memwrite:MemwriteIndication::\`NumberOfMasters
+MEM_INTERFACES = mkMemServerW:lMemwrite.dmaClients
 BSVFILES = Memwrite.bsv
 CPPFILES=testmemwrite.cpp
 

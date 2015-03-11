@@ -2,7 +2,7 @@
 CONNECTALDIR?=../..
 INTERFACES = EchoRequestSW EchoIndicationSW SecondRequest SecondIndication ThirdRequest ThirdIndication
 S2H_INTERFACES = EchoRequest:Echo.request
-H2S_INTERFACES = EchoIndication:Echo
+H2S_INTERFACES = Echo:EchoIndication
 BSVFILES = Echo.bsv Services.bsv
 CPPFILES=testecho.cpp
 CPPFILES2=daemon.cpp

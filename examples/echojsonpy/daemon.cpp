@@ -42,7 +42,7 @@ public:
     if (daemon_trace) fprintf(stderr, "daemon say2(%d, %d)\n", a,b);
     sIndicationProxy->heard2(a, b);
   }
-  void setLeds ( const uint16_t v ) {
+  void setLeds ( const uint8_t v ) {
     if (daemon_trace) fprintf(stderr, "daemon setLeds(%d)\n", v);
     sleep(1);
     exit(1);
