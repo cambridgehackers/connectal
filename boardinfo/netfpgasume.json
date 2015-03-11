@@ -1,0 +1,251 @@
+{
+    "options": {
+        "bsvdefines" : ["XILINX", "Virtex7", "PCIE", "PcieHostTypeIF", "PhysAddrWidth=40", "NUMBER_OF_LEDS=2"],
+        "os" : "ubuntu",
+        "partname" : "xc7vx690tffg1761-3",
+        "need_pcie" : "x7_gen1x8",
+        "TOP" : "PcieTop",
+        "CONNECTALFLAGS" : [],
+        "rewireclockstring" : ""
+    },
+    "fmc1": {
+    "LA00_p_CC": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA00_n_CC": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA01_p_CC": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA01_n_CC": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA02_p": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA02_n": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA03_p": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA03_n": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA04_p": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA04_n": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA05_p": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA05_n": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA06_p": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA06_n": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA07_p": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA07_n": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA08_p": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA08_n": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA09_p": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA09_n": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA10_p": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA10_n": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA11_p": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA11_n": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA12_p": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA12_n": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA13_p": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA13_n": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA14_p": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA14_n": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA15_p": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA15_n": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA16_p": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA16_n": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA17_p_CC": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA17_n_CC": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA18_p_CC": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA18_n_CC": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA19_p": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "LA19_n": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "CLK0_M2C_p": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "CLK0_M2C_n": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        }
+    },
+    "pins": {
+	"userClk_p": {
+	    "PACKAGE_PIN": "bogus",
+	    "IOSTANDARD": "LVDS_25",
+	    "DIFF_TERM": "TRUE",
+	    "PIO_DIRECTION": "INPUT"
+	},
+	"userClk_n": {
+	    "PACKAGE_PIN": "bogus",
+	    "IOSTANDARD": "LVDS_25",
+	    "DIFF_TERM": "TRUE",
+	    "PIO_DIRECTION": "INPUT"
+	},
+	"smaUserClk_p": {
+	    "PACKAGE_PIN": "bogus",
+	    "IOSTANDARD": "LVDS_25",
+	    "DIFF_TERM": "TRUE",
+	    "PIO_DIRECTION": "OUTPUT"
+	},
+	"smaUserClk_n": {
+	    "PACKAGE_PIN": "bogus",
+	    "IOSTANDARD": "LVDS_25",
+	    "DIFF_TERM": "TRUE",
+	    "PIO_DIRECTION": "OUTPUT"
+	},
+	"mgtRefClk_p": {
+	    "PACKAGE_PIN": "bogus",
+	    "IOSTANDARD": "LVDS_25",
+	    "DIFF_TERM": "TRUE",
+	    "PIO_DIRECTION": "INPUT"
+	},
+	"mgtRefClk_n": {
+	    "PACKAGE_PIN": "bogus",
+	    "IOSTANDARD": "LVDS_25",
+	    "DIFF_TERM": "TRUE",
+	    "PIO_DIRECTION": "INPUT"
+	},
+	"mgtRx_p": {
+	    "PACKAGE_PIN": "bogus",
+	    "DIFF_TERM": "TRUE",
+	    "PIO_DIRECTION": "INPUT"
+	},
+	"mgtRx_n": {
+	    "PACKAGE_PIN": "bogus",
+	    "DIFF_TERM": "TRUE",
+	    "PIO_DIRECTION": "INPUT"
+	},
+	"mgtTx_p": {
+	    "PACKAGE_PIN": "bogus",
+	    "DIFF_TERM": "TRUE",
+	    "PIO_DIRECTION": "OUTPUT"
+	},
+	"mgtTx_n": {
+	    "PACKAGE_PIN": "bogus",
+	    "DIFF_TERM": "TRUE",
+	    "PIO_DIRECTION": "OUTPUT"
+	},
+	"uart_d_in": {
+	    "PACKAGE_PIN": "bogus",
+	    "IOSTANDARD": "LVCMOS25",
+	    "PIO_DIRECTION": "INPUT"
+	},
+	"uart_d_out": {
+	    "PACKAGE_PIN": "bogus",
+	    "IOSTANDARD": "LVCMOS25",
+	    "PIO_DIRECTION": "OUTPUT"
+	}
+    }
+}
+
+
