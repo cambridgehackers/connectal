@@ -38,7 +38,13 @@ import PcieCsr           :: *;
 import MemTypes          :: *;
 import Bscan             :: *;
 `ifdef XILINX
+`ifdef PCIE3
+import PCIEWRAPPER3      :: *;
+import Pcie3EndpointX7   :: *;
+`else // pcie3
+import PCIEWRAPPER       :: *;
 import PcieEndpointX7    :: *;
+`endif // pcie3
 `elsif ALTERA
 import PcieEndpointS5    :: *;
 `endif
