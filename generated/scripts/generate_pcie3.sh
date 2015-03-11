@@ -9,6 +9,8 @@ set -e
    pcie3Wrap \
    -f \
    pipe_gen3 \
+   -f int_userclk1 \
+   -f int_userclk2 \
    -f \
    pipe_userclk1 \
    -f \
