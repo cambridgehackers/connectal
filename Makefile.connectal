@@ -207,7 +207,7 @@ ifneq ($(USE_AUTOTOP),)
 	$(Q)$(CONNECTALDIR)/scripts/topgen.py --project-dir $(GPROJ) $(AUTOTOP) \
 	    $(foreach f, $(S2H_INTERFACES), --wrapper $f) \
 	    $(foreach f, $(H2S_INTERFACES), --proxy $f)   \
-	    $(foreach f, $(MEM_INTERFACES), --proxy MemServer:MemServerIndication:/$(word 2, $(subst :, , $f)),cons\(lMMU,nil\):PhysAddrWidth,DataBusWidth,\`NumberOfMasters:$(word 1, $(subst /,, $(subst :, , $f))))
+	    $(foreach f, $(MEM_INTERFACES), --proxy MemServer:MemServerIndication:$f,cons\(lMMU,nil\):PhysAddrWidth,DataBusWidth,\`NumberOfMasters)
 endif
 
 generate_altera_custom::

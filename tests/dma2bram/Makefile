@@ -2,7 +2,7 @@
 CONNECTALDIR?=../..
 S2H_INTERFACES = TestRequest:Test.request
 H2S_INTERFACES = Test:TestIndication
-MEM_INTERFACES = mkMemServerR:lTest.dmaClient
+MEM_INTERFACES = lTest.dmaClient,nil
 BSVFILES = Test.bsv
 CPPFILES=test.cpp
 

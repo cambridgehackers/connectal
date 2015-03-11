@@ -2,7 +2,7 @@
 CONNECTALDIR?=../..
 S2H_INTERFACES = MemreadRequest:Memread.request
 H2S_INTERFACES = Memread:MemreadIndication::\`NumberOfMasters
-MEM_INTERFACES = mkMemServerR:lMemread.dmaClients
+MEM_INTERFACES = lMemread.dmaClients,nil
 BSVFILES = Memread.bsv
 CPPFILES=testmemread.cpp
 
