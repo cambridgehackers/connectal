@@ -317,7 +317,7 @@ module mkMPEngine#(MemreadServer#(haystackBusWidth) haystackReader,
       Bit#(32) haystack_len_ds = haystack_len+fromInteger(valueOf(nc)-1);
       Bit#(TLog#(nc)) zeros = 0;
       Bit#(32) haystack_len_bytes = {zeros,haystack_len_ds[31:valueOf(TLog#(nc))]} * fromInteger(valueOf(nc));
-      haystackReader.cmdServer.request.put(MemengineCmd{sglId:haystack_sglId, base:extend(haystack_base), len:haystack_len_bytes, burstLen:fromInteger(8*valueOf(nc))});
+      haystackReader.cmdServer.request.put(MemengineCmd{sglId:haystack_sglId, base:extend(haystack_base), len:haystack_len_bytes, burstLen:fromInteger(8*valueOf(nc)), tag: 0});
       if (verbose) $display("mkMPEngine::search %d %d %d",  haystack_sglId, haystack_base, haystack_len_bytes);
    endrule
    

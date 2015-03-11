@@ -50,8 +50,8 @@ endinterface
 interface NandSim;
    interface NandCfgRequest request;
    interface PhysMemSlave#(PhysAddrWidth,64) memSlave;
-   interface MemReadClient#(64) readClient;
-   interface MemWriteClient#(64) writeClient;
+   interface Vector#(1, MemReadClient#(64)) readClient;
+   interface Vector#(1, MemWriteClient#(64)) writeClient;
 endinterface
 
 interface NandSimControl;
@@ -123,8 +123,8 @@ module mkNandSim#(NandCfgIndication indication) (NandSim);
       endinterface
    endinterface
    interface request = ns.request;
-   interface MemReadClient readClient = re.dmaClient;
-   interface MemWriteClient writeClient = we.dmaClient;
+   interface MemReadClient readClient = cons(re.dmaClient, nil);
+   interface MemWriteClient writeClient = cons(we.dmaClient, nil);
 
 endmodule
 
