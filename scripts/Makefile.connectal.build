@@ -159,8 +159,8 @@ bits: hw/mkTop.bit prepare_bin_target
     ifeq ($(OS),android)
 	xxd hw/mkTop.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r > bin/mkTop.xdevcfg.bin
 	gzip -f bin/mkTop.xdevcfg.bin
-	$(Q)[ ! -f bin/android.exe ] || objcopy --remove-section fpgadata bin/android.exe
-	$(Q)[ ! -f bin/android.exe ] || objcopy --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe
+	#$(Q)[ ! -f bin/android.exe ] || objcopy --remove-section fpgadata bin/android.exe
+	#$(Q)[ ! -f bin/android.exe ] || objcopy --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe
     else
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
 	$(Q)[ ! -f bin/ubuntu.exe ] || objcopy --remove-section fpgadata bin/ubuntu.exe
@@ -175,14 +175,14 @@ endif
 android.exe: prepare_bin_target
 	ndk-build $(CONNECTAL_NDK_PARAM)
 	@cp -v libs/armeabi/android.exe bin
-	$(Q)[ ! -f bin/mkTop.xdevcfg.bin.gz ] || objcopy --remove-section fpgadata bin/android.exe
-	$(Q)[ -f bin/mkTop.xdevcfg.bin.gz ] || objcopy --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe
+	#$(Q)[ ! -f bin/mkTop.xdevcfg.bin.gz ] || objcopy --remove-section fpgadata bin/android.exe
+	#$(Q)[ -f bin/mkTop.xdevcfg.bin.gz ] || objcopy --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe
 
 android.debug.exe: prepare_bin_target
 	ndk-build $(CONNECTAL_NDK_PARAM) -B V=1 NDK_DEBUG=1
 	@cp -v libs/armeabi/android.exe bin
-	$(Q)[ ! -f bin/mkTop.xdevcfg.bin.gz ] || objcopy --remove-section fpgadata bin/android.exe
-	$(Q)[ ! -f bin/mkTop.xdevcfg.bin.gz ] || objcopy --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe
+	#$(Q)[ ! -f bin/mkTop.xdevcfg.bin.gz ] || objcopy --remove-section fpgadata bin/android.exe
+	#$(Q)[ ! -f bin/mkTop.xdevcfg.bin.gz ] || objcopy --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe
 
 run:
 ifeq ($(CONNECTAL_SHARED),1)
