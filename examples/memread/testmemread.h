@@ -110,7 +110,7 @@ void *debugWorker(void *ptr)
 {
   while (running) {
     device->getStateDbg();
-    sleep(1);
+    sleep(5);
   }
 }
 
@@ -198,12 +198,13 @@ int runtest(int argc, const char ** argv)
       test_result++;     // failed
     }
 
+    running 0;
+
     MonkitFile("perf.monkit")
       .setHwCycles(cycles)
       .setReadBwUtil(read_util)
       .writeFile();
 
-    running = 0;
     return test_result; 
   } else {
     fprintf(stderr, "Main::new_test read %08x\n", numWords);
