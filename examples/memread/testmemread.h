@@ -198,7 +198,7 @@ int runtest(int argc, const char ** argv)
       test_result++;     // failed
     }
 
-    running 0;
+    running = 0;
 
     MonkitFile("perf.monkit")
       .setHwCycles(cycles)
