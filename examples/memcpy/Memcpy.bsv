@@ -117,8 +117,8 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
    endrule
    
    rule drain_buffer;
-      buffer.deq;
-      we.dataPipes[0].enq(buffer.first);
+      let v <- toGet(buffer).get();
+      we.dataPipes[0].enq(v);
       rdBuffer <= rdBuffer+2;
       //$display("                    drain_buffer %h", buffer.first);
    endrule
