@@ -29,7 +29,6 @@ import ClientServer::*;
 import Pipe::*;
 import MemTypes::*;
 import MemreadEngine::*;
-import Pipe::*;
 import HostInterface::*; // for DataBusWidth
 
 interface MemreadRequest;
@@ -98,3 +97,5 @@ module mkMemread#(MemreadIndication indication) (Memread);
       endmethod
    endinterface
 endmodule
+
+

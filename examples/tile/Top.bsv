@@ -21,56 +21,107 @@
 // SOFTWARE.
 
 import Vector::*;
+import Connectable::*;
+
 import Portal::*;
 import CtrlMux::*;
 import HostInterface::*;
-import MemreadIndication::*;
-import Memread::*;
-import MMUIndication::*;
-import MMU::*;
-import MemServerIndication::*;
-import MemServer::*;
-import MemreadRequest::*;
-import MMURequest::*;
-import MemServerRequest::*;
 import Tile::*;
+import Memread::*;
+import MMU::*;
+import MemServer::*;
+import MemTypes::*;
 
-`ifndef PinType
-`define PinType Empty
-`endif
-typedef `PinType PinType;
+import MemreadRequest::*;
+import MemreadIndication::*;
+import MMURequest::*;
+import MMUIndication::*;
+import MemServerIndication::*;
+import MemServerRequest::*;
 
-typedef enum {MemreadIndicationH2S,MMUIndicationH2S,MemServerIndicationH2S,MemreadRequestS2H,MMURequestS2H,MemServerRequestS2H} IfcNames deriving (Eq,Bits);
 
-module mkConnectalTop
-`ifdef IMPORT_HOSTIF
-       #(HostType host)
-`endif
-       (ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,`NumberOfMasters));
-  
+typedef enum {MemreadIndicationH2S, MMUIndicationH2S,MemServerIndicationH2S, 
+	      MemreadRequestS2H,MMURequestS2H,MemServerRequestS2H} IfcNames deriving (Eq,Bits);
 
+module mkMemreadTile(Tile);
+   
    MemreadIndicationProxy lMemreadIndicationProxy <- mkMemreadIndicationProxy(MemreadIndicationH2S);
    Memread lMemread <- mkMemread(lMemreadIndicationProxy.ifc);
-   MMUIndicationProxy lMMUIndicationProxy <- mkMMUIndicationProxy(MMUIndicationH2S);
-   MMU#(PhysAddrWidth) lMMU <- mkMMU(0,True, lMMUIndicationProxy.ifc);
-   MemServerIndicationProxy lMemServerIndicationProxy <- mkMemServerIndicationProxy(MemServerIndicationH2S);
-   MemServer#(PhysAddrWidth,DataBusWidth,`NumberOfMasters) lMemServer <- mkMemServer(lMemread.dmaClient,nil,cons(lMMU,nil), lMemServerIndicationProxy.ifc);
    MemreadRequestWrapper lMemreadRequestWrapper <- mkMemreadRequestWrapper(MemreadRequestS2H, lMemread.request);
+   
+   Vector#(2,StdPortal) portal_vec;
+   portal_vec[0] = lMemreadIndicationProxy.portalIfc;
+   portal_vec[1] = lMemreadRequestWrapper.portalIfc;
+   PhysMemSlave#(20,32) ctrl_mux <- mkSlaveMux(portal_vec);
+   let interrupts <- mkInterruptMux(getInterruptVector(portal_vec));
+   
+   interface portals = ctrl_mux;
+   interface interrupt = interrupts;
+   interface readers = append(lMemread.dmaClient,replicate(null_mem_read_client));
+   interface writers = replicate(null_mem_write_client);
+   interface pins = ?;
+      
+endmodule
+
+module mkFramework(Framework#(numTiles,Empty,numMasters))
+   provisos(Add#(a__, TLog#(TAdd#(1, numTiles)), 12)
+	    ,Add#(b__, TLog#(c__), 6)
+	    ,Mul#(c__, numMasters, numTiles)
+	    );
+   
+   
+   Vector#(numTiles, PhysMemConnector#(20,32)) portal_connectors <- replicateM(mkPhysMemConnector);
+   Vector#(numTiles, MemReadClient#(DataBusWidth)) tile_read_clients = newVector;
+   Vector#(numTiles, MemWriteClient#(DataBusWidth)) tile_write_clients = newVector;
+   Vector#(numTiles, TileSocket) tss = newVector;
+   for(Integer i = 0; i < valueOf(numTiles); i=i+1) begin
+	 
+   end
+
+
+   /////////////////////////////////////////////////////////////
+   // framework internal portals
+
+   MMUIndicationProxy lMMUIndicationProxy <- mkMMUIndicationProxy(MMUIndicationH2S);
+   MemServerIndicationProxy lMemServerIndicationProxy <- mkMemServerIndicationProxy(MemServerIndicationH2S);
+
+   MMU#(PhysAddrWidth) lMMU <- mkMMU(0,True, lMMUIndicationProxy.ifc);
+   MemServer#(PhysAddrWidth,DataBusWidth,numMasters) lMemServer <- mkMemServerRW(lMemServerIndicationProxy.ifc, tile_read_clients, tile_write_clients, cons(lMMU,nil));
+
    MMURequestWrapper lMMURequestWrapper <- mkMMURequestWrapper(MMURequestS2H, lMMU.request);
    MemServerRequestWrapper lMemServerRequestWrapper <- mkMemServerRequestWrapper(MemServerRequestS2H, lMemServer.request);
 
-   Vector#(6,StdPortal) portals;
-   portals[0] = lMemreadIndicationProxy.portalIfc;
-   portals[1] = lMMUIndicationProxy.portalIfc;
-   portals[2] = lMemServerIndicationProxy.portalIfc;
-   portals[3] = lMemreadRequestWrapper.portalIfc;
-   portals[4] = lMMURequestWrapper.portalIfc;
-   portals[5] = lMemServerRequestWrapper.portalIfc;
-   let ctrl_mux <- mkSlaveMux(portals);
-   interface interrupt = getInterruptVector(portals);
+   Vector#(4,StdPortal) framework_portals;
+   framework_portals[0] = lMMUIndicationProxy.portalIfc;
+   framework_portals[1] = lMemServerIndicationProxy.portalIfc;
+   framework_portals[2] = lMMURequestWrapper.portalIfc;
+   framework_portals[3] = lMemServerRequestWrapper.portalIfc;
+   PhysMemSlave#(20,32) framework_ctrl_mux <- mkSlaveMux(framework_portals);
+   
+   //
+   /////////////////////////////////////////////////////////////
+
+   Vector#(TAdd#(1,numTiles), PhysMemSlave#(20,32)) foo = cons(framework_ctrl_mux, map(getPhysMemConnectorSlave, portal_connectors)); 
+   PhysMemSlave#(32,32) ctrl_mux <- mkMemSlaveMux(foo);
+
+   interface interrupt = getInterruptVector(framework_portals);
    interface slave = ctrl_mux;
    interface masters = lMemServer.masters;
-   interface PinType  pins;
-   endinterface
+   interface pins = ?; 
+   interface sockets = tss;
+
+endmodule
+
+
+module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
+
+   Framework#(1,Empty,1) f <- mkFramework;
+   Tile memreadTile <- mkMemreadTile;
+   mkConnection(memreadTile, f.sockets[0]);
+
+   interface interrupt = f.interrupt;
+   interface slave = f.slave;
+   interface masters = f.masters;
+   interface pins = f.pins;
 
 endmodule : mkConnectalTop

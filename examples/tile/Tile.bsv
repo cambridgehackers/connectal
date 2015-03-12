@@ -21,16 +21,27 @@
 // SOFTWARE.
 
 import Vector::*;
+import Connectable::*;
+
 import Portal::*;
 import MemTypes::*;
 import HostInterface::*;
 
-typedef Empty TilePins;
-typedef Empty ITilePins;
 typedef 4 MaxTileMemClients;
 
+interface TilePins;
+endinterface
+
+interface ITilePins;
+endinterface
+
+instance Connectable#(TilePins,ITilePins);
+   module mkConnection#(TilePins t, ITilePins it)(Empty);
+   endmodule
+endinstance
+
 interface TileSocket;
-   interface PhysMemMaster#(PhysAddrWidth,DataBusWidth) portals;
+   interface PhysMemMaster#(20,32) portals;
    interface WriteOnly#(Bool) interrupt;
    interface Vector#(MaxTileMemClients, MemReadServer#(DataBusWidth)) readers;
    interface Vector#(MaxTileMemClients, MemWriteServer#(DataBusWidth)) writers;
@@ -38,14 +49,29 @@ interface TileSocket;
 endinterface
 
 interface Tile;
-   interface PhysMemSlave#(PhysAddrWidth,DataBusWidth) portals;
+   interface PhysMemSlave#(20,32) portals;
    interface ReadOnly#(Bool) interrupt;
    interface Vector#(MaxTileMemClients, MemReadClient#(DataBusWidth)) readers;
    interface Vector#(MaxTileMemClients, MemWriteClient#(DataBusWidth)) writers;
    interface TilePins pins;
 endinterface
 
-interface Framework#(numeric type numTiles);
+interface Framework#(numeric type numTiles, type pins, numeric type numMasters);
    interface Vector#(numTiles, TileSocket) sockets;
+   interface PhysMemSlave#(32,32) slave;
+   interface Vector#(numMasters,PhysMemMaster#(PhysAddrWidth, DataBusWidth)) masters;
+   interface Vector#(16,ReadOnly#(Bool)) interrupt;
+   interface pins             pins;
 endinterface
 
+instance Connectable#(Tile,TileSocket);
+   module mkConnection#(Tile t, TileSocket ts)(Empty);
+      mkConnection(ts.portals,t.portals);
+      rule connect_interrupt;
+	 ts.interrupt <= t.interrupt;
+      endrule
+      mapM(uncurry(mkConnection), zip(t.readers,ts.readers));
+      mapM(uncurry(mkConnection), zip(t.writers,ts.writers));
+      mkConnection(t.pins,ts.pins);
+   endmodule
+endinstance

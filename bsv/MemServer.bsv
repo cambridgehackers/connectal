@@ -28,6 +28,7 @@ import GetPut::*;
 import ClientServer::*;
 import Assert::*;
 import StmtFSM::*;
+import SpecialFIFOs::*;
 
 // CONNECTAL Libraries
 import HostInterface::*;
@@ -419,3 +420,88 @@ module mkSimpleMemServer#(Vector#(numReadClients, MemReadClient#(dataWidth)) rea
    interface Vector masters = dma.masters;
    interface Vector addr = hostMMU.addr;
 endmodule
+
+interface PhysMemConnector#(numeric type addrWidth, numeric type dataWidth);
+   interface PhysMemSlave#(addrWidth,dataWidth) slave;
+   interface PhysMemMaster#(addrWidth,dataWidth) master;
+endinterface
+
+function PhysMemSlave#(aw,dw) getPhysMemConnectorSlave(PhysMemConnector#(aw,dw) s);
+   return s.slave;
+endfunction
+
+module mkPhysMemConnector(PhysMemConnector#(addrWidth,dataWidth));
+   FIFO#(PhysMemRequest#(addrWidth)) read_req <- mkBypassFIFO;
+   FIFO#(PhysMemRequest#(addrWidth)) write_req <- mkBypassFIFO;
+   FIFO#(MemData#(dataWidth)) read_data <- mkBypassFIFO;
+   FIFO#(MemData#(dataWidth)) write_data <- mkBypassFIFO;
+   FIFO#(Bit#(MemTagSize))    write_done <- mkBypassFIFO;
+   interface PhysMemSlave slave;
+      interface PhysMemReadServer read_server;
+	 interface Put readReq;
+	    method Action put(PhysMemRequest#(addrWidth) r);
+	       read_req.enq(r);
+	    endmethod
+	 endinterface
+	 interface Get readData;
+	    method ActionValue#(MemData#(dataWidth)) get;
+	       read_data.deq;
+	       return read_data.first;
+	    endmethod
+	 endinterface
+      endinterface
+      interface PhysMemWriteServer write_server; 
+	 interface Put writeReq;
+	    method Action put(PhysMemRequest#(addrWidth) r);
+	       write_req.enq(r);
+	    endmethod
+	 endinterface
+	 interface Put writeData;
+	    method Action put(MemData#(dataWidth) d);
+	       write_data.enq(d);
+	    endmethod
+	 endinterface
+	 interface Get writeDone;
+	    method ActionValue#(Bit#(MemTagSize)) get;
+	       write_done.deq;
+	       return write_done.first;
+	    endmethod
+	 endinterface
+      endinterface
+   endinterface
+   interface PhysMemMaster master;
+      interface PhysMemReadClient read_client;
+	 interface Get readReq;
+	    method ActionValue#(PhysMemRequest#(addrWidth)) get;
+	       read_req.deq;
+	       return read_req.first;
+	    endmethod
+	 endinterface
+	 interface Put readData;
+	    method Action put(MemData#(dataWidth) d);
+	       read_data.enq(d);
+	    endmethod
+	 endinterface
+      endinterface
+      interface PhysMemWriteClient write_client; 
+	 interface Get writeReq;
+	    method ActionValue#(PhysMemRequest#(addrWidth)) get;
+	       write_req.deq;
+	       return write_req.first;
+	    endmethod
+	 endinterface
+	 interface Get writeData;
+	    method ActionValue#(MemData#(dataWidth)) get;
+	       write_data.deq;
+	       return write_data.first;
+	    endmethod
+	 endinterface
+	 interface Put writeDone;
+	    method Action put(Bit#(MemTagSize) t);
+	       write_done.enq(t);
+	    endmethod
+	 endinterface
+      endinterface
+   endinterface
+endmodule
+		    
