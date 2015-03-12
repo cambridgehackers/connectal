@@ -23,7 +23,10 @@ if [ "$RUNPARAM" != "" ]; then
     BINNAME=`basename $1`
     EXENAME=`basename $2`
     if [ "$NOPROGRAM" != "1" ]; then
-        ssh $SSHPARAM $RUNPARAM "fpgajtag $BOARD_SERIAL $TEMPDIR/$BINNAME"
+        #ssh $SSHPARAM $RUNPARAM "fpgajtag $BOARD_SERIAL $TEMPDIR/$BINNAME"
+        ssh $SSHPARAM $RUNPARAM "objcopy -O binary --set-section-flags fpgadata=load --only-section fpgadata $TEMPDIR/$EXENAME $TEMPDIR/extracted_bitfile_from_exe"
+        ssh $SSHPARAM $RUNPARAM "fpgajtag $BOARD_SERIAL $TEMPDIR/extracted_bitfile_from_exe"
+        ssh $SSHPARAM $RUNPARAM "rm -f $TEMPDIR/extracted_bitfile_from_exe"
     else
         echo "not programming $BOARD"
     fi
@@ -33,7 +36,9 @@ if [ "$RUNPARAM" != "" ]; then
     ssh $SSHPARAM $RUNPARAM "rm -rf $TEMPDIR"
 else
     if [ "$NOPROGRAM" != "1" ]; then
-        fpgajtag $BOARD_SERIAL $1
+        objcopy -O binary --set-section-flags fpgadata=load --only-section fpgadata $2 extracted_bitfile_from_exe
+        fpgajtag $BOARD_SERIAL extracted_bitfile_from_exe
+        rm -f extracted_bitfile_from_exe
         sleep 1
     fi
     timeout 3m catchsegv $2

@@ -79,7 +79,7 @@ endif
 endif
 
 RUN_BSC = BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) bsc $(BSC_QUIET) $(BSVDEFINES) $(BSCFLAGS_COMMON) $(BSCFLAGS_PROJECT) -p +:$(BSVPATH)
-vfile=verilog/$(MKTOP).v
+VFILE=verilog/$(MKTOP).v
 
 all: exe bits
 
@@ -159,8 +159,12 @@ bits: hw/mkTop.bit prepare_bin_target
     ifeq ($(OS),android)
 	xxd hw/mkTop.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r > bin/mkTop.xdevcfg.bin
 	gzip -f bin/mkTop.xdevcfg.bin
+	$(Q)[ ! -f bin/android.exe ] || objcopy --remove-section fpgadata bin/android.exe
+	$(Q)[ ! -f bin/android.exe ] || objcopy --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe
     else
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
+	$(Q)[ ! -f bin/ubuntu.exe ] || objcopy --remove-section fpgadata bin/ubuntu.exe
+	$(Q)[ ! -f bin/ubuntu.exe ] || objcopy --add-section fpgadata=bin/mkTop.bin.gz bin/ubuntu.exe
     endif
 	if [ -f Impl/TopDown/top-post-route.dcp ]; then cp -f Impl/TopDown/top-post-route.dcp bin; fi
 	$(CONNECTALDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
@@ -171,10 +175,14 @@ endif
 android.exe: prepare_bin_target
 	ndk-build $(CONNECTAL_NDK_PARAM)
 	@cp -v libs/armeabi/android.exe bin
+	$(Q)[ ! -f bin/mkTop.xdevcfg.bin.gz ] || objcopy --remove-section fpgadata bin/android.exe
+	$(Q)[ -f bin/mkTop.xdevcfg.bin.gz ] || objcopy --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe
 
 android.debug.exe: prepare_bin_target
 	ndk-build $(CONNECTAL_NDK_PARAM) -B V=1 NDK_DEBUG=1
 	@cp -v libs/armeabi/android.exe bin
+	$(Q)[ ! -f bin/mkTop.xdevcfg.bin.gz ] || objcopy --remove-section fpgadata bin/android.exe
+	$(Q)[ ! -f bin/mkTop.xdevcfg.bin.gz ] || objcopy --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe
 
 run:
 ifeq ($(CONNECTAL_SHARED),1)
@@ -234,7 +242,7 @@ vsim: verilog bin/vsim
 	make -C vsim all
 	make -C vsim simulate
 
-$(vfile): $(TOPBSVFILE) $(BSVFILES)
+$(VFILE): $(TOPBSVFILE) $(BSVFILES)
 	$(Q)mkdir -p verilog/portal $(DTOP)/obj
 	@echo BSCVERILOG [$(DTOP)]
 	$(Q)cd generatedbsv; $(RUN_BSC) -remove-dollar -verilog -u -g $(MKTOP) $(TOPBSVFILE)
@@ -261,11 +269,11 @@ syntax.timestamp: $(BSVFILES)
 	$(Q)$(CONNECTALDIR)/scripts/syntax.py $(BSVFILES)
 	$(Q)touch syntax.timestamp
 
-verilog: $(vfile)
+verilog: $(VFILE)
 	@echo "verilog"
 
-lint: $(vfile)
-	verilator --error-limit 200 --lint-only -Igeneratedbsv -Igeneratedbsv/source $(vfile)
+lint: $(VFILE)
+	verilator --error-limit 200 --lint-only -Igeneratedbsv -Igeneratedbsv/source $(VFILE)
 
 prepare_bin_target: syntax.timestamp
 	@echo "prepare_bin_target"

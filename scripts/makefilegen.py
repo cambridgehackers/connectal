@@ -107,7 +107,7 @@ foreach {pat} {CLK_GATE_hdmi_clock_if CLK_*deleteme_unused_clock* CLK_GATE_*dele
 
 fpgamakeRuleTemplate='''
 FPGAMAKE=$(CONNECTALDIR)/../fpgamake/fpgamake
-fpgamake.mk: $(vfile) Makefile prepare_bin_target
+fpgamake.mk: $(VFILE) Makefile prepare_bin_target
 	$(Q)mkdir -p hw
 	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk --board=%(boardname)s --part=%(partname)s %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s %(qsf)s %(chipscope)s -t $(MKTOP) %(cachedir)s -b hw/mkTop.bit verilog $(CONNECTALDIR)/verilog %(verilog)s
 
@@ -207,6 +207,7 @@ BSIM_EXE_CXX = $(addprefix $(CONNECTALDIR)/cpp/, $(BSIM_EXE_CXX_FILES))
 
 ubuntu.exe: $(SOURCES)
 	$(Q)g++ $(CFLAGS) -o ubuntu.exe $(SOURCES) $(LDLIBS)
+	$(Q)[ ! -f ../bin/mkTop.bin.gz ] || objcopy --add-section fpgadata=../bin/mkTop.bin.gz ubuntu.exe
 
 connectal.so: $(SOURCES)
 	$(Q)g++ -shared -fpic $(CFLAGS) -o connectal.so %(bsimcxx)s $(SOURCES) $(LDLIBS)
