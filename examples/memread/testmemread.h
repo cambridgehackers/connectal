@@ -104,7 +104,7 @@ public:
 
 MemreadRequestProxy *device = 0;
 
-static int running = 1;
+static volatile int running = 1;
 
 void *debugWorker(void *ptr)
 {
@@ -188,6 +188,7 @@ int runtest(int argc, const char ** argv)
     srcBuffer[numWords-1] = -1;
     portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
 
+    fprintf(stderr, "Starting second read, mismatches expected\n");
     device->startRead(ref_srcAlloc, 0, numWords, burstLen, iterCnt);
     sem_wait(&test_sem);
     if (mismatchCount != 3/*number of errors introduced above*/ * iterCnt) {
