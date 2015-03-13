@@ -209,7 +209,8 @@ ssize_t sock_fd_read(int sockfd, void *ptr, size_t nbytes, int *recvfd)
         }
         int *foo = (int *)CMSG_DATA(cmptr);
         *recvfd = *foo;
-	fprintf(stderr, "[%s:%d] got fd %d\n", __FUNCTION__, __LINE__, *foo);
+	if (trace_socket)
+	  fprintf(stderr, "[%s:%d] got fd %d\n", __FUNCTION__, __LINE__, *foo);
     }
     if (n != nbytes) {
       //fprintf(stderr, "[%s:%d] asked for %ld bytes, got %ld\n", __FUNCTION__, __LINE__, (long)nbytes, (long)n);
