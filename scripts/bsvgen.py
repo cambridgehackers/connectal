@@ -154,7 +154,7 @@ endmodule
 
 interface %(Dut)sMemPortalPipes;
     interface %(Ifc)sInputPipes pipes;
-    interface MemPortal#(16,32) portalIfc;
+    interface StdPortal portalIfc;
 endinterface
 
 (* synthesize *)
