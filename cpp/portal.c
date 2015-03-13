@@ -128,6 +128,7 @@ static void init_portal_hw(void)
 #ifdef __KERNEL__
     tboard = get_pcie_portal_descriptor();
 #else
+#ifndef BSIM
     int pid = fork();
     if (pid == -1) {
         printf("[%s:%d] fork error\n", __FUNCTION__, __LINE__);
@@ -152,9 +153,10 @@ static void init_portal_hw(void)
         printf("[%s:%d] ARM\n", __FUNCTION__, __LINE__);
 #else
         execvp ("fpgajtag", argv);
-#endif
+#endif // !__arm__
     }
-#endif
+#endif // //BSIM
+#endif // !__KERNEL__
 }
 
 uint64_t portalCycleCount()
