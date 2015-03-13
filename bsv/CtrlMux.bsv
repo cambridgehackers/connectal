@@ -48,8 +48,10 @@ endmodule
 
 
 module mkSlaveMux#(Vector#(numPortals,MemPortal#(aw,dataWidth)) portals) (PhysMemSlave#(addrWidth,dataWidth))
-   provisos(Add#(selWidth,aw,addrWidth)
-	    ,Add#(a__, TLog#(numPortals), selWidth)
+   provisos(Add#(selWidth,aw,addrWidth),
+	    Add#(a__, TLog#(numPortals), selWidth),
+	    Min#(2,TLog#(numPortals),bpc),
+	    FunnelPipesPipelined#(1, numPortals, MemData#(dataWidth), bpc)
 	    );
    Vector#(numPortals, PhysMemSlave#(aw,dataWidth)) slaves = map(getSlave, portals);
    for(Integer i = 0; i < valueOf(numPortals); i=i+1)
@@ -129,15 +131,26 @@ module mkMemSlaveMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves) (Ph
 	    //$display("mkMemSlaveMux.readReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));
 	    if (req.burstLen > 4) $display("**** \n\n mkMemSlaveMux.readReq len=%d \n\n ****", req.burstLen);
 	    rs.enq(truncate(psel(req.addr)));
+<<<<<<< HEAD
+=======
+	    if (req.burstLen > 4) $display("**** \n\n mkSlaveMux.readReq len=%d \n\n ****", req.burstLen);
+	    if(verbose) $display("mkSlaveMux.readReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));
+>>>>>>> modified address layout
 	 endmethod
       endinterface
       interface Get readData;
 	 method ActionValue#(MemData#(dataWidth)) get();
+<<<<<<< HEAD
 	    let rv <- portalIfcs[rs.first].read_server.readData.get();
 	    //$display("mkMemSlaveMux.readData aw=%d rs=%d data=%h", valueOf(aw), rs.first, rv.data);
 	    //if (rv.last) begin
 	       rs.deq();
 	    //end
+=======
+	    let rv <- toGet(read_data_funnel[0]).get;
+	    rs.deq();
+	    if(verbose) $display("mkSlaveMux.readData rs=%d data=%h", rs.first, rv.data);
+>>>>>>> modified address layout
 	    return rv;
 	 endmethod
       endinterface
