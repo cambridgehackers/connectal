@@ -51,7 +51,7 @@ static void initialize_bsim_map(void)
         bsim_fpga_map[idx].name = id;
         bsim_fpga_map[idx].offset = idx;
         bsim_fpga_map[idx].valid = 1;
-        //PORTAL_PRINTF("%s: bsim_fpga_map[%d]=%d (%d)\n", __FUNCTION__, id, bsim_fpga_map[id], last);
+        PORTAL_PRINTF("%s: bsim_fpga_map[%d]=%d (%d)\n", __FUNCTION__, id, bsim_fpga_map[id], last);
         idx++;
     }  
 }

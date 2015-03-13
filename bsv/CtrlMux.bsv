@@ -50,15 +50,16 @@ module mkInterruptMux#(Vector#(numPortals,ReadOnly#(Bool)) inputs) (ReadOnly#(Bo
 endmodule
 
 module mkSlaveMux#(Vector#(numPortals,MemPortal#(aw,dataWidth)) portals) (PhysMemSlave#(addrWidth,dataWidth))
-   provisos(Add#(a__,TLog#(numPortals),4),
+   provisos(Add#(selWidth,aw,addrWidth),
+	    Add#(a__, TLog#(numPortals), selWidth),
 	    Min#(2,TLog#(numPortals),bpc),
 	    FunnelPipesPipelined#(1, numPortals, MemData#(dataWidth), bpc)
 	    );
    
    Vector#(numPortals, PhysMemSlave#(aw,dataWidth)) portalIfcs = map(getSlave, portals);
    let port_sel_low = valueOf(aw);
-   let port_sel_high = valueOf(TAdd#(3,aw));
-   function Bit#(4) psel(Bit#(addrWidth) a);
+   let port_sel_high = valueOf(TSub#(addrWidth,1));
+   function Bit#(selWidth) psel(Bit#(addrWidth) a);
       return a[port_sel_high:port_sel_low];
    endfunction
    function Bit#(aw) asel(Bit#(addrWidth) a);
@@ -132,14 +133,14 @@ module mkSlaveMux#(Vector#(numPortals,MemPortal#(aw,dataWidth)) portals) (PhysMe
 	    req_ars.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
 	    rs.enq(truncate(psel(req.addr)));
 	    if (req.burstLen > 4) $display("**** \n\n mkSlaveMux.readReq len=%d \n\n ****", req.burstLen);
-	    //$display("mkSlaveMux.readReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));
+	    if(verbose) $display("mkSlaveMux.readReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));
 	 endmethod
       endinterface
       interface Get readData;
 	 method ActionValue#(MemData#(dataWidth)) get();
 	    let rv <- toGet(read_data_funnel[0]).get;
 	    rs.deq();
-	    //$display("mkSlaveMux.readData rs=%d data=%h", rs.first, rv.data);
+	    if(verbose) $display("mkSlaveMux.readData rs=%d data=%h", rs.first, rv.data);
 	    return rv;
 	 endmethod
       endinterface
