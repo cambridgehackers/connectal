@@ -144,14 +144,19 @@ static void init_portal_hw(void)
         buf[0] = 0;
         int rc = readlink("/proc/self/exe", buf, sizeof(buf));
         char *serial = getenv("SERIALNO");
-        char *argv[] = { (char *)"fpgajtag", buf, NULL, NULL, NULL, NULL, NULL, NULL};
+        int ind = 1;
+        char *argv[] = { (char *)"fpgajtag", NULL, NULL, NULL, NULL, NULL, NULL, NULL};
         if (serial) {
-            argv[2] = (char *)"-s";
-            argv[3] = strdup(serial);
+            argv[ind++] = (char *)"-s";
+            argv[ind++] = strdup(serial);
         }
 #ifdef __arm__
-        printf("[%s:%d] ARM\n", __FUNCTION__, __LINE__);
+        argv[ind++] = (char *)"-x";
+        argv[ind++] = buf;
+        execvp ("/mnt/sdcard/fpgajtag", argv);
+        exit(-1);
 #else
+        argv[ind++] = buf;
         execvp ("fpgajtag", argv);
 #endif // !__arm__
     }
