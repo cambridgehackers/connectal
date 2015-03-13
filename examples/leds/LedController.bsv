@@ -50,6 +50,7 @@ module mkLedController(LedController);
       let duration = remainingDuration;
       if (duration == 0) begin
 	 let cmd <- toGet(ledsCmdFifo).get();
+	 $display("ledsValue <= %b", cmd.leds);
 	 ledsValue <= cmd.leds;
 	 duration = cmd.duration;
       end
@@ -61,6 +62,7 @@ module mkLedController(LedController);
 
    interface LedControllerRequest request;
        method Action setLeds(Bit#(8) v, Bit#(32) duration);
+	  $display("Enqueing v=%d duration=%d", v, duration);
 	  ledsCmdFifo.enq(LedControllerCmd { leds: v, duration: duration });
        endmethod
    endinterface
