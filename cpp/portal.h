@@ -30,13 +30,19 @@
 #include <string.h> // memcpy
 #endif
 
+/* division of 20 bits of physical address space */
+#define TILE_SEL   2
+#define PORTAL_SEL 6
+#define METHOD_SEL 7
+#define METHOD_SZ  5
+
 /* Offset of each /dev/fpgaxxx device in the address space */
-#define PORTAL_BASE_OFFSET         (1 << 16)
+#define PORTAL_BASE_OFFSET         (1 << (METHOD_SZ+METHOD_SEL))
 #define PORTAL_REG_OFFSET          0xc000
 
 /* Offsets of mapped registers within an /dev/fpgaxxx device */
-#define PORTAL_REQ_FIFO(A)         (((0<<14) + (A) * 256 + 256)/sizeof(uint32_t))
-#define PORTAL_IND_FIFO(A)         (((0<<14) + (A) * 256 + 256)/sizeof(uint32_t))
+#define PORTAL_REQ_FIFO(A)         (((A << (METHOD_SZ)) + (1 << (METHOD_SZ)))/sizeof(uint32_t))
+#define PORTAL_IND_FIFO(A)         (((A << (METHOD_SZ)) + (1 << (METHOD_SZ)))/sizeof(uint32_t))
 
 // PortalCtrl offsets
 #define PORTAL_CTRL_INTERRUPT_STATUS 0
@@ -50,7 +56,7 @@
 
 
 // PortalCtrl registers
-#define PORTAL_CTRL_REG_OFFSET_32   ( (0<<14)             /sizeof(uint32_t))
+#define PORTAL_CTRL_REG_OFFSET_32        0
 #define PORTAL_CTRL_REG_INTERRUPT_STATUS (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_INTERRUPT_STATUS)
 #define PORTAL_CTRL_REG_INTERRUPT_ENABLE (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_INTERRUPT_ENABLE)
 #define PORTAL_CTRL_REG_SEVEN            (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_SEVEN           )

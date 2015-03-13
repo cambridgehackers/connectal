@@ -64,7 +64,7 @@ interface SharedMemoryPortal#(numeric type dataBusWidth);
    interface ReadOnly#(Bool) interrupt;
 endinterface
 
-typedef MemPortal#(16,32) StdPortal;
+typedef MemPortal#(12,32) StdPortal;
 
 interface ConnectalTop#(numeric type addrWidth, numeric type dataWidth, type pins, numeric type numMasters);
    interface PhysMemSlave#(32,32) slave;
