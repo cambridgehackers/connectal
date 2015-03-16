@@ -429,20 +429,20 @@ int main(int argc, const char **argv)
 {
     init_local_semaphores();
 
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
 
-    serdesdevice = new ImageonSerdesRequestProxy(IfcNames_ImageonSerdesRequest);
-    sensordevice = new ImageonSensorRequestProxy(IfcNames_ImageonSensorRequest);
-    hdmidevice = new HdmiInternalRequestProxy(IfcNames_HdmiInternalRequest);
-    ImageonCaptureRequestProxy *idevice = new ImageonCaptureRequestProxy(IfcNames_ImageonCapture);
+    serdesdevice = new ImageonSerdesRequestProxy(IfcNames_ImageonSerdesRequestS2H);
+    sensordevice = new ImageonSensorRequestProxy(IfcNames_ImageonSensorRequestS2H);
+    hdmidevice = new HdmiInternalRequestProxy(IfcNames_HdmiInternalRequestS2H);
+    ImageonCaptureRequestProxy *idevice = new ImageonCaptureRequestProxy(IfcNames_ImageonCaptureRequestS2H);
     
-    ImageonSerdesIndicationWrapper *imageonSerdesIndication = new ImageonSerdesIndication(IfcNames_ImageonSerdesIndication);
-    ImageonSensorIndicationWrapper *imageonSensorIndication = new ImageonSensorIndication(IfcNames_ImageonSensorIndication);
-    HdmiInternalIndicationWrapper *hdmiIndication = new HdmiInternalIndication(IfcNames_HdmiInternalIndication, hdmidevice);
+    ImageonSerdesIndicationWrapper *imageonSerdesIndication = new ImageonSerdesIndication(IfcNames_ImageonSerdesIndicationH2S);
+    ImageonSensorIndicationWrapper *imageonSensorIndication = new ImageonSensorIndication(IfcNames_ImageonSensorIndicationH2S);
+    HdmiInternalIndicationWrapper *hdmiIndication = new HdmiInternalIndication(IfcNames_HdmiInternalIndicationH2S, hdmidevice);
     // read out monitor EDID from ADV7511
     struct edid edid;
     init_i2c_hdmi();
