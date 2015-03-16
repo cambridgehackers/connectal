@@ -36,6 +36,7 @@ argparser.add_argument('-f', '--fpga', default="xilinx", help='Target FPGA Vendo
 options = argparser.parse_args()
 boardfile = options.boardfile
 pinoutfile = options.pinoutfile
+errorDetected = False
 
 bindings = {
     'pins': 'pins',
@@ -75,9 +76,11 @@ for pin in pinout:
     pinInfo = pinout[pin]
     loc = 'TBD'
     iostandard = 'TBD'
+    iodir = 'TBD'
     used = []
     boardGroupInfo = {}
     pinName = ''
+    #print('PPP', pinInfo)
     for key in bindings:
         if pinInfo.has_key(key):
             used.append(key)
@@ -85,22 +88,38 @@ for pin in pinout:
             #print('LLL', key, pinName, bindings[key])
             boardGroupInfo = boardInfo[bindings[key]]
             break
+    if pinName == '':
+        for key in pinInfo:
+            #print('JJJJ', key)
+            if boardInfo.get(key):
+                pinName = pinInfo[key]
+                boardGroupInfo = boardInfo[key]
+                #print('FFF', key, pinName, boardGroupInfo, boardGroupInfo.has_key(pinName), boardGroupInfo.get(pinName))
+                break
+    if boardGroupInfo == {}:
+        print('Missing group description for', pinName, pinInfo, file=sys.stderr)
+        errorDetected = True
     if boardGroupInfo.has_key(pinName):
         if boardGroupInfo[pinName].has_key('LOC'):
             loc = boardGroupInfo[pinName]['LOC']
         else:
             loc = boardGroupInfo[pinName]['PACKAGE_PIN']
         iostandard = boardGroupInfo[pinName]['IOSTANDARD']
+        if boardGroupInfo[pinName].has_key('PIO_DIRECTION'):
+            iodir = boardGroupInfo[pinName]['PIO_DIRECTION']
     else:
         print('Missing pin description for', pinName, pinInfo, file=sys.stderr)
         loc = 'fmc.%s' % (pinName)
+        errorDetected = True
     if pinInfo.has_key('IOSTANDARD'):
         iostandard = pinInfo['IOSTANDARD']
+    if pinInfo.has_key('PIO_DIRECTION'):
+        iodir = pinInfo['PIO_DIRECTION']
     out.write(template % {
             'name': pin,
             'LOC': loc,
             'IOSTANDARD': iostandard,
-            'PIO_DIRECTION': pinInfo['PIO_DIRECTION']
+            'PIO_DIRECTION': iodir
             })
     for k in pinInfo:
         if k in used+['IOSTANDARD', 'PIO_DIRECTION']: continue
@@ -109,4 +128,5 @@ for pin in pinout:
                 'prop': k,
                 'val': pinInfo[k],
                 })
-
+if errorDetected:
+    sys.exit(-1);
