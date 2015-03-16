@@ -135,8 +135,14 @@ static void init_portal_hw(void)
         exit(-1);
     }
     else if (pid) {
-        int status;
+        int fd, status, len;
         waitpid(pid, &status, 0);
+#ifdef __arm__
+        fd = open("/dev/connectal", O_RDONLY); /* scan the fpga directory */
+        len = read(fd, &status, sizeof(status));
+printf("[%s:%d] fd %d len %d\n", __FUNCTION__, __LINE__, fd, len);
+        close(fd);
+#endif
     }
     else {
 #define MAX_PATH 2000

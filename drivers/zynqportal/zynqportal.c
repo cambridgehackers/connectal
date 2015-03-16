@@ -29,6 +29,7 @@
 #include <linux/slab.h>
 #include <linux/scatterlist.h>
 #include <linux/workqueue.h>
+#include <linux/delay.h>
 
 #include "zynqportal.h"
 #define CONNECTAL_DRIVER_CODE
@@ -325,6 +326,10 @@ static int connectal_open(struct inode *inode, struct file *filep)
 static ssize_t connectal_read(struct file *filp,
       char *buffer, size_t length, loff_t *offset)
 {
+  driver_devel("%s:%d\n", __func__, __LINE__);
+  msleep(50);
+  mutex_lock(&connectal_mutex);
+  mutex_unlock(&connectal_mutex);
   return 0;
 }
 
