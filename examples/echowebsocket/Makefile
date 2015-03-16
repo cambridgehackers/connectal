@@ -9,6 +9,4 @@ CPPFILES2=daemon.cpp $(CONNECTALDIR)/cpp/portalWebSocket.c
 
 NUMBER_OF_MASTERS =0
 
-AUTOTOP = --interface leds:Echo.leds
-
 include $(CONNECTALDIR)/Makefile.connectal
