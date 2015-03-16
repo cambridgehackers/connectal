@@ -27,11 +27,9 @@ interface Swallow;
 endinterface
 
 module mkSwallow (Swallow);
-
    Reg#(Bit#(32)) sink <- mkReg(0);
    
    method Action swallow(Bit#(32) v);
       sink <= v;
    endmethod
-
 endmodule

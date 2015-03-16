@@ -23,7 +23,6 @@
 // SOFTWARE.
 
 import FIFO::*;
-import Leds::*;
 import DisplayInd::*;
 
 interface EchoIndication;
@@ -75,12 +74,6 @@ module mkEchoRequestInternal#(EchoIndication indication, DisplayInd printfInd)(E
       endmethod
       
       method Action setLeds(Bit#(8) v);
-	 ledsReg <= v;
-      endmethod
-   endinterface
-   interface LEDS leds;
-      method Bit#(8) leds();
-         return ledsReg;
       endmethod
    endinterface
 endmodule

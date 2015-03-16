@@ -34,7 +34,6 @@ import CtrlMux::*;
 import Portal::*;
 import ConnectalMemory::*;
 import MemTypes::*;
-import Leds::*;
 import HostInterface::*;
 import MemSlaveEngine::*;
 import AddressGenerator::*;
@@ -189,6 +188,4 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
    interface masters = cons(dma1,nil);
-   interface leds = default_leds;
-   interface Empty pins; endinterface      
 endmodule : mkConnectalTop

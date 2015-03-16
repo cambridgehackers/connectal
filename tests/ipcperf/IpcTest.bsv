@@ -23,7 +23,6 @@
 // SOFTWARE.
 
 import FIFO::*;
-import Leds::*;
 import Vector::*;
 
 interface IpcTestIndication;
@@ -51,7 +50,6 @@ module mkIpcTestRequestInternal#(IpcTestIndication indication)(IpcTestRequestInt
 
     FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
     FIFO#(IpcTestPair) delay2 <- mkSizedFIFO(8);
-    Reg#(Bit#(LedsWidth)) ledsReg <- mkReg(0);
 
     rule heard;
         delay.deq;
@@ -73,12 +71,6 @@ module mkIpcTestRequestInternal#(IpcTestIndication indication)(IpcTestRequestInt
       endmethod
       
       method Action setLeds(Bit#(8) v);
-	 ledsReg <= pack(replicate(v[0]));
-      endmethod
-   endinterface
-   interface LEDS leds;
-      method Bit#(LedsWidth) leds();
-         return ledsReg;
       endmethod
    endinterface
 endmodule

@@ -36,7 +36,6 @@ import Portal::*;
 import HostInterface::*;
 import CtrlMux::*;
 import Portal::*;
-import Leds::*;
 import XADC::*;
 import ImageonCapture::*;
 import ImageonSerdesRequest::*;
@@ -196,8 +195,6 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,ImageCapturePins,1));
    interface interrupt = getInterruptVector(ic.portalif);
    interface slave = ctrl_mux;
    interface masters = ic.dmaif.masters;
-   //interface leds = captureRequestInternal.leds;
-   //interface xadc = ic.xadc;
    interface ImageCapturePins pins;
 `ifndef BSIM
        method Action fmc_video_clk1(Bit#(1) v);
