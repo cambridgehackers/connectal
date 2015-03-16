@@ -41,7 +41,7 @@ instance Connectable#(TilePins,ITilePins);
 endinstance
 
 interface TileSocket;
-   interface PhysMemMaster#(20,32) portals;
+   interface PhysMemMaster#(18,32) portals;
    interface WriteOnly#(Bool) interrupt;
    interface Vector#(MaxTileMemClients, MemReadServer#(DataBusWidth)) readers;
    interface Vector#(MaxTileMemClients, MemWriteServer#(DataBusWidth)) writers;
@@ -49,7 +49,7 @@ interface TileSocket;
 endinterface
 
 interface Tile;
-   interface PhysMemSlave#(20,32) portals;
+   interface PhysMemSlave#(18,32) portals;
    interface ReadOnly#(Bool) interrupt;
    interface Vector#(MaxTileMemClients, MemReadClient#(DataBusWidth)) readers;
    interface Vector#(MaxTileMemClients, MemWriteClient#(DataBusWidth)) writers;
