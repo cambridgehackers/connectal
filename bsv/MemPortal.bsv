@@ -248,7 +248,6 @@ module mkMemPortal#(Bit#(slaveDataWidth) ifcId,
 	     ,Add#(d__, 1, c__)
 	     ,Add#(a__, TLog#(TAdd#(1, TAdd#(numRequests, numIndications))), c__)
 	     ,Add#(b__, slaveDataWidth, TMul#(slaveDataWidth, 2))
-	     ,FunnelPipesPipelined#(1, TAdd#(1, TAdd#(numRequests,numIndications)), MemData#(slaveDataWidth), TMin#(2,TLog#(TAdd#(1, TAdd#(numRequests, numIndications)))))
 	     );
 
    Vector#(numRequests,    PipeIn#(Bit#(slaveDataWidth)))     requestPipes = portal.requests;
