@@ -80,12 +80,11 @@ module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
    Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
    SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, imageon_clock);
 
-   // instantiate user portals
    // serdes: serial line protocol for wires from sensor (nothing sensor specific)
    ImageonSerdesIndicationProxy serdesIndicationProxy <- mkImageonSerdesIndicationProxy(ImageonSerdesIndicationH2S);
    ISerdes serdes <- mkISerdes(defaultClock, defaultReset, serdesIndicationProxy.ifc,
 			clocked_by imageon_clock, reset_by imageon_reset);
-   ImageonSerdesRequestWrapper serdesRequestWrapper <- mkImageonSerdesRequestWrapper(ImageonSerdesRequestS2H,serdes.control);
+   ImageonSerdesRequestWrapper serdesRequestWrapper <- mkImageonSerdesRequestWrapper(ImageonSerdesRequestS2H,serdes.request);
    ImageonCapture lImageonCapture <- mkImageonCapture(imageon_clock, imageon_reset, serdes.data, serdesIndicationProxy.ifc);
    ImageonCaptureRequestWrapper imageonCaptureWrapper <- mkImageonCaptureRequestWrapper(ImageonCaptureRequestS2H, lImageonCapture.request);
    MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(MMUIndicationH2S);
@@ -100,7 +99,7 @@ module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
    ImageonSensorIndicationProxy sensorIndicationProxy <- mkImageonSensorIndicationProxy(ImageonSensorIndicationH2S);
    ImageonSensor fromSensor <- mkImageonSensor(defaultClock, defaultReset, serdes.data, vsyncPulse.pulse(),
        hdmi_clock, hdmi_reset, sensorIndicationProxy.ifc, clocked_by imageon_clock, reset_by imageon_reset);
-   ImageonSensorRequestWrapper sensorRequestWrapper <- mkImageonSensorRequestWrapper(ImageonSensorRequestS2H,fromSensor.control);
+   ImageonSensorRequestWrapper sensorRequestWrapper <- mkImageonSensorRequestWrapper(ImageonSensorRequestS2H,fromSensor.request);
 
    // hdmi: output to display
    HdmiGeneratorIndicationProxy hdmiIndicationProxy <- mkHdmiGeneratorIndicationProxy(HdmiGeneratorIndicationH2S);
