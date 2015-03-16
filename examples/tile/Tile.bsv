@@ -27,8 +27,6 @@ import Portal::*;
 import MemTypes::*;
 import HostInterface::*;
 
-typedef 4 MaxTileMemClients;
-
 interface TilePins;
 endinterface
 
@@ -43,16 +41,16 @@ endinstance
 interface TileSocket;
    interface PhysMemMaster#(18,32) portals;
    interface WriteOnly#(Bool) interrupt;
-   interface Vector#(MaxTileMemClients, MemReadServer#(DataBusWidth)) readers;
-   interface Vector#(MaxTileMemClients, MemWriteServer#(DataBusWidth)) writers;
+   interface MemReadServer#(DataBusWidth) reader;
+   interface MemWriteServer#(DataBusWidth) writer;
    interface ITilePins pins;
 endinterface
 
 interface Tile;
    interface PhysMemSlave#(18,32) portals;
    interface ReadOnly#(Bool) interrupt;
-   interface Vector#(MaxTileMemClients, MemReadClient#(DataBusWidth)) readers;
-   interface Vector#(MaxTileMemClients, MemWriteClient#(DataBusWidth)) writers;
+   interface MemReadClient#(DataBusWidth) reader;
+   interface MemWriteClient#(DataBusWidth) writer;
    interface TilePins pins;
 endinterface
 
@@ -70,8 +68,10 @@ instance Connectable#(Tile,TileSocket);
       rule connect_interrupt;
 	 ts.interrupt <= t.interrupt;
       endrule
-      mapM(uncurry(mkConnection), zip(t.readers,ts.readers));
-      mapM(uncurry(mkConnection), zip(t.writers,ts.writers));
+      mkConnection(t.reader,ts.reader);
+      mkConnection(t.writer,ts.writer);
       mkConnection(t.pins,ts.pins);
    endmodule
 endinstance
+
+

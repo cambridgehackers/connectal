@@ -40,8 +40,8 @@ import MemServerIndication::*;
 import MemServerRequest::*;
 
 
-typedef enum {MemreadIndicationH2S, MMUIndicationH2S,MemServerIndicationH2S, 
-	      MemreadRequestS2H,MMURequestS2H,MemServerRequestS2H} IfcNames deriving (Eq,Bits);
+typedef enum {MemreadIndicationH2S, MemreadRequestS2H} TileNames deriving (Eq,Bits);
+typedef enum {MMUIndicationH2S, MemServerIndicationH2S, MMURequestS2H, MemServerRequestS2H} FrameworkNames deriving (Eq,Bits);
 
 module mkMemreadTile(Tile);
    
@@ -57,29 +57,44 @@ module mkMemreadTile(Tile);
    
    interface portals = ctrl_mux;
    interface interrupt = interrupts;
-   interface readers = append(lMemread.dmaClient,replicate(null_mem_read_client));
-   interface writers = replicate(null_mem_write_client);
+   interface reader = lMemread.dmaClient;
+   interface writer = null_mem_write_client;
    interface pins = ?;
       
 endmodule
 
 module mkFramework(Framework#(numTiles,Empty,numMasters))
    provisos(Add#(a__, numTiles, 3)
-	    ,Add#(b__, TLog#(TAdd#(1, numTiles)), 14)
 	    ,Add#(c__, TLog#(d__), 6)
 	    ,Mul#(d__, numMasters, numTiles)
+	    ,Add#(1,numTiles,numInterrupts)
+	    ,Add#(e__, TLog#(numInterrupts), 14)
+	    ,Add#(b__, TLog#(f__), 6)
+	    ,Mul#(f__, numMasters, TMul#(numTiles, 4))
 	    );
    
-   
    Vector#(numTiles, PhysMemConnector#(18,32)) portal_connectors <- replicateM(mkPhysMemConnector);
+   Vector#(numTiles, MemreadConnector#(DataBusWidth)) tile_read_connectors <- replicateM(mkMemreadConnector);
+   Vector#(numTiles, MemwriteConnector#(DataBusWidth)) tile_write_connectors <- replicateM(mkMemwriteConnector);
    Vector#(numTiles, MemReadClient#(DataBusWidth)) tile_read_clients = newVector;
    Vector#(numTiles, MemWriteClient#(DataBusWidth)) tile_write_clients = newVector;
+   Vector#(numTiles, Wire#(Bool)) tile_interrupts <- replicateM(mkWire);
+
    Vector#(numTiles, TileSocket) tss = newVector;
    for(Integer i = 0; i < valueOf(numTiles); i=i+1) begin
-	 
+      tile_read_clients[i] = tile_read_connectors[i].client;
+      tile_write_clients[i] = tile_write_connectors[i].client;
+      tss[i] = (interface TileSocket;
+		   interface portals = portal_connectors[i].master; 
+		   interface WriteOnly interrupt;
+		      method Action _write(Bool v) = tile_interrupts[i]._write(v);
+		   endinterface
+		   interface reader = tile_read_connectors[i].server;
+		   interface writer = tile_write_connectors[i].server;
+		   interface pins = ?;
+		endinterface);
    end
-
-
+      
    /////////////////////////////////////////////////////////////
    // framework internal portals
 
@@ -98,14 +113,21 @@ module mkFramework(Framework#(numTiles,Empty,numMasters))
    framework_portals[2] = lMMURequestWrapper.portalIfc;
    framework_portals[3] = lMemServerRequestWrapper.portalIfc;
    PhysMemSlave#(18,32) framework_ctrl_mux <- mkSlaveMux(framework_portals);
+   let framework_intr <- mkInterruptMux(getInterruptVector(framework_portals));
    
    //
    /////////////////////////////////////////////////////////////
 
-   Vector#(TAdd#(1,numTiles), PhysMemSlave#(18,32)) foo = cons(framework_ctrl_mux, map(getPhysMemConnectorSlave, portal_connectors)); 
-   PhysMemSlave#(32,32) ctrl_mux <- mkMemSlaveMux(foo);
-
-   interface interrupt = getInterruptVector(framework_portals);
+   PhysMemSlave#(32,32) ctrl_mux <- mkMemSlaveMux(cons(framework_ctrl_mux, map(getPhysMemConnectorSlave, portal_connectors)));
+   Vector#(16, ReadOnly#(Bool)) interrupts = replicate(interface ReadOnly; method Bool _read(); return False; endmethod endinterface);
+   interrupts[0] = framework_intr;
+   for (Integer i = 1; i < valueOf(numInterrupts); i = i + 1)
+      interrupts[i] = (interface ReadOnly;
+			  method Bool _read();
+			     return tile_interrupts[i-1]._read;
+			  endmethod
+		       endinterface);
+   interface interrupt = interrupts;
    interface slave = ctrl_mux;
    interface masters = lMemServer.masters;
    interface pins = ?; 
