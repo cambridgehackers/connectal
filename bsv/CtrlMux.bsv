@@ -48,11 +48,28 @@ endmodule
 
 
 module mkSlaveMux#(Vector#(numPortals,MemPortal#(aw,dataWidth)) portals) (PhysMemSlave#(addrWidth,dataWidth))
-   provisos(Add#(selWidth,aw,addrWidth),
-	    Add#(a__, TLog#(numPortals), selWidth),
-	    Min#(2,TLog#(numPortals),bpc),
-	    FunnelPipesPipelined#(1, numPortals, MemData#(dataWidth), bpc)
+   provisos(Add#(selWidth,aw,addrWidth)
+	    ,Add#(a__, TLog#(numPortals), selWidth)
+	    ,FunnelPipesPipelined#(1, numPortals, MemData#(dataWidth),TMin#(2, TLog#(numPortals)))
 	    );
+   Vector#(numPortals, PhysMemSlave#(aw,dataWidth)) slaves = map(getSlave, portals);
+   for(Integer i = 0; i < valueOf(numPortals); i=i+1)
+      rule writeTop;
+	 portals[i].top <= (i+1 == valueOf(numPortals));
+      endrule
+   let rv <- mkMemSlaveMux(slaves);
+   return rv;
+endmodule
+
+
+
+module mkMemSlaveMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves) (PhysMemSlave#(addrWidth,dataWidth))
+   provisos(Add#(selWidth,aw,addrWidth)
+	    ,Add#(a__, TLog#(numSlaves), selWidth)
+	    ,Min#(2,TLog#(numSlaves),bpc)
+	    ,Pipe::FunnelPipesPipelined#(1, numSlaves, MemTypes::MemData#(dataWidth),bpc)
+	    );
+<<<<<<< HEAD
    Vector#(numPortals, PhysMemSlave#(aw,dataWidth)) slaves = map(getSlave, portals);
    for(Integer i = 0; i < valueOf(numPortals); i=i+1)
       rule writeTop;
@@ -71,6 +88,8 @@ module mkMemSlaveMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves) (Ph
       );
 
    Vector#(numSlaves, PhysMemSlave#(aw,dataWidth)) portalIfcs = take(slaves);
+=======
+>>>>>>> merging mkSlaveMux and mkMemSlaveMux
    let port_sel_low = valueOf(aw);
    let port_sel_high = valueOf(TSub#(addrWidth,1));
    function Bit#(selWidth) psel(Bit#(addrWidth) a);
@@ -79,6 +98,7 @@ module mkMemSlaveMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves) (Ph
    function Bit#(aw) asel(Bit#(addrWidth) a);
       return a[(port_sel_low-1):0];
    endfunction
+<<<<<<< HEAD
 
    FIFO#(Bit#(MemTagSize)) doneFifo          <- mkFIFO1();
    FIFO#(PhysMemRequest#(aw))   req_ars <- mkFIFO1();
@@ -92,15 +112,44 @@ module mkMemSlaveMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves) (Ph
       doneFifo.enq(rv);
    endrule
 
+=======
+   function Get#(MemData#(dataWidth)) getMemPortalReadData(PhysMemSlave#(aw,dataWidth) x) = x.read_server.readData;
+   function Put#(MemData#(dataWidth)) getMemPortalWriteData(PhysMemSlave#(aw,dataWidth) x) = x.write_server.writeData;
+   
+   FIFO#(Bit#(MemTagSize))        doneFifo <- mkFIFO1();
+   FIFO#(PhysMemRequest#(aw)) req_ars <- mkSizedFIFO(1);
+   FIFO#(Bit#(TLog#(numSlaves))) rs <- mkFIFO1();
+   Vector#(numSlaves, PipeOut#(MemData#(dataWidth))) readDataPipes <- mapM(mkPipeOut, map(getMemPortalReadData,slaves));
+   FunnelPipe#(1, numSlaves, MemData#(dataWidth), bpc) read_data_funnel <- mkFunnelPipesPipelined(readDataPipes);
+      
+   FIFO#(PhysMemRequest#(aw)) req_aws <- mkFIFO1();
+   FIFO#(Bit#(TLog#(numSlaves))) ws <- mkFIFO1();
+   FIFOF#(Tuple2#(Bit#(TLog#(numSlaves)), MemData#(dataWidth))) write_data <- mkFIFOF;
+   UnFunnelPipe#(1, numSlaves, MemData#(dataWidth), bpc) write_data_unfunnel <- mkUnFunnelPipesPipelined(cons(toPipeOut(write_data),nil));
+   Vector#(numSlaves, PipeIn#(MemData#(dataWidth))) writeDataPipes <- mapM(mkPipeIn, map(getMemPortalWriteData,slaves));
+   zipWithM(mkConnection, write_data_unfunnel, writeDataPipes);
+ 
+>>>>>>> merging mkSlaveMux and mkMemSlaveMux
    rule req_aw;
       let req <- toGet(req_aws).get;
-      portalIfcs[ws.first].write_server.writeReq.put(req);
+      slaves[ws.first].write_server.writeReq.put(req);
    endrule
 
    rule req_ar;
       let req <- toGet(req_ars).get;
-      portalIfcs[rs.first].read_server.readReq.put(req);
+      slaves[rs.first].read_server.readReq.put(req);
    endrule
+<<<<<<< HEAD
+=======
+   
+   rule write_done_rule;
+      let rv <- slaves[ws.first].write_server.writeDone.get();
+      ws.deq();
+      doneFifo.enq(rv);
+   endrule
+      
+   let verbose = False;
+>>>>>>> merging mkSlaveMux and mkMemSlaveMux
 
    interface PhysMemWriteServer write_server;
       interface Put writeReq;
@@ -157,6 +206,7 @@ module mkMemSlaveMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves) (Ph
    endinterface
 endmodule
 
+<<<<<<< HEAD
 module mkMemSlaveMuxPipelined#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves) (PhysMemSlave#(addrWidth,dataWidth))
    provisos(Add#(selWidth,aw,addrWidth)
 	    ,Add#(a__, TLog#(numSlaves), selWidth)
@@ -247,3 +297,5 @@ module mkMemSlaveMuxPipelined#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) sl
    endinterface
 endmodule
 
+=======
+>>>>>>> merging mkSlaveMux and mkMemSlaveMux
