@@ -65,17 +65,13 @@ endmodule
 
 module mkFramework(Framework#(numTiles,Empty,numMasters))
    provisos(Add#(a__, numTiles, 3)
+	    ,Add#(b__, TLog#(TAdd#(1, numTiles)), 14)
 	    ,Add#(c__, TLog#(d__), 6)
 	    ,Mul#(d__, numMasters, numTiles)
-	    ,Add#(1,numTiles,numInterrupts)
-	    ,Add#(e__, TLog#(numInterrupts), 14)
-	    ,Add#(b__, TLog#(f__), 6)
-	    ,Mul#(f__, numMasters, TMul#(numTiles, 4))
 	    );
    
+   
    Vector#(numTiles, PhysMemConnector#(18,32)) portal_connectors <- replicateM(mkPhysMemConnector);
-   Vector#(numTiles, MemreadConnector#(DataBusWidth)) tile_read_connectors <- replicateM(mkMemreadConnector);
-   Vector#(numTiles, MemwriteConnector#(DataBusWidth)) tile_write_connectors <- replicateM(mkMemwriteConnector);
    Vector#(numTiles, MemReadClient#(DataBusWidth)) tile_read_clients = newVector;
    Vector#(numTiles, MemWriteClient#(DataBusWidth)) tile_write_clients = newVector;
    Vector#(numTiles, Wire#(Bool)) tile_interrupts <- replicateM(mkWire);
@@ -113,21 +109,14 @@ module mkFramework(Framework#(numTiles,Empty,numMasters))
    framework_portals[2] = lMMURequestWrapper.portalIfc;
    framework_portals[3] = lMemServerRequestWrapper.portalIfc;
    PhysMemSlave#(18,32) framework_ctrl_mux <- mkSlaveMux(framework_portals);
-   let framework_intr <- mkInterruptMux(getInterruptVector(framework_portals));
    
    //
    /////////////////////////////////////////////////////////////
 
-   PhysMemSlave#(32,32) ctrl_mux <- mkMemSlaveMux(cons(framework_ctrl_mux, map(getPhysMemConnectorSlave, portal_connectors)));
-   Vector#(16, ReadOnly#(Bool)) interrupts = replicate(interface ReadOnly; method Bool _read(); return False; endmethod endinterface);
-   interrupts[0] = framework_intr;
-   for (Integer i = 1; i < valueOf(numInterrupts); i = i + 1)
-      interrupts[i] = (interface ReadOnly;
-			  method Bool _read();
-			     return tile_interrupts[i-1]._read;
-			  endmethod
-		       endinterface);
-   interface interrupt = interrupts;
+   Vector#(TAdd#(1,numTiles), PhysMemSlave#(18,32)) foo = cons(framework_ctrl_mux, map(getPhysMemConnectorSlave, portal_connectors)); 
+   PhysMemSlave#(32,32) ctrl_mux <- mkMemSlaveMux(foo);
+
+   interface interrupt = getInterruptVector(framework_portals);
    interface slave = ctrl_mux;
    interface masters = lMemServer.masters;
    interface pins = ?; 
