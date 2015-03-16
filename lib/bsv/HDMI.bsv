@@ -47,25 +47,25 @@ interface HDMI#(type pixelType);
     interface Reset deleteme_unused_reset;
 endinterface
 
-interface HdmiInternalRequest;
+interface HdmiGeneratorRequest;
     method Action setTestPattern(Bit#(1) v);
     method Action setPatternColor(Bit#(32) v);
     method Action setDePixel(Bit#(12) porch, Bit#(12) width, Bit#(12) visible, Bit#(12) last, Bit#(12) mid);
     method Action setDeLine(Bit#(11) porch, Bit#(11) width, Bit#(11) visible, Bit#(11) last, Bit#(11) mid);
     method Action waitForVsync(Bit#(32) unused);
 endinterface
-interface HdmiInternalIndication;
+interface HdmiGeneratorIndication;
     method Action vsync(Bit#(64) v, Bit#(32) vs);
 endinterface
 
 interface HdmiGenerator#(type pixelType);
-    interface HdmiInternalRequest control;
+    interface HdmiGeneratorRequest request;
     interface Get#(VideoData#(pixelType)) rgb888;
-    interface Put#(Bit#(32)) request;
+    interface Put#(Bit#(32)) pdata;
 endinterface
 
 module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
-   SyncPulseIfc startDMA, HdmiInternalIndication indication)(HdmiGenerator#(Rgb888));
+   SyncPulseIfc startDMA, HdmiGeneratorIndication indication)(HdmiGenerator#(Rgb888));
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
     // 1920 * 1080
@@ -180,13 +180,13 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
         rgb888StageReg <= VideoData {de: 1, vsync: 0, hsync: 0, pixel: unpack(patternRegs[{patternIndex1, patternIndex0}])};
     endrule
 
-    interface Put request;
+    interface Put pdata;
         method Action put(Bit#(32) v) if (testPatternEnabled == 0 && dataEnable);
            rgb888StageReg <= VideoData {de: 1, vsync: 0, hsync: 0, pixel: unpack(v[23:0])};
         endmethod
-    endinterface: request
+    endinterface
 
-    interface HdmiInternalRequest control;
+    interface HdmiGeneratorRequest request;
         method Action setPatternColor(Bit#(32) v);
             patternRegs[0] <= v[23:0]; 
         endmethod

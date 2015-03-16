@@ -38,12 +38,13 @@ import CtrlMux::*;
 import Portal::*;
 import Leds::*;
 import XADC::*;
+import ImageonCapture::*;
 import ImageonSerdesRequest::*;
 import ImageonSerdesIndication::*;
 import ImageonSensorRequest::*;
 import ImageonSensorIndication::*;
-import HdmiInternalRequest::*;
-import HdmiInternalIndication::*;
+import HdmiGeneratorRequest::*;
+import HdmiGeneratorIndication::*;
 import MemServerRequest::*;
 import MMURequest::*;
 import MemServerIndication::*;
@@ -57,8 +58,8 @@ import YUV::*;
 import XilinxCells::*;
 import ConnectalClocks::*;
 
-typedef enum { ImageonSerdesRequestS2H, ImageonSensorRequestS2H, HdmiInternalRequestS2H, ImageonCaptureRequestS2H,
-    ImageonSerdesIndicationH2S, ImageonSensorIndicationH2S, HdmiInternalIndicationH2S, MemServerIndicationH2S, MemServerRequestS2H, MMURequestS2H, MMUIndicationH2S} IfcNames deriving (Eq,Bits);
+typedef enum { ImageonSerdesRequestS2H, ImageonSensorRequestS2H, HdmiGeneratorRequestS2H, ImageonCaptureRequestS2H,
+    ImageonSerdesIndicationH2S, ImageonSensorIndicationH2S, HdmiGeneratorIndicationH2S, MemServerIndicationH2S, MemServerRequestS2H, MMURequestS2H, MMUIndicationH2S} IfcNames deriving (Eq,Bits);
 
 interface ImageCapture;
    interface Vector#(11,StdPortal) portalif;
@@ -86,51 +87,30 @@ module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
    ISerdes serdes <- mkISerdes(defaultClock, defaultReset, serdesIndicationProxy.ifc,
 			clocked_by imageon_clock, reset_by imageon_reset);
    ImageonSerdesRequestWrapper serdesRequestWrapper <- mkImageonSerdesRequestWrapper(ImageonSerdesRequestS2H,serdes.control);
-   let serdes_data = serdes.data;
-   // mem capture
-   MemwriteEngineV#(64,1,1) we <- mkMemwriteEngine();
-   Reg#(Bool) dmaRun <- mkSyncReg(False, defaultClock, defaultReset, imageon_clock);
-   SyncFIFOIfc#(Bit#(64)) synchronizer <- mkSyncBRAMFIFO(10, imageon_clock, imageon_reset, defaultClock, defaultReset);
-   rule sync_data if (dmaRun);
-       synchronizer.enq(serdes_data.capture);
-   endrule
-   rule send_data;
-       we.dataPipes[0].enq(synchronizer.first);
-       synchronizer.deq;
-   endrule
-   rule dma_response;
-       let rv <- we.writeServers[0].response.get;
-       serdesIndicationProxy.ifc.iserdes_dma('hffffffff); // request is all finished
-   endrule
-   ImageonCaptureRequestWrapper imageonCaptureWrapper <- mkImageonCaptureRequestWrapper(ImageonCaptureRequestS2H,
-       (interface ImageonCaptureRequest;
-            method Action startWrite(Bit#(32) pointer, Bit#(32) numBytes);
-                we.writeServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(numBytes), burstLen:8});
-                dmaRun <= True;
-	    endmethod
-       endinterface));
+   ImageonCapture lImageonCapture <- mkImageonCapture(imageon_clock, imageon_reset, serdes.data, serdesIndicationProxy.ifc);
+   ImageonCaptureRequestWrapper imageonCaptureWrapper <- mkImageonCaptureRequestWrapper(ImageonCaptureRequestS2H, lImageonCapture.request);
    MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(MMUIndicationH2S);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUIndicationProxy.ifc);
    MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(MMURequestS2H, hostMMU.request);
 
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(MemServerIndicationH2S);
-   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(nil, cons(we.dmaClient,nil), cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
+   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(nil, lImageonCapture.dmaClient, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
    MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(MemServerRequestS2H, dma.request);
 
    // fromSensor: sensor specific processing of serdes input, resulting in pixels
    ImageonSensorIndicationProxy sensorIndicationProxy <- mkImageonSensorIndicationProxy(ImageonSensorIndicationH2S);
-   ImageonSensor fromSensor <- mkImageonSensor(defaultClock, defaultReset, serdes_data, vsyncPulse.pulse(),
+   ImageonSensor fromSensor <- mkImageonSensor(defaultClock, defaultReset, serdes.data, vsyncPulse.pulse(),
        hdmi_clock, hdmi_reset, sensorIndicationProxy.ifc, clocked_by imageon_clock, reset_by imageon_reset);
    ImageonSensorRequestWrapper sensorRequestWrapper <- mkImageonSensorRequestWrapper(ImageonSensorRequestS2H,fromSensor.control);
 
    // hdmi: output to display
-   HdmiInternalIndicationProxy hdmiIndicationProxy <- mkHdmiInternalIndicationProxy(HdmiInternalIndicationH2S);
-   HdmiGenerator#(Rgb888) hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
+   HdmiGeneratorIndicationProxy hdmiIndicationProxy <- mkHdmiGeneratorIndicationProxy(HdmiGeneratorIndicationH2S);
+   HdmiGenerator#(Rgb888) lHdmiGenerator <- mkHdmiGenerator(defaultClock, defaultReset,
        vsyncPulse, hdmiIndicationProxy.ifc, clocked_by hdmi_clock, reset_by hdmi_reset);
    Rgb888ToYyuv converter <- mkRgb888ToYyuv(clocked_by hdmi_clock, reset_by hdmi_reset);
-   mkConnection(hdmiGen.rgb888, converter.rgb888);
+   mkConnection(lHdmiGenerator.rgb888, converter.rgb888);
    HDMI#(Bit#(HdmiBits)) hdmisignals <- mkHDMI(converter.yyuv, clocked_by hdmi_clock, reset_by hdmi_reset);
-   HdmiInternalRequestWrapper hdmiRequestWrapper <- mkHdmiInternalRequestWrapper(HdmiInternalRequestS2H,hdmiGen.control);
+   HdmiGeneratorRequestWrapper hdmiRequestWrapper <- mkHdmiGeneratorRequestWrapper(HdmiGeneratorRequestS2H,lHdmiGenerator.request);
 
    Reg#(Bool) frameStart <- mkReg(False, clocked_by imageon_clock, reset_by imageon_reset);
    Reg#(Bit#(32)) frameCount <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
@@ -163,7 +143,7 @@ module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
    endrule
    rule xsviput;
        Bit#(32) pixel = {8'b0, xsvi[9:2], xsvi[9:2], xsvi[9:2]};
-       hdmiGen.request.put(pixel);
+       lHdmiGenerator.pdata.put(pixel);
    endrule
    Reg#(Bit#(1)) bozobit <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
     rule bozobit_rule;

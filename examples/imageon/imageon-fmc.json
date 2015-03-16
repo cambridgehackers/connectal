@@ -131,5 +131,39 @@
     "I2C1_sda": {
 	"PIO_DIRECTION": "BIDIR",
 	"fmc": "LA16_n"
-    }
+    },
+    "I2C0_scl": {
+	"i2c0": "scl"
+    },
+    "I2C0_sda": {
+	"i2c0": "sda"
+    },
+    "CLK_hdmi_clock_if": {
+	"hdmi": "clock"
+    },
+    "hdmi_hsync": {
+	"hdmi": "hsync"
+    },
+    "hdmi_vsync": {
+	"hdmi": "vsync"
+    },
+    "hdmi_de": {
+	"hdmi": "de"
+    },
+    "hdmi_data[0]": { "hdmi": "data[0]" },
+    "hdmi_data[1]": { "hdmi": "data[1]" },
+    "hdmi_data[2]": { "hdmi": "data[2]" },
+    "hdmi_data[3]": { "hdmi": "data[3]" },
+    "hdmi_data[4]": { "hdmi": "data[4]" },
+    "hdmi_data[5]": { "hdmi": "data[5]" },
+    "hdmi_data[6]": { "hdmi": "data[6]" },
+    "hdmi_data[7]": { "hdmi": "data[7]" },
+    "hdmi_data[8]": { "hdmi": "data[8]" },
+    "hdmi_data[9]": { "hdmi": "data[9]" },
+    "hdmi_data[10]": { "hdmi": "data[10]" },
+    "hdmi_data[11]": { "hdmi": "data[11]" },
+    "hdmi_data[12]": { "hdmi": "data[12]" },
+    "hdmi_data[13]": { "hdmi": "data[13]" },
+    "hdmi_data[14]": { "hdmi": "data[14]" },
+    "hdmi_data[15]": { "hdmi": "data[15]" }
 }

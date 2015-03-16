@@ -403,10 +403,6 @@ interface ImageonSerdesIndication;
     method Action iserdes_dma(Bit#(32) v);
 endinterface
 
-interface ImageonCaptureRequest;
-   method Action startWrite(Bit#(32) pointer, Bit#(32) numBytes);
-endinterface
-
 interface SerdesData;
     method Wire#(Bit#(1)) reset();
     method Vector#(5, Bit#(10)) raw_data();
