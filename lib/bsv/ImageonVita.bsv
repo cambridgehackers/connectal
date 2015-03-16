@@ -25,6 +25,7 @@ import Vector::*;
 import Clocks::*;
 import DefaultValue::*;
 import XilinxCells::*;
+import ConnectalClocks::*;
 import ConnectalXilinxCells::*;
 
 typedef struct {

@@ -104,13 +104,13 @@ public:
 
 MemreadRequestProxy *device = 0;
 
-static int running = 1;
+static volatile int running = 1;
 
 void *debugWorker(void *ptr)
 {
   while (running) {
     device->getStateDbg();
-    sleep(1);
+    sleep(5);
   }
 }
 
@@ -188,6 +188,7 @@ int runtest(int argc, const char ** argv)
     srcBuffer[numWords-1] = -1;
     portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
 
+    fprintf(stderr, "Starting second read, mismatches expected\n");
     device->startRead(ref_srcAlloc, 0, numWords, burstLen, iterCnt);
     sem_wait(&test_sem);
     if (mismatchCount != 3/*number of errors introduced above*/ * iterCnt) {
@@ -197,12 +198,13 @@ int runtest(int argc, const char ** argv)
       test_result++;     // failed
     }
 
+    running = 0;
+
     MonkitFile("perf.monkit")
       .setHwCycles(cycles)
       .setReadBwUtil(read_util)
       .writeFile();
 
-    running = 0;
     return test_result; 
   } else {
     fprintf(stderr, "Main::new_test read %08x\n", numWords);

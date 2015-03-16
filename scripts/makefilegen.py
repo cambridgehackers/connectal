@@ -91,8 +91,7 @@ set boardname {%(boardname)s}
 set xbsvipdir {%(ipdir)s}
 set ipdir {%(ipdir)s}
 set connectaldir {%(connectaldir)s}
-set need_xilinx_pcie {%(need_xilinx_pcie)s}
-set need_altera_pcie {%(need_altera_pcie)s}
+set need_pcie {%(need_pcie)s}
 set connectal_dut {%(Dut)s}
 %(tcldefines)s
 '''
@@ -108,7 +107,7 @@ foreach {pat} {CLK_GATE_hdmi_clock_if CLK_*deleteme_unused_clock* CLK_GATE_*dele
 
 fpgamakeRuleTemplate='''
 FPGAMAKE=$(CONNECTALDIR)/../fpgamake/fpgamake
-fpgamake.mk: $(vfile) Makefile prepare_bin_target
+fpgamake.mk: $(VFILE) Makefile prepare_bin_target
 	$(Q)mkdir -p hw
 	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk --board=%(boardname)s --part=%(partname)s %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s %(qsf)s %(chipscope)s -t $(MKTOP) %(cachedir)s -b hw/mkTop.bit verilog $(CONNECTALDIR)/verilog %(verilog)s
 
@@ -167,7 +166,7 @@ CONNECTALDIR?=%(connectaldir)s
 LOCAL_ARM_MODE := arm
 include $(DTOP)/jni/Makefile.generated_files
 APP_SRC_FILES := $(addprefix $(DTOP)/jni/,  $(GENERATED_CPP)) %(source)s
-PORTAL_SRC_FILES := $(addprefix $(CONNECTALDIR)/cpp/, portal.c portalSocket.c portalJson.c poller.cpp sock_utils.c timer.c)
+PORTAL_SRC_FILES := $(addprefix $(CONNECTALDIR)/cpp/, portal.c portalSocket.c portalJson.c portalPrintf.c poller.cpp sock_utils.c timer.c)
 LOCAL_SRC_FILES := $(APP_SRC_FILES) $(PORTAL_SRC_FILES)
 
 LOCAL_PATH :=
@@ -196,7 +195,7 @@ CFLAGS_COMMON = -O -g %(cflags)s
 CFLAGS = $(CFLAGS_COMMON)
 CFLAGS2 = %(cdefines2)s
 
-PORTAL_CPP_FILES = $(addprefix $(CONNECTALDIR)/cpp/, portal.c portalSocket.c portalJson.c poller.cpp sock_utils.c timer.c)
+PORTAL_CPP_FILES = $(addprefix $(CONNECTALDIR)/cpp/, portal.c portalPrintf.c portalSocket.c portalJson.c poller.cpp sock_utils.c timer.c)
 include $(DTOP)/jni/Makefile.generated_files
 include $(DTOP)/Makefile.autotop
 SOURCES = $(addprefix $(DTOP)/jni/,  $(GENERATED_CPP)) %(source)s $(PORTAL_CPP_FILES)
@@ -208,6 +207,7 @@ BSIM_EXE_CXX = $(addprefix $(CONNECTALDIR)/cpp/, $(BSIM_EXE_CXX_FILES))
 
 ubuntu.exe: $(SOURCES)
 	$(Q)g++ $(CFLAGS) -o ubuntu.exe $(SOURCES) $(LDLIBS)
+	$(Q)[ ! -f ../bin/mkTop.bin.gz ] || objcopy --add-section fpgadata=../bin/mkTop.bin.gz ubuntu.exe
 
 connectal.so: $(SOURCES)
 	$(Q)g++ -shared -fpic $(CFLAGS) -o connectal.so %(bsimcxx)s $(SOURCES) $(LDLIBS)
@@ -288,12 +288,9 @@ if __name__=='__main__':
             print "ERROR: File %s not found" % (option_info['TOP'] + '.bsv')
             sys.exit(1)
 
-    needs_pcie_7x_gen1x8 = None
-    needs_pcie_s5_gen2x8 = None
-    if 'needs_pcie_7x_gen1x8' in option_info:
-        needs_pcie_7x_gen1x8 = option_info['needs_pcie_7x_gen1x8']
-    elif 'needs_pcie_s5_gen2x8' in option_info:
-        needs_pcie_s5_gen2x8 = option_info['needs_pcie_s5_gen2x8']
+    need_pcie = None
+    if 'need_pcie' in option_info:
+        need_pcie = option_info['need_pcie']
 
     partname = option_info['partname']
     if noisyFlag:
@@ -385,8 +382,7 @@ if __name__=='__main__':
                                                 'pattern': '/*.*v' if os.path.isdir(f) else ''} for f in options.verilog]),
                  'read_xci': '\n'.join([tclReadXciTemplate
                                         % { 'xci': f } for f in options.xci]),
-                 'need_xilinx_pcie': 1 if needs_pcie_7x_gen1x8 in ["True", "true"] else 0,
-                 'need_altera_pcie': 1 if needs_pcie_s5_gen2x8 in ["True", "true"] else 0,
+                 'need_pcie': need_pcie,
                  'tcldefines': '\n'.join(['set %s {%s}' % (var,val) for (var,val) in map(util.splitBinding, bsvdefines)]),
                  'ipdir': os.path.abspath(options.ipdir) if options.ipdir else connectaldir
                  }

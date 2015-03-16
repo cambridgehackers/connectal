@@ -31,5 +31,5 @@
 int main(int argc, const char **argv)
 {
   int ret = runtest(argc, argv);
-  exit(ret ? 1 : 0);
+  return ret;
 }

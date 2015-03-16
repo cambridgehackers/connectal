@@ -1,7 +1,9 @@
 
 CONNECTALDIR?=../..
-INTERFACES = MemreadRequest MemreadIndication
-BSVFILES = Memread.bsv Top.bsv
+S2H_INTERFACES = MemreadRequest:Memread.request
+H2S_INTERFACES = Memread:MemreadIndication
+MEM_INTERFACES = lMemread.dmaClient,nil
+BSVFILES = Memread.bsv
 CPPFILES=testmemread.cpp
 CONNECTALFLAGS += --bscflags " -D DataBusWidth=128"
 

@@ -56,6 +56,12 @@
 #define driver_devel(format, ...)
 #endif
 
+struct pmentry {
+	struct file *fmem;
+	int          id;
+	struct list_head pmlist;
+};
+
 struct portal_data {
         struct miscdevice misc; /* must be first element (pointer passed to misc_register) */
         wait_queue_head_t wait_queue;
@@ -64,6 +70,7 @@ struct portal_data {
         u32               top;
         char              name[128];
         char              irqname[128];
+	struct list_head pmlist;;
 };
 
 struct connectal_data{
@@ -151,20 +158,43 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
         case PORTAL_SEND_FD: {
                 /* pushd down allocated fd */
                 PortalSendFd sendFd;
+		struct pmentry *pmentry;
                 PortalInternal devptr = {.map_base = portal_data->map_base, .item=&kernelfunc};
 
                 int err = copy_from_user(&sendFd, (void __user *) arg, sizeof(sendFd));
                 if (err)
                     break;
                 printk("[%s:%d] PORTAL_SEND_FD %x %x  **\n", __FUNCTION__, __LINE__, sendFd.fd, sendFd.id);
+		pmentry = (struct pmentry *)kzalloc(sizeof(struct pmentry), GFP_KERNEL);
+		INIT_LIST_HEAD(&pmentry->pmlist);
+		mutex_lock(&connectal_mutex);
+		pmentry->fmem = fget(sendFd.fd);
+		pmentry->id   = sendFd.id;
+		list_add(&pmentry->pmlist, &portal_data->pmlist);
                 err = send_fd_to_portal(&devptr, sendFd.fd, sendFd.id, 0);
+		mutex_unlock(&connectal_mutex);
                 if (err < 0)
                     break;
                 return 0;
                 }
+	case PORTAL_DEREFERENCE: {
+		int id = arg;
+		struct list_head *pmlist;
+                PortalInternal devptr = {.map_base = portal_data->map_base, .item=&kernelfunc};
+		MMURequest_idReturn(&devptr, id);
+		list_for_each(pmlist, &portal_data->pmlist) {
+			struct pmentry *pmentry = list_entry(pmlist, struct pmentry, pmlist);
+			if (pmentry->id == id) {
+				printk("%s:%d releasing portalmem object %d fmem=%p\n", __FUNCTION__, __LINE__, id, pmentry->fmem);
+				list_del(&pmentry->pmlist);
+				fput(pmentry->fmem);
+				kfree(pmentry);
+			}
+		}
+	} break;
         case PORTAL_DCACHE_FLUSH_INVAL: {
   	        flush = 1;
-	}
+	} // fall through
 	case PORTAL_DCACHE_INVAL: {
                 struct scatterlist *sg;
                 struct file *fmem = fget((int)arg);
@@ -224,12 +254,21 @@ unsigned int portal_poll (struct file *filep, poll_table *poll_table)
 static int portal_release(struct inode *inode, struct file *filep)
 {
         struct portal_data *portal_data = filep->private_data;
+	PortalInternal devptr = {.map_base = portal_data->map_base, .item=&kernelfunc};
+	struct list_head *pmlist;
         driver_devel("%s inode=%p filep=%p\n", __func__, inode, filep);
         if (portal_data->name[0]) {
                 // disable interrupt
                 writel(0, (void *)(STATUS_OFFSET + (unsigned long) portal_data->map_base));
         }
         init_waitqueue_head(&portal_data->wait_queue);
+	list_for_each(pmlist, &portal_data->pmlist) {
+		struct pmentry *pmentry = list_entry(pmlist, struct pmentry, pmlist);
+		printk("    returning id=%d fmem=%p\n", pmentry->id, pmentry->fmem);
+		MMURequest_idReturn(&devptr, pmentry->id);
+		kfree(pmentry);
+	}
+	INIT_LIST_HEAD(&portal_data->pmlist);
         return 0;
 }
 
@@ -328,6 +367,7 @@ static int connectal_of_probe(struct platform_device *pdev)
     portal_data->map_base = ioremap_nocache(portal_data->dev_base_phys, PORTAL_BASE_OFFSET);
     portal_data->misc.name = portal_data->name;
     portal_data->misc.fops = &portal_fops;
+    INIT_LIST_HEAD(&portal_data->pmlist);
     sprintf(portal_data->irqname, "zynqportal%d", fpn);
     if (request_irq(connectal_data->portal_irq, portal_isr,
             IRQF_TRIGGER_HIGH | IRQF_SHARED , portal_data->irqname, portal_data)) {

@@ -46,7 +46,7 @@ endinterface
 
 interface Memread;
    interface MemreadRequest request;
-   interface MemReadClient#(DataBusWidth) dmaClient;
+   interface Vector#(1,MemReadClient#(DataBusWidth)) dmaClient;
 endinterface
 
 interface MemreadIndication;
@@ -59,7 +59,7 @@ typedef TDiv#(DataBusWidth,32) DataBusWords;
 
 module mkMemread#(MemreadIndication indication) (Memread);
 
-   Reg#(ObjectPointer)   pointer <- mkReg(0);
+   Reg#(SGLId)   pointer <- mkReg(0);
    Reg#(Bit#(32))       numWords <- mkReg(0);
    Reg#(Bit#(32))       burstLen <- mkReg(0);
    Reg#(Bit#(32))    mismatchCnt <- mkReg(0);
@@ -88,7 +88,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    
    for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
       rule start (iterCnts[i] > 0);
-	 re.readServers[i].request.put(MemengineCmd{pointer:pointer, base:extend(readOffset)+(fromInteger(i)*chunk), len:truncate(chunk), burstLen:truncate(burstLen*4)});
+	 re.readServers[i].request.put(MemengineCmd{sglId:pointer, base:extend(readOffset)+(fromInteger(i)*chunk), len:truncate(chunk), burstLen:truncate(burstLen*4)});
 	 iterCnts[i] <= iterCnts[i]-1;
 	 Bit#(32) base = (readOffset/4)+(fromInteger(i)*(truncate(chunk)/4));
 	 Bit#(32) limit = base + truncate(chunk)/4;
@@ -135,7 +135,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
       iterCnt <= iterCnt - 1;
    endrule
    
-   interface dmaClient = re.dmaClient;
+   interface dmaClient = cons(re.dmaClient, nil);
    interface MemreadRequest request;
       method Action startRead(Bit#(32) rp, Bit#(32) off, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
 	 indication.started(nw);

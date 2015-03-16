@@ -86,9 +86,9 @@ Integer dmaBurstsPerPage = pageSizeUser/dmaBurstBytes;
 
 interface FlashTop;
 	interface FlashRequest request;
-	interface MemWriteClient#(WordSz) hostMemWriteClient;
-	interface MemReadClient#(WordSz) hostMemReadClient;
-   interface PhysMemSlave#(FlashAddrWidth, 128) memSlave;    
+	interface Vector#(1, MemWriteClient#(WordSz)) hostMemWriteClient;
+	interface Vector#(1, MemReadClient#(WordSz)) hostMemReadClient;
+        interface PhysMemSlave#(FlashAddrWidth, 128) memSlave;    
 	interface Aurora_Pins#(4) aurora_fmc1;
 	interface Aurora_Clock_Pins aurora_clk_fmc1;
 endinterface
@@ -525,8 +525,8 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 
 	endinterface //FlashRequest
 
-   interface MemWriteClient hostMemWriteClient = we.dmaClient;
-   interface MemReadClient hostMemReadClient = re.dmaClient;
+   interface MemWriteClient hostMemWriteClient = cons(we.dmaClient, nil);
+   interface MemReadClient hostMemReadClient = cons(re.dmaClient, nil);
 
    interface Aurora_Pins aurora_fmc1 = flashCtrl.aurora;
    interface Aurora_Clock_Pins aurora_clk_fmc1 = gtx_clk_fmc1.aurora_clk;

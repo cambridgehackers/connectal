@@ -1,7 +1,9 @@
 
 CONNECTALDIR?=../..
-INTERFACES = EchoRequest EchoIndication MMURequest
-BSVFILES = Echo.bsv Top.bsv $(CONNECTALDIR)/bsv/ConnectalMemory.bsv
+INTERFACES = MMURequest
+S2H_INTERFACES = EchoRequest:Echo.request
+H2S_INTERFACES = Echo:EchoIndication
+BSVFILES = Echo.bsv $(CONNECTALDIR)/bsv/ConnectalMemory.bsv
 CPPFILES=testecho.cpp $(CONNECTALDIR)/cpp/portalShared.c $(CONNECTALDIR)/cpp/dmaManager.c
 
 NUMBER_OF_MASTERS =0

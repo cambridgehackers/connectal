@@ -148,7 +148,7 @@ module mkPcieTestBench#(PcieTestBenchIndication indication)(PcieTestBench#(40,64
    SGListConfigRequestWrapper hostmemSGListConfigRequestWrapper <- mkSGListConfigRequestWrapper(HostmemSGListConfigRequest, hostmemSGList.request);
 
    MemServerIndicationProxy hostmemMemServerIndicationProxy <- mkMemServerIndicationProxy(HostmemMemServerIndication);
-   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServerR(hostmemMemServerIndicationProxy.ifc, cons(re.dmaClient,nil), hostmemSGList);
+   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(cons(re.dmaClient,nil), nil, hostmemSGList, hostmemMemServerIndicationProxy.ifc);
    MemServerRequestWrapper hostmemMemServerRequestWrapper <- mkMemServerRequestWrapper(HostmemMemServerRequest, dma.request);
 `ifdef SANITY
    Axi3Master#(40,64,6) m_axi = ?;

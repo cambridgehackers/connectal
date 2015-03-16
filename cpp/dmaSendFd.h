@@ -34,8 +34,6 @@ static int trace_memory = 1;
 #endif
 
 #include "GeneratedTypes.h" // generated in project directory
-#define DMAsglist(P, A, B, C, D) MMURequest_sglist((P), (A), (B), (C), (D));
-#define DMAregion(P, PTR, B8, I8, B4, I4, B0, I0) MMURequest_region((P), (PTR), (B8), (I8), (B4), (I4), (B0), (I0))
 
 int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
 {
@@ -120,7 +118,7 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
       PORTAL_PRINTF("DmaManager:unsupported sglist size %lx\n", len);
     if (trace_memory)
       PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d dma_addr=%08lx, len=%08lx)\n", id, i, (long)addr, len);
-    DMAsglist(device, id, i, addr, len);
+    MMURequest_sglist(device, id, i, addr, len);
   } // balance } }
 #ifdef __KERNEL__
   fput(fmem);
@@ -131,7 +129,7 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
   // HW interprets zeros as end of sglist
   if (trace_memory)
     PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d end of list)\n", id, i);
-  DMAsglist(device, id, i, 0, 0); // end list
+  MMURequest_sglist(device, id, i, 0, 0); // end list
 
   for(i = 0; i < 3; i++){
     idxOffset = entryCount - border;
@@ -145,7 +143,7 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
     PORTAL_PRINTF("regions %d (%x %x %x)\n", id,regions[0], regions[1], regions[2]);
     PORTAL_PRINTF("borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borderVal[0], borderVal[1], borderVal[2]);
   }
-  DMAregion(device, id, borderVal[0], indexVal[0], borderVal[1], indexVal[1], borderVal[2], indexVal[2]);
+  MMURequest_region(device, id, borderVal[0], indexVal[0], borderVal[1], indexVal[1], borderVal[2], indexVal[2]);
   /* ifdefs here to supress warning during kernel build */
 #ifndef __KERNEL__
 retlab:

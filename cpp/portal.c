@@ -41,6 +41,7 @@
 #include <sys/ioctl.h>
 #include <time.h> // ctime
 #include <stdarg.h> // for portal_printf
+#include <sys/wait.h>
 #endif
 #include "drivers/portalmem/portalmem.h" // PA_MALLOC
 
@@ -119,14 +120,48 @@ int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency
 
 static void init_portal_hw(void)
 {
-  static int once = 0;
+    static int once = 0;
 
-  if (once)
-      return;
-  once = 1;
+    if (once)
+        return;
+    once = 1;
 #ifdef __KERNEL__
-  tboard = get_pcie_portal_descriptor();
-#endif
+    tboard = get_pcie_portal_descriptor();
+#else
+#ifndef BSIM
+    int pid = fork();
+    if (pid == -1) {
+        printf("[%s:%d] fork error\n", __FUNCTION__, __LINE__);
+        exit(-1);
+    }
+    else if (pid) {
+        int status;
+        waitpid(pid, &status, 0);
+    }
+    else {
+#define MAX_PATH 2000
+        char buf[MAX_PATH];
+        buf[0] = 0;
+        int rc = readlink("/proc/self/exe", buf, sizeof(buf));
+        char *serial = getenv("SERIALNO");
+        int ind = 1;
+        char *argv[] = { (char *)"fpgajtag", NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+        if (serial) {
+            argv[ind++] = (char *)"-s";
+            argv[ind++] = strdup(serial);
+        }
+#ifdef __arm__
+        argv[ind++] = (char *)"-x";
+        argv[ind++] = buf;
+        execvp ("/mnt/sdcard/fpgajtag", argv);
+        exit(-1);
+#else
+        argv[ind++] = buf;
+        execvp ("fpgajtag", argv);
+#endif // !__arm__
+    }
+#endif // //BSIM
+#endif // !__KERNEL__
 }
 
 uint64_t portalCycleCount()
@@ -254,15 +289,6 @@ void portalCheckIndication(PortalInternal *pint)
         pint->handler(pint, queue_status-1, 0);
   }
 }
-
-#ifndef __KERNEL__
-int portal_printf(const char *format, ...)
-{
-    va_list ap;
-    va_start(ap, format);
-    return vfprintf(stderr, format, ap);
-}
-#endif
 
 void send_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, unsigned int hdr, int sendFd)
 {

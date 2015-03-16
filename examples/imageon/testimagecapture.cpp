@@ -63,7 +63,7 @@ DECL(spi_response)
 
 class ImageonSerdesIndication : public ImageonSerdesIndicationWrapper {
 public:
-    ImageonSerdesIndication(int id, PortalPoller *poller = 0) : ImageonSerdesIndicationWrapper(id, poller) {}
+    ImageonSerdesIndication(int id) : ImageonSerdesIndicationWrapper(id) {}
     virtual void iserdes_control_value ( uint32_t v ){
         cv_iserdes_control = v;
         sem_post(&sem_iserdes_control);
@@ -75,7 +75,7 @@ printf("[%s:%d] 0x%x ***********************************************************
 
 class ImageonSensorIndication : public ImageonSensorIndicationWrapper {
 public:
-    ImageonSensorIndication(int id, PortalPoller *poller = 0) : ImageonSensorIndicationWrapper(id, poller) {}
+    ImageonSensorIndication(int id) : ImageonSensorIndicationWrapper(id) {}
     void spi_response(uint32_t v){
         //fprintf(stderr, "spi_response: %x\n", v);
         cv_spi_response = v;
@@ -86,7 +86,7 @@ public:
 class HdmiInternalIndication: public HdmiInternalIndicationWrapper {
     HdmiInternalRequestProxy *hdmiRequest;
 public:
-    HdmiInternalIndication(int id, HdmiInternalRequestProxy *proxy, PortalPoller *poller = 0) : HdmiInternalIndicationWrapper(id, poller), hdmiRequest(proxy) {}
+    HdmiInternalIndication(int id, HdmiInternalRequestProxy *proxy) : HdmiInternalIndicationWrapper(id), hdmiRequest(proxy) {}
     virtual void vsync ( uint64_t v, uint32_t w ) {
         fprintf(stderr, "[%s:%d] v=%d w=%d\n", __FUNCTION__, __LINE__, (uint32_t) v, w);
         hdmiRequest->waitForVsync(v+1);
@@ -428,22 +428,21 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
 int main(int argc, const char **argv)
 {
     init_local_semaphores();
-    PortalPoller *poller = new PortalPoller();
 
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
 
-    serdesdevice = new ImageonSerdesRequestProxy(IfcNames_ImageonSerdesRequest, poller);
-    sensordevice = new ImageonSensorRequestProxy(IfcNames_ImageonSensorRequest, poller);
-    hdmidevice = new HdmiInternalRequestProxy(IfcNames_HdmiInternalRequest);
-    ImageonCaptureRequestProxy *idevice = new ImageonCaptureRequestProxy(IfcNames_ImageonCapture);
+    serdesdevice = new ImageonSerdesRequestProxy(IfcNames_ImageonSerdesRequestS2H);
+    sensordevice = new ImageonSensorRequestProxy(IfcNames_ImageonSensorRequestS2H);
+    hdmidevice = new HdmiInternalRequestProxy(IfcNames_HdmiInternalRequestS2H);
+    ImageonCaptureRequestProxy *idevice = new ImageonCaptureRequestProxy(IfcNames_ImageonCaptureRequestS2H);
     
-    ImageonSerdesIndicationWrapper *imageonSerdesIndication = new ImageonSerdesIndication(IfcNames_ImageonSerdesIndication);
-    ImageonSensorIndicationWrapper *imageonSensorIndication = new ImageonSensorIndication(IfcNames_ImageonSensorIndication);
-    HdmiInternalIndicationWrapper *hdmiIndication = new HdmiInternalIndication(IfcNames_HdmiInternalIndication, hdmidevice);
+    ImageonSerdesIndicationWrapper *imageonSerdesIndication = new ImageonSerdesIndication(IfcNames_ImageonSerdesIndicationH2S);
+    ImageonSensorIndicationWrapper *imageonSensorIndication = new ImageonSensorIndication(IfcNames_ImageonSensorIndicationH2S);
+    HdmiInternalIndicationWrapper *hdmiIndication = new HdmiInternalIndication(IfcNames_HdmiInternalIndicationH2S, hdmidevice);
     // read out monitor EDID from ADV7511
     struct edid edid;
     init_i2c_hdmi();

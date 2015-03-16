@@ -54,7 +54,7 @@ interface HdmiDisplay;
 `endif
     interface HdmiDisplayRequest displayRequest;
     interface HdmiInternalRequest internalRequest;
-    interface MemReadClient#(64) dmaClient;
+    interface Vector#(1, MemReadClient#(64)) dmaClient;
     interface HDMI#(Bit#(HdmiBits)) hdmi;
     interface XADC xadc;
 endinterface
@@ -145,7 +145,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
 
    Reg#(Bool) traceTransfers <- mkReg(False);
    rule startTransfer if (startDMA.pulse() &&& referenceReg matches tagged Valid .reference);
-      memreadEngine.readServers[0].request.put(MemengineCmd{sglId:reference, base:0, len:pack(extend(byteCountReg)), burstLen:64});
+      memreadEngine.readServers[0].request.put(MemengineCmd{sglId:reference, base:0, len:pack(extend(byteCountReg)), burstLen:64, tag: 0});
       if (traceTransfers)
 	 hdmiDisplayIndication.transferStarted(transferCount);
       transferCyclesSnapshot <= transferCycles;
@@ -183,7 +183,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
        endmethod
     endinterface: displayRequest
 
-    interface MemReadClient dmaClient = memreadEngine.dmaClient;
+    interface MemReadClient dmaClient = cons(memreadEngine.dmaClient, nil);
     interface HDMI hdmi = hdmisignals;
     interface HdmiInternalRequest internalRequest = hdmiGen.control;
 `ifdef HDMI_BLUESCOPE

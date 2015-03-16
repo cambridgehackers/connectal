@@ -27,7 +27,6 @@
 #include <monkit.h>
 #include <semaphore.h>
 
-#include "poller.h"
 #include "StdDmaIndication.h"
 #include "MemServerRequest.h"
 #include "MMURequest.h"
@@ -58,7 +57,7 @@ class MemcpyIndication : public MemcpyIndicationWrapper
 {
 
 public:
-  MemcpyIndication(unsigned int id, PortalPoller *poller) : MemcpyIndicationWrapper(id, poller){}
+  MemcpyIndication(unsigned int id) : MemcpyIndicationWrapper(id){}
 
   virtual void started(){
     fprintf(stderr, "started\n");
@@ -73,16 +72,13 @@ public:
 
 int do_copy(int srcAlloc, int sgl_config_request_id, int sgl_config_indication_id)
 {
-  PortalPoller *poller = new PortalPoller();
   MemcpyRequestProxy *device = new MemcpyRequestProxy(IfcNames_MemcpyRequest);
-  MemcpyIndication *deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndication, poller);
+  MemcpyIndication *deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndication);
   MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
   MMURequestProxy *dmap = new MMURequestProxy(sgl_config_request_id);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_HostMemServerIndication, poller);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, sgl_config_indication_id, poller);
-
-  poller->portalExec_start();
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_HostMemServerIndication);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, sgl_config_indication_id);
 
   fprintf(stderr, "Main::allocating memory...\n");
 
@@ -114,7 +110,6 @@ int do_copy(int srcAlloc, int sgl_config_request_id, int sgl_config_indication_i
   device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords, 16, 1);
   sem_wait(&done_sem);
 
-  poller->portalExec_end();
   return dstAlloc;
 }
 
@@ -137,7 +132,8 @@ int main(int argc, const char **argv)
   int dst_ref3 = do_copy(dst_ref3, IfcNames_HostMMU3ConfigRequest, IfcNames_HostMMU3ConfigIndication);
   memcmp_fails[3] = memcmp_fail;
 
-  fprintf(stderr, "%d %d %d %d\n", memcmp_fails[0], memcmp_fails[1], memcmp_fails[2], memcmp_fails[3]);
+  fprintf(stderr, "memcpy_manysglists: Done %d %d %d %d\n", memcmp_fails[0], memcmp_fails[1], memcmp_fails[2], memcmp_fails[3]);
+  sleep(2);
 
   exit(memcmp_fails[0] | memcmp_fails[1] | memcmp_fails[2] | memcmp_fails[3] );
 }

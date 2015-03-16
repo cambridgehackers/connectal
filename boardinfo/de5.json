@@ -3,7 +3,7 @@
         "bsvdefines" : ["ALTERA", "StratixV", "PCIE", "PCIE_NO_BSCAN", "PcieHostTypeIF", "PhysAddrWidth=40", "NUMBER_OF_LEDS=4"],
         "os" : "ubuntu",
         "partname" : "5SGXEA7N2F45C2",
-        "needs_pcie_s5_gen2x8" : "True",
+        "need_pcie" : "s5_gen2x8",
         "TOP" : "PcieTop",
         "CONNECTALFLAGS" : [],
         "rewireclockstring" : ""

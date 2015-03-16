@@ -1,4 +1,4 @@
-// Copyright (c) 2014 Quanta Research Cambridge, Inc.
+// Copyright (c) 2014-2015 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -40,8 +40,13 @@ import PcieCsr           :: *;
 import MemTypes          :: *;
 `ifndef BSIM
 `ifdef XILINX
-import PcieEndpointX7    :: *;
+`ifdef PCIE3
+import PCIEWRAPPER3      :: *;
+import Pcie3EndpointX7   :: *;
+`else // pcie3
 import PCIEWRAPPER       :: *;
+import PcieEndpointX7    :: *;
+`endif // pcie3
 `elsif ALTERA
 import PcieEndpointS5    :: *;
 `elsif VSIM

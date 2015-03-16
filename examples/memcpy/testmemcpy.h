@@ -39,7 +39,7 @@ int numWords = 16 << 10;
 #endif
 size_t alloc_sz = numWords*sizeof(unsigned int);
 bool finished = false;
-bool memcmp_fail = false;
+int memcmp_fail = 0;
 unsigned int memcmp_count = 0;
 
 void dump(const char *prefix, char *buf, size_t len)
@@ -168,6 +168,7 @@ int runtest(int argc, const char **argv)
     .setReadBwUtil(read_util)
     .setWriteBwUtil(write_util)
     .writeFile();
+  return memcmp_fail;
 }
 
 int runtest_chunk(int argc, const char **argv)
@@ -229,6 +230,7 @@ int runtest_chunk(int argc, const char **argv)
 
   fprintf(stderr, "XXX %s %d\n", __FUNCTION__, __LINE__);
 
+  return memcmp_fail;
 }
 
 

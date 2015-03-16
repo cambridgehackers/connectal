@@ -2,7 +2,7 @@ source "board.tcl"
 source "$connectaldir/scripts/connectal-synth-ip.tcl"
 source "$scriptsdir/../../fpgamake/tcl/ipcore.tcl"
 
-if $need_xilinx_pcie {
+if {$need_pcie == "x7_gen1x8"} {
     set pcieversion {3.0}
     set maxlinkwidth {X8}
     if {$boardname == {zc706}} {
@@ -18,6 +18,12 @@ if $need_xilinx_pcie {
 # Description of MSIx_Table_Offset is in:
 # Xilinx/Vivado/2013.2/data/ip/xilinx/pcie_7x_v2_1/xgui/pcie_7x_v2_1.tcl
 # (it is byteoffset/8, expressed in hex)
+}
+
+if {$need_pcie == "x7_gen3x8"} {
+    set pcieversion {3.0}
+    set maxlinkwidth {X8}
+    connectal_synth_ip pcie3_7x $pcieversion pcie3_7x_0 [list CONFIG.PL_LINK_CAP_MAX_LINK_WIDTH {X8} CONFIG.PL_LINK_CAP_MAX_LINK_SPEED {8.0_GT/s} CONFIG.TL_PF_ENABLE_REG {false} CONFIG.vendor_id {1be7} CONFIG.PF0_DEVICE_ID {c300} CONFIG.PF0_SUBSYSTEM_VENDOR_ID {1be7} CONFIG.PF0_SUBSYSTEM_ID {a705} CONFIG.PF0_Use_Class_Code_Lookup_Assistant {false} CONFIG.pf0_base_class_menu {Memory_controller} CONFIG.pf0_bar0_64bit {true} CONFIG.pf0_bar0_size {16} CONFIG.pf0_bar2_enabled {true} CONFIG.pf0_bar2_64bit {true} CONFIG.pf0_bar2_scale {Megabytes} CONFIG.pf0_bar2_size {1} CONFIG.PF0_INTERRUPT_PIN {INTA} CONFIG.pf0_msi_enabled {false} CONFIG.pf0_msix_enabled {true} CONFIG.PF0_MSIX_CAP_TABLE_SIZE {010} CONFIG.PF0_MSIX_CAP_TABLE_OFFSET {00000200} CONFIG.PF0_MSIX_CAP_PBA_OFFSET {000001f0} CONFIG.PF0_PM_CAP_SUPP_D1_STATE {false} CONFIG.pf0_dsn_enabled {true} CONFIG.mode_selection {Advanced} CONFIG.en_ext_clk {true} CONFIG.en_msi_per_vec_masking {false}]
 }
 
 proc create_pcie_sv_hip_ast {mode} {
@@ -92,10 +98,29 @@ proc create_pcie_sv_hip_ast {mode} {
 	dict set params	class_code_hwtcl                         $class_code
 	dict set params	subsystem_vendor_id_hwtcl                $vendor_id
 	dict set params	subsystem_device_id_hwtcl                $device_id
-	dict set params	max_payload_size_hwtcl                   256
-	dict set params	extend_tag_field_hwtcl                   "32"
+	dict set params	max_payload_size_hwtcl                   512
+	dict set params	extend_tag_field_hwtcl                   "64"
 	dict set params	completion_timeout_hwtcl                 "ABCD"
 	dict set params	enable_completion_timeout_disable_hwtcl  1
+
+	dict set params use_aer_hwtcl                            0
+	dict set params ecrc_check_capable_hwtcl                 0
+	dict set params ecrc_gen_capable_hwtcl                   0
+	dict set params use_crc_forwarding_hwtcl                 0
+	dict set params port_link_number_hwtcl                   1
+	dict set params dll_active_report_support_hwtcl          0
+	dict set params surprise_down_error_support_hwtcl        0
+	dict set params slotclkcfg_hwtcl                         1
+	dict set params msi_multi_message_capable_hwtcl          "1"
+	dict set params msi_64bit_addressing_capable_hwtcl       "true"
+	dict set params msi_masking_capable_hwtcl                "false"
+	dict set params msi_support_hwtcl                        "true"
+	dict set params enable_function_msix_support_hwtcl       1
+	dict set params msix_table_size_hwtcl                    16
+	dict set params msix_table_offset_hwtcl                  "512"
+	dict set params msix_table_bir_hwtcl                     0
+	dict set params msix_pba_offset_hwtcl                    "496"
+	dict set params msix_pba_bir_hwtcl                       0
 
 	set component_parameters {}
 	foreach item [dict keys $params] {
@@ -194,10 +219,14 @@ proc create_pcie_xcvr_reconfig {mode core_name core_version ip_name n_interface}
     }
 }
 
-if $need_altera_pcie {
+if {$need_pcie == "s5_gen2x8"} {
     create_pcie_sv_hip_ast SYNTHESIS
     create_pcie_xcvr_reconfig SYNTHESIS alt_xcvr_reconfig 14.0 alt_xcvr_reconfig_wrapper 10
     create_pcie_reconfig SYNTHESIS
     create_pcie_hip_ast_ed
 }
 
+# Stratix IV PCIe requires use of Megawizard
+if {$need_pcie == "s4_gen2x8"} {
+	fpgamake_altera_qmegawiz $connectaldir/verilog/altera/siv_gen2x8 siv_gen2x8
+}

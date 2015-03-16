@@ -60,7 +60,7 @@ public:
         fprintf(stderr, "daemon[%s:%d] proxy %p\n", __FUNCTION__, __LINE__, echoRequestProxy);
         echoRequestProxy->say2(a, b);
     }
-    void setLeds ( const uint16_t v ) {
+    void setLeds ( const uint8_t v ) {
         fprintf(stderr, "daemon[%s:%d] proxy %p\n", __FUNCTION__, __LINE__, echoRequestProxy);
         echoRequestProxy->setLeds(v);
         sleep(1);

@@ -164,7 +164,7 @@ module mkSyncBlueScope#(Integer samples, BlueScopeIndication indication, Clock s
    
    interface BlueScopeRequest requestIfc;
       method Action start(Bit#(32) pointer, Bit#(32) len);
-	 mwriter.writeServers[0].request.put(MemengineCmd {sglId: pointer, base: 0, burstLen: 8*fromInteger(valueOf(TDiv#(dataWidth,8))), len: len});
+	 mwriter.writeServers[0].request.put(MemengineCmd {sglId: pointer, base: 0, burstLen: 8*fromInteger(valueOf(TDiv#(dataWidth,8))), len: len, tag: 0});
 	 startPulse.send();
       endmethod
 

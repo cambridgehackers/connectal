@@ -78,8 +78,8 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
 	 readEngine.cmdServer.request.put(MemengineCmd { sglId: sglIdReg,
 							base: 0,
 							burstLen: 16,
-							len: 16
-							});
+							len: 16,
+							tag: 0});
 	 reqState <= HeadRequested;
       endrule
 
@@ -127,8 +127,8 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
 	 readEngine.cmdServer.request.put(MemengineCmd {sglId: sglIdReg,
 							base: extend(reqTailReg << 2),
 							burstLen: 16,
-							len: wordCount << 2
-							});
+							len: wordCount << 2,
+							tag: 0});
 	 reqState <= MessageHeaderRequested;
       endrule
 
@@ -199,8 +199,8 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
 	 writeEngine.cmdServer.request.put(MemengineCmd {sglId: sglIdReg,
 							 base: 8,
 							 len: 8,
-							 burstLen: 8
-							 });
+							 burstLen: 8,
+							 tag: 0});
 	 writeEngine.dataPipe.enq(extend(reqTailReg));
 	 reqState <= Waiting;
       endrule
@@ -246,8 +246,8 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 
 	 readEngine.cmdServer.request.put(MemengineCmd { sglId: sglIdReg,
 							base: 0,
 							burstLen: 16,
-							len: 16
-							});
+							len: 16,
+							tag: 0});
 	 indState <= HeadRequested;
       endrule
 
@@ -303,7 +303,7 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 
       writeEngine.cmdServer.request.put(MemengineCmd { sglId: sglIdReg,
 						      base: extend(indHeadReg) << 2,
 						      burstLen: 8,
-						      len: extend(totalWords) << 2 });
+						      len: extend(totalWords) << 2, tag: 0 });
       indState <= SendMessage;
    endrule
    rule sendMessage if (indState == SendMessage);
@@ -331,7 +331,7 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 
       writeEngine.cmdServer.request.put(MemengineCmd { sglId: sglIdReg,
 						      base: 0 << 2,
 						      burstLen: 8,
-						      len: 2 << 2 });
+						      len: 2 << 2, tag: 0 });
       indState <= UpdateHead2;
    endrule
    rule updateHead2 if (indState == UpdateHead2);
@@ -367,8 +367,8 @@ module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal
 	 readyReg <= True;
       endmethod
    endinterface
-   interface MemReadClient  readClient = readEngine.dmaClient;
-   interface MemWriteClient writeClient = writeEngine.dmaClient;
+   interface MemReadClient  readClient = cons(readEngine.dmaClient, nil);
+   interface MemWriteClient writeClient = cons(writeEngine.dmaClient, nil);
    interface ReadOnly interrupt;
    endinterface
 endmodule

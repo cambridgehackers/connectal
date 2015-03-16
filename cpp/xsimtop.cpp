@@ -1,3 +1,24 @@
+/* Copyright (c) 2014 Quanta Research Cambridge, Inc
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
+
 #include <stdlib.h>
 #include <string>
 #include <iostream>
@@ -34,7 +55,8 @@ public:
   xsiport(Xsi::Loader &loader, const char *name, int bits = 1)
     : xsiInstance(loader), port(-1), name(name), width(bits)
   {
-    value = {1, 1};
+    value.aVal = 1;
+    value.bVal = 1;
     port = xsiInstance.get_port_number(name);
     //width = xsiInstance.get_int_port(port, xsiHDLValueSize);
     std::cout << "Port name=" << name << " number=" << port << std::endl;
@@ -89,7 +111,7 @@ public:
   virtual void connect () {
       connected = 1;
   }
-  virtual void enableint( const uint32_t fpgaId, const uint32_t val);
+  virtual void enableint( const uint32_t fpgaId, const uint8_t val);
   virtual void read ( const uint32_t fpgaId, const uint32_t addr );
   virtual void write ( const uint32_t fpgaId, const uint32_t addr, const uint32_t data );
   virtual void msgSink ( const uint32_t data );
@@ -100,7 +122,7 @@ public:
 
 };
 
-void XsimMemSlaveRequest::enableint( const uint32_t fpgaId, const uint32_t val)
+void XsimMemSlaveRequest::enableint( const uint32_t fpgaId, const uint8_t val)
 {
   int number = fpgaNumber(fpgaId);
   uint32_t hwaddr = number << 16 | 4;
