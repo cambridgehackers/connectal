@@ -158,7 +158,7 @@ bits: xsim
 else
 bits: hw/mkTop.bit prepare_bin_target
     ifeq ($(OS),android)
-	xxd hw/mkTop.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r > bin/mkTop.xdevcfg.bin
+	$(CONNECTALDIR)/scripts/reorderbytes.py hw/mkTop.bin bin/mkTop.xdevcfg.bin
 	gzip -f bin/mkTop.xdevcfg.bin
 	$(Q)[ ! -f bin/android.exe ] || $(NDK_OBJCOPY) --remove-section fpgadata bin/android.exe
 	$(Q)[ ! -f bin/android.exe ] || $(NDK_OBJCOPY) --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe
