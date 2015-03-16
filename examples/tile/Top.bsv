@@ -52,7 +52,7 @@ module mkMemreadTile(Tile);
    Vector#(2,StdPortal) portal_vec;
    portal_vec[0] = lMemreadIndicationProxy.portalIfc;
    portal_vec[1] = lMemreadRequestWrapper.portalIfc;
-   PhysMemSlave#(20,32) ctrl_mux <- mkSlaveMux(portal_vec);
+   PhysMemSlave#(18,32) ctrl_mux <- mkSlaveMux(portal_vec);
    let interrupts <- mkInterruptMux(getInterruptVector(portal_vec));
    
    interface portals = ctrl_mux;
@@ -64,13 +64,14 @@ module mkMemreadTile(Tile);
 endmodule
 
 module mkFramework(Framework#(numTiles,Empty,numMasters))
-   provisos(Add#(a__, TLog#(TAdd#(1, numTiles)), 12)
-	    ,Add#(b__, TLog#(c__), 6)
-	    ,Mul#(c__, numMasters, numTiles)
+   provisos(Add#(a__, numTiles, 3)
+	    ,Add#(b__, TLog#(TAdd#(1, numTiles)), 14)
+	    ,Add#(c__, TLog#(d__), 6)
+	    ,Mul#(d__, numMasters, numTiles)
 	    );
    
    
-   Vector#(numTiles, PhysMemConnector#(20,32)) portal_connectors <- replicateM(mkPhysMemConnector);
+   Vector#(numTiles, PhysMemConnector#(18,32)) portal_connectors <- replicateM(mkPhysMemConnector);
    Vector#(numTiles, MemReadClient#(DataBusWidth)) tile_read_clients = newVector;
    Vector#(numTiles, MemWriteClient#(DataBusWidth)) tile_write_clients = newVector;
    Vector#(numTiles, TileSocket) tss = newVector;
@@ -96,12 +97,12 @@ module mkFramework(Framework#(numTiles,Empty,numMasters))
    framework_portals[1] = lMemServerIndicationProxy.portalIfc;
    framework_portals[2] = lMMURequestWrapper.portalIfc;
    framework_portals[3] = lMemServerRequestWrapper.portalIfc;
-   PhysMemSlave#(20,32) framework_ctrl_mux <- mkSlaveMux(framework_portals);
+   PhysMemSlave#(18,32) framework_ctrl_mux <- mkSlaveMux(framework_portals);
    
    //
    /////////////////////////////////////////////////////////////
 
-   Vector#(TAdd#(1,numTiles), PhysMemSlave#(20,32)) foo = cons(framework_ctrl_mux, map(getPhysMemConnectorSlave, portal_connectors)); 
+   Vector#(TAdd#(1,numTiles), PhysMemSlave#(18,32)) foo = cons(framework_ctrl_mux, map(getPhysMemConnectorSlave, portal_connectors)); 
    PhysMemSlave#(32,32) ctrl_mux <- mkMemSlaveMux(foo);
 
    interface interrupt = getInterruptVector(framework_portals);
