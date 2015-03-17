@@ -37,7 +37,7 @@
 XsimMemSlaveIndicationProxy *memSlaveIndicationProxy;
 class XsimMemSlaveRequest;
 XsimMemSlaveRequest *memSlaveRequest;
-static int trace_xsimtop;
+static int trace_xsimtop ;//= 1;
 
 //deleteme
 std::string getcurrentdir()
@@ -245,7 +245,11 @@ int main(int argc, char **argv)
     XsimMemSlaveIndicationProxy *memSlaveIndicationProxy = new XsimMemSlaveIndicationProxy(XsimIfcNames_XsimMemSlaveIndication, &muxfunc, &param);
     XsimMemSlaveRequest *memSlaveRequest = new XsimMemSlaveRequest(XsimIfcNames_XsimMemSlaveRequest, &muxfunc, &param);
 
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     //portalExec_init();
+    portalExec_stop();
+sleep(2);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 
     // start low clock
     clk.write(0);
@@ -266,12 +270,12 @@ int main(int argc, char **argv)
     int portal_count = 0;
     int offset = 0x00;
 
-    for (int i = 0; 1; i++) {
+    for (int ind = 0; 1; ind++) {
 	void *rc = portalExec_poll(1);
 	if ((long)rc >= 0) {
 	    portalExec_event();
 	}
-	if (i > 2) {
+	if (ind > 2) {
 	    rst_n.write(1);
 	}
 	// mkConnectalTop

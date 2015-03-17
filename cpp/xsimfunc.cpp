@@ -31,7 +31,7 @@
 class XsimMemSlaveIndication;
 static XsimMemSlaveRequestProxy *memSlaveRequestProxy;
 static XsimMemSlaveIndication *memSlaveIndication;
-static int trace_xsim;
+static int trace_xsim ;//= 1;
 
 class XsimMemSlaveIndication : public XsimMemSlaveIndicationWrapper {
   struct idInfo {

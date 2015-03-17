@@ -117,8 +117,6 @@ int main(int argc, const char **argv)
   SimpleProxy *device = new SimpleProxy(IfcNames_SimpleRequest);
   device->pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
 
-  portalExec_start();
-
   fprintf(stderr, "Main::calling say1(%d)\n", v1a);
   device->say1(v1a);  
   fprintf(stderr, "Main::calling say2(%d, %d)\n", v2a,v2b);
