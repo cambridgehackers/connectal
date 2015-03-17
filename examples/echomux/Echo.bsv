@@ -49,7 +49,6 @@ endinterface
 
 interface Echo;
    interface EchoRequest request;
-   interface LEDS leds;
 endinterface
 
 typedef struct {

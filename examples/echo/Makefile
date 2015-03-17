@@ -12,7 +12,6 @@ NUMBER_OF_MASTERS =0
 FPGAMAKE_CONNECTALFLAGS += -P mkEchoIndicationProxySynth -P mkEchoRequestWrapperMemPortalPipes
 
 PORTAL_DUMP_MAP = "EchoIndication:EchoRequest:SwallowRequest"
-AUTOTOP = --interface leds:Echo.leds
 
 include $(CONNECTALDIR)/Makefile.connectal
 

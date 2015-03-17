@@ -38,7 +38,6 @@ endinterface
 
 interface IpcTestRequestInternal;
    interface IpcTestRequest ifc;
-   interface LEDS leds;
 endinterface
 
 typedef struct {
