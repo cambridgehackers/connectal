@@ -67,7 +67,6 @@ module mkEcho#(EchoIndication indication)(Echo);
       endmethod
       
       method Action setLeds(Bit#(8) v);
-	 ledsReg <= pack(replicate(v[0]));
       endmethod
    endinterface
 endmodule

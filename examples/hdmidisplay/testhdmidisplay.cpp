@@ -33,14 +33,14 @@
 #include "StdDmaIndication.h"
 #include "HdmiDisplayRequest.h"
 #include "HdmiDisplayIndication.h"
-#include "HdmiInternalIndication.h"
-#include "HdmiInternalRequest.h"
+#include "HdmiGeneratorIndication.h"
+#include "HdmiGeneratorRequest.h"
 
 #define FRAME_COUNT 2
 #define MAX_PIXEL 256
 #define INCREMENT_PIXEL 2
 
-static HdmiInternalRequestProxy *hdmiInternal;
+static HdmiGeneratorRequestProxy *hdmiGenerator;
 static HdmiDisplayRequestProxy *device;
 static DmaManager *dma;
 static MMURequestProxy *dmap;
@@ -96,17 +96,17 @@ static void fill_pixels(int offset)
     corner_index = offset/16;
     portalDCacheFlushInval(allocFrame[frame_index], fbsize, dataptr[frame_index]);
     device->startFrameBuffer(ref_srcAlloc[frame_index], fbsize);
-    hdmiInternal->setTestPattern(0);
-    hdmiInternal->waitForVsync(0);
+    hdmiGenerator->setTestPattern(0);
+    hdmiGenerator->waitForVsync(0);
     frame_index = 1 - frame_index;
 }
 
 static int synccount = 0;
 static long long totalcount;
 static int number;
-class HdmiIndication : public HdmiInternalIndicationWrapper {
+class HdmiIndication : public HdmiGeneratorIndicationWrapper {
 public:
-    HdmiIndication(int id) : HdmiInternalIndicationWrapper(id) {}
+    HdmiIndication(int id) : HdmiGeneratorIndicationWrapper(id) {}
   virtual void vsync ( uint64_t v, uint32_t w ) {
       static int base = 0;
 
@@ -147,9 +147,9 @@ int main(int argc, const char **argv)
   MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
 
-    HdmiInternalIndicationWrapper *hdmiIndication = new HdmiIndication(IfcNames_HdmiInternalIndicationH2S);
+    HdmiGeneratorIndicationWrapper *hdmiIndication = new HdmiIndication(IfcNames_HdmiGeneratorIndicationH2S);
     HdmiDisplayIndicationWrapper *displayIndication = new DisplayIndication(IfcNames_HdmiDisplayIndicationH2S);
-    hdmiInternal = new HdmiInternalRequestProxy(IfcNames_HdmiInternalRequestS2H);
+    hdmiGenerator = new HdmiGeneratorRequestProxy(IfcNames_HdmiGeneratorRequestS2H);
 
 #ifndef BOARD_bluesim
     // read out monitor EDID from ADV7511
@@ -196,11 +196,11 @@ int main(int argc, const char **argv)
     fprintf(stderr, "lines %d, pixels %d, vblank %d, hblank %d, vwidth %d, hwidth %d\n",
              nlines, npixels, vblank, hblank, vsyncwidth, hsyncwidth);
 hblank--; // needed on zc702
-    hdmiInternal->setDeLine(vsyncoff,           // End of FrontPorch
+    hdmiGenerator->setDeLine(vsyncoff,           // End of FrontPorch
                             vsyncoff+vsyncwidth,// End of Sync
                             vblank,             // Start of Visible (start of BackPorch)
                             vblank + nlines, vblank + nlines / 2); // End
-        hdmiInternal->setDePixel(hsyncoff,
+        hdmiGenerator->setDePixel(hsyncoff,
                             hsyncoff+hsyncwidth, hblank,
                             hblank + npixels, hblank + npixels / 2);
 #else
@@ -224,11 +224,11 @@ hblank--; // needed on zc702
 		npixels, nlines);
 	status = setClockFrequency(1, pixclk, 0);
 hblank--; // needed on zc702
-	hdmiInternal->setDeLine(vsyncoff,           // End of FrontPorch
+	hdmiGenerator->setDeLine(vsyncoff,           // End of FrontPorch
                                 vsyncoff+vsyncwidth,// End of Sync
                                 vblank,             // Start of Visible (start of BackPorch)
                                 vblank + nlines, vblank + nlines / 2); // End
-        hdmiInternal->setDePixel(hsyncoff,
+        hdmiGenerator->setDePixel(hsyncoff,
                                 hsyncoff+hsyncwidth, hblank,
                                 hblank + npixels, hblank + npixels / 2);
 	break;

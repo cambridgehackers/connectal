@@ -2,13 +2,13 @@
 CONNECTALDIR?=../..
 LIBBSVDIR=$(CONNECTALDIR)/lib/bsv
 ifeq ($(BOARD),bluesim)
-H2S_INTERFACES = HdmiDisplay:HdmiDisplayIndication,HdmiInternalIndication:defaultClock
+H2S_INTERFACES = HdmiDisplay:HdmiDisplayIndication,HdmiGeneratorIndication:defaultClock
 else
-H2S_INTERFACES = HdmiDisplay:HdmiDisplayIndication,HdmiInternalIndication:host.ps7.fclkclk\[1\]
+H2S_INTERFACES = HdmiDisplay:HdmiDisplayIndication,HdmiGeneratorIndication:host.ps7.fclkclk\[1\]
 endif
-S2H_INTERFACES = HdmiDisplayRequest:HdmiDisplay.displayRequest HdmiInternalRequest:HdmiDisplay.internalRequest
+S2H_INTERFACES = HdmiDisplayRequest:HdmiDisplay.displayRequest HdmiGeneratorRequest:HdmiDisplay.internalRequest
 MEM_INTERFACES = lHdmiDisplay.dmaClient,nil
-AUTOTOP = --importfiles HDMI --importfiles HDMI16 --interface pins:HdmiDisplay.hdmi
+AUTOTOP = --importfiles HDMI --importfiles HDMI16 --importfiles PS7LIB --interface pins:HdmiDisplay.hdmi
 
 BSVFILES = $(LIBBSVDIR)/HdmiDisplay.bsv $(LIBBSVDIR)/HDMI.bsv $(CONNECTALDIR)/lib/deprecated/DmaUtils.bsv HDMI16.bsv
 CPPFILES= testhdmidisplay.cpp
