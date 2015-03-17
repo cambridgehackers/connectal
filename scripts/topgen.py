@@ -77,12 +77,16 @@ class iReq:
         self.inst = ''
         self.args = []
 
-moduleInstantiation = '''
-   %(modname)s%(memFlag)s%(tparam)s l%(modname)s%(memFlag)s <- %(constr)s%(memFlag)s(%(args)s);
+memModuleInstantiation = '''
+   %(modname)s%(memFlag)s%(tparam)s l%(modname)s%(memFlag)s <- mk%(modname)s%(memFlag)s(%(args)s);
    SharedMemoryPortal#(64) l%(modname)s%(memFlag)sMem <- mkSharedMemoryPortal(l%(modname)s%(memFlag)s.portalIfc);
    SharedMemoryPortalConfigWrapper l%(modname)s <-
        mkSharedMemoryPortalConfigWrapper(%(argsConfig)s, l%(modname)s%(memFlag)sMem.cfg);
 '''
+proxyInstantiation = '''
+   %(modname)s%(tparam)s l%(modname)s <- mk%(modname)s(%(args)s);'''
+wrapperInstantiation = '''
+   %(modname)s%(tparam)s l%(modname)s <- mk%(modname)s(%(args)s, l%(userIf)s);'''
 
 def instMod(args, modname, modext, constructor, tparam, memFlag):
     if not modname:
@@ -90,30 +94,27 @@ def instMod(args, modname, modext, constructor, tparam, memFlag):
     pmap['tparam'] = tparam
     pmap['modname'] = modname + modext
     tstr = 'S2H'
+    if modext == 'Proxy':
+        tstr = 'H2S'
     if modext:
-        if modext == 'Proxy':
-            tstr = 'H2S'
         args = modname + tstr
-        if modext != 'Proxy':
-            args += ', l%(userIf)s'
+    pmap['args'] = args % pmap
+    if modext:
         enumList.append(modname + tstr)
         pmap['argsConfig'] = modname + memFlag + tstr
         if memFlag:
             enumList.append(modname + memFlag + tstr)
         addPortal('l%(modname)s' % pmap)
-    pmap['constr'] = pmap['constructor']
-    if not pmap['constructor'] or modext:
-        pmap['constr'] = 'mk' + pmap['modname']
-    pmap['args'] = args % pmap
-    if modext:
         if memFlag:
-            portalInstantiate.append(moduleInstantiation % pmap)
+            portalInstantiate.append(memModuleInstantiation % pmap)
+        elif modext == 'Proxy':
+            portalInstantiate.append(proxyInstantiation % pmap)
         else:
-            portalInstantiate.append(('   %(modname)s%(tparam)s l%(modname)s <- %(constr)s(%(args)s);') % pmap)
+            portalInstantiate.append(wrapperInstantiation % pmap)
     else:
         if not instantiateRequest.get(pmap['modname']):
             instantiateRequest[pmap['modname']] = iReq()
-            instantiateRequest[pmap['modname']].inst = '   %(modname)s%(tparam)s l%(modname)s <- %(constr)s(%%s);' % pmap
+            instantiateRequest[pmap['modname']].inst = '   %(modname)s%(tparam)s l%(modname)s <- mk%(modname)s(%%s);' % pmap
         instantiateRequest[pmap['modname']].args.append(pmap['args'])
     if pmap['modname'] not in instantiatedModules:
         instantiatedModules.append(pmap['modname'])
@@ -127,7 +128,7 @@ def flushModules(key):
 
 def parseParam(pitem, proxy):
     p = pitem.split(':')
-    pmap = {'tparam': '', 'xparam': '', 'uparam': '', 'constructor': '', 'memFlag': 'Portal' if p[0][0] == '/' else ''}
+    pmap = {'tparam': '', 'xparam': '', 'uparam': '', 'memFlag': 'Portal' if p[0][0] == '/' else ''}
     pmap['usermod'] = p[0].replace('/','')
     pmap['name'] = p[1]
     ind = pmap['usermod'].find('#')
@@ -136,10 +137,6 @@ def parseParam(pitem, proxy):
         pmap['usermod'] = pmap['usermod'][:ind]
     if len(p) > 2 and p[2]:
         pmap['uparam'] = p[2] + ', '
-    #if len(p) > 3 and p[3]:
-    #    pmap['xparam'] = '#(' + p[3] + ')'
-    #if len(p) > 4:
-    #    pmap['constructor'] = p[4]
     return pmap
 
 if __name__=='__main__':
