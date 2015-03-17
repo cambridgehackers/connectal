@@ -30,7 +30,7 @@ import DefaultValue      :: *;
 import PcieSplitter      :: *;
 import Xilinx            :: *;
 import Portal            :: *;
-import Leds              :: *;
+//import Leds              :: *;
 import Top               :: *;
 import MemSlaveEngine    :: *;
 import MemMasterEngine   :: *;
@@ -103,10 +103,10 @@ module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (P
 
 `ifndef BSIM
    interface pcie = host.tep7.pcie;
-   method Bit#(NumLeds) leds();
-      return portalTop.leds.leds();
-   endmethod
-   interface Clock deleteme_unused_clockLeds = host.tep7.epClock125;
+   //method Bit#(NumLeds) leds();
+      //return portalTop.leds.leds();
+   //endmethod
+   //interface Clock deleteme_unused_clockLeds = host.tep7.epClock125;
    interface pins = portalTop.pins;
 `endif
 endmodule

@@ -101,7 +101,7 @@ typedef struct {
 } AvalonStTx#(type bytes) deriving (Bits, Eq);
 
 typedef 8 PcieLanes;
-typedef 4 NumLeds;
+//typedef 4 NumLeds;
 
 //(* synthesize *)
 module mkPcieEndpointS5#(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieEndpointS5#(PcieLanes));

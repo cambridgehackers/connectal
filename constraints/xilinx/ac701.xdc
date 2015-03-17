@@ -11,18 +11,18 @@
 ######################################################################################################
 # PIN ASSIGNMENTS
 ######################################################################################################
-set_property LOC M26 [get_ports {leds[0]}]
-set_property LOC T24 [get_ports {leds[1]}]
-set_property LOC T25 [get_ports {leds[2]}]
-set_property LOC R26 [get_ports {leds[3]}]
+set_property LOC M26 [get_ports {GPIO_leds[0]}]
+set_property LOC T24 [get_ports {GPIO_leds[1]}]
+set_property LOC T25 [get_ports {GPIO_leds[2]}]
+set_property LOC R26 [get_ports {GPIO_leds[3]}]
 
-set_property IOSTANDARD LVCMOS33 [get_ports {leds[0]}]
-set_property IOSTANDARD LVCMOS33 [get_ports {leds[1]}]
-set_property IOSTANDARD LVCMOS33 [get_ports {leds[2]}]
-set_property IOSTANDARD LVCMOS33 [get_ports {leds[3]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {GPIO_leds[0]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {GPIO_leds[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {GPIO_leds[2]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {GPIO_leds[3]}]
 
-set_property SLEW SLOW [get_ports leds]
-set_property DRIVE 12 [get_ports leds]
+set_property SLEW SLOW [get_ports GPIO_leds]
+set_property DRIVE 12 [get_ports GPIO_leds]
 
 set_property LOC F11   [get_ports { CLK_pci_sys_clk_p }]
 set_property LOC E11  [get_ports { CLK_pci_sys_clk_n }]
@@ -56,7 +56,7 @@ set_property LOC A7   [get_ports { PCIE_txn[3] }]
 ######################################################################################################
 # I/O STANDARDS
 ######################################################################################################
-set_property IOSTANDARD LVCMOS33    [get_ports { leds[*] }]
+set_property IOSTANDARD LVCMOS33    [get_ports { GPIO_leds[*] }]
 set_property IOSTANDARD DIFF_SSTL15 [get_ports { CLK_sys_clk_* }]
 # set_property IOSTANDARD DIFF_SSTL15 [get_ports { CLK_user_clk_* }]
 set_property IOSTANDARD LVCMOS33    [get_ports { RST_N_pci_sys_reset_n }]

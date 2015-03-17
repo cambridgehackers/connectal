@@ -29,7 +29,7 @@ import GetPut            :: *;
 import Connectable       :: *;
 import StmtFSM           :: *;
 import Portal            :: *;
-import Leds              :: *;
+//import Leds              :: *;
 import Top               :: *;
 import MemTypes          :: *;
 import HostInterface     :: *;
