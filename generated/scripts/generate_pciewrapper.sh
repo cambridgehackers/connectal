@@ -1,7 +1,7 @@
 #
 set -x
 set -e
-./importbvi.py -o PCIEWRAPPER.bsv -I PcieWrap -P PcieWrap \
+../scripts/importbvi.py -o PCIEWRAPPER.bsv -I PcieWrap -P PcieWrap \
     -n pl_link_partner_gen2_supported \
     -n cfg_mgmt_wr_rw1c_as_rw \
     -n pipe_gen3_out \
