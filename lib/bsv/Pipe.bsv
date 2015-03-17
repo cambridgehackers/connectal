@@ -28,6 +28,7 @@ import Vector::*;
 import MIMO::*;
 import DefaultValue::*;
 import Gearbox::*;
+import Clocks::*;
 
 typedef Tuple3#(x,x,x) Tripple#(type x);
 typedef Tuple2#(x,x)   Pair#(type x);
@@ -127,6 +128,25 @@ endinstance
 instance ToPipeOut#(Vector#(n, a), Gearbox#(m, n, a));
    function PipeOut#(Vector#(n, a)) toPipeOut(Gearbox#(m, n, a) in);
       return (interface PipeOut#(Vector#(n,a));
+		 method first = in.first;
+		 method deq = in.deq;
+		 method notEmpty = in.notEmpty;
+	      endinterface);
+   endfunction
+endinstance
+
+instance ToPipeIn#(a, SyncFIFOIfc#(a));
+   function PipeIn#(a) toPipeIn(SyncFIFOIfc#(a) in);
+      return (interface PipeIn#(a);
+		 method enq = in.enq;
+		 method notFull = in.notFull;
+	      endinterface);
+   endfunction
+endinstance
+
+instance ToPipeOut#(a, SyncFIFOIfc#(a));
+   function PipeOut#(a) toPipeOut(SyncFIFOIfc#(a) in);
+      return (interface PipeOut#(a);
 		 method first = in.first;
 		 method deq = in.deq;
 		 method notEmpty = in.notEmpty;
