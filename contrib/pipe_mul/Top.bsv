@@ -24,7 +24,6 @@ import Connectable::*;
 import Portal::*;
 import HostInterface::*;
 import CtrlMux::*;
-import Leds::*;
 import PipeMulIndication::*;
 import PipeMulRequest::*;
 import PipeMulTB::*;
@@ -44,5 +43,4 @@ module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
    interface masters = nil;
-   interface leds = pmTB.leds;
 endmodule : mkConnectalTop

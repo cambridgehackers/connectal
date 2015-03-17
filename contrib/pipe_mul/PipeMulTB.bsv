@@ -21,9 +21,7 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import FIFO::*;
-import Leds::*;
 import PipeMul::*;
 
 interface PipeMulIndication;
@@ -36,7 +34,6 @@ endinterface
 
 interface PipeMulTB;
    interface PipeMulRequest ifc;
-   interface LEDS leds;
 endinterface
 
 module mkPipeMulTB#(PipeMulIndication indication)(PipeMulTB);
@@ -48,11 +45,6 @@ module mkPipeMulTB#(PipeMulIndication indication)(PipeMulTB);
    interface PipeMulRequest ifc;
       method Action mul(Bit#(32) a, Bit#(32) b);
 	 multiplier.put(unpack(truncate(a)),unpack(truncate(b)),?);
-      endmethod
-   endinterface
-   interface LEDS leds;
-      method Bit#(8) leds();
-         return maxBound;
       endmethod
    endinterface
 endmodule
