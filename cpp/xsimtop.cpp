@@ -245,7 +245,7 @@ int main(int argc, char **argv)
     XsimMemSlaveIndicationProxy *memSlaveIndicationProxy = new XsimMemSlaveIndicationProxy(XsimIfcNames_XsimMemSlaveIndication, &muxfunc, &param);
     XsimMemSlaveRequest *memSlaveRequest = new XsimMemSlaveRequest(XsimIfcNames_XsimMemSlaveRequest, &muxfunc, &param);
 
-    portalExec_init();
+    //portalExec_init();
 
     // start low clock
     clk.write(0);
@@ -266,19 +266,14 @@ int main(int argc, char **argv)
     int portal_count = 0;
     int offset = 0x00;
 
-
-    for (int i = 0; 1; i++)
-    {
-
+    for (int i = 0; 1; i++) {
 	void *rc = portalExec_poll(1);
 	if ((long)rc >= 0) {
 	    portalExec_event();
 	}
-
 	if (i > 2) {
 	    rst_n.write(1);
 	}
-
 	// mkConnectalTop
 	if (!msgSource_beat.valid()) {
 	  if (rdy_directoryEntry.read() && !portal_count) {
@@ -296,19 +291,15 @@ int main(int argc, char **argv)
 
 	      state = xt_active;
 	    }
-
 	    en_directoryEntry.write(1);
 	  } else {
 	    en_directoryEntry.write(0);
 	  }
-	  
 	  if (memSlaveRequest->connected && (portal_number < portal_count)) {
 	    memSlaveIndicationProxy->directory(portal_number, portal_ids[portal_number], portal_number == (portal_count-1));
 	    portal_number++;
 	  }
-
 	  if (state == xt_active) {
-
 	    if (memSlaveRequest->readreqs.size() && rdy_read.read()) {
 	      XsimMemSlaveRequest::readreq readreq = memSlaveRequest->readreqs.front();
 	      memSlaveRequest->readreqs.pop();
@@ -339,7 +330,6 @@ int main(int argc, char **argv)
 	      en_write.write(0);
 	    }
 	  }
-
 	  if (memSlaveRequest->connected && rdy_interrupt.read()) {
 	    en_interrupt.write(1);
 	    int intr = interrupt.read();
@@ -351,9 +341,7 @@ int main(int argc, char **argv)
 	  }
 	} else {
 	  // mkBluenocTop
-
 	  //fprintf(stderr, "msgSource ready %d msgSink ready %d\n", msgSource_src_rdy.read(), msgSink_dst_rdy.read());
-
 	  if (msgSource_src_rdy.read()) {
 	    uint32_t beat = msgSource_beat.read();
 	    msgSource_dst_rdy_b.write(1);
@@ -376,26 +364,21 @@ int main(int argc, char **argv)
 	  } else {
 	    msgSink_src_rdy_b.write(0);
 	  }
-
 	}
-
 	// setup time
 	xsiInstance.run(10);
 	clk.write(1);
 	xsiInstance.run(10);
-
 	if (0) {
 	    // clock is divided by two
 	    clk.write(0);
 	    xsiInstance.run(10);
-
 	    clk.write(1);
 	    xsiInstance.run(10);
 	}
-
 	clk.write(0);
 	xsiInstance.run(10);
     }
     sleep(10);
-    portalExec_end();
+    //portalExec_end();
 }

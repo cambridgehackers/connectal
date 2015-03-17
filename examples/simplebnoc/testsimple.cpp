@@ -102,8 +102,8 @@ public:
   }
   virtual void say8 ( const bsvvector_Luint32_t_L128 v ) {
     fprintf(stderr, "say8\n");
-    for (int i = 0; i < 128; i++)
-        fprintf(stderr, "    [%d] = 0x%x\n", i, v[i]);
+    //for (int i = 0; i < 128; i++)
+        //fprintf(stderr, "    [%d] = 0x%x\n", i, v[i]);
     incr_cnt();
   }
   Simple(unsigned int id) : SimpleWrapper(id), cnt(0){}
