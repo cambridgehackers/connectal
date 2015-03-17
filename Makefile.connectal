@@ -100,6 +100,9 @@ endif
 CONNECTALFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) -D PinType=$(PIN_TYPE) -D MainClockPeriod=$(MAIN_CLOCK_PERIOD) -D DerivedClockPeriod=$(DERIVED_CLOCK_PERIOD)
 CONNECTALFLAGS += -D BurstLenSize=$(BURST_LEN_SIZE)
 CONNECTALFLAGS += --ipdir=$(IPDIR)
+ifeq ($(BOARD),xsim)
+CONNECTALFLAGS += -D BluenocTop
+endif
 ifneq ($(AUTOTOP),)
 USE_AUTOTOP = 1
 endif

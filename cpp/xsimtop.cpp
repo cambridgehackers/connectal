@@ -37,6 +37,7 @@
 XsimMemSlaveIndicationProxy *memSlaveIndicationProxy;
 class XsimMemSlaveRequest;
 XsimMemSlaveRequest *memSlaveRequest;
+static int trace_xsimtop;
 
 //deleteme
 std::string getcurrentdir()
@@ -151,6 +152,7 @@ void XsimMemSlaveRequest::write ( const uint32_t fpgaId, const uint32_t addr, co
 
 void XsimMemSlaveRequest::msgSink ( const uint32_t data )
 {
+  if (trace_xsimtop)
   fprintf(stderr, "[%s:%d] data=%08x\n", __FUNCTION__, __LINE__, data);
   sinkbeats.push(data);
 }
@@ -355,6 +357,7 @@ int main(int argc, char **argv)
 	  if (msgSource_src_rdy.read()) {
 	    uint32_t beat = msgSource_beat.read();
 	    msgSource_dst_rdy_b.write(1);
+            if (trace_xsimtop)
 	    fprintf(stderr, "[%s:%d] source message beat %08x\n", __FUNCTION__, __LINE__, beat);
 	    memSlaveIndicationProxy->msgSource(beat);
 	  } else {
@@ -365,6 +368,7 @@ int main(int argc, char **argv)
 	    uint32_t beat = memSlaveRequest->sinkbeats.front();
 	    memSlaveRequest->sinkbeats.pop();
 
+            if (trace_xsimtop)
 	    fprintf(stderr, "[%s:%d] sink message beat %08x\n", __FUNCTION__, __LINE__, beat);
 	    msgSink_beat_v.write(beat);
 	    msgSink_src_rdy_b.write(1);
