@@ -52,28 +52,10 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
     struct scatterlist *sg;
     struct file *fmem;
     struct sg_table *sgtable;
-#endif
-#ifdef __KERNEL__
     fmem = fget(fd);
     sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
 #elif !defined(BSIM)
-  int numEntries = 0;
-  PortalAlloc *portalAlloc = NULL, pa = { 0 };
-  pa.header.fd=fd;
-  rc = ioctl(pa_fd, PA_DMA_ADDRESSES, &pa);
-  if (rc){
-    PORTAL_PRINTF("send_fd_to_portal: alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
-    goto retlab;
-  }
-  numEntries = pa.header.numEntries;
-  portalAlloc = (PortalAlloc *)PORTAL_MALLOC(sizeof(PortalAlloc)+((numEntries+1)*sizeof(DmaEntry)));
-  portalAlloc->header.fd = fd;
-  portalAlloc->header.numEntries = numEntries;
-  rc = ioctl(pa_fd, PA_DMA_ADDRESSES, portalAlloc);
-  if (rc){
-    PORTAL_PRINTF("send_fd_to_portal: alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
-    goto retlab;
-  }
+#error
 #endif
   rc = id;
 #ifdef __KERNEL__
@@ -95,10 +77,6 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
     }
     if (!len)
         break;
-#else
-  for(i = 0; i < numEntries; i++) {
-    long addr = portalAlloc->entries[i].dma_address;
-    long len = portalAlloc->entries[i].length;
 #endif
 #if defined(BSIM)
     addr = size_accum;
@@ -119,11 +97,9 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
     if (trace_memory)
       PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d dma_addr=%08lx, len=%08lx)\n", id, i, (long)addr, len);
     MMURequest_sglist(device, id, i, addr, len);
-  } // balance } }
+  } // balance }
 #ifdef __KERNEL__
   fput(fmem);
-#elif !defined(BSIM)
-  PORTAL_FREE(portalAlloc);
 #endif
 
   // HW interprets zeros as end of sglist

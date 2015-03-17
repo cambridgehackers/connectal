@@ -129,7 +129,6 @@ static struct vm_operations_struct custom_vm_ops = {
 static void llshow_pte(struct mm_struct *mm, unsigned long addr)
 {
 	pgd_t *pgd; 
-	//if (!mm) //mm = &init_mm; 
 	printk(KERN_ALERT "pgd = %p\n", mm->pgd);
 	pgd = pgd_offset(mm, addr);
 	printk(KERN_ALERT "[%08lx] *pgd=%08llx", addr, (long long)pgd_val(*pgd)); 
@@ -470,33 +469,6 @@ int portalmem_dmabuffer_create(unsigned long len)
 static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
   switch (cmd) {
-#define DIAGNOSTIC
-#ifdef DIAGNOSTIC
-  case PA_DMA_ADDRESSES: {
-    struct PortalAllocHeader header;
-    struct file *f;
-    struct sg_table *sgtable;
-    struct scatterlist *sg;
-    int i;
-    struct PortalAlloc* palloc = (struct PortalAlloc*)arg;
-    if (copy_from_user(&header, (void __user *)arg, sizeof(header)))
-      return -EFAULT;
-    f = fget(header.fd);
-    sgtable = ((struct pa_buffer *)((struct dma_buf *)f->private_data)->priv)->sg_table;
-    if (header.numEntries > 0)
-      for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
-        unsigned long p = sg_phys(sg);
-        if (copy_to_user((void __user *)&(palloc->entries[i].dma_address), &(p), sizeof(p))
-         || copy_to_user((void __user *)&(palloc->entries[i].length), &(sg->length), sizeof(sg->length)))
-    	  return -EFAULT;
-      }
-    header.numEntries = ((struct pa_buffer *)((struct dma_buf *)f->private_data)->priv)->sg_table->nents;
-    fput(f);
-    if (copy_to_user((void __user *)arg, &header, sizeof(header)))
-      return -EFAULT;
-    return 0;
-  }
-#endif
   case PA_MALLOC:
     return portalmem_dmabuffer_create((unsigned long)arg);
   case PA_ELEMENT_SIZE: {

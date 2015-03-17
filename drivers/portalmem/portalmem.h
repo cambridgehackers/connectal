@@ -22,28 +22,16 @@
 #ifndef __PORTALALLOC_H__
 #define __PORTALALLOC_H__
 
-typedef struct PortalAllocHeader {
-    size_t size;
-    int fd;
-    int numEntries;
-} PortalAllocHeader;
-
 typedef struct DmaEntry {
     long dma_address;
     unsigned int length; // to match length field in scatterlist.h
 } DmaEntry;
-
-typedef struct PortalAlloc {
-    PortalAllocHeader header;
-    DmaEntry entries[0];
-} PortalAlloc;
 
 typedef struct PortalElementSize {
     int fd;
     int index;
 } PortalElementSize;
 
-#define PA_DMA_ADDRESSES      _IOWR('B', 13, PortalAlloc)
 #define PA_MALLOC              _IOR('B', 14, unsigned long)
 #define PA_ELEMENT_SIZE        _IOR('B', 15, PortalElementSize)
 
