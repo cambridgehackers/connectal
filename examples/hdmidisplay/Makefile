@@ -21,4 +21,12 @@ REALCONNECTALDIR=$(realpath ../..)
 CONNECTALFLAGS += -q --bscflags " -Xc++" --bscflags " -DLIBNAME=\\\"$(REALCONNECTALDIR)/examples/hdmidisplay/bluesim/jni/libHdmi.so\\\""
 CONNECTALFLAGS += -D BSIMRESPONDER=mkResponder -m $(CONNECTALDIR)/examples/hdmidisplay/BsimHdmi.cpp 
 
+CONNECTALFLAGS += -C $(BOARD)/sources/hdmi.xdc
+
+gentarget:: $(BOARD)/sources/hdmi.xdc
+
+$(BOARD)/sources/hdmi.xdc: hdmi.json $(CONNECTALDIR)/boardinfo/$(BOARD).json
+	mkdir -p $(BOARD)/sources
+	$(CONNECTALDIR)/scripts/generate-constraints.py $(PIN_BINDINGS) -o $(BOARD)/sources/hdmi.xdc $(CONNECTALDIR)/boardinfo/$(BOARD).json hdmi.json
+
 include $(CONNECTALDIR)/Makefile.connectal
