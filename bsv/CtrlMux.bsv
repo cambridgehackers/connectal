@@ -46,19 +46,17 @@ module mkInterruptMux#(Vector#(numPortals,ReadOnly#(Bool)) inputs) (ReadOnly#(Bo
    endmethod
 endmodule
 
-
 module mkSlaveMux#(Vector#(numPortals,MemPortal#(aw,dataWidth)) portals) (PhysMemSlave#(addrWidth,dataWidth))
    provisos(Add#(selWidth,aw,addrWidth)
 	    ,Add#(a__, TLog#(numPortals), selWidth)
+	    ,FunnelPipesPipelined#(1, numPortals, MemData#(dataWidth),TMin#(2, TLog#(numPortals)))
 	    );
    Vector#(numPortals, PhysMemSlave#(aw,dataWidth)) slaves = map(getSlave, portals);
    for(Integer i = 0; i < valueOf(numPortals); i=i+1)
       rule writeTop;
 	 portals[i].top <= (i+1 == valueOf(numPortals));
       endrule
-   // use the pipelined version if you have a lot of portals (mdk)
-   // let rv <- mkMemSlaveMuxPipelined(slaves)
-   let rv <- mkMemSlaveMux(slaves);
+   let rv <- mkMemSlaveMuxPipelined(slaves);
    return rv;
 endmodule
 

@@ -38,6 +38,13 @@ instance Connectable#(TilePins,ITilePins);
    endmodule
 endinstance
 
+// implementation of a Portal as a physical memory slave
+interface MemPortalSocket#(numeric type slaveAddrWidth, numeric type slaveDataWidth);
+   interface PhysMemMaster#(slaveAddrWidth,slaveDataWidth) slave;
+   interface WriteOnly#(Bool) interrupt;
+   interface ReadOnly#(Bool) top;
+endinterface
+
 interface TileSocket;
    interface PhysMemMaster#(18,32) portals;
    interface WriteOnly#(Bool) interrupt;
