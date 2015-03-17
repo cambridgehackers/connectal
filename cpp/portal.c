@@ -128,7 +128,6 @@ static void init_portal_hw(void)
 #ifdef __KERNEL__
     tboard = get_pcie_portal_descriptor();
 #else
-#ifndef BSIM
     int pid = fork();
     if (pid == -1) {
         printf("[%s:%d] fork error\n", __FUNCTION__, __LINE__);
@@ -160,13 +159,12 @@ printf("[%s:%d] fd %d len %d\n", __FUNCTION__, __LINE__, fd, len);
         argv[ind++] = (char *)"-x";
         argv[ind++] = buf;
         execvp ("/mnt/sdcard/fpgajtag", argv);
-        exit(-1);
-#else
+#elif !defined(BSIM) && !defined(BOARD_xsim)
         argv[ind++] = buf;
         execvp ("fpgajtag", argv);
 #endif // !__arm__
+        exit(-1);
     }
-#endif // //BSIM
 #endif // !__KERNEL__
 }
 
