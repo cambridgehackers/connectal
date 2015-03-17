@@ -1,4 +1,4 @@
-// Copyright (c) 2013 Quanta Research Cambridge, Inc.
+// Copyright (c) 2015 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -31,6 +31,7 @@ import Memread::*;
 import MMU::*;
 import MemServer::*;
 import MemTypes::*;
+import MemConnectors::*;
 
 import MemreadRequest::*;
 import MemreadIndication::*;
