@@ -75,7 +75,7 @@ interface %(Dut)s;
 endinterface
 
 (* synthesize *)
-module %(moduleContext)s mk%(Dut)sPortalSynth#(Bit#(32) id) (%(Dut)sPortal);
+module %(moduleContext)s mk%(Dut)sPortal(%(Dut)sPortal);
     Vector#(%(channelCount)s, PipeOut#(Bit#(32))) indicationPipes = newVector();
 %(indicationMethodRules)s
     interface %(Package)s::%(Ifc)s ifc;
@@ -91,18 +91,10 @@ module %(moduleContext)s mk%(Dut)sPortalSynth#(Bit#(32) id) (%(Dut)sPortal);
     endinterface
 endmodule
 
-// exposed proxy implementation
-module %(moduleContext)s mk%(Dut)sPortal#(idType id) (%(Dut)sPortal)
-    provisos (Bits#(idType, __a),
-              Add#(a__, __a, 32));
-    let rv <- mk%(Dut)sPortalSynth(extend(pack(id)));
-    return rv;
-endmodule
-
 // synthesizeable proxy MemPortal
 (* synthesize *)
 module mk%(Dut)sSynth#(Bit#(32) id)(%(Dut)s);
-  let dut <- mk%(Dut)sPortal(id);
+  let dut <- mk%(Dut)sPortal();
   let memPortal <- mkMemPortal(id, dut.portalIfc);
   interface MemPortal portalIfc = memPortal;
   interface %(Package)s::%(Ifc)s ifc = dut.ifc;
@@ -140,7 +132,7 @@ endinstance
 
 // exposed wrapper Portal implementation
 (* synthesize *)
-module mk%(Dut)sPipes#(Bit#(32) id)(%(Dut)sPipes);
+module mk%(Dut)sPipes(%(Dut)sPipes);
     Vector#(%(channelCount)s, PipeIn#(Bit#(32))) requestPipeIn = newVector();
 %(methodRules)s
     interface PipePortal portalIfc;
@@ -154,10 +146,8 @@ module mk%(Dut)sPipes#(Bit#(32) id)(%(Dut)sPipes);
 %(outputPipes)s
 endmodule
 
-module mk%(Dut)sPortal#(idType id, %(Ifc)s ifc)(%(Dut)sPortal)
-    provisos (Bits#(idType, __a),
-              Add#(a__, __a, 32));
-    let pipes <- mk%(Dut)sPipes(zeroExtend(pack(id)));
+module mk%(Dut)sPortal#(%(Ifc)s ifc)(%(Dut)sPortal);
+    let pipes <- mk%(Dut)sPipes;
     mkConnection(pipes, ifc);
     interface PipePortal portalIfc = pipes.portalIfc;
 endmodule
@@ -170,7 +160,7 @@ endinterface
 (* synthesize *)
 module mk%(Dut)sMemPortalPipes#(Bit#(32) id)(%(Dut)sMemPortalPipes);
 
-  let p <- mk%(Dut)sPipes(zeroExtend(pack(id)));
+  let p <- mk%(Dut)sPipes;
   let memPortal <- mkMemPortal(id, p.portalIfc);
   interface %(Dut)sPipes pipes = p;
   interface MemPortal portalIfc = memPortal;
