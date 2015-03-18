@@ -438,13 +438,14 @@ int portalmem_dmabuffer_create(PortalAlloc portalAlloc)
          memory is ready for dma, ie if it has a
          cached mapping that mapping has been invalidated */
       for_each_sg(buffer->sg_table->sgl, sg, buffer->sg_table->nents, infocount){
-	unsigned int length = sg->length;
-	dma_addr_t start_addr = sg_phys(sg), end_addr = start_addr+length;
-        sg_dma_address(sg) = sg_phys(sg);
 #ifdef __arm__
+	unsigned int length = sg->length;
+	dma_addr_t start_addr = sg_phys(sg);
+	dma_addr_t  end_addr = start_addr+length;
 	outer_clean_range(start_addr, end_addr);
 	outer_inv_range(start_addr, end_addr);
 #endif
+        sg_dma_address(sg) = sg_phys(sg);
       }
       dmabuf = dma_buf_export(buffer, &dma_buf_ops, len, O_RDWR);
       if (IS_ERR(dmabuf))
