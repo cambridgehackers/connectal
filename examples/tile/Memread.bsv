@@ -31,6 +31,8 @@ import MemTypes::*;
 import MemreadEngine::*;
 import HostInterface::*; // for DataBusWidth
 
+typedef enum {MemreadIndicationH2S, MemreadRequestS2H} TileNames deriving (Eq,Bits);
+
 interface MemreadRequest;
    method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
 endinterface
