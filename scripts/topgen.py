@@ -38,6 +38,8 @@ import Vector::*;
 import Portal::*;
 import CtrlMux::*;
 import HostInterface::*;
+import MemPortal::*;
+import Connectable::*;
 %(generatedImport)s
 
 `ifndef PinType
@@ -67,9 +69,12 @@ endmodule : mkConnectalTop
 %(exportedNames)s
 '''
 
-def addPortal(name):
+portalTemplate = '''   let portalEnt_%(count)s <- mkMemPortal(extend(pack(%(enumVal)s)), l%(ifcName)s.portalIfc);
+   portals[%(count)s] = portalEnt_%(count)s;'''
+
+def addPortal(enumVal, ifcName):
     global portalCount
-    portalList.append('   portals[%(count)s] = %(name)s.portalIfc;' % {'count': portalCount, 'name': name})
+    portalList.append(portalTemplate % {'count': portalCount, 'enumVal': enumVal, 'ifcName': ifcName})
     portalCount = portalCount + 1
 
 class iReq:
@@ -78,15 +83,17 @@ class iReq:
         self.args = []
 
 memModuleInstantiation = '''
-   %(modname)s%(memFlag)s%(tparam)s l%(modname)s%(memFlag)s <- mk%(modname)s%(memFlag)s(%(args)s);
-   SharedMemoryPortal#(64) l%(modname)s%(memFlag)sMem <- mkSharedMemoryPortal(l%(modname)s%(memFlag)s.portalIfc);
-   SharedMemoryPortalConfigWrapper l%(modname)s <-
-       mkSharedMemoryPortalConfigWrapper(%(argsConfig)s, l%(modname)s%(memFlag)sMem.cfg);
-'''
+   %(modname)sPortal%(tparam)s l%(modname)sPortal <- mk%(modname)sPortal(%(args)s);
+   SharedMemoryPortal#(64) l%(modname)sShare <- mkSharedMemoryPortal(l%(modname)sPortal.portalIfc);
+   SharedMemoryPortalConfigWrapperPipes%(tparam)s l%(modname)sCW <- mkSharedMemoryPortalConfigWrapperPipes;
+   mkConnection(l%(modname)sCW, l%(modname)sShare.cfg);'''
+
 proxyInstantiation = '''
-   %(modname)s%(tparam)s l%(modname)s <- mk%(modname)s(%(args)s);'''
+   %(modname)s%(tparam)sPortal l%(modname)sPortal <- mk%(modname)sPortal;'''
+
 wrapperInstantiation = '''
-   %(modname)s%(tparam)s l%(modname)s <- mk%(modname)s(%(args)s, l%(userIf)s);'''
+   %(modname)sPipes%(tparam)s l%(modname)sPortal <- mk%(modname)sPipes;
+   mkConnection(l%(modname)sPortal, l%(userIf)s);'''
 
 def instMod(args, modname, modext, constructor, tparam, memFlag):
     if not modname:
@@ -103,14 +110,20 @@ def instMod(args, modname, modext, constructor, tparam, memFlag):
         enumList.append(modname + tstr)
         pmap['argsConfig'] = modname + memFlag + tstr
         if memFlag:
-            enumList.append(modname + memFlag + tstr)
-        addPortal('l%(modname)s' % pmap)
-        if memFlag:
+            if modext == 'Proxy':
+                pmap['args'] = '';
+            else:
+                pmap['args'] = 'l%(userIf)s' % pmap
             portalInstantiate.append(memModuleInstantiation % pmap)
         elif modext == 'Proxy':
             portalInstantiate.append(proxyInstantiation % pmap)
         else:
             portalInstantiate.append(wrapperInstantiation % pmap)
+        if memFlag:
+            enumList.append(modname + memFlag + tstr)
+            addPortal(pmap['argsConfig'], '%(modname)sCW' % pmap)
+        else:
+            addPortal(pmap['args'], '%(modname)sPortal' % pmap)
     else:
         if not instantiateRequest.get(pmap['modname']):
             instantiateRequest[pmap['modname']] = iReq()
@@ -176,9 +189,9 @@ if __name__=='__main__':
         ptemp = pmap['name']
         for pmap['name'] in ptemp.split(','):
             instMod('', pmap['name'], 'Proxy', '', '', pmap['memFlag'])
-            argstr = pmap['uparam'] + 'l%(name)sProxy%(memFlag)s.ifc'
+            argstr = pmap['uparam'] + 'l%(name)sProxyPortal.ifc'
             if pmap['uparam'] and pmap['uparam'][0] == '/':
-                argstr = 'l%(name)sProxy%(memFlag)s.ifc, ' + pmap['uparam'][1:-2]
+                argstr = 'l%(name)sProxyPortal.ifc, ' + pmap['uparam'][1:-2]
             instMod(argstr, pmap['usermod'], '', '', pmap['xparam'], False)
             pmap['uparam'] = ''
     for pitem in options.wrapper:
