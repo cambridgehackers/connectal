@@ -1,4 +1,4 @@
-// Copyright (c) 2013 Quanta Research Cambridge, Inc.
+// Copyright (c) 2015 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -21,64 +21,36 @@
 // SOFTWARE.
 
 import Vector::*;
-import Connectable::*;
 
 import Portal::*;
+import PlatformTypes::*;
+import CtrlMux::*;
+import MemServer::*;
 import MemTypes::*;
-import HostInterface::*;
 
-interface TilePins;
-endinterface
+import Memread::*;
+import MemreadRequest::*;
+import MemreadIndication::*;
 
-interface ITilePins;
-endinterface
-
-instance Connectable#(TilePins,ITilePins);
-   module mkConnection#(TilePins t, ITilePins it)(Empty);
-   endmodule
-endinstance
-
-// implementation of a Portal as a physical memory slave
-interface MemPortalSocket#(numeric type slaveAddrWidth, numeric type slaveDataWidth);
-   interface PhysMemMaster#(slaveAddrWidth,slaveDataWidth) slave;
-   interface WriteOnly#(Bool) interrupt;
-   interface ReadOnly#(Bool) top;
-endinterface
-
-interface TileSocket;
-   interface PhysMemMaster#(18,32) portals;
-   interface WriteOnly#(Bool) interrupt;
-   interface MemReadServer#(DataBusWidth) reader;
-   interface MemWriteServer#(DataBusWidth) writer;
-   interface ITilePins pins;
-endinterface
-
-interface Tile;
-   interface PhysMemSlave#(18,32) portals;
-   interface ReadOnly#(Bool) interrupt;
-   interface MemReadClient#(DataBusWidth) reader;
-   interface MemWriteClient#(DataBusWidth) writer;
-   interface TilePins pins;
-endinterface
-
-interface Framework#(numeric type numTiles, type pins, numeric type numMasters);
-   interface Vector#(numTiles, TileSocket) sockets;
-   interface PhysMemSlave#(32,32) slave;
-   interface Vector#(numMasters,PhysMemMaster#(PhysAddrWidth, DataBusWidth)) masters;
-   interface Vector#(16,ReadOnly#(Bool)) interrupt;
-   interface pins             pins;
-endinterface
-
-instance Connectable#(Tile,TileSocket);
-   module mkConnection#(Tile t, TileSocket ts)(Empty);
-      mkConnection(ts.portals,t.portals);
-      rule connect_interrupt;
-	 ts.interrupt <= t.interrupt;
-      endrule
-      mkConnection(t.reader,ts.reader);
-      mkConnection(t.writer,ts.writer);
-      mkConnection(t.pins,ts.pins);
-   endmodule
-endinstance
-
-
+module mkTile(Vector#(1,Tile#(Empty)));
+   
+   MemreadIndicationProxy lMemreadIndicationProxy <- mkMemreadIndicationProxy(MemreadIndicationH2S);
+   Memread lMemread <- mkMemread(lMemreadIndicationProxy.ifc);
+   MemreadRequestWrapper lMemreadRequestWrapper <- mkMemreadRequestWrapper(MemreadRequestS2H, lMemread.request);
+   
+   Vector#(2,StdPortal) portal_vec;
+   portal_vec[0] = lMemreadIndicationProxy.portalIfc;
+   portal_vec[1] = lMemreadRequestWrapper.portalIfc;
+   PhysMemSlave#(18,32) mem_portal <- mkSlaveMux(portal_vec);
+   let interrupts <- mkInterruptMux(getInterruptVector(portal_vec));
+   
+   Vector#(1,Tile#(Empty)) rv = newVector;
+   rv[0] = (interface Tile;
+	       interface interrupt = interrupts;
+	       interface portals = mem_portal;
+	       interface reader = lMemread.dmaClient;
+	       interface writer = null_mem_write_client;
+	       interface ext = ?;
+	    endinterface);
+   return rv;
+endmodule

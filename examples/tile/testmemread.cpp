@@ -60,13 +60,13 @@ public:
     printf( "Memread::readDone(mismatch = %x)\n", v);
     sem_post(&test_sem);
   }
-  MemreadIndication(int id) : MemreadIndicationWrapper(id){}
+  MemreadIndication(int id, int tile) : MemreadIndicationWrapper(id,tile){}
 };
 
 int main(int argc, const char **argv)
 {
-  MemreadRequestProxy *device = new MemreadRequestProxy(TileNames_MemreadRequestS2H);
-  MemreadIndication *deviceIndication = new MemreadIndication(TileNames_MemreadIndicationH2S);
+  MemreadRequestProxy *device = new MemreadRequestProxy(TileNames_MemreadRequestS2H, 1);
+  MemreadIndication *deviceIndication = new MemreadIndication(TileNames_MemreadIndicationH2S, 1);
 
   MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(FrameworkNames_MemServerRequestS2H);
   MMURequestProxy *dmap = new MMURequestProxy(FrameworkNames_MMURequestS2H);
