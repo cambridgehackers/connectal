@@ -32,8 +32,8 @@ import Memread::*;
 import MemreadRequest::*;
 import MemreadIndication::*;
 
-module mkTile(Vector#(1,Tile#(Empty)));
-   
+module mkTile(Tile#(Empty));
+
    MemreadIndicationProxy lMemreadIndicationProxy <- mkMemreadIndicationProxy(MemreadIndicationH2S);
    Memread lMemread <- mkMemread(lMemreadIndicationProxy.ifc);
    MemreadRequestWrapper lMemreadRequestWrapper <- mkMemreadRequestWrapper(MemreadRequestS2H, lMemread.request);
@@ -44,13 +44,10 @@ module mkTile(Vector#(1,Tile#(Empty)));
    PhysMemSlave#(18,32) mem_portal <- mkSlaveMux(portal_vec);
    let interrupts <- mkInterruptMux(getInterruptVector(portal_vec));
    
-   Vector#(1,Tile#(Empty)) rv = newVector;
-   rv[0] = (interface Tile;
-	       interface interrupt = interrupts;
-	       interface portals = mem_portal;
-	       interface reader = lMemread.dmaClient;
-	       interface writer = null_mem_write_client;
-	       interface ext = ?;
-	    endinterface);
-   return rv;
+   interface interrupt = interrupts;
+   interface portals = mem_portal;
+   interface reader = lMemread.dmaClient;
+   interface writer = null_mem_write_client;
+   interface ext = ?;
+
 endmodule
