@@ -252,12 +252,20 @@ void init_portal_memory(void)
 
 int portalAlloc(size_t size)
 {
+  return portalAllocCached(size, 0);
+}
+
+int portalAllocCached(size_t size, int cached)
+{
   int fd;
+  struct PortalAlloc portalAlloc;
+  portalAlloc.len = size;
+  portalAlloc.cached = cached;
   init_portal_memory();
 #ifdef __KERNEL__
   fd = portalmem_dmabuffer_create(size);
 #else
-  fd = ioctl(global_pa_fd, PA_MALLOC, size);
+  fd = ioctl(global_pa_fd, PA_MALLOC, &portalAlloc);
 #endif
   PORTAL_PRINTF("alloc size=%ldMB fd=%d\n", size/(1L<<20), fd);
   return fd;

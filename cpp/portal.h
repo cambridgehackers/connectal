@@ -201,6 +201,7 @@ void portalDCacheFlushInval(int fd, long size, void *__p);
 void portalDCacheInval(int fd, long size, void *__p);
 void init_portal_memory(void);
 int portalAlloc(size_t size);
+int portalAllocCached(size_t size, int cached);
 void *portalMmap(int fd, size_t size);
 void portalSendFd(int fd, void *data, int len, int sendFd);
 int portalRecvFd(int fd, void *data, int len, int *recvFd);
