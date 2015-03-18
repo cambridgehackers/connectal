@@ -88,6 +88,8 @@ memShareInst = '''   SharedMemoryPortalConfigWrapperPipes%(tparam)s l%(modname)s
 memModuleInstantiation = '''   SharedMemoryPortal#(64) l%(modname)sShare <- mkSharedMemoryPortal(l%(modname)sPipes.portalIfc);
    mkConnection(l%(modname)sCW, l%(modname)sShare.cfg);'''
 
+connectUser = '''   mkConnection(lSimpleRequestWrapperPipes, %(args)s);'''
+
 pipeInstantiation = '''   %(modname)sPipes%(tparam)s l%(modname)sPipes <- mk%(modname)sPipes;'''
 
 connectInstantiation = '''   mkConnection(l%(modname)sPipes, l%(userIf)s);'''
@@ -114,6 +116,8 @@ def instMod(args, modname, modext, constructor, tparam, memFlag):
             pipeInstantiate.append(pipeInstantiation % pmap)
             pipeInstantiate.append(memShareInst % pmap)
             portalInstantiate.append(memModuleInstantiation % pmap)
+            if modext == 'Wrapper':
+                portalInstantiate.append(connectUser % pmap)
         elif modext == 'Proxy':
             pipeInstantiate.append(pipeInstantiation % pmap)
         else:
