@@ -84,11 +84,12 @@ module mkPortalCtrlMemSlave#(Bit#(dataWidth) ifcId,
    rule count;
       cycle_count <= cycle_count+1;
    endrule
+   let verbose = False;
    
    rule writeDataRule;
       let d <- toGet(ctrlWriteDataFifo).get();
       let b <- ctrlWriteAddrGenerator.addrBeat.get();
-      //$display("mkCtrl.writeData addr=%h data=%h last=%d", b.addr, d.data, b.last);
+      if (verbose) $display("mkCtrl.writeData addr=%h data=%h last=%d", b.addr, d.data, b.last);
       let v = d.data;
       let addr = b.addr;
       if (addr == 'h000)
@@ -132,7 +133,7 @@ module mkPortalCtrlMemSlave#(Bit#(dataWidth) ifcId,
 	       end
 	       if (addr == 'h01C)
 		  v = snapshot;
-	       //$display("mkCtrl.readData addr=%h data=%h", b.addr, v);
+	       if (verbose) $display("mkCtrl.readData addr=%h data=%h", b.addr, v);
 	       return MemData { data: v, tag: b.tag, last: b.last };
 	    endmethod
 	 endinterface
