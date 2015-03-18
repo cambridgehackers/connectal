@@ -83,9 +83,9 @@ class iReq:
         self.inst = ''
         self.args = []
 
-#%(modname)sPipes%(tparam)s l%(modname)sPipes <- mk%(modname)sPipes(%(args)s);
+memShareInst = '''   SharedMemoryPortalConfigWrapperPipes%(tparam)s l%(modname)sCW <- mkSharedMemoryPortalConfigWrapperPipes;'''
+
 memModuleInstantiation = '''   SharedMemoryPortal#(64) l%(modname)sShare <- mkSharedMemoryPortal(l%(modname)sPipes.portalIfc);
-   SharedMemoryPortalConfigWrapperPipes%(tparam)s l%(modname)sCW <- mkSharedMemoryPortalConfigWrapperPipes;
    mkConnection(l%(modname)sCW, l%(modname)sShare.cfg);'''
 
 pipeInstantiation = '''   %(modname)sPipes%(tparam)s l%(modname)sPipes <- mk%(modname)sPipes;'''
@@ -112,6 +112,7 @@ def instMod(args, modname, modext, constructor, tparam, memFlag):
             else:
                 pmap['args'] = 'l%(userIf)s' % pmap
             pipeInstantiate.append(pipeInstantiation % pmap)
+            pipeInstantiate.append(memShareInst % pmap)
             portalInstantiate.append(memModuleInstantiation % pmap)
         elif modext == 'Proxy':
             pipeInstantiate.append(pipeInstantiation % pmap)
