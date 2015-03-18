@@ -73,6 +73,7 @@ void init_portal_internal(PortalInternal *pint, int id, int tile, PORTAL_INDFUNC
     if(!utility_portal)
       utility_portal = pint;
     pint->fpga_number = id;
+    pint->fpga_tile = tile;
     pint->fpga_fd = -1;
     pint->handler = handler;
     pint->cb = cb;
