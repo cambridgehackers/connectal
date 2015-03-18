@@ -38,6 +38,7 @@
 
 /* Offset of each /dev/fpgaxxx device in the address space */
 #define PORTAL_BASE_OFFSET         (1 << (METHOD_SZ+METHOD_SEL))
+#define TILE_BASE_OFFSET           (1 << (PORTAL_SEL+METHOD_SZ+METHOD_SEL))
 
 /* Offsets of mapped registers within an /dev/fpgaxxx device */
 #define PORTAL_REQ_FIFO(A)         (((A << (METHOD_SZ)) + (1 << (METHOD_SZ)))/sizeof(uint32_t))
@@ -105,6 +106,7 @@ typedef struct PortalInternal {
     struct PortalPoller   *poller;
     int                    fpga_fd;
     int                    fpga_number;
+    int                    fpga_tile;
     volatile unsigned int *map_base;
     void                  *parent;
     PORTAL_INDFUNC         handler;

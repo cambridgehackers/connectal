@@ -34,13 +34,13 @@ import MemreadIndication::*;
 
 module mkTile(Tile#(Empty));
 
-   MemreadIndicationProxy lMemreadIndicationProxy <- mkMemreadIndicationProxy(MemreadIndicationH2S);
+   MemreadIndicationProxy lMemreadIndicationProxy <- mkMemreadIndicationProxy(MemreadIndicationH2S); //0
    Memread lMemread <- mkMemread(lMemreadIndicationProxy.ifc);
-   MemreadRequestWrapper lMemreadRequestWrapper <- mkMemreadRequestWrapper(MemreadRequestS2H, lMemread.request);
+   MemreadRequestWrapper lMemreadRequestWrapper <- mkMemreadRequestWrapper(MemreadRequestS2H, lMemread.request); //1
    
    Vector#(2,StdPortal) portal_vec;
-   portal_vec[0] = lMemreadIndicationProxy.portalIfc;
-   portal_vec[1] = lMemreadRequestWrapper.portalIfc;
+   portal_vec[0] = lMemreadRequestWrapper.portalIfc;
+   portal_vec[1] = lMemreadIndicationProxy.portalIfc;
    PhysMemSlave#(18,32) mem_portal <- mkSlaveMux(portal_vec);
    let interrupts <- mkInterruptMux(getInterruptVector(portal_vec));
    

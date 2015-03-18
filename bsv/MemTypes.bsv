@@ -130,37 +130,6 @@ interface MemWriteServer#(numeric type dsz);
    interface Put#(MemData#(dsz))     writeData;
    interface Get#(Bit#(MemTagSize))           writeDone;
 endinterface
-
-instance Connectable#(MemReadServer#(dataWidth), MemReadClient#(dataWidth));
-   module mkConnection#(MemReadServer#(dataWidth) server, MemReadClient#(dataWidth) client)(Empty);
-      rule connect_req;
-	 let r <- client.readReq.get;
-	 server.readReq.put(r);
-      endrule
-      rule connect_data;
-	 let d <- server.readData.get;
-	 client.readData.put(d);
-      endrule
-   endmodule
-endinstance
-
-
-instance Connectable#(MemWriteServer#(dataWidth), MemWriteClient#(dataWidth));
-   module mkConnection#(MemWriteServer#(dataWidth) server, MemWriteClient#(dataWidth) client)(Empty);
-      rule connect_req;
-	 let r <- client.writeReq.get;
-	 server.writeReq.put(r);
-      endrule
-      rule connect_data;
-	 let d <- client.writeData.get;
-	 server.writeData.put(d);
-      endrule
-      rule connect_done;
-	 let d <- server.writeDone.get;
-	 client.writeDone.put(d);
-      endrule
-   endmodule
-endinstance
       
 //
 ///////////////////////////////////////////////////////////////////////////////////

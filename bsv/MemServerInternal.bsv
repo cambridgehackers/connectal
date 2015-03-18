@@ -111,7 +111,7 @@ module mkMemReadInternal#(MemServerIndication ind,
    Reg#(Bit#(BurstLenSize))      compReg0 <- mkReg(0);
    Reg#(Bit#(TLog#(numTags)))    compReg1 <- mkReg(0);
    Reg#(Bit#(TLog#(numServers))) compReg2 <- mkReg(0);
-   FIFO#(Bit#(TLog#(numServers)))compFifo0 <- mkFIFO;
+   FIFO#(Bit#(TAdd#(1,TLog#(numServers)))) compFifo0 <- mkFIFO; // this ugliness because Bit#(0) isn't equal to anything. stupid Bluespec!
    FIFO#(Bit#(TLog#(numTags)))   compFifo1 <- mkFIFO;
    
    // performance analytics 
@@ -136,6 +136,7 @@ module mkMemReadInternal#(MemServerIndication ind,
       let tag <- tag_gen.complete;
       dreqFifos.portB.request.put(BRAMRequest{write:False, address:tag, datain: ?, responseOnWrite: ?});      
       compFifo1.enq(tag);
+      if(debug) $display("mkMemReadInternal::complete_burst0 %h", tag);
    endrule
    
    rule complete_burst1a if (compReg0==0);
@@ -143,20 +144,22 @@ module mkMemReadInternal#(MemServerIndication ind,
       let cnt = drq.req.burstLen >> beat_shift;
       let cli = drq.client;
       let tag <- toGet(compFifo1).get;
-      compFifo0.enq(cli);
+      compFifo0.enq(extend(cli));
       read_buffer.portB.request.put(BRAMRequest{write:False, address:{tag,truncate(cnt)}, datain: ?, responseOnWrite: ?});
       compReg0 <= cnt-1;
       compReg1 <= tag;
       compReg2 <= cli;
+      if(debug) $display("mkMemReadInternal::complete_burst1a %h", cli);
    endrule
 
    rule complete_burst1b if (compReg0 > 0);
       let cnt = compReg0;
       let tag = compReg1;
       let cli = compReg2;
-      compFifo0.enq(cli);
+      compFifo0.enq(extend(cli));
       read_buffer.portB.request.put(BRAMRequest{write:False, address:{tag,truncate(cnt)}, datain: ?, responseOnWrite: ?});
       compReg0 <= cnt-1;
+      if(debug) $display("mkMemReadInternal::complete_burst1b %h", compReg0);
    endrule
          
    rule checkMmuResp;
