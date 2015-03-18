@@ -48,17 +48,17 @@ int fmcomms1_get_version(int fd, int device, unsigned char *datap, int size)
   msgs[1].flags = I2C_M_RD | I2C_M_RECV_LEN;
   msgs[1].len = 33;
   msgs[1].buf = datap;
-  arg.msgs = msgs;
-  arg.nmsgs = 2;
+  arg.msgs = &msgs[0];
+  arg.nmsgs = 1;
   datap[0] = 1;
   status = ioctl(fd, I2C_RDWR, &arg);
   if (status != 0) {
-    fprintf(stderr, "[%s:%d]: ioctl I2C_RW write status=%d errno=%d [%s]\n", __FILE__, __LINE__, status, errno, strerror(errno));
+    fprintf(stdout, "[%s:%d]: ioctl I2C_RW write status=%d errno=%d [%s]\n", __FILE__, __LINE__, status, errno, strerror(errno));
   }
-  msgs[0] = msgs[1];
+  arg.msgs = &msgs[1];
   status = ioctl(fd, I2C_RDWR, &arg);
   if (status != 0) {
-    fprintf(stderr, "[%s:%d]: ioctl I2C_RW read status=%d errno=%d [%s]\n", __FILE__, __LINE__, status, errno, strerror(errno));
+    fprintf(stdout, "[%s:%d]: ioctl I2C_RW read status=%d errno=%d [%s]\n", __FILE__, __LINE__, status, errno, strerror(errno));
   }
   return status;
 }

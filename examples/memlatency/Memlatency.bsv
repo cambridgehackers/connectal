@@ -25,6 +25,7 @@ import FIFO::*;
 import ClientServer::*;
 import GetPut::*;
 import BRAMFIFO::*;
+import Vector::*;
 
 import Pipe::*;
 import ConnectalMemory::*;
@@ -46,8 +47,8 @@ endinterface
 
 interface Memlatency;
    interface MemlatencyRequest request;
-   interface MemReadClient#(64) dmaReadClient;
-   interface MemWriteClient#(64) dmaWriteClient;
+   interface Vector#(1, MemReadClient#(64)) dmaReadClient;
+   interface Vector#(1, MemWriteClient#(64)) dmaWriteClient;
 endinterface
 
 module mkMemlatency#(MemlatencyIndication indication)(Memlatency);
@@ -128,7 +129,7 @@ module mkMemlatency#(MemlatencyIndication indication)(Memlatency);
       burstLen  <= bl;
    endmethod
    endinterface
-   interface MemReadClient dmaReadClient = re.dmaClient;
-   interface MemWriteClient dmaWriteClient = we.dmaClient;
+   interface MemReadClient dmaReadClient = cons(re.dmaClient, nil);
+   interface MemWriteClient dmaWriteClient = cons(we.dmaClient, nil);
    
 endmodule

@@ -28,7 +28,7 @@
 #include "StdDmaIndication.h"
 #include "dmaManager.h"
 #include "SharedMemoryPortalConfig.h"
-#include "Simple.h"
+#include "SimpleRequest.h"
 
 #if 1
 #define TEST_ASSERT(A) assert(A)
@@ -59,7 +59,7 @@ S3 s3 = { a: v7a, e1: v7b };
 
 int did_nothing;
 
-class Simple : public SimpleWrapper
+class Simple : public SimpleRequestWrapper
 {  
 public:
   uint32_t cnt;
@@ -74,7 +74,7 @@ public:
     TEST_ASSERT(a == v1a);
     incr_cnt();
   }
-  virtual void say2(uint32_t a, uint32_t b) {
+  virtual void say2(uint16_t a, uint16_t b) {
     fprintf(stderr, "say2(%d %d)\n", a, b);
     TEST_ASSERT(a == v2a);
     TEST_ASSERT(b == v2b);
@@ -113,7 +113,12 @@ public:
     TEST_ASSERT(v.e1 == v7b);
     incr_cnt();
   }
-    Simple(unsigned int id, unsigned int numtimes=1, PortalItemFunctions *item=0, void *param = 0) : SimpleWrapper(id, item, param), cnt(0), times(numtimes){}
+  void say8(const uint32_t*v) {}
+  void sayv1(const int32_t*a, const int32_t*b) {}
+  void sayv2(const int16_t*v) {}
+  void sayv3(const int16_t*v, int16_t count) {}
+
+    Simple(unsigned int id, unsigned int numtimes=1, PortalItemFunctions *item=0, void *param = 0) : SimpleRequestWrapper(id, item, param), cnt(0), times(numtimes){}
 };
 
 void dump_buf(volatile unsigned int *data, const char *name, int len)
@@ -133,18 +138,18 @@ int main(int argc, const char **argv)
     int verbose = 1;
     int numtimes = 10;
     int alloc_sz = 4096;
-    MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequest);
+    MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
     DmaManager *dma = new DmaManager(dmap);
-    MMUIndication *mIndication = new MMUIndication(dma, IfcNames_MMUIndication);
+    MMUIndication *mIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
 
     portalExec_start();
 
     PortalSharedParam param = {dma, alloc_sz};
-    Simple *indication = new Simple(IfcNames_SimpleIndication, numtimes, &sharedfunc, &param);
-    SimpleProxy *device = new SimpleProxy(IfcNames_SimpleRequest, &sharedfunc, &param);
-    SharedMemoryPortalConfigProxy *reqConfig = new SharedMemoryPortalConfigProxy(IfcNames_ReqConfigWrapper);
+    Simple *indication = new Simple(IfcNames_SimpleRequestH2S, numtimes, &sharedfunc, &param);
+    SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequestS2H, &sharedfunc, &param);
+    SharedMemoryPortalConfigProxy *reqConfig = new SharedMemoryPortalConfigProxy(IfcNames_SimpleRequestPipesS2H);
     reqConfig->setSglId(device->pint.sharedMem);
-    SharedMemoryPortalConfigProxy *indConfig = new SharedMemoryPortalConfigProxy(IfcNames_IndConfigWrapper);
+    SharedMemoryPortalConfigProxy *indConfig = new SharedMemoryPortalConfigProxy(IfcNames_SimpleRequestPipesH2S);
     indConfig->setSglId(indication->pint.sharedMem);
 
     for (int i = 0; i < numtimes; i++) {

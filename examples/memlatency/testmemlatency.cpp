@@ -94,14 +94,14 @@ int runtest(int argc, const char **argv)
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
-  device = new MemlatencyRequestProxy(IfcNames_MemlatencyRequest);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  device = new MemlatencyRequestProxy(IfcNames_MemlatencyRequestS2H);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
 
-  deviceIndication = new MemlatencyIndication(IfcNames_MemlatencyIndication);
+  deviceIndication = new MemlatencyIndication(IfcNames_MemlatencyIndicationH2S);
 
   fprintf(stderr, "Main::allocating memory...\n");
 

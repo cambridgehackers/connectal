@@ -69,7 +69,7 @@ public:
         fprintf(stderr, "daemon[%s] id %d %d %d\n", __FUNCTION__, this->pint.indication_index, a, b);
         echoRequestProxy->say2(this->pint.indication_index, a, b);
     }
-    void setLeds ( const uint16_t v ) {
+    void setLeds ( const uint8_t v ) {
         fprintf(stderr, "daemon[%s] id %d %d\n", __FUNCTION__, this->pint.indication_index, v);
         echoRequestProxy->setLeds(this->pint.indication_index, v);
         sleep(1);
@@ -109,13 +109,13 @@ int main(int argc, const char **argv)
     PortalSocketParam paramSocket = {};
     PortalMuxParam param = {};
 
-    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, NULL, NULL);
-    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
+    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndicationH2S, NULL, NULL);
+    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H);
 
     Portal *mcommon = new Portal(0, sizeof(uint32_t), portal_mux_handler, NULL, &socketfuncResp, &paramSocket, 0);
     param.pint = &mcommon->pint;
-    sIndicationProxy = new EchoIndicationSWProxy(IfcNames_EchoIndication, &muxfunc, &param);
-    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &muxfunc, &param);
+    sIndicationProxy = new EchoIndicationSWProxy(IfcNames_EchoIndicationH2S, &muxfunc, &param);
+    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequestS2H, &muxfunc, &param);
 
     sSecondIndicationProxy = new SecondIndicationProxy(IfcNames_SecondIndication, &muxfunc, &param);
     SecondRequest *sSecondRequest = new SecondRequest(IfcNames_SecondRequest, &muxfunc, &param);

@@ -1,3 +1,24 @@
+/* Copyright (c) 2014 Quanta Research Cambridge, Inc
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
+
 #include <stdlib.h>
 #include <string>
 #include <iostream>
@@ -16,6 +37,7 @@
 XsimMemSlaveIndicationProxy *memSlaveIndicationProxy;
 class XsimMemSlaveRequest;
 XsimMemSlaveRequest *memSlaveRequest;
+static int trace_xsimtop ;//= 1;
 
 //deleteme
 std::string getcurrentdir()
@@ -34,7 +56,8 @@ public:
   xsiport(Xsi::Loader &loader, const char *name, int bits = 1)
     : xsiInstance(loader), port(-1), name(name), width(bits)
   {
-    value = {1, 1};
+    value.aVal = 1;
+    value.bVal = 1;
     port = xsiInstance.get_port_number(name);
     //width = xsiInstance.get_int_port(port, xsiHDLValueSize);
     std::cout << "Port name=" << name << " number=" << port << std::endl;
@@ -89,7 +112,7 @@ public:
   virtual void connect () {
       connected = 1;
   }
-  virtual void enableint( const uint32_t fpgaId, const uint32_t val);
+  virtual void enableint( const uint32_t fpgaId, const uint8_t val);
   virtual void read ( const uint32_t fpgaId, const uint32_t addr );
   virtual void write ( const uint32_t fpgaId, const uint32_t addr, const uint32_t data );
   virtual void msgSink ( const uint32_t data );
@@ -100,7 +123,7 @@ public:
 
 };
 
-void XsimMemSlaveRequest::enableint( const uint32_t fpgaId, const uint32_t val)
+void XsimMemSlaveRequest::enableint( const uint32_t fpgaId, const uint8_t val)
 {
   int number = fpgaNumber(fpgaId);
   uint32_t hwaddr = number << 16 | 4;
@@ -129,6 +152,7 @@ void XsimMemSlaveRequest::write ( const uint32_t fpgaId, const uint32_t addr, co
 
 void XsimMemSlaveRequest::msgSink ( const uint32_t data )
 {
+  if (trace_xsimtop)
   fprintf(stderr, "[%s:%d] data=%08x\n", __FUNCTION__, __LINE__, data);
   sinkbeats.push(data);
 }
@@ -221,7 +245,11 @@ int main(int argc, char **argv)
     XsimMemSlaveIndicationProxy *memSlaveIndicationProxy = new XsimMemSlaveIndicationProxy(XsimIfcNames_XsimMemSlaveIndication, &muxfunc, &param);
     XsimMemSlaveRequest *memSlaveRequest = new XsimMemSlaveRequest(XsimIfcNames_XsimMemSlaveRequest, &muxfunc, &param);
 
-    portalExec_init();
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+    //portalExec_init();
+    portalExec_stop();
+sleep(2);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 
     // start low clock
     clk.write(0);
@@ -242,19 +270,14 @@ int main(int argc, char **argv)
     int portal_count = 0;
     int offset = 0x00;
 
-
-    for (int i = 0; 1; i++)
-    {
-
+    for (int ind = 0; 1; ind++) {
 	void *rc = portalExec_poll(1);
 	if ((long)rc >= 0) {
 	    portalExec_event();
 	}
-
-	if (i > 2) {
+	if (ind > 2) {
 	    rst_n.write(1);
 	}
-
 	// mkConnectalTop
 	if (!msgSource_beat.valid()) {
 	  if (rdy_directoryEntry.read() && !portal_count) {
@@ -272,19 +295,15 @@ int main(int argc, char **argv)
 
 	      state = xt_active;
 	    }
-
 	    en_directoryEntry.write(1);
 	  } else {
 	    en_directoryEntry.write(0);
 	  }
-	  
 	  if (memSlaveRequest->connected && (portal_number < portal_count)) {
 	    memSlaveIndicationProxy->directory(portal_number, portal_ids[portal_number], portal_number == (portal_count-1));
 	    portal_number++;
 	  }
-
 	  if (state == xt_active) {
-
 	    if (memSlaveRequest->readreqs.size() && rdy_read.read()) {
 	      XsimMemSlaveRequest::readreq readreq = memSlaveRequest->readreqs.front();
 	      memSlaveRequest->readreqs.pop();
@@ -315,7 +334,6 @@ int main(int argc, char **argv)
 	      en_write.write(0);
 	    }
 	  }
-
 	  if (memSlaveRequest->connected && rdy_interrupt.read()) {
 	    en_interrupt.write(1);
 	    int intr = interrupt.read();
@@ -327,12 +345,11 @@ int main(int argc, char **argv)
 	  }
 	} else {
 	  // mkBluenocTop
-
 	  //fprintf(stderr, "msgSource ready %d msgSink ready %d\n", msgSource_src_rdy.read(), msgSink_dst_rdy.read());
-
 	  if (msgSource_src_rdy.read()) {
 	    uint32_t beat = msgSource_beat.read();
 	    msgSource_dst_rdy_b.write(1);
+            if (trace_xsimtop)
 	    fprintf(stderr, "[%s:%d] source message beat %08x\n", __FUNCTION__, __LINE__, beat);
 	    memSlaveIndicationProxy->msgSource(beat);
 	  } else {
@@ -343,6 +360,7 @@ int main(int argc, char **argv)
 	    uint32_t beat = memSlaveRequest->sinkbeats.front();
 	    memSlaveRequest->sinkbeats.pop();
 
+            if (trace_xsimtop)
 	    fprintf(stderr, "[%s:%d] sink message beat %08x\n", __FUNCTION__, __LINE__, beat);
 	    msgSink_beat_v.write(beat);
 	    msgSink_src_rdy_b.write(1);
@@ -350,26 +368,21 @@ int main(int argc, char **argv)
 	  } else {
 	    msgSink_src_rdy_b.write(0);
 	  }
-
 	}
-
 	// setup time
 	xsiInstance.run(10);
 	clk.write(1);
 	xsiInstance.run(10);
-
 	if (0) {
 	    // clock is divided by two
 	    clk.write(0);
 	    xsiInstance.run(10);
-
 	    clk.write(1);
 	    xsiInstance.run(10);
 	}
-
 	clk.write(0);
 	xsiInstance.run(10);
     }
     sleep(10);
-    portalExec_end();
+    //portalExec_end();
 }

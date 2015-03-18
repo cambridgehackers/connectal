@@ -41,6 +41,7 @@
 #include <sys/ioctl.h>
 #include <time.h> // ctime
 #include <stdarg.h> // for portal_printf
+#include <sys/wait.h>
 #endif
 #include "drivers/portalmem/portalmem.h" // PA_MALLOC
 
@@ -119,14 +120,52 @@ int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency
 
 static void init_portal_hw(void)
 {
-  static int once = 0;
+    static int once = 0;
 
-  if (once)
-      return;
-  once = 1;
+    if (once)
+        return;
+    once = 1;
 #ifdef __KERNEL__
-  tboard = get_pcie_portal_descriptor();
+    tboard = get_pcie_portal_descriptor();
+#else
+    int pid = fork();
+    if (pid == -1) {
+        printf("[%s:%d] fork error\n", __FUNCTION__, __LINE__);
+        exit(-1);
+    }
+    else if (pid) {
+        int fd, status, len;
+        waitpid(pid, &status, 0);
+#ifdef __arm__
+        fd = open("/dev/connectal", O_RDONLY); /* scan the fpga directory */
+        len = read(fd, &status, sizeof(status));
+printf("[%s:%d] fd %d len %d\n", __FUNCTION__, __LINE__, fd, len);
+        close(fd);
 #endif
+    }
+    else {
+#define MAX_PATH 2000
+        char buf[MAX_PATH];
+        buf[0] = 0;
+        int rc = readlink("/proc/self/exe", buf, sizeof(buf));
+        char *serial = getenv("SERIALNO");
+        int ind = 1;
+        char *argv[] = { (char *)"fpgajtag", NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+        if (serial) {
+            argv[ind++] = (char *)"-s";
+            argv[ind++] = strdup(serial);
+        }
+#ifdef __arm__
+        argv[ind++] = (char *)"-x";
+        argv[ind++] = buf;
+        execvp ("/mnt/sdcard/fpgajtag", argv);
+#elif !defined(BSIM) && !defined(BOARD_xsim)
+        argv[ind++] = buf;
+        execvp ("fpgajtag", argv);
+#endif // !__arm__
+        exit(-1);
+    }
+#endif // !__KERNEL__
 }
 
 uint64_t portalCycleCount()
@@ -213,12 +252,20 @@ void init_portal_memory(void)
 
 int portalAlloc(size_t size)
 {
+  return portalAllocCached(size, 0);
+}
+
+int portalAllocCached(size_t size, int cached)
+{
   int fd;
+  struct PortalAlloc portalAlloc;
+  portalAlloc.len = size;
+  portalAlloc.cached = cached;
   init_portal_memory();
 #ifdef __KERNEL__
   fd = portalmem_dmabuffer_create(size);
 #else
-  fd = ioctl(global_pa_fd, PA_MALLOC, size);
+  fd = ioctl(global_pa_fd, PA_MALLOC, &portalAlloc);
 #endif
   PORTAL_PRINTF("alloc size=%ldMB fd=%d\n", size/(1L<<20), fd);
   return fd;
@@ -254,15 +301,6 @@ void portalCheckIndication(PortalInternal *pint)
         pint->handler(pint, queue_status-1, 0);
   }
 }
-
-#ifndef __KERNEL__
-int portal_printf(const char *format, ...)
-{
-    va_list ap;
-    va_start(ap, format);
-    return vfprintf(stderr, format, ap);
-}
-#endif
 
 void send_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, unsigned int hdr, int sendFd)
 {

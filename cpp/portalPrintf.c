@@ -1,5 +1,4 @@
-
-// Copyright (c) 2014 Quanta Research Cambridge, Inc.
+// Copyright (c) 2013-2015 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -21,12 +20,17 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include <stdio.h>
+#include <stdarg.h>
 
-module echo(input clk,
-	    input rst,
-	    input [31:0]  say,
-	    output [31:0] heard);
-
-   assign heard = say;
-
-endmodule // echo
+#ifndef __KERNEL__
+#ifdef  __cplusplus
+extern "C"
+#endif
+int portal_printf(const char *format, ...)
+{
+    va_list ap;
+    va_start(ap, format);
+    return vfprintf(stderr, format, ap);
+}
+#endif

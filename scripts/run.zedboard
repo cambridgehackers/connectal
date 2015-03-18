@@ -123,20 +123,16 @@ def run_zedboard(bitfile, androidexe, additional_files):
     print('Sending files to the zedboard')
     connection.Shell('mkdir -p /mnt/sdcard/tmp')
     connection.Shell('mount -t tmpfs tmpfs /mnt/sdcard/tmp')
-    connection.Push(bitfile, '/mnt/sdcard/tmp/%s' % os.path.basename(bitfile))
+    #no longer needed connection.Push(bitfile, '/mnt/sdcard/tmp/%s' % os.path.basename(bitfile))
     connection.Push(androidexe, '/mnt/sdcard/tmp/%s' % os.path.basename(androidexe))
     connection.Shell('chmod agu+rx /mnt/sdcard/tmp/%s' % os.path.basename(androidexe))
     for f in additional_files:
         connection.Push(f, '/mnt/sdcard/tmp/%s' % os.path.basename(f))
     connection.Shell("rmmod portalmem")
     connection.Shell("rmmod zynqportal")
-    connection.Shell("gzip -dc /mnt/sdcard/tmp/%s >/dev/xdevcfg" % os.path.basename(bitfile))
     connection.Shell("insmod /mnt/sdcard/portalmem.ko")
     connection.Shell("insmod /mnt/sdcard/zynqportal.ko")
     connection.Shell("touch /mnt/sdcard/tmp/perf.monkit")
-    connection.Shell("cat /dev/connectal")
-    #wait for driver to enumerate /dev/portalXXX entries
-    connection.Shell("sleep 1")
     print('Running android.exe with timelimit %d' % options.timelimit)
     for line in connection.StreamingShell("cd /mnt/sdcard/tmp/; rm -f /mnt/sdcard/tmp/exit.status; /mnt/sdcard/timelimit -t %d ./%s %s; echo $? > /mnt/sdcard/tmp/exit.status"
                                           % (options.timelimit, os.path.basename(androidexe), ' '.join([os.path.basename(f) for f in additional_files]))):

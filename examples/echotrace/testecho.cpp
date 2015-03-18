@@ -77,11 +77,11 @@ static void call_say2(int v, int v2)
 
 int main(int argc, const char **argv)
 {
-    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication);
-    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
+    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndicationH2S);
+    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H);
     int alloc_sz = 1000;
     PortalSharedParam param = {NULL, alloc_sz};
-    echoRequestTrace = new EchoRequestProxy(IfcNames_EchoRequest, &tracefunc, &param);
+    echoRequestTrace = new EchoRequestProxy(IfcNames_EchoRequestS2H, &tracefunc, &param);
     portalExec_start();
 
     int v = 42;

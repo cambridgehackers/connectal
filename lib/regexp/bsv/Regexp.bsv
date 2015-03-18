@@ -49,8 +49,8 @@ endinterface
 
 interface Regexp#(numeric type busWidth);
    interface RegexpRequest request;
-   interface MemReadClient#(busWidth) config_read_client;
-   interface MemReadClient#(busWidth) haystack_read_client;
+   interface Vector#(1, MemReadClient#(busWidth)) config_read_client;
+   interface Vector#(1, MemReadClient#(busWidth)) haystack_read_client;
 endinterface
 
 typedef `DEGPAR DegPar;
@@ -118,8 +118,8 @@ module mkRegexp#(RegexpIndication indication)(Regexp#(64))
       endcase      
    endrule
 
-   interface config_read_client = config_re.dmaClient;
-   interface haystack_read_client = haystack_re.dmaClient;
+   interface config_read_client = cons(config_re.dmaClient, nil);
+   interface haystack_read_client = cons(haystack_re.dmaClient, nil);
       
    interface RegexpRequest request;
       method Action setup(Bit#(32) sglId, Bit#(32) len);	 

@@ -44,8 +44,8 @@ endinterface
 
 interface Strstr#(numeric type haystackBusWidth, numeric type configBusWidth);
    interface StrstrRequest request;
-   interface MemReadClient#(haystackBusWidth) haystack_read_client;
-   interface MemReadClient#(configBusWidth) config_read_client;
+   interface Vector#(1, MemReadClient#(haystackBusWidth)) haystack_read_client;
+   interface Vector#(1, MemReadClient#(configBusWidth)) config_read_client;
 endinterface
 
 // I can't belive we still have to do this shit
@@ -181,8 +181,8 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(haystackBusWidth, configBu
 	 startFSM.start();
       endmethod
    endinterface
-   interface config_read_client = config_re.dmaClient;
-   interface haystack_read_client = haystack_re.dmaClient;
+   interface config_read_client = cons(config_re.dmaClient, nil);
+   interface haystack_read_client = cons(haystack_re.dmaClient, nil);
 endmodule
    
    

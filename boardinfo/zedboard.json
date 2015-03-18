@@ -474,5 +474,119 @@
              "LOC" : "U5",
 	     "IOSTANDARD" : "LVCMOS33"
 	     }	 
+    },
+    "i2c0" : {
+        "scl" : {
+             "LOC" : "AA18",
+	     "IOSTANDARD" : "LVCMOS33",
+	     "PIO_DIRECTION": "BIDIR"
+	     },
+        "sda" : {
+             "LOC" : "Y16",
+	     "IOSTANDARD" : "LVCMOS33",
+	     "PIO_DIRECTION": "BIDIR"
+	     }	 
+    },
+    "hdmi" : {
+        "clock" : {
+             "LOC" : "W18",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "hsync" : {
+             "LOC" : "V17",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "vsync" : {
+             "LOC" : "W17",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "de" : {
+             "LOC" : "U16",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[0]" : {
+             "LOC" : "Y13",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[1]" : {
+             "LOC" : "AA13",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[2]" : {
+             "LOC" : "AA14",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[3]" : {
+             "LOC" : "Y14",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[4]" : {
+             "LOC" : "AB15",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[5]" : {
+             "LOC" : "AB16",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[6]" : {
+             "LOC" : "AA16",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[7]" : {
+             "LOC" : "AB17",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[8]" : {
+             "LOC" : "AA17",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[9]" : {
+             "LOC" : "Y15",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[10]" : {
+             "LOC" : "W13",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[11]" : {
+             "LOC" : "W15",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[12]" : {
+             "LOC" : "V15",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[13]" : {
+             "LOC" : "U17",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[14]" : {
+             "LOC" : "V14",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[15]" : {
+             "LOC" : "V13",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     }
     }
 }

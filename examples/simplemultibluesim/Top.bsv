@@ -20,42 +20,51 @@
  */
 import Vector::*;
 import FIFO::*;
+import GetPut::*;
+import Pipe::*;
 import Connectable::*;
+import CtrlMux::*;
 import Portal::*;
 import HostInterface::*;
-import CtrlMux::*;
-import Leds::*;
-import EchoIndication::*;
-import EchoRequest::*;
-import Echo::*;
+import MemPortal::*;
+import BlueNoC::*;
+import BnocPortal::*;
+import BsimLink::*;
+import Simple::*;
+import Link::*;
+import SimpleIF::*;
 
-typedef enum {EchoIndication, EchoRequest, MMURequest, MMUIndication} IfcNames deriving (Eq,Bits);
-
-// module mkCntr#(Integer label)(Empty);
-//    Reg#(Bit#(32)) cycles <- mkReg(0);
-//    rule count;
-//       cycles <= cycles+1;
-//       $display("mkCntr(%d) %d",label, cycles);
-//    endrule
-// endmodule
+typedef enum {SimpleRequest, SimpleIndication, LinkRequest} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
+   // the indications from simpleRequest will be connected to the request interface to simpleReuqest2
+   SimpleProxyPortal simple1IndicationProxy <- mkSimpleProxyPortal(SimpleIndication);
+   Simple simple1 <- mkSimple(simple1IndicationProxy.ifc);
+   SimpleWrapper simple1RequestWrapper <- mkSimpleWrapper(SimpleRequest,simple1);
 
-   // instantiate user portals
-   EchoIndicationProxy echoIndicationProxy <- mkEchoIndicationProxy(EchoIndication);
-   EchoRequestInternal echoRequestInternal <- mkEchoRequestInternal(echoIndicationProxy.ifc);
-   EchoRequestWrapper echoRequestWrapper <- mkEchoRequestWrapper(EchoRequest,echoRequestInternal.ifc);
-   
-   Vector#(2,StdPortal) portals;
-   portals[0] = echoRequestWrapper.portalIfc; 
-   portals[1] = echoIndicationProxy.portalIfc;
+   SimpleProxy simple2IndicationProxy <- mkSimpleProxy(SimpleIndication);
+   Simple simple2 <- mkSimple(simple2IndicationProxy.ifc);
+   SimpleWrapperPortal simple2RequestWrapper <- mkSimpleWrapperPortal(SimpleRequest, simple2);
+
+   // now connect them via a BlueNoC link
+   BsimLink#(32) link <- mkBsimLink("simplelink");
+   mkConnection(simple1IndicationProxy.portalIfc, link);
+   mkConnection(link, simple2RequestWrapper.portalIfc);
+
+   Link linkRequest = (interface Link;
+		       method Action start(Bool l);
+			  link.start(l);
+		       endmethod
+		       endinterface);
+   LinkWrapper linkWrapper <- mkLinkWrapper(LinkRequest, linkRequest);
+
+   Vector#(3,StdPortal) portals;
+   portals[0] = simple2IndicationProxy.portalIfc;
+   portals[1] = simple1RequestWrapper.portalIfc;
+   portals[2] = linkWrapper.portalIfc;
    let ctrl_mux <- mkSlaveMux(portals);
-   
+
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
    interface masters = nil;
-   interface leds = echoRequestInternal.leds;
-   interface Empty pins;
-   endinterface
-
 endmodule : mkConnectalTop

@@ -1,12 +1,13 @@
 
 CONNECTALDIR?=../..
-INTERFACES = EchoRequest EchoIndication EchoRequestSW EchoIndicationSW SecondRequest SecondIndication ThirdRequest ThirdIndication
-## all the BSV files to be scanned for types and interfaces
-BSVFILES = Echo.bsv Top.bsv Services.bsv
-## the source files in the example
-CPPFILES=daemon.cpp
-CPPFILES2=testecho.cpp
+INTERFACES = EchoRequestSW EchoIndicationSW SecondRequest SecondIndication ThirdRequest ThirdIndication
+S2H_INTERFACES = EchoRequest:Echo.request
+H2S_INTERFACES = Echo:EchoIndication
+BSVFILES = Echo.bsv Services.bsv
+CPPFILES=testecho.cpp
+CPPFILES2=daemon.cpp
 
 NUMBER_OF_MASTERS =0
+AUTOTOP = --portname SecondRequest --portname SecondIndication --portname ThirdRequest --portname ThirdIndication
 
 include $(CONNECTALDIR)/Makefile.connectal

@@ -23,7 +23,6 @@
 // SOFTWARE.
 
 import FIFO::*;
-import Leds::*;
 import DisplayInd::*;
 
 interface EchoIndication;
@@ -39,7 +38,6 @@ endinterface
 
 interface EchoRequestInternal;
    interface EchoRequest ifc;
-   interface LEDS leds;
 endinterface
 
 typedef struct {
@@ -51,7 +49,6 @@ module mkEchoRequestInternal#(EchoIndication indication, DisplayInd printfInd)(E
 
     FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
     FIFO#(EchoPair) delay2 <- mkSizedFIFO(8);
-    Reg#(Bit#(8)) ledsReg <- mkReg(0);
 
     rule heard;
         delay.deq;
@@ -75,12 +72,6 @@ module mkEchoRequestInternal#(EchoIndication indication, DisplayInd printfInd)(E
       endmethod
       
       method Action setLeds(Bit#(8) v);
-	 ledsReg <= v;
-      endmethod
-   endinterface
-   interface LEDS leds;
-      method Bit#(8) leds();
-         return ledsReg;
       endmethod
    endinterface
 endmodule

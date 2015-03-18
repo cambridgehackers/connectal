@@ -42,9 +42,4 @@ module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
-   interface masters = nil;
-   interface leds = echoRequestInternal.leds;
-   interface Empty pins;
-   endinterface
-
 endmodule : mkConnectalTop

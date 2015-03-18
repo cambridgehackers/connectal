@@ -23,8 +23,8 @@
 
 import Vector::*;
 import MemTypes::*;
-import Leds::*;
-import XADC::*;
+//import Leds::*;
+//import XADC::*;
 import Pipe::*;
 import ConnectalMemory::*;
 
@@ -58,8 +58,8 @@ function Vector#(16, ReadOnly#(Bool)) getInterruptVector(Vector#(numPortals, Mem
 endfunction
 
 interface SharedMemoryPortal#(numeric type dataBusWidth);
-   interface MemReadClient#(dataBusWidth)  readClient;
-   interface MemWriteClient#(dataBusWidth) writeClient;
+   interface Vector#(1, MemReadClient#(dataBusWidth))  readClient;
+   interface Vector#(1, MemWriteClient#(dataBusWidth)) writeClient;
    interface SharedMemoryPortalConfig cfg;
    interface ReadOnly#(Bool) interrupt;
 endinterface
@@ -70,7 +70,7 @@ interface ConnectalTop#(numeric type addrWidth, numeric type dataWidth, type pin
    interface PhysMemSlave#(32,32) slave;
    interface Vector#(numMasters,PhysMemMaster#(addrWidth, dataWidth)) masters;
    interface Vector#(16,ReadOnly#(Bool)) interrupt;
-   interface LEDS             leds;
+   //interface LEDS             leds;
    interface pins             pins;
 endinterface
 

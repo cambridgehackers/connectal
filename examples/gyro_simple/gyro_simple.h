@@ -56,12 +56,12 @@ class GyroCtrlIndication : public GyroCtrlIndicationWrapper
     write_addr = 0;
     write_wrap_cnt = 0;
   }
-  virtual void read_reg_resp ( const uint16_t v){
+  virtual void read_reg_resp ( const uint8_t v){
     //fprintf(stderr, "GyroCtrlIndication::read_reg_resp(v=%x)\n", v);
     read_reg_val = v;
     sem_post(&read_sem);
   }
-  virtual void write_reg_resp ( const uint16_t v){
+  virtual void write_reg_resp ( const uint8_t v){
     //fprintf(stderr, "GyroCtrlIndication::write_reg_resp(v=%x)\n", v);
     sem_post(&write_sem);
   }

@@ -26,7 +26,7 @@ import Connectable       :: *;
 import ConnectableWithTrace::*;
 import Portal            :: *;
 import MemTypes          :: *;
-import Leds              :: *;
+//import Leds              :: *;
 import AxiMasterSlave    :: *;
 import XilinxCells       :: *;
 import ConnectalXilinxCells   :: *;
@@ -55,8 +55,8 @@ endinterface
 interface ZynqTop;
    (* prefix="" *)
    interface ZynqPins zynq;
-   (* prefix="GPIO" *)
-   interface LEDS             leds;
+   //(* prefix="GPIO" *)
+   //interface LEDS             leds;
 `ifdef USE_I2C0
    (* prefix="I2C0" *)
    interface I2C_Pins         i2c0;
@@ -122,7 +122,7 @@ module mkZynqTop(ZynqTop);
    Vector#(4, Reset) unused_reset <- genWithM(bufferReset);
 
    interface zynq = ps7.pins;
-   interface leds = top.leds;
+   //interface leds = top.leds;
 `ifdef USE_I2C0
    interface I2C_Pins i2c0;
       interface Inout scl = tscl0.io;

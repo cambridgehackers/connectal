@@ -27,7 +27,7 @@ import CtrlMux::*;
 import Portal::*;
 import HostInterface::*;
 import MemTypes::*;
-import Leds::*;
+//import Leds::*;
 import MemPortal::*;
 import PcieHost ::*;
 `ifndef BSIM
@@ -207,17 +207,13 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,ZynqPcie,0));
 		     endinterface);
 
    // connect the standard LEDS interface
-   LEDS ledsIF = (interface LEDS; method Bit#(LedsWidth) leds(); return truncate(ledsValue); endmethod endinterface);
+   //LEDS ledsIF = (interface LEDS; method Bit#(LedsWidth) leds(); return truncate(ledsValue); endmethod endinterface);
 
    // export the interfaces from the Zynq portals
    interface interrupt = getInterruptVector(zynqPortals);
    interface slave = ctrl_mux;
    interface masters = nil;
-   interface leds = ledsIF;
-
+   //interface leds = ledsIF;
    // expose the pcie interface as pins
    interface pins = zpcie;
-
 endmodule : mkConnectalTop
-
-

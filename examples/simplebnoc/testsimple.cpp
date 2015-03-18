@@ -61,7 +61,7 @@ public:
     assert(a == v1a);
     incr_cnt();
   }
-  virtual void say2(uint32_t a, uint32_t b) {
+  virtual void say2(uint16_t a, uint16_t b) {
     fprintf(stderr, "say2(%d %d)\n", a, b);
     assert(a == v2a);
     assert(b == v2b);
@@ -102,8 +102,8 @@ public:
   }
   virtual void say8 ( const bsvvector_Luint32_t_L128 v ) {
     fprintf(stderr, "say8\n");
-    for (int i = 0; i < 128; i++)
-        fprintf(stderr, "    [%d] = 0x%x\n", i, v[i]);
+    //for (int i = 0; i < 128; i++)
+        //fprintf(stderr, "    [%d] = 0x%x\n", i, v[i]);
     incr_cnt();
   }
   Simple(unsigned int id) : SimpleWrapper(id), cnt(0){}
@@ -116,8 +116,6 @@ int main(int argc, const char **argv)
   Simple *indication = new Simple(IfcNames_SimpleIndication);
   SimpleProxy *device = new SimpleProxy(IfcNames_SimpleRequest);
   device->pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
-
-  portalExec_start();
 
   fprintf(stderr, "Main::calling say1(%d)\n", v1a);
   device->say1(v1a);  

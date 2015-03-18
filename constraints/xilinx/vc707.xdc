@@ -11,14 +11,14 @@
 ######################################################################################################
 # PIN ASSIGNMENTS
 ######################################################################################################
-set_property LOC AM39 [get_ports { leds[0] }]
-set_property LOC AN39 [get_ports { leds[1] }]
-set_property LOC AR37 [get_ports { leds[2] }]
-set_property LOC AT37 [get_ports { leds[3] }]
-set_property LOC AR35 [get_ports { leds[4] }]
-set_property LOC AP41 [get_ports { leds[5] }]
-set_property LOC AP42 [get_ports { leds[6] }]
-set_property LOC AU39 [get_ports { leds[7] }]
+set_property LOC AM39 [get_ports { GPIO_leds[0] }]
+set_property LOC AN39 [get_ports { GPIO_leds[1] }]
+set_property LOC AR37 [get_ports { GPIO_leds[2] }]
+set_property LOC AT37 [get_ports { GPIO_leds[3] }]
+set_property LOC AR35 [get_ports { GPIO_leds[4] }]
+set_property LOC AP41 [get_ports { GPIO_leds[5] }]
+set_property LOC AP42 [get_ports { GPIO_leds[6] }]
+set_property LOC AU39 [get_ports { GPIO_leds[7] }]
 set_property LOC AD8  [get_ports { CLK_pci_sys_clk_p }]
 set_property LOC AD7  [get_ports { CLK_pci_sys_clk_n }]
 set_property LOC AV35 [get_ports { RST_N_pci_sys_reset_n }]
@@ -64,7 +64,7 @@ set_property LOC AK3  [get_ports { PCIE_txn[7] }]
 ######################################################################################################
 # I/O STANDARDS
 ######################################################################################################
-set_property IOSTANDARD LVCMOS15    [get_ports { leds[*] }]
+set_property IOSTANDARD LVCMOS15    [get_ports { GPIO_leds[*] }]
 set_property IOSTANDARD DIFF_SSTL15 [get_ports { CLK_sys_clk_* }]
 set_property IOSTANDARD LVCMOS15    [get_ports { RST_N_pci_sys_reset_n }]
 set_property PULLUP     true        [get_ports { RST_N_pci_sys_reset_n }]

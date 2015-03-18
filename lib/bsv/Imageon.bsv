@@ -54,7 +54,7 @@ interface ImageonSensorIndication;
 endinterface
 
 interface ImageonSensor;
-    interface ImageonSensorRequest control;
+    interface ImageonSensorRequest request;
     interface ImageonSensorPins pins;
     method ActionValue#(Bit#(10)) get_data();
     method Bit#(2) monitor();
@@ -111,7 +111,7 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
         indication.spi_response(extend(v));
     endrule
 
-    interface ImageonSensorRequest control;
+    interface ImageonSensorRequest request;
 	method Action set_host_oe(Bit#(1) v);
 	    imageon_oe <= ~v;
 	endmethod
@@ -125,7 +125,7 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
         method Action set_i2c_mux_reset_n(Bit#(1) v);
             i2c_mux_reset_n_reg <= v;
         endmethod
-    endinterface: control
+    endinterface
     method ActionValue#(Bit#(10)) get_data();
         dataGearbox.deq;
         return dataGearbox.first[0];

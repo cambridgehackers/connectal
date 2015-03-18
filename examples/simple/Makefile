@@ -1,7 +1,7 @@
 
 CONNECTALDIR?=../..
 S2H_INTERFACES = SimpleRequest:Simple.request
-H2S_INTERFACES = SimpleRequest:Simple
+H2S_INTERFACES = Simple:SimpleRequest
 BSVFILES = Simple.bsv
 CPPFILES=testsimple.cpp
 NUMBER_OF_MASTERS =0

@@ -28,6 +28,7 @@ import GetPut::*;
 import ClientServer::*;
 import Assert::*;
 import StmtFSM::*;
+import SpecialFIFOs::*;
 
 // CONNECTAL Libraries
 import HostInterface::*;
@@ -52,7 +53,7 @@ function Get#(t) null_get();
            endinterface);
 endfunction
 
-function  PhysMemWriteClient#(addrWidth, busWidth) null_mem_write_client();
+function  PhysMemWriteClient#(addrWidth, busWidth) null_phys_mem_write_client();
    return (interface PhysMemWriteClient;
               interface Get writeReq = null_get;
               interface Get writeData = null_get;
@@ -60,8 +61,23 @@ function  PhysMemWriteClient#(addrWidth, busWidth) null_mem_write_client();
            endinterface);
 endfunction
 
-function  PhysMemReadClient#(addrWidth, busWidth) null_mem_read_client();
+function  PhysMemReadClient#(addrWidth, busWidth) null_phys_mem_read_client();
    return (interface PhysMemReadClient;
+              interface Get readReq = null_get;
+              interface Put readData = null_put;
+           endinterface);
+endfunction
+
+function  MemWriteClient#(busWidth) null_mem_write_client();
+   return (interface MemWriteClient;
+              interface Get writeReq = null_get;
+              interface Get writeData = null_get;
+              interface Put writeDone = null_put;
+           endinterface);
+endfunction
+
+function  MemReadClient#(busWidth) null_mem_read_client();
+   return (interface MemReadClient;
               interface Get readReq = null_get;
               interface Put readData = null_put;
            endinterface);
@@ -77,25 +93,41 @@ typedef struct {
    Bit#(32) pref;
    } DmaError deriving (Bits);
 
-module mkMemServerRW#(MemServerIndication indication,
-		      Vector#(numReadClients, MemReadClient#(dataWidth)) readClients,
-		      Vector#(numWriteClients, MemWriteClient#(dataWidth)) writeClients,
-		      Vector#(numMMUs,MMU#(PhysAddrWidth)) mmus)
-   (MemServer#(PhysAddrWidth, dataWidth, nMasters))
+module mkMemServer#(Vector#(numReadClients, MemReadClient#(dataWidth)) readClients,
+		    Vector#(numWriteClients, MemWriteClient#(dataWidth)) writeClients,
+		    Vector#(numMMUs,MMU#(addrWidth)) mmus,
+		    MemServerIndication indication)
+   (MemServer#(addrWidth, dataWidth, nMasters))
    
-   provisos (Add#(1,a__,dataWidth),
+   provisos (Max#(nMasters,numReadClients,numReadClientsActual),
+	     Add#(numReadClients,numReadClientsNull,numReadClientsActual),
+	     Mul#(a__, nMasters, numReadClientsActual),
+	     Max#(nMasters,numWriteClients,numWriteClientsActual),
+	     Add#(numWriteClients,numWriteClientsNull,numWriteClientsActual),
+	     Mul#(b__, nMasters, numWriteClientsActual),
+	     Add#(1,c__,dataWidth),
 	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
-	     Mul#(nwc, nMasters, numWriteClients),
-	     Mul#(nrc, nMasters, numReadClients),
-	     Add#(b__, TLog#(nrc), 6),
-	     Add#(c__, TLog#(nwc), 6),
-	     Add#(TLog#(TDiv#(dataWidth, 8)), d__, BurstLenSize)
-	     );
+	     Add#(TLog#(TDiv#(dataWidth, 8)), d__, BurstLenSize),
+	     Mul#(h__, nMasters, TMax#(nMasters, numReadClientsActual)),
+	     Mul#(i__, nMasters, TMax#(nMasters, numWriteClientsActual)),
+	     Add#(e__, TLog#(b__), 6),
+	     Add#(f__, TLog#(a__), 6),
+	     Mul#(g__, nMasters, TMax#(nMasters, TMax#(nMasters, numWriteClientsActual))),
+	     Add#(j__, TLog#(i__), 6),
+	     Mul#(k__, nMasters, TMax#(nMasters, TMax#(nMasters, numReadClientsActual))),
+	     Add#(l__, TLog#(h__), 6),
+	     Mul#(m__, nMasters, TMax#(nMasters, nMasters)),
+             Add#(n__, addrWidth, 64),
+             Add#(o__, 12, addrWidth)
+      );
 
-   MemServer#(PhysAddrWidth,dataWidth,nMasters) reader <- mkMemServerR(indication,  readClients, mmus);
-   MemServer#(PhysAddrWidth,dataWidth,nMasters) writer <- mkMemServerW(indication, writeClients, mmus);
+   Vector#(numReadClientsNull, MemReadClient#(dataWidth)) nullReadClients = replicate(null_mem_read_client());
+   Vector#(numWriteClientsNull, MemWriteClient#(dataWidth)) nullWriteClients = replicate(null_mem_write_client());
+
+   MemServer#(addrWidth,dataWidth,nMasters) reader <- mkMemServerR(indication, append(readClients,nullReadClients), mmus);
+   MemServer#(addrWidth,dataWidth,nMasters) writer <- mkMemServerW(indication, append(writeClients,nullWriteClients), mmus);
    
-   function PhysMemMaster#(PhysAddrWidth,dataWidth) mkm(Integer i) = (interface PhysMemMaster#(PhysAddrWidth,dataWidth);
+   function PhysMemMaster#(addrWidth,dataWidth) mkm(Integer i) = (interface PhysMemMaster#(addrWidth,dataWidth);
 								 interface PhysMemReadClient read_client = reader.masters[i].read_client;
 								 interface PhysMemWriteClient write_client = writer.masters[i].write_client;
 							      endinterface);
@@ -120,6 +152,51 @@ module mkMemServerRW#(MemServerIndication indication,
    interface masters = map(mkm,genVector);
 endmodule
 
+module mkMemServerRW#(MemServerIndication indication,
+		      Vector#(numReadClients, MemReadClient#(dataWidth)) readClients,
+		      Vector#(numWriteClients, MemWriteClient#(dataWidth)) writeClients,
+		      Vector#(numMMUs,MMU#(addrWidth)) mmus)
+   (MemServer#(addrWidth, dataWidth, nMasters))
+   
+   provisos (Add#(1,a__,dataWidth),
+	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
+	     Mul#(nwc, nMasters, numWriteClients),
+	     Mul#(nrc, nMasters, numReadClients),
+	     Add#(b__, TLog#(nrc), 6),
+	     Add#(c__, TLog#(nwc), 6),
+	     Add#(TLog#(TDiv#(dataWidth, 8)), d__, BurstLenSize),
+             Add#(e__, addrWidth, 64),
+             Add#(f__, 12, addrWidth),
+             Add#(1, f__, g__)
+	     );
+
+   MemServer#(addrWidth,dataWidth,nMasters) reader <- mkMemServerR(indication,  readClients, mmus);
+   MemServer#(addrWidth,dataWidth,nMasters) writer <- mkMemServerW(indication, writeClients, mmus);
+   
+   function PhysMemMaster#(addrWidth,dataWidth) mkm(Integer i) = (interface PhysMemMaster#(addrWidth,dataWidth);
+								 interface PhysMemReadClient read_client = reader.masters[i].read_client;
+								 interface PhysMemWriteClient write_client = writer.masters[i].write_client;
+							      endinterface);
+
+   interface MemServerRequest request;
+      method Action stateDbg(ChannelType rc);
+	 if (rc == Read)
+	    reader.request.stateDbg(rc);
+	 else
+	    writer.request.stateDbg(rc);
+      endmethod
+      method Action memoryTraffic(ChannelType rc);
+	 if (rc == Read) 
+	    reader.request.memoryTraffic(rc);
+	 else 
+	    writer.request.memoryTraffic(rc);
+      endmethod
+      method Action addrTrans(Bit#(32) pointer, Bit#(32) offset);
+	 writer.request.addrTrans(pointer,offset);
+      endmethod
+   endinterface
+   interface masters = map(mkm,genVector);
+endmodule
 
 module mkMemServerR#(MemServerIndication indication,
 		       Vector#(numReadClients, MemReadClient#(dataWidth)) readClients,
@@ -171,7 +248,7 @@ module mkMemServerR#(MemServerIndication indication,
    
    function PhysMemMaster#(addrWidth,dataWidth) mkm(Integer i) = (interface PhysMemMaster#(addrWidth,dataWidth);
 								 interface PhysMemReadClient read_client = readers[i].read_client;
-								 interface PhysMemWriteClient write_client = null_mem_write_client;
+								 interface PhysMemWriteClient write_client = null_phys_mem_write_client;
 							      endinterface);
 
    Stmt dbgStmt = seq
@@ -213,13 +290,16 @@ endmodule
 	
 module mkMemServerW#(MemServerIndication indication,
 		     Vector#(numWriteClients, MemWriteClient#(dataWidth)) writeClients,
-		     Vector#(numMMUs,MMU#(PhysAddrWidth)) mmus)
-   (MemServer#(PhysAddrWidth, dataWidth, nMasters))
+		     Vector#(numMMUs,MMU#(addrWidth)) mmus)
+   (MemServer#(addrWidth, dataWidth, nMasters))
    
    provisos (Add#(1,a__,dataWidth),
 	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
 	     Mul#(nwc, nMasters, numWriteClients),
-	     Add#(b__, TLog#(nwc), 6)
+	     Add#(b__, TLog#(nwc), 6),
+             Add#(c__, addrWidth, 64),
+             Add#(d__, 12, addrWidth),
+             Add#(1, d__, e__)
 	     );
 
    FIFO#(Bit#(32))   addrReqFifo <- mkFIFO;
@@ -233,15 +313,15 @@ module mkMemServerW#(MemServerIndication indication,
    endfunction
    Vector#(nMasters,Vector#(nwc, MemWriteClient#(dataWidth))) client_bins = genWith(selectClients(writeClients));
 
-   module foo#(Integer i) (MMUAddrServer#(PhysAddrWidth,nMasters));
+   module foo#(Integer i) (MMUAddrServer#(addrWidth,nMasters));
       let rv <- mkMMUAddrServer(mmus[i].addr[1]);
       return rv;
    endmodule
-   Vector#(numMMUs,MMUAddrServer#(PhysAddrWidth,nMasters)) mmu_servers <- mapM(foo,genVector);
+   Vector#(numMMUs,MMUAddrServer#(addrWidth,nMasters)) mmu_servers <- mapM(foo,genVector);
 
-   Vector#(nMasters,MemWriteInternal#(PhysAddrWidth,dataWidth,MemServerTags)) writers;
+   Vector#(nMasters,MemWriteInternal#(addrWidth,dataWidth,MemServerTags)) writers;
    for(Integer i = 0; i < valueOf(nMasters); i = i+1) begin
-      Vector#(numMMUs,Server#(ReqTup,Bit#(PhysAddrWidth))) ss;
+      Vector#(numMMUs,Server#(ReqTup,Bit#(addrWidth))) ss;
       for(Integer j = 0; j < valueOf(numMMUs); j=j+1)
 	 ss[j] = mmu_servers[j].servers[i];
       writers[i] <- mkMemWriteInternal(client_bins[i], indication, ss);
@@ -253,8 +333,8 @@ module mkMemServerW#(MemServerIndication indication,
       indication.addrResponse(zeroExtend(physAddr));
    endrule
 
-   function PhysMemMaster#(PhysAddrWidth,dataWidth) mkm(Integer i) = (interface PhysMemMaster#(PhysAddrWidth,dataWidth);
-								 interface PhysMemReadClient read_client = null_mem_read_client;
+   function PhysMemMaster#(addrWidth,dataWidth) mkm(Integer i) = (interface PhysMemMaster#(addrWidth,dataWidth);
+								 interface PhysMemReadClient read_client = null_phys_mem_read_client;
 								 interface PhysMemWriteClient write_client = writers[i].write_client;
 							      endinterface);
    
@@ -295,3 +375,133 @@ module mkMemServerW#(MemServerIndication indication,
    interface masters = map(mkm,genVector);
 endmodule
 
+interface SimpleMemServer#(numeric type addrWidth, numeric type dataWidth, numeric type nMasters);
+   interface MemServerRequest memServerRequest;
+   interface MMURequest mmuRequest;
+   interface Vector#(nMasters,PhysMemMaster#(addrWidth, dataWidth)) masters;
+   interface Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addr;
+endinterface
+
+module mkSimpleMemServer#(Vector#(numReadClients, MemReadClient#(dataWidth)) readClients,
+			  Vector#(numWriteClients, MemWriteClient#(dataWidth)) writeClients,
+			  MemServerIndication indication,
+			  MMUIndication mmuIndication)(SimpleMemServer#(addrWidth, dataWidth,nMasters))
+   provisos (Max#(nMasters,numReadClients,numReadClientsActual),
+	     Add#(numReadClients,numReadClientsNull,numReadClientsActual),
+	     Mul#(a__, nMasters, numReadClientsActual),
+	     Max#(nMasters,numWriteClients,numWriteClientsActual),
+	     Add#(numWriteClients,numWriteClientsNull,numWriteClientsActual),
+	     Mul#(b__, nMasters, numWriteClientsActual),
+	     Add#(1,c__,dataWidth),
+	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
+	     Add#(TLog#(TDiv#(dataWidth, 8)), d__, BurstLenSize),
+	     Mul#(h__, nMasters, TMax#(nMasters, numReadClientsActual)),
+	     Mul#(i__, nMasters, TMax#(nMasters, numWriteClientsActual)),
+
+	     Add#(e__, TLog#(a__), 6),
+	     Add#(f__, TLog#(b__), 6),
+             Add#(g__, addrWidth, 44),
+             Add#(j__, addrWidth, 64),
+             Add#(k__, 12, addrWidth),
+             Add#(1, k__, l__)
+
+	     );
+
+   MMU#(addrWidth) hostMMU <- mkMMU(0, True, mmuIndication);
+
+   Vector#(numReadClientsNull, MemReadClient#(dataWidth)) nullReadClients = replicate(null_mem_read_client());
+   Vector#(numWriteClientsNull, MemWriteClient#(dataWidth)) nullWriteClients = replicate(null_mem_write_client());
+
+   // if this is implemented in terms of mkMemServer, then we go into loop where the compiler keeps asking for more provisos...
+   MemServer#(addrWidth,dataWidth,nMasters) dma <- mkMemServerRW(indication, append(readClients,nullReadClients), append(writeClients,nullWriteClients), cons(hostMMU,nil));
+
+   interface MemServerRequest memServerRequest = dma.request;
+   interface MMURequest mmuRequest = hostMMU.request;
+   interface Vector masters = dma.masters;
+   interface Vector addr = hostMMU.addr;
+endmodule
+
+interface PhysMemConnector#(numeric type addrWidth, numeric type dataWidth);
+   interface PhysMemSlave#(addrWidth,dataWidth) slave;
+   interface PhysMemMaster#(addrWidth,dataWidth) master;
+endinterface
+
+function PhysMemSlave#(aw,dw) getPhysMemConnectorSlave(PhysMemConnector#(aw,dw) s);
+   return s.slave;
+endfunction
+
+module mkPhysMemConnector(PhysMemConnector#(addrWidth,dataWidth));
+   FIFO#(PhysMemRequest#(addrWidth)) read_req <- mkBypassFIFO;
+   FIFO#(PhysMemRequest#(addrWidth)) write_req <- mkBypassFIFO;
+   FIFO#(MemData#(dataWidth)) read_data <- mkBypassFIFO;
+   FIFO#(MemData#(dataWidth)) write_data <- mkBypassFIFO;
+   FIFO#(Bit#(MemTagSize))    write_done <- mkBypassFIFO;
+   interface PhysMemSlave slave;
+      interface PhysMemReadServer read_server;
+	 interface Put readReq;
+	    method Action put(PhysMemRequest#(addrWidth) r);
+	       read_req.enq(r);
+	    endmethod
+	 endinterface
+	 interface Get readData;
+	    method ActionValue#(MemData#(dataWidth)) get;
+	       read_data.deq;
+	       return read_data.first;
+	    endmethod
+	 endinterface
+      endinterface
+      interface PhysMemWriteServer write_server; 
+	 interface Put writeReq;
+	    method Action put(PhysMemRequest#(addrWidth) r);
+	       write_req.enq(r);
+	    endmethod
+	 endinterface
+	 interface Put writeData;
+	    method Action put(MemData#(dataWidth) d);
+	       write_data.enq(d);
+	    endmethod
+	 endinterface
+	 interface Get writeDone;
+	    method ActionValue#(Bit#(MemTagSize)) get;
+	       write_done.deq;
+	       return write_done.first;
+	    endmethod
+	 endinterface
+      endinterface
+   endinterface
+   interface PhysMemMaster master;
+      interface PhysMemReadClient read_client;
+	 interface Get readReq;
+	    method ActionValue#(PhysMemRequest#(addrWidth)) get;
+	       read_req.deq;
+	       return read_req.first;
+	    endmethod
+	 endinterface
+	 interface Put readData;
+	    method Action put(MemData#(dataWidth) d);
+	       read_data.enq(d);
+	    endmethod
+	 endinterface
+      endinterface
+      interface PhysMemWriteClient write_client; 
+	 interface Get writeReq;
+	    method ActionValue#(PhysMemRequest#(addrWidth)) get;
+	       write_req.deq;
+	       return write_req.first;
+	    endmethod
+	 endinterface
+	 interface Get writeData;
+	    method ActionValue#(MemData#(dataWidth)) get;
+	       write_data.deq;
+	       return write_data.first;
+	    endmethod
+	 endinterface
+	 interface Put writeDone;
+	    method Action put(Bit#(MemTagSize) t);
+	       write_done.enq(t);
+	    endmethod
+	 endinterface
+      endinterface
+   endinterface
+endmodule
+		    

@@ -40,7 +40,8 @@ interface LedController;
 endinterface
 
 module mkLedController(LedController);
-
+   Clock defaultClock <- exposeCurrentClock();
+   Reset defaultReset <- exposeCurrentReset();
    Reg#(Bit#(8)) ledsValue <- mkReg(0);
    Reg#(Bit#(32)) remainingDuration <- mkReg(0);
 
@@ -50,6 +51,7 @@ module mkLedController(LedController);
       let duration = remainingDuration;
       if (duration == 0) begin
 	 let cmd <- toGet(ledsCmdFifo).get();
+	 $display("ledsValue <= %b", cmd.leds);
 	 ledsValue <= cmd.leds;
 	 duration = cmd.duration;
       end
@@ -61,10 +63,13 @@ module mkLedController(LedController);
 
    interface LedControllerRequest request;
        method Action setLeds(Bit#(8) v, Bit#(32) duration);
+	  $display("Enqueing v=%d duration=%d", v, duration);
 	  ledsCmdFifo.enq(LedControllerCmd { leds: v, duration: duration });
        endmethod
    endinterface
    interface LEDS leds;
-      method leds = ledsValue._read;
+      method leds = truncate(ledsValue._read);
+      interface deleteme_unused_clock = defaultClock;
+      interface deleteme_unused_reset = defaultReset;
    endinterface
 endmodule

@@ -12,7 +12,7 @@ PIN_TYPE = FMComms1Pins
 
 ifeq ($(BOARD),zedboard)
 HAS_PS7=true
-CONNECTALFLAGS += -D USE_I2C0
+#CONNECTALFLAGS += -D USE_I2C0
 endif
 ifeq ($(BOARD),zc702)
 HAS_PS7=true

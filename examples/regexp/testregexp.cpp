@@ -44,13 +44,13 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
-  RegexpRequestProxy *device = new RegexpRequestProxy(IfcNames_RegexpRequest);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *hostMMURequest = new MMURequestProxy(IfcNames_HostMMURequest);
+  RegexpRequestProxy *device = new RegexpRequestProxy(IfcNames_RegexpRequestS2H);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
+  MMURequestProxy *hostMMURequest = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *hostDma = new DmaManager(hostMMURequest);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(hostDma, IfcNames_HostMMUIndication);
-  RegexpIndication *deviceIndication = new RegexpIndication(IfcNames_RegexpIndication);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
+  MMUIndication *hostMMUIndication = new MMUIndication(hostDma, IfcNames_MMUIndicationH2S);
+  RegexpIndication *deviceIndication = new RegexpIndication(IfcNames_RegexpIndicationH2S);
   
   haystack_dma = hostDma;
   haystack_mmu = hostMMURequest;
@@ -60,7 +60,6 @@ int main(int argc, const char **argv)
     fprintf(stderr, "failed to init test_sem\n");
     return -1;
   }
-  portalExec_start();
 
   // this is hard-coded into the REParser.java
   assert(32 == MAX_NUM_STATES);
@@ -105,7 +104,7 @@ int main(int argc, const char **argv)
     close(stateMapP.alloc);
     close(stateTransitionsP.alloc);
   }
-  portalExec_stop();
-  fprintf(stderr, "hw_match_cnt=%d, sw_match_cnt=%d\n", hw_match_cnt, sw_match_cnt);
+  fprintf(stderr, " testregexp: Done, hw_match_cnt=%d, sw_match_cnt=%d\n", hw_match_cnt, sw_match_cnt);
+  sleep(1);
   return (hw_match_cnt == sw_match_cnt ? 0 : -1);
 }

@@ -947,7 +947,7 @@ def p_packageStmt(p):
 
 def p_packageStmts(p):
     '''packageStmts :
-                    | packageStmts packageStmt'''
+                    | packageStmts packageStmt exportDecls'''
 
 def p_beginPackage(p):
     '''beginPackage :

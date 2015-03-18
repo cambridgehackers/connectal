@@ -1,4 +1,4 @@
-// Copyright (c) 2014 Quanta Research Cambridge, Inc.
+// Copyright (c) 2014-2015 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -33,15 +33,20 @@ import PcieTracer        :: *;
 import Xilinx            :: *;
 import Bscan             :: *;
 import Portal            :: *;
-import Leds              :: *;
+//import Leds              :: *;
 import MemSlaveEngine    :: *;
 import MemMasterEngine   :: *;
 import PcieCsr           :: *;
 import MemTypes          :: *;
 `ifndef BSIM
 `ifdef XILINX
-import PcieEndpointX7    :: *;
+`ifdef PCIE3
+import PCIEWRAPPER3      :: *;
+import Pcie3EndpointX7   :: *;
+`else // pcie3
 import PCIEWRAPPER       :: *;
+import PcieEndpointX7    :: *;
+`endif // pcie3
 `elsif ALTERA
 import PcieEndpointS5    :: *;
 `elsif VSIM
@@ -131,9 +136,9 @@ interface PcieTop#(type ipins);
 `ifndef BSIM
    (* prefix="PCIE" *)
    interface PciewrapPci_exp#(PcieLanes) pcie;
+   //method Bit#(NumLeds) leds();
+   //interface Clock deleteme_unused_clockLeds;
    (* always_ready *)
-   method Bit#(NumLeds) leds();
-   interface Clock deleteme_unused_clockLeds;
    (* prefix="" *)
    interface ipins       pins;
 `endif

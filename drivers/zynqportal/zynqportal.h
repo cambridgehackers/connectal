@@ -35,5 +35,6 @@ typedef struct {
 #define PORTAL_DIRECTORY_READ     _IOR('B',  44, unsigned long)
 #define PORTAL_INTERRUPT_TIME     _IOR('B',  45, PortalInterruptTime)
 #define PORTAL_DCACHE_INVAL       _IOR('B',  46, int)
+#define PORTAL_DEREFERENCE        _IOR('B',  47, int)
 
 #endif /* __PORTAL_H__ */

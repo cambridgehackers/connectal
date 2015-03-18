@@ -403,10 +403,6 @@ interface ImageonSerdesIndication;
     method Action iserdes_dma(Bit#(32) v);
 endinterface
 
-interface ImageonCaptureRequest;
-   method Action startWrite(Bit#(32) pointer, Bit#(32) numBytes);
-endinterface
-
 interface SerdesData;
     method Wire#(Bit#(1)) reset();
     method Vector#(5, Bit#(10)) raw_data();
@@ -415,7 +411,7 @@ interface SerdesData;
 endinterface
 
 interface ISerdes;
-    interface ImageonSerdesRequest control;
+    interface ImageonSerdesRequest request;
     interface ImageonSerdesPins pins;
     interface SerdesData data;
 endinterface
@@ -476,7 +472,7 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
     //endrule
 
     Reg#(Bool) runCapture <- mkSyncReg(False, axi_clock, axi_reset, defaultClock);
-    interface ImageonSerdesRequest control;
+    interface ImageonSerdesRequest request;
 	method Action set_serdes_manual_tap(Bit#(10) v);
 	    serdes_manual_tap_reg <= v;
 	endmethod

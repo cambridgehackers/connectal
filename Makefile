@@ -28,7 +28,7 @@ MODULES_LOAD_D_DIR=/etc/modules-load.d
 all: pciedrivers scripts/syntax/parsetab.py
 	echo version "$(VERSION)"
 
-VERSION=15.02.3
+VERSION=15.03.1
 
 pciedrivers:
 	#(cd drivers/pcieportal; make DRIVER_VERSION=$(VERSION))
@@ -273,7 +273,7 @@ cppalllist =     $(bsimalllist) \
     tests/testmm2.2.2 \
     tests/testmm2.4.2 \
 
-allarchlist = ac701 zedboard zc702 zc706 kc705 vc707 zynq100 v2000t bluesim miniitx100 de5 htg4 vsim parallella xsim
+allarchlist = ac701 zedboard zc702 zc706 kc705 vc707 zynq100 v2000t bluesim miniitx100 de5 htg4 vsim parallella xsim zybo
 
 #################################################################################################
 # gdb
