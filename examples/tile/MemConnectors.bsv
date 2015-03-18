@@ -26,7 +26,6 @@ import GetPut::*;
 import SpecialFIFOs::*;
 import MemTypes::*;
 
-
 interface PhysMemConnector#(numeric type addrWidth, numeric type dataWidth);
    interface PhysMemSlave#(addrWidth,dataWidth) slave;
    interface PhysMemMaster#(addrWidth,dataWidth) master;
