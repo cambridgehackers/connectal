@@ -32,8 +32,8 @@ import Tile::*;
 module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
 
    Platform#(1,Empty,Empty,1) f <- mkPlatform;
-   Vector#(1,Tile#(Empty)) t <- mkTile;
-   zipWithM(mkConnection, t, f.sockets);
+   Tile#(Empty) t <- mkTile;
+   mkConnection(t,f.sockets[0]);
 
    interface interrupt = f.interrupt;
    interface slave = f.slave;
