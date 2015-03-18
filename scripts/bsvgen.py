@@ -65,7 +65,7 @@ requestOutputPipeInterfaceTemplate='''\
 
 exposedProxyInterfaceTemplate='''
 // exposed proxy interface
-interface %(Dut)sPortal;
+interface %(Dut)sPipes;
     interface PipePortal#(0, %(channelCount)s, 32) portalIfc;
     interface %(Package)s::%(Ifc)s ifc;
 endinterface
@@ -75,7 +75,7 @@ interface %(Dut)s;
 endinterface
 
 (* synthesize *)
-module %(moduleContext)s mk%(Dut)sPortal(%(Dut)sPortal);
+module %(moduleContext)s mk%(Dut)sPipes(%(Dut)sPipes);
     Vector#(%(channelCount)s, PipeOut#(Bit#(32))) indicationPipes = newVector();
 %(indicationMethodRules)s
     interface %(Package)s::%(Ifc)s ifc;
@@ -94,7 +94,7 @@ endmodule
 // synthesizeable proxy MemPortal
 (* synthesize *)
 module mk%(Dut)sSynth#(Bit#(32) id)(%(Dut)s);
-  let dut <- mk%(Dut)sPortal();
+  let dut <- mk%(Dut)sPipes();
   let memPortal <- mkMemPortal(id, dut.portalIfc);
   interface MemPortal portalIfc = memPortal;
   interface %(Package)s::%(Ifc)s ifc = dut.ifc;

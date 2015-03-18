@@ -56,8 +56,9 @@ module mkConnectalTop
        (%(moduleParam)s);
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
-%(portalInstantiate)s
+%(pipeInstantiate)s
 
+%(portalInstantiate)s
    Vector#(%(portalCount)s,StdPortal) portals;
 %(portalList)s
    let ctrl_mux <- mkSlaveMux(portals);
@@ -82,18 +83,14 @@ class iReq:
         self.inst = ''
         self.args = []
 
-memModuleInstantiation = '''
-   %(modname)sPortal%(tparam)s l%(modname)sPortal <- mk%(modname)sPortal(%(args)s);
-   SharedMemoryPortal#(64) l%(modname)sShare <- mkSharedMemoryPortal(l%(modname)sPortal.portalIfc);
+#%(modname)sPipes%(tparam)s l%(modname)sPipes <- mk%(modname)sPipes(%(args)s);
+memModuleInstantiation = '''   SharedMemoryPortal#(64) l%(modname)sShare <- mkSharedMemoryPortal(l%(modname)sPipes.portalIfc);
    SharedMemoryPortalConfigWrapperPipes%(tparam)s l%(modname)sCW <- mkSharedMemoryPortalConfigWrapperPipes;
    mkConnection(l%(modname)sCW, l%(modname)sShare.cfg);'''
 
-proxyInstantiation = '''
-   %(modname)s%(tparam)sPortal l%(modname)sPortal <- mk%(modname)sPortal;'''
+pipeInstantiation = '''   %(modname)sPipes%(tparam)s l%(modname)sPipes <- mk%(modname)sPipes;'''
 
-wrapperInstantiation = '''
-   %(modname)sPipes%(tparam)s l%(modname)sPortal <- mk%(modname)sPipes;
-   mkConnection(l%(modname)sPortal, l%(userIf)s);'''
+connectInstantiation = '''   mkConnection(l%(modname)sPipes, l%(userIf)s);'''
 
 def instMod(args, modname, modext, constructor, tparam, memFlag):
     if not modname:
@@ -114,16 +111,18 @@ def instMod(args, modname, modext, constructor, tparam, memFlag):
                 pmap['args'] = '';
             else:
                 pmap['args'] = 'l%(userIf)s' % pmap
+            pipeInstantiate.append(pipeInstantiation % pmap)
             portalInstantiate.append(memModuleInstantiation % pmap)
         elif modext == 'Proxy':
-            portalInstantiate.append(proxyInstantiation % pmap)
+            pipeInstantiate.append(pipeInstantiation % pmap)
         else:
-            portalInstantiate.append(wrapperInstantiation % pmap)
+            pipeInstantiate.append(pipeInstantiation % pmap)
+            portalInstantiate.append(connectInstantiation % pmap)
         if memFlag:
             enumList.append(modname + memFlag + tstr)
             addPortal(pmap['argsConfig'], '%(modname)sCW' % pmap)
         else:
-            addPortal(pmap['args'], '%(modname)sPortal' % pmap)
+            addPortal(pmap['args'], '%(modname)sPipes' % pmap)
     else:
         if not instantiateRequest.get(pmap['modname']):
             instantiateRequest[pmap['modname']] = iReq()
@@ -141,7 +140,7 @@ def flushModules(key):
 
 def parseParam(pitem, proxy):
     p = pitem.split(':')
-    pmap = {'tparam': '', 'xparam': '', 'uparam': '', 'memFlag': 'Portal' if p[0][0] == '/' else ''}
+    pmap = {'tparam': '', 'xparam': '', 'uparam': '', 'memFlag': 'Pipes' if p[0][0] == '/' else ''}
     pmap['usermod'] = p[0].replace('/','')
     pmap['name'] = p[1]
     ind = pmap['usermod'].find('#')
@@ -163,6 +162,7 @@ if __name__=='__main__':
     print 'Writing Top:', topFilename
     userFiles = []
     portalInstantiate = []
+    pipeInstantiate = []
     instantiateRequest = {}
     portalList = []
     portalCount = 0
@@ -189,9 +189,9 @@ if __name__=='__main__':
         ptemp = pmap['name']
         for pmap['name'] in ptemp.split(','):
             instMod('', pmap['name'], 'Proxy', '', '', pmap['memFlag'])
-            argstr = pmap['uparam'] + 'l%(name)sProxyPortal.ifc'
+            argstr = pmap['uparam'] + 'l%(name)sProxyPipes.ifc'
             if pmap['uparam'] and pmap['uparam'][0] == '/':
-                argstr = 'l%(name)sProxyPortal.ifc, ' + pmap['uparam'][1:-2]
+                argstr = 'l%(name)sProxyPipes.ifc, ' + pmap['uparam'][1:-2]
             instMod(argstr, pmap['usermod'], '', '', pmap['xparam'], False)
             pmap['uparam'] = ''
     for pitem in options.wrapper:
@@ -204,6 +204,7 @@ if __name__=='__main__':
             instMod(pmap['uparam'], pmap['usermod'], '', '', pmap['xparam'], False)
         flushModules(pmap['usermod'])
         instMod('', pmap['name'], 'Wrapper', '', '', pmap['memFlag'])
+        portalInstantiate.append('')
     for key in instantiatedModules:
         flushModules(key)
     for pitem in options.interface:
@@ -213,6 +214,7 @@ if __name__=='__main__':
     memory_flag = 'MemServer' in instantiatedModules
     topsubsts = {'enumList': ','.join(enumList),
                  'generatedImport': '\n'.join(['import %s::*;' % p for p in importfiles]),
+                 'pipeInstantiate' : '\n'.join(pipeInstantiate),
                  'portalInstantiate' : '\n'.join(portalInstantiate),
                  'portalList': '\n'.join(portalList),
                  'portalCount': portalCount,
