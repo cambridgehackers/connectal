@@ -60,9 +60,7 @@ typedef enum {
 
 module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32) portal,
 				    MemreadServer#(64) readEngine,
-				    MemwriteServer#(64) writeEngine,
-				    Reg#(Bit#(32)) sglIdReg,
-				    Reg#(Bool)     readyReg)(SharedMemoryPortal#(64));
+				    MemwriteServer#(64) writeEngine)(SharedMemoryPortal#(64));
       // read the head and tail pointers, if they are different, then read a request
       Reg#(Bit#(32)) reqLimitReg <- mkReg(0);
       Reg#(Bit#(32)) reqHeadReg <- mkReg(0);
@@ -71,6 +69,9 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
       Reg#(Bit#(16)) messageWordsReg <- mkReg(0);
       Reg#(Bit#(16)) methodIdReg <- mkReg(0);
       Reg#(SharedMemoryPortalState) reqState <- mkReg(Idle);
+
+   Reg#(Bit#(32)) sglIdReg <- mkReg(0);
+   Reg#(Bool)     readyReg   <- mkReg(False);
 
    let verbose = False;
 
@@ -212,13 +213,17 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
       rule consumeResponse;
 	 let response <- readEngine.cmdServer.response.get();
       endrule
+   interface SharedMemoryPortalConfig cfg;
+      method Action setSglId(Bit#(32) id);
+	 sglIdReg <= id;
+	 readyReg <= True;
+      endmethod
+   endinterface
 endmodule
 
 module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 32) portal,
 				       MemreadServer#(64) readEngine,
-				       MemwriteServer#(64) writeEngine,
-				       Reg#(Bit#(32)) sglIdReg,
-				       Reg#(Bool)     readyReg)(SharedMemoryPortal#(64));
+				       MemwriteServer#(64) writeEngine)(SharedMemoryPortal#(64));
       // read the head and tail pointers, if they are different, then read a request
       Reg#(Bit#(16)) indLimitReg <- mkReg(0);
       Reg#(Bit#(16)) indHeadReg <- mkReg(0);
@@ -228,6 +233,9 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 
       Reg#(Bit#(16)) methodIdReg <- mkReg(0);
       Reg#(Bool) paddingReg <- mkReg(False);
       Reg#(SharedMemoryPortalState) indState <- mkReg(Idle);
+
+   Reg#(Bit#(32)) sglIdReg <- mkReg(0);
+   Reg#(Bool)     readyReg   <- mkReg(False);
 
    let verbose = True;
 
@@ -342,33 +350,11 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 
    rule done;
       let done <- writeEngine.cmdServer.response.get();
    endrule
-
-endmodule
-
-module mkSharedMemoryPortal#(PipePortal#(numRequests, numIndications, 32) portal)(SharedMemoryPortal#(64));
-
-   MemreadEngineV#(64,2,1) readEngine <- mkMemreadEngine();
-   MemwriteEngineV#(64,2,1) writeEngine <- mkMemwriteEngine();
-
-   Bool verbose = False;
-
-   Reg#(Bit#(32)) sglIdReg <- mkReg(0);
-   Reg#(Bool)     readyReg   <- mkReg(False);
-
-   if (valueOf(numRequests) > 0) begin
-      let readPortal <- mkSharedMemoryRequestPortal(portal, readEngine.read_servers[0], writeEngine.write_servers[0], sglIdReg, readyReg);
-   end
-   else if (valueOf(numIndications) > 0) begin
-      let writePortal <- mkSharedMemoryIndicationPortal(portal, readEngine.read_servers[0], writeEngine.write_servers[0], sglIdReg, readyReg);
-   end
    interface SharedMemoryPortalConfig cfg;
       method Action setSglId(Bit#(32) id);
 	 sglIdReg <= id;
 	 readyReg <= True;
       endmethod
    endinterface
-   interface MemReadClient  readClient = cons(readEngine.dmaClient, nil);
-   interface MemWriteClient writeClient = cons(writeEngine.dmaClient, nil);
-   interface ReadOnly interrupt;
-   endinterface
+
 endmodule

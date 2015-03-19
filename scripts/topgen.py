@@ -40,6 +40,9 @@ import CtrlMux::*;
 import HostInterface::*;
 import MemPortal::*;
 import Connectable::*;
+import MemreadEngine::*;
+import MemwriteEngine::*;
+import MemTypes::*;
 %(generatedImport)s
 
 `ifndef PinType
@@ -87,7 +90,11 @@ class iReq:
 
 memShareInst = '''   SharedMemoryPortalConfigInputPipes%(tparam)s l%(modname)sCW <- mkSharedMemoryPortalConfigInputPipes;'''
 
-memModuleInstantiation = '''   SharedMemoryPortal#(64) l%(modname)sShare <- mkSharedMemoryPortal(l%(modname)sPipes.portalIfc);'''
+memEngineInst = '''   MemreadEngineV#(64,2,%(clientCount)s) lSharereadEngine <- mkMemreadEngine();
+   MemwriteEngineV#(64,2,%(clientCount)s) lSharewriteEngine <- mkMemwriteEngine();'''
+
+memModuleInstantiation = '''   SharedMemoryPortal#(64) l%(modname)sShare <- mkSharedMemory%(stype)sPortal(l%(modname)sPipes.portalIfc,
+   lSharereadEngine.read_servers[%(clientCount)s], lSharewriteEngine.write_servers[%(clientCount)s]);'''
 
 memConnection = '''   mkConnection(l%(modname)sCW, l%(modname)sShare.cfg);'''
 
@@ -98,6 +105,7 @@ pipeInstantiation = '''   %(modname)sPipes%(tparam)s l%(modname)sPipes <- mk%(mo
 connectInstantiation = '''   mkConnection(l%(modname)sPipes, l%(userIf)s);'''
 
 def instMod(args, modname, modext, constructor, tparam, memFlag):
+    global clientCount
     if not modname:
         return
     pmap['tparam'] = tparam
@@ -114,14 +122,18 @@ def instMod(args, modname, modext, constructor, tparam, memFlag):
         if memFlag:
             if modext == 'Output':
                 pmap['args'] = '';
+                pmap['stype'] = 'Indication';
             else:
                 pmap['args'] = 'l%(userIf)s' % pmap
+                pmap['stype'] = 'Request';
+            pmap['clientCount'] = clientCount;
             pipeInstantiate.append(pipeInstantiation % pmap)
             pipeInstantiate.append(memShareInst % pmap)
             portalInstantiate.append(memModuleInstantiation % pmap)
             connectInstantiate.append(memConnection % pmap)
             if modext != 'Output':
                 connectInstantiate.append(connectUser % pmap)
+            clientCount += 1
         elif modext == 'Output':
             pipeInstantiate.append(pipeInstantiation % pmap)
         else:
@@ -169,6 +181,7 @@ if __name__=='__main__':
     project_dir = os.path.abspath(os.path.expanduser(options.project_dir))
     topFilename = project_dir + '/Top.bsv'
     print 'Writing Top:', topFilename
+    clientCount = 0
     userFiles = []
     portalInstantiate = []
     pipeInstantiate = []
@@ -222,6 +235,8 @@ if __name__=='__main__':
         interfaceList.append('   interface %s = l%s;' % (p[0], p[1]))
 
     memory_flag = 'MemServerCompat' in instantiatedModules
+    if clientCount:
+        pipeInstantiate.append(memEngineInst % {'clientCount': clientCount})
     topsubsts = {'enumList': ','.join(enumList),
                  'generatedImport': '\n'.join(['import %s::*;' % p for p in importfiles]),
                  'pipeInstantiate' : '\n'.join(sorted(pipeInstantiate)),
