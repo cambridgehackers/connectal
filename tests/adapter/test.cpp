@@ -27,5 +27,6 @@ int main(int argc, const char **argv)
     printf("Test: start\n");
     testRequestProxy->start();
     printf("Test: done\n");
+    sleep(5);
     return 0;
 }
