@@ -222,6 +222,9 @@ proc create_xcvr_reset {channels} {
     connectal_altera_synth_ip $core_name $core_version $ip_name $component_parameters
 }
 
-create_altera_10gbe_pma 4
-create_xcvr_reconfig alt_xcvr_reconfig 14.0 altera_xgbe_pma_reconfig_wrapper 8
-create_xcvr_reset 4
+if {$NUMBER_OF_10G_PORTS != ""} {
+set v [expr "$NUMBER_OF_10G_PORTS * 2"]
+create_altera_10gbe_pma $NUMBER_OF_10G_PORTS
+create_xcvr_reconfig alt_xcvr_reconfig 14.0 altera_xgbe_pma_reconfig_wrapper $v
+create_xcvr_reset $NUMBER_OF_10G_PORTS
+}

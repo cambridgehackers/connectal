@@ -256,7 +256,7 @@ def processline(line, phase):
             if len(f) == 2:
                 f = [f[0], '', '1', f[1]]
             if len(f) == 3:
-                f = [f[0], f[1], f[1], f[2]]
+                f = [f[0], f[1], '1', f[2]]
             # check for parameterized declarations
             pname = f[2].strip('0123456789/')
             if len(pname) > 0 and pname not in paramnames and pname[:4] != 'TDiv':

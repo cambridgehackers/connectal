@@ -41,6 +41,8 @@ import PCIE              ::*;
 
 `ifdef BOARD_de5
 import PS5LIB            ::*;
+`elsif BOARD_vsim
+import PS5LIB            ::*;
 //import PcieEndpointS5Test ::*;
 `elsif BOARD_htg4
 import PS4LIB            ::*;
@@ -117,6 +119,10 @@ module mkPcieEndpointS5#(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieE
    PcieWrap#(12, 32, 128) pcie_ep <- mkPcieS5Wrap(clk_100MHz, clk_50MHz, npor, perst_n);
 `elsif BOARD_htg4
    PcieWrap#(12, 32, 128) pcie_ep <- mkPcieS4Wrap(clk_100MHz, clk_50MHz, clk_100MHz, npor, perst_n);
+`endif
+
+`ifdef BOARD_vsim
+   PcieWrap#(12, 32, 128) pcie_ep <- mkPcieS5Wrap(clk_100MHz, clk_50MHz, npor, perst_n);
 `endif
 
    Clock core_clk = pcie_ep.coreclkout_hip;

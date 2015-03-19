@@ -116,7 +116,7 @@ hw/mkTop.bit: fpgamake.mk prepare_bin_target
 ifeq ($(XILINX),"")
 	$(Q)cp -f Impl/*/*.rpt bin
 else ifeq ($(ALTERA),"")
-	$(Q)echo "copy report files"
+	$(Q)cp -f $(MKTOP).sof bin
 endif
 '''
 

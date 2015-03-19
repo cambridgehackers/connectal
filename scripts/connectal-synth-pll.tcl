@@ -49,14 +49,14 @@ proc create_custom_pll {name refclk args} {
 
     exec -ignorestderr -- ip-generate \
             --project-directory=$ipdir/$boardname                            \
-            --output-directory=$ipdir/$boardname/synthesis                   \
+            --output-directory=$ipdir/$boardname/synthesis/$ip_name                   \
             --file-set=QUARTUS_SYNTH                                         \
             --report-file=html:$ipdir/$boardname/$ip_name.html               \
             --report-file=sopcinfo:$ipdir/$boardname/$ip_name.sopcinfo       \
             --report-file=cmp:$ipdir/$boardname/$ip_name.cmp                 \
-            --report-file=svd:$ipdir/$boardname/synthesis/$ip_name.svd       \
-            --report-file=qip:$ipdir/$boardname/synthesis/altera_$ip_name.qip     \
-            --report-file=regmap:$ipdir/$boardname/synthesis/$ip_name.regmap \
+            --report-file=svd:$ipdir/$boardname/synthesis/$ip_name/$ip_name.svd       \
+            --report-file=qip:$ipdir/$boardname/synthesis/$ip_name/altera_$ip_name.qip     \
+            --report-file=regmap:$ipdir/$boardname/synthesis/$ip_name/$ip_name.regmap \
             --report-file=xml:$ipdir/$boardname/$ip_name.xml                 \
             --system-info=DEVICE_FAMILY=StratixV                             \
             --system-info=DEVICE=$partname                                   \
@@ -67,5 +67,5 @@ proc create_custom_pll {name refclk args} {
             --output-name=$ip_name
 }
 
-create_custom_pll pll_156 50.0 156.25
-create_custom_pll pll_644 156.25 644.53125
+create_custom_pll pll_156 50.0 125 156.25
+create_custom_pll pll_644 125 644.53125
