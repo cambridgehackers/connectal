@@ -19,7 +19,7 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
-VERSION=15.02.2
+VERSION=15.03.5
 
 export UDEV_RULES_DIR=/etc/udev/rules.d
 UDEV_RULES=$(shell ls etc/udev/rules.d)
@@ -27,8 +27,6 @@ MODULES_LOAD_D_DIR=/etc/modules-load.d
 
 all: pciedrivers scripts/syntax/parsetab.py
 	echo version "$(VERSION)"
-
-VERSION=15.03.1
 
 pciedrivers:
 	#(cd drivers/pcieportal; make DRIVER_VERSION=$(VERSION))
