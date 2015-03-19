@@ -27,7 +27,7 @@ import Portal::*;
 import MemTypes::*;
 import HostInterface::*;
 
-typedef enum {MMUIndicationH2S, MemServerIndicationH2S, MMURequestS2H, MemServerRequestS2H} FrameworkNames deriving (Eq,Bits);
+typedef enum {MMUIndicationH2S, MemServerIndicationH2S, MMURequestS2H, MemServerRequestS2H} PlatformNames deriving (Eq,Bits);
 
 interface TileSocket#(type ext_socket_type, numeric type numReadServers, numeric type numWriteServers);
    interface PhysMemMaster#(18,32) portals;
