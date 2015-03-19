@@ -65,7 +65,7 @@ requestOutputPipeInterfaceTemplate='''\
 
 exposedProxyInterfaceTemplate='''
 // exposed proxy interface
-interface %(Dut)sPipes;
+interface %(Ifc)sOutputPipes;
     interface PipePortal#(0, %(channelCount)s, 32) portalIfc;
     interface %(Package)s::%(Ifc)s ifc;
 endinterface
@@ -75,7 +75,7 @@ interface %(Dut)s;
 endinterface
 
 (* synthesize *)
-module %(moduleContext)s mk%(Dut)sPipes(%(Dut)sPipes);
+module %(moduleContext)s mk%(Ifc)sOutputPipes(%(Ifc)sOutputPipes);
     Vector#(%(channelCount)s, PipeOut#(Bit#(32))) indicationPipes = newVector();
 %(indicationMethodRules)s
     interface %(Package)s::%(Ifc)s ifc;
@@ -94,7 +94,7 @@ endmodule
 // synthesizeable proxy MemPortal
 (* synthesize *)
 module mk%(Dut)sSynth#(Bit#(32) id)(%(Dut)s);
-  let dut <- mk%(Dut)sPipes();
+  let dut <- mk%(Ifc)sOutputPipes();
   let memPortal <- mkMemPortal(id, dut.portalIfc);
   interface MemPortal portalIfc = memPortal;
   interface %(Package)s::%(Ifc)s ifc = dut.ifc;
@@ -112,7 +112,7 @@ endmodule
 exposedWrapperInterfaceTemplate='''
 %(requestElements)s
 // exposed wrapper portal interface
-interface %(Dut)sPipes;
+interface %(Ifc)sInputPipes;
     interface PipePortal#(%(channelCount)s, 0, 32) portalIfc;
 %(requestOutputPipeInterfaces)s
 endinterface
@@ -124,15 +124,15 @@ interface %(Dut)s;
     interface StdPortal portalIfc;
 endinterface
 
-instance Connectable#(%(Dut)sPipes,%(Ifc)s);
-   module mkConnection#(%(Dut)sPipes pipes, %(Ifc)s ifc)(Empty);
+instance Connectable#(%(Ifc)sInputPipes,%(Ifc)s);
+   module mkConnection#(%(Ifc)sInputPipes pipes, %(Ifc)s ifc)(Empty);
 %(mkConnectionMethodRules)s
    endmodule
 endinstance
 
 // exposed wrapper Portal implementation
 (* synthesize *)
-module mk%(Dut)sPipes(%(Dut)sPipes);
+module mk%(Ifc)sInputPipes(%(Ifc)sInputPipes);
     Vector#(%(channelCount)s, PipeIn#(Bit#(32))) requestPipeIn = newVector();
 %(methodRules)s
     interface PipePortal portalIfc;
@@ -147,22 +147,22 @@ module mk%(Dut)sPipes(%(Dut)sPipes);
 endmodule
 
 module mk%(Dut)sPortal#(%(Ifc)s ifc)(%(Dut)sPortal);
-    let pipes <- mk%(Dut)sPipes;
+    let pipes <- mk%(Ifc)sInputPipes;
     mkConnection(pipes, ifc);
     interface PipePortal portalIfc = pipes.portalIfc;
 endmodule
 
 interface %(Dut)sMemPortalPipes;
-    interface %(Dut)sPipes pipes;
+    interface %(Ifc)sInputPipes pipes;
     interface MemPortal#(16,32) portalIfc;
 endinterface
 
 (* synthesize *)
 module mk%(Dut)sMemPortalPipes#(Bit#(32) id)(%(Dut)sMemPortalPipes);
 
-  let p <- mk%(Dut)sPipes;
+  let p <- mk%(Ifc)sInputPipes;
   let memPortal <- mkMemPortal(id, p.portalIfc);
-  interface %(Dut)sPipes pipes = p;
+  interface %(Ifc)sInputPipes pipes = p;
   interface MemPortal portalIfc = memPortal;
 endmodule
 
