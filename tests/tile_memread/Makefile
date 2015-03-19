@@ -1,7 +1,7 @@
 
 CONNECTALDIR?=../..
 INTERFACES = MemreadRequest MemreadIndication
-BSVFILES = Memread.bsv PlatformTypes.bsv
+BSVFILES = Memread.bsv $(CONNECTALDIR)/bsv/PlatformTypes.bsv
 CPPFILES=testmemread.cpp
 NUMBER_OF_MASTERS = 1
 

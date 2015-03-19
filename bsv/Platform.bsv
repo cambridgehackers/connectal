@@ -26,7 +26,6 @@ import Portal::*;
 import HostInterface::*;
 import MMU::*;
 import MemServer::*;
-import MemConnectors::*;
 import PlatformTypes::*;
 import MemTypes::*;
 import CtrlMux::*;
