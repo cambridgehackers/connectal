@@ -68,7 +68,6 @@ typedef struct {
         unsigned int      device_name;
         struct tBoard    *board;
         void             *virt;
-        volatile uint32_t *regs;
         struct extra_info *extra;
 	struct list_head pmlist;
 } tPortal;
