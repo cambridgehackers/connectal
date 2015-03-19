@@ -211,12 +211,12 @@ else
     ifeq ($(OS),android)
 	$(CONNECTALDIR)/scripts/run.zedboard bin/mkTop.xdevcfg.bin.gz bin/android.exe $(RUN_ARGS)
     else
-	ifeq ($(XILINX),1)
-	    $(CONNECTALDIR)/scripts/run.pcietest bin/ubuntu.exe $(RUN_ARGS)
-	endif
-	ifneq ($(ALTERA),1)
-	    $(CONNECTALDIR)/scripts/run.pcietest.altera bin/mk*.sof bin/ubuntu.exe $(RUN_ARGS)
-	endif
+        ifeq ($(XILINX),1)
+	$(CONNECTALDIR)/scripts/run.pcietest bin/ubuntu.exe $(RUN_ARGS)
+        endif
+        ifneq ($(ALTERA),1)
+	$(CONNECTALDIR)/scripts/run.pcietest.altera bin/mk*.sof bin/ubuntu.exe $(RUN_ARGS)
+        endif
     endif # android
   endif
 endif
