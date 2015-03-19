@@ -29,24 +29,24 @@ import HostInterface::*;
 
 typedef enum {MMUIndicationH2S, MemServerIndicationH2S, MMURequestS2H, MemServerRequestS2H} FrameworkNames deriving (Eq,Bits);
 
-interface TileSocket#(type ext_socket_type);
+interface TileSocket#(type ext_socket_type, numeric type numReadServers, numeric type numWriteServers);
    interface PhysMemMaster#(18,32) portals;
    interface WriteOnly#(Bool) interrupt;
-   interface MemReadServer#(DataBusWidth) reader;
-   interface MemWriteServer#(DataBusWidth) writer;
+   interface Vector#(numReadServers,MemReadServer#(DataBusWidth)) readers;
+   interface Vector#(numWriteServers,MemWriteServer#(DataBusWidth)) writers;
    interface ext_socket_type ext_socket;
 endinterface
 
-interface Tile#(type ext_type);
+interface Tile#(type ext_type, numeric type numReadClients, numeric type numWriteClients);
    interface PhysMemSlave#(18,32) portals;
    interface ReadOnly#(Bool) interrupt;
-   interface MemReadClient#(DataBusWidth) reader;
-   interface MemWriteClient#(DataBusWidth) writer;
+   interface Vector#(numReadClients,MemReadClient#(DataBusWidth)) readers;
+   interface Vector#(numWriteClients,MemWriteClient#(DataBusWidth)) writers;
    interface ext_type ext;
 endinterface
 
-interface Platform#(numeric type numTiles, type ext_socket_type, type pins, numeric type numMasters);
-   interface Vector#(numTiles, TileSocket#(ext_socket_type)) sockets;
+interface Platform#(numeric type numTiles, type ext_socket_type, type pins, numeric type numMasters, numeric type numReadServers, numeric type numWriteServers);
+   interface Vector#(numTiles, TileSocket#(ext_socket_type, numReadServers, numWriteServers)) sockets;
    interface PhysMemSlave#(32,32) slave;
    interface Vector#(numMasters,PhysMemMaster#(PhysAddrWidth, DataBusWidth)) masters;
    interface Vector#(16,ReadOnly#(Bool)) interrupt;
@@ -58,12 +58,12 @@ instance Connectable#(Empty,Empty);
    endmodule
 endinstance
 
-instance Connectable#(Tile#(ext_type),TileSocket#(ext_socket_type))
+instance Connectable#(Tile#(ext_type, num_readers, num_writers),TileSocket#(ext_socket_type, num_readers, num_writers))
    provisos(Connectable#(ext_type, ext_socket_type));
-   module mkConnection#(Tile#(ext_type) t, TileSocket#(ext_socket_type) ts)(Empty);
+   module mkConnection#(Tile#(ext_type, num_readers, num_writers) t, TileSocket#(ext_socket_type, num_readers, num_writers) ts)(Empty);
       mkConnection(ts.portals,t.portals);
-      mkConnection(t.reader,ts.reader);
-      mkConnection(t.writer,ts.writer);
+      zipWithM(mkConnection, t.readers,ts.readers);
+      zipWithM(mkConnection, t.writers,ts.writers);
       mkConnection(t.ext,ts.ext_socket);
       rule connect_interrupt;
 	 ts.interrupt <= t.interrupt;

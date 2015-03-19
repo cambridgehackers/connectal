@@ -101,17 +101,12 @@ module mkMemServer#(MemServerIndication indication,
 		    Vector#(numMMUs,MMU#(addrWidth)) mmus)
    (MemServer#(addrWidth, dataWidth, nMasters, numReadServers, numWriteServers))
    provisos(Mul#(a__, nMasters, numWriteServers)
-	    ,Add#(b__, TLog#(a__), 6)
-	    ,Mul#(c__, nMasters, numReadServers)
-	    ,Add#(d__, TLog#(c__), 6)
-	    ,Add#(TLog#(TDiv#(dataWidth, 8)), e__, 8)
-	    ,Add#(1, f__, dataWidth)
-	    ,Add#(g__, 12, addrWidth)
-	    ,Add#(1, g__, h__)
-	    ,Add#(i__, addrWidth, 64)
-	    ,Mul#(TDiv#(dataWidth, 8), 8, dataWidth)
+	    ,Mul#(b__, nMasters, numReadServers)
+	    ,Add#(TLog#(TDiv#(dataWidth, 8)), d__, 8)
+	    ,Add#(c__, addrWidth, 64)
 	    );
-
+   
+   
    MemServer#(addrWidth,dataWidth,nMasters,numReadServers,0)  reader <- mkMemServerR(indication, mmus);
    MemServer#(addrWidth,dataWidth,nMasters,0,numWriteServers) writer <- mkMemServerW(indication, mmus);
    
@@ -145,16 +140,10 @@ endmodule
 module mkMemServerR#(MemServerIndication indication,
 		     Vector#(numMMUs,MMU#(addrWidth)) mmus)
    (MemServer#(addrWidth, dataWidth, nMasters, numReadServers, 0))
-   provisos (Add#(1,a__,dataWidth)
-	     ,Mul#(TDiv#(dataWidth, 8), 8, dataWidth)
-	     ,Mul#(nrc, nMasters, numReadServers)
-	     ,Add#(b__, TLog#(nrc), 6)
-	     ,Add#(TLog#(TDiv#(dataWidth, 8)), c__, BurstLenSize)
-	     ,Add#(d__, addrWidth, 64)
-	     ,Add#(e__, 12, addrWidth)
-	     ,Add#(1, e__, f__)
-	     );
-
+   provisos(Mul#(nrc, nMasters, numReadServers)
+	    ,Add#(a__, addrWidth, 64)
+	    ,Add#(TLog#(TDiv#(dataWidth, 8)), b__, 8)
+	    );
 
 
    FIFO#(Bit#(32))   addrReqFifo <- mkFIFO;
@@ -238,16 +227,11 @@ endmodule
 module mkMemServerW#(MemServerIndication indication,
 		     Vector#(numMMUs,MMU#(addrWidth)) mmus)
    (MemServer#(addrWidth, dataWidth, nMasters, 0, numWriteServers))
-   provisos (Add#(1,a__,dataWidth)
-	     ,Mul#(TDiv#(dataWidth, 8), 8, dataWidth)
-	     ,Mul#(nwc, nMasters, numWriteServers)
-	     ,Add#(b__, TLog#(nwc), 6)
-	     ,Add#(c__, addrWidth, 64)
-	     ,Add#(d__, 12, addrWidth)
-	     ,Add#(1, d__, e__)
-	     );
-
-
+   provisos(Mul#(nwc, nMasters, numWriteServers)
+	    ,Add#(a__, addrWidth, 64)
+	    ,Add#(TLog#(TDiv#(dataWidth, 8)), b__, 8)
+	    );
+   
    FIFO#(Bit#(32))   addrReqFifo <- mkFIFO;
    Reg#(Bit#(8)) dbgPtr <- mkReg(0);
    Reg#(Bit#(8)) trafficPtr <- mkReg(0);
@@ -338,18 +322,11 @@ module mkSimpleMemServer#(Vector#(numReadClients, MemReadClient#(dataWidth)) rea
 			  Vector#(numWriteClients, MemWriteClient#(dataWidth)) writeClients,
 			  MemServerIndication indication,
 			  MMUIndication mmuIndication)(SimpleMemServer#(addrWidth, dataWidth,nMasters, numReadServers, numWriteServers))
-   
    provisos(Mul#(a__, nMasters, numWriteServers)
-	    ,Add#(b__, TLog#(a__), 6)
-	    ,Mul#(c__, nMasters, numReadServers)
-	    ,Add#(d__, TLog#(c__), 6)
+	    ,Mul#(b__, nMasters, numReadServers)
 	    ,Add#(TLog#(TDiv#(dataWidth, 8)), e__, 8)
-	    ,Add#(1, f__, dataWidth)
-	    ,Add#(g__, 12, addrWidth)
-	    ,Add#(1, g__, h__)
-	    ,Add#(i__, addrWidth, 64)
-	    ,Mul#(TDiv#(dataWidth, 8), 8, dataWidth)
-	    ,Add#(j__, addrWidth, 44)
+	    ,Add#(c__, addrWidth, 64)
+	    ,Add#(d__, addrWidth, 44)
 	    );
    
    MMU#(addrWidth) hostMMU <- mkMMU(0, True, mmuIndication);

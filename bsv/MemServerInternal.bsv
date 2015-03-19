@@ -55,20 +55,20 @@ function Bool sglid_outofrange(SGLId p);
 endfunction
 
 typedef struct {MemRequest req;
-		Bit#(TLog#(numClients)) client; } LRec#(numeric type numClients, numeric type addrWidth) deriving(Bits);
+		Bit#(TLog#(TMax#(1,numClients))) client; } LRec#(numeric type numClients, numeric type addrWidth) deriving(Bits);
 
 typedef struct {MemRequest req;
 		Bit#(addrWidth) pa;
 		Bit#(MemTagSize) rename_tag;
-		Bit#(TLog#(numClients)) client; } RRec#(numeric type numClients, numeric type addrWidth) deriving(Bits);
+		Bit#(TLog#(TMax#(1,numClients))) client; } RRec#(numeric type numClients, numeric type addrWidth) deriving(Bits);
 
 typedef struct {MemRequest req;
 		Bit#(MemTagSize) rename_tag;
-		Bit#(TLog#(numClients)) client;
+		Bit#(TLog#(TMax#(1,numClients))) client;
 		Bool last; } DRec#(numeric type numClients, numeric type addrWidth) deriving(Bits);
 
 typedef struct {Bit#(MemTagSize) orig_tag;
-		Bit#(TLog#(numClients)) client; } RResp#(numeric type numClients, numeric type addrWidth) deriving(Bits);
+		Bit#(TLog#(TMax#(1,numClients))) client; } RResp#(numeric type numClients, numeric type addrWidth) deriving(Bits);
 
 typedef struct {DmaErrorType errorType;
 		Bit#(32) pref; } DmaError deriving (Bits);
@@ -76,17 +76,11 @@ typedef struct {DmaErrorType errorType;
 module mkMemReadInternal#(MemServerIndication ind,
 			  Vector#(numMMUs,Server#(ReqTup,Bit#(addrWidth))) mmus) 
    (MemReadInternal#(addrWidth, dataWidth, numTags, numServers))
-
-   provisos(Add#(b__, addrWidth, 64), 
-	    Add#(c__, 12, addrWidth), 
-	    Add#(1, c__, d__),
-	    Div#(dataWidth,8,dataWidthBytes),
-	    Mul#(dataWidthBytes,8,dataWidth),
-	    Log#(dataWidthBytes,beatShift),
-	    Add#(a__, TLog#(numServers), 6),
-	    Add#(beatShift, e__, BurstLenSize),
-	    Add#(g__, TLog#(numTags), 6)
-      );
+   provisos(Log#(dataWidthBytes,beatShift)
+	    ,Div#(dataWidth,8,dataWidthBytes)
+	    ,Add#(beatShift, a__, 8)
+	    ,Add#(b__, TLog#(numTags), 6)
+	    );
    
    // stage 0: address translation (latency = MMU_PIPELINE_DEPTH)
    FIFO#(LRec#(numServers,addrWidth)) lreqFifo <- mkSizedFIFO(valueOf(MMU_PIPELINE_DEPTH));
@@ -110,8 +104,8 @@ module mkMemReadInternal#(MemServerIndication ind,
 
    Reg#(Bit#(BurstLenSize))      compReg0 <- mkReg(0);
    Reg#(Bit#(TLog#(numTags)))    compReg1 <- mkReg(0);
-   Reg#(Bit#(TLog#(numServers))) compReg2 <- mkReg(0);
-   FIFO#(Bit#(TAdd#(1,TLog#(numServers)))) compFifo0 <- mkFIFO; // this ugliness because Bit#(0) isn't equal to anything. stupid Bluespec!
+   Reg#(Bit#(TLog#(TMax#(1,numServers)))) compReg2 <- mkReg(0);
+   FIFO#(Bit#(TAdd#(1,TLog#(TMax#(1,numServers))))) compFifo0 <- mkFIFO;
    FIFO#(Bit#(TLog#(numTags)))   compFifo1 <- mkFIFO;
    
    // performance analytics 
@@ -268,15 +262,11 @@ endmodule
 module mkMemWriteInternal#(MemServerIndication ind, 
 			   Vector#(numMMUs,Server#(ReqTup,Bit#(addrWidth))) mmus)
    (MemWriteInternal#(addrWidth, dataWidth, numTags, numServers))
-   
-   provisos(Add#(b__, addrWidth, 64), 
-	    Add#(c__, 12, addrWidth), 
-	    Add#(1, c__, d__),
-	    Div#(dataWidth,8,dataWidthBytes),
-	    Mul#(dataWidthBytes,8,dataWidth),
-	    Log#(dataWidthBytes,beatShift),
-	    Add#(a__, TLog#(numServers), 6),
-	    Add#(e__, TLog#(numTags), 6));
+   provisos(Log#(dataWidthBytes,beatShift)
+	    ,Div#(dataWidth,8,dataWidthBytes)
+	    ,Add#(beatShift, a__, 8)
+	    ,Add#(b__, TLog#(numTags), 6)
+	    );
    
    let debug = False;
 
@@ -332,28 +322,29 @@ module mkMemWriteInternal#(MemServerIndication ind,
    FIFO#(MemData#(dataWidth)) memDataFifo <- mkFIFO();
    Vector#(numServers, FIFO#(MemData#(dataWidth))) clientWriteData <- replicateM(mkFIFO);
    
-   rule memdata;
-      let client = dreqFifo.first.client;
-      let req = dreqFifo.first.req;
-      let rename_tag = dreqFifo.first.rename_tag;
-      MemData#(dataWidth) tagdata <- toGet(clientWriteData[client]).get();
-      let burstLen = burstReg;
-      let first    = firstReg;
-      let last     = lastReg;
-      if (first) begin
-	 burstLen = req.burstLen >> beat_shift;
-	 last     = dreqFifo.first.last;
-	 respFifos.portA.request.put(BRAMRequest{write:True,responseOnWrite:False, address:truncate(rename_tag), datain:RResp{orig_tag:req.tag, client:client}});
-      end
-      burstReg <= burstLen-1;
-      firstReg <= (burstLen-1 == 0);
-      lastReg  <= (burstLen-1 == 1);
-      beatCount <= beatCount+1;
-      if (last)
-	 dreqFifo.deq();
-      //$display("writeData: client=%d, rename_tag=%d", client, rename_tag);
-      memDataFifo.enq(MemData { data: tagdata.data,  tag:extend(rename_tag), last: last });
-   endrule
+   if(valueOf(numServers) > 0)
+      rule memdata;
+	 let client = dreqFifo.first.client;
+	 let req = dreqFifo.first.req;
+	 let rename_tag = dreqFifo.first.rename_tag;
+	 MemData#(dataWidth) tagdata <- toGet(clientWriteData[client]).get();
+	 let burstLen = burstReg;
+	 let first    = firstReg;
+	 let last     = lastReg;
+	 if (first) begin
+	    burstLen = req.burstLen >> beat_shift;
+	    last     = dreqFifo.first.last;
+	    respFifos.portA.request.put(BRAMRequest{write:True,responseOnWrite:False, address:truncate(rename_tag), datain:RResp{orig_tag:req.tag, client:client}});
+	 end
+	 burstReg <= burstLen-1;
+	 firstReg <= (burstLen-1 == 0);
+	 lastReg  <= (burstLen-1 == 1);
+	 beatCount <= beatCount+1;
+	 if (last)
+	    dreqFifo.deq();
+	 //$display("writeData: client=%d, rename_tag=%d", client, rename_tag);
+	 memDataFifo.enq(MemData { data: tagdata.data,  tag:extend(rename_tag), last: last });
+      endrule
    
    rule fill_respFifos_buff;
       let rv <- respFifos.portB.response.get;
