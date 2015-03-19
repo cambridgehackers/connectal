@@ -122,14 +122,12 @@ module mkPhysMemConnector(PhysMemConnector#(addrWidth,dataWidth));
    endinterface
 endmodule
 
-module mkPlatform(Platform#(numTiles,Empty,Empty,numMasters))
-   provisos(Add#(a__, numTiles, 3)
-	    ,Add#(c__, TLog#(d__), 6)
-	    ,Mul#(d__, numMasters, numTiles)
-	    ,Add#(1,numTiles,numInterrupts)
-	    ,Add#(e__, TLog#(numInterrupts), 14)
-	    ,Add#(b__, TLog#(f__), 6)
-	    ,Mul#(f__, numMasters, TMul#(numTiles, 4))
+module mkPlatform(Platform#(numTiles,Empty,Empty,numMasters,numReadServers,numWriteServers))
+   provisos(Add#(a__, TLog#(TAdd#(1, numTiles)), 14)
+	    ,Add#(numReadServers, b__, TMul#(numReadServers, numTiles))
+	    ,Add#(numWriteServers, c__, TMul#(numWriteServers, numTiles))
+	    ,Mul#(d__, numMasters, TMul#(numWriteServers, numTiles))
+	    ,Mul#(e__, numMasters, TMul#(numReadServers, numTiles))
 	    );
    
    /////////////////////////////////////////////////////////////
@@ -139,7 +137,7 @@ module mkPlatform(Platform#(numTiles,Empty,Empty,numMasters))
    MemServerIndicationProxy lMemServerIndicationProxy <- mkMemServerIndicationProxy(MemServerIndicationH2S);
 
    MMU#(PhysAddrWidth) lMMU <- mkMMU(0,True, lMMUIndicationProxy.ifc);
-   MemServer#(PhysAddrWidth,DataBusWidth,numMasters,numTiles,numTiles) lMemServer <- mkMemServer(lMemServerIndicationProxy.ifc, cons(lMMU,nil));
+   MemServer#(PhysAddrWidth,DataBusWidth,numMasters,TMul#(numReadServers,numTiles),TMul#(numWriteServers,numTiles)) lMemServer <- mkMemServer(lMemServerIndicationProxy.ifc, cons(lMMU,nil));
 
    MMURequestWrapper lMMURequestWrapper <- mkMMURequestWrapper(MMURequestS2H, lMMU.request);
    MemServerRequestWrapper lMemServerRequestWrapper <- mkMemServerRequestWrapper(MemServerRequestS2H, lMemServer.request);
@@ -161,15 +159,15 @@ module mkPlatform(Platform#(numTiles,Empty,Empty,numMasters))
    Vector#(numTiles, PhysMemConnector#(18,32)) portal_connectors <- replicateM(mkPhysMemConnector);
    Vector#(numTiles, Wire#(Bool)) tile_interrupts <- replicateM(mkWire);
 
-   Vector#(numTiles, TileSocket#(Empty)) tss = newVector;
+   Vector#(numTiles, TileSocket#(Empty,numReadServers,numWriteServers)) tss = newVector;
    for(Integer i = 0; i < valueOf(numTiles); i=i+1) begin
       tss[i] = (interface TileSocket;
 		   interface portals = portal_connectors[i].master; 
 		   interface WriteOnly interrupt;
 		      method Action _write(Bool v) = tile_interrupts[i]._write(v);
 		   endinterface
-		   interface reader = lMemServer.read_servers[i];
-		   interface writer = lMemServer.write_servers[i];
+		   interface readers = takeAt(i*valueOf(numReadServers),lMemServer.read_servers);
+		   interface writers = takeAt(i*valueOf(numWriteServers),lMemServer.write_servers);
 		   interface ext_socket = ?;
 		endinterface);
    end
@@ -180,7 +178,7 @@ module mkPlatform(Platform#(numTiles,Empty,Empty,numMasters))
    PhysMemSlave#(32,32) ctrl_mux <- mkMemSlaveMux(cons(framework_ctrl_mux, map(getPhysMemConnectorSlave, portal_connectors)));
    Vector#(16, ReadOnly#(Bool)) interrupts = replicate(interface ReadOnly; method Bool _read(); return False; endmethod endinterface);
    interrupts[0] = framework_intr;
-   for (Integer i = 1; i < valueOf(numInterrupts); i = i + 1)
+   for (Integer i = 1; i < valueOf(TAdd#(1,numTiles)); i = i + 1)
       interrupts[i] = (interface ReadOnly;
 			  method Bool _read();
 			     return tile_interrupts[i-1]._read;
@@ -193,3 +191,7 @@ module mkPlatform(Platform#(numTiles,Empty,Empty,numMasters))
    interface sockets = tss;
 
 endmodule
+
+
+
+

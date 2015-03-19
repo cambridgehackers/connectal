@@ -178,11 +178,11 @@ endinterface
 
 instance Connectable#(MemReadClient#(dsz), MemReadServer#(dsz));
    module mkConnection#(MemReadClient#(dsz) source, MemReadServer#(dsz) sink)(Empty);
-      rule request;
+      rule mr_request;
 	 let req <- source.readReq.get();
 	 sink.readReq.put(req);
       endrule
-      rule response;
+      rule mr_response;
 	 let resp <- sink.readData.get();
 	 source.readData.put(resp);
       endrule
@@ -191,15 +191,15 @@ endinstance
 
 instance Connectable#(MemWriteClient#(dsz), MemWriteServer#(dsz));
    module mkConnection#(MemWriteClient#(dsz) source, MemWriteServer#(dsz) sink)(Empty);
-      rule request;
+      rule mw_request;
 	 let req <- source.writeReq.get();
 	 sink.writeReq.put(req);
       endrule
-      rule response;
+      rule mw_response;
 	 let resp <- source.writeData.get();
 	 sink.writeData.put(resp);
       endrule
-      rule done;
+      rule mw_done;
 	 let resp <- sink.writeDone.get();
 	 source.writeDone.put(resp);
       endrule

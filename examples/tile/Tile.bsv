@@ -32,7 +32,7 @@ import Memread::*;
 import MemreadRequest::*;
 import MemreadIndication::*;
 
-module mkTile(Tile#(Empty));
+module mkTile(Tile#(Empty,1,0));
 
    MemreadIndicationProxy lMemreadIndicationProxy <- mkMemreadIndicationProxy(MemreadIndicationH2S); //0
    Memread lMemread <- mkMemread(lMemreadIndicationProxy.ifc);
@@ -46,8 +46,8 @@ module mkTile(Tile#(Empty));
    
    interface interrupt = interrupts;
    interface portals = mem_portal;
-   interface reader = lMemread.dmaClient;
-   interface writer = null_mem_write_client;
+   interface readers = cons(lMemread.dmaClient,nil);
+   interface writers = nil;
    interface ext = ?;
 
 endmodule
