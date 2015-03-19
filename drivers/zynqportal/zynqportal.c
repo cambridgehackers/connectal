@@ -198,15 +198,24 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
 	case PORTAL_DCACHE_INVAL: {
                 struct scatterlist *sg;
                 struct file *fmem = fget((int)arg);
-                struct sg_table *sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
+		struct pa_buffer *pa_buffer = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv);
+                struct sg_table *sgtable = pa_buffer->sg_table;
+		void *virt = pa_buffer->vaddr;
+
                 int i;
-printk("[%s:%d] flush %d\n", __FUNCTION__, __LINE__, (int)arg);
+		printk("[%s:%d] fd %d flush %d\n", __FUNCTION__, __LINE__, (int)arg, flush);
                 for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
                     unsigned int length = sg->length;
                     dma_addr_t start_addr = sg_phys(sg), end_addr = start_addr+length;
-printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start_addr, (long)end_addr, length);
-                    if(flush) outer_clean_range(start_addr, end_addr);
-                    outer_inv_range(start_addr, end_addr);
+		    printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start_addr, (long)end_addr, length);
+		    if (flush) {
+			    flush_cache_all();
+			    //flush_user_range(virt, virt+length, 0);
+			    outer_flush_range(start_addr, end_addr);
+		    } else {
+			    outer_inv_range(start_addr, end_addr);
+		    }
+		    virt += length;
                 }
                 fput(fmem);
 		flush = 0;
