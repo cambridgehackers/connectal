@@ -1,3 +1,9 @@
+connectal (15.03.6-1trusty1) trusty; urgency=medium
+
+  * 15.03.6: a couple of driver fixes
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 19 Mar 2015 17:04:55 -0400
+
 connectal (15.03.5-1trusty1) trusty; urgency=medium
 
   * 15.03.5
@@ -42,7 +48,7 @@ connectal (15.02.3-1trusty1) trusty; urgency=medium
 
 connectal (15.02.2-2trusty2) trusty; urgency=medium
 
-  * For Wheezy
+  * For Trusty
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 10 Feb 2015 10:33:22 -0500
 
