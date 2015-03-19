@@ -30,31 +30,103 @@
 #include <monkit.h>
 #include <sys/socket.h>
 
-#include "testmemwrite.h"
+#include <errno.h>
+#include "sock_utils.h"
+#include "StdDmaIndication.h"
+#include "MemServerRequest.h"
+#include "MMURequest.h"
+#include "MemwriteIndication.h"
+#include "MemwriteRequest.h"
+#include "dmaManager.h"
+
+
+sem_t test_sem;
+#ifndef BSIM
+int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
+#else
+int numWords = 0x124000/4;
+#endif
+size_t test_sz  = numWords*sizeof(unsigned int);
+size_t alloc_sz = test_sz;
+
+#ifdef PCIE
+int burstLen = 32;
+#else
+int burstLen = 16;
+#endif
+#ifndef BSIM
+int iterCnt = 128;
+#else
+int iterCnt = 2;
+#endif
+
+
+class MemwriteIndication : public MemwriteIndicationWrapper
+{
+public:
+ MemwriteIndication(int id, int tile) : MemwriteIndicationWrapper(id, tile){}
+
+  virtual void started(uint32_t words){
+    fprintf(stderr, "Memwrite::started: words=%x\n", words);
+  }
+  virtual void writeDone ( uint32_t srcGen ){
+    fprintf(stderr, "Memwrite::writeDone (%08x)\n", srcGen);
+    sem_post(&test_sem);
+  }
+  virtual void reportStateDbg(uint32_t streamWrCnt, uint32_t srcGen){
+    fprintf(stderr, "Memwrite::reportStateDbg: streamWrCnt=%08x srcGen=%d\n", streamWrCnt, srcGen);
+  }  
+
+};
+
+MemwriteRequestProxy *device = 0;
+MMURequestProxy *dmap = 0;
+MemwriteIndication *deviceIndication = 0;
+int dstAlloc;
+unsigned int *dstBuffer = 0;
+
 
 int main(int argc, const char **argv)
 {
-  int sv[2];
-  int pid;
-  int status;
+
+  if(sem_init(&test_sem, 1, 0)){
+    fprintf(stderr, "error: failed to init test_sem\n");
+    exit(1);
+  }
+
+  device = new MemwriteRequestProxy(TileNames_MemwriteRequestS2H,1);
+  deviceIndication = new MemwriteIndication(TileNames_MemwriteIndicationH2S,1);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(PlatformNames_MemServerRequestS2H);
+  MMURequestProxy *dmap = new MMURequestProxy(PlatformNames_MMURequestS2H);
+  DmaManager *dma = new DmaManager(dmap);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, PlatformNames_MemServerIndicationH2S);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, PlatformNames_MMUIndicationH2S);
   
-  if (socketpair(AF_LOCAL, SOCK_STREAM, 0, sv) < 0) {
-    perror("error: socketpair");
-    exit(1);
+  fprintf(stderr, "main::allocating memory...\n");
+  dstAlloc = portalAlloc(alloc_sz);
+  dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
+  
+  portalExec_start();
+
+  unsigned int ref_dstAlloc = dma->reference(dstAlloc);
+  
+  for (int i = 0; i < numWords; i++){
+    dstBuffer[i] = 0xDEADBEEF;
   }
-  switch ((pid = fork())) {
-  case 0:
-    close(sv[0]);
-    child(sv[1]);
-    break;
-  case -1:
-    perror("error: fork");
-    exit(1);
-  default:
-    close(sv[1]);
-    parent(sv[0]);
-    waitpid(pid, &status, 0);
-    break;
-  }
-  exit(status);
+  
+  portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
+  fprintf(stderr, "main::flush and invalidate complete\n");
+
+
+  device->startWrite(ref_dstAlloc, 0, numWords, burstLen, iterCnt);
+  sem_wait(&test_sem);
+
+  bool mismatch = false;
+  unsigned int sg = 0;
+  for (int i = 0; i < numWords; i++)
+    mismatch |= (dstBuffer[i] != sg++);
+
+  fprintf(stderr, "main::mismatch=%d\n", mismatch);
+  munmap(dstBuffer, alloc_sz);
+  exit(mismatch);
 }
