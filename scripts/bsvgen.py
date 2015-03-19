@@ -65,7 +65,7 @@ requestOutputPipeInterfaceTemplate='''\
 
 exposedProxyInterfaceTemplate='''
 // exposed proxy interface
-interface %(Dut)sPipes;
+interface %(Ifc)sOutputPipes;
     interface PipePortal#(0, %(channelCount)s, 32) portalIfc;
     interface %(Package)s::%(Ifc)s ifc;
 endinterface
@@ -75,7 +75,7 @@ interface %(Dut)s;
 endinterface
 
 (* synthesize *)
-module %(moduleContext)s mk%(Dut)sPipes(%(Dut)sPipes);
+module %(moduleContext)s mk%(Ifc)sOutputPipes(%(Ifc)sOutputPipes);
     Vector#(%(channelCount)s, PipeOut#(Bit#(32))) indicationPipes = newVector();
 %(indicationMethodRules)s
     interface %(Package)s::%(Ifc)s ifc;
@@ -94,7 +94,7 @@ endmodule
 // synthesizeable proxy MemPortal
 (* synthesize *)
 module mk%(Dut)sSynth#(Bit#(32) id)(%(Dut)s);
-  let dut <- mk%(Dut)sPipes();
+  let dut <- mk%(Ifc)sOutputPipes();
   let memPortal <- mkMemPortal(id, dut.portalIfc);
   interface MemPortal portalIfc = memPortal;
   interface %(Package)s::%(Ifc)s ifc = dut.ifc;
@@ -112,7 +112,7 @@ endmodule
 exposedWrapperInterfaceTemplate='''
 %(requestElements)s
 // exposed wrapper portal interface
-interface %(Dut)sPipes;
+interface %(Ifc)sInputPipes;
     interface PipePortal#(%(channelCount)s, 0, 32) portalIfc;
 %(requestOutputPipeInterfaces)s
 endinterface
@@ -124,15 +124,15 @@ interface %(Dut)s;
     interface StdPortal portalIfc;
 endinterface
 
-instance Connectable#(%(Dut)sPipes,%(Ifc)s);
-   module mkConnection#(%(Dut)sPipes pipes, %(Ifc)s ifc)(Empty);
+instance Connectable#(%(Ifc)sInputPipes,%(Ifc)s);
+   module mkConnection#(%(Ifc)sInputPipes pipes, %(Ifc)s ifc)(Empty);
 %(mkConnectionMethodRules)s
    endmodule
 endinstance
 
 // exposed wrapper Portal implementation
 (* synthesize *)
-module mk%(Dut)sPipes(%(Dut)sPipes);
+module mk%(Ifc)sInputPipes(%(Ifc)sInputPipes);
     Vector#(%(channelCount)s, PipeIn#(Bit#(32))) requestPipeIn = newVector();
 %(methodRules)s
     interface PipePortal portalIfc;
@@ -147,22 +147,22 @@ module mk%(Dut)sPipes(%(Dut)sPipes);
 endmodule
 
 module mk%(Dut)sPortal#(%(Ifc)s ifc)(%(Dut)sPortal);
-    let pipes <- mk%(Dut)sPipes;
+    let pipes <- mk%(Ifc)sInputPipes;
     mkConnection(pipes, ifc);
     interface PipePortal portalIfc = pipes.portalIfc;
 endmodule
 
 interface %(Dut)sMemPortalPipes;
-    interface %(Dut)sPipes pipes;
-    interface MemPortal#(16,32) portalIfc;
+    interface %(Ifc)sInputPipes pipes;
+    interface StdPortal portalIfc;
 endinterface
 
 (* synthesize *)
 module mk%(Dut)sMemPortalPipes#(Bit#(32) id)(%(Dut)sMemPortalPipes);
 
-  let p <- mk%(Dut)sPipes;
+  let p <- mk%(Ifc)sInputPipes;
   let memPortal <- mkMemPortal(id, p.portalIfc);
-  interface %(Dut)sPipes pipes = p;
+  interface %(Ifc)sInputPipes pipes = p;
   interface MemPortal portalIfc = memPortal;
 endmodule
 
@@ -177,8 +177,8 @@ endmodule
 '''
 
 requestRuleTemplate='''
-    FromBit#(32,%(MethodName)s_Message) %(methodName)s_requestFifo <- mkFromBit();
-    requestPipeIn[%(channelNumber)s] = toPipeIn(%(methodName)s_requestFifo);
+    AdapterFromBus#(32,%(MethodName)s_Message) %(methodName)s_requestFifo <- mkAdapterFromBus();
+    requestPipeIn[%(channelNumber)s] = %(methodName)s_requestFifo.in;
 '''
 
 messageSizeTemplate='''
@@ -192,8 +192,8 @@ mkConnectionMethodTemplate='''
 '''
 
 indicationRuleTemplate='''
-    ToBit#(32,%(MethodName)s_Message) %(methodName)s_responseFifo <- mkToBit();
-    indicationPipes[%(channelNumber)s] = toPipeOut(%(methodName)s_responseFifo);
+    AdapterToBus#(32,%(MethodName)s_Message) %(methodName)s_responseFifo <- mkAdapterToBus();
+    indicationPipes[%(channelNumber)s] = %(methodName)s_responseFifo.out;
 '''
 
 indicationMethodDeclTemplate='''
@@ -201,7 +201,7 @@ indicationMethodDeclTemplate='''
 
 indicationMethodTemplate='''
     method Action %(methodName)s(%(formals)s);
-        %(methodName)s_responseFifo.enq(%(MethodName)s_Message {%(structElements)s});
+        %(methodName)s_responseFifo.in.enq(%(MethodName)s_Message {%(structElements)s});
         //$display(\"indicationMethod \'%(methodName)s\' invoked\");
     endmethod'''
 
@@ -243,7 +243,7 @@ def fixupSubsts(item, suffix):
         msubs = {'methodName': m['name'],
                  'paramsForCall': ', '.join(paramsForCall)}
         mkConnectionMethodRules.append(mkConnectionMethodTemplate % msubs)
-        outputPipes.append('    interface %(methodName)s_PipeOut = toPipeOut(%(methodName)s_requestFifo);' % msubs)
+        outputPipes.append('    interface %(methodName)s_PipeOut = %(methodName)s_requestFifo.out;' % msubs)
     substs = {
         'Package': item['Package'],
         'channelCount': len(dlist),

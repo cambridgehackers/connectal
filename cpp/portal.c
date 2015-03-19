@@ -65,7 +65,7 @@ PortalInternal *utility_portal = 0x0;
 static tBoard* tboard;
 #endif
 
-void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param, uint32_t reqinfo)
+void init_portal_internal(PortalInternal *pint, int id, int tile, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param, uint32_t reqinfo)
 {
     int rc;
     init_portal_hw();
@@ -73,6 +73,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
     if(!utility_portal)
       utility_portal = pint;
     pint->fpga_number = id;
+    pint->fpga_tile = tile;
     pint->fpga_fd = -1;
     pint->handler = handler;
     pint->cb = cb;
@@ -267,7 +268,11 @@ int portalAllocCached(size_t size, int cached)
 #else
   fd = ioctl(global_pa_fd, PA_MALLOC, &portalAlloc);
 #endif
-  PORTAL_PRINTF("alloc size=%ldMB fd=%d\n", size/(1L<<20), fd);
+  PORTAL_PRINTF("alloc size=%ld fd=%d\n", (unsigned long)size, fd);
+  if (fd == -1) {
+       PORTAL_PRINTF("portalAllocCached: alloc failed size=%ld errno=%d\n", (unsigned long)size, errno);
+       exit(-1);
+  }
   return fd;
 }
 

@@ -4,7 +4,7 @@
 #**************************************************************
 
 create_clock -period 10 [get_ports pcie_refclk_p]
-create_clock -period 10 [get_ports sfp_refclk]
+create_clock -period 1.552 [get_ports sfp_refclk]
 create_clock -period 20 [get_ports osc_50_b3b]
 create_clock -period 20 [get_ports osc_50_b3d]
 create_clock -period 20 [get_ports osc_50_b4d]

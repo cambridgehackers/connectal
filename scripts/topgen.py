@@ -40,6 +40,9 @@ import CtrlMux::*;
 import HostInterface::*;
 import MemPortal::*;
 import Connectable::*;
+import MemreadEngine::*;
+import MemwriteEngine::*;
+import MemTypes::*;
 %(generatedImport)s
 
 `ifndef PinType
@@ -59,6 +62,8 @@ module mkConnectalTop
 %(pipeInstantiate)s
 
 %(portalInstantiate)s
+%(connectInstantiate)s
+
    Vector#(%(portalCount)s,StdPortal) portals;
 %(portalList)s
    let ctrl_mux <- mkSlaveMux(portals);
@@ -83,22 +88,30 @@ class iReq:
         self.inst = ''
         self.args = []
 
-#%(modname)sPipes%(tparam)s l%(modname)sPipes <- mk%(modname)sPipes(%(args)s);
-memModuleInstantiation = '''   SharedMemoryPortal#(64) l%(modname)sShare <- mkSharedMemoryPortal(l%(modname)sPipes.portalIfc);
-   SharedMemoryPortalConfigWrapperPipes%(tparam)s l%(modname)sCW <- mkSharedMemoryPortalConfigWrapperPipes;
-   mkConnection(l%(modname)sCW, l%(modname)sShare.cfg);'''
+memShareInst = '''   SharedMemoryPortalConfigInputPipes%(tparam)s l%(modname)sCW <- mkSharedMemoryPortalConfigInputPipes;'''
+
+memEngineInst = '''   MemreadEngineV#(64,2,%(clientCount)s) lSharereadEngine <- mkMemreadEngine();
+   MemwriteEngineV#(64,2,%(clientCount)s) lSharewriteEngine <- mkMemwriteEngine();'''
+
+memModuleInstantiation = '''   SharedMemoryPortal#(64) l%(modname)sShare <- mkSharedMemory%(stype)sPortal(l%(modname)sPipes.portalIfc,
+   lSharereadEngine.read_servers[%(clientCount)s], lSharewriteEngine.write_servers[%(clientCount)s]);'''
+
+memConnection = '''   mkConnection(l%(modname)sCW, l%(modname)sShare.cfg);'''
+
+connectUser = '''   mkConnection(lSimpleRequestInputPipes, %(args)s);'''
 
 pipeInstantiation = '''   %(modname)sPipes%(tparam)s l%(modname)sPipes <- mk%(modname)sPipes;'''
 
 connectInstantiation = '''   mkConnection(l%(modname)sPipes, l%(userIf)s);'''
 
 def instMod(args, modname, modext, constructor, tparam, memFlag):
+    global clientCount
     if not modname:
         return
     pmap['tparam'] = tparam
     pmap['modname'] = modname + modext
     tstr = 'S2H'
-    if modext == 'Proxy':
+    if modext == 'Output':
         tstr = 'H2S'
     if modext:
         args = modname + tstr
@@ -107,17 +120,25 @@ def instMod(args, modname, modext, constructor, tparam, memFlag):
         enumList.append(modname + tstr)
         pmap['argsConfig'] = modname + memFlag + tstr
         if memFlag:
-            if modext == 'Proxy':
+            if modext == 'Output':
                 pmap['args'] = '';
+                pmap['stype'] = 'Indication';
             else:
                 pmap['args'] = 'l%(userIf)s' % pmap
+                pmap['stype'] = 'Request';
+            pmap['clientCount'] = clientCount;
             pipeInstantiate.append(pipeInstantiation % pmap)
+            pipeInstantiate.append(memShareInst % pmap)
             portalInstantiate.append(memModuleInstantiation % pmap)
-        elif modext == 'Proxy':
+            connectInstantiate.append(memConnection % pmap)
+            if modext != 'Output':
+                connectInstantiate.append(connectUser % pmap)
+            clientCount += 1
+        elif modext == 'Output':
             pipeInstantiate.append(pipeInstantiation % pmap)
         else:
             pipeInstantiate.append(pipeInstantiation % pmap)
-            portalInstantiate.append(connectInstantiation % pmap)
+            connectInstantiate.append(connectInstantiation % pmap)
         if memFlag:
             enumList.append(modname + memFlag + tstr)
             addPortal(pmap['argsConfig'], '%(modname)sCW' % pmap)
@@ -160,9 +181,11 @@ if __name__=='__main__':
     project_dir = os.path.abspath(os.path.expanduser(options.project_dir))
     topFilename = project_dir + '/Top.bsv'
     print 'Writing Top:', topFilename
+    clientCount = 0
     userFiles = []
     portalInstantiate = []
     pipeInstantiate = []
+    connectInstantiate = []
     instantiateRequest = {}
     portalList = []
     portalCount = 0
@@ -188,10 +211,10 @@ if __name__=='__main__':
         pmap = parseParam(pitem, True)
         ptemp = pmap['name']
         for pmap['name'] in ptemp.split(','):
-            instMod('', pmap['name'], 'Proxy', '', '', pmap['memFlag'])
-            argstr = pmap['uparam'] + 'l%(name)sProxyPipes.ifc'
+            instMod('', pmap['name'], 'Output', '', '', pmap['memFlag'])
+            argstr = pmap['uparam'] + 'l%(name)sOutputPipes.ifc'
             if pmap['uparam'] and pmap['uparam'][0] == '/':
-                argstr = 'l%(name)sProxyPipes.ifc, ' + pmap['uparam'][1:-2]
+                argstr = 'l%(name)sOutputPipes.ifc, ' + pmap['uparam'][1:-2]
             instMod(argstr, pmap['usermod'], '', '', pmap['xparam'], False)
             pmap['uparam'] = ''
     for pitem in options.wrapper:
@@ -203,7 +226,7 @@ if __name__=='__main__':
         if pmap['usermod'] not in instantiatedModules:
             instMod(pmap['uparam'], pmap['usermod'], '', '', pmap['xparam'], False)
         flushModules(pmap['usermod'])
-        instMod('', pmap['name'], 'Wrapper', '', '', pmap['memFlag'])
+        instMod('', pmap['name'], 'Input', '', '', pmap['memFlag'])
         portalInstantiate.append('')
     for key in instantiatedModules:
         flushModules(key)
@@ -211,16 +234,19 @@ if __name__=='__main__':
         p = pitem.split(':')
         interfaceList.append('   interface %s = l%s;' % (p[0], p[1]))
 
-    memory_flag = 'MemServer' in instantiatedModules
+    memory_flag = 'MemServerCompat' in instantiatedModules
+    if clientCount:
+        pipeInstantiate.append(memEngineInst % {'clientCount': clientCount})
     topsubsts = {'enumList': ','.join(enumList),
                  'generatedImport': '\n'.join(['import %s::*;' % p for p in importfiles]),
-                 'pipeInstantiate' : '\n'.join(pipeInstantiate),
+                 'pipeInstantiate' : '\n'.join(sorted(pipeInstantiate)),
+                 'connectInstantiate' : '\n'.join(sorted(connectInstantiate)),
                  'portalInstantiate' : '\n'.join(portalInstantiate),
                  'portalList': '\n'.join(portalList),
                  'portalCount': portalCount,
                  'exportedInterfaces' : '\n'.join(interfaceList),
                  'exportedNames' : '\n'.join(exportedNames),
-                 'portalMaster' : 'lMemServer.masters' if memory_flag else 'nil',
+                 'portalMaster' : 'lMemServerCompat.masters' if memory_flag else 'nil',
                  'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,`PinType,`NumberOfMasters)' 
 #\ if memory_flag else 'StdConnectalTop#(PhysAddrWidth)'
                  }

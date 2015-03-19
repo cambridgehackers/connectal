@@ -60,18 +60,19 @@ public:
     printf( "Memread::readDone(mismatch = %x)\n", v);
     sem_post(&test_sem);
   }
-  MemreadIndication(int id) : MemreadIndicationWrapper(id){}
+  MemreadIndication(int id, int tile) : MemreadIndicationWrapper(id,tile){}
 };
 
 int main(int argc, const char **argv)
 {
-  MemreadRequestProxy *device = new MemreadRequestProxy(IfcNames_MemreadRequestS2H);
-  MemreadIndication *deviceIndication = new MemreadIndication(IfcNames_MemreadIndicationH2S);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
+  MemreadRequestProxy *device = new MemreadRequestProxy(TileNames_MemreadRequestS2H, 1);
+  MemreadIndication *deviceIndication = new MemreadIndication(TileNames_MemreadIndicationH2S, 1);
+
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(PlatformNames_MemServerRequestS2H);
+  MMURequestProxy *dmap = new MMURequestProxy(PlatformNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, PlatformNames_MemServerIndicationH2S);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, PlatformNames_MMUIndicationH2S);
 
   int srcAlloc;
   srcAlloc = portalAlloc(alloc_sz);

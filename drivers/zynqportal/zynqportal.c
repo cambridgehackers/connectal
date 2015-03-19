@@ -39,7 +39,6 @@
 #define DRIVER_NAME        "zynqportal"
 #define DRIVER_DESCRIPTION "Generic userspace hardware bridge"
 #define DRIVER_VERSION     "0.2"
-#define PORTAL_BASE_OFFSET         (1 << 16)
 #define STATUS_OFFSET 0x000
 #define MASK_OFFSET 0x004
 #define IID_OFFSET 0x010
