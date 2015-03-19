@@ -189,6 +189,7 @@ int runtest(int argc, const char ** argv)
     portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
 
     fprintf(stderr, "Starting second read, mismatches expected\n");
+    mismatchCount = 0;
     device->startRead(ref_srcAlloc, 0, numWords, burstLen, iterCnt);
     sem_wait(&test_sem);
     if (mismatchCount != 3/*number of errors introduced above*/ * iterCnt) {
