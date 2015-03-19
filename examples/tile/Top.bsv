@@ -31,8 +31,8 @@ import Tile::*;
 
 module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
 
-   Platform#(1,Empty,Empty,1) f <- mkPlatform;
-   Tile#(Empty) t <- mkTile;
+   Platform#(1,Empty,Empty,1,1,0) f <- mkPlatform;
+   Tile#(Empty,1,0) t <- mkTile;
    mkConnection(t,f.sockets[0]);
 
    interface interrupt = f.interrupt;
