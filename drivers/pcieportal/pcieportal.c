@@ -458,6 +458,10 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		  this_board->portal[fpn].portal_number = fpn;
 		  this_board->portal[fpn].device_name = iid;
 		  this_board->portal[fpn].board = this_board;
+		  if (this_board->bar2io) {
+		    this_board->portal[fpn].regs = (volatile uint32_t *)(this_board->bar2io
+                        + PORTAL_BASE_OFFSET * fpn + PORTAL_REG_OFFSET);
+		  }
 		  /* add the device operations */
 		  cdev_init(&this_board->portal[fpn].extra->cdev, &pcieportal_fops);
 		  if (cdev_add(&this_board->portal[fpn].extra->cdev, this_device_number, 1)) {
