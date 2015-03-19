@@ -34,8 +34,10 @@ static bsim_fpga_map_entry bsim_fpga_map[2][MAX_BSIM_PORTAL_ID];
 
 static void initialize_bsim_map(void)
 {
-    for(int t = 0; t < 2; t++){
-      unsigned int last = 0, idx = 0;
+    unsigned int last, idx, t;
+    for(t = 0; t < 2; t++){
+      last = 0;
+      idx = 0;
       while (!last && idx < 32) {
         static PortalInternal p;
         volatile unsigned int *ptr=(volatile unsigned int *)(long)((t * TILE_BASE_OFFSET)+(idx * PORTAL_BASE_OFFSET));
