@@ -22,20 +22,25 @@
 // SOFTWARE.
 import Adapter::*;
 
+interface TestIndication;
+    method Action done();
+endinterface
+
 interface TestRequest;
-   method Action start();
+    method Action start();
 endinterface
 
 interface Test;
-   interface TestRequest request;
+    interface TestRequest request;
 endinterface
 
-module mkTest(Test);
-   let dummy <- mkAdapterTb();
-
-   interface TestRequest request;
-      method Action start();
-          $display("TestRequest: start");
-      endmethod
-   endinterface
+module mkTest#(TestIndication indication)(Test);
+    let dummy <- mkAdapterTb(interface AdapterIndication;
+                                 method Action done = indication.done;
+                             endinterface);
+    interface TestRequest request;
+        method Action start();
+            dummy.start();
+        endmethod
+    endinterface
 endmodule

@@ -190,7 +190,13 @@ module mkFromBit(FromBit#(n,a))
    method Bool notFull() = fifo.notFull;
 endmodule
 
-module mkAdapterTb(Empty);
+interface AdapterIndication;
+   method Action done();
+endinterface
+interface AdapterTb;
+   method Action start();
+endinterface
+module mkAdapterTb#(AdapterIndication indication)(AdapterTb);
    ToBit#(32,Bit#(72)) tb32_72 <- mkToBit();
    ToBit#(32,Bit#(17)) tb32_17 <- mkToBit();
 
@@ -203,7 +209,7 @@ module mkAdapterTb(Empty);
        dynamicAssert(timer < 128, "Timeout");
    endrule
 
-   mkAutoFSM(
+   let fsm <- mkFSM(
       seq
       
        // test to bit-32
@@ -283,8 +289,11 @@ module mkAdapterTb(Empty);
        dynamicAssert(fb32_17.first == 17'h10203, "Expected 10203");
        fb32_17.deq;
        	     
-       $finish(0);
+       indication.done();
    endseq
    );
 
+   method Action start();
+       fsm.start();
+   endmethod
 endmodule

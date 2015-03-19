@@ -19,14 +19,26 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #include "TestRequest.h"
+#include "TestIndication.h"
+
+class TestIndication : public TestIndicationWrapper
+{
+public:
+    void done() {
+        printf("Test: all done\n");
+        exit(0);
+    }
+    TestIndication(unsigned int id) : TestIndicationWrapper(id) {}
+};
 
 int main(int argc, const char **argv)
 {
-    TestRequestProxy *testRequestProxy = new TestRequestProxy(IfcNames_TestRequestS2H);
+    TestIndication *testIndication = new TestIndication(IfcNames_TestIndicationH2S);
+    TestRequestProxy *testRequest = new TestRequestProxy(IfcNames_TestRequestS2H);
 
     printf("Test: start\n");
-    testRequestProxy->start();
-    printf("Test: done\n");
-    sleep(5);
+    testRequest->start();
+    sleep(100);
+    printf("Test: timed out\n");
     return 0;
 }
