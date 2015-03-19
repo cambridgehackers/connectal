@@ -177,8 +177,8 @@ endmodule
 '''
 
 requestRuleTemplate='''
-    FromBit#(32,%(MethodName)s_Message) %(methodName)s_requestFifo <- mkFromBit();
-    requestPipeIn[%(channelNumber)s] = toPipeIn(%(methodName)s_requestFifo);
+    AdapterFromBus#(32,%(MethodName)s_Message) %(methodName)s_requestFifo <- mkAdapterFromBus();
+    requestPipeIn[%(channelNumber)s] = %(methodName)s_requestFifo.in;
 '''
 
 messageSizeTemplate='''
@@ -192,8 +192,8 @@ mkConnectionMethodTemplate='''
 '''
 
 indicationRuleTemplate='''
-    ToBit#(32,%(MethodName)s_Message) %(methodName)s_responseFifo <- mkToBit();
-    indicationPipes[%(channelNumber)s] = toPipeOut(%(methodName)s_responseFifo);
+    AdapterToBus#(32,%(MethodName)s_Message) %(methodName)s_responseFifo <- mkAdapterToBus();
+    indicationPipes[%(channelNumber)s] = %(methodName)s_responseFifo.out;
 '''
 
 indicationMethodDeclTemplate='''
@@ -201,7 +201,7 @@ indicationMethodDeclTemplate='''
 
 indicationMethodTemplate='''
     method Action %(methodName)s(%(formals)s);
-        %(methodName)s_responseFifo.enq(%(MethodName)s_Message {%(structElements)s});
+        %(methodName)s_responseFifo.in.enq(%(MethodName)s_Message {%(structElements)s});
         //$display(\"indicationMethod \'%(methodName)s\' invoked\");
     endmethod'''
 
@@ -243,7 +243,7 @@ def fixupSubsts(item, suffix):
         msubs = {'methodName': m['name'],
                  'paramsForCall': ', '.join(paramsForCall)}
         mkConnectionMethodRules.append(mkConnectionMethodTemplate % msubs)
-        outputPipes.append('    interface %(methodName)s_PipeOut = toPipeOut(%(methodName)s_requestFifo);' % msubs)
+        outputPipes.append('    interface %(methodName)s_PipeOut = %(methodName)s_requestFifo.out;' % msubs)
     substs = {
         'Package': item['Package'],
         'channelCount': len(dlist),

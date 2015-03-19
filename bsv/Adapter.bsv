@@ -34,84 +34,42 @@ function Bit#(a) rtruncate(Bit#(b) x) provisos(Add#(k,a,b));
    return v;
 endfunction
 
-interface ToBit#(numeric type n, type a);
-   method Action enq(a v);          
-   method Bit#(n) first;
-   method Action deq();
-   method Bool notEmpty();
-   method Bool notFull();
+interface AdapterToBus#(numeric type n, type a);
+   interface PipeIn#(a) in;
+   interface PipeOut#(Bit#(n)) out;
 endinterface
    
-interface FromBit#(numeric type n, type a);
-   method Action enq(Bit#(n) v);
-   method a first();
-   method Action deq();
-   method Bool notEmpty();
-   method Bool notFull();
+interface AdapterFromBus#(numeric type n, type a);
+   interface PipeIn#(Bit#(n)) in;
+   interface PipeOut#(a) out;
 endinterface
 
-instance ToGet#(FromBit#(n,a),a);
-   function Get#(a) toGet(FromBit#(n,a) x);
+instance ToGet#(AdapterFromBus#(n,a),a);
+   function Get#(a) toGet(AdapterFromBus#(n,a) x);
       return (interface Get
 		 method ActionValue #(a) get();
 		    actionvalue
-		       x.deq;
-		       return x.first;
+		       x.out.deq;
+		       return x.out.first;
 		    endactionvalue
 		 endmethod
 	      endinterface);
    endfunction
 endinstance
 
-instance ToPut#(ToBit#(n,a),a);
-   function Put#(a) toPut(ToBit#(n,a) x);
+instance ToPut#(AdapterToBus#(n,a),a);
+   function Put#(a) toPut(AdapterToBus#(n,a) x);
       return (interface Put
 		 method Action put(a v);
 		    action
-		       x.enq(v);
+		       x.in.enq(v);
 		    endaction
 		 endmethod
 	      endinterface);
    endfunction
 endinstance
 
-instance ToPipeIn#(Bit#(n), FromBit#(n,a));
-   function PipeIn#(Bit#(n)) toPipeIn(FromBit#(n,a) frombit);
-      return (interface PipeIn#(Bit#(n));
-		 method enq = frombit.enq;
-		 method notFull = frombit.notFull;
-	      endinterface);
-   endfunction
-endinstance
-instance ToPipeOut#(a, FromBit#(n,a));
-   function PipeOut#(a) toPipeOut(FromBit#(n,a) frombit);
-      return (interface PipeOut#(a);
-		 method first = frombit.first;
-		 method deq = frombit.deq;
-		 method notEmpty = frombit.notEmpty;
-	      endinterface);
-   endfunction
-endinstance
-
-instance ToPipeIn#(a, ToBit#(n,a));
-   function PipeIn#(a) toPipeIn(ToBit#(n,a) tobit);
-      return (interface PipeIn#(Bit#(n));
-		 method enq = tobit.enq;
-		 method notFull = tobit.notFull;
-	      endinterface);
-   endfunction
-endinstance
-instance ToPipeOut#(Bit#(n), ToBit#(n,a));
-   function PipeOut#(Bit#(n)) toPipeOut(ToBit#(n,a) tobit);
-      return (interface PipeOut#(Bit#(n));
-		 method first = tobit.first;
-		 method deq = tobit.deq;
-		 method notEmpty = tobit.notEmpty;
-	      endinterface);
-   endfunction
-endinstance
-
-module mkToBit(ToBit#(n,a))
+module mkAdapterToBus(AdapterToBus#(n,a))
    provisos(Bits#(a,asz),
             Add#(1, z, asz),
             Div#(asz,n,nwords),
@@ -127,30 +85,32 @@ module mkToBit(ToBit#(n,a))
    
    let nv = valueOf(n);
    
-   method Action enq(a val);
-      fifo.enq({padding,pack(val)});
-   endmethod
-
-   method Bit#(n) first() if (fifo.notEmpty);
-      return rtruncate(fifo.first << (count*fromInteger(nv)));
-   endmethod
-
-   method Action deq() if (fifo.notEmpty);
-      if (count == max)
-         begin 
-            count <= 0;
-            fifo.deq;
-         end
-      else
-         begin
-            count <= count + 1;
-         end   
-   endmethod
-   method Bool notEmpty = fifo.notEmpty;
-   method Bool notFull = fifo.notFull;
+   interface PipeIn in;
+      method Action enq(a val);
+         fifo.enq({padding,pack(val)});
+      endmethod
+      method notFull = fifo.notFull;
+   endinterface
+   interface PipeOut out;
+      method Bit#(n) first() if (fifo.notEmpty);
+         return rtruncate(fifo.first << (count*fromInteger(nv)));
+      endmethod
+      method Action deq() if (fifo.notEmpty);
+         if (count == max)
+            begin 
+               count <= 0;
+               fifo.deq;
+            end
+         else
+            begin
+               count <= count + 1;
+            end   
+      endmethod
+      method notEmpty = fifo.notEmpty;
+   endinterface
 endmodule
 
-module mkFromBit(FromBit#(n,a))
+module mkAdapterFromBus(AdapterFromBus#(n,a))
    provisos(Bits#(a,asz),
             Add#(1,z,asz),
             Div#(asz,n,nwords),
@@ -164,30 +124,27 @@ module mkFromBit(FromBit#(n,a))
    Reg#(Bit#(32))    count <- mkReg(0);
    FIFOF#(Bit#(asz)) fifo <- mkFIFOF1;
 
-   method Action enq(Bit#(n) x) if (count < max || fifo.notFull);
-      Bit#(aszn) newbuff = truncate({fbnbuff,x});
-      fbnbuff <= newbuff;
-      if (count == max)
-         begin
-            count <= 0;
-            fifo.enq(truncate(newbuff));
-         end
-      else
-         begin
-            count <= count+1;
-         end
-   endmethod
-
-   method a first;
-       return unpack(fifo.first);
-   endmethod
-
-   method Action deq;
-       fifo.deq;
-   endmethod
-
-   method Bool notEmpty() = fifo.notEmpty;
-   method Bool notFull() = fifo.notFull;
+   interface PipeIn in;
+      method Action enq(Bit#(n) x) if (count < max || fifo.notFull);
+         Bit#(aszn) newbuff = truncate({fbnbuff,x});
+         fbnbuff <= newbuff;
+         if (count == max)
+            begin
+               count <= 0;
+               fifo.enq(truncate(newbuff));
+            end
+         else
+            begin
+               count <= count+1;
+            end
+      endmethod
+      method notFull = fifo.notFull;
+   endinterface
+   interface PipeOut out;
+      method first = unpack(fifo.first);
+      method deq = fifo.deq;
+      method notEmpty = fifo.notEmpty;
+   endinterface
 endmodule
 
 interface AdapterIndication;
@@ -197,11 +154,11 @@ interface AdapterTb;
    method Action start();
 endinterface
 module mkAdapterTb#(AdapterIndication indication)(AdapterTb);
-   ToBit#(32,Bit#(72)) tb32_72 <- mkToBit();
-   ToBit#(32,Bit#(17)) tb32_17 <- mkToBit();
+   AdapterToBus#(32,Bit#(72)) tb32_72 <- mkAdapterToBus();
+   AdapterToBus#(32,Bit#(17)) tb32_17 <- mkAdapterToBus();
 
-   FromBit#(32,Bit#(72)) fb32_72 <- mkFromBit();
-   FromBit#(32,Bit#(17)) fb32_17 <- mkFromBit();
+   AdapterFromBus#(32,Bit#(72)) fb32_72 <- mkAdapterFromBus();
+   AdapterFromBus#(32,Bit#(17)) fb32_17 <- mkAdapterFromBus();
    
    Reg#(Bit#(10)) timer <- mkReg(0);
    rule timeout;
@@ -213,81 +170,81 @@ module mkAdapterTb#(AdapterIndication indication)(AdapterTb);
       seq
       
        // test to bit-32
-       tb32_72.enq(72'h090807060504030201);
-       dynamicAssert(tb32_72.notEmpty, "Adapter not empty");
-       dynamicAssert(!tb32_72.notFull, "Adapter full");
-       $display("tb32_72 notEmpty %d notFull %d", tb32_72.notEmpty, tb32_72.notFull);
-       $display("tb32_72 word 0 %h", tb32_72.first());
-       dynamicAssert(tb32_72.first == 32'h00000009, "expecting 00000009");
-       tb32_72.deq;
-       $display("tb32_72 word 1 %h", tb32_72.first());
-       dynamicAssert(tb32_72.first == 32'h08070605, "expecting 08070605");
-       tb32_72.deq;
-       $display("tb32_72 word 2 %h", tb32_72.first());
-       dynamicAssert(tb32_72.first == 32'h04030201, "expecting 04030201");
-       tb32_72.deq;
-       dynamicAssert(!tb32_72.notEmpty && tb32_72.notFull, "Adapter empty and not full");
-       $display("tb32_72 notEmpty %d notFull %d", tb32_72.notEmpty, tb32_72.notFull);
-       dynamicAssert(!tb32_17.notEmpty, "tb32_17 empty");
-       dynamicAssert(tb32_17.notFull, "tb32_17 !full");
-       tb32_17.enq(17'h10203);
-       dynamicAssert(tb32_17.notEmpty, "tb32_17 not empty");
-       dynamicAssert(!tb32_17.notFull, "tb32_17 full");
-       $display("tb32_17.first %h", tb32_17.first);
-       dynamicAssert(tb32_17.first == (32'h00010203), "Expected 00010203");
-       tb32_17.deq;
-       dynamicAssert(!tb32_17.notEmpty, "tb32_17 empty");
-       dynamicAssert(tb32_17.notFull, "tb32_17 !full");
+       tb32_72.in.enq(72'h090807060504030201);
+       dynamicAssert(tb32_72.out.notEmpty, "Adapter not empty");
+       dynamicAssert(!tb32_72.in.notFull, "Adapter full");
+       $display("tb32_72 notEmpty %d notFull %d", tb32_72.out.notEmpty, tb32_72.in.notFull);
+       $display("tb32_72 word 0 %h", tb32_72.out.first());
+       dynamicAssert(tb32_72.out.first == 32'h00000009, "expecting 00000009");
+       tb32_72.out.deq;
+       $display("tb32_72 word 1 %h", tb32_72.out.first());
+       dynamicAssert(tb32_72.out.first == 32'h08070605, "expecting 08070605");
+       tb32_72.out.deq;
+       $display("tb32_72 word 2 %h", tb32_72.out.first());
+       dynamicAssert(tb32_72.out.first == 32'h04030201, "expecting 04030201");
+       tb32_72.out.deq;
+       dynamicAssert(!tb32_72.out.notEmpty && tb32_72.in.notFull, "Adapter empty and not full");
+       $display("tb32_72 notEmpty %d notFull %d", tb32_72.out.notEmpty, tb32_72.in.notFull);
+       dynamicAssert(!tb32_17.out.notEmpty, "tb32_17 empty");
+       dynamicAssert(tb32_17.in.notFull, "tb32_17 !full");
+       tb32_17.in.enq(17'h10203);
+       dynamicAssert(tb32_17.out.notEmpty, "tb32_17 not empty");
+       dynamicAssert(!tb32_17.in.notFull, "tb32_17 full");
+       $display("tb32_17.out.first %h", tb32_17.out.first);
+       dynamicAssert(tb32_17.out.first == (32'h00010203), "Expected 00010203");
+       tb32_17.out.deq;
+       dynamicAssert(!tb32_17.out.notEmpty, "tb32_17 empty");
+       dynamicAssert(tb32_17.in.notFull, "tb32_17 !full");
 
        //test from bit-32
-       dynamicAssert(!fb32_72.notEmpty, "Adapter empty");
-       dynamicAssert(fb32_72.notFull, "Adapter not full");
-       $display("fb32_72 notEmpty %d notFull %d", fb32_72.notEmpty, fb32_72.notFull);
-       fb32_72.enq(32'h00000009);
-       fb32_72.enq(32'h08070605);
-       fb32_72.enq(32'h04030201);
-       $display("fb32_72.first %h", fb32_72.first);
-       dynamicAssert(fb32_72.first == 72'h090807060504030201, "Expected 090807060504030201");
-       fb32_72.deq;
-       fb32_72.enq(32'h09080706);
-       dynamicAssert(!fb32_72.notEmpty, "Adapter not empty");
-       dynamicAssert(fb32_72.notFull, "Adapter not full");
-       fb32_72.enq(32'h05040302);
-       fb32_72.enq(32'h01000000);
-       dynamicAssert(fb32_72.notEmpty, "Adapter not empty");
-       dynamicAssert(!fb32_72.notFull, "Adapter full");
-       $display("fb32_72.first %h", fb32_72.first);
-       dynamicAssert(fb32_72.first == 72'h060504030201000000, "Expected 060504030201000000");
-       fb32_72.deq;
-       $display("fb32_72 notEmpty %d notFull %d", fb32_72.notEmpty, fb32_72.notFull);
-       dynamicAssert(!fb32_72.notEmpty, "Adapter empty");
-       dynamicAssert(fb32_72.notFull, "Adapter not full");
-       fb32_17.enq(32'h10203);
-       dynamicAssert(fb32_17.notEmpty, "Adapter not empty");
-       dynamicAssert(!fb32_17.notFull, "Adapter full");
-       $display("fb32_17.first %h", fb32_17.first);
-       dynamicAssert(fb32_17.first == 17'h10203, "Expected 10203");
-       fb32_17.deq;
-       dynamicAssert(!fb32_17.notEmpty, "Adapter empty");
-       dynamicAssert(fb32_17.notFull, "Adapter not full");
+       dynamicAssert(!fb32_72.out.notEmpty, "Adapter empty");
+       dynamicAssert(fb32_72.in.notFull, "Adapter not full");
+       $display("fb32_72 notEmpty %d notFull %d", fb32_72.out.notEmpty, fb32_72.in.notFull);
+       fb32_72.in.enq(32'h00000009);
+       fb32_72.in.enq(32'h08070605);
+       fb32_72.in.enq(32'h04030201);
+       $display("fb32_72.out.first %h", fb32_72.out.first);
+       dynamicAssert(fb32_72.out.first == 72'h090807060504030201, "Expected 090807060504030201");
+       fb32_72.out.deq;
+       fb32_72.in.enq(32'h09080706);
+       dynamicAssert(!fb32_72.out.notEmpty, "Adapter not empty");
+       dynamicAssert(fb32_72.in.notFull, "Adapter not full");
+       fb32_72.in.enq(32'h05040302);
+       fb32_72.in.enq(32'h01000000);
+       dynamicAssert(fb32_72.out.notEmpty, "Adapter not empty");
+       dynamicAssert(!fb32_72.in.notFull, "Adapter full");
+       $display("fb32_72.out.first %h", fb32_72.out.first);
+       dynamicAssert(fb32_72.out.first == 72'h060504030201000000, "Expected 060504030201000000");
+       fb32_72.out.deq;
+       $display("fb32_72 notEmpty %d notFull %d", fb32_72.out.notEmpty, fb32_72.in.notFull);
+       dynamicAssert(!fb32_72.out.notEmpty, "Adapter empty");
+       dynamicAssert(fb32_72.in.notFull, "Adapter not full");
+       fb32_17.in.enq(32'h10203);
+       dynamicAssert(fb32_17.out.notEmpty, "Adapter not empty");
+       dynamicAssert(!fb32_17.in.notFull, "Adapter full");
+       $display("fb32_17.out.first %h", fb32_17.out.first);
+       dynamicAssert(fb32_17.out.first == 17'h10203, "Expected 10203");
+       fb32_17.out.deq;
+       dynamicAssert(!fb32_17.out.notEmpty, "Adapter empty");
+       dynamicAssert(fb32_17.in.notFull, "Adapter not full");
 
 
        // they should be duals
-       tb32_72.enq(72'h090807060504030201);
-       fb32_72.enq(tb32_72.first);
-       tb32_72.deq;
-       fb32_72.enq(tb32_72.first);
-       tb32_72.deq;
-       fb32_72.enq(tb32_72.first);
-       tb32_72.deq;
-       dynamicAssert(fb32_72.first == 72'h090807060504030201, "Expected 090807060504030201");
-       fb32_72.deq;
+       tb32_72.in.enq(72'h090807060504030201);
+       fb32_72.in.enq(tb32_72.out.first);
+       tb32_72.out.deq;
+       fb32_72.in.enq(tb32_72.out.first);
+       tb32_72.out.deq;
+       fb32_72.in.enq(tb32_72.out.first);
+       tb32_72.out.deq;
+       dynamicAssert(fb32_72.out.first == 72'h090807060504030201, "Expected 090807060504030201");
+       fb32_72.out.deq;
              
-       tb32_17.enq(17'h10203);
-       fb32_17.enq(tb32_17.first);
-       tb32_17.deq;
-       dynamicAssert(fb32_17.first == 17'h10203, "Expected 10203");
-       fb32_17.deq;
+       tb32_17.in.enq(17'h10203);
+       fb32_17.in.enq(tb32_17.out.first);
+       tb32_17.out.deq;
+       dynamicAssert(fb32_17.out.first == 17'h10203, "Expected 10203");
+       fb32_17.out.deq;
        	     
        indication.done();
    endseq
