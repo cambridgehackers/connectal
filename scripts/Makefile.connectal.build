@@ -162,7 +162,7 @@ bits: hw/mkTop.bit prepare_bin_target
 	gzip -f bin/mkTop.xdevcfg.bin
 	$(Q)[ ! -f bin/android.exe ] || $(NDK_OBJCOPY) --remove-section fpgadata bin/android.exe
 	$(Q)[ ! -f bin/android.exe ] || $(NDK_OBJCOPY) --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe
-else ifneq (, $(XILINX))
+else ifeq ($(XILINX),1)
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
 	$(Q)[ ! -f bin/ubuntu.exe ] || objcopy --remove-section fpgadata bin/ubuntu.exe
 	$(Q)[ ! -f bin/ubuntu.exe ] || objcopy --add-section fpgadata=bin/mkTop.bin.gz bin/ubuntu.exe
@@ -170,7 +170,7 @@ else ifneq (, $(XILINX))
 	$(CONNECTALDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
 endif
 
-ifneq (, $(ALTERA))
+ifeq ($(ALTERA),1)
 	gzip -c $(MKTOP).sof > bin/$(MKTOP).sof.gz
 endif
 
@@ -211,13 +211,13 @@ else
     ifeq ($(OS),android)
 	$(CONNECTALDIR)/scripts/run.zedboard bin/mkTop.xdevcfg.bin.gz bin/android.exe $(RUN_ARGS)
     else
-	ifneq (, $(XILINX))
+	ifeq ($(XILINX),1)
 	    $(CONNECTALDIR)/scripts/run.pcietest bin/ubuntu.exe $(RUN_ARGS)
 	endif
-	ifneq (, $(ALTERA))
+	ifneq ($(ALTERA),1)
 	    $(CONNECTALDIR)/scripts/run.pcietest.altera bin/mk*.sof bin/ubuntu.exe $(RUN_ARGS)
 	endif
-    endif
+    endif # android
   endif
 endif
 endif

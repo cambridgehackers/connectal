@@ -1,6 +1,6 @@
 {
     "options": {
-        "bsvdefines" : ["XILINX", "Virtex7", "PCIE", "PCIE3", "PcieHostTypeIF", "PhysAddrWidth=40", "NUMBER_OF_LEDS=2"],
+        "bsvdefines" : ["XILINX=1", "Virtex7", "PCIE", "PCIE3", "PcieHostTypeIF", "PhysAddrWidth=40", "NUMBER_OF_LEDS=2"],
         "os" : "ubuntu",
         "partname" : "xc7vx690tffg1761-3",
         "need_pcie" : "x7_gen3x8",
