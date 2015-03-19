@@ -44,31 +44,6 @@ interface AdapterFromBus#(numeric type n, type a);
    interface PipeOut#(a) out;
 endinterface
 
-instance ToGet#(AdapterFromBus#(n,a),a);
-   function Get#(a) toGet(AdapterFromBus#(n,a) x);
-      return (interface Get
-		 method ActionValue #(a) get();
-		    actionvalue
-		       x.out.deq;
-		       return x.out.first;
-		    endactionvalue
-		 endmethod
-	      endinterface);
-   endfunction
-endinstance
-
-instance ToPut#(AdapterToBus#(n,a),a);
-   function Put#(a) toPut(AdapterToBus#(n,a) x);
-      return (interface Put
-		 method Action put(a v);
-		    action
-		       x.in.enq(v);
-		    endaction
-		 endmethod
-	      endinterface);
-   endfunction
-endinstance
-
 module mkAdapterToBus(AdapterToBus#(n,a))
    provisos(Bits#(a,asz),
             Add#(1, z, asz),
@@ -150,13 +125,14 @@ endmodule
 interface AdapterIndication;
    method Action done();
 endinterface
+
 interface AdapterTb;
    method Action start();
 endinterface
+
 module mkAdapterTb#(AdapterIndication indication)(AdapterTb);
    AdapterToBus#(32,Bit#(72)) tb32_72 <- mkAdapterToBus();
    AdapterToBus#(32,Bit#(17)) tb32_17 <- mkAdapterToBus();
-
    AdapterFromBus#(32,Bit#(72)) fb32_72 <- mkAdapterFromBus();
    AdapterFromBus#(32,Bit#(17)) fb32_17 <- mkAdapterFromBus();
    
@@ -168,7 +144,6 @@ module mkAdapterTb#(AdapterIndication indication)(AdapterTb);
 
    let fsm <- mkFSM(
       seq
-      
        // test to bit-32
        tb32_72.in.enq(72'h090807060504030201);
        dynamicAssert(tb32_72.out.notEmpty, "Adapter not empty");
