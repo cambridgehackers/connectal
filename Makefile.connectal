@@ -124,7 +124,7 @@ ifneq ($(CPPFILES2),)
 CPPFILES2 += $(CONNECTALDIR)/cpp/dmaManager.c
 endif
 ifneq ($(USE_AUTOTOP),)
-S2H_INTERFACES += MMURequest:MMU.request MemServerRequest:MemServer.request
+S2H_INTERFACES += MMURequest:MMU.request MemServerRequest:MemServerCompat.request
 H2S_INTERFACES += MMU\#\(PhysAddrWidth\):MMUIndication:0,True
 endif
 endif
@@ -221,7 +221,7 @@ ifneq ($(USE_AUTOTOP),)
 	$(Q)$(CONNECTALDIR)/scripts/topgen.py --project-dir $(GPROJ) $(AUTOTOP) \
 	    $(foreach f, $(S2H_INTERFACES), --wrapper $f) \
 	    $(foreach f, $(H2S_INTERFACES), --proxy $f)   \
-	    $(foreach f, $(MEM_INTERFACES), --proxy MemServer\#\(PhysAddrWidth,DataBusWidth,\`NumberOfMasters\):MemServerIndication:$f,cons\(lMMU,nil\))
+	    $(foreach f, $(MEM_INTERFACES), --proxy MemServerCompat\#\(PhysAddrWidth,DataBusWidth,\`NumberOfMasters\):MemServerIndication:$f,cons\(lMMU,nil\))
 endif
 
 generate_altera_custom::
