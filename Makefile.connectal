@@ -54,6 +54,7 @@ programflash.%:
 	make CONNECTAL_DEBUG=1 --no-print-directory $*
 
 IPDIR?=$(CONNECTALDIR)/out
+NUMBER_OF_TILES?=1
 ifndef NUMBER_OF_MASTERS
 NUMBER_OF_MASTERS=1
 endif
@@ -98,6 +99,7 @@ BURST_LEN_SIZE=8
 endif
 
 CONNECTALFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) -D PinType=$(PIN_TYPE) -D MainClockPeriod=$(MAIN_CLOCK_PERIOD) -D DerivedClockPeriod=$(DERIVED_CLOCK_PERIOD)
+CONNECTALFLAGS += -D NumberOfTiles=$(NUMBER_OF_TILES)
 CONNECTALFLAGS += -D BurstLenSize=$(BURST_LEN_SIZE)
 CONNECTALFLAGS += --ipdir=$(IPDIR)
 ifeq ($(BOARD),xsim)
