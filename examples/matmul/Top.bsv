@@ -28,7 +28,7 @@ import Portal::*;
 import HostInterface::*;
 import ConnectalMemory::*;
 import MemTypes::*;
-import MemServer::*;
+import MemServerCompat::*;
 import MMU::*;
 import RbmTypes::*;
 import MemServerRequest::*;
@@ -69,7 +69,7 @@ module  mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,TMul#(32,N),E
    MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
 
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
-   MemServer#(PhysAddrWidth, TMul#(32,N), NumberOfMasters) dma <- mkMemServer(mm.readClients, mm.writeClients, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
+   MemServerCompat#(PhysAddrWidth, TMul#(32,N), NumberOfMasters) dma <- mkMemServerCompat(mm.readClients, mm.writeClients, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
    MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
 
    Vector#(8,StdPortal) portals;
