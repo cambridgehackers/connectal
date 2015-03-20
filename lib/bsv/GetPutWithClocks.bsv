@@ -33,6 +33,11 @@ typeclass ConnectableWithClocks#(type a, type b);
    module mkConnectionWithClocks#(a x1, b x2, Clock fastClock, Reset fastReset, Clock slowClock, Reset slowReset)(Empty);
 endtypeclass
 
+module mkConnectionWithClocksFirst#(Clock fastClock, Reset fastReset, Clock slowClock, Reset slowReset, a x1, b x2)(Empty)
+   provisos (ConnectableWithClocks#(a, b));
+   let m <- mkConnectionWithClocks(x1, x2, fastClock, fastReset, slowClock, slowReset);
+endmodule
+
 instance ConnectableWithClocks#(Get#(a), Put#(a)) provisos (Bits#(a, awidth));
    module mkConnectionWithClocks#(Get#(a) in, Put#(a) out,
                                   Clock inClock, Reset inReset,
