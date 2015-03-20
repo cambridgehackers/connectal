@@ -28,7 +28,7 @@ import ClientServer::*;
 import Connectable::*;
 import PCIE::*;
 import DefaultValue::*;
-import MemServerCompat::*;
+import MemServer::*;
 import MMU::*;
 import CtrlMux::*;
 import Portal::*;
@@ -58,7 +58,7 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
    MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(MMURequestS2H, hostMMU.request);
 
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(MemServerIndicationH2S);
-   MemServerCompat#(PhysAddrWidth,DataBusWidth,1) dma <- mkMemServerCompat(memread.dmaClient, nil, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
+   MemServer#(PhysAddrWidth,DataBusWidth,1) dma <- mkMemServer(memread.dmaClient, nil, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
    MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(MemServerRequestS2H, dma.request);
 
    PhysMemMaster#(PhysAddrWidth,DataBusWidth) dma1 = (interface PhysMemMaster;
