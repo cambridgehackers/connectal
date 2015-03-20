@@ -67,6 +67,7 @@ install-dkms:
 	cp -fv ../../cpp/*.[ch] ../portalmem/*.[ch] \
 	../../generated/cpp/*.[ch] \
 	$(DESTDIR)/usr/src/connectal-$(VERSION)
+	sed -i "s|14.11.[0-9]+.|$(VERSION)|" $(DESTDIR)/usr/src/connectal-$(VERSION)/*.[ch]
 	sed -i 's|drivers/portalmem/||' $(DESTDIR)/usr/src/connectal-$(VERSION)/*.[ch]
 	sed -i 's|drivers/pcieportal/||' $(DESTDIR)/usr/src/connectal-$(VERSION)/*.[ch]
 	sed -i 's|drivers/zynqportal/||' $(DESTDIR)/usr/src/connectal-$(VERSION)/*.[ch]
