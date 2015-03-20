@@ -46,6 +46,7 @@
 #define MSB_OFFSET 0x018
 #define LSB_OFFSET 0x01C
 #define MAX_NUM_PORTALS 16
+#define MAX_NUM_TILES   2
 
 #ifdef DEBUG // was KERN_DEBUG
 #define driver_devel(format, ...) \
@@ -76,7 +77,7 @@ struct portal_data {
 struct connectal_data{
   struct miscdevice  misc; /* must be first element (pointer passed to misc_register) */
   unsigned int       portal_irq;
-  struct portal_data portald[MAX_NUM_PORTALS + 1];
+  struct portal_data portald[MAX_NUM_TILES][MAX_NUM_PORTALS + 1];
 };
 
 static DEFINE_MUTEX(connectal_mutex);
@@ -292,31 +293,35 @@ static const struct file_operations portal_fops = {
 
 static int remove_portal_devices(struct connectal_data *connectal_data)
 {
-  int fpn;
-  for (fpn = 0; fpn < MAX_NUM_PORTALS; fpn++) {
-    if (connectal_data->portald[fpn].name[0])
-      misc_deregister(&connectal_data->portald[fpn].misc);
-    connectal_data->portald[fpn].name[0] = 0;
+  int fpn, t;
+  for (t = 0; t < MAX_NUM_TILES; t++){
+    for (fpn = 0; fpn < MAX_NUM_PORTALS; fpn++) {
+      if (connectal_data->portald[t][fpn].name[0])
+	misc_deregister(&connectal_data->portald[t][fpn].misc);
+      connectal_data->portald[t][fpn].name[0] = 0;
+    }
   }
   return 0;
 }
 
 static void connectal_work_handler(struct work_struct *__xxx)
 {
-  int fpn;
+  int fpn, t;
   mutex_lock(&connectal_mutex);
   remove_portal_devices(ws.connectal_data);
-  for (fpn = 0; fpn < MAX_NUM_PORTALS; fpn++) {
-    int rc;
-    struct portal_data *portal_data = &ws.connectal_data->portald[fpn];
-    portal_data->top = readl(portal_data->map_base+TOP_OFFSET);
-    sprintf(portal_data->name, "portal%d", readl(portal_data->map_base+IID_OFFSET));
-    driver_devel("%s: fpn=%08x top=%d name=%s\n", __func__, fpn, portal_data->top, portal_data->misc.name);
-    portal_data->misc.minor = MISC_DYNAMIC_MINOR;
-    rc = misc_register( &portal_data->misc);
-    driver_devel("%s: rc=%d minor=%d\n", __func__, rc, portal_data->misc.minor);
-    if (portal_data->top)
-	    break;
+  for (t = 0; t < MAX_NUM_TILES; t++){
+    for (fpn = 0; fpn < MAX_NUM_PORTALS; fpn++) {
+      int rc;
+      struct portal_data *portal_data = &ws.connectal_data->portald[t][fpn];
+      portal_data->top = readl(portal_data->map_base+TOP_OFFSET);
+      sprintf(portal_data->name, "portal%d", readl(portal_data->map_base+IID_OFFSET));
+      driver_devel("%s: fpn=%08x top=%d name=%s\n", __func__, fpn, portal_data->top, portal_data->misc.name);
+      portal_data->misc.minor = MISC_DYNAMIC_MINOR;
+      rc = misc_register( &portal_data->misc);
+      driver_devel("%s: rc=%d minor=%d\n", __func__, rc, portal_data->misc.minor);
+      if (portal_data->top)
+	break;
+    }
   }
   if (fpn > MAX_NUM_PORTALS - 1) {
 	  printk(KERN_INFO "%s: MAX_NUM_PORTALS exceeded", __func__);
@@ -350,7 +355,7 @@ static const struct file_operations connectal_fops = {
 static int connectal_of_probe(struct platform_device *pdev)
 {
   u32 size;
-  int rc, fpn;
+  int rc, fpn, t;
   struct connectal_data *connectal_data;
   const char *dname = (char *)of_get_property(pdev->dev.of_node, "device-name", &size);
   struct resource *reg_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -374,17 +379,19 @@ static int connectal_of_probe(struct platform_device *pdev)
   driver_devel("%s: name=%s rc=%d minor=%d\n", __func__, connectal_data->misc.name, rc, connectal_data->misc.minor);
   dev_set_drvdata(&pdev->dev, connectal_data);
   ws.connectal_data = connectal_data;
-  for (fpn = 0; fpn < MAX_NUM_PORTALS; fpn++) {
-    struct portal_data *portal_data = &connectal_data->portald[fpn];
-    portal_data->dev_base_phys = reg_res->start+(fpn*PORTAL_BASE_OFFSET);
-    portal_data->map_base = ioremap_nocache(portal_data->dev_base_phys, PORTAL_BASE_OFFSET);
-    portal_data->misc.name = portal_data->name;
-    portal_data->misc.fops = &portal_fops;
-    INIT_LIST_HEAD(&portal_data->pmlist);
-    sprintf(portal_data->irqname, "zynqportal%d", fpn);
-    if (request_irq(connectal_data->portal_irq, portal_isr,
-            IRQF_TRIGGER_HIGH | IRQF_SHARED , portal_data->irqname, portal_data)) {
-            printk("%s Failed to register irq\n", __func__);
+  for (t = 0; t < MAX_NUM_TILES; t++){
+    for (fpn = 0; fpn < MAX_NUM_PORTALS; fpn++) {
+      struct portal_data *portal_data = &connectal_data->portald[fpn];
+      portal_data->dev_base_phys = reg_res->start+((t * TILE_BASE_OFFSET)+(fpn*PORTAL_BASE_OFFSET));
+      portal_data->map_base = ioremap_nocache(portal_data->dev_base_phys, PORTAL_BASE_OFFSET);
+      portal_data->misc.name = portal_data->name;
+      portal_data->misc.fops = &portal_fops;
+      INIT_LIST_HEAD(&portal_data->pmlist);
+      sprintf(portal_data->irqname, "zynqportal%d", fpn);
+      if (request_irq(connectal_data->portal_irq, portal_isr,
+		      IRQF_TRIGGER_HIGH | IRQF_SHARED , portal_data->irqname, portal_data)) {
+	printk("%s Failed to register irq\n", __func__);
+      }
     }
   }
   mutex_unlock(&connectal_mutex);
@@ -393,12 +400,14 @@ static int connectal_of_probe(struct platform_device *pdev)
 
 static int connectal_of_remove(struct platform_device *pdev)
 {
-  int fpn;
+  int fpn, t;
   struct connectal_data* connectal_data = dev_get_drvdata(&pdev->dev);
   driver_devel("%s: %s\n",__FUNCTION__, pdev->name);
   mutex_lock(&connectal_mutex);
-  for (fpn = 0; fpn < MAX_NUM_PORTALS; fpn++)
-    free_irq(connectal_data->portal_irq, &connectal_data->portald[fpn]);
+  for (t = 0; t < MAX_NUM_TILES; t++){
+    for (fpn = 0; fpn < MAX_NUM_PORTALS; fpn++)
+      free_irq(connectal_data->portal_irq, &connectal_data->portald[t][fpn]);
+  }
   remove_portal_devices(connectal_data);
   misc_deregister(&connectal_data->misc);
   dev_set_drvdata(&pdev->dev, NULL);

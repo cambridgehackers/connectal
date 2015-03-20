@@ -234,7 +234,7 @@ if __name__=='__main__':
         p = pitem.split(':')
         interfaceList.append('   interface %s = l%s;' % (p[0], p[1]))
 
-    memory_flag = 'MemServerCompat' in instantiatedModules
+    memory_flag = 'MemServer' in instantiatedModules
     if clientCount:
         pipeInstantiate.append(memEngineInst % {'clientCount': clientCount})
     topsubsts = {'enumList': ','.join(enumList),
@@ -246,7 +246,7 @@ if __name__=='__main__':
                  'portalCount': portalCount,
                  'exportedInterfaces' : '\n'.join(interfaceList),
                  'exportedNames' : '\n'.join(exportedNames),
-                 'portalMaster' : 'lMemServerCompat.masters' if memory_flag else 'nil',
+                 'portalMaster' : 'lMemServer.masters' if memory_flag else 'nil',
                  'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,`PinType,`NumberOfMasters)' 
 #\ if memory_flag else 'StdConnectalTop#(PhysAddrWidth)'
                  }

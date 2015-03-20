@@ -40,13 +40,13 @@ typedef 9 MMU_PIPELINE_DEPTH;
 
 interface MemWriteInternal#(numeric type addrWidth, numeric type dataWidth, numeric type numTags, numeric type numServers);
    interface DmaDbg dbg;
-   interface PhysMemWriteClient#(addrWidth,dataWidth) write_client;
+   interface PhysMemWriteClient#(addrWidth,dataWidth) client;
    interface Vector#(numServers, MemWriteServer#(dataWidth)) servers;
 endinterface
 
 interface MemReadInternal#(numeric type addrWidth, numeric type dataWidth, numeric type numTags, numeric type numServers);
    interface DmaDbg dbg;
-   interface PhysMemReadClient#(addrWidth,dataWidth) read_client;
+   interface PhysMemReadClient#(addrWidth,dataWidth) client;
    interface Vector#(numServers, MemReadServer#(dataWidth)) servers;
 endinterface
 
@@ -224,7 +224,7 @@ module mkMemReadInternal#(MemServerIndication ind,
 	       endinterface);
    
    interface servers = sv;
-   interface PhysMemReadClient read_client;
+   interface PhysMemReadClient client;
       interface Get readReq;
 	 method ActionValue#(PhysMemRequest#(addrWidth)) get();
 	    reqFifo.deq;
@@ -385,7 +385,7 @@ module mkMemWriteInternal#(MemServerIndication ind,
    
    
    interface servers = sv;
-   interface PhysMemWriteClient write_client;
+   interface PhysMemWriteClient client;
       interface Get writeReq;
 	 method ActionValue#(PhysMemRequest#(addrWidth)) get();
 	    let req = reqFifo.first.req;
