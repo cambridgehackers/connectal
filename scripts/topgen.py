@@ -94,7 +94,7 @@ memEngineInst = '''   MemreadEngineV#(64,2,%(clientCount)s) lSharereadEngine <- 
    MemwriteEngineV#(64,2,%(clientCount)s) lSharewriteEngine <- mkMemwriteEngine();'''
 
 memModuleInstantiation = '''   SharedMemoryPortal#(64) l%(modname)sShare <- mkSharedMemory%(stype)sPortal(l%(modname)sPipes.portalIfc,
-   lSharereadEngine.read_servers[%(clientCount)s], lSharewriteEngine.write_servers[%(clientCount)s]);'''
+           lSharereadEngine.read_servers[%(clientCount)s], lSharewriteEngine.write_servers[%(clientCount)s]);'''
 
 memConnection = '''   mkConnection(l%(modname)sCW, l%(modname)sShare.cfg);'''
 

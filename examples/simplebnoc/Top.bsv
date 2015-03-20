@@ -34,13 +34,13 @@ typedef enum {FooRequest, FooIndication, SimpleRequest, SimpleIndication} IfcNam
 
 module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
    // the indications from simpleRequest will be connected to the request interface to simpleReuqest2
-   SimpleProxyPortal simple1Proxy <- mkSimpleProxyPortal(SimpleIndication);
+   SimpleOutputPipes simple1Proxy <- mkSimpleOutputPipes;
    Simple simple1 <- mkSimple(simple1Proxy.ifc);
    SimpleWrapper simple1Wrapper <- mkSimpleWrapper(SimpleRequest,simple1);
 
    SimpleProxy simple2Proxy <- mkSimpleProxy(SimpleIndication);
    Simple simple2 <- mkSimple(simple2Proxy.ifc);
-   SimpleWrapperPortal simple2Wrapper <- mkSimpleWrapperPortal(SimpleRequest, simple2);
+   SimpleWrapperPortal simple2Wrapper <- mkSimpleWrapperPortal(simple2);
 
    // now connect them via a BlueNoC link
    MsgSource#(4) simpleMsgSource <- mkPortalMsgSource(simple1Proxy.portalIfc);
@@ -60,9 +60,9 @@ endmodule : mkConnectalTop
 module mkBluenocTop(BluenocTop#(1,1));
    // instantiate user portals
    // the indications from simpleRequest will be connected to the request interface to simpleReuqest2
-   SimpleProxyPortal simple1Proxy <- mkSimpleProxyPortal(SimpleIndication);
+   SimpleOutputPipes simple1Proxy <- mkSimpleOutputPipes;
    Simple simple1 <- mkSimple(simple1Proxy.ifc);
-   SimpleWrapperPortal simple1Wrapper <- mkSimpleWrapperPortal(SimpleRequest,simple1);
+   SimpleWrapperPortal simple1Wrapper <- mkSimpleWrapperPortal(simple1);
 
    // now connect them via a BlueNoC link
    MsgSource#(4) simpleMsgSource <- mkPortalMsgSource(simple1Proxy.portalIfc);
