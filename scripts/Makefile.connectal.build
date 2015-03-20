@@ -157,20 +157,23 @@ ifeq ($(BOARD),xsim)
 bits: xsim
 else
 bits: hw/mkTop.bit prepare_bin_target
-    ifeq ($(OS),android)
+ifeq ($(OS),android)
+	@echo "zipping android"
 	$(CONNECTALDIR)/scripts/reorderbytes.py hw/mkTop.bin bin/mkTop.xdevcfg.bin
 	gzip -f bin/mkTop.xdevcfg.bin
 	$(Q)[ ! -f bin/android.exe ] || $(NDK_OBJCOPY) --remove-section fpgadata bin/android.exe
 	$(Q)[ ! -f bin/android.exe ] || $(NDK_OBJCOPY) --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe
-else ifeq ($(XILINX),1)
+else ifneq ($(XILINX),)
+	@echo "zipping xilinx"
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
 	$(Q)[ ! -f bin/ubuntu.exe ] || objcopy --remove-section fpgadata bin/ubuntu.exe
 	$(Q)[ ! -f bin/ubuntu.exe ] || objcopy --add-section fpgadata=bin/mkTop.bin.gz bin/ubuntu.exe
 	if [ -f Impl/TopDown/top-post-route.dcp ]; then cp -f Impl/TopDown/top-post-route.dcp bin; fi
 	$(CONNECTALDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
+else
+	@echo "not zipping xilinx"
 endif
-
-ifeq ($(ALTERA),1)
+ifneq ($(ALTERA),)
 	gzip -c $(MKTOP).sof > bin/$(MKTOP).sof.gz
 endif
 
