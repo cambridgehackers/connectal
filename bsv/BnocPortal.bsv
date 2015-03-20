@@ -35,7 +35,7 @@ typedef enum {
    BpMessage
    } BnocPortalState deriving (Bits,Eq);
 
-module mkPortalMsgSink#(PipePortal#(numRequests, 0, 32) portal)(MsgSink#(4));
+module mkPortalMsgRequest#(PipePortal#(numRequests, 0, 32) portal)(MsgSink#(4));
    Bool verbose = True;
    Reg#(Bit#(8)) messageWordsReg <- mkReg(0);
    Reg#(Bit#(8)) methodIdReg <- mkReg(0);
@@ -70,7 +70,7 @@ module mkPortalMsgSink#(PipePortal#(numRequests, 0, 32) portal)(MsgSink#(4));
    return fifoMsgSink.sink;
 endmodule
 
-module mkPortalMsgSource#(PipePortal#(0, numIndications, 32) portal)(MsgSource#(4));
+module mkPortalMsgIndication#(PipePortal#(0, numIndications, 32) portal)(MsgSource#(4));
    Reg#(Bit#(16)) messageWordsReg <- mkReg(0);
    Reg#(Bit#(8)) methodIdReg <- mkReg(0);
    Reg#(BnocPortalState) bpState <- mkReg(BpHeader);

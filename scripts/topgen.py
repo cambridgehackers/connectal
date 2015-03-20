@@ -32,6 +32,7 @@ argparser.add_argument('--importfiles', help='added imports', action='append')
 argparser.add_argument('--portname', help='added portal names to enum list', action='append')
 argparser.add_argument('--wrapper', help='exported wrapper interfaces', action='append')
 argparser.add_argument('--proxy', help='exported proxy interfaces', action='append')
+argparser.add_argument('--bluenoc', help='generate mkBluenocTop', action='store_true')
 
 topTemplate='''
 import Vector::*;
@@ -75,12 +76,53 @@ endmodule : mkConnectalTop
 %(exportedNames)s
 '''
 
+topNocTemplate='''
+import Vector::*;
+import Portal::*;
+import BnocPortal::*;
+import Connectable::*;
+%(generatedImport)s
+
+`ifndef PinType
+`define PinType Empty
+`endif
+typedef `PinType PinType;
+
+typedef enum {%(enumList)s} IfcNames deriving (Eq,Bits);
+
+module mkBluenocTop
+`ifdef IMPORT_HOSTIF
+       #(HostType host)
+`endif
+       (%(moduleParam)s);
+   Clock defaultClock <- exposeCurrentClock();
+   Reset defaultReset <- exposeCurrentReset();
+%(pipeInstantiate)s
+
+%(portalInstantiate)s
+%(connectInstantiate)s
+
+%(portalList)s
+   interface requests = cons(%(requestList)s, nil);
+   interface indications = cons(%(indicationList)s, nil);
+%(exportedInterfaces)s
+endmodule : mkBluenocTop
+%(exportedNames)s
+'''
+
 portalTemplate = '''   let portalEnt_%(count)s <- mkMemPortal(extend(pack(%(enumVal)s)), l%(ifcName)s.portalIfc);
    portals[%(count)s] = portalEnt_%(count)s;'''
 
-def addPortal(enumVal, ifcName):
+portalNocTemplate = '''   let l%(ifcName)sNoc <- mkPortalMsg%(direction)s(l%(ifcName)s.portalIfc);'''
+
+def addPortal(enumVal, ifcName, direction):
     global portalCount
-    portalList.append(portalTemplate % {'count': portalCount, 'enumVal': enumVal, 'ifcName': ifcName})
+    if direction == 'Request':
+        requestList.append('l' + ifcName + 'Noc')
+    else:
+        indicationList.append('l' + ifcName + 'Noc')
+    p = portalNocTemplate if options.bluenoc else portalTemplate
+    portalList.append(p % {'count': portalCount, 'enumVal': enumVal, 'ifcName': ifcName, 'direction': direction})
     portalCount = portalCount + 1
 
 class iReq:
@@ -119,13 +161,15 @@ def instMod(args, modname, modext, constructor, tparam, memFlag):
     if modext:
         enumList.append(modname + tstr)
         pmap['argsConfig'] = modname + memFlag + tstr
+        if modext == 'Output':
+            pmap['stype'] = 'Indication';
+        else:
+            pmap['stype'] = 'Request';
         if memFlag:
             if modext == 'Output':
                 pmap['args'] = '';
-                pmap['stype'] = 'Indication';
             else:
                 pmap['args'] = 'l%(userIf)s' % pmap
-                pmap['stype'] = 'Request';
             pmap['clientCount'] = clientCount;
             pipeInstantiate.append(pipeInstantiation % pmap)
             pipeInstantiate.append(memShareInst % pmap)
@@ -141,9 +185,9 @@ def instMod(args, modname, modext, constructor, tparam, memFlag):
             connectInstantiate.append(connectInstantiation % pmap)
         if memFlag:
             enumList.append(modname + memFlag + tstr)
-            addPortal(pmap['argsConfig'], '%(modname)sCW' % pmap)
+            addPortal(pmap['argsConfig'], '%(modname)sCW' % pmap, pmap['stype'])
         else:
-            addPortal(pmap['args'], '%(modname)sPipes' % pmap)
+            addPortal(pmap['args'], '%(modname)sPipes' % pmap, pmap['stype'])
     else:
         if not instantiateRequest.get(pmap['modname']):
             instantiateRequest[pmap['modname']] = iReq()
@@ -187,11 +231,15 @@ if __name__=='__main__':
     pipeInstantiate = []
     connectInstantiate = []
     instantiateRequest = {}
+    requestList = []
+    indicationList = []
     portalList = []
     portalCount = 0
     instantiatedModules = []
     importfiles = []
     exportedNames = ['export mkConnectalTop;']
+    if options.bluenoc:
+        exportedNames = ['export mkBluenocTop;']
     if options.importfiles:
         importfiles = options.importfiles
         for item in options.importfiles:
@@ -244,13 +292,18 @@ if __name__=='__main__':
                  'portalInstantiate' : '\n'.join(portalInstantiate),
                  'portalList': '\n'.join(portalList),
                  'portalCount': portalCount,
+                 'requestList': ','.join(requestList),
+                 'indicationList': ','.join(indicationList),
                  'exportedInterfaces' : '\n'.join(interfaceList),
                  'exportedNames' : '\n'.join(exportedNames),
                  'portalMaster' : 'lMemServer.masters' if memory_flag else 'nil',
-                 'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,`PinType,`NumberOfMasters)' 
-#\ if memory_flag else 'StdConnectalTop#(PhysAddrWidth)'
+                 'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,`PinType,`NumberOfMasters)' if not options.bluenoc \
+                     else 'BluenocTop#(1,1)'
                  }
     print 'TOPFN', topFilename
     top = util.createDirAndOpen(topFilename, 'w')
-    top.write(topTemplate % topsubsts)
+    if options.bluenoc:
+        top.write(topNocTemplate % topsubsts)
+    else:
+        top.write(topTemplate % topsubsts)
     top.close()

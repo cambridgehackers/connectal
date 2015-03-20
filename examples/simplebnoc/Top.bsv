@@ -44,8 +44,8 @@ module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
    mkConnection(simple2Wrapper, simple2.request);
 
    // now connect them via a BlueNoC link
-   MsgSource#(4) simpleMsgSource <- mkPortalMsgSource(lSimpleRequestOutputPipes.portalIfc);
-   MsgSink#(4) simpleMsgSink <- mkPortalMsgSink(simple2Wrapper.portalIfc);
+   MsgSource#(4) simpleMsgSource <- mkPortalMsgIndication(lSimpleRequestOutputPipes.portalIfc);
+   MsgSink#(4) simpleMsgSink <- mkPortalMsgRequest(simple2Wrapper.portalIfc);
    mkConnection(simpleMsgSource, simpleMsgSink);
 
    Vector#(2,StdPortal) portals;
@@ -57,19 +57,3 @@ module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
    interface slave = ctrl_mux;
    interface masters = nil;
 endmodule : mkConnectalTop
-
-module mkBluenocTop(BluenocTop#(1,1));
-   // instantiate user portals
-   SimpleRequestInputPipes lSimpleRequestInputPipes <- mkSimpleRequestInputPipes;
-   SimpleRequestOutputPipes lSimpleRequestOutputPipes <- mkSimpleRequestOutputPipes;
-
-   Simple simple1 <- mkSimple(lSimpleRequestOutputPipes.ifc);
-
-   mkConnection(lSimpleRequestInputPipes, simple1.request);
-
-   // now connect them via a BlueNoC link
-   MsgSink#(4) simpleMsgSink <- mkPortalMsgSink(lSimpleRequestInputPipes.portalIfc);
-   MsgSource#(4) simpleMsgSource <- mkPortalMsgSource(lSimpleRequestOutputPipes.portalIfc);
-   interface requests = cons(simpleMsgSink, nil);
-   interface indications = cons(simpleMsgSource, nil);
-endmodule
