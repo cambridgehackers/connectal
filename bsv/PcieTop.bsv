@@ -36,6 +36,7 @@ import MemMasterEngine   :: *;
 import PcieCsr           :: *;
 import MemTypes          :: *;
 import Bscan             :: *;
+import GetPutWithClocks  :: *;
 `ifdef XILINX
 `ifdef PCIE3
 import PCIEWRAPPER3      :: *;
@@ -75,18 +76,21 @@ module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (P
 `endif
 
 `ifdef IMPORT_HOSTIF
-   ConnectalTop#(PhysAddrWidth, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkConnectalTop(host, clocked_by host.portalClock, reset_by host.portalReset);
+   ConnectalTop#(PhysAddrWidth, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkConnectalTop(host, clocked_by host.derivedClock, reset_by host.derivedReset);
 `else
-   ConnectalTop#(PhysAddrWidth, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkConnectalTop(clocked_by host.portalClock, reset_by host.portalReset);
+   ConnectalTop#(PhysAddrWidth, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkConnectalTop(clocked_by host.derivedClock, reset_by host.derivedReset);
 `endif
 
-   mkConnection(host.tpciehost.master, portalTop.slave, clocked_by host.portalClock, reset_by host.portalReset);
+   GetPutWithClocks::mkConnectionWithClocks(host.tpciehost.master, portalTop.slave, host.portalClock, host.portalReset, host.derivedClock, host.derivedReset);
+   //mkConnection(host.tpciehost.master, portalTop.slave, clocked_by host.derivedClock, reset_by host.derivedReset);
    if (valueOf(NumberOfMasters) > 0) begin
-      mapM(uncurry(mkConnection),zip(portalTop.masters, host.tpciehost.slave));
+      mapM(uncurry(mkConnectionWithClocksFirst(host.derivedClock, host.derivedReset, host.portalClock, host.portalReset)),
+	   zip(portalTop.masters, host.tpciehost.slave));
    end
 
    // going from level to edge-triggered interrupt
-   Vector#(16, Reg#(Bool)) interruptRequested <- replicateM(mkReg(False, clocked_by host.portalClock, reset_by host.portalReset));
+   SyncFIFOIfc#(Bit#(4)) intrFifo <- mkSyncFIFO(1, host.derivedClock, host.derivedReset, host.portalClock);
+   Vector#(16, Reg#(Bool)) interruptRequested <- replicateM(mkReg(False, clocked_by host.derivedClock, reset_by host.derivedReset));
    rule interrupt_rule;
      Maybe#(Bit#(4)) intr = tagged Invalid;
      for (Integer i = 0; i < 16; i = i + 1) begin
@@ -95,9 +99,13 @@ module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (P
 	 interruptRequested[i] <= portalTop.interrupt[i];
      end
      if (intr matches tagged Valid .intr_num) begin
-        ReadOnly_MSIX_Entry msixEntry = host.tpciehost.msixEntry[intr_num];
-        host.tpciehost.interruptRequest.put(tuple2({msixEntry.addr_hi, msixEntry.addr_lo}, msixEntry.msg_data));
+	intrFifo.enq(intr_num);
      end
+   endrule
+   rule syncintr;
+      Bit#(4) intr_num <- toGet(intrFifo).get();
+      ReadOnly_MSIX_Entry msixEntry = host.tpciehost.msixEntry[intr_num];
+      host.tpciehost.interruptRequest.put(tuple2({msixEntry.addr_hi, msixEntry.addr_lo}, msixEntry.msg_data));
    endrule
 
 `ifndef BSIM
