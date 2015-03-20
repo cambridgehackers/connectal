@@ -29,7 +29,7 @@ import CtrlMux::*;
 import Portal::*;
 import HostInterface::*;
 import ConnectalMemory::*;
-import MemServerCompat::*;
+import MemServer::*;
 import MemServerInternal::*;
 import MMU::*;
 import NandCfgRequest::*;
@@ -73,11 +73,11 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    // host memory dma server
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
    let rcs = append(strstr.config_read_client,nandSim.readClient);
-   MemServerCompat#(PhysAddrWidth,64,1) hostDma <- mkMemServerCompat(rcs, nandSim.writeClient, cons(backingStoreMMU,cons(algoMMU,nil)), hostMemServerIndicationProxy.ifc);
+   MemServer#(PhysAddrWidth,64,1) hostDma <- mkMemServer(rcs, nandSim.writeClient, cons(backingStoreMMU,cons(algoMMU,nil)), hostMemServerIndicationProxy.ifc);
 
    // nandsim memory dma server
    MemServerIndicationProxy nandsimMemServerIndicationProxy <- mkMemServerIndicationProxy(NandMemServerIndication);
-   MemServerCompat#(PhysAddrWidth,64,1) nandsimDma <- mkMemServerCompat(strstr.haystack_read_client, nil, cons(nandMMU,nil), nandsimMemServerIndicationProxy.ifc);
+   MemServer#(PhysAddrWidth,64,1) nandsimDma <- mkMemServer(strstr.haystack_read_client, nil, cons(nandMMU,nil), nandsimMemServerIndicationProxy.ifc);
    mkConnection(nandsimDma.masters[0], nandSim.memSlave);
    
    Vector#(12,StdPortal) portals;
