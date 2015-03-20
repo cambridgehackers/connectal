@@ -29,7 +29,7 @@ import CtrlMux::*;
 import Portal::*;
 import HostInterface::*;
 import ConnectalMemory::*;
-import MemServerCompat::*;
+import MemServer::*;
 import MemUtils::*;
 import MMU::*;
 import NandCfgRequest::*;
@@ -52,7 +52,7 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    MMURequestWrapper backingStoreMMURequestWrapper <- mkMMURequestWrapper(BackingStoreMMURequest, backingStoreSGList.request);
 
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
-   MemServerCompat#(PhysAddrWidth,64,1) hostDma <- mkMemServerCompat(nandSim.readClient, nandSim.writeClient, cons(backingStoreSGList, nil), hostMemServerIndicationProxy.ifc);
+   MemServer#(PhysAddrWidth,64,1) hostDma <- mkMemServer(nandSim.readClient, nandSim.writeClient, cons(backingStoreSGList, nil), hostMemServerIndicationProxy.ifc);
    MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, hostDma.request);
 
 

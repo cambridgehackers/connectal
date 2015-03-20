@@ -27,7 +27,7 @@ import FIFO::*;
 import BRAMFIFO::*;
 import DefaultValue::*;
 import MemTypes::*;
-import MemServerCompat::*;
+import MemServer::*;
 import MMU::*;
 import ClientServer::*;
 import Pipe::*;
@@ -92,7 +92,7 @@ module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
    MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(MMURequestS2H, hostMMU.request);
 
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(MemServerIndicationH2S);
-   MemServerCompat#(PhysAddrWidth,64,1) dma <- mkMemServerCompat(nil, lImageonCapture.dmaClient, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
+   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(nil, lImageonCapture.dmaClient, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
    MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(MemServerRequestS2H, dma.request);
 
    // fromSensor: sensor specific processing of serdes input, resulting in pixels
