@@ -57,9 +57,11 @@ function Vector#(16, ReadOnly#(Bool)) getInterruptVector(Vector#(numPortals, Mem
    return interrupts;
 endfunction
 
+interface SharedMemoryPortalConfig;
+   method Action setSglId(Bit#(32) sglId);
+endinterface
+
 interface SharedMemoryPortal#(numeric type dataBusWidth);
-   interface Vector#(1, MemReadClient#(dataBusWidth))  readClient;
-   interface Vector#(1, MemWriteClient#(dataBusWidth)) writeClient;
    interface SharedMemoryPortalConfig cfg;
    interface ReadOnly#(Bool) interrupt;
 endinterface
