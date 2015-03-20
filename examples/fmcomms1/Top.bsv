@@ -28,7 +28,7 @@ import Portal::*;
 import HostInterface::*;
 import CtrlMux::*;
 import MemTypes::*;
-import MemServer::*;
+import MemServerCompat::*;
 import MMU::*;
 import PS7LIB::*;
 import PPS7LIB::*;
@@ -122,7 +122,7 @@ module mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,64,FMComms1Pin
    MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
 
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
-   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(readClients, writeClients, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
+   MemServerCompat#(PhysAddrWidth,64,1) dma <- mkMemServerCompat(readClients, writeClients, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
    MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
 
    Vector#(8,StdPortal) portals;

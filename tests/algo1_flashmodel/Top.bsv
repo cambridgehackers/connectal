@@ -30,7 +30,7 @@ import CtrlMux::*;
 import Portal::*;
 import ConnectalMemory::*;
 import MemTypes::*;
-import MemServer::*;
+import MemServerCompat::*;
 import MemServerInternal::*;
 import MMU::*;
 import MemreadEngine::*;
@@ -88,11 +88,11 @@ module mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,DataBusWidth,
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
    let rcs = append(strstr.config_read_client,flashtop.hostMemReadClient);
    let wcs = flashtop.hostMemWriteClient;
-   MemServer#(PhysAddrWidth,DataBusWidth,1) hostMemServer <- mkMemServer(rcs,wcs, cons(algoMMU, cons(backingMMU,nil)), hostMemServerIndicationProxy.ifc);
+   MemServerCompat#(PhysAddrWidth,DataBusWidth,1) hostMemServer <- mkMemServerCompat(rcs,wcs, cons(algoMMU, cons(backingMMU,nil)), hostMemServerIndicationProxy.ifc);
 
    // flash memory read server
    MemServerIndicationProxy flashMemServerIndicationProxy <- mkMemServerIndicationProxy(NandMemServerIndication);
-   MemServer#(FlashAddrWidth,FlashDataWidth,1) flashMemServer <- mkMemServer(strstr.haystack_read_client, nil, cons(nandMMU,nil),
+   MemServerCompat#(FlashAddrWidth,FlashDataWidth,1) flashMemServer <- mkMemServerCompat(strstr.haystack_read_client, nil, cons(nandMMU,nil),
                                                                       flashMemServerIndicationProxy.ifc);
    mkConnection(flashMemServer.masters[0], flashtop.memSlave);
    

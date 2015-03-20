@@ -23,7 +23,7 @@ import SpecialFIFOs::*;
 import Vector::*;
 import StmtFSM::*;
 import FIFO::*;
-import MemServer::*;
+import MemServerCompat::*;
 import MMU::*;
 import HostInterface::*;
 import CtrlMux::*;
@@ -52,7 +52,7 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,Empty,1));
 
    Vector#(1, MemReadClient#(64)) readClients = cons(memread.dmaClient, nil);
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
-   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(readClients, nil, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
+   MemServerCompat#(PhysAddrWidth,64,1) dma <- mkMemServerCompat(readClients, nil, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
    MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
 
    Vector#(6,StdPortal) portals;

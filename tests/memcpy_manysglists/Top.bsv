@@ -27,7 +27,7 @@ import CtrlMux::*;
 import Portal::*;
 import ConnectalMemory::*;
 import MemTypes::*;
-import MemServer::*;
+import MemServerCompat::*;
 import MMU::*;
 import HostInterface::*;
 import MemcpyRequest::*;
@@ -81,7 +81,7 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
    let sgls = cons(hostMMU0,cons(hostMMU1, cons(hostMMU2,cons(hostMMU3,nil))));  
-   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(memcpy.dmaReadClient, memcpy.dmaWriteClient, sgls, hostMemServerIndicationProxy.ifc);
+   MemServerCompat#(PhysAddrWidth,64,1) dma <- mkMemServerCompat(memcpy.dmaReadClient, memcpy.dmaWriteClient, sgls, hostMemServerIndicationProxy.ifc);
    MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
 
    Vector#(12,StdPortal) portals;

@@ -35,7 +35,7 @@ import HostInterface::*;
 import MaxSonarCtrlRequest::*;
 import MaxSonarCtrlIndication::*;
 import MMU::*;
-import MemServer::*;
+import MemServerCompat::*;
 
 // defined by user
 import MaxSonarController::*;
@@ -57,7 +57,7 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,MaxSonarPins,1));
    MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
    
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
-   MemServer#(PhysAddrWidth,DataBusWidth,1) dma <- mkMemServer(nil, cons(controller.dmaClient,nil), cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
+   MemServerCompat#(PhysAddrWidth,DataBusWidth,1) dma <- mkMemServerCompat(nil, cons(controller.dmaClient,nil), cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
    MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
 
    Vector#(6,StdPortal) portals;
