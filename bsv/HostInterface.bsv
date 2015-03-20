@@ -116,8 +116,6 @@ interface PcieHost#(numeric type dsz, numeric type nSlaves);
 endinterface
 
 interface PcieHostTop;
-   interface Clock tepClock125;
-   interface Reset tepReset125;
    interface PcieHost#(DataBusWidth, NumberOfMasters) tpciehost;
 `ifdef XILINX
    interface Clock tsys_clk_200mhz;
