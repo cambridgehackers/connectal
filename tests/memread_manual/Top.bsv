@@ -49,7 +49,7 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
 
-   SimpleMemServer#(PhysAddrWidth,64,1) dma <- mkSimpleMemServer(readClients, nil, hostMemServerIndicationProxy.ifc, hostMMUIndicationProxy.ifc);
+   MemServerWithMMU#(PhysAddrWidth,64,1) dma <- mkMemServerWithMMU(readClients, nil, hostMemServerIndicationProxy.ifc, hostMMUIndicationProxy.ifc);
 
    MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, dma.mmuRequest);
    MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.memServerRequest);

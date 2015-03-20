@@ -5,7 +5,7 @@ S2H_INTERFACES = /SimpleRequest:Simple.request
 H2S_INTERFACES = /Simple:SimpleRequest
 MEM_INTERFACES = "cons(lSharereadEngine.dmaClient,nil),cons(lSharewriteEngine.dmaClient,nil)"
 
-BSVFILES = Simple.bsv
+BSVFILES = Simple.bsv $(CONNECTALDIR)/bsv/Portal.bsv
 CPPFILES=testsimple.cpp $(CONNECTALDIR)/cpp/portalShared.c
 AUTOTOP = --importfiles SharedMemoryPortal --importfiles SharedMemoryPortalConfig
 

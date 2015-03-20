@@ -113,9 +113,9 @@ fpgamake.mk: $(VFILE) Makefile prepare_bin_target
 
 hw/mkTop.bit: fpgamake.mk prepare_bin_target
 	$(Q)make -f fpgamake.mk
-ifeq ($(XILINX),1)
+ifneq ($(XILINX),)
 	$(Q)cp -f Impl/*/*.rpt bin
-else ifeq ($(ALTERA),1)
+else ifneq ($(ALTERA),)
 	$(Q)cp -f $(MKTOP).sof bin
 endif
 '''

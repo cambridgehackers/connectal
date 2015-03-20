@@ -94,7 +94,7 @@ memEngineInst = '''   MemreadEngineV#(64,2,%(clientCount)s) lSharereadEngine <- 
    MemwriteEngineV#(64,2,%(clientCount)s) lSharewriteEngine <- mkMemwriteEngine();'''
 
 memModuleInstantiation = '''   SharedMemoryPortal#(64) l%(modname)sShare <- mkSharedMemory%(stype)sPortal(l%(modname)sPipes.portalIfc,
-   lSharereadEngine.read_servers[%(clientCount)s], lSharewriteEngine.write_servers[%(clientCount)s]);'''
+           lSharereadEngine.read_servers[%(clientCount)s], lSharewriteEngine.write_servers[%(clientCount)s]);'''
 
 memConnection = '''   mkConnection(l%(modname)sCW, l%(modname)sShare.cfg);'''
 
@@ -234,7 +234,7 @@ if __name__=='__main__':
         p = pitem.split(':')
         interfaceList.append('   interface %s = l%s;' % (p[0], p[1]))
 
-    memory_flag = 'MemServerCompat' in instantiatedModules
+    memory_flag = 'MemServer' in instantiatedModules
     if clientCount:
         pipeInstantiate.append(memEngineInst % {'clientCount': clientCount})
     topsubsts = {'enumList': ','.join(enumList),
@@ -246,7 +246,7 @@ if __name__=='__main__':
                  'portalCount': portalCount,
                  'exportedInterfaces' : '\n'.join(interfaceList),
                  'exportedNames' : '\n'.join(exportedNames),
-                 'portalMaster' : 'lMemServerCompat.masters' if memory_flag else 'nil',
+                 'portalMaster' : 'lMemServer.masters' if memory_flag else 'nil',
                  'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,`PinType,`NumberOfMasters)' 
 #\ if memory_flag else 'StdConnectalTop#(PhysAddrWidth)'
                  }

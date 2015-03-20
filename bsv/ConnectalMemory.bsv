@@ -104,7 +104,3 @@ interface MemServerRequest;
    method Action stateDbg(ChannelType rc);
    method Action memoryTraffic(ChannelType rc);
 endinterface
-
-interface SharedMemoryPortalConfig;
-   method Action setSglId(Bit#(32) sglId);
-endinterface

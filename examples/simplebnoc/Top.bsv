@@ -28,19 +28,20 @@ import MemPortal::*;
 import BlueNoC::*;
 import BnocPortal::*;
 import Simple::*;
-import SimpleIF::*;
+import SimpleRequest::*;
 
-typedef enum {FooRequest, FooIndication, SimpleRequest, SimpleIndication} IfcNames deriving (Eq,Bits);
+typedef enum {FooRequest, FooIndication, SimpleRequestS2H, SimpleRequestH2S} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
    // the indications from simpleRequest will be connected to the request interface to simpleReuqest2
-   SimpleProxyPortal simple1Proxy <- mkSimpleProxyPortal(SimpleIndication);
+   SimpleRequestOutputPipes simple1Proxy <- mkSimpleRequestOutputPipes;
    Simple simple1 <- mkSimple(simple1Proxy.ifc);
-   SimpleWrapper simple1Wrapper <- mkSimpleWrapper(SimpleRequest,simple1);
+   SimpleRequestWrapper simple1Wrapper <- mkSimpleRequestWrapper(SimpleRequestS2H,simple1.request);
 
-   SimpleProxy simple2Proxy <- mkSimpleProxy(SimpleIndication);
+   SimpleRequestProxy simple2Proxy <- mkSimpleRequestProxy(SimpleRequestH2S);
    Simple simple2 <- mkSimple(simple2Proxy.ifc);
-   SimpleWrapperPortal simple2Wrapper <- mkSimpleWrapperPortal(SimpleRequest, simple2);
+   SimpleRequestInputPipes simple2Wrapper <- mkSimpleRequestInputPipes;
+   mkConnection(simple2Wrapper, simple2.request);
 
    // now connect them via a BlueNoC link
    MsgSource#(4) simpleMsgSource <- mkPortalMsgSource(simple1Proxy.portalIfc);
@@ -60,9 +61,10 @@ endmodule : mkConnectalTop
 module mkBluenocTop(BluenocTop#(1,1));
    // instantiate user portals
    // the indications from simpleRequest will be connected to the request interface to simpleReuqest2
-   SimpleProxyPortal simple1Proxy <- mkSimpleProxyPortal(SimpleIndication);
+   SimpleRequestOutputPipes simple1Proxy <- mkSimpleRequestOutputPipes;
    Simple simple1 <- mkSimple(simple1Proxy.ifc);
-   SimpleWrapperPortal simple1Wrapper <- mkSimpleWrapperPortal(SimpleRequest,simple1);
+   SimpleRequestInputPipes simple1Wrapper <- mkSimpleRequestInputPipes;
+   mkConnection(simple1Wrapper, simple1.request);
 
    // now connect them via a BlueNoC link
    MsgSource#(4) simpleMsgSource <- mkPortalMsgSource(simple1Proxy.portalIfc);

@@ -113,12 +113,12 @@ static void connect_to_xsim()
     PortalSocketParam paramSocket = {};
     PortalMuxParam param = {};
 
-    mcommon = new Portal(0, sizeof(uint32_t), portal_mux_handler, NULL, &socketfuncInit, &paramSocket, defaultPoller);
+    mcommon = new Portal(0, 0, sizeof(uint32_t), portal_mux_handler, NULL, &socketfuncInit, &paramSocket);
     param.pint = &mcommon->pint;
     fprintf(stderr, "[%s:%d] adding fd %d\n", __FUNCTION__, __LINE__, mcommon->pint.client_fd[0]);
 
   fprintf(stderr, "[%s:%d]\n", __FUNCTION__, __LINE__);
-  memSlaveIndication = new XsimMemSlaveIndication(XsimIfcNames_XsimMemSlaveIndication, &muxfunc, &param, defaultPoller);
+  memSlaveIndication = new XsimMemSlaveIndication(XsimIfcNames_XsimMemSlaveIndication, &muxfunc, &param);
   memSlaveRequestProxy = new XsimMemSlaveRequestProxy(XsimIfcNames_XsimMemSlaveRequest, &muxfunc, &param);
   fprintf(stderr, "[%s:%d] calling connect()\n", __FUNCTION__, __LINE__);
     memSlaveRequestProxy->connect();
@@ -152,7 +152,7 @@ static unsigned int read_portal_xsim(PortalInternal *pint, volatile unsigned int
   uint32_t beat = memSlaveIndication->srcbeats.front();
   memSlaveIndication->srcbeats.pop();
   if (trace_xsim)
-  fprintf(stderr, "[%s:%d] id=%d addr=%08lx data=%08x numwords=%d\n", __FUNCTION__, __LINE__, pint->fpga_number, (long)*addr, beat, numwords);
+  fprintf(stderr, "[%s:%d] id=%d addr=%08lx data=%08x numwords=%ld\n", __FUNCTION__, __LINE__, pint->fpga_number, (long)*addr, beat, (long)numwords);
   return beat;
 }
 
@@ -201,7 +201,7 @@ int event_portal_xsim(struct PortalInternal *pint)
 
     if (memSlaveIndication->srcbeats.size() >= numwords+1) {
       fprintf(stderr, "[%s:%d] pint=%p srcbeats=%d methodwords=%d methodId=%d hdr=%08x\n",
-	      __FUNCTION__, __LINE__, pint, memSlaveIndication->srcbeats.size(), numwords, methodId, bluenoc_hdr);
+	      __FUNCTION__, __LINE__, pint, (int)memSlaveIndication->srcbeats.size(), numwords, methodId, bluenoc_hdr);
           memSlaveIndication->srcbeats.pop();
 	  if (pint->handler)
 	    pint->handler(pint, methodId, 0);
