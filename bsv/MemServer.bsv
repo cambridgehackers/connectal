@@ -309,7 +309,7 @@ module mkMemServerW#(MemServerIndication indication,
    interface masters = map(mkm,genVector);
 endmodule
 
-interface SimpleMemServer#(numeric type addrWidth, numeric type dataWidth, numeric type nMasters, numeric type numReadServers, numeric type numWriteServers);
+interface MemServerWithMMU#(numeric type addrWidth, numeric type dataWidth, numeric type nMasters, numeric type numReadServers, numeric type numWriteServers);
    interface MemServerRequest memServerRequest;
    interface MMURequest mmuRequest;
    interface Vector#(nMasters,PhysMemMaster#(addrWidth, dataWidth)) masters;
@@ -318,10 +318,10 @@ interface SimpleMemServer#(numeric type addrWidth, numeric type dataWidth, numer
    interface Vector#(numWriteServers, MemReadServer#(dataWidth)) write_servers;
 endinterface
 
-module mkSimpleMemServer#(Vector#(numReadClients, MemReadClient#(dataWidth)) readClients,
+module mkMemServerWithMMU#(Vector#(numReadClients, MemReadClient#(dataWidth)) readClients,
 			  Vector#(numWriteClients, MemWriteClient#(dataWidth)) writeClients,
 			  MemServerIndication indication,
-			  MMUIndication mmuIndication)(SimpleMemServer#(addrWidth, dataWidth,nMasters, numReadServers, numWriteServers))
+			  MMUIndication mmuIndication)(MemServerWithMMU#(addrWidth, dataWidth,nMasters, numReadServers, numWriteServers))
    provisos(Mul#(a__, nMasters, numWriteServers)
 	    ,Mul#(b__, nMasters, numReadServers)
 	    ,Add#(TLog#(TDiv#(dataWidth, 8)), e__, 8)
