@@ -24,6 +24,7 @@
 import GetPut :: *;
 import ClientServer :: *;
 import Clocks :: *;
+import MemTypes :: *;
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Typeclass Definition
@@ -59,6 +60,39 @@ instance ConnectableWithClocks#(Client#(a,b), Server#(a,b)) provisos (Bits#(a, a
 		Bits#(b, bwidth));
       mkConnectionWithClocks(client.request, server.request, sourceClock, sourceReset, destClock, destReset);
       mkConnectionWithClocks(server.response, client.response, destClock, destReset, sourceClock, sourceReset);
+   endmodule
+endinstance
+
+instance ConnectableWithClocks#(PhysMemReadClient#(addrWidth, dataWidth),
+				PhysMemReadServer#(addrWidth, dataWidth));
+   module mkConnectionWithClocks#(PhysMemReadClient#(addrWidth, dataWidth) client,
+				  PhysMemReadServer#(addrWidth, dataWidth) server,
+                                  Clock sourceClock, Reset sourceReset,
+				  Clock destClock, Reset destReset)(Empty);
+      mkConnectionWithClocks(client.readReq, server.readReq, sourceClock, sourceReset, destClock, destReset);
+      mkConnectionWithClocks(server.readData, client.readData, destClock, destReset, sourceClock, sourceReset);
+   endmodule
+endinstance
+
+instance ConnectableWithClocks#(PhysMemWriteClient#(addrWidth, dataWidth),
+				PhysMemWriteServer#(addrWidth, dataWidth));
+   module mkConnectionWithClocks#(PhysMemWriteClient#(addrWidth, dataWidth) client,
+				  PhysMemWriteServer#(addrWidth, dataWidth) server,
+                                  Clock sourceClock, Reset sourceReset,
+				  Clock destClock, Reset destReset)(Empty);
+      mkConnectionWithClocks(client.writeReq, server.writeReq, destClock, destReset, sourceClock, sourceReset);
+      mkConnectionWithClocks(client.writeData, server.writeData, destClock, destReset, sourceClock, sourceReset);
+      mkConnectionWithClocks(server.writeDone, client.writeDone, sourceClock, sourceReset, destClock, destReset);
+   endmodule
+endinstance
+
+instance ConnectableWithClocks#(PhysMemMaster#(addrWidth, dataWidth), PhysMemSlave#(addrWidth, dataWidth));
+   module mkConnectionWithClocks#(PhysMemMaster#(addrWidth, dataWidth) client,
+				  PhysMemSlave#(addrWidth, dataWidth) server,
+                                  Clock sourceClock, Reset sourceReset,
+				  Clock destClock, Reset destReset)(Empty);
+      mkConnectionWithClocks(client.read_client, server.read_server, sourceClock, sourceReset, destClock, destReset);
+      mkConnectionWithClocks(client.write_client, server.write_server, destClock, destReset, sourceClock, sourceReset);
    endmodule
 endinstance
 
