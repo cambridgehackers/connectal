@@ -19,29 +19,23 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
-
 import Vector::*;
 import MemTypes::*;
-import Leds::*;
-import XADC::*;
 import Pipe::*;
 import Portal::*;
 import BlueNoC::*;
 
 typedef enum {
-   Idle,
    BpHeader,
    BpMessage
    } BnocPortalState deriving (Bits,Eq);
 
 module mkPortalMsgRequest#(PipePortal#(numRequests, 0, 32) portal)(MsgSink#(4));
-   Bool verbose = True;
    Reg#(Bit#(8)) messageWordsReg <- mkReg(0);
    Reg#(Bit#(8)) methodIdReg <- mkReg(0);
    Reg#(BnocPortalState) bpState <- mkReg(BpHeader);
-
    FifoMsgSink#(4) fifoMsgSink <- mkFifoMsgSink();
+   Bool verbose = True;
 
    rule receiveMessageHeader if (bpState == BpHeader && !fifoMsgSink.empty());
       let hdr = fifoMsgSink.first();
@@ -61,12 +55,10 @@ module mkPortalMsgRequest#(PipePortal#(numRequests, 0, 32) portal)(MsgSink#(4));
       if (verbose)
 	 $display("receiveMessage id=%d data=%x messageWords=%d", methodIdReg, data, messageWordsReg);
       portal.requests[methodIdReg].enq(data);
-
       messageWordsReg <= messageWordsReg - 1;
       if (messageWordsReg == 1)
 	 bpState <= BpHeader;
    endrule
-   
    return fifoMsgSink.sink;
 endmodule
 
@@ -74,19 +66,18 @@ module mkPortalMsgIndication#(PipePortal#(0, numIndications, 32) portal)(MsgSour
    Reg#(Bit#(16)) messageWordsReg <- mkReg(0);
    Reg#(Bit#(8)) methodIdReg <- mkReg(0);
    Reg#(BnocPortalState) bpState <- mkReg(BpHeader);
-
-   function Bool pipeOutNotEmpty(PipeOut#(a) po); return po.notEmpty(); endfunction
    Vector#(numIndications, Bool) readyBits = map(pipeOutNotEmpty, portal.indications);
    Bool      interruptStatus = False;
    Bit#(8)  readyChannel = -1;
+   FifoMsgSource#(4) fifoMsgSource <- mkFifoMsgSource();
+   function Bool pipeOutNotEmpty(PipeOut#(a) po); return po.notEmpty(); endfunction
+
    for (Integer i = valueOf(numIndications) - 1; i >= 0; i = i - 1) begin
       if (readyBits[i]) begin
          interruptStatus = True;
          readyChannel = fromInteger(i);
       end
    end
-   FifoMsgSource#(4) fifoMsgSource <- mkFifoMsgSource();
-
    rule sendHeader if (bpState == BpHeader && interruptStatus);
       Bit#(16) messageBits = portal.messageSize(extend(readyChannel));
       Bit#(16) roundup = messageBits[4:0] == 0 ? 0 : 1;
@@ -100,7 +91,6 @@ module mkPortalMsgIndication#(PipePortal#(0, numIndications, 32) portal)(MsgSour
       // op, dp, and src left empty for now
       Bit#(32) hdr = extend(readyChannel) << 24 | (extend(numWords) << 16);
       $display("sendHeader hdr=%h messageBits=%d numWords=%d", hdr, messageBits, numWords);
-
       messageWordsReg <= numWords;
       methodIdReg <= readyChannel;
       fifoMsgSource.enq(hdr);
@@ -116,7 +106,6 @@ module mkPortalMsgIndication#(PipePortal#(0, numIndications, 32) portal)(MsgSour
 	 bpState <= BpHeader;
       end
    endrule
-
    return fifoMsgSource.source;
 endmodule
 

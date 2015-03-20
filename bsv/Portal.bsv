@@ -19,12 +19,8 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
-
 import Vector::*;
 import MemTypes::*;
-//import Leds::*;
-//import XADC::*;
 import Pipe::*;
 import ConnectalMemory::*;
 
@@ -72,7 +68,6 @@ interface ConnectalTop#(numeric type addrWidth, numeric type dataWidth, type pin
    interface PhysMemSlave#(32,32) slave;
    interface Vector#(numMasters,PhysMemMaster#(addrWidth, dataWidth)) masters;
    interface Vector#(16,ReadOnly#(Bool)) interrupt;
-   //interface LEDS             leds;
    interface pins             pins;
 endinterface
 
