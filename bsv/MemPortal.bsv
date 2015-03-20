@@ -37,6 +37,7 @@ import MemTypes::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;
 import ConnectalMemory::*;
+import HostInterface::*;
 
 typedef struct {
     Bit#(1) select;
@@ -46,13 +47,13 @@ typedef struct {
 interface PortalCtrlMemSlave#(numeric type addrWidth, numeric type dataWidth);
    interface PhysMemSlave#(addrWidth, dataWidth) memSlave;
    interface ReadOnly#(Bool) interrupt;
-   interface WriteOnly#(Bool) top;
+   interface WriteOnly#(Bit#(dataWidth)) num_portals;
 endinterface
 
 
 module mkPortalCtrlMemSlave#(Bit#(dataWidth) ifcId, 
-			     Vector#(numIndications, PipeOut#(Bit#(dataWidth))) indicationPipes,
-			     Bool is_tile, Reg#(Bool) top_tile_reg)(PortalCtrlMemSlave#(addrWidth, dataWidth))
+			     Vector#(numIndications, PipeOut#(Bit#(dataWidth))) indicationPipes)
+   (PortalCtrlMemSlave#(addrWidth, dataWidth))
    provisos( Add#(a__, 1, dataWidth)
 	    ,Div#(dataWidth, 8, b__)
 	    ,Bits#(MemData#(dataWidth), c__)
@@ -63,7 +64,7 @@ module mkPortalCtrlMemSlave#(Bit#(dataWidth) ifcId,
    AddressGenerator#(addrWidth,dataWidth) ctrlWriteAddrGenerator <- mkAddressGenerator();
    FIFO#(MemData#(dataWidth))        ctrlWriteDataFifo <- mkFIFO();
    FIFO#(Bit#(MemTagSize))        ctrlWriteDoneFifo <- mkFIFO();
-   Reg#(Bool) topR <- mkReg(True);
+   Reg#(Bit#(dataWidth)) num_portals_reg <- mkReg(0);
 
    function Bool pipeOutNotEmpty(PipeOut#(a) po); return po.notEmpty(); endfunction
    Vector#(numIndications, Bool) readyBits = map(pipeOutNotEmpty, indicationPipes);
@@ -113,10 +114,7 @@ module mkPortalCtrlMemSlave#(Bit#(dataWidth) ifcId,
 	       if (addr == 'h004)
 		  v = interruptEnableReg ? 1 : 0;
 	       if (addr == 'h008)
-		  if (is_tile)
-		     v = {'b1,pack(top_tile_reg)};
-		  else
-		     v = 0;
+		  v = fromInteger(valueOf(NumberOfTiles));
                if (addr == 'h00C) begin
 		  if (interruptStatus)
 		     v = readyChannel+1;
@@ -126,7 +124,7 @@ module mkPortalCtrlMemSlave#(Bit#(dataWidth) ifcId,
 	       if (addr == 'h010)
 		  v = ifcId;
 	       if (addr == 'h014)
-		  v = extend(pack(topR));
+		  v = num_portals_reg;
 	       if (addr == 'h018) begin
 		  snapshot <= truncate(cycle_count);
 		  v = truncate(cycle_count>>valueOf(dataWidth));
@@ -158,9 +156,9 @@ module mkPortalCtrlMemSlave#(Bit#(dataWidth) ifcId,
 	 return interruptStatus && interruptEnableReg;
       endmethod
    endinterface
-   interface WriteOnly top;
-      method Action _write(Bool v);
-	 topR <= v;
+   interface WriteOnly num_portals;
+      method Action _write(Bit#(dataWidth) v);
+	 num_portals_reg <= v;
       endmethod
    endinterface
 endmodule   
@@ -260,9 +258,9 @@ module mkMemPortal#(Bit#(slaveDataWidth) ifcId,
    Vector#(numRequests,    PhysMemSlave#(5, slaveDataWidth))    requestMemSlaves <- mapM(mkPipeInMemSlave, requestPipes);
    Vector#(numIndications, PhysMemSlave#(5, slaveDataWidth)) indicationMemSlaves <- mapM(mkPipeOutMemSlave, indicationPipes);
    
-   PortalCtrlMemSlave#(5,slaveDataWidth) ctrlPort <- mkPortalCtrlMemSlave(ifcId, indicationPipes, False, ?);
+   PortalCtrlMemSlave#(5,slaveDataWidth) ctrlPort <- mkPortalCtrlMemSlave(ifcId, indicationPipes);
    PhysMemSlave#(slaveAddrWidth,slaveDataWidth) memslave  <- mkMemSlaveMux(cons(ctrlPort.memSlave,append(requestMemSlaves, indicationMemSlaves)));
    interface PhysMemSlave slave = memslave;
    interface ReadOnly interrupt = ctrlPort.interrupt;
-   interface WriteOnly top = ctrlPort.top;
+   interface WriteOnly num_portals = ctrlPort.num_portals;
 endmodule

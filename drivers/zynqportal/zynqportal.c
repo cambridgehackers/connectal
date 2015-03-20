@@ -41,8 +41,9 @@
 #define DRIVER_VERSION     "0.2"
 #define STATUS_OFFSET 0x000
 #define MASK_OFFSET 0x004
+#define NUM_TILES_OFFSET 0x008
 #define IID_OFFSET 0x010
-#define TOP_OFFSET 0x014
+#define NUM_PORTALS_OFFSET 0x014
 #define MSB_OFFSET 0x018
 #define LSB_OFFSET 0x01C
 #define MAX_NUM_PORTALS 16
@@ -68,7 +69,6 @@ struct portal_data {
         wait_queue_head_t wait_queue;
         dma_addr_t        dev_base_phys;
         void             *map_base;
-        u32               top;
         char              name[128];
         char              irqname[128];
 	struct list_head pmlist;;
@@ -83,7 +83,7 @@ struct connectal_data{
 static DEFINE_MUTEX(connectal_mutex);
 /* anyone should be able to get PORTAL_DIRECTORY_COUNTER */
 	  // FIXME: directory_virt = ws.portal_data;
-#define DIRECTORY_VIRT ((void *)ws.connectal_data->portald)
+#define DIRECTORY_VIRT ((void *)ws.connectal_data->portald[0])
 static PortalInterruptTime inttime;
 static int flush = 0;
 
@@ -294,38 +294,49 @@ static const struct file_operations portal_fops = {
 static int remove_portal_devices(struct connectal_data *connectal_data)
 {
   int fpn, t;
-  for (t = 0; t < MAX_NUM_TILES; t++){
+  for(t = 0; t < MAX_NUM_TILES; t++)
     for (fpn = 0; fpn < MAX_NUM_PORTALS; fpn++) {
       if (connectal_data->portald[t][fpn].name[0])
 	misc_deregister(&connectal_data->portald[t][fpn].misc);
       connectal_data->portald[t][fpn].name[0] = 0;
     }
-  }
   return 0;
 }
 
 static void connectal_work_handler(struct work_struct *__xxx)
 {
-  int fpn, t;
+  int num_tiles, num_portals, fpn, t = 0;
   mutex_lock(&connectal_mutex);
   remove_portal_devices(ws.connectal_data);
-  for (t = 0; t < MAX_NUM_TILES; t++){
-    for (fpn = 0; fpn < MAX_NUM_PORTALS; fpn++) {
+  do{
+    fpn = 0;
+    do {
       int rc;
       struct portal_data *portal_data = &ws.connectal_data->portald[t][fpn];
-      portal_data->top = readl(portal_data->map_base+TOP_OFFSET);
-      sprintf(portal_data->name, "portal%d", readl(portal_data->map_base+IID_OFFSET));
-      driver_devel("%s: fpn=%08x top=%d name=%s\n", __func__, fpn, portal_data->top, portal_data->misc.name);
+      if(fpn==0){
+	num_portals = readl(portal_data->map_base+NUM_PORTALS_OFFSET);
+	if(t==0)
+	  num_tiles = readl(portal_data->map_base+NUM_TILES_OFFSET);
+      } else {
+	if(num_portals != readl(portal_data->map_base+NUM_PORTALS_OFFSET))
+	  ; // warn??
+	if(num_tiles   != readl(portal_data->map_base+NUM_TILES_OFFSET))
+	  ; // warn??
+      }
+      sprintf(portal_data->name, "portal_%d_%d", t, readl(portal_data->map_base+IID_OFFSET));
+      driver_devel("%s: fpn=%08x top=%d name=%s\n", __func__, fpn, fpn==num_portals, portal_data->misc.name);
       portal_data->misc.minor = MISC_DYNAMIC_MINOR;
       rc = misc_register( &portal_data->misc);
       driver_devel("%s: rc=%d minor=%d\n", __func__, rc, portal_data->misc.minor);
-      if (portal_data->top)
+      if (fpn+1==num_portals)
 	break;
+      fpn++;
+    } while (fpn < num_portals && fpn < MAX_NUM_PORTALS);
+    if (fpn > MAX_NUM_PORTALS - 1) {
+      printk(KERN_INFO "%s: MAX_NUM_PORTALS exceeded", __func__);
     }
-  }
-  if (fpn > MAX_NUM_PORTALS - 1) {
-	  printk(KERN_INFO "%s: MAX_NUM_PORTALS exceeded", __func__);
-  }
+    t++;
+  } while (t < num_tiles && t < MAX_NUM_TILES);
   mutex_unlock(&connectal_mutex);
 }
 
@@ -355,7 +366,7 @@ static const struct file_operations connectal_fops = {
 static int connectal_of_probe(struct platform_device *pdev)
 {
   u32 size;
-  int rc, fpn, t;
+  int rc, fpn, t = 0;
   struct connectal_data *connectal_data;
   const char *dname = (char *)of_get_property(pdev->dev.of_node, "device-name", &size);
   struct resource *reg_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -379,35 +390,33 @@ static int connectal_of_probe(struct platform_device *pdev)
   driver_devel("%s: name=%s rc=%d minor=%d\n", __func__, connectal_data->misc.name, rc, connectal_data->misc.minor);
   dev_set_drvdata(&pdev->dev, connectal_data);
   ws.connectal_data = connectal_data;
-  for (t = 0; t < MAX_NUM_TILES; t++){
+  for(t = 0; t < MAX_NUM_TILES; t++)
     for (fpn = 0; fpn < MAX_NUM_PORTALS; fpn++) {
-      struct portal_data *portal_data = &connectal_data->portald[fpn];
+      struct portal_data *portal_data = &connectal_data->portald[t][fpn];
       portal_data->dev_base_phys = reg_res->start+((t * TILE_BASE_OFFSET)+(fpn*PORTAL_BASE_OFFSET));
       portal_data->map_base = ioremap_nocache(portal_data->dev_base_phys, PORTAL_BASE_OFFSET);
       portal_data->misc.name = portal_data->name;
       portal_data->misc.fops = &portal_fops;
       INIT_LIST_HEAD(&portal_data->pmlist);
-      sprintf(portal_data->irqname, "zynqportal%d", fpn);
+      sprintf(portal_data->irqname, "zynqportal_%d_%d", t, fpn);
       if (request_irq(connectal_data->portal_irq, portal_isr,
 		      IRQF_TRIGGER_HIGH | IRQF_SHARED , portal_data->irqname, portal_data)) {
 	printk("%s Failed to register irq\n", __func__);
       }
     }
-  }
   mutex_unlock(&connectal_mutex);
   return 0;
 }
 
 static int connectal_of_remove(struct platform_device *pdev)
 {
-  int fpn, t;
+  int fpn, t = 0;
   struct connectal_data* connectal_data = dev_get_drvdata(&pdev->dev);
   driver_devel("%s: %s\n",__FUNCTION__, pdev->name);
   mutex_lock(&connectal_mutex);
-  for (t = 0; t < MAX_NUM_TILES; t++){
+  for(t = 0; t < MAX_NUM_TILES; t++)
     for (fpn = 0; fpn < MAX_NUM_PORTALS; fpn++)
       free_irq(connectal_data->portal_irq, &connectal_data->portald[t][fpn]);
-  }
   remove_portal_devices(connectal_data);
   misc_deregister(&connectal_data->misc);
   dev_set_drvdata(&pdev->dev, NULL);

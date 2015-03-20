@@ -23,6 +23,7 @@
 
 #include "portal.h"
 #include "sock_utils.h"
+#include <assert.h>
 
 static unsigned int tag_counter;
 typedef struct bsim_fpga_map_entry{
@@ -34,30 +35,38 @@ static bsim_fpga_map_entry bsim_fpga_map[2][MAX_BSIM_PORTAL_ID];
 
 static void initialize_bsim_map(void)
 {
-    unsigned int last, idx, t;
-    for(t = 0; t < 2; t++){
-      last = 0;
-      idx = 0;
-      while (!last && idx < 32) {
-        static PortalInternal p;
-        volatile unsigned int *ptr=(volatile unsigned int *)(long)((t * TILE_BASE_OFFSET)+(idx * PORTAL_BASE_OFFSET));
-        volatile unsigned int *idp = &ptr[PORTAL_CTRL_REG_PORTAL_ID];
-        volatile unsigned int *topp = &ptr[PORTAL_CTRL_REG_TOP];
-        unsigned int id;
-        p.fpga_number = idx;
-        id = bsimfunc.read(&p, &idp);
-        last = bsimfunc.read(&p, &topp);
-        if (id >= MAX_BSIM_PORTAL_ID) {
-	  PORTAL_PRINTF("%s: [%d] readid too large %d\n", __FUNCTION__, idx, id);
-	  break;
-        }
-        bsim_fpga_map[t][idx].name = id;
-        bsim_fpga_map[t][idx].offset = idx;
-        bsim_fpga_map[t][idx].valid = 1;
-        PORTAL_PRINTF("%s: bsim_fpga_map[%d][%d]=%d (%d)\n", __FUNCTION__, t, idx, bsim_fpga_map[t][idx].name, last);
-        idx++;
+  unsigned int num_tiles, num_portals, idx, t = 0;
+  do{
+    idx = 0;
+    do{
+      static PortalInternal p;
+      volatile unsigned int *ptr=(volatile unsigned int *)(long)((t * TILE_BASE_OFFSET)+(idx * PORTAL_BASE_OFFSET));
+      volatile unsigned int *idp = &ptr[PORTAL_CTRL_REG_PORTAL_ID];
+      volatile unsigned int *ntp = &ptr[PORTAL_CTRL_REG_NUM_TILES];
+      volatile unsigned int *npp = &ptr[PORTAL_CTRL_REG_NUM_PORTALS];
+      unsigned int id;
+      p.fpga_number = idx;
+      id = bsimfunc.read(&p, &idp);
+      if(idx==0){
+	num_portals = bsimfunc.read(&p, &npp);
+	if(t==0)
+	  num_tiles = bsimfunc.read(&p, &ntp);
+      } else {
+	assert(num_portals == bsimfunc.read(&p, &npp));
+	assert(num_tiles   == bsimfunc.read(&p, &ntp));
       }
-    }  
+      if (id >= MAX_BSIM_PORTAL_ID) {
+	PORTAL_PRINTF("%s: [%d] readid too large %d\n", __FUNCTION__, idx, id);
+	break;
+      }
+      bsim_fpga_map[t][idx].name = id;
+      bsim_fpga_map[t][idx].offset = idx;
+      bsim_fpga_map[t][idx].valid = 1;
+      PORTAL_PRINTF("%s: bsim_fpga_map[%d][%d]=%d (%d)\n", __FUNCTION__, t, idx, bsim_fpga_map[t][idx].name, (idx+1==num_portals));
+      idx++;
+    } while (idx < num_portals && idx < 32);
+    t++;
+  } while (t < num_tiles && t < 2);
 }
 
 #ifndef __KERNEL__
@@ -72,7 +81,6 @@ static void initialize_bsim_map(void)
 #include <sys/un.h>
 #include <semaphore.h>
 #include <pthread.h>
-#include <assert.h>
 #include <netdb.h>
 
 void memdump(unsigned char *p, int len, const char *title)

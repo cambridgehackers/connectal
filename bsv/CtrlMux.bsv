@@ -54,7 +54,7 @@ module mkSlaveMux#(Vector#(numPortals,MemPortal#(aw,dataWidth)) portals) (PhysMe
    Vector#(numPortals, PhysMemSlave#(aw,dataWidth)) slaves = map(getSlave, portals);
    for(Integer i = 0; i < valueOf(numPortals); i=i+1)
       rule writeTop;
-	 portals[i].top <= (i+1 == valueOf(numPortals));
+	 portals[i].num_portals <= fromInteger(valueOf(numPortals));
       endrule
    let rv <- mkMemSlaveMuxPipelined(slaves);
    return rv;
