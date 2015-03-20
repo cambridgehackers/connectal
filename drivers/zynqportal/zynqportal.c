@@ -64,7 +64,7 @@ struct pmentry {
 };
 
 struct portal_data {
-        struct miscdevice misc; /* must be first element (pointer passed to misc_register) */
+	struct miscdevice misc; // use container_of to get (struct portal_data *) from (struct miscdevice *)
         wait_queue_head_t wait_queue;
         dma_addr_t        dev_base_phys;
         void             *map_base;
@@ -100,6 +100,7 @@ static DECLARE_DELAYED_WORK(connectal_work, connectal_work_handler);
 
 static irqreturn_t portal_isr(int irq, void *dev_id)
 {
+	// request_irq used the portal_data pointer as dev_id;
         struct portal_data *portal_data = (struct portal_data *)dev_id;
         irqreturn_t rc = IRQ_NONE;
 
@@ -122,14 +123,14 @@ static irqreturn_t portal_isr(int irq, void *dev_id)
  */
 static int portal_open(struct inode *inode, struct file *filep)
 {
-        struct portal_data *portal_data = filep->private_data;
+        struct portal_data *portal_data = container_of((struct miscdevice *)filep->private_data, struct portal_data, misc);
         init_waitqueue_head(&portal_data->wait_queue);
         return 0;
 }
 
 long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
-        struct portal_data *portal_data = filep->private_data;
+        struct portal_data *portal_data = container_of((struct miscdevice *)filep->private_data, struct portal_data, misc);
         switch (cmd) {
         case PORTAL_SET_FCLK_RATE: {
                 PortalClockRequest request;
@@ -237,7 +238,7 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
 
 int portal_mmap(struct file *filep, struct vm_area_struct *vma)
 {
-        struct portal_data *portal_data = filep->private_data;
+        struct portal_data *portal_data = container_of((struct miscdevice *)filep->private_data, struct portal_data, misc);
         if (vma->vm_pgoff > (~0UL >> PAGE_SHIFT))
                 return -EINVAL;
         vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
@@ -254,7 +255,7 @@ int portal_mmap(struct file *filep, struct vm_area_struct *vma)
 
 unsigned int portal_poll (struct file *filep, poll_table *poll_table)
 {
-        struct portal_data *portal_data = filep->private_data;
+        struct portal_data *portal_data = container_of((struct miscdevice *)filep->private_data, struct portal_data, misc);
         poll_wait(filep, &portal_data->wait_queue, poll_table);
 	if (readl((void *)(STATUS_OFFSET + (unsigned long) portal_data->map_base)))
 	  return POLLIN | POLLRDNORM; /* when we wake up, always return back to user */
@@ -263,7 +264,7 @@ unsigned int portal_poll (struct file *filep, poll_table *poll_table)
 
 static int portal_release(struct inode *inode, struct file *filep)
 {
-        struct portal_data *portal_data = filep->private_data;
+        struct portal_data *portal_data = container_of((struct miscdevice *)filep->private_data, struct portal_data, misc);
 	PortalInternal devptr = {.map_base = portal_data->map_base, .item=&kernelfunc};
 	struct list_head *pmlist;
         driver_devel("%s inode=%p filep=%p\n", __func__, inode, filep);
