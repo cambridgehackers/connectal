@@ -253,13 +253,10 @@ module mkMemPortal#(Bit#(slaveDataWidth) ifcId,
 	     ,Add#(b__, slaveDataWidth, TMul#(slaveDataWidth, 2))
 	     );
 
-   Vector#(numRequests,    PipeIn#(Bit#(slaveDataWidth)))     requestPipes = portal.requests;
-   Vector#(numIndications, PipeOut#(Bit#(slaveDataWidth))) indicationPipes = portal.indications;
-   Vector#(numRequests,    PhysMemSlave#(5, slaveDataWidth))    requestMemSlaves <- mapM(mkPipeInMemSlave, requestPipes);
-   Vector#(numIndications, PhysMemSlave#(5, slaveDataWidth)) indicationMemSlaves <- mapM(mkPipeOutMemSlave, indicationPipes);
-   
-   PortalCtrlMemSlave#(5,slaveDataWidth) ctrlPort <- mkPortalCtrlMemSlave(ifcId, indicationPipes);
-   PhysMemSlave#(slaveAddrWidth,slaveDataWidth) memslave  <- mkMemSlaveMux(cons(ctrlPort.memSlave,append(requestMemSlaves, indicationMemSlaves)));
+   let requestMemSlaves <- mapM(mkPipeInMemSlave, portal.requests);
+   let indicationMemSlaves <- mapM(mkPipeOutMemSlave, portal.indications);
+   PortalCtrlMemSlave#(5,slaveDataWidth) ctrlPort <- mkPortalCtrlMemSlave(ifcId, portal.indications);
+   let memslave  <- mkMemSlaveMux(cons(ctrlPort.memSlave,append(requestMemSlaves, indicationMemSlaves)));
    interface PhysMemSlave slave = memslave;
    interface ReadOnly interrupt = ctrlPort.interrupt;
    interface WriteOnly num_portals = ctrlPort.num_portals;
