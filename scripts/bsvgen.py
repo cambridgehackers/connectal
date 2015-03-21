@@ -116,7 +116,6 @@ exposedWrapperInterfaceTemplate='''
 // exposed wrapper portal interface
 interface %(Ifc)sInputPipes;
     interface PipePortal#(%(channelCount)s, 0, 32) portalIfc;
-    interface PortalInterrupt#(32) intr;
 %(requestOutputPipeInterfaces)s
 endinterface
 interface %(Dut)sPortal;

@@ -46,6 +46,27 @@ module mkInterruptMux#(Vector#(numPortals,ReadOnly#(Bool)) inputs) (ReadOnly#(Bo
    endmethod
 endmodule
 
+module mkPortalInterrupt#(Vector#(numIndications, PipeOut#(Bit#(dataWidth))) indicationPipes)
+   (PortalInterrupt#(dataWidth));
+   Bool      interruptStatus = False;
+   function Bool pipeOutNotEmpty(PipeOut#(a) po); return po.notEmpty(); endfunction
+   Vector#(numIndications, Bool) readyBits = map(pipeOutNotEmpty, indicationPipes);
+   
+   Bit#(dataWidth)  readyChannel = -1;
+   for (Integer i = valueOf(numIndications) - 1; i >= 0; i = i - 1) begin
+      if (readyBits[i]) begin
+         interruptStatus = True;
+         readyChannel = fromInteger(i);
+      end
+   end
+   method Bool status();
+      return interruptStatus;
+   endmethod
+   method Bit#(dataWidth) channel();
+      return readyChannel;
+   endmethod
+endmodule
+
 module mkSlaveMux#(Vector#(numPortals,MemPortal#(aw,dataWidth)) portals) (PhysMemSlave#(addrWidth,dataWidth))
    provisos(Add#(selWidth,aw,addrWidth)
 	    ,Add#(a__, TLog#(numPortals), selWidth)

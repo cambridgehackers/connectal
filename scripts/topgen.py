@@ -130,12 +130,10 @@ def addPortal(enumVal, ifcName, direction):
     if direction == 'Request':
         requestList.append('l' + ifcName + 'Noc')
         portParam['itype'] = 'requests'
-        portParam['slaveParam'] = 'nil'
         portParam['slaveType'] = 'In'
     else:
         indicationList.append('l' + ifcName + 'Noc')
         portParam['itype'] = 'indications'
-        portParam['slaveParam'] = 'l%(ifcName)s.portalIfc.indications' % portParam
         portParam['slaveType'] = 'Out'
     p = portalNocTemplate if options.bluenoc else portalTemplateNew
     portalList.append(p % portParam)
