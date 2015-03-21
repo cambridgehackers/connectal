@@ -137,7 +137,7 @@ def addPortal(enumVal, ifcName, direction):
         portParam['itype'] = 'indications'
         portParam['slaveParam'] = 'l%(ifcName)s.portalIfc.indications' % portParam
         portParam['slaveType'] = 'Out'
-    p = portalNocTemplate if options.bluenoc else portalTemplateNew
+    p = portalNocTemplate if options.bluenoc else portalTemplate
     portalList.append(p % portParam)
     portalCount = portalCount + 1
 
