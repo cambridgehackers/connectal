@@ -50,29 +50,11 @@ interface PortalCtrlMemSlave#(numeric type addrWidth, numeric type dataWidth);
    interface WriteOnly#(Bit#(dataWidth)) num_portals;
 endinterface
 
-
-module mkPortalCtrlMemSlave#(Bit#(dataWidth) ifcId, 
-			     Vector#(numIndications, PipeOut#(Bit#(dataWidth))) indicationPipes)
-   (PortalCtrlMemSlave#(addrWidth, dataWidth))
-   provisos( Add#(a__, 1, dataWidth)
-	    ,Div#(dataWidth, 8, b__)
-	    ,Bits#(MemData#(dataWidth), c__)
-	    ,Add#(d__, dataWidth, TMul#(dataWidth, 2))
-	    );
-   
-   AddressGenerator#(addrWidth,dataWidth) ctrlReadAddrGenerator  <- mkAddressGenerator();
-   AddressGenerator#(addrWidth,dataWidth) ctrlWriteAddrGenerator <- mkAddressGenerator();
-   FIFO#(MemData#(dataWidth))        ctrlWriteDataFifo <- mkFIFO();
-   FIFO#(Bit#(MemTagSize))        ctrlWriteDoneFifo <- mkFIFO();
-   Reg#(Bit#(dataWidth)) num_portals_reg <- mkReg(0);
-
+module mkPortalInterrupt#(Vector#(numIndications, PipeOut#(Bit#(dataWidth))) indicationPipes)
+   (PortalInterrupt#(dataWidth));
+   Bool      interruptStatus = False;
    function Bool pipeOutNotEmpty(PipeOut#(a) po); return po.notEmpty(); endfunction
    Vector#(numIndications, Bool) readyBits = map(pipeOutNotEmpty, indicationPipes);
-   
-   Reg#(Bool) interruptEnableReg <- mkReg(False);
-   Bool      interruptStatus = False;
-   Reg#(Bit#(TMul#(dataWidth,2))) cycle_count <- mkReg(0);
-   Reg#(Bit#(dataWidth))    snapshot <- mkReg(0);
    
    Bit#(dataWidth)  readyChannel = -1;
    for (Integer i = valueOf(numIndications) - 1; i >= 0; i = i - 1) begin
@@ -81,6 +63,27 @@ module mkPortalCtrlMemSlave#(Bit#(dataWidth) ifcId,
          readyChannel = fromInteger(i);
       end
    end
+   method Bool status();
+      return interruptStatus;
+   endmethod
+   method Bit#(dataWidth) channel();
+      return readyChannel;
+   endmethod
+endmodule
+
+module mkPortalCtrlMemSlave#(Bit#(dataWidth) ifcId, PortalInterrupt#(dataWidth) intr)
+   (PortalCtrlMemSlave#(addrWidth, dataWidth))
+   provisos(Add#(d__, dataWidth, TMul#(dataWidth, 2)));
+   
+   AddressGenerator#(addrWidth,dataWidth) ctrlReadAddrGenerator  <- mkAddressGenerator();
+   AddressGenerator#(addrWidth,dataWidth) ctrlWriteAddrGenerator <- mkAddressGenerator();
+   FIFO#(MemData#(dataWidth))        ctrlWriteDataFifo <- mkFIFO();
+   FIFO#(Bit#(MemTagSize))        ctrlWriteDoneFifo <- mkFIFO();
+   Reg#(Bit#(dataWidth)) num_portals_reg <- mkReg(0);
+
+   Reg#(Bool) interruptEnableReg <- mkReg(False);
+   Reg#(Bit#(TMul#(dataWidth,2))) cycle_count <- mkReg(0);
+   Reg#(Bit#(dataWidth))    snapshot <- mkReg(0);
    
    rule count;
       cycle_count <= cycle_count+1;
@@ -110,14 +113,14 @@ module mkPortalCtrlMemSlave#(Bit#(dataWidth) ifcId,
 	       let addr = b.addr;
 	       let v = 'h05a05a0;
 	       if (addr == 'h000)
-		  v = interruptStatus ? 1 : 0;
+		  v = intr.status() ? 1 : 0;
 	       if (addr == 'h004)
 		  v = interruptEnableReg ? 1 : 0;
 	       if (addr == 'h008)
 		  v = fromInteger(valueOf(NumberOfTiles));
                if (addr == 'h00C) begin
-		  if (interruptStatus)
-		     v = readyChannel+1;
+		  if (intr.status())
+		     v = intr.channel()+1;
 		  else 
 		     v = 0;
                end
@@ -153,7 +156,7 @@ module mkPortalCtrlMemSlave#(Bit#(dataWidth) ifcId,
    endinterface: memSlave
    interface ReadOnly interrupt;
       method Bool _read();
-	 return interruptStatus && interruptEnableReg;
+	 return intr.status() && interruptEnableReg;
       endmethod
    endinterface
    interface WriteOnly num_portals;
@@ -255,7 +258,7 @@ module mkMemPortal#(Bit#(slaveDataWidth) ifcId,
 
    let requestMemSlaves <- mapM(mkPipeInMemSlave, portal.requests);
    let indicationMemSlaves <- mapM(mkPipeOutMemSlave, portal.indications);
-   PortalCtrlMemSlave#(5,slaveDataWidth) ctrlPort <- mkPortalCtrlMemSlave(ifcId, portal.indications);
+   PortalCtrlMemSlave#(5,slaveDataWidth) ctrlPort <- mkPortalCtrlMemSlave(ifcId, portal.intr);
    let memslave  <- mkMemSlaveMux(cons(ctrlPort.memSlave,append(requestMemSlaves, indicationMemSlaves)));
    interface PhysMemSlave slave = memslave;
    interface ReadOnly interrupt = ctrlPort.interrupt;

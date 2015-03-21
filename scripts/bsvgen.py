@@ -78,6 +78,7 @@ endinterface
 module %(moduleContext)s mk%(Ifc)sOutputPipes(%(Ifc)sOutputPipes);
     Vector#(%(channelCount)s, PipeOut#(Bit#(32))) indicationPipes = newVector();
 %(indicationMethodRules)s
+    PortalInterrupt#(32) intrInst <- mkPortalInterrupt(indicationPipes);
     interface %(Package)s::%(Ifc)s ifc;
 %(indicationMethods)s
     endinterface
@@ -88,6 +89,7 @@ module %(moduleContext)s mk%(Ifc)sOutputPipes(%(Ifc)sOutputPipes);
         endmethod
         interface Vector requests = nil;
         interface Vector indications = indicationPipes;
+        interface PortalInterrupt intr = intrInst;
     endinterface
 endmodule
 
@@ -114,6 +116,7 @@ exposedWrapperInterfaceTemplate='''
 // exposed wrapper portal interface
 interface %(Ifc)sInputPipes;
     interface PipePortal#(%(channelCount)s, 0, 32) portalIfc;
+    interface PortalInterrupt#(32) intr;
 %(requestOutputPipeInterfaces)s
 endinterface
 interface %(Dut)sPortal;
@@ -142,6 +145,14 @@ module mk%(Ifc)sInputPipes(%(Ifc)sInputPipes);
         endmethod
         interface Vector requests = requestPipeIn;
         interface Vector indications = nil;
+        interface PortalInterrupt intr;
+           method Bool status();
+              return False;
+           endmethod
+           method Bit#(dataWidth) channel();
+              return -1;
+           endmethod
+        endinterface
     endinterface
 %(outputPipes)s
 endmodule
