@@ -91,7 +91,7 @@ void init_portal_internal(PortalInternal *pint, int id, int tile, PORTAL_INDFUNC
     pint->reqinfo = reqinfo;
     rc = pint->item->init(pint, param);
     if (rc != 0) {
-      PORTAL_PRINTF("%s: failed to open Portal portal%d\n", __FUNCTION__, pint->fpga_number);
+      PORTAL_PRINTF("%s: failed to open Portal portal_%d_%d\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number);
 #ifndef __KERNEL__
       exit(1);
 #endif
@@ -407,7 +407,7 @@ static int init_hardware(struct PortalInternal *pint, void *param)
     int rc = 0;
     char read_status;
     char buff[128];
-    snprintf(buff, sizeof(buff), "/dev/portal%d", pint->fpga_number);
+    snprintf(buff, sizeof(buff), "/dev/portal_%d_%d", pint->fpga_tile, pint->fpga_number);
     pint->fpga_fd = open(buff, O_RDWR);
     if (pint->fpga_fd < 0) {
 	PORTAL_PRINTF("Failed to open %s fd=%d errno=%d\n", buff, pint->fpga_fd, errno);

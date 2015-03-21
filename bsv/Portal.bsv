@@ -24,6 +24,11 @@ import MemTypes::*;
 import Pipe::*;
 import ConnectalMemory::*;
 
+interface PortalInterrupt#(numeric type dataWidth);
+   method Bool status();
+   method Bit#(dataWidth) channel();
+endinterface
+
 // implementation of a Portal as a group of Pipes
 interface PipePortal#(numeric type numRequests, numeric type numIndications, numeric type slaveDataWidth);
    method Bit#(16) messageSize(Bit#(16) methodNumber);
@@ -31,13 +36,14 @@ interface PipePortal#(numeric type numRequests, numeric type numIndications, num
    //method PipeIn#(Bit#(slaveDataWidth)) requestsPipe(Integer a);
    interface Vector#(numIndications, PipeOut#(Bit#(slaveDataWidth))) indications;
    //method PipeOut#(Bit#(slaveDataWidth)) indicationsPipe(Integer a);
+   interface PortalInterrupt#(slaveDataWidth) intr;
 endinterface
 
 // implementation of a Portal as a physical memory slave
 interface MemPortal#(numeric type slaveAddrWidth, numeric type slaveDataWidth);
    interface PhysMemSlave#(slaveAddrWidth,slaveDataWidth) slave;
    interface ReadOnly#(Bool) interrupt;
-   interface WriteOnly#(Bool) top;
+   interface WriteOnly#(Bit#(slaveDataWidth)) num_portals;
 endinterface
 
 function PhysMemSlave#(_a,_d) getSlave(MemPortal#(_a,_d) p);
