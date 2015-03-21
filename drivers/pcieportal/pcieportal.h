@@ -64,8 +64,8 @@ typedef unsigned int tTlpData[6];
  * Per-device data
  */
 typedef struct {
-        unsigned int      portal_number;
         unsigned int      device_tile;
+        unsigned int      portal_number;
         unsigned int      device_name;
         struct tBoard    *board;
         void             *virt;
