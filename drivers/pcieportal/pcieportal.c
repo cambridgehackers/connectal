@@ -50,7 +50,7 @@
 #define DEV_NAME "portal"
 
 /* version string for the driver */
-#define DEV_VERSION "14.11.5"
+#define DEV_VERSION "15.03.22"
 
 /* Bluespec's standard vendor ID */
 #define BLUESPEC_VENDOR_ID 0x1be7
@@ -79,10 +79,12 @@
 #define PCR_IID_OFFSET 0x010
 #define PCR_NUM_TILES_OFFSET 0x008
 #define PCR_NUM_PORTALS_OFFSET 0x014
+#define MAX_MSIX_ENTRIES 16
+#define MAX_MINOR_COUNT (NUM_BOARDS * MAX_NUM_PORTALS)
 
 /* static device data */
 static dev_t device_number;
-static tPortal *portalp[NUM_BOARDS * MAX_NUM_PORTALS]; // mapping (minor number) -> this_portal pointer
+static tPortal *portalp[MAX_MINOR_COUNT]; // mapping (minor number) -> this_portal pointer
 static struct class *pcieportal_class = NULL;
 typedef struct extra_info {
         wait_queue_head_t wait_queue; /* used for interrupt notifications */
@@ -330,9 +332,11 @@ static int board_activate(int activate, tBoard *this_board, struct pci_dev *dev)
 	int i;
         int rc, err = 0;
         unsigned long long magic_num;
-	int num_entries = 16; //MAX_NUM_PORTALS;
-	struct msix_entry msix_entries[MAX_NUM_PORTALS];
+	int num_entries = MAX_MSIX_ENTRIES;
+	struct msix_entry msix_entries[MAX_MSIX_ENTRIES];
 	int fpn = 0;
+	int num_tiles, tile_index;
+	void __iomem *ptile;
 
 printk("[%s:%d]\n", __FUNCTION__, __LINE__);
         for (i = 0; i < MAX_NUM_PORTALS; i++)
@@ -413,14 +417,6 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
                 /* enable MSIX */
 		for (i = 0; i < num_entries; i++)
 			msix_entries[i].entry = i;
-////
-		void __iomem *pp = this_board->bar2io;
-printk("[%s:%d] pp %p\n", __FUNCTION__, __LINE__, pp);
-		int nt = *(volatile uint32_t *)(pp + PCR_NUM_TILES_OFFSET);
-		int np = *(volatile uint32_t *)(pp + PCR_NUM_PORTALS_OFFSET);
-printk("[%s:%d] nt %x np %x ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ\n", __FUNCTION__, __LINE__, nt, np);
-printk("[%s:%d] msix_entries %x num_entries %x\n", __FUNCTION__, __LINE__, msix_entries, num_entries);
-////
 		if (pci_enable_msix(dev, msix_entries, num_entries)) {
 			printk(KERN_ERR "%s: Failed to setup MSIX interrupts\n", DEV_NAME);
 			err = -EFAULT;
@@ -444,19 +440,19 @@ printk("[%s:%d] msix_entries %x num_entries %x\n", __FUNCTION__, __LINE__, msix_
 		iowrite32(0, this_board->bar0io + CSR_MSIX_MASKED);
                 pci_set_master(dev); /* enable PCI bus master */
 		
-		int num_portals, num_tiles, tile_index = 0;
-		num_tiles = *(volatile uint32_t *)(pp + PCR_NUM_TILES_OFFSET);
+		ptile = this_board->bar2io;
+		num_tiles = *(volatile uint32_t *)(ptile + PCR_NUM_TILES_OFFSET);
+		tile_index = 0;
 		do {  // loop over all tiles
+		  void __iomem *pportal = ptile;
+		  int num_portals = *(volatile uint32_t *)(pportal + PCR_NUM_PORTALS_OFFSET);
 		  int portal_index = 0;
-		  num_portals = *(volatile uint32_t *)(pp + PCR_NUM_PORTALS_OFFSET);
-		  void __iomem *pportal = pp;
 		  do {  // loop over all portals in a tile
 		    dev_t this_device_number;
 		    int freep;
-printk("[%s:%d] num_tiles %x/%x num_portals %x/%x fpn %x\n", __FUNCTION__, __LINE__, tile_index, num_tiles, portal_index, num_portals, fpn);
 		    uint32_t iid = *(volatile uint32_t *)(pportal + PCR_IID_OFFSET);
 		    tPortal *this_portal = &this_board->portal[portal_index];
-		    printk("%s:%d fpn=%08x iid=%d \n", __func__, __LINE__, fpn, iid);
+		    printk("%s:%d num_tiles %x/%x num_portals %x/%x fpn %x iid=%d\n", __FUNCTION__, __LINE__, tile_index, num_tiles, portal_index, num_portals, fpn, iid);
 		    traceInfo.intval[fpn] = ioread32(this_board->bar0io + CSR_MSIX_MSG_DATA  + 16*fpn);
 		    traceInfo.name[fpn] = iid;
 		    for (freep = 0; freep < sizeof(portalp)/sizeof(portalp[0]); freep++)
@@ -468,14 +464,12 @@ printk("[%s:%d] num_tiles %x/%x num_portals %x/%x fpn %x\n", __FUNCTION__, __LIN
 		    }
 		    else
 		        portalp[freep] = this_portal;
-		    this_board->portal[fpn].portal_number = fpn;
 		    this_board->portal[fpn].device_number = freep;
-		    this_board->portal[fpn].device_name = iid;
 		    this_board->portal[fpn].device_tile = tile_index;
+		    this_board->portal[fpn].portal_number = fpn;
+		    this_board->portal[fpn].device_name = iid;
 		    this_board->portal[fpn].board = this_board;
-		    if (this_board->bar2io) {
-		      this_board->portal[fpn].regs = (volatile uint32_t *)(pportal);
-		    }
+		    this_board->portal[fpn].regs = (volatile uint32_t *)pportal;
 		    /* add the device operations */
 		    cdev_init(&this_board->portal[fpn].extra->cdev, &pcieportal_fops);
 		    this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + this_portal->device_number);
@@ -485,8 +479,6 @@ printk("[%s:%d] num_tiles %x/%x num_portals %x/%x fpn %x\n", __FUNCTION__, __LIN
 		      err = -EFAULT;
 		    } else {
 		      /* create a device node via udev */
-printk(KERN_INFO "%s: class %p /dev/%s_%d_%d = %x TRYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY\n",
-			     DEV_NAME, pcieportal_class, DEV_NAME, this_portal->device_tile, this_portal->device_name, this_device_number);
 		      device_create(pcieportal_class, NULL,
 				    this_device_number, this_portal, "%s_%d_%d", DEV_NAME, this_portal->device_tile, this_portal->device_name);
 		      printk(KERN_INFO "%s: /dev/%s_%d_%d = %x created\n",
@@ -499,15 +491,18 @@ printk(KERN_INFO "%s: class %p /dev/%s_%d_%d = %x TRYYYYYYYYYYYYYYYYYYYYYYYYYYYY
 		    }
 		    pportal += PORTAL_BASE_OFFSET;
 		  } while (++portal_index < num_portals);
-		  pp += TILE_BASE_OFFSET;
+		  ptile += TILE_BASE_OFFSET;
 		} while (++tile_index < num_tiles);
 		this_board->info.num_portals = fpn;
                 pci_set_drvdata(dev, this_board);
+		device_create(pcieportal_class, NULL,
+		    MKDEV(MAJOR(device_number), MINOR(device_number) + MAX_MINOR_COUNT), NULL, "connectal");
                 if (err == 0)
                     return err; /* if board activated correctly, return */
         } /* end of if(activate) */
 
         /******** deactivate board *******/
+	device_destroy(pcieportal_class, MKDEV(MAJOR(device_number), MINOR(device_number) + MAX_MINOR_COUNT));
 	fpn = 0;
 	while(fpn < this_board->info.num_portals) {
                 tPortal *this_portal = &this_board->portal[fpn];
@@ -636,9 +631,8 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
                 printk(KERN_ERR "%s: failed to create class Connectal\n", DEV_NAME);
                 return PTR_ERR(pcieportal_class);
         }
-printk("[%s:%d]\n", __FUNCTION__, __LINE__);
         /* dynamically allocate a device number */
-        if (alloc_chrdev_region(&device_number, 1, NUM_BOARDS * MAX_NUM_PORTALS, DEV_NAME) < 0) {
+        if (alloc_chrdev_region(&device_number, 1, MAX_MINOR_COUNT + 1, DEV_NAME) < 0) {
                 printk(KERN_ERR "%s: failed to allocate character device region\n", DEV_NAME);
                 class_destroy(pcieportal_class);
                 return -1;
@@ -649,9 +643,8 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
         printk(KERN_INFO "%s: Registered Connectal Pcieportal driver %s\n", DEV_NAME, DEV_VERSION);
         printk(KERN_INFO "%s: Major = %d  Minors = %d to %d\n", DEV_NAME,
                MAJOR(device_number), MINOR(device_number),
-               MINOR(device_number) + NUM_BOARDS * MAX_NUM_PORTALS - 1);
+               MINOR(device_number) + MAX_MINOR_COUNT - 1);
         /* register the driver with the PCI subsystem */
-printk("[%s:%d] pci_register_driver triggers probe\n", __FUNCTION__, __LINE__);
         status = pci_register_driver(&pcieportal_ops);
         if (status < 0) {
                 printk(KERN_ERR "%s: failed to register PCI driver\n", DEV_NAME);
@@ -668,7 +661,7 @@ static void pcieportal_exit(void)
         /* unregister the driver with the PCI subsystem */
         pci_unregister_driver(&pcieportal_ops);
         /* release reserved device numbers */
-        unregister_chrdev_region(device_number, NUM_BOARDS * MAX_NUM_PORTALS);
+        unregister_chrdev_region(device_number, MAX_MINOR_COUNT + 1);
         class_destroy(pcieportal_class);
         /* log that the driver module has been unloaded */
         printk(KERN_INFO "%s: Unregistered Connectal Pcieportal driver %s\n", DEV_NAME, DEV_VERSION);
