@@ -84,14 +84,15 @@
 
 /* static device data */
 static dev_t device_number;
-static tPortal *portalp[MAX_MINOR_COUNT]; // mapping (minor number) -> this_portal pointer
+static char portalp[MAX_MINOR_COUNT]; // free map of minor numbers
 static struct class *pcieportal_class = NULL;
-typedef struct extra_info {
+typedef struct extra_info { /* these datatypes are not available to userspace */
+        struct cdev       cdev; /* per-portal cdev structure */
         wait_queue_head_t wait_queue; /* used for interrupt notifications */
         dma_addr_t        dma_handle;
-        struct cdev       cdev; /* per-portal cdev structure */
-} extra_info ;
-static struct extra_info extra_portal_info[MAX_NUM_PORTALS * NUM_BOARDS];
+        tPortal          *portal;
+} extra_info;
+static extra_info extra_portal_info[MAX_MINOR_COUNT];
 static tBoard board_map[NUM_BOARDS + 1];
 static unsigned long long expected_magic = 'B' | ((unsigned long long) 'l' << 8)
     | ((unsigned long long) 'u' << 16) | ((unsigned long long) 'e' << 24)
@@ -118,10 +119,11 @@ static irqreturn_t intr_handler(int irq, void *p)
 static int pcieportal_open(struct inode *inode, struct file *filp)
 {
         int err = 0;
-        tPortal *this_portal = portalp[iminor(inode) - MINOR(device_number)];
+        tPortal *this_portal = ((extra_info *)inode->i_cdev)->portal;
 
         printk("pcieportal_open: device_number=%x device_name=%d device_tile=%d\n",
 	       device_number, this_portal->device_name, this_portal->device_tile);
+//printk("[%s:%d] inode %p filp %p portal %p priv %p privp %p extra %p\n", __FUNCTION__, __LINE__, inode, filp, this_portal, filp->private_data, privp, this_portal->extra);
         init_waitqueue_head(&(this_portal->extra->wait_queue));
         filp->private_data = (void *) this_portal;
         /* increment the open file count */
@@ -463,7 +465,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		        err = -EFAULT;
 		    }
 		    else
-		        portalp[freep] = this_portal;
+		        portalp[freep] = 1;
 		    this_board->portal[fpn].device_number = freep;
 		    this_board->portal[fpn].device_tile = tile_index;
 		    this_board->portal[fpn].portal_number = fpn;
@@ -508,7 +510,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
                 tPortal *this_portal = &this_board->portal[fpn];
 		  /* remove device node in udev */
 		dev_t this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + this_portal->device_number);
-		portalp[this_portal->device_name] = NULL;
+		portalp[this_portal->device_name] = 0;
                 device_destroy(pcieportal_class, this_device_number);
                 printk(KERN_INFO "%s: /dev/%s_%d_%d = %x removed\n",
 		       DEV_NAME, DEV_NAME, this_portal->device_tile, this_portal->device_name, this_device_number); 
@@ -569,6 +571,7 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
         memset(this_board, 0, sizeof(tBoard));
         for (i = 0; i < MAX_NUM_PORTALS; i++) {
                 this_board->portal[i].extra = &extra_portal_info[board_number * MAX_NUM_PORTALS + i];
+                extra_portal_info[board_number * MAX_NUM_PORTALS + i].portal = &this_board->portal[i];
 		INIT_LIST_HEAD(&this_board->portal[i].pmlist);
 	}
         this_board->info.board_number = board_number;
