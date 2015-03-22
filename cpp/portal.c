@@ -42,6 +42,7 @@
 #include <time.h> // ctime
 #include <stdarg.h> // for portal_printf
 #include <sys/wait.h>
+#include <sys/stat.h>
 #endif
 #include "drivers/portalmem/portalmem.h" // PA_MALLOC
 
@@ -142,11 +143,20 @@ static void init_portal_hw(void)
         len = read(fd, &status, sizeof(status));
 printf("[%s:%d] fd %d len %d\n", __FUNCTION__, __LINE__, fd, len);
         close(fd);
+#elif !defined(BSIM) && !defined(BOARD_xsim)
+        while (1) {
+            struct stat statbuf;
+            int rc = stat("/dev/connectal", &statbuf); /* wait for driver to load */
+            if (rc != -1)
+                break;
+            printf("[%s:%d] waiting for '/dev/connectal'\n", __FUNCTION__, __LINE__);
+            sleep(1);
+        }
 #endif
     }
     else {
 #define MAX_PATH 2000
-        char buf[MAX_PATH];
+        static char buf[MAX_PATH];
         buf[0] = 0;
         int rc = readlink("/proc/self/exe", buf, sizeof(buf));
         char *serial = getenv("SERIALNO");
