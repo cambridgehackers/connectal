@@ -302,6 +302,7 @@ def p_colonVar(p):
 
 def p_expression(p):
     '''expression : binaryExpression'''
+    p[0] = p[1]
 
 def p_binaryExpression(p):
     '''binaryExpression : unaryExpression
@@ -326,6 +327,7 @@ def p_binaryExpression(p):
                         | binaryExpression BAR binaryExpression
                         | binaryExpression BARBAR binaryExpression
                         | binaryExpression PERCENT binaryExpression'''
+    p[0] = p[1]
 
 def p_unaryExpression(p):
     '''unaryExpression : term
@@ -342,6 +344,7 @@ def p_unaryExpression(p):
                        | TOKACTION colonVar expressionStmts TOKENDACTION colonVar
                        | TOKACTIONVALUE colonVar expressionStmts TOKENDACTIONVALUE colonVar
                        '''
+    p[0] = p[1]
 
 def p_term(p):
     '''term : type
@@ -369,6 +372,7 @@ def p_term(p):
             | term LBRACKET expression RBRACKET
             | term LBRACKET expression COLON expression RBRACKET
             | term LPAREN params RPAREN'''
+    p[0] = p[1]
 
 def p_structInits(p):
     '''structInits : 
@@ -491,7 +495,7 @@ def p_interfaceDecl(p):
 
 def p_varDecl(p):
     '''varDecl : type VAR'''
-    p[0] = AST.Variable(p[2], p[1])
+    p[0] = AST.Variable(p[2], p[1], None)
     
 
 def p_params(p):
@@ -505,19 +509,32 @@ def p_lvalue(p):
               | TOKACTION fsmStmts TOKENDACTION
               | lvalue LBRACKET expression RBRACKET
               | lvalue LBRACKET expression COLON expression RBRACKET
-              | TOKMATCH pattern '''
+              | TOKMATCH pattern'''
+
+def p_varAssign1(p):
+    '''varAssign1 : TOKLET VAR EQUAL expression
+                  | TOKLET VAR LARROW expression'''
+    p[0] = AST.Variable(p[2], p[1], p[4])
+    print 'SSS1', p[1]
+
+def p_varAssign2(p):
+    '''varAssign2 : type VAR EQUAL expression
+                  | type VAR LBRACKET expression RBRACKET EQUAL expression
+                  | type VAR LBRACKET expression RBRACKET LBRACKET NUM RBRACKET EQUAL expression
+                  | type VAR LARROW expression'''
+    p[0] = AST.Variable(p[2], p[1], p[4])
+
+def p_varAssign3(p):
+    '''varAssign3 : lvalue EQUAL expression
+                  | lvalue LEQ expression
+                  | lvalue LARROW expression'''
+    p[0] = AST.Variable(p[2], p[1], None)
+    print 'SSS3', p[1]
 
 def p_varAssign(p):
-    '''varAssign : TOKLET VAR EQUAL expression
-                 | TOKLET VAR LARROW expression
-                 | type VAR EQUAL expression
-                 | type VAR LBRACKET expression RBRACKET EQUAL expression
-                 | type VAR LBRACKET expression RBRACKET LBRACKET NUM RBRACKET EQUAL expression
-                 | type VAR LARROW expression
-                 | lvalue EQUAL expression
-                 | lvalue LEQ expression
-                 | lvalue LARROW expression'''
-    p[0] = AST.Variable(p[2], p[1])
+    '''varAssign : varAssign1
+                 | varAssign2
+                 | varAssign3'''
 
 def p_ruleCond(p):
     '''ruleCond : LPAREN expression RPAREN'''

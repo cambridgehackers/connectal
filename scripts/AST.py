@@ -33,6 +33,7 @@ import util
 
 verbose = False
 tempFilename = 'generatedDesignInterfaceFile.json'
+lookupTable = {}
 
 class InterfaceMixin:
     def getSubinterface(self, name):
@@ -50,8 +51,12 @@ def dtInfo(arg):
     rc = {}
     if hasattr(arg, 'name'):
         rc['name'] = arg.name
+        if lookupTable.get(arg.name):
+            rc['name'] = lookupTable[arg.name]
     if hasattr(arg, 'type'):
         rc['type'] = arg.type
+        if lookupTable.get(arg.type):
+            rc['type'] = lookupTable[arg.type]
     if hasattr(arg, 'params'):
         if arg.params is not None:
             rc['params'] = [dtInfo(p) for p in arg.params]
@@ -101,7 +106,9 @@ def serialize_json(interfaces, globalimports, dutname, interfaceList):
     gvlist = {}
     for key, value in globalv.globalvars.iteritems():
         gvlist[key] = {'type': value.type}
-        if value.type == 'TypeDef':
+        if value.type == 'Variable':
+            print 'Variable globalvar:', key, value
+        elif value.type == 'TypeDef':
             #print 'TYPEDEF globalvar:', key, value
             gvlist[key]['name'] = value.name
             gvlist[key]['tdtype'] = dtInfo(value.tdtype)
@@ -112,11 +119,13 @@ def serialize_json(interfaces, globalimports, dutname, interfaceList):
     gdlist = []
     for item in globalv.globaldecls:
         newitem = {'type': item.type}
-        if item.type == 'TypeDef':
+        if value.type == 'Variable':
+            print 'Variable globaldecl:', key, value
+        elif item.type == 'TypeDef':
             newitem['name'] = item.name
             newitem['tdtype'] = dtInfo(item.tdtype)
             newitem['params'] = item.params
-            #print 'TYPEDEF globaldecl:', item, 'ZZZ', newitem
+            #print 'TYPEDEF globaldecl:', item, newitem
         elif verbose:
             print 'Unprocessed globaldecl:', item, 'ZZZ', newitem
         gdlist.append(newitem)
@@ -130,7 +139,9 @@ def serialize_json(interfaces, globalimports, dutname, interfaceList):
             j2file = open(tempFilename).read()
             toplevelnew = json.loads(j2file)
         except:
-            print 'Unable to write json file', tempFilename
+            print 'Unable to encode json file', tempFilename
+            #print 'WWWW', toplevel
+            sys.exit(-1)
     return toplevel
 
 class Method:
@@ -161,10 +172,13 @@ class Function:
         return '<function: %s %s %s>' % (self.name, self.return_type, sparams)
 
 class Variable:
-    def __init__(self, name, t):
+    def __init__(self, name, t, value):
         self.type = 'Variable'
         self.name = name
         self.type = t
+        self.value = value
+        if t.type == 'Type' and t.name == 'Integer' and value and value.type == 'Type':
+            lookupTable[name] = value.name
     def __repr__(self):
         return '<variable: %s : %s>' % (self.name, self.type)
 
