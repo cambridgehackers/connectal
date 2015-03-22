@@ -109,7 +109,8 @@ def serialize_json(interfaces, globalimports, dutname, interfaceList):
         if value.type == 'Variable':
             print 'Variable globalvar:', key, value
         elif value.type == 'TypeDef':
-            #print 'TYPEDEF globalvar:', key, value
+            if verbose:
+                print 'TYPEDEF globalvar:', key, value
             gvlist[key]['name'] = value.name
             gvlist[key]['tdtype'] = dtInfo(value.tdtype)
             gvlist[key]['params'] = value.params
@@ -125,7 +126,8 @@ def serialize_json(interfaces, globalimports, dutname, interfaceList):
             newitem['name'] = item.name
             newitem['tdtype'] = dtInfo(item.tdtype)
             newitem['params'] = item.params
-            #print 'TYPEDEF globaldecl:', item, newitem
+            if verbose:
+                print 'TYPEDEF globaldecl:', item, newitem
         elif verbose:
             print 'Unprocessed globaldecl:', item, newitem
         gdlist.append(newitem)
