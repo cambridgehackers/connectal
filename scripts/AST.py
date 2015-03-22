@@ -127,7 +127,7 @@ def serialize_json(interfaces, globalimports, dutname, interfaceList):
             newitem['params'] = item.params
             #print 'TYPEDEF globaldecl:', item, newitem
         elif verbose:
-            print 'Unprocessed globaldecl:', item, 'ZZZ', newitem
+            print 'Unprocessed globaldecl:', item, newitem
         gdlist.append(newitem)
     toplevel['globaldecls'] = gdlist
     toplevel['globalimports'] = globalimports
@@ -177,7 +177,7 @@ class Variable:
         self.name = name
         self.type = t
         self.value = value
-        if t.type == 'Type' and t.name == 'Integer' and value and value.type == 'Type':
+        if t and t.type == 'Type' and t.name == 'Integer' and value and value.type == 'Type':
             lookupTable[name] = value.name
     def __repr__(self):
         return '<variable: %s : %s>' % (self.name, self.type)

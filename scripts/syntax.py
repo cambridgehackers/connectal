@@ -514,8 +514,7 @@ def p_lvalue(p):
 def p_varAssign1(p):
     '''varAssign1 : TOKLET VAR EQUAL expression
                   | TOKLET VAR LARROW expression'''
-    p[0] = AST.Variable(p[2], p[1], p[4])
-    print 'SSS1', p[1]
+    p[0] = AST.Variable(p[2], None, p[4])
 
 def p_varAssign2(p):
     '''varAssign2 : type VAR EQUAL expression
@@ -529,7 +528,6 @@ def p_varAssign3(p):
                   | lvalue LEQ expression
                   | lvalue LARROW expression'''
     p[0] = AST.Variable(p[2], p[1], None)
-    print 'SSS3', p[1]
 
 def p_varAssign(p):
     '''varAssign : varAssign1
