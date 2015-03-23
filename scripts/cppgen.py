@@ -636,7 +636,7 @@ def emitStruct(item, name, f, indentation):
 def emitType(item, name, f, indentation):
     indent(f, indentation)
     tmp = typeCName(item)
-    if not tmp or tmp[0] == '`' or tmp == 'Empty':
+    if not tmp or tmp[0] == '`' or tmp == 'Empty' or tmp[-2:] == '_P':
         return
     if (indentation == 0):
         f.write('typedef ')
