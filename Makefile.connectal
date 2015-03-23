@@ -141,9 +141,10 @@ all bits verilog implementation bsim xsim xsimrun: gentarget prebuild
 android.exe bsim_exe ubuntu.exe exe: gentarget
 	make -C $(BOARD) --no-print-directory $@
 
+PCIEGEN=$(shell grep PCIE $(CONNECTALDIR)/boardinfo/$(BOARD).json | sed 's/.*PCIE\([123]\).*/\1/')
 NEED_XILINX_PCIE_ac701=1
-NEED_XILINX_PCIE_kc705=1
-NEED_XILINX_PCIE_vc707=1
+NEED_XILINX_PCIE_kc705=$(PCIEGEN)
+NEED_XILINX_PCIE_vc707=$(PCIEGEN)
 NEED_XILINX_PCIE_netfpgasume=3
 NEED_XILINX_PCIE_v2000t=1
 
@@ -240,7 +241,7 @@ endif
 prebuild::
 	@# additional steps needed before making verilog etc
 ifneq ($(NEED_XILINX_PCIE_$(BOARD)),)
-	@echo "building ..."
+	@echo "building ... $(BOARD) PCIe gen$(PCIEGEN)"
 	cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) vivado -notrace -mode batch -source $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
 endif
 
