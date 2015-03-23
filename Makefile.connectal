@@ -158,6 +158,11 @@ ifeq ($(NEED_XILINX_PCIE_$(BOARD)),1)
     CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/pcie_7x_0/pcie_7x_0.xci
     CONNECTALFLAGS += --bscflags="+RTS -K46777216 -RTS"
 endif
+ifeq ($(NEED_XILINX_PCIE_$(BOARD)),2)
+    FPGAMAKE_CONNECTALFLAGS += -P mkPcieEndpointX7Gen2 -P mkPcieHost
+    CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/pcie2_7x_0/pcie2_7x_0.xci
+    CONNECTALFLAGS += --bscflags="+RTS -K46777216 -RTS"
+endif
 
 ifeq ($(NEED_XILINX_PCIE_$(BOARD)),3)
     FPGAMAKE_CONNECTALFLAGS += -P mkPcieEndpointX7 -P mkPcieHost
@@ -234,11 +239,7 @@ endif
 
 prebuild::
 	@# additional steps needed before making verilog etc
-ifeq ($(NEED_XILINX_PCIE_$(BOARD)),1)
-	@echo "building ..."
-	cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) vivado -notrace -mode batch -source $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
-endif
-ifeq ($(NEED_XILINX_PCIE_$(BOARD)),3)
+ifneq ($(NEED_XILINX_PCIE_$(BOARD)),)
 	@echo "building ..."
 	cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) vivado -notrace -mode batch -source $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
 endif
