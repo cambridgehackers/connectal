@@ -1,6 +1,6 @@
 {
     "options": {
-        "bsvdefines" : ["XILINX", "ZYNQ", "ZynqHostTypeIF", "PhysAddrWidth=32"],
+        "bsvdefines" : ["XILINX=1", "ZYNQ", "ZynqHostTypeIF", "PhysAddrWidth=32"],
         "os" : "android",
         "partname" : "xc7z020clg484-1",
         "rewireclockstring" : "tclzynqrewireclock",
@@ -348,5 +348,107 @@
             "LOC": "AA18",
             "IOSTANDARD": "LVCMOS25"
 	}
+    },
+    "hdmi" : {
+        "clock" : {
+             "LOC" : "L16",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "hsync" : {
+             "LOC" : "R18",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "vsync" : {
+             "LOC" : "H15",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "de" : {
+             "LOC" : "T18",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[0]" : {
+             "LOC" : "AB21",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[1]" : {
+             "LOC" : "AA21",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[2]" : {
+             "LOC" : "AB22",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[3]" : {
+             "LOC" : "AA22",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[4]" : {
+             "LOC" : "V19",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[5]" : {
+             "LOC" : "V18",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[6]" : {
+             "LOC" : "V20",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[7]" : {
+             "LOC" : "U20",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[8]" : {
+             "LOC" : "W21",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[9]" : {
+             "LOC" : "W20",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[10]" : {
+             "LOC" : "W18",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[11]" : {
+             "LOC" : "T19",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[12]" : {
+             "LOC" : "U19",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[13]" : {
+             "LOC" : "R19",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[14]" : {
+             "LOC" : "T17",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     },
+        "data[15]" : {
+             "LOC" : "T16",
+	     "IOSTANDARD" : "LVCMOS33",
+             "PIO_DIRECTION": "OUTPUT"
+	     }
     }
 }

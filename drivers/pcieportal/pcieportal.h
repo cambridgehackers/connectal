@@ -32,7 +32,7 @@
 
 /* Number of boards to support */
 #define NUM_BOARDS 1
-#define MAX_NUM_PORTALS 16
+#define MAX_NUM_PORTALS 32
 
 /* Structures used with IOCTLs */
 
@@ -64,6 +64,8 @@ typedef unsigned int tTlpData[6];
  * Per-device data
  */
 typedef struct {
+        unsigned int      device_number;
+        unsigned int      device_tile;
         unsigned int      portal_number;
         unsigned int      device_name;
         struct tBoard    *board;

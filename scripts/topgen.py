@@ -32,12 +32,18 @@ argparser.add_argument('--importfiles', help='added imports', action='append')
 argparser.add_argument('--portname', help='added portal names to enum list', action='append')
 argparser.add_argument('--wrapper', help='exported wrapper interfaces', action='append')
 argparser.add_argument('--proxy', help='exported proxy interfaces', action='append')
+argparser.add_argument('--bluenoc', help='generate mkBluenocTop', action='store_true')
 
 topTemplate='''
 import Vector::*;
 import Portal::*;
 import CtrlMux::*;
 import HostInterface::*;
+import MemPortal::*;
+import Connectable::*;
+import MemreadEngine::*;
+import MemwriteEngine::*;
+import MemTypes::*;
 %(generatedImport)s
 
 `ifndef PinType
@@ -54,7 +60,10 @@ module mkConnectalTop
        (%(moduleParam)s);
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
+%(pipeInstantiate)s
+
 %(portalInstantiate)s
+%(connectInstantiate)s
 
    Vector#(%(portalCount)s,StdPortal) portals;
 %(portalList)s
@@ -67,9 +76,67 @@ endmodule : mkConnectalTop
 %(exportedNames)s
 '''
 
-def addPortal(name):
+topNocTemplate='''
+import Vector::*;
+import Portal::*;
+import BnocPortal::*;
+import Connectable::*;
+%(generatedImport)s
+
+`ifndef PinType
+`define PinType Empty
+`endif
+typedef `PinType PinType;
+
+typedef enum {%(enumList)s} IfcNames deriving (Eq,Bits);
+
+module mkBluenocTop
+`ifdef IMPORT_HOSTIF
+       #(HostType host)
+`endif
+       (%(moduleParam)s);
+   Clock defaultClock <- exposeCurrentClock();
+   Reset defaultReset <- exposeCurrentReset();
+%(pipeInstantiate)s
+
+%(portalInstantiate)s
+%(connectInstantiate)s
+
+%(portalList)s
+   interface requests = cons(%(requestList)s, nil);
+   interface indications = cons(%(indicationList)s, nil);
+%(exportedInterfaces)s
+endmodule : mkBluenocTop
+%(exportedNames)s
+'''
+
+portalTemplate = '''   let portalEnt_%(count)s <- mkMemPortal(extend(pack(%(enumVal)s)), l%(ifcName)s.portalIfc);
+   portals[%(count)s] = portalEnt_%(count)s;'''
+
+portalTemplateNew = '''   let memSlaves_%(count)s <- mapM(mkPipe%(slaveType)sMemSlave, l%(ifcName)s.portalIfc.%(itype)s);
+   PortalCtrlMemSlave#(5,32/*slaveDataWidth*/) ctrlPort_%(count)s <- mkPortalCtrlMemSlave(extend(pack(%(enumVal)s)), l%(ifcName)s.portalIfc.intr);
+   let memslave_%(count)s <- mkMemMethodMux(cons(ctrlPort_%(count)s.memSlave,memSlaves_%(count)s));
+   portals[%(count)s] = (interface MemPortal;
+       interface PhysMemSlave slave = memslave_%(count)s;
+       interface ReadOnly interrupt = ctrlPort_%(count)s.interrupt;
+       interface WriteOnly num_portals = ctrlPort_%(count)s.num_portals;
+       endinterface);'''
+
+portalNocTemplate = '''   let l%(ifcName)sNoc <- mkPortalMsg%(direction)s(l%(ifcName)s.portalIfc);'''
+
+def addPortal(enumVal, ifcName, direction):
     global portalCount
-    portalList.append('   portals[%(count)s] = %(name)s.portalIfc;' % {'count': portalCount, 'name': name})
+    portParam = {'count': portalCount, 'enumVal': enumVal, 'ifcName': ifcName, 'direction': direction}
+    if direction == 'Request':
+        requestList.append('l' + ifcName + 'Noc')
+        portParam['itype'] = 'requests'
+        portParam['slaveType'] = 'In'
+    else:
+        indicationList.append('l' + ifcName + 'Noc')
+        portParam['itype'] = 'indications'
+        portParam['slaveType'] = 'Out'
+    p = portalNocTemplate if options.bluenoc else portalTemplate
+    portalList.append(p % portParam)
     portalCount = portalCount + 1
 
 class iReq:
@@ -77,43 +144,68 @@ class iReq:
         self.inst = ''
         self.args = []
 
-moduleInstantiation = '''
-   %(modname)s%(memFlag)s%(tparam)s l%(modname)s%(memFlag)s <- %(constr)s%(memFlag)s(%(args)s);
-   SharedMemoryPortal#(64) l%(modname)s%(memFlag)sMem <- mkSharedMemoryPortal(l%(modname)s%(memFlag)s.portalIfc);
-   SharedMemoryPortalConfigWrapper l%(modname)s <-
-       mkSharedMemoryPortalConfigWrapper(%(argsConfig)s, l%(modname)s%(memFlag)sMem.cfg);
-'''
+memShareInst = '''   SharedMemoryPortalConfigInputPipes%(tparam)s l%(modname)sCW <- mkSharedMemoryPortalConfigInputPipes;'''
+
+memEngineInst = '''   MemreadEngineV#(64,2,%(clientCount)s) lSharereadEngine <- mkMemreadEngine();
+   MemwriteEngineV#(64,2,%(clientCount)s) lSharewriteEngine <- mkMemwriteEngine();'''
+
+memModuleInstantiation = '''   SharedMemoryPortal#(64) l%(modname)sShare <- mkSharedMemory%(stype)sPortal(l%(modname)sPipes.portalIfc,
+           lSharereadEngine.read_servers[%(clientCount)s], lSharewriteEngine.write_servers[%(clientCount)s]);'''
+
+memConnection = '''   mkConnection(l%(modname)sCW, l%(modname)sShare.cfg);'''
+
+connectUser = '''   mkConnection(lSimpleRequestInputPipes, %(args)s);'''
+
+pipeInstantiation = '''   %(modname)sPipes%(tparam)s l%(modname)sPipes <- mk%(modname)sPipes;'''
+
+connectInstantiation = '''   mkConnection(l%(modname)sPipes, l%(userIf)s);'''
 
 def instMod(args, modname, modext, constructor, tparam, memFlag):
+    global clientCount
     if not modname:
         return
     pmap['tparam'] = tparam
     pmap['modname'] = modname + modext
     tstr = 'S2H'
+    if modext == 'Output':
+        tstr = 'H2S'
     if modext:
-        if modext == 'Proxy':
-            tstr = 'H2S'
         args = modname + tstr
-        if modext != 'Proxy':
-            args += ', l%(userIf)s'
-        enumList.append(modname + tstr)
-        pmap['argsConfig'] = modname + memFlag + tstr
-        if memFlag:
-            enumList.append(modname + memFlag + tstr)
-        addPortal('l%(modname)s' % pmap)
-    pmap['constr'] = pmap['constructor']
-    if not pmap['constructor'] or modext:
-        pmap['constr'] = 'mk' + pmap['modname']
     pmap['args'] = args % pmap
     if modext:
-        if memFlag:
-            portalInstantiate.append(moduleInstantiation % pmap)
+        enumList.append(modname + tstr)
+        pmap['argsConfig'] = modname + memFlag + tstr
+        if modext == 'Output':
+            pmap['stype'] = 'Indication';
         else:
-            portalInstantiate.append(('   %(modname)s%(tparam)s l%(modname)s <- %(constr)s(%(args)s);') % pmap)
+            pmap['stype'] = 'Request';
+        if memFlag:
+            if modext == 'Output':
+                pmap['args'] = '';
+            else:
+                pmap['args'] = 'l%(userIf)s' % pmap
+            pmap['clientCount'] = clientCount;
+            pipeInstantiate.append(pipeInstantiation % pmap)
+            pipeInstantiate.append(memShareInst % pmap)
+            portalInstantiate.append(memModuleInstantiation % pmap)
+            connectInstantiate.append(memConnection % pmap)
+            if modext != 'Output':
+                connectInstantiate.append(connectUser % pmap)
+            clientCount += 1
+        elif modext == 'Output':
+            pipeInstantiate.append(pipeInstantiation % pmap)
+        else:
+            pipeInstantiate.append(pipeInstantiation % pmap)
+            connectInstantiate.append(connectInstantiation % pmap)
+        if memFlag:
+            enumList.append(modname + memFlag + tstr)
+            addPortal(pmap['argsConfig'], '%(modname)sCW' % pmap, pmap['stype'])
+        else:
+            addPortal(pmap['args'], '%(modname)sPipes' % pmap, pmap['stype'])
     else:
         if not instantiateRequest.get(pmap['modname']):
             instantiateRequest[pmap['modname']] = iReq()
-            instantiateRequest[pmap['modname']].inst = '   %(modname)s%(tparam)s l%(modname)s <- %(constr)s(%%s);' % pmap
+            instantiateRequest[pmap['modname']].inst = '   %(modname)s%(tparam)s l%(modname)s <- mk%(modname)s(%%s);' % pmap
         instantiateRequest[pmap['modname']].args.append(pmap['args'])
     if pmap['modname'] not in instantiatedModules:
         instantiatedModules.append(pmap['modname'])
@@ -127,7 +219,7 @@ def flushModules(key):
 
 def parseParam(pitem, proxy):
     p = pitem.split(':')
-    pmap = {'tparam': '', 'xparam': '', 'uparam': '', 'constructor': '', 'memFlag': 'Portal' if p[0][0] == '/' else ''}
+    pmap = {'tparam': '', 'xparam': '', 'uparam': '', 'memFlag': 'Pipes' if p[0][0] == '/' else ''}
     pmap['usermod'] = p[0].replace('/','')
     pmap['name'] = p[1]
     ind = pmap['usermod'].find('#')
@@ -136,10 +228,6 @@ def parseParam(pitem, proxy):
         pmap['usermod'] = pmap['usermod'][:ind]
     if len(p) > 2 and p[2]:
         pmap['uparam'] = p[2] + ', '
-    #if len(p) > 3 and p[3]:
-    #    pmap['xparam'] = '#(' + p[3] + ')'
-    #if len(p) > 4:
-    #    pmap['constructor'] = p[4]
     return pmap
 
 if __name__=='__main__':
@@ -151,14 +239,21 @@ if __name__=='__main__':
     project_dir = os.path.abspath(os.path.expanduser(options.project_dir))
     topFilename = project_dir + '/Top.bsv'
     print 'Writing Top:', topFilename
+    clientCount = 0
     userFiles = []
     portalInstantiate = []
+    pipeInstantiate = []
+    connectInstantiate = []
     instantiateRequest = {}
+    requestList = []
+    indicationList = []
     portalList = []
     portalCount = 0
     instantiatedModules = []
     importfiles = []
     exportedNames = ['export mkConnectalTop;']
+    if options.bluenoc:
+        exportedNames = ['export mkBluenocTop;']
     if options.importfiles:
         importfiles = options.importfiles
         for item in options.importfiles:
@@ -178,10 +273,10 @@ if __name__=='__main__':
         pmap = parseParam(pitem, True)
         ptemp = pmap['name']
         for pmap['name'] in ptemp.split(','):
-            instMod('', pmap['name'], 'Proxy', '', '', pmap['memFlag'])
-            argstr = pmap['uparam'] + 'l%(name)sProxy%(memFlag)s.ifc'
+            instMod('', pmap['name'], 'Output', '', '', pmap['memFlag'])
+            argstr = pmap['uparam'] + 'l%(name)sOutputPipes.ifc'
             if pmap['uparam'] and pmap['uparam'][0] == '/':
-                argstr = 'l%(name)sProxy%(memFlag)s.ifc, ' + pmap['uparam'][1:-2]
+                argstr = 'l%(name)sOutputPipes.ifc, ' + pmap['uparam'][1:-2]
             instMod(argstr, pmap['usermod'], '', '', pmap['xparam'], False)
             pmap['uparam'] = ''
     for pitem in options.wrapper:
@@ -193,7 +288,8 @@ if __name__=='__main__':
         if pmap['usermod'] not in instantiatedModules:
             instMod(pmap['uparam'], pmap['usermod'], '', '', pmap['xparam'], False)
         flushModules(pmap['usermod'])
-        instMod('', pmap['name'], 'Wrapper', '', '', pmap['memFlag'])
+        instMod('', pmap['name'], 'Input', '', '', pmap['memFlag'])
+        portalInstantiate.append('')
     for key in instantiatedModules:
         flushModules(key)
     for pitem in options.interface:
@@ -201,18 +297,27 @@ if __name__=='__main__':
         interfaceList.append('   interface %s = l%s;' % (p[0], p[1]))
 
     memory_flag = 'MemServer' in instantiatedModules
+    if clientCount:
+        pipeInstantiate.append(memEngineInst % {'clientCount': clientCount})
     topsubsts = {'enumList': ','.join(enumList),
                  'generatedImport': '\n'.join(['import %s::*;' % p for p in importfiles]),
+                 'pipeInstantiate' : '\n'.join(sorted(pipeInstantiate)),
+                 'connectInstantiate' : '\n'.join(sorted(connectInstantiate)),
                  'portalInstantiate' : '\n'.join(portalInstantiate),
                  'portalList': '\n'.join(portalList),
                  'portalCount': portalCount,
+                 'requestList': ','.join(requestList),
+                 'indicationList': ','.join(indicationList),
                  'exportedInterfaces' : '\n'.join(interfaceList),
                  'exportedNames' : '\n'.join(exportedNames),
                  'portalMaster' : 'lMemServer.masters' if memory_flag else 'nil',
-                 'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,`PinType,`NumberOfMasters)' 
-#\ if memory_flag else 'StdConnectalTop#(PhysAddrWidth)'
+                 'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,`PinType,`NumberOfMasters)' if not options.bluenoc \
+                     else 'BluenocTop#(1,1)'
                  }
     print 'TOPFN', topFilename
     top = util.createDirAndOpen(topFilename, 'w')
-    top.write(topTemplate % topsubsts)
+    if options.bluenoc:
+        top.write(topNocTemplate % topsubsts)
+    else:
+        top.write(topTemplate % topsubsts)
     top.close()

@@ -29,7 +29,6 @@ import MemTypes::*;
 import MemwriteEngine::*;
 import Pipe::*;
 import Arith::*;
-import MemUtils::*;
 import HostInterface::*;
 
 `ifdef NumEngineServers

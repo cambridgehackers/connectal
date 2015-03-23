@@ -129,7 +129,6 @@ static struct vm_operations_struct custom_vm_ops = {
 static void llshow_pte(struct mm_struct *mm, unsigned long addr)
 {
 	pgd_t *pgd; 
-	//if (!mm) //mm = &init_mm; 
 	printk(KERN_ALERT "pgd = %p\n", mm->pgd);
 	pgd = pgd_offset(mm, addr);
 	printk(KERN_ALERT "[%08lx] *pgd=%08llx", addr, (long long)pgd_val(*pgd)); 
@@ -185,13 +184,14 @@ static int pa_dma_buf_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
   vma->vm_ops = &custom_vm_ops;
   vma->vm_private_data = buffer;
   printk("pa_dma_buf_mmap %p %zd\n", (dmabuf->file), dmabuf->file->f_count.counter);
-#if 1
-  // this is disabled so that ld/strex work correctly on arm (in C: __gnu_cxx::__exchange_and_add )
-  // According to Arm ARM A3.4.5: "LDREX and STREX ... only on memory with Normal"
-  // According to Arm ARM B3.7.2: TEX[2:0]/C/B == 000/0/1 -> "Device", 001/1/1 -> "Normal"
-  // (this is the difference between calling pgprot_writecombine() or not)
-  vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
-#endif
+  if (!buffer->cached) {
+    // pgprot_writecombine must be disabled so that ld/strex work correctly on arm (in C: __gnu_cxx::__exchange_and_add )
+    // however, that currently breaks connectal examples. Jamey 10/2014
+    // According to Arm ARM A3.4.5: "LDREX and STREX ... only on memory with Normal"
+    // According to Arm ARM B3.7.2: TEX[2:0]/C/B == 000/0/1 -> "Device", 001/1/1 -> "Normal"
+    // (this is the difference between calling pgprot_writecombine() or not)
+    vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
+  }
   mutex_lock(&buffer->lock);
   /* now map it to userspace */
   {
@@ -340,7 +340,7 @@ int portalmem_dmabuffer_destroy(int fd)
   return 0;
 }
 
-int portalmem_dmabuffer_create(unsigned long len)
+int portalmem_dmabuffer_create(PortalAlloc portalAlloc)
 {
   static unsigned int high_order_gfp_flags = (GFP_HIGHUSER | __GFP_ZERO |
 	    __GFP_NOWARN | __GFP_NORETRY | __GFP_NO_KSWAPD) & ~__GFP_WAIT;
@@ -361,14 +361,17 @@ int portalmem_dmabuffer_create(unsigned long len)
   long size_remaining;
   int infocount = 0;
   size_t align = 4096;
+  size_t len = portalAlloc.len;
   int return_fd;
 
-  printk("%s, size=%ld\n", __FUNCTION__, len);
+  printk("%s, size=%ld cached=%d\n", __FUNCTION__, portalAlloc.len, portalAlloc.cached);
   len = PAGE_ALIGN(round_up(len, align));
   size_remaining = len;
   buffer = kzalloc(sizeof(struct pa_buffer), GFP_KERNEL);
   if (!buffer)
     return -ENOMEM;
+  buffer->cached = portalAlloc.cached;
+
   table = kmalloc(sizeof(struct sg_table), GFP_KERNEL);
   if (!table) {
     kfree(buffer);
@@ -435,13 +438,14 @@ int portalmem_dmabuffer_create(unsigned long len)
          memory is ready for dma, ie if it has a
          cached mapping that mapping has been invalidated */
       for_each_sg(buffer->sg_table->sgl, sg, buffer->sg_table->nents, infocount){
-	unsigned int length = sg->length;
-	dma_addr_t start_addr = sg_phys(sg), end_addr = start_addr+length;
-        sg_dma_address(sg) = sg_phys(sg);
 #ifdef __arm__
+	unsigned int length = sg->length;
+	dma_addr_t start_addr = sg_phys(sg);
+	dma_addr_t  end_addr = start_addr+length;
 	outer_clean_range(start_addr, end_addr);
 	outer_inv_range(start_addr, end_addr);
 #endif
+        sg_dma_address(sg) = sg_phys(sg);
       }
       dmabuf = dma_buf_export(buffer, &dma_buf_ops, len, O_RDWR);
       if (IS_ERR(dmabuf))
@@ -470,35 +474,12 @@ int portalmem_dmabuffer_create(unsigned long len)
 static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
   switch (cmd) {
-#define DIAGNOSTIC
-#ifdef DIAGNOSTIC
-  case PA_DMA_ADDRESSES: {
-    struct PortalAllocHeader header;
-    struct file *f;
-    struct sg_table *sgtable;
-    struct scatterlist *sg;
-    int i;
-    struct PortalAlloc* palloc = (struct PortalAlloc*)arg;
-    if (copy_from_user(&header, (void __user *)arg, sizeof(header)))
+  case PA_MALLOC: {
+    struct PortalAlloc portalAlloc;
+    if (copy_from_user(&portalAlloc, (void __user *)arg, sizeof(portalAlloc)))
       return -EFAULT;
-    f = fget(header.fd);
-    sgtable = ((struct pa_buffer *)((struct dma_buf *)f->private_data)->priv)->sg_table;
-    if (header.numEntries > 0)
-      for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
-        unsigned long p = sg_phys(sg);
-        if (copy_to_user((void __user *)&(palloc->entries[i].dma_address), &(p), sizeof(p))
-         || copy_to_user((void __user *)&(palloc->entries[i].length), &(sg->length), sizeof(sg->length)))
-    	  return -EFAULT;
-      }
-    header.numEntries = ((struct pa_buffer *)((struct dma_buf *)f->private_data)->priv)->sg_table->nents;
-    fput(f);
-    if (copy_to_user((void __user *)arg, &header, sizeof(header)))
-      return -EFAULT;
-    return 0;
+    return portalmem_dmabuffer_create(portalAlloc);
   }
-#endif
-  case PA_MALLOC:
-    return portalmem_dmabuffer_create((unsigned long)arg);
   case PA_ELEMENT_SIZE: {
     struct PortalElementSize req;
     struct file *f;

@@ -5,6 +5,5 @@ H2S_INTERFACES = Echo:EchoIndication
 BSVFILES = Echo.bsv Swallow.bsv
 CPPFILES=daemon.cpp
 NUMBER_OF_MASTERS =0
-AUTOTOP = --interface leds:Echo.leds
 
 include $(CONNECTALDIR)/Makefile.connectal

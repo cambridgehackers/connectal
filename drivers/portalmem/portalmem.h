@@ -22,20 +22,14 @@
 #ifndef __PORTALALLOC_H__
 #define __PORTALALLOC_H__
 
-typedef struct PortalAllocHeader {
-    size_t size;
-    int fd;
-    int numEntries;
-} PortalAllocHeader;
-
 typedef struct DmaEntry {
     long dma_address;
     unsigned int length; // to match length field in scatterlist.h
 } DmaEntry;
 
 typedef struct PortalAlloc {
-    PortalAllocHeader header;
-    DmaEntry entries[0];
+  size_t len;
+  int cached;
 } PortalAlloc;
 
 typedef struct PortalElementSize {
@@ -43,8 +37,7 @@ typedef struct PortalElementSize {
     int index;
 } PortalElementSize;
 
-#define PA_DMA_ADDRESSES      _IOWR('B', 13, PortalAlloc)
-#define PA_MALLOC              _IOR('B', 14, unsigned long)
+#define PA_MALLOC              _IOR('B', 14, PortalAlloc)
 #define PA_ELEMENT_SIZE        _IOR('B', 15, PortalElementSize)
 
 /**
@@ -60,10 +53,11 @@ struct pa_buffer {
     size_t          size;
     struct mutex    lock;
     int             kmap_cnt;
+    int             cached;
     void            *vaddr;
     struct sg_table *sg_table;
 };
-int portalmem_dmabuffer_create(unsigned long len);
+int portalmem_dmabuffer_create(struct PortalAlloc arg);
 int portalmem_dmabuffer_destroy(int fd);
 #endif
 

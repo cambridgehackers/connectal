@@ -41,6 +41,8 @@ import PCIE              ::*;
 
 `ifdef BOARD_de5
 import PS5LIB            ::*;
+`elsif BOARD_vsim
+import PS5LIB            ::*;
 //import PcieEndpointS5Test ::*;
 `elsif BOARD_htg4
 import PS4LIB            ::*;
@@ -76,10 +78,10 @@ interface PcieEndpointS5#(numeric type lanes);
    interface PcieHipPipe pipe;
    interface PcieHipCtrl ctrl;
 `endif
-   interface Clock epClock125;
-   interface Reset epReset125;
-   interface Clock epClock250;
-   interface Reset epReset250;
+   interface Clock epPcieClock;
+   interface Reset epPcieReset;
+   interface Clock epPortalClock;
+   interface Reset epPortalReset;
    interface Clock epDerivedClock;
    interface Reset epDerivedReset;
    method PciId device;
@@ -101,7 +103,6 @@ typedef struct {
 } AvalonStTx#(type bytes) deriving (Bits, Eq);
 
 typedef 8 PcieLanes;
-typedef 4 NumLeds;
 
 //(* synthesize *)
 module mkPcieEndpointS5#(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieEndpointS5#(PcieLanes));
@@ -117,6 +118,10 @@ module mkPcieEndpointS5#(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieE
    PcieWrap#(12, 32, 128) pcie_ep <- mkPcieS5Wrap(clk_100MHz, clk_50MHz, npor, perst_n);
 `elsif BOARD_htg4
    PcieWrap#(12, 32, 128) pcie_ep <- mkPcieS4Wrap(clk_100MHz, clk_50MHz, clk_100MHz, npor, perst_n);
+`endif
+
+`ifdef BOARD_vsim
+   PcieWrap#(12, 32, 128) pcie_ep <- mkPcieS5Wrap(clk_100MHz, clk_50MHz, npor, perst_n);
 `endif
 
    Clock core_clk = pcie_ep.coreclkout_hip;
@@ -263,12 +268,10 @@ module mkPcieEndpointS5#(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieE
    endinterface
 
    interface tlp = tlp16;
-   //FIXME: verify epClock250 is needed.
-   interface Clock epClock250 = core_clk;
-   interface Clock epReset250 = core_resetn;
-   interface Clock epClock125 = core_clk;
-   interface Clock epReset125 = core_resetn;
-
+   interface Clock epPcieClock = core_clk;
+   interface Reset epPcieReset = core_resetn;
+   interface Clock epPortalClock = core_clk;
+   interface Reset epPortalReset = core_resetn;
    //FIXME: verify derivedClock value
    interface Clock epDerivedClock = core_clk;
    interface Reset epDerivedReset = core_resetn;

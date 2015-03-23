@@ -32,30 +32,30 @@ proxyClassPrefixTemplate='''
 class %(className)sProxy : public %(parentClass)s {
     %(classNameOrig)sCb *cb;
 public:
-    %(className)sProxy(int id, %(classNameOrig)sCb *cbarg = &%(className)sProxyReq, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller = 0) :
-        Portal(id, bufsize, NULL, NULL, poller), cb(cbarg) {};
+    %(className)sProxy(int id, int tile = 0, %(classNameOrig)sCb *cbarg = &%(className)sProxyReq, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller = 0) :
+        Portal(id, tile, bufsize, NULL, NULL, poller), cb(cbarg) {};
     %(className)sProxy(int id, PortalItemFunctions *item, void *param, %(classNameOrig)sCb *cbarg = &%(className)sProxyReq, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller = 0) :
-        Portal(id, bufsize, NULL, NULL, item, param, poller), cb(cbarg) {};
+        Portal(id, 0, bufsize, NULL, NULL, item, param, poller), cb(cbarg) {};
 '''
 
 wrapperClassPrefixTemplate='''
 extern %(classNameOrig)sCb %(className)s_cbTable;
 class %(className)sWrapper : public %(parentClass)s {
 public:
-    %(className)sWrapper(int id, PORTAL_INDFUNC cba = %(className)s_handleMessage, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller = 0) :
-           Portal(id, bufsize, cba, (void *)&%(className)s_cbTable, poller) {
+    %(className)sWrapper(int id, int tile = 0, PORTAL_INDFUNC cba = %(className)s_handleMessage, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller = 0) :
+           Portal(id, tile, bufsize, cba, (void *)&%(className)s_cbTable, poller) {
         pint.parent = static_cast<void *>(this);
     };
     %(className)sWrapper(int id, PortalItemFunctions *item, void *param, PORTAL_INDFUNC cba = %(className)s_handleMessage, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller=0):
-           Portal(id, bufsize, cba, (void *)&%(className)s_cbTable, item, param, poller) {
+           Portal(id, 0, bufsize, cba, (void *)&%(className)s_cbTable, item, param, poller) {
         pint.parent = static_cast<void *>(this);
     };
     %(className)sWrapper(int id, PortalPoller *poller) :
-           Portal(id, %(classNameOrig)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, poller) {
+           Portal(id, 0, %(classNameOrig)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, poller) {
         pint.parent = static_cast<void *>(this);
     };
     %(className)sWrapper(int id, PortalItemFunctions *item, void *param, PortalPoller *poller):
-           Portal(id, %(classNameOrig)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, item, param, poller) {
+           Portal(id, 0, %(classNameOrig)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, item, param, poller) {
         pint.parent = static_cast<void *>(this);
     };
 '''
@@ -633,6 +633,18 @@ def emitStruct(item, name, f, indentation):
         f.write(' %s;' % name)
     f.write('\n')
 
+def emitType(item, name, f, indentation):
+    indent(f, indentation)
+    tmp = typeCName(item)
+    if not tmp or tmp[0] == '`' or tmp == 'Empty' or tmp[-2:] == '_P':
+        return
+    if (indentation == 0):
+        f.write('typedef ')
+    f.write(tmp)
+    if (indentation == 0):
+        f.write(' %s;' % name)
+    f.write('\n')
+
 def emitEnum(item, name, f, indentation):
     indent(f, indentation)
     if (indentation == 0):
@@ -654,6 +666,10 @@ def emitCD(item, generated_hpp, indentation):
         emitEnum(td, n, generated_hpp, indentation)
     elif t == 'Struct':
         emitStruct(td, n, generated_hpp, indentation)
+    elif t == 'Type':
+        emitType(td, n, generated_hpp, indentation)
+    else:
+        print 'EMITCD', n, t, td
 
 def generate_cpp(project_dir, noisyFlag, jsondata):
     global globalv_globalvars

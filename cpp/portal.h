@@ -30,39 +30,45 @@
 #include <string.h> // memcpy
 #endif
 
+/* division of 20 bits of physical address space */
+#define TILE_SEL   2
+#define PORTAL_SEL 6
+#define METHOD_SEL 7
+#define METHOD_SZ  5
+
 /* Offset of each /dev/fpgaxxx device in the address space */
-#define PORTAL_BASE_OFFSET         (1 << 16)
-#define PORTAL_REG_OFFSET          0xc000
+#define PORTAL_BASE_OFFSET         (1 << (METHOD_SZ+METHOD_SEL))
+#define TILE_BASE_OFFSET           (1 << (PORTAL_SEL+METHOD_SZ+METHOD_SEL))
 
 /* Offsets of mapped registers within an /dev/fpgaxxx device */
-#define PORTAL_REQ_FIFO(A)         (((0<<14) + (A) * 256 + 256)/sizeof(uint32_t))
-#define PORTAL_IND_FIFO(A)         (((0<<14) + (A) * 256 + 256)/sizeof(uint32_t))
+#define PORTAL_REQ_FIFO(A)         (((A << (METHOD_SZ)) + (1 << (METHOD_SZ)))/sizeof(uint32_t))
+#define PORTAL_IND_FIFO(A)         (((A << (METHOD_SZ)) + (1 << (METHOD_SZ)))/sizeof(uint32_t))
 
 // PortalCtrl offsets
 #define PORTAL_CTRL_INTERRUPT_STATUS 0
 #define PORTAL_CTRL_INTERRUPT_ENABLE 1
-#define PORTAL_CTRL_SEVEN            2
+#define PORTAL_CTRL_NUM_TILES        2
 #define PORTAL_CTRL_IND_QUEUE_STATUS 3
 #define PORTAL_CTRL_PORTAL_ID        4
-#define PORTAL_CTRL_TOP              5
+#define PORTAL_CTRL_NUM_PORTALS      5
 #define PORTAL_CTRL_COUNTER_MSB      6
 #define PORTAL_CTRL_COUNTER_LSB      7
 
 
 // PortalCtrl registers
-#define PORTAL_CTRL_REG_OFFSET_32   ( (0<<14)             /sizeof(uint32_t))
+#define PORTAL_CTRL_REG_OFFSET_32        0
 #define PORTAL_CTRL_REG_INTERRUPT_STATUS (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_INTERRUPT_STATUS)
 #define PORTAL_CTRL_REG_INTERRUPT_ENABLE (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_INTERRUPT_ENABLE)
-#define PORTAL_CTRL_REG_SEVEN            (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_SEVEN           )
+#define PORTAL_CTRL_REG_NUM_TILES        (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_NUM_TILES       )
 #define PORTAL_CTRL_REG_IND_QUEUE_STATUS (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_IND_QUEUE_STATUS)
 #define PORTAL_CTRL_REG_PORTAL_ID        (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_PORTAL_ID       )
-#define PORTAL_CTRL_REG_TOP              (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_TOP             )
+#define PORTAL_CTRL_REG_NUM_PORTALS      (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_NUM_PORTALS     )
 #define PORTAL_CTRL_REG_COUNTER_MSB      (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_COUNTER_MSB     )
 #define PORTAL_CTRL_REG_COUNTER_LSB      (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_COUNTER_LSB     )
 
 
 typedef int Bool;   /* for GeneratedTypes.h */
-typedef int SpecialTypeForSendingFd;
+typedef uint32_t SpecialTypeForSendingFd;
 struct PortalInternal;
 typedef int (*ITEMINIT)(struct PortalInternal *pint, void *param);
 typedef int (*PORTAL_INDFUNC)(struct PortalInternal *p, unsigned int channel, int messageFd);
@@ -100,6 +106,7 @@ typedef struct PortalInternal {
     struct PortalPoller   *poller;
     int                    fpga_fd;
     int                    fpga_number;
+    int                    fpga_tile;
     volatile unsigned int *map_base;
     void                  *parent;
     PORTAL_INDFUNC         handler;
@@ -181,7 +188,7 @@ extern "C" {
 #ifndef __KERNEL__
 int portal_printf(const char *format, ...); // outputs to stderr
 #endif
-void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param, uint32_t reqinfo);
+void init_portal_internal(PortalInternal *pint, int id, int tile, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param, uint32_t reqinfo);
 void portalCheckIndication(PortalInternal *pint);
 uint64_t portalCycleCount(void);
 void write_portal_fd_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
@@ -201,6 +208,7 @@ void portalDCacheFlushInval(int fd, long size, void *__p);
 void portalDCacheInval(int fd, long size, void *__p);
 void init_portal_memory(void);
 int portalAlloc(size_t size);
+int portalAllocCached(size_t size, int cached);
 void *portalMmap(int fd, size_t size);
 void portalSendFd(int fd, void *data, int len, int sendFd);
 int portalRecvFd(int fd, void *data, int len, int *recvFd);

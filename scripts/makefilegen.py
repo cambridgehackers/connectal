@@ -113,10 +113,10 @@ fpgamake.mk: $(VFILE) Makefile prepare_bin_target
 
 hw/mkTop.bit: fpgamake.mk prepare_bin_target
 	$(Q)make -f fpgamake.mk
-ifeq ($(XILINX),"")
+ifneq ($(XILINX),)
 	$(Q)cp -f Impl/*/*.rpt bin
-else ifeq ($(ALTERA),"")
-	$(Q)echo "copy report files"
+else ifneq ($(ALTERA),)
+	$(Q)cp -f $(MKTOP).sof bin
 endif
 '''
 
@@ -310,16 +310,18 @@ if __name__=='__main__':
 
     options.verilog.append(os.path.join(connectaldir, 'verilog'))
 
-    if 'ALTERA' in bsvdefines:
+    # bsvdefines is a list of definitions, not a dictionary, so need to include the "=1"
+    if 'ALTERA=1' in bsvdefines:
         fpga_vendor = 'altera'
         suffix = 'sdc'
-    elif 'XILINX' in bsvdefines:
+    elif 'XILINX=1' in bsvdefines:
         fpga_vendor = 'xilinx'
         suffix = 'xdc'
     else:
         fpga_vendor = None
         suffix = None
 
+    print 'fpga_vendor', fpga_vendor
     if fpga_vendor:
         options.constraint.insert(0, os.path.join(connectaldir, 'constraints/', '%s/%s.%s' % (fpga_vendor, boardname, suffix)))
 

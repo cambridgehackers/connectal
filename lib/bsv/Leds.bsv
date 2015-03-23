@@ -24,17 +24,36 @@
 `ifdef NUMBER_OF_LEDS
 typedef `NUMBER_OF_LEDS LedsWidth;
 `else
+`ifdef XILINX
+`ifdef Artix7
+typedef 4 LedsWidth;
+`else
+`ifdef BOARD_zybo
+typedef 4 LedsWidth;
+`else
+`ifdef BOARD_zc706
+typedef 4 LedsWidth;
+`else
+`ifdef BOARD_netfpgasume
+typedef 2 LedsWidth;
+`else
 typedef 8 LedsWidth;
+`endif
+`endif
+`endif
+`endif
+`elsif ALTERA
+typedef 4 LedsWidth;
+`elsif VSIM
+typedef 4 LedsWidth;
+`else
+typedef 8 LedsWidth;
+`endif
 `endif
 
 interface LEDS;
+    (* result= "GPIO_leds" *)
     method Bit#(LedsWidth) leds;
+    interface Clock deleteme_unused_clock;
+    interface Reset deleteme_unused_reset;
 endinterface
-
-function LEDS default_leds();
-   return (interface LEDS;
-	      method Bit#(LedsWidth) leds;
-		 return 0;
-	      endmethod
-	   endinterface);   
-endfunction

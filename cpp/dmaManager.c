@@ -42,7 +42,9 @@
 
 static int trace_memory = 1;
 
+#ifdef BSIM
 #include "dmaSendFd.h"
+#endif
 
 void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *dmaDevice, PortalInternal *sglDevice)
 {

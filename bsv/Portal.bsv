@@ -19,27 +19,31 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
-
 import Vector::*;
 import MemTypes::*;
-import Leds::*;
-import XADC::*;
 import Pipe::*;
 import ConnectalMemory::*;
+
+interface PortalInterrupt#(numeric type dataWidth);
+   method Bool status();
+   method Bit#(dataWidth) channel();
+endinterface
 
 // implementation of a Portal as a group of Pipes
 interface PipePortal#(numeric type numRequests, numeric type numIndications, numeric type slaveDataWidth);
    method Bit#(16) messageSize(Bit#(16) methodNumber);
    interface Vector#(numRequests, PipeIn#(Bit#(slaveDataWidth))) requests;
+   //method PipeIn#(Bit#(slaveDataWidth)) requestsPipe(Integer a);
    interface Vector#(numIndications, PipeOut#(Bit#(slaveDataWidth))) indications;
+   //method PipeOut#(Bit#(slaveDataWidth)) indicationsPipe(Integer a);
+   interface PortalInterrupt#(slaveDataWidth) intr;
 endinterface
 
 // implementation of a Portal as a physical memory slave
 interface MemPortal#(numeric type slaveAddrWidth, numeric type slaveDataWidth);
    interface PhysMemSlave#(slaveAddrWidth,slaveDataWidth) slave;
    interface ReadOnly#(Bool) interrupt;
-   interface WriteOnly#(Bool) top;
+   interface WriteOnly#(Bit#(slaveDataWidth)) num_portals;
 endinterface
 
 function PhysMemSlave#(_a,_d) getSlave(MemPortal#(_a,_d) p);
@@ -57,20 +61,21 @@ function Vector#(16, ReadOnly#(Bool)) getInterruptVector(Vector#(numPortals, Mem
    return interrupts;
 endfunction
 
+interface SharedMemoryPortalConfig;
+   method Action setSglId(Bit#(32) sglId);
+endinterface
+
 interface SharedMemoryPortal#(numeric type dataBusWidth);
-   interface Vector#(1, MemReadClient#(dataBusWidth))  readClient;
-   interface Vector#(1, MemWriteClient#(dataBusWidth)) writeClient;
    interface SharedMemoryPortalConfig cfg;
    interface ReadOnly#(Bool) interrupt;
 endinterface
 
-typedef MemPortal#(16,32) StdPortal;
+typedef MemPortal#(12,32) StdPortal;
 
 interface ConnectalTop#(numeric type addrWidth, numeric type dataWidth, type pins, numeric type numMasters);
    interface PhysMemSlave#(32,32) slave;
    interface Vector#(numMasters,PhysMemMaster#(addrWidth, dataWidth)) masters;
    interface Vector#(16,ReadOnly#(Bool)) interrupt;
-   interface LEDS             leds;
    interface pins             pins;
 endinterface
 

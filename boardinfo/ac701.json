@@ -1,6 +1,6 @@
 {
     "options": {
-        "bsvdefines" : ["XILINX", "Artix7",  "PCIE", "PcieHostTypeIF", "PhysAddrWidth=40"],
+        "bsvdefines" : ["XILINX=1", "Artix7",  "PCIE", "PCIE1", "PcieHostTypeIF", "PhysAddrWidth=40"],
         "os" : "ubuntu",
         "partname" : "xc7a200tfbg676-2",
         "need_pcie" : "x7_gen1x8",

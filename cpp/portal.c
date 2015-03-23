@@ -42,6 +42,7 @@
 #include <time.h> // ctime
 #include <stdarg.h> // for portal_printf
 #include <sys/wait.h>
+#include <sys/stat.h>
 #endif
 #include "drivers/portalmem/portalmem.h" // PA_MALLOC
 
@@ -65,7 +66,7 @@ PortalInternal *utility_portal = 0x0;
 static tBoard* tboard;
 #endif
 
-void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param, uint32_t reqinfo)
+void init_portal_internal(PortalInternal *pint, int id, int tile, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param, uint32_t reqinfo)
 {
     int rc;
     init_portal_hw();
@@ -73,6 +74,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
     if(!utility_portal)
       utility_portal = pint;
     pint->fpga_number = id;
+    pint->fpga_tile = tile;
     pint->fpga_fd = -1;
     pint->handler = handler;
     pint->cb = cb;
@@ -90,7 +92,7 @@ void init_portal_internal(PortalInternal *pint, int id, PORTAL_INDFUNC handler, 
     pint->reqinfo = reqinfo;
     rc = pint->item->init(pint, param);
     if (rc != 0) {
-      PORTAL_PRINTF("%s: failed to open Portal portal%d\n", __FUNCTION__, pint->fpga_number);
+      PORTAL_PRINTF("%s: failed to open Portal portal_%d_%d\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number);
 #ifndef __KERNEL__
       exit(1);
 #endif
@@ -128,19 +130,33 @@ static void init_portal_hw(void)
 #ifdef __KERNEL__
     tboard = get_pcie_portal_descriptor();
 #else
-#ifndef BSIM
     int pid = fork();
     if (pid == -1) {
         printf("[%s:%d] fork error\n", __FUNCTION__, __LINE__);
         exit(-1);
     }
     else if (pid) {
-        int status;
+        int fd, status, len;
         waitpid(pid, &status, 0);
+#ifdef __arm__
+        fd = open("/dev/connectal", O_RDONLY); /* scan the fpga directory */
+        len = read(fd, &status, sizeof(status));
+printf("[%s:%d] fd %d len %d\n", __FUNCTION__, __LINE__, fd, len);
+        close(fd);
+#elif !defined(BSIM) && !defined(BOARD_xsim)
+        while (1) {
+            struct stat statbuf;
+            int rc = stat("/dev/connectal", &statbuf); /* wait for driver to load */
+            if (rc != -1)
+                break;
+            printf("[%s:%d] waiting for '/dev/connectal'\n", __FUNCTION__, __LINE__);
+            sleep(1);
+        }
+#endif
     }
     else {
 #define MAX_PATH 2000
-        char buf[MAX_PATH];
+        static char buf[MAX_PATH];
         buf[0] = 0;
         int rc = readlink("/proc/self/exe", buf, sizeof(buf));
         char *serial = getenv("SERIALNO");
@@ -154,13 +170,12 @@ static void init_portal_hw(void)
         argv[ind++] = (char *)"-x";
         argv[ind++] = buf;
         execvp ("/mnt/sdcard/fpgajtag", argv);
-        exit(-1);
-#else
+#elif !defined(BSIM) && !defined(BOARD_xsim)
         argv[ind++] = buf;
         execvp ("fpgajtag", argv);
 #endif // !__arm__
+        exit(-1);
     }
-#endif // //BSIM
 #endif // !__KERNEL__
 }
 
@@ -248,14 +263,26 @@ void init_portal_memory(void)
 
 int portalAlloc(size_t size)
 {
+  return portalAllocCached(size, 0);
+}
+
+int portalAllocCached(size_t size, int cached)
+{
   int fd;
+  struct PortalAlloc portalAlloc;
+  portalAlloc.len = size;
+  portalAlloc.cached = cached;
   init_portal_memory();
 #ifdef __KERNEL__
   fd = portalmem_dmabuffer_create(size);
 #else
-  fd = ioctl(global_pa_fd, PA_MALLOC, size);
+  fd = ioctl(global_pa_fd, PA_MALLOC, &portalAlloc);
 #endif
-  PORTAL_PRINTF("alloc size=%ldMB fd=%d\n", size/(1L<<20), fd);
+  PORTAL_PRINTF("alloc size=%ld fd=%d\n", (unsigned long)size, fd);
+  if (fd == -1) {
+       PORTAL_PRINTF("portalAllocCached: alloc failed size=%ld errno=%d\n", (unsigned long)size, errno);
+       exit(-1);
+  }
   return fd;
 }
 
@@ -390,7 +417,7 @@ static int init_hardware(struct PortalInternal *pint, void *param)
     int rc = 0;
     char read_status;
     char buff[128];
-    snprintf(buff, sizeof(buff), "/dev/portal%d", pint->fpga_number);
+    snprintf(buff, sizeof(buff), "/dev/portal_%d_%d", pint->fpga_tile, pint->fpga_number);
     pint->fpga_fd = open(buff, O_RDWR);
     if (pint->fpga_fd < 0) {
 	PORTAL_PRINTF("Failed to open %s fd=%d errno=%d\n", buff, pint->fpga_fd, errno);

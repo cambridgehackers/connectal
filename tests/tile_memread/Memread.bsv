@@ -26,10 +26,13 @@ import Vector::*;
 import GetPut::*;
 import ClientServer::*;
 
+import CtrlMux::*;
 import Pipe::*;
 import MemTypes::*;
 import MemreadEngine::*;
 import HostInterface::*; // for DataBusWidth
+
+typedef enum {MemreadIndicationH2S, MemreadRequestS2H} TileNames deriving (Eq,Bits);
 
 interface MemreadRequest;
    method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
@@ -37,7 +40,7 @@ endinterface
 
 interface Memread;
    interface MemreadRequest request;
-   interface Vector#(1,MemReadClient#(DataBusWidth)) dmaClient;
+   interface MemReadClient#(DataBusWidth) dmaClient;
 endinterface
 
 interface MemreadIndication;
@@ -59,7 +62,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    
    
    rule start (itersToStart > 0);
-      re.readServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(chunk), burstLen:truncate(burstLen*4)});
+      re.readServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(chunk), tag:0, burstLen:truncate(burstLen*4)});
       itersToStart <= itersToStart-1;
    endrule
 
@@ -83,7 +86,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
       itersToFinish <= itersToFinish - 1;
    endrule
    
-   interface dmaClient = cons(re.dmaClient, nil);
+   interface dmaClient = re.dmaClient;
    interface MemreadRequest request;
       method Action startRead(Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic) if (itersToStart == 0 && itersToFinish == 0);
 	 pointer <= rp;

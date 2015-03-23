@@ -1,0 +1,36 @@
+#
+set -x
+set -e
+export SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
+echo "run.de5test parameters are:" $*
+SSHPARAM=" -o StrictHostKeyChecking=no"
+
+if [ "$SERIALNO" != "" ]; then
+    BOARD_USB="-c $SERIALNO"
+else
+    BOARD_USB="-c 1"
+fi
+if [ "$RUNTIMELIMIT" != "" ]; then
+    TIMELIMIT=$RUNTIMELIMIT
+else
+    TIMELIMIT=3m
+fi
+
+if [ "$RUNPARAM" != "" ]; then
+    TEMPDIR=/tmp/`uname -n`-$PPID-pcie
+    ssh $SSHPARAM $RUNPARAM "rm -rf $TEMPDIR; mkdir -p $TEMPDIR"
+    scp $1 $2 $RUNPARAM:$TEMPDIR
+    BINNAME=`basename $1`
+    EXENAME=`basename $2`
+    if [ "$NOPROGRAM" != "1" ]; then
+        ssh $SSHPARAM $RUNPARAM "fpgajtag $BOARD_USB $TEMPDIR/$BINNAME"
+    else
+        echo "not programming $BOARD"
+    fi
+else
+    if [ "$NOPROGRAM" != "1" ]; then
+	    echo $1
+        quartus_pgm $BOARD_USB -m jtag -o p\;$1
+        sleep 1
+    fi
+fi

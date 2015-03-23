@@ -25,7 +25,6 @@ import StmtFSM::*;
 import FIFO::*;
 import CtrlMux::*;
 import Portal::*;
-import Leds::*;
 import ConnectalMemory::*;
 import MemTypes::*;
 import MemServer::*;
@@ -107,7 +106,6 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
    interface masters = dma.masters;
-   interface leds = default_leds;
 endmodule
 
 

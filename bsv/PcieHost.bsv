@@ -33,19 +33,23 @@ import PcieTracer        :: *;
 import Xilinx            :: *;
 import Bscan             :: *;
 import Portal            :: *;
-import Leds              :: *;
 import MemSlaveEngine    :: *;
 import MemMasterEngine   :: *;
 import PcieCsr           :: *;
 import MemTypes          :: *;
 `ifndef BSIM
 `ifdef XILINX
+`ifdef PCIE1
+import PCIEWRAPPER       :: *;
+import PcieEndpointX7    :: *;
+`endif // pcie1
+`ifdef PCIE2
+import PCIEWRAPPER2       :: *;
+import PcieEndpointX7Gen2 :: *;
+`endif // pcie2
 `ifdef PCIE3
 import PCIEWRAPPER3      :: *;
 import Pcie3EndpointX7   :: *;
-`else // pcie3
-import PCIEWRAPPER       :: *;
-import PcieEndpointX7    :: *;
 `endif // pcie3
 `elsif ALTERA
 import PcieEndpointS5    :: *;
@@ -69,8 +73,6 @@ endmodule
 
 //(* synthesize *) commented out so that the guards in MemServer aren't destroyed (mdk)
 module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
-   Clock epClock125 <- exposeCurrentClock();
-   Reset epReset125 <- exposeCurrentReset();
    let dispatcher <- mkTLPDispatcher;
    let arbiter    <- mkTLPArbiter;
    Vector#(NumberOfMasters,MemSlaveEngine#(DataBusWidth)) sEngine <- replicateM(mkMemSlaveEngineSynth(my_pciId));
@@ -137,8 +139,6 @@ interface PcieTop#(type ipins);
    (* prefix="PCIE" *)
    interface PciewrapPci_exp#(PcieLanes) pcie;
    (* always_ready *)
-   method Bit#(NumLeds) leds();
-   interface Clock deleteme_unused_clockLeds;
    (* prefix="" *)
    interface ipins       pins;
 `endif
@@ -148,8 +148,6 @@ endinterface
 module mkBsimPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)(PcieHostTop);
    let dc <- exposeCurrentClock;
    let dr <- exposeCurrentReset;
-   Clock epClock125 = dc;
-   Reset epReset125 = dr;
    PcieHost#(DataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(PciId{ bus:0, dev:0, func:0});
    // connect pciehost.pci to bdip functions here
    rule from_bdpi if (can_get_tlp);
@@ -162,8 +160,8 @@ module mkBsimPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_c
       put_tlp(foo);
       //$display("to_bdpi");
    endrule
-   interface Clock tepClock125 = epClock125;
-   interface Reset tepReset125 = epReset125;
+   interface Clock pcieClock = dc;
+   interface Reset pcieReset = dr;
    interface PcieHost tpciehost = pciehost;
 endmodule
 `endif
@@ -187,33 +185,23 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys
    // Instantiate the PCIE endpoint
    PcieEndpointX7#(PcieLanes) ep7 <- mkPcieEndpointX7( clocked_by pci_clk_100mhz_buf, reset_by pci_sys_reset_n);
 
-   Clock epClock125 = ep7.epClock125;
-   Reset epReset125 = ep7.epReset125;
-   Clock epClock250 = ep7.epClock250;
-   Reset epReset250 = ep7.epReset250;
-`ifdef PCIE_250MHZ
-   Clock portalClock_ = epClock250;
-   Reset portalReset_ = epReset250;
-`else
-   Clock portalClock_ = epClock125;
-   Reset portalReset_ = epReset125;
-`endif
+   Clock pcieClock_ = ep7.epPcieClock;
+   Reset pcieReset_ = ep7.epPcieReset;
    PcieHost#(DataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(
          PciId{ bus:  ep7.cfg.bus_number(), dev: ep7.cfg.device_number(), func: ep7.cfg.function_number()},
-         clocked_by portalClock_, reset_by portalReset_);
-   mkConnection(ep7.tlp, pciehost.pci, clocked_by portalClock_, reset_by portalReset_);
+         clocked_by pcieClock_, reset_by pcieReset_);
+   mkConnection(ep7.tlp, pciehost.pci, clocked_by pcieClock_, reset_by pcieReset_);
    interface Clock tsys_clk_200mhz = sys_clk_200mhz;
    interface Clock tsys_clk_200mhz_buf = sys_clk_200mhz_buf;
    interface Clock tpci_clk_100mhz_buf = pci_clk_100mhz_buf;
 
    interface PcieEndpointX7 tep7 = ep7;
-   interface Clock tepClock125 = epClock125;
-   interface Reset tepReset125 = epReset125;
    interface PcieHost tpciehost = pciehost;
 
-   //once the dot product server makes timing, replace epClock125 with ep7.epclock250
-   interface portalClock = portalClock_;
-   interface portalReset = portalReset_;
+   interface pcieClock = ep7.epPcieClock;
+   interface pcieReset = ep7.epPcieReset;
+   interface portalClock = ep7.epPortalClock;
+   interface portalReset = ep7.epPortalReset;
    interface derivedClock = ep7.epDerivedClock;
    interface derivedReset = ep7.epDerivedReset;
 endmodule
@@ -231,28 +219,20 @@ module mkAlteraPcieHostTop #(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(P
 
    PcieEndpointS5#(PcieLanes) ep7 <- mkPcieEndpointS5(clk_100MHz, clk_50MHz, perst_n, clocked_by clk_100MHz, reset_by perst_n);
 
-   Clock epClock125 = ep7.epClock125;
-   Reset epReset125 = ep7.epReset125;
-   Clock epClock250 = ep7.epClock250;
-   Reset epReset250 = ep7.epReset250;
+   Clock epPcieClock = ep7.pcieClock;
+   Reset epPcieReset = ep7.epPcieReset;
 
-`ifdef PCIE_250MHZ
-   Clock portalClock_ = epClock250;
-   Reset portalReset_ = epReset250;
-`else
-   Clock portalClock_ = epClock125;
-   Reset portalReset_ = epReset125;
-`endif
+   Clock portalClock_ = epPcieClock;
+   Reset portalReset_ = epPcieReset;
 
    PcieHost#(DataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(ep7.device, clocked_by portalClock_, reset_by portalReset_);
    mkConnection(ep7.tlp, pciehost.pci, clocked_by portalClock_, reset_by portalReset_);
 
    interface PcieEndpointS5 tep7 = ep7;
-   interface Clock tepClock125 = epClock125;
-   interface Reset tepReset125 = epReset125;
    interface PcieHost tpciehost = pciehost;
 
-   //once the dot product server makes timing, replace epClock125 with ep7.epclock250
+   interface Clock pcieClock = epPcieClock;
+   interface Reset pcieReset = epPcieReset;
    interface portalClock = portalClock_;
    interface portalReset = portalReset_;
    interface derivedClock = ep7.epDerivedClock;

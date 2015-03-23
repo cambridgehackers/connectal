@@ -53,7 +53,7 @@ interface HdmiDisplay;
    interface MemWriteClient#(64) bluescopeWriteClient;
 `endif
     interface HdmiDisplayRequest displayRequest;
-    interface HdmiInternalRequest internalRequest;
+    interface HdmiGeneratorRequest internalRequest;
     interface Vector#(1, MemReadClient#(64)) dmaClient;
     interface HDMI#(Bit#(HdmiBits)) hdmi;
     interface XADC xadc;
@@ -61,7 +61,7 @@ endinterface
 
 module mkHdmiDisplay#(Clock hdmi_clock,
 		      HdmiDisplayIndication hdmiDisplayIndication,
-		      HdmiInternalIndication hdmiInternalIndication
+		      HdmiGeneratorIndication hdmiGeneratorIndication
 `ifdef HDMI_BLUESCOPE
 		      , BlueScopeIndication bluescopeIndication
 `endif
@@ -82,7 +82,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
    MemreadEngine#(64,16) memreadEngine <- mkMemreadEngine;
 
    HdmiGenerator#(Rgb888) hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
-			startDMA, hdmiInternalIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
+			startDMA, hdmiGeneratorIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
 `ifndef ZC706
    Rgb888ToYyuv converter <- mkRgb888ToYyuv(clocked_by hdmi_clock, reset_by fifo_reset_hdmi);
    mkConnection(hdmiGen.rgb888, converter.rgb888);
@@ -131,7 +131,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
 	 pixel = doublePixel[0];
       end
       evenOdd <= !evenOdd;
-      hdmiGen.request.put(pixel);
+      hdmiGen.pdata.put(pixel);
    endrule      
 
    Reg#(Bit#(32)) transferCount <- mkReg(0);
@@ -185,7 +185,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
 
     interface MemReadClient dmaClient = cons(memreadEngine.dmaClient, nil);
     interface HDMI hdmi = hdmisignals;
-    interface HdmiInternalRequest internalRequest = hdmiGen.control;
+    interface HdmiGeneratorRequest internalRequest = hdmiGen.request;
 `ifdef HDMI_BLUESCOPE
     interface BlueScopeRequest bluescopeRequest = bluescope.requestIfc;
     interface MemWriteClient bluescopeWriteClient = bluescope.writeClient;

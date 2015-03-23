@@ -1,13 +1,11 @@
 
 CONNECTALDIR?=../..
-#INTERFACES = SimpleRequest MMURequest MMUIndication MemServerRequest MemServerIndication SharedMemoryPortalConfig
 INTERFACES = SharedMemoryPortalConfig
 S2H_INTERFACES = /SimpleRequest:Simple.request
 H2S_INTERFACES = /Simple:SimpleRequest
-MEM_INTERFACES = "append(lSimpleRequestWrapperPortalMem.readClient,lSimpleRequestProxyPortalMem.readClient),append(lSimpleRequestWrapperPortalMem.writeClient,lSimpleRequestProxyPortalMem.writeClient)"
+MEM_INTERFACES = "cons(lSharereadEngine.dmaClient,nil),cons(lSharewriteEngine.dmaClient,nil)"
 
-BSVFILES = Simple.bsv
-#BSVFILES += Top.bsv
+BSVFILES = Simple.bsv $(CONNECTALDIR)/bsv/Portal.bsv
 CPPFILES=testsimple.cpp $(CONNECTALDIR)/cpp/portalShared.c
 AUTOTOP = --importfiles SharedMemoryPortal --importfiles SharedMemoryPortalConfig
 

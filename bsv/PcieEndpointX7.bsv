@@ -178,6 +178,10 @@ interface PcieEndpointX7#(numeric type lanes);
    interface Reset epReset125;
    interface Clock epClock250;
    interface Reset epReset250;
+   interface Clock epPcieClock;
+   interface Reset epPcieReset;
+   interface Clock epPortalClock;
+   interface Reset epPortalReset;
    interface Clock epDerivedClock;
    interface Reset epDerivedReset;
 endinterface
@@ -197,23 +201,18 @@ typedef struct {
 
 `ifdef Artix7
 typedef 4 PcieLanes;
-typedef 4 NumLeds;
 `endif
 `ifdef BOARD_zc706
 typedef 4 PcieLanes;
-typedef 4 NumLeds;
 `endif
 `ifdef BOARD_vc707
 typedef 8 PcieLanes;
-typedef 8 NumLeds;
 `endif
 `ifdef BOARD_kc705
 typedef 8 PcieLanes;
-typedef 8 NumLeds;
 `endif
 `ifdef BOARD_netfpgasume
 typedef 8 PcieLanes;
-typedef 2 NumLeds;
 `endif
 
 (* synthesize *)
@@ -398,6 +397,10 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    interface Reset epReset125 = reset125;
    interface Clock epClock250 = clock250;
    interface Reset epReset250 = reset250;
+   interface Clock epPcieClock = clock125;
+   interface Reset epPcieReset = reset125;
+   interface Clock epPortalClock = portalClock;
+   interface Reset epPortalReset = portalReset;
    interface Clock epDerivedClock = derivedClock;
    interface Reset epDerivedReset = derivedReset;
 endmodule: mkPcieEndpointX7

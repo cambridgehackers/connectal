@@ -54,12 +54,10 @@ programflash.%:
 	make CONNECTAL_DEBUG=1 --no-print-directory $*
 
 IPDIR?=$(CONNECTALDIR)/out
-ifndef NUMBER_OF_MASTERS
-NUMBER_OF_MASTERS=1
-endif
-ifndef PIN_TYPE
-PIN_TYPE=Empty
-endif
+NUMBER_OF_TILES?=1
+SLAVE_DATA_BUS_WIDTH?=32
+NUMBER_OF_MASTERS?=1
+PIN_TYPE?=Empty
 ifndef MAIN_CLOCK_PERIOD
     ifeq ($(BOARD),vc707)
     MAIN_CLOCK_PERIOD=8
@@ -98,8 +96,13 @@ BURST_LEN_SIZE=8
 endif
 
 CONNECTALFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) -D PinType=$(PIN_TYPE) -D MainClockPeriod=$(MAIN_CLOCK_PERIOD) -D DerivedClockPeriod=$(DERIVED_CLOCK_PERIOD)
+CONNECTALFLAGS += -D NumberOfTiles=$(NUMBER_OF_TILES)
+CONNECTALFLAGS += -D SlaveDataBusWidth=$(SLAVE_DATA_BUS_WIDTH)
 CONNECTALFLAGS += -D BurstLenSize=$(BURST_LEN_SIZE)
 CONNECTALFLAGS += --ipdir=$(IPDIR)
+ifeq ($(BOARD),xsim)
+CONNECTALFLAGS += -D BluenocTop
+endif
 ifneq ($(AUTOTOP),)
 USE_AUTOTOP = 1
 endif
@@ -138,9 +141,10 @@ all bits verilog implementation bsim xsim xsimrun: gentarget prebuild
 android.exe bsim_exe ubuntu.exe exe: gentarget
 	make -C $(BOARD) --no-print-directory $@
 
+PCIEGEN=$(shell grep PCIE $(CONNECTALDIR)/boardinfo/$(BOARD).json | sed 's/.*PCIE\([123]\).*/\1/')
 NEED_XILINX_PCIE_ac701=1
-NEED_XILINX_PCIE_kc705=1
-NEED_XILINX_PCIE_vc707=1
+NEED_XILINX_PCIE_kc705=$(PCIEGEN)
+NEED_XILINX_PCIE_vc707=$(PCIEGEN)
 NEED_XILINX_PCIE_netfpgasume=3
 NEED_XILINX_PCIE_v2000t=1
 
@@ -155,6 +159,11 @@ ifeq ($(NEED_XILINX_PCIE_$(BOARD)),1)
     CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/pcie_7x_0/pcie_7x_0.xci
     CONNECTALFLAGS += --bscflags="+RTS -K46777216 -RTS"
 endif
+ifeq ($(NEED_XILINX_PCIE_$(BOARD)),2)
+    FPGAMAKE_CONNECTALFLAGS += -P mkPcieEndpointX7Gen2 -P mkPcieHost
+    CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/pcie2_7x_0/pcie2_7x_0.xci
+    CONNECTALFLAGS += --bscflags="+RTS -K46777216 -RTS"
+endif
 
 ifeq ($(NEED_XILINX_PCIE_$(BOARD)),3)
     FPGAMAKE_CONNECTALFLAGS += -P mkPcieEndpointX7 -P mkPcieHost
@@ -163,9 +172,9 @@ ifeq ($(NEED_XILINX_PCIE_$(BOARD)),3)
 endif
 
 ifeq ($(NEED_ALTERA_PCIE_$(BOARD)),1)
-	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/altera_pcie_reconfig_driver_wrapper.qip
-	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/altera_pcie_sv_hip_ast_wrapper.qip
-	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/alt_xcvr_reconfig_wrapper.qip
+	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/altera_pcie_reconfig_driver_wrapper/altera_pcie_reconfig_driver_wrapper.qip
+	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/altera_pcie_sv_hip_ast_wrapper/altera_pcie_sv_hip_ast_wrapper.qip
+	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/alt_xcvr_reconfig_wrapper/alt_xcvr_reconfig_wrapper.qip
 	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/siv_gen2x8/siv_gen2x8.qip
 	FPGAMAKE_CONNECTALFLAGS += --tcl=$(BOARD)/generatedbsv/$(BOARD).qsf
 	FPGAMAKE_CONNECTALFLAGS += --tcl=$(CONNECTALDIR)/constraints/altera/$(BOARD).sdc
@@ -231,12 +240,8 @@ endif
 
 prebuild::
 	@# additional steps needed before making verilog etc
-ifeq ($(NEED_XILINX_PCIE_$(BOARD)),1)
-	@echo "building ..."
-	cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) vivado -notrace -mode batch -source $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
-endif
-ifeq ($(NEED_XILINX_PCIE_$(BOARD)),3)
-	@echo "building ..."
+ifneq ($(NEED_XILINX_PCIE_$(BOARD)),)
+	@echo "building ... $(BOARD) PCIe gen$(PCIEGEN)"
 	cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) vivado -notrace -mode batch -source $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
 endif
 
@@ -247,6 +252,6 @@ endif
 
 # Synthesize Altera Ethernet Core
 ifeq ($(NEED_ALTERA_ETH_$(BOARD)), 1)
-#	cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) quartus_sh -t $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-eth.tcl
+	cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) quartus_sh -t $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-eth.tcl
 endif
 

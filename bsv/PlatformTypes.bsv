@@ -1,4 +1,4 @@
-// Copyright (c) 2013 Quanta Research Cambridge, Inc.
+// Copyright (c) 2015 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -27,51 +27,20 @@ import Portal::*;
 import MemTypes::*;
 import HostInterface::*;
 
-typedef 4 MaxTileMemClients;
+typedef enum {MMUIndicationH2S, MemServerIndicationH2S, MMURequestS2H, MemServerRequestS2H} PlatformNames deriving (Eq,Bits);
 
-interface TilePins;
-endinterface
-
-interface ITilePins;
-endinterface
-
-instance Connectable#(TilePins,ITilePins);
-   module mkConnection#(TilePins t, ITilePins it)(Empty);
-   endmodule
-endinstance
-
-interface TileSocket;
-   interface PhysMemMaster#(20,32) portals;
-   interface WriteOnly#(Bool) interrupt;
-   interface Vector#(MaxTileMemClients, MemReadServer#(DataBusWidth)) readers;
-   interface Vector#(MaxTileMemClients, MemWriteServer#(DataBusWidth)) writers;
-   interface ITilePins pins;
-endinterface
-
-interface Tile;
-   interface PhysMemSlave#(20,32) portals;
+interface Tile#(type ext_type, numeric type numReadClients, numeric type numWriteClients);
+   interface PhysMemSlave#(18,32) portals;
    interface ReadOnly#(Bool) interrupt;
-   interface Vector#(MaxTileMemClients, MemReadClient#(DataBusWidth)) readers;
-   interface Vector#(MaxTileMemClients, MemWriteClient#(DataBusWidth)) writers;
-   interface TilePins pins;
+   interface Vector#(numReadClients,MemReadClient#(DataBusWidth)) readers;
+   interface Vector#(numWriteClients,MemWriteClient#(DataBusWidth)) writers;
+   interface ext_type ext;
 endinterface
 
-interface Framework#(numeric type numTiles, type pins, numeric type numMasters);
-   interface Vector#(numTiles, TileSocket) sockets;
+interface Platform#(type pins, numeric type numMasters);
    interface PhysMemSlave#(32,32) slave;
    interface Vector#(numMasters,PhysMemMaster#(PhysAddrWidth, DataBusWidth)) masters;
    interface Vector#(16,ReadOnly#(Bool)) interrupt;
-   interface pins             pins;
+   interface pins pins;
 endinterface
 
-instance Connectable#(Tile,TileSocket);
-   module mkConnection#(Tile t, TileSocket ts)(Empty);
-      mkConnection(ts.portals,t.portals);
-      rule connect_interrupt;
-	 ts.interrupt <= t.interrupt;
-      endrule
-      mapM(uncurry(mkConnection), zip(t.readers,ts.readers));
-      mapM(uncurry(mkConnection), zip(t.writers,ts.writers));
-      mkConnection(t.pins,ts.pins);
-   endmodule
-endinstance

@@ -11,23 +11,14 @@
 ######################################################################################################
 # PIN ASSIGNMENTS
 ######################################################################################################
-set_property LOC AB8  [get_ports { leds[0] }]
-set_property LOC AA8  [get_ports { leds[1] }]
-set_property LOC AC9  [get_ports { leds[2] }]
-set_property LOC AB9  [get_ports { leds[3] }]
-set_property LOC AE26 [get_ports { leds[4] }]
-set_property LOC G19  [get_ports { leds[5] }]
-set_property LOC E18  [get_ports { leds[6] }]
-set_property LOC F16  [get_ports { leds[7] }]
-
-# set_property LOC F16  [get_ports { LED_7_gpio }]
-# set_property LOC E18  [get_ports { LED_6_gpio }]
-# set_property LOC G19  [get_ports { LED_5_gpio }]
-# set_property LOC AE26 [get_ports { LED_4_gpio }]
-# set_property LOC AB9  [get_ports { LED_3_gpio }]
-# set_property LOC AC9  [get_ports { LED_2_gpio }]
-# set_property LOC AA8  [get_ports { LED_1_gpio }]
-# set_property LOC AB8  [get_ports { LED_0_gpio }]
+set_property LOC AB8  [get_ports { GPIO_leds[0] }]
+set_property LOC AA8  [get_ports { GPIO_leds[1] }]
+set_property LOC AC9  [get_ports { GPIO_leds[2] }]
+set_property LOC AB9  [get_ports { GPIO_leds[3] }]
+set_property LOC AE26 [get_ports { GPIO_leds[4] }]
+set_property LOC G19  [get_ports { GPIO_leds[5] }]
+set_property LOC E18  [get_ports { GPIO_leds[6] }]
+set_property LOC F16  [get_ports { GPIO_leds[7] }]
 
 # set_property LOC Y28  [get_ports { DIP_3_gpio }]
 # set_property LOC AA28 [get_ports { DIP_2_gpio }]
@@ -102,8 +93,7 @@ set_property LOC Y1   [get_ports { PCIE_txn[7] }]
 ######################################################################################################
 # I/O STANDARDS
 ######################################################################################################
-set_property IOSTANDARD LVCMOS15    [get_ports { leds[*] }]
-# set_property IOSTANDARD LVCMOS15    [get_ports { LED_*_gpio }]
+set_property IOSTANDARD LVCMOS15    [get_ports { GPIO_leds[*] }]
 # set_property IOSTANDARD LVCMOS15    [get_ports { DIP_*_gpio }]
 # set_property IOSTANDARD LVCMOS25    [get_ports { BUTTON_*_gpio }]
 # set_property IOSTANDARD LVCMOS15    [get_ports { LCD_* }]

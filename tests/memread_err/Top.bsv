@@ -30,15 +30,12 @@ import CtrlMux::*;
 import Portal::*;
 import ConnectalMemory::*;
 import MemTypes::*;
-import Leds::*;
 import MemreadRequest::*;
 import MemServerRequest::*;
 import MMURequest::*;
 import MemreadIndication::*;
 import MemServerIndication::*;
 import MMUIndication::*;
-
-// defined by user
 import Memread::*;
 
 typedef enum {MemreadIndication, MemreadRequest, HostMemServerIndication, HostMemServerRequest, HostMMURequest, HostMMUIndication} IfcNames deriving (Eq,Bits);
@@ -70,6 +67,4 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,Empty,1));
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
    interface masters = dma.masters;
-   interface leds = default_leds;
-      
 endmodule : mkConnectalTop

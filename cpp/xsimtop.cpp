@@ -37,6 +37,7 @@
 XsimMemSlaveIndicationProxy *memSlaveIndicationProxy;
 class XsimMemSlaveRequest;
 XsimMemSlaveRequest *memSlaveRequest;
+static int trace_xsimtop ;//= 1;
 
 //deleteme
 std::string getcurrentdir()
@@ -151,6 +152,7 @@ void XsimMemSlaveRequest::write ( const uint32_t fpgaId, const uint32_t addr, co
 
 void XsimMemSlaveRequest::msgSink ( const uint32_t data )
 {
+  if (trace_xsimtop)
   fprintf(stderr, "[%s:%d] data=%08x\n", __FUNCTION__, __LINE__, data);
   sinkbeats.push(data);
 }
@@ -238,12 +240,16 @@ int main(int argc, char **argv)
 
     if (msgSource_beat.valid())
       fprintf(stderr, "[%s:%d] using BluenocTop\n", __FILE__, __LINE__);
-    Portal *mcommon = new Portal(0, sizeof(uint32_t), portal_mux_handler, NULL, &socketfuncResp, &paramSocket, 0);
+    Portal *mcommon = new Portal(0, 0, sizeof(uint32_t), portal_mux_handler, NULL, &socketfuncResp, &paramSocket);
     param.pint = &mcommon->pint;
     XsimMemSlaveIndicationProxy *memSlaveIndicationProxy = new XsimMemSlaveIndicationProxy(XsimIfcNames_XsimMemSlaveIndication, &muxfunc, &param);
     XsimMemSlaveRequest *memSlaveRequest = new XsimMemSlaveRequest(XsimIfcNames_XsimMemSlaveRequest, &muxfunc, &param);
 
-    portalExec_init();
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+    //portalExec_init();
+    portalExec_stop();
+sleep(2);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 
     // start low clock
     clk.write(0);
@@ -264,19 +270,14 @@ int main(int argc, char **argv)
     int portal_count = 0;
     int offset = 0x00;
 
-
-    for (int i = 0; 1; i++)
-    {
-
+    for (int ind = 0; 1; ind++) {
 	void *rc = portalExec_poll(1);
 	if ((long)rc >= 0) {
 	    portalExec_event();
 	}
-
-	if (i > 2) {
+	if (ind > 2) {
 	    rst_n.write(1);
 	}
-
 	// mkConnectalTop
 	if (!msgSource_beat.valid()) {
 	  if (rdy_directoryEntry.read() && !portal_count) {
@@ -294,19 +295,15 @@ int main(int argc, char **argv)
 
 	      state = xt_active;
 	    }
-
 	    en_directoryEntry.write(1);
 	  } else {
 	    en_directoryEntry.write(0);
 	  }
-	  
 	  if (memSlaveRequest->connected && (portal_number < portal_count)) {
 	    memSlaveIndicationProxy->directory(portal_number, portal_ids[portal_number], portal_number == (portal_count-1));
 	    portal_number++;
 	  }
-
 	  if (state == xt_active) {
-
 	    if (memSlaveRequest->readreqs.size() && rdy_read.read()) {
 	      XsimMemSlaveRequest::readreq readreq = memSlaveRequest->readreqs.front();
 	      memSlaveRequest->readreqs.pop();
@@ -337,7 +334,6 @@ int main(int argc, char **argv)
 	      en_write.write(0);
 	    }
 	  }
-
 	  if (memSlaveRequest->connected && rdy_interrupt.read()) {
 	    en_interrupt.write(1);
 	    int intr = interrupt.read();
@@ -349,12 +345,11 @@ int main(int argc, char **argv)
 	  }
 	} else {
 	  // mkBluenocTop
-
 	  //fprintf(stderr, "msgSource ready %d msgSink ready %d\n", msgSource_src_rdy.read(), msgSink_dst_rdy.read());
-
 	  if (msgSource_src_rdy.read()) {
 	    uint32_t beat = msgSource_beat.read();
 	    msgSource_dst_rdy_b.write(1);
+            if (trace_xsimtop)
 	    fprintf(stderr, "[%s:%d] source message beat %08x\n", __FUNCTION__, __LINE__, beat);
 	    memSlaveIndicationProxy->msgSource(beat);
 	  } else {
@@ -365,6 +360,7 @@ int main(int argc, char **argv)
 	    uint32_t beat = memSlaveRequest->sinkbeats.front();
 	    memSlaveRequest->sinkbeats.pop();
 
+            if (trace_xsimtop)
 	    fprintf(stderr, "[%s:%d] sink message beat %08x\n", __FUNCTION__, __LINE__, beat);
 	    msgSink_beat_v.write(beat);
 	    msgSink_src_rdy_b.write(1);
@@ -372,26 +368,21 @@ int main(int argc, char **argv)
 	  } else {
 	    msgSink_src_rdy_b.write(0);
 	  }
-
 	}
-
 	// setup time
 	xsiInstance.run(10);
 	clk.write(1);
 	xsiInstance.run(10);
-
 	if (0) {
 	    // clock is divided by two
 	    clk.write(0);
 	    xsiInstance.run(10);
-
 	    clk.write(1);
 	    xsiInstance.run(10);
 	}
-
 	clk.write(0);
 	xsiInstance.run(10);
     }
     sleep(10);
-    portalExec_end();
+    //portalExec_end();
 }

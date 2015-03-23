@@ -60,7 +60,7 @@ public:
         else
             sem_post(&sem_heard);
     }
-    virtual void heard2(uint32_t v1, uint32_t v2) {}
+    virtual void heard2(uint16_t v1, uint16_t v2) {}
     IpcTestIndication(unsigned int id, PortalPoller *poller) : IpcTestIndicationWrapper(id, poller) {}
 };
 

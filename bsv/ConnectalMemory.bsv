@@ -49,7 +49,8 @@ typedef enum {
    DmaErrorMMUOutOfRange_r,
    DmaErrorMMUOutOfRange_w,
    DmaErrorOffsetOutOfRange,
-   DmaErrorSGLIdInvalid
+   DmaErrorSGLIdInvalid,
+   DmaErrorTileTagOutOfRange
    } DmaErrorType deriving (Bits);
 
 //
@@ -103,8 +104,4 @@ interface MemServerRequest;
    //
    method Action stateDbg(ChannelType rc);
    method Action memoryTraffic(ChannelType rc);
-endinterface
-
-interface SharedMemoryPortalConfig;
-   method Action setSglId(Bit#(32) sglId);
 endinterface

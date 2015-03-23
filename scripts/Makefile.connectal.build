@@ -157,18 +157,26 @@ ifeq ($(BOARD),xsim)
 bits: xsim
 else
 bits: hw/mkTop.bit prepare_bin_target
-    ifeq ($(OS),android)
+ifeq ($(OS),android)
+	@echo "zipping android"
 	$(CONNECTALDIR)/scripts/reorderbytes.py hw/mkTop.bin bin/mkTop.xdevcfg.bin
 	gzip -f bin/mkTop.xdevcfg.bin
 	$(Q)[ ! -f bin/android.exe ] || $(NDK_OBJCOPY) --remove-section fpgadata bin/android.exe
 	$(Q)[ ! -f bin/android.exe ] || $(NDK_OBJCOPY) --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe
-    else
+else ifneq ($(XILINX),)
+	@echo "zipping xilinx"
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
 	$(Q)[ ! -f bin/ubuntu.exe ] || objcopy --remove-section fpgadata bin/ubuntu.exe
 	$(Q)[ ! -f bin/ubuntu.exe ] || objcopy --add-section fpgadata=bin/mkTop.bin.gz bin/ubuntu.exe
-    endif
 	if [ -f Impl/TopDown/top-post-route.dcp ]; then cp -f Impl/TopDown/top-post-route.dcp bin; fi
 	$(CONNECTALDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
+else
+	@echo "not zipping xilinx"
+endif
+ifneq ($(ALTERA),)
+	gzip -c $(MKTOP).sof > bin/$(MKTOP).sof.gz
+endif
+
 endif
 endif
 endif
@@ -206,8 +214,14 @@ else
     ifeq ($(OS),android)
 	$(CONNECTALDIR)/scripts/run.zedboard bin/mkTop.xdevcfg.bin.gz bin/android.exe $(RUN_ARGS)
     else
+	echo foo
+ifeq ($(XILINX),"1")
 	$(CONNECTALDIR)/scripts/run.pcietest bin/ubuntu.exe $(RUN_ARGS)
-    endif
+endif
+ifeq ($(ALTERA),"1")
+	$(CONNECTALDIR)/scripts/run.pcietest.altera bin/mk*.sof bin/ubuntu.exe $(RUN_ARGS)
+endif
+    endif # android
   endif
 endif
 endif
@@ -226,11 +240,12 @@ bin/xsim: $(CONNECTALDIR)/cpp/xsimtop.cpp $(XSI_EXAMPLE_DIR)/xsi_loader.cpp
 	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o timer.o $(CONNECTALDIR)/cpp/timer.c
 	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o portalSocket.o $(CONNECTALDIR)/cpp/portalSocket.c
 	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o portalJson.o $(CONNECTALDIR)/cpp/portalJson.c
+	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o portalPrintf.o $(CONNECTALDIR)/cpp/portalPrintf.c
 	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o xsimtop.o $(CONNECTALDIR)/cpp/xsimtop.cpp
 	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o XsimMemSlaveIndication.o jni/XsimMemSlaveIndication.c
 	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o XsimMemSlaveRequest.o jni/XsimMemSlaveRequest.c
 	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o GeneratedCppCallbacks.o jni/GeneratedCppCallbacks.cpp
-	  g++ -o bin/xsim xsimtop.o xsi_loader.o portal.o portalSocket.o portalJson.o poller.o sock_utils.o timer.o XsimMemSlaveRequest.o XsimMemSlaveIndication.o GeneratedCppCallbacks.o -ldl -lrt -pthread
+	  g++ -o bin/xsim xsimtop.o xsi_loader.o portal.o portalSocket.o portalJson.o poller.o sock_utils.o timer.o XsimMemSlaveRequest.o XsimMemSlaveIndication.o GeneratedCppCallbacks.o portalPrintf.o -ldl -lrt -pthread
 
 xsim: verilog bin/xsim
 	xvlog $(XVLOGFLAGS) verilog/*.v
