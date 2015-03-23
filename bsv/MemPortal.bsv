@@ -208,20 +208,42 @@ module mkPortalCtrlMemSlave#(Bit#(dataWidth) ifcId, PortalInterrupt#(dataWidth) 
    endinterface
 endmodule   
 
-module mkMemPortal#(Bit#(slaveDataWidth) ifcId,
-		    PipePortal#(numRequests, numIndications, slaveDataWidth) portal)(MemPortal#(slaveAddrWidth, slaveDataWidth))
+module mkMemPortalIn#(Bit#(slaveDataWidth) ifcId, Vector#(numRequests, PipeIn#(Bit#(slaveDataWidth))) requests)(MemPortal#(slaveAddrWidth, slaveDataWidth))
    provisos ( Add#(1, i__, slaveDataWidth)
 	     ,Add#(c__, 5, slaveAddrWidth)
 	     ,Add#(d__, 1, c__)
-	     ,Add#(a__, TLog#(TAdd#(1, TAdd#(numRequests, numIndications))), c__)
+	     ,Add#(a__, TLog#(TAdd#(1, numRequests)), c__)
 	     ,Add#(b__, slaveDataWidth, TMul#(slaveDataWidth, 2))
-             ,Add#(e__, TLog#(TAdd#(numRequests, numIndications)), c__)
+             ,Add#(e__, TLog#(numRequests), c__)
 	     );
 
-   let requestMemSlaves <- mapM(mkPipeInMemSlave, portal.requests);
-   let indicationMemSlaves <- mapM(mkPipeOutMemSlave, portal.indications);
-   PortalCtrlMemSlave#(5,slaveDataWidth) ctrlPort <- mkPortalCtrlMemSlave(ifcId, portal.intr);
-   let memslave  <- mkMemMethodMux(ctrlPort.memSlave,append(requestMemSlaves, indicationMemSlaves));
+   let requestMemSlaves <- mapM(mkPipeInMemSlave, requests);
+   PortalCtrlMemSlave#(5,slaveDataWidth) ctrlPort <- mkPortalCtrlMemSlave(ifcId, (interface PortalInterrupt;
+           method Bool status();
+              return False;
+           endmethod
+           method Bit#(dataWidth) channel();
+              return -1;
+           endmethod
+        endinterface));
+   let memslave  <- mkMemMethodMux(ctrlPort.memSlave,requestMemSlaves);
+   interface PhysMemSlave slave = memslave;
+   interface ReadOnly interrupt = ctrlPort.interrupt;
+   interface WriteOnly num_portals = ctrlPort.num_portals;
+endmodule
+
+module mkMemPortalOut#(Bit#(slaveDataWidth) ifcId, Vector#(numIndications, PipeOut#(Bit#(slaveDataWidth))) indications, PortalInterrupt#(slaveDataWidth) intr)(MemPortal#(slaveAddrWidth, slaveDataWidth))
+   provisos ( Add#(1, i__, slaveDataWidth)
+	     ,Add#(c__, 5, slaveAddrWidth)
+	     ,Add#(d__, 1, c__)
+	     ,Add#(a__, TLog#(TAdd#(1, numIndications)), c__)
+	     ,Add#(b__, slaveDataWidth, TMul#(slaveDataWidth, 2))
+             ,Add#(e__, TLog#(numIndications), c__)
+	     );
+
+   let indicationMemSlaves <- mapM(mkPipeOutMemSlave, indications);
+   PortalCtrlMemSlave#(5,slaveDataWidth) ctrlPort <- mkPortalCtrlMemSlave(ifcId, intr);
+   let memslave  <- mkMemMethodMux(ctrlPort.memSlave,indicationMemSlaves);
    interface PhysMemSlave slave = memslave;
    interface ReadOnly interrupt = ctrlPort.interrupt;
    interface WriteOnly num_portals = ctrlPort.num_portals;

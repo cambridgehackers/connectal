@@ -97,7 +97,7 @@ endmodule
 (* synthesize *)
 module mk%(Dut)sSynth#(Bit#(32) id)(%(Dut)s);
   let dut <- mk%(Ifc)sOutputPipes();
-  let memPortal <- mkMemPortal(id, dut.portalIfc);
+  let memPortal <- mkMemPortalOut(id, dut.portalIfc.indications, dut.portalIfc.intr);
   interface MemPortal portalIfc = memPortal;
   interface %(Package)s::%(Ifc)s ifc = dut.ifc;
 endmodule
@@ -171,7 +171,7 @@ endinterface
 module mk%(Dut)sMemPortalPipes#(Bit#(32) id)(%(Dut)sMemPortalPipes);
 
   let p <- mk%(Ifc)sInputPipes;
-  let memPortal <- mkMemPortal(id, p.portalIfc);
+  let memPortal <- mkMemPortalIn(id, p.portalIfc.requests);
   interface %(Ifc)sInputPipes pipes = p;
   interface MemPortal portalIfc = memPortal;
 endmodule
