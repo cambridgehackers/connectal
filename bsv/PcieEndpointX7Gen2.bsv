@@ -27,7 +27,6 @@ import XilinxCells       ::*;
 import PCIE              ::*;
 import PCIEWRAPPER2      ::*;
 import Bufgctrl           ::*;
-import PcieGearbox       :: *;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -39,10 +38,8 @@ interface PcieEndpointX7#(numeric type lanes);
    interface PciewrapUser#(lanes)      user;
    interface PciewrapCfg#(lanes)       cfg;
    interface Server#(TLPData#(16), TLPData#(16)) tlp;
-   interface Clock epClock125;
-   interface Reset epReset125;
-   interface Clock epClock250;
-   interface Reset epReset250;
+   interface Clock epPcieClock;
+   interface Reset epPcieReset;
    interface Clock epPortalClock;
    interface Reset epPortalReset;
    interface Clock epDerivedClock;
@@ -225,14 +222,12 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
 						endinterface
 					     endinterface);
 
-   interface Clock epClock250 = user_clk;
-   interface Reset epReset250 = user_reset_n;
-   interface Clock epClock125 = user_clk;
-   interface Reset epReset125 = user_reset_n;
    interface tlp = tlp16;
    interface pcie    = pcie_ep.pci_exp;
    interface PciewrapUser user = pcie_ep.user;
    interface PciewrapCfg cfg = pcie_ep.cfg;
+   interface Clock epPcieClock = user_clk;
+   interface Reset epPcieReset = user_reset_n;
    interface Clock epPortalClock = portalClock;
    interface Reset epPortalReset = portalReset;
    interface Clock epDerivedClock = derivedClock;

@@ -78,10 +78,10 @@ interface PcieEndpointS5#(numeric type lanes);
    interface PcieHipPipe pipe;
    interface PcieHipCtrl ctrl;
 `endif
-   interface Clock epClock125;
-   interface Reset epReset125;
-   interface Clock epClock250;
-   interface Reset epReset250;
+   interface Clock epPcieClock;
+   interface Reset epPcieReset;
+   interface Clock epPortalClock;
+   interface Reset epPortalReset;
    interface Clock epDerivedClock;
    interface Reset epDerivedReset;
    method PciId device;
@@ -268,12 +268,10 @@ module mkPcieEndpointS5#(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieE
    endinterface
 
    interface tlp = tlp16;
-   //FIXME: verify epClock250 is needed.
-   interface Clock epClock250 = core_clk;
-   interface Clock epReset250 = core_resetn;
-   interface Clock epClock125 = core_clk;
-   interface Clock epReset125 = core_resetn;
-
+   interface Clock epPcieClock = core_clk;
+   interface Reset epPcieReset = core_resetn;
+   interface Clock epPortalClock = core_clk;
+   interface Reset epPortalReset = core_resetn;
    //FIXME: verify derivedClock value
    interface Clock epDerivedClock = core_clk;
    interface Reset epDerivedReset = core_resetn;
