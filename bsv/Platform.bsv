@@ -33,6 +33,7 @@ import FIFO::*;
 import GetPut::*;
 import SpecialFIFOs::*;
 
+import Pipe::*;
 import ConnectalMemory::*;
 import MMURequest::*;
 import MMUIndication::*;
@@ -90,6 +91,7 @@ module mkPlatform#(Vector#(numTiles, Tile#(Empty, numReadClients, numWriteClient
    provisos(Add#(a__, TLog#(TAdd#(1, numTiles)), 14)
 	    ,Add#(TMul#(numTiles, numWriteClients), b__, TMul#(TDiv#(TMul#(numTiles,numWriteClients), numMasters), numMasters))
 	    ,Add#(TMul#(numTiles, numReadClients), c__, TMul#(TDiv#(TMul#(numTiles,numReadClients), numMasters), numMasters))
+	    ,FunnelPipesPipelined#(1, TAdd#(1, numTiles), MemTypes::MemData#(32),TMin#(2, TLog#(TAdd#(1, numTiles))))
 	    );
 
    /////////////////////////////////////////////////////////////
@@ -131,7 +133,7 @@ module mkPlatform#(Vector#(numTiles, Tile#(Empty, numReadClients, numWriteClient
    /////////////////////////////////////////////////////////////
    // expose interface to top
 
-   PhysMemSlave#(32,32) ctrl_mux <- mkMemMethodMux(framework_ctrl_mux, tile_slaves);
+   PhysMemSlave#(32,32) ctrl_mux <- mkMemPortalMux(cons(framework_ctrl_mux,tile_slaves));
    Vector#(16, ReadOnly#(Bool)) interrupts = replicate(interface ReadOnly; method Bool _read(); return False; endmethod endinterface);
    interrupts[0] = framework_intr;
    for (Integer i = 1; i < valueOf(TAdd#(1,numTiles)); i = i + 1)
