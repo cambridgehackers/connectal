@@ -226,7 +226,7 @@ module mkMemPortalIn#(Bit#(slaveDataWidth) ifcId, Vector#(numRequests, PipeIn#(B
               return -1;
            endmethod
         endinterface));
-   let memslave  <- mkMemMethodMux(ctrlPort.memSlave,requestMemSlaves);
+   let memslave  <- mkMemMethodMuxIn(ctrlPort.memSlave,requestMemSlaves);
    interface PhysMemSlave slave = memslave;
    interface ReadOnly interrupt = ctrlPort.interrupt;
    interface WriteOnly num_portals = ctrlPort.num_portals;
@@ -243,7 +243,7 @@ module mkMemPortalOut#(Bit#(slaveDataWidth) ifcId, Vector#(numIndications, PipeO
 
    let indicationMemSlaves <- mapM(mkPipeOutMemSlave, indications);
    PortalCtrlMemSlave#(5,slaveDataWidth) ctrlPort <- mkPortalCtrlMemSlave(ifcId, intr);
-   let memslave  <- mkMemMethodMux(ctrlPort.memSlave,indicationMemSlaves);
+   let memslave  <- mkMemMethodMuxOut(ctrlPort.memSlave,indicationMemSlaves);
    interface PhysMemSlave slave = memslave;
    interface ReadOnly interrupt = ctrlPort.interrupt;
    interface WriteOnly num_portals = ctrlPort.num_portals;
