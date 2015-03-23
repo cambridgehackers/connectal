@@ -47,19 +47,19 @@ endinterface
 function Bool pipeInNotFull(PipeIn#(a) pipein); return pipein.notFull(); endfunction
 function Bool pipeOutNotEmpty(PipeOut#(a) pipein); return pipein.notEmpty(); endfunction
 
-typeclass ToPipeIn#(type a, type b);
+typeclass ToPipeIn#(type a, type b) dependencies (b determines a);
    function PipeIn#(a) toPipeIn(b in);
 endtypeclass
 
-typeclass ToPipeOut#(type a, type b);
+typeclass ToPipeOut#(type a, type b) dependencies ( b determines a);
    function PipeOut#(a) toPipeOut(b in);
 endtypeclass
 
-typeclass MkPipeOut#(type a, type b);
+typeclass MkPipeOut#(type a, type b) dependencies ( b determines a);
    module mkPipeOut#(b in)(PipeOut#(a));
 endtypeclass
 
-typeclass MkPipeIn#(type a, type b);
+typeclass MkPipeIn#(type a, type b) dependencies ( b determines a);
    module mkPipeIn#(b in)(PipeIn#(a));
 endtypeclass
 
