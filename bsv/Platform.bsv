@@ -131,7 +131,7 @@ module mkPlatform#(Vector#(numTiles, Tile#(Empty, numReadClients, numWriteClient
    /////////////////////////////////////////////////////////////
    // expose interface to top
 
-   PhysMemSlave#(32,32) ctrl_mux <- mkMemSlaveMux(cons(framework_ctrl_mux, tile_slaves));
+   PhysMemSlave#(32,32) ctrl_mux <- mkMemMethodMux(cons(framework_ctrl_mux, tile_slaves));
    Vector#(16, ReadOnly#(Bool)) interrupts = replicate(interface ReadOnly; method Bool _read(); return False; endmethod endinterface);
    interrupts[0] = framework_intr;
    for (Integer i = 1; i < valueOf(TAdd#(1,numTiles)); i = i + 1)
