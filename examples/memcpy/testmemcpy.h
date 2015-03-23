@@ -28,6 +28,7 @@
 #include "MemcpyRequest.h"
 
 sem_t done_sem;
+sem_t memcmp_sem;
 int srcAlloc;
 int dstAlloc;
 unsigned int *srcBuffer = 0;
@@ -39,7 +40,7 @@ int numWords = 16 << 10;
 #endif
 size_t alloc_sz = numWords*sizeof(unsigned int);
 bool finished = false;
-int memcmp_fail = 0;
+volatile int memcmp_fail = 0;
 unsigned int memcmp_count = 0;
 
 void dump(const char *prefix, char *buf, size_t len)
@@ -67,6 +68,7 @@ public:
     fprintf(stderr, "done\n");
     finished = true;
     memcmp_fail = memcmp(srcBuffer, dstBuffer, numWords*sizeof(unsigned int));
+    sem_post(&memcmp_sem);
   }
 };
 
@@ -83,6 +85,10 @@ int runtest(int argc, const char **argv)
 {
   if(sem_init(&done_sem, 1, 0)){
     fprintf(stderr, "failed to init done_sem\n");
+    exit(1);
+  }
+  if(sem_init(&memcmp_sem, 1, 0)){
+    fprintf(stderr, "failed to init memcmp_sem\n");
     exit(1);
   }
 
@@ -138,7 +144,7 @@ int runtest(int argc, const char **argv)
   //   sleep(1);
   // }
 
-  fprintf(stderr, "Main::starting mempcy numWords:%d\n", numWords);
+  fprintf(stderr, "Main::starting memcpy numWords:%d\n", numWords);
   int burstLen = 16;
 #ifndef BSIM
   int iterCnt = 64;
@@ -168,6 +174,8 @@ int runtest(int argc, const char **argv)
     .setReadBwUtil(read_util)
     .setWriteBwUtil(write_util)
     .writeFile();
+  fprintf(stderr, "After updating perf.monkit\n");
+  sem_wait(&memcmp_sem);
   return memcmp_fail;
 }
 
