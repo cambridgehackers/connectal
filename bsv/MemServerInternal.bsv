@@ -38,6 +38,14 @@ import ConnectalCompletionBuffer::*;
 
 typedef 9 MMU_PIPELINE_DEPTH;
 
+interface DmaDbg;
+   method ActionValue#(Bit#(64)) getMemoryTraffic();
+   method ActionValue#(DmaDbgRec) dbg();
+   method Action stop(Bit#(2) tile);
+   method Action kill(Bit#(2) tile);
+   method Action go(Bit#(2) tile);
+endinterface
+
 interface MemWriteInternal#(numeric type addrWidth, numeric type dataWidth, numeric type numTags, numeric type numServers);
    interface DmaDbg dbg;
    interface PhysMemWriteClient#(addrWidth,dataWidth) client;
@@ -82,6 +90,11 @@ module mkMemReadInternal#(MemServerIndication ind,
 	    ,Add#(b__, TLog#(numTags), 6)
 	    );
    
+   
+   // stopping/killing infra
+   Vector#(4,Reg#(Bool)) killv <- replicateM(mkReg(False));
+   Vector#(4,Reg#(Bool)) stopv <- replicateM(mkReg(False));
+   
    // stage 0: address translation (latency = MMU_PIPELINE_DEPTH)
    FIFO#(LRec#(numServers,addrWidth)) lreqFifo <- mkSizedFIFO(valueOf(MMU_PIPELINE_DEPTH));
    // stage 1: address validation (latency = 1)
@@ -105,6 +118,7 @@ module mkMemReadInternal#(MemServerIndication ind,
    Reg#(Bit#(BurstLenSize))      compReg0 <- mkReg(0);
    Reg#(Bit#(TLog#(numTags)))    compReg1 <- mkReg(0);
    Reg#(Bit#(TLog#(TMax#(1,numServers)))) compReg2 <- mkReg(0);
+   Reg#(Bit#(2))                 compReg3 <- mkReg(0);
    FIFO#(Bit#(TAdd#(1,TLog#(TMax#(1,numServers))))) compFifo0 <- mkFIFO;
    FIFO#(Bit#(TLog#(numTags)))   compFifo1 <- mkFIFO;
    
@@ -138,11 +152,14 @@ module mkMemReadInternal#(MemServerIndication ind,
       let cnt = drq.req.burstLen >> beat_shift;
       let cli = drq.client;
       let tag <- toGet(compFifo1).get;
-      compFifo0.enq(extend(cli));
-      read_buffer.portB.request.put(BRAMRequest{write:False, address:{tag,truncate(cnt)}, datain: ?, responseOnWrite: ?});
+      if(killv[drq.req.tag[5:4]] == False) begin
+	 compFifo0.enq(extend(cli));
+	 read_buffer.portB.request.put(BRAMRequest{write:False, address:{tag,truncate(cnt)}, datain: ?, responseOnWrite: ?});
+      end
       compReg0 <= cnt-1;
       compReg1 <= tag;
       compReg2 <= cli;
+      compReg3 <= drq.req.tag[5:4];
       if(debug) $display("mkMemReadInternal::complete_burst1a %h", cli);
    endrule
 
@@ -150,8 +167,10 @@ module mkMemReadInternal#(MemServerIndication ind,
       let cnt = compReg0;
       let tag = compReg1;
       let cli = compReg2;
-      compFifo0.enq(extend(cli));
-      read_buffer.portB.request.put(BRAMRequest{write:False, address:{tag,truncate(cnt)}, datain: ?, responseOnWrite: ?});
+      if(killv[compReg3] == False) begin
+	 compFifo0.enq(extend(cli));
+	 read_buffer.portB.request.put(BRAMRequest{write:False, address:{tag,truncate(cnt)}, datain: ?, responseOnWrite: ?});
+      end
       compReg0 <= cnt-1;
       if(debug) $display("mkMemReadInternal::complete_burst1b %h", compReg0);
    endrule
@@ -206,7 +225,7 @@ module mkMemReadInternal#(MemServerIndication ind,
 			   dmaErrorFifo.enq(DmaError { errorType: DmaErrorMMUOutOfRange_r, pref: req.sglId });
    			else if (sglid_outofrange(req.sglId))
 			   dmaErrorFifo.enq(DmaError { errorType: DmaErrorSGLIdOutOfRange_r, pref: req.sglId });
-   			else begin
+   			else if (stopv[req.tag[5:4]] == False) begin
    			   lreqFifo.enq(LRec{req:req, client:fromInteger(i)});
    			   mmus[mmusel].request.put(ReqTup{id:truncate(req.sglId),off:req.offset});
    			end
@@ -250,6 +269,16 @@ module mkMemReadInternal#(MemServerIndication ind,
       endinterface
    endinterface
    interface DmaDbg dbg;
+      method Action go(Bit#(2) tile);
+	 killv[tile] <= False;
+	 stopv[tile] <= False;
+      endmethod
+      method Action stop(Bit#(2) tile);
+	 stopv[tile] <= True;
+      endmethod
+      method Action kill(Bit#(2) tile);
+	 killv[tile] <= True;
+      endmethod
       method ActionValue#(DmaDbgRec) dbg();
 	 return DmaDbgRec{x:0, y:0, z:0, w:0};
       endmethod
@@ -269,6 +298,10 @@ module mkMemWriteInternal#(MemServerIndication ind,
 	    );
    
    let debug = False;
+
+   // stopping/killing infra
+   Vector#(4,Reg#(Bool)) killv <- replicateM(mkReg(False));
+   Vector#(4,Reg#(Bool)) stopv <- replicateM(mkReg(False));
 
    // stage 0: address translation (latency = MMU_PIPELINE_DEPTH)
    FIFO#(LRec#(numServers,addrWidth)) lreqFifo <- mkSizedFIFO(valueOf(MMU_PIPELINE_DEPTH));
@@ -327,7 +360,11 @@ module mkMemWriteInternal#(MemServerIndication ind,
 	 let client = dreqFifo.first.client;
 	 let req = dreqFifo.first.req;
 	 let rename_tag = dreqFifo.first.rename_tag;
-	 MemData#(dataWidth) tagdata <- toGet(clientWriteData[client]).get();
+	 MemData#(dataWidth) tagdata = unpack(0);
+	 if (killv[req.tag[5:4]] == False) begin
+	    tagdata = clientWriteData[client].first;
+	    clientWriteData[client].deq;
+	 end
 	 let burstLen = burstReg;
 	 let first    = firstReg;
 	 let last     = lastReg;
@@ -363,7 +400,7 @@ module mkMemWriteInternal#(MemServerIndication ind,
 			   dmaErrorFifo.enq(DmaError { errorType: DmaErrorMMUOutOfRange_w, pref: req.sglId });
    			else if (sglid_outofrange(req.sglId))
 			   dmaErrorFifo.enq(DmaError { errorType: DmaErrorSGLIdOutOfRange_w, pref: req.sglId });
-   			else begin
+   			else if (stopv[req.tag[5:4]] == False) begin
    			   lreqFifo.enq(LRec{req:req, client:fromInteger(i)});
    			   mmus[mmusel].request.put(ReqTup{id:truncate(req.sglId),off:req.offset});
    			end
@@ -377,12 +414,6 @@ module mkMemWriteInternal#(MemServerIndication ind,
 		     endmethod
 		  endinterface
 	       endinterface);
-   
-   
-   
-   
-
-   
    
    interface servers = sv;
    interface PhysMemWriteClient client;
@@ -407,6 +438,16 @@ module mkMemWriteInternal#(MemServerIndication ind,
       endinterface
    endinterface
    interface DmaDbg dbg;
+      method Action go(Bit#(2) tile);
+	 killv[tile] <= False;
+	 stopv[tile] <= False;
+      endmethod
+      method Action stop(Bit#(2) tile);
+	 stopv[tile] <= True;
+      endmethod
+      method Action kill(Bit#(2) tile);
+	 killv[tile] <= True;
+      endmethod
       method ActionValue#(DmaDbgRec) dbg();
 	 return DmaDbgRec{x:fromInteger(valueOf(numServers)), y:?, z:?, w:?};
       endmethod

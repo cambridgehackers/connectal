@@ -152,6 +152,18 @@ module mkMemServer#(Vector#(numReadClients, MemReadClient#(dataWidth)) readClien
       method Action addrTrans(Bit#(32) pointer, Bit#(32) offset);
 	 writer.request.addrTrans(pointer,offset);
       endmethod
+      method Action go(Bit#(2) tile);
+	 reader.request.go(tile);
+	 writer.request.go(tile);
+      endmethod
+      method Action stop(Bit#(2) tile);
+	 reader.request.stop(tile);
+	 writer.request.stop(tile);
+      endmethod
+      method Action kill(Bit#(2) tile);
+	 reader.request.kill(tile);
+	 writer.request.kill(tile);
+      endmethod
    endinterface
    interface masters = map(mkm,genVector);
 endmodule
@@ -219,6 +231,18 @@ module mkMemServerRead#(MemServerIndication indication,
    interface servers = read_servers;
    interface clients = read_clients;
    interface MemServerRequest request;
+      method Action go(Bit#(2) tile);
+	 for(Integer i = 0; i < valueOf(numClients); i=i+1)
+	    readers[i].dbg.go(tile);
+      endmethod
+      method Action stop(Bit#(2) tile);
+	 for(Integer i = 0; i < valueOf(numClients); i=i+1)
+	    readers[i].dbg.stop(tile);
+      endmethod
+      method Action kill(Bit#(2) tile);
+	 for(Integer i = 0; i < valueOf(numClients); i=i+1)
+	    readers[i].dbg.kill(tile);
+      endmethod
       method Action stateDbg(ChannelType rc);
 	 if (rc == Read)
 	    dbgFSM.start;
@@ -297,6 +321,18 @@ module mkMemServerWrite#(MemServerIndication indication,
    interface servers = write_servers;
    interface clients = write_clients;
    interface MemServerRequest request;
+      method Action go(Bit#(2) tile);
+	 for(Integer i = 0; i < valueOf(numClients); i=i+1)
+	    writers[i].dbg.go(tile);
+      endmethod
+      method Action stop(Bit#(2) tile);
+	 for(Integer i = 0; i < valueOf(numClients); i=i+1)
+	    writers[i].dbg.stop(tile);
+      endmethod
+      method Action kill(Bit#(2) tile);
+	 for(Integer i = 0; i < valueOf(numClients); i=i+1)
+	    writers[i].dbg.kill(tile);
+      endmethod
       method Action stateDbg(ChannelType rc);
 	 if (rc == Write)
 	    dbgFSM.start;
