@@ -40,10 +40,15 @@ import Bscan             :: *;
 `ifdef PCIE3
 import PCIEWRAPPER3      :: *;
 import Pcie3EndpointX7   :: *;
-`else // pcie3
+`endif
+`ifdef PCIE2
+import PCIEWRAPPER2       :: *;
+import PcieEndpointX7Gen2 :: *;
+`endif // pcie2
+`ifdef PCIE1
 import PCIEWRAPPER       :: *;
 import PcieEndpointX7    :: *;
-`endif // pcie3
+`endif // pcie2
 `elsif ALTERA
 import PcieEndpointS5    :: *;
 `endif
