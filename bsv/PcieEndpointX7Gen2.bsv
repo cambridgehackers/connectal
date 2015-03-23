@@ -39,8 +39,12 @@ interface PcieEndpointX7#(numeric type lanes);
    interface PciewrapUser#(lanes)      user;
    interface PciewrapCfg#(lanes)       cfg;
    interface Server#(TLPData#(16), TLPData#(16)) tlp;
-   interface Clock portalClock;
-   interface Reset portalReset;
+   interface Clock epClock125;
+   interface Reset epReset125;
+   interface Clock epClock250;
+   interface Reset epReset250;
+   interface Clock epPortalClock;
+   interface Reset epPortalReset;
    interface Clock epDerivedClock;
    interface Reset epDerivedReset;
 endinterface
@@ -188,11 +192,16 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    clkgenParams.clkin_buffer     = False;
    clkgenParams.clkfbout_mult_f  = 4.000; // 1000MHz
    clkgenParams.clkout0_divide_f = 4.000; //  250MHz
-   clkgenParams.clkout1_divide     = round(derivedClockPeriod);
+   clkgenParams.clkout1_divide     = round(mainClockPeriod);
    clkgenParams.clkout1_duty_cycle = 0.5;
    clkgenParams.clkout1_phase      = 0.0000;
+   clkgenParams.clkout2_divide     = round(derivedClockPeriod);
+   clkgenParams.clkout2_duty_cycle = 0.5;
+   clkgenParams.clkout2_phase      = 0.0000;
    ClockGenerator7           clkgen <- mkClockGenerator7(clkgenParams, clocked_by user_clk, reset_by user_reset_n);
-   Clock derivedClock = clkgen.clkout1;
+   Clock portalClock = clkgen.clkout1;
+   Reset portalReset <- mkAsyncReset(4, user_reset_n, portalClock);
+   Clock derivedClock = clkgen.clkout2;
    Reset derivedReset <- mkAsyncReset(4, user_reset_n, derivedClock);
 
    Server#(TLPData#(16), TLPData#(16)) tlp16 = (interface Server;
@@ -216,12 +225,16 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
 						endinterface
 					     endinterface);
 
-   interface Clock portalClock = user_clk;
-   interface Reset portalReset = user_reset_n;
+   interface Clock epClock250 = user_clk;
+   interface Reset epReset250 = user_reset_n;
+   interface Clock epClock125 = user_clk;
+   interface Reset epReset125 = user_reset_n;
    interface tlp = tlp16;
    interface pcie    = pcie_ep.pci_exp;
    interface PciewrapUser user = pcie_ep.user;
    interface PciewrapCfg cfg = pcie_ep.cfg;
+   interface Clock epPortalClock = portalClock;
+   interface Reset epPortalReset = portalReset;
    interface Clock epDerivedClock = derivedClock;
    interface Reset epDerivedReset = derivedReset;
 endmodule: mkPcieEndpointX7
