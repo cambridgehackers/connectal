@@ -215,12 +215,13 @@ module mkMemPortal#(Bit#(slaveDataWidth) ifcId,
 	     ,Add#(d__, 1, c__)
 	     ,Add#(a__, TLog#(TAdd#(1, TAdd#(numRequests, numIndications))), c__)
 	     ,Add#(b__, slaveDataWidth, TMul#(slaveDataWidth, 2))
+             ,Add#(e__, TLog#(TAdd#(numRequests, numIndications)), c__)
 	     );
 
    let requestMemSlaves <- mapM(mkPipeInMemSlave, portal.requests);
    let indicationMemSlaves <- mapM(mkPipeOutMemSlave, portal.indications);
    PortalCtrlMemSlave#(5,slaveDataWidth) ctrlPort <- mkPortalCtrlMemSlave(ifcId, portal.intr);
-   let memslave  <- mkMemMethodMux(cons(ctrlPort.memSlave,append(requestMemSlaves, indicationMemSlaves)));
+   let memslave  <- mkMemMethodMux(ctrlPort.memSlave,append(requestMemSlaves, indicationMemSlaves));
    interface PhysMemSlave slave = memslave;
    interface ReadOnly interrupt = ctrlPort.interrupt;
    interface WriteOnly num_portals = ctrlPort.num_portals;
