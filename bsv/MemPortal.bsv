@@ -39,81 +39,6 @@ import MemwriteEngine::*;
 import ConnectalMemory::*;
 import HostInterface::*;
 
-module mkPipeInMemSlave#(PipeIn#(Bit#(dataWidth)) methodPipe)(PhysMemSlave#(addrWidth, dataWidth))
-   provisos (Add#(1,a__,dataWidth));
-   AddressGenerator#(addrWidth,dataWidth) fifoReadAddrGenerator  <- mkAddressGenerator();
-   AddressGenerator#(addrWidth,dataWidth) fifoWriteAddrGenerator <- mkAddressGenerator();
-   FIFO#(Bit#(MemTagSize))                fifoWriteDoneFifo <- mkFIFO();
-
-   interface PhysMemReadServer read_server;
-      interface Put readReq = fifoReadAddrGenerator.request;
-      interface Get readData;
-	 method ActionValue#(MemData#(dataWidth)) get();
-	    let b <- fifoReadAddrGenerator.addrBeat.get();
-	    let v = 0;
-	    if (b.addr == 4)
-	       v = extend(pack(methodPipe.notFull()));
-	    return MemData { data: v, tag: b.tag, last: b.last };
-	 endmethod
-      endinterface
-   endinterface
-   interface PhysMemWriteServer write_server; 
-      interface Put writeReq = fifoWriteAddrGenerator.request;
-      interface Put writeData;
-	 method Action put((MemData#(dataWidth)) d);
-	    let b <- fifoWriteAddrGenerator.addrBeat.get();
-	    //$display("mkPipeInMemSlave.writeData.put addr=%h data=%h", b.addr, d.data);
-	    if (b.last)
-	       fifoWriteDoneFifo.enq(b.tag);
-	    methodPipe.enq(d.data);
-	    // this used to be where we triggered putFailed
-	 endmethod
-      endinterface
-      interface Get writeDone = toGet(fifoWriteDoneFifo);
-   endinterface
-endmodule
-
-module mkPipeOutMemSlave#(PipeOut#(Bit#(dataWidth)) methodPipe)(PhysMemSlave#(addrWidth, dataWidth))
-   provisos (Add#(1,a__,dataWidth));
-   AddressGenerator#(addrWidth,dataWidth) fifoReadAddrGenerator <- mkAddressGenerator();
-   AddressGenerator#(addrWidth,dataWidth) fifoWriteAddrGenerator <- mkAddressGenerator();
-   FIFO#(Bit#(MemTagSize))                fifoWriteDoneFifo <- mkFIFO();
-   FIFO#(MemData#(dataWidth))             fifoReadDataFifo <- mkFIFO();
-
-   rule readDataRule;
-      let b <- fifoReadAddrGenerator.addrBeat.get();
-      let v = 0;
-      if (b.addr == 0)
-	 v <- toGet(methodPipe).get();
-      else if (b.addr == 4)
-	 v = extend(pack(methodPipe.notEmpty()));
-      //$display("mkPipeOutMemSlave.readData.get addr=%h data=%h", b.addr, data);
-      fifoReadDataFifo.enq(MemData { data: v, tag: b.tag, last: b.last });
-   endrule
-
-   interface PhysMemReadServer read_server;
-      interface Put readReq = fifoReadAddrGenerator.request;
-      interface Get readData;
-	 method ActionValue#(MemData#(dataWidth)) get();
-	    let d <- toGet(fifoReadDataFifo).get();
-	    return d;
-	 endmethod
-      endinterface
-   endinterface
-   interface PhysMemWriteServer write_server; 
-      interface Put writeReq = fifoWriteAddrGenerator.request;
-      interface Put writeData;
-	 method Action put((MemData#(dataWidth)) d);
-	    let b <- fifoWriteAddrGenerator.addrBeat.get();
-	    //$display("mkPipeOutMemSlave.writeData.put addr=%h data=%h", b.addr, d.data);
-	    if (b.last)
-	       fifoWriteDoneFifo.enq(b.tag);
-	 endmethod
-      endinterface
-      interface Get writeDone = toGet(fifoWriteDoneFifo);
-   endinterface
-endmodule
-
 interface PortalCtrlMemSlave#(numeric type addrWidth, numeric type dataWidth);
    interface PhysMemSlave#(addrWidth, dataWidth) memSlave;
    interface ReadOnly#(Bool) interrupt;
@@ -217,7 +142,6 @@ module mkMemPortalIn#(Bit#(slaveDataWidth) ifcId, Vector#(numRequests, PipeIn#(B
              ,Add#(e__, TLog#(numRequests), c__)
 	     );
 
-   let requestMemSlaves <- mapM(mkPipeInMemSlave, requests);
    PortalCtrlMemSlave#(5,slaveDataWidth) ctrlPort <- mkPortalCtrlMemSlave(ifcId, (interface PortalInterrupt;
            method Bool status();
               return False;
@@ -226,7 +150,7 @@ module mkMemPortalIn#(Bit#(slaveDataWidth) ifcId, Vector#(numRequests, PipeIn#(B
               return -1;
            endmethod
         endinterface));
-   let memslave  <- mkMemMethodMuxIn(ctrlPort.memSlave,requestMemSlaves);
+   let memslave  <- mkMemMethodMuxIn(ctrlPort.memSlave,requests);
    interface PhysMemSlave slave = memslave;
    interface ReadOnly interrupt = ctrlPort.interrupt;
    interface WriteOnly num_portals = ctrlPort.num_portals;
@@ -241,9 +165,8 @@ module mkMemPortalOut#(Bit#(slaveDataWidth) ifcId, Vector#(numIndications, PipeO
              ,Add#(e__, TLog#(numIndications), c__)
 	     );
 
-   let indicationMemSlaves <- mapM(mkPipeOutMemSlave, indications);
    PortalCtrlMemSlave#(5,slaveDataWidth) ctrlPort <- mkPortalCtrlMemSlave(ifcId, intr);
-   let memslave  <- mkMemMethodMuxOut(ctrlPort.memSlave,indicationMemSlaves);
+   let memslave  <- mkMemMethodMuxOut(ctrlPort.memSlave,indications);
    interface PhysMemSlave slave = memslave;
    interface ReadOnly interrupt = ctrlPort.interrupt;
    interface WriteOnly num_portals = ctrlPort.num_portals;
