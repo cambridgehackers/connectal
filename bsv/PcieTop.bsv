@@ -36,6 +36,8 @@ import MemMasterEngine   :: *;
 import PcieCsr           :: *;
 import MemTypes          :: *;
 import Bscan             :: *;
+import ConnectalClocks   :: *;
+import GetPutWithClocks  :: *;
 `ifdef XILINX
 `ifdef PCIE3
 import PCIEWRAPPER3      :: *;
@@ -85,12 +87,22 @@ module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (P
    ConnectalTop#(PhysAddrWidth, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkConnectalTop(clocked_by host.portalClock, reset_by host.portalReset);
 `endif
 
-   mkConnection(host.tpciehost.master, portalTop.slave, clocked_by host.portalClock, reset_by host.portalReset);
-   if (valueOf(NumberOfMasters) > 0) begin
-      mapM(uncurry(mkConnection),zip(portalTop.masters, host.tpciehost.slave));
+   if (mainClockPeriod == 4) begin
+       mkConnection(host.tpciehost.master, portalTop.slave, clocked_by host.portalClock, reset_by host.portalReset);
+       if (valueOf(NumberOfMasters) > 0) begin
+	  mapM(uncurry(mkConnection),zip(portalTop.masters, host.tpciehost.slave));
+       end
+   end
+   else begin
+       GetPutWithClocks::mkConnectionWithClocks(host.tpciehost.master, portalTop.slave, host.pcieClock, host.pcieReset, host.portalClock, host.portalReset);
+       if (valueOf(NumberOfMasters) > 0) begin
+	  mapM(uncurry(mkConnectionWithClocksFirst(host.portalClock, host.portalReset, host.pcieClock, host.pcieReset)),
+               zip(portalTop.masters, host.tpciehost.slave));
+       end
    end
 
    // going from level to edge-triggered interrupt
+   SyncFIFOIfc#(Bit#(4)) intrFifo <- mkSyncFIFO(1, host.portalClock, host.portalReset, host.pcieClock);
    Vector#(16, Reg#(Bool)) interruptRequested <- replicateM(mkReg(False, clocked_by host.portalClock, reset_by host.portalReset));
    rule interrupt_rule;
      Maybe#(Bit#(4)) intr = tagged Invalid;
@@ -100,9 +112,13 @@ module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (P
 	 interruptRequested[i] <= portalTop.interrupt[i];
      end
      if (intr matches tagged Valid .intr_num) begin
-        ReadOnly_MSIX_Entry msixEntry = host.tpciehost.msixEntry[intr_num];
-        host.tpciehost.interruptRequest.put(tuple2({msixEntry.addr_hi, msixEntry.addr_lo}, msixEntry.msg_data));
+	intrFifo.enq(intr_num);
      end
+   endrule
+   rule syncintr;
+      Bit#(4) intr_num <- toGet(intrFifo).get();
+      ReadOnly_MSIX_Entry msixEntry = host.tpciehost.msixEntry[intr_num];
+      host.tpciehost.interruptRequest.put(tuple2({msixEntry.addr_hi, msixEntry.addr_lo}, msixEntry.msg_data));
    endrule
 
 `ifndef BSIM
