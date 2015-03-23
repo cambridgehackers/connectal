@@ -1,9 +1,9 @@
 // simple verilog example of a 2 port register file with 4 registers
 
- module regfile (clock, reset, write_address, write_data, write_en,
+ module regfile (clock, reset_n, write_address, write_data, write_en,
 		read_address, read_data);
    input clock;
-   input reset;
+   input reset_n;
    input [1:0] write_address;
    input [7:0] write_data;
    input       write_en;
@@ -23,8 +23,11 @@
 
    
    always @ (posedge clock)
-   if (reset == 1) begin
+   if (reset_n == 0) begin
       reg0 <= 0;
+      reg1 <= 0;
+      reg2 <= 0;
+      reg3 <= 0;
    end else begin
       if (write_en) begin
 	 case(write_address)
