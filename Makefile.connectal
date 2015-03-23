@@ -54,12 +54,10 @@ programflash.%:
 	make CONNECTAL_DEBUG=1 --no-print-directory $*
 
 IPDIR?=$(CONNECTALDIR)/out
-ifndef NUMBER_OF_MASTERS
-NUMBER_OF_MASTERS=1
-endif
-ifndef PIN_TYPE
-PIN_TYPE=Empty
-endif
+NUMBER_OF_TILES?=1
+SLAVE_DATA_BUS_WIDTH?=32
+NUMBER_OF_MASTERS?=1
+PIN_TYPE?=Empty
 ifndef MAIN_CLOCK_PERIOD
     ifeq ($(BOARD),vc707)
     MAIN_CLOCK_PERIOD=8
@@ -98,6 +96,8 @@ BURST_LEN_SIZE=8
 endif
 
 CONNECTALFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) -D PinType=$(PIN_TYPE) -D MainClockPeriod=$(MAIN_CLOCK_PERIOD) -D DerivedClockPeriod=$(DERIVED_CLOCK_PERIOD)
+CONNECTALFLAGS += -D NumberOfTiles=$(NUMBER_OF_TILES)
+CONNECTALFLAGS += -D SlaveDataBusWidth=$(SLAVE_DATA_BUS_WIDTH)
 CONNECTALFLAGS += -D BurstLenSize=$(BURST_LEN_SIZE)
 CONNECTALFLAGS += --ipdir=$(IPDIR)
 ifeq ($(BOARD),xsim)

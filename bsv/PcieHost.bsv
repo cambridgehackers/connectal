@@ -33,7 +33,6 @@ import PcieTracer        :: *;
 import Xilinx            :: *;
 import Bscan             :: *;
 import Portal            :: *;
-//import Leds              :: *;
 import MemSlaveEngine    :: *;
 import MemMasterEngine   :: *;
 import PcieCsr           :: *;
@@ -136,8 +135,6 @@ interface PcieTop#(type ipins);
 `ifndef BSIM
    (* prefix="PCIE" *)
    interface PciewrapPci_exp#(PcieLanes) pcie;
-   //method Bit#(NumLeds) leds();
-   //interface Clock deleteme_unused_clockLeds;
    (* always_ready *)
    (* prefix="" *)
    interface ipins       pins;

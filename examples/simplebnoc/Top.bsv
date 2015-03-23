@@ -34,9 +34,9 @@ typedef enum {FooRequest, FooIndication, SimpleRequestS2H, SimpleRequestH2S} Ifc
 
 module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
    // the indications from simpleRequest will be connected to the request interface to simpleReuqest2
-   SimpleRequestOutputPipes simple1Proxy <- mkSimpleRequestOutputPipes;
-   Simple simple1 <- mkSimple(simple1Proxy.ifc);
-   SimpleRequestWrapper simple1Wrapper <- mkSimpleRequestWrapper(SimpleRequestS2H,simple1.request);
+   SimpleRequestOutputPipes lSimpleRequestOutputPipes <- mkSimpleRequestOutputPipes;
+   Simple simple1 <- mkSimple(lSimpleRequestOutputPipes.ifc);
+   SimpleRequestWrapper lSimpleRequestInputPipes <- mkSimpleRequestWrapper(SimpleRequestS2H,simple1.request);
 
    SimpleRequestProxy simple2Proxy <- mkSimpleRequestProxy(SimpleRequestH2S);
    Simple simple2 <- mkSimple(simple2Proxy.ifc);
@@ -44,35 +44,16 @@ module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
    mkConnection(simple2Wrapper, simple2.request);
 
    // now connect them via a BlueNoC link
-   MsgSource#(4) simpleMsgSource <- mkPortalMsgSource(simple1Proxy.portalIfc);
-   MsgSink#(4) simpleMsgSink <- mkPortalMsgSink(simple2Wrapper.portalIfc);
+   MsgSource#(4) simpleMsgSource <- mkPortalMsgIndication(lSimpleRequestOutputPipes.portalIfc);
+   MsgSink#(4) simpleMsgSink <- mkPortalMsgRequest(simple2Wrapper.portalIfc);
    mkConnection(simpleMsgSource, simpleMsgSink);
 
    Vector#(2,StdPortal) portals;
    portals[0] = simple2Proxy.portalIfc;
-   portals[1] = simple1Wrapper.portalIfc;
+   portals[1] = lSimpleRequestInputPipes.portalIfc;
    let ctrl_mux <- mkSlaveMux(portals);
 
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
    interface masters = nil;
 endmodule : mkConnectalTop
-
-module mkBluenocTop(BluenocTop#(1,1));
-   // instantiate user portals
-   // the indications from simpleRequest will be connected to the request interface to simpleReuqest2
-   SimpleRequestOutputPipes simple1Proxy <- mkSimpleRequestOutputPipes;
-   Simple simple1 <- mkSimple(simple1Proxy.ifc);
-   SimpleRequestInputPipes simple1Wrapper <- mkSimpleRequestInputPipes;
-   mkConnection(simple1Wrapper, simple1.request);
-
-   // now connect them via a BlueNoC link
-   MsgSource#(4) simpleMsgSource <- mkPortalMsgSource(simple1Proxy.portalIfc);
-   MsgSink#(4) simpleMsgSink <- mkPortalMsgSink(simple1Wrapper.portalIfc);
-
-   Vector#(1,MsgSink#(4)) rs = cons(simpleMsgSink, nil);
-   Vector#(1,MsgSource#(4)) is = cons(simpleMsgSource, nil);
-
-   interface requests = rs;
-   interface indications = is;
-endmodule

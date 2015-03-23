@@ -27,8 +27,10 @@
 `endif
 
 typedef `PhysAddrWidth PhysAddrWidth;
+typedef `SlaveDataBusWidth SlaveDataBusWidth;
 typedef `DataBusWidth DataBusWidth;
 typedef `NumberOfMasters NumberOfMasters;
+typedef `NumberOfTiles NumberOfTiles;
 
 ////////////////////////////// Bsim /////////////////////////////////
 `ifdef BsimHostTypeIF

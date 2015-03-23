@@ -633,6 +633,18 @@ def emitStruct(item, name, f, indentation):
         f.write(' %s;' % name)
     f.write('\n')
 
+def emitType(item, name, f, indentation):
+    indent(f, indentation)
+    tmp = typeCName(item)
+    if not tmp or tmp[0] == '`' or tmp == 'Empty' or tmp[-2:] == '_P':
+        return
+    if (indentation == 0):
+        f.write('typedef ')
+    f.write(tmp)
+    if (indentation == 0):
+        f.write(' %s;' % name)
+    f.write('\n')
+
 def emitEnum(item, name, f, indentation):
     indent(f, indentation)
     if (indentation == 0):
@@ -654,6 +666,10 @@ def emitCD(item, generated_hpp, indentation):
         emitEnum(td, n, generated_hpp, indentation)
     elif t == 'Struct':
         emitStruct(td, n, generated_hpp, indentation)
+    elif t == 'Type':
+        emitType(td, n, generated_hpp, indentation)
+    else:
+        print 'EMITCD', n, t, td
 
 def generate_cpp(project_dir, noisyFlag, jsondata):
     global globalv_globalvars

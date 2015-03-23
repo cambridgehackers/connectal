@@ -369,12 +369,12 @@ if __name__ == '__main__':
     if argcount == 2:
         tlplog = open(sys.argv[argindex]).read().split('\n')
     elif False:
-        tlplog = subprocess.check_output(['connectalutil', '/dev/portal0']).split('\n')
+        tlplog = subprocess.check_output(['connectalutil', '/dev/portal_0_0']).split('\n')
         tlpfirst = tlplog.pop(0)
         base = int(tlpfirst[0:16],16)
         base = int(tlpfirst[0:8],16)
     else:
-        fd = open('/dev/portal0', 'rw')
+        fd = open('/dev/portal_0_0', 'rw')
         buf = fcntl.ioctl(fd, BNOC_TRACE, ' ' * Trace_len)
         traceData = struct.unpack_from(struct_traceData, buf)
         #print 'SSS', traceData
