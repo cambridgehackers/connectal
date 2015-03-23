@@ -88,13 +88,18 @@ import PcieTracer        :: *;
 import MemTypes          :: *;
 `ifndef BSIM
 `ifdef XILINX
+`ifdef PCIE1
+import PCIEWRAPPER       :: *;
+import PcieEndpointX7    :: *;
+`endif // pcie1
+`ifdef PCIE2
+import PCIEWRAPPER2       :: *;
+import PcieEndpointX7Gen2 :: *;
+`endif // pcie2
 `ifdef PCIE3
 import PCIEWRAPPER3      :: *;
 import Pcie3EndpointX7   :: *;
-`else // pcie3
-import PCIEWRAPPER       :: *;
-import PcieEndpointX7    :: *;
-`endif // pcie3
+`endif
 `elsif ALTERA
 import PcieEndpointS5    :: *;
 `elsif VSIM
