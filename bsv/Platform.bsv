@@ -33,10 +33,58 @@ import FIFO::*;
 import GetPut::*;
 import SpecialFIFOs::*;
 
+import ConnectalMemory::*;
 import MMURequest::*;
 import MMUIndication::*;
 import MemServerIndication::*;
 import MemServerRequest::*;
+
+module renameReads#(Integer tile, MemReadClient#(DataBusWidth) reader, MemServerIndication err)(MemReadClient#(DataBusWidth));
+   interface Get readReq;
+      method ActionValue#(MemRequest) get;
+	 let rv <- reader.readReq.get;
+	 Bit#(4) lsb = rv.tag[3:0];
+	 Bit#(2) msb = rv.tag[5:4];
+	 if(msb != 0) begin
+	    $display("renameReads tile tag out of range: %h", rv.tag);
+	    err.error(extend(pack(DmaErrorTileTagOutOfRange)), rv.sglId, extend(rv.tag), fromInteger(tile));
+	 end
+	 return MemRequest{sglId:rv.sglId, offset:rv.offset, burstLen:rv.burstLen, tag:{fromInteger(tile),lsb}};
+      endmethod
+   endinterface
+   interface Put readData;
+      method Action put(MemData#(DataBusWidth) v);
+	 reader.readData.put(MemData{data:v.data, tag:{0,v.tag[3:0]}, last:v.last});
+      endmethod
+   endinterface
+endmodule
+
+module renameWrites#(Integer tile, MemWriteClient#(DataBusWidth) writer, MemServerIndication err)(MemWriteClient#(DataBusWidth));
+   interface Get writeReq;
+      method ActionValue#(MemRequest) get;
+	 let rv <- writer.writeReq.get;
+	 Bit#(4) lsb = rv.tag[3:0];
+	 Bit#(2) msb = rv.tag[5:4];
+	 if(msb != 0) begin
+	    $display("renameWrites tile tag out of range: %h", rv.tag);
+	    err.error(extend(pack(DmaErrorTileTagOutOfRange)), rv.sglId, extend(rv.tag), fromInteger(tile));
+	 end
+	 return MemRequest{sglId:rv.sglId, offset:rv.offset, burstLen:rv.burstLen, tag:{fromInteger(tile),lsb}};
+      endmethod
+   endinterface
+   interface Get writeData;
+      method ActionValue#(MemData#(DataBusWidth)) get;
+	 let rv <- writer.writeData.get;
+   	 return MemData{data:rv.data, tag:{0,rv.tag[3:0]}, last:rv.last};
+      endmethod
+   endinterface
+   interface Put writeDone;
+      method Action put(Bit#(MemTagSize) v);
+	 writer.writeDone.put({0,v[3:0]});
+      endmethod
+   endinterface
+endmodule
+
 
 module mkPlatform#(Vector#(numTiles, Tile#(Empty, numReadClients, numWriteClients)) tiles)(Platform#(Empty,numMasters))
    provisos(Add#(a__, TLog#(TAdd#(1, numTiles)), 14)
@@ -58,7 +106,6 @@ module mkPlatform#(Vector#(numTiles, Tile#(Empty, numReadClients, numWriteClient
       tile_write_clients[i] = tiles[i].writers;
    end
 
-
    /////////////////////////////////////////////////////////////
    // framework internal portals
 
@@ -66,7 +113,9 @@ module mkPlatform#(Vector#(numTiles, Tile#(Empty, numReadClients, numWriteClient
    MemServerIndicationProxy lMemServerIndicationProxy <- mkMemServerIndicationProxy(MemServerIndicationH2S);
 
    MMU#(PhysAddrWidth) lMMU <- mkMMU(0,True, lMMUIndicationProxy.ifc);
-   MemServer#(PhysAddrWidth,DataBusWidth,numMasters) lMemServer <- mkMemServer(concat(tile_read_clients), concat(tile_write_clients), cons(lMMU,nil), lMemServerIndicationProxy.ifc);
+   Vector#(TMul#(numTiles,numReadClients), MemReadClient#(DataBusWidth)) tile_read_clients_renamed <- zipWith3M(renameReads, genVector, concat(tile_read_clients), replicate(lMemServerIndicationProxy.ifc));
+   Vector#(TMul#(numTiles,numWriteClients), MemWriteClient#(DataBusWidth)) tile_write_clients_renamed <- zipWith3M(renameWrites, genVector, concat(tile_write_clients), replicate(lMemServerIndicationProxy.ifc));
+   MemServer#(PhysAddrWidth,DataBusWidth,numMasters) lMemServer <- mkMemServer(tile_read_clients_renamed, tile_write_clients_renamed, cons(lMMU,nil), lMemServerIndicationProxy.ifc);
 
    MMURequestWrapper lMMURequestWrapper <- mkMMURequestWrapper(MMURequestS2H, lMMU.request);
    MemServerRequestWrapper lMemServerRequestWrapper <- mkMemServerRequestWrapper(MemServerRequestS2H, lMemServer.request);
