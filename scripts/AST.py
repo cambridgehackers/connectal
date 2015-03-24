@@ -71,6 +71,8 @@ def piInfo(pitem):
     rc = {}
     rc['name'] = pitem.name
     rc['type'] = dtInfo(pitem.type)
+    if hasattr(pitem, 'oldtype'):
+        rc['oldtype'] = dtInfo(pitem.oldtype)
     return rc
 
 def declInfo(mitem):

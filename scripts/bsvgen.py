@@ -28,7 +28,6 @@ import math
 import re
 import md5
 
-import globalv
 import AST
 import string
 import util
@@ -215,9 +214,11 @@ indicationMethodTemplate='''
         //$display(\"indicationMethod \'%(methodName)s\' invoked\");
     endmethod'''
 
-def toBsvType(titem):
+def toBsvType(titem, oitem):
+    if oitem and oitem['name'].startswith('Tuple'):
+        titem = oitem
     if len(titem['params']):
-        return '%s#(%s)' % (titem['name'], ','.join([str(toBsvType(p)) for p in titem['params']]))
+        return '%s#(%s)' % (titem['name'], ','.join([str(toBsvType(p, None)) for p in titem['params']]))
     else:
         return titem['name']
 
@@ -230,9 +231,9 @@ def collectElements(mlist, workerfn, name):
           'methodName': item['name'],
           'MethodName': util.capitalize(item['name']),
           'channelNumber': mindex}
-        paramStructDeclarations = ['    %s %s;' % (toBsvType(p['type']), p['name']) for p in item['params']]
-        sub['paramType'] = ', '.join(['%s' % toBsvType(p['type']) for p in item['params']])
-        sub['formals'] = ', '.join(['%s %s' % (toBsvType(p['type']), p['name']) for p in item['params']])
+        paramStructDeclarations = ['    %s %s;' % (toBsvType(p['type'], p.get('oldtype')), p['name']) for p in item['params']]
+        sub['paramType'] = ', '.join(['%s' % toBsvType(p['type'], p.get('oldtype')) for p in item['params']])
+        sub['formals'] = ', '.join(['%s %s' % (toBsvType(p['type'], p.get('oldtype')), p['name']) for p in item['params']])
         structElements = ['%s: %s' % (p['name'], p['name']) for p in item['params']]
         if not item['params']:
             paramStructDeclarations = ['    %s %s;' % ('Bit#(32)', 'padding')]

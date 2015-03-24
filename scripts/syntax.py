@@ -1074,6 +1074,7 @@ def generate_bsvcpp(filelist, project_dir, dutname, bsvdefines, interfaces, nf):
                 p = globalv.globalvars.get(thisType.name)
                 if p and thisType.params and p.params:
                     myName = '%sL_%s_P' % (thisType.name, '_'.join([t.name for t in thisType.params if t]))
+                    pitem.oldtype = pitem.type
                     pitem.type = AST.Type(myName, [])
                     if not globalv.globalvars.get(myName):
                         globalv.add_new(AST.TypeDef(p.tdtype.instantiate(dict(zip(p.params, thisType.params))), myName, []))
