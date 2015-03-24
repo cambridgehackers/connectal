@@ -21,7 +21,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import FIFO::*;
+import FIFOF::*;
 import RegFile::*;
 import Clocks::*;
 import DefaultValue::*;
@@ -48,13 +48,13 @@ module mkMain#(MainRequest indication)(Main);
 
    Reset defaultReset <- exposeCurrentReset();
    RegFile rf <- mkRegFile(defaultClock, defaultReset, defaultReset);
-   FIFO#(RFItem) read_item <- mkSizedFIFO(1);
+   FIFOF#(RFItem) read_item <- mkSizedFIFOF(2);
 
    // The purpose of this state machine is to read
    
    Stmt handleRead =
    seq
-      if (rf.notEmpty())
+      if (read_item.notEmpty())
 	 seq
 	    rf.read.address(zeroExtend(read_item.first().address));
 	    action
