@@ -201,8 +201,8 @@ int runtest(int argc, const char ** argv)
 
     running = 0;
 
-    MonkitFile("perf.monkit")
-      .setHwCycles(cycles)
+    MonkitFile pmf("perf.monkit");
+    pmf.setHwCycles(cycles)
       .setReadBwUtil(read_util)
       .writeFile();
 

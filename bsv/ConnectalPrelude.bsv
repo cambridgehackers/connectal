@@ -1,6 +1,4 @@
-
-// Copyright (c) 2013 Nokia, Inc.
-// Copyright (c) 2013 Quanta Research Cambridge, Inc.
+// Copyright (c) 2015 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -22,21 +20,30 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-interface SwallowRequest;
-   method Action swallow(Bit#(32) v);
-endinterface
 
-interface Swallow;
-   interface SwallowRequest request;
-endinterface
-module mkSwallow(Swallow);
+typedef struct {
+   t1 tpl_1;
+   t2 tpl_2;
+   } Tuple2#(type t1, type t2);
 
-   Reg#(Bit#(32)) sink <- mkReg(0);
-   
-   interface SwallowRequest request;
-   method Action swallow(Bit#(32) v);
-      sink <= v;
-   endmethod
-   endinterface
+typedef struct {
+   t1 tpl_1;
+   t2 tpl_2;
+   t3 tpl_3;
+   } Tuple3#(type t1, type t2, type t3);
 
-endmodule
+typedef struct {
+   t1 tpl_1;
+   t2 tpl_2;
+   t3 tpl_3;
+   t4 tpl_4;
+   } Tuple4#(type t1, type t2, type t3, type t4);
+
+typedef struct {
+   t1 tpl_1;
+   t2 tpl_2;
+   t3 tpl_3;
+   t4 tpl_4;
+   t5 tpl_5;
+   } Tuple5#(type t1, type t2, type t3, type t4, type t5);
+

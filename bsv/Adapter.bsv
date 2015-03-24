@@ -52,14 +52,13 @@ module mkAdapterToBus(AdapterToBus#(n,a))
             Add#(n,a__,aszn),
             Add#(asz,paddingsz,aszn));
    
-   Bit#(32) max  = fromInteger(valueOf(nwords)) - 1;
+   Bit#(TLog#(nwords)) max  = fromInteger(valueOf(nwords) - 1);
    Bit#(paddingsz) padding = 0;
 
    FIFOF#(Bit#(aszn)) fifo <- mkFIFOF1();
-   Reg#(Bit#(32))   count <- mkReg(0);
-   
-   let nv = valueOf(n);
-   
+   Reg#(Bit#(TLog#(nwords)))   count <- mkReg(0);
+   Reg#(Bit#(TAdd#(TLog#(asz),1)))   shift <- mkReg(0);
+
    interface PipeIn in;
       method Action enq(a val);
          fifo.enq({padding,pack(val)});
@@ -68,17 +67,19 @@ module mkAdapterToBus(AdapterToBus#(n,a))
    endinterface
    interface PipeOut out;
       method Bit#(n) first() if (fifo.notEmpty);
-         return rtruncate(fifo.first << (count*fromInteger(nv)));
+         return rtruncate(fifo.first << shift);
       endmethod
       method Action deq() if (fifo.notEmpty);
          if (count == max)
             begin 
                count <= 0;
+	       shift <= 0;
                fifo.deq;
             end
          else
             begin
                count <= count + 1;
+	       shift <= shift + fromInteger(valueOf(n));
             end   
       endmethod
       method notEmpty = fifo.notEmpty;
@@ -93,10 +94,10 @@ module mkAdapterFromBus(AdapterFromBus#(n,a))
             Add#(n,a__,aszn),
             Add#(asz,paddingsz,aszn));
 
-   Bit#(32) max    = fromInteger(valueOf(nwords))-1;
+   Bit#(TLog#(nwords)) max    = fromInteger(valueOf(nwords)-1);
 
    Reg#(Bit#(aszn)) fbnbuff <- mkReg(0);
-   Reg#(Bit#(32))    count <- mkReg(0);
+   Reg#(Bit#(TLog#(nwords)))    count <- mkReg(0);
    FIFOF#(Bit#(asz)) fifo <- mkFIFOF1;
 
    interface PipeIn in;

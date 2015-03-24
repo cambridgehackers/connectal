@@ -262,11 +262,12 @@ extern "C" int bsimLinkCanTransmit(const char *name, int listening)
 extern "C" uint32_t bsimLinkReceive32(const char *name, int listening)
 {
     struct linkInfo *li = getLinkInfo(name, listening);
+    uint32_t *prxdata = (uint32_t *)&li->rxdata;
     int i = (listening) ? 0 : 1;
     int numBytes = read(li->fd[i], li->rxdata, sizeof(uint32_t));
     if (numBytes > 0)
 	fprintf(stderr, "%s:%d name=%s listening=%d numBytes=%d\n", __func__, __LINE__, name, listening, numBytes);
-    return *(uint32_t*)&li->rxdata;
+    return *prxdata;
 }
 extern "C" int bsimLinkTransmit32(const char *name, int listening, uint32_t val)
 {

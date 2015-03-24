@@ -49,7 +49,8 @@ typedef enum {
    DmaErrorMMUOutOfRange_r,
    DmaErrorMMUOutOfRange_w,
    DmaErrorOffsetOutOfRange,
-   DmaErrorSGLIdInvalid
+   DmaErrorSGLIdInvalid,
+   DmaErrorTileTagOutOfRange
    } DmaErrorType deriving (Bits);
 
 //
@@ -94,6 +95,9 @@ endinterface
 // @brief Debug interface to Dma engine
 //
 interface MemServerRequest;
+   method Action stop(Bit#(2) tile);
+   method Action kill(Bit#(2) tile);
+   method Action go(Bit#(2) tile);
    //
    // @brief Requests an address translation
    //

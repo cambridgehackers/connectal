@@ -110,12 +110,12 @@ endmodule : mkBluenocTop
 %(exportedNames)s
 '''
 
-portalTemplate = '''   let portalEnt_%(count)s <- mkMemPortal(extend(pack(%(enumVal)s)), l%(ifcName)s.portalIfc);
+portalTemplate = '''   let portalEnt_%(count)s <- mkMemPortal%(slaveType)s(extend(pack(%(enumVal)s)), l%(ifcName)s.portalIfc.%(itype)s%(intrParam)s);
    portals[%(count)s] = portalEnt_%(count)s;'''
 
 portalTemplateNew = '''   let memSlaves_%(count)s <- mapM(mkPipe%(slaveType)sMemSlave, l%(ifcName)s.portalIfc.%(itype)s);
    PortalCtrlMemSlave#(5,32/*slaveDataWidth*/) ctrlPort_%(count)s <- mkPortalCtrlMemSlave(extend(pack(%(enumVal)s)), l%(ifcName)s.portalIfc.intr);
-   let memslave_%(count)s <- mkMemSlaveMux(cons(ctrlPort_%(count)s.memSlave,memSlaves_%(count)s));
+   let memslave_%(count)s <- mkMemMethodMux(cons(ctrlPort_%(count)s.memSlave,memSlaves_%(count)s));
    portals[%(count)s] = (interface MemPortal;
        interface PhysMemSlave slave = memslave_%(count)s;
        interface ReadOnly interrupt = ctrlPort_%(count)s.interrupt;
@@ -131,10 +131,12 @@ def addPortal(enumVal, ifcName, direction):
         requestList.append('l' + ifcName + 'Noc')
         portParam['itype'] = 'requests'
         portParam['slaveType'] = 'In'
+        portParam['intrParam'] = ''
     else:
         indicationList.append('l' + ifcName + 'Noc')
         portParam['itype'] = 'indications'
         portParam['slaveType'] = 'Out'
+        portParam['intrParam'] = ', l%(ifcName)s.portalIfc.intr' % portParam
     p = portalNocTemplate if options.bluenoc else portalTemplate
     portalList.append(p % portParam)
     portalCount = portalCount + 1

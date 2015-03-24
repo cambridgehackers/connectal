@@ -194,7 +194,7 @@ t_LPAREN = r'\('
 t_LPARENSTAR = r'\(\*'
 t_MINUS = r'[-]'
 t_NEQ = r'!='
-t_NUM = r'(([0-9]+\'?)|(\'))[bdh\.]?[0-9a-zA-Z]*'
+t_NUM = r'(([0-9]+\'?[bdh\.]?[0-9a-zA-Z]*)|(\'[bdh\.]?[0-9a-zA-Z]+))'
 t_PERCENT = r'%'
 t_PLUS = r'\+'
 t_QUESTION = r'\?'
@@ -369,8 +369,10 @@ def p_term(p):
             | term TOKMATCHES pattern
             | LBRACE expressions RBRACE
             | term DOT VAR
+            | term LBRACKET expression RBRACKET DOT term
             | term LBRACKET expression RBRACKET
             | term LBRACKET expression COLON expression RBRACKET
+            | term LPAREN params RPAREN DOT term
             | term LPAREN params RPAREN'''
     p[0] = p[1]
 
@@ -579,6 +581,7 @@ def p_expressionStmt(p):
                       | fsmStmtDef
                       | whenStmt
                       | lvalue SEMICOLON
+                      | lvalue LPAREN params RPAREN DOT expression SEMICOLON
                       | lvalue LPAREN params RPAREN SEMICOLON
                       | BUILTINVAR LPAREN expressions RPAREN SEMICOLON
                       | varAssign SEMICOLON
@@ -646,6 +649,7 @@ def p_functionDef(p):
     '''functionDef : instanceAttributes TOKFUNCTION type VAR LPAREN functionFormals RPAREN provisos functionBody
                    | instanceAttributes TOKFUNCTION      VAR LPAREN functionFormals RPAREN provisos functionBody
                    | instanceAttributes TOKFUNCTION type VAR LPAREN functionFormals RPAREN provisos functionValue
+                   | instanceAttributes TOKFUNCTION      VAR LPAREN functionFormals RPAREN provisos functionValue
                    '''
     if len(p) == 9:
         # no type

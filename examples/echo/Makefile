@@ -1,8 +1,8 @@
 
 CONNECTALDIR?=../..
-S2H_INTERFACES = EchoRequest:Echo.request SwallowRequest:Swallow.request
+S2H_INTERFACES = EchoRequest:Echo.request
 H2S_INTERFACES = Echo:EchoIndication
-BSVFILES = Echo.bsv Swallow.bsv
+BSVFILES = Echo.bsv
 CPPFILES=testecho.cpp
 
 CONNECTALFLAGS += -D IMPORT_HOSTIF

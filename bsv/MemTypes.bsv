@@ -170,12 +170,6 @@ endinterface
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-interface DmaDbg;
-   method ActionValue#(Bit#(64)) getMemoryTraffic();
-   method ActionValue#(DmaDbgRec) dbg();
-endinterface
-
-
 instance Connectable#(MemReadClient#(dsz), MemReadServer#(dsz));
    module mkConnection#(MemReadClient#(dsz) source, MemReadServer#(dsz) sink)(Empty);
       rule mr_request;

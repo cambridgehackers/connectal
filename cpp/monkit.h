@@ -24,6 +24,8 @@
 #ifndef _MONKIT_H_
 #define _MONKIT_H_
 
+#include <errno.h>
+
 class MonkitFile {
  public:
  
@@ -69,8 +71,12 @@ void MonkitFile::writeFile()
 {
   float hw_speedup = sw_cycles/hw_cycles;
   FILE *out = fopen(name, "w");
-  fprintf(out, monkit, hw_cycles, sw_cycles, hw_read_bw_util, hw_write_bw_util, hw_speedup);
-  fclose(out);
+  if (out) {
+    fprintf(out, monkit, hw_cycles, sw_cycles, hw_read_bw_util, hw_write_bw_util, hw_speedup);
+    fclose(out);
+  } else {
+    fprintf(stderr, "Failed to open MonkitFile %s errno=%d:%s\n", name, errno, strerror(errno));
+  }
 }
 
 #endif
