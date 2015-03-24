@@ -68,6 +68,7 @@ public:
     fprintf(stderr, "done\n");
     finished = true;
     memcmp_fail = memcmp(srcBuffer, dstBuffer, numWords*sizeof(unsigned int));
+    fprintf(stderr, "memcmp=%d\n", memcmp_fail);
     sem_post(&memcmp_sem);
   }
 };
@@ -169,12 +170,12 @@ int runtest(int argc, const char **argv)
   fprintf(stderr, "memory read utilization (beats/cycle): %f\n", read_util);
   fprintf(stderr, "memory write utilization (beats/cycle): %f\n", write_util);
   
-  MonkitFile("perf.monkit")
-    .setHwCycles(cycles)
-    .setReadBwUtil(read_util)
-    .setWriteBwUtil(write_util)
-    .writeFile();
-  fprintf(stderr, "After updating perf.monkit\n");
+  // MonkitFile("perf.monkit")
+  //   .setHwCycles(cycles)
+  //   .setReadBwUtil(read_util)
+  //   .setWriteBwUtil(write_util)
+  //   .writeFile();
+  // fprintf(stderr, "After updating perf.monkit\n");
   sem_wait(&memcmp_sem);
   return memcmp_fail;
 }
