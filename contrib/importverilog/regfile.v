@@ -14,13 +14,18 @@
    reg [7:0] 	reg1;
    reg [7:0] 	reg2;
    reg [7:0] 	reg3;
+   reg [1:0] 	ra;
+   
    wire [7:0] 	read_data;
    
-  assign read_data = (read_address == 0) ? reg0 :
-		      (read_address == 1) ? reg1 :
-		      (read_address == 2) ? reg2 :
-		     (read_address == 3) ? reg3 : 0;
+  assign read_data = (ra == 0) ? reg0 :
+		      (ra == 1) ? reg1 :
+		      (ra == 2) ? reg2 :
+		     (ra == 3) ? reg3 : 0;
 
+   
+   always @ (posedge clock)
+     ra <= read_address;
    
    always @ (posedge clock)
    if (reset_n == 0) begin
