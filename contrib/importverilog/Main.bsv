@@ -54,6 +54,8 @@ module mkMain#(MainRequest indication)(Main);
    
    Stmt handleRead =
    seq
+      while(True)
+   seq
       if (read_item.notEmpty())
 	 seq
 	    rf.read.address(zeroExtend(read_item.first().address));
@@ -62,9 +64,10 @@ module mkMain#(MainRequest indication)(Main);
 	       indication.read_rf(zeroExtend(read_item.first().address), zeroExtend(rf.read.data()));
 	    endaction
 	 endseq
+      endseq
    endseq;
    
-   FSM readFSM <- mkFSM(handleRead);
+  mkAutoFSM(handleRead);
    
    interface MainRequest request;
 
@@ -79,8 +82,7 @@ module mkMain#(MainRequest indication)(Main);
    method Action read_rf(Bit#(16) address, Bit#(16) data);
       if (verbose) $display("mkMain::read_rf");
       read_item.enq(RFItem{address:truncate(address), data:0});
-      readFSM.start();
-   endmethod
+    endmethod
 
    endinterface
 endmodule
