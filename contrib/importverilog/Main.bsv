@@ -23,7 +23,9 @@
 
 import FIFO::*;
 import RegFile::*;
-
+import Clocks::*;
+import DefaultValue::*;
+import StmtFSM::*;
 
 interface MainRequest;
     method Action write_rf(Bit#(16) address, Bit#(16) data);
@@ -42,29 +44,42 @@ typedef struct{
 
 module mkMain#(MainRequest indication)(Main);
    let verbose = False;
-   RegFile rf <- mkRegFile();
+   Clock defaultClock <- exposeCurrentClock();
+
+   Reset defaultReset <- exposeCurrentReset();
+   RegFile rf <- mkRegFile(defaultClock, defaultReset, defaultReset);
    FIFO#(RFItem) read_item <- mkSizedFIFO(1);
 
-   // This runs a cycle after the register file read address is set
-   rule handleread;
-      let v <- read_item.get();
-      indication.read_rf(v.address, rf.read.data());
-   endrule
+   // The purpose of this state machine is to read
+   
+   Stmt handleRead =
+   seq
+      if (rf.notEmpty())
+	 seq
+	    rf.read.address(zeroExtend(read_item.first().address));
+	    action
+	       read_item.deq();
+	       indication.read_rf(zeroExtend(read_item.first().address), zeroExtend(rf.read.data()));
+	    endaction
+	 endseq
+   endseq;
+   
+   FSM readFSM <- mkFSM(handleRead);
    
    interface MainRequest request;
 
    method Action write_rf(Bit#(16) address, Bit#(16) data);
       if (verbose) $display("mkMain::write_rf");
-      rf.write.address(address);
-      rf.write.data(data);
+      rf.write.address(truncate(address));
+      rf.write.data(truncate(data));
       rf.write.en(1);
       indication.write_rf(address, data);
    endmethod
 
    method Action read_rf(Bit#(16) address, Bit#(16) data);
       if (verbose) $display("mkMain::read_rf");
-      rf.read.address(address);
-      read_item.put(RFItem{address:address, data:0});
+      read_item.enq(RFItem{address:truncate(address), data:0});
+      readFSM.start();
    endmethod
 
    endinterface
