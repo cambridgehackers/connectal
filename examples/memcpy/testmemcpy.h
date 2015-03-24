@@ -170,13 +170,16 @@ int runtest(int argc, const char **argv)
   fprintf(stderr, "memory read utilization (beats/cycle): %f\n", read_util);
   fprintf(stderr, "memory write utilization (beats/cycle): %f\n", write_util);
   
+#if 0
   MonkitFile pmf("perf.monkit");
   pmf.setHwCycles(cycles)
     .setReadBwUtil(read_util)
     .setWriteBwUtil(write_util)
     .writeFile();
   fprintf(stderr, "After updating perf.monkit\n");
+#endif
   sem_wait(&memcmp_sem);
+  fprintf(stderr, "after memcmp_sem memcmp_fail=%d\n", memcmp_fail);
   return memcmp_fail;
 }
 
