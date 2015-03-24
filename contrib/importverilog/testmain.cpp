@@ -24,12 +24,7 @@
 
 #include "MainRequest.h"
 
-#define NUMBER_OF_TESTS 1
-
-
-int v2a = 2;
-int v2b = 4;
-
+#define NUMBER_OF_TESTS 8
 
 
 class Main : public MainRequestWrapper
@@ -41,11 +36,11 @@ public:
       exit(0);
   }
   virtual void write_rf(uint16_t address, uint16_t data) {
-    fprintf(stderr, "write_rf(%d %d)\n", address, data);
+    fprintf(stderr, "write_rf(%d 0x%02x)\n", address, data);
     incr_cnt();
   }
   virtual void read_rf(uint16_t address, uint16_t data) {
-    fprintf(stderr, "read_rf(%d %d)\n", address, data);
+    fprintf(stderr, "read_rf(%d 0x%02x)\n", address, data);
     incr_cnt();
   }
   Main(unsigned int id) : MainRequestWrapper(id), cnt(0){}
@@ -61,12 +56,16 @@ int main(int argc, const char **argv)
 
   portalExec_start();
 
-  v2a = 1;
-  v2b = 0x11;
-  fprintf(stderr, "Main::calling write_rf(%d, %d)\n", v2a,v2b);
-  device->write_rf(v2a, v2b);
-  fprintf(stderr, "Main::calling read_rf(%d, %d)\n", v2a,v2b);
-  device->read_rf(v2a,0);
+  fprintf(stderr, "Main::calling write_rf(11, 22, 33, 44)\n");
+  device->write_rf(0, 0x11);
+  device->write_rf(1, 0x22);
+  device->write_rf(2, 0x33);
+  device->write_rf(3, 0x44);
+  fprintf(stderr, "Main::calling read_rf(0, 1, 2, 3)\n");
+  device->read_rf(0,0);
+  device->read_rf(1,0);
+  device->read_rf(2,0);
+  device->read_rf(3,0);
   fprintf(stderr, "Main::about to go to sleep\n");
   while(true){sleep(2);}
 }
