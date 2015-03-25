@@ -240,19 +240,6 @@ module mkMemMethodMuxOut#(PhysMemSlave#(aw,dataWidth) ctrl, Vector#(numIndicatio
    FIFO#(Bit#(TLog#(numIndications))) ws <- mkFIFO1();
    FIFO#(Bool)                   wsCtrl <- mkFIFO1();
 
-   rule readDataRule;
-      let b <- fifoReadAddrGenerator.addrBeat.get();
-      let v = 0;
-      if (!rsCtrl.first) begin
-	  if (b.addr == 0)
-	     v <- toGet(indications[rs.first]).get();
-	  else if (b.addr == 4)
-	     v = extend(pack(indications[rs.first].notEmpty()));
-	  //$display("mkPipeOutMemSlave.readData.get addr=%h data=%h", b.addr, data);
-	  fifoReadDataFifo.enq(MemData { data: v, tag: b.tag, last: b.last });
-      end
-   endrule
-
    rule write_done;
       let rv;
       if (wsCtrl.first)
@@ -280,11 +267,17 @@ module mkMemMethodMuxOut#(PhysMemSlave#(aw,dataWidth) ctrl, Vector#(numIndicatio
 
    FIFO#(MemData#(dataWidth)) rvFifo <- mkFIFO;
    rule rvrule;
+      let b <- fifoReadAddrGenerator.addrBeat.get();
       let rv;
       if (rsCtrl.first)
 	 rv <- ctrl.read_server.readData.get();
-      else
-	 rv <- toGet(fifoReadDataFifo).get();
+      else begin
+	 rv = MemData { data: 0, tag: b.tag, last: b.last };
+	 if (b.addr == 0)
+	    rv.data <- toGet(indications[rs.first]).get();
+	 else if (b.addr == 4)
+	    rv.data = extend(pack(indications[rs.first].notEmpty()));
+      end
       rvFifo.enq(rv);
       //$display("mkMemMethodMux.readData aw=%d rs=%d data=%h", valueOf(aw), rs.first, rv.data);
       rs.deq();
