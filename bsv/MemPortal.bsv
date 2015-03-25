@@ -40,7 +40,7 @@ import ConnectalMemory::*;
 import HostInterface::*;
 
 interface PortalCtrlMemSlave#(numeric type addrWidth, numeric type dataWidth);
-   interface PhysMemSlave#(addrWidth, dataWidth) memSlave;
+   interface PortalCtrl#(addrWidth, dataWidth)  memSlave;
    interface ReadOnly#(Bool) interrupt;
    interface WriteOnly#(Bit#(dataWidth)) num_portals;
 endinterface
@@ -48,10 +48,6 @@ endinterface
 module mkPortalCtrlMemSlave#(Bit#(dataWidth) ifcId, PortalInterrupt#(dataWidth) intr)
    (PortalCtrlMemSlave#(addrWidth, dataWidth))
    provisos(Add#(d__, dataWidth, TMul#(dataWidth, 2)));
-   AddressGenerator#(addrWidth,dataWidth) fifoReadAddrGenerator  <- mkAddressGenerator();
-   AddressGenerator#(addrWidth,dataWidth) fifoWriteAddrGenerator <- mkAddressGenerator();
-   FIFO#(Bit#(MemTagSize))                fifoWriteDoneFifo <- mkFIFO();
-   FIFO#(MemData#(dataWidth))             fifoWriteDataFifo <- mkFIFO();
    Reg#(Bit#(dataWidth)) num_portals_reg <- mkReg(0);
    Reg#(Bool) interruptEnableReg <- mkReg(False);
    Reg#(Bit#(TMul#(dataWidth,2))) cycle_count <- mkReg(0);
@@ -62,27 +58,13 @@ module mkPortalCtrlMemSlave#(Bit#(dataWidth) ifcId, PortalInterrupt#(dataWidth) 
       cycle_count <= cycle_count+1;
    endrule
    
-   rule writeDataRule;
-      let d <- toGet(fifoWriteDataFifo).get();
-      let b <- fifoWriteAddrGenerator.addrBeat.get();
-      if (verbose) $display("mkCtrl.writeData addr=%h data=%h last=%d", b.addr, d.data, b.last);
-      let v = d.data;
-      let addr = b.addr;
-      if (addr == 0)
-	 noAction;
+   interface PortalCtrl memSlave;
+   method Action write(Bit#(addrWidth) addr, Bit#(dataWidth) v);
       if (addr == 4)
 	 interruptEnableReg <= v[0] == 1'd1;
-      if (b.last)
-	 fifoWriteDoneFifo.enq(b.tag);
-   endrule
+   endmethod
 
-   interface PhysMemSlave memSlave;
-      interface PhysMemReadServer read_server;
-	 interface Put readReq = fifoReadAddrGenerator.request;
-	 interface Get readData;
-	    method ActionValue#(MemData#(dataWidth)) get();
-	       let b <- fifoReadAddrGenerator.addrBeat.get();
-	       let addr = b.addr;
+   method ActionValue#(Bit#(dataWidth)) read(Bit#(addrWidth) addr);
 	       let v = 'h05a05a0;
 	       if (addr == 0)
 		  v = intr.status() ? 1 : 0;
@@ -106,21 +88,9 @@ module mkPortalCtrlMemSlave#(Bit#(dataWidth) ifcId, PortalInterrupt#(dataWidth) 
 	       end
 	       if (addr == 'h01C)
 		  v = snapshot;
-	       if (verbose) $display("mkCtrl.readData addr=%h data=%h", b.addr, v);
-	       return MemData { data: v, tag: b.tag, last: b.last };
-	    endmethod
-	 endinterface
-      endinterface: read_server
-      interface PhysMemWriteServer write_server; 
-	 interface Put writeReq = fifoWriteAddrGenerator.request;
-	 interface Put writeData;
-	    method Action put(MemData#(dataWidth) d);
-	       fifoWriteDataFifo.enq(d);
-	    endmethod
-	 endinterface
-         interface Get writeDone = toGet(fifoWriteDoneFifo);
-      endinterface: write_server
-   endinterface: memSlave
+	       return v;
+   endmethod
+   endinterface
    interface ReadOnly interrupt;
       method Bool _read();
 	 return intr.status() && interruptEnableReg;

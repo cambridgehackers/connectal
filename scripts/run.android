@@ -34,6 +34,7 @@ sys.path.append(scriptdir)
 
 from adb import adb_commands
 from adb import common
+from argparse import RawTextHelpFormatter
 
 timelimit=600
 if os.environ.has_key('RUNTIMELIMIT'):
@@ -56,13 +57,24 @@ Will download the bit file and executable from buildbot if
 buildbot-url, project, and build-number are specified.
 
 The buildbot-url defaults to %(buildbot_url)s.
+
+Will download the bit file and executable from an arbitrary location 
+using rsync if rsync-path is specified. If you require a non-default 
+identity file for rsync, add the  following lines to ~/.ssh/config:
+
+   Host <hostname>
+   HostName <url>
+   User <username>
+   Port 22
+   IdentityFile <path_to_key>
+
+---
 ''' % {
     'buildbot_url': buildbot_url
 }
 
 argparser = argparse.ArgumentParser("Run Connectal apps on Android Zynq boards.",
-                                    epilog=epilog)
-argparser.add_argument('bitfile', help='Gzipped binary bit file for the FPGA', nargs='?')
+                                    epilog=epilog, formatter_class=RawTextHelpFormatter)
 argparser.add_argument('androidexe', help='Android executable for the Zynq', nargs='?')
 argparser.add_argument('file', help='Additional files to transfer to the target', nargs='*', default=[])
 argparser.add_argument('-t', '--timelimit', type=int, default=timelimit, help='Time limit for jobs running on the zedboard. Defaults to value of environment variable RUNTIMELIMIT or 600 seconds.')
@@ -71,11 +83,16 @@ argparser.add_argument('-u', '--buildbot-url', default=buildbot_url, help='Base 
 argparser.add_argument('-p', '--project', help='Name of project on buildbot.')
 argparser.add_argument('-b', '--build-number', help='Build number on buildbot.')
 argparser.add_argument('-n', '--board-name', help='String in \'hostname\' on the SDCard')
+argparser.add_argument('-r', '--rsync-path', help='rsync path to android.exe (hostname:/home/.../zedboard/bin/)')
 
-def run_zedboard(bitfile, androidexe, additional_files):
+
+def run_android(androidexe, additional_files):
     ipaddr = options.ipaddr
 
-    if not ipaddr:
+    if ipaddr:
+        if ipaddr.find(':') == -1:
+            ipaddr = ipaddr + ':5555'
+    else:
         if (options.board_name):
             found = False
             discover_tcp.detect_network()
@@ -91,8 +108,9 @@ def run_zedboard(bitfile, androidexe, additional_files):
             ipaddr = p.stdout.read()
             ipaddr = ipaddr.replace('\n', '')
             ipaddr = ipaddr.replace('\r', '')
+            ipaddr = ipaddr + ':5555'
 
-    device_serial = '%s:5555' % (ipaddr)
+    device_serial = ipaddr
 
     print 'connecting to %s' % device_serial
     connected = False
@@ -123,7 +141,6 @@ def run_zedboard(bitfile, androidexe, additional_files):
     print('Sending files to the zedboard')
     connection.Shell('mkdir -p /mnt/sdcard/tmp')
     connection.Shell('mount -t tmpfs tmpfs /mnt/sdcard/tmp')
-    #no longer needed connection.Push(bitfile, '/mnt/sdcard/tmp/%s' % os.path.basename(bitfile))
     connection.Push(androidexe, '/mnt/sdcard/tmp/%s' % os.path.basename(androidexe))
     connection.Shell('chmod agu+rx /mnt/sdcard/tmp/%s' % os.path.basename(androidexe))
     for f in additional_files:
@@ -139,7 +156,7 @@ def run_zedboard(bitfile, androidexe, additional_files):
         sys.stdout.write(line)
     connection.Pull('/mnt/sdcard/tmp/exit.status', 'exit.status')
     connection.Pull('/mnt/sdcard/tmp/perf.monkit', 'perf.monkit')
-    connection.Shell('rm -vf %s' % ' '.join([os.path.basename(f) for f in [bitfile, androidexe] + additional_files]))
+    connection.Shell('rm -vf %s' % ' '.join([os.path.basename(f) for f in [androidexe] + additional_files]))
     status = int(open('exit.status').read())
     print('status=%d' % status)
     sys.exit(status)
@@ -147,23 +164,20 @@ def run_zedboard(bitfile, androidexe, additional_files):
 if __name__ == '__main__':
     options = argparser.parse_args()
     if options.buildbot_url and options.project and options.build_number:
-        # download android.exe and mkTop.xdevcfg.bin.gz
+        # download android.exe
         options.androidexe = 'android.exe'
-        options.bitfile = 'mkTop.xdevcfg.bin.gz'
         url = '%s/%s/%s/bin/android.exe' % (options.buildbot_url, options.project, options.build_number)
         print 'downloading', url
         status = subprocess.call(['curl', '-f', '-O', url])
         if status != 0:
             #print 'curl returned error', status
             sys.exit(status)
-        # http://54.86.72.185/archive/leds2/zedboard/1/bin/mkTop.xdevcfg.bin.gz
-        url = '%s/%s/%s/bin/mkTop.xdevcfg.bin.gz' % (options.buildbot_url, options.project, options.build_number)
-        print 'downloading', url
-        status = subprocess.call(['curl', '-f', '-O', url])
+    elif options.rsync_path:
+        options.androidexe = 'android.exe'
+        status = subprocess.call(['rsync', '-av', '%s/android.exe' % (options.rsync_path), '.'])
         if status != 0:
-            #print 'curl returned error', status
             sys.exit(status)
-    if not options.bitfile or not options.androidexe:
+    if not options.androidexe:
         argparser.print_help()
         sys.exit(1)
-    run_zedboard(options.bitfile, options.androidexe, options.file)
+    run_android(options.androidexe, options.file)

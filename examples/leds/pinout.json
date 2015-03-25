@@ -1,0 +1,36 @@
+{
+    "leds[0]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L0"
+    },
+    "leds[1]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L1"
+    },
+    "leds[2]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L2"
+    },
+    "leds[3]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L3"
+    },
+    "leds[4]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L4"
+    },
+    "leds[5]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L5"
+    },
+    "leds[6]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L6"
+    },
+    "leds[7]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L7"
+    }
+}
+
+

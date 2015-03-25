@@ -180,5 +180,8 @@ if __name__ ==  '__main__':
     else:
         nw = options.network.split("/")
         start = ip2int(nw[0])
-        end = start+(1<<int(nw[1]))-2
+        if len(nw) != 2:
+            print 'Usage: discover_tcp.py ipaddr/prefix_width'
+            sys.exit(-1)
+        end = start + (1 << (32-int(nw[1])) ) - 2
         do_work(start+1,end)

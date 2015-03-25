@@ -5,6 +5,7 @@
         "rewireclockstring" : "tclzynqrewireclock",
         "constraints": "constraints/xilinx/xc7z045ffg900.xdc",
         "TOP" : "ZynqTop",
+        "runscript" : "run.android",
         "bsvdefines" : ["XILINX=1", "ZynqHostTypeIF", "PhysAddrWidth=32", "NUMBER_OF_LEDS=4"],
 	    "CONNECTALFLAGS": [],
         "need_pcie" : "unused"

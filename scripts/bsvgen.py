@@ -28,7 +28,6 @@ import math
 import re
 import md5
 
-import globalv
 import AST
 import string
 import util
@@ -187,8 +186,8 @@ endmodule
 '''
 
 requestRuleTemplate='''
-    AdapterFromBus#(32,%(MethodName)s_Message) %(methodName)s_requestFifo <- mkAdapterFromBus();
-    requestPipeIn[%(channelNumber)s] = %(methodName)s_requestFifo.in;
+    AdapterFromBus#(32,%(MethodName)s_Message) %(methodName)s_requestAdapter <- mkAdapterFromBus();
+    requestPipeIn[%(channelNumber)s] = %(methodName)s_requestAdapter.in;
 '''
 
 messageSizeTemplate='''
@@ -202,8 +201,8 @@ mkConnectionMethodTemplate='''
 '''
 
 indicationRuleTemplate='''
-    AdapterToBus#(32,%(MethodName)s_Message) %(methodName)s_responseFifo <- mkAdapterToBus();
-    indicationPipes[%(channelNumber)s] = %(methodName)s_responseFifo.out;
+    AdapterToBus#(32,%(MethodName)s_Message) %(methodName)s_responseAdapter <- mkAdapterToBus();
+    indicationPipes[%(channelNumber)s] = %(methodName)s_responseAdapter.out;
 '''
 
 indicationMethodDeclTemplate='''
@@ -211,13 +210,15 @@ indicationMethodDeclTemplate='''
 
 indicationMethodTemplate='''
     method Action %(methodName)s(%(formals)s);
-        %(methodName)s_responseFifo.in.enq(%(MethodName)s_Message {%(structElements)s});
+        %(methodName)s_responseAdapter.in.enq(%(MethodName)s_Message {%(structElements)s});
         //$display(\"indicationMethod \'%(methodName)s\' invoked\");
     endmethod'''
 
-def toBsvType(titem):
+def toBsvType(titem, oitem):
+    if oitem and oitem['name'].startswith('Tuple'):
+        titem = oitem
     if len(titem['params']):
-        return '%s#(%s)' % (titem['name'], ','.join([str(toBsvType(p)) for p in titem['params']]))
+        return '%s#(%s)' % (titem['name'], ','.join([str(toBsvType(p, None)) for p in titem['params']]))
     else:
         return titem['name']
 
@@ -230,9 +231,9 @@ def collectElements(mlist, workerfn, name):
           'methodName': item['name'],
           'MethodName': util.capitalize(item['name']),
           'channelNumber': mindex}
-        paramStructDeclarations = ['    %s %s;' % (toBsvType(p['type']), p['name']) for p in item['params']]
-        sub['paramType'] = ', '.join(['%s' % toBsvType(p['type']) for p in item['params']])
-        sub['formals'] = ', '.join(['%s %s' % (toBsvType(p['type']), p['name']) for p in item['params']])
+        paramStructDeclarations = ['    %s %s;' % (toBsvType(p['type'], p.get('oldtype')), p['name']) for p in item['params']]
+        sub['paramType'] = ', '.join(['%s' % toBsvType(p['type'], p.get('oldtype')) for p in item['params']])
+        sub['formals'] = ', '.join(['%s %s' % (toBsvType(p['type'], p.get('oldtype')), p['name']) for p in item['params']])
         structElements = ['%s: %s' % (p['name'], p['name']) for p in item['params']]
         if not item['params']:
             paramStructDeclarations = ['    %s %s;' % ('Bit#(32)', 'padding')]
@@ -253,7 +254,7 @@ def fixupSubsts(item, suffix):
         msubs = {'methodName': m['name'],
                  'paramsForCall': ', '.join(paramsForCall)}
         mkConnectionMethodRules.append(mkConnectionMethodTemplate % msubs)
-        outputPipes.append('    interface %(methodName)s_PipeOut = %(methodName)s_requestFifo.out;' % msubs)
+        outputPipes.append('    interface %(methodName)s_PipeOut = %(methodName)s_requestAdapter.out;' % msubs)
     substs = {
         'Package': item['Package'],
         'channelCount': len(dlist),

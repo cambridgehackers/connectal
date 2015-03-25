@@ -110,11 +110,14 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
 
    FIFOF#(AddrBeat#(16)) csrRagBeatFifo <- mkFIFOF();
    FIFOF#(Bool)       csrIsMsixAddrFifo <- mkFIFOF();
-   FIFOF#(Vector#(1024,Bool)) csrOneHotFifo <- mkFIFOF();
+   FIFOF#(Bit#(2))     csrOneHotFifo000 <- mkFIFOF();
+   FIFOF#(Bit#(21))    csrOneHotFifo774 <- mkFIFOF();
+   FIFOF#(Bit#(2))     csrOneHotFifo992 <- mkFIFOF();
 
    FIFOF#(AddrBeat#(16)) csrWagBeatFifo <- mkFIFOF();
    FIFOF#(Bool)       csrWagIsMsixAddrFifo <- mkFIFOF();
-   FIFOF#(Vector#(1024,Bool)) csrWagOneHotFifo <- mkFIFOF();
+   FIFOF#(Bit#(8))     csrWagOneHotFifo768 <- mkFIFOF();
+   FIFOF#(Bit#(3))     csrWagOneHotFifo792 <- mkFIFOF();
 
    rule readDataRule;
       let beat <- csrRag.addrBeat.get();
@@ -125,8 +128,10 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
 
       csrRagBeatFifo.enq(beat);
       csrIsMsixAddrFifo.enq(msixaddr >= 0 && msixaddr <= 63);
-      function Bool addrDecode(Integer i); return addr[9:0] == fromInteger(i); endfunction
-      csrOneHotFifo.enq(genWith(addrDecode));
+      Bit#(1024) onehot = (1 << addr[9:0]);
+      csrOneHotFifo000.enq(onehot[1:0]);
+      csrOneHotFifo774.enq(onehot[794:774]);
+      csrOneHotFifo992.enq(onehot[993:992]);
    endrule
    rule readDataRule2;
       let beat       <- toGet(csrRagBeatFifo).get();
@@ -136,7 +141,9 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
       let modaddr = (addr % 8192);
       let msix_base = `msix_base;
       let msixaddr = modaddr - msix_base;
-      let oneHotDecode <- toGet(csrOneHotFifo).get();
+      let oneHotDecode000 <- toGet(csrOneHotFifo000).get();
+      let oneHotDecode774 <- toGet(csrOneHotFifo774).get();
+      let oneHotDecode992 <- toGet(csrOneHotFifo992).get();
 
       if (isMsixAddr) begin
          begin
@@ -154,24 +161,24 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
       end
       else begin
 	  // board identification
-	  if (oneHotDecode[0]) data = 32'h65756c42; // Blue
-	  if (oneHotDecode[1]) data = 32'h63657073; // spec
+	  if (oneHotDecode000[0] == 1) data = 32'h65756c42; // Blue
+	  if (oneHotDecode000[1] == 1) data = 32'h63657073; // spec
 
-	  if (oneHotDecode[774]) data = fromInteger(2**valueOf(TAdd#(TlpTraceAddrSize,1)));
-	  if (oneHotDecode[775]) data = (tlpdata.tlpTracing ? 1 : 0);
-	  if (oneHotDecode[776]) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 0);
-	  if (oneHotDecode[777]) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 1);
-	  if (oneHotDecode[778]) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 2);
-	  if (oneHotDecode[779]) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 3);
-	  if (oneHotDecode[780]) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 4);
-	  if (oneHotDecode[781]) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 5);
-	  if (oneHotDecode[792]) data = extend(tlpdata.pcieTraceBramWrAddr);
-	  if (oneHotDecode[794]) data = extend(tlpdata.tlpTraceLimit);
+	  if (oneHotDecode774[774-774] == 1) data = fromInteger(2**valueOf(TAdd#(TlpTraceAddrSize,1)));
+	  if (oneHotDecode774[775-774] == 1) data = (tlpdata.tlpTracing ? 1 : 0);
+	  if (oneHotDecode774[776-774] == 1) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 0);
+	  if (oneHotDecode774[777-774] == 1) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 1);
+	  if (oneHotDecode774[778-774] == 1) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 2);
+	  if (oneHotDecode774[779-774] == 1) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 3);
+	  if (oneHotDecode774[780-774] == 1) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 4);
+	  if (oneHotDecode774[781-774] == 1) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 5);
+	  if (oneHotDecode774[792-774] == 1) data = extend(tlpdata.pcieTraceBramWrAddr);
+	  if (oneHotDecode774[794-774] == 1) data = extend(tlpdata.tlpTraceLimit);
 
          //******************************** msix_base has to match CONFIG.MXIx_PBA_Offset in scripts/connectal-synth-pcie.tcl
 	  // 4-bit MSIx pending bit field
-	  if (oneHotDecode[992]) data = '0;                               // PBA structure (low)
-	  if (oneHotDecode[993]) data = '0;                               // PBA structure (high)
+	  if (oneHotDecode992[992-992] == 1) data = '0;                               // PBA structure (low)
+	  if (oneHotDecode992[993-992] == 1) data = '0;                               // PBA structure (high)
 	  //******************************** end of PBA Table
       end
       readResponseFifo.enq(MemData { data: data, tag: beat.tag, last: beat.last });
@@ -189,8 +196,9 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
 
       csrWagBeatFifo.enq(beat);
       csrWagIsMsixAddrFifo.enq(msixaddr >= 0 && msixaddr <= 63);
-      function Bool addrDecode(Integer i); return addr[9:0] == fromInteger(i); endfunction
-      csrWagOneHotFifo.enq(genWith(addrDecode));
+      Bit#(1024) onehot = (1 << addr[9:0]);
+      csrWagOneHotFifo768.enq(onehot[775:768]);
+      csrWagOneHotFifo792.enq(onehot[794:792]);
    endrule
 
    rule writeDataRule2;
@@ -203,7 +211,8 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
       let modaddr = (addr % 8192);
       let msix_base = `msix_base;
       let msixaddr = modaddr - msix_base;
-      let oneHotDecode <- toGet(csrWagOneHotFifo).get();
+      let oneHotDecode768 <- toGet(csrWagOneHotFifo768).get();
+      let oneHotDecode792 <- toGet(csrWagOneHotFifo792).get();
 
       if (isMsixAddr)
          begin
@@ -217,11 +226,11 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
             endcase
          end
       else begin
-	 if (oneHotDecode[775]) tlpdata.tlpTracing <= (dword != 0) ? True : False;
-	 if (oneHotDecode[768])
+	 if (oneHotDecode768[775-768] == 1) tlpdata.tlpTracing <= (dword != 0) ? True : False;
+	 if (oneHotDecode768[768-768] == 1)
 	     bramRequestFifo.enq(BRAMRequest{ write: False, responseOnWrite: False, address: truncate(dword), datain: ?});
-	 if (oneHotDecode[792]) tlpdata.pcieTraceBramWrAddr <= truncate(dword);
-	 if (oneHotDecode[794]) tlpdata.tlpTraceLimit <= truncate(dword);
+	 if (oneHotDecode792[792-792] == 1) tlpdata.pcieTraceBramWrAddr <= truncate(dword);
+	 if (oneHotDecode792[794-792] == 1) tlpdata.tlpTraceLimit <= truncate(dword);
       end
       if (beat.last)
 	 writeDoneFifo.enq(beat.tag);

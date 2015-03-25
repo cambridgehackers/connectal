@@ -1,9 +1,9 @@
 {
     "options": {
-        "bsvdefines" : ["XILINX=1", "Virtex7", "PCIE", "PcieHostTypeIF", "PhysAddrWidth=40"],
+        "bsvdefines" : ["XILINX=1", "Virtex7", "PCIE", "PCIE2", "PcieHostTypeIF", "PhysAddrWidth=40"],
         "os" : "ubuntu",
-        "partname" : "xc7v2000tflg1925-2",
-        "need_pcie" : "x7_gen1x8",
+        "partname" : "xc7vx485tffg1761-2",
+        "need_pcie" : "x7_gen2x8",
         "TOP" : "PcieTop",
         "runscript" : "run.pcietest",
         "CONNECTALFLAGS" : [],
@@ -12,3 +12,5 @@
     "fmc": {
     }
 }
+
+

@@ -201,10 +201,12 @@ int runtest(int argc, const char ** argv)
 
     running = 0;
 
+#if 0
     MonkitFile pmf("perf.monkit");
     pmf.setHwCycles(cycles)
       .setReadBwUtil(read_util)
       .writeFile();
+#endif
 
     return test_result; 
   } else {

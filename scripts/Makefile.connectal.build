@@ -212,7 +212,7 @@ else
     endif
   else
     ifeq ($(OS),android)
-	$(CONNECTALDIR)/scripts/run.zedboard bin/mkTop.xdevcfg.bin.gz bin/android.exe $(RUN_ARGS)
+	$(CONNECTALDIR)/scripts/run.android bin/android.exe $(RUN_ARGS)
     else
 	echo foo
 ifeq ($(XILINX),"1")
