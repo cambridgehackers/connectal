@@ -196,8 +196,16 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    clkgenParams.clkout2_duty_cycle = 0.5;
    clkgenParams.clkout2_phase      = 0.0000;
    ClockGenerator7           clkgen <- mkClockGenerator7(clkgenParams, clocked_by user_clk, reset_by user_reset_n);
-   Clock portalClock = clkgen.clkout1;
-   Reset portalReset <- mkAsyncReset(4, user_reset_n, portalClock);
+   Clock portalClock;
+   Reset portalReset;
+   if (mainClockPeriod == 4) begin
+      portalClock = user_clk;
+      portalReset = user_reset_n;
+   end
+   else begin
+      portalClock = clkgen.clkout1;
+      portalReset <- mkAsyncReset(4, user_reset_n, portalClock);
+   end
    Clock derivedClock = clkgen.clkout2;
    Reset derivedReset <- mkAsyncReset(4, user_reset_n, derivedClock);
 
