@@ -6,6 +6,7 @@
         "constraints": "constraints/xilinx/zc7z020clg400.xdc",
         "rewireclockstring" : "tclzynqrewireclock",
         "TOP" : "ZynqTop",
+        "runscript" : "run.android",
         "CONNECTALFLAGS" : [],
         "need_pcie" : "unused"
     }

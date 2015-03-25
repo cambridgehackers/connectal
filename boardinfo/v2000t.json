@@ -5,6 +5,7 @@
         "partname" : "xc7v2000tflg1925-2",
         "need_pcie" : "x7_gen1x8",
         "TOP" : "PcieTop",
+        "runscript" : "run.pcietest",
         "CONNECTALFLAGS" : [],
         "rewireclockstring" : ""
     },

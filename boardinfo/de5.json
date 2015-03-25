@@ -5,6 +5,7 @@
         "partname" : "5SGXEA7N2F45C2",
         "need_pcie" : "s5_gen2x8",
         "TOP" : "PcieTop",
+        "runscript" : "run.pcietest.altera",
         "CONNECTALFLAGS" : [],
         "rewireclockstring" : ""
     },
