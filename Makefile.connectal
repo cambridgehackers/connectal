@@ -220,7 +220,7 @@ gentarget:: process_autotop generate_altera_custom
 ifeq ($(USE_PRINTF),1)
 	$(CONNECTALDIR)/scripts/preprocess_trace.py $(BOARD) $(BSVFILES)
 endif
-	$(Q)$(CONNECTALDIR)/scripts/makefilegen.py -B$(BOARD) -p $(BOARD) \
+	$(Q)$(CONNECTALDIR)/scripts/makefilegen.py --pinout=$(PINOUT_FILE) -B$(BOARD) -p $(BOARD) \
 	$(foreach interfaces, $(INTERFACES), -interfaces $(interfaces)) \
 	$(foreach f, $(CPPFILES), --source $f) \
 	$(foreach f, $(CPPFILES2), --source2 $f) \
