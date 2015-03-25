@@ -140,6 +140,24 @@ module mkMemMethodMuxIn#(PhysMemSlave#(aw,dataWidth) ctrl, Vector#(numRequests, 
          fifoReadAddrGenerator.request.put(req);
    endrule
 
+   FIFO#(MemData#(dataWidth)) rvFifo <- mkFIFO;
+   rule rvrule;
+      let rv;
+      if (rsCtrl.first)
+	 rv <- ctrl.read_server.readData.get();
+      else begin
+	 let b <- fifoReadAddrGenerator.addrBeat.get();
+	 let v = 0;
+	 if (b.addr == 4)
+	    v = extend(pack(requests[rs.first].notFull()));
+	 rv = MemData { data: v, tag: b.tag, last: b.last };
+      end
+      rvFifo.enq(rv);
+      //$display("mkMemMethodMux.readData aw=%d rs=%d data=%h", valueOf(aw), rs.first, rv.data);
+      rs.deq();
+      rsCtrl.deq();
+   endrule
+
    interface PhysMemWriteServer write_server;
       interface Put writeReq;
 	 method Action put(PhysMemRequest#(addrWidth) req);
@@ -184,19 +202,7 @@ module mkMemMethodMuxIn#(PhysMemSlave#(aw,dataWidth) ctrl, Vector#(numRequests, 
       endinterface
       interface Get readData;
 	 method ActionValue#(MemData#(dataWidth)) get();
-	    let rv;
-            if (rsCtrl.first)
-	       rv <- ctrl.read_server.readData.get();
-            else begin
-	       let b <- fifoReadAddrGenerator.addrBeat.get();
-	       let v = 0;
-	       if (b.addr == 4)
-	          v = extend(pack(requests[rs.first].notFull()));
-	       rv = MemData { data: v, tag: b.tag, last: b.last };
-            end
-	    //$display("mkMemMethodMux.readData aw=%d rs=%d data=%h", valueOf(aw), rs.first, rv.data);
-	    rs.deq();
-	    rsCtrl.deq();
+	    let rv <- toGet(rvFifo).get();
 	    return rv;
 	 endmethod
       endinterface
@@ -272,6 +278,19 @@ module mkMemMethodMuxOut#(PhysMemSlave#(aw,dataWidth) ctrl, Vector#(numIndicatio
          fifoReadAddrGenerator.request.put(req);
    endrule
 
+   FIFO#(MemData#(dataWidth)) rvFifo <- mkFIFO;
+   rule rvrule;
+      let rv;
+      if (rsCtrl.first)
+	 rv <- ctrl.read_server.readData.get();
+      else
+	 rv <- toGet(fifoReadDataFifo).get();
+      rvFifo.enq(rv);
+      //$display("mkMemMethodMux.readData aw=%d rs=%d data=%h", valueOf(aw), rs.first, rv.data);
+      rs.deq();
+      rsCtrl.deq();
+   endrule
+
    interface PhysMemWriteServer write_server;
       interface Put writeReq;
 	 method Action put(PhysMemRequest#(addrWidth) req);
@@ -314,14 +333,7 @@ module mkMemMethodMuxOut#(PhysMemSlave#(aw,dataWidth) ctrl, Vector#(numIndicatio
       endinterface
       interface Get readData;
 	 method ActionValue#(MemData#(dataWidth)) get();
-	    let rv;
-            if (rsCtrl.first)
-	       rv <- ctrl.read_server.readData.get();
-            else
-	       rv <- toGet(fifoReadDataFifo).get();
-	    //$display("mkMemMethodMux.readData aw=%d rs=%d data=%h", valueOf(aw), rs.first, rv.data);
-	    rs.deq();
-	    rsCtrl.deq();
+	    let rv <- toGet(rvFifo).get();
 	    return rv;
 	 endmethod
       endinterface
