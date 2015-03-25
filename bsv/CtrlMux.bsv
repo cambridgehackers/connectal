@@ -135,6 +135,22 @@ module mkMemMethodMuxIn#(PortalCtrl#(aw,dataWidth) ctrl, Vector#(numRequests, Pi
       fifoReadAddrGenerator.request.put(req);
    endrule
 
+   FIFO#(MemData#(dataWidth)) writeDataFifo <- mkFIFO();
+   rule writeDataRule;
+      let wdata <- toGet(writeDataFifo).get();
+      //$display("mkMemMethodMux.writeData aw=%d ws=%d data=%h", valueOf(aw), ws.first, wdata.data);
+      let b <- fifoWriteAddrGenerator.addrBeat.get();
+      //$display("mkPipeInMemSlave.writeData.put addr=%h data=%h", b.addr, wdata.data);
+      if (b.last)
+	 fifoWriteDoneFifo.enq(b.tag);
+      if (wsCtrl.first)
+	 ctrl.write(b.addr, wdata.data);
+      else begin
+	 requests[ws.first].enq(wdata.data);
+	 // this used to be where we triggered putFailed
+      end
+   endrule
+
    FIFO#(MemData#(dataWidth)) rvFifo <- mkFIFO;
    rule rvrule;
 	 let v = 0;
@@ -167,17 +183,7 @@ module mkMemMethodMuxIn#(PortalCtrl#(aw,dataWidth) ctrl, Vector#(numRequests, Pi
       endinterface
       interface Put writeData;
 	 method Action put(MemData#(dataWidth) wdata);
-	    //$display("mkMemMethodMux.writeData aw=%d ws=%d data=%h", valueOf(aw), ws.first, wdata.data);
-	    let b <- fifoWriteAddrGenerator.addrBeat.get();
-	       //$display("mkPipeInMemSlave.writeData.put addr=%h data=%h", b.addr, wdata.data);
-	       if (b.last)
-	          fifoWriteDoneFifo.enq(b.tag);
-            if (wsCtrl.first)
-	       ctrl.write(b.addr, wdata.data);
-            else begin
-	       requests[ws.first].enq(wdata.data);
-	       // this used to be where we triggered putFailed
-            end
+	    writeDataFifo.enq(wdata);
 	 endmethod
       endinterface
       interface Get writeDone;
