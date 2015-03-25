@@ -59,8 +59,16 @@ SLAVE_DATA_BUS_WIDTH?=32
 NUMBER_OF_MASTERS?=1
 PIN_TYPE?=Empty
 ifndef MAIN_CLOCK_PERIOD
+    ifeq ($(BOARD),vc707g2)
+    MAIN_CLOCK_PERIOD=4
+    DEFAULT_DERIVED_CLOCK_PERIOD=4
+    endif
+    ifeq ($(BOARD),kc705g2)
+    MAIN_CLOCK_PERIOD=4
+    DEFAULT_DERIVED_CLOCK_PERIOD=4
+    endif
     ifeq ($(BOARD),vc707)
-    MAIN_CLOCK_PERIOD=8
+    MAIN_CLOCK_PERIOD=4
     DEFAULT_DERIVED_CLOCK_PERIOD=4
     endif
     ifeq ($(BOARD),kc705)
@@ -143,6 +151,8 @@ android.exe bsim_exe ubuntu.exe exe: gentarget
 
 PCIEGEN=$(shell grep PCIE $(CONNECTALDIR)/boardinfo/$(BOARD).json | sed 's/.*PCIE\([123]\).*/\1/')
 NEED_XILINX_PCIE_ac701=1
+NEED_XILINX_PCIE_kc705g2=$(PCIEGEN)
+NEED_XILINX_PCIE_vc707g2=$(PCIEGEN)
 NEED_XILINX_PCIE_kc705=$(PCIEGEN)
 NEED_XILINX_PCIE_vc707=$(PCIEGEN)
 NEED_XILINX_PCIE_netfpgasume=3
