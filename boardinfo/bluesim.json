@@ -93,6 +93,48 @@
         "J6" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
         "J7" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
         "J8" : { "LOC" : "XX", "IOSTANDARD" : "YY"}
+    },
+    "leds" : {
+    	"L0" : {
+	     "LOC" : "XX",
+             "IOSTANDARD" : "YY",
+	     "PIO_DIRECTION" : "OUTPUT"
+	     },
+    	"L1" : {
+	     "LOC" : "XX",
+             "IOSTANDARD" : "YY",
+	     "PIO_DIRECTION" : "OUTPUT"
+	     },
+    	"L2" : {
+	     "LOC" : "XX",
+             "IOSTANDARD" : "YY",
+	     "PIO_DIRECTION" : "OUTPUT"
+	     },
+    	"L3" : {
+	     "LOC" : "XX",
+             "IOSTANDARD" : "YY",
+	     "PIO_DIRECTION" : "OUTPUT"
+	     },
+    	"L4" : {
+	     "LOC" : "XX",
+             "IOSTANDARD" : "YY",
+	     "PIO_DIRECTION" : "OUTPUT"
+	     },
+    	"L5" : {
+	     "LOC" : "XX",
+             "IOSTANDARD" : "YY",
+	     "PIO_DIRECTION" : "OUTPUT"
+	     },
+    	"L6" : {
+	     "LOC" : "XX",
+             "IOSTANDARD" : "YY",
+	     "PIO_DIRECTION" : "OUTPUT"
+	     },
+    	"L7" : {
+	     "LOC" : "XX",
+             "IOSTANDARD" : "YY",
+	     "PIO_DIRECTION" : "OUTPUT"
+	     }
     }
 }
 
