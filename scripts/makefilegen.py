@@ -302,9 +302,11 @@ if __name__=='__main__':
     if bdef:
         bsvdefines += bdef
 
+    # 'constraints' is now a list of files
     cstr = option_info.get('constraints')
     if cstr:
-        options.constraint.insert(0, os.path.join(connectaldir, cstr))
+        for item in cstr:
+            options.constraint.insert(0, os.path.join(connectaldir, item))
 
     bsvdefines += ['BOARD_'+boardname]
 
@@ -322,8 +324,9 @@ if __name__=='__main__':
         suffix = None
 
     print 'fpga_vendor', fpga_vendor
-    if fpga_vendor:
-        options.constraint.insert(0, os.path.join(connectaldir, 'constraints/', '%s/%s.%s' % (fpga_vendor, boardname, suffix)))
+    #must now be explicitly specified in 'constraints' section of boardinfo
+    #if fpga_vendor:
+    #    options.constraint.insert(0, os.path.join(connectaldir, 'constraints/', '%s/%s.%s' % (fpga_vendor, boardname, suffix)))
 
     if noisyFlag:
         pprint.pprint(options.__dict__)
