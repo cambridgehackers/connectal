@@ -5,6 +5,7 @@
         "partname" : "EP4S100G2F40I2",
         "need_pcie" : "s4_gen2x8",
         "TOP" : "PcieTop",
+        "constraints": ["constraints/altera/htg4.xdc"],
         "runscript" : "run.pcietest.altera",
         "CONNECTALFLAGS" : [],
         "rewireclockstring" : ""
