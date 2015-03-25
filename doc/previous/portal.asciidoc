@@ -590,7 +590,7 @@ For Zynq platforms,
 
 will copy the Android executable and FPGA configuration file to the
 target device, program the FPGA, and run the executable. See
-[run.zedboard](../scripts/run.zedboard) for details.
+[run.android](../scripts/run.android) for details.
 
 It uses `checkip` to determine the IP address of the
 device via a USB console connection to the device (it is built/installed

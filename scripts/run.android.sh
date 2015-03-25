@@ -2,7 +2,7 @@
 set -x
 set -e
 export SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
-echo "run.zedboard parameters are:" $*
+echo "run.android parameters are:" $*
 bitfile=$1
 androidexe=$2
 if [ "$BUILDBOT_URL" == "" ]; then

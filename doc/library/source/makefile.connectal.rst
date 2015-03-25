@@ -115,7 +115,7 @@ Controlling the Build
 
    Specifies the name or IP address of the machine on which to run the application, e.g.::
 
-      make RUNPARAM=192.168.168.100 run.zedboard
+      make RUNPARAM=192.168.168.100 run.android
 
 
 Top Level Make Targets

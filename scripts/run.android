@@ -87,7 +87,7 @@ argparser.add_argument('-n', '--board-name', help='String in \'hostname\' on the
 argparser.add_argument('-r', '--rsync-path', help='rsync path to android.exe (hostname:/home/.../zedboard/bin/)')
 
 
-def run_zedboard(bitfile, androidexe, additional_files):
+def run_android(bitfile, androidexe, additional_files):
     ipaddr = options.ipaddr
 
     if not ipaddr:
@@ -190,4 +190,4 @@ if __name__ == '__main__':
     if not options.bitfile or not options.androidexe:
         argparser.print_help()
         sys.exit(1)
-    run_zedboard(options.bitfile, options.androidexe, options.file)
+    run_android(options.bitfile, options.androidexe, options.file)
