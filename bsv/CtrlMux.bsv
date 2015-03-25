@@ -36,6 +36,11 @@ import MemTypes::*;
 import Arith::*;
 import Pipe::*;
 
+interface PortalCtrl#(numeric type addrWidth, numeric type dataWidth);
+   method ActionValue#(Bit#(dataWidth)) read(Bit#(addrWidth) addr);
+   method Action write(Bit#(addrWidth) addr, Bit#(dataWidth) v);
+endinterface
+
 module mkInterruptMux#(Vector#(numPortals,ReadOnly#(Bool)) inputs) (ReadOnly#(Bool))
    provisos(Add#(nz, TLog#(numPortals), 4),
 	    Add#(1, a__, numPortals));
@@ -82,7 +87,7 @@ module mkSlaveMux#(Vector#(numPortals,MemPortal#(aw,dataWidth)) portals) (PhysMe
    return rv;
 endmodule
 
-module mkMemMethodMuxIn#(PhysMemSlave#(aw,dataWidth) ctrl, Vector#(numRequests, PipeIn#(Bit#(dataWidth))) requests
+module mkMemMethodMuxIn#(PortalCtrl#(aw,dataWidth) ctrl, Vector#(numRequests, PipeIn#(Bit#(dataWidth))) requests
 )(PhysMemSlave#(addrWidth,dataWidth))
    provisos(Add#(selWidth,aw,addrWidth)
 	    , Add#(a__, TLog#(numRequests), selWidth)
@@ -114,11 +119,7 @@ module mkMemMethodMuxIn#(PhysMemSlave#(aw,dataWidth) ctrl, Vector#(numRequests, 
    FIFO#(Bool)                   wsCtrl <- mkFIFO1();
 
    rule write_done;
-      let rv;
-      if (wsCtrl.first)
-         rv <- ctrl.write_server.writeDone.get();
-      else
-         rv <- toGet(fifoWriteDoneFifo).get();
+      let rv <- toGet(fifoWriteDoneFifo).get();
       ws.deq();
       wsCtrl.deq();
       doneFifo.enq(rv);
@@ -127,30 +128,26 @@ module mkMemMethodMuxIn#(PhysMemSlave#(aw,dataWidth) ctrl, Vector#(numRequests, 
    rule req_aw;
       let req <- toGet(req_aws).get;
       fifoWriteAddrGenerator.request.put(req);
-      if (wsCtrl.first)
-         ctrl.write_server.writeReq.put(req);
    endrule
 
    rule req_ar;
       let req <- toGet(req_ars).get;
       fifoReadAddrGenerator.request.put(req);
-      if (rsCtrl.first)
-         ctrl.read_server.readReq.put(req);
    endrule
 
    FIFO#(MemData#(dataWidth)) rvFifo <- mkFIFO;
    rule rvrule;
-      let rv;
-      let b <- fifoReadAddrGenerator.addrBeat.get();
-      if (rsCtrl.first)
-	 rv <- ctrl.read_server.readData.get();
-      else begin
 	 let v = 0;
+      let b <- fifoReadAddrGenerator.addrBeat.get();
+      if (rsCtrl.first) begin
+	 let vr <- ctrl.read(b.addr);
+         v = vr;
+      end
+      else begin
 	 if (b.addr == 4)
 	    v = extend(pack(requests[rs.first].notFull()));
-	 rv = MemData { data: v, tag: b.tag, last: b.last };
       end
-      rvFifo.enq(rv);
+      rvFifo.enq(MemData { data: v, tag: b.tag, last: b.last });
       //$display("mkMemMethodMux.readData aw=%d rs=%d data=%h", valueOf(aw), rs.first, rv.data);
       if (b.last) begin
 	 rs.deq();
@@ -172,12 +169,12 @@ module mkMemMethodMuxIn#(PhysMemSlave#(aw,dataWidth) ctrl, Vector#(numRequests, 
 	 method Action put(MemData#(dataWidth) wdata);
 	    //$display("mkMemMethodMux.writeData aw=%d ws=%d data=%h", valueOf(aw), ws.first, wdata.data);
 	    let b <- fifoWriteAddrGenerator.addrBeat.get();
-            if (wsCtrl.first)
-	       ctrl.write_server.writeData.put(wdata);
-            else begin
 	       //$display("mkPipeInMemSlave.writeData.put addr=%h data=%h", b.addr, wdata.data);
 	       if (b.last)
 	          fifoWriteDoneFifo.enq(b.tag);
+            if (wsCtrl.first)
+	       ctrl.write(b.addr, wdata.data);
+            else begin
 	       requests[ws.first].enq(wdata.data);
 	       // this used to be where we triggered putFailed
             end
@@ -209,7 +206,7 @@ module mkMemMethodMuxIn#(PhysMemSlave#(aw,dataWidth) ctrl, Vector#(numRequests, 
    endinterface
 endmodule
 
-module mkMemMethodMuxOut#(PhysMemSlave#(aw,dataWidth) ctrl, Vector#(numIndications, PipeOut#(Bit#(dataWidth))) indications)(PhysMemSlave#(addrWidth,dataWidth))
+module mkMemMethodMuxOut#(PortalCtrl#(aw,dataWidth) ctrl, Vector#(numIndications, PipeOut#(Bit#(dataWidth))) indications)(PhysMemSlave#(addrWidth,dataWidth))
    provisos(Add#(selWidth,aw,addrWidth)
 	    , Add#(a__, TLog#(numIndications), selWidth)
             , Add#(1, b__, dataWidth)
@@ -241,11 +238,7 @@ module mkMemMethodMuxOut#(PhysMemSlave#(aw,dataWidth) ctrl, Vector#(numIndicatio
    FIFO#(Bool)                   wsCtrl <- mkFIFO1();
 
    rule write_done;
-      let rv;
-      if (wsCtrl.first)
-         rv <- ctrl.write_server.writeDone.get();
-      else
-         rv <- toGet(fifoWriteDoneFifo).get();
+      let rv <- toGet(fifoWriteDoneFifo).get();
       ws.deq();
       wsCtrl.deq();
       doneFifo.enq(rv);
@@ -254,25 +247,22 @@ module mkMemMethodMuxOut#(PhysMemSlave#(aw,dataWidth) ctrl, Vector#(numIndicatio
    rule req_aw;
       let req <- toGet(req_aws).get;
       fifoWriteAddrGenerator.request.put(req);
-      if (wsCtrl.first)
-         ctrl.write_server.writeReq.put(req);
    endrule
 
    rule req_ar;
       let req <- toGet(req_ars).get;
       fifoReadAddrGenerator.request.put(req);
-      if (rsCtrl.first)
-         ctrl.read_server.readReq.put(req);
    endrule
 
    FIFO#(MemData#(dataWidth)) rvFifo <- mkFIFO;
    rule rvrule;
       let b <- fifoReadAddrGenerator.addrBeat.get();
-      let rv;
-      if (rsCtrl.first)
-	 rv <- ctrl.read_server.readData.get();
+      let rv = MemData { data: 0, tag: b.tag, last: b.last };
+      if (rsCtrl.first) begin
+	 let vr <- ctrl.read(b.addr);
+         rv.data = vr;
+      end
       else begin
-	 rv = MemData { data: 0, tag: b.tag, last: b.last };
 	 if (b.addr == 0)
 	    rv.data <- toGet(indications[rs.first]).get();
 	 else if (b.addr == 4)
@@ -299,12 +289,10 @@ module mkMemMethodMuxOut#(PhysMemSlave#(aw,dataWidth) ctrl, Vector#(numIndicatio
 	    //$display("mkMemMethodMux.writeData aw=%d ws=%d data=%h", valueOf(aw), ws.first, wdata.data);
 	    let b <- fifoWriteAddrGenerator.addrBeat.get();
             if (wsCtrl.first)
-	       ctrl.write_server.writeData.put(wdata);
-            else begin
+	       ctrl.write(b.addr, wdata.data);
 	       //$display("mkPipeOutMemSlave.writeData.put addr=%h data=%h", b.addr, d.data);
 	       if (b.last)
 	          fifoWriteDoneFifo.enq(b.tag);
-            end
 	 endmethod
       endinterface
       interface Get writeDone;
