@@ -227,7 +227,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
 						      let info <- toGet(fAxiRx).get;
 						      TLPData#(16) retval = defaultValue;
 						      retval.sof  = (info.user[14] == 1);
-						      retval.eof  = info.last != 0;
+						      retval.eof  = (info.user[21] == 1); // 128-bit interface uses tuser bits instead of tlast to indicate EOF
 						      retval.hit  = info.user[8:2];
 						      retval.be= dwordSwap128BE(info.keep);
 						      retval.data = dwordSwap128(info.data);
