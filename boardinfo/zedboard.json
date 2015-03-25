@@ -476,6 +476,48 @@
 	     "IOSTANDARD" : "LVCMOS33"
 	     }	 
     },
+    "leds" : {
+    	"L0" : {
+	     "LOC" : "T22",
+             "IOSTANDARD" : "LVCMOS25",
+	     "PIO_DIRECTION" : "OUTPUT"
+	     },
+    	"L1" : {
+	     "LOC" : "T21",
+             "IOSTANDARD" : "LVCMOS25",
+	     "PIO_DIRECTION" : "OUTPUT"
+	     },
+    	"L2" : {
+	     "LOC" : "U22",
+             "IOSTANDARD" : "LVCMOS25",
+	     "PIO_DIRECTION" : "OUTPUT"
+	     },
+    	"L3" : {
+	     "LOC" : "U21",
+             "IOSTANDARD" : "LVCMOS25",
+	     "PIO_DIRECTION" : "OUTPUT"
+	     },
+    	"L4" : {
+	     "LOC" : "V22",
+             "IOSTANDARD" : "LVCMOS25",
+	     "PIO_DIRECTION" : "OUTPUT"
+	     },
+    	"L5" : {
+	     "LOC" : "W22",
+             "IOSTANDARD" : "LVCMOS25",
+	     "PIO_DIRECTION" : "OUTPUT"
+	     },
+    	"L6" : {
+	     "LOC" : "U19",
+             "IOSTANDARD" : "LVCMOS25",
+	     "PIO_DIRECTION" : "OUTPUT"
+	     },
+    	"L7" : {
+	     "LOC" : "U14",
+             "IOSTANDARD" : "LVCMOS25",
+	     "PIO_DIRECTION" : "OUTPUT"
+	     }
+    },  
     "i2c0" : {
         "scl" : {
              "LOC" : "AA18",

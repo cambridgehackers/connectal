@@ -52,7 +52,6 @@ typedef 8 LedsWidth;
 `endif
 
 interface LEDS;
-    (* result= "GPIO_leds" *)
     method Bit#(LedsWidth) leds;
     interface Clock deleteme_unused_clock;
     interface Reset deleteme_unused_reset;
