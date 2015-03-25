@@ -72,6 +72,7 @@ module mkPcieTracer(PcieTracer);
    BRAM_Configure bramCfg = defaultValue;
    bramCfg.memorySize = memorySize;
    bramCfg.latency = 1;
+   bramCfg.allowWriteResponseBypass = True;
    BRAM2Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) fromPcieTraceBram <- mkBRAM2Server(bramCfg);
    BRAM2Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) toPcieTraceBram <- mkBRAM2Server(bramCfg);
    Vector#(2, BRAMServer#(Bit#(TlpTraceAddrSize), TimestampedTlpData)) bramServers;

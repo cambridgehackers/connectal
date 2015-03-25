@@ -201,7 +201,9 @@ module mkUGBramFifos(UGBramFifos#(numFifos,fifoDepth,a))
    function Bit#(buffAddrSz) hf(Integer i) = fromInteger(i*valueOf(fifoDepth));
    Vector#(numFifos, Reg#(Bit#(buffAddrSz))) head <- mapM(mkReg, genWith(hf));
    Vector#(numFifos, Reg#(Bit#(buffAddrSz))) tail <- mapM(mkReg, genWith(hf));
-   BRAM2Port#(Bit#(buffAddrSz),a)    buff <- mkBRAM2Server(defaultValue);
+   BRAM_Configure bramConfig = defaultValue;
+   //bramConfig.allowWriteResponseBypass = True;
+   BRAM2Port#(Bit#(buffAddrSz),a)    buff <- mkBRAM2Server(bramConfig);
    let fifo_depth = fromInteger(valueOf(fifoDepth));
       
    method Action enq(Bit#(TLog#(numFifos)) idx, a v);

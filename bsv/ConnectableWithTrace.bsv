@@ -52,6 +52,7 @@ instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Sla
    BRAM_Configure bramCfg = defaultValue;
    bramCfg.memorySize = `TRACE_ADDR_SIZE;
    bramCfg.latency = 1;
+   bramCfg.allowWriteResponseBypass = True;
    BRAM2Port#(Bit#(`TRACE_ADDR_WIDTH), Bit#(64)) traceBram <- mkBRAM2Server(bramCfg);
    mkConnection(bscanBram.bramClient, traceBram.portB);
    rule tdorule;
