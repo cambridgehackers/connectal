@@ -105,7 +105,6 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUIndication mmuIndication)(MMU#(addr
    // stage 1 (latency == 2)
    BRAM_Configure bramConfig = defaultValue;
    bramConfig.latency        = 2;
-   bramConfig.allowWriteResponseBypass = True;
    BRAM2Port#(RegionsIdx, Maybe#(Region)) regall <- mkBRAM2Server(bramConfig);
    Vector#(2,FIFOF#(ReqTup))          reqs0 <- replicateM(mkSizedFIFOF(3));
    
