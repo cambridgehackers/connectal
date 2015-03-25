@@ -53,6 +53,9 @@ typedef `PinType PinType;
 
 typedef enum {%(enumList)s} IfcNames deriving (Eq,Bits);
 
+`ifndef IMPORT_HOSTIF
+(* synthesize *)
+`endif
 module mkConnectalTop
 `ifdef IMPORT_HOSTIF
        #(HostType host)
