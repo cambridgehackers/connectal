@@ -89,7 +89,10 @@ argparser.add_argument('-r', '--rsync-path', help='rsync path to android.exe (ho
 def run_android(androidexe, additional_files):
     ipaddr = options.ipaddr
 
-    if not ipaddr:
+    if ipaddr:
+        if ipaddr.find(':') == -1:
+            ipaddr = ipaddr + ':5555'
+    else:
         if (options.board_name):
             found = False
             discover_tcp.detect_network()
@@ -105,8 +108,9 @@ def run_android(androidexe, additional_files):
             ipaddr = p.stdout.read()
             ipaddr = ipaddr.replace('\n', '')
             ipaddr = ipaddr.replace('\r', '')
+            ipaddr = ipaddr + ':5555'
 
-    device_serial = '%s:5555' % (ipaddr)
+    device_serial = ipaddr
 
     print 'connecting to %s' % device_serial
     connected = False
