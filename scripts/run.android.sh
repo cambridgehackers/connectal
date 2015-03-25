@@ -3,8 +3,7 @@ set -x
 set -e
 export SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 echo "run.android parameters are:" $*
-bitfile=$1
-androidexe=$2
+androidexe=$1
 if [ "$BUILDBOT_URL" == "" ]; then
    BUILDBOT_URL="http://sj9.qrclab.com/archive"
 fi
@@ -14,7 +13,6 @@ if [ "$BUILDBOT_BUILD" != "" ]; then
    curl -v -O $BUILDBOT_URL/$BUILDBOT_BUILD/bin/android.exe ; \
    curl -v -O $BUILDBOT_URL/$BUILDBOT_BUILD/bin/mkTop.xdevcfg.bin.gz)
    chmod agu+rx zedboard/bin/android.exe
-   bitfile=zedboard/bin/mkTop.xdevcfg.bin.gz
    androidexe=zedboard/bin/android.exe
 fi
 if [ "$RUNPARAM" != "" ]; then
@@ -39,7 +37,6 @@ adb connect $ZEDBOARD_IPADDR
 adb -s $ANDROID_SERIAL shell mount -o remount,rw /mnt/sdcard
 adb -s $ANDROID_SERIAL shell mkdir -p /mnt/sdcard/tmp
 adb -s $ANDROID_SERIAL shell mount -t tmpfs tmpfs /mnt/sdcard/tmp
-adb -s $ANDROID_SERIAL push $bitfile /mnt/sdcard/tmp || exit -1
 adb -s $ANDROID_SERIAL push $androidexe /mnt/sdcard/tmp
 for f in $RUNFILES; do
     adb -s $ANDROID_SERIAL push $f /mnt/sdcard/tmp
@@ -48,7 +45,6 @@ adb -s $ANDROID_SERIAL shell rmmod portalmem
 adb -s $ANDROID_SERIAL shell rmmod zynqportal
 adb -s $ANDROID_SERIAL shell insmod /mnt/sdcard/portalmem.ko
 adb -s $ANDROID_SERIAL shell insmod /mnt/sdcard/zynqportal.ko
-adb -s $ANDROID_SERIAL shell "gzip -dc /mnt/sdcard/tmp/`basename $bitfile` >/dev/xdevcfg"
 adb -s $ANDROID_SERIAL shell "pwd"
 adb -s $ANDROID_SERIAL shell touch /mnt/sdcard/tmp/perf.monkit
 if [ "$CONNECTAL_DEBUG" != "" ]; then
@@ -63,9 +59,9 @@ echo target remote :5039 >>$TEMPSCRIPT
 else
 adb -s $ANDROID_SERIAL shell "cd /mnt/sdcard/tmp/; rm -f /mnt/sdcard/tmp/exit.status; /mnt/sdcard/timelimit -t $TIMELIMIT ./$exename $3; echo \$? > /mnt/sdcard/tmp/exit.status"
 adb -s $ANDROID_SERIAL pull /mnt/sdcard/tmp/exit.status ./
-adb -s $ANDROID_SERIAL pull /mnt/sdcard/tmp/perf.monkit `dirname $bitfile`
+adb -s $ANDROID_SERIAL pull /mnt/sdcard/tmp/perf.monkit `dirname $androidexe`
 fi
-adb -s $ANDROID_SERIAL shell rm -f /mnt/sdcard/tmp/`basename $bitfile` /mnt/sdcard/tmp/`basename $androidexe` /mnt/sdcard/tmp/perf.monkit
+adb -s $ANDROID_SERIAL shell rm -f /mnt/sdcard/tmp/`basename $androidexe` /mnt/sdcard/tmp/perf.monkit
 pwd
 status=`cat exit.status`
 if [ "$status" != "0" ]; then
