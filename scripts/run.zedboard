@@ -34,6 +34,7 @@ sys.path.append(scriptdir)
 
 from adb import adb_commands
 from adb import common
+from argparse import RawTextHelpFormatter
 
 timelimit=600
 if os.environ.has_key('RUNTIMELIMIT'):
@@ -56,12 +57,24 @@ Will download the bit file and executable from buildbot if
 buildbot-url, project, and build-number are specified.
 
 The buildbot-url defaults to %(buildbot_url)s.
+
+Will download the bit file and executable from an arbitrary location 
+using rsync if rsync-path is specified. If you require a non-default 
+identity file for rsync, add the  following lines to ~/.ssh/config:
+
+   Host <hostname>
+   HostName <url>
+   User <username>
+   Port 22
+   IdentityFile <path_to_key>
+
+---
 ''' % {
     'buildbot_url': buildbot_url
 }
 
 argparser = argparse.ArgumentParser("Run Connectal apps on Android Zynq boards.",
-                                    epilog=epilog)
+                                    epilog=epilog, formatter_class=RawTextHelpFormatter)
 argparser.add_argument('bitfile', help='Gzipped binary bit file for the FPGA', nargs='?')
 argparser.add_argument('androidexe', help='Android executable for the Zynq', nargs='?')
 argparser.add_argument('file', help='Additional files to transfer to the target', nargs='*', default=[])
@@ -71,6 +84,8 @@ argparser.add_argument('-u', '--buildbot-url', default=buildbot_url, help='Base 
 argparser.add_argument('-p', '--project', help='Name of project on buildbot.')
 argparser.add_argument('-b', '--build-number', help='Build number on buildbot.')
 argparser.add_argument('-n', '--board-name', help='String in \'hostname\' on the SDCard')
+argparser.add_argument('-r', '--rsync-path', help='rsync path to android.exe (hostname:/home/.../zedboard/bin/)')
+
 
 def run_zedboard(bitfile, androidexe, additional_files):
     ipaddr = options.ipaddr
@@ -162,6 +177,15 @@ if __name__ == '__main__':
         status = subprocess.call(['curl', '-f', '-O', url])
         if status != 0:
             #print 'curl returned error', status
+            sys.exit(status)
+    elif options.rsync_path:
+        options.androidexe = 'android.exe'
+        options.bitfile = 'mkTop.xdevcfg.bin.gz'
+        status = subprocess.call(['rsync', '-av', '%s/mkTop.xdevcfg.bin.gz' % (options.rsync_path), '.'])
+        if status != 0:
+            sys.exit(status)
+        status = subprocess.call(['rsync', '-av', '%s/android.exe' % (options.rsync_path), '.'])
+        if status != 0:
             sys.exit(status)
     if not options.bitfile or not options.androidexe:
         argparser.print_help()
