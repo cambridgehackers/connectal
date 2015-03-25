@@ -1,4 +1,4 @@
-#
+#!/bin/bash
 set -x
 set -e
 export SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
@@ -17,14 +17,18 @@ else
 fi
 
 if [ "$RUNPARAM" != "" ]; then
+    RUNPARAMTEMP=$RUNPARAM:22
+    array=(${RUNPARAMTEMP//:/ })
+    RUNIP=${array[0]}
+    RUNPORT=${array[1]}
     TEMPDIR=/tmp/`uname -n`-$PPID-pcie
-    ssh $SSHPARAM $RUNPARAM "rm -rf $TEMPDIR; mkdir -p $TEMPDIR"
-    scp $1 $RUNPARAM:$TEMPDIR
+    ssh $SSHPARAM -p $RUNPORT $RUNIP "rm -rf $TEMPDIR; mkdir -p $TEMPDIR"
+    scp -P $RUNPORT $1 $RUNIP:$TEMPDIR
     EXENAME=`basename $1`
-    ssh $SSHPARAM $RUNPARAM "$BOARD_SERIAL timeout $TIMELIMIT catchsegv $TEMPDIR/$EXENAME"
-    ssh $SSHPARAM $RUNPARAM "pcieflat > $TEMPDIR/pcieflat.txt"
-    scp $RUNPARAM:$TEMPDIR/pcieflat.txt `dirname $1`
-    ssh $SSHPARAM $RUNPARAM "rm -rf $TEMPDIR"
+    ssh $SSHPARAM -p $RUNPORT $RUNIP "$BOARD_SERIAL timeout $TIMELIMIT catchsegv $TEMPDIR/$EXENAME"
+    ssh $SSHPARAM -p $RUNPORT $RUNIP "pcieflat > $TEMPDIR/pcieflat.txt"
+    scp -P $RUNPORT $RUNIP:$TEMPDIR/pcieflat.txt `dirname $1`
+    ssh $SSHPARAM -p $RUNPORT $RUNIP "rm -rf $TEMPDIR"
 else
     timeout 3m catchsegv $1
     if [ "$PORTAL_DUMP_MAP" != "" ]; then
