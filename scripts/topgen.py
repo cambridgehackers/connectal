@@ -51,7 +51,7 @@ import MemTypes::*;
 `endif
 typedef `PinType PinType;
 
-typedef enum {%(enumList)s} IfcNames deriving (Eq,Bits);
+typedef enum {NoInterface, %(enumList)s} IfcNames deriving (Eq,Bits);
 
 `ifndef IMPORT_HOSTIF
 (* synthesize *)
