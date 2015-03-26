@@ -62,7 +62,7 @@ public:
 
 int main(int argc, const char **argv)
 {
-  size_t alloc_sz = 1024*1024;
+  size_t alloc_sz = 1024*1024*10;
   MemwriteRequestProxy *device = new MemwriteRequestProxy(IfcNames_MemwriteRequest);
   MemwriteIndication *deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndication);
   MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
@@ -90,7 +90,7 @@ int main(int argc, const char **argv)
   sem_wait(&done_sem);
   memdump((unsigned char *)dstBuffer, 32, "MEM");
   int mismatchCount = 0;
-  for (int i = 0; i < alloc_sz/4; i++) {
+  for (int i = 0; i < alloc_sz/sizeof(uint32_t); i++) {
     if (dstBuffer[i] != i)
       mismatchCount++;
   }
