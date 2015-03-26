@@ -65,6 +65,7 @@ import HostInterface    :: *;
 `endif
 
 typedef `PinType PinType;
+let pcieClockPeriod = `PcieClockPeriod;
 
 `ifndef BSIM
 (* synthesize, no_default_clock, no_default_reset *)
@@ -87,7 +88,7 @@ module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (P
    ConnectalTop#(PhysAddrWidth, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkConnectalTop(clocked_by host.portalClock, reset_by host.portalReset);
 `endif
 
-   if (mainClockPeriod == 4) begin
+   if (mainClockPeriod == pcieClockPeriod) begin
        mkConnection(host.tpciehost.master, portalTop.slave, clocked_by host.portalClock, reset_by host.portalReset);
        if (valueOf(NumberOfMasters) > 0) begin
 	  mapM(uncurry(mkConnection),zip(portalTop.masters, host.tpciehost.slave));
