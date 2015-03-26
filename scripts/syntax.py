@@ -846,11 +846,15 @@ def p_moduleContext(p):
     if len(p) > 2:
         p[0] = p[2]
 
+def p_moduleDefHeader(p):
+    '''moduleDefHeader : instanceAttributes TOKMODULE moduleContext VAR moduleParamsArgs provisos SEMICOLON'''
+    p[0] = [p[3], p[4], p[5][0], p[5][1], p[6]]
+
 def p_moduleDef(p):
-    '''moduleDef : instanceAttributes TOKMODULE moduleContext VAR moduleParamsArgs provisos SEMICOLON expressionStmts TOKENDMODULE colonVar'''
+    '''moduleDef : moduleDefHeader expressionStmts TOKENDMODULE colonVar'''
     if parseTrace:
         print 'ENDMODULE', [pitem for pitem in p]
-    p[0] = AST.Module(p[3], p[4], p[5][0], p[5][1], p[6], p[8])
+    p[0] = AST.Module(p[1][0], p[1][1], p[1][2], p[1][3], p[1][4], p[2])
 
 def p_importBviDef(p):
     '''importBviDef : TOKIMPORT STR VAR EQUAL bviModuleDef
@@ -942,7 +946,8 @@ def p_instanceDecl(p):
     p[0] = AST.TypeclassInstance(p[2], p[5], p[7], p[9])
 
 def p_typeClassDeclStmts(p):
-    '''typeClassDeclStmts : '''
+    '''typeClassDeclStmts : 
+                          | moduleDefHeader'''
 
 def p_typeClassDecl(p):
     '''typeClassDecl : TOKTYPECLASS VAR HASH LPAREN interfaceFormalParams RPAREN provisos SEMICOLON typeClassDeclStmts TOKENDTYPECLASS'''
