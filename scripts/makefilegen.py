@@ -58,6 +58,7 @@ argparser.add_argument('-C', '--constraint', help='Additional constraint files',
 argparser.add_argument('-M', '--make', help='Run make on the specified targets', action='append')
 argparser.add_argument('-D', '--bsvdefine', default=[], help='BSV define', action='append')
 argparser.add_argument('-D2', '--bsvdefine2', default=[], help='BSV define2', action='append')
+argparser.add_argument(      '--pin-binding', default=[], help='pin bindings for generate-constraints.py', action='append')
 argparser.add_argument('-l', '--clib', default=[], help='C++ libary', action='append')
 argparser.add_argument('-S', '--clibfiles', default=[], help='C++ libary file', action='append')
 argparser.add_argument('-L', '--clibdir', default=[], help='C++ libary', action='append')
@@ -186,6 +187,9 @@ include $(BUILD_EXECUTABLE)
 '''
 
 genxdc_template='''
+
+PIN_BINDING=%(pin_binding)s
+
 %(genxdc_dep)s: %(project_dir)s/../%(pinout_file)s $(CONNECTALDIR)/boardinfo/%(boardname)s.json
 	mkdir -p %(project_dir)s/sources
 	$(CONNECTALDIR)/scripts/generate-constraints.py $(PIN_BINDING) -o %(genxdc_dep)s $(CONNECTALDIR)/boardinfo/%(boardname)s.json %(project_dir)s/../%(pinout_file)s
@@ -437,7 +441,8 @@ if __name__=='__main__':
 					 'chipscope': ' '.join(['--chipscope=%s' % os.path.abspath(chipscope) for chipscope in options.chipscope]),
 					 'sourceTcl': ' '.join(['--tcl=%s' % os.path.abspath(tcl) for tcl in options.tcl]),
                                          'verilog': ' '.join([os.path.abspath(f) for f in options.verilog]),
-					 'cachedir': '--cachedir=%s' % os.path.abspath(options.cachedir) if options.cachedir else ''
+					 'cachedir': '--cachedir=%s' % os.path.abspath(options.cachedir) if options.cachedir else '',
+                                         'pin_binding' : ' '.join(['-b %s' % s for s in options.pin_binding])
 					 }
     substs['genxdc'] = (genxdc_template % substs) if options.pinout else ''
     bitsmake=fpgamakeRuleTemplate % substs

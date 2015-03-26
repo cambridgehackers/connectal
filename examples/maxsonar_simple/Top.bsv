@@ -72,7 +72,6 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,MaxSonarPins,1));
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
    interface masters = dma.masters;
-   interface leds = controller.leds;
    interface pins = controller.pins;
 
 endmodule : mkConnectalTop
