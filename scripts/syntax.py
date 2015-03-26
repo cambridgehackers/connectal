@@ -467,8 +467,9 @@ def p_subinterfaceDecl(p):
 
 def p_parenthesizedFormalParams(p):
     '''parenthesizedFormalParams : 
+                                 |  LPAREN RPAREN
                                  |  LPAREN moduleFormalParams RPAREN'''
-    if len(p) == 1:
+    if len(p) < 4:
         p[0] = []
     else:
         p[0] = p[2]
