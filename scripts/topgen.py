@@ -84,6 +84,7 @@ import Vector::*;
 import Portal::*;
 import BnocPortal::*;
 import Connectable::*;
+import HostInterface::*;
 %(generatedImport)s
 
 `ifndef PinType
