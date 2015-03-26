@@ -116,6 +116,12 @@ memtests =  memread_manyclients  \
             memread_manyclients128  \
             memwrite_manyclients128 
 
+
+zr_examples = gyro_simple \
+            maxsonar_simple \
+            hbridge_simple \
+            zedboard_robot
+
 matmultests2 = testmm8.8.2       \
 	    testmm16.16.2        \
 	    testmm32.32.2        \
@@ -194,7 +200,11 @@ examples =  echo                 \
             memwrite_4m          \
 	    matmul               \
 	    rbm                  \
-            yuv                  
+            yuv                  \
+            gyro_simple          \
+            maxsonar_simple      \
+            hbridge_simple       \
+            zedboard_robot
 
 memexamples =  memcpy            \
             memread              \
@@ -342,6 +352,9 @@ matmultests.zc706:  $(addprefix tests/, $(addsuffix .zc706, $(matmultests2)))
 
 #################################################################################################
 # misc
+
+
+zr_examples.zedboard: $(addprefix examples/, $(addsuffix .zedboard, $(zr_examples)))
 
 android_exetests = $(addprefix examples/, $(addsuffix .android_exe, $(examples)))
 android_exetests: $(android_exetests)
