@@ -91,6 +91,7 @@ import HostInterface::*;
 `define PinType Empty
 `endif
 typedef `PinType PinType;
+%(generatedTypedefs)s
 
 typedef enum {%(enumList)s} IfcNames deriving (Eq,Bits);
 
@@ -313,6 +314,8 @@ if __name__=='__main__':
         pipeInstantiate.append(memEngineInst % {'clientCount': clientCount})
     topsubsts = {'enumList': ','.join(enumList),
                  'generatedImport': '\n'.join(['import %s::*;' % p for p in importfiles]),
+                 'generatedTypedefs': '\n'.join(['typedef %d NumberOfRequests;' % len(requestList),
+                                                 'typedef %d NumberOfIndications;' % len(indicationList)]),
                  'pipeInstantiate' : '\n'.join(sorted(pipeInstantiate)),
                  'connectInstantiate' : '\n'.join(sorted(connectInstantiate)),
                  'portalInstantiate' : '\n'.join(portalInstantiate),
@@ -324,7 +327,7 @@ if __name__=='__main__':
                  'exportedNames' : '\n'.join(exportedNames),
                  'portalMaster' : 'lMemServer.masters' if memory_flag else 'nil',
                  'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,`PinType,`NumberOfMasters)' if not options.bluenoc \
-                     else 'BluenocTop#(1,1)'
+                     else 'BluenocTop#(NumberOfRequests,NumberOfIndications)'
                  }
     print 'TOPFN', topFilename
     top = util.createDirAndOpen(topFilename, 'w')
