@@ -204,7 +204,6 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    ClockGenerator7           clkgen <- mkClockGenerator7(clkgenParams, clocked_by user_clk, reset_by user_reset_n);
    Clock portalClock;
    Reset portalReset;
-   let pcieClockPeriod = `PcieClockPeriod;
    if (mainClockPeriod == pcieClockPeriod) begin
       portalClock = user_clk;
       portalReset = user_reset_n;

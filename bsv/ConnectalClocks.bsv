@@ -20,6 +20,10 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+`ifdef PcieClockPeriod
+Real pcieClockPeriod = `PcieClockPeriod;
+`endif
+
 Real mainClockPeriod = `MainClockPeriod;
 Real derivedClockPeriod =`DerivedClockPeriod;
 

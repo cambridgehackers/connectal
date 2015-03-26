@@ -65,7 +65,6 @@ import HostInterface    :: *;
 `endif
 
 typedef `PinType PinType;
-let pcieClockPeriod = `PcieClockPeriod;
 
 `ifndef BSIM
 (* synthesize, no_default_clock, no_default_reset *)
