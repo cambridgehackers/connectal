@@ -44,6 +44,7 @@ argparser.add_argument(      '--pinfo', default=None, help='Project description 
 argparser.add_argument('-s', '--source', help='C++ source files', action='append')
 argparser.add_argument(      '--source2', help='C++ second program source files', action='append')
 argparser.add_argument(      '--cflags', help='C++ CFLAGS', action='append')
+argparser.add_argument(      '--pinout', help='project pinout file', action='append')
 argparser.add_argument(      '--shared', help='Make a shared library', action='store_true')
 argparser.add_argument(      '--nohardware', help='Do not generate hardware for the design', action='store_true')
 argparser.add_argument(      '--contentid', help='Specify 64-bit contentid for PCIe designs')
@@ -108,16 +109,19 @@ foreach {pat} {CLK_GATE_hdmi_clock_if CLK_*deleteme_unused_clock* CLK_GATE_*dele
 fpgamakeRuleTemplate='''
 FPGAMAKE=$(CONNECTALDIR)/../fpgamake/fpgamake
 fpgamake.mk: $(VFILE) Makefile prepare_bin_target
-	$(Q)mkdir -p hw
 	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk --board=%(boardname)s --part=%(partname)s %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s %(qsf)s %(chipscope)s -t $(MKTOP) %(cachedir)s -b hw/mkTop.bit verilog $(CONNECTALDIR)/verilog %(verilog)s
 
-hw/mkTop.bit: fpgamake.mk prepare_bin_target
+hw/mkTop.bit: fpgamake.mk prepare_bin_target %(genxdc_dep)s
+	$(Q)mkdir -p hw
 	$(Q)make -f fpgamake.mk
 ifneq ($(XILINX),)
 	$(Q)cp -f Impl/*/*.rpt bin
 else ifneq ($(ALTERA),)
 	$(Q)cp -f $(MKTOP).sof bin
 endif
+
+%(genxdc)s
+
 '''
 
 makefileTemplate='''
@@ -179,6 +183,12 @@ LOCAL_CXXFLAGS := -DZYNQ %(cflags)s
 LOCAL_CFLAGS2 := $(cdefines2)s
 
 include $(BUILD_EXECUTABLE)
+'''
+
+genxdc_template='''
+%(genxdc_dep)s: %(project_dir)s/../%(pinout_file)s $(CONNECTALDIR)/boardinfo/%(boardname)s.json
+	mkdir -p %(project_dir)s/sources
+	$(CONNECTALDIR)/scripts/generate-constraints.py $(PIN_BINDING) -o %(genxdc_dep)s $(CONNECTALDIR)/boardinfo/%(boardname)s.json %(project_dir)s/../%(pinout_file)s
 '''
 
 linuxmakefile_template='''
@@ -409,9 +419,17 @@ if __name__=='__main__':
         print 'Writing Makefile', makename
     make = util.createDirAndOpen(makename, 'w')
 
-    bitsmake=fpgamakeRuleTemplate % {'partitions': ' '.join(['-s %s' % p for p in options.partition_module]),
+    genxdc_dep = ''
+    if options.pinout:
+        genxdc_dep = '%s/sources/pinout-%s.xdc' % (project_dir,boardname)
+        options.constraint.append(genxdc_dep)
+
+    substs = {'partitions': ' '.join(['-s %s' % p for p in options.partition_module]),
 					 'boardname': boardname,
 					 'partname': partname,
+                                         'project_dir' : project_dir,
+                                         'pinout_file' : options.pinout[0] if options.pinout else '',
+                                         'genxdc_dep' : genxdc_dep,
 					 'floorplan': os.path.abspath(options.floorplan) if options.floorplan else '',
 					 'xdc': ' '.join(['--constraint=%s' % os.path.abspath(xdc) for xdc in options.constraint]),
 					 'xci': ' '.join(['--xci=%s' % os.path.abspath(xci) for xci in options.xci]),
@@ -421,6 +439,8 @@ if __name__=='__main__':
                                          'verilog': ' '.join([os.path.abspath(f) for f in options.verilog]),
 					 'cachedir': '--cachedir=%s' % os.path.abspath(options.cachedir) if options.cachedir else ''
 					 }
+    substs['genxdc'] = (genxdc_template % substs) if options.pinout else ''
+    bitsmake=fpgamakeRuleTemplate % substs
 
     make.write(makefileTemplate % {'connectaldir': connectaldir,
                                    'bsvpath': ':'.join(list(set([os.path.dirname(os.path.abspath(bsvfile)) for bsvfile in options.bsvfile])
