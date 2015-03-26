@@ -73,13 +73,13 @@ public:
 int main(int argc, const char **argv)
 {
   size_t alloc_sz = 0x1240;
-  MemwriteRequestProxy *device = new MemwriteRequestProxy(IfcNames_MemwriteRequest);
-  MemwriteIndication *deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndication);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  MemwriteRequestProxy *device = new MemwriteRequestProxy(IfcNames_MemwriteRequestS2H);
+  MemwriteIndication *deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndicationH2S);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
+  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
+  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
 
   sem_init(&done_sem, 1, 0);
   portalExec_start();

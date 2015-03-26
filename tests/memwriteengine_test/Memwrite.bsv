@@ -20,6 +20,9 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import HostInterface::*;
+import CtrlMux::*;
+import Vector::*;
 import FIFOF::*;
 import ClientServer::*;
 import GetPut::*;
@@ -42,7 +45,7 @@ endinterface
 
 interface Memwrite;
    interface MemwriteRequest request;
-   interface MemWriteClient#(64) dmaClient;
+   interface Vector#(1,MemWriteClient#(64)) dmaClients;
 endinterface
 
 module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
@@ -94,6 +97,6 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
           doOnce <= True;
        endmethod
    endinterface
-   interface MemWriteClient dmaClient = wet.dmaClient;
+   interface Vector dmaClients = cons(wet.dmaClient,nil);
 endmodule
 

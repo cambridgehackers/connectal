@@ -64,11 +64,15 @@ module mkMemwriteEngineTest(MemwriteEngineTest);
    rule dataRule;
       let b <- addrGenerator.addrBeat.get();
       let data <- toGet(writeDataInFifo).get();
+      let traceAllData = True;
+      if (traceAllData)
+	 mismatchFifo.enq(tuple2(b.addr, data.data));
+
       //writeDataOutFifo.enq(data);
       Vector#(2, Bit#(32)) v = unpack(data.data);
       if (v[0] != (b.addr>>2) || v[1] != ((b.addr>>2)+1)) begin
 	 $display("mismatch: addr=%h data=%h", b.addr, data.data);
-	 if (mismatchFifo.notFull())
+	 if (!traceAllData && mismatchFifo.notFull())
 	    mismatchFifo.enq(tuple2(b.addr, data.data));
       end
       if (b.last)
