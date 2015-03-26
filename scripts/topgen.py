@@ -107,8 +107,8 @@ module mkBluenocTop
 %(connectInstantiate)s
 
 %(portalList)s
-   interface requests = cons(%(requestList)s, nil);
-   interface indications = cons(%(indicationList)s, nil);
+   interface requests = %(requestList)s;
+   interface indications = %(indicationList)s;
 %(exportedInterfaces)s
 endmodule : mkBluenocTop
 %(exportedNames)s
@@ -223,6 +223,12 @@ def flushModules(key):
             portalInstantiate.append(temp.inst % ','.join(temp.args))
             del instantiateRequest[key]
 
+def toVectorLiteral(l):
+    if l:
+        return 'cons(%s,%s)' % (l[0], toVectorLiteral(l[1:]))
+    else:
+        return 'nil'
+
 def parseParam(pitem, proxy):
     p = pitem.split(':')
     pmap = {'tparam': '', 'xparam': '', 'uparam': '', 'memFlag': 'Pipes' if p[0][0] == '/' else ''}
@@ -312,8 +318,8 @@ if __name__=='__main__':
                  'portalInstantiate' : '\n'.join(portalInstantiate),
                  'portalList': '\n'.join(portalList),
                  'portalCount': portalCount,
-                 'requestList': ','.join(requestList),
-                 'indicationList': ','.join(indicationList),
+                 'requestList': toVectorLiteral(requestList),
+                 'indicationList': toVectorLiteral(indicationList),
                  'exportedInterfaces' : '\n'.join(interfaceList),
                  'exportedNames' : '\n'.join(exportedNames),
                  'portalMaster' : 'lMemServer.masters' if memory_flag else 'nil',
