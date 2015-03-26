@@ -137,6 +137,7 @@ typedef struct PortalInternal {
 typedef struct {
     struct DmaManager *dma;
     uint32_t    size;
+    int         hardware;
 } PortalSharedParam; /* for ITEMINIT function */
 
 typedef struct {

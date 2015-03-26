@@ -204,7 +204,7 @@ def instMod(args, modname, modext, constructor, tparam, memFlag):
             connectInstantiate.append(connectInstantiation % pmap)
         if memFlag:
             enumList.append(modname + memFlag + tstr)
-            addPortal(pmap['argsConfig'], '%(modname)sCW' % pmap, pmap['stype'])
+            addPortal(pmap['argsConfig'], '%(modname)sCW' % pmap, 'Request')
         else:
             addPortal(pmap['args'], '%(modname)sPipes' % pmap, pmap['stype'])
     else:

@@ -27,7 +27,6 @@
 #include "MMURequest.h"
 #include "StdDmaIndication.h"
 #include "dmaManager.h"
-#include "SharedMemoryPortalConfig.h"
 #include "SimpleRequest.h"
 
 #if 1
@@ -142,15 +141,10 @@ int main(int argc, const char **argv)
     DmaManager *dma = new DmaManager(dmap);
     MMUIndication *mIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
 
-    portalExec_start();
-
-    PortalSharedParam param = {dma, alloc_sz};
-    Simple *indication = new Simple(IfcNames_SimpleRequestH2S, numtimes, &sharedfunc, &param);
-    SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequestS2H, &sharedfunc, &param);
-    SharedMemoryPortalConfigProxy *reqConfig = new SharedMemoryPortalConfigProxy(IfcNames_SimpleRequestPipesS2H);
-    reqConfig->setSglId(device->pint.sharedMem);
-    SharedMemoryPortalConfigProxy *indConfig = new SharedMemoryPortalConfigProxy(IfcNames_SimpleRequestPipesH2S);
-    indConfig->setSglId(indication->pint.sharedMem);
+    PortalSharedParam parami = {dma, alloc_sz, IfcNames_SimpleRequestPipesH2S};
+    Simple *indication = new Simple(IfcNames_SimpleRequestH2S, numtimes, &sharedfunc, &parami);
+    PortalSharedParam paramr = {dma, alloc_sz, IfcNames_SimpleRequestPipesS2H};
+    SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequestS2H, &sharedfunc, &paramr);
 
     for (int i = 0; i < numtimes; i++) {
       if (verbose) fprintf(stderr, "Main::calling say1(%d)\n", v1a);
