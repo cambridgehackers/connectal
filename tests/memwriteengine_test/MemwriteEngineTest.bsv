@@ -64,7 +64,7 @@ module mkMemwriteEngineTest(MemwriteEngineTest);
    rule dataRule;
       let b <- addrGenerator.addrBeat.get();
       let data <- toGet(writeDataInFifo).get();
-      let traceAllData = True;
+      let traceAllData = False;
       if (traceAllData)
 	 mismatchFifo.enq(tuple2(b.addr, data.data));
 
