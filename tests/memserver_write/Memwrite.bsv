@@ -25,6 +25,7 @@ import FIFOF::*;
 import BRAMFIFO::*;
 import ClientServer::*;
 import GetPut::*;
+import HostInterface::*;
 import MemTypes::*;
 import MemwriteEngine::*;
 import Pipe::*;
@@ -54,22 +55,28 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    Reg#(Bit#(32))              srcGens <- mkReg(0);
 
    AddressGenerator#(32, 64) addrGenerator <- mkAddressGenerator();
-   FIFO#(MemRequest) reqFifo <- mkFIFO();
-   FIFO#(MemData#(64))   dataFifo <- mkSizedBRAMFIFO(64);
+   FIFO#(MemRequest) reqFifo <- mkSizedBRAMFIFO(8);
+   FIFO#(PhysMemRequest#(32)) preqFifo <- mkSizedBRAMFIFO(8);
+   FIFO#(MemData#(64))   dataFifo <- mkSizedBRAMFIFO(1024);
    FIFO#(Bit#(MemTagSize)) doneFifo <- mkFIFO();
 
    rule start if (numReqs != 0);
       reqFifo.enq(MemRequest { sglId: pointer, offset: reqOffset, burstLen: burstLenBytes, tag: tag });
-      addrGenerator.request.put(PhysMemRequest { addr: 0, burstLen: burstLenBytes, tag: tag });
+      preqFifo.enq(PhysMemRequest { addr: 0, burstLen: burstLenBytes, tag: tag });
       numReqs <= numReqs - 1;
       reqOffset <= reqOffset + extend(burstLenBytes);
       tag <= tag + 1;
-      $display("start numReqs", numReqs);
+      //$display("start numReqs", numReqs);
+   endrule
+
+   rule preq;
+      let preq <- toGet(preqFifo).get();
+      addrGenerator.request.put(preq);
    endrule
 
    rule finish;
       let rv <- toGet(doneFifo).get();
-      $display("finished num todo=%d", numDone);
+      //$display("finished num todo=%d", numDone);
       if (numDone == 1) begin
          indication.writeDone(0);
       end
@@ -79,7 +86,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    rule src if (numWords != 0);
       let b <- addrGenerator.addrBeat.get();
       let v = {srcGens+1,srcGens};
-      dataFifo.enq(MemData { data: v, tag: b.tag});
+      dataFifo.enq(MemData { data: v, tag: b.tag, last: b.last});
       srcGens <= srcGens+2;
       numWords <= numWords - 2;
    endrule
