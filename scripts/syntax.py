@@ -495,10 +495,20 @@ def p_interfaceDecl(p):
     interface = AST.Interface(p[3], p[4], p[6], None, globalfilename)
     p[0] = interface
 
+
+# the token '[' signifies an array type 
+def p_arrayDecl(p):
+    '''arrayDecl : type VAR LBRACKET NUM RBRACKET'''
+    arr_t = AST.Type(p[3],p[1])
+    p[0] = AST.Variable(p[2], arr_t, None)
+
 def p_varDecl(p):
-    '''varDecl : type VAR'''
-    p[0] = AST.Variable(p[2], p[1], None)
-    
+    '''varDecl : arrayDecl
+               | type VAR'''
+    if len(p)==3:
+        p[0] = AST.Variable(p[2], p[1], None)
+    else:
+        p[0] = p[1]
 
 def p_params(p):
     '''params : expressions
