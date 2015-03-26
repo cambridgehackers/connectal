@@ -134,10 +134,16 @@ typedef struct PortalInternal {
     int                    poller_register;
 } PortalInternal;
 
+#define SHARED_HARDWARE(PORTALNAME) {(PORTALNAME), SharedMemoryPortalConfig_reqinfo, SharedMemoryPortalConfig_setSglId}
+typedef int (*SHARED_CONFIG_SETSGLID)(struct PortalInternal *, const uint32_t sglId);
 typedef struct {
     struct DmaManager *dma;
     uint32_t    size;
-    int         hardware;
+    struct {
+        int port;
+        uint32_t reqinfo;
+        SHARED_CONFIG_SETSGLID setSglId;
+    } hardware;
 } PortalSharedParam; /* for ITEMINIT function */
 
 typedef struct {

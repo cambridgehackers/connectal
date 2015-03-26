@@ -59,6 +59,8 @@ extern "C" {
 void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *dmaDevice, PortalInternal *sglDevice);
 int DmaManager_reference(DmaManagerPrivate *priv, int fd);
 void DmaManager_dereference(DmaManagerPrivate *priv, int ref);
+void DmaManager_idresp(DmaManagerPrivate *priv, uint32_t sglId);
+void DmaManager_confresp(DmaManagerPrivate *priv, uint32_t channelId);
 #ifdef __cplusplus
 }
 #endif
@@ -80,12 +82,10 @@ class DmaManager
     DmaManager_dereference(&priv, ref);
   }
   void sglIdResp(uint32_t sglId) {
-    priv.sglId = sglId;
-    sem_post(&priv.sglIdSem);
+    DmaManager_idresp(&priv, sglId);
   }
   void confResp(uint32_t channelId) {
-    //fprintf(stderr, "configResp %d\n", channelId);
-    sem_post(&priv.confSem);
+    DmaManager_confresp(&priv, channelId);
   };
 };
 #endif

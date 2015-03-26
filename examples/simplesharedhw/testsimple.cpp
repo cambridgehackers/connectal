@@ -136,9 +136,9 @@ int main(int argc, const char **argv)
     DmaManager *dma = new DmaManager(dmap);
     MMUIndication *mIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
 
-    PortalSharedParam parami = {dma, alloc_sz, IfcNames_SimpleRequestPipesH2S};
+    PortalSharedParam parami = {dma, alloc_sz, SHARED_HARDWARE(IfcNames_SimpleRequestPipesH2S)};
     Simple *indication = new Simple(IfcNames_SimpleRequestH2S, numtimes, &sharedfunc, &parami);
-    PortalSharedParam paramr = {dma, alloc_sz, IfcNames_SimpleRequestPipesS2H};
+    PortalSharedParam paramr = {dma, alloc_sz, SHARED_HARDWARE(IfcNames_SimpleRequestPipesS2H)};
     SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequestS2H, &sharedfunc, &paramr);
 
     for (int i = 0; i < numtimes; i++) {

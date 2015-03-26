@@ -40,7 +40,6 @@
 #include <time.h> // ctime
 #endif
 #include "drivers/portalmem/portalmem.h" // PA_MALLOC
-#include "SharedMemoryPortalConfig.h"
 
 static int init_shared(struct PortalInternal *pint, void *aparam)
 {
@@ -56,11 +55,11 @@ static int init_shared(struct PortalInternal *pint, void *aparam)
             pint->sharedMem = param->dma->reference(fd);
             MMURequest_setInterface(param->dma->priv.sglDevice, pint->fpga_number, pint->sharedMem);
         }
-        if (param->hardware) {
+        if (param->hardware.setSglId) {
             PortalInternal pcfg;
-            init_portal_internal(&pcfg, param->hardware, pint->fpga_tile, NULL,
-                NULL, NULL, NULL, SharedMemoryPortalConfig_reqinfo);
-            SharedMemoryPortalConfig_setSglId(&pcfg, pint->sharedMem);
+            init_portal_internal(&pcfg, param->hardware.port, pint->fpga_tile, NULL,
+                NULL, NULL, NULL, param->hardware.reqinfo);
+            param->hardware.setSglId(&pcfg, pint->sharedMem);
         }
     }
     return 0;

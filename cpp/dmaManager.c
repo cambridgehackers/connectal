@@ -106,3 +106,19 @@ int DmaManager_reference(DmaManagerPrivate *priv, int fd)
 #endif // defined(BSIM) || defined(__KERNEL__)
   return rc;
 }
+void DmaManager_idresp(DmaManagerPrivate *priv, uint32_t sglId)
+{
+    priv->sglId = sglId;
+#ifdef __KERNEL__
+#else
+    sem_post(&priv->sglIdSem);
+#endif
+}
+void DmaManager_confresp(DmaManagerPrivate *priv, uint32_t channelId)
+{
+#ifdef __KERNEL__
+#else
+    //fprintf(stderr, "configResp %d\n", channelId);
+    sem_post(&priv->confSem);
+#endif
+}
