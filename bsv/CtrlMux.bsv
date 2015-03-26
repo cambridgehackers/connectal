@@ -220,7 +220,6 @@ module mkMemMethodMuxOut#(PortalCtrl#(aw,dataWidth) ctrl, Vector#(numIndications
    AddressGenerator#(aw,dataWidth) fifoReadAddrGenerator <- mkAddressGenerator();
    AddressGenerator#(aw,dataWidth) fifoWriteAddrGenerator <- mkAddressGenerator();
    FIFO#(Bit#(MemTagSize))                fifoWriteDoneFifo <- mkFIFO();
-   FIFO#(MemData#(dataWidth))             fifoReadDataFifo <- mkFIFO();
    let port_sel_low = valueOf(aw);
    let port_sel_high = valueOf(TSub#(addrWidth,1));
    function Bit#(selWidth) psel(Bit#(addrWidth) a);
