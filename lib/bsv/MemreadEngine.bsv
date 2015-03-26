@@ -81,7 +81,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
    Reg#(Bool) load_in_progress <- mkReg(False);
    FIFO#(Tuple3#(MemengineCmd,Bool,Bool))         loadf_b <- mkSizedFIFO(1);
    FIFO#(Tuple2#(Bit#(serverIdxSz),MemengineCmd)) loadf_c <- mkSizedFIFO(1);
-   FIFO#(Tuple3#(Bit#(8),Bit#(serverIdxSz),Bool))   workf <- mkSizedFIFO(32); // isthis the right size?
+   FIFO#(Tuple3#(Bit#(8),Bit#(serverIdxSz),Bool))   workf <- mkSizedBRAMFIFO(32); // isthis the right size?
    
 
    Vector#(numServers, FIFO#(void))              outfs <- replicateM(mkSizedFIFO(1));

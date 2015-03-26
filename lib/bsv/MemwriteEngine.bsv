@@ -72,8 +72,8 @@ module mkBurstFunnel#(Integer maxBurstLen)(BurstFunnel#(k,w))
    Vector#(k,Reg#(Bit#(BurstLenSize))) burst_len <- replicateM(mkReg(0));
    Vector#(k,Reg#(Bit#(BurstLenSize))) drain_cnt <- replicateM(mkReg(0));
    Reg#(Bit#(BurstLenSize)) inj_ctrl <- mkReg(0);
-   FIFO#(Tuple2#(Bit#(TAdd#(1,logk)),Bit#(2))) loadIdxs <- mkSizedFIFO(32);
-   FIFO#(Tuple2#(Bit#(TAdd#(1,logk)),Bit#(2))) inFlight <- mkSizedFIFO(4);
+   FIFO#(Tuple2#(Bit#(TAdd#(1,logk)),Bit#(2))) loadIdxs <- mkSizedBRAMFIFO(32);
+   FIFO#(Tuple2#(Bit#(TAdd#(1,logk)),Bit#(2))) inFlight <- mkSizedBRAMFIFO(4);
    FunnelPipe#(1, k, Tuple3#(Bit#(2),Bit#(w),Bool),bpc) data_in_funnel <- mkFunnelPipesPipelined(map(toPipeOut,data_in));
    Reg#(Bit#(BurstLenSize)) drainCnt <- mkReg(0);
    FIFOF#(Tuple2#(Bit#(TLog#(k)),Bit#(w))) exit_data <- mkFIFOF;
@@ -192,8 +192,8 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
    Reg#(Bool) load_in_progress <- mkReg(False);
    FIFO#(Tuple3#(MemengineCmd,Bool,Bool))         loadf_b <- mkSizedFIFO(1);
    FIFO#(Tuple2#(Bit#(serverIdxSz),MemengineCmd)) loadf_c <- mkSizedFIFO(1);
-   FIFO#(Tuple3#(Bit#(8),Bit#(MemTagSize),Bool))    workf <- mkSizedFIFO(32); // is this the right size?
-   FIFO#(Tuple2#(Bit#(serverIdxSz),Bool))           donef <- mkSizedFIFO(32); // is this the right size?
+   FIFO#(Tuple3#(Bit#(8),Bit#(MemTagSize),Bool))    workf <- mkSizedBRAMFIFO(32); // is this the right size?
+   FIFO#(Tuple2#(Bit#(serverIdxSz),Bool))           donef <- mkSizedBRAMFIFO(32); // is this the right size?
    
    Vector#(numServers, FIFO#(Bool))              outfs <- replicateM(mkSizedFIFO(1));
    Vector#(numServers, FIFOF#(Tuple2#(Bit#(serverIdxSz), MemengineCmd))) cmds_in <- replicateM(mkSizedFIFOF(1));
