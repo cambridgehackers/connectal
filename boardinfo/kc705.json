@@ -1,9 +1,9 @@
 {
     "options": {
-        "bsvdefines" : ["XILINX=1", "Kintex7", "PCIE", "PCIE2", "PcieHostTypeIF", "PhysAddrWidth=40"],
+        "bsvdefines" : ["XILINX=1", "Kintex7", "PCIE", "PCIE1", "PcieHostTypeIF", "PhysAddrWidth=40"],
         "os" : "ubuntu",
         "partname" : "xc7k325tffg900-2",
-        "need_pcie" : "x7_gen2x8",
+        "need_pcie" : "x7_gen1x8",
         "TOP" : "PcieTop",
         "constraints": ["constraints/xilinx/kc705.xdc"],
         "runscript" : "run.pcietest",
