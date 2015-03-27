@@ -61,7 +61,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite#(4));
    FIFO#(void)           startFifo <- mkFIFO;
 
    Vector#(4,Reg#(Bit#(32)))      srcGens <- replicateM(mkReg(0));
-   Vector#(4,MemwriteEngine#(64,1,1))   wes <- replicateM(mkMemwriteEngine);
+   Vector#(4,MemwriteEngine#(64,2,1))   wes <- replicateM(mkMemwriteEngine);
 
    Stmt startStmt = seq
 		       startBase <= 0;

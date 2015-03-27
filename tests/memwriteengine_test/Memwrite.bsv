@@ -54,7 +54,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    Reg#(Bit#(32))       burstLen <- mkReg(0);
    Reg#(Bit#(32))         srcGens <- mkReg(0);
    Reg#(Bool)              doOnce <- mkReg(False);
-   MemwriteEngine#(64,1,1)    we <- mkMemwriteEngine;
+   MemwriteEngine#(64,2,1)    we <- mkMemwriteEngine;
    MemwriteEngineTest         wet <- mkMemwriteEngineTest();
    mkConnection(we.dmaClient, wet.dmaServer);
 
