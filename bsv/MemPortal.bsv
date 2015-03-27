@@ -105,14 +105,14 @@ endmodule
 
 module mkMemPortalIn#(Bit#(slaveDataWidth) ifcId, Vector#(numRequests, PipeIn#(Bit#(slaveDataWidth))) requests)(MemPortal#(slaveAddrWidth, slaveDataWidth))
    provisos ( Add#(1, i__, slaveDataWidth)
-	     ,Add#(c__, 5, slaveAddrWidth)
+	     ,Add#(c__, SlaveControlAddrWidth, slaveAddrWidth)
 	     ,Add#(d__, 1, c__)
 	     ,Add#(a__, TLog#(TAdd#(1, numRequests)), c__)
 	     ,Add#(b__, slaveDataWidth, TMul#(slaveDataWidth, 2))
              ,Add#(e__, TLog#(numRequests), c__)
 	     );
 
-   PortalCtrlMemSlave#(5,slaveDataWidth) ctrlPort <- mkPortalCtrlMemSlave(ifcId, (interface PortalInterrupt;
+   PortalCtrlMemSlave#(SlaveControlAddrWidth,slaveDataWidth) ctrlPort <- mkPortalCtrlMemSlave(ifcId, (interface PortalInterrupt;
            method Bool status();
               return False;
            endmethod
@@ -128,14 +128,14 @@ endmodule
 
 module mkMemPortalOut#(Bit#(slaveDataWidth) ifcId, Vector#(numIndications, PipeOut#(Bit#(slaveDataWidth))) indications, PortalInterrupt#(slaveDataWidth) intr)(MemPortal#(slaveAddrWidth, slaveDataWidth))
    provisos ( Add#(1, i__, slaveDataWidth)
-	     ,Add#(c__, 5, slaveAddrWidth)
+	     ,Add#(c__, SlaveControlAddrWidth, slaveAddrWidth)
 	     ,Add#(d__, 1, c__)
 	     ,Add#(a__, TLog#(TAdd#(1, numIndications)), c__)
 	     ,Add#(b__, slaveDataWidth, TMul#(slaveDataWidth, 2))
              ,Add#(e__, TLog#(numIndications), c__)
 	     );
 
-   PortalCtrlMemSlave#(5,slaveDataWidth) ctrlPort <- mkPortalCtrlMemSlave(ifcId, intr);
+   PortalCtrlMemSlave#(SlaveControlAddrWidth,slaveDataWidth) ctrlPort <- mkPortalCtrlMemSlave(ifcId, intr);
    let memslave  <- mkMemMethodMuxOut(ctrlPort.memSlave,indications);
    interface PhysMemSlave slave = memslave;
    interface ReadOnly interrupt = ctrlPort.interrupt;

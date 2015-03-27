@@ -119,7 +119,7 @@ portalTemplate = '''   let portalEnt_%(count)s <- mkMemPortal%(slaveType)s(exten
    portals[%(count)s] = portalEnt_%(count)s;'''
 
 portalTemplateNew = '''   let memSlaves_%(count)s <- mapM(mkPipe%(slaveType)sMemSlave, l%(ifcName)s.portalIfc.%(itype)s);
-   PortalCtrlMemSlave#(5,32/*slaveDataWidth*/) ctrlPort_%(count)s <- mkPortalCtrlMemSlave(extend(pack(%(enumVal)s)), l%(ifcName)s.portalIfc.intr);
+   PortalCtrlMemSlave#(SlaveControlAddrWidth,SlaveDataBusWidth) ctrlPort_%(count)s <- mkPortalCtrlMemSlave(extend(pack(%(enumVal)s)), l%(ifcName)s.portalIfc.intr);
    let memslave_%(count)s <- mkMemMethodMux(cons(ctrlPort_%(count)s.memSlave,memSlaves_%(count)s));
    portals[%(count)s] = (interface MemPortal;
        interface PhysMemSlave slave = memslave_%(count)s;
