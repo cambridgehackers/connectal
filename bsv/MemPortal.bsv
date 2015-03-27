@@ -20,24 +20,10 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import Vector::*;
-import GetPut::*;
-import FIFO::*;
-import FIFOF::*;
-import GetPut::*;
-import ClientServer::*;
-import CtrlMux::*;
-
-import MIFO::*;
 import Pipe::*;
-import Portal::*;
-import MemTypes::*;
-import AddressGenerator::*;
-import MemTypes::*;
-import MemreadEngine::*;
-import MemwriteEngine::*;
-import ConnectalMemory::*;
 import HostInterface::*;
+import Portal::*;
+import CtrlMux::*;
 
 interface PortalCtrlMemSlave#(numeric type addrWidth, numeric type dataWidth);
    interface PortalCtrl#(addrWidth, dataWidth)  memSlave;
@@ -102,42 +88,3 @@ module mkPortalCtrlMemSlave#(Bit#(dataWidth) ifcId, PortalInterrupt#(dataWidth) 
       endmethod
    endinterface
 endmodule   
-
-module mkMemPortalIn#(Bit#(slaveDataWidth) ifcId, Vector#(numRequests, PipeIn#(Bit#(slaveDataWidth))) requests)(MemPortal#(slaveAddrWidth, slaveDataWidth))
-   provisos ( Add#(1, i__, slaveDataWidth)
-	     ,Add#(c__, SlaveControlAddrWidth, slaveAddrWidth)
-	     ,Add#(d__, 1, c__)
-	     ,Add#(a__, TLog#(TAdd#(1, numRequests)), c__)
-	     ,Add#(b__, slaveDataWidth, TMul#(slaveDataWidth, 2))
-             ,Add#(e__, TLog#(numRequests), c__)
-	     );
-
-   PortalCtrlMemSlave#(SlaveControlAddrWidth,slaveDataWidth) ctrlPort <- mkPortalCtrlMemSlave(ifcId, (interface PortalInterrupt;
-           method Bool status();
-              return False;
-           endmethod
-           method Bit#(dataWidth) channel();
-              return -1;
-           endmethod
-        endinterface));
-   let memslave  <- mkMemMethodMuxIn(ctrlPort.memSlave,requests);
-   interface PhysMemSlave slave = memslave;
-   interface ReadOnly interrupt = ctrlPort.interrupt;
-   interface WriteOnly num_portals = ctrlPort.num_portals;
-endmodule
-
-module mkMemPortalOut#(Bit#(slaveDataWidth) ifcId, Vector#(numIndications, PipeOut#(Bit#(slaveDataWidth))) indications, PortalInterrupt#(slaveDataWidth) intr)(MemPortal#(slaveAddrWidth, slaveDataWidth))
-   provisos ( Add#(1, i__, slaveDataWidth)
-	     ,Add#(c__, SlaveControlAddrWidth, slaveAddrWidth)
-	     ,Add#(d__, 1, c__)
-	     ,Add#(a__, TLog#(TAdd#(1, numIndications)), c__)
-	     ,Add#(b__, slaveDataWidth, TMul#(slaveDataWidth, 2))
-             ,Add#(e__, TLog#(numIndications), c__)
-	     );
-
-   PortalCtrlMemSlave#(SlaveControlAddrWidth,slaveDataWidth) ctrlPort <- mkPortalCtrlMemSlave(ifcId, intr);
-   let memslave  <- mkMemMethodMuxOut(ctrlPort.memSlave,indications);
-   interface PhysMemSlave slave = memslave;
-   interface ReadOnly interrupt = ctrlPort.interrupt;
-   interface WriteOnly num_portals = ctrlPort.num_portals;
-endmodule
