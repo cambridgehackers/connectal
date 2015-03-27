@@ -71,12 +71,12 @@ ifndef MAIN_CLOCK_PERIOD
     endif
     ifeq ($(BOARD),vc707)
     PCIE_CLOCK_PERIOD?=8
-    MAIN_CLOCK_PERIOD=8
+    MAIN_CLOCK_PERIOD=4
     DEFAULT_DERIVED_CLOCK_PERIOD=4
     endif
     ifeq ($(BOARD),kc705)
     PCIE_CLOCK_PERIOD?=8
-    MAIN_CLOCK_PERIOD=8
+    MAIN_CLOCK_PERIOD=4
     DEFAULT_DERIVED_CLOCK_PERIOD=4
     endif
     ifeq ($(BOARD),netfpga-sume)
