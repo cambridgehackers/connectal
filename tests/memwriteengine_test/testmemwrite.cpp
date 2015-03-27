@@ -23,10 +23,12 @@
 #include <stdint.h>
 #include <semaphore.h>
 
+#if (NumberOfMasters != 0)
 #include "dmaManager.h"
 #include "StdDmaIndication.h"
 #include "MemServerRequest.h"
 #include "MMURequest.h"
+#endif
 #include "MemwriteIndication.h"
 #include "MemwriteRequest.h"
 
@@ -75,15 +77,18 @@ int main(int argc, const char **argv)
   size_t alloc_sz = 0x1240;
   MemwriteRequestProxy *device = new MemwriteRequestProxy(IfcNames_MemwriteRequestS2H);
   MemwriteIndication *deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndicationH2S);
+#if (NumberOfMasters != 0)
   MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
   MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
   MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
+#endif
 
   sem_init(&done_sem, 1, 0);
   portalExec_start();
 
+#if (NumberOfMasters != 0)
   int dstAlloc = portalAlloc(alloc_sz);
   unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
 
@@ -94,9 +99,14 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "parent::starting write\n");
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
+#else
+  unsigned int ref_dstAlloc = 1;
+#endif
   device->startWrite(ref_dstAlloc, alloc_sz, 2 * sizeof(uint32_t));
 
   sem_wait(&done_sem);
+#if (NumberOfMasters != 0)
   memdump((unsigned char *)dstBuffer, 32, "MEM");
+#endif
   fprintf(stderr, "%s: done\n", __FUNCTION__);
 }
