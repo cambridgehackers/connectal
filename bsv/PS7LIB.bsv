@@ -29,7 +29,7 @@ import ConnectableWithTrace::*;
 import Bscan::*;
 import Vector::*;
 import PPS7LIB::*;
-import CtrlMux::*;
+//import CtrlMux::*;
 import Portal::*;
 import AxiMasterSlave::*;
 import AxiDma::*;
