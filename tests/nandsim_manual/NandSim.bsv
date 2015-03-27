@@ -53,8 +53,8 @@ endinterface
 
 module mkNandSim#(NandSimIndication indication) (NandSim);
 
-   MemreadEngineV#(64, 1, 2)     re <- mkMemreadEngine();
-   MemwriteEngineV#(64, 1, 3)    we <- mkMemwriteEngine();
+   MemreadEngine#(64, 1, 2)     re <- mkMemreadEngine();
+   MemwriteEngine#(64, 1, 3)    we <- mkMemwriteEngine();
    
    Server#(MemengineCmd,Bool)  dramReadServer = re.readServers[0];
    Server#(MemengineCmd,Bool)  nandReadServer = re.readServers[1];

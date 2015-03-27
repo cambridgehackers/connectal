@@ -188,8 +188,6 @@ Memory Engine Interfaces
 
    .. bsv:subinterface:: Vector#(numServers, MemwriteServer#(dataWidth)) write_servers
 
-.. bsv:typedef:: MemwriteEngineV#(dataWidth,cmdQDepth,1) MemwriteEngine#(numeric type dataWidth, numeric type cmdQDepth)
-
 .. bsv:interface:: MemreadServer#(numeric type dataWidth)
 
    .. bsv:subinterface:: Server#(MemengineCmd,Bool) cmdServer
@@ -206,7 +204,6 @@ Memory Engine Interfaces
 
    .. bsv:subinterface:: Vector#(numServers, MemreadServer#(dataWidth)) read_servers
 
-.. bsv:typedef:: MemreadEngineV#(dataWidth,cmdQDepth,1) MemreadEngine#(numeric type dataWidth, numeric type cmdQDepth)
 
 Memory Traffic Interfaces
 -------------------------

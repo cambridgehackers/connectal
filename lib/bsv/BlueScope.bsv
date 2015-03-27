@@ -82,7 +82,7 @@ module mkSyncBlueScope#(Integer samples, BlueScopeIndication indication, Clock s
    SyncPulseIfc         triggeredPulse <- mkSyncPulse(sClk, sRst, dClk);
    SyncPulseIfc              donePulse <- mkSyncPulse(sClk, sRst, dClk);
    
-   MemwriteEngine#(dataWidth, 2) mwriter <- mkMemwriteEngine;
+   MemwriteEngine#(dataWidth, 2,1) mwriter <- mkMemwriteEngine;
    
    (* descending_urgency = "resetState, startState" *)
    rule resetState if (resetPulse.pulse);

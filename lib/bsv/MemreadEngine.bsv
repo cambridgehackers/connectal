@@ -37,7 +37,7 @@ import Pipe::*;
 import MemUtils::*;
 
 
-module mkMemreadEngine(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
+module mkMemreadEngine(MemreadEngine#(dataWidth, cmdQDepth, numServers))
    provisos( Mul#(TDiv#(dataWidth, 8), 8, dataWidth)
 	    ,Add#(1, a__, numServers)
 	    ,Add#(b__, TLog#(numServers), TAdd#(1, TLog#(TMul#(cmdQDepth,numServers))))
@@ -50,7 +50,7 @@ module mkMemreadEngine(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
    return rv;
 endmodule
 
-module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth, cmdQDepth, numServers))
+module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, cmdQDepth, numServers))
    provisos (Div#(dataWidth,8,dataWidthBytes),
 	     Mul#(dataWidthBytes,8,dataWidth),
 	     Log#(dataWidthBytes,beatShift),

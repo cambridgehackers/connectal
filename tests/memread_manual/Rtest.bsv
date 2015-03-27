@@ -54,7 +54,7 @@ module mkRtest#(RtestIndication indication) (Rtest);
    Reg#(Bit#(32))   itersToStart <- mkReg(0);
    Reg#(Bit#(32))        srcGens <- mkReg(0);
    Reg#(Bit#(32)) mismatchCounts <- mkReg(0);
-   MemreadEngineV#(64,2,1)        re <- mkMemreadEngine;
+   MemreadEngine#(64,2,1)        re <- mkMemreadEngine;
    Bit#(MemOffsetSize) chunk = extend(numWords)*4;
    
    

@@ -43,7 +43,7 @@ module mkImageonCapture#(Clock imageon_clock, Reset imageon_reset, SerdesData se
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
    // mem capture
-   MemwriteEngineV#(64,1,1) we <- mkMemwriteEngine();
+   MemwriteEngine#(64,1,1) we <- mkMemwriteEngine();
    Reg#(Bool) dmaRun <- mkSyncReg(False, defaultClock, defaultReset, imageon_clock);
    SyncFIFOIfc#(Bit#(64)) synchronizer <- mkSyncBRAMFIFO(10, imageon_clock, imageon_reset, defaultClock, defaultReset);
    rule sync_data if (dmaRun);

@@ -204,7 +204,7 @@ module mkBRAMWriteClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMWriteClient#
    Reg#(Bit#(MemOffsetSize)) off <- mkReg(0);
    Gearbox#(1,nd,Bit#(dsz)) gb <- mk1toNGearbox(clk,rst,clk,rst);
    
-   MemwriteEngine#(busWidth,1) we <- mkMemwriteEngine;
+   MemwriteEngine#(busWidth,1,1) we <- mkMemwriteEngine;
    Bit#(MemOffsetSize) bus_width_in_bytes = fromInteger(valueOf(busWidth)/8);
       
    rule drain_geatbox;

@@ -61,7 +61,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite#(4));
    FIFO#(void)           startFifo <- mkFIFO;
 
    Vector#(4,Reg#(Bit#(32)))      srcGens <- replicateM(mkReg(0));
-   Vector#(4,MemwriteEngine#(64,1))   wes <- replicateM(mkMemwriteEngine);
+   Vector#(4,MemwriteEngine#(64,1,1))   wes <- replicateM(mkMemwriteEngine);
 
    Stmt startStmt = seq
 		       startBase <= 0;
@@ -102,7 +102,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite#(4));
 	    srcGens[i] <= srcGens[i]+2;
       endrule
 
-   function MemWriteClient#(64) dc(MemwriteEngine#(64,1) we) = we.dmaClient;
+   function MemWriteClient#(64) dc(MemwriteEngine#(64,1,1) we) = we.dmaClient;
    interface dmaClients = map(dc,wes);
    interface MemwriteRequest request;
       method Action startWrite(Bit#(32) wp, Bit#(32) ofs, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);

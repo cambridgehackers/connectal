@@ -52,7 +52,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    
    Reg#(Bit#(32))           srcGen <- mkReg(0);
    Reg#(Bit#(32))    mismatchCount <- mkReg(0);
-   MemreadEngine#(64,1)         re <- mkMemreadEngine;
+   MemreadEngine#(64,1,1)         re <- mkMemreadEngine;
 
    let debug = True;
    

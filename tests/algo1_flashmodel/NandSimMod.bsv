@@ -101,8 +101,8 @@ module mkNandSimMod#(NandCfgIndication indication,
    
    let verbose = False;
    
-   MemreadEngineV#(64, memengineOuts,  TAdd#(numSlaves,1))  re <- mkMemreadEngine();
-   MemwriteEngineV#(64, memengineOuts, TAdd#(numSlaves,2))  we <- mkMemwriteEngine();
+   MemreadEngine#(64, memengineOuts,  TAdd#(numSlaves,1))  re <- mkMemreadEngine();
+   MemwriteEngine#(64, memengineOuts, TAdd#(numSlaves,2))  we <- mkMemwriteEngine();
    NandSimControl ns <- mkNandSimControl(nand_ctrl_host_rs, re.read_servers[0],
 					 nand_ctrl_host_ws, we.write_servers[0], we.write_servers[1],
 					 indication);

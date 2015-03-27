@@ -70,7 +70,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    Vector#(NumEngineServers, Reg#(Bit#(32)))       iterCnts <- replicateM(mkReg(0));
    Vector#(NumEngineServers, Reg#(Bit#(32)))   valuesToRead <- replicateM(mkReg(0));
    Vector#(NumEngineServers, Reg#(Bit#(32))) mismatchCounts <- replicateM(mkReg(0));
-   MemreadEngineV#(DataBusWidth,2,NumEngineServers)                re <- mkMemreadEngine;
+   MemreadEngine#(DataBusWidth,2,NumEngineServers)                re <- mkMemreadEngine;
    Vector#(NumEngineServers, FIFOF#(Bit#(32))) mismatchFifos <- replicateM(mkFIFOF);
    Bit#(MemOffsetSize) chunk = (extend(numWords)/fromInteger(valueOf(NumEngineServers)))*4;
    

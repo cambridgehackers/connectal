@@ -574,9 +574,9 @@ endinterface
 
 module  mkDramMatrixMultiply#(HostType host)(DramMatrixMultiply#(N,TMul#(N,32),2));
 
-   MemwriteEngineV#(TMul#(N,32),2, J)   writeEngine <- mkMemwriteEngine();
-   MemreadEngineV#(TMul#(N,32), 2, J) rowReadEngine <- mkMemreadEngineBuff(512);
-   MemreadEngineV#(TMul#(N,32), 2, K) colReadEngine <- mkMemreadEngineBuff(512);
+   MemwriteEngine#(TMul#(N,32),2, J)   writeEngine <- mkMemwriteEngine();
+   MemreadEngine#(TMul#(N,32), 2, J) rowReadEngine <- mkMemreadEngineBuff(512);
+   MemreadEngine#(TMul#(N,32), 2, K) colReadEngine <- mkMemreadEngineBuff(512);
    
    Vector#(J, Server#(MemengineCmd,Bool)) rowReadServers = rowReadEngine.readServers;
    Vector#(K, Server#(MemengineCmd,Bool)) colReadServers = colReadEngine.readServers;

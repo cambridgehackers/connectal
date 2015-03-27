@@ -36,7 +36,7 @@ import Pipe::*;
 import MemUtils::*;
 
 
-module mkMemwriteEngine(MemwriteEngineV#(dataWidth, cmdQDepth, numServers))
+module mkMemwriteEngine(MemwriteEngine#(dataWidth, cmdQDepth, numServers))
    provisos( Mul#(TDiv#(dataWidth, 8), 8, dataWidth)
 	    ,Add#(1, a__, numServers)
 	    ,Add#(b__, TLog#(numServers), TAdd#(1, TLog#(TMul#(cmdQDepth,numServers))))
@@ -159,7 +159,7 @@ module mkBurstFunnel#(Integer maxBurstLen)(BurstFunnel#(k,w))
    interface PipeOut dataOut = toPipeOut(exit_data);
 endmodule
 
-module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth, cmdQDepth, numServers))
+module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngine#(dataWidth, cmdQDepth, numServers))
    provisos ( Div#(dataWidth,8,dataWidthBytes)
 	     ,Mul#(dataWidthBytes,8,dataWidth)
 	     ,Log#(dataWidthBytes,beatShift)

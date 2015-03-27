@@ -61,7 +61,7 @@ module mkMemread#(MemreadIndication indication) (Memread#(4));
    
    Vector#(4,Reg#(Bit#(32)))        srcGens <- replicateM(mkReg(0));
    Vector#(4,Reg#(Bit#(32))) mismatchCounts <- replicateM(mkReg(0));
-   Vector#(4,MemreadEngine#(128,1))      res <- replicateM(mkMemreadEngine);
+   Vector#(4,MemreadEngine#(128,1,1))      res <- replicateM(mkMemreadEngine);
    
    Stmt startStmt = seq
 		       startBase <= 0;
@@ -115,7 +115,7 @@ module mkMemread#(MemreadIndication indication) (Memread#(4));
 	    srcGens[i] <= srcGens[i]+4;
       endrule
    
-   function MemReadClient#(128) dc(MemreadEngine#(128,1) re) = re.dmaClient;
+   function MemReadClient#(128) dc(MemreadEngine#(128,1,1) re) = re.dmaClient;
    interface dmaClients = map(dc,res);
    interface MemreadRequest request;
       method Action startRead(Bit#(32) rp, Bit#(32) off, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
