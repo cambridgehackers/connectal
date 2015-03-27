@@ -39,7 +39,6 @@ import Vector::*;
 import Portal::*;
 import CtrlMux::*;
 import HostInterface::*;
-import MemPortal::*;
 import Connectable::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;

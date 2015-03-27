@@ -26,7 +26,6 @@ import Connectable::*;
 import CtrlMux::*;
 import Portal::*;
 import HostInterface::*;
-import MemPortal::*;
 import BlueNoC::*;
 import BnocPortal::*;
 import BsimLink::*;

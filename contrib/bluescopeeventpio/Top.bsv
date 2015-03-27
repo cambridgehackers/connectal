@@ -23,7 +23,6 @@ import FIFO::*;
 import CtrlMux::*;
 import Portal::*;
 import HostInterface::*;
-import MemPortal::*;
 import BlueScopeEventPIO::*;
 import SignalGen::*;
 import BlueScopeEventPIORequest::*;

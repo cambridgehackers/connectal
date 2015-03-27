@@ -1,4 +1,3 @@
-
 // Copyright (c) 2014 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
@@ -23,8 +22,9 @@
 
 #ifndef _MONKIT_H_
 #define _MONKIT_H_
-
+#include <stdio.h>
 #include <errno.h>
+#include <string.h> // strerrror
 
 class MonkitFile {
  public:

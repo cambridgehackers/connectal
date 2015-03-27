@@ -28,7 +28,6 @@ import Vector::*;
 import CtrlMux::*;
 import Portal::*;
 import MemTypes::*;
-import MemPortal::*;
 import HostInterface::*;
 import MMU::*;
 import MemServer::*;

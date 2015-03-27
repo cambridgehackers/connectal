@@ -45,7 +45,7 @@ import Vector::*;
 import SpecialFIFOs::*;
 import ConnectalMemory::*;
 import Portal::*;
-import MemPortal::*;
+import CtrlMux::*;
 import MemTypes::*;
 import Pipe::*;
 %(extraImports)s
@@ -75,7 +75,7 @@ endinterface
 
 (* synthesize *)
 module %(moduleContext)s mk%(Ifc)sOutputPipes(%(Ifc)sOutputPipes);
-    Vector#(%(channelCount)s, PipeOut#(Bit#(SlaveDataBusWidth))) indicationPipes = newVector();
+    Vector#(%(channelCount)s, PipeOut#(Bit#(SlaveDataBusWidth))) indicationPipes;
 %(indicationMethodRules)s
     PortalInterrupt#(SlaveDataBusWidth) intrInst <- mkPortalInterrupt(indicationPipes);
     interface %(Package)s::%(Ifc)s ifc;
@@ -139,7 +139,7 @@ endinstance
 // exposed wrapper Portal implementation
 (* synthesize *)
 module mk%(Ifc)sInputPipes(%(Ifc)sInputPipes);
-    Vector#(%(channelCount)s, PipeIn#(Bit#(SlaveDataBusWidth))) requestPipeIn = newVector();
+    Vector#(%(channelCount)s, PipeIn#(Bit#(SlaveDataBusWidth))) requestPipeIn;
 %(methodRules)s
     interface PipePortal portalIfc;
         method Bit#(16) messageSize(Bit#(16) methodNumber);
