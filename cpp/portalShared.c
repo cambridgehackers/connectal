@@ -51,15 +51,31 @@ static int init_shared(struct PortalInternal *pint, void *aparam)
         pint->map_base[SHARED_WRITE] = SHARED_START;
         pint->map_base[SHARED_READ] = SHARED_START;
         pint->map_base[SHARED_START] = 0;
-        if (param->dma) {
-            pint->sharedMem = param->dma->reference(fd);
-            MMURequest_setInterface(param->dma->priv.sglDevice, pint->fpga_number, pint->sharedMem);
+        if (param->dma.manager)
+            pint->shared_dma = &param->dma.manager->priv;
+        else if (param->dma.reqinfo) {
+            PortalInternal *psgl = (PortalInternal *)malloc(sizeof(PortalInternal));
+            init_portal_internal(psgl, param->dma.reqport, pint->fpga_tile, NULL,
+                NULL, NULL, NULL, param->dma.reqinfo);
+            DmaManagerPrivate *p = (DmaManagerPrivate *)malloc(sizeof(DmaManagerPrivate));
+            pint->shared_dma = p;
+            DmaManager_init(p, psgl);
+            p->poll = param->dma.poll;
+            p->shared_mmu_indication = (PortalInternal *)malloc(sizeof(PortalInternal));
+            init_portal_internal(p->shared_mmu_indication, param->dma.indport, pint->fpga_tile, param->dma.handler,
+                param->dma.callbackFunctions, NULL, NULL, param->dma.indinfo);
+        }
+        DmaManagerPrivate *p = (DmaManagerPrivate *)pint->shared_dma;
+        if (p) {
+            pint->sharedMem = DmaManager_reference(p, fd);
+            MMURequest_setInterface(p->sglDevice, pint->fpga_number, pint->sharedMem);
         }
         if (param->hardware.setSglId) {
-            PortalInternal pcfg;
-            init_portal_internal(&pcfg, param->hardware.port, pint->fpga_tile, NULL,
+            PortalInternal *p = (PortalInternal *)malloc(sizeof(PortalInternal));
+            pint->shared_cfg = p;
+            init_portal_internal(p, param->hardware.port, pint->fpga_tile, NULL,
                 NULL, NULL, NULL, param->hardware.reqinfo);
-            param->hardware.setSglId(&pcfg, pint->sharedMem);
+            param->hardware.setSglId(p, pint->sharedMem);
         }
     }
     return 0;

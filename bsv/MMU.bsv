@@ -315,6 +315,9 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUIndication mmuIndication)(MMU#(addr
              address:{truncate(pointer),ind}, datain:truncate(addr)});
          if (verbose) $display("mkMMU::sglist pointer=%d pointerIndex=%d addr=%d len=%d", pointer, pointerIndex, addr, len);
    endmethod
+   method Action setInterface(Bit#(32) interfaceId, Bit#(32) sglId);
+       /* this method is only implemented in s/w responders */
+   endmethod
    endinterface
    interface addr = addrServers;
 

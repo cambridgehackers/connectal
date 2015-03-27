@@ -27,7 +27,11 @@ import json, os, sys
 scripthome = os.path.dirname(os.path.abspath(__file__))
 
 def attribute(boardname, name): 
-    boardInfo = json.loads(open(scripthome + '/../boardinfo/' + boardname + '.json').read())
+    filename = scripthome + '/../boardinfo/' + boardname + '.json'
+    if not os.path.exists(filename):
+        print('boardinfo: The boardinfo file for the specified architecture does not exist \'' + boardname + '\'')
+        sys.exit(-1)
+    boardInfo = json.loads(open(filename).read())
     return boardInfo[name]
 
 if __name__=='__main__':

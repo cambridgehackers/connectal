@@ -48,15 +48,16 @@ typedef struct {
   sem_t confSem;
   sem_t sglIdSem;
   uint32_t sglId;
-  PortalInternal *dmaDevice;
   PortalInternal *sglDevice;
   int pa_fd;
+  SHARED_MMUINDICATION_POLL poll;
+  PortalInternal  *shared_mmu_indication;
 } DmaManagerPrivate;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *dmaDevice, PortalInternal *sglDevice);
+void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *sglDevice);
 int DmaManager_reference(DmaManagerPrivate *priv, int fd);
 void DmaManager_dereference(DmaManagerPrivate *priv, int ref);
 void DmaManager_idresp(DmaManagerPrivate *priv, uint32_t sglId);
@@ -73,7 +74,7 @@ class DmaManager
  public:
   DmaManagerPrivate priv;
   DmaManager(PortalInternalCpp *sglDevice) {
-    DmaManager_init(&priv, NULL, &sglDevice->pint);
+    DmaManager_init(&priv, &sglDevice->pint);
   };
   int reference(int fd) {
     return DmaManager_reference(&priv, fd);

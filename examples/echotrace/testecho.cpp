@@ -80,7 +80,7 @@ int main(int argc, const char **argv)
     EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndicationH2S);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H);
     int alloc_sz = 1000;
-    PortalSharedParam param = {NULL, alloc_sz};
+    PortalSharedParam param = {{NULL}, alloc_sz};
     echoRequestTrace = new EchoRequestProxy(IfcNames_EchoRequestS2H, &tracefunc, &param);
 
     int v = 42;

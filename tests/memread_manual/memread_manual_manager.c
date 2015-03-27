@@ -128,7 +128,7 @@ int main(int argc, const char **argv)
   init_portal_internal(&intarr[3], IfcNames_RtestRequest, NULL, NULL, NULL, NULL, RtestRequest_reqinfo);    // fpga4
 
   sem_init(&test_sem, 0, 0);
-  DmaManager_init(&priv, NULL, &intarr[2]);
+  DmaManager_init(&priv, &intarr[2]);
   srcAlloc = portalAlloc(alloc_sz);
   if (rc){
     PORTAL_PRINTF("portal alloc failed rc=%d\n", rc);

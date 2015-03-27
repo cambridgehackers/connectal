@@ -117,7 +117,7 @@ typedef struct PortalInternal {
     struct PortalInternal  *mux;
     int                    muxid;
     int                    busyType;
-    int                    sharedMem;
+    uint32_t               sharedMem;
 #define BUSY_TIMEWAIT 0
 #define BUSY_SPIN     1
 #define BUSY_EXIT     2
@@ -131,13 +131,26 @@ typedef struct PortalInternal {
     void                   *websock;
     void                   *websock_context;
     void                   *websock_wsi;
+    void                   *shared_dma;
+    struct PortalInternal  *shared_cfg;
     int                    poller_register;
 } PortalInternal;
 
+#define SHARED_DMA(REQPORTALNAME, INDPORTALNAME) {NULL, (REQPORTALNAME), MMURequest_reqinfo, (INDPORTALNAME), MMUIndication_reqinfo, MMUIndication_handleMessage, (void *)&manualMMU_Cb, manualWaitForResp}
 #define SHARED_HARDWARE(PORTALNAME) {(PORTALNAME), SharedMemoryPortalConfig_reqinfo, SharedMemoryPortalConfig_setSglId}
 typedef int (*SHARED_CONFIG_SETSGLID)(struct PortalInternal *, const uint32_t sglId);
+typedef int (*SHARED_MMUINDICATION_POLL)(PortalInternal *p, uint32_t *arg_id);
 typedef struct {
-    struct DmaManager *dma;
+    struct {
+        struct DmaManager *manager;
+        int reqport;
+        int reqinfo;
+        int indport;
+        int indinfo;
+        PORTAL_INDFUNC     handler;
+        void              *callbackFunctions;
+        SHARED_MMUINDICATION_POLL poll;
+    } dma;
     uint32_t    size;
     struct {
         int port;

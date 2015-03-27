@@ -23,6 +23,7 @@
 #include "StdDmaIndication.h"
 #include "dmaManager.h"
 #include "MMURequest.h"
+#include "manualMMUIndication.h"
 
 #if 1
 #define TEST_ASSERT(A) assert(A)
@@ -136,9 +137,11 @@ int main(int argc, const char **argv)
     DmaManager *dma = new DmaManager(dmap);
     MMUIndication *mIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
 
-    PortalSharedParam parami = {dma, alloc_sz, SHARED_HARDWARE(IfcNames_SimpleRequestPipesH2S)};
+//#define FF {dma}
+#define FF SHARED_DMA(IfcNames_MMURequestS2H, IfcNames_MMUIndicationH2S)
+    PortalSharedParam parami = {FF, alloc_sz, SHARED_HARDWARE(IfcNames_SimpleRequestPipesH2S)};
     Simple *indication = new Simple(IfcNames_SimpleRequestH2S, numtimes, &sharedfunc, &parami);
-    PortalSharedParam paramr = {dma, alloc_sz, SHARED_HARDWARE(IfcNames_SimpleRequestPipesS2H)};
+    PortalSharedParam paramr = {FF, alloc_sz, SHARED_HARDWARE(IfcNames_SimpleRequestPipesS2H)};
     SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequestS2H, &sharedfunc, &paramr);
 
     for (int i = 0; i < numtimes; i++) {
