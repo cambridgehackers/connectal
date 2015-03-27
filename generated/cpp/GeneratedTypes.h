@@ -4,7 +4,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-typedef enum IfcNames { IfcNames_MemreadIndication, IfcNames_MemreadRequest, IfcNames_HostMemServerIndication, IfcNames_HostMemServerRequest, IfcNames_HostMMURequest, IfcNames_HostMMUIndication } IfcNames;
+typedef enum IfcNames { IfcNames_RtestIndication, IfcNames_RtestRequest, IfcNames_HostMemServerIndication, IfcNames_HostMemServerRequest, IfcNames_HostMMURequest, IfcNames_HostMMUIndication } IfcNames;
 typedef enum ChannelType { ChannelType_Read, ChannelType_Write } ChannelType;
 typedef struct DmaDbgRec {
     uint32_t x : 32;
@@ -12,39 +12,108 @@ typedef struct DmaDbgRec {
     uint32_t z : 32;
     uint32_t w : 32;
 } DmaDbgRec;
-typedef enum DmaErrorType { DmaErrorType_DmaErrorNone, DmaErrorType_DmaErrorSGLIdOutOfRange_r, DmaErrorType_DmaErrorSGLIdOutOfRange_w, DmaErrorType_DmaErrorMMUOutOfRange_r, DmaErrorType_DmaErrorMMUOutOfRange_w, DmaErrorType_DmaErrorOffsetOutOfRange, DmaErrorType_DmaErrorSGLIdInvalid } DmaErrorType;
+typedef enum DmaErrorType { DmaErrorType_DmaErrorNone, DmaErrorType_DmaErrorSGLIdOutOfRange_r, DmaErrorType_DmaErrorSGLIdOutOfRange_w, DmaErrorType_DmaErrorMMUOutOfRange_r, DmaErrorType_DmaErrorMMUOutOfRange_w, DmaErrorType_DmaErrorOffsetOutOfRange, DmaErrorType_DmaErrorSGLIdInvalid, DmaErrorType_DmaErrorTileTagOutOfRange } DmaErrorType;
+typedef uint32_t SpecialTypeForSendingFd;
 
 
-int MemreadRequest_startRead ( struct PortalInternal *p, const uint32_t pointer, const uint32_t numWords, const uint32_t burstLen, const uint32_t iterCnt );
-enum { CHAN_NUM_MemreadRequest_startRead};
-#define MemreadRequest_reqinfo 0x10014
+int RtestRequest_startRead ( struct PortalInternal *p, const uint32_t pointer, const uint32_t numWords, const uint32_t burstLen, const uint32_t iterCnt );
+enum { CHAN_NUM_RtestRequest_startRead};
+#define RtestRequest_reqinfo 0x10014
 
-int MemreadRequest_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
 typedef struct {
-    void (*startRead) (  struct PortalInternal *p, const uint32_t pointer, const uint32_t numWords, const uint32_t burstLen, const uint32_t iterCnt );
-} MemreadRequestCb;
-
-int MemreadIndication_readDone ( struct PortalInternal *p, const uint32_t mismatchCount );
-enum { CHAN_NUM_MemreadIndication_readDone};
-#define MemreadIndication_reqinfo 0x10008
-
-int MemreadIndication_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
+    uint32_t pointer;
+    uint32_t numWords;
+    uint32_t burstLen;
+    uint32_t iterCnt;
+} RtestRequest_startReadData;
+typedef union {
+    RtestRequest_startReadData startRead;
+} RtestRequestData;
+int RtestRequest_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
 typedef struct {
-    void (*readDone) (  struct PortalInternal *p, const uint32_t mismatchCount );
-} MemreadIndicationCb;
+    int (*startRead) (  struct PortalInternal *p, const uint32_t pointer, const uint32_t numWords, const uint32_t burstLen, const uint32_t iterCnt );
+} RtestRequestCb;
+extern RtestRequestCb RtestRequestProxyReq;
 
+int RtestRequestJson_startRead ( struct PortalInternal *p, const uint32_t pointer, const uint32_t numWords, const uint32_t burstLen, const uint32_t iterCnt );
+int RtestRequestJson_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
+extern RtestRequestCb RtestRequestJsonProxyReq;
+
+int RtestIndication_readDone ( struct PortalInternal *p, const uint32_t mismatchCount );
+enum { CHAN_NUM_RtestIndication_readDone};
+#define RtestIndication_reqinfo 0x10008
+
+typedef struct {
+    uint32_t mismatchCount;
+} RtestIndication_readDoneData;
+typedef union {
+    RtestIndication_readDoneData readDone;
+} RtestIndicationData;
+int RtestIndication_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
+typedef struct {
+    int (*readDone) (  struct PortalInternal *p, const uint32_t mismatchCount );
+} RtestIndicationCb;
+extern RtestIndicationCb RtestIndicationProxyReq;
+
+int RtestIndicationJson_readDone ( struct PortalInternal *p, const uint32_t mismatchCount );
+int RtestIndicationJson_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
+extern RtestIndicationCb RtestIndicationJsonProxyReq;
+
+int MemServerRequest_stop ( struct PortalInternal *p, const uint8_t tile );
+int MemServerRequest_kill ( struct PortalInternal *p, const uint8_t tile );
+int MemServerRequest_go ( struct PortalInternal *p, const uint8_t tile );
 int MemServerRequest_addrTrans ( struct PortalInternal *p, const uint32_t sglId, const uint32_t offset );
 int MemServerRequest_stateDbg ( struct PortalInternal *p, const ChannelType rc );
 int MemServerRequest_memoryTraffic ( struct PortalInternal *p, const ChannelType rc );
-enum { CHAN_NUM_MemServerRequest_addrTrans,CHAN_NUM_MemServerRequest_stateDbg,CHAN_NUM_MemServerRequest_memoryTraffic};
-#define MemServerRequest_reqinfo 0x3000c
+enum { CHAN_NUM_MemServerRequest_stop,CHAN_NUM_MemServerRequest_kill,CHAN_NUM_MemServerRequest_go,CHAN_NUM_MemServerRequest_addrTrans,CHAN_NUM_MemServerRequest_stateDbg,CHAN_NUM_MemServerRequest_memoryTraffic};
+#define MemServerRequest_reqinfo 0x6000c
 
+typedef struct {
+    uint8_t tile;
+} MemServerRequest_stopData;
+typedef struct {
+    uint8_t tile;
+} MemServerRequest_killData;
+typedef struct {
+    uint8_t tile;
+} MemServerRequest_goData;
+typedef struct {
+    uint32_t sglId;
+    uint32_t offset;
+} MemServerRequest_addrTransData;
+typedef struct {
+    ChannelType rc;
+} MemServerRequest_stateDbgData;
+typedef struct {
+    ChannelType rc;
+} MemServerRequest_memoryTrafficData;
+typedef union {
+    MemServerRequest_stopData stop;
+    MemServerRequest_killData kill;
+    MemServerRequest_goData go;
+    MemServerRequest_addrTransData addrTrans;
+    MemServerRequest_stateDbgData stateDbg;
+    MemServerRequest_memoryTrafficData memoryTraffic;
+} MemServerRequestData;
 int MemServerRequest_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
 typedef struct {
-    void (*addrTrans) (  struct PortalInternal *p, const uint32_t sglId, const uint32_t offset );
-    void (*stateDbg) (  struct PortalInternal *p, const ChannelType rc );
-    void (*memoryTraffic) (  struct PortalInternal *p, const ChannelType rc );
+    int (*stop) (  struct PortalInternal *p, const uint8_t tile );
+    int (*kill) (  struct PortalInternal *p, const uint8_t tile );
+    int (*go) (  struct PortalInternal *p, const uint8_t tile );
+    int (*addrTrans) (  struct PortalInternal *p, const uint32_t sglId, const uint32_t offset );
+    int (*stateDbg) (  struct PortalInternal *p, const ChannelType rc );
+    int (*memoryTraffic) (  struct PortalInternal *p, const ChannelType rc );
 } MemServerRequestCb;
+extern MemServerRequestCb MemServerRequestProxyReq;
+
+int MemServerRequestJson_stop ( struct PortalInternal *p, const uint8_t tile );
+int MemServerRequestJson_kill ( struct PortalInternal *p, const uint8_t tile );
+int MemServerRequestJson_go ( struct PortalInternal *p, const uint8_t tile );
+int MemServerRequestJson_addrTrans ( struct PortalInternal *p, const uint32_t sglId, const uint32_t offset );
+int MemServerRequestJson_stateDbg ( struct PortalInternal *p, const ChannelType rc );
+int MemServerRequestJson_memoryTraffic ( struct PortalInternal *p, const ChannelType rc );
+int MemServerRequestJson_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
+extern MemServerRequestCb MemServerRequestJsonProxyReq;
 
 int MMURequest_sglist ( struct PortalInternal *p, const uint32_t sglId, const uint32_t sglIndex, const uint64_t addr, const uint32_t len );
 int MMURequest_region ( struct PortalInternal *p, const uint32_t sglId, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 );
@@ -54,14 +123,55 @@ int MMURequest_setInterface ( struct PortalInternal *p, const uint32_t interface
 enum { CHAN_NUM_MMURequest_sglist,CHAN_NUM_MMURequest_region,CHAN_NUM_MMURequest_idRequest,CHAN_NUM_MMURequest_idReturn,CHAN_NUM_MMURequest_setInterface};
 #define MMURequest_reqinfo 0x5002c
 
+typedef struct {
+    uint32_t sglId;
+    uint32_t sglIndex;
+    uint64_t addr;
+    uint32_t len;
+} MMURequest_sglistData;
+typedef struct {
+    uint32_t sglId;
+    uint64_t barr8;
+    uint32_t index8;
+    uint64_t barr4;
+    uint32_t index4;
+    uint64_t barr0;
+    uint32_t index0;
+} MMURequest_regionData;
+typedef struct {
+    SpecialTypeForSendingFd fd;
+} MMURequest_idRequestData;
+typedef struct {
+    uint32_t sglId;
+} MMURequest_idReturnData;
+typedef struct {
+    uint32_t interfaceId;
+    uint32_t sglId;
+} MMURequest_setInterfaceData;
+typedef union {
+    MMURequest_sglistData sglist;
+    MMURequest_regionData region;
+    MMURequest_idRequestData idRequest;
+    MMURequest_idReturnData idReturn;
+    MMURequest_setInterfaceData setInterface;
+} MMURequestData;
 int MMURequest_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
 typedef struct {
-    void (*sglist) (  struct PortalInternal *p, const uint32_t sglId, const uint32_t sglIndex, const uint64_t addr, const uint32_t len );
-    void (*region) (  struct PortalInternal *p, const uint32_t sglId, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 );
-    void (*idRequest) (  struct PortalInternal *p, const SpecialTypeForSendingFd fd );
-    void (*idReturn) (  struct PortalInternal *p, const uint32_t sglId );
-    void (*setInterface) (  struct PortalInternal *p, const uint32_t interfaceId, const uint32_t sglId );
+    int (*sglist) (  struct PortalInternal *p, const uint32_t sglId, const uint32_t sglIndex, const uint64_t addr, const uint32_t len );
+    int (*region) (  struct PortalInternal *p, const uint32_t sglId, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 );
+    int (*idRequest) (  struct PortalInternal *p, const SpecialTypeForSendingFd fd );
+    int (*idReturn) (  struct PortalInternal *p, const uint32_t sglId );
+    int (*setInterface) (  struct PortalInternal *p, const uint32_t interfaceId, const uint32_t sglId );
 } MMURequestCb;
+extern MMURequestCb MMURequestProxyReq;
+
+int MMURequestJson_sglist ( struct PortalInternal *p, const uint32_t sglId, const uint32_t sglIndex, const uint64_t addr, const uint32_t len );
+int MMURequestJson_region ( struct PortalInternal *p, const uint32_t sglId, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 );
+int MMURequestJson_idRequest ( struct PortalInternal *p, const SpecialTypeForSendingFd fd );
+int MMURequestJson_idReturn ( struct PortalInternal *p, const uint32_t sglId );
+int MMURequestJson_setInterface ( struct PortalInternal *p, const uint32_t interfaceId, const uint32_t sglId );
+int MMURequestJson_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
+extern MMURequestCb MMURequestJsonProxyReq;
 
 int MemServerIndication_addrResponse ( struct PortalInternal *p, const uint64_t physAddr );
 int MemServerIndication_reportStateDbg ( struct PortalInternal *p, const DmaDbgRec rec );
@@ -70,13 +180,42 @@ int MemServerIndication_error ( struct PortalInternal *p, const uint32_t code, c
 enum { CHAN_NUM_MemServerIndication_addrResponse,CHAN_NUM_MemServerIndication_reportStateDbg,CHAN_NUM_MemServerIndication_reportMemoryTraffic,CHAN_NUM_MemServerIndication_error};
 #define MemServerIndication_reqinfo 0x4001c
 
+typedef struct {
+    uint64_t physAddr;
+} MemServerIndication_addrResponseData;
+typedef struct {
+    DmaDbgRec rec;
+} MemServerIndication_reportStateDbgData;
+typedef struct {
+    uint64_t words;
+} MemServerIndication_reportMemoryTrafficData;
+typedef struct {
+    uint32_t code;
+    uint32_t sglId;
+    uint64_t offset;
+    uint64_t extra;
+} MemServerIndication_errorData;
+typedef union {
+    MemServerIndication_addrResponseData addrResponse;
+    MemServerIndication_reportStateDbgData reportStateDbg;
+    MemServerIndication_reportMemoryTrafficData reportMemoryTraffic;
+    MemServerIndication_errorData error;
+} MemServerIndicationData;
 int MemServerIndication_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
 typedef struct {
-    void (*addrResponse) (  struct PortalInternal *p, const uint64_t physAddr );
-    void (*reportStateDbg) (  struct PortalInternal *p, const DmaDbgRec rec );
-    void (*reportMemoryTraffic) (  struct PortalInternal *p, const uint64_t words );
-    void (*error) (  struct PortalInternal *p, const uint32_t code, const uint32_t sglId, const uint64_t offset, const uint64_t extra );
+    int (*addrResponse) (  struct PortalInternal *p, const uint64_t physAddr );
+    int (*reportStateDbg) (  struct PortalInternal *p, const DmaDbgRec rec );
+    int (*reportMemoryTraffic) (  struct PortalInternal *p, const uint64_t words );
+    int (*error) (  struct PortalInternal *p, const uint32_t code, const uint32_t sglId, const uint64_t offset, const uint64_t extra );
 } MemServerIndicationCb;
+extern MemServerIndicationCb MemServerIndicationProxyReq;
+
+int MemServerIndicationJson_addrResponse ( struct PortalInternal *p, const uint64_t physAddr );
+int MemServerIndicationJson_reportStateDbg ( struct PortalInternal *p, const DmaDbgRec rec );
+int MemServerIndicationJson_reportMemoryTraffic ( struct PortalInternal *p, const uint64_t words );
+int MemServerIndicationJson_error ( struct PortalInternal *p, const uint32_t code, const uint32_t sglId, const uint64_t offset, const uint64_t extra );
+int MemServerIndicationJson_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
+extern MemServerIndicationCb MemServerIndicationJsonProxyReq;
 
 int MMUIndication_idResponse ( struct PortalInternal *p, const uint32_t sglId );
 int MMUIndication_configResp ( struct PortalInternal *p, const uint32_t sglId );
@@ -84,12 +223,36 @@ int MMUIndication_error ( struct PortalInternal *p, const uint32_t code, const u
 enum { CHAN_NUM_MMUIndication_idResponse,CHAN_NUM_MMUIndication_configResp,CHAN_NUM_MMUIndication_error};
 #define MMUIndication_reqinfo 0x3001c
 
+typedef struct {
+    uint32_t sglId;
+} MMUIndication_idResponseData;
+typedef struct {
+    uint32_t sglId;
+} MMUIndication_configRespData;
+typedef struct {
+    uint32_t code;
+    uint32_t sglId;
+    uint64_t offset;
+    uint64_t extra;
+} MMUIndication_errorData;
+typedef union {
+    MMUIndication_idResponseData idResponse;
+    MMUIndication_configRespData configResp;
+    MMUIndication_errorData error;
+} MMUIndicationData;
 int MMUIndication_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
 typedef struct {
-    void (*idResponse) (  struct PortalInternal *p, const uint32_t sglId );
-    void (*configResp) (  struct PortalInternal *p, const uint32_t sglId );
-    void (*error) (  struct PortalInternal *p, const uint32_t code, const uint32_t sglId, const uint64_t offset, const uint64_t extra );
+    int (*idResponse) (  struct PortalInternal *p, const uint32_t sglId );
+    int (*configResp) (  struct PortalInternal *p, const uint32_t sglId );
+    int (*error) (  struct PortalInternal *p, const uint32_t code, const uint32_t sglId, const uint64_t offset, const uint64_t extra );
 } MMUIndicationCb;
+extern MMUIndicationCb MMUIndicationProxyReq;
+
+int MMUIndicationJson_idResponse ( struct PortalInternal *p, const uint32_t sglId );
+int MMUIndicationJson_configResp ( struct PortalInternal *p, const uint32_t sglId );
+int MMUIndicationJson_error ( struct PortalInternal *p, const uint32_t code, const uint32_t sglId, const uint64_t offset, const uint64_t extra );
+int MMUIndicationJson_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
+extern MMUIndicationCb MMUIndicationJsonProxyReq;
 #ifdef __cplusplus
 }
 #endif

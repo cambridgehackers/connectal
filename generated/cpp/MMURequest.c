@@ -64,95 +64,78 @@ int MMURequest_setInterface ( struct PortalInternal *p, const uint32_t interface
     return 0;
 };
 
+MMURequestCb MMURequestProxyReq = {
+    MMURequest_sglist,
+    MMURequest_region,
+    MMURequest_idRequest,
+    MMURequest_idReturn,
+    MMURequest_setInterface,
+};
 int MMURequest_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd)
 {
     static int runaway = 0;
     int tmpfd;
     unsigned int tmp;
+    MMURequestData tempdata;
     volatile unsigned int* temp_working_addr = p->item->mapchannelInd(p, channel);
     switch (channel) {
     case CHAN_NUM_MMURequest_sglist:
-        {
-        uint32_t sglId;
-        uint32_t sglIndex;
-        uint64_t addr;
-        uint32_t len;
+        
         p->item->recv(p, temp_working_addr, 5, &tmpfd);
         tmp = p->item->read(p, &temp_working_addr);
-        sglId = (uint32_t)(((tmp)&0xfffffffful));
+        tempdata.sglist.sglId = (uint32_t)(((tmp)&0xfffffffful));
         tmp = p->item->read(p, &temp_working_addr);
-        sglIndex = (uint32_t)(((tmp)&0xfffffffful));
+        tempdata.sglist.sglIndex = (uint32_t)(((tmp)&0xfffffffful));
         tmp = p->item->read(p, &temp_working_addr);
-        addr = (uint64_t)(((uint64_t)(((tmp)&0xfffffffful))<<32));
+        tempdata.sglist.addr = (uint64_t)(((uint64_t)(((tmp)&0xfffffffful))<<32));
         tmp = p->item->read(p, &temp_working_addr);
-        addr |= (uint64_t)(((tmp)&0xfffffffffffffffful));
+        tempdata.sglist.addr |= (uint64_t)(((tmp)&0xfffffffffffffffful));
         tmp = p->item->read(p, &temp_working_addr);
-        len = (uint32_t)(((tmp)&0xfffffffful));
-        ((MMURequestCb *)p->cb)->sglist(p, sglId, sglIndex, addr, len);
-        }
+        tempdata.sglist.len = (uint32_t)(((tmp)&0xfffffffful));((MMURequestCb *)p->cb)->sglist(p, tempdata.sglist.sglId, tempdata.sglist.sglIndex, tempdata.sglist.addr, tempdata.sglist.len);
         break;
     case CHAN_NUM_MMURequest_region:
-        {
-        uint32_t sglId;
-        uint64_t barr8;
-        uint32_t index8;
-        uint64_t barr4;
-        uint32_t index4;
-        uint64_t barr0;
-        uint32_t index0;
+        
         p->item->recv(p, temp_working_addr, 10, &tmpfd);
         tmp = p->item->read(p, &temp_working_addr);
-        sglId = (uint32_t)(((tmp)&0xfffffffful));
+        tempdata.region.sglId = (uint32_t)(((tmp)&0xfffffffful));
         tmp = p->item->read(p, &temp_working_addr);
-        barr8 = (uint64_t)(((uint64_t)(((tmp)&0xfffffffful))<<32));
+        tempdata.region.barr8 = (uint64_t)(((uint64_t)(((tmp)&0xfffffffful))<<32));
         tmp = p->item->read(p, &temp_working_addr);
-        barr8 |= (uint64_t)(((tmp)&0xfffffffffffffffful));
+        tempdata.region.barr8 |= (uint64_t)(((tmp)&0xfffffffffffffffful));
         tmp = p->item->read(p, &temp_working_addr);
-        index8 = (uint32_t)(((tmp)&0xfffffffful));
+        tempdata.region.index8 = (uint32_t)(((tmp)&0xfffffffful));
         tmp = p->item->read(p, &temp_working_addr);
-        barr4 = (uint64_t)(((uint64_t)(((tmp)&0xfffffffful))<<32));
+        tempdata.region.barr4 = (uint64_t)(((uint64_t)(((tmp)&0xfffffffful))<<32));
         tmp = p->item->read(p, &temp_working_addr);
-        barr4 |= (uint64_t)(((tmp)&0xfffffffffffffffful));
+        tempdata.region.barr4 |= (uint64_t)(((tmp)&0xfffffffffffffffful));
         tmp = p->item->read(p, &temp_working_addr);
-        index4 = (uint32_t)(((tmp)&0xfffffffful));
+        tempdata.region.index4 = (uint32_t)(((tmp)&0xfffffffful));
         tmp = p->item->read(p, &temp_working_addr);
-        barr0 = (uint64_t)(((uint64_t)(((tmp)&0xfffffffful))<<32));
+        tempdata.region.barr0 = (uint64_t)(((uint64_t)(((tmp)&0xfffffffful))<<32));
         tmp = p->item->read(p, &temp_working_addr);
-        barr0 |= (uint64_t)(((tmp)&0xfffffffffffffffful));
+        tempdata.region.barr0 |= (uint64_t)(((tmp)&0xfffffffffffffffful));
         tmp = p->item->read(p, &temp_working_addr);
-        index0 = (uint32_t)(((tmp)&0xfffffffful));
-        ((MMURequestCb *)p->cb)->region(p, sglId, barr8, index8, barr4, index4, barr0, index0);
-        }
+        tempdata.region.index0 = (uint32_t)(((tmp)&0xfffffffful));((MMURequestCb *)p->cb)->region(p, tempdata.region.sglId, tempdata.region.barr8, tempdata.region.index8, tempdata.region.barr4, tempdata.region.index4, tempdata.region.barr0, tempdata.region.index0);
         break;
     case CHAN_NUM_MMURequest_idRequest:
-        {
-        SpecialTypeForSendingFd fd;
+        
         p->item->recv(p, temp_working_addr, 1, &tmpfd);
         tmp = p->item->read(p, &temp_working_addr);
-        fd = messageFd;
-        ((MMURequestCb *)p->cb)->idRequest(p, fd);
-        }
+        tempdata.idRequest.fd = messageFd;((MMURequestCb *)p->cb)->idRequest(p, tempdata.idRequest.fd);
         break;
     case CHAN_NUM_MMURequest_idReturn:
-        {
-        uint32_t sglId;
+        
         p->item->recv(p, temp_working_addr, 1, &tmpfd);
         tmp = p->item->read(p, &temp_working_addr);
-        sglId = (uint32_t)(((tmp)&0xfffffffful));
-        ((MMURequestCb *)p->cb)->idReturn(p, sglId);
-        }
+        tempdata.idReturn.sglId = (uint32_t)(((tmp)&0xfffffffful));((MMURequestCb *)p->cb)->idReturn(p, tempdata.idReturn.sglId);
         break;
     case CHAN_NUM_MMURequest_setInterface:
-        {
-        uint32_t interfaceId;
-        uint32_t sglId;
+        
         p->item->recv(p, temp_working_addr, 2, &tmpfd);
         tmp = p->item->read(p, &temp_working_addr);
-        interfaceId = (uint32_t)(((tmp)&0xfffffffful));
+        tempdata.setInterface.interfaceId = (uint32_t)(((tmp)&0xfffffffful));
         tmp = p->item->read(p, &temp_working_addr);
-        sglId = (uint32_t)(((tmp)&0xfffffffful));
-        ((MMURequestCb *)p->cb)->setInterface(p, interfaceId, sglId);
-        }
+        tempdata.setInterface.sglId = (uint32_t)(((tmp)&0xfffffffful));((MMURequestCb *)p->cb)->setInterface(p, tempdata.setInterface.interfaceId, tempdata.setInterface.sglId);
         break;
     default:
         PORTAL_PRINTF("MMURequest_handleMessage: unknown channel 0x%x\n", channel);
