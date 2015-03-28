@@ -1119,8 +1119,11 @@ if __name__=='__main__':
     t = os.environ.get('BSVDEFINES_LIST')
     if t:
         deflist = t.split()
+    verbose = os.environ.get('V') == '1'
     if os.environ.get('D'):
         parseDebugFlag=True
+    if verbose:
+        parseTrace=True
     generate_bsvcpp(sys.argv[1:], os.environ.get('DTOP'), os.environ.get('DUT_NAME'),
-         deflist, ifitems, os.environ.get('V') == '1')
+         deflist, ifitems, verbose)
 
