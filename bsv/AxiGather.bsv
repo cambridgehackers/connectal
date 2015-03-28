@@ -161,23 +161,23 @@ endmodule
 
 module mkAxi3MasterGather#(Pps7Maxigp axiWires)(AxiMasterCommon);
    AxiMasterWires vtopmw <- mkAxiMasterWires;
-   rule axi_gp_handshake1;
+   rule handshake1;
         axiWires.arready(vtopmw.arready);
    endrule
-   rule axi_gp_handshake2;
+   rule handshake2;
         axiWires.awready(vtopmw.awready);
    endrule
-   rule axi_gp_handshake3;
+   rule handshake3;
         axiWires.rid(vtopmw.rid);
         axiWires.rresp(vtopmw.rresp);
         axiWires.rdata(vtopmw.rdata);
         axiWires.rlast(vtopmw.rlast);
         axiWires.rvalid(vtopmw.rvalid);
    endrule
-   rule axi_gp_handshake4;
+   rule handshake4;
         axiWires.wready(vtopmw.wready);
    endrule
-   rule axi_gp_handshake5;
+   rule handshake5;
         axiWires.bvalid(vtopmw.bvalid);
         axiWires.bid(vtopmw.bid);
         axiWires.bresp(vtopmw.bresp);
@@ -253,7 +253,7 @@ endmodule
 
 module mkAxi3SlaveGather#(Pps7Saxigp axiWires)(AxiSlaveCommon#(32,6));
     AxiSlaveWires#(32,6) vtopsw <- mkAxiSlaveWires;
-    rule axi_gp_handshake11;
+    rule handshake1;
           axiWires.araddr(vtopsw.araddr);
           axiWires.arburst(vtopsw.arburst);
           axiWires.arcache(vtopsw.arcache);
@@ -265,7 +265,7 @@ module mkAxi3SlaveGather#(Pps7Saxigp axiWires)(AxiSlaveCommon#(32,6));
           axiWires.arsize(vtopsw.arsize);
           axiWires.arvalid(vtopsw.arvalid);
     endrule
-    rule axi_gp_handshake12;
+    rule handshake2;
           axiWires.awaddr(vtopsw.awaddr);
           axiWires.awburst(vtopsw.awburst);
           axiWires.awcache(vtopsw.awcache);
@@ -277,17 +277,17 @@ module mkAxi3SlaveGather#(Pps7Saxigp axiWires)(AxiSlaveCommon#(32,6));
           axiWires.awsize(vtopsw.awsize);
           axiWires.awvalid(vtopsw.awvalid);
     endrule
-    rule axi_gp_handshake13;
+    rule handshake3;
          axiWires.rready(vtopsw.rready);
     endrule
-    rule axi_gp_handshake14;
+    rule handshake4;
           axiWires.wid(vtopsw.wid);
           axiWires.wstrb(vtopsw.wstrb);
           axiWires.wdata(vtopsw.wdata);
           axiWires.wlast(vtopsw.wlast);
           axiWires.wvalid(vtopsw.wvalid);
     endrule
-    rule axi_gp_handshake15;
+    rule handshake5;
          axiWires.bready(vtopsw.bready);
     endrule
     interface Axi3Slave server;
@@ -359,7 +359,7 @@ endmodule
 
 module mkAxi3SlaveGather64#(Pps7Saxiacp axiWires)(AxiSlaveCommon#(64,3));
     AxiSlaveWires#(64,3) vtopsw <- mkAxiSlaveWires;
-    rule axi_acp_handshake1;
+    rule handshake1;
           axiWires.araddr(vtopsw.araddr);
           axiWires.arburst(vtopsw.arburst);
           axiWires.arcache(vtopsw.arcache);
@@ -372,7 +372,7 @@ module mkAxi3SlaveGather64#(Pps7Saxiacp axiWires)(AxiSlaveCommon#(64,3));
           axiWires.aruser(vtopsw.aruser);
           axiWires.arvalid(vtopsw.arvalid);
     endrule
-    rule axi_acp_handshake2;
+    rule handshake2;
           axiWires.awaddr(vtopsw.awaddr);
           axiWires.awburst(vtopsw.awburst);
           axiWires.awcache(vtopsw.awcache);
@@ -385,17 +385,17 @@ module mkAxi3SlaveGather64#(Pps7Saxiacp axiWires)(AxiSlaveCommon#(64,3));
           axiWires.awuser(vtopsw.awuser);
           axiWires.awvalid(vtopsw.awvalid);
     endrule
-    rule axi_acp_handshake3;
+    rule handshake3;
          axiWires.rready(vtopsw.rready);
     endrule
-    rule axi_acp_handshake4;
+    rule handshake4;
           axiWires.wid(vtopsw.wid);
           axiWires.wstrb(vtopsw.wstrb);
           axiWires.wdata(vtopsw.wdata);
           axiWires.wlast(vtopsw.wlast);
           axiWires.wvalid(vtopsw.wvalid);
     endrule
-    rule axi_acp_handshake5;
+    rule handshake5;
          axiWires.bready(vtopsw.bready);
     endrule
     interface Axi3Slave server;
@@ -467,7 +467,7 @@ endmodule
 
 module mkAxiSlaveHighSpeedGather#(Pps7Saxihp axiWires)(AxiSlaveHighSpeed);
     AxiSlaveWires#(64,6) vtopsw <- mkAxiSlaveWires;
-    rule axi_hp_handshake1;
+    rule handshake1;
           axiWires.araddr(vtopsw.araddr);
           axiWires.arburst(vtopsw.arburst);
           axiWires.arcache(vtopsw.arcache);
@@ -479,7 +479,7 @@ module mkAxiSlaveHighSpeedGather#(Pps7Saxihp axiWires)(AxiSlaveHighSpeed);
           axiWires.arsize(vtopsw.arsize);
           axiWires.arvalid(vtopsw.arvalid);
     endrule
-    rule axi_hp_handshake2;
+    rule handshake2;
           axiWires.awaddr(vtopsw.awaddr);
           axiWires.awburst(vtopsw.awburst);
           axiWires.awcache(vtopsw.awcache);
@@ -491,17 +491,17 @@ module mkAxiSlaveHighSpeedGather#(Pps7Saxihp axiWires)(AxiSlaveHighSpeed);
           axiWires.awsize(vtopsw.awsize);
           axiWires.awvalid(vtopsw.awvalid);
     endrule
-    rule axi_hp_handshake3;
+    rule handshake3;
        axiWires.rready(vtopsw.rready);
     endrule
-    rule axi_hp_handshake4;
+    rule handshake4;
           axiWires.wid(vtopsw.wid);
           axiWires.wstrb(vtopsw.wstrb);
           axiWires.wdata(vtopsw.wdata);
           axiWires.wlast(vtopsw.wlast);
           axiWires.wvalid(vtopsw.wvalid);
     endrule
-    rule axi_hp_handshake5;
+    rule handshake5;
          axiWires.bready(vtopsw.bready);
     endrule
     rule issuecap;
