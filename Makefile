@@ -383,19 +383,23 @@ zynqdrivers-clean:
 zynqdrivers-install:
 	cp drivers/zynqportal/zynqportal.ko drivers/portalmem/portalmem.ko ../zynq-boot/imagefiles/
 
+RUNPARAMTEMP=$(subst :, ,$(RUNPARAM):5555)
+RUNIP=$(wordlist 1,1,$(RUNPARAMTEMP))
+RUNPORT=$(wordlist 2,2,$(RUNPARAMTEMP))
+
 zynqdrivers-adb:
 	adb connect $(RUNPARAM)
-	adb -s $(RUNPARAM):5555 shell pwd || true
+	adb -s $(RUNIP):$(RUNPORT) shell pwd || true
 	adb connect $(RUNPARAM)
-	adb -s $(RUNPARAM):5555 root || true
+	adb -s $(RUNIP):$(RUNPORT) root || true
 	sleep 1
 	adb connect $(RUNPARAM)
-	adb -s $(RUNPARAM):5555 push drivers/zynqportal/zynqportal.ko /mnt/sdcard
-	adb -s $(RUNPARAM):5555 push drivers/portalmem/portalmem.ko /mnt/sdcard
-	adb -s $(RUNPARAM):5555 shell rmmod zynqportal
-	adb -s $(RUNPARAM):5555 shell rmmod portalmem
-	adb -s $(RUNPARAM):5555 shell insmod /mnt/sdcard/zynqportal.ko
-	adb -s $(RUNPARAM):5555 shell insmod /mnt/sdcard/portalmem.ko
+	adb -s $(RUNIP):$(RUNPORT) push drivers/zynqportal/zynqportal.ko /mnt/sdcard
+	adb -s $(RUNIP):$(RUNPORT) push drivers/portalmem/portalmem.ko /mnt/sdcard
+	adb -s $(RUNIP):$(RUNPORT) shell rmmod zynqportal
+	adb -s $(RUNIP):$(RUNPORT) shell rmmod portalmem
+	adb -s $(RUNIP):$(RUNPORT) shell insmod /mnt/sdcard/zynqportal.ko
+	adb -s $(RUNIP):$(RUNPORT) shell insmod /mnt/sdcard/portalmem.ko
 
 #################################################################################################
 
