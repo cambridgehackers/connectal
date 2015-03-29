@@ -164,7 +164,7 @@ module mkGyroController#(GyroCtrlIndication ind)(GyroController);
    endinterface
    
    interface LEDS leds;
-      method Bit#(LedsWidth) leds() = 0;
+      method Bit#(LedsWidth) leds() = truncate(pack(wrapCnt));
    endinterface
 
    interface SpiPins spi = spiCtrl.pins;

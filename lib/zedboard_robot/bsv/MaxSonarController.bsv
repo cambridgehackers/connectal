@@ -35,15 +35,12 @@ endinterface
 
 interface MaxSonarCtrlRequest;
    method Action pulse_width();
-   method Action set_en(Bit#(32) en);
    method Action range_ctrl(Bit#(1) v);
-   method Action sample(Bit#(32) sgl_id, Bit#(32) alloc_sz);
 endinterface
 
 interface MaxSonarCtrlIndication;
    method Action range_ctrl(Bit#(1) v);
    method Action pulse_width(Bit#(32) v);
-   method Action memwrite_status(Bit#(32) addr, Bit#(32) wrap_cnt);
 endinterface
 
 interface MaxSonarSampleStream;
@@ -54,7 +51,6 @@ interface MaxSonarController;
    interface MaxSonarCtrlRequest req;
    interface MaxSonarPins pins;
    interface LEDS leds;
-   interface MemWriteClient#(64) dmaClient;
 endinterface
 
 module mkMaxSonarController#(MaxSonarCtrlIndication ind)(MaxSonarController);
@@ -63,20 +59,11 @@ module mkMaxSonarController#(MaxSonarCtrlIndication ind)(MaxSonarController);
    Vector#(2,Reg#(Bit#(32))) high_cnt <- replicateM(mkReg(0));
    Reg#(Bit#(1)) last_pulse <- mkReg(0);
    Reg#(Bool) end_pulse <- mkReg(False);
-   Reg#(Bit#(32))  en_memwr   <- mkReg(maxBound);
-   Reg#(Bit#(32))  sampleCnt  <- mkReg(0);
-   Reg#(Bit#(32))  allocSz    <- mkReg(0);
-   Reg#(Bit#(32))  writePtr   <- mkReg(0);
-   Reg#(Bit#(32))  wrapCnt    <- mkReg(0);
-   Reg#(Bit#(32))  sglId      <- mkReg(0);
    FIFO#(Bool)     pw_fifo    <- mkSizedFIFO(1);
-   Reg#(Bit#(8))   wr_reg     <- mkReg(0);
 `ifdef BSIM
    Reg#(Bit#(32))  bsim_cnt   <- mkReg(0);
    Reg#(Bit#(32))  bsim_pulse <- mkReg(0);
 `endif
-   FIFO#(Bit#(8))  wr_queue   <- mkSizedFIFO(1);
-
    let clk <- exposeCurrentClock;
    let rst <- exposeCurrentReset;
    Gearbox#(1,2,Bit#(32)) gb   <- mk1toNGearbox(clk,rst,clk,rst);
@@ -102,16 +89,6 @@ module mkMaxSonarController#(MaxSonarCtrlIndication ind)(MaxSonarController);
    endrule
    
    interface MaxSonarCtrlRequest req;
-      method Action set_en(Bit#(32) en);
-	 en_memwr <= en;
-	 if(en == 0) ind.memwrite_status(writePtr, wrapCnt);
-      endmethod
-      method Action sample(Bit#(32) sgl_id, Bit#(32) alloc_sz);
-	 $display("sample %d %d", sgl_id, alloc_sz);
-	 sampleCnt <= 0;
-	 allocSz <= alloc_sz;
-	 sglId <= sgl_id;
-      endmethod
       method Action range_ctrl(Bit#(1) v);
 	 range_ctrl_reg <= v;
 	 ind.range_ctrl(v);
@@ -142,44 +119,5 @@ module mkMaxSonarController#(MaxSonarCtrlIndication ind)(MaxSonarController);
    interface LEDS leds;
       method Bit#(LedsWidth) leds() = extend(range_ctrl_reg);
    endinterface
-   
-   interface MemWriteClient dmaClient;
-      interface Get writeReq;
-	 method ActionValue#(MemRequest) get if (allocSz > 0 && en_memwr > 0);
-	    Bit#(8) bl = 8;
-	    Bit#(32) new_writePtr = writePtr + extend(bl);
-	    if (new_writePtr >= allocSz) begin
-	       new_writePtr = 0;
-	       bl =  truncate(allocSz-writePtr);
-	       wrapCnt <= wrapCnt+1;
-	       en_memwr <= en_memwr-1;
-	    end
-	    writePtr <= new_writePtr;
-	    if (verbose) $display("writeReq %d", writePtr);
-	    wr_queue.enq(bl);
-	    return MemRequest {sglId:sglId, offset:extend(writePtr), burstLen:bl, tag:0};
-	 endmethod
-      endinterface
-      interface Get writeData;
-	 method ActionValue#(MemData#(64)) get;
-	    gb.deq;
-	    let new_wr_reg = wr_reg-8;
-	    if (wr_reg == 0) begin
-	       let wrv <- toGet(wr_queue).get;
-	       new_wr_reg = wrv-8;
-	    end
-	    wr_reg <= new_wr_reg;
-	    let rv = pack(gb.first);
-	    if(verbose) $display("writeData %h", rv);
-	    return MemData{data:rv, tag:0, last:(new_wr_reg==0)};
-	 endmethod
-      endinterface
-      interface Put writeDone;
-	 method Action put(Bit#(MemTagSize) tag);
-	    if(verbose) $display("writeDone");
-	 endmethod
-      endinterface
-   endinterface
-
    
 endmodule

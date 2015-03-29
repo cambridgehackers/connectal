@@ -28,10 +28,16 @@ import HostInterface::*;
 import HBridgeCtrlRequest::*;
 import HBridgeCtrlIndication::*;
 import HBridgeController::*;
+import Leds::*;
 
 typedef enum {ControllerRequest, ControllerIndication} IfcNames deriving (Eq,Bits);
 
-module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,HBridge2Pins,0));
+interface HBridgeSimplePins;
+   interface HBridge2Pins hbridge;
+   interface LEDS leds;
+endinterface
+
+module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,HBridgeSimplePins,0));
 
    HBridgeCtrlIndicationProxy cp <- mkHBridgeCtrlIndicationProxy(ControllerIndication);
    HBridgeController controller <- mkHBridgeController(cp.ifc);
@@ -45,10 +51,14 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,HBridge2Pins,0));
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
    interface masters = nil;
-   interface pins = controller.pins;
+   interface HBridgeSimplePins pins;
+      interface hbridge = controller.pins;
+      interface leds = controller.leds;
+   endinterface
 
 endmodule : mkConnectalTop
 
 export HBridgeController::*;
+export HBridgeSimplePins;
 export mkConnectalTop;
 

@@ -5,9 +5,9 @@ ZBR_CPP = $(CONNECTALDIR)/lib/zedboard_robot/cpp
 INTERFACES = MaxSonarCtrlRequest MaxSonarCtrlIndication
 BSVFILES = $(ZBR_BSV)/MaxSonarController.bsv Top.bsv 
 CPPFILES= test_maxsonar.cpp $(ZBR_CPP)/read_buffer.cpp
-NUMBER_OF_MASTERS =1
+NUMBER_OF_MASTERS=0
 
-PIN_TYPE = MaxSonarPins
+PIN_TYPE = MaxSonarSimplePins
 PINOUT_FILE = pinout.json
 PIN_BINDINGS = pmod:pmodb
 

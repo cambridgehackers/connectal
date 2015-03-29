@@ -35,10 +35,16 @@ import MemServerIndication::*;
 import MMUIndication::*;
 import GyroController::*;
 import ConnectalSpi::*;
+import Leds::*;
 
 typedef enum {ControllerRequest, ControllerIndication, HostMemServerIndication, HostMemServerRequest, HostMMURequest, HostMMUIndication, SampleStream} IfcNames deriving (Eq,Bits);
 
-module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,SpiPins,1));
+interface GyroSimplePins;
+   interface SpiPins spi;
+   interface LEDS leds;
+endinterface
+
+module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,GyroSimplePins,1));
 
    GyroCtrlIndicationProxy cp <- mkGyroCtrlIndicationProxy(ControllerIndication);
    GyroController controller <- mkGyroController(cp.ifc);
@@ -64,10 +70,14 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,SpiPins,1));
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
    interface masters = dma.masters;
-   interface pins = controller.spi;
+   interface GyroSimplePins pins;
+      interface spi = controller.spi;
+      interface leds = controller.leds;
+   endinterface
 
 endmodule : mkConnectalTop
 
+export GyroSimplePins;
 export GyroController::*;
 export ConnectalSpi::*;
 export mkConnectalTop;

@@ -34,9 +34,14 @@ interface HBridgeCtrlIndication;
    method Action hbc_event(Bit#(32) e);
 endinterface
 
+interface HBridgePins;
+   method Bit#(1) direction();
+   method Bit#(1) enabled();
+endinterface
+
 interface HBridge2Pins;
-   method Bit#(2) hbridge0();
-   method Bit#(2) hbridge1();
+   interface HBridgePins hbridge0;
+   interface HBridgePins hbridge1;
 endinterface
  
 interface HBridgeController;
@@ -54,7 +59,7 @@ module mkHBridgeController#(HBridgeCtrlIndication ind)(HBridgeController);
    Vector#(2, Reg#(Bit#(11)))    power <- replicateM(mkReg(0));
    Vector#(2, Reg#(Bool))           pz <- replicateM(mkReg(True));
    FIFOF#(Bit#(32))         event_fifo <- mkSizedFIFOF(4);
-   Bit#(8) leds_val =  extend({direction[0],direction[1]});  
+   Bit#(8) leds_val =  {enabled[0],enabled[1],1'b0,1'b0,1'b0,1'b0,direction[0],direction[1]};  
    
    // more information on the Digilent PmodHB5:
    // https://digilentinc.com/Data/Products/PMOD-HB5/PmodHB5_RevD_rm.pdf
@@ -99,12 +104,22 @@ module mkHBridgeController#(HBridgeCtrlIndication ind)(HBridgeController);
    endinterface
    
    interface HBridge2Pins pins;
-      method Bit#(2) hbridge0();
-	 return {enabled[0],direction[0]};
-      endmethod
-      method Bit#(2) hbridge1();
-	 return {enabled[1],direction[1]};
-      endmethod
+      interface HBridgePins hbridge0;
+	 method Bit#(1) enabled();
+	    return enabled[0];
+	 endmethod
+	 method Bit#(1) direction();
+	    return direction[0];
+	 endmethod
+      endinterface
+      interface HBridgePins hbridge1;
+	 method Bit#(1) enabled();
+	    return enabled[1];
+	 endmethod
+	 method Bit#(1) direction();
+	    return direction[1];
+	 endmethod
+      endinterface
    endinterface
    
    interface LEDS leds;

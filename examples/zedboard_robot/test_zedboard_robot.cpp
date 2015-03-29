@@ -87,6 +87,8 @@ void* drive_hbridges(void *_x)
 
 int main(int argc, const char **argv)
 {
+
+  // portals communicating between "main" running on the ARM and the logic running in the FPGA
   HBridgeCtrlIndication *hbridge_ind = new HBridgeCtrlIndication(IfcNames_HBridgeControllerIndication);
   HBridgeCtrlRequestProxy *hbridge_ctrl = new HBridgeCtrlRequestProxy(IfcNames_HBridgeControllerRequest);
   MaxSonarCtrlIndication *maxsonar_ind = new MaxSonarCtrlIndication(IfcNames_MaxSonarControllerIndication);
@@ -99,25 +101,29 @@ int main(int argc, const char **argv)
   MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
+  // portals communicating between "main" running on the ARM and SW running on a server somewhere on the network (HOST_SW)
   PortalSocketParam param0;
   int rc0 = getaddrinfo("0.0.0.0", "5000", NULL, &param0.addr);
   GyroSampleStreamProxy *gssp = new GyroSampleStreamProxy(IfcNames_GyroSampleStream, &socketfuncResp, &param0, &GyroSampleStreamJsonProxyReq, 1000);
-
   PortalSocketParam param1;
   int rc1 = getaddrinfo("0.0.0.0", "5001", NULL, &param1.addr);
   MaxSonarSampleStreamProxy *msssp = new MaxSonarSampleStreamProxy(IfcNames_MaxSonarSampleStream, &socketfuncResp, &param1, &MaxSonarSampleStreamJsonProxyReq, 1000);
 
+  // start connectal runtime
   portalExec_start();
 
+  // allocate memory for the gyro controller to write samples to
   int dstAlloc = portalAlloc(alloc_sz);
   char *dstBuffer = (char *)portalMmap(dstAlloc, alloc_sz);
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
 
+  // set design clock frequency (this is important since our PW modulators depend on this number)
   long req_freq = 100000000; // 100 mHz
   long freq = 0;
   setClockFrequency(0, req_freq, &freq);
   fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
   
+  // some nonesense I would like to clean up used by the circular buffer in the gyro controller
   // sample has one two-byte component for each axis (x,y,z).  This is to ensure 
   // that the X component always lands in offset 0 when the HW wraps around
   int sample_size = 6;
@@ -128,9 +134,9 @@ int main(int argc, const char **argv)
   reader* r = new reader();
   //r->verbose = 1;
 
-  // setup gyro registers and dma infra
+  // setup gyro registers and dma infra (setup_registers defined gyro_simple.h)
   setup_registers(gyro_ind,gyro_ctrl, ref_dstAlloc, wrap_limit);  
-  maxsonar_ctrl->range_ctrl(0xFF);
+  maxsonar_ctrl->range_ctrl(1);
   int discard = 20;
 
   // start up the thread to drive the hbridges
@@ -143,19 +149,26 @@ int main(int argc, const char **argv)
 #else
     usleep(50000*2);
 #endif
+    // first read the "current" sonar distance
     maxsonar_ctrl->pulse_width();
     sem_wait(&(maxsonar_ind->pulse_width_sem));
     float distance = ((float)maxsonar_ind->useconds)/147.0;
 
+    // now get the latest window of gyro samples.  begin by disabling gyro writes to the memory buffer
     set_en(gyro_ind,gyro_ctrl, 0);
+    // read the memory from the circular buffer into "snapshot"
     int datalen = r->read_circ_buff(wrap_limit, ref_dstAlloc, dstAlloc, dstBuffer, snapshot, gyro_ind->write_addr, gyro_ind->write_wrap_cnt, 6); 
+    // re-enable the gyro memwrite
     set_en(gyro_ind,gyro_ctrl, 2);
     
     if (!discard){
       if (spew) fprintf(stderr, "(%d microseconds == %f inches)\n", maxsonar_ind->useconds, distance);
       if (spew) display(snapshot, datalen);
-      if(datalen){
+      // 'datalen' corresponds to the amount of "new" samples the gyro controller has written to memory.
+      // if we haven't slept for long enough, this could be zero
+      if(datalen){ 
 	int16_t *ss = (int16_t*)snapshot;
+	// send each sample to the HOST_SW
 	for(int i = 0; i < datalen/2; i+=3){
 	  gssp->sample(ss[i+0], ss[i+1], ss[i+2]);
 	  // this is a bit wasteful, but it simplifies test_zedboard_robot.py
