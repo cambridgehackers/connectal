@@ -64,6 +64,7 @@ int main(int argc, const char **argv)
 
   char* snapshot = (char*)malloc(alloc_sz);
   reader* r = new reader();
+  device->range_ctrl(1);
 
 #ifdef MEM_PATH
   device->sample(ref_dstAlloc, alloc_sz);
