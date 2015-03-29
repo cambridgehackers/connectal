@@ -50,14 +50,23 @@
    -c
    SAXIHP3ACLK
    -i
-   PS7EXTENDED:Pps7Emiocan:Pps7Emioenet:Pps7Emiopjtag:Pps7Emiosdio:Pps7Emiospi:Pps7Emiotrace:Pps7Emiottc:Pps7Emiouart:Pps7Emiousb:Pps7Emiowdt:Pps7Dma
-   ../import_components/Xilinx/Vivado/2013.2/data/parts/xilinx/zynq/zynq.lib
+   PS7EXTENDED:Pps7Emiocan:Pps7Emioenet:Pps7Emiopjtag:Pps7Emiosdio:Pps7Emiospi:Pps7Emiotrace:Pps7Emiottc:Pps7Emiouart:Pps7Emiousb:Pps7Emiowdt:Pps7Dma:Pps7Ftmd:Pps7Ftmt
+   --notdef
+   Pps7Maxigp
+   --notdef
+   Pps7Saxigp
+   --notdef
+   Pps7Saxihp
+   --notdef
+   Pps7Saxiacp
+   ../../import_components/Xilinx/Vivado/2013.2/data/parts/xilinx/zynq/zynq.lib
 */
 
 import Clocks::*;
 import DefaultValue::*;
 import XilinxCells::*;
 import GetPut::*;
+import AxiBits::*;
 
 (* always_ready, always_enabled *)
 interface Pps7Ddr;
@@ -241,6 +250,7 @@ interface Pps7Event;
     method Bit#(2)     standbywfe();
     method Bit#(2)     standbywfi();
 endinterface
+`ifdef PS7EXTENDED
 (* always_ready, always_enabled *)
 interface Pps7Ftmd;
     method Action      traceinatid(Bit#(4) v);
@@ -248,6 +258,8 @@ interface Pps7Ftmd;
     method Action      traceindata(Bit#(32) v);
     method Action      traceinvalid(Bit#(1) v);
 endinterface
+`endif
+`ifdef PS7EXTENDED
 (* always_ready, always_enabled *)
 interface Pps7Ftmt;
     method Action      f2pdebug(Bit#(32) v);
@@ -257,192 +269,17 @@ interface Pps7Ftmt;
     method Bit#(4)     p2ftrig();
     method Action      p2ftrigack(Bit#(4) v);
 endinterface
+`endif
 (* always_ready, always_enabled *)
 interface Pps7Irq;
     method Action      f2p(Bit#(20) v);
     method Bit#(29)     p2f();
 endinterface
 (* always_ready, always_enabled *)
-interface Pps7Maxigp;
-    method Bit#(32)     araddr();
-    method Bit#(2)     arburst();
-    method Bit#(4)     arcache();
-    method Bit#(1)     aresetn();
-    method Bit#(12)     arid();
-    method Bit#(4)     arlen();
-    method Bit#(2)     arlock();
-    method Bit#(3)     arprot();
-    method Bit#(4)     arqos();
-    method Action      arready(Bit#(1) v);
-    method Bit#(2)     arsize();
-    method Bit#(1)     arvalid();
-    method Bit#(32)     awaddr();
-    method Bit#(2)     awburst();
-    method Bit#(4)     awcache();
-    method Bit#(12)     awid();
-    method Bit#(4)     awlen();
-    method Bit#(2)     awlock();
-    method Bit#(3)     awprot();
-    method Bit#(4)     awqos();
-    method Action      awready(Bit#(1) v);
-    method Bit#(2)     awsize();
-    method Bit#(1)     awvalid();
-    method Action      bid(Bit#(12) v);
-    method Bit#(1)     bready();
-    method Action      bresp(Bit#(2) v);
-    method Action      bvalid(Bit#(1) v);
-    method Action      rdata(Bit#(32) v);
-    method Action      rid(Bit#(12) v);
-    method Action      rlast(Bit#(1) v);
-    method Bit#(1)     rready();
-    method Action      rresp(Bit#(2) v);
-    method Action      rvalid(Bit#(1) v);
-    method Bit#(32)     wdata();
-    method Bit#(12)     wid();
-    method Bit#(1)     wlast();
-    method Action      wready(Bit#(1) v);
-    method Bit#(4)     wstrb();
-    method Bit#(1)     wvalid();
-endinterface
-(* always_ready, always_enabled *)
 interface Pps7Ps;
     interface Inout#(Bit#(1))     clk;
     interface Inout#(Bit#(1))     porb;
     interface Inout#(Bit#(1))     srstb;
-endinterface
-(* always_ready, always_enabled *)
-interface Pps7Saxiacp;
-    method Action      araddr(Bit#(32) v);
-    method Action      arburst(Bit#(2) v);
-    method Action      arcache(Bit#(4) v);
-    method Bit#(1)     aresetn();
-    method Action      arid(Bit#(3) v);
-    method Action      arlen(Bit#(4) v);
-    method Action      arlock(Bit#(2) v);
-    method Action      arprot(Bit#(3) v);
-    method Action      arqos(Bit#(4) v);
-    method Bit#(1)     arready();
-    method Action      arsize(Bit#(2) v);
-    method Action      aruser(Bit#(5) v);
-    method Action      arvalid(Bit#(1) v);
-    method Action      awaddr(Bit#(32) v);
-    method Action      awburst(Bit#(2) v);
-    method Action      awcache(Bit#(4) v);
-    method Action      awid(Bit#(3) v);
-    method Action      awlen(Bit#(4) v);
-    method Action      awlock(Bit#(2) v);
-    method Action      awprot(Bit#(3) v);
-    method Action      awqos(Bit#(4) v);
-    method Bit#(1)     awready();
-    method Action      awsize(Bit#(2) v);
-    method Action      awuser(Bit#(5) v);
-    method Action      awvalid(Bit#(1) v);
-    method Bit#(3)     bid();
-    method Action      bready(Bit#(1) v);
-    method Bit#(2)     bresp();
-    method Bit#(1)     bvalid();
-    method Bit#(64)     rdata();
-    method Bit#(3)     rid();
-    method Bit#(1)     rlast();
-    method Action      rready(Bit#(1) v);
-    method Bit#(2)     rresp();
-    method Bit#(1)     rvalid();
-    method Action      wdata(Bit#(64) v);
-    method Action      wid(Bit#(3) v);
-    method Action      wlast(Bit#(1) v);
-    method Bit#(1)     wready();
-    method Action      wstrb(Bit#(8) v);
-    method Action      wvalid(Bit#(1) v);
-endinterface
-(* always_ready, always_enabled *)
-interface Pps7Saxigp;
-    method Action      araddr(Bit#(32) v);
-    method Action      arburst(Bit#(2) v);
-    method Action      arcache(Bit#(4) v);
-    method Bit#(1)     aresetn();
-    method Action      arid(Bit#(6) v);
-    method Action      arlen(Bit#(4) v);
-    method Action      arlock(Bit#(2) v);
-    method Action      arprot(Bit#(3) v);
-    method Action      arqos(Bit#(4) v);
-    method Bit#(1)     arready();
-    method Action      arsize(Bit#(2) v);
-    method Action      arvalid(Bit#(1) v);
-    method Action      awaddr(Bit#(32) v);
-    method Action      awburst(Bit#(2) v);
-    method Action      awcache(Bit#(4) v);
-    method Action      awid(Bit#(6) v);
-    method Action      awlen(Bit#(4) v);
-    method Action      awlock(Bit#(2) v);
-    method Action      awprot(Bit#(3) v);
-    method Action      awqos(Bit#(4) v);
-    method Bit#(1)     awready();
-    method Action      awsize(Bit#(2) v);
-    method Action      awvalid(Bit#(1) v);
-    method Bit#(6)     bid();
-    method Action      bready(Bit#(1) v);
-    method Bit#(2)     bresp();
-    method Bit#(1)     bvalid();
-    method Bit#(32)     rdata();
-    method Bit#(6)     rid();
-    method Bit#(1)     rlast();
-    method Action      rready(Bit#(1) v);
-    method Bit#(2)     rresp();
-    method Bit#(1)     rvalid();
-    method Action      wdata(Bit#(32) v);
-    method Action      wid(Bit#(6) v);
-    method Action      wlast(Bit#(1) v);
-    method Bit#(1)     wready();
-    method Action      wstrb(Bit#(4) v);
-    method Action      wvalid(Bit#(1) v);
-endinterface
-(* always_ready, always_enabled *)
-interface Pps7Saxihp;
-    method Action      araddr(Bit#(32) v);
-    method Action      arburst(Bit#(2) v);
-    method Action      arcache(Bit#(4) v);
-    method Bit#(1)     aresetn();
-    method Action      arid(Bit#(6) v);
-    method Action      arlen(Bit#(4) v);
-    method Action      arlock(Bit#(2) v);
-    method Action      arprot(Bit#(3) v);
-    method Action      arqos(Bit#(4) v);
-    method Bit#(1)     arready();
-    method Action      arsize(Bit#(2) v);
-    method Action      arvalid(Bit#(1) v);
-    method Action      awaddr(Bit#(32) v);
-    method Action      awburst(Bit#(2) v);
-    method Action      awcache(Bit#(4) v);
-    method Action      awid(Bit#(6) v);
-    method Action      awlen(Bit#(4) v);
-    method Action      awlock(Bit#(2) v);
-    method Action      awprot(Bit#(3) v);
-    method Action      awqos(Bit#(4) v);
-    method Bit#(1)     awready();
-    method Action      awsize(Bit#(2) v);
-    method Action      awvalid(Bit#(1) v);
-    method Bit#(6)     bid();
-    method Action      bready(Bit#(1) v);
-    method Bit#(2)     bresp();
-    method Bit#(1)     bvalid();
-    method Bit#(3)     racount();
-    method Bit#(8)     rcount();
-    method Bit#(64)     rdata();
-    method Action      rdissuecap1en(Bit#(1) v);
-    method Bit#(6)     rid();
-    method Bit#(1)     rlast();
-    method Action      rready(Bit#(1) v);
-    method Bit#(2)     rresp();
-    method Bit#(1)     rvalid();
-    method Bit#(6)     wacount();
-    method Bit#(8)     wcount();
-    method Action      wdata(Bit#(64) v);
-    method Action      wid(Bit#(6) v);
-    method Action      wlast(Bit#(1) v);
-    method Bit#(1)     wready();
-    method Action      wrissuecap1en(Bit#(1) v);
-    method Action      wstrb(Bit#(8) v);
-    method Action      wvalid(Bit#(1) v);
 endinterface
 (* always_ready, always_enabled *)
 interface PPS7LIB;
@@ -521,6 +358,8 @@ interface PPS7LIB;
     method Action      fpgaidlen(Bit#(1) v);
 `ifdef PS7EXTENDED
     interface Pps7Ftmd     ftmd;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Ftmt     ftmt;
 `endif
     interface Pps7Irq     irq;
@@ -537,46 +376,46 @@ interface PPS7LIB;
     interface Pps7Saxihp     saxihp3;
 endinterface
 import "BVI" PS7 =
-module mkPPS7LIB#(Clock maxigp0aclk, Reset maxigp0aclk_reset, Clock maxigp1aclk, Reset maxigp1aclk_reset, Clock saxiacpaclk, Reset saxiacpaclk_reset, Clock saxigp0aclk, Reset saxigp0aclk_reset, Clock saxigp1aclk, Reset saxigp1aclk_reset, Clock saxihp0aclk, Reset saxihp0aclk_reset, Clock saxihp1aclk, Reset saxihp1aclk_reset, Clock saxihp2aclk, Reset saxihp2aclk_reset, Clock saxihp3aclk, Reset saxihp3aclk_reset)(PPS7LIB);
+module mkPPS7LIB#(Clock maxigp0aclk, Clock maxigp1aclk, Clock saxiacpaclk, Clock saxigp0aclk, Clock saxigp1aclk, Clock saxihp0aclk, Clock saxihp1aclk, Clock saxihp2aclk, Clock saxihp3aclk, Reset maxigp0aclk_reset, Reset maxigp1aclk_reset, Reset saxiacpaclk_reset, Reset saxigp0aclk_reset, Reset saxigp1aclk_reset, Reset saxihp0aclk_reset, Reset saxihp1aclk_reset, Reset saxihp2aclk_reset, Reset saxihp3aclk_reset)(PPS7LIB);
     default_clock clk();
     default_reset rst();
         input_clock maxigp0aclk(MAXIGP0ACLK) = maxigp0aclk;
-        input_reset maxigp0aclk_reset() = maxigp0aclk_reset;
+        input_reset maxigp0aclk_reset() = maxigp0aclk_reset; /* from clock*/
         input_clock maxigp1aclk(MAXIGP1ACLK) = maxigp1aclk;
-        input_reset maxigp1aclk_reset() = maxigp1aclk_reset;
+        input_reset maxigp1aclk_reset() = maxigp1aclk_reset; /* from clock*/
         input_clock saxiacpaclk(SAXIACPACLK) = saxiacpaclk;
-        input_reset saxiacpaclk_reset() = saxiacpaclk_reset;
+        input_reset saxiacpaclk_reset() = saxiacpaclk_reset; /* from clock*/
         input_clock saxigp0aclk(SAXIGP0ACLK) = saxigp0aclk;
-        input_reset saxigp0aclk_reset() = saxigp0aclk_reset;
+        input_reset saxigp0aclk_reset() = saxigp0aclk_reset; /* from clock*/
         input_clock saxigp1aclk(SAXIGP1ACLK) = saxigp1aclk;
-        input_reset saxigp1aclk_reset() = saxigp1aclk_reset;
+        input_reset saxigp1aclk_reset() = saxigp1aclk_reset; /* from clock*/
         input_clock saxihp0aclk(SAXIHP0ACLK) = saxihp0aclk;
-        input_reset saxihp0aclk_reset() = saxihp0aclk_reset;
+        input_reset saxihp0aclk_reset() = saxihp0aclk_reset; /* from clock*/
         input_clock saxihp1aclk(SAXIHP1ACLK) = saxihp1aclk;
-        input_reset saxihp1aclk_reset() = saxihp1aclk_reset;
+        input_reset saxihp1aclk_reset() = saxihp1aclk_reset; /* from clock*/
         input_clock saxihp2aclk(SAXIHP2ACLK) = saxihp2aclk;
-        input_reset saxihp2aclk_reset() = saxihp2aclk_reset;
+        input_reset saxihp2aclk_reset() = saxihp2aclk_reset; /* from clock*/
         input_clock saxihp3aclk(SAXIHP3ACLK) = saxihp3aclk;
-        input_reset saxihp3aclk_reset() = saxihp3aclk_reset;
+        input_reset saxihp3aclk_reset() = saxihp3aclk_reset; /* from clock*/
     interface Pps7Ddr     ddr;
-        ifc_inout a(DDRA) clocked_by(no_clock) reset_by(no_reset);
+        ifc_inout a(DDRA);
         method arb(DDRARB) enable((*inhigh*) EN_DDRARB);
-        ifc_inout ba(DDRBA) clocked_by(no_clock) reset_by(no_reset);
-        ifc_inout casb(DDRCASB) clocked_by(no_clock) reset_by(no_reset);
-        ifc_inout cke(DDRCKE) clocked_by(no_clock) reset_by(no_reset);
-        ifc_inout ckn(DDRCKN) clocked_by(no_clock) reset_by(no_reset);
-        ifc_inout ckp(DDRCKP) clocked_by(no_clock) reset_by(no_reset);
-        ifc_inout csb(DDRCSB) clocked_by(no_clock) reset_by(no_reset);
-        ifc_inout dm(DDRDM) clocked_by(no_clock) reset_by(no_reset);
-        ifc_inout dq(DDRDQ) clocked_by(no_clock) reset_by(no_reset);
-        ifc_inout dqsn(DDRDQSN) clocked_by(no_clock) reset_by(no_reset);
-        ifc_inout dqsp(DDRDQSP) clocked_by(no_clock) reset_by(no_reset);
-        ifc_inout drstb(DDRDRSTB) clocked_by(no_clock) reset_by(no_reset);
-        ifc_inout odt(DDRODT) clocked_by(no_clock) reset_by(no_reset);
-        ifc_inout rasb(DDRRASB) clocked_by(no_clock) reset_by(no_reset);
-        ifc_inout vrn(DDRVRN) clocked_by(no_clock) reset_by(no_reset);
-        ifc_inout vrp(DDRVRP) clocked_by(no_clock) reset_by(no_reset);
-        ifc_inout web(DDRWEB) clocked_by(no_clock) reset_by(no_reset);
+        ifc_inout ba(DDRBA);
+        ifc_inout casb(DDRCASB);
+        ifc_inout cke(DDRCKE);
+        ifc_inout ckn(DDRCKN);
+        ifc_inout ckp(DDRCKP);
+        ifc_inout csb(DDRCSB);
+        ifc_inout dm(DDRDM);
+        ifc_inout dq(DDRDQ);
+        ifc_inout dqsn(DDRDQSN);
+        ifc_inout dqsp(DDRDQSP);
+        ifc_inout drstb(DDRDRSTB);
+        ifc_inout odt(DDRODT);
+        ifc_inout rasb(DDRRASB);
+        ifc_inout vrn(DDRVRN);
+        ifc_inout vrp(DDRVRP);
+        ifc_inout web(DDRWEB);
     endinterface
 `ifdef PS7EXTENDED
     interface Pps7Dma     dma0;
@@ -877,6 +716,8 @@ module mkPPS7LIB#(Clock maxigp0aclk, Reset maxigp0aclk_reset, Clock maxigp1aclk,
         method traceindata(FTMDTRACEINDATA) enable((*inhigh*) EN_FTMDTRACEINDATA);
         method traceinvalid(FTMDTRACEINVALID) enable((*inhigh*) EN_FTMDTRACEINVALID);
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Ftmt     ftmt;
         method f2pdebug(FTMTF2PDEBUG) enable((*inhigh*) EN_FTMTF2PDEBUG);
         method f2ptrig(FTMTF2PTRIG) enable((*inhigh*) EN_FTMTF2PTRIG);
@@ -972,11 +813,11 @@ module mkPPS7LIB#(Clock maxigp0aclk, Reset maxigp0aclk_reset, Clock maxigp1aclk,
         method MAXIGP1WSTRB wstrb() clocked_by (maxigp1aclk) reset_by (maxigp1aclk_reset);
         method MAXIGP1WVALID wvalid() clocked_by (maxigp1aclk) reset_by (maxigp1aclk_reset);
     endinterface
-    ifc_inout mio(MIO) clocked_by (no_clock) reset_by (no_reset);
+    ifc_inout mio(MIO);
     interface Pps7Ps     ps;
-        ifc_inout clk(PSCLK) clocked_by (no_clock) reset_by (no_reset);
-        ifc_inout porb(PSPORB) clocked_by (no_clock) reset_by (no_reset);
-        ifc_inout srstb(PSSRSTB) clocked_by (no_clock) reset_by (no_reset);
+        ifc_inout clk(PSCLK);
+        ifc_inout porb(PSPORB);
+        ifc_inout srstb(PSSRSTB);
     endinterface
     interface Pps7Saxiacp     saxiacp;
         method araddr(SAXIACPARADDR) clocked_by (saxiacpaclk) reset_by (saxiacpaclk_reset) enable((*inhigh*) EN_SAXIACPARADDR);
@@ -990,7 +831,6 @@ module mkPPS7LIB#(Clock maxigp0aclk, Reset maxigp0aclk_reset, Clock maxigp1aclk,
         method arqos(SAXIACPARQOS) clocked_by (saxiacpaclk) reset_by (saxiacpaclk_reset) enable((*inhigh*) EN_SAXIACPARQOS);
         method SAXIACPARREADY arready() clocked_by (saxiacpaclk) reset_by (saxiacpaclk_reset);
         method arsize(SAXIACPARSIZE) clocked_by (saxiacpaclk) reset_by (saxiacpaclk_reset) enable((*inhigh*) EN_SAXIACPARSIZE);
-        method aruser(SAXIACPARUSER) clocked_by (saxiacpaclk) reset_by (saxiacpaclk_reset) enable((*inhigh*) EN_SAXIACPARUSER);
         method arvalid(SAXIACPARVALID) clocked_by (saxiacpaclk) reset_by (saxiacpaclk_reset) enable((*inhigh*) EN_SAXIACPARVALID);
         method awaddr(SAXIACPAWADDR) clocked_by (saxiacpaclk) reset_by (saxiacpaclk_reset) enable((*inhigh*) EN_SAXIACPAWADDR);
         method awburst(SAXIACPAWBURST) clocked_by (saxiacpaclk) reset_by (saxiacpaclk_reset) enable((*inhigh*) EN_SAXIACPAWBURST);
@@ -1002,7 +842,10 @@ module mkPPS7LIB#(Clock maxigp0aclk, Reset maxigp0aclk_reset, Clock maxigp1aclk,
         method awqos(SAXIACPAWQOS) clocked_by (saxiacpaclk) reset_by (saxiacpaclk_reset) enable((*inhigh*) EN_SAXIACPAWQOS);
         method SAXIACPAWREADY awready() clocked_by (saxiacpaclk) reset_by (saxiacpaclk_reset);
         method awsize(SAXIACPAWSIZE) clocked_by (saxiacpaclk) reset_by (saxiacpaclk_reset) enable((*inhigh*) EN_SAXIACPAWSIZE);
+interface ACPType extra;
+        method aruser(SAXIACPARUSER) clocked_by (saxiacpaclk) reset_by (saxiacpaclk_reset) enable((*inhigh*) EN_SAXIACPARUSER);
         method awuser(SAXIACPAWUSER) clocked_by (saxiacpaclk) reset_by (saxiacpaclk_reset) enable((*inhigh*) EN_SAXIACPAWUSER);
+endinterface
         method awvalid(SAXIACPAWVALID) clocked_by (saxiacpaclk) reset_by (saxiacpaclk_reset) enable((*inhigh*) EN_SAXIACPAWVALID);
         method SAXIACPBID bid() clocked_by (saxiacpaclk) reset_by (saxiacpaclk_reset);
         method bready(SAXIACPBREADY) clocked_by (saxiacpaclk) reset_by (saxiacpaclk_reset) enable((*inhigh*) EN_SAXIACPBREADY);
@@ -1131,22 +974,24 @@ module mkPPS7LIB#(Clock maxigp0aclk, Reset maxigp0aclk_reset, Clock maxigp1aclk,
         method bready(SAXIHP0BREADY) clocked_by (saxihp0aclk) reset_by (saxihp0aclk_reset) enable((*inhigh*) EN_SAXIHP0BREADY);
         method SAXIHP0BRESP bresp() clocked_by (saxihp0aclk) reset_by (saxihp0aclk_reset);
         method SAXIHP0BVALID bvalid() clocked_by (saxihp0aclk) reset_by (saxihp0aclk_reset);
-        method SAXIHP0RACOUNT racount() clocked_by (saxihp0aclk) reset_by (saxihp0aclk_reset);
-        method SAXIHP0RCOUNT rcount() clocked_by (saxihp0aclk) reset_by (saxihp0aclk_reset);
         method SAXIHP0RDATA rdata() clocked_by (saxihp0aclk) reset_by (saxihp0aclk_reset);
-        method rdissuecap1en(SAXIHP0RDISSUECAP1EN) clocked_by (saxihp0aclk) reset_by (saxihp0aclk_reset) enable((*inhigh*) EN_SAXIHP0RDISSUECAP1EN);
         method SAXIHP0RID rid() clocked_by (saxihp0aclk) reset_by (saxihp0aclk_reset);
         method SAXIHP0RLAST rlast() clocked_by (saxihp0aclk) reset_by (saxihp0aclk_reset);
         method rready(SAXIHP0RREADY) clocked_by (saxihp0aclk) reset_by (saxihp0aclk_reset) enable((*inhigh*) EN_SAXIHP0RREADY);
         method SAXIHP0RRESP rresp() clocked_by (saxihp0aclk) reset_by (saxihp0aclk_reset);
         method SAXIHP0RVALID rvalid() clocked_by (saxihp0aclk) reset_by (saxihp0aclk_reset);
+interface HPType extra;
+        method rdissuecap1en(SAXIHP0RDISSUECAP1EN) clocked_by (saxihp0aclk) reset_by (saxihp0aclk_reset) enable((*inhigh*) EN_SAXIHP0RDISSUECAP1EN);
+        method SAXIHP0RACOUNT racount() clocked_by (saxihp0aclk) reset_by (saxihp0aclk_reset);
+        method SAXIHP0RCOUNT rcount() clocked_by (saxihp0aclk) reset_by (saxihp0aclk_reset);
         method SAXIHP0WACOUNT wacount() clocked_by (saxihp0aclk) reset_by (saxihp0aclk_reset);
         method SAXIHP0WCOUNT wcount() clocked_by (saxihp0aclk) reset_by (saxihp0aclk_reset);
+        method wrissuecap1en(SAXIHP0WRISSUECAP1EN) clocked_by (saxihp0aclk) reset_by (saxihp0aclk_reset) enable((*inhigh*) EN_SAXIHP0WRISSUECAP1EN);
+endinterface
         method wdata(SAXIHP0WDATA) clocked_by (saxihp0aclk) reset_by (saxihp0aclk_reset) enable((*inhigh*) EN_SAXIHP0WDATA);
         method wid(SAXIHP0WID) clocked_by (saxihp0aclk) reset_by (saxihp0aclk_reset) enable((*inhigh*) EN_SAXIHP0WID);
         method wlast(SAXIHP0WLAST) clocked_by (saxihp0aclk) reset_by (saxihp0aclk_reset) enable((*inhigh*) EN_SAXIHP0WLAST);
         method SAXIHP0WREADY wready() clocked_by (saxihp0aclk) reset_by (saxihp0aclk_reset);
-        method wrissuecap1en(SAXIHP0WRISSUECAP1EN) clocked_by (saxihp0aclk) reset_by (saxihp0aclk_reset) enable((*inhigh*) EN_SAXIHP0WRISSUECAP1EN);
         method wstrb(SAXIHP0WSTRB) clocked_by (saxihp0aclk) reset_by (saxihp0aclk_reset) enable((*inhigh*) EN_SAXIHP0WSTRB);
         method wvalid(SAXIHP0WVALID) clocked_by (saxihp0aclk) reset_by (saxihp0aclk_reset) enable((*inhigh*) EN_SAXIHP0WVALID);
     endinterface
@@ -1178,22 +1023,24 @@ module mkPPS7LIB#(Clock maxigp0aclk, Reset maxigp0aclk_reset, Clock maxigp1aclk,
         method bready(SAXIHP1BREADY) clocked_by (saxihp1aclk) reset_by (saxihp1aclk_reset) enable((*inhigh*) EN_SAXIHP1BREADY);
         method SAXIHP1BRESP bresp() clocked_by (saxihp1aclk) reset_by (saxihp1aclk_reset);
         method SAXIHP1BVALID bvalid() clocked_by (saxihp1aclk) reset_by (saxihp1aclk_reset);
-        method SAXIHP1RACOUNT racount() clocked_by (saxihp1aclk) reset_by (saxihp1aclk_reset);
-        method SAXIHP1RCOUNT rcount() clocked_by (saxihp1aclk) reset_by (saxihp1aclk_reset);
         method SAXIHP1RDATA rdata() clocked_by (saxihp1aclk) reset_by (saxihp1aclk_reset);
-        method rdissuecap1en(SAXIHP1RDISSUECAP1EN) clocked_by (saxihp1aclk) reset_by (saxihp1aclk_reset) enable((*inhigh*) EN_SAXIHP1RDISSUECAP1EN);
         method SAXIHP1RID rid() clocked_by (saxihp1aclk) reset_by (saxihp1aclk_reset);
         method SAXIHP1RLAST rlast() clocked_by (saxihp1aclk) reset_by (saxihp1aclk_reset);
         method rready(SAXIHP1RREADY) clocked_by (saxihp1aclk) reset_by (saxihp1aclk_reset) enable((*inhigh*) EN_SAXIHP1RREADY);
         method SAXIHP1RRESP rresp() clocked_by (saxihp1aclk) reset_by (saxihp1aclk_reset);
         method SAXIHP1RVALID rvalid() clocked_by (saxihp1aclk) reset_by (saxihp1aclk_reset);
+interface HPType extra;
+        method rdissuecap1en(SAXIHP1RDISSUECAP1EN) clocked_by (saxihp1aclk) reset_by (saxihp1aclk_reset) enable((*inhigh*) EN_SAXIHP1RDISSUECAP1EN);
+        method SAXIHP1RACOUNT racount() clocked_by (saxihp1aclk) reset_by (saxihp1aclk_reset);
+        method SAXIHP1RCOUNT rcount() clocked_by (saxihp1aclk) reset_by (saxihp1aclk_reset);
         method SAXIHP1WACOUNT wacount() clocked_by (saxihp1aclk) reset_by (saxihp1aclk_reset);
         method SAXIHP1WCOUNT wcount() clocked_by (saxihp1aclk) reset_by (saxihp1aclk_reset);
+        method wrissuecap1en(SAXIHP1WRISSUECAP1EN) clocked_by (saxihp1aclk) reset_by (saxihp1aclk_reset) enable((*inhigh*) EN_SAXIHP1WRISSUECAP1EN);
+endinterface
         method wdata(SAXIHP1WDATA) clocked_by (saxihp1aclk) reset_by (saxihp1aclk_reset) enable((*inhigh*) EN_SAXIHP1WDATA);
         method wid(SAXIHP1WID) clocked_by (saxihp1aclk) reset_by (saxihp1aclk_reset) enable((*inhigh*) EN_SAXIHP1WID);
         method wlast(SAXIHP1WLAST) clocked_by (saxihp1aclk) reset_by (saxihp1aclk_reset) enable((*inhigh*) EN_SAXIHP1WLAST);
         method SAXIHP1WREADY wready() clocked_by (saxihp1aclk) reset_by (saxihp1aclk_reset);
-        method wrissuecap1en(SAXIHP1WRISSUECAP1EN) clocked_by (saxihp1aclk) reset_by (saxihp1aclk_reset) enable((*inhigh*) EN_SAXIHP1WRISSUECAP1EN);
         method wstrb(SAXIHP1WSTRB) clocked_by (saxihp1aclk) reset_by (saxihp1aclk_reset) enable((*inhigh*) EN_SAXIHP1WSTRB);
         method wvalid(SAXIHP1WVALID) clocked_by (saxihp1aclk) reset_by (saxihp1aclk_reset) enable((*inhigh*) EN_SAXIHP1WVALID);
     endinterface
@@ -1225,22 +1072,24 @@ module mkPPS7LIB#(Clock maxigp0aclk, Reset maxigp0aclk_reset, Clock maxigp1aclk,
         method bready(SAXIHP2BREADY) clocked_by (saxihp2aclk) reset_by (saxihp2aclk_reset) enable((*inhigh*) EN_SAXIHP2BREADY);
         method SAXIHP2BRESP bresp() clocked_by (saxihp2aclk) reset_by (saxihp2aclk_reset);
         method SAXIHP2BVALID bvalid() clocked_by (saxihp2aclk) reset_by (saxihp2aclk_reset);
-        method SAXIHP2RACOUNT racount() clocked_by (saxihp2aclk) reset_by (saxihp2aclk_reset);
-        method SAXIHP2RCOUNT rcount() clocked_by (saxihp2aclk) reset_by (saxihp2aclk_reset);
         method SAXIHP2RDATA rdata() clocked_by (saxihp2aclk) reset_by (saxihp2aclk_reset);
-        method rdissuecap1en(SAXIHP2RDISSUECAP1EN) clocked_by (saxihp2aclk) reset_by (saxihp2aclk_reset) enable((*inhigh*) EN_SAXIHP2RDISSUECAP1EN);
         method SAXIHP2RID rid() clocked_by (saxihp2aclk) reset_by (saxihp2aclk_reset);
         method SAXIHP2RLAST rlast() clocked_by (saxihp2aclk) reset_by (saxihp2aclk_reset);
         method rready(SAXIHP2RREADY) clocked_by (saxihp2aclk) reset_by (saxihp2aclk_reset) enable((*inhigh*) EN_SAXIHP2RREADY);
         method SAXIHP2RRESP rresp() clocked_by (saxihp2aclk) reset_by (saxihp2aclk_reset);
         method SAXIHP2RVALID rvalid() clocked_by (saxihp2aclk) reset_by (saxihp2aclk_reset);
+interface HPType extra;
+        method rdissuecap1en(SAXIHP2RDISSUECAP1EN) clocked_by (saxihp2aclk) reset_by (saxihp2aclk_reset) enable((*inhigh*) EN_SAXIHP2RDISSUECAP1EN);
+        method SAXIHP2RACOUNT racount() clocked_by (saxihp2aclk) reset_by (saxihp2aclk_reset);
+        method SAXIHP2RCOUNT rcount() clocked_by (saxihp2aclk) reset_by (saxihp2aclk_reset);
         method SAXIHP2WACOUNT wacount() clocked_by (saxihp2aclk) reset_by (saxihp2aclk_reset);
         method SAXIHP2WCOUNT wcount() clocked_by (saxihp2aclk) reset_by (saxihp2aclk_reset);
+        method wrissuecap1en(SAXIHP2WRISSUECAP1EN) clocked_by (saxihp2aclk) reset_by (saxihp2aclk_reset) enable((*inhigh*) EN_SAXIHP2WRISSUECAP1EN);
+endinterface
         method wdata(SAXIHP2WDATA) clocked_by (saxihp2aclk) reset_by (saxihp2aclk_reset) enable((*inhigh*) EN_SAXIHP2WDATA);
         method wid(SAXIHP2WID) clocked_by (saxihp2aclk) reset_by (saxihp2aclk_reset) enable((*inhigh*) EN_SAXIHP2WID);
         method wlast(SAXIHP2WLAST) clocked_by (saxihp2aclk) reset_by (saxihp2aclk_reset) enable((*inhigh*) EN_SAXIHP2WLAST);
         method SAXIHP2WREADY wready() clocked_by (saxihp2aclk) reset_by (saxihp2aclk_reset);
-        method wrissuecap1en(SAXIHP2WRISSUECAP1EN) clocked_by (saxihp2aclk) reset_by (saxihp2aclk_reset) enable((*inhigh*) EN_SAXIHP2WRISSUECAP1EN);
         method wstrb(SAXIHP2WSTRB) clocked_by (saxihp2aclk) reset_by (saxihp2aclk_reset) enable((*inhigh*) EN_SAXIHP2WSTRB);
         method wvalid(SAXIHP2WVALID) clocked_by (saxihp2aclk) reset_by (saxihp2aclk_reset) enable((*inhigh*) EN_SAXIHP2WVALID);
     endinterface
@@ -1272,28 +1121,38 @@ module mkPPS7LIB#(Clock maxigp0aclk, Reset maxigp0aclk_reset, Clock maxigp1aclk,
         method bready(SAXIHP3BREADY) clocked_by (saxihp3aclk) reset_by (saxihp3aclk_reset) enable((*inhigh*) EN_SAXIHP3BREADY);
         method SAXIHP3BRESP bresp() clocked_by (saxihp3aclk) reset_by (saxihp3aclk_reset);
         method SAXIHP3BVALID bvalid() clocked_by (saxihp3aclk) reset_by (saxihp3aclk_reset);
-        method SAXIHP3RACOUNT racount() clocked_by (saxihp3aclk) reset_by (saxihp3aclk_reset);
-        method SAXIHP3RCOUNT rcount() clocked_by (saxihp3aclk) reset_by (saxihp3aclk_reset);
         method SAXIHP3RDATA rdata() clocked_by (saxihp3aclk) reset_by (saxihp3aclk_reset);
-        method rdissuecap1en(SAXIHP3RDISSUECAP1EN) clocked_by (saxihp3aclk) reset_by (saxihp3aclk_reset) enable((*inhigh*) EN_SAXIHP3RDISSUECAP1EN);
         method SAXIHP3RID rid() clocked_by (saxihp3aclk) reset_by (saxihp3aclk_reset);
         method SAXIHP3RLAST rlast() clocked_by (saxihp3aclk) reset_by (saxihp3aclk_reset);
         method rready(SAXIHP3RREADY) clocked_by (saxihp3aclk) reset_by (saxihp3aclk_reset) enable((*inhigh*) EN_SAXIHP3RREADY);
         method SAXIHP3RRESP rresp() clocked_by (saxihp3aclk) reset_by (saxihp3aclk_reset);
         method SAXIHP3RVALID rvalid() clocked_by (saxihp3aclk) reset_by (saxihp3aclk_reset);
+interface HPType extra;
+        method rdissuecap1en(SAXIHP3RDISSUECAP1EN) clocked_by (saxihp3aclk) reset_by (saxihp3aclk_reset) enable((*inhigh*) EN_SAXIHP3RDISSUECAP1EN);
+        method SAXIHP3RACOUNT racount() clocked_by (saxihp3aclk) reset_by (saxihp3aclk_reset);
+        method SAXIHP3RCOUNT rcount() clocked_by (saxihp3aclk) reset_by (saxihp3aclk_reset);
         method SAXIHP3WACOUNT wacount() clocked_by (saxihp3aclk) reset_by (saxihp3aclk_reset);
         method SAXIHP3WCOUNT wcount() clocked_by (saxihp3aclk) reset_by (saxihp3aclk_reset);
+        method wrissuecap1en(SAXIHP3WRISSUECAP1EN) clocked_by (saxihp3aclk) reset_by (saxihp3aclk_reset) enable((*inhigh*) EN_SAXIHP3WRISSUECAP1EN);
+endinterface
         method wdata(SAXIHP3WDATA) clocked_by (saxihp3aclk) reset_by (saxihp3aclk_reset) enable((*inhigh*) EN_SAXIHP3WDATA);
         method wid(SAXIHP3WID) clocked_by (saxihp3aclk) reset_by (saxihp3aclk_reset) enable((*inhigh*) EN_SAXIHP3WID);
         method wlast(SAXIHP3WLAST) clocked_by (saxihp3aclk) reset_by (saxihp3aclk_reset) enable((*inhigh*) EN_SAXIHP3WLAST);
         method SAXIHP3WREADY wready() clocked_by (saxihp3aclk) reset_by (saxihp3aclk_reset);
-        method wrissuecap1en(SAXIHP3WRISSUECAP1EN) clocked_by (saxihp3aclk) reset_by (saxihp3aclk_reset) enable((*inhigh*) EN_SAXIHP3WRISSUECAP1EN);
         method wstrb(SAXIHP3WSTRB) clocked_by (saxihp3aclk) reset_by (saxihp3aclk_reset) enable((*inhigh*) EN_SAXIHP3WSTRB);
         method wvalid(SAXIHP3WVALID) clocked_by (saxihp3aclk) reset_by (saxihp3aclk_reset) enable((*inhigh*) EN_SAXIHP3WVALID);
     endinterface
 `ifdef PS7EXTENDED
-    schedule (ddr.arb, emiogpio.i, emiogpio.o, emiogpio.tn, emioi2c0.scli, emioi2c0.sclo, emioi2c0.scltn, emioi2c0.sdai, emioi2c0.sdao, emioi2c0.sdatn, emioi2c1.scli, emioi2c1.sclo, emioi2c1.scltn, emioi2c1.sdai, emioi2c1.sdao, emioi2c1.sdatn, emiosramintin, event_.eventi, event_.evento, event_.standbywfe, event_.standbywfi, fclkclk, fclkclktrign, fclkresetn, fpgaidlen, ftmd.traceinatid, ftmd.traceinclock, ftmd.traceindata, ftmd.traceinvalid, ftmt.f2pdebug, ftmt.f2ptrig, ftmt.f2ptrigack, ftmt.p2fdebug, ftmt.p2ftrig, ftmt.p2ftrigack, irq.f2p, irq.p2f, maxigp0.araddr, maxigp0.arburst, maxigp0.arcache, maxigp0.aresetn, maxigp0.arid, maxigp0.arlen, maxigp0.arlock, maxigp0.arprot, maxigp0.arqos, maxigp0.arready, maxigp0.arsize, maxigp0.arvalid, maxigp0.awaddr, maxigp0.awburst, maxigp0.awcache, maxigp0.awid, maxigp0.awlen, maxigp0.awlock, maxigp0.awprot, maxigp0.awqos, maxigp0.awready, maxigp0.awsize, maxigp0.awvalid, maxigp0.bid, maxigp0.bready, maxigp0.bresp, maxigp0.bvalid, maxigp0.rdata, maxigp0.rid, maxigp0.rlast, maxigp0.rready, maxigp0.rresp, maxigp0.rvalid, maxigp0.wdata, maxigp0.wid, maxigp0.wlast, maxigp0.wready, maxigp0.wstrb, maxigp0.wvalid, maxigp1.araddr, maxigp1.arburst, maxigp1.arcache, maxigp1.aresetn, maxigp1.arid, maxigp1.arlen, maxigp1.arlock, maxigp1.arprot, maxigp1.arqos, maxigp1.arready, maxigp1.arsize, maxigp1.arvalid, maxigp1.awaddr, maxigp1.awburst, maxigp1.awcache, maxigp1.awid, maxigp1.awlen, maxigp1.awlock, maxigp1.awprot, maxigp1.awqos, maxigp1.awready, maxigp1.awsize, maxigp1.awvalid, maxigp1.bid, maxigp1.bready, maxigp1.bresp, maxigp1.bvalid, maxigp1.rdata, maxigp1.rid, maxigp1.rlast, maxigp1.rready, maxigp1.rresp, maxigp1.rvalid, maxigp1.wdata, maxigp1.wid, maxigp1.wlast, maxigp1.wready, maxigp1.wstrb, maxigp1.wvalid, saxiacp.araddr, saxiacp.arburst, saxiacp.arcache, saxiacp.aresetn, saxiacp.arid, saxiacp.arlen, saxiacp.arlock, saxiacp.arprot, saxiacp.arqos, saxiacp.arready, saxiacp.arsize, saxiacp.aruser, saxiacp.arvalid, saxiacp.awaddr, saxiacp.awburst, saxiacp.awcache, saxiacp.awid, saxiacp.awlen, saxiacp.awlock, saxiacp.awprot, saxiacp.awqos, saxiacp.awready, saxiacp.awsize, saxiacp.awuser, saxiacp.awvalid, saxiacp.bid, saxiacp.bready, saxiacp.bresp, saxiacp.bvalid, saxiacp.rdata, saxiacp.rid, saxiacp.rlast, saxiacp.rready, saxiacp.rresp, saxiacp.rvalid, saxiacp.wdata, saxiacp.wid, saxiacp.wlast, saxiacp.wready, saxiacp.wstrb, saxiacp.wvalid, saxigp0.araddr, saxigp0.arburst, saxigp0.arcache, saxigp0.aresetn, saxigp0.arid, saxigp0.arlen, saxigp0.arlock, saxigp0.arprot, saxigp0.arqos, saxigp0.arready, saxigp0.arsize, saxigp0.arvalid, saxigp0.awaddr, saxigp0.awburst, saxigp0.awcache, saxigp0.awid, saxigp0.awlen, saxigp0.awlock, saxigp0.awprot, saxigp0.awqos, saxigp0.awready, saxigp0.awsize, saxigp0.awvalid, saxigp0.bid, saxigp0.bready, saxigp0.bresp, saxigp0.bvalid, saxigp0.rdata, saxigp0.rid, saxigp0.rlast, saxigp0.rready, saxigp0.rresp, saxigp0.rvalid, saxigp0.wdata, saxigp0.wid, saxigp0.wlast, saxigp0.wready, saxigp0.wstrb, saxigp0.wvalid, saxigp1.araddr, saxigp1.arburst, saxigp1.arcache, saxigp1.aresetn, saxigp1.arid, saxigp1.arlen, saxigp1.arlock, saxigp1.arprot, saxigp1.arqos, saxigp1.arready, saxigp1.arsize, saxigp1.arvalid, saxigp1.awaddr, saxigp1.awburst, saxigp1.awcache, saxigp1.awid, saxigp1.awlen, saxigp1.awlock, saxigp1.awprot, saxigp1.awqos, saxigp1.awready, saxigp1.awsize, saxigp1.awvalid, saxigp1.bid, saxigp1.bready, saxigp1.bresp, saxigp1.bvalid, saxigp1.rdata, saxigp1.rid, saxigp1.rlast, saxigp1.rready, saxigp1.rresp, saxigp1.rvalid, saxigp1.wdata, saxigp1.wid, saxigp1.wlast, saxigp1.wready, saxigp1.wstrb, saxigp1.wvalid, saxihp0.araddr, saxihp0.arburst, saxihp0.arcache, saxihp0.aresetn, saxihp0.arid, saxihp0.arlen, saxihp0.arlock, saxihp0.arprot, saxihp0.arqos, saxihp0.arready, saxihp0.arsize, saxihp0.arvalid, saxihp0.awaddr, saxihp0.awburst, saxihp0.awcache, saxihp0.awid, saxihp0.awlen, saxihp0.awlock, saxihp0.awprot, saxihp0.awqos, saxihp0.awready, saxihp0.awsize, saxihp0.awvalid, saxihp0.bid, saxihp0.bready, saxihp0.bresp, saxihp0.bvalid, saxihp0.racount, saxihp0.rcount, saxihp0.rdata, saxihp0.rdissuecap1en, saxihp0.rid, saxihp0.rlast, saxihp0.rready, saxihp0.rresp, saxihp0.rvalid, saxihp0.wacount, saxihp0.wcount, saxihp0.wdata, saxihp0.wid, saxihp0.wlast, saxihp0.wready, saxihp0.wrissuecap1en, saxihp0.wstrb, saxihp0.wvalid, saxihp1.araddr, saxihp1.arburst, saxihp1.arcache, saxihp1.aresetn, saxihp1.arid, saxihp1.arlen, saxihp1.arlock, saxihp1.arprot, saxihp1.arqos, saxihp1.arready, saxihp1.arsize, saxihp1.arvalid, saxihp1.awaddr, saxihp1.awburst, saxihp1.awcache, saxihp1.awid, saxihp1.awlen, saxihp1.awlock, saxihp1.awprot, saxihp1.awqos, saxihp1.awready, saxihp1.awsize, saxihp1.awvalid, saxihp1.bid, saxihp1.bready, saxihp1.bresp, saxihp1.bvalid, saxihp1.racount, saxihp1.rcount, saxihp1.rdata, saxihp1.rdissuecap1en, saxihp1.rid, saxihp1.rlast, saxihp1.rready, saxihp1.rresp, saxihp1.rvalid, saxihp1.wacount, saxihp1.wcount, saxihp1.wdata, saxihp1.wid, saxihp1.wlast, saxihp1.wready, saxihp1.wrissuecap1en, saxihp1.wstrb, saxihp1.wvalid, saxihp2.araddr, saxihp2.arburst, saxihp2.arcache, saxihp2.aresetn, saxihp2.arid, saxihp2.arlen, saxihp2.arlock, saxihp2.arprot, saxihp2.arqos, saxihp2.arready, saxihp2.arsize, saxihp2.arvalid, saxihp2.awaddr, saxihp2.awburst, saxihp2.awcache, saxihp2.awid, saxihp2.awlen, saxihp2.awlock, saxihp2.awprot, saxihp2.awqos, saxihp2.awready, saxihp2.awsize, saxihp2.awvalid, saxihp2.bid, saxihp2.bready, saxihp2.bresp, saxihp2.bvalid, saxihp2.racount, saxihp2.rcount, saxihp2.rdata, saxihp2.rdissuecap1en, saxihp2.rid, saxihp2.rlast, saxihp2.rready, saxihp2.rresp, saxihp2.rvalid, saxihp2.wacount, saxihp2.wcount, saxihp2.wdata, saxihp2.wid, saxihp2.wlast, saxihp2.wready, saxihp2.wrissuecap1en, saxihp2.wstrb, saxihp2.wvalid, saxihp3.araddr, saxihp3.arburst, saxihp3.arcache, saxihp3.aresetn, saxihp3.arid, saxihp3.arlen, saxihp3.arlock, saxihp3.arprot, saxihp3.arqos, saxihp3.arready, saxihp3.arsize, saxihp3.arvalid, saxihp3.awaddr, saxihp3.awburst, saxihp3.awcache, saxihp3.awid, saxihp3.awlen, saxihp3.awlock, saxihp3.awprot, saxihp3.awqos, saxihp3.awready, saxihp3.awsize, saxihp3.awvalid, saxihp3.bid, saxihp3.bready, saxihp3.bresp, saxihp3.bvalid, saxihp3.racount, saxihp3.rcount, saxihp3.rdata, saxihp3.rdissuecap1en, saxihp3.rid, saxihp3.rlast, saxihp3.rready, saxihp3.rresp, saxihp3.rvalid, saxihp3.wacount, saxihp3.wcount, saxihp3.wdata, saxihp3.wid, saxihp3.wlast, saxihp3.wready, saxihp3.wrissuecap1en, saxihp3.wstrb, saxihp3.wvalid, dma0.aclk, dma0.daready, dma0.datype, dma0.davalid, dma0.drlast, dma0.drready, dma0.drtype, dma0.drvalid, dma0.rstn, dma1.aclk, dma1.daready, dma1.datype, dma1.davalid, dma1.drlast, dma1.drready, dma1.drtype, dma1.drvalid, dma1.rstn, dma2.aclk, dma2.daready, dma2.datype, dma2.davalid, dma2.drlast, dma2.drready, dma2.drtype, dma2.drvalid, dma2.rstn, dma3.aclk, dma3.daready, dma3.datype, dma3.davalid, dma3.drlast, dma3.drready, dma3.drtype, dma3.drvalid, dma3.rstn, emiocan0.phyrx, emiocan0.phytx, emiocan1.phyrx, emiocan1.phytx, emioenet0.extintin, emioenet0.gmiicol, emioenet0.gmiicrs, emioenet0.gmiirxclk, emioenet0.gmiirxd, emioenet0.gmiirxdv, emioenet0.gmiirxer, emioenet0.gmiitxclk, emioenet0.gmiitxd, emioenet0.gmiitxen, emioenet0.gmiitxer, emioenet0.mdioi, emioenet0.mdiomdc, emioenet0.mdioo, emioenet0.mdiotn, emioenet0.ptpdelayreqrx, emioenet0.ptpdelayreqtx, emioenet0.ptppdelayreqrx, emioenet0.ptppdelayreqtx, emioenet0.ptppdelayresprx, emioenet0.ptppdelayresptx, emioenet0.ptpsyncframerx, emioenet0.ptpsyncframetx, emioenet0.sofrx, emioenet0.softx, emioenet1.extintin, emioenet1.gmiicol, emioenet1.gmiicrs, emioenet1.gmiirxclk, emioenet1.gmiirxd, emioenet1.gmiirxdv, emioenet1.gmiirxer, emioenet1.gmiitxclk, emioenet1.gmiitxd, emioenet1.gmiitxen, emioenet1.gmiitxer, emioenet1.mdioi, emioenet1.mdiomdc, emioenet1.mdioo, emioenet1.mdiotn, emioenet1.ptpdelayreqrx, emioenet1.ptpdelayreqtx, emioenet1.ptppdelayreqrx, emioenet1.ptppdelayreqtx, emioenet1.ptppdelayresprx, emioenet1.ptppdelayresptx, emioenet1.ptpsyncframerx, emioenet1.ptpsyncframetx, emioenet1.sofrx, emioenet1.softx, emiopjtag.tck, emiopjtag.tdi, emiopjtag.tdo, emiopjtag.tdtn, emiopjtag.tms, emiosdio0.buspow, emiosdio0.busvolt, emiosdio0.cdn, emiosdio0.clk, emiosdio0.clkfb, emiosdio0.cmdi, emiosdio0.cmdo, emiosdio0.cmdtn, emiosdio0.datai, emiosdio0.datao, emiosdio0.datatn, emiosdio0.led, emiosdio0.wp, emiosdio1.buspow, emiosdio1.busvolt, emiosdio1.cdn, emiosdio1.clk, emiosdio1.clkfb, emiosdio1.cmdi, emiosdio1.cmdo, emiosdio1.cmdtn, emiosdio1.datai, emiosdio1.datao, emiosdio1.datatn, emiosdio1.led, emiosdio1.wp, emiospi0.mi, emiospi0.mo, emiospi0.motn, emiospi0.sclki, emiospi0.sclko, emiospi0.sclktn, emiospi0.si, emiospi0.so, emiospi0.ssin, emiospi0.ssntn, emiospi0.sson, emiospi0.stn, emiospi1.mi, emiospi1.mo, emiospi1.motn, emiospi1.sclki, emiospi1.sclko, emiospi1.sclktn, emiospi1.si, emiospi1.so, emiospi1.ssin, emiospi1.ssntn, emiospi1.sson, emiospi1.stn, emiotrace.clk, emiotrace.ctl, emiotrace.data, emiottc0.clki, emiottc0.waveo, emiottc1.clki, emiottc1.waveo, emiouart0.ctsn, emiouart0.dcdn, emiouart0.dsrn, emiouart0.dtrn, emiouart0.rin, emiouart0.rtsn, emiouart0.rx, emiouart0.tx, emiouart1.ctsn, emiouart1.dcdn, emiouart1.dsrn, emiouart1.dtrn, emiouart1.rin, emiouart1.rtsn, emiouart1.rx, emiouart1.tx, emiousb0.portindctl, emiousb0.vbuspwrfault, emiousb0.vbuspwrselect, emiousb1.portindctl, emiousb1.vbuspwrfault, emiousb1.vbuspwrselect, emiowdt.clki, emiowdt.rsto) CF (ddr.arb, emiogpio.i, emiogpio.o, emiogpio.tn, emioi2c0.scli, emioi2c0.sclo, emioi2c0.scltn, emioi2c0.sdai, emioi2c0.sdao, emioi2c0.sdatn, emioi2c1.scli, emioi2c1.sclo, emioi2c1.scltn, emioi2c1.sdai, emioi2c1.sdao, emioi2c1.sdatn, emiosramintin, event_.eventi, event_.evento, event_.standbywfe, event_.standbywfi, fclkclk, fclkclktrign, fclkresetn, fpgaidlen, ftmd.traceinatid, ftmd.traceinclock, ftmd.traceindata, ftmd.traceinvalid, ftmt.f2pdebug, ftmt.f2ptrig, ftmt.f2ptrigack, ftmt.p2fdebug, ftmt.p2ftrig, ftmt.p2ftrigack, irq.f2p, irq.p2f, maxigp0.araddr, maxigp0.arburst, maxigp0.arcache, maxigp0.aresetn, maxigp0.arid, maxigp0.arlen, maxigp0.arlock, maxigp0.arprot, maxigp0.arqos, maxigp0.arready, maxigp0.arsize, maxigp0.arvalid, maxigp0.awaddr, maxigp0.awburst, maxigp0.awcache, maxigp0.awid, maxigp0.awlen, maxigp0.awlock, maxigp0.awprot, maxigp0.awqos, maxigp0.awready, maxigp0.awsize, maxigp0.awvalid, maxigp0.bid, maxigp0.bready, maxigp0.bresp, maxigp0.bvalid, maxigp0.rdata, maxigp0.rid, maxigp0.rlast, maxigp0.rready, maxigp0.rresp, maxigp0.rvalid, maxigp0.wdata, maxigp0.wid, maxigp0.wlast, maxigp0.wready, maxigp0.wstrb, maxigp0.wvalid, maxigp1.araddr, maxigp1.arburst, maxigp1.arcache, maxigp1.aresetn, maxigp1.arid, maxigp1.arlen, maxigp1.arlock, maxigp1.arprot, maxigp1.arqos, maxigp1.arready, maxigp1.arsize, maxigp1.arvalid, maxigp1.awaddr, maxigp1.awburst, maxigp1.awcache, maxigp1.awid, maxigp1.awlen, maxigp1.awlock, maxigp1.awprot, maxigp1.awqos, maxigp1.awready, maxigp1.awsize, maxigp1.awvalid, maxigp1.bid, maxigp1.bready, maxigp1.bresp, maxigp1.bvalid, maxigp1.rdata, maxigp1.rid, maxigp1.rlast, maxigp1.rready, maxigp1.rresp, maxigp1.rvalid, maxigp1.wdata, maxigp1.wid, maxigp1.wlast, maxigp1.wready, maxigp1.wstrb, maxigp1.wvalid, saxiacp.araddr, saxiacp.arburst, saxiacp.arcache, saxiacp.aresetn, saxiacp.arid, saxiacp.arlen, saxiacp.arlock, saxiacp.arprot, saxiacp.arqos, saxiacp.arready, saxiacp.arsize, saxiacp.aruser, saxiacp.arvalid, saxiacp.awaddr, saxiacp.awburst, saxiacp.awcache, saxiacp.awid, saxiacp.awlen, saxiacp.awlock, saxiacp.awprot, saxiacp.awqos, saxiacp.awready, saxiacp.awsize, saxiacp.awuser, saxiacp.awvalid, saxiacp.bid, saxiacp.bready, saxiacp.bresp, saxiacp.bvalid, saxiacp.rdata, saxiacp.rid, saxiacp.rlast, saxiacp.rready, saxiacp.rresp, saxiacp.rvalid, saxiacp.wdata, saxiacp.wid, saxiacp.wlast, saxiacp.wready, saxiacp.wstrb, saxiacp.wvalid, saxigp0.araddr, saxigp0.arburst, saxigp0.arcache, saxigp0.aresetn, saxigp0.arid, saxigp0.arlen, saxigp0.arlock, saxigp0.arprot, saxigp0.arqos, saxigp0.arready, saxigp0.arsize, saxigp0.arvalid, saxigp0.awaddr, saxigp0.awburst, saxigp0.awcache, saxigp0.awid, saxigp0.awlen, saxigp0.awlock, saxigp0.awprot, saxigp0.awqos, saxigp0.awready, saxigp0.awsize, saxigp0.awvalid, saxigp0.bid, saxigp0.bready, saxigp0.bresp, saxigp0.bvalid, saxigp0.rdata, saxigp0.rid, saxigp0.rlast, saxigp0.rready, saxigp0.rresp, saxigp0.rvalid, saxigp0.wdata, saxigp0.wid, saxigp0.wlast, saxigp0.wready, saxigp0.wstrb, saxigp0.wvalid, saxigp1.araddr, saxigp1.arburst, saxigp1.arcache, saxigp1.aresetn, saxigp1.arid, saxigp1.arlen, saxigp1.arlock, saxigp1.arprot, saxigp1.arqos, saxigp1.arready, saxigp1.arsize, saxigp1.arvalid, saxigp1.awaddr, saxigp1.awburst, saxigp1.awcache, saxigp1.awid, saxigp1.awlen, saxigp1.awlock, saxigp1.awprot, saxigp1.awqos, saxigp1.awready, saxigp1.awsize, saxigp1.awvalid, saxigp1.bid, saxigp1.bready, saxigp1.bresp, saxigp1.bvalid, saxigp1.rdata, saxigp1.rid, saxigp1.rlast, saxigp1.rready, saxigp1.rresp, saxigp1.rvalid, saxigp1.wdata, saxigp1.wid, saxigp1.wlast, saxigp1.wready, saxigp1.wstrb, saxigp1.wvalid, saxihp0.araddr, saxihp0.arburst, saxihp0.arcache, saxihp0.aresetn, saxihp0.arid, saxihp0.arlen, saxihp0.arlock, saxihp0.arprot, saxihp0.arqos, saxihp0.arready, saxihp0.arsize, saxihp0.arvalid, saxihp0.awaddr, saxihp0.awburst, saxihp0.awcache, saxihp0.awid, saxihp0.awlen, saxihp0.awlock, saxihp0.awprot, saxihp0.awqos, saxihp0.awready, saxihp0.awsize, saxihp0.awvalid, saxihp0.bid, saxihp0.bready, saxihp0.bresp, saxihp0.bvalid, saxihp0.racount, saxihp0.rcount, saxihp0.rdata, saxihp0.rdissuecap1en, saxihp0.rid, saxihp0.rlast, saxihp0.rready, saxihp0.rresp, saxihp0.rvalid, saxihp0.wacount, saxihp0.wcount, saxihp0.wdata, saxihp0.wid, saxihp0.wlast, saxihp0.wready, saxihp0.wrissuecap1en, saxihp0.wstrb, saxihp0.wvalid, saxihp1.araddr, saxihp1.arburst, saxihp1.arcache, saxihp1.aresetn, saxihp1.arid, saxihp1.arlen, saxihp1.arlock, saxihp1.arprot, saxihp1.arqos, saxihp1.arready, saxihp1.arsize, saxihp1.arvalid, saxihp1.awaddr, saxihp1.awburst, saxihp1.awcache, saxihp1.awid, saxihp1.awlen, saxihp1.awlock, saxihp1.awprot, saxihp1.awqos, saxihp1.awready, saxihp1.awsize, saxihp1.awvalid, saxihp1.bid, saxihp1.bready, saxihp1.bresp, saxihp1.bvalid, saxihp1.racount, saxihp1.rcount, saxihp1.rdata, saxihp1.rdissuecap1en, saxihp1.rid, saxihp1.rlast, saxihp1.rready, saxihp1.rresp, saxihp1.rvalid, saxihp1.wacount, saxihp1.wcount, saxihp1.wdata, saxihp1.wid, saxihp1.wlast, saxihp1.wready, saxihp1.wrissuecap1en, saxihp1.wstrb, saxihp1.wvalid, saxihp2.araddr, saxihp2.arburst, saxihp2.arcache, saxihp2.aresetn, saxihp2.arid, saxihp2.arlen, saxihp2.arlock, saxihp2.arprot, saxihp2.arqos, saxihp2.arready, saxihp2.arsize, saxihp2.arvalid, saxihp2.awaddr, saxihp2.awburst, saxihp2.awcache, saxihp2.awid, saxihp2.awlen, saxihp2.awlock, saxihp2.awprot, saxihp2.awqos, saxihp2.awready, saxihp2.awsize, saxihp2.awvalid, saxihp2.bid, saxihp2.bready, saxihp2.bresp, saxihp2.bvalid, saxihp2.racount, saxihp2.rcount, saxihp2.rdata, saxihp2.rdissuecap1en, saxihp2.rid, saxihp2.rlast, saxihp2.rready, saxihp2.rresp, saxihp2.rvalid, saxihp2.wacount, saxihp2.wcount, saxihp2.wdata, saxihp2.wid, saxihp2.wlast, saxihp2.wready, saxihp2.wrissuecap1en, saxihp2.wstrb, saxihp2.wvalid, saxihp3.araddr, saxihp3.arburst, saxihp3.arcache, saxihp3.aresetn, saxihp3.arid, saxihp3.arlen, saxihp3.arlock, saxihp3.arprot, saxihp3.arqos, saxihp3.arready, saxihp3.arsize, saxihp3.arvalid, saxihp3.awaddr, saxihp3.awburst, saxihp3.awcache, saxihp3.awid, saxihp3.awlen, saxihp3.awlock, saxihp3.awprot, saxihp3.awqos, saxihp3.awready, saxihp3.awsize, saxihp3.awvalid, saxihp3.bid, saxihp3.bready, saxihp3.bresp, saxihp3.bvalid, saxihp3.racount, saxihp3.rcount, saxihp3.rdata, saxihp3.rdissuecap1en, saxihp3.rid, saxihp3.rlast, saxihp3.rready, saxihp3.rresp, saxihp3.rvalid, saxihp3.wacount, saxihp3.wcount, saxihp3.wdata, saxihp3.wid, saxihp3.wlast, saxihp3.wready, saxihp3.wrissuecap1en, saxihp3.wstrb, saxihp3.wvalid, dma0.aclk, dma0.daready, dma0.datype, dma0.davalid, dma0.drlast, dma0.drready, dma0.drtype, dma0.drvalid, dma0.rstn, dma1.aclk, dma1.daready, dma1.datype, dma1.davalid, dma1.drlast, dma1.drready, dma1.drtype, dma1.drvalid, dma1.rstn, dma2.aclk, dma2.daready, dma2.datype, dma2.davalid, dma2.drlast, dma2.drready, dma2.drtype, dma2.drvalid, dma2.rstn, dma3.aclk, dma3.daready, dma3.datype, dma3.davalid, dma3.drlast, dma3.drready, dma3.drtype, dma3.drvalid, dma3.rstn, emiocan0.phyrx, emiocan0.phytx, emiocan1.phyrx, emiocan1.phytx, emioenet0.extintin, emioenet0.gmiicol, emioenet0.gmiicrs, emioenet0.gmiirxclk, emioenet0.gmiirxd, emioenet0.gmiirxdv, emioenet0.gmiirxer, emioenet0.gmiitxclk, emioenet0.gmiitxd, emioenet0.gmiitxen, emioenet0.gmiitxer, emioenet0.mdioi, emioenet0.mdiomdc, emioenet0.mdioo, emioenet0.mdiotn, emioenet0.ptpdelayreqrx, emioenet0.ptpdelayreqtx, emioenet0.ptppdelayreqrx, emioenet0.ptppdelayreqtx, emioenet0.ptppdelayresprx, emioenet0.ptppdelayresptx, emioenet0.ptpsyncframerx, emioenet0.ptpsyncframetx, emioenet0.sofrx, emioenet0.softx, emioenet1.extintin, emioenet1.gmiicol, emioenet1.gmiicrs, emioenet1.gmiirxclk, emioenet1.gmiirxd, emioenet1.gmiirxdv, emioenet1.gmiirxer, emioenet1.gmiitxclk, emioenet1.gmiitxd, emioenet1.gmiitxen, emioenet1.gmiitxer, emioenet1.mdioi, emioenet1.mdiomdc, emioenet1.mdioo, emioenet1.mdiotn, emioenet1.ptpdelayreqrx, emioenet1.ptpdelayreqtx, emioenet1.ptppdelayreqrx, emioenet1.ptppdelayreqtx, emioenet1.ptppdelayresprx, emioenet1.ptppdelayresptx, emioenet1.ptpsyncframerx, emioenet1.ptpsyncframetx, emioenet1.sofrx, emioenet1.softx, emiopjtag.tck, emiopjtag.tdi, emiopjtag.tdo, emiopjtag.tdtn, emiopjtag.tms, emiosdio0.buspow, emiosdio0.busvolt, emiosdio0.cdn, emiosdio0.clk, emiosdio0.clkfb, emiosdio0.cmdi, emiosdio0.cmdo, emiosdio0.cmdtn, emiosdio0.datai, emiosdio0.datao, emiosdio0.datatn, emiosdio0.led, emiosdio0.wp, emiosdio1.buspow, emiosdio1.busvolt, emiosdio1.cdn, emiosdio1.clk, emiosdio1.clkfb, emiosdio1.cmdi, emiosdio1.cmdo, emiosdio1.cmdtn, emiosdio1.datai, emiosdio1.datao, emiosdio1.datatn, emiosdio1.led, emiosdio1.wp, emiospi0.mi, emiospi0.mo, emiospi0.motn, emiospi0.sclki, emiospi0.sclko, emiospi0.sclktn, emiospi0.si, emiospi0.so, emiospi0.ssin, emiospi0.ssntn, emiospi0.sson, emiospi0.stn, emiospi1.mi, emiospi1.mo, emiospi1.motn, emiospi1.sclki, emiospi1.sclko, emiospi1.sclktn, emiospi1.si, emiospi1.so, emiospi1.ssin, emiospi1.ssntn, emiospi1.sson, emiospi1.stn, emiotrace.clk, emiotrace.ctl, emiotrace.data, emiottc0.clki, emiottc0.waveo, emiottc1.clki, emiottc1.waveo, emiouart0.ctsn, emiouart0.dcdn, emiouart0.dsrn, emiouart0.dtrn, emiouart0.rin, emiouart0.rtsn, emiouart0.rx, emiouart0.tx, emiouart1.ctsn, emiouart1.dcdn, emiouart1.dsrn, emiouart1.dtrn, emiouart1.rin, emiouart1.rtsn, emiouart1.rx, emiouart1.tx, emiousb0.portindctl, emiousb0.vbuspwrfault, emiousb0.vbuspwrselect, emiousb1.portindctl, emiousb1.vbuspwrfault, emiousb1.vbuspwrselect, emiowdt.clki, emiowdt.rsto);
+    schedule (
+ddr.arb, emiogpio.i, emiogpio.o, emiogpio.tn, emioi2c0.scli, emioi2c0.sclo, emioi2c0.scltn, emioi2c0.sdai, emioi2c0.sdao, emioi2c0.sdatn, emioi2c1.scli, emioi2c1.sclo, emioi2c1.scltn, emioi2c1.sdai, emioi2c1.sdao, emioi2c1.sdatn, emiosramintin, event_.eventi, event_.evento, event_.standbywfe, event_.standbywfi, fclkclk, fclkclktrign, fclkresetn, fpgaidlen, irq.f2p, irq.p2f, maxigp0.araddr, maxigp0.arburst, maxigp0.arcache, maxigp0.aresetn, maxigp0.arid, maxigp0.arlen, maxigp0.arlock, maxigp0.arprot, maxigp0.arqos, maxigp0.arready, maxigp0.arsize, maxigp0.arvalid, maxigp0.awaddr, maxigp0.awburst, maxigp0.awcache, maxigp0.awid, maxigp0.awlen, maxigp0.awlock, maxigp0.awprot, maxigp0.awqos, maxigp0.awready, maxigp0.awsize, maxigp0.awvalid, maxigp0.bid, maxigp0.bready, maxigp0.bresp, maxigp0.bvalid, maxigp0.rdata, maxigp0.rid, maxigp0.rlast, maxigp0.rready, maxigp0.rresp, maxigp0.rvalid, maxigp0.wdata, maxigp0.wid, maxigp0.wlast, maxigp0.wready, maxigp0.wstrb, maxigp0.wvalid, maxigp1.araddr, maxigp1.arburst, maxigp1.arcache, maxigp1.aresetn, maxigp1.arid, maxigp1.arlen, maxigp1.arlock, maxigp1.arprot, maxigp1.arqos, maxigp1.arready, maxigp1.arsize, maxigp1.arvalid, maxigp1.awaddr, maxigp1.awburst, maxigp1.awcache, maxigp1.awid, maxigp1.awlen, maxigp1.awlock, maxigp1.awprot, maxigp1.awqos, maxigp1.awready, maxigp1.awsize, maxigp1.awvalid, maxigp1.bid, maxigp1.bready, maxigp1.bresp, maxigp1.bvalid, maxigp1.rdata, maxigp1.rid, maxigp1.rlast, maxigp1.rready, maxigp1.rresp, maxigp1.rvalid, maxigp1.wdata, maxigp1.wid, maxigp1.wlast, maxigp1.wready, maxigp1.wstrb, maxigp1.wvalid, saxiacp.araddr, saxiacp.arburst, saxiacp.arcache, saxiacp.aresetn, saxiacp.arid, saxiacp.arlen, saxiacp.arlock, saxiacp.arprot, saxiacp.arqos, saxiacp.arready, saxiacp.arsize, saxiacp.extra.aruser, saxiacp.arvalid, saxiacp.awaddr, saxiacp.awburst, saxiacp.awcache, saxiacp.awid, saxiacp.awlen, saxiacp.awlock, saxiacp.awprot, saxiacp.awqos, saxiacp.awready, saxiacp.awsize, saxiacp.extra.awuser, saxiacp.awvalid, saxiacp.bid, saxiacp.bready, saxiacp.bresp, saxiacp.bvalid, saxiacp.rdata, saxiacp.rid, saxiacp.rlast, saxiacp.rready, saxiacp.rresp, saxiacp.rvalid, saxiacp.wdata, saxiacp.wid, saxiacp.wlast, saxiacp.wready, saxiacp.wstrb, saxiacp.wvalid, saxigp0.araddr, saxigp0.arburst, saxigp0.arcache, saxigp0.aresetn, saxigp0.arid, saxigp0.arlen, saxigp0.arlock, saxigp0.arprot, saxigp0.arqos, saxigp0.arready, saxigp0.arsize, saxigp0.arvalid, saxigp0.awaddr, saxigp0.awburst, saxigp0.awcache, saxigp0.awid, saxigp0.awlen, saxigp0.awlock, saxigp0.awprot, saxigp0.awqos, saxigp0.awready, saxigp0.awsize, saxigp0.awvalid, saxigp0.bid, saxigp0.bready, saxigp0.bresp, saxigp0.bvalid, saxigp0.rdata, saxigp0.rid, saxigp0.rlast, saxigp0.rready, saxigp0.rresp, saxigp0.rvalid, saxigp0.wdata, saxigp0.wid, saxigp0.wlast, saxigp0.wready, saxigp0.wstrb, saxigp0.wvalid, saxigp1.araddr, saxigp1.arburst, saxigp1.arcache, saxigp1.aresetn, saxigp1.arid, saxigp1.arlen, saxigp1.arlock, saxigp1.arprot, saxigp1.arqos, saxigp1.arready, saxigp1.arsize, saxigp1.arvalid, saxigp1.awaddr, saxigp1.awburst, saxigp1.awcache, saxigp1.awid, saxigp1.awlen, saxigp1.awlock, saxigp1.awprot, saxigp1.awqos, saxigp1.awready, saxigp1.awsize, saxigp1.awvalid, saxigp1.bid, saxigp1.bready, saxigp1.bresp, saxigp1.bvalid, saxigp1.rdata, saxigp1.rid, saxigp1.rlast, saxigp1.rready, saxigp1.rresp, saxigp1.rvalid, saxigp1.wdata, saxigp1.wid, saxigp1.wlast, saxigp1.wready, saxigp1.wstrb, saxigp1.wvalid, saxihp0.araddr, saxihp0.arburst, saxihp0.arcache, saxihp0.aresetn, saxihp0.arid, saxihp0.arlen, saxihp0.arlock, saxihp0.arprot, saxihp0.arqos, saxihp0.arready, saxihp0.arsize, saxihp0.arvalid, saxihp0.awaddr, saxihp0.awburst, saxihp0.awcache, saxihp0.awid, saxihp0.awlen, saxihp0.awlock, saxihp0.awprot, saxihp0.awqos, saxihp0.awready, saxihp0.awsize, saxihp0.awvalid, saxihp0.bid, saxihp0.bready, saxihp0.bresp, saxihp0.bvalid, saxihp0.extra.racount, saxihp0.extra.rcount, saxihp0.rdata, saxihp0.extra.rdissuecap1en, saxihp0.rid, saxihp0.rlast, saxihp0.rready, saxihp0.rresp, saxihp0.rvalid, saxihp0.extra.wacount, saxihp0.extra.wcount, saxihp0.wdata, saxihp0.wid, saxihp0.wlast, saxihp0.wready, saxihp0.extra.wrissuecap1en, saxihp0.wstrb, saxihp0.wvalid, saxihp1.araddr, saxihp1.arburst, saxihp1.arcache, saxihp1.aresetn, saxihp1.arid, saxihp1.arlen, saxihp1.arlock, saxihp1.arprot, saxihp1.arqos, saxihp1.arready, saxihp1.arsize, saxihp1.arvalid, saxihp1.awaddr, saxihp1.awburst, saxihp1.awcache, saxihp1.awid, saxihp1.awlen, saxihp1.awlock, saxihp1.awprot, saxihp1.awqos, saxihp1.awready, saxihp1.awsize, saxihp1.awvalid, saxihp1.bid, saxihp1.bready, saxihp1.bresp, saxihp1.bvalid, saxihp1.extra.racount, saxihp1.extra.rcount, saxihp1.rdata, saxihp1.extra.rdissuecap1en, saxihp1.rid, saxihp1.rlast, saxihp1.rready, saxihp1.rresp, saxihp1.rvalid, saxihp1.extra.wacount, saxihp1.extra.wcount, saxihp1.wdata, saxihp1.wid, saxihp1.wlast, saxihp1.wready, saxihp1.extra.wrissuecap1en, saxihp1.wstrb, saxihp1.wvalid, saxihp2.araddr, saxihp2.arburst, saxihp2.arcache, saxihp2.aresetn, saxihp2.arid, saxihp2.arlen, saxihp2.arlock, saxihp2.arprot, saxihp2.arqos, saxihp2.arready, saxihp2.arsize, saxihp2.arvalid, saxihp2.awaddr, saxihp2.awburst, saxihp2.awcache, saxihp2.awid, saxihp2.awlen, saxihp2.awlock, saxihp2.awprot, saxihp2.awqos, saxihp2.awready, saxihp2.awsize, saxihp2.awvalid, saxihp2.bid, saxihp2.bready, saxihp2.bresp, saxihp2.bvalid, saxihp2.extra.racount, saxihp2.extra.rcount, saxihp2.rdata, saxihp2.extra.rdissuecap1en, saxihp2.rid, saxihp2.rlast, saxihp2.rready, saxihp2.rresp, saxihp2.rvalid, saxihp2.extra.wacount, saxihp2.extra.wcount, saxihp2.wdata, saxihp2.wid, saxihp2.wlast, saxihp2.wready, saxihp2.extra.wrissuecap1en, saxihp2.wstrb, saxihp2.wvalid, saxihp3.araddr, saxihp3.arburst, saxihp3.arcache, saxihp3.aresetn, saxihp3.arid, saxihp3.arlen, saxihp3.arlock, saxihp3.arprot, saxihp3.arqos, saxihp3.arready, saxihp3.arsize, saxihp3.arvalid, saxihp3.awaddr, saxihp3.awburst, saxihp3.awcache, saxihp3.awid, saxihp3.awlen, saxihp3.awlock, saxihp3.awprot, saxihp3.awqos, saxihp3.awready, saxihp3.awsize, saxihp3.awvalid, saxihp3.bid, saxihp3.bready, saxihp3.bresp, saxihp3.bvalid, saxihp3.extra.racount, saxihp3.extra.rcount, saxihp3.rdata, saxihp3.extra.rdissuecap1en, saxihp3.rid, saxihp3.rlast, saxihp3.rready, saxihp3.rresp, saxihp3.rvalid, saxihp3.extra.wacount, saxihp3.extra.wcount, saxihp3.wdata, saxihp3.wid, saxihp3.wlast, saxihp3.wready, saxihp3.extra.wrissuecap1en, saxihp3.wstrb, saxihp3.wvalid, dma0.aclk, dma0.daready, dma0.datype, dma0.davalid, dma0.drlast, dma0.drready, dma0.drtype, dma0.drvalid, dma0.rstn, dma1.aclk, dma1.daready, dma1.datype, dma1.davalid, dma1.drlast, dma1.drready, dma1.drtype, dma1.drvalid, dma1.rstn, dma2.aclk, dma2.daready, dma2.datype, dma2.davalid, dma2.drlast, dma2.drready, dma2.drtype, dma2.drvalid, dma2.rstn, dma3.aclk, dma3.daready, dma3.datype, dma3.davalid, dma3.drlast, dma3.drready, dma3.drtype, dma3.drvalid, dma3.rstn, emiocan0.phyrx, emiocan0.phytx, emiocan1.phyrx, emiocan1.phytx, emioenet0.extintin, emioenet0.gmiicol, emioenet0.gmiicrs, emioenet0.gmiirxclk, emioenet0.gmiirxd, emioenet0.gmiirxdv, emioenet0.gmiirxer, emioenet0.gmiitxclk, emioenet0.gmiitxd, emioenet0.gmiitxen, emioenet0.gmiitxer, emioenet0.mdioi, emioenet0.mdiomdc, emioenet0.mdioo, emioenet0.mdiotn, emioenet0.ptpdelayreqrx, emioenet0.ptpdelayreqtx, emioenet0.ptppdelayreqrx, emioenet0.ptppdelayreqtx, emioenet0.ptppdelayresprx, emioenet0.ptppdelayresptx, emioenet0.ptpsyncframerx, emioenet0.ptpsyncframetx, emioenet0.sofrx, emioenet0.softx, emioenet1.extintin, emioenet1.gmiicol, emioenet1.gmiicrs, emioenet1.gmiirxclk, emioenet1.gmiirxd, emioenet1.gmiirxdv, emioenet1.gmiirxer, emioenet1.gmiitxclk, emioenet1.gmiitxd, emioenet1.gmiitxen, emioenet1.gmiitxer, emioenet1.mdioi, emioenet1.mdiomdc, emioenet1.mdioo, emioenet1.mdiotn, emioenet1.ptpdelayreqrx, emioenet1.ptpdelayreqtx, emioenet1.ptppdelayreqrx, emioenet1.ptppdelayreqtx, emioenet1.ptppdelayresprx, emioenet1.ptppdelayresptx, emioenet1.ptpsyncframerx, emioenet1.ptpsyncframetx, emioenet1.sofrx, emioenet1.softx, emiopjtag.tck, emiopjtag.tdi, emiopjtag.tdo, emiopjtag.tdtn, emiopjtag.tms, emiosdio0.buspow, emiosdio0.busvolt, emiosdio0.cdn, emiosdio0.clk, emiosdio0.clkfb, emiosdio0.cmdi, emiosdio0.cmdo, emiosdio0.cmdtn, emiosdio0.datai, emiosdio0.datao, emiosdio0.datatn, emiosdio0.led, emiosdio0.wp, emiosdio1.buspow, emiosdio1.busvolt, emiosdio1.cdn, emiosdio1.clk, emiosdio1.clkfb, emiosdio1.cmdi, emiosdio1.cmdo, emiosdio1.cmdtn, emiosdio1.datai, emiosdio1.datao, emiosdio1.datatn, emiosdio1.led, emiosdio1.wp, emiospi0.mi, emiospi0.mo, emiospi0.motn, emiospi0.sclki, emiospi0.sclko, emiospi0.sclktn, emiospi0.si, emiospi0.so, emiospi0.ssin, emiospi0.ssntn, emiospi0.sson, emiospi0.stn, emiospi1.mi, emiospi1.mo, emiospi1.motn, emiospi1.sclki, emiospi1.sclko, emiospi1.sclktn, emiospi1.si, emiospi1.so, emiospi1.ssin, emiospi1.ssntn, emiospi1.sson, emiospi1.stn, emiotrace.clk, emiotrace.ctl, emiotrace.data, emiottc0.clki, emiottc0.waveo, emiottc1.clki, emiottc1.waveo, emiouart0.ctsn, emiouart0.dcdn, emiouart0.dsrn, emiouart0.dtrn, emiouart0.rin, emiouart0.rtsn, emiouart0.rx, emiouart0.tx, emiouart1.ctsn, emiouart1.dcdn, emiouart1.dsrn, emiouart1.dtrn, emiouart1.rin, emiouart1.rtsn, emiouart1.rx, emiouart1.tx, emiousb0.portindctl, emiousb0.vbuspwrfault, emiousb0.vbuspwrselect, emiousb1.portindctl, emiousb1.vbuspwrfault, emiousb1.vbuspwrselect, emiowdt.clki, emiowdt.rsto, ftmd.traceinatid, ftmd.traceinclock, ftmd.traceindata, ftmd.traceinvalid, ftmt.f2pdebug, ftmt.f2ptrig, ftmt.f2ptrigack, ftmt.p2fdebug, ftmt.p2ftrig, ftmt.p2ftrigack
+) CF (
+ddr.arb, emiogpio.i, emiogpio.o, emiogpio.tn, emioi2c0.scli, emioi2c0.sclo, emioi2c0.scltn, emioi2c0.sdai, emioi2c0.sdao, emioi2c0.sdatn, emioi2c1.scli, emioi2c1.sclo, emioi2c1.scltn, emioi2c1.sdai, emioi2c1.sdao, emioi2c1.sdatn, emiosramintin, event_.eventi, event_.evento, event_.standbywfe, event_.standbywfi, fclkclk, fclkclktrign, fclkresetn, fpgaidlen, irq.f2p, irq.p2f, maxigp0.araddr, maxigp0.arburst, maxigp0.arcache, maxigp0.aresetn, maxigp0.arid, maxigp0.arlen, maxigp0.arlock, maxigp0.arprot, maxigp0.arqos, maxigp0.arready, maxigp0.arsize, maxigp0.arvalid, maxigp0.awaddr, maxigp0.awburst, maxigp0.awcache, maxigp0.awid, maxigp0.awlen, maxigp0.awlock, maxigp0.awprot, maxigp0.awqos, maxigp0.awready, maxigp0.awsize, maxigp0.awvalid, maxigp0.bid, maxigp0.bready, maxigp0.bresp, maxigp0.bvalid, maxigp0.rdata, maxigp0.rid, maxigp0.rlast, maxigp0.rready, maxigp0.rresp, maxigp0.rvalid, maxigp0.wdata, maxigp0.wid, maxigp0.wlast, maxigp0.wready, maxigp0.wstrb, maxigp0.wvalid, maxigp1.araddr, maxigp1.arburst, maxigp1.arcache, maxigp1.aresetn, maxigp1.arid, maxigp1.arlen, maxigp1.arlock, maxigp1.arprot, maxigp1.arqos, maxigp1.arready, maxigp1.arsize, maxigp1.arvalid, maxigp1.awaddr, maxigp1.awburst, maxigp1.awcache, maxigp1.awid, maxigp1.awlen, maxigp1.awlock, maxigp1.awprot, maxigp1.awqos, maxigp1.awready, maxigp1.awsize, maxigp1.awvalid, maxigp1.bid, maxigp1.bready, maxigp1.bresp, maxigp1.bvalid, maxigp1.rdata, maxigp1.rid, maxigp1.rlast, maxigp1.rready, maxigp1.rresp, maxigp1.rvalid, maxigp1.wdata, maxigp1.wid, maxigp1.wlast, maxigp1.wready, maxigp1.wstrb, maxigp1.wvalid, saxiacp.araddr, saxiacp.arburst, saxiacp.arcache, saxiacp.aresetn, saxiacp.arid, saxiacp.arlen, saxiacp.arlock, saxiacp.arprot, saxiacp.arqos, saxiacp.arready, saxiacp.arsize, saxiacp.extra.aruser, saxiacp.arvalid, saxiacp.awaddr, saxiacp.awburst, saxiacp.awcache, saxiacp.awid, saxiacp.awlen, saxiacp.awlock, saxiacp.awprot, saxiacp.awqos, saxiacp.awready, saxiacp.awsize, saxiacp.extra.awuser, saxiacp.awvalid, saxiacp.bid, saxiacp.bready, saxiacp.bresp, saxiacp.bvalid, saxiacp.rdata, saxiacp.rid, saxiacp.rlast, saxiacp.rready, saxiacp.rresp, saxiacp.rvalid, saxiacp.wdata, saxiacp.wid, saxiacp.wlast, saxiacp.wready, saxiacp.wstrb, saxiacp.wvalid, saxigp0.araddr, saxigp0.arburst, saxigp0.arcache, saxigp0.aresetn, saxigp0.arid, saxigp0.arlen, saxigp0.arlock, saxigp0.arprot, saxigp0.arqos, saxigp0.arready, saxigp0.arsize, saxigp0.arvalid, saxigp0.awaddr, saxigp0.awburst, saxigp0.awcache, saxigp0.awid, saxigp0.awlen, saxigp0.awlock, saxigp0.awprot, saxigp0.awqos, saxigp0.awready, saxigp0.awsize, saxigp0.awvalid, saxigp0.bid, saxigp0.bready, saxigp0.bresp, saxigp0.bvalid, saxigp0.rdata, saxigp0.rid, saxigp0.rlast, saxigp0.rready, saxigp0.rresp, saxigp0.rvalid, saxigp0.wdata, saxigp0.wid, saxigp0.wlast, saxigp0.wready, saxigp0.wstrb, saxigp0.wvalid, saxigp1.araddr, saxigp1.arburst, saxigp1.arcache, saxigp1.aresetn, saxigp1.arid, saxigp1.arlen, saxigp1.arlock, saxigp1.arprot, saxigp1.arqos, saxigp1.arready, saxigp1.arsize, saxigp1.arvalid, saxigp1.awaddr, saxigp1.awburst, saxigp1.awcache, saxigp1.awid, saxigp1.awlen, saxigp1.awlock, saxigp1.awprot, saxigp1.awqos, saxigp1.awready, saxigp1.awsize, saxigp1.awvalid, saxigp1.bid, saxigp1.bready, saxigp1.bresp, saxigp1.bvalid, saxigp1.rdata, saxigp1.rid, saxigp1.rlast, saxigp1.rready, saxigp1.rresp, saxigp1.rvalid, saxigp1.wdata, saxigp1.wid, saxigp1.wlast, saxigp1.wready, saxigp1.wstrb, saxigp1.wvalid, saxihp0.araddr, saxihp0.arburst, saxihp0.arcache, saxihp0.aresetn, saxihp0.arid, saxihp0.arlen, saxihp0.arlock, saxihp0.arprot, saxihp0.arqos, saxihp0.arready, saxihp0.arsize, saxihp0.arvalid, saxihp0.awaddr, saxihp0.awburst, saxihp0.awcache, saxihp0.awid, saxihp0.awlen, saxihp0.awlock, saxihp0.awprot, saxihp0.awqos, saxihp0.awready, saxihp0.awsize, saxihp0.awvalid, saxihp0.bid, saxihp0.bready, saxihp0.bresp, saxihp0.bvalid, saxihp0.extra.racount, saxihp0.extra.rcount, saxihp0.rdata, saxihp0.extra.rdissuecap1en, saxihp0.rid, saxihp0.rlast, saxihp0.rready, saxihp0.rresp, saxihp0.rvalid, saxihp0.extra.wacount, saxihp0.extra.wcount, saxihp0.wdata, saxihp0.wid, saxihp0.wlast, saxihp0.wready, saxihp0.extra.wrissuecap1en, saxihp0.wstrb, saxihp0.wvalid, saxihp1.araddr, saxihp1.arburst, saxihp1.arcache, saxihp1.aresetn, saxihp1.arid, saxihp1.arlen, saxihp1.arlock, saxihp1.arprot, saxihp1.arqos, saxihp1.arready, saxihp1.arsize, saxihp1.arvalid, saxihp1.awaddr, saxihp1.awburst, saxihp1.awcache, saxihp1.awid, saxihp1.awlen, saxihp1.awlock, saxihp1.awprot, saxihp1.awqos, saxihp1.awready, saxihp1.awsize, saxihp1.awvalid, saxihp1.bid, saxihp1.bready, saxihp1.bresp, saxihp1.bvalid, saxihp1.extra.racount, saxihp1.extra.rcount, saxihp1.rdata, saxihp1.extra.rdissuecap1en, saxihp1.rid, saxihp1.rlast, saxihp1.rready, saxihp1.rresp, saxihp1.rvalid, saxihp1.extra.wacount, saxihp1.extra.wcount, saxihp1.wdata, saxihp1.wid, saxihp1.wlast, saxihp1.wready, saxihp1.extra.wrissuecap1en, saxihp1.wstrb, saxihp1.wvalid, saxihp2.araddr, saxihp2.arburst, saxihp2.arcache, saxihp2.aresetn, saxihp2.arid, saxihp2.arlen, saxihp2.arlock, saxihp2.arprot, saxihp2.arqos, saxihp2.arready, saxihp2.arsize, saxihp2.arvalid, saxihp2.awaddr, saxihp2.awburst, saxihp2.awcache, saxihp2.awid, saxihp2.awlen, saxihp2.awlock, saxihp2.awprot, saxihp2.awqos, saxihp2.awready, saxihp2.awsize, saxihp2.awvalid, saxihp2.bid, saxihp2.bready, saxihp2.bresp, saxihp2.bvalid, saxihp2.extra.racount, saxihp2.extra.rcount, saxihp2.rdata, saxihp2.extra.rdissuecap1en, saxihp2.rid, saxihp2.rlast, saxihp2.rready, saxihp2.rresp, saxihp2.rvalid, saxihp2.extra.wacount, saxihp2.extra.wcount, saxihp2.wdata, saxihp2.wid, saxihp2.wlast, saxihp2.wready, saxihp2.extra.wrissuecap1en, saxihp2.wstrb, saxihp2.wvalid, saxihp3.araddr, saxihp3.arburst, saxihp3.arcache, saxihp3.aresetn, saxihp3.arid, saxihp3.arlen, saxihp3.arlock, saxihp3.arprot, saxihp3.arqos, saxihp3.arready, saxihp3.arsize, saxihp3.arvalid, saxihp3.awaddr, saxihp3.awburst, saxihp3.awcache, saxihp3.awid, saxihp3.awlen, saxihp3.awlock, saxihp3.awprot, saxihp3.awqos, saxihp3.awready, saxihp3.awsize, saxihp3.awvalid, saxihp3.bid, saxihp3.bready, saxihp3.bresp, saxihp3.bvalid, saxihp3.extra.racount, saxihp3.extra.rcount, saxihp3.rdata, saxihp3.extra.rdissuecap1en, saxihp3.rid, saxihp3.rlast, saxihp3.rready, saxihp3.rresp, saxihp3.rvalid, saxihp3.extra.wacount, saxihp3.extra.wcount, saxihp3.wdata, saxihp3.wid, saxihp3.wlast, saxihp3.wready, saxihp3.extra.wrissuecap1en, saxihp3.wstrb, saxihp3.wvalid, dma0.aclk, dma0.daready, dma0.datype, dma0.davalid, dma0.drlast, dma0.drready, dma0.drtype, dma0.drvalid, dma0.rstn, dma1.aclk, dma1.daready, dma1.datype, dma1.davalid, dma1.drlast, dma1.drready, dma1.drtype, dma1.drvalid, dma1.rstn, dma2.aclk, dma2.daready, dma2.datype, dma2.davalid, dma2.drlast, dma2.drready, dma2.drtype, dma2.drvalid, dma2.rstn, dma3.aclk, dma3.daready, dma3.datype, dma3.davalid, dma3.drlast, dma3.drready, dma3.drtype, dma3.drvalid, dma3.rstn, emiocan0.phyrx, emiocan0.phytx, emiocan1.phyrx, emiocan1.phytx, emioenet0.extintin, emioenet0.gmiicol, emioenet0.gmiicrs, emioenet0.gmiirxclk, emioenet0.gmiirxd, emioenet0.gmiirxdv, emioenet0.gmiirxer, emioenet0.gmiitxclk, emioenet0.gmiitxd, emioenet0.gmiitxen, emioenet0.gmiitxer, emioenet0.mdioi, emioenet0.mdiomdc, emioenet0.mdioo, emioenet0.mdiotn, emioenet0.ptpdelayreqrx, emioenet0.ptpdelayreqtx, emioenet0.ptppdelayreqrx, emioenet0.ptppdelayreqtx, emioenet0.ptppdelayresprx, emioenet0.ptppdelayresptx, emioenet0.ptpsyncframerx, emioenet0.ptpsyncframetx, emioenet0.sofrx, emioenet0.softx, emioenet1.extintin, emioenet1.gmiicol, emioenet1.gmiicrs, emioenet1.gmiirxclk, emioenet1.gmiirxd, emioenet1.gmiirxdv, emioenet1.gmiirxer, emioenet1.gmiitxclk, emioenet1.gmiitxd, emioenet1.gmiitxen, emioenet1.gmiitxer, emioenet1.mdioi, emioenet1.mdiomdc, emioenet1.mdioo, emioenet1.mdiotn, emioenet1.ptpdelayreqrx, emioenet1.ptpdelayreqtx, emioenet1.ptppdelayreqrx, emioenet1.ptppdelayreqtx, emioenet1.ptppdelayresprx, emioenet1.ptppdelayresptx, emioenet1.ptpsyncframerx, emioenet1.ptpsyncframetx, emioenet1.sofrx, emioenet1.softx, emiopjtag.tck, emiopjtag.tdi, emiopjtag.tdo, emiopjtag.tdtn, emiopjtag.tms, emiosdio0.buspow, emiosdio0.busvolt, emiosdio0.cdn, emiosdio0.clk, emiosdio0.clkfb, emiosdio0.cmdi, emiosdio0.cmdo, emiosdio0.cmdtn, emiosdio0.datai, emiosdio0.datao, emiosdio0.datatn, emiosdio0.led, emiosdio0.wp, emiosdio1.buspow, emiosdio1.busvolt, emiosdio1.cdn, emiosdio1.clk, emiosdio1.clkfb, emiosdio1.cmdi, emiosdio1.cmdo, emiosdio1.cmdtn, emiosdio1.datai, emiosdio1.datao, emiosdio1.datatn, emiosdio1.led, emiosdio1.wp, emiospi0.mi, emiospi0.mo, emiospi0.motn, emiospi0.sclki, emiospi0.sclko, emiospi0.sclktn, emiospi0.si, emiospi0.so, emiospi0.ssin, emiospi0.ssntn, emiospi0.sson, emiospi0.stn, emiospi1.mi, emiospi1.mo, emiospi1.motn, emiospi1.sclki, emiospi1.sclko, emiospi1.sclktn, emiospi1.si, emiospi1.so, emiospi1.ssin, emiospi1.ssntn, emiospi1.sson, emiospi1.stn, emiotrace.clk, emiotrace.ctl, emiotrace.data, emiottc0.clki, emiottc0.waveo, emiottc1.clki, emiottc1.waveo, emiouart0.ctsn, emiouart0.dcdn, emiouart0.dsrn, emiouart0.dtrn, emiouart0.rin, emiouart0.rtsn, emiouart0.rx, emiouart0.tx, emiouart1.ctsn, emiouart1.dcdn, emiouart1.dsrn, emiouart1.dtrn, emiouart1.rin, emiouart1.rtsn, emiouart1.rx, emiouart1.tx, emiousb0.portindctl, emiousb0.vbuspwrfault, emiousb0.vbuspwrselect, emiousb1.portindctl, emiousb1.vbuspwrfault, emiousb1.vbuspwrselect, emiowdt.clki, emiowdt.rsto, ftmd.traceinatid, ftmd.traceinclock, ftmd.traceindata, ftmd.traceinvalid, ftmt.f2pdebug, ftmt.f2ptrig, ftmt.f2ptrigack, ftmt.p2fdebug, ftmt.p2ftrig, ftmt.p2ftrigack
+);
 `else
-    schedule (ddr.arb, emiogpio.i, emiogpio.o, emiogpio.tn, emioi2c0.scli, emioi2c0.sclo, emioi2c0.scltn, emioi2c0.sdai, emioi2c0.sdao, emioi2c0.sdatn, emioi2c1.scli, emioi2c1.sclo, emioi2c1.scltn, emioi2c1.sdai, emioi2c1.sdao, emioi2c1.sdatn, emiosramintin, event_.eventi, event_.evento, event_.standbywfe, event_.standbywfi, fclkclk, fclkclktrign, fclkresetn, fpgaidlen, irq.f2p, irq.p2f, maxigp0.araddr, maxigp0.arburst, maxigp0.arcache, maxigp0.aresetn, maxigp0.arid, maxigp0.arlen, maxigp0.arlock, maxigp0.arprot, maxigp0.arqos, maxigp0.arready, maxigp0.arsize, maxigp0.arvalid, maxigp0.awaddr, maxigp0.awburst, maxigp0.awcache, maxigp0.awid, maxigp0.awlen, maxigp0.awlock, maxigp0.awprot, maxigp0.awqos, maxigp0.awready, maxigp0.awsize, maxigp0.awvalid, maxigp0.bid, maxigp0.bready, maxigp0.bresp, maxigp0.bvalid, maxigp0.rdata, maxigp0.rid, maxigp0.rlast, maxigp0.rready, maxigp0.rresp, maxigp0.rvalid, maxigp0.wdata, maxigp0.wid, maxigp0.wlast, maxigp0.wready, maxigp0.wstrb, maxigp0.wvalid, maxigp1.araddr, maxigp1.arburst, maxigp1.arcache, maxigp1.aresetn, maxigp1.arid, maxigp1.arlen, maxigp1.arlock, maxigp1.arprot, maxigp1.arqos, maxigp1.arready, maxigp1.arsize, maxigp1.arvalid, maxigp1.awaddr, maxigp1.awburst, maxigp1.awcache, maxigp1.awid, maxigp1.awlen, maxigp1.awlock, maxigp1.awprot, maxigp1.awqos, maxigp1.awready, maxigp1.awsize, maxigp1.awvalid, maxigp1.bid, maxigp1.bready, maxigp1.bresp, maxigp1.bvalid, maxigp1.rdata, maxigp1.rid, maxigp1.rlast, maxigp1.rready, maxigp1.rresp, maxigp1.rvalid, maxigp1.wdata, maxigp1.wid, maxigp1.wlast, maxigp1.wready, maxigp1.wstrb, maxigp1.wvalid, saxiacp.araddr, saxiacp.arburst, saxiacp.arcache, saxiacp.aresetn, saxiacp.arid, saxiacp.arlen, saxiacp.arlock, saxiacp.arprot, saxiacp.arqos, saxiacp.arready, saxiacp.arsize, saxiacp.aruser, saxiacp.arvalid, saxiacp.awaddr, saxiacp.awburst, saxiacp.awcache, saxiacp.awid, saxiacp.awlen, saxiacp.awlock, saxiacp.awprot, saxiacp.awqos, saxiacp.awready, saxiacp.awsize, saxiacp.awuser, saxiacp.awvalid, saxiacp.bid, saxiacp.bready, saxiacp.bresp, saxiacp.bvalid, saxiacp.rdata, saxiacp.rid, saxiacp.rlast, saxiacp.rready, saxiacp.rresp, saxiacp.rvalid, saxiacp.wdata, saxiacp.wid, saxiacp.wlast, saxiacp.wready, saxiacp.wstrb, saxiacp.wvalid, saxigp0.araddr, saxigp0.arburst, saxigp0.arcache, saxigp0.aresetn, saxigp0.arid, saxigp0.arlen, saxigp0.arlock, saxigp0.arprot, saxigp0.arqos, saxigp0.arready, saxigp0.arsize, saxigp0.arvalid, saxigp0.awaddr, saxigp0.awburst, saxigp0.awcache, saxigp0.awid, saxigp0.awlen, saxigp0.awlock, saxigp0.awprot, saxigp0.awqos, saxigp0.awready, saxigp0.awsize, saxigp0.awvalid, saxigp0.bid, saxigp0.bready, saxigp0.bresp, saxigp0.bvalid, saxigp0.rdata, saxigp0.rid, saxigp0.rlast, saxigp0.rready, saxigp0.rresp, saxigp0.rvalid, saxigp0.wdata, saxigp0.wid, saxigp0.wlast, saxigp0.wready, saxigp0.wstrb, saxigp0.wvalid, saxigp1.araddr, saxigp1.arburst, saxigp1.arcache, saxigp1.aresetn, saxigp1.arid, saxigp1.arlen, saxigp1.arlock, saxigp1.arprot, saxigp1.arqos, saxigp1.arready, saxigp1.arsize, saxigp1.arvalid, saxigp1.awaddr, saxigp1.awburst, saxigp1.awcache, saxigp1.awid, saxigp1.awlen, saxigp1.awlock, saxigp1.awprot, saxigp1.awqos, saxigp1.awready, saxigp1.awsize, saxigp1.awvalid, saxigp1.bid, saxigp1.bready, saxigp1.bresp, saxigp1.bvalid, saxigp1.rdata, saxigp1.rid, saxigp1.rlast, saxigp1.rready, saxigp1.rresp, saxigp1.rvalid, saxigp1.wdata, saxigp1.wid, saxigp1.wlast, saxigp1.wready, saxigp1.wstrb, saxigp1.wvalid, saxihp0.araddr, saxihp0.arburst, saxihp0.arcache, saxihp0.aresetn, saxihp0.arid, saxihp0.arlen, saxihp0.arlock, saxihp0.arprot, saxihp0.arqos, saxihp0.arready, saxihp0.arsize, saxihp0.arvalid, saxihp0.awaddr, saxihp0.awburst, saxihp0.awcache, saxihp0.awid, saxihp0.awlen, saxihp0.awlock, saxihp0.awprot, saxihp0.awqos, saxihp0.awready, saxihp0.awsize, saxihp0.awvalid, saxihp0.bid, saxihp0.bready, saxihp0.bresp, saxihp0.bvalid, saxihp0.racount, saxihp0.rcount, saxihp0.rdata, saxihp0.rdissuecap1en, saxihp0.rid, saxihp0.rlast, saxihp0.rready, saxihp0.rresp, saxihp0.rvalid, saxihp0.wacount, saxihp0.wcount, saxihp0.wdata, saxihp0.wid, saxihp0.wlast, saxihp0.wready, saxihp0.wrissuecap1en, saxihp0.wstrb, saxihp0.wvalid, saxihp1.araddr, saxihp1.arburst, saxihp1.arcache, saxihp1.aresetn, saxihp1.arid, saxihp1.arlen, saxihp1.arlock, saxihp1.arprot, saxihp1.arqos, saxihp1.arready, saxihp1.arsize, saxihp1.arvalid, saxihp1.awaddr, saxihp1.awburst, saxihp1.awcache, saxihp1.awid, saxihp1.awlen, saxihp1.awlock, saxihp1.awprot, saxihp1.awqos, saxihp1.awready, saxihp1.awsize, saxihp1.awvalid, saxihp1.bid, saxihp1.bready, saxihp1.bresp, saxihp1.bvalid, saxihp1.racount, saxihp1.rcount, saxihp1.rdata, saxihp1.rdissuecap1en, saxihp1.rid, saxihp1.rlast, saxihp1.rready, saxihp1.rresp, saxihp1.rvalid, saxihp1.wacount, saxihp1.wcount, saxihp1.wdata, saxihp1.wid, saxihp1.wlast, saxihp1.wready, saxihp1.wrissuecap1en, saxihp1.wstrb, saxihp1.wvalid, saxihp2.araddr, saxihp2.arburst, saxihp2.arcache, saxihp2.aresetn, saxihp2.arid, saxihp2.arlen, saxihp2.arlock, saxihp2.arprot, saxihp2.arqos, saxihp2.arready, saxihp2.arsize, saxihp2.arvalid, saxihp2.awaddr, saxihp2.awburst, saxihp2.awcache, saxihp2.awid, saxihp2.awlen, saxihp2.awlock, saxihp2.awprot, saxihp2.awqos, saxihp2.awready, saxihp2.awsize, saxihp2.awvalid, saxihp2.bid, saxihp2.bready, saxihp2.bresp, saxihp2.bvalid, saxihp2.racount, saxihp2.rcount, saxihp2.rdata, saxihp2.rdissuecap1en, saxihp2.rid, saxihp2.rlast, saxihp2.rready, saxihp2.rresp, saxihp2.rvalid, saxihp2.wacount, saxihp2.wcount, saxihp2.wdata, saxihp2.wid, saxihp2.wlast, saxihp2.wready, saxihp2.wrissuecap1en, saxihp2.wstrb, saxihp2.wvalid, saxihp3.araddr, saxihp3.arburst, saxihp3.arcache, saxihp3.aresetn, saxihp3.arid, saxihp3.arlen, saxihp3.arlock, saxihp3.arprot, saxihp3.arqos, saxihp3.arready, saxihp3.arsize, saxihp3.arvalid, saxihp3.awaddr, saxihp3.awburst, saxihp3.awcache, saxihp3.awid, saxihp3.awlen, saxihp3.awlock, saxihp3.awprot, saxihp3.awqos, saxihp3.awready, saxihp3.awsize, saxihp3.awvalid, saxihp3.bid, saxihp3.bready, saxihp3.bresp, saxihp3.bvalid, saxihp3.racount, saxihp3.rcount, saxihp3.rdata, saxihp3.rdissuecap1en, saxihp3.rid, saxihp3.rlast, saxihp3.rready, saxihp3.rresp, saxihp3.rvalid, saxihp3.wacount, saxihp3.wcount, saxihp3.wdata, saxihp3.wid, saxihp3.wlast, saxihp3.wready, saxihp3.wrissuecap1en, saxihp3.wstrb, saxihp3.wvalid) CF (ddr.arb, emiogpio.i, emiogpio.o, emiogpio.tn, emioi2c0.scli, emioi2c0.sclo, emioi2c0.scltn, emioi2c0.sdai, emioi2c0.sdao, emioi2c0.sdatn, emioi2c1.scli, emioi2c1.sclo, emioi2c1.scltn, emioi2c1.sdai, emioi2c1.sdao, emioi2c1.sdatn, emiosramintin, event_.eventi, event_.evento, event_.standbywfe, event_.standbywfi, fclkclk, fclkclktrign, fclkresetn, fpgaidlen, irq.f2p, irq.p2f, maxigp0.araddr, maxigp0.arburst, maxigp0.arcache, maxigp0.aresetn, maxigp0.arid, maxigp0.arlen, maxigp0.arlock, maxigp0.arprot, maxigp0.arqos, maxigp0.arready, maxigp0.arsize, maxigp0.arvalid, maxigp0.awaddr, maxigp0.awburst, maxigp0.awcache, maxigp0.awid, maxigp0.awlen, maxigp0.awlock, maxigp0.awprot, maxigp0.awqos, maxigp0.awready, maxigp0.awsize, maxigp0.awvalid, maxigp0.bid, maxigp0.bready, maxigp0.bresp, maxigp0.bvalid, maxigp0.rdata, maxigp0.rid, maxigp0.rlast, maxigp0.rready, maxigp0.rresp, maxigp0.rvalid, maxigp0.wdata, maxigp0.wid, maxigp0.wlast, maxigp0.wready, maxigp0.wstrb, maxigp0.wvalid, maxigp1.araddr, maxigp1.arburst, maxigp1.arcache, maxigp1.aresetn, maxigp1.arid, maxigp1.arlen, maxigp1.arlock, maxigp1.arprot, maxigp1.arqos, maxigp1.arready, maxigp1.arsize, maxigp1.arvalid, maxigp1.awaddr, maxigp1.awburst, maxigp1.awcache, maxigp1.awid, maxigp1.awlen, maxigp1.awlock, maxigp1.awprot, maxigp1.awqos, maxigp1.awready, maxigp1.awsize, maxigp1.awvalid, maxigp1.bid, maxigp1.bready, maxigp1.bresp, maxigp1.bvalid, maxigp1.rdata, maxigp1.rid, maxigp1.rlast, maxigp1.rready, maxigp1.rresp, maxigp1.rvalid, maxigp1.wdata, maxigp1.wid, maxigp1.wlast, maxigp1.wready, maxigp1.wstrb, maxigp1.wvalid, saxiacp.araddr, saxiacp.arburst, saxiacp.arcache, saxiacp.aresetn, saxiacp.arid, saxiacp.arlen, saxiacp.arlock, saxiacp.arprot, saxiacp.arqos, saxiacp.arready, saxiacp.arsize, saxiacp.aruser, saxiacp.arvalid, saxiacp.awaddr, saxiacp.awburst, saxiacp.awcache, saxiacp.awid, saxiacp.awlen, saxiacp.awlock, saxiacp.awprot, saxiacp.awqos, saxiacp.awready, saxiacp.awsize, saxiacp.awuser, saxiacp.awvalid, saxiacp.bid, saxiacp.bready, saxiacp.bresp, saxiacp.bvalid, saxiacp.rdata, saxiacp.rid, saxiacp.rlast, saxiacp.rready, saxiacp.rresp, saxiacp.rvalid, saxiacp.wdata, saxiacp.wid, saxiacp.wlast, saxiacp.wready, saxiacp.wstrb, saxiacp.wvalid, saxigp0.araddr, saxigp0.arburst, saxigp0.arcache, saxigp0.aresetn, saxigp0.arid, saxigp0.arlen, saxigp0.arlock, saxigp0.arprot, saxigp0.arqos, saxigp0.arready, saxigp0.arsize, saxigp0.arvalid, saxigp0.awaddr, saxigp0.awburst, saxigp0.awcache, saxigp0.awid, saxigp0.awlen, saxigp0.awlock, saxigp0.awprot, saxigp0.awqos, saxigp0.awready, saxigp0.awsize, saxigp0.awvalid, saxigp0.bid, saxigp0.bready, saxigp0.bresp, saxigp0.bvalid, saxigp0.rdata, saxigp0.rid, saxigp0.rlast, saxigp0.rready, saxigp0.rresp, saxigp0.rvalid, saxigp0.wdata, saxigp0.wid, saxigp0.wlast, saxigp0.wready, saxigp0.wstrb, saxigp0.wvalid, saxigp1.araddr, saxigp1.arburst, saxigp1.arcache, saxigp1.aresetn, saxigp1.arid, saxigp1.arlen, saxigp1.arlock, saxigp1.arprot, saxigp1.arqos, saxigp1.arready, saxigp1.arsize, saxigp1.arvalid, saxigp1.awaddr, saxigp1.awburst, saxigp1.awcache, saxigp1.awid, saxigp1.awlen, saxigp1.awlock, saxigp1.awprot, saxigp1.awqos, saxigp1.awready, saxigp1.awsize, saxigp1.awvalid, saxigp1.bid, saxigp1.bready, saxigp1.bresp, saxigp1.bvalid, saxigp1.rdata, saxigp1.rid, saxigp1.rlast, saxigp1.rready, saxigp1.rresp, saxigp1.rvalid, saxigp1.wdata, saxigp1.wid, saxigp1.wlast, saxigp1.wready, saxigp1.wstrb, saxigp1.wvalid, saxihp0.araddr, saxihp0.arburst, saxihp0.arcache, saxihp0.aresetn, saxihp0.arid, saxihp0.arlen, saxihp0.arlock, saxihp0.arprot, saxihp0.arqos, saxihp0.arready, saxihp0.arsize, saxihp0.arvalid, saxihp0.awaddr, saxihp0.awburst, saxihp0.awcache, saxihp0.awid, saxihp0.awlen, saxihp0.awlock, saxihp0.awprot, saxihp0.awqos, saxihp0.awready, saxihp0.awsize, saxihp0.awvalid, saxihp0.bid, saxihp0.bready, saxihp0.bresp, saxihp0.bvalid, saxihp0.racount, saxihp0.rcount, saxihp0.rdata, saxihp0.rdissuecap1en, saxihp0.rid, saxihp0.rlast, saxihp0.rready, saxihp0.rresp, saxihp0.rvalid, saxihp0.wacount, saxihp0.wcount, saxihp0.wdata, saxihp0.wid, saxihp0.wlast, saxihp0.wready, saxihp0.wrissuecap1en, saxihp0.wstrb, saxihp0.wvalid, saxihp1.araddr, saxihp1.arburst, saxihp1.arcache, saxihp1.aresetn, saxihp1.arid, saxihp1.arlen, saxihp1.arlock, saxihp1.arprot, saxihp1.arqos, saxihp1.arready, saxihp1.arsize, saxihp1.arvalid, saxihp1.awaddr, saxihp1.awburst, saxihp1.awcache, saxihp1.awid, saxihp1.awlen, saxihp1.awlock, saxihp1.awprot, saxihp1.awqos, saxihp1.awready, saxihp1.awsize, saxihp1.awvalid, saxihp1.bid, saxihp1.bready, saxihp1.bresp, saxihp1.bvalid, saxihp1.racount, saxihp1.rcount, saxihp1.rdata, saxihp1.rdissuecap1en, saxihp1.rid, saxihp1.rlast, saxihp1.rready, saxihp1.rresp, saxihp1.rvalid, saxihp1.wacount, saxihp1.wcount, saxihp1.wdata, saxihp1.wid, saxihp1.wlast, saxihp1.wready, saxihp1.wrissuecap1en, saxihp1.wstrb, saxihp1.wvalid, saxihp2.araddr, saxihp2.arburst, saxihp2.arcache, saxihp2.aresetn, saxihp2.arid, saxihp2.arlen, saxihp2.arlock, saxihp2.arprot, saxihp2.arqos, saxihp2.arready, saxihp2.arsize, saxihp2.arvalid, saxihp2.awaddr, saxihp2.awburst, saxihp2.awcache, saxihp2.awid, saxihp2.awlen, saxihp2.awlock, saxihp2.awprot, saxihp2.awqos, saxihp2.awready, saxihp2.awsize, saxihp2.awvalid, saxihp2.bid, saxihp2.bready, saxihp2.bresp, saxihp2.bvalid, saxihp2.racount, saxihp2.rcount, saxihp2.rdata, saxihp2.rdissuecap1en, saxihp2.rid, saxihp2.rlast, saxihp2.rready, saxihp2.rresp, saxihp2.rvalid, saxihp2.wacount, saxihp2.wcount, saxihp2.wdata, saxihp2.wid, saxihp2.wlast, saxihp2.wready, saxihp2.wrissuecap1en, saxihp2.wstrb, saxihp2.wvalid, saxihp3.araddr, saxihp3.arburst, saxihp3.arcache, saxihp3.aresetn, saxihp3.arid, saxihp3.arlen, saxihp3.arlock, saxihp3.arprot, saxihp3.arqos, saxihp3.arready, saxihp3.arsize, saxihp3.arvalid, saxihp3.awaddr, saxihp3.awburst, saxihp3.awcache, saxihp3.awid, saxihp3.awlen, saxihp3.awlock, saxihp3.awprot, saxihp3.awqos, saxihp3.awready, saxihp3.awsize, saxihp3.awvalid, saxihp3.bid, saxihp3.bready, saxihp3.bresp, saxihp3.bvalid, saxihp3.racount, saxihp3.rcount, saxihp3.rdata, saxihp3.rdissuecap1en, saxihp3.rid, saxihp3.rlast, saxihp3.rready, saxihp3.rresp, saxihp3.rvalid, saxihp3.wacount, saxihp3.wcount, saxihp3.wdata, saxihp3.wid, saxihp3.wlast, saxihp3.wready, saxihp3.wrissuecap1en, saxihp3.wstrb, saxihp3.wvalid);
+    schedule (
+ddr.arb, emiogpio.i, emiogpio.o, emiogpio.tn, emioi2c0.scli, emioi2c0.sclo, emioi2c0.scltn, emioi2c0.sdai, emioi2c0.sdao, emioi2c0.sdatn, emioi2c1.scli, emioi2c1.sclo, emioi2c1.scltn, emioi2c1.sdai, emioi2c1.sdao, emioi2c1.sdatn, emiosramintin, event_.eventi, event_.evento, event_.standbywfe, event_.standbywfi, fclkclk, fclkclktrign, fclkresetn, fpgaidlen, irq.f2p, irq.p2f, maxigp0.araddr, maxigp0.arburst, maxigp0.arcache, maxigp0.aresetn, maxigp0.arid, maxigp0.arlen, maxigp0.arlock, maxigp0.arprot, maxigp0.arqos, maxigp0.arready, maxigp0.arsize, maxigp0.arvalid, maxigp0.awaddr, maxigp0.awburst, maxigp0.awcache, maxigp0.awid, maxigp0.awlen, maxigp0.awlock, maxigp0.awprot, maxigp0.awqos, maxigp0.awready, maxigp0.awsize, maxigp0.awvalid, maxigp0.bid, maxigp0.bready, maxigp0.bresp, maxigp0.bvalid, maxigp0.rdata, maxigp0.rid, maxigp0.rlast, maxigp0.rready, maxigp0.rresp, maxigp0.rvalid, maxigp0.wdata, maxigp0.wid, maxigp0.wlast, maxigp0.wready, maxigp0.wstrb, maxigp0.wvalid, maxigp1.araddr, maxigp1.arburst, maxigp1.arcache, maxigp1.aresetn, maxigp1.arid, maxigp1.arlen, maxigp1.arlock, maxigp1.arprot, maxigp1.arqos, maxigp1.arready, maxigp1.arsize, maxigp1.arvalid, maxigp1.awaddr, maxigp1.awburst, maxigp1.awcache, maxigp1.awid, maxigp1.awlen, maxigp1.awlock, maxigp1.awprot, maxigp1.awqos, maxigp1.awready, maxigp1.awsize, maxigp1.awvalid, maxigp1.bid, maxigp1.bready, maxigp1.bresp, maxigp1.bvalid, maxigp1.rdata, maxigp1.rid, maxigp1.rlast, maxigp1.rready, maxigp1.rresp, maxigp1.rvalid, maxigp1.wdata, maxigp1.wid, maxigp1.wlast, maxigp1.wready, maxigp1.wstrb, maxigp1.wvalid, saxiacp.araddr, saxiacp.arburst, saxiacp.arcache, saxiacp.aresetn, saxiacp.arid, saxiacp.arlen, saxiacp.arlock, saxiacp.arprot, saxiacp.arqos, saxiacp.arready, saxiacp.arsize, saxiacp.extra.aruser, saxiacp.arvalid, saxiacp.awaddr, saxiacp.awburst, saxiacp.awcache, saxiacp.awid, saxiacp.awlen, saxiacp.awlock, saxiacp.awprot, saxiacp.awqos, saxiacp.awready, saxiacp.awsize, saxiacp.extra.awuser, saxiacp.awvalid, saxiacp.bid, saxiacp.bready, saxiacp.bresp, saxiacp.bvalid, saxiacp.rdata, saxiacp.rid, saxiacp.rlast, saxiacp.rready, saxiacp.rresp, saxiacp.rvalid, saxiacp.wdata, saxiacp.wid, saxiacp.wlast, saxiacp.wready, saxiacp.wstrb, saxiacp.wvalid, saxigp0.araddr, saxigp0.arburst, saxigp0.arcache, saxigp0.aresetn, saxigp0.arid, saxigp0.arlen, saxigp0.arlock, saxigp0.arprot, saxigp0.arqos, saxigp0.arready, saxigp0.arsize, saxigp0.arvalid, saxigp0.awaddr, saxigp0.awburst, saxigp0.awcache, saxigp0.awid, saxigp0.awlen, saxigp0.awlock, saxigp0.awprot, saxigp0.awqos, saxigp0.awready, saxigp0.awsize, saxigp0.awvalid, saxigp0.bid, saxigp0.bready, saxigp0.bresp, saxigp0.bvalid, saxigp0.rdata, saxigp0.rid, saxigp0.rlast, saxigp0.rready, saxigp0.rresp, saxigp0.rvalid, saxigp0.wdata, saxigp0.wid, saxigp0.wlast, saxigp0.wready, saxigp0.wstrb, saxigp0.wvalid, saxigp1.araddr, saxigp1.arburst, saxigp1.arcache, saxigp1.aresetn, saxigp1.arid, saxigp1.arlen, saxigp1.arlock, saxigp1.arprot, saxigp1.arqos, saxigp1.arready, saxigp1.arsize, saxigp1.arvalid, saxigp1.awaddr, saxigp1.awburst, saxigp1.awcache, saxigp1.awid, saxigp1.awlen, saxigp1.awlock, saxigp1.awprot, saxigp1.awqos, saxigp1.awready, saxigp1.awsize, saxigp1.awvalid, saxigp1.bid, saxigp1.bready, saxigp1.bresp, saxigp1.bvalid, saxigp1.rdata, saxigp1.rid, saxigp1.rlast, saxigp1.rready, saxigp1.rresp, saxigp1.rvalid, saxigp1.wdata, saxigp1.wid, saxigp1.wlast, saxigp1.wready, saxigp1.wstrb, saxigp1.wvalid, saxihp0.araddr, saxihp0.arburst, saxihp0.arcache, saxihp0.aresetn, saxihp0.arid, saxihp0.arlen, saxihp0.arlock, saxihp0.arprot, saxihp0.arqos, saxihp0.arready, saxihp0.arsize, saxihp0.arvalid, saxihp0.awaddr, saxihp0.awburst, saxihp0.awcache, saxihp0.awid, saxihp0.awlen, saxihp0.awlock, saxihp0.awprot, saxihp0.awqos, saxihp0.awready, saxihp0.awsize, saxihp0.awvalid, saxihp0.bid, saxihp0.bready, saxihp0.bresp, saxihp0.bvalid, saxihp0.extra.racount, saxihp0.extra.rcount, saxihp0.rdata, saxihp0.extra.rdissuecap1en, saxihp0.rid, saxihp0.rlast, saxihp0.rready, saxihp0.rresp, saxihp0.rvalid, saxihp0.extra.wacount, saxihp0.extra.wcount, saxihp0.wdata, saxihp0.wid, saxihp0.wlast, saxihp0.wready, saxihp0.extra.wrissuecap1en, saxihp0.wstrb, saxihp0.wvalid, saxihp1.araddr, saxihp1.arburst, saxihp1.arcache, saxihp1.aresetn, saxihp1.arid, saxihp1.arlen, saxihp1.arlock, saxihp1.arprot, saxihp1.arqos, saxihp1.arready, saxihp1.arsize, saxihp1.arvalid, saxihp1.awaddr, saxihp1.awburst, saxihp1.awcache, saxihp1.awid, saxihp1.awlen, saxihp1.awlock, saxihp1.awprot, saxihp1.awqos, saxihp1.awready, saxihp1.awsize, saxihp1.awvalid, saxihp1.bid, saxihp1.bready, saxihp1.bresp, saxihp1.bvalid, saxihp1.extra.racount, saxihp1.extra.rcount, saxihp1.rdata, saxihp1.extra.rdissuecap1en, saxihp1.rid, saxihp1.rlast, saxihp1.rready, saxihp1.rresp, saxihp1.rvalid, saxihp1.extra.wacount, saxihp1.extra.wcount, saxihp1.wdata, saxihp1.wid, saxihp1.wlast, saxihp1.wready, saxihp1.extra.wrissuecap1en, saxihp1.wstrb, saxihp1.wvalid, saxihp2.araddr, saxihp2.arburst, saxihp2.arcache, saxihp2.aresetn, saxihp2.arid, saxihp2.arlen, saxihp2.arlock, saxihp2.arprot, saxihp2.arqos, saxihp2.arready, saxihp2.arsize, saxihp2.arvalid, saxihp2.awaddr, saxihp2.awburst, saxihp2.awcache, saxihp2.awid, saxihp2.awlen, saxihp2.awlock, saxihp2.awprot, saxihp2.awqos, saxihp2.awready, saxihp2.awsize, saxihp2.awvalid, saxihp2.bid, saxihp2.bready, saxihp2.bresp, saxihp2.bvalid, saxihp2.extra.racount, saxihp2.extra.rcount, saxihp2.rdata, saxihp2.extra.rdissuecap1en, saxihp2.rid, saxihp2.rlast, saxihp2.rready, saxihp2.rresp, saxihp2.rvalid, saxihp2.extra.wacount, saxihp2.extra.wcount, saxihp2.wdata, saxihp2.wid, saxihp2.wlast, saxihp2.wready, saxihp2.extra.wrissuecap1en, saxihp2.wstrb, saxihp2.wvalid, saxihp3.araddr, saxihp3.arburst, saxihp3.arcache, saxihp3.aresetn, saxihp3.arid, saxihp3.arlen, saxihp3.arlock, saxihp3.arprot, saxihp3.arqos, saxihp3.arready, saxihp3.arsize, saxihp3.arvalid, saxihp3.awaddr, saxihp3.awburst, saxihp3.awcache, saxihp3.awid, saxihp3.awlen, saxihp3.awlock, saxihp3.awprot, saxihp3.awqos, saxihp3.awready, saxihp3.awsize, saxihp3.awvalid, saxihp3.bid, saxihp3.bready, saxihp3.bresp, saxihp3.bvalid, saxihp3.extra.racount, saxihp3.extra.rcount, saxihp3.rdata, saxihp3.extra.rdissuecap1en, saxihp3.rid, saxihp3.rlast, saxihp3.rready, saxihp3.rresp, saxihp3.rvalid, saxihp3.extra.wacount, saxihp3.extra.wcount, saxihp3.wdata, saxihp3.wid, saxihp3.wlast, saxihp3.wready, saxihp3.extra.wrissuecap1en, saxihp3.wstrb, saxihp3.wvalid
+) CF (
+ddr.arb, emiogpio.i, emiogpio.o, emiogpio.tn, emioi2c0.scli, emioi2c0.sclo, emioi2c0.scltn, emioi2c0.sdai, emioi2c0.sdao, emioi2c0.sdatn, emioi2c1.scli, emioi2c1.sclo, emioi2c1.scltn, emioi2c1.sdai, emioi2c1.sdao, emioi2c1.sdatn, emiosramintin, event_.eventi, event_.evento, event_.standbywfe, event_.standbywfi, fclkclk, fclkclktrign, fclkresetn, fpgaidlen, irq.f2p, irq.p2f, maxigp0.araddr, maxigp0.arburst, maxigp0.arcache, maxigp0.aresetn, maxigp0.arid, maxigp0.arlen, maxigp0.arlock, maxigp0.arprot, maxigp0.arqos, maxigp0.arready, maxigp0.arsize, maxigp0.arvalid, maxigp0.awaddr, maxigp0.awburst, maxigp0.awcache, maxigp0.awid, maxigp0.awlen, maxigp0.awlock, maxigp0.awprot, maxigp0.awqos, maxigp0.awready, maxigp0.awsize, maxigp0.awvalid, maxigp0.bid, maxigp0.bready, maxigp0.bresp, maxigp0.bvalid, maxigp0.rdata, maxigp0.rid, maxigp0.rlast, maxigp0.rready, maxigp0.rresp, maxigp0.rvalid, maxigp0.wdata, maxigp0.wid, maxigp0.wlast, maxigp0.wready, maxigp0.wstrb, maxigp0.wvalid, maxigp1.araddr, maxigp1.arburst, maxigp1.arcache, maxigp1.aresetn, maxigp1.arid, maxigp1.arlen, maxigp1.arlock, maxigp1.arprot, maxigp1.arqos, maxigp1.arready, maxigp1.arsize, maxigp1.arvalid, maxigp1.awaddr, maxigp1.awburst, maxigp1.awcache, maxigp1.awid, maxigp1.awlen, maxigp1.awlock, maxigp1.awprot, maxigp1.awqos, maxigp1.awready, maxigp1.awsize, maxigp1.awvalid, maxigp1.bid, maxigp1.bready, maxigp1.bresp, maxigp1.bvalid, maxigp1.rdata, maxigp1.rid, maxigp1.rlast, maxigp1.rready, maxigp1.rresp, maxigp1.rvalid, maxigp1.wdata, maxigp1.wid, maxigp1.wlast, maxigp1.wready, maxigp1.wstrb, maxigp1.wvalid, saxiacp.araddr, saxiacp.arburst, saxiacp.arcache, saxiacp.aresetn, saxiacp.arid, saxiacp.arlen, saxiacp.arlock, saxiacp.arprot, saxiacp.arqos, saxiacp.arready, saxiacp.arsize, saxiacp.extra.aruser, saxiacp.arvalid, saxiacp.awaddr, saxiacp.awburst, saxiacp.awcache, saxiacp.awid, saxiacp.awlen, saxiacp.awlock, saxiacp.awprot, saxiacp.awqos, saxiacp.awready, saxiacp.awsize, saxiacp.extra.awuser, saxiacp.awvalid, saxiacp.bid, saxiacp.bready, saxiacp.bresp, saxiacp.bvalid, saxiacp.rdata, saxiacp.rid, saxiacp.rlast, saxiacp.rready, saxiacp.rresp, saxiacp.rvalid, saxiacp.wdata, saxiacp.wid, saxiacp.wlast, saxiacp.wready, saxiacp.wstrb, saxiacp.wvalid, saxigp0.araddr, saxigp0.arburst, saxigp0.arcache, saxigp0.aresetn, saxigp0.arid, saxigp0.arlen, saxigp0.arlock, saxigp0.arprot, saxigp0.arqos, saxigp0.arready, saxigp0.arsize, saxigp0.arvalid, saxigp0.awaddr, saxigp0.awburst, saxigp0.awcache, saxigp0.awid, saxigp0.awlen, saxigp0.awlock, saxigp0.awprot, saxigp0.awqos, saxigp0.awready, saxigp0.awsize, saxigp0.awvalid, saxigp0.bid, saxigp0.bready, saxigp0.bresp, saxigp0.bvalid, saxigp0.rdata, saxigp0.rid, saxigp0.rlast, saxigp0.rready, saxigp0.rresp, saxigp0.rvalid, saxigp0.wdata, saxigp0.wid, saxigp0.wlast, saxigp0.wready, saxigp0.wstrb, saxigp0.wvalid, saxigp1.araddr, saxigp1.arburst, saxigp1.arcache, saxigp1.aresetn, saxigp1.arid, saxigp1.arlen, saxigp1.arlock, saxigp1.arprot, saxigp1.arqos, saxigp1.arready, saxigp1.arsize, saxigp1.arvalid, saxigp1.awaddr, saxigp1.awburst, saxigp1.awcache, saxigp1.awid, saxigp1.awlen, saxigp1.awlock, saxigp1.awprot, saxigp1.awqos, saxigp1.awready, saxigp1.awsize, saxigp1.awvalid, saxigp1.bid, saxigp1.bready, saxigp1.bresp, saxigp1.bvalid, saxigp1.rdata, saxigp1.rid, saxigp1.rlast, saxigp1.rready, saxigp1.rresp, saxigp1.rvalid, saxigp1.wdata, saxigp1.wid, saxigp1.wlast, saxigp1.wready, saxigp1.wstrb, saxigp1.wvalid, saxihp0.araddr, saxihp0.arburst, saxihp0.arcache, saxihp0.aresetn, saxihp0.arid, saxihp0.arlen, saxihp0.arlock, saxihp0.arprot, saxihp0.arqos, saxihp0.arready, saxihp0.arsize, saxihp0.arvalid, saxihp0.awaddr, saxihp0.awburst, saxihp0.awcache, saxihp0.awid, saxihp0.awlen, saxihp0.awlock, saxihp0.awprot, saxihp0.awqos, saxihp0.awready, saxihp0.awsize, saxihp0.awvalid, saxihp0.bid, saxihp0.bready, saxihp0.bresp, saxihp0.bvalid, saxihp0.extra.racount, saxihp0.extra.rcount, saxihp0.rdata, saxihp0.extra.rdissuecap1en, saxihp0.rid, saxihp0.rlast, saxihp0.rready, saxihp0.rresp, saxihp0.rvalid, saxihp0.extra.wacount, saxihp0.extra.wcount, saxihp0.wdata, saxihp0.wid, saxihp0.wlast, saxihp0.wready, saxihp0.extra.wrissuecap1en, saxihp0.wstrb, saxihp0.wvalid, saxihp1.araddr, saxihp1.arburst, saxihp1.arcache, saxihp1.aresetn, saxihp1.arid, saxihp1.arlen, saxihp1.arlock, saxihp1.arprot, saxihp1.arqos, saxihp1.arready, saxihp1.arsize, saxihp1.arvalid, saxihp1.awaddr, saxihp1.awburst, saxihp1.awcache, saxihp1.awid, saxihp1.awlen, saxihp1.awlock, saxihp1.awprot, saxihp1.awqos, saxihp1.awready, saxihp1.awsize, saxihp1.awvalid, saxihp1.bid, saxihp1.bready, saxihp1.bresp, saxihp1.bvalid, saxihp1.extra.racount, saxihp1.extra.rcount, saxihp1.rdata, saxihp1.extra.rdissuecap1en, saxihp1.rid, saxihp1.rlast, saxihp1.rready, saxihp1.rresp, saxihp1.rvalid, saxihp1.extra.wacount, saxihp1.extra.wcount, saxihp1.wdata, saxihp1.wid, saxihp1.wlast, saxihp1.wready, saxihp1.extra.wrissuecap1en, saxihp1.wstrb, saxihp1.wvalid, saxihp2.araddr, saxihp2.arburst, saxihp2.arcache, saxihp2.aresetn, saxihp2.arid, saxihp2.arlen, saxihp2.arlock, saxihp2.arprot, saxihp2.arqos, saxihp2.arready, saxihp2.arsize, saxihp2.arvalid, saxihp2.awaddr, saxihp2.awburst, saxihp2.awcache, saxihp2.awid, saxihp2.awlen, saxihp2.awlock, saxihp2.awprot, saxihp2.awqos, saxihp2.awready, saxihp2.awsize, saxihp2.awvalid, saxihp2.bid, saxihp2.bready, saxihp2.bresp, saxihp2.bvalid, saxihp2.extra.racount, saxihp2.extra.rcount, saxihp2.rdata, saxihp2.extra.rdissuecap1en, saxihp2.rid, saxihp2.rlast, saxihp2.rready, saxihp2.rresp, saxihp2.rvalid, saxihp2.extra.wacount, saxihp2.extra.wcount, saxihp2.wdata, saxihp2.wid, saxihp2.wlast, saxihp2.wready, saxihp2.extra.wrissuecap1en, saxihp2.wstrb, saxihp2.wvalid, saxihp3.araddr, saxihp3.arburst, saxihp3.arcache, saxihp3.aresetn, saxihp3.arid, saxihp3.arlen, saxihp3.arlock, saxihp3.arprot, saxihp3.arqos, saxihp3.arready, saxihp3.arsize, saxihp3.arvalid, saxihp3.awaddr, saxihp3.awburst, saxihp3.awcache, saxihp3.awid, saxihp3.awlen, saxihp3.awlock, saxihp3.awprot, saxihp3.awqos, saxihp3.awready, saxihp3.awsize, saxihp3.awvalid, saxihp3.bid, saxihp3.bready, saxihp3.bresp, saxihp3.bvalid, saxihp3.extra.racount, saxihp3.extra.rcount, saxihp3.rdata, saxihp3.extra.rdissuecap1en, saxihp3.rid, saxihp3.rlast, saxihp3.rready, saxihp3.rresp, saxihp3.rvalid, saxihp3.extra.wacount, saxihp3.extra.wcount, saxihp3.wdata, saxihp3.wid, saxihp3.wlast, saxihp3.wready, saxihp3.extra.wrissuecap1en, saxihp3.wstrb, saxihp3.wvalid
+);
 `endif
 endmodule

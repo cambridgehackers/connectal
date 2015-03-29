@@ -23,78 +23,72 @@ import GetPut::*;
 import Vector::*;
 import PPS7LIB::*;
 import AxiMasterSlave::*;
+import AxiBits::*;
 
-interface AxiMasterCommon;
+interface AxiMasterCommon#(numeric type addrWidth, numeric type dataWidth, numeric type tagWidth);
     method Bit#(1)            aresetn();
-    interface Axi3Master#(32,32,12) client;
+    interface Axi3Master#(addrWidth,dataWidth,tagWidth) client;
 endinterface
 
-interface AxiSlaveCommon#(numeric type data_width, numeric type id_width);
+interface AxiSlaveCommon#(numeric type addrWidth, numeric type dataWidth, numeric type tagWidth, type extraType);
     method Bit#(1)            aresetn();
-    interface Axi3Slave#(32,data_width,id_width) server;
+    interface Axi3Slave#(addrWidth,dataWidth,tagWidth) server;
+    interface extraType   extra;
 endinterface
 
-interface AxiSlaveHighSpeed;
-    interface AxiSlaveCommon#(64,6) axi;
-    method Bit#(3)            racount();
-    method Bit#(8)            rcount();
-    method Action             rdissuecap1en(Bit#(1) v);
-    method Bit#(6)            wacount();
-    method Bit#(8)            wcount();
-    method Action             wrissuecap1en(Bit#(1) v);
+interface AxiSlaveHighSpeed#(numeric type addrWidth, numeric type dataWidth, numeric type tagWidth, type extraType);
+    interface AxiSlaveCommon#(addrWidth,dataWidth,tagWidth,extraType) axi;
 endinterface
 
-interface AxiMasterWires;
+interface AxiMasterWires#(numeric type addrWidth, numeric type dataWidth, numeric type tagWidth);
    interface Wire#(Bit#(1)) arready;
    interface Wire#(Bit#(1)) awready;
    interface Wire#(Bit#(1)) rvalid;
    interface Wire#(Bit#(1)) wready;
    interface Wire#(Bit#(1)) bvalid;
 
-   interface Wire#(Bit#(12)) rid;
+   interface Wire#(Bit#(tagWidth)) rid;
    interface Wire#(Bit#(2))  rresp;
-   interface Wire#(Bit#(32)) rdata;
+   interface Wire#(Bit#(dataWidth)) rdata;
    interface Wire#(Bit#(1))  rlast;
-   interface Wire#(Bit#(12)) bid;
+   interface Wire#(Bit#(tagWidth)) bid;
    interface Wire#(Bit#(2)) bresp;
 endinterface
 
-interface AxiSlaveWires#(numeric type data_width, numeric type id_width);
-   interface Wire#(Bit#(32)) araddr;
+interface AxiSlaveWires#(numeric type addrWidth, numeric type dataWidth, numeric type tagWidth);
+   interface Wire#(Bit#(addrWidth)) araddr;
    interface Wire#(Bit#(2)) arburst;
    interface Wire#(Bit#(4)) arcache;
-   interface Wire#(Bit#(id_width)) arid;
+   interface Wire#(Bit#(tagWidth)) arid;
    interface Wire#(Bit#(4)) arlen;
    interface Wire#(Bit#(2)) arlock;
    interface Wire#(Bit#(3)) arprot;
    interface Wire#(Bit#(4)) arqos;
    interface Wire#(Bit#(2)) arsize;
-   interface Wire#(Bit#(5)) aruser;
    interface Wire#(Bit#(1)) arvalid;
-   interface Wire#(Bit#(32)) awaddr;
+   interface Wire#(Bit#(addrWidth)) awaddr;
    interface Wire#(Bit#(2)) awburst;
    interface Wire#(Bit#(4)) awcache;
-   interface Wire#(Bit#(id_width)) awid;
+   interface Wire#(Bit#(tagWidth)) awid;
    interface Wire#(Bit#(4)) awlen;
    interface Wire#(Bit#(2)) awlock;
    interface Wire#(Bit#(3)) awprot;
    interface Wire#(Bit#(4)) awqos;
    interface Wire#(Bit#(2)) awsize;
-   interface Wire#(Bit#(5)) awuser;
    interface Wire#(Bit#(1)) awvalid;
    interface Wire#(Bit#(1)) rready;
-   interface Wire#(Bit#(id_width)) wid;
-   interface Wire#(Bit#(TDiv#(data_width,8))) wstrb;
-   interface Wire#(Bit#(data_width)) wdata;
+   interface Wire#(Bit#(tagWidth)) wid;
+   interface Wire#(Bit#(TDiv#(dataWidth,8))) wstrb;
+   interface Wire#(Bit#(dataWidth)) wdata;
    interface Wire#(Bit#(1)) wlast;
    interface Wire#(Bit#(1)) wvalid;
    interface Wire#(Bit#(1)) bready;
 endinterface
 
-module mkAxiMasterWires(AxiMasterWires);
+module mkAxiMasterWires(AxiMasterWires#(addrWidth, dataWidth, tagWidth));
    Vector#(6, Wire#(Bit#(1))) wires <- replicateM(mkDWire(0));
-   Vector#(1, Wire#(Bit#(32))) datawires <- replicateM(mkDWire(0));
-   Vector#(2, Wire#(Bit#(12))) idwires <- replicateM(mkDWire(0));
+   Vector#(1, Wire#(Bit#(dataWidth))) datawires <- replicateM(mkDWire(0));
+   Vector#(2, Wire#(Bit#(tagWidth))) idwires <- replicateM(mkDWire(0));
    Vector#(2, Wire#(Bit#(2))) respwires <- replicateM(mkDWire(0));
    interface Wire arready = wires[0];
    interface Wire awready = wires[1];
@@ -109,14 +103,14 @@ module mkAxiMasterWires(AxiMasterWires);
    interface Wire bresp  = respwires[1];
 endmodule
 
-module mkAxiSlaveWires(AxiSlaveWires#(data_width, id_width));
+module mkAxiSlaveWires(AxiSlaveWires#(addrWidth, dataWidth, tagWidth));
    Vector#(5, Wire#(Bit#(1))) wires <- replicateM(mkDWire(0));
-   Vector#(2, Wire#(Bit#(32))) addrwires <- replicateM(mkDWire(0));
-   Vector#(1, Wire#(Bit#(data_width))) datawires <- replicateM(mkDWire(0));
+   Vector#(2, Wire#(Bit#(addrWidth))) addrwires <- replicateM(mkDWire(0));
+   Vector#(1, Wire#(Bit#(dataWidth))) datawires <- replicateM(mkDWire(0));
    Vector#(2, Wire#(Bit#(2))) burstwires <- replicateM(mkDWire(0));
    Vector#(2, Wire#(Bit#(4))) cachewires <- replicateM(mkDWire(0));
-   Vector#(3, Wire#(Bit#(id_width))) idwires <- replicateM(mkDWire(0));
-   Vector#(1, Wire#(Bit#(TDiv#(data_width,8)))) strbwires <- replicateM(mkDWire(0));
+   Vector#(3, Wire#(Bit#(tagWidth))) idwires <- replicateM(mkDWire(0));
+   Vector#(1, Wire#(Bit#(TDiv#(dataWidth,8)))) strbwires <- replicateM(mkDWire(0));
    Vector#(2, Wire#(Bit#(4))) lenwires <- replicateM(mkDWire(0));
    Vector#(2, Wire#(Bit#(2))) lockwires <- replicateM(mkDWire(0));
    Vector#(2, Wire#(Bit#(3))) protwires <- replicateM(mkDWire(0));
@@ -135,7 +129,6 @@ module mkAxiSlaveWires(AxiSlaveWires#(data_width, id_width));
    interface Wire arprot = protwires[0];
    interface Wire arqos = qoswires[0];
    interface Wire arsize = sizewires[0];
-   interface Wire aruser = userwires[0];
    interface Wire arvalid = validwires[0];
 
    interface Wire awaddr = addrwires[1];
@@ -147,7 +140,6 @@ module mkAxiSlaveWires(AxiSlaveWires#(data_width, id_width));
    interface Wire awprot = protwires[1];
    interface Wire awqos = qoswires[1];
    interface Wire awsize = sizewires[1];
-   interface Wire awuser = userwires[1];
    interface Wire awvalid = validwires[1];
 
    interface Wire rready = readywires[0];
@@ -159,8 +151,9 @@ module mkAxiSlaveWires(AxiSlaveWires#(data_width, id_width));
    interface Wire bready = readywires[1];
 endmodule
 
-module mkAxi3MasterGather#(Pps7Maxigp axiWires)(AxiMasterCommon);
-   AxiMasterWires vtopmw <- mkAxiMasterWires;
+module mkAxi3MasterGather#(AxiMasterBits#(addrWidth, dataWidth, tagWidth) axiWires)(AxiMasterCommon#(addrWidth, dataWidth, tagWidth))
+provisos(Div#(dataWidth, 8, 4));
+   AxiMasterWires#(addrWidth, dataWidth, tagWidth) vtopmw <- mkAxiMasterWires;
    rule handshake1;
         axiWires.arready(vtopmw.arready);
    endrule
@@ -185,8 +178,8 @@ module mkAxi3MasterGather#(Pps7Maxigp axiWires)(AxiMasterCommon);
 
    interface Axi3Master client;
         interface Get req_ar;
-             method ActionValue#(Axi3ReadRequest#(32,12)) get() if (axiWires.arvalid() != 0);
-                 Axi3ReadRequest#(32,12) v;
+             method ActionValue#(Axi3ReadRequest#(addrWidth,tagWidth)) get() if (axiWires.arvalid() != 0);
+                 Axi3ReadRequest#(addrWidth,tagWidth) v;
                  v.address = axiWires.araddr();
                  v.burst = axiWires.arburst();
                  v.cache = axiWires.arcache();
@@ -198,13 +191,12 @@ module mkAxi3MasterGather#(Pps7Maxigp axiWires)(AxiMasterCommon);
                  v.size = {0, axiWires.arsize()};
 
                 vtopmw.arready <= 1;
-
                 return v;
             endmethod
         endinterface
         interface Get req_aw;
-            method ActionValue#(Axi3WriteRequest#(32,12)) get() if (axiWires.awvalid() != 0);
-                Axi3WriteRequest#(32,12) v;
+            method ActionValue#(Axi3WriteRequest#(addrWidth,tagWidth)) get() if (axiWires.awvalid() != 0);
+                Axi3WriteRequest#(addrWidth,tagWidth) v;
                 v.address = axiWires.awaddr();
                 v.burst = axiWires.awburst();
                 v.cache = axiWires.awcache();
@@ -220,7 +212,7 @@ module mkAxi3MasterGather#(Pps7Maxigp axiWires)(AxiMasterCommon);
            endmethod
         endinterface
         interface Put resp_read;
-            method Action put(Axi3ReadResponse#(32, 12) v) if (axiWires.rready() != 0);
+            method Action put(Axi3ReadResponse#(dataWidth, tagWidth) v) if (axiWires.rready() != 0);
                 vtopmw.rid <= v.id;
                 vtopmw.rresp <= v.resp;
                 vtopmw.rdata <= v.data;
@@ -229,8 +221,8 @@ module mkAxi3MasterGather#(Pps7Maxigp axiWires)(AxiMasterCommon);
             endmethod
         endinterface
         interface Get resp_write;
-            method ActionValue#(Axi3WriteData#(32,12)) get() if (axiWires.wvalid() != 0);
-                Axi3WriteData#(32,12) v;
+            method ActionValue#(Axi3WriteData#(dataWidth,tagWidth)) get() if (axiWires.wvalid() != 0);
+                Axi3WriteData#(dataWidth,tagWidth) v;
                 v.id = axiWires.wid();
                 v.byteEnable = axiWires.wstrb();
                 v.data = axiWires.wdata();
@@ -241,7 +233,7 @@ module mkAxi3MasterGather#(Pps7Maxigp axiWires)(AxiMasterCommon);
             endmethod
         endinterface
         interface Put resp_b;
-            method Action put(Axi3WriteResponse#(12) v) if (axiWires.bready() != 0);
+            method Action put(Axi3WriteResponse#(tagWidth) v) if (axiWires.bready() != 0);
                 vtopmw.bvalid <= 1;
                 vtopmw.bid    <= v.id;
                 vtopmw.bresp  <= v.resp;
@@ -251,8 +243,10 @@ module mkAxi3MasterGather#(Pps7Maxigp axiWires)(AxiMasterCommon);
     method aresetn = axiWires.aresetn;
 endmodule
 
-module mkAxi3SlaveGather#(Pps7Saxigp axiWires)(AxiSlaveCommon#(32,6));
-    AxiSlaveWires#(32,6) vtopsw <- mkAxiSlaveWires;
+module mkAxi3SlaveGather#(AxiSlaveBits#(addrWidth, dataWidth, tagWidth,
+    strobeWidth, extraType) axiWires)(AxiSlaveCommon#(addrWidth, dataWidth,tagWidth,extraType))
+provisos(Div#(dataWidth, 8, strobeWidth));
+    AxiSlaveWires#(addrWidth,dataWidth,tagWidth) vtopsw <- mkAxiSlaveWires;
     rule handshake1;
           axiWires.araddr(vtopsw.araddr);
           axiWires.arburst(vtopsw.arburst);
@@ -292,7 +286,7 @@ module mkAxi3SlaveGather#(Pps7Saxigp axiWires)(AxiSlaveCommon#(32,6));
     endrule
     interface Axi3Slave server;
     interface Put req_ar;
-        method Action put(Axi3ReadRequest#(32,6) v) if (axiWires.arready() != 0);
+        method Action put(Axi3ReadRequest#(addrWidth,tagWidth) v) if (axiWires.arready() != 0);
            vtopsw.araddr <= v.address;
            vtopsw.arburst <= v.burst;
            vtopsw.arcache <= v.cache;
@@ -307,7 +301,7 @@ module mkAxi3SlaveGather#(Pps7Saxigp axiWires)(AxiSlaveCommon#(32,6));
         endmethod
     endinterface
     interface Put req_aw;
-        method Action put(Axi3WriteRequest#(32,6) v) if (axiWires.awready() != 0);
+        method Action put(Axi3WriteRequest#(addrWidth,tagWidth) v) if (axiWires.awready() != 0);
            vtopsw.awaddr <= v.address;
            vtopsw.awburst <= v.burst;
            vtopsw.awcache <= v.cache;
@@ -322,7 +316,7 @@ module mkAxi3SlaveGather#(Pps7Saxigp axiWires)(AxiSlaveCommon#(32,6));
         endmethod
     endinterface
     interface Put resp_write;
-        method Action put(Axi3WriteData#(32,6) v) if (axiWires.wready() != 0);
+        method Action put(Axi3WriteData#(dataWidth,tagWidth) v) if (axiWires.wready() != 0);
            vtopsw.wid <= v.id;
            vtopsw.wstrb <= v.byteEnable;
            vtopsw.wdata <= v.data;
@@ -332,8 +326,8 @@ module mkAxi3SlaveGather#(Pps7Saxigp axiWires)(AxiSlaveCommon#(32,6));
         endmethod
     endinterface
     interface Get resp_read;
-        method ActionValue#(Axi3ReadResponse#(32,6)) get() if (axiWires.rvalid() != 0);
-            Axi3ReadResponse#(32, 6) v;
+        method ActionValue#(Axi3ReadResponse#(dataWidth,tagWidth)) get() if (axiWires.rvalid() != 0);
+            Axi3ReadResponse#(dataWidth, tagWidth) v;
             v.id = axiWires.rid();
             v.resp = axiWires.rresp();
             v.data = axiWires.rdata();
@@ -344,8 +338,8 @@ module mkAxi3SlaveGather#(Pps7Saxigp axiWires)(AxiSlaveCommon#(32,6));
         endmethod
             endinterface
     interface Get resp_b;
-        method ActionValue#(Axi3WriteResponse#(6)) get() if (axiWires.bvalid() != 0);
-            Axi3WriteResponse#(6) v;
+        method ActionValue#(Axi3WriteResponse#(tagWidth)) get() if (axiWires.bvalid() != 0);
+            Axi3WriteResponse#(tagWidth) v;
             v.id = axiWires.bid();
             v.resp = axiWires.bresp();
 
@@ -357,8 +351,10 @@ module mkAxi3SlaveGather#(Pps7Saxigp axiWires)(AxiSlaveCommon#(32,6));
     method aresetn = axiWires.aresetn;
 endmodule
 
-module mkAxi3SlaveGather64#(Pps7Saxiacp axiWires)(AxiSlaveCommon#(64,3));
-    AxiSlaveWires#(64,3) vtopsw <- mkAxiSlaveWires;
+module mkAxi3SlaveGather64#(AxiSlaveBits#(addrWidth, dataWidth, tagWidth,
+    strobeWidth, extraType) axiWires)(AxiSlaveCommon#(addrWidth, dataWidth,tagWidth,extraType))
+provisos (Div#(dataWidth, 8, strobeWidth) );
+    AxiSlaveWires#(addrWidth,dataWidth,tagWidth) vtopsw <- mkAxiSlaveWires;
     rule handshake1;
           axiWires.araddr(vtopsw.araddr);
           axiWires.arburst(vtopsw.arburst);
@@ -369,7 +365,6 @@ module mkAxi3SlaveGather64#(Pps7Saxiacp axiWires)(AxiSlaveCommon#(64,3));
           axiWires.arprot(vtopsw.arprot);
           axiWires.arqos(vtopsw.arqos);
           axiWires.arsize(vtopsw.arsize);
-          axiWires.aruser(vtopsw.aruser);
           axiWires.arvalid(vtopsw.arvalid);
     endrule
     rule handshake2;
@@ -382,7 +377,6 @@ module mkAxi3SlaveGather64#(Pps7Saxiacp axiWires)(AxiSlaveCommon#(64,3));
           axiWires.awprot(vtopsw.awprot);
           axiWires.awqos(vtopsw.awqos);
           axiWires.awsize(vtopsw.awsize);
-          axiWires.awuser(vtopsw.awuser);
           axiWires.awvalid(vtopsw.awvalid);
     endrule
     rule handshake3;
@@ -400,7 +394,7 @@ module mkAxi3SlaveGather64#(Pps7Saxiacp axiWires)(AxiSlaveCommon#(64,3));
     endrule
     interface Axi3Slave server;
     interface Put req_ar;
-        method Action put(Axi3ReadRequest#(32,3) v) if (axiWires.arready() != 0);
+        method Action put(Axi3ReadRequest#(addrWidth,tagWidth) v) if (axiWires.arready() != 0);
            vtopsw.araddr <= v.address;
            vtopsw.arburst <= v.burst;
            vtopsw.arcache <= v.cache;
@@ -415,7 +409,7 @@ module mkAxi3SlaveGather64#(Pps7Saxiacp axiWires)(AxiSlaveCommon#(64,3));
         endmethod
     endinterface
     interface Put req_aw;
-        method Action put(Axi3WriteRequest#(32,3) v) if (axiWires.awready() != 0);
+        method Action put(Axi3WriteRequest#(addrWidth,tagWidth) v) if (axiWires.awready() != 0);
            vtopsw.awaddr <= v.address;
            vtopsw.awburst <= v.burst;
            vtopsw.awcache <= v.cache;
@@ -430,7 +424,7 @@ module mkAxi3SlaveGather64#(Pps7Saxiacp axiWires)(AxiSlaveCommon#(64,3));
         endmethod
     endinterface
     interface Put resp_write;
-        method Action put(Axi3WriteData#(64,3) v) if (axiWires.wready() != 0);
+        method Action put(Axi3WriteData#(dataWidth,tagWidth) v) if (axiWires.wready() != 0);
            vtopsw.wid <= v.id;
            vtopsw.wstrb <= v.byteEnable;
            vtopsw.wdata <= v.data;
@@ -440,8 +434,8 @@ module mkAxi3SlaveGather64#(Pps7Saxiacp axiWires)(AxiSlaveCommon#(64,3));
         endmethod
     endinterface
     interface Get resp_read;
-        method ActionValue#(Axi3ReadResponse#(64, 3)) get() if (axiWires.rvalid() != 0);
-            Axi3ReadResponse#(64, 3) v;
+        method ActionValue#(Axi3ReadResponse#(dataWidth, tagWidth)) get() if (axiWires.rvalid() != 0);
+            Axi3ReadResponse#(dataWidth, tagWidth) v;
             v.id = axiWires.rid();
             v.resp = axiWires.rresp();
             v.data = axiWires.rdata();
@@ -452,8 +446,8 @@ module mkAxi3SlaveGather64#(Pps7Saxiacp axiWires)(AxiSlaveCommon#(64,3));
         endmethod
          endinterface
     interface Get resp_b;
-        method ActionValue#(Axi3WriteResponse#(3)) get() if (axiWires.bvalid() != 0);
-            Axi3WriteResponse#(3) v;
+        method ActionValue#(Axi3WriteResponse#(tagWidth)) get() if (axiWires.bvalid() != 0);
+            Axi3WriteResponse#(tagWidth) v;
             v.id = axiWires.bid();
             v.resp = axiWires.bresp();
 
@@ -462,11 +456,14 @@ module mkAxi3SlaveGather64#(Pps7Saxiacp axiWires)(AxiSlaveCommon#(64,3));
         endmethod
      endinterface
      endinterface
+     interface extra = axiWires.extra;
      method aresetn = axiWires.aresetn;
 endmodule
 
-module mkAxiSlaveHighSpeedGather#(Pps7Saxihp axiWires)(AxiSlaveHighSpeed);
-    AxiSlaveWires#(64,6) vtopsw <- mkAxiSlaveWires;
+module mkAxiSlaveHighSpeedGather#(AxiSlaveBits#(addrWidth, dataWidth, tagWidth,
+    strobeWidth, AxiBits::HPType) axiWires)(AxiSlaveHighSpeed#(addrWidth, dataWidth,tagWidth,AxiBits::HPType))
+provisos(Div#(dataWidth, 8, strobeWidth));
+    AxiSlaveWires#(addrWidth,dataWidth,tagWidth) vtopsw <- mkAxiSlaveWires;
     rule handshake1;
           axiWires.araddr(vtopsw.araddr);
           axiWires.arburst(vtopsw.arburst);
@@ -505,13 +502,13 @@ module mkAxiSlaveHighSpeedGather#(Pps7Saxihp axiWires)(AxiSlaveHighSpeed);
          axiWires.bready(vtopsw.bready);
     endrule
     rule issuecap;
-          axiWires.rdissuecap1en(0);
-          axiWires.wrissuecap1en(0);
+          axiWires.extra.rdissuecap1en(0);
+          axiWires.extra.wrissuecap1en(0);
     endrule
     interface AxiSlaveCommon axi;
     interface Axi3Slave server;
     interface Put req_ar;
-        method Action put(Axi3ReadRequest#(32,6) v) if (axiWires.arready() != 0);
+        method Action put(Axi3ReadRequest#(addrWidth,tagWidth) v) if (axiWires.arready() != 0);
            vtopsw.araddr <= v.address;
            vtopsw.arburst <= v.burst;
            vtopsw.arcache <= v.cache;
@@ -526,7 +523,7 @@ module mkAxiSlaveHighSpeedGather#(Pps7Saxihp axiWires)(AxiSlaveHighSpeed);
         endmethod
     endinterface
     interface Put req_aw;
-        method Action put(Axi3WriteRequest#(32,6) v) if (axiWires.awready() != 0);
+        method Action put(Axi3WriteRequest#(addrWidth,tagWidth) v) if (axiWires.awready() != 0);
            vtopsw.awaddr <= v.address;
            vtopsw.awburst <= v.burst;
            vtopsw.awcache <= v.cache;
@@ -541,7 +538,7 @@ module mkAxiSlaveHighSpeedGather#(Pps7Saxihp axiWires)(AxiSlaveHighSpeed);
         endmethod
     endinterface
     interface Put resp_write;
-        method Action put(Axi3WriteData#(64,6) v) if (axiWires.wready() != 0);
+        method Action put(Axi3WriteData#(dataWidth,tagWidth) v) if (axiWires.wready() != 0);
            vtopsw.wid <= v.id;
            vtopsw.wstrb <= v.byteEnable;
            vtopsw.wdata <= v.data;
@@ -551,8 +548,8 @@ module mkAxiSlaveHighSpeedGather#(Pps7Saxihp axiWires)(AxiSlaveHighSpeed);
         endmethod
     endinterface
     interface Get resp_read;
-        method ActionValue#(Axi3ReadResponse#(64,6)) get() if (axiWires.rvalid() != 0);
-            Axi3ReadResponse#(64, 6) v;
+        method ActionValue#(Axi3ReadResponse#(dataWidth,tagWidth)) get() if (axiWires.rvalid() != 0);
+            Axi3ReadResponse#(dataWidth, tagWidth) v;
             v.id = axiWires.rid();
             v.resp = axiWires.rresp();
             v.data = axiWires.rdata();
@@ -563,8 +560,8 @@ module mkAxiSlaveHighSpeedGather#(Pps7Saxihp axiWires)(AxiSlaveHighSpeed);
         endmethod
     endinterface
     interface Get resp_b;
-        method ActionValue#(Axi3WriteResponse#(6)) get() if (axiWires.bvalid() != 0);
-            Axi3WriteResponse#(6) v;
+        method ActionValue#(Axi3WriteResponse#(tagWidth)) get() if (axiWires.bvalid() != 0);
+            Axi3WriteResponse#(tagWidth) v;
             v.id = axiWires.bid();
             v.resp = axiWires.bresp();
 
@@ -574,11 +571,6 @@ module mkAxiSlaveHighSpeedGather#(Pps7Saxihp axiWires)(AxiSlaveHighSpeed);
       endinterface: resp_b
     endinterface: server
     method aresetn = axiWires.aresetn;
+    interface extra = axiWires.extra;
     endinterface: axi
-    method racount = axiWires.racount;
-    method rcount = axiWires.rcount;
-    method rdissuecap1en = axiWires.rdissuecap1en;
-    method wacount = axiWires.wacount;
-    method wcount = axiWires.wcount;
-    method wrissuecap1en = axiWires.wrissuecap1en;
 endmodule

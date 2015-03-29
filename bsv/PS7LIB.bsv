@@ -29,13 +29,13 @@ import ConnectableWithTrace::*;
 import Bscan::*;
 import Vector::*;
 import PPS7LIB::*;
-//import CtrlMux::*;
 import Portal::*;
 import AxiMasterSlave::*;
 import AxiDma::*;
 import XilinxCells::*;
 import ConnectalXilinxCells::*;
 import ConnectalClocks::*;
+import AxiBits::*;
 import AxiGather::*;
 
 (* always_ready, always_enabled *)
@@ -76,17 +76,17 @@ interface PS7LIB;
     interface Inout#(Bit#(54))     mio;
     interface Pps7Ps               ps;
 
-    interface Vector#(2, AxiMasterCommon) m_axi_gp;
-    interface Vector#(2, AxiSlaveCommon#(32,6)) s_axi_gp;
-    interface Vector#(4, AxiSlaveHighSpeed) s_axi_hp;
-    interface AxiSlaveCommon#(64,3) s_axi_acp;
+    interface Vector#(2, AxiMasterCommon#(32,32,12)) m_axi_gp;
+    interface Vector#(2, AxiSlaveCommon#(32,32,6,Empty)) s_axi_gp;
+    interface Vector#(4, AxiSlaveHighSpeed#(32,64,6,HPType)) s_axi_hp;
+    interface AxiSlaveCommon#(32,64,3,ACPType) s_axi_acp;
 endinterface
 
 module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
     PPS7LIB foo <- mkPPS7LIB(
-        axi_clock, axi_reset, axi_clock, axi_reset, axi_clock, axi_reset, axi_clock, axi_reset,
-        axi_clock, axi_reset, axi_clock, axi_reset, axi_clock, axi_reset, axi_clock, axi_reset,
-        axi_clock, axi_reset);
+        axi_clock, axi_clock, axi_clock, axi_clock, axi_clock, axi_clock, axi_clock, axi_clock,
+        axi_clock, axi_reset, axi_reset, axi_reset, axi_reset, axi_reset, axi_reset, axi_reset,
+        axi_reset, axi_reset);
 `ifdef PS7EXTENDED
     Vector#(2, Pps7Can)     vcan;
     Vector#(4, Pps7Dma)     vdma;
@@ -99,14 +99,10 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
 `endif
     Vector#(2, Pps7Emioi2c)     vi2c;
     Vector#(1, Pps7Saxiacp)    vs_axi_acp;
-    Vector#(2, AxiMasterCommon) vtopm_axi_gp;
-    //Vector#(2, AxiMasterWires) vtopmw_axi_gp <- replicateM(mkAxiMasterWires(clocked_by axi_clock, reset_by axi_reset));
-    Vector#(2, AxiSlaveCommon#(32,6)) vtops_axi_gp;
-    Vector#(1, AxiSlaveCommon#(64,3)) vtops_axi_acp;
-    //Vector#(2, AxiSlaveWires#(32,6)) vtopsw_axi_gp <- replicateM(mkAxiSlaveWires(clocked_by axi_clock, reset_by axi_reset));
-    Vector#(4, AxiSlaveHighSpeed) vtops_axi_hp;
-    //Vector#(4, AxiSlaveWires#(64,6)) vtopsw_axi_hp <- replicateM(mkAxiSlaveWires(clocked_by axi_clock, reset_by axi_reset));
-    //Vector#(1, AxiSlaveWires#(64,3)) vtopsw_axi_acp <- replicateM(mkAxiSlaveWires(clocked_by axi_clock, reset_by axi_reset));
+    Vector#(2, AxiMasterCommon#(32,32,12)) vtopm_axi_gp;
+    Vector#(2, AxiSlaveCommon#(32,32,6,Empty)) vtops_axi_gp;
+    Vector#(1, AxiSlaveCommon#(32,64,3,ACPType)) vtops_axi_acp;
+    Vector#(4, AxiSlaveHighSpeed#(32,64,6,HPType)) vtops_axi_hp;
 
 `ifdef PS7EXTENDED
     vcan[0] = foo.can0;
@@ -206,7 +202,7 @@ interface ZynqPins;
     (* prefix="FIXED_IO_ddr_vrn" *) interface Inout#(Bit#(1))     vrn;
     (* prefix="FIXED_IO_ddr_vrp" *) interface Inout#(Bit#(1))     vrp;
     (* prefix="DDR_WEB" *) interface Inout#(Bit#(1))     web;
-    (* prefix="FIXED_IO_mio" *)
+    (* prefix="MIO" *)
     interface Inout#(Bit#(54))       mio;
     (* prefix="FIXED_IO_ps" *)
     interface Pps7Ps ps;
@@ -215,9 +211,9 @@ endinterface
 interface PS7;
     (* prefix="" *)
     interface ZynqPins pins;
-    interface Vector#(2, AxiMasterCommon)     m_axi_gp;
-    interface Vector#(2, AxiSlaveCommon#(32,6)) s_axi_gp;
-    interface Vector#(4, AxiSlaveHighSpeed)   s_axi_hp;
+    interface Vector#(2, AxiMasterCommon#(32,32,12))     m_axi_gp;
+    interface Vector#(2, AxiSlaveCommon#(32,32,6,Empty)) s_axi_gp;
+    interface Vector#(4, AxiSlaveHighSpeed#(32,64,6,HPType))   s_axi_hp;
     method Action                             interrupt(Bit#(1) v);
     interface Vector#(4, Clock) fclkclk;
     interface Vector#(4, Reset) fclkreset;
