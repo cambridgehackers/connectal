@@ -26,19 +26,19 @@
 	"pmod_gyro": "J4"
     },
 
-    "hbridge_hbridge0[0]" : {
+    "hbridge_hbridge0_direction" : {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod_hbridge" : "J1"
     },
-    "hbridge_hbridge0[1]" : {
+    "hbridge_hbridge0_enabled" : {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod_hbridge" : "J2"
     },
-    "hbridge_hbridge1[0]" : {
+    "hbridge_hbridge1_direction" : { 
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod_hbridge" : "J5"
     },
-    "hbridge_hbridge1[1]" : {
+    "hbridge_hbridge1_enabled" : { 
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod_hbridge" : "J6"
     },
