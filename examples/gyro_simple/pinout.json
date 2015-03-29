@@ -11,7 +11,7 @@
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod": "J1"
     },
-    "spi_CLK_clock": {
+    "CLK_spi_clock": {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod": "J4"
     },
