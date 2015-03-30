@@ -28,5 +28,5 @@ class reader
  public:
   int verbose;
   reader(): wrap_cnt(0), addr(0){}
-  int read_circ_buff(int buff_len, unsigned int ref_dstAlloc, int dstAlloc, char* dstBuffer,char *snapshot, int write_addr, int write_wrap_cnt, int align);
+  int read_circ_buff(int buff_len, unsigned int ref_dstAlloc, int dstAlloc, char* dstBuffer,char *snapshot, int write_addr, int write_wrap_cnt);
 };
