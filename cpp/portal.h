@@ -68,7 +68,6 @@
 
 
 typedef int Bool;   /* for GeneratedTypes.h */
-typedef uint32_t SpecialTypeForSendingFd;
 struct PortalInternal;
 typedef int (*ITEMINIT)(struct PortalInternal *pint, void *param);
 typedef int (*PORTAL_INDFUNC)(struct PortalInternal *p, unsigned int channel, int messageFd);
