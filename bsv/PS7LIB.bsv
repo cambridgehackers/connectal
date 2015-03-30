@@ -289,8 +289,10 @@ module mkPS7(PS7);
     rule arb_rule;
         ps7.ddr.arb(4'b0);
     endrule
-   
+
+`ifdef PS7EXTENDED         
     interface Pps7Emiosdio emiosdio1 = ps7.sdio[1];
+`endif      
     interface ZynqPins pins;
     interface a = ps7.ddr.a;
     interface ba = ps7.ddr.ba;
