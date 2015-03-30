@@ -19,7 +19,7 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
-VERSION=15.03.10
+VERSION=15.03.11
 
 export UDEV_RULES_DIR=/etc/udev/rules.d
 UDEV_RULES=$(shell ls etc/udev/rules.d)
