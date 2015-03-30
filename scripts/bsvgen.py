@@ -45,7 +45,7 @@ import Vector::*;
 import SpecialFIFOs::*;
 import ConnectalMemory::*;
 import Portal::*;
-import MemPortal::*;
+import CtrlMux::*;
 import MemTypes::*;
 import Pipe::*;
 %(extraImports)s
@@ -65,7 +65,7 @@ requestOutputPipeInterfaceTemplate='''\
 exposedProxyInterfaceTemplate='''
 // exposed proxy interface
 interface %(Ifc)sOutputPipes;
-    interface PipePortal#(0, %(channelCount)s, 32) portalIfc;
+    interface PipePortal#(0, %(channelCount)s, SlaveDataBusWidth) portalIfc;
     interface %(Package)s::%(Ifc)s ifc;
 endinterface
 interface %(Dut)s;
@@ -75,9 +75,9 @@ endinterface
 
 (* synthesize *)
 module %(moduleContext)s mk%(Ifc)sOutputPipes(%(Ifc)sOutputPipes);
-    Vector#(%(channelCount)s, PipeOut#(Bit#(32))) indicationPipes = newVector();
+    Vector#(%(channelCount)s, PipeOut#(Bit#(SlaveDataBusWidth))) indicationPipes;
 %(indicationMethodRules)s
-    PortalInterrupt#(32) intrInst <- mkPortalInterrupt(indicationPipes);
+    PortalInterrupt#(SlaveDataBusWidth) intrInst <- mkPortalInterrupt(indicationPipes);
     interface %(Package)s::%(Ifc)s ifc;
 %(indicationMethods)s
     endinterface
@@ -94,17 +94,22 @@ endmodule
 
 // synthesizeable proxy MemPortal
 (* synthesize *)
-module mk%(Dut)sSynth#(Bit#(32) id)(%(Dut)s);
+module mk%(Dut)sSynth#(Bit#(SlaveDataBusWidth) id)(%(Dut)s);
   let dut <- mk%(Ifc)sOutputPipes();
-  let memPortal <- mkMemPortalOut(id, dut.portalIfc.indications, dut.portalIfc.intr);
-  interface MemPortal portalIfc = memPortal;
+  PortalCtrlMemSlave#(SlaveControlAddrWidth,SlaveDataBusWidth) ctrlPort <- mkPortalCtrlMemSlave(id, dut.portalIfc.intr);
+  let memslave  <- mkMemMethodMuxOut(ctrlPort.memSlave,dut.portalIfc.indications);
+  interface MemPortal portalIfc = (interface MemPortal;
+      interface PhysMemSlave slave = memslave;
+      interface ReadOnly interrupt = ctrlPort.interrupt;
+      interface WriteOnly num_portals = ctrlPort.num_portals;
+    endinterface);
   interface %(Package)s::%(Ifc)s ifc = dut.ifc;
 endmodule
 
 // exposed proxy MemPortal
 module mk%(Dut)s#(idType id)(%(Dut)s)
    provisos (Bits#(idType, a__),
-	     Add#(b__, a__, 32));
+	     Add#(b__, a__, SlaveDataBusWidth));
    let rv <- mk%(Dut)sSynth(extend(pack(id)));
    return rv;
 endmodule
@@ -114,11 +119,11 @@ exposedWrapperInterfaceTemplate='''
 %(requestElements)s
 // exposed wrapper portal interface
 interface %(Ifc)sInputPipes;
-    interface PipePortal#(%(channelCount)s, 0, 32) portalIfc;
+    interface PipePortal#(%(channelCount)s, 0, SlaveDataBusWidth) portalIfc;
 %(requestOutputPipeInterfaces)s
 endinterface
 interface %(Dut)sPortal;
-    interface PipePortal#(%(channelCount)s, 0, 32) portalIfc;
+    interface PipePortal#(%(channelCount)s, 0, SlaveDataBusWidth) portalIfc;
 endinterface
 // exposed wrapper MemPortal interface
 interface %(Dut)s;
@@ -134,7 +139,7 @@ endinstance
 // exposed wrapper Portal implementation
 (* synthesize *)
 module mk%(Ifc)sInputPipes(%(Ifc)sInputPipes);
-    Vector#(%(channelCount)s, PipeIn#(Bit#(32))) requestPipeIn = newVector();
+    Vector#(%(channelCount)s, PipeIn#(Bit#(SlaveDataBusWidth))) requestPipeIn;
 %(methodRules)s
     interface PipePortal portalIfc;
         method Bit#(16) messageSize(Bit#(16) methodNumber);
@@ -167,18 +172,23 @@ interface %(Dut)sMemPortalPipes;
 endinterface
 
 (* synthesize *)
-module mk%(Dut)sMemPortalPipes#(Bit#(32) id)(%(Dut)sMemPortalPipes);
+module mk%(Dut)sMemPortalPipes#(Bit#(SlaveDataBusWidth) id)(%(Dut)sMemPortalPipes);
 
-  let p <- mk%(Ifc)sInputPipes;
-  let memPortal <- mkMemPortalIn(id, p.portalIfc.requests);
-  interface %(Ifc)sInputPipes pipes = p;
-  interface MemPortal portalIfc = memPortal;
+  let dut <- mk%(Ifc)sInputPipes;
+  PortalCtrlMemSlave#(SlaveControlAddrWidth,SlaveDataBusWidth) ctrlPort <- mkPortalCtrlMemSlave(id, dut.portalIfc.intr);
+  let memslave  <- mkMemMethodMuxIn(ctrlPort.memSlave,dut.portalIfc.requests);
+  interface %(Ifc)sInputPipes pipes = dut;
+  interface MemPortal portalIfc = (interface MemPortal;
+      interface PhysMemSlave slave = memslave;
+      interface ReadOnly interrupt = ctrlPort.interrupt;
+      interface WriteOnly num_portals = ctrlPort.num_portals;
+    endinterface);
 endmodule
 
 // exposed wrapper MemPortal implementation
 module mk%(Dut)s#(idType id, %(Ifc)s ifc)(%(Dut)s)
    provisos (Bits#(idType, a__),
-	     Add#(b__, a__, 32));
+	     Add#(b__, a__, SlaveDataBusWidth));
   let dut <- mk%(Dut)sMemPortalPipes(zeroExtend(pack(id)));
   mkConnection(dut.pipes, ifc);
   interface MemPortal portalIfc = dut.portalIfc;
@@ -186,7 +196,7 @@ endmodule
 '''
 
 requestRuleTemplate='''
-    AdapterFromBus#(32,%(MethodName)s_Message) %(methodName)s_requestAdapter <- mkAdapterFromBus();
+    AdapterFromBus#(SlaveDataBusWidth,%(MethodName)s_Message) %(methodName)s_requestAdapter <- mkAdapterFromBus();
     requestPipeIn[%(channelNumber)s] = %(methodName)s_requestAdapter.in;
 '''
 
@@ -201,7 +211,7 @@ mkConnectionMethodTemplate='''
 '''
 
 indicationRuleTemplate='''
-    AdapterToBus#(32,%(MethodName)s_Message) %(methodName)s_responseAdapter <- mkAdapterToBus();
+    AdapterToBus#(SlaveDataBusWidth,%(MethodName)s_Message) %(methodName)s_responseAdapter <- mkAdapterToBus();
     indicationPipes[%(channelNumber)s] = %(methodName)s_responseAdapter.out;
 '''
 

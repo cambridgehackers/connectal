@@ -122,13 +122,13 @@ int main(int argc, const char **argv)
   int rc = 0, i;
   pthread_t tid = 0;
 
-  init_portal_internal(&intarr[0], IfcNames_HostMMUIndication, MMUIndication_handleMessage, &MMUIndication_cbTable, NULL, NULL, MMUIndication_reqinfo);// fpga1
-  init_portal_internal(&intarr[1], IfcNames_RtestIndication, RtestIndication_handleMessage, &RtestIndication_cbTable, NULL, NULL, RtestIndication_reqinfo); // fpga2
-  init_portal_internal(&intarr[2], IfcNames_HostMMURequest, NULL, NULL, NULL, NULL, MMURequest_reqinfo); // fpga3
-  init_portal_internal(&intarr[3], IfcNames_RtestRequest, NULL, NULL, NULL, NULL, RtestRequest_reqinfo);    // fpga4
+  init_portal_internal(&intarr[0], 0, IfcNames_HostMMUIndication, MMUIndication_handleMessage, &MMUIndication_cbTable, NULL, NULL, MMUIndication_reqinfo);// fpga1
+  init_portal_internal(&intarr[1], 0, IfcNames_RtestIndication, RtestIndication_handleMessage, &RtestIndication_cbTable, NULL, NULL, RtestIndication_reqinfo); // fpga2
+  init_portal_internal(&intarr[2], 0, IfcNames_HostMMURequest, NULL, NULL, NULL, NULL, MMURequest_reqinfo); // fpga3
+  init_portal_internal(&intarr[3], 0, IfcNames_RtestRequest, NULL, NULL, NULL, NULL, RtestRequest_reqinfo);    // fpga4
 
   sem_init(&test_sem, 0, 0);
-  DmaManager_init(&priv, NULL, &intarr[2]);
+  DmaManager_init(&priv, &intarr[2]);
   srcAlloc = portalAlloc(alloc_sz);
   if (rc){
     PORTAL_PRINTF("portal alloc failed rc=%d\n", rc);

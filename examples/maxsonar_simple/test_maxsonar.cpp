@@ -28,53 +28,25 @@
 #include <assert.h>
 #include <string.h>
 
-#include "StdDmaIndication.h"
-#include "MemServerRequest.h"
-#include "MMURequest.h"
-#include "dmaManager.h"
-
 #include "maxsonar_simple.h"
 #include "MaxSonarCtrlRequest.h"
 #include "GeneratedTypes.h"
 #include "read_buffer.h"
 
-int spew = 1;
-int alloc_sz = 1<<8;
-
 int main(int argc, const char **argv)
 {
   MaxSonarCtrlIndication *ind = new MaxSonarCtrlIndication(IfcNames_ControllerIndication);
   MaxSonarCtrlRequestProxy *device = new MaxSonarCtrlRequestProxy(IfcNames_ControllerRequest);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
-  DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
   portalExec_start();
-
-  int dstAlloc = portalAlloc(alloc_sz);
-  char *dstBuffer = (char *)portalMmap(dstAlloc, alloc_sz);
-  unsigned int ref_dstAlloc = dma->reference(dstAlloc);
 
   long req_freq = 100000000; // 100 mHz
   long freq = 0;
   setClockFrequency(0, req_freq, &freq);
   fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
 
-  char* snapshot = (char*)malloc(alloc_sz);
-  reader* r = new reader();
+  device->range_ctrl(1);
 
-#ifdef MEM_PATH
-  device->sample(ref_dstAlloc, alloc_sz);
-  while (true){
-    usleep(50000);
-    set_en(ind,device, 0);
-    int datalen = r->read_circ_buff(alloc_sz, ref_dstAlloc, dstAlloc, dstBuffer, snapshot, ind->write_addr, ind->write_wrap_cnt, 1); 
-    set_en(ind,device, 2);
-    if (spew) display((uint32_t*)snapshot, datalen/4);
-  }
-#else
   while(true){
     usleep(50000);
     device->pulse_width();
@@ -82,5 +54,5 @@ int main(int argc, const char **argv)
     float distance = ((float)ind->useconds)/147.0;
     fprintf(stderr, "(%8d microseconds == %8f inches)\n", ind->useconds, distance);
   }
-#endif
+
 }

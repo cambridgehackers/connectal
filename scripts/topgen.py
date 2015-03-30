@@ -39,7 +39,6 @@ import Vector::*;
 import Portal::*;
 import CtrlMux::*;
 import HostInterface::*;
-import MemPortal::*;
 import Connectable::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;
@@ -51,7 +50,7 @@ import MemTypes::*;
 `endif
 typedef `PinType PinType;
 
-typedef enum {%(enumList)s} IfcNames deriving (Eq,Bits);
+typedef enum {NoInterface, %(enumList)s} IfcNames deriving (Eq,Bits);
 
 `ifndef IMPORT_HOSTIF
 (* synthesize *)
@@ -84,12 +83,14 @@ import Vector::*;
 import Portal::*;
 import BnocPortal::*;
 import Connectable::*;
+import HostInterface::*;
 %(generatedImport)s
 
 `ifndef PinType
 `define PinType Empty
 `endif
 typedef `PinType PinType;
+%(generatedTypedefs)s
 
 typedef enum {%(enumList)s} IfcNames deriving (Eq,Bits);
 
@@ -106,19 +107,15 @@ module mkBluenocTop
 %(connectInstantiate)s
 
 %(portalList)s
-   interface requests = cons(%(requestList)s, nil);
-   interface indications = cons(%(indicationList)s, nil);
+   interface requests = %(requestList)s;
+   interface indications = %(indicationList)s;
 %(exportedInterfaces)s
 endmodule : mkBluenocTop
 %(exportedNames)s
 '''
 
-portalTemplate = '''   let portalEnt_%(count)s <- mkMemPortal%(slaveType)s(extend(pack(%(enumVal)s)), l%(ifcName)s.portalIfc.%(itype)s%(intrParam)s);
-   portals[%(count)s] = portalEnt_%(count)s;'''
-
-portalTemplateNew = '''   let memSlaves_%(count)s <- mapM(mkPipe%(slaveType)sMemSlave, l%(ifcName)s.portalIfc.%(itype)s);
-   PortalCtrlMemSlave#(5,32/*slaveDataWidth*/) ctrlPort_%(count)s <- mkPortalCtrlMemSlave(extend(pack(%(enumVal)s)), l%(ifcName)s.portalIfc.intr);
-   let memslave_%(count)s <- mkMemMethodMux(cons(ctrlPort_%(count)s.memSlave,memSlaves_%(count)s));
+portalTemplate = '''   PortalCtrlMemSlave#(SlaveControlAddrWidth,SlaveDataBusWidth) ctrlPort_%(count)s <- mkPortalCtrlMemSlave(extend(pack(%(enumVal)s)), l%(ifcName)s.portalIfc.intr);
+   let memslave_%(count)s <- mkMemMethodMux%(slaveType)s(ctrlPort_%(count)s.memSlave,l%(ifcName)s.portalIfc.%(itype)s);
    portals[%(count)s] = (interface MemPortal;
        interface PhysMemSlave slave = memslave_%(count)s;
        interface ReadOnly interrupt = ctrlPort_%(count)s.interrupt;
@@ -204,7 +201,7 @@ def instMod(args, modname, modext, constructor, tparam, memFlag):
             connectInstantiate.append(connectInstantiation % pmap)
         if memFlag:
             enumList.append(modname + memFlag + tstr)
-            addPortal(pmap['argsConfig'], '%(modname)sCW' % pmap, pmap['stype'])
+            addPortal(pmap['argsConfig'], '%(modname)sCW' % pmap, 'Request')
         else:
             addPortal(pmap['args'], '%(modname)sPipes' % pmap, pmap['stype'])
     else:
@@ -221,6 +218,12 @@ def flushModules(key):
         if temp:
             portalInstantiate.append(temp.inst % ','.join(temp.args))
             del instantiateRequest[key]
+
+def toVectorLiteral(l):
+    if l:
+        return 'cons(%s,%s)' % (l[0], toVectorLiteral(l[1:]))
+    else:
+        return 'nil'
 
 def parseParam(pitem, proxy):
     p = pitem.split(':')
@@ -306,18 +309,20 @@ if __name__=='__main__':
         pipeInstantiate.append(memEngineInst % {'clientCount': clientCount})
     topsubsts = {'enumList': ','.join(enumList),
                  'generatedImport': '\n'.join(['import %s::*;' % p for p in importfiles]),
+                 'generatedTypedefs': '\n'.join(['typedef %d NumberOfRequests;' % len(requestList),
+                                                 'typedef %d NumberOfIndications;' % len(indicationList)]),
                  'pipeInstantiate' : '\n'.join(sorted(pipeInstantiate)),
                  'connectInstantiate' : '\n'.join(sorted(connectInstantiate)),
                  'portalInstantiate' : '\n'.join(portalInstantiate),
                  'portalList': '\n'.join(portalList),
                  'portalCount': portalCount,
-                 'requestList': ','.join(requestList),
-                 'indicationList': ','.join(indicationList),
+                 'requestList': toVectorLiteral(requestList),
+                 'indicationList': toVectorLiteral(indicationList),
                  'exportedInterfaces' : '\n'.join(interfaceList),
                  'exportedNames' : '\n'.join(exportedNames),
                  'portalMaster' : 'lMemServer.masters' if memory_flag else 'nil',
                  'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,`PinType,`NumberOfMasters)' if not options.bluenoc \
-                     else 'BluenocTop#(1,1)'
+                     else 'BluenocTop#(NumberOfRequests,NumberOfIndications)'
                  }
     print 'TOPFN', topFilename
     top = util.createDirAndOpen(topFilename, 'w')

@@ -4,7 +4,7 @@
         "os" : "android",
         "partname" : "xc7z020clg484-1",
         "rewireclockstring" : "tclzynqrewireclock",
-        "constraints": "constraints/xilinx/zc7z020clg484.xdc",
+        "constraints": ["constraints/xilinx/zc7z020clg484.xdc"],
         "TOP" : "ZynqTop",
         "runscript" : "run.android",
         "CONNECTALFLAGS" : [],

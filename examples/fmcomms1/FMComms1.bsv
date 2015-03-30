@@ -64,7 +64,7 @@ module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#(64)) dac, PipeOut
    Reg#(Bit#(BurstLenSize)) readBurstLen <- mkReg(0);
    Reg#(Bit#(1))          readRun <- mkReg(0);
 
-   MemreadEngine#(64,1)         re <- mkMemreadEngineBuff(64*16);
+   MemreadEngine#(64,1,1)         re <- mkMemreadEngineBuff(64*16);
 
    Reg#(SGLId)     writePointer <- mkReg(0);
    Reg#(Bit#(32))         writeNumWords <- mkReg(0);
@@ -72,7 +72,7 @@ module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#(64)) dac, PipeOut
    Reg#(Bit#(BurstLenSize)) writeBurstLen <- mkReg(0);
    Reg#(Bit#(1))          writeRun <- mkReg(0);
    
-   MemwriteEngine#(64,1)        we <- mkMemwriteEngineBuff(64*16);
+   MemwriteEngine#(64,1,1)        we <- mkMemwriteEngineBuff(64*16);
    
    mkConnection(adc, we.dataPipes[0]);
    mkConnection(re.dataPipes[0], dac);

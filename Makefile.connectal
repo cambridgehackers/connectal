@@ -56,38 +56,47 @@ programflash.%:
 IPDIR?=$(CONNECTALDIR)/out
 NUMBER_OF_TILES?=1
 SLAVE_DATA_BUS_WIDTH?=32
+SLAVE_CONTROL_ADDR_WIDTH?=5
 NUMBER_OF_MASTERS?=1
 PIN_TYPE?=Empty
 ifndef MAIN_CLOCK_PERIOD
     ifeq ($(BOARD),vc707g2)
+    PCIE_CLOCK_PERIOD?=4
     MAIN_CLOCK_PERIOD=4
     DEFAULT_DERIVED_CLOCK_PERIOD=4
     endif
     ifeq ($(BOARD),kc705g2)
+    PCIE_CLOCK_PERIOD?=4
     MAIN_CLOCK_PERIOD=4
     DEFAULT_DERIVED_CLOCK_PERIOD=4
     endif
     ifeq ($(BOARD),vc707)
-    MAIN_CLOCK_PERIOD=4
+    PCIE_CLOCK_PERIOD?=8
+    MAIN_CLOCK_PERIOD=8
     DEFAULT_DERIVED_CLOCK_PERIOD=4
     endif
     ifeq ($(BOARD),kc705)
+    PCIE_CLOCK_PERIOD?=8
     MAIN_CLOCK_PERIOD=8
     DEFAULT_DERIVED_CLOCK_PERIOD=4
     endif
     ifeq ($(BOARD),netfpga-sume)
+    PCIE_CLOCK_PERIOD?=8
     MAIN_CLOCK_PERIOD=8
     DEFAULT_DERIVED_CLOCK_PERIOD=4
     endif
     ifeq ($(BOARD),zc706)
+    PCIE_CLOCK_PERIOD?=8
     MAIN_CLOCK_PERIOD=5
     DEFAULT_DERIVED_CLOCK_PERIOD=2.5
     endif
     ifeq ($(BOARD),de5)
+    PCIE_CLOCK_PERIOD?=8
     MAIN_CLOCK_PERIOD=8
     DEFAULT_DERIVED_CLOCK_PERIOD=4
     endif
     ifeq ($(BOARD),htg4)
+    PCIE_CLOCK_PERIOD?=8
     MAIN_CLOCK_PERIOD=8
     DEFAULT_DERIVED_CLOCK_PERIOD=4
     endif
@@ -96,6 +105,9 @@ ifndef MAIN_CLOCK_PERIOD
     DEFAULT_DERIVED_CLOCK_PERIOD=5
     endif
 endif
+ifneq ($(PCIE_CLOCK_PERIOD),)
+PCIE_CLOCK_DEFINE ?= -D PcieClockPeriod=$(PCIE_CLOCK_PERIOD)
+endif
 ifndef DERIVED_CLOCK_PERIOD
 DERIVED_CLOCK_PERIOD?=$(DEFAULT_DERIVED_CLOCK_PERIOD)
 endif
@@ -103,11 +115,13 @@ ifndef BURST_LEN_SIZE
 BURST_LEN_SIZE=8
 endif
 
-CONNECTALFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) -D PinType=$(PIN_TYPE) -D MainClockPeriod=$(MAIN_CLOCK_PERIOD) -D DerivedClockPeriod=$(DERIVED_CLOCK_PERIOD)
+CONNECTALFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) -D PinType=$(PIN_TYPE) -D MainClockPeriod=$(MAIN_CLOCK_PERIOD) $(PCIE_CLOCK_DEFINE) -D DerivedClockPeriod=$(DERIVED_CLOCK_PERIOD)
 CONNECTALFLAGS += -D NumberOfTiles=$(NUMBER_OF_TILES)
 CONNECTALFLAGS += -D SlaveDataBusWidth=$(SLAVE_DATA_BUS_WIDTH)
+CONNECTALFLAGS += -D SlaveControlAddrWidth=$(SLAVE_CONTROL_ADDR_WIDTH)
 CONNECTALFLAGS += -D BurstLenSize=$(BURST_LEN_SIZE)
 CONNECTALFLAGS += --ipdir=$(IPDIR)
+CONNECTALFLAGS += -D ExportType=$(EXPORT_TYPE)
 ifeq ($(BOARD),xsim)
 CONNECTALFLAGS += -D BluenocTop
 endif
@@ -224,6 +238,8 @@ endif
 	$(foreach interfaces, $(INTERFACES), -interfaces $(interfaces)) \
 	$(foreach f, $(CPPFILES), --source $f) \
 	$(foreach f, $(CPPFILES2), --source2 $f) \
+	$(foreach f, $(PINOUT_FILE), --pinout $f) \
+	$(foreach f, $(PIN_BINDINGS), --pin-binding $f) \
 	$(foreach f, $(S2H_INTERFACES), -interfaces $(word 1, $(subst /,, $(subst :, , $f)))) \
 	$(foreach f, $(H2S_INTERFACES), $(foreach g, $(subst $(comma), , $(word 2, $(subst :, , $f))), -interfaces $g)) \
 	$(foreach f, $(PORTAL_DUMP_MAP), --dump_map $f) \
@@ -244,7 +260,10 @@ generate_altera_custom::
 ifneq ($(PIN_BINDINGS), )
 ifneq ($(filter $(BOARD), de5 htg4), )
 	$(Q)[ -e $(BOARD)/generatedbsv ] || mkdir -p $(BOARD)/generatedbsv
-	$(CONNECTALDIR)/scripts/generate-constraints.py -f altera $(PIN_BINDINGS) -o $(BOARD)/generatedbsv/$(BOARD).qsf $(CONNECTALDIR)/boardinfo/$(BOARD).json boards/$(BOARD).json
+	$(CONNECTALDIR)/scripts/generate-constraints.py -f altera \
+		$(foreach f, $(PIN_BINDINGS), -b $f) \
+		-o $(BOARD)/generatedbsv/$(BOARD).qsf \
+		$(CONNECTALDIR)/boardinfo/$(BOARD).json boards/$(BOARD).json
 endif
 endif
 

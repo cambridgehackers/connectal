@@ -21,18 +21,19 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import Leds::*;
 import Vector::*;
 import MaxSonarController::*;
 import GyroController::*;
 import HBridgeController::*;
 import ConnectalSpi::*;
 import MemTypes::*;
+import Leds::*;
 
 interface ZedboardRobotPins;
-   interface MaxSonarPins maxsonar_pins;
-   interface SpiPins spi_pins;
-   interface HBridge2Pins hbridge_pins;
+   interface MaxSonarPins maxsonar;
+   interface SpiPins spi;
+   interface HBridge2Pins hbridge;
+   interface LEDS leds;
 endinterface
 
 interface Controller;
@@ -40,8 +41,7 @@ interface Controller;
    interface GyroCtrlRequest gyro_req;
    interface HBridgeCtrlRequest hbridge_req;
    interface ZedboardRobotPins pins;
-   interface LEDS leds;
-   interface Vector#(2,MemWriteClient#(64)) dmaClients;
+   interface MemWriteClient#(64) dmaClient;
 endinterface
 
 module mkController#(MaxSonarCtrlIndication maxsonar_ind, GyroCtrlIndication gyro_ind, HBridgeCtrlIndication hbridge_ind)(Controller);
@@ -54,11 +54,11 @@ module mkController#(MaxSonarCtrlIndication maxsonar_ind, GyroCtrlIndication gyr
    interface MaxSonarCtrlRequest maxsonar_req = msc.req;
    interface GyroCtrlRequest gyro_req = gc.req;
    interface ZedboardRobotPins pins;
-      interface MaxSonarPins maxsonar_pins = msc.pins;
-      interface SpiPins spi_pins = gc.spi;
-      interface HBridge2Pins hbridge_pins = hbc.pins;
+      interface maxsonar = msc.pins;
+      interface spi = gc.spi;
+      interface hbridge = hbc.pins;
+      interface leds = hbc.leds;
    endinterface
-   interface LEDS leds = msc.leds;
-   interface dmaClients = cons(gc.dmaClient, cons(msc.dmaClient,nil));
+   interface dmaClient = gc.dmaClient;
 
 endmodule

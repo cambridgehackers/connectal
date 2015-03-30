@@ -26,7 +26,6 @@ import Connectable::*;
 import CtrlMux::*;
 import Portal::*;
 import HostInterface::*;
-import MemPortal::*;
 import AuroraIndication::*;
 import AuroraRequest::*;
 import Aurora::*;

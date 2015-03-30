@@ -133,6 +133,12 @@ memtests =  memread_manyclients  \
             memread_manyclients128  \
             memwrite_manyclients128 
 
+
+zr_examples = gyro_simple \
+            maxsonar_simple \
+            hbridge_simple \
+            zedboard_robot
+
 matmultests2 = testmm8.8.2       \
 	    testmm16.16.2        \
 	    testmm32.32.2        \
@@ -211,7 +217,11 @@ examples =  echo                 \
             memwrite_4m          \
 	    matmul               \
 	    rbm                  \
-            yuv                  
+            yuv                  \
+            gyro_simple          \
+            maxsonar_simple      \
+            hbridge_simple       \
+            zedboard_robot
 
 memexamples =  memcpy            \
             memread              \
@@ -360,6 +370,9 @@ matmultests.zc706:  $(addprefix tests/, $(addsuffix .zc706, $(matmultests2)))
 #################################################################################################
 # misc
 
+
+zr_examples.zedboard: $(addprefix examples/, $(addsuffix .zedboard, $(zr_examples)))
+
 android_exetests = $(addprefix examples/, $(addsuffix .android_exe, $(examples)))
 android_exetests: $(android_exetests)
 
@@ -388,19 +401,23 @@ zynqdrivers-install:
 	install -d -m755 $(DESTDIR)/usr/share/connectal-zynqdrivers/
 	install -m644 drivers/zynqportal/zynqportal.ko drivers/portalmem/portalmem.ko $(DESTDIR)/usr/share/connectal-zynqdrivers/
 
+RUNPARAMTEMP=$(subst :, ,$(RUNPARAM):5555)
+RUNIP=$(wordlist 1,1,$(RUNPARAMTEMP))
+RUNPORT=$(wordlist 2,2,$(RUNPARAMTEMP))
+
 zynqdrivers-adb:
 	adb connect $(RUNPARAM)
-	adb -s $(RUNPARAM):5555 shell pwd || true
+	adb -s $(RUNIP):$(RUNPORT) shell pwd || true
 	adb connect $(RUNPARAM)
-	adb -s $(RUNPARAM):5555 root || true
+	adb -s $(RUNIP):$(RUNPORT) root || true
 	sleep 1
 	adb connect $(RUNPARAM)
-	adb -s $(RUNPARAM):5555 push drivers/zynqportal/zynqportal.ko /mnt/sdcard
-	adb -s $(RUNPARAM):5555 push drivers/portalmem/portalmem.ko /mnt/sdcard
-	adb -s $(RUNPARAM):5555 shell rmmod zynqportal
-	adb -s $(RUNPARAM):5555 shell rmmod portalmem
-	adb -s $(RUNPARAM):5555 shell insmod /mnt/sdcard/zynqportal.ko
-	adb -s $(RUNPARAM):5555 shell insmod /mnt/sdcard/portalmem.ko
+	adb -s $(RUNIP):$(RUNPORT) push drivers/zynqportal/zynqportal.ko /mnt/sdcard
+	adb -s $(RUNIP):$(RUNPORT) push drivers/portalmem/portalmem.ko /mnt/sdcard
+	adb -s $(RUNIP):$(RUNPORT) shell rmmod zynqportal
+	adb -s $(RUNIP):$(RUNPORT) shell rmmod portalmem
+	adb -s $(RUNIP):$(RUNPORT) shell insmod /mnt/sdcard/zynqportal.ko
+	adb -s $(RUNIP):$(RUNPORT) shell insmod /mnt/sdcard/portalmem.ko
 
 #################################################################################################
 

@@ -199,25 +199,60 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
 	} // fall through
 	case PORTAL_DCACHE_INVAL: {
                 struct scatterlist *sg;
-                struct file *fmem = fget((int)arg);
-		struct pa_buffer *pa_buffer = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv);
-                struct sg_table *sgtable = pa_buffer->sg_table;
-		void *virt = pa_buffer->vaddr;
+		struct portal_cache_request cacheReq;
+                struct file *fmem;
+		struct pa_buffer *pa_buffer;
+                struct sg_table *sgtable;
 
+                int err = copy_from_user(&cacheReq, (void __user *) arg, sizeof(cacheReq));
+                if (err)
+                    break;
+		fmem = fget(cacheReq.fd);
+		pa_buffer = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv);
+		sgtable = pa_buffer->sg_table;
+		void *virt = pa_buffer->vaddr;
+		long flush_offset = cacheReq.base - virt;
+		long flush_length = cacheReq.len;
+		long offset = 0;
                 int i;
-		printk("[%s:%d] fd %d flush %d\n", __FUNCTION__, __LINE__, (int)arg, flush);
+		int verbose_flush = 0;
+		if (verbose_flush)
+			printk("[%s:%d] fd %d flush %d base %p virt %p flush_offset %lx flush_length %lx\n", __FUNCTION__, __LINE__,
+			       cacheReq.fd, flush,
+			       cacheReq.base, virt, flush_offset, flush_length);
+
+		flush_cache_all();
+
                 for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
-                    unsigned int length = sg->length;
-                    dma_addr_t start_addr = sg_phys(sg), end_addr = start_addr+length;
-		    printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start_addr, (long)end_addr, length);
-		    if (flush) {
-			    flush_cache_all();
-			    //flush_user_range(virt, virt+length, 0);
-			    outer_flush_range(start_addr, end_addr);
-		    } else {
-			    outer_inv_range(start_addr, end_addr);
-		    }
-		    virt += length;
+			unsigned int length = sg->length;
+			dma_addr_t start_addr = sg_phys(sg);
+			dma_addr_t end_addr = start_addr+length;
+			long end_offset = offset + length;
+			if (flush_length && offset <= flush_offset && flush_offset < end_offset) {
+				long delta = (flush_offset - offset);
+				start_addr += delta;
+				length -= delta;
+				if (flush_length < length) {
+					printk("last segment: adjusting end_addr\n");
+					end_addr = start_addr + flush_length;
+				}
+
+				if (verbose_flush) {
+					printk("[%s:%d] start %lx end %lx len %x delta %x flush_length %lx\n",
+					       __FUNCTION__, __LINE__, (long)start_addr, (long)end_addr, length, delta, flush_length);
+					printk("[%s:%d]         start_offset %lx end_offset %lx flush_offset %lx\n",
+					       __FUNCTION__, __LINE__, offset, end_offset, flush_offset);
+				}
+				if (flush) {
+					//flush_user_range(virt, virt+length, 0);
+					outer_flush_range(start_addr, end_addr);
+				} else {
+					outer_inv_range(start_addr, end_addr);
+				}
+				flush_offset += length;
+				flush_length -= length;
+			}
+			offset += sg->length;
                 }
                 fput(fmem);
 		flush = 0;

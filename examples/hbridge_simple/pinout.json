@@ -1,20 +1,53 @@
 {
-    "hbridge0[0]" : {
+    "hbridge_hbridge0_direction" : {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod" : "J1"
     },
-    "hbridge0[1]" : {
+    "hbridge_hbridge0_enabled" : {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod" : "J2"
     },
-    "hbridge1[0]" : {
+    "hbridge_hbridge1_direction" : { 
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod" : "J5"
     },
-    "hbridge1[1]" : {
+    "hbridge_hbridge1_enabled" : { 
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod" : "J6"
+    },
+
+    "leds_leds[0]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L0"
+    },
+    "leds_leds[1]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L1"
+    },
+    "leds_leds[2]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L2"
+    },
+    "leds_leds[3]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L3"
+    },
+    "leds_leds[4]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L4"
+    },
+    "leds_leds[5]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L5"
+    },
+    "leds_leds[6]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L6"
+    },
+    "leds_leds[7]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L7"
     }
-  }
+}
 
 

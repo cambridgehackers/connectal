@@ -5,6 +5,7 @@
         "partname" : "xc7k325tffg900-2",
         "need_pcie" : "x7_gen2x8",
         "TOP" : "PcieTop",
+        "constraints": ["constraints/xilinx/kc705g2.xdc"],
         "runscript" : "run.pcietest",
         "CONNECTALFLAGS" : [],
         "rewireclockstring" : ""

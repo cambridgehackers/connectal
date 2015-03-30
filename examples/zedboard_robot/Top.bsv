@@ -28,7 +28,6 @@ import Vector::*;
 import CtrlMux::*;
 import Portal::*;
 import MemTypes::*;
-import MemPortal::*;
 import HostInterface::*;
 import MMU::*;
 import MemServer::*;
@@ -71,7 +70,7 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,ZedboardRobotPins
    MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
    
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
-   MemServer#(PhysAddrWidth,DataBusWidth,1) dma <- mkMemServer(nil, controller.dmaClients, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
+   MemServer#(PhysAddrWidth,DataBusWidth,1) dma <- mkMemServer(nil, cons(controller.dmaClient,nil), cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
    MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
 
    Vector#(10,StdPortal) portals;
@@ -90,7 +89,6 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,ZedboardRobotPins
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
    interface masters = dma.masters;
-   interface leds = controller.leds;
    interface pins = controller.pins;
 
 endmodule : mkConnectalTop

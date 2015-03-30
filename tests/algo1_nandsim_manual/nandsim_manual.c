@@ -157,7 +157,7 @@ int main(int argc, const char **argv)
   init_portal_internal(&intarr[3], IfcNames_NandCfgRequest, NULL, NULL, NULL, NULL, NandCfgRequest_reqinfo);    // fpga4
   init_portal_internal(&intarr[1], IfcNames_NandCfgIndication, NandCfgIndication_handleMessage, &NandCfgIndication_cbTable, NULL, NULL, NandCfgIndication_reqinfo); // fpga2
 
-  DmaManager_init(&priv, NULL, &intarr[2]);
+  DmaManager_init(&priv, &intarr[2]);
   sem_init(&test_sem, 0, 0);
 
   PORTAL_PRINTF( "Main: creating exec thread - %lu\n", sizeof (unsigned int) );

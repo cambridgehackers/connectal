@@ -26,7 +26,6 @@ import Connectable::*;
 import CtrlMux::*;
 import Portal::*;
 import MemTypes::*;
-import MemPortal::*;
 import HostInterface::*;
 import SimpleIndication::*;
 import SimpleRequest::*;

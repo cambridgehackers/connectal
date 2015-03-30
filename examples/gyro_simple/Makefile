@@ -6,14 +6,9 @@ INTERFACES = GyroCtrlRequest GyroCtrlIndication GyroSampleStream
 BSVFILES = $(ZBR_BSV)/GyroController.bsv Top.bsv
 CPPFILES = test_gyro.cpp $(ZBR_CPP)/read_buffer.cpp
 NUMBER_OF_MASTERS = 1
-CONNECTALFLAGS += -C $(BOARD)/sources/pinout-$(BOARD).xdc #--tcl clock.tcl
 
-PIN_TYPE = SpiPins
-PIN_BINDING ?= -b pmod:pmodd
-
-gentarget:: $(BOARD)/sources/pinout-$(BOARD).xdc
-$(BOARD)/sources/pinout-$(BOARD).xdc: pinout.json $(CONNECTALDIR)/boardinfo/$(BOARD).json
-	mkdir -p $(BOARD)/sources
-	$(CONNECTALDIR)/scripts/generate-constraints.py $(PIN_BINDING) -o $(BOARD)/sources/pinout-$(BOARD).xdc $(CONNECTALDIR)/boardinfo/$(BOARD).json pinout.json
+PIN_TYPE = GyroSimplePins
+PINOUT_FILE = pinout.json
+PIN_BINDINGS = pmod:pmodd
 
 include $(CONNECTALDIR)/Makefile.connectal

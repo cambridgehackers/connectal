@@ -1,47 +1,81 @@
 {
 
-    "maxsonar_pins_range_ctrl" : {
+    "maxsonar_range_ctrl" : {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod_sonar" : "J2"
     },
-    "maxsonar_pins_pulse_v" : {
+    "maxsonar_pulse_v" : {
 	"PIO_DIRECTION": "INPUT",
 	"pmod_sonar" : "J4"
     },
 
-    "spi_pins_mosi": {
+    "spi_mosi": {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod_gyro": "J2"
     },
-    "spi_pins_miso_v": {
+    "spi_miso_v": {
 	"PIO_DIRECTION": "INPUT",
 	"pmod_gyro": "J3"
     },
-    "spi_pins_sel_n": {
+    "spi_sel_n": {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod_gyro": "J1"
     },
-    "CLK_spi_pins_clock": {
+    "CLK_spi_clock": {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod_gyro": "J4"
     },
 
-    "hbridge_pins_hbridge0[0]" : {
+    "hbridge_hbridge0_direction" : {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod_hbridge" : "J1"
     },
-    "hbridge_pins_hbridge0[1]" : {
+    "hbridge_hbridge0_enabled" : {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod_hbridge" : "J2"
     },
-    "hbridge_pins_hbridge1[0]" : {
+    "hbridge_hbridge1_direction" : { 
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod_hbridge" : "J5"
     },
-    "hbridge_pins_hbridge1[1]" : {
+    "hbridge_hbridge1_enabled" : { 
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod_hbridge" : "J6"
+    },
+
+    "leds_leds[0]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L0"
+    },
+    "leds_leds[1]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L1"
+    },
+    "leds_leds[2]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L2"
+    },
+    "leds_leds[3]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L3"
+    },
+    "leds_leds[4]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L4"
+    },
+    "leds_leds[5]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L5"
+    },
+    "leds_leds[6]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L6"
+    },
+    "leds_leds[7]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L7"
     }
+
 
 
 }

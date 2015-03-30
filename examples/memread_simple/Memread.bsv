@@ -55,7 +55,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    Reg#(Bit#(32))   itersToStart <- mkReg(0);
    Reg#(Bit#(32))        srcGens <- mkReg(0);
    Reg#(Bit#(32)) mismatchCounts <- mkReg(0);
-   MemreadEngineV#(DataBusWidth,2,1) re <- mkMemreadEngine;
+   MemreadEngine#(DataBusWidth,2,1) re <- mkMemreadEngine;
    Bit#(MemOffsetSize) chunk = extend(numWords)*4;
    
    

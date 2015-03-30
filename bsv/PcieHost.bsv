@@ -219,7 +219,7 @@ module mkAlteraPcieHostTop #(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(P
 
    PcieEndpointS5#(PcieLanes) ep7 <- mkPcieEndpointS5(clk_100MHz, clk_50MHz, perst_n, clocked_by clk_100MHz, reset_by perst_n);
 
-   Clock epPcieClock = ep7.pcieClock;
+   Clock epPcieClock = ep7.epPcieClock;
    Reset epPcieReset = ep7.epPcieReset;
 
    Clock portalClock_ = epPcieClock;

@@ -62,8 +62,8 @@ endinterface
 module mkNandSim#(NandCfgIndication indication) (NandSim);
    let verbose = False;
 
-   MemreadEngineV#(64, 1,  3)  re <- mkMemreadEngine();
-   MemwriteEngineV#(64, 1, 4)  we <- mkMemwriteEngine();
+   MemreadEngine#(64, 1,  3)  re <- mkMemreadEngine();
+   MemwriteEngine#(64, 1, 4)  we <- mkMemwriteEngine();
    NandSimControl ns <- mkNandSimControl(take(re.readServers), take(re.dataPipes), take(we.writeServers), take(we.dataPipes), indication);
 
    Server#(MemengineCmd,Bool) slave_read_server  = re.readServers[2];

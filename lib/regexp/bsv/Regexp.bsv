@@ -66,8 +66,8 @@ module mkRegexp#(RegexpIndication indication)(Regexp#(64))
 	    ,Log#(p,lp)
 	    );
 
-   MemreadEngineV#(64, 1, p) config_re <- mkMemreadEngine;
-   MemreadEngineV#(64, 2, p) haystack_re <- mkMemreadEngine;
+   MemreadEngine#(64, 1, p) config_re <- mkMemreadEngine;
+   MemreadEngine#(64, 2, p) haystack_re <- mkMemreadEngine;
    let read_servers = zip(config_re.read_servers,haystack_re.read_servers);
    Vector#(p, RegexpEngine#(lp)) rees <- mapM(uncurry(mkRegexpEngine), zip(read_servers,genVector));
    Reg#(RegexpState) state <- mkReg(Config_charMap);

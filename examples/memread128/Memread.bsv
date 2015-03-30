@@ -55,7 +55,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    
    Reg#(Bit#(32))           srcGen <- mkReg(0);
    Reg#(Bit#(32))    mismatchCount <- mkReg(0);
-   MemreadEngine#(128,1)        re <- mkMemreadEngine;
+   MemreadEngine#(128,1,1)        re <- mkMemreadEngine;
    
    rule start (iterCnt > 0);
       iterCnt <= iterCnt-1;

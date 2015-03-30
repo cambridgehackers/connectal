@@ -334,6 +334,8 @@ def generate_condition(interfacename):
 
 def generate_interface(interfacename, paramlist, paramval, ilist, cname):
     global clock_names, deleted_interface
+    if interfacename in options.notdef:
+        return
     cflag = generate_condition(interfacename)
     print('(* always_ready, always_enabled *)', file=options.outfile)
     methodfound = False
@@ -597,7 +599,7 @@ def generate_bsv():
     for item in sys.argv:
         print('   ' + item, file=options.outfile)
     print('*/\n', file=options.outfile)
-    for item in ['Clocks', 'DefaultValue', 'XilinxCells', 'GetPut']:
+    for item in ['Clocks', 'DefaultValue', 'XilinxCells', 'GetPut', 'AxiBits']:
         print('import ' + item + '::*;', file=options.outfile)
     print('', file=options.outfile)
     paramlist = ''
@@ -662,6 +664,7 @@ if __name__=='__main__':
     parser.add_option("-r", "--reset", action="append", dest="reset")
     parser.add_option("-d", "--delete", action="append", dest="delete")
     parser.add_option("-e", "--export", action="append", dest="export")
+    parser.add_option("--notdef", action="append", dest="notdef")
     parser.add_option("-i", "--ifdef", action="append", dest="ifdef")
     parser.add_option("-n", "--notfactor", action="append", dest="notfactor")
     parser.add_option("-C", "--cell", dest="cell")
@@ -675,6 +678,8 @@ if __name__=='__main__':
     options.outfile = open(options.filename, 'w')
     if options.notfactor == None:
         options.notfactor = []
+    if options.notdef == None:
+        options.notdef = []
     if options.param:
         for item in options.param:
             item2 = item.split(':')

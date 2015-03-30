@@ -3,7 +3,7 @@
         "os" : "android",
         "partname" : "xc7z100ffg900-2",
         "rewireclockstring" : "tclzynqrewireclock",
-        "constraints": "constraints/xilinx/xc7z100ffg900.xdc",
+        "constraints": ["constraints/xilinx/xc7z100ffg900.xdc", "constraints/xilinx/miniitx100.xdc"],
         "TOP" : "ZynqTop",
         "runscript" : "run.android",
         "bsvdefines" : ["ZynqHostTypeIF", "PhysAddrWidth=32", "NUMBER_OF_LEDS=8"],

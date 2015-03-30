@@ -53,6 +53,4 @@ typedef 8 LedsWidth;
 
 interface LEDS;
     method Bit#(LedsWidth) leds;
-    interface Clock deleteme_unused_clock;
-    interface Reset deleteme_unused_reset;
 endinterface

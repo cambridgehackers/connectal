@@ -28,6 +28,7 @@ import GetPut::*;
 import FIFOF::*;
 import SpecialFIFOs::*;
 import FIFO::*;
+import HostInterface::*;
 import Connectable::*;
 import AddressGenerator::*;
 
@@ -39,6 +40,12 @@ import Pipe::*;
 interface PortalCtrl#(numeric type addrWidth, numeric type dataWidth);
    method ActionValue#(Bit#(dataWidth)) read(Bit#(addrWidth) addr);
    method Action write(Bit#(addrWidth) addr, Bit#(dataWidth) v);
+endinterface
+
+interface PortalCtrlMemSlave#(numeric type addrWidth, numeric type dataWidth);
+   interface PortalCtrl#(addrWidth, dataWidth)  memSlave;
+   interface ReadOnly#(Bool)                    interrupt;
+   interface WriteOnly#(Bit#(dataWidth))        num_portals;
 endinterface
 
 module mkInterruptMux#(Vector#(numPortals,ReadOnly#(Bool)) inputs) (ReadOnly#(Bool))
@@ -73,22 +80,66 @@ module mkPortalInterrupt#(Vector#(numIndications, PipeOut#(Bit#(dataWidth))) ind
    endmethod
 endmodule
 
-module mkSlaveMux#(Vector#(numPortals,MemPortal#(aw,dataWidth)) portals) (PhysMemSlave#(addrWidth,dataWidth))
-   provisos(Add#(selWidth,aw,addrWidth)
-	    ,Add#(a__, TLog#(numPortals), selWidth)
-	    ,FunnelPipesPipelined#(1, numPortals, MemData#(dataWidth),TMin#(2, TLog#(numPortals)))
-	    );
-   Vector#(numPortals, PhysMemSlave#(aw,dataWidth)) slaves = map(getSlave, portals);
-   for(Integer i = 0; i < valueOf(numPortals); i=i+1)
-      rule writeTop;
-	 portals[i].num_portals <= fromInteger(valueOf(numPortals));
-      endrule
-   let rv <- mkMemPortalMux(slaves);
-   return rv;
-endmodule
+module mkPortalCtrlMemSlave#(Bit#(dataWidth) ifcId, PortalInterrupt#(dataWidth) intr)
+   (PortalCtrlMemSlave#(addrWidth, dataWidth))
+   provisos(Add#(d__, dataWidth, TMul#(dataWidth, 2)));
+   Reg#(Bit#(dataWidth)) num_portals_reg <- mkReg(0);
+   Reg#(Bool) interruptEnableReg <- mkReg(False);
+   Reg#(Bit#(TMul#(dataWidth,2))) cycle_count <- mkReg(0);
+   Reg#(Bit#(dataWidth))    snapshot <- mkReg(0);
+   let verbose = False;
+   
+   rule count;
+      cycle_count <= cycle_count+1;
+   endrule
+   
+   interface PortalCtrl memSlave;
+   method Action write(Bit#(addrWidth) addr, Bit#(dataWidth) v);
+      if (addr == 4)
+	 interruptEnableReg <= v[0] == 1'd1;
+   endmethod
+
+   method ActionValue#(Bit#(dataWidth)) read(Bit#(addrWidth) addr);
+	       let v = 'h05a05a0;
+	       if (addr == 0)
+		  v = intr.status() ? 1 : 0;
+	       if (addr == 4)
+		  v = interruptEnableReg ? 1 : 0;
+	       if (addr == 8)
+		  v = fromInteger(valueOf(NumberOfTiles));
+               if (addr == 'h00C) begin
+		  if (intr.status())
+		     v = intr.channel()+1;
+		  else 
+		     v = 0;
+               end
+	       if (addr == 'h010)
+		  v = ifcId;
+	       if (addr == 'h014)
+		  v = num_portals_reg;
+	       if (addr == 'h018) begin
+		  snapshot <= truncate(cycle_count);
+		  v = truncate(cycle_count>>valueOf(dataWidth));
+	       end
+	       if (addr == 'h01C)
+		  v = snapshot;
+	       return v;
+   endmethod
+   endinterface
+   interface ReadOnly interrupt;
+      method Bool _read();
+	 return intr.status() && interruptEnableReg;
+      endmethod
+   endinterface
+   interface WriteOnly num_portals;
+      method Action _write(Bit#(dataWidth) v);
+	 num_portals_reg <= v;
+      endmethod
+   endinterface
+endmodule   
 
 module mkMemMethodMuxIn#(PortalCtrl#(aw,dataWidth) ctrl, Vector#(numRequests, PipeIn#(Bit#(dataWidth))) requests
-)(PhysMemSlave#(addrWidth,dataWidth))
+        )(PhysMemSlave#(addrWidth,dataWidth))
    provisos(Add#(selWidth,aw,addrWidth)
 	    , Add#(a__, TLog#(numRequests), selWidth)
             , Add#(1, b__, dataWidth)
@@ -220,7 +271,6 @@ module mkMemMethodMuxOut#(PortalCtrl#(aw,dataWidth) ctrl, Vector#(numIndications
    AddressGenerator#(aw,dataWidth) fifoReadAddrGenerator <- mkAddressGenerator();
    AddressGenerator#(aw,dataWidth) fifoWriteAddrGenerator <- mkAddressGenerator();
    FIFO#(Bit#(MemTagSize))                fifoWriteDoneFifo <- mkFIFO();
-   FIFO#(MemData#(dataWidth))             fifoReadDataFifo <- mkFIFO();
    let port_sel_low = valueOf(aw);
    let port_sel_high = valueOf(TSub#(addrWidth,1));
    function Bit#(selWidth) psel(Bit#(addrWidth) a);
@@ -356,6 +406,7 @@ module mkMemPortalMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves) (P
    UnFunnelPipe#(1, numSlaves, MemData#(dataWidth), bpc) write_data_unfunnel <- mkUnFunnelPipesPipelined(cons(toPipeOut(write_data),nil));
    Vector#(numSlaves, PipeIn#(MemData#(dataWidth))) writeDataPipes <- mapM(mkPipeIn, map(getMemPortalWriteData,slaves));
    zipWithM(mkConnection, write_data_unfunnel, writeDataPipes);
+   let verbose = False;
  
    rule req_aw;
       let req <- toGet(req_aws).get;
@@ -372,22 +423,20 @@ module mkMemPortalMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves) (P
       ws.deq();
       doneFifo.enq(rv);
    endrule
-      
-   let verbose = False;
 
    interface PhysMemWriteServer write_server;
       interface Put writeReq;
 	 method Action put(PhysMemRequest#(addrWidth) req);
 	    req_aws.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
-	    if (req.burstLen > 4) $display("**** \n\n mkSlaveMux.writeReq len=%d \n\n ****", req.burstLen);
+	    if (req.burstLen > 4) $display("**** \n\n mkMemPortalMux.writeReq len=%d \n\n ****", req.burstLen);
 	    ws.enq(truncate(psel(req.addr)));
-	    if(verbose) $display("mkSlaveMux.writeReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));
+	    if(verbose) $display("mkMemPortalMux.writeReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));
 	 endmethod
       endinterface
       interface Put writeData;
 	 method Action put(MemData#(dataWidth) wdata);
 	    write_data.enq(tuple2(ws.first,wdata));
-	    if(verbose) $display("mkSlaveMux.writeData dst=%h wdata=%h", ws.first,wdata);
+	    if(verbose) $display("mkMemPortalMux.writeData dst=%h wdata=%h", ws.first,wdata);
 	 endmethod
       endinterface
       interface Get writeDone;
@@ -402,17 +451,34 @@ module mkMemPortalMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves) (P
 	 method Action put(PhysMemRequest#(addrWidth) req);
 	    req_ars.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
 	    rs.enq(truncate(psel(req.addr)));
-	    if (req.burstLen > 4) $display("**** \n\n mkSlaveMux.readReq len=%d \n\n ****", req.burstLen);
-	    if(verbose) $display("mkSlaveMux.readReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));
+	    if (req.burstLen > 4) $display("**** \n\n mkMemPortalMux.readReq len=%d \n\n ****", req.burstLen);
+	    if(verbose) $display("mkMemPortalMux.readReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));
 	 endmethod
       endinterface
       interface Get readData;
 	 method ActionValue#(MemData#(dataWidth)) get();
 	    let rv <- toGet(read_data_funnel[0]).get;
 	    rs.deq();
-	    if(verbose) $display("mkSlaveMux.readData rs=%d data=%h", rs.first, rv.data);
+	    if(verbose) $display("mkMemPortalMux.readData rs=%d data=%h", rs.first, rv.data);
 	    return rv;
 	 endmethod
       endinterface
    endinterface
+endmodule
+
+module mkSlaveMux#(Vector#(numPortals,MemPortal#(aw,dataWidth)) portals) (PhysMemSlave#(addrWidth,dataWidth))
+   provisos(Add#(selWidth,aw,addrWidth)
+	    ,Add#(a__, TLog#(numPortals), selWidth)
+	    ,FunnelPipesPipelined#(1, numPortals, MemData#(dataWidth),TMin#(2, TLog#(numPortals)))
+	    );
+   function PhysMemSlave#(_a,_d) getSlave(MemPortal#(_a,_d) p);
+      return p.slave;
+   endfunction
+   Vector#(numPortals, PhysMemSlave#(aw,dataWidth)) slaves = map(getSlave, portals);
+   for(Integer i = 0; i < valueOf(numPortals); i=i+1)
+      rule writeTop;
+	 portals[i].num_portals <= fromInteger(valueOf(numPortals));
+      endrule
+   let rv <- mkMemPortalMux(slaves);
+   return rv;
 endmodule

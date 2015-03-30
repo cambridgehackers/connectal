@@ -26,7 +26,6 @@ import FIFO::*;
 import Portal::*;
 import HostInterface::*;
 import CtrlMux::*;
-import MemPortal::*;
 import MemServer::*;
 import DDSTestInterfaces::*;
 import DDSTest::*;

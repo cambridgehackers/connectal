@@ -18,89 +18,86 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
-#include <stdio.h>
 #include <assert.h>
-
 #include "SimpleRequest.h"
+
+#if 1
+#define TEST_ASSERT(A) assert(A)
+#else
+#define TEST_ASSERT(A) {}
+#endif
 
 #define NUMBER_OF_TESTS 11
 
 int v1a = 42;
-
 int v2a = 2;
 int v2b = 4;
-
 S2 s2 = {7, 8, 9};
-
 S1 s1 = {3, 6};
-
 uint32_t v5a = 0x00000000;
 uint64_t v5b = 0xDEADBEEFFECAFECA;
 uint32_t v5c = 0x00000001;
-
 uint32_t v6a = 0xBBBBBBBB;
 uint64_t v6b = 0x000000EFFECAFECA;
 uint32_t v6c = 0xCCCCCCCC;
-
 uint32_t v7a = 0xDADADADA;
 E1 v7b = E1_E1Choice2;
 S3 s3 = { a: v7a, e1: v7b };
-
 
 class Simple : public SimpleRequestWrapper
 {  
 public:
   uint32_t cnt;
+  uint32_t times;
   void incr_cnt(){
     if (++cnt == NUMBER_OF_TESTS)
       exit(0);
   }
-  virtual void say1(uint32_t a) {
+  void say1(uint32_t a) {
     fprintf(stderr, "say1(%d)\n", a);
-    assert(a == v1a);
+    TEST_ASSERT(a == v1a);
     incr_cnt();
   }
-  virtual void say2(uint16_t a, uint16_t b) {
+  void say2(uint16_t a, uint16_t b) {
     fprintf(stderr, "say2(%d %d)\n", a, b);
-    assert(a == v2a);
-    assert(b == v2b);
+    TEST_ASSERT(a == v2a);
+    TEST_ASSERT(b == v2b);
     incr_cnt();
   }
-  virtual void say3(S1 s){
+  void say3(S1 s){
     fprintf(stderr, "say3(S1{a:%d,b:%d})\n", s.a, s.b);
-    assert(s.a == s1.a);
-    assert(s.b == s1.b);
+    TEST_ASSERT(s.a == s1.a);
+    TEST_ASSERT(s.b == s1.b);
     incr_cnt();
   }
-  virtual void say4(S2 s){
+  void say4(S2 s){
     fprintf(stderr, "say4(S2{a:%d,b:%d,c:%d})\n", s.a,s.b,s.c);
-    assert(s.a == s2.a);
-    assert(s.b == s2.b);
-    assert(s.c == s2.c);
+    TEST_ASSERT(s.a == s2.a);
+    TEST_ASSERT(s.b == s2.b);
+    TEST_ASSERT(s.c == s2.c);
     incr_cnt();
   }
-  virtual void say5(uint32_t a, uint64_t b, uint32_t c) {
+  void say5(uint32_t a, uint64_t b, uint32_t c) {
     fprintf(stderr, "say5(%08x, %016llx, %08x)\n", a, (long long)b, c);
-    assert(a == v5a);
-    assert(b == v5b);
-    assert(c == v5c);
+    TEST_ASSERT(a == v5a);
+    TEST_ASSERT(b == v5b);
+    TEST_ASSERT(c == v5c);
     incr_cnt();
   }
-  virtual void say6(uint32_t a, uint64_t b, uint32_t c) {
+  void say6(uint32_t a, uint64_t b, uint32_t c) {
     fprintf(stderr, "say6(%08x, %016llx, %08x)\n", a, (long long)b, c);
-    assert(a == v6a);
-    assert(b == v6b);
-    assert(c == v6c);
+    TEST_ASSERT(a == v6a);
+    TEST_ASSERT(b == v6b);
+    TEST_ASSERT(c == v6c);
     incr_cnt();
   }
-  virtual void say7(S3 v) {
+  void say7(S3 v) {
     fprintf(stderr, "say7(%08x, %08x)\n", v.a, v.e1);
-    assert(v.a == v7a);
-    assert(v.e1 == v7b);
+    TEST_ASSERT(v.a == v7a);
+    TEST_ASSERT(v.e1 == v7b);
     incr_cnt();
   }
-  virtual void say8 ( const bsvvector_Luint32_t_L128 v ) {
+  void say8 ( const bsvvector_Luint32_t_L128 v ) {
     fprintf(stderr, "say8\n");
     for (int i = 0; i < 128; i++)
         fprintf(stderr, "    [%d] = 0x%x\n", i, v[i]);
@@ -127,15 +124,13 @@ public:
   Simple(unsigned int id) : SimpleRequestWrapper(id), cnt(0){}
 };
 
-
-
 int main(int argc, const char **argv)
 {
+  int32_t testval = 0x1234abcd, v1arg1[4], v1arg2[4];
+  int16_t v2v[16], v3count;
   Simple *indication = new Simple(IfcNames_SimpleRequestH2S);
   SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequestS2H);
   device->pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
-
-  portalExec_start();
 
   fprintf(stderr, "Main::calling say1(%d)\n", v1a);
   device->say1(v1a);  
@@ -156,22 +151,20 @@ int main(int argc, const char **argv)
     vect[i] = -i*32;
   fprintf(stderr, "Main::calling say8\n");
   device->say8(vect);  
-int32_t v1arg1[4], v1arg2[4];
-int32_t testval = 0x1234abcd;
   for (int i = 0; i < 4; i++) {
-     v1arg1[i] = testval;
-     v1arg2[i] = ~testval;
-     testval = (testval << 4) | ((testval >> 28) & 0xf);
+    v1arg1[i] = testval;
+    v1arg2[i] = ~testval;
+    testval = (testval << 4) | ((testval >> 28) & 0xf);
   }
   device->sayv1(v1arg1, v1arg2);
-int16_t v2v[16], v3count;
   testval = 0x12349876;
   for (int i = 0; i < 16; i++) {
-     v2v[i] = testval;
-     testval = (testval << 4) | ((testval >> 28) & 0xf);
+    v2v[i] = testval;
+    testval = (testval << 4) | ((testval >> 28) & 0xf);
   }
   device->sayv2(v2v);
   device->sayv3(v2v, 44);
   fprintf(stderr, "Main::about to go to sleep\n");
-  while(true){sleep(2);}
+  while(1)
+    sleep(10);
 }

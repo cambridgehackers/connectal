@@ -20,12 +20,11 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
+#include <assert.h>
 #include "dmaManager.h"
-#include "MemServerIndication.h"
 #include "MMUIndication.h"
-#include "assert.h"
 #include "MemServerRequest.h"
+#include "MemServerIndication.h"
 
 class PortalPoller;
 
@@ -36,9 +35,7 @@ class MMUIndication : public MMUIndicationWrapper
   DmaManager *portalMemory;
  public:
   MMUIndication(DmaManager *pm, unsigned int  id) : MMUIndicationWrapper(id), portalMemory(pm) {}
-  //MMUIndication(DmaManager *pm, unsigned int  id, PortalPoller *poller) : MMUIndicationWrapper(id,poller), portalMemory(pm) {}
   MMUIndication(DmaManager *pm, unsigned int  id, PortalItemFunctions *item, void *param) : MMUIndicationWrapper(id, item, param), portalMemory(pm) {}
-  //MMUIndication(DmaManager *pm, unsigned int  id, PortalItemFunctions *item, void *param, PortalPoller *poller) : MMUIndicationWrapper(id,item, param, poller), portalMemory(pm) {}
   virtual void configResp(uint32_t pointer){
     fprintf(stderr, "MMUIndication::configResp: %x\n", pointer);
     portalMemory->confResp(pointer);
@@ -63,7 +60,6 @@ class MemServerIndication : public MemServerIndicationWrapper
       PORTAL_PRINTF("MemServerIndication::init failed to init mtSem\n");
   }
  public:
-  //MemServerIndication(unsigned int  id, PortalPoller *poller) : MemServerIndicationWrapper(id,poller), memServerRequestProxy(NULL){init();}
   MemServerIndication(unsigned int  id) : MemServerIndicationWrapper(id), memServerRequestProxy(NULL) {init();}
   MemServerIndication(MemServerRequestProxy *p, unsigned int  id) : MemServerIndicationWrapper(id), memServerRequestProxy(p) {init();}
   virtual void addrResponse(uint64_t physAddr){

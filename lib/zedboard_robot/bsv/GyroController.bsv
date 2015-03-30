@@ -27,10 +27,13 @@ import StmtFSM::*;
 import FIFO::*;
 import SpecialFIFOs::*;
 import Gearbox::*;
+import ClientServer::*;
 
 import MemTypes::*;
 import Leds::*;
 import ConnectalSpi::*;
+import MemwriteEngine::*;
+import Pipe::*;
 
 interface GyroCtrlRequest;
    method Action write_reg_req(Bit#(8) addr, Bit#(8) val);
@@ -58,24 +61,27 @@ endinterface
 
 module mkGyroController#(GyroCtrlIndication ind)(GyroController);
 
-   Reg#(Bit#(32))  en_memwr   <- mkReg(maxBound);
    SPI#(Bit#(16))  spiCtrl    <- mkSPI(1000, True);
    FIFO#(Bool)     spi_aux    <- mkPipelineFIFO;
    Reg#(Bit#(32))  sampleFreq <- mkReg(0);
    Reg#(Bit#(32))  sampleCnt  <- mkReg(0);
-   Reg#(Bit#(32))  wrapCnt    <- mkReg(0);
-   Reg#(Bit#(32))  sglId      <- mkReg(0);
-   Reg#(Bit#(32))  allocSz    <- mkReg(0);
-   Reg#(Bit#(32))  writePtr   <- mkReg(0);
-   FIFO#(Bool)     rc_fifo    <- mkSizedFIFO(1);
-   FIFO#(Bit#(8))  wr_queue   <- mkSizedFIFO(4);
-   Reg#(Bit#(8))   wr_reg     <- mkReg(0);
+   FIFO#(Bool)     rc_fifo    <- mkFIFO1;
 `ifdef BSIM
    Reg#(Bit#(8))   bsim_cnt   <- mkReg(0);
 `endif
    let clk <- exposeCurrentClock;
    let rst <- exposeCurrentReset;
    Gearbox#(1,8,Bit#(8)) gb   <- mk1toNGearbox(clk,rst,clk,rst);
+   MemwriteEngine#(64, 1, 1) we <- mkMemwriteEngine;
+
+   
+   Reg#(Bit#(32))  en_memwr   <- mkReg(maxBound);
+   Reg#(Bit#(32))  cWrapCnt    <- mkReg(0);
+   Reg#(Bit#(32))  sglId      <- mkReg(0);
+   Reg#(Bit#(32))  allocSz    <- mkReg(0);
+   Reg#(Bit#(32))  writePtr   <- mkReg(0);
+   Reg#(Bit#(32))  cWritePtr  <- mkReg(0);
+
    
    let out_X_L = 'h28;
    let out_X_H = 'h29;
@@ -139,7 +145,31 @@ module mkGyroController#(GyroCtrlIndication ind)(GyroController);
       gb.enq(cons(truncate(rv),nil));
 `endif
    endrule
-      
+   
+   rule we_cmd_enq if (en_memwr != 0 && allocSz > 0);
+      Bit#(32) new_writePtr = writePtr + 8;
+      if (new_writePtr >= allocSz) begin
+         new_writePtr = 0;
+         en_memwr <= en_memwr-1;
+      end
+      writePtr <= new_writePtr;      
+      we.write_servers[0].cmdServer.request.put(MemengineCmd{sglId:sglId, base:extend(writePtr), burstLen:8, len:8, tag:0});
+   endrule
+   rule we_cmd_deq;
+      let rv <- we.write_servers[0].cmdServer.response.get;
+      Bit#(32) new_cWritePtr = cWritePtr + 8;
+      if(new_cWritePtr >= allocSz) begin
+	 new_cWritePtr = 0;
+	 cWrapCnt <= cWrapCnt+1;
+      end
+      cWritePtr <= new_cWritePtr;
+   endrule
+   
+   rule we_data_enq;
+      gb.deq;
+      we.write_servers[0].dataPipe.enq(pack(gb.first));
+   endrule
+   
    interface GyroCtrlRequest req;
       method Action write_reg_req(Bit#(8) addr, Bit#(8) val);
 	 spiCtrl.request.put({1'b0,1'b0,addr[5:0],val});
@@ -159,51 +189,14 @@ module mkGyroController#(GyroCtrlIndication ind)(GyroController);
       endmethod
       method Action set_en(Bit#(32) en);
 	 en_memwr <= en;
-	 if(en == 0) ind.memwrite_status(writePtr, wrapCnt);
+	 if(en == 0) ind.memwrite_status(cWritePtr, cWrapCnt);
       endmethod
    endinterface
    
    interface LEDS leds;
-      method Bit#(LedsWidth) leds() = 0;
+      method Bit#(LedsWidth) leds() = truncate(pack(cWrapCnt));
    endinterface
-
    interface SpiPins spi = spiCtrl.pins;
-
-   interface MemWriteClient dmaClient;
-      interface Get writeReq;
-	 method ActionValue#(MemRequest) get if (allocSz > 0 && en_memwr > 0);
-	    Bit#(8) bl = 128;
-	    Bit#(32) new_writePtr = writePtr + extend(bl);
-	    if (new_writePtr >= allocSz) begin
-	       new_writePtr = 0;
-	       bl =  truncate(allocSz-writePtr);
-	       wrapCnt <= wrapCnt+1;
-	       en_memwr <= en_memwr-1;
-	    end
-	    writePtr <= new_writePtr;
-	    if (verbose) $display("writeReq %d", writePtr);
-	    wr_queue.enq(bl);
-	    return MemRequest {sglId:sglId, offset:extend(writePtr), burstLen:bl, tag:0};
-	 endmethod
-      endinterface
-      interface Get writeData;
-	 method ActionValue#(MemData#(64)) get;
-	    gb.deq;
-	    let new_wr_reg = wr_reg-8;
-	    if (wr_reg == 0) begin
-	       let wrv <- toGet(wr_queue).get;
-	       new_wr_reg = wrv-8;
-	    end
-	    wr_reg <= new_wr_reg;
-	    let rv = pack(gb.first);
-	    if(verbose) $display("writeData %h", rv);
-	    return MemData{data:rv, tag:0, last:(new_wr_reg==0)};
-	 endmethod
-      endinterface
-      interface Put writeDone;
-	 method Action put(Bit#(MemTagSize) tag);
-	    if(verbose) $display("writeDone");
-	 endmethod
-      endinterface
-   endinterface
+   interface dmaClient = we.dmaClient;
+      
 endmodule

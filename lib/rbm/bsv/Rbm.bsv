@@ -253,8 +253,8 @@ module  mkRbm#(HostType host, RbmIndication rbmInd, SigmoidIndication sigmoidInd
    let n = valueOf(n);
    
    // TODO: figure out the correct amount of buffering required
-   MemreadEngineV#(TMul#(n,32), 2, 9) readEngine  <- mkMemreadEngine; 
-   MemwriteEngineV#(TMul#(n,32),2, 3) writeEngine <- mkMemwriteEngine; 
+   MemreadEngine#(TMul#(n,32), 2, 9) readEngine  <- mkMemreadEngine;
+   MemwriteEngine#(TMul#(n,32),2, 3) writeEngine <- mkMemwriteEngine;
    
    let res = readEngine.readServers;
    let rep = readEngine.dataPipes;

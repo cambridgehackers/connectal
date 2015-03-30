@@ -25,7 +25,6 @@ import Connectable::*;
 import CtrlMux::*;
 import Portal::*;
 import MemTypes::*;
-import MemPortal::*;
 import MifoTestIndication::*;
 import MifoTestRequest::*;
 import MifoTest::*;

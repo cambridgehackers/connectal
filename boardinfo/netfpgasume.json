@@ -5,6 +5,7 @@
         "partname" : "xc7vx690tffg1761-3",
         "need_pcie" : "x7_gen3x8",
         "TOP" : "PcieTop",
+        "constraints": ["constraints/xilinx/netfpgasume.xdc"],
         "runscript" : "run.pcietest",
         "CONNECTALFLAGS" : [],
         "rewireclockstring" : ""

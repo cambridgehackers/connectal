@@ -46,7 +46,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    Reg#(Bit#(32))       burstLen <- mkReg(0);
    Reg#(Bit#(32))         srcGens <- mkReg(0);
    Reg#(Bool)              doOnce <- mkReg(False);
-   MemwriteEngineV#(64,1,1)    we <- mkMemwriteEngine;
+   MemwriteEngine#(64,2,1)    we <- mkMemwriteEngine;
 
    rule start if (doOnce);
          we.writeServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(numWords), burstLen:truncate(burstLen)});

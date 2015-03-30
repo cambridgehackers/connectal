@@ -46,10 +46,9 @@ static int trace_memory = 1;
 #include "dmaSendFd.h"
 #endif
 
-void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *dmaDevice, PortalInternal *sglDevice)
+void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *sglDevice)
 {
   memset(priv, 0, sizeof(*priv));
-  priv->dmaDevice = dmaDevice;
   priv->sglDevice = sglDevice;
   init_portal_memory();
   if (sem_init(&priv->sglIdSem, 0, 0)){
@@ -80,7 +79,12 @@ int DmaManager_reference(DmaManagerPrivate *priv, int fd)
   int rc = 0;
   init_portal_memory();
   MMURequest_idRequest(priv->sglDevice, (SpecialTypeForSendingFd)fd);
-  sem_wait(&priv->sglIdSem);
+  if (priv->poll) {
+      int rc = priv->poll(priv->shared_mmu_indication, &priv->sglId);
+printf("[%s:%d] return after idrequest %d %d\n", __FUNCTION__, __LINE__, rc, priv->sglId);
+  }
+  else
+      sem_wait(&priv->sglIdSem);
   id = priv->sglId;
 #if  !defined(BSIM) && !defined(__KERNEL__)
 #ifdef ZYNQ
@@ -94,15 +98,44 @@ int DmaManager_reference(DmaManagerPrivate *priv, int fd)
   sendFd.id = id;
   rc = ioctl(priv->sglDevice->fpga_fd, PCIE_SEND_FD, &sendFd);
 #endif
-  if (!rc)
-    sem_wait(&priv->confSem);
+  if (!rc) {
+      if (priv->poll) {
+          uint32_t ret;
+          int rc = priv->poll(priv->shared_mmu_indication, &ret);
+    printf("[%s:%d] return after ioctl %d %d\n", __FUNCTION__, __LINE__, rc, ret);
+      }
+      else
+          sem_wait(&priv->confSem);
+  }
   rc = id;
 #else // defined(BSIM) || defined(__KERNEL__)
   rc = send_fd_to_portal(priv->sglDevice, fd, id, global_pa_fd);
   if (rc <= 0) {
     //PORTAL_PRINTF("%s:%d sem_wait\n", __FUNCTION__, __LINE__);
+      if (priv->poll) {
+          uint32_t ret;
+          int rc = priv->poll(priv->shared_mmu_indication, &ret);
+    printf("[%s:%d] return after sendfd %d %d\n", __FUNCTION__, __LINE__, rc, ret);
+      }
+      else
     sem_wait(&priv->confSem);
   }
 #endif // defined(BSIM) || defined(__KERNEL__)
   return rc;
+}
+void DmaManager_idresp(DmaManagerPrivate *priv, uint32_t sglId)
+{
+    priv->sglId = sglId;
+#ifdef __KERNEL__
+#else
+    sem_post(&priv->sglIdSem);
+#endif
+}
+void DmaManager_confresp(DmaManagerPrivate *priv, uint32_t channelId)
+{
+#ifdef __KERNEL__
+#else
+    //fprintf(stderr, "configResp %d\n", channelId);
+    sem_post(&priv->confSem);
+#endif
 }

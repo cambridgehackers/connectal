@@ -23,6 +23,7 @@
 
 #ifndef _SOCK_UTILS_H_
 #define _SOCK_UTILS_H_
+#include <stdio.h>    // ssize_t
 
 #define MAX_BSIM_PORTAL_ID 128
 #define MAGIC_PORTAL_FOR_SENDING_FD                 666

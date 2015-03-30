@@ -467,8 +467,9 @@ def p_subinterfaceDecl(p):
 
 def p_parenthesizedFormalParams(p):
     '''parenthesizedFormalParams : 
+                                 |  LPAREN RPAREN
                                  |  LPAREN moduleFormalParams RPAREN'''
-    if len(p) == 1:
+    if len(p) < 4:
         p[0] = []
     else:
         p[0] = p[2]
@@ -495,10 +496,20 @@ def p_interfaceDecl(p):
     interface = AST.Interface(p[3], p[4], p[6], None, globalfilename)
     p[0] = interface
 
+
+# the token '[' signifies an array type 
+def p_arrayDecl(p):
+    '''arrayDecl : type VAR LBRACKET NUM RBRACKET'''
+    arr_t = AST.Type(p[3],p[1])
+    p[0] = AST.Variable(p[2], arr_t, None)
+
 def p_varDecl(p):
-    '''varDecl : type VAR'''
-    p[0] = AST.Variable(p[2], p[1], None)
-    
+    '''varDecl : arrayDecl
+               | type VAR'''
+    if len(p)==3:
+        p[0] = AST.Variable(p[2], p[1], None)
+    else:
+        p[0] = p[1]
 
 def p_params(p):
     '''params : expressions
@@ -846,11 +857,15 @@ def p_moduleContext(p):
     if len(p) > 2:
         p[0] = p[2]
 
+def p_moduleDefHeader(p):
+    '''moduleDefHeader : instanceAttributes TOKMODULE moduleContext VAR moduleParamsArgs provisos SEMICOLON'''
+    p[0] = [p[3], p[4], p[5][0], p[5][1], p[6]]
+
 def p_moduleDef(p):
-    '''moduleDef : instanceAttributes TOKMODULE moduleContext VAR moduleParamsArgs provisos SEMICOLON expressionStmts TOKENDMODULE colonVar'''
+    '''moduleDef : moduleDefHeader expressionStmts TOKENDMODULE colonVar'''
     if parseTrace:
         print 'ENDMODULE', [pitem for pitem in p]
-    p[0] = AST.Module(p[3], p[4], p[5][0], p[5][1], p[6], p[8])
+    p[0] = AST.Module(p[1][0], p[1][1], p[1][2], p[1][3], p[1][4], p[2])
 
 def p_importBviDef(p):
     '''importBviDef : TOKIMPORT STR VAR EQUAL bviModuleDef
@@ -942,7 +957,8 @@ def p_instanceDecl(p):
     p[0] = AST.TypeclassInstance(p[2], p[5], p[7], p[9])
 
 def p_typeClassDeclStmts(p):
-    '''typeClassDeclStmts : '''
+    '''typeClassDeclStmts : 
+                          | moduleDefHeader'''
 
 def p_typeClassDecl(p):
     '''typeClassDecl : TOKTYPECLASS VAR HASH LPAREN interfaceFormalParams RPAREN provisos SEMICOLON typeClassDeclStmts TOKENDTYPECLASS'''
@@ -1103,8 +1119,11 @@ if __name__=='__main__':
     t = os.environ.get('BSVDEFINES_LIST')
     if t:
         deflist = t.split()
+    verbose = os.environ.get('V') == '1'
     if os.environ.get('D'):
         parseDebugFlag=True
+    if verbose:
+        parseTrace=True
     generate_bsvcpp(sys.argv[1:], os.environ.get('DTOP'), os.environ.get('DUT_NAME'),
-         deflist, ifitems, os.environ.get('V') == '1')
+         deflist, ifitems, verbose)
 

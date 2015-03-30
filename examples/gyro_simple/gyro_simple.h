@@ -91,22 +91,21 @@ void set_en(GyroCtrlIndication *ind, GyroCtrlRequestProxy *device, unsigned int 
   if(!v) sem_wait(&(ind->status_sem));
 }
 
-void display(void *b, int len)
+int send(GyroSampleStreamProxy *gssp, void*b, int len, int drop, int spew, int send)
 {
   int16_t *ss = (int16_t*)b;
-  for(int i = 0; i < len/2; i+=3)
-    fprintf(stderr, "%8d %8d %8d\n", ss[i], ss[i+1], ss[i+2]);
-}
-
-void send(GyroSampleStreamProxy *gssp, void*b, int len)
-{
-  int16_t *ss = (int16_t*)b;
-  for(int i = 0; i < len/2; i+=3)
-    gssp->sample(ss[i+0], ss[i+1], ss[i+2]);
+  int i = 3+drop;
+  while(i < len/2){
+    if (send) gssp->sample(ss[(i-3)+0], ss[(i-3)+1], ss[(i-3)+2]);
+    if (spew) fprintf(stderr, "%8d %8d %8d\n", ss[(i-3)+0], ss[(i-3)+1], ss[(i-3)+2]);
+    i+=3;
+  }
+  int missing = i-(len/2);
+  return missing;
 }
 
 //#define HIGH_SAMPLE_RATE
-void setup_registers(GyroCtrlIndication *ind, GyroCtrlRequestProxy *device, int ref_dstAlloc, int wrap_limit)
+void setup_registers(GyroCtrlIndication *ind, GyroCtrlRequestProxy *device, int ref_dstAlloc, int alloc_sz)
 {
 #ifdef HIGH_SAMPLE_RATE
   write_reg(ind,device, CTRL_REG1, 0b11001111);  // ODR:800Hz Cutoff:30
@@ -120,14 +119,14 @@ void setup_registers(GyroCtrlIndication *ind, GyroCtrlRequestProxy *device, int 
   // make sure the memwrite is disabled before we start
   set_en(ind,device,0); 
 #ifdef BSIM
-  device->sample(ref_dstAlloc, wrap_limit, 10);
+  device->sample(ref_dstAlloc, alloc_sz, 10);
 #else
 #ifdef HIGH_SAMPLE_RATE
   // sampling rate of 800Hz. Model running at 100 MHz. 
-  device->sample(ref_dstAlloc, wrap_limit, 1000000/8);
+  device->sample(ref_dstAlloc, alloc_sz, 1000000/8);
 #else
   // sampling rate of 100Hz. Model running at 100 MHz. 
-  device->sample(ref_dstAlloc, wrap_limit, 1000000);
+  device->sample(ref_dstAlloc, alloc_sz, 1000000);
 #endif
 #endif
 }

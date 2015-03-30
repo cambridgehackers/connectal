@@ -55,8 +55,8 @@ endinterface
 
 module mkMemcpy#(MemcpyIndication indication)(Memcpy);
 
-   MemreadEngine#(64,1)  re <- mkMemreadEngine;
-   MemwriteEngine#(64,1) we <- mkMemwriteEngine;
+   MemreadEngine#(64,1,1)  re <- mkMemreadEngine;
+   MemwriteEngine#(64,2,1) we <- mkMemwriteEngine;
 
    Reg#(Bit#(32))        rdIterCnt <- mkReg(0);
    Reg#(Bit#(32))        wrIterCnt <- mkReg(0);

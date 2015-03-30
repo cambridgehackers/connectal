@@ -55,8 +55,8 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
    Reg#(Bit#(32))     srcGen1 <- mkReg(0);
    Reg#(Bit#(32)) mismatchCount0 <- mkReg(0);
    Reg#(Bit#(32)) mismatchCount1 <- mkReg(0);
-   MemreadEngine#(64,1) re0 <- mkMemreadEngine;
-   MemreadEngine#(64,1) re1 <- mkMemreadEngine;
+   MemreadEngine#(64,1,1) re0 <- mkMemreadEngine;
+   MemreadEngine#(64,1,1) re1 <- mkMemreadEngine;
 
    FIFOF#(Bit#(64)) outReg0 <- mkFIFOF;
    FIFOF#(Bit#(64)) outReg1 <- mkFIFOF;

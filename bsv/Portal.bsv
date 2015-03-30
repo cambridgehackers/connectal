@@ -46,10 +46,6 @@ interface MemPortal#(numeric type slaveAddrWidth, numeric type slaveDataWidth);
    interface WriteOnly#(Bit#(slaveDataWidth)) num_portals;
 endinterface
 
-function PhysMemSlave#(_a,_d) getSlave(MemPortal#(_a,_d) p);
-   return p.slave;
-endfunction
-
 function ReadOnly#(Bool) getInterrupt(MemPortal#(_a,_d) p);
    return p.interrupt;
 endfunction

@@ -19,17 +19,12 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
-// BSV Libraries
 import FIFO::*;
 import GetPut::*;
 import ClientServer::*;
-
-// CONNECTAL Libraries
 import AxiMasterSlave::*;
 import MemTypes::*;
 import ConnectalMemory::*;
-
 
 module mkAxiDmaSlave#(PhysMemSlave#(addrWidth,dataWidth) slave) (Axi3Slave#(addrWidth,dataWidth,12));
    let beatShift = fromInteger(valueOf(TLog#(TDiv#(dataWidth,8))));
