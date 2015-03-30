@@ -26,21 +26,22 @@ import Portal::*;
 import MemTypes::*;
 import HostInterface::*;
 import SDIORequest::*;
-import SDIOIndication::*;
-import Controller::*;
+import SDIOResponse::*;
+import SDIO::*;
 import Leds::*;
+import PS7LIB::*;
 
-typedef enum {ControllerRequest, ControllerIndication} IfcNames deriving (Eq,Bits);
+typedef enum {ControllerRequest, ControllerResponse} IfcNames deriving (Eq,Bits);
 
 interface TestSDIO1Pins;
    interface SDIOPins sdio;
    interface LEDS leds;
 endinterface
 
-module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,HBridgeSimplePins,0));
+module mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,DataBusWidth,TestSDIO1Pins,0));
 
-   SDIOIndicationProxy cp <- mkSDIOIndicationProxy(ControllerIndication);
-   Controller controller <- mkController(cp.ifc);
+   SDIOResponseProxy cp <- mkSDIOResponseProxy(ControllerResponse);
+   Controller controller <- mkController(cp.ifc, host.ps7.emiosdio1);
    SDIORequestWrapper cw <- mkSDIORequestWrapper(ControllerRequest, controller.req);
    
    Vector#(2,StdPortal) portals;
@@ -51,14 +52,13 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,HBridgeSimplePins
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
    interface masters = nil;
-   interface HBridgeSimplePins pins;
-      interface hbridge = controller.pins;
-      interface leds = controller.leds;
+   interface TestSDIO1Pins pins;
+      interface sdio = controller.pins;
+      interface leds = ?;
    endinterface
 
 endmodule : mkConnectalTop
 
-export HBridgeController::*;
-export HBridgeSimplePins;
+export TestSDIO1Pins;
 export mkConnectalTop;
 

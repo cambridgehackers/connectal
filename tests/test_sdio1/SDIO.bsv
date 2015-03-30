@@ -22,17 +22,16 @@
 // SOFTWARE.
 
 import Vector::*;
-import XilinxCells::*;
-import SDIORequest::*;
-import SDIOIndication::*;
+import ConnectalXilinxCells::*;
+import PPS7LIB::*;
 
 interface SDIOPins;
    method Bit#(1) clk;
-   interface Inout cmd;
-   interface Inout dat0;
-   interface Inout dat1;
-   interface Inout dat2;
-   interface Inout dat3;
+   interface Inout#(Bit#(1)) cmd;
+   interface Inout#(Bit#(1)) d0;
+   interface Inout#(Bit#(1)) d1;
+   interface Inout#(Bit#(1)) d2;
+   interface Inout#(Bit#(1)) d3;
    method Action cd(Bit#(1) v);
    method Action wp(Bit#(1) v);
 endinterface
@@ -54,13 +53,18 @@ module mkController#(SDIOResponse ind, Pps7Emiosdio sdio)(Controller);
    
    Reg#(Bit#(1)) cd_reg <- mkReg(0);
    Reg#(Bit#(1)) wp_reg <- mkReg(0);
-   let cmdb <- mkIOBUF(~sdio.cmdn, sdio.cmdo);
+   let cmdb <- mkIOBUF(~sdio.cmdtn, sdio.cmdo);
+   
+   let d0b <- mkIOBUF(~sdio.datatn[0], sdio.datao[0]);
+   let d1b <- mkIOBUF(~sdio.datatn[1], sdio.datao[1]);
+   let d2b <- mkIOBUF(~sdio.datatn[2], sdio.datao[2]);
+   let d3b <- mkIOBUF(~sdio.datatn[3], sdio.datao[3]);
    
    rule xxx;
       sdio.cmdi(cmdb.o);
-      sdio.clkfp(sdio.clk);
+      sdio.clkfb(sdio.clk);
       sdio.wp(wp_reg);
-      sdio.cd(cd_reg);
+      sdio.cdn(~cd_reg);
    endrule
 
    interface SDIORequest req;
@@ -72,17 +76,14 @@ module mkController#(SDIOResponse ind, Pps7Emiosdio sdio)(Controller);
    interface SDIOPins pins;
       method Bit#(1) clk = sdio.clk;
       interface cmd = cmdb.io;
-      interface d0 = ?;
-      interface d1 = ?;
-      interface d2 = ?;
-      interface d3 = ?;
+      interface d0 = d0b.io;
+      interface d1 = d1b.io;
+      interface d2 = d2b.io;
+      interface d3 = d3b.io;
       method Action cd(Bit#(1) v) = cd_reg._write(v);
       method Action wp(Bit#(1) v) = wp_reg._write(v);
    endinterface
 
-endmodule : mkConnectalTop
+endmodule
 
-export HBridgeController::*;
-export HBridgeSimplePins;
-export mkConnectalTop;
 

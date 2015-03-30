@@ -28,38 +28,14 @@
 #include <assert.h>
 #include <string.h>
 
-#include "HBridgeCtrlRequest.h"
-#include "GeneratedTypes.h"
-
-#include "hbridge_simple.h" 
+#include "SDIORequest.h"
+#include "SDIOResponse.h"
 
 
 
 
 int main(int argc, const char **argv)
 {
-  HBridgeCtrlIndication *ind = new HBridgeCtrlIndication(IfcNames_ControllerIndication);
-  HBridgeCtrlRequestProxy *device = new HBridgeCtrlRequestProxy(IfcNames_ControllerRequest);
+  SDIORequestProxy *device = new SDIORequestProxy(IfcNames_ControllerRequest);
   portalExec_start();
-  sleep(2);
-
-  for(int i = 0; i < 2; i++){
-    MOVE_FOREWARD(POWER_5);
-    usleep(1000000);
-    STOP;
-    
-    MOVE_BACKWARD(POWER_5);
-    usleep(1000000);
-    STOP;
-    
-    TURN_RIGHT(POWER_5);
-    usleep(1000000);
-    STOP;
-    
-    TURN_LEFT(POWER_5);
-    usleep(1000000);
-    STOP;
-    sleep(1);
-  }
-
 }
