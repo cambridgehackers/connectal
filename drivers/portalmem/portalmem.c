@@ -180,6 +180,7 @@ static int pa_dma_buf_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
   struct scatterlist *sg;
   int i;
 
+  buffer->vaddr = (long)vma->vm_start;
   /* Fill in vma_ops::access(), so that gdb print command works correctly */
   vma->vm_ops = &custom_vm_ops;
   vma->vm_private_data = buffer;
