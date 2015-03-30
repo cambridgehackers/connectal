@@ -213,10 +213,14 @@ printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start
 #else
   int rc;
   if (utility_portal){
+    PortalCacheRequest req;
+    req.fd = fd;
+    req.base = __p;
+    req.len = size;
     if(flush)
-      rc = ioctl(utility_portal->fpga_fd, PORTAL_DCACHE_FLUSH_INVAL, fd);
+      rc = ioctl(utility_portal->fpga_fd, PORTAL_DCACHE_FLUSH_INVAL, &req);
     else
-      rc = ioctl(utility_portal->fpga_fd, PORTAL_DCACHE_INVAL, fd);
+      rc = ioctl(utility_portal->fpga_fd, PORTAL_DCACHE_INVAL, &req);
   }
   else
     rc = -1;
