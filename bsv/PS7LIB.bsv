@@ -98,7 +98,6 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
     Vector#(2, Pps7Emiousb)     vusb;
 `endif
     Vector#(2, Pps7Emioi2c)     vi2c;
-    Vector#(1, Pps7Saxiacp)    vs_axi_acp;
     Vector#(2, AxiMasterCommon#(32,32,12)) vtopm_axi_gp;
     Vector#(2, AxiSlaveCommon#(32,32,6,Empty)) vtops_axi_gp;
     Vector#(1, AxiSlaveCommon#(32,64,3,ACPType)) vtops_axi_acp;

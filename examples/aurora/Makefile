@@ -21,6 +21,6 @@ BviAurora.bsv:
 
 $(BOARD)/sources/aurora-$(BOARD).xdc: aurora.json $(CONNECTALDIR)/boardinfo/$(BOARD).json
 	mkdir -p $(BOARD)/sources
-	$(CONNECTALDIR)/scripts/generate-constraints.py $(CONNECTALDIR)/boardinfo/$(BOARD).json aurora.json > $(BOARD)/sources/aurora-$(BOARD).xdc
+	$(CONNECTALDIR)/scripts/generate-constraints.py --boardfile $(CONNECTALDIR)/boardinfo/$(BOARD).json --pinoutfile aurora.json > $(BOARD)/sources/aurora-$(BOARD).xdc
 
 include $(CONNECTALDIR)/Makefile.connectal

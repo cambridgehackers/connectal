@@ -24,6 +24,7 @@
 
 import functools, math, os, re, sys, util
 
+verbose = False
 sizeofUint32_t = 4
 generatedVectors = []
 itypeNames = ['int16_t', 'uint16_t', 'uint32_t', 'uint64_t', 'SpecialTypeForSendingFd', 'ChannelType', 'DmaDbgRec']
@@ -637,8 +638,12 @@ def emitType(item, name, f, indentation):
     indent(f, indentation)
     tmp = typeCName(item)
     if re.match('[0-9]+', tmp):
+        if True or verbose:
+            print 'cppgen/emitType: ignore numeric typedef for', tmp
         return
     if not tmp or tmp[0] == '`' or tmp == 'Empty' or tmp[-2:] == '_P':
+        if True or verbose:
+            print 'cppgen/emitType: ignore typedef for', tmp
         return
     if (indentation == 0):
         f.write('typedef ')
@@ -661,6 +666,8 @@ def emitEnum(item, name, f, indentation):
     f.write('\n')
 
 def emitCD(item, generated_hpp, indentation):
+    if verbose:
+        print 'cppgen/emitCD:', item
     n = item['name']
     td = item['tdtype']
     t = td['type']
@@ -674,15 +681,16 @@ def emitCD(item, generated_hpp, indentation):
         print 'EMITCD', n, t, td
 
 def generate_cpp(project_dir, noisyFlag, jsondata):
-    global globalv_globalvars
+    global globalv_globalvars, verbose
     def create_cpp_file(name):
         fname = os.path.join(project_dir, 'jni', name)
         f = util.createDirAndOpen(fname, 'w')
-        if noisyFlag:
+        if verbose:
             print "Writing file ",fname
         f.write('#include "GeneratedTypes.h"\n')
         return f
 
+    verbose = noisyFlag
     generatedCFiles = []
     globalv_globalvars = jsondata['globalvars']
     hname = os.path.join(project_dir, 'jni', 'GeneratedTypes.h')

@@ -50,6 +50,7 @@ import MemServerIndication::*;
 import MMUIndication::*;
 import ImageonCaptureRequest::*;
 import IserdesDatadeser::*;
+import IserdesDatadeserIF::*;
 import Imageon::*;
 import ImageonVita::*;
 import HDMI::*;

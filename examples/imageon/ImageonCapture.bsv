@@ -30,6 +30,7 @@ import Pipe::*;
 import MemwriteEngine::*;
 import HostInterface::*;
 import IserdesDatadeser::*;
+import IserdesDatadeserIF::*;
 
 interface ImageonCaptureRequest;
     method Action startWrite(Bit#(32) pointer, Bit#(32) numBytes);

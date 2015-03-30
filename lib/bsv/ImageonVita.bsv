@@ -123,7 +123,11 @@ module mkIserdesCore#(Clock serdes_clock, Reset serdes_reset, Clock serdest,
         srval_q1: 0, srval_q2: 0, srval_q3: 0, srval_q4: 0,
         serdes_mode: "SLAVE", iobdelay: "NONE"},
         serdest, serdest_inverted, clocked_by serdes_clock, reset_by serdes_reset);
-    ReadOnly#(Bit#(1))ibufds_v <- mkIBUFDS(vita_data_p, vita_data_n);
+    ReadOnly#(Bit#(1))ibufds_v <- mkIBUFDS(
+//`ifdef ClockDefaultParam
+        //defaultValue,
+//`endif
+        vita_data_p, vita_data_n);
 
     (* no_implicit_conditions *)
     rule setruledata;
@@ -201,7 +205,11 @@ module mkSerdesClock(SerdesClock);
 `else
     B2C1 vita_clk_p <- mkB2C1();
     B2C1 vita_clk_n <- mkB2C1();
-    Clock ibufds_clk <- mkClockIBUFDS(vita_clk_p.c, vita_clk_n.c);
+    Clock ibufds_clk <- mkClockIBUFDS(
+`ifdef ClockDefaultParam
+        defaultValue,
+`endif
+        vita_clk_p.c, vita_clk_n.c);
     ClockGenIfc serdes_clk <- mkBUFR5(ibufds_clk);
     ClockGenIfc serdest_clk <- mkBUFIO(ibufds_clk);
     Reset serdes_reset <- mkAsyncReset(2, defaultReset, serdes_clk.gen_clk);
