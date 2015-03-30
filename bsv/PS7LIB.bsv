@@ -78,7 +78,7 @@ interface PS7LIB;
 
     interface Vector#(2, AxiMasterCommon#(32,32,12)) m_axi_gp;
     interface Vector#(2, AxiSlaveCommon#(32,32,6,Empty)) s_axi_gp;
-    interface Vector#(4, AxiSlaveHighSpeed#(32,64,6,HPType)) s_axi_hp;
+    interface Vector#(4, AxiSlaveCommon#(32,64,6,HPType)) s_axi_hp;
     interface AxiSlaveCommon#(32,64,3,ACPType) s_axi_acp;
 endinterface
 
@@ -102,7 +102,7 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
     Vector#(2, AxiMasterCommon#(32,32,12)) vtopm_axi_gp;
     Vector#(2, AxiSlaveCommon#(32,32,6,Empty)) vtops_axi_gp;
     Vector#(1, AxiSlaveCommon#(32,64,3,ACPType)) vtops_axi_acp;
-    Vector#(4, AxiSlaveHighSpeed#(32,64,6,HPType)) vtops_axi_hp;
+    Vector#(4, AxiSlaveCommon#(32,64,6,HPType)) vtops_axi_hp;
 
 `ifdef PS7EXTENDED
     vcan[0] = foo.can0;
@@ -130,20 +130,20 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
     vtopm_axi_gp[1] <- mkAxi3MasterGather(foo.maxigp1, clocked_by axi_clock, reset_by axi_reset);
     vtops_axi_gp[0] <- mkAxi3SlaveGather(foo.saxigp0, clocked_by axi_clock, reset_by axi_reset);
     vtops_axi_gp[1] <- mkAxi3SlaveGather(foo.saxigp1, clocked_by axi_clock, reset_by axi_reset);
-    vtops_axi_acp[0] <- mkAxi3SlaveGather64(foo.saxiacp, clocked_by axi_clock, reset_by axi_reset);
-    vtops_axi_hp[0] <- mkAxiSlaveHighSpeedGather(foo.saxihp0, clocked_by axi_clock, reset_by axi_reset);
-    vtops_axi_hp[1] <- mkAxiSlaveHighSpeedGather(foo.saxihp1, clocked_by axi_clock, reset_by axi_reset);
-    vtops_axi_hp[2] <- mkAxiSlaveHighSpeedGather(foo.saxihp2, clocked_by axi_clock, reset_by axi_reset);
-    vtops_axi_hp[3] <- mkAxiSlaveHighSpeedGather(foo.saxihp3, clocked_by axi_clock, reset_by axi_reset);
-   Wire#(Bit#(1)) fpgaidlenw <- mkDWire(1);
-   rule fpgaidle;
-      foo.fpgaidlen(fpgaidlenw);
-   endrule
-   rule misc;
-      foo.emiosramintin(0);
-      // UG585 "fclkclktrign is currently not supported and must be tied to ground"
-      foo.fclkclktrign(0);
-   endrule
+    vtops_axi_acp[0] <- mkAxi3SlaveGather(foo.saxiacp, clocked_by axi_clock, reset_by axi_reset);
+    vtops_axi_hp[0] <- mkAxi3SlaveGather(foo.saxihp0, clocked_by axi_clock, reset_by axi_reset);
+    vtops_axi_hp[1] <- mkAxi3SlaveGather(foo.saxihp1, clocked_by axi_clock, reset_by axi_reset);
+    vtops_axi_hp[2] <- mkAxi3SlaveGather(foo.saxihp2, clocked_by axi_clock, reset_by axi_reset);
+    vtops_axi_hp[3] <- mkAxi3SlaveGather(foo.saxihp3, clocked_by axi_clock, reset_by axi_reset);
+    Wire#(Bit#(1)) fpgaidlenw <- mkDWire(1);
+    rule fpgaidle;
+       foo.fpgaidlen(fpgaidlenw);
+    endrule
+    rule misc;
+       foo.emiosramintin(0);
+       // UG585 "fclkclktrign is currently not supported and must be tied to ground"
+       foo.fclkclktrign(0);
+    endrule
 
 `ifdef PS7EXTENDED
     interface Pps7Can can = vcan;
@@ -163,25 +163,25 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
     interface Pps7Trace     trace = foo.trace;
     interface Pps7Wdt     wdt = foo.wdt;
 `endif
-    interface Pps7Emioi2c    i2c = vi2c;
-    interface Pps7Ddr     ddr = foo.ddr;
-    interface Bit        fclkclk = foo.fclkclk;
-    interface Bit        fclkresetn = foo.fclkresetn;
+    interface i2c = vi2c;
+    interface ddr = foo.ddr;
+    interface fclkclk = foo.fclkclk;
+    interface fclkresetn = foo.fclkresetn;
     method Action      fclkclktrign(Bit#(4) v);
         foo.fclkclktrign(v);
     endmethod
     method Action      fpgaidlen(Bit#(1) v);
        fpgaidlenw <= v;
     endmethod
-    interface Pps7Emiogpio     gpio = foo.emiogpio;
-    interface Pps7Irq     irq = foo.irq;
-    interface Inout     mio = foo.mio;
-    interface Pps7Ps     ps = foo.ps;
+    interface gpio = foo.emiogpio;
+    interface irq = foo.irq;
+    interface mio = foo.mio;
+    interface ps = foo.ps;
 
-    interface AxiMasterCommon m_axi_gp = vtopm_axi_gp;
-    interface AxiSlaveCommon s_axi_gp = vtops_axi_gp;
-    interface AxiSlaveHighSpeed s_axi_hp = vtops_axi_hp;
-    interface AxiSlaveCommon s_axi_acp = vtops_axi_acp[0];
+    interface m_axi_gp = vtopm_axi_gp;
+    interface s_axi_gp = vtops_axi_gp;
+    interface s_axi_hp = vtops_axi_hp;
+    interface s_axi_acp = vtops_axi_acp[0];
 endmodule
 
 interface ZynqPins;
@@ -213,7 +213,7 @@ interface PS7;
     interface ZynqPins pins;
     interface Vector#(2, AxiMasterCommon#(32,32,12))     m_axi_gp;
     interface Vector#(2, AxiSlaveCommon#(32,32,6,Empty)) s_axi_gp;
-    interface Vector#(4, AxiSlaveHighSpeed#(32,64,6,HPType))   s_axi_hp;
+    interface Vector#(4, AxiSlaveCommon#(32,64,6,HPType))   s_axi_hp;
     method Action                             interrupt(Bit#(1) v);
     interface Vector#(4, Clock) fclkclk;
     interface Vector#(4, Reset) fclkreset;
@@ -275,6 +275,10 @@ module mkPS7(PS7);
 	 b2c[i].inputclock(fclkb[i]);
 	 b2c[i].inputreset(fclkresetnb[i]);
       endrule
+      rule issue_rule;
+         ps7.s_axi_hp[i].extra.rdissuecap1en(0);
+         ps7.s_axi_hp[i].extra.wrissuecap1en(0);
+      endrule
    end
 
    IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by fclk[3], reset_by freset[0]);
@@ -284,29 +288,29 @@ module mkPS7(PS7);
     endrule
 
     interface ZynqPins pins;
-    interface Inout  a = ps7.ddr.a;
-    interface Inout  ba = ps7.ddr.ba;
-    interface Inout  casb = ps7.ddr.casb;
-    interface Inout  cke = ps7.ddr.cke;
-    interface Inout  csb = ps7.ddr.csb;
-    interface Inout  ckn = ps7.ddr.ckn;
-    interface Inout  ck = ps7.ddr.ckp;
-    interface Inout  dm = ps7.ddr.dm;
-    interface Inout  dq = ps7.ddr.dq;
-    interface Inout  dqsn = ps7.ddr.dqsn;
-    interface Inout  dqs = ps7.ddr.dqsp;
-    interface Inout  drstb = ps7.ddr.drstb;
-    interface Inout  odt = ps7.ddr.odt;
-    interface Inout  rasb = ps7.ddr.rasb;
-    interface Inout  vrn = ps7.ddr.vrn;
-    interface Inout  vrp = ps7.ddr.vrp;
-    interface Inout  web = ps7.ddr.web;
-    interface Inout  mio = ps7.mio;
-    interface Pps7Ps ps = ps7.ps;
+    interface a = ps7.ddr.a;
+    interface ba = ps7.ddr.ba;
+    interface casb = ps7.ddr.casb;
+    interface cke = ps7.ddr.cke;
+    interface csb = ps7.ddr.csb;
+    interface ckn = ps7.ddr.ckn;
+    interface ck = ps7.ddr.ckp;
+    interface dm = ps7.ddr.dm;
+    interface dq = ps7.ddr.dq;
+    interface dqsn = ps7.ddr.dqsn;
+    interface dqs = ps7.ddr.dqsp;
+    interface drstb = ps7.ddr.drstb;
+    interface odt = ps7.ddr.odt;
+    interface rasb = ps7.ddr.rasb;
+    interface vrn = ps7.ddr.vrn;
+    interface vrp = ps7.ddr.vrp;
+    interface web = ps7.ddr.web;
+    interface mio = ps7.mio;
+    interface ps = ps7.ps;
     endinterface
-    interface AxiMasterCommon m_axi_gp = ps7.m_axi_gp;
-    interface AxiSlaveCommon s_axi_gp = ps7.s_axi_gp;
-    interface AxiSlaveHighSpeed s_axi_hp = ps7.s_axi_hp;
+    interface m_axi_gp = ps7.m_axi_gp;
+    interface s_axi_gp = ps7.s_axi_gp;
+    interface s_axi_hp = ps7.s_axi_hp;
     interface fclkclk = fclk;
     interface fclkreset = freset;
     interface derivedClock = derived_clock;
@@ -314,7 +318,7 @@ module mkPS7(PS7);
     method Action interrupt(Bit#(1) v);
         ps7.irq.f2p({19'b0, v});
     endmethod
-    interface Pps7Emioi2c       i2c = ps7.i2c;
+    interface i2c = ps7.i2c;
 endmodule
 
 instance ConnectableWithTrace#(PS7, ConnectalTop#(32,64,ipins,nMasters), BscanTop);
@@ -325,7 +329,7 @@ instance ConnectableWithTrace#(PS7, ConnectalTop#(32,64,ipins,nMasters), BscanTo
 
       module mkAxiMasterConnection#(Integer i)(Axi3Master#(32,64,6));
 	 let m_axi <- mkAxiDmaMaster(top.masters[i]);
-	 mkConnection(m_axi, ps7.s_axi_hp[i].axi.server);
+	 mkConnection(m_axi, ps7.s_axi_hp[i].server);
 	 return m_axi;
       endmodule
       Vector#(nMasters, Axi3Master#(32,64,6)) m_axis <- genWithM(mkAxiMasterConnection);
