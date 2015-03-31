@@ -213,6 +213,7 @@ interface PS7;
     interface Vector#(2, AxiMasterCommon#(32,32,12))     m_axi_gp;
     interface Vector#(2, AxiSlaveCommon#(32,32,6,Empty)) s_axi_gp;
     interface Vector#(4, AxiSlaveCommon#(32,64,6,HPType))   s_axi_hp;
+    interface Vector#(1, AxiSlaveCommon#(32,64,3,ACPType))   s_axi_acp;
     method Action                             interrupt(Bit#(1) v);
     interface Vector#(4, Clock) fclkclk;
     interface Vector#(4, Reset) fclkreset;
@@ -324,7 +325,14 @@ module mkPS7(PS7);
         ps7.irq.f2p({19'b0, v});
     endmethod
     interface i2c = ps7.i2c;
+   interface s_axi_acp = cons(ps7.s_axi_acp, nil);
 endmodule
+
+`ifdef USE_ACP
+typedef 1 NumAcp;
+`else
+typedef 0 NumAcp;
+`endif
 
 instance ConnectableWithTrace#(PS7, ConnectalTop#(32,64,ipins,nMasters), BscanTop);
    module mkConnectionWithTrace#(PS7 ps7, ConnectalTop#(32,64,ipins,nMasters) top, BscanTop bscan)(Empty);
@@ -332,12 +340,25 @@ instance ConnectableWithTrace#(PS7, ConnectalTop#(32,64,ipins,nMasters), BscanTo
       Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(top.slave);
       mkConnectionWithTrace(ps7.m_axi_gp[0].client, ctrl, bscan);
 
+`ifdef USE_ACP
+      begin
+	 Axi3Master#(32,64,3) acp_m_axi <- mkAxiDmaMaster(top.masters[0]);
+	 mkConnection(acp_m_axi, ps7.s_axi_acp[0].server);
+      end
+      rule acp_aruser;
+	 ps7.s_axi_acp[0].extra.aruser(5'h1f);
+      endrule
+      rule acp_awuser;
+	 ps7.s_axi_acp[0].extra.awuser(5'h1f);
+      endrule
+`endif
       module mkAxiMasterConnection#(Integer i)(Axi3Master#(32,64,6));
-	 let m_axi <- mkAxiDmaMaster(top.masters[i]);
+	 let m_axi <- mkAxiDmaMaster(top.masters[i+valueOf(NumAcp)]);
 	 mkConnection(m_axi, ps7.s_axi_hp[i].server);
 	 return m_axi;
       endmodule
-      Vector#(nMasters, Axi3Master#(32,64,6)) m_axis <- genWithM(mkAxiMasterConnection);
+      Vector#(TSub#(nMasters,NumAcp), Axi3Master#(32,64,6)) m_axis <- genWithM(mkAxiMasterConnection);
+
 
    endmodule
 endinstance
