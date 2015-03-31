@@ -93,6 +93,7 @@ typedef struct extra_info { /* these datatypes are not available to userspace */
         tPortal          *portal;
 } extra_info;
 static extra_info extra_portal_info[MAX_MINOR_COUNT];
+static extra_info extra_board_info[NUM_BOARDS];
 static tBoard board_map[NUM_BOARDS + 1];
 static unsigned long long expected_magic = 'B' | ((unsigned long long) 'l' << 8)
     | ((unsigned long long) 'u' << 16) | ((unsigned long long) 'e' << 24)
@@ -121,14 +122,19 @@ static int pcieportal_open(struct inode *inode, struct file *filp)
         int err = 0;
         tPortal *this_portal = ((extra_info *)inode->i_cdev)->portal;
 
+        if (!this_portal) {
+        printk("pcieportal_open: device_number=%x /dev/connectal\n", device_number);
+        }
+        else {
         printk("pcieportal_open: device_number=%x device_name=%d device_tile=%d\n",
 	       device_number, this_portal->device_name, this_portal->device_tile);
 //printk("[%s:%d] inode %p filp %p portal %p priv %p privp %p extra %p\n", __FUNCTION__, __LINE__, inode, filp, this_portal, filp->private_data, privp, this_portal->extra);
         init_waitqueue_head(&(this_portal->extra->wait_queue));
-        filp->private_data = (void *) this_portal;
         /* increment the open file count */
         this_portal->board->open_count += 1; 
         // FIXME: why does the kernel think this device is RDONLY?
+        }
+        filp->private_data = (void *) this_portal;
         filp->f_mode |= FMODE_WRITE;
 
         return err;
@@ -138,6 +144,7 @@ static int pcieportal_open(struct inode *inode, struct file *filp)
 static int pcieportal_release(struct inode *inode, struct file *filp)
 {
         tPortal *this_portal = (tPortal *) filp->private_data;
+        if (this_portal) {
 	tBoard  *this_board  = this_portal->board;
 	struct list_head *pmlist;
 	PortalInternal devptr = {.map_base = (volatile int *)(this_board->bar2io + PORTAL_BASE_OFFSET * this_portal->portal_number),
@@ -154,6 +161,7 @@ static int pcieportal_release(struct inode *inode, struct file *filp)
 		kfree(pmentry);
 	}
 	INIT_LIST_HEAD(&this_portal->pmlist);
+        }
         return 0;                /* success */
 }
 
@@ -185,13 +193,13 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
 {
         int err = 0;
         tPortal *this_portal = (tPortal *) filp->private_data;
-        tBoard *this_board = this_portal->board;
+        tBoard *this_board = NULL;
         //tBoardInfo info;
         static int trace_index;
 
+        if (this_portal)
+            this_board = this_portal->board;
         /* basic sanity checks */
-        if (_IOC_TYPE(cmd) != BNOC_IOC_MAGIC)
-                return -ENOTTY;
         if (_IOC_DIR(cmd) & _IOC_READ)
                 err = !access_ok(VERIFY_WRITE, (void __user *) arg, _IOC_SIZE(cmd));
         else if (_IOC_DIR(cmd) & _IOC_WRITE)
@@ -289,6 +297,7 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                         return -EFAULT;
                 signature.md5[0] = 0;
                 signature.filename[0] = 0;
+//printk("%s: index %d/%ld\n", __FUNCTION__, signature.index, (long)sizeof(filesignatures)/sizeof(filesignatures[0]));
                 if (signature.index < sizeof(filesignatures)/sizeof(filesignatures[0])) {
                     memcpy(signature.md5, filesignatures[signature.index].md5, sizeof(signature.md5));
                     memcpy(signature.filename, filesignatures[signature.index].filename, sizeof(signature.filename));
@@ -369,6 +378,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
                         goto err_exit;
                 }
         if (activate) {
+		dev_t this_device_number;
    	        for (i = 0; i < MAX_NUM_PORTALS; i++)
 		  this_board->portal[i].device_name = -1;
    	        for (i = 0; i < MAX_NUM_PORTALS; i++)
@@ -471,7 +481,6 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		  int num_portals = *(volatile uint32_t *)(pportal + PCR_NUM_PORTALS_OFFSET);
 		  int portal_index = 0;
 		  do {  // loop over all portals in a tile
-		    dev_t this_device_number;
 		    int freep;
 		    uint32_t iid = *(volatile uint32_t *)(pportal + PCR_IID_OFFSET);
 		    tPortal *this_portal = &this_board->portal[portal_index];
@@ -518,14 +527,19 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		} while (++tile_index < num_tiles);
 		this_board->info.num_portals = fpn;
                 pci_set_drvdata(dev, this_board);
-		device_create(pcieportal_class, NULL,
-		    MKDEV(MAJOR(device_number), MINOR(device_number) + MAX_MINOR_COUNT), NULL, "connectal");
+		this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + MAX_MINOR_COUNT);
+		cdev_init(&this_board->extra->cdev, &pcieportal_fops);
+		if (cdev_add(&this_board->extra->cdev, this_device_number, 1)) {
+		    printk(KERN_ERR "%s: cdev_add board failed\n", DEV_NAME);
+                }
+		device_create(pcieportal_class, NULL, this_device_number, NULL, "connectal");
                 if (err == 0)
                     return err; /* if board activated correctly, return */
         } /* end of if(activate) */
 
         /******** deactivate board *******/
 	device_destroy(pcieportal_class, MKDEV(MAJOR(device_number), MINOR(device_number) + MAX_MINOR_COUNT));
+        cdev_del(&this_board->extra->cdev);
 	fpn = 0;
 	while(fpn < this_board->info.num_portals) {
                 tPortal *this_portal = &this_board->portal[fpn];
@@ -595,6 +609,7 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
                 extra_portal_info[board_number * MAX_NUM_PORTALS + i].portal = &this_board->portal[i];
 		INIT_LIST_HEAD(&this_board->portal[i].pmlist);
 	}
+        this_board->extra = &extra_board_info[board_number];
         this_board->info.board_number = board_number;
         return board_activate(1, this_board, dev);
 }
