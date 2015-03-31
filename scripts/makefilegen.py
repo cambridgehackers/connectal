@@ -44,7 +44,7 @@ argparser.add_argument(      '--pinfo', default=None, help='Project description 
 argparser.add_argument('-s', '--source', help='C++ source files', action='append')
 argparser.add_argument(      '--source2', help='C++ second program source files', action='append')
 argparser.add_argument(      '--cflags', help='C++ CFLAGS', action='append')
-argparser.add_argument(      '--pinout', help='project pinout file', action='append')
+argparser.add_argument(      '--pinout', help='project pinout file', default=[], action='append')
 argparser.add_argument(      '--shared', help='Make a shared library', action='store_true')
 argparser.add_argument(      '--nohardware', help='Do not generate hardware for the design', action='store_true')
 argparser.add_argument(      '--contentid', help='Specify 64-bit contentid for PCIe designs')
