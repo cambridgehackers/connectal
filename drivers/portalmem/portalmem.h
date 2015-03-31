@@ -37,8 +37,15 @@ typedef struct PortalElementSize {
     int index;
 } PortalElementSize;
 
+typedef struct {
+    int  index;        /* in param */
+    char md5[32];      /* out param */
+    char filename[32]; /* out param */
+} PortalSignatureMem;
+
 #define PA_MALLOC              _IOR('B', 14, PortalAlloc)
 #define PA_ELEMENT_SIZE        _IOR('B', 15, PortalElementSize)
+#define PA_SIGNATURE           _IOR('B', 20, PortalSignatureMem)
 
 /**
  * struct pa_buffer - metadata for a particular buffer

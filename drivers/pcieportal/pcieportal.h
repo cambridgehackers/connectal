@@ -49,6 +49,12 @@ typedef struct {
   int id;
 } tSendFd;
 
+typedef struct {
+    int  index;        /* in param */
+    char md5[32];      /* out param */
+    char filename[32]; /* out param */
+} PortalSignaturePcie;
+
 typedef unsigned int tTlpData[6];
 
 /* IOCTL code definitions */
@@ -58,6 +64,7 @@ typedef unsigned int tTlpData[6];
 #define BNOC_ENABLE_TRACE    _IOR(BNOC_IOC_MAGIC,8,int*)
 #define PCIE_SEND_FD         _IOR(BNOC_IOC_MAGIC,12,tSendFd*)
 #define PCIE_DEREFERENCE     _IOR(BNOC_IOC_MAGIC,13,int)
+#define PCIE_SIGNATURE       _IOR(BNOC_IOC_MAGIC,13,PortalSignaturePcie)
 
 #ifdef __KERNEL__
 /*

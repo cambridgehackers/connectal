@@ -35,6 +35,12 @@ typedef struct portal_cache_request {
   size_t len;
 } PortalCacheRequest;
 
+typedef struct {
+    int  index;        /* in param */
+    char md5[32];      /* out param */
+    char filename[32]; /* out param */
+} PortalSignature;
+
 #define PORTAL_SET_FCLK_RATE      _IOWR('B', 40, PortalClockRequest)
 #define PORTAL_SEND_FD            _IOR('B',  42, PortalSendFd)
 #define PORTAL_DCACHE_FLUSH_INVAL _IOR('B',  43, PortalCacheRequest)
@@ -42,5 +48,6 @@ typedef struct portal_cache_request {
 #define PORTAL_INTERRUPT_TIME     _IOR('B',  45, PortalInterruptTime)
 #define PORTAL_DCACHE_INVAL       _IOR('B',  46, PortalCacheRequest)
 #define PORTAL_DEREFERENCE        _IOR('B',  47, int)
+#define PORTAL_SIGNATURE          _IOR('B',  47, PortalSignature)
 
 #endif /* __PORTAL_H__ */

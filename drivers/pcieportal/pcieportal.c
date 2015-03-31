@@ -276,6 +276,27 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
 			}
 		}
 	} break;
+        case PCIE_SIGNATURE: {
+                PortalSignaturePcie signature;
+                static struct {
+                    const char *md5;
+                    const char *filename;
+                } filesignatures[] = {
+#include "driver_signature_file.h"
+                    {} };
+                int err = copy_from_user(&signature, (void __user *) arg, sizeof(signature));
+                if (err)
+                        return -EFAULT;
+                signature.md5[0] = 0;
+                signature.filename[0] = 0;
+                if (signature.index < sizeof(filesignatures)/sizeof(filesignatures[0])) {
+                    memcpy(signature.md5, filesignatures[signature.index].md5, sizeof(signature.md5));
+                    memcpy(signature.filename, filesignatures[signature.index].filename, sizeof(signature.filename));
+                }
+                if (copy_to_user((void __user *)arg, &signature, sizeof(signature)))
+                        return -EFAULT;
+                return 0;
+                }
         default:
                 return -ENOTTY;
         }
