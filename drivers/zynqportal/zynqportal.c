@@ -206,8 +206,13 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
 
                 int err = copy_from_user(&cacheReq, (void __user *) arg, sizeof(cacheReq));
                 if (err)
-                    break;
+			break;
 		fmem = fget(cacheReq.fd);
+		if (!fmem) {
+			printk(KERN_ERR " [%s:%d] invalid fd %d\n", __FUNCTION__, __LINE__, cacheReq.fd);
+			return -EINVAL;
+		}
+
 		pa_buffer = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv);
 		sgtable = pa_buffer->sg_table;
 		void *virt = pa_buffer->vaddr;
