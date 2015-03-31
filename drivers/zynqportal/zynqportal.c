@@ -220,7 +220,7 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
 		long flush_length = cacheReq.len;
 		long offset = 0;
                 int i;
-		int verbose_flush = 0;
+		int verbose_flush = 1;
 		if (verbose_flush)
 			printk("[%s:%d] fd %d flush %d base %p virt %p flush_offset %lx flush_length %lx\n", __FUNCTION__, __LINE__,
 			       cacheReq.fd, flush,
