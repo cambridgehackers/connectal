@@ -424,6 +424,8 @@ if __name__=='__main__':
     if options.pinout:
         genxdc_dep = '%s/sources/pinout-%s.xdc' % (project_dir,boardname)
         options.constraint.append(genxdc_dep)
+    else:
+       options.pinout = []
 
     substs = {'partitions': ' '.join(['-s %s' % p for p in options.partition_module]),
 					 'boardname': boardname,
