@@ -279,11 +279,11 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
         case PCIE_SIGNATURE: {
                 PortalSignaturePcie signature;
                 static struct {
-                    const char *md5;
-                    const char *filename;
+                    const char md5[33];
+                    const char filename[33];
                 } filesignatures[] = {
 #include "driver_signature_file.h"
-                    {} };
+                    };
                 int err = copy_from_user(&signature, (void __user *) arg, sizeof(signature));
                 if (err)
                         return -EFAULT;

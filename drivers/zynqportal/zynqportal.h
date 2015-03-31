@@ -37,8 +37,8 @@ typedef struct portal_cache_request {
 
 typedef struct {
     int  index;        /* in param */
-    char md5[32];      /* out param */
-    char filename[32]; /* out param */
+    char md5[33];      /* out param -- asciz */
+    char filename[33]; /* out param -- asciz */
 } PortalSignature;
 
 #define PORTAL_SET_FCLK_RATE      _IOWR('B', 40, PortalClockRequest)

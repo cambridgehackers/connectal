@@ -82,7 +82,7 @@ struct connectal_data{
 
 static DEFINE_MUTEX(connectal_mutex);
 /* anyone should be able to get PORTAL_DIRECTORY_COUNTER */
-	  // FIXME: directory_virt = ws.portal_data;
+// FIXME: directory_virt = ws.portal_data;
 #define DIRECTORY_VIRT ((void *)ws.connectal_data->portald[0])
 static PortalInterruptTime inttime;
 static int flush = 0;
@@ -203,6 +203,12 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
                 struct file *fmem;
 		struct pa_buffer *pa_buffer;
                 struct sg_table *sgtable;
+		long offset = 0;
+                int i;
+		int verbose_flush = 1;
+		void *virt;
+		long flush_offset;
+		long flush_length;
 
                 int err = copy_from_user(&cacheReq, (void __user *) arg, sizeof(cacheReq));
                 if (err)
@@ -215,12 +221,9 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
 
 		pa_buffer = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv);
 		sgtable = pa_buffer->sg_table;
-		void *virt = pa_buffer->vaddr;
-		long flush_offset = cacheReq.base - virt;
-		long flush_length = cacheReq.len;
-		long offset = 0;
-                int i;
-		int verbose_flush = 1;
+		virt = pa_buffer->vaddr;
+		flush_offset = cacheReq.base - virt;
+		flush_length = cacheReq.len;
 		if (verbose_flush)
 			printk("[%s:%d] fd %d flush %d base %p virt %p flush_offset %lx flush_length %lx\n", __FUNCTION__, __LINE__,
 			       cacheReq.fd, flush,
@@ -243,8 +246,8 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
 				}
 
 				if (verbose_flush) {
-					printk("[%s:%d] start %lx end %lx len %x delta %x flush_length %lx\n",
-					       __FUNCTION__, __LINE__, (long)start_addr, (long)end_addr, length, delta, flush_length);
+					printk("[%s:%d] start %lx end %lx len %lx delta %lx flush_length %lx\n",
+					       __FUNCTION__, __LINE__, (long)start_addr, (long)end_addr, (long)length, (long)delta, flush_length);
 					printk("[%s:%d]         start_offset %lx end_offset %lx flush_offset %lx\n",
 					       __FUNCTION__, __LINE__, offset, end_offset, flush_offset);
 				}
@@ -269,27 +272,6 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
                 if (copy_to_user((void __user *)arg, &inttime, sizeof(inttime)))
                         return -EFAULT;
                 return 0;
-        case PORTAL_SIGNATURE: {
-                PortalSignature signature;
-                static struct {
-                    const char *md5;
-                    const char *filename;
-                } filesignatures[] = {
-#include "driver_signature_file.h"
-                    {} };
-                int err = copy_from_user(&signature, (void __user *) arg, sizeof(signature));
-                if (err)
-                        return -EFAULT;
-                signature.md5[0] = 0;
-                signature.filename[0] = 0;
-                if (signature.index < sizeof(filesignatures)/sizeof(filesignatures[0])) {
-                    memcpy(signature.md5, filesignatures[signature.index].md5, sizeof(signature.md5));
-                    memcpy(signature.filename, filesignatures[signature.index].filename, sizeof(signature.filename));
-                }
-                if (copy_to_user((void __user *)arg, &signature, sizeof(signature)))
-                        return -EFAULT;
-                return 0;
-                }
         default:
                 printk("portal_unlocked_ioctl ENOTTY cmd=%x\n", cmd);
                 return -ENOTTY;
@@ -367,7 +349,7 @@ static int remove_portal_devices(struct connectal_data *connectal_data)
 
 static void connectal_work_handler(struct work_struct *__xxx)
 {
-  int num_tiles, num_portals, fpn, t = 0;
+  int num_tiles = 0, num_portals, fpn, t = 0;
   mutex_lock(&connectal_mutex);
   remove_portal_devices(ws.connectal_data);
   do{
@@ -409,6 +391,129 @@ static int connectal_open(struct inode *inode, struct file *filep)
   return 0;
 }
 
+long connectal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
+{
+        switch (cmd) {
+        case PORTAL_SET_FCLK_RATE: {
+                PortalClockRequest request;
+                char clkname[32];
+                int status = 0;
+                struct clk *fclk = NULL;
+
+                if (copy_from_user(&request, (void __user *)arg, sizeof(request)))
+                        return -EFAULT;
+                snprintf(clkname, sizeof(clkname), "FPGA%d", request.clknum);
+                fclk = clk_get_sys(clkname, NULL);
+                printk(KERN_INFO "[%s:%d] fclk %s %p\n", __FUNCTION__, __LINE__, clkname, fclk);
+                if (!fclk)
+                        return -ENODEV;
+                request.actual_rate = clk_round_rate(fclk, request.requested_rate);
+                printk(KERN_INFO "%s requested rate %ld actual rate %ld\n",
+                    __FUNCTION__, request.requested_rate, request.actual_rate);
+                if ((status = clk_set_rate(fclk, request.actual_rate))) {
+                        printk(KERN_INFO "[%s:%d] err\n", __FUNCTION__, __LINE__);
+                        return status;
+                }
+                if (copy_to_user((void __user *)arg, &request, sizeof(request)))
+                        return -EFAULT;
+                return 0;
+                }
+                break;
+        case PORTAL_DCACHE_FLUSH_INVAL: {
+  	        flush = 1;
+	} // fall through
+	case PORTAL_DCACHE_INVAL: {
+                struct scatterlist *sg;
+		struct portal_cache_request cacheReq;
+                struct file *fmem;
+		struct pa_buffer *pa_buffer;
+                struct sg_table *sgtable;
+		long offset = 0;
+                int i;
+		int verbose_flush = 0;
+		void *virt;
+		long flush_offset;
+		long flush_length;
+
+                int err = copy_from_user(&cacheReq, (void __user *) arg, sizeof(cacheReq));
+                if (err)
+                    break;
+		fmem = fget(cacheReq.fd);
+		pa_buffer = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv);
+		sgtable = pa_buffer->sg_table;
+		virt = pa_buffer->vaddr;
+		flush_offset = cacheReq.base - virt;
+		flush_length = cacheReq.len;
+		if (verbose_flush)
+			printk("[%s:%d] fd %d flush %d base %p virt %p flush_offset %lx flush_length %lx\n", __FUNCTION__, __LINE__,
+			       cacheReq.fd, flush,
+			       cacheReq.base, virt, flush_offset, flush_length);
+
+		flush_cache_all();
+
+                for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
+			unsigned int length = sg->length;
+			dma_addr_t start_addr = sg_phys(sg);
+			dma_addr_t end_addr = start_addr+length;
+			long end_offset = offset + length;
+			if (flush_length && offset <= flush_offset && flush_offset < end_offset) {
+				long delta = (flush_offset - offset);
+				start_addr += delta;
+				length -= delta;
+				if (flush_length < length) {
+					printk("last segment: adjusting end_addr\n");
+					end_addr = start_addr + flush_length;
+				}
+
+				if (verbose_flush) {
+					printk("[%s:%d] start %lx end %lx len %lx delta %lx flush_length %lx\n",
+					       __FUNCTION__, __LINE__, (long)start_addr, (long)end_addr, (long)length, (long)delta, flush_length);
+					printk("[%s:%d]         start_offset %lx end_offset %lx flush_offset %lx\n",
+					       __FUNCTION__, __LINE__, offset, end_offset, flush_offset);
+				}
+				if (flush) {
+					//flush_user_range(virt, virt+length, 0);
+					outer_flush_range(start_addr, end_addr);
+				} else {
+					outer_inv_range(start_addr, end_addr);
+				}
+				flush_offset += length;
+				flush_length -= length;
+			}
+			offset += sg->length;
+                }
+                fput(fmem);
+		flush = 0;
+                return 0;
+                }
+        case PORTAL_SIGNATURE: {
+                PortalSignature signature;
+                static struct {
+                    const char md5[33];
+                    const char filename[33];
+                } filesignatures[] = {
+#include "driver_signature_file.h"
+                    };
+                int err = copy_from_user(&signature, (void __user *) arg, sizeof(signature));
+                if (err)
+                        return -EFAULT;
+                signature.md5[0] = 0;
+                signature.filename[0] = 0;
+                if (signature.index < sizeof(filesignatures)/sizeof(filesignatures[0])) {
+                    memcpy(signature.md5, filesignatures[signature.index].md5, sizeof(signature.md5));
+                    memcpy(signature.filename, filesignatures[signature.index].filename, sizeof(signature.filename));
+                }
+                if (copy_to_user((void __user *)arg, &signature, sizeof(signature)))
+                        return -EFAULT;
+                return 0;
+                }
+        default:
+                printk("portal_unlocked_ioctl ENOTTY cmd=%x\n", cmd);
+                return -ENOTTY;
+        }
+        return -ENODEV;
+}
+
 static ssize_t connectal_read(struct file *filp,
       char *buffer, size_t length, loff_t *offset)
 {
@@ -423,6 +528,7 @@ static const struct file_operations connectal_fops = {
         .owner          = THIS_MODULE,
         .open           = connectal_open,
 	.read           = connectal_read,
+        .unlocked_ioctl = connectal_unlocked_ioctl,
 };
 
 static int connectal_of_probe(struct platform_device *pdev)

@@ -39,8 +39,8 @@ typedef struct PortalElementSize {
 
 typedef struct {
     int  index;        /* in param */
-    char md5[32];      /* out param */
-    char filename[32]; /* out param */
+    char md5[33];      /* out param -- asciz */
+    char filename[33]; /* out param -- asciz */
 } PortalSignatureMem;
 
 #define PA_MALLOC              _IOR('B', 14, PortalAlloc)
