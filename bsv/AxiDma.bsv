@@ -59,11 +59,12 @@ module mkAxiDmaSlave#(PhysMemSlave#(addrWidth,dataWidth) slave) (Axi3Slave#(addr
    endinterface
 endmodule
 
-module mkAxiDmaMaster#(PhysMemMaster#(addrWidth,dataWidth) master) (Axi3Master#(addrWidth,dataWidth,6))
+module mkAxiDmaMaster#(PhysMemMaster#(addrWidth,dataWidth) master) (Axi3Master#(addrWidth,dataWidth,tagWidth))
    
    provisos(Div#(dataWidth,8,dataWidthBytes),
 	    Mul#(dataWidthBytes,8,dataWidth),
-	    Log#(dataWidthBytes,beatShift));
+	    Log#(dataWidthBytes,beatShift),
+	    Add#(tagWidth,a__,MemTagSize));
 
    Reg#(Bit#(8))  burstReg <- mkReg(0);
    FIFO#(Bit#(8)) reqs <- mkSizedFIFO(32);
@@ -71,14 +72,14 @@ module mkAxiDmaMaster#(PhysMemMaster#(addrWidth,dataWidth) master) (Axi3Master#(
    let beat_shift = fromInteger(valueOf(beatShift));
 
    interface Get req_aw;
-      method ActionValue#(Axi3WriteRequest#(addrWidth,6)) get();
+      method ActionValue#(Axi3WriteRequest#(addrWidth,tagWidth)) get();
 	 let req <- master.write_client.writeReq.get;
 	 reqs.enq(truncate(req.burstLen));
-	 return Axi3WriteRequest{address:req.addr, len:truncate((req.burstLen>>beat_shift)-1), id:req.tag, size: axiBusSize(valueOf(dataWidth)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
+	 return Axi3WriteRequest{address:req.addr, len:truncate((req.burstLen>>beat_shift)-1), id:truncate(req.tag), size: axiBusSize(valueOf(dataWidth)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
       endmethod
    endinterface
    interface Get resp_write;
-      method ActionValue#(Axi3WriteData#(dataWidth,6)) get();
+      method ActionValue#(Axi3WriteData#(dataWidth,tagWidth)) get();
 	 let tagdata <- master.write_client.writeData.get();
 	 let burstLen = burstReg;
 	 if (burstLen == 0) begin
@@ -87,25 +88,25 @@ module mkAxiDmaMaster#(PhysMemMaster#(addrWidth,dataWidth) master) (Axi3Master#(
 	 end
 	 burstReg <= burstLen-1;
 	 Bit#(1) last = burstLen == 1 ? 1'b1 : 1'b0;
-	 return Axi3WriteData { data: tagdata.data, byteEnable: maxBound, last: last, id: tagdata.tag };
+	 return Axi3WriteData { data: tagdata.data, byteEnable: maxBound, last: last, id: truncate(tagdata.tag) };
       endmethod
    endinterface
    interface Put resp_b;
-      method Action put(Axi3WriteResponse#(6) resp);
-	 master.write_client.writeDone.put(resp.id);
+      method Action put(Axi3WriteResponse#(tagWidth) resp);
+	 master.write_client.writeDone.put(extend(resp.id));
       endmethod
    endinterface
    interface Get req_ar;
-      method ActionValue#(Axi3ReadRequest#(addrWidth,6)) get();
+      method ActionValue#(Axi3ReadRequest#(addrWidth,tagWidth)) get();
 	 let req <- master.read_client.readReq.get;
 	 //$display("req_ar %h", req.tag);
-	 return Axi3ReadRequest{address:req.addr, len:truncate((req.burstLen>>beat_shift)-1), id:req.tag, size: axiBusSize(valueOf(dataWidth)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
+	 return Axi3ReadRequest{address:req.addr, len:truncate((req.burstLen>>beat_shift)-1), id:truncate(req.tag), size: axiBusSize(valueOf(dataWidth)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
       endmethod
    endinterface
    interface Put resp_read;
-      method Action put(Axi3ReadResponse#(dataWidth,6) response);
+      method Action put(Axi3ReadResponse#(dataWidth,tagWidth) response);
 	 //$display("resp_read %h %h", response.data, response.id);
-	 master.read_client.readData.put(MemData { data: response.data, tag: response.id, last: response.last == 1 });
+	 master.read_client.readData.put(MemData { data: response.data, tag: extend(response.id), last: response.last == 1 });
       endmethod
    endinterface
 
