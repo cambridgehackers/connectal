@@ -168,19 +168,14 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
                     break;
                 printk("[%s:%d] PORTAL_SEND_FD fd 0x%x id 0x%x  **\n", __FUNCTION__, __LINE__, sendFd.fd, sendFd.id);
 		pmentry = (struct pmentry *)kzalloc(sizeof(struct pmentry), GFP_KERNEL);
-printk("[%s:%d] pmentry %p\n", __FUNCTION__, __LINE__, pmentry);
                 if (!pmentry)
                         return -EFAULT;
 		INIT_LIST_HEAD(&pmentry->pmlist);
 		mutex_lock(&connectal_mutex);
-printk("[%s:%d] pmentry %p\n", __FUNCTION__, __LINE__, pmentry);
 		pmentry->fmem = fget(sendFd.fd);
-printk("[%s:%d] pmentry %p\n", __FUNCTION__, __LINE__, pmentry);
 		pmentry->id   = sendFd.id;
 		list_add(&pmentry->pmlist, &portal_data->pmlist);
-printk("[%s:%d]\n", __FUNCTION__, __LINE__);
                 err = send_fd_to_portal(&devptr, sendFd.fd, sendFd.id, 0);
-printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		mutex_unlock(&connectal_mutex);
                 if (err < 0)
                     break;
@@ -213,31 +208,35 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
                 struct sg_table *sgtable;
 		long offset = 0;
                 int i;
-		int verbose_flush = 1;
+		int verbose_flush = 0;
 		void *virt;
 		long flush_offset;
 		long flush_length;
 
-		printk("[%s:%d] portal dcache flush=%d\n", __FUNCTION__, __LINE__, flush);
+		if (verbose_flush)
+		        printk("[%s:%d] portal dcache flush=%d\n", __FUNCTION__, __LINE__, flush);
                 int err = copy_from_user(&cacheReq, (void __user *) arg, sizeof(cacheReq));
                 if (err)
 			break;
-		printk("[%s:%d] portal fd %d\n", __FUNCTION__, __LINE__, cacheReq.fd);
-printk("[%s:%d]\n", __FUNCTION__, __LINE__);
+		if (verbose_flush)
+		        printk("[%s:%d] portal fd %d\n", __FUNCTION__, __LINE__, cacheReq.fd);
 		fmem = fget(cacheReq.fd);
-printk("[%s:%d]\n", __FUNCTION__, __LINE__);
-		printk("[%s:%d] portal fmem %p\n", __FUNCTION__, __LINE__, fmem);
+		if (verbose_flush)
+		        printk("[%s:%d] portal fmem %p\n", __FUNCTION__, __LINE__, fmem);
 		if (!fmem) {
 			printk("[%s:%d] invalid fd %d\n", __FUNCTION__, __LINE__, cacheReq.fd);
 			return -EINVAL;
 		}
 
 		dma_buf = (struct dma_buf *)fmem->private_data;
-		printk("[%s:%d] portal dma_buf %p\n", __FUNCTION__, __LINE__, dma_buf);
+		if (verbose_flush)
+		        printk("[%s:%d] portal dma_buf %p\n", __FUNCTION__, __LINE__, dma_buf);
 		pa_buffer = ((struct pa_buffer *)(dma_buf)->priv);
-		printk("[%s:%d] portal pa_buffer %p\n", __FUNCTION__, __LINE__, pa_buffer);
+		if (verbose_flush)
+		        printk("[%s:%d] portal pa_buffer %p\n", __FUNCTION__, __LINE__, pa_buffer);
 		sgtable = pa_buffer->sg_table;
-		printk("[%s:%d] portal sgtable %p\n", __FUNCTION__, __LINE__, sgtable);
+		if (verbose_flush)
+		        printk("[%s:%d] portal sgtable %p\n", __FUNCTION__, __LINE__, sgtable);
 		virt = pa_buffer->vaddr;
 		flush_offset = cacheReq.base - virt;
 		flush_length = cacheReq.len;
@@ -455,10 +454,9 @@ long connectal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
                 int err = copy_from_user(&cacheReq, (void __user *) arg, sizeof(cacheReq));
                 if (err)
                     break;
-printk("[%s:%d]\n", __FUNCTION__, __LINE__);
-		printk("[%s:%d] portal fd %d\n", __FUNCTION__, __LINE__, cacheReq.fd);
+		if (verbose_flush)
+		        printk("[%s:%d] portal fd %d\n", __FUNCTION__, __LINE__, cacheReq.fd);
 		fmem = fget(cacheReq.fd);
-printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		pa_buffer = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv);
 		sgtable = pa_buffer->sg_table;
 		virt = pa_buffer->vaddr;
