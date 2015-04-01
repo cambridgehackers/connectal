@@ -38,6 +38,11 @@ interface Par_txo;
    method Action data_n(Bit#(8) v);
    method Action frame_p(Bit#(1) v);
    method Action frame_n(Bit#(1) v);
+   method Action lclk_p(Bit#(1) v);
+   method Action lclk_n(Bit#(1) v);
+endinterface
+
+interface Par_txi;
    method Bit#(1) wr_wait_p();
    method Bit#(1) wr_wait_n();
    method Bit#(1) rd_wait_p();
@@ -49,15 +54,37 @@ interface Par_rxi;
    method Bit#(8) data_n();
    method Bit#(1) frame_p();
    method Bit#(1) frame_n();
-   method Action wr_wait_p(Bit#(1) v);
-   method Action wr_wait_n(Bit#(1) v);
-   method Action rd_wait_p(Bit#(1) v);
-   method Action rd_wait_n(Bit#(1) v);
+   method Bit#(1) lclk_p();
+   method Bit#(1) lclk_n();
    method Action cclk_p(Bit#(1));
    method Action cclk_n(Bit#(1));
 endinterface
 
+interface Par_rxo;
+   method Action wr_wait_p(Bit#(1) v);
+   method Action wr_wait_n(Bit#(1) v);
+   method Action rd_wait_p(Bit#(1) v);
+   method Action rd_wait_n(Bit#(1) v);
+endinterface
+
+interface Par_misc;
+   method Bit#(1) cactive();
+   method Bit#(1) csysack();
+   method Action reset_chip();
+   method Action reset_fpga();
+endinterface
 //
+
+
+interface PParallellaLib;
+   interface Par_txo txo;
+   interface Par_txi txi;
+   interface Par_rxo rxo;
+   interface Par_rxi rxi;
+   interface AxiMaster#(32,32,6) maxi;
+   interface AxiSlave#(64, 32, 6) saxi;
+   interface Par_misc misc;
+endinterface;
 
 module mkPParallellaLIB#(Clock maxiclk, Clock saxiclk, 
    Reset maxiclk_reset, Reset saxiclk_reset,\
@@ -65,14 +92,26 @@ module mkPParallellaLIB#(Clock maxiclk, Clock saxiclk,
    Reset reset_chip, Reset reset_fpga)(PParallellaLib);
    default_clock clk();
    default_reset rst();
-   input_clock axiclk(AXICLK) = axiclk;
-   input_reset axiclk_reset() = axiclk_reset; /* from clock*/
+   input_clock maxiclk(emaxi_aclk) = maxiclk;  // assigns the verilog emaxi_aclk
+   input_clock saxiclk(esaxi_aclk) = saxiclk;  // assigns the verilog esaxi_aclk
+   input_reset maxiclk_reset() = maxiclk_reset; /* from clock*/
+   input_reset saxiclk_reset() = saxiclk_reset; /* from clock*/
+   
+   interface Par_misc;
+   method cactive(cactive);
+   method csysack(csysack);
+   method reset_chip(reset_chip) enable((*inhigh*) EN_reset_chip);
+   method reset_fpga(reset_fpga) enable((*inhigh*) EN_reset_fpga);
+   endinterface
    
    interface Par_txo;
       method data_p(txo_data_p) enable((*inhigh*) EN_txo_data_p);
       method data_n(txo_data_n) enable((*inhigh*) EN_txo_data_n);
       method frame_p(txo_frame_p) enable((*inhigh*) EN_txo_frame_p);
       method frame_n(txo_frame_n) enable((*inhigh*) EN_txo_frame_n);
+   endinterface
+
+   interface Par_txi;
       method txo_wr_wait_p wr_wait_p();
       method txo_wr_wait_n wr_wait_n();
       method txo_rd_wait_p rd_wait_p();
@@ -84,10 +123,13 @@ module mkPParallellaLIB#(Clock maxiclk, Clock saxiclk,
       method rxi_data_n data_n();
       method rxi_frame_p frame_p();
       method rxi_frame_n frame_n();
-      method wr_wait_p(rxi_wr_wait_p) enable((*inhigh*) EN_rxi_wr_wait_p);
-      method wr_wait_n(rxi_wr_wait_n) enable((*inhigh*) EN_rxi_wr_wait_n);
-      method rd_wait_p(rxi_rd_wait_p) enable((*inhigh*) EN_rxi_rd_wait_p);
-      method rd_wait_n(rxi_rd_wait_n) enable((*inhigh*) EN_rxi_rd_wait_n);
+   endinterface
+ 
+   interface Par_rxo;
+      method wr_wait_p(rxo_wr_wait_p) enable((*inhigh*) EN_rxo_wr_wait_p);
+      method wr_wait_n(rxo_wr_wait_n) enable((*inhigh*) EN_rxo_wr_wait_n);
+      method rd_wait_p(rxo_rd_wait_p) enable((*inhigh*) EN_rxo_rd_wait_p);
+      method rd_wait_n(rxo_rd_wait_n) enable((*inhigh*) EN_rxo_rd_wait_n);
       method cclk_p(rxi_cclk_p) enable((*inhigh*) EN_rxi_cclk_p);
       method cclk_n(rxi_cclk_n) enable((*inhigh*) EN_rxi_cclk_p);
    endinterface
@@ -138,75 +180,104 @@ module mkPParallellaLIB#(Clock maxiclk, Clock saxiclk,
    
    
    interface Par_saxi;
-      method araddr(saxi_araddr) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_araddr);
-      method arburst(saxi_arburst) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_arburst);
-      method arcache(saxi_arcache) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_arcache);
-      method saxi_aresetn aresetn() clocked_by(saxiclk) reset_by(saxireset);
-      method arid(saxi_arid) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_arid);
-      method arlen(saxi_arlen) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_arlen);
-      method arlock(saxi_arlock) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_arlock);
-      method arprot(saxi_arprot) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_arprot);
-      method arqos(saxi_arqos) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_arqos);
-      method saxi_arready arready() clocked_by(saxiclk) reset_by(saxireset);
-      method arsize(saxi_arsize) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_arsize);
-      method arvalid(saxi_arvalid) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_arvalid);
-      method awaddr(saxi_awaddr) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_awaddr);
-      method awburst(saxi_awburst) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_awburst);
-      method awcache(saxi_awcache) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_awcache);
-      method awid(saxi_awid) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_awid);
-      method awlen(saxi_awlen) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_awlen);
-      method awlock(saxi_awlock) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_awlock);
-      method awprot(saxi_awprot) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_awprot);
-      method awqos(saxi_awqos) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_awqos);
-      method saxi_awready awready() clocked_by(saxiclk) reset_by(saxireset);
-      method awsize(saxi_awsize) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_awsize);
-      method awvalid(saxi_awvalid) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_awvalid);
-      method saxi_bid bid() clocked_by(saxiclk) reset_by(saxireset);
-      method bready(saxi_bready) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_bready);
-      method saxi_bresp bresp() clocked_by(saxiclk) reset_by(saxireset);
-      method saxi_bvalid bvalid() clocked_by(saxiclk) reset_by(saxireset);
-      method saxi_rdata rdata() clocked_by(saxiclk) reset_by(saxireset);
-      method saxi_rlast rlast() clocked_by(saxiclk) reset_by(saxireset);
-      method rready(saxi_rready) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_rready);
-      method saxi_rresp rresp() clocked_by(saxiclk) reset_by(saxireset);
-      method saxi_rvalid rvalid() clocked_by(saxiclk) reset_by(saxireset);
-      method wdata(saxi_wdata) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_wdata);
-      method wid(saxi_wid) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_wid);
-      method wlast(saxi_wlast) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_wlast);
-      method saxi_wready wready() clocked_by(saxiclk) reset_by(saxireset);
-      method wstrb(saxi_wstrb) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_wstrb);
-      method wvalid(saxi_wvalid) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_saxi_wvalid);
-      method saxi_rid rid() clocked_by(saxiclk) reset_by(saxireset);
+      method araddr(esaxi_araddr) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_araddr);
+      method arburst(esaxi_arburst) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_arburst);
+      method arcache(esaxi_arcache) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_arcache);
+      method esaxi_aresetn aresetn() clocked_by(saxiclk) reset_by(saxireset);
+      method arid(esaxi_arid) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_arid);
+      method arlen(esaxi_arlen) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_arlen);
+      method arlock(esaxi_arlock) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_arlock);
+      method arprot(esaxi_arprot) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_arprot);
+      method arqos(esaxi_arqos) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_arqos);
+      method esaxi_arready arready() clocked_by(saxiclk) reset_by(saxireset);
+      method arsize(esaxi_arsize) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_arsize);
+      method arvalid(esaxi_arvalid) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_arvalid);
+      method awaddr(esaxi_awaddr) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_awaddr);
+      method awburst(esaxi_awburst) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_awburst);
+      method awcache(esaxi_awcache) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_awcache);
+      method awid(esaxi_awid) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_awid);
+      method awlen(esaxi_awlen) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_awlen);
+      method awlock(esaxi_awlock) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_awlock);
+      method awprot(esaxi_awprot) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_awprot);
+      method awqos(esaxi_awqos) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_awqos);
+      method esaxi_awready awready() clocked_by(saxiclk) reset_by(saxireset);
+      method awsize(esaxi_awsize) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_awsize);
+      method awvalid(esaxi_awvalid) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_awvalid);
+      method esaxi_bid bid() clocked_by(saxiclk) reset_by(saxireset);
+      method bready(esaxi_bready) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_bready);
+      method esaxi_bresp bresp() clocked_by(saxiclk) reset_by(saxireset);
+      method esaxi_bvalid bvalid() clocked_by(saxiclk) reset_by(saxireset);
+      method esaxi_rdata rdata() clocked_by(saxiclk) reset_by(saxireset);
+      method esaxi_rlast rlast() clocked_by(saxiclk) reset_by(saxireset);
+      method rready(esaxi_rready) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_rready);
+      method esaxi_rresp rresp() clocked_by(saxiclk) reset_by(saxireset);
+      method esaxi_rvalid rvalid() clocked_by(saxiclk) reset_by(saxireset);
+      method wdata(esaxi_wdata) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_wdata);
+      method wid(esaxi_wid) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_wid);
+      method wlast(esaxi_wlast) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_wlast);
+      method esaxi_wready wready() clocked_by(saxiclk) reset_by(saxireset);
+      method wstrb(esaxi_wstrb) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_wstrb);
+      method wvalid(esaxi_wvalid) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_wvalid);
+      method esaxi_rid rid() clocked_by(saxiclk) reset_by(saxireset);
       interface extraType   extra;
    endinterface
    
    
 schedule (
-   csysack, cactive, reset_chip, reset_fpga, txo_data_p, txo_data_n,
-   txo_frame_p, txo_frame_n, txo_lclk_p, txo_lclk_n, rxo_wr_wait_p,
-   rxo_wr_wait_n, rxo_rd_wait_p, rxo_rd_wait_n, rxi_cclk_p,
-   rxi_cclk_n, emaxi_awid, emaxi_awaddr, emaxi_awlen, emaxi_awsize,
-   emaxi_awburst, emaxi_awlock, emaxi_awcache, emaxi_awprot,
-   emaxi_awvalid, esaxi_awready, emaxi_wid, emaxi_wdata, emaxi_wstrb,
-   emaxi_wlast, emaxi_wvalid, esaxi_wready, emaxi_bready, esaxi_bid,
-   esaxi_bresp, esaxi_bvalid, emaxi_arid, emaxi_araddr, emaxi_arlen,
-   emaxi_arsize, emaxi_arburst, emaxi_arlock, emaxi_arcache,
-   emaxi_arprot, emaxi_arvalid, esaxi_arready, emaxi_rready,
-   esaxi_rid, esaxi_rdata, esaxi_rresp, esaxi_rlast, esaxi_rvalid,
-   emaxi_awqos, emaxi_arqos,
+   misc.csysack, misc.cactive, misc.reset_chip, misc.reset_fpga, txo.data_p, txo.data_n,
+   txo.frame_p, txo.frame_n, txo.lclk_p, txo.lclk_n, rxo.wr_wait_p,
+   rxo.wr_wait_n, rxo.rd_wait_p, rxo.rd_wait_n, rxi.cclk_p,
+   rxi.cclk_n, maxi.awid, maxi.awaddr, maxi.awlen, maxi.awsize,
+   maxi.awburst, maxi.awlock, maxi.awcache, maxi.awprot,
+   maxi.awvalid, saxi.awready, maxi.wid, maxi.wdata, maxi.wstrb,
+   maxi.wlast, maxi.wvalid, saxi.wready, maxi.bready, saxi.bid,
+   saxi.bresp, saxi.bvalid, maxi.arid, maxi.araddr, maxi.arlen,
+   maxi.arsize, maxi.arburst, maxi.arlock, maxi.arcache,
+   maxi.arprot, maxi.arvalid, saxi.arready, maxi.rready,
+   saxi.rid, saxi.rdata, saxi.rresp, saxi.rlast, saxi.rvalid,
+   maxi.awqos, maxi.arqos,
    // Inputs
-   clkin_100, esaxi_aclk, emaxi_aclk, reset, esaxi_aresetn,
-   emaxi_aresetn, csysreq, rxi_data_p, rxi_data_n, rxi_frame_p,
-   rxi_frame_n, rxi_lclk_p, rxi_lclk_n, txi_wr_wait_p, txi_wr_wait_n,
-   txi_rd_wait_p, txi_rd_wait_n, emaxi_awready, esaxi_awid,
-   esaxi_awaddr, esaxi_awlen, esaxi_awsize, esaxi_awburst,
-   esaxi_awlock, esaxi_awcache, esaxi_awprot, esaxi_awvalid,
-   emaxi_wready, esaxi_wid, esaxi_wdata, esaxi_wstrb, esaxi_wlast,
-   esaxi_wvalid, emaxi_bid, emaxi_bresp, emaxi_bvalid, esaxi_bready,
-   emaxi_arready, esaxi_arid, esaxi_araddr, esaxi_arlen, esaxi_arsize,
-   esaxi_arburst, esaxi_arlock, esaxi_arcache, esaxi_arprot,
-   esaxi_arvalid, emaxi_rid, emaxi_rdata, emaxi_rresp, emaxi_rlast,
-   emaxi_rvalid, esaxi_rready, esaxi_awqos, esaxi_arqos
-);
+   // clkin_100, saxi.aclk, maxi.aclk, reset, 
+   saxi.aresetn,
+   maxi.aresetn, csysreq, rxi.data_p, rxi.data_n, rxi.frame_p,
+   rxi.frame_n, rxi.lclk_p, rxi.lclk_n, txi.wr_wait_p, txi.wr_wait_n,
+   txi.rd_wait_p, txi.rd_wait_n, maxi.awready, saxi.awid,
+   saxi.awaddr, saxi.awlen, saxi.awsize, saxi.awburst,
+   saxi.awlock, saxi.awcache, saxi.awprot, saxi.awvalid,
+   maxi.wready, saxi.wid, saxi.wdata, saxi.wstrb, saxi.wlast,
+   saxi.wvalid, maxi.bid, maxi.bresp, maxi.bvalid, saxi.bready,
+   maxi.arready, saxi.arid, saxi.araddr, saxi.arlen, saxi.arsize,
+   saxi.arburst, saxi.arlock, saxi.arcache, saxi.arprot,
+   saxi.arvalid, maxi.rid, maxi.rdata, maxi.rresp, maxi.rlast,
+   maxi.rvalid, saxi.rready, saxi.awqos, saxi.arqos
+) CF (
+   misc.csysack, misc.cactive, misc.reset_chip, misc.reset_fpga, txo.data_p, txo.data_n,
+   txo.frame_p, txo.frame_n, txo.lclk_p, txo.lclk_n, rxo.wr_wait_p,
+   rxo.wr_wait_n, rxo.rd_wait_p, rxo.rd_wait_n, rxi.cclk_p,
+   rxi.cclk_n, maxi.awid, maxi.awaddr, maxi.awlen, maxi.awsize,
+   maxi.awburst, maxi.awlock, maxi.awcache, maxi.awprot,
+   maxi.awvalid, saxi.awready, maxi.wid, maxi.wdata, maxi.wstrb,
+   maxi.wlast, maxi.wvalid, saxi.wready, maxi.bready, saxi.bid,
+   saxi.bresp, saxi.bvalid, maxi.arid, maxi.araddr, maxi.arlen,
+   maxi.arsize, maxi.arburst, maxi.arlock, maxi.arcache,
+   maxi.arprot, maxi.arvalid, saxi.arready, maxi.rready,
+   saxi.rid, saxi.rdata, saxi.rresp, saxi.rlast, saxi.rvalid,
+   maxi.awqos, maxi.arqos,
+   // Inputs
+   // clkin_100, saxi.aclk, maxi.aclk, reset, 
+   saxi.aresetn,
+   maxi.aresetn, csysreq, rxi.data_p, rxi.data_n, rxi.frame_p,
+   rxi.frame_n, rxi.lclk_p, rxi.lclk_n, txi.wr_wait_p, txi.wr_wait_n,
+   txi.rd_wait_p, txi.rd_wait_n, maxi.awready, saxi.awid,
+   saxi.awaddr, saxi.awlen, saxi.awsize, saxi.awburst,
+   saxi.awlock, saxi.awcache, saxi.awprot, saxi.awvalid,
+   maxi.wready, saxi.wid, saxi.wdata, saxi.wstrb, saxi.wlast,
+   saxi.wvalid, maxi.bid, maxi.bresp, maxi.bvalid, saxi.bready,
+   maxi.arready, saxi.arid, saxi.araddr, saxi.arlen, saxi.arsize,
+   saxi.arburst, saxi.arlock, saxi.arcache, saxi.arprot,
+   saxi.arvalid, maxi.rid, maxi.rdata, maxi.rresp, maxi.rlast,
+   maxi.rvalid, saxi.rready, saxi.awqos, saxi.arqos
+   
+   );
 
 endmodule
