@@ -2,7 +2,7 @@ CONNECTALDIR?=../..
 
 run: spiTestBench
 	./spiTestBench
-	gtkwave dump.vcd
+	gtkwave dump.vcd spitest.gtkw
 
 spiTestBench: $(CONNECTALDIR)/lib/bsv/ConnectalSpi.bsv
 	mkdir -p obj
