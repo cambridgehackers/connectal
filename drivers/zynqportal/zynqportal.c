@@ -257,7 +257,8 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
 				start_addr += delta;
 				length -= delta;
 				if (flush_length < length) {
-					printk("last segment: adjusting end_addr\n");
+				        if (verbose_flush)
+					        printk("last segment: adjusting end_addr\n");
 					end_addr = start_addr + flush_length;
 				}
 
@@ -365,7 +366,7 @@ static int remove_portal_devices(struct connectal_data *connectal_data)
 
 static void connectal_work_handler(struct work_struct *__xxx)
 {
-  int num_tiles = 0, num_portals, fpn, t = 0;
+  int num_tiles = 0, num_portals = 0, fpn, t = 0;
   mutex_lock(&connectal_mutex);
   remove_portal_devices(ws.connectal_data);
   do{
