@@ -1,0 +1,23 @@
+[*]
+[*] GTKWave Analyzer v3.3.58 (w)1999-2014 BSI
+[*] Wed Apr  1 15:21:05 2015
+[*]
+[dumpfile] "/scratch/jamey/connectal/tests/spi/dump.vcd"
+[dumpfile_mtime] "Wed Apr  1 15:19:07 2015"
+[dumpfile_size] 10945
+[savefile] "/scratch/jamey/connectal/tests/spi/spitest.gtkw"
+[timestart] 0
+[size] 1302 874
+[pos] -1 -1
+*-8.000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] main.
+[sst_width] 224
+[signals_width] 150
+[sst_expanded] 1
+[sst_vpaned_height] 248
+@28
+main.top.probeMiso$PROBE
+main.top.probeMosi$PROBE
+main.top.probeSelN$PROBE
+[pattern_trace] 1
+[pattern_trace] 0
