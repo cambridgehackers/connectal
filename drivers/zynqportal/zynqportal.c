@@ -206,7 +206,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 	} // fall through
 	case PORTAL_DCACHE_INVAL: {
                 struct scatterlist *sg;
-		struct portal_cache_request cacheReq;
+                PortalCacheRequest cacheReq;
                 struct file *fmem;
 		struct dma_buf *dma_buf;
 		struct pa_buffer *pa_buffer;
@@ -441,7 +441,7 @@ long connectal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
 	} // fall through
 	case PORTAL_DCACHE_INVAL: {
                 struct scatterlist *sg;
-		struct portal_cache_request cacheReq;
+                PortalCacheRequest cacheReq;
                 struct file *fmem;
 		struct pa_buffer *pa_buffer;
                 struct sg_table *sgtable;

@@ -29,7 +29,7 @@ typedef struct {
     uint32_t lsb;
 } PortalInterruptTime;
 
-typedef struct portal_cache_request {
+typedef struct {
   int fd;
   void *base;
   size_t len;
