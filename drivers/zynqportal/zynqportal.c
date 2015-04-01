@@ -201,6 +201,7 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
                 struct scatterlist *sg;
 		struct portal_cache_request cacheReq;
                 struct file *fmem;
+		struct dma_buf *dma_buf;
 		struct pa_buffer *pa_buffer;
                 struct sg_table *sgtable;
 		long offset = 0;
@@ -210,17 +211,24 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
 		long flush_offset;
 		long flush_length;
 
+		printk("[%s:%d] portal dcache flush=%d\n", __FUNCTION__, __LINE__, flush);
                 int err = copy_from_user(&cacheReq, (void __user *) arg, sizeof(cacheReq));
                 if (err)
 			break;
+		printk("[%s:%d] portal fd %d\n", __FUNCTION__, __LINE__, cacheReq.fd);
 		fmem = fget(cacheReq.fd);
+		printk("[%s:%d] portal fmem %p\n", __FUNCTION__, __LINE__, fmem);
 		if (!fmem) {
-			printk(KERN_ERR " [%s:%d] invalid fd %d\n", __FUNCTION__, __LINE__, cacheReq.fd);
+			printk("[%s:%d] invalid fd %d\n", __FUNCTION__, __LINE__, cacheReq.fd);
 			return -EINVAL;
 		}
 
-		pa_buffer = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv);
+		dma_buf = (struct dma_buf *)fmem->private_data;
+		printk("[%s:%d] portal dma_buf %p\n", __FUNCTION__, __LINE__, dma_buf);
+		pa_buffer = ((struct pa_buffer *)(dma_buf)->priv);
+		printk("[%s:%d] portal pa_buffer %p\n", __FUNCTION__, __LINE__, pa_buffer);
 		sgtable = pa_buffer->sg_table;
+		printk("[%s:%d] portal sgtable %p\n", __FUNCTION__, __LINE__, sgtable);
 		virt = pa_buffer->vaddr;
 		flush_offset = cacheReq.base - virt;
 		flush_length = cacheReq.len;
