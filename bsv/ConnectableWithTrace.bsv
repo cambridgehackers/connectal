@@ -1,4 +1,4 @@
-// Copyright (c) 2014 Quanta Research Cambridge, Inc.
+// Copyright (c) 2014-2015 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -44,7 +44,7 @@ instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Sla
 `ifndef TRACE_AXI
    mkConnection(m, s);
 `else
-   
+
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
    Reg#(Bit#(`TRACE_ADDR_WIDTH)) addrReg <- mkReg(9);
@@ -113,11 +113,11 @@ instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Sla
        let resp <- s.resp_read.get();
        m.resp_read.put(resp);
        bscan_fifos[1].enq(
-           {3'h2, interrupt_bit, 6'h0, resp.id[5:0], 
+           {3'h2, interrupt_bit, 6'h0, resp.id[5:0],
 `ifdef AXI_READ_TIMING
 	    seqCounter,
 `else
-	    resp.resp, resp.last, 13'b0, 
+	    resp.resp, resp.last, 13'b0,
 `endif
 	    resp.data[31:0]});
    endrule
@@ -126,12 +126,12 @@ instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Sla
        let req <- m.req_aw.get();
        s.req_aw.put(req);
        bscan_fifos[2].enq(
-           {3'h3, interrupt_bit, 6'h0, req.id[5:0], 
+           {3'h3, interrupt_bit, 6'h0, req.id[5:0],
 `ifdef AXI_WRITE_TIMING
 	    seqCounter,
-`else	    
+`else
 	    req.len, req.cache, req.prot, req.size,
-	    pack(req.burst == 2'b01), pack(req.lock == 0 && req.qos == 0), 
+	    pack(req.burst == 2'b01), pack(req.lock == 0 && req.qos == 0),
 `endif
 	    req.address});
    endrule
@@ -140,11 +140,11 @@ instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Sla
        let resp <- m.resp_write.get();
        s.resp_write.put(resp);
        bscan_fifos[3].enq(
-           {3'h4, interrupt_bit, 6'h0, resp.id[5:0], 
+           {3'h4, interrupt_bit, 6'h0, resp.id[5:0],
 `ifdef AXI_WRITE_TIMING
 	    seqCounter,
 `else
-	    resp.last, resp.byteEnable[3:0], 11'b0, 
+	    resp.last, resp.byteEnable[3:0], 11'b0,
 `endif
 	    resp.data[31:0]});
    endrule
@@ -156,5 +156,120 @@ instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Sla
            {3'h5, interrupt_bit, 6'h0, resp.id[5:0], resp.resp, 46'b0});
    endrule
 `endif
+   endmodule
+endinstance
+
+interface TraceReadout;
+   interface BRAMClient#(Bit#(`TRACE_ADDR_WIDTH),Bit#(64)) bramClient;
+endinterface
+
+instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Slave#(addrWidth, busWidth,idWidth), TraceReadout)
+   provisos(Add#(0,addrWidth,32));
+   module mkConnectionWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth) m, Axi3Slave#(addrWidth, busWidth,idWidth) s, TraceReadout readout)(Empty);
+
+   Reg#(Bit#(`TRACE_ADDR_WIDTH)) addrReg <- mkReg(9);
+   BRAM_Configure bramCfg = defaultValue;
+   bramCfg.memorySize = `TRACE_ADDR_SIZE;
+   bramCfg.latency = 1;
+   BRAM2Port#(Bit#(`TRACE_ADDR_WIDTH), Bit#(64)) traceBram <- mkBRAM2Server(bramCfg);
+   mkConnection(readout.bramClient, traceBram.portB);
+
+   Vector#(5, FIFOF#(Bit#(64))) bscan_fifos <- replicateM(mkFIFOF);
+
+   let interrupt_bit = 1'b0;
+   rule write_bscanBram;
+      Bit#(64) data = ?;
+      if (bscan_fifos[0].notEmpty) begin
+	 data = bscan_fifos[0].first;
+	 bscan_fifos[0].deq;
+      end
+      else if (bscan_fifos[1].notEmpty) begin
+	 data = bscan_fifos[1].first;
+	 bscan_fifos[1].deq;
+      end
+      else if (bscan_fifos[2].notEmpty) begin
+	 data = bscan_fifos[2].first;
+	 bscan_fifos[2].deq;
+      end
+      else if (bscan_fifos[3].notEmpty) begin
+	 data = bscan_fifos[3].first;
+	 bscan_fifos[3].deq;
+      end
+      else begin
+	 data = bscan_fifos[4].first;
+	 bscan_fifos[4].deq;
+      end
+      traceBram.portA.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:data});
+      addrReg <= addrReg + 1;
+   endrule
+
+   Reg#(Bit#(16)) seqCounter <- mkReg(0);
+   (* fire_when_enabled *)
+   rule seqinc;
+       seqCounter <= seqCounter + 1;
+   endrule
+
+   // AXI trace for JTAG
+   //mkConnection(m.req_ar, s.req_ar);
+   rule connect_req_ar;
+       let req <- m.req_ar.get();
+       s.req_ar.put(req);
+       bscan_fifos[0].enq(
+	   {3'h1, interrupt_bit, 6'h0, req.id[5:0],
+`ifdef AXI_READ_TIMING
+	    seqCounter,
+`else
+	    req.len, req.cache, req.prot, req.size,
+	    pack(req.burst == 2'b01), pack(req.lock == 0 && req.qos == 0),
+`endif
+	    req.address});
+   endrule
+   //mkConnection(s.resp_read, m.resp_read);
+   rule connect_resp_read;
+       let resp <- s.resp_read.get();
+       m.resp_read.put(resp);
+       bscan_fifos[1].enq(
+           {3'h2, interrupt_bit, 6'h0, resp.id[5:0],
+`ifdef AXI_READ_TIMING
+	    seqCounter,
+`else
+	    resp.resp, resp.last, 13'b0,
+`endif
+	    resp.data[31:0]});
+   endrule
+   //mkConnection(m.req_aw, s.req_aw);
+   rule connect_req_aw;
+       let req <- m.req_aw.get();
+       s.req_aw.put(req);
+       bscan_fifos[2].enq(
+           {3'h3, interrupt_bit, 6'h0, req.id[5:0],
+`ifdef AXI_WRITE_TIMING
+	    seqCounter,
+`else
+	    req.len, req.cache, req.prot, req.size,
+	    pack(req.burst == 2'b01), pack(req.lock == 0 && req.qos == 0),
+`endif
+	    req.address});
+   endrule
+   //mkConnection(m.resp_write, s.resp_write);
+   rule connect_resp_write;
+       let resp <- m.resp_write.get();
+       s.resp_write.put(resp);
+       bscan_fifos[3].enq(
+           {3'h4, interrupt_bit, 6'h0, resp.id[5:0],
+`ifdef AXI_WRITE_TIMING
+	    seqCounter,
+`else
+	    resp.last, resp.byteEnable[3:0], 11'b0,
+`endif
+	    resp.data[31:0]});
+   endrule
+   //mkConnection(s.resp_b, m.resp_b);
+   rule connect_resp_b;
+       let resp <- s.resp_b.get();
+       m.resp_b.put(resp);
+       bscan_fifos[4].enq(
+           {3'h5, interrupt_bit, 6'h0, resp.id[5:0], resp.resp, 46'b0});
+   endrule
    endmodule
 endinstance
