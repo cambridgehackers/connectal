@@ -73,16 +73,14 @@ interface Par_misc;
    method Action reset_chip();
    method Action reset_fpga();
 endinterface
-//
-
 
 interface PParallellaLib;
    interface Par_txo txo;
    interface Par_txi txi;
    interface Par_rxo rxo;
    interface Par_rxi rxi;
-   interface AxiMaster#(32,32,6) maxi;
-   interface AxiSlave#(64, 32, 6) saxi;
+   interface AxiSlaveCommon#(32,32,12) maxi;   // this will connect to a master
+   interface AxiMasterCommon#(32,64, 6) saxi;  // this will connect to a slave
    interface Par_misc misc;
 endinterface;
 
