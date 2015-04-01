@@ -62,13 +62,16 @@ typedef enum { ImageonSerdesRequestS2H, ImageonSensorRequestS2H, HdmiGeneratorRe
     ImageonSerdesIndicationH2S, ImageonSensorIndicationH2S, HdmiGeneratorIndicationH2S, MemServerIndicationH2S, MemServerRequestS2H, MMURequestS2H, MMUIndicationH2S} IfcNames deriving (Eq,Bits);
 
 interface ImageCapture;
-   interface Vector#(11,StdPortal) portalif;
-   interface MemServer#(PhysAddrWidth,64,1)   dmaif;
+   interface ImageonSerdesRequest serdes_request;
+   interface ImageonCaptureRequest capture_request;
+   interface ImageonSensorRequest sensor_request;
+   interface HdmiGeneratorRequest hdmi_request;
+   interface Vector#(1, MemWriteClient#(64)) dmaClient;
    interface ImageCapturePins pins;
 endinterface
 
-(* synthesize *)
-module mkImageCapture(ImageCapture);
+//(* synthesize *)
+module mkImageCapture#(ImageonSerdesIndication serdes_indication, ImageonSensorIndication sensor_ind, HdmiGeneratorIndication hdmi_ind)(ImageCapture);
 `ifndef BSIM
    B2C1 iclock <- mkB2C1();
    Clock fmc_imageon_clk1 <- mkClockBUFG(clocked_by iclock.c);
@@ -85,34 +88,20 @@ module mkImageCapture(ImageCapture);
    SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, imageon_clock);
 
    // serdes: serial line protocol for wires from sensor (nothing sensor specific)
-   ImageonSerdesIndicationProxy serdesIndicationProxy <- mkImageonSerdesIndicationProxy(ImageonSerdesIndicationH2S);
-   ISerdes serdes <- mkISerdes(defaultClock, defaultReset, serdesIndicationProxy.ifc,
+   ISerdes serdes <- mkISerdes(defaultClock, defaultReset, serdes_indication,
 			clocked_by imageon_clock, reset_by imageon_reset);
-   ImageonSerdesRequestWrapper serdesRequestWrapper <- mkImageonSerdesRequestWrapper(ImageonSerdesRequestS2H,serdes.request);
-   ImageonCapture lImageonCapture <- mkImageonCapture(imageon_clock, imageon_reset, serdes.data, serdesIndicationProxy.ifc);
-   ImageonCaptureRequestWrapper imageonCaptureWrapper <- mkImageonCaptureRequestWrapper(ImageonCaptureRequestS2H, lImageonCapture.request);
-   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(MMUIndicationH2S);
-   MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUIndicationProxy.ifc);
-   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(MMURequestS2H, hostMMU.request);
-
-   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(MemServerIndicationH2S);
-   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(nil, lImageonCapture.dmaClient, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
-   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(MemServerRequestS2H, dma.request);
+   ImageonCapture lImageonCapture <- mkImageonCapture(imageon_clock, imageon_reset, serdes.data, serdes_indication);
 
    // fromSensor: sensor specific processing of serdes input, resulting in pixels
-   ImageonSensorIndicationProxy sensorIndicationProxy <- mkImageonSensorIndicationProxy(ImageonSensorIndicationH2S);
    ImageonSensor fromSensor <- mkImageonSensor(defaultClock, defaultReset, serdes.data, vsyncPulse.pulse(),
-       hdmi_clock, hdmi_reset, sensorIndicationProxy.ifc, clocked_by imageon_clock, reset_by imageon_reset);
-   ImageonSensorRequestWrapper sensorRequestWrapper <- mkImageonSensorRequestWrapper(ImageonSensorRequestS2H,fromSensor.request);
+       hdmi_clock, hdmi_reset, sensor_ind, clocked_by imageon_clock, reset_by imageon_reset);
 
    // hdmi: output to display
-   HdmiGeneratorIndicationProxy hdmiIndicationProxy <- mkHdmiGeneratorIndicationProxy(HdmiGeneratorIndicationH2S);
    HdmiGenerator#(Rgb888) lHdmiGenerator <- mkHdmiGenerator(defaultClock, defaultReset,
-       vsyncPulse, hdmiIndicationProxy.ifc, clocked_by hdmi_clock, reset_by hdmi_reset);
+       vsyncPulse, hdmi_ind, clocked_by hdmi_clock, reset_by hdmi_reset);
    Rgb888ToYyuv converter <- mkRgb888ToYyuv(clocked_by hdmi_clock, reset_by hdmi_reset);
    mkConnection(lHdmiGenerator.rgb888, converter.rgb888);
    HDMI#(Bit#(HdmiBits)) hdmisignals <- mkHDMI(converter.yyuv, clocked_by hdmi_clock, reset_by hdmi_reset);
-   HdmiGeneratorRequestWrapper hdmiRequestWrapper <- mkHdmiGeneratorRequestWrapper(HdmiGeneratorRequestS2H,lHdmiGenerator.request);
 
    Reg#(Bool) frameStart <- mkReg(False, clocked_by imageon_clock, reset_by imageon_reset);
    Reg#(Bit#(32)) frameCount <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
@@ -151,22 +140,12 @@ module mkImageCapture(ImageCapture);
     rule bozobit_rule;
         bozobit <= ~bozobit;
     endrule
-   
-   Vector#(11,StdPortal) portals;
-   portals[0] = serdesRequestWrapper.portalIfc; 
-   portals[1] = serdesIndicationProxy.portalIfc;
-   portals[2] = sensorRequestWrapper.portalIfc; 
-   portals[3] = sensorIndicationProxy.portalIfc; 
-   portals[4] = hdmiRequestWrapper.portalIfc; 
-   portals[5] = hdmiIndicationProxy.portalIfc; 
-   portals[6] = hostMemServerRequestWrapper.portalIfc;
-   portals[7] = hostMemServerIndicationProxy.portalIfc;
-   portals[8] = imageonCaptureWrapper.portalIfc;
-   portals[9] = hostMMURequestWrapper.portalIfc;
-   portals[10] = hostMMUIndicationProxy.portalIfc;
-   interface Vector portalif = portals;
 
-   interface dmaif = dma;
+   interface serdes_request = serdes.request;
+   interface capture_request =  lImageonCapture.request;
+   interface sensor_request = fromSensor.request;
+   interface hdmi_request = lHdmiGenerator.request;
+   interface dmaClient = lImageonCapture.dmaClient;
    interface ImageCapturePins pins;
 `ifndef BSIM
        method Action fmc_video_clk1(Bit#(1) v);
@@ -187,11 +166,40 @@ interface ImageCapturePins;
    method Action fmc_video_clk1(Bit#(1) v);
 endinterface
 module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,ImageCapturePins,1));
-   ImageCapture ic <- mkImageCapture();
-   let ctrl_mux <- mkSlaveMux(ic.portalif);
+   ImageonSerdesIndicationProxy serdesIndicationProxy <- mkImageonSerdesIndicationProxy(ImageonSerdesIndicationH2S);
+   ImageonSensorIndicationProxy sensorIndicationProxy <- mkImageonSensorIndicationProxy(ImageonSensorIndicationH2S);
+   HdmiGeneratorIndicationProxy hdmiIndicationProxy <- mkHdmiGeneratorIndicationProxy(HdmiGeneratorIndicationH2S);
+
+   ImageCapture ic <- mkImageCapture(serdesIndicationProxy.ifc, sensorIndicationProxy.ifc, hdmiIndicationProxy.ifc);
+   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(MMUIndicationH2S);
+   MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUIndicationProxy.ifc);
+   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(MMURequestS2H, hostMMU.request);
+
+   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(MemServerIndicationH2S);
+   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(nil, ic.dmaClient, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
+   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(MemServerRequestS2H, dma.request);
+
+   ImageonSerdesRequestWrapper serdesRequestWrapper <- mkImageonSerdesRequestWrapper(ImageonSerdesRequestS2H, ic.serdes_request);
+   ImageonCaptureRequestWrapper imageonCaptureWrapper <- mkImageonCaptureRequestWrapper(ImageonCaptureRequestS2H, ic.capture_request);
+   ImageonSensorRequestWrapper sensorRequestWrapper <- mkImageonSensorRequestWrapper(ImageonSensorRequestS2H,ic.sensor_request);
+   HdmiGeneratorRequestWrapper hdmiRequestWrapper <- mkHdmiGeneratorRequestWrapper(HdmiGeneratorRequestS2H,ic.hdmi_request);
+
+   Vector#(11,StdPortal) portals;
+   portals[0] = serdesRequestWrapper.portalIfc; 
+   portals[1] = serdesIndicationProxy.portalIfc;
+   portals[2] = sensorRequestWrapper.portalIfc; 
+   portals[3] = sensorIndicationProxy.portalIfc; 
+   portals[4] = hdmiRequestWrapper.portalIfc; 
+   portals[5] = hdmiIndicationProxy.portalIfc; 
+   portals[6] = hostMemServerRequestWrapper.portalIfc;
+   portals[7] = hostMemServerIndicationProxy.portalIfc;
+   portals[8] = imageonCaptureWrapper.portalIfc;
+   portals[9] = hostMMURequestWrapper.portalIfc;
+   portals[10] = hostMMUIndicationProxy.portalIfc;
+   let ctrl_mux <- mkSlaveMux(portals);
    
-   interface interrupt = getInterruptVector(ic.portalif);
+   interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
-   interface masters = ic.dmaif.masters;
+   interface masters = dma.masters;
    interface ImageCapturePins pins = ic.pins;
 endmodule : mkConnectalTop
