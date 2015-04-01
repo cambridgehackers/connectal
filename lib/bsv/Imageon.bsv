@@ -26,6 +26,7 @@ import GetPut::*;
 import Gearbox::*;
 import Clocks::*;
 import IserdesDatadeser::*;
+import IserdesDatadeserIF::*;
 import ConnectalSpi::*;
 import HDMI::*;
 import ImageonVita::*;

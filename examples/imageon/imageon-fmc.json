@@ -132,12 +132,6 @@
 	"PIO_DIRECTION": "BIDIR",
 	"fmc": "LA16_n"
     },
-    "I2C0_scl": {
-	"i2c0": "scl"
-    },
-    "I2C0_sda": {
-	"i2c0": "sda"
-    },
     "CLK_hdmi_clock_if": {
 	"hdmi": "clock"
     },

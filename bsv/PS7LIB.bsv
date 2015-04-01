@@ -47,23 +47,23 @@ endinterface
 
 interface PS7LIB;
 `ifdef PS7EXTENDED
-    interface Vector#(2, Pps7Can)  can;
+    interface Vector#(2, Pps7Emiocan)  can;
     interface Vector#(4, Pps7Dma)  dma;
-    interface Vector#(2, Pps7Enet) enet;
+    interface Vector#(2, Pps7Emioenet) enet;
     interface Pps7Event            event_;
-    interface Vector#(4,Pps7Fclk_clktrig)fclk_clktrig;
-    interface Pps7Fpga             fpga;
+//    interface Vector#(4,Pps7Fclk_clktrig)fclk_clktrig;
+//    interface Pps7Fpga             fpga;
     interface Pps7Ftmd             ftmd;
     interface Pps7Ftmt             ftmt;
-    interface Pps7Pjtag            pjtag;
-    interface Vector#(2, Pps7Sdio) sdio;
-    interface Vector#(2, Pps7Spi)  spi;
-    interface Pps7Sram             sram;
-    interface Pps7Trace            trace;
-    interface Vector#(2, Pps7Ttc)  ttc;
-    interface Vector#(2, Pps7Uart) uart;
-    interface Vector#(2, Pps7Usb)  usb;
-    interface Pps7Wdt              wdt;
+    interface Pps7Emiopjtag            pjtag;
+    interface Vector#(2, Pps7Emiosdio) sdio;
+    interface Vector#(2, Pps7Emiospi)  spi;
+//    interface Pps7Sram             sram;
+    interface Pps7Emiotrace            trace;
+    interface Vector#(2, Pps7Emiottc)  ttc;
+    interface Vector#(2, Pps7Emiouart) uart;
+    interface Vector#(2, Pps7Emiousb)  usb;
+    interface Pps7Emiowdt              wdt;
 `endif
     interface Pps7Ddr              ddr;
     method Bit#(4)     fclkclk();
@@ -88,41 +88,40 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
         axi_clock, axi_reset, axi_reset, axi_reset, axi_reset, axi_reset, axi_reset, axi_reset,
         axi_reset, axi_reset);
 `ifdef PS7EXTENDED
-    Vector#(2, Pps7Can)     vcan;
+    Vector#(2, Pps7Emiocan)     vcan;
     Vector#(4, Pps7Dma)     vdma;
-    Vector#(2, Pps7Enet)     venet;
-    Vector#(2, Pps7Sdio)     vsdio;
-    Vector#(2, Pps7Spi)     vspi;
-    Vector#(2, Pps7Ttc)     vttc;
-    Vector#(2, Pps7Uart)     vuart;
-    Vector#(2, Pps7Usb)     vusb;
+    Vector#(2, Pps7Emioenet)     venet;
+    Vector#(2, Pps7Emiosdio)     vsdio;
+    Vector#(2, Pps7Emiospi)     vspi;
+    Vector#(2, Pps7Emiottc)     vttc;
+    Vector#(2, Pps7Emiouart)     vuart;
+    Vector#(2, Pps7Emiousb)     vusb;
 `endif
     Vector#(2, Pps7Emioi2c)     vi2c;
-    Vector#(1, Pps7Saxiacp)    vs_axi_acp;
     Vector#(2, AxiMasterCommon#(32,32,12)) vtopm_axi_gp;
     Vector#(2, AxiSlaveCommon#(32,32,6,Empty)) vtops_axi_gp;
     Vector#(1, AxiSlaveCommon#(32,64,3,ACPType)) vtops_axi_acp;
     Vector#(4, AxiSlaveCommon#(32,64,6,HPType)) vtops_axi_hp;
 
 `ifdef PS7EXTENDED
-    vcan[0] = foo.can0;
-    vcan[1] = foo.can1;
+    vcan[0] = foo.emiocan0;
+    vcan[1] = foo.emiocan1;
     vdma[0] = foo.dma0;
     vdma[1] = foo.dma1;
     vdma[2] = foo.dma2;
     vdma[3] = foo.dma3;
-    venet[0] = foo.enet0;
-    venet[1] = foo.enet1;
-    vsdio[0] = foo.sdio0;
-    vsdio[1] = foo.sdio1;
-    vspi[0] = foo.spi0;
-    vspi[1] = foo.spi1;
-    vttc[0] = foo.ttc0;
-    vttc[1] = foo.ttc1;
-    vuart[0] = foo.uart0;
-    vuart[1] = foo.uart1;
-    vusb[0] = foo.usb0;
-    vusb[1] = foo.usb1;
+    venet[0] = foo.emioenet0;
+    venet[1] = foo.emioenet1;
+    vsdio[0] = foo.emiosdio0;
+    vsdio[1] = foo.emiosdio1;
+    vspi[0] = foo.emiospi0;
+    vspi[1] = foo.emiospi1;
+    vttc[0] = foo.emiottc0;
+    vttc[1] = foo.emiottc1;
+    vuart[0] = foo.emiouart0;
+    vuart[1] = foo.emiouart1;
+    vusb[0] = foo.emiousb0;
+    vusb[1] = foo.emiousb1;
 `endif
     vi2c[0] = foo.emioi2c0;
     vi2c[1] = foo.emioi2c1;
@@ -155,13 +154,13 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
     interface Pps7Uart    uart = vuart;
     interface Pps7Usb    usb = vusb;
     interface Pps7Event     event_ = foo.event_;
-    interface Pps7Fpga     fpga = foo.fpga;
+//    interface Pps7Fpga     fpga = foo.fpga;
     interface Pps7Ftmd     ftmd = foo.ftmd;
     interface Pps7Ftmt     ftmt = foo.ftmt;
-    interface Pps7Pjtag     pjtag = foo.pjtag;
-    interface Pps7Sram     sram = foo.sram;
-    interface Pps7Trace     trace = foo.trace;
-    interface Pps7Wdt     wdt = foo.wdt;
+    interface Pps7Pjtag     pjtag = foo.emiopjtag;
+//    interface Pps7Sram     sram = foo.sram;
+    interface Pps7Emiotrace     trace = foo.emiotrace;
+    interface Pps7Wdt     wdt = foo.emiowdt;
 `endif
     interface i2c = vi2c;
     interface ddr = foo.ddr;
@@ -220,6 +219,9 @@ interface PS7;
     interface Vector#(2, Pps7Emioi2c)  i2c;
     interface Clock derivedClock;
     interface Reset derivedReset;
+`ifdef PS7EXTENDED      
+    interface Pps7Emiosdio emiosdio1;   
+`endif
 endinterface
 
 module mkPS7(PS7);
@@ -287,6 +289,9 @@ module mkPS7(PS7);
         ps7.ddr.arb(4'b0);
     endrule
 
+`ifdef PS7EXTENDED         
+    interface Pps7Emiosdio emiosdio1 = ps7.sdio[1];
+`endif      
     interface ZynqPins pins;
     interface a = ps7.ddr.a;
     interface ba = ps7.ddr.ba;

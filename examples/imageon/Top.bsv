@@ -50,6 +50,7 @@ import MemServerIndication::*;
 import MMUIndication::*;
 import ImageonCaptureRequest::*;
 import IserdesDatadeser::*;
+import IserdesDatadeserIF::*;
 import Imageon::*;
 import ImageonVita::*;
 import HDMI::*;
@@ -62,15 +63,18 @@ typedef enum { ImageonSerdesRequestS2H, ImageonSensorRequestS2H, HdmiGeneratorRe
 
 interface ImageCapture;
    interface Vector#(11,StdPortal) portalif;
-   interface ImageonSensorPins sensorpins;
-   interface ImageonSerdesPins serpins;
-   interface HDMI#(Bit#(HdmiBits)) hdmi;
-   interface XADC             xadc;
    interface MemServer#(PhysAddrWidth,64,1)   dmaif;
+   interface ImageCapturePins pins;
 endinterface
 
 (* synthesize *)
-module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
+module mkImageCapture(ImageCapture);
+`ifndef BSIM
+   B2C1 iclock <- mkB2C1();
+   Clock fmc_imageon_clk1 <- mkClockBUFG(clocked_by iclock.c);
+`else
+   Clock fmc_imageon_clk1 <- exposeCurrentClock();
+`endif
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
    ImageClocks clk <- mkImageClocks(fmc_imageon_clk1);
@@ -162,16 +166,17 @@ module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
    portals[10] = hostMMUIndicationProxy.portalIfc;
    interface Vector portalif = portals;
 
-   interface ImageonSensorPins sensorpins = fromSensor.pins;
-   interface ImageonSerdesPins serpins = serdes.pins;
-   interface HDMI hdmi = hdmisignals;
-   interface XADC             xadc;
-        method Bit#(4) gpio;
-            return { bozobit, hdmisignals.hdmi_vsync,
-                hdmisignals.hdmi_hsync, hdmisignals.hdmi_de};
-        endmethod
-   endinterface
    interface dmaif = dma;
+   interface ImageCapturePins pins;
+`ifndef BSIM
+       method Action fmc_video_clk1(Bit#(1) v);
+           iclock.inputclock(v);
+       endmethod
+`endif
+       interface ImageonSensorPins pins = fromSensor.pins;
+       interface ImageonSerdesPins serpins = serdes.pins;
+       interface HDMI hdmi = hdmisignals;
+   endinterface
 endmodule
 
 interface ImageCapturePins;
@@ -182,26 +187,11 @@ interface ImageCapturePins;
    method Action fmc_video_clk1(Bit#(1) v);
 endinterface
 module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,ImageCapturePins,1));
-`ifndef BSIM
-   B2C1 iclock <- mkB2C1();
-   Clock iclock_buf <- mkClockBUFG(clocked_by iclock.c);
-`else
-   Clock iclock_buf <- exposeCurrentClock();
-`endif
-   ImageCapture ic <- mkImageCapture(iclock_buf);
+   ImageCapture ic <- mkImageCapture();
    let ctrl_mux <- mkSlaveMux(ic.portalif);
    
    interface interrupt = getInterruptVector(ic.portalif);
    interface slave = ctrl_mux;
    interface masters = ic.dmaif.masters;
-   interface ImageCapturePins pins;
-`ifndef BSIM
-       method Action fmc_video_clk1(Bit#(1) v);
-           iclock.inputclock(v);
-       endmethod
-`endif
-       interface ImageonSensorPins pins = ic.sensorpins;
-       interface ImageonSerdesPins serpins = ic.serpins;
-       interface HDMI hdmi = ic.hdmi;
-   endinterface
+   interface ImageCapturePins pins = ic.pins;
 endmodule : mkConnectalTop

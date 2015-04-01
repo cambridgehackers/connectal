@@ -22,35 +22,28 @@
 # SOFTWARE.
 
 from __future__ import print_function
-import sys
-import json
-import argparse
+import argparse, json, sys
+
+bindings = {
+    #'pins': 'pins',
+    'pin_name': 'pins' # legacy
+    }
+errorDetected = False
 
 argparser = argparse.ArgumentParser("Generate constraints file for board.")
-argparser.add_argument('boardfile', help='Board description file (json)')
-argparser.add_argument('pinoutfile', help='Project description file (json)')
+argparser.add_argument('--boardfile', help='Board description file (json)')
+argparser.add_argument('--pinoutfile', default=[], help='Project description file (json)', action='append')
 argparser.add_argument('-b', '--bind', default=[], help='Bind signal group to pin group', action='append')
 argparser.add_argument('-o', '--output', default=None, help='Write output to file')
 argparser.add_argument('-f', '--fpga', default="xilinx", help='Target FPGA Vendor')
 
 options = argparser.parse_args()
-boardfile = options.boardfile
-pinoutfile = options.pinoutfile
-errorDetected = False
 
-bindings = {
-    'pins': 'pins',
-    'pin_name': 'pins' # legacy
-    }
 for binding in options.bind:
     split = binding.split(':')
     bindings[split[0]] = split[1]
 
-
-pinstr = open(pinoutfile).read()
-pinout = json.loads(pinstr)
-
-boardInfo = json.loads(open(boardfile).read())
+boardInfo = json.loads(open(options.boardfile).read())
 
 if options.fpga == "xilinx":
     template='''\
@@ -72,61 +65,65 @@ out = sys.stdout
 if options.output:
     out = open(options.output, 'w')
 
-for pin in pinout:
-    pinInfo = pinout[pin]
-    loc = 'TBD'
-    iostandard = 'TBD'
-    iodir = 'TBD'
-    used = []
-    boardGroupInfo = {}
-    pinName = ''
-    #print('PPP', pinInfo)
-    for key in bindings:
-        if pinInfo.has_key(key):
-            used.append(key)
-            pinName = pinInfo[key]
-            #print('LLL', key, pinName, bindings[key])
-            boardGroupInfo = boardInfo[bindings[key]]
-            break
-    if pinName == '':
-        for key in pinInfo:
-            #print('JJJJ', key)
-            if boardInfo.get(key):
+for filename in options.pinoutfile:
+    print('generate-constraints: processing file "' + filename + '"')
+    pinstr = open(filename).read()
+    pinout = json.loads(pinstr)
+    for pin in pinout:
+        pinInfo = pinout[pin]
+        loc = 'TBD'
+        iostandard = 'TBD'
+        iodir = 'TBD'
+        used = []
+        boardGroupInfo = {}
+        pinName = ''
+        #print('PPP', pinInfo)
+        for key in bindings:
+            if pinInfo.has_key(key):
+                used.append(key)
                 pinName = pinInfo[key]
-                boardGroupInfo = boardInfo[key]
-                #print('FFF', key, pinName, boardGroupInfo, boardGroupInfo.has_key(pinName), boardGroupInfo.get(pinName))
+                #print('LLL', key, pinName, bindings[key])
+                boardGroupInfo = boardInfo[bindings[key]]
                 break
-    if boardGroupInfo == {}:
-        print('Missing group description for', pinName, pinInfo, file=sys.stderr)
-        errorDetected = True
-    if boardGroupInfo.has_key(pinName):
-        if boardGroupInfo[pinName].has_key('LOC'):
-            loc = boardGroupInfo[pinName]['LOC']
+        if pinName == '':
+            for key in pinInfo:
+                #print('JJJJ', key)
+                if boardInfo.get(key):
+                    pinName = pinInfo[key]
+                    boardGroupInfo = boardInfo[key]
+                    #print('FFF', key, pinName, boardGroupInfo, boardGroupInfo.has_key(pinName), boardGroupInfo.get(pinName))
+                    break
+        if boardGroupInfo == {}:
+            print('Missing group description for', pinName, pinInfo, file=sys.stderr)
+            errorDetected = True
+        if boardGroupInfo.has_key(pinName):
+            if boardGroupInfo[pinName].has_key('LOC'):
+                loc = boardGroupInfo[pinName]['LOC']
+            else:
+                loc = boardGroupInfo[pinName]['PACKAGE_PIN']
+            iostandard = boardGroupInfo[pinName]['IOSTANDARD']
+            if boardGroupInfo[pinName].has_key('PIO_DIRECTION'):
+                iodir = boardGroupInfo[pinName]['PIO_DIRECTION']
         else:
-            loc = boardGroupInfo[pinName]['PACKAGE_PIN']
-        iostandard = boardGroupInfo[pinName]['IOSTANDARD']
-        if boardGroupInfo[pinName].has_key('PIO_DIRECTION'):
-            iodir = boardGroupInfo[pinName]['PIO_DIRECTION']
-    else:
-        print('Missing pin description for', pinName, pinInfo, file=sys.stderr)
-        loc = 'fmc.%s' % (pinName)
-        errorDetected = True
-    if pinInfo.has_key('IOSTANDARD'):
-        iostandard = pinInfo['IOSTANDARD']
-    if pinInfo.has_key('PIO_DIRECTION'):
-        iodir = pinInfo['PIO_DIRECTION']
-    out.write(template % {
-            'name': pin,
-            'LOC': loc,
-            'IOSTANDARD': iostandard,
-            'PIO_DIRECTION': iodir
-            })
-    for k in pinInfo:
-        if k in used+['IOSTANDARD', 'PIO_DIRECTION']: continue
-        out.write(setPropertyTemplate % {
+            print('Missing pin description for', pinName, pinInfo, file=sys.stderr)
+            loc = 'fmc.%s' % (pinName)
+            errorDetected = True
+        if pinInfo.has_key('IOSTANDARD'):
+            iostandard = pinInfo['IOSTANDARD']
+        if pinInfo.has_key('PIO_DIRECTION'):
+            iodir = pinInfo['PIO_DIRECTION']
+        out.write(template % {
                 'name': pin,
-                'prop': k,
-                'val': pinInfo[k],
+                'LOC': loc,
+                'IOSTANDARD': iostandard,
+                'PIO_DIRECTION': iodir
                 })
+        for k in pinInfo:
+            if k in used+['IOSTANDARD', 'PIO_DIRECTION']: continue
+            out.write(setPropertyTemplate % {
+                    'name': pin,
+                    'prop': k,
+                    'val': pinInfo[k],
+                    })
 if errorDetected:
     sys.exit(-1);

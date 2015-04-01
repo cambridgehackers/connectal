@@ -123,6 +123,12 @@ int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency
 static void init_portal_hw(void)
 {
     static int once = 0;
+    static struct {
+        const char *md5;
+        const char *filename;
+    } signature[] = {
+#include "driver_signature_file.h"
+    {} };
 
     if (once)
         return;

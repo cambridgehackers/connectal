@@ -263,7 +263,7 @@ ifneq ($(filter $(BOARD), de5 htg4), )
 	$(CONNECTALDIR)/scripts/generate-constraints.py -f altera \
 		$(foreach f, $(PIN_BINDINGS), -b $f) \
 		-o $(BOARD)/generatedbsv/$(BOARD).qsf \
-		$(CONNECTALDIR)/boardinfo/$(BOARD).json boards/$(BOARD).json
+		--boardfile $(CONNECTALDIR)/boardinfo/$(BOARD).json --pinoutfile boards/$(BOARD).json
 endif
 endif
 
