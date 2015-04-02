@@ -19,6 +19,8 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
+include Makefile.version
+
 CONNECTALDIR=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
 V?=0
@@ -115,6 +117,7 @@ ifndef BURST_LEN_SIZE
 BURST_LEN_SIZE=8
 endif
 
+CONNECTALFLAGS += -D ConnectalVersion=$(VERSION)
 CONNECTALFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) -D PinType=$(PIN_TYPE) -D MainClockPeriod=$(MAIN_CLOCK_PERIOD) $(PCIE_CLOCK_DEFINE) -D DerivedClockPeriod=$(DERIVED_CLOCK_PERIOD)
 CONNECTALFLAGS += -D NumberOfTiles=$(NUMBER_OF_TILES)
 CONNECTALFLAGS += -D SlaveDataBusWidth=$(SLAVE_DATA_BUS_WIDTH)

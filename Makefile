@@ -19,7 +19,7 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
-VERSION=15.03.12
+include Makefile.version
 
 export UDEV_RULES_DIR=/etc/udev/rules.d
 UDEV_RULES=$(shell ls etc/udev/rules.d)
