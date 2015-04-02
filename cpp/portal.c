@@ -214,7 +214,7 @@ printf("[%s:%d] fd %d len %d\n", __FUNCTION__, __LINE__, fd, len);
 #ifdef __arm__
         argv[ind++] = (char *)"-x";
         argv[ind++] = buf;
-        execvp ("/mnt/sdcard/fpgajtag", argv);
+        execvp ("/fpgajtag", argv);
 #elif !defined(BSIM) && !defined(BOARD_xsim)
         argv[ind++] = buf;
         execvp ("fpgajtag", argv);
