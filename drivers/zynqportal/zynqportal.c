@@ -212,10 +212,11 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
 		void *virt;
 		long flush_offset;
 		long flush_length;
+                int err;
 
 		if (verbose_flush)
 		        printk("[%s:%d] portal dcache flush=%d\n", __FUNCTION__, __LINE__, flush);
-                int err = copy_from_user(&cacheReq, (void __user *) arg, sizeof(cacheReq));
+                err = copy_from_user(&cacheReq, (void __user *) arg, sizeof(cacheReq));
                 if (err)
 			break;
 		if (verbose_flush)
