@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2013 Quanta Research Cambridge, Inc.
+# Copyright (c) 2013-2015 Quanta Research Cambridge, Inc.
 
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
@@ -37,10 +37,10 @@ from adb import common
 
 deviceAddresses = []
 
-def ip2int(addr):                                                               
-    return struct.unpack("!I", socket.inet_aton(addr))[0]                       
+def ip2int(addr):
+    return struct.unpack("!I", socket.inet_aton(addr))[0]
 
-def int2ip(addr):                                                               
+def int2ip(addr):
     return socket.inet_ntoa(struct.pack("!I", addr))
 
 def connect_with_adb(ipaddr):
@@ -65,7 +65,7 @@ def connect_with_adb(ipaddr):
                 deviceAddresses[ipaddr] =  ipaddr
                 return
         cnt = cnt+1
-      
+
 def open_adb_socket(dest_addr):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setblocking(0)
@@ -154,35 +154,38 @@ def do_work(start,end):
     else:
         do_work_poll(start,end)
 
-def detect_network():
+def detect_network(network=None):
     global deviceAddresses
     deviceAddresses = {}
-    for ifc in netifaces.interfaces():
-        ifaddrs = netifaces.ifaddresses(ifc)
-        if netifaces.AF_INET in ifaddrs.keys():
-            af_inet = ifaddrs[netifaces.AF_INET]
-            for i in af_inet: 
-                if i.get('addr') == '127.0.0.1':
-                    print 'skipping localhost'
-                else:
-                    addr = ip2int(i.get('addr'))
-                    netmask = ip2int(i.get('netmask'))
-                    start = addr & netmask
-                    end = start + (netmask ^ 0xffffffff) 
-                    start = start+1
-                    end = end-1
-                    print (int2ip(start), int2ip(end)) 
-                    do_work(start, end) 
-
-if __name__ ==  '__main__':
-    options = argparser.parse_args()
-    if options.network == None:
-        detect_network()
-    else:
-        nw = options.network.split("/")
+    if network:
+        nw = network.split("/")
         start = ip2int(nw[0])
         if len(nw) != 2:
             print 'Usage: discover_tcp.py ipaddr/prefix_width'
             sys.exit(-1)
         end = start + (1 << (32-int(nw[1])) ) - 2
         do_work(start+1,end)
+    else:
+        for ifc in netifaces.interfaces():
+            ifaddrs = netifaces.ifaddresses(ifc)
+            if netifaces.AF_INET in ifaddrs.keys():
+                af_inet = ifaddrs[netifaces.AF_INET]
+                for i in af_inet:
+                    if i.get('addr') == '127.0.0.1':
+                        print 'skipping localhost'
+                    else:
+                        addr = ip2int(i.get('addr'))
+                        netmask = ip2int(i.get('netmask'))
+                        start = addr & netmask
+                        end = start + (netmask ^ 0xffffffff)
+                        start = start+1
+                        end = end-1
+                        print (int2ip(start), int2ip(end))
+                        do_work(start, end)
+
+if __name__ ==  '__main__':
+    options = argparser.parse_args()
+    if options.network == None:
+        detect_network()
+    else:
+        detect_network(options.network)
