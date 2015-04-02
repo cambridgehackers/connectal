@@ -35,6 +35,8 @@ import netifaces
 from adb import adb_commands
 from adb import common
 
+deviceAddresses = []
+
 def ip2int(addr):                                                               
     return struct.unpack("!I", socket.inet_aton(addr))[0]                       
 
@@ -42,8 +44,8 @@ def int2ip(addr):
     return socket.inet_ntoa(struct.pack("!I", addr))
 
 def connect_with_adb(ipaddr):
-    global zedboards
-    device_serial = '%s:5555' % int2ip(ipaddr)
+    global deviceAddresses
+    device_serial = '%s:5555' % ipaddr
     cnt = 0
     while cnt < 5:
         try:
@@ -55,14 +57,14 @@ def connect_with_adb(ipaddr):
             if 'hostname.txt' in connection.Shell('ls /mnt/sdcard/'):
                 name = connection.Shell('cat /mnt/sdcard/hostname.txt').strip()
                 connection.Close()
-                print 'discover_tcp: ', int2ip(ipaddr), name
-                zedboards.append((ipaddr, name))
+                print 'discover_tcp: ', ipaddr, name
+                deviceAddresses[ipaddr] = name
                 return
             else:
-                print 'discover_tcp: ', int2ip(ipaddr), ":/mnt/sdcard/hostname.txt not found"
+                print 'discover_tcp: ', ipaddr, " /mnt/sdcard/hostname.txt not found"
+                deviceAddresses[ipaddr] =  ipaddr
                 return
         cnt = cnt+1
-    #print "failed to connect", int2ip(ipaddr)
       
 def open_adb_socket(dest_addr):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -97,7 +99,7 @@ def do_work_poll(start, end):
             (addr,sock) = fd_map[fd]
             if sock.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR) == 0:
                 print 'ADDCON', fd, int2ip(addr)
-                connected.append(addr)
+                connected.append(int2ip(addr))
         for fd,t in fd_map.iteritems():
             poller.unregister(t[1])
             t[1].close()
@@ -109,7 +111,7 @@ def do_work_poll(start, end):
 
 # Darwin version
 def do_work_kqueue(start, end):
-    print "scanning "+int2ip(start)+" to "+int2ip(end)
+    print "kqueue scanning "+int2ip(start)+" to "+int2ip(end)
     connected = []
     total = end-start
 
@@ -133,7 +135,7 @@ def do_work_kqueue(start, end):
             addr = fd_map[w.fileno()][0]
             if w.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR) == 0:
                 print 'ADDCON2', k.ident, w.fileno(), int2ip(addr), fd_map[w.fileno()]
-                connected.append(addr)
+                connected.append(int2ip(addr))
         for fd,t in fd_map.iteritems():
             t[1].close()
         sys.stdout.write("\r%d/%d" % (total-(end-start),total))
@@ -153,8 +155,8 @@ def do_work(start,end):
         do_work_poll(start,end)
 
 def detect_network():
-    global zedboards
-    zedboards = []
+    global deviceAddresses
+    deviceAddresses = {}
     for ifc in netifaces.interfaces():
         ifaddrs = netifaces.ifaddresses(ifc)
         if netifaces.AF_INET in ifaddrs.keys():
@@ -173,7 +175,6 @@ def detect_network():
                     do_work(start, end) 
 
 if __name__ ==  '__main__':
-    zedboards = []
     options = argparser.parse_args()
     if options.network == None:
         detect_network()
