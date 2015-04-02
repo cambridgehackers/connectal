@@ -19,9 +19,8 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
-include Makefile.version
-
 CONNECTALDIR=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+include $(CONNECTALDIR)/Makefile.version
 
 V?=0
 ifeq ($(V),0)
