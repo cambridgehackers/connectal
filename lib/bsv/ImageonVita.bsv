@@ -1,6 +1,4 @@
-
 // Copyright (c) 2013 Quanta Research Cambridge, Inc.
-
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
 // files (the "Software"), to deal in the Software without
@@ -20,7 +18,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import Vector::*;
 import Clocks::*;
 import DefaultValue::*;
@@ -40,7 +37,6 @@ interface ImageonVita;
     method Vector#(3, ReadOnly#(Bit#(1))) trigger();
 endinterface
 
-//(* synthesize *)
 module mkImageonVita#(Wire#(Bit#(1)) imageon_oe, Wire#(Bit#(1)) trigger_active, Wire#(Bit#(1)) serdes_reset)(ImageonVita);
     Vector#(3, ReadOnly#(Bit#(1))) vita_trigger_wire;
 `ifndef BSIM
@@ -91,10 +87,8 @@ interface IserdesCore;
     method Bit#(10) data();
 endinterface: IserdesCore
 
-//(* synthesize *)
 module mkIserdesCore#(Clock serdes_clock, Reset serdes_reset, Clock serdest,
       Clock serdest_inverted, Bit#(1) astate_reset, SerdesStart param)(IserdesCore);
-
     Wire#(Bit#(1)) vita_data_p <- mkDWire(0);
     Wire#(Bit#(1)) vita_data_n <- mkDWire(0);
 `ifndef BSIM
@@ -123,11 +117,7 @@ module mkIserdesCore#(Clock serdes_clock, Reset serdes_reset, Clock serdest,
         srval_q1: 0, srval_q2: 0, srval_q3: 0, srval_q4: 0,
         serdes_mode: "SLAVE", iobdelay: "NONE"},
         serdest, serdest_inverted, clocked_by serdes_clock, reset_by serdes_reset);
-    ReadOnly#(Bit#(1))ibufds_v <- mkIBUFDS(
-//`ifdef ClockDefaultParam
-        //defaultValue,
-//`endif
-        vita_data_p, vita_data_n);
+    ReadOnly#(Bit#(1))ibufds_v <- mkIBUFDS(vita_data_p, vita_data_n);
 
     (* no_implicit_conditions *)
     rule setruledata;
@@ -187,7 +177,6 @@ interface SerdesClock;
     method Action io_vita_clk_p(Bit#(1) v);
     method Action io_vita_clk_n(Bit#(1) v);
 endinterface
-
 (* synthesize *)
 module mkSerdesClock(SerdesClock);
     Clock defaultClock <- exposeCurrentClock();
@@ -229,7 +218,6 @@ interface ImageClocks;
    interface Clock imageon;
    interface Clock hdmi;
 endinterface
-
 (* synthesize *)
 module mkImageClocks#(Clock fmc_imageon_clk1)(ImageClocks);
 `ifndef BSIM
@@ -249,7 +237,6 @@ module mkImageClocks#(Clock fmc_imageon_clk1)(ImageClocks);
    clockParams.divclk_divide      = 1;
    clockParams.ref_jitter1        = 0.010;
    clockParams.ref_jitter2        = 0.010;
-
    XClockGenerator7 clockGen <- mkClockGenerator7Adv(clockParams, clocked_by fmc_imageon_clk1);
    C2B c2b_fb <- mkC2B(clockGen.clkfbout, clocked_by clockGen.clkfbout);
    rule txoutrule5;

@@ -449,4 +449,5 @@ distclean:
 	rm -f drivers/zynqportal/.*.o.cmd drivers/zynqportal/.*.ko.cmd
 	rm -rf doc/library/build/ examples/rbm/datasets/
 	rm -f doc/library/source/devguide/connectalbuild-1.png
+	rm -f drivers/*/driver_signature_file.h
 

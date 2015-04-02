@@ -163,10 +163,6 @@ module mkImageonCapture#(ImageonSerdesIndication serdes_indication, ImageonSenso
        Bit#(32) pixel = {8'b0, xsvi[9:2], xsvi[9:2], xsvi[9:2]};
        lHdmiGenerator.pdata.put(pixel);
    endrule
-   Reg#(Bit#(1)) bozobit <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
-    rule bozobit_rule;
-        bozobit <= ~bozobit;
-    endrule
 
    interface serdes_request = serdes.request;
    interface capture_request =  lImageonCamera.request;
