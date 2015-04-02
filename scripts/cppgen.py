@@ -639,11 +639,11 @@ def emitType(item, name, f, indentation):
     tmp = typeCName(item)
     if re.match('[0-9]+', tmp):
         if True or verbose:
-            print 'cppgen/emitType: ignore numeric typedef for', tmp
+            print 'cppgen/emitType: INFO ignore numeric typedef for', tmp
         return
     if not tmp or tmp[0] == '`' or tmp == 'Empty' or tmp[-2:] == '_P':
         if True or verbose:
-            print 'cppgen/emitType: ignore typedef for', tmp
+            print 'cppgen/emitType: INFO ignore typedef for', tmp
         return
     if (indentation == 0):
         f.write('typedef ')

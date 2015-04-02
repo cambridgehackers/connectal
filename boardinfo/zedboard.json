@@ -301,11 +301,11 @@
         },
     "SDA": {
         "LOC": "U7",
-        "IOSTANDARD": "LVCMOS33"
+        "IOSTANDARD": "LVCMOS25"
         },
     "SCL": {
         "LOC": "R7",
-        "IOSTANDARD": "LVCMOS33"
+        "IOSTANDARD": "LVCMOS25"
         }
     },
     "pins": {
@@ -521,12 +521,12 @@
     "i2c0" : {
         "scl" : {
              "LOC" : "AA18",
-	     "IOSTANDARD" : "LVCMOS33",
+	     "IOSTANDARD" : "LVCMOS25",
 	     "PIO_DIRECTION": "BIDIR"
 	     },
         "sda" : {
              "LOC" : "Y16",
-	     "IOSTANDARD" : "LVCMOS33",
+	     "IOSTANDARD" : "LVCMOS25",
 	     "PIO_DIRECTION": "BIDIR"
 	     }	 
     },

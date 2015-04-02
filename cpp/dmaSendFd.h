@@ -52,7 +52,9 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
     struct scatterlist *sg;
     struct file *fmem;
     struct sg_table *sgtable;
+PORTAL_PRINTF("[%s:%d]\n", __FUNCTION__, __LINE__);
     fmem = fget(fd);
+PORTAL_PRINTF("[%s:%d]\n", __FUNCTION__, __LINE__);
     sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
 #elif !defined(BSIM)
 #error
@@ -120,6 +122,7 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
     PORTAL_PRINTF("borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borderVal[0], borderVal[1], borderVal[2]);
   }
   MMURequest_region(device, id, borderVal[0], indexVal[0], borderVal[1], indexVal[1], borderVal[2], indexVal[2]);
+PORTAL_PRINTF("[%s:%d]\n", __FUNCTION__, __LINE__);
   /* ifdefs here to supress warning during kernel build */
 #ifndef __KERNEL__
 retlab:

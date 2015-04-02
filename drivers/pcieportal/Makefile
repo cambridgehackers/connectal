@@ -17,6 +17,7 @@ cflags-y += -I$(PWD)
 	cd ../portalmem; make -f Makefile.x86
 
 pcieportal.ko: pcieportal.c pcieportal.h
+	md5sum *.c ../../generated/cpp/*.c | grep -v mod.c | sed -f ../../scripts/driver_signature.sed >driver_signature_file.h
 	@$(MAKE) -C $(KROOT) M=$(PWD) modules
 
 .PHONY: modules_check

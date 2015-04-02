@@ -38,7 +38,11 @@ typedef Bit#(32) SGLId;
 typedef 44 MemOffsetSize;
 typedef 6 MemTagSize;
 typedef `BurstLenSize BurstLenSize;
+`ifndef USE_ACP
 typedef 32 MemServerTags;
+`else
+typedef 8 MemServerTags;
+`endif
 
 // memory request with physical addresses.
 // these can be transmitted directly to the bus master

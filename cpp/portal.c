@@ -120,15 +120,44 @@ int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency
     return status;
 }
 
-static void init_portal_hw(void)
+static void check_signature(const char *filename, int ioctlnum)
 {
-    static int once = 0;
+    int status;
     static struct {
         const char *md5;
         const char *filename;
-    } signature[] = {
+    } filesignature[] = {
 #include "driver_signature_file.h"
     {} };
+#ifdef ZYNQ
+    PortalSignature signature;
+#else
+    PortalSignaturePcie signature;
+#endif
+
+    int fd = open(filename, O_RDONLY);
+    int len = read(fd, &status, sizeof(status));
+    signature.index = 0;
+    while ((status = ioctl(fd, ioctlnum, &signature)) == 0 && strlen(signature.md5)) {
+        int i = 0;
+//printf("[%s:%d] found [%d] %s %s\n", __FUNCTION__, __LINE__, signature.index, signature.md5, signature.filename);
+        while(filesignature[i].md5) {
+            if (!strcmp(filesignature[i].filename, signature.filename)) {
+//printf("[%s:%d] orig %s %s\n", __FUNCTION__, __LINE__, filesignature[i].md5, filesignature[i].filename);
+                if (strcmp(filesignature[i].md5, signature.md5))
+                    printf("%s: driver '%s' signature mismatch %s %s\n", __FUNCTION__,
+                        signature.filename, signature.md5, filesignature[i].md5);
+                break;
+            }
+            i++;
+        }
+        signature.index++;
+    }
+    close(fd);
+}
+static void init_portal_hw(void)
+{
+    static int once = 0;
 
     if (once)
         return;
@@ -159,6 +188,16 @@ printf("[%s:%d] fd %d len %d\n", __FUNCTION__, __LINE__, fd, len);
             sleep(1);
         }
 #endif
+#if !defined(BSIM) && !defined(BOARD_xsim)
+        check_signature("/dev/connectal",
+#ifdef ZYNQ
+            PORTAL_SIGNATURE
+#else
+            PCIE_SIGNATURE
+#endif
+            );
+#endif
+        check_signature("/dev/portalmem", PA_SIGNATURE);
     }
     else {
 #define MAX_PATH 2000
@@ -175,7 +214,7 @@ printf("[%s:%d] fd %d len %d\n", __FUNCTION__, __LINE__, fd, len);
 #ifdef __arm__
         argv[ind++] = (char *)"-x";
         argv[ind++] = buf;
-        execvp ("/mnt/sdcard/fpgajtag", argv);
+        execvp ("/fpgajtag", argv);
 #elif !defined(BSIM) && !defined(BOARD_xsim)
         argv[ind++] = buf;
         execvp ("fpgajtag", argv);
