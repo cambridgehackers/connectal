@@ -29,10 +29,12 @@ import GetPut::*;
 import ClientServer::*;
 import Assert::*;
 import BRAM::*;
+import DefaultValue::*;
 
 // CONNECTAL Libraries
 import MemTypes::*;
 import ConnectalMemory::*;
+import ConnectalClocks::*;
 import MMU::*;
 import ConnectalCompletionBuffer::*;
 
@@ -100,8 +102,11 @@ module mkMemReadInternal#(MemServerIndication ind,
    // stage 1: address validation (latency = 1)
    FIFO#(RRec#(numServers,addrWidth))  reqFifo <- mkFIFO;
    // stage 2: read commands
-   BRAM2Port#(Bit#(TLog#(numTags)), DRec#(numServers,addrWidth)) dreqBram <- mkBRAM2Server(defaultValue);
-   BRAM2Port#(Bit#(TAdd#(TLog#(numTags),TSub#(BurstLenSize,beatShift))), MemData#(dataWidth)) readBufferBram <- mkBRAM2Server(defaultValue);
+   BRAM_Configure bramConfig = defaultValue;
+   if (mainClockPeriod < 8)
+      bramConfig.latency = 2;
+   BRAM2Port#(Bit#(TLog#(numTags)), DRec#(numServers,addrWidth)) dreqBram <- mkBRAM2Server(bramConfig);
+   BRAM2Port#(Bit#(TAdd#(TLog#(numTags),TSub#(BurstLenSize,beatShift))), MemData#(dataWidth)) readBufferBram <- mkBRAM2Server(bramConfig);
    // stage 3: read data 
    FIFO#(MemData#(dataWidth)) readDataPipelineFifo <- mkFIFO;
    
