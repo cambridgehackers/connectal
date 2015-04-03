@@ -2,7 +2,7 @@
 CONNECTALDIR?=../..
 #S2H_INTERFACES = MainRequest:Main.request
 #H2S_INTERFACES = Main:MainRequest
-BSVFILES = PParallellaLIB.bsv ParallellaLib.bsv Top.bsv
+BSVFILES = PParallellaLIB.bsv ParallellaLibDefs.bsv Top.bsv
 #CPPFILES=testmain.cpp
 NUMBER_OF_MASTERS =0
 
