@@ -120,6 +120,41 @@ int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency
     return status;
 }
 
+static void check_signature(const char *filename, int ioctlnum)
+{
+    int status;
+    static struct {
+        const char *md5;
+        const char *filename;
+    } filesignature[] = {
+#include "driver_signature_file.h"
+    {} };
+#ifdef ZYNQ
+    PortalSignature signature;
+#else
+    PortalSignaturePcie signature;
+#endif
+
+    int fd = open(filename, O_RDONLY);
+    int len = read(fd, &status, sizeof(status));
+    signature.index = 0;
+    while ((status = ioctl(fd, ioctlnum, &signature)) == 0 && strlen(signature.md5)) {
+        int i = 0;
+//printf("[%s:%d] found [%d] %s %s\n", __FUNCTION__, __LINE__, signature.index, signature.md5, signature.filename);
+        while(filesignature[i].md5) {
+            if (!strcmp(filesignature[i].filename, signature.filename)) {
+//printf("[%s:%d] orig %s %s\n", __FUNCTION__, __LINE__, filesignature[i].md5, filesignature[i].filename);
+                if (strcmp(filesignature[i].md5, signature.md5))
+                    printf("%s: driver '%s' signature mismatch %s %s\n", __FUNCTION__,
+                        signature.filename, signature.md5, filesignature[i].md5);
+                break;
+            }
+            i++;
+        }
+        signature.index++;
+    }
+    close(fd);
+}
 static void init_portal_hw(void)
 {
     static int once = 0;
@@ -139,6 +174,9 @@ static void init_portal_hw(void)
         int fd, status, len;
         waitpid(pid, &status, 0);
 #ifdef __arm__
+	fprintf(stderr, "subprocess pid %d completed status=%x %d\n", pid, status, WEXITSTATUS(status));
+	if (WEXITSTATUS(status) != 0)
+	  exit(-1);
         fd = open("/dev/connectal", O_RDONLY); /* scan the fpga directory */
         len = read(fd, &status, sizeof(status));
 printf("[%s:%d] fd %d len %d\n", __FUNCTION__, __LINE__, fd, len);
@@ -153,6 +191,16 @@ printf("[%s:%d] fd %d len %d\n", __FUNCTION__, __LINE__, fd, len);
             sleep(1);
         }
 #endif
+#if !defined(BSIM) && !defined(BOARD_xsim)
+        check_signature("/dev/connectal",
+#ifdef ZYNQ
+            PORTAL_SIGNATURE
+#else
+            PCIE_SIGNATURE
+#endif
+            );
+#endif
+        check_signature("/dev/portalmem", PA_SIGNATURE);
     }
     else {
 #define MAX_PATH 2000
@@ -169,7 +217,7 @@ printf("[%s:%d] fd %d len %d\n", __FUNCTION__, __LINE__, fd, len);
 #ifdef __arm__
         argv[ind++] = (char *)"-x";
         argv[ind++] = buf;
-        execvp ("/mnt/sdcard/fpgajtag", argv);
+        execvp ("/fpgajtag", argv);
 #elif !defined(BSIM) && !defined(BOARD_xsim)
         argv[ind++] = buf;
         execvp ("fpgajtag", argv);
@@ -213,10 +261,14 @@ printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start
 #else
   int rc;
   if (utility_portal){
+    PortalCacheRequest req;
+    req.fd = fd;
+    req.base = __p;
+    req.len = size;
     if(flush)
-      rc = ioctl(utility_portal->fpga_fd, PORTAL_DCACHE_FLUSH_INVAL, fd);
+      rc = ioctl(utility_portal->fpga_fd, PORTAL_DCACHE_FLUSH_INVAL, &req);
     else
-      rc = ioctl(utility_portal->fpga_fd, PORTAL_DCACHE_INVAL, fd);
+      rc = ioctl(utility_portal->fpga_fd, PORTAL_DCACHE_INVAL, &req);
   }
   else
     rc = -1;

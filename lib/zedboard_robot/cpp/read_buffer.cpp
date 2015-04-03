@@ -40,7 +40,7 @@
 #include "read_buffer.h"
 
 
-int reader::read_circ_buff(int buff_len, unsigned int ref_dstAlloc, int dstAlloc, char* dstBuffer, char *snapshot, int write_addr, int write_wrap_cnt, int align)
+int reader::read_circ_buff(int buff_len, unsigned int ref_dstAlloc, int dstAlloc, char* dstBuffer, char *snapshot, int write_addr, int write_wrap_cnt)
 {
   int dwc = write_wrap_cnt - wrap_cnt;
   int two,top,bottom,datalen=0;
@@ -67,10 +67,8 @@ int reader::read_circ_buff(int buff_len, unsigned int ref_dstAlloc, int dstAlloc
     datalen = buff_len;
     fprintf(stderr, "WARNING: sock_server::read_circ_buffer dwc>1\n");
   }
-  top = (top/align)*align;
-  bottom = (bottom/align)*align;
   portalDCacheInval(dstAlloc, buff_len, dstBuffer);    
-  if (verbose) fprintf(stderr, "two:%d, top:%4x, bottom:%4x, datalen:%4x, dwc:%d\n", two,top,bottom,datalen,dwc);
+  if (verbose) fprintf(stderr, "bottom:%4x, top:%4x, two:%d, datalen:%4x, dwc:%d\n", bottom,top,two,datalen,dwc);
   if (datalen){
     if (two) {
       memcpy(snapshot,                  dstBuffer+top,    datalen-bottom);

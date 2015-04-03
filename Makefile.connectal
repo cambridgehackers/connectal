@@ -20,6 +20,7 @@
 #
 
 CONNECTALDIR=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+include $(CONNECTALDIR)/Makefile.version
 
 V?=0
 ifeq ($(V),0)
@@ -115,6 +116,7 @@ ifndef BURST_LEN_SIZE
 BURST_LEN_SIZE=8
 endif
 
+CONNECTALFLAGS += -D ConnectalVersion=$(VERSION)
 CONNECTALFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) -D PinType=$(PIN_TYPE) -D MainClockPeriod=$(MAIN_CLOCK_PERIOD) $(PCIE_CLOCK_DEFINE) -D DerivedClockPeriod=$(DERIVED_CLOCK_PERIOD)
 CONNECTALFLAGS += -D NumberOfTiles=$(NUMBER_OF_TILES)
 CONNECTALFLAGS += -D SlaveDataBusWidth=$(SLAVE_DATA_BUS_WIDTH)
@@ -263,7 +265,7 @@ ifneq ($(filter $(BOARD), de5 htg4), )
 	$(CONNECTALDIR)/scripts/generate-constraints.py -f altera \
 		$(foreach f, $(PIN_BINDINGS), -b $f) \
 		-o $(BOARD)/generatedbsv/$(BOARD).qsf \
-		$(CONNECTALDIR)/boardinfo/$(BOARD).json boards/$(BOARD).json
+		--boardfile $(CONNECTALDIR)/boardinfo/$(BOARD).json --pinoutfile boards/$(BOARD).json
 endif
 endif
 

@@ -1,0 +1,69 @@
+{
+    "sdio_clk" : { 
+	"PIO_DIRECTION": "OUTPUT",
+	"pmod" : "J4"
+    },
+    "sdio_cd_v" : { 
+	"PIO_DIRECTION": "INPUT",
+	"pmod" : "J7"
+    },
+    "sdio_wp_v" : { 
+	"PIO_DIRECTION": "INPUT",
+	"pmod" : "J8"
+    },
+    "sdio_cmd" : { 
+	"PIO_DIRECTION": "BIDIR",
+	"pmod" : "J2"
+    },
+    "sdio_d0" : { 
+	"PIO_DIRECTION": "BIDIR",
+	"pmod" : "J3"
+    },
+    "sdio_d1" : { 
+	"PIO_DIRECTION": "BIDIR",
+	"pmod" : "J5"
+    },
+    "sdio_d2" : { 
+	"PIO_DIRECTION": "BIDIR",
+	"pmod" : "J6"
+    },
+    "sdio_d3" : { 
+	"PIO_DIRECTION": "BIDIR",
+	"pmod" : "J1"
+    },
+    "leds_leds[0]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L0"
+    },
+    "leds_leds[1]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L1"
+    },
+    "leds_leds[2]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L2"
+    },
+    "leds_leds[3]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L3"
+    },
+    "leds_leds[4]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L4"
+    },
+    "leds_leds[5]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L5"
+    },
+    "leds_leds[6]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L6"
+    },
+    "leds_leds[7]" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"leds" : "L7"
+    }
+
+}
+
+

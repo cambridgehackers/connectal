@@ -44,7 +44,12 @@
 #include "read_buffer.h"
 
 static int spew = 1;
+static int host_sw = 1;
+#ifdef BSIM
+static int alloc_sz = 1<<7;
+#else
 static int alloc_sz = 1<<10;
+#endif
 
 int main(int argc, const char **argv)
 {
@@ -74,33 +79,22 @@ int main(int argc, const char **argv)
   setClockFrequency(0, req_freq, &freq);
   fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
   
-  // sample has one two-byte component for each axis (x,y,z).  This is to ensure 
-  // that the X component always lands in offset 0 when the HW wraps around
-  int sample_size = 6;
-  int bus_data_width = 8;
-  int wrap_limit = alloc_sz-(alloc_sz%(sample_size*bus_data_width)); 
-  fprintf(stderr, "wrap_limit:%08x\n", wrap_limit);
   char* snapshot = (char*)malloc(alloc_sz);
   reader* r = new reader();
 
   // setup gyro registers and dma infra
-  setup_registers(ind,device, ref_dstAlloc, wrap_limit);  
-  int discard = 40;
+  setup_registers(ind,device, ref_dstAlloc, alloc_sz);  
+  int drop = 0;
 
   while(true){
 #ifdef BSIM
     sleep(5);
 #else
-    usleep(20000);
+    usleep(80000);
 #endif
     set_en(ind,device, 0);
-    int datalen = r->read_circ_buff(wrap_limit, ref_dstAlloc, dstAlloc, dstBuffer, snapshot, ind->write_addr, ind->write_wrap_cnt, 6); 
+    int datalen = r->read_circ_buff(alloc_sz, ref_dstAlloc, dstAlloc, dstBuffer, snapshot, ind->write_addr, ind->write_wrap_cnt); 
     set_en(ind,device, 2);
-    if (!discard){
-      send(gssp, snapshot, datalen);
-      if (spew) display(snapshot, datalen);
-    } else {
-      discard--;
-    }
+    drop = send(gssp, snapshot, datalen, drop, spew, host_sw);
   }
 }

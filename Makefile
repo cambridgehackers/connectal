@@ -19,13 +19,14 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
+include Makefile.version
+
 export UDEV_RULES_DIR=/etc/udev/rules.d
 UDEV_RULES=$(shell ls etc/udev/rules.d)
 MODULES_LOAD_D_DIR=/etc/modules-load.d
 
 all: pciedrivers scripts/syntax/parsetab.py
-
-VERSION=15.03.1
+	echo version "$(VERSION)"
 
 pciedrivers:
 	(cd drivers/pcieportal; make DRIVER_VERSION=$(VERSION))
@@ -448,4 +449,5 @@ distclean:
 	rm -f drivers/zynqportal/.*.o.cmd drivers/zynqportal/.*.ko.cmd
 	rm -rf doc/library/build/ examples/rbm/datasets/
 	rm -f doc/library/source/devguide/connectalbuild-1.png
+	rm -f drivers/*/driver_signature_file.h
 

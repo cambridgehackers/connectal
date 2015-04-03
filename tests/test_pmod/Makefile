@@ -12,6 +12,6 @@ PIN_BINDING ?= -b pmod:pmoda
 gentarget:: $(BOARD)/sources/pinout-$(BOARD).xdc
 $(BOARD)/sources/pinout-$(BOARD).xdc: pinout.json $(CONNECTALDIR)/boardinfo/$(BOARD).json
 	mkdir -p $(BOARD)/sources
-	$(CONNECTALDIR)/scripts/generate-constraints.py $(PIN_BINDING) -o $(BOARD)/sources/pinout-$(BOARD).xdc $(CONNECTALDIR)/boardinfo/$(BOARD).json pinout.json
+	$(CONNECTALDIR)/scripts/generate-constraints.py $(PIN_BINDING) -o $(BOARD)/sources/pinout-$(BOARD).xdc --boardfile $(CONNECTALDIR)/boardinfo/$(BOARD).json --pinoutfile pinout.json
 
 include $(CONNECTALDIR)/Makefile.connectal

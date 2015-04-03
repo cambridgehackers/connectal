@@ -1,4 +1,5 @@
-// Copyright (c) 2013-2014 Quanta Research Cambridge, Inc.
+
+// Copyright (c) 2014 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -20,13 +21,21 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-class reader
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <assert.h>
+#include <string.h>
+
+#include "SDIORequest.h"
+#include "SDIOResponse.h"
+
+
+
+
+int main(int argc, const char **argv)
 {
- private:
-  int wrap_cnt;
-  int addr;
- public:
-  int verbose;
-  reader(): wrap_cnt(0), addr(0){}
-  int read_circ_buff(int buff_len, unsigned int ref_dstAlloc, int dstAlloc, char* dstBuffer,char *snapshot, int write_addr, int write_wrap_cnt);
-};
+  SDIORequestProxy *device = new SDIORequestProxy(IfcNames_ControllerRequest);
+  portalExec_start();
+}

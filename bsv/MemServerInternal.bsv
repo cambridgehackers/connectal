@@ -29,10 +29,12 @@ import GetPut::*;
 import ClientServer::*;
 import Assert::*;
 import BRAM::*;
+import DefaultValue::*;
 
 // CONNECTAL Libraries
 import MemTypes::*;
 import ConnectalMemory::*;
+import ConnectalClocks::*;
 import MMU::*;
 import ConnectalCompletionBuffer::*;
 
@@ -100,8 +102,11 @@ module mkMemReadInternal#(MemServerIndication ind,
    // stage 1: address validation (latency = 1)
    FIFO#(RRec#(numServers,addrWidth))  reqFifo <- mkFIFO;
    // stage 2: read commands
-   BRAM2Port#(Bit#(TLog#(numTags)), DRec#(numServers,addrWidth)) dreqBram <- mkBRAM2Server(defaultValue);
-   BRAM2Port#(Bit#(TAdd#(TLog#(numTags),TSub#(BurstLenSize,beatShift))), MemData#(dataWidth)) readBufferBram <- mkBRAM2Server(defaultValue);
+   BRAM_Configure bramConfig = defaultValue;
+   if (mainClockPeriod < 8)
+      bramConfig.latency = 2;
+   BRAM2Port#(Bit#(TLog#(numTags)), DRec#(numServers,addrWidth)) dreqBram <- mkBRAM2Server(bramConfig);
+   BRAM2Port#(Bit#(TAdd#(TLog#(numTags),TSub#(BurstLenSize,beatShift))), MemData#(dataWidth)) readBufferBram <- mkBRAM2Server(bramConfig);
    // stage 3: read data 
    FIFO#(MemData#(dataWidth)) readDataPipelineFifo <- mkFIFO;
    
@@ -115,10 +120,10 @@ module mkMemReadInternal#(MemServerIndication ind,
    let beat_shift = fromInteger(valueOf(beatShift));
    TagGen#(numTags) tag_gen <- mkTagGen;
 
-   Reg#(Bit#(BurstLenSize))      compReg0 <- mkReg(0);
-   Reg#(Bit#(TLog#(numTags)))    compReg1 <- mkReg(0);
-   Reg#(Bit#(TLog#(TMax#(1,numServers)))) compReg2 <- mkReg(0);
-   Reg#(Bit#(2))                 compReg3 <- mkReg(0);
+   Reg#(Bit#(BurstLenSize))      compCountReg <- mkReg(0);
+   Reg#(Bit#(TLog#(numTags)))    compTagReg <- mkReg(0);
+   Reg#(Bit#(TLog#(TMax#(1,numServers)))) compClientReg <- mkReg(0);
+   Reg#(Bit#(2))                 compTileReg <- mkReg(0);
    FIFO#(Bit#(TAdd#(1,TLog#(TMax#(1,numServers))))) compFifo0 <- mkFIFO;
    FIFO#(Bit#(TLog#(numTags)))   compFifo1 <- mkFIFO;
    
@@ -147,7 +152,7 @@ module mkMemReadInternal#(MemServerIndication ind,
       if(debug) $display("mkMemReadInternal::complete_burst0 %h", tag);
    endrule
    
-   rule complete_burst1a if (compReg0==0);
+   rule complete_burst1a if (compCountReg==0);
       let drq <- dreqBram.portB.response.get;
       let cnt = drq.req.burstLen >> beat_shift;
       let cli = drq.client;
@@ -156,23 +161,23 @@ module mkMemReadInternal#(MemServerIndication ind,
 	 compFifo0.enq(extend(cli));
 	 readBufferBram.portB.request.put(BRAMRequest{write:False, address:{tag,truncate(cnt)}, datain: ?, responseOnWrite: ?});
       end
-      compReg0 <= cnt-1;
-      compReg1 <= tag;
-      compReg2 <= cli;
-      compReg3 <= drq.req.tag[5:4];
+      compCountReg <= cnt-1;
+      compTagReg <= tag;
+      compClientReg <= cli;
+      compTileReg <= drq.req.tag[5:4];
       if(debug) $display("mkMemReadInternal::complete_burst1a %h", cli);
    endrule
 
-   rule complete_burst1b if (compReg0 > 0);
-      let cnt = compReg0;
-      let tag = compReg1;
-      let cli = compReg2;
-      if(killv[compReg3] == False) begin
+   rule complete_burst1b if (compCountReg > 0);
+      let cnt = compCountReg;
+      let tag = compTagReg;
+      let cli = compClientReg;
+      if(killv[compTileReg] == False) begin
 	 compFifo0.enq(extend(cli));
 	 readBufferBram.portB.request.put(BRAMRequest{write:False, address:{tag,truncate(cnt)}, datain: ?, responseOnWrite: ?});
       end
-      compReg0 <= cnt-1;
-      if(debug) $display("mkMemReadInternal::complete_burst1b %h", compReg0);
+      compCountReg <= cnt-1;
+      if(debug) $display("mkMemReadInternal::complete_burst1b count %h", compCountReg);
    endrule
          
    rule checkMmuResp;

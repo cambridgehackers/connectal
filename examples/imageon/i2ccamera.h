@@ -101,8 +101,9 @@ static unsigned char cdce913_data[] = {
                   // [1:0] = VCO1_0_RANGE[1:0]
 
     int fd = open("/dev/i2c-1", O_RDWR);
+printf("[%s:%d] /dev/i2c-1 open fd %d\n", __FUNCTION__, __LINE__, fd);
     if (fd < 0)
-        printf("[%s] open failed\n", __FUNCTION__);
+        printf("[%s] /dev/i2c-1 open failed\n", __FUNCTION__);
     // setup mux for enabling clock generator
     if (i2c_write_array(fd, 0x70, cmuxdata, sizeof(cmuxdata)))
         printf("[%s] write mux failed\n", __FUNCTION__);

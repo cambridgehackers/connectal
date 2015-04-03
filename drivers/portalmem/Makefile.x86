@@ -4,10 +4,8 @@ KVERSION=$(shell uname -r)
 export KROOT=/lib/modules/$(KVERSION)/build
 
 default:
+	md5sum *.c | grep -v mod.c | sed -f ../../scripts/driver_signature.sed >driver_signature_file.h
 	$(MAKE) -C $(KROOT) M=$(PWD) modules
-	#rmmod portalmem || true
-	#insmod ./portalmem.ko
-	#chmod 777 /dev/portalmem
 
 clean:
 	$(MAKE) -C $(KROOT) M=$(PWD) clean

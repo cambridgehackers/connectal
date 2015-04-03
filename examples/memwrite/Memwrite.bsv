@@ -55,8 +55,6 @@ interface MemwriteIndication;
    method Action writeDone(Bit#(32) v);
 endinterface
 
-`define FOO
-`ifdef FOO
 module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 
    Reg#(SGLId)   pointer <- mkReg(0);
@@ -127,86 +125,3 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
        endmethod
    endinterface
 endmodule
-`else
-// this can come in handy for debugging the memserver
-module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
-
-   Reg#(SGLId)   pointer <- mkReg(0);
-   Reg#(Bit#(32))       numWords <- mkReg(0);
-   Reg#(Bit#(32))       burstLen <- mkReg(0);
-
-   Reg#(Bit#(32))         srcGen <- mkReg(0);
-   Reg#(Bit#(32))    writeOffset <- mkReg(0);
-   Reg#(Bit#(32))       writeEnd <- mkReg(0);
-   Reg#(Bit#(32))        iterCnt <- mkReg(0);
-   MemWriterBuff#(DataBusWidth,1024)    we <- mkMemWriterBuff;
-   FIFOF#(void)               cf <- mkSizedFIFOF(1);
-   
-   Reg#(Bit#(64)) cycle_cnt <- mkReg(0);
-   Reg#(Bit#(64)) last_write_req <- mkReg(0);
-   Reg#(Bit#(64)) last_write_data <- mkReg(0);
-   Reg#(Bit#(64)) last_write_done_a <- mkReg(0);
-
-   (* fire_when_enabled *)
-   rule cycle;
-      cycle_cnt <= cycle_cnt+1;
-   endrule
-
-   let verbose = False;
-   
-   rule write_req (writeEnd > writeOffset);
-      if (verbose) $display("write_req %d", cycle_cnt-last_write_req);
-      last_write_req <= cycle_cnt;
-      let nwe = writeEnd-burstLen;
-      we.writeServer.writeReq.put(MemRequest{sglId:pointer, offset:extend(nwe), burstLen:truncate(burstLen), tag:0});
-      writeEnd <= nwe;
-      //if (verbose) $display("write_req %d", nwe);
-   endrule
-   rule write_data if (srcGen > writeOffset/4);
-      if (verbose) $display("write_data %d", cycle_cnt-last_write_data);
-      last_write_data <= cycle_cnt;
-      let v = {srcGen-1,srcGen-2};
-      we.writeServer.writeData.put(MemData{data:v, tag:0, last:False});
-      let new_srcGen = srcGen-2;
-      srcGen <= new_srcGen;
-      //if (verbose) $display("write_data %d", srcGen);
-      if (new_srcGen == writeOffset/4)
-	 cf.enq(?);
-   endrule
-   rule write_done_a if (srcGen > writeOffset/4);
-      if (verbose) $display("write_done_a %d", cycle_cnt-last_write_done_a);
-      last_write_done_a <= cycle_cnt;
-      let rv <- we.writeServer.writeDone.get;
-   endrule
-   rule write_done_b if (srcGen == writeOffset/4);
-      let rv <- we.writeServer.writeDone.get;
-      iterCnt <= iterCnt-1;
-      if(iterCnt==1) begin
-	 $display("finish0 %d ", iterCnt);
-	 indication.writeDone(0);
-      end
-      else begin
-	 $display("finish1 %d ", iterCnt);
-	 cf.deq;
-	 let off = writeOffset/4;
-	 writeEnd <= (numWords*4)+(off*4);
-	 srcGen <= off+numWords;
-      end
-   endrule
-       
-   interface MemWriteClient dmaClient = cons(we.writeClient, nil);
-   interface MemwriteRequest request;
-       method Action startWrite(Bit#(32) wp, Bit#(32) off, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
-	  indication.started(nw);
-	  if (verbose) $display("startWrite pointer=%d offset=%d numWords=%h burstLen=%d iterCnt=%d", pointer, off, nw, bl, ic);
-	  pointer <= wp;
-	  numWords  <= nw;
-	  burstLen  <= bl*4;
-	  iterCnt <= ic;
-	  writeOffset <= off*4;
-	  writeEnd <= (nw*4)+(off*4);
-	  srcGen <= off+nw;
-       endmethod
-   endinterface
-endmodule
-`endif

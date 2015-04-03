@@ -31,7 +31,6 @@
 #include <linux/slab.h>
 #include <linux/scatterlist.h>
 #include <linux/vmalloc.h>
-
 #include <asm/cacheflush.h>
 
 #include "drivers/portalmem/portalmem.h"
@@ -180,6 +179,7 @@ static int pa_dma_buf_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
   struct scatterlist *sg;
   int i;
 
+  buffer->vaddr = (void *)(long)vma->vm_start;
   /* Fill in vma_ops::access(), so that gdb print command works correctly */
   vma->vm_ops = &custom_vm_ops;
   vma->vm_private_data = buffer;
@@ -364,7 +364,7 @@ int portalmem_dmabuffer_create(PortalAlloc portalAlloc)
   size_t len = portalAlloc.len;
   int return_fd;
 
-  printk("%s, size=%ld cached=%d\n", __FUNCTION__, portalAlloc.len, portalAlloc.cached);
+  printk("%s, size=%ld cached=%d\n", __FUNCTION__, (long)portalAlloc.len, portalAlloc.cached);
   len = PAGE_ALIGN(round_up(len, align));
   size_remaining = len;
   buffer = kzalloc(sizeof(struct pa_buffer), GFP_KERNEL);
@@ -501,6 +501,27 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
     fput(f);
     return retsize;
   }
+  case PA_SIGNATURE: {
+    PortalSignatureMem signature;
+    static struct {
+        const char md5[33];
+        const char filename[33];
+    } filesignatures[] = {
+#include "driver_signature_file.h"
+        };
+    int err = copy_from_user(&signature, (void __user *) arg, sizeof(signature));
+    if (err)
+            return -EFAULT;
+    signature.md5[0] = 0;
+    signature.filename[0] = 0;
+    if (signature.index < sizeof(filesignatures)/sizeof(filesignatures[0])) {
+        memcpy(signature.md5, filesignatures[signature.index].md5, sizeof(signature.md5));
+        memcpy(signature.filename, filesignatures[signature.index].filename, sizeof(signature.filename));
+    }
+    if (copy_to_user((void __user *)arg, &signature, sizeof(signature)))
+            return -EFAULT;
+    return 0;
+    }
   default:
     printk("pa_unlocked_ioctl ENOTTY cmd=%x\n", cmd);
     return -ENOTTY;

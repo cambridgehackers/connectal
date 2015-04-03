@@ -296,9 +296,10 @@ lint: $(VFILE)
 
 prepare_bin_target: syntax.timestamp
 	@echo "prepare_bin_target"
-	@mkdir -p bin
+	@mkdir -p bin jni
 	@(git rev-parse HEAD 2> /dev/null || echo not a git repo) > bin/githash
 	@(git diff 2>/dev/null || echo not a git repo) | gzip -c > bin/gitdiff.patch.gz
+	@md5sum $(CONNECTALDIR)/drivers/*/*.c $(CONNECTALDIR)/generated/cpp/*.c | grep -v mod.c | sed -f $(CONNECTALDIR)/scripts/driver_signature.sed >jni/driver_signature_file.h
 
 hwclean:
 	rm -fr obj hw vivado*.jou vivado*.log fsm_encoding.os .Xil

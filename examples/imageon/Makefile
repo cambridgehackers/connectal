@@ -1,27 +1,23 @@
 
 CONNECTALDIR?=../..
-INTERFACES = ImageonSerdesRequest ImageonSensorRequest HdmiGeneratorRequest ImageonCaptureRequest ImageonSerdesIndication ImageonSensorIndication HdmiGeneratorIndication
-BSVFILES = $(CONNECTALDIR)/lib/bsv/IserdesDatadeser.bsv \
+S2H_INTERFACES = ImageonSerdesRequest:ImageonCapture.serdes_request ImageonSensorRequest:ImageonCapture.sensor_request HdmiGeneratorRequest:ImageonCapture.hdmi_request ImageonCaptureRequest:ImageonCapture.capture_request
+H2S_INTERFACES = ImageonCapture:ImageonSerdesIndication,ImageonSensorIndication,HdmiGeneratorIndication
+MEM_INTERFACES = nil,lImageonCapture.dmaClient
+BSVFILES = $(CONNECTALDIR)/lib/bsv/IserdesDatadeserIF.bsv \
     $(CONNECTALDIR)/lib/bsv/HDMI.bsv \
     $(CONNECTALDIR)/lib/bsv/Imageon.bsv \
-    ImageonCapture.bsv \
-    Top.bsv
+    ImageonCapture.bsv
+
 CPPFILES=testimagecapture.cpp
-CONNECTALFLAGS = -C $(BOARD)/sources/imageon-$(BOARD).xdc -D USE_I2C1
-PIN_TYPE = ImageCapturePins
+CONNECTALFLAGS = -D USE_I2C1
+PINOUT_FILE += imageon-fmc.json
+PIN_TYPE = ImageonCapturePins
+PIN_BINDINGS ?= fmc:fmc1
 NUMBER_OF_MASTERS = 1
-
 ifeq ($(BOARD),zedboard)
-    CONNECTALFLAGS += -D USE_I2C0
+    CONNECTALFLAGS += -D USE_I2C0 
+    PINOUT_FILE += imageon-zedboard.json
 endif
-
-PIN_BINDINGS ?= -b fmc:fmc1
-
-gentarget:: $(BOARD)/sources/imageon-$(BOARD).xdc
-
-$(BOARD)/sources/imageon-$(BOARD).xdc: imageon-fmc.json $(CONNECTALDIR)/boardinfo/$(BOARD).json
-	mkdir -p $(BOARD)/sources
-	$(CONNECTALDIR)/scripts/generate-constraints.py $(PIN_BINDINGS) -o $(BOARD)/sources/imageon-$(BOARD).xdc $(CONNECTALDIR)/boardinfo/$(BOARD).json imageon-fmc.json
+AUTOTOP = --interface pins:ImageonCapture.pins --importfiles ImageonCapture
 
 include $(CONNECTALDIR)/Makefile.connectal
-

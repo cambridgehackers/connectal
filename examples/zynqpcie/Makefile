@@ -19,7 +19,7 @@ prebuild:: synth-ip.tcl
 
 $(BOARD)/sources/zynqpcie.xdc: zynqpcie.json $(CONNECTALDIR)/boardinfo/$(BOARD).json
 	mkdir -p $(BOARD)/sources
-	$(CONNECTALDIR)/scripts/generate-constraints.py $(PIN_BINDINGS) -o $(BOARD)/sources/zynqpcie.xdc $(CONNECTALDIR)/boardinfo/$(BOARD).json zynqpcie.json
+	$(CONNECTALDIR)/scripts/generate-constraints.py $(PIN_BINDINGS) -o $(BOARD)/sources/zynqpcie.xdc --boardfile $(CONNECTALDIR)/boardinfo/$(BOARD).json --pinoutfile zynqpcie.json
 
 
 include $(CONNECTALDIR)/Makefile.connectal

@@ -44,7 +44,7 @@ argparser.add_argument(      '--pinfo', default=None, help='Project description 
 argparser.add_argument('-s', '--source', help='C++ source files', action='append')
 argparser.add_argument(      '--source2', help='C++ second program source files', action='append')
 argparser.add_argument(      '--cflags', help='C++ CFLAGS', action='append')
-argparser.add_argument(      '--pinout', help='project pinout file', action='append')
+argparser.add_argument(      '--pinout', help='project pinout file', default=[], action='append')
 argparser.add_argument(      '--shared', help='Make a shared library', action='store_true')
 argparser.add_argument(      '--nohardware', help='Do not generate hardware for the design', action='store_true')
 argparser.add_argument(      '--contentid', help='Specify 64-bit contentid for PCIe designs')
@@ -58,7 +58,7 @@ argparser.add_argument('-C', '--constraint', help='Additional constraint files',
 argparser.add_argument('-M', '--make', help='Run make on the specified targets', action='append')
 argparser.add_argument('-D', '--bsvdefine', default=[], help='BSV define', action='append')
 argparser.add_argument('-D2', '--bsvdefine2', default=[], help='BSV define2', action='append')
-argparser.add_argument(      '--pin-binding', default=[], help='pin bindings for generate-constraints.py', action='append')
+argparser.add_argument(      '--pin-binding', default=[], help='pin binding translations for generate-constraints.py', action='append')
 argparser.add_argument('-l', '--clib', default=[], help='C++ libary', action='append')
 argparser.add_argument('-S', '--clibfiles', default=[], help='C++ libary file', action='append')
 argparser.add_argument('-L', '--clibdir', default=[], help='C++ libary', action='append')
@@ -112,7 +112,7 @@ FPGAMAKE=$(CONNECTALDIR)/../fpgamake/fpgamake
 fpgamake.mk: $(VFILE) Makefile prepare_bin_target
 	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk --board=%(boardname)s --part=%(partname)s %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s %(qsf)s %(chipscope)s -t $(MKTOP) %(cachedir)s -b hw/mkTop.bit verilog $(CONNECTALDIR)/verilog %(verilog)s
 
-hw/mkTop.bit: fpgamake.mk prepare_bin_target %(genxdc_dep)s
+hw/mkTop.bit: prepare_bin_target %(genxdc_dep)s fpgamake.mk
 	$(Q)mkdir -p hw
 	$(Q)make -f fpgamake.mk
 ifneq ($(XILINX),)
@@ -190,9 +190,9 @@ genxdc_template='''
 
 PIN_BINDING=%(pin_binding)s
 
-%(genxdc_dep)s: %(project_dir)s/../%(pinout_file)s $(CONNECTALDIR)/boardinfo/%(boardname)s.json
+%(genxdc_dep)s: %(pinout_dep_file)s $(CONNECTALDIR)/boardinfo/%(boardname)s.json
 	mkdir -p %(project_dir)s/sources
-	$(CONNECTALDIR)/scripts/generate-constraints.py $(PIN_BINDING) -o %(genxdc_dep)s $(CONNECTALDIR)/boardinfo/%(boardname)s.json %(project_dir)s/../%(pinout_file)s
+	$(CONNECTALDIR)/scripts/generate-constraints.py $(PIN_BINDING) -o %(genxdc_dep)s --boardfile $(CONNECTALDIR)/boardinfo/%(boardname)s.json %(pinout_file)s
 '''
 
 linuxmakefile_template='''
@@ -338,9 +338,6 @@ if __name__=='__main__':
         suffix = None
 
     print 'fpga_vendor', fpga_vendor
-    #must now be explicitly specified in 'constraints' section of boardinfo
-    #if fpga_vendor:
-    #    options.constraint.insert(0, os.path.join(connectaldir, 'constraints/', '%s/%s.%s' % (fpga_vendor, boardname, suffix)))
 
     if noisyFlag:
         pprint.pprint(options.__dict__)
@@ -427,12 +424,15 @@ if __name__=='__main__':
     if options.pinout:
         genxdc_dep = '%s/sources/pinout-%s.xdc' % (project_dir,boardname)
         options.constraint.append(genxdc_dep)
+    else:
+       options.pinout = []
 
     substs = {'partitions': ' '.join(['-s %s' % p for p in options.partition_module]),
 					 'boardname': boardname,
 					 'partname': partname,
                                          'project_dir' : project_dir,
-                                         'pinout_file' : options.pinout[0] if options.pinout else '',
+                                         'pinout_file' : ' '.join([('--pinoutfile ' + os.path.abspath(p)) for p in options.pinout]),
+                                         'pinout_dep_file' : ' '.join([os.path.abspath(p) for p in options.pinout]),
                                          'genxdc_dep' : genxdc_dep,
 					 'floorplan': os.path.abspath(options.floorplan) if options.floorplan else '',
 					 'xdc': ' '.join(['--constraint=%s' % os.path.abspath(xdc) for xdc in options.constraint]),

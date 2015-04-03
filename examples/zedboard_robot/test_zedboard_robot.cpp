@@ -46,7 +46,8 @@
 #include "dmaManager.h"
 #include "read_buffer.h"
 
-static int spew = 0;
+static int spew = 1;
+static int host_sw = 1;
 static int alloc_sz = 1<<10;
 
 void* drive_hbridges(void *_x)
@@ -83,6 +84,23 @@ void* drive_hbridges(void *_x)
   STOP;
 
 
+}
+
+int send_aux(GyroSampleStreamProxy *gssp, void*b, int len, int drop, int spew, int send, MaxSonarSampleStreamProxy *msssp, int usecs)
+{
+  int16_t *ss = (int16_t*)b;
+  int i = 3+drop;
+  while(i < len/2){
+    if (send) {
+      gssp->sample(ss[(i-3)+0], ss[(i-3)+1], ss[(i-3)+2]);
+      // this is a bit wasteful, but it simplifies test_zedboard_robot.py
+      msssp->sample(usecs);
+    }
+    if (spew) fprintf(stderr, "%8d %8d %8d\n", ss[(i-3)+0], ss[(i-3)+1], ss[(i-3)+2]);
+    i+=3;
+  }
+  int missing = i-(len/2);
+  return missing;
 }
 
 int main(int argc, const char **argv)
@@ -123,21 +141,14 @@ int main(int argc, const char **argv)
   setClockFrequency(0, req_freq, &freq);
   fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
   
-  // some nonesense I would like to clean up used by the circular buffer in the gyro controller
-  // sample has one two-byte component for each axis (x,y,z).  This is to ensure 
-  // that the X component always lands in offset 0 when the HW wraps around
-  int sample_size = 6;
-  int bus_data_width = 8;
-  int wrap_limit = alloc_sz-(alloc_sz%(sample_size*bus_data_width)); 
-  fprintf(stderr, "wrap_limit:%08x\n", wrap_limit);
   char* snapshot = (char*)malloc(alloc_sz);
   reader* r = new reader();
   //r->verbose = 1;
 
   // setup gyro registers and dma infra (setup_registers defined gyro_simple.h)
-  setup_registers(gyro_ind,gyro_ctrl, ref_dstAlloc, wrap_limit);  
+  setup_registers(gyro_ind,gyro_ctrl, ref_dstAlloc, alloc_sz);  
   maxsonar_ctrl->range_ctrl(1);
-  int discard = 20;
+  int drop = 0;
 
   // start up the thread to drive the hbridges
   pthread_t threaddata;
@@ -157,26 +168,12 @@ int main(int argc, const char **argv)
     // now get the latest window of gyro samples.  begin by disabling gyro writes to the memory buffer
     set_en(gyro_ind,gyro_ctrl, 0);
     // read the memory from the circular buffer into "snapshot"
-    int datalen = r->read_circ_buff(wrap_limit, ref_dstAlloc, dstAlloc, dstBuffer, snapshot, gyro_ind->write_addr, gyro_ind->write_wrap_cnt, 6); 
+    int datalen = r->read_circ_buff(alloc_sz, ref_dstAlloc, dstAlloc, dstBuffer, snapshot, gyro_ind->write_addr, gyro_ind->write_wrap_cnt); 
     // re-enable the gyro memwrite
     set_en(gyro_ind,gyro_ctrl, 2);
     
-    if (!discard){
-      if (spew) fprintf(stderr, "(%d microseconds == %f inches)\n", maxsonar_ind->useconds, distance);
-      if (spew) display(snapshot, datalen);
-      // 'datalen' corresponds to the amount of "new" samples the gyro controller has written to memory.
-      // if we haven't slept for long enough, this could be zero
-      if(datalen){ 
-	int16_t *ss = (int16_t*)snapshot;
-	// send each sample to the HOST_SW
-	for(int i = 0; i < datalen/2; i+=3){
-	  gssp->sample(ss[i+0], ss[i+1], ss[i+2]);
-	  // this is a bit wasteful, but it simplifies test_zedboard_robot.py
-	  msssp->sample(maxsonar_ind->useconds);
-	}
-      }
-    } else {
-      discard--;
-    }
+    if (spew) fprintf(stderr, "(%d microseconds == %f inches)\n", maxsonar_ind->useconds, distance);
+    // 'datalen' corresponds to the amount of "new" samples the gyro controller has written to memory.
+    drop = send_aux(gssp, snapshot, datalen, drop, spew, host_sw, msssp, maxsonar_ind->useconds);
   }
 }

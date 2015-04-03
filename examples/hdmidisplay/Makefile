@@ -27,6 +27,6 @@ gentarget:: $(BOARD)/sources/hdmi.xdc
 
 $(BOARD)/sources/hdmi.xdc: hdmi.json $(CONNECTALDIR)/boardinfo/$(BOARD).json
 	mkdir -p $(BOARD)/sources
-	$(CONNECTALDIR)/scripts/generate-constraints.py $(PIN_BINDINGS) -o $(BOARD)/sources/hdmi.xdc $(CONNECTALDIR)/boardinfo/$(BOARD).json hdmi.json
+	$(CONNECTALDIR)/scripts/generate-constraints.py $(PIN_BINDINGS) -o $(BOARD)/sources/hdmi.xdc --boardfile $(CONNECTALDIR)/boardinfo/$(BOARD).json --pinoutfile hdmi.json
 
 include $(CONNECTALDIR)/Makefile.connectal

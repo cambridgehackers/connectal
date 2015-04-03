@@ -1,4 +1,3 @@
-VERSION=140520.1
 
 # On Centos: sudo yum install kernel-headers
 
@@ -18,6 +17,7 @@ cflags-y += -I$(PWD)
 	cd ../portalmem; make -f Makefile.x86
 
 pcieportal.ko: pcieportal.c pcieportal.h
+	md5sum *.c ../../generated/cpp/*.c | grep -v mod.c | sed -f ../../scripts/driver_signature.sed >driver_signature_file.h
 	@$(MAKE) -C $(KROOT) M=$(PWD) modules
 
 .PHONY: modules_check
@@ -68,6 +68,7 @@ install-dkms:
 	cp -fv ../../cpp/*.[ch] ../portalmem/*.[ch] \
 	../../generated/cpp/*.[ch] \
 	$(DESTDIR)/usr/src/connectal-$(VERSION)
+	sed -i "s|14.11.[0-9]+.|$(VERSION)|" $(DESTDIR)/usr/src/connectal-$(VERSION)/*.[ch]
 	sed -i 's|drivers/portalmem/||' $(DESTDIR)/usr/src/connectal-$(VERSION)/*.[ch]
 	sed -i 's|drivers/pcieportal/||' $(DESTDIR)/usr/src/connectal-$(VERSION)/*.[ch]
 	sed -i 's|drivers/zynqportal/||' $(DESTDIR)/usr/src/connectal-$(VERSION)/*.[ch]
