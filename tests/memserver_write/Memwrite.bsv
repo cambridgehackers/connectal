@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import Vector::*;
 import FIFO::*;
 import FIFOF::*;
 import BRAMFIFO::*;
@@ -31,12 +32,15 @@ import MemwriteEngine::*;
 import Pipe::*;
 import AddressGenerator::*;
 
+typedef TDiv#(DataBusWidth,32) WordsPerBeat;
+
 interface MemwriteRequest;
    method Action startWrite(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) numReqs, Bit#(32) burstLen);
 endinterface
 
 interface MemwriteIndication;
    method Action writeDone(Bit#(32) v);
+   method Action writeProgress(Bit#(32) v);
 endinterface
 
 interface Memwrite;
@@ -49,20 +53,22 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    Reg#(Bit#(32))        numReqs <- mkReg(0);
    Reg#(Bit#(32))        numDone <- mkReg(0);
    Reg#(Bit#(MemOffsetSize)) reqOffset <- mkReg(0);
-   Reg#(Bit#(MemTagSize))          tag <- mkReg(0);
+   Reg#(Bit#(3))                   tag <- mkReg(0);
    Reg#(Bit#(32))             numWords <- mkReg(0);
    Reg#(Bit#(BurstLenSize)) burstLenBytes <- mkReg(0);
    Reg#(Bit#(32))              srcGens <- mkReg(0);
 
-   AddressGenerator#(32, 64) addrGenerator <- mkAddressGenerator();
-   FIFO#(MemRequest) reqFifo <- mkSizedBRAMFIFO(8);
-   FIFO#(PhysMemRequest#(32)) preqFifo <- mkSizedBRAMFIFO(8);
-   FIFO#(MemData#(64))   dataFifo <- mkSizedBRAMFIFO(1024);
+   AddressGenerator#(32, DataBusWidth) addrGenerator <- mkAddressGenerator();
+   FIFO#(MemRequest) reqFifo <- mkFIFO();
+   FIFO#(PhysMemRequest#(32)) preqFifo <- mkFIFO();
+   FIFO#(MemData#(DataBusWidth))   dataFifo <- mkSizedBRAMFIFO(1024);
    FIFO#(Bit#(MemTagSize)) doneFifo <- mkFIFO();
 
+   let verboseProgress = False;
+
    rule start if (numReqs != 0);
-      reqFifo.enq(MemRequest { sglId: pointer, offset: reqOffset, burstLen: burstLenBytes, tag: tag });
-      preqFifo.enq(PhysMemRequest { addr: 0, burstLen: burstLenBytes, tag: tag });
+      reqFifo.enq(MemRequest { sglId: pointer, offset: reqOffset, burstLen: burstLenBytes, tag: extend(tag) });
+      preqFifo.enq(PhysMemRequest { addr: 0, burstLen: burstLenBytes, tag: extend(tag) });
       numReqs <= numReqs - 1;
       reqOffset <= reqOffset + extend(burstLenBytes);
       tag <= tag + 1;
@@ -75,20 +81,24 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    endrule
 
    rule finish;
-      let rv <- toGet(doneFifo).get();
+      let donetag <- toGet(doneFifo).get();
       //$display("finished num todo=%d", numDone);
       if (numDone == 1) begin
          indication.writeDone(0);
       end
       numDone <= numDone - 1;
+      if (verboseProgress)
+	 indication.writeProgress(extend(donetag));
    endrule
 
    rule src if (numWords != 0);
       let b <- addrGenerator.addrBeat.get();
-      let v = {srcGens+1,srcGens};
-      dataFifo.enq(MemData { data: v, tag: b.tag, last: b.last});
-      srcGens <= srcGens+2;
-      numWords <= numWords - 2;
+
+      function Bit#(32) plusi(Integer i); return srcGens + fromInteger(i); endfunction
+      Vector#(WordsPerBeat, Bit#(32)) v = genWith(plusi);
+      dataFifo.enq(MemData { data: pack(v), tag: b.tag, last: b.last});
+      srcGens <= srcGens+fromInteger(valueOf(WordsPerBeat));
+      numWords <= numWords - fromInteger(valueOf(WordsPerBeat));
    endrule
 
    interface MemwriteRequest request;

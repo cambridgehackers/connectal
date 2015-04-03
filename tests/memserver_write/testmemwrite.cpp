@@ -58,6 +58,9 @@ public:
     fprintf(stderr, "Memwrite::writeDone (%08x)\n", srcGen);
     sem_post(&done_sem);
   }
+  virtual void writeProgress ( uint32_t numtodo ){
+    fprintf(stderr, "Memwrite::writeProgress (%08x)\n", numtodo);
+  }
 };
 
 int main(int argc, const char **argv)
@@ -74,17 +77,20 @@ int main(int argc, const char **argv)
   sem_init(&done_sem, 1, 0);
   portalExec_start();
 
-  int dstAlloc = portalAlloc(alloc_sz);
+  int dstAlloc = portalAllocCached(alloc_sz, 1);
   unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
 
   for (int i = 0; i < alloc_sz/sizeof(uint32_t); i++)
     dstBuffer[i] = 0xDEADBEEF;
 
+#ifndef USE_ACP
+  fprintf(stderr, "flushing cache\n");
   portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
+#endif
 
   fprintf(stderr, "parent::starting write\n");
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
-  int burstLenBytes = 2*sizeof(uint32_t);
+  int burstLenBytes = 32*sizeof(uint32_t);
   device->startWrite(ref_dstAlloc, alloc_sz, alloc_sz / burstLenBytes, burstLenBytes);
 
   sem_wait(&done_sem);
