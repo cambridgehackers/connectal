@@ -36,42 +36,28 @@ import ConnectalXilinxCells::*;
 import ConnectalClocks::*;
 import AxiBits::*;
 import AxiGather::*;
-
-interface ParallellaPins;
-   interface Par_txo txo;
-   interface Par_txi txi;
-   interface Par_rxo rxo;
-   interface Par_rxi rxi;
-endinterface
-
-interface ParallellaLib;
-   interface ParallellaPins pins;
-   interface AxiSlaveCommon#(32,32,12) maxi;  // this will connect to a master
-   interface AxiMasterCommon#(32,64,6) saxi;  // this will connect to a slave
-   interface Par_misc misc;
-endinterface
+import ParallellaLibDefs::*;
    
 
-module mkParallellaLIB#(Clock axi_clock, Reset axi_reset)(ParallellaLIB);
+module mkParallellaLib#(Clock axi_clock, Reset axi_reset)(ParallellaLib);
+
    PParallellaLIB foo <- mkPParallellaLIB( 
-      axiclk,  axiclk, 
+      axi_clk,  axi_clk, 
       axi_reset, axi_reset,
       axi_reset, axi_reset,
-      //Reset reset_chip, Reset reset_fpga
-       axi_reset, axi_reset
- );
-   AxiSlaveCommon#(32,32,12) vtopm_axi_gp;
-   AxiMasterCommon#(32,64,6,Empty) vtops_axi_hp;
-   vtopm_axi_gp <- mkAxi3SlaveGather(foo.maxigp0, clocked_by axi_clock, reset_by axi_reset);
-   vtops_axi_hp <- mkAxi3MasterGather(foo.saxihp0, clocked_by axi_clock, reset_by axi_reset);
-   interface maxi = vtopm_axi_gp;
-   interface saxi = vtops_axi_hp;
-   interface ParallellaPins pins;
-      interface Par_txo txo = foo.txo;
-      interface Par_txi txi = foo.txi;
-      interface Par_rxo rxo = foo.rxo;
-      interface Par_rxi rxi = foo.rxi;
+       axi_reset, axi_reset );
+      AxiSlaveCommon#(32,32,12) vtopm_axi_gp;
+    AxiMasterCommon#(32,64,6) vtops_axi_hp;
+    vtopm_axi_gp <- mkAxi3SlaveGather(foo.maxigp0, clocked_by axi_clock, reset_by axi_reset);
+    vtops_axi_hp <- mkAxi3MasterGather(foo.saxihp0, clocked_by axi_clock, reset_by axi_reset);
+    interface maxi = vtopm_axi_gp;
+    interface saxi = vtops_axi_hp;
+    interface  ParallellaPins pins;
+     interface  txo = foo.txo;
+     interface  txi = foo.txi;
+      interface  rxo = foo.rxo;
+      interface  rxi = foo.rxi;
    endinterface
-   interface Par_misc misc = foo.misc;
+   interface  misc = foo.misc;
       
 endmodule
