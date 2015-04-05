@@ -2,8 +2,8 @@
 CONNECTALDIR?=../..
 #S2H_INTERFACES = MainRequest:Main.request
 #H2S_INTERFACES = Main:MainRequest
-BSVFILES = PParallellaLIB.bsv ParallellaLibDefs.bsv Top.bsv
-#CPPFILES=testmain.cpp
+BSVFILES = PParallellaLIB.bsv ParallellaLibDefs.bsv
+CPPFILES=testmain.cpp
 NUMBER_OF_MASTERS =0
 
 PARDIR=/scratch/stewart/parallella/parallella-hw/fpga/hdl

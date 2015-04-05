@@ -130,7 +130,7 @@ module mkPParallellaLIB#(Clock maxiclk, Clock saxiclk,
       method rd_wait_p(rxo_rd_wait_p) enable((*inhigh*) EN_rxo_rd_wait_p);
       method rd_wait_n(rxo_rd_wait_n) enable((*inhigh*) EN_rxo_rd_wait_n);
       method cclk_p(rxi_cclk_p) enable((*inhigh*) EN_rxi_cclk_p);
-      method cclk_n(rxi_cclk_n) enable((*inhigh*) EN_rxi_cclk_p);
+      method cclk_n(rxi_cclk_n) enable((*inhigh*) EN_rxi_cclk_n);
    endinterface
    
    interface Par_emaxi maxi;
