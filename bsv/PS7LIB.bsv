@@ -334,11 +334,14 @@ typedef 1 NumAcp;
 typedef 0 NumAcp;
 `endif
 
-instance ConnectableWithTrace#(PS7, ConnectalTop#(32,64,ipins,nMasters), BscanTop);
-   module mkConnectionWithTrace#(PS7 ps7, ConnectalTop#(32,64,ipins,nMasters) top, BscanTop bscan)(Empty);
+instance ConnectableWithTrace#(PS7, ConnectalTop#(32,64,ipins,nMasters), traceType)
+   provisos (ConnectableWithTrace::ConnectableWithTrace#(AxiMasterSlave::Axi3Master#(32,64,6),AxiMasterSlave::Axi3Slave#(32, 64, 6),traceType),
+             ConnectableWithTrace::ConnectableWithTrace#(AxiMasterSlave::Axi3Master#(32,32,12),AxiMasterSlave::Axi3Slave#(32,32,12),traceType));
+   module mkConnectionWithTrace#(PS7 ps7, ConnectalTop#(32,64,ipins,nMasters) top, traceType readout)(Empty)
+      provisos (ConnectableWithTrace#(Axi3Master#(32,64,6), Axi3Slave#(32,64,6),traceType));
 
       Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(top.slave);
-      mkConnectionWithTrace(ps7.m_axi_gp[0].client, ctrl, bscan);
+      mkConnectionWithTrace(ps7.m_axi_gp[0].client, ctrl, readout);
 
 `ifdef USE_ACP
       begin

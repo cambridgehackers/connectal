@@ -147,7 +147,7 @@ module mkAxiSlaveWires(AxiSlaveWires#(addrWidth, dataWidth, tagWidth));
    interface Wire bready = readywires[1];
 endmodule
 
-module mkAxi3MasterGather#(AxiMasterBits#(addrWidth, dataWidth, tagWidth) axiWires)(AxiMasterCommon#(addrWidth, dataWidth, tagWidth))
+module mkAxi3MasterGather#(AxiMasterBits#(addrWidth, dataWidth, tagWidth, Empty) axiWires)(AxiMasterCommon#(addrWidth, dataWidth, tagWidth))
 provisos(Div#(dataWidth, 8, 4));
    AxiMasterWires#(addrWidth, dataWidth, tagWidth) vtopmw <- mkAxiMasterWires;
    rule handshake1;
@@ -240,8 +240,7 @@ provisos(Div#(dataWidth, 8, 4));
 endmodule
 
 module mkAxi3SlaveGather#(AxiSlaveBits#(addrWidth, dataWidth, tagWidth,
-    strobeWidth, extraType) axiWires)(AxiSlaveCommon#(addrWidth, dataWidth,tagWidth,extraType))
-provisos (Div#(dataWidth, 8, strobeWidth) );
+    extraType) axiWires)(AxiSlaveCommon#(addrWidth, dataWidth,tagWidth,extraType));
     AxiSlaveWires#(addrWidth,dataWidth,tagWidth) vtopsw <- mkAxiSlaveWires;
     rule handshake1;
           axiWires.araddr(vtopsw.araddr);
