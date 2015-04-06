@@ -31,18 +31,21 @@ import PS7LIB::*;
 import PPS7LIB::*;
 import ConnectalClocks::*;
 import BlueScopeEventPIO::*;
+import ParallellaLibDefs::*;
 import ParallellaLib::*;
 import PParallellaLIB::*;
 import AxiMasterSlave::*;
 import AxiGather::*;
+import AxiDma::*;
 
 
 
 module mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,64,ParallellaPins,1));
-
-   ParallellaLib plib <- mkParallella();
+   Clock oneTrueClock <- exposeCurrentClock;
+   Reset oneTrueReset <- exposeCurrentReset;
+   ParallellaLib plib <- mkParallellaLib(oneTrueClock, oneTrueReset);
    Axi3Slave#(32,32,12) parctrl <- mkAxiDmaSlave(plib.maxi);
-   Axi3Master#(32,64,6) parmaster <- mkAxiDmaNaster(plib.saxi);
+   Axi3Master#(32,64,6) parmaster <- mkAxiDmaMaster(plib.saxi);
    mkConnection(host.ps7.m_axi_gp[1].client, parslave);
    mkConnection(parmaster, host.ps7.m_axi_hp[3].client);
 						    
