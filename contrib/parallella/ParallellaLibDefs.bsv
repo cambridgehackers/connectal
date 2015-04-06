@@ -37,7 +37,7 @@ endinterface
 
 interface ParallellaLib;
    interface ParallellaPins pins;
-   interface AxiSlaveCommon#(32,32,12) maxi;  // this will connect to a master
+   interface AxiSlaveCommon#(32,32,12,Empty) maxi;  // this will connect to a master
    interface AxiMasterCommon#(32,64,6) saxi;  // this will connect to a slave
    interface Par_misc misc;
 endinterface
