@@ -42,14 +42,14 @@ import ParallellaLibDefs::*;
 module mkParallellaLib#(Clock axi_clock, Reset axi_reset)(ParallellaLib);
 
    PParallellaLIB foo <- mkPParallellaLIB( 
-      axi_clk,  axi_clk, 
+      axi_clock,  axi_clock, 
       axi_reset, axi_reset,
       axi_reset, axi_reset,
        axi_reset, axi_reset );
-      AxiSlaveCommon#(32,32,12) vtopm_axi_gp;
+      AxiSlaveCommon#(32,32,12,Empty) vtopm_axi_gp;
     AxiMasterCommon#(32,64,6) vtops_axi_hp;
-    vtopm_axi_gp <- mkAxi3SlaveGather(foo.maxigp0, clocked_by axi_clock, reset_by axi_reset);
-    vtops_axi_hp <- mkAxi3MasterGather(foo.saxihp0, clocked_by axi_clock, reset_by axi_reset);
+    vtopm_axi_gp <- mkAxi3SlaveGather(foo.maxi, clocked_by axi_clock, reset_by axi_reset);
+    vtops_axi_hp <- mkAxi3MasterGather(foo.saxi, clocked_by axi_clock, reset_by axi_reset);
     interface maxi = vtopm_axi_gp;
     interface saxi = vtops_axi_hp;
     interface  ParallellaPins pins;
