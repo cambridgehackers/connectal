@@ -33,6 +33,7 @@ import AxiBits::*;
 
 // The name of this interface is a prefix "Par_" plus the common prefix of the signals "txo"
 // Hopefully this is what importbvi.py would do
+(* always_ready, always_enabled *)
 interface Par_txo;
    method Action data_p(Bit#(8) v);
    method Action data_n(Bit#(8) v);
@@ -42,6 +43,7 @@ interface Par_txo;
    method Action lclk_n(Bit#(1) v);
 endinterface
 
+(* always_ready, always_enabled *)
 interface Par_txi; 
    method Bit#(1) wr_wait_p();
    method Bit#(1) wr_wait_n();
@@ -49,6 +51,7 @@ interface Par_txi;
    method Bit#(1) rd_wait_n();
 endinterface
 
+(* always_ready, always_enabled *)
 interface Par_rxi;
    method Bit#(8) data_p();
    method Bit#(8) data_n();
@@ -60,6 +63,7 @@ interface Par_rxi;
    method Action cclk_n(Bit#(1) v);
 endinterface
 
+(* always_ready, always_enabled *)
 interface Par_rxo;
    method Action wr_wait_p(Bit#(1) v);
    method Action wr_wait_n(Bit#(1) v);
@@ -67,24 +71,27 @@ interface Par_rxo;
    method Action rd_wait_n(Bit#(1) v);
 endinterface
 
+(* always_ready, always_enabled *)
 interface Par_misc;
-   method Bit#(1) cactive();
    method Bit#(1) csysack();
+   method Bit#(1) cactive();
+   method Action csysreq();
    method Action reset_chip();
    method Action reset_fpga();
 endinterface
 
+(* always_ready, always_enabled *)
 interface PParallellaLib;
    interface Par_txo txo;
    interface Par_txi txi;
    interface Par_rxo rxo;
    interface Par_rxi rxi;
-   interface AxiSlaveBits#(32,32,12) maxi;   // this will connect to a master
-   interface AxiMasterBits#(32,64,6) saxi;  // this will connect to a slave
+   interface Pps7Saxihp maxi;   // this will connect to a master
+   interface Pps7Maxigp saxi;  // this will connect to a slave
    interface Par_misc misc;
 endinterface
 
-import "BVI" PParallella =
+import "BVI" PParallellaZZZ =
 module mkPParallellaLIB#(Clock maxiclk, Clock saxiclk, 
    Reset maxiclk_reset, Reset saxiclk_reset,
    Reset maxireset, Reset saxireset,
@@ -95,10 +102,13 @@ module mkPParallellaLIB#(Clock maxiclk, Clock saxiclk,
    input_clock saxiclk(esaxi_aclk) = saxiclk;  // assigns the verilog esaxi_aclk
    input_reset maxiclk_reset() = maxiclk_reset; /* from clock*/
    input_reset saxiclk_reset() = saxiclk_reset; /* from clock*/
+   input_reset maxireset() = maxireset;
+   input_reset saxireset() = saxireset;
    
    interface Par_misc misc;
-      method cactive(cactive);
-      method csysack(csysack);
+      method csysack csysack();
+      method cactive cactive();
+      method csysreq(csysreq) enable((*inhigh*) EN_csysreq);
       method reset_chip(reset_chip) enable((*inhigh*) EN_reset_chip);
       method reset_fpga(reset_fpga) enable((*inhigh*) EN_reset_fpga);
    endinterface
@@ -108,6 +118,8 @@ module mkPParallellaLIB#(Clock maxiclk, Clock saxiclk,
       method data_n(txo_data_n) enable((*inhigh*) EN_txo_data_n);
       method frame_p(txo_frame_p) enable((*inhigh*) EN_txo_frame_p);
       method frame_n(txo_frame_n) enable((*inhigh*) EN_txo_frame_n);
+      method lclk_p(txo_lclk_p) enable((*inhigh*) EN_txo_lclk_p);
+      method lclk_n(txo_lclk_n) enable((*inhigh*) EN_txo_lclk_n);
    endinterface
 
    interface Par_txi txi;
@@ -122,6 +134,10 @@ module mkPParallellaLIB#(Clock maxiclk, Clock saxiclk,
       method rxi_data_n data_n();
       method rxi_frame_p frame_p();
       method rxi_frame_n frame_n();
+      method rxi_lclk_p lclk_p();
+      method rxi_lclk_n lclk_n();
+      method cclk_p(rxi_cclk_p) enable((*inhigh*) EN_rxi_cclk_p);
+      method cclk_n(rxi_cclk_n) enable((*inhigh*) EN_rxi_cclk_n);
    endinterface
  
    interface Par_rxo rxo;
@@ -129,11 +145,9 @@ module mkPParallellaLIB#(Clock maxiclk, Clock saxiclk,
       method wr_wait_n(rxo_wr_wait_n) enable((*inhigh*) EN_rxo_wr_wait_n);
       method rd_wait_p(rxo_rd_wait_p) enable((*inhigh*) EN_rxo_rd_wait_p);
       method rd_wait_n(rxo_rd_wait_n) enable((*inhigh*) EN_rxo_rd_wait_n);
-      method cclk_p(rxi_cclk_p) enable((*inhigh*) EN_rxi_cclk_p);
-      method cclk_n(rxi_cclk_n) enable((*inhigh*) EN_rxi_cclk_n);
    endinterface
    
-   interface Par_emaxi maxi;
+   interface Pps7Saxihp maxi;
       method emaxi_araddr araddr() clocked_by (maxiclk) reset_by(maxireset);
       method emaxi_arburst arburst() clocked_by (maxiclk) reset_by(maxireset);
       method emaxi_arcache arcache() clocked_by (maxiclk) reset_by(maxireset);
@@ -175,10 +189,7 @@ module mkPParallellaLIB#(Clock maxiclk, Clock saxiclk,
       method emaxi_wvalid wvalid() clocked_by (maxiclk) reset_by(maxireset);
    endinterface   
    
-   
-   
-   
-   interface Par_saxi saxi;
+   interface Pps7Maxigp saxi;
       method araddr(esaxi_araddr) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_araddr);
       method arburst(esaxi_arburst) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_arburst);
       method arcache(esaxi_arcache) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_arcache);
@@ -239,7 +250,7 @@ schedule (
    // Inputs
    // clkin_100, saxi.aclk, maxi.aclk, reset, 
    saxi.aresetn,
-   maxi.aresetn, csysreq, rxi.data_p, rxi.data_n, rxi.frame_p,
+   maxi.aresetn, misc.csysreq, rxi.data_p, rxi.data_n, rxi.frame_p,
    rxi.frame_n, rxi.lclk_p, rxi.lclk_n, txi.wr_wait_p, txi.wr_wait_n,
    txi.rd_wait_p, txi.rd_wait_n, maxi.awready, saxi.awid,
    saxi.awaddr, saxi.awlen, saxi.awsize, saxi.awburst,
@@ -266,7 +277,7 @@ schedule (
    // Inputs
    // clkin_100, saxi.aclk, maxi.aclk, reset, 
    saxi.aresetn,
-   maxi.aresetn, csysreq, rxi.data_p, rxi.data_n, rxi.frame_p,
+   maxi.aresetn, misc.csysreq, rxi.data_p, rxi.data_n, rxi.frame_p,
    rxi.frame_n, rxi.lclk_p, rxi.lclk_n, txi.wr_wait_p, txi.wr_wait_n,
    txi.rd_wait_p, txi.rd_wait_n, maxi.awready, saxi.awid,
    saxi.awaddr, saxi.awlen, saxi.awsize, saxi.awburst,
