@@ -75,9 +75,9 @@ endinterface
 interface Par_misc;
    method Bit#(1) csysack();
    method Bit#(1) cactive();
-   method Action csysreq();
-   method Action reset_chip();
-   method Action reset_fpga();
+   method Action csysreq(Bit#(1) v);
+   method Bit#(1) reset_chip();
+   method Bit#(1) reset_fpga();
 endinterface
 
 (* always_ready, always_enabled *)
@@ -108,9 +108,9 @@ module mkPParallellaLIB#(Clock maxiclk, Clock saxiclk,
    interface Par_misc misc;
       method csysack csysack();
       method cactive cactive();
+      method reset_chip reset_chip();
+      method reset_fpga reset_fpga();
       method csysreq(csysreq) enable((*inhigh*) EN_csysreq);
-      method reset_chip(reset_chip) enable((*inhigh*) EN_reset_chip);
-      method reset_fpga(reset_fpga) enable((*inhigh*) EN_reset_fpga);
    endinterface
    
    interface Par_txo txo;
