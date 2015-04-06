@@ -86,8 +86,8 @@ interface PParallellaLib;
    interface Par_txi txi;
    interface Par_rxo rxo;
    interface Par_rxi rxi;
-   interface Pps7Saxihp maxi;   // this will connect to a master
-   interface Pps7Maxigp saxi;  // this will connect to a slave
+   interface AxiSlaveBits#(32,32,12,Empty) maxi;   // this will connect to a master
+   interface AxiMasterBits#(32,64,6,Empty) saxi;  // this will connect to a slave
    interface Par_misc misc;
 endinterface
 
@@ -147,7 +147,7 @@ module mkPParallellaLIB#(Clock maxiclk, Clock saxiclk,
       method rd_wait_n(rxo_rd_wait_n) enable((*inhigh*) EN_rxo_rd_wait_n);
    endinterface
    
-   interface Pps7Saxihp maxi;
+   interface AxiSlaveBits maxi;
       method emaxi_araddr araddr() clocked_by (maxiclk) reset_by(maxireset);
       method emaxi_arburst arburst() clocked_by (maxiclk) reset_by(maxireset);
       method emaxi_arcache arcache() clocked_by (maxiclk) reset_by(maxireset);
@@ -189,7 +189,7 @@ module mkPParallellaLIB#(Clock maxiclk, Clock saxiclk,
       method emaxi_wvalid wvalid() clocked_by (maxiclk) reset_by(maxireset);
    endinterface   
    
-   interface Pps7Maxigp saxi;
+   interface AxiMasterBits saxi;
       method araddr(esaxi_araddr) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_araddr);
       method arburst(esaxi_arburst) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_arburst);
       method arcache(esaxi_arcache) clocked_by(saxiclk) reset_by(saxireset) enable((*inhigh*) EN_esaxi_arcache);
