@@ -126,6 +126,7 @@ CONNECTALFLAGS += --ipdir=$(IPDIR)
 CONNECTALFLAGS += -D ExportType=$(EXPORT_TYPE)
 ifeq ($(BOARD),xsim)
 CONNECTALFLAGS += -D BluenocTop
+BLUENOC?=--bluenoc
 endif
 ifneq ($(AUTOTOP),)
 USE_AUTOTOP = 1
@@ -252,7 +253,7 @@ process_autotop::
 	touch $(BOARD)/Makefile.autotop
 ifneq ($(USE_AUTOTOP),)
 	$(Q)[ -e $(GPROJ) ] || mkdir -p $(GPROJ)
-	$(Q)$(CONNECTALDIR)/scripts/topgen.py --project-dir $(GPROJ) $(AUTOTOP) \
+	$(Q)$(CONNECTALDIR)/scripts/topgen.py --project-dir $(GPROJ) $(AUTOTOP) $(BLUENOC) \
 	    $(foreach f, $(S2H_INTERFACES), --wrapper $f) \
 	    $(foreach f, $(H2S_INTERFACES), --proxy $f)   \
 	    $(foreach f, $(MEM_INTERFACES), --proxy MemServer\#\(PhysAddrWidth,DataBusWidth,\`NumberOfMasters\):MemServerIndication:$f,cons\(lMMU,nil\))
