@@ -87,4 +87,4 @@ create_clock -name bscan_refclk -period 20 [get_pins host_pciehost_bscan_bscan/T
 create_clock -name pci_refclk -period 10 [get_pins *pci_clk_100mhz_buf/O]
 
 # ignore this timing violation
-set_false_path -from [get_pins host_ep7/pclk_sel_reg_replica/C]
+set_false_path -from [get_pins host_ep7/pclk_sel_reg/C]

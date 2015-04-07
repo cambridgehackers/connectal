@@ -93,4 +93,4 @@ create_clock -name bscan_refclk -period 20 [get_pins host_pciehost_bscan_bscan/T
 create_clock -name pci_extclk -period 10 [get_pins *ep7/pcie_ep/inst/inst/gt_top_i/pipe_wrapper_i/pipe_lane[0].gt_wrapper_i/gtx_channel.gtxe2_channel_i/TXOUTCLK]
 
 # ignore this timing violation
-set_false_path -from [get_pins host_ep7/pclk_sel_reg_replica/C]
+set_false_path -from [get_pins host_ep7/pclk_sel_reg/C]
