@@ -184,10 +184,10 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngine#(dataWidth,
    
    
    Integer bufferSizeBeats = bufferSizeBytes/valueOf(dataWidthBytes);
-   Vector#(numServers, Reg#(Bit#(outCntSz)))     outs1 <- replicateM(mkReg(0));
+   Vector#(numServers, Reg#(Bool))               outs1 <- replicateM(mkReg(False));
    Vector#(numServers, Reg#(Bit#(outCntSz)))     outs0 <- replicateM(mkReg(0));
-   Vector#(numServers, ConfigCounter#(16))           buffCap <- replicateM(mkConfigCounter(0));
-   UGBramFifos#(numServers,cmdQDepth,MemengineCmd) cmdBuf <- mkUGBramFifos;
+   Vector#(numServers, ConfigCounter#(16))        buffCap <- replicateM(mkConfigCounter(0));
+   Vector#(numServers, Reg#(MemengineCmd))        cmdRegs <- replicateM(mkReg(unpack(0)));
 
    Reg#(Bool) load_in_progress <- mkReg(False);
    FIFO#(Tuple3#(MemengineCmd,Bool,Bool))         loadf_b <- mkSizedFIFO(1);
@@ -196,8 +196,7 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngine#(dataWidth,
    FIFO#(Tuple2#(Bit#(serverIdxSz),Bool))           donef <- mkSizedBRAMFIFO(32); // is this the right size?
    
    Vector#(numServers, FIFO#(Bool))              outfs <- replicateM(mkSizedFIFO(1));
-   Vector#(numServers, FIFOF#(Tuple2#(Bit#(serverIdxSz), MemengineCmd))) cmds_in <- replicateM(mkSizedFIFOF(1));
-   FunnelPipe#(1, numServers, Tuple2#(Bit#(serverIdxSz), MemengineCmd),bpc) cmds_in_funnel <- mkFunnelPipesPipelined(map(toPipeOut,cmds_in));
+   Vector#(numServers, FIFOF#(MemengineCmd))    cmds_in <- replicateM(mkSizedFIFOF(1));
    Vector#(numServers, FIFOF#(Bit#(dataWidth)))  write_data_buffs <- replicateM(mkSizedBRAMFIFOF(bufferSizeBeats));
    Vector#(numServers, PipeOut#(Bit#(dataWidth))) foo = map(toPipeOut, write_data_buffs); 
    BurstFunnel#(numServers,dataWidth) write_data_funnel <- mkBurstFunnel(bufferSizeBeats);
@@ -216,31 +215,27 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngine#(dataWidth,
 	  loadIdx <= loadIdx+1;
        endaction);
 
-   rule store_cmd;
-      match {.idx, .cmd} <- toGet(cmds_in_funnel[0]).get;
-      outs1[idx] <= outs1[idx]+1;
-      cmdBuf.enq(idx,cmd);
-      //$display("store_cmd %d", idx);
-   endrule
+   for (Integer idx = 0; idx < valueOf(numServers); idx = idx + 1)
+      rule store_cmd if (!outs1[idx]);
+	 let cmd <- toGet(cmds_in[idx]).get();
+	 outs1[idx] <= True;
+	 cmdRegs[idx] <= cmd;
+      endrule
 
-   rule load_ctxt_a (!load_in_progress);
-      if (outs1[loadIdx] > 0) begin
+   rule load_ctxt_a if (!load_in_progress);
+      if (outs1[loadIdx]) begin
 	 load_in_progress <= True;
-	 cmdBuf.first_req(truncate(loadIdx));
+	 let cmd = cmdRegs[loadIdx];
+	 let cond0 <- buffCap[loadIdx].maybeDecrement(unpack(extend(cmd.burstLen>>beat_shift)));
+	 let cond1 = cmd.len <= extend(cmd.burstLen);
+	 loadf_b.enq(tuple3(cmd,cond0,cond1));
       end
       else begin
 	 incr_loadIdx;
       end
    endrule
-
-   rule load_ctxt_b;
-      let cmd <- cmdBuf.first_resp;
-      let cond0 <- buffCap[loadIdx].maybeDecrement(unpack(extend(cmd.burstLen>>beat_shift)));
-      let cond1 = cmd.len <= extend(cmd.burstLen);
-      loadf_b.enq(tuple3(cmd,cond0,cond1));
-   endrule
    
-   rule load_ctxt_c;
+   rule load_ctxt_b if (load_in_progress);
       load_in_progress <= False;
       incr_loadIdx;
       match {.cmd,.cond0,.cond1} <- toGet(loadf_b).get;
@@ -252,12 +247,11 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngine#(dataWidth,
 	 loadf_c.enq(tuple2(truncate(loadIdx),cmd));
 	 write_data_funnel.loadIdx(truncate(loadIdx));
 	 if (cond1) begin
-	    outs1[loadIdx] <= outs1[loadIdx]-1;
-	    cmdBuf.deq(truncate(loadIdx));
+	    outs1[loadIdx] <= False;
 	 end
 	 else begin
 	    let new_cmd = MemengineCmd{sglId:cmd.sglId, base:cmd.base+extend(cmd.burstLen), burstLen:cmd.burstLen, len:cmd.len-extend(cmd.burstLen), tag:cmd.tag};
-	    cmdBuf.upd_head(truncate(loadIdx),new_cmd);
+	    cmdRegs[loadIdx] <= new_cmd;
 	 end
       end
    endrule
@@ -309,7 +303,7 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngine#(dataWidth,
 			else begin
 `endif
 			   outs0[i] <= outs0[i]+1;
-			   cmds_in[i].enq(tuple2(fromInteger(i),c));
+			   cmds_in[i].enq(c);
 			   write_data_funnel.burstLen[i] <= c.burstLen >> beat_shift;
 			   //$display("(%d) %h %h %h", i, c.base, c.len, c.burstLen);
 `ifdef BSIM
