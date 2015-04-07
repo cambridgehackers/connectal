@@ -185,7 +185,6 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngine#(dataWidth,
    
    Integer bufferSizeBeats = bufferSizeBytes/valueOf(dataWidthBytes);
    Vector#(numServers, Reg#(Bool))               outs1 <- replicateM(mkReg(False));
-   Vector#(numServers, Reg#(Bit#(outCntSz)))     outs0 <- replicateM(mkReg(0));
    Vector#(numServers, ConfigCounter#(16))        buffCap <- replicateM(mkConfigCounter(0));
    Vector#(numServers, Reg#(MemengineCmd))        cmdRegs <- replicateM(mkReg(unpack(0)));
 
@@ -242,7 +241,6 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngine#(dataWidth,
 	 if (cmd.len < extend(cmd.burstLen))
 	    x = truncate(cmd.len);
 	 loadf_c.enq(tuple2(truncate(loadIdx),cmd));
-	 //write_data_funnel.loadIdx(truncate(loadIdx));
 	 if (cond1) begin
 	    outs1[loadIdx] <= False;
 	 end
@@ -279,7 +277,7 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngine#(dataWidth,
    for(Integer i = 0; i < valueOf(numServers); i=i+1)
       rs[i] = (interface Server#(MemengineCmd,Bool);
 		  interface Put request;
-		     method Action put(MemengineCmd cmd) if (outs0[i] < cmd_q_depth);
+		     method Action put(MemengineCmd cmd);
 			Bit#(32) bsb = fromInteger(bufferSizeBytes);
 `ifdef BSIM	 
 			Bit#(32) dw = fromInteger(valueOf(dataWidthBytes));
@@ -299,7 +297,6 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngine#(dataWidth,
 			end
 			else begin
 `endif
-			   outs0[i] <= outs0[i]+1;
 			   cmds_in[i].enq(cmd);
 			   //$display("(%d) %h %h %h", i, cmd.base, cmd.len, cmd.burstLen);
 `ifdef BSIM
@@ -310,7 +307,6 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngine#(dataWidth,
 		  interface Get response;
 		     method ActionValue#(Bool) get;
 			let rv <- toGet(outfs[i]).get;
-	 		outs0[i] <= outs0[i]-1;
 			return rv;
 		     endmethod
 		  endinterface
