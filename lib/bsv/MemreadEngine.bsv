@@ -141,7 +141,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
 
    rule load_ctxt_b;
       let cmd <- cmdBuf.first_resp;
-      let cond0 = buffCap[loadIdx].read() >= unpack(extend(cmd.burstLen>>beat_shift));
+      let cond0 <- buffCap[loadIdx].maybeDecrement(unpack(extend(cmd.burstLen>>beat_shift)));
       let cond1 = cmd.len <= extend(cmd.burstLen);
       loadf_b.enq(tuple3(cmd,cond0,cond1));
       if (verbose) $display("mkMemreadEngineBuff::load_ctxt_b %d %d", buffCap[loadIdx].read(), cmd.burstLen>>beat_shift);
@@ -156,7 +156,6 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
 	 let x = cmd.burstLen;
 	 if (cmd.len < extend(cmd.burstLen))
 	    x = truncate(cmd.len);
-	 buffCap[loadIdx].decrement(unpack(extend(x>>beat_shift)));
 	 loadf_c.enq(tuple2(truncate(loadIdx),cmd));
 	 if (cond1) begin
 	    //$display("load_ctxt_b cond1");
