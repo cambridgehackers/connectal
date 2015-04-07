@@ -3,7 +3,7 @@
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod" : "J4"
     },
-    "sdio_cd_v" : { 
+    "sdio_cdn_v" : { 
 	"PIO_DIRECTION": "INPUT",
 	"pmod" : "J7"
     },

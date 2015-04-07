@@ -402,6 +402,24 @@ zynqdrivers-adb:
 	adb -s $(RUNIP):$(RUNPORT) shell insmod /mnt/sdcard/zynqportal.ko
 	adb -s $(RUNIP):$(RUNPORT) shell insmod /mnt/sdcard/portalmem.ko
 
+connectalsdhci-clean:
+	(cd drivers/connectalsdhci/; DEVICE_XILINX_KERNEL=`pwd`/../../../zynq-boot/linux-xlnx/ make clean)
+
+connectalsdhci:
+	(cd drivers/connectalsdhci/;  DRIVER_VERSION=$(VERSION) DEVICE_XILINX_KERNEL=`pwd`/../../../zynq-boot/linux-xlnx/ make connectalsdhci.ko)
+
+connectalsdhci-adb:
+	adb connect $(RUNPARAM)
+	adb -s $(RUNIP):$(RUNPORT) shell pwd || true
+	adb connect $(RUNPARAM)
+	adb -s $(RUNIP):$(RUNPORT) root || true
+	sleep 1
+	adb connect $(RUNPARAM)
+	adb -s $(RUNIP):$(RUNPORT) push drivers/connectalsdhci/connectalsdhci.ko /mnt/sdcard
+	adb -s $(RUNIP):$(RUNPORT) shell rmmod connectalsdhci
+	adb -s $(RUNIP):$(RUNPORT) shell insmod -f /mnt/sdcard/connectalsdhci.ko
+
+
 #################################################################################################
 
 #xilinx/pcie_7x_gen1x8: scripts/generate-pcie-gen1x8.tcl

@@ -22,6 +22,7 @@
 
 import Clocks::*;
 import FIFO::*;
+import StmtFSM::*;
 
 
 interface FrequencyCounter;
@@ -65,4 +66,21 @@ module mkFrequencyCounter#(Clock clock, Reset reset)(FrequencyCounter);
       elapsedFifo.deq();
       return elapsedFifo.first();
    endmethod
+endmodule
+
+module mkTB(Empty);
+   Clock c <- exposeCurrentClock();
+   Reset r <- exposeCurrentReset();
+   let fc <- mkFrequencyCounter(c,r);
+   
+   Stmt test =
+   (seq
+       delay(10);
+       fc.start(10);
+       action
+	  let v <- fc.elapsedCycles;
+	  $display(v);
+       endaction
+    endseq);
+   mkAutoFSM(test);
 endmodule

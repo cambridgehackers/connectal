@@ -94,6 +94,7 @@ typedef `PinType PinType;
 
 typedef enum {%(enumList)s} IfcNames deriving (Eq,Bits);
 
+(* synthesize *)
 module mkBluenocTop
 `ifdef IMPORT_HOSTIF
        #(HostType host)
@@ -261,7 +262,7 @@ if __name__=='__main__':
     importfiles = []
     exportedNames = ['export mkConnectalTop;']
     if options.bluenoc:
-        exportedNames = ['export mkBluenocTop;']
+        exportedNames = ['export mkBluenocTop;', 'export NumberOfRequests;', 'export NumberOfIndications;']
     if options.importfiles:
         importfiles = options.importfiles
         for item in options.importfiles:

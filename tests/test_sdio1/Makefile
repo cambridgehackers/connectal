@@ -9,6 +9,6 @@ CONNECTALFLAGS += -D PS7EXTENDED -D IMPORT_HOSTIF
 
 PIN_TYPE = TestSDIO1Pins
 PINOUT_FILE = pinout.json
-PIN_BINDINGS = pmod:pmoda
+PIN_BINDINGS = pmod:pmodd
 
 include $(CONNECTALDIR)/Makefile.connectal
