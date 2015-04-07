@@ -40,7 +40,7 @@ import AxiDma::*;
 
 
 
-module mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,64,ParallellaPins,1));
+module mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,64,PinType,NumberOfMasters));
    Clock oneTrueClock <- exposeCurrentClock;
    Reset oneTrueReset <- exposeCurrentReset;
    ParallellaLib plib <- mkParallellaLib(oneTrueClock, oneTrueReset);
@@ -48,10 +48,9 @@ module mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,64,ParallellaP
 
    mkConnection(host.ps7.m_axi_gp[1].client, plib.maxi.server);
    mkConnection(plib.saxi.client, host.ps7.s_axi_hp[3].server);
-   interface ParallellaPins pins;
-      interface txo = plib.pins.txo;
-      interface txi = plib.pins.txi;
-      interface rxo = plib.pins.rxo;
-      interface rxi = plib.pins.rxi;
-   endinterface
+   interface ParallellaPins pins = plib.pins;
+
 endmodule : mkConnectalTop
+export mkConnectalTop;
+export ParallellaLibDefs::*;
+export PParallellaLIB::*;
