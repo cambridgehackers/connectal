@@ -40,7 +40,7 @@ import AxiDma::*;
 
 
 
-module mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,64,PinType,NumberOfMasters));
+module mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,64,`PinType,NumberOfMasters));
    Clock oneTrueClock <- exposeCurrentClock;
    Reset oneTrueReset <- exposeCurrentReset;
    ParallellaLib plib <- mkParallellaLib(oneTrueClock, oneTrueReset);

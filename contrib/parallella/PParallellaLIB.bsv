@@ -95,7 +95,7 @@ interface PParallellaLIB;
    interface Par_misc misc;
 endinterface
 
-import "BVI" pparallellalib =
+import "BVI" parallella =
 module mkPParallellaLIB#(Clock maxiclk, Clock saxiclk, 
    Reset maxiclk_reset, Reset saxiclk_reset,
    Reset maxireset, Reset saxireset,

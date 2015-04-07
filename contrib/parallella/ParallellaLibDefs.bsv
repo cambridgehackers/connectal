@@ -20,11 +20,8 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import Clocks::*;
-import DefaultValue::*;
 import PParallellaLIB::*;
 import AxiMasterSlave::*;
-import ConnectalClocks::*;
 import AxiBits::*;
 import AxiGather::*;
 
