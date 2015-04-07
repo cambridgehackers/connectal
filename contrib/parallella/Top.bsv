@@ -44,14 +44,14 @@ module mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,64,ParallellaP
    Clock oneTrueClock <- exposeCurrentClock;
    Reset oneTrueReset <- exposeCurrentReset;
    ParallellaLib plib <- mkParallellaLib(oneTrueClock, oneTrueReset);
-   Axi3Slave#(32,32,12) parctrl <- mkAxiDmaSlave(plib.maxi);
-   Axi3Master#(32,64,6) parmaster <- mkAxiDmaMaster(plib.saxi);
-   mkConnection(host.ps7.m_axi_gp[1].client, parslave);
-   mkConnection(parmaster, host.ps7.m_axi_hp[3].client);
-						    
-   interface interrupt = getInterruptVector(portals);
-   interface slave = ctrl_mux;
-   interface masters = dma.masters;
-   interface pins = pins;
 
+
+   mkConnection(host.ps7.m_axi_gp[1].client, plib.maxi.server);
+   mkConnection(plib.saxi.client, host.ps7.s_axi_hp[3].server);
+   interface ParallellaPins pins;
+      interface txo = plib.pins.txo;
+      interface txi = plib.pins.txi;
+      interface rxo = plib.pins.rxo;
+      interface rxi = plib.pins.rxi;
+   endinterface
 endmodule : mkConnectalTop

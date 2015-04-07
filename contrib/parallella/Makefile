@@ -5,12 +5,13 @@ CONNECTALDIR?=../..
 BSVFILES = PParallellaLIB.bsv ParallellaLibDefs.bsv
 CPPFILES=testmain.cpp
 NUMBER_OF_MASTERS =0
-
 PARDIR=/scratch/stewart/parallella/parallella-hw/fpga/hdl
-
+PIN_TYPE = ParallellaPins
+# CONNECTAL_FLAGS = -C /scratch/stewart/parallella/parallella-hw/boards/parallella-I/constraints/parallella_z70x0_loc.xdc
 CONNECTAL_FLAGS += \
 	--verilob $(PARDIR)/parallella-I \
 	--verilog $(PARDIR)/elink-gold
+CONNECTALFLAGS += -D IMPORT_HOSTIF
 
 Parallella.bsv: parallella.v
 	$(CONNECTALDIR)/generated/scripts/importbvi.py -o Parallella.bsv -I Parallella -P PP --factor esaxi --factor emaxi --factor rx --factor tx -c clkin_100 -r reset \
