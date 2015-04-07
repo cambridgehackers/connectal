@@ -235,7 +235,7 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngine#(dataWidth,
 
    rule load_ctxt_b;
       let cmd <- cmdBuf.first_resp;
-      let cond0 = buffCap[loadIdx].read() >= unpack(extend(cmd.burstLen>>beat_shift));
+      let cond0 <- buffCap[loadIdx].maybeDecrement(unpack(extend(cmd.burstLen>>beat_shift)));
       let cond1 = cmd.len <= extend(cmd.burstLen);
       loadf_b.enq(tuple3(cmd,cond0,cond1));
    endrule
@@ -249,7 +249,6 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngine#(dataWidth,
 	 let x = cmd.burstLen;
 	 if (cmd.len < extend(cmd.burstLen))
 	    x = truncate(cmd.len);
-	 buffCap[loadIdx].decrement(unpack(extend(x>>beat_shift)));
 	 loadf_c.enq(tuple2(truncate(loadIdx),cmd));
 	 write_data_funnel.loadIdx(truncate(loadIdx));
 	 if (cond1) begin
