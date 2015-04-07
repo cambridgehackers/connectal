@@ -333,17 +333,18 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngine#(dataWidth,
 	    match {.rc, .new_tag, .last} = workf.first;
 	    Bit#(serverIdxSz) idx = truncate(new_tag);
 	    let new_respCnt = respCnt+1;
+	    let lastBeat = False;
 	    if (new_respCnt == rc) begin
 	       respCnt <= 0;
 	       workf.deq;
 	       donef.enq(tuple2(idx,last));
+	       lastBeat = True;
 	    end
 	    else begin
 	       respCnt <= new_respCnt;
 	    end
 	    let wd <- toGet(write_data_buffs[idx]).get();
-	    // TODO: this last field should be set correctly to mark the end of bursts
-	    return MemData{data:wd, tag:new_tag, last:False};
+	    return MemData{data:wd, tag:new_tag, last:lastBeat};
 	 endmethod
       endinterface
       interface Put writeDone;
