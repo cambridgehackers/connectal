@@ -58,6 +58,7 @@ set_property LOC Y1   [get_ports { PCIE_txn[7] }]
 ######################################################################################################
 # I/O STANDARDS
 ######################################################################################################
+set_property IOSTANDARD DIFF_SSTL15 [get_ports { CLK_pci_sys_clk_* }]
 set_property IOSTANDARD DIFF_SSTL15 [get_ports { CLK_sys_clk_* }]
 #set_property IOSTANDARD DIFF_SSTL15 [get_ports { CLK_user_clk_* }]
 set_property IOSTANDARD LVCMOS25    [get_ports { RST_N_pci_sys_reset_n }]
@@ -77,8 +78,6 @@ set_property PULLUP     true        [get_ports { RST_N_pci_sys_reset_n }]
 # (UG) for guidelines regarding clock resource selection.
 #
 set_property LOC IBUFDS_GTE2_X0Y1  [get_cells { *pci_clk_100mhz_buf }]
-set_property LOC MMCME2_ADV_X1Y1 [get_cells -hier -filter { NAME =~ *clk_gen_pll }]
-
 
 
 ######################################################################################################
@@ -87,10 +86,7 @@ set_property LOC MMCME2_ADV_X1Y1 [get_cells -hier -filter { NAME =~ *clk_gen_pll
 
 # # clocks
 create_clock -name bscan_refclk -period 20 [get_pins host_pciehost_bscan_bscan/TCK]
-#create_clock -name pci_refclk -period 10 [get_pins *pci_clk_100mhz_buf/O]
-
-## no longer needed?
-create_clock -name pci_extclk -period 10 [get_pins *ep7/pcie_ep/inst/inst/gt_top_i/pipe_wrapper_i/pipe_lane[0].gt_wrapper_i/gtx_channel.gtxe2_channel_i/TXOUTCLK]
+create_clock -name pci_refclk -period 10 [get_pins *pci_clk_100mhz_buf/O]
 
 # ignore this timing violation
 set_false_path -from [get_pins host_ep7/pclk_sel_reg/C]
