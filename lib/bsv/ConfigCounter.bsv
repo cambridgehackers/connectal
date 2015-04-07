@@ -24,26 +24,49 @@ import GetPut::*;
 
 interface ConfigCounter#(numeric type count_sz);
    method Action decrement(UInt#(count_sz) x);
+   method ActionValue#(Bool) maybeDecrement(UInt#(count_sz) x);
    method Action increment(UInt#(count_sz) x);
    method UInt#(count_sz) read();
+   method Bool positive();
 endinterface
 
 module mkConfigCounter#(UInt#(count_sz) init_val)(ConfigCounter#(count_sz));
    Wire#(UInt#(count_sz)) inc_wire <- mkDWire(0);
    Wire#(UInt#(count_sz)) dec_wire <- mkDWire(0);
    Reg#(UInt#(count_sz)) cnt <- mkReg(init_val);
-   (* fire_when_enabled *)
-   rule react;
-      if (inc_wire > dec_wire)
-	 cnt <= cnt + (inc_wire - dec_wire);
-      else
-	 cnt <= cnt - (dec_wire - inc_wire);
-   endrule
+   Reg#(Bool) positive_reg <- mkReg(False);
+   // (* fire_when_enabled *)
+   // rule react;
+   //    let new_count = cnt;
+   //    if (inc_wire > dec_wire)
+   // 	 new_count = cnt + (inc_wire - dec_wire);
+   //    else
+   // 	 new_count = cnt - (dec_wire - inc_wire);
+   //    cnt <= new_count;
+   //    positive_reg <= (new_count > 0);
+   // endrule
    method Action increment(UInt#(count_sz) x);
-      inc_wire <= x;
+      //inc_wire <= x;
+      cnt <= cnt + x;
+      positive_reg <= (cnt != 0 || x != 0);
    endmethod
    method Action decrement(UInt#(count_sz) x);
-      dec_wire <= x;
+      //dec_wire <= x;
+      cnt <= cnt - x;
+      positive_reg <= (cnt > x);
+   endmethod
+   method ActionValue#(Bool) maybeDecrement(UInt#(count_sz) x);
+      //dec_wire <= x;
+      let new_count = cnt - x;
+      let nonneg = (cnt >= x);
+      if (nonneg) begin
+	 cnt <= new_count;
+	 positive_reg <= (cnt > x);
+	 return True;
+      end
+      else
+	 return False;
    endmethod
    method UInt#(count_sz) read = cnt._read;
+   method Bool positive = positive_reg._read;
 endmodule
