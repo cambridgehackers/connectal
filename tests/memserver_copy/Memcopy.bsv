@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 import Vector::*;
+import BuildVector::*;
 import FIFO::*;
 import FIFOF::*;
 import BRAMFIFO::*;
@@ -110,8 +111,7 @@ module  mkMemcopy#(MemcopyIndication indication) (Memcopy);
 	  numDone <= nreq;
        endmethod
    endinterface
-   interface readClients = cons(readClient, nil);
-   interface writeClients = cons(writeClient, nil);
+   interface readClients = vec(readClient);
+   interface writeClients = vec(writeClient);
 
 endmodule
-
