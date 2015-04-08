@@ -43,6 +43,14 @@ PortalPoller::PortalPoller()
     pthread_mutex_init(&mutex, NULL);
     fcntl(pipefd[0], F_SETFL, O_NONBLOCK);
     addFd(pipefd[0]);
+
+    portalExec_timeout = -1;
+#ifdef XSIM
+    portalExec_timeout = 100;
+#endif
+#ifdef BSIM
+    portalExec_timeout = 100;
+#endif
 }
 
 int PortalPoller::unregisterInstance(Portal *portal)
@@ -114,12 +122,7 @@ int PortalPoller::registerInstance(Portal *portal)
 
 void* PortalPoller::portalExec_init(void)
 {
-    portalExec_timeout = 100; // no interrupt timeout
-#ifdef XSIM
-    portalExec_timeout = 100;
-#endif
 #ifdef BSIM
-    portalExec_timeout = 100;
     if (global_sockfd != -1) {
         pthread_mutex_lock(&mutex);
         addFd(global_sockfd);
