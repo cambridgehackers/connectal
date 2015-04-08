@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 import Vector::*;
+import BuildVector::*;
 import FIFOF::*;
 import FIFO::*;
 import BRAMFIFO::*;
@@ -71,8 +72,10 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
    Reg#(Bit#(32))    rdBuffer <- mkReg(32);
    Reg#(Bit#(32))    wrBuffer <- mkReg(0); 
    
+   Bool verbose = True;
+
    rule start_read(rdIterCnt > 0 && rdBuffer >= burstLen);
-      //$display("start_read %d", rdCnt);
+      if (verbose) $display("start_read %d", rdCnt);
       re.readServers[0].request.put(MemengineCmd{sglId:rdPointer, base:extend(rdCnt*4), len:(burstLen*4), burstLen:truncate(burstLen*4)});
       rdBuffer <= rdBuffer-burstLen;
       if(rdCnt+burstLen >= numWords) begin
@@ -85,7 +88,7 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
    endrule
 
    rule start_write(wrIterCnt > 0 && wrBuffer >= burstLen);
-      //$display("                    start_write %d", wrCnt);
+      if (verbose) $display("                    start_write %d", wrCnt);
       we.writeServers[0].request.put(MemengineCmd{sglId:wrPointer, base:extend(wrCnt*4), len:burstLen*4, burstLen:truncate(burstLen*4)});
       wrBuffer <= wrBuffer-burstLen;
       if(wrCnt+burstLen >= numWords) begin
@@ -98,12 +101,12 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
    endrule
    
    rule read_finish;
-      //$display("read_finish %d", rdIterCnt);
+      if (verbose) $display("read_finish %d", rdIterCnt);
       let rv0 <- re.readServers[0].response.get;
    endrule
 
    rule write_finish;
-      //$display("                    write_finish %d", wrIterCnt);
+      if (verbose) $display("                    write_finish %d", wrIterCnt);
       let rv1 <- we.writeServers[0].response.get;
       if(wrIterCnt==0)
 	 indication.done;
@@ -113,7 +116,7 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
       let v <- toGet(re.dataPipes[0]).get;
       buffer.enq(v);
       wrBuffer <= wrBuffer+2;
-      //$display("fill_buffer %h", rdFifo.first);
+      if (verbose) $display("fill_buffer %h", v);
    endrule
    
    rule drain_buffer;
@@ -136,6 +139,6 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
       burstLen  <= bl;
    endmethod
    endinterface
-   interface MemReadClient dmaReadClient = cons(re.dmaClient, nil);
-   interface MemWriteClient dmaWriteClient = cons(we.dmaClient, nil);
+   interface MemReadClient dmaReadClient = vec(re.dmaClient);
+   interface MemWriteClient dmaWriteClient = vec(we.dmaClient);
 endmodule
