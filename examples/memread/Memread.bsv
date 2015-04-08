@@ -23,6 +23,7 @@
 import FIFO::*;
 import FIFOF::*;
 import Vector::*;
+import BuildVector::*;
 import GetPut::*;
 import ClientServer::*;
 
@@ -158,7 +159,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
       iterCnt <= iterCnt - 1;
    endrule
    
-   interface dmaClient = cons(re.dmaClient, nil);
+   interface dmaClient = vec(re.dmaClient);
    interface MemreadRequest request;
       method Action startRead(Bit#(32) rp, Bit#(32) off, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
 	 indication.started(nw);

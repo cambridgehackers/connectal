@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 import Vector::*;
+import BuildVector::*;
 
 import Portal::*;
 import PlatformTypes::*;
@@ -46,7 +47,7 @@ module mkTile(Tile#(Empty,1,0));
    
    interface interrupt = interrupts;
    interface portals = mem_portal;
-   interface readers = cons(lMemread.dmaClient,nil);
+   interface readers = vec(lMemread.dmaClient);
    interface writers = nil;
    interface ext = ?;
 

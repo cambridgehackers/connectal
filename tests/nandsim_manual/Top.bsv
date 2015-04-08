@@ -20,6 +20,7 @@
  */
 import SpecialFIFOs::*;
 import Vector::*;
+import BuildVector::*;
 import StmtFSM::*;
 import FIFO::*;
 import BRAM::*;
@@ -50,15 +51,15 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    NandSim nandSim <- mkNandSim(nandSimIndicationProxy.ifc);
    NandSimRequestWrapper nandSimRequestWrapper <- mkNandSimRequestWrapper(NandSimRequest,nandSim.request);
 
-   Vector#(1, MemReadClient#(64)) readClients = cons(nandSim.readClient, nil);
-   Vector#(1, MemWriteClient#(64)) writeClients = cons(nandSim.writeClient, nil);
+   Vector#(1, MemReadClient#(64)) readClients = vec(nandSim.readClient);
+   Vector#(1, MemWriteClient#(64)) writeClients = vec(nandSim.writeClient);
 
    MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUIndicationProxy.ifc);
    MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
 
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
-   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(readClients, writeClients, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
+   MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(readClients, writeClients, vec(hostMMU), hostMemServerIndicationProxy.ifc);
    MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
 
    Vector#(6,StdPortal) portals;

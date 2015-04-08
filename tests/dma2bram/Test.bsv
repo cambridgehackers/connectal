@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 import Vector::*;
+import BuildVector::*;
 import ClientServer::*;
 import BRAM::*;
 
@@ -62,6 +63,6 @@ module mkTest#(TestIndication indication)(Test);
 	 bramWriter.start(sglId, 0, minBound, maxBound);
       endmethod
    endinterface
-   interface dmaClient = cons(re.dmaClient, nil);
+   interface dmaClient = vec(re.dmaClient);
 endmodule
 

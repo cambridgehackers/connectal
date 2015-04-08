@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 import Vector::*;
+import BuildVector::*;
 import MemServer::*;
 import MMU::*;
 import Portal::*;
@@ -44,7 +45,7 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    Rtest memread <- mkRtest(memreadIndicationProxy.ifc);
    RtestRequestWrapper memreadRequestWrapper <- mkRtestRequestWrapper(RtestRequest,memread.request);
 
-   Vector#(1, MemReadClient#(64)) readClients = cons(memread.dmaClient, nil);
+   Vector#(1, MemReadClient#(64)) readClients = vec(memread.dmaClient);
 
    MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);

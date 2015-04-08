@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 import Vector::*;
+import BuildVector::*;
 import FIFO::*;
 import FIFOF::*;
 import BRAMFIFO::*;
@@ -118,7 +119,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 	  numDone <= nreq;
        endmethod
    endinterface
-   interface dmaClients = cons(dmaClient, nil);
+   interface dmaClients = vec(dmaClient);
 
 endmodule
 

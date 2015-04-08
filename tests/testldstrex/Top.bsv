@@ -20,6 +20,7 @@
  */
 import SpecialFIFOs::*;
 import Vector::*;
+import BuildVector::*;
 import StmtFSM::*;
 import FIFO::*;
 import Connectable::*;
@@ -49,7 +50,7 @@ module  mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,TMul#(32,N),E
    MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
 
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
-   MemServer#(PhysAddrWidth,TMul#(32,N), NumberOfMasters) dma <- mkMemServer(cons(reader.readClient, nil), cons(writer.writeClient, nil), cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
+   MemServer#(PhysAddrWidth,TMul#(32,N), NumberOfMasters) dma <- mkMemServer(vec(reader.readClient), vec(writer.writeClient), vec(hostMMU), hostMemServerIndicationProxy.ifc);
    MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
 
    Vector#(4,StdPortal) portals;
