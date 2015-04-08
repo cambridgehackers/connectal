@@ -71,7 +71,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
    let verbose = False;
 
    Integer bufferSizeBeats = bufferSizeBytes/valueOf(dataWidthBytes);
-   Vector#(numServers, Reg#(Bit#(outCntSz)))     outs1 <- replicateM(mkReg(0));
+   Vector#(numServers, Reg#(Bool))               outs1 <- replicateM(mkReg(False));
    Vector#(numServers, Reg#(Bit#(outCntSz)))     outs0 <- replicateM(mkReg(0));
    Vector#(numServers, ConfigCounter#(16))     buffCap <- replicateM(mkConfigCounter(fromInteger(bufferSizeBeats)));
    UGBramFifos#(numServers,cmdQDepth,MemengineCmd) cmdBuf <- mkUGBramFifos;
@@ -118,13 +118,13 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
          
    rule store_cmd;
       match {.idx, .cmd} <- toGet(cmds_in_funnel[0]).get;
-      outs1[idx] <= outs1[idx]+1;
+      outs1[idx] <= True;
       cmdBuf.enq(idx,cmd);
       if (verbose) $display("mkMemreadEngineBuff::store_cmd %d %d", idx, buffCap[idx].read);
    endrule
    
    rule load_ctxt_a (!load_in_progress);
-      if (outs1[loadIdx] > 0) begin
+      if (outs1[loadIdx]) begin
 	 load_in_progress <= True;
 	 cmdBuf.first_req(truncate(loadIdx));
 	 if (verbose) $display("mkMemreadEngineBuff::load_ctxt_a %d", loadIdx);
@@ -154,7 +154,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
 	 loadf_c.enq(tuple2(truncate(loadIdx),cmd));
 	 if (cond1) begin
 	    //$display("load_ctxt_b cond1");
-	    outs1[loadIdx] <= outs1[loadIdx]-1;
+	    outs1[loadIdx] <= False;
 	    cmdBuf.deq(truncate(loadIdx));
 	 end
 	 else begin
