@@ -44,6 +44,7 @@ endinterface
 interface SDIORequest;
    method Action cnt_cycle_req(Bit#(32) v);
    method Action set_spew_en(Bit#(1) v);
+   method Action toggle_cd(Bit#(32) v);
 endinterface
 
 interface SDIOResponse;
@@ -73,6 +74,7 @@ module mkController#(SDIOResponse ind, Pps7Emiosdio sdio)(Controller);
    let d1b  <- mkIOBUF(sdio.datatn[1], sdio.datao[1]);
    let d2b  <- mkIOBUF(sdio.datatn[2], sdio.datao[2]);
    let d3b  <- mkIOBUF(sdio.datatn[3], sdio.datao[3]);
+   Reg#(Bit#(32)) toggle_cd_reg <- mkReg(0);
    
    Bit#(4) db_o = {d3b.o,d2b.o,d1b.o,d0b.o};
    Bit#(1) cmdb_o = cmdb.o;
@@ -93,12 +95,19 @@ module mkController#(SDIOResponse ind, Pps7Emiosdio sdio)(Controller);
       ind.cnt_cycle_resp(v);
    endrule
    
+   rule decr_toggle_cd_reg (toggle_cd_reg > 0);
+	 toggle_cd_reg <= toggle_cd_reg-1;
+   endrule
+   
    interface SDIORequest req;
       method Action cnt_cycle_req(Bit#(32) v);
 	 fc.start(v);
       endmethod
       method Action set_spew_en(Bit#(1) v);
 	 spew_en <= v;
+      endmethod
+      method Action toggle_cd(Bit#(32) v);
+	 toggle_cd_reg <= v;
       endmethod
    endinterface
    
@@ -109,7 +118,7 @@ module mkController#(SDIOResponse ind, Pps7Emiosdio sdio)(Controller);
       interface d1 = d1b.io;
       interface d2 = d2b.io;
       interface d3 = d3b.io;
-      method Action cdn(Bit#(1) v) = sdio.cdn(v);
+      method Action cdn(Bit#(1) v) = sdio.cdn((toggle_cd_reg > 0) ? ~v : v);
       method Action wp(Bit#(1) v) = sdio.wp(v);
    endinterface
 

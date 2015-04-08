@@ -68,6 +68,7 @@ int main(int argc, const char **argv)
   portalExec_start();
   sleep(2);
   
+  // device->toggle_cd(1000);
   //  device->set_spew_en(1);
   // while(true){
   //   device->cnt_cycle_req(0xF);
