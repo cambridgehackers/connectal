@@ -65,14 +65,14 @@ public:
 
 int main(int argc, const char **argv)
 {
-  size_t alloc_sz = 1024*1024*10;
-  MemwriteRequestProxy *device = new MemwriteRequestProxy(IfcNames_MemwriteRequest);
-  MemwriteIndication *deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndication);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  size_t alloc_sz = 1024*1024;
+  MemwriteRequestProxy *device = new MemwriteRequestProxy(IfcNames_MemwriteRequestS2H);
+  MemwriteIndication *deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndicationH2S);
+  MemServerRequestProxy *memServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
+  MemServerIndication *memServerIndication = new MemServerIndication(memServerRequest, IfcNames_MemServerIndicationH2S);
+  MMUIndication *mmuIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
 
   sem_init(&done_sem, 1, 0);
   portalExec_start();
@@ -90,7 +90,7 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "parent::starting write\n");
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
-  int burstLenBytes = 32*sizeof(uint32_t);
+  int burstLenBytes = 16*sizeof(uint32_t);
   device->startWrite(ref_dstAlloc, alloc_sz, alloc_sz / burstLenBytes, burstLenBytes);
 
   sem_wait(&done_sem);

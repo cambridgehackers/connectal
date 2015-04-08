@@ -45,7 +45,7 @@ endinterface
 
 interface Memwrite;
    interface MemwriteRequest request;
-   interface MemWriteClient#(64) dmaClient;
+   interface Vector#(1, MemWriteClient#(64)) dmaClients;
 endinterface
 
 module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
@@ -101,8 +101,15 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
       numWords <= numWords - fromInteger(valueOf(WordsPerBeat));
    endrule
 
+   MemWriteClient#(64) dmaClient = (interface MemWriteClient;
+      interface Get writeReq = toGet(reqFifo);
+      interface Get writeData = toGet(dataFifo);
+      interface Put writeDone = toPut(doneFifo);
+   endinterface );
+
    interface MemwriteRequest request;
        method Action startWrite(Bit#(32) wp, Bit#(32) nw, Bit#(32) nreq, Bit#(32) bl);
+	  $dumpvars();
           $display("startWrite pointer=%d numWords=%d (%d) numReqs=%d burstLen=%d", pointer, nw, nreq*bl, nreq, bl);
           pointer <= wp;
           numWords  <= nw;
@@ -111,11 +118,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 	  numDone <= nreq;
        endmethod
    endinterface
+   interface dmaClients = cons(dmaClient, nil);
 
-   interface MemWriteClient dmaClient;
-      interface Get writeReq = toGet(reqFifo);
-      interface Get writeData = toGet(dataFifo);
-      interface Put writeDone = toPut(doneFifo);
-   endinterface 
 endmodule
 
