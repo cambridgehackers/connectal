@@ -114,7 +114,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
        endaction);
          
    for (Integer idx = 0; idx < valueOf(numServers); idx = idx + 1)
-      rule store_cmd;
+      rule store_cmd if (!outs1[idx]);
 	 let cmd <- toGet(cmds_in[idx]).get();
 	 outs1[idx] <= True;
 	 cmdBuf.enq(fromInteger(idx),cmd);
@@ -132,7 +132,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
       end
    endrule
 
-   rule load_ctxt_b;
+   rule load_ctxt_b if (load_in_progress);
       let cmd <- cmdBuf.first_resp;
       let cond0 <- buffCap[loadIdx].maybeDecrement(unpack(extend(cmd.burstLen>>beat_shift)));
       let cond1 = cmd.len <= extend(cmd.burstLen);
@@ -140,7 +140,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
       if (verbose) $display("mkMemreadEngineBuff::load_ctxt_b %d %d", buffCap[loadIdx].read(), cmd.burstLen>>beat_shift);
    endrule
 
-   rule load_ctxt_c;
+   rule load_ctxt_c if (load_in_progress);
       load_in_progress <= False;
       incr_loadIdx;
       match {.cmd,.cond0,.cond1} <- toGet(loadf_b).get;
