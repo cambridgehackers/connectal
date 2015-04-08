@@ -155,7 +155,6 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 mc = 0;
       end
       mismatchCnt <= mc;
-      //reportStateFifo.enq(1);
       iterCnt <= iterCnt - 1;
    endrule
    
