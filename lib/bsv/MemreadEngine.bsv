@@ -72,7 +72,8 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
    Vector#(numServers, Reg#(Bool))               outs1 <- replicateM(mkReg(False));
    Vector#(numServers, Reg#(Bit#(outCntSz)))     outs0 <- replicateM(mkReg(0));
    Vector#(numServers, ConfigCounter#(16))     buffCap <- replicateM(mkConfigCounter(fromInteger(bufferSizeBeats)));
-   UGBramFifos#(numServers,cmdQDepth,MemengineCmd) cmdBuf <- mkUGBramFifos;
+   FIFO#(Bool)                                 cmdFifo <- mkFIFO1();
+   Vector#(numServers, Reg#(MemengineCmd))     cmdRegs <- replicateM(mkReg(unpack(0)));
    
    Reg#(Bool) load_in_progress <- mkReg(False);
    FIFO#(Tuple3#(MemengineCmd,Bool,Bool))         loadf_b <- mkSizedFIFO(1);
@@ -117,14 +118,14 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
       rule store_cmd if (!outs1[idx]);
 	 let cmd <- toGet(cmds_in[idx]).get();
 	 outs1[idx] <= True;
-	 cmdBuf.enq(fromInteger(idx),cmd);
+	 cmdRegs[idx] <= cmd;
 	 if (verbose) $display("mkMemreadEngineBuff::store_cmd %d %d", idx, buffCap[idx].read);
       endrule
    
    rule load_ctxt_a (!load_in_progress);
       if (outs1[loadIdx]) begin
 	 load_in_progress <= True;
-	 cmdBuf.first_req(truncate(loadIdx));
+	 cmdFifo.enq(True);
 	 if (verbose) $display("mkMemreadEngineBuff::load_ctxt_a %d", loadIdx);
       end
       else begin
@@ -133,7 +134,8 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
    endrule
 
    rule load_ctxt_b if (load_in_progress);
-      let cmd <- cmdBuf.first_resp;
+      let unused <- toGet(cmdFifo).get();
+      let cmd = cmdRegs[loadIdx];
       let cond0 <- buffCap[loadIdx].maybeDecrement(unpack(extend(cmd.burstLen>>beat_shift)));
       let cond1 = cmd.len <= extend(cmd.burstLen);
       loadf_b.enq(tuple3(cmd,cond0,cond1));
@@ -153,12 +155,11 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
 	 if (cond1) begin
 	    //$display("load_ctxt_b cond1");
 	    outs1[loadIdx] <= False;
-	    cmdBuf.deq(truncate(loadIdx));
 	 end
 	 else begin
 	    let new_cmd = MemengineCmd{sglId:cmd.sglId, base:cmd.base+extend(cmd.burstLen), 
 				       burstLen:cmd.burstLen, len:cmd.len-extend(cmd.burstLen), tag:cmd.tag};
-	    cmdBuf.upd_head(truncate(loadIdx),new_cmd);
+	    cmdRegs[loadIdx] <= new_cmd;
 	 end
       end
    endrule
