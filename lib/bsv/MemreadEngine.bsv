@@ -41,7 +41,6 @@ module mkMemreadEngine(MemreadEngine#(dataWidth, cmdQDepth, numServers))
    provisos( Mul#(TDiv#(dataWidth, 8), 8, dataWidth)
 	    ,Add#(1, a__, numServers)
 	    ,Add#(b__, TLog#(numServers), TAdd#(1, TLog#(TMul#(cmdQDepth,numServers))))
-	    ,Pipe::FunnelPipesPipelined#(1, numServers,Tuple2#(Bit#(TLog#(numServers)), MemTypes::MemengineCmd), TMin#(2,TLog#(numServers)))
 	    ,Add#(c__, TLog#(numServers), TLog#(TMul#(cmdQDepth, numServers)))
 	    ,Add#(d__, TLog#(numServers), 6)
 	    );
@@ -63,7 +62,6 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
 	     Add#(e__, TLog#(numServers), TAdd#(1, cmdBuffAddrSz)),
 	     Add#(a__, serverIdxSz, cmdBuffAddrSz),
 	     Min#(2,TLog#(numServers),bpc),
-	     FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(serverIdxSz),MemengineCmd),bpc),
 	     Add#(d__, TLog#(numServers), TAdd#(1, serverIdxSz)),
 	     Add#(f__, serverIdxSz, 6));
    
@@ -83,8 +81,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
    
 
    Vector#(numServers, FIFO#(void))              outfs <- replicateM(mkSizedFIFO(1));
-   Vector#(numServers, FIFOF#(Tuple2#(Bit#(serverIdxSz), MemengineCmd))) cmds_in <- replicateM(mkSizedFIFOF(1));
-   FunnelPipe#(1, numServers, Tuple2#(Bit#(serverIdxSz), MemengineCmd),bpc) cmds_in_funnel <- mkFunnelPipesPipelined(map(toPipeOut,cmds_in));
+   Vector#(numServers, FIFOF#(MemengineCmd))   cmds_in <- replicateM(mkSizedFIFOF(1));
 
    FIFOF#(MemData#(dataWidth))                             read_data <- mkFIFOF;
    Vector#(numServers, FIFOF#(MemData#(dataWidth)))  read_data_buffs <- replicateM(mkSizedBRAMFIFOF(bufferSizeBeats));
@@ -116,12 +113,13 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
 	  loadIdx <= loadIdx+1;
        endaction);
          
-   rule store_cmd;
-      match {.idx, .cmd} <- toGet(cmds_in_funnel[0]).get;
-      outs1[idx] <= True;
-      cmdBuf.enq(idx,cmd);
-      if (verbose) $display("mkMemreadEngineBuff::store_cmd %d %d", idx, buffCap[idx].read);
-   endrule
+   for (Integer idx = 0; idx < valueOf(numServers); idx = idx + 1)
+      rule store_cmd;
+	 let cmd <- toGet(cmds_in[idx]).get();
+	 outs1[idx] <= True;
+	 cmdBuf.enq(fromInteger(idx),cmd);
+	 if (verbose) $display("mkMemreadEngineBuff::store_cmd %d %d", idx, buffCap[idx].read);
+      endrule
    
    rule load_ctxt_a (!load_in_progress);
       if (outs1[loadIdx]) begin
@@ -194,22 +192,22 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
    for(Integer i = 0; i < valueOf(numServers); i=i+1)
       rs[i] = (interface Server#(MemengineCmd,Bool);
 		  interface Put request;
-		     method Action put(MemengineCmd c) if (outs0[i] < cmd_q_depth);
+		     method Action put(MemengineCmd cmd) if (outs0[i] < cmd_q_depth);
 			Bit#(32) bsb = fromInteger(bufferSizeBytes);
 `ifdef BSIM	 
 			Bit#(32) dw = fromInteger(valueOf(dataWidthBytes));
-			let mdw = ((c.len)/dw)*dw != c.len;
-			let bbl = extend(c.burstLen) > bsb;
+			let mdw = ((cmd.len)/dw)*dw != cmd.len;
+			let bbl = extend(cmd.burstLen) > bsb;
 			if(bbl || mdw) begin
 			   if (bbl)
-			      $display("XXXXXXXXXX mkMemreadEngineBuff::unsupported burstLen %d %d", bsb, c.burstLen);
+			      $display("XXXXXXXXXX mkMemreadEngineBuff::unsupported burstLen %d %d", bsb, cmd.burstLen);
 			   if (mdw)
-			      $display("XXXXXXXXXX mkMemreadEngineBuff::unsupported len %d", c.len);
+			      $display("XXXXXXXXXX mkMemreadEngineBuff::unsupported len %d", cmd.len);
 			end
 			else begin
 `endif
 	 		   outs0[i] <= outs0[i]+1;
-			   cmds_in[i].enq(tuple2(fromInteger(i),c));
+			   cmds_in[i].enq(cmd);
 `ifdef BSIM
 			end
 `endif
