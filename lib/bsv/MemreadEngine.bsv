@@ -42,7 +42,6 @@ module mkMemreadEngine(MemreadEngine#(dataWidth, cmdQDepth, numServers))
 	    ,Add#(1, a__, numServers)
 	    ,Add#(b__, TLog#(numServers), TAdd#(1, TLog#(TMul#(cmdQDepth,numServers))))
 	    ,Pipe::FunnelPipesPipelined#(1, numServers,Tuple2#(Bit#(TLog#(numServers)), MemTypes::MemengineCmd), TMin#(2,TLog#(numServers)))
-	    ,Pipe::FunnelPipesPipelined#(1, numServers, Tuple2#(Bit#(dataWidth), Bool),TMin#(2, TLog#(numServers)))
 	    ,Add#(c__, TLog#(numServers), TLog#(TMul#(cmdQDepth, numServers)))
 	    ,Add#(d__, TLog#(numServers), 6)
 	    );
@@ -65,7 +64,6 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
 	     Add#(a__, serverIdxSz, cmdBuffAddrSz),
 	     Min#(2,TLog#(numServers),bpc),
 	     FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(serverIdxSz),MemengineCmd),bpc),
-	     FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(dataWidth),Bool),bpc),
 	     Add#(d__, TLog#(numServers), TAdd#(1, serverIdxSz)),
 	     Add#(f__, serverIdxSz, 6));
    
@@ -88,23 +86,20 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
    Vector#(numServers, FIFOF#(Tuple2#(Bit#(serverIdxSz), MemengineCmd))) cmds_in <- replicateM(mkSizedFIFOF(1));
    FunnelPipe#(1, numServers, Tuple2#(Bit#(serverIdxSz), MemengineCmd),bpc) cmds_in_funnel <- mkFunnelPipesPipelined(map(toPipeOut,cmds_in));
 
-   FIFOF#(Tuple2#(Bit#(TLog#(numServers)), Tuple2#(Bit#(dataWidth),Bool))) read_data <- mkFIFOF;
-   UnFunnelPipe#(1, numServers, Tuple2#(Bit#(dataWidth),Bool),bpc) read_data_unfunnel <- mkUnFunnelPipesPipelined(cons(toPipeOut(read_data),nil));
-   Vector#(numServers, FIFOF#(Tuple2#(Bit#(dataWidth),Bool)))  read_data_buffs <- replicateM(mkSizedBRAMFIFOF(bufferSizeBeats));
-   Vector#(numServers, PipeIn#(Tuple2#(Bit#(dataWidth),Bool))) foo = map(toPipeIn, read_data_buffs); 
-   zipWithM(mkConnection, read_data_unfunnel, foo);
-   function PipeOut#(Bit#(dataWidth)) check_out(PipeOut#(Tuple2#(Bit#(dataWidth),Bool)) x, Integer i) = 
+   FIFOF#(MemData#(dataWidth))                             read_data <- mkFIFOF;
+   Vector#(numServers, FIFOF#(MemData#(dataWidth)))  read_data_buffs <- replicateM(mkSizedBRAMFIFOF(bufferSizeBeats));
+   function PipeOut#(Bit#(dataWidth)) check_out(PipeOut#(MemData#(dataWidth)) inpipe, Integer i) = 
       (interface PipeOut;
 	  method Bit#(dataWidth) first;
-	     return tpl_1(x.first);
+	     return inpipe.first.data;
 	  endmethod
 	  method Action deq;
-	     x.deq;
+	     inpipe.deq;
 	     buffCap[i].increment(1);
-	     if (tpl_2(x.first)) 
+	     if (inpipe.first.last)
 		outfs[i].enq(?);
 	  endmethod
-	  method Bool notEmpty = x.notEmpty;
+	  method Bool notEmpty = inpipe.notEmpty;
        endinterface);
    Vector#(numServers, PipeOut#(Bit#(dataWidth))) read_data_pipes = zipWith(check_out, map(toPipeOut,read_data_buffs), genVector);
    
@@ -170,6 +165,24 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
       end
    endrule
    
+   rule read_data_rule;
+      let d <- toGet(read_data).get();
+      match {.rc, .idx, .last} = workf.first;
+      let new_respCnt = respCnt+1;
+      let l = False;
+      //$display("%h %d", d.data, idx);
+      if (new_respCnt == rc) begin
+	 respCnt <= 0;
+	 workf.deq;
+	 //$display("eob %d", idx);
+	 l = last;
+      end
+      else begin
+	 respCnt <= new_respCnt;
+      end
+      read_data_buffs[idx].enq(d);
+   endrule
+
    function MemreadServer#(dataWidth) toMemreadServer(Server#(MemengineCmd,Bool) cs, PipeOut#(Bit#(dataWidth)) p) =
       (interface MemreadServer;
 	  interface cmdServer = cs;
@@ -226,24 +239,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
 	    return MemRequest { sglId: cmd.sglId, offset: cmd.base, burstLen:bl, tag: (cmd.tag << valueOf(serverIdxSz)) | extend(idx)};
 	 endmethod
       endinterface
-      interface Put readData;
-	 method Action put(MemData#(dataWidth) d);
-	    match {.rc, .idx, .last} = workf.first;
-	    let new_respCnt = respCnt+1;
-	    let l = False;
-	    //$display("%h %d", d.data, idx);
-	    if (new_respCnt == rc) begin
-	       respCnt <= 0;
-	       workf.deq;
-	       //$display("eob %d", idx);
-	       l = last;
-	    end
-	    else begin
-	       respCnt <= new_respCnt;
-	    end
-	    read_data.enq(tuple2(idx,tuple2(d.data,l)));
-	 endmethod
-      endinterface
+      interface Put readData = toPut(read_data);
    endinterface 
    interface dataPipes = read_data_pipes;
    interface read_servers = zipWith(toMemreadServer, rs, read_data_pipes);
