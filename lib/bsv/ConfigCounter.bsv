@@ -52,7 +52,7 @@ module mkConfigCounter#(UInt#(count_sz) init_val)(ConfigCounter#(count_sz));
       dec_wire <= x;
    endmethod
    method ActionValue#(Bool) maybeDecrement(UInt#(count_sz) x);
-      if (cnt + inc_wire > x) begin
+      if (cnt + inc_wire >= x) begin
 	 dec_wire <= x;
 	 return True;
       end
