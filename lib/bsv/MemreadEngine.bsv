@@ -70,19 +70,17 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
 
    Integer bufferSizeBeats = bufferSizeBytes/valueOf(dataWidthBytes);
    Vector#(numServers, Reg#(Bool))               outs1 <- replicateM(mkReg(False));
-   Vector#(numServers, Reg#(Bit#(outCntSz)))     outs0 <- replicateM(mkReg(0));
    Vector#(numServers, ConfigCounter#(16))     buffCap <- replicateM(mkConfigCounter(fromInteger(bufferSizeBeats)));
-   FIFO#(Bool)                                 cmdFifo <- mkFIFO1();
    Vector#(numServers, Reg#(MemengineCmd))     cmdRegs <- replicateM(mkReg(unpack(0)));
    
    Reg#(Bool) load_in_progress <- mkReg(False);
    FIFO#(Tuple3#(MemengineCmd,Bool,Bool))         loadf_b <- mkSizedFIFO(1);
-   FIFO#(Tuple2#(Bit#(serverIdxSz),MemengineCmd)) loadf_c <- mkSizedFIFO(1);
-   FIFO#(Tuple3#(Bit#(8),Bit#(serverIdxSz),Bool))   workf <- mkSizedBRAMFIFO(32); // isthis the right size?
+   FIFO#(Tuple2#(Bit#(serverIdxSz),MemengineCmd)) loadf_c <- mkSizedFIFO(valueOf(cmdQDepth));
+   FIFO#(Tuple3#(Bit#(8),Bit#(serverIdxSz),Bool))   workf <- mkSizedBRAMFIFO(valueOf(cmdQDepth));
    
 
    Vector#(numServers, FIFO#(void))              outfs <- replicateM(mkSizedFIFO(1));
-   Vector#(numServers, FIFOF#(MemengineCmd))   cmds_in <- replicateM(mkSizedFIFOF(1));
+   Vector#(numServers, FIFO#(MemengineCmd))    cmds_in <- replicateM(mkFIFO());
 
    FIFOF#(MemData#(dataWidth))                             read_data <- mkFIFOF;
    Vector#(numServers, FIFOF#(MemData#(dataWidth)))  read_data_buffs <- replicateM(mkSizedBRAMFIFOF(bufferSizeBeats));
@@ -191,7 +189,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
    for(Integer i = 0; i < valueOf(numServers); i=i+1)
       rs[i] = (interface Server#(MemengineCmd,Bool);
 		  interface Put request;
-		     method Action put(MemengineCmd cmd) if (outs0[i] < cmd_q_depth);
+		     method Action put(MemengineCmd cmd);
 			Bit#(32) bsb = fromInteger(bufferSizeBytes);
 `ifdef BSIM	 
 			Bit#(32) dw = fromInteger(valueOf(dataWidthBytes));
@@ -205,7 +203,6 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
 			end
 			else begin
 `endif
-	 		   outs0[i] <= outs0[i]+1;
 			   cmds_in[i].enq(cmd);
 `ifdef BSIM
 			end
@@ -215,7 +212,6 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
 		  interface Get response;
 		     method ActionValue#(Bool) get;
 			outfs[i].deq;
-	 		outs0[i] <= outs0[i]-1;
 			return True;
 		     endmethod
 		  endinterface
