@@ -106,8 +106,8 @@ int PortalPoller::registerInstance(Portal *portal)
     uint8_t ch = 0;
     pthread_mutex_lock(&mutex);
     int rc = write(pipefd[1], &ch, 1); // get poll to return, so that it is no long using portal_fds (which gets realloc'ed)
-    if (rc != 1)
-      fprintf(stderr, "[%s:%d] short write %d\n", __FUNCTION__, __LINE__, rc);
+    if (rc < 0)
+      fprintf(stderr, "[%s:%d] write error %d\n", __FUNCTION__, __LINE__, errno);
     numWrappers++;
     fprintf(stderr, "Portal::registerInstance fpga%d fd %d clients %d\n", portal->pint.fpga_number, portal->pint.fpga_fd, portal->pint.client_fd_number);
     portal_wrappers = (Portal **)realloc(portal_wrappers, numWrappers*sizeof(Portal *));
@@ -154,8 +154,8 @@ void PortalPoller::portalExec_stop(void)
     int rc;
     stopping = 1;
     rc = write(pipefd[1], &ch, 1);
-    if (rc != 1)
-      fprintf(stderr, "[%s:%d] short write %d\n", __FUNCTION__, __LINE__, rc);
+    if (rc < 0)
+      fprintf(stderr, "[%s:%d] write error %d\n", __FUNCTION__, __LINE__, errno);
 }
 void PortalPoller::portalExec_end(void)
 {
@@ -188,8 +188,8 @@ void* PortalPoller::portalExec_event(void)
     uint8_t ch;
     pthread_mutex_lock(&mutex);
     size_t rc = read(pipefd[0], &ch, 1);
-    if (rc != 1)
-      fprintf(stderr, "[%s:%d] short read rc=%lu\n", __FUNCTION__, __LINE__, rc);
+    if (rc < 0)
+      fprintf(stderr, "[%s:%d] read error %d\n", __FUNCTION__, __LINE__, errno);
     for (int i = 0; i < numWrappers; i++) {
        if (!portal_wrappers)
            fprintf(stderr, "No portal_instances revents=%d\n", portal_fds[i].revents);
