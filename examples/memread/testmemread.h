@@ -73,7 +73,7 @@ int mismatchCount = 0;
 void dump(const char *prefix, char *buf, size_t len)
 {
     fprintf(stderr, "%s ", prefix);
-    for (int i = 0; i < (len > 16 ? 16 : len) ; i++)
+    for (size_t i = 0; i < (len > 16 ? 16 : len) ; i++)
 	fprintf(stderr, "%02x", (unsigned char)buf[i]);
     fprintf(stderr, "\n");
 }
@@ -112,6 +112,7 @@ void *debugWorker(void *ptr)
     device->getStateDbg();
     sleep(5);
   }
+  return ptr;
 }
 
 int runtest(int argc, const char ** argv)
@@ -121,17 +122,15 @@ int runtest(int argc, const char ** argv)
   int srcAlloc;
   unsigned int *srcBuffer = 0;
 
-  MemreadIndication *deviceIndication = 0;
-
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
   device = new MemreadRequestProxy(IfcNames_MemreadRequestS2H);
-  deviceIndication = new MemreadIndication(IfcNames_MemreadIndicationH2S);
   MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
   MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
   MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
+  MemreadIndication memReadIndication(IfcNames_MemreadIndicationH2S);
+  MMUIndication mmuIndication(dma, IfcNames_MMUIndicationH2S);
 
   fprintf(stderr, "Main::allocating memory...\n");
   srcAlloc = portalAlloc(alloc_sz);
