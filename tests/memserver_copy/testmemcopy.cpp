@@ -67,12 +67,12 @@ int main(int argc, const char **argv)
 {
   size_t alloc_sz = 4096;
   MemcopyRequestProxy *device = new MemcopyRequestProxy(IfcNames_MemcopyRequestS2H);
-  MemcopyIndication *deviceIndication = new MemcopyIndication(IfcNames_MemcopyIndicationH2S);
+  MemcopyIndication deviceIndication(IfcNames_MemcopyIndicationH2S);
   MemServerRequestProxy *memServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
   MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *memServerIndication = new MemServerIndication(memServerRequest, IfcNames_MemServerIndicationH2S);
-  MMUIndication *mmuIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
+  MemServerIndication memServerIndication(memServerRequest, IfcNames_MemServerIndicationH2S);
+  MMUIndication mmuIndication(dma, IfcNames_MMUIndicationH2S);
 
   sem_init(&done_sem, 1, 0);
   portalExec_start();
@@ -82,7 +82,7 @@ int main(int argc, const char **argv)
   int dstAlloc = portalAllocCached(alloc_sz, 1);
   unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
 
-  for (int i = 0; i < alloc_sz/sizeof(uint32_t); i++) {
+  for (size_t i = 0; i < alloc_sz/sizeof(uint32_t); i++) {
     srcBuffer[i] = 7*i-3;
     dstBuffer[i] = 0xDEADBEEF;
   }
@@ -101,7 +101,7 @@ int main(int argc, const char **argv)
   sem_wait(&done_sem);
   memdump((unsigned char *)dstBuffer, 32, "MEM");
   int mismatchCount = 0;
-  for (int i = 0; i < alloc_sz/sizeof(uint32_t); i++) {
+  for (size_t i = 0; i < alloc_sz/sizeof(uint32_t); i++) {
     if (dstBuffer[i] != srcBuffer[i])
       mismatchCount++;
   }
