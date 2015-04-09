@@ -68,12 +68,12 @@ int main(int argc, const char **argv)
     }
     fprintf(stderr, "testmemwrite: start %s %s\n", __DATE__, __TIME__);
     MemwriteRequestProxy *device = new MemwriteRequestProxy(IfcNames_MemwriteRequestS2H);
-    MemwriteIndication *deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndicationH2S);
+    MemwriteIndication deviceIndication(IfcNames_MemwriteIndicationH2S);
     MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
     MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
     DmaManager *dma = new DmaManager(dmap);
     MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
-    MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
+    MMUIndication hostMMUIndication(dma, IfcNames_MMUIndicationH2S);
 
     fprintf(stderr, "parent::allocating memory...\n");
     int dstAlloc = portalAlloc(alloc_sz);
