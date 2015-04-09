@@ -32,24 +32,6 @@
 #include "MemwriteIndication.h"
 #include "MemwriteRequest.h"
 
-static void memdump(unsigned char *p, int len, const char *title)
-{
-int i;
-
-    i = 0;
-    while (len > 0) {
-        if (!(i & 0xf)) {
-            if (i > 0)
-                printf("\n");
-            printf("%s: ",title);
-        }
-        printf("%02x ", *p++);
-        i++;
-        len--;
-    }
-    printf("\n");
-}
-
 static sem_t done_sem;
 class MemwriteIndication : public MemwriteIndicationWrapper
 {
@@ -76,7 +58,7 @@ int main(int argc, const char **argv)
 {
   size_t alloc_sz = 0x1240;
   MemwriteRequestProxy *device = new MemwriteRequestProxy(IfcNames_MemwriteRequestS2H);
-  MemwriteIndication *deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndicationH2S);
+  MemwriteIndication deviceIndication(IfcNames_MemwriteIndicationH2S);
 #if (NumberOfMasters != 0)
   MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
   MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
@@ -105,8 +87,5 @@ int main(int argc, const char **argv)
   device->startWrite(ref_dstAlloc, alloc_sz, 2 * sizeof(uint32_t));
 
   sem_wait(&done_sem);
-#if (NumberOfMasters != 0)
-  memdump((unsigned char *)dstBuffer, 32, "MEM");
-#endif
   fprintf(stderr, "%s: done\n", __FUNCTION__);
 }
