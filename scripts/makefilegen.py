@@ -205,7 +205,7 @@ else
 Q=
 endif
 
-CFLAGS_COMMON = -O -g %(cflags)s
+CFLAGS_COMMON = -O -g %(cflags)s -Wall
 CFLAGS = $(CFLAGS_COMMON)
 CFLAGS2 = %(cdefines2)s
 
