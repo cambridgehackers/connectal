@@ -136,7 +136,9 @@ static void check_signature(const char *filename, int ioctlnum)
 #endif
 
     int fd = open(filename, O_RDONLY);
-    int len = read(fd, &status, sizeof(status));
+    ssize_t len = read(fd, &status, sizeof(status));
+    if (len != sizeof(status))
+      fprintf(stderr, "[%s:%d] short read %lu\n", __FUNCTION__, __LINE__, len);
     signature.index = 0;
     while ((status = ioctl(fd, ioctlnum, &signature)) == 0 && strlen(signature.md5)) {
         int i = 0;
@@ -171,14 +173,18 @@ static void init_portal_hw(void)
         exit(-1);
     }
     else if (pid) {
-        int fd, status, len;
+        int status;
         waitpid(pid, &status, 0);
 #ifdef __arm__
-	fprintf(stderr, "subprocess pid %d completed status=%x %d\n", pid, status, WEXITSTATUS(status));
-	if (WEXITSTATUS(status) != 0)
-	  exit(-1);
-        fd = open("/dev/connectal", O_RDONLY); /* scan the fpga directory */
-        len = read(fd, &status, sizeof(status));
+	{
+	  int fd;
+	  ssize_t len;
+	  fprintf(stderr, "subprocess pid %d completed status=%x %d\n", pid, status, WEXITSTATUS(status));
+	  if (WEXITSTATUS(status) != 0)
+	    exit(-1);
+	  fd = open("/dev/connectal", O_RDONLY); /* scan the fpga directory */
+	  len = read(fd, &status, sizeof(status));
+	}
 printf("[%s:%d] fd %d len %d\n", __FUNCTION__, __LINE__, fd, len);
         close(fd);
 #elif !defined(BSIM) && !defined(BOARD_xsim)
@@ -207,6 +213,8 @@ printf("[%s:%d] fd %d len %d\n", __FUNCTION__, __LINE__, fd, len);
         static char buf[MAX_PATH];
         buf[0] = 0;
         int rc = readlink("/proc/self/exe", buf, sizeof(buf));
+	if (rc < 0)
+	  fprintf(stderr, "[%s:%d] readlink error %d\n", __FUNCTION__, __LINE__, errno);
         char *serial = getenv("SERIALNO");
         int ind = 1;
         char *argv[] = { (char *)"fpgajtag", NULL, NULL, NULL, NULL, NULL, NULL, NULL};
@@ -466,8 +474,6 @@ static int init_hardware(struct PortalInternal *pint, void *param)
         return -1;
     }
 #else
-    int rc = 0;
-    char read_status;
     char buff[128];
     snprintf(buff, sizeof(buff), "/dev/portal_%d_%d", pint->fpga_tile, pint->fpga_number);
     pint->fpga_fd = open(buff, O_RDWR);
