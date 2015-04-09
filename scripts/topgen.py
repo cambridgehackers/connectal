@@ -147,21 +147,21 @@ class iReq:
         self.inst = ''
         self.args = []
 
-memShareInst = '''   SharedMemoryPortalConfigInputPipes%(tparam)s l%(modname)sCW <- mkSharedMemoryPortalConfigInputPipes;'''
+memShareInst = '''   SharedMemoryPortalConfigInput%(tparam)s l%(modname)sCW <- mkSharedMemoryPortalConfigInput;'''
 
 memEngineInst = '''   MemreadEngineV#(64,2,%(clientCount)s) lSharereadEngine <- mkMemreadEngine();
    MemwriteEngineV#(64,2,%(clientCount)s) lSharewriteEngine <- mkMemwriteEngine();'''
 
-memModuleInstantiation = '''   SharedMemoryPortal#(64) l%(modname)sShare <- mkSharedMemory%(stype)sPortal(l%(modname)sPipes.portalIfc,
+memModuleInstantiation = '''   SharedMemoryPortal#(64) l%(modname)sShare <- mkSharedMemory%(stype)sPortal(l%(modname)s.portalIfc,
            lSharereadEngine.read_servers[%(clientCount)s], lSharewriteEngine.write_servers[%(clientCount)s]);'''
 
 memConnection = '''   mkConnection(l%(modname)sCW, l%(modname)sShare.cfg);'''
 
-connectUser = '''   mkConnection(lSimpleRequestInputPipes, %(args)s);'''
+connectUser = '''   mkConnection(lSimpleRequestInput.pipes, %(args)s);'''
 
-pipeInstantiation = '''   %(modname)sPipes%(tparam)s l%(modname)sPipes <- mk%(modname)sPipes;'''
+pipeInstantiation = '''   %(modname)s%(tparam)s l%(modname)s <- mk%(modname)s;'''
 
-connectInstantiation = '''   mkConnection(l%(modname)sPipes, l%(userIf)s);'''
+connectInstantiation = '''   mkConnection(l%(modname)s.pipes, l%(userIf)s);'''
 
 def instMod(args, modname, modext, constructor, tparam, memFlag):
     global clientCount
@@ -204,7 +204,7 @@ def instMod(args, modname, modext, constructor, tparam, memFlag):
             enumList.append(modname + memFlag + tstr)
             addPortal(pmap['argsConfig'], '%(modname)sCW' % pmap, 'Request')
         else:
-            addPortal(pmap['args'], '%(modname)sPipes' % pmap, pmap['stype'])
+            addPortal(pmap['args'], '%(modname)s' % pmap, pmap['stype'])
     else:
         if not instantiateRequest.get(pmap['modname']):
             instantiateRequest[pmap['modname']] = iReq()
@@ -283,9 +283,9 @@ if __name__=='__main__':
         ptemp = pmap['name']
         for pmap['name'] in ptemp.split(','):
             instMod('', pmap['name'], 'Output', '', '', pmap['memFlag'])
-            argstr = pmap['uparam'] + 'l%(name)sOutputPipes.ifc'
+            argstr = pmap['uparam'] + 'l%(name)sOutput.ifc'
             if pmap['uparam'] and pmap['uparam'][0] == '/':
-                argstr = 'l%(name)sOutputPipes.ifc, ' + pmap['uparam'][1:-2]
+                argstr = 'l%(name)sOutput.ifc, ' + pmap['uparam'][1:-2]
             instMod(argstr, pmap['usermod'], '', '', pmap['xparam'], False)
             pmap['uparam'] = ''
     for pitem in options.wrapper:
