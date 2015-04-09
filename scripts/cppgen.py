@@ -417,8 +417,11 @@ def generate_demarshall(argStruct, w):
         if off:
             field = '%s>>%s' % (field, off)
         #print 'JJJ', e.name, '{{'+field+'}}', typeBitWidth(e.datatype), e.shifted, e.assignOp, off
-        #if typeBitWidth(e.datatype) < 32:
-        field = '((%s)&0x%xul)' % (field, ((1 << (typeBitWidth(e.datatype)-e.shifted))-1))
+        fieldWidth = 32 - off     # number of valid data bits in source
+        fieldWidth += e.shifted   # number of valid data bits after shifting
+        if fieldWidth > typeBitWidth(e.datatype): # if num bits in type < num of valid bits
+            fieldWidth = typeBitWidth(e.datatype)
+        field = '((%s)&0x%xul)' % (field, ((1 << (fieldWidth - e.shifted))-1))
         if e.shifted:
             field = '((%s)(%s)<<%s)' % (typeCName(e.datatype),field, e.shifted)
         if typeCName(e.datatype) == 'SpecialTypeForSendingFd':
