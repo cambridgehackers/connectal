@@ -136,9 +136,11 @@ static void check_signature(const char *filename, int ioctlnum)
 #endif
 
     int fd = open(filename, O_RDONLY);
-    ssize_t len = read(fd, &status, sizeof(status));
-    if (len != sizeof(status))
-      fprintf(stderr, "[%s:%d] short read %lu\n", __FUNCTION__, __LINE__, len);
+    if (strcmp(filename, "/dev/portalmem")) {
+        ssize_t len = read(fd, &status, sizeof(status));
+        if (len != sizeof(status))
+            fprintf(stderr, "[%s:%d] read status from '%s' was only %d bytes long\n", __FUNCTION__, __LINE__, filename, (int)len);
+    }
     signature.index = 0;
     while ((status = ioctl(fd, ioctlnum, &signature)) == 0 && strlen(signature.md5)) {
         int i = 0;
