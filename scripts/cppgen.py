@@ -603,7 +603,9 @@ def generate_class(classNameOrig, classVariant, declList, parentC, parentCC, gen
             generated_hpp.write(('    int (*%s) ( ' % methodName) + formalParamStr + ' );\n')
             generated_cpp.write(('int %s%s_cb ( ' % (classCName, methodName)) + formalParamStr + ' ) {\n')
             indent(generated_cpp, 4)
-            generated_cpp.write(('(static_cast<%sWrapper *>(p->parent))->%s ( ' % (classCName, methodName)) + paramValues + ');\n};\n')
+            generated_cpp.write(('(static_cast<%sWrapper *>(p->parent))->%s ( ' % (classCName, methodName)) + paramValues + ');\n')
+            indent(generated_cpp, 4)
+            generated_cpp.write('return 0;\n};\n');
         generated_hpp.write('} %sCb;\n' % classCName)
         generated_cpp.write('%sCb %s_cbTable = {\n' % (classCName, classCName))
         for mitem in declList:
