@@ -77,8 +77,6 @@ typedef union {
 handleMessageTemplate1='''
 {
     static int runaway = 0;
-    int tmpfd;
-    unsigned int tmp;
     %(classNameOrig)sData tempdata;
     %(handleStartup)s
     switch (channel) {'''
@@ -569,7 +567,7 @@ def generate_class(classNameOrig, classVariant, declList, parentC, parentCC, gen
     if classVariant:
         subs['handleStartup'] = 'channel = connnectalJsonDecode(p, channel, &tempdata, %(classNameOrig)sInfo);' % subs
     else:
-        subs['handleStartup'] = 'volatile unsigned int* temp_working_addr = p->item->mapchannelInd(p, channel);'
+        subs['handleStartup'] = 'volatile unsigned int* temp_working_addr = p->item->mapchannelInd(p, channel);\n    int tmp;\n    int tmpfd;'
         generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(className)s_reqinfo %(reqInfo)s\n' % subs)
         hpp.write(proxyClassPrefixTemplate % subs)
         for mitem in declList:
