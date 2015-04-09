@@ -25,6 +25,7 @@ import FIFOF::*;
 import GetPut::*;
 import Connectable::*;
 import Vector::*;
+import BuildVector::*;
 import MIMO::*;
 import DefaultValue::*;
 import Gearbox::*;
@@ -382,22 +383,45 @@ module mkUnFunnelPipesPipelinedInternal#(Vector#(1, PipeOut#(Tuple2#(Bit#(TLog#(
    return map(pipeSecond,outs);
 endmodule
    
+module mkFunnelNode#(Vector#(n, PipeOut#(a)) inpipes, Integer numPipes, Put#(a) outpipe)(Empty);
+   rule funnel;
+      a v = ?;
+      Bool send = False;
+      for (Integer i = 0; i < valueOf(n) && i < numPipes; i = i+1)
+	 if (inpipes[i].notEmpty) begin
+	    v <- toGet(inpipes[i]).get();
+	    send = True;
+	 end
+      if (send)
+	 outpipe.put(v);
+   endrule
+endmodule
+
 instance FunnelPipesPipelined#(1,k,a,bpc)
    provisos (Log#(k, logk),
 	     Bits#(a,a__),
 	     Add#(1,b__,k),
+	     Add#(TExp#(bpc), d__, k),
 	     Div#(logk,bpc,stages));
    module mkFunnelPipesPipelined#(Vector#(k,PipeOut#(a)) in) (FunnelPipe#(1,k,a,bpc));
       Vector#(stages, Vector#(k, FIFOF#(a))) buffs  <- replicateM(replicateM(mkFIFOF));
-      Vector#(TAdd#(stages,1), Vector#(k, PipeOut#(a))) infss = append(map(map(toPipeOut),buffs), cons(in,nil));
-      for(Integer j = valueOf(stages); j > 0; j=j-1)
-	 for(Integer i = 0; i < 2**(j*valueOf(bpc)) && i < valueOf(k); i=i+1) 
-	    mkConnection(infss[j][i], toPut(buffs[j-1][i/(2**valueOf(bpc))]));
-      return cons(infss[0][0],nil);
+      Vector#(TAdd#(stages,1), Vector#(k, PipeOut#(a))) infss = append(map(map(toPipeOut),buffs), vec(in));
+      for(Integer j = valueOf(stages); j > 0; j=j-1) begin
+	 Integer width = 2**(j*valueOf(bpc));
+	 Integer stride = 2**valueOf(bpc);
+	 for(Integer i = 0; i < width && i < valueOf(k); i=i+stride) begin
+	    Vector#(TExp#(bpc),PipeOut#(a)) inpipes = takeAt(i, infss[j]);
+	    Integer numPipes = stride;
+	    if (i + stride >= valueOf(k))
+	       numPipes = valueOf(k) - i;
+	    mkFunnelNode(inpipes, numPipes, toPut(buffs[j-1][i/width]));
+	 end
+      end
+      return vec(infss[0][0]);
    endmodule
    module mkFunnelPipesPipelinedRR#(Vector#(k,PipeOut#(a)) in, Integer c) (FunnelPipe#(1,k,a,bpc));
       Vector#(stages, Vector#(k, FIFOF#(a))) buffs  <- replicateM(replicateM(mkFIFOF));
-      Vector#(TAdd#(stages,1), Vector#(k, PipeOut#(a))) infss = append(map(map(toPipeOut),buffs), cons(in,nil));
+      Vector#(TAdd#(stages,1), Vector#(k, PipeOut#(a))) infss = append(map(map(toPipeOut),buffs), vec(in));
       for(Integer j = valueOf(stages); j > 0; j=j-1) begin
 	 Vector#(k, FIFOF#(void)) ctrl  <- replicateM(mkFIFOF1());
    	 for(Integer i = 0; i < 2**(j*valueOf(bpc)) && i < valueOf(k); i=i+1) begin
@@ -431,7 +455,7 @@ instance FunnelPipesPipelined#(1,k,a,bpc)
    	    endrule
    	 end
       end
-      return cons(infss[0][0],nil);
+      return vec(infss[0][0]);
    endmodule
    module mkUnFunnelPipesPipelined#(Vector#(1, PipeOut#(Tuple2#(Bit#(logk),a))) in) (UnFunnelPipe#(1,k,a,bpc));
       let rv <- mkUnFunnelPipesPipelinedInternal(in);
