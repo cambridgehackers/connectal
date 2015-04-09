@@ -43,19 +43,18 @@ typedef 9 MMU_PIPELINE_DEPTH;
 interface DmaDbg;
    method ActionValue#(Bit#(64)) getMemoryTraffic();
    method ActionValue#(DmaDbgRec) dbg();
-   method Action stop(Bit#(2) tile);
-   method Action kill(Bit#(2) tile);
-   method Action go(Bit#(2) tile);
 endinterface
 
 interface MemWriteInternal#(numeric type addrWidth, numeric type dataWidth, numeric type numTags, numeric type numServers);
    interface DmaDbg dbg;
+   interface Put#(TileControl) tileControl;
    interface PhysMemWriteClient#(addrWidth,dataWidth) client;
    interface Vector#(numServers, MemWriteServer#(dataWidth)) servers;
 endinterface
 
 interface MemReadInternal#(numeric type addrWidth, numeric type dataWidth, numeric type numTags, numeric type numServers);
    interface DmaDbg dbg;
+   interface Put#(TileControl) tileControl;
    interface PhysMemReadClient#(addrWidth,dataWidth) client;
    interface Vector#(numServers, MemReadServer#(dataWidth)) servers;
 endinterface
@@ -277,17 +276,20 @@ module mkMemReadInternal#(MemServerIndication ind,
 	 endmethod
       endinterface
    endinterface
+   interface Put tileControl;
+      method Action put(TileControl tc);
+	 let tile = tc.tile;
+	 let kv = True;
+	 let sv = True;
+	 if (tc.state == Running || tc.state == Stopped)
+	    kv = False;
+	 if (tc.state == Running)
+	    sv = False;
+	 killv[tile] <= kv;
+	 stopv[tile] <= sv;
+      endmethod
+   endinterface
    interface DmaDbg dbg;
-      method Action go(Bit#(2) tile);
-	 killv[tile] <= False;
-	 stopv[tile] <= False;
-      endmethod
-      method Action stop(Bit#(2) tile);
-	 stopv[tile] <= True;
-      endmethod
-      method Action kill(Bit#(2) tile);
-	 killv[tile] <= True;
-      endmethod
       method ActionValue#(DmaDbgRec) dbg();
 	 return DmaDbgRec{x:0, y:0, z:0, w:0};
       endmethod
@@ -448,17 +450,20 @@ module mkMemWriteInternal#(MemServerIndication ind,
 	 endmethod
       endinterface
    endinterface
+   interface Put tileControl;
+      method Action put(TileControl tc);
+	 let tile = tc.tile;
+	 let kv = True;
+	 let sv = True;
+	 if (tc.state == Running || tc.state == Stopped)
+	    kv = False;
+	 if (tc.state == Running)
+	    sv = False;
+	 killv[tile] <= kv;
+	 stopv[tile] <= sv;
+      endmethod
+   endinterface
    interface DmaDbg dbg;
-      method Action go(Bit#(2) tile);
-	 killv[tile] <= False;
-	 stopv[tile] <= False;
-      endmethod
-      method Action stop(Bit#(2) tile);
-	 stopv[tile] <= True;
-      endmethod
-      method Action kill(Bit#(2) tile);
-	 killv[tile] <= True;
-      endmethod
       method ActionValue#(DmaDbgRec) dbg();
 	 return DmaDbgRec{x:fromInteger(valueOf(numServers)), y:?, z:?, w:?};
       endmethod
