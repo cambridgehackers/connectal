@@ -18,7 +18,6 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
 #include <stdio.h>
 #include <stdint.h>
 #include <semaphore.h>
@@ -31,6 +30,8 @@
 #endif
 #include "MemwriteIndication.h"
 #include "MemwriteRequest.h"
+
+#define NUMBER_OF_WORDS   0x1240
 
 static sem_t done_sem;
 class MemwriteIndication : public MemwriteIndicationWrapper
@@ -56,7 +57,7 @@ public:
 
 int main(int argc, const char **argv)
 {
-  size_t alloc_sz = 0x1240;
+  size_t alloc_sz = NUMBER_OF_WORDS;
   MemwriteRequestProxy *device = new MemwriteRequestProxy(IfcNames_MemwriteRequestS2H);
   MemwriteIndication deviceIndication(IfcNames_MemwriteIndicationH2S);
 #if (NumberOfMasters != 0)
@@ -68,8 +69,6 @@ int main(int argc, const char **argv)
 #endif
 
   sem_init(&done_sem, 1, 0);
-  portalExec_start();
-
 #if (NumberOfMasters != 0)
   int dstAlloc = portalAlloc(alloc_sz);
   unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
@@ -88,4 +87,6 @@ int main(int argc, const char **argv)
 
   sem_wait(&done_sem);
   fprintf(stderr, "%s: done\n", __FUNCTION__);
+  sleep(2);
+  return 0;
 }
