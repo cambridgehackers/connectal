@@ -184,9 +184,9 @@ static void init_portal_hw(void)
 	    exit(-1);
 	  fd = open("/dev/connectal", O_RDONLY); /* scan the fpga directory */
 	  len = read(fd, &status, sizeof(status));
+	  printf("[%s:%d] fd %d len %lu\n", __FUNCTION__, __LINE__, fd, len);
+	  close(fd);
 	}
-printf("[%s:%d] fd %d len %d\n", __FUNCTION__, __LINE__, fd, len);
-        close(fd);
 #elif !defined(BSIM) && !defined(BOARD_xsim)
         while (1) {
             struct stat statbuf;
