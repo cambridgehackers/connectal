@@ -34,8 +34,6 @@
 #include "sock_utils.h"  // bsim_poll_interrupt()
 #include "GeneratedTypes.h" 
 
-static int trace_memory;// = 1;
-
 #define MAX_INDARRAY 4
 static PortalInternal intarr[MAX_INDARRAY];
 
@@ -46,7 +44,6 @@ static int burstLen = 16;
 #else
 #define numWords 0x1240/4
 #endif
-static long test_sz  = numWords*sizeof(unsigned int);
 static long alloc_sz = numWords*sizeof(unsigned int);
 static DmaManagerPrivate priv;
 
@@ -54,20 +51,24 @@ int RtestIndicationWrapperreadDone_cb (  struct PortalInternal *p, const uint32_
 {
          PORTAL_PRINTF( "Rtest_readDone(mismatch = %x)\n", mismatchCount);
          sem_post(&test_sem);
+	 return 0;
 }
 int MMUIndicationWrapperconfigResp_cb (  struct PortalInternal *p, const uint32_t pointer)
 {
         //PORTAL_PRINTF("configResp %x\n", pointer);
         sem_post(&priv.confSem);
+	return 0;
 }
 int MMUIndicationWrapperidResponse_cb (  struct PortalInternal *p, const uint32_t sglId ) {
         priv.sglId = sglId;
         sem_post(&priv.sglIdSem);
+	return 0;
 };
 int MMUIndicationWrappererror_cb (  struct PortalInternal *p, const uint32_t code, const uint32_t pointer, const uint64_t offset, const uint64_t extra ) {
-static int maxnumber = 10;
-if (maxnumber-- > 0)
-        PORTAL_PRINTF("DmaIndication::dmaError(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
+  static int maxnumber = 10;
+  if (maxnumber-- > 0)
+    PORTAL_PRINTF("DmaIndication::dmaError(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
+  return 0;
 }
 
 void manual_event(void)
