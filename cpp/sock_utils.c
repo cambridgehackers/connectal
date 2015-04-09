@@ -168,12 +168,12 @@ ssize_t sock_fd_write(int sockfd, void *ptr, size_t nbytes, int sendfd)
     iov[0].iov_len = nbytes;
     msg.msg_iov = iov;
     msg.msg_iovlen = 1;
-    int rc = sendmsg(sockfd, &msg, 0);
-    if (rc != nbytes) {
-        fprintf(stderr, "[%s:%d] error in sendmsg %d %d\n", __FUNCTION__, __LINE__, rc, errno);
+    ssize_t bytesSent = sendmsg(sockfd, &msg, 0);
+    if (bytesSent != (ssize_t)nbytes) {
+        fprintf(stderr, "[%s:%d] error in sendmsg %lu %d\n", __FUNCTION__, __LINE__, bytesSent, errno);
         exit(1);
     }
-    return rc;
+    return bytesSent;
 }
 
 ssize_t sock_fd_read(int sockfd, void *ptr, size_t nbytes, int *recvfd)
@@ -181,7 +181,6 @@ ssize_t sock_fd_read(int sockfd, void *ptr, size_t nbytes, int *recvfd)
     struct msghdr    msg;
     struct iovec     iov[1];
     ssize_t          n;
-    int              newfd;
     union {
       struct cmsghdr cm;
       char           control[CMSG_SPACE(sizeof(int))];
@@ -212,7 +211,7 @@ ssize_t sock_fd_read(int sockfd, void *ptr, size_t nbytes, int *recvfd)
 	if (trace_socket)
 	  fprintf(stderr, "[%s:%d] got fd %d\n", __FUNCTION__, __LINE__, *foo);
     }
-    if (n != nbytes) {
+    if (n != (ssize_t)nbytes) {
       //fprintf(stderr, "[%s:%d] asked for %ld bytes, got %ld\n", __FUNCTION__, __LINE__, (long)nbytes, (long)n);
       iov[0].iov_base = (void *)((unsigned long)iov[0].iov_base + n);
       iov[0].iov_len -= n;
