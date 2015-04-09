@@ -215,6 +215,7 @@ printf("[%s:%d] fd %d len %d\n", __FUNCTION__, __LINE__, fd, len);
         int rc = readlink("/proc/self/exe", buf, sizeof(buf));
 	if (rc < 0)
 	  fprintf(stderr, "[%s:%d] readlink error %d\n", __FUNCTION__, __LINE__, errno);
+#if !defined(BOARD_bluesim) && !defined(BOARD_xsim)
         char *serial = getenv("SERIALNO");
         int ind = 1;
         char *argv[] = { (char *)"fpgajtag", NULL, NULL, NULL, NULL, NULL, NULL, NULL};
@@ -226,10 +227,11 @@ printf("[%s:%d] fd %d len %d\n", __FUNCTION__, __LINE__, fd, len);
         argv[ind++] = (char *)"-x";
         argv[ind++] = buf;
         execvp ("/fpgajtag", argv);
-#elif !defined(BSIM) && !defined(BOARD_xsim)
+#else
         argv[ind++] = buf;
         execvp ("fpgajtag", argv);
 #endif // !__arm__
+#endif
         exit(-1);
     }
 #endif // !__KERNEL__

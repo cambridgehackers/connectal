@@ -27,7 +27,7 @@
 
 static unsigned int tag_counter;
 typedef struct bsim_fpga_map_entry{
-  int name;
+  uint32_t name;
   int offset;
   int valid;
 } bsim_fpga_map_entry;
@@ -471,18 +471,18 @@ static int init_bsim(struct PortalInternal *pint, void *param)
 #ifndef __KERNEL__
     assert(pint->fpga_number < MAX_BSIM_PORTAL_ID);
 #endif
-    struct bsim_fpga_map_entry* foo = bsim_fpga_map[pint->fpga_tile];
-    for (i = 0; foo[i].valid; i++)
-      if (foo[i].name == pint->fpga_number) {
+    struct bsim_fpga_map_entry* entry = bsim_fpga_map[pint->fpga_tile];
+    for (i = 0; entry[i].valid; i++)
+      if (entry[i].name == pint->fpga_number) {
 	found = 1;
-	pint->fpga_number = foo[i].offset;
+	pint->fpga_number = entry[i].offset;
 	break;
       }
     if (!found) {
       PORTAL_PRINTF( "Error: init_bsim: did not find fpga_number %d\n", pint->fpga_number);
       PORTAL_PRINTF( "    Found fpga numbers:");
-      for (i = 0; foo[i].valid; i++)
-	PORTAL_PRINTF( " %d", foo[i].name);
+      for (i = 0; entry[i].valid; i++)
+	PORTAL_PRINTF( " %d", entry[i].name);
       PORTAL_PRINTF( "\n");
     }
 #ifndef __KERNEL__
