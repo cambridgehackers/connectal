@@ -104,8 +104,8 @@ typedef struct {
 typedef struct PortalInternal {
     struct PortalPoller   *poller;
     int                    fpga_fd;
-    int                    fpga_number;
-    int                    fpga_tile;
+    uint32_t               fpga_number;
+    uint32_t               fpga_tile;
     volatile unsigned int *map_base;
     void                  *parent;
     PORTAL_INDFUNC         handler;

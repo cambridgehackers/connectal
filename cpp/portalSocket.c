@@ -35,9 +35,11 @@ static bsim_fpga_map_entry bsim_fpga_map[2][MAX_BSIM_PORTAL_ID];
 
 static void initialize_bsim_map(void)
 {
-  unsigned int num_tiles, num_portals, idx, t = 0;
+  uint32_t  num_tiles = 0;
+  uint32_t num_portals = 0;
+  uint32_t t = 0;
   do{
-    idx = 0;
+    uint32_t idx = 0;
     do{
       static PortalInternal p;
       volatile unsigned int *ptr=(volatile unsigned int *)(long)((t * TILE_BASE_OFFSET)+(idx * PORTAL_BASE_OFFSET));
@@ -272,7 +274,7 @@ PortalItemFunctions muxfunc = {
 static struct memresponse shared_response;
 static int shared_response_valid;
 static uint32_t interrupt_value;
-int poll_response(int id)
+int poll_response(uint32_t id)
 {
   int recvFd;
   if (!shared_response_valid) {

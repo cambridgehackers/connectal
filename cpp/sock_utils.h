@@ -35,13 +35,13 @@ typedef struct PortalSocketParam {
 } PortalSocketParam; /* for ITEMINIT function */
 
 struct memrequest{
-  int portal;
+  uint32_t portal;
   int write_flag;
   volatile unsigned int *addr;
   unsigned int data_or_tag;
 };
 struct memresponse{
-  int portal;
+  uint32_t portal;
   unsigned int data;
   unsigned int tag;
 };
