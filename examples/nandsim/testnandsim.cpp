@@ -89,7 +89,7 @@ int main(int argc, const char **argv)
 
   MMURequestProxy *hostMMURequest = new MMURequestProxy(IfcNames_BackingStoreMMURequest);
   DmaManager *hostDma = new DmaManager(hostMMURequest);
-  MMUIndication *hostMMUIndication = new MMUIndication(hostDma, IfcNames_BackingStoreMMUIndication);
+  MMUIndication hostMMUIndication(hostDma, IfcNames_BackingStoreMMUIndication);
 
   NandCfgRequestProxy *nandcfgRequest = new NandCfgRequestProxy(IfcNames_NandCfgRequest);
   NandCfgIndication *nandcfgIndication = new NandCfgIndication(IfcNames_NandCfgIndication);
@@ -172,22 +172,22 @@ int main(int argc, const char **argv)
     fprintf(stderr, "testnandsim::opening %s\n", filename);
     // open up the text file and read it into an allocated memory buffer
     int dataFile = open(filename, O_RDONLY);
-    uint32_t data_len = lseek(dataFile, 0, SEEK_END);
+    off_t data_len = lseek(dataFile, 0, SEEK_END);
     data_len = data_len & ~15; // because we are using a burst length of 16
     lseek(dataFile, 0, SEEK_SET);
 
     int dataAlloc = portalAlloc(data_len);
     int ref_dataAlloc = hostDma->reference(dataAlloc);
     char *data = (char *)portalMmap(dataAlloc, data_len);
-    int read_len = read(dataFile, data, data_len); 
+    ssize_t read_len = read(dataFile, data, data_len); 
     if(read_len != data_len) {
-      fprintf(stderr, "testnandsim::error reading %s %d %d\n", filename, (int)data_len, (int) read_len);
+      fprintf(stderr, "testnandsim::error reading %s %ld %ld\n", filename, (long)data_len, (long) read_len);
       exit(-1);
     }
 
     // write the contents of data into "flash" memory
     portalDCacheFlushInval(ref_dataAlloc, data_len, data);
-    fprintf(stderr, "testnandsim::invoking write %08x %08x\n", ref_dataAlloc, data_len);
+    fprintf(stderr, "testnandsim::invoking write %08x %08lx\n", ref_dataAlloc, (long)data_len);
     nandcfgRequest->startWrite(ref_dataAlloc, 0, 0, data_len, 16);
     nandcfgIndication->wait();
 
