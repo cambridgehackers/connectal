@@ -146,9 +146,9 @@ int runtest(int argc, const char **argv)
   // }
 
   fprintf(stderr, "Main::starting memcpy numWords:%d\n", numWords);
-  int burstLen = 16;
+  int burstLen = 32;
 #ifndef BSIM
-  int iterCnt = 64;
+  int iterCnt = 128;
 #else
   int iterCnt = 2;
 #endif
@@ -162,8 +162,9 @@ int runtest(int argc, const char **argv)
   uint64_t write_beats = hostMemServerIndication->receiveMemoryTraffic();
   float read_util = (float)read_beats/(float)cycles;
   float write_util = (float)write_beats/(float)cycles;
-  fprintf(stderr, "wr_beats: %"PRIx64"\n", write_beats);
-  fprintf(stderr, "rd_beats: %"PRIx64"\n", read_beats);
+  fprintf(stderr, "   iters: %d\n", iterCnt);
+  fprintf(stderr, "wr_beats: %"PRIx64" %08lx\n", write_beats, (long)write_beats);
+  fprintf(stderr, "rd_beats: %"PRIx64" %08lx\n", read_beats, (long)read_beats);
   fprintf(stderr, "numWords: %x\n", numWords);
   fprintf(stderr, "  wr_est: %"PRIx64"\n", (write_beats*2)/iterCnt);
   fprintf(stderr, "  rd_est: %"PRIx64"\n", (read_beats*2)/iterCnt);
@@ -233,7 +234,7 @@ int runtest_chunk(int argc, const char **argv)
       srcBuffer[i] = loop/sizeof(srcBuffer[0])+i;
     }
     portalDCacheFlushInval(srcAlloc, srcBytes, srcBuffer);
-    device->startCopy(ref_dstAlloc, ref_srcAlloc, nw, 16, 1);
+    device->startCopy(ref_dstAlloc, ref_srcAlloc, nw, 128, 1);
     sem_wait(&done_sem);
     fprintf(stderr, "LOOP %s %d\n", __FUNCTION__, __LINE__);
 
