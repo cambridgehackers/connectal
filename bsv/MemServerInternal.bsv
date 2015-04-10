@@ -321,7 +321,7 @@ module mkMemWriteInternal#(MemServerIndication ind,
    // stage 1: address validation (latency = 1)
    FIFO#(RRec#(numServers,addrWidth))  reqFifo <- mkFIFO;
    // stage 2: write commands
-   FIFO#(DRec#(numServers, addrWidth)) dreqFifo <- mkSizedBRAMFIFO(valueOf(numTags));
+   FIFO#(DRec#(numServers, addrWidth)) dreqFifo <- mkSizedFIFO(valueOf(numTags));
    // stage 3: write data 
    BRAM2Port#(Bit#(TLog#(numTags)), RResp#(numServers,addrWidth)) respFifos <- mkBRAM2Server(defaultValue);
    TagGen#(numTags) tag_gen <- mkTagGen;
