@@ -26,10 +26,8 @@ import AxiBits::*;
 import AxiGather::*;
 
 interface ParallellaPins;
-   interface Par_txo txo;
-   interface Par_txi txi;
-   interface Par_rxo rxo;
-   interface Par_rxi rxi;
+   interface Par_tx tx;
+   interface Par_rx rxo
 endinterface
 
 interface ParallellaLib;
