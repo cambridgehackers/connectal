@@ -40,6 +40,11 @@ int burstLen = 32;
 #else
 int burstLen = 16;
 #endif
+#ifndef BSIM
+int iterCnt = 64;
+#else
+int iterCnt = 3;
+#endif
 
 #ifndef BSIM
 int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
@@ -146,7 +151,7 @@ int main(int argc, const char ** argv)
   if (orig_test){
     fprintf(stderr, "Main::orig_test read %08x\n", numWords);
     portalTimerStart(0);
-    device->startRead(ref_srcAlloc, 0, numWords, burstLen);
+    device->startRead(ref_srcAlloc, 0, numWords, burstLen, iterCnt);
     sem_wait(&test_sem);
     if (mismatchCount) {
       fprintf(stderr, "Main::first test failed to match %d.\n", mismatchCount);
@@ -156,9 +161,10 @@ int main(int argc, const char ** argv)
     hostMemServerRequest->memoryTraffic(ChannelType_Read);
     uint64_t beats = hostMemServerIndication->receiveMemoryTraffic();
     float read_util = (float)beats/(float)cycles;
+    fprintf(stderr, " iterCnt: %d\n", iterCnt);
     fprintf(stderr, "   beats: %"PRIx64"\n", beats);
     fprintf(stderr, "numWords: %x\n", numWords);
-    fprintf(stderr, "     est: %"PRIx64"\n", (beats*2));
+    fprintf(stderr, "     est: %"PRIx64"\n", (beats*2)/iterCnt);
     fprintf(stderr, "memory read utilization (beats/cycle): %f\n", read_util);
 
     /* Test 2: check that mismatch is detected */
@@ -169,12 +175,12 @@ int main(int argc, const char ** argv)
 
     fprintf(stderr, "Starting second read, mismatches expected\n");
     mismatchCount = 0;
-    device->startRead(ref_srcAlloc, 0, numWords, burstLen);
+    device->startRead(ref_srcAlloc, 0, numWords, burstLen, iterCnt);
     sem_wait(&test_sem);
-    if (mismatchCount != 3/*number of errors introduced above*/) {
-      fprintf(stderr, "Main::second test failed to match mismatchCount=%d (expected %d) numWords=%d.\n",
-	      mismatchCount, 3,
-	      numWords);
+    if (mismatchCount != 3/*number of errors introduced above*/ * iterCnt) {
+      fprintf(stderr, "Main::second test failed to match mismatchCount=%d (expected %d) iterCnt=%d numWords=%d.\n",
+	      mismatchCount, 3*iterCnt,
+	      iterCnt, numWords);
       test_result++;     // failed
     }
 
