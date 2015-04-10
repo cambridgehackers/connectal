@@ -40,8 +40,6 @@
 
 #include "GeneratedTypes.h" // generated in project directory
 
-static int trace_memory = 1;
-
 #ifdef BSIM
 #include "dmaSendFd.h"
 #endif
@@ -62,12 +60,13 @@ void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *sglDevice)
 void DmaManager_dereference(DmaManagerPrivate *priv, int ref)
 {
 #if  !defined(BSIM) && !defined(__KERNEL__)
-  int rc;
 #ifdef ZYNQ
-  rc = ioctl(priv->sglDevice->fpga_fd, PORTAL_DEREFERENCE, ref);
+  int rc = ioctl(priv->sglDevice->fpga_fd, PORTAL_DEREFERENCE, ref);
 #else
-  rc = ioctl(priv->sglDevice->fpga_fd, PCIE_DEREFERENCE, ref);
+  int rc = ioctl(priv->sglDevice->fpga_fd, PCIE_DEREFERENCE, ref);
 #endif
+    if (rc != 0)
+      fprintf(stderr, "[%s:%d] dereference ioctl error %d\n", __FUNCTION__, __LINE__, errno);
 #else
   MMURequest_idReturn(priv->sglDevice, ref);
 #endif

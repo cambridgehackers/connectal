@@ -91,17 +91,26 @@ interface MMURequest;
    method Action setInterface(Bit#(32) interfaceId, Bit#(32) sglId);
 endinterface
 
+typedef enum {
+   Idle, Stopped, Running
+   } TileState deriving (Bits,Eq);
+
+typedef struct {
+   Bit#(2) tile;
+   TileState state;
+   } TileControl deriving (Bits);
+
 //
-// @brief Debug interface to Dma engine
+// @brief Control interface to Dma engine
 //
 interface MemServerRequest;
-   method Action stop(Bit#(2) tile);
-   method Action kill(Bit#(2) tile);
-   method Action go(Bit#(2) tile);
-   //
    // @brief Requests an address translation
    //
    method Action addrTrans(Bit#(32) sglId, Bit#(32) offset);
+
+   // @brief Changes tile status
+   //
+   method Action setTileState(TileControl tc);
    //
    // @brief Requests debug info for the specified channel type
    //

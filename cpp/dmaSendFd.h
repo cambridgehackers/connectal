@@ -30,8 +30,8 @@ static int shifts[] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0, 0};
 #ifdef CONNECTAL_DRIVER_CODE
 #define NO_WRAPPER_FUNCTIONS
 #include "MMURequest.c"
-static int trace_memory = 1;
 #endif
+static int trace_memory = 1;
 
 #include "GeneratedTypes.h" // generated in project directory
 

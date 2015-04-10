@@ -36,13 +36,23 @@ PortalPoller *defaultPoller = new PortalPoller();
 uint64_t poll_enter_time, poll_return_time; // for performance measurement
 
 PortalPoller::PortalPoller()
-  : portal_wrappers(0), portal_fds(0), numFds(0), inited(0), numWrappers(0), stopping(0)
+  : portal_wrappers(0), portal_fds(0), inited(0), numWrappers(0), numFds(0), stopping(0)
 {
     int rc = pipe(pipefd);
+    if (rc != 0)
+      fprintf(stderr, "[%s:%d] pipe error %d:%s\n", __FUNCTION__, __LINE__, errno, strerror(errno));
     sem_init(&sem_startup, 0, 0);
     pthread_mutex_init(&mutex, NULL);
     fcntl(pipefd[0], F_SETFL, O_NONBLOCK);
     addFd(pipefd[0]);
+
+    portalExec_timeout = -1;
+#ifdef XSIM
+    portalExec_timeout = 100;
+#endif
+#ifdef BSIM
+    portalExec_timeout = 100;
+#endif
 }
 
 int PortalPoller::unregisterInstance(Portal *portal)
@@ -94,9 +104,10 @@ void PortalPoller::addFd(int fd)
 int PortalPoller::registerInstance(Portal *portal)
 {
     uint8_t ch = 0;
-    int rc;
     pthread_mutex_lock(&mutex);
-    rc = write(pipefd[1], &ch, 1); // get poll to return, so that it is no long using portal_fds (which gets realloc'ed)
+    int rc = write(pipefd[1], &ch, 1); // get poll to return, so that it is no long using portal_fds (which gets realloc'ed)
+    if (rc < 0)
+      fprintf(stderr, "[%s:%d] write error %d\n", __FUNCTION__, __LINE__, errno);
     numWrappers++;
     fprintf(stderr, "Portal::registerInstance fpga%d fd %d clients %d\n", portal->pint.fpga_number, portal->pint.fpga_fd, portal->pint.client_fd_number);
     portal_wrappers = (Portal **)realloc(portal_wrappers, numWrappers*sizeof(Portal *));
@@ -114,12 +125,7 @@ int PortalPoller::registerInstance(Portal *portal)
 
 void* PortalPoller::portalExec_init(void)
 {
-    portalExec_timeout = 100; // no interrupt timeout
-#ifdef XSIM
-    portalExec_timeout = 100;
-#endif
 #ifdef BSIM
-    portalExec_timeout = 100;
     if (global_sockfd != -1) {
         pthread_mutex_lock(&mutex);
         addFd(global_sockfd);
@@ -148,6 +154,8 @@ void PortalPoller::portalExec_stop(void)
     int rc;
     stopping = 1;
     rc = write(pipefd[1], &ch, 1);
+    if (rc < 0)
+      fprintf(stderr, "[%s:%d] write error %d\n", __FUNCTION__, __LINE__, errno);
 }
 void PortalPoller::portalExec_end(void)
 {
@@ -178,9 +186,10 @@ void* PortalPoller::portalExec_poll(int timeout)
 void* PortalPoller::portalExec_event(void)
 {
     uint8_t ch;
-    int rc;
     pthread_mutex_lock(&mutex);
-    rc = read(pipefd[0], &ch, 1);
+    size_t rc = read(pipefd[0], &ch, 1);
+    if (rc < 0)
+      fprintf(stderr, "[%s:%d] read error %d\n", __FUNCTION__, __LINE__, errno);
     for (int i = 0; i < numWrappers; i++) {
        if (!portal_wrappers)
            fprintf(stderr, "No portal_instances revents=%d\n", portal_fds[i].revents);

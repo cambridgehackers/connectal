@@ -75,6 +75,7 @@ argparser.add_argument('-P', '--partition-module', default=[], help='Modules to 
 argparser.add_argument('--cachedir', default=None, help='Cache directory for fpgamake to use')
 argparser.add_argument('-v', '--verbose', help='Display verbose information messages', action='store_true')
 argparser.add_argument(      '--dump_map', help='List of portals passed to pcieflat for PCIe trace debug info')
+argparser.add_argument('--nonstrict', help='If nonstrict, pass -Wall to gcc, otherwise -Werror', default=False, action='store_true')
 
 noisyFlag=False
 
@@ -179,8 +180,8 @@ LOCAL_MODULE := android.exe
 LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS := -llog %(clibdirs)s %(clibs)s %(clibfiles)s
 LOCAL_CPPFLAGS := "-march=armv7-a"
-LOCAL_CFLAGS := -DZYNQ %(cflags)s
-LOCAL_CXXFLAGS := -DZYNQ %(cflags)s
+LOCAL_CFLAGS := -DZYNQ %(cflags)s %(werr)s
+LOCAL_CXXFLAGS := -DZYNQ %(cflags)s %(werr)s
 LOCAL_CFLAGS2 := $(cdefines2)s
 
 include $(BUILD_EXECUTABLE)
@@ -205,7 +206,7 @@ else
 Q=
 endif
 
-CFLAGS_COMMON = -O -g %(cflags)s
+CFLAGS_COMMON = -O -g %(cflags)s -Wall %(werr)s
 CFLAGS = $(CFLAGS_COMMON)
 CFLAGS2 = %(cdefines2)s
 
@@ -366,7 +367,8 @@ if __name__=='__main__':
         'cdefines': ' '.join([ '-D%s' % d for d in bsvdefines ]),
         'cdefines2': ' '.join([ '-D%s' % d for d in options.bsvdefine2 ]),
         'cincludes': ' '.join([ '-I%s' % os.path.abspath(i) for i in options.cinclude ]),
-        'bsimcxx': '-DBSIM $(BSIM_EXE_CXX)' if boardname == 'bluesim' else ''
+        'bsimcxx': '-DBSIM $(BSIM_EXE_CXX)' if boardname == 'bluesim' else '',
+        'werr': '-Werror' if not options.nonstrict else '-Wall'
     }
     includelist = ['-I$(DTOP)/jni', '-I$(CONNECTALDIR)', \
                    '-I$(CONNECTALDIR)/cpp', '-I$(CONNECTALDIR)/lib/cpp', \

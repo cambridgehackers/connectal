@@ -77,9 +77,9 @@ typedef union {
 handleMessageTemplate1='''
 {
     static int runaway = 0;
-    int tmpfd;
-    unsigned int tmp;
-    %(classNameOrig)sData tempdata;
+    int   tmp __attribute__ ((unused));
+    int tmpfd __attribute__ ((unused));
+    %(classNameOrig)sData tempdata __attribute__ ((unused));
     %(handleStartup)s
     switch (channel) {'''
 
@@ -88,9 +88,9 @@ handleMessagePrep='''
         %(paramStructDemarshall)s'''
 
 handleMessageCase='''
-    case %(channelNumber)s:
+    case %(channelNumber)s: {
         %(responseCase)s
-        break;'''
+      } break;'''
 
 handleMessageTemplate2='''
     default:
@@ -417,8 +417,11 @@ def generate_demarshall(argStruct, w):
         if off:
             field = '%s>>%s' % (field, off)
         #print 'JJJ', e.name, '{{'+field+'}}', typeBitWidth(e.datatype), e.shifted, e.assignOp, off
-        #if typeBitWidth(e.datatype) < 32:
-        field = '((%s)&0x%xul)' % (field, ((1 << (typeBitWidth(e.datatype)-e.shifted))-1))
+        fieldWidth = 32 - off     # number of valid data bits in source
+        fieldWidth += e.shifted   # number of valid data bits after shifting
+        if fieldWidth > typeBitWidth(e.datatype): # if num bits in type < num of valid bits
+            fieldWidth = typeBitWidth(e.datatype)
+        field = '((%s)&0x%xul)' % (field, ((1 << (fieldWidth - e.shifted))-1))
         if e.shifted:
             field = '((%s)(%s)<<%s)' % (typeCName(e.datatype),field, e.shifted)
         if typeCName(e.datatype) == 'SpecialTypeForSendingFd':
@@ -603,7 +606,9 @@ def generate_class(classNameOrig, classVariant, declList, parentC, parentCC, gen
             generated_hpp.write(('    int (*%s) ( ' % methodName) + formalParamStr + ' );\n')
             generated_cpp.write(('int %s%s_cb ( ' % (classCName, methodName)) + formalParamStr + ' ) {\n')
             indent(generated_cpp, 4)
-            generated_cpp.write(('(static_cast<%sWrapper *>(p->parent))->%s ( ' % (classCName, methodName)) + paramValues + ');\n};\n')
+            generated_cpp.write(('(static_cast<%sWrapper *>(p->parent))->%s ( ' % (classCName, methodName)) + paramValues + ');\n')
+            indent(generated_cpp, 4)
+            generated_cpp.write('return 0;\n};\n')
         generated_hpp.write('} %sCb;\n' % classCName)
         generated_cpp.write('%sCb %s_cbTable = {\n' % (classCName, classCName))
         for mitem in declList:

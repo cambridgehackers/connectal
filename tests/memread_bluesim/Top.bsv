@@ -21,6 +21,7 @@
 // SOFTWARE.
 import SpecialFIFOs::*;
 import Vector::*;
+import BuildVector::*;
 import StmtFSM::*;
 import FIFO::*;
 import GetPut::*;
@@ -58,7 +59,7 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
    MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(MMURequestS2H, hostMMU.request);
 
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(MemServerIndicationH2S);
-   MemServer#(PhysAddrWidth,DataBusWidth,1) dma <- mkMemServer(memread.dmaClient, nil, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
+   MemServer#(PhysAddrWidth,DataBusWidth,1) dma <- mkMemServer(memread.dmaClient, nil, vec(hostMMU), hostMemServerIndicationProxy.ifc);
    MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(MemServerRequestS2H, dma.request);
 
    PhysMemMaster#(PhysAddrWidth,DataBusWidth) dma1 = (interface PhysMemMaster;
@@ -187,5 +188,5 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
-   interface masters = cons(dma1,nil);
+   interface masters = vec(dma1);
 endmodule : mkConnectalTop

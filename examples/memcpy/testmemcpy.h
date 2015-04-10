@@ -46,7 +46,7 @@ unsigned int memcmp_count = 0;
 void dump(const char *prefix, char *buf, size_t len)
 {
     fprintf(stderr, "%s ", prefix);
-    for (int i = 0; i < len ; i++) {
+    for (size_t i = 0; i < len ; i++) {
 	fprintf(stderr, "%02x", (unsigned char)buf[i]);
 	if (i % 32 == 31)
 	  fprintf(stderr, "\n");
@@ -96,12 +96,12 @@ int runtest(int argc, const char **argv)
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
   MemcpyRequestProxy *device = new MemcpyRequestProxy(IfcNames_MemcpyRequestS2H);
-  MemcpyIndication *deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndicationH2S);
+  MemcpyIndication deviceIndication(IfcNames_MemcpyIndicationH2S);
   MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
   MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
   MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
+  MMUIndication hostMMUIndication (dma, IfcNames_MMUIndicationH2S);
 
   fprintf(stderr, "Main::allocating memory...\n");
 
@@ -192,12 +192,12 @@ int runtest_chunk(int argc, const char **argv)
   }
 
   MemcpyRequestProxy *device = new MemcpyRequestProxy(IfcNames_MemcpyRequestS2H);
-  MemcpyIndication *deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndicationH2S);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
+  MemcpyIndication deviceIndication(IfcNames_MemcpyIndicationH2S);
+  MemServerRequestProxy hostMemServerRequest(IfcNames_MemServerRequestS2H);
   MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_MemServerIndicationH2S);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
+  MemServerIndication hostMemServerIndication(IfcNames_MemServerIndicationH2S);
+  MMUIndication hostMMUIndication(dma, IfcNames_MMUIndicationH2S);
 
   portalExec_start();
 

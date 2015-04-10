@@ -20,6 +20,7 @@
  */
 import SpecialFIFOs::*;
 import Vector::*;
+import BuildVector::*;
 import StmtFSM::*;
 import FIFO::*;
 import CtrlMux::*;
@@ -45,7 +46,7 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    Memwrite memwrite <- mkMemwrite(memwriteIndicationProxy.ifc);
    MemwriteRequestWrapper memwriteRequestWrapper <- mkMemwriteRequestWrapper(MemwriteRequest,memwrite.request);
 
-   Vector#(1, MemWriteClient#(64)) writeClients = cons(memwrite.dmaClient,nil);
+   Vector#(1, MemWriteClient#(64)) writeClients = vec(memwrite.dmaClient);
 
    MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);

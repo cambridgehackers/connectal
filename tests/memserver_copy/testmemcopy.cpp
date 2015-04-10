@@ -27,8 +27,8 @@
 #include "StdDmaIndication.h"
 #include "MemServerRequest.h"
 #include "MMURequest.h"
-#include "MemwriteIndication.h"
-#include "MemwriteRequest.h"
+#include "MemcopyIndication.h"
+#include "MemcopyRequest.h"
 
 static void memdump(unsigned char *p, int len, const char *title)
 {
@@ -49,39 +49,43 @@ int i;
 }
 
 static sem_t done_sem;
-class MemwriteIndication : public MemwriteIndicationWrapper
+class MemcopyIndication : public MemcopyIndicationWrapper
 {
 public:
-  MemwriteIndication(int id) : MemwriteIndicationWrapper(id){}
+  MemcopyIndication(int id) : MemcopyIndicationWrapper(id){}
 
-  virtual void writeDone ( uint32_t srcGen ){
-    fprintf(stderr, "Memwrite::writeDone (%08x)\n", srcGen);
+  virtual void copyDone ( uint32_t srcGen ){
+    fprintf(stderr, "Memcopy::writeDone (%08x)\n", srcGen);
     sem_post(&done_sem);
   }
-  virtual void writeProgress ( uint32_t numtodo ){
-    fprintf(stderr, "Memwrite::writeProgress (%08x)\n", numtodo);
+  virtual void copyProgress ( uint32_t numtodo ){
+    fprintf(stderr, "Memcopy::writeProgress (%08x)\n", numtodo);
   }
 };
 
 int main(int argc, const char **argv)
 {
-  size_t alloc_sz = 1024*1024;
-  MemwriteRequestProxy *device = new MemwriteRequestProxy(IfcNames_MemwriteRequestS2H);
-  MemwriteIndication *deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndicationH2S);
+  size_t alloc_sz = 4096;
+  MemcopyRequestProxy *device = new MemcopyRequestProxy(IfcNames_MemcopyRequestS2H);
+  MemcopyIndication deviceIndication(IfcNames_MemcopyIndicationH2S);
   MemServerRequestProxy *memServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
   MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *memServerIndication = new MemServerIndication(memServerRequest, IfcNames_MemServerIndicationH2S);
-  MMUIndication *mmuIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
+  MemServerIndication memServerIndication(memServerRequest, IfcNames_MemServerIndicationH2S);
+  MMUIndication mmuIndication(dma, IfcNames_MMUIndicationH2S);
 
   sem_init(&done_sem, 1, 0);
   portalExec_start();
 
+  int srcAlloc = portalAllocCached(alloc_sz, 1);
+  unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
   int dstAlloc = portalAllocCached(alloc_sz, 1);
   unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
 
-  for (int i = 0; i < alloc_sz/sizeof(uint32_t); i++)
+  for (size_t i = 0; i < alloc_sz/sizeof(uint32_t); i++) {
+    srcBuffer[i] = 7*i-3;
     dstBuffer[i] = 0xDEADBEEF;
+  }
 
 #ifndef USE_ACP
   fprintf(stderr, "flushing cache\n");
@@ -89,15 +93,16 @@ int main(int argc, const char **argv)
 #endif
 
   fprintf(stderr, "parent::starting write\n");
+  unsigned int ref_srcAlloc = dma->reference(srcAlloc);
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
   int burstLenBytes = 16*sizeof(uint32_t);
-  device->startWrite(ref_dstAlloc, alloc_sz, alloc_sz / burstLenBytes, burstLenBytes);
+  device->startCopy(ref_srcAlloc, ref_dstAlloc, alloc_sz, alloc_sz / burstLenBytes, burstLenBytes);
 
   sem_wait(&done_sem);
   memdump((unsigned char *)dstBuffer, 32, "MEM");
   int mismatchCount = 0;
-  for (int i = 0; i < alloc_sz/sizeof(uint32_t); i++) {
-    if (dstBuffer[i] != i)
+  for (size_t i = 0; i < alloc_sz/sizeof(uint32_t); i++) {
+    if (dstBuffer[i] != srcBuffer[i])
       mismatchCount++;
   }
   fprintf(stderr, "%s: done mismatchCount=%d\n", __FUNCTION__, mismatchCount);

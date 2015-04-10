@@ -408,7 +408,8 @@ connectalsdhci-clean:
 connectalsdhci:
 	(cd drivers/connectalsdhci/;  DRIVER_VERSION=$(VERSION) DEVICE_XILINX_KERNEL=`pwd`/../../../zynq-boot/linux-xlnx/ make connectalsdhci.ko)
 
-connectalsdhci-adb:
+connectalsdhci-adb: 
+	cd tests/test_sdio1/ && make run.zedboard
 	adb connect $(RUNPARAM)
 	adb -s $(RUNIP):$(RUNPORT) shell pwd || true
 	adb connect $(RUNPARAM)

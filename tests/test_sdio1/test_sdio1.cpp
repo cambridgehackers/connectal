@@ -66,10 +66,13 @@ int main(int argc, const char **argv)
   SDIOResponse *ind = new SDIOResponse(IfcNames_ControllerResponse);
 
   portalExec_start();
+  sleep(2);
   
+  // device->toggle_cd(1000);
   //  device->set_spew_en(1);
-  while(true){
-    device->cnt_cycle_req(0xF);
-    sleep(2);
-  }
+  // while(true){
+  //   device->cnt_cycle_req(0xF);
+  //   sleep(2);
+  // }
+
 }

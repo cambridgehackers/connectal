@@ -35,22 +35,24 @@ import AddressGenerator::*;
 
 typedef TDiv#(DataBusWidth,32) WordsPerBeat;
 
-interface MemwriteRequest;
-   method Action startWrite(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) numReqs, Bit#(32) burstLen);
+interface MemcopyRequest;
+   method Action startCopy(Bit#(32) readPointer, Bit#(32) writePointer, Bit#(32) numWords, Bit#(32) numReqs, Bit#(32) burstLen);
 endinterface
 
-interface MemwriteIndication;
-   method Action writeDone(Bit#(32) v);
-   method Action writeProgress(Bit#(32) v);
+interface MemcopyIndication;
+   method Action copyDone(Bit#(32) v);
+   method Action copyProgress(Bit#(32) v);
 endinterface
 
-interface Memwrite;
-   interface MemwriteRequest request;
-   interface Vector#(1, MemWriteClient#(64)) dmaClients;
+interface Memcopy;
+   interface MemcopyRequest request;
+   interface Vector#(1, MemReadClient#(64)) readClients;
+   interface Vector#(1, MemWriteClient#(64)) writeClients;
 endinterface
 
-module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
-   Reg#(SGLId)   pointer <- mkReg(0);
+module  mkMemcopy#(MemcopyIndication indication) (Memcopy);
+   Reg#(SGLId)   readPointer <- mkReg(0);
+   Reg#(SGLId)   writePointer <- mkReg(0);
    Reg#(Bit#(32))        numReqs <- mkReg(0);
    Reg#(Bit#(32))        numDone <- mkReg(0);
    Reg#(Bit#(MemOffsetSize)) reqOffset <- mkReg(0);
@@ -59,67 +61,57 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    Reg#(Bit#(BurstLenSize)) burstLenBytes <- mkReg(0);
    Reg#(Bit#(32))              srcGens <- mkReg(0);
 
-   AddressGenerator#(32, DataBusWidth) addrGenerator <- mkAddressGenerator();
-   FIFO#(MemRequest) reqFifo <- mkFIFO();
-   FIFO#(PhysMemRequest#(32)) preqFifo <- mkFIFO();
+   FIFO#(MemRequest) readReqFifo <- mkFIFO();
+   FIFO#(MemRequest) writeReqFifo <- mkFIFO();
    FIFO#(MemData#(DataBusWidth))   dataFifo <- mkSizedBRAMFIFO(1024);
    FIFO#(Bit#(MemTagSize)) doneFifo <- mkFIFO();
 
    let verboseProgress = False;
 
-   rule start if (numReqs != 0);
-      reqFifo.enq(MemRequest { sglId: pointer, offset: reqOffset, burstLen: burstLenBytes, tag: extend(tag) });
-      preqFifo.enq(PhysMemRequest { addr: 0, burstLen: burstLenBytes, tag: extend(tag) });
+   rule startReqRule if (numReqs != 0);
+      readReqFifo.enq(MemRequest { sglId: readPointer, offset: reqOffset, burstLen: burstLenBytes, tag: extend(tag) });
+      writeReqFifo.enq(MemRequest { sglId: writePointer, offset: reqOffset, burstLen: burstLenBytes, tag: extend(tag) });
+
       numReqs <= numReqs - 1;
       reqOffset <= reqOffset + extend(burstLenBytes);
       tag <= tag + 1;
       //$display("start numReqs", numReqs);
    endrule
 
-   rule preq;
-      let preq <- toGet(preqFifo).get();
-      addrGenerator.request.put(preq);
-   endrule
-
    rule finish;
       let donetag <- toGet(doneFifo).get();
       //$display("finished num todo=%d", numDone);
       if (numDone == 1) begin
-         indication.writeDone(0);
+         indication.copyDone(0);
       end
       numDone <= numDone - 1;
       if (verboseProgress)
-	 indication.writeProgress(extend(donetag));
+	 indication.copyProgress(extend(donetag));
    endrule
 
-   rule src if (numWords != 0);
-      let b <- addrGenerator.addrBeat.get();
-
-      function Bit#(32) plusi(Integer i); return srcGens + fromInteger(i); endfunction
-      Vector#(WordsPerBeat, Bit#(32)) v = genWith(plusi);
-      dataFifo.enq(MemData { data: pack(v), tag: b.tag, last: b.last});
-      srcGens <= srcGens+fromInteger(valueOf(WordsPerBeat));
-      numWords <= numWords - fromInteger(valueOf(WordsPerBeat));
-   endrule
-
-   MemWriteClient#(64) dmaClient = (interface MemWriteClient;
-      interface Get writeReq = toGet(reqFifo);
+   MemReadClient#(64) readClient = (interface MemReadClient;
+      interface Get readReq = toGet(readReqFifo);
+      interface Put readData = toPut(dataFifo);
+   endinterface );
+   MemWriteClient#(64) writeClient = (interface MemWriteClient;
+      interface Get writeReq = toGet(writeReqFifo);
       interface Get writeData = toGet(dataFifo);
       interface Put writeDone = toPut(doneFifo);
    endinterface );
 
-   interface MemwriteRequest request;
-       method Action startWrite(Bit#(32) wp, Bit#(32) nw, Bit#(32) nreq, Bit#(32) bl);
+   interface MemcopyRequest request;
+       method Action startCopy(Bit#(32) rp, Bit#(32) wp, Bit#(32) nw, Bit#(32) nreq, Bit#(32) bl);
 	  $dumpvars();
-          $display("startWrite pointer=%d numWords=%d (%d) numReqs=%d burstLen=%d", pointer, nw, nreq*bl, nreq, bl);
-          pointer <= wp;
+          $display("startCopy readPointer=%d writePointer=%d numWords=%d (%d) numReqs=%d burstLen=%d", rp, wp, nw, nreq*bl, nreq, bl);
+          readPointer <= rp;
+          writePointer <= wp;
           numWords  <= nw;
           burstLenBytes <= truncate(bl);
 	  numReqs <= nreq;
 	  numDone <= nreq;
        endmethod
    endinterface
-   interface dmaClients = vec(dmaClient);
+   interface readClients = vec(readClient);
+   interface writeClients = vec(writeClient);
 
 endmodule
-

@@ -23,6 +23,7 @@
 import FIFO::*;
 import FIFOF::*;
 import Vector::*;
+import BuildVector::*;
 import ClientServer::*;
 import GetPut::*;
 import MemTypes::*;
@@ -112,7 +113,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
       iterCnt <= iterCnt - 1;
    endrule
    
-   interface MemWriteClient dmaClient = cons(we.dmaClient, nil);
+   interface MemWriteClient dmaClient = vec(we.dmaClient);
    interface MemwriteRequest request;
        method Action startWrite(Bit#(32) wp, Bit#(32) off, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
 	  $display("startWrite pointer=%d offset=%d numWords=%h burstLen=%d iterCnt=%d", pointer, off, nw, bl, ic);

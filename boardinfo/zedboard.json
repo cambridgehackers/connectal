@@ -476,6 +476,40 @@
 	     "IOSTANDARD" : "LVCMOS33"
 	     }	 
     },
+    "pmode_documentation_only;cannot use from PL" : {
+        "MIO13" : {
+             "LOC" : "A6",
+	     "CONNECTORPIN" : "JE1"
+	     },
+        "MIO10" : {
+             "LOC" : "G7",
+	     "CONNECTORPIN" : "JE2"
+	     },
+        "MIO11" : {
+             "LOC" : "B4",
+	     "CONNECTORPIN" : "JE3"
+	     },
+        "MIO12" : {
+             "LOC" : "C5",
+	     "CONNECTORPIN" : "JE4"
+	     },
+        "MIO0" : {
+             "LOC" : "G6",
+	     "CONNECTORPIN" : "JE7"
+	     },
+        "MIO9" : {
+             "LOC" : "C4",
+	     "CONNECTORPIN" : "JE8"
+	     },
+        "MIO14" : {
+             "LOC" : "B6",
+	     "CONNECTORPIN" : "JE9"
+	     },
+        "MIO15" : {
+             "LOC" : "E6",
+	     "CONNECTORPIN" : "JE10"
+	     }
+    },
     "leds" : {
     	"L0" : {
 	     "LOC" : "T22",

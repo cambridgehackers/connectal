@@ -198,13 +198,13 @@ android.debug.exe: prepare_bin_target
 
 run:
 ifeq ($(CONNECTAL_SHARED),1)
-	$(GDB_BSIM) ./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe2 $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
+	$(RUN_BSC_LM_LICENSE_FILE) $(GDB_BSIM) ./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe2 $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
 else
 ifeq ($(BOARD),bluesim)
     ifeq ($(RUNSOURCE2),)
-	$(GDB_BSIM) ./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
+	$(RUN_BSC_LM_LICENSE_FILE) $(GDB_BSIM) ./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
     else
-	./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB2) ./bin/bsim_exe2& bsim2pid=$$!; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid $$bsim2pid; exit $$retcode
+	$(RUN_BSC_LM_LICENSE_FILE) ./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB2) ./bin/bsim_exe2& bsim2pid=$$!; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid $$bsim2pid; exit $$retcode
     endif
 else
   ifeq ($(BOARD),xsim)
@@ -217,7 +217,6 @@ else
     ifeq ($(OS),android)
 	$(CONNECTALDIR)/scripts/run.android bin/android.exe $(RUN_ARGS)
     else
-	echo foo
 ifeq ($(XILINX),"1")
 	$(CONNECTALDIR)/scripts/run.pcietest bin/ubuntu.exe $(RUN_ARGS)
 endif
