@@ -27,7 +27,7 @@ import Connectable::*;
 import ConnectableWithTrace::*;
 import Bscan::*;
 import Vector::*;
-import PParallellaLIB::*;
+import ELink::*;
 import Portal::*;
 import AxiMasterSlave::*;
 import AxiDma::*;
@@ -41,7 +41,7 @@ import ParallellaLibDefs::*;
 
 module mkParallellaLib#(Clock axi_clock, Reset axi_reset)(ParallellaLib);
 
-   PParallellaLIB foo <- mkPParallellaLIB( 
+   ELink foo <- mkELink( 
       axi_clock,  axi_clock, 
       axi_reset, axi_reset,
       axi_reset, axi_reset,
@@ -53,10 +53,8 @@ module mkParallellaLib#(Clock axi_clock, Reset axi_reset)(ParallellaLib);
     interface maxi = vtopm_axi_gp;
     interface saxi = vtops_axi_hp;
     interface  ParallellaPins pins;
-     interface  txo = foo.txo;
-     interface  txi = foo.txi;
-      interface  rxo = foo.rxo;
-      interface  rxi = foo.rxi;
+     interface  tx = foo.tx;
+      interface  rx = foo.rx;
    endinterface
    interface  misc = foo.misc;
       
