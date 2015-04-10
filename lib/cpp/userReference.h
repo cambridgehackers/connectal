@@ -90,6 +90,6 @@ int send_reference_to_portal(PortalInternal *device, int numEntries, RegionRef *
     PORTAL_PRINTF("borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borderVal[0], borderVal[1], borderVal[2]);
   }
   DMAregion(device, id, borderVal[0], indexVal[0], borderVal[1], indexVal[1], borderVal[2], indexVal[2]);
-retlab:
+
     return rc;
 }
