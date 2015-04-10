@@ -79,20 +79,18 @@ typedef AxiSlaveBits#(32,32,12,Empty) ParMaxiGp;
 
 (* always_ready, always_enabled *)
 interface PParallellaLIB;
-   interface Par_txo txo;
-   interface Par_txi txi;
-   interface Par_rxo rxo;
-   interface Par_rxi rxi;
+   interface Par_tx tx;
+   interface Par_rx rx;
    interface ParMaxiGp maxi;   // this will connect to a master
    interface ParSaxiHp saxi;  // this will connect to a slave
    interface Par_misc misc;
 endinterface
 
-import "BVI" parallella =
-module mkPParallellaLIB#(Clock maxiclk, Clock saxiclk, 
+import "BVI" elink =
+module mkELink#(Clock maxiclk, Clock saxiclk, 
    Reset maxiclk_reset, Reset saxiclk_reset,
    Reset maxireset, Reset saxireset,
-   Reset reset_chip, Reset reset_fpga)(PParallellaLIB);
+   Reset reset_chip, Reset reset_fpga)(ELink);
    // default_clock clk();
    // default_reset rst();
    input_clock maxiclk(emaxi_aclk) = maxiclk;  // assigns the verilog emaxi_aclk
@@ -108,40 +106,34 @@ module mkPParallellaLIB#(Clock maxiclk, Clock saxiclk,
       method reset_chip reset_chip();
       method reset_fpga reset_fpga();
       method csysreq(csysreq) enable((*inhigh*) EN_csysreq);
-      method cclk_p(rxi_cclk_p) enable((*inhigh*) EN_rxi_cclk_p);
-      method cclk_n(rxi_cclk_n) enable((*inhigh*) EN_rxi_cclk_n);
+      method cclk_p(cclk_p) enable((*inhigh*) EN_cclk_p);
+      method cclk_n(cclk_n) enable((*inhigh*) EN_cclk_n);
    endinterface
    
-   interface Par_txo txo;
-      method data_p(txo_data_p) enable((*inhigh*) EN_txo_data_p);
-      method data_n(txo_data_n) enable((*inhigh*) EN_txo_data_n);
-      method frame_p(txo_frame_p) enable((*inhigh*) EN_txo_frame_p);
-      method frame_n(txo_frame_n) enable((*inhigh*) EN_txo_frame_n);
-      method lclk_p(txo_lclk_p) enable((*inhigh*) EN_txo_lclk_p);
-      method lclk_n(txo_lclk_n) enable((*inhigh*) EN_txo_lclk_n);
+   interface Par_tx tx;
+      method data_p(tx_data_p) enable((*inhigh*) EN_tx_data_p);
+      method data_n(tx_data_n) enable((*inhigh*) EN_tx_data_n);
+      method frame_p(tx_frame_p) enable((*inhigh*) EN_tx_frame_p);
+      method frame_n(tx_frame_n) enable((*inhigh*) EN_tx_frame_n);
+      method lclk_p(tx_lclk_p) enable((*inhigh*) EN_tx_lclk_p);
+      method lclk_n(tx_lclk_n) enable((*inhigh*) EN_tx_lclk_n);
+      method tx_wr_wait_p wr_wait_p();
+      method tx_wr_wait_n wr_wait_n();
+      method tx_rd_wait_p rd_wait_p();
+      method tx_rd_wait_n rd_wait_n();
    endinterface
 
-   interface Par_txi txi;
-      method txo_wr_wait_p wr_wait_p();
-      method txo_wr_wait_n wr_wait_n();
-      method txo_rd_wait_p rd_wait_p();
-      method txo_rd_wait_n rd_wait_n();
-   endinterface
-
-   interface Par_rxi rxi;
-      method rxi_data_p data_p();
-      method rxi_data_n data_n();
-      method rxi_frame_p frame_p();
-      method rxi_frame_n frame_n();
-      method rxi_lclk_p lclk_p();
-      method rxi_lclk_n lclk_n();
-   endinterface
- 
-   interface Par_rxo rxo;
-      method wr_wait_p(rxo_wr_wait_p) enable((*inhigh*) EN_rxo_wr_wait_p);
-      method wr_wait_n(rxo_wr_wait_n) enable((*inhigh*) EN_rxo_wr_wait_n);
-      method rd_wait_p(rxo_rd_wait_p) enable((*inhigh*) EN_rxo_rd_wait_p);
-      method rd_wait_n(rxo_rd_wait_n) enable((*inhigh*) EN_rxo_rd_wait_n);
+   interface Par_rx rx;
+      method rx_data_p data_p();
+      method rx_data_n data_n();
+      method rx_frame_p frame_p();
+      method rx_frame_n frame_n();
+      method rx_lclk_p lclk_p();
+      method rx_lclk_n lclk_n();
+      method wr_wait_p(rx_wr_wait_p) enable((*inhigh*) EN_rx_wr_wait_p);
+      method wr_wait_n(rx_wr_wait_n) enable((*inhigh*) EN_rx_wr_wait_n);
+      method rd_wait_p(rx_rd_wait_p) enable((*inhigh*) EN_rx_rd_wait_p);
+      method rd_wait_n(rx_rd_wait_n) enable((*inhigh*) EN_rx_rd_wait_n);
    endinterface
    
    interface ParSaxiHp saxi;
@@ -230,10 +222,10 @@ module mkPParallellaLIB#(Clock maxiclk, Clock saxiclk,
    
    
 schedule (
-   misc.csysack, misc.cactive, misc.reset_chip, misc.reset_fpga, txo.data_p, txo.data_n,
-   txo.frame_p, txo.frame_n, txo.lclk_p, txo.lclk_n, rxo.wr_wait_p,
-   rxo.wr_wait_n, rxo.rd_wait_p, rxo.rd_wait_n, rxi.cclk_p,
-   rxi.cclk_n, maxi.awid, maxi.awaddr, maxi.awlen, maxi.awsize,
+   misc.csysack, misc.cactive, misc.reset_chip, misc.reset_fpga, tx.data_p, tx.data_n,
+   tx.frame_p, tx.frame_n, tx.lclk_p, tx.lclk_n, rx.wr_wait_p,
+   rx.wr_wait_n, rx.rd_wait_p, rx.rd_wait_n, misc.cclk_p,
+   misc.cclk_n, maxi.awid, maxi.awaddr, maxi.awlen, maxi.awsize,
    maxi.awburst, maxi.awlock, maxi.awcache, maxi.awprot,
    maxi.awvalid, saxi.awready, maxi.wid, maxi.wdata, maxi.wstrb,
    maxi.wlast, maxi.wvalid, saxi.wready, maxi.bready, saxi.bid,
@@ -245,8 +237,8 @@ schedule (
    // Inputs
    // clkin_100, saxi.aclk, maxi.aclk, reset, 
    saxi.aresetn,
-   maxi.aresetn, misc.csysreq, rxi.data_p, rxi.data_n, rxi.frame_p,
-   rxi.frame_n, rxi.lclk_p, rxi.lclk_n, txi.wr_wait_p, txi.wr_wait_n,
+   maxi.aresetn, misc.csysreq, rx.data_p, rx.data_n, rx.frame_p,
+   rx.frame_n, rx.lclk_p, rx.lclk_n, txi.wr_wait_p, txi.wr_wait_n,
    txi.rd_wait_p, txi.rd_wait_n, maxi.awready, saxi.awid,
    saxi.awaddr, saxi.awlen, saxi.awsize, saxi.awburst,
    saxi.awlock, saxi.awcache, saxi.awprot, saxi.awvalid,
@@ -257,10 +249,10 @@ schedule (
    saxi.arvalid, maxi.rid, maxi.rdata, maxi.rresp, maxi.rlast,
    maxi.rvalid, saxi.rready, saxi.awqos, saxi.arqos
 ) CF (
-   misc.csysack, misc.cactive, misc.reset_chip, misc.reset_fpga, txo.data_p, txo.data_n,
-   txo.frame_p, txo.frame_n, txo.lclk_p, txo.lclk_n, rxo.wr_wait_p,
-   rxo.wr_wait_n, rxo.rd_wait_p, rxo.rd_wait_n, rxi.cclk_p,
-   rxi.cclk_n, maxi.awid, maxi.awaddr, maxi.awlen, maxi.awsize,
+   misc.csysack, misc.cactive, misc.reset_chip, misc.reset_fpga, tx.data_p, tx.data_n,
+   tx.frame_p, tx.frame_n, tx.lclk_p, tx.lclk_n, rx.wr_wait_p,
+   rx.wr_wait_n, rx.rd_wait_p, rx.rd_wait_n, misc.cclk_p,
+   misc.cclk_n, maxi.awid, maxi.awaddr, maxi.awlen, maxi.awsize,
    maxi.awburst, maxi.awlock, maxi.awcache, maxi.awprot,
    maxi.awvalid, saxi.awready, maxi.wid, maxi.wdata, maxi.wstrb,
    maxi.wlast, maxi.wvalid, saxi.wready, maxi.bready, saxi.bid,
@@ -272,8 +264,8 @@ schedule (
    // Inputs
    // clkin_100, saxi.aclk, maxi.aclk, reset, 
    saxi.aresetn,
-   maxi.aresetn, misc.csysreq, rxi.data_p, rxi.data_n, rxi.frame_p,
-   rxi.frame_n, rxi.lclk_p, rxi.lclk_n, txi.wr_wait_p, txi.wr_wait_n,
+   maxi.aresetn, misc.csysreq, rx.data_p, rx.data_n, rx.frame_p,
+   rx.frame_n, rx.lclk_p, rx.lclk_n, txi.wr_wait_p, txi.wr_wait_n,
    txi.rd_wait_p, txi.rd_wait_n, maxi.awready, saxi.awid,
    saxi.awaddr, saxi.awlen, saxi.awsize, saxi.awburst,
    saxi.awlock, saxi.awcache, saxi.awprot, saxi.awvalid,
