@@ -380,7 +380,7 @@ endmodule
 module mkMemPortalMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves) (PhysMemSlave#(addrWidth,dataWidth))
    provisos(Add#(selWidth,aw,addrWidth)
 	    ,Add#(a__, TLog#(numSlaves), selWidth)
-	    ,Min#(2,TLog#(numSlaves),bpc)
+	    ,Min#(4,TLog#(numSlaves),bpc)
 	    ,Pipe::FunnelPipesPipelined#(1, numSlaves, MemTypes::MemData#(dataWidth),bpc)
 	    );
    let port_sel_low = valueOf(aw);
@@ -469,7 +469,7 @@ endmodule
 module mkSlaveMux#(Vector#(numPortals,MemPortal#(aw,dataWidth)) portals) (PhysMemSlave#(addrWidth,dataWidth))
    provisos(Add#(selWidth,aw,addrWidth)
 	    ,Add#(a__, TLog#(numPortals), selWidth)
-	    ,FunnelPipesPipelined#(1, numPortals, MemData#(dataWidth),TMin#(2, TLog#(numPortals)))
+	    ,FunnelPipesPipelined#(1, numPortals, MemData#(dataWidth),TMin#(4, TLog#(numPortals)))
 	    );
    function PhysMemSlave#(_a,_d) getSlave(MemPortal#(_a,_d) p);
       return p.slave;

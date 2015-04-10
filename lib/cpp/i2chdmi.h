@@ -69,7 +69,7 @@ static unsigned char i2c_read_reg(int fd, int device, unsigned char reg)
       fprintf(stderr, "[i2chdmi] i2c_read_reg: ioctl I2C_SMBUS status=%d errno=%d\n", status, errno);
     return ioctl_data.byte;
 }
-static void init_i2c_hdmi(void)
+void init_i2c_hdmi(void)
 {
 static unsigned char muxdata[] = {2, 2};
 static unsigned char hdmidata[] = {
@@ -102,7 +102,7 @@ static unsigned char hdmidata[] = {
     if (i2c_write_array(fd, 0x39, hdmidata, sizeof(hdmidata)))
         printf("[%s] write data failed\n", __FUNCTION__);
 }
-static void init_i2c_hdmi_rgb24(void)
+void init_i2c_hdmi_rgb24(void)
 {
 static unsigned char muxdata[] = {2, 2};
 static unsigned char hdmidata[] = {
