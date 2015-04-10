@@ -33,6 +33,7 @@ import Memread::*;
 import MemreadRequest::*;
 import MemreadIndication::*;
 
+(* synthesize *)
 module mkTile(Tile#(Empty,1,0));
 
    MemreadIndicationProxy lMemreadIndicationProxy <- mkMemreadIndicationProxy(MemreadIndicationH2S); //0
