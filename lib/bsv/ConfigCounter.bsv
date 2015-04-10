@@ -27,6 +27,7 @@ interface ConfigCounter#(numeric type count_sz);
    method ActionValue#(Bool) maybeDecrement(UInt#(count_sz) x);
    method Action increment(UInt#(count_sz) x);
    method UInt#(count_sz) read();
+   method UInt#(count_sz) read_bypass();
    method Bool positive();
 endinterface
 
@@ -37,11 +38,7 @@ module mkConfigCounter#(UInt#(count_sz) init_val)(ConfigCounter#(count_sz));
    Reg#(Bool) positive_reg <- mkReg(False);
    (* fire_when_enabled *)
    rule react;
-      let new_count = cnt;
-      if (inc_wire > dec_wire)
-	 new_count = cnt + (inc_wire - dec_wire);
-      else
-	 new_count = cnt - (dec_wire - inc_wire);
+      let new_count = (cnt + inc_wire) - dec_wire;
       cnt <= new_count;
       positive_reg <= (new_count > 0);
    endrule
@@ -52,7 +49,7 @@ module mkConfigCounter#(UInt#(count_sz) init_val)(ConfigCounter#(count_sz));
       dec_wire <= x;
    endmethod
    method ActionValue#(Bool) maybeDecrement(UInt#(count_sz) x);
-      if (cnt + inc_wire >= x) begin
+      if (cnt >= x) begin
 	 dec_wire <= x;
 	 return True;
       end
