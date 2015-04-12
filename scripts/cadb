@@ -1,0 +1,92 @@
+#!/usr/bin/env python
+
+# Copyright (c) 2013 Quanta Research Cambridge, Inc.
+
+# Permission is hereby granted, free of charge, to any person
+# obtaining a copy of this software and associated documentation
+# files (the "Software"), to deal in the Software without
+# restriction, including without limitation the rights to use, copy,
+# modify, merge, publish, distribute, sublicense, and/or sell copies
+# of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+# BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+# ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+# CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+import argparse
+import os
+import socket
+import subprocess
+import sys
+
+from adb import adb_commands
+from adb import common
+from argparse import RawTextHelpFormatter
+
+timelimit = -1
+scriptdir=os.path.dirname(sys.argv[0])
+sys.path.append(scriptdir)
+
+def run_command(ipaddr, args):
+    if ipaddr.find(':') == -1:
+        ipaddr = ipaddr + ':5555'
+    print 'connecting to %s' % ipaddr
+    connected = False
+    outstr = ''
+    while not connected:
+        try:
+            connection = adb_commands.AdbCommands.ConnectDevice(serial=ipaddr)
+            connected = True
+        except socket.error:
+            #print('socket.error', sys.exc_info())
+            pass
+    if args[0] == 'shell':
+        outstr = connection.Shell(' '.join(args[1:]))
+        # StreamingShell(self, command, timeout_ms=None):
+    elif args[0] == 'push':
+        #outstr = connection.Push(args[1], args[2])
+        pass
+    elif args[0] == 'pull':
+        #outstr = connection.Pull(args[1], args[2])
+        pass
+    elif args[0] == 'root':
+        outstr = connection.Root()
+    elif args[0] == 'reboot':
+        outstr = connection.Reboot()
+    connection.Close()
+    print outstr
+    # Devices(cls):
+    # GetState(self):
+    # Install(self, apk_path, destination_dir=None, timeout_ms=None):
+    # Stat(self, device_filename):
+    # List(self, device_path):
+    # Remount(self):
+    # Logcat(self, options, timeout_ms=None):
+
+if __name__ == '__main__':
+    #argparser.add_argument('-t', '--timelimit', type=int, default=timelimit, help='Time limit for jobs running on the zedboard. Defaults to value of environment variable RUNTIMELIMIT or 600 seconds.')
+    if len(sys.argv) < 2:
+        print 'cadb <args>'
+        sys.exit(-1)
+    ipaddr = ''
+    aitem = sys.argv[1:]
+    if aitem[0] != 'shell' and aitem[0] != 'push' and aitem[0] != 'pull' \
+     and aitem[0] != 'root' and aitem[0] != 'reboot':
+        ipaddr = aitem[0]
+        aitem = aitem[1:]
+    if os.environ.has_key('RUNPARAM'):
+        ipaddr=os.environ['RUNPARAM']
+    print 'IP', ipaddr, 'ARGS', aitem
+    if ipaddr == '':
+         print 'cadb: missing address'
+         sys.exit(-1)
+    run_command(ipaddr, aitem)
