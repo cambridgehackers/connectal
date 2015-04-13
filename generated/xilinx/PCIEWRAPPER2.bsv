@@ -500,8 +500,8 @@ module mkPcieWrap#(Clock sys_clk, Reset sys_rst_n)(PcieWrap#(lanes));
         method m_axis_rx_tvalid tvalid() clocked_by (user_clk_out) reset_by (user_reset_out);
     endinterface
     interface PciewrapPci_exp     pci_exp;
-        method rxn(pci_exp_rxn) enable((*inhigh*) EN_pci_exp_rxn) clocked_by (sys_clk) reset_by (sys_rst_n);
-        method rxp(pci_exp_rxp) enable((*inhigh*) EN_pci_exp_rxp) clocked_by (sys_clk) reset_by (sys_rst_n);
+        method rxn(pci_exp_rxn) enable((*inhigh*) EN_pci_exp_rxn)  clocked_by (sys_clk) reset_by (sys_rst_n);
+        method rxp(pci_exp_rxp) enable((*inhigh*) EN_pci_exp_rxp)  clocked_by (sys_clk) reset_by (sys_rst_n);
         method pci_exp_txn txn() clocked_by (sys_clk) reset_by (sys_rst_n);
         method pci_exp_txp txp() clocked_by (sys_clk) reset_by (sys_rst_n);
     endinterface

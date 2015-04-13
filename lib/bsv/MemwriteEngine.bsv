@@ -189,10 +189,10 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngine#(dataWidth,
    Vector#(numServers, Reg#(MemengineCmd))        cmdRegs <- replicateM(mkReg(unpack(0)));
 
    Reg#(Bool) load_in_progress <- mkReg(False);
-   FIFO#(Tuple3#(MemengineCmd,Bool,Bool))         loadf_b <- mkSizedFIFO(1);
-   FIFO#(Tuple2#(Bit#(serverIdxSz),MemengineCmd)) loadf_c <- mkSizedFIFO(1);
-   FIFO#(Tuple3#(Bit#(8),Bit#(MemTagSize),Bool))    workf <- mkSizedBRAMFIFO(32); // is this the right size?
-   FIFO#(Tuple2#(Bit#(serverIdxSz),Bool))           donef <- mkSizedBRAMFIFO(32); // is this the right size?
+   FIFO#(Tuple3#(MemengineCmd,Bool,Bool))         loadf_b <- mkFIFO1();
+   FIFO#(Tuple2#(Bit#(serverIdxSz),MemengineCmd)) loadf_c <- mkSizedFIFO(valueOf(cmdQDepth));
+   FIFO#(Tuple3#(Bit#(8),Bit#(MemTagSize),Bool))    workf <- mkSizedFIFO(valueOf(cmdQDepth));
+   FIFO#(Tuple2#(Bit#(serverIdxSz),Bool))           donef <- mkSizedFIFO(valueOf(cmdQDepth));
    
    Vector#(numServers, FIFO#(Bool))              outfs <- replicateM(mkSizedFIFO(1));
    Vector#(numServers, FIFOF#(MemengineCmd))    cmds_in <- replicateM(mkSizedFIFOF(1));

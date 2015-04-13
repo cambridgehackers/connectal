@@ -38,6 +38,8 @@ import ConnectalClocks::*;
 import MMU::*;
 import ConnectalCompletionBuffer::*;
 
+typedef 32 BeatCountSize;
+
 typedef 9 MMU_PIPELINE_DEPTH;
 
 interface DmaDbg;
@@ -117,7 +119,7 @@ module mkMemReadInternal#(MemServerIndication ind,
    Reg#(Bool)               firstReg <- mkReg(True);
    Reg#(Bool)                lastReg <- mkReg(False);
          
-   Reg#(Bit#(64))  beatCount <- mkReg(0);
+   Reg#(Bit#(32))  beatCount <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
    TagGen#(numTags) tag_gen <- mkTagGen;
 
@@ -294,7 +296,7 @@ module mkMemReadInternal#(MemServerIndication ind,
 	 return DmaDbgRec{x:0, y:0, z:0, w:0};
       endmethod
       method ActionValue#(Bit#(64)) getMemoryTraffic();
-	 return beatCount;
+	 return extend(beatCount);
       endmethod
    endinterface
 endmodule
@@ -319,7 +321,7 @@ module mkMemWriteInternal#(MemServerIndication ind,
    // stage 1: address validation (latency = 1)
    FIFO#(RRec#(numServers,addrWidth))  reqFifo <- mkFIFO;
    // stage 2: write commands
-   FIFO#(DRec#(numServers, addrWidth)) dreqFifo <- mkSizedBRAMFIFO(valueOf(numTags));
+   FIFO#(DRec#(numServers, addrWidth)) dreqFifo <- mkSizedFIFO(valueOf(numTags));
    // stage 3: write data 
    BRAM2Port#(Bit#(TLog#(numTags)), RResp#(numServers,addrWidth)) respFifos <- mkBRAM2Server(defaultValue);
    TagGen#(numTags) tag_gen <- mkTagGen;
@@ -328,7 +330,7 @@ module mkMemWriteInternal#(MemServerIndication ind,
    Reg#(Bit#(BurstLenSize)) burstReg <- mkReg(0);
    Reg#(Bool)               firstReg <- mkReg(True);
    Reg#(Bool)               lastReg <- mkReg(False);
-   Reg#(Bit#(64))           beatCount <- mkReg(0);
+   Reg#(Bit#(BeatCountSize)) beatCount <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
 
    Reg#(Bit#(64)) cycle_cnt <- mkReg(0);
@@ -468,7 +470,7 @@ module mkMemWriteInternal#(MemServerIndication ind,
 	 return DmaDbgRec{x:fromInteger(valueOf(numServers)), y:?, z:?, w:?};
       endmethod
       method ActionValue#(Bit#(64)) getMemoryTraffic();
-	 return beatCount;
+	 return extend(beatCount);
       endmethod
    endinterface
 endmodule

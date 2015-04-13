@@ -505,10 +505,10 @@ module mkPcieWrap#(Clock sys_clk, Reset sys_clk_reset, Reset sys_rst_n)(PcieWrap
         method m_axis_rx_tvalid tvalid();
     endinterface
     interface PciewrapPci_exp     pci_exp;
-        method rxn(pci_exprxn) enable((*inhigh*) EN_pci_exprxn);
-        method rxp(pci_exprxp) enable((*inhigh*) EN_pci_exprxp);
-        method pci_exptxn txn();
-        method pci_exptxp txp();
+        method rxn(pci_exprxn) enable((*inhigh*) EN_pci_exprxn) clocked_by (sys_clk) reset_by (sys_rst_n);
+        method rxp(pci_exprxp) enable((*inhigh*) EN_pci_exprxp) clocked_by (sys_clk) reset_by (sys_rst_n);
+        method pci_exptxn txn() clocked_by (sys_clk) reset_by (sys_rst_n);
+        method pci_exptxp txp() clocked_by (sys_clk) reset_by (sys_rst_n);
     endinterface
     interface PciewrapPcie_drp     pcie_drp;
         method addr(pcie_drpaddr) enable((*inhigh*) EN_pcie_drpaddr);
