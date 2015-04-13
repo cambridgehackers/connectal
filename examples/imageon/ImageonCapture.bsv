@@ -47,13 +47,9 @@ import XilinxCells::*;
 import ConnectalClocks::*;
 
 interface ImageonCaptureRequest;
+    method Action set_trigger_cnt_trigger(Bit#(32) v);
     method Action startWrite(Bit#(32) pointer, Bit#(32) numBytes);
 endinterface
-interface ImageonCamera;
-    interface ImageonCaptureRequest request;
-    interface Vector#(1,MemWriteClient#(DataBusWidth)) dmaClient;
-endinterface
-
 interface ImageonCapturePins;
    interface ImageonSensorPins pins;
    interface ImageonSerdesPins serpins;
@@ -71,33 +67,6 @@ interface ImageonCapture;
    interface ImageonCapturePins pins;
 endinterface
 
-module mkImageonCamera#(Clock imageon_clock, Reset imageon_reset, SerdesData serdes_data, ImageonSerdesIndication indication)(ImageonCamera);
-   Clock defaultClock <- exposeCurrentClock();
-   Reset defaultReset <- exposeCurrentReset();
-   // mem capture
-   MemwriteEngine#(64,1,1) we <- mkMemwriteEngine();
-   Reg#(Bool) dmaRun <- mkSyncReg(False, defaultClock, defaultReset, imageon_clock);
-   SyncFIFOIfc#(Bit#(64)) synchronizer <- mkSyncBRAMFIFO(10, imageon_clock, imageon_reset, defaultClock, defaultReset);
-   rule sync_data if (dmaRun);
-       synchronizer.enq(serdes_data.capture);
-   endrule
-   rule send_data;
-       we.dataPipes[0].enq(synchronizer.first);
-       synchronizer.deq;
-   endrule
-   rule dma_response;
-       let rv <- we.writeServers[0].response.get;
-       indication.iserdes_dma('hffffffff); // request is all finished
-   endrule
-   interface ImageonCaptureRequest request;
-        method Action startWrite(Bit#(32) pointer, Bit#(32) numBytes);
-            we.writeServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(numBytes), burstLen:8});
-            dmaRun <= True;
-       endmethod
-   endinterface
-   interface MemWriteClient dmaClient = cons(we.dmaClient, nil);
-endmodule : mkImageonCamera
-
 module mkImageonCapture#(ImageonSerdesIndication serdes_indication, ImageonSensorIndication sensor_ind, HdmiGeneratorIndication hdmi_ind)(ImageonCapture);
 `ifndef BSIM
    B2C1 iclock <- mkB2C1();
@@ -112,16 +81,45 @@ module mkImageonCapture#(ImageonSerdesIndication serdes_indication, ImageonSenso
    Clock imageon_clock = clk.imageon;
    Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
    Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
-   SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, imageon_clock);
 
    // serdes: serial line protocol for wires from sensor (nothing sensor specific)
    ISerdes serdes <- mkISerdes(defaultClock, defaultReset, serdes_indication,
 			clocked_by imageon_clock, reset_by imageon_reset);
-   ImageonCamera lImageonCamera <- mkImageonCamera(imageon_clock, imageon_reset, serdes.data, serdes_indication);
 
+   // mem capture
+   MemwriteEngine#(64,1,1) we <- mkMemwriteEngine();
+   Reg#(Bool) dmaRun <- mkSyncReg(False, defaultClock, defaultReset, imageon_clock);
+   SyncFIFOIfc#(Bit#(64)) synchronizer <- mkSyncBRAMFIFO(10, imageon_clock, imageon_reset, defaultClock, defaultReset);
+   rule sync_data if (dmaRun);
+       synchronizer.enq(serdes.data.capture);
+   endrule
+   rule send_data;
+       we.dataPipes[0].enq(synchronizer.first);
+       synchronizer.deq;
+   endrule
+   rule dma_response;
+       let rv <- we.writeServers[0].response.get;
+       serdes_indication.iserdes_dma('hffffffff); // request is all finished
+   endrule
+
+    SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, imageon_clock);
+    Reg#(Bit#(32)) trigger_cnt_trigger_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
+    Reg#(Bit#(1))  trigger_active <- mkReg(1, clocked_by imageon_clock, reset_by imageon_reset);
+    Reg#(Bit#(32)) tcounter <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
+    rule tcalc;
+        if (trigger_active == 1 && vsyncPulse.pulse())
+            begin
+            tcounter <= trigger_cnt_trigger_reg;
+            trigger_active <= 0;
+            end
+        else
+            tcounter <= tcounter - 1;
+        if (trigger_active == 0 && tcounter == 0)
+            trigger_active <= 1;
+    endrule
    // fromSensor: sensor specific processing of serdes input, resulting in pixels
-   ImageonSensor fromSensor <- mkImageonSensor(defaultClock, defaultReset, serdes.data, vsyncPulse.pulse(),
-       hdmi_clock, hdmi_reset, sensor_ind, clocked_by imageon_clock, reset_by imageon_reset);
+   ImageonSensor fromSensor <- mkImageonSensor(imageon_clock, imageon_reset, serdes.data,
+       hdmi_clock, hdmi_reset, trigger_active, sensor_ind);
 
    // hdmi: output to display
    HdmiGenerator#(Rgb888) lHdmiGenerator <- mkHdmiGenerator(defaultClock, defaultReset,
@@ -165,10 +163,19 @@ module mkImageonCapture#(ImageonSerdesIndication serdes_indication, ImageonSenso
    endrule
 
    interface serdes_request = serdes.request;
-   interface capture_request =  lImageonCamera.request;
+   interface ImageonCaptureRequest capture_request;
+       method Action set_trigger_cnt_trigger(Bit#(32) v);
+           trigger_cnt_trigger_reg <= v;
+           serdes.data.start_capture();
+       endmethod
+       method Action startWrite(Bit#(32) pointer, Bit#(32) numBytes);
+           we.writeServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(numBytes), burstLen:8});
+           dmaRun <= True;
+       endmethod
+   endinterface
    interface sensor_request = fromSensor.request;
    interface hdmi_request = lHdmiGenerator.request;
-   interface dmaClient = lImageonCamera.dmaClient;
+   interface dmaClient = cons(we.dmaClient, nil);
    interface ImageonCapturePins pins;
 `ifndef BSIM
        method Action fmc_video_clk1(Bit#(1) v);
