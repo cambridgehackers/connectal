@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-
-# Copyright (c) 2013 Quanta Research Cambridge, Inc.
+# Copyright (c) 2015 Quanta Research Cambridge, Inc.
 
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
@@ -37,42 +36,33 @@ def run_command(ipaddr, args):
     if ipaddr.find(':') == -1:
         ipaddr = ipaddr + ':5555'
     print 'connecting to %s' % ipaddr
-    connected = False
     starttime = time.clock()
-    while not connected:
+    while True:
         try:
             connection = adb_commands.AdbCommands.ConnectDevice(serial=ipaddr)
-            connected = True
+            print 'connect ok', connection
+            break
         except socket.error:
             #print('socket.error', sys.exc_info())
             pass
         if time.clock() - starttime > timebound:
             print 'cadb: connection attempt timed out'
             sys.exit(-1)
-    starttime -= time.clock()
     if args[0] == 'shell':
         for line in connection.StreamingShell(' '.join(args[1:])):
             sys.stdout.write(line)
     elif args[0] == 'push':
         for filename in args[1:-1]:
-            #print 'PUSH', filename, args[-1]
+            print 'PUSH', filename, args[-1]
             connection.Push(filename, args[-1])
-        pass
     elif args[0] == 'pull':
+        print 'PULL', args[1], args[2]
         connection.Pull(args[1], args[2])
-        pass
     elif args[0] == 'root':
         connection.Root()
     elif args[0] == 'reboot':
         connection.Reboot()
     connection.Close()
-    # Devices(cls):
-    # GetState(self):
-    # Install(self, apk_path, destination_dir=None, timeout_ms=None):
-    # Stat(self, device_filename):
-    # List(self, device_path):
-    # Remount(self):
-    # Logcat(self, options, timeout_ms=None):
 
 if __name__ == '__main__':
     #argparser.add_argument('-t', '--timelimit', type=int, default=timelimit, help='Time limit for jobs running on the zedboard. Defaults to value of environment variable RUNTIMELIMIT or 600 seconds.')
@@ -86,7 +76,7 @@ if __name__ == '__main__':
         aitem = aitem[1:]
     if os.environ.has_key('RUNPARAM'):
         ipaddr=os.environ['RUNPARAM']
-    print 'IP', ipaddr, 'ARGS', aitem
+    #print 'IP', ipaddr, 'ARGS', aitem
     if ipaddr == '':
          print 'cadb: missing address'
          sys.exit(-1)
