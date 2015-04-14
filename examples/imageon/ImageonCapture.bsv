@@ -107,6 +107,13 @@ module mkImageonCapture#(ImageonSerdesIndication serdes_indication, HdmiGenerato
     Reg#(Bool) dmaRun <- mkSyncReg(False, defaultClock, defaultReset, imageon_clock);
     Reg#(Bit#(32)) trigger_cnt_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
     Reg#(Bit#(1)) imageon_oe <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
+    Vector#(3, ReadOnly#(Bit#(1))) vita_trigger_wire;
+    Reg#(Bool) remapKernel <- mkReg(False, clocked_by imageon_clock, reset_by imageon_reset);
+    Gearbox#(4, 1, Bit#(10)) dataGearbox <- mkNto1Gearbox(imageon_clock, imageon_reset, hdmi_clock, hdmi_reset);
+
+    function ReadOnly#(Bit#(1)) roval(Bit#(1) val);
+        return (interface ReadOnly; method Bit#(1) _read(); return val; endmethod endinterface);
+    endfunction
 
     // serdes: serial line protocol for wires from sensor (nothing sensor specific)
     ISerdes serdes <- mkISerdes(defaultClock, defaultReset, serdes_indication,
@@ -143,27 +150,16 @@ module mkImageonCapture#(ImageonSerdesIndication serdes_indication, HdmiGenerato
     endrule
 
     // fromSensor: sensor specific processing of serdes input, resulting in pixels
-    Vector#(3, ReadOnly#(Bit#(1))) vita_trigger_wire;
-function ReadOnly#(Bit#(1)) roval(Bit#(1) val);
-    return (interface ReadOnly; method Bit#(1) _read(); return val; endmethod endinterface);
-endfunction
 `ifndef BSIM
     ConnectalODDR#(Bit#(1)) pll_out <- mkConnectalODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"}, clocked_by imageon_clock, reset_by imageon_reset);
     ConnectalODDR#(Bit#(1)) pll_t <- mkConnectalODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"}, clocked_by imageon_clock, reset_by imageon_reset);
-    //Wire#(Bit#(1)) poutq <- mkDWire(0, clocked_by imageon_clock, reset_by imageon_reset);
-    //Wire#(Bit#(1)) ptq <- mkDWire(0, clocked_by imageon_clock, reset_by imageon_reset);
     ReadOnly#(Bit#(1)) vita_clk_pll <- mkOBUFT(roval(pll_out.q()), roval(pll_t.q()), clocked_by imageon_clock, reset_by imageon_reset);
-
-    //Reg#(Bit#(1)) zero_wire <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
-    //Reg#(Bit#(1)) one_wire <- mkReg(1, clocked_by imageon_clock, reset_by imageon_reset);
     vita_trigger_wire[2] <- mkOBUFT(roval(0), regToReadOnly(imageon_oe), clocked_by imageon_clock, reset_by imageon_reset);
     vita_trigger_wire[1] <- mkOBUFT(roval(1), regToReadOnly(imageon_oe), clocked_by imageon_clock, reset_by imageon_reset);
     vita_trigger_wire[0] <- mkOBUFT(regToReadOnly(trigger_active), regToReadOnly(imageon_oe), clocked_by imageon_clock, reset_by imageon_reset);
     ReadOnly#(Bit#(1)) vita_reset_n_wire <- mkOBUFT(regToReadOnly(serdes.data.reset), regToReadOnly(imageon_oe), clocked_by imageon_clock, reset_by imageon_reset);
 
     rule pll_rule;
-        //poutq <= pll_out.q();
-        //ptq <= pll_t.q();
         pll_t.s(False);
         pll_out.s(False);
         pll_out.d1(0);
@@ -178,8 +174,6 @@ endfunction
     let vita_reset_n_wire = 0;
     vita_trigger_wire = replicate(interface ReadOnly; method Bit#(1) _read(); return 0; endmethod endinterface);
 `endif
-    Reg#(Bool) remapKernel <- mkReg(False, clocked_by imageon_clock, reset_by imageon_reset);
-    Gearbox#(4, 1, Bit#(10)) dataGearbox <- mkNto1Gearbox(imageon_clock, imageon_reset, hdmi_clock, hdmi_reset);
 
     rule frameData;
         Vector#(5, Bit#(10)) v = serdes.data.raw_data();
