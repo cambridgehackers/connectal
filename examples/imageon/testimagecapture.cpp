@@ -29,7 +29,6 @@
 #include "dmaManager.h"
 #include "StdDmaIndication.h"
 #include "ImageonCaptureRequest.h"
-#include "ImageonSensorRequest.h"
 #include "ImageonSensorIndication.h"
 #include "ImageonSerdesRequest.h"
 #include "ImageonSerdesIndication.h"
@@ -38,7 +37,6 @@
 #include "MemServerRequest.h"
 #include "MMURequest.h"
 
-static ImageonSensorRequestProxy *sensordevice;
 static ImageonSerdesRequestProxy *serdesdevice;
 static HdmiGeneratorRequestProxy *hdmidevice;
 static ImageonCaptureRequestProxy *idevice;
@@ -240,7 +238,7 @@ static uint32_t spi_transfer (uint32_t v)
 {
     if (trace_spi)
         printf("SPITRANSFER: %x\n", v);
-    sensordevice->put_spi_request(v);
+    idevice->put_spi_request(v);
     sem_wait(&sem_spi_response);
     return cv_spi_response;
 }
@@ -414,7 +412,7 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
 
    uint32_t trigDutyCycle    = 90; // exposure time is 90% of frame time (ie. 15msec)
    uint32_t vitaTrigGenDefaultFreq = (((1920+88+44+148)*(1080+4+5+36))>>2) - 2;
-   idevice->set_trigger_cnt_trigger((vitaTrigGenDefaultFreq * (100-trigDutyCycle))/100 + 1);
+   idevice->set_trigger_cnt((vitaTrigGenDefaultFreq * (100-trigDutyCycle))/100 + 1);
    vita_spi_write(194, 0x0400);
    vita_spi_write(0x29, 0x0700);
    uint16_t vspi_data = vita_spi_read(192) | 0x71; usleep(100);
@@ -437,7 +435,6 @@ int main(int argc, const char **argv)
   MMUIndication hostMMUIndication(dma, IfcNames_MMUIndicationH2S);
 
     serdesdevice = new ImageonSerdesRequestProxy(IfcNames_ImageonSerdesRequestS2H);
-    sensordevice = new ImageonSensorRequestProxy(IfcNames_ImageonSensorRequestS2H);
     hdmidevice = new HdmiGeneratorRequestProxy(IfcNames_HdmiGeneratorRequestS2H);
     idevice = new ImageonCaptureRequestProxy(IfcNames_ImageonCaptureRequestS2H);
     
@@ -475,7 +472,7 @@ int main(int argc, const char **argv)
     printf("[%s:%d] setClockFrequency 3 200000000 status=%d actualfreq=%ld\n", __FUNCTION__, __LINE__, status, actualFrequency);
     portalExec_start();
     printf("[%s:%d] before set_i2c_mux_reset_n\n", __FUNCTION__, __LINE__);
-    sensordevice->set_i2c_mux_reset_n(1);
+    idevice->set_i2c_mux_reset_n(1);
     printf("[%s:%d] before setDeLine/Pixel\n", __FUNCTION__, __LINE__);
     for (int i = 0; i < 4; i++) {
       int pixclk = (long)edid.timing[i].pixclk * 10000;
@@ -523,7 +520,7 @@ hblank--; // needed on zc702
 
     //ret = fmc_iic_axi_init(uBaseAddr_IIC_FmcImageon);
     //fmc_iic_axi_GpoWrite(uBaseAddr_IIC_FmcImageon, fmc_iic_axi_GpoRead(uBaseAddr_IIC_FmcImageon) | 2);
-    sensordevice->set_host_oe(1);
+    idevice->set_host_oe(1);
 
 printf("[%s:%d] before i2c_camera\n", __FUNCTION__, __LINE__);
     init_i2c_camera();

@@ -31,56 +31,6 @@ typedef struct {
      Bit#(1) bitslip;
 } SerdesStart deriving (Bits);
 
-interface ImageonVita;
-    method Bit#(1) clk_pll();
-    method Bit#(1) reset_n();
-    method Vector#(3, ReadOnly#(Bit#(1))) trigger();
-endinterface
-
-module mkImageonVita#(Wire#(Bit#(1)) imageon_oe, Wire#(Bit#(1)) trigger_active, Wire#(Bit#(1)) serdes_reset)(ImageonVita);
-    Vector#(3, ReadOnly#(Bit#(1))) vita_trigger_wire;
-`ifndef BSIM
-    ConnectalODDR#(Bit#(1)) pll_out <- mkConnectalODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
-    ConnectalODDR#(Bit#(1)) pll_t <- mkConnectalODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
-    Wire#(Bit#(1)) poutq <- mkDWire(0);
-    Wire#(Bit#(1)) ptq <- mkDWire(0);
-    ReadOnly#(Bit#(1)) vita_clk_pll <- mkOBUFT(poutq, ptq);
-
-    Wire#(Bit#(1)) zero_wire <- mkDWire(0);
-    Wire#(Bit#(1)) one_wire <- mkDWire(1);
-    vita_trigger_wire[2] <- mkOBUFT(zero_wire, imageon_oe);
-    vita_trigger_wire[1] <- mkOBUFT(one_wire, imageon_oe);
-    vita_trigger_wire[0] <- mkOBUFT(trigger_active, imageon_oe);
-    ReadOnly#(Bit#(1)) vita_reset_n_wire <- mkOBUFT(serdes_reset, imageon_oe);
-
-    rule pll_rule;
-        poutq <= pll_out.q();
-        ptq <= pll_t.q();
-        pll_t.s(False);
-        pll_out.s(False);
-        pll_out.d1(0);
-        pll_out.d2(1);
-        pll_out.ce(True);
-        pll_t.d1(imageon_oe);
-        pll_t.d2(imageon_oe);
-        pll_t.ce(True);
-    endrule
-`else
-    let vita_clk_pll = 0;
-    let vita_reset_n_wire = 0;
-    vita_trigger_wire = replicate(interface ReadOnly; method Bit#(1) _read(); return 0; endmethod endinterface);
-`endif
-    method Bit#(1) clk_pll();
-        return vita_clk_pll;
-    endmethod
-    method Bit#(1) reset_n();
-        return vita_reset_n_wire;
-    endmethod
-    method Vector#(3, ReadOnly#(Bit#(1))) trigger();
-        return vita_trigger_wire;
-    endmethod
-endmodule
-
 interface IserdesCore;
     method Action io_vita_data_p(Bit#(1) v);
     method Action io_vita_data_n(Bit#(1) v);

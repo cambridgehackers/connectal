@@ -21,12 +21,6 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 import Vector::*;
-//import Clocks::*;
-//import FIFO::*;
-//import FIFOF::*;
-//import SyncBits::*;
-//import ImageonVita::*;
-//import IserdesDatadeserIF::*;
 
 interface IserdesDatadeser;
     method Bit#(1)          align_busy();

@@ -7,27 +7,27 @@
 	"PIO_DIRECTION": "OUTPUT",
 	"fmc": "CLK0_M2C_n"
     },
-    "*_io_vita_trigger_0*": {
+    "*io_vita_trigger_0*": {
 	"PIO_DIRECTION": "OUTPUT",
 	"fmc": "LA14_n"
     },
-    "*_io_vita_trigger_1*": {
+    "*io_vita_trigger_1*": {
 	"PIO_DIRECTION": "OUTPUT",
 	"fmc": "LA14_p"
     },
-    "*_io_vita_trigger_2*": {
+    "*io_vita_trigger_2*": {
 	"PIO_DIRECTION": "OUTPUT",
 	"fmc": "LA13_n"
     },
-    "*_io_vita_monitor*[0]": {
+    "*io_vita_monitor*[0]": {
 	"PIO_DIRECTION": "INPUT",
 	"fmc": "LA15_p"
     },
-    "*_io_vita_monitor*[1]": {
+    "*io_vita_monitor*[1]": {
 	"PIO_DIRECTION": "INPUT",
 	"fmc": "LA15_n"
     },
-    "CLK_pins_spi_clock": {
+    "CLK_spi_clock": {
         "original_name": "io_vita_spi_sclk",
 	"PIO_DIRECTION": "OUTPUT",
 	"fmc": "LA12_p"
@@ -120,7 +120,7 @@
 	"PIO_DIRECTION": "INPUT",
 	"fmc": "CLK0_M2C_p"
     },
-    "pins_i2c_mux_reset_n": {
+    "*i2c_mux_reset_n": {
 	"PIO_DIRECTION": "OUTPUT",
 	"fmc": "LA01_n_CC"
     },
