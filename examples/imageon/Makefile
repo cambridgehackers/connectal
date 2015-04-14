@@ -1,7 +1,7 @@
 
 CONNECTALDIR?=../..
 S2H_INTERFACES = ImageonSerdesRequest:ImageonCapture.serdes_request HdmiGeneratorRequest:ImageonCapture.hdmi_request ImageonCaptureRequest:ImageonCapture.capture_request
-H2S_INTERFACES = ImageonCapture:ImageonSerdesIndication,ImageonSensorIndication,HdmiGeneratorIndication
+H2S_INTERFACES = ImageonCapture:ImageonSerdesIndication,HdmiGeneratorIndication,ImageonCaptureIndication
 MEM_INTERFACES = nil,lImageonCapture.dmaClient
 BSVFILES = $(CONNECTALDIR)/lib/bsv/IserdesDatadeserIF.bsv $(CONNECTALDIR)/lib/bsv/HDMI.bsv ImageonCapture.bsv
 

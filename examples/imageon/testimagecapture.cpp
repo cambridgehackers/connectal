@@ -29,7 +29,7 @@
 #include "dmaManager.h"
 #include "StdDmaIndication.h"
 #include "ImageonCaptureRequest.h"
-#include "ImageonSensorIndication.h"
+#include "ImageonCaptureIndication.h"
 #include "ImageonSerdesRequest.h"
 #include "ImageonSerdesIndication.h"
 #include "HdmiGeneratorRequest.h"
@@ -72,9 +72,9 @@ printf("[%s:%d] 0x%x ***********************************************************
     }
 };
 
-class ImageonSensorIndication : public ImageonSensorIndicationWrapper {
+class ImageonCaptureIndication : public ImageonCaptureIndicationWrapper {
 public:
-    ImageonSensorIndication(int id) : ImageonSensorIndicationWrapper(id) {}
+    ImageonCaptureIndication(int id) : ImageonCaptureIndicationWrapper(id) {}
     void spi_response(uint32_t v){
         //fprintf(stderr, "spi_response: %x\n", v);
         cv_spi_response = v;
@@ -439,7 +439,7 @@ int main(int argc, const char **argv)
     idevice = new ImageonCaptureRequestProxy(IfcNames_ImageonCaptureRequestS2H);
     
     ImageonSerdesIndication imageonSerdesIndication(IfcNames_ImageonSerdesIndicationH2S);
-    ImageonSensorIndication imageonSensorIndication(IfcNames_ImageonSensorIndicationH2S);
+    ImageonCaptureIndication imageonCaptureIndication(IfcNames_ImageonCaptureIndicationH2S);
     HdmiGeneratorIndication hdmiIndication(IfcNames_HdmiGeneratorIndicationH2S, hdmidevice);
     // read out monitor EDID from ADV7511
     struct edid edid;

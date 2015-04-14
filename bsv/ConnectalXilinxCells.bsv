@@ -120,7 +120,7 @@ module mkConnectalClockIBUFDS_GTE2#(Bool enable, Wire#(one_bit) i, Wire#(one_bit
 endmodule: mkConnectalClockIBUFDS_GTE2
 
 import "BVI" OBUFT =
-module mkOBUFT#(Wire#(one_bit) i, Wire#(one_bit) t)(ReadOnly#(one_bit)) provisos(Bits#(one_bit,1));
+module mkOBUFT#(ReadOnly#(one_bit) i, ReadOnly#(oneb_bit) t)(ReadOnly#(onec_bit)) provisos(Bits#(one_bit,1), Bits#(oneb_bit,1), Bits#(onec_bit,1));
    default_clock clk();
    default_reset rstn();
 

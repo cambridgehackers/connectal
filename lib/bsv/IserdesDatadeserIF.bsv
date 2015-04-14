@@ -55,7 +55,7 @@ interface ImageonSerdesIndication;
 endinterface
 
 interface SerdesData;
-    method Wire#(Bit#(1)) reset();
+    method Reg#(Bit#(1)) reset();
     method Vector#(5, Bit#(10)) raw_data();
     method Bit#(64) capture();
     method Action start_capture();
