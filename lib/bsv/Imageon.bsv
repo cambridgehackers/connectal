@@ -45,7 +45,6 @@ endinterface
 
 interface ImageonSensorRequest;
     method Action set_host_oe(Bit#(1) v);
-    method Action set_trigger_cnt_trigger(Bit#(32) v);
     method Action put_spi_request(Bit#(32) v);
     method Action set_i2c_mux_reset_n(Bit#(1) v);
 endinterface
@@ -61,34 +60,19 @@ interface ImageonSensor;
     method Bit#(2) monitor();
 endinterface
 
-module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Bool send_trigger,
-        Clock hdmi_clock, Reset hdmi_reset, ImageonSensorIndication indication)(ImageonSensor);
+module mkImageonSensor#(Clock imageon_clock, Reset imageon_reset, SerdesData serdes,
+        Clock hdmi_clock, Reset hdmi_reset, Wire#(Bit#(1)) trigger_active, ImageonSensorIndication indication)(ImageonSensor);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
 
-    Wire#(Bit#(2)) monitor_wires <- mkDWire(0);
-    Reg#(Bit#(1)) imageon_oe <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(32)) trigger_cnt_trigger_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
+    Wire#(Bit#(2)) monitor_wires <- mkDWire(0, clocked_by imageon_clock, reset_by imageon_reset);
+    Reg#(Bit#(1)) imageon_oe <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock, clocked_by imageon_clock, reset_by imageon_reset);
 
-    Reg#(Bit#(1))  trigger_active <- mkReg(1);
-    Reg#(Bit#(32)) tcounter <- mkReg(0);
-    Reg#(Bit#(1))  remapkernel_reg <- mkReg(0);
-    Gearbox#(4, 1, Bit#(10)) dataGearbox <- mkNto1Gearbox(defaultClock, defaultReset, hdmi_clock, hdmi_reset);
-    SPI#(Bit#(26)) spiController <- mkSPI(1000, True, clocked_by axi_clock, reset_by axi_reset);
-    Reg#(Bit#(1)) i2c_mux_reset_n_reg <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
-    ImageonVita vitaItem <- mkImageonVita(imageon_oe, trigger_active, serdes.reset);
-
-    rule tcalc;
-        if (trigger_active == 1 && send_trigger)
-            begin
-            tcounter <= trigger_cnt_trigger_reg;
-            trigger_active <= 0;
-            end
-        else
-            tcounter <= tcounter - 1;
-        if (trigger_active == 0 && tcounter == 0)
-            trigger_active <= 1;
-    endrule
+    Reg#(Bit#(1))  remapkernel_reg <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
+    Gearbox#(4, 1, Bit#(10)) dataGearbox <- mkNto1Gearbox(imageon_clock, imageon_reset, hdmi_clock, hdmi_reset, clocked_by imageon_clock, reset_by imageon_reset);
+    SPI#(Bit#(26)) spiController <- mkSPI(1000, True);
+    Reg#(Bit#(1)) i2c_mux_reset_n_reg <- mkReg(0);
+    ImageonVita vitaItem <- mkImageonVita(imageon_oe, trigger_active, serdes.reset, clocked_by imageon_clock, reset_by imageon_reset);
 
     rule calculate_framedata;
         Vector#(5, Bit#(10)) v = serdes.raw_data();
@@ -116,10 +100,6 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
 	method Action set_host_oe(Bit#(1) v);
 	    imageon_oe <= ~v;
 	endmethod
-	method Action set_trigger_cnt_trigger(Bit#(32) v);
-	    trigger_cnt_trigger_reg <= v;
-            serdes.start_capture();
-	endmethod
         method Action put_spi_request(Bit#(32) v);
             spiController.request.put(truncate(v));
         endmethod
@@ -141,7 +121,7 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
         interface io_vita = vitaItem;
         method Bit#(1) i2c_mux_reset_n(); return i2c_mux_reset_n_reg; endmethod
         interface SpiPins spi = spiController.pins;
-        interface deleteme_unused_clock = defaultClock;
-        interface deleteme_unused_reset = defaultReset;
+        interface deleteme_unused_clock = imageon_clock;
+        interface deleteme_unused_reset = imageon_reset;
     endinterface
 endmodule

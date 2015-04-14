@@ -41,6 +41,7 @@
 static ImageonSensorRequestProxy *sensordevice;
 static ImageonSerdesRequestProxy *serdesdevice;
 static HdmiGeneratorRequestProxy *hdmidevice;
+static ImageonCaptureRequestProxy *idevice;
 static int trace_spi = 0;
 static int nlines = 1080;
 static int npixels = 1920;
@@ -413,7 +414,7 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
 
    uint32_t trigDutyCycle    = 90; // exposure time is 90% of frame time (ie. 15msec)
    uint32_t vitaTrigGenDefaultFreq = (((1920+88+44+148)*(1080+4+5+36))>>2) - 2;
-   sensordevice->set_trigger_cnt_trigger((vitaTrigGenDefaultFreq * (100-trigDutyCycle))/100 + 1);
+   idevice->set_trigger_cnt_trigger((vitaTrigGenDefaultFreq * (100-trigDutyCycle))/100 + 1);
    vita_spi_write(194, 0x0400);
    vita_spi_write(0x29, 0x0700);
    uint16_t vspi_data = vita_spi_read(192) | 0x71; usleep(100);
@@ -438,7 +439,7 @@ int main(int argc, const char **argv)
     serdesdevice = new ImageonSerdesRequestProxy(IfcNames_ImageonSerdesRequestS2H);
     sensordevice = new ImageonSensorRequestProxy(IfcNames_ImageonSensorRequestS2H);
     hdmidevice = new HdmiGeneratorRequestProxy(IfcNames_HdmiGeneratorRequestS2H);
-    ImageonCaptureRequestProxy *idevice = new ImageonCaptureRequestProxy(IfcNames_ImageonCaptureRequestS2H);
+    idevice = new ImageonCaptureRequestProxy(IfcNames_ImageonCaptureRequestS2H);
     
     ImageonSerdesIndication imageonSerdesIndication(IfcNames_ImageonSerdesIndicationH2S);
     ImageonSensorIndication imageonSensorIndication(IfcNames_ImageonSensorIndicationH2S);
