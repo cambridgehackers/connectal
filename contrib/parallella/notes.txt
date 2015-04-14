@@ -1,0 +1,34 @@
+In parallella-hw I'm getting width differences between various axi bus signals in elink.v and the corresponding signals on the PS7.
+From Table 5-9 in the Zynq TRM ug585-Zynq-7000-TRM.pdf, I think elink.v has the wrong values.
+
+Why is elink.v like this?  Is there a module that actually wires up the ps7 to elink.v somewhere?
+
+
+WARNING: [Synth 8-689] width (6) of port connection 'm_axi_bid' does not match port width (1) of module 'elink' [/scratch/stewart/connectal/contrib/parallella/zedboard/verilog/mkZynqTop.v:1539]
+WARNING: [Synth 8-689] width (6) of port connection 'm_axi_rid' does not match port width (1) of module 'elink' [/scratch/stewart/connectal/contrib/parallella/zedboard/verilog/mkZynqTop.v:1543]
+WARNING: [Synth 8-689] width (6) of port connection 'm_axi_arid' does not match port width (1) of module 'elink' [/scratch/stewart/connectal/contrib/parallella/zedboard/verilog/mkZynqTop.v:1603]
+WARNING: [Synth 8-689] width (6) of port connection 'm_axi_awid' does not match port width (1) of module 'elink' [/scratch/stewart/connectal/contrib/parallella/zedboard/verilog/mkZynqTop.v:1613]
+
+WARNING: [Synth 8-689] width (4) of port connection 'm_axi_arlen' does not match port width (8) of module 'elink' [/scratch/stewart/connectal/contrib/parallella/zedboard/verilog/mkZynqTop.v:1604]
+WARNING: [Synth 8-689] width (4) of port connection 'm_axi_awlen' does not match port width (8) of module 'elink' [/scratch/stewart/connectal/contrib/parallella/zedboard/verilog/mkZynqTop.v:1614]
+
+WARNING: [Synth 8-689] width (2) of port connection 'm_axi_arlock' does not match port width (1) of module 'elink' [/scratch/stewart/connectal/contrib/parallella/zedboard/verilog/mkZynqTop.v:1605]
+WARNING: [Synth 8-689] width (2) of port connection 'm_axi_awlock' does not match port width (1) of module 'elink' [/scratch/stewart/connectal/contrib/parallella/zedboard/verilog/mkZynqTop.v:1615]
+
+WARNING: [Synth 8-689] width (2) of port connection 'm_axi_arsize' does not match port width (3) of module 'elink' [/scratch/stewart/connectal/contrib/parallella/zedboard/verilog/mkZynqTop.v:1608]
+WARNING: [Synth 8-689] width (2) of port connection 'm_axi_awsize' does not match port width (3) of module 'elink' [/scratch/stewart/connectal/contrib/parallella/zedboard/verilog/mkZynqTop.v:1618]
+
+
+WARNING: [Synth 8-689] width (32) of port connection 's_axi_araddr' does not match port width (30) of module 'elink' [/scratch/stewart/connectal/contrib/parallella/zedboard/verilog/mkZynqTop.v:1552]
+WARNING: [Synth 8-689] width (32) of port connection 's_axi_awaddr' does not match port width (30) of module 'elink' [/scratch/stewart/connectal/contrib/parallella/zedboard/verilog/mkZynqTop.v:1562]
+
+WARNING: [Synth 8-689] width (4) of port connection 's_axi_arlen' does not match port width (8) of module 'elink' [/scratch/stewart/connectal/contrib/parallella/zedboard/verilog/mkZynqTop.v:1556]
+WARNING: [Synth 8-689] width (4) of port connection 's_axi_awlen' does not match port width (8) of module 'elink' [/scratch/stewart/connectal/contrib/parallella/zedboard/verilog/mkZynqTop.v:1566]
+
+WARNING: [Synth 8-689] width (2) of port connection 's_axi_arlock' does not match port width (1) of module 'elink' [/scratch/stewart/connectal/contrib/parallella/zedboard/verilog/mkZynqTop.v:1557]
+WARNING: [Synth 8-689] width (2) of port connection 's_axi_awlock' does not match port width (1) of module 'elink' [/scratch/stewart/connectal/contrib/parallella/zedboard/verilog/mkZynqTop.v:1567]
+
+
+WARNING: [Synth 8-689] width (2) of port connection 's_axi_arsize' does not match port width (3) of module 'elink' [/scratch/stewart/connectal/contrib/parallella/zedboard/verilog/mkZynqTop.v:1560]
+WARNING: [Synth 8-689] width (2) of port connection 's_axi_awsize' does not match port width (3) of module 'elink' [/scratch/stewart/connectal/contrib/parallella/zedboard/verilog/mkZynqTop.v:1570]
+

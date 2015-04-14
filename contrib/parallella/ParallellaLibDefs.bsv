@@ -20,14 +20,14 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import PParallellaLIB::*;
+import ELink::*;
 import AxiMasterSlave::*;
 import AxiBits::*;
 import AxiGather::*;
 
 interface ParallellaPins;
    interface Par_tx tx;
-   interface Par_rx rxo
+   interface Par_rx rx;
 endinterface
 
 interface ParallellaLib;

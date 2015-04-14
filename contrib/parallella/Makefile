@@ -2,15 +2,26 @@
 CONNECTALDIR?=../..
 #S2H_INTERFACES = MainRequest:Main.request
 #H2S_INTERFACES = Main:MainRequest
-BSVFILES = PParallellaLIB.bsv ParallellaLibDefs.bsv
+BSVFILES = ELink.bsv ParallellaLibDefs.bsv
 CPPFILES=testmain.cpp
 NUMBER_OF_MASTERS =0
-PARDIR=/scratch/stewart/parallella/parallella-hw/fpga/hdl
+PARDIR=/scratch/stewart/parallella/parallella-hw/fpga/src
 PIN_TYPE = ParallellaLibDefs::ParallellaPins
 # CONNECTALFLAGS = -C /scratch/stewart/parallella/parallella-hw/boards/parallella-I/constraints/parallella_z70x0_loc.xdc
 CONNECTALFLAGS += \
-	--verilog $(PARDIR)/parallella-I \
-	--verilog $(PARDIR)/elink-gold
+	--verilog $(PARDIR)/elink/hdl/elink_regmap.v \
+	--verilog $(PARDIR)/constants/hdl \
+	--verilog $(PARDIR)/elink/hdl \
+	--verilog $(PARDIR)/embox/hdl \
+	--verilog $(PARDIR)/emmu/hdl \
+	--verilog $(PARDIR)/gpio/hdl \
+	--verilog $(PARDIR)/i2c/hdl \
+	--verilog $(PARDIR)/memory/hdl \
+	--verilog $(PARDIR)/stubs/hdl 
+
+
+
+
 CONNECTALFLAGS += -D IMPORT_HOSTIF
 
 Parallella.bsv: parallella.v
