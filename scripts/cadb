@@ -21,64 +21,61 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import os, socket, subprocess, sys, time
-
+import os, sys, time
 from adb import adb_commands
 from adb import common
 
-timelimit = -1
 timebound = 5
-scriptdir=os.path.dirname(sys.argv[0])
-sys.path.append(scriptdir)
+#scriptdir=os.path.dirname(sys.argv[0])
+#sys.path.append(scriptdir)
 command_list = ['shell', 'push', 'pull', 'root', 'reboot']
 
-def run_command(ipaddr, args):
-    if ipaddr.find(':') == -1:
-        ipaddr = ipaddr + ':5555'
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print 'cadb <ipaddr> <command> <args>'
+        sys.exit(-1)
+    ipaddr = ''
+    args = sys.argv[1:]
+    if args[0] not in command_list:
+        ipaddr = args[0]
+        args = args[1:]
+    if os.environ.has_key('RUNPARAM'):
+        ipaddr=os.environ['RUNPARAM']
+    if ipaddr == '':
+         print 'cadb: missing address'
+         sys.exit(-1)
     print 'connecting to %s' % ipaddr
     starttime = time.clock()
+    count = 0
     while True:
         try:
             connection = adb_commands.AdbCommands.ConnectDevice(serial=ipaddr)
-            print 'connect ok', connection
+            print 'connect ok', count, time.clock() - starttime
             break
-        except socket.error:
-            #print('socket.error', sys.exc_info())
+        except:
             pass
         if time.clock() - starttime > timebound:
             print 'cadb: connection attempt timed out'
             sys.exit(-1)
-    if args[0] == 'shell':
-        for line in connection.StreamingShell(' '.join(args[1:])):
-            sys.stdout.write(line)
-    elif args[0] == 'push':
-        for filename in args[1:-1]:
-            print 'PUSH', filename, args[-1]
-            connection.Push(filename, args[-1])
-    elif args[0] == 'pull':
-        print 'PULL', args[1], args[2]
-        connection.Pull(args[1], args[2])
-    elif args[0] == 'root':
-        connection.Root()
-    elif args[0] == 'reboot':
-        connection.Reboot()
-    connection.Close()
-
-if __name__ == '__main__':
-    #argparser.add_argument('-t', '--timelimit', type=int, default=timelimit, help='Time limit for jobs running on the zedboard. Defaults to value of environment variable RUNTIMELIMIT or 600 seconds.')
-    if len(sys.argv) < 2:
-        print 'cadb <args>'
+        count += 1
+    try:
+        if args[0] == 'shell':
+            for line in connection.StreamingShell(' '.join(args[1:])):
+                sys.stdout.write(line)
+        elif args[0] == 'push':
+            for filename in args[1:-1]:
+                connection.Push(filename, args[-1])
+        elif args[0] == 'pull':
+            connection.Pull(args[1], args[2])
+        elif args[0] == 'root':
+            try:
+                connection.Root()
+            except:
+                pass    # connection always fails as adbd reboots...
+        elif args[0] == 'reboot':
+            connection.Reboot()
+        connection.Close()
+    except:
+        print 'cadb: operation failed', args[0]
         sys.exit(-1)
-    ipaddr = ''
-    aitem = sys.argv[1:]
-    if aitem[0] not in command_list:
-        ipaddr = aitem[0]
-        aitem = aitem[1:]
-    if os.environ.has_key('RUNPARAM'):
-        ipaddr=os.environ['RUNPARAM']
-    #print 'IP', ipaddr, 'ARGS', aitem
-    if ipaddr == '':
-         print 'cadb: missing address'
-         sys.exit(-1)
-    run_command(ipaddr, aitem)
     sys.exit(0)
