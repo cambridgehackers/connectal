@@ -70,7 +70,7 @@ interface ImageonCapturePins;
     method Bit#(1) io_vita_reset_n();
     method Vector#(3, ReadOnly#(Bit#(1))) io_vita_trigger();
     method Action io_vita_monitor(Bit#(2) v);
-    interface SpiPins spi;
+    interface SpiMasterPins spi;
     method Bit#(1) i2c_mux_reset_n();
     interface Clock imageon_deleteme_unused_clock;
     interface Reset imageon_deleteme_unused_reset;
@@ -277,7 +277,7 @@ module mkImageonCapture#(ImageonSerdesIndication serdes_indication, HdmiGenerato
             return vita_trigger_wire;
         endmethod
         method Bit#(1) i2c_mux_reset_n(); return i2c_mux_reset_n_reg; endmethod
-        interface SpiPins spi = spiController.pins;
+        interface SpiMasterPins spi = spiController.pins;
         interface imageon_deleteme_unused_clock = imageon_clock;
         interface imageon_deleteme_unused_reset = imageon_reset;
         interface ImageonSerdesPins serpins = serdes.pins;

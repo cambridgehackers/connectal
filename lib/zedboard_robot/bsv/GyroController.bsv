@@ -54,14 +54,14 @@ endinterface
 
 interface GyroController;
    interface GyroCtrlRequest req;
-   interface SpiPins spi;
+   interface SpiMasterPins spi;
    interface LEDS leds;
    interface MemWriteClient#(64) dmaClient;
 endinterface
 
 module mkGyroController#(GyroCtrlIndication ind)(GyroController);
 
-   SPI#(Bit#(16))  spiCtrl    <- mkSPI(1000, True);
+   SPIMaster#(Bit#(16))  spiCtrl    <- mkSPIMaster(1000, True);
    FIFO#(Bool)     spi_aux    <- mkPipelineFIFO;
    Reg#(Bit#(32))  sampleFreq <- mkReg(0);
    Reg#(Bit#(32))  sampleCnt  <- mkReg(0);
@@ -196,7 +196,7 @@ module mkGyroController#(GyroCtrlIndication ind)(GyroController);
    interface LEDS leds;
       method Bit#(LedsWidth) leds() = truncate(pack(cWrapCnt));
    endinterface
-   interface SpiPins spi = spiCtrl.pins;
+   interface SpiMasterPins spi = spiCtrl.pins;
    interface dmaClient = we.dmaClient;
       
 endmodule
