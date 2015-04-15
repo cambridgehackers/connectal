@@ -1,0 +1,9 @@
+
+CONNECTALDIR ?= ../..
+INTERFACES = SPIRequest SPIResponse
+BSVFILES = Top.bsv SPI.bsv
+CPPFILES= test_spi0.cpp
+NUMBER_OF_MASTERS =0
+CONNECTALFLAGS += -D PS7EXTENDED -D IMPORT_HOSTIF
+
+include $(CONNECTALDIR)/Makefile.connectal

@@ -222,6 +222,7 @@ interface PS7;
     interface Reset derivedReset;
 `ifdef PS7EXTENDED      
     interface Pps7Emiosdio emiosdio1;   
+    interface Pps7Emiospi  emiospi0;
 `endif
 endinterface
 
@@ -292,6 +293,7 @@ module mkPS7(PS7);
 
 `ifdef PS7EXTENDED         
     interface Pps7Emiosdio emiosdio1 = ps7.sdio[1];
+    interface Pps7Emiospi  emiospi0  = ps7.spi[0];
 `endif      
     interface ZynqPins pins;
     interface a = ps7.ddr.a;

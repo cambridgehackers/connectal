@@ -1,6 +1,5 @@
 
 CONNECTALDIR ?= ../..
-ZBLD = $(CONNECTALDIR)/lib/zedboard_robot/bsv
 INTERFACES = SDIORequest SDIOResponse
 BSVFILES = Top.bsv SDIO.bsv
 CPPFILES= test_sdio1.cpp
