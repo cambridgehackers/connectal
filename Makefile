@@ -403,13 +403,14 @@ zynqdrivers-adb:
 	adb -s $(RUNIP):$(RUNPORT) shell insmod /mnt/sdcard/portalmem.ko
 
 connectalsdhci-clean:
-	(cd drivers/connectalsdhci/; DEVICE_XILINX_KERNEL=`pwd`/../../../zynq-boot/linux-xlnx/ make clean)
+	(cd drivers/connectalsdhci/; DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make clean)
 
 connectalsdhci:
-	(cd drivers/connectalsdhci/;  DRIVER_VERSION=$(VERSION) DEVICE_XILINX_KERNEL=`pwd`/../../../zynq-boot/linux-xlnx/ make connectalsdhci.ko)
+	(cd drivers/connectalsdhci/; DRIVER_VERSION=$(VERSION) DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make connectalsdhci.ko)
 
+# the fpga must be programmed before loading the connectalsdhci driver 
+# cd tests/test_sdio1/ && make run.zedboard || true
 connectalsdhci-adb: 
-	cd tests/test_sdio1/ && make run.zedboard
 	adb connect $(RUNPARAM)
 	adb -s $(RUNIP):$(RUNPORT) shell pwd || true
 	adb connect $(RUNPARAM)

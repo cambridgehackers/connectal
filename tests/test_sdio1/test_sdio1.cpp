@@ -54,7 +54,7 @@ public:
     fprintf(stderr, "emio_sample(%08x): datai:%X datatn:%X datao:%X cmdi:%X, cmdtn:%X, cmdo:%X, clk:%X\n", v, datai, datatn, datao, cmdi, cmdtn, cmdo, clk);
   }
   virtual void cnt_cycle_resp(uint32_t v){
-    fprintf(stderr, "cnt_cycle_resp %x\n", v);
+    fprintf(stderr, "cnt_cycle_resp %d\n", v);
   } 
   SDIOResponse(unsigned int id) : SDIOResponseWrapper(id){}
 };
@@ -65,13 +65,12 @@ int main(int argc, const char **argv)
   SDIORequestProxy *device = new SDIORequestProxy(IfcNames_ControllerRequest);
   SDIOResponse *ind = new SDIOResponse(IfcNames_ControllerResponse);
 
-  portalExec_start();
-  sleep(2);
-  
+  // portalExec_start();
+  // sleep(2);
   // device->toggle_cd(1000);
-  //  device->set_spew_en(1);
+  // device->set_spew_en(1);
   // while(true){
-  //   device->cnt_cycle_req(0xF);
+  //   device->cnt_cycle_req(100);
   //   sleep(2);
   // }
 
