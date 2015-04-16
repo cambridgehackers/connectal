@@ -135,18 +135,18 @@ module mkImageonCapture#(ImageonSerdesIndication serdes_indication, HdmiGenerato
     endrule
 
     SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, imageon_clock);
-    Reg#(Bool)  trigger_active <- mkReg(True, clocked_by imageon_clock, reset_by imageon_reset);
+    Reg#(Bool)  triggerOutput <- mkReg(True, clocked_by imageon_clock, reset_by imageon_reset);
     Reg#(Bit#(32)) tcounter <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
     rule calcTrigger;
-        if (trigger_active && vsyncPulse.pulse())
+        if (triggerOutput && vsyncPulse.pulse())
             begin
             tcounter <= trigger_cnt_reg;
-            trigger_active <= False;
+            triggerOutput <= False;
             end
         else
             tcounter <= tcounter - 1;
-        if (!trigger_active && tcounter == 0)
-            trigger_active <= True;
+        if (!triggerOutput && tcounter == 0)
+            triggerOutput <= True;
     endrule
 
     // fromSensor: sensor specific processing of serdes input, resulting in pixels
@@ -156,7 +156,7 @@ module mkImageonCapture#(ImageonSerdesIndication serdes_indication, HdmiGenerato
     ReadOnly#(Bit#(1)) vita_clk_pll <- mkOBUFT(roval(pll_out.q()), roval(pll_t.q()), clocked_by imageon_clock, reset_by imageon_reset);
     vita_trigger_wire[2] <- mkOBUFT(roval(0), regToReadOnly(imageon_oe), clocked_by imageon_clock, reset_by imageon_reset);
     vita_trigger_wire[1] <- mkOBUFT(roval(1), regToReadOnly(imageon_oe), clocked_by imageon_clock, reset_by imageon_reset);
-    vita_trigger_wire[0] <- mkOBUFT(regToReadOnly(trigger_active), regToReadOnly(imageon_oe), clocked_by imageon_clock, reset_by imageon_reset);
+    vita_trigger_wire[0] <- mkOBUFT(regToReadOnly(triggerOutput), regToReadOnly(imageon_oe), clocked_by imageon_clock, reset_by imageon_reset);
     ReadOnly#(Bit#(1)) vita_reset_n_wire <- mkOBUFT(regToReadOnly(serdes.data.reset), regToReadOnly(imageon_oe), clocked_by imageon_clock, reset_by imageon_reset);
 
     rule pll_rule;
