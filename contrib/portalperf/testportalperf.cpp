@@ -26,7 +26,6 @@
 
 #include "PortalPerfIndication.h"
 #include "PortalPerfRequest.h"
-#include "GeneratedTypes.h"
 
 //#define DEBUG 1
 
@@ -237,10 +236,7 @@ void dotestin(const char *testname, int which)
 int main(int argc, const char **argv)
 {
     PortalPerfIndication *portalPerfIndication = new PortalPerfIndication(IfcNames_PortalPerfIndication);
-
     portalPerfRequestProxy = new PortalPerfRequestProxy(IfcNames_PortalPerfRequest);
-
-    portalExec_init();
 
     printf("Timer tests\n");
     portalTimerInit();
@@ -286,6 +282,5 @@ int main(int argc, const char **argv)
     dotestin("spitddd", 7);
     dotestin("spitdddd", 8);
 
-    portalExec_end();
     return 0;
 }

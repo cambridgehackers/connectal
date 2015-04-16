@@ -72,8 +72,6 @@ int main(int argc, const char **argv)
   long freq = 0;
   setClockFrequency(0, 200000000, &freq);
 
-  portalExec_start();
-
   fprintf(stderr, "Main::calling say1(%d)\n", 0);
   device->send(0);
 

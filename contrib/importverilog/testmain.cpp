@@ -54,8 +54,6 @@ int main(int argc, const char **argv)
   MainRequestProxy *device = new MainRequestProxy(IfcNames_MainRequestS2H);
   device->pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
 
-  portalExec_start();
-
   fprintf(stderr, "Main::calling write_rf(11, 22, 33, 44)\n");
   device->write_rf(0, 0x11);
   device->write_rf(1, 0x22);

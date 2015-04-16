@@ -38,8 +38,6 @@ int main(int argc, const char **argv)
   MaxSonarCtrlIndication *ind = new MaxSonarCtrlIndication(IfcNames_ControllerIndication);
   MaxSonarCtrlRequestProxy *device = new MaxSonarCtrlRequestProxy(IfcNames_ControllerRequest);
 
-  portalExec_start();
-
   long req_freq = 100000000; // 100 mHz
   long freq = 0;
   setClockFrequency(0, req_freq, &freq);

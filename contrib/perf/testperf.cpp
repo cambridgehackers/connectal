@@ -168,9 +168,6 @@ int main(int argc, const char **argv)
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
   dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
 
-  portalExec_start();
-
-
   portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
   portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");

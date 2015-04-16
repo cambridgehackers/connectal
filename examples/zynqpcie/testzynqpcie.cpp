@@ -50,7 +50,6 @@ int main(int argc, const char **argv)
   ZynqPcieTestRequestProxy *device = new ZynqPcieTestRequestProxy(IfcNames_ZynqPcieTestRequest);
   device->pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
 
-  portalExec_start();
   for (int i = 0; i < 2; i++) {
       device->getStatus(0);
       sleep(2);

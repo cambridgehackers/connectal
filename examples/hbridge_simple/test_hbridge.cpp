@@ -40,7 +40,6 @@ int main(int argc, const char **argv)
 {
   HBridgeCtrlIndication *ind = new HBridgeCtrlIndication(IfcNames_ControllerIndication);
   HBridgeCtrlRequestProxy *device = new HBridgeCtrlRequestProxy(IfcNames_ControllerRequest);
-  portalExec_start();
   sleep(2);
 
   for(int i = 0; i < 2; i++){

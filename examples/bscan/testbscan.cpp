@@ -44,7 +44,6 @@ int main(int argc, const char **argv)
     BscanIndication *bscanIndication = new BscanIndication(IfcNames_BscanIndication);
     bscanRequestProxy = new BscanRequestProxy(IfcNames_BscanRequest);
 
-    portalExec_start();
     if (argc == 1) {
         int v = 42;
         printf("Bscan put %x\n", v);

@@ -352,9 +352,6 @@ int main(int argc, const char **argv)
 
 	printf( "Done initializing hw interfaces\n" ); fflush(stdout);
 
-	portalExec_start();
-	printf( "Done portalExec_start\n" ); fflush(stdout);
-
 	portalDCacheFlushInval(dstAlloc, dstAlloc_sz, dstBuffer);
 	portalDCacheFlushInval(srcAlloc, srcAlloc_sz, srcBuffer);
 	ref_dstAlloc = dma->reference(dstAlloc);

@@ -58,8 +58,6 @@ int main(int argc, const char **argv)
   SinkRequestProxy *sinkRequestProxy = new SinkRequestProxy(IfcNames_SinkRequest);
   
   fprintf(stderr, "Main::creating exec thread\n");
-  portalExec_start();
-  
   sinkRequestProxy->init(0);
   while(tokens < 32){
 

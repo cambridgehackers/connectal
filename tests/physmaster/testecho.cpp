@@ -47,11 +47,9 @@ int main(int argc, const char **argv)
 {
     PhysMemMasterIndication *sIndication = new PhysMemMasterIndication(IfcNames_PhysMemMasterIndication, &socketfuncInit, NULL);
     sRequestProxy = new PhysMemMasterRequestProxy(IfcNames_PhysMemMasterRequest, &socketfuncInit, NULL);
-    portalExec_start();
 
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
     //call_say(v);
-    portalExec_end();
     return 0;
 }

@@ -228,7 +228,6 @@ int main(int argc, char **argv)
     XsimMemSlaveRequest *memSlaveRequest = new XsimMemSlaveRequest(XsimIfcNames_XsimMemSlaveRequest, &muxfunc, &param);
 
     printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-    //portalExec_init();
     portalExec_stop();
     sleep(2);
     printf("[%s:%d]\n", __FUNCTION__, __LINE__);
@@ -294,5 +293,4 @@ int main(int argc, char **argv)
 	xsiInstance.run(10000);
     }
     sleep(10);
-    //portalExec_end();
 }

@@ -58,7 +58,6 @@ int main(int argc, const char **argv)
 {
     EchoIndication echoIndication(IfcNames_EchoIndicationH2S);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H);
-    portalExec_start();
 
     int v = 42;
     printf("Saying %d\n", v);

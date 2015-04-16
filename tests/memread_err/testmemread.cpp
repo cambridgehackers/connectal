@@ -101,8 +101,6 @@ int runtest(int argc, const char ** argv)
   srcAlloc = portalAlloc(alloc_sz);
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
 
-  portalExec_start();
-
 #ifdef FPGA0_CLOCK_FREQ
   long req_freq = FPGA0_CLOCK_FREQ;
   long freq = 0;

@@ -89,8 +89,6 @@ int main(int argc, const char **argv)
 
   ddsindication = new DDSTestIndication(IfcNames_DDSTestIndication);
 
-  portalExec_start();
-
   fprintf(stdout, "DDSTest\n");
   ddsdevice->setPhaseAdvance(1, 0);
 

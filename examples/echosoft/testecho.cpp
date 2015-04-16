@@ -72,8 +72,6 @@ int main(int argc, const char **argv)
     rc = getaddrinfo("127.0.0.1", "5001", NULL, &param.addr);
     sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H, &socketfuncInit, PARAM);
 
-    portalExec_start();
-
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
     call_say(v);
@@ -83,7 +81,5 @@ int main(int argc, const char **argv)
     call_say2(v, v*3);
     printf("TEST TYPE: SEM\n");
     sRequestProxy->setLeds(9);
-    portalExec_end();
-    //freeaddrinfo(param.addr);
     return 0;
 }

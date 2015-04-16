@@ -72,8 +72,6 @@ int main(int argc, const char **argv)
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
   sem_init(&done_sem, 1, 0);
-  portalExec_start();
-
   int dstAlloc = portalAlloc(alloc_sz);
   unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
 

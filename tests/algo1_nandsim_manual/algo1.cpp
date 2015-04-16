@@ -134,7 +134,6 @@ int main(int argc, const char **argv)
   StrstrRequestProxy *strstrRequest = new StrstrRequestProxy(IfcNames_AlgoRequest);
   StrstrIndication *strstrIndication = new StrstrIndication(IfcNames_AlgoIndication);
 
-  portalExec_start();
   fprintf(stderr, "Main::allocating memory...\n");
 
   // allocate memory for strstr data

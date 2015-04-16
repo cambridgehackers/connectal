@@ -127,9 +127,6 @@ int main(int argc, const char **argv)
   int rc1 = getaddrinfo("0.0.0.0", "5001", NULL, &param1.addr);
   MaxSonarSampleStreamProxy *msssp = new MaxSonarSampleStreamProxy(IfcNames_MaxSonarSampleStream, &socketfuncResp, &param1, &MaxSonarSampleStreamJsonProxyReq, 1000);
 
-  // start connectal runtime
-  portalExec_start();
-
   // allocate memory for the gyro controller to write samples to
   int dstAlloc = portalAlloc(alloc_sz);
   char *dstBuffer = (char *)portalMmap(dstAlloc, alloc_sz);

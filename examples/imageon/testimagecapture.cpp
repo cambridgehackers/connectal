@@ -470,7 +470,6 @@ int main(int argc, const char **argv)
     printf("[%s:%d] setClockFrequency 1 160000000 status=%d actualfreq=%ld\n", __FUNCTION__, __LINE__, status, actualFrequency);
     status = setClockFrequency(3, 200000000, &actualFrequency);
     printf("[%s:%d] setClockFrequency 3 200000000 status=%d actualfreq=%ld\n", __FUNCTION__, __LINE__, status, actualFrequency);
-    portalExec_start();
     printf("[%s:%d] before set_i2c_mux_reset_n\n", __FUNCTION__, __LINE__);
     idevice->set_i2c_mux_reset_n(1);
     printf("[%s:%d] before setDeLine/Pixel\n", __FUNCTION__, __LINE__);

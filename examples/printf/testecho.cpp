@@ -69,9 +69,9 @@ static void *pthread_worker(void *p)
 {
     void *rc = NULL;
     while (CHECKSEM(sem_heard2) && !rc && !poller->stopping) {
-        rc = poller->portalExec_poll(poller->portalExec_timeout);
+        rc = poller->pollFn(poller->timeout);
         if ((long)rc >= 0)
-            rc = poller->portalExec_event();
+            rc = poller->event();
     }
     return rc;
 }
@@ -132,9 +132,8 @@ int main(int argc, const char **argv)
     SwallowProxy *swallowProxy = new SwallowProxy(IfcNames_Swallow);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
 
-    poller->portalExec_init();
+    poller->init();
     init_thread();
-    portalExec_start();
 
 #if 0
     printf("Timer tests\n");
@@ -177,7 +176,5 @@ uint64_t elapsed = portalTimerLap(1);
     portalTimerPrint(LOOP_COUNT);
     printf("call_say: elapsed %g average %g\n", (double) elapsed, (double) elapsed/ (double) LOOP_COUNT);
     echoRequestProxy->setLeds(9);
-    poller->portalExec_end();
-    portalExec_end();
     return 0;
 }

@@ -77,7 +77,6 @@ int main(int argc, const char **argv)
   srcAlloc = portalAlloc(alloc_sz);
   unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
 
-  portalExec_start();
   for (int i = 0; i < numWords; i++)
     srcBuffer[i] = i;
   portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);

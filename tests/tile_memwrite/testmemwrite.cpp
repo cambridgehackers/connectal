@@ -106,8 +106,6 @@ int main(int argc, const char **argv)
   dstAlloc = portalAlloc(alloc_sz);
   dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
   
-  portalExec_start();
-
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
   
   for (int i = 0; i < numWords; i++){

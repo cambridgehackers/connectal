@@ -50,8 +50,6 @@ int main(int argc, const char **argv)
   FpIndication *indication = new FpIndication(IfcNames_FpIndication);
   FpRequestProxy *device = new FpRequestProxy(IfcNames_FpRequest);
 
-  portalExec_start();
-
   float a = 1.0;
   float b = 0.5;
 

@@ -165,8 +165,6 @@ int main(int argc, const char **argv)
   dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
   bsBuffer  = (unsigned int *)portalMmap(bsAlloc, alloc_sz);
 
-  portalExec_start();
-
   for (int i = 0; i < numWords; i++){
     srcBuffer[i] = i;
     dstBuffer[i] = 0x5a5abeef;

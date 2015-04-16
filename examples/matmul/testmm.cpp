@@ -148,8 +148,6 @@ int main(int argc, const char **argv)
     return -1;
   }
 
-  portalExec_start();
-
   long req_freq = 100000000;
   long freq = 0;
   setClockFrequency(0, req_freq, &freq);

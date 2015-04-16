@@ -122,7 +122,6 @@ int main(int argc, const char ** argv)
   srcAlloc = portalAlloc(alloc_sz);
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
 
-  portalExec_start();
   pthread_t debug_thread;
   pthread_create(&debug_thread, 0, debugWorker, 0);
 

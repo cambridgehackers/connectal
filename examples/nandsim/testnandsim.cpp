@@ -94,8 +94,6 @@ int main(int argc, const char **argv)
   NandCfgRequestProxy *nandcfgRequest = new NandCfgRequestProxy(IfcNames_NandCfgRequest);
   NandCfgIndication *nandcfgIndication = new NandCfgIndication(IfcNames_NandCfgIndication);
 
-  portalExec_start();
-
   int nandAlloc = portalAlloc(nandBytes);
   fprintf(stderr, "testnandsim::nandAlloc=%d\n", nandAlloc);
   int ref_nandAlloc = hostDma->reference(nandAlloc);

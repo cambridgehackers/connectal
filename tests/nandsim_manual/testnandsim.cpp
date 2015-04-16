@@ -84,8 +84,6 @@ int main(int argc, const char **argv)
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, numBytes);
   fprintf(stderr, "fd=%d, srcBuffer=%p\n", srcAlloc, srcBuffer);
 
-  portalExec_start();
-
   for (int i = 0; i < numBytes/sizeof(srcBuffer[0]); i++)
     srcBuffer[i] = srcGen++;
     

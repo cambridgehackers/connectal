@@ -25,8 +25,6 @@ int main(int argc, const char **argv)
   PmodControllerIndication *ind = new PmodControllerIndication(IfcNames_ControllerIndication);
   PmodControllerRequestProxy *device = new PmodControllerRequestProxy(IfcNames_ControllerRequest);
 
-  portalExec_start();
-
   for(int i = 0; i < 10; i++) {
     device->rst(i);
     sleep(1);

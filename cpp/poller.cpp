@@ -46,12 +46,12 @@ PortalPoller::PortalPoller()
     fcntl(pipefd[0], F_SETFL, O_NONBLOCK);
     addFd(pipefd[0]);
 
-    portalExec_timeout = -1;
+    timeout = -1;
 #ifdef XSIM
-    portalExec_timeout = 100;
+    timeout = 100;
 #endif
 #ifdef BSIM
-    portalExec_timeout = 100;
+    timeout = 100;
 #endif
 }
 
@@ -92,7 +92,7 @@ void PortalPoller::addFd(int fd)
 {
     /* this internal function assumes mutex locked by caller.
      * since it can be called from addFdToPoller(), which was called under mutex lock
-     * portalExec_event().
+     * event().
      */
     numFds++;
     portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
@@ -119,11 +119,11 @@ int PortalPoller::registerInstance(Portal *portal)
         addFd(portal->pint.client_fd[i]);
     portal->pint.item->enableint(&portal->pint, 1);
     pthread_mutex_unlock(&mutex);
-    portalExec_start();
+    start();
     return 0;
 }
 
-void* PortalPoller::portalExec_init(void)
+void* PortalPoller::init(void)
 {
 #ifdef BSIM
     if (global_sockfd != -1) {
@@ -148,7 +148,7 @@ void* PortalPoller::portalExec_init(void)
     fprintf(stderr, "portalExec::about to enter loop, numFds=%d\n", numFds);
     return NULL;
 }
-void PortalPoller::portalExec_stop(void)
+void PortalPoller::stop(void)
 {
     uint8_t ch = 0;
     int rc;
@@ -157,7 +157,7 @@ void PortalPoller::portalExec_stop(void)
     if (rc < 0)
       fprintf(stderr, "[%s:%d] write error %d\n", __FUNCTION__, __LINE__, errno);
 }
-void PortalPoller::portalExec_end(void)
+void PortalPoller::end(void)
 {
     stopping = 1;
     printf("%s: don't disable interrupts when stopping\n", __FUNCTION__);
@@ -171,7 +171,7 @@ void PortalPoller::portalExec_end(void)
     pthread_mutex_unlock(&mutex);
 }
 
-void* PortalPoller::portalExec_poll(int timeout)
+void* PortalPoller::pollFn(int timeout)
 {
     long rc = 0;
     if (timeout != 0)
@@ -183,7 +183,7 @@ void* PortalPoller::portalExec_poll(int timeout)
     return (void*)rc;
 }
 
-void* PortalPoller::portalExec_event(void)
+void* PortalPoller::event(void)
 {
     uint8_t ch;
     pthread_mutex_lock(&mutex);
@@ -208,51 +208,51 @@ extern "C" void addFdToPoller(struct PortalPoller *poller, int fd)
     poller->addFd(fd);
 }
 
-void* PortalPoller::portalExec(void* __x)
+void* PortalPoller::threadFn(void* __x)
 {
-    void *rc = portalExec_init();
+    void *rc = init();
     sem_post(&sem_startup);
     while (!rc && !stopping) {
-        rc = portalExec_poll(portalExec_timeout);
+        rc = pollFn(timeout);
         if ((long) rc >= 0)
-            rc = portalExec_event();
+            rc = event();
     }
-    portalExec_end();
+    end();
     printf("[%s] thread ending\n", __FUNCTION__);
     return rc;
 }
 
 void* portalExec(void* __x)
 {
-  return defaultPoller->portalExec(__x);
+  return defaultPoller->threadFn(__x);
 }
 
 void* portalExec_init(void)
 {
-  return defaultPoller->portalExec_init();
+  return defaultPoller->init();
 }
 
 void* portalExec_poll(int timeout)
 {
-  return defaultPoller->portalExec_poll(timeout);
+  return defaultPoller->pollFn(timeout);
 }
 
 void* portalExec_event(void)
 {
-  return defaultPoller->portalExec_event();
+  return defaultPoller->event();
 }
 
 void portalExec_end(void)
 {
-  defaultPoller->portalExec_end();
+  defaultPoller->end();
 }
 
 static void *pthread_worker(void *__x)
 {
-    ((PortalPoller *)__x)->portalExec(__x);
+    ((PortalPoller *)__x)->threadFn(__x);
     return 0;
 }
-void PortalPoller::portalExec_start()
+void PortalPoller::start()
 {
     pthread_t threaddata;
     pthread_mutex_lock(&mutex);
@@ -267,11 +267,11 @@ void PortalPoller::portalExec_start()
 }
 void portalExec_start()
 {
-    defaultPoller->portalExec_start();
+    defaultPoller->start();
 }
 void portalExec_stop()
 {
-    defaultPoller->portalExec_stop();
+    defaultPoller->stop();
 }
 
 #endif // NO_CPP_PORTAL_CODE

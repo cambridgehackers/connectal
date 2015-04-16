@@ -76,7 +76,6 @@ int main(int argc, const char **argv)
   haystack_mmu = hostMMURequest;
   regexp = device;
 
-  portalExec_start();
   fprintf(stderr, "Main::allocating memory...\n");
 
   // this is hard-coded into the REParser.java
@@ -155,7 +154,6 @@ int main(int argc, const char **argv)
     close(stateMapP.alloc);
     close(stateTransitionsP.alloc);
   }
-  portalExec_stop();
   fprintf(stderr, "hw_match_cnt=%d, sw_match_cnt=%d\n", hw_match_cnt, sw_match_cnt);
   return (hw_match_cnt == sw_match_cnt ? 0 : -1);
 }

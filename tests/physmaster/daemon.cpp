@@ -52,7 +52,6 @@ int main(int argc, const char **argv)
     sIndicationProxy = new PhysMemMasterIndicationProxy(IfcNames_PhysMemMasterIndication, &socketfuncResp, NULL);
     PhysMemMasterRequest *sRequest = new PhysMemMasterRequest(IfcNames_PhysMemMasterRequest, &socketfuncResp, NULL);
 
-    portalExec_start();
     printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);
     while(1)
         sleep(100);

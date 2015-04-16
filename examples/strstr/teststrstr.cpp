@@ -55,8 +55,6 @@ int main(int argc, const char **argv)
   MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
 
-  portalExec_start();
-
   if(1){
     fprintf(stderr, "simple tests\n");
     int needleAlloc;

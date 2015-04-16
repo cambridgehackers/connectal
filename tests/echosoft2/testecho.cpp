@@ -134,15 +134,11 @@ int main(int argc, const char **argv)
 	sIndication2 = new EchoIndication2(IfcNames_EchoIndication2, &socketfuncInit, NULL);
     sRequestProxy2 = new EchoRequestProxy(IfcNames_EchoRequest2, &socketfuncInit, NULL);
 
-    portalExec_start();
-
 	pthread_create (&thread1, NULL, client1, (void*)NULL);
 	pthread_create (&thread2, NULL, client2, (void*)NULL);
 
 	pthread_join (thread1, NULL);
 	pthread_join (thread2, NULL);
-
-    portalExec_end();
 
 	printf ("done\n");
 
@@ -165,8 +161,6 @@ int main(int argc, const char **argv)
     sRequestProxy2 = new EchoRequestProxy(IfcNames_EchoRequest2, &socketfuncInit, NULL);
 
 
-    portalExec_start();
-
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
     call_say(v);
@@ -186,8 +180,6 @@ int main(int argc, const char **argv)
     call2_say(v*93);
     call2_say2(v, v*3);
 
-
-    portalExec_end();
     //freeaddrinfo(param.addr);
     return 0;
 }

@@ -140,9 +140,6 @@ int main(int argc, const char **argv)
   bluescope = new BlueScopeEventPIORequestProxy(IfcNames_BlueScopeEventPIORequest);
   bluescopeIndication = new BlueScopeEventPIOIndication(IfcNames_BlueScopeEventPIOIndication);
 
-  fprintf(stdout, "NEW Main::portalExec_start()...\n");
-  portalExec_start();
-
   fprintf(stdout, "Main::allocating memory...\n");
   srcAlloc = portalAlloc(alloc_sz);
 

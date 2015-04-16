@@ -103,8 +103,6 @@ int main(int argc, const char **argv)
   for (int i = 0; i < numWords; i++)
     srcBuffer[i] = i;
 
-  portalExec_start();
-
   portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
 

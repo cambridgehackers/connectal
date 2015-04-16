@@ -123,7 +123,6 @@ int main(int argc, const char **argv)
     sThirdIndicationProxy = new ThirdIndicationProxy(IfcNames_ThirdIndication, &muxfunc, &param);
     ThirdRequest *sThirdRequest = new ThirdRequest(IfcNames_ThirdRequest, &muxfunc, &param);
 
-    portalExec_start();
     printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);
     while(1)
         sleep(100);

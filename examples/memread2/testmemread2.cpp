@@ -104,8 +104,6 @@ int main(int argc, const char **argv)
   srcAlloc2 = portalAlloc(alloc_sz);
   srcBuffer2 = (unsigned int *)portalMmap(srcAlloc2, alloc_sz);
 
-  portalExec_start();
-
   for (int i = 0; i < numWords; i++){
     int v = srcGen++;
     srcBuffer[i] = v;

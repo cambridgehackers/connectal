@@ -71,7 +71,6 @@ int main(int argc, const char **argv)
   MemServerIndication hostMemServerIndication(IfcNames_HostMemServerIndication);
   MemServerIndication nandsimMemServerIndication(IfcNames_NandMemServerIndication);
 
-  portalExec_start();
   fprintf(stderr, "Main::allocating memory...\n");
 
   // allocate memory for strstr data

@@ -97,8 +97,6 @@ int main(int argc, const char **argv)
   MifoTestIndication *indication = new MifoTestIndication(IfcNames_MifoTestIndication);
   MifoTestRequestProxy *device = new MifoTestRequestProxy(IfcNames_MifoTestRequest);
 
-  portalExec_start();
-
   device->fimo32(68);
   sleep(1);
   device->fimo32(47);

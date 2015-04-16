@@ -81,7 +81,5 @@ int main(int argc, const char **argv)
     call_say2(v, v*3);
     printf("TEST TYPE: SEM\n");
     sRequestProxy->setLeds(9);
-    portalExec_end();
-    //freeaddrinfo(param.addr);
     return 0;
 }

@@ -68,8 +68,6 @@ int main(int argc, const char **argv)
   int rc = getaddrinfo("0.0.0.0", "5000", NULL, &param.addr);
   GyroSampleStreamProxy *gssp = new GyroSampleStreamProxy(IfcNames_SampleStream, &socketfuncResp, &param, &GyroSampleStreamJsonProxyReq, 1000);
 
-  portalExec_start();
-
   int dstAlloc = portalAlloc(alloc_sz);
   char *dstBuffer = (char *)portalMmap(dstAlloc, alloc_sz);
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);

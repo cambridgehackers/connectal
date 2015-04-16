@@ -130,8 +130,6 @@ int main(int argc, const char **argv)
   bsAlloc = portalAlloc(alloc_sz);
   bsBuffer  = (uint64_t *)portalMmap(bsAlloc, alloc_sz);
 
-  portalExec_start();
-
   portalDCacheFlushInval(bsAlloc, alloc_sz,  bsBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 

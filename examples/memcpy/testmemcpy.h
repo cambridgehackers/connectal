@@ -116,8 +116,6 @@ int runtest(int argc, const char **argv)
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
   dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
 
-  //portalExec_start();
-
   for (int i = 0; i < numWords; i++){
     srcBuffer[i] = i;
     dstBuffer[i] = 0x5a5abeef;
@@ -200,11 +198,7 @@ int runtest_chunk(int argc, const char **argv)
   MemServerIndication hostMemServerIndication(IfcNames_MemServerIndicationH2S);
   MMUIndication hostMMUIndication(dma, IfcNames_MMUIndicationH2S);
 
-  portalExec_start();
-
   fprintf(stderr, "Main::allocating memory...\n");
-
-  fprintf(stderr, "XXX %s %d\n", __FUNCTION__, __LINE__);
 
   size_t dstBytes = alloc_sz;
   size_t srcBytes = dstBytes;

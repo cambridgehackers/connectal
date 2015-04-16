@@ -110,8 +110,6 @@ int runtest(int argc, const char **argv)
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
   dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
 
-  portalExec_start();
-
   for (int i = 0; i < numWords; i++){
     srcBuffer[i] = i;
     dstBuffer[i] = 0x5a5abeef;

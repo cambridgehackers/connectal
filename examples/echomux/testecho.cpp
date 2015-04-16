@@ -99,8 +99,6 @@ int main(int argc, const char **argv)
     ThirdIndication *sThirdIndication = new ThirdIndication(IfcNames_ThirdIndication, &muxfunc, &param);
     sThird = new ThirdRequestProxy(IfcNames_ThirdRequest, &muxfunc, &param);
 
-    portalExec_start();
-
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
     call_say(v);
@@ -112,6 +110,5 @@ sThird->say();
     call_say2(v, v*3);
     printf("TEST TYPE: SEM\n");
     sEcho->setLeds(9);
-    portalExec_end();
     return 0;
 }

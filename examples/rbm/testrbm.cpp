@@ -104,8 +104,6 @@ int main(int argc, const char **argv)
     return -1;
   }
 
-  portalExec_start();
-
   pthread_t dbgtid;
   fprintf(stderr, "creating debug thread\n");
   if(pthread_create(&dbgtid, NULL,  dbgThread, NULL)){
