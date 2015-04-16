@@ -27,10 +27,45 @@
 #include <unistd.h>
 #include <assert.h>
 #include <string.h>
+#include <fcntl.h>
+#include <asm/ioctl.h>
+#include <linux/types.h>
 
 #include "SPIRequest.h"
 #include "SPIResponse.h"
 
+
+//***********************************************************************
+// copied from linux-xlnx/include/uapi/linux/spi/spidev.h
+
+#define SPI_IOC_MAGIC			'k'
+
+/* Read / Write of SPI mode (SPI_MODE_0..SPI_MODE_3) */
+#define SPI_IOC_RD_MODE			_IOR(SPI_IOC_MAGIC, 1, __u8)
+#define SPI_IOC_WR_MODE			_IOW(SPI_IOC_MAGIC, 1, __u8)
+
+/* Read / Write SPI bit justification */
+#define SPI_IOC_RD_LSB_FIRST		_IOR(SPI_IOC_MAGIC, 2, __u8)
+#define SPI_IOC_WR_LSB_FIRST		_IOW(SPI_IOC_MAGIC, 2, __u8)
+
+/* Read / Write SPI device word length (1..N) */
+#define SPI_IOC_RD_BITS_PER_WORD	_IOR(SPI_IOC_MAGIC, 3, __u8)
+#define SPI_IOC_WR_BITS_PER_WORD	_IOW(SPI_IOC_MAGIC, 3, __u8)
+
+/* Read / Write SPI device default max speed hz */
+#define SPI_IOC_RD_MAX_SPEED_HZ		_IOR(SPI_IOC_MAGIC, 4, __u32)
+#define SPI_IOC_WR_MAX_SPEED_HZ		_IOW(SPI_IOC_MAGIC, 4, __u32)
+
+//
+//***********************************************************************
+
+#define SPIDEVICENAME "/dev/spidev2.0"
+
+static int spidevicefd;
+static uint8_t spimode = 0;
+static uint8_t spibits = 8;
+static uint32_t speed = 50000;
+static uint16_t delay = 100;
 
 uint32_t bit_sel(uint32_t lsb, uint32_t msb, uint32_t v)
 {
@@ -44,14 +79,7 @@ public:
     fprintf(stderr, "read_resp cd:%d wp:%d\n", (v&2)>>1, v&1);
   }
   virtual void emio_sample(uint32_t v){
-    int clk = bit_sel(0,0,v);
-    int cmdo = bit_sel(1,1,v);
-    int cmdtn = bit_sel(2,2,v);
-    int cmdi = bit_sel(3,3,v);
-    int datao = bit_sel(4,7,v);
-    int datatn = bit_sel(8,11,v);
-    int datai = bit_sel(12,15,v);
-    fprintf(stderr, "emio_sample(%08x): datai:%X datatn:%X datao:%X cmdi:%X, cmdtn:%X, cmdo:%X, clk:%X\n", v, datai, datatn, datao, cmdi, cmdtn, cmdo, clk);
+    fprintf(stderr, "emio_sample(%08x)\n", v);
   }
   virtual void cnt_cycle_resp(uint32_t v){
     fprintf(stderr, "cnt_cycle_resp %d\n", v);
@@ -64,5 +92,20 @@ int main(int argc, const char **argv)
 {
   SPIRequestProxy *device = new SPIRequestProxy(IfcNames_ControllerRequest);
   SPIResponse *ind = new SPIResponse(IfcNames_ControllerResponse);
+
+  spidevicefd = open(SPIDEVICENAME, O_RDWR);
+  if (spidevicefd < 0
+      || ioctl(spidevicefd, SPI_IOC_WR_MODE, &spimode) == -1
+      || ioctl(spidevicefd, SPI_IOC_RD_MODE, &spimode) == -1
+      || ioctl(spidevicefd, SPI_IOC_WR_BITS_PER_WORD, &spibits) == -1
+      || ioctl(spidevicefd, SPI_IOC_RD_BITS_PER_WORD, &spibits) == -1
+      || ioctl(spidevicefd, SPI_IOC_WR_MAX_SPEED_HZ, &speed) == -1
+      || ioctl(spidevicefd, SPI_IOC_RD_MAX_SPEED_HZ, &speed) == -1)
+    printf("Error: cannot open SPI device\n");
+  
+  while(1){
+    sleep(1);
+    device->cnt_cycle_req(100);
+  }
 
 }

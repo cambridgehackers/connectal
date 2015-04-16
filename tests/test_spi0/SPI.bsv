@@ -1,5 +1,5 @@
 
-// Copyright (c) 2014 Quanta Research Cambridge, Inc.
+// Copyright (c) 2015 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -47,52 +47,27 @@ module mkController#(SPIResponse ind, Pps7Emiospi spi)(Controller);
    
    B2C1 b2c <- mkB2C1();
    Clock spi_clk <- mkClockBUFG(clocked_by b2c.c);
+   // this module implements a slave device: ground .sclki and ignore .sclktn
    rule tx_spi_clk;
-      b2c.inputclock(spi.clk);
+      b2c.inputclock(spi.sclko);
+      spi.sclki(0);
    endrule
    Reset def_rst <- exposeCurrentReset();
    Reset spi_rst <- mkAsyncReset(2, def_rst, spi_clk);
    FrequencyCounter fc <- mkFrequencyCounter(spi_clk, spi_rst);
-
-   // Reg#(Bit#(1)) spew_en <- mkReg(0);
-   // let cmdb <- mkIOBUF(sdio.cmdtn,     sdio.cmdo);
-   // let d0b  <- mkIOBUF(sdio.datatn[0], sdio.datao[0]);
-   // let d1b  <- mkIOBUF(sdio.datatn[1], sdio.datao[1]);
-   // let d2b  <- mkIOBUF(sdio.datatn[2], sdio.datao[2]);
-   // let d3b  <- mkIOBUF(sdio.datatn[3], sdio.datao[3]);
-   // Reg#(Bit#(32)) toggle_cd_reg <- mkReg(0);
+   Reg#(Bit#(1)) spew_en <- mkReg(0);
    
-   // Bit#(4) db_o = {d3b.o,d2b.o,d1b.o,d0b.o};
-   // Bit#(1) cmdb_o = cmdb.o;
-   
-   // (* fire_when_enabled, no_implicit_conditions *)
-   // rule xxx;
-   //    sdio.cmdi(cmdb_o);
-   //    sdio.datai(db_o);
-   //    sdio.clkfb(sdio.clk);
-   // endrule
-   
-   // rule emio_sample_rule if (spew_en == 1);
-   //    ind.emio_sample({0, db_o, sdio.datatn, sdio.datao, cmdb_o, sdio.cmdtn, sdio.cmdo, sdio.clk});
-   // endrule
-   
-   // rule cnt_cycle_resp_rule;
-   //    let v <- fc.elapsedCycles;
-   //    ind.cnt_cycle_resp(v);
-   // endrule
-   
-   // rule decr_toggle_cd_reg (toggle_cd_reg > 0);
-   // 	 toggle_cd_reg <= toggle_cd_reg-1;
-   // endrule
+   rule cnt_cycle_resp_rule;
+      let v <- fc.elapsedCycles;
+      ind.cnt_cycle_resp(v);
+   endrule
    
    interface SPIRequest req;
       method Action cnt_cycle_req(Bit#(32) v);
-	 //fc.start(v);
-	 noAction;
+	 fc.start(v);
       endmethod
       method Action set_spew_en(Bit#(1) v);
-	 //spew_en <= v;
-	 noAction;
+	 spew_en <= v;
       endmethod
    endinterface
 

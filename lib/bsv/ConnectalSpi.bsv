@@ -42,10 +42,24 @@ interface SpiMasterPins;
     interface Reset deleteme_unused_reset;
 endinterface: SpiMasterPins
 
+(* always_enabled *)
+interface SpiSlavePins;
+    method Action mosi(Bit#(1) v);
+    method Action sel_n(Bit#(1) v);
+    method Bit#(1) miso();
+    method Action clock(Bit#(1) v);
+endinterface
+
 interface SPIMaster#(type a);
    interface Put#(a) request;
    interface Get#(a) response;
    interface SpiMasterPins pins;
+endinterface
+
+interface SPISlave#(type a);
+   interface Get#(a) request;
+   interface Put#(a) response;
+   interface SpiSlavePins pins;
 endinterface
 
 module mkSpiMasterShifter#(Bool invert_clk) (SPIMaster#(a)) provisos(Bits#(a,awidth),Add#(1,awidth1,awidth),Log#(awidth,logawidth));
@@ -108,6 +122,11 @@ module mkSpiMasterShifter#(Bool invert_clk) (SPIMaster#(a)) provisos(Bits#(a,awi
       interface Reset deleteme_unused_reset = defaultReset;
    endinterface: pins
 endmodule: mkSpiMasterShifter
+
+module mkSPISlave(SPISlave#(a))
+   provisos(Bits#(a,awidth));
+
+endmodule
 
 module mkSPIMaster#(Integer divisor, Bool invert_clk)(SPIMaster#(a)) provisos(Bits#(a,awidth),Add#(1,awidth1,awidth),Log#(awidth,logawidth));
    ClockDividerIfc clockDivider <- mkClockDivider(divisor);
