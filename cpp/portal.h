@@ -22,12 +22,18 @@
 #ifndef __PORTAL_OFFSETS_H__
 #define __PORTAL_OFFSETS_H__
 #ifdef __KERNEL__
-#include <linux/types.h>
+#include <linux/types.h>  // has same typedefs as stdint.h
+#include <linux/module.h>
+#include <linux/kernel.h>
 #else
 #include <stdint.h>
 #include <sys/types.h>
 #include <sys/socket.h> // for send()/recv()
 #include <string.h> // memcpy
+#include <stdio.h>   // printf()
+#include <stdlib.h>  // exit()
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #endif
 
 /* division of 20 bits of physical address space */
@@ -54,7 +60,6 @@
 #define PORTAL_CTRL_COUNTER_MSB      6
 #define PORTAL_CTRL_COUNTER_LSB      7
 
-
 // PortalCtrl registers
 #define PORTAL_CTRL_REG_OFFSET_32        0
 #define PORTAL_CTRL_REG_INTERRUPT_STATUS (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_INTERRUPT_STATUS)
@@ -65,7 +70,6 @@
 #define PORTAL_CTRL_REG_NUM_PORTALS      (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_NUM_PORTALS     )
 #define PORTAL_CTRL_REG_COUNTER_MSB      (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_COUNTER_MSB     )
 #define PORTAL_CTRL_REG_COUNTER_LSB      (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_COUNTER_LSB     )
-
 
 typedef int Bool;   /* for GeneratedTypes.h */
 struct PortalInternal;
@@ -180,23 +184,12 @@ int connnectalJsonDecode(PortalInternal *pint, int channel, void *tempdata, Conn
 #define Connectaloffsetof(TYPE, MEMBER) ((unsigned long)&((TYPE *)0)->MEMBER)
 
 #ifdef __KERNEL__
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/types.h>  // has same typedefs as stdint.h
-
 typedef struct task_struct *pthread_t;
 int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *), void *arg);
 #define PRIu64 "llx"
 #define PRIx64 "llx"
-
 #define PORTAL_PRINTF printk
 #else
-#include <stdio.h>   // printf()
-#include <stdlib.h>  // exit()
-#include <stdint.h>
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
-
 extern int debug_portal;
 #define PORTAL_PRINTF portal_printf
 #endif
@@ -211,16 +204,6 @@ void init_portal_internal(PortalInternal *pint, int id, int tile, PORTAL_INDFUNC
 void portalCheckIndication(PortalInternal *pint);
 uint64_t portalCycleCount(void);
 void write_portal_fd_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
-
-// uses the default poller
-void* portalExec(void* __x);
-/* fine grained functions for building custom portalExec */
-void* portalExec_init(void);
-void* portalExec_poll(int timeout);
-void* portalExec_event(void);
-void portalExec_start(void);
-void portalExec_stop(void);
-void portalExec_end(void);
 int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
   int portalDCacheFlushInvalInternal(int fd, long size, void *__p, int flush);
 void portalDCacheFlushInval(int fd, long size, void *__p);
@@ -256,7 +239,6 @@ int notfull_hardware(PortalInternal *pint, unsigned int v);
 volatile unsigned int *mapchannel_socket(struct PortalInternal *pint, unsigned int v);
 unsigned int bsim_poll_interrupt(void);
 
-extern int portalExec_timeout;
 extern int global_pa_fd;
 extern int global_sockfd;
 extern PortalInternal *utility_portal;
@@ -347,6 +329,17 @@ class Portal : public PortalInternalCpp
   };
   ~Portal() { if (pint.handler) pint.poller->unregisterInstance(this); };
 };
+
+// uses the default poller
+void* portalExec(void* __x);
+/* fine grained functions for building custom portalExec */
+void* portalExec_init(void);
+void* portalExec_poll(int timeout);
+void* portalExec_event(void);
+void portalExec_start(void);
+void portalExec_stop(void);
+void portalExec_end(void);
+extern int portalExec_timeout;
 #endif // __cplusplus
 
 #endif /* __PORTAL_OFFSETS_H__ */
