@@ -36,13 +36,16 @@ import AxiBits::*;
 // prefix of the signals "tx"
 // Hopefully this is what importbvi.py would do
 (* always_ready, always_enabled *)
-interface Par_tx;
+interface Par_txo;
    method Action data_p(Bit#(8) v);
    method Action data_n(Bit#(8) v);
    method Action frame_p(Bit#(1) v);
    method Action frame_n(Bit#(1) v);
    method Action lclk_p(Bit#(1) v);
    method Action lclk_n(Bit#(1) v);
+endinterface
+
+interface Par_txi;
    method Bit#(1) wr_wait_p();
    method Bit#(1) wr_wait_n();
    method Bit#(1) rd_wait_p();
@@ -50,13 +53,16 @@ interface Par_tx;
 endinterface
 
 (* always_ready, always_enabled *)
-interface Par_rx;
+interface Par_rxi;
    method Bit#(8) data_p();
    method Bit#(8) data_n();
    method Bit#(1) frame_p();
    method Bit#(1) frame_n();
    method Bit#(1) lclk_p();
    method Bit#(1) lclk_n();
+endinterface
+
+interface Par_Rxo
    method Action wr_wait_p(Bit#(1) v);
    method Action wr_wait_n(Bit#(1) v);
    method Action rd_wait_p(Bit#(1) v);
@@ -79,8 +85,10 @@ typedef AxiSlaveBits#(32,32,12,Empty) ParMaxiGp;
 
 (* always_ready, always_enabled *)
 interface ELink;
-   interface Par_tx tx;
-   interface Par_rx rx;
+   interface Par_txi txi;
+   interface Par_txo txo;
+   interface Par_rxi rxi;
+   interface Par_rxo rxo;
    interface ParMaxiGp maxi;   // this will connect to a master
    interface ParSaxiHp saxi;  // this will connect to a slave
    interface Par_misc misc;
@@ -93,7 +101,7 @@ module mkELink#(Clock maxiclk, Clock saxiclk,
    Reset reset_chip, Reset reset_fpga)(ELink);
    // default_clock clk();
    // default_reset rst();
-   input_clock maxiclk(emaxi_aclk) = maxiclk;  // assigns the verilog emaxi_aclk
+   input_clock maxiclk(m_axi_aclk) = maxiclk;  // assigns the verilog m_axi_aclk
    input_clock saxiclk(s_axi_aclk) = saxiclk;  // assigns the verilog s_axi_aclk
    input_reset maxiclk_reset() = maxiclk_reset; /* from clock*/
    input_reset saxiclk_reset() = saxiclk_reset; /* from clock*/
@@ -110,30 +118,36 @@ module mkELink#(Clock maxiclk, Clock saxiclk,
       method cclk_n(cclk_n) enable((*inhigh*) EN_cclk_n);
    endinterface
    
-   interface Par_tx tx;
-      method data_p(tx_data_p) enable((*inhigh*) EN_tx_data_p);
-      method data_n(tx_data_n) enable((*inhigh*) EN_tx_data_n);
-      method frame_p(tx_frame_p) enable((*inhigh*) EN_tx_frame_p);
-      method frame_n(tx_frame_n) enable((*inhigh*) EN_tx_frame_n);
-      method lclk_p(tx_lclk_p) enable((*inhigh*) EN_tx_lclk_p);
-      method lclk_n(tx_lclk_n) enable((*inhigh*) EN_tx_lclk_n);
-      method tx_wr_wait_p wr_wait_p();
-      method tx_wr_wait_n wr_wait_n();
-      method tx_rd_wait_p rd_wait_p();
-      method tx_rd_wait_n rd_wait_n();
+   interface Par_txo txo;
+      method data_p(txo_data_p) enable((*inhigh*) EN_txo_data_p);
+      method data_n(txo_data_n) enable((*inhigh*) EN_txo_data_n);
+      method frame_p(txo_frame_p) enable((*inhigh*) EN_txo_frame_p);
+      method frame_n(txo_frame_n) enable((*inhigh*) EN_txo_frame_n);
+      method lclk_p(txo_lclk_p) enable((*inhigh*) EN_txo_lclk_p);
+      method lclk_n(txo_lclk_n) enable((*inhigh*) EN_txo_lclk_n);
+   endinterface	       
+
+   interface Par_txi txi;	
+      method txi_wr_wait_p wr_wait_p();
+      method txi_wr_wait_n wr_wait_n();
+      method txi_rd_wait_p rd_wait_p();
+      method txi_rd_wait_n rd_wait_n();
    endinterface
 
-   interface Par_rx rx;
-      method rx_data_p data_p();
-      method rx_data_n data_n();
-      method rx_frame_p frame_p();
-      method rx_frame_n frame_n();
-      method rx_lclk_p lclk_p();
-      method rx_lclk_n lclk_n();
-      method wr_wait_p(rx_wr_wait_p) enable((*inhigh*) EN_rx_wr_wait_p);
-      method wr_wait_n(rx_wr_wait_n) enable((*inhigh*) EN_rx_wr_wait_n);
-      method rd_wait_p(rx_rd_wait_p) enable((*inhigh*) EN_rx_rd_wait_p);
-      method rd_wait_n(rx_rd_wait_n) enable((*inhigh*) EN_rx_rd_wait_n);
+   interface Par_rxi rxi;
+      method rxi_data_p data_p();
+      method rxi_data_n data_n();
+      method rxi_frame_p frame_p();
+      method rxi_frame_n frame_n();
+      method rxi_lclk_p lclk_p();
+      method rxi_lclk_n lclk_n();
+   endinterface
+
+   interface Par_rxo rxo;
+      method wr_wait_p(rxo_wr_wait_p) enable((*inhigh*) EN_rxo_wr_wait_p);
+      method wr_wait_n(rxo_wr_wait_n) enable((*inhigh*) EN_rxo_wr_wait_n);
+      method rd_wait_p(rxo_rd_wait_p) enable((*inhigh*) EN_rxo_rd_wait_p);
+      method rd_wait_n(rxo_rd_wait_n) enable((*inhigh*) EN_rxo_rd_wait_n);
    endinterface
    
    interface ParSaxiHp saxi;
