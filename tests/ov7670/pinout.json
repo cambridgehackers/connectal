@@ -1,0 +1,14 @@
+{
+    "reset" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmodb" : "J5"
+    },
+    "i2c_SDA" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmodb" : "J4"
+    },
+    "i2c_SCL" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmodb" : "J8"
+    }
+}
