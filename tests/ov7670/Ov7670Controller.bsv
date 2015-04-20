@@ -35,6 +35,7 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
 
    I2CController#(1) i2c <- mkI2CController();
    Reg#(bit) resetReg <- mkReg(0);
+   Reg#(bit) pwdnReg <- mkReg(0);
    rule i2c_response_rule;
       let response <- i2c.users[0].response.get();
       ind.probeResponse(response.data);
@@ -47,9 +48,13 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
       method Action setReset(Bit#(1) rval);
 	 resetReg <= rval;
       endmethod
+      method Action setPowerDown(Bit#(1) pwdn);
+	 pwdnReg <= pwdn;
+      endmethod
    endinterface
    interface Ov7670Pins pins;
       interface I2C_Pins i2c = i2c.i2c;
       method bit reset() = resetReg;
+      method bit pwdn() = pwdnReg;
    endinterface
 endmodule

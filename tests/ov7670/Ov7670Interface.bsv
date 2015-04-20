@@ -26,6 +26,7 @@ import I2C::*;
 interface Ov7670ControllerRequest;
    method Action probe(Bool write, Bit#(7) slaveaddr, Bit#(8) address, Bit#(8) data);
    method Action setReset(Bit#(1) rval);
+   method Action setPowerDown(Bit#(1) pwdn);
 endinterface
 
 interface Ov7670ControllerIndication;
@@ -35,4 +36,5 @@ endinterface
 interface Ov7670Pins;
    interface I2C_Pins i2c;
    method bit reset();
+   method bit pwdn();
 endinterface
