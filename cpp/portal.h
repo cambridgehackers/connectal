@@ -25,6 +25,11 @@
 #include <linux/types.h>  // has same typedefs as stdint.h
 #include <linux/module.h>
 #include <linux/kernel.h>
+typedef struct task_struct *pthread_t;
+int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *), void *arg);
+#define PRIu64 "llx"
+#define PRIx64 "llx"
+#define PORTAL_PRINTF printk
 #else
 #include <stdint.h>
 #include <sys/types.h>
@@ -34,21 +39,32 @@
 #include <stdlib.h>  // exit()
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
+#ifdef __cplusplus
+#include <semaphore.h>
+#include <unistd.h>
+#include <pthread.h> // pthread_mutex_t
 #endif
 
-/* division of 20 bits of physical address space */
-#define TILE_SEL   2
-#define PORTAL_SEL 6
-#define METHOD_SEL 7
-#define METHOD_SZ  5
+extern int debug_portal;
+#define PORTAL_PRINTF portal_printf
+#endif
+
+/*
+ * Address constants for portal memory mapped registers
+ */
+/* Divide up 20 bits of physical address space into Tile:Portal:Method selectors */
+#define ADDRESS_TILE_SELECTOR   2
+#define ADDRESS_PORTAL_SELECTOR 6
+#define ADDRESS_METHOD_SELECTOR 7
+#define ADDRESS_METHOD_SIZE     5
 
 /* Offset of each /dev/fpgaxxx device in the address space */
-#define PORTAL_BASE_OFFSET         (1 << (METHOD_SZ+METHOD_SEL))
-#define TILE_BASE_OFFSET           (1 << (PORTAL_SEL+METHOD_SZ+METHOD_SEL))
+#define PORTAL_BASE_OFFSET   (1 << (ADDRESS_METHOD_SIZE+ADDRESS_METHOD_SELECTOR))
+#define TILE_BASE_OFFSET     (PORTAL_BASE_OFFSET << (ADDRESS_PORTAL_SELECTOR))
 
 /* Offsets of mapped registers within an /dev/fpgaxxx device */
-#define PORTAL_REQ_FIFO(A)         (((A << (METHOD_SZ)) + (1 << (METHOD_SZ)))/sizeof(uint32_t))
-#define PORTAL_IND_FIFO(A)         (((A << (METHOD_SZ)) + (1 << (METHOD_SZ)))/sizeof(uint32_t))
+#define PORTAL_REQ_FIFO(A)   (((A << (ADDRESS_METHOD_SIZE)) + (1 << (ADDRESS_METHOD_SIZE)))/sizeof(uint32_t))
+#define PORTAL_IND_FIFO(A)   (((A << (ADDRESS_METHOD_SIZE)) + (1 << (ADDRESS_METHOD_SIZE)))/sizeof(uint32_t))
 
 // PortalCtrl offsets
 #define PORTAL_CTRL_INTERRUPT_STATUS 0
@@ -71,20 +87,25 @@
 #define PORTAL_CTRL_REG_COUNTER_MSB      (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_COUNTER_MSB     )
 #define PORTAL_CTRL_REG_COUNTER_LSB      (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_COUNTER_LSB     )
 
-typedef int Bool;   /* for GeneratedTypes.h */
+// Other constants
+#define MAX_TIMERS    50
+#define MAX_CLIENT_FD 10
+
+/*
+ * Function vector for portal transport primitives used in generated C code
+ */
 struct PortalInternal;
-typedef int (*ITEMINIT)(struct PortalInternal *pint, void *param);
-typedef int (*PORTAL_INDFUNC)(struct PortalInternal *p, unsigned int channel, int messageFd);
-typedef void (*SENDMSG)(struct PortalInternal *pint, volatile unsigned int *buffer, unsigned int hdr, int sendFd);
-typedef int (*RECVMSG)(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd);
+typedef int  (*ITEMINIT)(struct PortalInternal *pint, void *param);
 typedef unsigned int (*READWORD)(struct PortalInternal *pint, volatile unsigned int **addr);
 typedef void (*WRITEWORD)(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 typedef void (*WRITEFDWORD)(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
-typedef int (*BUSYWAIT)(struct PortalInternal *pint, unsigned int v, const char *str);
-typedef void (*ENABLEINT)(struct PortalInternal *pint, int val);
 typedef volatile unsigned int *(*MAPCHANNEL)(struct PortalInternal *pint, unsigned int v);
-typedef int (*EVENT)(struct PortalInternal *pint);
-typedef int (*NOTFULL)(struct PortalInternal *pint, unsigned int v);
+typedef void (*SENDMSG)(struct PortalInternal *pint, volatile unsigned int *buffer, unsigned int hdr, int sendFd);
+typedef int  (*RECVMSG)(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd);
+typedef int  (*BUSYWAIT)(struct PortalInternal *pint, unsigned int v, const char *str);
+typedef void (*ENABLEINT)(struct PortalInternal *pint, int val);
+typedef int  (*EVENT)(struct PortalInternal *pint);
+typedef int  (*NOTFULL)(struct PortalInternal *pint, unsigned int v);
 typedef struct {
     ITEMINIT    init;
     READWORD    read;
@@ -100,11 +121,14 @@ typedef struct {
     NOTFULL     notFull;
 } PortalItemFunctions;
 
-typedef struct {
-    struct PortalInternal *pint;
-} PortalMuxHandler;
+/*
+ * Indication function vector for method invocations from HW->SW
+ */
+typedef int (*PORTAL_INDFUNC)(struct PortalInternal *p, unsigned int channel, int messageFd);
 
-#define MAX_CLIENT_FD 10
+/*
+ * Main data structure used for managing Portal info at runtime
+ */
 typedef struct PortalInternal {
     struct PortalPoller   *poller;
     int                    fpga_fd;
@@ -130,7 +154,7 @@ typedef struct PortalInternal {
     int                    client_fd_number;
     int                    client_fd[MAX_CLIENT_FD];
     int                    mux_ports_number;
-    PortalMuxHandler       *mux_ports;
+    struct PortalMuxHandler *mux_ports;
     void                   *websock;
     void                   *websock_context;
     void                   *websock_wsi;
@@ -139,8 +163,13 @@ typedef struct PortalInternal {
     int                    poller_register;
 } PortalInternal;
 
-#define SHARED_DMA(REQPORTALNAME, INDPORTALNAME) {NULL, (REQPORTALNAME), MMURequest_reqinfo, (INDPORTALNAME), MMUIndication_reqinfo, MMUIndication_handleMessage, (void *)&manualMMU_Cb, manualWaitForResp}
-#define SHARED_HARDWARE(PORTALNAME) {(PORTALNAME), SharedMemoryPortalConfig_reqinfo, SharedMemoryPortalConfig_setSglId}
+typedef struct PortalMuxHandler {
+    PortalInternal *pint;
+} PortalMuxHandler;
+
+/*
+ * Struct definitions for optional parameter when initializing transport for portal
+ */
 typedef int (*SHARED_CONFIG_SETSGLID)(struct PortalInternal *, const uint32_t sglId);
 typedef int (*SHARED_MMUINDICATION_POLL)(PortalInternal *p, uint32_t *arg_id);
 typedef struct {
@@ -167,8 +196,6 @@ typedef struct {
     void                 *socketParam;
 } PortalMuxParam;
 
-enum {ITYPE_other, ITYPE_int16_t, ITYPE_uint16_t, ITYPE_uint32_t, ITYPE_uint64_t, ITYPE_SpecialTypeForSendingFd,
-      ITYPE_ChannelType, ITYPE_DmaDbgRec};
 typedef struct {
     const char *name;
     int         offset;
@@ -180,30 +207,26 @@ typedef struct {
 } ConnectalMethodJsonInfo;
 void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJsonInfo *info);
 int connnectalJsonDecode(PortalInternal *pint, int channel, void *tempdata, ConnectalMethodJsonInfo *info);
+enum {ITYPE_other, ITYPE_int16_t, ITYPE_uint16_t, ITYPE_uint32_t, ITYPE_uint64_t, ITYPE_SpecialTypeForSendingFd,
+      ITYPE_ChannelType, ITYPE_DmaDbgRec};
 
+typedef int Bool;   /* for GeneratedTypes.h */
+
+#define SHARED_DMA(REQPORTALNAME, INDPORTALNAME) {NULL, (REQPORTALNAME), MMURequest_reqinfo, (INDPORTALNAME), MMUIndication_reqinfo, MMUIndication_handleMessage, (void *)&manualMMU_Cb, manualWaitForResp}
+#define SHARED_HARDWARE(PORTALNAME) {(PORTALNAME), SharedMemoryPortalConfig_reqinfo, SharedMemoryPortalConfig_setSglId}
 #define Connectaloffsetof(TYPE, MEMBER) ((unsigned long)&((TYPE *)0)->MEMBER)
-
-#ifdef __KERNEL__
-typedef struct task_struct *pthread_t;
-int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *), void *arg);
-#define PRIu64 "llx"
-#define PRIx64 "llx"
-#define PORTAL_PRINTF printk
-#else
-extern int debug_portal;
-#define PORTAL_PRINTF portal_printf
-#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-#ifndef __KERNEL__
-int portal_printf(const char *format, ...); // outputs to stderr
-#endif
-void init_portal_internal(PortalInternal *pint, int id, int tile, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param, uint32_t reqinfo);
+// Initialize portal control structure. (called by constructor when creating a portal at runtime)
+void init_portal_internal(PortalInternal *pint, int id, int tile,
+    PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item,
+    void *param, uint32_t reqinfo);
 void portalCheckIndication(PortalInternal *pint);
 uint64_t portalCycleCount(void);
 void write_portal_fd_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
+// Support functions for use of shared memory with hardware
 int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
   int portalDCacheFlushInvalInternal(int fd, long size, void *__p, int flush);
 void portalDCacheFlushInval(int fd, long size, void *__p);
@@ -212,15 +235,19 @@ void init_portal_memory(void);
 int portalAlloc(size_t size);
 int portalAllocCached(size_t size, int cached);
 void *portalMmap(int fd, size_t size);
+
+// Primitive used to send/recv data across a socket.
 void portalSendFd(int fd, void *data, int len, int sendFd);
 int portalRecvFd(int fd, void *data, int len, int *recvFd);
 
+// Timer functions
 void portalTimerStart(unsigned int i);
 uint64_t portalTimerLap(unsigned int i);
 void portalTimerInit(void);
 uint64_t portalTimerCatch(unsigned int i);
 void portalTimerPrint(int loops);
 
+// Common portal transport functions, reused across several transports
 void send_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, unsigned int hdr, int sendFd);
 int recv_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd);
 int busy_portal_null(struct PortalInternal *pint, unsigned int v, const char *str);
@@ -238,19 +265,32 @@ int notfull_null(PortalInternal *pint, unsigned int v);
 int notfull_hardware(PortalInternal *pint, unsigned int v);
 volatile unsigned int *mapchannel_socket(struct PortalInternal *pint, unsigned int v);
 unsigned int bsim_poll_interrupt(void);
+#ifndef __KERNEL__
+int portal_printf(const char *format, ...); // outputs to stderr
+#endif
 
 extern int global_pa_fd;
 extern int global_sockfd;
 extern PortalInternal *utility_portal;
-extern PortalItemFunctions bsimfunc, hardwarefunc,
-  socketfuncInit, socketfuncResp, sharedfunc, muxfunc, tracefunc, xsimfunc,
-  websocketfuncInit, websocketfuncResp;
+// Portal transport options
+extern PortalItemFunctions bsimfunc, // Transport for bsim
+  hardwarefunc,    // Memory-mapped register transport for hardware
+  socketfuncInit,  // Linux socket transport (Unix sockets and TCP); Initiator side
+                   // (the 'connect()' call is on Initiator side; Responder does 'listen()'
+  socketfuncResp,  // Linux socket transport (Unix sockets and TCP); Responder side
+  sharedfunc,      // Shared memory transport
+  muxfunc,         // Multiplex transport (to use 1 transport for all methods or multiple portals)
+  tracefunc,       // Trace transport tee
+  xsimfunc,        // Xilinx xsim transport
+  websocketfuncInit, // Websocket transport; Initiator side
+  websocketfuncResp; // Websocket transport; Responder side
 #ifdef __cplusplus
 }
 #endif
 
-#define MAX_TIMERS 50
-
+/*
+ * Constants used in shared memory transport for portals
+ */
 #define SHARED_LIMIT  0
 #define SHARED_WRITE  1
 #define SHARED_READ   2
@@ -258,11 +298,10 @@ extern PortalItemFunctions bsimfunc, hardwarefunc,
 #define REQINFO_SIZE(A) ((A) & 0xffff)
 #define REQINFO_COUNT(A) (((A) >> 16) & 0xffff)
 
+/*
+ * C++ class definitions used in application software
+ */
 #ifdef __cplusplus
-#include <semaphore.h>
-#include <unistd.h>
-#include <pthread.h> // pthread_mutex_t
-
 class Portal;
 class PortalPoller {
 private:
@@ -290,16 +329,12 @@ public:
   void* threadFn(void* __x);
 };
 
-extern PortalPoller *defaultPoller;
-extern uint64_t poll_enter_time, poll_return_time; // for performance measurement
-
 class PortalInternalCpp
 {
  public:
   PortalInternal pint;
   PortalInternalCpp(int id, int tile, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions* item, void *param, uint32_t reqinfo) { 
     init_portal_internal(&pint, id, tile, handler, cb, item, param, reqinfo); 
-    //fprintf(stderr, "PortalInternalCpp %d\n", pint.fpga_number);
   };
   ~PortalInternalCpp() {
     if (pint.fpga_fd > 0) {
@@ -309,6 +344,7 @@ class PortalInternalCpp
   };
 };
 
+extern PortalPoller *defaultPoller;
 class Portal : public PortalInternalCpp
 {
    void initPortal() {
@@ -330,16 +366,17 @@ class Portal : public PortalInternalCpp
   ~Portal() { if (pint.handler) pint.poller->unregisterInstance(this); };
 };
 
+extern int portalExec_timeout;
+extern uint64_t poll_enter_time, poll_return_time; // for performance measurement
+
 // uses the default poller
 void* portalExec(void* __x);
-/* fine grained functions for building custom portalExec */
 void* portalExec_init(void);
 void* portalExec_poll(int timeout);
 void* portalExec_event(void);
 void portalExec_start(void);
 void portalExec_stop(void);
 void portalExec_end(void);
-extern int portalExec_timeout;
 #endif // __cplusplus
 
 #endif /* __PORTAL_OFFSETS_H__ */
