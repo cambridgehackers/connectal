@@ -63,7 +63,7 @@ public:
   virtual void directory ( const uint32_t fpgaNumber, const uint32_t fpgaId, const uint8_t last )
   {
     fprintf(stderr, "[%s:%d] fpga=%d id=%d last=%d\n", __FUNCTION__, __LINE__, fpgaNumber, fpgaId, last);
-    struct idInfo info = { fpgaNumber, fpgaId, 1 };
+    struct idInfo info = { (int)fpgaNumber, (int)fpgaId, 1 };
     ids[fpgaNumber] = info;
     if (last)
       portal_count = fpgaNumber+1;
@@ -103,8 +103,8 @@ int XsimMemSlaveIndication::fpgaNumber(int fpgaId)
 
 int XsimMemSlaveIndication::getReadData(uint32_t *data)
 {
+    return -1;
 }
-
 
 Portal *mcommon;
 static void connect_to_xsim()
@@ -134,16 +134,11 @@ static int init_xsim(struct PortalInternal *pint, void *init_param)
   return 0;
 }
 
-static volatile unsigned int *mapchannel_xsim(struct PortalInternal *pint, unsigned int v)
-{
-    return 0;
-}
-
 uint32_t hdr = 0;
 int numwords = 0;
 static int recv_portal_xsim(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
 {
-  // nothing to do here?
+    return -1;     // nothing to do here?
 }
 
 static unsigned int read_portal_xsim(PortalInternal *pint, volatile unsigned int **addr)

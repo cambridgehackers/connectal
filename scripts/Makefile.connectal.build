@@ -228,26 +228,11 @@ endif
 endif
 endif
 
-ifeq ($(BOARD), xsim)
-XSI_INCLUDE_DIR=$(VIVADODIR)/data/xsim/include
 XSI_EXAMPLE_DIR=$(VIVADODIR)/examples/xsim/verilog/xsi/counter/
-XSIM_INCLUDES = -I$(XSI_INCLUDE_DIR) -I$(XSI_EXAMPLE_DIR) -Ijni -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR)
-endif
 
-bin/xsim: $(CONNECTALDIR)/cpp/xsimtop.cpp $(XSI_EXAMPLE_DIR)/xsi_loader.cpp
-	  g++ $(XSIM_INCLUDES) -O -g -c -o xsi_loader.o $(XSI_EXAMPLE_DIR)/xsi_loader.cpp
-	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o portal.o $(CONNECTALDIR)/cpp/portal.c
-	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o poller.o $(CONNECTALDIR)/cpp/poller.cpp
-	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o sock_utils.o $(CONNECTALDIR)/cpp/sock_utils.c
-	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o timer.o $(CONNECTALDIR)/cpp/timer.c
-	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o portalSocket.o $(CONNECTALDIR)/cpp/portalSocket.c
-	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o portalJson.o $(CONNECTALDIR)/cpp/portalJson.c
-	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o portalPrintf.o $(CONNECTALDIR)/cpp/portalPrintf.c
-	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o xsimtop.o $(CONNECTALDIR)/cpp/xsimtop.cpp
-	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o XsimMemSlaveIndication.o jni/XsimMemSlaveIndication.c
-	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o XsimMemSlaveRequest.o jni/XsimMemSlaveRequest.c
-	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o GeneratedCppCallbacks.o jni/GeneratedCppCallbacks.cpp
-	  g++ -o bin/xsim xsimtop.o xsi_loader.o portal.o portalSocket.o portalJson.o poller.o sock_utils.o timer.o XsimMemSlaveRequest.o XsimMemSlaveIndication.o GeneratedCppCallbacks.o portalPrintf.o -ldl -lrt -pthread
+bin/xsim: prepare_bin_target $(CONNECTALDIR)/cpp/xsimtop.cpp $(XSI_EXAMPLE_DIR)/xsi_loader.cpp
+	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk xsim XSI_EXAMPLE_DIR=$(XSI_EXAMPLE_DIR) VIVADODIR=$(VIVADODIR)
+	$(Q)cp -v jni/xsim bin
 
 xsim: verilog bin/xsim
 	xvlog $(XVLOGFLAGS) verilog/*.v

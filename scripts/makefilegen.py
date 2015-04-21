@@ -223,6 +223,14 @@ bsim_exe: $(SOURCES)
 
 bsim_exe2: $(SOURCES2)
 	$(Q)g++ $(CFLAGS_COMMON) $(CFLAGS2) -o bsim_exe2 -DBSIM $(SOURCES2) $(BSIM_EXE_CXX) $(LDLIBS)
+
+XSI_INCLUDE_DIR=$(VIVADODIR)/data/xsim/include
+XSIM_INCLUDES = -I$(XSI_INCLUDE_DIR) -I$(XSI_EXAMPLE_DIR) -I. -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR) -DXSIM -DBOARD_xsim
+
+xsim: $(CONNECTALDIR)/cpp/xsimtop.cpp $(XSI_EXAMPLE_DIR)/xsi_loader.cpp $(PORTAL_SRC_FILES)
+	g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -o xsim \
+	    $(CONNECTALDIR)/cpp/xsimtop.cpp $(CONNECTALDIR)/cpp/xsimfunc.cpp \
+	    $(XSI_EXAMPLE_DIR)/xsi_loader.cpp $(PORTAL_SRC_FILES) -ldl -lrt -pthread
 '''
 
 if __name__=='__main__':
