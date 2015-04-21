@@ -28,8 +28,11 @@ public:
   virtual void probeResponse(uint8_t data) {
     fprintf(stderr, "i2c response %02x\n", data);
   }
-  virtual void vsync(uint32_t cycles) {
-    fprintf(stderr, "vsync %d\n", cycles);
+  virtual void vsync(uint32_t cycles, uint8_t href) {
+    fprintf(stderr, "vsync %8d href %d\n", cycles, href);
+  }
+  virtual void data(uint8_t data) {
+    fprintf(stderr, "data %8x\n", data);
   }
 };
 

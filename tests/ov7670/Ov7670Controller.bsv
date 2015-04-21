@@ -43,10 +43,12 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
    B2C1 b2c <- mkB2C1;
    let pclk = b2c.c;
    Reset preset <- mkAsyncReset(2, defaultReset, pclk);
-   SyncFIFOIfc#(Bit#(32)) vsyncFifo <- mkSyncFIFO(32, pclk, preset, defaultClock);
+   SyncFIFOIfc#(Tuple2#(Bit#(32),Bit#(1))) vsyncFifo <- mkSyncFIFO(32, pclk, preset, defaultClock);
+   SyncFIFOIfc#(Bit#(8)) dataFifo <- mkSyncFIFO(32, pclk, preset, defaultClock);
 
    Reg#(Bit#(32)) cycleReg     <- mkReg(0, clocked_by pclk, reset_by preset);
    Reg#(Bit#(32)) lastVsyncReg <- mkReg(0, clocked_by pclk, reset_by preset);
+   Reg#(Bit#(32)) lastDataReg <- mkReg(0, clocked_by pclk, reset_by preset);
    Reg#(Bit#(1)) vsyncReg <- mkReg(0, clocked_by pclk, reset_by preset);
    Reg#(Bit#(1)) hrefReg <- mkReg(0, clocked_by pclk, reset_by preset);
    Reg#(Bit#(8)) dataReg <- mkReg(0, clocked_by pclk, reset_by preset);
@@ -64,13 +66,23 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
    endrule
    rule vsyncRule;
       if (vsyncReg == 1) begin
-	 vsyncFifo.enq(cycleReg - lastVsyncReg);
+	 vsyncFifo.enq(tuple2(cycleReg - lastVsyncReg, hrefReg));
 	 lastVsyncReg <= cycleReg;
       end
    endrule
    rule vsyncSyncRule;
-      let cycles <- toGet(vsyncFifo).get();
-      ind.vsync(cycles);
+      match { .cycles, .href } <- toGet(vsyncFifo).get();
+      ind.vsync(cycles, href);
+   endrule
+   rule dataRule;
+      if (hrefReg == 1) begin
+	 dataFifo.enq(dataReg);
+	 lastDataReg <= cycleReg;
+      end
+   endrule
+   rule dataSyncRule;
+      let pxl <- toGet(dataFifo).get();
+      ind.data(pxl);
    endrule
 
    interface Ov7670ControllerRequest request;
