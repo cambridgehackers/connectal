@@ -69,7 +69,7 @@ void write_fd_portal_memory(PortalInternal *pint, volatile unsigned int **addr, 
 }
 volatile unsigned int *mapchannel_hardware(struct PortalInternal *pint, unsigned int v)
 {
-    return &pint->map_base[PORTAL_IND_FIFO(v)];
+    return &pint->map_base[PORTAL_FIFO(v)];
 }
 int notfull_hardware(PortalInternal *pint, unsigned int v)
 {

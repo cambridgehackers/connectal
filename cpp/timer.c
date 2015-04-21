@@ -21,16 +21,10 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 #include "portal.h"
-
-#ifdef __KERNEL__
-#define assert(A)
-#else
-#include <string.h>
-#include <assert.h>
-#endif
-
+//#ifndef __KERNEL__
+//#include <string.h>
+//#endif
 
 #define MAX_TIMER_COUNT      16
 
@@ -42,17 +36,31 @@ static uint64_t c_start[MAX_TIMER_COUNT];
 static uint64_t lap_timer_temp;
 static PORTAL_TIMETYPE timers[MAX_TIMERS];
 
+uint64_t portalCycleCount()
+{
+  unsigned int high_bits, low_bits;
+  volatile unsigned int *msb, *lsb;
+  initPortalFramework();
+  if(!utility_portal)
+    return 0;
+  msb = &utility_portal->map_base[PORTAL_CTRL_REG_COUNTER_MSB];
+  lsb = &utility_portal->map_base[PORTAL_CTRL_REG_COUNTER_LSB];
+  high_bits = utility_portal->item->read(utility_portal, &msb);
+  low_bits  = utility_portal->item->read(utility_portal, &lsb);
+  return (((uint64_t)high_bits)<<32) | ((uint64_t)low_bits);
+}
 
 void portalTimerStart(unsigned int i) 
 {
-  assert(i < MAX_TIMER_COUNT);
-  c_start[i] = portalCycleCount();
+  if (i < MAX_TIMER_COUNT)
+       c_start[i] = portalCycleCount();
 }
 
 uint64_t portalTimerLap(unsigned int i)
 {
   uint64_t temp = portalCycleCount();
-  assert(i < MAX_TIMER_COUNT);
+  if (i >= MAX_TIMER_COUNT)
+      return 0;
   lap_timer_temp = temp;
   return temp - c_start[i];
 }

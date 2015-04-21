@@ -49,44 +49,6 @@ extern int debug_portal;
 #define PORTAL_PRINTF portal_printf
 #endif
 
-/*
- * Address constants for portal memory mapped registers
- */
-/* Divide up 20 bits of physical address space into Tile:Portal:Method selectors */
-#define ADDRESS_TILE_SELECTOR   2
-#define ADDRESS_PORTAL_SELECTOR 6
-#define ADDRESS_METHOD_SELECTOR 7
-#define ADDRESS_METHOD_SIZE     5
-
-/* Offset of each /dev/fpgaxxx device in the address space */
-#define PORTAL_BASE_OFFSET   (1 << (ADDRESS_METHOD_SIZE+ADDRESS_METHOD_SELECTOR))
-#define TILE_BASE_OFFSET     (PORTAL_BASE_OFFSET << (ADDRESS_PORTAL_SELECTOR))
-
-/* Offsets of mapped registers within an /dev/fpgaxxx device */
-#define PORTAL_REQ_FIFO(A)   (((A << (ADDRESS_METHOD_SIZE)) + (1 << (ADDRESS_METHOD_SIZE)))/sizeof(uint32_t))
-#define PORTAL_IND_FIFO(A)   (((A << (ADDRESS_METHOD_SIZE)) + (1 << (ADDRESS_METHOD_SIZE)))/sizeof(uint32_t))
-
-// PortalCtrl offsets
-#define PORTAL_CTRL_INTERRUPT_STATUS 0
-#define PORTAL_CTRL_INTERRUPT_ENABLE 1
-#define PORTAL_CTRL_NUM_TILES        2
-#define PORTAL_CTRL_IND_QUEUE_STATUS 3
-#define PORTAL_CTRL_PORTAL_ID        4
-#define PORTAL_CTRL_NUM_PORTALS      5
-#define PORTAL_CTRL_COUNTER_MSB      6
-#define PORTAL_CTRL_COUNTER_LSB      7
-
-// PortalCtrl registers
-#define PORTAL_CTRL_REG_OFFSET_32        0
-#define PORTAL_CTRL_REG_INTERRUPT_STATUS (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_INTERRUPT_STATUS)
-#define PORTAL_CTRL_REG_INTERRUPT_ENABLE (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_INTERRUPT_ENABLE)
-#define PORTAL_CTRL_REG_NUM_TILES        (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_NUM_TILES       )
-#define PORTAL_CTRL_REG_IND_QUEUE_STATUS (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_IND_QUEUE_STATUS)
-#define PORTAL_CTRL_REG_PORTAL_ID        (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_PORTAL_ID       )
-#define PORTAL_CTRL_REG_NUM_PORTALS      (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_NUM_PORTALS     )
-#define PORTAL_CTRL_REG_COUNTER_MSB      (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_COUNTER_MSB     )
-#define PORTAL_CTRL_REG_COUNTER_LSB      (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_COUNTER_LSB     )
-
 // Other constants
 #define MAX_TIMERS    50
 #define MAX_CLIENT_FD 10
@@ -216,6 +178,53 @@ typedef int Bool;   /* for GeneratedTypes.h */
 #define SHARED_HARDWARE(PORTALNAME) {(PORTALNAME), SharedMemoryPortalConfig_reqinfo, SharedMemoryPortalConfig_setSglId}
 #define Connectaloffsetof(TYPE, MEMBER) ((unsigned long)&((TYPE *)0)->MEMBER)
 
+/*
+ * Address constants for portal memory mapped registers
+ */
+/* Divide up 20 bits of physical address space into Tile:Portal:Method selectors */
+#define ADDRESS_TILE_SELECTOR   2
+#define ADDRESS_PORTAL_SELECTOR 6
+#define ADDRESS_METHOD_SELECTOR 7
+#define ADDRESS_METHOD_SIZE     5
+
+/* Offset of each /dev/fpgaxxx device in the address space */
+#define PORTAL_BASE_OFFSET   (1 << (ADDRESS_METHOD_SIZE+ADDRESS_METHOD_SELECTOR))
+#define TILE_BASE_OFFSET     (PORTAL_BASE_OFFSET << (ADDRESS_PORTAL_SELECTOR))
+
+/* Offsets of mapped registers within an /dev/fpgaxxx device */
+#define PORTAL_FIFO(A)   (((A << (ADDRESS_METHOD_SIZE)) + (1 << (ADDRESS_METHOD_SIZE)))/sizeof(uint32_t))
+
+// PortalCtrl offsets
+#define PORTAL_CTRL_INTERRUPT_STATUS 0
+#define PORTAL_CTRL_INTERRUPT_ENABLE 1
+#define PORTAL_CTRL_NUM_TILES        2
+#define PORTAL_CTRL_IND_QUEUE_STATUS 3
+#define PORTAL_CTRL_PORTAL_ID        4
+#define PORTAL_CTRL_NUM_PORTALS      5
+#define PORTAL_CTRL_COUNTER_MSB      6
+#define PORTAL_CTRL_COUNTER_LSB      7
+
+// PortalCtrl registers
+#define PORTAL_CTRL_REG_OFFSET_32        0
+#define PORTAL_CTRL_REG_INTERRUPT_STATUS (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_INTERRUPT_STATUS)
+#define PORTAL_CTRL_REG_INTERRUPT_ENABLE (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_INTERRUPT_ENABLE)
+#define PORTAL_CTRL_REG_NUM_TILES        (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_NUM_TILES       )
+#define PORTAL_CTRL_REG_IND_QUEUE_STATUS (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_IND_QUEUE_STATUS)
+#define PORTAL_CTRL_REG_PORTAL_ID        (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_PORTAL_ID       )
+#define PORTAL_CTRL_REG_NUM_PORTALS      (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_NUM_PORTALS     )
+#define PORTAL_CTRL_REG_COUNTER_MSB      (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_COUNTER_MSB     )
+#define PORTAL_CTRL_REG_COUNTER_LSB      (PORTAL_CTRL_REG_OFFSET_32 + PORTAL_CTRL_COUNTER_LSB     )
+
+/*
+ * Constants used in shared memory transport for portals
+ */
+#define SHARED_LIMIT  0
+#define SHARED_WRITE  1
+#define SHARED_READ   2
+#define SHARED_START  4
+#define REQINFO_SIZE(A) ((A) & 0xffff)
+#define REQINFO_COUNT(A) (((A) >> 16) & 0xffff)
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -223,11 +232,9 @@ extern "C" {
 void init_portal_internal(PortalInternal *pint, int id, int tile,
     PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item,
     void *param, uint32_t reqinfo);
-uint64_t portalCycleCount(void);
-void write_portal_fd_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 // Support functions for use of shared memory with hardware
 int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
-  int portalDCacheFlushInvalInternal(int fd, long size, void *__p, int flush);
+int portalDCacheFlushInvalInternal(int fd, long size, void *__p, int flush);
 void portalDCacheFlushInval(int fd, long size, void *__p);
 void portalDCacheInval(int fd, long size, void *__p);
 void init_portal_memory(void);
@@ -235,11 +242,8 @@ int portalAlloc(size_t size);
 int portalAllocCached(size_t size, int cached);
 void *portalMmap(int fd, size_t size);
 
-// Primitive used to send/recv data across a socket.
-void portalSendFd(int fd, void *data, int len, int sendFd);
-int portalRecvFd(int fd, void *data, int len, int *recvFd);
-
 // Timer functions
+uint64_t portalCycleCount(void);
 void portalTimerStart(unsigned int i);
 uint64_t portalTimerLap(unsigned int i);
 void portalTimerInit(void);
@@ -263,7 +267,14 @@ int portal_mux_handler(struct PortalInternal *p, unsigned int channel, int messa
 int notfull_null(PortalInternal *pint, unsigned int v);
 int notfull_hardware(PortalInternal *pint, unsigned int v);
 volatile unsigned int *mapchannel_socket(struct PortalInternal *pint, unsigned int v);
+
+// Primitive used to send/recv data across a socket.
+void portalSendFd(int fd, void *data, int len, int sendFd);
+int portalRecvFd(int fd, void *data, int len, int *recvFd);
+void write_portal_fd_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 unsigned int bsim_poll_interrupt(void);
+
+void initPortalFramework(void);
 #ifndef __KERNEL__
 int portal_printf(const char *format, ...); // outputs to stderr
 #endif
@@ -271,7 +282,8 @@ int portal_printf(const char *format, ...); // outputs to stderr
 extern int global_pa_fd;
 extern int global_sockfd;
 extern PortalInternal *utility_portal;
-// Portal transport options
+
+// Portal transport variants
 extern PortalItemFunctions bsimfunc, // Transport for bsim
   hardwarefunc,    // Memory-mapped register transport for hardware
   socketfuncInit,  // Linux socket transport (Unix sockets and TCP); Initiator side
@@ -286,16 +298,6 @@ extern PortalItemFunctions bsimfunc, // Transport for bsim
 #ifdef __cplusplus
 }
 #endif
-
-/*
- * Constants used in shared memory transport for portals
- */
-#define SHARED_LIMIT  0
-#define SHARED_WRITE  1
-#define SHARED_READ   2
-#define SHARED_START  4
-#define REQINFO_SIZE(A) ((A) & 0xffff)
-#define REQINFO_COUNT(A) (((A) >> 16) & 0xffff)
 
 /*
  * C++ class definitions used in application software

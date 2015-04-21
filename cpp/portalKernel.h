@@ -29,7 +29,7 @@ int recv_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer,
 }
 volatile unsigned int *mapchannel_portal_kernel(struct PortalInternal *pint, unsigned int v)
 {
-    return &pint->map_base[PORTAL_IND_FIFO(v)];
+    return &pint->map_base[PORTAL_FIFO(v)];
 }
 int notfull_kernel(PortalInternal *pint, unsigned int v)
 {
