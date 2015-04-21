@@ -64,10 +64,10 @@ int main(int argc, const char **argv)
 
     MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H, &socketfuncInit, NULL);
     DmaManager *dma = new DmaManager(dmap);
-    MMUIndication *mIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S, &socketfuncInit, NULL);
+    MMUIndication mIndication(dma, IfcNames_MMUIndicationH2S, &socketfuncInit, NULL);
 
-    PortalSharedParam param = {{dma}, alloc_sz};
-    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndicationH2S, &sharedfunc, &param);
+    PortalSharedParam param = {{dma}, (uint32_t)alloc_sz};
+    EchoIndication sIndication(IfcNames_EchoIndicationH2S, &sharedfunc, &param);
     sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H, &sharedfunc, &param);
 
 for (int i = 0; i < LOOP_COUNT; i++) {

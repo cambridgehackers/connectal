@@ -228,10 +228,8 @@ endif
 endif
 endif
 
-XSI_EXAMPLE_DIR=$(VIVADODIR)/examples/xsim/verilog/xsi/counter/
-
-bin/xsim: prepare_bin_target $(CONNECTALDIR)/cpp/xsimtop.cpp $(XSI_EXAMPLE_DIR)/xsi_loader.cpp
-	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk xsim XSI_EXAMPLE_DIR=$(XSI_EXAMPLE_DIR) VIVADODIR=$(VIVADODIR)
+bin/xsim: prepare_bin_target
+	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk xsim VIVADODIR=$(VIVADODIR)
 	$(Q)cp -v jni/xsim bin
 
 xsim: verilog bin/xsim

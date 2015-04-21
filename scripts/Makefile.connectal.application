@@ -27,7 +27,7 @@ endif
 
 include $(DTOP)/jni/Makefile.generated_files
 
-PORTAL_INFRA := portal.c portalHardware.c portalSocket.c portalJson.c portalPrintf.c poller.cpp sock_utils.c timer.c
+PORTAL_INFRA := portal.c transportHardware.c transportSocket.c portalJson.c portalPrintf.c poller.cpp sock_utils.c timer.c
 PORTAL_SRC_FILES := $(addprefix $(CONNECTALDIR)/cpp/, $(PORTAL_INFRA)) \
       $(addprefix $(DTOP)/jni/,  $(GENERATED_CPP))
 

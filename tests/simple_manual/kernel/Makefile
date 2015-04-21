@@ -28,7 +28,7 @@ $(CONNECTAL_MODULE_NAME)-y := ../simple_manual.o \
      $(BOARDDIR)/SimpleIndication.o \
      $(BOARDDIR)/SimpleRequest.o \
      $(CPPDIR)/portal.o \
-     $(CPPDIR)/portalSocket.o \
+     $(CPPDIR)/transportSocket.o \
      $(CPPDIR)/kernel_module.o
 
 $(CONNECTAL_MODULE_NAME)-n := $(CPPDIR)/dmaManager.o

@@ -70,7 +70,7 @@ static EchoRequest *sRequest;
 
 int main(int argc, const char **argv)
 {
-    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndicationH2S, NULL, NULL);
+    EchoIndication echoIndication(IfcNames_EchoIndicationH2S, NULL, NULL);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H);
     sRequest = new EchoRequest(IfcNames_EchoRequestS2H, &sharedfunc, NULL);
     sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndicationH2S, &sharedfunc, NULL);
