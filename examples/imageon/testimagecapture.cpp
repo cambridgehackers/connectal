@@ -508,7 +508,7 @@ hblank--; // needed on zc702
 
     fbsize = nlines*npixels*4;
 
-    int srcAlloc = portalAlloc(DMA_BUFFER_SIZE);
+    int srcAlloc = portalAlloc(DMA_BUFFER_SIZE, 0);
     unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, DMA_BUFFER_SIZE);
     printf("[%s:%d] before dma->reference\n", __FUNCTION__, __LINE__);
     memset(srcBuffer, 0xff, 16);

@@ -128,7 +128,7 @@ int main(int argc, const char **argv)
   MaxSonarSampleStreamProxy *msssp = new MaxSonarSampleStreamProxy(IfcNames_MaxSonarSampleStream, &socketfuncResp, &param1, &MaxSonarSampleStreamJsonProxyReq, 1000);
 
   // allocate memory for the gyro controller to write samples to
-  int dstAlloc = portalAlloc(alloc_sz);
+  int dstAlloc = portalAlloc(alloc_sz, 0);
   char *dstBuffer = (char *)portalMmap(dstAlloc, alloc_sz);
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
 

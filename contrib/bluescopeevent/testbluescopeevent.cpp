@@ -127,7 +127,7 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "Main::allocating memory of size=%d...\n", (int)alloc_sz);
 
-  bsAlloc = portalAlloc(alloc_sz);
+  bsAlloc = portalAlloc(alloc_sz, 0);
   bsBuffer  = (uint64_t *)portalMmap(bsAlloc, alloc_sz);
 
   portalDCacheFlushInval(bsAlloc, alloc_sz,  bsBuffer);

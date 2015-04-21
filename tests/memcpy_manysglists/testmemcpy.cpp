@@ -86,9 +86,9 @@ int do_copy(int srcAlloc, int sgl_config_request_id, int sgl_config_indication_i
   size_t srcBytes = dstBytes;
   bool first = false;
 
-  int dstAlloc = portalAlloc(dstBytes);
+  int dstAlloc = portalAlloc(dstBytes, 0);
   if(!srcAlloc) {
-    srcAlloc = portalAlloc(srcBytes);
+    srcAlloc = portalAlloc(srcBytes, 0);
     first = true;
   }
 

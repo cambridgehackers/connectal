@@ -22,16 +22,13 @@
 // SOFTWARE.
 #include "portal.h"
 #include "sock_utils.h"
-
 #ifdef __KERNEL__
 #include "linux/delay.h"
 #include "linux/file.h"
 #include "linux/dma-buf.h"
-//#define assert(A)
 #else
 #include <stdlib.h>
 #include <string.h>
-//#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -44,9 +41,6 @@
 #endif
 #include "drivers/portalmem/portalmem.h" // PA_MALLOC
 
-//#ifdef ANDROID
-//#include <android/log.h>
-//#endif
 #ifdef ZYNQ
 #include "drivers/zynqportal/zynqportal.h"
 #else
@@ -94,9 +88,9 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
     pint->item = item;
     rc = pint->item->init(pint, param);
     if (rc != 0) {
-      PORTAL_PRINTF("%s: failed to initialize Portal portal_%d_%d\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number);
+        PORTAL_PRINTF("%s: failed to initialize Portal portal_%d_%d\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number);
 #ifndef __KERNEL__
-      exit(1);
+        exit(1);
 #endif
     }
 }
@@ -112,7 +106,7 @@ static void check_signature(const char *filename, int ioctlnum)
         const char *filename;
     } filesignature[] = {
 #include "driver_signature_file.h"
-    {} };
+        {} };
 #ifdef ZYNQ
     PortalSignature signature;
 #else
@@ -128,10 +122,8 @@ static void check_signature(const char *filename, int ioctlnum)
     signature.index = 0;
     while ((status = ioctl(fd, ioctlnum, &signature)) == 0 && strlen(signature.md5)) {
         int i = 0;
-//printf("[%s:%d] found [%d] %s %s\n", __FUNCTION__, __LINE__, signature.index, signature.md5, signature.filename);
         while(filesignature[i].md5) {
             if (!strcmp(filesignature[i].filename, signature.filename)) {
-//printf("[%s:%d] orig %s %s\n", __FUNCTION__, __LINE__, filesignature[i].md5, filesignature[i].filename);
                 if (strcmp(filesignature[i].md5, signature.md5))
                     printf("%s: driver '%s' signature mismatch %s %s\n", __FUNCTION__,
                         signature.filename, signature.md5, filesignature[i].md5);
@@ -175,7 +167,7 @@ void initPortalFramework(void)
 	  ssize_t len;
 	  fprintf(stderr, "subprocess pid %d completed status=%x %d\n", pid, status, WEXITSTATUS(status));
 	  if (WEXITSTATUS(status) != 0)
-	    exit(-1);
+	      exit(-1);
 	  fd = open("/dev/connectal", O_RDONLY); /* scan the fpga directory */
 	  len = read(fd, &status, sizeof(status));
 	  printf("[%s:%d] fd %d len %lu\n", __FUNCTION__, __LINE__, fd, len);
@@ -208,7 +200,7 @@ void initPortalFramework(void)
         buf[0] = 0;
         int rc = readlink("/proc/self/exe", buf, sizeof(buf));
 	if (rc < 0)
-	  fprintf(stderr, "[%s:%d] readlink error %d\n", __FUNCTION__, __LINE__, errno);
+	    fprintf(stderr, "[%s:%d] readlink error %d\n", __FUNCTION__, __LINE__, errno);
 #if !defined(BOARD_bluesim) && !defined(BOARD_xsim)
         char *serial = getenv("SERIALNO");
         int ind = 1;
@@ -237,49 +229,44 @@ void initPortalFramework(void)
 void init_portal_memory(void)
 {
 #ifndef __KERNEL__
-  if (global_pa_fd == -1)
-      global_pa_fd = open("/dev/portalmem", O_RDWR);
-  if (global_pa_fd < 0){
-    PORTAL_PRINTF("Failed to open /dev/portalmem pa_fd=%d errno=%d\n", global_pa_fd, errno);
-    exit(ENODEV);
-  }
+    if (global_pa_fd == -1)
+        global_pa_fd = open("/dev/portalmem", O_RDWR);
+    if (global_pa_fd < 0){
+        PORTAL_PRINTF("Failed to open /dev/portalmem pa_fd=%d errno=%d\n", global_pa_fd, errno);
+        exit(ENODEV);
+    }
 #endif
 }
 
-int portalAllocCached(size_t size, int cached)
+int portalAlloc(size_t size, int cached)
 {
-  int fd;
-  struct PortalAlloc portalAlloc;
-  portalAlloc.len = size;
-  portalAlloc.cached = cached;
-  init_portal_memory();
+    int fd;
+    struct PortalAlloc portalAlloc;
+    portalAlloc.len = size;
+    portalAlloc.cached = cached;
+    init_portal_memory();
 #ifdef __KERNEL__
-  fd = portalmem_dmabuffer_create(size);
+    fd = portalmem_dmabuffer_create(size);
 #else
-  fd = ioctl(global_pa_fd, PA_MALLOC, &portalAlloc);
+    fd = ioctl(global_pa_fd, PA_MALLOC, &portalAlloc);
 #endif
-  PORTAL_PRINTF("alloc size=%ld fd=%d\n", (unsigned long)size, fd);
-  if (fd == -1) {
-       PORTAL_PRINTF("portalAllocCached: alloc failed size=%ld errno=%d\n", (unsigned long)size, errno);
-       exit(-1);
-  }
-  return fd;
-}
-
-int portalAlloc(size_t size)
-{
-  return portalAllocCached(size, 0);
+    PORTAL_PRINTF("alloc size=%ld fd=%d\n", (unsigned long)size, fd);
+    if (fd == -1) {
+        PORTAL_PRINTF("portalAllocCached: alloc failed size=%ld errno=%d\n", (unsigned long)size, errno);
+        exit(-1);
+    }
+    return fd;
 }
 
 void *portalMmap(int fd, size_t size)
 {
 #ifdef __KERNEL__
-  struct file *fmem = fget(fd);
-  void *retptr = dma_buf_vmap(fmem->private_data);
-  fput(fmem);
-  return retptr;
+    struct file *fmem = fget(fd);
+    void *retptr = dma_buf_vmap(fmem->private_data);
+    fput(fmem);
+    return retptr;
 #else      ///////////////////////// userspace version
-  return mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
+    return mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
 #endif
 }
 
@@ -301,46 +288,46 @@ printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start
     }
     fput(fmem);
 #else
-  int rc;
-  if (utility_portal){
-    PortalCacheRequest req;
-    req.fd = fd;
-    req.base = __p;
-    req.len = size;
-    if(flush)
-      rc = ioctl(utility_portal->fpga_fd, PORTAL_DCACHE_FLUSH_INVAL, &req);
+    int rc;
+    if (utility_portal){
+        PortalCacheRequest req;
+        req.fd = fd;
+        req.base = __p;
+        req.len = size;
+        if(flush)
+            rc = ioctl(utility_portal->fpga_fd, PORTAL_DCACHE_FLUSH_INVAL, &req);
+        else
+            rc = ioctl(utility_portal->fpga_fd, PORTAL_DCACHE_INVAL, &req);
+    }
     else
-      rc = ioctl(utility_portal->fpga_fd, PORTAL_DCACHE_INVAL, &req);
-  }
-  else
-    rc = -1;
-  if (rc){
-    PORTAL_PRINTF("portal dcache flush failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
-    return rc;
-  }
+        rc = -1;
+    if (rc){
+        PORTAL_PRINTF("portal dcache flush failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
+        return rc;
+    }
 #endif
 #elif defined(__i386__) || defined(__x86_64__)
-  // not sure any of this is necessary (mdk)
-  for(i = 0; i < size; i++){
-    char foo = *(((volatile char *)__p)+i);
-    asm volatile("clflush %0" :: "m" (foo));
-  }
-  asm volatile("mfence");
+    // not sure any of this is necessary (mdk)
+    for(i = 0; i < size; i++){
+        char foo = *(((volatile char *)__p)+i);
+        asm volatile("clflush %0" :: "m" (foo));
+    }
+    asm volatile("mfence");
 #else
 #error("dCAcheFlush not defined for unspecified architecture")
 #endif
-  //PORTAL_PRINTF("dcache flush\n");
-  return 0;
+    //PORTAL_PRINTF("dcache flush\n");
+    return 0;
 }
 
 void portalDCacheInval(int fd, long size, void *__p)
 {
-  portalDCacheFlushInvalInternal(fd,size,__p,0);
+    portalDCacheFlushInvalInternal(fd,size,__p,0);
 }
 
 void portalDCacheFlushInval(int fd, long size, void *__p)
 {
-  portalDCacheFlushInvalInternal(fd,size,__p,1);
+    portalDCacheFlushInvalInternal(fd,size,__p,1);
 }
 
 /*

@@ -105,8 +105,8 @@ int runtest(int argc, const char **argv)
 
   fprintf(stderr, "Main::allocating memory...\n");
 
-  srcAlloc = portalAlloc(alloc_sz);
-  dstAlloc = portalAlloc(alloc_sz);
+  srcAlloc = portalAlloc(alloc_sz, 0);
+  dstAlloc = portalAlloc(alloc_sz, 0);
 
   // for(int i = 0; i < srcAlloc->header.numEntries; i++)
   //   fprintf(stderr, "%lx %lx\n", srcAlloc->entries[i].dma_address, srcAlloc->entries[i].length);
@@ -205,8 +205,8 @@ int runtest_chunk(int argc, const char **argv)
 
   fprintf(stderr, "XXX %s %d\n", __FUNCTION__, __LINE__);
 
-  int dstAlloc = portalAlloc(dstBytes);
-  int srcAlloc = portalAlloc(srcBytes);
+  int dstAlloc = portalAlloc(dstBytes, 0);
+  int srcAlloc = portalAlloc(srcBytes, 0);
 
   fprintf(stderr, "XXX %s %d\n", __FUNCTION__, __LINE__);
 

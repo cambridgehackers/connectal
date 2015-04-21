@@ -94,7 +94,7 @@ int main(int argc, const char **argv)
   NandCfgRequestProxy *nandcfgRequest = new NandCfgRequestProxy(IfcNames_NandCfgRequest);
   NandCfgIndication *nandcfgIndication = new NandCfgIndication(IfcNames_NandCfgIndication);
 
-  int nandAlloc = portalAlloc(nandBytes);
+  int nandAlloc = portalAlloc(nandBytes, 0);
   fprintf(stderr, "testnandsim::nandAlloc=%d\n", nandAlloc);
   int ref_nandAlloc = hostDma->reference(nandAlloc);
   fprintf(stderr, "ref_nandAlloc=%d\n", ref_nandAlloc);
@@ -107,7 +107,7 @@ int main(int argc, const char **argv)
 
     fprintf(stderr, "testnandsim::allocating memory...\n");
     size_t srcBytes = nandBytes>>2;
-    int srcAlloc = portalAlloc(srcBytes);
+    int srcAlloc = portalAlloc(srcBytes, 0);
     unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, srcBytes);
     unsigned int ref_srcAlloc = hostDma->reference(srcAlloc);
     fprintf(stderr, "testnandsim::fd=%d, srcBuffer=%p\n", srcAlloc, srcBuffer);
@@ -174,7 +174,7 @@ int main(int argc, const char **argv)
     data_len = data_len & ~15; // because we are using a burst length of 16
     lseek(dataFile, 0, SEEK_SET);
 
-    int dataAlloc = portalAlloc(data_len);
+    int dataAlloc = portalAlloc(data_len, 0);
     int ref_dataAlloc = hostDma->reference(dataAlloc);
     char *data = (char *)portalMmap(dataAlloc, data_len);
     ssize_t read_len = read(dataFile, data, data_len); 

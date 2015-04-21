@@ -339,8 +339,8 @@ int main(int argc, const char **argv)
 	device = new FlashRequestProxy(IfcNames_NandCfgRequest);
 	FlashIndication *deviceIndication = new FlashIndication(IfcNames_NandCfgIndication);
 	
-	srcAlloc = portalAlloc(srcAlloc_sz);
-	dstAlloc = portalAlloc(dstAlloc_sz);
+	srcAlloc = portalAlloc(srcAlloc_sz, 0);
+	dstAlloc = portalAlloc(dstAlloc_sz, 0);
 	srcBuffer = (unsigned int *)portalMmap(srcAlloc, srcAlloc_sz);
 	dstBuffer = (unsigned int *)portalMmap(dstAlloc, dstAlloc_sz);
 

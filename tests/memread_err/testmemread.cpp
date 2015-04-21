@@ -98,7 +98,7 @@ int runtest(int argc, const char ** argv)
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
-  srcAlloc = portalAlloc(alloc_sz);
+  srcAlloc = portalAlloc(alloc_sz, 0);
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
 
 #ifdef FPGA0_CLOCK_FREQ

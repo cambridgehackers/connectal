@@ -85,7 +85,7 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "Main::allocating memory...\n");
 
-  srcAlloc = portalAlloc(numBytes);
+  srcAlloc = portalAlloc(numBytes, 0);
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, numBytes);
   fprintf(stderr, "fd=%d, srcBuffer=%p\n", srcAlloc, srcBuffer);
 
@@ -98,7 +98,7 @@ int main(int argc, const char **argv)
 
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
 
-  nandAlloc = portalAlloc(nandBytes);
+  nandAlloc = portalAlloc(nandBytes, 0);
   int ref_nandAlloc = dma->reference(nandAlloc);
   fprintf(stderr, "NAND alloc fd=%d ref=%d\n", nandAlloc, ref_nandAlloc);
   device->configureNand(ref_nandAlloc, nandBytes);

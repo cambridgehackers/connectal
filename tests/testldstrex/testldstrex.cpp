@@ -46,9 +46,9 @@ int main(int argc, const char **argv)
 {
   unsigned int srcGen = 0;
   int totalsize = 4096;
-  int fd = portalAlloc(totalsize);
+  int fd = portalAlloc(totalsize, 0);
   if (fd < 0) {
-    fprintf(stderr, "portalAlloc failed errno=%d\n", errno);
+    fprintf(stderr, "memory alloc failed errno=%d\n", errno);
     exit(-1);
   }
   fprintf(stderr, "allocated %d bytes, fd=%d\n", totalsize, fd);

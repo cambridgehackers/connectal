@@ -99,8 +99,8 @@ int runtest(int argc, const char **argv)
 
   fprintf(stderr, "Main::allocating memory...\n");
 
-  srcAlloc = portalAlloc(alloc_sz);
-  dstAlloc = portalAlloc(alloc_sz);
+  srcAlloc = portalAlloc(alloc_sz, 0);
+  dstAlloc = portalAlloc(alloc_sz, 0);
 
   // for(int i = 0; i < srcAlloc->header.numEntries; i++)
   //   fprintf(stderr, "%lx %lx\n", srcAlloc->entries[i].dma_address, srcAlloc->entries[i].length);

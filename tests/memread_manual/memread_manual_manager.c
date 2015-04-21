@@ -130,7 +130,7 @@ int main(int argc, const char **argv)
 
   sem_init(&test_sem, 0, 0);
   DmaManager_init(&priv, &intarr[2]);
-  srcAlloc = portalAlloc(alloc_sz);
+  srcAlloc = portalAlloc(alloc_sz, 0);
   if (rc){
     PORTAL_PRINTF("portal alloc failed rc=%d\n", rc);
     return rc;

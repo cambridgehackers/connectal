@@ -85,7 +85,7 @@ int main(int argc, const char **argv)
   deviceIndication = new MemreadIndication(IfcNames_MemreadIndicationH2S);
 
   fprintf(stderr, "Main::allocating memory...\n");
-  srcAlloc = portalAlloc(alloc_sz);
+  srcAlloc = portalAlloc(alloc_sz, 0);
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
 
   for (int i = 0; i < numWords; i++){

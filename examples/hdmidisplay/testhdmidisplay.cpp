@@ -239,7 +239,7 @@ hblank--; // needed on zc702
     fbsize = nlines*npixels*4;
 
     for (int i = 0; i < FRAME_COUNT; i++) {
-        allocFrame[i] = portalAlloc(fbsize);
+        allocFrame[i] = portalAlloc(fbsize, 0);
         dataptr[i] = (int*)portalMmap(allocFrame[i], fbsize);
         memset(dataptr[i], i ? 0xff : 0, fbsize);
         fprintf(stderr, "calling dma->reference\n");

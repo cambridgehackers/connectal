@@ -76,7 +76,7 @@ int main(int argc, const char **argv)
     MMUIndication hostMMUIndication(dma, IfcNames_MMUIndicationH2S);
 
     fprintf(stderr, "parent::allocating memory...\n");
-    int dstAlloc = portalAlloc(alloc_sz);
+    int dstAlloc = portalAlloc(alloc_sz, 0);
     unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
 #ifdef FPGA0_CLOCK_FREQ
     long req_freq = FPGA0_CLOCK_FREQ, freq = 0;

@@ -62,9 +62,9 @@ int main(int argc, const char **argv)
     int mpNextAlloc;
     unsigned int alloc_len = 16 << 8;
     
-    needleAlloc = portalAlloc(alloc_len);
-    mpNextAlloc = portalAlloc(alloc_len);
-    haystackAlloc = portalAlloc(alloc_len);
+    needleAlloc = portalAlloc(alloc_len, 0);
+    mpNextAlloc = portalAlloc(alloc_len, 0);
+    haystackAlloc = portalAlloc(alloc_len, 0);
 
     char *needle = (char *)portalMmap(needleAlloc, alloc_len);
     char *haystack = (char *)portalMmap(haystackAlloc, alloc_len);
@@ -136,9 +136,9 @@ int main(int argc, const char **argv)
     unsigned int needle_alloc_len = strlen(needle_text);
     unsigned int mpNext_alloc_len = needle_alloc_len*4;
     
-    needleAlloc = portalAlloc(needle_alloc_len);
-    haystackAlloc = portalAlloc(haystack_alloc_len);
-    mpNextAlloc = portalAlloc(mpNext_alloc_len);
+    needleAlloc = portalAlloc(needle_alloc_len, 0);
+    haystackAlloc = portalAlloc(haystack_alloc_len, 0);
+    mpNextAlloc = portalAlloc(mpNext_alloc_len, 0);
 
     char *needle = (char *)portalMmap(needleAlloc, needle_alloc_len);
     char *haystack = (char *)portalMmap(haystackAlloc, haystack_alloc_len);

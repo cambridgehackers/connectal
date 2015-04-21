@@ -75,7 +75,7 @@ int main(int argc, const char **argv)
   MMUIndication *hostMMUIndication = new MMUIndication(dma, PlatformNames_MMUIndicationH2S);
 
   int srcAlloc;
-  srcAlloc = portalAlloc(alloc_sz);
+  srcAlloc = portalAlloc(alloc_sz, 0);
   unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
 
   for (int i = 0; i < numWords; i++)

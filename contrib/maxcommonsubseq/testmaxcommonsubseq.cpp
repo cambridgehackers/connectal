@@ -98,21 +98,21 @@ int main(int argc, const char **argv)
     int rcA, rcB, rcFetch;
     struct stat statAbuf, statBbuf, statFetchbuf;
     
-    fetchAlloc = portalAlloc(fetch_len*sizeof(uint16_t));
+    fetchAlloc = portalAlloc(fetch_len*sizeof(uint16_t), 0);
     rcFetch = fstat(fetchAlloc, &statFetchbuf);
     if (rcA < 0) perror("fstatFetch");
     int *fetch = (int *)portalMmap(fetchAlloc, fetch_len * sizeof(uint16_t));
     if (fetch == MAP_FAILED) perror("fetch mmap failed");
     assert(fetch != MAP_FAILED);
 
-    strAAlloc = portalAlloc(alloc_len);
+    strAAlloc = portalAlloc(alloc_len, 0);
     rcA = fstat(strAAlloc, &statAbuf);
     if (rcA < 0) perror("fstatA");
     char *strA = (char *)portalMmap(strAAlloc, alloc_len);
     if (strA == MAP_FAILED) perror("strA mmap failed");
     assert(strA != MAP_FAILED);
 
-    strBAlloc = portalAlloc(alloc_len);
+    strBAlloc = portalAlloc(alloc_len, 0);
     rcB = fstat(strBAlloc, &statBbuf);
     if (rcA < 0) perror("fstatB");
     char *strB = (char *)portalMmap(strBAlloc, alloc_len);

@@ -90,14 +90,14 @@ int main(int argc, const char **argv)
     int rcA, rcB;
     struct stat statAbuf, statBbuf;
     
-    strAAlloc = portalAlloc(alloc_len);
+    strAAlloc = portalAlloc(alloc_len, 0);
     rcA = fstat(strAAlloc, &statAbuf);
     if (rcA < 0) perror("fstatA");
     char *strA = (char *)portalMmap(strAAlloc, alloc_len);
     if (strA == MAP_FAILED) perror("strA mmap failed");
     assert(strA != MAP_FAILED);
 
-    strBAlloc = portalAlloc(alloc_len);
+    strBAlloc = portalAlloc(alloc_len, 0);
     rcB = fstat(strBAlloc, &statBbuf);
     if (rcA < 0) perror("fstatB");
     char *strB = (char *)portalMmap(strBAlloc, alloc_len);

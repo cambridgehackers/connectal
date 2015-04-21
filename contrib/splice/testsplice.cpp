@@ -100,9 +100,9 @@ int main(int argc, const char **argv)
     unsigned int alloc_len = 128;
     unsigned int fetch_len = alloc_len * alloc_len;
     
-    strAAlloc = portalAlloc(alloc_len);
-    strBAlloc = portalAlloc(alloc_len);
-    fetchAlloc = portalAlloc(fetch_len);
+    strAAlloc = portalAlloc(alloc_len, 0);
+    strBAlloc = portalAlloc(alloc_len, 0);
+    fetchAlloc = portalAlloc(fetch_len, 0);
 
     char *strA = (char *)portalMmap(strAAlloc, alloc_len);
     char *strB = (char *)portalMmap(strBAlloc, alloc_len);

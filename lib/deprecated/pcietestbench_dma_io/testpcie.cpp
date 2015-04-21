@@ -97,7 +97,7 @@ int main(int argc, const char **argv)
 
   std::ifstream infile("../memread_nobuff_io.tstlp");
 
-  srcAlloc = portalAlloc(alloc_sz);
+  srcAlloc = portalAlloc(alloc_sz, 0);
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
   for (int i = 0; i < numWords; i++)
     srcBuffer[i] = i;

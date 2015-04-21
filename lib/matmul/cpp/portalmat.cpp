@@ -34,7 +34,7 @@ void PortalMatAllocator::allocate(int dims, const int* sizes, int type, int*& re
   size_t arraysize = step[0]*sizes[0];
   size_t totalsize = cv::alignSize(arraysize, 4096);
   int arraynum = numarrays++;
-  int fd = portalAlloc(totalsize);
+  int fd = portalAlloc(totalsize, 0);
   struct arrayInfo *info = &arrayInfo[arraynum];
   info->fd = fd;
   info->refcount = 1;

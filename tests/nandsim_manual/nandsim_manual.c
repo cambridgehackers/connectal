@@ -150,7 +150,7 @@ int main(int argc, const char **argv)
 
   sem_init(&test_sem, 0, 0);
   DmaManager_init(&priv, &intarr[2]);
-  srcAlloc = portalAlloc(alloc_sz);
+  srcAlloc = portalAlloc(alloc_sz, 0);
   if (rc){
     PORTAL_PRINTF("portal alloc failed rc=%d\n", rc);
     return rc;
@@ -173,7 +173,7 @@ int main(int argc, const char **argv)
   ref_srcAlloc = DmaManager_reference(&priv, srcAlloc);
 
 
-  nandAlloc = portalAlloc (nandBytes);
+  nandAlloc = portalAlloc (nandBytes, 0);
   ref_nandAlloc = DmaManager_reference(&priv, nandAlloc);
   PORTAL_PRINTF("Main::configure NAND fd=%d ref=%d\n", nandAlloc, ref_nandAlloc);
   NandSimRequest_configureNand (&intarr[3], ref_nandAlloc, nandBytes);

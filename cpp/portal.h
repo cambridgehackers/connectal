@@ -238,8 +238,7 @@ int portalDCacheFlushInvalInternal(int fd, long size, void *__p, int flush);
 void portalDCacheFlushInval(int fd, long size, void *__p);
 void portalDCacheInval(int fd, long size, void *__p);
 void init_portal_memory(void);
-int portalAlloc(size_t size);
-int portalAllocCached(size_t size, int cached);
+int portalAlloc(size_t size, int cached);
 void *portalMmap(int fd, size_t size);
 
 // Timer functions

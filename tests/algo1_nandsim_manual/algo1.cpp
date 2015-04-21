@@ -137,8 +137,8 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::allocating memory...\n");
 
   // allocate memory for strstr data
-  int needleAlloc = portalAlloc(numBytes);
-  int mpNextAlloc = portalAlloc(numBytes);
+  int needleAlloc = portalAlloc(numBytes, 0);
+  int mpNextAlloc = portalAlloc(numBytes, 0);
   int ref_needleAlloc = hostDma->reference(needleAlloc);
   int ref_mpNextAlloc = hostDma->reference(mpNextAlloc);
 

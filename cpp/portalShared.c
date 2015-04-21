@@ -45,7 +45,7 @@ static int init_shared(struct PortalInternal *pint, void *aparam)
 {
     PortalSharedParam *param = (PortalSharedParam *)aparam;
     if (param) {
-        int fd = portalAlloc(param->size);
+        int fd = portalAlloc(param->size, 0);
         pint->map_base = (volatile unsigned int *)portalMmap(fd, param->size);
         pint->map_base[SHARED_LIMIT] = param->size/sizeof(uint32_t);
         pint->map_base[SHARED_WRITE] = SHARED_START;

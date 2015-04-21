@@ -484,9 +484,9 @@ int main(int argc, const char **argv)
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
   fprintf(stderr, "allocating memory...\n");
-  cmdAlloc = portalAlloc(cmd_ring_sz);
-  statusAlloc = portalAlloc(status_ring_sz);
-  scratchAlloc = portalAlloc(scratch_sz);
+  cmdAlloc = portalAlloc(cmd_ring_sz, 0);
+  statusAlloc = portalAlloc(status_ring_sz, 0);
+  scratchAlloc = portalAlloc(scratch_sz, 0);
 
   v = portalMmap(cmdAlloc, cmd_ring_sz);
   assert(v != MAP_FAILED);

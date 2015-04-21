@@ -166,7 +166,7 @@ int main(int argc, const char **argv)
    return -1;
   }
 
-  backAlloc = portalAlloc (back_sz);
+  backAlloc = portalAlloc (back_sz, 0);
   PORTAL_PRINTF("backAlloc=%d\n", backAlloc);
 
   ref_backAlloc = DmaManager_reference(&priv, backAlloc);
@@ -179,7 +179,7 @@ int main(int argc, const char **argv)
   PORTAL_PRINTF("Main::configure NAND fd=%d ref=%d\n", backAlloc, ref_backAlloc);
   sem_wait(&test_sem);
 
-  srcAlloc = portalAlloc(back_sz);
+  srcAlloc = portalAlloc(back_sz, 0);
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, back_sz);
   ref_srcAlloc = DmaManager_reference(&priv, srcAlloc);
 
