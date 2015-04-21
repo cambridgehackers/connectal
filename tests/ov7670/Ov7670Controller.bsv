@@ -55,11 +55,11 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
    Reg#(Bool)    firstReg      <- mkReg(False, clocked_by pclk, reset_by preset);
    Reg#(Bool)    lastReg       <- mkReg(False, clocked_by pclk, reset_by preset);
 
-   I2CController#(1) i2c <- mkI2CController();
+   I2C i2c <- mkI2C(10000);
    Reg#(bit) resetReg <- mkReg(0);
    Reg#(bit) pwdnReg <- mkReg(0);
    rule i2c_response_rule;
-      let response <- i2c.users[0].response.get();
+      let response <- i2c.user.response.get();
       ind.probeResponse(response.data);
    endrule
 
@@ -104,7 +104,7 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
 
    interface Ov7670ControllerRequest request;
       method Action probe(Bool write, Bit#(7) slaveaddr, Bit#(8) address, Bit#(8) data);
-	 i2c.users[0].request.put(I2CRequest {write: write, slaveaddr: slaveaddr, address: address, data: data});
+	 i2c.user.request.put(I2CRequest {write: write, slaveaddr: slaveaddr, address: address, data: data});
       endmethod
       method Action setReset(Bit#(1) rval);
 	 resetReg <= rval;
