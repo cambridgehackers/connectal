@@ -109,19 +109,19 @@ int main(int argc, const char **argv)
     PortalSocketParam paramSocket = {};
     PortalMuxParam param = {};
 
-    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndicationH2S, NULL, NULL);
+    EchoIndication echoIndication(IfcNames_EchoIndicationH2S, NULL, NULL);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H);
 
-    Portal *mcommon = new Portal(0, sizeof(uint32_t), portal_mux_handler, NULL, &socketfuncResp, &paramSocket, 0);
+    Portal *mcommon = new Portal(0, 0, sizeof(uint32_t), portal_mux_handler, NULL, &socketfuncResp, &paramSocket, 0);
     param.pint = &mcommon->pint;
     sIndicationProxy = new EchoIndicationSWProxy(IfcNames_EchoIndicationH2S, &muxfunc, &param);
-    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequestS2H, &muxfunc, &param);
+    EchoRequest sRequest(IfcNames_EchoRequestS2H, &muxfunc, &param);
 
     sSecondIndicationProxy = new SecondIndicationProxy(IfcNames_SecondIndication, &muxfunc, &param);
-    SecondRequest *sSecondRequest = new SecondRequest(IfcNames_SecondRequest, &muxfunc, &param);
+    SecondRequest sSecondRequest(IfcNames_SecondRequest, &muxfunc, &param);
 
     sThirdIndicationProxy = new ThirdIndicationProxy(IfcNames_ThirdIndication, &muxfunc, &param);
-    ThirdRequest *sThirdRequest = new ThirdRequest(IfcNames_ThirdRequest, &muxfunc, &param);
+    ThirdRequest sThirdRequest(IfcNames_ThirdRequest, &muxfunc, &param);
 
     printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);
     while(1)
