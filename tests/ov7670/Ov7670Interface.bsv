@@ -24,6 +24,7 @@
 import I2C::*;
 
 interface Ov7670ControllerRequest;
+   method Action setFramePointer(Bit#(32) frameId);
    method Action probe(Bool write, Bit#(7) slaveaddr, Bit#(8) address, Bit#(8) data);
    method Action setReset(Bit#(1) rval);
    method Action setPowerDown(Bit#(1) pwdn);
@@ -33,6 +34,8 @@ interface Ov7670ControllerIndication;
    method Action probeResponse(Bit#(8) data);
    method Action vsync(Bit#(32) cycles, Bit#(1) href);
    method Action data(Bit#(1) first, Bit#(1) gap, Bit#(8) pxl);
+   method Action data4(Bit#(32) pxls);
+   method Action frameTransferred();
 endinterface
 
 interface Ov7670Pins;

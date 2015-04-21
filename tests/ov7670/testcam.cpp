@@ -19,6 +19,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "StdDmaIndication.h"
+#include "MMURequest.h"
 #include "Ov7670ControllerRequest.h"
 #include "Ov7670ControllerIndication.h"
 
@@ -44,12 +46,23 @@ public:
     datacount++;
     if (gap) gapcount++;
   }
+  virtual void frameTransferred() {
+    fprintf(stderr, "frameTransferred\n");
+  }
+  virtual void data4(uint32_t data) {
+  }
 };
 
 int main(int argc, const char **argv)
 {
   Ov7670ControllerRequestProxy device(IfcNames_Ov7670ControllerRequestS2H);
   Ov7670ControllerIndication deviceResponse(IfcNames_Ov7670ControllerIndicationH2S);
+  MMURequestProxy *mmuRequest = new MMURequestProxy(IfcNames_MMURequestS2H);
+  DmaManager *dmaManager = new DmaManager(mmuRequest);
+  MemServerRequestProxy *memServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
+  MemServerIndication *memServerIndication = new MemServerIndication(memServerRequest, IfcNames_MemServerIndicationH2S);
+  MMUIndication mmuIndication(dmaManager, IfcNames_MMUIndicationH2S);
+
   device.setPowerDown(0);
   device.setReset(1);
   for (int i = 0; i < 10; i++) {

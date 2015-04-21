@@ -21,18 +21,27 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import Vector::*;
+import BuildVector::*;
 import Clocks::*;
 import GetPut::*;
 import ClientServer::*;
 import I2C::*;
+import FIFOF::*;
 import BRAMFIFO::*;
+import Gearbox::*;
 
+import MemTypes::*;
+import HostInterface::*;
+import MemwriteEngine::*;
+import Pipe::*;
 import ConnectalClocks::*;
 import Ov7670Interface::*;
 
 interface Ov7670Controller;
    interface Ov7670ControllerRequest request;
    interface Ov7670Pins pins;
+   interface Vector#(1,MemWriteClient#(DataBusWidth)) dmaClient;
 endinterface
 
 module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
@@ -45,7 +54,13 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
    let pclk = b2c.c;
    Reset preset <- mkAsyncReset(2, defaultReset, pclk);
    SyncFIFOIfc#(Tuple2#(Bit#(32),Bit#(1))) vsyncFifo <- mkSyncFIFO(32, pclk, preset, defaultClock);
-   SyncFIFOIfc#(Tuple3#(Bool, Bool, Bit#(8))) dataFifo <- mkSyncBRAMFIFO(2048, pclk, preset, defaultClock, defaultReset);
+   SyncFIFOIfc#(Tuple3#(Bool, Bool, Bit#(8))) dataFifo <- mkSyncBRAMFIFO(16384, pclk, preset, defaultClock, defaultReset);
+   Gearbox#(1, 8, Bit#(8))                  dataGearbox <- mk1toNGearbox(defaultClock, defaultReset, defaultClock, defaultReset);
+
+   MemwriteEngine#(DataBusWidth,8,1) writeEngine <- mkMemwriteEngineBuff(2048);
+   FIFOF#(Bool)        sofFifo    <- mkFIFOF();
+   Reg#(Bit#(32))      pointerReg <- mkReg(0);
+   Reg#(Bool)     transferDoneReg <- mkReg(False);
 
    Reg#(Bit#(32)) cycleReg     <- mkReg(0, clocked_by pclk, reset_by preset);
    Reg#(Bit#(32)) lastVsyncReg <- mkReg(0, clocked_by pclk, reset_by preset);
@@ -55,6 +70,8 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
    Reg#(Bit#(8)) dataReg       <- mkReg(0, clocked_by pclk, reset_by preset);
    Reg#(Bool)    firstReg      <- mkReg(False, clocked_by pclk, reset_by preset);
    Reg#(Bool)    lastReg       <- mkReg(False, clocked_by pclk, reset_by preset);
+   Reg#(Bit#(16)) dataGapCycles <- mkReg(0, clocked_by pclk, reset_by preset);
+   Wire#(Bool)    dataRuleFired <- mkDWire(False, clocked_by pclk, reset_by preset);
 
    I2C i2c <- mkI2C(10000);
    Reg#(bit) resetReg <- mkReg(0);
@@ -76,9 +93,9 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
    rule vsyncSyncRule;
       match { .cycles, .href } <- toGet(vsyncFifo).get();
       ind.vsync(cycles, href);
+      if (sofFifo.notFull())
+	 sofFifo.enq(True);
    endrule
-   Reg#(Bit#(16)) dataGapCycles <- mkReg(0, clocked_by pclk, reset_by preset);
-   Wire#(Bool)    dataRuleFired <- mkDWire(False, clocked_by pclk, reset_by preset);
    rule dataRule;
       if (hrefReg == 1) begin
 	 dataRuleFired <= True;
@@ -100,10 +117,35 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
 
    rule dataSyncRule;
       match { .first, .gap, .pxl } <- toGet(dataFifo).get();
-      ind.data(pack(first), pack(gap), pxl);
+
+      if (first && sofFifo.notEmpty() && transferDoneReg) begin
+	 sofFifo.deq();
+	 transferDoneReg <= False;
+	 writeEngine.write_servers[0].cmdServer.request.put(MemengineCmd { sglId: pointerReg, base: 0, burstLen: 8*8, len: 640*480, tag: 0});
+      end
+
+      dataGearbox.enq(unpack(pxl));
+      if (gap)
+	 ind.data(pack(first), pack(gap), pxl);
+   endrule
+   rule dataIndRule;
+      let d = dataGearbox.first();
+      dataGearbox.deq();
+      //ind.data8(pack(d));
+      if (pointerReg != 0)
+	 writeEngine.write_servers[0].dataPipe.enq(pack(d));
+   endrule
+
+   rule transferDoneRule;
+      let d <- writeEngine.write_servers[0].cmdServer.response.get();
+      transferDoneReg <= True;
+      ind.frameTransferred();
    endrule
 
    interface Ov7670ControllerRequest request;
+      method Action setFramePointer(Bit#(32) frameId);
+	 pointerReg <= frameId;
+      endmethod
       method Action probe(Bool write, Bit#(7) slaveaddr, Bit#(8) address, Bit#(8) data);
 	 i2c.user.request.put(I2CRequest {write: write, slaveaddr: slaveaddr, address: address, data: data});
       endmethod
@@ -129,4 +171,5 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
 	 dataReg <= data;
       endmethod
    endinterface
+   interface Vector dmaClient = vec(writeEngine.dmaClient);
 endmodule
