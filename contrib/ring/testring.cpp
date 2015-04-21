@@ -250,9 +250,9 @@ void StatusPoll(void)
   int i;
   uint64_t *msg;
   long int rc;
-  rc = (long int) portalExec_poll(0);
+  rc = (long int) defaultPoller->pollFn(0);
   if ((long)rc >= 0)
-      rc = (long int) portalExec_event();
+      rc = (long int) defaultPoller->event();
   assert(rc == 0);
   if (ring_init_done) {
     msg = ring_next(&status_ring);
@@ -272,9 +272,9 @@ void *statusThreadProc(void *arg)
   printf("Status thread running\n");
   for (;;) {
     StatusPoll();
-    rc = (long int) portalExec_poll(0);
+    rc = (long int) defaultPoller->pollFn(0);
     if ((long)rc >= 0)
-        rc = (long int) portalExec_event();
+        rc = (long int) defaultPoller->event();
     assert(rc == 0);
   }
 }
@@ -507,7 +507,7 @@ int main(int argc, const char **argv)
    exit(1);
   }
 
-  rc = (long int) portalExec_init();
+  rc = (long int) defaultPoller->init();
   assert(rc == 0);
   cmdPointer = dma->reference(cmdAlloc);
   statusPointer = dma->reference(statusAlloc);

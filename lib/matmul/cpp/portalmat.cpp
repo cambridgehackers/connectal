@@ -134,12 +134,14 @@ PortalMat& PortalMat::operator = (const cv::MatExpr& expr)
 {
     *(cv::Mat*)this = expr;
     fprintf(stderr, "PortalMat::operator=(MatExpr&) this=%p datastart=%p\n", this, datastart);
+    return *this;
 }
 
 PortalMat& PortalMat::operator = (const cv::Mat& o)
 {
     *(cv::Mat*)this = o;
     fprintf(stderr, "PortalMat::operator=(Mat&) this=%p datastart=%p\n", this, datastart);
+    return *this;
 }
 
 int PortalMat::reference()
@@ -403,7 +405,7 @@ void dynamicRange(cv::Mat mat, int *pmin_exp, int *pmax_exp, float *pmin_val, fl
     for (int j = 0; j < mat.cols; j++) {
       float f = mat.at<float>(i,j);
       int exp = 0;
-      float mantissa = frexpf(f, &exp);
+      //float mantissa = frexpf(f, &exp);
       min_val = std::min<float>(min_val, f);
       max_val = std::max<float>(max_val, f);
       min_exp = std::min<int>(min_exp, exp);

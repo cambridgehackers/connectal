@@ -221,7 +221,7 @@ int main(int argc, char **argv)
     XsimMemSlaveRequest *memSlaveRequest = new XsimMemSlaveRequest(XsimIfcNames_XsimMemSlaveRequest, &muxfunc, &param);
 
     printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-    portalExec_stop();
+    defaultPoller->stop();
     sleep(2);
     printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 
@@ -231,9 +231,9 @@ int main(int argc, char **argv)
     xsiInstance.run(10000);
 
     for (int ind = 0; 1; ind++) {
-        void *rc = portalExec_poll(1);
+        void *rc = defaultPoller->pollFn(1);
         if ((long)rc >= 0) {
-            portalExec_event();
+            defaultPoller->event();
         }
         if (ind > 2) {
             rst_n.write(1);

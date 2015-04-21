@@ -328,54 +328,39 @@ public:
     void* threadFn(void* __x);
 };
 
-class PortalInternalCpp
-{
- public:
-    PortalInternal pint;
-    PortalInternalCpp(int id, int tile, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions* item, void *param, uint32_t reqinfo) { 
-        init_portal_internal(&pint, id, tile, handler, cb, item, param, reqinfo); 
+extern PortalPoller *defaultPoller;
+class Portal {
+    void initPortal() {
+        if (pint.handler || pint.poller_register) {
+            if (pint.poller == 0)
+                pint.poller = defaultPoller;
+            pint.poller->registerInstance(this);
+        }
+    }
+public:
+    Portal(int id, int tile, uint32_t reqinfo, PORTAL_INDFUNC handler, void *cb, PortalPoller *poller = 0) {
+        init_portal_internal(&pint, id, tile, handler, cb, NULL, NULL, reqinfo); 
+        pint.poller = poller;
+        initPortal();
     };
-    ~PortalInternalCpp() {
+    Portal(int id, int tile, uint32_t reqinfo, PORTAL_INDFUNC handler, void *cb,
+          PortalItemFunctions *item, void *param, PortalPoller *poller = 0) {
+        init_portal_internal(&pint, id, tile, handler, cb, item, param, reqinfo); 
+        pint.poller = poller;
+        initPortal();
+    };
+    ~Portal() {
+        if (pint.handler)
+            pint.poller->unregisterInstance(this);
         if (pint.fpga_fd > 0) {
             ::close(pint.fpga_fd);
             pint.fpga_fd = -1;
         }    
     };
+    PortalInternal pint;
 };
 
-extern PortalPoller *defaultPoller;
-class Portal : public PortalInternalCpp
-{
-   void initPortal() {
-      if (pint.handler || pint.poller_register) {
-          if (pint.poller == 0)
-              pint.poller = defaultPoller;
-          pint.poller->registerInstance(this);
-      }
-  }
- public:
-  Portal(int id, int tile, uint32_t reqinfo, PORTAL_INDFUNC handler, void *cb, PortalPoller *poller = 0) : PortalInternalCpp(id, tile, handler, cb, NULL, NULL, reqinfo) {
-    pint.poller = poller;
-    initPortal();
-  };
-  Portal(int id, int tile, uint32_t reqinfo, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : PortalInternalCpp(id, tile, handler, cb, item, param, reqinfo) {
-    pint.poller = poller;
-    initPortal();
-  };
-  ~Portal() { if (pint.handler) pint.poller->unregisterInstance(this); };
-};
-
-extern int portalExec_timeout;
 extern uint64_t poll_enter_time, poll_return_time; // for performance measurement
-
-// uses the default poller
-void* portalExec(void* __x);
-void* portalExec_init(void);
-void* portalExec_poll(int timeout);
-void* portalExec_event(void);
-void portalExec_start(void);
-void portalExec_stop(void);
-void portalExec_end(void);
 #endif // __cplusplus
 
 #endif /* __PORTAL_OFFSETS_H__ */

@@ -21,20 +21,16 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 #include "dmaManager.h"
-//#include "sock_utils.h"
 #ifndef __KERNEL__
 #include <string.h>
 #include <errno.h>
-//#include <fcntl.h>
 #include <sys/ioctl.h>
-//#include <sys/mman.h>
-#if defined(__arm__)
+#ifdef ZYNQ
 #include "drivers/zynqportal/zynqportal.h"
 #else
 #include "drivers/pcieportal/pcieportal.h"
 #endif
 #endif
-//#include "GeneratedTypes.h" // generated in project directory
 #ifdef BSIM
 #include "dmaSendFd.h"
 #endif
