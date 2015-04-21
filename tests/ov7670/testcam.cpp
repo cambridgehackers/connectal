@@ -28,8 +28,8 @@ public:
   virtual void probeResponse(uint8_t data) {
     fprintf(stderr, "i2c response %02x\n", data);
   }
-  virtual void vsync() {
-    fprintf(stderr, "vsync\n");
+  virtual void vsync(uint32_t cycles) {
+    fprintf(stderr, "vsync %d\n", cycles);
   }
 };
 
@@ -37,5 +37,10 @@ int main(int argc, const char **argv)
 {
   Ov7670ControllerRequestProxy device(IfcNames_Ov7670ControllerRequestS2H);
   Ov7670ControllerIndication deviceResponse(IfcNames_Ov7670ControllerIndicationH2S);
+  device.setPowerDown(0);
+  device.setReset(1);
+  while (1) {
+    sleep(1);
+  }
   return 0;
 }
