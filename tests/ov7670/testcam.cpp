@@ -54,9 +54,13 @@ int main(int argc, const char **argv)
   device.setReset(1);
   for (int i = 0; i < 10; i++) {
     // product ID: 0x76
-    device.probe(0, 42/2, 0x0a, 0);
-    device.probe(0, 42/2, 0x0b, 0);
+    device.probe(0, 21, 0x0a, 0);
     // product VER: 0x70
+    device.probe(0, 21, 0x0b, 0);
+    // mfg id: 0x7F
+    device.probe(0, 21, 0x1c, 0);
+    // mfg id: 0xA2
+    device.probe(0, 21, 0x1d, 0);
     sleep(1);
   }
   return 0;
