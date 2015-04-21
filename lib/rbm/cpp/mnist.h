@@ -34,7 +34,7 @@
 
 class MnistImageFile {
 public:
-  MnistImageFile(const char *name) : name(name), fd(0), mapping(0) {}
+  MnistImageFile(const char *name) : name(name), fd(0), mapping(0), len(0) {}
   ~MnistImageFile() { 
     if (mapping)
       munmap((void*)mapping, len);

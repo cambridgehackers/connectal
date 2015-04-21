@@ -67,7 +67,7 @@ void configureSigmoidTable()
   fprintf(stderr, "filling sigmoid table pointer=%x\n", sigmoidTable.reference());
   for (int ai = 0; ai < num_entries; ai += incr) {
     float angle = (ai - num_entries / 2) / fscale;
-    int index = (int)(angle*fscale);
+    //int index = (int)(angle*fscale);
     float s = sigmoid(angle);
     //fprintf(stderr, "ai=%d angle=%f entry_angle=%f sigmoid=%f\n", ai, angle, angle * fscale + num_entries/2, s);
     sigmoidTable.at<float>(0, 4*ai+0) = -angle;
@@ -168,7 +168,7 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
   float sum_of_errors_squareds[numEpochs];
   bool verbose = false;
   bool dynamicRange = true;
-  int numExamples = trainingData.rows;
+  //int numExamples = trainingData.rows;
 
   if (verbose) dumpMat<float>("trainingData", "%5.6f", trainingData);
   if (dynamicRange) printDynamicRange("trainingData", trainingData);
