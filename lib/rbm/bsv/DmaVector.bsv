@@ -53,7 +53,7 @@ module  mkMemreadVectorSource#(Server#(MemengineCmd,Bool) memreadServer, PipeOut
    let ashift = valueOf(ashift);
    method Action start(SGLId p, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l);
       if (verbose) $display("VectorSource.start h=%d a=%h l=%h ashift=%d", p, a, l, ashift);
-      memreadServer.request.put(MemengineCmd { sglId: p, base: a << ashift, len: truncate(l << ashift), burstLen: (fromInteger(valueOf(BurstLen)) << ashift) });
+      memreadServer.request.put(MemengineCmd { sglId: p, base: a << ashift, len: truncate(l << ashift), burstLen: (fromInteger(valueOf(BurstLen)) << ashift), tag: 0});
       // Bit#(8) foo = (fromInteger(valueOf(BurstLen)) << ashift);
       // $display("feck %d", foo);
    endmethod
@@ -79,7 +79,7 @@ module  mkMemwriteVectorSink#(Server#(MemengineCmd,Bool) memwriteServer, PipeIn#
    method Action start(SGLId p, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l);
       if (verbose) $display("VectorSink.start h=%d a=%h l=%h ashift=%d", p, a, l, ashift);
       // I set burstLen==1 so that testmm works for all J,K,N. If we want burst writes we will need to rethink this (mdk)
-      let cmd = MemengineCmd { sglId: p, base: a << ashift, len: truncate(l << ashift), burstLen: fromInteger(valueOf(abytes)) };
+      let cmd = MemengineCmd { sglId: p, base: a << ashift, len: truncate(l << ashift), burstLen: fromInteger(valueOf(abytes)), tag: 0};
       memwriteServer.request.put(cmd);
       //$display("%d %d %d %d", cmd.sglId, cmd.base, cmd.len, cmd.burstLen);
    endmethod
