@@ -58,13 +58,20 @@ int main(int argc, const char **argv)
   Ov7670ControllerRequestProxy device(IfcNames_Ov7670ControllerRequestS2H);
   Ov7670ControllerIndication deviceResponse(IfcNames_Ov7670ControllerIndicationH2S);
   MMURequestProxy *mmuRequest = new MMURequestProxy(IfcNames_MMURequestS2H);
-  DmaManager *dmaManager = new DmaManager(mmuRequest);
+  DmaManager *dma = new DmaManager(mmuRequest);
   MemServerRequestProxy *memServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
   MemServerIndication *memServerIndication = new MemServerIndication(memServerRequest, IfcNames_MemServerIndicationH2S);
-  MMUIndication mmuIndication(dmaManager, IfcNames_MMUIndicationH2S);
+  MMUIndication mmuIndication(dma, IfcNames_MMUIndicationH2S);
+
+  int len = 640*480*4;
+  int fbAlloc = portalAlloc(len, 0);
+  unsigned int *fbBuffer = (unsigned int *)portalMmap(fbAlloc, len);
+  unsigned int ref_fbAlloc = dma->reference(fbAlloc);
 
   device.setPowerDown(0);
   device.setReset(1);
+  device.setFramePointer(ref_fbAlloc);
+
   for (int i = 0; i < 10; i++) {
     // product ID: 0x76
     device.probe(0, 21, 0x0a, 0);
