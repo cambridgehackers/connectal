@@ -32,7 +32,7 @@ endinterface
 interface Ov7670ControllerIndication;
    method Action probeResponse(Bit#(8) data);
    method Action vsync(Bit#(32) cycles, Bit#(1) href);
-   method Action data(Bit#(8) pxl);
+   method Action data(Bit#(1) first, Bit#(1) gap, Bit#(8) pxl);
 endinterface
 
 interface Ov7670Pins;

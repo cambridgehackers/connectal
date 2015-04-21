@@ -23,16 +23,26 @@
 #include "Ov7670ControllerIndication.h"
 
 class Ov7670ControllerIndication : public Ov7670ControllerIndicationWrapper {
+  int datacount;
+  int gapcount;
 public:
-  Ov7670ControllerIndication(unsigned int id) : Ov7670ControllerIndicationWrapper(id){}
+  Ov7670ControllerIndication(unsigned int id) : Ov7670ControllerIndicationWrapper(id), datacount(0), gapcount(0) {}
+  ~Ov7670ControllerIndication() {}
   virtual void probeResponse(uint8_t data) {
     fprintf(stderr, "i2c response %02x\n", data);
   }
   virtual void vsync(uint32_t cycles, uint8_t href) {
-    fprintf(stderr, "vsync %8d href %d\n", cycles, href);
+    //fprintf(stderr, "vsync %8d href %d\n", cycles, href);
+    if (datacount) {
+      fprintf(stderr, "vsync datacount=%8d gapcount=%8d\n", datacount, gapcount);
+      datacount = 0;
+      gapcount = 0;
+    }
   }
-  virtual void data(uint8_t data) {
-    fprintf(stderr, "data %8x\n", data);
+  virtual void data(uint8_t first, uint8_t gap, uint8_t data) {
+    //if (gap) fprintf(stderr, "data %8x first %d gap %d\n", data, first, gap);
+    datacount++;
+    if (gap) gapcount++;
   }
 };
 
@@ -42,7 +52,11 @@ int main(int argc, const char **argv)
   Ov7670ControllerIndication deviceResponse(IfcNames_Ov7670ControllerIndicationH2S);
   device.setPowerDown(0);
   device.setReset(1);
-  while (1) {
+  for (int i = 0; i < 10; i++) {
+    // product ID: 0x76
+    device.probe(0, 42/2, 0x0a, 0);
+    device.probe(0, 42/2, 0x0b, 0);
+    // product VER: 0x70
     sleep(1);
   }
   return 0;

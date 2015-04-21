@@ -44,15 +44,17 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
    let pclk = b2c.c;
    Reset preset <- mkAsyncReset(2, defaultReset, pclk);
    SyncFIFOIfc#(Tuple2#(Bit#(32),Bit#(1))) vsyncFifo <- mkSyncFIFO(32, pclk, preset, defaultClock);
-   SyncFIFOIfc#(Bit#(8)) dataFifo <- mkSyncFIFO(32, pclk, preset, defaultClock);
+   SyncFIFOIfc#(Tuple3#(Bool, Bool, Bit#(8))) dataFifo <- mkSyncFIFO(32, pclk, preset, defaultClock);
 
    Reg#(Bit#(32)) cycleReg     <- mkReg(0, clocked_by pclk, reset_by preset);
    Reg#(Bit#(32)) lastVsyncReg <- mkReg(0, clocked_by pclk, reset_by preset);
-   Reg#(Bit#(32)) lastDataReg <- mkReg(0, clocked_by pclk, reset_by preset);
-   Reg#(Bit#(1)) vsyncReg <- mkReg(0, clocked_by pclk, reset_by preset);
-   Reg#(Bit#(1)) hrefReg <- mkReg(0, clocked_by pclk, reset_by preset);
-   Reg#(Bit#(8)) dataReg <- mkReg(0, clocked_by pclk, reset_by preset);
-   
+   Reg#(Bit#(32)) lastDataReg  <- mkReg(0, clocked_by pclk, reset_by preset);
+   Reg#(Bit#(1)) vsyncReg      <- mkReg(0, clocked_by pclk, reset_by preset);
+   Reg#(Bit#(1)) hrefReg       <- mkReg(0, clocked_by pclk, reset_by preset);
+   Reg#(Bit#(8)) dataReg       <- mkReg(0, clocked_by pclk, reset_by preset);
+   Reg#(Bool)    firstReg      <- mkReg(False, clocked_by pclk, reset_by preset);
+   Reg#(Bool)    lastReg       <- mkReg(False, clocked_by pclk, reset_by preset);
+
    I2CController#(1) i2c <- mkI2CController();
    Reg#(bit) resetReg <- mkReg(0);
    Reg#(bit) pwdnReg <- mkReg(0);
@@ -74,15 +76,30 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
       match { .cycles, .href } <- toGet(vsyncFifo).get();
       ind.vsync(cycles, href);
    endrule
+   Reg#(Bit#(16)) dataGapCycles <- mkReg(0, clocked_by pclk, reset_by preset);
+   Wire#(Bool)    dataRuleFired <- mkDWire(False, clocked_by pclk, reset_by preset);
    rule dataRule;
       if (hrefReg == 1) begin
-	 dataFifo.enq(dataReg);
+	 dataRuleFired <= True;
+	 let gap = dataGapCycles != 0;
+	 dataFifo.enq(tuple3(firstReg, (firstReg ? False : gap), dataReg));
 	 lastDataReg <= cycleReg;
+	 firstReg <= False;
+      end
+      else begin
+	 firstReg <= True;
       end
    endrule
+   rule dataRuleGap if (hrefReg == 1);
+      if (!dataRuleFired)
+	 dataGapCycles <= dataGapCycles + 1;
+      else
+	 dataGapCycles <= 0;
+   endrule
+
    rule dataSyncRule;
-      let pxl <- toGet(dataFifo).get();
-      ind.data(pxl);
+      match { .first, .gap, .pxl } <- toGet(dataFifo).get();
+      ind.data(pack(first), pack(gap), pxl);
    endrule
 
    interface Ov7670ControllerRequest request;
