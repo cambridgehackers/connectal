@@ -7,20 +7,20 @@
 	"PIO_DIRECTION": "OUTPUT",
 	"pmodb" : "J8"
     },
-    "vsync" : {
+    "pxl_vsync" : {
 	"PIO_DIRECTION": "INPUT",
 	"pmodb" : "J3"
     },
-    "href" : {
+    "pxl_href" : {
 	"PIO_DIRECTION": "INPUT",
 	"pmodb" : "J7"
     },
 
-    "data[0]": {
+    "pxl_data[0]": {
 	"PIO_DIRECTION": "INPUT",
 	"pmodb" : "J2"
     },
-    "data[1]": {
+    "pxl_data[1]": {
 	"PIO_DIRECTION": "INPUT",
 	"pmodb" : "J6"
     },
@@ -33,35 +33,35 @@
 	"pmodb" : "J5"
     },
 
-    "xclk" : {
+    "CLK_xclk" : {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmoda" : "J4"
     },
-    "pclk" : {
+    "pclk_v" : {
 	"PIO_DIRECTION": "INPUT",
 	"pmoda" : "J8"
     },
-    "data[6]": {
+    "pxl_data[6]": {
 	"PIO_DIRECTION": "INPUT",
 	"pmoda" : "J3"
     },
-    "data[7]": {
+    "pxl_data[7]": {
 	"PIO_DIRECTION": "INPUT",
 	"pmoda" : "J7"
     },
-    "data[4]": {
+    "pxl_data[4]": {
 	"PIO_DIRECTION": "INPUT",
 	"pmoda" : "J2"
     },
-    "data[5]": {
+    "pxl_data[5]": {
 	"PIO_DIRECTION": "INPUT",
 	"pmoda" : "J6"
     },
-    "data[2]": {
+    "pxl_data[2]": {
 	"PIO_DIRECTION": "INPUT",
 	"pmoda" : "J1"
     },
-    "data[3]": {
+    "pxl_data[3]": {
 	"PIO_DIRECTION": "INPUT",
 	"pmoda" : "J5"
     }

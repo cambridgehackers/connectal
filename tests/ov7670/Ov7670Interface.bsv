@@ -31,10 +31,15 @@ endinterface
 
 interface Ov7670ControllerIndication;
    method Action probeResponse(Bit#(8) data);
+   method Action vsync();
 endinterface
 
 interface Ov7670Pins;
    interface I2C_Pins i2c;
+   interface Clock xclk;
+   interface Clock pclk_deleteme_unused_clock;
    method bit reset();
    method bit pwdn();
+   method Action pclk(Bit#(1) v);
+   method Action pxl(Bit#(1) vsync, Bit#(1) href, Bit#(8) data);
 endinterface
