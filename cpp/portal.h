@@ -223,7 +223,6 @@ extern "C" {
 void init_portal_internal(PortalInternal *pint, int id, int tile,
     PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item,
     void *param, uint32_t reqinfo);
-void portalCheckIndication(PortalInternal *pint);
 uint64_t portalCycleCount(void);
 void write_portal_fd_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 // Support functions for use of shared memory with hardware

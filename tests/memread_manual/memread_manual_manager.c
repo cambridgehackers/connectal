@@ -76,7 +76,7 @@ void manual_event(void)
     int i;
 
     for (i = 0; i < MAX_INDARRAY; i++)
-      portalCheckIndication(&intarr[i]);
+      event_hardware(&intarr[i]);
 }
 
 #ifdef __KERNEL__

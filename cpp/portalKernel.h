@@ -55,7 +55,7 @@ void enableint_portal_kernel(struct PortalInternal *pint, int val)
 int event_portal_kernel(struct PortalInternal *pint)
 {
     // handle all messasges from this portal instance
-    //portalCheckIndication(pint);
+    //event_hardware(pint);
     return -1;
 }
 
