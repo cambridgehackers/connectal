@@ -98,7 +98,7 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
 /*
  * Check md5 signatures of Linux device drivers to be sure they are up to date
  */
-static void check_signature(const char *filename, int ioctlnum)
+static void checkSignature(const char *filename, int ioctlnum)
 {
     int status;
     static struct {
@@ -184,7 +184,7 @@ void initPortalFramework(void)
         }
 #endif
 #if !defined(BSIM) && !defined(BOARD_xsim)
-        check_signature("/dev/connectal",
+        checkSignature("/dev/connectal",
 #ifdef ZYNQ
             PORTAL_SIGNATURE
 #else
@@ -192,7 +192,7 @@ void initPortalFramework(void)
 #endif
             );
 #endif
-        check_signature("/dev/portalmem", PA_SIGNATURE);
+        checkSignature("/dev/portalmem", PA_SIGNATURE);
     }
     else {
 #define MAX_PATH 2000
@@ -226,7 +226,7 @@ void initPortalFramework(void)
 /*
  * Utility functions for alloc/mmap/cache for shared memory
  */
-void init_portal_memory(void)
+void initPortalMemory(void)
 {
 #ifndef __KERNEL__
     if (global_pa_fd == -1)
@@ -244,7 +244,7 @@ int portalAlloc(size_t size, int cached)
     struct PortalAlloc portalAlloc;
     portalAlloc.len = size;
     portalAlloc.cached = cached;
-    init_portal_memory();
+    initPortalMemory();
 #ifdef __KERNEL__
     fd = portalmem_dmabuffer_create(size);
 #else
@@ -325,20 +325,18 @@ printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start
  */
 int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)
 {
-    int status = 0;
+    int status = -1;
     initPortalFramework();
 #ifdef ZYNQ
     PortalClockRequest request;
     request.clknum = clkNum;
     request.requested_rate = requestedFrequency;
     if (utility_portal){
-      status = ioctl(utility_portal->fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
-      if (status == 0 && actualFrequency)
-	*actualFrequency = request.actual_rate;
-      if (status < 0)
-	status = errno;
-    }else{ 
-      status = -1;
+        status = ioctl(utility_portal->fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
+        if (status == 0 && actualFrequency)
+	    *actualFrequency = request.actual_rate;
+        if (status < 0)
+	    status = errno;
     }
 #endif
     return status;

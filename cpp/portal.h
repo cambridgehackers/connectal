@@ -231,7 +231,7 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
     PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item,
     void *param, uint32_t reqinfo);
 // Shared memory functions
-void init_portal_memory(void);
+void initPortalMemory(void);
 int portalAlloc(size_t size, int cached);
 void *portalMmap(int fd, size_t size);
 int portalCacheFlush(int fd, void *__p, long size, int flush);
@@ -304,54 +304,54 @@ extern PortalItemFunctions bsimfunc, // Transport for bsim
 class Portal;
 class PortalPoller {
 private:
-  Portal **portal_wrappers;
-  pthread_mutex_t mutex;
-  struct pollfd *portal_fds;
-  int pipefd[2];
-  int inited;
-  int numWrappers;
-  int numFds;
+    Portal **portal_wrappers;
+    pthread_mutex_t mutex;
+    struct pollfd *portal_fds;
+    int pipefd[2];
+    int inited;
+    int numWrappers;
+    int numFds;
 public:
-  PortalPoller();
-  int registerInstance(Portal *portal);
-  int unregisterInstance(Portal *portal);
-  void *init(void);
-  void *pollFn(int timeout);
-  void *event(void);
-  void end(void);
-  void start();
-  void stop();
-  void addFd(int fd);
-  int timeout;
-  int stopping;
-  sem_t sem_startup;
-  void* threadFn(void* __x);
+    PortalPoller();
+    int registerInstance(Portal *portal);
+    int unregisterInstance(Portal *portal);
+    void *init(void);
+    void *pollFn(int timeout);
+    void *event(void);
+    void end(void);
+    void start();
+    void stop();
+    void addFd(int fd);
+    int timeout;
+    int stopping;
+    sem_t sem_startup;
+    void* threadFn(void* __x);
 };
 
 class PortalInternalCpp
 {
  public:
-  PortalInternal pint;
-  PortalInternalCpp(int id, int tile, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions* item, void *param, uint32_t reqinfo) { 
-    init_portal_internal(&pint, id, tile, handler, cb, item, param, reqinfo); 
-  };
-  ~PortalInternalCpp() {
-    if (pint.fpga_fd > 0) {
-        ::close(pint.fpga_fd);
-        pint.fpga_fd = -1;
-    }    
-  };
+    PortalInternal pint;
+    PortalInternalCpp(int id, int tile, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions* item, void *param, uint32_t reqinfo) { 
+        init_portal_internal(&pint, id, tile, handler, cb, item, param, reqinfo); 
+    };
+    ~PortalInternalCpp() {
+        if (pint.fpga_fd > 0) {
+            ::close(pint.fpga_fd);
+            pint.fpga_fd = -1;
+        }    
+    };
 };
 
 extern PortalPoller *defaultPoller;
 class Portal : public PortalInternalCpp
 {
    void initPortal() {
-    if (pint.handler || pint.poller_register) {
-      if (pint.poller == 0)
-        pint.poller = defaultPoller;
-      pint.poller->registerInstance(this);
-    }
+      if (pint.handler || pint.poller_register) {
+          if (pint.poller == 0)
+              pint.poller = defaultPoller;
+          pint.poller->registerInstance(this);
+      }
   }
  public:
   Portal(int id, int tile, uint32_t reqinfo, PORTAL_INDFUNC handler, void *cb, PortalPoller *poller = 0) : PortalInternalCpp(id, tile, handler, cb, NULL, NULL, reqinfo) {
