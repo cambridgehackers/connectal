@@ -167,8 +167,6 @@ typedef struct {
     const char *name;
     ConnectalParamJsonInfo *param;
 } ConnectalMethodJsonInfo;
-void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJsonInfo *info);
-int connnectalJsonDecode(PortalInternal *pint, int channel, void *tempdata, ConnectalMethodJsonInfo *info);
 enum {ITYPE_other, ITYPE_int16_t, ITYPE_uint16_t, ITYPE_uint32_t, ITYPE_uint64_t, ITYPE_SpecialTypeForSendingFd,
       ITYPE_ChannelType, ITYPE_DmaDbgRec};
 
@@ -232,14 +230,11 @@ extern "C" {
 void init_portal_internal(PortalInternal *pint, int id, int tile,
     PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item,
     void *param, uint32_t reqinfo);
-// Support functions for use of shared memory with hardware
-int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
-int portalDCacheFlushInvalInternal(int fd, long size, void *__p, int flush);
-void portalDCacheFlushInval(int fd, long size, void *__p);
-void portalDCacheInval(int fd, long size, void *__p);
+// Shared memory functions
 void init_portal_memory(void);
 int portalAlloc(size_t size, int cached);
 void *portalMmap(int fd, size_t size);
+int portalCacheFlush(int fd, void *__p, long size, int flush);
 
 // Timer functions
 uint64_t portalCycleCount(void);
@@ -267,19 +262,23 @@ int notfull_null(PortalInternal *pint, unsigned int v);
 int notfull_hardware(PortalInternal *pint, unsigned int v);
 volatile unsigned int *mapchannel_socket(struct PortalInternal *pint, unsigned int v);
 
+// Json functions called from generated code
+void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJsonInfo *info);
+int connnectalJsonDecode(PortalInternal *pint, int channel, void *tempdata, ConnectalMethodJsonInfo *info);
+
 // Primitive used to send/recv data across a socket.
 void portalSendFd(int fd, void *data, int len, int sendFd);
 int portalRecvFd(int fd, void *data, int len, int *recvFd);
 void write_portal_fd_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 unsigned int bsim_poll_interrupt(void);
 
+int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
 void initPortalFramework(void);
 #ifndef __KERNEL__
 int portal_printf(const char *format, ...); // outputs to stderr
 #endif
 
-extern int global_pa_fd;
-extern int global_sockfd;
+extern int global_sockfd, global_pa_fd;
 extern PortalInternal *utility_portal;
 
 // Portal transport variants

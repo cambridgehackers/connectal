@@ -103,7 +103,7 @@ int main(int argc, const char **argv)
   for (int i = 0; i < numWords; i++)
     srcBuffer[i] = i;
 
-  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
+  portalCacheFlush(srcAlloc, srcBuffer, alloc_sz, 1);
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
 
   device->startRead(ref_srcAlloc, numWords, burstLen);

@@ -121,9 +121,9 @@ int main(int argc, const char **argv)
     readfile("jregexp.stateMap", &stateMapP);
     readfile("jregexp.stateTransitions", &stateTransitionsP);
 
-    portalDCacheFlushInval(charMapP.alloc,          charMapP.length,          charMapP.mem);
-    portalDCacheFlushInval(stateMapP.alloc,         stateMapP.length,         stateMapP.mem);
-    portalDCacheFlushInval(stateTransitionsP.alloc, stateTransitionsP.length, stateTransitionsP.mem);
+    portalCacheFlush(charMapP.alloc, charMapP.mem, charMapP.length, 1);
+    portalCacheFlush(stateMapP.alloc, stateMapP.mem, stateMapP.length, 1);
+    portalCacheFlush(stateTransitionsP.alloc, stateTransitionsP.mem, stateTransitionsP.length, 1);
 
     for(int i = 0; i < num_tests; i++){
 

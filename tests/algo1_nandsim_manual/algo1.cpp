@@ -160,8 +160,8 @@ int main(int argc, const char **argv)
   //   fprintf(stderr, "%d ", needle[i]);
   // fprintf(stderr, "]\n");
 
-  portalDCacheFlushInval(needleAlloc, numBytes, needle);
-  portalDCacheFlushInval(mpNextAlloc, numBytes, mpNext);
+  portalCacheFlush(needleAlloc, needle, numBytes, 1);
+  portalCacheFlush(mpNextAlloc, mpNext, numBytes, 1);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   // base of haystack in "flash" memory

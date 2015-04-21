@@ -158,8 +158,8 @@ int main(int argc, const char **argv)
   /* FMComms1 refclk should be 30 MHz */
   status = setClockFrequency(1,  30000000, 0);
     
-  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
-  portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
+  portalCacheFlush(srcAlloc, srcBuffer, alloc_sz, 1);
+  portalCacheFlush(dstAlloc, dstBuffer, alloc_sz, 1);
   fprintf(stdout, "Main::flush and invalidate complete\n");
 
   bluescope->doReset();

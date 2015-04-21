@@ -74,9 +74,9 @@ int main(int argc, const char **argv)
     readfile("jregexp.stateMap", &stateMapP);
     readfile("jregexp.stateTransitions", &stateTransitionsP);
 
-    portalDCacheFlushInval(charMapP.alloc,          charMapP.length,          charMapP.mem);
-    portalDCacheFlushInval(stateMapP.alloc,         stateMapP.length,         stateMapP.mem);
-    portalDCacheFlushInval(stateTransitionsP.alloc, stateTransitionsP.length, stateTransitionsP.mem);
+    portalCacheFlush(charMapP.alloc, charMapP.mem, charMapP.length, 1);
+    portalCacheFlush(stateMapP.alloc, stateMapP.mem, stateMapP.length, 1);
+    portalCacheFlush(stateTransitionsP.alloc, stateTransitionsP.mem, stateTransitionsP.length, 1);
 
     for(int i = 0; i < num_tests; i++){
 
@@ -85,7 +85,7 @@ int main(int argc, const char **argv)
       device->setup(stateTransitionsP.ref, stateTransitionsP.length);
 
       readfile("test.bin", &haystackP[i]);
-      portalDCacheFlushInval(haystackP[i].alloc, haystackP[i].length, haystackP[i].mem);
+      portalCacheFlush(haystackP[i].alloc, haystackP[i].mem, haystackP[i].length, 1);
 
       if(i==0)
 	sw_match_cnt = num_tests*sw_ref(&haystackP[0], &charMapP, &stateMapP, &stateTransitionsP);

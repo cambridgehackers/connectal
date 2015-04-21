@@ -75,7 +75,7 @@ int PortalMatAllocator::reference(int* refcount, uchar* datastart, uchar* data)
 void PortalMatAllocator::cacheFlushInvalidate(int* refcount, uchar* datastart, uchar* data)
 {
   struct arrayInfo *info = (struct arrayInfo *)refcount;
-  portalDCacheFlushInval(info->fd, info->totalsize, datastart);
+  portalCacheFlush(info->fd, datastart, info->totalsize, 1);
 }
 
 PortalMat::PortalMat()

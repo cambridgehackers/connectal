@@ -130,7 +130,7 @@ int main(int argc, const char **argv)
   bsAlloc = portalAlloc(alloc_sz, 0);
   bsBuffer  = (uint64_t *)portalMmap(bsAlloc, alloc_sz);
 
-  portalDCacheFlushInval(bsAlloc, alloc_sz,  bsBuffer);
+  portalCacheFlush(bsAlloc, bsBuffer, alloc_sz, 1);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   unsigned int ref_bsAlloc  = dma->reference(bsAlloc);

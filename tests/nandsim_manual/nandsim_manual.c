@@ -168,7 +168,7 @@ int main(int argc, const char **argv)
   }
 
   PORTAL_PRINTF("Test 1: check for operations\n");
-  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
+  portalCacheFlush(srcAlloc, srcBuffer, alloc_sz, 1);
   PORTAL_PRINTF("Main: before DmaManager_reference(%u)\n", srcAlloc);
   ref_srcAlloc = DmaManager_reference(&priv, srcAlloc);
 

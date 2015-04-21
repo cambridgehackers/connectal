@@ -270,7 +270,7 @@ void *portalMmap(int fd, size_t size)
 #endif
 }
 
-int portalDCacheFlushInvalInternal(int fd, long size, void *__p, int flush)
+int portalCacheFlush(int fd, void *__p, long size, int flush)
 {
     int i;
 #if defined(__arm__)
@@ -318,16 +318,6 @@ printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start
 #endif
     //PORTAL_PRINTF("dcache flush\n");
     return 0;
-}
-
-void portalDCacheInval(int fd, long size, void *__p)
-{
-    portalDCacheFlushInvalInternal(fd,size,__p,0);
-}
-
-void portalDCacheFlushInval(int fd, long size, void *__p)
-{
-    portalDCacheFlushInvalInternal(fd,size,__p,1);
 }
 
 /*

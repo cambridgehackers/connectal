@@ -104,8 +104,8 @@ int do_copy(int srcAlloc, int sgl_config_request_id, int sgl_config_indication_i
     dstBuffer[i] = 0x5a5abeef;
   }
 
-  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
-  portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
+  portalCacheFlush(srcAlloc, srcBuffer, alloc_sz, 1);
+  portalCacheFlush(dstAlloc, dstBuffer, alloc_sz, 1);
 
   device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords, 16, 1);
   sem_wait(&done_sem);

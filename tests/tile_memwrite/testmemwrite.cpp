@@ -112,7 +112,7 @@ int main(int argc, const char **argv)
     dstBuffer[i] = 0xDEADBEEF;
   }
   
-  portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
+  portalCacheFlush(dstAlloc, dstBuffer, alloc_sz, 1);
   fprintf(stderr, "main::flush and invalidate complete\n");
 
 

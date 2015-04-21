@@ -513,9 +513,9 @@ int main(int argc, const char **argv)
   statusPointer = dma->reference(statusAlloc);
   scratchPointer = dma->reference(scratchAlloc);
 
-  /*   portalDCacheFlushInval(cmdAlloc, cmd_ring_sz, cmdBuffer);
-  portalDCacheFlushInval(statusAlloc, status_ring_sz, statusBuffer);
-  portalDCacheFlushInval(scratchAlloc, scratch_sz, scratchBuffer);
+  /*   portalCacheFlush(cmdAlloc, cmdBuffer, cmd_ring_sz, 1);
+  portalCacheFlush(statusAlloc, statusBuffer, status_ring_sz, 1);
+  portalCacheFlush(scratchAlloc, scratchBuffer, scratch_sz, 1);
   fprintf(stderr, "flush and invalidate complete\n");
   */
   portalThreadRun = 0;

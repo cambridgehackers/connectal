@@ -123,7 +123,7 @@ int main(int argc, const char **argv)
       for (int i = 0; i < srcBytes/sizeof(srcBuffer[0]); i++) {
 	srcBuffer[i] = loop+i;
       }
-      portalDCacheFlushInval(srcAlloc, srcBytes, srcBuffer);
+      portalCacheFlush(srcAlloc, srcBuffer, srcBytes, 1);
       nandcfgRequest->startWrite(ref_srcAlloc, 0, loop, srcBytes, 16);
       nandcfgIndication->wait();
       loop+=srcBytes;
@@ -137,7 +137,7 @@ int main(int argc, const char **argv)
 	srcBuffer[i] = 5;
       }
 
-      portalDCacheFlushInval(srcAlloc, srcBytes, srcBuffer);
+      portalCacheFlush(srcAlloc, srcBuffer, srcBytes, 1);
       nandcfgRequest->startRead(ref_srcAlloc, 0, loop, srcBytes, 16);
       nandcfgIndication->wait();
       
@@ -184,7 +184,7 @@ int main(int argc, const char **argv)
     }
 
     // write the contents of data into "flash" memory
-    portalDCacheFlushInval(ref_dataAlloc, data_len, data);
+    portalCacheFlush(ref_dataAlloc, data, data_len, 1);
     fprintf(stderr, "testnandsim::invoking write %08x %08lx\n", ref_dataAlloc, (long)data_len);
     nandcfgRequest->startWrite(ref_dataAlloc, 0, 0, data_len, 16);
     nandcfgIndication->wait();

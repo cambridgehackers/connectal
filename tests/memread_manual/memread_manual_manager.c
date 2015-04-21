@@ -147,7 +147,7 @@ int main(int argc, const char **argv)
     srcBuffer[i] = i;
 
   PORTAL_PRINTF( "Test 1: check for match\n");
-  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
+  portalCacheFlush(srcAlloc, srcBuffer, alloc_sz, 1);
   PORTAL_PRINTF( "Main: before DmaManager_reference(%x)\n", srcAlloc);
   ref_srcAlloc = DmaManager_reference(&priv, srcAlloc);
   PORTAL_PRINTF( "Main: starting read %08x\n", numWords);
@@ -158,7 +158,7 @@ int main(int argc, const char **argv)
   PORTAL_PRINTF( "Test 2: check that mismatch is detected\n");
   for (i = 0; i < numWords; i++)
     srcBuffer[i] = 1-i;
-  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
+  portalCacheFlush(srcAlloc, srcBuffer, alloc_sz, 1);
   RtestRequest_startRead (&intarr[3], ref_srcAlloc, numWords, burstLen, 1);
   PORTAL_PRINTF( "Main: waiting for semaphore2\n");
   sem_wait(&test_sem);

@@ -94,7 +94,7 @@ static void fill_pixels(int offset)
 	ptr[line * npixels + pixel] = v;
       }
     corner_index = offset/16;
-    portalDCacheFlushInval(allocFrame[frame_index], fbsize, dataptr[frame_index]);
+    portalCacheFlush(allocFrame[frame_index], dataptr[frame_index], fbsize, 1);
     device->startFrameBuffer(ref_srcAlloc[frame_index], fbsize);
     hdmiGenerator->setTestPattern(0);
     hdmiGenerator->waitForVsync(0);

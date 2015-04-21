@@ -512,7 +512,7 @@ hblank--; // needed on zc702
     unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, DMA_BUFFER_SIZE);
     printf("[%s:%d] before dma->reference\n", __FUNCTION__, __LINE__);
     memset(srcBuffer, 0xff, 16);
-    portalDCacheFlushInval(srcAlloc, DMA_BUFFER_SIZE, srcBuffer);
+    portalCacheFlush(srcAlloc, srcBuffer, DMA_BUFFER_SIZE, 1);
     unsigned int ref_srcAlloc = dma->reference(srcAlloc);
     printf("[%s:%d] before setTestPattern\n", __FUNCTION__, __LINE__);
     hdmidevice->setTestPattern(1);
@@ -558,7 +558,7 @@ sleep(2);
             printf("[%s:%d] spi %d. %x\n", __FUNCTION__, __LINE__, regids[i], vita_spi_read(regids[i]));
         printf("counter %d\n", counter);
         if (counter == 1 && argc > 1) {
-            portalDCacheFlushInval(srcAlloc, DMA_BUFFER_SIZE, srcBuffer);
+            portalCacheFlush(srcAlloc, srcBuffer, DMA_BUFFER_SIZE, 1);
             int fd = creat("tmp.outfile", 0666);
             int cnt = write(fd, srcBuffer, DMA_BUFFER_SIZE);
             printf("[%s:%d] length written %d.\n", __FUNCTION__, __LINE__, cnt);

@@ -84,7 +84,7 @@ int main(int argc, const char **argv)
 
 #ifndef USE_ACP
   fprintf(stderr, "flushing cache\n");
-  portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
+  portalCacheFlush(dstAlloc, dstBuffer, alloc_sz, 1);
 #endif
 
   fprintf(stderr, "parent::starting write\n");

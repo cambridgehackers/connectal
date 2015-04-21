@@ -173,7 +173,7 @@ int main(int argc, const char **argv)
   PORTAL_PRINTF("ref_backAlloc=%d\n", ref_backAlloc);
 
   backBuffer = (unsigned int*)portalMmap(backAlloc, back_sz); 
-  portalDCacheFlushInval(backAlloc, back_sz, backBuffer);
+  portalCacheFlush(backAlloc, backBuffer, back_sz, 1);
 
   NandCfgRequest_configureNand (&intarr[3], ref_backAlloc, back_sz);
   PORTAL_PRINTF("Main::configure NAND fd=%d ref=%d\n", backAlloc, ref_backAlloc);

@@ -171,9 +171,9 @@ int main(int argc, const char **argv)
     bsBuffer[i]  = 0x5a5abeef;
   }
 
-  portalDCacheFlushInval(bsAlloc, alloc_sz,  bsBuffer);
-  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
-  portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
+  portalCacheFlush(bsAlloc, bsBuffer, alloc_sz, 1);
+  portalCacheFlush(srcAlloc, srcBuffer, alloc_sz, 1);
+  portalCacheFlush(dstAlloc, dstBuffer, alloc_sz, 1);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);

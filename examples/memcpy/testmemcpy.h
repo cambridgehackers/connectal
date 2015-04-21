@@ -121,8 +121,8 @@ int runtest(int argc, const char **argv)
     dstBuffer[i] = 0x5a5abeef;
   }
 
-  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
-  portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
+  portalCacheFlush(srcAlloc, srcBuffer, alloc_sz, 1);
+  portalCacheFlush(dstAlloc, dstBuffer, alloc_sz, 1);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
@@ -227,7 +227,7 @@ int runtest_chunk(int argc, const char **argv)
     for (int i = 0; i < nw; i++) {
       srcBuffer[i] = loop/sizeof(srcBuffer[0])+i;
     }
-    portalDCacheFlushInval(srcAlloc, srcBytes, srcBuffer);
+    portalCacheFlush(srcAlloc, srcBuffer, srcBytes, 1);
     device->startCopy(ref_dstAlloc, ref_srcAlloc, nw, 128, 1);
     sem_wait(&done_sem);
     fprintf(stderr, "LOOP %s %d\n", __FUNCTION__, __LINE__);

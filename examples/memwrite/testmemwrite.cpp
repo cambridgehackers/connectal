@@ -86,7 +86,7 @@ int main(int argc, const char **argv)
     unsigned int ref_dstAlloc = dma->reference(dstAlloc);
     for (int i = 0; i < numWords; i++)
         dstBuffer[i] = 0xDEADBEEF;
-    portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
+    portalCacheFlush(dstAlloc, dstBuffer, alloc_sz, 1);
     fprintf(stderr, "testmemwrite: flush and invalidate complete\n");
     fprintf(stderr, "testmemwrite: starting write %08x\n", numWords);
     portalTimerStart(0);

@@ -87,7 +87,7 @@ int main(int argc, const char **argv)
   for (int i = 0; i < numBytes/sizeof(srcBuffer[0]); i++)
     srcBuffer[i] = srcGen++;
     
-  portalDCacheFlushInval(srcAlloc, numBytes, srcBuffer);
+  portalCacheFlush(srcAlloc, srcBuffer, numBytes, 1);
   fprintf(stderr, "Main::flush and invalidate complete\n");
   sleep(1);
 
