@@ -25,6 +25,7 @@ import Clocks::*;
 import GetPut::*;
 import ClientServer::*;
 import I2C::*;
+import BRAMFIFO::*;
 
 import ConnectalClocks::*;
 import Ov7670Interface::*;
@@ -44,7 +45,7 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
    let pclk = b2c.c;
    Reset preset <- mkAsyncReset(2, defaultReset, pclk);
    SyncFIFOIfc#(Tuple2#(Bit#(32),Bit#(1))) vsyncFifo <- mkSyncFIFO(32, pclk, preset, defaultClock);
-   SyncFIFOIfc#(Tuple3#(Bool, Bool, Bit#(8))) dataFifo <- mkSyncFIFO(32, pclk, preset, defaultClock);
+   SyncFIFOIfc#(Tuple3#(Bool, Bool, Bit#(8))) dataFifo <- mkSyncBRAMFIFO(2048, pclk, preset, defaultClock, defaultReset);
 
    Reg#(Bit#(32)) cycleReg     <- mkReg(0, clocked_by pclk, reset_by preset);
    Reg#(Bit#(32)) lastVsyncReg <- mkReg(0, clocked_by pclk, reset_by preset);
