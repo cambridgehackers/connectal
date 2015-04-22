@@ -31,5 +31,5 @@ PORTAL_INFRA := portal.c transportHardware.c transportSocket.c portalJson.c port
 PORTAL_SRC_FILES := $(addprefix $(CONNECTALDIR)/cpp/, $(PORTAL_INFRA)) \
       $(addprefix $(DTOP)/jni/,  $(GENERATED_CPP))
 
-BSIM_EXE_CXX_FILES := TlpReplay.cxx
+BSIM_EXE_CXX_FILES := TlpReplay.cpp
 BSIM_EXE_CXX := $(addprefix $(CONNECTALDIR)/cpp/, $(BSIM_EXE_CXX_FILES))

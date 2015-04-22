@@ -65,8 +65,8 @@ BSCOPTFLAGS= -show-schedule -aggressive-conditions
 BSCPATHFLAGS=  -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj -info-dir $(DTOP)/obj
 BSCFLAGS_COMMON += $(BSCWARNFLAGS) $(BSCOPTFLAGS) $(BSCPATHFLAGS) --wait-for-license
 BSC_CXXFLAGS= -I $(CONNECTALDIR)/cpp -I $(CONNECTALDIR) -D BSIM
-BSIM_CXX_COMMON = $(CONNECTALDIR)/cpp/BsimCtrl.cxx $(CONNECTALDIR)/cpp/TlpReplay.cxx $(CONNECTALDIR)/cpp/BsimDma.cxx $(CONNECTALDIR)/cpp/sock_utils.c
-BSIM_CXX_LOCAL = $(DTOP)/jni/BsimCtrl.cxx $(DTOP)/jni/TlpReplay.cxx $(DTOP)/jni/BsimDma.cxx $(DTOP)/jni/sock_utils.c $(DTOP)/jni/portalPrintf.c
+BSIM_CXX_COMMON = $(CONNECTALDIR)/cpp/BsimCtrl.cpp $(CONNECTALDIR)/cpp/TlpReplay.cpp $(CONNECTALDIR)/cpp/BsimDma.cpp $(CONNECTALDIR)/cpp/sock_utils.c
+BSIM_CXX_LOCAL = $(DTOP)/jni/BsimCtrl.cpp $(DTOP)/jni/TlpReplay.cpp $(DTOP)/jni/BsimDma.cpp $(DTOP)/jni/sock_utils.c $(DTOP)/jni/portalPrintf.c
 
 VIVADODIR=$(shell dirname $(shell dirname $(shell which vivado)))
 VIVADOFLAGS= -notrace
@@ -252,12 +252,10 @@ $(VFILE): $(TOPBSVFILE) $(BSVFILES)
 
 $(DTOP)/jni/%.cpp: $(CONNECTALDIR)/cpp/%.cpp
 	$(Q)cp $< $@
-$(DTOP)/jni/%.cxx: $(CONNECTALDIR)/cpp/%.cxx
-	$(Q)cp $< $@
 $(DTOP)/jni/%.c: $(CONNECTALDIR)/cpp/%.c
 	$(Q)cp $< $@
 
-bsim: prepare_bin_target $(DTOP)/jni/TlpReplay.cxx $(BSIM_CXX_LOCAL)
+bsim: prepare_bin_target $(DTOP)/jni/TlpReplay.cpp $(BSIM_CXX_LOCAL)
 	$(Q)mkdir -p $(DTOP)/obj verilog
 	@echo BSCBSIM [$(DTOP)]
 	$(Q)cd generatedbsv; $(RUN_BSC) -D BSIM -sim -u -g $(MKTOP) $(TOPBSVFILE)
