@@ -11,6 +11,7 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <asm/io.h>
+#include <linux/clk.h>
 
 // defined in drivers/mmc/host/sdhci-of-xilinxps.c
 extern int sdhci_zynq_remove(struct platform_device *pdev);
@@ -84,6 +85,11 @@ static int local_zynq_probe(struct platform_device *pdev)
     printk("[%s:%d] v %x\n", __FUNCTION__, __LINE__, (v>>5)&7);
     ind++;
   }
+
+  struct clk *devclk = clk_get_sys("SPI0", NULL);
+  printk("[%s:%d] devclk %x\n", __FUNCTION__, __LINE__, devclk);
+  printk("[%s:%d] rate %d\n", __FUNCTION__, __LINE__, clk_get_rate(devclk));
+ 
   return 0;
 }
 

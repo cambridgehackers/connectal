@@ -55,10 +55,14 @@ public:
     fprintf(stderr, "read_resp cd:%d wp:%d\n", (v&2)>>1, v&1);
   }
   virtual void emio_sample(uint32_t v){
-    int sson = bit_sel(9,9,v);
-    int mosi = bit_sel(8,8,v);
-    int cnt  = bit_sel(0,7,v);
-    fprintf(stderr, "emio_sample{sson:%d, mosi:%d, cnt:%d}\n", sson, mosi, cnt);
+    int mo = bit_sel(12,12,v);
+    int motn = bit_sel(11,11,v);
+    int sson = bit_sel(8,10,v);
+    int ssntn = bit_sel(7,7,v);
+    int sclko = bit_sel(6,6,v);
+    int sclktn = bit_sel(5,5,v);
+    int cnt  = bit_sel(0,4,v);
+    fprintf(stderr, "emio_sample{mo:%d, motn:%d, sson:%d, ssntn:%d, sclko:%d, sclktn:%d, cnt:%d}\n", mo, motn, sson, ssntn, sclko, sclktn, cnt);
   }
   virtual void cnt_cycle_resp(uint32_t v){
     fprintf(stderr, "cnt_cycle_resp %d\n", v);
@@ -88,8 +92,10 @@ int main(int argc, const char **argv)
   else
     printf("Successfully opened spi %x\n", spidevicefd);
 
-  device->cnt_cycle_req(16);
+  device->set_clk_inv(1);
+  device->cnt_cycle_req(32);
   device->set_spew_en(1);
+  //device->set_spew_src(1);
 
   uint8_t iter = 1;
   while(1) {
@@ -105,10 +111,10 @@ int main(int argc, const char **argv)
     tr.bits_per_word = spibits;
     if (ioctl(spidevicefd, SPI_IOC_MESSAGE(1), &tr) < 1)
       printf("can't send spi message\n");
-    else
-      printf("successfully sent spi message\n");
+    // else
+    //   printf("successfully sent spi message\n");
     iter++;
-    sleep(2);
+    sleep(1);
   }
 
 }
