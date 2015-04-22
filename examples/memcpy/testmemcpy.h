@@ -68,7 +68,15 @@ public:
     fprintf(stderr, "done\n");
     finished = true;
     memcmp_fail = memcmp(srcBuffer, dstBuffer, numWords*sizeof(unsigned int));
-    fprintf(stderr, "memcmp=%d\n", memcmp_fail);
+    if (memcmp_fail) {
+      for (int i = 0; i < numWords; i++) {
+	int *s = (int *)srcBuffer;
+	int *d = (int *)dstBuffer;
+	if (s[i] != d[i])
+	  fprintf(stderr, "mismatch %d %08x %08x\n", i, s[i], d[i]);
+      }
+    }
+    fprintf(stderr, "memcmp=%x\n", memcmp_fail);
     sem_post(&memcmp_sem);
   }
 };
