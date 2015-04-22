@@ -35,6 +35,7 @@ interface Ov7670ControllerIndication;
    method Action vsync(Bit#(32) cycles, Bit#(1) href);
    method Action data(Bit#(1) first, Bit#(1) gap, Bit#(8) pxl);
    method Action data4(Bit#(32) pxls);
+   method Action frameStarted(Bit#(1) first);
    method Action frameTransferred();
 endinterface
 

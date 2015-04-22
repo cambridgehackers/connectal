@@ -76,6 +76,7 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
    I2C i2c <- mkI2C(10000);
    Reg#(bit) resetReg <- mkReg(0);
    Reg#(bit) pwdnReg <- mkReg(0);
+
    rule i2c_response_rule;
       let response <- i2c.user.response.get();
       ind.probeResponse(response.data);
@@ -84,18 +85,21 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
    rule cycleRule;
       cycleReg <= cycleReg + 1;
    endrule
+
    rule vsyncRule;
       if (vsyncReg == 1) begin
 	 vsyncFifo.enq(tuple2(cycleReg - lastVsyncReg, hrefReg));
 	 lastVsyncReg <= cycleReg;
       end
    endrule
+
    rule vsyncSyncRule;
       match { .cycles, .href } <- toGet(vsyncFifo).get();
       ind.vsync(cycles, href);
       if (sofFifo.notFull())
 	 sofFifo.enq(True);
    endrule
+
    rule dataRule;
       if (hrefReg == 1) begin
 	 dataRuleFired <= True;
@@ -108,6 +112,7 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
 	 firstReg <= True;
       end
    endrule
+
    rule dataRuleGap if (hrefReg == 1);
       if (!dataRuleFired)
 	 dataGapCycles <= dataGapCycles + 1;
@@ -118,16 +123,18 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
    rule dataSyncRule;
       match { .first, .gap, .pxl } <- toGet(dataFifo).get();
 
-      if (first && sofFifo.notEmpty() && transferDoneReg) begin
+      if (sofFifo.notEmpty() && transferDoneReg) begin
 	 sofFifo.deq();
 	 transferDoneReg <= False;
 	 writeEngine.write_servers[0].cmdServer.request.put(MemengineCmd { sglId: pointerReg, base: 0, burstLen: 8*8, len: 640*480, tag: 0});
+	 ind.frameStarted(pack(first));
       end
 
       dataGearbox.enq(unpack(pxl));
       if (gap)
 	 ind.data(pack(first), pack(gap), pxl);
    endrule
+
    rule dataIndRule;
       let d = dataGearbox.first();
       dataGearbox.deq();
@@ -145,6 +152,7 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
    interface Ov7670ControllerRequest request;
       method Action setFramePointer(Bit#(32) frameId);
 	 pointerReg <= frameId;
+	 transferDoneReg <= True; // prime the pump
       endmethod
       method Action probe(Bool write, Bit#(7) slaveaddr, Bit#(8) address, Bit#(8) data);
 	 i2c.user.request.put(I2CRequest {write: write, slaveaddr: slaveaddr, address: address, data: data});

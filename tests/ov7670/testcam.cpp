@@ -34,7 +34,7 @@ public:
     fprintf(stderr, "i2c response %02x\n", data);
   }
   virtual void vsync(uint32_t cycles, uint8_t href) {
-    //fprintf(stderr, "vsync %8d href %d\n", cycles, href);
+    fprintf(stderr, "vsync %8d href %d\n", cycles, href);
     if (datacount) {
       fprintf(stderr, "vsync datacount=%8d gapcount=%8d\n", datacount, gapcount);
       datacount = 0;
@@ -45,6 +45,9 @@ public:
     //if (gap) fprintf(stderr, "data %8x first %d gap %d\n", data, first, gap);
     datacount++;
     if (gap) gapcount++;
+  }
+  virtual void frameStarted(uint8_t first) {
+    fprintf(stderr, "frameStarted %d\n", first);
   }
   virtual void frameTransferred() {
     fprintf(stderr, "frameTransferred\n");
@@ -69,18 +72,26 @@ int main(int argc, const char **argv)
   unsigned int ref_fbAlloc = dma->reference(fbAlloc);
 
   device.setPowerDown(0);
+  device.setReset(0);
+  sleep(1);
   device.setReset(1);
   device.setFramePointer(ref_fbAlloc);
 
-  for (int i = 0; i < 10; i++) {
+  for (int i = 0; i < 50; i++) {
+    int write = 0;
+    int val = 0x33;
+    int slaveaddr = 21;
+    int addr = 0xa;
+    //fprintf(stderr, "writing %x to device %x address %#x\n", val, (slaveaddr<<1)|write, addr);
+    device.probe(write, slaveaddr, addr, val);
     // product ID: 0x76
-    device.probe(0, 21, 0x0a, 0);
+    //device.probe(0, 21, 0x0a, 0);
     // product VER: 0x70
-    device.probe(0, 21, 0x0b, 0);
+    //device.probe(0, 21, 0x0b, 0);
     // mfg id: 0x7F
-    device.probe(0, 21, 0x1c, 0);
+    //device.probe(0, 21, 0x1c, 0);
     // mfg id: 0xA2
-    device.probe(0, 21, 0x1d, 0);
+    //device.probe(0, 21, 0x1d, 0);
     sleep(1);
   }
   return 0;
