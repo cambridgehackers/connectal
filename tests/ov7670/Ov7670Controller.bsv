@@ -26,7 +26,7 @@ import BuildVector::*;
 import Clocks::*;
 import GetPut::*;
 import ClientServer::*;
-import I2C::*;
+import SCCB::*;
 import FIFOF::*;
 import BRAMFIFO::*;
 import Gearbox::*;
@@ -73,7 +73,7 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
    Reg#(Bit#(16)) dataGapCycles <- mkReg(0, clocked_by pclk, reset_by preset);
    Wire#(Bool)    dataRuleFired <- mkDWire(False, clocked_by pclk, reset_by preset);
 
-   I2C i2c <- mkI2C(10000);
+   SCCB i2c <- mkSCCB(1000);
    Reg#(bit) resetReg <- mkReg(0);
    Reg#(bit) pwdnReg <- mkReg(0);
 
@@ -155,7 +155,7 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
 	 transferDoneReg <= True; // prime the pump
       endmethod
       method Action probe(Bool write, Bit#(7) slaveaddr, Bit#(8) address, Bit#(8) data);
-	 i2c.user.request.put(I2CRequest {write: write, slaveaddr: slaveaddr, address: address, data: data});
+	 i2c.user.request.put(SCCBRequest {write: write, slaveaddr: slaveaddr, address: address, data: data});
       endmethod
       method Action setReset(Bit#(1) rval);
 	 resetReg <= rval;
@@ -165,7 +165,7 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
       endmethod
    endinterface
    interface Ov7670Pins pins;
-      interface I2C_Pins i2c = i2c.i2c;
+      interface SCCB_Pins i2c = i2c.i2c;
       interface Clock xclk = clockDivider.slowClock;
       interface Clock pclk_deleteme_unused_clock = pclk;
       method bit reset() = resetReg;
