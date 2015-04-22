@@ -31,6 +31,8 @@ import SpecialFIFOs:: *;
 import SyncBits    :: *;
 import StmtFSM     :: *;
 import Assert      :: *;
+import XilinxCells :: *;
+import ConnectalClocks :: *;
 
 (* always_enabled *)
 interface SpiMasterPins;
@@ -48,6 +50,8 @@ interface SpiSlavePins;
     method Action sel_n(Bit#(1) v);
     method Bit#(1) miso();
     method Action clock(Bit#(1) v);
+    interface Clock deleteme_unused_clock;
+    interface Reset deleteme_unused_reset;
 endinterface
 
 interface SPIMaster#(type a);
@@ -123,10 +127,93 @@ module mkSpiMasterShifter#(Bool invert_clk) (SPIMaster#(a)) provisos(Bits#(a,awi
    endinterface: pins
 endmodule: mkSpiMasterShifter
 
-module mkSPISlave(SPISlave#(a))
-   provisos(Bits#(a,awidth));
+module mkSpiSlaveShifter#(ReadOnly#(Bit#(1)) mosi,
+			  ReadOnly#(Bit#(1)) seln)(SPISlave#(a))
+   provisos(Bits#(a,awidth),
+	    Add#(__a,1,awidth),
+	    Add#(TLog#(awidth),1,cwidth));
+   
+   let awidth = valueOf(awidth);
+   Reg#(Bit#(awidth)) shift_reg <- mkReg(0);
+   Reg#(Bit#(cwidth)) cnt_reg <- mkReg(0);
 
-endmodule
+   FIFOF#(a) req_fifo <- mkFIFOF;
+   FIFOF#(a) resp_fifo <- mkFIFOF;
+   
+   (* fire_when_enabled *)
+   rule mosi_rule if (seln._read == 0);
+      let s = shift_reg;
+      if (cnt_reg == 0 && resp_fifo.notEmpty) begin
+	 s = pack(resp_fifo.first);
+	 resp_fifo.deq;
+      end
+      let new_s = {s[awidth-2:0],mosi._read};
+      if (cnt_reg+1 == fromInteger(awidth) && req_fifo.notFull) begin
+	 cnt_reg <= 0;
+	 req_fifo.enq(unpack(new_s));
+      end
+      else begin
+	 cnt_reg <= cnt_reg+1;
+	 shift_reg <= new_s;
+      end
+   endrule
+   
+   interface request = toGet(req_fifo);
+   interface response = toPut(resp_fifo);
+   interface SpiSlavePins pins;
+      method Bit#(1) miso();
+	 return shift_reg[awidth-1];
+      endmethod
+   endinterface
+   
+endmodule : mkSpiSlaveShifter
+
+module mkSPISlave(SPISlave#(a))
+   provisos(Bits#(a,awidth),
+	    Add#(__a,1,awidth));
+
+   B2C1 b2c <- mkB2C1();
+   Clock def_clk <- exposeCurrentClock;
+   Clock spi_clk <- mkClockBUFG(clocked_by b2c.c);
+   Reset spi_rst <- mkAsyncResetFromCR(2, spi_clk);
+
+   Wire#(Bit#(1)) mosi_wire <- mkDWire(0);
+   Wire#(Bit#(1)) seln_wire <- mkDWire(1);
+   Wire#(Bit#(1)) clk_wire  <- mkDWire(0);
+   
+   ReadOnly#(Bit#(1)) mosi_sync <- mkNullCrossingWire(spi_clk, mosi_wire);
+   ReadOnly#(Bit#(1)) seln_sync <- mkNullCrossingWire(spi_clk, seln_wire);
+   SPISlave#(a) shifter <- mkSpiSlaveShifter(mosi_sync, seln_sync, clocked_by spi_clk, reset_by spi_rst);
+   ReadOnly#(Bit#(1)) miso_sync <- mkNullCrossingWire(def_clk, shifter.pins.miso);
+
+   SyncFIFOIfc#(a) responseFifo <- mkSyncFIFOFromCC(1, spi_clk);
+   SyncFIFOIfc#(a) requestFifo  <- mkSyncFIFOToCC(1, spi_clk, spi_rst);
+   mkConnection(toPut(requestFifo), shifter.request);
+   mkConnection(toGet(responseFifo),shifter.response);
+   
+   rule clk_rule;
+      b2c.inputclock(clk_wire);
+   endrule
+   
+   interface request = toGet(requestFifo); 
+   interface response = toPut(responseFifo); 
+   interface SpiSlavePins pins;
+      method Action mosi(Bit#(1) v);
+	 mosi_wire._write(v);
+      endmethod
+      method Action sel_n(Bit#(1) v);
+	 seln_wire._write(v);
+      endmethod
+      method Bit#(1) miso();
+	 return miso_sync._read();
+      endmethod
+      method Action clock(Bit#(1) v);
+	 clk_wire._write(v);
+      endmethod
+      interface Clock deleteme_unused_clock = spi_clk;
+      interface Reset deleteme_unused_reset = spi_rst;
+   endinterface: pins
+endmodule : mkSPISlave
 
 module mkSPIMaster#(Integer divisor, Bool invert_clk)(SPIMaster#(a)) provisos(Bits#(a,awidth),Add#(1,awidth1,awidth),Log#(awidth,logawidth));
    ClockDividerIfc clockDivider <- mkClockDivider(divisor);
@@ -151,6 +238,7 @@ module mkSPI20(SPIMaster#(Bit#(20)));
 endmodule
 
 module mkSpiTestBench(Empty);
+
    Clock defaultClock <- exposeCurrentClock;
    Reset defaultReset <- exposeCurrentReset;
 

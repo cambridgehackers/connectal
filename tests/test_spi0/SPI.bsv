@@ -65,7 +65,7 @@ module mkController#(SPIResponse ind, Pps7Emiospi spi)(Controller);
    ReadOnly#(Bit#(1)) sclko_sync  <- mkNullCrossingWire(spi_clk, spi.sclko);
    ReadOnly#(Bit#(1)) sclktn_sync <- mkNullCrossingWire(spi_clk, spi.sclktn);
    ReadOnly#(Bit#(1)) miso_sync   <- mkNullCrossingWire(def_clk, shift_reg[31]);
-
+   
    Reg#(Bit#(1)) spew_src <- mkReg(0);
    Reg#(Bit#(1)) clk_inv <- mkReg(0);
    Reg#(Bit#(1)) spew_en <- mkSyncRegFromCC(0, spi_clk);
@@ -83,8 +83,8 @@ module mkController#(SPIResponse ind, Pps7Emiospi spi)(Controller);
    endrule
    
    let mosi_signal = mo_sync & ~motn_sync;
-   let sso_signal = ~sson_sync[0] & ~ssntn_sync;
-   rule mosi_rule if (sso_signal == 1);
+   let sson_signal = sson_sync[0] | ssntn_sync;
+   rule mosi_rule if (sson_signal == 0);
       shift_reg <= {shift_reg[30:0],mosi_signal};
       cnt_reg <= cnt_reg+1;
       if (cnt_reg == maxBound) req_fifo.enq(shift_reg);
