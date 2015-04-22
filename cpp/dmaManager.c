@@ -34,6 +34,7 @@
 #ifdef BSIM
 #include "dmaSendFd.h"
 #endif
+#include "GeneratedTypes.h"
 
 void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *sglDevice)
 {
