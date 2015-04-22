@@ -5,6 +5,7 @@
     },
     "i2c_SDA" : {
 	"PIO_DIRECTION": "BIDIR",
+	"PULLTYPE": "PULLUP",
 	"pmodb" : "J8"
     },
     "pxl_vsync" : {
