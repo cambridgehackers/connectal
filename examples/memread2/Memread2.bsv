@@ -65,22 +65,52 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
    mkConnection(re0.dataPipes[0], pi0);
    mkConnection(re1.dataPipes[0], pi1);
 
+   Reg#(Bool)         valid0Reg <- mkReg(False);
+   Reg#(Bit#(64)) v0Reg <- mkReg(0);
+   Reg#(Bit#(64)) v0ExpectedReg <- mkReg(0);
    rule read0;
-      srcGen0 <= srcGen0+2;
-      let v = {srcGen0+1,srcGen0};
-      let rv <- toGet(outReg0).get;
-      let mm = v != rv;
-      mismatchCount0 <= mismatchCount0 + (mm ? 1 : 0);
-      if (mm) indication.mismatch(0, v, rv); 
+      // first stage of pipeline
+      if (outReg0.notEmpty) begin
+	 srcGen0 <= srcGen0+2;
+	 v0ExpectedReg  <= {srcGen0+1,srcGen0};
+	 let v0 <- toGet(outReg0).get;
+	 v0Reg <= v0;
+	 valid0Reg <= True;
+      end
+      else begin
+	 valid0Reg <= False;
+      end
+      
+      // second stage of pipeline
+      if (valid0Reg) begin
+	 let mm = v0Reg != v0ExpectedReg;
+	 mismatchCount0 <= mismatchCount0 + (mm ? 1 : 0);
+	 if (mm) indication.mismatch(0, v0ExpectedReg, v0Reg);
+      end
    endrule
 
+   Reg#(Bool)         valid1Reg <- mkReg(False);
+   Reg#(Bit#(64)) v1Reg <- mkReg(0);
+   Reg#(Bit#(64)) v1ExpectedReg <- mkReg(0);
    rule read1;
-      srcGen1 <= srcGen1+2;
-      let v = {(srcGen1+1)*3,srcGen1*3};
-      let rv <- toGet(outReg1).get;
-      let mm = v != rv;
-      mismatchCount1 <= mismatchCount1 + (mm ? 1 : 0);
-      if (mm) indication.mismatch(1, v, rv); 
+      // first stage of pipeline
+      if (outReg1.notEmpty) begin
+	 srcGen1 <= srcGen1+2;
+	 v1ExpectedReg <= {(srcGen1+1)*3,srcGen1*3};
+	 let v1 <- toGet(outReg1).get;
+	 v1Reg <= v1;
+	 valid1Reg <= True;
+      end
+      else begin
+	 valid1Reg <= False;
+      end
+
+      // second stage of pipeline
+      if (valid1Reg) begin
+	 let mm = v1Reg != v1ExpectedReg;
+	 mismatchCount1 <= mismatchCount1 + (mm ? 1 : 0);
+	 if (mm) indication.mismatch(1, v1ExpectedReg, v1Reg); 
+      end
    endrule
    
    rule done;
