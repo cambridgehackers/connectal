@@ -78,13 +78,13 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
 
    rule start_read(rdIterCnt > 0);
       if (verbose) $display("start_read numWords %d wordsPerBeat %d", numWords, wordsPerBeat);
-      re.readServers[0].request.put(MemengineCmd{sglId:rdPointer, base:0, len:extend(numWords/fromInteger(wordsPerBeat)), burstLen:truncate(burstLen*fromInteger(wordsPerBeat))});
+      re.readServers[0].request.put(MemengineCmd{sglId:rdPointer, base:0, len:extend(numWords*4), burstLen:truncate(burstLen*4)});
       rdIterCnt <= rdIterCnt-1;
    endrule
 
    rule start_write(wrIterCnt > 0);
       if (verbose) $display("                    start_write numWords %d", numWords);
-      we.writeServers[0].request.put(MemengineCmd{sglId:wrPointer, base:0, len:extend(numWords/fromInteger(wordsPerBeat)), burstLen:truncate(burstLen*fromInteger(wordsPerBeat))});
+      we.writeServers[0].request.put(MemengineCmd{sglId:wrPointer, base:0, len:extend(numWords*4), burstLen:truncate(burstLen*4)});
       wrIterCnt <= wrIterCnt-1;
    endrule
    
