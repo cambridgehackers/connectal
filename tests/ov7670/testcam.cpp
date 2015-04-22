@@ -24,6 +24,8 @@
 #include "Ov7670ControllerRequest.h"
 #include "Ov7670ControllerIndication.h"
 
+int slaveaddr = 0;
+
 class Ov7670ControllerIndication : public Ov7670ControllerIndicationWrapper {
   int datacount;
   int gapcount;
@@ -31,10 +33,13 @@ public:
   Ov7670ControllerIndication(unsigned int id) : Ov7670ControllerIndicationWrapper(id), datacount(0), gapcount(0) {}
   ~Ov7670ControllerIndication() {}
   virtual void probeResponse(uint8_t data) {
-    fprintf(stderr, "i2c response %02x\n", data);
+    if (data != 0xff)
+    fprintf(stderr, "i2c device %d response %02x\n", slaveaddr, data);
+    else
+      fprintf(stderr, ".");
   }
   virtual void vsync(uint32_t cycles, uint8_t href) {
-    fprintf(stderr, "vsync %8d href %d\n", cycles, href);
+    //fprintf(stderr, "vsync %8d href %d\n", cycles, href);
     if (datacount) {
       fprintf(stderr, "vsync datacount=%8d gapcount=%8d\n", datacount, gapcount);
       datacount = 0;
@@ -47,10 +52,10 @@ public:
     if (gap) gapcount++;
   }
   virtual void frameStarted(uint8_t first) {
-    fprintf(stderr, "frameStarted %d\n", first);
+    //if (first) fprintf(stderr, "frameStarted %d\n", first);
   }
   virtual void frameTransferred() {
-    fprintf(stderr, "frameTransferred\n");
+    //fprintf(stderr, "frameTransferred\n");
   }
   virtual void data4(uint32_t data) {
   }
@@ -67,6 +72,9 @@ int main(int argc, const char **argv)
   MMUIndication mmuIndication(dma, IfcNames_MMUIndicationH2S);
 
   int len = 640*480*4;
+  int nfbAlloc = portalAlloc(4096, 0);
+  unsigned int *nfbBuffer = (unsigned int *)portalMmap(nfbAlloc, 4096);
+  unsigned int ref_nfbAlloc = dma->reference(nfbAlloc);
   int fbAlloc = portalAlloc(len, 0);
   unsigned int *fbBuffer = (unsigned int *)portalMmap(fbAlloc, len);
   unsigned int ref_fbAlloc = dma->reference(fbAlloc);
@@ -75,24 +83,36 @@ int main(int argc, const char **argv)
   device.setReset(0);
   sleep(1);
   device.setReset(1);
+  fprintf(stderr, "ref_fbAlloc=%d\n", ref_fbAlloc);
   device.setFramePointer(ref_fbAlloc);
+  // hsync instead of href
+  device.probe(1, 21, 0x15, 0x40);
+  // always has href
+  device.probe(1, 21, 0x3c, 0x80);
 
-  for (int i = 0; i < 50; i++) {
+  for (int i = 0; i < 128; i++) {
     int write = 0;
     int val = 0x33;
-    int slaveaddr = 21;
-    int addr = 0xa;
-    //fprintf(stderr, "writing %x to device %x address %#x\n", val, (slaveaddr<<1)|write, addr);
+    slaveaddr = 0x21;
+    int addr = 1;
+    if (0)
+    if (write)
+      fprintf(stderr, "writing %x to device %x address %#x\n", val, (slaveaddr<<1)|write, addr);
+    else
+      fprintf(stderr, "reading device %x address %#x\n", (slaveaddr<<1)|write, addr);
     device.probe(write, slaveaddr, addr, val);
     // product ID: 0x76
-    //device.probe(0, 21, 0x0a, 0);
+    device.probe(0, slaveaddr, 0x0a, 0);
     // product VER: 0x70
-    //device.probe(0, 21, 0x0b, 0);
+    //device.probe(0, slaveaddr, 0x0b, 0);
     // mfg id: 0x7F
-    //device.probe(0, 21, 0x1c, 0);
+    //device.probe(0, slaveaddr, 0x1c, 0);
     // mfg id: 0xA2
-    //device.probe(0, 21, 0x1d, 0);
+    //device.probe(0, slaveaddr, 0x1d, 0);
     sleep(1);
   }
+  for (int i = 0; i < 64; i++)
+    fprintf(stderr, " %02x", fbBuffer[i] & 0xff);
+  fprintf(stderr, "\n");
   return 0;
 }
