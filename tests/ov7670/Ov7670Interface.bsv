@@ -21,7 +21,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import I2C::*;
+import SCCB::*;
 
 interface Ov7670ControllerRequest;
    method Action setFramePointer(Bit#(32) frameId);
@@ -40,7 +40,7 @@ interface Ov7670ControllerIndication;
 endinterface
 
 interface Ov7670Pins;
-   interface I2C_Pins i2c;
+   interface SCCB_Pins i2c;
    interface Clock xclk;
    interface Clock pclk_deleteme_unused_clock;
    method bit reset();
