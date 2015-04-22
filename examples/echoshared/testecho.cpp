@@ -41,7 +41,7 @@ public:
         sem_post(&sem_heard2);
         //fprintf(stderr, "heard an s2: %d %d\n", a, b);
     }
-    EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
+    EchoIndication(unsigned int id, PortalTransportFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
 };
 
 static void call_say(int v)
@@ -62,13 +62,13 @@ int main(int argc, const char **argv)
     int alloc_sz = 64-4;
 //1000;
 
-    MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H, &socketfuncInit, NULL);
+    MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H, &transportSocketInit, NULL);
     DmaManager *dma = new DmaManager(dmap);
-    MMUIndication mIndication(dma, IfcNames_MMUIndicationH2S, &socketfuncInit, NULL);
+    MMUIndication mIndication(dma, IfcNames_MMUIndicationH2S, &transportSocketInit, NULL);
 
     PortalSharedParam param = {{dma}, (uint32_t)alloc_sz};
-    EchoIndication sIndication(IfcNames_EchoIndicationH2S, &sharedfunc, &param);
-    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H, &sharedfunc, &param);
+    EchoIndication sIndication(IfcNames_EchoIndicationH2S, &transportShared, &param);
+    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H, &transportShared, &param);
 
 for (int i = 0; i < LOOP_COUNT; i++) {
     int v = 42;

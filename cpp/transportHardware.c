@@ -104,7 +104,7 @@ int busy_hardware(struct PortalInternal *pint, unsigned int v, const char *str)
 }
 void enableint_hardware(struct PortalInternal *pint, int val)
 {
-    volatile unsigned int *enp = &(pint->map_base[PORTAL_CTRL_REG_INTERRUPT_ENABLE]);
+    volatile unsigned int *enp = &(pint->map_base[PORTAL_CTRL_INTERRUPT_ENABLE]);
     pint->item->write(pint, &enp, val);
 }
 int event_hardware(struct PortalInternal *pint)
@@ -113,9 +113,9 @@ int event_hardware(struct PortalInternal *pint)
     volatile unsigned int *map_base = pint->map_base;
     // sanity check, to see the status of interrupt source and enable
     unsigned int queue_status;
-    volatile unsigned int *statp = &map_base[PORTAL_CTRL_REG_IND_QUEUE_STATUS];
-    volatile unsigned int *srcp = &map_base[PORTAL_CTRL_REG_INTERRUPT_STATUS];
-    volatile unsigned int *enp = &map_base[PORTAL_CTRL_REG_INTERRUPT_ENABLE];
+    volatile unsigned int *statp = &map_base[PORTAL_CTRL_IND_QUEUE_STATUS];
+    volatile unsigned int *srcp = &map_base[PORTAL_CTRL_INTERRUPT_STATUS];
+    volatile unsigned int *enp = &map_base[PORTAL_CTRL_INTERRUPT_ENABLE];
     while ((queue_status = pint->item->read(pint, &statp))) {
         if(0) {
             unsigned int int_src = pint->item->read(pint, &srcp);
@@ -172,6 +172,6 @@ static void write_fd_hardware(PortalInternal *pint, volatile unsigned int **addr
     **addr = v;
 }
 
-PortalItemFunctions hardwarefunc = {
+PortalTransportFunctions transportHardware = {
     init_hardware, read_hardware, write_hardware, write_fd_hardware, mapchannel_hardware, mapchannel_hardware,
     send_portal_null, recv_portal_null, busy_hardware, enableint_hardware, event_hardware, notfull_hardware};

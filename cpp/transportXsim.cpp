@@ -104,7 +104,7 @@ public:
 
   int connected;
 
-  XsimMemSlaveRequest(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : XsimMemSlaveRequestWrapper(id, item, param, poller), connected(0) { }
+  XsimMemSlaveRequest(int id, PortalTransportFunctions *item, void *param, PortalPoller *poller = 0) : XsimMemSlaveRequestWrapper(id, item, param, poller), connected(0) { }
   ~XsimMemSlaveRequest() {}
   virtual void connect () {
       connected = 1;
@@ -215,10 +215,10 @@ int main(int argc, char **argv)
 
     if (msgSource_beat.valid())
         fprintf(stderr, "[%s:%d] using BluenocTop\n", __FILE__, __LINE__);
-    Portal *mcommon = new Portal(0, 0, sizeof(uint32_t), portal_mux_handler, NULL, &socketfuncResp, &paramSocket);
+    Portal *mcommon = new Portal(0, 0, sizeof(uint32_t), portal_mux_handler, NULL, &transportSocketResp, &paramSocket);
     param.pint = &mcommon->pint;
-    XsimMemSlaveIndicationProxy *memSlaveIndicationProxy = new XsimMemSlaveIndicationProxy(XsimIfcNames_XsimMemSlaveIndication, &muxfunc, &param);
-    XsimMemSlaveRequest *memSlaveRequest = new XsimMemSlaveRequest(XsimIfcNames_XsimMemSlaveRequest, &muxfunc, &param);
+    XsimMemSlaveIndicationProxy *memSlaveIndicationProxy = new XsimMemSlaveIndicationProxy(XsimIfcNames_XsimMemSlaveIndication, &transportMux, &param);
+    XsimMemSlaveRequest *memSlaveRequest = new XsimMemSlaveRequest(XsimIfcNames_XsimMemSlaveRequest, &transportMux, &param);
 
     printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     defaultPoller->stop();
@@ -299,7 +299,7 @@ public:
     std::queue<int> intrs;
     std::queue<uint32_t> srcbeats;
 
-    XsimMemSlaveIndication(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0)
+    XsimMemSlaveIndication(int id, PortalTransportFunctions *item, void *param, PortalPoller *poller = 0)
       : XsimMemSlaveIndicationWrapper(id, item, param, poller),
         portal_count(0), poller(poller)
     {
@@ -365,13 +365,13 @@ static void connect_to_xsim()
         PortalSocketParam paramSocket = {};
         PortalMuxParam param = {};
 
-        mcommon = new Portal(0, 0, sizeof(uint32_t), portal_mux_handler, NULL, &socketfuncInit, &paramSocket);
+        mcommon = new Portal(0, 0, sizeof(uint32_t), portal_mux_handler, NULL, &transportSocketInit, &paramSocket);
         param.pint = &mcommon->pint;
         fprintf(stderr, "[%s:%d] adding fd %d\n", __FUNCTION__, __LINE__, mcommon->pint.client_fd[0]);
 
         fprintf(stderr, "[%s:%d]\n", __FUNCTION__, __LINE__);
-        memSlaveIndication = new XsimMemSlaveIndication(XsimIfcNames_XsimMemSlaveIndication, &muxfunc, &param);
-        memSlaveRequestProxy = new XsimMemSlaveRequestProxy(XsimIfcNames_XsimMemSlaveRequest, &muxfunc, &param);
+        memSlaveIndication = new XsimMemSlaveIndication(XsimIfcNames_XsimMemSlaveIndication, &transportMux, &param);
+        memSlaveRequestProxy = new XsimMemSlaveRequestProxy(XsimIfcNames_XsimMemSlaveRequest, &transportMux, &param);
         fprintf(stderr, "[%s:%d] calling connect()\n", __FUNCTION__, __LINE__);
         memSlaveRequestProxy->connect();
         fprintf(stderr, "[%s:%d] called connect\n", __FUNCTION__, __LINE__);
@@ -458,7 +458,7 @@ int event_portal_xsim(struct PortalInternal *pint)
     return -1;
 }
 
-PortalItemFunctions xsimfunc = {
+PortalTransportFunctions transportXsim = {
     init_xsim, read_portal_xsim, write_portal_xsim, write_portal_fd_xsim, mapchannel_hardware, mapchannel_hardware,
     send_portal_xsim, recv_portal_xsim, busy_portal_null, enableint_portal_xsim, event_portal_xsim, notfull_null};
 

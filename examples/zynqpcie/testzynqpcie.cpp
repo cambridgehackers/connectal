@@ -33,7 +33,7 @@ class ZynqPcieTestIndication : public ZynqPcieTestIndicationWrapper {
 public:
     ZynqPcieTestIndication(int id, PortalPoller *poller = 0) : ZynqPcieTestIndicationWrapper(id, poller) {
     };
-    ZynqPcieTestIndication(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : ZynqPcieTestIndicationWrapper(id, item, param, poller) {
+    ZynqPcieTestIndication(int id, PortalTransportFunctions *item, void *param, PortalPoller *poller = 0) : ZynqPcieTestIndicationWrapper(id, item, param, poller) {
     };
   virtual void status ( const uint32_t v ) {
 	fprintf(stderr, "ZynqPcieTestIndicationWrapper.status v=%x\n", v);

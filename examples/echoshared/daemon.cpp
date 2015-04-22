@@ -41,7 +41,7 @@ public:
         fprintf(stderr, "daemon: heard an echo2: %d %d\n", a, b);
         sIndicationProxy->heard2(a, b);
     }
-    EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
+    EchoIndication(unsigned int id, PortalTransportFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
 };
 
 class EchoRequest : public EchoRequestWrapper
@@ -63,7 +63,7 @@ public:
         sleep(1);
         exit(0);
     }
-    EchoRequest(unsigned int id, PortalItemFunctions *item, void *param) : EchoRequestWrapper(id, item, param) {}
+    EchoRequest(unsigned int id, PortalTransportFunctions *item, void *param) : EchoRequestWrapper(id, item, param) {}
 };
 
 static EchoRequest *sRequest;
@@ -72,11 +72,11 @@ int main(int argc, const char **argv)
 {
     EchoIndication echoIndication(IfcNames_EchoIndicationH2S, NULL, NULL);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H);
-    sRequest = new EchoRequest(IfcNames_EchoRequestS2H, &sharedfunc, NULL);
-    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndicationH2S, &sharedfunc, NULL);
+    sRequest = new EchoRequest(IfcNames_EchoRequestS2H, &transportShared, NULL);
+    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndicationH2S, &transportShared, NULL);
 
     MMUServer *mServer = new MMUServer(IfcNames_MMURequestS2H,
-        new MMUIndicationProxy(IfcNames_MMUIndicationH2S, &socketfuncResp, NULL), &socketfuncResp, NULL);
+        new MMUIndicationProxy(IfcNames_MMUIndicationH2S, &transportSocketResp, NULL), &transportSocketResp, NULL);
     mServer->registerInterface(IfcNames_EchoRequestS2H, &sRequest->pint);
     mServer->registerInterface(IfcNames_EchoIndicationH2S, &sIndicationProxy->pint);
 

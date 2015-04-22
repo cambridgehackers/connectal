@@ -60,7 +60,7 @@ static tBoard* tboard;
  * Initialize control data structure for portal
  */
 void init_portal_internal(PortalInternal *pint, int id, int tile,
-    PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param,
+    PORTAL_INDFUNC handler, void *cb, PortalTransportFunctions *item, void *param,
     uint32_t reqinfo)
 {
     int rc;
@@ -78,11 +78,11 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
     if (!item) {
         // Use defaults for transport handling methods
 #ifdef BSIM
-        item = &bsimfunc;
+        item = &transportBsim;
 #elif defined(XSIM)
-        item = &xsimfunc;
+        item = &transportXsim;
 #else
-        item = &hardwarefunc;
+        item = &transportHardware;
 #endif
     }
     pint->item = item;

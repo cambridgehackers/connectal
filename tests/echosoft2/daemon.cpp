@@ -56,7 +56,7 @@ public:
 			fprintf (stderr, "id is wrong (%u)", id);
 		}
     }
-    EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
+    EchoIndication(unsigned int id, PortalTransportFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
 };
 
 class EchoRequest : public EchoRequestWrapper
@@ -78,18 +78,18 @@ public:
         sleep(1);
         exit(1);
     }
-    EchoRequest(unsigned int id, PortalItemFunctions *item, void *param) : EchoRequestWrapper(id, item, param) {}
+    EchoRequest(unsigned int id, PortalTransportFunctions *item, void *param) : EchoRequestWrapper(id, item, param) {}
 };
 
 int main(int argc, const char **argv)
 {
     PortalSocketParam param;
 
-    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &socketfuncResp, NULL);
-    sIndicationProxy2 = new EchoIndicationProxy(IfcNames_EchoIndication2, &socketfuncResp, NULL);
+    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &transportSocketResp, NULL);
+    sIndicationProxy2 = new EchoIndicationProxy(IfcNames_EchoIndication2, &transportSocketResp, NULL);
 
-    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &socketfuncResp, NULL);
-    EchoRequest *sRequest2 = new EchoRequest(IfcNames_EchoRequest2, &socketfuncResp, NULL);
+    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &transportSocketResp, NULL);
+    EchoRequest *sRequest2 = new EchoRequest(IfcNames_EchoRequest2, &transportSocketResp, NULL);
 
 
 

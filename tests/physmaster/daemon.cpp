@@ -44,13 +44,13 @@ public:
         sleep(1);
         exit(1);
     }
-    PhysMemMasterRequest(unsigned int id, PortalItemFunctions *item, void *param) : PhysMemMasterRequestWrapper(id, item, param) {}
+    PhysMemMasterRequest(unsigned int id, PortalTransportFunctions *item, void *param) : PhysMemMasterRequestWrapper(id, item, param) {}
 };
 
 int main(int argc, const char **argv)
 {
-    sIndicationProxy = new PhysMemMasterIndicationProxy(IfcNames_PhysMemMasterIndication, &socketfuncResp, NULL);
-    PhysMemMasterRequest *sRequest = new PhysMemMasterRequest(IfcNames_PhysMemMasterRequest, &socketfuncResp, NULL);
+    sIndicationProxy = new PhysMemMasterIndicationProxy(IfcNames_PhysMemMasterIndication, &transportSocketResp, NULL);
+    PhysMemMasterRequest *sRequest = new PhysMemMasterRequest(IfcNames_PhysMemMasterRequest, &transportSocketResp, NULL);
 
     printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);
     while(1)

@@ -122,10 +122,10 @@ int main(int argc, const char **argv)
   // portals communicating between "main" running on the ARM and SW running on a server somewhere on the network (HOST_SW)
   PortalSocketParam param0;
   int rc0 = getaddrinfo("0.0.0.0", "5000", NULL, &param0.addr);
-  GyroSampleStreamProxy *gssp = new GyroSampleStreamProxy(IfcNames_GyroSampleStream, &socketfuncResp, &param0, &GyroSampleStreamJsonProxyReq, 1000);
+  GyroSampleStreamProxy *gssp = new GyroSampleStreamProxy(IfcNames_GyroSampleStream, &transportSocketResp, &param0, &GyroSampleStreamJsonProxyReq, 1000);
   PortalSocketParam param1;
   int rc1 = getaddrinfo("0.0.0.0", "5001", NULL, &param1.addr);
-  MaxSonarSampleStreamProxy *msssp = new MaxSonarSampleStreamProxy(IfcNames_MaxSonarSampleStream, &socketfuncResp, &param1, &MaxSonarSampleStreamJsonProxyReq, 1000);
+  MaxSonarSampleStreamProxy *msssp = new MaxSonarSampleStreamProxy(IfcNames_MaxSonarSampleStream, &transportSocketResp, &param1, &MaxSonarSampleStreamJsonProxyReq, 1000);
 
   // allocate memory for the gyro controller to write samples to
   int dstAlloc = portalAlloc(alloc_sz, 0);

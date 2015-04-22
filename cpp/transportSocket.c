@@ -43,19 +43,19 @@ static void initialize_bsim_map(void)
     do{
       static PortalInternal p;
       volatile unsigned int *ptr=(volatile unsigned int *)(long)((t * TILE_BASE_OFFSET)+(idx * PORTAL_BASE_OFFSET));
-      volatile unsigned int *idp = &ptr[PORTAL_CTRL_REG_PORTAL_ID];
-      volatile unsigned int *ntp = &ptr[PORTAL_CTRL_REG_NUM_TILES];
-      volatile unsigned int *npp = &ptr[PORTAL_CTRL_REG_NUM_PORTALS];
+      volatile unsigned int *idp = &ptr[PORTAL_CTRL_PORTAL_ID];
+      volatile unsigned int *ntp = &ptr[PORTAL_CTRL_NUM_TILES];
+      volatile unsigned int *npp = &ptr[PORTAL_CTRL_NUM_PORTALS];
       unsigned int id;
       p.fpga_number = idx;
-      id = bsimfunc.read(&p, &idp);
+      id = transportBsim.read(&p, &idp);
       if(idx==0){
-	num_portals = bsimfunc.read(&p, &npp);
+	num_portals = transportBsim.read(&p, &npp);
 	if(t==0)
-	  num_tiles = bsimfunc.read(&p, &ntp);
+	  num_tiles = transportBsim.read(&p, &ntp);
       } else {
-	assert(num_portals == bsimfunc.read(&p, &npp));
-	assert(num_tiles   == bsimfunc.read(&p, &ntp));
+	assert(num_portals == transportBsim.read(&p, &npp));
+	assert(num_tiles   == transportBsim.read(&p, &ntp));
       }
       if (id >= MAX_BSIM_PORTAL_ID) {
 	PORTAL_PRINTF("%s: [%d] readid too large %d\n", __FUNCTION__, idx, id);
@@ -214,10 +214,10 @@ static void send_socket(struct PortalInternal *pint, volatile unsigned int *data
     }
     portalSendFd(pint->client_fd[pint->request_index], (void *)buffer, (hdr & 0xffff) * sizeof(uint32_t), sendFd);
 }
-PortalItemFunctions socketfuncResp = {
+PortalTransportFunctions transportSocketResp = {
     init_socketResp, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_socket,
     send_socket, recv_socket, busy_portal_null, enableint_portal_null, event_socket, notfull_null};
-PortalItemFunctions socketfuncInit = {
+PortalTransportFunctions transportSocketInit = {
     init_socketInit, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_socket,
     send_socket, recv_socket, busy_portal_null, enableint_portal_null, event_socket, notfull_null};
 
@@ -264,7 +264,7 @@ int portal_mux_handler(struct PortalInternal *pint, unsigned int channel, int me
     }
     return -1;
 }
-PortalItemFunctions muxfunc = {
+PortalTransportFunctions transportMux = {
     init_mux, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_socket,
     send_mux, recv_mux, busy_portal_null, enableint_portal_null, event_mux, notfull_null};
 
@@ -501,6 +501,6 @@ int event_portal_bsim(struct PortalInternal *pint)
 #endif
     return event_hardware(pint);
 }
-PortalItemFunctions bsimfunc = {
+PortalTransportFunctions transportBsim = {
     init_bsim, read_portal_bsim, write_portal_bsim, write_portal_fd_bsim, mapchannel_hardware, mapchannel_hardware,
     send_portal_null, recv_portal_null, busy_hardware, enableint_hardware, event_portal_bsim, notfull_hardware};

@@ -81,7 +81,7 @@ int main(int argc, const char **argv)
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H);
     int alloc_sz = 1000;
     PortalSharedParam param = {{NULL}, (uint32_t)alloc_sz};
-    echoRequestTrace = new EchoRequestProxy(IfcNames_EchoRequestS2H, &tracefunc, &param);
+    echoRequestTrace = new EchoRequestProxy(IfcNames_EchoRequestS2H, &transportTrace, &param);
 
     int v = 42;
     printf("Saying %d\n", v);

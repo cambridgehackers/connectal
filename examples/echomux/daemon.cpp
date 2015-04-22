@@ -53,7 +53,7 @@ public:
         this->pint.request_index = id;
         sIndicationProxy->heard2(a, b);
     }
-    EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
+    EchoIndication(unsigned int id, PortalTransportFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
 };
 
 class EchoRequest : public EchoRequestSWWrapper
@@ -75,7 +75,7 @@ public:
         sleep(1);
         exit(1);
     }
-    EchoRequest(unsigned int id, PortalItemFunctions *item, void *param) : EchoRequestSWWrapper(id, item, param) {}
+    EchoRequest(unsigned int id, PortalTransportFunctions *item, void *param) : EchoRequestSWWrapper(id, item, param) {}
 };
 
 SecondIndicationProxy *sSecondIndicationProxy;
@@ -88,7 +88,7 @@ public:
         sSecondIndicationProxy->pint.request_index = this->pint.indication_index;
         sSecondIndicationProxy->heard(v*4, a*2);
     }
-    SecondRequest(unsigned int id, PortalItemFunctions *item, void *param) : SecondRequestWrapper(id, item, param) {}
+    SecondRequest(unsigned int id, PortalTransportFunctions *item, void *param) : SecondRequestWrapper(id, item, param) {}
 };
 
 ThirdIndicationProxy *sThirdIndicationProxy;
@@ -101,7 +101,7 @@ public:
         sThirdIndicationProxy->pint.request_index = this->pint.indication_index;
         sThirdIndicationProxy->heard();
     }
-    ThirdRequest(unsigned int id, PortalItemFunctions *item, void *param) : ThirdRequestWrapper(id, item, param) {}
+    ThirdRequest(unsigned int id, PortalTransportFunctions *item, void *param) : ThirdRequestWrapper(id, item, param) {}
 };
 
 int main(int argc, const char **argv)
@@ -112,16 +112,16 @@ int main(int argc, const char **argv)
     EchoIndication echoIndication(IfcNames_EchoIndicationH2S, NULL, NULL);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H);
 
-    Portal *mcommon = new Portal(0, 0, sizeof(uint32_t), portal_mux_handler, NULL, &socketfuncResp, &paramSocket, 0);
+    Portal *mcommon = new Portal(0, 0, sizeof(uint32_t), portal_mux_handler, NULL, &transportSocketResp, &paramSocket, 0);
     param.pint = &mcommon->pint;
-    sIndicationProxy = new EchoIndicationSWProxy(IfcNames_EchoIndicationH2S, &muxfunc, &param);
-    EchoRequest sRequest(IfcNames_EchoRequestS2H, &muxfunc, &param);
+    sIndicationProxy = new EchoIndicationSWProxy(IfcNames_EchoIndicationH2S, &transportMux, &param);
+    EchoRequest sRequest(IfcNames_EchoRequestS2H, &transportMux, &param);
 
-    sSecondIndicationProxy = new SecondIndicationProxy(IfcNames_SecondIndication, &muxfunc, &param);
-    SecondRequest sSecondRequest(IfcNames_SecondRequest, &muxfunc, &param);
+    sSecondIndicationProxy = new SecondIndicationProxy(IfcNames_SecondIndication, &transportMux, &param);
+    SecondRequest sSecondRequest(IfcNames_SecondRequest, &transportMux, &param);
 
-    sThirdIndicationProxy = new ThirdIndicationProxy(IfcNames_ThirdIndication, &muxfunc, &param);
-    ThirdRequest sThirdRequest(IfcNames_ThirdRequest, &muxfunc, &param);
+    sThirdIndicationProxy = new ThirdIndicationProxy(IfcNames_ThirdIndication, &transportMux, &param);
+    ThirdRequest sThirdRequest(IfcNames_ThirdRequest, &transportMux, &param);
 
     printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);
     while(1)

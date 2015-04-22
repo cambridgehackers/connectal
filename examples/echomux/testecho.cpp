@@ -45,7 +45,7 @@ public:
         sem_post(&semEcho);
         //fprintf(stderr, "heard an s2: %ld %ld\n", a, b);
     }
-    EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationSWWrapper(id, item, param) {}
+    EchoIndication(unsigned int id, PortalTransportFunctions *item, void *param) : EchoIndicationSWWrapper(id, item, param) {}
 };
 
 static void call_say(int v)
@@ -70,7 +70,7 @@ public:
     virtual void heard(uint32_t v, uint32_t a) {
         fprintf(stderr, "Secondheard an s: %d %d\n", v, a);
     }
-    SecondIndication(unsigned int id, PortalItemFunctions *item, void *param) : SecondIndicationWrapper(id, item, param) {}
+    SecondIndication(unsigned int id, PortalTransportFunctions *item, void *param) : SecondIndicationWrapper(id, item, param) {}
 };
 
 //static sem_t semThird;
@@ -82,7 +82,7 @@ public:
     virtual void heard() {
         fprintf(stderr, "Thirdheard\n");
     }
-    ThirdIndication(unsigned int id, PortalItemFunctions *item, void *param) : ThirdIndicationWrapper(id, item, param) {}
+    ThirdIndication(unsigned int id, PortalTransportFunctions *item, void *param) : ThirdIndicationWrapper(id, item, param) {}
 };
 
 int main(int argc, const char **argv)
@@ -90,14 +90,14 @@ int main(int argc, const char **argv)
     PortalSocketParam paramSocket = {};
     PortalMuxParam param = {};
 
-    Portal *mcommon = new Portal(0, 0, sizeof(uint32_t), portal_mux_handler, NULL, &socketfuncInit, &paramSocket, 0);
+    Portal *mcommon = new Portal(0, 0, sizeof(uint32_t), portal_mux_handler, NULL, &transportSocketInit, &paramSocket, 0);
     param.pint = &mcommon->pint;
-    EchoIndication sIndication(IfcNames_EchoIndicationH2S, &muxfunc, &param);
-    sEcho = new EchoRequestSWProxy(IfcNames_EchoRequestS2H, &muxfunc, &param);
-    SecondIndication sSecondIndication(IfcNames_SecondIndication, &muxfunc, &param);
-    sSecond = new SecondRequestProxy(IfcNames_SecondRequest, &muxfunc, &param);
-    ThirdIndication sThirdIndication(IfcNames_ThirdIndication, &muxfunc, &param);
-    sThird = new ThirdRequestProxy(IfcNames_ThirdRequest, &muxfunc, &param);
+    EchoIndication sIndication(IfcNames_EchoIndicationH2S, &transportMux, &param);
+    sEcho = new EchoRequestSWProxy(IfcNames_EchoRequestS2H, &transportMux, &param);
+    SecondIndication sSecondIndication(IfcNames_SecondIndication, &transportMux, &param);
+    sSecond = new SecondRequestProxy(IfcNames_SecondRequest, &transportMux, &param);
+    ThirdIndication sThirdIndication(IfcNames_ThirdIndication, &transportMux, &param);
+    sThird = new ThirdRequestProxy(IfcNames_ThirdRequest, &transportMux, &param);
 
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
