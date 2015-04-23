@@ -82,27 +82,27 @@
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
         "J2" : {
-             "LOC" : "V20",
-	     "IOSTANDARD" : "LVCMOS33"
-	     },
-        "J3" : {
-             "LOC" : "Y18",
-	     "IOSTANDARD" : "LVCMOS33"
-	     },
-        "J4" : {
-             "LOC" : "W18",
-	     "IOSTANDARD" : "LVCMOS33"
-	     },
-        "J7" : {
              "LOC" : "U20",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J8" : {
+        "J3" : {
+             "LOC" : "V20",
+	     "IOSTANDARD" : "LVCMOS33"
+	     },
+        "J4" : {
              "LOC" : "W20",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J9" : {
+        "J7" : {
+             "LOC" : "Y18",
+	     "IOSTANDARD" : "LVCMOS33"
+	     },
+        "J8" : {
              "LOC" : "Y19",
+	     "IOSTANDARD" : "LVCMOS33"
+	     },
+        "J9" : {
+             "LOC" : "W18",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
         "J10" : {
@@ -116,27 +116,27 @@
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
         "J2" : {
-             "LOC" : "T11",
-	     "IOSTANDARD" : "LVCMOS33"
-	     },
-        "J3" : {
-             "LOC" : "W14",
-	     "IOSTANDARD" : "LVCMOS33"
-	     },
-        "J4" : {
-             "LOC" : "T12",
-	     "IOSTANDARD" : "LVCMOS33"
-	     },
-        "J7" : {
              "LOC" : "W15",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J8" : {
+        "J3" : {
+             "LOC" : "T11",
+	     "IOSTANDARD" : "LVCMOS33"
+	     },
+        "J4" : {
              "LOC" : "T10",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J9" : {
+        "J7" : {
+             "LOC" : "W14",
+	     "IOSTANDARD" : "LVCMOS33"
+	     },
+        "J8" : {
              "LOC" : "Y14",
+	     "IOSTANDARD" : "LVCMOS33"
+	     },
+        "J9" : {
+             "LOC" : "T12",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
         "J10" : {
@@ -150,27 +150,27 @@
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
         "J2" : {
-             "LOC" : "P14",
-	     "IOSTANDARD" : "LVCMOS33"
-	     },
-        "J3" : {
-             "LOC" : "U14",
-	     "IOSTANDARD" : "LVCMOS33"
-	     },
-        "J4" : {
-             "LOC" : "V17",
-	     "IOSTANDARD" : "LVCMOS33"
-	     },
-        "J7" : {
              "LOC" : "T15",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J8" : {
+        "J3" : {
+             "LOC" : "P14",
+	     "IOSTANDARD" : "LVCMOS33"
+	     },
+        "J4" : {
              "LOC" : "R14",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J9" : {
+        "J7" : {
+             "LOC" : "U14",
+	     "IOSTANDARD" : "LVCMOS33"
+	     },
+        "J8" : {
              "LOC" : "U15",
+	     "IOSTANDARD" : "LVCMOS33"
+	     },
+        "J9" : {
+             "LOC" : "V17",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
         "J10" : {

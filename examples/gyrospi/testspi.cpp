@@ -1,5 +1,4 @@
-
-// Copyright (c) 2014 Quanta Research Cambridge, Inc.
+// Copyright (c) 2015 The Connectal Project
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -23,25 +22,32 @@
 #include "STestRequest.h"
 #include "STestIndication.h"
 #include "gyro.h"
+#include <semaphore.h>
+
+static STestRequestProxy *device;
+static sem_t semp;
+static int indication_return_value;
 
 class STestIndication: public STestIndicationWrapper {
 public:
     STestIndication(int id): STestIndicationWrapper(id) {}
     void result(uint16_t val ) {
-printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, val);
+        indication_return_value = val & 0xff;
+        sem_post(&semp);
     }
 };
-static STestRequestProxy *device;
 
 int read_reg(int addr)
 {
-printf("[%s:%d] addr %x\n", __FUNCTION__, __LINE__, addr);
-    device->request(addr << 9);
+    device->request((addr << 8) | (1 << 15));
+    sem_wait(&semp);
+    printf("[%s:%d] addr %x = %x\n", __FUNCTION__, __LINE__, addr, indication_return_value);
+    return indication_return_value;
 }
 void write_reg(int addr, int data)
 {
-printf("[%s:%d] addr %x data %x\n", __FUNCTION__, __LINE__, addr, data);
-    device->request((addr << 9) | (1 << 8) | data);
+    device->request((addr << 8) | data);
+    sem_wait(&semp);
 }
 
 int main(int argc, const char **argv)
@@ -49,21 +55,14 @@ int main(int argc, const char **argv)
     STestIndication ind(IfcNames_STestIndicationH2S);
     device = new STestRequestProxy(IfcNames_STestRequestS2H);
     read_reg(WHO_AM_I);
-sleep(2);
-printf("[%s:%d] after read\n", __FUNCTION__, __LINE__);
-    read_reg(WHO_AM_I);
-sleep(2);
-printf("[%s:%d] after 2read\n", __FUNCTION__, __LINE__);
+    //while(1)
+    //    read_reg(WHO_AM_I);
     write_reg(CTRL_REG1, 0x0f);  // ODR:100Hz Cutoff:12.5
-sleep(2);
     write_reg(CTRL_REG2, 0);
-sleep(2);
     write_reg(CTRL_REG3, 0);
-sleep(2);
     write_reg(CTRL_REG4, 0xa0);  // BDU:1, Range:2000 dps
-sleep(2);
     write_reg(CTRL_REG5, 0);
-    sleep(10);
+    sleep(1);
     printf("[%s:%d] done\n", __FUNCTION__, __LINE__);
     return 0;
 }

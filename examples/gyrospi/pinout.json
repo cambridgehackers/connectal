@@ -1,4 +1,8 @@
 {
+    "spi_sel_n": {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmod": "J1"
+    },
     "spi_mosi": {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod": "J2"
@@ -6,10 +10,6 @@
     "spi_miso_v": {
 	"PIO_DIRECTION": "INPUT",
 	"pmod": "J3"
-    },
-    "spi_sel_n": {
-	"PIO_DIRECTION": "OUTPUT",
-	"pmod": "J1"
     },
     "CLK_spi_clock": {
 	"PIO_DIRECTION": "OUTPUT",

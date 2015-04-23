@@ -1,4 +1,3 @@
-
 // Copyright (c) 2014 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
@@ -47,5 +46,3 @@
 #define INT1_THS_ZH     0x36
 #define INT1_THS_ZL     0x37
 #define INT1_DURATION   0x38
-
-
