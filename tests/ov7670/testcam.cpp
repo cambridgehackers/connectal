@@ -28,12 +28,6 @@
 int slaveaddr[3];
 int addr;
 
-int rdClock[64];
-int rdData[64];
-int rdOutEn[64];
-volatile int rdSample[64];
-volatile int cursor = 0;
-volatile int phase = 0;
 sem_t bit_sem;
 
 class Ov7670ControllerIndication : public Ov7670ControllerIndicationWrapper {
@@ -68,61 +62,6 @@ public:
   virtual void data4(uint32_t data) {
   }
 };
-
-void enqueueStart()
-{
-  rdClock[cursor] = 0b110;
-  rdData[cursor] = 0b100;
-  rdOutEn[cursor] = 0b111;
-  cursor++;
-}
-void enqueueStop()
-{
-  rdClock[cursor] = 0b001;
-  rdData[cursor] = 0b011;
-  rdOutEn[cursor] = 0b111;
-  cursor++;
-}
-void enqueueIdle()
-{
-  rdClock[cursor] = 0b111;
-  rdData[cursor] = 0b111;
-  rdOutEn[cursor] = 0b111;
-  cursor++;
-}
-void enqueueBitOut(int b)
-{
-    rdClock[cursor] = 0b010;
-    rdData[cursor] = b ? 0b111 : 0b000;
-    rdOutEn[cursor] = 0b111;
-    cursor++;
-}
-void enqueueBitIn()
-{
-    rdClock[cursor] = 0b010;
-    rdData[cursor] = 0;
-    rdOutEn[cursor] = 0b000;
-    cursor++;
-}
-void enqueueAck()
-{
-    rdClock[cursor] = 0b010;
-    rdData[cursor] = 0;
-    rdOutEn[cursor] = 0b000;
-    cursor++;
-}
-void enqueueMAck()
-{
-    rdClock[cursor] = 0b010;
-    rdData[cursor] = 0b111;
-    rdOutEn[cursor] = 0b111;
-    cursor++;
-}
-
-int bit(int v, int pos)
-{
-  return (v >> pos) & 1;
-}
 
 int main(int argc, const char **argv)
 {
