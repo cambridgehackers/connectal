@@ -23,9 +23,18 @@
 #include "MMURequest.h"
 #include "Ov7670ControllerRequest.h"
 #include "Ov7670ControllerIndication.h"
+#include "pthread.h"
 
 int slaveaddr[3];
 int addr;
+
+int rdClock[64];
+int rdData[64];
+int rdOutEn[64];
+volatile int rdSample[64];
+volatile int cursor = 0;
+volatile int phase = 0;
+sem_t bit_sem;
 
 class Ov7670ControllerIndication : public Ov7670ControllerIndicationWrapper {
   int datacount;
@@ -35,6 +44,15 @@ public:
   ~Ov7670ControllerIndication() {}
   virtual void i2cResponse(uint8_t bus, uint8_t data) {
     fprintf(stderr, "i2c bus %d device %d addr %x response %02x\n", bus, slaveaddr[bus], addr, data);
+  }
+  virtual void pinResponse(uint8_t sdaIn) {
+    int pos = (phase == 2) ? cursor-1 : cursor;
+    if (pos > 0) {
+      int newsample = (rdSample[cursor] << 1) | sdaIn;
+      fprintf(stderr, "i2c cursor %3d phase %d sda %d %d %d\n", cursor, phase, sdaIn, rdSample[cursor], newsample);
+      rdSample[cursor] = newsample;
+    }
+    sem_post(&bit_sem);
   }
   virtual void vsync(uint32_t cycles, uint8_t href) {
     //fprintf(stderr, "vsync %8d href %d\n", cycles, href);
@@ -58,6 +76,61 @@ public:
   virtual void data4(uint32_t data) {
   }
 };
+
+void enqueueStart()
+{
+  rdClock[cursor] = 0b110;
+  rdData[cursor] = 0b100;
+  rdOutEn[cursor] = 0b111;
+  cursor++;
+}
+void enqueueStop()
+{
+  rdClock[cursor] = 0b001;
+  rdData[cursor] = 0b011;
+  rdOutEn[cursor] = 0b111;
+  cursor++;
+}
+void enqueueIdle()
+{
+  rdClock[cursor] = 0b111;
+  rdData[cursor] = 0b111;
+  rdOutEn[cursor] = 0b111;
+  cursor++;
+}
+void enqueueBitOut(int b)
+{
+    rdClock[cursor] = 0b010;
+    rdData[cursor] = b ? 0b111 : 0b000;
+    rdOutEn[cursor] = 0b111;
+    cursor++;
+}
+void enqueueBitIn()
+{
+    rdClock[cursor] = 0b010;
+    rdData[cursor] = 0;
+    rdOutEn[cursor] = 0b000;
+    cursor++;
+}
+void enqueueAck()
+{
+    rdClock[cursor] = 0b010;
+    rdData[cursor] = 0;
+    rdOutEn[cursor] = 0b000;
+    cursor++;
+}
+void enqueueMAck()
+{
+    rdClock[cursor] = 0b010;
+    rdData[cursor] = 0b111;
+    rdOutEn[cursor] = 0b111;
+    cursor++;
+}
+
+int bit(int v, int pos)
+{
+  return (v >> pos) & 1;
+}
 
 int main(int argc, const char **argv)
 {
@@ -88,12 +161,60 @@ int main(int argc, const char **argv)
   // always has href
   device.i2cRequest(0, 1, slaveaddr[0], 0x3c, 0x80);
 
+  slaveaddr[0] = 0x21;
+  slaveaddr[1] = 0x1e;
+  slaveaddr[2] = 0x69;
+  addr = 0x5a;
+
+  cursor = 0;
+  // START symbol
+  enqueueStart();
+  for (int s = 6; s >= 0; s--) {
+    enqueueBitOut(bit(slaveaddr[0], s));
+  }
+  enqueueBitOut(0); // write
+  enqueueAck();
+  for (int s = 7; s >= 0; s--) {
+    enqueueBitOut(bit(addr, s));
+  }
+  enqueueAck();
+  //enqueueStop();
+  //enqueueIdle();
+  //enqueueStart();
+  for (int s = 6; s >= 0; s--) {
+    enqueueBitOut(bit(slaveaddr[0], s));
+  }
+  enqueueBitOut(1); // read
+  enqueueAck();
+  for (int s = 7; s >= 0; s--) {
+    enqueueBitIn();
+  }
+  enqueueMAck();
+  enqueueStop();
+  enqueueIdle();
+  int max_cursor = cursor;
+
+  for (int i = 0; i < cursor; i++) {
+    fprintf(stderr, "CYCLE %3d CLK %d OUT %d OE %d IN %x\n", i, rdClock[i], rdData[i], rdOutEn[i], rdSample[i]);
+  }
+  cursor = 0;
+  sem_init(&bit_sem, 0, 0);
+  for (int i = 0; i < max_cursor; i++) {
+    cursor = i;
+    for (phase = 2; phase >= 0; phase--) {
+      device.pinRequest(bit(rdOutEn[i], phase), bit(rdClock[i], phase), bit(rdData[i], phase));
+      sem_wait(&bit_sem);
+    }
+  }
+  for (int i = 0; i < max_cursor; i++) {
+    fprintf(stderr, "CYCLE %3d CLK %d OUT %d OE %d IN %x\n", i, rdClock[i], rdData[i], rdOutEn[i], rdSample[i]);
+  }
+  return 0;
+
+
   for (int i = 0; i < 128; i++) {
     int write = 0;
     int val = 0x33;
-    slaveaddr[0] = 0x21;
-    slaveaddr[1] = 0x1e;
-    slaveaddr[2] = 0x69;
     addr = i;
     device.i2cRequest(0, write, slaveaddr[0], addr, val);
     device.i2cRequest(1, write, slaveaddr[1], addr, val);

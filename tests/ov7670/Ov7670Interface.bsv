@@ -28,6 +28,7 @@ interface Ov7670ControllerRequest;
    method Action i2cRequest(Bit#(8) bus, Bool write, Bit#(7) slaveaddr, Bit#(8) address, Bit#(8) data);
    method Action setReset(Bit#(1) rval);
    method Action setPowerDown(Bit#(1) pwdn);
+   method Action pinRequest(Bit#(1) outen, Bit#(1) scl, Bit#(1) sda);
 endinterface
 
 interface Ov7670ControllerIndication;
@@ -37,6 +38,7 @@ interface Ov7670ControllerIndication;
    method Action data4(Bit#(32) pxls);
    method Action frameStarted(Bit#(1) first);
    method Action frameTransferred();
+   method Action pinResponse(Bit#(1) i);
 endinterface
 
 interface Ov7670Pins;

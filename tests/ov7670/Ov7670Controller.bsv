@@ -36,6 +36,7 @@ import HostInterface::*;
 import MemwriteEngine::*;
 import Pipe::*;
 import ConnectalClocks::*;
+import ConnectalXilinxCells::*;
 import Ov7670Interface::*;
 
 interface Ov7670Controller;
@@ -76,6 +77,12 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
    Vector#(3, SCCB) i2c <- replicateM(mkSCCB(1000));
    Reg#(bit) resetReg <- mkReg(0);
    Reg#(bit) pwdnReg <- mkReg(0);
+
+   Reg#(Bit#(1))                   rSCL                <- mkReg(1);
+   Reg#(Bit#(1))                   rSDA                <- mkReg(1);
+   Reg#(Bool)                      rOutEn              <- mkReg(True);
+   IOBUF                           ioSCL               <- mkIOBUF(0, rSCL);
+   IOBUF                           ioSDA               <- mkIOBUF(rOutEn ? 0 : 1, rSDA);
 
    for (Integer i = 0; i < 3; i = i + 1)
       rule i2c_response_rule;
@@ -158,6 +165,13 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
       method Action i2cRequest(Bit#(8) bus, Bool write, Bit#(7) slaveaddr, Bit#(8) address, Bit#(8) data);
 	 i2c[bus].user.request.put(SCCBRequest {write: write, slaveaddr: slaveaddr, address: address, data: data});
       endmethod
+      method Action pinRequest(Bit#(1) outen, Bit#(1) scl, Bit#(1) sdaOut);
+	 let sdaIn = ioSDA.o();
+	 rSCL <= scl;
+	 rSDA <= sdaOut;
+	 rOutEn <= unpack(outen);
+	 ind.pinResponse(sdaIn);
+      endmethod
       method Action setReset(Bit#(1) rval);
 	 resetReg <= rval;
       endmethod
@@ -166,7 +180,10 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
       endmethod
    endinterface
    interface Ov7670Pins pins;
-      interface SCCB_Pins i2c0 = i2c[0].i2c;
+      interface SCCB_Pins i2c0; //i2c[0].i2c;
+	 interface Inout sda = ioSDA.io;
+	 interface Inout scl = ioSCL.io;
+      endinterface
       interface SCCB_Pins i2c1 = i2c[1].i2c;
       interface SCCB_Pins i2c2 = i2c[2].i2c;
       interface Clock xclk = clockDivider.slowClock;
