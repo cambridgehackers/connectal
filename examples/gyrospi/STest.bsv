@@ -23,33 +23,38 @@ import ConnectalSpi::*;
 import GetPut::*;
 
 interface STestRequest;
-   method Action write_reg(Bit#(8) addr, Bit#(8) val);
-   method Action read_reg(Bit#(8) addr);
+   method Action request(Bit#(16) addr_data);
 endinterface
 
 interface STestIndication;
    method Action result(Bit#(16) val);
 endinterface
 
+interface STestPins;
+   interface SpiMasterPins spi;
+endinterface
+
 interface STest;
    interface STestRequest request;
-   interface SpiMasterPins pins;
+   interface STestPins pins;
 endinterface
 
 module mkSTest#(STestIndication indication)(STest);
    SPIMaster#(Bit#(16))  spiMaster <- mkSPIMaster(1000, True);
+   Reg#(Bool) inUse <- mkReg(False);
    rule read_reg_resp;
       let rv <- spiMaster.response.get;
       indication.result(rv);
+      inUse <= False;
    endrule
       
    interface STestRequest request;
-      method Action write_reg(Bit#(8) addr, Bit#(8) val);
-         spiMaster.request.put({1'b0,1'b0,addr[5:0],val});
-      endmethod
-      method Action read_reg(Bit#(8) addr);
-         spiMaster.request.put({1'b1,1'b0,addr[5:0],8'h00});
+      method Action request(Bit#(16) addr_data) if (!inUse);
+         spiMaster.request.put(addr_data);
+         inUse <= True;
       endmethod
    endinterface
-   interface SpiMasterPins pins = spiMaster.pins;
+   interface STestPins pins;
+       interface SpiMasterPins spi = spiMaster.pins;
+   endinterface
 endmodule

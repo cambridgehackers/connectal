@@ -28,21 +28,42 @@ class STestIndication: public STestIndicationWrapper {
 public:
     STestIndication(int id): STestIndicationWrapper(id) {}
     void result(uint16_t val ) {
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, val);
     }
 };
+static STestRequestProxy *device;
+
+int read_reg(int addr)
+{
+printf("[%s:%d] addr %x\n", __FUNCTION__, __LINE__, addr);
+    device->request(addr << 9);
+}
+void write_reg(int addr, int data)
+{
+printf("[%s:%d] addr %x data %x\n", __FUNCTION__, __LINE__, addr, data);
+    device->request((addr << 9) | (1 << 8) | data);
+}
 
 int main(int argc, const char **argv)
 {
-  STestIndication ind(IfcNames_STestIndicationH2S);
-  STestRequestProxy *device = new STestRequestProxy(IfcNames_STestRequestS2H);
-  device->write_reg(CTRL_REG1, 0b00001111);  // ODR:100Hz Cutoff:12.5
-  device->write_reg(CTRL_REG2, 0b00000000);
-  device->write_reg(CTRL_REG3, 0b00000000);
-  device->write_reg(CTRL_REG4, 0b10100000);  // BDU:1, Range:2000 dps
-  device->write_reg(CTRL_REG5, 0b00000000);
-
-  while(1) {
-    sleep(1);
-  }
+    STestIndication ind(IfcNames_STestIndicationH2S);
+    device = new STestRequestProxy(IfcNames_STestRequestS2H);
+    read_reg(WHO_AM_I);
+sleep(2);
+printf("[%s:%d] after read\n", __FUNCTION__, __LINE__);
+    read_reg(WHO_AM_I);
+sleep(2);
+printf("[%s:%d] after 2read\n", __FUNCTION__, __LINE__);
+    write_reg(CTRL_REG1, 0x0f);  // ODR:100Hz Cutoff:12.5
+sleep(2);
+    write_reg(CTRL_REG2, 0);
+sleep(2);
+    write_reg(CTRL_REG3, 0);
+sleep(2);
+    write_reg(CTRL_REG4, 0xa0);  // BDU:1, Range:2000 dps
+sleep(2);
+    write_reg(CTRL_REG5, 0);
+    sleep(10);
+    printf("[%s:%d] done\n", __FUNCTION__, __LINE__);
+    return 0;
 }
