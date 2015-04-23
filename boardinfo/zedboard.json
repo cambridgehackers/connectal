@@ -357,19 +357,19 @@
              "LOC" : "AA9",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J5" : {
+        "J7" : {
              "LOC" : "AB11",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J6" : {
+        "J8" : {
              "LOC" : "AB10",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J7" : {
+        "J9" : {
              "LOC" : "AB9",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J8" : {
+        "J10" : {
              "LOC" : "AA8",
 	     "IOSTANDARD" : "LVCMOS33"
 	     }	 
@@ -391,19 +391,19 @@
              "LOC" : "W8",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J5" : {
+        "J7" : {
              "LOC" : "V12",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J6" : {
+        "J8" : {
              "LOC" : "W10",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J7" : {
+        "J9" : {
              "LOC" : "V9",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J8" : {
+        "J10" : {
              "LOC" : "V8",
 	     "IOSTANDARD" : "LVCMOS33"
 	     }	 
@@ -425,19 +425,19 @@
              "LOC" : "AA4",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J5" : {
+        "J7" : {
              "LOC" : "R6",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J6" : {
+        "J8" : {
              "LOC" : "T6",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J7" : {
+        "J9" : {
              "LOC" : "T4",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J8" : {
+        "J10" : {
              "LOC" : "U4",
 	     "IOSTANDARD" : "LVCMOS33"
 	     }	 
@@ -459,19 +459,19 @@
              "LOC" : "V4",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J5" : {
+        "J7" : {
              "LOC" : "W6",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J6" : {
+        "J8" : {
              "LOC" : "W5",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J7" : {
+        "J9" : {
              "LOC" : "U6",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J8" : {
+        "J10" : {
              "LOC" : "U5",
 	     "IOSTANDARD" : "LVCMOS33"
 	     }	 
