@@ -46,15 +46,6 @@ public:
     fprintf(stderr, "i2c bus %d device %d addr %x response %02x\n", bus, slaveaddr[bus], addr, data);
     sem_post(&bit_sem);
   }
-  virtual void pinResponse(uint8_t sdaIn) {
-    int pos = (phase == 2) ? cursor-1 : cursor;
-    if (pos > 0) {
-      int newsample = (rdSample[cursor] << 1) | sdaIn;
-      fprintf(stderr, "i2c cursor %3d phase %d sda %d %d %d\n", cursor, phase, sdaIn, rdSample[cursor], newsample);
-      rdSample[cursor] = newsample;
-    }
-    sem_post(&bit_sem);
-  }
   virtual void vsync(uint32_t cycles, uint8_t href) {
     //fprintf(stderr, "vsync %8d href %d\n", cycles, href);
     if (datacount) {
@@ -173,52 +164,6 @@ int main(int argc, const char **argv)
   slaveaddr[1] = 0x1e;
   slaveaddr[2] = 0x69;
   addr = 0x5a;
-
-  if (0) {
-    cursor = 0;
-    // START symbol
-    enqueueStart();
-    for (int s = 6; s >= 0; s--) {
-      enqueueBitOut(bit(slaveaddr[0], s));
-    }
-    enqueueBitOut(0); // write
-    enqueueAck();
-    for (int s = 7; s >= 0; s--) {
-      enqueueBitOut(bit(addr, s));
-    }
-    enqueueAck();
-    //enqueueStop();
-    //enqueueIdle();
-    //enqueueStart();
-    for (int s = 6; s >= 0; s--) {
-      enqueueBitOut(bit(slaveaddr[0], s));
-    }
-    enqueueBitOut(1); // read
-    enqueueAck();
-    for (int s = 7; s >= 0; s--) {
-      enqueueBitIn();
-    }
-    enqueueMAck();
-    enqueueStop();
-    enqueueIdle();
-    int max_cursor = cursor;
-
-    for (int i = 0; i < cursor; i++) {
-      fprintf(stderr, "CYCLE %3d CLK %d OUT %d OE %d IN %x\n", i, rdClock[i], rdData[i], rdOutEn[i], rdSample[i]);
-    }
-    cursor = 0;
-    for (int i = 0; i < max_cursor; i++) {
-      cursor = i;
-      for (phase = 2; phase >= 0; phase--) {
-	device.pinRequest(bit(rdOutEn[i], phase), bit(rdClock[i], phase), bit(rdData[i], phase));
-	sem_wait(&bit_sem);
-      }
-    }
-    for (int i = 0; i < max_cursor; i++) {
-      fprintf(stderr, "CYCLE %3d CLK %d OUT %d OE %d IN %x\n", i, rdClock[i], rdData[i], rdOutEn[i], rdSample[i]);
-    }
-    return 0;
-  }
 
   for (int i = 0; i < 128; i++) {
     int write = 0;
