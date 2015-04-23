@@ -1,9 +1,9 @@
 {
-    "i2c_SCL" : {
+    "i2c0_SCL" : {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmodb" : "J4"
     },
-    "i2c_SDA" : {
+    "i2c0_SDA" : {
 	"PIO_DIRECTION": "BIDIR",
 	"PULLTYPE": "PULLUP",
 	"pmodb" : "J8"
@@ -65,5 +65,14 @@
     "reset" : {
 	"PIO_DIRECTION": "OUTPUT",
 	"pmoda" : "J5"
+    },
+    "i2c1_SCL" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmodc" : "J3"
+    },
+    "i2c1_SDA" : {
+	"PIO_DIRECTION": "BIDIR",
+	"PULLTYPE": "PULLUP",
+	"pmodc" : "J4"
     }
 }

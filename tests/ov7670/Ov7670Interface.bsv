@@ -25,13 +25,13 @@ import SCCB::*;
 
 interface Ov7670ControllerRequest;
    method Action setFramePointer(Bit#(32) frameId);
-   method Action probe(Bool write, Bit#(7) slaveaddr, Bit#(8) address, Bit#(8) data);
+   method Action i2cRequest(Bit#(8) bus, Bool write, Bit#(7) slaveaddr, Bit#(8) address, Bit#(8) data);
    method Action setReset(Bit#(1) rval);
    method Action setPowerDown(Bit#(1) pwdn);
 endinterface
 
 interface Ov7670ControllerIndication;
-   method Action probeResponse(Bit#(8) data);
+   method Action i2cResponse(Bit#(8) bus, Bit#(8) data);
    method Action vsync(Bit#(32) cycles, Bit#(1) href);
    method Action data(Bit#(1) first, Bit#(1) gap, Bit#(8) pxl);
    method Action data4(Bit#(32) pxls);
@@ -40,7 +40,8 @@ interface Ov7670ControllerIndication;
 endinterface
 
 interface Ov7670Pins;
-   interface SCCB_Pins i2c;
+   interface SCCB_Pins i2c0;
+   interface SCCB_Pins i2c1;
    interface Clock xclk;
    interface Clock pclk_deleteme_unused_clock;
    method bit reset();

@@ -24,7 +24,7 @@
 #include "Ov7670ControllerRequest.h"
 #include "Ov7670ControllerIndication.h"
 
-int slaveaddr = 0;
+int slaveaddr[2];
 
 class Ov7670ControllerIndication : public Ov7670ControllerIndicationWrapper {
   int datacount;
@@ -32,11 +32,8 @@ class Ov7670ControllerIndication : public Ov7670ControllerIndicationWrapper {
 public:
   Ov7670ControllerIndication(unsigned int id) : Ov7670ControllerIndicationWrapper(id), datacount(0), gapcount(0) {}
   ~Ov7670ControllerIndication() {}
-  virtual void probeResponse(uint8_t data) {
-    if (data != 0xff)
-    fprintf(stderr, "i2c device %d response %02x\n", slaveaddr, data);
-    else
-      fprintf(stderr, ".");
+  virtual void i2cResponse(uint8_t bus, uint8_t data) {
+    fprintf(stderr, "i2c bus %d device %d response %02x\n", bus, slaveaddr[bus], data);
   }
   virtual void vsync(uint32_t cycles, uint8_t href) {
     //fprintf(stderr, "vsync %8d href %d\n", cycles, href);
@@ -86,29 +83,28 @@ int main(int argc, const char **argv)
   fprintf(stderr, "ref_fbAlloc=%d\n", ref_fbAlloc);
   device.setFramePointer(ref_fbAlloc);
   // hsync instead of href
-  device.probe(1, 21, 0x15, 0x40);
+  //device.i2cRequest(0, 1, 0x21, 0x15, 0x40);
   // always has href
-  device.probe(1, 21, 0x3c, 0x80);
+  device.i2cRequest(0, 1, 0x21, 0x3c, 0x80);
 
   for (int i = 0; i < 128; i++) {
     int write = 0;
     int val = 0x33;
-    slaveaddr = 0x21;
+    slaveaddr[0] = 0x21;
+    slaveaddr[1] = 0x1e;
     int addr = 1;
-    if (0)
-    if (write)
-      fprintf(stderr, "writing %x to device %x address %#x\n", val, (slaveaddr<<1)|write, addr);
-    else
-      fprintf(stderr, "reading device %x address %#x\n", (slaveaddr<<1)|write, addr);
-    device.probe(write, slaveaddr, addr, val);
+    device.i2cRequest(0, write, slaveaddr[0], i, val);
+    device.i2cRequest(1, write, slaveaddr[1], i, val);
+    if (0) {
     // product ID: 0x76
-    device.probe(0, slaveaddr, 0x0a, 0);
+    device.i2cRequest(0, 0, slaveaddr[0], 0x0a, 0);
     // product VER: 0x70
-    //device.probe(0, slaveaddr, 0x0b, 0);
+    device.i2cRequest(0, 0, slaveaddr[0], 0x0b, 0);
     // mfg id: 0x7F
-    //device.probe(0, slaveaddr, 0x1c, 0);
+    device.i2cRequest(0, 0, slaveaddr[0], 0x1c, 0);
     // mfg id: 0xA2
-    //device.probe(0, slaveaddr, 0x1d, 0);
+    device.i2cRequest(0, 0, slaveaddr[0], 0x1d, 0);
+    }
     sleep(1);
   }
   for (int i = 0; i < 64; i++)
