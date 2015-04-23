@@ -211,7 +211,7 @@
              "LOC" : "Y17",
 	     "IOSTANDARD" : "LVCMOS33"
 	     }
-    }
+    },
     "pmodf_mio_documentation" : {
         "J1" : {
              "LOC" : "E8",
