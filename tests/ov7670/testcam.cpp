@@ -24,7 +24,8 @@
 #include "Ov7670ControllerRequest.h"
 #include "Ov7670ControllerIndication.h"
 
-int slaveaddr[2];
+int slaveaddr[3];
+int addr;
 
 class Ov7670ControllerIndication : public Ov7670ControllerIndicationWrapper {
   int datacount;
@@ -33,7 +34,7 @@ public:
   Ov7670ControllerIndication(unsigned int id) : Ov7670ControllerIndicationWrapper(id), datacount(0), gapcount(0) {}
   ~Ov7670ControllerIndication() {}
   virtual void i2cResponse(uint8_t bus, uint8_t data) {
-    fprintf(stderr, "i2c bus %d device %d response %02x\n", bus, slaveaddr[bus], data);
+    fprintf(stderr, "i2c bus %d device %d addr %x response %02x\n", bus, slaveaddr[bus], addr, data);
   }
   virtual void vsync(uint32_t cycles, uint8_t href) {
     //fprintf(stderr, "vsync %8d href %d\n", cycles, href);
@@ -85,16 +86,18 @@ int main(int argc, const char **argv)
   // hsync instead of href
   //device.i2cRequest(0, 1, 0x21, 0x15, 0x40);
   // always has href
-  device.i2cRequest(0, 1, 0x21, 0x3c, 0x80);
+  device.i2cRequest(0, 1, slaveaddr[0], 0x3c, 0x80);
 
   for (int i = 0; i < 128; i++) {
     int write = 0;
     int val = 0x33;
     slaveaddr[0] = 0x21;
     slaveaddr[1] = 0x1e;
-    int addr = 1;
-    device.i2cRequest(0, write, slaveaddr[0], i, val);
-    device.i2cRequest(1, write, slaveaddr[1], i, val);
+    slaveaddr[2] = 0x69;
+    addr = i;
+    device.i2cRequest(0, write, slaveaddr[0], addr, val);
+    device.i2cRequest(1, write, slaveaddr[1], addr, val);
+    device.i2cRequest(2, write, slaveaddr[2], addr, val);
     if (0) {
     // product ID: 0x76
     device.i2cRequest(0, 0, slaveaddr[0], 0x0a, 0);

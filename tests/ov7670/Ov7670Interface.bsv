@@ -42,6 +42,7 @@ endinterface
 interface Ov7670Pins;
    interface SCCB_Pins i2c0;
    interface SCCB_Pins i2c1;
+   interface SCCB_Pins i2c2;
    interface Clock xclk;
    interface Clock pclk_deleteme_unused_clock;
    method bit reset();

@@ -73,11 +73,11 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
    Reg#(Bit#(16)) dataGapCycles <- mkReg(0, clocked_by pclk, reset_by preset);
    Wire#(Bool)    dataRuleFired <- mkDWire(False, clocked_by pclk, reset_by preset);
 
-   Vector#(2, SCCB) i2c <- replicateM(mkSCCB(1000));
+   Vector#(3, SCCB) i2c <- replicateM(mkSCCB(1000));
    Reg#(bit) resetReg <- mkReg(0);
    Reg#(bit) pwdnReg <- mkReg(0);
 
-   for (Integer i = 0; i < 2; i = i + 1)
+   for (Integer i = 0; i < 3; i = i + 1)
       rule i2c_response_rule;
 	 let response <- i2c[i].user.response.get();
 	 ind.i2cResponse(fromInteger(i), response.data);
@@ -168,6 +168,7 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
    interface Ov7670Pins pins;
       interface SCCB_Pins i2c0 = i2c[0].i2c;
       interface SCCB_Pins i2c1 = i2c[1].i2c;
+      interface SCCB_Pins i2c2 = i2c[2].i2c;
       interface Clock xclk = clockDivider.slowClock;
       interface Clock pclk_deleteme_unused_clock = pclk;
       method bit reset() = resetReg;

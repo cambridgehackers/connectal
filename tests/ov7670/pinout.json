@@ -74,5 +74,14 @@
 	"PIO_DIRECTION": "BIDIR",
 	"PULLTYPE": "PULLUP",
 	"pmodc" : "J4"
+    },
+    "i2c2_SCL" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmodd" : "J3"
+    },
+    "i2c2_SDA" : {
+	"PIO_DIRECTION": "BIDIR",
+	"PULLTYPE": "PULLUP",
+	"pmodd" : "J4"
     }
 }
