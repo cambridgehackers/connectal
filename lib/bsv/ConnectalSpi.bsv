@@ -33,22 +33,36 @@ import StmtFSM     :: *;
 import Assert      :: *;
 
 (* always_enabled *)
-interface SpiPins;
+interface SpiMasterPins;
     method Bit#(1) mosi();
     method Bit#(1) sel_n();
     method Action miso(Bit#(1) v);
     interface Clock clock;
     interface Clock deleteme_unused_clock;
     interface Reset deleteme_unused_reset;
-endinterface: SpiPins
+endinterface: SpiMasterPins
 
-interface SPI#(type a);
-   interface Put#(a) request;
-   interface Get#(a) response;
-   interface SpiPins pins;
+(* always_enabled *)
+interface SpiSlavePins;
+    method Action mosi(Bit#(1) v);
+    method Action sel_n(Bit#(1) v);
+    method Bit#(1) miso();
+    method Action clock(Bit#(1) v);
 endinterface
 
-module mkSpiShifter#(Bool invert_clk) (SPI#(a)) provisos(Bits#(a,awidth),Add#(1,awidth1,awidth),Log#(awidth,logawidth));
+interface SPIMaster#(type a);
+   interface Put#(a) request;
+   interface Get#(a) response;
+   interface SpiMasterPins pins;
+endinterface
+
+interface SPISlave#(type a);
+   interface Get#(a) request;
+   interface Put#(a) response;
+   interface SpiSlavePins pins;
+endinterface
+
+module mkSpiMasterShifter#(Bool invert_clk) (SPIMaster#(a)) provisos(Bits#(a,awidth),Add#(1,awidth1,awidth),Log#(awidth,logawidth));
 
    Clock defaultClock <- exposeCurrentClock;
    Reset defaultReset <- exposeCurrentReset;
@@ -93,7 +107,7 @@ module mkSpiShifter#(Bool invert_clk) (SPI#(a)) provisos(Bits#(a,awidth),Add#(1,
       endmethod
    endinterface: response
 
-   interface SpiPins pins;
+   interface SpiMasterPins pins;
       method Bit#(1) mosi();
          return sync_shiftreg[valueOf(awidth)-1];
       endmethod
@@ -107,12 +121,17 @@ module mkSpiShifter#(Bool invert_clk) (SPI#(a)) provisos(Bits#(a,awidth),Add#(1,
       interface Clock deleteme_unused_clock = invert_clk ? defaultClock : clockInverter.slowClock;
       interface Reset deleteme_unused_reset = defaultReset;
    endinterface: pins
-endmodule: mkSpiShifter
+endmodule: mkSpiMasterShifter
 
-module mkSPI#(Integer divisor, Bool invert_clk)(SPI#(a)) provisos(Bits#(a,awidth),Add#(1,awidth1,awidth),Log#(awidth,logawidth));
+module mkSPISlave(SPISlave#(a))
+   provisos(Bits#(a,awidth));
+
+endmodule
+
+module mkSPIMaster#(Integer divisor, Bool invert_clk)(SPIMaster#(a)) provisos(Bits#(a,awidth),Add#(1,awidth1,awidth),Log#(awidth,logawidth));
    ClockDividerIfc clockDivider <- mkClockDivider(divisor);
    Reset slowReset <- mkAsyncResetFromCR(2, clockDivider.slowClock);
-   SPI#(a) spi <- mkSpiShifter(invert_clk, clocked_by clockDivider.slowClock, reset_by slowReset);
+   SPIMaster#(a) spi <- mkSpiMasterShifter(invert_clk, clocked_by clockDivider.slowClock, reset_by slowReset);
 
    SyncFIFOIfc#(a) requestFifo <- mkSyncFIFOFromCC(1, clockDivider.slowClock);
    SyncFIFOIfc#(a) responseFifo <- mkSyncFIFOToCC(1, clockDivider.slowClock, slowReset);
@@ -124,10 +143,10 @@ module mkSPI#(Integer divisor, Bool invert_clk)(SPI#(a)) provisos(Bits#(a,awidth
    interface request = toPut(requestFifo);
    interface response = toGet(responseFifo);
    interface pins = spi.pins;
-endmodule: mkSPI
+endmodule: mkSPIMaster
 
-module mkSPI20(SPI#(Bit#(20)));
-   SPI#(Bit#(20)) spi <- mkSPI(200, True);
+module mkSPI20(SPIMaster#(Bit#(20)));
+   SPIMaster#(Bit#(20)) spi <- mkSPIMaster(200, True);
    return spi;
 endmodule
 
@@ -139,7 +158,7 @@ module mkSpiTestBench(Empty);
    Bit#(20) masterV = 20'h8baeb;
    let verbose = False;
 
-   SPI#(Bit#(20)) spi <- mkSPI(4, False);
+   SPIMaster#(Bit#(20)) spi <- mkSPIMaster(4, False);
    Reg#(Bit#(20)) slaveCount <- mkReg(20, clocked_by spi.pins.clock, reset_by spi.pins.deleteme_unused_reset);
    Reg#(Bit#(20)) slaveValue <- mkReg(slaveV, clocked_by spi.pins.clock, reset_by spi.pins.deleteme_unused_reset);
    Reg#(Bit#(20)) responseValue <- mkReg(0, clocked_by spi.pins.clock, reset_by spi.pins.deleteme_unused_reset);

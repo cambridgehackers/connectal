@@ -41,8 +41,6 @@ int main(int argc, const char **argv)
   PcieTestBenchIndication *indication = new PcieTestBenchIndication(IfcNames_PcieTestBenchIndication);
   PcieTestBenchRequestProxy *device = new PcieTestBenchRequestProxy(IfcNames_PcieTestBenchRequest);
 
-  portalExec_start();
-
   device->sendReadRequest(1, 4, 1, 5);
   indication->wait();
   device->sendReadRequest(1, 0, 2, 7);

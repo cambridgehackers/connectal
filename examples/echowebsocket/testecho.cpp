@@ -41,7 +41,7 @@ public:
         fprintf(stderr, "heard an s2: %ld %ld\n", (long)a, (long)b);
         sem_post(&sem_heard2);
     }
-    EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationWrapper(id, item, param, &EchoIndicationJson_handleMessage, 1000) {}
+    EchoIndication(unsigned int id, PortalTransportFunctions *item, void *param) : EchoIndicationWrapper(id, item, param, &EchoIndicationJson_handleMessage, 1000) {}
 };
 
 static void call_say(int v)
@@ -68,9 +68,9 @@ int main(int argc, const char **argv)
 #endif
 
     int rc = getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
-    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndicationH2S, &websocketfuncInit, PARAM);
+    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndicationH2S, &transportWebSocketInit, PARAM);
     rc = getaddrinfo("127.0.0.1", "5001", NULL, &param.addr);
-    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H, &websocketfuncInit, PARAM, &EchoRequestJsonProxyReq, 1000);
+    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H, &transportWebSocketInit, PARAM, &EchoRequestJsonProxyReq, 1000);
 
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
@@ -81,7 +81,5 @@ int main(int argc, const char **argv)
     call_say2(v, v*3);
     printf("TEST TYPE: SEM\n");
     sRequestProxy->setLeds(9);
-    portalExec_end();
-    //freeaddrinfo(param.addr);
     return 0;
 }

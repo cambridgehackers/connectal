@@ -59,24 +59,23 @@ int main(int argc, const char **argv)
 
   MMURequestProxy *hostMMURequest = new MMURequestProxy(IfcNames_AlgoMMURequest);
   DmaManager *hostDma = new DmaManager(hostMMURequest);
-  MMUIndication *hostMMUIndication = new MMUIndication(hostDma, IfcNames_AlgoMMUIndication);
+  MMUIndication hostMMUIndication(hostDma, IfcNames_AlgoMMUIndication);
 
   MMURequestProxy *nandsimMMURequest = new MMURequestProxy(IfcNames_NandMMURequest);
   DmaManager *nandsimDma = new DmaManager(nandsimMMURequest);
-  MMUIndication *nandsimMMUIndication = new MMUIndication(nandsimDma,IfcNames_NandMMUIndication);
+  MMUIndication nandsimMMUIndication(nandsimDma,IfcNames_NandMMUIndication);
 
   StrstrRequestProxy *strstrRequest = new StrstrRequestProxy(IfcNames_AlgoRequest);
   StrstrIndication *strstrIndication = new StrstrIndication(IfcNames_AlgoIndication);
   
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_HostMemServerIndication);
-  MemServerIndication *nandsimMemServerIndication = new MemServerIndication(IfcNames_NandMemServerIndication);
+  MemServerIndication hostMemServerIndication(IfcNames_HostMemServerIndication);
+  MemServerIndication nandsimMemServerIndication(IfcNames_NandMemServerIndication);
 
-  portalExec_start();
   fprintf(stderr, "Main::allocating memory...\n");
 
   // allocate memory for strstr data
-  int needleAlloc = portalAlloc(numBytes);
-  int mpNextAlloc = portalAlloc(numBytes);
+  int needleAlloc = portalAlloc(numBytes, 0);
+  int mpNextAlloc = portalAlloc(numBytes, 0);
   int ref_needleAlloc = hostDma->reference(needleAlloc);
   int ref_mpNextAlloc = hostDma->reference(mpNextAlloc);
 
@@ -98,8 +97,8 @@ int main(int argc, const char **argv)
   //   fprintf(stderr, "%d ", needle[i]);
   // fprintf(stderr, "]\n");
 
-  portalDCacheFlushInval(needleAlloc, numBytes, needle);
-  portalDCacheFlushInval(mpNextAlloc, numBytes, mpNext);
+  portalCacheFlush(needleAlloc, needle, numBytes, 1);
+  portalCacheFlush(mpNextAlloc, mpNext, numBytes, 1);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   fprintf(stderr, "Main::waiting to connect to nandsim_exe\n");
@@ -109,6 +108,7 @@ int main(int argc, const char **argv)
   // this is read from nandsim_exe, but could also come from kernel driver
   int haystack_base = read_from_nandsim_exe();
   int haystack_len  = read_from_nandsim_exe();
+  fprintf(stderr, "haystack_base=%d haystack_len=%d\n", haystack_base, haystack_len);
 
   // request the next sglist identifier from the sglistMMU hardware module
   // which is used by the mem server accessing flash memory.

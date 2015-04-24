@@ -55,8 +55,6 @@ int main(int argc, const char **argv)
   SimpleIndication *indication = new SimpleIndication(IfcNames_SimpleIndication);
   SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequest);
 
-  portalExec_start();
-
   fprintf(stderr, "Main::calling say1(%d)\n", v1a);
   device->say1(v1a);  
 

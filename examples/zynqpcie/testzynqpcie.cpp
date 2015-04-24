@@ -33,7 +33,7 @@ class ZynqPcieTestIndication : public ZynqPcieTestIndicationWrapper {
 public:
     ZynqPcieTestIndication(int id, PortalPoller *poller = 0) : ZynqPcieTestIndicationWrapper(id, poller) {
     };
-    ZynqPcieTestIndication(int id, PortalItemFunctions *item, void *param, PortalPoller *poller = 0) : ZynqPcieTestIndicationWrapper(id, item, param, poller) {
+    ZynqPcieTestIndication(int id, PortalTransportFunctions *item, void *param, PortalPoller *poller = 0) : ZynqPcieTestIndicationWrapper(id, item, param, poller) {
     };
   virtual void status ( const uint32_t v ) {
 	fprintf(stderr, "ZynqPcieTestIndicationWrapper.status v=%x\n", v);
@@ -50,7 +50,6 @@ int main(int argc, const char **argv)
   ZynqPcieTestRequestProxy *device = new ZynqPcieTestRequestProxy(IfcNames_ZynqPcieTestRequest);
   device->pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
 
-  portalExec_start();
   for (int i = 0; i < 2; i++) {
       device->getStatus(0);
       sleep(2);

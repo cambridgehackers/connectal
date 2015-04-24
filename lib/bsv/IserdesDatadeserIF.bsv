@@ -21,12 +21,6 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 import Vector::*;
-//import Clocks::*;
-//import FIFO::*;
-//import FIFOF::*;
-//import SyncBits::*;
-//import ImageonVita::*;
-//import IserdesDatadeserIF::*;
 
 interface IserdesDatadeser;
     method Bit#(1)          align_busy();
@@ -61,7 +55,7 @@ interface ImageonSerdesIndication;
 endinterface
 
 interface SerdesData;
-    method Wire#(Bit#(1)) reset();
+    method Reg#(Bit#(1)) reset();
     method Vector#(5, Bit#(10)) raw_data();
     method Bit#(64) capture();
     method Action start_capture();

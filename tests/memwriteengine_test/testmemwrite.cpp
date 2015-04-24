@@ -18,7 +18,6 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
 #include <stdio.h>
 #include <stdint.h>
 #include <semaphore.h>
@@ -32,23 +31,7 @@
 #include "MemwriteIndication.h"
 #include "MemwriteRequest.h"
 
-static void memdump(unsigned char *p, int len, const char *title)
-{
-int i;
-
-    i = 0;
-    while (len > 0) {
-        if (!(i & 0xf)) {
-            if (i > 0)
-                printf("\n");
-            printf("%s: ",title);
-        }
-        printf("%02x ", *p++);
-        i++;
-        len--;
-    }
-    printf("\n");
-}
+#define NUMBER_OF_WORDS   0x1240
 
 static sem_t done_sem;
 class MemwriteIndication : public MemwriteIndicationWrapper
@@ -74,9 +57,9 @@ public:
 
 int main(int argc, const char **argv)
 {
-  size_t alloc_sz = 0x1240;
+  size_t alloc_sz = NUMBER_OF_WORDS;
   MemwriteRequestProxy *device = new MemwriteRequestProxy(IfcNames_MemwriteRequestS2H);
-  MemwriteIndication *deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndicationH2S);
+  MemwriteIndication deviceIndication(IfcNames_MemwriteIndicationH2S);
 #if (NumberOfMasters != 0)
   MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
   MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
@@ -86,16 +69,14 @@ int main(int argc, const char **argv)
 #endif
 
   sem_init(&done_sem, 1, 0);
-  portalExec_start();
-
 #if (NumberOfMasters != 0)
-  int dstAlloc = portalAlloc(alloc_sz);
+  int dstAlloc = portalAlloc(alloc_sz, 0);
   unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
 
   for (int i = 0; i < alloc_sz/sizeof(uint32_t); i++)
     dstBuffer[i] = 0xDEADBEEF;
 
-  portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
+  portalCacheFlush(dstAlloc, dstBuffer, alloc_sz, 1);
 
   fprintf(stderr, "parent::starting write\n");
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
@@ -105,8 +86,7 @@ int main(int argc, const char **argv)
   device->startWrite(ref_dstAlloc, alloc_sz, 2 * sizeof(uint32_t));
 
   sem_wait(&done_sem);
-#if (NumberOfMasters != 0)
-  memdump((unsigned char *)dstBuffer, 32, "MEM");
-#endif
   fprintf(stderr, "%s: done\n", __FUNCTION__);
+  sleep(2);
+  return 0;
 }

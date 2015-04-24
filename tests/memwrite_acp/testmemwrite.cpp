@@ -72,15 +72,13 @@ int main(int argc, const char **argv)
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
   sem_init(&done_sem, 1, 0);
-  portalExec_start();
-
-  int dstAlloc = portalAlloc(alloc_sz);
+  int dstAlloc = portalAlloc(alloc_sz, 0);
   unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
 
   for (int i = 0; i < alloc_sz/sizeof(uint32_t); i++)
     dstBuffer[i] = 0xDEADBEEF;
 
-  portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
+  portalCacheFlush(dstAlloc, dstBuffer, alloc_sz, 1);
 
   fprintf(stderr, "parent::starting write\n");
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);

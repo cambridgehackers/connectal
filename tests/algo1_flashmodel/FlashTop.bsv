@@ -29,6 +29,7 @@ import GetPut::*;
 import ClientServer::*;
 
 import Vector::*;
+import BuildVector::*;
 import List::*;
 
 import ConnectalMemory::*;
@@ -525,8 +526,8 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 
 	endinterface //FlashRequest
 
-   interface MemWriteClient hostMemWriteClient = cons(we.dmaClient, nil);
-   interface MemReadClient hostMemReadClient = cons(re.dmaClient, nil);
+   interface MemWriteClient hostMemWriteClient = vec(we.dmaClient);
+   interface MemReadClient hostMemReadClient = vec(re.dmaClient);
 
    interface Aurora_Pins aurora_fmc1 = flashCtrl.aurora;
    interface Aurora_Clock_Pins aurora_clk_fmc1 = gtx_clk_fmc1.aurora_clk;

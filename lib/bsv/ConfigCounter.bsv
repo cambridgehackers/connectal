@@ -24,20 +24,23 @@ import GetPut::*;
 
 interface ConfigCounter#(numeric type count_sz);
    method Action decrement(UInt#(count_sz) x);
+   method ActionValue#(Bool) maybeDecrement(UInt#(count_sz) x);
    method Action increment(UInt#(count_sz) x);
    method UInt#(count_sz) read();
+   method UInt#(count_sz) read_bypass();
+   method Bool positive();
 endinterface
 
 module mkConfigCounter#(UInt#(count_sz) init_val)(ConfigCounter#(count_sz));
    Wire#(UInt#(count_sz)) inc_wire <- mkDWire(0);
    Wire#(UInt#(count_sz)) dec_wire <- mkDWire(0);
    Reg#(UInt#(count_sz)) cnt <- mkReg(init_val);
+   Reg#(Bool) positive_reg <- mkReg(False);
    (* fire_when_enabled *)
    rule react;
-      if (inc_wire > dec_wire)
-	 cnt <= cnt + (inc_wire - dec_wire);
-      else
-	 cnt <= cnt - (dec_wire - inc_wire);
+      let new_count = (cnt + inc_wire) - dec_wire;
+      cnt <= new_count;
+      positive_reg <= (new_count > 0);
    endrule
    method Action increment(UInt#(count_sz) x);
       inc_wire <= x;
@@ -45,5 +48,14 @@ module mkConfigCounter#(UInt#(count_sz) init_val)(ConfigCounter#(count_sz));
    method Action decrement(UInt#(count_sz) x);
       dec_wire <= x;
    endmethod
+   method ActionValue#(Bool) maybeDecrement(UInt#(count_sz) x);
+      if (cnt >= x) begin
+	 dec_wire <= x;
+	 return True;
+      end
+      else
+	 return False;
+   endmethod
    method UInt#(count_sz) read = cnt._read;
+   method Bool positive = positive_reg._read;
 endmodule

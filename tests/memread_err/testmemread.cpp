@@ -98,10 +98,8 @@ int runtest(int argc, const char ** argv)
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
-  srcAlloc = portalAlloc(alloc_sz);
+  srcAlloc = portalAlloc(alloc_sz, 0);
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
-
-  portalExec_start();
 
 #ifdef FPGA0_CLOCK_FREQ
   long req_freq = FPGA0_CLOCK_FREQ;
@@ -114,7 +112,7 @@ int runtest(int argc, const char ** argv)
     srcBuffer[i] = i;
   }
 
-  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
+  portalCacheFlush(srcAlloc, srcBuffer, alloc_sz, 1);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);

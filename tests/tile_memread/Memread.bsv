@@ -89,6 +89,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    interface dmaClient = re.dmaClient;
    interface MemreadRequest request;
       method Action startRead(Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic) if (itersToStart == 0 && itersToFinish == 0);
+         ic = ic + 4;
 	 pointer <= rp;
 	 cf.enq(?);
 	 numWords  <= nw;

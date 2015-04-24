@@ -95,8 +95,6 @@ int main(int argc, const char **argv)
   YuvIndication *indication = new YuvIndication(IfcNames_YuvIndicationPortal);
   YuvRequestProxy *device = new YuvRequestProxy(IfcNames_YuvRequestPortal);
 
-  portalExec_start();
-
   struct rgb tests[] = {
     { 0, 0, 0 },
     { 1, 2, 3 },

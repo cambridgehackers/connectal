@@ -72,8 +72,6 @@ int main(int argc, const char **argv)
   FpMulRequestProxy *dev = new FpMulRequestProxy(IfcNames_FpMulRequestPortal);
   FpMulIndication   *ind = new FpMulIndication(IfcNames_FpMulIndicationPortal);
 
-  portalExec_start();
-
   dev->mul_req(0,0);
   while(1);
 }

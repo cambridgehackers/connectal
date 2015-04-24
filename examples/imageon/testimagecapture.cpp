@@ -29,8 +29,7 @@
 #include "dmaManager.h"
 #include "StdDmaIndication.h"
 #include "ImageonCaptureRequest.h"
-#include "ImageonSensorRequest.h"
-#include "ImageonSensorIndication.h"
+#include "ImageonCaptureIndication.h"
 #include "ImageonSerdesRequest.h"
 #include "ImageonSerdesIndication.h"
 #include "HdmiGeneratorRequest.h"
@@ -38,9 +37,9 @@
 #include "MemServerRequest.h"
 #include "MMURequest.h"
 
-static ImageonSensorRequestProxy *sensordevice;
 static ImageonSerdesRequestProxy *serdesdevice;
 static HdmiGeneratorRequestProxy *hdmidevice;
+static ImageonCaptureRequestProxy *idevice;
 static int trace_spi = 0;
 static int nlines = 1080;
 static int npixels = 1920;
@@ -64,18 +63,18 @@ DECL(spi_response)
 class ImageonSerdesIndication : public ImageonSerdesIndicationWrapper {
 public:
     ImageonSerdesIndication(int id) : ImageonSerdesIndicationWrapper(id) {}
-    virtual void iserdes_control_value ( uint32_t v ){
+    void iserdes_control_value ( const uint32_t v ){
         cv_iserdes_control = v;
         sem_post(&sem_iserdes_control);
     }
-    virtual void iserdes_dma ( uint32_t v ){
+    void iserdes_dma ( const uint32_t v ){
 printf("[%s:%d] 0x%x ***************************************************************** \n", __FUNCTION__, __LINE__, v);
     }
 };
 
-class ImageonSensorIndication : public ImageonSensorIndicationWrapper {
+class ImageonCaptureIndication : public ImageonCaptureIndicationWrapper {
 public:
-    ImageonSensorIndication(int id) : ImageonSensorIndicationWrapper(id) {}
+    ImageonCaptureIndication(int id) : ImageonCaptureIndicationWrapper(id) {}
     void spi_response(uint32_t v){
         //fprintf(stderr, "spi_response: %x\n", v);
         cv_spi_response = v;
@@ -239,7 +238,7 @@ static uint32_t spi_transfer (uint32_t v)
 {
     if (trace_spi)
         printf("SPITRANSFER: %x\n", v);
-    sensordevice->put_spi_request(v);
+    idevice->put_spi_request(v);
     sem_wait(&sem_spi_response);
     return cv_spi_response;
 }
@@ -413,7 +412,7 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
 
    uint32_t trigDutyCycle    = 90; // exposure time is 90% of frame time (ie. 15msec)
    uint32_t vitaTrigGenDefaultFreq = (((1920+88+44+148)*(1080+4+5+36))>>2) - 2;
-   sensordevice->set_trigger_cnt_trigger((vitaTrigGenDefaultFreq * (100-trigDutyCycle))/100 + 1);
+   idevice->set_trigger_cnt((vitaTrigGenDefaultFreq * (100-trigDutyCycle))/100 + 1);
    vita_spi_write(194, 0x0400);
    vita_spi_write(0x29, 0x0700);
    uint16_t vspi_data = vita_spi_read(192) | 0x71; usleep(100);
@@ -432,17 +431,16 @@ int main(int argc, const char **argv)
   MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
   MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
+  MemServerIndication hostMemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
+  MMUIndication hostMMUIndication(dma, IfcNames_MMUIndicationH2S);
 
     serdesdevice = new ImageonSerdesRequestProxy(IfcNames_ImageonSerdesRequestS2H);
-    sensordevice = new ImageonSensorRequestProxy(IfcNames_ImageonSensorRequestS2H);
     hdmidevice = new HdmiGeneratorRequestProxy(IfcNames_HdmiGeneratorRequestS2H);
-    ImageonCaptureRequestProxy *idevice = new ImageonCaptureRequestProxy(IfcNames_ImageonCaptureRequestS2H);
+    idevice = new ImageonCaptureRequestProxy(IfcNames_ImageonCaptureRequestS2H);
     
-    ImageonSerdesIndicationWrapper *imageonSerdesIndication = new ImageonSerdesIndication(IfcNames_ImageonSerdesIndicationH2S);
-    ImageonSensorIndicationWrapper *imageonSensorIndication = new ImageonSensorIndication(IfcNames_ImageonSensorIndicationH2S);
-    HdmiGeneratorIndicationWrapper *hdmiIndication = new HdmiGeneratorIndication(IfcNames_HdmiGeneratorIndicationH2S, hdmidevice);
+    ImageonSerdesIndication imageonSerdesIndication(IfcNames_ImageonSerdesIndicationH2S);
+    ImageonCaptureIndication imageonCaptureIndication(IfcNames_ImageonCaptureIndicationH2S);
+    HdmiGeneratorIndication hdmiIndication(IfcNames_HdmiGeneratorIndicationH2S, hdmidevice);
     // read out monitor EDID from ADV7511
     struct edid edid;
     init_i2c_hdmi();
@@ -472,9 +470,8 @@ int main(int argc, const char **argv)
     printf("[%s:%d] setClockFrequency 1 160000000 status=%d actualfreq=%ld\n", __FUNCTION__, __LINE__, status, actualFrequency);
     status = setClockFrequency(3, 200000000, &actualFrequency);
     printf("[%s:%d] setClockFrequency 3 200000000 status=%d actualfreq=%ld\n", __FUNCTION__, __LINE__, status, actualFrequency);
-    portalExec_start();
     printf("[%s:%d] before set_i2c_mux_reset_n\n", __FUNCTION__, __LINE__);
-    sensordevice->set_i2c_mux_reset_n(1);
+    idevice->set_i2c_mux_reset_n(1);
     printf("[%s:%d] before setDeLine/Pixel\n", __FUNCTION__, __LINE__);
     for (int i = 0; i < 4; i++) {
       int pixclk = (long)edid.timing[i].pixclk * 10000;
@@ -511,18 +508,18 @@ hblank--; // needed on zc702
 
     fbsize = nlines*npixels*4;
 
-    int srcAlloc = portalAlloc(DMA_BUFFER_SIZE);
+    int srcAlloc = portalAlloc(DMA_BUFFER_SIZE, 0);
     unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, DMA_BUFFER_SIZE);
     printf("[%s:%d] before dma->reference\n", __FUNCTION__, __LINE__);
     memset(srcBuffer, 0xff, 16);
-    portalDCacheFlushInval(srcAlloc, DMA_BUFFER_SIZE, srcBuffer);
+    portalCacheFlush(srcAlloc, srcBuffer, DMA_BUFFER_SIZE, 1);
     unsigned int ref_srcAlloc = dma->reference(srcAlloc);
     printf("[%s:%d] before setTestPattern\n", __FUNCTION__, __LINE__);
     hdmidevice->setTestPattern(1);
 
     //ret = fmc_iic_axi_init(uBaseAddr_IIC_FmcImageon);
     //fmc_iic_axi_GpoWrite(uBaseAddr_IIC_FmcImageon, fmc_iic_axi_GpoRead(uBaseAddr_IIC_FmcImageon) | 2);
-    sensordevice->set_host_oe(1);
+    idevice->set_host_oe(1);
 
 printf("[%s:%d] before i2c_camera\n", __FUNCTION__, __LINE__);
     init_i2c_camera();
@@ -561,7 +558,7 @@ sleep(2);
             printf("[%s:%d] spi %d. %x\n", __FUNCTION__, __LINE__, regids[i], vita_spi_read(regids[i]));
         printf("counter %d\n", counter);
         if (counter == 1 && argc > 1) {
-            portalDCacheFlushInval(srcAlloc, DMA_BUFFER_SIZE, srcBuffer);
+            portalCacheFlush(srcAlloc, srcBuffer, DMA_BUFFER_SIZE, 1);
             int fd = creat("tmp.outfile", 0666);
             int cnt = write(fd, srcBuffer, DMA_BUFFER_SIZE);
             printf("[%s:%d] length written %d.\n", __FUNCTION__, __LINE__, cnt);

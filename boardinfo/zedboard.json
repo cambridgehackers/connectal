@@ -357,19 +357,19 @@
              "LOC" : "AA9",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J5" : {
+        "J7" : {
              "LOC" : "AB11",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J6" : {
+        "J8" : {
              "LOC" : "AB10",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J7" : {
+        "J9" : {
              "LOC" : "AB9",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J8" : {
+        "J10" : {
              "LOC" : "AA8",
 	     "IOSTANDARD" : "LVCMOS33"
 	     }	 
@@ -391,19 +391,19 @@
              "LOC" : "W8",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J5" : {
+        "J7" : {
              "LOC" : "V12",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J6" : {
+        "J8" : {
              "LOC" : "W10",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J7" : {
+        "J9" : {
              "LOC" : "V9",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J8" : {
+        "J10" : {
              "LOC" : "V8",
 	     "IOSTANDARD" : "LVCMOS33"
 	     }	 
@@ -425,19 +425,19 @@
              "LOC" : "AA4",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J5" : {
+        "J7" : {
              "LOC" : "R6",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J6" : {
+        "J8" : {
              "LOC" : "T6",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J7" : {
+        "J9" : {
              "LOC" : "T4",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J8" : {
+        "J10" : {
              "LOC" : "U4",
 	     "IOSTANDARD" : "LVCMOS33"
 	     }	 
@@ -459,22 +459,56 @@
              "LOC" : "V4",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J5" : {
+        "J7" : {
              "LOC" : "W6",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J6" : {
+        "J8" : {
              "LOC" : "W5",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J7" : {
+        "J9" : {
              "LOC" : "U6",
 	     "IOSTANDARD" : "LVCMOS33"
 	     },
-        "J8" : {
+        "J10" : {
              "LOC" : "U5",
 	     "IOSTANDARD" : "LVCMOS33"
 	     }	 
+    },
+    "pmode_documentation_only;cannot use from PL" : {
+        "MIO13" : {
+             "LOC" : "A6",
+	     "CONNECTORPIN" : "JE1"
+	     },
+        "MIO10" : {
+             "LOC" : "G7",
+	     "CONNECTORPIN" : "JE2"
+	     },
+        "MIO11" : {
+             "LOC" : "B4",
+	     "CONNECTORPIN" : "JE3"
+	     },
+        "MIO12" : {
+             "LOC" : "C5",
+	     "CONNECTORPIN" : "JE4"
+	     },
+        "MIO0" : {
+             "LOC" : "G6",
+	     "CONNECTORPIN" : "JE7"
+	     },
+        "MIO9" : {
+             "LOC" : "C4",
+	     "CONNECTORPIN" : "JE8"
+	     },
+        "MIO14" : {
+             "LOC" : "B6",
+	     "CONNECTORPIN" : "JE9"
+	     },
+        "MIO15" : {
+             "LOC" : "E6",
+	     "CONNECTORPIN" : "JE10"
+	     }
     },
     "leds" : {
     	"L0" : {

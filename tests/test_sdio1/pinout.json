@@ -3,13 +3,13 @@
 	"PIO_DIRECTION": "OUTPUT",
 	"pmod" : "J4"
     },
-    "sdio_cd_v" : { 
+    "sdio_cdn_v" : { 
 	"PIO_DIRECTION": "INPUT",
-	"pmod" : "J7"
+	"pmod" : "J9"
     },
     "sdio_wp_v" : { 
 	"PIO_DIRECTION": "INPUT",
-	"pmod" : "J8"
+	"pmod" : "J10"
     },
     "sdio_cmd" : { 
 	"PIO_DIRECTION": "BIDIR",
@@ -21,11 +21,11 @@
     },
     "sdio_d1" : { 
 	"PIO_DIRECTION": "BIDIR",
-	"pmod" : "J5"
+	"pmod" : "J7"
     },
     "sdio_d2" : { 
 	"PIO_DIRECTION": "BIDIR",
-	"pmod" : "J6"
+	"pmod" : "J8"
     },
     "sdio_d3" : { 
 	"PIO_DIRECTION": "BIDIR",

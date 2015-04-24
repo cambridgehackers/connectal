@@ -79,9 +79,7 @@ static void run_test(void)
   pcyc[8] = portalCycleCount();
   if (use_inline) {
     while (!flag_heard) {
-        //void *rc = poller->portalExec_poll(poller->portalExec_timeout);
-        //if ((long) rc >= 0)
-        poller->portalExec_event();
+        poller->event();
     }
     pcyc[9] = pcyc[8];
     pcyc[12] = pcyc[8];
@@ -121,8 +119,7 @@ int main(int argc, const char **argv)
     pthread_mutex_lock(&mutex_heard);
     sem_init(&sem_heard, 0, 0);
 
-    poller->portalExec_start();
-    portalExec_start();
+    poller->start();
 
     run_test();
     printf("turn off printf in responder\n");
@@ -144,7 +141,7 @@ int main(int argc, const char **argv)
     for (i = 0; i < LOOP_COUNT; i++)
         run_test();
     printf("disable interrupts for ipcTestIndication\n");
-    poller->portalExec_stop();
+    poller->stop();
     printf("now try inline\n");
     use_inline = 1;
     for (i = 0; i < LOOP_COUNT; i++)

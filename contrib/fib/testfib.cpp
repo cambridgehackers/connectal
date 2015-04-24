@@ -55,8 +55,6 @@ int main(int argc, const char **argv)
     fprintf(stderr, "failed to init test_sem\n");
     return -1;
   }
-  portalExec_start();
-
   for (i = 0; i < 20; i += 1) {
     fprintf(stderr, "fib(%d)\n", i);
     fibRequestProxy->fib(i);

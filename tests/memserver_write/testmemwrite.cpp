@@ -58,33 +58,38 @@ public:
     fprintf(stderr, "Memwrite::writeDone (%08x)\n", srcGen);
     sem_post(&done_sem);
   }
+  virtual void writeProgress ( uint32_t numtodo ){
+    fprintf(stderr, "Memwrite::writeProgress (%08x)\n", numtodo);
+  }
 };
 
 int main(int argc, const char **argv)
 {
-  size_t alloc_sz = 1024*1024*10;
-  MemwriteRequestProxy *device = new MemwriteRequestProxy(IfcNames_MemwriteRequest);
-  MemwriteIndication *deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndication);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+  size_t alloc_sz = 1024*1024;
+  MemwriteRequestProxy *device = new MemwriteRequestProxy(IfcNames_MemwriteRequestS2H);
+  MemwriteIndication *deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndicationH2S);
+  MemServerRequestProxy *memServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
+  MemServerIndication *memServerIndication = new MemServerIndication(memServerRequest, IfcNames_MemServerIndicationH2S);
+  MMUIndication *mmuIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
 
   sem_init(&done_sem, 1, 0);
-  portalExec_start();
 
-  int dstAlloc = portalAlloc(alloc_sz);
+  int dstAlloc = portalAllocCached(alloc_sz, 1, 0);
   unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
 
   for (int i = 0; i < alloc_sz/sizeof(uint32_t); i++)
     dstBuffer[i] = 0xDEADBEEF;
 
-  portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
+#ifndef USE_ACP
+  fprintf(stderr, "flushing cache\n");
+  portalCacheFlush(dstAlloc, dstBuffer, alloc_sz, 1);
+#endif
 
   fprintf(stderr, "parent::starting write\n");
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
-  int burstLenBytes = 2*sizeof(uint32_t);
+  int burstLenBytes = 16*sizeof(uint32_t);
   device->startWrite(ref_dstAlloc, alloc_sz, alloc_sz / burstLenBytes, burstLenBytes);
 
   sem_wait(&done_sem);

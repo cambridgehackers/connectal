@@ -47,7 +47,7 @@ public:
     sleep(1);
     exit(1);
   }
-  EchoRequest(unsigned int id, PortalItemFunctions *item, void *param) : EchoRequestWrapper(id, item, param, &EchoRequestJson_handleMessage, 1000) {}
+  EchoRequest(unsigned int id, PortalTransportFunctions *item, void *param) : EchoRequestWrapper(id, item, param, &EchoRequestJson_handleMessage, 1000) {}
 };
 
 int main(int argc, const char **argv)
@@ -56,9 +56,9 @@ int main(int argc, const char **argv)
 
     //talk to testecho.py
     int rc = getaddrinfo("0.0.0.0", "5000", NULL, &param.addr);
-    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndicationH2S, &socketfuncResp, &param, &EchoIndicationJsonProxyReq, 1000);
+    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndicationH2S, &transportSocketResp, &param, &EchoIndicationJsonProxyReq, 1000);
     rc = getaddrinfo("0.0.0.0", "5001", NULL, &param.addr);
-    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequestS2H, &socketfuncResp, &param);
+    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequestS2H, &transportSocketResp, &param);
 
     printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);
     while(1)

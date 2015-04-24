@@ -44,7 +44,6 @@ int main(int argc, const char **argv)
 {
   PipeMulIndication *indication = new PipeMulIndication(IfcNames_PipeMulIndication);
   PipeMulRequestProxy *device = new PipeMulRequestProxy(IfcNames_PipeMulRequest);
-  portalExec_start();
   device->mul(3,4);  
   while(true);
 }

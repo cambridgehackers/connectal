@@ -41,7 +41,7 @@ public:
         sem_post(&sem_heard);
         //fprintf(stderr, "heard an s2: %ld %ld\n", a, b);
     }
-    EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
+    EchoIndication(unsigned int id, PortalTransportFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
 };
 
 EchoIndication *sIndication;
@@ -89,7 +89,7 @@ public:
         sem_post(&sem_heard2);
         //fprintf(stderr, "heard an s2: %ld %ld\n", a, b);
     }
-    EchoIndication2(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
+    EchoIndication2(unsigned int id, PortalTransportFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
 };
 
 EchoIndication2 *sIndication2;
@@ -128,21 +128,17 @@ int main(int argc, const char **argv)
 
 	printf ("*** Two clients version ***\n");
 
-	sIndication = new EchoIndication(IfcNames_EchoIndication, &socketfuncInit, NULL);
-	sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &socketfuncInit, NULL);
+	sIndication = new EchoIndication(IfcNames_EchoIndication, &transportSocketInit, NULL);
+	sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &transportSocketInit, NULL);
 
-	sIndication2 = new EchoIndication2(IfcNames_EchoIndication2, &socketfuncInit, NULL);
-    sRequestProxy2 = new EchoRequestProxy(IfcNames_EchoRequest2, &socketfuncInit, NULL);
-
-    portalExec_start();
+	sIndication2 = new EchoIndication2(IfcNames_EchoIndication2, &transportSocketInit, NULL);
+    sRequestProxy2 = new EchoRequestProxy(IfcNames_EchoRequest2, &transportSocketInit, NULL);
 
 	pthread_create (&thread1, NULL, client1, (void*)NULL);
 	pthread_create (&thread2, NULL, client2, (void*)NULL);
 
 	pthread_join (thread1, NULL);
 	pthread_join (thread2, NULL);
-
-    portalExec_end();
 
 	printf ("done\n");
 
@@ -157,15 +153,13 @@ int main(int argc, const char **argv)
 	printf ("*** version 2 ***\n");
 
 	// Client 1
-	EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &socketfuncInit, NULL);
-    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &socketfuncInit, NULL);
+	EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &transportSocketInit, NULL);
+    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &transportSocketInit, NULL);
 
 	// Client 2
-	EchoIndication *sIndication2 = new EchoIndication(IfcNames_EchoIndication2, &socketfuncInit, NULL);
-    sRequestProxy2 = new EchoRequestProxy(IfcNames_EchoRequest2, &socketfuncInit, NULL);
+	EchoIndication *sIndication2 = new EchoIndication(IfcNames_EchoIndication2, &transportSocketInit, NULL);
+    sRequestProxy2 = new EchoRequestProxy(IfcNames_EchoRequest2, &transportSocketInit, NULL);
 
-
-    portalExec_start();
 
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
@@ -186,8 +180,6 @@ int main(int argc, const char **argv)
     call2_say(v*93);
     call2_say2(v, v*3);
 
-
-    portalExec_end();
     //freeaddrinfo(param.addr);
     return 0;
 }

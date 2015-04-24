@@ -35,7 +35,7 @@ class %(className)sProxy : public %(parentClass)s {
 public:
     %(className)sProxy(int id, int tile = 0, %(classNameOrig)sCb *cbarg = &%(className)sProxyReq, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller = 0) :
         Portal(id, tile, bufsize, NULL, NULL, poller), cb(cbarg) {};
-    %(className)sProxy(int id, PortalItemFunctions *item, void *param, %(classNameOrig)sCb *cbarg = &%(className)sProxyReq, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller = 0) :
+    %(className)sProxy(int id, PortalTransportFunctions *item, void *param, %(classNameOrig)sCb *cbarg = &%(className)sProxyReq, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller = 0) :
         Portal(id, 0, bufsize, NULL, NULL, item, param, poller), cb(cbarg) {};
 '''
 
@@ -47,7 +47,7 @@ public:
            Portal(id, tile, bufsize, cba, (void *)&%(className)s_cbTable, poller) {
         pint.parent = static_cast<void *>(this);
     };
-    %(className)sWrapper(int id, PortalItemFunctions *item, void *param, PORTAL_INDFUNC cba = %(className)s_handleMessage, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller=0):
+    %(className)sWrapper(int id, PortalTransportFunctions *item, void *param, PORTAL_INDFUNC cba = %(className)s_handleMessage, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller=0):
            Portal(id, 0, bufsize, cba, (void *)&%(className)s_cbTable, item, param, poller) {
         pint.parent = static_cast<void *>(this);
     };
@@ -55,7 +55,7 @@ public:
            Portal(id, 0, %(classNameOrig)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, poller) {
         pint.parent = static_cast<void *>(this);
     };
-    %(className)sWrapper(int id, PortalItemFunctions *item, void *param, PortalPoller *poller):
+    %(className)sWrapper(int id, PortalTransportFunctions *item, void *param, PortalPoller *poller):
            Portal(id, 0, %(classNameOrig)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, item, param, poller) {
         pint.parent = static_cast<void *>(this);
     };
@@ -77,9 +77,9 @@ typedef union {
 handleMessageTemplate1='''
 {
     static int runaway = 0;
-    int tmpfd;
-    unsigned int tmp;
-    %(classNameOrig)sData tempdata;
+    int   tmp __attribute__ ((unused));
+    int tmpfd __attribute__ ((unused));
+    %(classNameOrig)sData tempdata __attribute__ ((unused));
     %(handleStartup)s
     switch (channel) {'''
 
@@ -88,9 +88,9 @@ handleMessagePrep='''
         %(paramStructDemarshall)s'''
 
 handleMessageCase='''
-    case %(channelNumber)s:
+    case %(channelNumber)s: {
         %(responseCase)s
-        break;'''
+      } break;'''
 
 handleMessageTemplate2='''
     default:
@@ -417,8 +417,11 @@ def generate_demarshall(argStruct, w):
         if off:
             field = '%s>>%s' % (field, off)
         #print 'JJJ', e.name, '{{'+field+'}}', typeBitWidth(e.datatype), e.shifted, e.assignOp, off
-        #if typeBitWidth(e.datatype) < 32:
-        field = '((%s)&0x%xul)' % (field, ((1 << (typeBitWidth(e.datatype)-e.shifted))-1))
+        fieldWidth = 32 - off     # number of valid data bits in source
+        fieldWidth += e.shifted   # number of valid data bits after shifting
+        if fieldWidth > typeBitWidth(e.datatype): # if num bits in type < num of valid bits
+            fieldWidth = typeBitWidth(e.datatype)
+        field = '((%s)&0x%xul)' % (field, ((1 << (fieldWidth - e.shifted))-1))
         if e.shifted:
             field = '((%s)(%s)<<%s)' % (typeCName(e.datatype),field, e.shifted)
         if typeCName(e.datatype) == 'SpecialTypeForSendingFd':
@@ -603,7 +606,9 @@ def generate_class(classNameOrig, classVariant, declList, parentC, parentCC, gen
             generated_hpp.write(('    int (*%s) ( ' % methodName) + formalParamStr + ' );\n')
             generated_cpp.write(('int %s%s_cb ( ' % (classCName, methodName)) + formalParamStr + ' ) {\n')
             indent(generated_cpp, 4)
-            generated_cpp.write(('(static_cast<%sWrapper *>(p->parent))->%s ( ' % (classCName, methodName)) + paramValues + ');\n};\n')
+            generated_cpp.write(('(static_cast<%sWrapper *>(p->parent))->%s ( ' % (classCName, methodName)) + paramValues + ');\n')
+            indent(generated_cpp, 4)
+            generated_cpp.write('return 0;\n};\n')
         generated_hpp.write('} %sCb;\n' % classCName)
         generated_cpp.write('%sCb %s_cbTable = {\n' % (classCName, classCName))
         for mitem in declList:

@@ -40,7 +40,7 @@ import Leds::*;
 typedef enum {ControllerRequest, ControllerIndication, HostMemServerIndication, HostMemServerRequest, HostMMURequest, HostMMUIndication, SampleStream} IfcNames deriving (Eq,Bits);
 
 interface GyroSimplePins;
-   interface SpiPins spi;
+   interface SpiMasterPins spi;
    interface LEDS leds;
 endinterface
 

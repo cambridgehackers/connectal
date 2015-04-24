@@ -46,7 +46,7 @@ unsigned int memcmp_count = 0;
 void dump(const char *prefix, char *buf, size_t len)
 {
     fprintf(stderr, "%s ", prefix);
-    for (int i = 0; i < len ; i++) {
+    for (size_t i = 0; i < len ; i++) {
 	fprintf(stderr, "%02x", (unsigned char)buf[i]);
 	if (i % 32 == 31)
 	  fprintf(stderr, "\n");
@@ -68,7 +68,15 @@ public:
     fprintf(stderr, "done\n");
     finished = true;
     memcmp_fail = memcmp(srcBuffer, dstBuffer, numWords*sizeof(unsigned int));
-    fprintf(stderr, "memcmp=%d\n", memcmp_fail);
+    if (memcmp_fail) {
+      for (int i = 0; i < numWords; i++) {
+	int *s = (int *)srcBuffer;
+	int *d = (int *)dstBuffer;
+	if (s[i] != d[i])
+	  fprintf(stderr, "mismatch %d %08x %08x\n", i, s[i], d[i]);
+      }
+    }
+    fprintf(stderr, "memcmp=%x\n", memcmp_fail);
     sem_post(&memcmp_sem);
   }
 };
@@ -96,17 +104,17 @@ int runtest(int argc, const char **argv)
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
   MemcpyRequestProxy *device = new MemcpyRequestProxy(IfcNames_MemcpyRequestS2H);
-  MemcpyIndication *deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndicationH2S);
+  MemcpyIndication deviceIndication(IfcNames_MemcpyIndicationH2S);
   MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
   MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
   MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
+  MMUIndication hostMMUIndication (dma, IfcNames_MMUIndicationH2S);
 
   fprintf(stderr, "Main::allocating memory...\n");
 
-  srcAlloc = portalAlloc(alloc_sz);
-  dstAlloc = portalAlloc(alloc_sz);
+  srcAlloc = portalAlloc(alloc_sz, 0);
+  dstAlloc = portalAlloc(alloc_sz, 0);
 
   // for(int i = 0; i < srcAlloc->header.numEntries; i++)
   //   fprintf(stderr, "%lx %lx\n", srcAlloc->entries[i].dma_address, srcAlloc->entries[i].length);
@@ -116,15 +124,13 @@ int runtest(int argc, const char **argv)
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
   dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
 
-  //portalExec_start();
-
   for (int i = 0; i < numWords; i++){
     srcBuffer[i] = i;
     dstBuffer[i] = 0x5a5abeef;
   }
 
-  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
-  portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
+  portalCacheFlush(srcAlloc, srcBuffer, alloc_sz, 1);
+  portalCacheFlush(dstAlloc, dstBuffer, alloc_sz, 1);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
@@ -146,9 +152,9 @@ int runtest(int argc, const char **argv)
   // }
 
   fprintf(stderr, "Main::starting memcpy numWords:%d\n", numWords);
-  int burstLen = 16;
+  int burstLen = 32;
 #ifndef BSIM
-  int iterCnt = 64;
+  int iterCnt = 128;
 #else
   int iterCnt = 2;
 #endif
@@ -162,8 +168,9 @@ int runtest(int argc, const char **argv)
   uint64_t write_beats = hostMemServerIndication->receiveMemoryTraffic();
   float read_util = (float)read_beats/(float)cycles;
   float write_util = (float)write_beats/(float)cycles;
-  fprintf(stderr, "wr_beats: %"PRIx64"\n", write_beats);
-  fprintf(stderr, "rd_beats: %"PRIx64"\n", read_beats);
+  fprintf(stderr, "   iters: %d\n", iterCnt);
+  fprintf(stderr, "wr_beats: %"PRIx64" %08lx\n", write_beats, (long)write_beats);
+  fprintf(stderr, "rd_beats: %"PRIx64" %08lx\n", read_beats, (long)read_beats);
   fprintf(stderr, "numWords: %x\n", numWords);
   fprintf(stderr, "  wr_est: %"PRIx64"\n", (write_beats*2)/iterCnt);
   fprintf(stderr, "  rd_est: %"PRIx64"\n", (read_beats*2)/iterCnt);
@@ -192,26 +199,22 @@ int runtest_chunk(int argc, const char **argv)
   }
 
   MemcpyRequestProxy *device = new MemcpyRequestProxy(IfcNames_MemcpyRequestS2H);
-  MemcpyIndication *deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndicationH2S);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
+  MemcpyIndication deviceIndication(IfcNames_MemcpyIndicationH2S);
+  MemServerRequestProxy hostMemServerRequest(IfcNames_MemServerRequestS2H);
   MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_MemServerIndicationH2S);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
-
-  portalExec_start();
+  MemServerIndication hostMemServerIndication(IfcNames_MemServerIndicationH2S);
+  MMUIndication hostMMUIndication(dma, IfcNames_MMUIndicationH2S);
 
   fprintf(stderr, "Main::allocating memory...\n");
-
-  fprintf(stderr, "XXX %s %d\n", __FUNCTION__, __LINE__);
 
   size_t dstBytes = alloc_sz;
   size_t srcBytes = dstBytes;
 
   fprintf(stderr, "XXX %s %d\n", __FUNCTION__, __LINE__);
 
-  int dstAlloc = portalAlloc(dstBytes);
-  int srcAlloc = portalAlloc(srcBytes);
+  int dstAlloc = portalAlloc(dstBytes, 0);
+  int srcAlloc = portalAlloc(srcBytes, 0);
 
   fprintf(stderr, "XXX %s %d\n", __FUNCTION__, __LINE__);
 
@@ -232,8 +235,8 @@ int runtest_chunk(int argc, const char **argv)
     for (int i = 0; i < nw; i++) {
       srcBuffer[i] = loop/sizeof(srcBuffer[0])+i;
     }
-    portalDCacheFlushInval(srcAlloc, srcBytes, srcBuffer);
-    device->startCopy(ref_dstAlloc, ref_srcAlloc, nw, 16, 1);
+    portalCacheFlush(srcAlloc, srcBuffer, srcBytes, 1);
+    device->startCopy(ref_dstAlloc, ref_srcAlloc, nw, 128, 1);
     sem_wait(&done_sem);
     fprintf(stderr, "LOOP %s %d\n", __FUNCTION__, __LINE__);
 

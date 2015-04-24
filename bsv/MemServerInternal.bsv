@@ -29,31 +29,34 @@ import GetPut::*;
 import ClientServer::*;
 import Assert::*;
 import BRAM::*;
+import DefaultValue::*;
 
 // CONNECTAL Libraries
 import MemTypes::*;
 import ConnectalMemory::*;
+import ConnectalClocks::*;
 import MMU::*;
 import ConnectalCompletionBuffer::*;
+
+typedef 32 BeatCountSize;
 
 typedef 9 MMU_PIPELINE_DEPTH;
 
 interface DmaDbg;
    method ActionValue#(Bit#(64)) getMemoryTraffic();
    method ActionValue#(DmaDbgRec) dbg();
-   method Action stop(Bit#(2) tile);
-   method Action kill(Bit#(2) tile);
-   method Action go(Bit#(2) tile);
 endinterface
 
 interface MemWriteInternal#(numeric type addrWidth, numeric type dataWidth, numeric type numTags, numeric type numServers);
    interface DmaDbg dbg;
+   interface Put#(TileControl) tileControl;
    interface PhysMemWriteClient#(addrWidth,dataWidth) client;
    interface Vector#(numServers, MemWriteServer#(dataWidth)) servers;
 endinterface
 
 interface MemReadInternal#(numeric type addrWidth, numeric type dataWidth, numeric type numTags, numeric type numServers);
    interface DmaDbg dbg;
+   interface Put#(TileControl) tileControl;
    interface PhysMemReadClient#(addrWidth,dataWidth) client;
    interface Vector#(numServers, MemReadServer#(dataWidth)) servers;
 endinterface
@@ -70,10 +73,12 @@ typedef struct {MemRequest req;
 		Bit#(MemTagSize) rename_tag;
 		Bit#(TLog#(TMax#(1,numClients))) client; } RRec#(numeric type numClients, numeric type addrWidth) deriving(Bits);
 
-typedef struct {MemRequest req;
+typedef struct {Bit#(MemTagSize) req_tag;
+		Bit#(BurstLenSize) req_burstLen;
 		Bit#(MemTagSize) rename_tag;
 		Bit#(TLog#(TMax#(1,numClients))) client;
-		Bool last; } DRec#(numeric type numClients, numeric type addrWidth) deriving(Bits);
+		Bool last;
+   } DRec#(numeric type numClients, numeric type addrWidth) deriving(Bits);
 
 typedef struct {Bit#(MemTagSize) orig_tag;
 		Bit#(TLog#(TMax#(1,numClients))) client; } RResp#(numeric type numClients, numeric type addrWidth) deriving(Bits);
@@ -100,8 +105,11 @@ module mkMemReadInternal#(MemServerIndication ind,
    // stage 1: address validation (latency = 1)
    FIFO#(RRec#(numServers,addrWidth))  reqFifo <- mkFIFO;
    // stage 2: read commands
-   BRAM2Port#(Bit#(TLog#(numTags)), DRec#(numServers,addrWidth)) dreqBram <- mkBRAM2Server(defaultValue);
-   BRAM2Port#(Bit#(TAdd#(TLog#(numTags),TSub#(BurstLenSize,beatShift))), MemData#(dataWidth)) readBufferBram <- mkBRAM2Server(defaultValue);
+   BRAM_Configure bramConfig = defaultValue;
+   if (mainClockPeriod < 8)
+      bramConfig.latency = 2;
+   BRAM2Port#(Bit#(TLog#(numTags)), DRec#(numServers,addrWidth)) dreqBram <- mkBRAM2Server(bramConfig);
+   BRAM2Port#(Bit#(TAdd#(TLog#(numTags),TSub#(BurstLenSize,beatShift))), MemData#(dataWidth)) readBufferBram <- mkBRAM2Server(bramConfig);
    // stage 3: read data 
    FIFO#(MemData#(dataWidth)) readDataPipelineFifo <- mkFIFO;
    
@@ -111,14 +119,14 @@ module mkMemReadInternal#(MemServerIndication ind,
    Reg#(Bool)               firstReg <- mkReg(True);
    Reg#(Bool)                lastReg <- mkReg(False);
          
-   Reg#(Bit#(64))  beatCount <- mkReg(0);
+   Reg#(Bit#(32))  beatCount <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
    TagGen#(numTags) tag_gen <- mkTagGen;
 
-   Reg#(Bit#(BurstLenSize))      compReg0 <- mkReg(0);
-   Reg#(Bit#(TLog#(numTags)))    compReg1 <- mkReg(0);
-   Reg#(Bit#(TLog#(TMax#(1,numServers)))) compReg2 <- mkReg(0);
-   Reg#(Bit#(2))                 compReg3 <- mkReg(0);
+   Reg#(Bit#(BurstLenSize))      compCountReg <- mkReg(0);
+   Reg#(Bit#(TLog#(numTags)))    compTagReg <- mkReg(0);
+   Reg#(Bit#(TLog#(TMax#(1,numServers)))) compClientReg <- mkReg(0);
+   Reg#(Bit#(2))                 compTileReg <- mkReg(0);
    FIFO#(Bit#(TAdd#(1,TLog#(TMax#(1,numServers))))) compFifo0 <- mkFIFO;
    FIFO#(Bit#(TLog#(numTags)))   compFifo1 <- mkFIFO;
    
@@ -147,32 +155,33 @@ module mkMemReadInternal#(MemServerIndication ind,
       if(debug) $display("mkMemReadInternal::complete_burst0 %h", tag);
    endrule
    
-   rule complete_burst1a if (compReg0==0);
+   rule complete_burst1a if (compCountReg==0);
       let drq <- dreqBram.portB.response.get;
-      let cnt = drq.req.burstLen >> beat_shift;
-      let cli = drq.client;
+      let req_burstLen = drq.req_burstLen;
+      let client = drq.client;
+      let cnt = req_burstLen >> beat_shift;
       let tag <- toGet(compFifo1).get;
-      if(killv[drq.req.tag[5:4]] == False) begin
-	 compFifo0.enq(extend(cli));
+      if(killv[drq.req_tag[5:4]] == False) begin
+	 compFifo0.enq(extend(client));
 	 readBufferBram.portB.request.put(BRAMRequest{write:False, address:{tag,truncate(cnt)}, datain: ?, responseOnWrite: ?});
       end
-      compReg0 <= cnt-1;
-      compReg1 <= tag;
-      compReg2 <= cli;
-      compReg3 <= drq.req.tag[5:4];
-      if(debug) $display("mkMemReadInternal::complete_burst1a %h", cli);
+      compCountReg <= cnt-1;
+      compTagReg <= tag;
+      compClientReg <= client;
+      compTileReg <= drq.req_tag[5:4];
+      if(debug) $display("mkMemReadInternal::complete_burst1a %h", client);
    endrule
 
-   rule complete_burst1b if (compReg0 > 0);
-      let cnt = compReg0;
-      let tag = compReg1;
-      let cli = compReg2;
-      if(killv[compReg3] == False) begin
+   rule complete_burst1b if (compCountReg > 0);
+      let cnt = compCountReg;
+      let tag = compTagReg;
+      let cli = compClientReg;
+      if(killv[compTileReg] == False) begin
 	 compFifo0.enq(extend(cli));
 	 readBufferBram.portB.request.put(BRAMRequest{write:False, address:{tag,truncate(cnt)}, datain: ?, responseOnWrite: ?});
       end
-      compReg0 <= cnt-1;
-      if(debug) $display("mkMemReadInternal::complete_burst1b %h", compReg0);
+      compCountReg <= cnt-1;
+      if(debug) $display("mkMemReadInternal::complete_burst1b count %h", compCountReg);
    endrule
          
    rule checkMmuResp;
@@ -191,12 +200,12 @@ module mkMemReadInternal#(MemServerIndication ind,
       let response <- toGet(readDataPipelineFifo).get();
       Bit#(MemTagSize) response_tag = response.tag;
       let drq <- dreqBram.portA.response.get;
-      let otag = drq.req.tag;
+      let otag = drq.req_tag;
       let burstLen = burstReg;
       let first =    firstReg;
       let last  =    lastReg;
       if (first) begin
-	 burstLen = drq.req.burstLen >> beat_shift;
+	 burstLen = drq.req_burstLen >> beat_shift;
 	 last = drq.last;
 	 dynamicAssert(last == (burstLen==1), "Last incorrect");
 	 //$display("burstLen=%d dreqFifo.first.last=%d last=%d\n", burstLen, dreqFifo.first.last, last);
@@ -253,7 +262,8 @@ module mkMemReadInternal#(MemServerIndication ind,
 	    let rename_tag = reqFifo.first.rename_tag;
 	    if (False && physAddr[31:24] != 0)
 	       $display("req_ar: funny physAddr req.sglId=%d req.offset=%h physAddr=%h", req.sglId, req.offset, physAddr);
-	    dreqBram.portB.request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(rename_tag), datain:DRec{req:req, client:client, rename_tag:rename_tag, last:(req.burstLen == fromInteger(valueOf(dataWidthBytes)))}});
+	    dreqBram.portB.request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(rename_tag),
+						   datain:DRec{req_tag:req.tag, req_burstLen: req.burstLen, client:client, rename_tag:rename_tag, last:(req.burstLen == fromInteger(valueOf(dataWidthBytes)))}});
 	    //$display("readReq: client=%d, rename_tag=%d, physAddr=%h req.burstLen=%d beat_shift=%d last=%d", client,rename_tag,physAddr, req.burstLen, beat_shift, req.burstLen == beat_shift);
 	    if (debug) $display("read_client.readReq %d", cycle_cnt-last_readReq);
 	    last_readReq <= cycle_cnt;
@@ -268,22 +278,25 @@ module mkMemReadInternal#(MemServerIndication ind,
 	 endmethod
       endinterface
    endinterface
+   interface Put tileControl;
+      method Action put(TileControl tc);
+	 let tile = tc.tile;
+	 let kv = True;
+	 let sv = True;
+	 if (tc.state == Running || tc.state == Stopped)
+	    kv = False;
+	 if (tc.state == Running)
+	    sv = False;
+	 killv[tile] <= kv;
+	 stopv[tile] <= sv;
+      endmethod
+   endinterface
    interface DmaDbg dbg;
-      method Action go(Bit#(2) tile);
-	 killv[tile] <= False;
-	 stopv[tile] <= False;
-      endmethod
-      method Action stop(Bit#(2) tile);
-	 stopv[tile] <= True;
-      endmethod
-      method Action kill(Bit#(2) tile);
-	 killv[tile] <= True;
-      endmethod
       method ActionValue#(DmaDbgRec) dbg();
 	 return DmaDbgRec{x:0, y:0, z:0, w:0};
       endmethod
       method ActionValue#(Bit#(64)) getMemoryTraffic();
-	 return beatCount;
+	 return extend(beatCount);
       endmethod
    endinterface
 endmodule
@@ -308,7 +321,7 @@ module mkMemWriteInternal#(MemServerIndication ind,
    // stage 1: address validation (latency = 1)
    FIFO#(RRec#(numServers,addrWidth))  reqFifo <- mkFIFO;
    // stage 2: write commands
-   FIFO#(DRec#(numServers, addrWidth)) dreqFifo <- mkSizedBRAMFIFO(valueOf(numTags));
+   FIFO#(DRec#(numServers, addrWidth)) dreqFifo <- mkSizedFIFO(valueOf(numTags));
    // stage 3: write data 
    BRAM2Port#(Bit#(TLog#(numTags)), RResp#(numServers,addrWidth)) respFifos <- mkBRAM2Server(defaultValue);
    TagGen#(numTags) tag_gen <- mkTagGen;
@@ -317,7 +330,7 @@ module mkMemWriteInternal#(MemServerIndication ind,
    Reg#(Bit#(BurstLenSize)) burstReg <- mkReg(0);
    Reg#(Bool)               firstReg <- mkReg(True);
    Reg#(Bool)               lastReg <- mkReg(False);
-   Reg#(Bit#(64))           beatCount <- mkReg(0);
+   Reg#(Bit#(BeatCountSize)) beatCount <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
 
    Reg#(Bit#(64)) cycle_cnt <- mkReg(0);
@@ -357,11 +370,13 @@ module mkMemWriteInternal#(MemServerIndication ind,
    
    if(valueOf(numServers) > 0)
       rule memdata;
-	 let client = dreqFifo.first.client;
-	 let req = dreqFifo.first.req;
-	 let rename_tag = dreqFifo.first.rename_tag;
+	 let drq = dreqFifo.first;
+	 let req_tag = drq.req_tag;
+	 let req_burstLen = drq.req_burstLen;
+	 let rename_tag = drq.rename_tag;
+	 let client = drq.client;
 	 MemData#(dataWidth) tagdata = unpack(0);
-	 if (killv[req.tag[5:4]] == False) begin
+	 if (killv[req_tag[5:4]] == False) begin
 	    tagdata = clientWriteData[client].first;
 	    clientWriteData[client].deq;
 	 end
@@ -369,9 +384,9 @@ module mkMemWriteInternal#(MemServerIndication ind,
 	 let first    = firstReg;
 	 let last     = lastReg;
 	 if (first) begin
-	    burstLen = req.burstLen >> beat_shift;
+	    burstLen = req_burstLen >> beat_shift;
 	    last     = dreqFifo.first.last;
-	    respFifos.portA.request.put(BRAMRequest{write:True,responseOnWrite:False, address:truncate(rename_tag), datain:RResp{orig_tag:req.tag, client:client}});
+	    respFifos.portA.request.put(BRAMRequest{write:True,responseOnWrite:False, address:truncate(rename_tag), datain:RResp{orig_tag:req_tag, client:client}});
 	 end
 	 burstReg <= burstLen-1;
 	 firstReg <= (burstLen-1 == 0);
@@ -424,7 +439,7 @@ module mkMemWriteInternal#(MemServerIndication ind,
 	    let client = reqFifo.first.client;
 	    let rename_tag = reqFifo.first.rename_tag;
 	    reqFifo.deq;
-	    dreqFifo.enq(DRec{req:req, client:client, rename_tag:rename_tag, last: (req.burstLen == fromInteger(valueOf(dataWidthBytes))) });
+	    dreqFifo.enq(DRec{req_tag:req.tag, req_burstLen: req.burstLen, client:client, rename_tag:rename_tag, last: (req.burstLen == fromInteger(valueOf(dataWidthBytes))) });
 	    //$display("writeReq: client=%d, rename_tag=%d", client,rename_tag);
 	    return PhysMemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(rename_tag)};
 	 endmethod
@@ -437,22 +452,25 @@ module mkMemWriteInternal#(MemServerIndication ind,
 	 endmethod
       endinterface
    endinterface
+   interface Put tileControl;
+      method Action put(TileControl tc);
+	 let tile = tc.tile;
+	 let kv = True;
+	 let sv = True;
+	 if (tc.state == Running || tc.state == Stopped)
+	    kv = False;
+	 if (tc.state == Running)
+	    sv = False;
+	 killv[tile] <= kv;
+	 stopv[tile] <= sv;
+      endmethod
+   endinterface
    interface DmaDbg dbg;
-      method Action go(Bit#(2) tile);
-	 killv[tile] <= False;
-	 stopv[tile] <= False;
-      endmethod
-      method Action stop(Bit#(2) tile);
-	 stopv[tile] <= True;
-      endmethod
-      method Action kill(Bit#(2) tile);
-	 killv[tile] <= True;
-      endmethod
       method ActionValue#(DmaDbgRec) dbg();
 	 return DmaDbgRec{x:fromInteger(valueOf(numServers)), y:?, z:?, w:?};
       endmethod
       method ActionValue#(Bit#(64)) getMemoryTraffic();
-	 return beatCount;
+	 return extend(beatCount);
       endmethod
    endinterface
 endmodule

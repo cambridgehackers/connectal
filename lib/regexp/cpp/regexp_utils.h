@@ -83,7 +83,7 @@ int readfile(const char *fname, P* pP)
   sprintf(buff, "../%s", fname);
   ifstream binFile(buff, ios::in|ios::binary|ios::ate);
   pP->length = binFile.tellg();
-  pP->alloc = portalAlloc(pP->length);
+  pP->alloc = portalAlloc(pP->length, 0);
   pP->mem = (char *)portalMmap(pP->alloc, pP->length);
   pP->ref = haystack_dma->reference(pP->alloc);
   binFile.seekg (0, ios::beg);

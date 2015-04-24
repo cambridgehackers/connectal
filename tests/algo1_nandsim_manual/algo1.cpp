@@ -134,12 +134,11 @@ int main(int argc, const char **argv)
   StrstrRequestProxy *strstrRequest = new StrstrRequestProxy(IfcNames_AlgoRequest);
   StrstrIndication *strstrIndication = new StrstrIndication(IfcNames_AlgoIndication);
 
-  portalExec_start();
   fprintf(stderr, "Main::allocating memory...\n");
 
   // allocate memory for strstr data
-  int needleAlloc = portalAlloc(numBytes);
-  int mpNextAlloc = portalAlloc(numBytes);
+  int needleAlloc = portalAlloc(numBytes, 0);
+  int mpNextAlloc = portalAlloc(numBytes, 0);
   int ref_needleAlloc = hostDma->reference(needleAlloc);
   int ref_mpNextAlloc = hostDma->reference(mpNextAlloc);
 
@@ -161,8 +160,8 @@ int main(int argc, const char **argv)
   //   fprintf(stderr, "%d ", needle[i]);
   // fprintf(stderr, "]\n");
 
-  portalDCacheFlushInval(needleAlloc, numBytes, needle);
-  portalDCacheFlushInval(mpNextAlloc, numBytes, mpNext);
+  portalCacheFlush(needleAlloc, needle, numBytes, 1);
+  portalCacheFlush(mpNextAlloc, mpNext, numBytes, 1);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   // base of haystack in "flash" memory

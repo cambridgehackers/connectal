@@ -64,7 +64,7 @@ requestOutputPipeInterfaceTemplate='''\
 
 exposedProxyInterfaceTemplate='''
 // exposed proxy interface
-interface %(Ifc)sOutputPipes;
+interface %(Ifc)sOutput;
     interface PipePortal#(0, %(channelCount)s, SlaveDataBusWidth) portalIfc;
     interface %(Package)s::%(Ifc)s ifc;
 endinterface
@@ -74,7 +74,7 @@ interface %(Dut)s;
 endinterface
 
 (* synthesize *)
-module %(moduleContext)s mk%(Ifc)sOutputPipes(%(Ifc)sOutputPipes);
+module %(moduleContext)s mk%(Ifc)sOutput(%(Ifc)sOutput);
     Vector#(%(channelCount)s, PipeOut#(Bit#(SlaveDataBusWidth))) indicationPipes;
 %(indicationMethodRules)s
     PortalInterrupt#(SlaveDataBusWidth) intrInst <- mkPortalInterrupt(indicationPipes);
@@ -95,7 +95,7 @@ endmodule
 // synthesizeable proxy MemPortal
 (* synthesize *)
 module mk%(Dut)sSynth#(Bit#(SlaveDataBusWidth) id)(%(Dut)s);
-  let dut <- mk%(Ifc)sOutputPipes();
+  let dut <- mk%(Ifc)sOutput();
   PortalCtrlMemSlave#(SlaveControlAddrWidth,SlaveDataBusWidth) ctrlPort <- mkPortalCtrlMemSlave(id, dut.portalIfc.intr);
   let memslave  <- mkMemMethodMuxOut(ctrlPort.memSlave,dut.portalIfc.indications);
   interface MemPortal portalIfc = (interface MemPortal;
@@ -119,8 +119,11 @@ exposedWrapperInterfaceTemplate='''
 %(requestElements)s
 // exposed wrapper portal interface
 interface %(Ifc)sInputPipes;
-    interface PipePortal#(%(channelCount)s, 0, SlaveDataBusWidth) portalIfc;
 %(requestOutputPipeInterfaces)s
+endinterface
+interface %(Ifc)sInput;
+    interface PipePortal#(%(channelCount)s, 0, SlaveDataBusWidth) portalIfc;
+    interface %(Ifc)sInputPipes pipes;
 endinterface
 interface %(Dut)sPortal;
     interface PipePortal#(%(channelCount)s, 0, SlaveDataBusWidth) portalIfc;
@@ -138,7 +141,7 @@ endinstance
 
 // exposed wrapper Portal implementation
 (* synthesize *)
-module mk%(Ifc)sInputPipes(%(Ifc)sInputPipes);
+module mk%(Ifc)sInput(%(Ifc)sInput);
     Vector#(%(channelCount)s, PipeIn#(Bit#(SlaveDataBusWidth))) requestPipeIn;
 %(methodRules)s
     interface PipePortal portalIfc;
@@ -157,27 +160,29 @@ module mk%(Ifc)sInputPipes(%(Ifc)sInputPipes);
            endmethod
         endinterface
     endinterface
+    interface %(Ifc)sInputPipes pipes;
 %(outputPipes)s
+    endinterface
 endmodule
 
 module mk%(Dut)sPortal#(%(Ifc)s ifc)(%(Dut)sPortal);
-    let pipes <- mk%(Ifc)sInputPipes;
-    mkConnection(pipes, ifc);
-    interface PipePortal portalIfc = pipes.portalIfc;
+    let dut <- mk%(Ifc)sInput;
+    mkConnection(dut.pipes, ifc);
+    interface PipePortal portalIfc = dut.portalIfc;
 endmodule
 
 interface %(Dut)sMemPortalPipes;
     interface %(Ifc)sInputPipes pipes;
-    interface StdPortal portalIfc;
+    interface MemPortal#(12,32) portalIfc;
 endinterface
 
 (* synthesize *)
 module mk%(Dut)sMemPortalPipes#(Bit#(SlaveDataBusWidth) id)(%(Dut)sMemPortalPipes);
 
-  let dut <- mk%(Ifc)sInputPipes;
+  let dut <- mk%(Ifc)sInput;
   PortalCtrlMemSlave#(SlaveControlAddrWidth,SlaveDataBusWidth) ctrlPort <- mkPortalCtrlMemSlave(id, dut.portalIfc.intr);
   let memslave  <- mkMemMethodMuxIn(ctrlPort.memSlave,dut.portalIfc.requests);
-  interface %(Ifc)sInputPipes pipes = dut;
+  interface %(Ifc)sInputPipes pipes = dut.pipes;
   interface MemPortal portalIfc = (interface MemPortal;
       interface PhysMemSlave slave = memslave;
       interface ReadOnly interrupt = ctrlPort.interrupt;
@@ -264,7 +269,7 @@ def fixupSubsts(item, suffix):
         msubs = {'methodName': m['name'],
                  'paramsForCall': ', '.join(paramsForCall)}
         mkConnectionMethodRules.append(mkConnectionMethodTemplate % msubs)
-        outputPipes.append('    interface %(methodName)s_PipeOut = %(methodName)s_requestAdapter.out;' % msubs)
+        outputPipes.append('        interface %(methodName)s_PipeOut = %(methodName)s_requestAdapter.out;' % msubs)
     substs = {
         'Package': item['Package'],
         'channelCount': len(dlist),

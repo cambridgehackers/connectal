@@ -71,12 +71,11 @@ int main(int argc, const char **argv)
   MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_HostMemServerIndication);
   MemServerIndication *nandsimMemServerIndication = new MemServerIndication(IfcNames_NandMemServerIndication);
 
-  portalExec_start();
   fprintf(stderr, "Main::allocating memory...\n");
 
   // allocate memory for strstr data
-  int needleAlloc = portalAlloc(numBytes);
-  int mpNextAlloc = portalAlloc(numBytes);
+  int needleAlloc = portalAlloc(numBytes, 0);
+  int mpNextAlloc = portalAlloc(numBytes, 0);
   int ref_needleAlloc = hostDma->reference(needleAlloc);
   int ref_mpNextAlloc = hostDma->reference(mpNextAlloc);
 
@@ -98,8 +97,8 @@ int main(int argc, const char **argv)
   //   fprintf(stderr, "%d ", needle[i]);
   // fprintf(stderr, "]\n");
 
-  portalDCacheFlushInval(needleAlloc, numBytes, needle);
-  portalDCacheFlushInval(mpNextAlloc, numBytes, mpNext);
+  portalCacheFlush(needleAlloc, needle, numBytes, 1);
+  portalCacheFlush(mpNextAlloc, mpNext, numBytes, 1);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
  // fprintf(stderr, "Main::waiting to connect to nandsim_exe\n");

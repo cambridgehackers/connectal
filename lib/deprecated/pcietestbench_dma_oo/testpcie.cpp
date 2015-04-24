@@ -98,14 +98,12 @@ int main(int argc, const char **argv)
 
   std::ifstream infile("../memread_nobuff_oo.tstlp");
 
-  srcAlloc = portalAlloc(alloc_sz);
+  srcAlloc = portalAlloc(alloc_sz, 0);
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
   for (int i = 0; i < numWords; i++)
     srcBuffer[i] = i;
 
-  portalExec_start();
-
-  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
+  portalCacheFlush(srcAlloc, srcBuffer, alloc_sz, 1);
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
 
   device->startRead(ref_srcAlloc, numWords, burstLen);

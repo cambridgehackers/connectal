@@ -21,6 +21,7 @@
 // SOFTWARE.
 import SpecialFIFOs::*;
 import Vector::*;
+import BuildVector::*;
 import StmtFSM::*;
 import FIFO::*;
 import CtrlMux::*;
@@ -80,7 +81,7 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    MMURequestWrapper hostMMU3ConfigRequestWrapper <- mkMMURequestWrapper(HostMMU3ConfigRequest, hostMMU3.request);
    
    MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
-   let sgls = cons(hostMMU0,cons(hostMMU1, cons(hostMMU2,cons(hostMMU3,nil))));  
+   let sgls = vec(hostMMU0,hostMMU1,hostMMU2,hostMMU3);
    MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(memcpy.dmaReadClient, memcpy.dmaWriteClient, sgls, hostMemServerIndicationProxy.ifc);
    MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
 

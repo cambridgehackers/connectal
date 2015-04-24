@@ -103,18 +103,16 @@ int main(int argc, const char **argv)
   MMUIndication *hostMMUIndication = new MMUIndication(dma, PlatformNames_MMUIndicationH2S);
   
   fprintf(stderr, "main::allocating memory...\n");
-  dstAlloc = portalAlloc(alloc_sz);
+  dstAlloc = portalAlloc(alloc_sz, 0);
   dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
   
-  portalExec_start();
-
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
   
   for (int i = 0; i < numWords; i++){
     dstBuffer[i] = 0xDEADBEEF;
   }
   
-  portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
+  portalCacheFlush(dstAlloc, dstBuffer, alloc_sz, 1);
   fprintf(stderr, "main::flush and invalidate complete\n");
 
 

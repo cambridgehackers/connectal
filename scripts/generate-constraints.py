@@ -89,6 +89,7 @@ for filename in options.pinoutfile:
             for key in pinInfo:
                 #print('JJJJ', key)
                 if boardInfo.get(key):
+                    used.append(key)
                     pinName = pinInfo[key]
                     boardGroupInfo = boardInfo[key]
                     #print('FFF', key, pinName, boardGroupInfo, boardGroupInfo.has_key(pinName), boardGroupInfo.get(pinName))

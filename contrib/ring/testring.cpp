@@ -250,9 +250,9 @@ void StatusPoll(void)
   int i;
   uint64_t *msg;
   long int rc;
-  rc = (long int) portalExec_poll(0);
+  rc = (long int) defaultPoller->pollFn(0);
   if ((long)rc >= 0)
-      rc = (long int) portalExec_event();
+      rc = (long int) defaultPoller->event();
   assert(rc == 0);
   if (ring_init_done) {
     msg = ring_next(&status_ring);
@@ -272,9 +272,9 @@ void *statusThreadProc(void *arg)
   printf("Status thread running\n");
   for (;;) {
     StatusPoll();
-    rc = (long int) portalExec_poll(0);
+    rc = (long int) defaultPoller->pollFn(0);
     if ((long)rc >= 0)
-        rc = (long int) portalExec_event();
+        rc = (long int) defaultPoller->event();
     assert(rc == 0);
   }
 }
@@ -484,9 +484,9 @@ int main(int argc, const char **argv)
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
 
   fprintf(stderr, "allocating memory...\n");
-  cmdAlloc = portalAlloc(cmd_ring_sz);
-  statusAlloc = portalAlloc(status_ring_sz);
-  scratchAlloc = portalAlloc(scratch_sz);
+  cmdAlloc = portalAlloc(cmd_ring_sz, 0);
+  statusAlloc = portalAlloc(status_ring_sz, 0);
+  scratchAlloc = portalAlloc(scratch_sz, 0);
 
   v = portalMmap(cmdAlloc, cmd_ring_sz);
   assert(v != MAP_FAILED);
@@ -507,15 +507,15 @@ int main(int argc, const char **argv)
    exit(1);
   }
 
-  rc = (long int) portalExec_init();
+  rc = (long int) defaultPoller->init();
   assert(rc == 0);
   cmdPointer = dma->reference(cmdAlloc);
   statusPointer = dma->reference(statusAlloc);
   scratchPointer = dma->reference(scratchAlloc);
 
-  /*   portalDCacheFlushInval(cmdAlloc, cmd_ring_sz, cmdBuffer);
-  portalDCacheFlushInval(statusAlloc, status_ring_sz, statusBuffer);
-  portalDCacheFlushInval(scratchAlloc, scratch_sz, scratchBuffer);
+  /*   portalCacheFlush(cmdAlloc, cmdBuffer, cmd_ring_sz, 1);
+  portalCacheFlush(statusAlloc, statusBuffer, status_ring_sz, 1);
+  portalCacheFlush(scratchAlloc, scratchBuffer, scratch_sz, 1);
   fprintf(stderr, "flush and invalidate complete\n");
   */
   portalThreadRun = 0;

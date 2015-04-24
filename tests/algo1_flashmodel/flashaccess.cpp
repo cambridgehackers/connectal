@@ -339,8 +339,8 @@ int main(int argc, const char **argv)
 	device = new FlashRequestProxy(IfcNames_NandCfgRequest);
 	FlashIndication *deviceIndication = new FlashIndication(IfcNames_NandCfgIndication);
 	
-	srcAlloc = portalAlloc(srcAlloc_sz);
-	dstAlloc = portalAlloc(dstAlloc_sz);
+	srcAlloc = portalAlloc(srcAlloc_sz, 0);
+	dstAlloc = portalAlloc(dstAlloc_sz, 0);
 	srcBuffer = (unsigned int *)portalMmap(srcAlloc, srcAlloc_sz);
 	dstBuffer = (unsigned int *)portalMmap(dstAlloc, dstAlloc_sz);
 
@@ -352,11 +352,8 @@ int main(int argc, const char **argv)
 
 	printf( "Done initializing hw interfaces\n" ); fflush(stdout);
 
-	portalExec_start();
-	printf( "Done portalExec_start\n" ); fflush(stdout);
-
-	portalDCacheFlushInval(dstAlloc, dstAlloc_sz, dstBuffer);
-	portalDCacheFlushInval(srcAlloc, srcAlloc_sz, srcBuffer);
+	portalCacheFlush(dstAlloc, dstBuffer, dstAlloc_sz, 1);
+	portalCacheFlush(srcAlloc, srcBuffer, srcAlloc_sz, 1);
 	ref_dstAlloc = dma->reference(dstAlloc);
 	ref_srcAlloc = dma->reference(srcAlloc);
 

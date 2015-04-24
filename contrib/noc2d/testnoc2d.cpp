@@ -116,12 +116,6 @@ int main(int argc, const char **argv)
     return -1;
   }
 
-  portalExec_start();
-
     fprintf(stderr, "simple tests\n");
-    
     dotest();
-
-  }
-
-
+}

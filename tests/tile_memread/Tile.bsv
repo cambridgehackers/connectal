@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 import Vector::*;
+import BuildVector::*;
 
 import Portal::*;
 import PlatformTypes::*;
@@ -32,6 +33,7 @@ import Memread::*;
 import MemreadRequest::*;
 import MemreadIndication::*;
 
+(* synthesize *)
 module mkTile(Tile#(Empty,1,0));
 
    MemreadIndicationProxy lMemreadIndicationProxy <- mkMemreadIndicationProxy(MemreadIndicationH2S); //0
@@ -46,7 +48,7 @@ module mkTile(Tile#(Empty,1,0));
    
    interface interrupt = interrupts;
    interface portals = mem_portal;
-   interface readers = cons(lMemread.dmaClient,nil);
+   interface readers = vec(lMemread.dmaClient);
    interface writers = nil;
    interface ext = ?;
 

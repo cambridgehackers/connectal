@@ -83,8 +83,6 @@ int main(int argc, const char **argv)
     return -1;
   }
 
-  portalExec_start();
-
     fprintf(stderr, "simple tests\n");
     int strAAlloc;
     int strBAlloc;
@@ -92,14 +90,14 @@ int main(int argc, const char **argv)
     int rcA, rcB;
     struct stat statAbuf, statBbuf;
     
-    strAAlloc = portalAlloc(alloc_len);
+    strAAlloc = portalAlloc(alloc_len, 0);
     rcA = fstat(strAAlloc, &statAbuf);
     if (rcA < 0) perror("fstatA");
     char *strA = (char *)portalMmap(strAAlloc, alloc_len);
     if (strA == MAP_FAILED) perror("strA mmap failed");
     assert(strA != MAP_FAILED);
 
-    strBAlloc = portalAlloc(alloc_len);
+    strBAlloc = portalAlloc(alloc_len, 0);
     rcB = fstat(strBAlloc, &statBbuf);
     if (rcA < 0) perror("fstatB");
     char *strB = (char *)portalMmap(strBAlloc, alloc_len);
@@ -124,8 +122,8 @@ int main(int argc, const char **argv)
 
     fprintf(stderr, "elapsed time (hw cycles): %lld\n", (long long)portalTimerLap(0));
     
-    portalDCacheFlushInval(strAAlloc, alloc_len, strA);
-    portalDCacheFlushInval(strBAlloc, alloc_len, strB);
+    portalCacheFlush(strAAlloc, strA, alloc_len, 1);
+    portalCacheFlush(strBAlloc, strB, alloc_len, 1);
 
     unsigned int ref_strAAlloc = dma->reference(strAAlloc);
     unsigned int ref_strBAlloc = dma->reference(strBAlloc);

@@ -40,7 +40,7 @@ size_t alloc_sz = test_sz;
 void dump(const char *prefix, char *buf, size_t len)
 {
     fprintf(stderr, "%s ", prefix);
-    for (int i = 0; i < (len > 16 ? 16 : len) ; i++)
+    for (size_t i = 0; i < (len > 16 ? 16 : len) ; i++)
 	fprintf(stderr, "%02x", (unsigned char)buf[i]);
     fprintf(stderr, "\n");
 }
@@ -86,7 +86,6 @@ int main(int argc, const char **argv)
   unsigned int srcGen = 0;
 
   Memread2RequestProxy *device = 0;
-  Memread2Indication *deviceIndication = 0;
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
@@ -95,17 +94,15 @@ int main(int argc, const char **argv)
   MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
   MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
+  MMUIndication hostMMUIndication(dma, IfcNames_MMUIndicationH2S);
 
-  deviceIndication = new Memread2Indication(IfcNames_Memread2IndicationH2S);
+  Memread2Indication deviceIndication(IfcNames_Memread2IndicationH2S);
 
   fprintf(stderr, "Main::allocating memory...\n");
-  srcAlloc = portalAlloc(alloc_sz);
+  srcAlloc = portalAlloc(alloc_sz, 0);
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
-  srcAlloc2 = portalAlloc(alloc_sz);
+  srcAlloc2 = portalAlloc(alloc_sz, 0);
   srcBuffer2 = (unsigned int *)portalMmap(srcAlloc2, alloc_sz);
-
-  portalExec_start();
 
   for (int i = 0; i < numWords; i++){
     int v = srcGen++;
@@ -113,7 +110,7 @@ int main(int argc, const char **argv)
     srcBuffer2[i] = v*3;
   }
     
-  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
+  portalCacheFlush(srcAlloc, srcBuffer, alloc_sz, 1);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);

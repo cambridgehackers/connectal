@@ -1,6 +1,8 @@
 C/C++ Portal
 ============
 
+****deprecated*****
+
 .. c:function:: void *portalExec(void *__x)
    Polls the registered portals and invokes their callback handlers.
 

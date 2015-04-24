@@ -61,5 +61,5 @@ sed -i 's/method[^;]*EN_[^;]*/& clocked_by (user_clk_out) reset_by (user_reset_o
 sed -i 's/clocked_by (user_clk_out) reset_by (user_reset_out) clocked_by (user_clk_out) reset_by (user_reset_out)/clocked_by (user_clk_out) reset_by (user_reset_out)/'  PCIEWRAPPER2.bsv
 
 # now the pcie clocks
-sed -i 's/(method rxn[&;])/\\1 clocked_by (sys_clk) reset_by (sys_rst_n)/' PCIEWRAPPER2.bsv
+sed -i 's/\(method rx[^;]*\)clocked_by[^;]*/\1 clocked_by (sys_clk) reset_by (sys_rst_n)/' PCIEWRAPPER2.bsv
 sed -i 's/method pci_exp_tx[^;]*/& clocked_by (sys_clk) reset_by (sys_rst_n)/' PCIEWRAPPER2.bsv

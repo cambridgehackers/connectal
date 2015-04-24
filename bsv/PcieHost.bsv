@@ -59,7 +59,7 @@ import PcieEndpointS5    :: *;
 `endif
 import HostInterface     :: *;
 
-// implemented in TlpReplay.cxx
+// implemented in TlpReplay.cpp
 import "BDPI" function Action put_tlp(TLPData#(16) d);
 import "BDPI" function ActionValue#(TLPData#(16)) get_tlp();
 import "BDPI" function Bool can_put_tlp();
@@ -78,7 +78,7 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    Vector#(NumberOfMasters,MemSlaveEngine#(DataBusWidth)) sEngine <- replicateM(mkMemSlaveEngineSynth(my_pciId));
    Vector#(NumberOfMasters,PhysMemSlave#(PciePhysAddrWidth,DataBusWidth)) slavearr;
    MemInterrupt intr <- mkMemInterrupt(my_pciId);
-`ifndef PCIE_NO_BSCAN
+`ifdef PCIE_BSCAN
    BscanTop bscan <- mkBscanTop(3); // Use USER3  (JTAG IDCODE address 0x22)
    BscanLocal lbscan <- mkBscanLocal(bscan, clocked_by bscan.tck, reset_by bscan.rst);
 `endif
@@ -109,7 +109,7 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
                               endinterface));
 
 `ifndef BSIM
-`ifndef PCIE_NO_BSCAN
+`ifdef PCIE_BSCAN
    Reg#(Bit#(TAdd#(TlpTraceAddrSize,1))) bscanPcieTraceBramWrAddrReg <- mkReg(0);
    BscanBram#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) pcieBscanBram <- mkBscanBram(127, bscanPcieTraceBramWrAddrReg, lbscan.loc[1]);
    mkConnection(pcieBscanBram.bramClient, traceif.tlpdata.bscanBramServer);
@@ -127,7 +127,7 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    interface slave = slavearr;
    interface interruptRequest = intr.interruptRequest;
    interface pci = traceif.pci;
-`ifndef PCIE_NO_BSCAN
+`ifdef PCIE_BSCAN
    interface BscanTop bscanif = lbscan.loc[0];
 `else
    interface BRAMServer traceBramServer = traceif.tlpdata.bscanBramServer;

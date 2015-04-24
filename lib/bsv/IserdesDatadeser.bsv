@@ -472,7 +472,7 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
         method io_vita_clk_n = coreClock.io_vita_clk_n;
     endinterface
     interface SerdesData data;
-        method Wire#(Bit#(1)) reset();
+        method Reg#(Bit#(1)) reset();
             return serdes_reset_reg;
         endmethod
         method Vector#(5, Bit#(10)) raw_data() if (new_raw_empty_reg == 0 && serdes_reset_reg != 0);

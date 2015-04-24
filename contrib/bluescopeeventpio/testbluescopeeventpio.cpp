@@ -104,8 +104,6 @@ int main(int argc, const char **argv)
   signalgen = new SignalGenRequestProxy(IfcNames_SignalGenRequest);
   signalgenIndication = new SignalGenIndication(IfcNames_SignalGenIndication);
 
-  portalExec_start();
-
   bluescope->doReset();
   bluescope->setTriggerMask (0xFFFFFFFF);
   bluescope->getCounterValue();

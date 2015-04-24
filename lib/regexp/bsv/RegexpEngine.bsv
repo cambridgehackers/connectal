@@ -240,7 +240,7 @@ module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEng
       conff.enq(True);
       match {.pointer, .len}  = p;
       if (verbose) $display("setupSearch %d %d", pointer, len);
-      haystack_re.cmdServer.request.put(MemengineCmd{sglId:pointer, base:0, len:len, burstLen:16*fromInteger(valueOf(nc))});
+      haystack_re.cmdServer.request.put(MemengineCmd{sglId:pointer, base:0, len:len, burstLen:16*fromInteger(valueOf(nc)), tag: 0});
       charCnt <= 0;
       resCnt <= 0;
       fsmState.enq(0);

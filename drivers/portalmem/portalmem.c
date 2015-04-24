@@ -447,7 +447,11 @@ int portalmem_dmabuffer_create(PortalAlloc portalAlloc)
 #endif
         sg_dma_address(sg) = sg_phys(sg);
       }
-      dmabuf = dma_buf_export(buffer, &dma_buf_ops, len, O_RDWR);
+      dmabuf = dma_buf_export(buffer, &dma_buf_ops, len, O_RDWR
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,17,0))
+          , NULL
+#endif
+          );
       if (IS_ERR(dmabuf))
         pa_buffer_free(buffer);
       printk("pa_get_dma_buf %p %zd\n", dmabuf->file, dmabuf->file->f_count.counter);

@@ -20,6 +20,7 @@
 #
 
 CONNECTALDIR=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+include $(CONNECTALDIR)/Makefile.version
 
 V?=0
 ifeq ($(V),0)
@@ -115,6 +116,7 @@ ifndef BURST_LEN_SIZE
 BURST_LEN_SIZE=8
 endif
 
+CONNECTALFLAGS += -D ConnectalVersion=$(VERSION)
 CONNECTALFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) -D PinType=$(PIN_TYPE) -D MainClockPeriod=$(MAIN_CLOCK_PERIOD) $(PCIE_CLOCK_DEFINE) -D DerivedClockPeriod=$(DERIVED_CLOCK_PERIOD)
 CONNECTALFLAGS += -D NumberOfTiles=$(NUMBER_OF_TILES)
 CONNECTALFLAGS += -D SlaveDataBusWidth=$(SLAVE_DATA_BUS_WIDTH)
@@ -124,6 +126,7 @@ CONNECTALFLAGS += --ipdir=$(IPDIR)
 CONNECTALFLAGS += -D ExportType=$(EXPORT_TYPE)
 ifeq ($(BOARD),xsim)
 CONNECTALFLAGS += -D BluenocTop
+BLUENOC?=--bluenoc
 endif
 ifneq ($(AUTOTOP),)
 USE_AUTOTOP = 1
@@ -250,7 +253,7 @@ process_autotop::
 	touch $(BOARD)/Makefile.autotop
 ifneq ($(USE_AUTOTOP),)
 	$(Q)[ -e $(GPROJ) ] || mkdir -p $(GPROJ)
-	$(Q)$(CONNECTALDIR)/scripts/topgen.py --project-dir $(GPROJ) $(AUTOTOP) \
+	$(Q)$(CONNECTALDIR)/scripts/topgen.py --project-dir $(GPROJ) $(AUTOTOP) $(BLUENOC) \
 	    $(foreach f, $(S2H_INTERFACES), --wrapper $f) \
 	    $(foreach f, $(H2S_INTERFACES), --proxy $f)   \
 	    $(foreach f, $(MEM_INTERFACES), --proxy MemServer\#\(PhysAddrWidth,DataBusWidth,\`NumberOfMasters\):MemServerIndication:$f,cons\(lMMU,nil\))

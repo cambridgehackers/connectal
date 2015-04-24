@@ -29,7 +29,7 @@ int recv_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer,
 }
 volatile unsigned int *mapchannel_portal_kernel(struct PortalInternal *pint, unsigned int v)
 {
-    return &pint->map_base[PORTAL_IND_FIFO(v)];
+    return &pint->map_base[PORTAL_FIFO(v)];
 }
 int notfull_kernel(PortalInternal *pint, unsigned int v)
 {
@@ -49,13 +49,13 @@ int busy_portal_kernel(struct PortalInternal *pint, unsigned int v, const char *
 }
 void enableint_portal_kernel(struct PortalInternal *pint, int val)
 {
-    volatile unsigned int *enp = &(pint->map_base[PORTAL_CTRL_REG_INTERRUPT_ENABLE]);
+    volatile unsigned int *enp = &(pint->map_base[PORTAL_CTRL_INTERRUPT_ENABLE]);
     pint->item->write(pint, &enp, val);
 }
 int event_portal_kernel(struct PortalInternal *pint)
 {
     // handle all messasges from this portal instance
-    //portalCheckIndication(pint);
+    //event_hardware(pint);
     return -1;
 }
 
@@ -77,6 +77,6 @@ static void write_fd_portal_kernel(PortalInternal *pint, volatile unsigned int *
     **addr = v;
 }
 
-PortalItemFunctions kernelfunc = {
+PortalTransportFunctions kernelfunc = {
     init_portal_kernel, read_portal_kernel, write_portal_kernel, write_fd_portal_kernel, mapchannel_portal_kernel, mapchannel_portal_kernel,
     send_portal_null, recv_portal_null, busy_portal_kernel, enableint_portal_kernel, event_portal_kernel, notfull_kernel};

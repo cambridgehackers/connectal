@@ -119,8 +119,6 @@ int main(int argc, const char **argv)
   SimpleProxy *device = new SimpleProxy(IfcNames_SimpleRequest);
   device->pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
 
-  portalExec_start();
-
   const char *socketName = getenv("BLUESIM_SOCKET_NAME");
   int listening = (strcmp(socketName, "socket1") == 0);
 

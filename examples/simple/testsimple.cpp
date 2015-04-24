@@ -29,9 +29,9 @@
 
 #define NUMBER_OF_TESTS 11
 
-int v1a = 42;
-int v2a = 2;
-int v2b = 4;
+uint32_t v1a = 42;
+uint32_t v2a = 2;
+uint32_t v2b = 4;
 S2 s2 = {7, 8, 9};
 S1 s1 = {3, 6};
 uint32_t v5a = 0x00000000;
@@ -127,8 +127,8 @@ public:
 int main(int argc, const char **argv)
 {
   int32_t testval = 0x1234abcd, v1arg1[4], v1arg2[4];
-  int16_t v2v[16], v3count;
-  Simple *indication = new Simple(IfcNames_SimpleRequestH2S);
+  int16_t v2v[16];
+  Simple indication(IfcNames_SimpleRequestH2S);
   SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequestS2H);
   device->pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
 

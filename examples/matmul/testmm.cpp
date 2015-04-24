@@ -82,7 +82,6 @@ int main(int argc, const char **argv)
 {
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   bool sane = 1;
-  unsigned int srcGen = 0;
 #define LARGE_MAT
 #ifdef LARGE_MAT
 #ifdef BSIM
@@ -134,21 +133,19 @@ int main(int argc, const char **argv)
 #endif
 #endif
   MmIndication *mmdeviceIndication = new MmIndication(IfcNames_MmIndicationPortal);
-  TimerRequestProxy *timerdevice = new TimerRequestProxy(IfcNames_TimerRequestPortal);
-  TimerIndication *timerdeviceIndication = new TimerIndication(IfcNames_TimerIndicationPortal);
+  //TimerRequestProxy *timerdevice = new TimerRequestProxy(IfcNames_TimerRequestPortal);
+  TimerIndication timerdeviceIndication(IfcNames_TimerIndicationPortal);
 
   MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
   MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
+  MemServerIndication hostMemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
+  MMUIndication hostMMUIndication(dma, IfcNames_HostMMUIndication);
 
   if(sem_init(&mul_sem, 1, 0)){
     fprintf(stderr, "failed to init mul_sem\n");
     return -1;
   }
-
-  portalExec_start();
 
   long req_freq = 100000000;
   long freq = 0;
@@ -225,9 +222,9 @@ int main(int argc, const char **argv)
   pm3.multf(pm1, pm2t, mmdeviceIndication);
 #endif
 #endif
-  uint64_t hw_cycles = portalTimerLap(0); 
-  uint64_t read_beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
-  uint64_t write_beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Write);
+  //uint64_t hw_cycles = portalTimerLap(0); 
+  uint64_t read_beats = hostMemServerIndication.getMemoryTraffic(ChannelType_Read);
+  uint64_t write_beats = hostMemServerIndication.getMemoryTraffic(ChannelType_Write);
   float read_util = (float)read_beats/(float)mmdeviceIndication->ccnt;
   float write_util = (float)write_beats/(float)mmdeviceIndication->ccnt;
   float read_bw = read_util * N_VALUE * 4 * (float)freq / 1.0e9;

@@ -38,20 +38,18 @@ public:
         //fprintf(stderr, "heard an s2: %ld %ld\n", a, b);
     }
 
-    PhysMemMasterIndication(unsigned int id, PortalItemFunctions *item, void *param) : PhysMemMasterIndicationWrapper(id, item, param) {}
+    PhysMemMasterIndication(unsigned int id, PortalTransportFunctions *item, void *param) : PhysMemMasterIndicationWrapper(id, item, param) {}
 };
 
     //sem_wait(&sem_heard2);
 
 int main(int argc, const char **argv)
 {
-    PhysMemMasterIndication *sIndication = new PhysMemMasterIndication(IfcNames_PhysMemMasterIndication, &socketfuncInit, NULL);
-    sRequestProxy = new PhysMemMasterRequestProxy(IfcNames_PhysMemMasterRequest, &socketfuncInit, NULL);
-    portalExec_start();
+    PhysMemMasterIndication *sIndication = new PhysMemMasterIndication(IfcNames_PhysMemMasterIndication, &transportSocketInit, NULL);
+    sRequestProxy = new PhysMemMasterRequestProxy(IfcNames_PhysMemMasterRequest, &transportSocketInit, NULL);
 
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
     //call_say(v);
-    portalExec_end();
     return 0;
 }

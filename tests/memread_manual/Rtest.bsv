@@ -48,33 +48,37 @@ module mkRtest#(RtestIndication indication) (Rtest);
 
    Reg#(SGLId)   pointer <- mkReg(0);
    Reg#(Bit#(32))       numWords <- mkReg(0);
-   Reg#(Bit#(32))       burstLen <- mkReg(0);
+   Reg#(Bit#(BurstLenSize)) burstLenBytes <- mkReg(0);
    FIFO#(void)                cf <- mkSizedFIFO(1);
    Reg#(Bit#(32))  itersToFinish <- mkReg(0);
    Reg#(Bit#(32))   itersToStart <- mkReg(0);
-   Reg#(Bit#(32))        srcGens <- mkReg(0);
+   Reg#(Bit#(32))        wordsRead <- mkReg(0);
    Reg#(Bit#(32)) mismatchCounts <- mkReg(0);
-   MemreadEngine#(64,2,1)        re <- mkMemreadEngine;
-   Bit#(MemOffsetSize) chunk = extend(numWords)*4;
-   
+   MemreadEngine#(64,1,1)        re <- mkMemreadEngine;
+   Bit#(32)             numBytes = extend(numWords)*4;
+   FIFO#(Bit#(32)) checkDoneFifo <- mkFIFO();
    
    rule start (itersToStart > 0);
-      re.readServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(chunk), burstLen:truncate(burstLen*4)});
+      re.readServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:numBytes, burstLen:burstLenBytes});
       itersToStart <= itersToStart-1;
    endrule
 
    rule check;
       let v <- toGet(re.dataPipes[0]).get;
-      let expectedV = {srcGens+1,srcGens};
+      let expectedV = {wordsRead+1,wordsRead};
       let misMatch = v != expectedV;
       mismatchCounts <= mismatchCounts + (misMatch ? 1 : 0);
-      let new_srcGens = srcGens+2;
-      if (new_srcGens >= truncate(chunk/4))
-	 new_srcGens = 0;
-      srcGens <= new_srcGens;
+      // $display("check v=%h expected=%h mismatch=%d", v, expectedV, misMatch);
+      let new_wordsRead = wordsRead+(64/32);
+      if (new_wordsRead >= truncate(numBytes/4)) begin
+	 new_wordsRead = 0;
+	 checkDoneFifo.enq(mismatchCounts);
+      end
+      wordsRead <= new_wordsRead;
    endrule
    
    rule finish if (itersToFinish > 0);
+      let mc <- toGet(checkDoneFifo).get();
       let rv <- re.readServers[0].response.get;
       if (itersToFinish == 1) begin
 	 cf.deq;
@@ -89,11 +93,11 @@ module mkRtest#(RtestIndication indication) (Rtest);
 	 pointer <= rp;
 	 cf.enq(?);
 	 numWords  <= nw;
-	 burstLen  <= bl;
+	 burstLenBytes  <= truncate(bl*4);
 	 itersToFinish <= ic;
 	 itersToStart <= ic;
 	 mismatchCounts <= 0;
-	 srcGens <= 0;
+	 wordsRead <= 0;
       endmethod
    endinterface
 endmodule

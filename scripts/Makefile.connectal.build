@@ -65,8 +65,8 @@ BSCOPTFLAGS= -show-schedule -aggressive-conditions
 BSCPATHFLAGS=  -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj -info-dir $(DTOP)/obj
 BSCFLAGS_COMMON += $(BSCWARNFLAGS) $(BSCOPTFLAGS) $(BSCPATHFLAGS) --wait-for-license
 BSC_CXXFLAGS= -I $(CONNECTALDIR)/cpp -I $(CONNECTALDIR) -D BSIM
-BSIM_CXX_COMMON = $(CONNECTALDIR)/cpp/BsimCtrl.cxx $(CONNECTALDIR)/cpp/TlpReplay.cxx $(CONNECTALDIR)/cpp/BsimDma.cxx $(CONNECTALDIR)/cpp/sock_utils.c
-BSIM_CXX_LOCAL = $(DTOP)/jni/BsimCtrl.cxx $(DTOP)/jni/TlpReplay.cxx $(DTOP)/jni/BsimDma.cxx $(DTOP)/jni/sock_utils.c $(DTOP)/jni/portalPrintf.c
+BSIM_CXX_COMMON = $(CONNECTALDIR)/cpp/BsimCtrl.cpp $(CONNECTALDIR)/cpp/TlpReplay.cpp $(CONNECTALDIR)/cpp/BsimDma.cpp $(CONNECTALDIR)/cpp/sock_utils.c
+BSIM_CXX_LOCAL = $(DTOP)/jni/BsimCtrl.cpp $(DTOP)/jni/TlpReplay.cpp $(DTOP)/jni/BsimDma.cpp $(DTOP)/jni/sock_utils.c $(DTOP)/jni/portalPrintf.c
 
 VIVADODIR=$(shell dirname $(shell dirname $(shell which vivado)))
 VIVADOFLAGS= -notrace
@@ -198,13 +198,13 @@ android.debug.exe: prepare_bin_target
 
 run:
 ifeq ($(CONNECTAL_SHARED),1)
-	$(GDB_BSIM) ./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe2 $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
+	$(RUN_BSC_LM_LICENSE_FILE) $(GDB_BSIM) ./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe2 $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
 else
 ifeq ($(BOARD),bluesim)
     ifeq ($(RUNSOURCE2),)
-	$(GDB_BSIM) ./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
+	$(RUN_BSC_LM_LICENSE_FILE) $(GDB_BSIM) ./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
     else
-	./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB2) ./bin/bsim_exe2& bsim2pid=$$!; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid $$bsim2pid; exit $$retcode
+	$(RUN_BSC_LM_LICENSE_FILE) ./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB2) ./bin/bsim_exe2& bsim2pid=$$!; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid $$bsim2pid; exit $$retcode
     endif
 else
   ifeq ($(BOARD),xsim)
@@ -217,7 +217,6 @@ else
     ifeq ($(OS),android)
 	$(CONNECTALDIR)/scripts/run.android bin/android.exe $(RUN_ARGS)
     else
-	echo foo
 ifeq ($(XILINX),"1")
 	$(CONNECTALDIR)/scripts/run.pcietest bin/ubuntu.exe $(RUN_ARGS)
 endif
@@ -229,30 +228,13 @@ endif
 endif
 endif
 
-ifeq ($(BOARD), xsim)
-XSI_INCLUDE_DIR=$(VIVADODIR)/data/xsim/include
-XSI_EXAMPLE_DIR=$(VIVADODIR)/examples/xsim/verilog/xsi/counter/
-XSIM_INCLUDES = -I$(XSI_INCLUDE_DIR) -I$(XSI_EXAMPLE_DIR) -Ijni -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR)
-endif
-
-bin/xsim: $(CONNECTALDIR)/cpp/xsimtop.cpp $(XSI_EXAMPLE_DIR)/xsi_loader.cpp
-	  g++ $(XSIM_INCLUDES) -O -g -c -o xsi_loader.o $(XSI_EXAMPLE_DIR)/xsi_loader.cpp
-	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o portal.o $(CONNECTALDIR)/cpp/portal.c
-	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o poller.o $(CONNECTALDIR)/cpp/poller.cpp
-	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o sock_utils.o $(CONNECTALDIR)/cpp/sock_utils.c
-	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o timer.o $(CONNECTALDIR)/cpp/timer.c
-	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o portalSocket.o $(CONNECTALDIR)/cpp/portalSocket.c
-	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o portalJson.o $(CONNECTALDIR)/cpp/portalJson.c
-	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o portalPrintf.o $(CONNECTALDIR)/cpp/portalPrintf.c
-	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o xsimtop.o $(CONNECTALDIR)/cpp/xsimtop.cpp
-	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o XsimMemSlaveIndication.o jni/XsimMemSlaveIndication.c
-	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o XsimMemSlaveRequest.o jni/XsimMemSlaveRequest.c
-	  g++ $(XSIM_INCLUDES) -I$(XSI_EXAMPLE_DIR) -O -g -c -o GeneratedCppCallbacks.o jni/GeneratedCppCallbacks.cpp
-	  g++ -o bin/xsim xsimtop.o xsi_loader.o portal.o portalSocket.o portalJson.o poller.o sock_utils.o timer.o XsimMemSlaveRequest.o XsimMemSlaveIndication.o GeneratedCppCallbacks.o portalPrintf.o -ldl -lrt -pthread
+bin/xsim: prepare_bin_target
+	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk xsim VIVADODIR=$(VIVADODIR)
+	$(Q)cp -v jni/xsim bin
 
 xsim: verilog bin/xsim
 	xvlog $(XVLOGFLAGS) verilog/*.v
-	xelab $(XELABFLAGS) work.$(MKTOP) -dll -s $(MKTOP)
+	xelab -L unimacro $(XELABFLAGS) work.$(MKTOP) -dll -s $(MKTOP)
 
 bin/vsim:
 	python $(CONNECTALDIR)/scripts/sim-gen.py -o vsim/Makefile -s ~/dev/connectal/out/vsim/synthesis/ -d ~/dev/sonic-lite/vsim/modelsim -p ~/dev/sonic-lite -c $(CONNECTALDIR) -g ~/dev/connectal/out/vsim/synthesis/ -t ~/dev/connectal/out/vsim/synthesis/ -T mkSonicSimTop
@@ -270,12 +252,10 @@ $(VFILE): $(TOPBSVFILE) $(BSVFILES)
 
 $(DTOP)/jni/%.cpp: $(CONNECTALDIR)/cpp/%.cpp
 	$(Q)cp $< $@
-$(DTOP)/jni/%.cxx: $(CONNECTALDIR)/cpp/%.cxx
-	$(Q)cp $< $@
 $(DTOP)/jni/%.c: $(CONNECTALDIR)/cpp/%.c
 	$(Q)cp $< $@
 
-bsim: prepare_bin_target $(DTOP)/jni/TlpReplay.cxx $(BSIM_CXX_LOCAL)
+bsim: prepare_bin_target $(DTOP)/jni/TlpReplay.cpp $(BSIM_CXX_LOCAL)
 	$(Q)mkdir -p $(DTOP)/obj verilog
 	@echo BSCBSIM [$(DTOP)]
 	$(Q)cd generatedbsv; $(RUN_BSC) -D BSIM -sim -u -g $(MKTOP) $(TOPBSVFILE)
@@ -299,7 +279,7 @@ prepare_bin_target: syntax.timestamp
 	@mkdir -p bin jni
 	@(git rev-parse HEAD 2> /dev/null || echo not a git repo) > bin/githash
 	@(git diff 2>/dev/null || echo not a git repo) | gzip -c > bin/gitdiff.patch.gz
-	md5sum $(CONNECTALDIR)/drivers/*/*.c $(CONNECTALDIR)/generated/cpp/*.c | grep -v mod.c | sed -f $(CONNECTALDIR)/scripts/driver_signature.sed >jni/driver_signature_file.h
+	@md5sum $(CONNECTALDIR)/drivers/*/*.c $(CONNECTALDIR)/generated/cpp/*.c | grep -v mod.c | sed -f $(CONNECTALDIR)/scripts/driver_signature.sed >jni/driver_signature_file.h
 
 hwclean:
 	rm -fr obj hw vivado*.jou vivado*.log fsm_encoding.os .Xil

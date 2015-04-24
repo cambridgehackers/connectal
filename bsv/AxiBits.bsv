@@ -21,7 +21,7 @@
 // SOFTWARE.
 import Vector::*;
 
-interface AxiMasterBits#(numeric type addrWidth, numeric type dataWidth, numeric type tagWidth);
+interface AxiMasterBits#(numeric type addrWidth, numeric type dataWidth, numeric type tagWidth, type extraType);
     method Bit#(addrWidth)     araddr();
     method Bit#(2)     arburst();
     method Bit#(4)     arcache();
@@ -59,8 +59,9 @@ interface AxiMasterBits#(numeric type addrWidth, numeric type dataWidth, numeric
     method Bit#(tagWidth)     wid();
     method Bit#(1)     wlast();
     method Action      wready(Bit#(1) v);
-    method Bit#(4)     wstrb();
+    method Bit#(TDiv#(dataWidth,8))     wstrb();
     method Bit#(1)     wvalid();
+    interface extraType   extra;
 endinterface
 
 interface HPType;
@@ -78,7 +79,7 @@ interface ACPType;
 endinterface
 
 interface AxiSlaveBits#(numeric type addrWidth, numeric type dataWidth, numeric type tagWidth,
-    numeric type strobeWidth, type extraType);
+    type extraType);
     method Action      araddr(Bit#(addrWidth) v);
     method Action      arburst(Bit#(2) v);
     method Action      arcache(Bit#(4) v);
@@ -115,13 +116,13 @@ interface AxiSlaveBits#(numeric type addrWidth, numeric type dataWidth, numeric 
     method Action      wid(Bit#(tagWidth) v);
     method Action      wlast(Bit#(1) v);
     method Bit#(1)     wready();
-    method Action      wstrb(Bit#(strobeWidth) v);
+    method Action      wstrb(Bit#(TDiv#(dataWidth,8)) v);
     method Action      wvalid(Bit#(1) v);
     method Bit#(tagWidth)     rid();
     interface extraType   extra;
 endinterface
 
-typedef AxiMasterBits#(32,32,12) Pps7Maxigp;
-typedef AxiSlaveBits#(32,32,6,4,Empty) Pps7Saxigp;
-typedef AxiSlaveBits#(32,64,6,8,HPType) Pps7Saxihp;
-typedef AxiSlaveBits#(32,64,3,8,ACPType) Pps7Saxiacp;
+typedef AxiMasterBits#(32,32,12,Empty) Pps7Maxigp;
+typedef AxiSlaveBits#(32,32,6,Empty) Pps7Saxigp;
+typedef AxiSlaveBits#(32,64,6,HPType) Pps7Saxihp;
+typedef AxiSlaveBits#(32,64,3,ACPType) Pps7Saxiacp;

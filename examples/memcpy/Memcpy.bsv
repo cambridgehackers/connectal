@@ -21,12 +21,14 @@
 // SOFTWARE.
 
 import Vector::*;
+import BuildVector::*;
 import FIFOF::*;
 import FIFO::*;
 import BRAMFIFO::*;
 import GetPut::*;
 import ClientServer::*;
 
+import HostInterface::*;
 import ConnectalMemory::*;
 import MemTypes::*;
 import MemreadEngine::*;
@@ -44,8 +46,8 @@ endinterface
 
 interface Memcpy;
    interface MemcpyRequest request;
-   interface Vector#(1, MemReadClient#(64)) dmaReadClient;
-   interface Vector#(1, MemWriteClient#(64)) dmaWriteClient;
+   interface Vector#(1, MemReadClient#(DataBusWidth)) dmaReadClient;
+   interface Vector#(1, MemWriteClient#(DataBusWidth)) dmaWriteClient;
 endinterface
 
 
@@ -53,57 +55,46 @@ endinterface
 //       speculative read/write requests are not unsafely issued.  As a 
 //       result this must be enforced manually (mdk)
 
+typedef 8 CmdQDepth;
+typedef TDiv#(DataBusWidth,32) WordsPerBeat;
+
 module mkMemcpy#(MemcpyIndication indication)(Memcpy);
 
-   MemreadEngine#(64,1,1)  re <- mkMemreadEngine;
-   MemwriteEngine#(64,2,1) we <- mkMemwriteEngine;
+   MemreadEngine#(DataBusWidth,CmdQDepth,1)  re <- mkMemreadEngineBuff(valueOf(CmdQDepth)*512);
+   MemwriteEngine#(DataBusWidth,CmdQDepth,1) we <- mkMemwriteEngineBuff(valueOf(CmdQDepth)*512);
+
+   Integer wordsPerBeat = valueOf(WordsPerBeat);
 
    Reg#(Bit#(32))        rdIterCnt <- mkReg(0);
    Reg#(Bit#(32))        wrIterCnt <- mkReg(0);
-   Reg#(Bit#(32))            rdCnt <- mkReg(0);
-   Reg#(Bit#(32))            wrCnt <- mkReg(0);
-   Reg#(SGLId)      rdPointer <- mkReg(0);
-   Reg#(SGLId)      wrPointer <- mkReg(0);
+   Reg#(SGLId)           rdPointer <- mkReg(0);
+   Reg#(SGLId)           wrPointer <- mkReg(0);
    Reg#(Bit#(32))         burstLen <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);
    
-   FIFOF#(Bit#(64))    buffer <- mkSizedBRAMFIFOF(16);
-   Reg#(Bit#(32))    rdBuffer <- mkReg(32);
-   Reg#(Bit#(32))    wrBuffer <- mkReg(0); 
+   FIFOF#(Bit#(DataBusWidth))    buffer <- mkSizedBRAMFIFOF(valueOf(CmdQDepth)*32);
    
-   rule start_read(rdIterCnt > 0 && rdBuffer >= burstLen);
-      //$display("start_read %d", rdCnt);
-      re.readServers[0].request.put(MemengineCmd{sglId:rdPointer, base:extend(rdCnt*4), len:(burstLen*4), burstLen:truncate(burstLen*4)});
-      rdBuffer <= rdBuffer-burstLen;
-      if(rdCnt+burstLen >= numWords) begin
-	 rdCnt <= 0;
-	 rdIterCnt <= rdIterCnt-1;
-      end
-      else begin
-	 rdCnt <= rdCnt+burstLen;
-      end
+   Bool verbose = True;
+
+   rule start_read(rdIterCnt > 0);
+      if (verbose) $display("start_read numWords %d wordsPerBeat %d", numWords, wordsPerBeat);
+      re.readServers[0].request.put(MemengineCmd{sglId:rdPointer, base:0, len:extend(numWords*4), burstLen:truncate(burstLen*4)});
+      rdIterCnt <= rdIterCnt-1;
    endrule
 
-   rule start_write(wrIterCnt > 0 && wrBuffer >= burstLen);
-      //$display("                    start_write %d", wrCnt);
-      we.writeServers[0].request.put(MemengineCmd{sglId:wrPointer, base:extend(wrCnt*4), len:burstLen*4, burstLen:truncate(burstLen*4)});
-      wrBuffer <= wrBuffer-burstLen;
-      if(wrCnt+burstLen >= numWords) begin
-	 wrCnt <= 0;
-	 wrIterCnt <= wrIterCnt-1;
-      end
-      else begin
-	 wrCnt <= wrCnt+burstLen;
-      end
+   rule start_write(wrIterCnt > 0);
+      if (verbose) $display("                    start_write numWords %d", numWords);
+      we.writeServers[0].request.put(MemengineCmd{sglId:wrPointer, base:0, len:extend(numWords*4), burstLen:truncate(burstLen*4)});
+      wrIterCnt <= wrIterCnt-1;
    endrule
    
    rule read_finish;
-      //$display("read_finish %d", rdIterCnt);
+      if (verbose) $display("read_finish %d", rdIterCnt);
       let rv0 <- re.readServers[0].response.get;
    endrule
 
    rule write_finish;
-      //$display("                    write_finish %d", wrIterCnt);
+      if (verbose) $display("                    write_finish %d", wrIterCnt);
       let rv1 <- we.writeServers[0].response.get;
       if(wrIterCnt==0)
 	 indication.done;
@@ -112,14 +103,12 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
    rule fill_buffer;
       let v <- toGet(re.dataPipes[0]).get;
       buffer.enq(v);
-      wrBuffer <= wrBuffer+2;
-      //$display("fill_buffer %h", rdFifo.first);
+      if (verbose) $display("fill_buffer %h", v);
    endrule
    
    rule drain_buffer;
       let v <- toGet(buffer).get();
       we.dataPipes[0].enq(v);
-      rdBuffer <= rdBuffer+2;
       //$display("                    drain_buffer %h", buffer.first);
    endrule
 
@@ -136,6 +125,6 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
       burstLen  <= bl;
    endmethod
    endinterface
-   interface MemReadClient dmaReadClient = cons(re.dmaClient, nil);
-   interface MemWriteClient dmaWriteClient = cons(we.dmaClient, nil);
+   interface MemReadClient dmaReadClient = vec(re.dmaClient);
+   interface MemWriteClient dmaWriteClient = vec(we.dmaClient);
 endmodule

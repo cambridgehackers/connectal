@@ -58,7 +58,7 @@ long dotprod = 0;
 void dump(const char *prefix, char *buf, size_t len)
 {
     fprintf(stderr, "%s ", prefix);
-    for (int i = 0; i < (len > 64 ? 64 : len) ; i++) {
+    for (unsigned int i = 0; i < (len > 64 ? 64 : len) ; i++) {
 	fprintf(stderr, "%02x", (unsigned char)buf[i]);
 	if (i % 4 == 3)
 	  fprintf(stderr, " ");
@@ -80,8 +80,6 @@ void *dbgThread(void *)
 
 int main(int argc, const char **argv)
 {
-  unsigned int srcGen = 0;
-
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
  
   mmdevice = new MmRequestTNProxy(IfcNames_MmRequestPortal);
@@ -103,8 +101,6 @@ int main(int argc, const char **argv)
     fprintf(stderr, "failed to init mul_sem\n");
     return -1;
   }
-
-  portalExec_start();
 
   pthread_t dbgtid;
   fprintf(stderr, "creating debug thread\n");

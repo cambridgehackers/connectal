@@ -59,9 +59,7 @@ int main(int argc, const char **argv)
     return -1;
   }
 
-  portalExec_start();
-
-  int srcAlloc = portalAlloc(alloc_sz);
+  int srcAlloc = portalAlloc(alloc_sz, 0);
   unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
 
