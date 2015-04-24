@@ -87,17 +87,11 @@ spkg:
 	git clean -fdx
 	git checkout debian
 	sed -i s/trusty/precise/g debian/changelog
-	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu/precise --git-ignore-new -S -tc
+	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu/precise --git-ignore-new -S -tc '--git-upstream-tag=v%(version)s'
 	git clean -fdx
-	sed -i s/precise/wheezy/g debian/changelog
-	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu/precise --git-ignore-new -S -tc
+	sed -i s/precise/trusty/g debian/changelog
+	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu/precise --git-ignore-new -S -tc '--git-upstream-tag=v%(version)s'
 	git clean -fdx
-	sed -i s/wheezy/trusty/g debian/changelog
-	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu/precise --git-ignore-new -S -tc
-	git clean -fdx
-	git checkout debian
-	sed -i s/trusty/wheezy/g debian/changelog
-	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu/precise --git-ignore-new -S -tc
 
 dpkg:
 	sed -i s/trusty/precise/g debian/changelog
