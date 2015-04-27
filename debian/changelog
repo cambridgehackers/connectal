@@ -1,3 +1,9 @@
+connectal (15.04.2-1trusty1) trusty; urgency=medium
+
+  * Fixing DKMS sources
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 27 Apr 2015 11:06:34 -0400
+
 connectal (15.04.1-1trusty1) trusty; urgency=medium
 
   * 15.04.1
