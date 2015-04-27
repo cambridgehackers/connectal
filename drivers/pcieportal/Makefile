@@ -16,9 +16,8 @@ cflags-y += -I$(PWD)
 ../portalmem/portalmem.ko: ../portalmem/portalmem.c
 	cd ../portalmem; make -f Makefile.x86
 
-SIGNATURE_C_FILES = $(shell ls *.c ../../generated/cpp/*.c)
-
-pcieportal_signature_file.h: $(SIGNATURE_C_FILES)
+.PHONY: pcieportal_signature_file.h
+pcieportal_signature_file.h:
 	md5sum *.c ../../generated/cpp/*.c | grep -v mod.c | sed -f ../../scripts/driver_signature.sed >pcieportal_signature_file.h
 
 pcieportal.ko: pcieportal.c pcieportal.h pcieportal_signature_file.h
