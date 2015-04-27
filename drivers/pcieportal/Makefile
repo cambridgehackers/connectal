@@ -16,8 +16,12 @@ cflags-y += -I$(PWD)
 ../portalmem/portalmem.ko: ../portalmem/portalmem.c
 	cd ../portalmem; make -f Makefile.x86
 
-pcieportal.ko: pcieportal.c pcieportal.h
-	md5sum *.c ../../generated/cpp/*.c | grep -v mod.c | sed -f ../../scripts/driver_signature.sed >driver_signature_file.h
+SIGNATURE_C_FILES = $(shell ls *.c ../../generated/cpp/*.c)
+
+pcieportal_signature_file.h: $(SIGNATURE_C_FILES)
+	md5sum *.c ../../generated/cpp/*.c | grep -v mod.c | sed -f ../../scripts/driver_signature.sed >pcieportal_signature_file.h
+
+pcieportal.ko: pcieportal.c pcieportal.h pcieportal_signature_file.h
 	@$(MAKE) -C $(KROOT) M=$(PWD) modules
 
 .PHONY: modules_check
@@ -60,11 +64,12 @@ insmod: rmmod
 	chmod agu+rw /dev/portalmem
 
 .PHONY: install-dkms
-install-dkms:
+install-dkms: pcieportal_signature_file.h
+	make -C ../portalmem portalmem_signature_file.h
 	mkdir -p $(DESTDIR)//usr/src/connectal-$(VERSION)
 	sed "s/@VERSION@/$(VERSION)/" dkms.conf > dkms.conf.out
 	cp -fv dkms.conf.out $(DESTDIR)/usr/src/connectal-$(VERSION)/dkms.conf
-	cp -fv pcieportal.c pcieportal.h $(DESTDIR)/usr/src/connectal-$(VERSION)
+	cp -fv pcieportal_signature_file.h pcieportal.c pcieportal.h $(DESTDIR)/usr/src/connectal-$(VERSION)
 	cp -fv ../../cpp/*.[ch] ../portalmem/*.[ch] \
 	../../generated/cpp/*.[ch] \
 	$(DESTDIR)/usr/src/connectal-$(VERSION)
