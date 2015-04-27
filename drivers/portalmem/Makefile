@@ -10,9 +10,9 @@ ccflags-y := -D DRIVER_VERSION_RAW="$(DRIVER_VERSION)" -I$(PWD)/../..
 default: portalmem.ko
 	cp portalmem.ko ~/adb_scripts/
 
-SIGNATURE_C_FILES = $(shell ls *.c)
+.PHONY: portalmem_signature_file.h
 
-portalmem_signature_file.h: $(SIGNATURE_C_FILES)
+portalmem_signature_file.h:
 	md5sum *.c | grep -v mod.c | sed -f ../../scripts/driver_signature.sed >portalmem_signature_file.h
 
 parallellaportalmem.ko: portalmem.h portalmem.c portalmem_signature_file.h
