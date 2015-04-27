@@ -73,6 +73,11 @@ endmodule
 
 //(* synthesize *) commented out so that the guards in MemServer aren't destroyed (mdk)
 module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
+<<<<<<< HEAD
+=======
+   Clock epClock250 <- exposeCurrentClock();
+   Reset epReset250 <- exposeCurrentReset();
+>>>>>>> 02bf911c93d893d41ad03f79662dd85f1bfe376e
    let dispatcher <- mkTLPDispatcher;
    let arbiter    <- mkTLPArbiter;
    Vector#(NumberOfMasters,MemSlaveEngine#(DataBusWidth)) sEngine <- replicateM(mkMemSlaveEngineSynth(my_pciId));
@@ -160,8 +165,11 @@ module mkBsimPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_c
       put_tlp(foo);
       //$display("to_bdpi");
    endrule
+<<<<<<< HEAD
    interface Clock pcieClock = dc;
    interface Reset pcieReset = dr;
+=======
+>>>>>>> 02bf911c93d893d41ad03f79662dd85f1bfe376e
    interface PcieHost tpciehost = pciehost;
 endmodule
 `endif
@@ -185,8 +193,13 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys
    // Instantiate the PCIE endpoint
    PcieEndpointX7#(PcieLanes) ep7 <- mkPcieEndpointX7( clocked_by pci_clk_100mhz_buf, reset_by pci_sys_reset_n);
 
+<<<<<<< HEAD
    Clock pcieClock_ = ep7.epPcieClock;
    Reset pcieReset_ = ep7.epPcieReset;
+=======
+   Clock portalClock_ = ep7.portalClock;
+   Reset portalReset_ = ep7.portalReset;
+>>>>>>> 02bf911c93d893d41ad03f79662dd85f1bfe376e
    PcieHost#(DataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(
          PciId{ bus:  ep7.cfg.bus_number(), dev: ep7.cfg.device_number(), func: ep7.cfg.function_number()},
          clocked_by pcieClock_, reset_by pcieReset_);
@@ -198,10 +211,15 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys
    interface PcieEndpointX7 tep7 = ep7;
    interface PcieHost tpciehost = pciehost;
 
+<<<<<<< HEAD
    interface pcieClock = ep7.epPcieClock;
    interface pcieReset = ep7.epPcieReset;
    interface portalClock = ep7.epPortalClock;
    interface portalReset = ep7.epPortalReset;
+=======
+   interface portalClock = portalClock_;
+   interface portalReset = portalReset_;
+>>>>>>> 02bf911c93d893d41ad03f79662dd85f1bfe376e
    interface derivedClock = ep7.epDerivedClock;
    interface derivedReset = ep7.epDerivedReset;
 endmodule
