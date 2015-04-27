@@ -557,7 +557,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
         /* set MSIX Entry 0 Vector Control value to 1 (masked) */
         iowrite32(1, this_board->bar0io + CSR_MSIX_MASKED);
         disable_irq(this_board->irq_num);
-	for (i = 0; i < MAX_NUM_PORTALS; i++) 
+	for (i = 0; i < num_entries; i++) 
 		free_irq(this_board->irq_num + i, (void *) &this_board->portal[i]);
 MSI_ENABLED_label:
         /* disable MSI/MSIX */
