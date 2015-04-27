@@ -93,10 +93,13 @@ spkg:
 	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu/precise --git-ignore-new -S -tc '--git-upstream-tag=v%(version)s'
 	git clean -fdx
 
-dpkg:
-	sed -i s/trusty/precise/g debian/changelog
-	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu/precise --git-ignore-new -tc -us -uc
-	sed -i s/precise/trusty/g debian/changelog
+upload:
+	git push origin v$(VERSION)
+	dput ppa:jamey-hicks/connectal ../connectal_$(VERSION)-*_source.changes
+	(cd  ../obs/home:jameyhicks:connectaldeb/connectal/; osc rm * || true)
+	cp -v ../connectal_$(VERSION)*.diff.gz ../connectal_$(VERSION)*.dsc ../connectal_$(VERSION)*.orig.tar.gz ../obs/home:jameyhicks:connectaldeb/connectal/
+	(cd ../obs/home:jameyhicks:connectaldeb/connectal/; osc add *; osc commit -m $(VERSION) )
+	(cd ../obs/home:jameyhicks:connectal/connectal; sed -i "s/>v.....</>v$(VERSION)</" _service; osc commit -m "v$(VERSION)" )
 
 ## PLY's home is http://www.dabeaz.com/ply/
 install-dependences:
