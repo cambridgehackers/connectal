@@ -511,7 +511,7 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
         const char md5[33];
         const char filename[33];
     } filesignatures[] = {
-#include "driver_signature_file.h"
+#include "portalmem_signature_file.h"
         };
     int err = copy_from_user(&signature, (void __user *) arg, sizeof(signature));
     if (err)

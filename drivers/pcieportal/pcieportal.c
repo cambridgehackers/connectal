@@ -290,7 +290,7 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                     const char md5[33];
                     const char filename[33];
                 } filesignatures[] = {
-#include "driver_signature_file.h"
+#include "pcieportal_signature_file.h"
                     };
                 int err = copy_from_user(&signature, (void __user *) arg, sizeof(signature));
                 if (err)
