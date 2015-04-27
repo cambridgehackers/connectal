@@ -100,9 +100,9 @@ int main(int argc, const char **argv)
     unsigned int alloc_len = 128;
     unsigned int fetch_len = alloc_len * alloc_len;
     
-    strAAlloc = portalAlloc(alloc_len);
-    strBAlloc = portalAlloc(alloc_len);
-    fetchAlloc = portalAlloc(fetch_len);
+    strAAlloc = portalAlloc(alloc_len, 0);
+    strBAlloc = portalAlloc(alloc_len, 0);
+    fetchAlloc = portalAlloc(fetch_len, 0);
 
     char *strA = (char *)portalMmap(strAAlloc, alloc_len);
     char *strB = (char *)portalMmap(strBAlloc, alloc_len);
@@ -132,9 +132,9 @@ int main(int argc, const char **argv)
 
     fprintf(stderr, "elapsed time (hw cycles): %lld\n", (long long)portalTimerLap(0));
     
-    portalDCacheFlushInval(strAAlloc, alloc_len, strA);
-    portalDCacheFlushInval(strBAlloc, alloc_len, strB);
-    portalDCacheFlushInval(fetchAlloc, fetch_len, fetch);
+    portalCacheFlush(strAAlloc, strA, alloc_len, 1);
+    portalCacheFlush(strBAlloc, strB, alloc_len, 1);
+    portalCacheFlush(fetchAlloc, fetch, fetch_len, 1);
 
     unsigned int ref_strAAlloc = dma->reference(strAAlloc);
     unsigned int ref_strBAlloc = dma->reference(strBAlloc);

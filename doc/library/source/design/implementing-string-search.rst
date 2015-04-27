@@ -299,7 +299,7 @@ accordingly::
 
     int search(char *str){
       int size = strlen(str)+1;
-      int fd = portalAlloc(size);
+      int fd = portalAlloc(size, 0);
       char *sharedStr = portalMmap(fd, size);
       strcpy(sharedStr, str);
       // send a DMA reference to the search pattern

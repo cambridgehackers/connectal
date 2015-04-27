@@ -123,7 +123,7 @@ public:
         fprintf(stderr, "    [%d] = 0x%x\n", i, v[i] & 0xffff);
     incr_cnt();
   }
-  Simple(unsigned int id, unsigned int numtimes=1, PortalItemFunctions *item=0, void *param = 0) : SimpleRequestWrapper(id, item, param), cnt(0), times(numtimes){}
+  Simple(unsigned int id, unsigned int numtimes=1, PortalTransportFunctions *item=0, void *param = 0) : SimpleRequestWrapper(id, item, param), cnt(0), times(numtimes){}
 };
 
 int main(int argc, const char **argv)
@@ -140,9 +140,9 @@ int main(int argc, const char **argv)
 //#define FF {dma}
 #define FF SHARED_DMA(IfcNames_MMURequestS2H, IfcNames_MMUIndicationH2S)
     PortalSharedParam parami = {FF, alloc_sz, SHARED_HARDWARE(IfcNames_SimpleRequestPipesH2S)};
-    Simple *indication = new Simple(IfcNames_SimpleRequestH2S, numtimes, &sharedfunc, &parami);
+    Simple *indication = new Simple(IfcNames_SimpleRequestH2S, numtimes, &transportShared, &parami);
     PortalSharedParam paramr = {FF, alloc_sz, SHARED_HARDWARE(IfcNames_SimpleRequestPipesS2H)};
-    SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequestS2H, &sharedfunc, &paramr);
+    SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequestS2H, &transportShared, &paramr);
 
     for (int i = 0; i < numtimes; i++) {
       if (verbose) fprintf(stderr, "Main::calling say1(%d)\n", v1a);

@@ -76,7 +76,7 @@ int main(int argc, const char **argv)
     MMUIndication hostMMUIndication(dma, IfcNames_MMUIndicationH2S);
 
     fprintf(stderr, "parent::allocating memory...\n");
-    int dstAlloc = portalAlloc(alloc_sz);
+    int dstAlloc = portalAlloc(alloc_sz, 0);
     unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
 #ifdef FPGA0_CLOCK_FREQ
     long req_freq = FPGA0_CLOCK_FREQ, freq = 0;
@@ -86,7 +86,7 @@ int main(int argc, const char **argv)
     unsigned int ref_dstAlloc = dma->reference(dstAlloc);
     for (int i = 0; i < numWords; i++)
         dstBuffer[i] = 0xDEADBEEF;
-    portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
+    portalCacheFlush(dstAlloc, dstBuffer, alloc_sz, 1);
     fprintf(stderr, "testmemwrite: flush and invalidate complete\n");
     fprintf(stderr, "testmemwrite: starting write %08x\n", numWords);
     portalTimerStart(0);

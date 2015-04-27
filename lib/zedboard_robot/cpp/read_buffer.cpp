@@ -19,8 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -67,7 +65,7 @@ int reader::read_circ_buff(int buff_len, unsigned int ref_dstAlloc, int dstAlloc
     datalen = buff_len;
     fprintf(stderr, "WARNING: sock_server::read_circ_buffer dwc>1\n");
   }
-  portalDCacheInval(dstAlloc, buff_len, dstBuffer);    
+  portalCacheFlush(dstAlloc, dstBuffer, buff_len, 1);
   if (verbose) fprintf(stderr, "bottom:%4x, top:%4x, two:%d, datalen:%4x, dwc:%d\n", bottom,top,two,datalen,dwc);
   if (datalen){
     if (two) {

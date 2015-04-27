@@ -17,19 +17,19 @@
     },
     "pmod[4]" : {
 	"PIO_DIRECTION": "OUTPUT",
-	"pmod" : "J5"
+	"pmod" : "J7"
     },
     "pmod[5]" : {
 	"PIO_DIRECTION": "OUTPUT",
-	"pmod" : "J6"
+	"pmod" : "J8"
     },
     "pmod[6]" : {
 	"PIO_DIRECTION": "OUTPUT",
-	"pmod" : "J7"
+	"pmod" : "J9"
     },
     "pmod[7]" : {
 	"PIO_DIRECTION": "OUTPUT",
-	"pmod" : "J8"
+	"pmod" : "J10"
     }
   }
 

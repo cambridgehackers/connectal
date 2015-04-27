@@ -73,7 +73,7 @@ class DmaManager
 {
  public:
   DmaManagerPrivate priv;
-  DmaManager(PortalInternalCpp *sglDevice) {
+  DmaManager(Portal *sglDevice) {
     DmaManager_init(&priv, &sglDevice->pint);
   };
   int reference(int fd) {

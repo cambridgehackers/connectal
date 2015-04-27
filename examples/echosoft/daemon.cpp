@@ -44,7 +44,7 @@ public:
         fprintf(stderr, "daemon: heard an echo2: %d %d\n", a, b);
         sIndicationProxy->heard2(a, b);
     }
-    EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
+    EchoIndication(unsigned int id, PortalTransportFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
 };
 
 class EchoRequest : public EchoRequestWrapper
@@ -66,7 +66,7 @@ public:
         sleep(1);
         exit(1);
     }
-    EchoRequest(unsigned int id, PortalItemFunctions *item, void *param) : EchoRequestWrapper(id, item, param) {}
+    EchoRequest(unsigned int id, PortalTransportFunctions *item, void *param) : EchoRequestWrapper(id, item, param) {}
 };
 
 int main(int argc, const char **argv)
@@ -79,12 +79,12 @@ int main(int argc, const char **argv)
 #define PARAM &param
 #endif
 
-    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndicationH2S, NULL, NULL);
+    EchoIndication echoIndication(IfcNames_EchoIndicationH2S, NULL, NULL);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H);
-    int rc = getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
-    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndicationH2S, &socketfuncResp, PARAM);
-    rc = getaddrinfo("127.0.0.1", "5001", NULL, &param.addr);
-    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequestS2H, &socketfuncResp, PARAM);
+    getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
+    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndicationH2S, &transportSocketResp, PARAM);
+    getaddrinfo("127.0.0.1", "5001", NULL, &param.addr);
+    EchoRequest sRequest(IfcNames_EchoRequestS2H, &transportSocketResp, PARAM);
 
     printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);
     while(1)

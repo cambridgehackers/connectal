@@ -45,7 +45,7 @@ static int init_shared(struct PortalInternal *pint, void *aparam)
 {
     PortalSharedParam *param = (PortalSharedParam *)aparam;
     if (param) {
-        int fd = portalAlloc(param->size);
+        int fd = portalAlloc(param->size, 0);
         pint->map_base = (volatile unsigned int *)portalMmap(fd, param->size);
         pint->map_base[SHARED_LIMIT] = param->size/sizeof(uint32_t);
         pint->map_base[SHARED_WRITE] = SHARED_START;
@@ -148,7 +148,7 @@ static int event_shared(struct PortalInternal *pint)
     }
     return -1;
 }
-PortalItemFunctions sharedfunc = {
+PortalTransportFunctions transportShared = {
     init_shared, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_sharedInd, mapchannel_sharedReq,
     send_shared, recv_portal_null, busywait_shared, enableint_portal_null, event_shared, notfull_null};
 static volatile unsigned int *mapchannel_traceInd(struct PortalInternal *pint, unsigned int v)
@@ -168,7 +168,7 @@ static void send_trace(struct PortalInternal *pint, volatile unsigned int *buff,
     //fprintf(stderr, "send_shared head=%d padded=%d hdr=%08x\n", pint->map_base[SHARED_WRITE], needs_padding, hdr);
     pint->map_base[pint->map_base[SHARED_WRITE]] = 0;
 }
-PortalItemFunctions tracefunc = {
+PortalTransportFunctions transportTrace = {
     init_shared, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_traceInd, mapchannel_traceReq,
     send_trace, recv_portal_null, busywait_shared, enableint_portal_null, event_shared, notfull_null};
 

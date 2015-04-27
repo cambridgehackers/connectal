@@ -170,10 +170,8 @@ include $(CLEAR_VARS)
 DTOP?=%(project_dir)s
 CONNECTALDIR?=%(connectaldir)s
 LOCAL_ARM_MODE := arm
-include $(DTOP)/jni/Makefile.generated_files
-APP_SRC_FILES := $(addprefix $(DTOP)/jni/,  $(GENERATED_CPP)) %(source)s
-PORTAL_SRC_FILES := $(addprefix $(CONNECTALDIR)/cpp/, portal.c portalSocket.c portalJson.c portalPrintf.c poller.cpp sock_utils.c timer.c)
-LOCAL_SRC_FILES := $(APP_SRC_FILES) $(PORTAL_SRC_FILES)
+include $(CONNECTALDIR)/scripts/Makefile.connectal.application
+LOCAL_SRC_FILES := %(source)s $(PORTAL_SRC_FILES)
 
 LOCAL_PATH :=
 LOCAL_MODULE := android.exe
@@ -199,26 +197,16 @@ PIN_BINDING=%(pin_binding)s
 linuxmakefile_template='''
 CONNECTALDIR?=%(connectaldir)s
 DTOP?=%(project_dir)s
-export V=0
-ifeq ($(V),0)
-Q=@
-else
-Q=
-endif
 
 CFLAGS_COMMON = -O -g %(cflags)s -Wall %(werr)s
 CFLAGS = $(CFLAGS_COMMON)
 CFLAGS2 = %(cdefines2)s
 
-PORTAL_CPP_FILES = $(addprefix $(CONNECTALDIR)/cpp/, portal.c portalPrintf.c portalSocket.c portalJson.c poller.cpp sock_utils.c timer.c)
-include $(DTOP)/jni/Makefile.generated_files
 include $(DTOP)/Makefile.autotop
-SOURCES = $(addprefix $(DTOP)/jni/,  $(GENERATED_CPP)) %(source)s $(PORTAL_CPP_FILES)
-SOURCES2 = $(addprefix $(DTOP)/jni/,  $(GENERATED_CPP)) %(source2)s $(PORTAL_CPP_FILES)
+include $(CONNECTALDIR)/scripts/Makefile.connectal.application
+SOURCES = %(source)s $(PORTAL_SRC_FILES)
+SOURCES2 = %(source2)s $(PORTAL_SRC_FILES)
 LDLIBS := %(clibdirs)s %(clibs)s %(clibfiles)s -pthread 
-
-BSIM_EXE_CXX_FILES = TlpReplay.cxx
-BSIM_EXE_CXX = $(addprefix $(CONNECTALDIR)/cpp/, $(BSIM_EXE_CXX_FILES))
 
 ubuntu.exe: $(SOURCES)
 	$(Q)g++ $(CFLAGS) -o ubuntu.exe $(SOURCES) $(LDLIBS)
@@ -235,6 +223,11 @@ bsim_exe: $(SOURCES)
 
 bsim_exe2: $(SOURCES2)
 	$(Q)g++ $(CFLAGS_COMMON) $(CFLAGS2) -o bsim_exe2 -DBSIM $(SOURCES2) $(BSIM_EXE_CXX) $(LDLIBS)
+
+XSI_EXAMPLE_DIR = $(VIVADODIR)/examples/xsim/verilog/xsi/counter/
+XSOURCES = $(XSI_EXAMPLE_DIR)/xsi_loader.cpp $(CONNECTALDIR)/cpp/transportXsim.cpp $(PORTAL_SRC_FILES)
+xsim: $(XSOURCES)
+	g++ $(CFLAGS) -I$(VIVADODIR)/data/xsim/include -I$(XSI_EXAMPLE_DIR) -o xsim $(XSOURCES) -ldl -lrt -pthread
 '''
 
 if __name__=='__main__':

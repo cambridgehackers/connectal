@@ -98,7 +98,7 @@ for filename in sys.argv[2:]:
             fh.write(line)
         fh.close()
 if cppind != []:
-    fname = sys.argv[1] + '/jni/printfind.h'
+    fname = sys.argv[1] + '/jni/printfInd.h'
     fh = open(fname, 'w')
     fh.write('class DisplayInd : public DisplayIndWrapper\n')
     fh.write('{\n')

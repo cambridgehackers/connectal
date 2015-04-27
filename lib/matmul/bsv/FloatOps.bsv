@@ -128,7 +128,7 @@ module mkFloatMultiplier#(RoundMode rmode)(FloatAlu);
       endmethod
    endinterface
 endmodule
-
+/*********** missing fromInt32()
 (* synthesize *)
 module mkRandomPipe(PipeOut#(Float));
    let randomizer <- mkConstrainedRandomizer(0, 1024);
@@ -148,4 +148,5 @@ module mkRandomPipe(PipeOut#(Float));
 			     endinterface);
    return pipe_out;
 endmodule
+*/
 

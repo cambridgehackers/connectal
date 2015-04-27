@@ -59,7 +59,7 @@ import PcieEndpointS5    :: *;
 `endif
 import HostInterface     :: *;
 
-// implemented in TlpReplay.cxx
+// implemented in TlpReplay.cpp
 import "BDPI" function Action put_tlp(TLPData#(16) d);
 import "BDPI" function ActionValue#(TLPData#(16)) get_tlp();
 import "BDPI" function Bool can_put_tlp();

@@ -105,8 +105,8 @@ int runtest(int argc, const char **argv)
 
   fprintf(stderr, "Main::allocating memory...\n");
 
-  srcAlloc = portalAlloc(alloc_sz);
-  dstAlloc = portalAlloc(alloc_sz);
+  srcAlloc = portalAlloc(alloc_sz, 0);
+  dstAlloc = portalAlloc(alloc_sz, 0);
 
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
   dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
@@ -116,8 +116,8 @@ int runtest(int argc, const char **argv)
     dstBuffer[i] = 0x5a5abeef;
   }
 
-  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
-  portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
+  portalCacheFlush(srcAlloc, srcBuffer, alloc_sz, 1);
+  portalCacheFlush(dstAlloc, dstBuffer, alloc_sz, 1);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);

@@ -49,50 +49,50 @@
         "J2" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
         "J3" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
         "J4" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
-        "J5" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
-        "J6" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
         "J7" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
-        "J8" : { "LOC" : "XX", "IOSTANDARD" : "YY"}
+        "J8" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
+        "J9" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
+        "J10" : { "LOC" : "XX", "IOSTANDARD" : "YY"}
     },
     "pmodb" : {
         "J1" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
         "J2" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
         "J3" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
         "J4" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
-        "J5" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
-        "J6" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
         "J7" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
-        "J8" : { "LOC" : "XX", "IOSTANDARD" : "YY"}
+        "J8" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
+        "J9" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
+        "J10" : { "LOC" : "XX", "IOSTANDARD" : "YY"}
     },
     "pmodc" : {
         "J1" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
         "J2" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
         "J3" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
         "J4" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
-        "J5" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
-        "J6" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
         "J7" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
-        "J8" : { "LOC" : "XX", "IOSTANDARD" : "YY"}
+        "J8" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
+        "J9" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
+        "J10" : { "LOC" : "XX", "IOSTANDARD" : "YY"}
     },
     "pmodd" : {
         "J1" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
         "J2" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
         "J3" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
         "J4" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
-        "J5" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
-        "J6" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
         "J7" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
-        "J8" : { "LOC" : "XX", "IOSTANDARD" : "YY"}
+        "J8" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
+        "J9" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
+        "J10" : { "LOC" : "XX", "IOSTANDARD" : "YY"}
     },
     "pmode" : {
         "J1" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
         "J2" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
         "J3" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
         "J4" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
-        "J5" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
-        "J6" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
         "J7" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
-        "J8" : { "LOC" : "XX", "IOSTANDARD" : "YY"}
+        "J8" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
+        "J9" : { "LOC" : "XX", "IOSTANDARD" : "YY"},
+        "J10" : { "LOC" : "XX", "IOSTANDARD" : "YY"}
     },
     "leds" : {
     	"L0" : {

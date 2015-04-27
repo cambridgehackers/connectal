@@ -119,7 +119,7 @@ int main(int argc, const char ** argv)
   MMUIndication mmuIndication(dma, IfcNames_MMUIndicationH2S);
 
   fprintf(stderr, "Main::allocating memory...\n");
-  srcAlloc = portalAlloc(alloc_sz);
+  srcAlloc = portalAlloc(alloc_sz, 0);
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
 
   pthread_t debug_thread;
@@ -137,7 +137,7 @@ int main(int argc, const char ** argv)
     srcBuffer[i] = i;
   }
     
-  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
+  portalCacheFlush(srcAlloc, srcBuffer, alloc_sz, 1);
   fprintf(stderr, "Main::flush and invalidate complete\n");
   device->getStateDbg();
   fprintf(stderr, "Main::after getStateDbg\n");
@@ -170,7 +170,7 @@ int main(int argc, const char ** argv)
     srcBuffer[0] = -1;
     srcBuffer[numWords/2] = -1;
     srcBuffer[numWords-1] = -1;
-    portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
+    portalCacheFlush(srcAlloc, srcBuffer, alloc_sz, 1);
 
     fprintf(stderr, "Starting second read, mismatches expected\n");
     mismatchCount = 0;

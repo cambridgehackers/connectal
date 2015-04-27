@@ -76,9 +76,9 @@ int main(int argc, const char **argv)
 
   sem_init(&done_sem, 1, 0);
 
-  int srcAlloc = portalAllocCached(alloc_sz, 1);
+  int srcAlloc = portalAlloc(alloc_sz, 0);
   unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
-  int dstAlloc = portalAllocCached(alloc_sz, 1);
+  int dstAlloc = portalAlloc(alloc_sz, 0);
   unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
 
   for (size_t i = 0; i < alloc_sz/sizeof(uint32_t); i++) {
@@ -88,7 +88,7 @@ int main(int argc, const char **argv)
 
 #ifndef USE_ACP
   fprintf(stderr, "flushing cache\n");
-  portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
+  portalCacheFlush(dstAlloc, dstBuffer, alloc_sz, 1);
 #endif
 
   fprintf(stderr, "parent::starting write\n");

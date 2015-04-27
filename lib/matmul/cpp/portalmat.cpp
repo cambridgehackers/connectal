@@ -34,7 +34,7 @@ void PortalMatAllocator::allocate(int dims, const int* sizes, int type, int*& re
   size_t arraysize = step[0]*sizes[0];
   size_t totalsize = cv::alignSize(arraysize, 4096);
   int arraynum = numarrays++;
-  int fd = portalAlloc(totalsize);
+  int fd = portalAlloc(totalsize, 0);
   struct arrayInfo *info = &arrayInfo[arraynum];
   info->fd = fd;
   info->refcount = 1;
@@ -75,7 +75,7 @@ int PortalMatAllocator::reference(int* refcount, uchar* datastart, uchar* data)
 void PortalMatAllocator::cacheFlushInvalidate(int* refcount, uchar* datastart, uchar* data)
 {
   struct arrayInfo *info = (struct arrayInfo *)refcount;
-  portalDCacheFlushInval(info->fd, info->totalsize, datastart);
+  portalCacheFlush(info->fd, datastart, info->totalsize, 1);
 }
 
 PortalMat::PortalMat()
@@ -134,12 +134,14 @@ PortalMat& PortalMat::operator = (const cv::MatExpr& expr)
 {
     *(cv::Mat*)this = expr;
     fprintf(stderr, "PortalMat::operator=(MatExpr&) this=%p datastart=%p\n", this, datastart);
+    return *this;
 }
 
 PortalMat& PortalMat::operator = (const cv::Mat& o)
 {
     *(cv::Mat*)this = o;
     fprintf(stderr, "PortalMat::operator=(Mat&) this=%p datastart=%p\n", this, datastart);
+    return *this;
 }
 
 int PortalMat::reference()
@@ -403,7 +405,7 @@ void dynamicRange(cv::Mat mat, int *pmin_exp, int *pmax_exp, float *pmin_val, fl
     for (int j = 0; j < mat.cols; j++) {
       float f = mat.at<float>(i,j);
       int exp = 0;
-      float mantissa = frexpf(f, &exp);
+      //float mantissa = frexpf(f, &exp);
       min_val = std::min<float>(min_val, f);
       max_val = std::max<float>(max_val, f);
       min_exp = std::min<int>(min_exp, exp);

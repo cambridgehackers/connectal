@@ -74,12 +74,12 @@ int main(int argc, const char **argv)
   MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
 
   int srcAlloc;
-  srcAlloc = portalAlloc(alloc_sz);
+  srcAlloc = portalAlloc(alloc_sz, 0);
   unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
 
   for (int i = 0; i < numWords; i++)
     srcBuffer[i] = i;
-  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
+  portalCacheFlush(srcAlloc, srcBuffer, alloc_sz, 1);
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
   printf( "Main::starting read %08x\n", numWords);
   device->startRead(ref_srcAlloc, numWords, burstLen, 1);

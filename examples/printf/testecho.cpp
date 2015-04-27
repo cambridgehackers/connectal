@@ -100,7 +100,7 @@ public:
     EchoIndication(unsigned int id, PortalPoller *poller) : EchoIndicationWrapper(id, poller) {}
 };
 
-#include "printfind.h"
+#include "printfInd.h"
 
 static void call_say(int v)
 {

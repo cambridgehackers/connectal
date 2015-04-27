@@ -40,8 +40,6 @@ import MemServerIndication::*;
 import MMUIndication::*;
 
 module  mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,TMul#(32,N),Empty,NumberOfMasters));
-
-   // all this stuff is here so we can call portalAlloc in user space
    let reader <- mkMemReader();
    let writer <- mkMemWriter();
 

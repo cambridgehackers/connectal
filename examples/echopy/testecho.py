@@ -48,7 +48,7 @@ def callback(a):
 
 def worker():
     while not stopPolling:
-        connectal.portalCheckIndication(ctypes.c_void_p(tind))
+        connectal.event_hardware(ctypes.c_void_p(tind))
 
 stopPolling = False
 connectal.set_callback(ctypes.py_object(callback))

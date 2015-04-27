@@ -1,5 +1,5 @@
 
-// Copyright (c) 2013-2014 Quanta Research Cambridge, Inc.
+// Copyright (c) 2015 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -21,61 +21,32 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "sock_utils.h"
+import SCCB::*;
 
-void
-child(int sock)
-{
-    int fd;
-    ssize_t size;
+interface Ov7670ControllerRequest;
+   method Action setFramePointer(Bit#(32) frameId);
+   method Action i2cRequest(Bit#(8) bus, Bool write, Bit#(7) slaveaddr, Bit#(8) address, Bit#(8) data);
+   method Action setReset(Bit#(1) rval);
+   method Action setPowerDown(Bit#(1) pwdn);
+endinterface
 
-    sleep(1);
-    for (;;) {
-        size = sock_fd_read(sock, NULL, 0, &fd);
-        if (size <= 0)
-            break;
-        printf ("read %d\n", size);
-        if (fd != -1) {
-            write(fd, "hello, world\n", 13);
-            close(fd);
-        }
-    }
-}
+interface Ov7670ControllerIndication;
+   method Action i2cResponse(Bit#(8) bus, Bit#(8) data);
+   method Action vsync(Bit#(32) cycles, Bit#(1) href);
+   method Action data(Bit#(1) first, Bit#(1) gap, Bit#(8) pxl);
+   method Action data4(Bit#(32) pxls);
+   method Action frameStarted(Bit#(1) first);
+   method Action frameTransferred();
+endinterface
 
-void
-parent(int sock)
-{
-    ssize_t size;
-    int i;
-    int fd;
-
-    fd = 1;
-    size = sock_fd_write(sock, NULL, 0, fd);
-    printf ("wrote %d\n", size);
-}
-
-int
-main(int argc, char **argv)
-{
-    int sv[2];
-    int pid;
-
-    if (socketpair(AF_LOCAL, SOCK_STREAM, 0, sv) < 0) {
-        perror("socketpair");
-        exit(1);
-    }
-    switch ((pid = fork())) {
-    case 0:
-        close(sv[0]);
-        child(sv[1]);
-        break;
-    case -1:
-        perror("fork");
-        exit(1);
-    default:
-        close(sv[1]);
-        parent(sv[0]);
-        break;
-    }
-    return 0;
-}
+interface Ov7670Pins;
+   interface SCCB_Pins i2c0;
+   interface SCCB_Pins i2c1;
+   interface SCCB_Pins i2c2;
+   interface Clock xclk;
+   interface Clock pclk_deleteme_unused_clock;
+   method bit reset();
+   method bit pwdn();
+   method Action pclk(Bit#(1) v);
+   method Action pxl(Bit#(1) vsync, Bit#(1) href, Bit#(8) data);
+endinterface

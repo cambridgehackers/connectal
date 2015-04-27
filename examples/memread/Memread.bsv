@@ -101,7 +101,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
 
    for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
       rule start (iterCnts[i] > 0);
-	 re.readServers[i].request.put(MemengineCmd{sglId:pointer, base:extend(readOffset)+(fromInteger(i)*chunkBytes), len:truncate(chunkBytes), burstLen:truncate(burstLen*4)});
+	 re.readServers[i].request.put(MemengineCmd{sglId:pointer, base:extend(readOffset)+(fromInteger(i)*chunkBytes), len:truncate(chunkBytes), burstLen:truncate(burstLen*4), tag: 0});
 	 iterCnts[i] <= iterCnts[i]-1;
 	 Bit#(32) base = (readOffset/4)+(fromInteger(i)*(truncate(chunkBytes)/4));
 	 Bit#(32) limit = base + truncate(chunkBytes)/4;

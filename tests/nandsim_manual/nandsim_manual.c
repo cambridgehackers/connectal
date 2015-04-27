@@ -100,7 +100,7 @@ void manual_event(void)
 {
     int i;
     for (i = 0; i < MAX_INDARRAY; i++)
-      portalCheckIndication(&intarr[i]);
+      event_hardware(&intarr[i]);
 }
 
 #ifdef __KERNEL__
@@ -150,7 +150,7 @@ int main(int argc, const char **argv)
 
   sem_init(&test_sem, 0, 0);
   DmaManager_init(&priv, &intarr[2]);
-  srcAlloc = portalAlloc(alloc_sz);
+  srcAlloc = portalAlloc(alloc_sz, 0);
   if (rc){
     PORTAL_PRINTF("portal alloc failed rc=%d\n", rc);
     return rc;
@@ -168,12 +168,12 @@ int main(int argc, const char **argv)
   }
 
   PORTAL_PRINTF("Test 1: check for operations\n");
-  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
+  portalCacheFlush(srcAlloc, srcBuffer, alloc_sz, 1);
   PORTAL_PRINTF("Main: before DmaManager_reference(%u)\n", srcAlloc);
   ref_srcAlloc = DmaManager_reference(&priv, srcAlloc);
 
 
-  nandAlloc = portalAlloc (nandBytes);
+  nandAlloc = portalAlloc (nandBytes, 0);
   ref_nandAlloc = DmaManager_reference(&priv, nandAlloc);
   PORTAL_PRINTF("Main::configure NAND fd=%d ref=%d\n", nandAlloc, ref_nandAlloc);
   NandSimRequest_configureNand (&intarr[3], ref_nandAlloc, nandBytes);

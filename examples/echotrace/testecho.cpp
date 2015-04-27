@@ -77,11 +77,11 @@ static void call_say2(int v, int v2)
 
 int main(int argc, const char **argv)
 {
-    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndicationH2S);
+    EchoIndication echoIndication(IfcNames_EchoIndicationH2S);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H);
     int alloc_sz = 1000;
-    PortalSharedParam param = {{NULL}, alloc_sz};
-    echoRequestTrace = new EchoRequestProxy(IfcNames_EchoRequestS2H, &tracefunc, &param);
+    PortalSharedParam param = {{NULL}, (uint32_t)alloc_sz};
+    echoRequestTrace = new EchoRequestProxy(IfcNames_EchoRequestS2H, &transportTrace, &param);
 
     int v = 42;
     printf("Saying %d\n", v);
@@ -97,7 +97,7 @@ int main(int argc, const char **argv)
     volatile unsigned int *p = echoRequestTrace->pint.map_base;
     printf("[%s] Dump trace buffer: limit %d write %d read %d start %d\n", __FUNCTION__,
         p[SHARED_LIMIT], p[SHARED_WRITE], p[SHARED_READ], p[SHARED_START]);
-    int current = p[SHARED_WRITE];
+    uint32_t current = p[SHARED_WRITE];
     while (current != p[SHARED_READ]) {
         unsigned int hdr = p[current-1];
         current -= (hdr & 0xffff);

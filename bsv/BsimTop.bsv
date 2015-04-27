@@ -45,14 +45,14 @@ import PCIE              :: *;
 typedef `PinType PinType;
 typedef `NumberOfMasters NumberOfMasters;
 
-// implemented in BsimCtrl.cxx
+// implemented in BsimCtrl.cpp
 import "BDPI" function Action                 initPortal();
 import "BDPI" function Bool                   checkForRequest(Bit#(32) v);
 import "BDPI" function ActionValue#(Bit#(64)) getRequest32(Bit#(32) v);
 import "BDPI" function Action                 readResponse32(Bit#(32) d, Bit#(32) tag);
 import "BDPI" function Action                 interruptLevel(Bit#(1) d);
 
-// implemented in BsimDma.cxx
+// implemented in BsimDma.cpp
 import "BDPI" function Action write_pareff32(Bit#(32) handle, Bit#(32) addr, Bit#(32) v);
 import "BDPI" function Action write_pareff64(Bit#(32) handle, Bit#(32) addr, Bit#(64) v);
 import "BDPI" function ActionValue#(Bit#(32)) read_pareff32(Bit#(32) handle, Bit#(32) addr);

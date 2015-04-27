@@ -41,7 +41,7 @@ public:
         sem_post(&sem_heard2);
         //fprintf(stderr, "heard an s2: %ld %ld\n", a, b);
     }
-    EchoIndication(unsigned int id, PortalItemFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
+    EchoIndication(unsigned int id, PortalTransportFunctions *item, void *param) : EchoIndicationWrapper(id, item, param) {}
 };
 
 static void call_say(int v)
@@ -67,10 +67,10 @@ int main(int argc, const char **argv)
 #define PARAM &param
 #endif
 
-    int rc = getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
-    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndicationH2S, &socketfuncInit, PARAM);
-    rc = getaddrinfo("127.0.0.1", "5001", NULL, &param.addr);
-    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H, &socketfuncInit, PARAM);
+    getaddrinfo("127.0.0.1", "5000", NULL, &param.addr);
+    EchoIndication sIndication(IfcNames_EchoIndicationH2S, &transportSocketInit, PARAM);
+    getaddrinfo("127.0.0.1", "5001", NULL, &param.addr);
+    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H, &transportSocketInit, PARAM);
 
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);

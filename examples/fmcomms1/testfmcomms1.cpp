@@ -141,13 +141,13 @@ int main(int argc, const char **argv)
   bluescopeIndication = new BlueScopeEventPIOIndication(IfcNames_BlueScopeEventPIOIndication);
 
   fprintf(stdout, "Main::allocating memory...\n");
-  srcAlloc = portalAlloc(alloc_sz);
+  srcAlloc = portalAlloc(alloc_sz, 0);
 
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
   if ((char *) srcBuffer == MAP_FAILED) perror("srcBuffer mmap failed");
   assert ((char *) srcBuffer != MAP_FAILED);
 
-  dstAlloc = portalAlloc(alloc_sz);
+  dstAlloc = portalAlloc(alloc_sz, 0);
 
   dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
   if ((char *) dstBuffer == MAP_FAILED) perror("dstBuffer mmap failed");
@@ -158,8 +158,8 @@ int main(int argc, const char **argv)
   /* FMComms1 refclk should be 30 MHz */
   status = setClockFrequency(1,  30000000, 0);
     
-  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
-  portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
+  portalCacheFlush(srcAlloc, srcBuffer, alloc_sz, 1);
+  portalCacheFlush(dstAlloc, dstBuffer, alloc_sz, 1);
   fprintf(stdout, "Main::flush and invalidate complete\n");
 
   bluescope->doReset();

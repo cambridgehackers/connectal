@@ -46,9 +46,9 @@ static void *wait_for(int n)
 {
     void *rc = NULL;
     while ((heard_count != n) && !rc) {
-        rc = portalExec_poll(0);
+        rc = defaultPoller->pollFn(0);
         if ((long)rc >= 0)
-            rc = portalExec_event();
+            rc = defaultPoller->event();
     }
     return rc;
 }

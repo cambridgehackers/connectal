@@ -80,20 +80,20 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "Main::allocating memory...\n");
 
-  srcAlloc = portalAlloc(numBytes);
+  srcAlloc = portalAlloc(numBytes, 0);
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, numBytes);
   fprintf(stderr, "fd=%d, srcBuffer=%p\n", srcAlloc, srcBuffer);
 
   for (int i = 0; i < numBytes/sizeof(srcBuffer[0]); i++)
     srcBuffer[i] = srcGen++;
     
-  portalDCacheFlushInval(srcAlloc, numBytes, srcBuffer);
+  portalCacheFlush(srcAlloc, srcBuffer, numBytes, 1);
   fprintf(stderr, "Main::flush and invalidate complete\n");
   sleep(1);
 
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
 
-  nandAlloc = portalAlloc(nandBytes);
+  nandAlloc = portalAlloc(nandBytes, 0);
   int ref_nandAlloc = dma->reference(nandAlloc);
   fprintf(stderr, "NAND alloc fd=%d ref=%d\n", nandAlloc, ref_nandAlloc);
   device->configureNand(ref_nandAlloc, nandBytes);

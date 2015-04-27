@@ -48,7 +48,7 @@ static int dummyBUSYWAIT(struct PortalInternal *pint, unsigned int v, const char
 static void dummyENABLEINT(struct PortalInternal *pint, int val) STUB
 static int dummyEVENT(struct PortalInternal *pint) STUB
 static int dummyNOTFULL(struct PortalInternal *pint, unsigned int v) STUB
-PortalItemFunctions callbackItem = {
+PortalTransportFunctions callbackItem = {
     dummyITEMINIT, dummyREADWORD, dummyWRITEWORD, dummyWRITEFDWORD,
     dummyMAPCHANNEL, dummyMAPCHANNEL, dummySENDMSG, dummyRECVMSG,
     dummyBUSYWAIT, dummyENABLEINT, dummyEVENT, dummyNOTFULL};

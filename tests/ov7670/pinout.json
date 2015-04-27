@@ -1,0 +1,87 @@
+{
+    "i2c0_SCL" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmodb" : "J4"
+    },
+    "i2c0_SDA" : {
+	"PIO_DIRECTION": "BIDIR",
+	"PULLTYPE": "PULLUP",
+	"pmodb" : "J10"
+    },
+    "pxl_vsync" : {
+	"PIO_DIRECTION": "INPUT",
+	"pmodb" : "J3"
+    },
+    "pxl_href" : {
+	"PIO_DIRECTION": "INPUT",
+	"pmodb" : "J9"
+    },
+    "CLK_xclk" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmodb" : "J2"
+    },
+    "pclk_v" : {
+	"PIO_DIRECTION": "INPUT",
+	"pmodb" : "J8"
+    },
+    "pxl_data[6]": {
+	"PIO_DIRECTION": "INPUT",
+	"pmodb" : "J1"
+    },
+    "pxl_data[7]": {
+	"PIO_DIRECTION": "INPUT",
+	"pmodb" : "J7"
+    },
+
+
+    "pxl_data[4]": {
+	"PIO_DIRECTION": "INPUT",
+	"pmoda" : "J4"
+    },
+    "pxl_data[5]": {
+	"PIO_DIRECTION": "INPUT",
+	"pmoda" : "J10"
+    },
+    "pxl_data[2]": {
+	"PIO_DIRECTION": "INPUT",
+	"pmoda" : "J3"
+    },
+    "pxl_data[3]": {
+	"PIO_DIRECTION": "INPUT",
+	"pmoda" : "J9"
+    },
+    "pxl_data[0]": {
+	"PIO_DIRECTION": "INPUT",
+	"pmoda" : "J2"
+    },
+    "pxl_data[1]": {
+	"PIO_DIRECTION": "INPUT",
+	"pmoda" : "J8"
+    },
+    "pwdn" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmoda" : "J1"
+    },
+    "reset" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmoda" : "J7"
+    },
+    "i2c1_SCL" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmodc" : "J3"
+    },
+    "i2c1_SDA" : {
+	"PIO_DIRECTION": "BIDIR",
+	"PULLTYPE": "PULLUP",
+	"pmodc" : "J4"
+    },
+    "i2c2_SCL" : {
+	"PIO_DIRECTION": "OUTPUT",
+	"pmodd" : "J3"
+    },
+    "i2c2_SDA" : {
+	"PIO_DIRECTION": "BIDIR",
+	"PULLTYPE": "PULLUP",
+	"pmodd" : "J4"
+    }
+}

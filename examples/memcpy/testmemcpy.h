@@ -68,7 +68,15 @@ public:
     fprintf(stderr, "done\n");
     finished = true;
     memcmp_fail = memcmp(srcBuffer, dstBuffer, numWords*sizeof(unsigned int));
-    fprintf(stderr, "memcmp=%d\n", memcmp_fail);
+    if (memcmp_fail) {
+      for (int i = 0; i < numWords; i++) {
+	int *s = (int *)srcBuffer;
+	int *d = (int *)dstBuffer;
+	if (s[i] != d[i])
+	  fprintf(stderr, "mismatch %d %08x %08x\n", i, s[i], d[i]);
+      }
+    }
+    fprintf(stderr, "memcmp=%x\n", memcmp_fail);
     sem_post(&memcmp_sem);
   }
 };
@@ -105,8 +113,8 @@ int runtest(int argc, const char **argv)
 
   fprintf(stderr, "Main::allocating memory...\n");
 
-  srcAlloc = portalAlloc(alloc_sz);
-  dstAlloc = portalAlloc(alloc_sz);
+  srcAlloc = portalAlloc(alloc_sz, 0);
+  dstAlloc = portalAlloc(alloc_sz, 0);
 
   // for(int i = 0; i < srcAlloc->header.numEntries; i++)
   //   fprintf(stderr, "%lx %lx\n", srcAlloc->entries[i].dma_address, srcAlloc->entries[i].length);
@@ -121,8 +129,8 @@ int runtest(int argc, const char **argv)
     dstBuffer[i] = 0x5a5abeef;
   }
 
-  portalDCacheFlushInval(srcAlloc, alloc_sz, srcBuffer);
-  portalDCacheFlushInval(dstAlloc, alloc_sz, dstBuffer);
+  portalCacheFlush(srcAlloc, srcBuffer, alloc_sz, 1);
+  portalCacheFlush(dstAlloc, dstBuffer, alloc_sz, 1);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
@@ -205,8 +213,8 @@ int runtest_chunk(int argc, const char **argv)
 
   fprintf(stderr, "XXX %s %d\n", __FUNCTION__, __LINE__);
 
-  int dstAlloc = portalAlloc(dstBytes);
-  int srcAlloc = portalAlloc(srcBytes);
+  int dstAlloc = portalAlloc(dstBytes, 0);
+  int srcAlloc = portalAlloc(srcBytes, 0);
 
   fprintf(stderr, "XXX %s %d\n", __FUNCTION__, __LINE__);
 
@@ -227,7 +235,7 @@ int runtest_chunk(int argc, const char **argv)
     for (int i = 0; i < nw; i++) {
       srcBuffer[i] = loop/sizeof(srcBuffer[0])+i;
     }
-    portalDCacheFlushInval(srcAlloc, srcBytes, srcBuffer);
+    portalCacheFlush(srcAlloc, srcBuffer, srcBytes, 1);
     device->startCopy(ref_dstAlloc, ref_srcAlloc, nw, 128, 1);
     sem_wait(&done_sem);
     fprintf(stderr, "LOOP %s %d\n", __FUNCTION__, __LINE__);

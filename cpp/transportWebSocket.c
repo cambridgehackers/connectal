@@ -207,10 +207,10 @@ static void send_webSocket(struct PortalInternal *pint, volatile unsigned int *d
     n = libwebsocket_write((libwebsocket *)pint->websock_wsi, &txbuf[LWS_SEND_BUFFER_PRE_PADDING], len, LWS_WRITE_TEXT);
 }
 
-PortalItemFunctions websocketfuncInit = {
+PortalTransportFunctions transportWebSocketInit = {
     init_webSocketInit, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_socket,
     send_webSocket, recv_portal_null, busy_portal_null, enableint_portal_null, event_webSocket, notfull_null};
 
-PortalItemFunctions websocketfuncResp = {
+PortalTransportFunctions transportWebSocketResp = {
     init_webSocketResp, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_socket,
     send_webSocket, recv_portal_null, busy_portal_null, enableint_portal_null, event_webSocket, notfull_null};

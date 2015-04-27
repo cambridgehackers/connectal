@@ -143,7 +143,7 @@ static int gralloc_alloc_buffer(alloc_device_t* dev,
     struct gralloc_context_t *ctx = reinterpret_cast<gralloc_context_t*>(dev);
 
     if (ctx->hdmiDisplay != 0) {
-        fd = portalAlloc(size);
+        fd = portalAlloc(size, 0);
         ctx->ref_srcAlloc = ctx->dma->reference(fd);
         //ptr = portalMmap(fd, size);
     }

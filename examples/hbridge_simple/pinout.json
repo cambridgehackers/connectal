@@ -9,11 +9,11 @@
     },
     "hbridge_hbridge1_direction" : { 
 	"PIO_DIRECTION": "OUTPUT",
-	"pmod" : "J5"
+	"pmod" : "J7"
     },
     "hbridge_hbridge1_enabled" : { 
 	"PIO_DIRECTION": "OUTPUT",
-	"pmod" : "J6"
+	"pmod" : "J8"
     },
 
     "leds_leds[0]" : {

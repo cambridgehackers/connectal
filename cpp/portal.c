@@ -1,4 +1,3 @@
-
 // Copyright (c) 2012 Nokia, Inc.
 // Copyright (c) 2013-2014 Quanta Research Cambridge, Inc.
 
@@ -21,19 +20,15 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 #include "portal.h"
 #include "sock_utils.h"
-
 #ifdef __KERNEL__
 #include "linux/delay.h"
 #include "linux/file.h"
 #include "linux/dma-buf.h"
-#define assert(A)
 #else
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -46,10 +41,6 @@
 #endif
 #include "drivers/portalmem/portalmem.h" // PA_MALLOC
 
-
-#ifdef ANDROID
-#include <android/log.h>
-#endif
 #ifdef ZYNQ
 #include "drivers/zynqportal/zynqportal.h"
 #else
@@ -58,7 +49,6 @@
 
 int debug_portal = 0;
 
-static void init_portal_hw(void);
 int global_pa_fd = -1;
 PortalInternal *utility_portal = 0x0;
 
@@ -66,61 +56,49 @@ PortalInternal *utility_portal = 0x0;
 static tBoard* tboard;
 #endif
 
-void init_portal_internal(PortalInternal *pint, int id, int tile, PORTAL_INDFUNC handler, void *cb, PortalItemFunctions *item, void *param, uint32_t reqinfo)
+/*
+ * Initialize control data structure for portal
+ */
+void init_portal_internal(PortalInternal *pint, int id, int tile,
+    PORTAL_INDFUNC handler, void *cb, PortalTransportFunctions *item, void *param,
+    uint32_t reqinfo)
 {
     int rc;
-    init_portal_hw();
+    initPortalFramework();
     memset(pint, 0, sizeof(*pint));
     if(!utility_portal)
       utility_portal = pint;
     pint->fpga_number = id;
     pint->fpga_tile = tile;
     pint->fpga_fd = -1;
+    pint->muxid = -1;
     pint->handler = handler;
     pint->cb = cb;
-    pint->item = item;
-    pint->muxid = -1;
+    pint->reqinfo = reqinfo;
     if (!item) {
+        // Use defaults for transport handling methods
 #ifdef BSIM
-        pint->item = &bsimfunc;
+        item = &transportBsim;
 #elif defined(XSIM)
-        pint->item = &xsimfunc;
+        item = &transportXsim;
 #else
-        pint->item = &hardwarefunc;
+        item = &transportHardware;
 #endif
     }
-    pint->reqinfo = reqinfo;
+    pint->item = item;
     rc = pint->item->init(pint, param);
     if (rc != 0) {
-      PORTAL_PRINTF("%s: failed to open Portal portal_%d_%d\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number);
+        PORTAL_PRINTF("%s: failed to initialize Portal portal_%d_%d\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number);
 #ifndef __KERNEL__
-      exit(1);
+        exit(1);
 #endif
     }
 }
 
-int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)
-{
-    int status = 0;
-    init_portal_hw();
-#ifdef ZYNQ
-    PortalClockRequest request;
-    request.clknum = clkNum;
-    request.requested_rate = requestedFrequency;
-    if (utility_portal){
-      status = ioctl(utility_portal->fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
-      if (status == 0 && actualFrequency)
-	*actualFrequency = request.actual_rate;
-      if (status < 0)
-	status = errno;
-    }else{ 
-      status = -1;
-    }
-#endif
-    return status;
-}
-
-static void check_signature(const char *filename, int ioctlnum)
+/*
+ * Check md5 signatures of Linux device drivers to be sure they are up to date
+ */
+static void checkSignature(const char *filename, int ioctlnum)
 {
     int status;
     static struct {
@@ -128,7 +106,7 @@ static void check_signature(const char *filename, int ioctlnum)
         const char *filename;
     } filesignature[] = {
 #include "driver_signature_file.h"
-    {} };
+        {} };
 #ifdef ZYNQ
     PortalSignature signature;
 #else
@@ -144,10 +122,8 @@ static void check_signature(const char *filename, int ioctlnum)
     signature.index = 0;
     while ((status = ioctl(fd, ioctlnum, &signature)) == 0 && strlen(signature.md5)) {
         int i = 0;
-//printf("[%s:%d] found [%d] %s %s\n", __FUNCTION__, __LINE__, signature.index, signature.md5, signature.filename);
         while(filesignature[i].md5) {
             if (!strcmp(filesignature[i].filename, signature.filename)) {
-//printf("[%s:%d] orig %s %s\n", __FUNCTION__, __LINE__, filesignature[i].md5, filesignature[i].filename);
                 if (strcmp(filesignature[i].md5, signature.md5))
                     printf("%s: driver '%s' signature mismatch %s %s\n", __FUNCTION__,
                         signature.filename, signature.md5, filesignature[i].md5);
@@ -159,7 +135,11 @@ static void check_signature(const char *filename, int ioctlnum)
     }
     close(fd);
 }
-static void init_portal_hw(void)
+
+/*
+ * One time initialization of portal framework
+ */
+void initPortalFramework(void)
 {
     static int once = 0;
 
@@ -169,6 +149,10 @@ static void init_portal_hw(void)
 #ifdef __KERNEL__
     tboard = get_pcie_portal_descriptor();
 #else
+    /*
+     * fork/exec 'fpgajtag' to download bits to hardware
+     * (the FPGA bits are stored as an extra ELF segment in the executable file)
+     */
     int pid = fork();
     if (pid == -1) {
         printf("[%s:%d] fork error\n", __FUNCTION__, __LINE__);
@@ -183,7 +167,7 @@ static void init_portal_hw(void)
 	  ssize_t len;
 	  fprintf(stderr, "subprocess pid %d completed status=%x %d\n", pid, status, WEXITSTATUS(status));
 	  if (WEXITSTATUS(status) != 0)
-	    exit(-1);
+	      exit(-1);
 	  fd = open("/dev/connectal", O_RDONLY); /* scan the fpga directory */
 	  len = read(fd, &status, sizeof(status));
 	  printf("[%s:%d] fd %d len %lu\n", __FUNCTION__, __LINE__, fd, len);
@@ -200,7 +184,7 @@ static void init_portal_hw(void)
         }
 #endif
 #if !defined(BSIM) && !defined(BOARD_xsim)
-        check_signature("/dev/connectal",
+        checkSignature("/dev/connectal",
 #ifdef ZYNQ
             PORTAL_SIGNATURE
 #else
@@ -208,7 +192,7 @@ static void init_portal_hw(void)
 #endif
             );
 #endif
-        check_signature("/dev/portalmem", PA_SIGNATURE);
+        checkSignature("/dev/portalmem", PA_SIGNATURE);
     }
     else {
 #define MAX_PATH 2000
@@ -216,7 +200,7 @@ static void init_portal_hw(void)
         buf[0] = 0;
         int rc = readlink("/proc/self/exe", buf, sizeof(buf));
 	if (rc < 0)
-	  fprintf(stderr, "[%s:%d] readlink error %d\n", __FUNCTION__, __LINE__, errno);
+	    fprintf(stderr, "[%s:%d] readlink error %d\n", __FUNCTION__, __LINE__, errno);
 #if !defined(BOARD_bluesim) && !defined(BOARD_xsim)
         char *serial = getenv("SERIALNO");
         int ind = 1;
@@ -239,21 +223,54 @@ static void init_portal_hw(void)
 #endif // !__KERNEL__
 }
 
-uint64_t portalCycleCount()
+/*
+ * Utility functions for alloc/mmap/cache for shared memory
+ */
+void initPortalMemory(void)
 {
-  unsigned int high_bits, low_bits;
-  volatile unsigned int *msb, *lsb;
-  if(!utility_portal)
-    return 0;
-  init_portal_hw();
-  msb = &utility_portal->map_base[PORTAL_CTRL_REG_COUNTER_MSB];
-  lsb = &utility_portal->map_base[PORTAL_CTRL_REG_COUNTER_LSB];
-  high_bits = utility_portal->item->read(utility_portal, &msb);
-  low_bits  = utility_portal->item->read(utility_portal, &lsb);
-  return (((uint64_t)high_bits)<<32) | ((uint64_t)low_bits);
+#ifndef __KERNEL__
+    if (global_pa_fd == -1)
+        global_pa_fd = open("/dev/portalmem", O_RDWR);
+    if (global_pa_fd < 0){
+        PORTAL_PRINTF("Failed to open /dev/portalmem pa_fd=%d errno=%d\n", global_pa_fd, errno);
+        exit(ENODEV);
+    }
+#endif
 }
 
-int portalDCacheFlushInvalInternal(int fd, long size, void *__p, int flush)
+int portalAlloc(size_t size, int cached)
+{
+    int fd;
+    struct PortalAlloc portalAlloc;
+    portalAlloc.len = size;
+    portalAlloc.cached = cached;
+    initPortalMemory();
+#ifdef __KERNEL__
+    fd = portalmem_dmabuffer_create(size);
+#else
+    fd = ioctl(global_pa_fd, PA_MALLOC, &portalAlloc);
+#endif
+    PORTAL_PRINTF("alloc size=%ld fd=%d\n", (unsigned long)size, fd);
+    if (fd == -1) {
+        PORTAL_PRINTF("portalAllocCached: alloc failed size=%ld errno=%d\n", (unsigned long)size, errno);
+        exit(-1);
+    }
+    return fd;
+}
+
+void *portalMmap(int fd, size_t size)
+{
+#ifdef __KERNEL__
+    struct file *fmem = fget(fd);
+    void *retptr = dma_buf_vmap(fmem->private_data);
+    fput(fmem);
+    return retptr;
+#else      ///////////////////////// userspace version
+    return mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
+#endif
+}
+
+int portalCacheFlush(int fd, void *__p, long size, int flush)
 {
     int i;
 #if defined(__arm__)
@@ -271,241 +288,56 @@ printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start
     }
     fput(fmem);
 #else
-  int rc;
-  if (utility_portal){
-    PortalCacheRequest req;
-    req.fd = fd;
-    req.base = __p;
-    req.len = size;
-    if(flush)
-      rc = ioctl(utility_portal->fpga_fd, PORTAL_DCACHE_FLUSH_INVAL, &req);
+    int rc;
+    if (utility_portal){
+        PortalCacheRequest req;
+        req.fd = fd;
+        req.base = __p;
+        req.len = size;
+        if(flush)
+            rc = ioctl(utility_portal->fpga_fd, PORTAL_DCACHE_FLUSH_INVAL, &req);
+        else
+            rc = ioctl(utility_portal->fpga_fd, PORTAL_DCACHE_INVAL, &req);
+    }
     else
-      rc = ioctl(utility_portal->fpga_fd, PORTAL_DCACHE_INVAL, &req);
-  }
-  else
-    rc = -1;
-  if (rc){
-    PORTAL_PRINTF("portal dcache flush failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
-    return rc;
-  }
+        rc = -1;
+    if (rc){
+        PORTAL_PRINTF("portal dcache flush failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
+        return rc;
+    }
 #endif
 #elif defined(__i386__) || defined(__x86_64__)
-  // not sure any of this is necessary (mdk)
-  for(i = 0; i < size; i++){
-    char foo = *(((volatile char *)__p)+i);
-    asm volatile("clflush %0" :: "m" (foo));
-  }
-  asm volatile("mfence");
+    // not sure any of this is necessary (mdk)
+    for(i = 0; i < size; i++){
+        char foo = *(((volatile char *)__p)+i);
+        asm volatile("clflush %0" :: "m" (foo));
+    }
+    asm volatile("mfence");
 #else
 #error("dCAcheFlush not defined for unspecified architecture")
 #endif
-  //PORTAL_PRINTF("dcache flush\n");
-  return 0;
-}
-
-void portalDCacheInval(int fd, long size, void *__p)
-{
-  portalDCacheFlushInvalInternal(fd,size,__p,0);
-}
-
-void portalDCacheFlushInval(int fd, long size, void *__p)
-{
-  portalDCacheFlushInvalInternal(fd,size,__p,1);
-}
-
-void init_portal_memory(void)
-{
-#ifndef __KERNEL__
-  if (global_pa_fd == -1)
-      global_pa_fd = open("/dev/portalmem", O_RDWR);
-  if (global_pa_fd < 0){
-    PORTAL_PRINTF("Failed to open /dev/portalmem pa_fd=%d errno=%d\n", global_pa_fd, errno);
-    exit(ENODEV);
-  }
-#endif
-}
-
-int portalAlloc(size_t size)
-{
-  return portalAllocCached(size, 0);
-}
-
-int portalAllocCached(size_t size, int cached)
-{
-  int fd;
-  struct PortalAlloc portalAlloc;
-  portalAlloc.len = size;
-  portalAlloc.cached = cached;
-  init_portal_memory();
-#ifdef __KERNEL__
-  fd = portalmem_dmabuffer_create(size);
-#else
-  fd = ioctl(global_pa_fd, PA_MALLOC, &portalAlloc);
-#endif
-  PORTAL_PRINTF("alloc size=%ld fd=%d\n", (unsigned long)size, fd);
-  if (fd == -1) {
-       PORTAL_PRINTF("portalAllocCached: alloc failed size=%ld errno=%d\n", (unsigned long)size, errno);
-       exit(-1);
-  }
-  return fd;
-}
-
-void *portalMmap(int fd, size_t size)
-{
-#ifdef __KERNEL__
-  struct file *fmem = fget(fd);
-  void *retptr = dma_buf_vmap(fmem->private_data);
-  fput(fmem);
-  return retptr;
-#else      ///////////////////////// userspace version
-  return mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
-#endif
-}
-
-void portalCheckIndication(PortalInternal *pint)
-{
-  volatile unsigned int *map_base = pint->map_base;
-  // sanity check, to see the status of interrupt source and enable
-  unsigned int queue_status;
-  volatile unsigned int *statp = &map_base[PORTAL_CTRL_REG_IND_QUEUE_STATUS];
-  volatile unsigned int *srcp = &map_base[PORTAL_CTRL_REG_INTERRUPT_STATUS];
-  volatile unsigned int *enp = &map_base[PORTAL_CTRL_REG_INTERRUPT_ENABLE];
-  while ((queue_status = pint->item->read(pint, &statp))) {
-    if(0) {
-      unsigned int int_src = pint->item->read(pint, &srcp);
-      unsigned int int_en  = pint->item->read(pint, &enp);
-      PORTAL_PRINTF( "%s: (fpga%d) about to receive messages int=%08x en=%08x qs=%08x\n", __FUNCTION__, pint->fpga_number, int_src, int_en, queue_status);
-    }
-    if (pint->handler)
-        pint->handler(pint, queue_status-1, 0);
-  }
-}
-
-void send_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, unsigned int hdr, int sendFd)
-{
-}
-int recv_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
-{
+    //PORTAL_PRINTF("dcache flush\n");
     return 0;
 }
-int notfull_null(PortalInternal *pint, unsigned int v)
-{
-    return 0;
-}
-int busy_portal_null(struct PortalInternal *pint, unsigned int v, const char *str)
-{
-    return 0;
-}
-void enableint_portal_null(struct PortalInternal *pint, int val)
-{
-}
-unsigned int read_portal_memory(PortalInternal *pint, volatile unsigned int **addr)
-{
-    unsigned int rc = **addr;
-    *addr += 1;
-    return rc;
-}
-void write_portal_memory(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
-{
-    **addr = v;
-    *addr += 1;
-}
-void write_fd_portal_memory(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
-{
-    **addr = v;
-    *addr += 1;
-}
-volatile unsigned int *mapchannel_hardware(struct PortalInternal *pint, unsigned int v)
-{
-    return &pint->map_base[PORTAL_IND_FIFO(v)];
-}
-int notfull_hardware(PortalInternal *pint, unsigned int v)
-{
-    volatile unsigned int *tempp = pint->item->mapchannelReq(pint, v) + 1;
-    return pint->item->read(pint, &tempp);
-}
-int busy_hardware(struct PortalInternal *pint, unsigned int v, const char *str)
-{
-    int count = 50;
-    while (!pint->item->notFull(pint, v) && ((pint->busyType == BUSY_SPIN) || count-- > 0))
-        ; /* busy wait a bit on 'fifo not full' */
-    if (count <= 0) {
-        if (0 && pint->busyType == BUSY_TIMEWAIT)
-            while (!pint->item->notFull(pint, v)) {
-#ifndef __KERNEL__
-                struct timeval timeout;
-                timeout.tv_sec = 0;
-                timeout.tv_usec = 10000;
-                select(0, NULL, NULL, NULL, &timeout);
-#endif
-            }
-        else {
-            PORTAL_PRINTF("putFailed: %s\n", str);
-#ifndef __KERNEL__
-            if (pint->busyType == BUSY_EXIT)
-                exit(1);
-#endif
-            return 1;
-        }
-    }
-    return 0;
-}
-void enableint_hardware(struct PortalInternal *pint, int val)
-{
-    volatile unsigned int *enp = &(pint->map_base[PORTAL_CTRL_REG_INTERRUPT_ENABLE]);
-    pint->item->write(pint, &enp, val);
-}
-int event_hardware(struct PortalInternal *pint)
-{
-    // handle all messasges from this portal instance
-    portalCheckIndication(pint);
-    return -1;
-}
 
-static int init_hardware(struct PortalInternal *pint, void *param)
+/*
+ * Miscellaneous utility functions
+ */
+int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)
 {
-#if defined(__KERNEL__)
-    int i;
-    pint->map_base = NULL;
-    for (i = 0; i < MAX_NUM_PORTALS; i++) {
-      if (tboard->portal[i].device_name == pint->fpga_number) {
-        pint->map_base = (volatile unsigned int*)(tboard->bar2io + i * PORTAL_BASE_OFFSET);
-        break;
-      }
+    int status = -1;
+    initPortalFramework();
+#ifdef ZYNQ
+    PortalClockRequest request;
+    request.clknum = clkNum;
+    request.requested_rate = requestedFrequency;
+    if (utility_portal){
+        status = ioctl(utility_portal->fpga_fd, PORTAL_SET_FCLK_RATE, (long)&request);
+        if (status == 0 && actualFrequency)
+	    *actualFrequency = request.actual_rate;
+        if (status < 0)
+	    status = errno;
     }
-    if (!pint->map_base) {
-	PORTAL_PRINTF("init_hardware: portal not found %d.\n", pint->fpga_number);
-        return -1;
-    }
-#else
-    char buff[128];
-    snprintf(buff, sizeof(buff), "/dev/portal_%d_%d", pint->fpga_tile, pint->fpga_number);
-    pint->fpga_fd = open(buff, O_RDWR);
-    if (pint->fpga_fd < 0) {
-	PORTAL_PRINTF("Failed to open %s fd=%d errno=%d\n", buff, pint->fpga_fd, errno);
-	return -errno;
-    }
-    pint->map_base = (volatile unsigned int*)portalMmap(pint->fpga_fd, PORTAL_BASE_OFFSET);
-    if (pint->map_base == MAP_FAILED) {
-        PORTAL_PRINTF("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", pint->fpga_fd, errno);
-        return -errno;
-    }  
 #endif
-    return 0;
+    return status;
 }
-static unsigned int read_hardware(PortalInternal *pint, volatile unsigned int **addr)
-{
-    return **addr;
-}
-static void write_hardware(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
-{
-    **addr = v;
-}
-static void write_fd_hardware(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
-{
-    **addr = v;
-}
-
-PortalItemFunctions hardwarefunc = {
-    init_hardware, read_hardware, write_hardware, write_fd_hardware, mapchannel_hardware, mapchannel_hardware,
-    send_portal_null, recv_portal_null, busy_hardware, enableint_hardware, event_hardware, notfull_hardware};
