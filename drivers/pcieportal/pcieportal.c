@@ -50,7 +50,7 @@
 #define DEV_NAME "portal"
 
 /* version string for the driver */
-#define DEV_VERSION "15.03.22"
+#define DEV_VERSION "15.04.3"
 
 /* Bluespec's standard vendor ID */
 #define BLUESPEC_VENDOR_ID 0x1be7
