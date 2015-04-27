@@ -53,10 +53,8 @@ module mkParallellaLib#(Clock axi_clock, Reset axi_reset)(ParallellaLib);
     interface maxi = vtopm_axi_gp;
     interface saxi = vtops_axi_hp;
     interface  ParallellaPins pins;
-      interface  txi = foo.txi;
-      interface  txo = foo.txo;
-      interface  rxi = foo.rxi;
-      interface  rxo = foo.rxo;
+     interface  tx = foo.tx;
+      interface  rx = foo.rx;
    endinterface
    interface  misc = foo.misc;
       
