@@ -11,6 +11,7 @@ interface Dsp48E1;
    method Action b(Bit#(18) v);
    method Action c(Bit#(48) v);
    method Action d(Bit#(25) v);
+   method Action last(Bit#(1) v);
 endinterface
 
 (* always_ready, always_enabled *)
@@ -104,12 +105,18 @@ module mkDsp48E1(Dsp48E1);
    Wire#(Bit#(25)) dWire <- mkDWire(0);
 
    Wire#(Bit#(1)) ce1Wire <- mkDWire(0);
-   Reg#(Bit#(1)) ce2Reg <- mkReg(0);
-   Reg#(Bit#(1)) cepReg <- mkReg(0);
+   Reg#(Bit#(1)) ce2Reg <- mkReg(0, reset_by noReset);
+   Reg#(Bit#(1)) cepReg <- mkReg(0, reset_by noReset);
+   Wire#(Bit#(1)) last1Wire <- mkDWire(0);
+   Reg#(Bit#(1))  last2Reg  <- mkReg(0, reset_by noReset);
+   Reg#(Bit#(1))  last3Reg  <- mkReg(0, reset_by noReset);
 
    rule clock_enable_and_reset;
       ce2Reg <= ce1Wire;
       cepReg <= ce2Reg;
+
+      last2Reg <= last1Wire;
+      last3Reg <= last2Reg;
 
       dsp.cea1(ce1Wire);
       dsp.cea2(ce2Reg);
@@ -142,10 +149,10 @@ module mkDsp48E1(Dsp48E1);
       dsp.carryinsel(carryinselWire);
       dsp.inmode(inmodeWire);
       dsp.opmode(opmodeWire);
-      dsp.a(aWire);
-      dsp.b(bWire);
-      dsp.c(cWire);
-      dsp.d(dWire);
+      //dsp.a(aWire);
+      //dsp.b(bWire);
+      //dsp.c(cWire);
+      //dsp.d(dWire);
    endrule
 
    method Action alumode(Bit#(4) v);
@@ -162,18 +169,21 @@ module mkDsp48E1(Dsp48E1);
    endmethod
    method Action a(Bit#(30) v);
       ce1Wire <= 1;
-      aWire <= v;
+      dsp.a(v);
    endmethod
    method Action b(Bit#(18) v);
-      bWire <= v;
+      dsp.b(v);
    endmethod
    method Action c(Bit#(48) v);
-      cWire <= v;
+      dsp.c(v);
    endmethod
    method Action d(Bit#(25) v);
-      dWire <= v;
+      dsp.d(v);
    endmethod
-   method Bit#(48) p();
+   method Bit#(48) p() if (last2Reg == 1);
       return dsp.p();
+   endmethod
+   method Action last(Bit#(1) v);
+      last1Wire <= v;
    endmethod
 endmodule
