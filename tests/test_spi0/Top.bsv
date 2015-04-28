@@ -34,7 +34,7 @@ import SPIResponse::*;
 
 typedef enum {ControllerRequest, ControllerResponse} IfcNames deriving (Eq,Bits);
 
-module mkConnectalTop#(HostType host)(StdConnectalTop#(PhysAddrWidth));
+module mkConnectalTop#(HostInterface host)(StdConnectalTop#(PhysAddrWidth));
 
    SPIResponseProxy cp <- mkSPIResponseProxy(ControllerResponse);
    Controller controller <- mkController(cp.ifc, host.ps7.emiospi0);

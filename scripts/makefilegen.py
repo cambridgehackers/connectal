@@ -111,7 +111,7 @@ foreach {pat} {CLK_GATE_hdmi_clock_if CLK_*deleteme_unused_clock* CLK_GATE_*dele
 fpgamakeRuleTemplate='''
 FPGAMAKE=$(CONNECTALDIR)/../fpgamake/fpgamake
 fpgamake.mk: $(VFILE) Makefile prepare_bin_target
-	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk --board=%(boardname)s --part=%(partname)s %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s %(qsf)s %(chipscope)s -t $(MKTOP) %(cachedir)s -b hw/mkTop.bit verilog $(CONNECTALDIR)/verilog %(verilog)s
+	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk --board=%(boardname)s --part=%(partname)s %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s %(qsf)s %(chipscope)s -t $(MKTOP) %(FPGAMAKE_DEFINE)s %(cachedir)s -b hw/mkTop.bit verilog $(CONNECTALDIR)/verilog %(verilog)s
 
 hw/mkTop.bit: prepare_bin_target %(genxdc_dep)s fpgamake.mk
 	$(Q)mkdir -p hw
@@ -440,6 +440,7 @@ if __name__=='__main__':
                                          'pin_binding' : ' '.join(['-b %s' % s for s in options.pin_binding])
 					 }
     substs['genxdc'] = (genxdc_template % substs) if options.pinout else ''
+    substs['FPGAMAKE_DEFINE'] = '-D BSV_POSITIVE_RESET' if 'BSV_POSITIVE_RESET' in options.bsvdefine else ''
     bitsmake=fpgamakeRuleTemplate % substs
 
     make.write(makefileTemplate % {'connectaldir': connectaldir,

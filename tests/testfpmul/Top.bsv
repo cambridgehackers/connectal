@@ -30,7 +30,7 @@ import FpMulRequest::*;
 import RbmTypes::*;
 import FpMacTb::*;
 
-module  mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,TMul#(32,N),Empty,NumberOfMasters));
+module  mkConnectalTop#(HostInterface host)(ConnectalTop#(PhysAddrWidth,TMul#(32,N),Empty,NumberOfMasters));
 
    FpMulIndicationProxy ind <- mkFpMulIndicationProxy(FpMulIndicationPortal);
    FpMulRequest req <- mkFpMulRequest(ind.ifc);

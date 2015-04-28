@@ -1,6 +1,6 @@
 {
     "options": {
-        "bsvdefines" : ["XILINX=1", "ZYNQ", "ZynqHostTypeIF", "PhysAddrWidth=32", "NUMBER_OF_LEDS=4"],
+        "bsvdefines" : ["XILINX=1", "ZYNQ", "ZynqHostInterface", "PhysAddrWidth=32", "NUMBER_OF_LEDS=4"],
         "os" : "android",
         "partname" : "xc7z010clg400-1",
         "rewireclockstring" : "tclzynqrewireclock",

@@ -31,7 +31,7 @@ import BscanIF::*;
 
 typedef enum {BscanIndication, BscanRequest} IfcNames deriving (Eq,Bits);
 
-module mkConnectalTop#(HostType host)(StdConnectalTop#(PhysAddrWidth));
+module mkConnectalTop#(HostInterface host)(StdConnectalTop#(PhysAddrWidth));
    BscanIndicationProxy bscanIndicationProxy <- mkBscanIndicationProxy(BscanIndication);
    BscanRequest bscanRequest <- mkBscanRequest(bscanIndicationProxy.ifc, host.bscan);
    BscanRequestWrapper bscanRequestWrapper <- mkBscanRequestWrapper(BscanRequest,bscanRequest);

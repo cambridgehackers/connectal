@@ -6,7 +6,7 @@
         "constraints": ["constraints/xilinx/xc7z100ffg900.xdc", "constraints/xilinx/miniitx100.xdc"],
         "TOP" : "ZynqTop",
         "runscript" : "run.android",
-        "bsvdefines" : ["ZynqHostTypeIF", "PhysAddrWidth=32", "NUMBER_OF_LEDS=8"],
+        "bsvdefines" : ["ZynqHostInterface", "PhysAddrWidth=32", "NUMBER_OF_LEDS=8"],
 	"CONNECTALFLAGS": [],
         "need_pcie" : "unused"
     }

@@ -47,7 +47,7 @@ import RbmTypes::*;
 import Sigmoid::*;
 import Rbm::*;
 
-module  mkConnectalTop#(HostType host) (ConnectalTop#(PhysAddrWidth,TMul#(32,N),Empty,NumberOfMasters));
+module  mkConnectalTop#(HostInterface host) (ConnectalTop#(PhysAddrWidth,TMul#(32,N),Empty,NumberOfMasters));
 
    RbmIndicationProxy rbmIndicationProxy <- mkRbmIndicationProxy(RbmIndicationPortal);
    MmIndicationProxy   mmIndicationProxy <- mkMmIndicationProxy(MmIndicationPortal);

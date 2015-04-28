@@ -290,7 +290,7 @@ typedef enum {
 module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) sA,
 			     Vector#(K, VectorSource#(dsz, Vector#(N, Float))) sB,
 			     Vector#(J, VectorSink#(dsz, Vector#(N,Float)))    ss,
-			     HostType host
+			     HostInterface host
 			     )(DmaMatrixMultiplyIfc#(addrwidth, dsz))
    provisos (  Mul#(N,n__,K) // K must be an integer multiple of N
 	     , Mul#(N,m__,J) // J must be an integer multiple of N
@@ -572,7 +572,7 @@ interface DramMatrixMultiply#(numeric type n, numeric type dmasz, numeric type n
    interface DmaMatrixMultiplyDebug debug;
 endinterface
 
-module  mkDramMatrixMultiply#(HostType host)(DramMatrixMultiply#(N,TMul#(N,32),2));
+module  mkDramMatrixMultiply#(HostInterface host)(DramMatrixMultiply#(N,TMul#(N,32),2));
 
    MemwriteEngine#(TMul#(N,32),2, J)   writeEngine <- mkMemwriteEngine();
    MemreadEngine#(TMul#(N,32), 2, J) rowReadEngine <- mkMemreadEngineBuff(512);
@@ -604,7 +604,7 @@ interface MmNT#(numeric type n);
    interface Vector#(2, MemWriteClient#(TMul#(32,n))) writeClients;
 endinterface
 
-module  mkMmNT#(MmIndication ind, TimerIndication timerInd, HostType host)(MmNT#(N))
+module  mkMmNT#(MmIndication ind, TimerIndication timerInd, HostInterface host)(MmNT#(N))
    provisos (Add#(1,a__,N),
 	     Add#(N,0,n),
 	     Mul#(N,32,DmaSz)

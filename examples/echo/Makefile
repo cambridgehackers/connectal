@@ -5,7 +5,6 @@ H2S_INTERFACES = Echo:EchoIndication
 BSVFILES = Echo.bsv
 CPPFILES=testecho.cpp
 
-CONNECTALFLAGS += -D IMPORT_HOSTIF
 NUMBER_OF_MASTERS =0
 
 ## for testing fpgamake:
