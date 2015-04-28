@@ -49,7 +49,7 @@ import MatrixNT::*;
 `endif
 `endif
 
-module  mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,TMul#(32,N),Empty,NumberOfMasters));
+module  mkConnectalTop#(HostInterface host)(ConnectalTop#(PhysAddrWidth,TMul#(32,N),Empty,NumberOfMasters));
 
    MmIndicationProxy mmIndicationProxy <- mkMmIndicationProxy(MmIndicationPortal);
    TimerIndicationProxy timerIndicationProxy <- mkTimerIndicationProxy(TimerIndicationPortal);

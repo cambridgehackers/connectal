@@ -245,7 +245,7 @@ interface Rbm#(numeric type n);
    interface Vector#(3,MemWriteClient#(TMul#(32,n))) writeClients;
 endinterface
 
-module  mkRbm#(HostType host, RbmIndication rbmInd, SigmoidIndication sigmoidInd, MmIndication mmInd, TimerIndication timerInd)(Rbm#(N))
+module  mkRbm#(HostInterface host, RbmIndication rbmInd, SigmoidIndication sigmoidInd, MmIndication mmInd, TimerIndication timerInd)(Rbm#(N))
    provisos (Add#(1,a__,N),
 	     Add#(N,0,n),
 	     Mul#(N,32,DmaSz));

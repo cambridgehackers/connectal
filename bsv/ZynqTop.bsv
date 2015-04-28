@@ -94,7 +94,7 @@ module mkZynqTop(ZynqTop);
    BscanLocal lbscan <- mkBscanLocal(bscan, clocked_by bscan.tck, reset_by bscan.rst);
 `ifdef IMPORT_HOSTIF
    ConnectalTop#(PhysAddrWidth, 64, PinType, NumberOfMasters) top <- mkConnectalTop(
-      (interface HostType;
+      (interface HostInterface;
           interface ps7 = ps7;
 	  interface portalClock = mainclock;
 	  interface portalReset = mainreset;

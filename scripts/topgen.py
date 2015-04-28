@@ -57,7 +57,7 @@ typedef enum {NoInterface, %(enumList)s} IfcNames deriving (Eq,Bits);
 `endif
 module mkConnectalTop
 `ifdef IMPORT_HOSTIF
-       #(HostType host)
+       #(HostInterface host)
 `endif
        (%(moduleParam)s);
    Clock defaultClock <- exposeCurrentClock();
@@ -97,7 +97,7 @@ typedef enum {%(enumList)s} IfcNames deriving (Eq,Bits);
 (* synthesize *)
 module mkBluenocTop
 `ifdef IMPORT_HOSTIF
-       #(HostType host)
+       #(HostInterface host)
 `endif
        (%(moduleParam)s);
    Clock defaultClock <- exposeCurrentClock();

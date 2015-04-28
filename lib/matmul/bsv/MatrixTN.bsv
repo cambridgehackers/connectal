@@ -285,7 +285,7 @@ typedef enum {
 module  mkDmaMatrixMultiply#(MemReadServer#(TMul#(N,32)) sA,
 			     MemReadServer#(TMul#(N,32)) sB,
 			     MemWriteServer#(TMul#(N,32))ss,
-			     HostType host
+			     HostInterface host
 			     )(DmaMatrixMultiplyIfc#(addrwidth, dsz))
    provisos (  Mul#(N,n__,K) // K must be an integer multiple of N
 	     , Mul#(N,m__,J) // J must be an integer multiple of N
@@ -477,7 +477,7 @@ interface DramMatrixMultiply#(numeric type n, numeric type dmasz);
    interface DmaMatrixMultiplyDebug debug;
 endinterface
       
-module  mkDramMatrixMultiply#(HostType host)(DramMatrixMultiply#(N,TMul#(N,32)));
+module  mkDramMatrixMultiply#(HostInterface host)(DramMatrixMultiply#(N,TMul#(N,32)));
 
    MemWriterBuff#(TMul#(N,32),128)    writer <- mkMemWriterBuff;
    MemReaderBuff#(TMul#(N,32),256) rowReader <- mkMemReaderBuff;
@@ -507,7 +507,7 @@ interface MmTNInternal#(numeric type n);
    method ActionValue#(Bit#(32)) debugDone(); 
 endinterface
 
-module  mkMmTNInternal#(HostType host)(MmTNInternal#(N))
+module  mkMmTNInternal#(HostInterface host)(MmTNInternal#(N))
    provisos (Add#(1,a__,N),
 	     Add#(N,0,n),
 	     Mul#(N,32,DmaSz)
@@ -562,7 +562,7 @@ module  mkMmTNInternal#(HostType host)(MmTNInternal#(N))
    interface Vector writeClients =  dmaMMF.writeClients;
 endmodule
 
-module  mkMmTN#(MmIndication ind, TimerIndication timerInd, HostType host)(MmTN#(N))
+module  mkMmTN#(MmIndication ind, TimerIndication timerInd, HostInterface host)(MmTN#(N))
    provisos (Add#(1,a__,N),
 	     Add#(N,0,n),
 	     Mul#(N,32,DmaSz)

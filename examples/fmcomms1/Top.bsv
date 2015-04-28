@@ -73,7 +73,7 @@ endinterface
 
 /* clk1 is the FCLKCLK1 controlled by software */
 
-module mkConnectalTop#(HostType host)(ConnectalTop#(PhysAddrWidth,64,FMComms1Pins,1));
+module mkConnectalTop#(HostInterface host)(ConnectalTop#(PhysAddrWidth,64,FMComms1Pins,1));
 
    Clock clk1 = host.ps7.fclkclk[1];
    C2B ref_clk_as_bit <- mkC2B(clk1);

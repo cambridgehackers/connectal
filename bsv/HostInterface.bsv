@@ -34,7 +34,7 @@ typedef `NumberOfTiles NumberOfTiles;
 typedef `SlaveControlAddrWidth SlaveControlAddrWidth;
 
 ////////////////////////////// Bsim /////////////////////////////////
-`ifdef BsimHostTypeIF
+`ifdef BsimHostInterface
 
 import Vector            :: *;
 import AxiMasterSlave    :: *;
@@ -50,11 +50,11 @@ interface BsimHost#(numeric type clientAddrWidth, numeric type clientBusWidth, n
    interface Reset derivedReset;
 endinterface
 
-typedef BsimHost#(32,32,12,40,DataBusWidth,6,NumberOfMasters) HostType;
+typedef BsimHost#(32,32,12,40,DataBusWidth,6,NumberOfMasters) HostInterface;
 `endif
 
 ////////////////////////////// Xsim /////////////////////////////////
-`ifdef XsimHostTypeIF
+`ifdef XsimHostInterface
 
 import Vector            :: *;
 import AxiMasterSlave    :: *;
@@ -66,12 +66,12 @@ interface XsimHost;
    interface Reset derivedReset;
 endinterface
 
-typedef XsimHost HostType;
+typedef XsimHost HostInterface;
 `endif
 
 ////////////////////////////// PciE /////////////////////////////////
 `ifndef PcieHostIF
-`ifdef PcieHostTypeIF
+`ifdef PcieHostInterface
 `define PcieHostIF
 `endif
 `endif
@@ -143,16 +143,16 @@ interface PcieHostTop;
 endinterface
 `endif
 
-`ifdef PcieHostTypeIF
-typedef PcieHostTop HostType;
+`ifdef PcieHostInterface
+typedef PcieHostTop HostInterface;
 `endif
 
 ////////////////////////////// Zynq /////////////////////////////////
-`ifdef ZynqHostTypeIF
+`ifdef ZynqHostInterface
 import PS7LIB::*;
 import Bscan::*;
 
-interface HostType;
+interface HostInterface;
     interface PS7 ps7;
     interface Clock portalClock;
     interface Reset portalReset;
@@ -163,7 +163,7 @@ endinterface
 
 //export PS7LIB::*;
 //export BscanTop;
-//export HostType;
+//export HostInterface;
 //export DataBusWidth;
 //export NumberOfMasters;
 //export PhysAddrWidth;
