@@ -3,7 +3,7 @@
         "os" : "ubuntu",
         "partname" : "xxx",
         "TOP" : "VsimTop",
-		"bsvdefines": ["VSIM", "PCIE", "PCIE_NO_BSCAN", "PcieHostTypeIF", "PhysAddrWidth=40"],
+		"bsvdefines": ["VSIM", "PCIE", "PCIE_NO_BSCAN", "PcieHostInterface", "PhysAddrWidth=40"],
         "need_pcie" : "unused",
         "CONNECTALFLAGS" : [],
         "rewireclockstring" : ""

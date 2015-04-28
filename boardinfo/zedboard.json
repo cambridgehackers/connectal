@@ -1,6 +1,6 @@
 {
     "options": {
-        "bsvdefines" : ["XILINX=1", "ZYNQ", "ZynqHostTypeIF", "PhysAddrWidth=32", "CFGBVS=VCCO", "CONFIG_VOLTAGE=3.3"],
+        "bsvdefines" : ["XILINX=1", "ZYNQ", "ZynqHostInterface", "PhysAddrWidth=32", "CFGBVS=VCCO", "CONFIG_VOLTAGE=3.3"],
         "os" : "android",
         "partname" : "xc7z020clg484-1",
         "rewireclockstring" : "tclzynqrewireclock",
