@@ -7,7 +7,7 @@ CPPFILES = testsimple.cpp
 NUMBER_OF_MASTERS = 0
 
 ifeq ($(BOARD), $(filter $(BOARD), de5 htg4))
-PIN_BINDINGS?=-b PCIE:PCIE -b LED:LED -b OSC:OSC
+PIN_BINDINGS?=PCIE:PCIE LED:LED OSC:OSC
 endif
 
 include $(CONNECTALDIR)/Makefile.connectal
