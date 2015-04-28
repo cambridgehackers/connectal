@@ -156,24 +156,26 @@ zynqdrivers-adb:
 	adb -s $(RUNIP):$(RUNPORT) shell insmod /mnt/sdcard/zynqportal.ko
 	adb -s $(RUNIP):$(RUNPORT) shell insmod /mnt/sdcard/portalmem.ko
 
-connectalsdhci-clean:
-	(cd drivers/connectalsdhci/; DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make clean)
+connectalspi-clean:
+	(cd drivers/connectalspi/; DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make clean)
 
-connectalsdhci:
-	(cd drivers/connectalsdhci/; DRIVER_VERSION=$(VERSION) DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make connectalsdhci.ko)
+connectalspi:
+	(cd drivers/connectalspi/; DRIVER_VERSION=$(VERSION) DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make connectalspi.ko)
 
-# the fpga must be programmed before loading the connectalsdhci driver 
-# cd tests/test_sdio1/ && make run.zedboard || true
-connectalsdhci-adb: 
+foo:
+	cd tests/test_spi0/ && make run.zedboard || true
+
+connectalspi-adb: 
 	adb connect $(RUNPARAM)
 	adb -s $(RUNIP):$(RUNPORT) shell pwd || true
 	adb connect $(RUNPARAM)
 	adb -s $(RUNIP):$(RUNPORT) root || true
 	sleep 1
 	adb connect $(RUNPARAM)
-	adb -s $(RUNIP):$(RUNPORT) push drivers/connectalsdhci/connectalsdhci.ko /mnt/sdcard
-	adb -s $(RUNIP):$(RUNPORT) shell rmmod connectalsdhci
-	adb -s $(RUNIP):$(RUNPORT) shell insmod -f /mnt/sdcard/connectalsdhci.ko
+	adb -s $(RUNIP):$(RUNPORT) push drivers/connectalspi/connectalspi.ko /mnt/sdcard
+	adb -s $(RUNIP):$(RUNPORT) shell rmmod connectalspi
+	adb -s $(RUNIP):$(RUNPORT) shell insmod /mnt/sdcard/connectalspi.ko
+	adb -s $(RUNIP):$(RUNPORT) shell chmod 777 /dev/spi*
 
 distclean:
 	for archname in $(allarchlist) ; do  \

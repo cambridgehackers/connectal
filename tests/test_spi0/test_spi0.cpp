@@ -40,7 +40,7 @@
 static int spidevicefd;
 static uint8_t spimode = 0;
 static uint8_t spibits = 8;
-static uint32_t speed = 25000;
+static uint32_t speed = 16666666;
 static uint16_t delay = 100;
 
 uint32_t bit_sel(uint32_t lsb, uint32_t msb, uint32_t v)
@@ -54,15 +54,9 @@ public:
   virtual void read_resp(uint8_t v){
     fprintf(stderr, "read_resp cd:%d wp:%d\n", (v&2)>>1, v&1);
   }
-  virtual void emio_sample(uint32_t v){
-    int mo = bit_sel(12,12,v);
-    int motn = bit_sel(11,11,v);
-    int sson = bit_sel(8,10,v);
-    int ssntn = bit_sel(7,7,v);
-    int sclko = bit_sel(6,6,v);
-    int sclktn = bit_sel(5,5,v);
-    int cnt  = bit_sel(0,4,v);
-    fprintf(stderr, "emio_sample{mo:%d, motn:%d, sson:%d, ssntn:%d, sclko:%d, sclktn:%d, cnt:%d}\n", mo, motn, sson, ssntn, sclko, sclktn, cnt);
+  virtual void emio_sample(const Spew v){
+    fprintf(stderr, "emio_sample{mo:%d, motn:%d, sson:%d, ssntn:%d, sclko:%d, sclktn:%d, cnt:%d}\n", 
+	                       v.mo,  v.motn,  v.sson,  v.ssntn,  v.sclko,  v.sclktn,  v.cnt);
   }
   virtual void cnt_cycle_resp(uint32_t v){
     fprintf(stderr, "cnt_cycle_resp %d\n", v);
@@ -78,30 +72,32 @@ int main(int argc, const char **argv)
 {
   SPIRequestProxy *device = new SPIRequestProxy(IfcNames_ControllerRequest);
   SPIResponse *ind = new SPIResponse(IfcNames_ControllerResponse);
-
-  spidevicefd = open(SPIDEVICENAME, O_RDWR);
-  if (spidevicefd < 0)
-    printf("Error: cannot open SPI device\n");
-  else if (ioctl(spidevicefd, SPI_IOC_WR_MODE, &spimode) == -1
-      || ioctl(spidevicefd, SPI_IOC_RD_MODE, &spimode) == -1
-      || ioctl(spidevicefd, SPI_IOC_WR_BITS_PER_WORD, &spibits) == -1
-      || ioctl(spidevicefd, SPI_IOC_RD_BITS_PER_WORD, &spibits) == -1
-      || ioctl(spidevicefd, SPI_IOC_WR_MAX_SPEED_HZ, &speed) == -1
-      || ioctl(spidevicefd, SPI_IOC_RD_MAX_SPEED_HZ, &speed) == -1)
-    printf("Error: cannot configure SPI device\n");
-  else
-    printf("Successfully opened spi %x\n", spidevicefd);
-
-  device->set_clk_inv(1);
-  device->cnt_cycle_req(32);
-  device->set_spew_en(1);
-  //device->set_spew_src(1);
-
   uint8_t iter = 1;
-  while(1) {
+
+  printf("Setting fpga registers\n");
+  device->set_clk_inv(1);
+  device->set_spew_en(1);
+  device->set_spew_src(1);
+
+  while(iter < 2){
+    spidevicefd = open(SPIDEVICENAME, O_RDWR);
+    if (spidevicefd < 0){
+      printf("Error: cannot open SPI device\n");
+      goto finish;
+    } else if (ioctl(spidevicefd, SPI_IOC_WR_MODE, &spimode) == -1
+	       || ioctl(spidevicefd, SPI_IOC_RD_MODE, &spimode) == -1
+	       || ioctl(spidevicefd, SPI_IOC_WR_BITS_PER_WORD, &spibits) == -1
+	       || ioctl(spidevicefd, SPI_IOC_RD_BITS_PER_WORD, &spibits) == -1
+	       || ioctl(spidevicefd, SPI_IOC_WR_MAX_SPEED_HZ, &speed) == -1
+	       || ioctl(spidevicefd, SPI_IOC_RD_MAX_SPEED_HZ, &speed) == -1){
+      printf("Error: cannot configure SPI device\n");
+      goto finish;
+    } else {
+      printf("Successfully opened spi %x\n", spidevicefd);
+    }
     uint8_t tx[sizeof(uint32_t)], rx[sizeof(uint32_t)];
     for(int i = 0; i < sizeof(uint32_t); i++)
-      tx[i] = iter;
+      tx[i] = 0xFF;
     struct spi_ioc_transfer tr;
     tr.tx_buf = (unsigned long)tx;
     tr.rx_buf = (unsigned long)rx;
@@ -109,12 +105,17 @@ int main(int argc, const char **argv)
     tr.delay_usecs = delay;
     tr.speed_hz = speed;
     tr.bits_per_word = spibits;
+    device->cnt_cycle_req(1024);
     if (ioctl(spidevicefd, SPI_IOC_MESSAGE(1), &tr) < 1)
       printf("can't send spi message\n");
-    // else
-    //   printf("successfully sent spi message\n");
+    else
+      printf("successfully sent spi message\n");
     iter++;
-    sleep(1);
+    close(spidevicefd);
   }
+
+ finish:
+  usleep(100);
+  return 0;
 
 }

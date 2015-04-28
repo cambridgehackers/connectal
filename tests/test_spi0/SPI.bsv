@@ -31,16 +31,27 @@ import Clocks::*;
 import BRAMFIFO::*;
 import FIFOF::*;
 
+
+typedef struct {
+   Bit#(1)  mo;
+   Bit#(1)  motn;
+   Bit#(3)  sson;
+   Bit#(1)  ssntn;
+   Bit#(1)  sclko;
+   Bit#(1)  sclktn;
+   Bit#(16) cnt;   
+   } Spew deriving (Eq,Bits);
+
 interface SPIRequest;
    method Action cnt_cycle_req(Bit#(32) v);
-   method Action set_spew_en(Bit#(1) v);
+   method Action set_spew_en(Bit#(32) v);
    method Action set_clk_inv(Bit#(1) v);
    method Action set_spew_src(Bit#(1) v);
 endinterface
 
 interface SPIResponse;
    method Action cnt_cycle_resp(Bit#(32) v);
-   method Action emio_sample(Bit#(32) v);
+   method Action emio_sample(Spew v);
    method Action spi_word(Bit#(32) v);
 endinterface
 
@@ -56,7 +67,7 @@ module mkController#(SPIResponse ind, Pps7Emiospi spi)(Controller);
    Reset spi_rst <- mkAsyncResetFromCR(2, spi_clk);
 
    Reg#(Bit#(32)) shift_reg <- mkReg(0, clocked_by spi_clk, reset_by spi_rst);
-   Reg#(Bit#(5))  cnt_reg <- mkReg(0, clocked_by spi_clk, reset_by spi_rst);
+   Reg#(Bit#(5))  spi_cnt_reg <- mkReg(0, clocked_by spi_clk, reset_by spi_rst);
 
    ReadOnly#(Bit#(1)) mo_sync     <- mkNullCrossingWire(spi_clk, spi.mo);
    ReadOnly#(Bit#(1)) motn_sync   <- mkNullCrossingWire(spi_clk, spi.motn);
@@ -68,26 +79,38 @@ module mkController#(SPIResponse ind, Pps7Emiospi spi)(Controller);
    
    Reg#(Bit#(1)) spew_src <- mkReg(0);
    Reg#(Bit#(1)) clk_inv <- mkReg(0);
-   Reg#(Bit#(1)) spew_en <- mkSyncRegFromCC(0, spi_clk);
+   Reg#(Bit#(16)) def_cnt_reg <- mkReg(0);
+   Reg#(Bit#(32)) spew_en <- mkReg(0);
+   Reg#(Bit#(32)) spew_cyc <- mkReg(0);
    FrequencyCounter fc <- mkFrequencyCounter(spi_clk, spi_rst);
    SyncFIFOIfc#(Bit#(32)) req_fifo <- mkSyncFIFOToCC(2, spi_clk, spi_rst);
-   SyncFIFOIfc#(Bit#(32)) spew_fifo <- mkSyncBRAMFIFOToCC(128, spi_clk, spi_rst);
+   SyncFIFOIfc#(Spew) spew_fifo <- mkSyncBRAMFIFOToCC(128, spi_clk, spi_rst);
 
    (* fire_when_enabled *)
+   rule connect_clock;
+      //b2c.inputclock(clk_inv ^ (spi.sclko & ~spi.sclktn));
+      b2c.inputclock(clk_inv ^ spi.sclko);
+   endrule
+   
+   (* fire_when_enabled *)
    rule connect_to_ps7;
-      b2c.inputclock(clk_inv ^ (spi.sclko & ~spi.sclktn));
       spi.mi(miso_sync);
       spi.sclki(0);
       spi.si(0);
       spi.ssin(1);
    endrule
    
+   (* fire_when_enabled *)
+   rule def_cnt_rule if (~spi.sclktn==1 && ~spi.motn==1);
+      def_cnt_reg <= def_cnt_reg+1;
+   endrule
+      
    let mosi_signal = mo_sync & ~motn_sync;
    let sson_signal = sson_sync[0] | ssntn_sync;
    rule mosi_rule if (sson_signal == 0);
       shift_reg <= {shift_reg[30:0],mosi_signal};
-      cnt_reg <= cnt_reg+1;
-      if (cnt_reg == maxBound) req_fifo.enq(shift_reg);
+      spi_cnt_reg <= spi_cnt_reg+1;
+      if (spi_cnt_reg == maxBound) req_fifo.enq(shift_reg);
    endrule
 
    rule cnt_cycle_resp_rule;
@@ -100,17 +123,35 @@ module mkController#(SPIResponse ind, Pps7Emiospi spi)(Controller);
       req_fifo.deq;
    endrule
    
-   rule emio_sample_rule_a if (spew_en == 1);
-      spew_fifo.enq({0, mo_sync, motn_sync, sson_sync, ssntn_sync, sclko_sync, sclktn_sync, cnt_reg});
+   rule emio_sample_rule_a;
+      spew_fifo.enq(Spew{mo:mo_sync,
+			 motn:motn_sync,
+			 sson:sson_sync,
+			 ssntn:ssntn_sync, 
+			 sclko:sclko_sync,
+			 sclktn:sclktn_sync, 
+			 cnt:extend(spi_cnt_reg)});
    endrule
 
-   rule emio_sample_rule_b;
-      if (spew_src == 1) begin
-	 ind.emio_sample({0, spi.mo, spi.motn, spi.sson, spi.ssntn, spi.sclko, spi.sclktn, 5'b00000});
+   rule emio_sample_rule_b if (spew_en > 0);
+      if (spew_cyc+1 == spew_en) begin
+	 spew_cyc <= 0;
+	 if (spew_src == 1) begin
+	    ind.emio_sample(Spew{mo:spi.mo, 
+				 motn:spi.motn, 
+				 sson:spi.sson, 
+				 ssntn:spi.ssntn, 
+				 sclko:spi.sclko, 
+				 sclktn:spi.sclktn, 
+				 cnt:def_cnt_reg});
+	 end
+	 else begin
+	    ind.emio_sample(spew_fifo.first);
+	    spew_fifo.deq;
+	 end
       end
       else begin
-	 ind.emio_sample(spew_fifo.first);
-	 spew_fifo.deq;
+	 spew_cyc <= spew_cyc+1;
       end
    endrule
    
@@ -118,7 +159,7 @@ module mkController#(SPIResponse ind, Pps7Emiospi spi)(Controller);
       method Action cnt_cycle_req(Bit#(32) v);
 	 fc.start(v);
       endmethod
-      method Action set_spew_en(Bit#(1) v);
+      method Action set_spew_en(Bit#(32) v);
 	 spew_en <= v;
       endmethod
       method Action set_clk_inv(Bit#(1) v);
