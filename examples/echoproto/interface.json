@@ -1,0 +1,192 @@
+{
+    "globaldecls": [
+        {
+            "name": "EchoPair", 
+            "params": [], 
+            "tdtype": {
+                "elements": [
+                    {
+                        "name": "a", 
+                        "type": {
+                            "name": "Bit", 
+                            "params": [
+                                {
+                                    "name": "16", 
+                                    "params": [], 
+                                    "type": "Type"
+                                }
+                            ], 
+                            "type": "Type"
+                        }
+                    }, 
+                    {
+                        "name": "b", 
+                        "type": {
+                            "name": "Bit", 
+                            "params": [
+                                {
+                                    "name": "16", 
+                                    "params": [], 
+                                    "type": "Type"
+                                }
+                            ], 
+                            "type": "Type"
+                        }
+                    }
+                ], 
+                "name": "EchoPair", 
+                "type": "Struct"
+            }, 
+            "type": "TypeDef"
+        }, 
+        {
+            "name": "IfcNames", 
+            "params": [], 
+            "tdtype": {
+                "elements": [
+                    "NoInterface", 
+                    "EchoIndicationH2S", 
+                    "EchoRequestS2H"
+                ], 
+                "name": "IfcNames", 
+                "type": "Enum"
+            }, 
+            "type": "TypeDef"
+        }
+    ], 
+    "interfaces": [
+        {
+            "decls": [
+                {
+                    "name": "say", 
+                    "params": [
+                        {
+                            "name": "v", 
+                            "type": {
+                                "name": "Bit", 
+                                "params": [
+                                    {
+                                        "name": "32", 
+                                        "params": [], 
+                                        "type": "Type"
+                                    }
+                                ], 
+                                "type": "Type"
+                            }
+                        }
+                    ]
+                }, 
+                {
+                    "name": "say2", 
+                    "params": [
+                        {
+                            "name": "a", 
+                            "type": {
+                                "name": "Bit", 
+                                "params": [
+                                    {
+                                        "name": "16", 
+                                        "params": [], 
+                                        "type": "Type"
+                                    }
+                                ], 
+                                "type": "Type"
+                            }
+                        }, 
+                        {
+                            "name": "b", 
+                            "type": {
+                                "name": "Bit", 
+                                "params": [
+                                    {
+                                        "name": "16", 
+                                        "params": [], 
+                                        "type": "Type"
+                                    }
+                                ], 
+                                "type": "Type"
+                            }
+                        }
+                    ]
+                }, 
+                {
+                    "name": "setLeds", 
+                    "params": [
+                        {
+                            "name": "v", 
+                            "type": {
+                                "name": "Bit", 
+                                "params": [
+                                    {
+                                        "name": "8", 
+                                        "params": [], 
+                                        "type": "Type"
+                                    }
+                                ], 
+                                "type": "Type"
+                            }
+                        }
+                    ]
+                }
+            ], 
+            "name": "EchoRequest"
+        }, 
+        {
+            "decls": [
+                {
+                    "name": "heard", 
+                    "params": [
+                        {
+                            "name": "v", 
+                            "type": {
+                                "name": "Bit", 
+                                "params": [
+                                    {
+                                        "name": "32", 
+                                        "params": [], 
+                                        "type": "Type"
+                                    }
+                                ], 
+                                "type": "Type"
+                            }
+                        }
+                    ]
+                }, 
+                {
+                    "name": "heard2", 
+                    "params": [
+                        {
+                            "name": "a", 
+                            "type": {
+                                "name": "Bit", 
+                                "params": [
+                                    {
+                                        "name": "16", 
+                                        "params": [], 
+                                        "type": "Type"
+                                    }
+                                ], 
+                                "type": "Type"
+                            }
+                        }, 
+                        {
+                            "name": "b", 
+                            "type": {
+                                "name": "Bit", 
+                                "params": [
+                                    {
+                                        "name": "16", 
+                                        "params": [], 
+                                        "type": "Type"
+                                    }
+                                ], 
+                                "type": "Type"
+                            }
+                        }
+                    ]
+                }
+            ], 
+            "name": "EchoIndication"
+        }
+    ]
+}

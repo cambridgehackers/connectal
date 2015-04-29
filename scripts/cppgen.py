@@ -30,7 +30,7 @@ generatedVectors = []
 itypeNames = ['int16_t', 'uint16_t', 'uint32_t', 'uint64_t', 'SpecialTypeForSendingFd', 'ChannelType', 'DmaDbgRec']
 
 proxyClassPrefixTemplate='''
-class %(className)sProxy : public %(parentClass)s {
+class %(className)sProxy : public Portal {
     %(classNameOrig)sCb *cb;
 public:
     %(className)sProxy(int id, int tile = 0, %(classNameOrig)sCb *cbarg = &%(className)sProxyReq, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller = 0) :
@@ -41,7 +41,7 @@ public:
 
 wrapperClassPrefixTemplate='''
 extern %(classNameOrig)sCb %(className)s_cbTable;
-class %(className)sWrapper : public %(parentClass)s {
+class %(className)sWrapper : public Portal {
 public:
     %(className)sWrapper(int id, int tile = 0, PORTAL_INDFUNC cba = %(className)s_handleMessage, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller = 0) :
            Portal(id, tile, bufsize, cba, (void *)&%(className)s_cbTable, poller) {
@@ -519,7 +519,7 @@ def emitMethodDeclaration(mname, params, f, className):
         f.write('{ return cb->%s (' % methodName)
         f.write(', '.join(paramValues) + '); };\n')
 
-def generate_class(classNameOrig, classVariant, declList, parentC, parentCC, generatedCFiles, create_cpp_file, generated_hpp, generated_cpp):
+def generate_class(classNameOrig, classVariant, declList, generatedCFiles, create_cpp_file, generated_hpp, generated_cpp):
     global generatedVectors
     className = classNameOrig + classVariant
     classCName = cName(className)
@@ -537,7 +537,7 @@ def generate_class(classNameOrig, classVariant, declList, parentC, parentCC, gen
     else:
         hpp = create_cpp_file(hppname)
         hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': className.upper()})
-        hpp.write('#include "%s.h"\n' % parentC)
+        hpp.write('#include "portal.h"\n')
         generated_cpp.write('\n/************** Start of %sWrapper CPP ***********/\n' % className)
         generated_cpp.write('#include "%s.h"\n' % classNameOrig)
     for mitem in declList:
@@ -566,7 +566,7 @@ def generate_class(classNameOrig, classVariant, declList, parentC, parentCC, gen
         generated_hpp.write((proxyMethodTemplateDecl % substs) + ';')
     methodTable = ['%(className)s_%(methodName)s,' % {'methodName': p, 'className': className} for p in methodList]
     cpp.write(proxyMethodTableDecl % {'className': className, 'classNameOrig': classNameOrig, 'methodTable': '\n    '.join(methodTable)})
-    subs = {'className': classCName, 'maxSize': (maxSize+1) * sizeofUint32_t, 'parentClass': parentCC,
+    subs = {'className': classCName, 'maxSize': (maxSize+1) * sizeofUint32_t,
             'reqInfo': '0x%x' % ((len(declList) << 16) + (maxSize+1) * sizeofUint32_t),
             'classNameOrig': classNameOrig }
     if classVariant:
@@ -697,7 +697,9 @@ def generate_cpp(project_dir, noisyFlag, jsondata):
 
     verbose = noisyFlag
     generatedCFiles = []
-    globalv_globalvars = jsondata['globalvars']
+    globalv_globalvars = jsondata.get('globalvars')
+    if not globalv_globalvars:
+        globalv_globalvars = {}
     hname = os.path.join(project_dir, 'jni', 'GeneratedTypes.h')
     generated_hpp = util.createDirAndOpen(hname, 'w')
     generated_hpp.write('#ifndef __GENERATED_TYPES__\n')
@@ -719,8 +721,8 @@ def generate_cpp(project_dir, noisyFlag, jsondata):
     generatedCFiles.append(cppname)
     generated_cpp.write('\n#ifndef NO_CPP_PORTAL_CODE\n')
     for item in jsondata['interfaces']:
-        generate_class(item['name'], '', item['decls'], item['parentLportal'], item['parentPortal'], generatedCFiles, create_cpp_file, generated_hpp, generated_cpp)
-        generate_class(item['name'], 'Json', item['decls'], item['parentLportal'], item['parentPortal'], generatedCFiles, create_cpp_file, generated_hpp, generated_cpp)
+        generate_class(item['name'],     '', item['decls'], generatedCFiles, create_cpp_file, generated_hpp, generated_cpp)
+        generate_class(item['name'], 'Json', item['decls'], generatedCFiles, create_cpp_file, generated_hpp, generated_cpp)
     generated_cpp.write('#endif //NO_CPP_PORTAL_CODE\n')
     generated_cpp.close()
     generated_hpp.write('#ifdef __cplusplus\n')

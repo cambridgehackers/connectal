@@ -86,17 +86,14 @@ def declInfo(mitem):
 def classInfo(item):
     rc = {
         'Package': os.path.splitext(os.path.basename(item.package))[0],
-        'moduleContext': '',
         'name': item.name,
-        'parentLportal': item.parentClass("portal"),
-        'parentPortal': item.parentClass("Portal"),
         'decls': [],
     }
     for mitem in item.decls:
         rc['decls'].append(declInfo(mitem))
     return rc
 
-def serialize_json(interfaces, globalimports, dutname, interfaceList):
+def serialize_json(interfaces, globalimports):
     global verbose
     itemlist = []
     for item in interfaces:
@@ -104,7 +101,6 @@ def serialize_json(interfaces, globalimports, dutname, interfaceList):
     jfile = open(tempFilename, 'w')
     toplevel = {}
     toplevel['interfaces'] = itemlist
-    toplevel['interfacesList'] = interfaceList
     gvlist = {}
     for key, value in globalv.globalvars.iteritems():
         gvlist[key] = {'type': value.type}
@@ -135,7 +131,6 @@ def serialize_json(interfaces, globalimports, dutname, interfaceList):
         gdlist.append(newitem)
     toplevel['globaldecls'] = gdlist
     toplevel['globalimports'] = globalimports
-    toplevel['dutname'] = dutname
     if True:
         try:
             json.dump(toplevel, jfile, sort_keys = True, indent = 4)

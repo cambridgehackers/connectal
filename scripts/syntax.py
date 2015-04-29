@@ -22,7 +22,7 @@
 
 import ply.lex as lex
 import AST
-import os, re, sys
+import json, os, re, sys
 
 import globalv
 import cppgen, bsvgen
@@ -1068,9 +1068,7 @@ def syntax_parse(argdata, inputfilename, bsvdefines):
         return parser.parse(data,debug=1)
     return  parser.parse(data)
 
-def generate_bsvcpp(filelist, project_dir, dutname, bsvdefines, interfaces, nf):
-    global noisyFlag
-    noisyFlag=nf
+def generate_bsvcpp(filelist, project_dir, bsvdefines, interfaces):
     for inputfile in filelist:
         syntax_parse(open(inputfile).read(),inputfile, bsvdefines)
     ## code generation pass
@@ -1094,13 +1092,10 @@ def generate_bsvcpp(filelist, project_dir, dutname, bsvdefines, interfaces, nf):
                     pitem.type = AST.Type(myName, [])
                     if not globalv.globalvars.get(myName):
                         globalv.add_new(AST.TypeDef(p.tdtype.instantiate(dict(zip(p.params, thisType.params))), myName, []))
-    jsondata = AST.serialize_json(ilist, globalimports, dutname, interfaces)
+    jsondata = AST.serialize_json(ilist, globalimports)
     if project_dir:
         cppgen.generate_cpp(project_dir, noisyFlag, jsondata)
-        tmp = os.environ.get('PROTODEBUG')
-        if tmp:
-            tmp = True
-        bsvgen.generate_bsv(project_dir, noisyFlag, tmp, jsondata)
+        bsvgen.generate_bsv(project_dir, noisyFlag, False, jsondata)
     
 if __name__=='__main__':
     if len(sys.argv) == 1:
@@ -1122,11 +1117,19 @@ if __name__=='__main__':
     t = os.environ.get('BSVDEFINES_LIST')
     if t:
         deflist = t.split()
-    verbose = os.environ.get('V') == '1'
+    noisyFlag = os.environ.get('V') == '1'
     if os.environ.get('D'):
         parseDebugFlag=True
-    if verbose:
+    if noisyFlag:
         parseTrace=True
-    generate_bsvcpp(sys.argv[1:], os.environ.get('DTOP'), os.environ.get('DUT_NAME'),
-         deflist, ifitems, verbose)
+    project_dir =  os.environ.get('DTOP')
+    tmp = os.environ.get('PROTODEBUG')
+    if tmp:
+        print 'JSONNN', tmp
+        j2file = open(tmp).read()
+        jsondata = json.loads(j2file)
+        cppgen.generate_cpp(project_dir, noisyFlag, jsondata)
+        bsvgen.generate_bsv(project_dir, noisyFlag, True, jsondata)
+    else:
+        generate_bsvcpp(sys.argv[1:], project_dir, deflist, ifitems)
 

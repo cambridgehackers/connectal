@@ -74,7 +74,7 @@ interface %(Dut)s;
 endinterface
 
 (* synthesize *)
-module %(moduleContext)s mk%(Ifc)sOutput(%(Ifc)sOutput);
+module mk%(Ifc)sOutput(%(Ifc)sOutput);
     Vector#(%(channelCount)s, PipeOut#(Bit#(SlaveDataBusWidth))) indicationPipes;
 %(indicationMethodRules)s
     PortalInterrupt#(SlaveDataBusWidth) intrInst <- mkPortalInterrupt(indicationPipes);
@@ -276,15 +276,14 @@ def fixupSubsts(item, suffix):
         mkConnectionMethodRules.append(mkConnectionMethodTemplate % msubs)
         outputPipes.append('        interface %(methodName)s_PipeOut = %(methodName)s_requestAdapter.out;' % msubs)
     substs = {
-        'Package': item['Package'] + '::',
+        'Package': '',
         'channelCount': len(dlist),
-        'moduleContext': item['moduleContext'],
         'Ifc': item['name'],
         'dut': util.decapitalize(name),
         'Dut': util.capitalize(name),
     }
-    if generateInterfaceDefs:
-        substs['Package'] = ''
+    if not generateInterfaceDefs:
+        substs['Package'] = item['Package'] + '::'
     substs['requestOutputPipeInterfaces'] = ''.join(
         [requestOutputPipeInterfaceTemplate % {'methodName': p['name'],
                                                'MethodName': util.capitalize(p['name'])} for p in dlist])

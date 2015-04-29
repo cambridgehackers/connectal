@@ -445,6 +445,8 @@ if __name__=='__main__':
     substs['FPGAMAKE_DEFINE'] = '-D BSV_POSITIVE_RESET' if 'BSV_POSITIVE_RESET' in options.bsvdefine else ''
     bitsmake=fpgamakeRuleTemplate % substs
 
+    if options.protobuf:
+        protolist = [os.path.abspath(fn) for fn in options.protobuf]
     make.write(makefileTemplate % {'connectaldir': connectaldir,
                                    'bsvpath': ':'.join(list(set([os.path.dirname(os.path.abspath(bsvfile)) for bsvfile in options.bsvfile])
                                                             | set([os.path.join(connectaldir, 'bsv')])
@@ -475,7 +477,7 @@ if __name__=='__main__':
                                    'bsvdefines_list': ' '.join(bsvdefines),
                                    'shared': 'CONNECTAL_SHARED=1' if options.shared else '',
                                    'nohardware': 'CONNECTAL_NOHARDWARE=1' if options.nohardware else '',
-                                   'protobuf': 'export PROTODEBUG=1' if options.protobuf else '',
+                                   'protobuf': ('export PROTODEBUG=%s' % ' '.join(protolist)) if options.protobuf else '',
                                    'bitsmake': bitsmake
                                    })
     make.close()
