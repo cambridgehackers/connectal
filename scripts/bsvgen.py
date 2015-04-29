@@ -66,11 +66,11 @@ exposedProxyInterfaceTemplate='''
 // exposed proxy interface
 interface %(Ifc)sOutput;
     interface PipePortal#(0, %(channelCount)s, SlaveDataBusWidth) portalIfc;
-    interface %(Package)s::%(Ifc)s ifc;
+    interface %(Package)s%(Ifc)s ifc;
 endinterface
 interface %(Dut)s;
     interface StdPortal portalIfc;
-    interface %(Package)s::%(Ifc)s ifc;
+    interface %(Package)s%(Ifc)s ifc;
 endinterface
 
 (* synthesize *)
@@ -78,7 +78,7 @@ module %(moduleContext)s mk%(Ifc)sOutput(%(Ifc)sOutput);
     Vector#(%(channelCount)s, PipeOut#(Bit#(SlaveDataBusWidth))) indicationPipes;
 %(indicationMethodRules)s
     PortalInterrupt#(SlaveDataBusWidth) intrInst <- mkPortalInterrupt(indicationPipes);
-    interface %(Package)s::%(Ifc)s ifc;
+    interface %(Package)s%(Ifc)s ifc;
 %(indicationMethods)s
     endinterface
     interface PipePortal portalIfc;
@@ -103,7 +103,7 @@ module mk%(Dut)sSynth#(Bit#(SlaveDataBusWidth) id)(%(Dut)s);
       interface ReadOnly interrupt = ctrlPort.interrupt;
       interface WriteOnly num_portals = ctrlPort.num_portals;
     endinterface);
-  interface %(Package)s::%(Ifc)s ifc = dut.ifc;
+  interface %(Package)s%(Ifc)s ifc = dut.ifc;
 endmodule
 
 // exposed proxy MemPortal
@@ -205,6 +205,14 @@ requestRuleTemplate='''
     requestPipeIn[%(channelNumber)s] = %(methodName)s_requestAdapter.in;
 '''
 
+methodDefTemplate='''
+    method Action %(methodName)s(%(formals)s);'''
+
+interfaceDefTemplate = '''
+interface %(Ifc)s;%(methodDef)s
+endinterface
+'''
+
 messageSizeTemplate='''
             %(channelNumber)s: return fromInteger(valueOf(SizeOf#(%(MethodName)s_Message)));'''
 
@@ -219,9 +227,6 @@ indicationRuleTemplate='''
     AdapterToBus#(SlaveDataBusWidth,%(MethodName)s_Message) %(methodName)s_responseAdapter <- mkAdapterToBus();
     indicationPipes[%(channelNumber)s] = %(methodName)s_responseAdapter.out;
 '''
-
-indicationMethodDeclTemplate='''
-    method Action %(methodName)s(%(formals)s);'''
 
 indicationMethodTemplate='''
     method Action %(methodName)s(%(formals)s);
@@ -271,13 +276,15 @@ def fixupSubsts(item, suffix):
         mkConnectionMethodRules.append(mkConnectionMethodTemplate % msubs)
         outputPipes.append('        interface %(methodName)s_PipeOut = %(methodName)s_requestAdapter.out;' % msubs)
     substs = {
-        'Package': item['Package'],
+        'Package': item['Package'] + '::',
         'channelCount': len(dlist),
         'moduleContext': item['moduleContext'],
         'Ifc': item['name'],
         'dut': util.decapitalize(name),
         'Dut': util.capitalize(name),
     }
+    if generateInterfaceDefs:
+        substs['Package'] = ''
     substs['requestOutputPipeInterfaces'] = ''.join(
         [requestOutputPipeInterfaceTemplate % {'methodName': p['name'],
                                                'MethodName': util.capitalize(p['name'])} for p in dlist])
@@ -287,10 +294,13 @@ def fixupSubsts(item, suffix):
     substs['indicationMethods'] = collectElements(dlist, indicationMethodTemplate, name)
     substs['requestElements'] = collectElements(dlist, requestStructTemplate, name)
     substs['methodRules'] = collectElements(dlist, requestRuleTemplate, name)
+    substs['methodDef'] = collectElements(dlist, methodDefTemplate, name)
     substs['messageSizes'] = collectElements(dlist, messageSizeTemplate, name)
     return substs
 
-def generate_bsv(project_dir, noisyFlag, jsondata):
+def generate_bsv(project_dir, noisyFlag, aGenDef, jsondata):
+    global generateInterfaceDefs
+    generateInterfaceDefs = aGenDef
     generatedPackageNames = []
     for item in jsondata['interfaces']:
         pname = item['name']
@@ -300,11 +310,16 @@ def generate_bsv(project_dir, noisyFlag, jsondata):
         fname = os.path.join(project_dir, 'generatedbsv', '%s.bsv' % pname)
         bsv_file = util.createDirAndOpen(fname, 'w')
         bsv_file.write('package %s;\n' % pname)
-        extraImports = (['import %s::*;\n' % pn for pn in [item['Package']] ]
-                   + ['import %s::*;\n' % i for i in jsondata['globalimports'] if not i in generatedPackageNames])
-        bsv_file.write(preambleTemplate % {'extraImports' : ''.join(extraImports)})
+        if generateInterfaceDefs:
+            extraImports = ['HostInterface']
+        else:
+            extraImports = [item['Package']]
+            extraImports += [i for i in jsondata['globalimports'] if not i in generatedPackageNames]
+        bsv_file.write(preambleTemplate % {'extraImports' : ''.join(['import %s::*;\n' % pn for pn in extraImports])})
         if noisyFlag:
             print 'Writing file ', fname
+        if generateInterfaceDefs:
+            bsv_file.write(interfaceDefTemplate % fixupSubsts(item, ''))
         
         bsv_file.write(exposedWrapperInterfaceTemplate % fixupSubsts(item, 'Wrapper'))
         bsv_file.write(exposedProxyInterfaceTemplate % fixupSubsts(item, 'Proxy'))

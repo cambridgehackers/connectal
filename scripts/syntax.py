@@ -1097,7 +1097,10 @@ def generate_bsvcpp(filelist, project_dir, dutname, bsvdefines, interfaces, nf):
     jsondata = AST.serialize_json(ilist, globalimports, dutname, interfaces)
     if project_dir:
         cppgen.generate_cpp(project_dir, noisyFlag, jsondata)
-        bsvgen.generate_bsv(project_dir, noisyFlag, jsondata)
+        tmp = os.environ.get('PROTODEBUG')
+        if tmp:
+            tmp = True
+        bsvgen.generate_bsv(project_dir, noisyFlag, tmp, jsondata)
     
 if __name__=='__main__':
     if len(sys.argv) == 1:

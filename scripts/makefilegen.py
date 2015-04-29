@@ -41,6 +41,7 @@ argparser.add_argument('-O', '--OS', default=None, choices=supported_os, help='T
 argparser.add_argument('-interfaces', '--interfaces', help='BSV interface', action='append')
 argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps project directory')
 argparser.add_argument(      '--pinfo', default=None, help='Project description file (json)')
+argparser.add_argument(      '--protobuf', default=[], help='Interface description in protobuf', action='append')
 argparser.add_argument('-s', '--source', help='C++ source files', action='append')
 argparser.add_argument(      '--source2', help='C++ second program source files', action='append')
 argparser.add_argument(      '--cflags', help='C++ CFLAGS', action='append')
@@ -156,6 +157,7 @@ export DUT_NAME = %(Dut)s
 %(runsource2)s
 %(shared)s
 %(nohardware)s
+%(protobuf)s
 
 %(mdefines)s
 %(dump_map)s
@@ -473,6 +475,7 @@ if __name__=='__main__':
                                    'bsvdefines_list': ' '.join(bsvdefines),
                                    'shared': 'CONNECTAL_SHARED=1' if options.shared else '',
                                    'nohardware': 'CONNECTAL_NOHARDWARE=1' if options.nohardware else '',
+                                   'protobuf': 'export PROTODEBUG=1' if options.protobuf else '',
                                    'bitsmake': bitsmake
                                    })
     make.close()
