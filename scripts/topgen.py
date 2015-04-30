@@ -95,7 +95,9 @@ typedef `PinType PinType;
 
 typedef enum {%(enumList)s} IfcNames deriving (Eq,Bits);
 
+`ifndef IMPORT_HOSTIF
 (* synthesize *)
+`endif
 module mkBluenocTop
 `ifdef IMPORT_HOSTIF
        #(HostInterface host)
