@@ -8,9 +8,13 @@ CPPFILES=testinnerprod.cpp
 NUMBER_OF_MASTERS =0
 AUTOTOP = --importfiles InnerProdInterface
 
-DERIVED_CLOCK_PERIOD=2
+#DERIVED_CLOCK_PERIOD=2
 
-CONNECTALFLAGS += -D IMPORT_HOSTIF -D BSV_POSITIVE_RESET
+#CONNECTALFLAGS += -D IMPORT_HOSTIF
 CONNECTALFLAGS += -P mkInnerProdTile
+
+ifeq ($(BOARD),xsim)
+AUTOTOP = --bluenoc
+endif
 
 include $(CONNECTALDIR)/Makefile.connectal

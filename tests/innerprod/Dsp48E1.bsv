@@ -1,4 +1,4 @@
-
+import Clocks::*;
 
 interface Dsp48E1;
    method Bit#(48) p();
@@ -26,6 +26,13 @@ interface PRIM_DSP48E1;
    method Action b(Bit#(18) v);
    method Action c(Bit#(48) v);
    method Action d(Bit#(25) v);
+   method Action acin(Bit#(30) v);
+   method Action bcin(Bit#(18) v);
+   method Action carrycascin(Bit#(1) v);
+   method Action carryin(Bit#(1) v);
+   method Action multsignin(Bit#(1) v);
+   method Action pcin(Bit#(48) v);
+
    method Action cea1(Bit#(1) en);		// 1-bit input: Clock enable input for 1st stage AREG
    method Action cea2(Bit#(1) en);		// 1-bit input: Clock enable input for 2nd stage AREG
    method Action cead(Bit#(1) en);		// 1-bit input: Clock enable input for ADREG
@@ -39,22 +46,24 @@ interface PRIM_DSP48E1;
    method Action ceinmode(Bit#(1) en);		// 1-bit input: Clock enable input for INMODEREG
    method Action cem(Bit#(1) en);		// 1-bit input: Clock enable input for MREG
    method Action cep(Bit#(1) en);		// 1-bit input: Clock enable input for PREG
-   method Action rsta(Bit#(1) rst);		// 1-bit input: Reset input for AREG
-   method Action rstallcarryin(Bit#(1) rst);		// 1-bit input: Reset input for CARRYINREG
-   method Action rstalumode(Bit#(1) rst);		// 1-bit input: Reset input for ALUMODEREG
-   method Action rstb(Bit#(1) rst);		// 1-bit input: Reset input for BREG
-   method Action rstc(Bit#(1) rst);		// 1-bit input: Reset input for CREG
-   method Action rstctrl(Bit#(1) rst);		// 1-bit input: Reset input for OPMODEREG and CARRYINSELREG
-   method Action rstd(Bit#(1) rst);		// 1-bit input: Reset input for DREG and ADREG
-   method Action rstinmode(Bit#(1) rst);		// 1-bit input: Reset input for INMODEREG
-   method Action rstm(Bit#(1) rst);		// 1-bit input: Reset input for MREG
-   method Action rstp(Bit#(1) rst);		// 1-bit input: Reset input for PREG
 endinterface
 
 import "BVI" DSP48E1 =
 module vmkDSP48E1(PRIM_DSP48E1);
+   let currentReset <- exposeCurrentReset;
+   let invertedReset <- mkResetInverter(currentReset);
    default_clock clk(CLK);
-   no_reset;
+
+   default_reset rsta(RSTA) = invertedReset;
+   input_reset rstb(RSTB) = invertedReset;
+   input_reset rstc(RSTC) = invertedReset;
+   input_reset rstd(RSTD) = invertedReset;
+   input_reset rstallcarryin(RSTALLCARRYIN) = invertedReset;
+   input_reset rstalumode(RSTALUMODE) = invertedReset;
+   input_reset rstctrl(RSTCTRL) = invertedReset;
+   input_reset rstinmode(RSTINMODE) = invertedReset;
+   input_reset rstm(RSTM) = invertedReset;
+   input_reset rstp(RSTP) = invertedReset;
 
    method P p();
    method alumode(ALUMODE) enable ((*inhigh*)EN_alumode);
@@ -65,6 +74,12 @@ module vmkDSP48E1(PRIM_DSP48E1);
    method b(B) enable ((*inhigh*)EN_b);
    method c(C) enable ((*inhigh*)EN_c);
    method d(D) enable ((*inhigh*)EN_d);
+   method acin(ACIN) enable ((*inhigh*)EN_acin);
+   method bcin(BCIN) enable ((*inhigh*)EN_bcin);
+   method carrycascin(CARRYCASCIN) enable ((*inhigh*)EN_carrycascin);
+   method carryin(CARRYIN) enable ((*inhigh*)EN_carryin);
+   method multsignin(MULTSIGNIN) enable ((*inhigh*)EN_multsignin);
+   method pcin(PCIN) enable ((*inhigh*)EN_pcin);
 
    method cea1(CEA1) enable ((*inhigh*)EN_cea1);
    method cea2(CEA2) enable ((*inhigh*)EN_cea2);
@@ -79,37 +94,34 @@ module vmkDSP48E1(PRIM_DSP48E1);
    method ceinmode(CEINMODE) enable ((*inhigh*)EN_ceinmode);
    method cem(CEM) enable ((*inhigh*)EN_cem);
    method cep(CEP) enable ((*inhigh*)EN_cep);
-   method rsta(RSTA) enable ((*inhigh*)EN_rsta);
-   method rstallcarryin(RSTALLCARRYIN) enable ((*inhigh*)EN_rstallcarryin);
-   method rstalumode(RSTALUMODE) enable ((*inhigh*)EN_rstalumode);
-   method rstb(RSTB) enable ((*inhigh*)EN_rstb);
-   method rstc(RSTC) enable ((*inhigh*)EN_rstc);
-   method rstctrl(RSTCTRL) enable ((*inhigh*)EN_rstctrl);
-   method rstd(RSTD) enable ((*inhigh*)EN_rstd);
-   method rstinmode(RSTINMODE) enable ((*inhigh*)EN_rstinmode);
-   method rstm(RSTM) enable ((*inhigh*)EN_rstm);
-   method rstp(RSTP) enable ((*inhigh*)EN_rstp);
-   schedule (alumode,carryinsel,inmode,opmode,a,b,c,d,cea1,cea2,cead,ceb1,ceb2,cealumode,cec,cecarryin,cectrl,ced,ceinmode,cem,cep,rsta,rstallcarryin,rstalumode,rstb,rstc,rstctrl,rstd,rstinmode,rstm,rstp,p)
-      CF (alumode,carryinsel,inmode,opmode,a,b,c,d,cea1,cea2,cead,ceb1,ceb2,cealumode,cec,cecarryin,cectrl,ced,ceinmode,cem,cep,rsta,rstallcarryin,rstalumode,rstb,rstc,rstctrl,rstd,rstinmode,rstm,rstp,p);
+   schedule (alumode,carryinsel,inmode,opmode,a,b,c,d,acin,bcin,carrycascin,carryin,multsignin,pcin,cea1,cea2,cead,ceb1,ceb2,cealumode,cec,cecarryin,cectrl,ced,ceinmode,cem,cep,p)
+      CF (alumode,carryinsel,inmode,opmode,a,b,c,d,acin,bcin,carrycascin,carryin,multsignin,pcin,cea1,cea2,cead,ceb1,ceb2,cealumode,cec,cecarryin,cectrl,ced,ceinmode,cem,cep,p);
 endmodule
 
+(* synthesize *)
 module mkDsp48E1(Dsp48E1);
    let dsp <- vmkDSP48E1();
+   let defaultReset <- exposeCurrentReset;
+   let optionalReset = defaultReset; // noReset
    Wire#(Bit#(4)) alumodeWire <- mkDWire(0);
+   Reg#(Bit#(4)) alumodeReg <- mkReg(0);
    Wire#(Bit#(3)) carryinselWire <- mkDWire(0);
    Wire#(Bit#(5)) inmodeWire <- mkDWire(0);
-   Wire#(Bit#(7)) opmodeWire <- mkDWire(0);
+   Wire#(Bit#(7)) opmodeWire <- mkDWire(7'h35);
+   Reg#(Bit#(7)) opmodeReg <- mkReg(7'h35);
+
    Wire#(Bit#(30)) aWire <- mkDWire(0);
    Wire#(Bit#(18)) bWire <- mkDWire(0);
    Wire#(Bit#(48)) cWire <- mkDWire(0);
    Wire#(Bit#(25)) dWire <- mkDWire(0);
 
    Wire#(Bit#(1)) ce1Wire <- mkDWire(0);
-   Reg#(Bit#(1)) ce2Reg <- mkReg(0, reset_by noReset);
-   Reg#(Bit#(1)) cepReg <- mkReg(0, reset_by noReset);
+   Reg#(Bit#(1)) ce2Reg <- mkReg(0, reset_by optionalReset);
+   Reg#(Bit#(1)) cepReg <- mkReg(0, reset_by optionalReset);
    Wire#(Bit#(1)) last1Wire <- mkDWire(0);
-   Reg#(Bit#(1))  last2Reg  <- mkReg(0, reset_by noReset);
-   Reg#(Bit#(1))  last3Reg  <- mkReg(0, reset_by noReset);
+   Reg#(Bit#(1))  last2Reg  <- mkReg(0, reset_by optionalReset);
+   Reg#(Bit#(1))  last3Reg  <- mkReg(0, reset_by optionalReset);
+   Reg#(Bit#(1))  last4Reg  <- mkReg(0, reset_by optionalReset);
 
    rule clock_enable_and_reset;
       ce2Reg <= ce1Wire;
@@ -117,42 +129,46 @@ module mkDsp48E1(Dsp48E1);
 
       last2Reg <= last1Wire;
       last3Reg <= last2Reg;
+      last4Reg <= last3Reg;
 
-      dsp.cea1(ce1Wire);
-      dsp.cea2(ce2Reg);
+      dsp.cea1(1); // (ce1Wire);
+      dsp.cea2(1); // (ce2Reg);
       dsp.cead(1);
-      dsp.ceb1(ce1Wire);
-      dsp.ceb2(ce2Reg);
-      dsp.cealumode(ce1Wire);
+      dsp.ceb1(1); // (ce1Wire);
+      dsp.ceb2(1); // (ce2Reg);
+      dsp.cealumode(1); // (ce1Wire);
       dsp.cec(1);
       dsp.cecarryin(1);
       dsp.cectrl(1);
       dsp.ced(1);
       dsp.ceinmode(1);
       dsp.cem(1);
-      dsp.cep(cepReg);
+      dsp.cep(1); // (cepReg);
 
-      dsp.rsta(0);
-      dsp.rstallcarryin(0);
-      dsp.rstalumode(0);
-      dsp.rstb(0);
-      dsp.rstc(0);
-      dsp.rstctrl(0);
-      dsp.rstd(0);
-      dsp.rstinmode(0);
-      dsp.rstm(0);
-      dsp.rstp(0);
    endrule
 
    rule driveInputs;
-      dsp.alumode(alumodeWire);
+      opmodeReg <= opmodeWire;
+      alumodeReg <= alumodeWire;
+
+      dsp.alumode(alumodeReg);
       dsp.carryinsel(carryinselWire);
       dsp.inmode(inmodeWire);
-      dsp.opmode(opmodeWire);
+      dsp.opmode(opmodeReg);
       //dsp.a(aWire);
       //dsp.b(bWire);
       //dsp.c(cWire);
       //dsp.d(dWire);
+
+      dsp.acin(0);
+      dsp.bcin(0);
+      dsp.carrycascin(0);
+      dsp.carryin(0);
+      dsp.pcin(0);
+      dsp.a(extend(16'haaaa));
+      dsp.b(extend(16'hbbbb));
+      dsp.c(extend(16'hcccc));
+      dsp.d(extend(16'hdddd));
    endrule
 
    method Action alumode(Bit#(4) v);
@@ -169,18 +185,18 @@ module mkDsp48E1(Dsp48E1);
    endmethod
    method Action a(Bit#(30) v);
       ce1Wire <= 1;
-      dsp.a(v);
+      //dsp.a(v);
    endmethod
    method Action b(Bit#(18) v);
-      dsp.b(v);
+      //dsp.b(v);
    endmethod
    method Action c(Bit#(48) v);
-      dsp.c(v);
+//      dsp.c(v);
    endmethod
    method Action d(Bit#(25) v);
-      dsp.d(v);
+      //dsp.d(v);
    endmethod
-   method Bit#(48) p() if (last2Reg == 1);
+   method Bit#(48) p() if (last2Reg == 1 || last3Reg == 1 || last4Reg == 1);
       return dsp.p();
    endmethod
    method Action last(Bit#(1) v);

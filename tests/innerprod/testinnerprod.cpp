@@ -32,8 +32,8 @@ public:
     if (++cnt == NUMBER_OF_TESTS)
       exit(0);
   }
-  void innerProd(uint16_t v) {
-      fprintf(stderr, "innerProd v=%x\n", v);
+  void innerProd(uint64_t v) {
+      fprintf(stderr, "innerProd v=%lx\n", v);
   }
     InnerProd(unsigned int id) : InnerProdIndicationWrapper(id), cnt(0) {}
 };
@@ -44,8 +44,14 @@ int main(int argc, const char **argv)
     InnerProdRequestProxy device(IfcNames_InnerProdRequestS2H);
     device.pint.busyType = BUSY_SPIN;
 
-    device.innerProd(0x0100, 0x0100, 1, 1);
-    for (int times = 0; times < 10; times++)
+    fprintf(stderr, "[%s:%d] waiting for response\n", __FILE__, __LINE__);
+    int alumode = 0x35;
+    int inmode = 0;
+    int opmode = 0;
+    device.innerProd(0x0080, 0x0080, 1, 1, alumode, inmode, opmode);
+    //device.innerProd(0xa5a5, 0x5a5a, 1, 1, alumode, inmode, opmode);
+    for (int times = 0; times < 100; times++)
 	sleep(1);
+    device.finish();
 }
 
