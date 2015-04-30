@@ -109,7 +109,7 @@ scripts/syntax/parsetab.py: scripts/syntax.py
 	[ -e out ] || mkdir out
 	python scripts/syntax.py
 
-allarchlist = ac701 zedboard zc702 zc706 kc705 vc707 zynq100 v2000t bluesim miniitx100 de5 htg4 vsim parallella xsim zybo
+allarchlist = ac701 zedboard zc702 zc706 kc705 vc707 zynq100 v2000t bluesim miniitx100 de5 htg4 vsim parallella xsim zybo kc705g2
 
 #################################################################################################
 # gdb
@@ -191,3 +191,4 @@ distclean:
 	rm -rf doc/library/build/ examples/rbm/datasets/
 	rm -f doc/library/source/devguide/connectalbuild-1.png
 	rm -f drivers/*/driver_signature_file.h
+	rm -f drivers/pcieportal/pcieportal_signature_file.h drivers/portalmem/portalmem_signature_file.h

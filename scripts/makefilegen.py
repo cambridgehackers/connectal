@@ -227,7 +227,7 @@ bsim_exe2: $(SOURCES2)
 	$(Q)g++ $(CFLAGS_COMMON) $(CFLAGS2) -o bsim_exe2 -DBSIM $(SOURCES2) $(BSIM_EXE_CXX) $(LDLIBS)
 
 XSI_EXAMPLE_DIR = $(VIVADODIR)/examples/xsim/verilog/xsi/counter/
-XSOURCES = $(XSI_EXAMPLE_DIR)/xsi_loader.cpp $(CONNECTALDIR)/cpp/transportXsim.cpp $(PORTAL_SRC_FILES)
+XSOURCES = $(XSI_EXAMPLE_DIR)/xsi_loader.cpp $(CONNECTALDIR)/cpp/XsimTop.cpp $(CONNECTALDIR)/cpp/transportXsim.cpp $(PORTAL_SRC_FILES)
 xsim: $(XSOURCES)
 	g++ $(CFLAGS) -I$(VIVADODIR)/data/xsim/include -I$(XSI_EXAMPLE_DIR) -o xsim $(XSOURCES) -ldl -lrt -pthread
 '''
