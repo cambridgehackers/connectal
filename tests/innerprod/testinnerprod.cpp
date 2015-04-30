@@ -33,7 +33,7 @@ public:
       exit(0);
   }
   void innerProd(uint64_t v) {
-      fprintf(stderr, "innerProd v=%lx\n", v);
+    fprintf(stderr, "innerProd v=%llx\n", (long long)v);
   }
     InnerProd(unsigned int id) : InnerProdIndicationWrapper(id), cnt(0) {}
 };
