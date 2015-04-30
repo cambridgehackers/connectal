@@ -74,30 +74,29 @@ int main(int argc, const char **argv)
   SPIResponse *ind = new SPIResponse(IfcNames_ControllerResponse);
   uint8_t iter = 1;
 
-  printf("Setting fpga registers\n");
-  device->set_clk_inv(1);
-  device->set_spew_en(1);
-  device->set_spew_src(1);
+  device->set_clk_inv(0);
+  device->set_spew_en(0);
+  device->set_spew_src(0);
+  spidevicefd = open(SPIDEVICENAME, O_RDWR);
+  if (spidevicefd < 0){
+    printf("Error: cannot open SPI device\n");
+    goto finish;
+  } else if (ioctl(spidevicefd, SPI_IOC_WR_MODE, &spimode) == -1
+	     || ioctl(spidevicefd, SPI_IOC_RD_MODE, &spimode) == -1
+	     || ioctl(spidevicefd, SPI_IOC_WR_BITS_PER_WORD, &spibits) == -1
+	     || ioctl(spidevicefd, SPI_IOC_RD_BITS_PER_WORD, &spibits) == -1
+	     || ioctl(spidevicefd, SPI_IOC_WR_MAX_SPEED_HZ, &speed) == -1
+	     || ioctl(spidevicefd, SPI_IOC_RD_MAX_SPEED_HZ, &speed) == -1){
+    printf("Error: cannot configure SPI device\n");
+    goto finish;
+  } else {
+    printf("Successfully opened spi %x\n", spidevicefd);
+  }
 
-  while(iter < 2){
-    spidevicefd = open(SPIDEVICENAME, O_RDWR);
-    if (spidevicefd < 0){
-      printf("Error: cannot open SPI device\n");
-      goto finish;
-    } else if (ioctl(spidevicefd, SPI_IOC_WR_MODE, &spimode) == -1
-	       || ioctl(spidevicefd, SPI_IOC_RD_MODE, &spimode) == -1
-	       || ioctl(spidevicefd, SPI_IOC_WR_BITS_PER_WORD, &spibits) == -1
-	       || ioctl(spidevicefd, SPI_IOC_RD_BITS_PER_WORD, &spibits) == -1
-	       || ioctl(spidevicefd, SPI_IOC_WR_MAX_SPEED_HZ, &speed) == -1
-	       || ioctl(spidevicefd, SPI_IOC_RD_MAX_SPEED_HZ, &speed) == -1){
-      printf("Error: cannot configure SPI device\n");
-      goto finish;
-    } else {
-      printf("Successfully opened spi %x\n", spidevicefd);
-    }
+  while(iter < 4){
     uint8_t tx[sizeof(uint32_t)], rx[sizeof(uint32_t)];
     for(int i = 0; i < sizeof(uint32_t); i++)
-      tx[i] = 0xFF;
+      tx[i] = 1;
     struct spi_ioc_transfer tr;
     tr.tx_buf = (unsigned long)tx;
     tr.rx_buf = (unsigned long)rx;
@@ -105,17 +104,21 @@ int main(int argc, const char **argv)
     tr.delay_usecs = delay;
     tr.speed_hz = speed;
     tr.bits_per_word = spibits;
-    device->cnt_cycle_req(1024);
+    {
+      struct CycleReq cr;
+      cr.clk_sel = 0;
+      cr.clk_cnt = 10000;
+      device->cnt_cycle_req(cr);
+    }
     if (ioctl(spidevicefd, SPI_IOC_MESSAGE(1), &tr) < 1)
       printf("can't send spi message\n");
     else
       printf("successfully sent spi message\n");
     iter++;
-    close(spidevicefd);
+    sleep(1);
   }
-
  finish:
-  usleep(100);
+  if (spidevicefd >= 0) 
+    close(spidevicefd);
   return 0;
-
 }
