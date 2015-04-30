@@ -54,6 +54,7 @@ module mkXsimTop(XsimTop);
    rule startdump if (!dumpstarted);
       $dumpfile("dump.vcd");
       $dumpvars;
+      dumpstarted <= True;
    endrule
    XsimHost host <- mkXsimHost(derivedClock, derivedReset);
    BluenocTop#(1,1) top <- mkBluenocTop(
