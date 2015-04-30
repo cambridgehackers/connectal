@@ -28,6 +28,9 @@ class XsimMemSlaveIndication;
 static XsimMemSlaveRequestProxy *memSlaveRequestProxy;
 static XsimMemSlaveIndication *memSlaveIndication;
 static int trace_xsim ;//= 1;
+static Portal *mcommon;
+//FIXME, should go into pint->something
+static std::queue<uint32_t> msgbeats;
 
 class XsimMemSlaveIndication : public XsimMemSlaveIndicationWrapper {
     struct idInfo {
@@ -87,13 +90,11 @@ int XsimMemSlaveIndication::fpgaNumber(int fpgaId)
         if (ids[i].id == fpgaId) {
             return ids[i].number;
         }
-
     PORTAL_PRINTF( "Error: init_xsim: did not find fpga_number %d\n", fpgaId);
     PORTAL_PRINTF( "    Found fpga numbers:");
     for (int i = 0; ids[i].valid; i++)
         PORTAL_PRINTF( " %d", ids[i].id);
     PORTAL_PRINTF( "\n");
-
     return 0;
 }
 
@@ -102,9 +103,9 @@ int XsimMemSlaveIndication::getReadData(uint32_t *data)
     return -1;
 }
 
-Portal *mcommon;
-static void connect_to_xsim()
+static int init_xsim(struct PortalInternal *pint, void *init_param)
 {
+    //fprintf(stderr, "FIXME [%s:%d]\n", __FUNCTION__, __LINE__);
     if (memSlaveRequestProxy == 0) {
         PortalSocketParam paramSocket = {};
         PortalMuxParam param = {};
@@ -112,26 +113,16 @@ static void connect_to_xsim()
         mcommon = new Portal(0, 0, sizeof(uint32_t), portal_mux_handler, NULL, &transportSocketInit, &paramSocket);
         param.pint = &mcommon->pint;
         fprintf(stderr, "[%s:%d] adding fd %d\n", __FUNCTION__, __LINE__, mcommon->pint.client_fd[0]);
-
-        fprintf(stderr, "[%s:%d]\n", __FUNCTION__, __LINE__);
         memSlaveIndication = new XsimMemSlaveIndication(XsimIfcNames_XsimMemSlaveIndication, &transportMux, &param);
         memSlaveRequestProxy = new XsimMemSlaveRequestProxy(XsimIfcNames_XsimMemSlaveRequest, &transportMux, &param);
         fprintf(stderr, "[%s:%d] calling connect()\n", __FUNCTION__, __LINE__);
         memSlaveRequestProxy->connect();
         fprintf(stderr, "[%s:%d] called connect\n", __FUNCTION__, __LINE__);
     }
-}
-
-static int init_xsim(struct PortalInternal *pint, void *init_param)
-{
-    //fprintf(stderr, "FIXME [%s:%d]\n", __FUNCTION__, __LINE__);
-    connect_to_xsim();
     //pint->fpga_number = memSlaveIndication->fpgaNumber(pint->fpga_number);
     return 0;
 }
 
-uint32_t hdr = 0;
-int numwords = 0;
 static int recv_portal_xsim(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
 {
     return -1;     // nothing to do here?
@@ -143,16 +134,14 @@ static unsigned int read_portal_xsim(PortalInternal *pint, volatile unsigned int
     uint32_t beat = memSlaveIndication->srcbeats.front();
     memSlaveIndication->srcbeats.pop();
     if (trace_xsim)
-        fprintf(stderr, "[%s:%d] id=%d addr=%08lx data=%08x numwords=%ld\n", __FUNCTION__, __LINE__, pint->fpga_number, (long)*addr, beat, (long)numwords);
+        fprintf(stderr, "%s: id=%d addr=%08lx data=%08x numwords=%ld\n", __FUNCTION__, pint->fpga_number, (long)*addr, beat, (long)numwords);
     return beat;
 }
 
-//FIXME, should go into pint->something
-std::queue<uint32_t> msgbeats;
 static void write_portal_xsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
 {
     if (trace_xsim)
-        fprintf(stderr, "[%s:%d] id=%d addr=%08lx data=%08x\n", __FUNCTION__, __LINE__, pint->fpga_number, (long)*addr, v);
+        fprintf(stderr, "%s: id=%d addr=%08lx data=%08x\n", __FUNCTION__, pint->fpga_number, (long)*addr, v);
     msgbeats.push(v);
 }
 static void send_portal_xsim(struct PortalInternal *pint, volatile unsigned int *data, unsigned int hdr, int sendFd)
@@ -171,7 +160,7 @@ static void send_portal_xsim(struct PortalInternal *pint, volatile unsigned int 
     }
 }
 
-void write_portal_fd_xsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
+static void write_portal_fd_xsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
 {
     fprintf(stderr, "FIXME [%s:%d] fd %d\n", __FUNCTION__, __LINE__, v);
     //FIXME
@@ -181,7 +170,7 @@ static void enableint_portal_xsim(struct PortalInternal *pint, int val)
 {
 }
 
-int event_portal_xsim(struct PortalInternal *pint)
+static int event_portal_xsim(struct PortalInternal *pint)
 {
     memSlaveIndication->lockReadData();
     if (memSlaveIndication->srcbeats.size()) {
@@ -191,8 +180,8 @@ int event_portal_xsim(struct PortalInternal *pint)
         uint32_t methodId = (bluenoc_hdr >> 24) & 0xFF;
 
         if (memSlaveIndication->srcbeats.size() >= numwords+1) {
-            fprintf(stderr, "[%s:%d] pint=%p srcbeats=%d methodwords=%d methodId=%d hdr=%08x\n",
-              __FUNCTION__, __LINE__, pint, (int)memSlaveIndication->srcbeats.size(), numwords, methodId, bluenoc_hdr);
+            fprintf(stderr, "%s: pint=%p srcbeats=%d methodwords=%d methodId=%d hdr=%08x\n",
+              __FUNCTION__, pint, (int)memSlaveIndication->srcbeats.size(), numwords, methodId, bluenoc_hdr);
             memSlaveIndication->srcbeats.pop();
             if (pint->handler)
                 pint->handler(pint, methodId, 0);
