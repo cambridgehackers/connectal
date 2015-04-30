@@ -17,4 +17,10 @@ ifeq ($(BOARD),xsim)
 AUTOTOP = --bluenoc
 endif
 
+xsim_manual:
+	make build.xsim
+	cd xsim; xvlog --sv ../xsimtop.sv
+	cd xsim; xelab --debug wave -L unisim -L unifast work.xsimtop
+	cd xsim; xsim work.xsimtop
+
 include $(CONNECTALDIR)/Makefile.connectal
