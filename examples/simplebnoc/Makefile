@@ -7,7 +7,7 @@ NUMBER_OF_MASTERS =0
 ifeq ($(BOARD),xsim)
 S2H_INTERFACES = SimpleRequest:Simple.request
 H2S_INTERFACES = Simple:SimpleRequest
-AUTOTOP = --bluenoc
+#AUTOTOP = --bluenoc
 else
 INTERFACES = SimpleRequest
 BSVFILES += Top.bsv

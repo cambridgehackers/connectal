@@ -28,6 +28,7 @@ import util
 argparser = argparse.ArgumentParser("Generate Top.bsv for an project.")
 argparser.add_argument('--project-dir', help='project directory')
 argparser.add_argument('--interface', help='exported interface declaration', action='append')
+argparser.add_argument('--board', help='Board type')
 argparser.add_argument('--importfiles', help='added imports', action='append')
 argparser.add_argument('--portname', help='added portal names to enum list', action='append')
 argparser.add_argument('--wrapper', help='exported wrapper interfaces', action='append')
@@ -266,6 +267,8 @@ if __name__=='__main__':
     instantiatedModules = []
     importfiles = []
     exportedNames = ['export mkConnectalTop;']
+    if options.board == 'xsim':
+        options.bluenoc = True
     if options.bluenoc:
         exportedNames = ['export mkBluenocTop;', 'export NumberOfRequests;', 'export NumberOfIndications;']
     if options.importfiles:
