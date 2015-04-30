@@ -234,7 +234,7 @@ bin/xsim: prepare_bin_target
 
 xsim: verilog bin/xsim
 	xvlog $(XVLOGFLAGS) verilog/*.v
-	xelab -L unimacro $(XELABFLAGS) work.$(MKTOP) -dll -s $(MKTOP)
+	xelab -L unifast -L unimacro $(XELABFLAGS) --debug wave work.$(MKTOP) -dll -s $(MKTOP)
 
 bin/vsim:
 	python $(CONNECTALDIR)/scripts/sim-gen.py -o vsim/Makefile -s ~/dev/connectal/out/vsim/synthesis/ -d ~/dev/sonic-lite/vsim/modelsim -p ~/dev/sonic-lite -c $(CONNECTALDIR) -g ~/dev/connectal/out/vsim/synthesis/ -t ~/dev/connectal/out/vsim/synthesis/ -T mkSonicSimTop
