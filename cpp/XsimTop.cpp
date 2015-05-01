@@ -24,11 +24,22 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <queue>
-#include "xsi_loader.h"
+#ifdef SYSTEM_VERILOG
+    #include "svdpi.h"
+#else
+    #include "xsi_loader.h"
+#endif
 #include <portal.h>
 #include <sock_utils.h>
 #include <XsimMemSlaveRequest.h>
 #include <XsimMemSlaveIndication.h>
+
+extern "C" {
+void dpi_init();
+void dpi_poll();
+void dpi_msgSink_beat(int dst_rdy, int *beat, int *src_rdy);
+void dpi_msgSource_beat(int src_rdy, int beat, int *dst_rdy);
+}
 
 XsimMemSlaveIndicationProxy *memSlaveIndicationProxy;
 class XsimMemSlaveRequest;
@@ -41,6 +52,7 @@ std::string getcurrentdir()
     return get_current_dir_name();
 }
 
+#ifndef SYSTEM_VERILOG
 class xsiport {
   Xsi::Loader &xsiInstance;
   int port;
@@ -80,6 +92,7 @@ void xsiport::write(int aVal)
     value.bVal = 0;
     xsiInstance.put_value(port, &value);
 }
+#endif // !SYSTEM_VERILOG
 
 class XsimMemSlaveRequest : public XsimMemSlaveRequestWrapper {
   struct idInfo {
@@ -186,6 +199,88 @@ enum xsimtop_state {
   xt_reset, xt_read_directory, xt_active
 };
 
+#ifdef SYSTEM_VERILOG
+
+class DpiWorker {
+public:
+  DpiWorker ();
+  //private:
+  Portal                      *mcommon;
+  XsimMemSlaveIndicationProxy *memSlaveIndicationProxy;
+  XsimMemSlaveRequest         *memSlaveRequest;
+};
+
+DpiWorker::DpiWorker()
+{
+    PortalSocketParam paramSocket = {};
+    PortalMuxParam param = {};
+
+    fprintf(stderr, "[%s:%d] using BluenocTop\n", __FILE__, __LINE__);
+    mcommon = new Portal(0, 0, sizeof(uint32_t), portal_mux_handler, NULL, &transportSocketResp, &paramSocket);
+    param.pint = &mcommon->pint;
+    memSlaveIndicationProxy = new XsimMemSlaveIndicationProxy(XsimIfcNames_XsimMemSlaveIndication, &transportMux, &param);
+    memSlaveRequest = new XsimMemSlaveRequest(XsimIfcNames_XsimMemSlaveRequest, &transportMux, &param);
+
+    printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+    defaultPoller->stop();
+    sleep(2);
+    printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+
+}
+
+static DpiWorker *dpiWorker;
+
+void dpi_init()
+{
+  dpiWorker = new DpiWorker();
+}
+
+void dpi_poll()
+{
+  void *rc = defaultPoller->pollFn(1);
+  if ((long)rc >= 0) {
+    defaultPoller->event();
+  }
+}
+
+void dpi_msgSink_beat(int dst_rdy, int *p_beat, int *p_src_rdy)
+{
+  if (dst_rdy && (dpiWorker->memSlaveRequest->sinkbeats.size() > 0)) {
+    uint32_t beat = dpiWorker->memSlaveRequest->sinkbeats.front();
+    dpiWorker->memSlaveRequest->sinkbeats.pop();
+
+    if (trace_xsimtop)
+      fprintf(stderr, "[%s:%d] sink message beat %08x\n", __FUNCTION__, __LINE__, beat);
+    *p_beat = beat;
+    *p_src_rdy = 1;
+  } else {
+    *p_beat = 0xbad0da7a;
+    *p_src_rdy = 0;
+  }
+}
+void dpi_msgSource_beat(int src_rdy, int beat, int *p_dst_rdy)
+{
+  if (src_rdy) {
+    fprintf(stderr, "dpi_msgSource_beat() called beat=%08x src_rdy=%d\n", beat, src_rdy);
+    if (trace_xsimtop)
+      fprintf(stderr, "[%s:%d] source message beat %08x\n", __FUNCTION__, __LINE__, beat);
+    dpiWorker->memSlaveIndicationProxy->msgSource(beat);
+    *p_dst_rdy = 1;
+  } else {
+    *p_dst_rdy = 0;
+  }
+}
+
+int dpi_msgSource_dst_rdy_b(int src_rdy)
+{
+  if (src_rdy) {
+    fprintf(stderr, "dpi_msgSource_dst_rdy_b() called\n");
+    return 1;
+  }
+}
+#endif
+
+#ifndef SYSTEM_VERILOG
 int main(int argc, char **argv)
 {
     std::string cwd = getcurrentdir();
@@ -278,3 +373,4 @@ int main(int argc, char **argv)
     }
     sleep(10);
 }
+#endif

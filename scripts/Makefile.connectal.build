@@ -209,9 +209,9 @@ ifeq ($(BOARD),bluesim)
 else
   ifeq ($(BOARD),xsim)
     ifeq ($(RUNSOURCE2),)
-	LD_LIBRARY_PATH=$(VIVADODIR)/lib/lnx64.o $(GDB_BSIM) ./bin/xsim -w & xsimpid=$$!; echo xsimpid $$xsimpid; $(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; kill $$xsimpid; exit $$retcode
+	xsim -R work.xsimtop & xsimpid=$$!; echo xsimpid $$xsimpid; $(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; kill $$xsimpid; exit $$retcode
     else
-	LD_LIBRARY_PATH=$(VIVADODIR)/lib/lnx64.o ./bin/xsim -w & xsimpid=$$!; echo xsimpid $$xsimpid; $(GDB2) ./bin/ubuntu.exe2& xsim2pid=$$!; $(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; kill $$xsimpid $$xsim2pid; exit $$retcode
+	xsim -R work.xsimtop & xsimpid=$$!; echo xsimpid $$xsimpid; $(GDB2) ./bin/ubuntu.exe2& xsim2pid=$$!; $(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; kill $$xsimpid $$xsim2pid; exit $$retcode
     endif
   else
     ifeq ($(OS),android)
@@ -228,13 +228,28 @@ endif
 endif
 endif
 
-bin/xsim: prepare_bin_target
-	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk xsim
-	$(Q)cp -v jni/xsim bin
+VIVADO=$(shell which vivado)
+VIVADODIR=$(realpath $(shell dirname $(VIVADO))/..)
+XSC_CFLAGS= -Wa,-W -fPIC -m64  -I"$(VIVADODIR)/data/xsim/include" -DSYSTEM_VERILOG -DBOARD_xsim -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR) -Ijni
 
-xsim: verilog bin/xsim
-	xvlog $(XVLOGFLAGS) verilog/*.v
-	xelab -L unifast -L unimacro $(XELABFLAGS) --debug wave work.$(MKTOP) -dll -s $(MKTOP)
+XSIM_GENERATED_CFILES = XsimMemSlaveIndication XsimMemSlaveRequest GeneratedCppCallbacks
+XSIM_CFILES = transportSocket transportHardware transportXsim XsimTop poller sock_utils portalPrintf portal
+XSIM_OBJECTS = $(foreach c, $(XSIM_CFILES), xsim.dir/xsc/$(c).lnx64.o ) $(foreach c, $(XSIM_GENERATED_CFILES), xsim.dir/xsc/$(c).lnx64.o)
+
+xsim.dir/xsc/%.lnx64.o: $(CONNECTALDIR)/cpp/%.c
+	gcc -c $(XSC_CFLAGS) -O1 -o xsim.dir/xsc/$(*).lnx64.o $<
+xsim.dir/xsc/%.lnx64.o: $(CONNECTALDIR)/cpp/%.cpp
+	gcc -c $(XSC_CFLAGS) -O1 -o xsim.dir/xsc/$(*).lnx64.o $<
+xsim.dir/xsc/%.lnx64.o: jni/%.c
+	gcc -c $(XSC_CFLAGS) -O1 -o xsim.dir/xsc/$(*).lnx64.o $<
+xsim.dir/xsc/%.lnx64.o: jni/%.cpp
+	gcc -c $(XSC_CFLAGS) -O1 -o xsim.dir/xsc/$(*).lnx64.o $<
+
+xsim: verilog $(XSIM_OBJECTS)
+	xvlog --sv ../xsimtop.sv
+	#xsc -v -cc gcc -compile $(SOURCES)
+	xsc -cc gcc -link $(foreach c, $(XSIM_CFILES) $(XSIM_GENERATED_CFILES), xsim.dir/xsc/$(c).lnx64.o ) -o xsimtop
+	xelab -cc gcc -svlog ../xsimtop.sv --debug wave -L unisim -L unifast work.xsimtop -sv_lib xsimtop
 
 bin/vsim:
 	python $(CONNECTALDIR)/scripts/sim-gen.py -o vsim/Makefile -s ~/dev/connectal/out/vsim/synthesis/ -d ~/dev/sonic-lite/vsim/modelsim -p ~/dev/sonic-lite -c $(CONNECTALDIR) -g ~/dev/connectal/out/vsim/synthesis/ -t ~/dev/connectal/out/vsim/synthesis/ -T mkSonicSimTop

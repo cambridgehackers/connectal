@@ -1,9 +1,9 @@
 //`timescale 1ns / 1ps
 
-import "DPI-C" function int dpi_msgSink_src_rdy_b();
-import "DPI-C" function int dpi_msgSink_beat();
-import "DPI-C" function int dpi_msgSource_dst_rdy_b();
-import "DPI-C" function int dpi_msgSource_beat(int x);
+import "DPI-C" function void dpi_init();
+import "DPI-C" function void dpi_poll();
+import "DPI-C" function void dpi_msgSink_beat(input int dst_rdy, output int beat, output int src_rdy);
+import "DPI-C" function void dpi_msgSource_beat(input int src_rdy, input int beat, output int dst_rdy);
 
 module xsimtop();
 
@@ -38,6 +38,7 @@ module xsimtop();
       count = 0;
       msgSource_dst_rdy_b = 0;
       msgSink_src_rdy_b = 0;
+      dpi_init();
    end
 
    always begin
@@ -51,13 +52,15 @@ module xsimtop();
 	 RST_N <= 1;
       end
 
-      msgSink_src_rdy_b <= dpi_msgSink_src_rdy_b();
-      if (msgSink_dst_rdy)
-	msgSink_beat_v <= dpi_msgSink_beat();
-
-      msgSource_dst_rdy_b <= dpi_msgSource_dst_rdy_b();
-      if (msgSource_src_rdy)
-	dpi_msgSource_beat(msgSource_beat);
-
+      dpi_poll();
+   
+      if (msgSink_dst_rdy) begin
+	 dpi_msgSink_beat(msgSink_dst_rdy, msgSink_beat_v, msgSink_src_rdy_b);
+	 //$display("msgSink_dst_rdy=%d, msgSink_beat_v=%x, msgSink_src_rdy_b=%d", msgSink_dst_rdy, msgSink_beat_v, msgSink_src_rdy_b);
+      end
+      if (msgSource_src_rdy) begin
+	 dpi_msgSource_beat(msgSource_src_rdy, msgSource_beat, msgSource_dst_rdy_b);
+	 //$display("msgSource_src_rdy=%d, msgSource_beat=%x, msgSource_dst_rdy_b=%d", msgSource_src_rdy, msgSource_beat, msgSource_dst_rdy_b);
+      end
    end
 endmodule
