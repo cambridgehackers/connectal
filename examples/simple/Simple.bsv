@@ -139,7 +139,9 @@ module mkSimple#(SimpleRequest indication)(Simple);
               Address src2, Intptr i_src_stride2,
               Byte i_width, Byte i_height, Bool qpelInt,
               Bool hasWeight, Byte i_offset, Byte i_scale, Byte i_denom);
-      if (verbose) $display("mkSimple::reftest1", dst, dst_stride, src1, i_src_stride1, src2, i_src_stride2, i_width, i_height, qpelInt, hasWeight, i_offset, i_scale, i_denom);
+      //if (verbose) 
+      $display("mkSimple::reftest1 dst %x dst_stride %x src1 %x i_src_stride1 %x src2 %x i_src_stride2 %x i_width %x i_height %x qpelInt %x hasWeight %x i_offset %x i_scale %x i_denom %x\n",
+          dst, dst_stride, src1, i_src_stride1, src2, i_src_stride2, i_width, i_height, qpelInt, hasWeight, i_offset, i_scale, i_denom);
       indication.reftest1(dst, dst_stride, src1, i_src_stride1, src2, i_src_stride2, i_width, i_height, qpelInt, hasWeight, i_offset, i_scale, i_denom);
     endmethod
   endinterface
