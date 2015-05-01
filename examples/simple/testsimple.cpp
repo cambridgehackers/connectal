@@ -27,7 +27,7 @@
 #define TEST_ASSERT(A) {}
 #endif
 
-#define NUMBER_OF_TESTS 11
+#define NUMBER_OF_TESTS 12
 
 uint32_t v1a = 42;
 uint32_t v2a = 2;
@@ -121,6 +121,11 @@ public:
         fprintf(stderr, "    [%d] = 0x%x\n", i, v[i] & 0xffff);
     incr_cnt();
   }
+  void reftest1 ( const Address dst, const Intptr dst_stride, const Address src1, const Intptr i_src_stride1, const Address src2, const Intptr i_src_stride2, const Byte i_width, const Byte i_height, const int qpelInt, const int hasWeight, const Byte i_offset, const Byte i_scale, const Byte i_denom ) {
+    fprintf(stderr, "reftest1: %x, %x, %x, %x, %x, %x, %x, %x, %x, %x, %x, %x, %x\n",
+       (uint32_t)dst, (uint32_t)dst_stride, (uint32_t)src1, (uint32_t)i_src_stride1, (uint32_t)src2, (uint32_t)i_src_stride2, (uint32_t)i_width, (uint32_t)i_height, (uint32_t)qpelInt, (uint32_t)hasWeight, (uint32_t)i_offset, (uint32_t)i_scale, (uint32_t)i_denom );
+    incr_cnt();
+  }
   Simple(unsigned int id) : SimpleRequestWrapper(id), cnt(0){}
 };
 
@@ -164,6 +169,7 @@ int main(int argc, const char **argv)
   }
   device->sayv2(v2v);
   device->sayv3(v2v, 44);
+  device->reftest1 ( 0xaabbcc, 0x11223344, 0xddeeff, 0x44332211, 0x123456, 0x87654321, 0x12, 0x34, 0x123456, 0x7654321, 0x34, 0x56, 0x77);
   fprintf(stderr, "Main::about to go to sleep\n");
   while(1)
     sleep(10);
