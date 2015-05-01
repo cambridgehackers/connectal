@@ -237,19 +237,23 @@ XSIM_CFILES = transportSocket transportHardware transportXsim XsimTop poller soc
 XSIM_OBJECTS = $(foreach c, $(XSIM_CFILES), xsim.dir/xsc/$(c).lnx64.o ) $(foreach c, $(XSIM_GENERATED_CFILES), xsim.dir/xsc/$(c).lnx64.o)
 
 xsim.dir/xsc/%.lnx64.o: $(CONNECTALDIR)/cpp/%.c
+	mkdir -p xsim.dir/xsc
 	gcc -c $(XSC_CFLAGS) -O1 -o xsim.dir/xsc/$(*).lnx64.o $<
 xsim.dir/xsc/%.lnx64.o: $(CONNECTALDIR)/cpp/%.cpp
+	mkdir -p xsim.dir/xsc
 	gcc -c $(XSC_CFLAGS) -O1 -o xsim.dir/xsc/$(*).lnx64.o $<
 xsim.dir/xsc/%.lnx64.o: jni/%.c
+	mkdir -p xsim.dir/xsc
 	gcc -c $(XSC_CFLAGS) -O1 -o xsim.dir/xsc/$(*).lnx64.o $<
 xsim.dir/xsc/%.lnx64.o: jni/%.cpp
+	mkdir -p xsim.dir/xsc
 	gcc -c $(XSC_CFLAGS) -O1 -o xsim.dir/xsc/$(*).lnx64.o $<
 
 xsim: verilog $(XSIM_OBJECTS)
 	xvlog --sv $(CONNECTALDIR)/verilog/xsimtop.sv
 	#xsc -v -cc gcc -compile $(SOURCES)
 	xsc -cc gcc -link $(foreach c, $(XSIM_CFILES) $(XSIM_GENERATED_CFILES), xsim.dir/xsc/$(c).lnx64.o ) -o xsimtop
-	xelab -cc gcc -svlog ../xsimtop.sv --debug wave -L unisim -L unifast work.xsimtop -sv_lib xsimtop
+	xelab -cc gcc -svlog $(CONNECTALDIR)/verilog/xsimtop.sv --debug wave -L unisim -L unifast work.xsimtop -sv_lib xsimtop
 
 bin/vsim:
 	python $(CONNECTALDIR)/scripts/sim-gen.py -o vsim/Makefile -s ~/dev/connectal/out/vsim/synthesis/ -d ~/dev/sonic-lite/vsim/modelsim -p ~/dev/sonic-lite -c $(CONNECTALDIR) -g ~/dev/connectal/out/vsim/synthesis/ -t ~/dev/connectal/out/vsim/synthesis/ -T mkSonicSimTop
