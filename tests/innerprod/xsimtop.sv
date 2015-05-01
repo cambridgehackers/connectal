@@ -1,6 +1,9 @@
 //`timescale 1ns / 1ps
 
 import "DPI-C" function int dpi_msgSink_src_rdy_b();
+import "DPI-C" function int dpi_msgSink_beat();
+import "DPI-C" function int dpi_msgSource_dst_rdy_b();
+import "DPI-C" function int dpi_msgSource_beat(int x);
 
 module xsimtop();
 
@@ -46,9 +49,15 @@ module xsimtop();
       count <= count + 1;
       if (count == 10) begin
 	 RST_N <= 1;
-	 msgSource_dst_rdy_b = 1;
-	 msgSink_src_rdy_b <= dpi_msgSink_src_rdy_b();
       end
-      
+
+      msgSink_src_rdy_b <= dpi_msgSink_src_rdy_b();
+      if (msgSink_dst_rdy)
+	msgSink_beat_v <= dpi_msgSink_beat();
+
+      msgSource_dst_rdy_b <= dpi_msgSource_dst_rdy_b();
+      if (msgSource_src_rdy)
+	dpi_msgSource_beat(msgSource_beat);
+
    end
 endmodule
