@@ -246,7 +246,7 @@ xsim.dir/xsc/%.lnx64.o: jni/%.cpp
 	gcc -c $(XSC_CFLAGS) -O1 -o xsim.dir/xsc/$(*).lnx64.o $<
 
 xsim: verilog $(XSIM_OBJECTS)
-	xvlog --sv ../xsimtop.sv
+	xvlog --sv $(CONNECTALDIR)/verilog/xsimtop.sv
 	#xsc -v -cc gcc -compile $(SOURCES)
 	xsc -cc gcc -link $(foreach c, $(XSIM_CFILES) $(XSIM_GENERATED_CFILES), xsim.dir/xsc/$(c).lnx64.o ) -o xsimtop
 	xelab -cc gcc -svlog ../xsimtop.sv --debug wave -L unisim -L unifast work.xsimtop -sv_lib xsimtop
