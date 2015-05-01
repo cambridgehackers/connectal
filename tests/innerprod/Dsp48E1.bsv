@@ -165,10 +165,6 @@ module mkDsp48E1(Dsp48E1);
       dsp.carrycascin(0);
       dsp.carryin(0);
       dsp.pcin(0);
-      dsp.a(extend(16'haaaa));
-      dsp.b(extend(16'hbbbb));
-      dsp.c(extend(16'hcccc));
-      dsp.d(extend(16'hdddd));
    endrule
 
    method Action alumode(Bit#(4) v);
@@ -185,16 +181,16 @@ module mkDsp48E1(Dsp48E1);
    endmethod
    method Action a(Bit#(30) v);
       ce1Wire <= 1;
-      //dsp.a(v);
+      dsp.a(v);
    endmethod
    method Action b(Bit#(18) v);
-      //dsp.b(v);
+      dsp.b(v);
    endmethod
    method Action c(Bit#(48) v);
-//      dsp.c(v);
+      dsp.c(v);
    endmethod
    method Action d(Bit#(25) v);
-      //dsp.d(v);
+      dsp.d(v);
    endmethod
    method Bit#(48) p() if (last2Reg == 1 || last3Reg == 1 || last4Reg == 1);
       return dsp.p();

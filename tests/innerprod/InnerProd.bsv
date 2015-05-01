@@ -25,15 +25,13 @@ module mkInnerProdTile(InnerProdTile);
 
    let dsp <- mkDsp48E1();
 
-   rule cRule;
-      dsp.c(extend(16'hcccc));
-   endrule
-
    interface Put request;
       method Action put(Tuple7#(Int#(16),Int#(16),Bool,Bool,Bit#(4),Bit#(5),Bit#(7)) req);
 	 match { .a, .b, .first, .last, .alumode, .inmode, .opmode } = req;
 	 dsp.a(extend(pack(a)));
 	 dsp.b(extend(pack(b)));
+	 dsp.c(0);
+	 dsp.d(0);
 	 //let opmode = 7'h45; // p = M + P
 	 //if (first)
 	 //opmode = 7'h05; // P = M + 0
@@ -81,19 +79,6 @@ module mkInnerProd#(
       let r <- tile.response.get();
       $display("indRule v=%x %d", r, r);
       ind.innerProd(pack(r));
-   endrule
-
-   Reg#(Bool) tested <- mkReg(False);
-   rule dotest if (!tested);
-      let a = 16'haaaa;
-      let b = 16'hbbbb;
-      let first = True;
-      let last = True;
-      let alumode = 0;
-      let inmode = 0;
-      let opmode = 7'h35;
-      tile.request.put(tuple7(unpack(a),unpack(b),first,last, alumode, inmode, opmode));
-      tested <= True;
    endrule
 
    interface InnerProdRequest request;
