@@ -1,5 +1,7 @@
 //`timescale 1ns / 1ps
 
+import "DPI-C" function int dpi_msgSink_src_rdy_b();
+
 module xsimtop();
 
    reg CLK;
@@ -45,6 +47,7 @@ module xsimtop();
       if (count == 10) begin
 	 RST_N <= 1;
 	 msgSource_dst_rdy_b = 1;
+	 msgSink_src_rdy_b <= dpi_msgSink_src_rdy_b();
       end
       
    end

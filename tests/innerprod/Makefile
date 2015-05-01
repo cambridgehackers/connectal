@@ -20,7 +20,8 @@ endif
 xsim_manual:
 	make build.xsim
 	cd xsim; xvlog --sv ../xsimtop.sv
-	cd xsim; xelab --debug wave -L unisim -L unifast work.xsimtop
-	cd xsim; xsim work.xsimtop
+	cd xsim; xsc -v -cc -gcc -compile ../xsimtop.c
+	cd xsim; xelab -cc gcc -svlog ../xsimtop.sv --debug wave -L unisim -L unifast work.xsimtop -sv_lib xsimtop.lnx64.o
+	cd xsim; xsim -g work.xsimtop
 
 include $(CONNECTALDIR)/Makefile.connectal
