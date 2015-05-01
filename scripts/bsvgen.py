@@ -237,7 +237,7 @@ indicationMethodTemplate='''
 def toBsvType(titem, oitem):
     if oitem and oitem['name'].startswith('Tuple'):
         titem = oitem
-    if len(titem['params']):
+    if titem.get('params') and len(titem['params']):
         return '%s#(%s)' % (titem['name'], ','.join([str(toBsvType(p, None)) for p in titem['params']]))
     else:
         return titem['name']
@@ -246,16 +246,21 @@ def collectElements(mlist, workerfn, name):
     methods = []
     mindex = 0
     for item in mlist:
+        if verbose:
+            print 'collectEl', item
+            for p in item['dparams']:
+                print 'collectEl/param', p
+                break
         sub = { 'dut': util.decapitalize(name),
           'Dut': util.capitalize(name),
-          'methodName': item['name'],
-          'MethodName': util.capitalize(item['name']),
+          'methodName': item['dname'],
+          'MethodName': util.capitalize(item['dname']),
           'channelNumber': mindex}
-        paramStructDeclarations = ['    %s %s;' % (toBsvType(p['type'], p.get('oldtype')), p['name']) for p in item['params']]
-        sub['paramType'] = ', '.join(['%s' % toBsvType(p['type'], p.get('oldtype')) for p in item['params']])
-        sub['formals'] = ', '.join(['%s %s' % (toBsvType(p['type'], p.get('oldtype')), p['name']) for p in item['params']])
-        structElements = ['%s: %s' % (p['name'], p['name']) for p in item['params']]
-        if not item['params']:
+        paramStructDeclarations = ['    %s %s;' % (toBsvType(p['ptype'], p.get('oldtype')), p['pname']) for p in item['dparams']]
+        sub['paramType'] = ', '.join(['%s' % toBsvType(p['ptype'], p.get('oldtype')) for p in item['dparams']])
+        sub['formals'] = ', '.join(['%s %s' % (toBsvType(p['ptype'], p.get('oldtype')), p['pname']) for p in item['dparams']])
+        structElements = ['%s: %s' % (p['pname'], p['pname']) for p in item['dparams']]
+        if not item['dparams']:
             paramStructDeclarations = ['    %s %s;' % ('Bit#(32)', 'padding')]
             structElements = ['padding: 0']
         sub['paramStructDeclarations'] = '\n'.join(paramStructDeclarations)
@@ -265,28 +270,30 @@ def collectElements(mlist, workerfn, name):
     return ''.join(methods)
 
 def fixupSubsts(item, suffix):
-    name = item['name']+suffix
-    dlist = item['decls']
+    name = item['cname']+suffix
+    dlist = item['cdecls']
     mkConnectionMethodRules = []
     outputPipes = []
     for m in dlist:
-        paramsForCall = ['request.%s' % p['name'] for p in m['params']]
-        msubs = {'methodName': m['name'],
+        if verbose:
+            print 'fixupSubsts', m
+        paramsForCall = ['request.%s' % p['pname'] for p in m['dparams']]
+        msubs = {'methodName': m['dname'],
                  'paramsForCall': ', '.join(paramsForCall)}
         mkConnectionMethodRules.append(mkConnectionMethodTemplate % msubs)
         outputPipes.append('        interface %(methodName)s_PipeOut = %(methodName)s_requestAdapter.out;' % msubs)
     substs = {
         'Package': '',
         'channelCount': len(dlist),
-        'Ifc': item['name'],
+        'Ifc': item['cname'],
         'dut': util.decapitalize(name),
         'Dut': util.capitalize(name),
     }
     if not generateInterfaceDefs:
         substs['Package'] = item['Package'] + '::'
     substs['requestOutputPipeInterfaces'] = ''.join(
-        [requestOutputPipeInterfaceTemplate % {'methodName': p['name'],
-                                               'MethodName': util.capitalize(p['name'])} for p in dlist])
+        [requestOutputPipeInterfaceTemplate % {'methodName': m['dname'],
+                                               'MethodName': util.capitalize(m['dname'])} for m in dlist])
     substs['outputPipes'] = '\n'.join(outputPipes)
     substs['mkConnectionMethodRules'] = ''.join(mkConnectionMethodRules)
     substs['indicationMethodRules'] = collectElements(dlist, indicationRuleTemplate, name)
@@ -297,12 +304,15 @@ def fixupSubsts(item, suffix):
     substs['messageSizes'] = collectElements(dlist, messageSizeTemplate, name)
     return substs
 
-def generate_bsv(project_dir, noisyFlag, aGenDef, jsondata):
-    global generateInterfaceDefs
+def generate_bsv(project_dir, nf, aGenDef, jsondata):
+    global generateInterfaceDefs,verbose
+    verbose = nf
     generateInterfaceDefs = aGenDef
     generatedPackageNames = []
     for item in jsondata['interfaces']:
-        pname = item['name']
+        if verbose:
+            print 'genbsv', item
+        pname = item['cname']
         if pname in generatedPackageNames:
             continue
         generatedPackageNames.append(pname)
@@ -315,7 +325,7 @@ def generate_bsv(project_dir, noisyFlag, aGenDef, jsondata):
             extraImports = [item['Package']]
             extraImports += [i for i in jsondata['globalimports'] if not i in generatedPackageNames]
         bsv_file.write(preambleTemplate % {'extraImports' : ''.join(['import %s::*;\n' % pn for pn in extraImports])})
-        if noisyFlag:
+        if verbose:
             print 'Writing file ', fname
         if generateInterfaceDefs:
             bsv_file.write(interfaceDefTemplate % fixupSubsts(item, ''))
