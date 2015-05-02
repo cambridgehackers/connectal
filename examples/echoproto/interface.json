@@ -1,47 +1,7 @@
 {
     "globaldecls": [
         {
-            "name": "EchoPair", 
-            "params": [], 
-            "tdtype": {
-                "elements": [
-                    {
-                        "name": "a", 
-                        "type": {
-                            "name": "Bit", 
-                            "params": [
-                                {
-                                    "name": "16", 
-                                    "params": [], 
-                                    "type": "Type"
-                                }
-                            ], 
-                            "type": "Type"
-                        }
-                    }, 
-                    {
-                        "name": "b", 
-                        "type": {
-                            "name": "Bit", 
-                            "params": [
-                                {
-                                    "name": "16", 
-                                    "params": [], 
-                                    "type": "Type"
-                                }
-                            ], 
-                            "type": "Type"
-                        }
-                    }
-                ], 
-                "name": "EchoPair", 
-                "type": "Struct"
-            }, 
-            "type": "TypeDef"
-        }, 
-        {
-            "name": "IfcNames", 
-            "params": [], 
+            "dtype": "TypeDef", 
             "tdtype": {
                 "elements": [
                     "NoInterface", 
@@ -51,142 +11,123 @@
                 "name": "IfcNames", 
                 "type": "Enum"
             }, 
-            "type": "TypeDef"
+            "tname": "IfcNames"
         }
     ], 
     "interfaces": [
         {
-            "decls": [
+            "Package": "Echo", 
+            "cdecls": [
                 {
-                    "name": "say", 
-                    "params": [
+                    "dname": "say", 
+                    "dparams": [
                         {
-                            "name": "v", 
-                            "type": {
+                            "pname": "v", 
+                            "ptype": {
                                 "name": "Bit", 
                                 "params": [
                                     {
-                                        "name": "32", 
-                                        "params": [], 
-                                        "type": "Type"
+                                        "name": "32"
                                     }
-                                ], 
-                                "type": "Type"
+                                ]
                             }
                         }
                     ]
                 }, 
                 {
-                    "name": "say2", 
-                    "params": [
+                    "dname": "say2", 
+                    "dparams": [
                         {
-                            "name": "a", 
-                            "type": {
+                            "pname": "a", 
+                            "ptype": {
                                 "name": "Bit", 
                                 "params": [
                                     {
-                                        "name": "16", 
-                                        "params": [], 
-                                        "type": "Type"
+                                        "name": "16"
                                     }
-                                ], 
-                                "type": "Type"
+                                ]
                             }
                         }, 
                         {
-                            "name": "b", 
-                            "type": {
+                            "pname": "b", 
+                            "ptype": {
                                 "name": "Bit", 
                                 "params": [
                                     {
-                                        "name": "16", 
-                                        "params": [], 
-                                        "type": "Type"
+                                        "name": "16"
                                     }
-                                ], 
-                                "type": "Type"
+                                ]
                             }
                         }
                     ]
                 }, 
                 {
-                    "name": "setLeds", 
-                    "params": [
+                    "dname": "setLeds", 
+                    "dparams": [
                         {
-                            "name": "v", 
-                            "type": {
+                            "pname": "v", 
+                            "ptype": {
                                 "name": "Bit", 
                                 "params": [
                                     {
-                                        "name": "8", 
-                                        "params": [], 
-                                        "type": "Type"
+                                        "name": "8"
                                     }
-                                ], 
-                                "type": "Type"
+                                ]
                             }
                         }
                     ]
                 }
             ], 
-            "name": "EchoRequest"
+            "cname": "EchoRequest"
         }, 
         {
-            "decls": [
+            "Package": "Echo", 
+            "cdecls": [
                 {
-                    "name": "heard", 
-                    "params": [
+                    "dname": "heard", 
+                    "dparams": [
                         {
-                            "name": "v", 
-                            "type": {
+                            "pname": "v", 
+                            "ptype": {
                                 "name": "Bit", 
                                 "params": [
                                     {
-                                        "name": "32", 
-                                        "params": [], 
-                                        "type": "Type"
+                                        "name": "32"
                                     }
-                                ], 
-                                "type": "Type"
+                                ]
                             }
                         }
                     ]
                 }, 
                 {
-                    "name": "heard2", 
-                    "params": [
+                    "dname": "heard2", 
+                    "dparams": [
                         {
-                            "name": "a", 
-                            "type": {
+                            "pname": "a", 
+                            "ptype": {
                                 "name": "Bit", 
                                 "params": [
                                     {
-                                        "name": "16", 
-                                        "params": [], 
-                                        "type": "Type"
+                                        "name": "16"
                                     }
-                                ], 
-                                "type": "Type"
+                                ]
                             }
                         }, 
                         {
-                            "name": "b", 
-                            "type": {
+                            "pname": "b", 
+                            "ptype": {
                                 "name": "Bit", 
                                 "params": [
                                     {
-                                        "name": "16", 
-                                        "params": [], 
-                                        "type": "Type"
+                                        "name": "16"
                                     }
-                                ], 
-                                "type": "Type"
+                                ]
                             }
                         }
                     ]
                 }
             ], 
-            "name": "EchoIndication"
+            "cname": "EchoIndication"
         }
     ]
 }
