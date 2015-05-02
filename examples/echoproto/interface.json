@@ -1,133 +1,37 @@
 {
     "globaldecls": [
-        {
-            "dtype": "TypeDef", 
+        { "dtype": "TypeDef", "tname": "IfcNames",
             "tdtype": {
-                "elements": [
-                    "NoInterface", 
-                    "EchoIndicationH2S", 
-                    "EchoRequestS2H"
-                ], 
+                "elements": [ "NoInterface", "EchoIndicationH2S", "EchoRequestS2H" ], 
                 "name": "IfcNames", 
                 "type": "Enum"
-            }, 
-            "tname": "IfcNames"
+            }
         }
     ], 
     "interfaces": [
-        {
-            "Package": "Echo", 
-            "cdecls": [
-                {
-                    "dname": "say", 
-                    "dparams": [
-                        {
-                            "pname": "v", 
-                            "ptype": {
-                                "name": "Bit", 
-                                "params": [
-                                    {
-                                        "name": "32"
-                                    }
-                                ]
-                            }
-                        }
-                    ]
+        { "cname": "EchoRequest", "cdecls": [
+                { "dname": "say", "dparams": [
+                    { "pname": "v", "ptype": { "name": "Bit", "params": [ { "name": "32" } ] } }]
                 }, 
-                {
-                    "dname": "say2", 
-                    "dparams": [
-                        {
-                            "pname": "a", 
-                            "ptype": {
-                                "name": "Bit", 
-                                "params": [
-                                    {
-                                        "name": "16"
-                                    }
-                                ]
-                            }
-                        }, 
-                        {
-                            "pname": "b", 
-                            "ptype": {
-                                "name": "Bit", 
-                                "params": [
-                                    {
-                                        "name": "16"
-                                    }
-                                ]
-                            }
-                        }
-                    ]
+                { "dname": "say2", "dparams": [
+                    { "pname": "a", "ptype": { "name": "Bit", "params": [ { "name": "16" } ] } }, 
+                    { "pname": "b", "ptype": { "name": "Bit", "params": [ { "name": "16" } ] } }]
                 }, 
-                {
-                    "dname": "setLeds", 
-                    "dparams": [
-                        {
-                            "pname": "v", 
-                            "ptype": {
-                                "name": "Bit", 
-                                "params": [
-                                    {
-                                        "name": "8"
-                                    }
-                                ]
-                            }
-                        }
-                    ]
+                { "dname": "setLeds", "dparams": [
+                    { "pname": "v", "ptype": { "name": "Bit", "params": [ { "name": "8" } ] } }]
                 }
-            ], 
-            "cname": "EchoRequest"
+            ]
         }, 
-        {
-            "Package": "Echo", 
-            "cdecls": [
-                {
-                    "dname": "heard", 
-                    "dparams": [
-                        {
-                            "pname": "v", 
-                            "ptype": {
-                                "name": "Bit", 
-                                "params": [
-                                    {
-                                        "name": "32"
-                                    }
-                                ]
-                            }
-                        }
+        { "cname": "EchoIndication", "cdecls": [
+                { "dname": "heard", "dparams": [
+                    { "pname": "v", "ptype": { "name": "Bit", "params": [ { "name": "32" } ] } }
                     ]
                 }, 
-                {
-                    "dname": "heard2", 
-                    "dparams": [
-                        {
-                            "pname": "a", 
-                            "ptype": {
-                                "name": "Bit", 
-                                "params": [
-                                    {
-                                        "name": "16"
-                                    }
-                                ]
-                            }
-                        }, 
-                        {
-                            "pname": "b", 
-                            "ptype": {
-                                "name": "Bit", 
-                                "params": [
-                                    {
-                                        "name": "16"
-                                    }
-                                ]
-                            }
-                        }
-                    ]
+                { "dname": "heard2", "dparams": [
+                    { "pname": "a", "ptype": { "name": "Bit", "params": [ { "name": "16" } ] } }, 
+                    { "pname": "b", "ptype": { "name": "Bit", "params": [ { "name": "16" } ] } }]
                 }
-            ], 
-            "cname": "EchoIndication"
+            ]
         }
     ]
 }
