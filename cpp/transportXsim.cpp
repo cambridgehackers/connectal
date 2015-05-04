@@ -27,7 +27,7 @@
 class XsimMemSlaveIndication;
 static XsimMemSlaveRequestProxy *memSlaveRequestProxy;
 static XsimMemSlaveIndication *memSlaveIndication;
-static int trace_xsim ;//= 1;
+static int trace_xsim; // = 1;
 static Portal *mcommon;
 //FIXME, should go into pint->something
 static std::queue<uint32_t> msgbeats;
@@ -74,8 +74,10 @@ public:
 
     void msgSource ( const uint32_t data ) {
         if (trace_xsim)
-            fprintf(stderr, "[%s:%d] data=%d\n", __FUNCTION__, __LINE__, data);
+	  fprintf(stderr, "[%s:%d] data=%x pid=%d\n", __FUNCTION__, __LINE__, data, getpid());
+        pthread_mutex_lock(&readDataMutex);
         srcbeats.push(data);
+        pthread_mutex_unlock(&readDataMutex);
     }
 
     int fpgaNumber(int fpgaId);
@@ -132,9 +134,10 @@ static unsigned int read_portal_xsim(PortalInternal *pint, volatile unsigned int
 {
     size_t numwords = memSlaveIndication->srcbeats.size();
     uint32_t beat = memSlaveIndication->srcbeats.front();
+    uint32_t last = memSlaveIndication->srcbeats.back();
     memSlaveIndication->srcbeats.pop();
     if (trace_xsim)
-        fprintf(stderr, "%s: id=%d addr=%08lx data=%08x numwords=%ld\n", __FUNCTION__, pint->fpga_number, (long)*addr, beat, (long)numwords);
+        fprintf(stderr, "%s: id=%d addr=%08lx data=%08x last=%08x numwords=%ld\n", __FUNCTION__, pint->fpga_number, (long)*addr, beat, last, (long)numwords);
     return beat;
 }
 
@@ -175,14 +178,18 @@ static int event_portal_xsim(struct PortalInternal *pint)
     memSlaveIndication->lockReadData();
     if (memSlaveIndication->srcbeats.size()) {
         uint32_t bluenoc_hdr = memSlaveIndication->srcbeats.front();
+	uint32_t last = memSlaveIndication->srcbeats.back();
         //hmm, which portal?
         uint32_t numwords = (bluenoc_hdr >> 16) & 0xFF;
         uint32_t methodId = (bluenoc_hdr >> 24) & 0xFF;
 
         if (memSlaveIndication->srcbeats.size() >= numwords+1) {
-            fprintf(stderr, "%s: pint=%p srcbeats=%d methodwords=%d methodId=%d hdr=%08x\n",
-              __FUNCTION__, pint, (int)memSlaveIndication->srcbeats.size(), numwords, methodId, bluenoc_hdr);
+	  if (trace_xsim)
+            fprintf(stderr, "%s: pint=%p srcbeats=%d methodwords=%d methodId=%d hdr=%08x last=%08x\n",
+		    __FUNCTION__, pint, (int)memSlaveIndication->srcbeats.size(), numwords, methodId, bluenoc_hdr, last);
+	    // pop the header word
             memSlaveIndication->srcbeats.pop();
+
             if (pint->handler)
                 pint->handler(pint, methodId, 0);
         }

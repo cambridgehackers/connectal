@@ -209,9 +209,9 @@ ifeq ($(BOARD),bluesim)
 else
   ifeq ($(BOARD),xsim)
     ifeq ($(RUNSOURCE2),)
-	xsim -R work.xsimtop & xsimpid=$$!; echo xsimpid $$xsimpid; $(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; kill $$xsimpid; exit $$retcode
+	xsim -R work.xsimtop & xsimpid=$$!; echo xsimpid $$xsimpid; sleep 5; $(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; kill $$xsimpid; exit $$retcode
     else
-	xsim -R work.xsimtop & xsimpid=$$!; echo xsimpid $$xsimpid; $(GDB2) ./bin/ubuntu.exe2& xsim2pid=$$!; $(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; kill $$xsimpid $$xsim2pid; exit $$retcode
+	xsim -R work.xsimtop & xsimpid=$$!; echo xsimpid $$xsimpid; sleep 5; $(GDB2) ./bin/ubuntu.exe2& xsim2pid=$$!; $(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; kill $$xsimpid $$xsim2pid; exit $$retcode
     endif
   else
     ifeq ($(OS),android)

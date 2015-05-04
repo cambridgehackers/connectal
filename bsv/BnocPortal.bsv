@@ -19,6 +19,7 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+import FIFOF::*;
 import Vector::*;
 import MemTypes::*;
 import Pipe::*;
@@ -30,12 +31,13 @@ typedef enum {
    BpMessage
    } BnocPortalState deriving (Bits,Eq);
 
+
 module mkPortalMsgRequest#(PipePortal#(numRequests, 0, 32) portal)(MsgSink#(4));
    Reg#(Bit#(8)) messageWordsReg <- mkReg(0);
    Reg#(Bit#(8)) methodIdReg <- mkReg(0);
    Reg#(BnocPortalState) bpState <- mkReg(BpHeader);
    FifoMsgSink#(4) fifoMsgSink <- mkFifoMsgSink();
-   Bool verbose = True;
+   Bool verbose = False;
 
    rule receiveMessageHeader if (bpState == BpHeader && !fifoMsgSink.empty());
       let hdr = fifoMsgSink.first();
@@ -71,6 +73,7 @@ module mkPortalMsgIndication#(PipePortal#(0, numIndications, 32) portal)(MsgSour
    Bit#(8)  readyChannel = -1;
    FifoMsgSource#(4) fifoMsgSource <- mkFifoMsgSource();
    function Bool pipeOutNotEmpty(PipeOut#(a) po); return po.notEmpty(); endfunction
+   let verbose = False;
 
    for (Integer i = valueOf(numIndications) - 1; i >= 0; i = i - 1) begin
       if (readyBits[i]) begin
@@ -90,7 +93,7 @@ module mkPortalMsgIndication#(PipePortal#(0, numIndications, 32) portal)(MsgSour
       */
       // op, dp, and src left empty for now
       Bit#(32) hdr = extend(readyChannel) << 24 | (extend(numWords) << 16);
-      $display("sendHeader hdr=%h messageBits=%d numWords=%d", hdr, messageBits, numWords);
+      if (verbose) $display("sendHeader hdr=%h messageBits=%d numWords=%d", hdr, messageBits, numWords);
       messageWordsReg <= numWords;
       methodIdReg <= readyChannel;
       fifoMsgSource.enq(hdr);
@@ -101,7 +104,7 @@ module mkPortalMsgIndication#(PipePortal#(0, numIndications, 32) portal)(MsgSour
       let v = portal.indications[methodIdReg].first;
       portal.indications[methodIdReg].deq();
       fifoMsgSource.enq(v);
-      $display("sendMessage id=%d data=%h messageWords=%d", methodIdReg, v, messageWordsReg);
+      if (verbose) $display("sendMessage id=%d data=%h messageWords=%d", methodIdReg, v, messageWordsReg);
       if (messageWordsReg == 1) begin
 	 bpState <= BpHeader;
       end

@@ -52,8 +52,8 @@ module mkXsimTop(XsimTop);
 
    Reg#(Bool) dumpstarted <- mkReg(False);
    rule startdump if (!dumpstarted);
-      $dumpfile("dump.vcd");
-      $dumpvars;
+      //$dumpfile("dump.vcd");
+      //$dumpvars;
       dumpstarted <= True;
    endrule
    XsimHost host <- mkXsimHost(derivedClock, derivedReset);

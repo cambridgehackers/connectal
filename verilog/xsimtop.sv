@@ -11,13 +11,14 @@ module xsimtop();
    reg RST_N;
    reg [31:0] count;
    reg msgSource_src_rdy;
-   reg msgSource_dst_rdy_b;
+   wire msgSource_dst_rdy_b;
    reg [31:0] msgSource_beat;
+   
    reg msgSink_dst_rdy;
    reg msgSink_src_rdy_b;
    reg [31:0] msgSink_beat_v;
    wire       CLK_singleClock, CLK_GATE_singleClock, RST_N_singleReset;
-   
+   reg msgSource_dst_rdy_b0;
 
    mkXsimTop xsimtop(.CLK(CLK),
 		     .RST_N(RST_N),
@@ -36,8 +37,8 @@ module xsimtop();
       CLK = 0;
       RST_N = 0;
       count = 0;
-      msgSource_dst_rdy_b = 0;
       msgSink_src_rdy_b = 0;
+      
       dpi_init();
    end
 
@@ -46,21 +47,27 @@ module xsimtop();
 	CLK = !CLK;
    end
 
+   always @(negedge CLK) begin
+      dpi_poll();
+   end   
+
+   assign msgSource_dst_rdy_b = 1;
+   
    always @(posedge CLK) begin
       count <= count + 1;
       if (count == 10) begin
 	 RST_N <= 1;
       end
 
-      dpi_poll();
-   
       if (msgSink_dst_rdy) begin
 	 dpi_msgSink_beat(msgSink_dst_rdy, msgSink_beat_v, msgSink_src_rdy_b);
-	 //$display("msgSink_dst_rdy=%d, msgSink_beat_v=%x, msgSink_src_rdy_b=%d", msgSink_dst_rdy, msgSink_beat_v, msgSink_src_rdy_b);
       end
+      else begin
+	msgSink_src_rdy_b <= 0;
+     end
+
       if (msgSource_src_rdy) begin
-	 dpi_msgSource_beat(msgSource_src_rdy, msgSource_beat, msgSource_dst_rdy_b);
-	 //$display("msgSource_src_rdy=%d, msgSource_beat=%x, msgSource_dst_rdy_b=%d", msgSource_src_rdy, msgSource_beat, msgSource_dst_rdy_b);
+	 dpi_msgSource_beat(msgSource_src_rdy, msgSource_beat, msgSource_dst_rdy_b0);
       end
    end
 endmodule
