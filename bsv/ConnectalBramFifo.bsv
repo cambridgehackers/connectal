@@ -108,7 +108,7 @@ module mkSizedBRAMFIFOF#(Integer m)(FIFOF#(t))
       Vector#(TDiv#(sizet,72), Bit#(72)) vs = unpack(extendNP(pack(v)));
       Vector#(TDiv#(sizet,72), Integer) indices = genVector();
       function Action fifoEnq(Integer i); action dinWires[i] <= vs[i]; endaction endfunction
-      let unused <- mapM(fifoEnq, indices);
+      mapM_(fifoEnq, indices);
       wrenWire <= 1;
    endmethod
    method notFull = (fifos[0].full == 0);
