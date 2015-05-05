@@ -266,7 +266,7 @@ vsim: verilog bin/vsim
 $(VFILE): $(TOPBSVFILE) $(BSVFILES)
 	$(Q)mkdir -p verilog/portal $(DTOP)/obj
 	@echo BSCVERILOG [$(DTOP)]
-	$(Q)cd generatedbsv; $(RUN_BSC) -remove-dollar -verilog -u -g $(MKTOP) $(TOPBSVFILE)
+	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -remove-dollar -verilog -u -g $(MKTOP) $(TOPBSVFILE)
 	$(Q)sed -i 's|// On .*|// timestamp removed|' verilog/*.v
 	$(Q)for v in verilog/*.v; do $(CONNECTALDIR)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
 
@@ -278,8 +278,8 @@ $(DTOP)/jni/%.c: $(CONNECTALDIR)/cpp/%.c
 bsim: prepare_bin_target $(DTOP)/jni/TlpReplay.cpp $(BSIM_CXX_LOCAL)
 	$(Q)mkdir -p $(DTOP)/obj verilog
 	@echo BSCBSIM [$(DTOP)]
-	$(Q)cd generatedbsv; $(RUN_BSC) -D BSIM -sim -u -g $(MKTOP) $(TOPBSVFILE)
-	$(Q)cd generatedbsv; $(RUN_BSC) $(BSC_CXXFLAGS) -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX_LOCAL) $(BSIM_CXX_PROJECT)
+	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -D BSIM -sim -u -g $(MKTOP) $(TOPBSVFILE)
+	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) $(BSC_CXXFLAGS) -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX_LOCAL) $(BSIM_CXX_PROJECT)
 	$(Q)cp -v generatedbsv/bsim* bin
 	$(QTUSED)
 
