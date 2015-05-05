@@ -257,7 +257,7 @@ xsim: verilog $(XSIM_OBJECTS)
 	xvlog --sv $(CONNECTALDIR)/verilog/xsimtop.sv
 	#xsc -v -cc gcc -compile $(SOURCES)
 	xsc -cc gcc -link $(foreach c, $(XSIM_CFILES) $(XSIM_GENERATED_CFILES), xsim.dir/xsc/$(c).lnx64.o ) -o xsimtop
-	xelab -cc gcc -svlog $(CONNECTALDIR)/verilog/xsimtop.sv --debug wave -L unisim -L unifast work.xsimtop -sv_lib xsimtop
+	xelab -cc gcc -svlog $(CONNECTALDIR)/verilog/xsimtop.sv --debug wave -L unisim -L unifast -L unimacro work.xsimtop -sv_lib xsimtop
 
 bin/vsim:
 	python $(CONNECTALDIR)/scripts/sim-gen.py -o vsim/Makefile -s ~/dev/connectal/out/vsim/synthesis/ -d ~/dev/sonic-lite/vsim/modelsim -p ~/dev/sonic-lite -c $(CONNECTALDIR) -g ~/dev/connectal/out/vsim/synthesis/ -t ~/dev/connectal/out/vsim/synthesis/ -T mkSonicSimTop
