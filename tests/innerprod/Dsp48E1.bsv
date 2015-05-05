@@ -122,6 +122,8 @@ module mkDsp48E1(Dsp48E1);
    Reg#(Bit#(1))  last2Reg  <- mkReg(0, reset_by optionalReset);
    Reg#(Bit#(1))  last3Reg  <- mkReg(0, reset_by optionalReset);
    Reg#(Bit#(1))  last4Reg  <- mkReg(0, reset_by optionalReset);
+   Reg#(Bit#(1))  last5Reg  <- mkReg(0, reset_by optionalReset);
+   Reg#(Bit#(1))  last6Reg  <- mkReg(0, reset_by optionalReset);
 
    rule clock_enable_and_reset;
       ce2Reg <= ce1Wire;
@@ -130,6 +132,8 @@ module mkDsp48E1(Dsp48E1);
       last2Reg <= last1Wire;
       last3Reg <= last2Reg;
       last4Reg <= last3Reg;
+      last5Reg <= last4Reg;
+      last6Reg <= last5Reg;
 
       dsp.cea1(1); // (ce1Wire);
       dsp.cea2(1); // (ce2Reg);
@@ -192,7 +196,7 @@ module mkDsp48E1(Dsp48E1);
    method Action d(Bit#(25) v);
       dsp.d(v);
    endmethod
-   method Bit#(48) p() if (last2Reg == 1 || last3Reg == 1 || last4Reg == 1);
+   method Bit#(48) p() if (last6Reg == 1);
       return dsp.p();
    endmethod
    method Action last(Bit#(1) v);
