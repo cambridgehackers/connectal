@@ -43,6 +43,7 @@ module mkInnerProdTile(InnerProdTile);
    endinterface
    interface Get response;
       method ActionValue#(Int#(48)) get();
+	 $display("InnerProdTile response.get %h", dsp.p());
 	 return unpack(dsp.p());
       endmethod
    endinterface
@@ -63,28 +64,33 @@ module mkInnerProd#(
 `endif
    let derivedReset <- mkAsyncReset(2, defaultReset, derivedClock);
    let optionalReset = derivedReset; // noReset
-   //let syncIn <- mkSyncFIFO(16, defaultClock, defaultReset, derivedClock);
-   //SyncFIFOIfc#(Int#(48)) syncOut <- mkSyncFIFO(16, derivedClock, derivedReset, defaultClock);
-   //FIFOF#(Int#(48)) bramFifo <- mkSizedBRAMFIFOF(512, clocked_by derivedClock, reset_by derivedReset);
+   let syncIn <- mkSyncFIFO(16, defaultClock, defaultReset, derivedClock);
+   SyncFIFOIfc#(Int#(48)) syncOut <- mkSyncFIFO(16, derivedClock, derivedReset, defaultClock);
+   FIFOF#(Int#(48)) bramFifo <- mkSizedBRAMFIFOF(512, clocked_by derivedClock, reset_by derivedReset);
+
+   Reg#(Bit#(32)) cycles <- mkReg(0, clocked_by derivedClock, reset_by derivedReset);
+   rule cyclesRule;
+      cycles <= cycles+1;
+   endrule
 
    let tile <- mkInnerProdTile(clocked_by derivedClock, reset_by optionalReset);
    rule syncRequestRule;
-      //let req <- toGet(syncIn).get();
-      //tile.request.put(req);
+      let req <- toGet(syncIn).get();
+      $display("syncRequestRule a=%h b=%h", tpl_1(req), tpl_2(req));
+      tile.request.put(req);
    endrule
-   //mkConnection(tile.response, toPut(bramFifo), clocked_by derivedClock, reset_by derivedReset);
-   //mkConnection(toGet(bramFifo), toPut(syncOut), clocked_by derivedClock, reset_by derivedReset);
+   mkConnection(tile.response, toPut(bramFifo), clocked_by derivedClock, reset_by derivedReset);
+   mkConnection(toGet(bramFifo), toPut(syncOut), clocked_by derivedClock, reset_by derivedReset);
    rule indRule;
-      //let r <- toGet(syncOut).get();
-      let r <- tile.response.get();
-      $display("indRule v=%x %d", r, r);
+      let r <- toGet(syncOut).get();
+      $display("%d: indRule v=%x %d", cycles, r, r);
       ind.innerProd(pack(r));
    endrule
 
    interface InnerProdRequest request;
       method Action innerProd(Bit#(16) a, Bit#(16) b, Bool first, Bool last, Bit#(4) alumode, Bit#(5) inmode, Bit#(7) opmode);
-	 //syncIn.enq(tuple7(unpack(a),unpack(b),first,last, alumode, inmode, opmode));
-	 tile.request.put(tuple7(unpack(a),unpack(b),first,last, alumode, inmode, opmode));
+	 $display("request.innerProd a=%h b=%h", a, b);
+	 syncIn.enq(tuple7(unpack(a),unpack(b),first,last, alumode, inmode, opmode));
       endmethod
       method Action finish();
 	 $dumpflush();
