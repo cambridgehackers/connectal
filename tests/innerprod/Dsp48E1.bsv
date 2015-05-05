@@ -114,6 +114,9 @@ module mkDsp48E1(Dsp48E1);
    Wire#(Bit#(18)) bWire <- mkDWire(0);
    Wire#(Bit#(48)) cWire <- mkDWire(0);
    Wire#(Bit#(25)) dWire <- mkDWire(0);
+   Reg#(Bit#(48))  c1Reg <- mkReg(0);
+   Reg#(Bit#(48))  c2Reg <- mkReg(0);
+   Reg#(Bit#(48))  c3Reg <- mkReg(0);
 
    Wire#(Bit#(1)) ce1Wire <- mkDWire(0);
    Reg#(Bit#(1)) ce2Reg <- mkReg(0, reset_by optionalReset);
@@ -155,13 +158,17 @@ module mkDsp48E1(Dsp48E1);
       opmodeReg <= opmodeWire;
       alumodeReg <= alumodeWire;
 
+      c1Reg <= cWire;
+      c2Reg <= c1Reg;
+      c3Reg <= c2Reg;
+
       dsp.alumode(alumodeReg);
       dsp.carryinsel(carryinselWire);
       dsp.inmode(inmodeWire);
       dsp.opmode(opmodeReg);
       //dsp.a(aWire);
       //dsp.b(bWire);
-      //dsp.c(cWire);
+      dsp.c(c3Reg);
       //dsp.d(dWire);
 
       dsp.acin(0);
@@ -191,7 +198,7 @@ module mkDsp48E1(Dsp48E1);
       dsp.b(v);
    endmethod
    method Action c(Bit#(48) v);
-      dsp.c(v);
+      cWire <= v;
    endmethod
    method Action d(Bit#(25) v);
       dsp.d(v);
