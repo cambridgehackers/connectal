@@ -60,6 +60,9 @@ endif
 ifeq ($(BSCVERSION), 2014.07.A)
     BSCFLAGS_COMMON += -D ClockDefaultParam
 endif
+ifeq ($(BSCMAJOR), 2015)
+    BSCFLAGS_COMMON += -D ClockDefaultParam
+endif
 
 BSCOPTFLAGS= -show-schedule -aggressive-conditions
 BSCPATHFLAGS=  -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj -info-dir $(DTOP)/obj
