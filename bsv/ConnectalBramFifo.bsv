@@ -81,6 +81,9 @@ module mkSizedBRAMFIFOF#(Integer m)(FIFOF#(t))
 	 fifos[i].rden(rdenWire);
 	 fifos[i].wren(wrenWire);
       endrule
+      rule inputs;
+	 fifos[i].din(dinWires[i]);
+      endrule
       rule counts;
 	 rdcount <= fifos[i].rdcount();
 	 wrcount <= fifos[i].wrcount();
