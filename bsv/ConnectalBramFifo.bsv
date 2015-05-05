@@ -37,6 +37,8 @@ interface X7FifoSyncMacro#(numeric type data_width);
    method Action wren(Bit#(1) wren);
    method Bit#(data_width) dout();
    method Action rden(Bit#(1) rden);
+   method Bit#(9) wrcount();
+   method Bit#(9) rdcount();
 endinterface
 
 import "BVI" FIFO_DUALCLOCK_MACRO =
@@ -54,7 +56,10 @@ module  vmkBramFifo#(Clock wrclk, String fifo_size)(X7FifoSyncMacro#(data_width)
    method wren(WREN) enable ((*inhigh*)EN_wren);
    method DO dout();
    method rden(RDEN) enable ((*inhigh*)EN_rden);
-   schedule (empty, full, dout, din, wren, rden) CF (empty, full, dout, din, wren, rden);
+   // wrcount and rdcount ports are needed for xsim
+   method WRCOUNT wrcount();
+   method RDCOUNT rdcount();
+   schedule (empty, full, dout, din, wren, rden, wrcount, rdcount) CF (empty, full, dout, din, wren, rden, wrcount, rdcount);
 endmodule
 
 module mkSizedBRAMFIFOF#(Integer m)(FIFOF#(t))
@@ -69,11 +74,18 @@ module mkSizedBRAMFIFOF#(Integer m)(FIFOF#(t))
    Wire#(Bit#(1)) wrenWire <- mkDWire(0);
    Vector#(TDiv#(sizet,72),Wire#(Bit#(72))) dinWires <- replicateM(mkDWire(0));
 
-   for (Integer i = 0; i < valueOf(TDiv#(sizet,72)); i = i+1)
+   for (Integer i = 0; i < valueOf(TDiv#(sizet,72)); i = i+1) begin
+      Reg#(Bit#(9)) rdcount <- mkReg(0);
+      Reg#(Bit#(9)) wrcount <- mkReg(0);
       rule enables;
 	 fifos[i].rden(rdenWire);
 	 fifos[i].wren(wrenWire);
       endrule
+      rule counts;
+	 rdcount <= fifos[i].rdcount();
+	 wrcount <= fifos[i].wrcount();
+      endrule
+   end
 
    function Bool fifoNotEmpty(Integer i); return fifos[i].empty == 0; endfunction
    function Bool fifoNotFull(Integer i); return fifos[i].full == 0; endfunction
