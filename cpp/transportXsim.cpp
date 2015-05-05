@@ -149,12 +149,12 @@ static void write_portal_xsim(PortalInternal *pint, volatile unsigned int **addr
 }
 static void send_portal_xsim(struct PortalInternal *pint, volatile unsigned int *data, unsigned int hdr, int sendFd)
 {
-    // send a BlueNoc header
+    // send an xsim header
     uint32_t methodId = (hdr >> 16) & 0xFF;
     uint32_t numwords = (hdr & 0xFF) - 1;
     //FIXME, probably should have portal number in dst (bits 7:0)
-    uint32_t bluenoc_hdr = (methodId << 24) | (numwords << 16);
-    xsimRequestProxy->msgSink(bluenoc_hdr);
+    uint32_t xsim_hdr = (methodId << 24) | (numwords << 16);
+    xsimRequestProxy->msgSink(xsim_hdr);
 
     // then the data beats
     while (msgbeats.size()) {
@@ -177,16 +177,16 @@ static int event_portal_xsim(struct PortalInternal *pint)
 {
     xsimIndication->lockReadData();
     if (xsimIndication->srcbeats.size()) {
-        uint32_t bluenoc_hdr = xsimIndication->srcbeats.front();
+        uint32_t xsim_hdr = xsimIndication->srcbeats.front();
 	uint32_t last = xsimIndication->srcbeats.back();
         //hmm, which portal?
-        uint32_t numwords = (bluenoc_hdr >> 16) & 0xFF;
-        uint32_t methodId = (bluenoc_hdr >> 24) & 0xFF;
+        uint32_t numwords = (xsim_hdr >> 16) & 0xFF;
+        uint32_t methodId = (xsim_hdr >> 24) & 0xFF;
 
         if (xsimIndication->srcbeats.size() >= numwords+1) {
 	  if (trace_xsim)
             fprintf(stderr, "%s: pint=%p srcbeats=%d methodwords=%d methodId=%d hdr=%08x last=%08x\n",
-		    __FUNCTION__, pint, (int)xsimIndication->srcbeats.size(), numwords, methodId, bluenoc_hdr, last);
+		    __FUNCTION__, pint, (int)xsimIndication->srcbeats.size(), numwords, methodId, xsim_hdr, last);
 	    // pop the header word
             xsimIndication->srcbeats.pop();
 
@@ -197,7 +197,6 @@ static int event_portal_xsim(struct PortalInternal *pint)
     xsimIndication->unlockReadData();
     return -1;
 }
-
 PortalTransportFunctions transportXsim = {
     init_xsim, read_portal_xsim, write_portal_xsim, write_portal_fd_xsim, mapchannel_hardware, mapchannel_hardware,
     send_portal_xsim, recv_portal_xsim, busy_portal_null, enableint_portal_xsim, event_portal_xsim, notfull_null};
