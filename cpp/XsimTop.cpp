@@ -31,8 +31,8 @@
 #endif
 #include <portal.h>
 #include <sock_utils.h>
-#include <XsimMemSlaveRequest.h>
-#include <XsimMemSlaveIndication.h>
+#include <XsimMsgRequest.h>
+#include <XsimMsgIndication.h>
 
 extern "C" {
 void dpi_init();
@@ -91,7 +91,7 @@ void xsiport::write(int aVal)
 }
 #endif // !SYSTEM_VERILOG
 
-class XsimMemSlaveRequest : public XsimMemSlaveRequestWrapper {
+class XsimMsgRequest : public XsimMsgRequestWrapper {
   struct idInfo {
     int number;
     int id;
@@ -113,8 +113,8 @@ public:
 
   int connected;
 
-  XsimMemSlaveRequest(int id, PortalTransportFunctions *item, void *param, PortalPoller *poller = 0) : XsimMemSlaveRequestWrapper(id, item, param, poller), connected(0) { }
-  ~XsimMemSlaveRequest() {}
+  XsimMsgRequest(int id, PortalTransportFunctions *item, void *param, PortalPoller *poller = 0) : XsimMsgRequestWrapper(id, item, param, poller), connected(0) { }
+  ~XsimMsgRequest() {}
   virtual void connect () {
       connected = 1;
   }
@@ -129,7 +129,7 @@ public:
 
 };
 
-void XsimMemSlaveRequest::enableint( const uint32_t fpgaId, const uint8_t val)
+void XsimMsgRequest::enableint( const uint32_t fpgaId, const uint8_t val)
 {
   int number = fpgaNumber(fpgaId);
   uint32_t hwaddr = number << 16 | 4;
@@ -138,7 +138,7 @@ void XsimMemSlaveRequest::enableint( const uint32_t fpgaId, const uint8_t val)
   writereqs.push(req);
 }
 
-void XsimMemSlaveRequest::read ( const uint32_t fpgaId, const uint32_t addr )
+void XsimMsgRequest::read ( const uint32_t fpgaId, const uint32_t addr )
 {
   int number = fpgaNumber(fpgaId);
   fprintf(stderr, "[%s:%d] id=%d number=%d addr=%08x\n", __FUNCTION__, __LINE__, fpgaId, number, addr);
@@ -147,7 +147,7 @@ void XsimMemSlaveRequest::read ( const uint32_t fpgaId, const uint32_t addr )
   readreqs.push(req);
 }
 
-void XsimMemSlaveRequest::write ( const uint32_t fpgaId, const uint32_t addr, const uint32_t data )
+void XsimMsgRequest::write ( const uint32_t fpgaId, const uint32_t addr, const uint32_t data )
 {
   int number = fpgaNumber(fpgaId);
   uint32_t hwaddr = number << 16 | addr;
@@ -156,14 +156,14 @@ void XsimMemSlaveRequest::write ( const uint32_t fpgaId, const uint32_t addr, co
   writereqs.push(req);
 }
 
-void XsimMemSlaveRequest::msgSink ( const uint32_t data )
+void XsimMsgRequest::msgSink ( const uint32_t data )
 {
   if (trace_xsimtop)
       fprintf(stderr, "[%s:%d] data=%08x\n", __FUNCTION__, __LINE__, data);
   sinkbeats.push(data);
 }
 
-void XsimMemSlaveRequest::directory ( const uint32_t fpgaNumber, const uint32_t fpgaId, const uint32_t last )
+void XsimMsgRequest::directory ( const uint32_t fpgaNumber, const uint32_t fpgaId, const uint32_t last )
 {
     fprintf(stderr, "[%s:%d] fpga=%d id=%d last=%d\n", __FUNCTION__, __LINE__, fpgaNumber, fpgaId, last);
     struct idInfo info = { (int)fpgaNumber, (int)fpgaId, 1 };
@@ -172,7 +172,7 @@ void XsimMemSlaveRequest::directory ( const uint32_t fpgaNumber, const uint32_t 
       portal_count = fpgaNumber+1;
 }
 
-int XsimMemSlaveRequest::fpgaNumber(int fpgaId)
+int XsimMsgRequest::fpgaNumber(int fpgaId)
 {
     for (int i = 0; ids[i].valid; i++)
         if (ids[i].id == fpgaId) {
@@ -187,7 +187,7 @@ int XsimMemSlaveRequest::fpgaNumber(int fpgaId)
 
     return 0;
 }
-int XsimMemSlaveRequest::fpgaId(int fpgaNumber)
+int XsimMsgRequest::fpgaId(int fpgaNumber)
 {
   return ids[fpgaNumber].id;
 }
@@ -201,9 +201,9 @@ public:
   DpiWorker();
   void poll();
   //private:
-  Portal                      *mcommon;
-  XsimMemSlaveIndicationProxy *memSlaveIndicationProxy;
-  XsimMemSlaveRequest         *memSlaveRequest;
+  Portal                 *mcommon;
+  XsimMsgIndicationProxy *xsimIndicationProxy;
+  XsimMsgRequest         *xsimRequest;
   // msgSink
   int dst_rdy;
   // msgSource
@@ -220,8 +220,8 @@ DpiWorker::DpiWorker()
     fprintf(stderr, "[%s:%d] using BluenocTop\n", __FILE__, __LINE__);
     mcommon = new Portal(0, 0, sizeof(uint32_t), portal_mux_handler, NULL, &transportSocketResp, &paramSocket);
     param.pint = &mcommon->pint;
-    memSlaveIndicationProxy = new XsimMemSlaveIndicationProxy(XsimIfcNames_XsimMemSlaveIndication, &transportMux, &param);
-    memSlaveRequest = new XsimMemSlaveRequest(XsimIfcNames_XsimMemSlaveRequest, &transportMux, &param);
+    xsimIndicationProxy = new XsimMsgIndicationProxy(XsimIfcNames_XsimMsgIndication, &transportMux, &param);
+    xsimRequest = new XsimMsgRequest(XsimIfcNames_XsimMsgRequest, &transportMux, &param);
 
     fprintf(stderr, "[%s:%d]\n", __FUNCTION__, __LINE__);
     defaultPoller->stop();
@@ -235,13 +235,13 @@ void DpiWorker::poll()
   if (dst_rdy) {
     // msgSink consumed one beat of data
     if (trace_xsimtop) fprintf(stderr, "[%s:%d] sinkbeats.pop()\n", __FUNCTION__, __LINE__);
-    memSlaveRequest->sinkbeats.pop();
+    xsimRequest->sinkbeats.pop();
     dst_rdy = 0;
   }
   if (src_rdy) {
     // we got some data from the msgSource
       if (trace_xsimtop) fprintf(stderr, "[%s:%d] srcbeats.push() src_beat=%08x\n", __FUNCTION__, __LINE__, src_beat);
-      memSlaveIndicationProxy->msgSource(src_beat);
+      xsimIndicationProxy->msgSource(src_beat);
       src_rdy = 0;
   }
 
@@ -274,8 +274,8 @@ void dpi_poll()
 
 void dpi_msgSink_beat(int dst_rdy, int *p_beat, int *p_src_rdy)
 {
-  if (dst_rdy && (dpiWorker->memSlaveRequest->sinkbeats.size() > 0)) {
-    uint32_t beat = dpiWorker->memSlaveRequest->sinkbeats.front();
+  if (dst_rdy && (dpiWorker->xsimRequest->sinkbeats.size() > 0)) {
+    uint32_t beat = dpiWorker->xsimRequest->sinkbeats.front();
     if (trace_xsimtop)
       fprintf(stderr, "[%s:%d] sink message beat %08x\n", __FUNCTION__, __LINE__, beat);
     *p_beat = beat;

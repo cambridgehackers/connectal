@@ -155,7 +155,7 @@ endif
 endif
 
 ifeq ($(BOARD),xsim)
-INTERFACES += XsimMemSlaveRequest XsimMemSlaveIndication
+INTERFACES += XsimMsgRequest XsimMsgIndication
 CPPFILES += $(CONNECTALDIR)/cpp/transportXsim.cpp
 BSVFILES += $(CONNECTALDIR)/bsv/XsimIF.bsv
 endif
