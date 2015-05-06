@@ -32,8 +32,8 @@ public:
     if (++cnt == NUMBER_OF_TESTS)
       exit(0);
   }
-  void innerProd(uint64_t v) {
-    fprintf(stderr, "innerProd v=%llx\n", (long long)v);
+  void innerProd(uint16_t v) {
+    fprintf(stderr, "innerProd v=%x\n", v);
   }
     InnerProd(unsigned int id) : InnerProdIndicationWrapper(id), cnt(0) {}
 };

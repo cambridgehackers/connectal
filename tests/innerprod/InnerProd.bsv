@@ -17,35 +17,41 @@ endinterface
 
 interface InnerProdTile;
    interface Put#(Tuple4#(Int#(16),Int#(16),Bool,Bool)) request;
-   interface Get#(Int#(48)) response;
+   interface Get#(Int#(16)) response;
 endinterface
 
 (* synthesize *)
 module mkInnerProdTile(InnerProdTile);
 
    let dsp <- mkDsp48E1();
+   let defaultClock <- exposeCurrentClock();
+   let defaultReset <- exposeCurrentReset();
 
-   interface Put request;
-      method Action put(Tuple4#(Int#(16),Int#(16),Bool,Bool) req);
-	 match { .a, .b, .first, .last } = req;
-	 dsp.a(extend(pack(a)));
-	 dsp.b(extend(pack(b)));
-	 dsp.c('h22);
-	 dsp.d(0);
-	 let opmode = 7'h25;
-	 if (first) opmode = 7'h05;
-	 dsp.opmode(opmode);
-	 dsp.inmode(0);
-	 dsp.alumode(0);
-	 dsp.last(pack(last));
-      endmethod
-   endinterface
-   interface Get response;
-      method ActionValue#(Int#(48)) get();
-	 $display("InnerProdTile response.get %h", dsp.p());
-	 return unpack(dsp.p());
-      endmethod
-   endinterface
+   FIFOF#(Tuple4#(Int#(16),Int#(16),Bool,Bool)) reqFifo <- mkDualClockBramFIFOF(defaultClock, defaultReset, defaultClock, defaultReset);
+   FIFOF#(Int#(16)) responseFifo <- mkDualClockBramFIFOF(defaultClock, defaultReset, defaultClock, defaultReset);
+
+   rule request_rule;
+      let req <- toGet(reqFifo).get();
+      match { .a, .b, .first, .last } = req;
+      dsp.a(extend(pack(a)));
+      dsp.b(extend(pack(b)));
+      dsp.c(0);
+      dsp.d(0);
+      let opmode = 7'h25;
+      if (first) opmode = 7'h05;
+      dsp.opmode(opmode);
+      dsp.inmode(0);
+      dsp.alumode(0);
+      dsp.last(pack(last));
+   endrule
+
+   rule responseRule;
+      $display("InnerProdTile response.get %h", dsp.p());
+      responseFifo.enq(unpack(dsp.p()[23:8]));
+   endrule
+
+   interface Put request = toPut(reqFifo);
+   interface Get response = toGet(responseFifo);
 endmodule
 
 module mkInnerProd#(
@@ -64,7 +70,7 @@ module mkInnerProd#(
    let derivedReset <- mkAsyncReset(2, defaultReset, derivedClock);
    let optionalReset = derivedReset; // noReset
    let syncIn <- mkDualClockBramFIFOF(defaultClock, defaultReset, derivedClock, derivedReset);
-   FIFOF#(Int#(48)) bramFifo <- mkDualClockBramFIFOF(derivedClock, derivedReset, defaultClock, defaultReset);
+   FIFOF#(Int#(16)) bramFifo <- mkDualClockBramFIFOF(derivedClock, derivedReset, defaultClock, defaultReset);
    let started <- mkFIFOF();
 
    Reg#(Bit#(32)) cycles <- mkReg(0, clocked_by derivedClock, reset_by derivedReset);
