@@ -66,6 +66,7 @@ module mkInnerProd#(
    let optionalReset = derivedReset; // noReset
    let syncIn <- mkDualClockBramFIFOF(defaultClock, defaultReset, derivedClock, derivedReset);
    FIFOF#(Int#(48)) bramFifo <- mkDualClockBramFIFOF(derivedClock, derivedReset, defaultClock, defaultReset);
+   let started <- mkFIFOF();
 
    Reg#(Bit#(32)) cycles <- mkReg(0, clocked_by derivedClock, reset_by derivedReset);
    rule cyclesRule;
@@ -73,7 +74,7 @@ module mkInnerProd#(
    endrule
 
    let tile <- mkInnerProdTile(clocked_by derivedClock, reset_by optionalReset);
-   rule syncRequestRule;
+   rule syncRequestRule if (started.notEmpty());
       let req <- toGet(syncIn).get();
       $display("syncRequestRule a=%h b=%h", tpl_1(req), tpl_2(req));
       tile.request.put(req);
@@ -89,6 +90,10 @@ module mkInnerProd#(
       method Action innerProd(Bit#(16) a, Bit#(16) b, Bool first, Bool last, Bit#(4) alumode, Bit#(5) inmode, Bit#(7) opmode);
 	 $display("request.innerProd a=%h b=%h", a, b);
 	 syncIn.enq(tuple7(unpack(a),unpack(b),first,last, alumode, inmode, opmode));
+      endmethod
+      method Action start();
+	 started.enq(True);
+	 $display("start");
       endmethod
       method Action finish();
 	 $dumpflush();
