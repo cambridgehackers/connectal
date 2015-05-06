@@ -45,13 +45,14 @@ int main(int argc, const char **argv)
     device.pint.busyType = BUSY_SPIN;
 
     fprintf(stderr, "[%s:%d] waiting for response\n", __FILE__, __LINE__);
-    device.innerProd(0x0080, 0x0080, 1, 0);
-    device.innerProd(0x0000, 0x0000, 0, 0);
-    device.innerProd(0x0100, 0x0080, 0, 0);
-    device.innerProd(0x0080, 0x0080, 0, 0);
-    device.innerProd(0x0100, 0x1000, 0, 0);
-    device.innerProd(0x0200, 0x1000, 0, 1);
-    device.start();
+    for (int tile = 0; tile < 16; tile++) {
+      device.innerProd(tile, 0x0080, 0x0080, 1, 0);
+      device.innerProd(tile, 0x0000, 0x0000, 0, 0);
+      device.innerProd(tile, 0x0100, 0x0080, 0, 0);
+      device.innerProd(tile, 0x0080, 0x0080, 0, 0);
+      device.innerProd(tile, 0x0100, 0x1000, 0, 0);
+      device.innerProd(tile, 0x0200, 0x1000, 0, 1);
+    }
     for (int times = 0; times < 5; times++)
 	sleep(1);
     device.finish();

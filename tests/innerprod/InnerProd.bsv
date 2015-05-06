@@ -1,11 +1,14 @@
 
 import GetPut::*;
 import Clocks::*;
+import Vector::*;
+import BuildVector::*;
 import FIFO::*;
 import FIFOF::*;
 import GetPut::*;
 import Connectable::*;
 
+import Pipe::*;
 import HostInterface::*;
 import Dsp48E1::*;
 import InnerProdInterface::*;
@@ -15,10 +18,15 @@ interface InnerProd;
    interface InnerProdRequest request;
 endinterface
 
+typedef Tuple4#(Int#(16),Int#(16),Bool,Bool) TileRequest;
+typedef Int#(16)                             TileResponse;
+
 interface InnerProdTile;
-   interface Put#(Tuple4#(Int#(16),Int#(16),Bool,Bool)) request;
-   interface Get#(Int#(16)) response;
+   interface PipeIn#(TileRequest) request;
+   interface PipeOut#(TileResponse) response;
 endinterface
+
+function PipeOut#(TileResponse) getTileResponsePipe(InnerProdTile tile); return tile.response; endfunction
 
 (* synthesize *)
 module mkInnerProdTile(InnerProdTile);
@@ -50,8 +58,8 @@ module mkInnerProdTile(InnerProdTile);
       responseFifo.enq(unpack(dsp.p()[23:8]));
    endrule
 
-   interface Put request = toPut(reqFifo);
-   interface Get response = toGet(responseFifo);
+   interface Put request = toPipeIn(reqFifo);
+   interface Get response = toPipeOut(responseFifo);
 endmodule
 
 module mkInnerProd#(
@@ -69,7 +77,8 @@ module mkInnerProd#(
 `endif
    let derivedReset <- mkAsyncReset(2, defaultReset, derivedClock);
    let optionalReset = derivedReset; // noReset
-   let syncIn <- mkDualClockBramFIFOF(defaultClock, defaultReset, derivedClock, derivedReset);
+
+   FIFOF#(Tuple2#(Bit#(4),TileRequest)) syncIn <- mkDualClockBramFIFOF(defaultClock, defaultReset, derivedClock, derivedReset);
    FIFOF#(Int#(16)) bramFifo <- mkDualClockBramFIFOF(derivedClock, derivedReset, defaultClock, defaultReset);
    let started <- mkFIFOF();
 
@@ -78,13 +87,24 @@ module mkInnerProd#(
       cycles <= cycles+1;
    endrule
 
-   let tile <- mkInnerProdTile(clocked_by derivedClock, reset_by optionalReset);
-   rule syncRequestRule if (started.notEmpty());
-      let req <- toGet(syncIn).get();
-      $display("syncRequestRule a=%h b=%h", tpl_1(req), tpl_2(req));
-      tile.request.put(req);
-   endrule
-   mkConnection(tile.response, toPut(bramFifo), clocked_by derivedClock, reset_by derivedReset);
+   Vector#(16, InnerProdTile) tiles <- replicateM(mkInnerProdTile(clocked_by derivedClock, reset_by optionalReset));
+
+   PipeOut#(Tuple2#(Bit#(4),TileRequest))              reqPipe = toPipeOut(syncIn);
+   Vector#(1, PipeOut#(Tuple2#(Bit#(4),TileRequest))) reqPipe1 = vec(reqPipe);
+   UnFunnelPipe#(1,16,TileRequest,2)                  reqPipes <- mkUnFunnelPipesPipelined(reqPipe1);
+   
+   Vector#(16, PipeOut#(TileResponse))           responsePipes = map(getTileResponsePipe, tiles);
+   FunnelPipe#(1,16,TileResponse,2)               responsePipe <- mkFunnelPipesPipelined(responsePipes);
+
+   for (Integer tile = 0; tile < 16; tile = tile + 1) begin
+      rule syncRequestRule if (started.notEmpty());
+	 let req <- toGet(reqPipes[tile]).get();
+	 $display("syncRequestRule a=%h b=%h", tpl_1(req), tpl_2(req));
+	 tiles[tile].request.enq(req);
+      endrule
+   end
+   mkConnection(responsePipe[0], toPipeIn(bramFifo), clocked_by derivedClock, reset_by derivedReset);
+
    rule indRule;
       let r <- toGet(bramFifo).get();
       $display("%d: indRule v=%x %d", cycles, r, r);
@@ -92,9 +112,10 @@ module mkInnerProd#(
    endrule
 
    interface InnerProdRequest request;
-      method Action innerProd(Bit#(16) a, Bit#(16) b, Bool first, Bool last);
+      method Action innerProd(Bit#(16) tile, Bit#(16) a, Bit#(16) b, Bool first, Bool last);
 	 $display("request.innerProd a=%h b=%h first=%d last=%d", a, b, first, last);
-	 syncIn.enq(tuple4(unpack(a),unpack(b),first,last));
+	 Bit#(4) t = truncate(tile);
+	 syncIn.enq(tuple2(t, tuple4(unpack(a),unpack(b),first,last)));
 	 if (last)
 	    started.enq(True);
 	 $display("start");
