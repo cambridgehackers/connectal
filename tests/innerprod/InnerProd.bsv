@@ -64,7 +64,7 @@ module mkInnerProd#(
 `endif
    let derivedReset <- mkAsyncReset(2, defaultReset, derivedClock);
    let optionalReset = derivedReset; // noReset
-   let syncIn <- mkSyncFIFO(16, defaultClock, defaultReset, derivedClock);
+   let syncIn <- mkDualClockBramFIFOF(defaultClock, defaultReset, derivedClock, derivedReset);
    FIFOF#(Int#(48)) bramFifo <- mkDualClockBramFIFOF(derivedClock, derivedReset, defaultClock, defaultReset);
 
    Reg#(Bit#(32)) cycles <- mkReg(0, clocked_by derivedClock, reset_by derivedReset);
