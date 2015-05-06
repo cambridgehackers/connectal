@@ -88,12 +88,16 @@ module mkInnerProd#(
 
    interface InnerProdRequest request;
       method Action innerProd(Bit#(16) a, Bit#(16) b, Bool first, Bool last, Bit#(4) alumode, Bit#(5) inmode, Bit#(7) opmode);
-	 $display("request.innerProd a=%h b=%h", a, b);
-	 syncIn.enq(tuple7(unpack(a),unpack(b),first,last, alumode, inmode, opmode));
+	 $display("request.innerProd a=%h b=%h first=%d last=%d", a, b, first, last);
+	 Bit#(7) om = 7'h25;
+	 if (first)
+	    om = 7'h05;
+	 syncIn.enq(tuple7(unpack(a),unpack(b),first,last, alumode, inmode, om));
+	 if (last)
+	    started.enq(True);
+	 $display("start");
       endmethod
       method Action start();
-	 started.enq(True);
-	 $display("start");
       endmethod
       method Action finish();
 	 $dumpflush();
