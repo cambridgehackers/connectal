@@ -30,7 +30,7 @@ module mkInnerProdTile(InnerProdTile);
 	 match { .a, .b, .first, .last, .alumode, .inmode, .opmode } = req;
 	 dsp.a(extend(pack(a)));
 	 dsp.b(extend(pack(b)));
-	 dsp.c(0);
+	 dsp.c('h22);
 	 dsp.d(0);
 	 //let opmode = 7'h45; // p = M + P
 	 //if (first)
@@ -65,8 +65,7 @@ module mkInnerProd#(
    let derivedReset <- mkAsyncReset(2, defaultReset, derivedClock);
    let optionalReset = derivedReset; // noReset
    let syncIn <- mkSyncFIFO(16, defaultClock, defaultReset, derivedClock);
-   SyncFIFOIfc#(Int#(48)) syncOut <- mkSyncFIFO(16, derivedClock, derivedReset, defaultClock);
-   FIFOF#(Int#(48)) bramFifo <- mkSizedBRAMFIFOF(512, clocked_by derivedClock, reset_by derivedReset);
+   FIFOF#(Int#(48)) bramFifo <- mkDualClockBramFIFOF(derivedClock, derivedReset, defaultClock, defaultReset);
 
    Reg#(Bit#(32)) cycles <- mkReg(0, clocked_by derivedClock, reset_by derivedReset);
    rule cyclesRule;
@@ -80,9 +79,8 @@ module mkInnerProd#(
       tile.request.put(req);
    endrule
    mkConnection(tile.response, toPut(bramFifo), clocked_by derivedClock, reset_by derivedReset);
-   mkConnection(toGet(bramFifo), toPut(syncOut), clocked_by derivedClock, reset_by derivedReset);
    rule indRule;
-      let r <- toGet(syncOut).get();
+      let r <- toGet(bramFifo).get();
       $display("%d: indRule v=%x %d", cycles, r, r);
       ind.innerProd(pack(r));
    endrule
