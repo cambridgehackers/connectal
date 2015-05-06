@@ -42,34 +42,32 @@ interface X7FifoSyncMacro#(numeric type data_width);
 endinterface
 
 import "BVI" FIFO_DUALCLOCK_MACRO =
-module  vmkBramFifo#(Clock wrclk, String fifo_size)(X7FifoSyncMacro#(data_width));
+module  vmkBramFifo#(String fifo_size, Clock wrClock, Reset wrReset, Clock rdClock, Reset rdReset)(X7FifoSyncMacro#(data_width));
+   let invertReset <- mkResetInverter(wrReset);
    parameter DEVICE = "7SERIES";
    parameter DATA_WIDTH = valueOf(data_width);
    parameter FIFO_SIZE = fifo_size;
    parameter FIRST_WORD_FALL_THROUGH = 1;
-   default_clock clk(RDCLK);
-   default_reset rst(RST);
-   input_clock wrclk(WRCLK) = wrclk;
-   method EMPTY empty();
-   method FULL full();
-   method din(DI) enable ((*inhigh*)EN_di);
-   method wren(WREN) enable ((*inhigh*)EN_wren);
-   method DO dout();
-   method rden(RDEN) enable ((*inhigh*)EN_rden);
+   default_clock wrClock(WRCLK) = wrClock;
+   default_reset wrReset(RST) = invertReset;
+   input_clock rdClock(RDCLK) = rdClock;
+   method EMPTY empty() clocked_by (rdClock) reset_by (wrReset);
+   method FULL full() clocked_by (wrClock) reset_by (wrReset);
+   method din(DI) enable ((*inhigh*)EN_di) clocked_by (wrClock) reset_by (wrReset);
+   method wren(WREN) enable ((*inhigh*)EN_wren) clocked_by (wrClock) reset_by (wrReset);
+   method DO dout() clocked_by (rdClock) reset_by (wrReset);
+   method rden(RDEN) enable ((*inhigh*)EN_rden) clocked_by (rdClock) reset_by (wrReset);
    // wrcount and rdcount ports are needed for xsim
-   method WRCOUNT wrcount();
-   method RDCOUNT rdcount();
+   method WRCOUNT wrcount() clocked_by (wrClock) reset_by (wrReset);
+   method RDCOUNT rdcount() clocked_by (rdClock) reset_by (wrReset);
    schedule (empty, full, dout, din, wren, rden, wrcount, rdcount) CF (empty, full, dout, din, wren, rden, wrcount, rdcount);
 endmodule
 
-module mkSizedBRAMFIFOF#(Integer m)(FIFOF#(t))
+module mkDualClockBramFIFOF#(Clock srcClock, Reset srcReset, Clock dstClock, Reset dstReset)(FIFOF#(t))
    provisos (Bits#(t,sizet),
 	     Add#(1,a__,sizet));
    String fifo_size = "36Kb";
-   let defaultClock <- exposeCurrentClock;
-   let defaultReset <- exposeCurrentReset;
-   let invertReset <- mkResetInverter(defaultReset);
-   Vector#(TDiv#(sizet,72),X7FifoSyncMacro#(72)) fifos <- replicateM(vmkBramFifo(defaultClock, fifo_size, reset_by invertReset));
+   Vector#(TDiv#(sizet,72),X7FifoSyncMacro#(72)) fifos <- replicateM(vmkBramFifo(fifo_size, srcClock, srcReset, dstClock, dstReset));
    Wire#(Bit#(1)) rdenWire <- mkDWire(0);
    Wire#(Bit#(1)) wrenWire <- mkDWire(0);
    Vector#(TDiv#(sizet,72),Wire#(Bit#(72))) dinWires <- replicateM(mkDWire(0));
@@ -114,10 +112,20 @@ module mkSizedBRAMFIFOF#(Integer m)(FIFOF#(t))
    method notFull = (fifos[0].full == 0);
 endmodule
 
+module mkSizedBRAMFIFOF#(Integer m)(FIFOF#(t))
+   provisos (Bits#(t,sizet),
+	     Add#(1,a__,sizet));
+   let clock <- exposeCurrentClock();
+   let reset <- exposeCurrentReset();
+   let fifo <- mkDualClockBramFIFOF(clock, reset, clock, reset);
+   return fifo;
+endmodule
 module mkSizedBRAMFIFO#(Integer m)(FIFO#(t))
    provisos (Bits#(t,sizet),
 	     Add#(1,a__,sizet));
-   let fifo <- mkSizedBRAMFIFOF(m);
+   let clock <- exposeCurrentClock();
+   let reset <- exposeCurrentReset();
+   let fifo <- mkDualClockBramFIFOF(clock, reset, clock, reset);
    method first = fifo.first;
    method deq = fifo.deq;
    method enq = fifo.enq;
