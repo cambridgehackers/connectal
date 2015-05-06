@@ -16,7 +16,7 @@ interface InnerProd;
 endinterface
 
 interface InnerProdTile;
-   interface Put#(Tuple7#(Int#(16),Int#(16),Bool,Bool,Bit#(4),Bit#(5),Bit#(7))) request;
+   interface Put#(Tuple4#(Int#(16),Int#(16),Bool,Bool)) request;
    interface Get#(Int#(48)) response;
 endinterface
 
@@ -26,18 +26,17 @@ module mkInnerProdTile(InnerProdTile);
    let dsp <- mkDsp48E1();
 
    interface Put request;
-      method Action put(Tuple7#(Int#(16),Int#(16),Bool,Bool,Bit#(4),Bit#(5),Bit#(7)) req);
-	 match { .a, .b, .first, .last, .alumode, .inmode, .opmode } = req;
+      method Action put(Tuple4#(Int#(16),Int#(16),Bool,Bool) req);
+	 match { .a, .b, .first, .last } = req;
 	 dsp.a(extend(pack(a)));
 	 dsp.b(extend(pack(b)));
 	 dsp.c('h22);
 	 dsp.d(0);
-	 //let opmode = 7'h45; // p = M + P
-	 //if (first)
-	 //opmode = 7'h05; // P = M + 0
+	 let opmode = 7'h25;
+	 if (first) opmode = 7'h05;
 	 dsp.opmode(opmode);
-	 dsp.inmode(inmode);
-	 dsp.alumode(alumode);
+	 dsp.inmode(0);
+	 dsp.alumode(0);
 	 dsp.last(pack(last));
       endmethod
    endinterface
@@ -87,12 +86,9 @@ module mkInnerProd#(
    endrule
 
    interface InnerProdRequest request;
-      method Action innerProd(Bit#(16) a, Bit#(16) b, Bool first, Bool last, Bit#(4) alumode, Bit#(5) inmode, Bit#(7) opmode);
+      method Action innerProd(Bit#(16) a, Bit#(16) b, Bool first, Bool last);
 	 $display("request.innerProd a=%h b=%h first=%d last=%d", a, b, first, last);
-	 Bit#(7) om = 7'h25;
-	 if (first)
-	    om = 7'h05;
-	 syncIn.enq(tuple7(unpack(a),unpack(b),first,last, alumode, inmode, om));
+	 syncIn.enq(tuple4(unpack(a),unpack(b),first,last));
 	 if (last)
 	    started.enq(True);
 	 $display("start");
