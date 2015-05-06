@@ -11,7 +11,7 @@ AUTOTOP = --importfiles InnerProdInterface
 #DERIVED_CLOCK_PERIOD=2
 
 #CONNECTALFLAGS += -D IMPORT_HOSTIF
-CONNECTALFLAGS += -P mkInnerProdTile
+CONNECTALFLAGS += -P mkInnerProdTile -P mkRequestPipes -P mkResponsePipes
 
 ifeq ($(BOARD),xsim)
 AUTOTOP = --bluenoc
