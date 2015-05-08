@@ -14,8 +14,8 @@ import Dsp48E1::*;
 import InnerProdInterface::*;
 import ConnectalBramFifo::*;
 
-typedef 64 NumTiles;
-typedef 64 NumTilesPerMacro;
+typedef 256 NumTiles;
+typedef 16 NumTilesPerMacro;
 typedef TDiv#(NumTiles,NumTilesPerMacro) NumMacroTiles;
 typedef Tuple2#(Bit#(TLog#(NumTilesPerMacro)),TileRequest) MacroTileRequest;
 
@@ -101,11 +101,11 @@ interface ResponsePipes#(numeric type numPipes);
 endinterface
 
 module mkResponsePipes(ResponsePipes#(numPipes))
-   provisos (FunnelPipesPipelined#(1, numPipes, TileResponse, 3));
+   provisos (FunnelPipesPipelined#(1, numPipes, TileResponse, 2));
 
    Vector#(numPipes, FIFOF#(TileResponse))                fifos <- replicateM(mkFIFOF);
    Vector#(numPipes, PipeOut#(TileResponse))      responsePipes = map(toPipeOut, fifos);
-   FunnelPipe#(1,numPipes,TileResponse,3) funnelResponsePipe <- mkFunnelPipesPipelined(responsePipes);
+   FunnelPipe#(1,numPipes,TileResponse,2) funnelResponsePipe <- mkFunnelPipesPipelined(responsePipes);
 
    interface Vector  inPipes = map(toPipeIn, fifos);
    interface PipeOut outPipe = funnelResponsePipe[0];
