@@ -101,17 +101,14 @@ interface ResponsePipes#(numeric type numPipes);
 endinterface
 
 module mkResponsePipes(ResponsePipes#(numPipes))
-   provisos (FunnelPipesPipelined#(1, numPipes, TileResponse, 2));
+   provisos (FunnelPipesPipelined#(1, numPipes, TileResponse, 3));
 
    Vector#(numPipes, FIFOF#(TileResponse))                fifos <- replicateM(mkFIFOF);
    Vector#(numPipes, PipeOut#(TileResponse))      responsePipes = map(toPipeOut, fifos);
-   //FunnelPipe#(1,numPipes,TileResponse,2)    funnelResponsePipe <- mkFunnelPipesPipelined(responsePipes);
-   FIFOF#(TileResponse) responseFifo <- mkFIFOF();
-   for (Integer i = 0; i < valueOf(numPipes); i = i + 1)
-      mkConnection(responsePipes[i], toPipeIn(responseFifo));
+   FunnelPipe#(1,numPipes,TileResponse,3) funnelResponsePipe <- mkFunnelPipesPipelined(responsePipes);
 
    interface Vector  inPipes = map(toPipeIn, fifos);
-   interface PipeOut outPipe = toPipeOut(responseFifo); //funnelResponsePipe[0];
+   interface PipeOut outPipe = funnelResponsePipe[0];
 endmodule
 
 interface MacroTile;
