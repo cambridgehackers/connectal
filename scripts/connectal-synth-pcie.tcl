@@ -130,9 +130,9 @@ proc create_pcie_sv_hip_ast {mode} {
 	dict set params msi_support_hwtcl                        "true"
 	dict set params enable_function_msix_support_hwtcl       1
 	dict set params msix_table_size_hwtcl                    16
-	dict set params msix_table_offset_hwtcl                  "512"
+	dict set params msix_table_offset_hwtcl                  "4096"
 	dict set params msix_table_bir_hwtcl                     0
-	dict set params msix_pba_offset_hwtcl                    "496"
+	dict set params msix_pba_offset_hwtcl                    "3968"
 	dict set params msix_pba_bir_hwtcl                       0
 
 	set component_parameters {}
