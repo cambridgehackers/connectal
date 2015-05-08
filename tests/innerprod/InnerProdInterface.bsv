@@ -8,5 +8,5 @@ interface InnerProdRequest;
    method Action finish();
 endinterface
 interface InnerProdIndication;
-   method Action innerProd(Bit#(16) sum);
+   method Action innerProd(Bit#(16) tile, Bit#(16) sum);
 endinterface
