@@ -416,8 +416,8 @@ instance FunnelPipesPipelined#(1,k,a,bpc)
 	    Vector#(TExp#(bpc),PipeOut#(a)) inpipes = takeAt(i, paddedPipes);
 	    Integer numPipes = stride;
 	    if (i + stride > valueOf(k))
-	       numPipes = valueOf(k) - i + 1;
-	    mkFunnelNode(inpipes, numPipes, toPut(buffs[j-1][i/width]));
+	       numPipes = valueOf(k) - i;
+	    mkFunnelNode(inpipes, numPipes, toPut(buffs[j-1][i/stride]));
 	 end
       end
       return vec(infss[0][0]);

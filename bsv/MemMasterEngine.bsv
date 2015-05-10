@@ -66,7 +66,6 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
    Reg#(LUInt#(4))     completionMimoDeqCount <- mkReg(0);
    Reg#(Bool)      readBurstCountGreaterThan4 <- mkReg(False);
    Reg#(Bool)                  readInProgress <- mkReg(False);
-   Reg#(Bool)                  debugQuadWord  <- mkReg(False);
    Reg#(Bit#(7))               address <- mkReg(0);
 
    function Bool isQuarWordAligned(Bit#(7) lower_addr);
@@ -198,6 +197,10 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
 	    TLPMemoryIO3DWHeader h = unpack(tlp.data);
 	    hitReg <= tlp.hit;
 	    TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
+`ifdef AVALON
+            // For Altera, the position of payload in a 3DW TLP depends on alignment.
+            let quadWordAligned = isQuarWordAligned(getLowerAddr(hdr_3dw.addr, hdr_3dw.firstbe));
+`endif
 	    if (tlp.sof && hdr_3dw.format == MEM_READ_3DW_NO_DATA) begin
 	       if (readHeaderFifo.notFull())
 	          readHeaderFifo.enq(hdr_3dw);
@@ -206,7 +209,8 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
 	       end
 	    end
 	    else begin
-	       if (writeHeaderFifo.notFull())
+               //FIXME: should rewrite to allow burst write.
+               if (tlp.sof && writeHeaderFifo.notFull())
 		  writeHeaderFifo.enq(hdr_3dw);
 	    end
 	endmethod
@@ -227,7 +231,11 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
         interface Get writeData;
 	  method ActionValue#(MemData#(32)) get();
 	     let hdr <- toGet(writeDataFifo).get();
+`ifdef AXI
 	     let data = byteSwap(hdr.data);
+`elsif AVALON
+	     let data = hdr.data;
+`endif
 	     return MemData { data: data, tag: truncate(hdr.tag), last: True};
 	  endmethod
        endinterface
@@ -270,13 +278,17 @@ typedef struct {
    Bool     lswIsZero;
    } InterruptRequest deriving (Bits);
 
-//(* synthesize *)
+(* synthesize *)
 module mkMemInterrupt#(PciId my_id)(MemInterrupt);
     FIFOF#(InterruptRequest) interruptRequestFifo <- mkFIFOF();
     FIFOF#(InterruptRequest) interruptTraceFifo <- mkSizedFIFOF(4);
     Reg#(Maybe#(Bit#(32))) interruptSecondHalf <- mkReg(tagged Invalid);
     Reg#(TLPTag) tlpTag <- mkReg(0);
     FIFOF#(TLPData#(16)) tlpOutFifo <- mkSizedFIFOF(8);
+
+    function Bool isQuarWordAligned(Bit#(7) lower_addr);
+       return (lower_addr[2:0]==3'b0);
+    endfunction
 
     rule interruptTlpOut if (interruptRequestFifo.notEmpty &&& interruptSecondHalf matches tagged Invalid);
        TLPData#(16) tlp = defaultValue;
@@ -294,6 +306,8 @@ module mkMemInterrupt#(PciId my_id)(MemInterrupt);
        let mswIsZero = interruptRequest.mswIsZero;
        let lswIsZero = interruptRequest.lswIsZero;
 
+       let quadWordAligned = isQuarWordAligned(truncate(interruptAddr));
+
        if (mswIsZero && lswIsZero) begin
 	  // do not write to 0 -- it wedges the host
 	  interruptRequested = False;
@@ -308,9 +322,21 @@ module mkMemInterrupt#(PciId my_id)(MemInterrupt);
           hdr_3dw.firstbe = '1;
           hdr_3dw.lastbe = '0;
           hdr_3dw.addr = interruptAddr[31:2];
+`ifdef AXI
 	  hdr_3dw.data = byteSwap(interruptData);
+`elsif AVALON
+	  hdr_3dw.data = interruptData;
+`endif
+
 	  tlp.data = pack(hdr_3dw);
+`ifdef AXI
 	  tlp.eof = True;
+`elsif AVALON
+          tlp.eof = (!quadWordAligned) ? True : False;
+          if (quadWordAligned) begin
+             interruptSecondHalf <= tagged Valid interruptData;
+          end
+`endif
 	  sendInterrupt = True;
 	  interruptRequested = False;
        end
@@ -344,10 +370,16 @@ module mkMemInterrupt#(PciId my_id)(MemInterrupt);
        tlp.eof = True;
        tlp.hit = 7'h00;
        tlp.be = 16'hf000;
+`ifdef AXI
        tlp.data[7+8*15:8*12] = byteSwap(interruptData);
+`elsif AVALON
+       tlp.data[7+8*15:8*12] = interruptData;
+`endif
        tlpOutFifo.enq(tlp);
        interruptSecondHalf <= tagged Invalid;
+`ifdef AXI
        interruptRequestFifo.deq();
+`endif
     endrule
 
     interface Client        tlp;

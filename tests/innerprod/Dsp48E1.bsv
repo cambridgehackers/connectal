@@ -107,29 +107,44 @@ module mkDsp48E1(Dsp48E1);
    Reg#(Bit#(4)) alumodeReg <- mkReg(0);
    Wire#(Bit#(3)) carryinselWire <- mkDWire(0);
    Wire#(Bit#(5)) inmodeWire <- mkDWire(0);
-   Wire#(Bit#(7)) opmodeWire <- mkDWire(7'h35);
-   Reg#(Bit#(7)) opmodeReg <- mkReg(7'h35);
+   Wire#(Bit#(7)) opmodeWire <- mkDWire(7'h20);
+   Reg#(Bit#(7)) opmode1Reg <- mkReg(0);
+   Reg#(Bit#(7)) opmode2Reg <- mkReg(0);
+   Reg#(Bit#(7)) opmode3Reg <- mkReg(0);
+   Reg#(Bit#(7)) opmode4Reg <- mkReg(0);
 
    Wire#(Bit#(30)) aWire <- mkDWire(0);
    Wire#(Bit#(18)) bWire <- mkDWire(0);
    Wire#(Bit#(48)) cWire <- mkDWire(0);
    Wire#(Bit#(25)) dWire <- mkDWire(0);
+   Reg#(Bit#(48))  c1Reg <- mkReg(0);
+   Reg#(Bit#(48))  c2Reg <- mkReg(0);
+   Reg#(Bit#(48))  c3Reg <- mkReg(0);
 
    Wire#(Bit#(1)) ce1Wire <- mkDWire(0);
    Reg#(Bit#(1)) ce2Reg <- mkReg(0, reset_by optionalReset);
    Reg#(Bit#(1)) cepReg <- mkReg(0, reset_by optionalReset);
-   Wire#(Bit#(1)) last1Wire <- mkDWire(0);
+   Wire#(Bit#(1)) lastWire <- mkDWire(0);
+   Reg#(Bit#(1))  last1Reg  <- mkReg(0, reset_by optionalReset);
    Reg#(Bit#(1))  last2Reg  <- mkReg(0, reset_by optionalReset);
    Reg#(Bit#(1))  last3Reg  <- mkReg(0, reset_by optionalReset);
    Reg#(Bit#(1))  last4Reg  <- mkReg(0, reset_by optionalReset);
+   Reg#(Bit#(1))  last5Reg  <- mkReg(0, reset_by optionalReset);
+
+   Reg#(Bit#(32)) cycles <- mkReg(0);
+   rule cyclesRule;
+      cycles <= cycles+1;
+   endrule
 
    rule clock_enable_and_reset;
       ce2Reg <= ce1Wire;
       cepReg <= ce2Reg;
 
-      last2Reg <= last1Wire;
+      last1Reg <= lastWire;
+      last2Reg <= last1Reg;
       last3Reg <= last2Reg;
       last4Reg <= last3Reg;
+      last5Reg <= last4Reg;
 
       dsp.cea1(1); // (ce1Wire);
       dsp.cea2(1); // (ce2Reg);
@@ -148,16 +163,27 @@ module mkDsp48E1(Dsp48E1);
    endrule
 
    rule driveInputs;
-      opmodeReg <= opmodeWire;
+      opmode1Reg <= opmodeWire;
+      opmode2Reg <= opmode1Reg;
+      opmode3Reg <= opmode2Reg;
+      opmode4Reg <= opmode3Reg;
+
       alumodeReg <= alumodeWire;
+
+      c1Reg <= cWire;
+      c2Reg <= c1Reg;
+      c3Reg <= c2Reg;
+
+      //if (lastWire == 1 || last1Reg == 1 || last2Reg == 1 || last3Reg == 1 || last4Reg == 1 || last5Reg == 1)
+	 $display("%d: a=%h b=%h c=%h p=%h", cycles, aWire, bWire, c3Reg, dsp.p());
 
       dsp.alumode(alumodeReg);
       dsp.carryinsel(carryinselWire);
       dsp.inmode(inmodeWire);
-      dsp.opmode(opmodeReg);
-      //dsp.a(aWire);
-      //dsp.b(bWire);
-      //dsp.c(cWire);
+      dsp.opmode(opmode1Reg);
+      dsp.a(aWire);
+      dsp.b(bWire);
+      dsp.c(c1Reg);
       //dsp.d(dWire);
 
       dsp.acin(0);
@@ -165,10 +191,6 @@ module mkDsp48E1(Dsp48E1);
       dsp.carrycascin(0);
       dsp.carryin(0);
       dsp.pcin(0);
-      dsp.a(extend(16'haaaa));
-      dsp.b(extend(16'hbbbb));
-      dsp.c(extend(16'hcccc));
-      dsp.d(extend(16'hdddd));
    endrule
 
    method Action alumode(Bit#(4) v);
@@ -185,21 +207,21 @@ module mkDsp48E1(Dsp48E1);
    endmethod
    method Action a(Bit#(30) v);
       ce1Wire <= 1;
-      //dsp.a(v);
+      aWire <= v;
    endmethod
    method Action b(Bit#(18) v);
-      //dsp.b(v);
+      bWire <= v;
    endmethod
    method Action c(Bit#(48) v);
-//      dsp.c(v);
+      cWire <= v;
    endmethod
    method Action d(Bit#(25) v);
-      //dsp.d(v);
+      dsp.d(v);
    endmethod
-   method Bit#(48) p() if (last2Reg == 1 || last3Reg == 1 || last4Reg == 1);
+   method Bit#(48) p() if (last5Reg == 1);
       return dsp.p();
    endmethod
    method Action last(Bit#(1) v);
-      last1Wire <= v;
+      lastWire <= v;
    endmethod
 endmodule

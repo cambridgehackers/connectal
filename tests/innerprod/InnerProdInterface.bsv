@@ -3,9 +3,10 @@ typedef enum {
    } Alumode deriving (Bits,Eq);
 
 interface InnerProdRequest;
-   method Action innerProd(Bit#(16) a, Bit#(16) b, Bool first, Bool last, Bit#(4) alumode, Bit#(5) inmode, Bit#(7) opmode);
+   method Action innerProd(Bit#(16) tile, Bit#(16) a, Bit#(16) b, Bool first, Bool last);
+   method Action start();
    method Action finish();
 endinterface
 interface InnerProdIndication;
-   method Action innerProd(Bit#(48) sum);
+   method Action innerProd(Bit#(16) tile, Bit#(16) sum);
 endinterface

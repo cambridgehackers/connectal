@@ -8,10 +8,14 @@ CPPFILES=testinnerprod.cpp
 NUMBER_OF_MASTERS =0
 AUTOTOP = --importfiles InnerProdInterface
 
-#DERIVED_CLOCK_PERIOD=2
+DERIVED_CLOCK_PERIOD=5
+CONNECTALFLAGS += -D IMPORT_HOSTIF
 
-#CONNECTALFLAGS += -D IMPORT_HOSTIF
-CONNECTALFLAGS += -P mkInnerProdTile
+#CONNECTALFLAGS += -P mkInnerProdTile
+CONNECTALFLAGS += -P mkMacroTile
+#CONNECTALFLAGS += -P mkRequestPipes -P mkResponsePipes
+CONNECTALFLAGS += -P mkRequestPipesSynth -P mkResponsePipesSynth 
+#CONNECTALFLAGS += -P mkRequestPipesMTSynth -P mkResponsePipesMTSynth
 
 ifeq ($(BOARD),xsim)
 AUTOTOP = --bluenoc

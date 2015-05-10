@@ -32,8 +32,9 @@ public:
     if (++cnt == NUMBER_OF_TESTS)
       exit(0);
   }
-  void innerProd(uint64_t v) {
-    fprintf(stderr, "innerProd v=%llx\n", (long long)v);
+  void innerProd(uint16_t t, uint16_t v) {
+    fprintf(stderr, "%d: t=%03d innerProd v=%x\n", cnt, t, v);
+    cnt++;
   }
     InnerProd(unsigned int id) : InnerProdIndicationWrapper(id), cnt(0) {}
 };
@@ -45,12 +46,15 @@ int main(int argc, const char **argv)
     device.pint.busyType = BUSY_SPIN;
 
     fprintf(stderr, "[%s:%d] waiting for response\n", __FILE__, __LINE__);
-    int alumode = 0x35;
-    int inmode = 0;
-    int opmode = 0;
-    device.innerProd(0x0080, 0x0080, 1, 1, alumode, inmode, opmode);
-    //device.innerProd(0xa5a5, 0x5a5a, 1, 1, alumode, inmode, opmode);
-    for (int times = 0; times < 100; times++)
+    for (int tile = 0; tile < 64; tile++) {
+      device.innerProd(tile, 0x0080, 0x0080, 1, 0);
+      device.innerProd(tile, 0x0000, 0x0000, 0, 0);
+      device.innerProd(tile, 0x0100, 0x0080, 0, 0);
+      device.innerProd(tile, 0x0080, 0x0080, 0, 0);
+      device.innerProd(tile, 0x0100, 0x1000, 0, 0);
+      device.innerProd(tile, 0x0200, 0x1000, 0, 1);
+    }
+    for (int times = 0; times < 40; times++)
 	sleep(1);
     device.finish();
 }

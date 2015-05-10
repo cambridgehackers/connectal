@@ -4,7 +4,7 @@ S2H_INTERFACES = MemreadRequest:Memread.request
 H2S_INTERFACES = Memread\#\(\`NumberOfMasters\):MemreadIndication
 MEM_INTERFACES = lMemread.dmaClients,nil
 BSVFILES = Memread.bsv
-CPPFILES=testmemread.cpp
+CPPFILES=../memread/testmemread.cpp
 
 NUMBER_OF_MASTERS =4
 CONNECTALFLAGS += -I$(CONNECTALDIR)/examples/memread
