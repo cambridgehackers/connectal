@@ -67,5 +67,4 @@ proc create_custom_pll {name refclk args} {
             --output-name=$ip_name
 }
 
-create_custom_pll pll_156 50.0 125 156.25
-create_custom_pll pll_644 125 644.53125
+create_custom_pll pll_156 644.53125 156.25
