@@ -302,7 +302,7 @@ def typeJson(item):
     return tname
 
 def hasBitWidth(item):
-    return item['name'] == 'Bit' or item['name'] == 'Int' or item['name'] == 'UInt'
+    return item['name'] == 'Bit' or item['name'] == 'Int' or item['name'] == 'UInt' or item['name'] == 'fixed32'
 
 def getNumeric(item):
    if globalv_globalvars.has_key(item['name']):
@@ -330,6 +330,14 @@ def getNumeric(item):
    return int(item['name'])
 
 def typeBitWidth(item):
+    if item['name'] == 'Bool':
+        return 1
+    if item['name'] == 'Float':
+        return 32
+    if item['name'] == 'fixed32':
+        return 32
+    if item.get('type') == 'Enum':
+        return int(math.ceil(math.log(len(item['elements']))))
     if hasBitWidth(item):
         width = item['params'][0]['name']
         while globalv_globalvars.has_key(width):
@@ -341,12 +349,6 @@ def typeBitWidth(item):
         if re.match('[0-9]+', width):
             return int(width)
         return getNumeric(decl['tdtype'])
-    if item['name'] == 'Bool':
-        return 1
-    if item['name'] == 'Float':
-        return 32
-    if item.get('type') == 'Enum':
-        return int(math.ceil(math.log(len(item['elements']))))
     return 0
 
 # pack flattened struct-member list into 32-bit wide bins.  If a type is wider than 32-bits or

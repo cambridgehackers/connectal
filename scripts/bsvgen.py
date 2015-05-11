@@ -393,7 +393,6 @@ def generate_bsv(project_dir, nf, aGenDef, jsondata):
                     continue
                 emitBDef(v, if_file, 0)
         if_file.write('\n')
-        if_file.close()
     for item in jsondata['interfaces']:
         if verbose:
             print 'genbsv', item
@@ -413,10 +412,12 @@ def generate_bsv(project_dir, nf, aGenDef, jsondata):
         if verbose:
             print 'Writing file ', fname
         if generateInterfaceDefs:
-            bsv_file.write(interfaceDefTemplate % fixupSubsts(item, ''))
+            if_file.write(interfaceDefTemplate % fixupSubsts(item, ''))
         
         bsv_file.write(exposedWrapperInterfaceTemplate % fixupSubsts(item, 'Wrapper'))
         bsv_file.write(exposedProxyInterfaceTemplate % fixupSubsts(item, 'Proxy'))
         bsv_file.write('endpackage: %s\n' % pname)
         bsv_file.close()
+    if generateInterfaceDefs:
+        if_file.close()
 

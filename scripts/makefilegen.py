@@ -448,7 +448,7 @@ if __name__=='__main__':
     if options.protobuf:
         protolist = [os.path.abspath(fn) for fn in options.protobuf]
     make.write(makefileTemplate % {'connectaldir': connectaldir,
-                                   'bsvpath': ':'.join(list(set([os.path.dirname(os.path.abspath(bsvfile)) for bsvfile in options.bsvfile])
+                                   'bsvpath': ':'.join(list(set([os.path.dirname(os.path.abspath(bsvfile)) for bsvfile in (options.bsvfile + [project_dir])])
                                                             | set([os.path.join(connectaldir, 'bsv')])
                                                             | set([os.path.join(connectaldir, 'lib/bsv')])
                                                             | set([os.path.join(connectaldir, 'generated/xilinx')])
