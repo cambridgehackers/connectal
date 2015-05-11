@@ -28,14 +28,14 @@ import SinkIndication::*;
 import SinkRequest::*;
 import Sink::*;
 
-typedef enum {SinkIndication, SinkRequest} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_SinkIndication, IfcNames_SinkRequest} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
 
    // instantiate user portals
-   SinkIndicationProxy sinkIndicationProxy <- mkSinkIndicationProxy(SinkIndication);
+   SinkIndicationProxy sinkIndicationProxy <- mkSinkIndicationProxy(IfcNames_SinkIndication);
    SinkRequest sinkRequest <- mkSinkRequest(sinkIndicationProxy.ifc);
-   SinkRequestWrapper sinkRequestWrapper <- mkSinkRequestWrapper(SinkRequest,sinkRequest);
+   SinkRequestWrapper sinkRequestWrapper <- mkSinkRequestWrapper(IfcNames_SinkRequest,sinkRequest);
    
    Vector#(2,StdPortal) portals;
    portals[0] = sinkIndicationProxy.portalIfc;

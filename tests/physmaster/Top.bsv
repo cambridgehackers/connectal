@@ -19,4 +19,4 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-typedef enum {PhysMemMasterIndication, PhysMemMasterRequest} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_PhysMemMasterIndication, IfcNames_PhysMemMasterRequest} IfcNames deriving (Eq,Bits);

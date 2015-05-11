@@ -31,7 +31,7 @@ import SDIO::*;
 import Leds::*;
 import PS7LIB::*;
 
-typedef enum {ControllerRequest, ControllerResponse} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_ControllerRequest, IfcNames_ControllerResponse} IfcNames deriving (Eq,Bits);
 
 interface TestSDIO1Pins;
    interface SDIOPins sdio;
@@ -40,9 +40,9 @@ endinterface
 
 module mkConnectalTop#(HostInterface host)(ConnectalTop#(PhysAddrWidth,DataBusWidth,TestSDIO1Pins,0));
 
-   SDIOResponseProxy cp <- mkSDIOResponseProxy(ControllerResponse);
+   SDIOResponseProxy cp <- mkSDIOResponseProxy(IfcNames_ControllerResponse);
    Controller controller <- mkController(cp.ifc, host.ps7.emiosdio1);
-   SDIORequestWrapper cw <- mkSDIORequestWrapper(ControllerRequest, controller.req);
+   SDIORequestWrapper cw <- mkSDIORequestWrapper(IfcNames_ControllerRequest, controller.req);
    
    Vector#(2,StdPortal) portals;
    portals[0] = cp.portalIfc;

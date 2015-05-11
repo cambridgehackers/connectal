@@ -40,27 +40,27 @@ import MemServerIndication::*;
 import MMUIndication::*;
 import NandSim::*;
 
-typedef enum {HostMemServerIndication, HostMemServerRequest, HostMMURequest, HostMMUIndication, NandSimIndication, NandSimRequest} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_HostMemServerIndication, IfcNames_HostMemServerRequest, IfcNames_HostMMURequest, IfcNames_HostMMUIndication, IfcNames_NandSimIndication, IfcNames_NandSimRequest} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    
-   NandSimIndicationProxy nandSimIndicationProxy <- mkNandSimIndicationProxy(NandSimIndication);
+   NandSimIndicationProxy nandSimIndicationProxy <- mkNandSimIndicationProxy(IfcNames_NandSimIndication);
    
    //BRAM1Port#(Bit#(14), Bit#(64)) br <- mkBRAM1Server(defaultValue);
    //NandSim nandSim <- mkNandSim(nandSimIndicationProxy.ifc, br.portA);
    NandSim nandSim <- mkNandSim(nandSimIndicationProxy.ifc);
-   NandSimRequestWrapper nandSimRequestWrapper <- mkNandSimRequestWrapper(NandSimRequest,nandSim.request);
+   NandSimRequestWrapper nandSimRequestWrapper <- mkNandSimRequestWrapper(IfcNames_NandSimRequest,nandSim.request);
 
    Vector#(1, MemReadClient#(64)) readClients = vec(nandSim.readClient);
    Vector#(1, MemWriteClient#(64)) writeClients = vec(nandSim.writeClient);
 
-   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
+   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_HostMMUIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUIndicationProxy.ifc);
-   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
+   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(IfcNames_HostMMURequest, hostMMU.request);
 
-   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
+   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_HostMemServerIndication);
    MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(readClients, writeClients, vec(hostMMU), hostMemServerIndicationProxy.ifc);
-   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
+   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(IfcNames_HostMemServerRequest, dma.request);
 
    Vector#(6,StdPortal) portals;
    portals[0] = nandSimRequestWrapper.portalIfc;

@@ -29,14 +29,14 @@ import MifoTestIndication::*;
 import MifoTestRequest::*;
 import MifoTest::*;
 
-typedef enum {MifoTestIndication, MifoTestRequest} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_MifoTestIndication, IfcNames_MifoTestRequest} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
 
    // instantiate user portals
-   MifoTestIndicationProxy mifoIndicationProxy <- mkMifoTestIndicationProxy(MifoTestIndication);
+   MifoTestIndicationProxy mifoIndicationProxy <- mkMifoTestIndicationProxy(IfcNames_MifoTestIndication);
    MifoTestRequest mifoRequest <- mkMifoTestRequest(mifoIndicationProxy.ifc);
-   MifoTestRequestWrapper mifoRequestWrapper <- mkMifoTestRequestWrapper(MifoTestRequest,mifoRequest);
+   MifoTestRequestWrapper mifoRequestWrapper <- mkMifoTestRequestWrapper(IfcNames_MifoTestRequest,mifoRequest);
    
    Vector#(2,StdPortal) portals;
    portals[0] = mifoRequestWrapper.portalIfc;

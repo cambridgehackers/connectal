@@ -39,7 +39,7 @@ import MemServerIndication::*;
 import MMUIndication::*;
 import Maxcommonsubseq::*;
 
-typedef enum {MaxcommonsubseqIndication, MaxcommonsubseqRequest, HostMemServerIndication, HostMemServerRequest, HostMMURequest, HostMMUIndication} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_MaxcommonsubseqIndication, IfcNames_MaxcommonsubseqRequest, IfcNames_HostMemServerIndication, IfcNames_HostMemServerRequest, IfcNames_HostMMURequest, IfcNames_HostMMUIndication} IfcNames deriving (Eq,Bits);
 typedef 1 DegPar;
 
 
@@ -61,17 +61,17 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    writeClients[0] = fetch_write_client;
 
 
-   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
+   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_HostMMUIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUIndicationProxy.ifc);
-   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
+   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(IfcNames_HostMMURequest, hostMMU.request);
 
-   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
+   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_HostMemServerIndication);
    MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(readClients, writeClients, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
-   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
+   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(IfcNames_HostMemServerRequest, dma.request);
    
-   MaxcommonsubseqIndicationProxy maxcommonsubseqIndicationProxy <- mkMaxcommonsubseqIndicationProxy(MaxcommonsubseqIndication);
+   MaxcommonsubseqIndicationProxy maxcommonsubseqIndicationProxy <- mkMaxcommonsubseqIndicationProxy(IfcNames_MaxcommonsubseqIndication);
    MaxcommonsubseqRequest maxcommonsubseqRequest <- mkMaxcommonsubseqRequest(maxcommonsubseqIndicationProxy.ifc, setupA_read_chan.dmaServer, setupB_read_chan.dmaServer, fetch_write_chan.dmaServer);
-   MaxcommonsubseqRequestWrapper maxcommonsubseqRequestWrapper <- mkMaxcommonsubseqRequestWrapper(MaxcommonsubseqRequest,maxcommonsubseqRequest);
+   MaxcommonsubseqRequestWrapper maxcommonsubseqRequestWrapper <- mkMaxcommonsubseqRequestWrapper(IfcNames_MaxcommonsubseqRequest,maxcommonsubseqRequest);
 
    Vector#(6,StdPortal) portals;
    portals[0] = maxcommonsubseqRequestWrapper.portalIfc;

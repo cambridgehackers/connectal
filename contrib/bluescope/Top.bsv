@@ -42,30 +42,30 @@ import Memcpy::*;
 
 `define BluescopeSampleLength 8
 
-typedef enum {MemcpyIndication, MemcpyRequest, HostMemServerIndication, HostMemServerRequest, HostMMURequest, HostMMUIndication, BluescopeIndication, BluescopeRequest} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_MemcpyIndication, IfcNames_MemcpyRequest, IfcNames_HostMemServerIndication, IfcNames_HostMemServerRequest, IfcNames_HostMMURequest, IfcNames_HostMMUIndication, IfcNames_BluescopeIndication, IfcNames_BluescopeRequest} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
 
-   BlueScopeIndicationProxy blueScopeIndicationProxy <- mkBlueScopeIndicationProxy(BluescopeIndication);
+   BlueScopeIndicationProxy blueScopeIndicationProxy <- mkBlueScopeIndicationProxy(IfcNames_BluescopeIndication);
    BlueScope#(64) bs <- mkBlueScope(`BluescopeSampleLength, blueScopeIndicationProxy.ifc);
-   BlueScopeRequestWrapper blueScopeRequestWrapper <- mkBlueScopeRequestWrapper(BluescopeRequest,bs.requestIfc);
+   BlueScopeRequestWrapper blueScopeRequestWrapper <- mkBlueScopeRequestWrapper(IfcNames_BluescopeRequest,bs.requestIfc);
 
-   MemcpyIndicationProxy memcpyIndicationProxy <- mkMemcpyIndicationProxy(MemcpyIndication);
+   MemcpyIndicationProxy memcpyIndicationProxy <- mkMemcpyIndicationProxy(IfcNames_MemcpyIndication);
    Memcpy memcpy <- mkMemcpyRequest(memcpyIndicationProxy.ifc, bs);
-   MemcpyRequestWrapper memcpyRequestWrapper <- mkMemcpyRequestWrapper(MemcpyRequest,memcpy.request);
+   MemcpyRequestWrapper memcpyRequestWrapper <- mkMemcpyRequestWrapper(IfcNames_MemcpyRequest,memcpy.request);
 
    Vector#(1,  MemReadClient#(64))   readClients = newVector();
    readClients[0] = memcpy.readClient;
    Vector#(2, MemWriteClient#(64)) writeClients = newVector();
    writeClients[0] = bs.writeClient;
    writeClients[1] = memcpy.writeClient;
-   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
+   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_HostMMUIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUIndicationProxy.ifc);
-   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
+   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(IfcNames_HostMMURequest, hostMMU.request);
 
-   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
+   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_HostMemServerIndication);
    MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(readClients, writeClients, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
-   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
+   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(IfcNames_HostMemServerRequest, dma.request);
 
    Vector#(8,StdPortal) portals;
    portals[0] = memcpyRequestWrapper.portalIfc;

@@ -29,14 +29,14 @@ import HostInterface::*;
 import AuroraIndication::*;
 import AuroraRequest::*;
 import Aurora::*;
-typedef enum {AuroraIndication, AuroraRequest} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_AuroraIndication, IfcNames_AuroraRequest} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,AuroraPins,0));
 
    // instantiate user portals
-   AuroraIndicationProxy auroraIndicationProxy <- mkAuroraIndicationProxy(AuroraIndication);
+   AuroraIndicationProxy auroraIndicationProxy <- mkAuroraIndicationProxy(IfcNames_AuroraIndication);
    let auroraRequest <- mkAuroraRequest(auroraIndicationProxy.ifc);
-   AuroraRequestWrapper auroraRequestWrapper <- mkAuroraRequestWrapper(AuroraRequest,auroraRequest.request);
+   AuroraRequestWrapper auroraRequestWrapper <- mkAuroraRequestWrapper(IfcNames_AuroraRequest,auroraRequest.request);
    
    Vector#(2,StdPortal) portals;
    portals[0] = auroraRequestWrapper.portalIfc;

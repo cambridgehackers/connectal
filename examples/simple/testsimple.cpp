@@ -41,7 +41,7 @@ uint32_t v6a = 0xBBBBBBBB;
 uint64_t v6b = 0x000000EFFECAFECA;
 uint32_t v6c = 0xCCCCCCCC;
 uint32_t v7a = 0xDADADADA;
-E1 v7b = E1_E1Choice2;
+E1 v7b = E1Choice2;
 S3 s3 = { a: v7a, e1: v7b };
 
 class Simple : public SimpleRequestWrapper

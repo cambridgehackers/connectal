@@ -38,23 +38,23 @@ import MemServerIndication::*;
 import MMUIndication::*;
 import Memwrite::*;
 
-typedef enum {HostMemServerIndication, HostMemServerRequest, HostMMURequest, HostMMUIndication, MemwriteIndication, MemwriteRequest} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_HostMemServerIndication, IfcNames_HostMemServerRequest, IfcNames_HostMMURequest, IfcNames_HostMMUIndication, IfcNames_MemwriteIndication, IfcNames_MemwriteRequest} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
 
-   MemwriteIndicationProxy memwriteIndicationProxy <- mkMemwriteIndicationProxy(MemwriteIndication);
+   MemwriteIndicationProxy memwriteIndicationProxy <- mkMemwriteIndicationProxy(IfcNames_MemwriteIndication);
    Memwrite memwrite <- mkMemwrite(memwriteIndicationProxy.ifc);
-   MemwriteRequestWrapper memwriteRequestWrapper <- mkMemwriteRequestWrapper(MemwriteRequest,memwrite.request);
+   MemwriteRequestWrapper memwriteRequestWrapper <- mkMemwriteRequestWrapper(IfcNames_MemwriteRequest,memwrite.request);
 
    Vector#(1, MemWriteClient#(64)) writeClients = vec(memwrite.dmaClient);
 
-   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
-   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
+   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_HostMMUIndication);
+   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_HostMemServerIndication);
 
    MemServerWithMMU#(PhysAddrWidth,64,1) dma <- mkMemServerWithMMU(nil, writeClients, hostMemServerIndicationProxy.ifc, hostMMUIndicationProxy.ifc);
 
-   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, dma.mmuRequest);
-   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.memServerRequest);
+   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(IfcNames_HostMMURequest, dma.mmuRequest);
+   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(IfcNames_HostMemServerRequest, dma.memServerRequest);
    
    Vector#(6,StdPortal) portals;
    portals[0] = memwriteRequestWrapper.portalIfc;

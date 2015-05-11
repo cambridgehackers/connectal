@@ -53,22 +53,22 @@ typedef TDiv#(J,RowsPerTile) T;
 typedef TMul#(32,N) DmaSz;
 
 typedef enum {
-   HostMemServerIndication, 
-   HostMemServerRequest, 
-   HostMMURequest, 
-   HostMMUIndication,
-   MmIndicationPortal,
-   MmRequestPortal,
-   RbmIndicationPortal,
-   RbmRequestPortal,
-   SigmoidIndicationPortal,
-   SigmoidRequestPortal,
-   TimerIndicationPortal,
-   TimerRequestPortal,
-   FpMacRequestPortal,
-   FpMacIndicationPortal,
-   FpMulRequestPortal,
-   FpMulIndicationPortal
+   IfcNames_HostMemServerIndication, 
+   IfcNames_HostMemServerRequest, 
+   IfcNames_HostMMURequest, 
+   IfcNames_HostMMUIndication,
+   IfcNames_MmIndicationPortal,
+   IfcNames_MmRequestPortal,
+   IfcNames_RbmIndicationPortal,
+   IfcNames_RbmRequestPortal,
+   IfcNames_SigmoidIndicationPortal,
+   IfcNames_SigmoidRequestPortal,
+   IfcNames_TimerIndicationPortal,
+   IfcNames_TimerRequestPortal,
+   IfcNames_FpMacRequestPortal,
+   IfcNames_FpMacIndicationPortal,
+   IfcNames_FpMulRequestPortal,
+   IfcNames_FpMulIndicationPortal
 } IfcNames deriving (Eq,Bits);
 
 interface MmIndication;

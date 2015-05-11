@@ -46,21 +46,21 @@ import MemServerIndication::*;
 import MMUIndication::*;
 import Memread::*;
 
-typedef enum {MemreadIndicationH2S, MemreadRequestS2H, MemServerIndicationH2S, MemServerRequestS2H, MMURequestS2H, MMUIndicationH2S} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_MemreadIndicationH2S, IfcNames_MemreadRequestS2H, IfcNames_MemServerIndicationH2S, IfcNames_MemServerRequestS2H, IfcNames_MMURequestS2H, IfcNames_MMUIndicationH2S} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
 
-   MemreadIndicationProxy memreadIndicationProxy <- mkMemreadIndicationProxy(MemreadIndicationH2S);
+   MemreadIndicationProxy memreadIndicationProxy <- mkMemreadIndicationProxy(IfcNames_MemreadIndicationH2S);
    Memread memread <- mkMemread(memreadIndicationProxy.ifc);
-   MemreadRequestWrapper memreadRequestWrapper <- mkMemreadRequestWrapper(MemreadRequestS2H,memread.request);
+   MemreadRequestWrapper memreadRequestWrapper <- mkMemreadRequestWrapper(IfcNames_MemreadRequestS2H,memread.request);
 
-   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(MMUIndicationH2S);
+   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_MMUIndicationH2S);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUIndicationProxy.ifc);
-   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(MMURequestS2H, hostMMU.request);
+   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(IfcNames_MMURequestS2H, hostMMU.request);
 
-   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(MemServerIndicationH2S);
+   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_MemServerIndicationH2S);
    MemServer#(PhysAddrWidth,DataBusWidth,1) dma <- mkMemServer(memread.dmaClient, nil, vec(hostMMU), hostMemServerIndicationProxy.ifc);
-   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(MemServerRequestS2H, dma.request);
+   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(IfcNames_MemServerRequestS2H, dma.request);
 
    PhysMemMaster#(PhysAddrWidth,DataBusWidth) dma1 = (interface PhysMemMaster;
 	  interface PhysMemReadClient read_client;

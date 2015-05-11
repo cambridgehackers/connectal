@@ -37,23 +37,23 @@ import MMUIndication::*;
 // defined by user
 import Rtest::*;
 
-typedef enum {RtestIndication, RtestRequest, HostMemServerIndication, HostMemServerRequest, HostMMURequest, HostMMUIndication} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_RtestIndication, IfcNames_RtestRequest, IfcNames_HostMemServerIndication, IfcNames_HostMemServerRequest, IfcNames_HostMMURequest, IfcNames_HostMMUIndication} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
 
-   RtestIndicationProxy memreadIndicationProxy <- mkRtestIndicationProxy(RtestIndication);
+   RtestIndicationProxy memreadIndicationProxy <- mkRtestIndicationProxy(IfcNames_RtestIndication);
    Rtest memread <- mkRtest(memreadIndicationProxy.ifc);
-   RtestRequestWrapper memreadRequestWrapper <- mkRtestRequestWrapper(RtestRequest,memread.request);
+   RtestRequestWrapper memreadRequestWrapper <- mkRtestRequestWrapper(IfcNames_RtestRequest,memread.request);
 
    Vector#(1, MemReadClient#(64)) readClients = vec(memread.dmaClient);
 
-   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
-   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
+   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_HostMMUIndication);
+   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_HostMemServerIndication);
 
    MemServerWithMMU#(PhysAddrWidth,64,1) dma <- mkMemServerWithMMU(readClients, nil, hostMemServerIndicationProxy.ifc, hostMMUIndicationProxy.ifc);
 
-   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, dma.mmuRequest);
-   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.memServerRequest);
+   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(IfcNames_HostMMURequest, dma.mmuRequest);
+   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(IfcNames_HostMemServerRequest, dma.memServerRequest);
 
    Vector#(6,StdPortal) portals;
    portals[0] = hostMemServerIndicationProxy.portalIfc; 

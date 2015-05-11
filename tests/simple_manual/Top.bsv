@@ -31,12 +31,12 @@ import SimpleIndication::*;
 import SimpleRequest::*;
 import Simple::*;
 
-typedef enum {SimpleIndication, SimpleRequest} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_SimpleIndication, IfcNames_SimpleRequest} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
-   SimpleIndicationProxy simpleIndicationProxy <- mkSimpleIndicationProxy(SimpleIndication);
+   SimpleIndicationProxy simpleIndicationProxy <- mkSimpleIndicationProxy(IfcNames_SimpleIndication);
    SimpleRequest simpleRequest <- mkSimpleRequest(simpleIndicationProxy.ifc);
-   SimpleRequestWrapper simpleRequestWrapper <- mkSimpleRequestWrapper(SimpleRequest,simpleRequest);
+   SimpleRequestWrapper simpleRequestWrapper <- mkSimpleRequestWrapper(IfcNames_SimpleRequest,simpleRequest);
    
    Vector#(2,StdPortal) portals;
    portals[0] = simpleRequestWrapper.portalIfc;

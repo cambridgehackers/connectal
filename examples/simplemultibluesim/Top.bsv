@@ -33,17 +33,17 @@ import Simple::*;
 import Link::*;
 import SimpleIF::*;
 
-typedef enum {SimpleRequest, SimpleIndication, LinkRequest} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_SimpleRequest, IfcNames_SimpleIndication, IfcNames_LinkRequest} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
    // the indications from simpleRequest will be connected to the request interface to simpleReuqest2
-   SimpleProxyPortal simple1IndicationProxy <- mkSimpleProxyPortal(SimpleIndication);
+   SimpleProxyPortal simple1IndicationProxy <- mkSimpleProxyPortal(IfcNames_SimpleIndication);
    Simple simple1 <- mkSimple(simple1IndicationProxy.ifc);
-   SimpleWrapper simple1RequestWrapper <- mkSimpleWrapper(SimpleRequest,simple1);
+   SimpleWrapper simple1RequestWrapper <- mkSimpleWrapper(IfcNames_SimpleRequest,simple1);
 
-   SimpleProxy simple2IndicationProxy <- mkSimpleProxy(SimpleIndication);
+   SimpleProxy simple2IndicationProxy <- mkSimpleProxy(IfcNames_SimpleIndication);
    Simple simple2 <- mkSimple(simple2IndicationProxy.ifc);
-   SimpleWrapperPortal simple2RequestWrapper <- mkSimpleWrapperPortal(SimpleRequest, simple2);
+   SimpleWrapperPortal simple2RequestWrapper <- mkSimpleWrapperPortal(IfcNames_SimpleRequest, simple2);
 
    // now connect them via a BlueNoC link
    BsimLink#(32) link <- mkBsimLink("simplelink");
@@ -55,7 +55,7 @@ module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
 			  link.start(l);
 		       endmethod
 		       endinterface);
-   LinkWrapper linkWrapper <- mkLinkWrapper(LinkRequest, linkRequest);
+   LinkWrapper linkWrapper <- mkLinkWrapper(IfcNames_LinkRequest, linkRequest);
 
    Vector#(3,StdPortal) portals;
    portals[0] = simple2IndicationProxy.portalIfc;

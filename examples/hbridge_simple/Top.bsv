@@ -30,7 +30,7 @@ import HBridgeCtrlIndication::*;
 import HBridgeController::*;
 import Leds::*;
 
-typedef enum {ControllerRequest, ControllerIndication} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_ControllerRequest, IfcNames_ControllerIndication} IfcNames deriving (Eq,Bits);
 
 interface HBridgeSimplePins;
    interface HBridge2Pins hbridge;
@@ -39,9 +39,9 @@ endinterface
 
 module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,HBridgeSimplePins,0));
 
-   HBridgeCtrlIndicationProxy cp <- mkHBridgeCtrlIndicationProxy(ControllerIndication);
+   HBridgeCtrlIndicationProxy cp <- mkHBridgeCtrlIndicationProxy(IfcNames_ControllerIndication);
    HBridgeController controller <- mkHBridgeController(cp.ifc);
-   HBridgeCtrlRequestWrapper cw <- mkHBridgeCtrlRequestWrapper(ControllerRequest, controller.req);
+   HBridgeCtrlRequestWrapper cw <- mkHBridgeCtrlRequestWrapper(IfcNames_ControllerRequest, controller.req);
    
    Vector#(2,StdPortal) portals;
    portals[0] = cp.portalIfc;

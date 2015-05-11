@@ -28,12 +28,12 @@ import SimpleIndication::*;
 import SimpleRequest::*;
 import Simple::*;
 
-typedef enum {SimpleIndication, SimpleRequest} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_SimpleIndication, IfcNames_SimpleRequest} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
-   SimpleIndicationProxy simpleIndicationProxy <- mkSimpleIndicationProxy(SimpleIndication);
+   SimpleIndicationProxy simpleIndicationProxy <- mkSimpleIndicationProxy(IfcNames_SimpleIndication);
    Simple simpleRequest <- mkSimple();
-   SimpleRequestWrapper simpleRequestWrapper <- mkSimpleRequestWrapper(SimpleRequest,simpleRequest.request);
+   SimpleRequestWrapper simpleRequestWrapper <- mkSimpleRequestWrapper(IfcNames_SimpleRequest,simpleRequest.request);
    // connect the ActionValue heard1 to the Action method heard1
    mkConnection(simpleRequest.response.heard1, simpleIndicationProxy.ifc.heard1);
    

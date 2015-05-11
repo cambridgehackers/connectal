@@ -59,7 +59,7 @@ endinterface
 
 `define BlueScopeEventPIOSampleLength 512
 
-typedef enum { BlueScopeEventPIORequest, BlueScopeEventPIOIndication, FMComms1Request, FMComms1Indication, HostMemServerIndication, HostMemServerRequest, HostMMURequest, HostMMUIndication} IfcNames deriving (Eq,Bits);
+typedef enum { IfcNames_BlueScopeEventPIORequest, IfcNames_BlueScopeEventPIOIndication, IfcNames_FMComms1Request, IfcNames_FMComms1Indication, IfcNames_HostMemServerIndication, IfcNames_HostMemServerRequest, IfcNames_HostMMURequest, IfcNames_HostMMUIndication} IfcNames deriving (Eq,Bits);
 
 interface FMComms1Pins;
    interface FMComms1ADCPins adcpins;
@@ -89,9 +89,9 @@ module mkConnectalTop#(HostInterface host)(ConnectalTop#(PhysAddrWidth,64,FMComm
    FMComms1ADC adc <- mkFMComms1ADC();
    FMComms1DAC dac <- mkFMComms1DAC();
    
-   BlueScopeEventPIOIndicationProxy blueScopeEventPIOIndicationProxy <- mkBlueScopeEventPIOIndicationProxy(BlueScopeEventPIOIndication);
+   BlueScopeEventPIOIndicationProxy blueScopeEventPIOIndicationProxy <- mkBlueScopeEventPIOIndicationProxy(IfcNames_BlueScopeEventPIOIndication);
    BlueScopeEventPIOControl#(32) bs <- mkBlueScopeEventPIO(`BlueScopeEventPIOSampleLength, blueScopeEventPIOIndicationProxy.ifc);
-   BlueScopeEventPIORequestWrapper blueScopeEventPIORequestWrapper <- mkBlueScopeEventPIORequestWrapper(BlueScopeEventPIORequest,bs.requestIfc);
+   BlueScopeEventPIORequestWrapper blueScopeEventPIORequestWrapper <- mkBlueScopeEventPIORequestWrapper(IfcNames_BlueScopeEventPIORequest,bs.requestIfc);
 
 `ifdef USE_FMC_I2C1
    Clock mainclock = host.ps7.fclkclk[0];
@@ -111,19 +111,19 @@ module mkConnectalTop#(HostInterface host)(ConnectalTop#(PhysAddrWidth,64,FMComm
    endrule
 `endif
 
-   FMComms1IndicationProxy fmcomms1IndicationProxy <- mkFMComms1IndicationProxy(FMComms1Indication);
+   FMComms1IndicationProxy fmcomms1IndicationProxy <- mkFMComms1IndicationProxy(IfcNames_FMComms1Indication);
    FMComms1 fmcomms1 <- mkFMComms1(fmcomms1IndicationProxy.ifc, dac.dac, adc.adc);
-   FMComms1RequestWrapper fmcomms1RequestWrapper <- mkFMComms1RequestWrapper(FMComms1Request, fmcomms1.request);
+   FMComms1RequestWrapper fmcomms1RequestWrapper <- mkFMComms1RequestWrapper(IfcNames_FMComms1Request, fmcomms1.request);
 
    Vector#(1,  MemReadClient#(64))   readClients = cons(fmcomms1.readDmaClient, nil);
    Vector#(1, MemWriteClient#(64))  writeClients = cons(fmcomms1.writeDmaClient, nil);
-   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
+   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_HostMMUIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUIndicationProxy.ifc);
-   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
+   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(IfcNames_HostMMURequest, hostMMU.request);
 
-   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
+   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_HostMemServerIndication);
    MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(readClients, writeClients, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
-   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
+   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(IfcNames_HostMemServerRequest, dma.request);
 
    Vector#(8,StdPortal) portals;
    portals[0] = fmcomms1RequestWrapper.portalIfc;

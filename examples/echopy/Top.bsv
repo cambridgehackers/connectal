@@ -26,14 +26,14 @@ import EchoIndication::*;
 import EchoRequest::*;
 import Echo::*;
 
-typedef enum {EchoIndication, EchoRequest} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_EchoIndication, IfcNames_EchoRequest} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
 
    // instantiate user portals
-   EchoIndicationProxy echoIndicationProxy <- mkEchoIndicationProxy(EchoIndication);
+   EchoIndicationProxy echoIndicationProxy <- mkEchoIndicationProxy(IfcNames_EchoIndication);
    EchoRequestInternal echoRequestInternal <- mkEchoRequestInternal(echoIndicationProxy.ifc);
-   EchoRequestWrapper echoRequestWrapper <- mkEchoRequestWrapper(EchoRequest,echoRequestInternal.ifc);
+   EchoRequestWrapper echoRequestWrapper <- mkEchoRequestWrapper(IfcNames_EchoRequest,echoRequestInternal.ifc);
    
    Vector#(2,StdPortal) portals;
    portals[0] = echoRequestWrapper.portalIfc; 

@@ -10,9 +10,9 @@ import PcieTestBenchRequestWrapper::*;
 import PcieTestBench::*;
 
 module mkConnectalTop(StdConnectalDmaTop#(40));
-   PcieTestBenchIndicationProxy pcieTestBenchIndicationProxy <- mkPcieTestBenchIndicationProxy(TestBenchIndication);
+   PcieTestBenchIndicationProxy pcieTestBenchIndicationProxy <- mkPcieTestBenchIndicationProxy(IfcNames_TestBenchIndication);
    PcieTestBench#(40,64) pcieTestBench <- mkPcieTestBench(pcieTestBenchIndicationProxy.ifc);
-   PcieTestBenchRequestWrapper pcieTestBenchRequestWrapper <- mkPcieTestBenchRequestWrapper(TestBenchRequest,pcieTestBench.request);
+   PcieTestBenchRequestWrapper pcieTestBenchRequestWrapper <- mkPcieTestBenchRequestWrapper(IfcNames_TestBenchRequest,pcieTestBench.request);
    
    Vector#(4,StdPortal) portals;
    portals[0] = pcieTestBenchRequestWrapper.portalIfc; 

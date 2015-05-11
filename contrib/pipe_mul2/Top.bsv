@@ -28,12 +28,12 @@ import PipeMulIndication::*;
 import PipeMulRequest::*;
 import PipeMulTB::*;
 
-typedef enum {PipeMulIndication, PipeMulRequest} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_PipeMulIndication, IfcNames_PipeMulRequest} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
-   PipeMulIndicationProxy indProxy <- mkPipeMulIndicationProxy(PipeMulIndication);
+   PipeMulIndicationProxy indProxy <- mkPipeMulIndicationProxy(IfcNames_PipeMulIndication);
    PipeMulTB pmTB <- mkPipeMulTB(indProxy.ifc);
-   PipeMulRequestWrapper reqWrapper <- mkPipeMulRequestWrapper(PipeMulRequest,pmTB.ifc);
+   PipeMulRequestWrapper reqWrapper <- mkPipeMulRequestWrapper(IfcNames_PipeMulRequest,pmTB.ifc);
    
    Vector#(2,StdPortal) portals;
    portals[0] = indProxy.portalIfc;
