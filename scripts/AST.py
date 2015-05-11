@@ -101,36 +101,19 @@ def serialize_json(interfaces, globalimports):
     jfile = open(tempFilename, 'w')
     toplevel = {}
     toplevel['interfaces'] = itemlist
-    gvlist = {}
-    for key, value in globalv.globalvars.iteritems():
-        gvlist[key] = {'vtype': value.type}
-        if value.type == 'Variable':
-            print 'Variable globalvar:', key, value
-        elif value.type == 'TypeDef':
-            if verbose:
-                print 'TYPEDEF globalvar:', key, value
-            gvlist[key]['tname'] = value.name
-            gvlist[key]['tdtype'] = dtInfo(value.tdtype)
-            if value.params:
-                gvlist[key]['tparams'] = value.params
-        elif verbose:
-            print 'Unprocessed globalvar:', key, value
-    toplevel['globalvars'] = gvlist
     gdlist = []
     for item in globalv.globaldecls:
-        newitem = {'dtype': item.type}
-        if value.type == 'Variable':
-            print 'Variable globaldecl:', key, value
-        elif item.type == 'TypeDef':
+        if item.type == 'TypeDef':
+            newitem = {'dtype': item.type}
             newitem['tname'] = item.name
             newitem['tdtype'] = dtInfo(item.tdtype)
             if item.params:
                  newitem['tparams'] = item.params
             if verbose:
                 print 'TYPEDEF globaldecl:', item, newitem
+            gdlist.append(newitem)
         elif verbose:
-            print 'Unprocessed globaldecl:', item, newitem
-        gdlist.append(newitem)
+            print 'Unprocessed globaldecl:', item
     toplevel['globaldecls'] = gdlist
     toplevel['globalimports'] = globalimports
     if True:

@@ -711,9 +711,7 @@ def generate_cpp(project_dir, noisyFlag, jsondata):
 
     verbose = noisyFlag
     generatedCFiles = []
-    globalv_globalvars = jsondata.get('globalvars')
-    if not globalv_globalvars:
-        globalv_globalvars = {}
+    globalv_globalvars = {}
     hname = os.path.join(project_dir, 'jni', 'GeneratedTypes.h')
     generated_hpp = util.createDirAndOpen(hname, 'w')
     generated_hpp.write('#ifndef __GENERATED_TYPES__\n')
@@ -725,8 +723,9 @@ def generate_cpp(project_dir, noisyFlag, jsondata):
     # global type declarations used by interface mthods
     for v in jsondata['globaldecls']:
         if v['dtype'] == 'TypeDef':
+            globalv_globalvars[v['tname']] = v
             if v.get('tparams'):
-                print 'Skipping C++ declaration for parameterized type', v['name']
+                print 'Skipping C++ declaration for parameterized type', v['tname']
                 continue
             emitCD(v, generated_hpp, 0)
     generated_hpp.write('\n')
