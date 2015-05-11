@@ -27,7 +27,7 @@ import Vector::*;
 // Dma channel type
 //
 typedef enum {
-   Read, Write
+   ChannelType_Read, ChannelType_Write
    } ChannelType deriving (Bits,Eq,FShow);
 
 //

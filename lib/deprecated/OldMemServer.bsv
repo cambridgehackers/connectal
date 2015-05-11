@@ -344,12 +344,12 @@ module mkMemServer#(DmaIndication dmaIndication,
    
    rule tag_mismatch_read;
       let rv <- reader.tagMismatch.get;
-      dmaIndication.tagMismatch(Read, extend(tpl_1(rv)), extend(tpl_2(rv)));
+      dmaIndication.tagMismatch(ChannelType_Read, extend(tpl_1(rv)), extend(tpl_2(rv)));
    endrule
    
    rule tag_mismatch_write;
       let rv <- writer.tagMismatch.get;
-      dmaIndication.tagMismatch(Write, extend(tpl_1(rv)), extend(tpl_2(rv)));
+      dmaIndication.tagMismatch(ChannelType_Write, extend(tpl_1(rv)), extend(tpl_2(rv)));
    endrule
 
    rule sglistEntry;
@@ -361,14 +361,14 @@ module mkMemServer#(DmaIndication dmaIndication,
    interface DmaConfig request;
       method Action getStateDbg(ChannelType rc);
 	 let rv = ?;
-	 if (rc == Read)
+	 if (rc == ChannelType_Read)
 	    rv <- reader.dbg.dbg;
 	 else
 	    rv <- writer.dbg.dbg;
 	 dmaIndication.reportStateDbg(rv);
       endmethod
       method Action getMemoryTraffic(ChannelType rc, Bit#(32) client);
-	 if (rc == Read) begin
+	 if (rc == ChannelType_Read) begin
 	    let rv <- reader.dbg.getMemoryTraffic(client);
 	    dmaIndication.reportMemoryTraffic(rv);
 	 end
