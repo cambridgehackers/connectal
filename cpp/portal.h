@@ -171,6 +171,7 @@ enum {ITYPE_other, ITYPE_int16_t, ITYPE_uint16_t, ITYPE_uint32_t, ITYPE_uint64_t
       ITYPE_ChannelType, ITYPE_DmaDbgRec};
 
 typedef int Bool;   /* for GeneratedTypes.h */
+typedef uint32_t fixed32; /* for GeneratedTypes.h from protobuf */
 
 #define SHARED_DMA(REQPORTALNAME, INDPORTALNAME) {NULL, (REQPORTALNAME), MMURequest_reqinfo, (INDPORTALNAME), MMUIndication_reqinfo, MMUIndication_handleMessage, (void *)&manualMMU_Cb, manualWaitForResp}
 #define SHARED_HARDWARE(PORTALNAME) {(PORTALNAME), SharedMemoryPortalConfig_reqinfo, SharedMemoryPortalConfig_setSglId}
