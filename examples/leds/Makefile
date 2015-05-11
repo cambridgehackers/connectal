@@ -5,8 +5,8 @@ BSVFILES = LedController.bsv
 CPPFILES= testleds.cpp
 NUMBER_OF_MASTERS =0
 
-PIN_TYPE = LEDS
+PIN_TYPE = LedPins
 PINOUT_FILE = pinout.json
-AUTOTOP = --interface pins:LedController.leds --importfiles Leds
+AUTOTOP = --interface pins:LedController.leds --importfiles LedController
 
 include $(CONNECTALDIR)/Makefile.connectal

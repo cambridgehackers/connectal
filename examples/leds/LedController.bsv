@@ -34,9 +34,15 @@ interface LedControllerRequest;
    method Action setLeds(Bit#(8) v, Bit#(32) duration);
 endinterface
 
+interface LedPins;
+   interface LEDS leds;
+   interface Clock deleteme_unused_clock;
+   interface Reset deleteme_unused_reset;
+endinterface
+
 interface LedController;
    interface LedControllerRequest request;
-   interface LEDS leds;
+   interface LedPins leds;
 endinterface
 
 module mkLedController(LedController);
@@ -67,8 +73,10 @@ module mkLedController(LedController);
 	  ledsCmdFifo.enq(LedControllerCmd { leds: v, duration: duration });
        endmethod
    endinterface
-   interface LEDS leds;
-      method leds = truncate(ledsValue._read);
+   interface LedPins leds;
+      interface LEDS leds;
+         method leds = truncate(ledsValue._read);
+      endinterface
       interface deleteme_unused_clock = defaultClock;
       interface deleteme_unused_reset = defaultReset;
    endinterface
