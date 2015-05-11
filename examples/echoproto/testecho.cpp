@@ -23,6 +23,7 @@
 #include "EchoIndication.h"
 #include "EchoRequest.h"
 #include "GeneratedTypes.h"
+#include "topEnum.h"
 
 static EchoRequestProxy *echoRequestProxy = 0;
 static sem_t sem_heard2;
@@ -30,27 +31,30 @@ static sem_t sem_heard2;
 class EchoIndication : public EchoIndicationWrapper
 {
 public:
-    virtual void heard(uint32_t v) {
-        printf("heard an echo: %d\n", v);
-	echoRequestProxy->say2(v, 2*v);
+    virtual void heard(EchoHeard v) {
+        EchoSay2 tmp = {v.v, 2*v.v};
+        printf("heard an echo: %d\n", v.v);
+        echoRequestProxy->say2(tmp);
     }
-    virtual void heard2(uint16_t a, uint16_t b) {
+    virtual void heard2(EchoHeard2 v) {
         sem_post(&sem_heard2);
         //printf("heard an echo2: %ld %ld\n", a, b);
     }
     EchoIndication(unsigned int id) : EchoIndicationWrapper(id) {}
 };
 
-static void call_say(int v)
+static void call_say(fixed32 v)
 {
+    EchoSay tmp = {v};
     printf("[%s:%d] %d\n", __FUNCTION__, __LINE__, v);
-    echoRequestProxy->say(v);
+    echoRequestProxy->say(tmp);
     sem_wait(&sem_heard2);
 }
 
-static void call_say2(int v, int v2)
+static void call_say2(fixed32 v, fixed32 v2)
 {
-    echoRequestProxy->say2(v, v2);
+    EchoSay2 tmp = {v, v2};
+    echoRequestProxy->say2(tmp);
     sem_wait(&sem_heard2);
 }
 
@@ -67,6 +71,7 @@ int main(int argc, const char **argv)
     call_say(v*93);
     call_say2(v, v*3);
     printf("TEST TYPE: SEM\n");
-    echoRequestProxy->setLeds(9);
+    EchoLeds tmp = {9};
+    echoRequestProxy->setLeds(tmp);
     return 0;
 }

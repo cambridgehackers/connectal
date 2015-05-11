@@ -1,17 +1,13 @@
 
 CONNECTALDIR?=../..
+NUMBER_OF_MASTERS =0
 S2H_INTERFACES = EchoRequest:Echo.request
 H2S_INTERFACES = Echo:EchoIndication
-BSVFILES = EchoIF.bsv
 CPPFILES=testecho.cpp
-CONNECTALFLAGS += --protobuf interface.json
-
-NUMBER_OF_MASTERS =0
-
-## for testing fpgamake:
-FPGAMAKE_CONNECTALFLAGS += -P mkEchoIndicationProxySynth -P mkEchoRequestWrapperMemPortalPipes
-
-PORTAL_DUMP_MAP = "EchoIndication:EchoRequest:SwallowRequest"
+#CONNECTALFLAGS += --protobuf interface.json
+CONNECTALFLAGS += --protobuf echo_pb.json
 
 include $(CONNECTALDIR)/Makefile.connectal
 
+prebuild::
+	$(CONNECTALDIR)/../protobuf/src/protoc --cpp_out=. --bsv_out=. echo.proto

@@ -24,19 +24,15 @@ import FIFO::*;
 import Vector::*;
 import EchoRequest::*;
 import EchoIndication::*;
+import GeneratedTypes::*;
 
 interface Echo;
    interface EchoRequest request;
 endinterface
 
-typedef struct {
-	Bit#(16) a;
-	Bit#(16) b;
-} EchoPair deriving (Bits);
-
 module mkEcho#(EchoIndication indication)(Echo);
-    FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
-    FIFO#(EchoPair) delay2 <- mkSizedFIFO(8);
+    FIFO#(EchoHeard) delay <- mkSizedFIFO(8);
+    FIFO#(EchoHeard2) delay2 <- mkSizedFIFO(8);
 
     rule heard;
         delay.deq;
@@ -45,19 +41,19 @@ module mkEcho#(EchoIndication indication)(Echo);
 
     rule heard2;
         delay2.deq;
-        indication.heard2(delay2.first.b, delay2.first.a);
+        indication.heard2(delay2.first);
     endrule
    
    interface EchoRequest request;
-      method Action say(Bit#(32) v);
-	 delay.enq(v);
+      method Action say(EchoSay v);
+	 delay.enq(EchoHeard{v: v.v});
       endmethod
       
-      method Action say2(Bit#(16) a, Bit#(16) b);
-	 delay2.enq(EchoPair { a: a, b: b});
+      method Action say2(EchoSay2 v);
+	 delay2.enq(EchoHeard2{ a: v.a, b: v.b});
       endmethod
       
-      method Action setLeds(Bit#(8) v);
+      method Action setLeds(EchoLeds v);
       endmethod
    endinterface
 endmodule
