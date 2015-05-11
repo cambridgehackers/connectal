@@ -679,7 +679,7 @@ def emitEnum(item, name, f, indentation):
         f.write('typedef ')
     f.write('enum %s { ' % name)
     indent(f, indentation)
-    f.write(', '.join(['%s_%s' % (name, e) for e in item['elements']]))
+    f.write(', '.join(item['elements']))
     indent(f, indentation)
     f.write(' }')
     if (indentation == 0):
