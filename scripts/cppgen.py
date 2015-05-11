@@ -170,7 +170,7 @@ def collectMembers(scope, pitem):
     membtype = pitem['ptype']
     while 1:
         if membtype['name'] == 'Bit' or membtype['name'] == 'Int' or membtype['name'] == 'UInt' \
-            or membtype['name'] == 'Float' or membtype['name'] == 'Bool':
+            or membtype['name'] == 'Float' or membtype['name'] == 'Bool' or membtype['name'] == 'fixed32':
             return [('%s%s'%(scope,pitem['pname']),membtype)]
         elif membtype['name'] == 'SpecialTypeForSendingFd':
             return [('%s%s'%(scope,pitem['pname']),membtype)]

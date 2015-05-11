@@ -118,6 +118,10 @@ endmodule : mkBluenocTop
 %(exportedNames)s
 '''
 
+topEnumTemplate='''
+typedef enum {NoInterface, %(enumList)s} IfcNames;
+'''
+
 portalTemplate = '''   PortalCtrlMemSlave#(SlaveControlAddrWidth,SlaveDataBusWidth) ctrlPort_%(count)s <- mkPortalCtrlMemSlave(extend(pack(%(enumVal)s)), l%(ifcName)s.portalIfc.intr);
    let memslave_%(count)s <- mkMemMethodMux%(slaveType)s(ctrlPort_%(count)s.memSlave,l%(ifcName)s.portalIfc.%(itype)s);
    portals[%(count)s] = (interface MemPortal;
@@ -179,7 +183,7 @@ def instMod(args, modname, modext, constructor, tparam, memFlag):
         args = modname + tstr
     pmap['args'] = args % pmap
     if modext:
-        enumList.append(modname + tstr)
+        enumList.append('IfcNames_' + modname + tstr)
         pmap['argsConfig'] = modname + memFlag + tstr
         if modext == 'Output':
             pmap['stype'] = 'Indication';
@@ -204,10 +208,10 @@ def instMod(args, modname, modext, constructor, tparam, memFlag):
             pipeInstantiate.append(pipeInstantiation % pmap)
             connectInstantiate.append(connectInstantiation % pmap)
         if memFlag:
-            enumList.append(modname + memFlag + tstr)
-            addPortal(pmap['argsConfig'], '%(modname)sCW' % pmap, 'Request')
+            enumList.append('IfcNames_' + modname + memFlag + tstr)
+            addPortal('IfcNames_' + pmap['argsConfig'], '%(modname)sCW' % pmap, 'Request')
         else:
-            addPortal(pmap['args'], '%(modname)s' % pmap, pmap['stype'])
+            addPortal('IfcNames_' + pmap['args'], '%(modname)s' % pmap, pmap['stype'])
     else:
         if not instantiateRequest.get(pmap['modname']):
             instantiateRequest[pmap['modname']] = iReq()
@@ -254,8 +258,6 @@ if __name__=='__main__':
         print "topgen: --project-dir option missing"
         sys.exit(1)
     project_dir = os.path.abspath(os.path.expanduser(options.project_dir))
-    topFilename = project_dir + '/Top.bsv'
-    print 'Writing Top:', topFilename
     clientCount = 0
     userFiles = []
     portalInstantiate = []
@@ -335,10 +337,16 @@ if __name__=='__main__':
                  'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,`PinType,`NumberOfMasters)' if not options.bluenoc \
                      else 'BluenocTop#(NumberOfRequests,NumberOfIndications)'
                  }
-    print 'TOPFN', topFilename
+    topFilename = project_dir + '/Top.bsv'
+    print 'Writing:', topFilename
     top = util.createDirAndOpen(topFilename, 'w')
     if options.bluenoc:
         top.write(topNocTemplate % topsubsts)
     else:
         top.write(topTemplate % topsubsts)
+    top.close()
+    topFilename = project_dir + '/../jni/topEnum.h'
+    print 'Writing:', topFilename
+    top = util.createDirAndOpen(topFilename, 'w')
+    top.write(topEnumTemplate % topsubsts)
     top.close()
