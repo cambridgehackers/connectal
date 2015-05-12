@@ -321,7 +321,7 @@ static void write_portal_bsim(PortalInternal *pint, volatile unsigned int **addr
 
   portalSendFd(global_sockfd, &foo, sizeof(foo), -1);
 }
-void write_portal_fd_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
+static void write_fd_portal_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
 {
   struct memrequest foo = {pint->fpga_number, 1,*addr,v};
 
@@ -445,7 +445,7 @@ static void write_portal_bsim(struct PortalInternal *pint, volatile unsigned int
     memcpy(&upreq, &foo, sizeof(upreq));
     have_request = 1;
 }
-void write_portal_fd_bsim(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
+void write_fd_portal_bsim(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
 {
     struct memrequest foo = {pint->fpga_number, MAGIC_PORTAL_FOR_SENDING_FD,*addr,v};
     struct file *fmem;
@@ -502,5 +502,5 @@ int event_portal_bsim(struct PortalInternal *pint)
     return event_hardware(pint);
 }
 PortalTransportFunctions transportBsim = {
-    init_bsim, read_portal_bsim, write_portal_bsim, write_portal_fd_bsim, mapchannel_hardware, mapchannel_hardware,
+    init_bsim, read_portal_bsim, write_portal_bsim, write_fd_portal_bsim, mapchannel_hardware, mapchannel_hardware,
     send_portal_null, recv_portal_null, busy_hardware, enableint_hardware, event_portal_bsim, notfull_hardware};

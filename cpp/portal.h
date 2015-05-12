@@ -258,7 +258,6 @@ int connnectalJsonDecode(PortalInternal *pint, int channel, void *tempdata, Conn
 // Primitive used to send/recv data across a socket.
 void portalSendFd(int fd, void *data, int len, int sendFd);
 int portalRecvFd(int fd, void *data, int len, int *recvFd);
-void write_portal_fd_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 unsigned int bsim_poll_interrupt(void);
 
 int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
