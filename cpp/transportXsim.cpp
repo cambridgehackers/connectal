@@ -24,13 +24,7 @@
 #include <XsimMsgRequest.h>
 #include <XsimMsgIndication.h>
 
-class XsimMsgIndication;
-static XsimMsgRequestProxy *xsimRequestProxy;
-static XsimMsgIndication *xsimIndication;
 static int trace_xsim; // = 1;
-static Portal *mcommon;
-//FIXME, should go into pint->something
-static std::queue<uint32_t> msgbeats;
 
 class XsimMsgIndication : public XsimMsgIndicationWrapper {
     struct idInfo {
@@ -39,11 +33,10 @@ class XsimMsgIndication : public XsimMsgIndicationWrapper {
         int valid;
     } ids[16];
     int portal_count;
-    std::queue<uint32_t> readDataQueue;
     pthread_mutex_t readDataMutex;
     PortalPoller *poller;
-public:
     std::queue<int> intrs;
+public:
     std::queue<uint32_t> srcbeats;
 
     XsimMsgIndication(int id, PortalTransportFunctions *item, void *param, PortalPoller *poller = 0)
@@ -52,12 +45,6 @@ public:
     {
         memset(ids, 0, sizeof(ids));
         pthread_mutex_init(&readDataMutex, NULL);
-    }
-    void readData ( const uint32_t data ) {
-        fprintf(stderr, "%s: FIXME data=%d\n", __FUNCTION__, data);
-        pthread_mutex_lock(&readDataMutex);
-        readDataQueue.push(data);
-        pthread_mutex_unlock(&readDataMutex);
     }
     void directory ( const uint32_t fpgaNumber, const uint32_t fpgaId, const uint8_t last )
     {
@@ -71,47 +58,27 @@ public:
         fprintf(stderr, "%s: fpga=%d\n", __FUNCTION__, intrNumber);
         intrs.push(intrNumber);
     }
-
     void msgSource ( const uint32_t data ) {
         if (trace_xsim)
 	  fprintf(stderr, "%s: data=%x pid=%d\n", __FUNCTION__, data, getpid());
-        pthread_mutex_lock(&readDataMutex);
+        lockReadData();
         srcbeats.push(data);
-        pthread_mutex_unlock(&readDataMutex);
+        unlockReadData();
     }
-
-    int fpgaNumber(int fpgaId);
-    int getReadData(uint32_t *data);
     void lockReadData() { pthread_mutex_lock(&readDataMutex); }
     void unlockReadData() { pthread_mutex_unlock(&readDataMutex); }
 };
 
-int XsimMsgIndication::fpgaNumber(int fpgaId)
-{
-    for (int i = 0; ids[i].valid; i++)
-        if (ids[i].id == fpgaId) {
-            return ids[i].number;
-        }
-    PORTAL_PRINTF( "Error: init_xsim: did not find fpga_number %d\n", fpgaId);
-    PORTAL_PRINTF( "    Found fpga numbers:");
-    for (int i = 0; ids[i].valid; i++)
-        PORTAL_PRINTF( " %d", ids[i].id);
-    PORTAL_PRINTF( "\n");
-    return 0;
-}
-
-int XsimMsgIndication::getReadData(uint32_t *data)
-{
-    return -1;
-}
+static XsimMsgIndication *xsimIndication;
+static XsimMsgRequestProxy *xsimRequestProxy;
+static Portal *mcommon;
 
 static int init_xsim(struct PortalInternal *pint, void *init_param)
 {
     //fprintf(stderr, "FIXME %s:\n", __FUNCTION__);
     if (!xsimRequestProxy) {
-        PortalMuxParam param = {};
-
         mcommon = new Portal(0, 0, sizeof(uint32_t), portal_mux_handler, NULL, &transportSocketInit, NULL);
+        PortalMuxParam param = {};
         param.pint = &mcommon->pint;
         fprintf(stderr, "[%s] adding fd %d\n", __FUNCTION__, mcommon->pint.client_fd[0]);
         xsimIndication = new XsimMsgIndication(XsimIfcNames_XsimMsgIndication, &transportMux, &param);
@@ -121,6 +88,7 @@ static int init_xsim(struct PortalInternal *pint, void *init_param)
         fprintf(stderr, "[%s] called connect\n", __FUNCTION__);
     }
     //pint->fpga_number = xsimIndication->fpgaNumber(pint->fpga_number);
+    pint->map_base = (volatile unsigned int*)malloc(REQINFO_SIZE(pint->reqinfo));
     return 0;
 }
 
@@ -135,50 +103,33 @@ static unsigned int read_portal_xsim(PortalInternal *pint, volatile unsigned int
     return beat;
 }
 
-static void write_portal_xsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
-{
-    if (trace_xsim)
-        fprintf(stderr, "%s: id=%d addr=%08x data=%08x\n", __FUNCTION__, pint->fpga_number, **addr, v);
-    msgbeats.push(v);
-}
-
-static void write_fd_portal_xsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
-{
-    if (trace_xsim)
-        fprintf(stderr, "%s: id=%d addr=%08x data=%08x\n", __FUNCTION__, pint->fpga_number, **addr, v);
-    msgbeats.push(v);
-}
-
 static void send_portal_xsim(struct PortalInternal *pint, volatile unsigned int *data, unsigned int hdr, int sendFd)
 {
     // send an xsim header
     uint32_t methodId = (hdr >> 16) & 0xFF;
-    uint32_t numwords = (hdr & 0xFF) - 1;
+    int numwords = (hdr & 0xFF) - 1;
+    volatile unsigned int *p = pint->map_base;
     //FIXME, probably should have portal number in dst (bits 7:0)
-    uint32_t xsim_hdr = (methodId << 24) | (numwords << 16);
-    xsimRequestProxy->msgSink(xsim_hdr);
+    *p = (methodId << 24) | (numwords << 16);
 
-    // then the data beats
-    while (msgbeats.size()) {
-        xsimRequestProxy->msgSink(msgbeats.front());
-        msgbeats.pop();
-    }
+    while (numwords-- >= 0)
+        xsimRequestProxy->msgSink(*p++);
 }
 
 static int event_portal_xsim(struct PortalInternal *pint)
 {
     xsimIndication->lockReadData();
-    if (xsimIndication->srcbeats.size()) {
+    uint32_t beatsSize = xsimIndication->srcbeats.size();
+    if (beatsSize) {
         uint32_t xsim_hdr = xsimIndication->srcbeats.front();
-	uint32_t last = xsimIndication->srcbeats.back();
         //hmm, which portal?
         uint32_t numwords = (xsim_hdr >> 16) & 0xFF;
         uint32_t methodId = (xsim_hdr >> 24) & 0xFF;
 
-        if (xsimIndication->srcbeats.size() >= numwords+1) {
+        if (beatsSize >= numwords+1) {
 	  if (trace_xsim)
             fprintf(stderr, "%s: pint=%p srcbeats=%d methodwords=%d methodId=%d hdr=%08x last=%08x\n",
-		    __FUNCTION__, pint, (int)xsimIndication->srcbeats.size(), numwords, methodId, xsim_hdr, last);
+		    __FUNCTION__, pint, beatsSize, numwords, methodId, xsim_hdr, xsimIndication->srcbeats.back());
 	    // pop the header word
             xsimIndication->srcbeats.pop();
 
@@ -190,6 +141,6 @@ static int event_portal_xsim(struct PortalInternal *pint)
     return -1;
 }
 PortalTransportFunctions transportXsim = {
-    init_xsim, read_portal_xsim, write_portal_xsim, write_fd_portal_xsim, mapchannel_hardware, mapchannel_hardware,
+    init_xsim, read_portal_xsim, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_socket,
     send_portal_xsim, recv_portal_null, busy_portal_null, enableint_portal_null, event_portal_xsim, notfull_null};
 
