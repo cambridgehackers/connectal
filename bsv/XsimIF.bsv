@@ -20,7 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-typedef enum { XsimMsgRequest, XsimMsgIndication } XsimIfcNames;
+typedef enum { XsimIfcNames_XsimMsgRequest, XsimIfcNames_XsimMsgIndication } XsimIfcNames;
 
 interface XsimMsgRequest;
    method Action connect();
