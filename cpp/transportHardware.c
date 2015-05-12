@@ -51,6 +51,10 @@ int busy_portal_null(struct PortalInternal *pint, unsigned int v, const char *st
 void enableint_portal_null(struct PortalInternal *pint, int val)
 {
 }
+int event_null(struct PortalInternal *pint)
+{
+    return -1;
+}
 unsigned int read_portal_memory(PortalInternal *pint, volatile unsigned int **addr)
 {
     unsigned int rc = **addr;

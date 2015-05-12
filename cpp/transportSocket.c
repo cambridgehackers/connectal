@@ -248,10 +248,6 @@ static int recv_mux(struct PortalInternal *pint, volatile unsigned int *buffer, 
 {
     return pint->mux->item->recv(pint->mux, buffer, len, recvfd);
 }
-static int event_mux(struct PortalInternal *pint)
-{
-    return -1;
-}
 int portal_mux_handler(struct PortalInternal *pint, unsigned int channel, int messageFd)
 {
     int i, dummy;
@@ -266,7 +262,7 @@ int portal_mux_handler(struct PortalInternal *pint, unsigned int channel, int me
 }
 PortalTransportFunctions transportMux = {
     init_mux, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_socket,
-    send_mux, recv_mux, busy_portal_null, enableint_portal_null, event_mux, notfull_null};
+    send_mux, recv_mux, busy_portal_null, enableint_portal_null, event_null, notfull_null};
 
 /*
  * BSIM

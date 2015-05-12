@@ -106,11 +106,11 @@ typedef struct PortalInternal {
     struct PortalInternal  *mux;
     int                    muxid;
     int                    busyType;
-    uint32_t               sharedMem;
 #define BUSY_TIMEWAIT 0
 #define BUSY_SPIN     1
 #define BUSY_EXIT     2
 #define BUSY_ERROR    3
+    uint32_t               sharedMem;
     int                    indication_index;
     int                    request_index;
     int                    client_fd_number;
@@ -240,6 +240,7 @@ int busy_portal_null(struct PortalInternal *pint, unsigned int v, const char *st
 int notfull_null(PortalInternal *pint, unsigned int v);
 void send_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, unsigned int hdr, int sendFd);
 int recv_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd);
+int event_null(struct PortalInternal *pint);
 unsigned int read_portal_memory(PortalInternal *pint, volatile unsigned int **addr);
 void write_portal_memory(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 void write_fd_portal_memory(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
