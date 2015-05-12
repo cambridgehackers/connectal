@@ -24,72 +24,13 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <queue>
-#ifdef SYSTEM_VERILOG
-    #include "svdpi.h"
-#else
-    #include "xsi_loader.h"
-#endif
+#include "svdpi.h"
 #include <portal.h>
 #include <sock_utils.h>
 #include <XsimMsgRequest.h>
 #include <XsimMsgIndication.h>
 
-extern "C" {
-void dpi_init();
-void dpi_poll();
-void dpi_msgSink_beat(int dst_rdy, int *beat, int *src_rdy);
-void dpi_msgSource_beat(int src_rdy, int beat, int *dst_rdy);
-}
-
 static int trace_xsimtop = 0;
-
-//deleteme
-std::string getcurrentdir()
-{
-    return get_current_dir_name();
-}
-
-#ifndef SYSTEM_VERILOG
-class xsiport {
-  Xsi::Loader &xsiInstance;
-  int port;
-  //int direction;
-  const char *name;
-  int width;
-  s_xsi_vlog_logicval value;
-public:
-  xsiport(Xsi::Loader &loader, const char *name, int bits = 1)
-    : xsiInstance(loader), port(-1), name(name), width(bits)
-  {
-    value.aVal = 1;
-    value.bVal = 1;
-    port = xsiInstance.get_port_number(name);
-    //width = xsiInstance.get_int_port(port, xsiHDLValueSize);
-    std::cout << "Port name=" << name << " number=" << port << std::endl;
-  }
-  int read();
-  void write(int val);
-  int valid() { return port >= 0; }
-};
-
-int xsiport::read()
-{
-    xsiInstance.get_value(port, &value);
-    int mask = (width == 32) ? -1 : ((1 << width) - 1);
-    if (value.bVal != 0) {
-      char charval[] = { '0', '1', 'Z', 'X' };
-      int encoding = (value.aVal & mask) | ((value.bVal & mask) << 1);
-      fprintf(stderr, "port %2d.%16s value=%08x.%08x mask=%08x width=%2d %c\n", port, name, value.aVal, value.bVal, mask, width, charval[encoding]);
-    }
-    return value.aVal & mask;
-}
-void xsiport::write(int aVal)
-{
-    value.aVal = aVal;
-    value.bVal = 0;
-    xsiInstance.put_value(port, &value);
-}
-#endif // !SYSTEM_VERILOG
 
 class XsimMsgRequest : public XsimMsgRequestWrapper {
   struct idInfo {
@@ -127,6 +68,25 @@ public:
   int fpgaNumber(int fpgaId);
   int fpgaId(int fpgaNumber);
 
+};
+
+enum xsimtop_state {
+  xt_reset, xt_read_directory, xt_active
+};
+
+class DpiWorker {
+public:
+  DpiWorker();
+  void poll();
+  //private:
+  Portal                 *mcommon;
+  XsimMsgIndicationProxy *xsimIndicationProxy;
+  XsimMsgRequest         *xsimRequest;
+  // msgSink
+  int dst_rdy;
+  // msgSource
+  int src_rdy;
+  uint32_t src_beat;
 };
 
 void XsimMsgRequest::enableint( const uint32_t fpgaId, const uint8_t val)
@@ -192,25 +152,6 @@ int XsimMsgRequest::fpgaId(int fpgaNumber)
   return ids[fpgaNumber].id;
 }
 
-enum xsimtop_state {
-  xt_reset, xt_read_directory, xt_active
-};
-
-class DpiWorker {
-public:
-  DpiWorker();
-  void poll();
-  //private:
-  Portal                 *mcommon;
-  XsimMsgIndicationProxy *xsimIndicationProxy;
-  XsimMsgRequest         *xsimRequest;
-  // msgSink
-  int dst_rdy;
-  // msgSource
-  int src_rdy;
-  uint32_t src_beat;
-};
-
 DpiWorker::DpiWorker()
  : dst_rdy(0), src_rdy(0)
 {
@@ -249,6 +190,7 @@ void DpiWorker::poll()
 
 static DpiWorker *dpiWorker;
 
+extern "C" {
 void dpi_init()
 {
     if (trace_xsimtop) fprintf(stderr, "[%s:%d]\n", __FUNCTION__, __LINE__);
@@ -286,6 +228,7 @@ void dpi_msgSink_beat(int dst_rdy, int *p_beat, int *p_src_rdy)
     *p_src_rdy = 0;
   }
 }
+
 void dpi_msgSource_beat(int src_rdy, int beat, int *p_dst_rdy)
 {
   if (src_rdy) {
@@ -298,12 +241,4 @@ void dpi_msgSource_beat(int src_rdy, int beat, int *p_dst_rdy)
     *p_dst_rdy = 0;
   }
 }
-
-int dpi_msgSource_dst_rdy_b(int src_rdy)
-{
-  if (src_rdy) {
-    fprintf(stderr, "dpi_msgSource_dst_rdy_b() called\n");
-    return 1;
-  }
-}
-
+} // extern "C"

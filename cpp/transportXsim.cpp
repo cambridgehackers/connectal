@@ -77,7 +77,6 @@ static int init_xsim(struct PortalInternal *pint, void *init_param)
             &transportSocketInit, NULL, sizeof(uint32_t)); 
         PortalMuxParam param = {};
         param.pint = &mcommon;
-        fprintf(stderr, "[%s] adding fd %d\n", __FUNCTION__, mcommon.client_fd[0]);
         init_portal_internal(&indPortal, XsimIfcNames_XsimMsgIndication, 0,
             XsimMsgIndication_handleMessage, &indHandlers, &transportMux, &param, XsimMsgIndication_reqinfo);
         init_portal_internal(&reqPortal, XsimIfcNames_XsimMsgRequest, 0,
@@ -87,12 +86,11 @@ static int init_xsim(struct PortalInternal *pint, void *init_param)
     }
     //pint->fpga_number = indPortal->fpgaNumber(pint->fpga_number);
     pint->map_base = ((volatile unsigned int*)malloc(REQINFO_SIZE(pint->reqinfo) + sizeof(uint32_t))) + 1;
-    pint->muxid = indPortal.mux_ports_number;
+    pint->muxid = indPortal.mux_ports_number++;
 printf("[%s:%d] fpga %d muxid %d\n", __FUNCTION__, __LINE__, pint->fpga_number, pint->muxid);
-    indPortal.mux_ports_number++;
     indPortal.mux_ports = (PortalMuxHandler *)realloc(indPortal.mux_ports,
         indPortal.mux_ports_number * sizeof(PortalMuxHandler));
-    indPortal.mux_ports[indPortal.mux_ports_number-1].pint = pint;
+    indPortal.mux_ports[pint->muxid].pint = pint;
     pint->fpga_fd = mcommon.client_fd[0];
     return 0;
 }
