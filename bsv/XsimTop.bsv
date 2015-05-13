@@ -19,6 +19,7 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+import Vector            :: *;
 import Portal            :: *;
 import Top               :: *;
 import HostInterface     :: *;
@@ -38,10 +39,16 @@ module  mkXsimHost#(Clock derivedClock, Reset derivedReset)(XsimHost);
 endmodule
 
 import "BVI" XsimSource =
-module mkXsimSource#(Bit#(32) portal, Bool src_rdy, MsgBeat#(4) beat)(Empty);
+module mkXsimSourceBVI#(Bit#(32) portal, Bool src_rdy, MsgBeat#(4) beat)(Empty);
     port portal = portal;
     port src_rdy = src_rdy;
     port beat = beat;
+endmodule
+module mkXsimSource#(MsgSource#(4) indication, Integer i)(Empty);
+   mkXsimSourceBVI(fromInteger(i), indication.src_rdy, indication.beat());
+   rule ind_dst_rdy;
+      indication.dst_rdy(True);
+   endrule
 endmodule
 
 interface MsgSinkR#(numeric type bytes_per_beat);
@@ -50,12 +57,21 @@ interface MsgSinkR#(numeric type bytes_per_beat);
 endinterface
 
 import "BVI" XsimSink =
-module mkXsimSink#(Bit#(32) portal, Bool dst_rdy)(MsgSinkR#(4));
+module mkXsimSinkBVI#(Bit#(32) portal, Bool dst_rdy)(MsgSinkR#(4));
     port portal = portal;
     port dst_rdy = dst_rdy;
     method src_rdy src_rdy();
     method beat beat();
     schedule (src_rdy, beat) CF (src_rdy, beat);
+endmodule
+module mkXsimSink#(MsgSink#(4) request, Integer portalIndex)(MsgSinkR#(4));
+   let sink <- mkXsimSinkBVI(fromInteger(portalIndex), request.dst_rdy);
+   rule req_src_rdy;
+      request.src_rdy(sink.src_rdy);
+   endrule
+   rule req_beat;
+      request.beat(sink.beat);
+   endrule
 endmodule
 
 module mkXsimTop(Empty);
@@ -77,19 +93,6 @@ module mkXsimTop(Empty);
 `endif
        );
 
-   for(Integer i = 0; i < top.indications.length; i=i+1) begin
-       mkXsimSource(i, top.indications[i].src_rdy, top.indications[i].beat);
-       rule ind_dst_rdy;
-           top.indications[i].dst_rdy(True);
-       endrule
-   end
-   for(Integer i = 0; i < top.requests.length; i=i+1) begin
-       MsgSinkR#(4) sink <- mkXsimSink(i, top.requests[i].dst_rdy);
-       rule req_src_rdy;
-           top.requests[i].src_rdy(sink.src_rdy);
-       endrule
-       rule req_beat;
-           top.requests[i].beat(sink.beat);
-       endrule
-   end
+   mapM_(uncurry(mkXsimSource), zip(top.indications, genVector()));
+   mapM_(uncurry(mkXsimSink), zip(top.requests, genVector()));
 endmodule
