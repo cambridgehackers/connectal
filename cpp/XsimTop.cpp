@@ -40,11 +40,6 @@ class XsimMsgRequest : public XsimMsgRequestWrapper {
   } ids[16];
   int portal_count;
 public:
-  //struct writereq {
-    //uint32_t addr;
-    //uint32_t data;
-  //};
-  //std::queue<writereq> writereqs;
   std::queue<uint32_t> sinkbeats;
   int connected;
 
@@ -63,20 +58,18 @@ void XsimMsgRequest::enableint( const uint32_t fpgaId, const uint8_t val)
 {
   int number = fpgaNumber(fpgaId);
   uint32_t hwaddr = number << 16 | 4;
-  fprintf(stderr, "[%s:%d] id=%d number=%d addr=%08x\n", __FUNCTION__, __LINE__, fpgaId, number, hwaddr);
-  //writereq req = { hwaddr, val };
-  //writereqs.push(req);
+  fprintf(stderr, "%s: id=%d number=%d addr=%08x\n", __FUNCTION__, fpgaId, number, hwaddr);
 }
 void XsimMsgRequest::msgSink ( const uint32_t data )
 {
   if (trace_xsimtop)
-      fprintf(stderr, "[%s:%d] data=%08x\n", __FUNCTION__, __LINE__, data);
+      fprintf(stderr, "%s: data=%08x\n", __FUNCTION__, data);
   sinkbeats.push(data);
 }
 
 void XsimMsgRequest::directory ( const uint32_t fpgaNumber, const uint32_t fpgaId, const uint32_t last )
 {
-    fprintf(stderr, "[%s:%d] fpga=%d id=%d last=%d\n", __FUNCTION__, __LINE__, fpgaNumber, fpgaId, last);
+    fprintf(stderr, "%s: fpga=%d id=%d last=%d\n", __FUNCTION__, fpgaNumber, fpgaId, last);
     struct idInfo info = { (int)fpgaNumber, (int)fpgaId, 1 };
     ids[fpgaNumber] = info;
     if (last)
@@ -100,27 +93,24 @@ int XsimMsgRequest::fpgaNumber(int fpgaId)
 static Portal                 *mcommon;
 static XsimMsgIndicationProxy *xsimIndicationProxy;
 static XsimMsgRequest         *xsimRequest;
-static int dpiwdst_rdy, dpiwsrc_rdy;
-static uint32_t dpiwsrc_beat;
+static int dpiwdst_rdy;
 
 extern "C" {
 void dpi_init()
 {
     if (trace_xsimtop) 
-        fprintf(stderr, "[%s:%d]\n", __FUNCTION__, __LINE__);
+        fprintf(stderr, "%s:\n", __FUNCTION__);
     dpiwdst_rdy = 0;
-    dpiwsrc_rdy = 0;
-    fprintf(stderr, "[%s:%d] using BluenocTop\n", __FILE__, __LINE__);
     mcommon = new Portal(0, 0, sizeof(uint32_t), portal_mux_handler, NULL, &transportSocketResp, NULL);
     PortalMuxParam param = {};
     param.pint = &mcommon->pint;
     xsimIndicationProxy = new XsimMsgIndicationProxy(XsimIfcNames_XsimMsgIndication, &transportMux, &param);
     xsimRequest = new XsimMsgRequest(XsimIfcNames_XsimMsgRequest, &transportMux, &param);
 
-    fprintf(stderr, "[%s:%d]\n", __FUNCTION__, __LINE__);
+    fprintf(stderr, "%s: before sleep\n", __FUNCTION__);
     defaultPoller->stop();
     sleep(2);
-    fprintf(stderr, "[%s:%d]\n", __FUNCTION__, __LINE__);
+    fprintf(stderr, "%s: end\n", __FUNCTION__);
 }
 
 void dpi_poll()
@@ -128,35 +118,29 @@ void dpi_poll()
   void *rc = defaultPoller->pollFn(1);
   if ((long)rc > 0)
       defaultPoller->event();
-  if (dpiwsrc_rdy || dpiwdst_rdy) {
+  if (dpiwdst_rdy) {
       if (trace_xsimtop) fprintf(stderr, "============================================================\n");
       if (trace_xsimtop)
-	  fprintf(stderr, "[%s:%d] rc=%ld src_rdy=%d src_beat=%08x dst_rdy=%d\n",
-		  __FUNCTION__, __LINE__, (long)rc, dpiwsrc_rdy, dpiwsrc_beat, dpiwdst_rdy);
+	  fprintf(stderr, "%s: rc=%ld dst_rdy=%d\n",
+		  __FUNCTION__, (long)rc, dpiwdst_rdy);
       // called on @(negedge CLK)
       if (dpiwdst_rdy) {
           // msgSink consumed one beat of data
-          if (trace_xsimtop) fprintf(stderr, "[%s:%d] sinkbeats.pop()\n", __FUNCTION__, __LINE__);
+          if (trace_xsimtop) fprintf(stderr, "%s: sinkbeats.pop()\n", __FUNCTION__);
           xsimRequest->sinkbeats.pop();
           dpiwdst_rdy = 0;
-      }
-      if (dpiwsrc_rdy) {
-          // we got some data from the msgSource
-          if (trace_xsimtop) fprintf(stderr, "[%s:%d] srcbeats.push() src_beat=%08x\n", __FUNCTION__, __LINE__, dpiwsrc_beat);
-          xsimIndicationProxy->msgSource(dpiwsrc_beat);
-          dpiwsrc_rdy = 0;
       }
       if (trace_xsimtop)
 	  fprintf(stderr, "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
   }
 }
 
-void dpi_msgSink_beat(int dst_rdy, int *p_beat, int *p_src_rdy)
+void dpi_msgSink_beat(int *p_beat, int *p_src_rdy)
 {
-  if (dst_rdy && (xsimRequest->sinkbeats.size() > 0)) {
+  if (xsimRequest->sinkbeats.size() > 0) {
       uint32_t beat = xsimRequest->sinkbeats.front();
       if (trace_xsimtop)
-          fprintf(stderr, "[%s:%d] sink message beat %08x\n", __FUNCTION__, __LINE__, beat);
+          fprintf(stderr, "%s: beat %08x\n", __FUNCTION__, beat);
       *p_beat = beat;
       *p_src_rdy = 1;
       dpiwdst_rdy = 1;
@@ -166,14 +150,10 @@ void dpi_msgSink_beat(int dst_rdy, int *p_beat, int *p_src_rdy)
   }
 }
 
-void dpi_msgSource_beat(int src_rdy, int beat, int *p_dst_rdy)
+void dpi_msgSource_beat(int beat)
 {
-  if (src_rdy) {
-      if (trace_xsimtop)
-	  fprintf(stderr, "dpi_msgSource_beat() called beat=%08x src_rdy=%d\n", beat, src_rdy);
-      dpiwsrc_beat = beat;
-      dpiwsrc_rdy = 1;
-  }
-  *p_dst_rdy = src_rdy;
+    if (trace_xsimtop)
+        fprintf(stderr, "dpi_msgSource_beat: beat=%08x\n", beat);
+    xsimIndicationProxy->msgSource(beat);
 }
 } // extern "C"

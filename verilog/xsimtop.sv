@@ -1,9 +1,30 @@
+// Copyright (c) 2015 The Connectal Project
+
+// Permission is hereby granted, free of charge, to any person
+// obtaining a copy of this software and associated documentation
+// files (the "Software"), to deal in the Software without
+// restriction, including without limitation the rights to use, copy,
+// modify, merge, publish, distribute, sublicense, and/or sell copies
+// of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+// BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+// CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 //`timescale 1ns / 1ps
 
 import "DPI-C" function void dpi_init();
 import "DPI-C" function void dpi_poll();
-import "DPI-C" function void dpi_msgSink_beat(input int dst_rdy, output int beat, output int src_rdy);
-import "DPI-C" function void dpi_msgSource_beat(input int src_rdy, input int beat, output int dst_rdy);
+import "DPI-C" function void dpi_msgSink_beat(output int beat, output int src_rdy);
+import "DPI-C" function void dpi_msgSource_beat(input int beat);
 
 module xsimtop();
 
@@ -60,14 +81,15 @@ module xsimtop();
       end
 
       if (msgSink_dst_rdy) begin
-	 dpi_msgSink_beat(msgSink_dst_rdy, msgSink_beat_v, msgSink_src_rdy_b);
+	 dpi_msgSink_beat(msgSink_beat_v, msgSink_src_rdy_b);
       end
       else begin
-	msgSink_src_rdy_b <= 0;
-     end
+	 msgSink_src_rdy_b <= 0;
+      end
 
       if (msgSource_src_rdy) begin
-	 dpi_msgSource_beat(msgSource_src_rdy, msgSource_beat, msgSource_dst_rdy_b0);
+	 dpi_msgSource_beat(msgSource_beat);
+         msgSource_dst_rdy_b0 <= 1;
       end
    end
 endmodule
