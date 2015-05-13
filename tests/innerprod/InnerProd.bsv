@@ -14,8 +14,16 @@ import Dsp48E1::*;
 import InnerProdInterface::*;
 import ConnectalBramFifo::*;
 
+`ifdef NUMBER_OF_TILES 
+typedef `NUMBER_OF_TILES NumTiles;
+`else
 typedef 256 NumTiles;
+`endif
+`ifdef TILES_PER_MACRO
+typedef `TILES_PER_MACRO NumTilesPerMacro;
+`else
 typedef 16 NumTilesPerMacro;
+`endif
 typedef TDiv#(NumTiles,NumTilesPerMacro) NumMacroTiles;
 typedef Tuple2#(Bit#(TLog#(NumTilesPerMacro)),TileRequest) MacroTileRequest;
 
@@ -130,13 +138,18 @@ endmodule
 
 (* synthesize *)
 module mkMacroTile#(Int#(16) mt)(MacroTile);
-   ReqPipes#(NumTilesPerMacro,TileRequest) rp <- mkRequestPipesMTSynth();
-   ResponsePipes#(NumTilesPerMacro) op <- mkResponsePipesMTSynth();
+   let clock <- exposeCurrentClock();
+   let reset <- exposeCurrentReset();
+   let trpReset <- mkSyncReset(2, reset, clock);
+   let topReset <- mkSyncReset(2, reset, clock);
+   ReqPipes#(NumTilesPerMacro,TileRequest) rp <- mkRequestPipesMTSynth(reset_by trpReset);
+   ResponsePipes#(NumTilesPerMacro) op <- mkResponsePipesMTSynth(reset_by topReset);
 
    for (Integer t = 0; t < valueOf(NumTilesPerMacro); t = t + 1) begin
-      let tile <- mkInnerProdTile(mt * fromInteger(valueOf(NumTilesPerMacro)) + fromInteger(t));
-      mkConnection(rp.outPipes[t], tile.request);
-      mkConnection(tile.response, op.inPipes[t]);
+      let tileReset <- mkSyncReset(2, reset, clock);
+      let tile <- mkInnerProdTile(mt * fromInteger(valueOf(NumTilesPerMacro)) + fromInteger(t), reset_by tileReset);
+      mkConnection(rp.outPipes[t], tile.request, reset_by tileReset);
+      mkConnection(tile.response, op.inPipes[t], reset_by tileReset);
    end
 
    FIFOF#(TileResponse) responseFifo <- mkSizedFIFOF(valueOf(NumTilesPerMacro));
@@ -179,8 +192,10 @@ module mkInnerProdSynth#(Clock derivedClock)(InnerProdSynth);
       cycles <= cycles+1;
    endrule
 
-   ReqPipes#(NumMacroTiles,MacroTileRequest) rp <- mkRequestPipesSynth(clocked_by derivedClock, reset_by derivedReset);
-   ResponsePipes#(NumMacroTiles) op <- mkResponsePipesSynth(clocked_by derivedClock, reset_by derivedReset);
+   let rpReset <- mkSyncReset(2, derivedReset, derivedClock);
+   let opReset <- mkSyncReset(2, derivedReset, derivedClock);
+   ReqPipes#(NumMacroTiles,MacroTileRequest) rp <- mkRequestPipesSynth(clocked_by derivedClock, reset_by rpReset);
+   ResponsePipes#(NumMacroTiles) op <- mkResponsePipesSynth(clocked_by derivedClock, reset_by opReset);
 
    for (Integer mt = 0; mt < valueOf(NumMacroTiles); mt = mt + 1) begin
       let mtReset <- mkSyncReset(2, derivedReset, derivedClock);
