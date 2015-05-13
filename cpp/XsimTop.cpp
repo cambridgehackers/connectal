@@ -40,7 +40,7 @@ class XsimMsgRequest : public XsimMsgRequestWrapper {
   } ids[16];
   int portal_count;
 public:
-  std::queue<uint32_t> sinkbeats;
+  std::queue<uint32_t> sinkbeats[16];
   int connected;
 
   XsimMsgRequest(int id, PortalTransportFunctions *item, void *param, PortalPoller *poller = 0) : XsimMsgRequestWrapper(id, item, param, poller), connected(0) { }
@@ -49,7 +49,7 @@ public:
       connected = 1;
   }
   void enableint( const uint32_t fpgaId, const uint8_t val);
-  void msgSink ( const uint32_t data );
+  void msgSink ( const uint32_t portal, const uint32_t data );
   void directory( const uint32_t fpgaNumber, const uint32_t fpgaId, const uint32_t last );
   int fpgaNumber(int fpgaId);
 };
@@ -60,11 +60,11 @@ void XsimMsgRequest::enableint( const uint32_t fpgaId, const uint8_t val)
   uint32_t hwaddr = number << 16 | 4;
   fprintf(stderr, "%s: id=%d number=%d addr=%08x\n", __FUNCTION__, fpgaId, number, hwaddr);
 }
-void XsimMsgRequest::msgSink ( const uint32_t data )
+void XsimMsgRequest::msgSink ( const uint32_t portal, const uint32_t data )
 {
   if (trace_xsimtop)
       fprintf(stderr, "%s: data=%08x\n", __FUNCTION__, data);
-  sinkbeats.push(data);
+  sinkbeats[portal].push(data);
 }
 
 void XsimMsgRequest::directory ( const uint32_t fpgaNumber, const uint32_t fpgaId, const uint32_t last )
@@ -111,10 +111,10 @@ void dpi_init()
     fprintf(stderr, "%s: end\n", __FUNCTION__);
 }
 
-void dpi_msgSink_beat(int *p_beat, int *p_src_rdy)
+void dpi_msgSink_beat(int portal, int *p_beat, int *p_src_rdy)
 {
-  if (xsimRequest->sinkbeats.size() > 0) {
-      uint32_t beat = xsimRequest->sinkbeats.front();
+  if (xsimRequest->sinkbeats[portal].size() > 0) {
+      uint32_t beat = xsimRequest->sinkbeats[portal].front();
       if (trace_xsimtop)
           fprintf(stderr, "%s: beat %08x\n", __FUNCTION__, beat);
       *p_beat = beat;
@@ -122,7 +122,7 @@ void dpi_msgSink_beat(int *p_beat, int *p_src_rdy)
       if (trace_xsimtop) fprintf(stderr, "============================================================\n");
       // msgSink consumed one beat of data
       if (trace_xsimtop) fprintf(stderr, "%s: sinkbeats.pop()\n", __FUNCTION__);
-      xsimRequest->sinkbeats.pop();
+      xsimRequest->sinkbeats[portal].pop();
       if (trace_xsimtop)
 	  fprintf(stderr, "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
   } else {
@@ -134,10 +134,10 @@ void dpi_msgSink_beat(int *p_beat, int *p_src_rdy)
   }
 }
 
-void dpi_msgSource_beat(int beat)
+void dpi_msgSource_beat(int portal, int beat)
 {
     if (trace_xsimtop)
         fprintf(stderr, "dpi_msgSource_beat: beat=%08x\n", beat);
-    xsimIndicationProxy->msgSource(beat);
+    xsimIndicationProxy->msgSource(portal, beat);
 }
 } // extern "C"

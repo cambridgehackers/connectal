@@ -46,7 +46,7 @@ static int indInterrupt (PortalInternal *pint,const uint8_t intrNumber )
     fprintf(stderr, "%s: fpga=%d\n", __FUNCTION__, intrNumber);
     return 0;
 }
-static int indMsgSource (PortalInternal *pint, const uint32_t data )
+static int indMsgSource (PortalInternal *pint, const uint32_t portal, const uint32_t data )
 {
     if (trace_xsim)
 	fprintf(stderr, "%s: data=%x pid=%d\n", __FUNCTION__, data, getpid());
@@ -97,6 +97,7 @@ printf("[%s:%d] fpga %d muxid %d\n", __FUNCTION__, __LINE__, pint->fpga_number, 
 
 static void send_portal_xsim(struct PortalInternal *pint, volatile unsigned int *data, unsigned int hdr, int sendFd)
 {
+    int portal = 0;
     sending_muxid = pint->muxid;
     // send an xsim header
     uint32_t methodId = (hdr >> 16) & 0xFF;
@@ -106,7 +107,7 @@ static void send_portal_xsim(struct PortalInternal *pint, volatile unsigned int 
     *p = (methodId << 24) | (numwords << 16);
 
     while (numwords-- >= 0)
-        XsimMsgRequest_msgSink(&reqPortal, *p++);
+        XsimMsgRequest_msgSink(&reqPortal, portal, *p++);
 }
 
 static int event_xsim(struct PortalInternal *pint)

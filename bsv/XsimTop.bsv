@@ -38,7 +38,8 @@ module  mkXsimHost#(Clock derivedClock, Reset derivedReset)(XsimHost);
 endmodule
 
 import "BVI" XsimSource =
-module mkXsimSource#(Bool src_rdy, MsgBeat#(4) beat)(Empty);
+module mkXsimSource#(Bit#(32) portal, Bool src_rdy, MsgBeat#(4) beat)(Empty);
+    port portal = portal;
     port src_rdy = src_rdy;
     port beat = beat;
 endmodule
@@ -49,7 +50,8 @@ interface MsgSinkR#(numeric type bytes_per_beat);
 endinterface
 
 import "BVI" XsimSink =
-module mkXsimSink#(Bool dst_rdy)(MsgSinkR#(4));
+module mkXsimSink#(Bit#(32) portal, Bool dst_rdy)(MsgSinkR#(4));
+    port portal = portal;
     port dst_rdy = dst_rdy;
     method src_rdy src_rdy();
     method beat beat();
@@ -73,11 +75,11 @@ module mkXsimTop(Empty);
 `endif
        );
 
-   mkXsimSource(top.indications[0].src_rdy, top.indications[0].beat);
+   mkXsimSource(0, top.indications[0].src_rdy, top.indications[0].beat);
    rule ind_dst_rdy;
        top.indications[0].dst_rdy(True);
    endrule
-   MsgSinkR#(4) sink <- mkXsimSink(top.requests[0].dst_rdy);
+   MsgSinkR#(4) sink <- mkXsimSink(0, top.requests[0].dst_rdy);
    rule req_src_rdy;
        top.requests[0].src_rdy(sink.src_rdy);
    endrule

@@ -26,11 +26,11 @@ interface XsimMsgRequest;
    method Action connect();
    method Action enableint(Bit#(32) fpgaId, Bit#(1) val);
    // for bluenoc top
-   method Action msgSink(Bit#(32) data);
+   method Action msgSink(Bit#(32) portal, Bit#(32) data);
 endinterface
 interface XsimMsgIndication;
    method Action directory(Bit#(32) fpgaNumber, Bit#(32) fpgaId, Bit#(1) last);
    method Action interrupt(Bit#(4) intrNum);
    // for bluenoc top
-   method Action msgSource(Bit#(32) data);
+   method Action msgSource(Bit#(32) portal, Bit#(32) data);
 endinterface
