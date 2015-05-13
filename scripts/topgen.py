@@ -130,7 +130,7 @@ portalTemplate = '''   PortalCtrlMemSlave#(SlaveControlAddrWidth,SlaveDataBusWid
        interface WriteOnly num_portals = ctrlPort_%(count)s.num_portals;
        endinterface);'''
 
-portalNocTemplate = '''   let l%(ifcName)sNoc <- mkPortalMsg%(direction)s(l%(ifcName)s.portalIfc);'''
+portalNocTemplate = '''   let l%(ifcName)sNoc <- mkPortalMsg%(direction)s(l%(ifcName)s.portalIfc.%(itype)s%(messageSize)s);'''
 
 def addPortal(enumVal, ifcName, direction):
     global portalCount
@@ -140,11 +140,13 @@ def addPortal(enumVal, ifcName, direction):
         portParam['itype'] = 'requests'
         portParam['slaveType'] = 'In'
         portParam['intrParam'] = ''
+        portParam['messageSize'] = ''
     else:
         indicationList.append('l' + ifcName + 'Noc')
         portParam['itype'] = 'indications'
         portParam['slaveType'] = 'Out'
         portParam['intrParam'] = ', l%(ifcName)s.portalIfc.intr' % portParam
+        portParam['messageSize'] = ', l%(ifcName)s.portalIfc.messageSize' % portParam
     p = portalNocTemplate if options.bluenoc else portalTemplate
     portalList.append(p % portParam)
     portalCount = portalCount + 1

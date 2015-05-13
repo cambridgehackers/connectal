@@ -82,10 +82,12 @@ module mk%(Ifc)sOutput(%(Ifc)sOutput);
 %(indicationMethods)s
     endinterface
     interface PipePortal portalIfc;
-        method Bit#(16) messageSize(Bit#(16) methodNumber);
+        interface PortalSize messageSize;
+        method Bit#(16) size(Bit#(16) methodNumber);
             case (methodNumber)%(messageSizes)s
             endcase
         endmethod
+        endinterface
         interface Vector requests = nil;
         interface Vector indications = indicationPipes;
         interface PortalInterrupt intr = intrInst;
@@ -145,10 +147,12 @@ module mk%(Ifc)sInput(%(Ifc)sInput);
     Vector#(%(channelCount)s, PipeIn#(Bit#(SlaveDataBusWidth))) requestPipeIn;
 %(methodRules)s
     interface PipePortal portalIfc;
-        method Bit#(16) messageSize(Bit#(16) methodNumber);
+        interface PortalSize messageSize;
+        method Bit#(16) size(Bit#(16) methodNumber);
             case (methodNumber)%(messageSizes)s
             endcase
         endmethod
+        endinterface
         interface Vector requests = requestPipeIn;
         interface Vector indications = nil;
         interface PortalInterrupt intr;

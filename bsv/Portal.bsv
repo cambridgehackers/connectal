@@ -29,9 +29,13 @@ interface PortalInterrupt#(numeric type dataWidth);
    method Bit#(dataWidth) channel();
 endinterface
 
+interface PortalSize;
+   method Bit#(16) size(Bit#(16) methodNumber);
+endinterface
+
 // implementation of a Portal as a group of Pipes
 interface PipePortal#(numeric type numRequests, numeric type numIndications, numeric type slaveDataWidth);
-   method Bit#(16) messageSize(Bit#(16) methodNumber);
+   interface PortalSize messageSize;
    interface Vector#(numRequests, PipeIn#(Bit#(slaveDataWidth))) requests;
    //method PipeIn#(Bit#(slaveDataWidth)) requestsPipe(Integer a);
    interface Vector#(numIndications, PipeOut#(Bit#(slaveDataWidth))) indications;

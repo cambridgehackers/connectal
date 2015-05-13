@@ -32,7 +32,7 @@ typedef enum {
    } BnocPortalState deriving (Bits,Eq);
 
 
-module mkPortalMsgRequest#(PipePortal#(numRequests, 0, 32) portal)(MsgSink#(4));
+module mkPortalMsgRequest#(Vector#(numRequests, PipeIn#(Bit#(32))) portal)(MsgSink#(4));
    Reg#(Bit#(8)) messageWordsReg <- mkReg(0);
    Reg#(Bit#(8)) methodIdReg <- mkReg(0);
    Reg#(BnocPortalState) bpState <- mkReg(BpHeader);
@@ -56,7 +56,7 @@ module mkPortalMsgRequest#(PipePortal#(numRequests, 0, 32) portal)(MsgSink#(4));
       fifoMsgSink.deq();
       if (verbose)
 	 $display("receiveMessage id=%d data=%x messageWords=%d", methodIdReg, data, messageWordsReg);
-      portal.requests[methodIdReg].enq(data);
+      portal[methodIdReg].enq(data);
       messageWordsReg <= messageWordsReg - 1;
       if (messageWordsReg == 1)
 	 bpState <= BpHeader;
@@ -64,11 +64,11 @@ module mkPortalMsgRequest#(PipePortal#(numRequests, 0, 32) portal)(MsgSink#(4));
    return fifoMsgSink.sink;
 endmodule
 
-module mkPortalMsgIndication#(PipePortal#(0, numIndications, 32) portal)(MsgSource#(4));
+module mkPortalMsgIndication#(Vector#(numIndications, PipeOut#(Bit#(32))) portal, PortalSize messageSize)(MsgSource#(4));
    Reg#(Bit#(16)) messageWordsReg <- mkReg(0);
    Reg#(Bit#(8)) methodIdReg <- mkReg(0);
    Reg#(BnocPortalState) bpState <- mkReg(BpHeader);
-   Vector#(numIndications, Bool) readyBits = map(pipeOutNotEmpty, portal.indications);
+   Vector#(numIndications, Bool) readyBits = map(pipeOutNotEmpty, portal);
    Bool      interruptStatus = False;
    Bit#(8)  readyChannel = -1;
    FifoMsgSource#(4) fifoMsgSource <- mkFifoMsgSource();
@@ -82,7 +82,7 @@ module mkPortalMsgIndication#(PipePortal#(0, numIndications, 32) portal)(MsgSour
       end
    end
    rule sendHeader if (bpState == BpHeader && interruptStatus);
-      Bit#(16) messageBits = portal.messageSize(extend(readyChannel));
+      Bit#(16) messageBits = messageSize.size(extend(readyChannel));
       Bit#(16) roundup = messageBits[4:0] == 0 ? 0 : 1;
       Bit#(16) numWords = (messageBits >> 5) + roundup;
       /*      
@@ -101,8 +101,8 @@ module mkPortalMsgIndication#(PipePortal#(0, numIndications, 32) portal)(MsgSour
    endrule
    rule sendMessage if (bpState == BpMessage);
       messageWordsReg <= messageWordsReg - 1;
-      let v = portal.indications[methodIdReg].first;
-      portal.indications[methodIdReg].deq();
+      let v = portal[methodIdReg].first;
+      portal[methodIdReg].deq();
       fifoMsgSource.enq(v);
       if (verbose) $display("sendMessage id=%d data=%h messageWords=%d", methodIdReg, v, messageWordsReg);
       if (messageWordsReg == 1) begin
