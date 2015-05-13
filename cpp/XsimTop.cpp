@@ -40,18 +40,12 @@ class XsimMsgRequest : public XsimMsgRequestWrapper {
   } ids[16];
   int portal_count;
 public:
-  struct readreq {
-    uint32_t addr;
-  };
-  struct writereq {
-    uint32_t addr;
-    uint32_t data;
-  };
-  std::queue<readreq> readreqs;
-  std::queue<uint32_t> readdata;
-  std::queue<writereq> writereqs;
+  //struct writereq {
+    //uint32_t addr;
+    //uint32_t data;
+  //};
+  //std::queue<writereq> writereqs;
   std::queue<uint32_t> sinkbeats;
-
   int connected;
 
   XsimMsgRequest(int id, PortalTransportFunctions *item, void *param, PortalPoller *poller = 0) : XsimMsgRequestWrapper(id, item, param, poller), connected(0) { }
@@ -60,47 +54,19 @@ public:
       connected = 1;
   }
   void enableint( const uint32_t fpgaId, const uint8_t val);
-  //virtual void read ( const uint32_t fpgaId, const uint32_t addr );
-  //virtual void write ( const uint32_t fpgaId, const uint32_t addr, const uint32_t data );
-  virtual void msgSink ( const uint32_t data );
-
+  void msgSink ( const uint32_t data );
   void directory( const uint32_t fpgaNumber, const uint32_t fpgaId, const uint32_t last );
   int fpgaNumber(int fpgaId);
-  //int fpgaId(int fpgaNumber);
-
 };
 
-enum xsimtop_state {
-  xt_reset, xt_read_directory, xt_active
-};
 void XsimMsgRequest::enableint( const uint32_t fpgaId, const uint8_t val)
 {
   int number = fpgaNumber(fpgaId);
   uint32_t hwaddr = number << 16 | 4;
-  writereq req = { hwaddr, val };
   fprintf(stderr, "[%s:%d] id=%d number=%d addr=%08x\n", __FUNCTION__, __LINE__, fpgaId, number, hwaddr);
-  writereqs.push(req);
+  //writereq req = { hwaddr, val };
+  //writereqs.push(req);
 }
-#if 0
-
-void XsimMsgRequest::read ( const uint32_t fpgaId, const uint32_t addr )
-{
-  int number = fpgaNumber(fpgaId);
-  fprintf(stderr, "[%s:%d] id=%d number=%d addr=%08x\n", __FUNCTION__, __LINE__, fpgaId, number, addr);
-  uint32_t hwaddr = number << 16 | addr;
-  readreq req = { hwaddr };
-  readreqs.push(req);
-}
-
-void XsimMsgRequest::write ( const uint32_t fpgaId, const uint32_t addr, const uint32_t data )
-{
-  int number = fpgaNumber(fpgaId);
-  uint32_t hwaddr = number << 16 | addr;
-  writereq req = { hwaddr, data };
-  fprintf(stderr, "[%s:%d] id=%d number=%d addr=%08x/%08x data=%08x\n", __FUNCTION__, __LINE__, fpgaId, fpgaNumber(fpgaId), addr, hwaddr, data);
-  writereqs.push(req);
-}
-#endif
 void XsimMsgRequest::msgSink ( const uint32_t data )
 {
   if (trace_xsimtop)
@@ -128,15 +94,8 @@ int XsimMsgRequest::fpgaNumber(int fpgaId)
     for (int i = 0; ids[i].valid; i++)
         PORTAL_PRINTF( " %d", ids[i].id);
     PORTAL_PRINTF( "\n");
-
     return 0;
 }
-#if 0
-int XsimMsgRequest::fpgaId(int fpgaNumber)
-{
-  return ids[fpgaNumber].id;
-}
-#endif
 
 static Portal                 *mcommon;
 static XsimMsgIndicationProxy *xsimIndicationProxy;
@@ -147,7 +106,7 @@ static uint32_t dpiwsrc_beat;
 extern "C" {
 void dpi_init()
 {
-    //if (trace_xsimtop) 
+    if (trace_xsimtop) 
         fprintf(stderr, "[%s:%d]\n", __FUNCTION__, __LINE__);
     dpiwdst_rdy = 0;
     dpiwsrc_rdy = 0;
