@@ -69,21 +69,27 @@ module mkXsimTop(Empty);
       dumpstarted <= True;
    endrule
    XsimHost host <- mkXsimHost(derivedClock, derivedReset);
-   BluenocTop#(1,1) top <- mkBluenocTop(
+   //BluenocTop#(1,1) top <- mkBluenocTop(
+   //BluenocTop#(numRequests, numIndications) top <- mkBluenocTop(
+   let top <- mkBluenocTop(
 `ifdef IMPORT_HOSTIF
        host
 `endif
        );
 
-   mkXsimSource(0, top.indications[0].src_rdy, top.indications[0].beat);
-   rule ind_dst_rdy;
-       top.indications[0].dst_rdy(True);
-   endrule
-   MsgSinkR#(4) sink <- mkXsimSink(0, top.requests[0].dst_rdy);
-   rule req_src_rdy;
-       top.requests[0].src_rdy(sink.src_rdy);
-   endrule
-   rule req_beat;
-       top.requests[0].beat(sink.beat);
-   endrule
+   for(Integer i = 0; i < top.indications.length; i=i+1) begin
+       mkXsimSource(i, top.indications[i].src_rdy, top.indications[i].beat);
+       rule ind_dst_rdy;
+           top.indications[i].dst_rdy(True);
+       endrule
+   end
+   for(Integer i = 0; i < top.requests.length; i=i+1) begin
+       MsgSinkR#(4) sink <- mkXsimSink(i, top.requests[i].dst_rdy);
+       rule req_src_rdy;
+           top.requests[i].src_rdy(sink.src_rdy);
+       endrule
+       rule req_beat;
+           top.requests[i].beat(sink.beat);
+       endrule
+   end
 endmodule
