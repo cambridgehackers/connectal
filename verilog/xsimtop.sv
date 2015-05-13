@@ -22,7 +22,6 @@
 //`timescale 1ns / 1ps
 
 import "DPI-C" function void dpi_init();
-import "DPI-C" function void dpi_poll();
 import "DPI-C" function void dpi_msgSink_beat(output int beat, output int src_rdy);
 import "DPI-C" function void dpi_msgSource_beat(input int beat);
 
@@ -67,10 +66,6 @@ module xsimtop();
       #5 
 	CLK = !CLK;
    end
-
-   always @(negedge CLK) begin
-      dpi_poll();
-   end   
 
    assign msgSource_dst_rdy_b = 1;
    

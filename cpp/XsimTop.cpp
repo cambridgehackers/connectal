@@ -93,14 +93,12 @@ int XsimMsgRequest::fpgaNumber(int fpgaId)
 static Portal                 *mcommon;
 static XsimMsgIndicationProxy *xsimIndicationProxy;
 static XsimMsgRequest         *xsimRequest;
-static int dpiwdst_rdy;
 
 extern "C" {
 void dpi_init()
 {
     if (trace_xsimtop) 
         fprintf(stderr, "%s:\n", __FUNCTION__);
-    dpiwdst_rdy = 0;
     mcommon = new Portal(0, 0, sizeof(uint32_t), portal_mux_handler, NULL, &transportSocketResp, NULL);
     PortalMuxParam param = {};
     param.pint = &mcommon->pint;
@@ -113,28 +111,6 @@ void dpi_init()
     fprintf(stderr, "%s: end\n", __FUNCTION__);
 }
 
-void dpi_poll()
-{
-  void *rc = defaultPoller->pollFn(1);
-  if ((long)rc > 0)
-      defaultPoller->event();
-  if (dpiwdst_rdy) {
-      if (trace_xsimtop) fprintf(stderr, "============================================================\n");
-      if (trace_xsimtop)
-	  fprintf(stderr, "%s: rc=%ld dst_rdy=%d\n",
-		  __FUNCTION__, (long)rc, dpiwdst_rdy);
-      // called on @(negedge CLK)
-      if (dpiwdst_rdy) {
-          // msgSink consumed one beat of data
-          if (trace_xsimtop) fprintf(stderr, "%s: sinkbeats.pop()\n", __FUNCTION__);
-          xsimRequest->sinkbeats.pop();
-          dpiwdst_rdy = 0;
-      }
-      if (trace_xsimtop)
-	  fprintf(stderr, "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-  }
-}
-
 void dpi_msgSink_beat(int *p_beat, int *p_src_rdy)
 {
   if (xsimRequest->sinkbeats.size() > 0) {
@@ -143,10 +119,18 @@ void dpi_msgSink_beat(int *p_beat, int *p_src_rdy)
           fprintf(stderr, "%s: beat %08x\n", __FUNCTION__, beat);
       *p_beat = beat;
       *p_src_rdy = 1;
-      dpiwdst_rdy = 1;
+      if (trace_xsimtop) fprintf(stderr, "============================================================\n");
+      // msgSink consumed one beat of data
+      if (trace_xsimtop) fprintf(stderr, "%s: sinkbeats.pop()\n", __FUNCTION__);
+      xsimRequest->sinkbeats.pop();
+      if (trace_xsimtop)
+	  fprintf(stderr, "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
   } else {
       *p_beat = 0xbad0da7a;
       *p_src_rdy = 0;
+      void *rc = defaultPoller->pollFn(1);
+      if ((long)rc > 0)
+          defaultPoller->event();
   }
 }
 
