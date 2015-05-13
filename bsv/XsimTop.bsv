@@ -37,18 +37,28 @@ module  mkXsimHost#(Clock derivedClock, Reset derivedReset)(XsimHost);
    interface derivedReset = derivedReset;
 endmodule
 
-interface XsimTop;
-   interface MsgSource#(4) msgSource;
-   interface MsgSink#(4) msgSink;
-   interface Clock singleClock;
-   interface Reset singleReset;
+import "BVI" XsimSource =
+module mkXsimSource#(Bool src_rdy, MsgBeat#(4) beat)(Empty);
+    port src_rdy = src_rdy;
+    port beat = beat;
+endmodule
+
+interface MsgSinkR#(numeric type bytes_per_beat);
+   method Bool src_rdy();
+   method MsgBeat#(4) beat();
 endinterface
 
-module mkXsimTop(XsimTop);
+import "BVI" XsimSink =
+module mkXsimSink#(Bool dst_rdy)(MsgSinkR#(4));
+    port dst_rdy = dst_rdy;
+    method src_rdy src_rdy();
+    method beat beat();
+    schedule (src_rdy, beat) CF (src_rdy, beat);
+endmodule
+
+module mkXsimTop(Empty);
    Clock derivedClock <- exposeCurrentClock;
    Reset derivedReset <- exposeCurrentReset;
-   Clock single_clock = derivedClock;
-   Reset single_reset = derivedReset;
 
    Reg#(Bool) dumpstarted <- mkReg(False);
    rule startdump if (!dumpstarted);
@@ -63,8 +73,15 @@ module mkXsimTop(XsimTop);
 `endif
        );
 
-   interface msgSink = top.requests[0];
-   interface msgSource = top.indications[0];
-   interface Clock singleClock = single_clock;
-   interface Reset singleReset = single_reset;
+   mkXsimSource(top.indications[0].src_rdy, top.indications[0].beat);
+   rule ind_dst_rdy;
+       top.indications[0].dst_rdy(True);
+   endrule
+   MsgSinkR#(4) sink <- mkXsimSink(top.requests[0].dst_rdy);
+   rule req_src_rdy;
+       top.requests[0].src_rdy(sink.src_rdy);
+   endrule
+   rule req_beat;
+       top.requests[0].beat(sink.beat);
+   endrule
 endmodule
