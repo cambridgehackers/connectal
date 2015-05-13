@@ -85,14 +85,11 @@ module mkXsimTop(Empty);
       dumpstarted <= True;
    endrule
    XsimHost host <- mkXsimHost(derivedClock, derivedReset);
-   //BluenocTop#(1,1) top <- mkBluenocTop(
-   //BluenocTop#(numRequests, numIndications) top <- mkBluenocTop(
    let top <- mkBluenocTop(
 `ifdef IMPORT_HOSTIF
        host
 `endif
        );
-
    mapM_(uncurry(mkXsimSource), zip(top.indications, genVector()));
    mapM_(uncurry(mkXsimSink), zip(top.requests, genVector()));
 endmodule

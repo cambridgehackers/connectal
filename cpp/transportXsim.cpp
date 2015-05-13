@@ -41,11 +41,6 @@ static int indDirectory (PortalInternal *pint, const uint32_t fpgaNumber, const 
         portal_count = fpgaNumber+1;
     return 0;
 }
-static int indInterrupt (PortalInternal *pint,const uint8_t intrNumber )
-{
-    fprintf(stderr, "%s: fpga=%d\n", __FUNCTION__, intrNumber);
-    return 0;
-}
 static int indMsgSource (PortalInternal *pint, const uint32_t portal, const uint32_t data )
 {
     if (trace_xsim)
@@ -68,7 +63,7 @@ static int indMsgSource (PortalInternal *pint, const uint32_t portal, const uint
     }
     return 0;
 }
-static XsimMsgIndicationCb indHandlers = {indDirectory, indInterrupt, indMsgSource};
+static XsimMsgIndicationCb indHandlers = {indDirectory, indMsgSource};
 
 static int init_xsim(struct PortalInternal *pint, void *init_param)
 {

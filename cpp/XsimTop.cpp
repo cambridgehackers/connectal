@@ -48,25 +48,18 @@ public:
   virtual void connect () {
       connected = 1;
   }
-  void enableint( const uint32_t fpgaId, const uint8_t val);
   void msgSink ( const uint32_t portal, const uint32_t data );
-  void directory( const uint32_t fpgaNumber, const uint32_t fpgaId, const uint32_t last );
-  int fpgaNumber(int fpgaId);
+  //void directory( const uint32_t fpgaNumber, const uint32_t fpgaId, const uint32_t last );
+  //int fpgaNumber(int fpgaId);
 };
 
-void XsimMsgRequest::enableint( const uint32_t fpgaId, const uint8_t val)
-{
-  int number = fpgaNumber(fpgaId);
-  uint32_t hwaddr = number << 16 | 4;
-  fprintf(stderr, "%s: id=%d number=%d addr=%08x\n", __FUNCTION__, fpgaId, number, hwaddr);
-}
 void XsimMsgRequest::msgSink ( const uint32_t portal, const uint32_t data )
 {
   if (trace_xsimtop)
       fprintf(stderr, "%s: data=%08x\n", __FUNCTION__, data);
   sinkbeats[portal].push(data);
 }
-
+#if 0
 void XsimMsgRequest::directory ( const uint32_t fpgaNumber, const uint32_t fpgaId, const uint32_t last )
 {
     fprintf(stderr, "%s: fpga=%d id=%d last=%d\n", __FUNCTION__, fpgaNumber, fpgaId, last);
@@ -89,7 +82,7 @@ int XsimMsgRequest::fpgaNumber(int fpgaId)
     PORTAL_PRINTF( "\n");
     return 0;
 }
-
+#endif
 static Portal                 *mcommon;
 static XsimMsgIndicationProxy *xsimIndicationProxy;
 static XsimMsgRequest         *xsimRequest;
