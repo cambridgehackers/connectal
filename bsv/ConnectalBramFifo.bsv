@@ -43,7 +43,8 @@ endinterface
 
 import "BVI" FIFO_DUALCLOCK_MACRO =
 module  vmkBramFifo#(String fifo_size, Clock wrClock, Reset wrReset, Clock rdClock, Reset rdReset)(X7FifoSyncMacro#(data_width));
-   let invertReset <- mkResetInverter(wrReset, clocked_by wrClock);
+   let invertReset0 <- mkResetInverter(wrReset, clocked_by wrClock);
+   let invertReset <- mkAsyncReset(1, invertReset0, wrClock, clocked_by wrClock);
    parameter DEVICE = "7SERIES";
    parameter DATA_WIDTH = valueOf(data_width);
    parameter FIFO_SIZE = fifo_size;
