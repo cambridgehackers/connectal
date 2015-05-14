@@ -56,8 +56,8 @@ module mkPortalMsgRequest#(Bit#(SlaveDataBusWidth) portalId, Vector#(numRequests
    rule receiveMessageHeader if (bpState == BpHeader && !fifoMsgSink.empty());
       let hdr = fifoMsgSink.first();
       fifoMsgSink.deq();
-      let methodId = hdr[31:24];
-      Bit#(8) messageWords = hdr[23:16];
+      let methodId = hdr[23:16];
+      Bit#(8) messageWords = hdr[7:0] - 1;
       methodIdReg <= methodId;
       if (verbose)
 	 $display("receiveMessageHeader hdr=%x methodId=%x messageWords=%d", hdr, methodId, messageWords);
@@ -109,7 +109,7 @@ module mkPortalMsgIndication#(Bit#(SlaveDataBusWidth) portalId, Vector#(numIndic
       *    31  26    23    16 15     8 7      0
       */
       // op, dp, and src left empty for now
-      Bit#(32) hdr = extend(readyChannel) << 24 | (extend(numWords) << 16);
+      Bit#(32) hdr = extend(readyChannel) << 16 | extend(numWords+1);
       if (verbose) $display("sendHeader hdr=%h messageBits=%d numWords=%d", hdr, messageBits, numWords);
       messageWordsReg <= numWords;
       methodIdReg <= readyChannel;

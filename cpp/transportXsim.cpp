@@ -31,15 +31,14 @@ static int indMsgSource (PortalInternal *pint, const uint32_t portal, const uint
 	fprintf(stderr, "%s: portal=%d data=%x pid=%d\n", __FUNCTION__, portal, data, getpid());
     PortalInternal *clientp = pint->mux_ports[portal].pint;
     clientp->map_base[indicationIndex[portal]++] = data;
-    uint32_t xsim_hdr = clientp->map_base[0];
-    //hmm, which portal?
-    int numwords = (xsim_hdr >> 16) & 0xFF;
-    int methodId = (xsim_hdr >> 24) & 0xFF;
+    uint32_t hdr = clientp->map_base[0];
+    uint32_t methodId = (hdr >> 16) & 0xFF;
+    int numwords = (hdr & 0xFF) - 1;
 
     if (indicationIndex[portal] >= numwords+1) {
 	if (trace_xsim)
             fprintf(stderr, "%s: clientp=%p srcbeats=%d methodwords=%d methodId=%d hdr=%08x\n",
-		__FUNCTION__, clientp, indicationIndex[portal], numwords, methodId, xsim_hdr);
+		__FUNCTION__, clientp, indicationIndex[portal], numwords, methodId, hdr);
         if (clientp->handler)
             clientp->handler(clientp, methodId, 0);
         indicationIndex[portal] = 0;
@@ -72,13 +71,10 @@ static int init_xsim(struct PortalInternal *pint, void *init_param)
 
 static void send_portal_xsim(struct PortalInternal *pint, volatile unsigned int *data, unsigned int hdr, int sendFd)
 {
-    // send an xsim header
-    uint32_t methodId = (hdr >> 16) & 0xFF;
-    int numwords = (hdr & 0xFF) - 1;
     volatile unsigned int *p = pint->map_base;
-    *p = (methodId << 24) | (numwords << 16);
-
-    while (numwords-- >= 0)
+    int numwords = hdr & 0xffff;
+    *p = hdr;
+    while (numwords-- > 0)
         XsimMsgRequest_msgSink(&reqPortal, pint->fpga_number, *p++);
 }
 
