@@ -24,8 +24,7 @@ import Connectable::*;
 import CtrlMux::*;
 import Portal::*;
 import HostInterface::*;
-import BlueNoC::*;
-import BnocPortal::*;
+import CnocPortal::*;
 import Simple::*;
 import SimpleRequest::*;
 
@@ -42,7 +41,7 @@ module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
    SimpleRequestInput simple2Wrapper <- mkSimpleRequestInput;
    mkConnection(simple2Wrapper.pipes, simple2.request);
 
-   // now connect them via a BlueNoC link
+   // now connect them via a Cnoc link
    MsgSource#(4) simpleMsgSource <- mkPortalMsgIndication(lSimpleRequestOutput.portalIfc);
    MsgSink#(4) simpleMsgSink <- mkPortalMsgRequest(simple2Wrapper.portalIfc);
    mkConnection(simpleMsgSource, simpleMsgSink);

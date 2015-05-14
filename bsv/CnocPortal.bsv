@@ -29,7 +29,7 @@ import HostInterface::*;
 typedef enum {
    BpHeader,
    BpMessage
-   } BnocPortalState deriving (Bits,Eq);
+   } CnocPortalState deriving (Bits,Eq);
 
 interface PortalMsgRequest;
    method Bit#(SlaveDataBusWidth) id();
@@ -49,7 +49,7 @@ endinterface
 module mkPortalMsgRequest#(Bit#(SlaveDataBusWidth) portalId, Vector#(numRequests, PipeIn#(Bit#(32))) portal)(PortalMsgRequest);
    Reg#(Bit#(8)) messageWordsReg <- mkReg(0);
    Reg#(Bit#(8)) methodIdReg <- mkReg(0);
-   Reg#(BnocPortalState) bpState <- mkReg(BpHeader);
+   Reg#(CnocPortalState) bpState <- mkReg(BpHeader);
    FIFOF#(Bit#(32)) fifoMsgSink <- mkFIFOF();
    Bool verbose = False;
 
@@ -84,7 +84,7 @@ endmodule
 module mkPortalMsgIndication#(Bit#(SlaveDataBusWidth) portalId, Vector#(numIndications, PipeOut#(Bit#(32))) portal, PortalSize messageSize)(PortalMsgIndication);
    Reg#(Bit#(16)) messageWordsReg <- mkReg(0);
    Reg#(Bit#(8)) methodIdReg <- mkReg(0);
-   Reg#(BnocPortalState) bpState <- mkReg(BpHeader);
+   Reg#(CnocPortalState) bpState <- mkReg(BpHeader);
    Vector#(numIndications, Bool) readyBits = map(pipeOutNotEmpty, portal);
    Bool      interruptStatus = False;
    Bit#(8)  readyChannel = -1;

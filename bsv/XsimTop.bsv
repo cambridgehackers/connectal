@@ -24,7 +24,7 @@ import Portal            :: *;
 import Top               :: *;
 import HostInterface     :: *;
 import Pipe::*;
-import BnocPortal::*;
+import CnocPortal::*;
 
 `ifndef PinType
 `define PinType Empty

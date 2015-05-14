@@ -26,8 +26,7 @@ import Connectable::*;
 import CtrlMux::*;
 import Portal::*;
 import HostInterface::*;
-import BlueNoC::*;
-import BnocPortal::*;
+import CnocPortal::*;
 import BsimLink::*;
 import Simple::*;
 import Link::*;
@@ -45,7 +44,7 @@ module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
    Simple simple2 <- mkSimple(simple2IndicationProxy.ifc);
    SimpleWrapperPortal simple2RequestWrapper <- mkSimpleWrapperPortal(IfcNames_SimpleRequest, simple2);
 
-   // now connect them via a BlueNoC link
+   // now connect them via a Cnoc link
    BsimLink#(32) link <- mkBsimLink("simplelink");
    mkConnection(simple1IndicationProxy.portalIfc, link);
    mkConnection(link, simple2RequestWrapper.portalIfc);

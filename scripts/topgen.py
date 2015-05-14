@@ -82,7 +82,7 @@ endmodule : mkConnectalTop
 topNocTemplate='''
 import Vector::*;
 import Portal::*;
-import BnocPortal::*;
+import CnocPortal::*;
 import Connectable::*;
 import HostInterface::*;
 %(generatedImport)s

@@ -26,7 +26,7 @@ import FIFOF             :: *;
 import Pipe              :: *;
 import Portal            :: *;
 import MsgFormat         :: *;
-import BnocPortal        :: *;
+import CnocPortal        :: *;
 
 interface BsimLink#(numeric type dataWidth);
    method Action start(Bool listening);
