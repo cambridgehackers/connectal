@@ -43,6 +43,7 @@ endinterface
 interface InnerProdTile;
    interface PipeIn#(TileRequest) request;
    interface PipeOut#(TileResponse) response;
+   interface Reset                  resetOut;
 endinterface
 
 function PipeOut#(TileResponse) getTileResponsePipe(InnerProdTile tile); return tile.response; endfunction
@@ -50,12 +51,13 @@ function PipeOut#(TileResponse) getTileResponsePipe(InnerProdTile tile); return 
 (* synthesize *)
 module mkInnerProdTile#(Int#(16) tile)(InnerProdTile);
 
-   let dsp <- mkDsp48E1();
-   let defaultClock <- exposeCurrentClock();
-   let defaultReset <- exposeCurrentReset();
+   let clock <- exposeCurrentClock;
+   let reset <- exposeCurrentReset;
+   let ipReset <- mkAsyncReset(1, reset, clock);
+   let dsp <- mkDsp48E1(reset_by ipReset);
 
-   FIFOF#(Tuple4#(Int#(16),Int#(16),Bool,Bool)) reqFifo <- mkDualClockBramFIFOF(defaultClock, defaultReset, defaultClock, defaultReset);
-   FIFOF#(Int#(16)) responseFifo <- mkFIFOF(); //mkDualClockBramFIFOF(defaultClock, defaultReset, defaultClock, defaultReset);
+   FIFOF#(Tuple4#(Int#(16),Int#(16),Bool,Bool)) reqFifo <- mkDualClockBramFIFOF(clock, ipReset, clock, ipReset);
+   FIFOF#(Int#(16)) responseFifo <- mkFIFOF(); //mkDualClockBramFIFOF(clock, ipReset, clock, ipReset);
 
    rule request_rule;
       let req <- toGet(reqFifo).get();
@@ -81,6 +83,7 @@ module mkInnerProdTile#(Int#(16) tile)(InnerProdTile);
 
    interface PipeIn request = toPipeIn(reqFifo);
    interface PipeOut response = mapPipe(addTileNumber, toPipeOut(responseFifo));
+   interface ResetOut resetOut = ipReset;
 endmodule
 
 interface ReqPipes#(numeric type numPipes, type reqType);
@@ -122,6 +125,7 @@ endmodule
 interface MacroTile;
    interface PipeIn#(MacroTileRequest) inPipe;
    interface PipeOut#(TileResponse) outPipe;
+   interface Reset                  resetOut;
 endinterface
 
 (* synthesize *)
@@ -140,14 +144,16 @@ endmodule
 module mkMacroTile#(Int#(16) mt)(MacroTile);
    let clock <- exposeCurrentClock();
    let reset <- exposeCurrentReset();
-   let trpReset <- mkSyncReset(2, reset, clock);
-   let topReset <- mkSyncReset(2, reset, clock);
+   let trpReset <- mkAsyncReset(2, reset, clock);
+   let topReset <- mkAsyncReset(2, reset, clock);
    ReqPipes#(NumTilesPerMacro,TileRequest) rp <- mkRequestPipesMTSynth(reset_by trpReset);
    ResponsePipes#(NumTilesPerMacro) op <- mkResponsePipesMTSynth(reset_by topReset);
 
+   Reset tileReset <- mkAsyncReset(2, reset, clock);
+
    for (Integer t = 0; t < valueOf(NumTilesPerMacro); t = t + 1) begin
-      let tileReset <- mkSyncReset(2, reset, clock);
       let tile <- mkInnerProdTile(mt * fromInteger(valueOf(NumTilesPerMacro)) + fromInteger(t), reset_by tileReset);
+      tileReset = tile.resetOut;
       mkConnection(rp.outPipes[t], tile.request, reset_by tileReset);
       mkConnection(tile.response, op.inPipes[t], reset_by tileReset);
    end
@@ -161,6 +167,7 @@ module mkMacroTile#(Int#(16) mt)(MacroTile);
 
    interface PipeIn inPipe = rp.inPipe;
    interface PipeOut outPipe = toPipeOut(responseFifo); //op.outPipe;
+   interface Reset resetOut = tileReset;
 endmodule
 
 (* synthesize *)
@@ -192,14 +199,15 @@ module mkInnerProdSynth#(Clock derivedClock)(InnerProdSynth);
       cycles <= cycles+1;
    endrule
 
-   let rpReset <- mkSyncReset(2, derivedReset, derivedClock);
-   let opReset <- mkSyncReset(2, derivedReset, derivedClock);
+   let rpReset <- mkAsyncReset(2, derivedReset, derivedClock);
+   let opReset <- mkAsyncReset(2, derivedReset, derivedClock);
    ReqPipes#(NumMacroTiles,MacroTileRequest) rp <- mkRequestPipesSynth(clocked_by derivedClock, reset_by rpReset);
    ResponsePipes#(NumMacroTiles) op <- mkResponsePipesSynth(clocked_by derivedClock, reset_by opReset);
 
+   Reset mtReset <- mkAsyncReset(2, derivedReset, derivedClock);
    for (Integer mt = 0; mt < valueOf(NumMacroTiles); mt = mt + 1) begin
-      let mtReset <- mkSyncReset(2, derivedReset, derivedClock);
       let macroTile <- mkMacroTile(fromInteger(mt), clocked_by derivedClock, reset_by mtReset);
+      mtReset = macroTile.resetOut;
       mkConnection(rp.outPipes[mt], macroTile.inPipe, clocked_by derivedClock, reset_by mtReset);
       mkConnection(macroTile.outPipe, op.inPipes[mt], clocked_by derivedClock, reset_by mtReset);
    end
