@@ -41,7 +41,7 @@ interface PortalMsgIndication;
    interface PipeOut#(Bit#(32)) message;
 endinterface
 
-interface BluenocTop#(numeric type numRequests, numeric type numIndications);
+interface CnocTop#(numeric type numRequests, numeric type numIndications);
    interface Vector#(numRequests, PortalMsgRequest) requests;
    interface Vector#(numIndications, PortalMsgIndication) indications;
 endinterface
@@ -103,13 +103,6 @@ module mkPortalMsgIndication#(Bit#(SlaveDataBusWidth) portalId, Vector#(numIndic
       Bit#(16) messageBits = messageSize.size(extend(readyChannel));
       Bit#(16) roundup = messageBits[4:0] == 0 ? 0 : 1;
       Bit#(16) numWords = (messageBits >> 5) + roundup;
-      /*      
-      *   +------+--+--------+--------+--------+
-      *   |  OP  |DP| LENGTH |  SRC   |   DST  |
-      *   +------+--+--------+--------+--------+
-      *    31  26    23    16 15     8 7      0
-      */
-      // op, dp, and src left empty for now
       Bit#(32) hdr = extend(readyChannel) << 16 | extend(numWords+1);
       if (verbose) $display("sendHeader hdr=%h messageBits=%d numWords=%d", hdr, messageBits, numWords);
       messageWordsReg <= numWords;

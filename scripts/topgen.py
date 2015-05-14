@@ -33,7 +33,7 @@ argparser.add_argument('--importfiles', help='added imports', action='append')
 argparser.add_argument('--portname', help='added portal names to enum list', action='append')
 argparser.add_argument('--wrapper', help='exported wrapper interfaces', action='append')
 argparser.add_argument('--proxy', help='exported proxy interfaces', action='append')
-argparser.add_argument('--bluenoc', help='generate mkBluenocTop', action='store_true')
+argparser.add_argument('--cnoc', help='generate mkCnocTop', action='store_true')
 
 topTemplate='''
 import Vector::*;
@@ -98,7 +98,7 @@ typedef enum {%(enumList)s} IfcNames deriving (Eq,Bits);
 `ifndef IMPORT_HOSTIF
 (* synthesize *)
 `endif
-module mkBluenocTop
+module mkCnocTop
 `ifdef IMPORT_HOSTIF
        #(HostInterface host)
 `endif
@@ -114,7 +114,7 @@ module mkBluenocTop
    interface requests = %(requestList)s;
    interface indications = %(indicationList)s;
 %(exportedInterfaces)s
-endmodule : mkBluenocTop
+endmodule : mkCnocTop
 %(exportedNames)s
 '''
 
@@ -147,7 +147,7 @@ def addPortal(enumVal, ifcName, direction):
         portParam['slaveType'] = 'Out'
         portParam['intrParam'] = ', l%(ifcName)s.portalIfc.intr' % portParam
         portParam['messageSize'] = ', l%(ifcName)s.portalIfc.messageSize' % portParam
-    p = portalNocTemplate if options.bluenoc else portalTemplate
+    p = portalNocTemplate if options.cnoc else portalTemplate
     portalList.append(p % portParam)
     portalCount = portalCount + 1
 
@@ -274,9 +274,9 @@ if __name__=='__main__':
     importfiles = []
     exportedNames = ['export mkConnectalTop;']
     if options.board == 'xsim':
-        options.bluenoc = True
-    if options.bluenoc:
-        exportedNames = ['export mkBluenocTop;', 'export NumberOfRequests;', 'export NumberOfIndications;']
+        options.cnoc = True
+    if options.cnoc:
+        exportedNames = ['export mkCnocTop;', 'export NumberOfRequests;', 'export NumberOfIndications;']
     if options.importfiles:
         importfiles = options.importfiles
         for item in options.importfiles:
@@ -336,13 +336,13 @@ if __name__=='__main__':
                  'exportedInterfaces' : '\n'.join(interfaceList),
                  'exportedNames' : '\n'.join(exportedNames),
                  'portalMaster' : 'lMemServer.masters' if memory_flag else 'nil',
-                 'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,`PinType,`NumberOfMasters)' if not options.bluenoc \
-                     else 'BluenocTop#(NumberOfRequests,NumberOfIndications)'
+                 'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,`PinType,`NumberOfMasters)' if not options.cnoc \
+                     else 'CnocTop#(NumberOfRequests,NumberOfIndications)'
                  }
     topFilename = project_dir + '/Top.bsv'
     print 'Writing:', topFilename
     top = util.createDirAndOpen(topFilename, 'w')
-    if options.bluenoc:
+    if options.cnoc:
         top.write(topNocTemplate % topsubsts)
     else:
         top.write(topTemplate % topsubsts)

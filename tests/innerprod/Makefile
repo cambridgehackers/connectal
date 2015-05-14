@@ -20,10 +20,6 @@ CONNECTALFLAGS += -P mkMacroTile
 CONNECTALFLAGS += -P mkRequestPipesSynth -P mkResponsePipesSynth 
 #CONNECTALFLAGS += -P mkRequestPipesMTSynth -P mkResponsePipesMTSynth
 
-ifeq ($(BOARD),xsim)
-AUTOTOP = --bluenoc
-endif
-
 xsim_manual:
 	make build.xsim
 	cd xsim; xvlog --sv ../xsimtop.sv

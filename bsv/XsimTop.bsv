@@ -84,7 +84,7 @@ module mkXsimTop(Empty);
       dumpstarted <= True;
    endrule
    XsimHost host <- mkXsimHost(derivedClock, derivedReset);
-   let top <- mkBluenocTop(
+   let top <- mkCnocTop(
 `ifdef IMPORT_HOSTIF
        host
 `endif

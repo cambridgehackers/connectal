@@ -7,9 +7,5 @@ NUMBER_OF_MASTERS=0
 BSVFILES = Memwrite.bsv
 CPPFILES = testmemwrite.cpp
 
-ifeq ("$(BOARD)","xsim")
-AUTOTOP = --bluenoc
-endif
-
 include $(CONNECTALDIR)/Makefile.connectal
 
