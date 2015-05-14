@@ -44,7 +44,7 @@ module mkXsimSourceBVI#(Bit#(32) portal, Bool src_rdy, MsgBeat#(4) beat)(Empty);
     port src_rdy = src_rdy;
     port beat = beat;
 endmodule
-module mkXsimSource#(PortalMsgIndication indication, Integer foo)(Empty);
+module mkXsimSource#(PortalMsgIndication indication)(Empty);
    mkXsimSourceBVI(indication.id, indication.message.src_rdy, indication.message.beat());
    rule ind_dst_rdy;
       indication.message.dst_rdy(True);
@@ -64,7 +64,7 @@ module mkXsimSinkBVI#(Bit#(32) portal, Bool dst_rdy)(MsgSinkR#(4));
     method beat beat();
     schedule (src_rdy, beat) CF (src_rdy, beat);
 endmodule
-module mkXsimSink#(PortalMsgRequest request, Integer foo)(MsgSinkR#(4));
+module mkXsimSink#(PortalMsgRequest request)(MsgSinkR#(4));
    let sink <- mkXsimSinkBVI(request.id, request.message.dst_rdy);
    rule req_src_rdy;
       request.message.src_rdy(sink.src_rdy);
@@ -90,6 +90,6 @@ module mkXsimTop(Empty);
        host
 `endif
        );
-   mapM_(uncurry(mkXsimSource), zip(top.indications, genVector()));
-   mapM_(uncurry(mkXsimSink), zip(top.requests, genVector()));
+   mapM_(mkXsimSource, top.indications);
+   mapM_(mkXsimSink, top.requests);
 endmodule
