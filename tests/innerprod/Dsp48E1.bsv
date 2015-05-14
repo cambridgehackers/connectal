@@ -50,8 +50,10 @@ endinterface
 
 import "BVI" DSP48E1 =
 module vmkDSP48E1(PRIM_DSP48E1);
+   let currentClock <- exposeCurrentClock;
    let currentReset <- exposeCurrentReset;
-   let invertedReset <- mkResetInverter(currentReset);
+   let invertedReset0 <- mkResetInverter(currentReset);
+   let invertedReset <- mkAsyncReset(1, invertedReset0, currentClock);
    default_clock clk(CLK);
 
    default_reset rsta(RSTA) = invertedReset;
