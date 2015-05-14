@@ -32,17 +32,16 @@ static int indMsgSource (PortalInternal *pint, const uint32_t portal, const uint
     PortalInternal *clientp = pint->mux_ports[portal].pint;
     clientp->map_base[indicationIndex[portal]++] = data;
     uint32_t hdr = clientp->map_base[0];
-    uint32_t methodId = (hdr >> 16) & 0xFF;
-    int numwords = (hdr & 0xFF) - 1;
+    int numwords = hdr & 0xFF;
 
-    if (indicationIndex[portal] >= numwords+1) {
+    if (indicationIndex[portal] >= numwords) {
+        uint32_t methodId = (hdr >> 16) & 0xFF;
 	if (trace_xsim)
             fprintf(stderr, "%s: clientp=%p srcbeats=%d methodwords=%d methodId=%d hdr=%08x\n",
 		__FUNCTION__, clientp, indicationIndex[portal], numwords, methodId, hdr);
         if (clientp->handler)
             clientp->handler(clientp, methodId, 0);
         indicationIndex[portal] = 0;
-        clientp->map_base[0] = -1;   // temp
     }
     return 0;
 }

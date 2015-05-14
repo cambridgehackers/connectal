@@ -50,22 +50,16 @@ module xsimtop();
 endmodule
 
 import "DPI-C" function void dpi_msgSource_beat(input int portal, input int beat);
-module XsimSource( input CLK, input CLK_GATE, input RST, input [31:0] portal, input src_rdy, input [31:0] beat);
+module XsimSource( input CLK, input CLK_GATE, input RST, input [31:0] portal, input en_beat, input [31:0] beat);
    always @(posedge CLK) begin
-      if (src_rdy) begin
-	 dpi_msgSource_beat(portal, beat);
-      end
+      if (en_beat)
+          dpi_msgSource_beat(portal, beat);
    end
 endmodule
 
 import "DPI-C" function void dpi_msgSink_beat(input int portal, output int beat, output int src_rdy);
-module XsimSink(input CLK, input CLK_GATE, input RST, input [31:0] portal, output reg src_rdy, input dst_rdy, output reg [31:0] beat);
+module XsimSink(input CLK, input CLK_GATE, input RST, input [31:0] portal, output reg src_rdy, output reg [31:0] beat);
    always @(posedge CLK) begin
-      if (dst_rdy) begin
-	 dpi_msgSink_beat(portal, beat, src_rdy);
-      end
-      else begin
-	 src_rdy = 0;
-      end
+      dpi_msgSink_beat(portal, beat, src_rdy);
    end
 endmodule

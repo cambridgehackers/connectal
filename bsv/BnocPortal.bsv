@@ -24,7 +24,6 @@ import Vector::*;
 import MemTypes::*;
 import Pipe::*;
 import Portal::*;
-import BlueNoC::*;
 import HostInterface::*;
 
 typedef enum {
@@ -34,11 +33,12 @@ typedef enum {
 
 interface PortalMsgRequest;
    method Bit#(SlaveDataBusWidth) id();
-   interface MsgSink#(4) message;
+   interface PipeIn#(Bit#(32)) message;
 endinterface
+
 interface PortalMsgIndication;
    method Bit#(SlaveDataBusWidth) id();
-   interface MsgSource#(4) message;
+   interface PipeOut#(Bit#(32)) message;
 endinterface
 
 interface BluenocTop#(numeric type numRequests, numeric type numIndications);
@@ -50,10 +50,10 @@ module mkPortalMsgRequest#(Bit#(SlaveDataBusWidth) portalId, Vector#(numRequests
    Reg#(Bit#(8)) messageWordsReg <- mkReg(0);
    Reg#(Bit#(8)) methodIdReg <- mkReg(0);
    Reg#(BnocPortalState) bpState <- mkReg(BpHeader);
-   FifoMsgSink#(4) fifoMsgSink <- mkFifoMsgSink();
+   FIFOF#(Bit#(32)) fifoMsgSink <- mkFIFOF();
    Bool verbose = False;
 
-   rule receiveMessageHeader if (bpState == BpHeader && !fifoMsgSink.empty());
+   rule receiveMessageHeader if (bpState == BpHeader);
       let hdr = fifoMsgSink.first();
       fifoMsgSink.deq();
       let methodId = hdr[23:16];
@@ -65,7 +65,7 @@ module mkPortalMsgRequest#(Bit#(SlaveDataBusWidth) portalId, Vector#(numRequests
       if (messageWords != 0)
 	 bpState <= BpMessage;
    endrule
-   rule receiveMessage if (bpState == BpMessage && !fifoMsgSink.empty());
+   rule receiveMessage if (bpState == BpMessage);
       let data = fifoMsgSink.first();
       fifoMsgSink.deq();
       if (verbose)
@@ -78,7 +78,7 @@ module mkPortalMsgRequest#(Bit#(SlaveDataBusWidth) portalId, Vector#(numRequests
    method Bit#(SlaveDataBusWidth) id();
        return portalId;
    endmethod
-   interface message = fifoMsgSink.sink;
+   interface message = toPipeIn(fifoMsgSink);
 endmodule
 
 module mkPortalMsgIndication#(Bit#(SlaveDataBusWidth) portalId, Vector#(numIndications, PipeOut#(Bit#(32))) portal, PortalSize messageSize)(PortalMsgIndication);
@@ -88,7 +88,7 @@ module mkPortalMsgIndication#(Bit#(SlaveDataBusWidth) portalId, Vector#(numIndic
    Vector#(numIndications, Bool) readyBits = map(pipeOutNotEmpty, portal);
    Bool      interruptStatus = False;
    Bit#(8)  readyChannel = -1;
-   FifoMsgSource#(4) fifoMsgSource <- mkFifoMsgSource();
+   FIFOF#(Bit#(32)) fifoMsgSource <- mkFIFOF();
    function Bool pipeOutNotEmpty(PipeOut#(a) po); return po.notEmpty(); endfunction
    let verbose = False;
 
@@ -98,6 +98,7 @@ module mkPortalMsgIndication#(Bit#(SlaveDataBusWidth) portalId, Vector#(numIndic
          readyChannel = fromInteger(i);
       end
    end
+
    rule sendHeader if (bpState == BpHeader && interruptStatus);
       Bit#(16) messageBits = messageSize.size(extend(readyChannel));
       Bit#(16) roundup = messageBits[4:0] == 0 ? 0 : 1;
@@ -129,5 +130,5 @@ module mkPortalMsgIndication#(Bit#(SlaveDataBusWidth) portalId, Vector#(numIndic
    method Bit#(SlaveDataBusWidth) id();
       return portalId;
    endmethod
-   interface message = fifoMsgSource.source;
+   interface message = toPipeOut(fifoMsgSource);
 endmodule

@@ -23,7 +23,7 @@ import Vector            :: *;
 import Portal            :: *;
 import Top               :: *;
 import HostInterface     :: *;
-import BlueNoC::*;
+import Pipe::*;
 import BnocPortal::*;
 
 `ifndef PinType
@@ -38,39 +38,38 @@ module  mkXsimHost#(Clock derivedClock, Reset derivedReset)(XsimHost);
    interface derivedReset = derivedReset;
 endmodule
 
+interface XsimSource;
+    method Action beat(Bit#(32) v);
+endinterface
 import "BVI" XsimSource =
-module mkXsimSourceBVI#(Bit#(32) portal, Bool src_rdy, MsgBeat#(4) beat)(Empty);
+module mkXsimSourceBVI#(Bit#(32) portal)(XsimSource);
     port portal = portal;
-    port src_rdy = src_rdy;
-    port beat = beat;
+    method beat(beat) enable(en_beat);
 endmodule
 module mkXsimSource#(PortalMsgIndication indication)(Empty);
-   mkXsimSourceBVI(indication.id, indication.message.src_rdy, indication.message.beat());
+   let tmp <- mkXsimSourceBVI(indication.id);
    rule ind_dst_rdy;
-      indication.message.dst_rdy(True);
+      indication.message.deq();
+      tmp.beat(indication.message.first());
    endrule
 endmodule
 
 interface MsgSinkR#(numeric type bytes_per_beat);
    method Bool src_rdy();
-   method MsgBeat#(4) beat();
+   method Bit#(32) beat();
 endinterface
 
 import "BVI" XsimSink =
-module mkXsimSinkBVI#(Bit#(32) portal, Bool dst_rdy)(MsgSinkR#(4));
+module mkXsimSinkBVI#(Bit#(32) portal)(MsgSinkR#(4));
     port portal = portal;
-    port dst_rdy = dst_rdy;
     method src_rdy src_rdy();
     method beat beat();
     schedule (src_rdy, beat) CF (src_rdy, beat);
 endmodule
 module mkXsimSink#(PortalMsgRequest request)(MsgSinkR#(4));
-   let sink <- mkXsimSinkBVI(request.id, request.message.dst_rdy);
-   rule req_src_rdy;
-      request.message.src_rdy(sink.src_rdy);
-   endrule
-   rule req_beat;
-      request.message.beat(sink.beat);
+   let sink <- mkXsimSinkBVI(request.id);
+   rule req_src_rdy if (sink.src_rdy);
+      request.message.enq(sink.beat);
    endrule
 endmodule
 
