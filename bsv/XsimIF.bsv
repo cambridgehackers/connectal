@@ -23,12 +23,8 @@
 typedef enum { XsimIfcNames_XsimMsgRequest, XsimIfcNames_XsimMsgIndication } XsimIfcNames;
 
 interface XsimMsgRequest;
-   method Action connect();
-   // for bluenoc top
    method Action msgSink(Bit#(32) portal, Bit#(32) data);
 endinterface
 interface XsimMsgIndication;
-   method Action directory(Bit#(32) fpgaNumber, Bit#(32) fpgaId, Bit#(1) last);
-   // for bluenoc top
    method Action msgSource(Bit#(32) portal, Bit#(32) data);
 endinterface

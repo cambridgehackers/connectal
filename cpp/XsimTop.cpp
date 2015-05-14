@@ -33,21 +33,11 @@
 static int trace_xsimtop = 0;
 
 class XsimMsgRequest : public XsimMsgRequestWrapper {
-  struct idInfo {
-    int number;
-    int id;
-    int valid;
-  } ids[16];
-  int portal_count;
 public:
   std::queue<uint32_t> sinkbeats[16];
-  int connected;
 
-  XsimMsgRequest(int id, PortalTransportFunctions *item, void *param, PortalPoller *poller = 0) : XsimMsgRequestWrapper(id, item, param, poller), connected(0) { }
+  XsimMsgRequest(int id, PortalTransportFunctions *item, void *param, PortalPoller *poller = 0):XsimMsgRequestWrapper(id, item, param, poller){}
   ~XsimMsgRequest() {}
-  virtual void connect () {
-      connected = 1;
-  }
   void msgSink ( const uint32_t portal, const uint32_t data ) {
       if (trace_xsimtop)
           fprintf(stderr, "XsimRX: portal %d data=%08x\n", portal, data);
