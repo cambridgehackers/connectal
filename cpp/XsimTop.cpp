@@ -48,41 +48,13 @@ public:
   virtual void connect () {
       connected = 1;
   }
-  void msgSink ( const uint32_t portal, const uint32_t data );
-  //void directory( const uint32_t fpgaNumber, const uint32_t fpgaId, const uint32_t last );
-  //int fpgaNumber(int fpgaId);
+  void msgSink ( const uint32_t portal, const uint32_t data ) {
+      if (trace_xsimtop)
+          fprintf(stderr, "XsimRX: portal %d data=%08x\n", portal, data);
+      sinkbeats[portal].push(data);
+  }
 };
 
-void XsimMsgRequest::msgSink ( const uint32_t portal, const uint32_t data )
-{
-  if (trace_xsimtop)
-      fprintf(stderr, "%s: data=%08x\n", __FUNCTION__, data);
-  sinkbeats[portal].push(data);
-}
-#if 0
-void XsimMsgRequest::directory ( const uint32_t fpgaNumber, const uint32_t fpgaId, const uint32_t last )
-{
-    fprintf(stderr, "%s: fpga=%d id=%d last=%d\n", __FUNCTION__, fpgaNumber, fpgaId, last);
-    struct idInfo info = { (int)fpgaNumber, (int)fpgaId, 1 };
-    ids[fpgaNumber] = info;
-    if (last)
-      portal_count = fpgaNumber+1;
-}
-int XsimMsgRequest::fpgaNumber(int fpgaId)
-{
-    for (int i = 0; ids[i].valid; i++)
-        if (ids[i].id == fpgaId) {
-            return ids[i].number;
-        }
-
-    PORTAL_PRINTF( "Error: %s: did not find fpga_number %d\n", __FUNCTION__, fpgaId);
-    PORTAL_PRINTF( "    Found fpga numbers:");
-    for (int i = 0; ids[i].valid; i++)
-        PORTAL_PRINTF( " %d", ids[i].id);
-    PORTAL_PRINTF( "\n");
-    return 0;
-}
-#endif
 static Portal                 *mcommon;
 static XsimMsgIndicationProxy *xsimIndicationProxy;
 static XsimMsgRequest         *xsimRequest;
@@ -100,7 +72,7 @@ void dpi_init()
 
     fprintf(stderr, "%s: before sleep\n", __FUNCTION__);
     defaultPoller->stop();
-    sleep(2);
+    sleep(1);
     fprintf(stderr, "%s: end\n", __FUNCTION__);
 }
 
@@ -109,7 +81,7 @@ void dpi_msgSink_beat(int portal, int *p_beat, int *p_src_rdy)
   if (xsimRequest->sinkbeats[portal].size() > 0) {
       uint32_t beat = xsimRequest->sinkbeats[portal].front();
       if (trace_xsimtop)
-          fprintf(stderr, "%s: beat %08x\n", __FUNCTION__, beat);
+          fprintf(stderr, "%s: portal %d beat %08x\n", __FUNCTION__, portal, beat);
       *p_beat = beat;
       *p_src_rdy = 1;
       if (trace_xsimtop) fprintf(stderr, "============================================================\n");
@@ -130,7 +102,7 @@ void dpi_msgSink_beat(int portal, int *p_beat, int *p_src_rdy)
 void dpi_msgSource_beat(int portal, int beat)
 {
     if (trace_xsimtop)
-        fprintf(stderr, "dpi_msgSource_beat: beat=%08x\n", beat);
+        fprintf(stderr, "dpi_msgSource_beat: portal %d beat=%08x\n", portal, beat);
     xsimIndicationProxy->msgSource(portal, beat);
 }
 } // extern "C"

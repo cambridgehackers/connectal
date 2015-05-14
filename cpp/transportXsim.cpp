@@ -21,7 +21,6 @@
 #include "GeneratedTypes.h"
 
 static int trace_xsim; // = 1;
-static int sending_muxid = -1;
 
 static struct idInfo {
     int number;
@@ -44,8 +43,8 @@ static int indDirectory (PortalInternal *pint, const uint32_t fpgaNumber, const 
 static int indMsgSource (PortalInternal *pint, const uint32_t portal, const uint32_t data )
 {
     if (trace_xsim)
-	fprintf(stderr, "%s: data=%x pid=%d\n", __FUNCTION__, data, getpid());
-    PortalInternal *clientp = pint->mux_ports[pint->mux_ports_number-1 - sending_muxid].pint;
+	fprintf(stderr, "%s: portal=%d data=%x pid=%d\n", __FUNCTION__, portal, data, getpid());
+    PortalInternal *clientp = pint->mux_ports[portal].pint;
     clientp->map_base[indicationIndex++] = data;
     uint32_t xsim_hdr = clientp->map_base[0];
     //hmm, which portal?
@@ -78,22 +77,19 @@ static int init_xsim(struct PortalInternal *pint, void *init_param)
             NULL, NULL, &transportMux, &param, XsimMsgRequest_reqinfo);
         fprintf(stderr, "[%s] calling connect()\n", __FUNCTION__);
         XsimMsgRequest_connect(&reqPortal);
+        indPortal.mux_ports_number = 16;
+        indPortal.mux_ports = (PortalMuxHandler *)realloc(indPortal.mux_ports,
+            indPortal.mux_ports_number * sizeof(PortalMuxHandler));
     }
     //pint->fpga_number = indPortal->fpgaNumber(pint->fpga_number);
     pint->map_base = ((volatile unsigned int*)malloc(REQINFO_SIZE(pint->reqinfo) + sizeof(uint32_t))) + 1;
-    pint->muxid = indPortal.mux_ports_number++;
-printf("[%s:%d] fpga %d muxid %d\n", __FUNCTION__, __LINE__, pint->fpga_number, pint->muxid);
-    indPortal.mux_ports = (PortalMuxHandler *)realloc(indPortal.mux_ports,
-        indPortal.mux_ports_number * sizeof(PortalMuxHandler));
-    indPortal.mux_ports[pint->muxid].pint = pint;
+    indPortal.mux_ports[pint->fpga_number].pint = pint;  // FIXME: depends on ids < 16
     pint->fpga_fd = mcommon.client_fd[0];
     return 0;
 }
 
 static void send_portal_xsim(struct PortalInternal *pint, volatile unsigned int *data, unsigned int hdr, int sendFd)
 {
-    int portal = 0;
-    sending_muxid = pint->muxid;
     // send an xsim header
     uint32_t methodId = (hdr >> 16) & 0xFF;
     int numwords = (hdr & 0xFF) - 1;
@@ -102,7 +98,7 @@ static void send_portal_xsim(struct PortalInternal *pint, volatile unsigned int 
     *p = (methodId << 24) | (numwords << 16);
 
     while (numwords-- >= 0)
-        XsimMsgRequest_msgSink(&reqPortal, portal, *p++);
+        XsimMsgRequest_msgSink(&reqPortal, pint->fpga_number, *p++);
 }
 
 static int event_xsim(struct PortalInternal *pint)

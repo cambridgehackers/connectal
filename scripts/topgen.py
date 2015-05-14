@@ -130,7 +130,7 @@ portalTemplate = '''   PortalCtrlMemSlave#(SlaveControlAddrWidth,SlaveDataBusWid
        interface WriteOnly num_portals = ctrlPort_%(count)s.num_portals;
        endinterface);'''
 
-portalNocTemplate = '''   let l%(ifcName)sNoc <- mkPortalMsg%(direction)s(l%(ifcName)s.portalIfc.%(itype)s%(messageSize)s);'''
+portalNocTemplate = '''   let l%(ifcName)sNoc <- mkPortalMsg%(direction)s(extend(pack(%(enumVal)s)), l%(ifcName)s.portalIfc.%(itype)s%(messageSize)s);'''
 
 def addPortal(enumVal, ifcName, direction):
     global portalCount

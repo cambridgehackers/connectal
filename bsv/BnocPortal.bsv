@@ -25,14 +25,28 @@ import MemTypes::*;
 import Pipe::*;
 import Portal::*;
 import BlueNoC::*;
+import HostInterface::*;
 
 typedef enum {
    BpHeader,
    BpMessage
    } BnocPortalState deriving (Bits,Eq);
 
+interface PortalMsgRequest;
+   method Bit#(SlaveDataBusWidth) id();
+   interface MsgSink#(4) message;
+endinterface
+interface PortalMsgIndication;
+   method Bit#(SlaveDataBusWidth) id();
+   interface MsgSource#(4) message;
+endinterface
 
-module mkPortalMsgRequest#(Vector#(numRequests, PipeIn#(Bit#(32))) portal)(MsgSink#(4));
+interface BluenocTop#(numeric type numRequests, numeric type numIndications);
+   interface Vector#(numRequests, PortalMsgRequest) requests;
+   interface Vector#(numIndications, PortalMsgIndication) indications;
+endinterface
+
+module mkPortalMsgRequest#(Bit#(SlaveDataBusWidth) portalId, Vector#(numRequests, PipeIn#(Bit#(32))) portal)(PortalMsgRequest);
    Reg#(Bit#(8)) messageWordsReg <- mkReg(0);
    Reg#(Bit#(8)) methodIdReg <- mkReg(0);
    Reg#(BnocPortalState) bpState <- mkReg(BpHeader);
@@ -61,10 +75,13 @@ module mkPortalMsgRequest#(Vector#(numRequests, PipeIn#(Bit#(32))) portal)(MsgSi
       if (messageWordsReg == 1)
 	 bpState <= BpHeader;
    endrule
-   return fifoMsgSink.sink;
+   method Bit#(SlaveDataBusWidth) id();
+       return portalId;
+   endmethod
+   interface message = fifoMsgSink.sink;
 endmodule
 
-module mkPortalMsgIndication#(Vector#(numIndications, PipeOut#(Bit#(32))) portal, PortalSize messageSize)(MsgSource#(4));
+module mkPortalMsgIndication#(Bit#(SlaveDataBusWidth) portalId, Vector#(numIndications, PipeOut#(Bit#(32))) portal, PortalSize messageSize)(PortalMsgIndication);
    Reg#(Bit#(16)) messageWordsReg <- mkReg(0);
    Reg#(Bit#(8)) methodIdReg <- mkReg(0);
    Reg#(BnocPortalState) bpState <- mkReg(BpHeader);
@@ -109,10 +126,8 @@ module mkPortalMsgIndication#(Vector#(numIndications, PipeOut#(Bit#(32))) portal
 	 bpState <= BpHeader;
       end
    endrule
-   return fifoMsgSource.source;
+   method Bit#(SlaveDataBusWidth) id();
+      return portalId;
+   endmethod
+   interface message = fifoMsgSource.source;
 endmodule
-
-interface BluenocTop#(numeric type numRequests, numeric type numIndications);
-   interface Vector#(numRequests, MsgSink#(4)) requests;
-   interface Vector#(numIndications, MsgSource#(4)) indications;
-endinterface

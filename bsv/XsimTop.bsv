@@ -44,10 +44,10 @@ module mkXsimSourceBVI#(Bit#(32) portal, Bool src_rdy, MsgBeat#(4) beat)(Empty);
     port src_rdy = src_rdy;
     port beat = beat;
 endmodule
-module mkXsimSource#(MsgSource#(4) indication, Integer i)(Empty);
-   mkXsimSourceBVI(fromInteger(i), indication.src_rdy, indication.beat());
+module mkXsimSource#(PortalMsgIndication indication, Integer foo)(Empty);
+   mkXsimSourceBVI(indication.id, indication.message.src_rdy, indication.message.beat());
    rule ind_dst_rdy;
-      indication.dst_rdy(True);
+      indication.message.dst_rdy(True);
    endrule
 endmodule
 
@@ -64,13 +64,13 @@ module mkXsimSinkBVI#(Bit#(32) portal, Bool dst_rdy)(MsgSinkR#(4));
     method beat beat();
     schedule (src_rdy, beat) CF (src_rdy, beat);
 endmodule
-module mkXsimSink#(MsgSink#(4) request, Integer portalIndex)(MsgSinkR#(4));
-   let sink <- mkXsimSinkBVI(fromInteger(portalIndex), request.dst_rdy);
+module mkXsimSink#(PortalMsgRequest request, Integer foo)(MsgSinkR#(4));
+   let sink <- mkXsimSinkBVI(request.id, request.message.dst_rdy);
    rule req_src_rdy;
-      request.src_rdy(sink.src_rdy);
+      request.message.src_rdy(sink.src_rdy);
    endrule
    rule req_beat;
-      request.beat(sink.beat);
+      request.message.beat(sink.beat);
    endrule
 endmodule
 
