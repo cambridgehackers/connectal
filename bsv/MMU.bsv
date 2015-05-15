@@ -49,12 +49,34 @@ typedef struct {
    Bit#(MemOffsetSize) off;
 } ReqTup deriving (Eq,Bits,FShow);
 
+interface Pareff;
+   method ActionValue#(Bit#(32)) init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
+   method ActionValue#(Bit#(32)) initfd(Bit#(32) id, Bit#(32) fd);
+endinterface
+
 `ifdef BSIM
-`ifndef PCIE
 import "BDPI" function ActionValue#(Bit#(32)) pareff_init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
 import "BDPI" function ActionValue#(Bit#(32)) pareff_initfd(Bit#(32) id, Bit#(32) fd);
+
+module mkPareff(SimulatorMMU);
+   method ActionValue#(Bit#(32)) init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
+      let v <- pareff_init(id, handle, size);
+      return v;
+   endmethod
+   method ActionValue#(Bit#(32)) initfd(Bit#(32) id, Bit#(32) fd);
+      let v <- pareff_initfd(id, fd);
+      return v;
+   endmethod
+endmodule
+`else
+module mkPareff(SimulatorMMU);
+   method ActionValue#(Bit#(32)) init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
+   endmethod
+   method ActionValue#(Bit#(32)) initfd(Bit#(32) id, Bit#(32) fd);
+   endmethod
+endmodule
 `endif
-`endif
+
 
 interface MMU#(numeric type addrWidth);
    interface MMURequest request;
@@ -87,7 +109,7 @@ typedef struct {DmaErrorType errorType;
    } DmaError deriving (Bits);
 
 // the address translation servers (addr[0], addr[1]) have a latency of 8 and are fully pipelined
-module mkMMU#(Integer iid, Bool bsimMMap, MMUIndication mmuIndication)(MMU#(addrWidth))
+module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(addrWidth))
    provisos(Log#(MaxNumSGLists, listIdxSize),
 	    Add#(listIdxSize,8, entryIdxSize),
 	    Add#(a__,addrWidth,MemOffsetSize));
@@ -99,6 +121,9 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUIndication mmuIndication)(MMU#(addr
       let __x <- sglId_gen.complete;
    endrule
    
+   // for simulators
+   let pareff <- mkPareff();
+
    // stage 0 (latency == 1)
    Vector#(2, FIFO#(ReqTup)) incomingReqs <- replicateM(mkFIFO);
 
@@ -281,9 +306,7 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUIndication mmuIndication)(MMU#(addr
       let nextId <- sglId_gen.getTag;
       let resp = (fromInteger(iid) << 16) | extend(nextId);
       if (verbose) $display("mkMMU::idRequest %d", fd);
-`ifdef BSIM
-      let va <- pareff_initfd(resp, fd);
-`endif
+      let va <- pareff.initfd(resp, fd);
       mmuIndication.idResponse(resp);
    endmethod
    method Action idReturn(Bit#(32) sglId);
@@ -304,12 +327,8 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUIndication mmuIndication)(MMU#(addr
 	    $display("mkMMU::sglist ERROR");
 	    $finish();
 	 end
-`ifdef BSIM
-`ifndef PCIE
-	 if(bsimMMap) 
-	    let va <- pareff_init({0,pointer[31:16]}, {0,pointer[15:0]}, len);
-`endif
-`endif
+	 if(hostMapped)
+	    let va <- pareff.init({0,pointer[31:16]}, {0,pointer[15:0]}, len);
          Bit#(IndexWidth) ind = truncate(pointerIndex);
 	 portsel(pages, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
              address:{truncate(pointer),ind}, datain:truncate(addr)});
