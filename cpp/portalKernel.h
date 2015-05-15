@@ -27,9 +27,13 @@ int recv_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer,
 {
     return 0;
 }
-volatile unsigned int *mapchannel_portal_kernel(struct PortalInternal *pint, unsigned int v)
+volatile unsigned int *mapchannel_portal_kernel_ind(struct PortalInternal *pint, unsigned int v)
 {
     return &pint->map_base[PORTAL_FIFO(v)];
+}
+volatile unsigned int *mapchannel_portal_kernel_req(struct PortalInternal *pint, unsigned int v, unsigned int size)
+{
+    return pint->item->mapchannelInd(pint, v);
 }
 int notfull_kernel(PortalInternal *pint, unsigned int v)
 {
@@ -78,5 +82,5 @@ static void write_fd_portal_kernel(PortalInternal *pint, volatile unsigned int *
 }
 
 PortalTransportFunctions kernelfunc = {
-    init_portal_kernel, read_portal_kernel, write_portal_kernel, write_fd_portal_kernel, mapchannel_portal_kernel, mapchannel_req_generic,
+    init_portal_kernel, read_portal_kernel, write_portal_kernel, write_fd_portal_kernel, mapchannel_portal_kernel_ind, mapchannel_portal_kernel_req,
     send_portal_null, recv_portal_null, busy_portal_kernel, enableint_portal_kernel, event_portal_kernel, notfull_kernel};
