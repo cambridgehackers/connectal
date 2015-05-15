@@ -64,33 +64,45 @@ module XsimSink(input CLK, input CLK_GATE, input RST, input [31:0] portal, outpu
    end
 endmodule
 
+import "DPI-C" function void pareff_init(input int id, input int handle, input int size);
+import "DPI-C" function void pareff_initfd(input int id, input int fd);
 import "DPI-C" function void write_pareff32(input int handle, input int addr, input int data);
 import "DPI-C" function void write_pareff64(input int handle, input int addr, input int data);
 import "DPI-C" function void read_pareff32(input int handle, input int addr, output int data);
 import "DPI-C" function void read_pareff64(input int handle, input int addr, output int data);
 
 module XsimMemReadWrite(input CLK,
-			input 	      CLK_GATE,
-			input 	      RST,
-			input         en_read32,
-			input [31:0]  read32_addr,
-			input [31:0]  read32_handle,
+			input 		  CLK_GATE,
+			input 		  RST,
+
+			input 		  en_init,
+			input [31:0] 	  init_id,
+			input [31:0] 	  init_handle,
+			input [31:0] 	  init_size,
+
+			input 		  en_initfd,
+			input [31:0] 	  initfd_id,
+			input [31:0] 	  initfd_fd,
+
+			input 		  en_read32,
+			input [31:0] 	  read32_addr,
+			input [31:0] 	  read32_handle,
 			output reg [31:0] read32_data,
 
-			input         en_read64,
-			input [31:0]  read64_addr,
-			input [31:0]  read64_handle,
+			input 		  en_read64,
+			input [31:0] 	  read64_addr,
+			input [31:0] 	  read64_handle,
 			output reg [63:0] read64_data,
 
-			input         en_write32,
-			input [31:0]  write32_addr,
-			input [31:0]  write32_handle,
-			input [31:0]  write32_data,
+			input 		  en_write32,
+			input [31:0] 	  write32_addr,
+			input [31:0] 	  write32_handle,
+			input [31:0] 	  write32_data,
 
-			input         en_write64,
-			input [31:0]  write64_addr,
-			input [31:0]  write64_handle,
-			input [63:0]  write64_data
+			input 		  en_write64,
+			input [31:0] 	  write64_addr,
+			input [31:0] 	  write64_handle,
+			input [63:0] 	  write64_data
 			);
 
    always @(posedge CLK) begin
@@ -98,6 +110,11 @@ module XsimMemReadWrite(input CLK,
 	 // do nothing
       end
       else begin
+	 if (en_init == 1)
+	   pareff_init(init_id, init_handle, init_size);
+	 if (en_initfd == 1)
+	   pareff_initfd(initfd_id, initfd_fd);
+	 
 	 if (en_read32 == 1)
 	   read_pareff32(read32_handle, read32_addr, read32_data);
 	 if (en_read64 == 1) begin
