@@ -94,13 +94,20 @@ module XsimMemReadWrite(input CLK,
 			);
 
    always @(posedge CLK) begin
-      if (en_read32)
-	read_pareff32(read32_handle, read32_addr, read32_data);
-      if (en_read64)
-	read_pareff64(read64_handle, read64_addr, read64_data);
-      if (en_write32)
-	write_pareff32(write32_handle, write32_addr, write32_data);
-      if (en_write64)
-	write_pareff64(write64_handle, write64_addr, write64_data);
-   end
+      if (RST == 0) begin
+	 // do nothing
+      end
+      else begin
+	 if (en_read32 == 1)
+	   read_pareff32(read32_handle, read32_addr, read32_data);
+	 if (en_read64 == 1) begin
+	    $display("read_pareff64 handle=%h addr=%h", read64_handle, read64_addr);
+	    read_pareff64(read64_handle, read64_addr, read64_data);
+	 end
+	 if (en_write32 == 1)
+	   write_pareff32(write32_handle, write32_addr, write32_data);
+	 if (en_write64 == 1)
+	   write_pareff64(write64_handle, write64_addr, write64_data);
+      end // else: !if(RST == 0)
+   end // always @ (posedge CLK)
 endmodule
