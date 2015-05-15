@@ -58,7 +58,7 @@ endinterface
 import "BDPI" function ActionValue#(Bit#(32)) pareff_init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
 import "BDPI" function ActionValue#(Bit#(32)) pareff_initfd(Bit#(32) id, Bit#(32) fd);
 
-module mkPareff(SimulatorMMU);
+module mkPareff(Pareff);
    method ActionValue#(Bit#(32)) init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
       let v <- pareff_init(id, handle, size);
       return v;
@@ -69,10 +69,12 @@ module mkPareff(SimulatorMMU);
    endmethod
 endmodule
 `else
-module mkPareff(SimulatorMMU);
+module mkPareff(Pareff);
    method ActionValue#(Bit#(32)) init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
+      return 0;
    endmethod
    method ActionValue#(Bit#(32)) initfd(Bit#(32) id, Bit#(32) fd);
+      return 0;
    endmethod
 endmodule
 `endif
