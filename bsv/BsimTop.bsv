@@ -114,7 +114,7 @@ endmodule
 module  mkBsimHost#(Clock derived_clock, Reset derived_reset)(BsimHost#(clientAddrWidth, clientBusWidth, clientIdWidth,
 			      serverAddrWidth, serverBusWidth, serverIdWidth,
 			      nSlaves))
-   provisos (ModulePareffReadWrite#(serverBusWidth),
+   provisos (ModulePareff#(serverBusWidth),
              Add#(a__, 32, clientAddrWidth), Add#(b__, 32, clientBusWidth),
              Mul#(TDiv#(serverBusWidth, 8), 8, serverBusWidth));
 
@@ -127,8 +127,7 @@ module  mkBsimHost#(Clock derived_clock, Reset derived_reset)(BsimHost#(clientAd
    interface derivedReset = derived_reset;
 endmodule
 
-module  mkBsimTop(Empty)
-   provisos (ModulePareffReadWrite#(DataBusWidth));
+module  mkBsimTop(Empty);
    let divider <- mkClockDivider(2);
    Clock derivedClock = divider.fastClock;
    Clock singleClock = divider.slowClock;

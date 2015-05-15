@@ -51,11 +51,11 @@ instance ModulePareff#(32);
    module mkPareff(Pareff#(32) ifc);
       method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
 	 let v <- pareff_init(id, handle, size);
-	 return v;
+	 //return v;
       endmethod
       method Action initfd(Bit#(32) id, Bit#(32) fd);
 	 let v <- pareff_initfd(id, fd);
-	 return v;
+	 //return v;
       endmethod
       method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(32) v);
 	 write_pareff32(handle, addr, v);
@@ -70,11 +70,11 @@ instance ModulePareff#(64);
    module mkPareff(Pareff#(64) ifc);
       method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
 	 let v <- pareff_init(id, handle, size);
-	 return v;
+	 //return v;
       endmethod
       method Action initfd(Bit#(32) id, Bit#(32) fd);
 	 let v <- pareff_initfd(id, fd);
-	 return v;
+	 //return v;
       endmethod
        method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(64) v);
 	  write_pareff64(handle, addr, v);
@@ -89,11 +89,11 @@ instance ModulePareff#(128);
    module mkPareff(Pareff#(128) ifc);
       method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
 	 let v <- pareff_init(id, handle, size);
-	 return v;
+	 //return v;
       endmethod
       method Action initfd(Bit#(32) id, Bit#(32) fd);
 	 let v <- pareff_initfd(id, fd);
-	 return v;
+	 //return v;
       endmethod
        method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(128) v);
 	  write_pareff64(handle, addr, v[63:0]);
@@ -107,15 +107,15 @@ instance ModulePareff#(128);
    endmodule
 endinstance
 instance ModulePareff#(256);
+   module mkPareff(Pareff#(256) ifc);
       method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
 	 let v <- pareff_init(id, handle, size);
-	 return v;
+	 //return v;
       endmethod
       method Action initfd(Bit#(32) id, Bit#(32) fd);
 	 let v <- pareff_initfd(id, fd);
-	 return v;
+	 //return v;
       endmethod
-   module mkPareff(Pareff#(256) ifc);
        method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(256) v);
 	  write_pareff64(handle, addr, v[63:0]);
 	  write_pareff64(handle, addr+8, v[127:64]);
