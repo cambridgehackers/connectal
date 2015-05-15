@@ -33,6 +33,7 @@ import StmtFSM::*;
 import ClientServer::*;
 import ConnectalMemory::*;
 import ConnectalCompletionBuffer::*;
+import Pareff::*;
 
 
 typedef 32 MaxNumSGLists;
@@ -48,37 +49,6 @@ typedef struct {
    SGListId             id;
    Bit#(MemOffsetSize) off;
 } ReqTup deriving (Eq,Bits,FShow);
-
-interface Pareff;
-   method ActionValue#(Bit#(32)) init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
-   method ActionValue#(Bit#(32)) initfd(Bit#(32) id, Bit#(32) fd);
-endinterface
-
-`ifdef BSIM
-import "BDPI" function ActionValue#(Bit#(32)) pareff_init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
-import "BDPI" function ActionValue#(Bit#(32)) pareff_initfd(Bit#(32) id, Bit#(32) fd);
-
-module mkPareff(Pareff);
-   method ActionValue#(Bit#(32)) init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
-      let v <- pareff_init(id, handle, size);
-      return v;
-   endmethod
-   method ActionValue#(Bit#(32)) initfd(Bit#(32) id, Bit#(32) fd);
-      let v <- pareff_initfd(id, fd);
-      return v;
-   endmethod
-endmodule
-`else
-module mkPareff(Pareff);
-   method ActionValue#(Bit#(32)) init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
-      return 0;
-   endmethod
-   method ActionValue#(Bit#(32)) initfd(Bit#(32) id, Bit#(32) fd);
-      return 0;
-   endmethod
-endmodule
-`endif
-
 
 interface MMU#(numeric type addrWidth);
    interface MMURequest request;
@@ -124,7 +94,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
    endrule
    
    // for simulators
-   let pareff <- mkPareff();
+   Pareff#(32) pareff <- mkPareff();
 
    // stage 0 (latency == 1)
    Vector#(2, FIFO#(ReqTup)) incomingReqs <- replicateM(mkFIFO);
