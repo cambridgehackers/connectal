@@ -43,6 +43,11 @@ public:
           fprintf(stderr, "XsimRX: portal %d data=%08x\n", portal, data);
       sinkbeats[portal].push(data);
   }
+  void msgSinkFd ( const uint32_t portal, const uint32_t data ) {
+      //if (trace_xsimtop)
+          fprintf(stderr, "XsimRXFD: portal %d data=%08x\n", portal, data);
+      sinkbeats[portal].push(data);
+  }
 };
 
 static Portal                 *mcommon;

@@ -24,6 +24,7 @@ typedef enum { XsimIfcNames_XsimMsgRequest, XsimIfcNames_XsimMsgIndication } Xsi
 
 interface XsimMsgRequest;
    method Action msgSink(Bit#(32) portal, Bit#(32) data);
+   method Action msgSinkFd(Bit#(32) portal, SpecialTypeForSendingFd data);
 endinterface
 interface XsimMsgIndication;
    method Action msgSource(Bit#(32) portal, Bit#(32) data);
