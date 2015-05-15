@@ -41,9 +41,12 @@ interface PortalMsgIndication;
    interface PipeOut#(Bit#(32)) message;
 endinterface
 
-interface CnocTop#(numeric type numRequests, numeric type numIndications);
+interface CnocTop#(numeric type numRequests, numeric type numIndications,
+		   numeric type addrWidth, numeric type dataWidth, numeric type numMasters
+		   );
    interface Vector#(numRequests, PortalMsgRequest) requests;
    interface Vector#(numIndications, PortalMsgIndication) indications;
+   interface Vector#(numMasters,PhysMemMaster#(addrWidth, dataWidth)) masters;
 endinterface
 
 module mkPortalMsgRequest#(Bit#(SlaveDataBusWidth) portalId, Vector#(numRequests, PipeIn#(Bit#(32))) portal)(PortalMsgRequest);

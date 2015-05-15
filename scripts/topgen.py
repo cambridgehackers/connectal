@@ -337,7 +337,7 @@ if __name__=='__main__':
                  'exportedNames' : '\n'.join(exportedNames),
                  'portalMaster' : 'lMemServer.masters' if memory_flag else 'nil',
                  'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,`PinType,`NumberOfMasters)' if not options.cnoc \
-                     else 'CnocTop#(NumberOfRequests,NumberOfIndications)'
+                     else 'CnocTop#(NumberOfRequests,NumberOfIndications,PhysAddrWidth,DataBusWidth,NumberOfMasters)'
                  }
     topFilename = project_dir + '/Top.bsv'
     print 'Writing:', topFilename

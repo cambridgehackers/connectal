@@ -25,6 +25,9 @@ import Top               :: *;
 import HostInterface     :: *;
 import Pipe::*;
 import CnocPortal::*;
+import Pareff::*;
+import GetPut::*;
+import Connectable::*;
 
 `ifndef PinType
 `define PinType Empty
@@ -91,4 +94,5 @@ module mkXsimTop(Empty);
        );
    mapM_(mkXsimSource, top.indications);
    mapM_(mkXsimSink, top.requests);
+   mapM_(mkConnection, zip(top.masters, replicateM(mkPareffDmaMaster)));
 endmodule

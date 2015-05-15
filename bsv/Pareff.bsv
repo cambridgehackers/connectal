@@ -33,6 +33,15 @@ interface Pareff#(numeric type dataWidth);
    method ActionValue#(Bit#(dataWidth)) read(Bit#(32) handle, Bit#(32) addr);
 endinterface
 
+interface PareffReadWriteTC#(numeric type dsz);
+   method Action write_pareff(Bit#(32) handle, Bit#(32) addr, Bit#(dsz) v);
+   method ActionValue#(Bit#(dsz)) read_pareff(Bit#(32) handle, Bit#(32) addr);
+endinterface
+
+typeclass SelectPareffReadWrite#(numeric type dsz);
+   module selectPareffReadWrite(PareffReadWriteTC#(dsz) ifc);
+endtypeclass
+
 `ifdef BSIM
 import "BDPI" function ActionValue#(Bit#(32)) pareff_init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
 import "BDPI" function ActionValue#(Bit#(32)) pareff_initfd(Bit#(32) id, Bit#(32) fd);
@@ -42,15 +51,6 @@ import "BDPI" function Action write_pareff32(Bit#(32) handle, Bit#(32) addr, Bit
 import "BDPI" function Action write_pareff64(Bit#(32) handle, Bit#(32) addr, Bit#(64) v);
 import "BDPI" function ActionValue#(Bit#(32)) read_pareff32(Bit#(32) handle, Bit#(32) addr);
 import "BDPI" function ActionValue#(Bit#(64)) read_pareff64(Bit#(32) handle, Bit#(32) addr);
-
-interface PareffReadWriteTC#(numeric type dsz);
-   method Action write_pareff(Bit#(32) handle, Bit#(32) addr, Bit#(dsz) v);
-   method ActionValue#(Bit#(dsz)) read_pareff(Bit#(32) handle, Bit#(32) addr);
-endinterface
-
-typeclass SelectPareffReadWrite#(numeric type dsz);
-   module selectPareffReadWrite(PareffReadWriteTC#(dsz) ifc);
-endtypeclass
 
 instance SelectPareffReadWrite#(32);
    module selectPareffReadWrite(PareffReadWriteTC#(32) ifc);
