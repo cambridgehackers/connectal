@@ -34,10 +34,6 @@ interface Pareff#(numeric type dataWidth);
    method ActionValue#(Bit#(dataWidth)) read(Bit#(32) handle, Bit#(32) addr);
 endinterface
 
-typeclass ModulePareff#(numeric type dsz);
-   module mkPareff(Pareff#(dsz) ifc);
-endtypeclass
-
 `ifdef BSIM
 import "BDPI" function ActionValue#(Bit#(32)) pareff_init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
 import "BDPI" function ActionValue#(Bit#(32)) pareff_initfd(Bit#(32) id, Bit#(32) fd);
@@ -48,8 +44,8 @@ import "BDPI" function Action write_pareff64(Bit#(32) handle, Bit#(32) addr, Bit
 import "BDPI" function ActionValue#(Bit#(32)) read_pareff32(Bit#(32) handle, Bit#(32) addr);
 import "BDPI" function ActionValue#(Bit#(64)) read_pareff64(Bit#(32) handle, Bit#(32) addr);
 
-instance ModulePareff#(32);
-   module mkPareff(Pareff#(32) ifc);
+module mkPareff(Pareff#(dataWidth) ifc)
+   provisos (Mul#(TDiv#(dataWidth, 32), 32, dataWidth));
       method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
 	 let v <- pareff_init(id, handle, size);
 	 //return v;
@@ -58,80 +54,26 @@ instance ModulePareff#(32);
 	 let v <- pareff_initfd(id, fd);
 	 //return v;
       endmethod
-      method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(32) v);
-	 write_pareff32(handle, addr, v);
+      method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v);
+	  Vector#(TDiv#(dataWidth, 32), Bit#(32)) vs = unpack(v);
+	  function Action write32(Integer i, Bit#(32) vv);
+	     action
+		write_pareff32(handle, addr+4*fromInteger(i), vv);
+	     endaction
+	  endfunction
+	  mapM_(uncurry(write32), zip(genVector(), vs));
       endmethod
-      method ActionValue#(Bit#(32)) read(Bit#(32) handle, Bit#(32) addr);
-	 let v <- read_pareff32(handle, addr);
-	 return v;
+      method ActionValue#(Bit#(dataWidth)) read(Bit#(32) handle, Bit#(32) addr);
+	  function ActionValue#(Bit#(32)) read32(Integer i);
+	     actionvalue
+		let v <- read_pareff32(handle, addr+4*fromInteger(i));
+		return v;
+	     endactionvalue
+	  endfunction
+   	  Vector#(TDiv#(dataWidth,32),Bit#(32)) vs <- mapM(read32, genVector());
+	  return pack(vs);
       endmethod
-   endmodule
-endinstance
-instance ModulePareff#(64);
-   module mkPareff(Pareff#(64) ifc);
-      method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
-	 let v <- pareff_init(id, handle, size);
-	 //return v;
-      endmethod
-      method Action initfd(Bit#(32) id, Bit#(32) fd);
-	 let v <- pareff_initfd(id, fd);
-	 //return v;
-      endmethod
-       method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(64) v);
-	  write_pareff64(handle, addr, v);
-       endmethod
-       method ActionValue#(Bit#(64)) read(Bit#(32) handle, Bit#(32) addr);
-	  let v <- read_pareff64(handle, addr);
-	  return v;
-       endmethod
-   endmodule
-endinstance
-instance ModulePareff#(128);
-   module mkPareff(Pareff#(128) ifc);
-      method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
-	 let v <- pareff_init(id, handle, size);
-	 //return v;
-      endmethod
-      method Action initfd(Bit#(32) id, Bit#(32) fd);
-	 let v <- pareff_initfd(id, fd);
-	 //return v;
-      endmethod
-       method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(128) v);
-	  write_pareff64(handle, addr, v[63:0]);
-	  write_pareff64(handle, addr+8, v[127:64]);
-       endmethod
-       method ActionValue#(Bit#(128)) read(Bit#(32) handle, Bit#(32) addr);
-	  let v0 <- read_pareff64(handle, addr);
-	  let v1 <- read_pareff64(handle, addr+8);
-	  return {v1,v0};
-       endmethod
-   endmodule
-endinstance
-instance ModulePareff#(256);
-   module mkPareff(Pareff#(256) ifc);
-      method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
-	 let v <- pareff_init(id, handle, size);
-	 //return v;
-      endmethod
-      method Action initfd(Bit#(32) id, Bit#(32) fd);
-	 let v <- pareff_initfd(id, fd);
-	 //return v;
-      endmethod
-       method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(256) v);
-	  write_pareff64(handle, addr, v[63:0]);
-	  write_pareff64(handle, addr+8, v[127:64]);
-	  write_pareff64(handle, addr+16, v[191:128]);
-	  write_pareff64(handle, addr+24, v[255:192]);
-       endmethod
-       method ActionValue#(Bit#(256)) read(Bit#(32) handle, Bit#(32) addr);
-	  let v0 <- read_pareff64(handle, addr);
-	  let v1 <- read_pareff64(handle, addr+8);
-	  let v2 <- read_pareff64(handle, addr+16);
-	  let v3 <- read_pareff64(handle, addr+24);
-	  return {v3,v2,v1,v0};
-       endmethod
-   endmodule
-endinstance
+endmodule
 `endif
 		 
 `ifdef XSIM
@@ -155,53 +97,50 @@ module mkXsimReadWrite(XsimMemReadWrite);
    schedule (init, initfd, write32, write64, read32, read64) CF (init, initfd, write32, write64, read32, read64);
 endmodule
 
-instance ModulePareff#(dataWidth) provisos (Mul#(TDiv#(dataWidth, 32), 32, dataWidth));
-   module mkPareff(Pareff#(dataWidth) ifc);
-      Vector#(TDiv#(dataWidth,32),XsimMemReadWrite) rws <- replicateM(mkXsimReadWrite());
-      method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
-	 rws[0].init(id, handle, size);
-      endmethod
-      method Action initfd(Bit#(32) id, Bit#(32) fd);
-	 rws[0].initfd(id, fd);
-      endmethod
-       method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v);
-	  Vector#(TDiv#(dataWidth, 32), Bit#(32)) vs = unpack(v);
-	  function Action write32(Integer i, Bit#(32) vv);
-	     action
-		rws[i].write32(handle, addr+4*fromInteger(i), vv);
-	     endaction
-	  endfunction
-	  mapM_(uncurry(write32), zip(genVector(), vs));
-       endmethod
-       method ActionValue#(Bit#(dataWidth)) read(Bit#(32) handle, Bit#(32) addr);
-	  function ActionValue#(Bit#(32)) read32(Integer i);
-	     actionvalue
-		let v <- rws[i].read32(handle, addr+4*fromInteger(i));
-		return v;
-	     endactionvalue
-	  endfunction
-   	  Vector#(TDiv#(dataWidth,32),Bit#(32)) vs <- mapM(read32, genVector());
-	  return pack(vs);
-       endmethod
-   endmodule
-endinstance
+module mkPareff(Pareff#(dataWidth) ifc)
+   provisos (Mul#(TDiv#(dataWidth, 32), 32, dataWidth));
+   Vector#(TDiv#(dataWidth,32),XsimMemReadWrite) rws <- replicateM(mkXsimReadWrite());
+   method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
+      rws[0].init(id, handle, size);
+   endmethod
+   method Action initfd(Bit#(32) id, Bit#(32) fd);
+      rws[0].initfd(id, fd);
+   endmethod
+   method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v);
+      Vector#(TDiv#(dataWidth, 32), Bit#(32)) vs = unpack(v);
+      function Action write32(Integer i, Bit#(32) vv);
+	 action
+	    rws[i].write32(handle, addr+4*fromInteger(i), vv);
+	 endaction
+      endfunction
+      mapM_(uncurry(write32), zip(genVector(), vs));
+   endmethod
+   method ActionValue#(Bit#(dataWidth)) read(Bit#(32) handle, Bit#(32) addr);
+      function ActionValue#(Bit#(32)) read32(Integer i);
+	 actionvalue
+	    let v <- rws[i].read32(handle, addr+4*fromInteger(i));
+	    return v;
+	 endactionvalue
+      endfunction
+      Vector#(TDiv#(dataWidth,32),Bit#(32)) vs <- mapM(read32, genVector());
+      return pack(vs);
+   endmethod
+endmodule
 `endif
 
 `ifndef BSIM
 `ifndef XSIM
-instance ModulePareff#(dataWidth);
-   module mkPareff(Pareff#(dataWidth) ifc);
-      method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
-      endmethod
-      method Action initfd(Bit#(32) id, Bit#(32) fd);
-      endmethod
-       method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v);
-       endmethod
-       method ActionValue#(Bit#(dataWidth)) read(Bit#(32) handle, Bit#(32) addr);
-	  return 0;
-       endmethod
-   endmodule
-endinstance
+module mkPareff(Pareff#(dataWidth) ifc);
+   method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
+   endmethod
+   method Action initfd(Bit#(32) id, Bit#(32) fd);
+   endmethod
+   method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v);
+   endmethod
+   method ActionValue#(Bit#(dataWidth)) read(Bit#(32) handle, Bit#(32) addr);
+      return 0;
+   endmethod
+endmodule
 `endif
 `endif
 
@@ -209,7 +148,7 @@ module mkPareffDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
    provisos(Div#(serverBusWidth,8,dataWidthBytes),
 	    Mul#(dataWidthBytes,8,serverBusWidth),
 	    Log#(dataWidthBytes,beatShift),
-	    ModulePareff#(serverBusWidth)
+	    Mul#(TDiv#(serverBusWidth, 32), 32, serverBusWidth)
 	    );
 
    let verbose = False;

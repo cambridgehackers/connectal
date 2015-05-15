@@ -114,8 +114,8 @@ endmodule
 module  mkBsimHost#(Clock derived_clock, Reset derived_reset)(BsimHost#(clientAddrWidth, clientBusWidth, clientIdWidth,
 			      serverAddrWidth, serverBusWidth, serverIdWidth,
 			      nSlaves))
-   provisos (ModulePareff#(serverBusWidth),
-             Add#(a__, 32, clientAddrWidth), Add#(b__, 32, clientBusWidth),
+   provisos (Add#(a__, 32, clientAddrWidth), Add#(b__, 32, clientBusWidth),
+	     Mul#(TDiv#(serverBusWidth, 32), 32, serverBusWidth),
              Mul#(TDiv#(serverBusWidth, 8), 8, serverBusWidth));
 
    Vector#(nSlaves,PhysMemSlave#(serverAddrWidth,  serverBusWidth)) servers <- replicateM(mkPareffDmaMaster);
