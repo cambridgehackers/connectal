@@ -87,7 +87,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 	    Add#(a__,addrWidth,MemOffsetSize));
    
 	    
-   let verbose = False;
+   let verbose = True;
    TagGen#(MaxNumSGLists) sglId_gen <- mkTagGen;
    rule complete_sglId_gen;
       let __x <- sglId_gen.complete;
@@ -268,6 +268,9 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 `ifdef BSIM
 		rv = rv | (fromInteger(iid)<<valueOf(addrWidth)-3);
 `endif
+`ifdef XSIM
+		rv = rv | (fromInteger(iid)<<valueOf(addrWidth)-3);
+`endif
 		return rv;
 	     endmethod
 	  endinterface
@@ -278,6 +281,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
       let nextId <- sglId_gen.getTag;
       let resp = (fromInteger(iid) << 16) | extend(nextId);
       if (verbose) $display("mkMMU::idRequest %d", fd);
+      $display("mkMMU::idRequest %d", fd);
       let va <- pareff.initfd(resp, fd);
       mmuIndication.idResponse(resp);
    endmethod
