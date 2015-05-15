@@ -113,6 +113,7 @@ module mkCnocTop
 %(portalList)s
    interface requests = %(requestList)s;
    interface indications = %(indicationList)s;
+   interface masters = %(portalMaster)s;
 %(exportedInterfaces)s
 endmodule : mkCnocTop
 %(exportedNames)s
