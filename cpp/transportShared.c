@@ -84,7 +84,7 @@ static volatile unsigned int *mapchannel_sharedInd(struct PortalInternal *pint, 
 {
     return &pint->map_base[pint->map_base[SHARED_READ]+1];
 }
-static volatile unsigned int *mapchannel_sharedReq(struct PortalInternal *pint, unsigned int v)
+static volatile unsigned int *mapchannel_sharedReq(struct PortalInternal *pint, unsigned int v, unsigned int size)
 {
     return &pint->map_base[pint->map_base[SHARED_WRITE]+1];
 }
@@ -155,7 +155,7 @@ static volatile unsigned int *mapchannel_traceInd(struct PortalInternal *pint, u
 {
     return &pint->map_base[pint->map_base[SHARED_READ]];
 }
-static volatile unsigned int *mapchannel_traceReq(struct PortalInternal *pint, unsigned int v)
+static volatile unsigned int *mapchannel_traceReq(struct PortalInternal *pint, unsigned int v, unsigned int size)
 {
     return &pint->map_base[pint->map_base[SHARED_WRITE]];
 }

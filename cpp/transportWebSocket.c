@@ -208,9 +208,9 @@ static void send_webSocket(struct PortalInternal *pint, volatile unsigned int *d
 }
 
 PortalTransportFunctions transportWebSocketInit = {
-    init_webSocketInit, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_socket,
+    init_webSocketInit, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_req_generic,
     send_webSocket, recv_portal_null, busy_portal_null, enableint_portal_null, event_webSocket, notfull_null};
 
 PortalTransportFunctions transportWebSocketResp = {
-    init_webSocketResp, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_socket,
+    init_webSocketResp, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_req_generic,
     send_webSocket, recv_portal_null, busy_portal_null, enableint_portal_null, event_webSocket, notfull_null};

@@ -77,6 +77,11 @@ static void send_portal_xsim(struct PortalInternal *pint, volatile unsigned int 
         XsimMsgRequest_msgSink(&reqPortal, pint->fpga_number, *p++);
 }
 
+static volatile unsigned int *mapchannel_req_xsim(struct PortalInternal *pint, unsigned int v, unsigned int size)
+{
+    return pint->item->mapchannelInd(pint, v);
+}
+
 static int event_xsim(struct PortalInternal *pint)
 {
     mcommon.item->event(&mcommon);
@@ -84,6 +89,6 @@ static int event_xsim(struct PortalInternal *pint)
 }
 
 PortalTransportFunctions transportXsim = {
-    init_xsim, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_socket,
+    init_xsim, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_req_xsim,
     send_portal_xsim, recv_portal_null, busy_portal_null, enableint_portal_null, event_xsim, notfull_null};
 
