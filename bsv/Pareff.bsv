@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import Vector::*;
 import FIFO::*;
 import FIFOF::*;
 import GetPut::*;
@@ -154,89 +155,33 @@ module mkXsimReadWrite(XsimMemReadWrite);
    schedule (init, initfd, write32, write64, read32, read64) CF (init, initfd, write32, write64, read32, read64);
 endmodule
 
-instance ModulePareff#(32);
-   module mkPareff(Pareff#(32) ifc);
-      let rw <- mkXsimReadWrite();
+instance ModulePareff#(dataWidth) provisos (Mul#(TDiv#(dataWidth, 32), 32, dataWidth));
+   module mkPareff(Pareff#(dataWidth) ifc);
+      Vector#(TDiv#(dataWidth,32),XsimMemReadWrite) rws <- replicateM(mkXsimReadWrite());
       method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
-	 $display("Xsim.mkPareff.init id=%h handle=%h size=%h", id, handle, size);
-	 rw.init(id, handle, size);
+	 rws[0].init(id, handle, size);
       endmethod
       method Action initfd(Bit#(32) id, Bit#(32) fd);
-	 $display("Xsim.mkPareff.initfd id=%h fd=%h", id, fd);
-	 rw.initfd(id, fd);
+	 rws[0].initfd(id, fd);
       endmethod
-       method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(32) v);
-	  rw.write32(handle, addr, v);
+       method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v);
+	  Vector#(TDiv#(dataWidth, 32), Bit#(32)) vs = unpack(v);
+	  function Action write32(Integer i, Bit#(32) vv);
+	     action
+		rws[i].write32(handle, addr+4*fromInteger(i), vv);
+	     endaction
+	  endfunction
+	  mapM_(uncurry(write32), zip(genVector(), vs));
        endmethod
-       method ActionValue#(Bit#(32)) read(Bit#(32) handle, Bit#(32) addr);
-	  let v <- rw.read32(handle, addr);
-	  return v;
-       endmethod
-   endmodule
-endinstance
-instance ModulePareff#(64);
-   module mkPareff(Pareff#(64) ifc);
-      let rw <- mkXsimReadWrite();
-      method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
-	 $display("Xsim.mkPareff.init id=%h handle=%h size=%h", id, handle, size);
-	 rw.init(id, handle, size);
-      endmethod
-      method Action initfd(Bit#(32) id, Bit#(32) fd);
-	 $display("Xsim.mkPareff.initfd id=%h fd=%h", id, fd);
-	 rw.initfd(id, fd);
-      endmethod
-       method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(64) v);
-	 $display("Xsim.mkPareff.write");
-	  rw.write64(handle, addr, v);
-       endmethod
-       method ActionValue#(Bit#(64)) read(Bit#(32) handle, Bit#(32) addr);
-	 $display("Xsim.mkPareff.read");
-	  let v <- rw.read64(handle, addr);
-	  return v;
-       endmethod
-   endmodule
-endinstance
-instance ModulePareff#(128);
-   module mkPareff(Pareff#(128) ifc);
-      let rw <- mkXsimReadWrite();
-      method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
-	 rw.init(id, handle, size);
-      endmethod
-      method Action initfd(Bit#(32) id, Bit#(32) fd);
-	 rw.initfd(id, fd);
-      endmethod
-       method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(128) v);
-	  rw.write64(handle, addr, v[63:0]);
-	  rw.write64(handle, addr+8, v[127:64]);
-       endmethod
-       method ActionValue#(Bit#(128)) read(Bit#(32) handle, Bit#(32) addr);
-	  let v0 <- rw.read64(handle, addr);
-	  let v1 <- rw.read64(handle, addr+8);
-	  return {v1,v0};
-       endmethod
-   endmodule
-endinstance
-instance ModulePareff#(256);
-   module mkPareff(Pareff#(256) ifc);
-      let rw <- mkXsimReadWrite();
-      method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
-	 rw.init(id, handle, size);
-      endmethod
-      method Action initfd(Bit#(32) id, Bit#(32) fd);
-	 rw.initfd(id, fd);
-      endmethod
-       method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(256) v);
-	  rw.write64(handle, addr, v[63:0]);
-	  rw.write64(handle, addr+8, v[127:64]);
-	  rw.write64(handle, addr+16, v[191:128]);
-	  rw.write64(handle, addr+24, v[255:192]);
-       endmethod
-       method ActionValue#(Bit#(256)) read(Bit#(32) handle, Bit#(32) addr);
-	  let v0 <- rw.read64(handle, addr);
-	  let v1 <- rw.read64(handle, addr+8);
-	  let v2 <- rw.read64(handle, addr+16);
-	  let v3 <- rw.read64(handle, addr+24);
-	  return {v3,v2,v1,v0};
+       method ActionValue#(Bit#(dataWidth)) read(Bit#(32) handle, Bit#(32) addr);
+	  function ActionValue#(Bit#(32)) read32(Integer i);
+	     actionvalue
+		let v <- rws[i].read32(handle, addr+4*fromInteger(i));
+		return v;
+	     endactionvalue
+	  endfunction
+   	  Vector#(TDiv#(dataWidth,32),Bit#(32)) vs <- mapM(read32, genVector());
+	  return pack(vs);
        endmethod
    endmodule
 endinstance
