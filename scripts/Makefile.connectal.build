@@ -259,7 +259,7 @@ xsim: verilog $(XSIM_OBJECTS)
 	xvlog $(XVLOGFLAGS) verilog/*.v
 	xvlog --sv $(CONNECTALDIR)/verilog/xsimtop.sv
 	#xsc -v -cc gcc -compile $(SOURCES)
-	xsc -cc gcc -link $(foreach c, $(XSIM_CFILES) $(XSIM_GENERATED_CFILES), xsim.dir/xsc/$(c).lnx64.o ) -o xsimtop
+	xsc -cc gcc -link $(XSIM_OBJECTS) -o xsimtop
 	xelab -cc gcc -svlog $(CONNECTALDIR)/verilog/xsimtop.sv --debug wave -L unisim -L unifast -L unimacro work.xsimtop -sv_lib xsimtop
 endif #VIVADO
 
