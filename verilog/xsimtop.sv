@@ -75,12 +75,12 @@ module XsimMemReadWrite(input CLK,
 			input         en_read32,
 			input [31:0]  read32_addr,
 			input [31:0]  read32_handle,
-			output [31:0] read32_data,
+			output reg [31:0] read32_data,
 
 			input         en_read64,
 			input [31:0]  read64_addr,
 			input [31:0]  read64_handle,
-			output [63:0] read64_data,
+			output reg [63:0] read64_data,
 
 			input         en_write32,
 			input [31:0]  write32_addr,
@@ -92,4 +92,15 @@ module XsimMemReadWrite(input CLK,
 			input [31:0]  write64_handle,
 			input [63:0]  write64_data
 			);
+
+   always @(posedge CLK) begin
+      if (en_read32)
+	read_pareff32(read32_handle, read32_addr, read32_data);
+      if (en_read64)
+	read_pareff64(read64_handle, read64_addr, read64_data);
+      if (en_write32)
+	write_pareff32(write32_handle, write32_addr, write32_data);
+      if (en_write64)
+	write_pareff64(write64_handle, write64_addr, write64_data);
+   end
 endmodule
