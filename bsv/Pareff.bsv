@@ -33,13 +33,13 @@ interface Pareff#(numeric type dataWidth);
    method ActionValue#(Bit#(dataWidth)) read(Bit#(32) handle, Bit#(32) addr);
 endinterface
 
-interface PareffReadWriteTC#(numeric type dsz);
+interface PareffReadWrite#(numeric type dsz);
    method Action write_pareff(Bit#(32) handle, Bit#(32) addr, Bit#(dsz) v);
    method ActionValue#(Bit#(dsz)) read_pareff(Bit#(32) handle, Bit#(32) addr);
 endinterface
 
-typeclass SelectPareffReadWrite#(numeric type dsz);
-   module selectPareffReadWrite(PareffReadWriteTC#(dsz) ifc);
+typeclass ModulePareffReadWrite#(numeric type dsz);
+   module mkPareffReadWrite(PareffReadWrite#(dsz) ifc);
 endtypeclass
 
 `ifdef BSIM
@@ -52,8 +52,8 @@ import "BDPI" function Action write_pareff64(Bit#(32) handle, Bit#(32) addr, Bit
 import "BDPI" function ActionValue#(Bit#(32)) read_pareff32(Bit#(32) handle, Bit#(32) addr);
 import "BDPI" function ActionValue#(Bit#(64)) read_pareff64(Bit#(32) handle, Bit#(32) addr);
 
-instance SelectPareffReadWrite#(32);
-   module selectPareffReadWrite(PareffReadWriteTC#(32) ifc);
+instance ModulePareffReadWrite#(32);
+   module mkPareffReadWrite(PareffReadWrite#(32) ifc);
        method Action write_pareff(Bit#(32) handle, Bit#(32) addr, Bit#(32) v);
 	  write_pareff32(handle, addr, v);
        endmethod
@@ -63,8 +63,8 @@ instance SelectPareffReadWrite#(32);
        endmethod
    endmodule
 endinstance
-instance SelectPareffReadWrite#(64);
-   module selectPareffReadWrite(PareffReadWriteTC#(64) ifc);
+instance ModulePareffReadWrite#(64);
+   module mkPareffReadWrite(PareffReadWrite#(64) ifc);
        method Action write_pareff(Bit#(32) handle, Bit#(32) addr, Bit#(64) v);
 	  write_pareff64(handle, addr, v);
        endmethod
@@ -74,8 +74,8 @@ instance SelectPareffReadWrite#(64);
        endmethod
    endmodule
 endinstance
-instance SelectPareffReadWrite#(128);
-   module selectPareffReadWrite(PareffReadWriteTC#(128) ifc);
+instance ModulePareffReadWrite#(128);
+   module mkPareffReadWrite(PareffReadWrite#(128) ifc);
        method Action write_pareff(Bit#(32) handle, Bit#(32) addr, Bit#(128) v);
 	  write_pareff64(handle, addr, v[63:0]);
 	  write_pareff64(handle, addr+8, v[127:64]);
@@ -87,8 +87,8 @@ instance SelectPareffReadWrite#(128);
        endmethod
    endmodule
 endinstance
-instance SelectPareffReadWrite#(256);
-   module selectPareffReadWrite(PareffReadWriteTC#(256) ifc);
+instance ModulePareffReadWrite#(256);
+   module mkPareffReadWrite(PareffReadWrite#(256) ifc);
        method Action write_pareff(Bit#(32) handle, Bit#(32) addr, Bit#(256) v);
 	  write_pareff64(handle, addr, v[63:0]);
 	  write_pareff64(handle, addr+8, v[127:64]);
@@ -106,8 +106,8 @@ instance SelectPareffReadWrite#(256);
 endinstance
 
 module mkPareff(Pareff#(dataWidth))
-   provisos (SelectPareffReadWrite#(dataWidth));
-   let rw <- selectPareffReadWrite();
+   provisos (ModulePareffReadWrite#(dataWidth));
+   let rw <- mkPareffReadWrite();
 
    method ActionValue#(Bit#(32)) init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
       let v <- pareff_init(id, handle, size);
@@ -145,10 +145,11 @@ module mkPareffDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
    provisos(Div#(serverBusWidth,8,dataWidthBytes),
 	    Mul#(dataWidthBytes,8,serverBusWidth),
 	    Log#(dataWidthBytes,beatShift),
-	    SelectPareffReadWrite#(serverBusWidth));
+	    ModulePareffReadWrite#(serverBusWidth)
+	    );
 
    let verbose = False;
-   PareffReadWriteTC#(serverBusWidth) rw <- selectPareffReadWrite();
+   PareffReadWrite#(serverBusWidth) rw <- mkPareffReadWrite();
 
    Reg#(Bit#(serverAddrWidth)) readAddrr <- mkReg(0);
    Reg#(Bit#(BurstLenSize))  readLen <- mkReg(0);

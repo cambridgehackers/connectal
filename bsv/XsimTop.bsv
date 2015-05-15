@@ -20,14 +20,15 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 import Vector            :: *;
+import GetPut::*;
+import Connectable::*;
 import Portal            :: *;
 import Top               :: *;
 import HostInterface     :: *;
 import Pipe::*;
 import CnocPortal::*;
-import Pareff::*;
-import GetPut::*;
-import Connectable::*;
+import MemTypes          :: *;
+import Pareff            ::*;
 
 `ifndef PinType
 `define PinType Empty
@@ -76,6 +77,12 @@ module mkXsimSink#(PortalMsgRequest request)(MsgSinkR#(4));
    endrule
 endmodule
 
+module mkXsimMemoryConnection#(PhysMemMaster#(addrWidth, dataWidth) master)(Empty)
+   provisos (ModulePareffReadWrite#(dataWidth));
+   PhysMemSlave#(addrWidth,dataWidth) slave <- mkPareffDmaMaster();
+   mkConnection(master, slave);
+endmodule
+
 module mkXsimTop(Empty);
    Clock derivedClock <- exposeCurrentClock;
    Reset derivedReset <- exposeCurrentReset;
@@ -94,5 +101,5 @@ module mkXsimTop(Empty);
        );
    mapM_(mkXsimSource, top.indications);
    mapM_(mkXsimSink, top.requests);
-   mapM_(mkConnection, zip(top.masters, replicateM(mkPareffDmaMaster)));
+   mapM_(mkXsimMemoryConnection, top.masters);
 endmodule
