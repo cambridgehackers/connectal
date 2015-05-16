@@ -262,6 +262,8 @@ int connnectalJsonDecode(PortalInternal *pint, int channel, void *tempdata, Conn
 void portalSendFd(int fd, void *data, int len, int sendFd);
 int portalRecvFd(int fd, void *data, int len, int *recvFd);
 unsigned int bsim_poll_interrupt(void);
+unsigned int read_pareff32(uint32_t pref, uint32_t offset);
+unsigned int read_pareff64(uint64_t pref, uint64_t offset);
 
 int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
 void initPortalFramework(void);

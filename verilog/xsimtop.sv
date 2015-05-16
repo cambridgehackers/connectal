@@ -68,8 +68,8 @@ import "DPI-C" function void pareff_init(input int id, input int handle, input i
 import "DPI-C" function void pareff_initfd(input int id, input int fd);
 import "DPI-C" function void write_pareff32(input int handle, input int addr, input int data);
 import "DPI-C" function void write_pareff64(input int handle, input int addr, input int data);
-import "DPI-C" function void read_pareff32(input int handle, input int addr, output int data);
-import "DPI-C" function void read_pareff64(input int handle, input int addr, output int data);
+import "DPI-C" function void read_pareff32_xsim(input int handle, input int addr, output int data);
+import "DPI-C" function void read_pareff64_xsim(input int handle, input int addr, output int data);
 
 module XsimMemReadWrite(input CLK,
 			input 		  CLK_GATE,
@@ -116,10 +116,10 @@ module XsimMemReadWrite(input CLK,
 	   pareff_initfd(initfd_id, initfd_fd);
 	 
 	 if (en_read32 == 1)
-	   read_pareff32(read32_handle, read32_addr, read32_data);
+	   read_pareff32_xsim(read32_handle, read32_addr, read32_data);
 	 if (en_read64 == 1) begin
-	    $display("read_pareff64 handle=%h addr=%h", read64_handle, read64_addr);
-	    read_pareff64(read64_handle, read64_addr, read64_data);
+	    $display("read_pareff64_xsim handle=%h addr=%h", read64_handle, read64_addr);
+	    read_pareff64_xsim(read64_handle, read64_addr, read64_data);
 	 end
 	 if (en_write32 == 1)
 	   write_pareff32(write32_handle, write32_addr, write32_data);

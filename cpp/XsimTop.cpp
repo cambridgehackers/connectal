@@ -54,8 +54,7 @@ static Portal                 *mcommon;
 static XsimMsgIndicationProxy *xsimIndicationProxy;
 static XsimMsgRequest         *xsimRequest;
 
-extern "C" {
-void dpi_init()
+extern "C" void dpi_init()
 {
     if (trace_xsimtop) 
         fprintf(stderr, "%s:\n", __FUNCTION__);
@@ -71,7 +70,7 @@ void dpi_init()
     fprintf(stderr, "%s: end\n", __FUNCTION__);
 }
 
-void dpi_msgSink_beat(int portal, int *p_beat, int *p_src_rdy)
+extern "C" void dpi_msgSink_beat(int portal, int *p_beat, int *p_src_rdy)
 {
   if (xsimRequest->sinkbeats[portal].size() > 0) {
       uint32_t beat = xsimRequest->sinkbeats[portal].front();
@@ -89,10 +88,21 @@ void dpi_msgSink_beat(int portal, int *p_beat, int *p_src_rdy)
   }
 }
 
-void dpi_msgSource_beat(int portal, int beat)
+extern "C" void dpi_msgSource_beat(int portal, int beat)
 {
     if (trace_xsimtop)
         fprintf(stderr, "dpi_msgSource_beat: portal %d beat=%08x\n", portal, beat);
     xsimIndicationProxy->msgSource(portal, beat);
 }
-} // extern "C"
+
+extern "C" void read_pareff32_xsim(uint32_t pref, uint32_t offset, uint32_t *data)
+{
+    *data = read_pareff32(pref, offset);
+printf("[%s:%d] data %x\n", __FUNCTION__, __LINE__, *data);
+}
+
+extern "C" void read_pareff64_xsim(uint32_t pref, uint32_t offset, uint32_t *data)
+{
+    *data = read_pareff64(pref, offset);
+printf("[%s:%d] data %llx\n", __FUNCTION__, __LINE__, (long long) *data);
+}

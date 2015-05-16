@@ -51,7 +51,7 @@ extern "C" void write_pareff32(uint32_t pref, uint32_t offset, unsigned int data
     uint32_t id = pref>>5;
     pref -= id<<5; 
     if (dma_trace)
-      fprintf(stderr, "%s: %d %d %d\n", __FUNCTION__, id, pref, offset);
+      fprintf(stderr, "%s: %d [%d:%d] = %x\n", __FUNCTION__, id, pref, offset, data);
     BUFFER_CHECK
     *(unsigned int *)&dma_info[id][pref].buffer[offset] = data;
 }
@@ -59,11 +59,13 @@ extern "C" void write_pareff32(uint32_t pref, uint32_t offset, unsigned int data
 extern "C" unsigned int read_pareff32(uint32_t pref, uint32_t offset)
 {
     uint32_t id = pref>>5;
+    unsigned int ret;
     pref -= id<<5; 
-    if (dma_trace)
-      fprintf(stderr, "%s: %d %d %d\n", __FUNCTION__, id, pref, offset);
     BUFFER_CHECK
-    return *(unsigned int *)&dma_info[id][pref].buffer[offset];
+    ret = *(unsigned int *)&dma_info[id][pref].buffer[offset];
+    if (dma_trace)
+      fprintf(stderr, "%s: %d [%d:%d] = %x\n", __FUNCTION__, id, pref, offset, ret);
+    return ret;
 }
 
 extern "C" void write_pareff64(uint32_t pref, uint32_t offset, uint64_t data)
@@ -71,7 +73,7 @@ extern "C" void write_pareff64(uint32_t pref, uint32_t offset, uint64_t data)
     uint32_t id = pref>>5;
     pref -= id<<5; 
     if (dma_trace)
-      fprintf(stderr, "%s: %d %d %d\n", __FUNCTION__, id, pref, offset);
+      fprintf(stderr, "%s: %d [%d:%d] = %llx\n", __FUNCTION__, id, pref, offset, (long long)data);
     BUFFER_CHECK
     *(uint64_t *)&dma_info[id][pref].buffer[offset] = data;
 }
@@ -79,11 +81,13 @@ extern "C" void write_pareff64(uint32_t pref, uint32_t offset, uint64_t data)
 extern "C" uint64_t read_pareff64(uint32_t pref, uint32_t offset)
 {
     uint32_t id = pref>>5;
+    uint64_t ret;
     pref -= id<<5; 
-    if (dma_trace)
-      fprintf(stderr, "%s: %d %d %d buffer_len %d\n", __FUNCTION__, id, pref, offset, dma_info[id][pref].buffer_len);
     BUFFER_CHECK
-    return *(uint64_t *)&dma_info[id][pref].buffer[offset];
+    ret = *(uint64_t *)&dma_info[id][pref].buffer[offset];
+    if (dma_trace)
+      fprintf(stderr, "%s: %d [%d:%d] = %llx\n", __FUNCTION__, id, pref, offset, (long long)ret);
+    return ret;
 }
 
 extern "C" void pareff_initfd(uint32_t aid, uint32_t fd)

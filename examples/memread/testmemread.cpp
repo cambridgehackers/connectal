@@ -40,16 +40,15 @@ int burstLen = 32;
 #else
 int burstLen = 16;
 #endif
-#ifndef BSIM
+
+#if !defined(BSIM) && !defined(BOARD_xsim)
+int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
 int iterCnt = 64;
 #else
-int iterCnt = 3;
-#endif
-
-#ifndef BSIM
-int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
-#else
 int numWords = 0x124000/4;
+int iterCnt = 3;
+//int numWords = 0x20/4;
+//int iterCnt = 1;
 #endif
 
 size_t test_sz  = numWords*sizeof(unsigned int);
