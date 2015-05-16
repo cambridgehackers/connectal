@@ -72,6 +72,7 @@ module mkXsimSinkBVI#(Bit#(32) portal)(MsgSinkR#(4));
 endmodule
 module mkXsimSink#(PortalMsgRequest request)(MsgSinkR#(4));
    let sink <- mkXsimSinkBVI(request.id);
+
    rule req_src_rdy if (sink.src_rdy);
       request.message.enq(sink.beat);
    endrule

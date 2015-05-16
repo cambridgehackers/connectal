@@ -336,6 +336,8 @@ def typeBitWidth(item):
         return 32
     if item['name'] == 'fixed32':
         return 32
+    if item['name'] == 'SpecialTypeForSendingFd':
+        return 32
     if item.get('type') == 'Enum':
         return int(math.ceil(math.log(len(item['elements']))))
     if hasBitWidth(item):

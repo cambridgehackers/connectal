@@ -61,9 +61,11 @@ module mkPortalMsgRequest#(Bit#(SlaveDataBusWidth) portalId, Vector#(numRequests
       fifoMsgSink.deq();
       let methodId = hdr[23:16];
       Bit#(8) messageWords = hdr[7:0] - 1;
+      if (messageWords == 0)
+          messageWords = 1;
       methodIdReg <= methodId;
       if (verbose)
-	 $display("receiveMessageHeader hdr=%x methodId=%x messageWords=%d", hdr, methodId, messageWords);
+	 $display("receiveMessageHeader portal=%d hdr=%x methodId=%x messageWords=%d", portalId, hdr, methodId, messageWords);
       messageWordsReg <= messageWords;
       if (messageWords != 0)
 	 bpState <= BpMessage;
@@ -72,7 +74,7 @@ module mkPortalMsgRequest#(Bit#(SlaveDataBusWidth) portalId, Vector#(numRequests
       let data = fifoMsgSink.first();
       fifoMsgSink.deq();
       if (verbose)
-	 $display("receiveMessage id=%d data=%x messageWords=%d", methodIdReg, data, messageWordsReg);
+	 $display("receiveMessage portal=%d id=%d data=%x messageWords=%d", portalId, methodIdReg, data, messageWordsReg);
       portal[methodIdReg].enq(data);
       messageWordsReg <= messageWordsReg - 1;
       if (messageWordsReg == 1)
@@ -107,7 +109,7 @@ module mkPortalMsgIndication#(Bit#(SlaveDataBusWidth) portalId, Vector#(numIndic
       Bit#(16) roundup = messageBits[4:0] == 0 ? 0 : 1;
       Bit#(16) numWords = (messageBits >> 5) + roundup;
       Bit#(32) hdr = extend(readyChannel) << 16 | extend(numWords+1);
-      if (verbose) $display("sendHeader hdr=%h messageBits=%d numWords=%d", hdr, messageBits, numWords);
+      if (verbose) $display("sendHeader portal=%d hdr=%h messageBits=%d numWords=%d", portalId, hdr, messageBits, numWords);
       messageWordsReg <= numWords;
       methodIdReg <= readyChannel;
       fifoMsgSource.enq(hdr);
@@ -118,7 +120,7 @@ module mkPortalMsgIndication#(Bit#(SlaveDataBusWidth) portalId, Vector#(numIndic
       let v = portal[methodIdReg].first;
       portal[methodIdReg].deq();
       fifoMsgSource.enq(v);
-      if (verbose) $display("sendMessage id=%d data=%h messageWords=%d", methodIdReg, v, messageWordsReg);
+      if (verbose) $display("sendMessage portal=%d id=%d data=%h messageWords=%d", portalId, methodIdReg, v, messageWordsReg);
       if (messageWordsReg == 1) begin
 	 bpState <= BpHeader;
       end

@@ -20,7 +20,7 @@
  */
 #include "GeneratedTypes.h"
 
-static int trace_xsim; // = 1;
+static int trace_xsim ;//= 1;
 
 static int indicationIndex[16];
 static PortalInternal mcommon, indPortal, reqPortal;
@@ -70,16 +70,21 @@ static int init_xsim(struct PortalInternal *pint, void *init_param)
 
 void write_portal_xsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
 {
+    if (trace_xsim)
+        printf("%s %d sending data %d\n", __FUNCTION__, pint->fpga_number, v);
     XsimMsgRequest_msgSink(&reqPortal, pint->fpga_number, v);
 }
 void write_fd_portal_xsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
 {
-printf("[%s:%d] sending fd %d\n", __FUNCTION__, __LINE__, v);
+    //if (trace_xsim)
+        printf("%s: %d sending fd %d\n", __FUNCTION__, pint->fpga_number, v);
     XsimMsgRequest_msgSinkFd(&reqPortal, pint->fpga_number, v);
 }
 
 static volatile unsigned int *mapchannel_req_xsim(struct PortalInternal *pint, unsigned int v, unsigned int size)
 {
+    if (trace_xsim)
+        printf("%s: %d sending header %x\n", __FUNCTION__, pint->fpga_number, (v << 16) | size);
     XsimMsgRequest_msgSink(&reqPortal, pint->fpga_number, (v << 16) | size);
     return pint->item->mapchannelInd(pint, v);
 }

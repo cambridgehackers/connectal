@@ -79,12 +79,7 @@ void dpi_msgSink_beat(int portal, int *p_beat, int *p_src_rdy)
           fprintf(stderr, "%s: portal %d beat %08x\n", __FUNCTION__, portal, beat);
       *p_beat = beat;
       *p_src_rdy = 1;
-      if (trace_xsimtop) fprintf(stderr, "============================================================\n");
-      // msgSink consumed one beat of data
-      if (trace_xsimtop) fprintf(stderr, "%s: sinkbeats.pop()\n", __FUNCTION__);
       xsimRequest->sinkbeats[portal].pop();
-      if (trace_xsimtop)
-	  fprintf(stderr, "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
   } else {
       *p_beat = 0xbad0da7a;
       *p_src_rdy = 0;
