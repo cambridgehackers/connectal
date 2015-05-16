@@ -77,8 +77,82 @@ module mkXsimSink#(PortalMsgRequest request)(MsgSinkR#(4));
    endrule
 endmodule
 
+interface XsimMemReadWrite;
+   method Action write32(Bit#(32) handle, Bit#(32) addr, Bit#(32) v);
+   method Action write64(Bit#(32) handle, Bit#(32) addr, Bit#(64) v);
+   method ActionValue#(Bit#(32)) read32(Bit#(32) handle, Bit#(32) addr);
+   method ActionValue#(Bit#(64)) read64(Bit#(32) handle, Bit#(32) addr);
+endinterface
+
+import "BVI" XsimMemReadWrite =
+module mkXsimReadWrite(XsimMemReadWrite);
+   method write32(write32_handle, write32_addr, write32_data) enable (en_write32);
+   method write64(write64_handle, write64_addr, write64_data) enable (en_write64);
+   method read32_data read32(read32_handle, read32_addr) enable (en_read32);
+   method read64_data read64(read64_handle, read64_addr) enable (en_read64);
+   schedule (write32, write64, read32, read64) CF (write32, write64, read32, read64);
+endmodule
+
+instance ModulePareffReadWrite#(32);
+   module mkPareffReadWrite(PareffReadWrite#(32) ifc);
+      let rw <- mkXsimReadWrite();
+       method Action write_pareff(Bit#(32) handle, Bit#(32) addr, Bit#(32) v);
+	  rw.write32(handle, addr, v);
+       endmethod
+       method ActionValue#(Bit#(32)) read_pareff(Bit#(32) handle, Bit#(32) addr);
+	  let v <- rw.read32(handle, addr);
+	  return v;
+       endmethod
+   endmodule
+endinstance
+instance ModulePareffReadWrite#(64);
+   module mkPareffReadWrite(PareffReadWrite#(64) ifc);
+      let rw <- mkXsimReadWrite();
+       method Action write_pareff(Bit#(32) handle, Bit#(32) addr, Bit#(64) v);
+	  rw.write64(handle, addr, v);
+       endmethod
+       method ActionValue#(Bit#(64)) read_pareff(Bit#(32) handle, Bit#(32) addr);
+	  let v <- rw.read64(handle, addr);
+	  return v;
+       endmethod
+   endmodule
+endinstance
+instance ModulePareffReadWrite#(128);
+   module mkPareffReadWrite(PareffReadWrite#(128) ifc);
+      let rw <- mkXsimReadWrite();
+       method Action write_pareff(Bit#(32) handle, Bit#(32) addr, Bit#(128) v);
+	  rw.write64(handle, addr, v[63:0]);
+	  rw.write64(handle, addr+8, v[127:64]);
+       endmethod
+       method ActionValue#(Bit#(128)) read_pareff(Bit#(32) handle, Bit#(32) addr);
+	  let v0 <- rw.read64(handle, addr);
+	  let v1 <- rw.read64(handle, addr+8);
+	  return {v1,v0};
+       endmethod
+   endmodule
+endinstance
+instance ModulePareffReadWrite#(256);
+   module mkPareffReadWrite(PareffReadWrite#(256) ifc);
+      let rw <- mkXsimReadWrite();
+       method Action write_pareff(Bit#(32) handle, Bit#(32) addr, Bit#(256) v);
+	  rw.write64(handle, addr, v[63:0]);
+	  rw.write64(handle, addr+8, v[127:64]);
+	  rw.write64(handle, addr+16, v[191:128]);
+	  rw.write64(handle, addr+24, v[255:192]);
+       endmethod
+       method ActionValue#(Bit#(256)) read_pareff(Bit#(32) handle, Bit#(32) addr);
+	  let v0 <- rw.read64(handle, addr);
+	  let v1 <- rw.read64(handle, addr+8);
+	  let v2 <- rw.read64(handle, addr+16);
+	  let v3 <- rw.read64(handle, addr+24);
+	  return {v3,v2,v1,v0};
+       endmethod
+   endmodule
+endinstance
+
 module mkXsimMemoryConnection#(PhysMemMaster#(addrWidth, dataWidth) master)(Empty)
-   provisos (ModulePareffReadWrite#(dataWidth));
+   provisos (Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
+	     ModulePareffReadWrite#(dataWidth));
    PhysMemSlave#(addrWidth,dataWidth) slave <- mkPareffDmaMaster();
    mkConnection(master, slave);
 endmodule
