@@ -63,3 +63,33 @@ module XsimSink(input CLK, input CLK_GATE, input RST, input [31:0] portal, outpu
       dpi_msgSink_beat(portal, beat, src_rdy);
    end
 endmodule
+
+import "DPI-C" function void write_pareff32(input int handle, input int addr, input int data);
+import "DPI-C" function void write_pareff64(input int handle, input int addr, input int data);
+import "DPI-C" function void read_pareff32(input int handle, input int addr, output int data);
+import "DPI-C" function void read_pareff64(input int handle, input int addr, output int data);
+
+module XsimMemReadWrite(input CLK,
+			input 	      CLK_GATE,
+			input 	      RST,
+			input         en_read32,
+			input [31:0]  read32_addr,
+			input [31:0]  read32_handle,
+			output [31:0] read32_data,
+
+			input         en_read64,
+			input [31:0]  read64_addr,
+			input [31:0]  read64_handle,
+			output [63:0] read64_data,
+
+			input         en_write32,
+			input [31:0]  write32_addr,
+			input [31:0]  write32_handle,
+			input [31:0]  write32_data,
+
+			input         en_write64,
+			input [31:0]  write64_addr,
+			input [31:0]  write64_handle,
+			input [63:0]  write64_data
+			);
+endmodule
