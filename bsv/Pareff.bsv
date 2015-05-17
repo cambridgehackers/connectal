@@ -110,7 +110,6 @@ module mkPareff(Pareff#(dataWidth) ifc)
       Vector#(TDiv#(dataWidth, 32), Bit#(32)) vs = unpack(v);
       function Action write32(Integer i, Bit#(32) vv);
 	 action
-$display("read32: [%2d:%2d:%2d] = %x", handle, addr, fromInteger(i), vv);
 	    rws[i].write32(handle, addr+4*fromInteger(i), vv);
 	 endaction
       endfunction
@@ -124,7 +123,6 @@ $display("read32: [%2d:%2d:%2d] = %x", handle, addr, fromInteger(i), vv);
 	 endactionvalue
       endfunction
       Vector#(TDiv#(dataWidth,32),Bit#(32)) vs <- mapM(read32, genVector());
-$display("read32: [%2d:%2d] = %x", handle, addr, vs[0]);
       return pack(vs);
    endmethod
 endmodule

@@ -45,10 +45,13 @@ int burstLen = 16;
 int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
 int iterCnt = 64;
 #else
+#if defined(BOARD_xsim)
+int numWords = 0x20/4;
+int iterCnt = 1;
+#else
 int numWords = 0x124000/4;
 int iterCnt = 3;
-//int numWords = 0x20/4;
-//int iterCnt = 1;
+#endif
 #endif
 
 size_t test_sz  = numWords*sizeof(unsigned int);

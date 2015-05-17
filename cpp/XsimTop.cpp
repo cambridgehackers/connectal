@@ -18,15 +18,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#include <stdlib.h>
-#include <string>
-#include <iostream>
-#include <unistd.h>
-#include <stdio.h>
 #include <queue>
-#include "svdpi.h"
-#include <portal.h>
-#include <sock_utils.h>
 #include <XsimMsgRequest.h>
 #include <XsimMsgIndication.h>
 
@@ -93,16 +85,4 @@ extern "C" void dpi_msgSource_beat(int portal, int beat)
     if (trace_xsimtop)
         fprintf(stderr, "dpi_msgSource_beat: portal %d beat=%08x\n", portal, beat);
     xsimIndicationProxy->msgSource(portal, beat);
-}
-
-extern "C" void read_pareff32_xsim(uint32_t pref, uint32_t offset, uint32_t *data)
-{
-    *data = read_pareff32(pref, offset);
-printf("[%s:%d] data %x\n", __FUNCTION__, __LINE__, *data);
-}
-
-extern "C" void read_pareff64_xsim(uint32_t pref, uint32_t offset, uint32_t *data)
-{
-    *data = read_pareff64(pref, offset);
-printf("[%s:%d] data %llx\n", __FUNCTION__, __LINE__, (long long) *data);
 }
