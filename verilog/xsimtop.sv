@@ -67,7 +67,7 @@ endmodule
 import "DPI-C" function void pareff_init(input int id, input int handle, input int size);
 import "DPI-C" function void pareff_initfd(input int id, input int fd);
 import "DPI-C" function void write_pareff32(input int handle, input int addr, input int data);
-import "DPI-C" function void write_pareff64(input int handle, input int addr, input int data);
+import "DPI-C" function void write_pareff64(input int handle, input int addr, input longint data);
 import "DPI-C" function int read_pareff32(input int handle, input int addr);
 import "DPI-C" function longint read_pareff64(input int handle, input int addr);
 
