@@ -46,7 +46,7 @@ int numWords = 0x1240000/4; // make sure to allocate at least one entry of each 
 int iterCnt = 64;
 #else
 #if defined(BOARD_xsim)
-int numWords = 0x20/4;
+int numWords = 0x40/4;
 int iterCnt = 1;
 #else
 int numWords = 0x124000/4;
