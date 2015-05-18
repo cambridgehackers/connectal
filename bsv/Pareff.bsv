@@ -150,7 +150,9 @@ module mkPareff(Pareff#(dataWidth) ifc);
    endmethod
    method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v);
    endmethod
-   method ActionValue#(Bit#(dataWidth)) read(Bit#(32) handle, Bit#(32) addr);
+   method Action readrequest(Bit#(32) handle, Bit#(32) addr);
+   endmethod
+   method ActionValue#(Bit#(dataWidth)) readresponse();
       return 0;
    endmethod
 endmodule
