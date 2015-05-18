@@ -39,17 +39,17 @@ static PortalInternal intarr[MAX_INDARRAY];
 
 static sem_t test_sem;
 static int burstLen = 16;
-#ifndef BSIM
-#define numWords 0x1240000/4 // make sure to allocate at least one entry of each size
-#else
+#if defined(BSIM) || defined(BOARD_xsim)
 #define numWords 0x1240/4
+#else
+#define numWords 0x1240000/4 // make sure to allocate at least one entry of each size
 #endif
 static long alloc_sz = numWords*sizeof(unsigned int);
 static DmaManagerPrivate priv;
 
-int RtestIndicationWrapperreadDone_cb (  struct PortalInternal *p, const uint32_t mismatchCount )
+int ReadTestIndicationWrapperreadDone_cb (  struct PortalInternal *p, const uint32_t mismatchCount )
 {
-         PORTAL_PRINTF( "Rtest_readDone(mismatch = %x)\n", mismatchCount);
+         PORTAL_PRINTF( "ReadTest_readDone(mismatch = %x)\n", mismatchCount);
          sem_post(&test_sem);
 	 return 0;
 }
@@ -76,7 +76,7 @@ void manual_event(void)
     int i;
 
     for (i = 0; i < MAX_INDARRAY; i++)
-      event_hardware(&intarr[i]);
+        intarr[i].item->event(&intarr[i]);
 }
 
 #ifdef __KERNEL__
@@ -112,8 +112,8 @@ MMUIndicationCb MMUIndication_cbTable = {
     MMUIndicationWrapperconfigResp_cb,
     MMUIndicationWrappererror_cb,
 };
-RtestIndicationCb RtestIndication_cbTable = {
-    RtestIndicationWrapperreadDone_cb,
+ReadTestIndicationCb ReadTestIndication_cbTable = {
+    ReadTestIndicationWrapperreadDone_cb,
 };
 int main(int argc, const char **argv)
 {
@@ -123,10 +123,10 @@ int main(int argc, const char **argv)
   int rc = 0, i;
   pthread_t tid = 0;
 
-  init_portal_internal(&intarr[0], IfcNames_HostMMUIndication, 0, MMUIndication_handleMessage, &MMUIndication_cbTable, NULL, NULL, MMUIndication_reqinfo);// fpga1
-  init_portal_internal(&intarr[1], IfcNames_RtestIndication,   0, RtestIndication_handleMessage, &RtestIndication_cbTable, NULL, NULL, RtestIndication_reqinfo); // fpga2
-  init_portal_internal(&intarr[2], IfcNames_HostMMURequest,    0, NULL, NULL, NULL, NULL, MMURequest_reqinfo); // fpga3
-  init_portal_internal(&intarr[3], IfcNames_RtestRequest,      0, NULL, NULL, NULL, NULL, RtestRequest_reqinfo);    // fpga4
+  init_portal_internal(&intarr[0], IfcNames_MMUIndicationH2S,     0, MMUIndication_handleMessage, &MMUIndication_cbTable, NULL, NULL, MMUIndication_reqinfo);// fpga1
+  init_portal_internal(&intarr[1], IfcNames_ReadTestIndicationH2S,0, ReadTestIndication_handleMessage, &ReadTestIndication_cbTable, NULL, NULL, ReadTestIndication_reqinfo); // fpga2
+  init_portal_internal(&intarr[2], IfcNames_MMURequestS2H,     0, NULL, NULL, NULL, NULL, MMURequest_reqinfo); // fpga3
+  init_portal_internal(&intarr[3], IfcNames_ReadTestRequestS2H,0, NULL, NULL, NULL, NULL, ReadTestRequest_reqinfo);    // fpga4
 
   sem_init(&test_sem, 0, 0);
   DmaManager_init(&priv, &intarr[2]);
@@ -151,7 +151,7 @@ int main(int argc, const char **argv)
   PORTAL_PRINTF( "Main: before DmaManager_reference(%x)\n", srcAlloc);
   ref_srcAlloc = DmaManager_reference(&priv, srcAlloc);
   PORTAL_PRINTF( "Main: starting read %08x\n", numWords);
-  RtestRequest_startRead (&intarr[3], ref_srcAlloc, numWords, burstLen, 1);
+  ReadTestRequest_startRead (&intarr[3], ref_srcAlloc, numWords, burstLen, 1);
   PORTAL_PRINTF( "Main: waiting for semaphore1\n");
   sem_wait(&test_sem);
 
@@ -159,7 +159,7 @@ int main(int argc, const char **argv)
   for (i = 0; i < numWords; i++)
     srcBuffer[i] = 1-i;
   portalCacheFlush(srcAlloc, srcBuffer, alloc_sz, 1);
-  RtestRequest_startRead (&intarr[3], ref_srcAlloc, numWords, burstLen, 1);
+  ReadTestRequest_startRead (&intarr[3], ref_srcAlloc, numWords, burstLen, 1);
   PORTAL_PRINTF( "Main: waiting for semaphore2\n");
   sem_wait(&test_sem);
 

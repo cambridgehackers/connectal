@@ -19,10 +19,10 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import FIFO::*;
 import FIFOF::*;
 import Vector::*;
+import BuildVector::*;
 import GetPut::*;
 import ClientServer::*;
 
@@ -30,21 +30,24 @@ import Pipe::*;
 import MemTypes::*;
 import MemreadEngine::*;
 import Pipe::*;
+import HostInterface::*;
 
-interface RtestRequest;
+interface ReadTestRequest;
    method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
 endinterface
 
-interface Rtest;
-   interface RtestRequest request;
-   interface MemReadClient#(64) dmaClient;
+interface ReadTest;
+   interface ReadTestRequest request;
+   interface Vector#(1,MemReadClient#(DataBusWidth)) dmaClient;
 endinterface
 
-interface RtestIndication;
+interface ReadTestIndication;
    method Action readDone(Bit#(32) mismatchCount);
 endinterface
 
-module mkRtest#(RtestIndication indication) (Rtest);
+typedef TDiv#(DataBusWidth,32) DataBusWords;
+
+module mkReadTest#(ReadTestIndication indication) (ReadTest);
 
    Reg#(SGLId)   pointer <- mkReg(0);
    Reg#(Bit#(32))       numWords <- mkReg(0);
@@ -54,7 +57,7 @@ module mkRtest#(RtestIndication indication) (Rtest);
    Reg#(Bit#(32))   itersToStart <- mkReg(0);
    Reg#(Bit#(32))        wordsRead <- mkReg(0);
    Reg#(Bit#(32)) mismatchCounts <- mkReg(0);
-   MemreadEngine#(64,1,1)        re <- mkMemreadEngine;
+   MemreadEngine#(DataBusWidth,1,1)        re <- mkMemreadEngine;
    Bit#(32)             numBytes = extend(numWords)*4;
    FIFO#(Bit#(32)) checkDoneFifo <- mkFIFO();
    
@@ -69,7 +72,7 @@ module mkRtest#(RtestIndication indication) (Rtest);
       let misMatch = v != expectedV;
       mismatchCounts <= mismatchCounts + (misMatch ? 1 : 0);
       // $display("check v=%h expected=%h mismatch=%d", v, expectedV, misMatch);
-      let new_wordsRead = wordsRead+(64/32);
+      let new_wordsRead = wordsRead + fromInteger(valueOf(DataBusWords));
       if (new_wordsRead >= truncate(numBytes/4)) begin
 	 new_wordsRead = 0;
 	 checkDoneFifo.enq(mismatchCounts);
@@ -87,8 +90,8 @@ module mkRtest#(RtestIndication indication) (Rtest);
       itersToFinish <= itersToFinish - 1;
    endrule
    
-   interface dmaClient = re.dmaClient;
-   interface RtestRequest request;
+   interface dmaClient = vec(re.dmaClient);
+   interface ReadTestRequest request;
       method Action startRead(Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic) if (itersToStart == 0 && itersToFinish == 0);
 	 pointer <= rp;
 	 cf.enq(?);
