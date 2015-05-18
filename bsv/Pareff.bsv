@@ -141,22 +141,6 @@ module mkPareff(Pareff#(dataWidth) ifc)
 endmodule
 `endif
 
-`ifndef BSIM
-`ifndef XSIM
-module mkPareff(Pareff#(dataWidth) ifc);
-   method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
-   endmethod
-   method Action initfd(Bit#(32) id, Bit#(32) fd);
-   endmethod
-   method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v);
-   endmethod
-   method ActionValue#(Bit#(dataWidth)) read(Bit#(32) handle, Bit#(32) addr);
-      return 0;
-   endmethod
-endmodule
-`endif
-`endif
-
 module mkPareffDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
    provisos(Div#(serverBusWidth,8,dataWidthBytes),
 	    Mul#(dataWidthBytes,8,serverBusWidth),
