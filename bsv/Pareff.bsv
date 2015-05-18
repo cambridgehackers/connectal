@@ -155,9 +155,8 @@ module mkPareffDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
    Reg#(Bit#(BurstLenSize))  readLenReg <- mkReg(0);
    Reg#(Bit#(32))         readOffsetReg <- mkReg(0);
 
-   Reg#(Bit#(serverAddrWidth)) writeAddrr <- mkReg(0);
-   Reg#(Bit#(BurstLenSize))  writeLen <- mkReg(0);
-   Reg#(Bit#(MemTagSize)) writeId <- mkReg(0);
+   Reg#(Bit#(BurstLenSize))  writeLenReg <- mkReg(0);
+   Reg#(Bit#(32))         writeOffsetReg <- mkReg(0);
 
    let readLatency_I = 150;
    let writeLatency_I = 150;
@@ -234,46 +233,24 @@ module mkPareffDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
 	 endmethod
       endinterface
       interface Put writeData;
-	 method Action put(MemData#(serverBusWidth) resp) if (((writeLen > 0) || (writeLen == 0 && (cycles-tpl_1(writeDelayFifo.first)) > writeLatency)) && write_jitter);
-	    //let addrBeat <- writeAddrGenerator.addrBeat.get();
-	    //let addr = addrBeat.addr;
-	    //Bit#(bramAddrWidth) regFileAddr = truncate(addr/fromInteger(valueOf(TDiv#(serverBusWidth,8))));
-            //br.request.put(BRAMRequest{write:True, responseOnWrite:False, address:regFileAddr, datain:resp.data});
-	 Bit#(BurstLenSize) write_len = ?;
-	 Bit#(serverAddrWidth) write_addr = ?;
-	 Bit#(MemTagSize) write_id = ?;
-	 Bit#(8) handle = ?;
-	 if (writeLen == 0 && (cycles-tpl_1(writeDelayFifo.first)) > writeLatency) begin
-	    req_aw_b_ts <= cycles;
-	    let req = tpl_2(writeDelayFifo.first);
-	    writeDelayFifo.deq;
-	    write_addr = req.addr;
-	    write_len = req.burstLen>>beat_shift;
-	    write_id = req.tag;
-	    handle = req.addr[39:32];
-	    //$display("mkBsimHost::resp_write_a: %d %d", req.tag,  cycles-last_write_eob);
-	    //last_write_eob <= cycles;
-	 end
-	 else begin
-	    //$display("mkBsimHost::resp_write_b: %d %d", writeId,  cycles-last_write_eob);
-	    //last_write_eob <= cycles;
-	    handle = writeAddrr[39:32];
-	    write_len = writeLen;
-	    write_addr = writeAddrr;
-	    write_id = writeId;
-	 end
-	 rw.write(extend(handle), write_addr[31:0], resp.data);
-	 //$display("write_resp(%d): handle=%d addr=%h v=%h", cycles, handle, write_addr, resp.data);
-	 writeId <= write_id;
-	 writeLen <= write_len - 1;
-	 writeAddrr <= write_addr + fromInteger(valueOf(serverBusWidth)/8);
-	 if (write_len == 1) begin
-	    bFifo.enq(tuple2(cycles,write_id));
-	 end
-            //if (verbose) $display("%d write_server.writeAddr %h bc %d", cycles, req.addr, req.burstLen);
-            //if (verbose) $display("%d write_server.writeData %h %h %d", cycles, addr, resp.data, addrBeat.bc);
-            //if (addrBeat.last)
-               //writeTagFifo.enq(addrBeat.tag);
+	 method Action put(MemData#(serverBusWidth) resp) if (writeDelayFifo.notEmpty && (cycles-tpl_1(writeDelayFifo.first)) > writeLatency);
+	    match { .reqTime, .req } = writeDelayFifo.first;
+	    Bit#(BurstLenSize) writeLen = writeLenReg;
+	    Bit#(32) writeOffset = writeOffsetReg;
+	    Bit#(MemTagSize) tag = req.tag;
+	    Bit#(8) handle = req.addr[39:32];
+	    if (writeLenReg == 0) begin
+	       req_aw_b_ts <= cycles;
+	       writeLen = req.burstLen>>beat_shift;
+	       writeOffset = 0;
+	    end
+	    rw.write(extend(handle), req.addr[31:0] + writeOffset, resp.data);
+	    writeLenReg <= writeLen - 1;
+	    writeOffsetReg <= writeOffset + fromInteger(valueOf(serverBusWidth)/8);
+	    if (writeLen == 1) begin
+	       bFifo.enq(tuple2(cycles,tag));
+	       writeDelayFifo.deq;
+	    end
 	 endmethod
       endinterface
       interface Get writeDone;
