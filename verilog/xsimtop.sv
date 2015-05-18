@@ -67,9 +67,7 @@ endmodule
 import "DPI-C" function void pareff_init(input int id, input int handle, input int size);
 import "DPI-C" function void pareff_initfd(input int id, input int fd);
 import "DPI-C" function void write_pareff32(input int handle, input int addr, input int data);
-import "DPI-C" function void write_pareff64(input int handle, input int addr, input longint data);
 import "DPI-C" function int read_pareff32(input int handle, input int addr);
-import "DPI-C" function longint read_pareff64(input int handle, input int addr);
 
 module XsimMemReadWrite(input CLK,
 			input 		  CLK_GATE,
@@ -84,30 +82,32 @@ module XsimMemReadWrite(input CLK,
 			input [31:0] 	  initfd_id,
 			input [31:0] 	  initfd_fd,
 
-			input 		  en_read32,
-			input [31:0] 	  read32_addr,
-			input [31:0] 	  read32_handle,
-			output reg [31:0] read32_data,
+			output 		  rdy_readrequest,
+			input 		  en_readrequest,
+			input [31:0] 	  readrequest_addr,
+			input [31:0] 	  readrequest_handle,
 
-			input 		  en_read64,
-			input [31:0] 	  read64_addr,
-			input [31:0] 	  read64_handle,
-			output reg [63:0] read64_data,
+			input 		  en_readresponse,
+			output 		  rdy_readresponse,
+			output [31:0] 	  readresponse_data,
 
 			input 		  en_write32,
 			input [31:0] 	  write32_addr,
 			input [31:0] 	  write32_handle,
-			input [31:0] 	  write32_data,
-
-			input 		  en_write64,
-			input [31:0] 	  write64_addr,
-			input [31:0] 	  write64_handle,
-			input [63:0] 	  write64_data
+			input [31:0] 	  write32_data
 			);
+
+   reg 					  readresponse_valid_reg;
+   reg [31:0] 				  readresponse_data_reg;
+				  
+   assign rdy_readresponse = readresponse_valid_reg;
+   assign rdy_readrequest = !readresponse_valid_reg || en_readresponse;
+   assign readresponse_data = readresponse_data_reg;
 
    always @(posedge CLK) begin
       if (RST == 0) begin
-	 // do nothing
+	 readresponse_data_reg <= 32'haaaaaaaa;
+	 readresponse_valid_reg <= 0;
       end
       else begin
 	 if (en_init == 1)
@@ -115,16 +115,19 @@ module XsimMemReadWrite(input CLK,
 	 if (en_initfd == 1)
 	   pareff_initfd(initfd_id, initfd_fd);
 	 
-	 if (en_read32 == 1)
-	   read32_data = read_pareff32(read32_handle, read32_addr);
-	 if (en_read64 == 1) begin
-	    $display("read_pareff64_xsim handle=%h addr=%h", read64_handle, read64_addr);
-	    read64_data = read_pareff64(read64_handle, read64_addr);
+	 if (en_readresponse)
+	   $display("xsimtop.readresponse data=%h", readresponse_data_reg);
+	 if (en_readrequest == 1) begin
+	    readresponse_data_reg <= read_pareff32(readrequest_handle, readrequest_addr);
+	    $display("xsimtop.readrequest handle=%h addr=%h", readrequest_handle, readrequest_addr);
+	    readresponse_valid_reg <= 1;
+	 end
+	 else if (en_readresponse) begin
+	    readresponse_valid_reg <= 0;
+	    readresponse_data_reg <= 32'hbbbbbbbb;
 	 end
 	 if (en_write32 == 1)
 	   write_pareff32(write32_handle, write32_addr, write32_data);
-	 if (en_write64 == 1)
-	   write_pareff64(write64_handle, write64_addr, write64_data);
       end // else: !if(RST == 0)
    end // always @ (posedge CLK)
 endmodule

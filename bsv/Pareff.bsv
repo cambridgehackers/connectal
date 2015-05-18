@@ -31,7 +31,8 @@ interface Pareff#(numeric type dataWidth);
    method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
    method Action initfd(Bit#(32) id, Bit#(32) fd);
    method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v);
-   method ActionValue#(Bit#(dataWidth)) read(Bit#(32) handle, Bit#(32) addr);
+   method Action readrequest(Bit#(32) handle, Bit#(32) addr);
+   method ActionValue#(Bit#(dataWidth)) readresponse();
 endinterface
 
 `ifdef BSIM
@@ -46,6 +47,7 @@ import "BDPI" function ActionValue#(Bit#(64)) read_pareff64(Bit#(32) handle, Bit
 
 module mkPareff(Pareff#(dataWidth) ifc)
    provisos (Mul#(TDiv#(dataWidth, 32), 32, dataWidth));
+   FIFO#(Bit#(dataWidth)) dataFifo <- mkFIFO();
       method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
 	 let v <- pareff_init(id, handle, size);
 	 //return v;
@@ -63,7 +65,7 @@ module mkPareff(Pareff#(dataWidth) ifc)
 	  endfunction
 	  mapM_(uncurry(write32), zip(genVector(), vs));
       endmethod
-      method ActionValue#(Bit#(dataWidth)) read(Bit#(32) handle, Bit#(32) addr);
+      method Action  readrequest(Bit#(32) handle, Bit#(32) addr);
 	  function ActionValue#(Bit#(32)) read32(Integer i);
 	     actionvalue
 		let v <- read_pareff32(handle, addr+4*fromInteger(i));
@@ -71,7 +73,11 @@ module mkPareff(Pareff#(dataWidth) ifc)
 	     endactionvalue
 	  endfunction
    	  Vector#(TDiv#(dataWidth,32),Bit#(32)) vs <- mapM(read32, genVector());
-	  return pack(vs);
+	  dataFifo.enq(pack(vs));
+      endmethod
+      method ActionValue#(Bit#(dataWidth)) readresponse();
+          let v <- toGet(dataFifo).get();
+	  return v;
       endmethod
 endmodule
 `endif
@@ -81,9 +87,8 @@ interface XsimMemReadWrite;
    method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
    method Action initfd(Bit#(32) id, Bit#(32) fd);
    method Action write32(Bit#(32) handle, Bit#(32) addr, Bit#(32) v);
-   method Action write64(Bit#(32) handle, Bit#(32) addr, Bit#(64) v);
-   method ActionValue#(Bit#(32)) read32(Bit#(32) handle, Bit#(32) addr);
-   method ActionValue#(Bit#(64)) read64(Bit#(32) handle, Bit#(32) addr);
+   method Action readrequest(Bit#(32) handle, Bit#(32) addr);
+   method ActionValue#(Bit#(32)) readresponse();
 endinterface
 
 import "BVI" XsimMemReadWrite =
@@ -91,10 +96,9 @@ module mkXsimReadWrite(XsimMemReadWrite);
    method init(init_id, init_handle, init_size) enable (en_init);
    method initfd(initfd_id, initfd_fd) enable (en_initfd);
    method write32(write32_handle, write32_addr, write32_data) enable (en_write32);
-   method write64(write64_handle, write64_addr, write64_data) enable (en_write64);
-   method read32_data read32(read32_handle, read32_addr) enable (en_read32);
-   method read64_data read64(read64_handle, read64_addr) enable (en_read64);
-   schedule (init, initfd, write32, write64, read32, read64) CF (init, initfd, write32, write64, read32, read64);
+   method readrequest(readrequest_handle, readrequest_addr) enable (en_readrequest) ready (rdy_readrequest);
+   method readresponse_data readresponse() enable (en_readresponse) ready (rdy_readresponse);
+   schedule (init, initfd, write32, readrequest, readresponse) CF (init, initfd, write32, readrequest, readresponse);
 endmodule
 
 module mkPareff(Pareff#(dataWidth) ifc)
@@ -115,14 +119,23 @@ module mkPareff(Pareff#(dataWidth) ifc)
       endfunction
       mapM_(uncurry(write32), zip(genVector(), vs));
    endmethod
-   method ActionValue#(Bit#(dataWidth)) read(Bit#(32) handle, Bit#(32) addr);
-      function ActionValue#(Bit#(32)) read32(Integer i);
+   method Action readrequest(Bit#(32) handle, Bit#(32) addr);
+      function Action doreadrequest(Integer i);
+	 action
+	    rws[i].readrequest(handle, addr+4*fromInteger(i));
+	 endaction
+      endfunction
+      Vector#(TDiv#(dataWidth,32),Integer) indexes = genVector();
+      mapM_(doreadrequest, indexes);
+   endmethod
+   method ActionValue#(Bit#(dataWidth)) readresponse();
+      function ActionValue#(Bit#(32)) readresponse32(Integer i);
 	 actionvalue
-	    let v <- rws[i].read32(handle, addr+4*fromInteger(i));
+	    let v <- rws[i].readresponse();
 	    return v;
 	 endactionvalue
       endfunction
-      Vector#(TDiv#(dataWidth,32),Bit#(32)) vs <- mapM(read32, genVector());
+      Vector#(TDiv#(dataWidth,32),Bit#(32)) vs <- mapM(readresponse32, genVector());
       return pack(vs);
    endmethod
 endmodule
@@ -148,15 +161,16 @@ module mkPareffDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
    provisos(Div#(serverBusWidth,8,dataWidthBytes),
 	    Mul#(dataWidthBytes,8,serverBusWidth),
 	    Log#(dataWidthBytes,beatShift),
-	    Mul#(TDiv#(serverBusWidth, 32), 32, serverBusWidth)
+	    Mul#(TDiv#(serverBusWidth, 32), 32, serverBusWidth),
+	    Bits#(Tuple2#(Bit#(64), PhysMemRequest#(serverAddrWidth)), a__)
 	    );
 
    let verbose = False;
    Pareff#(serverBusWidth) rw <- mkPareff();
 
-   Reg#(Bit#(serverAddrWidth)) readAddrr <- mkReg(0);
-   Reg#(Bit#(BurstLenSize))  readLen <- mkReg(0);
-   Reg#(Bit#(MemTagSize)) readId <- mkReg(0);
+   Reg#(Bit#(BurstLenSize))  readLenReg <- mkReg(0);
+   Reg#(Bit#(32))         readOffsetReg <- mkReg(0);
+
    Reg#(Bit#(serverAddrWidth)) writeAddrr <- mkReg(0);
    Reg#(Bit#(BurstLenSize))  writeLen <- mkReg(0);
    Reg#(Bit#(MemTagSize)) writeId <- mkReg(0);
@@ -178,7 +192,7 @@ module mkPareffDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
    FIFOF#(Tuple2#(Bit#(64),PhysMemRequest#(serverAddrWidth))) writeDelayFifo <- mkSizedFIFOF(writeLatency_I);
 
    FIFOF#(Tuple2#(Bit#(64), Bit#(MemTagSize))) bFifo <- mkSizedFIFOF(writeLatency_I);
-
+   FIFOF#(Tuple2#(Bit#(MemTagSize),Bool)) taglastfifo <- mkFIFOF();
    rule increment_cycle;
       cycles <= cycles+1;
    endrule
@@ -191,6 +205,27 @@ module mkPareffDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
    
    let beat_shift = fromInteger(valueOf(beatShift));
 
+   rule read_rule if (readDelayFifo.notEmpty() && (cycles-tpl_1(readDelayFifo.first) > readLatency));
+	 match { .reqTime, .req } = readDelayFifo.first;
+	 Bit#(BurstLenSize) readLen = readLenReg;
+	 Bit#(32) readOffset = readOffsetReg;
+	 Bit#(MemTagSize) tag = req.tag;
+	 Bit#(8) handle = req.addr[39:32];
+
+	 if (readLen == 0) begin
+	    req_ar_b_ts <= cycles;
+	    readLen     = req.burstLen>>beat_shift;
+	    readOffset  = 0;
+	 end
+	 rw.readrequest(extend(handle), req.addr[31:0]+readOffset);
+	 let last = (readLen == 1);
+	 if (last)
+	    readDelayFifo.deq();
+	 taglastfifo.enq(tuple2(tag, last));
+	 readLenReg <= readLen - 1;
+	 readOffsetReg <= readOffset + fromInteger(valueOf(serverBusWidth)/8);
+   endrule
+
    interface PhysMemReadServer read_server;
       interface Put readReq;
 	 method Action put(PhysMemRequest#(serverAddrWidth) req);
@@ -200,38 +235,10 @@ module mkPareffDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
 	 endmethod
       endinterface
       interface Get readData;
-	 method ActionValue#(MemData#(serverBusWidth)) get() if (((readLen > 0) || (readLen == 0 && (cycles-tpl_1(readDelayFifo.first)) > readLatency)) && read_jitter);
-	 Bit#(BurstLenSize) read_len = ?;
-	 Bit#(serverAddrWidth) read_addr = ?;
-	 Bit#(MemTagSize) read_id = ?;
-	 Bit#(8) handle = ?;
-	 if (readLen == 0 && (cycles-tpl_1(readDelayFifo.first)) > readLatency) begin
-	    req_ar_b_ts <= cycles;
-	    let req = tpl_2(readDelayFifo.first);
-	    readDelayFifo.deq;
-	    read_len = req.burstLen>>beat_shift;
-	    read_addr = req.addr;
-	    read_id = req.tag;
-	    handle = req.addr[39:32];
-	    //if(id==1) $display("mkBsimHost::resp_read_a: %d %d %d", req.tag,  cycles-last_read_eob, (req.burstLen>>beat_shift)-1);
-	    //last_read_eob <= cycles;
-	 end 
-	 else begin
-	    //$display("mkBsimHost::resp_read_b: %d %d", readId,  cycles-last_read_eob);
-	    //last_read_eob <= cycles;
-	    handle = readAddrr[39:32];
-	    read_addr = readAddrr;
-	    read_id = readId;
-	    read_len = readLen;
-	 end
-	 Bit#(serverBusWidth) v <- rw.read(extend(handle), read_addr[31:0]);
-	 readLen <= read_len - 1;
-	 readId <= read_id;
-	 readAddrr <= read_addr + fromInteger(valueOf(serverBusWidth)/8);
-	 //$display("mkBsimHost::resp_read id=%d %d", read_id, read_len);
-	 //return Axi3ReadResponse { data: v, resp: 0, last: pack(readLen == 1), id: read_id};
-            //if (verbose) $display("%d read_server.readData (b) %h", cycles, data);
-            return MemData { data: v, tag: read_id, last: readLen == 1};
+	 method ActionValue#(MemData#(serverBusWidth)) get();
+	     match { .tag, .last } <- toGet(taglastfifo).get();
+ 	     let v <- rw.readresponse();
+	     return MemData { data: v, tag: tag, last: last };
 	 endmethod
       endinterface
    endinterface
