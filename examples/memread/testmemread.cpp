@@ -150,7 +150,7 @@ int main(int argc, const char ** argv)
   bool orig_test = true;
 
   if (orig_test){
-    fprintf(stderr, "Main::orig_test read %08x\n", numWords);
+    fprintf(stderr, "Main::orig_test read numWords=%d burstLen=%d iterCnt=%d\n", numWords, burstLen, iterCnt);
     portalTimerStart(0);
     device->startRead(ref_srcAlloc, 0, numWords, burstLen, iterCnt);
     sem_wait(&test_sem);
