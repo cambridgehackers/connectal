@@ -64,12 +64,12 @@ module XsimSink(input CLK, input CLK_GATE, input RST, input [31:0] portal, outpu
    end
 endmodule
 
-import "DPI-C" function void pareff_init(input int id, input int handle, input int size);
-import "DPI-C" function void pareff_initfd(input int id, input int fd);
-import "DPI-C" function void write_pareff32(input int handle, input int addr, input int data);
-import "DPI-C" function int read_pareff32(input int handle, input int addr);
+import "DPI-C" function void simDma_init(input int id, input int handle, input int size);
+import "DPI-C" function void simDma_initfd(input int id, input int fd);
+import "DPI-C" function void write_simDma32(input int handle, input int addr, input int data);
+import "DPI-C" function int read_simDma32(input int handle, input int addr);
 
-module XsimMemReadWrite(input CLK,
+module XsimDmaReadWrite(input CLK,
 			input 		  CLK_GATE,
 			input 		  RST,
 
@@ -111,15 +111,14 @@ module XsimMemReadWrite(input CLK,
       end
       else begin
 	 if (en_init == 1)
-	   pareff_init(init_id, init_handle, init_size);
+	   simDma_init(init_id, init_handle, init_size);
 	 if (en_initfd == 1)
-	   pareff_initfd(initfd_id, initfd_fd);
+	   simDma_initfd(initfd_id, initfd_fd);
 	 
-	 if (en_readresponse)
-	   $display("xsimtop.readresponse data=%h", readresponse_data_reg);
+	 //if (en_readresponse) $display("xsimtop.readresponse data=%h", readresponse_data_reg);
 	 if (en_readrequest == 1) begin
-	    readresponse_data_reg <= read_pareff32(readrequest_handle, readrequest_addr);
-	    $display("xsimtop.readrequest handle=%h addr=%h", readrequest_handle, readrequest_addr);
+	    readresponse_data_reg <= read_simDma32(readrequest_handle, readrequest_addr);
+	    //$display("xsimtop.readrequest handle=%h addr=%h", readrequest_handle, readrequest_addr);
 	    readresponse_valid_reg <= 1;
 	 end
 	 else if (en_readresponse) begin
@@ -127,7 +126,7 @@ module XsimMemReadWrite(input CLK,
 	    readresponse_data_reg <= 32'hbbbbbbbb;
 	 end
 	 if (en_write32 == 1)
-	   write_pareff32(write32_handle, write32_addr, write32_data);
+	   write_simDma32(write32_handle, write32_addr, write32_data);
       end // else: !if(RST == 0)
    end // always @ (posedge CLK)
 endmodule

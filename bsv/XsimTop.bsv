@@ -28,7 +28,7 @@ import HostInterface     :: *;
 import Pipe::*;
 import CnocPortal::*;
 import MemTypes          :: *;
-import Pareff            ::*;
+import SimDma            ::*;
 
 `ifndef PinType
 `define PinType Empty
@@ -81,7 +81,7 @@ endmodule
 module mkXsimMemoryConnection#(PhysMemMaster#(addrWidth, dataWidth) master)(Empty)
    provisos (Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
 	     Mul#(TDiv#(dataWidth, 32), 32, dataWidth));
-   PhysMemSlave#(addrWidth,dataWidth) slave <- mkPareffDmaMaster();
+   PhysMemSlave#(addrWidth,dataWidth) slave <- mkSimDmaDmaMaster();
    mkConnection(master, slave);
 endmodule
 

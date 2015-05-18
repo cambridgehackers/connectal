@@ -27,7 +27,7 @@ import GetPut::*;
 
 import MemTypes::*;
 
-interface Pareff#(numeric type dataWidth);
+interface SimDma#(numeric type dataWidth);
    method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
    method Action initfd(Bit#(32) id, Bit#(32) fd);
    method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v);
@@ -36,31 +36,31 @@ interface Pareff#(numeric type dataWidth);
 endinterface
 
 `ifdef BSIM
-import "BDPI" function ActionValue#(Bit#(32)) pareff_init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
-import "BDPI" function ActionValue#(Bit#(32)) pareff_initfd(Bit#(32) id, Bit#(32) fd);
+import "BDPI" function ActionValue#(Bit#(32)) simDma_init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
+import "BDPI" function ActionValue#(Bit#(32)) simDma_initfd(Bit#(32) id, Bit#(32) fd);
 
 // implemented in BsimDma.cpp
-import "BDPI" function Action write_pareff32(Bit#(32) handle, Bit#(32) addr, Bit#(32) v);
-import "BDPI" function Action write_pareff64(Bit#(32) handle, Bit#(32) addr, Bit#(64) v);
-import "BDPI" function ActionValue#(Bit#(32)) read_pareff32(Bit#(32) handle, Bit#(32) addr);
-import "BDPI" function ActionValue#(Bit#(64)) read_pareff64(Bit#(32) handle, Bit#(32) addr);
+import "BDPI" function Action write_simDma32(Bit#(32) handle, Bit#(32) addr, Bit#(32) v);
+import "BDPI" function Action write_simDma64(Bit#(32) handle, Bit#(32) addr, Bit#(64) v);
+import "BDPI" function ActionValue#(Bit#(32)) read_simDma32(Bit#(32) handle, Bit#(32) addr);
+import "BDPI" function ActionValue#(Bit#(64)) read_simDma64(Bit#(32) handle, Bit#(32) addr);
 
-module mkPareff(Pareff#(dataWidth) ifc)
+module mkSimDma(SimDma#(dataWidth) ifc)
    provisos (Mul#(TDiv#(dataWidth, 32), 32, dataWidth));
    FIFO#(Bit#(dataWidth)) dataFifo <- mkFIFO();
       method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
-	 let v <- pareff_init(id, handle, size);
+	 let v <- simDma_init(id, handle, size);
 	 //return v;
       endmethod
       method Action initfd(Bit#(32) id, Bit#(32) fd);
-	 let v <- pareff_initfd(id, fd);
+	 let v <- simDma_initfd(id, fd);
 	 //return v;
       endmethod
       method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v);
 	  Vector#(TDiv#(dataWidth, 32), Bit#(32)) vs = unpack(v);
 	  function Action write32(Integer i, Bit#(32) vv);
 	     action
-		write_pareff32(handle, addr+4*fromInteger(i), vv);
+		write_simDma32(handle, addr+4*fromInteger(i), vv);
 	     endaction
 	  endfunction
 	  mapM_(uncurry(write32), zip(genVector(), vs));
@@ -68,7 +68,7 @@ module mkPareff(Pareff#(dataWidth) ifc)
       method Action  readrequest(Bit#(32) handle, Bit#(32) addr);
 	  function ActionValue#(Bit#(32)) read32(Integer i);
 	     actionvalue
-		let v <- read_pareff32(handle, addr+4*fromInteger(i));
+		let v <- read_simDma32(handle, addr+4*fromInteger(i));
 		return v;
 	     endactionvalue
 	  endfunction
@@ -83,7 +83,7 @@ endmodule
 `endif
 		 
 `ifdef XSIM
-interface XsimMemReadWrite;
+interface XsimDmaReadWrite;
    method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
    method Action initfd(Bit#(32) id, Bit#(32) fd);
    method Action write32(Bit#(32) handle, Bit#(32) addr, Bit#(32) v);
@@ -91,8 +91,8 @@ interface XsimMemReadWrite;
    method ActionValue#(Bit#(32)) readresponse();
 endinterface
 
-import "BVI" XsimMemReadWrite =
-module mkXsimReadWrite(XsimMemReadWrite);
+import "BVI" XsimDmaReadWrite =
+module mkXsimReadWrite(XsimDmaReadWrite);
    method init(init_id, init_handle, init_size) enable (en_init);
    method initfd(initfd_id, initfd_fd) enable (en_initfd);
    method write32(write32_handle, write32_addr, write32_data) enable (en_write32);
@@ -101,9 +101,9 @@ module mkXsimReadWrite(XsimMemReadWrite);
    schedule (init, initfd, write32, readrequest, readresponse) CF (init, initfd, write32, readrequest, readresponse);
 endmodule
 
-module mkPareff(Pareff#(dataWidth) ifc)
+module mkSimDma(SimDma#(dataWidth) ifc)
    provisos (Mul#(TDiv#(dataWidth, 32), 32, dataWidth));
-   Vector#(TDiv#(dataWidth,32),XsimMemReadWrite) rws <- replicateM(mkXsimReadWrite());
+   Vector#(TDiv#(dataWidth,32),XsimDmaReadWrite) rws <- replicateM(mkXsimReadWrite());
    method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
       rws[0].init(id, handle, size);
    endmethod
@@ -143,7 +143,7 @@ endmodule
 
 `ifndef BSIM
 `ifndef XSIM
-module mkPareff(Pareff#(dataWidth) ifc);
+module mkSimDma(SimDma#(dataWidth) ifc);
    method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
    endmethod
    method Action initfd(Bit#(32) id, Bit#(32) fd);
@@ -159,7 +159,7 @@ endmodule
 `endif
 `endif
 
-module mkPareffDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
+module mkSimDmaDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
    provisos(Div#(serverBusWidth,8,dataWidthBytes),
 	    Mul#(dataWidthBytes,8,serverBusWidth),
 	    Log#(dataWidthBytes,beatShift),
@@ -168,7 +168,7 @@ module mkPareffDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
 	    );
 
    let verbose = False;
-   Pareff#(serverBusWidth) rw <- mkPareff();
+   SimDma#(serverBusWidth) rw <- mkSimDma();
 
    Reg#(Bit#(BurstLenSize))  readLenReg <- mkReg(0);
    Reg#(Bit#(32))         readOffsetReg <- mkReg(0);

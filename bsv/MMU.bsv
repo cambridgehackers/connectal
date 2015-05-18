@@ -33,7 +33,7 @@ import StmtFSM::*;
 import ClientServer::*;
 import ConnectalMemory::*;
 import ConnectalCompletionBuffer::*;
-import Pareff::*;
+import SimDma::*;
 
 
 typedef 32 MaxNumSGLists;
@@ -94,7 +94,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
    endrule
    
    // for simulators
-   Pareff#(32) pareff <- mkPareff();
+   SimDma#(32) simDma <- mkSimDma();
 
    // stage 0 (latency == 1)
    Vector#(2, FIFO#(ReqTup)) incomingReqs <- replicateM(mkFIFO);
@@ -281,7 +281,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
       let nextId <- sglId_gen.getTag;
       let resp = (fromInteger(iid) << 16) | extend(nextId);
       if (verbose) $display("mkMMU::idRequest %d", fd);
-      let va <- pareff.initfd(resp, fd);
+      let va <- simDma.initfd(resp, fd);
       mmuIndication.idResponse(resp);
    endmethod
    method Action idReturn(Bit#(32) sglId);
@@ -303,7 +303,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 	    $finish();
 	 end
 	 if(hostMapped)
-	    let va <- pareff.init({0,pointer[31:16]}, {0,pointer[15:0]}, len);
+	    let va <- simDma.init({0,pointer[31:16]}, {0,pointer[15:0]}, len);
          Bit#(IndexWidth) ind = truncate(pointerIndex);
 	 portsel(pages, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
              address:{truncate(pointer),ind}, datain:truncate(addr)});

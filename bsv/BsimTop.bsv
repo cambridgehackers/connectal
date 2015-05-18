@@ -37,7 +37,7 @@ import ClientServer      :: *;
 import MemSlaveEngine    :: *;
 import MemMasterEngine   :: *;
 import PCIE              :: *;
-import Pareff            :: *;
+import SimDma            :: *;
 
 `ifndef PinType
 `define PinType Empty
@@ -118,7 +118,7 @@ module  mkBsimHost#(Clock derived_clock, Reset derived_reset)(BsimHost#(clientAd
 	     Mul#(TDiv#(serverBusWidth, 32), 32, serverBusWidth),
              Mul#(TDiv#(serverBusWidth, 8), 8, serverBusWidth));
 
-   Vector#(nSlaves,PhysMemSlave#(serverAddrWidth,  serverBusWidth)) servers <- replicateM(mkPareffDmaMaster);
+   Vector#(nSlaves,PhysMemSlave#(serverAddrWidth,  serverBusWidth)) servers <- replicateM(mkSimDmaDmaMaster);
    PhysMemMaster#(clientAddrWidth, clientBusWidth) crw <- mkBsimCtrlReadWrite();
 
    interface mem_servers = servers;
