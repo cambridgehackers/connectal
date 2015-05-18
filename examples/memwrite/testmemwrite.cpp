@@ -24,9 +24,14 @@
 #include "MemwriteIndication.h"
 #include "MemwriteRequest.h"
 
-#ifdef BSIM
+#if defined(BSIM) || defined(BOARD_xsim)
+#ifdef BOARD_xsim
+static int numWords = 0x5000/4;
+static int iterCnt = 1;
+#else
 static int numWords = 0x124000/4;
 static int iterCnt = 2;
+#endif
 #else
 static int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
 static int iterCnt = 128;

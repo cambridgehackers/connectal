@@ -76,12 +76,12 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 	 we.writeServers[i].request.put(MemengineCmd{sglId:pointer, base:extend(writeOffset)+(fromInteger(i)*chunk), len:truncate(chunk), burstLen:truncate(burstLen*4)});
 	 Bit#(32) srcGen = (writeOffset/4)+(fromInteger(i)*truncate(chunk/4));
 	 srcGens[i] <= srcGen;
-	 $display("start %d, %h %d %h", i, srcGen, iterCnts[i], writeOffset);
+	 $display("start %d/%d, %h 0x%x %h", i, valueOf(NumEngineServers), srcGen, iterCnts[i], writeOffset);
 	 cfs[i].enq(?);
+	 iterCnts[i] <= iterCnts[i]-1;
       endrule
       rule finish;
-	 $display("finish %d %d", i, iterCnts[i]);
-	 iterCnts[i] <= iterCnts[i]-1;
+	 $display("finish %d 0x%x", i, iterCnts[i]);
 	 let rv <- we.writeServers[i].response.get;
 	 finishFifos[i].enq(rv);
       endrule
