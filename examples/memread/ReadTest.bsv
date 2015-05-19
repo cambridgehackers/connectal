@@ -52,7 +52,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
    Reg#(Bit#(BurstLenSize)) burstLenBytes <- mkReg(0);
    Reg#(Bit#(32))  itersToFinish <- mkReg(0);
    Reg#(Bit#(32))   itersToStart <- mkReg(0);
-   Reg#(Bit#(32))        wordsRead <- mkReg(0);
+   Reg#(Bit#(32))        bytesRead <- mkReg(0);
    Reg#(Bit#(32)) mismatchCounts <- mkReg(0);
    MemreadEngine#(DataBusWidth,1,1)        re <- mkMemreadEngine;
    FIFO#(Bit#(32)) checkDoneFifo <- mkFIFO();
@@ -72,21 +72,21 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
       // first pipeline stage
       if (re.dataPipes[0].notEmpty()) begin
 	 let v <- toGet(re.dataPipes[0]).get;
-	 let rval = wordsRead/4;
+	 let rval = bytesRead/4;
 	 let expectedV = {rval+1,rval};
 	 vReg <= v;
 	 vExpectedReg <= expectedV;
 	 validReg <= True;
-	 let next_wordsRead = wordsRead + fromInteger(valueOf(DataBusWidth))/8;
+	 let next_bytesRead = bytesRead + fromInteger(valueOf(DataBusWidth))/8;
 	 let next_bytesToRead = bytesToRead - fromInteger(valueOf(DataBusWidth))/8;
 	 let last = (bytesToRead <= fromInteger(valueOf(DataBusWidth))/8);
-	 //$display("check next_wordsRead=%d next_bytesToRead=%d last=%d", next_wordsRead, next_bytesToRead, last);
+	 //$display("check next_bytesRead=%d next_bytesToRead=%d last=%d", next_bytesRead, next_bytesToRead, last);
 	 if (last) begin
-	    next_wordsRead = 0;
+	    next_bytesRead = 0;
 	    next_bytesToRead = numBytes;
 	 end
 	 lastReg <= last;
-	 wordsRead <= next_wordsRead;
+	 bytesRead <= next_bytesRead;
 	 bytesToRead <= next_bytesToRead;
       end
       else begin
@@ -99,7 +99,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
 	 let expectedV = vExpectedReg;
 	 let misMatch = v != expectedV;
 	 mismatchCounts <= mismatchCounts + (misMatch ? 1 : 0);
-	 //$display("Test: check new=%x numBytes=%x wordsRead=%x misMatch=%x read=%x expect=%x", new_wordsRead, numBytes, wordsRead, misMatch, v, expectedV);
+	 //$display("Test: check new=%x numBytes=%x bytesRead=%x misMatch=%x read=%x expect=%x", new_bytesRead, numBytes, bytesRead, misMatch, v, expectedV);
 	 if (lastReg) begin
 	    checkDoneFifo.enq(mismatchCounts);
 	 end
@@ -127,7 +127,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
 	 itersToFinish <= ic;
 	 itersToStart <= ic;
 	 mismatchCounts <= 0;
-	 wordsRead <= 0;
+	 bytesRead <= 0;
       endmethod
    endinterface
 endmodule
