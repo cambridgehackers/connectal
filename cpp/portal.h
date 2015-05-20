@@ -61,7 +61,8 @@ typedef int  (*ITEMINIT)(struct PortalInternal *pint, void *param);
 typedef unsigned int (*READWORD)(struct PortalInternal *pint, volatile unsigned int **addr);
 typedef void (*WRITEWORD)(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 typedef void (*WRITEFDWORD)(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
-typedef volatile unsigned int *(*MAPCHANNEL)(struct PortalInternal *pint, unsigned int v);
+typedef volatile unsigned int *(*MAPCHANNELIND)(struct PortalInternal *pint, unsigned int v);
+typedef volatile unsigned int *(*MAPCHANNELREQ)(struct PortalInternal *pint, unsigned int v, unsigned int size);
 typedef void (*SENDMSG)(struct PortalInternal *pint, volatile unsigned int *buffer, unsigned int hdr, int sendFd);
 typedef int  (*RECVMSG)(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd);
 typedef int  (*BUSYWAIT)(struct PortalInternal *pint, unsigned int v, const char *str);
@@ -73,8 +74,8 @@ typedef struct {
     READWORD    read;
     WRITEWORD   write;
     WRITEFDWORD writefd;
-    MAPCHANNEL  mapchannelInd;
-    MAPCHANNEL  mapchannelReq;
+    MAPCHANNELIND  mapchannelInd;
+    MAPCHANNELREQ  mapchannelReq;
     SENDMSG     send;
     RECVMSG     recv;
     BUSYWAIT    busywait;
@@ -106,11 +107,11 @@ typedef struct PortalInternal {
     struct PortalInternal  *mux;
     int                    muxid;
     int                    busyType;
-    uint32_t               sharedMem;
 #define BUSY_TIMEWAIT 0
 #define BUSY_SPIN     1
 #define BUSY_EXIT     2
 #define BUSY_ERROR    3
+    uint32_t               sharedMem;
     int                    indication_index;
     int                    request_index;
     int                    client_fd_number;
@@ -171,6 +172,7 @@ enum {ITYPE_other, ITYPE_int16_t, ITYPE_uint16_t, ITYPE_uint32_t, ITYPE_uint64_t
       ITYPE_ChannelType, ITYPE_DmaDbgRec};
 
 typedef int Bool;   /* for GeneratedTypes.h */
+typedef uint32_t fixed32; /* for GeneratedTypes.h from protobuf */
 
 #define SHARED_DMA(REQPORTALNAME, INDPORTALNAME) {NULL, (REQPORTALNAME), MMURequest_reqinfo, (INDPORTALNAME), MMUIndication_reqinfo, MMUIndication_handleMessage, (void *)&manualMMU_Cb, manualWaitForResp}
 #define SHARED_HARDWARE(PORTALNAME) {(PORTALNAME), SharedMemoryPortalConfig_reqinfo, SharedMemoryPortalConfig_setSglId}
@@ -239,6 +241,8 @@ int busy_portal_null(struct PortalInternal *pint, unsigned int v, const char *st
 int notfull_null(PortalInternal *pint, unsigned int v);
 void send_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, unsigned int hdr, int sendFd);
 int recv_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd);
+int event_null(struct PortalInternal *pint);
+volatile unsigned int *mapchannel_req_generic(struct PortalInternal *pint, unsigned int v, unsigned int size);
 unsigned int read_portal_memory(PortalInternal *pint, volatile unsigned int **addr);
 void write_portal_memory(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 void write_fd_portal_memory(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
@@ -257,8 +261,9 @@ int connnectalJsonDecode(PortalInternal *pint, int channel, void *tempdata, Conn
 // Primitive used to send/recv data across a socket.
 void portalSendFd(int fd, void *data, int len, int sendFd);
 int portalRecvFd(int fd, void *data, int len, int *recvFd);
-void write_portal_fd_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v);
 unsigned int bsim_poll_interrupt(void);
+unsigned int read_pareff32(uint32_t pref, uint32_t offset);
+unsigned int read_pareff64(uint64_t pref, uint64_t offset);
 
 int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
 void initPortalFramework(void);

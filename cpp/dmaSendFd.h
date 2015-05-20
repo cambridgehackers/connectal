@@ -45,7 +45,7 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
     uint64_t borderVal[3];
     uint32_t indexVal[3];
     unsigned char idxOffset;
-#if defined(BSIM)
+#if defined(BSIM) || defined(BOARD_xsim)
     int size_accum = 0;
 #endif
 #ifdef __KERNEL__
@@ -56,7 +56,7 @@ PORTAL_PRINTF("[%s:%d]\n", __FUNCTION__, __LINE__);
     fmem = fget(fd);
 PORTAL_PRINTF("[%s:%d]\n", __FUNCTION__, __LINE__);
     sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
-#elif !defined(BSIM)
+#elif !defined(BSIM) && !defined(BOARD_xsim)
 #error
 #endif
   rc = id;
@@ -64,7 +64,7 @@ PORTAL_PRINTF("[%s:%d]\n", __FUNCTION__, __LINE__);
   for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
       long addr = sg_phys(sg);
       long len = sg->length;
-#elif defined(BSIM)
+#elif defined(BSIM) || defined(BOARD_xsim)
   for(i = 0; 1; i++){
     long len, addr;
     PortalElementSize portalElementSize;
@@ -80,7 +80,7 @@ PORTAL_PRINTF("[%s:%d]\n", __FUNCTION__, __LINE__);
     if (!len)
         break;
 #endif
-#if defined(BSIM)
+#if defined(BSIM) || defined(BOARD_xsim)
     addr = size_accum;
     size_accum += len;
     addr |= ((long)id) << 32; //[39:32] = truncate(pref);

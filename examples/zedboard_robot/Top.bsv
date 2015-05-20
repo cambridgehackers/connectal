@@ -47,31 +47,31 @@ import MaxSonarCtrlIndication::*;
 // defined by user
 import Controller::*;
 
-typedef enum {MaxSonarControllerRequest, MaxSonarControllerIndication, 
-	      GyroControllerRequest,     GyroControllerIndication, 
-	      HBridgeControllerRequest,  HBridgeControllerIndication, 
-	      HostMemServerRequest,      HostMemServerIndication,   
-	      HostMMURequest,            HostMMUIndication,
-	      GyroSampleStream,          MaxSonarSampleStream } IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_MaxSonarControllerRequest, IfcNames_MaxSonarControllerIndication, 
+	      IfcNames_GyroControllerRequest,     IfcNames_GyroControllerIndication, 
+	      IfcNames_HBridgeControllerRequest,  IfcNames_HBridgeControllerIndication, 
+	      IfcNames_HostMemServerRequest,      IfcNames_HostMemServerIndication,   
+	      IfcNames_HostMMURequest,            IfcNames_HostMMUIndication,
+	      IfcNames_GyroSampleStream,          IfcNames_MaxSonarSampleStream } IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,ZedboardRobotPins,1));
 
 
-   GyroCtrlIndicationProxy gcp <- mkGyroCtrlIndicationProxy(GyroControllerIndication);
-   MaxSonarCtrlIndicationProxy mscp <- mkMaxSonarCtrlIndicationProxy(MaxSonarControllerIndication);
-   HBridgeCtrlIndicationProxy hbcp <- mkHBridgeCtrlIndicationProxy(HBridgeControllerIndication);
+   GyroCtrlIndicationProxy gcp <- mkGyroCtrlIndicationProxy(IfcNames_GyroControllerIndication);
+   MaxSonarCtrlIndicationProxy mscp <- mkMaxSonarCtrlIndicationProxy(IfcNames_MaxSonarControllerIndication);
+   HBridgeCtrlIndicationProxy hbcp <- mkHBridgeCtrlIndicationProxy(IfcNames_HBridgeControllerIndication);
    Controller controller <- mkController(mscp.ifc, gcp.ifc, hbcp.ifc);
-   HBridgeCtrlRequestWrapper hbcw <- mkHBridgeCtrlRequestWrapper(HBridgeControllerRequest, controller.hbridge_req);
-   GyroCtrlRequestWrapper gcw <- mkGyroCtrlRequestWrapper(GyroControllerRequest, controller.gyro_req);
-   MaxSonarCtrlRequestWrapper mscw <- mkMaxSonarCtrlRequestWrapper(MaxSonarControllerRequest, controller.maxsonar_req);
+   HBridgeCtrlRequestWrapper hbcw <- mkHBridgeCtrlRequestWrapper(IfcNames_HBridgeControllerRequest, controller.hbridge_req);
+   GyroCtrlRequestWrapper gcw <- mkGyroCtrlRequestWrapper(IfcNames_GyroControllerRequest, controller.gyro_req);
+   MaxSonarCtrlRequestWrapper mscw <- mkMaxSonarCtrlRequestWrapper(IfcNames_MaxSonarControllerRequest, controller.maxsonar_req);
    
-   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
+   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_HostMMUIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUIndicationProxy.ifc);
-   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
+   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(IfcNames_HostMMURequest, hostMMU.request);
    
-   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
+   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_HostMemServerIndication);
    MemServer#(PhysAddrWidth,DataBusWidth,1) dma <- mkMemServer(nil, cons(controller.dmaClient,nil), cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
-   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
+   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(IfcNames_HostMemServerRequest, dma.request);
 
    Vector#(10,StdPortal) portals;
    portals[0] = gcp.portalIfc;

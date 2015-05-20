@@ -38,7 +38,7 @@ import MemServerIndication::*;
 import MMUIndication::*;
 import Perf::*;
 
-typedef enum {PerfIndication, PerfRequest, HostMemServerIndication, HostMemServerRequest, HostMMURequest, HostMMUIndication} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_PerfIndication, IfcNames_PerfRequest, IfcNames_HostMemServerIndication, IfcNames_HostMemServerRequest, IfcNames_HostMMURequest, IfcNames_HostMMUIndication} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
 
@@ -55,18 +55,18 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    writeClients[0] = dma_stream_write_chan.dmaClient;
    writeClients[1] = dma_debug_write_chan.dmaClient;
 
-   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
+   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_HostMMUIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUIndicationProxy.ifc);
-   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
+   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(IfcNames_HostMMURequest, hostMMU.request);
 
-   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
+   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_HostMemServerIndication);
    MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(readClients, writeClients, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
-   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
+   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(IfcNames_HostMemServerRequest, dma.request);
 
-   PerfIndicationProxy perfIndicationProxy <- mkPerfIndicationProxy(PerfIndication);
+   PerfIndicationProxy perfIndicationProxy <- mkPerfIndicationProxy(IfcNames_PerfIndication);
    PerfRequest perfRequest <- mkPerfRequest(perfIndicationProxy.ifc, dma_stream_read_chan.dmaServer,
 						  dma_stream_write_chan.dmaServer, dma_word_read_chan.dmaServer);
-   PerfRequestWrapper perfRequestWrapper <- mkPerfRequestWrapper(PerfRequest,perfRequest);
+   PerfRequestWrapper perfRequestWrapper <- mkPerfRequestWrapper(IfcNames_PerfRequest,perfRequest);
 
    Vector#(6,StdPortal) portals;
    portals[0] = perfRequestWrapper.portalIfc;

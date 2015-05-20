@@ -42,29 +42,29 @@ import SignalGenIndication::*;
 
 `define BlueScopeEventSampleLength 512
 
-typedef enum {HostMemServerIndication, HostMemServerRequest, HostMMURequest, HostMMUIndication, BlueScopeEventIndication, BlueScopeEventRequest, SignalGenIndication, SignalGenRequest} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_HostMemServerIndication, IfcNames_HostMemServerRequest, IfcNames_HostMMURequest, IfcNames_HostMMUIndication, IfcNames_BlueScopeEventIndication, IfcNames_BlueScopeEventRequest, IfcNames_SignalGenIndication, IfcNames_SignalGenRequest} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
 
-   BlueScopeEventIndicationProxy blueScopeEventIndicationProxy <- mkBlueScopeEventIndicationProxy(BlueScopeEventIndication);
+   BlueScopeEventIndicationProxy blueScopeEventIndicationProxy <- mkBlueScopeEventIndicationProxy(IfcNames_BlueScopeEventIndication);
    BlueScopeEventControl#(32) bs <- mkBlueScopeEvent(`BlueScopeEventSampleLength, blueScopeEventIndicationProxy.ifc);
-   BlueScopeEventRequestWrapper blueScopeEventRequestWrapper <- mkBlueScopeEventRequestWrapper(BlueScopeEventRequest,bs.requestIfc);
+   BlueScopeEventRequestWrapper blueScopeEventRequestWrapper <- mkBlueScopeEventRequestWrapper(IfcNames_BlueScopeEventRequest,bs.requestIfc);
 
-   SignalGenIndicationProxy signalGenIndicationProxy <- mkSignalGenIndicationProxy(SignalGenIndication);
+   SignalGenIndicationProxy signalGenIndicationProxy <- mkSignalGenIndicationProxy(IfcNames_SignalGenIndication);
    SignalGenRequest sg <- mkSignalGen(bs.bse, signalGenIndicationProxy.ifc);
-   SignalGenRequestWrapper signalGenRequestWrapper <- mkSignalGenRequestWrapper(SignalGenRequest,sg);
+   SignalGenRequestWrapper signalGenRequestWrapper <- mkSignalGenRequestWrapper(IfcNames_SignalGenRequest,sg);
 
 
    Vector#(1, MemWriteClient#(DataBusWidth)) writeClients = newVector();
    writeClients[0] = bs.writeClient;
 
-   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
+   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_HostMMUIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUIndicationProxy.ifc);
-   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
+   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(IfcNames_HostMMURequest, hostMMU.request);
 
-   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
+   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_HostMemServerIndication);
    MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(nil, writeClients, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
-   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
+   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(IfcNames_HostMemServerRequest, dma.request);
 
    Vector#(8,StdPortal) portals;
    portals[0] = signalGenRequestWrapper.portalIfc;

@@ -31,16 +31,16 @@ import Echo::*;
 import SwallowIF::*;
 import DisplayInd::*;
 
-typedef enum {EchoIndication, EchoRequest, Swallow, DisplayInd} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_EchoIndication, IfcNames_EchoRequest, IfcNames_Swallow, IfcNames_DisplayInd} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
-   EchoIndicationProxy echoIndicationProxy <- mkEchoIndicationProxy(EchoIndication);
-   DisplayIndProxy displayIndProxy <- mkDisplayIndProxy(DisplayInd);
+   EchoIndicationProxy echoIndicationProxy <- mkEchoIndicationProxy(IfcNames_EchoIndication);
+   DisplayIndProxy displayIndProxy <- mkDisplayIndProxy(IfcNames_DisplayInd);
    EchoRequestInternal echoRequestInternal <- mkEchoRequestInternal(echoIndicationProxy.ifc, displayIndProxy.ifc);
-   EchoRequestWrapper echoRequestWrapper <- mkEchoRequestWrapper(EchoRequest,echoRequestInternal.ifc);
+   EchoRequestWrapper echoRequestWrapper <- mkEchoRequestWrapper(IfcNames_EchoRequest,echoRequestInternal.ifc);
    
    Swallow swallow <- mkSwallow();
-   SwallowWrapper swallowWrapper <- mkSwallowWrapper(Swallow, swallow);
+   SwallowWrapper swallowWrapper <- mkSwallowWrapper(IfcNames_Swallow, swallow);
    
    Vector#(4,StdPortal) portals;
    portals[0] = echoIndicationProxy.portalIfc;

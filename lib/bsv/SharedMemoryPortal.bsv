@@ -267,7 +267,7 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 
    endrule
 
    rule sendHeader if (state == SendHeader && interruptStatus);
-      Bit#(16) messageBits = portal.messageSize(readyChannel);
+      Bit#(16) messageBits = portal.messageSize.size(readyChannel);
       Bit#(16) roundup = messageBits[4:0] == 0 ? 0 : 1;
       Bit#(16) numWords = (messageBits >> 5) + roundup;
       Bit#(16) totalWords = numWords + 1;

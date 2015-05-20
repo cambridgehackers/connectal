@@ -27,7 +27,7 @@ static int trace_json;// = 1;
 void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJsonInfo *info)
 {
     ConnectalParamJsonInfo *iparam = info->param;
-    char *datap = (char *)pint->item->mapchannelReq(pint, 0);
+    char *datap = (char *)pint->item->mapchannelInd(pint, 0);
     char *data = (char *)datap;
     data += sprintf(data, "{\"name\":\"%s\"", info->name);
     while(iparam->name) {

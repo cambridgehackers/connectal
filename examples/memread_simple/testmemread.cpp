@@ -47,7 +47,7 @@ size_t alloc_sz = test_sz;
 void dump(const char *prefix, char *buf, size_t len)
 {
     printf( "%s ", prefix);
-    for (int i = 0; i < (len > 16 ? 16 : len) ; i++)
+    for (unsigned int i = 0; i < (len > 16 ? 16 : len) ; i++)
 	printf( "%02x", (unsigned char)buf[i]);
     printf( "\n");
 }
@@ -66,12 +66,12 @@ public:
 int main(int argc, const char **argv)
 {
   MemreadRequestProxy *device = new MemreadRequestProxy(IfcNames_MemreadRequestS2H);
-  MemreadIndication *deviceIndication = new MemreadIndication(IfcNames_MemreadIndicationH2S);
+  MemreadIndication deviceIndication(IfcNames_MemreadIndicationH2S);
   MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
   MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
+  MemServerIndication hostMemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
+  MMUIndication hostMMUIndication(dma, IfcNames_MMUIndicationH2S);
 
   int srcAlloc;
   srcAlloc = portalAlloc(alloc_sz, 0);

@@ -28,12 +28,12 @@ import YuvIndication::*;
 import YuvRequest::*;
 import YuvIF::*;
 
-typedef enum {YuvIndicationPortal, YuvRequestPortal} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_YuvIndicationPortal, IfcNames_YuvRequestPortal} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
-   YuvIndicationProxy yuvIndicationProxy <- mkYuvIndicationProxy(YuvIndicationPortal);
+   YuvIndicationProxy yuvIndicationProxy <- mkYuvIndicationProxy(IfcNames_YuvIndicationPortal);
    YuvRequest yuvRequest <- mkYuvRequest(yuvIndicationProxy.ifc);
-   YuvRequestWrapper yuvRequestWrapper <- mkYuvRequestWrapper(YuvRequestPortal,yuvRequest);
+   YuvRequestWrapper yuvRequestWrapper <- mkYuvRequestWrapper(IfcNames_YuvRequestPortal,yuvRequest);
    
    Vector#(2,StdPortal) portals;
    portals[0] = yuvRequestWrapper.portalIfc; 

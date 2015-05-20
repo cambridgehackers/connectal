@@ -39,7 +39,7 @@ import MemServerIndication::*;
 import MMUIndication::*;
 import Smithwaterman::*;
 
-typedef enum {SmithwatermanIndication, SmithwatermanRequest, HostMemServerIndication, HostMemServerRequest, HostMMURequest, HostMMUIndication} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_SmithwatermanIndication, IfcNames_SmithwatermanRequest, IfcNames_HostMemServerIndication, IfcNames_HostMemServerRequest, IfcNames_HostMMURequest, IfcNames_HostMMUIndication} IfcNames deriving (Eq,Bits);
 typedef 1 DegPar;
 
 
@@ -55,17 +55,17 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    readClients[0] = setupA_read_client;
    readClients[1] = setupB_read_client;
 
-   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
+   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_HostMMUIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUIndicationProxy.ifc);
-   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
+   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(IfcNames_HostMMURequest, hostMMU.request);
 
-   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
+   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_HostMemServerIndication);
    MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(readClients, nil, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
-   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
+   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(IfcNames_HostMemServerRequest, dma.request);
 
-   SmithwatermanIndicationProxy smithwatermanIndicationProxy <- mkSmithwatermanIndicationProxy(SmithwatermanIndication);
+   SmithwatermanIndicationProxy smithwatermanIndicationProxy <- mkSmithwatermanIndicationProxy(IfcNames_SmithwatermanIndication);
    SmithwatermanRequest smithwatermanRequest <- mkSmithwatermanRequest(smithwatermanIndicationProxy.ifc, setupA_read_chan.dmaServer, setupB_read_chan.dmaServer);
-   SmithwatermanRequestWrapper smithwatermanRequestWrapper <- mkSmithwatermanRequestWrapper(SmithwatermanRequest,smithwatermanRequest);
+   SmithwatermanRequestWrapper smithwatermanRequestWrapper <- mkSmithwatermanRequestWrapper(IfcNames_SmithwatermanRequest,smithwatermanRequest);
 
    Vector#(6,StdPortal) portals;
    portals[0] = smithwatermanRequestWrapper.portalIfc;

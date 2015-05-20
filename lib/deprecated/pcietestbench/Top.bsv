@@ -9,12 +9,12 @@ import PcieTestBenchIndicationProxy::*;
 import PcieTestBenchRequestWrapper::*;
 import PcieTestBench::*;
 
-typedef enum {PcieTestBenchIndication, PcieTestBenchRequest} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_PcieTestBenchIndication, IfcNames_PcieTestBenchRequest} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalTop#(addrWidth));
-   PcieTestBenchIndicationProxy pcieTestBenchIndicationProxy <- mkPcieTestBenchIndicationProxy(PcieTestBenchIndication);
+   PcieTestBenchIndicationProxy pcieTestBenchIndicationProxy <- mkPcieTestBenchIndicationProxy(IfcNames_PcieTestBenchIndication);
    PcieTestBenchRequest pcieTestBenchRequest <- mkPcieTestBenchRequest(pcieTestBenchIndicationProxy.ifc);
-   PcieTestBenchRequestWrapper pcieTestBenchRequestWrapper <- mkPcieTestBenchRequestWrapper(PcieTestBenchRequest,pcieTestBenchRequest);
+   PcieTestBenchRequestWrapper pcieTestBenchRequestWrapper <- mkPcieTestBenchRequestWrapper(IfcNames_PcieTestBenchRequest,pcieTestBenchRequest);
    
    Vector#(2,StdPortal) portals;
    portals[0] = pcieTestBenchRequestWrapper.portalIfc; 

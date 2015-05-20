@@ -29,12 +29,12 @@ import BscanIndication::*;
 import BscanRequest::*;
 import BscanIF::*;
 
-typedef enum {BscanIndication, BscanRequest} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_BscanIndication, IfcNames_BscanRequest} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop#(HostInterface host)(StdConnectalTop#(PhysAddrWidth));
-   BscanIndicationProxy bscanIndicationProxy <- mkBscanIndicationProxy(BscanIndication);
+   BscanIndicationProxy bscanIndicationProxy <- mkBscanIndicationProxy(IfcNames_BscanIndication);
    BscanRequest bscanRequest <- mkBscanRequest(bscanIndicationProxy.ifc, host.bscan);
-   BscanRequestWrapper bscanRequestWrapper <- mkBscanRequestWrapper(BscanRequest,bscanRequest);
+   BscanRequestWrapper bscanRequestWrapper <- mkBscanRequestWrapper(IfcNames_BscanRequest,bscanRequest);
    
    Vector#(2,StdPortal) portals;
    portals[0] = bscanIndicationProxy.portalIfc;

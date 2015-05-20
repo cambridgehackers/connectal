@@ -19,11 +19,16 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+import Vector            :: *;
+import GetPut::*;
+import Connectable::*;
 import Portal            :: *;
 import Top               :: *;
 import HostInterface     :: *;
-import BlueNoC::*;
-import BnocPortal::*;
+import Pipe::*;
+import CnocPortal::*;
+import MemTypes          :: *;
+import SimDma            ::*;
 
 `ifndef PinType
 `define PinType Empty
@@ -37,33 +42,67 @@ module  mkXsimHost#(Clock derivedClock, Reset derivedReset)(XsimHost);
    interface derivedReset = derivedReset;
 endmodule
 
-interface XsimTop;
-   interface MsgSource#(4) msgSource;
-   interface MsgSink#(4) msgSink;
-   interface Clock singleClock;
-   interface Reset singleReset;
+interface XsimSource;
+    method Action beat(Bit#(32) v);
+endinterface
+import "BVI" XsimSource =
+module mkXsimSourceBVI#(Bit#(32) portal)(XsimSource);
+    port portal = portal;
+    method beat(beat) enable(en_beat);
+endmodule
+module mkXsimSource#(PortalMsgIndication indication)(Empty);
+   let tmp <- mkXsimSourceBVI(indication.id);
+   rule ind_dst_rdy;
+      indication.message.deq();
+      tmp.beat(indication.message.first());
+   endrule
+endmodule
+
+interface MsgSinkR#(numeric type bytes_per_beat);
+   method Bool src_rdy();
+   method Bit#(32) beat();
 endinterface
 
-module mkXsimTop(XsimTop);
+import "BVI" XsimSink =
+module mkXsimSinkBVI#(Bit#(32) portal)(MsgSinkR#(4));
+    port portal = portal;
+    method src_rdy src_rdy();
+    method beat beat();
+    schedule (src_rdy, beat) CF (src_rdy, beat);
+endmodule
+module mkXsimSink#(PortalMsgRequest request)(MsgSinkR#(4));
+   let sink <- mkXsimSinkBVI(request.id);
+
+   rule req_src_rdy if (sink.src_rdy);
+      request.message.enq(sink.beat);
+   endrule
+endmodule
+
+module mkXsimMemoryConnection#(PhysMemMaster#(addrWidth, dataWidth) master)(Empty)
+   provisos (Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
+	     Mul#(TDiv#(dataWidth, 32), 32, dataWidth));
+   PhysMemSlave#(addrWidth,dataWidth) slave <- mkSimDmaDmaMaster();
+   mkConnection(master, slave);
+endmodule
+
+module mkXsimTop(Empty);
    Clock derivedClock <- exposeCurrentClock;
    Reset derivedReset <- exposeCurrentReset;
-   Clock single_clock = derivedClock;
-   Reset single_reset = derivedReset;
 
    Reg#(Bool) dumpstarted <- mkReg(False);
    rule startdump if (!dumpstarted);
-      $dumpfile("dump.vcd");
-      $dumpvars;
+      //$dumpfile("dump.vcd");
+      //$dumpvars;
+      $display("XsimTop starting");
+      dumpstarted <= True;
    endrule
    XsimHost host <- mkXsimHost(derivedClock, derivedReset);
-   BluenocTop#(1,1) top <- mkBluenocTop(
+   let top <- mkCnocTop(
 `ifdef IMPORT_HOSTIF
        host
 `endif
        );
-
-   interface msgSink = top.requests[0];
-   interface msgSource = top.indications[0];
-   interface Clock singleClock = single_clock;
-   interface Reset singleReset = single_reset;
+   mapM_(mkXsimSource, top.indications);
+   mapM_(mkXsimSink, top.requests);
+   mapM_(mkXsimMemoryConnection, top.masters);
 endmodule

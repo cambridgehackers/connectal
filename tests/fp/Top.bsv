@@ -30,14 +30,14 @@ import FpIndication::*;
 import FpRequest::*;
 import Fp::*;
 
-typedef enum {FpIndication, FpRequest} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_FpIndication, IfcNames_FpRequest} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
 
    // instantiate user portals
-   FpIndicationProxy fpIndicationProxy <- mkFpIndicationProxy(FpIndication);
+   FpIndicationProxy fpIndicationProxy <- mkFpIndicationProxy(IfcNames_FpIndication);
    FpRequest fpRequest <- mkFpRequest(fpIndicationProxy.ifc);
-   FpRequestWrapper fpRequestWrapper <- mkFpRequestWrapper(FpRequest,fpRequest);
+   FpRequestWrapper fpRequestWrapper <- mkFpRequestWrapper(IfcNames_FpRequest,fpRequest);
    
    Vector#(2,StdPortal) portals;
    portals[0] = fpRequestWrapper.portalIfc; 

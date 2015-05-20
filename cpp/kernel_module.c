@@ -71,7 +71,7 @@ int main_program_finished = 0;
 
 static struct file_operations pa_fops = {
     .owner = THIS_MODULE,
-#ifdef BSIM
+#if defined(BSIM) || defined(BOARD_xsim)
     .read = connectal_kernel_read,
     .write = connectal_kernel_write,
 #endif

@@ -142,13 +142,13 @@ module mkMemServer#(Vector#(numReadClients, MemReadClient#(dataWidth)) readClien
 	 writer.request.setTileState(tc);
       endmethod
       method Action stateDbg(ChannelType rc);
-	 if (rc == Read)
+	 if (rc == ChannelType_Read)
 	    reader.request.stateDbg(rc);
 	 else
 	    writer.request.stateDbg(rc);
       endmethod
       method Action memoryTraffic(ChannelType rc);
-	 if (rc == Read) 
+	 if (rc == ChannelType_Read) 
 	    reader.request.memoryTraffic(rc);
 	 else 
 	    writer.request.memoryTraffic(rc);
@@ -228,11 +228,11 @@ module mkMemServerRead#(MemServerIndication indication,
 	    readers[i].tileControl.put(tc);
       endmethod
       method Action stateDbg(ChannelType rc);
-	 if (rc == Read)
+	 if (rc == ChannelType_Read)
 	    dbgFSM.start;
       endmethod
       method Action memoryTraffic(ChannelType rc);
-	 if (rc == Read)
+	 if (rc == ChannelType_Read)
 	    trafficFSM.start;
       endmethod
       method Action addrTrans(Bit#(32) pointer, Bit#(32) offset);
@@ -310,11 +310,11 @@ module mkMemServerWrite#(MemServerIndication indication,
 	    writers[i].tileControl.put(tc);
       endmethod
       method Action stateDbg(ChannelType rc);
-	 if (rc == Write)
+	 if (rc == ChannelType_Write)
 	    dbgFSM.start;
       endmethod
       method Action memoryTraffic(ChannelType rc);
-	 if (rc == Write) 
+	 if (rc == ChannelType_Write) 
 	    trafficFSM.start;
       endmethod
       method Action addrTrans(Bit#(32) pointer, Bit#(32) offset);

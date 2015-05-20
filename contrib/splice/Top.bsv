@@ -39,7 +39,7 @@ import MemServerIndication::*;
 import MMUIndication::*;
 import Splice::*;
 
-typedef enum {SpliceIndication, SpliceRequest, HostMemServerIndication, HostMemServerRequest, HostMMURequest, HostMMUIndication} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_SpliceIndication, IfcNames_SpliceRequest, IfcNames_HostMemServerIndication, IfcNames_HostMemServerRequest, IfcNames_HostMMURequest, IfcNames_HostMMUIndication} IfcNames deriving (Eq,Bits);
 typedef 1 DegPar;
 
 
@@ -61,17 +61,17 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    writeClients[0] = fetch_write_client;
 
 
-   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
+   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_HostMMUIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUIndicationProxy.ifc);
-   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
+   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(IfcNames_HostMMURequest, hostMMU.request);
 
-   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
+   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_HostMemServerIndication);
    MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(readClients, writeClients, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
-   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
+   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(IfcNames_HostMemServerRequest, dma.request);
    
-   SpliceIndicationProxy spliceIndicationProxy <- mkSpliceIndicationProxy(SpliceIndication);
+   SpliceIndicationProxy spliceIndicationProxy <- mkSpliceIndicationProxy(IfcNames_SpliceIndication);
    SpliceRequest spliceRequest <- mkSpliceRequest(spliceIndicationProxy.ifc, setupA_read_chan.dmaServer, setupB_read_chan.dmaServer, fetch_write_chan.dmaServer);
-   SpliceRequestWrapper spliceRequestWrapper <- mkSpliceRequestWrapper(SpliceRequest,spliceRequest);
+   SpliceRequestWrapper spliceRequestWrapper <- mkSpliceRequestWrapper(IfcNames_SpliceRequest,spliceRequest);
 
    Vector#(6,StdPortal) portals;
    portals[0] = spliceRequestWrapper.portalIfc;

@@ -39,7 +39,7 @@ import ZynqPcieTestIndication::*;
 import ZynqPcieTestIF::*;
 import SimpleIF::*;
 
-typedef enum {SimpleRequest, SimpleIndication, ZynqPcieTestRequest, ZynqPcieTestIndication} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_SimpleRequest, IfcNames_SimpleIndication, IfcNames_ZynqPcieTestRequest, IfcNames_ZynqPcieTestIndication} IfcNames deriving (Eq,Bits);
 
 interface ZynqPcie;
    (* prefix="PCIE" *)
@@ -99,9 +99,9 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,ZynqPcie,0));
    Reg#(Bit#(1)) resetSeenReg <- mkReg(0, clocked_by b2c_pcie_sys_reset_n.c, reset_by b2c_pcie_sys_reset_n.r);
 
    // instantiate zynq-side user portals
-   ZynqPcieTestIndicationProxy zynqPcieTestIndicationProxy <- mkZynqPcieTestIndicationProxy(ZynqPcieTestIndication);
+   ZynqPcieTestIndicationProxy zynqPcieTestIndicationProxy <- mkZynqPcieTestIndicationProxy(IfcNames_ZynqPcieTestIndication);
    ZynqPcieTest zynqPcieTest <- mkZynqPcieTest(linkUpBit, resetBit, resetSeenBit, zynqPcieTestIndicationProxy.ifc);
-   ZynqPcieTestRequestWrapper zynqPcieTestRequestWrapper <- mkZynqPcieTestRequestWrapper(ZynqPcieTestRequest,zynqPcieTest.request);
+   ZynqPcieTestRequestWrapper zynqPcieTestRequestWrapper <- mkZynqPcieTestRequestWrapper(IfcNames_ZynqPcieTestRequest,zynqPcieTest.request);
 
    // Connect the exposed BRAM client to the trace BRAM server in the PcieHost
    mkConnectionWithClocks(zynqPcieTest.traceBramClient, host.tpciehost.traceBramServer, defaultClock, defaultReset, host.portalClock, host.portalReset);
@@ -146,9 +146,9 @@ module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,ZynqPcie,0));
    //
    // Instantiate Simple portals as the test case connected to the x86 host via PCIe
    //
-   SimpleProxy simpleIndicationProxy <- mkSimpleProxy(SimpleIndication, clocked_by host.portalClock, reset_by host.portalReset);
+   SimpleProxy simpleIndicationProxy <- mkSimpleProxy(IfcNames_SimpleIndication, clocked_by host.portalClock, reset_by host.portalReset);
    Simple simpleRequest <- mkSimple(simpleIndicationProxy.ifc, clocked_by host.portalClock, reset_by host.portalReset);
-   SimpleWrapper simpleRequestWrapper <- mkSimpleWrapper(SimpleRequest,simpleRequest, clocked_by host.portalClock, reset_by host.portalReset);
+   SimpleWrapper simpleRequestWrapper <- mkSimpleWrapper(IfcNames_SimpleRequest,simpleRequest, clocked_by host.portalClock, reset_by host.portalReset);
    
    Vector#(2,StdPortal) pcieportals;
    pcieportals[0] = simpleIndicationProxy.portalIfc;

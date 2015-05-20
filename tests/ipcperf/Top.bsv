@@ -29,12 +29,12 @@ import IpcTestIndication::*;
 import IpcTestRequest::*;
 import IpcTest::*;
 
-typedef enum {IpcTestIndication, IpcTestRequest} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_IpcTestIndication, IfcNames_IpcTestRequest} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop#(HostInterface host)(StdConnectalTop#(PhysAddrWidth));
-   IpcTestIndicationProxy echoIndicationProxy <- mkIpcTestIndicationProxy(IpcTestIndication);
+   IpcTestIndicationProxy echoIndicationProxy <- mkIpcTestIndicationProxy(IfcNames_IpcTestIndication);
    IpcTestRequestInternal echoRequestInternal <- mkIpcTestRequestInternal(echoIndicationProxy.ifc);
-   IpcTestRequestWrapper echoRequestWrapper <- mkIpcTestRequestWrapper(IpcTestRequest,echoRequestInternal.ifc);
+   IpcTestRequestWrapper echoRequestWrapper <- mkIpcTestRequestWrapper(IfcNames_IpcTestRequest,echoRequestInternal.ifc);
    
    Vector#(2,StdPortal) portals;
    portals[0] = echoRequestWrapper.portalIfc; 

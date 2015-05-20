@@ -43,17 +43,17 @@ import NandSimNames::*;
 
 module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
 
-   NandCfgIndicationProxy nandCfgIndicationProxy <- mkNandCfgIndicationProxy(NandCfgIndication);
+   NandCfgIndicationProxy nandCfgIndicationProxy <- mkNandCfgIndicationProxy(IfcNames_NandCfgIndication);
    NandSim nandSim <- mkNandSim(nandCfgIndicationProxy.ifc);
-   NandCfgRequestWrapper nandCfgRequestWrapper <- mkNandCfgRequestWrapper(NandCfgRequest,nandSim.request);
+   NandCfgRequestWrapper nandCfgRequestWrapper <- mkNandCfgRequestWrapper(IfcNames_NandCfgRequest,nandSim.request);
 
-   MMUIndicationProxy backingStoreMMUIndicationProxy <- mkMMUIndicationProxy(BackingStoreMMUIndication);
+   MMUIndicationProxy backingStoreMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_BackingStoreMMUIndication);
    MMU#(PhysAddrWidth) backingStoreSGList <- mkMMU(0, True, backingStoreMMUIndicationProxy.ifc);
-   MMURequestWrapper backingStoreMMURequestWrapper <- mkMMURequestWrapper(BackingStoreMMURequest, backingStoreSGList.request);
+   MMURequestWrapper backingStoreMMURequestWrapper <- mkMMURequestWrapper(IfcNames_BackingStoreMMURequest, backingStoreSGList.request);
 
-   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
+   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_HostMemServerIndication);
    MemServer#(PhysAddrWidth,64,1) hostDma <- mkMemServer(nandSim.readClient, nandSim.writeClient, cons(backingStoreSGList, nil), hostMemServerIndicationProxy.ifc);
-   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, hostDma.request);
+   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(IfcNames_HostMemServerRequest, hostDma.request);
 
 
    Vector#(6,StdPortal) portals;

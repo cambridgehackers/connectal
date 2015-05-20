@@ -51,6 +51,10 @@ int busy_portal_null(struct PortalInternal *pint, unsigned int v, const char *st
 void enableint_portal_null(struct PortalInternal *pint, int val)
 {
 }
+int event_null(struct PortalInternal *pint)
+{
+    return -1;
+}
 unsigned int read_portal_memory(PortalInternal *pint, volatile unsigned int **addr)
 {
     unsigned int rc = **addr;
@@ -67,13 +71,17 @@ void write_fd_portal_memory(PortalInternal *pint, volatile unsigned int **addr, 
     **addr = v;
     *addr += 1;
 }
+volatile unsigned int *mapchannel_req_generic(struct PortalInternal *pint, unsigned int v, unsigned int size)
+{
+    return pint->item->mapchannelInd(pint, v);
+}
 volatile unsigned int *mapchannel_hardware(struct PortalInternal *pint, unsigned int v)
 {
     return &pint->map_base[PORTAL_FIFO(v)];
 }
 int notfull_hardware(PortalInternal *pint, unsigned int v)
 {
-    volatile unsigned int *tempp = pint->item->mapchannelReq(pint, v) + 1;
+    volatile unsigned int *tempp = pint->item->mapchannelInd(pint, v) + 1;
     return pint->item->read(pint, &tempp);
 }
 int busy_hardware(struct PortalInternal *pint, unsigned int v, const char *str)
@@ -173,5 +181,5 @@ static void write_fd_hardware(PortalInternal *pint, volatile unsigned int **addr
 }
 
 PortalTransportFunctions transportHardware = {
-    init_hardware, read_hardware, write_hardware, write_fd_hardware, mapchannel_hardware, mapchannel_hardware,
+    init_hardware, read_hardware, write_hardware, write_fd_hardware, mapchannel_hardware, mapchannel_req_generic,
     send_portal_null, recv_portal_null, busy_hardware, enableint_hardware, event_hardware, notfull_hardware};

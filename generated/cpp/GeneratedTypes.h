@@ -12,8 +12,13 @@ typedef struct DmaDbgRec {
     uint32_t z : 32;
     uint32_t w : 32;
 } DmaDbgRec;
-typedef enum DmaErrorType { DmaErrorType_DmaErrorNone, DmaErrorType_DmaErrorSGLIdOutOfRange_r, DmaErrorType_DmaErrorSGLIdOutOfRange_w, DmaErrorType_DmaErrorMMUOutOfRange_r, DmaErrorType_DmaErrorMMUOutOfRange_w, DmaErrorType_DmaErrorOffsetOutOfRange, DmaErrorType_DmaErrorSGLIdInvalid, DmaErrorType_DmaErrorTileTagOutOfRange } DmaErrorType;
+typedef enum DmaErrorType { DmaErrorNone, DmaErrorSGLIdOutOfRange_r, DmaErrorSGLIdOutOfRange_w, DmaErrorMMUOutOfRange_r, DmaErrorMMUOutOfRange_w, DmaErrorOffsetOutOfRange, DmaErrorSGLIdInvalid, DmaErrorTileTagOutOfRange } DmaErrorType;
 typedef uint32_t SpecialTypeForSendingFd;
+typedef enum TileState { Idle, Stopped, Running } TileState;
+typedef struct TileControl {
+    uint8_t tile : 2;
+    TileState state;
+} TileControl;
 
 
 int RtestRequest_startRead ( struct PortalInternal *p, const uint32_t pointer, const uint32_t numWords, const uint32_t burstLen, const uint32_t iterCnt );
@@ -59,28 +64,20 @@ int RtestIndicationJson_readDone ( struct PortalInternal *p, const uint32_t mism
 int RtestIndicationJson_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
 extern RtestIndicationCb RtestIndicationJsonProxyReq;
 
-int MemServerRequest_stop ( struct PortalInternal *p, const uint8_t tile );
-int MemServerRequest_kill ( struct PortalInternal *p, const uint8_t tile );
-int MemServerRequest_go ( struct PortalInternal *p, const uint8_t tile );
 int MemServerRequest_addrTrans ( struct PortalInternal *p, const uint32_t sglId, const uint32_t offset );
+int MemServerRequest_setTileState ( struct PortalInternal *p, const TileControl tc );
 int MemServerRequest_stateDbg ( struct PortalInternal *p, const ChannelType rc );
 int MemServerRequest_memoryTraffic ( struct PortalInternal *p, const ChannelType rc );
-enum { CHAN_NUM_MemServerRequest_stop,CHAN_NUM_MemServerRequest_kill,CHAN_NUM_MemServerRequest_go,CHAN_NUM_MemServerRequest_addrTrans,CHAN_NUM_MemServerRequest_stateDbg,CHAN_NUM_MemServerRequest_memoryTraffic};
-#define MemServerRequest_reqinfo 0x6000c
+enum { CHAN_NUM_MemServerRequest_addrTrans,CHAN_NUM_MemServerRequest_setTileState,CHAN_NUM_MemServerRequest_stateDbg,CHAN_NUM_MemServerRequest_memoryTraffic};
+#define MemServerRequest_reqinfo 0x4000c
 
-typedef struct {
-    uint8_t tile;
-} MemServerRequest_stopData;
-typedef struct {
-    uint8_t tile;
-} MemServerRequest_killData;
-typedef struct {
-    uint8_t tile;
-} MemServerRequest_goData;
 typedef struct {
     uint32_t sglId;
     uint32_t offset;
 } MemServerRequest_addrTransData;
+typedef struct {
+    TileControl tc;
+} MemServerRequest_setTileStateData;
 typedef struct {
     ChannelType rc;
 } MemServerRequest_stateDbgData;
@@ -88,28 +85,22 @@ typedef struct {
     ChannelType rc;
 } MemServerRequest_memoryTrafficData;
 typedef union {
-    MemServerRequest_stopData stop;
-    MemServerRequest_killData kill;
-    MemServerRequest_goData go;
     MemServerRequest_addrTransData addrTrans;
+    MemServerRequest_setTileStateData setTileState;
     MemServerRequest_stateDbgData stateDbg;
     MemServerRequest_memoryTrafficData memoryTraffic;
 } MemServerRequestData;
 int MemServerRequest_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
 typedef struct {
-    int (*stop) (  struct PortalInternal *p, const uint8_t tile );
-    int (*kill) (  struct PortalInternal *p, const uint8_t tile );
-    int (*go) (  struct PortalInternal *p, const uint8_t tile );
     int (*addrTrans) (  struct PortalInternal *p, const uint32_t sglId, const uint32_t offset );
+    int (*setTileState) (  struct PortalInternal *p, const TileControl tc );
     int (*stateDbg) (  struct PortalInternal *p, const ChannelType rc );
     int (*memoryTraffic) (  struct PortalInternal *p, const ChannelType rc );
 } MemServerRequestCb;
 extern MemServerRequestCb MemServerRequestProxyReq;
 
-int MemServerRequestJson_stop ( struct PortalInternal *p, const uint8_t tile );
-int MemServerRequestJson_kill ( struct PortalInternal *p, const uint8_t tile );
-int MemServerRequestJson_go ( struct PortalInternal *p, const uint8_t tile );
 int MemServerRequestJson_addrTrans ( struct PortalInternal *p, const uint32_t sglId, const uint32_t offset );
+int MemServerRequestJson_setTileState ( struct PortalInternal *p, const TileControl tc );
 int MemServerRequestJson_stateDbg ( struct PortalInternal *p, const ChannelType rc );
 int MemServerRequestJson_memoryTraffic ( struct PortalInternal *p, const ChannelType rc );
 int MemServerRequestJson_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);

@@ -32,13 +32,13 @@ import SPI::*;
 import SPIRequest::*;
 import SPIResponse::*;
 
-typedef enum {ControllerRequest, ControllerResponse} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_ControllerRequest, IfcNames_ControllerResponse} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop#(HostInterface host)(StdConnectalTop#(PhysAddrWidth));
 
-   SPIResponseProxy cp <- mkSPIResponseProxy(ControllerResponse);
+   SPIResponseProxy cp <- mkSPIResponseProxy(IfcNames_ControllerResponse);
    Controller controller <- mkController(cp.ifc, host.ps7.emiospi0);
-   SPIRequestWrapper cw <- mkSPIRequestWrapper(ControllerRequest, controller.req);
+   SPIRequestWrapper cw <- mkSPIRequestWrapper(IfcNames_ControllerRequest, controller.req);
    
    Vector#(2,StdPortal) portals;
    portals[0] = cp.portalIfc;

@@ -55,34 +55,36 @@ module mkAdapterToBus(AdapterToBus#(n,a))
    Bit#(TLog#(nwords)) max  = fromInteger(valueOf(nwords) - 1);
    Bit#(paddingsz) padding = 0;
 
-   FIFOF#(Bit#(aszn)) fifo <- mkFIFOF1();
+   Reg#(Bool) notEmptyReg <- mkReg(False);
+   Reg#(Bit#(aszn)) bits <- mkReg(0);
    Reg#(Bit#(TLog#(nwords)))   count <- mkReg(0);
    Reg#(Bit#(TAdd#(TLog#(asz),1)))   shift <- mkReg(0);
 
    interface PipeIn in;
-      method Action enq(a val);
-         fifo.enq({padding,pack(val)});
+      method Action enq(a val) if (!notEmptyReg);
+         bits <= {padding,pack(val)};
+	 notEmptyReg <= True;
       endmethod
-      method notFull = fifo.notFull;
+      method notFull = !notEmptyReg;
    endinterface
    interface PipeOut out;
-      method Bit#(n) first() if (fifo.notEmpty);
-         return rtruncate(fifo.first << shift);
+      method Bit#(n) first() if (notEmptyReg);
+         return rtruncate(bits);
       endmethod
-      method Action deq() if (fifo.notEmpty);
+      method Action deq() if (notEmptyReg);
          if (count == max)
             begin 
                count <= 0;
-	       shift <= 0;
-               fifo.deq;
+	       notEmptyReg <= False;
             end
          else
             begin
                count <= count + 1;
 	       shift <= shift + fromInteger(valueOf(n));
+	       bits <= (bits << valueOf(n));
             end   
       endmethod
-      method notEmpty = fifo.notEmpty;
+      method notEmpty = notEmptyReg;
    endinterface
 endmodule
 

@@ -31,15 +31,15 @@ import Swallow::*;
 import Echo::*;
 import SwallowIF::*;
 
-typedef enum {EchoIndication, EchoRequest, Swallow, EchoIndication2, EchoRequest2} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_EchoIndication, IfcNames_EchoRequest, IfcNames_Swallow, IfcNames_EchoIndication2, IfcNames_EchoRequest2} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
-   EchoIndicationProxy echoIndicationProxy <- mkEchoIndicationProxy(EchoIndication);
+   EchoIndicationProxy echoIndicationProxy <- mkEchoIndicationProxy(IfcNames_EchoIndication);
    EchoRequestInternal echoRequestInternal <- mkEchoRequestInternal(echoIndicationProxy.ifc);
-   EchoRequestWrapper echoRequestWrapper <- mkEchoRequestWrapper(EchoRequest,echoRequestInternal.ifc);
+   EchoRequestWrapper echoRequestWrapper <- mkEchoRequestWrapper(IfcNames_EchoRequest,echoRequestInternal.ifc);
    
    Swallow swallow <- mkSwallow();
-   SwallowWrapper swallowWrapper <- mkSwallowWrapper(Swallow, swallow);
+   SwallowWrapper swallowWrapper <- mkSwallowWrapper(IfcNames_Swallow, swallow);
    
    Vector#(3,StdPortal) portals;
    portals[0] = swallowWrapper.portalIfc; 

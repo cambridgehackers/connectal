@@ -53,12 +53,12 @@ def dtInfo(arg):
         rc['name'] = arg.name
         if lookupTable.get(arg.name):
             rc['name'] = lookupTable[arg.name]
-    if hasattr(arg, 'type'):
+    if hasattr(arg, 'type') and arg.type != 'Type':
         rc['type'] = arg.type
         if lookupTable.get(arg.type):
             rc['type'] = lookupTable[arg.type]
     if hasattr(arg, 'params'):
-        if arg.params is not None:
+        if arg.params is not None and arg.params != []:
             rc['params'] = [dtInfo(p) for p in arg.params]
     if hasattr(arg, 'elements'):
         if arg.type == 'Enum':
@@ -69,34 +69,31 @@ def dtInfo(arg):
 
 def piInfo(pitem):
     rc = {}
-    rc['name'] = pitem.name
-    rc['type'] = dtInfo(pitem.type)
+    rc['pname'] = pitem.name
+    rc['ptype'] = dtInfo(pitem.type)
     if hasattr(pitem, 'oldtype'):
         rc['oldtype'] = dtInfo(pitem.oldtype)
     return rc
 
 def declInfo(mitem):
     rc = {}
-    rc['name'] = mitem.name
-    rc['params'] = []
+    rc['dname'] = mitem.name
+    rc['dparams'] = []
     for pitem in mitem.params:
-        rc['params'].append(piInfo(pitem))
+        rc['dparams'].append(piInfo(pitem))
     return rc
 
 def classInfo(item):
     rc = {
         'Package': os.path.splitext(os.path.basename(item.package))[0],
-        'moduleContext': '',
-        'name': item.name,
-        'parentLportal': item.parentClass("portal"),
-        'parentPortal': item.parentClass("Portal"),
-        'decls': [],
+        'cname': item.name,
+        'cdecls': [],
     }
     for mitem in item.decls:
-        rc['decls'].append(declInfo(mitem))
+        rc['cdecls'].append(declInfo(mitem))
     return rc
 
-def serialize_json(interfaces, globalimports, dutname, interfaceList):
+def serialize_json(interfaces, globalimports):
     global verbose
     itemlist = []
     for item in interfaces:
@@ -104,38 +101,21 @@ def serialize_json(interfaces, globalimports, dutname, interfaceList):
     jfile = open(tempFilename, 'w')
     toplevel = {}
     toplevel['interfaces'] = itemlist
-    toplevel['interfacesList'] = interfaceList
-    gvlist = {}
-    for key, value in globalv.globalvars.iteritems():
-        gvlist[key] = {'type': value.type}
-        if value.type == 'Variable':
-            print 'Variable globalvar:', key, value
-        elif value.type == 'TypeDef':
-            if verbose:
-                print 'TYPEDEF globalvar:', key, value
-            gvlist[key]['name'] = value.name
-            gvlist[key]['tdtype'] = dtInfo(value.tdtype)
-            gvlist[key]['params'] = value.params
-        elif verbose:
-            print 'Unprocessed globalvar:', key, value
-    toplevel['globalvars'] = gvlist
     gdlist = []
     for item in globalv.globaldecls:
-        newitem = {'type': item.type}
-        if value.type == 'Variable':
-            print 'Variable globaldecl:', key, value
-        elif item.type == 'TypeDef':
-            newitem['name'] = item.name
+        if item.type == 'TypeDef':
+            newitem = {'dtype': item.type}
+            newitem['tname'] = item.name
             newitem['tdtype'] = dtInfo(item.tdtype)
-            newitem['params'] = item.params
+            if item.params:
+                 newitem['tparams'] = item.params
             if verbose:
                 print 'TYPEDEF globaldecl:', item, newitem
+            gdlist.append(newitem)
         elif verbose:
-            print 'Unprocessed globaldecl:', item, newitem
-        gdlist.append(newitem)
+            print 'Unprocessed globaldecl:', item
     toplevel['globaldecls'] = gdlist
     toplevel['globalimports'] = globalimports
-    toplevel['dutname'] = dutname
     if True:
         try:
             json.dump(toplevel, jfile, sort_keys = True, indent = 4)

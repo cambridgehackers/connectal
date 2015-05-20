@@ -29,12 +29,12 @@ import NocIndication::*;
 import NocRequest::*;
 import Noc2d::*;
 
-typedef enum {NocIndication, NocRequest} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_NocIndication, IfcNames_NocRequest} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
-   NocIndicationProxy nocIndicationProxy <- mkNocIndicationProxy(NocIndication);
+   NocIndicationProxy nocIndicationProxy <- mkNocIndicationProxy(IfcNames_NocIndication);
    NocRequest nocRequest <- mkNocRequest(nocIndicationProxy.ifc);
-   NocRequestWrapper nocRequestWrapper <- mkNocRequestWrapper(NocRequest,nocRequest);
+   NocRequestWrapper nocRequestWrapper <- mkNocRequestWrapper(IfcNames_NocRequest,nocRequest);
    
    Vector#(2,StdPortal) portals;
    portals[0] = nocRequestWrapper.portalIfc; 

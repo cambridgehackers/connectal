@@ -44,10 +44,7 @@ PortalPoller::PortalPoller()
     addFd(pipefd[0]);
 
     timeout = -1;
-#ifdef XSIM
-    timeout = 100;
-#endif
-#ifdef BSIM
+#if defined(BSIM) || defined(BOARD_xsim)
     timeout = 100;
 #endif
 }

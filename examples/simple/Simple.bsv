@@ -46,6 +46,10 @@ typedef struct{
    E1 e1;
    } S3 deriving (Bits);
 
+typedef Bit#(24) Address;
+typedef Bit#(32) Intptr;
+typedef Bit#(8) Byte;
+
 interface SimpleRequest;
     method Action say1(Bit#(32) v);
     method Action say2(Bit#(16) a, Bit#(16) b);
@@ -58,6 +62,11 @@ interface SimpleRequest;
     method Action sayv1 (Vector#(4, Int#(32)) arg1, Vector#(4, Int#(32)) arg2);
     method Action sayv2 (Vector#(16, Int#(16)) v);
     method Action sayv3 (Vector#(16, Int#(16)) v, Int#(16) count);
+    method Action reftest1(Address dst, Intptr dst_stride,
+              Address src1, Intptr i_src_stride1,
+              Address src2, Intptr i_src_stride2,
+              Byte i_width, Byte i_height, Bool qpelInt,
+              Bool hasWeight, Byte i_offset, Byte i_scale, Byte i_denom);
 endinterface
 
 typedef struct {
@@ -125,5 +134,15 @@ module mkSimple#(SimpleRequest indication)(Simple);
       if (verbose) $display("mkSimple::sayv3");
       indication.sayv3(v, count);
    endmethod
-   endinterface
+   method Action reftest1(Address dst, Intptr dst_stride,
+            Address src1, Intptr i_src_stride1,
+              Address src2, Intptr i_src_stride2,
+              Byte i_width, Byte i_height, Bool qpelInt,
+              Bool hasWeight, Byte i_offset, Byte i_scale, Byte i_denom);
+      //if (verbose) 
+      $display("mkSimple::reftest1 dst %x dst_stride %x src1 %x i_src_stride1 %x src2 %x i_src_stride2 %x i_width %x i_height %x qpelInt %x hasWeight %x i_offset %x i_scale %x i_denom %x\n",
+          dst, dst_stride, src1, i_src_stride1, src2, i_src_stride2, i_width, i_height, qpelInt, hasWeight, i_offset, i_scale, i_denom);
+      indication.reftest1(dst, dst_stride, src1, i_src_stride1, src2, i_src_stride2, i_width, i_height, qpelInt, hasWeight, i_offset, i_scale, i_denom);
+    endmethod
+  endinterface
 endmodule

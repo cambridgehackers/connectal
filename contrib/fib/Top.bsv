@@ -29,14 +29,14 @@ import FibIndication::*;
 import FibRequest::*;
 import FibWide::*;
 
-typedef enum {FibIndication, FibRequest} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_FibIndication, IfcNames_FibRequest} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
 
    // instantiate user portals
-   FibIndicationProxy fibIndicationProxy <- mkFibIndicationProxy(FibIndication);
+   FibIndicationProxy fibIndicationProxy <- mkFibIndicationProxy(IfcNames_FibIndication);
    FibRequest fibRequest <- mkFibRequest(fibIndicationProxy.ifc);
-   FibRequestWrapper fibRequestWrapper <- mkFibRequestWrapper(FibRequest,fibRequest);
+   FibRequestWrapper fibRequestWrapper <- mkFibRequestWrapper(IfcNames_FibRequest,fibRequest);
    
    Vector#(2,StdPortal) portals;
    portals[0] = fibRequestWrapper.portalIfc; 

@@ -66,26 +66,28 @@ exposedProxyInterfaceTemplate='''
 // exposed proxy interface
 interface %(Ifc)sOutput;
     interface PipePortal#(0, %(channelCount)s, SlaveDataBusWidth) portalIfc;
-    interface %(Package)s::%(Ifc)s ifc;
+    interface %(Package)s%(Ifc)s ifc;
 endinterface
 interface %(Dut)s;
     interface StdPortal portalIfc;
-    interface %(Package)s::%(Ifc)s ifc;
+    interface %(Package)s%(Ifc)s ifc;
 endinterface
 
 (* synthesize *)
-module %(moduleContext)s mk%(Ifc)sOutput(%(Ifc)sOutput);
+module mk%(Ifc)sOutput(%(Ifc)sOutput);
     Vector#(%(channelCount)s, PipeOut#(Bit#(SlaveDataBusWidth))) indicationPipes;
 %(indicationMethodRules)s
     PortalInterrupt#(SlaveDataBusWidth) intrInst <- mkPortalInterrupt(indicationPipes);
-    interface %(Package)s::%(Ifc)s ifc;
+    interface %(Package)s%(Ifc)s ifc;
 %(indicationMethods)s
     endinterface
     interface PipePortal portalIfc;
-        method Bit#(16) messageSize(Bit#(16) methodNumber);
+        interface PortalSize messageSize;
+        method Bit#(16) size(Bit#(16) methodNumber);
             case (methodNumber)%(messageSizes)s
             endcase
         endmethod
+        endinterface
         interface Vector requests = nil;
         interface Vector indications = indicationPipes;
         interface PortalInterrupt intr = intrInst;
@@ -103,7 +105,7 @@ module mk%(Dut)sSynth#(Bit#(SlaveDataBusWidth) id)(%(Dut)s);
       interface ReadOnly interrupt = ctrlPort.interrupt;
       interface WriteOnly num_portals = ctrlPort.num_portals;
     endinterface);
-  interface %(Package)s::%(Ifc)s ifc = dut.ifc;
+  interface %(Package)s%(Ifc)s ifc = dut.ifc;
 endmodule
 
 // exposed proxy MemPortal
@@ -145,10 +147,12 @@ module mk%(Ifc)sInput(%(Ifc)sInput);
     Vector#(%(channelCount)s, PipeIn#(Bit#(SlaveDataBusWidth))) requestPipeIn;
 %(methodRules)s
     interface PipePortal portalIfc;
-        method Bit#(16) messageSize(Bit#(16) methodNumber);
+        interface PortalSize messageSize;
+        method Bit#(16) size(Bit#(16) methodNumber);
             case (methodNumber)%(messageSizes)s
             endcase
         endmethod
+        endinterface
         interface Vector requests = requestPipeIn;
         interface Vector indications = nil;
         interface PortalInterrupt intr;
@@ -205,6 +209,14 @@ requestRuleTemplate='''
     requestPipeIn[%(channelNumber)s] = %(methodName)s_requestAdapter.in;
 '''
 
+methodDefTemplate='''
+    method Action %(methodName)s(%(formals)s);'''
+
+interfaceDefTemplate = '''
+interface %(Ifc)s;%(methodDef)s
+endinterface
+'''
+
 messageSizeTemplate='''
             %(channelNumber)s: return fromInteger(valueOf(SizeOf#(%(MethodName)s_Message)));'''
 
@@ -220,9 +232,6 @@ indicationRuleTemplate='''
     indicationPipes[%(channelNumber)s] = %(methodName)s_responseAdapter.out;
 '''
 
-indicationMethodDeclTemplate='''
-    method Action %(methodName)s(%(formals)s);'''
-
 indicationMethodTemplate='''
     method Action %(methodName)s(%(formals)s);
         %(methodName)s_responseAdapter.in.enq(%(MethodName)s_Message {%(structElements)s});
@@ -232,8 +241,10 @@ indicationMethodTemplate='''
 def toBsvType(titem, oitem):
     if oitem and oitem['name'].startswith('Tuple'):
         titem = oitem
-    if len(titem['params']):
+    if titem.get('params') and len(titem['params']):
         return '%s#(%s)' % (titem['name'], ','.join([str(toBsvType(p, None)) for p in titem['params']]))
+    elif titem['name'] == 'fixed32':
+        return 'Bit#(32)'
     else:
         return titem['name']
 
@@ -241,16 +252,21 @@ def collectElements(mlist, workerfn, name):
     methods = []
     mindex = 0
     for item in mlist:
+        if verbose:
+            print 'collectEl', item
+            for p in item['dparams']:
+                print 'collectEl/param', p
+                break
         sub = { 'dut': util.decapitalize(name),
           'Dut': util.capitalize(name),
-          'methodName': item['name'],
-          'MethodName': util.capitalize(item['name']),
+          'methodName': item['dname'],
+          'MethodName': util.capitalize(item['dname']),
           'channelNumber': mindex}
-        paramStructDeclarations = ['    %s %s;' % (toBsvType(p['type'], p.get('oldtype')), p['name']) for p in item['params']]
-        sub['paramType'] = ', '.join(['%s' % toBsvType(p['type'], p.get('oldtype')) for p in item['params']])
-        sub['formals'] = ', '.join(['%s %s' % (toBsvType(p['type'], p.get('oldtype')), p['name']) for p in item['params']])
-        structElements = ['%s: %s' % (p['name'], p['name']) for p in item['params']]
-        if not item['params']:
+        paramStructDeclarations = ['    %s %s;' % (toBsvType(p['ptype'], p.get('oldtype')), p['pname']) for p in item['dparams']]
+        sub['paramType'] = ', '.join(['%s' % toBsvType(p['ptype'], p.get('oldtype')) for p in item['dparams']])
+        sub['formals'] = ', '.join(['%s %s' % (toBsvType(p['ptype'], p.get('oldtype')), p['pname']) for p in item['dparams']])
+        structElements = ['%s: %s' % (p['pname'], p['pname']) for p in item['dparams']]
+        if not item['dparams']:
             paramStructDeclarations = ['    %s %s;' % ('Bit#(32)', 'padding')]
             structElements = ['padding: 0']
         sub['paramStructDeclarations'] = '\n'.join(paramStructDeclarations)
@@ -260,54 +276,152 @@ def collectElements(mlist, workerfn, name):
     return ''.join(methods)
 
 def fixupSubsts(item, suffix):
-    name = item['name']+suffix
-    dlist = item['decls']
+    name = item['cname']+suffix
+    dlist = item['cdecls']
     mkConnectionMethodRules = []
     outputPipes = []
     for m in dlist:
-        paramsForCall = ['request.%s' % p['name'] for p in m['params']]
-        msubs = {'methodName': m['name'],
+        if verbose:
+            print 'fixupSubsts', m
+        paramsForCall = ['request.%s' % p['pname'] for p in m['dparams']]
+        msubs = {'methodName': m['dname'],
                  'paramsForCall': ', '.join(paramsForCall)}
         mkConnectionMethodRules.append(mkConnectionMethodTemplate % msubs)
         outputPipes.append('        interface %(methodName)s_PipeOut = %(methodName)s_requestAdapter.out;' % msubs)
     substs = {
-        'Package': item['Package'],
+        'Package': '',
         'channelCount': len(dlist),
-        'moduleContext': item['moduleContext'],
-        'Ifc': item['name'],
+        'Ifc': item['cname'],
         'dut': util.decapitalize(name),
         'Dut': util.capitalize(name),
     }
+    if not generateInterfaceDefs:
+        substs['Package'] = item['Package'] + '::'
     substs['requestOutputPipeInterfaces'] = ''.join(
-        [requestOutputPipeInterfaceTemplate % {'methodName': p['name'],
-                                               'MethodName': util.capitalize(p['name'])} for p in dlist])
+        [requestOutputPipeInterfaceTemplate % {'methodName': m['dname'],
+                                               'MethodName': util.capitalize(m['dname'])} for m in dlist])
     substs['outputPipes'] = '\n'.join(outputPipes)
     substs['mkConnectionMethodRules'] = ''.join(mkConnectionMethodRules)
     substs['indicationMethodRules'] = collectElements(dlist, indicationRuleTemplate, name)
     substs['indicationMethods'] = collectElements(dlist, indicationMethodTemplate, name)
     substs['requestElements'] = collectElements(dlist, requestStructTemplate, name)
     substs['methodRules'] = collectElements(dlist, requestRuleTemplate, name)
+    substs['methodDef'] = collectElements(dlist, methodDefTemplate, name)
     substs['messageSizes'] = collectElements(dlist, messageSizeTemplate, name)
     return substs
 
-def generate_bsv(project_dir, noisyFlag, jsondata):
+def indent(f, indentation):
+    for i in xrange(indentation):
+        f.write(' ')
+
+def bemitStructMember(item, f, indentation):
+    if verbose:
+        print 'emitSM', item
+    indent(f, indentation)
+    f.write('%s %s' % (toBsvType(item['ptype'], item.get('oldtype')), item['pname']))
+    #if hasBitWidth(item['ptype']):
+    #    f.write(' : %d' % typeBitWidth(item['ptype']))
+    f.write(';\n')
+
+def bemitStruct(item, name, f, indentation):
+    indent(f, indentation)
+    if (indentation == 0):
+        f.write('typedef ')
+    f.write('struct {\n')
+    for e in item['elements']:
+        bemitStructMember(e, f, indentation+4)
+    indent(f, indentation)
+    f.write('}')
+    if (indentation == 0):
+        f.write(' %s deriving (Bits);' % name)
+    f.write('\n')
+
+def bemitType(item, name, f, indentation):
+    indent(f, indentation)
+    tmp = toBsvType(item, None)
+    if re.match('[0-9]+', tmp):
+        if True or verbose:
+            print 'bsvgen/bemitType: INFO ignore numeric typedef for', tmp
+        return
+    if not tmp or tmp[0] == '`' or tmp == 'Empty' or tmp[-2:] == '_P':
+        if True or verbose:
+            print 'bsvgen/bemitType: INFO ignore typedef for', tmp
+        return
+    if (indentation == 0):
+        f.write('typedef ')
+    f.write(tmp)
+    if (indentation == 0):
+        f.write(' %s deriving (Bits);' % name)
+    f.write('\n')
+
+def bemitEnum(item, name, f, indentation):
+    indent(f, indentation)
+    if (indentation == 0):
+        f.write('typedef ')
+    f.write('enum %s { ' % name)
+    indent(f, indentation)
+    f.write(', '.join(['%s_%s' % (name, e) for e in item['elements']]))
+    indent(f, indentation)
+    f.write(' }')
+    if (indentation == 0):
+        f.write(' %s deriving (Bits);' % name)
+    f.write('\n')
+
+def emitBDef(item, generated_hpp, indentation):
+    if verbose:
+        print 'bsvgen/emitBDef:', item
+    n = item['tname']
+    td = item['tdtype']
+    t = td.get('type')
+    if t == 'Enum':
+        bemitEnum(td, n, generated_hpp, indentation)
+    elif t == 'Struct':
+        bemitStruct(td, n, generated_hpp, indentation)
+    elif t == 'Type' or t == None:
+        bemitType(td, n, generated_hpp, indentation)
+    else:
+        print 'EMITCD', n, t, td
+
+def generate_bsv(project_dir, nf, aGenDef, jsondata):
+    global generateInterfaceDefs,verbose
+    verbose = nf
+    generateInterfaceDefs = aGenDef
     generatedPackageNames = []
+    if generateInterfaceDefs:
+        fname = os.path.join(project_dir, 'generatedbsv', 'GeneratedTypes.bsv')
+        if_file = util.createDirAndOpen(fname, 'w')
+        for v in jsondata['globaldecls']:
+            if v['dtype'] == 'TypeDef':
+                if v.get('tparams'):
+                    print 'Skipping BSV declaration for parameterized type', v['tname']
+                    continue
+                emitBDef(v, if_file, 0)
+        if_file.write('\n')
     for item in jsondata['interfaces']:
-        pname = item['name']
+        if verbose:
+            print 'genbsv', item
+        pname = item['cname']
         if pname in generatedPackageNames:
             continue
         generatedPackageNames.append(pname)
         fname = os.path.join(project_dir, 'generatedbsv', '%s.bsv' % pname)
         bsv_file = util.createDirAndOpen(fname, 'w')
         bsv_file.write('package %s;\n' % pname)
-        extraImports = (['import %s::*;\n' % pn for pn in [item['Package']] ]
-                   + ['import %s::*;\n' % i for i in jsondata['globalimports'] if not i in generatedPackageNames])
-        bsv_file.write(preambleTemplate % {'extraImports' : ''.join(extraImports)})
-        if noisyFlag:
+        if generateInterfaceDefs:
+            extraImports = ['HostInterface', 'GeneratedTypes']
+        else:
+            extraImports = [item['Package']]
+            extraImports += [i for i in jsondata['globalimports'] if not i in generatedPackageNames]
+        bsv_file.write(preambleTemplate % {'extraImports' : ''.join(['import %s::*;\n' % pn for pn in extraImports])})
+        if verbose:
             print 'Writing file ', fname
+        if generateInterfaceDefs:
+            if_file.write(interfaceDefTemplate % fixupSubsts(item, ''))
         
         bsv_file.write(exposedWrapperInterfaceTemplate % fixupSubsts(item, 'Wrapper'))
         bsv_file.write(exposedProxyInterfaceTemplate % fixupSubsts(item, 'Proxy'))
         bsv_file.write('endpackage: %s\n' % pname)
         bsv_file.close()
+    if generateInterfaceDefs:
+        if_file.close()
 

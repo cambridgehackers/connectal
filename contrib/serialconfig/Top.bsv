@@ -29,12 +29,12 @@ import SerialconfigIndication::*;
 import SerialconfigRequest::*;
 import Serialconfig::*;
 
-typedef enum {SerialconfigIndication, SerialconfigRequest} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_SerialconfigIndication, IfcNames_SerialconfigRequest} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
-   SerialconfigIndicationProxy serialconfigIndicationProxy <- mkSerialconfigIndicationProxy(SerialconfigIndication);
+   SerialconfigIndicationProxy serialconfigIndicationProxy <- mkSerialconfigIndicationProxy(IfcNames_SerialconfigIndication);
    SerialconfigRequest serialconfigRequest <- mkSerialconfigRequest(serialconfigIndicationProxy.ifc);
-   SerialconfigRequestWrapper serialconfigRequestWrapper <- mkSerialconfigRequestWrapper(SerialconfigRequest,serialconfigRequest);
+   SerialconfigRequestWrapper serialconfigRequestWrapper <- mkSerialconfigRequestWrapper(IfcNames_SerialconfigRequest,serialconfigRequest);
    
    Vector#(2,StdPortal) portals;
    portals[0] = serialconfigRequestWrapper.portalIfc; 

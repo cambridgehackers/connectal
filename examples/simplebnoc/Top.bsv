@@ -24,25 +24,24 @@ import Connectable::*;
 import CtrlMux::*;
 import Portal::*;
 import HostInterface::*;
-import BlueNoC::*;
-import BnocPortal::*;
+import CnocPortal::*;
 import Simple::*;
 import SimpleRequest::*;
 
-typedef enum {FooRequest, FooIndication, SimpleRequestS2H, SimpleRequestH2S} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_FooRequest, IfcNames_FooIndication, IfcNames_SimpleRequestS2H, IfcNames_SimpleRequestH2S} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
    // the indications from simpleRequest will be connected to the request interface to simpleReuqest2
    SimpleRequestOutput lSimpleRequestOutput <- mkSimpleRequestOutput;
    Simple simple1 <- mkSimple(lSimpleRequestOutput.ifc);
-   SimpleRequestWrapper lSimpleRequestInput <- mkSimpleRequestWrapper(SimpleRequestS2H,simple1.request);
+   SimpleRequestWrapper lSimpleRequestInput <- mkSimpleRequestWrapper(IfcNames_SimpleRequestS2H,simple1.request);
 
-   SimpleRequestProxy simple2Proxy <- mkSimpleRequestProxy(SimpleRequestH2S);
+   SimpleRequestProxy simple2Proxy <- mkSimpleRequestProxy(IfcNames_SimpleRequestH2S);
    Simple simple2 <- mkSimple(simple2Proxy.ifc);
    SimpleRequestInput simple2Wrapper <- mkSimpleRequestInput;
    mkConnection(simple2Wrapper.pipes, simple2.request);
 
-   // now connect them via a BlueNoC link
+   // now connect them via a Cnoc link
    MsgSource#(4) simpleMsgSource <- mkPortalMsgIndication(lSimpleRequestOutput.portalIfc);
    MsgSink#(4) simpleMsgSink <- mkPortalMsgRequest(simple2Wrapper.portalIfc);
    mkConnection(simpleMsgSource, simpleMsgSink);

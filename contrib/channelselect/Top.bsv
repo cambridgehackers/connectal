@@ -36,19 +36,15 @@ import ChannelSelectTestIndication::*;
 import DDSTestRequest::*;
 import DDSTestIndication::*;
 
-typedef enum { ChannelSelectTestIndication, ChannelSelectTestRequest, DDSTestIndication, DDSTestRequest} IfcNames deriving (Eq,Bits);
+typedef enum { IfcNames_ChannelSelectTestIndication, IfcNames_ChannelSelectTestRequest, IfcNames_DDSTestIndication, IfcNames_DDSTestRequest} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
-
-   ChannelSelectTestIndicationProxy channelSelectTestIndicationProxy <- mkChannelSelectTestIndicationProxy(ChannelSelectTestIndication);
-   
+   ChannelSelectTestIndicationProxy channelSelectTestIndicationProxy <- mkChannelSelectTestIndicationProxy(IfcNames_ChannelSelectTestIndication);
    ChannelSelectTestRequest channelSelectTestRequest <- mkChannelSelectTestRequest(channelSelectTestIndicationProxy.ifc);
-
-   ChannelSelectTestRequestWrapper channelSelectTestRequestWrapper <- mkChannelSelectTestRequestWrapper(ChannelSelectTestRequest, channelSelectTestRequest);
-
-   DDSTestIndicationProxy ddsTestIndicationProxy <- mkDDSTestIndicationProxy(DDSTestIndication);
+   ChannelSelectTestRequestWrapper channelSelectTestRequestWrapper <- mkChannelSelectTestRequestWrapper(IfcNames_ChannelSelectTestRequest, channelSelectTestRequest);
+   DDSTestIndicationProxy ddsTestIndicationProxy <- mkDDSTestIndicationProxy(IfcNames_DDSTestIndication);
    DDSTestRequest ddsTestRequest <- mkDDSTestRequest(ddsTestIndicationProxy.ifc);
-   DDSTestRequestWrapper ddsTestRequestWrapper <- mkDDSTestRequestWrapper(DDSTestRequest, ddsTestRequest);
+   DDSTestRequestWrapper ddsTestRequestWrapper <- mkDDSTestRequestWrapper(IfcNames_DDSTestRequest, ddsTestRequest);
 
    Vector#(4,StdPortal) portals;
    portals[0] = channelSelectTestRequestWrapper.portalIfc;

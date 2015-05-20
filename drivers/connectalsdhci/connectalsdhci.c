@@ -10,6 +10,8 @@
 
 #include <linux/module.h>
 #include <linux/platform_device.h>
+#include <asm/io.h>
+#include <linux/clk.h>
 
 // defined in drivers/mmc/host/sdhci-of-xilinxps.c
 extern int sdhci_zynq_remove(struct platform_device *pdev);
@@ -26,12 +28,12 @@ static const struct dev_pm_ops xsdhcips_dev_pm_ops = {
 #define XSDHCIPS_PM	NULL
 #endif /* ! CONFIG_PM_SLEEP */
 
-
 static const struct of_device_id sdhci_zynq_of_match[] = {
 	{ .compatible = "connectalsdhci" },
 	{},
 };
 MODULE_DEVICE_TABLE(of, sdhci_zynq_of_match);
+
 
 static struct platform_driver sdhci_zynq_driver = {
 	.driver = {
@@ -40,8 +42,8 @@ static struct platform_driver sdhci_zynq_driver = {
 		.of_match_table = sdhci_zynq_of_match,
 		.pm = XSDHCIPS_PM,
 	},
-	.probe = sdhci_zynq_probe,
-	.remove = sdhci_zynq_remove,
+	.probe = local_zynq_probe,
+	.remove = local_zynq_remove,
 };
 
 module_platform_driver(sdhci_zynq_driver);

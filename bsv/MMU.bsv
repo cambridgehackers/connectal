@@ -33,6 +33,7 @@ import StmtFSM::*;
 import ClientServer::*;
 import ConnectalMemory::*;
 import ConnectalCompletionBuffer::*;
+import SimDma::*;
 
 
 typedef 32 MaxNumSGLists;
@@ -48,13 +49,6 @@ typedef struct {
    SGListId             id;
    Bit#(MemOffsetSize) off;
 } ReqTup deriving (Eq,Bits,FShow);
-
-`ifdef BSIM
-`ifndef PCIE
-import "BDPI" function ActionValue#(Bit#(32)) pareff_init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
-import "BDPI" function ActionValue#(Bit#(32)) pareff_initfd(Bit#(32) id, Bit#(32) fd);
-`endif
-`endif
 
 interface MMU#(numeric type addrWidth);
    interface MMURequest request;
@@ -87,7 +81,7 @@ typedef struct {DmaErrorType errorType;
    } DmaError deriving (Bits);
 
 // the address translation servers (addr[0], addr[1]) have a latency of 8 and are fully pipelined
-module mkMMU#(Integer iid, Bool bsimMMap, MMUIndication mmuIndication)(MMU#(addrWidth))
+module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(addrWidth))
    provisos(Log#(MaxNumSGLists, listIdxSize),
 	    Add#(listIdxSize,8, entryIdxSize),
 	    Add#(a__,addrWidth,MemOffsetSize));
@@ -99,6 +93,9 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUIndication mmuIndication)(MMU#(addr
       let __x <- sglId_gen.complete;
    endrule
    
+   // for simulators
+   SimDma#(32) simDma <- mkSimDma();
+
    // stage 0 (latency == 1)
    Vector#(2, FIFO#(ReqTup)) incomingReqs <- replicateM(mkFIFO);
 
@@ -271,6 +268,9 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUIndication mmuIndication)(MMU#(addr
 `ifdef BSIM
 		rv = rv | (fromInteger(iid)<<valueOf(addrWidth)-3);
 `endif
+`ifdef XSIM
+		rv = rv | (fromInteger(iid)<<valueOf(addrWidth)-3);
+`endif
 		return rv;
 	     endmethod
 	  endinterface
@@ -281,9 +281,7 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUIndication mmuIndication)(MMU#(addr
       let nextId <- sglId_gen.getTag;
       let resp = (fromInteger(iid) << 16) | extend(nextId);
       if (verbose) $display("mkMMU::idRequest %d", fd);
-`ifdef BSIM
-      let va <- pareff_initfd(resp, fd);
-`endif
+      let va <- simDma.initfd(resp, fd);
       mmuIndication.idResponse(resp);
    endmethod
    method Action idReturn(Bit#(32) sglId);
@@ -304,12 +302,8 @@ module mkMMU#(Integer iid, Bool bsimMMap, MMUIndication mmuIndication)(MMU#(addr
 	    $display("mkMMU::sglist ERROR");
 	    $finish();
 	 end
-`ifdef BSIM
-`ifndef PCIE
-	 if(bsimMMap) 
-	    let va <- pareff_init({0,pointer[31:16]}, {0,pointer[15:0]}, len);
-`endif
-`endif
+	 if(hostMapped)
+	    let va <- simDma.init({0,pointer[31:16]}, {0,pointer[15:0]}, len);
          Bit#(IndexWidth) ind = truncate(pointerIndex);
 	 portsel(pages, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
              address:{truncate(pointer),ind}, datain:truncate(addr)});

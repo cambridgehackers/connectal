@@ -1,0 +1,33 @@
+syntax = "proto2";
+package echo;
+
+message EchoSay {
+  required fixed32 v = 1;
+}
+message EchoSay2 {
+  required fixed32 a = 1;
+  required fixed32 b = 2;
+}
+message EchoLeds {
+  required fixed32 v = 1;
+}
+message EchoHeard {
+  required fixed32 v = 1;
+}
+message EchoHeard2 {
+  required fixed32 a = 1;
+  required fixed32 b = 2;
+}
+
+message Empty {
+}
+
+service EchoRequest {
+  rpc say (EchoSay) returns (Empty);
+  rpc say2 (EchoSay2) returns (Empty);
+  rpc setLeds (EchoLeds) returns (Empty);
+}
+service EchoIndication {
+  rpc heard (EchoHeard) returns (Empty);
+  rpc heard2 (EchoHeard2) returns (Empty);
+}

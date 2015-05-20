@@ -32,17 +32,17 @@ import SignalGenIndication::*;
 
 `define BlueScopeEventPIOSampleLength 512
 
-typedef enum {BlueScopeEventPIOIndication, BlueScopeEventPIORequest, SignalGenIndication, SignalGenRequest} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_BlueScopeEventPIOIndication, IfcNames_BlueScopeEventPIORequest, IfcNames_SignalGenIndication, IfcNames_SignalGenRequest} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
 
-   BlueScopeEventPIOIndicationProxy blueScopeEventPIOIndicationProxy <- mkBlueScopeEventPIOIndicationProxy(BlueScopeEventPIOIndication);
+   BlueScopeEventPIOIndicationProxy blueScopeEventPIOIndicationProxy <- mkBlueScopeEventPIOIndicationProxy(IfcNames_BlueScopeEventPIOIndication);
    BlueScopeEventPIOControl#(32) bs <- mkBlueScopeEventPIO(`BlueScopeEventPIOSampleLength, blueScopeEventPIOIndicationProxy.ifc);
-   BlueScopeEventPIORequestWrapper blueScopeEventPIORequestWrapper <- mkBlueScopeEventPIORequestWrapper(BlueScopeEventPIORequest,bs.requestIfc);
+   BlueScopeEventPIORequestWrapper blueScopeEventPIORequestWrapper <- mkBlueScopeEventPIORequestWrapper(IfcNames_BlueScopeEventPIORequest,bs.requestIfc);
 
-   SignalGenIndicationProxy signalGenIndicationProxy <- mkSignalGenIndicationProxy(SignalGenIndication);
+   SignalGenIndicationProxy signalGenIndicationProxy <- mkSignalGenIndicationProxy(IfcNames_SignalGenIndication);
    SignalGenRequest sg <- mkSignalGen(bs.bse, signalGenIndicationProxy.ifc);
-   SignalGenRequestWrapper signalGenRequestWrapper <- mkSignalGenRequestWrapper(SignalGenRequest,sg);
+   SignalGenRequestWrapper signalGenRequestWrapper <- mkSignalGenRequestWrapper(IfcNames_SignalGenRequest,sg);
 
 
    Vector#(4,StdPortal) portals;

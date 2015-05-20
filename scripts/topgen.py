@@ -28,11 +28,12 @@ import util
 argparser = argparse.ArgumentParser("Generate Top.bsv for an project.")
 argparser.add_argument('--project-dir', help='project directory')
 argparser.add_argument('--interface', help='exported interface declaration', action='append')
+argparser.add_argument('--board', help='Board type')
 argparser.add_argument('--importfiles', help='added imports', action='append')
 argparser.add_argument('--portname', help='added portal names to enum list', action='append')
 argparser.add_argument('--wrapper', help='exported wrapper interfaces', action='append')
 argparser.add_argument('--proxy', help='exported proxy interfaces', action='append')
-argparser.add_argument('--bluenoc', help='generate mkBluenocTop', action='store_true')
+argparser.add_argument('--cnoc', help='generate mkCnocTop', action='store_true')
 
 topTemplate='''
 import Vector::*;
@@ -81,7 +82,7 @@ endmodule : mkConnectalTop
 topNocTemplate='''
 import Vector::*;
 import Portal::*;
-import BnocPortal::*;
+import CnocPortal::*;
 import Connectable::*;
 import HostInterface::*;
 %(generatedImport)s
@@ -94,8 +95,10 @@ typedef `PinType PinType;
 
 typedef enum {%(enumList)s} IfcNames deriving (Eq,Bits);
 
+`ifndef IMPORT_HOSTIF
 (* synthesize *)
-module mkBluenocTop
+`endif
+module mkCnocTop
 `ifdef IMPORT_HOSTIF
        #(HostInterface host)
 `endif
@@ -110,9 +113,14 @@ module mkBluenocTop
 %(portalList)s
    interface requests = %(requestList)s;
    interface indications = %(indicationList)s;
+   interface masters = %(portalMaster)s;
 %(exportedInterfaces)s
-endmodule : mkBluenocTop
+endmodule : mkCnocTop
 %(exportedNames)s
+'''
+
+topEnumTemplate='''
+typedef enum {NoInterface, %(enumList)s} IfcNames;
 '''
 
 portalTemplate = '''   PortalCtrlMemSlave#(SlaveControlAddrWidth,SlaveDataBusWidth) ctrlPort_%(count)s <- mkPortalCtrlMemSlave(extend(pack(%(enumVal)s)), l%(ifcName)s.portalIfc.intr);
@@ -123,7 +131,7 @@ portalTemplate = '''   PortalCtrlMemSlave#(SlaveControlAddrWidth,SlaveDataBusWid
        interface WriteOnly num_portals = ctrlPort_%(count)s.num_portals;
        endinterface);'''
 
-portalNocTemplate = '''   let l%(ifcName)sNoc <- mkPortalMsg%(direction)s(l%(ifcName)s.portalIfc);'''
+portalNocTemplate = '''   let l%(ifcName)sNoc <- mkPortalMsg%(direction)s(extend(pack(%(enumVal)s)), l%(ifcName)s.portalIfc.%(itype)s%(messageSize)s);'''
 
 def addPortal(enumVal, ifcName, direction):
     global portalCount
@@ -133,12 +141,14 @@ def addPortal(enumVal, ifcName, direction):
         portParam['itype'] = 'requests'
         portParam['slaveType'] = 'In'
         portParam['intrParam'] = ''
+        portParam['messageSize'] = ''
     else:
         indicationList.append('l' + ifcName + 'Noc')
         portParam['itype'] = 'indications'
         portParam['slaveType'] = 'Out'
         portParam['intrParam'] = ', l%(ifcName)s.portalIfc.intr' % portParam
-    p = portalNocTemplate if options.bluenoc else portalTemplate
+        portParam['messageSize'] = ', l%(ifcName)s.portalIfc.messageSize' % portParam
+    p = portalNocTemplate if options.cnoc else portalTemplate
     portalList.append(p % portParam)
     portalCount = portalCount + 1
 
@@ -176,7 +186,7 @@ def instMod(args, modname, modext, constructor, tparam, memFlag):
         args = modname + tstr
     pmap['args'] = args % pmap
     if modext:
-        enumList.append(modname + tstr)
+        enumList.append('IfcNames_' + modname + tstr)
         pmap['argsConfig'] = modname + memFlag + tstr
         if modext == 'Output':
             pmap['stype'] = 'Indication';
@@ -201,10 +211,10 @@ def instMod(args, modname, modext, constructor, tparam, memFlag):
             pipeInstantiate.append(pipeInstantiation % pmap)
             connectInstantiate.append(connectInstantiation % pmap)
         if memFlag:
-            enumList.append(modname + memFlag + tstr)
-            addPortal(pmap['argsConfig'], '%(modname)sCW' % pmap, 'Request')
+            enumList.append('IfcNames_' + modname + memFlag + tstr)
+            addPortal('IfcNames_' + pmap['argsConfig'], '%(modname)sCW' % pmap, 'Request')
         else:
-            addPortal(pmap['args'], '%(modname)s' % pmap, pmap['stype'])
+            addPortal('IfcNames_' + pmap['args'], '%(modname)s' % pmap, pmap['stype'])
     else:
         if not instantiateRequest.get(pmap['modname']):
             instantiateRequest[pmap['modname']] = iReq()
@@ -251,8 +261,6 @@ if __name__=='__main__':
         print "topgen: --project-dir option missing"
         sys.exit(1)
     project_dir = os.path.abspath(os.path.expanduser(options.project_dir))
-    topFilename = project_dir + '/Top.bsv'
-    print 'Writing Top:', topFilename
     clientCount = 0
     userFiles = []
     portalInstantiate = []
@@ -266,8 +274,10 @@ if __name__=='__main__':
     instantiatedModules = []
     importfiles = []
     exportedNames = ['export mkConnectalTop;']
-    if options.bluenoc:
-        exportedNames = ['export mkBluenocTop;', 'export NumberOfRequests;', 'export NumberOfIndications;']
+    if options.board == 'xsim':
+        options.cnoc = True
+    if options.cnoc:
+        exportedNames = ['export mkCnocTop;', 'export NumberOfRequests;', 'export NumberOfIndications;']
     if options.importfiles:
         importfiles = options.importfiles
         for item in options.importfiles:
@@ -327,13 +337,19 @@ if __name__=='__main__':
                  'exportedInterfaces' : '\n'.join(interfaceList),
                  'exportedNames' : '\n'.join(exportedNames),
                  'portalMaster' : 'lMemServer.masters' if memory_flag else 'nil',
-                 'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,`PinType,`NumberOfMasters)' if not options.bluenoc \
-                     else 'BluenocTop#(NumberOfRequests,NumberOfIndications)'
+                 'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,`PinType,`NumberOfMasters)' if not options.cnoc \
+                     else 'CnocTop#(NumberOfRequests,NumberOfIndications,PhysAddrWidth,DataBusWidth,NumberOfMasters)'
                  }
-    print 'TOPFN', topFilename
+    topFilename = project_dir + '/Top.bsv'
+    print 'Writing:', topFilename
     top = util.createDirAndOpen(topFilename, 'w')
-    if options.bluenoc:
+    if options.cnoc:
         top.write(topNocTemplate % topsubsts)
     else:
         top.write(topTemplate % topsubsts)
+    top.close()
+    topFilename = project_dir + '/../jni/topEnum.h'
+    print 'Writing:', topFilename
+    top = util.createDirAndOpen(topFilename, 'w')
+    top.write(topEnumTemplate % topsubsts)
     top.close()

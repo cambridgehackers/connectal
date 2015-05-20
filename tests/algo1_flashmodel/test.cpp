@@ -59,17 +59,17 @@ int main(int argc, const char **argv)
 
   MMURequestProxy *hostMMURequest = new MMURequestProxy(IfcNames_AlgoMMURequest);
   DmaManager *hostDma = new DmaManager(hostMMURequest);
-  MMUIndication *hostMMUIndication = new MMUIndication(hostDma, IfcNames_AlgoMMUIndication);
+  MMUIndication hostMMUIndication(hostDma, IfcNames_AlgoMMUIndication);
 
   MMURequestProxy *nandsimMMURequest = new MMURequestProxy(IfcNames_NandMMURequest);
   DmaManager *nandsimDma = new DmaManager(nandsimMMURequest);
-  MMUIndication *nandsimMMUIndication = new MMUIndication(nandsimDma,IfcNames_NandMMUIndication);
+  MMUIndication nandsimMMUIndication(nandsimDma,IfcNames_NandMMUIndication);
 
   StrstrRequestProxy *strstrRequest = new StrstrRequestProxy(IfcNames_AlgoRequest);
   StrstrIndication *strstrIndication = new StrstrIndication(IfcNames_AlgoIndication);
   
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_HostMemServerIndication);
-  MemServerIndication *nandsimMemServerIndication = new MemServerIndication(IfcNames_NandMemServerIndication);
+  MemServerIndication hostMemServerIndication(IfcNames_HostMemServerIndication);
+  MemServerIndication nandsimMemServerIndication(IfcNames_NandMemServerIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
 

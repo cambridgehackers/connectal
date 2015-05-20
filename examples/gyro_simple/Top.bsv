@@ -37,7 +37,7 @@ import GyroController::*;
 import ConnectalSpi::*;
 import Leds::*;
 
-typedef enum {ControllerRequest, ControllerIndication, HostMemServerIndication, HostMemServerRequest, HostMMURequest, HostMMUIndication, SampleStream} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_ControllerRequest, IfcNames_ControllerIndication, IfcNames_HostMemServerIndication, IfcNames_HostMemServerRequest, IfcNames_HostMMURequest, IfcNames_HostMMUIndication, IfcNames_SampleStream} IfcNames deriving (Eq,Bits);
 
 interface GyroSimplePins;
    interface SpiMasterPins spi;
@@ -46,17 +46,17 @@ endinterface
 
 module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,GyroSimplePins,1));
 
-   GyroCtrlIndicationProxy cp <- mkGyroCtrlIndicationProxy(ControllerIndication);
+   GyroCtrlIndicationProxy cp <- mkGyroCtrlIndicationProxy(IfcNames_ControllerIndication);
    GyroController controller <- mkGyroController(cp.ifc);
-   GyroCtrlRequestWrapper cw <- mkGyroCtrlRequestWrapper(ControllerRequest, controller.req);
+   GyroCtrlRequestWrapper cw <- mkGyroCtrlRequestWrapper(IfcNames_ControllerRequest, controller.req);
    
-   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(HostMMUIndication);
+   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_HostMMUIndication);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUIndicationProxy.ifc);
-   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(HostMMURequest, hostMMU.request);
+   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(IfcNames_HostMMURequest, hostMMU.request);
    
-   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(HostMemServerIndication);
+   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_HostMemServerIndication);
    MemServer#(PhysAddrWidth,DataBusWidth,1) dma <- mkMemServer(nil, cons(controller.dmaClient,nil), cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
-   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(HostMemServerRequest, dma.request);
+   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(IfcNames_HostMemServerRequest, dma.request);
    
    Vector#(6,StdPortal) portals;
    portals[0] = cp.portalIfc;

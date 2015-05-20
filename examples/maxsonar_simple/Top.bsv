@@ -38,7 +38,7 @@ import MaxSonarCtrlIndication::*;
 // defined by user
 import MaxSonarController::*;
 
-typedef enum {ControllerRequest, ControllerIndication} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_ControllerRequest, IfcNames_ControllerIndication} IfcNames deriving (Eq,Bits);
 
 interface MaxSonarSimplePins;
    interface MaxSonarPins maxsonar;
@@ -47,9 +47,9 @@ endinterface
 
 module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,MaxSonarSimplePins,0));
 
-   MaxSonarCtrlIndicationProxy cp <- mkMaxSonarCtrlIndicationProxy(ControllerIndication);
+   MaxSonarCtrlIndicationProxy cp <- mkMaxSonarCtrlIndicationProxy(IfcNames_ControllerIndication);
    MaxSonarController controller <- mkMaxSonarController(cp.ifc);
-   MaxSonarCtrlRequestWrapper cw <- mkMaxSonarCtrlRequestWrapper(ControllerRequest, controller.req);
+   MaxSonarCtrlRequestWrapper cw <- mkMaxSonarCtrlRequestWrapper(IfcNames_ControllerRequest, controller.req);
    
 
    Vector#(2,StdPortal) portals;

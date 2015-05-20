@@ -32,9 +32,9 @@ import FpMacTb::*;
 
 module  mkConnectalTop#(HostInterface host)(ConnectalTop#(PhysAddrWidth,TMul#(32,N),Empty,NumberOfMasters));
 
-   FpMulIndicationProxy ind <- mkFpMulIndicationProxy(FpMulIndicationPortal);
+   FpMulIndicationProxy ind <- mkFpMulIndicationProxy(IfcNames_FpMulIndicationPortal);
    FpMulRequest req <- mkFpMulRequest(ind.ifc);
-   FpMulRequestWrapper reqW <- mkFpMulRequestWrapper(FpMulRequestPortal,req);
+   FpMulRequestWrapper reqW <- mkFpMulRequestWrapper(IfcNames_FpMulRequestPortal,req);
 
    Vector#(2,StdPortal) portals;
    portals[0] = ind.portalIfc;

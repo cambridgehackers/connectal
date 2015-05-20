@@ -41,6 +41,7 @@ argparser.add_argument('-O', '--OS', default=None, choices=supported_os, help='T
 argparser.add_argument('-interfaces', '--interfaces', help='BSV interface', action='append')
 argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps project directory')
 argparser.add_argument(      '--pinfo', default=None, help='Project description file (json)')
+argparser.add_argument(      '--protobuf', default=[], help='Interface description in protobuf', action='append')
 argparser.add_argument('-s', '--source', help='C++ source files', action='append')
 argparser.add_argument(      '--source2', help='C++ second program source files', action='append')
 argparser.add_argument(      '--cflags', help='C++ CFLAGS', action='append')
@@ -156,6 +157,7 @@ export DUT_NAME = %(Dut)s
 %(runsource2)s
 %(shared)s
 %(nohardware)s
+%(protobuf)s
 
 %(mdefines)s
 %(dump_map)s
@@ -206,6 +208,7 @@ include $(DTOP)/Makefile.autotop
 include $(CONNECTALDIR)/scripts/Makefile.connectal.application
 SOURCES = %(source)s $(PORTAL_SRC_FILES)
 SOURCES2 = %(source2)s $(PORTAL_SRC_FILES)
+XSOURCES = $(CONNECTALDIR)/cpp/XsimTop.cpp $(PORTAL_SRC_FILES)
 LDLIBS := %(clibdirs)s %(clibs)s %(clibfiles)s -pthread 
 
 ubuntu.exe: $(SOURCES)
@@ -224,10 +227,8 @@ bsim_exe: $(SOURCES)
 bsim_exe2: $(SOURCES2)
 	$(Q)g++ $(CFLAGS_COMMON) $(CFLAGS2) -o bsim_exe2 -DBSIM $(SOURCES2) $(BSIM_EXE_CXX) $(LDLIBS)
 
-XSI_EXAMPLE_DIR = $(VIVADODIR)/examples/xsim/verilog/xsi/counter/
-XSOURCES = $(XSI_EXAMPLE_DIR)/xsi_loader.cpp $(CONNECTALDIR)/cpp/transportXsim.cpp $(PORTAL_SRC_FILES)
 xsim: $(XSOURCES)
-	g++ $(CFLAGS) -I$(VIVADODIR)/data/xsim/include -I$(XSI_EXAMPLE_DIR) -o xsim $(XSOURCES) -ldl -lrt -pthread
+	g++ $(CFLAGS) -o xsim $(XSOURCES)
 '''
 
 if __name__=='__main__':
@@ -443,8 +444,10 @@ if __name__=='__main__':
     substs['FPGAMAKE_DEFINE'] = '-D BSV_POSITIVE_RESET' if 'BSV_POSITIVE_RESET' in options.bsvdefine else ''
     bitsmake=fpgamakeRuleTemplate % substs
 
+    if options.protobuf:
+        protolist = [os.path.abspath(fn) for fn in options.protobuf]
     make.write(makefileTemplate % {'connectaldir': connectaldir,
-                                   'bsvpath': ':'.join(list(set([os.path.dirname(os.path.abspath(bsvfile)) for bsvfile in options.bsvfile])
+                                   'bsvpath': ':'.join(list(set([os.path.dirname(os.path.abspath(bsvfile)) for bsvfile in (options.bsvfile + [project_dir])])
                                                             | set([os.path.join(connectaldir, 'bsv')])
                                                             | set([os.path.join(connectaldir, 'lib/bsv')])
                                                             | set([os.path.join(connectaldir, 'generated/xilinx')])
@@ -473,6 +476,7 @@ if __name__=='__main__':
                                    'bsvdefines_list': ' '.join(bsvdefines),
                                    'shared': 'CONNECTAL_SHARED=1' if options.shared else '',
                                    'nohardware': 'CONNECTAL_NOHARDWARE=1' if options.nohardware else '',
+                                   'protobuf': ('export PROTODEBUG=%s' % ' '.join(protolist)) if options.protobuf else '',
                                    'bitsmake': bitsmake
                                    })
     make.close()

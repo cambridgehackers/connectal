@@ -60,6 +60,9 @@ endif
 ifeq ($(BSCVERSION), 2014.07.A)
     BSCFLAGS_COMMON += -D ClockDefaultParam
 endif
+ifeq ($(BSCMAJOR), 2015)
+    BSCFLAGS_COMMON += -D ClockDefaultParam
+endif
 
 BSCOPTFLAGS= -show-schedule -aggressive-conditions
 BSCPATHFLAGS=  -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj -info-dir $(DTOP)/obj
@@ -68,9 +71,12 @@ BSC_CXXFLAGS= -I $(CONNECTALDIR)/cpp -I $(CONNECTALDIR) -D BSIM
 BSIM_CXX_COMMON = $(CONNECTALDIR)/cpp/BsimCtrl.cpp $(CONNECTALDIR)/cpp/TlpReplay.cpp $(CONNECTALDIR)/cpp/BsimDma.cpp $(CONNECTALDIR)/cpp/sock_utils.c
 BSIM_CXX_LOCAL = $(DTOP)/jni/BsimCtrl.cpp $(DTOP)/jni/TlpReplay.cpp $(DTOP)/jni/BsimDma.cpp $(DTOP)/jni/sock_utils.c $(DTOP)/jni/portalPrintf.c
 
-VIVADODIR=$(shell dirname $(shell dirname $(shell which vivado)))
+VIVADO=$(shell which vivado)
+ifneq ($(VIVADO), )
+export VIVADODIR=$(shell dirname $(shell dirname $(VIVADO))))
 VIVADOFLAGS= -notrace
 XVLOGFLAGS =
+endif
 
 ifeq ($(USE_BUILDCACHE),1)
 BUILDCACHE=$(shell cd $(CONNECTALDIR)/..; /bin/pwd)/buildcache/buildcache
@@ -209,9 +215,9 @@ ifeq ($(BOARD),bluesim)
 else
   ifeq ($(BOARD),xsim)
     ifeq ($(RUNSOURCE2),)
-	LD_LIBRARY_PATH=$(VIVADODIR)/lib/lnx64.o $(GDB_BSIM) ./bin/xsim -w & xsimpid=$$!; echo xsimpid $$xsimpid; $(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; kill $$xsimpid; exit $$retcode
+	xsim -R work.xsimtop & xsimpid=$$!; echo xsimpid $$xsimpid; sleep 5; $(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; kill $$xsimpid; exit $$retcode
     else
-	LD_LIBRARY_PATH=$(VIVADODIR)/lib/lnx64.o ./bin/xsim -w & xsimpid=$$!; echo xsimpid $$xsimpid; $(GDB2) ./bin/ubuntu.exe2& xsim2pid=$$!; $(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; kill $$xsimpid $$xsim2pid; exit $$retcode
+	xsim -R work.xsimtop & xsimpid=$$!; echo xsimpid $$xsimpid; sleep 5; $(GDB2) ./bin/ubuntu.exe2& xsim2pid=$$!; $(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; kill $$xsimpid $$xsim2pid; exit $$retcode
     endif
   else
     ifeq ($(OS),android)
@@ -228,13 +234,34 @@ endif
 endif
 endif
 
-bin/xsim: prepare_bin_target
-	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk xsim VIVADODIR=$(VIVADODIR)
-	$(Q)cp -v jni/xsim bin
+ifneq ($(VIVADO), )
+VIVADODIR=$(realpath $(shell dirname $(VIVADO))/..)
+XSC_CFLAGS= -Wa,-W -fPIC -m64  -I"$(VIVADODIR)/data/xsim/include" -DSYSTEM_VERILOG -DBOARD_xsim -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR) -Ijni
 
-xsim: verilog bin/xsim
+XSIM_GENERATED_CFILES = XsimMsgIndication XsimMsgRequest GeneratedCppCallbacks
+XSIM_CFILES = transportSocket transportHardware transportXsim XsimTop poller sock_utils portalPrintf portal BsimDma
+XSIM_OBJECTS = $(foreach c, $(XSIM_CFILES), xsim.dir/xsc/$(c).lnx64.o ) $(foreach c, $(XSIM_GENERATED_CFILES), xsim.dir/xsc/$(c).lnx64.o)
+
+xsim.dir/xsc/%.lnx64.o: $(CONNECTALDIR)/cpp/%.c
+	mkdir -p xsim.dir/xsc
+	gcc -c $(XSC_CFLAGS) -O1 -o xsim.dir/xsc/$(*).lnx64.o $<
+xsim.dir/xsc/%.lnx64.o: $(CONNECTALDIR)/cpp/%.cpp
+	mkdir -p xsim.dir/xsc
+	gcc -c $(XSC_CFLAGS) -O1 -o xsim.dir/xsc/$(*).lnx64.o $<
+xsim.dir/xsc/%.lnx64.o: jni/%.c
+	mkdir -p xsim.dir/xsc
+	gcc -c $(XSC_CFLAGS) -O1 -o xsim.dir/xsc/$(*).lnx64.o $<
+xsim.dir/xsc/%.lnx64.o: jni/%.cpp
+	mkdir -p xsim.dir/xsc
+	gcc -c $(XSC_CFLAGS) -O1 -o xsim.dir/xsc/$(*).lnx64.o $<
+
+xsim: verilog $(XSIM_OBJECTS)
 	xvlog $(XVLOGFLAGS) verilog/*.v
-	xelab -L unimacro $(XELABFLAGS) work.$(MKTOP) -dll -s $(MKTOP)
+	xvlog --sv $(CONNECTALDIR)/verilog/xsimtop.sv
+	#xsc -v -cc gcc -compile $(SOURCES)
+	xsc -cc gcc -link $(XSIM_OBJECTS) -o xsimtop
+	xelab -cc gcc -svlog $(CONNECTALDIR)/verilog/xsimtop.sv --debug wave -L unisim -L unifast -L unimacro work.xsimtop -sv_lib xsimtop
+endif #VIVADO
 
 bin/vsim:
 	python $(CONNECTALDIR)/scripts/sim-gen.py -o vsim/Makefile -s ~/dev/connectal/out/vsim/synthesis/ -d ~/dev/sonic-lite/vsim/modelsim -p ~/dev/sonic-lite -c $(CONNECTALDIR) -g ~/dev/connectal/out/vsim/synthesis/ -t ~/dev/connectal/out/vsim/synthesis/ -T mkSonicSimTop
@@ -246,7 +273,7 @@ vsim: verilog bin/vsim
 $(VFILE): $(TOPBSVFILE) $(BSVFILES)
 	$(Q)mkdir -p verilog/portal $(DTOP)/obj
 	@echo BSCVERILOG [$(DTOP)]
-	$(Q)cd generatedbsv; $(RUN_BSC) -remove-dollar -verilog -u -g $(MKTOP) $(TOPBSVFILE)
+	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -remove-dollar -verilog -u -g $(MKTOP) $(TOPBSVFILE)
 	$(Q)sed -i 's|// On .*|// timestamp removed|' verilog/*.v
 	$(Q)for v in verilog/*.v; do $(CONNECTALDIR)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
 
@@ -258,8 +285,8 @@ $(DTOP)/jni/%.c: $(CONNECTALDIR)/cpp/%.c
 bsim: prepare_bin_target $(DTOP)/jni/TlpReplay.cpp $(BSIM_CXX_LOCAL)
 	$(Q)mkdir -p $(DTOP)/obj verilog
 	@echo BSCBSIM [$(DTOP)]
-	$(Q)cd generatedbsv; $(RUN_BSC) -D BSIM -sim -u -g $(MKTOP) $(TOPBSVFILE)
-	$(Q)cd generatedbsv; $(RUN_BSC) $(BSC_CXXFLAGS) -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX_LOCAL) $(BSIM_CXX_PROJECT)
+	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -D BSIM -sim -u -g $(MKTOP) $(TOPBSVFILE)
+	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) $(BSC_CXXFLAGS) -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX_LOCAL) $(BSIM_CXX_PROJECT)
 	$(Q)cp -v generatedbsv/bsim* bin
 	$(QTUSED)
 

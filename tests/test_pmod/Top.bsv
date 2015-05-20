@@ -29,12 +29,12 @@ import PmodControllerRequest::*;
 import PmodControllerIndication::*;
 import Controller::*;
 
-typedef enum {ControllerRequest, ControllerIndication} IfcNames deriving (Eq,Bits);
+typedef enum {IfcNames_ControllerRequest, IfcNames_ControllerIndication} IfcNames deriving (Eq,Bits);
 
 module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,PmodPins,0));
-   PmodControllerIndicationProxy cp <- mkPmodControllerIndicationProxy(ControllerIndication);
+   PmodControllerIndicationProxy cp <- mkPmodControllerIndicationProxy(IfcNames_ControllerIndication);
    Controller controller <- mkController(cp.ifc);
-   PmodControllerRequestWrapper cw <- mkPmodControllerRequestWrapper(ControllerRequest, controller.req);
+   PmodControllerRequestWrapper cw <- mkPmodControllerRequestWrapper(IfcNames_ControllerRequest, controller.req);
    
    Vector#(2,StdPortal) portals;
    portals[0] = cp.portalIfc;
