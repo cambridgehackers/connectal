@@ -29,12 +29,12 @@ class InnerProd : public InnerProdIndicationWrapper
     int cnt;
 public:
   void incr_cnt(){
-    if (++cnt == NUMBER_OF_TESTS)
+    if (++cnt == NUMBER_OF_TILES)
       exit(0);
   }
   void innerProd(uint16_t t, uint16_t v) {
     fprintf(stderr, "%d: t=%03d innerProd v=%x\n", cnt, t, v);
-    cnt++;
+    incr_cnt();
   }
     InnerProd(unsigned int id) : InnerProdIndicationWrapper(id), cnt(0) {}
 };
@@ -46,13 +46,21 @@ int main(int argc, const char **argv)
     device.pint.busyType = BUSY_SPIN;
 
     fprintf(stderr, "[%s:%d] waiting for response\n", __FILE__, __LINE__);
-    for (int tile = 0; tile < 64; tile++) {
-      device.innerProd(tile, 0x0080, 0x0080, 1, 0);
-      device.innerProd(tile, 0x0000, 0x0000, 0, 0);
-      device.innerProd(tile, 0x0100, 0x0080, 0, 0);
-      device.innerProd(tile, 0x0080, 0x0080, 0, 0);
-      device.innerProd(tile, 0x0100, 0x1000, 0, 0);
-      device.innerProd(tile, 0x0200, 0x1000, 0, 1);
+    for (int tile = 0; tile < NUMBER_OF_TILES; tile++) {
+      device.innerProd(tile, 0x0080, 1, 0, 1);
+      device.innerProd(tile, 0x0000, 0, 0, 1);
+      device.innerProd(tile, 0x0100, 0, 0, 1);
+      device.innerProd(tile, 0x0080, 0, 0, 1);
+      device.innerProd(tile, 0x0100, 0, 0, 1);
+      device.innerProd(tile, 0x0200, 0, 1, 1);
+    }
+    for (int tile = 0; tile < NUMBER_OF_TILES; tile++) {
+      device.innerProd(tile, 0x0080, 1, 0, 0);
+      device.innerProd(tile, 0x0000, 0, 0, 0);
+      device.innerProd(tile, 0x0080, 0, 0, 0);
+      device.innerProd(tile, 0x0080, 0, 0, 0);
+      device.innerProd(tile, 0x1000, 0, 0, 0);
+      device.innerProd(tile, 0x1000, 0, 1, 0);
     }
     for (int times = 0; times < 40; times++)
 	sleep(1);
