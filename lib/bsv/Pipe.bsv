@@ -936,6 +936,8 @@ typedef struct {
 
 interface XYRangePipeIfc#(type a);
    interface PipeOut#(Tuple2#(a,a)) pipe;
+   method Bool isFirst();
+   method Bool isLast();
    method Action start(XYRangeConfig#(a) cfg);
    method Action display();
 endinterface
@@ -950,6 +952,9 @@ module mkXYRangePipeOut(XYRangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth)
    Reg#(a) xlimit <- mkReg(0);
    Reg#(a) ylimit <- mkReg(0);
    
+   Reg#(Bool) isFirstReg <- mkReg(False);
+   Reg#(Bool) isLastReg <- mkReg(False);
+
    let guard = x < xlimit && y < ylimit;
    
    interface PipeOut pipe;
@@ -965,6 +970,8 @@ module mkXYRangePipeOut(XYRangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth)
 	 end
 	 x <= newx;
 	 y <= newy;
+	 isLastReg <= (newx+xstep >= xlimit && newy+ystep >= ylimit);
+	 isFirstReg <= False;
       endmethod
       method Bool notEmpty();
 	 return guard;
@@ -979,7 +986,11 @@ module mkXYRangePipeOut(XYRangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth)
       ystep <= cfg.ystep;
       xlimit <= cfg.xlimit;
       ylimit <= cfg.ylimit;
+      isFirstReg <= True;
+      isLastReg <= (cfg.xbase+cfg.xstep) > cfg.xlimit && (cfg.ybase+cfg.ystep) > cfg.ylimit;
    endmethod
+   method Bool isFirst(); return isFirstReg; endmethod
+   method Bool isLast(); return isLastReg; endmethod
    method Action display();
       $display("XYRangePipe x=%d xlimit=%d y=%d ylimit=%d xstep=%d ystep=%d", x, xlimit, xstep, y, ylimit, ystep);
    endmethod
