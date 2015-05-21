@@ -29,7 +29,7 @@ class InnerProd : public InnerProdIndicationWrapper
     int cnt;
 public:
   void incr_cnt(){
-    if (++cnt == NUMBER_OF_TILES)
+    if (++cnt == 8*NUMBER_OF_TILES)
       exit(0);
   }
   void innerProd(uint16_t t, uint16_t v) {
@@ -49,11 +49,14 @@ int main(int argc, const char **argv)
     for (int tile = 0; tile < NUMBER_OF_TILES; tile++) {
       device.innerProd(tile, 0x0080, 1, 0, 1);
       device.innerProd(tile, 0x0000, 0, 0, 1);
+      device.innerProd(tile, 0x0000, 0, 0, 1);
+      device.innerProd(tile, 0x0000, 0, 0, 1);
       device.innerProd(tile, 0x0100, 0, 0, 1);
       device.innerProd(tile, 0x0080, 0, 0, 1);
       device.innerProd(tile, 0x0100, 0, 0, 1);
       device.innerProd(tile, 0x0200, 0, 1, 1);
     }
+    if (0) {
     for (int tile = 0; tile < NUMBER_OF_TILES; tile++) {
       device.innerProd(tile, 0x0080, 1, 0, 0);
       device.innerProd(tile, 0x0000, 0, 0, 0);
@@ -62,6 +65,33 @@ int main(int argc, const char **argv)
       device.innerProd(tile, 0x1000, 0, 0, 0);
       device.innerProd(tile, 0x1000, 0, 1, 0);
     }
+    for (int tile = NUMBER_OF_TILES; tile <= NUMBER_OF_TILES; tile++) {
+      device.innerProd(tile, 0x0080, 1, 0, 0);
+      device.innerProd(tile, 0x0000, 0, 0, 0);
+      device.innerProd(tile, 0x0000, 0, 0, 0);
+      device.innerProd(tile, 0x0000, 0, 0, 0);
+      device.innerProd(tile, 0x0080, 0, 0, 0);
+      device.innerProd(tile, 0x0080, 0, 0, 0);
+      device.innerProd(tile, 0x1000, 0, 0, 0);
+      device.innerProd(tile, 0x0000, 0, 0, 0);
+      device.innerProd(tile, 0x0000, 0, 0, 0);
+      device.innerProd(tile, 0x0000, 0, 0, 0);
+      device.innerProd(tile, 0x0000, 0, 0, 0);
+      device.innerProd(tile, 0x0000, 0, 0, 0);
+      device.innerProd(tile, 0x0000, 0, 0, 0);
+      device.innerProd(tile, 0x0000, 0, 0, 0);
+      device.innerProd(tile, 0x0000, 0, 0, 0);
+      device.innerProd(tile, 0x1000, 0, 1, 0);
+    }
+    } else {
+      for (int addr = 0; addr < 1024; addr++) {
+	device.write(addr, 0x0100);
+      }
+      for (int i = 0; i < 8; i++) {
+	device.start(i, i+2, 0, 4);
+      }
+    }
+
     for (int times = 0; times < 40; times++)
 	sleep(1);
     device.finish();

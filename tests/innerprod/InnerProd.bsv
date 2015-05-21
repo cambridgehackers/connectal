@@ -38,6 +38,7 @@ import Dsp48E1::*;
 import InnerProdInterface::*;
 import ConnectalBramFifo::*;
 
+
 `ifdef NUMBER_OF_TILES 
 typedef `NUMBER_OF_TILES NumTiles;
 `else
@@ -267,6 +268,50 @@ module mkMacroTile#(Bit#(TileNumSize) mt)(MacroTile);
    interface Reset resetOut = tileReset;
 endmodule
 
+interface InnerProdDriver;
+   interface Put#(XYRangeConfig#(Bit#(10))) request;
+   interface BRAMClient#(Bit#(10),Int#(16)) bramClient;
+   interface PipeOut#(InnerProdParam) innerProdRequest;
+endinterface
+
+(* synthesize *)
+module mkIPDriver(InnerProdDriver);
+   FIFOF#(BRAMRequest#(Bit#(10),Int#(16))) bramRequestFifo <- mkFIFOF();
+   FIFOF#(Int#(16)) bramResponseFifo <- mkFIFOF();
+   FIFOF#(InnerProdParam) innerProdRequestFifo <- mkFIFOF();
+   FIFOF#(XYRangeConfig#(Bit#(10))) requestFifo <- mkFIFOF();
+   FIFOF#(Tuple2#(Bool,Bool)) lastFifo <- mkFIFOF();
+
+   XYRangePipeIfc#(Bit#(10)) rangePipe <- mkXYRangePipeOut();
+
+   rule startRule;
+      let req <- toGet(requestFifo).get();
+      rangePipe.start(req);
+   endrule
+
+   rule issueBramRequest;
+      match { .x, .y } <- toGet(rangePipe.pipe).get();
+      // fixme: placeholder address computation
+      let addr = (x << 5) | y;
+      bramRequestFifo.enq(BRAMRequest{write: False, responseOnWrite: False, address: addr, datain: 0});
+      lastFifo.enq(tuple2(rangePipe.isFirst(), rangePipe.isLast()));
+      $display("x=%d y=%d first=%d last=%d", x, y, rangePipe.isFirst(), rangePipe.isLast());
+   endrule
+   rule issueInnerProdRequest;
+      let v <- toGet(bramResponseFifo).get();
+      match { .first, .last } <- toGet(lastFifo).get();
+      let allTiles = fromInteger(valueOf(NumTiles));
+      innerProdRequestFifo.enq(InnerProdParam { tile: 0, v: v, first: first, last: last, update: False });
+   endrule
+
+   interface request = toPut(requestFifo);
+   interface innerProdRequest = toPipeOut(innerProdRequestFifo);
+   interface BRAMClient bramClient;
+      interface request = toGet(bramRequestFifo);
+      interface response = toPut(bramResponseFifo);
+   endinterface
+endmodule
+
 (* synthesize *)
 module mkRequestPipesSynth(ReqPipes#(NumMacroTiles,TileNumSize,InnerProdParam));
    let rp <- mkRequestPipes();
@@ -288,6 +333,8 @@ module mkInnerProdSynth#(Clock derivedClock)(InnerProdSynth);
    let derivedReset <- mkAsyncReset(10, defaultReset, derivedClock);
 
    let optionalReset = derivedReset; // noReset
+
+   BRAM2Port#(Bit#(10),Int#(16)) lineBuffer <- mkBRAM2Server(defaultValue);
 
    FIFOF#(InnerProdParam) inputFifo <- mkDualClockBramFIFOF(defaultClock, defaultReset, derivedClock, derivedReset);
    FIFOF#(InnerProdResponse) bramFifo <- mkTileResponseFifo(derivedClock, derivedReset, defaultClock, defaultReset);
@@ -320,7 +367,14 @@ module mkInnerProdSynth#(Clock derivedClock)(InnerProdSynth);
       $display("m=%d t=%d", mReg, tReg);
    endrule
 
+   let ipDriver <- mkIPDriver();
+   mkConnection(ipDriver.bramClient, lineBuffer.portB);
+   mkConnection(ipDriver.innerProdRequest, toPipeIn(inputFifo));
+
    interface InnerProdRequest request;
+      method Action write(Bit#(16) addr, Bit#(16) val);
+	 lineBuffer.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: truncate(addr), datain: unpack(val)});
+      endmethod
       method Action innerProd(Bit#(16) tile, Bit#(16) a, Bool first, Bool last, Bool update);
 	 Bit#(TileNumSize) t = truncate(tile);
 	 Bit#(TileNumSize) m = truncate(tile >> valueOf(TLog#(NumTilesPerMacro)));
@@ -331,7 +385,9 @@ module mkInnerProdSynth#(Clock derivedClock)(InnerProdSynth);
          // broadcast to all tiles
 	 inputFifo.enq(InnerProdParam { tile: t, v: unpack(a), first: first, last: last, update: update});
       endmethod
-      method Action start();
+      method Action start(Bit#(16) xbase, Bit#(16) xlimit, Bit#(16) ybase, Bit#(16) ylimit);
+	 ipDriver.request.put(XYRangeConfig { xbase: truncate(xbase), xlimit: truncate(xlimit), xstep: 1,
+					     ybase: truncate(ybase), ylimit: truncate(ylimit), ystep: 1 });
       endmethod
       method Action finish();
 	 $dumpflush();
