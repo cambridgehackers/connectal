@@ -924,3 +924,63 @@ module mkRangePipeOut(RangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq
    method Bool isFirst() = first;
    method Bool isLast() = last;
 endmodule: mkRangePipeOut
+
+typedef struct {
+   a xbase;
+   a xlimit;
+   a xstep;
+   a ybase;
+   a ylimit;
+   a ystep;
+} XYRangeConfig#(type a) deriving (Bits, FShow);
+
+interface XYRangePipeIfc#(type a);
+   interface PipeOut#(Tuple2#(a,a)) pipe;
+   method Action start(XYRangeConfig#(a) cfg);
+   method Action display();
+endinterface
+
+module mkXYRangePipeOut(XYRangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
+   Reg#(a) x <- mkReg(0);
+   Reg#(a) y <- mkReg(0);
+   Reg#(a) xbase <- mkReg(0);
+   Reg#(a) ybase <- mkReg(0);
+   Reg#(a) xstep <- mkReg(0);
+   Reg#(a) ystep <- mkReg(0);
+   Reg#(a) xlimit <- mkReg(0);
+   Reg#(a) ylimit <- mkReg(0);
+   
+   let guard = x < xlimit && y < ylimit;
+   
+   interface PipeOut pipe;
+      method Tuple2#(a,a) first() if (guard);
+	 return tuple2(x,y);
+      endmethod
+      method Action deq if (guard);
+	 let newx = x;
+	 let newy = y+ystep;
+	 if (newy >= ylimit && x < xlimit) begin
+	    newy = ybase;
+	    newx = newx + xstep;
+	 end
+	 x <= newx;
+	 y <= newy;
+      endmethod
+      method Bool notEmpty();
+	 return guard;
+      endmethod
+   endinterface
+   method Action start(XYRangeConfig#(a) cfg) if (!guard);
+      x <= cfg.xbase;
+      y <= cfg.ybase;
+      xbase <= cfg.xbase;
+      ybase <= cfg.ybase;
+      xstep <= cfg.xstep;
+      ystep <= cfg.ystep;
+      xlimit <= cfg.xlimit;
+      ylimit <= cfg.ylimit;
+   endmethod
+   method Action display();
+      $display("XYRangePipe x=%d xlimit=%d y=%d ylimit=%d xstep=%d ystep=%d", x, xlimit, xstep, y, ylimit, ystep);
+   endmethod
+endmodule: mkXYRangePipeOut
