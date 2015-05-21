@@ -283,10 +283,13 @@ module mkIPDriver(InnerProdDriver);
    FIFOF#(Tuple2#(Bool,Bool)) lastFifo <- mkFIFOF();
 
    XYRangePipeIfc#(Bit#(10)) rangePipe <- mkXYRangePipeOut();
+   FIFOF#(XYRangeConfig#(Bit#(10))) rpMutex <- mkFIFOF1();
 
    rule startRule;
       let req <- toGet(requestFifo).get();
+      $display("range startRule x=%d y=%d", req.xbase, req.ybase);
       rangePipe.start(req);
+      rpMutex.enq(req);
    endrule
 
    rule issueBramRequest;
@@ -295,13 +298,17 @@ module mkIPDriver(InnerProdDriver);
       let addr = (x << 5) | y;
       bramRequestFifo.enq(BRAMRequest{write: False, responseOnWrite: False, address: addr, datain: 0});
       lastFifo.enq(tuple2(rangePipe.isFirst(), rangePipe.isLast()));
+      if (rangePipe.isLast) begin
+	 let req <- toGet(rpMutex).get();
+	 $display("range finished x=%d y=%d", req.xbase, req.ybase);
+      end
       $display("x=%d y=%d first=%d last=%d", x, y, rangePipe.isFirst(), rangePipe.isLast());
    endrule
    rule issueInnerProdRequest;
       let v <- toGet(bramResponseFifo).get();
       match { .first, .last } <- toGet(lastFifo).get();
       let allTiles = fromInteger(valueOf(NumTiles));
-      innerProdRequestFifo.enq(InnerProdParam { tile: 0, v: v, first: first, last: last, update: False });
+      innerProdRequestFifo.enq(InnerProdParam { tile: allTiles, v: v, first: first, last: last, update: False });
    endrule
 
    interface request = toPut(requestFifo);

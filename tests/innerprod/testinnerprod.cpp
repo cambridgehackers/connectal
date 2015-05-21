@@ -87,8 +87,9 @@ int main(int argc, const char **argv)
       for (int addr = 0; addr < 1024; addr++) {
 	device.write(addr, 0x0100);
       }
-      for (int i = 0; i < 8; i++) {
+      for (int i = 0; i < 16; i++) {
 	device.start(i, i+2, 0, 4);
+	sleep(1);
       }
     }
 
