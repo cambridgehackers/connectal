@@ -348,10 +348,17 @@ static int portal_mmap(struct file *filp, struct vm_area_struct *vma)
         return 0;
 }
 
+static ssize_t pcieportal_read(struct file *filp,
+      char *buffer, size_t length, loff_t *offset)
+{
+        return 0;
+}
+
 /* file operations pointers */
 static const struct file_operations pcieportal_fops = {
         .owner = THIS_MODULE,
         .open = pcieportal_open,
+	.read   = pcieportal_read,
         .release = pcieportal_release,
         .poll = pcieportal_poll,
         .unlocked_ioctl = pcieportal_ioctl,
