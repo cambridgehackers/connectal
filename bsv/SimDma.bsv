@@ -27,6 +27,17 @@ import GetPut::*;
 
 import MemTypes::*;
 
+`ifdef SIM_DMA_READ_LATENCY
+typedef SIM_DMA_READ_LATENCY SimDmaReadLatency;
+`else
+typedef 150 SimDmaReadLatency;
+`endif
+`ifdef SIM_DMA_WRITE_LATENCY
+typedef SIM_DMA_WRITE_LATENCY SimDmaWriteLatency;
+`else
+typedef 150 SimDmaWriteLatency;
+`endif
+
 interface SimDma#(numeric type dataWidth);
    method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
    method Action initfd(Bit#(32) id, Bit#(32) fd);
@@ -176,8 +187,8 @@ module mkSimDmaDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
    Reg#(Bit#(BurstLenSize))  writeLenReg <- mkReg(0);
    Reg#(Bit#(32))         writeOffsetReg <- mkReg(0);
 
-   let readLatency_I = 150;
-   let writeLatency_I = 150;
+   let readLatency_I = valueOf(SimDmaReadLatency);
+   let writeLatency_I = valueOf(SimDmaWriteLatency);
 
    Bit#(64) readLatency = fromInteger(readLatency_I);
    Bit#(64) writeLatency = fromInteger(writeLatency_I);
