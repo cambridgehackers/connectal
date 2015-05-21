@@ -114,26 +114,38 @@ module mkInnerProdTile#(Bit#(TileNumSize) tile, Bool hasNext)(InnerProdTile);
    Reg#(Bool)        validReg       <- mkReg(False, reset_by ipReset);
 
    rule request_rule;
-      let req <- toGet(reqFifo).get();
+      if (reqFifo.notEmpty()) begin
+	 let req <- toGet(reqFifo).get();
 
-      let addr = addrReg + 1;
-      if (req.update && req.tile == tile) begin
-	 $display("tile %d: writing kernel addr=%d value=%d", tile, addrReg, req.v);
-	 kernelBram.portA.request.put(BRAMRequest {write:True, responseOnWrite:False, address: addrReg, datain: req.v});
+	 //$display("tile %d req.tile=%d update=%d", tile, req.tile, req.update);
+	 let addr = addrReg + 1;
+	 if (req.update && req.tile == tile) begin
+	    $display("tile %d: writing kernel addr=%d value=%d", tile, addrReg, req.v);
+	    kernelBram.portA.request.put(BRAMRequest {write:True, responseOnWrite:False, address: addrReg, datain: req.v});
+	 end
+	 else if (req.tile == tile || req.tile == fromInteger(valueOf(NumTiles))) begin
+	    kernelBram.portA.request.put(BRAMRequest {write:False, responseOnWrite:False, address: addrReg, datain: 0});
+	    req1Fifo.enq(req);
+	 end
+
+	 if (req.tile != tile || req.tile == fromInteger(valueOf(NumTiles))) begin
+	    nextReqReg <= req;
+	    validReg <= True;
+	 end
+
+	 if (req.last)
+	    addr = 0;
+	 addrReg <= addr;
       end
-      else if (req.tile == tile || req.tile == fromInteger(valueOf(NumTiles))) begin
-	 kernelBram.portA.request.put(BRAMRequest {write:False, responseOnWrite:False, address: addrReg, datain: 0});
-	 req1Fifo.enq(req);
+      else begin
+	 validReg <= False;
       end
-      if (req.last)
-	 addr = 0;
-      addrReg <= addr;
    endrule
 
    rule process_rule;
       let req <- toGet(req1Fifo).get();
       let b <- kernelBram.portA.response.get();
-      $display("tile %d: inner prod a=%h b=%h", tile, req.v, b);
+      $display("tile %d: inner prod a=%h b=%h last=%d", tile, req.v, b, req.last);
 
       dsp.a(extend(pack(req.v)));
       dsp.b(extend(pack(b)));
@@ -148,16 +160,17 @@ module mkInnerProdTile#(Bit#(TileNumSize) tile, Bool hasNext)(InnerProdTile);
    endrule
 
    rule responseRule;
-      $display("InnerProdTile %d response.get %h", tile, dsp.p());
       InnerProdResponse v = unpack(0);
       let valid = False;
       if (dsp.notEmpty()) begin
+	 $display("InnerProdTile tile=%d dsp.p %h", tile, dsp.p());
 	 Int#(16) uintTile = extend(unpack(tile));
 	 v = tuple2(uintTile, unpack(dsp.p()[23:8]));
 	 valid = True;
       end
       else if (nextRespFifo.notEmpty()) begin
 	 v <- toGet(nextRespFifo).get();
+	 $display("tile %d: nextResp tile=%d", tile, tpl_1(v));
 	 valid = True;
       end
       if (valid)
@@ -342,7 +355,7 @@ module mkInnerProd#(
    let ip <- mkInnerProdSynth(derivedClock);
    rule indRule;
       match { .t, .v } <- ip.response.get();
-      $display("indRule v=%x %h", t, v);
+      $display("indRule tile=%d v=%h", t, v);
       ind.innerProd(pack(t), pack(v));
    endrule
 
