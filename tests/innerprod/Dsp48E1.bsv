@@ -1,6 +1,7 @@
 import Clocks::*;
 
 interface Dsp48E1;
+   method Bool     notEmpty();
    method Bit#(48) p();
 // Control: 4-bit (each) input: Control Inputs/Status Bits
    method Action alumode(Bit#(4) v);		// 4-bit input: ALU control input
@@ -53,7 +54,7 @@ module vmkDSP48E1(PRIM_DSP48E1);
    let currentClock <- exposeCurrentClock;
    let currentReset <- exposeCurrentReset;
    let invertedReset0 <- mkResetInverter(currentReset);
-   let invertedReset <- mkAsyncReset(1, invertedReset0, currentClock);
+   let invertedReset <- mkAsyncReset(10, invertedReset0, currentClock);
    default_clock clk(CLK);
 
    default_reset rsta(RSTA) = invertedReset;
@@ -219,6 +220,9 @@ module mkDsp48E1(Dsp48E1);
    endmethod
    method Action d(Bit#(25) v);
       dsp.d(v);
+   endmethod
+   method Bool notEmpty();
+      return last5Reg == 1;
    endmethod
    method Bit#(48) p() if (last5Reg == 1);
       return dsp.p();

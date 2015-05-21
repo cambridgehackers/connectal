@@ -1,3 +1,24 @@
+// Copyright (c) 2015 Connectal Project
+
+// Permission is hereby granted, free of charge, to any person
+// obtaining a copy of this software and associated documentation
+// files (the "Software"), to deal in the Software without
+// restriction, including without limitation the rights to use, copy,
+// modify, merge, publish, distribute, sublicense, and/or sell copies
+// of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+// BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+// CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 
 import GetPut::*;
 import Clocks::*;
@@ -27,7 +48,9 @@ typedef `TILES_PER_MACRO NumTilesPerMacro;
 `else
 typedef 16 NumTilesPerMacro;
 `endif
+typedef TAdd#(1,TLog#(NumTiles)) TileNumSize;
 typedef struct {
+   Bit#(TileNumSize) tile;
    Int#(16) v;
    Bool first;
    Bool last;
@@ -35,7 +58,6 @@ typedef struct {
    } InnerProdParam deriving (Bits);
 typedef Tuple2#(Int#(16),Int#(16))           InnerProdResponse;
 typedef TDiv#(NumTiles,NumTilesPerMacro) NumMacroTiles;
-typedef Tuple2#(Bit#(TLog#(NumTilesPerMacro)),InnerProdParam) MacroTileRequest;
 
 interface InnerProdSynth;
    interface InnerProdRequest request;
@@ -49,17 +71,32 @@ endinterface
 interface InnerProdTile;
    interface PipeIn#(InnerProdParam) request;
    interface PipeOut#(InnerProdResponse) response;
+   interface PipeOut#(InnerProdParam) requestNext;
+   interface PipeIn#(InnerProdResponse) responseNext;
    interface Reset                  resetOut;
 endinterface
 
 function PipeOut#(InnerProdResponse) getInnerProdResponsePipe(InnerProdTile tile); return tile.response; endfunction
 
+
 (* synthesize *)
-module mkInnerProdTile#(Int#(16) tile)(InnerProdTile);
+module mkTileRequestFifo#(Clock derivedClock, Reset derivedReset, Clock defaultClock, Reset defaultReset)(FIFOF#(InnerProdParam));
+   let dualClockFifo <- mkDualClockBramFIFOF(defaultClock, defaultReset, derivedClock, derivedReset);
+   return dualClockFifo;
+endmodule
+
+(* synthesize *)
+module mkTileResponseFifo#(Clock srcClock, Reset srcReset, Clock dstClock, Reset dstReset)(FIFOF#(InnerProdResponse));
+   let dualClockFifo <- mkDualClockBramFIFOF(srcClock, srcReset, dstClock, dstReset, clocked_by srcClock, reset_by srcReset);
+   return dualClockFifo;
+endmodule
+
+(* synthesize *)
+module mkInnerProdTile#(Bit#(TileNumSize) tile, Bool hasNext)(InnerProdTile);
 
    let clock <- exposeCurrentClock;
    let reset <- exposeCurrentReset;
-   let ipReset <- mkAsyncReset(1, reset, clock);
+   let ipReset <- mkAsyncReset(10, reset, clock);
    let dsp <- mkDsp48E1(reset_by ipReset);
 
    //FIFOF#(InnerProdParam) reqFifo <- mkDualClockBramFIFOF(clock, ipReset, clock, ipReset);
@@ -67,17 +104,24 @@ module mkInnerProdTile#(Int#(16) tile)(InnerProdTile);
    FIFOF#(InnerProdParam) req1Fifo <- mkFIFOF();
    BRAM1Port#(Bit#(10),Int#(16)) kernelBram <- mkBRAM1Server(defaultValue);
    Reg#(Bit#(10)) addrReg <- mkReg(0);
-   FIFOF#(Int#(16)) responseFifo <- mkFIFOF(); //mkDualClockBramFIFOF(clock, ipReset, clock, ipReset);
+   FIFOF#(InnerProdResponse) responseFifo <- mkFIFOF(); //mkDualClockBramFIFOF(clock, ipReset, clock, ipReset);
+
+   Reg#(InnerProdParam)     nextReqReg <- mkReg(unpack(0), reset_by ipReset);
+   FIFOF#(InnerProdResponse) nextRespFifo <- mkFIFOF1(reset_by ipReset);
+
+   Reg#(InnerProdParam) requestPipeReg <- mkReg(unpack(0), reset_by ipReset);
+   Reg#(Bool)        isMyRequestReg <- mkReg(False, reset_by ipReset);
+   Reg#(Bool)        validReg       <- mkReg(False, reset_by ipReset);
 
    rule request_rule;
       let req <- toGet(reqFifo).get();
 
       let addr = addrReg + 1;
-      if (req.update) begin
+      if (req.update && req.tile == tile) begin
 	 $display("tile %d: writing kernel addr=%d value=%d", tile, addrReg, req.v);
 	 kernelBram.portA.request.put(BRAMRequest {write:True, responseOnWrite:False, address: addrReg, datain: req.v});
       end
-      else begin
+      else if (req.tile == tile || req.tile == fromInteger(valueOf(NumTiles))) begin
 	 kernelBram.portA.request.put(BRAMRequest {write:False, responseOnWrite:False, address: addrReg, datain: 0});
 	 req1Fifo.enq(req);
       end
@@ -105,34 +149,49 @@ module mkInnerProdTile#(Int#(16) tile)(InnerProdTile);
 
    rule responseRule;
       $display("InnerProdTile %d response.get %h", tile, dsp.p());
-      responseFifo.enq(unpack(dsp.p()[23:8]));
+      InnerProdResponse v = unpack(0);
+      let valid = False;
+      if (dsp.notEmpty()) begin
+	 Int#(16) uintTile = extend(unpack(tile));
+	 v = tuple2(uintTile, unpack(dsp.p()[23:8]));
+	 valid = True;
+      end
+      else if (nextRespFifo.notEmpty()) begin
+	 v <- toGet(nextRespFifo).get();
+	 valid = True;
+      end
+      if (valid)
+	 responseFifo.enq(v);
    endrule
 
-   function InnerProdResponse addTileNumber(Int#(16) v); return tuple2(tile, v); endfunction
-
    interface PipeIn request = toPipeIn(reqFifo);
-   interface PipeOut response = mapPipe(addTileNumber, toPipeOut(responseFifo));
+   interface PipeOut response = toPipeOut(responseFifo);
+   interface PipeOut requestNext;
+      method InnerProdParam first() if (validReg);
+	 return nextReqReg;
+      endmethod
+      method Bool notEmpty();
+	 return validReg;
+      endmethod
+   endinterface
+   interface PipeIn responseNext = toPipeIn(nextRespFifo);
    interface ResetOut resetOut = ipReset;
 endmodule
 
-interface ReqPipes#(numeric type numPipes, type reqType);
-   interface PipeIn#(Tuple2#(Bit#(TLog#(numPipes)),reqType)) inPipe;
-   interface Vector#(numPipes, PipeOut#(reqType))            outPipes;
+interface ReqPipes#(numeric type numPipes, numeric type typeNumSize, type reqType);
+   interface PipeIn#(reqType)                     inPipe;
+   interface Vector#(numPipes, PipeOut#(reqType)) outPipes;
 endinterface
 
-module mkRequestPipes(ReqPipes#(numPipes,reqType))
-   provisos (FunnelPipesPipelined#(1, numPipes, reqType, 2),
-	     Bits#(Tuple2#(Bit#(TLog#(numPipes)), reqType), a__),
-	     Add#(1, c__, a__)
-	     );
-   FIFOF#(Tuple2#(Bit#(TLog#(numPipes)),reqType)) syncIn <- mkFIFOF();
+module mkRequestPipes(ReqPipes#(numPipes,TileNumSize,reqType))
+   provisos (Bits#(reqType, a__));
+   FIFOF#(reqType) syncIn <- mkFIFOF();
 
-   PipeOut#(Tuple2#(Bit#(TLog#(numPipes)),reqType))              reqPipe = toPipeOut(syncIn);
-   Vector#(1, PipeOut#(Tuple2#(Bit#(TLog#(numPipes)),reqType))) reqPipe1 = vec(reqPipe);
-   UnFunnelPipe#(1,numPipes,reqType,2)                  unfunnelReqPipes <- mkUnFunnelPipesPipelined(reqPipe1);
+   PipeOut#(reqType)                   reqPipe = toPipeOut(syncIn);
+   Vector#(numPipes,PipeOut#(reqType)) opipes <- mkForkVector(reqPipe);
 
    interface PipeIn inPipe = toPipeIn(syncIn);
-   interface Vector outPipes = unfunnelReqPipes;
+   interface Vector outPipes = opipes;
 endmodule
 
 interface ResponsePipes#(numeric type numPipes);
@@ -152,55 +211,48 @@ module mkResponsePipes(ResponsePipes#(numPipes))
 endmodule
 
 interface MacroTile;
-   interface PipeIn#(MacroTileRequest) inPipe;
+   interface PipeIn#(InnerProdParam) inPipe;
    interface PipeOut#(InnerProdResponse) outPipe;
    interface Reset                  resetOut;
 endinterface
 
 (* synthesize *)
-module mkRequestPipesMTSynth(ReqPipes#(NumTilesPerMacro,InnerProdParam));
-   let rp <- mkRequestPipes();
-   return rp;
-endmodule
-
-(* synthesize *)
-module mkResponsePipesMTSynth(ResponsePipes#(NumTilesPerMacro));
-   let op <- mkResponsePipes();
-   return op;
-endmodule
-
-(* synthesize *)
-module mkMacroTile#(Int#(16) mt)(MacroTile);
+module mkMacroTile#(Bit#(TileNumSize) mt)(MacroTile);
    let clock <- exposeCurrentClock();
    let reset <- exposeCurrentReset();
-   let trpReset <- mkAsyncReset(2, reset, clock);
-   let topReset <- mkAsyncReset(2, reset, clock);
-   ReqPipes#(NumTilesPerMacro,InnerProdParam) rp <- mkRequestPipesMTSynth(reset_by trpReset);
-   ResponsePipes#(NumTilesPerMacro) op <- mkResponsePipesMTSynth(reset_by topReset);
+   let trpReset <- mkAsyncReset(10, reset, clock);
+   let topReset <- mkAsyncReset(10, reset, clock);
 
-   Reset tileReset <- mkAsyncReset(2, reset, clock);
+   Reset tileReset <- mkAsyncReset(10, reset, clock);
+
+   PipeIn#(InnerProdParam) tileRequestPipe;
+   PipeOut#(InnerProdResponse) tileResponsePipe;
+   PipeOut#(InnerProdParam) tileRequestNextPipe;
+   PipeIn#(InnerProdResponse) tileResponseNextPipe;
 
    for (Integer t = 0; t < valueOf(NumTilesPerMacro); t = t + 1) begin
-      let tile <- mkInnerProdTile(mt * fromInteger(valueOf(NumTilesPerMacro)) + fromInteger(t), reset_by tileReset);
+      let hasNext = t != (valueOf(NumTilesPerMacro) - 1);
+      let tile <- mkInnerProdTile(mt * fromInteger(valueOf(NumTilesPerMacro)) + fromInteger(t), hasNext, reset_by tileReset);
+      if (t == 0) begin
+	 tileRequestPipe = tile.request;
+	 tileResponsePipe = tile.response;
+      end
+      else begin
+	 mkConnection(tileRequestNextPipe, tile.request, reset_by trpReset);
+	 mkConnection(tile.response, tileResponseNextPipe, reset_by trpReset);
+      end
       tileReset = tile.resetOut;
-      mkConnection(rp.outPipes[t], tile.request, reset_by tileReset);
-      mkConnection(tile.response, op.inPipes[t], reset_by tileReset);
+      tileRequestNextPipe = tile.requestNext;
+      tileResponseNextPipe = tile.responseNext;
    end
 
-   FIFOF#(InnerProdResponse) responseFifo <- mkSizedFIFOF(valueOf(NumTilesPerMacro));
-   rule responseRule;
-      let tr <- toGet(op.outPipe).get();
-      $display("responseFifo: mt=%d t=%d v=%h", mt, tpl_1(tr), tpl_2(tr));
-      responseFifo.enq(tr);
-   endrule
-
-   interface PipeIn inPipe = rp.inPipe;
-   interface PipeOut outPipe = toPipeOut(responseFifo); //op.outPipe;
+   interface PipeIn inPipe = tileRequestPipe;
+   interface PipeOut outPipe = tileResponsePipe;
    interface Reset resetOut = tileReset;
 endmodule
 
 (* synthesize *)
-module mkRequestPipesSynth(ReqPipes#(NumMacroTiles,MacroTileRequest));
+module mkRequestPipesSynth(ReqPipes#(NumMacroTiles,TileNumSize,InnerProdParam));
    let rp <- mkRequestPipes();
    return rp;
 endmodule
@@ -211,29 +263,30 @@ module mkResponsePipesSynth(ResponsePipes#(NumMacroTiles));
    return op;
 endmodule
 
+
 (* synthesize *)
 module mkInnerProdSynth#(Clock derivedClock)(InnerProdSynth);
    let defaultClock <- exposeCurrentClock;
    let defaultReset <- exposeCurrentReset;
 
-   let derivedReset <- mkAsyncReset(2, defaultReset, derivedClock);
+   let derivedReset <- mkAsyncReset(10, defaultReset, derivedClock);
 
    let optionalReset = derivedReset; // noReset
 
-   FIFOF#(Tuple2#(Bit#(TLog#(NumMacroTiles)),MacroTileRequest)) inputFifo <- mkDualClockBramFIFOF(defaultClock, defaultReset, derivedClock, derivedReset);
-   FIFOF#(InnerProdResponse) bramFifo <- mkDualClockBramFIFOF(derivedClock, derivedReset, defaultClock, defaultReset, clocked_by derivedClock, reset_by derivedReset);
+   FIFOF#(InnerProdParam) inputFifo <- mkDualClockBramFIFOF(defaultClock, defaultReset, derivedClock, derivedReset);
+   FIFOF#(InnerProdResponse) bramFifo <- mkTileResponseFifo(derivedClock, derivedReset, defaultClock, defaultReset);
 
    Reg#(Bit#(32)) cycles <- mkReg(0, clocked_by derivedClock, reset_by derivedReset);
    rule cyclesRule;
       cycles <= cycles+1;
    endrule
 
-   let rpReset <- mkAsyncReset(2, derivedReset, derivedClock);
-   let opReset <- mkAsyncReset(2, derivedReset, derivedClock);
-   ReqPipes#(NumMacroTiles,MacroTileRequest) rp <- mkRequestPipesSynth(clocked_by derivedClock, reset_by rpReset);
+   let rpReset <- mkAsyncReset(10, defaultReset, derivedClock);
+   let opReset <- mkAsyncReset(10, defaultReset, derivedClock);
+   ReqPipes#(NumMacroTiles,TileNumSize,InnerProdParam) rp <- mkRequestPipesSynth(clocked_by derivedClock, reset_by rpReset);
    ResponsePipes#(NumMacroTiles) op <- mkResponsePipesSynth(clocked_by derivedClock, reset_by opReset);
 
-   Reset mtReset <- mkAsyncReset(2, derivedReset, derivedClock);
+   Reset mtReset <- mkAsyncReset(10, derivedReset, derivedClock);
    for (Integer mt = 0; mt < valueOf(NumMacroTiles); mt = mt + 1) begin
       let macroTile <- mkMacroTile(fromInteger(mt), clocked_by derivedClock, reset_by mtReset);
       mtReset = macroTile.resetOut;
@@ -244,8 +297,8 @@ module mkInnerProdSynth#(Clock derivedClock)(InnerProdSynth);
    mkConnection(toPipeOut(inputFifo), rp.inPipe, clocked_by derivedClock, reset_by derivedReset);
    mkConnection(op.outPipe, toPipeIn(bramFifo), clocked_by derivedClock, reset_by derivedReset);
 
-   Reg#(Bit#(TLog#(NumTilesPerMacro))) tReg <- mkReg(0);
-   Reg#(Bit#(TLog#(NumMacroTiles))) mReg <- mkReg(0);
+   Reg#(Bit#(TileNumSize)) tReg <- mkReg(0);
+   Reg#(Bit#(TileNumSize)) mReg <- mkReg(0);
    Wire#(Bool) bWire <- mkDWire(False);
    rule foo if (bWire);
       $display("m=%d t=%d", mReg, tReg);
@@ -253,13 +306,14 @@ module mkInnerProdSynth#(Clock derivedClock)(InnerProdSynth);
 
    interface InnerProdRequest request;
       method Action innerProd(Bit#(16) tile, Bit#(16) a, Bool first, Bool last, Bool update);
-	 Bit#(TLog#(NumTilesPerMacro)) t = truncate(tile);
-	 Bit#(TLog#(NumMacroTiles)) m = truncate(tile >> valueOf(TLog#(NumTilesPerMacro)));
+	 Bit#(TileNumSize) t = truncate(tile);
+	 Bit#(TileNumSize) m = truncate(tile >> valueOf(TLog#(NumTilesPerMacro)));
 	 tReg <= t;
 	 mReg <= m;
 	 bWire <= True;
 	 $display("request.innerProd m=%d t=%d a=%h first=%d last=%d", m, t, a, first, last);
-	 inputFifo.enq(tuple2(m, tuple2(t, InnerProdParam { v: unpack(a), first: first, last: last, update: update})));
+         // broadcast to all tiles
+	 inputFifo.enq(InnerProdParam { tile: t, v: unpack(a), first: first, last: last, update: update});
       endmethod
       method Action start();
       endmethod
