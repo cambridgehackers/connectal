@@ -162,6 +162,9 @@ module mkInnerProdTile#(Bit#(TileNumSize) tile, Bool hasNext)(InnerProdTile);
    rule responseRule;
       InnerProdResponse v = unpack(0);
       let valid = False;
+      if (dsp.notEmpty() && !responseFifo.notFull()) begin
+	 $display("tile %d dropping dsp.p due to full responseFifo", tile);
+      end
       if (dsp.notEmpty()) begin
 	 $display("InnerProdTile tile=%d dsp.p %h", tile, dsp.p());
 	 Int#(16) uintTile = extend(unpack(tile));
