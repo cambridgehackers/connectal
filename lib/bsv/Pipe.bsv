@@ -901,9 +901,10 @@ module mkRangePipeOut(RangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq
 	 return x;
       endmethod
       method Action deq if (x <= xlimit);
+	 let next_x = x + xstep;
 	 x <= x + xstep;
 	 first <= False;
-	 last <= (x+xstep >= xlimit);
+	 last <= (next_x+xstep > xlimit);
       endmethod
       method Bool notEmpty();
 	 return (x <= xlimit);
