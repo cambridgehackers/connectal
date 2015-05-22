@@ -73,7 +73,8 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
       if (re.dataPipes[0].notEmpty()) begin
 	 let v <- toGet(re.dataPipes[0]).get;
 	 let rval = bytesRead/4;
-	 let expectedV = {rval+1,rval};
+	 function Bit#(32) expectedVal(Integer i); return rval+fromInteger(i); endfunction
+	 let expectedV = pack(genWith(expectedVal));
 	 vReg <= v;
 	 vExpectedReg <= expectedV;
 	 validReg <= True;
