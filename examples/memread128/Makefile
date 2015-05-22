@@ -1,11 +1,11 @@
 
 CONNECTALDIR?=../..
-S2H_INTERFACES = MemreadRequest:Memread.request
-H2S_INTERFACES = Memread:MemreadIndication
-MEM_INTERFACES = lMemread.dmaClient,nil
-BSVFILES = Memread.bsv
-CPPFILES=testmemread.cpp
-CONNECTALFLAGS += --bscflags " -D DataBusWidth=128"
+S2H_INTERFACES = ReadTestRequest:ReadTest.request
+H2S_INTERFACES = ReadTest:ReadTestIndication
+MEM_INTERFACES = lReadTest.dmaClient,nil
+BSVFILES = ../memread/ReadTest.bsv
+CPPFILES= ../memread/testmemread.cpp
+
+CONNECTALFLAGS += -D DataBusWidth=128
 
 include $(CONNECTALDIR)/Makefile.connectal
-
