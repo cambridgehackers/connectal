@@ -888,9 +888,9 @@ interface RangePipeIfc#(type a);
 endinterface
 
 module mkRangePipeOut(RangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
-   Reg#(a) x <- mkReg(1);
+   Reg#(a) x <- mkReg(0);
    Reg#(a) xbase <- mkReg(0);
-   Reg#(a) xstep <- mkReg(1);
+   Reg#(a) xstep <- mkReg(0);
    // inclusive limit
    Reg#(a) xlimit <- mkReg(0);
    Reg#(Bool) first <- mkReg(False);
@@ -900,27 +900,26 @@ module mkRangePipeOut(RangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq
       method a first();
 	 return x;
       endmethod
-      method Action deq if (x <= xlimit);
+      method Action deq if (x < xlimit);
 	 let next_x = x + xstep;
 	 x <= x + xstep;
 	 first <= False;
-	 last <= (next_x+xstep > xlimit);
+	 last <= (next_x+xstep >= xlimit);
       endmethod
       method Bool notEmpty();
-	 return (x <= xlimit);
+	 return (x < xlimit);
       endmethod
    endinterface
-   method Action start(RangeConfig#(a) cfg) if (x > xlimit);
+   method Action start(RangeConfig#(a) cfg) if (x >= xlimit);
       x <= cfg.xbase;
       xbase <= cfg.xbase;
       xstep <= cfg.xstep;
-
-      // inclusive limit, should update interface accordingly
-      xlimit <= cfg.xlimit-cfg.xstep;
+      xlimit <= cfg.xlimit;
 
       first <= True;
       last <= (cfg.xbase+cfg.xstep >= cfg.xlimit);
-      if (verbose) $display("mkRangePipeOut xbase=%d xstep=%d cfg.xlimit=%d xlimit=%d last=%d", cfg.xbase, cfg.xstep, cfg.xlimit, (cfg.xlimit-cfg.xstep), (cfg.xbase+cfg.xstep >= cfg.xlimit));
+      if (True || verbose) $display("mkRangePipeOut xbase=%d xstep=%d xlimit=%d last=%d notEmpty=%d", cfg.xbase, cfg.xstep, cfg.xlimit, (cfg.xbase+cfg.xstep >= cfg.xlimit),
+	 (cfg.xbase < cfg.xlimit));
    endmethod
    method Bool isFirst() = first;
    method Bool isLast() = last;
