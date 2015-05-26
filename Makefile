@@ -100,7 +100,7 @@ upload:
 	git push origin v$(VERSION)
 	dput ppa:jamey-hicks/connectal ../connectal_$(VERSION)-*_source.changes
 	(cd  ../obs/home:jameyhicks:connectaldeb/connectal/; osc rm * || true)
-	cp -v ../connectal_$(VERSION)*.diff.gz ../connectal_$(VERSION)*.dsc ../connectal_$(VERSION)*.orig.tar.gz ../obs/home:jameyhicks:connectaldeb/connectal/
+	cp -v ../connectal_$(VERSION)*trusty*.diff.gz ../connectal_$(VERSION)*trusty*.dsc ../connectal_$(VERSION)*.orig.tar.gz ../obs/home:jameyhicks:connectaldeb/connectal/
 	(cd ../obs/home:jameyhicks:connectaldeb/connectal/; osc add *; osc commit -m $(VERSION) )
 	(cd ../obs/home:jameyhicks:connectal/connectal; sed -i "s/>v.....</>v$(VERSION)</" _service; osc commit -m "v$(VERSION)" )
 
