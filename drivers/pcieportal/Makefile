@@ -13,7 +13,7 @@ include $(CONNECTALDIR)/Makefile.version
 obj-m += pcieportal.o
 
 KVERSION=$(shell uname -r)
-export KROOT=/lib/modules/$(KVERSION)/build
+KROOT=/lib/modules/$(KVERSION)/build
 export BS_MOD_DIR=$(DESTDIR)/lib/modules/$(KVERSION)/connectal
 
 .PHONY: default
@@ -24,7 +24,7 @@ EXTRA_CFLAGS = -I$(PWD) -I$(PWD)/../../cpp -I$(PWD)/../.. -I$(PWD)/../portalmem 
 cflags-y += -I$(PWD)
 
 ../portalmem/portalmem.ko: ../portalmem/portalmem.c
-	cd ../portalmem; make -f Makefile.x86
+	cd ../portalmem; make
 
 .PHONY: pcieportal_signature_file.h
 pcieportal_signature_file.h:
@@ -58,7 +58,7 @@ endif
 clean:
 	rm -rf *.ko *.o *.mod.*
 	rm -rf Module.symvers Module.markers modules.order
-	cd ../portalmem; make -f Makefile.x86 clean
+	cd ../portalmem; make clean
 
 .PHONY: rmmod
 rmmod:

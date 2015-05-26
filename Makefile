@@ -114,17 +114,6 @@ allarchlist = ac701 zedboard zc702 zc706 kc705 vc707 zynq100 v2000t bluesim mini
 #################################################################################################
 
 KROOT_ZYNQ := $(PWD)/../linux-xlnx/
-KROOT_PAR  := $(PWD)/../parallella-linux/
-
-# For the parallella build to work, the cross compilers need to be in your path
-# and the parallella kernel needs to be parallel to connectal and built
-parallelladrivers:
-	(cd drivers/zynqportal/; CROSS_COMPILE=arm-linux-gnueabihf- KROOT=$(KROOT_PAR) make parallellazynqportal.ko)
-	(cd drivers/portalmem/; CROSS_COMPILE=arm-linux-gnueabihf- KROOT=$(KROOT_PAR) make parallellaportalmem.ko)
-
-parallelladrivers-clean:
-	(cd drivers/zynqportal/;  CROSS_COMPILE=arm-linux-gnueabihf- KROOT=$(KROOT_ZYNQ) make clean)
-	(cd drivers/portalmem/;   CROSS_COMPILE=arm-linux-gnueabihf- KROOT=$(KROOT_ZYNQ) make clean)
 
 zynqdrivers:
 	(cd drivers/zynqportal/; KROOT=$(KROOT_ZYNQ) make zynqportal.ko)
@@ -136,6 +125,17 @@ zynqdrivers-clean:
 
 zynqdrivers-install:
 	cp drivers/zynqportal/zynqportal.ko drivers/portalmem/portalmem.ko ../zynq-boot/imagefiles/
+
+# For the parallella build to work, the cross compilers need to be in your path
+# and the parallella kernel needs to be parallel to connectal and built
+KROOT_PAR  := $(PWD)/../parallella-linux/
+parallelladrivers:
+	(cd drivers/zynqportal/; CROSS_COMPILE=arm-linux-gnueabihf- KROOT=$(KROOT_PAR) make parallellazynqportal.ko)
+	(cd drivers/portalmem/; CROSS_COMPILE=arm-linux-gnueabihf- KROOT=$(KROOT_PAR) make parallellaportalmem.ko)
+
+parallelladrivers-clean:
+	(cd drivers/zynqportal/;  CROSS_COMPILE=arm-linux-gnueabihf- KROOT=$(KROOT_ZYNQ) make clean)
+	(cd drivers/portalmem/;   CROSS_COMPILE=arm-linux-gnueabihf- KROOT=$(KROOT_ZYNQ) make clean)
 
 RUNPARAMTEMP=$(subst :, ,$(RUNPARAM):5555)
 RUNIP=$(wordlist 1,1,$(RUNPARAMTEMP))
@@ -160,9 +160,6 @@ connectalspi-clean:
 
 connectalspi:
 	(cd drivers/connectalspi/; KROOT=$(KROOT_ZYNQ) make connectalspi.ko)
-
-foo:
-	cd tests/test_spi0/ && make run.zedboard || true
 
 connectalspi-adb: 
 	adb connect $(RUNPARAM)
