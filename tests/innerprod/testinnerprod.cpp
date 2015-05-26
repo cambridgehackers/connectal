@@ -34,8 +34,10 @@ class InnerProd : public InnerProdIndicationWrapper
     int cnt;
 public:
   void incr_cnt(){
-    if (++cnt == 8*NUMBER_OF_TILES)
+    if (++cnt == 128*NUMBER_OF_TILES) {
+      fprintf(stderr, "Received %d responses, finishing\n", cnt);
       exit(0);
+    }
   }
   void innerProd(uint16_t t, uint16_t v) {
     fprintf(stderr, "%d: t=%03d innerProd v=%x\n", cnt, t, v);
@@ -114,8 +116,7 @@ int main(int argc, const char **argv)
 	  device.startConv(ref_srcAlloc, 0, 16, 0, 4);
     }
 
-    for (int times = 0; times < 40; times++)
+    for (int times = 0; times < 400; times++)
 	sleep(1);
     device.finish();
 }
-
