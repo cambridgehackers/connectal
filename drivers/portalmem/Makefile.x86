@@ -1,3 +1,16 @@
+
+V?=0
+ifeq ($(V),0)
+Q=@
+else
+Q=
+endif
+CONNECTALDIR ?= $(PWD)/../..
+include $(CONNECTALDIR)/Makefile.version
+
+ccflags-y = \
+	-DDRIVER_VERSION="KBUILD_STR($(VERSION))"
+
 obj-m = portalmem.o
 
 KVERSION=$(shell uname -r)

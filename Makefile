@@ -29,7 +29,7 @@ all: pciedrivers scripts/syntax/parsetab.py
 	echo version "$(VERSION)"
 
 pciedrivers:
-	(cd drivers/pcieportal; make DRIVER_VERSION=$(VERSION))
+	(cd drivers/pcieportal; make)
 	make -C pcie
 
 pciedrivers-clean:
@@ -119,16 +119,16 @@ KROOT_PAR  := $(PWD)/../parallella-linux/
 # For the parallella build to work, the cross compilers need to be in your path
 # and the parallella kernel needs to be parallel to connectal and built
 parallelladrivers:
-	(cd drivers/zynqportal/; DRIVER_VERSION=$(VERSION) CROSS_COMPILE=arm-linux-gnueabihf- KROOT=$(KROOT_PAR) make parallellazynqportal.ko)
-	(cd drivers/portalmem/; DRIVER_VERSION=$(VERSION) CROSS_COMPILE=arm-linux-gnueabihf- KROOT=$(KROOT_PAR) make parallellaportalmem.ko)
+	(cd drivers/zynqportal/; CROSS_COMPILE=arm-linux-gnueabihf- KROOT=$(KROOT_PAR) make parallellazynqportal.ko)
+	(cd drivers/portalmem/; CROSS_COMPILE=arm-linux-gnueabihf- KROOT=$(KROOT_PAR) make parallellaportalmem.ko)
 
 parallelladrivers-clean:
 	(cd drivers/zynqportal/;  CROSS_COMPILE=arm-linux-gnueabihf- KROOT=$(KROOT_ZYNQ) make clean)
 	(cd drivers/portalmem/;   CROSS_COMPILE=arm-linux-gnueabihf- KROOT=$(KROOT_ZYNQ) make clean)
 
 zynqdrivers:
-	(cd drivers/zynqportal/; DRIVER_VERSION=$(VERSION) KROOT=$(KROOT_ZYNQ) make zynqportal.ko)
-	(cd drivers/portalmem/;  DRIVER_VERSION=$(VERSION) KROOT=$(KROOT_ZYNQ) make portalmem.ko)
+	(cd drivers/zynqportal/; KROOT=$(KROOT_ZYNQ) make zynqportal.ko)
+	(cd drivers/portalmem/;  KROOT=$(KROOT_ZYNQ) make portalmem.ko)
 
 zynqdrivers-clean:
 	(cd drivers/zynqportal/; KROOT=$(KROOT_ZYNQ) make clean)
@@ -159,7 +159,7 @@ connectalspi-clean:
 	(cd drivers/connectalspi/; KROOT=$(KROOT_ZYNQ) make clean)
 
 connectalspi:
-	(cd drivers/connectalspi/; DRIVER_VERSION=$(VERSION) KROOT=$(KROOT_ZYNQ) make connectalspi.ko)
+	(cd drivers/connectalspi/; KROOT=$(KROOT_ZYNQ) make connectalspi.ko)
 
 foo:
 	cd tests/test_spi0/ && make run.zedboard || true

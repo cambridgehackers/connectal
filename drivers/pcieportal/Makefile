@@ -1,6 +1,15 @@
 
 # On Centos: sudo yum install kernel-headers
 
+V?=0
+ifeq ($(V),0)
+Q=@
+else
+Q=
+endif
+CONNECTALDIR ?= $(PWD)/../..
+include $(CONNECTALDIR)/Makefile.version
+
 obj-m += pcieportal.o
 
 KVERSION=$(shell uname -r)
@@ -10,7 +19,8 @@ export BS_MOD_DIR=$(DESTDIR)/lib/modules/$(KVERSION)/connectal
 .PHONY: default
 default: pcieportal.ko ../portalmem/portalmem.ko
 
-EXTRA_CFLAGS = -I$(PWD) -I$(PWD)/../../cpp -I$(PWD)/../.. -I$(PWD)/../portalmem -I$(PWD)/../../generated/cpp
+EXTRA_CFLAGS = -I$(PWD) -I$(PWD)/../../cpp -I$(PWD)/../.. -I$(PWD)/../portalmem -I$(PWD)/../../generated/cpp \
+	-DDRIVER_VERSION="KBUILD_STR($(VERSION))"
 cflags-y += -I$(PWD)
 
 ../portalmem/portalmem.ko: ../portalmem/portalmem.c
@@ -21,11 +31,11 @@ pcieportal_signature_file.h:
 	md5sum *.c ../../generated/cpp/*.c | grep -v mod.c | sed -f ../../scripts/driver_signature.sed >pcieportal_signature_file.h
 
 pcieportal.ko: pcieportal.c pcieportal.h pcieportal_signature_file.h
-	@$(MAKE) -C $(KROOT) M=$(PWD) modules
+	$(Q)$(MAKE) -C $(KROOT) M=$(PWD) modules
 
 .PHONY: modules_check
 modules_check:
-	@$(MAKE) -C $(KROOT) C=2 M=$(PWD) modules
+	$(Q)$(MAKE) -C $(KROOT) C=2 M=$(PWD) modules
 
 .PHONY: install
 install: pcieportal.ko
