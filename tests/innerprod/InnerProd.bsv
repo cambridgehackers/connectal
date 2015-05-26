@@ -312,6 +312,7 @@ module mkIPDriver(InnerProdDriver);
 
    // fixme
    let kernelHeight = 4;
+   let kernelWidth = 4;
    let kernelColAddrBits = 2;
    Reg#(Bit#(16))           rowLenBytes <- mkReg(16);
    Reg#(Bit#(BurstLenSize)) burstLenBytes <- mkReg(16);
@@ -349,7 +350,7 @@ module mkIPDriver(InnerProdDriver);
       bramWriteFifo.enq(BRAMRequest{write: True, responseOnWrite: False, address: truncate(bramAddr), datain: unpack(v[0])});
       if (bramWriteRangePipe.isLast()) begin
 	 // now OK to start convolutions for rows up to here
-	 let rowNumber = bramAddr >> 4; // imageColAddrBits
+	 let rowNumber = bramAddr / (rowLenBytes/2);
 	 let enoughRowsCached = enoughRowsCachedReg;
 	 if (!enoughRowsCached) begin
 	    enoughRowsCached = rowNumber >= (kernelHeight-1);
@@ -358,8 +359,8 @@ module mkIPDriver(InnerProdDriver);
 	 $display("bramWriteRule: islast rowNumber=%d bramAddr=%d kernelHeight=%d enoughRowsCached=%d", rowNumber, bramAddr, kernelHeight, enoughRowsCached);
 	 if (enoughRowsCached) begin
 	    convRangePipe.start(XYRangeConfig {
-					       xbase: truncate(rowNumber), xlimit: truncate(rowNumber+1), xstep: 1,
-					       ybase: 0, ylimit: 1, ystep: 1
+					       xbase: truncate(rowNumber-kernelHeight+1), xlimit: truncate(rowNumber-kernelHeight+2), xstep: 1,
+					       ybase: 0, ylimit: (truncate(rowLenBytes>>1)-kernelWidth), ystep: 1
 					       });
 	 end
       end
@@ -368,7 +369,7 @@ module mkIPDriver(InnerProdDriver);
    rule convRowRule;
       match { .rowNumber, .colNumber } <- toGet(convRangePipe.pipe).get();
       let req = XYRangeConfig {
-			       xbase: truncate(rowNumber-kernelHeight+1), xlimit: truncate(rowNumber+1), xstep: 1,
+			       xbase: truncate(rowNumber), xlimit: truncate(rowNumber+1), xstep: 1,
 			       ybase: colNumber, ylimit: colNumber+kernelHeight, ystep: 1
 			       };
       ipRangePipe.start(req);
