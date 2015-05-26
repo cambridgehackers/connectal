@@ -1,10 +1,11 @@
 CONNECTALDIR?=../..
 S2H_INTERFACES = InnerProdRequest:InnerProd.request
 H2S_INTERFACES = InnerProd:InnerProdIndication
+MEM_INTERFACES = lInnerProd.readClients,nil
 
 BSVFILES = ../innerprod/InnerProdInterface.bsv
 CPPFILES= ../innerprod/testinnerprod.cpp
-NUMBER_OF_MASTERS =0
+NUMBER_OF_MASTERS = 1
 AUTOTOP = --importfiles InnerProdInterface
 
 DERIVED_CLOCK_PERIOD=4
