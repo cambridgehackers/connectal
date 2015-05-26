@@ -45,6 +45,8 @@ interface ReadTestIndication;
    method Action readDone(Bit#(32) mismatchCount);
 endinterface
 
+typedef 12 NumOutstandingRequests;
+typedef TMul#(NumOutstandingRequests,TMul#(32,4)) BufferSizeBytes;
 module mkReadTest#(ReadTestIndication indication) (ReadTest);
 
    Reg#(SGLId)   pointer <- mkReg(0);
@@ -54,7 +56,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
    Reg#(Bit#(32))   itersToStart <- mkReg(0);
    Reg#(Bit#(32))        bytesRead <- mkReg(0);
    Reg#(Bit#(32)) mismatchCounts <- mkReg(0);
-   MemreadEngine#(DataBusWidth,1,1)        re <- mkMemreadEngine;
+   MemreadEngine#(DataBusWidth,NumOutstandingRequests,1)        re <- mkMemreadEngineBuff(valueOf(BufferSizeBytes));
    FIFO#(Bit#(32)) checkDoneFifo <- mkFIFO();
    
    rule start (itersToStart > 0);
@@ -73,7 +75,8 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
       if (re.dataPipes[0].notEmpty()) begin
 	 let v <- toGet(re.dataPipes[0]).get;
 	 let rval = bytesRead/4;
-	 let expectedV = {rval+1,rval};
+	 function Bit#(32) expectedVal(Integer i); return rval+fromInteger(i); endfunction
+	 let expectedV = pack(genWith(expectedVal));
 	 vReg <= v;
 	 vExpectedReg <= expectedV;
 	 validReg <= True;

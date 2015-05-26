@@ -19,6 +19,11 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "dmaManager.h"
+#include "StdDmaIndication.h"
+#include "MemServerRequest.h"
+#include "MMURequest.h"
+
 #include "InnerProdRequest.h"
 #include "InnerProdIndication.h"
 
@@ -29,7 +34,7 @@ class InnerProd : public InnerProdIndicationWrapper
     int cnt;
 public:
   void incr_cnt(){
-    if (++cnt == NUMBER_OF_TILES)
+    if (++cnt == 8*NUMBER_OF_TILES)
       exit(0);
   }
   void innerProd(uint16_t t, uint16_t v) {
@@ -41,19 +46,35 @@ public:
 
 int main(int argc, const char **argv)
 {
+    MemServerRequestProxy *memServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
+    MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
+    DmaManager *dma = new DmaManager(dmap);
+    MemServerIndication memServerIndication(memServerRequest, IfcNames_MemServerIndicationH2S);
+    MMUIndication mmuIndication(dma, IfcNames_MMUIndicationH2S);
     InnerProd ind(IfcNames_InnerProdIndicationH2S);
     InnerProdRequestProxy device(IfcNames_InnerProdRequestS2H);
     device.pint.busyType = BUSY_SPIN;
 
+    size_t alloc_sz = 1<<20;
+    int srcAlloc = portalAlloc(alloc_sz, 0);
+    uint16_t *srcBuffer = (uint16_t *)portalMmap(srcAlloc, alloc_sz);
+    for (size_t i = 0; i < alloc_sz/sizeof(uint16_t); i++) {
+	srcBuffer[i] = 7*i-3;
+    }
+  unsigned int ref_srcAlloc = dma->reference(srcAlloc);
+
     fprintf(stderr, "[%s:%d] waiting for response\n", __FILE__, __LINE__);
     for (int tile = 0; tile < NUMBER_OF_TILES; tile++) {
       device.innerProd(tile, 0x0080, 1, 0, 1);
+      device.innerProd(tile, 0x0000, 0, 0, 1);
+      device.innerProd(tile, 0x0000, 0, 0, 1);
       device.innerProd(tile, 0x0000, 0, 0, 1);
       device.innerProd(tile, 0x0100, 0, 0, 1);
       device.innerProd(tile, 0x0080, 0, 0, 1);
       device.innerProd(tile, 0x0100, 0, 0, 1);
       device.innerProd(tile, 0x0200, 0, 1, 1);
     }
+    if (0) {
     for (int tile = 0; tile < NUMBER_OF_TILES; tile++) {
       device.innerProd(tile, 0x0080, 1, 0, 0);
       device.innerProd(tile, 0x0000, 0, 0, 0);
@@ -62,6 +83,37 @@ int main(int argc, const char **argv)
       device.innerProd(tile, 0x1000, 0, 0, 0);
       device.innerProd(tile, 0x1000, 0, 1, 0);
     }
+    for (int tile = NUMBER_OF_TILES; tile <= NUMBER_OF_TILES; tile++) {
+      device.innerProd(tile, 0x0080, 1, 0, 0);
+      device.innerProd(tile, 0x0000, 0, 0, 0);
+      device.innerProd(tile, 0x0000, 0, 0, 0);
+      device.innerProd(tile, 0x0000, 0, 0, 0);
+      device.innerProd(tile, 0x0080, 0, 0, 0);
+      device.innerProd(tile, 0x0080, 0, 0, 0);
+      device.innerProd(tile, 0x1000, 0, 0, 0);
+      device.innerProd(tile, 0x0000, 0, 0, 0);
+      device.innerProd(tile, 0x0000, 0, 0, 0);
+      device.innerProd(tile, 0x0000, 0, 0, 0);
+      device.innerProd(tile, 0x0000, 0, 0, 0);
+      device.innerProd(tile, 0x0000, 0, 0, 0);
+      device.innerProd(tile, 0x0000, 0, 0, 0);
+      device.innerProd(tile, 0x0000, 0, 0, 0);
+      device.innerProd(tile, 0x0000, 0, 0, 0);
+      device.innerProd(tile, 0x1000, 0, 1, 0);
+    }
+    } else {
+      for (int addr = 0; addr < 1024; addr++) {
+	device.write(addr, 0x0100);
+      }
+      if (0) 
+	for (int i = 0; i < 16; i++) {
+	  device.startIndividualConv(i, i+2, 0, 4);
+	  sleep(1);
+	}
+      else
+	  device.startConv(ref_srcAlloc, 0, 16, 0, 4);
+    }
+
     for (int times = 0; times < 40; times++)
 	sleep(1);
     device.finish();

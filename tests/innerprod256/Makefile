@@ -1,19 +1,17 @@
-
 CONNECTALDIR?=../..
 S2H_INTERFACES = InnerProdRequest:InnerProd.request
 H2S_INTERFACES = InnerProd:InnerProdIndication
-MEM_INTERFACES = lInnerProd.readClients,nil
 
-BSVFILES = InnerProdInterface.bsv
-CPPFILES=testinnerprod.cpp
-NUMBER_OF_MASTERS = 1
+BSVFILES = ../innerprod/InnerProdInterface.bsv
+CPPFILES= ../innerprod/testinnerprod.cpp
+NUMBER_OF_MASTERS =0
 AUTOTOP = --importfiles InnerProdInterface
 
 DERIVED_CLOCK_PERIOD=4
-CONNECTALFLAGS += -D IMPORT_HOSTIF -D SIM_DMA_READ_LATENCY=1
+CONNECTALFLAGS += -D IMPORT_HOSTIF
 
-CONNECTALFLAGS += -D NUMBER_OF_TILES=16 -D TILES_PER_MACRO=4
-CONNECTALFLAGS += --constraint=innerprod.xdc
+CONNECTALFLAGS += -D NUMBER_OF_TILES=256 -D TILES_PER_MACRO=16
+CONNECTALFLAGS += --constraint=../innerprod/innerprod.xdc
 
 #CONNECTALFLAGS += -P mkInnerProdTile
 CONNECTALFLAGS += -P mkMacroTile

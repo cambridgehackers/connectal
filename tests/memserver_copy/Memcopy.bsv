@@ -29,9 +29,7 @@ import ClientServer::*;
 import GetPut::*;
 import HostInterface::*;
 import MemTypes::*;
-import MemwriteEngine::*;
 import Pipe::*;
-import AddressGenerator::*;
 
 typedef TDiv#(DataBusWidth,32) WordsPerBeat;
 

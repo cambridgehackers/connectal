@@ -218,11 +218,14 @@ def instMod(args, modname, modext, constructor, tparam, memFlag):
     else:
         if not instantiateRequest.get(pmap['modname']):
             instantiateRequest[pmap['modname']] = iReq()
-            pmap['hostif'] = ('\n'
-                              '`ifdef IMPORT_HOSTIF\n'
-                              '                    host,\n'
-                              '`endif\n'
-                              '                    ')
+            if pmap['modname'] in ['MMU', 'MemServer']:
+                pmap['hostif'] = ''
+            else:
+                pmap['hostif'] = ('\n'
+                                  '`ifdef IMPORT_HOSTIF\n'
+                                  '                    host,\n'
+                                  '`endif\n'
+                                  '                    ')
             instantiateRequest[pmap['modname']].inst = '   %(modname)s%(tparam)s l%(modname)s <- mk%(modname)s(%(hostif)s%%s);' % pmap
         instantiateRequest[pmap['modname']].args.append(pmap['args'])
     if pmap['modname'] not in instantiatedModules:

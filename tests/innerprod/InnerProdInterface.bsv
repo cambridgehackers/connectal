@@ -4,7 +4,9 @@ typedef enum {
 
 interface InnerProdRequest;
    method Action innerProd(Bit#(16) tile, Bit#(16) a, Bool first, Bool last, Bool update);
-   method Action start();
+   method Action write(Bit#(16) addr, Bit#(16) val);
+   method Action startIndividualConv(Bit#(16) xbase, Bit#(16) xlimit, Bit#(16) ybase, Bit#(16) ylimit);
+   method Action startConv(Bit#(32) pointer, Bit#(16) xbase, Bit#(16) xlimit, Bit#(16) ybase, Bit#(16) ylimit);
    method Action finish();
 endinterface
 interface InnerProdIndication;
