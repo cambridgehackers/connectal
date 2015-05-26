@@ -290,11 +290,12 @@ module mkIPDriver(InnerProdDriver);
    FIFOF#(BRAMRequest#(Bit#(10),Int#(16))) bramWriteFifo <- mkFIFOF();
    FIFOF#(Int#(16)) bramResponseFifo <- mkFIFOF();
    FIFOF#(InnerProdParam) innerProdRequestFifo <- mkFIFOF();
-   FIFOF#(Tuple2#(Bool,Bool)) lastFifo <- mkFIFOF();
+   FIFOF#(Tuple4#(Bool,Bool,Bit#(10),Bit#(10))) lastFifo <- mkFIFOF();
 
    FIFOF#(RangeConfig#(Bit#(16))) rowRequestFifo <- mkFIFOF();
    FIFOF#(XYRangeConfig#(Bit#(10))) convRequestFifo <- mkFIFOF();
-   XYRangePipeIfc#(Bit#(10)) rangePipe <- mkXYRangePipeOut();
+   XYRangePipeIfc#(Bit#(10)) convRangePipe <- mkXYRangePipeOut();
+   XYRangePipeIfc#(Bit#(10)) ipRangePipe <- mkXYRangePipeOut();
    FIFOF#(XYRangeConfig#(Bit#(10))) rpMutex <- mkFIFOF1();
 
    RangePipeIfc#(Bit#(16)) rowRangePipe <- mkRangePipeOut();
@@ -356,42 +357,45 @@ module mkIPDriver(InnerProdDriver);
 	 end
 	 $display("bramWriteRule: islast rowNumber=%d bramAddr=%d kernelHeight=%d enoughRowsCached=%d", rowNumber, bramAddr, kernelHeight, enoughRowsCached);
 	 if (enoughRowsCached) begin
-	    // FIXME: start another rangeconfig that runs the convolutions for this row
-	    convRequestFifo.enq(XYRangeConfig {
-					       xbase: truncate(rowNumber-kernelHeight+1), xlimit: truncate(rowNumber+1), xstep: 1,
-					       ybase: 0, ylimit: kernelHeight, ystep: 1
+	    convRangePipe.start(XYRangeConfig {
+					       xbase: truncate(rowNumber), xlimit: truncate(rowNumber+1), xstep: 1,
+					       ybase: 0, ylimit: 1, ystep: 1
 					       });
 	 end
       end
    endrule
 
-   rule convStartRule;
-      let req <- toGet(convRequestFifo).get();
-      $display("range startRule x=%d xlimit=%d y=%d ylimit=%d", req.xbase, req.xlimit, req.ybase, req.ylimit);
-      rangePipe.start(req);
+   rule convRowRule;
+      match { .rowNumber, .colNumber } <- toGet(convRangePipe.pipe).get();
+      let req = XYRangeConfig {
+			       xbase: truncate(rowNumber-kernelHeight+1), xlimit: truncate(rowNumber+1), xstep: 1,
+			       ybase: colNumber, ylimit: colNumber+kernelHeight, ystep: 1
+			       };
+      ipRangePipe.start(req);
+      $display("range startRule row=%d col=%d", rowNumber, colNumber);
       rpMutex.enq(req);
    endrule
 
    rule issueBramReadRequest;
-      match { .x, .y } <- toGet(rangePipe.pipe).get();
+      match { .x, .y } <- toGet(ipRangePipe.pipe).get();
       // fixme: placeholder address computation
       let addr = (x << kernelColAddrBits) | y;
       bramRequestFifo.enq(BRAMRequest{write: False, responseOnWrite: False, address: addr, datain: 0});
-      lastFifo.enq(tuple2(rangePipe.isFirst(), rangePipe.isLast()));
-      if (rangePipe.isLast && !rpMutex.notEmpty()) begin
+      lastFifo.enq(tuple4(ipRangePipe.isFirst(), ipRangePipe.isLast(), x, y));
+      if (ipRangePipe.isLast && !rpMutex.notEmpty()) begin
 	 $display("range finished but rpMutex empty");
       end
-      if (rangePipe.isLast && rpMutex.notEmpty()) begin
+      if (ipRangePipe.isLast && rpMutex.notEmpty()) begin
 	 let req <- toGet(rpMutex).get();
 	 $display("range finished x=%d y=%d", req.xbase, req.ybase);
       end
-      $display("issueBramReadRequest x=%d y=%d first=%d last=%d", x, y, rangePipe.isFirst(), rangePipe.isLast());
+      $display("issueBramReadRequest x=%d y=%d first=%d last=%d", x, y, ipRangePipe.isFirst(), ipRangePipe.isLast());
    endrule
    rule issueInnerProdRequest;
       let v <- toGet(bramResponseFifo).get();
-      match { .first, .last } <- toGet(lastFifo).get();
+      match { .first, .last, .x, .y } <- toGet(lastFifo).get();
       let allTiles = fromInteger(valueOf(NumTiles));
-      $display("issueInnerProdRequest v=%d first=%d last=%d", v, first, last);
+      $display("issueInnerProdRequest v=%d x=%d y=%d first=%d last=%d", v, x, y, first, last);
       if (innerProdRequestFifo.notFull())
       innerProdRequestFifo.enq(InnerProdParam { tile: allTiles, v: v, first: first, last: last, update: False });
       else
