@@ -358,7 +358,7 @@ module mkIPDriver(InnerProdDriver);
 	 if (enoughRowsCached) begin
 	    // FIXME: start another rangeconfig that runs the convolutions for this row
 	    convRequestFifo.enq(XYRangeConfig {
-					       xbase: truncate(rowNumber), xlimit: truncate(rowNumber+kernelHeight), xstep: 1,
+					       xbase: truncate(rowNumber-kernelHeight+1), xlimit: truncate(rowNumber+1), xstep: 1,
 					       ybase: 0, ylimit: kernelHeight, ystep: 1
 					       });
 	 end
