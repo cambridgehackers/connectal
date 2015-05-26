@@ -372,10 +372,6 @@ module mkIPDriver(InnerProdDriver);
       rpMutex.enq(req);
    endrule
 
-   rule foo;
-      if (rangePipe.pipe.notEmpty() && (!bramRequestFifo.notFull() || !lastFifo.notFull()))
-	 $display("issueBramReadRequest blocked %d %d", bramRequestFifo.notFull(), lastFifo.notFull());
-   endrule
    rule issueBramReadRequest;
       match { .x, .y } <- toGet(rangePipe.pipe).get();
       // fixme: placeholder address computation
