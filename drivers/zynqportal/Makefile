@@ -1,6 +1,11 @@
-obj-m += zynqportal.o
+V?=0
+ifeq ($(V),0)
+Q=@
+else
+Q=
+endif
 
-export KROOT=$(DEVICE_XILINX_KERNEL)
+obj-m += zynqportal.o
 
 CROSS_COMPILE?=arm-linux-gnueabi-
 DRIVER_VERSION?=$(shell git log -n 1 --oneline -- zynqportal.c zynqportal.h ../../cpp/dmaSendFd.h | cut -f 1 -d " ")
@@ -13,20 +18,20 @@ default: zynqportal.ko
 
 zynqportal.ko: zynqportal.h zynqportal.c
 	echo "$(DRIVER_VERSION)"
-	@md5sum *.c ../../generated/cpp/*.c | grep -v mod.c | sed -f ../../scripts/driver_signature.sed >driver_signature_file.h
-	@$(MAKE) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) -C $(KROOT) xilinx_zynq_portal_defconfig
-	@$(MAKE) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) -C $(KROOT) oldconfig
-	@$(MAKE) -j 8 ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) -C $(KROOT) zImage
-	@$(MAKE) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) -C $(KROOT) M=$(PWD) DRIVER_VERSION="$(DRIVER_VERSION)" modules
+	$(Q)md5sum *.c ../../generated/cpp/*.c | grep -v mod.c | sed -f ../../scripts/driver_signature.sed >driver_signature_file.h
+	$(Q)$(MAKE) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) -C $(KROOT) xilinx_zynq_portal_defconfig
+	$(Q)$(MAKE) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) -C $(KROOT) oldconfig
+	$(Q)$(MAKE) -j 8 ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) -C $(KROOT) zImage
+	$(Q)$(MAKE) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) -C $(KROOT) M=$(PWD) DRIVER_VERSION="$(DRIVER_VERSION)" modules
 
 parallellazynqportal.ko: zynqportal.h zynqportal.c
 	echo "$(DRIVER_VERSION)"
-	@md5sum *.c ../../generated/cpp/*.c | grep -v mod.c | sed -f ../../../scripts/driver_signature.sed >driver_signature_file.h
-	@$(MAKE) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) -C $(KROOT) parallella_defconfig
-	@$(MAKE) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) -C $(KROOT) oldconfig
-	@$(MAKE) -j 8 ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) -C $(KROOT) LOADADDR=0x8000 uImage
-	@$(MAKE) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) -C $(KROOT) M=$(PWD) DRIVER_VERSION="$(DRIVER_VERSION)" modules
+	$(Q)md5sum *.c ../../generated/cpp/*.c | grep -v mod.c | sed -f ../../../scripts/driver_signature.sed >driver_signature_file.h
+	$(Q)$(MAKE) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) -C $(KROOT) parallella_defconfig
+	$(Q)$(MAKE) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) -C $(KROOT) oldconfig
+	$(Q)$(MAKE) -j 8 ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) -C $(KROOT) LOADADDR=0x8000 uImage
+	$(Q)$(MAKE) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) -C $(KROOT) M=$(PWD) DRIVER_VERSION="$(DRIVER_VERSION)" modules
 
 clean:
-	@$(MAKE) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) -C $(KROOT) M=$(PWD) clean
+	$(Q)$(MAKE) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) -C $(KROOT) M=$(PWD) clean
 	rm -f driver_signature_file.h

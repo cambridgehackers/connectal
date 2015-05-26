@@ -1,7 +1,5 @@
 obj-m += portalmem.o
 
-export KROOT=$(DEVICE_XILINX_KERNEL)
-
 CROSS_COMPILE?=arm-linux-gnueabi-
 DRIVER_VERSION?=$(shell git log -n 1 --oneline -- portalmem.c portalmem.h)
 
