@@ -353,12 +353,12 @@ module mkIPDriver(InnerProdDriver);
    endrule
    rule bramWriteRule;
       let bramAddr <- toGet(bramWriteIterator.pipe).get();
+      let rowNumber = bramWriteIterator.ctxt();
       Vector#(1,Bit#(16)) v = dataGearbox.first(); dataGearbox.deq();
       $display("bramWriteRule bramAddr=%d row=%d col=%d v=%h", bramAddr, bramAddr>>4, bramAddr & 'hf, v);
       bramWriteFifo.enq(BRAMRequest{write: True, responseOnWrite: False, address: truncate(bramAddr), datain: unpack(v[0])});
       if (bramWriteIterator.isLast()) begin
 	 // now OK to start convolutions for rows up to here
-	 let rowNumber = bramWriteIterator.ctxt();
 	 let enoughRowsCached = enoughRowsCachedReg;
 	 if (!enoughRowsCached) begin
 	    enoughRowsCached = rowNumber >= (kernelHeight-2);
