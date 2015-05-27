@@ -1,7 +1,7 @@
 CONNECTALDIR?=../..
 S2H_INTERFACES = InnerProdRequest:InnerProd.request
 H2S_INTERFACES = InnerProd:InnerProdIndication
-MEM_INTERFACES = lInnerProd.readClients,nil
+MEM_INTERFACES = lInnerProd.readClients,lInnerProd.writeClients
 
 BSVFILES = ../innerprod/InnerProdInterface.bsv
 CPPFILES= ../innerprod/testinnerprod.cpp
