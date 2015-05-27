@@ -64,13 +64,14 @@ typedef TDiv#(NumTiles,NumTilesPerMacro) NumMacroTiles;
 
 interface InnerProdSynth;
    interface InnerProdRequest request;
-   interface Get#(InnerProdResponse)   response;
    interface Vector#(1, MemReadClient#(DataBusWidth)) readClients;
+   interface Vector#(1, MemWriteClient#(DataBusWidth)) writeClients;
 endinterface
 
 interface InnerProd;
    interface InnerProdRequest request;
    interface Vector#(1, MemReadClient#(DataBusWidth)) readClients;
+   interface Vector#(1, MemWriteClient#(DataBusWidth)) writeClients;
 endinterface
 
 interface InnerProdTile;
@@ -277,22 +278,32 @@ typedef 11 LineBufferAddrSize;
 
 interface InnerProdDriver;
    interface Reg#(SGLId)                 readPointer;
+   interface Reg#(SGLId)                 writePointer;
    interface Put#(IteratorConfig#(Bit#(16))) rowRequest;
    interface Put#(XYIteratorConfig#(Bit#(LineBufferAddrSize))) convRequest; // for testing
-   interface BRAMClient#(Bit#(LineBufferAddrSize),Int#(16)) bramReadClient;
-   interface BRAMClient#(Bit#(LineBufferAddrSize),Int#(16)) bramWriteClient;
+   interface BRAMClient#(Bit#(LineBufferAddrSize),Int#(16)) lineBufferReadClient;
+   interface BRAMClient#(Bit#(LineBufferAddrSize),Int#(16)) lineBufferWriteClient;
+   interface BRAMClient#(Bit#(LineBufferAddrSize),Int#(16)) topBufferReadClient;
+   interface BRAMClient#(Bit#(LineBufferAddrSize),Int#(16)) topBufferWriteClient;
    interface PipeOut#(InnerProdParam) innerProdRequest;
+   interface PipeIn#(InnerProdResponse) innerProdResponse;
    interface MemReadClient#(DataBusWidth) readClient;
+   interface MemWriteClient#(DataBusWidth) writeClient;
 endinterface
 
 (* synthesize *)
 module mkIPDriver(InnerProdDriver);
    let clock <- exposeCurrentClock();
    let reset <- exposeCurrentReset();
-   FIFOF#(BRAMRequest#(Bit#(LineBufferAddrSize),Int#(16))) bramRequestFifo <- mkFIFOF();
-   FIFOF#(BRAMRequest#(Bit#(LineBufferAddrSize),Int#(16))) bramWriteFifo <- mkFIFOF();
-   FIFOF#(Int#(16)) bramResponseFifo <- mkFIFOF();
+   FIFOF#(BRAMRequest#(Bit#(LineBufferAddrSize),Int#(16))) lineBufferRequestFifo <- mkFIFOF();
+   FIFOF#(Int#(16))                                        lineBufferResponseFifo <- mkFIFOF();
+   FIFOF#(BRAMRequest#(Bit#(LineBufferAddrSize),Int#(16))) lineBufferWriteFifo <- mkFIFOF();
+   FIFOF#(BRAMRequest#(Bit#(LineBufferAddrSize),Int#(16))) topBufferRequestFifo <- mkFIFOF();
+   FIFOF#(Int#(16))                                        topBufferResponseFifo <- mkFIFOF();
+   FIFOF#(BRAMRequest#(Bit#(LineBufferAddrSize),Int#(16))) topBufferWriteFifo <- mkFIFOF();
+
    FIFOF#(InnerProdParam) innerProdRequestFifo <- mkFIFOF();
+   FIFOF#(InnerProdResponse) innerProdResponseFifo <- mkFIFOF();
    FIFOF#(Tuple4#(Bool,Bool,Bit#(LineBufferAddrSize),Bit#(LineBufferAddrSize))) lastFifo <- mkFIFOF();
 
    FIFOF#(IteratorConfig#(Bit#(16))) rowRequestFifo <- mkFIFOF();
@@ -305,12 +316,21 @@ module mkIPDriver(InnerProdDriver);
    IteratorIfc#(Bit#(16)) colIterator <- mkIterator();
    IteratorWithContext#(Bit#(16),Bit#(16)) bramWriteIterator <- mkIteratorWithContext();
 
+   IteratorIfc#(Bit#(16)) rowWriteBackIterator <- mkIterator();
+
+
    Reg#(SGLId)           readPointerReg <- mkReg(0);
+   Reg#(SGLId)          writePointerReg <- mkReg(0);
    Reg#(Bit#(3))                   tag <- mkReg(0);
 
    FIFO#(MemRequest) readReqFifo <- mkFIFO();
-   FIFO#(MemData#(DataBusWidth)) dataFifo <- mkFIFO();
-   Gearbox#(TDiv#(DataBusWidth,16), 1, Bit#(16))  dataGearbox <- mkNto1Gearbox(clock, reset, clock, reset);
+   FIFO#(MemData#(DataBusWidth)) readDataFifo <- mkSizedFIFO(8);
+   Gearbox#(TDiv#(DataBusWidth,16), 1, Bit#(16))  readDataGearbox <- mkNto1Gearbox(clock, reset, clock, reset);
+
+   Gearbox#(1, TDiv#(DataBusWidth,16), Bit#(16))  writeDataGearbox <- mk1toNGearbox(clock, reset, clock, reset);
+   FIFO#(MemRequest)              writeReqFifo <- mkFIFO();
+   FIFOF#(MemData#(DataBusWidth)) writeDataFifo <- mkSizedFIFOF(8);
+   FIFO#(Bit#(MemTagSize))       writeDoneFifo <- mkFIFO();
 
    // fixme
    let kernelHeight = 4;
@@ -351,15 +371,15 @@ module mkIPDriver(InnerProdDriver);
       tag <= tag + 1;
    endrule
    rule dataGearboxRule;
-      let d <- toGet(dataFifo).get();
-      dataGearbox.enq(unpack(d.data));
+      let d <- toGet(readDataFifo).get();
+      readDataGearbox.enq(unpack(d.data));
    endrule
    rule bramWriteRule;
       let bramAddr <- toGet(bramWriteIterator.pipe).get();
       let rowNumber = bramWriteIterator.ctxt();
-      Vector#(1,Bit#(16)) v = dataGearbox.first(); dataGearbox.deq();
+      Vector#(1,Bit#(16)) v = readDataGearbox.first(); readDataGearbox.deq();
       $display("bramWriteRule bramAddr=%d row=%d col=%d v=%h", bramAddr, bramAddr>>4, bramAddr & 'hf, v);
-      bramWriteFifo.enq(BRAMRequest{write: True, responseOnWrite: False, address: truncate(bramAddr), datain: unpack(v[0])});
+      lineBufferWriteFifo.enq(BRAMRequest{write: True, responseOnWrite: False, address: truncate(bramAddr), datain: unpack(v[0])});
       if (bramWriteIterator.isLast()) begin
 	 // now OK to start convolutions for rows up to here
 	 let enoughRowsCached = enoughRowsCachedReg;
@@ -393,12 +413,12 @@ module mkIPDriver(InnerProdDriver);
       match { .x, .y } <- toGet(ipIterator.pipe).get();
       // fixme: placeholder address computation
       let addr = (x << kernelColAddrBits) | y;
-      bramRequestFifo.enq(BRAMRequest{write: False, responseOnWrite: False, address: addr, datain: 0});
+      lineBufferRequestFifo.enq(BRAMRequest{write: False, responseOnWrite: False, address: addr, datain: 0});
       lastFifo.enq(tuple4(ipIterator.isFirst(), ipIterator.isLast(), x, y));
       $display("issueBramReadRequest x=%d y=%d first=%d last=%d", x, y, ipIterator.isFirst(), ipIterator.isLast());
    endrule
    rule issueInnerProdRequest;
-      let v <- toGet(bramResponseFifo).get();
+      let v <- toGet(lineBufferResponseFifo).get();
       match { .first, .last, .x, .y } <- toGet(lastFifo).get();
       let allTiles = fromInteger(valueOf(NumTiles));
       $display("issueInnerProdRequest v=%d x=%d y=%d first=%d last=%d", v, x, y, first, last);
@@ -408,24 +428,71 @@ module mkIPDriver(InnerProdDriver);
 	 $display("innerProdRequestFifo full");
    endrule
 
+   Reg#(Bit#(TileNumSize)) responseCountReg <- mkReg(0);
+   rule innerProdResponseRule;
+      let responseCount = responseCountReg;
+      if (responseCount == 0)
+	 responseCount = fromInteger(valueOf(NumTiles));
+      match { .tile, .data } <- toGet(innerProdResponseFifo).get();
+      $display("innerProdResponseRule count=%d tile=%d data=%h", responseCount, tile, data);
+      topBufferWriteFifo.enq(BRAMRequest{write: True, responseOnWrite: False, address: truncate(pack(tile)), datain: data});
+
+      if (responseCount == 1) begin
+	 let tag = 22;
+	 let offset = 0;
+	 //writeReqFifo.enq(MemRequest { sglId: writePointerReg, offset: offset, burstLen: fromInteger(valueOf(DataBusWidth)/8), tag: tag });
+      end
+      responseCountReg <= responseCount - 1;
+   endrule
+
+   mkConnection(mapPipe(pack, toPipeOut(topBufferResponseFifo)), toPipeIn(writeDataGearbox));
+   rule writeDataRule;
+      let tag = 22;
+      let v = pack(writeDataGearbox.first()); writeDataGearbox.deq();
+      writeDataFifo.enq(MemData { data: v, tag: tag });
+   endrule
+   rule writeDone;
+      let tag <- toGet(writeDoneFifo).get();
+   endrule
+
+   interface Reg readPointer = readPointerReg;
+   interface Reg writePointer = writePointerReg;
    interface rowRequest = toPut(rowRequestFifo);
    interface convRequest = toPut(convRequestFifo);
    interface innerProdRequest = toPipeOut(innerProdRequestFifo);
-   interface BRAMClient bramReadClient;
-      interface request = toGet(bramRequestFifo);
-      interface response = toPut(bramResponseFifo);
+   interface innerProdResponse = toPipeIn(innerProdResponseFifo);
+   interface BRAMClient lineBufferReadClient;
+      interface request = toGet(lineBufferRequestFifo);
+      interface response = toPut(lineBufferResponseFifo);
    endinterface
-   interface BRAMClient bramWriteClient;
-      interface request = toGet(bramWriteFifo);
+   interface BRAMClient lineBufferWriteClient;
+      interface request = toGet(lineBufferWriteFifo);
       interface Put response;
 	 method Action put(Int#(16) v);
-	    $display("bramWriteClient.response.put should never be called. v=%h", v);
+	    $display("lineBufferWriteClient.response.put should never be called. v=%h", v);
+	 endmethod
+      endinterface
+   endinterface
+   interface BRAMClient topBufferReadClient;
+      interface request = toGet(topBufferRequestFifo);
+      interface response = toPut(topBufferResponseFifo);
+   endinterface
+   interface BRAMClient topBufferWriteClient;
+      interface request = toGet(topBufferWriteFifo);
+      interface Put response;
+	 method Action put(Int#(16) v);
+	    $display("topBufferWriteClient.response.put should never be called. v=%h", v);
 	 endmethod
       endinterface
    endinterface
    interface MemReadClient readClient;
       interface Get readReq = toGet(readReqFifo);
-      interface Put readData = toPut(dataFifo);
+      interface Put readData = toPut(readDataFifo);
+   endinterface
+   interface MemWriteClient writeClient;
+      interface Get writeReq = toGet(writeReqFifo);
+      interface Get writeData = toGet(writeDataFifo);
+      interface Put writeDone = toPut(writeDoneFifo);
    endinterface
 endmodule
 
@@ -452,6 +519,7 @@ module mkInnerProdSynth#(Clock derivedClock)(InnerProdSynth);
    let optionalReset = derivedReset; // noReset
 
    BRAM2Port#(Bit#(LineBufferAddrSize),Int#(16)) lineBuffer <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(Bit#(LineBufferAddrSize),Int#(16)) topBuffer <- mkBRAM2Server(defaultValue);
 
    FIFOF#(InnerProdParam) inputFifo <- mkDualClockBramFIFOF(defaultClock, defaultReset, derivedClock, derivedReset);
    FIFOF#(InnerProdResponse) bramFifo <- mkTileResponseFifo(derivedClock, derivedReset, defaultClock, defaultReset);
@@ -485,9 +553,12 @@ module mkInnerProdSynth#(Clock derivedClock)(InnerProdSynth);
    endrule
 
    let ipDriver <- mkIPDriver();
-   mkConnection(ipDriver.bramReadClient, lineBuffer.portB);
-   mkConnection(ipDriver.bramWriteClient, lineBuffer.portA);
+   mkConnection(ipDriver.lineBufferReadClient, lineBuffer.portB);
+   mkConnection(ipDriver.lineBufferWriteClient, lineBuffer.portA);
+   mkConnection(ipDriver.topBufferReadClient, topBuffer.portB);
+   mkConnection(ipDriver.topBufferWriteClient, topBuffer.portA);
    mkConnection(ipDriver.innerProdRequest, toPipeIn(inputFifo));
+   mkConnection(toPipeOut(bramFifo), ipDriver.innerProdResponse);
 
    interface InnerProdRequest request;
       method Action write(Bit#(16) addr, Bit#(16) val);
@@ -507,8 +578,9 @@ module mkInnerProdSynth#(Clock derivedClock)(InnerProdSynth);
 	 ipDriver.convRequest.put(XYIteratorConfig { xbase: truncate(xbase), xlimit: truncate(xlimit), xstep: 1,
 						 ybase: truncate(ybase), ylimit: truncate(ylimit), ystep: 1 });
       endmethod
-      method Action startConv(Bit#(32) ptr, Bit#(16) xbase, Bit#(16) xlimit, Bit#(16) ybase, Bit#(16) ylimit);
-	 ipDriver.readPointer <= truncate(ptr);
+      method Action startConv(Bit#(32) rdptr, Bit#(32) wrptr, Bit#(16) xbase, Bit#(16) xlimit, Bit#(16) ybase, Bit#(16) ylimit);
+	 ipDriver.readPointer <= truncate(rdptr);
+	 ipDriver.writePointer <= truncate(wrptr);
       // fixme column bytes
 	 ipDriver.rowRequest.put(IteratorConfig { xbase: truncate(xbase), xlimit: truncate(xlimit), xstep: 1 });
       endmethod
@@ -517,8 +589,9 @@ module mkInnerProdSynth#(Clock derivedClock)(InnerProdSynth);
 	 $finish();
       endmethod
    endinterface
-   interface Get response = toGet(bramFifo);
+   //interface Get response = toGet(bramFifo);
    interface Vector readClients = vec(ipDriver.readClient);
+   interface Vector writeClients = vec(ipDriver.writeClient);
 endmodule
 
 module mkInnerProd#(
@@ -536,12 +609,8 @@ module mkInnerProd#(
 `endif
 
    let ip <- mkInnerProdSynth(derivedClock);
-   rule indRule;
-      match { .t, .v } <- ip.response.get();
-      $display("indRule tile=%d v=%h", t, v);
-      ind.innerProd(pack(t), pack(v));
-   endrule
 
    interface InnerProdRequest request = ip.request;
    interface Vector       readClients = ip.readClients;
+   interface Vector      writeClients = ip.writeClients;
 endmodule

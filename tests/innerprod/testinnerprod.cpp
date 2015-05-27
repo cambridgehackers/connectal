@@ -27,6 +27,9 @@
 #include "InnerProdRequest.h"
 #include "InnerProdIndication.h"
 
+const int NUM_IMAGES = 10;
+const int NUM_ROWS = 16;
+const int NUM_COLS = 16;
 const int NUMBER_OF_TESTS = 1;
 
 class InnerProd : public InnerProdIndicationWrapper
@@ -34,13 +37,13 @@ class InnerProd : public InnerProdIndicationWrapper
     int cnt;
 public:
   void incr_cnt(){
-    if (++cnt == 128*NUMBER_OF_TILES) {
+    if (++cnt == NUM_IMAGES*NUM_ROWS*NUM_COLS*NUMBER_OF_TILES) {
       fprintf(stderr, "Received %d responses, finishing\n", cnt);
       exit(0);
     }
   }
   void innerProd(uint16_t t, uint16_t v) {
-    fprintf(stderr, "%d: t=%03d innerProd v=%x\n", cnt, t, v);
+    fprintf(stderr, "%d: t=%03d innerProd v=%04x\n", cnt, t, v);
     incr_cnt();
   }
     InnerProd(unsigned int id) : InnerProdIndicationWrapper(id), cnt(0) {}
@@ -63,7 +66,13 @@ int main(int argc, const char **argv)
     for (size_t i = 0; i < alloc_sz/sizeof(uint16_t); i++) {
 	srcBuffer[i] = 7*i-3;
     }
-  unsigned int ref_srcAlloc = dma->reference(srcAlloc);
+    unsigned int ref_srcAlloc = dma->reference(srcAlloc);
+    int dstAlloc = portalAlloc(alloc_sz, 0);
+    uint16_t *dstBuffer = (uint16_t *)portalMmap(dstAlloc, alloc_sz);
+    for (size_t i = 0; i < alloc_sz/sizeof(uint16_t); i++) {
+      dstBuffer[i] = 0;
+    }
+    unsigned int ref_dstAlloc = dma->reference(dstAlloc);
 
     fprintf(stderr, "[%s:%d] waiting for response\n", __FILE__, __LINE__);
     for (int tile = 0; tile < NUMBER_OF_TILES; tile++) {
@@ -113,7 +122,7 @@ int main(int argc, const char **argv)
 	  sleep(1);
 	}
       else
-	  device.startConv(ref_srcAlloc, 0, 16, 0, 4);
+	device.startConv(ref_srcAlloc, ref_dstAlloc, 0, NUM_IMAGES, 0, 4);
     }
 
     for (int times = 0; times < 400; times++)

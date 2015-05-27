@@ -2,7 +2,7 @@
 CONNECTALDIR?=../..
 S2H_INTERFACES = InnerProdRequest:InnerProd.request
 H2S_INTERFACES = InnerProd:InnerProdIndication
-MEM_INTERFACES = lInnerProd.readClients,nil
+MEM_INTERFACES = lInnerProd.readClients,lInnerProd.writeClients
 
 BSVFILES = InnerProdInterface.bsv
 CPPFILES=testinnerprod.cpp
@@ -10,7 +10,7 @@ NUMBER_OF_MASTERS = 1
 AUTOTOP = --importfiles InnerProdInterface
 
 DERIVED_CLOCK_PERIOD=4
-CONNECTALFLAGS += -D IMPORT_HOSTIF -D SIM_DMA_READ_LATENCY=1
+CONNECTALFLAGS += -D IMPORT_HOSTIF -D SIM_DMA_READ_LATENCY=50
 
 CONNECTALFLAGS += -D NUMBER_OF_TILES=1 -D TILES_PER_MACRO=1
 CONNECTALFLAGS += --constraint=innerprod.xdc
