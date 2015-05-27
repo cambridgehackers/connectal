@@ -296,7 +296,6 @@ module mkIPDriver(InnerProdDriver);
    FIFOF#(XYIteratorConfig#(Bit#(10))) convRequestFifo <- mkFIFOF();
    XYIteratorIfc#(Bit#(10)) convIterator <- mkXYIteratorOut();
    XYIteratorIfc#(Bit#(10)) ipIterator <- mkXYIteratorOut();
-   FIFOF#(XYIteratorConfig#(Bit#(10))) rpMutex <- mkFIFOF1();
 
    IteratorIfc#(Bit#(16)) rowIterator <- mkIteratorOut();
    IteratorIfc#(Bit#(16)) colIterator <- mkIteratorOut();
@@ -375,7 +374,6 @@ module mkIPDriver(InnerProdDriver);
 			       };
       ipIterator.start(req);
       $display("range startRule row=%d col=%d", rowNumber, colNumber);
-      rpMutex.enq(req);
    endrule
 
    rule issueBramReadRequest;
@@ -384,13 +382,6 @@ module mkIPDriver(InnerProdDriver);
       let addr = (x << kernelColAddrBits) | y;
       bramRequestFifo.enq(BRAMRequest{write: False, responseOnWrite: False, address: addr, datain: 0});
       lastFifo.enq(tuple4(ipIterator.isFirst(), ipIterator.isLast(), x, y));
-      if (ipIterator.isLast && !rpMutex.notEmpty()) begin
-	 $display("range finished but rpMutex empty");
-      end
-      if (ipIterator.isLast && rpMutex.notEmpty()) begin
-	 let req <- toGet(rpMutex).get();
-	 $display("range finished x=%d y=%d", req.xbase, req.ybase);
-      end
       $display("issueBramReadRequest x=%d y=%d first=%d last=%d", x, y, ipIterator.isFirst(), ipIterator.isLast());
    endrule
    rule issueInnerProdRequest;
