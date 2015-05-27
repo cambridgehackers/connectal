@@ -510,7 +510,7 @@ module mkInnerProdSynth#(Clock derivedClock)(InnerProdSynth);
       method Action startConv(Bit#(32) ptr, Bit#(16) xbase, Bit#(16) xlimit, Bit#(16) ybase, Bit#(16) ylimit);
 	 ipDriver.readPointer <= truncate(ptr);
       // fixme column bytes
-	 ipDriver.rowRequest.put(IteratorConfig { xbase: truncate(xbase), xlimit: truncate(xlimit)<<4, xstep: 1<<4 });
+	 ipDriver.rowRequest.put(IteratorConfig { xbase: truncate(xbase), xlimit: truncate(xlimit), xstep: 1 });
       endmethod
       method Action finish();
 	 $dumpflush();
