@@ -945,7 +945,7 @@ module mkIteratorWithContext(IteratorWithContext#(a,c)) provisos (Arith#(a), Bit
       last <= (cfg.xbase+cfg.xstep >= cfg.xlimit);
       idle <= False;
       ctxtReg <= ctxt;
-      if (True || verbose) $display("mkIterator xbase=%d xstep=%d xlimit=%d last=%d notEmpty=%d", cfg.xbase, cfg.xstep, cfg.xlimit, (cfg.xbase+cfg.xstep >= cfg.xlimit),
+      if (verbose) $display("mkIterator xbase=%d xstep=%d xlimit=%d last=%d notEmpty=%d", cfg.xbase, cfg.xstep, cfg.xlimit, (cfg.xbase+cfg.xstep >= cfg.xlimit),
 	 (cfg.xbase < cfg.xlimit));
    endmethod
    method Bool isFirst() = first;
