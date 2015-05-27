@@ -303,7 +303,6 @@ module mkIPDriver(InnerProdDriver);
    IteratorIfc#(Bit#(16)) bramWriteIterator <- mkIteratorOut();
 
    Reg#(SGLId)           readPointerReg <- mkReg(0);
-   Reg#(Bit#(10))             writeAddr <- mkReg(0);
    Reg#(Bit#(3))                   tag <- mkReg(0);
 
    FIFO#(MemRequest) readReqFifo <- mkFIFO();
