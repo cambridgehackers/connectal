@@ -93,6 +93,15 @@ instance ToPipeOut#(a, Reg#(a));
    endfunction
 endinstance
 
+instance ToPipeIn#(a, Gearbox#(1, n, a));
+   function PipeIn#(a) toPipeIn(Gearbox#(1, n, a) in);
+      return (interface PipeIn#(a);
+		 method Action enq(a v); in.enq(vec(v)); endmethod
+		 method notFull = in.notFull;
+	      endinterface);
+   endfunction
+endinstance
+
 instance ToPipeIn#(Vector#(m, a), Gearbox#(m, n, a));
    function PipeIn#(Vector#(m, a)) toPipeIn(Gearbox#(m, n, a) in);
       return (interface PipeIn#(Vector#(m, a));
