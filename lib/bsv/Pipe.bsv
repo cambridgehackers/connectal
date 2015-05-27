@@ -882,6 +882,7 @@ typedef struct {
 
 interface IteratorWithContext#(type a, type c);
    interface PipeOut#(a) pipe;
+   method a count();
    method Bool isFirst();
    method Bool isLast();
    method Action start(IteratorConfig#(a) cfg, c ctxt);
@@ -890,6 +891,7 @@ endinterface
 
 interface IteratorIfc#(type a);
    interface PipeOut#(a) pipe;
+   method a count();
    method Bool isFirst();
    method Bool isLast();
    method Action start(IteratorConfig#(a) cfg);
@@ -897,6 +899,7 @@ endinterface
 
 module mkIteratorWithContext(IteratorWithContext#(a,c)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a), Bits#(c,cwidth));
    Reg#(c) ctxtReg <- mkReg(unpack(0));
+   Reg#(a) countReg <- mkReg(0);
    Reg#(a) x <- mkReg(0);
    Reg#(a) xbase <- mkReg(0);
    Reg#(a) xstep <- mkReg(0);
@@ -912,6 +915,7 @@ module mkIteratorWithContext(IteratorWithContext#(a,c)) provisos (Arith#(a), Bit
       endmethod
       method Action deq if (!idle);
 	 let next_x = x + xstep;
+	 countReg <= countReg + 1;
 	 x <= x + xstep;
 	 first <= False;
 	 last <= (next_x+xstep >= xlimit);
@@ -922,6 +926,7 @@ module mkIteratorWithContext(IteratorWithContext#(a,c)) provisos (Arith#(a), Bit
       endmethod
    endinterface
    method Action start(IteratorConfig#(a) cfg, c ctxt) if (idle);
+      countReg <= 0;
       x <= cfg.xbase;
       xbase <= cfg.xbase;
       xstep <= cfg.xstep;
@@ -936,6 +941,7 @@ module mkIteratorWithContext(IteratorWithContext#(a,c)) provisos (Arith#(a), Bit
    endmethod
    method Bool isFirst() = first;
    method Bool isLast() = last;
+   method a count() = countReg;
    method c ctxt() = ctxtReg;
 endmodule: mkIteratorWithContext
 
@@ -945,6 +951,7 @@ module mkIteratorOut(IteratorIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(
    method Action start(IteratorConfig#(a) cfg);
       iter.start(cfg, ?);
    endmethod
+   method a count() = iter.count();
    method isFirst = iter.isFirst;
    method isLast = iter.isLast;
 endmodule
