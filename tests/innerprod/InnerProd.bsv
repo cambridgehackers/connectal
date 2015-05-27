@@ -274,8 +274,8 @@ endmodule
 
 interface InnerProdDriver;
    interface Reg#(SGLId)                 readPointer;
-   interface Put#(RangeConfig#(Bit#(16))) rowRequest;
-   interface Put#(XYRangeConfig#(Bit#(10))) convRequest; // for testing
+   interface Put#(IteratorConfig#(Bit#(16))) rowRequest;
+   interface Put#(XYIteratorConfig#(Bit#(10))) convRequest; // for testing
    interface BRAMClient#(Bit#(10),Int#(16)) bramReadClient;
    interface BRAMClient#(Bit#(10),Int#(16)) bramWriteClient;
    interface PipeOut#(InnerProdParam) innerProdRequest;
@@ -292,11 +292,11 @@ module mkIPDriver(InnerProdDriver);
    FIFOF#(InnerProdParam) innerProdRequestFifo <- mkFIFOF();
    FIFOF#(Tuple4#(Bool,Bool,Bit#(10),Bit#(10))) lastFifo <- mkFIFOF();
 
-   FIFOF#(RangeConfig#(Bit#(16))) rowRequestFifo <- mkFIFOF();
-   FIFOF#(XYRangeConfig#(Bit#(10))) convRequestFifo <- mkFIFOF();
+   FIFOF#(IteratorConfig#(Bit#(16))) rowRequestFifo <- mkFIFOF();
+   FIFOF#(XYIteratorConfig#(Bit#(10))) convRequestFifo <- mkFIFOF();
    XYIteratorIfc#(Bit#(10)) convIterator <- mkXYIteratorOut();
    XYIteratorIfc#(Bit#(10)) ipIterator <- mkXYIteratorOut();
-   FIFOF#(XYRangeConfig#(Bit#(10))) rpMutex <- mkFIFOF1();
+   FIFOF#(XYIteratorConfig#(Bit#(10))) rpMutex <- mkFIFOF1();
 
    IteratorIfc#(Bit#(16)) rowIterator <- mkIteratorOut();
    IteratorIfc#(Bit#(16)) colIterator <- mkIteratorOut();
@@ -327,9 +327,9 @@ module mkIPDriver(InnerProdDriver);
       let rowStartBytes <- toGet(rowIterator.pipe).get();
       $display("startReadRowRule: rowStartBytes=%d rowLenBytes=%d burstLenBytes=%d", rowStartBytes, rowLenBytes, burstLenBytes);
       // start iterator of DRAM read addresses
-      colIterator.start(RangeConfig {xbase: rowStartBytes, xlimit: rowStartBytes+rowLenBytes, xstep: extend(burstLenBytes) });
+      colIterator.start(IteratorConfig {xbase: rowStartBytes, xlimit: rowStartBytes+rowLenBytes, xstep: extend(burstLenBytes) });
       // start iterator of BRAM write addresses
-      bramWriteIterator.start(RangeConfig {xbase: rowStartBytes>>1, xlimit: (rowStartBytes+rowLenBytes)>>1, xstep: 1 });
+      bramWriteIterator.start(IteratorConfig {xbase: rowStartBytes>>1, xlimit: (rowStartBytes+rowLenBytes)>>1, xstep: 1 });
    endrule
 
    rule startReadReqRule;
@@ -360,7 +360,7 @@ module mkIPDriver(InnerProdDriver);
 	 end
 	 $display("bramWriteRule: islast rowNumber=%d bramAddr=%d kernelHeight=%d enoughRowsCachedReg=%d", rowNumber, bramAddr, kernelHeight, enoughRowsCachedReg);
 	 if (enoughRowsCachedReg) begin
-	    convIterator.start(XYRangeConfig {
+	    convIterator.start(XYIteratorConfig {
 					       xbase: truncate(rowNumber-kernelHeight+1), xlimit: truncate(rowNumber-kernelHeight+2), xstep: 1,
 					       ybase: 0, ylimit: (truncate(rowLenBytes>>1)-kernelWidth), ystep: 1
 					       });
@@ -370,7 +370,7 @@ module mkIPDriver(InnerProdDriver);
 
    rule convRowRule;
       match { .rowNumber, .colNumber } <- toGet(convIterator.pipe).get();
-      let req = XYRangeConfig {
+      let req = XYIteratorConfig {
 			       xbase: truncate(rowNumber), xlimit: truncate(rowNumber+1), xstep: 1,
 			       ybase: colNumber, ylimit: colNumber+kernelHeight, ystep: 1
 			       };
@@ -501,13 +501,13 @@ module mkInnerProdSynth#(Clock derivedClock)(InnerProdSynth);
 	 inputFifo.enq(InnerProdParam { tile: t, v: unpack(a), first: first, last: last, update: update});
       endmethod
       method Action startIndividualConv(Bit#(16) xbase, Bit#(16) xlimit, Bit#(16) ybase, Bit#(16) ylimit);
-	 ipDriver.convRequest.put(XYRangeConfig { xbase: truncate(xbase), xlimit: truncate(xlimit), xstep: 1,
+	 ipDriver.convRequest.put(XYIteratorConfig { xbase: truncate(xbase), xlimit: truncate(xlimit), xstep: 1,
 						 ybase: truncate(ybase), ylimit: truncate(ylimit), ystep: 1 });
       endmethod
       method Action startConv(Bit#(32) ptr, Bit#(16) xbase, Bit#(16) xlimit, Bit#(16) ybase, Bit#(16) ylimit);
 	 ipDriver.readPointer <= truncate(ptr);
       // fixme column bytes
-	 ipDriver.rowRequest.put(RangeConfig { xbase: truncate(xbase), xlimit: truncate(xlimit)<<4, xstep: 1<<4 });
+	 ipDriver.rowRequest.put(IteratorConfig { xbase: truncate(xbase), xlimit: truncate(xlimit)<<4, xstep: 1<<4 });
       endmethod
       method Action finish();
 	 $dumpflush();

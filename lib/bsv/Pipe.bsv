@@ -878,13 +878,13 @@ typedef struct {
    a xbase;
    a xlimit;
    a xstep;
-} RangeConfig#(type a) deriving (Bits, FShow);
+} IteratorConfig#(type a) deriving (Bits, FShow);
 
 interface IteratorIfc#(type a);
    interface PipeOut#(a) pipe;
    method Bool isFirst();
    method Bool isLast();
-   method Action start(RangeConfig#(a) cfg);
+   method Action start(IteratorConfig#(a) cfg);
 endinterface
 
 module mkIteratorOut(IteratorIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
@@ -910,7 +910,7 @@ module mkIteratorOut(IteratorIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(
 	 return (x < xlimit);
       endmethod
    endinterface
-   method Action start(RangeConfig#(a) cfg) if (x >= xlimit);
+   method Action start(IteratorConfig#(a) cfg) if (x >= xlimit);
       x <= cfg.xbase;
       xbase <= cfg.xbase;
       xstep <= cfg.xstep;
@@ -932,13 +932,13 @@ typedef struct {
    a ybase;
    a ylimit;
    a ystep;
-} XYRangeConfig#(type a) deriving (Bits, FShow);
+} XYIteratorConfig#(type a) deriving (Bits, FShow);
 
 interface XYIteratorIfc#(type a);
    interface PipeOut#(Tuple2#(a,a)) pipe;
    method Bool isFirst();
    method Bool isLast();
-   method Action start(XYRangeConfig#(a) cfg);
+   method Action start(XYIteratorConfig#(a) cfg);
    method Action display();
 endinterface
 
@@ -977,7 +977,7 @@ module mkXYIteratorOut(XYIteratorIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), 
 	 return guard;
       endmethod
    endinterface
-   method Action start(XYRangeConfig#(a) cfg) if (!guard);
+   method Action start(XYIteratorConfig#(a) cfg) if (!guard);
       x <= cfg.xbase;
       y <= cfg.ybase;
       xbase <= cfg.xbase;

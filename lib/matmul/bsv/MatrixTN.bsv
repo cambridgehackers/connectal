@@ -67,11 +67,11 @@ typedef struct {
    a zbase;
    a zlimit;
    a zstep;
-} XYZRangeConfig#(type a) deriving (Bits, FShow);
+} XYZIteratorConfig#(type a) deriving (Bits, FShow);
 
 interface XYZIteratorIfc#(type a);
    interface PipeOut#(Tuple2#(a,a)) pipe;
-   method Action start(XYZRangeConfig#(a) cfg);
+   method Action start(XYZIteratorConfig#(a) cfg);
    method Action display();
 endinterface
 
@@ -122,7 +122,7 @@ module mkXYZIteratorOut#(RangeBehavior alt) (XYZIteratorIfc#(a)) provisos (Arith
 	 return guard;
       endmethod
    endinterface
-   method Action start(XYZRangeConfig#(a) cfg) if (!guard);
+   method Action start(XYZIteratorConfig#(a) cfg) if (!guard);
       x <= cfg.xbase;
       y <= cfg.ybase;
       z <= cfg.zbase;
@@ -422,15 +422,15 @@ module  mkDmaMatrixMultiply#(MemReadServer#(TMul#(N,32)) sA,
 		       UInt#(addrwidth) numColumnsA_x_numColumnsB,UInt#(addrwidth) numRowsB_x_numColumnsB
 		       ) if (!running);
 
-      XYZRangeConfig#(UInt#(addrwidth)) offsetcfgA = XYZRangeConfig {xbase: 0, xlimit: numRowsA_x_numColumnsA, xstep: numColumnsA,
+      XYZIteratorConfig#(UInt#(addrwidth)) offsetcfgA = XYZIteratorConfig {xbase: 0, xlimit: numRowsA_x_numColumnsA, xstep: numColumnsA,
 								     ybase: 0, ylimit: numColumnsB,            ystep: fromInteger(kk),
 								     zbase: 0, zlimit: numColumnsA,            zstep: fromInteger(jj)};
 
-      XYZRangeConfig#(UInt#(addrwidth)) offsetcfgB = XYZRangeConfig {xbase: 0, xlimit: numRowsB_x_numColumnsB, xstep: numColumnsB,
+      XYZIteratorConfig#(UInt#(addrwidth)) offsetcfgB = XYZIteratorConfig {xbase: 0, xlimit: numRowsB_x_numColumnsB, xstep: numColumnsB,
 								     ybase: 0, ylimit: numColumnsB,            ystep: fromInteger(kk),
 								     zbase: 0, zlimit: numColumnsA,            zstep: fromInteger(jj)};
 
-      XYZRangeConfig#(UInt#(addrwidth)) offsetcfgC = XYZRangeConfig {xbase: 0, xlimit: numColumnsB_x_J,           xstep: numColumnsB,
+      XYZIteratorConfig#(UInt#(addrwidth)) offsetcfgC = XYZIteratorConfig {xbase: 0, xlimit: numColumnsB_x_J,           xstep: numColumnsB,
 								     ybase: 0, ylimit: numColumnsB,               ystep: fromInteger(kk),
 								     zbase: 0, zlimit: numColumnsA_x_numColumnsB, zstep: numColumnsB_x_J };
 
