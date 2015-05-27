@@ -272,12 +272,15 @@ module mkMacroTile#(Bit#(TileNumSize) mt)(MacroTile);
    interface Reset resetOut = tileReset;
 endmodule
 
+// TLog#(kernelheight * rowlenbytes)
+typedef 11 LineBufferAddrSize;
+
 interface InnerProdDriver;
    interface Reg#(SGLId)                 readPointer;
    interface Put#(IteratorConfig#(Bit#(16))) rowRequest;
-   interface Put#(XYIteratorConfig#(Bit#(10))) convRequest; // for testing
-   interface BRAMClient#(Bit#(10),Int#(16)) bramReadClient;
-   interface BRAMClient#(Bit#(10),Int#(16)) bramWriteClient;
+   interface Put#(XYIteratorConfig#(Bit#(LineBufferAddrSize))) convRequest; // for testing
+   interface BRAMClient#(Bit#(LineBufferAddrSize),Int#(16)) bramReadClient;
+   interface BRAMClient#(Bit#(LineBufferAddrSize),Int#(16)) bramWriteClient;
    interface PipeOut#(InnerProdParam) innerProdRequest;
    interface MemReadClient#(DataBusWidth) readClient;
 endinterface
@@ -286,16 +289,16 @@ endinterface
 module mkIPDriver(InnerProdDriver);
    let clock <- exposeCurrentClock();
    let reset <- exposeCurrentReset();
-   FIFOF#(BRAMRequest#(Bit#(10),Int#(16))) bramRequestFifo <- mkFIFOF();
-   FIFOF#(BRAMRequest#(Bit#(10),Int#(16))) bramWriteFifo <- mkFIFOF();
+   FIFOF#(BRAMRequest#(Bit#(LineBufferAddrSize),Int#(16))) bramRequestFifo <- mkFIFOF();
+   FIFOF#(BRAMRequest#(Bit#(LineBufferAddrSize),Int#(16))) bramWriteFifo <- mkFIFOF();
    FIFOF#(Int#(16)) bramResponseFifo <- mkFIFOF();
    FIFOF#(InnerProdParam) innerProdRequestFifo <- mkFIFOF();
-   FIFOF#(Tuple4#(Bool,Bool,Bit#(10),Bit#(10))) lastFifo <- mkFIFOF();
+   FIFOF#(Tuple4#(Bool,Bool,Bit#(LineBufferAddrSize),Bit#(LineBufferAddrSize))) lastFifo <- mkFIFOF();
 
    FIFOF#(IteratorConfig#(Bit#(16))) rowRequestFifo <- mkFIFOF();
-   FIFOF#(XYIteratorConfig#(Bit#(10))) convRequestFifo <- mkFIFOF();
-   XYIteratorIfc#(Bit#(10)) convIterator <- mkXYIterator();
-   XYIteratorIfc#(Bit#(10)) ipIterator <- mkXYIterator();
+   FIFOF#(XYIteratorConfig#(Bit#(LineBufferAddrSize))) convRequestFifo <- mkFIFOF();
+   XYIteratorIfc#(Bit#(LineBufferAddrSize)) convIterator <- mkXYIterator();
+   XYIteratorIfc#(Bit#(LineBufferAddrSize)) ipIterator <- mkXYIterator();
 
    IteratorIfc#(Bit#(16)) imageIterator <- mkIterator();
    IteratorIfc#(Bit#(16)) rowIterator <- mkIterator();
@@ -448,7 +451,7 @@ module mkInnerProdSynth#(Clock derivedClock)(InnerProdSynth);
 
    let optionalReset = derivedReset; // noReset
 
-   BRAM2Port#(Bit#(10),Int#(16)) lineBuffer <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(Bit#(LineBufferAddrSize),Int#(16)) lineBuffer <- mkBRAM2Server(defaultValue);
 
    FIFOF#(InnerProdParam) inputFifo <- mkDualClockBramFIFOF(defaultClock, defaultReset, derivedClock, derivedReset);
    FIFOF#(InnerProdResponse) bramFifo <- mkTileResponseFifo(derivedClock, derivedReset, defaultClock, defaultReset);
