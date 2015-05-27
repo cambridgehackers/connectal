@@ -317,6 +317,7 @@ module mkIPDriver(InnerProdDriver);
    IteratorWithContext#(Bit#(16),Bit#(16)) bramWriteIterator <- mkIteratorWithContext();
 
    IteratorIfc#(Bit#(16)) rowWriteBackIterator <- mkIterator();
+   IteratorIfc#(Bit#(LineBufferAddrSize)) topBufferReadIterator <- mkIterator();
 
 
    Reg#(SGLId)           readPointerReg <- mkReg(0);
@@ -429,6 +430,8 @@ module mkIPDriver(InnerProdDriver);
    endrule
 
    Reg#(Bit#(TileNumSize)) responseCountReg <- mkReg(0);
+   FIFO#(Bool) fooFifo <- mkFIFO();
+   FIFO#(Bool) barFifo <- mkFIFO();
    rule innerProdResponseRule;
       let responseCount = responseCountReg;
       if (responseCount == 0)
@@ -438,17 +441,29 @@ module mkIPDriver(InnerProdDriver);
       topBufferWriteFifo.enq(BRAMRequest{write: True, responseOnWrite: False, address: truncate(pack(tile)), datain: data});
 
       if (responseCount == 1) begin
-	 let tag = 22;
-	 let offset = 0;
-	 //writeReqFifo.enq(MemRequest { sglId: writePointerReg, offset: offset, burstLen: fromInteger(valueOf(DataBusWidth)/8), tag: tag });
+	 rowWriteBackIterator.start(IteratorConfig {xbase: 0, xlimit: fromInteger(valueOf(NumTiles)*2), xstep: fromInteger(valueOf(DataBusWidth)/8)});
+	 topBufferReadIterator.start(IteratorConfig {xbase: 0, xlimit: fromInteger(valueOf(NumTiles)), xstep: 1});
       end
       responseCountReg <= responseCount - 1;
    endrule
 
+   rule topBufferReadRule;
+      let addr <- toGet(topBufferReadIterator.pipe).get();
+      $display("topBufferReadRule: addr=%h", addr);
+      topBufferRequestFifo.enq(BRAMRequest{write: False, responseOnWrite: False, address: addr, datain: 0});
+   endrule
+
    mkConnection(mapPipe(pack, toPipeOut(topBufferResponseFifo)), toPipeIn(writeDataGearbox));
+   rule writeReqRule;
+      let offset <- toGet(rowWriteBackIterator.pipe).get();
+      let tag = 22;
+      $display("writeReqRule: offset=%h", offset);
+      writeReqFifo.enq(MemRequest { sglId: writePointerReg, offset: extend(offset), burstLen: fromInteger(valueOf(DataBusWidth)/8), tag: tag });
+   endrule
    rule writeDataRule;
       let tag = 22;
       let v = pack(writeDataGearbox.first()); writeDataGearbox.deq();
+      $display("writeDataRule: data=%h", v);
       writeDataFifo.enq(MemData { data: v, tag: tag });
    endrule
    rule writeDone;
