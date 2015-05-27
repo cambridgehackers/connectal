@@ -302,10 +302,10 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
    
    zipWithM(mkConnection, fxpipes, map(getRowColSinkPipe, sinks));
    
-   XYRangePipeIfc#(UInt#(addrwidth)) indexpipeifc <- mkXYRangePipeOut();
-   XYRangePipeIfc#(UInt#(addrwidth)) offsetpipeA <- mkXYRangePipeOut();
-   XYRangePipeIfc#(UInt#(addrwidth)) offsetpipeB <- mkXYRangePipeOut();
-   XYRangePipeIfc#(UInt#(addrwidth)) offsetpipeC <- mkXYRangePipeOut();
+   XYIteratorIfc#(UInt#(addrwidth)) indexpipeifc <- mkXYIteratorOut();
+   XYIteratorIfc#(UInt#(addrwidth)) offsetpipeA <- mkXYIteratorOut();
+   XYIteratorIfc#(UInt#(addrwidth)) offsetpipeB <- mkXYIteratorOut();
+   XYIteratorIfc#(UInt#(addrwidth)) offsetpipeC <- mkXYIteratorOut();
 
    Vector#(TAdd#(J,K), PipeOut#(Tuple2#(UInt#(addrwidth),UInt#(addrwidth)))) indexpipes <- mkForkVector(indexpipeifc.pipe);
    Vector#(J, PipeOut#(Tuple2#(UInt#(addrwidth),UInt#(addrwidth))))        offsetpipesA <- mkForkVector(offsetpipeA.pipe);

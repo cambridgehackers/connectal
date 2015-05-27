@@ -880,14 +880,14 @@ typedef struct {
    a xstep;
 } RangeConfig#(type a) deriving (Bits, FShow);
 
-interface RangePipeIfc#(type a);
+interface IteratorIfc#(type a);
    interface PipeOut#(a) pipe;
    method Bool isFirst();
    method Bool isLast();
    method Action start(RangeConfig#(a) cfg);
 endinterface
 
-module mkRangePipeOut(RangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
+module mkIteratorOut(IteratorIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
    Reg#(a) x <- mkReg(0);
    Reg#(a) xbase <- mkReg(0);
    Reg#(a) xstep <- mkReg(0);
@@ -918,12 +918,12 @@ module mkRangePipeOut(RangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq
 
       first <= True;
       last <= (cfg.xbase+cfg.xstep >= cfg.xlimit);
-      if (True || verbose) $display("mkRangePipeOut xbase=%d xstep=%d xlimit=%d last=%d notEmpty=%d", cfg.xbase, cfg.xstep, cfg.xlimit, (cfg.xbase+cfg.xstep >= cfg.xlimit),
+      if (True || verbose) $display("mkIteratorOut xbase=%d xstep=%d xlimit=%d last=%d notEmpty=%d", cfg.xbase, cfg.xstep, cfg.xlimit, (cfg.xbase+cfg.xstep >= cfg.xlimit),
 	 (cfg.xbase < cfg.xlimit));
    endmethod
    method Bool isFirst() = first;
    method Bool isLast() = last;
-endmodule: mkRangePipeOut
+endmodule: mkIteratorOut
 
 typedef struct {
    a xbase;
@@ -934,7 +934,7 @@ typedef struct {
    a ystep;
 } XYRangeConfig#(type a) deriving (Bits, FShow);
 
-interface XYRangePipeIfc#(type a);
+interface XYIteratorIfc#(type a);
    interface PipeOut#(Tuple2#(a,a)) pipe;
    method Bool isFirst();
    method Bool isLast();
@@ -942,7 +942,7 @@ interface XYRangePipeIfc#(type a);
    method Action display();
 endinterface
 
-module mkXYRangePipeOut(XYRangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
+module mkXYIteratorOut(XYIteratorIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
    Reg#(a) x <- mkReg(0);
    Reg#(a) y <- mkReg(0);
    Reg#(a) xbase <- mkReg(0);
@@ -992,6 +992,6 @@ module mkXYRangePipeOut(XYRangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth)
    method Bool isFirst(); return isFirstReg; endmethod
    method Bool isLast(); return isLastReg; endmethod
    method Action display();
-      $display("XYRangePipe x=%d xlimit=%d y=%d ylimit=%d xstep=%d ystep=%d", x, xlimit, xstep, y, ylimit, ystep);
+      $display("XYIterator x=%d xlimit=%d y=%d ylimit=%d xstep=%d ystep=%d", x, xlimit, xstep, y, ylimit, ystep);
    endmethod
-endmodule: mkXYRangePipeOut
+endmodule: mkXYIteratorOut

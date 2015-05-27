@@ -294,13 +294,13 @@ module mkIPDriver(InnerProdDriver);
 
    FIFOF#(RangeConfig#(Bit#(16))) rowRequestFifo <- mkFIFOF();
    FIFOF#(XYRangeConfig#(Bit#(10))) convRequestFifo <- mkFIFOF();
-   XYRangePipeIfc#(Bit#(10)) convRangePipe <- mkXYRangePipeOut();
-   XYRangePipeIfc#(Bit#(10)) ipRangePipe <- mkXYRangePipeOut();
+   XYIteratorIfc#(Bit#(10)) convIterator <- mkXYIteratorOut();
+   XYIteratorIfc#(Bit#(10)) ipIterator <- mkXYIteratorOut();
    FIFOF#(XYRangeConfig#(Bit#(10))) rpMutex <- mkFIFOF1();
 
-   RangePipeIfc#(Bit#(16)) rowRangePipe <- mkRangePipeOut();
-   RangePipeIfc#(Bit#(16)) colRangePipe <- mkRangePipeOut();
-   RangePipeIfc#(Bit#(16)) bramWriteRangePipe <- mkRangePipeOut();
+   IteratorIfc#(Bit#(16)) rowIterator <- mkIteratorOut();
+   IteratorIfc#(Bit#(16)) colIterator <- mkIteratorOut();
+   IteratorIfc#(Bit#(16)) bramWriteIterator <- mkIteratorOut();
 
    Reg#(SGLId)           readPointerReg <- mkReg(0);
    Reg#(Bit#(10))             writeAddr <- mkReg(0);
@@ -321,19 +321,19 @@ module mkIPDriver(InnerProdDriver);
    rule startRowsRule;
       let req <- toGet(rowRequestFifo).get();
       $display("startRowsRule: xbase=%d xlimit=%d xstep=%d", req.xbase, req.xlimit, req.xstep);
-      rowRangePipe.start(req);
+      rowIterator.start(req);
    endrule
    rule startReadRowRule;
-      let rowStartBytes <- toGet(rowRangePipe.pipe).get();
+      let rowStartBytes <- toGet(rowIterator.pipe).get();
       $display("startReadRowRule: rowStartBytes=%d rowLenBytes=%d burstLenBytes=%d", rowStartBytes, rowLenBytes, burstLenBytes);
       // start iterator of DRAM read addresses
-      colRangePipe.start(RangeConfig {xbase: rowStartBytes, xlimit: rowStartBytes+rowLenBytes, xstep: extend(burstLenBytes) });
+      colIterator.start(RangeConfig {xbase: rowStartBytes, xlimit: rowStartBytes+rowLenBytes, xstep: extend(burstLenBytes) });
       // start iterator of BRAM write addresses
-      bramWriteRangePipe.start(RangeConfig {xbase: rowStartBytes>>1, xlimit: (rowStartBytes+rowLenBytes)>>1, xstep: 1 });
+      bramWriteIterator.start(RangeConfig {xbase: rowStartBytes>>1, xlimit: (rowStartBytes+rowLenBytes)>>1, xstep: 1 });
    endrule
 
    rule startReadReqRule;
-      let colOffsetBytes <- toGet(colRangePipe.pipe).get();
+      let colOffsetBytes <- toGet(colIterator.pipe).get();
       $display("startReadReqRule: colOffsetBytes=%d", colOffsetBytes);
       readReqFifo.enq(MemRequest { sglId: readPointerReg, offset: extend(colOffsetBytes), burstLen: burstLenBytes, tag: extend(tag) });
 
@@ -344,11 +344,11 @@ module mkIPDriver(InnerProdDriver);
       dataGearbox.enq(unpack(d.data));
    endrule
    rule bramWriteRule;
-      let bramAddr <- toGet(bramWriteRangePipe.pipe).get();
+      let bramAddr <- toGet(bramWriteIterator.pipe).get();
       Vector#(1,Bit#(16)) v = dataGearbox.first(); dataGearbox.deq();
       $display("bramWriteRule bramAddr=%d row=%d col=%d v=%h", bramAddr, bramAddr>>4, bramAddr & 'hf, v);
       bramWriteFifo.enq(BRAMRequest{write: True, responseOnWrite: False, address: truncate(bramAddr), datain: unpack(v[0])});
-      if (bramWriteRangePipe.isLast()) begin
+      if (bramWriteIterator.isLast()) begin
 	 // now OK to start convolutions for rows up to here
 	 let rowNumber = bramAddr / (rowLenBytes/2);
 	 let enoughRowsCached = enoughRowsCachedReg;
@@ -358,7 +358,7 @@ module mkIPDriver(InnerProdDriver);
 	 end
 	 $display("bramWriteRule: islast rowNumber=%d bramAddr=%d kernelHeight=%d enoughRowsCached=%d", rowNumber, bramAddr, kernelHeight, enoughRowsCached);
 	 if (enoughRowsCached) begin
-	    convRangePipe.start(XYRangeConfig {
+	    convIterator.start(XYRangeConfig {
 					       xbase: truncate(rowNumber-kernelHeight+1), xlimit: truncate(rowNumber-kernelHeight+2), xstep: 1,
 					       ybase: 0, ylimit: (truncate(rowLenBytes>>1)-kernelWidth), ystep: 1
 					       });
@@ -367,30 +367,30 @@ module mkIPDriver(InnerProdDriver);
    endrule
 
    rule convRowRule;
-      match { .rowNumber, .colNumber } <- toGet(convRangePipe.pipe).get();
+      match { .rowNumber, .colNumber } <- toGet(convIterator.pipe).get();
       let req = XYRangeConfig {
 			       xbase: truncate(rowNumber), xlimit: truncate(rowNumber+1), xstep: 1,
 			       ybase: colNumber, ylimit: colNumber+kernelHeight, ystep: 1
 			       };
-      ipRangePipe.start(req);
+      ipIterator.start(req);
       $display("range startRule row=%d col=%d", rowNumber, colNumber);
       rpMutex.enq(req);
    endrule
 
    rule issueBramReadRequest;
-      match { .x, .y } <- toGet(ipRangePipe.pipe).get();
+      match { .x, .y } <- toGet(ipIterator.pipe).get();
       // fixme: placeholder address computation
       let addr = (x << kernelColAddrBits) | y;
       bramRequestFifo.enq(BRAMRequest{write: False, responseOnWrite: False, address: addr, datain: 0});
-      lastFifo.enq(tuple4(ipRangePipe.isFirst(), ipRangePipe.isLast(), x, y));
-      if (ipRangePipe.isLast && !rpMutex.notEmpty()) begin
+      lastFifo.enq(tuple4(ipIterator.isFirst(), ipIterator.isLast(), x, y));
+      if (ipIterator.isLast && !rpMutex.notEmpty()) begin
 	 $display("range finished but rpMutex empty");
       end
-      if (ipRangePipe.isLast && rpMutex.notEmpty()) begin
+      if (ipIterator.isLast && rpMutex.notEmpty()) begin
 	 let req <- toGet(rpMutex).get();
 	 $display("range finished x=%d y=%d", req.xbase, req.ybase);
       end
-      $display("issueBramReadRequest x=%d y=%d first=%d last=%d", x, y, ipRangePipe.isFirst(), ipRangePipe.isLast());
+      $display("issueBramReadRequest x=%d y=%d first=%d last=%d", x, y, ipIterator.isFirst(), ipIterator.isLast());
    endrule
    rule issueInnerProdRequest;
       let v <- toGet(bramResponseFifo).get();

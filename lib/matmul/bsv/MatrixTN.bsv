@@ -69,7 +69,7 @@ typedef struct {
    a zstep;
 } XYZRangeConfig#(type a) deriving (Bits, FShow);
 
-interface XYZRangePipeIfc#(type a);
+interface XYZIteratorIfc#(type a);
    interface PipeOut#(Tuple2#(a,a)) pipe;
    method Action start(XYZRangeConfig#(a) cfg);
    method Action display();
@@ -77,7 +77,7 @@ endinterface
 
 typedef enum {RangeA,RangeB,RangeC} RangeBehavior deriving (Eq); 
 
-module mkXYZRangePipeOut#(RangeBehavior alt) (XYZRangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
+module mkXYZIteratorOut#(RangeBehavior alt) (XYZIteratorIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
    Reg#(a) x <- mkReg(0);
    Reg#(a) y <- mkReg(0);
    Reg#(a) z <- mkReg(0);
@@ -137,9 +137,9 @@ module mkXYZRangePipeOut#(RangeBehavior alt) (XYZRangePipeIfc#(a)) provisos (Ari
       zlimit <= cfg.zlimit;
    endmethod
    method Action display();
-      $display("XYZRangePipe x=%d xlimit=%d y=%d ylimit=%d z=%d zlimit=%d xstep=%d ystep=%d zstep=%d", x, xlimit, y, ylimit, z, zlimit,  xstep, ystep, zstep);
+      $display("XYZIterator x=%d xlimit=%d y=%d ylimit=%d z=%d zlimit=%d xstep=%d ystep=%d zstep=%d", x, xlimit, y, ylimit, z, zlimit,  xstep, ystep, zstep);
    endmethod
-endmodule: mkXYZRangePipeOut
+endmodule: mkXYZIteratorOut
 
 module mkRowSource#(MemReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) numRows, Bit#(MemTagSize) id) (RowColSource#(TMul#(N,32), Vector#(N,MmToken)))
    provisos (Bits#(Vector#(N,Float),asz),
@@ -352,9 +352,9 @@ module  mkDmaMatrixMultiply#(MemReadServer#(TMul#(N,32)) sA,
    FunnelPipe#(1,J,Vector#(N,MmToken),2) sinks <- mkFunnelPipesPipelinedRR(fxpipes,kk/valueOf(N));
    mkConnection(sinks[0],sink.pipe);
 
-   XYZRangePipeIfc#(UInt#(addrwidth)) offsetpipeC <- mkXYZRangePipeOut(RangeC);
-   XYZRangePipeIfc#(UInt#(addrwidth)) offsetpipeA <- mkXYZRangePipeOut(RangeA);
-   XYZRangePipeIfc#(UInt#(addrwidth)) offsetpipeB <- mkXYZRangePipeOut(RangeB);
+   XYZIteratorIfc#(UInt#(addrwidth)) offsetpipeC <- mkXYZIteratorOut(RangeC);
+   XYZIteratorIfc#(UInt#(addrwidth)) offsetpipeA <- mkXYZIteratorOut(RangeA);
+   XYZIteratorIfc#(UInt#(addrwidth)) offsetpipeB <- mkXYZIteratorOut(RangeB);
    
    Reg#(UInt#(32)) lastStartA <- mkReg(0);
    Reg#(UInt#(32)) lastStartB <- mkReg(0);
