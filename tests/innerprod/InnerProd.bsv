@@ -297,37 +297,47 @@ module mkIPDriver(InnerProdDriver);
    XYIteratorIfc#(Bit#(10)) convIterator <- mkXYIteratorOut();
    XYIteratorIfc#(Bit#(10)) ipIterator <- mkXYIteratorOut();
 
+   IteratorIfc#(Bit#(16)) imageIterator <- mkIteratorOut();
    IteratorIfc#(Bit#(16)) rowIterator <- mkIteratorOut();
    IteratorIfc#(Bit#(16)) colIterator <- mkIteratorOut();
-   IteratorIfc#(Bit#(16)) bramWriteIterator <- mkIteratorOut();
+   IteratorWithContext#(Bit#(16),Bit#(16)) bramWriteIterator <- mkIteratorWithContext();
 
    Reg#(SGLId)           readPointerReg <- mkReg(0);
    Reg#(Bit#(3))                   tag <- mkReg(0);
 
    FIFO#(MemRequest) readReqFifo <- mkFIFO();
    FIFO#(MemData#(DataBusWidth)) dataFifo <- mkFIFO();
-   Gearbox#(4, 1, Bit#(16))  dataGearbox <- mkNto1Gearbox(clock, reset, clock, reset);
+   Gearbox#(TDiv#(DataBusWidth,16), 1, Bit#(16))  dataGearbox <- mkNto1Gearbox(clock, reset, clock, reset);
 
    // fixme
    let kernelHeight = 4;
    let kernelWidth = 4;
    let kernelColAddrBits = 2;
+   Bit#(16)                 imageSizeShift = 8;
    Bit#(16)                   rowLenBytes = 16;
    Bit#(BurstLenSize)       burstLenBytes = 16;
    Reg#(Bool)         enoughRowsCachedReg <- mkReg(False);
 
-   rule startRowsRule;
+   rule startImagesRule;
       let req <- toGet(rowRequestFifo).get();
+      $display("startImagesRule: xbase=%d xlimit=%d xstep=%d", req.xbase, req.xlimit, req.xstep);
+      imageIterator.start(req);
+   endrule
+   rule startRowsRule;
+      let imageNumber <- toGet(imageIterator.pipe).get();
+      let req = IteratorConfig { xbase: imageNumber << imageSizeShift, xlimit: (imageNumber+1) << imageSizeShift, xstep: rowLenBytes };
       $display("startRowsRule: xbase=%d xlimit=%d xstep=%d", req.xbase, req.xlimit, req.xstep);
       rowIterator.start(req);
    endrule
    rule startReadRowRule;
       let rowStartBytes <- toGet(rowIterator.pipe).get();
+      let rowNumber = rowIterator.count();
       $display("startReadRowRule: rowStartBytes=%d rowLenBytes=%d burstLenBytes=%d", rowStartBytes, rowLenBytes, burstLenBytes);
       // start iterator of DRAM read addresses
       colIterator.start(IteratorConfig {xbase: rowStartBytes, xlimit: rowStartBytes+rowLenBytes, xstep: extend(burstLenBytes) });
       // start iterator of BRAM write addresses
-      bramWriteIterator.start(IteratorConfig {xbase: rowStartBytes>>1, xlimit: (rowStartBytes+rowLenBytes)>>1, xstep: 1 });
+      bramWriteIterator.start(IteratorConfig {xbase: rowStartBytes>>1, xlimit: (rowStartBytes+rowLenBytes)>>1, xstep: 1 },
+			      rowNumber);
    endrule
 
    rule startReadReqRule;
@@ -348,7 +358,7 @@ module mkIPDriver(InnerProdDriver);
       bramWriteFifo.enq(BRAMRequest{write: True, responseOnWrite: False, address: truncate(bramAddr), datain: unpack(v[0])});
       if (bramWriteIterator.isLast()) begin
 	 // now OK to start convolutions for rows up to here
-	 let rowNumber = bramAddr / (rowLenBytes/2);
+	 let rowNumber = bramWriteIterator.ctxt();
 	 let enoughRowsCached = enoughRowsCachedReg;
 	 if (!enoughRowsCached) begin
 	    enoughRowsCached = rowNumber >= (kernelHeight-2);
