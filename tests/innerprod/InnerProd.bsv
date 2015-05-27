@@ -314,8 +314,8 @@ module mkIPDriver(InnerProdDriver);
    let kernelHeight = 4;
    let kernelWidth = 4;
    let kernelColAddrBits = 2;
-   Reg#(Bit#(16))           rowLenBytes <- mkReg(16);
-   Reg#(Bit#(BurstLenSize)) burstLenBytes <- mkReg(16);
+   Bit#(16)                   rowLenBytes = 16;
+   Bit#(BurstLenSize)       burstLenBytes = 16;
    Reg#(Bool)         enoughRowsCachedReg <- mkReg(False);
 
    rule startRowsRule;
