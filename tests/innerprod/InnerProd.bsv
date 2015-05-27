@@ -294,12 +294,12 @@ module mkIPDriver(InnerProdDriver);
 
    FIFOF#(IteratorConfig#(Bit#(16))) rowRequestFifo <- mkFIFOF();
    FIFOF#(XYIteratorConfig#(Bit#(10))) convRequestFifo <- mkFIFOF();
-   XYIteratorIfc#(Bit#(10)) convIterator <- mkXYIteratorOut();
-   XYIteratorIfc#(Bit#(10)) ipIterator <- mkXYIteratorOut();
+   XYIteratorIfc#(Bit#(10)) convIterator <- mkXYIterator();
+   XYIteratorIfc#(Bit#(10)) ipIterator <- mkXYIterator();
 
-   IteratorIfc#(Bit#(16)) imageIterator <- mkIteratorOut();
-   IteratorIfc#(Bit#(16)) rowIterator <- mkIteratorOut();
-   IteratorIfc#(Bit#(16)) colIterator <- mkIteratorOut();
+   IteratorIfc#(Bit#(16)) imageIterator <- mkIterator();
+   IteratorIfc#(Bit#(16)) rowIterator <- mkIterator();
+   IteratorIfc#(Bit#(16)) colIterator <- mkIterator();
    IteratorWithContext#(Bit#(16),Bit#(16)) bramWriteIterator <- mkIteratorWithContext();
 
    Reg#(SGLId)           readPointerReg <- mkReg(0);

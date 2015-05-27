@@ -77,7 +77,7 @@ endinterface
 
 typedef enum {RangeA,RangeB,RangeC} RangeBehavior deriving (Eq); 
 
-module mkXYZIteratorOut#(RangeBehavior alt) (XYZIteratorIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
+module mkXYZIterator#(RangeBehavior alt) (XYZIteratorIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
    Reg#(a) x <- mkReg(0);
    Reg#(a) y <- mkReg(0);
    Reg#(a) z <- mkReg(0);
@@ -139,7 +139,7 @@ module mkXYZIteratorOut#(RangeBehavior alt) (XYZIteratorIfc#(a)) provisos (Arith
    method Action display();
       $display("XYZIterator x=%d xlimit=%d y=%d ylimit=%d z=%d zlimit=%d xstep=%d ystep=%d zstep=%d", x, xlimit, y, ylimit, z, zlimit,  xstep, ystep, zstep);
    endmethod
-endmodule: mkXYZIteratorOut
+endmodule: mkXYZIterator
 
 module mkRowSource#(MemReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) numRows, Bit#(MemTagSize) id) (RowColSource#(TMul#(N,32), Vector#(N,MmToken)))
    provisos (Bits#(Vector#(N,Float),asz),
@@ -352,9 +352,9 @@ module  mkDmaMatrixMultiply#(MemReadServer#(TMul#(N,32)) sA,
    FunnelPipe#(1,J,Vector#(N,MmToken),2) sinks <- mkFunnelPipesPipelinedRR(fxpipes,kk/valueOf(N));
    mkConnection(sinks[0],sink.pipe);
 
-   XYZIteratorIfc#(UInt#(addrwidth)) offsetpipeC <- mkXYZIteratorOut(RangeC);
-   XYZIteratorIfc#(UInt#(addrwidth)) offsetpipeA <- mkXYZIteratorOut(RangeA);
-   XYZIteratorIfc#(UInt#(addrwidth)) offsetpipeB <- mkXYZIteratorOut(RangeB);
+   XYZIteratorIfc#(UInt#(addrwidth)) offsetpipeC <- mkXYZIterator(RangeC);
+   XYZIteratorIfc#(UInt#(addrwidth)) offsetpipeA <- mkXYZIterator(RangeA);
+   XYZIteratorIfc#(UInt#(addrwidth)) offsetpipeB <- mkXYZIterator(RangeB);
    
    Reg#(UInt#(32)) lastStartA <- mkReg(0);
    Reg#(UInt#(32)) lastStartB <- mkReg(0);

@@ -936,7 +936,7 @@ module mkIteratorWithContext(IteratorWithContext#(a,c)) provisos (Arith#(a), Bit
       last <= (cfg.xbase+cfg.xstep >= cfg.xlimit);
       idle <= False;
       ctxtReg <= ctxt;
-      if (True || verbose) $display("mkIteratorOut xbase=%d xstep=%d xlimit=%d last=%d notEmpty=%d", cfg.xbase, cfg.xstep, cfg.xlimit, (cfg.xbase+cfg.xstep >= cfg.xlimit),
+      if (True || verbose) $display("mkIterator xbase=%d xstep=%d xlimit=%d last=%d notEmpty=%d", cfg.xbase, cfg.xstep, cfg.xlimit, (cfg.xbase+cfg.xstep >= cfg.xlimit),
 	 (cfg.xbase < cfg.xlimit));
    endmethod
    method Bool isFirst() = first;
@@ -945,7 +945,7 @@ module mkIteratorWithContext(IteratorWithContext#(a,c)) provisos (Arith#(a), Bit
    method c ctxt() = ctxtReg;
 endmodule: mkIteratorWithContext
 
-module mkIteratorOut(IteratorIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
+module mkIterator(IteratorIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
    IteratorWithContext#(a,void) iter <- mkIteratorWithContext();
    interface PipeOut pipe = iter.pipe;
    method Action start(IteratorConfig#(a) cfg);
@@ -973,7 +973,7 @@ interface XYIteratorIfc#(type a);
    method Action display();
 endinterface
 
-module mkXYIteratorOut(XYIteratorIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
+module mkXYIterator(XYIteratorIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
    Reg#(a) x <- mkReg(0);
    Reg#(a) y <- mkReg(0);
    Reg#(a) xbase <- mkReg(0);
@@ -1025,4 +1025,4 @@ module mkXYIteratorOut(XYIteratorIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), 
    method Action display();
       $display("XYIterator x=%d xlimit=%d y=%d ylimit=%d xstep=%d ystep=%d", x, xlimit, xstep, y, ylimit, ystep);
    endmethod
-endmodule: mkXYIteratorOut
+endmodule: mkXYIterator
