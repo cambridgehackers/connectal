@@ -353,11 +353,13 @@ module mkIPDriver(InnerProdDriver);
 	 let rowNumber = bramAddr / (rowLenBytes/2);
 	 let enoughRowsCached = enoughRowsCachedReg;
 	 if (!enoughRowsCached) begin
-	    enoughRowsCached = rowNumber >= (kernelHeight-1);
+	    enoughRowsCached = rowNumber >= (kernelHeight-2);
+	    if (!enoughRowsCachedReg && enoughRowsCached)
+	       $display("bramWriteRule rowNumber=%d enoughRowsCached=%d enoughRowsCachedReg=%d", rowNumber, enoughRowsCached, enoughRowsCachedReg);
 	    enoughRowsCachedReg <= enoughRowsCached;
 	 end
-	 $display("bramWriteRule: islast rowNumber=%d bramAddr=%d kernelHeight=%d enoughRowsCached=%d", rowNumber, bramAddr, kernelHeight, enoughRowsCached);
-	 if (enoughRowsCached) begin
+	 $display("bramWriteRule: islast rowNumber=%d bramAddr=%d kernelHeight=%d enoughRowsCachedReg=%d", rowNumber, bramAddr, kernelHeight, enoughRowsCachedReg);
+	 if (enoughRowsCachedReg) begin
 	    convIterator.start(XYRangeConfig {
 					       xbase: truncate(rowNumber-kernelHeight+1), xlimit: truncate(rowNumber-kernelHeight+2), xstep: 1,
 					       ybase: 0, ylimit: (truncate(rowLenBytes>>1)-kernelWidth), ystep: 1
