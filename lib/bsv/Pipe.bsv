@@ -880,6 +880,14 @@ typedef struct {
    a xstep;
 } IteratorConfig#(type a) deriving (Bits, FShow);
 
+interface IteratorWithContext#(type a, type c);
+   interface PipeOut#(a) pipe;
+   method Bool isFirst();
+   method Bool isLast();
+   method Action start(IteratorConfig#(a) cfg, c ctxt);
+   method c ctxt();
+endinterface
+
 interface IteratorIfc#(type a);
    interface PipeOut#(a) pipe;
    method Bool isFirst();
@@ -887,7 +895,8 @@ interface IteratorIfc#(type a);
    method Action start(IteratorConfig#(a) cfg);
 endinterface
 
-module mkIteratorOut(IteratorIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
+module mkIteratorWithContext(IteratorWithContext#(a,c)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a), Bits#(c,cwidth));
+   Reg#(c) ctxtReg <- mkReg(unpack(0));
    Reg#(a) x <- mkReg(0);
    Reg#(a) xbase <- mkReg(0);
    Reg#(a) xstep <- mkReg(0);
@@ -895,22 +904,24 @@ module mkIteratorOut(IteratorIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(
    Reg#(a) xlimit <- mkReg(0);
    Reg#(Bool) first <- mkReg(False);
    Reg#(Bool) last <- mkReg(False);
+   Reg#(Bool) idle <- mkReg(True);
    Bool verbose = False;
    interface PipeOut pipe;
       method a first();
 	 return x;
       endmethod
-      method Action deq if (x < xlimit);
+      method Action deq if (!idle);
 	 let next_x = x + xstep;
 	 x <= x + xstep;
 	 first <= False;
 	 last <= (next_x+xstep >= xlimit);
+	 idle <= last;
       endmethod
       method Bool notEmpty();
 	 return (x < xlimit);
       endmethod
    endinterface
-   method Action start(IteratorConfig#(a) cfg) if (x >= xlimit);
+   method Action start(IteratorConfig#(a) cfg, c ctxt) if (idle);
       x <= cfg.xbase;
       xbase <= cfg.xbase;
       xstep <= cfg.xstep;
@@ -918,12 +929,25 @@ module mkIteratorOut(IteratorIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(
 
       first <= True;
       last <= (cfg.xbase+cfg.xstep >= cfg.xlimit);
+      idle <= False;
+      ctxtReg <= ctxt;
       if (True || verbose) $display("mkIteratorOut xbase=%d xstep=%d xlimit=%d last=%d notEmpty=%d", cfg.xbase, cfg.xstep, cfg.xlimit, (cfg.xbase+cfg.xstep >= cfg.xlimit),
 	 (cfg.xbase < cfg.xlimit));
    endmethod
    method Bool isFirst() = first;
    method Bool isLast() = last;
-endmodule: mkIteratorOut
+   method c ctxt() = ctxtReg;
+endmodule: mkIteratorWithContext
+
+module mkIteratorOut(IteratorIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
+   IteratorWithContext#(a,void) iter <- mkIteratorWithContext();
+   interface PipeOut pipe = iter.pipe;
+   method Action start(IteratorConfig#(a) cfg);
+      iter.start(cfg, ?);
+   endmethod
+   method isFirst = iter.isFirst;
+   method isLast = iter.isLast;
+endmodule
 
 typedef struct {
    a xbase;
