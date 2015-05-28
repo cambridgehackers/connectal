@@ -283,8 +283,6 @@ interface InnerProdDriver;
    interface Put#(XYIteratorConfig#(Bit#(LineBufferAddrSize))) convRequest; // for testing
    interface BRAMClient#(Bit#(LineBufferAddrSize),Int#(16)) lineBufferReadClient;
    interface BRAMClient#(Bit#(LineBufferAddrSize),Int#(16)) lineBufferWriteClient;
-   interface BRAMClient#(Bit#(LineBufferAddrSize),Int#(16)) topBufferReadClient;
-   interface BRAMClient#(Bit#(LineBufferAddrSize),Int#(16)) topBufferWriteClient;
    interface PipeOut#(InnerProdParam) innerProdRequest;
    interface PipeIn#(InnerProdResponse) innerProdResponse;
    interface MemReadClient#(DataBusWidth) readClient;
@@ -298,9 +296,7 @@ module mkIPDriver(InnerProdDriver);
    FIFOF#(BRAMRequest#(Bit#(LineBufferAddrSize),Int#(16))) lineBufferRequestFifo <- mkFIFOF();
    FIFOF#(Int#(16))                                        lineBufferResponseFifo <- mkFIFOF();
    FIFOF#(BRAMRequest#(Bit#(LineBufferAddrSize),Int#(16))) lineBufferWriteFifo <- mkFIFOF();
-   FIFOF#(BRAMRequest#(Bit#(LineBufferAddrSize),Int#(16))) topBufferRequestFifo <- mkFIFOF();
-   FIFOF#(Int#(16))                                        topBufferResponseFifo <- mkFIFOF();
-   FIFOF#(BRAMRequest#(Bit#(LineBufferAddrSize),Int#(16))) topBufferWriteFifo <- mkFIFOF();
+   BRAM2Port#(Bit#(LineBufferAddrSize),Int#(16)) topBuffer <- mkBRAM2Server(defaultValue);
 
    FIFOF#(InnerProdParam) innerProdRequestFifo <- mkFIFOF();
    FIFOF#(InnerProdResponse) innerProdResponseFifo <- mkFIFOF();
@@ -440,7 +436,7 @@ module mkIPDriver(InnerProdDriver);
 	 responseCount = fromInteger(valueOf(NumTiles));
       match { .tile, .data } <- toGet(innerProdResponseFifo).get();
       if (verbose) $display("innerProdResponseRule count=%d tile=%d data=%h", responseCount, tile, data);
-      topBufferWriteFifo.enq(BRAMRequest{write: True, responseOnWrite: False, address: truncate(pack(tile)), datain: data});
+      topBuffer.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: truncate(pack(tile)), datain: data});
 
       if (responseCount == 1) begin
 	 colWriteBackIterator.start(IteratorConfig {xbase: 0, xlimit: fromInteger(valueOf(NumTiles)*2), xstep: fromInteger(valueOf(DataBusWidth)/8)});
@@ -452,10 +448,12 @@ module mkIPDriver(InnerProdDriver);
    rule topBufferReadRule;
       let addr <- toGet(topBufferReadIterator.pipe).get();
       if (verbose) $display("topBufferReadRule: addr=%h", addr);
-      topBufferRequestFifo.enq(BRAMRequest{write: False, responseOnWrite: False, address: addr, datain: 0});
+      topBuffer.portB.request.put(BRAMRequest{write: False, responseOnWrite: False, address: addr, datain: 0});
    endrule
-
-   mkConnection(mapPipe(pack, toPipeOut(topBufferResponseFifo)), toPipeIn(writeDataGearbox));
+   rule topBufferResponseRule;
+      let v <- topBuffer.portB.response.get();
+      writeDataGearbox.enq(vec(pack(v)));
+   endrule
    Reg#(Bit#(32)) wrrCount <- mkReg(0);
    rule writeReqRule;
       let offset <- toGet(colWriteBackIterator.pipe).get();
@@ -463,7 +461,6 @@ module mkIPDriver(InnerProdDriver);
       if (colWriteBackIterator.isLast()) begin
 	 //let unused <- toGet(rowWriteBackIterator.pipe).get();
       end
-
       wrrCount <= wrrCount + 1;
       $display("writeReqRule: offset=%h cwbi.isLast %d rwbi.isLast %d wrr %d", offset, colWriteBackIterator.isLast(), rowWriteBackIterator.isLast(), wrrCount);
       writeReqFifo.enq(MemRequest { sglId: writePointerReg, offset: extend(offset), burstLen: fromInteger(valueOf(DataBusWidth)/8), tag: tag });
@@ -492,18 +489,6 @@ module mkIPDriver(InnerProdDriver);
       interface Put response;
 	 method Action put(Int#(16) v);
 	    $display("lineBufferWriteClient.response.put should never be called. v=%h", v);
-	 endmethod
-      endinterface
-   endinterface
-   interface BRAMClient topBufferReadClient;
-      interface request = toGet(topBufferRequestFifo);
-      interface response = toPut(topBufferResponseFifo);
-   endinterface
-   interface BRAMClient topBufferWriteClient;
-      interface request = toGet(topBufferWriteFifo);
-      interface Put response;
-	 method Action put(Int#(16) v);
-	    $display("topBufferWriteClient.response.put should never be called. v=%h", v);
 	 endmethod
       endinterface
    endinterface
@@ -541,7 +526,6 @@ module mkInnerProdSynth#(Clock derivedClock)(InnerProdSynth);
    let optionalReset = derivedReset; // noReset
 
    BRAM2Port#(Bit#(LineBufferAddrSize),Int#(16)) lineBuffer <- mkBRAM2Server(defaultValue);
-   BRAM2Port#(Bit#(LineBufferAddrSize),Int#(16)) topBuffer <- mkBRAM2Server(defaultValue);
 
    FIFOF#(InnerProdParam) inputFifo <- mkDualClockBramFIFOF(defaultClock, defaultReset, derivedClock, derivedReset);
    FIFOF#(InnerProdResponse) bramFifo <- mkTileResponseFifo(derivedClock, derivedReset, defaultClock, defaultReset);
@@ -570,8 +554,6 @@ module mkInnerProdSynth#(Clock derivedClock)(InnerProdSynth);
    let ipDriver <- mkIPDriver();
    mkConnection(ipDriver.lineBufferReadClient, lineBuffer.portB);
    mkConnection(ipDriver.lineBufferWriteClient, lineBuffer.portA);
-   mkConnection(ipDriver.topBufferReadClient, topBuffer.portB);
-   mkConnection(ipDriver.topBufferWriteClient, topBuffer.portA);
    mkConnection(ipDriver.innerProdRequest, toPipeIn(inputFifo));
    mkConnection(toPipeOut(bramFifo), ipDriver.innerProdResponse);
 
