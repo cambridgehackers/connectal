@@ -311,6 +311,7 @@ module mkConvDriver(ConvDriver);
    IteratorIfc#(Bit#(16)) colIterator <- mkIterator();
    IteratorWithContext#(Bit#(16),Bit#(16)) bramWriteIterator <- mkIteratorWithContext();
 
+   IteratorIfc#(Bit#(16)) imageWriteBackIterator <- mkIterator();
    IteratorIfc#(Bit#(16)) rowWriteBackIterator <- mkIterator();
    IteratorIfc#(Bit#(16)) colWriteBackIterator <- mkIterator();
    IteratorIfc#(Bit#(LineBufferAddrSize)) topBufferReadIterator <- mkIterator();
@@ -344,6 +345,7 @@ module mkConvDriver(ConvDriver);
       let req <- toGet(rowRequestFifo).get();
       $display("startImagesRule: xbase=%d xlimit=%d xstep=%d", req.xbase, req.xlimit, req.xstep);
       imageIterator.start(req);
+      imageWriteBackIterator.start(req);
    endrule
    rule startRowsRule;
       let imageNumber <- toGet(imageIterator.pipe).get();
@@ -399,13 +401,16 @@ module mkConvDriver(ConvDriver);
       end
    endrule
 
+   Reg#(Bit#(32)) crrCount <- mkReg(0);
    rule convRowRule;
       let rowNumber = convIterator.ctxt();
       let colNumber <- toGet(convIterator.pipe).get();
       let req = IteratorConfig { xbase: colNumber, xlimit: colNumber+kernelHeight, xstep: 1 };
       //fixme: this should be a 2D iterator
       ipIterator.start(req, rowNumber);
-      $display("range startRule row=%d col=%d", rowNumber, colNumber);
+      $display("range startRule row=%d col=%d crrCount=%d", rowNumber, colNumber, crrCount);
+      crrCount <= crrCount + 1;
+      rowWriteBackIterator.start(IteratorConfig {xbase: 0, xlimit: fromInteger(valueOf(NumTiles)/valueOf(TDiv#(DataBusWidth,8))), xstep: 1 });
    endrule
 
    rule issueBramReadRequest;
@@ -473,7 +478,14 @@ module mkConvDriver(ConvDriver);
    endrule
    Reg#(Bit#(32)) wdoneCount <- mkReg(0);
    rule writeDone;
-      $display("writeDone: wdoneCount=%d", wdoneCount);
+      let n <- toGet(rowWriteBackIterator.pipe).get();
+      // if (rowWriteBackIterator.isLast()) begin
+      // 	 imageWriteBackIterator.pipe.deq();
+      // 	 if (imageWriteBackIterator.isLast())
+      // 	    $display("Finished!!");
+      // end
+
+      $display("writeDone: wdoneCount=%d rowWriteBackIterator.isLast %d", wdoneCount, rowWriteBackIterator.isLast);
       wdoneCount <= wdoneCount + 1;
       let tag <- toGet(writeDoneFifo).get();
    endrule
