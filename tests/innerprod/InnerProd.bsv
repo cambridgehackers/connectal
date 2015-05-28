@@ -151,7 +151,7 @@ module mkInnerProdTile#(Bit#(TileNumSize) tile, Bool hasNext)(InnerProdTile);
    rule process_rule;
       let req <- toGet(req1Fifo).get();
       let b <- kernelBram.portA.response.get();
-      $display("tile %d: inner prod a=%h b=%h last=%d", tile, req.v, b, req.last);
+      // $display("tile %d: inner prod a=%h b=%h last=%d", tile, req.v, b, req.last);
 
       dsp.a(extend(pack(req.v)));
       dsp.b(extend(pack(b)));
@@ -172,14 +172,14 @@ module mkInnerProdTile#(Bit#(TileNumSize) tile, Bool hasNext)(InnerProdTile);
 	 $display("tile %d dropping dsp.p due to full responseFifo", tile);
       end
       if (dsp.notEmpty()) begin
-	 $display("InnerProdTile tile=%d dsp.p %h", tile, dsp.p());
+	 //$display("InnerProdTile tile=%d dsp.p %h", tile, dsp.p());
 	 Int#(16) uintTile = extend(unpack(tile));
 	 v = tuple2(uintTile, unpack(dsp.p()[23:8]));
 	 valid = True;
       end
       else if (nextRespFifo.notEmpty()) begin
 	 v <- toGet(nextRespFifo).get();
-	 $display("tile %d: nextResp tile=%d v=%h", tile, tpl_1(v), tpl_2(v));
+	 //$display("tile %d: nextResp tile=%d v=%h", tile, tpl_1(v), tpl_2(v));
 	 valid = True;
       end
       if (valid)
