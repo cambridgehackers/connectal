@@ -276,7 +276,7 @@ endmodule
 // TLog#(kernelheight * rowlenbytes)
 typedef 11 LineBufferAddrSize;
 
-interface InnerProdDriver;
+interface ConvDriver;
    interface Reg#(SGLId)                 readPointer;
    interface Reg#(SGLId)                 writePointer;
    interface Put#(IteratorConfig#(Bit#(16))) rowRequest;
@@ -290,7 +290,7 @@ interface InnerProdDriver;
 endinterface
 
 (* synthesize *)
-module mkIPDriver(InnerProdDriver);
+module mkConvDriver(ConvDriver);
    let clock <- exposeCurrentClock();
    let reset <- exposeCurrentReset();
    FIFOF#(BRAMRequest#(Bit#(LineBufferAddrSize),Int#(16))) lineBufferRequestFifo <- mkFIFOF();
@@ -551,7 +551,7 @@ module mkInnerProdSynth#(Clock derivedClock)(InnerProdSynth);
    mkConnection(toPipeOut(inputFifo), rp.inPipe, clocked_by derivedClock, reset_by derivedReset);
    mkConnection(op.outPipe, toPipeIn(bramFifo), clocked_by derivedClock, reset_by derivedReset);
 
-   let ipDriver <- mkIPDriver();
+   let ipDriver <- mkConvDriver();
    mkConnection(ipDriver.lineBufferReadClient, lineBuffer.portB);
    mkConnection(ipDriver.lineBufferWriteClient, lineBuffer.portA);
    mkConnection(ipDriver.innerProdRequest, toPipeIn(inputFifo));
