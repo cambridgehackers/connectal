@@ -428,8 +428,6 @@ module mkConvDriver(ConvDriver);
    endrule
 
    Reg#(Bit#(TileNumSize)) responseCountReg <- mkReg(0);
-   FIFO#(Bool) fooFifo <- mkFIFO();
-   FIFO#(Bool) barFifo <- mkFIFO();
    rule innerProdResponseRule;
       let responseCount = responseCountReg;
       if (responseCount == 0)
