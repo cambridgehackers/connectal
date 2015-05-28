@@ -239,7 +239,7 @@ interface MacroTile;
 endinterface
 
 (* synthesize *)
-module mkMacroTile#(Bit#(TileNumSize) mt)(MacroTile);
+module mkMacroTile#(Bit#(TileNumSize) tilebase)(MacroTile);
    let clock <- exposeCurrentClock();
    let reset <- exposeCurrentReset();
    let trpReset <- mkAsyncReset(10, reset, clock);
@@ -254,7 +254,7 @@ module mkMacroTile#(Bit#(TileNumSize) mt)(MacroTile);
 
    for (Integer t = 0; t < valueOf(NumTilesPerMacro); t = t + 1) begin
       let hasNext = t != (valueOf(NumTilesPerMacro) - 1);
-      let tile <- mkInnerProdTile(mt * fromInteger(valueOf(NumTilesPerMacro)) + fromInteger(t), hasNext, reset_by tileReset);
+      let tile <- mkInnerProdTile(tilebase + fromInteger(t), hasNext, reset_by tileReset);
       if (t == 0) begin
 	 tileRequestPipe = tile.request;
 	 tileResponsePipe = tile.response;
@@ -545,7 +545,7 @@ module mkInnerProdSynth#(Clock derivedClock)(InnerProdSynth);
 
    Reset mtReset <- mkAsyncReset(10, derivedReset, derivedClock);
    for (Integer mt = 0; mt < valueOf(NumMacroTiles); mt = mt + 1) begin
-      let macroTile <- mkMacroTile(fromInteger(mt), clocked_by derivedClock, reset_by mtReset);
+      let macroTile <- mkMacroTile(fromInteger(mt)*fromInteger(valueOf(NumTilesPerMacro)), clocked_by derivedClock, reset_by mtReset);
       mtReset = macroTile.resetOut;
       mkConnection(rp.outPipes[mt], macroTile.inPipe, clocked_by derivedClock, reset_by mtReset);
       mkConnection(macroTile.outPipe, op.inPipes[mt], clocked_by derivedClock, reset_by mtReset);
