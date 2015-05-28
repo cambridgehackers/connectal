@@ -403,6 +403,7 @@ module mkConvDriver(ConvDriver);
       let rowNumber = convIterator.ctxt();
       let colNumber <- toGet(convIterator.pipe).get();
       let req = IteratorConfig { xbase: colNumber, xlimit: colNumber+kernelHeight, xstep: 1 };
+      //fixme: this should be a 2D iterator
       ipIterator.start(req, rowNumber);
       $display("range startRule row=%d col=%d", rowNumber, colNumber);
    endrule
@@ -429,6 +430,7 @@ module mkConvDriver(ConvDriver);
 
    Reg#(Bit#(TileNumSize)) responseCountReg <- mkReg(0);
    rule innerProdResponseRule;
+      // gets back one response for each tile for each conv started
       let responseCount = responseCountReg;
       if (responseCount == 0)
 	 responseCount = fromInteger(valueOf(NumTiles));
@@ -469,7 +471,10 @@ module mkConvDriver(ConvDriver);
       $display("writeDataRule: data=%h", v);
       writeDataFifo.enq(MemData { data: v, tag: tag });
    endrule
+   Reg#(Bit#(32)) wdoneCount <- mkReg(0);
    rule writeDone;
+      $display("writeDone: wdoneCount=%d", wdoneCount);
+      wdoneCount <= wdoneCount + 1;
       let tag <- toGet(writeDoneFifo).get();
    endrule
 
