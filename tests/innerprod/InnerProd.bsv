@@ -307,9 +307,8 @@ module mkIPDriver(InnerProdDriver);
    FIFOF#(Tuple4#(Bool,Bool,Bit#(LineBufferAddrSize),Bit#(LineBufferAddrSize))) lastFifo <- mkFIFOF();
 
    FIFOF#(IteratorConfig#(Bit#(16))) rowRequestFifo <- mkFIFOF();
-   FIFOF#(XYIteratorConfig#(Bit#(LineBufferAddrSize))) convRequestFifo <- mkFIFOF();
-   XYIteratorIfc#(Bit#(LineBufferAddrSize)) convIterator <- mkXYIterator();
-   XYIteratorIfc#(Bit#(LineBufferAddrSize)) ipIterator <- mkXYIterator();
+   IteratorWithContext#(Bit#(LineBufferAddrSize),Bit#(LineBufferAddrSize)) convIterator <- mkIteratorWithContext(); // rowNumber is the context
+   IteratorWithContext#(Bit#(LineBufferAddrSize),Bit#(LineBufferAddrSize)) ipIterator <- mkIteratorWithContext(); // rowNumber is the context
 
    IteratorIfc#(Bit#(16)) imageIterator <- mkIterator();
    IteratorIfc#(Bit#(16)) rowIterator <- mkIterator();
@@ -317,6 +316,7 @@ module mkIPDriver(InnerProdDriver);
    IteratorWithContext#(Bit#(16),Bit#(16)) bramWriteIterator <- mkIteratorWithContext();
 
    IteratorIfc#(Bit#(16)) rowWriteBackIterator <- mkIterator();
+   IteratorIfc#(Bit#(16)) colWriteBackIterator <- mkIterator();
    IteratorIfc#(Bit#(LineBufferAddrSize)) topBufferReadIterator <- mkIterator();
 
 
@@ -332,6 +332,8 @@ module mkIPDriver(InnerProdDriver);
    FIFO#(MemRequest)              writeReqFifo <- mkFIFO();
    FIFOF#(MemData#(DataBusWidth)) writeDataFifo <- mkSizedFIFOF(8);
    FIFO#(Bit#(MemTagSize))       writeDoneFifo <- mkFIFO();
+
+   let verbose = False;
 
    // fixme
    let kernelHeight = 4;
@@ -366,7 +368,7 @@ module mkIPDriver(InnerProdDriver);
 
    rule startReadReqRule;
       let colOffsetBytes <- toGet(colIterator.pipe).get();
-      $display("startReadReqRule: colOffsetBytes=%d", colOffsetBytes);
+      if (verbose) $display("startReadReqRule: colOffsetBytes=%d", colOffsetBytes);
       readReqFifo.enq(MemRequest { sglId: readPointerReg, offset: extend(colOffsetBytes), burstLen: burstLenBytes, tag: extend(tag) });
 
       tag <= tag + 1;
@@ -379,7 +381,7 @@ module mkIPDriver(InnerProdDriver);
       let bramAddr <- toGet(bramWriteIterator.pipe).get();
       let rowNumber = bramWriteIterator.ctxt();
       Vector#(1,Bit#(16)) v = readDataGearbox.first(); readDataGearbox.deq();
-      $display("bramWriteRule bramAddr=%d row=%d col=%d v=%h", bramAddr, bramAddr>>4, bramAddr & 'hf, v);
+      if (verbose) $display("bramWriteRule bramAddr=%d row=%d col=%d v=%h", bramAddr, bramAddr>>4, bramAddr & 'hf, v);
       lineBufferWriteFifo.enq(BRAMRequest{write: True, responseOnWrite: False, address: truncate(bramAddr), datain: unpack(v[0])});
       if (bramWriteIterator.isLast()) begin
 	 // now OK to start convolutions for rows up to here
@@ -387,42 +389,42 @@ module mkIPDriver(InnerProdDriver);
 	 if (!enoughRowsCached) begin
 	    enoughRowsCached = rowNumber >= (kernelHeight-2);
 	    if (!enoughRowsCachedReg && enoughRowsCached)
-	       $display("bramWriteRule rowNumber=%d enoughRowsCached=%d enoughRowsCachedReg=%d", rowNumber, enoughRowsCached, enoughRowsCachedReg);
+	       if (verbose) $display("bramWriteRule rowNumber=%d enoughRowsCached=%d enoughRowsCachedReg=%d", rowNumber, enoughRowsCached, enoughRowsCachedReg);
 	    enoughRowsCachedReg <= enoughRowsCached;
 	 end
-	 $display("bramWriteRule: islast rowNumber=%d bramAddr=%d kernelHeight=%d enoughRowsCachedReg=%d", rowNumber, bramAddr, kernelHeight, enoughRowsCachedReg);
+	 if (verbose) $display("bramWriteRule: islast rowNumber=%d bramAddr=%d kernelHeight=%d enoughRowsCachedReg=%d", rowNumber, bramAddr, kernelHeight, enoughRowsCachedReg);
 	 if (enoughRowsCachedReg) begin
-	    convIterator.start(XYIteratorConfig {
-					       xbase: truncate(rowNumber-kernelHeight+1), xlimit: truncate(rowNumber-kernelHeight+2), xstep: 1,
-					       ybase: 0, ylimit: (truncate(rowLenBytes>>1)-kernelWidth), ystep: 1
-					       });
+	    convIterator.start(IteratorConfig {xbase: 0,
+					       //xlimit: (truncate(rowLenBytes>>1)-kernelWidth),
+					       xlimit: (truncate(rowLenBytes>>1)),
+					       xstep: 1 },
+			       truncate(rowNumber-kernelHeight+1));
 	 end
       end
    endrule
 
    rule convRowRule;
-      match { .rowNumber, .colNumber } <- toGet(convIterator.pipe).get();
-      let req = XYIteratorConfig {
-			       xbase: truncate(rowNumber), xlimit: truncate(rowNumber+1), xstep: 1,
-			       ybase: colNumber, ylimit: colNumber+kernelHeight, ystep: 1
-			       };
-      ipIterator.start(req);
+      let rowNumber = convIterator.ctxt();
+      let colNumber <- toGet(convIterator.pipe).get();
+      let req = IteratorConfig { xbase: colNumber, xlimit: colNumber+kernelHeight, xstep: 1 };
+      ipIterator.start(req, rowNumber);
       $display("range startRule row=%d col=%d", rowNumber, colNumber);
    endrule
 
    rule issueBramReadRequest;
-      match { .x, .y } <- toGet(ipIterator.pipe).get();
+      let x = ipIterator.ctxt();
+      let y <- toGet(ipIterator.pipe).get();
       // fixme: placeholder address computation
       let addr = (x << kernelColAddrBits) | y;
       lineBufferRequestFifo.enq(BRAMRequest{write: False, responseOnWrite: False, address: addr, datain: 0});
       lastFifo.enq(tuple4(ipIterator.isFirst(), ipIterator.isLast(), x, y));
-      $display("issueBramReadRequest x=%d y=%d first=%d last=%d", x, y, ipIterator.isFirst(), ipIterator.isLast());
+      if (verbose) $display("issueBramReadRequest x=%d y=%d first=%d last=%d", x, y, ipIterator.isFirst(), ipIterator.isLast());
    endrule
    rule issueInnerProdRequest;
       let v <- toGet(lineBufferResponseFifo).get();
       match { .first, .last, .x, .y } <- toGet(lastFifo).get();
       let allTiles = fromInteger(valueOf(NumTiles));
-      $display("issueInnerProdRequest v=%d x=%d y=%d first=%d last=%d", v, x, y, first, last);
+      if (verbose) $display("issueInnerProdRequest v=%d x=%d y=%d first=%d last=%d", v, x, y, first, last);
       if (innerProdRequestFifo.notFull())
       innerProdRequestFifo.enq(InnerProdParam { tile: allTiles, v: v, first: first, last: last, update: False });
       else
@@ -437,11 +439,11 @@ module mkIPDriver(InnerProdDriver);
       if (responseCount == 0)
 	 responseCount = fromInteger(valueOf(NumTiles));
       match { .tile, .data } <- toGet(innerProdResponseFifo).get();
-      $display("innerProdResponseRule count=%d tile=%d data=%h", responseCount, tile, data);
+      if (verbose) $display("innerProdResponseRule count=%d tile=%d data=%h", responseCount, tile, data);
       topBufferWriteFifo.enq(BRAMRequest{write: True, responseOnWrite: False, address: truncate(pack(tile)), datain: data});
 
       if (responseCount == 1) begin
-	 rowWriteBackIterator.start(IteratorConfig {xbase: 0, xlimit: fromInteger(valueOf(NumTiles)*2), xstep: fromInteger(valueOf(DataBusWidth)/8)});
+	 colWriteBackIterator.start(IteratorConfig {xbase: 0, xlimit: fromInteger(valueOf(NumTiles)*2), xstep: fromInteger(valueOf(DataBusWidth)/8)});
 	 topBufferReadIterator.start(IteratorConfig {xbase: 0, xlimit: fromInteger(valueOf(NumTiles)), xstep: 1});
       end
       responseCountReg <= responseCount - 1;
@@ -449,15 +451,21 @@ module mkIPDriver(InnerProdDriver);
 
    rule topBufferReadRule;
       let addr <- toGet(topBufferReadIterator.pipe).get();
-      $display("topBufferReadRule: addr=%h", addr);
+      if (verbose) $display("topBufferReadRule: addr=%h", addr);
       topBufferRequestFifo.enq(BRAMRequest{write: False, responseOnWrite: False, address: addr, datain: 0});
    endrule
 
    mkConnection(mapPipe(pack, toPipeOut(topBufferResponseFifo)), toPipeIn(writeDataGearbox));
+   Reg#(Bit#(32)) wrrCount <- mkReg(0);
    rule writeReqRule;
-      let offset <- toGet(rowWriteBackIterator.pipe).get();
+      let offset <- toGet(colWriteBackIterator.pipe).get();
       let tag = 22;
-      $display("writeReqRule: offset=%h", offset);
+      if (colWriteBackIterator.isLast()) begin
+	 //let unused <- toGet(rowWriteBackIterator.pipe).get();
+      end
+
+      wrrCount <= wrrCount + 1;
+      $display("writeReqRule: offset=%h cwbi.isLast %d rwbi.isLast %d wrr %d", offset, colWriteBackIterator.isLast(), rowWriteBackIterator.isLast(), wrrCount);
       writeReqFifo.enq(MemRequest { sglId: writePointerReg, offset: extend(offset), burstLen: fromInteger(valueOf(DataBusWidth)/8), tag: tag });
    endrule
    rule writeDataRule;
@@ -473,7 +481,6 @@ module mkIPDriver(InnerProdDriver);
    interface Reg readPointer = readPointerReg;
    interface Reg writePointer = writePointerReg;
    interface rowRequest = toPut(rowRequestFifo);
-   interface convRequest = toPut(convRequestFifo);
    interface innerProdRequest = toPipeOut(innerProdRequestFifo);
    interface innerProdResponse = toPipeIn(innerProdResponseFifo);
    interface BRAMClient lineBufferReadClient;
@@ -560,13 +567,6 @@ module mkInnerProdSynth#(Clock derivedClock)(InnerProdSynth);
    mkConnection(toPipeOut(inputFifo), rp.inPipe, clocked_by derivedClock, reset_by derivedReset);
    mkConnection(op.outPipe, toPipeIn(bramFifo), clocked_by derivedClock, reset_by derivedReset);
 
-   Reg#(Bit#(TileNumSize)) tReg <- mkReg(0);
-   Reg#(Bit#(TileNumSize)) mReg <- mkReg(0);
-   Wire#(Bool) bWire <- mkDWire(False);
-   rule foo if (bWire);
-      $display("m=%d t=%d", mReg, tReg);
-   endrule
-
    let ipDriver <- mkIPDriver();
    mkConnection(ipDriver.lineBufferReadClient, lineBuffer.portB);
    mkConnection(ipDriver.lineBufferWriteClient, lineBuffer.portA);
@@ -582,16 +582,9 @@ module mkInnerProdSynth#(Clock derivedClock)(InnerProdSynth);
       method Action innerProd(Bit#(16) tile, Bit#(16) a, Bool first, Bool last, Bool update);
 	 Bit#(TileNumSize) t = truncate(tile);
 	 Bit#(TileNumSize) m = truncate(tile >> valueOf(TLog#(NumTilesPerMacro)));
-	 tReg <= t;
-	 mReg <= m;
-	 bWire <= True;
 	 $display("request.innerProd m=%d t=%d a=%h first=%d last=%d", m, t, a, first, last);
          // broadcast to all tiles
 	 inputFifo.enq(InnerProdParam { tile: t, v: unpack(a), first: first, last: last, update: update});
-      endmethod
-      method Action startIndividualConv(Bit#(16) xbase, Bit#(16) xlimit, Bit#(16) ybase, Bit#(16) ylimit);
-	 ipDriver.convRequest.put(XYIteratorConfig { xbase: truncate(xbase), xlimit: truncate(xlimit), xstep: 1,
-						 ybase: truncate(ybase), ylimit: truncate(ylimit), ystep: 1 });
       endmethod
       method Action startConv(Bit#(32) rdptr, Bit#(32) wrptr, Bit#(16) xbase, Bit#(16) xlimit, Bit#(16) ybase, Bit#(16) ylimit);
 	 ipDriver.readPointer <= truncate(rdptr);

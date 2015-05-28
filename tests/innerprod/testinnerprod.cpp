@@ -27,7 +27,7 @@
 #include "InnerProdRequest.h"
 #include "InnerProdIndication.h"
 
-const int NUM_IMAGES = 10;
+const int NUM_IMAGES = 1;
 const int NUM_ROWS = 16;
 const int NUM_COLS = 16;
 const int NUMBER_OF_TESTS = 1;
@@ -116,13 +116,7 @@ int main(int argc, const char **argv)
       for (int addr = 0; addr < 1024; addr++) {
 	device.write(addr, 0x0100);
       }
-      if (0) 
-	for (int i = 0; i < 16; i++) {
-	  device.startIndividualConv(i, i+2, 0, 4);
-	  sleep(1);
-	}
-      else
-	device.startConv(ref_srcAlloc, ref_dstAlloc, 0, NUM_IMAGES, 0, 4);
+      device.startConv(ref_srcAlloc, ref_dstAlloc, 0, NUM_IMAGES, 0, 4);
     }
 
     for (int times = 0; times < 400; times++)
