@@ -23,6 +23,8 @@
 import FIFO::*;
 import FIFOF::*;
 import GetPut::*;
+import ClientServer::*;
+import BRAM::*;
 
 import MemTypes::*;
 import Pipe::*;
@@ -108,4 +110,29 @@ module mkMemWriterPipe#(Reg#(SGLId) ptrReg,
       interface Get writeData = toGet(writeDataFifo);
       interface Put writeDone = toPut(writeDoneFifo);
    endinterface
+endmodule
+
+
+module mkBramReaderPipe#(BRAMServer#(Bit#(addrsz), Bit#(dsz)) bramServer,
+			 IteratorIfc#(Bit#(addrsz)) addrIterator)(PipeOut#(MemData#(dsz)))
+   provisos (Add#(a__, addrsz, MemOffsetSize));
+
+   FIFOF#(Bool) lastFifo <- mkFIFOF();
+   FIFOF#(MemData#(dsz)) readDataFifo <- mkFIFOF();
+
+   let verbose = False;
+
+   rule issueBramReadRequest;
+      let addr <- toGet(addrIterator.pipe).get();
+      bramServer.request.put(BRAMRequest{write: False, responseOnWrite: False, address: addr, datain: 0});
+      lastFifo.enq(addrIterator.isLast());
+      if (verbose) $display("issueBramReadRequest addr=%h first=%d last=%d", addr, addrIterator.isFirst(), addrIterator.isLast());
+   endrule
+
+   rule readData;
+      let v <- bramServer.response.get();
+      let last <- toGet(lastFifo).get();
+      readDataFifo.enq(MemData { data: v, last: last, tag: 0 });
+   endrule
+   return toPipeOut(readDataFifo);
 endmodule
