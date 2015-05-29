@@ -27,6 +27,40 @@ import GetPut::*;
 import MemTypes::*;
 import Pipe::*;
 
+interface MemReaderPipe#(numeric type dsz);
+   interface PipeOut#(MemData#(dsz)) dataPipe;
+   interface MemReadClient#(dsz) readClient;
+endinterface
+
+module mkMemReaderPipe#(Reg#(SGLId) ptrReg,
+			IteratorIfc#(Bit#(addrsz)) addrIterator,
+			Bit#(BurstLenSize) burstLen)(MemReaderPipe#(dsz))
+   provisos (Add#(a__, addrsz, MemOffsetSize));
+
+   let verbose = False;
+
+   FIFO#(MemRequest) readReqFifo <- mkFIFO();
+   FIFOF#(MemData#(dsz)) readDataFifo <- mkSizedFIFOF(8);
+   Reg#(Bit#(MemTagSize)) tagReg <- mkReg(0);
+
+   rule startReadReqRule;
+      let offset <- toGet(addrIterator.pipe).get();
+      let tag = tagReg;
+      if (addrIterator.isFirst())
+	 tag = 0;
+      if (verbose) $display("startReadReqRule: offset=%d", offset);
+      readReqFifo.enq(MemRequest { sglId: ptrReg, offset: extend(offset), burstLen: burstLen, tag: extend(tag) });
+
+      tagReg <= tag + 1;
+   endrule
+
+   interface dataPipe = toPipeOut(readDataFifo);
+   interface MemReadClient readClient;
+      interface Get readReq = toGet(readReqFifo);
+      interface Put readData = toPut(readDataFifo);
+   endinterface
+endmodule
+
 interface MemWriterPipe#(numeric type dsz);
    interface PipeOut#(Bool) lastPipe;
    interface MemWriteClient#(dsz) writeClient;
