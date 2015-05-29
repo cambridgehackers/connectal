@@ -53,7 +53,7 @@ ifneq ($(BSCMAJOR), 2013)
     # S0015: The use of a mkSyncReset may not always result in a reset
     #        signal being seen on the destination side. Recommend
     #        replacement with mkAsyncReset.
-    BSCWARNFLAGS += -demote-errors G0066:G0045 -suppress-warnings G0046:G0020:S0015:S0080:S0039
+    BSCWARNFLAGS += -demote-errors G0066:G0045 -suppress-warnings G0046:G0020:S0015:S0080:S0039:T0127
 else
     #BSCFLAGS_COMMON += -D ExportUnusedClocksAndResets
 endif
