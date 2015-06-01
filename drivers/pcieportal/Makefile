@@ -77,15 +77,14 @@ install-dkms: pcieportal_signature_file.h
 	make -C ../portalmem portalmem_signature_file.h
 	mkdir -p $(DESTDIR)//usr/src/connectal-$(VERSION)
 	sed "s/@VERSION@/$(VERSION)/" dkms.conf > dkms.conf.out
+	sed "s/@VERSION@/$(VERSION)/" Makefile.dkms > Makefile.dkms.out
 	cp -fv dkms.conf.out $(DESTDIR)/usr/src/connectal-$(VERSION)/dkms.conf
+	cp -fv Makefile.dkms.out $(DESTDIR)/usr/src/connectal-$(VERSION)/Makefile
 	cp -fv pcieportal_signature_file.h pcieportal.c pcieportal.h $(DESTDIR)/usr/src/connectal-$(VERSION)
 	cp -fv ../../cpp/*.[ch] ../portalmem/*.[ch] \
 	../../generated/cpp/*.[ch] \
 	$(DESTDIR)/usr/src/connectal-$(VERSION)
-	sed -i "s|define DEV_VERSION.*|define DEV_VERSION \"$(VERSION)\"|" $(DESTDIR)/usr/src/connectal-$(VERSION)/*.[ch]
-	sed -i "s|define DRIVER_VERSION.*|define DRIVER_VERSION \"$(VERSION)\"|" $(DESTDIR)/usr/src/connectal-$(VERSION)/*.[ch]
 	sed -i 's|drivers/portalmem/||' $(DESTDIR)/usr/src/connectal-$(VERSION)/*.[ch]
 	sed -i 's|drivers/pcieportal/||' $(DESTDIR)/usr/src/connectal-$(VERSION)/*.[ch]
 	sed -i 's|drivers/zynqportal/||' $(DESTDIR)/usr/src/connectal-$(VERSION)/*.[ch]
 	sed -i 's|../../cpp/||g' $(DESTDIR)/usr/src/connectal-$(VERSION)/*.[ch]
-	cp -fv Makefile.dkms $(DESTDIR)/usr/src/connectal-$(VERSION)/Makefile
