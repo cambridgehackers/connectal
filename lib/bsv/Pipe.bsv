@@ -889,8 +889,15 @@ typedef struct {
    a xstep;
 } IteratorConfig#(type a) deriving (Bits, FShow);
 
+typedef struct {
+   a value;
+   Bool first;
+   Bool last;
+} IteratorValue#(type a) deriving (Bits);
+
 interface IteratorWithContext#(type a, type c);
    interface PipeOut#(a) pipe;
+   interface PipeOut#(IteratorValue#(a)) ivpipe;
    method a count();
    method Bool isFirst();
    method Bool isLast();
@@ -900,6 +907,7 @@ endinterface
 
 interface IteratorIfc#(type a);
    interface PipeOut#(a) pipe;
+   interface PipeOut#(IteratorValue#(a)) ivpipe;
    method a count();
    method Bool isFirst();
    method Bool isLast();
@@ -921,6 +929,22 @@ module mkIteratorWithContext(IteratorWithContext#(a,c)) provisos (Arith#(a), Bit
    interface PipeOut pipe;
       method a first();
 	 return x;
+      endmethod
+      method Action deq if (!idle);
+	 let next_x = x + xstep;
+	 countReg <= countReg + 1;
+	 x <= x + xstep;
+	 first <= False;
+	 last <= (next_x+xstep >= xlimit);
+	 idle <= last;
+      endmethod
+      method Bool notEmpty();
+	 return (x < xlimit);
+      endmethod
+   endinterface
+   interface PipeOut ivpipe;
+      method IteratorValue#(a) first();
+	 return IteratorValue { value: x, first: first, last: last };
       endmethod
       method Action deq if (!idle);
 	 let next_x = x + xstep;
@@ -957,6 +981,7 @@ endmodule: mkIteratorWithContext
 module mkIterator(IteratorIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
    IteratorWithContext#(a,void) iter <- mkIteratorWithContext();
    interface PipeOut pipe = iter.pipe;
+   interface PipeOut ivpipe = iter.ivpipe;
    method Action start(IteratorConfig#(a) cfg);
       iter.start(cfg, ?);
    endmethod
