@@ -95,7 +95,7 @@ module mkMemWriterPipe#(Reg#(SGLId) ptrReg,
       let tag = 22;
       let v <- toGet(dataPipe).get();
       $display("writeDataRule: data=%h", v);
-      writeDataFifo.enq(MemData { data: pack(v), tag: tag });
+      writeDataFifo.enq(MemData { data: pack(v), tag: tag, last: False });
    endrule
    rule writeDone;
       let last <- toGet(lastFifo).get();
@@ -135,4 +135,36 @@ module mkBramReaderPipe#(BRAMServer#(Bit#(addrsz), Bit#(dsz)) bramServer,
       readDataFifo.enq(MemData { data: v, last: last, tag: 0 });
    endrule
    return toPipeOut(readDataFifo);
+endmodule
+
+interface BramWriterPipe#(numeric type dsz);
+   interface PipeOut#(Bool) lastPipe;
+endinterface
+
+module mkBramWriterPipe#(BRAMServer#(Bit#(addrsz), dtype) bramServer,
+			IteratorIfc#(Bit#(addrsz)) addrIterator,
+			PipeOut#(dtype) dataPipe)(BramWriterPipe#(dsz))
+   provisos (Bits#(dtype, dsz),
+	     Add#(a__, addrsz, MemOffsetSize));
+
+   FIFOF#(Bool)                       lastFifo <- mkFIFOF();
+   FIFOF#(Bool)                       doneFifo <- mkFIFOF();
+
+   Reg#(Bit#(32)) wrrCount <- mkReg(0);
+   Reg#(Bit#(32)) wdoneCount <- mkReg(0);
+   rule writeReqRule;
+      let offset <- toGet(addrIterator.pipe).get();
+      let v <- toGet(dataPipe).get();
+      wrrCount <= wrrCount + 1;
+      $display("BramWriter.writeReqRule: offset=%h addrIterator.isLast %d wrr %d", offset, addrIterator.isLast(), wrrCount);
+      bramServer.request.put(BRAMRequest { write: True, responseOnWrite: False, address: offset, datain: v });
+      lastFifo.enq(addrIterator.isLast());
+   endrule
+   rule writeDone;
+      let last <- toGet(lastFifo).get();
+      $display("writeDone: wdoneCount=%d last=%d", wdoneCount, last);
+      wdoneCount <= wdoneCount + 1;
+      doneFifo.enq(last);
+   endrule
+   interface PipeOut lastPipe = toPipeOut(doneFifo);
 endmodule
