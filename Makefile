@@ -48,7 +48,7 @@ install: $(INSTALL_SHARED)
 	    done; \
 	fi
 	#(cd drivers/pcieportal; make install)
-	make -C drivers/pcieportal VERSION=$(VERSION) install-dkms
+	make -C drivers/pcieportal VERSION=$(VERSION) CONNECTALDIR=$(PWD) install-dkms
 	make -C pcie install
 	install -d -m755 $(DESTDIR)$(UDEV_RULES_DIR)
 	for fname in $(UDEV_RULES) ; do \
