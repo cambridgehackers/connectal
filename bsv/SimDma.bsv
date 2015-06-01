@@ -28,12 +28,12 @@ import GetPut::*;
 import MemTypes::*;
 
 `ifdef SIM_DMA_READ_LATENCY
-typedef SIM_DMA_READ_LATENCY SimDmaReadLatency;
+typedef `SIM_DMA_READ_LATENCY SimDmaReadLatency;
 `else
 typedef 150 SimDmaReadLatency;
 `endif
 `ifdef SIM_DMA_WRITE_LATENCY
-typedef SIM_DMA_WRITE_LATENCY SimDmaWriteLatency;
+typedef `SIM_DMA_WRITE_LATENCY SimDmaWriteLatency;
 `else
 typedef 150 SimDmaWriteLatency;
 `endif

@@ -93,6 +93,15 @@ instance ToPipeOut#(a, Reg#(a));
    endfunction
 endinstance
 
+instance ToPipeIn#(a, Gearbox#(1, n, a));
+   function PipeIn#(a) toPipeIn(Gearbox#(1, n, a) in);
+      return (interface PipeIn#(a);
+		 method Action enq(a v); in.enq(vec(v)); endmethod
+		 method notFull = in.notFull;
+	      endinterface);
+   endfunction
+endinstance
+
 instance ToPipeIn#(Vector#(m, a), Gearbox#(m, n, a));
    function PipeIn#(Vector#(m, a)) toPipeIn(Gearbox#(m, n, a) in);
       return (interface PipeIn#(Vector#(m, a));
@@ -878,53 +887,83 @@ typedef struct {
    a xbase;
    a xlimit;
    a xstep;
-} RangeConfig#(type a) deriving (Bits, FShow);
+} IteratorConfig#(type a) deriving (Bits, FShow);
 
-interface RangePipeIfc#(type a);
+interface IteratorWithContext#(type a, type c);
    interface PipeOut#(a) pipe;
+   method a count();
    method Bool isFirst();
    method Bool isLast();
-   method Action start(RangeConfig#(a) cfg);
+   method Action start(IteratorConfig#(a) cfg, c ctxt);
+   method c ctxt();
 endinterface
 
-module mkRangePipeOut(RangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
-   Reg#(a) x <- mkReg(1);
+interface IteratorIfc#(type a);
+   interface PipeOut#(a) pipe;
+   method a count();
+   method Bool isFirst();
+   method Bool isLast();
+   method Action start(IteratorConfig#(a) cfg);
+endinterface
+
+module mkIteratorWithContext(IteratorWithContext#(a,c)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a), Bits#(c,cwidth));
+   Reg#(c) ctxtReg <- mkReg(unpack(0));
+   Reg#(a) countReg <- mkReg(0);
+   Reg#(a) x <- mkReg(0);
    Reg#(a) xbase <- mkReg(0);
-   Reg#(a) xstep <- mkReg(1);
+   Reg#(a) xstep <- mkReg(0);
    // inclusive limit
    Reg#(a) xlimit <- mkReg(0);
    Reg#(Bool) first <- mkReg(False);
    Reg#(Bool) last <- mkReg(False);
+   Reg#(Bool) idle <- mkReg(True);
    Bool verbose = False;
    interface PipeOut pipe;
       method a first();
 	 return x;
       endmethod
-      method Action deq if (x <= xlimit);
+      method Action deq if (!idle);
 	 let next_x = x + xstep;
+	 countReg <= countReg + 1;
 	 x <= x + xstep;
 	 first <= False;
-	 last <= (next_x+xstep > xlimit);
+	 last <= (next_x+xstep >= xlimit);
+	 idle <= last;
       endmethod
       method Bool notEmpty();
-	 return (x <= xlimit);
+	 return (x < xlimit);
       endmethod
    endinterface
-   method Action start(RangeConfig#(a) cfg) if (x > xlimit);
+   method Action start(IteratorConfig#(a) cfg, c ctxt) if (idle);
+      countReg <= 0;
       x <= cfg.xbase;
       xbase <= cfg.xbase;
       xstep <= cfg.xstep;
-
-      // inclusive limit, should update interface accordingly
-      xlimit <= cfg.xlimit-cfg.xstep;
+      xlimit <= cfg.xlimit;
 
       first <= True;
       last <= (cfg.xbase+cfg.xstep >= cfg.xlimit);
-      if (verbose) $display("mkRangePipeOut xbase=%d xstep=%d cfg.xlimit=%d xlimit=%d last=%d", cfg.xbase, cfg.xstep, cfg.xlimit, (cfg.xlimit-cfg.xstep), (cfg.xbase+cfg.xstep >= cfg.xlimit));
+      idle <= False;
+      ctxtReg <= ctxt;
+      if (verbose) $display("mkIterator xbase=%d xstep=%d xlimit=%d last=%d notEmpty=%d", cfg.xbase, cfg.xstep, cfg.xlimit, (cfg.xbase+cfg.xstep >= cfg.xlimit),
+	 (cfg.xbase < cfg.xlimit));
    endmethod
    method Bool isFirst() = first;
    method Bool isLast() = last;
-endmodule: mkRangePipeOut
+   method a count() = countReg;
+   method c ctxt() = ctxtReg;
+endmodule: mkIteratorWithContext
+
+module mkIterator(IteratorIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
+   IteratorWithContext#(a,void) iter <- mkIteratorWithContext();
+   interface PipeOut pipe = iter.pipe;
+   method Action start(IteratorConfig#(a) cfg);
+      iter.start(cfg, ?);
+   endmethod
+   method a count() = iter.count();
+   method isFirst = iter.isFirst;
+   method isLast = iter.isLast;
+endmodule
 
 typedef struct {
    a xbase;
@@ -933,17 +972,17 @@ typedef struct {
    a ybase;
    a ylimit;
    a ystep;
-} XYRangeConfig#(type a) deriving (Bits, FShow);
+} XYIteratorConfig#(type a) deriving (Bits, FShow);
 
-interface XYRangePipeIfc#(type a);
+interface XYIteratorIfc#(type a);
    interface PipeOut#(Tuple2#(a,a)) pipe;
    method Bool isFirst();
    method Bool isLast();
-   method Action start(XYRangeConfig#(a) cfg);
+   method Action start(XYIteratorConfig#(a) cfg);
    method Action display();
 endinterface
 
-module mkXYRangePipeOut(XYRangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
+module mkXYIterator(XYIteratorIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
    Reg#(a) x <- mkReg(0);
    Reg#(a) y <- mkReg(0);
    Reg#(a) xbase <- mkReg(0);
@@ -978,7 +1017,7 @@ module mkXYRangePipeOut(XYRangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth)
 	 return guard;
       endmethod
    endinterface
-   method Action start(XYRangeConfig#(a) cfg) if (!guard);
+   method Action start(XYIteratorConfig#(a) cfg) if (!guard);
       x <= cfg.xbase;
       y <= cfg.ybase;
       xbase <= cfg.xbase;
@@ -993,6 +1032,6 @@ module mkXYRangePipeOut(XYRangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth)
    method Bool isFirst(); return isFirstReg; endmethod
    method Bool isLast(); return isLastReg; endmethod
    method Action display();
-      $display("XYRangePipe x=%d xlimit=%d y=%d ylimit=%d xstep=%d ystep=%d", x, xlimit, xstep, y, ylimit, ystep);
+      $display("XYIterator x=%d xlimit=%d y=%d ylimit=%d xstep=%d ystep=%d", x, xlimit, xstep, y, ylimit, ystep);
    endmethod
-endmodule: mkXYRangePipeOut
+endmodule: mkXYIterator

@@ -67,17 +67,17 @@ typedef struct {
    a zbase;
    a zlimit;
    a zstep;
-} XYZRangeConfig#(type a) deriving (Bits, FShow);
+} XYZIteratorConfig#(type a) deriving (Bits, FShow);
 
-interface XYZRangePipeIfc#(type a);
+interface XYZIteratorIfc#(type a);
    interface PipeOut#(Tuple2#(a,a)) pipe;
-   method Action start(XYZRangeConfig#(a) cfg);
+   method Action start(XYZIteratorConfig#(a) cfg);
    method Action display();
 endinterface
 
 typedef enum {RangeA,RangeB,RangeC} RangeBehavior deriving (Eq); 
 
-module mkXYZRangePipeOut#(RangeBehavior alt) (XYZRangePipeIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
+module mkXYZIterator#(RangeBehavior alt) (XYZIteratorIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#(a), Ord#(a));
    Reg#(a) x <- mkReg(0);
    Reg#(a) y <- mkReg(0);
    Reg#(a) z <- mkReg(0);
@@ -122,7 +122,7 @@ module mkXYZRangePipeOut#(RangeBehavior alt) (XYZRangePipeIfc#(a)) provisos (Ari
 	 return guard;
       endmethod
    endinterface
-   method Action start(XYZRangeConfig#(a) cfg) if (!guard);
+   method Action start(XYZIteratorConfig#(a) cfg) if (!guard);
       x <= cfg.xbase;
       y <= cfg.ybase;
       z <= cfg.zbase;
@@ -137,9 +137,9 @@ module mkXYZRangePipeOut#(RangeBehavior alt) (XYZRangePipeIfc#(a)) provisos (Ari
       zlimit <= cfg.zlimit;
    endmethod
    method Action display();
-      $display("XYZRangePipe x=%d xlimit=%d y=%d ylimit=%d z=%d zlimit=%d xstep=%d ystep=%d zstep=%d", x, xlimit, y, ylimit, z, zlimit,  xstep, ystep, zstep);
+      $display("XYZIterator x=%d xlimit=%d y=%d ylimit=%d z=%d zlimit=%d xstep=%d ystep=%d zstep=%d", x, xlimit, y, ylimit, z, zlimit,  xstep, ystep, zstep);
    endmethod
-endmodule: mkXYZRangePipeOut
+endmodule: mkXYZIterator
 
 module mkRowSource#(MemReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) numRows, Bit#(MemTagSize) id) (RowColSource#(TMul#(N,32), Vector#(N,MmToken)))
    provisos (Bits#(Vector#(N,Float),asz),
@@ -352,9 +352,9 @@ module  mkDmaMatrixMultiply#(MemReadServer#(TMul#(N,32)) sA,
    FunnelPipe#(1,J,Vector#(N,MmToken),2) sinks <- mkFunnelPipesPipelinedRR(fxpipes,kk/valueOf(N));
    mkConnection(sinks[0],sink.pipe);
 
-   XYZRangePipeIfc#(UInt#(addrwidth)) offsetpipeC <- mkXYZRangePipeOut(RangeC);
-   XYZRangePipeIfc#(UInt#(addrwidth)) offsetpipeA <- mkXYZRangePipeOut(RangeA);
-   XYZRangePipeIfc#(UInt#(addrwidth)) offsetpipeB <- mkXYZRangePipeOut(RangeB);
+   XYZIteratorIfc#(UInt#(addrwidth)) offsetpipeC <- mkXYZIterator(RangeC);
+   XYZIteratorIfc#(UInt#(addrwidth)) offsetpipeA <- mkXYZIterator(RangeA);
+   XYZIteratorIfc#(UInt#(addrwidth)) offsetpipeB <- mkXYZIterator(RangeB);
    
    Reg#(UInt#(32)) lastStartA <- mkReg(0);
    Reg#(UInt#(32)) lastStartB <- mkReg(0);
@@ -422,15 +422,15 @@ module  mkDmaMatrixMultiply#(MemReadServer#(TMul#(N,32)) sA,
 		       UInt#(addrwidth) numColumnsA_x_numColumnsB,UInt#(addrwidth) numRowsB_x_numColumnsB
 		       ) if (!running);
 
-      XYZRangeConfig#(UInt#(addrwidth)) offsetcfgA = XYZRangeConfig {xbase: 0, xlimit: numRowsA_x_numColumnsA, xstep: numColumnsA,
+      XYZIteratorConfig#(UInt#(addrwidth)) offsetcfgA = XYZIteratorConfig {xbase: 0, xlimit: numRowsA_x_numColumnsA, xstep: numColumnsA,
 								     ybase: 0, ylimit: numColumnsB,            ystep: fromInteger(kk),
 								     zbase: 0, zlimit: numColumnsA,            zstep: fromInteger(jj)};
 
-      XYZRangeConfig#(UInt#(addrwidth)) offsetcfgB = XYZRangeConfig {xbase: 0, xlimit: numRowsB_x_numColumnsB, xstep: numColumnsB,
+      XYZIteratorConfig#(UInt#(addrwidth)) offsetcfgB = XYZIteratorConfig {xbase: 0, xlimit: numRowsB_x_numColumnsB, xstep: numColumnsB,
 								     ybase: 0, ylimit: numColumnsB,            ystep: fromInteger(kk),
 								     zbase: 0, zlimit: numColumnsA,            zstep: fromInteger(jj)};
 
-      XYZRangeConfig#(UInt#(addrwidth)) offsetcfgC = XYZRangeConfig {xbase: 0, xlimit: numColumnsB_x_J,           xstep: numColumnsB,
+      XYZIteratorConfig#(UInt#(addrwidth)) offsetcfgC = XYZIteratorConfig {xbase: 0, xlimit: numColumnsB_x_J,           xstep: numColumnsB,
 								     ybase: 0, ylimit: numColumnsB,               ystep: fromInteger(kk),
 								     zbase: 0, zlimit: numColumnsA_x_numColumnsB, zstep: numColumnsB_x_J };
 

@@ -29,7 +29,7 @@ all: pciedrivers scripts/syntax/parsetab.py
 	echo version "$(VERSION)"
 
 pciedrivers:
-	#(cd drivers/pcieportal; make DRIVER_VERSION=$(VERSION))
+	#(cd drivers/pcieportal; make)
 	make -C pcie
 
 pciedrivers-clean:
@@ -131,32 +131,31 @@ scripts/syntax/parsetab.py: scripts/syntax.py
 allarchlist = ac701 zedboard zc702 zc706 kc705 vc707 zynq100 v2000t bluesim miniitx100 de5 htg4 vsim parallella xsim zybo kc705g2
 
 #################################################################################################
-# gdb
 
-#%.gdb:
-#	make CONNECTAL_DEBUG=1 $*
-
-# For the parallella build to work, the cross compilers need to be in your path
-# and the parallella kernel needs to be parallel to connectal and built
-parallelladrivers:
-	(cd drivers/zynqportal/; DRIVER_VERSION=$(VERSION) CROSS_COMPILE=arm-linux-gnueabihf- DEVICE_XILINX_KERNEL=`pwd`/../../../parallella-linux/ make parallellazynqportal.ko)
-	(cd drivers/portalmem/; DRIVER_VERSION=$(VERSION) CROSS_COMPILE=arm-linux-gnueabihf- DEVICE_XILINX_KERNEL=`pwd`/../../../parallella-linux/ make parallellaportalmem.ko)
-
-parallelladrivers-clean:
-	(cd drivers/zynqportal/;  CROSS_COMPILE=arm-linux-gnueabihf- DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make clean)
-	(cd drivers/portalmem/;   CROSS_COMPILE=arm-linux-gnueabihf- DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make clean)
+KROOT_ZYNQ := $(PWD)/../linux-xlnx/
 
 zynqdrivers:
-	(cd drivers/zynqportal/; DRIVER_VERSION=$(VERSION) DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make zynqportal.ko)
-	(cd drivers/portalmem/;  DRIVER_VERSION=$(VERSION) DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make portalmem.ko)
+	(cd drivers/zynqportal/; KROOT=$(KROOT_ZYNQ) make zynqportal.ko)
+	(cd drivers/portalmem/;  KROOT=$(KROOT_ZYNQ) make portalmem.ko)
 
 zynqdrivers-clean:
-	(cd drivers/zynqportal/; MAKEKERNEL=true DEVICE_XILINX_KERNEL=/usr/src/connectal-zynq-linux-headers make clean)
-	(cd drivers/portalmem/;  MAKEKERNEL=true DEVICE_XILINX_KERNEL=/usr/src/connectal-zynq-linux-headers make clean)
+	(cd drivers/zynqportal/; KROOT=$(KROOT_ZYNQ) make clean)
+	(cd drivers/portalmem/;  KROOT=$(KROOT_ZYNQ) make clean)
 
 zynqdrivers-install:
 	install -d -m755 $(DESTDIR)/usr/share/connectal-zynqdrivers/
 	install -m644 drivers/zynqportal/zynqportal.ko drivers/portalmem/portalmem.ko $(DESTDIR)/usr/share/connectal-zynqdrivers/
+
+# For the parallella build to work, the cross compilers need to be in your path
+# and the parallella kernel needs to be parallel to connectal and built
+KROOT_PAR  := $(PWD)/../parallella-linux/
+parallelladrivers:
+	(cd drivers/zynqportal/; CROSS_COMPILE=arm-linux-gnueabihf- KROOT=$(KROOT_PAR) make parallellazynqportal.ko)
+	(cd drivers/portalmem/; CROSS_COMPILE=arm-linux-gnueabihf- KROOT=$(KROOT_PAR) make parallellaportalmem.ko)
+
+parallelladrivers-clean:
+	(cd drivers/zynqportal/;  CROSS_COMPILE=arm-linux-gnueabihf- KROOT=$(KROOT_ZYNQ) make clean)
+	(cd drivers/portalmem/;   CROSS_COMPILE=arm-linux-gnueabihf- KROOT=$(KROOT_ZYNQ) make clean)
 
 RUNPARAMTEMP=$(subst :, ,$(RUNPARAM):5555)
 RUNIP=$(wordlist 1,1,$(RUNPARAMTEMP))
@@ -177,13 +176,10 @@ zynqdrivers-adb:
 	adb -s $(RUNIP):$(RUNPORT) shell insmod /mnt/sdcard/portalmem.ko
 
 connectalspi-clean:
-	(cd drivers/connectalspi/; DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make clean)
+	(cd drivers/connectalspi/; KROOT=$(KROOT_ZYNQ) make clean)
 
 connectalspi:
-	(cd drivers/connectalspi/; DRIVER_VERSION=$(VERSION) DEVICE_XILINX_KERNEL=`pwd`/../../../linux-xlnx/ make connectalspi.ko)
-
-foo:
-	cd tests/test_spi0/ && make run.zedboard || true
+	(cd drivers/connectalspi/; KROOT=$(KROOT_ZYNQ) make connectalspi.ko)
 
 connectalspi-adb: 
 	adb connect $(RUNPARAM)

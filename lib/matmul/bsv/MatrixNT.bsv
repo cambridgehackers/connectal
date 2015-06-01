@@ -302,10 +302,10 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
    
    zipWithM(mkConnection, fxpipes, map(getRowColSinkPipe, sinks));
    
-   XYRangePipeIfc#(UInt#(addrwidth)) indexpipeifc <- mkXYRangePipeOut();
-   XYRangePipeIfc#(UInt#(addrwidth)) offsetpipeA <- mkXYRangePipeOut();
-   XYRangePipeIfc#(UInt#(addrwidth)) offsetpipeB <- mkXYRangePipeOut();
-   XYRangePipeIfc#(UInt#(addrwidth)) offsetpipeC <- mkXYRangePipeOut();
+   XYIteratorIfc#(UInt#(addrwidth)) indexpipeifc <- mkXYIterator();
+   XYIteratorIfc#(UInt#(addrwidth)) offsetpipeA <- mkXYIterator();
+   XYIteratorIfc#(UInt#(addrwidth)) offsetpipeB <- mkXYIterator();
+   XYIteratorIfc#(UInt#(addrwidth)) offsetpipeC <- mkXYIterator();
 
    Vector#(TAdd#(J,K), PipeOut#(Tuple2#(UInt#(addrwidth),UInt#(addrwidth)))) indexpipes <- mkForkVector(indexpipeifc.pipe);
    Vector#(J, PipeOut#(Tuple2#(UInt#(addrwidth),UInt#(addrwidth))))        offsetpipesA <- mkForkVector(offsetpipeA.pipe);
@@ -457,13 +457,13 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 		       UInt#(addrwidth) numRowsB_x_numColumnsB, UInt#(addrwidth) numColumnsB_x_K,
 		       UInt#(addrwidth) numRowsA_x_numRowsB,    UInt#(addrwidth) numRowsB_x_J
 		       ) if (!running);
-      XYRangeConfig#(UInt#(addrwidth)) indexcfg  = XYRangeConfig {xbase: 0, xlimit: numRowsA, xstep: fromInteger(jj),
+      XYIteratorConfig#(UInt#(addrwidth)) indexcfg  = XYIteratorConfig {xbase: 0, xlimit: numRowsA, xstep: fromInteger(jj),
 								  ybase: 0, ylimit: numRowsB, ystep: fromInteger(kk) };
-      XYRangeConfig#(UInt#(addrwidth)) offsetcfgA = XYRangeConfig {xbase: 0, xlimit: numRowsA_x_numColumnsA, xstep: numColumnsA_x_J,
+      XYIteratorConfig#(UInt#(addrwidth)) offsetcfgA = XYIteratorConfig {xbase: 0, xlimit: numRowsA_x_numColumnsA, xstep: numColumnsA_x_J,
 								  ybase: 0, ylimit: numRowsB, ystep: fromInteger(kk) };
-      XYRangeConfig#(UInt#(addrwidth)) offsetcfgB = XYRangeConfig {xbase: 0, xlimit: numRowsA, xstep: fromInteger(jj),
+      XYIteratorConfig#(UInt#(addrwidth)) offsetcfgB = XYIteratorConfig {xbase: 0, xlimit: numRowsA, xstep: fromInteger(jj),
 								  ybase: 0, ylimit: numRowsB_x_numColumnsB, ystep: numColumnsB_x_K };
-      XYRangeConfig#(UInt#(addrwidth)) offsetcfgC = XYRangeConfig {xbase: 0, xlimit: numRowsA_x_numRowsB, xstep: numRowsB_x_J,
+      XYIteratorConfig#(UInt#(addrwidth)) offsetcfgC = XYIteratorConfig {xbase: 0, xlimit: numRowsA_x_numRowsB, xstep: numRowsB_x_J,
 								  ybase: 0, ylimit: numRowsB, ystep: fromInteger(kk) };
       descFifoA.enq(MatrixDescriptor { sglId: pointerA, base: 0, numRows: numRowsA, numColumns: numColumnsA});
       descFifoB.enq(MatrixDescriptor { sglId: pointerB, base: 0, numRows: numRowsB, numColumns: numColumnsB});

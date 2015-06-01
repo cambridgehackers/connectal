@@ -49,9 +49,6 @@
 /* stem used for module and device names */
 #define DEV_NAME "portal"
 
-/* version string for the driver */
-#define DEV_VERSION "15.04.3"
-
 /* Bluespec's standard vendor ID */
 #define BLUESPEC_VENDOR_ID 0x1be7
 
@@ -686,7 +683,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
         /* initialize driver data */
         memset(board_map, 0, sizeof(board_map));
         /* log the fact that we loaded the driver module */
-        printk(KERN_INFO "%s: Registered Connectal Pcieportal driver %s\n", DEV_NAME, DEV_VERSION);
+        printk(KERN_INFO "%s: Registered Connectal Pcieportal driver %s\n", DEV_NAME, DRIVER_VERSION);
         printk(KERN_INFO "%s: Major = %d  Minors = %d to %d\n", DEV_NAME,
                MAJOR(device_number), MINOR(device_number),
                MINOR(device_number) + MAX_MINOR_COUNT - 1);
@@ -710,7 +707,7 @@ static void pcieportal_exit(void)
         unregister_chrdev_region(device_number, MAX_MINOR_COUNT + 1);
         class_destroy(pcieportal_class);
         /* log that the driver module has been unloaded */
-        printk(KERN_INFO "%s: Unregistered Connectal Pcieportal driver %s\n", DEV_NAME, DEV_VERSION);
+        printk(KERN_INFO "%s: Unregistered Connectal Pcieportal driver %s\n", DEV_NAME, DRIVER_VERSION);
 }
 
 
@@ -726,4 +723,4 @@ EXPORT_SYMBOL(get_pcie_portal_descriptor);
 MODULE_AUTHOR("Bluespec, Inc., Cambridge hackers");
 MODULE_DESCRIPTION("PCIe device driver for PCIe FPGA portals");
 MODULE_LICENSE("Dual BSD/GPL");
-MODULE_VERSION(DEV_VERSION);
+MODULE_VERSION(DRIVER_VERSION);

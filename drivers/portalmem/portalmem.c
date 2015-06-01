@@ -46,7 +46,6 @@
 
 #define DRIVER_NAME "portalmem"
 #define DRIVER_DESCRIPTION "Memory management between HW and SW processes"
-#define DRIVER_VERSION "14.10.1"
 
 static struct miscdevice miscdev;
 
