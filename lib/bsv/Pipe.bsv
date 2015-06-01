@@ -144,6 +144,15 @@ instance ToPipeOut#(Vector#(n, a), Gearbox#(m, n, a));
 	      endinterface);
    endfunction
 endinstance
+instance ToPipeOut#(a, Gearbox#(m, 1, a));
+   function PipeOut#(a) toPipeOut(Gearbox#(m, 1, a) in);
+      return (interface PipeOut#(a);
+		 method a first(); return in.first[0]; endmethod
+		 method deq = in.deq;
+		 method notEmpty = in.notEmpty;
+	      endinterface);
+   endfunction
+endinstance
 
 instance ToPipeIn#(a, SyncFIFOIfc#(a));
    function PipeIn#(a) toPipeIn(SyncFIFOIfc#(a) in);
@@ -893,11 +902,12 @@ typedef struct {
    a value;
    Bool first;
    Bool last;
-} IteratorValue#(type a) deriving (Bits);
+   b ctxt;
+} IteratorValue#(type a, type b) deriving (Bits);
 
 interface IteratorWithContext#(type a, type c);
    interface PipeOut#(a) pipe;
-   interface PipeOut#(IteratorValue#(a)) ivpipe;
+   interface PipeOut#(IteratorValue#(a,c)) ivpipe;
    method a count();
    method Bool isFirst();
    method Bool isLast();
@@ -907,7 +917,7 @@ endinterface
 
 interface IteratorIfc#(type a);
    interface PipeOut#(a) pipe;
-   interface PipeOut#(IteratorValue#(a)) ivpipe;
+   interface PipeOut#(IteratorValue#(a,void)) ivpipe;
    method a count();
    method Bool isFirst();
    method Bool isLast();
@@ -943,8 +953,8 @@ module mkIteratorWithContext(IteratorWithContext#(a,c)) provisos (Arith#(a), Bit
       endmethod
    endinterface
    interface PipeOut ivpipe;
-      method IteratorValue#(a) first();
-	 return IteratorValue { value: x, first: first, last: last };
+      method IteratorValue#(a,c) first();
+	 return IteratorValue { value: x, first: first, last: last, ctxt: ctxtReg };
       endmethod
       method Action deq if (!idle);
 	 let next_x = x + xstep;
