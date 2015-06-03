@@ -25,6 +25,7 @@ import FIFOF::*;
 import GetPut::*;
 import ClientServer::*;
 import BRAM::*;
+import Vector::*;
 
 import MemTypes::*;
 import Pipe::*;
@@ -87,14 +88,14 @@ module mkMemWriterPipe#(Reg#(SGLId) ptrReg,
       let offset <- toGet(addrIterator.pipe).get();
       let tag = 22;
       wrrCount <= wrrCount + 1;
-      $display("writeReqRule: offset=%h addrIterator.isLast %d wrr %d", offset, addrIterator.isLast(), wrrCount);
+      //$display("writeReqRule: offset=%h addrIterator.isLast %d wrr %d", offset, addrIterator.isLast(), wrrCount);
       writeReqFifo.enq(MemRequest { sglId: ptrReg, offset: extend(offset), burstLen: burstLen, tag: tag });
       lastFifo.enq(addrIterator.isLast());
    endrule
    rule writeDataRule;
       let tag = 22;
       let v <- toGet(dataPipe).get();
-      $display("writeDataRule: data=%h", v);
+      //$display("MemWriterPipe.writeDataRule: data=%h", v);
       writeDataFifo.enq(MemData { data: pack(v), tag: tag, last: False });
    endrule
    rule writeDone;
@@ -114,26 +115,26 @@ endmodule
 
 
 module mkBramReaderPipe#(BRAMServer#(Bit#(addrsz), dataType) bramServer,
-			 IteratorIfc#(Bit#(addrsz)) addrIterator)(PipeOut#(MemData#(dsz)))
+			 PipeOut#(IteratorValue#(Bit#(addrsz),void)) addrIterator)(PipeOut#(IteratorValue#(dataType,void)))
    provisos (Add#(a__, addrsz, MemOffsetSize),
 	     Bits#(dataType,dsz));
 
-   FIFOF#(Bool) lastFifo <- mkFIFOF();
-   FIFOF#(MemData#(dsz)) readDataFifo <- mkFIFOF();
+   FIFOF#(Tuple2#(Bool,Bool)) firstlastFifo <- mkFIFOF();
+   FIFOF#(IteratorValue#(dataType,void)) readDataFifo <- mkFIFOF();
 
    let verbose = False;
 
    rule issueBramReadRequest;
-      let addr <- toGet(addrIterator.pipe).get();
-      bramServer.request.put(BRAMRequest{write: False, responseOnWrite: False, address: addr, datain: unpack(0)});
-      lastFifo.enq(addrIterator.isLast());
-      if (verbose) $display("issueBramReadRequest addr=%h first=%d last=%d", addr, addrIterator.isFirst(), addrIterator.isLast());
+      let item <- toGet(addrIterator).get();
+      bramServer.request.put(BRAMRequest{write: False, responseOnWrite: False, address: item.value, datain: unpack(0)});
+      firstlastFifo.enq(tuple2(item.first, item.last));
+      if (verbose) $display("issueBramReadRequest addr=%h first=%d last=%d", item.value, item.first, item.last);
    endrule
 
    rule readData;
       let v <- bramServer.response.get();
-      let last <- toGet(lastFifo).get();
-      readDataFifo.enq(MemData { data: pack(v), last: last, tag: 0 });
+      match { .first, .last } <- toGet(firstlastFifo).get();
+      readDataFifo.enq(IteratorValue { value: v, first: first, last: last });
    endrule
    return toPipeOut(readDataFifo);
 endmodule
