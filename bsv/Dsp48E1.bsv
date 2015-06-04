@@ -1,8 +1,12 @@
+import GetPut::*;
+import FIFO::*;
+import FIFOF::*;
 import Clocks::*;
 
 interface Dsp48E1;
    method Bool     notEmpty();
    method Bit#(48) p();
+   method Action deq();
 // Control: 4-bit (each) input: Control Inputs/Status Bits
    method Action alumode(Bit#(4) v);		// 4-bit input: ALU control input
    method Action carryinsel(Bit#(3) v);		// 3-bit input: Carry select input
@@ -15,6 +19,7 @@ interface Dsp48E1;
    method Action last(Bit#(1) v);
 endinterface
 
+`ifndef BSIM
 (* always_ready, always_enabled *)
 interface PRIM_DSP48E1;
    method Bit#(48) p();
@@ -227,7 +232,82 @@ module mkDsp48E1(Dsp48E1);
    method Bit#(48) p() if (last5Reg == 1);
       return dsp.p();
    endmethod
+   method Action deq() if (last5Reg == 1);
+   endmethod
    method Action last(Bit#(1) v);
       lastWire <= v;
    endmethod
 endmodule
+`else
+module mkDsp48E1(Dsp48E1);
+   let defaultReset <- exposeCurrentReset;
+   let optionalReset = defaultReset; // noReset
+
+   Reg#(Bit#(48)) accumReg <- mkReg(0);
+   FIFO#(Bool) lastFifo <- mkSizedFIFO(3);
+   FIFO#(Bit#(7)) opmodeFifo <- mkSizedFIFO(3);
+   FIFOF#(Bit#(48)) pFifo <- mkSizedFIFOF(3);
+   FIFO#(Bit#(30)) aFifo <- mkSizedFIFO(3);
+   FIFO#(Bit#(18)) bFifo <- mkSizedFIFO(3);
+   FIFO#(Bit#(48)) abFifo <- mkSizedFIFO(3);
+   FIFO#(Bit#(48)) cFifo <- mkSizedFIFO(3);
+   FIFO#(Bit#(25)) dFifo <- mkSizedFIFO(3);
+
+   rule prod;
+      let a <- toGet(aFifo).get();
+      let b <- toGet(bFifo).get();
+      abFifo.enq(extend(a)*extend(b));
+   endrule
+   rule accum;
+      let last <- toGet(lastFifo).get();
+      let opmode <- toGet(opmodeFifo).get();
+      let ab <- toGet(abFifo).get();
+      let c <- toGet(cFifo).get();
+      let d <- toGet(dFifo).get();
+      
+      let accum = accumReg;
+      if (opmode == 7'h05)
+	 accum = 0;
+      if (opmode != 0)
+	 accum = accum + ab;
+      accumReg <= accum;
+      if (last)
+	 pFifo.enq(accum);
+   endrule
+
+   method Action alumode(Bit#(4) v);
+   endmethod
+   method Action carryinsel(Bit#(3) v);
+   endmethod
+   method Action inmode(Bit#(5) v);
+   endmethod
+   method Action opmode(Bit#(7) v);
+      opmodeFifo.enq(v);
+   endmethod
+   method Action a(Bit#(30) v);
+      aFifo.enq(v);
+   endmethod
+   method Action b(Bit#(18) v);
+      bFifo.enq(v);
+   endmethod
+   method Action c(Bit#(48) v);
+      cFifo.enq(v);
+   endmethod
+   method Action d(Bit#(25) v);
+      dFifo.enq(v);
+   endmethod
+   method Bool notEmpty();
+      return pFifo.notEmpty();
+   endmethod
+   method Action last(Bit#(1) v);
+      lastFifo.enq(unpack(v));
+   endmethod
+
+   method Bit#(48) p() if (pFifo.notEmpty());
+      return pFifo.first;
+   endmethod
+   method Action deq();
+      pFifo.deq();
+   endmethod
+endmodule
+`endif
