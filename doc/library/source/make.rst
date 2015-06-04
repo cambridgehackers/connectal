@@ -7,3 +7,4 @@ Connectal Makefile Variables
    :numbered:
 
    makefile.connectal.rst
+   makefile.connectal.build.rst
