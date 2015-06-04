@@ -88,6 +88,10 @@ Variables Controlling the Bluespec Compiler
 
    Specifies project-specific bsc flags, -p argument passed to makefilegen.py via CONNECTALFLAGS.
 
+.. make:var:: BSCFLAGS_EXTRA
+
+   Specifies additional flags to pass to bsc.
+
 Bluesim-related Variables
 -------------------------
 
