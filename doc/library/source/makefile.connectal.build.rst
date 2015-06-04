@@ -45,7 +45,7 @@ Board-specific targets
 Environment Variables
 ---------------------
 
-.. envvar:: RUN_PARAM
+.. envvar:: RUNPARAM
 
    Specifies the name or address of the host on which to run the application.
 
