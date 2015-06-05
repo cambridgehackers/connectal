@@ -264,7 +264,7 @@ module mkPS7(PS7);
    clockParams.clkin_buffer = False;
    ClockGenerator7   clockGen <- mkClockGenerator7(clockParams, clocked_by single_clock, reset_by single_reset);
    let derived_clock = clockGen.clkout0;
-   let derived_reset_unbuffered <- mkAsyncReset(2, single_reset, derived_clock);
+   let derived_reset_unbuffered <- mkSyncReset(10, single_reset, derived_clock);
    let derived_reset <- mkResetBUFG(clocked_by derived_clock, reset_by derived_reset_unbuffered);
 
    PS7LIB ps7 <- mkPS7LIB(single_clock, single_reset, clocked_by single_clock, reset_by single_reset);
