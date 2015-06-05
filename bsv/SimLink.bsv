@@ -103,32 +103,3 @@ module mkSimLink#(String name)(SimLink#(dataWidth)) provisos (SelectLinkWidth#(d
       listening <= l;
    endmethod
 endmodule
-
-instance Connectable#(PipePortal#(0,numIndications,32),SimLink#(32));
-   module mkConnection#(PipePortal#(0,numIndications,32) pp, SimLink#(32) link)(Empty);
-      MsgSource#(4) msgSource <- mkPortalMsgSource(pp);
-      (* fire_when_enabled *)
-      rule tx;
-	 msgSource.dst_rdy(link.tx.notFull());
-	 if (link.tx.notFull() && msgSource.src_rdy()) begin
-	    let v = msgSource.beat();
-	    link.tx.enq(v);
-	 end
-      endrule
-   endmodule
-endinstance
-
-instance Connectable#(SimLink#(32),PipePortal#(numRequests,0,32));
-   module mkConnection#(SimLink#(32) link,PipePortal#(numRequests,0,32) pp)(Empty);
-      MsgSink#(4) msgSink <- mkPortalMsgSink(pp);
-      (* fire_when_enabled *)
-      rule rx;
-	 msgSink.src_rdy(link.rx.notEmpty());
-	 if (link.rx.notEmpty() && msgSink.dst_rdy()) begin
-	    let v <- toGet(link.rx).get();
-	    msgSink.beat(v);
-	 end
-      endrule
-
-   endmodule
-endinstance
