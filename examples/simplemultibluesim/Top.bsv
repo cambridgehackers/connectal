@@ -27,7 +27,7 @@ import CtrlMux::*;
 import Portal::*;
 import HostInterface::*;
 import CnocPortal::*;
-import BsimLink::*;
+import SimLink::*;
 import Simple::*;
 import Link::*;
 import SimpleIF::*;
@@ -45,7 +45,7 @@ module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
    SimpleWrapperPortal simple2RequestWrapper <- mkSimpleWrapperPortal(IfcNames_SimpleRequest, simple2);
 
    // now connect them via a Cnoc link
-   BsimLink#(32) link <- mkBsimLink("simplelink");
+   SimLink#(32) link <- mkSimLink("simplelink");
    mkConnection(simple1IndicationProxy.portalIfc, link);
    mkConnection(link, simple2RequestWrapper.portalIfc);
 

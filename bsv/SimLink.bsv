@@ -28,7 +28,7 @@ import Portal            :: *;
 import MsgFormat         :: *;
 import CnocPortal        :: *;
 
-interface BsimLink#(numeric type dataWidth);
+interface SimLink#(numeric type dataWidth);
    method Action start(Bool listening);
    interface PipeOut#(Bit#(dataWidth)) rx;
    interface PipeIn#(Bit#(dataWidth)) tx;
@@ -74,7 +74,7 @@ instance SelectLinkWidth#(64);
    endfunction
 endinstance
 
-module mkBsimLink#(String name)(BsimLink#(dataWidth)) provisos (SelectLinkWidth#(dataWidth));
+module mkSimLink#(String name)(SimLink#(dataWidth)) provisos (SelectLinkWidth#(dataWidth));
    FIFOF#(Bit#(dataWidth)) rxFifo <- mkFIFOF();
    FIFOF#(Bit#(dataWidth)) txFifo <- mkFIFOF();
    Reg#(Bool) opened    <- mkReg(False);
@@ -104,8 +104,8 @@ module mkBsimLink#(String name)(BsimLink#(dataWidth)) provisos (SelectLinkWidth#
    endmethod
 endmodule
 
-instance Connectable#(PipePortal#(0,numIndications,32),BsimLink#(32));
-   module mkConnection#(PipePortal#(0,numIndications,32) pp, BsimLink#(32) link)(Empty);
+instance Connectable#(PipePortal#(0,numIndications,32),SimLink#(32));
+   module mkConnection#(PipePortal#(0,numIndications,32) pp, SimLink#(32) link)(Empty);
       MsgSource#(4) msgSource <- mkPortalMsgSource(pp);
       (* fire_when_enabled *)
       rule tx;
@@ -118,8 +118,8 @@ instance Connectable#(PipePortal#(0,numIndications,32),BsimLink#(32));
    endmodule
 endinstance
 
-instance Connectable#(BsimLink#(32),PipePortal#(numRequests,0,32));
-   module mkConnection#(BsimLink#(32) link,PipePortal#(numRequests,0,32) pp)(Empty);
+instance Connectable#(SimLink#(32),PipePortal#(numRequests,0,32));
+   module mkConnection#(SimLink#(32) link,PipePortal#(numRequests,0,32) pp)(Empty);
       MsgSink#(4) msgSink <- mkPortalMsgSink(pp);
       (* fire_when_enabled *)
       rule rx;
