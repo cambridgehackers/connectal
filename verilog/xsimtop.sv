@@ -23,6 +23,14 @@
 
 import "DPI-C" function void dpi_init();
 
+`ifdef BSV_POSITIVE_RESET
+  `define BSV_RESET_VALUE 1'b1
+  `define BSV_RESET_EDGE posedge
+`else
+  `define BSV_RESET_VALUE 1'b0
+  `define BSV_RESET_EDGE negedge
+`endif
+
 module xsimtop();
    reg CLK;
    reg RST_N;
@@ -31,7 +39,8 @@ module xsimtop();
    mkXsimTop xsimtop(.CLK(CLK), .RST_N(RST_N)); 
    initial begin
       CLK = 0;
-      RST_N = 0;
+      RST_N = `BSV_RESET_VALUE;
+      $display("asserting reset to value %d", `BSV_RESET_VALUE);
       count = 0;
       dpi_init();
    end
@@ -43,8 +52,11 @@ module xsimtop();
    
    always @(posedge CLK) begin
       count <= count + 1;
-      if (count == 10) begin
-	 RST_N <= 1;
+   end
+   always @(`BSV_RESET_EDGE CLK) begin
+      if (count == 20) begin
+	 $display("deasserting reset to value %d", !`BSV_RESET_VALUE);
+	 RST_N <= !`BSV_RESET_VALUE;
       end
    end
 endmodule
@@ -105,7 +117,7 @@ module XsimDmaReadWrite(input CLK,
    assign readresponse_data = readresponse_data_reg;
 
    always @(posedge CLK) begin
-      if (RST == 0) begin
+      if (RST == `BSV_RESET_VALUE) begin
 	 readresponse_data_reg <= 32'haaaaaaaa;
 	 readresponse_valid_reg <= 0;
       end
@@ -127,6 +139,6 @@ module XsimDmaReadWrite(input CLK,
 	 end
 	 if (en_write32 == 1)
 	   write_simDma32(write32_handle, write32_addr, write32_data);
-      end // else: !if(RST == 0)
+      end // else: !if(RST == BSV_RESET_VALUE)
    end // always @ (posedge CLK)
 endmodule
