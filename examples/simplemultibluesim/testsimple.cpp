@@ -22,10 +22,11 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "Simple.h"
-#include "Link.h"
+#include <GeneratedTypes.h>
+#include "SimpleRequest.h"
+#include "LinkRequest.h"
 
-#define NUMBER_OF_TESTS 8
+#define NUMBER_OF_TESTS 12
 
 uint32_t v1a = 42;
 
@@ -49,7 +50,7 @@ E1 v7b = E1Choice2;
 S3 s3 = { a: v7a, e1: v7b };
 
 
-class Simple : public SimpleWrapper
+class SimpleRequest : public SimpleRequestWrapper
 {
 public:
   uint32_t cnt;
@@ -107,16 +108,39 @@ public:
         fprintf(stderr, "    [%d] = 0x%x\n", i, v[i]);
     incr_cnt();
   }
-  Simple(unsigned int id) : SimpleWrapper(id), cnt(0){}
+  void sayv1(const int32_t*arg1, const int32_t*arg2) {
+    fprintf(stderr, "sayv1\n");
+    for (int i = 0; i < 4; i++)
+        fprintf(stderr, "    [%d] = 0x%x, 0x%x\n", i, arg1[i], arg2[i]);
+    incr_cnt();
+  }
+  void sayv2(const int16_t* v) {
+    fprintf(stderr, "sayv2\n");
+    for (int i = 0; i < 16; i++)
+        fprintf(stderr, "    [%d] = 0x%x\n", i, v[i] & 0xffff);
+    incr_cnt();
+  }
+  void sayv3(const int16_t* v, int16_t count) {
+    fprintf(stderr, "sayv3: count 0x%x\n", count);
+    for (int i = 0; i < 16; i++)
+        fprintf(stderr, "    [%d] = 0x%x\n", i, v[i] & 0xffff);
+    incr_cnt();
+  }
+  void reftest1 ( const Address dst, const Intptr dst_stride, const Address src1, const Intptr i_src_stride1, const Address src2, const Intptr i_src_stride2, const Byte i_width, const Byte i_height, const int qpelInt, const int hasWeight, const Byte i_offset, const Byte i_scale, const Byte i_denom ) {
+    fprintf(stderr, "reftest1: %x, %x, %x, %x, %x, %x, %x, %x, %x, %x, %x, %x, %x\n",
+       (uint32_t)dst, (uint32_t)dst_stride, (uint32_t)src1, (uint32_t)i_src_stride1, (uint32_t)src2, (uint32_t)i_src_stride2, (uint32_t)i_width, (uint32_t)i_height, (uint32_t)qpelInt, (uint32_t)hasWeight, (uint32_t)i_offset, (uint32_t)i_scale, (uint32_t)i_denom );
+    incr_cnt();
+  }
+  SimpleRequest(unsigned int id) : SimpleRequestWrapper(id), cnt(0){}
 };
 
 
 
 int main(int argc, const char **argv)
 {
-  LinkProxy *linkRequest = new LinkProxy(IfcNames_LinkRequest);
-  Simple indication(IfcNames_SimpleIndication);
-  SimpleProxy *device = new SimpleProxy(IfcNames_SimpleRequest);
+  LinkRequestProxy *linkRequest = new LinkRequestProxy(LinkIF_LinkRequestS2H);
+  SimpleRequest indication(LinkIF_SimpleRequestH2S);
+  SimpleRequestProxy *device = new SimpleRequestProxy(LinkIF_SimpleRequestS2H);
   device->pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
 
   const char *socketName = getenv("BLUESIM_SOCKET_NAME");

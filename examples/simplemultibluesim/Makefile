@@ -1,9 +1,9 @@
 
 CONNECTALDIR?=../..
-INTERFACES = Simple Link
-BSVFILES = SimpleIF.bsv Top.bsv
+BSVFILES = ../simple/Simple.bsv LinkIF.bsv
 CPPFILES=testsimple.cpp
 NUMBER_OF_MASTERS =0
-CONNECTALFLAGS += -D CnocTop
+S2H_INTERFACES = SimpleRequest:Link.simpleRequest LinkRequest:Link.linkRequest
+H2S_INTERFACES = Link:SimpleRequest
 
 include $(CONNECTALDIR)/Makefile.connectal

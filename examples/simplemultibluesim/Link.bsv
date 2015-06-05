@@ -1,4 +1,4 @@
-/* Copyright (c) 2014 Quanta Research Cambridge, Inc
+/* Copyright (c) 2015 Quanta Research Cambridge, Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -28,22 +28,19 @@ import Portal::*;
 import HostInterface::*;
 import CnocPortal::*;
 import SimLink::*;
+import LinkIF::*;
 import Simple::*;
-import Link::*;
-import SimpleIF::*;
+import SimpleRequest::*;
+import LinkRequest::*;
 
-typedef enum {IfcNames_SimpleRequest, IfcNames_SimpleIndication, IfcNames_LinkRequest} IfcNames deriving (Eq,Bits);
-
-module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
+module mkLink#(SimpleRequest simple2IndicationProxy)(Link);
    // the indications from simpleRequest will be connected to the request interface to simpleReuqest2
-   SimpleOutput simple1Output <- mkSimpleOutput();
+   SimpleRequestOutput simple1Output <- mkSimpleRequestOutput();
    Simple simple1 <- mkSimple(simple1Output.ifc);
-   SimpleWrapper simple1RequestWrapper <- mkSimpleWrapper(IfcNames_SimpleRequest,simple1);
 
-   SimpleProxy simple2IndicationProxy <- mkSimpleProxy(IfcNames_SimpleIndication);
-   Simple simple2 <- mkSimple(simple2IndicationProxy.ifc);
-   SimpleInput simple2Input <- mkSimpleInput();
-   mkConnection(simple2Input.pipes, simple2);
+   Simple simple2 <- mkSimple(simple2IndicationProxy);
+   SimpleRequestInput simple2Input <- mkSimpleRequestInput();
+   mkConnection(simple2Input.pipes, simple2.request);
 
    // now connect them via a Cnoc link
    SimLink#(32) link <- mkSimLink("simplelink");
@@ -53,20 +50,14 @@ module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
    let msgRequest <- mkPortalMsgRequest(23, simple2Input.portalIfc.requests);
    mkConnection(link.rx, msgRequest.message);
 
-   Link linkRequest = (interface Link;
-		       method Action start(Bool l);
-			  link.start(l);
-		       endmethod
-		       endinterface);
-   LinkWrapper linkWrapper <- mkLinkWrapper(IfcNames_LinkRequest, linkRequest);
+   interface SimpleRequest simpleRequest = simple1.request;
+   interface LinkRequest linkRequest;
+      method Action start(Bool l);
+	 link.start(l);
+      endmethod
+   endinterface
 
-   Vector#(3,StdPortal) portals;
-   portals[0] = simple2IndicationProxy.portalIfc;
-   portals[1] = simple1RequestWrapper.portalIfc;
-   portals[2] = linkWrapper.portalIfc;
-   let ctrl_mux <- mkSlaveMux(portals);
+endmodule : mkLink
 
-   interface interrupt = getInterruptVector(portals);
-   interface slave = ctrl_mux;
-   interface masters = nil;
-endmodule : mkConnectalTop
+export mkLink;
+export Link;
