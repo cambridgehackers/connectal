@@ -142,3 +142,23 @@ module XsimDmaReadWrite(input CLK,
       end // else: !if(RST == BSV_RESET_VALUE)
    end // always @ (posedge CLK)
 endmodule
+
+
+module XsimLink (
+		 input RST,
+		 input CLK,
+		 input CLK_GATE,
+		 input listening,
+		 input [31:0] tx_enq_v,
+		 input en_rx_deq,
+		 input en_tx_enq,
+		 input EN_start,
+		 output [31:0] rx_first,
+		 output rdy_rx_first,
+		 output rdy_rx_deq,
+		 output rx_not_empty,
+		 output tx_not_full
+		 );
+   parameter NAME="link";
+   
+endmodule
