@@ -275,9 +275,14 @@ module mkPS7(PS7);
       ReadOnly#(Bit#(4)) fclkresetnb;
       fclkb       <- mkNullCrossingWire(b2c[i].c, ps7.fclkclk);
       fclkresetnb <- mkNullCrossingWire(b2c[i].c, ps7.fclkresetn);
+`ifndef BSV_POSITIVE_RESET
+      let resetValue = 0;
+`else
+      let resetValue = 1;
+`endif
       rule b2c_rule1;
 	 b2c[i].inputclock(fclkb[i]);
-	 b2c[i].inputreset(fclkresetnb[i]);
+	 b2c[i].inputreset(fclkresetnb[i] == 0 ? resetValue : ~resetValue);
       endrule
       rule issue_rule;
          ps7.s_axi_hp[i].extra.rdissuecap1en(0);
