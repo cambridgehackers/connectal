@@ -100,7 +100,7 @@ module mkMemWriterPipe#(Reg#(SGLId) ptrReg,
    endrule
    rule writeDone;
       let last <- toGet(lastFifo).get();
-      $display("writeDone: wdoneCount=%d last=%d", wdoneCount, last);
+      //$display("writeDone: wdoneCount=%d last=%d", wdoneCount, last);
       wdoneCount <= wdoneCount + 1;
       let tag <- toGet(writeDoneFifo).get();
       doneFifo.enq(last);
@@ -158,13 +158,13 @@ module mkBramWriterPipe#(BRAMServer#(Bit#(addrsz), dtype) bramServer,
       let offset <- toGet(addrIterator.pipe).get();
       let v <- toGet(dataPipe).get();
       wrrCount <= wrrCount + 1;
-      $display("BramWriter.writeReqRule: offset=%h addrIterator.isLast %d wrr %d", offset, addrIterator.isLast(), wrrCount);
+      //$display("BramWriter.writeReqRule: offset=%h addrIterator.isLast %d wrr %d", offset, addrIterator.isLast(), wrrCount);
       bramServer.request.put(BRAMRequest { write: True, responseOnWrite: False, address: offset, datain: v });
       lastFifo.enq(addrIterator.isLast());
    endrule
    rule writeDone;
       let last <- toGet(lastFifo).get();
-      $display("writeDone: wdoneCount=%d last=%d", wdoneCount, last);
+      //$display("writeDone: wdoneCount=%d last=%d", wdoneCount, last);
       wdoneCount <= wdoneCount + 1;
       doneFifo.enq(last);
    endrule
