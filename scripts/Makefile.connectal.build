@@ -255,12 +255,14 @@ xsim.dir/xsc/%.lnx64.o: jni/%.cpp
 	mkdir -p xsim.dir/xsc
 	gcc -c $(XSC_CFLAGS) -O1 -o xsim.dir/xsc/$(*).lnx64.o $<
 
+XVLOGDEFINES = $(subst -D,-d,$(BSVDEFINES))
+
 xsim: verilog $(XSIM_OBJECTS)
-	xvlog $(XVLOGFLAGS) verilog/*.v
-	xvlog --sv $(CONNECTALDIR)/verilog/xsimtop.sv
+	xvlog $(XVLOGFLAGS) $(XVLOGDEFINES) verilog/*.v
+	xvlog $(XVLOGDEFINES) --sv $(CONNECTALDIR)/verilog/xsimtop.sv
 	#xsc -v -cc gcc -compile $(SOURCES)
 	xsc -cc gcc -link $(XSIM_OBJECTS) -o xsimtop
-	xelab -cc gcc -svlog $(CONNECTALDIR)/verilog/xsimtop.sv --debug wave -L unisim -L unifast -L unimacro work.xsimtop -sv_lib xsimtop
+	xelab --stats $(XVLOGDEFINES) -cc gcc -svlog $(CONNECTALDIR)/verilog/xsimtop.sv --debug wave -L unisim -L unifast -L unimacro work.xsimtop -sv_lib xsimtop
 endif #VIVADO
 
 bin/vsim:
