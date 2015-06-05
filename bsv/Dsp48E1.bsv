@@ -58,20 +58,24 @@ import "BVI" DSP48E1 =
 module vmkDSP48E1(PRIM_DSP48E1);
    let currentClock <- exposeCurrentClock;
    let currentReset <- exposeCurrentReset;
-   let invertedReset0 <- mkResetInverter(currentReset);
-   let invertedReset <- mkAsyncReset(10, invertedReset0, currentClock);
+`ifndef BSV_POSITIVE_RESET
+   let invertedReset <- mkResetInverter(currentReset);
+   let dspReset <- mkSyncReset(10, invertedReset, currentClock);
+`else
+   let dspReset = currentReset;
+`endif
    default_clock clk(CLK);
 
-   default_reset rsta(RSTA) = invertedReset;
-   input_reset rstb(RSTB) = invertedReset;
-   input_reset rstc(RSTC) = invertedReset;
-   input_reset rstd(RSTD) = invertedReset;
-   input_reset rstallcarryin(RSTALLCARRYIN) = invertedReset;
-   input_reset rstalumode(RSTALUMODE) = invertedReset;
-   input_reset rstctrl(RSTCTRL) = invertedReset;
-   input_reset rstinmode(RSTINMODE) = invertedReset;
-   input_reset rstm(RSTM) = invertedReset;
-   input_reset rstp(RSTP) = invertedReset;
+   default_reset rsta(RSTA) = dspReset;
+   input_reset rstb(RSTB) = dspReset;
+   input_reset rstc(RSTC) = dspReset;
+   input_reset rstd(RSTD) = dspReset;
+   input_reset rstallcarryin(RSTALLCARRYIN) = dspReset;
+   input_reset rstalumode(RSTALUMODE) = dspReset;
+   input_reset rstctrl(RSTCTRL) = dspReset;
+   input_reset rstinmode(RSTINMODE) = dspReset;
+   input_reset rstm(RSTM) = dspReset;
+   input_reset rstp(RSTP) = dspReset;
 
    method P p();
    method alumode(ALUMODE) enable ((*inhigh*)EN_alumode);
