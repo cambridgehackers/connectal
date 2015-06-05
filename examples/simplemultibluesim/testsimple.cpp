@@ -27,7 +27,7 @@
 
 #define NUMBER_OF_TESTS 8
 
-int v1a = 42;
+uint32_t v1a = 42;
 
 int v2a = 2;
 int v2b = 4;
@@ -45,7 +45,7 @@ uint64_t v6b = 0x000000EFFECAFECA;
 uint32_t v6c = 0xCCCCCCCC;
 
 uint32_t v7a = 0xDADADADA;
-E1 v7b = E1_E1Choice2;
+E1 v7b = E1Choice2;
 S3 s3 = { a: v7a, e1: v7b };
 
 
@@ -115,7 +115,7 @@ public:
 int main(int argc, const char **argv)
 {
   LinkProxy *linkRequest = new LinkProxy(IfcNames_LinkRequest);
-  Simple *indication = new Simple(IfcNames_SimpleIndication);
+  Simple indication(IfcNames_SimpleIndication);
   SimpleProxy *device = new SimpleProxy(IfcNames_SimpleRequest);
   device->pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
 
