@@ -186,7 +186,7 @@ module mkDsp48E1(Dsp48E1);
       c2Reg <= c1Reg;
       c3Reg <= c2Reg;
 
-      //if (lastWire == 1 || last1Reg == 1 || last2Reg == 1 || last3Reg == 1 || last4Reg == 1 || last5Reg == 1)
+      if (lastWire == 1 || last1Reg == 1 || last2Reg == 1 || last3Reg == 1 || last4Reg == 1 || last5Reg == 1)
 	 $display("%d: a=%h b=%h c=%h p=%h", cycles, aWire, bWire, c3Reg, dsp.p());
 
       dsp.alumode(alumodeReg);
