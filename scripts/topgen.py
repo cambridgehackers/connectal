@@ -88,6 +88,7 @@ import Portal::*;
 import CnocPortal::*;
 import Connectable::*;
 import HostInterface::*;
+import IfcNames::*;
 %(generatedImport)s
 
 `ifndef PinType
@@ -95,8 +96,6 @@ import HostInterface::*;
 `endif
 typedef `PinType PinType;
 %(generatedTypedefs)s
-
-typedef enum {%(enumList)s} IfcNames deriving (Eq,Bits);
 
 `ifndef IMPORT_HOSTIF
 (* synthesize *)
