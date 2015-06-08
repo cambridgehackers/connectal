@@ -237,7 +237,7 @@ endif
 
 ifneq ($(USE_AUTOTOP),)
 GPROJ = $(BOARD)/generatedbsv
-GENTOP = $(GPROJ)/Top.bsv
+GENTOP = $(GPROJ)/IfcNames.bsv
 endif
 
 comma := ,
