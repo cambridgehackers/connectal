@@ -35,47 +35,47 @@ interface SimLink#(numeric type dataWidth);
 endinterface
 
 `ifdef BSIM
-import "BDPI" function Action                 bsimLinkOpen(String name, Bool listening);
-import "BDPI" function Bool                   bsimLinkCanReceive(String name, Bool listening);
-import "BDPI" function Bool                   bsimLinkCanTransmit(String name, Bool listening);
-import "BDPI" function ActionValue#(Bit#(32)) bsimLinkReceive32(String name, Bool listening);
-import "BDPI" function Action                 bsimLinkTransmit32(String name, Bool listening, Bit#(32) value);
-import "BDPI" function ActionValue#(Bit#(64)) bsimLinkReceive64(String name, Bool listening);
-import "BDPI" function Action                 bsimLinkTransmit64(String name, Bool listening, Bit#(64) value);
+import "BDPI" function Action                 bsimLinkOpen(Integer linknumber, Bool listening);
+import "BDPI" function Bool                   bsimLinkCanReceive(Integer linknumber, Bool listening);
+import "BDPI" function Bool                   bsimLinkCanTransmit(Integer linknumber, Bool listening);
+import "BDPI" function ActionValue#(Bit#(32)) bsimLinkReceive32(Integer linknumber, Bool listening);
+import "BDPI" function Action                 bsimLinkTransmit32(Integer linknumber, Bool listening, Bit#(32) value);
+import "BDPI" function ActionValue#(Bit#(64)) bsimLinkReceive64(Integer linknumber, Bool listening);
+import "BDPI" function Action                 bsimLinkTransmit64(Integer linknumber, Bool listening, Bit#(64) value);
 
 typeclass SelectLinkWidth#(numeric type dsz);
-   function ActionValue#(Bit#(dsz)) bsimLinkReceive(String name, Bool listening);
-   function Action bsimLinkTransmit(String name, Bool listening, Bit#(dsz) value);
+   function ActionValue#(Bit#(dsz)) bsimLinkReceive(Integer linknumber, Bool listening);
+   function Action bsimLinkTransmit(Integer linknumber, Bool listening, Bit#(dsz) value);
 endtypeclass
 
 instance SelectLinkWidth#(32);
-   function ActionValue#(Bit#(32)) bsimLinkReceive(String name, Bool listening);
+   function ActionValue#(Bit#(32)) bsimLinkReceive(Integer linknumber, Bool listening);
    actionvalue
-      let v <- bsimLinkReceive32(name, listening);
+      let v <- bsimLinkReceive32(linknumber, listening);
       return v;
    endactionvalue
    endfunction
-   function Action bsimLinkTransmit(String name, Bool listening, Bit#(32) value);
+   function Action bsimLinkTransmit(Integer linknumber, Bool listening, Bit#(32) value);
    action
-      bsimLinkTransmit32(name, listening, value);
+      bsimLinkTransmit32(linknumber, listening, value);
    endaction
    endfunction
 endinstance
 instance SelectLinkWidth#(64);
-   function ActionValue#(Bit#(64)) bsimLinkReceive(String name, Bool listening);
+   function ActionValue#(Bit#(64)) bsimLinkReceive(Integer linknumber, Bool listening);
    actionvalue
-      let v <- bsimLinkReceive64(name, listening);
+      let v <- bsimLinkReceive64(linknumber, listening);
       return v;
    endactionvalue
    endfunction
-   function Action bsimLinkTransmit(String name, Bool listening, Bit#(64) value);
+   function Action bsimLinkTransmit(Integer linknumber, Bool listening, Bit#(64) value);
    action
-      bsimLinkTransmit64(name, listening, value);
+      bsimLinkTransmit64(linknumber, listening, value);
    endaction
    endfunction
 endinstance
 
-module mkSimLink#(String name)(SimLink#(dataWidth)) provisos (SelectLinkWidth#(dataWidth));
+module mkSimLink#(Integer linknumber)(SimLink#(dataWidth)) provisos (SelectLinkWidth#(dataWidth));
    FIFOF#(Bit#(dataWidth)) rxFifo <- mkFIFOF();
    FIFOF#(Bit#(dataWidth)) txFifo <- mkFIFOF();
    Reg#(Bool) opened    <- mkReg(False);
@@ -83,18 +83,18 @@ module mkSimLink#(String name)(SimLink#(dataWidth)) provisos (SelectLinkWidth#(d
    Reg#(Bool) started   <- mkReg(False);
 
    rule open if (!opened && started);
-      bsimLinkOpen(name, listening);
+      bsimLinkOpen(linknumber, listening);
       opened <= True;
    endrule
 
-   rule receive if (bsimLinkCanReceive(name, listening));
-      let v <- bsimLinkReceive(name, listening);
+   rule receive if (bsimLinkCanReceive(linknumber, listening));
+      let v <- bsimLinkReceive(linknumber, listening);
       rxFifo.enq(v);
    endrule
 
-   rule transmit if (bsimLinkCanTransmit(name, listening));
+   rule transmit if (bsimLinkCanTransmit(linknumber, listening));
       let v <- toGet(txFifo).get();
-      bsimLinkTransmit(name, listening, v);
+      bsimLinkTransmit(linknumber, listening, v);
    endrule
 
    interface rx = toPipeOut(rxFifo);
@@ -108,8 +108,8 @@ endmodule
 
 `ifdef XSIM
 import "BVI" XsimLink =
-module mkSimLink#(String name)(SimLink#(32));
-   parameter NAME=name;
+module mkSimLink#(Integer linknumber)(SimLink#(32));
+   parameter LINKNUMBER=linknumber;
 
    method start(listening) enable (EN_start);
    interface PipeOut rx;
