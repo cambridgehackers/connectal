@@ -22,8 +22,6 @@
 import HostInterface::*;
 import Simple::*;
 
-typedef enum {LinkIF_SimpleRequestH2S,LinkIF_SimpleRequestS2H,LinkIF_LinkRequestS2H} LinkIF deriving (Eq,Bits);
-
 interface LinkRequest;
    method Action start(Bool listening);
 endinterface

@@ -138,9 +138,9 @@ public:
 
 int main(int argc, const char **argv)
 {
-  LinkRequestProxy *linkRequest = new LinkRequestProxy(LinkIF_LinkRequestS2H);
-  SimpleRequest indication(LinkIF_SimpleRequestH2S);
-  SimpleRequestProxy *device = new SimpleRequestProxy(LinkIF_SimpleRequestS2H);
+  LinkRequestProxy *linkRequest = new LinkRequestProxy(IfcNames_LinkRequestS2H);
+  SimpleRequest indication(IfcNames_SimpleRequestH2S);
+  SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequestS2H);
   device->pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
 
   const char *socketName = getenv("BLUESIM_SOCKET_NAME");
