@@ -111,14 +111,14 @@ import "BVI" XsimLink =
 module mkSimLink#(Integer linknumber)(SimLink#(32));
    parameter LINKNUMBER=linknumber;
 
-   method start(listening) enable (EN_start);
+   method start(listening) enable (en_start);
    interface PipeOut rx;
       method rx_first first() ready (rdy_rx_first);
       method deq() enable (en_rx_deq) ready (rdy_rx_deq);
       method rx_not_empty notEmpty();
    endinterface
    interface PipeIn tx;
-      method enq(tx_enq_v) enable (en_tx_enq);
+      method enq(tx_enq_v) enable (en_tx_enq) ready (rdy_tx_enq);
       method tx_not_full notFull();
    endinterface
    schedule (rx_first, rx_notEmpty, tx_notFull, rx_deq, tx_enq, start) CF (rx_first, rx_notEmpty, tx_notFull, rx_deq, tx_enq, start);
