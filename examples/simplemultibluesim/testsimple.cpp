@@ -143,10 +143,14 @@ int main(int argc, const char **argv)
   SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequestS2H);
   device->pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
 
-  const char *socketName = getenv("BLUESIM_SOCKET_NAME");
-  int listening = (strcmp(socketName, "socket1") == 0);
+  const char *socketName = getenv("SOFTWARE_SOCKET_NAME");
+  if (!socketName) {
+    fprintf(stderr, "Specify name of link socket to use SOFTWARE_SOCKET_NAME");
+    exit(1);
+  }
+  int listening = (strcmp(socketName, "node1") == 0);
 
-  fprintf(stderr, "linkRequest->start(%d)\n", listening);
+  fprintf(stderr, "linkRequest->start(%d) [socketName=%s]\n", listening, socketName);
   linkRequest->start(listening);
 
   if (1) {

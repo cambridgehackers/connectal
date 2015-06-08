@@ -43,7 +43,7 @@ module mkLink#(SimpleRequest simple2IndicationProxy)(Link);
    mkConnection(simple2Input.pipes, simple2.request);
 
    // now connect them via a Cnoc link
-   SimLink#(32) link <- mkSimLink("simplelink");
+   SimLink#(32) link <- mkSimLink(17);
 
    let msgIndication <- mkPortalMsgIndication(22, simple1Output.portalIfc.indications, simple1Output.portalIfc.messageSize);
    mkConnection(msgIndication.message, link.tx);
@@ -53,6 +53,7 @@ module mkLink#(SimpleRequest simple2IndicationProxy)(Link);
    interface SimpleRequest simpleRequest = simple1.request;
    interface LinkRequest linkRequest;
       method Action start(Bool l);
+	 $display("Link.start l=%d", l);
 	 link.start(l);
       endmethod
    endinterface
