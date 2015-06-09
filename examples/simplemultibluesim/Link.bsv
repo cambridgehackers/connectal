@@ -37,7 +37,7 @@ module mkLink#(SimpleRequest simple2IndicationProxy)(Link);
    // the indications from simpleRequest will be connected to the request interface to simpleReuqest2
    Reg#(Bit#(1)) listening <- mkReg(0);
 
-   Bool useLink = False;
+   Bool useLink = True;
    Integer linknumber = 17;
 
    SimpleRequestOutput simple1Output <- mkSimpleRequestOutput();
