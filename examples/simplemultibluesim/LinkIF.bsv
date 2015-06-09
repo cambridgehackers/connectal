@@ -23,7 +23,7 @@ import HostInterface::*;
 import Simple::*;
 
 interface LinkRequest;
-   method Action start(Bool listening);
+   method Action start(Bit#(32) listening);
 endinterface
 
 interface Link;

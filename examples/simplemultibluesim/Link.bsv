@@ -35,6 +35,11 @@ import LinkRequest::*;
 
 module mkLink#(SimpleRequest simple2IndicationProxy)(Link);
    // the indications from simpleRequest will be connected to the request interface to simpleReuqest2
+   Reg#(Bit#(1)) listening <- mkReg(0);
+
+   Bool useLink = False;
+   Integer linknumber = 17;
+
    SimpleRequestOutput simple1Output <- mkSimpleRequestOutput();
    Simple simple1 <- mkSimple(simple1Output.ifc);
 
@@ -43,18 +48,36 @@ module mkLink#(SimpleRequest simple2IndicationProxy)(Link);
    mkConnection(simple2Input.pipes, simple2.request);
 
    // now connect them via a Cnoc link
-   SimLink#(32) link <- mkSimLink(17);
+   SimLink#(32) link <- mkSimLink(linknumber);
 
    let msgIndication <- mkPortalMsgIndication(22, simple1Output.portalIfc.indications, simple1Output.portalIfc.messageSize);
-   mkConnection(msgIndication.message, link.tx);
    let msgRequest <- mkPortalMsgRequest(23, simple2Input.portalIfc.requests);
-   mkConnection(link.rx, msgRequest.message);
+
+   if (useLink) begin
+       rule tx;
+	  let msg <- toGet(msgIndication.message).get();
+	  $display("%d.%d transmitting msg %h", linknumber, listening, msg);
+	  link.tx.enq(msg);
+       endrule
+      rule rx;
+	 let v <- toGet(link.rx).get();
+	 msgRequest.message.enq(v);
+	 $display("%d.%d received msg %h", linknumber, listening, v);
+      endrule
+   end
+   if (!useLink)
+      rule connect if (!useLink);
+	 let v <- toGet(msgIndication.message).get();
+	 msgRequest.message.enq(v);
+	 $display("message value %h", v);
+      endrule
 
    interface SimpleRequest simpleRequest = simple1.request;
    interface LinkRequest linkRequest;
-      method Action start(Bool l);
+      method Action start(Bit#(32) l);
 	 $display("Link.start l=%d", l);
-	 link.start(l);
+	 if (useLink) link.start(unpack(truncate(l)));
+	 listening <= truncate(l);
       endmethod
    endinterface
 

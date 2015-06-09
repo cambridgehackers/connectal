@@ -26,7 +26,7 @@
 #include "SimpleRequest.h"
 #include "LinkRequest.h"
 
-#define NUMBER_OF_TESTS 12
+#define NUMBER_OF_TESTS 8
 
 uint32_t v1a = 42;
 
@@ -55,7 +55,9 @@ class SimpleRequest : public SimpleRequestWrapper
 public:
   uint32_t cnt;
   void incr_cnt(){
-    if (++cnt == NUMBER_OF_TESTS)
+    cnt++;
+    fprintf(stderr, "saw %d responses\n", cnt);
+    if (cnt == NUMBER_OF_TESTS)
       exit(0);
   }
   virtual void say1(uint32_t a) {
@@ -138,41 +140,42 @@ public:
 
 int main(int argc, const char **argv)
 {
-  LinkRequestProxy *linkRequest = new LinkRequestProxy(IfcNames_LinkRequestS2H);
+  LinkRequestProxy linkRequest(IfcNames_LinkRequestS2H);
   SimpleRequest indication(IfcNames_SimpleRequestH2S);
-  SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequestS2H);
-  device->pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
+  SimpleRequestProxy device(IfcNames_SimpleRequestS2H);
+  linkRequest.pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
+  device.pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
 
   const char *socketName = getenv("SOFTWARE_SOCKET_NAME");
   if (!socketName) {
     fprintf(stderr, "Specify name of link socket to use SOFTWARE_SOCKET_NAME");
     exit(1);
   }
-  int listening = (strcmp(socketName, "node1") == 0);
+  int listening = (strcmp(socketName, "node1.") == 0);
 
-  fprintf(stderr, "linkRequest->start(%d) [socketName=%s]\n", listening, socketName);
-  linkRequest->start(listening);
+  fprintf(stderr, "linkRequest.start(%d) [socketName=%s]\n", listening, socketName);
+  linkRequest.start(listening);
 
   if (1) {
     fprintf(stderr, "Main::calling say1(%d)\n", v1a);
-    device->say1(v1a);
+    device.say1(v1a);
     fprintf(stderr, "Main::calling say2(%d, %d)\n", v2a,v2b);
-    device->say2(v2a,v2b);
+    device.say2(v2a,v2b);
     fprintf(stderr, "Main::calling say3(S1{a:%d,b:%d})\n", s1.a,s1.b);
-    device->say3(s1);
+    device.say3(s1);
     fprintf(stderr, "Main::calling say4(S2{a:%d,b:%d,c:%d})\n", s2.a,s2.b,s2.c);
-    device->say4(s2);
+    device.say4(s2);
     fprintf(stderr, "Main::calling say5(%08x, %016llx, %08x)\n", v5a, (long long)v5b, v5c);
-    device->say5(v5a, v5b, v5c);
+    device.say5(v5a, v5b, v5c);
     fprintf(stderr, "Main::calling say6(%08x, %016llx, %08x)\n", v6a, (long long)v6b, v6c);
-    device->say6(v6a, v6b, v6c);
+    device.say6(v6a, v6b, v6c);
     fprintf(stderr, "Main::calling say7(%08x, %08x)\n", s3.a, s3.e1);
-    device->say7(s3);
+    device.say7(s3);
     bsvvector_Luint32_t_L128 vect;
     for (int i = 0; i < 128; i++)
       vect[i] = -i*32;
     fprintf(stderr, "Main::calling say8\n");
-    device->say8(vect);
+    device.say8(vect);
   }
   fprintf(stderr, "Main::about to go to sleep\n");
   while(true){sleep(2);}
