@@ -56,6 +56,13 @@ static void call_say2(int v, int v2)
 
 int main(int argc, const char **argv)
 {
+    long actualFrequency = 0;
+    long requestedFrequency = 1e9 / MainClockPeriod;
+    setClockFrequency(0, requestedFrequency, &actualFrequency);
+    fprintf(stderr, "Requested main clock frequency %5.2f, actual clock frequency %5.2f MHz\n",
+	    (double)requestedFrequency * 1.0e-6,
+	    (double)actualFrequency * 1.0e-6);
+
     EchoIndication echoIndication(IfcNames_EchoIndicationH2S);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H);
 
