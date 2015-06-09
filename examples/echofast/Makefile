@@ -1,0 +1,12 @@
+CONNECTALFLAGS += -D BSV_POSITIVE_RESET
+
+ifeq ($(BOARD),zedboard)
+MAIN_CLOCK_PERIOD=5.0
+DERIVED_CLOCK_PERIOD=10.0
+endif
+ifeq ($(BOARD),zc706)
+MAIN_CLOCK_PERIOD=2.0
+DERIVED_CLOCK_PERIOD=5.0
+endif
+
+include ../echo/Makefile

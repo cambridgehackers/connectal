@@ -121,7 +121,10 @@ static int init_socketResp(struct PortalInternal *pint, void *aparam)
     PortalSocketParam *param = (PortalSocketParam *)aparam;
     char buff[128];
     int on = 1;
-    sprintf(buff, "SWSOCK%d", pint->fpga_number);
+    const char *name = getenv("SOFTWARE_SOCKET_NAME");
+    if (!name)
+	name = "SWSOCK";
+    sprintf(buff, "%s%d", name, pint->fpga_number);
     pint->fpga_fd = init_listening(buff, param);
     ioctl(pint->fpga_fd, FIONBIO, &on);
     pint->map_base = (volatile unsigned int*)malloc(REQINFO_SIZE(pint->reqinfo));
@@ -132,7 +135,10 @@ static int init_socketInit(struct PortalInternal *pint, void *aparam)
 {
     PortalSocketParam *param = (PortalSocketParam *)aparam;
     char buff[128];
-    sprintf(buff, "SWSOCK%d", pint->fpga_number);
+    const char *name = getenv("SOFTWARE_SOCKET_NAME");
+    if (!name)
+	name = "SWSOCK";
+    sprintf(buff, "%s%d", name, pint->fpga_number);
     pint->client_fd[pint->client_fd_number++] = init_connecting(buff, param);
     pint->accept_finished = 1;
     pint->map_base = (volatile unsigned int*)malloc(REQINFO_SIZE(pint->reqinfo));

@@ -239,7 +239,7 @@ VIVADODIR=$(realpath $(shell dirname $(VIVADO))/..)
 XSC_CFLAGS= -Wa,-W -fPIC -m64  -I"$(VIVADODIR)/data/xsim/include" -DSYSTEM_VERILOG -DBOARD_xsim -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR) -Ijni
 
 XSIM_GENERATED_CFILES = XsimMsgIndication XsimMsgRequest GeneratedCppCallbacks
-XSIM_CFILES = transportSocket transportHardware transportXsim XsimTop poller sock_utils portalPrintf portal BsimDma
+XSIM_CFILES = transportSocket transportHardware transportXsim XsimTop poller sock_utils portalPrintf portal BsimDma BsimCtrl
 XSIM_OBJECTS = $(foreach c, $(XSIM_CFILES), xsim.dir/xsc/$(c).lnx64.o ) $(foreach c, $(XSIM_GENERATED_CFILES), xsim.dir/xsc/$(c).lnx64.o)
 
 xsim.dir/xsc/%.lnx64.o: $(CONNECTALDIR)/cpp/%.c
@@ -255,12 +255,14 @@ xsim.dir/xsc/%.lnx64.o: jni/%.cpp
 	mkdir -p xsim.dir/xsc
 	gcc -c $(XSC_CFLAGS) -O1 -o xsim.dir/xsc/$(*).lnx64.o $<
 
+XVLOGDEFINES = $(subst -D,-d,$(BSVDEFINES))
+
 xsim: verilog $(XSIM_OBJECTS)
-	xvlog $(XVLOGFLAGS) verilog/*.v
-	xvlog --sv $(CONNECTALDIR)/verilog/xsimtop.sv
+	xvlog $(XVLOGFLAGS) $(XVLOGDEFINES) verilog/*.v
+	xvlog $(XVLOGDEFINES) --sv $(CONNECTALDIR)/verilog/xsimtop.sv
 	#xsc -v -cc gcc -compile $(SOURCES)
 	xsc -cc gcc -link $(XSIM_OBJECTS) -o xsimtop
-	xelab -cc gcc -svlog $(CONNECTALDIR)/verilog/xsimtop.sv --debug wave -L unisim -L unifast -L unimacro work.xsimtop -sv_lib xsimtop
+	xelab --stats $(XVLOGDEFINES) -cc gcc -svlog $(CONNECTALDIR)/verilog/xsimtop.sv --debug wave -L unisim -L unifast -L unimacro work.xsimtop -sv_lib xsimtop
 endif #VIVADO
 
 bin/vsim:

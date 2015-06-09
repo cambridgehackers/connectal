@@ -48,6 +48,7 @@ import Portal::*;
 import CtrlMux::*;
 import MemTypes::*;
 import Pipe::*;
+import HostInterface::*;
 %(extraImports)s
 
 '''

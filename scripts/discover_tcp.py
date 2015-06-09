@@ -43,9 +43,9 @@ def ip2int(addr):
 def int2ip(addr):
     return socket.inet_ntoa(struct.pack("!I", addr))
 
-def connect_with_adb(ipaddr):
+def connect_with_adb(ipaddr,port):
     global deviceAddresses
-    device_serial = '%s:5555' % ipaddr
+    device_serial = '%s:%d' % (ipaddr,port)
     cnt = 0
     while cnt < 5:
         try:
@@ -66,14 +66,14 @@ def connect_with_adb(ipaddr):
                 return
         cnt = cnt+1
 
-def open_adb_socket(dest_addr):
+def open_adb_socket(dest_addr,port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setblocking(0)
-    sock.connect_ex((dest_addr,5555))
+    sock.connect_ex((dest_addr,port))
     return sock
 
 # non-Darwin version
-def do_work_poll(start, end):
+def do_work_poll(start, end, port, get_hostname):
     print "scanning "+int2ip(start)+" to "+int2ip(end)
     connected = []
     total = end-start
@@ -86,7 +86,7 @@ def do_work_poll(start, end):
         fd_map = {}
         while (start <= end):
             try:
-                s = open_adb_socket(int2ip(start))
+                s = open_adb_socket(int2ip(start),port)
             except:
                 break
             else:
@@ -106,11 +106,12 @@ def do_work_poll(start, end):
         sys.stdout.write("\r%d/%d" % (total-(end-start),total))
         sys.stdout.flush()
     print
-    for c in connected:
-        connect_with_adb(c)
+    if get_hostname:
+        for c in connected:
+            connect_with_adb(c,port)
 
 # Darwin version
-def do_work_kqueue(start, end):
+def do_work_kqueue(start, end, port, get_hostname):
     print "kqueue scanning "+int2ip(start)+" to "+int2ip(end)
     connected = []
     total = end-start
@@ -121,7 +122,7 @@ def do_work_kqueue(start, end):
         kevents = []
         while (start <= end):
             try:
-                s = open_adb_socket(int2ip(start))
+                s = open_adb_socket(int2ip(start),port)
             except:
                 break
             else:
@@ -141,20 +142,23 @@ def do_work_kqueue(start, end):
         sys.stdout.write("\r%d/%d" % (total-(end-start),total))
         sys.stdout.flush()
     print
-    for c in connected:
-        connect_with_adb(c)
+    if get_hostname:
+        for c in connected:
+            connect_with_adb(c,port)
 
 
 argparser = argparse.ArgumentParser("Discover Zedboards on a network")
 argparser.add_argument('-n', '--network', help='xxx.xxx.xxx.xxx/N')
+argparser.add_argument('-p', '--port', default=5555, help='Port to probe')
+argparser.add_argument('-g', '--get_hostname', default=True, help='Get hostname with adb')
 
-def do_work(start,end):
+def do_work(start,end,port,get_hostname):
     if sys.platform == 'darwin':
-        do_work_kqueue(start,end)
+        do_work_kqueue(start,end,port,get_hostname)
     else:
-        do_work_poll(start,end)
+        do_work_poll(start,end,port,get_hostname)
 
-def detect_network(network=None):
+def detect_network(network=None, port=5555, get_hostname=True):
     global deviceAddresses
     deviceAddresses = {}
     if network:
@@ -164,7 +168,7 @@ def detect_network(network=None):
             print 'Usage: discover_tcp.py ipaddr/prefix_width'
             sys.exit(-1)
         end = start + (1 << (32-int(nw[1])) ) - 2
-        do_work(start+1,end)
+        do_work(start+1,end,port,get_hostname)
     else:
         for ifc in netifaces.interfaces():
             ifaddrs = netifaces.ifaddresses(ifc)
@@ -181,11 +185,8 @@ def detect_network(network=None):
                         start = start+1
                         end = end-1
                         print (int2ip(start), int2ip(end))
-                        do_work(start, end)
+                        do_work(start, end,port,get_hostname)
 
 if __name__ ==  '__main__':
     options = argparser.parse_args()
-    if options.network == None:
-        detect_network()
-    else:
-        detect_network(options.network)
+    detect_network(options.network,options.port,options.get_hostname)

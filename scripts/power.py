@@ -29,6 +29,10 @@
 from __future__ import print_function
 import socket,sys,time
 
+if sys.argv[1] == 'discover':
+    import discover_tcp
+    discover_tcp.detect_network(None,23,False)
+    sys.exit(0)
 
 if len(sys.argv) < 3:
     print('power.py <ipaddress> <command> ...')
@@ -41,6 +45,7 @@ if len(sys.argv) < 3:
     print('    time        Displays current time')
     print('    ver         Displays hardware and software versions')
     sys.exit(1)
+
 lines = []
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((sys.argv[1], 23))

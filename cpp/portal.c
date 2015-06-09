@@ -337,6 +337,9 @@ int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency
 	    *actualFrequency = request.actual_rate;
         if (status < 0)
 	    status = errno;
+    } else {
+      fprintf(stderr, "[%s:%d] no utility portal\n", __FUNCTION__, __LINE__);
+      status = -1;
     }
 #endif
     return status;

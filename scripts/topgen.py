@@ -44,14 +44,13 @@ import Connectable::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;
 import MemTypes::*;
+import IfcNames::*;
 %(generatedImport)s
 
 `ifndef PinType
 `define PinType Empty
 `endif
 typedef `PinType PinType;
-
-typedef enum {NoInterface, %(enumList)s} IfcNames deriving (Eq,Bits);
 
 `ifndef IMPORT_HOSTIF
 (* synthesize *)
@@ -79,12 +78,17 @@ endmodule : mkConnectalTop
 %(exportedNames)s
 '''
 
+ifcnamesTemplate='''
+typedef enum {NoInterface, %(enumList)s} IfcNames deriving (Eq,Bits);
+'''
+
 topNocTemplate='''
 import Vector::*;
 import Portal::*;
 import CnocPortal::*;
 import Connectable::*;
 import HostInterface::*;
+import IfcNames::*;
 %(generatedImport)s
 
 `ifndef PinType
@@ -92,8 +96,6 @@ import HostInterface::*;
 `endif
 typedef `PinType PinType;
 %(generatedTypedefs)s
-
-typedef enum {%(enumList)s} IfcNames deriving (Eq,Bits);
 
 `ifndef IMPORT_HOSTIF
 (* synthesize *)
@@ -350,6 +352,11 @@ if __name__=='__main__':
         top.write(topNocTemplate % topsubsts)
     else:
         top.write(topTemplate % topsubsts)
+    top.close()
+    topFilename = project_dir + '/IfcNames.bsv'
+    print 'Writing:', topFilename
+    top = util.createDirAndOpen(topFilename, 'w')
+    top.write(ifcnamesTemplate % topsubsts)
     top.close()
     topFilename = project_dir + '/../jni/topEnum.h'
     print 'Writing:', topFilename
