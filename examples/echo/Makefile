@@ -2,8 +2,8 @@
 CONNECTALDIR?=../..
 S2H_INTERFACES = EchoRequest:Echo.request
 H2S_INTERFACES = Echo:EchoIndication
-BSVFILES = Echo.bsv
-CPPFILES=testecho.cpp
+BSVFILES = ../echo/Echo.bsv
+CPPFILES= ../echo/testecho.cpp
 
 NUMBER_OF_MASTERS =0
 
