@@ -176,6 +176,7 @@ module XsimLink (
    reg 			[31:0] tx_reg;
    int   		       rx_val;
 
+   assign rx_first     = rx_reg;
    assign rdy_rx_first = rx_valid && started;
    assign rdy_rx_deq   = rx_valid && started;
    assign rdy_tx_enq   = !tx_valid && started;
