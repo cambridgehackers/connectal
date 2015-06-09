@@ -58,9 +58,11 @@
    -f
    cfg_mgmt_type1
    -f
-   cfg_req_pm_transition_l23
+   cfg_req_pm_transition
    -f
    pci_exp
+   -f
+   pipe
    -o
    ../xilinx/PCIEWRAPPER3.bsv
    ../../out/netfpgasume/pcie3_7x_0/pcie3_7x_0_stub.v
@@ -70,6 +72,7 @@ import Clocks::*;
 import DefaultValue::*;
 import XilinxCells::*;
 import GetPut::*;
+import AxiBits::*;
 
 (* always_ready, always_enabled *)
 interface Pcie3wrapCfg;
@@ -108,21 +111,15 @@ interface Pcie3wrapCfg;
     method Action      hot_reset_in(Bit#(1) v);
     method Bit#(1)     hot_reset_out();
     method Action      interrupt_int(Bit#(4) v);
-    method Action      interrupt_msi_attr(Bit#(3) v);
-    method Bit#(32)     interrupt_msi_data();
-    method Bit#(2)     interrupt_msi_enable();
-    method Bit#(1)     interrupt_msi_fail();
-    method Action      interrupt_msi_function_number(Bit#(3) v);
-    method Action      interrupt_msi_int(Bit#(32) v);
-    method Bit#(1)     interrupt_msi_mask_update();
-    method Bit#(6)     interrupt_msi_mmenable();
-    method Action      interrupt_msi_pending_status(Bit#(64) v);
-    method Action      interrupt_msi_select(Bit#(4) v);
-    method Bit#(1)     interrupt_msi_sent();
-    method Action      interrupt_msi_tph_present(Bit#(1) v);
-    method Action      interrupt_msi_tph_st_tag(Bit#(9) v);
-    method Action      interrupt_msi_tph_type(Bit#(2) v);
-    method Bit#(6)     interrupt_msi_vf_enable();
+    method Action      interrupt_msix_address(Bit#(64) v);
+    method Action      interrupt_msix_data(Bit#(32) v);
+    method Bit#(2)     interrupt_msix_enable();
+    method Bit#(1)     interrupt_msix_fail();
+    method Action      interrupt_msix_int(Bit#(1) v);
+    method Bit#(2)     interrupt_msix_mask();
+    method Bit#(1)     interrupt_msix_sent();
+    method Bit#(6)     interrupt_msix_vf_enable();
+    method Bit#(6)     interrupt_msix_vf_mask();
     method Action      interrupt_pending(Bit#(2) v);
     method Bit#(1)     interrupt_sent();
     method Bit#(2)     link_power_state();
@@ -173,15 +170,13 @@ interface Pcie3wrapCfg_mgmt_type1;
     method Action      cfg_reg_access(Bit#(1) v);
 endinterface
 (* always_ready, always_enabled *)
-interface Pcie3wrapCfg_req_pm_transition_l23;
-    method Action      ready(Bit#(1) v);
+interface Pcie3wrapCfg_req_pm_transition;
+    method Action      l23_ready(Bit#(1) v);
 endinterface
 (* always_ready, always_enabled *)
-interface Pcie3wrapInt;
-    method Bit#(1)     pclk_out_slave();
-    method Action      pclk_sel_slave(Bit#(8) v);
-    method Bit#(2)     qplllock_out();
-    method Bit#(2)     qplloutrefclk_out();
+interface Pcie3wrapCommon;
+    method Action      commands_in(Bit#(26) v);
+    method Bit#(17)     commands_out();
 endinterface
 (* always_ready, always_enabled *)
 interface Pcie3wrapM_axis_cq;
@@ -220,6 +215,47 @@ interface Pcie3wrapPcie;
     method Bit#(2)     tfc_nph_av();
 endinterface
 (* always_ready, always_enabled *)
+interface Pcie3wrapPipe;
+    method Action      dclk_in(Bit#(1) v);
+    method Action      mmcm_lock_in(Bit#(1) v);
+    method Action      mmcm_rst_n(Bit#(1) v);
+    method Action      oobclk_in(Bit#(1) v);
+    method Action      pclk_in(Bit#(1) v);
+    method Bit#(8)     pclk_sel_out();
+    method Action      rx_0_sigs(Bit#(84) v);
+    method Action      rx_1_sigs(Bit#(84) v);
+    method Action      rx_2_sigs(Bit#(84) v);
+    method Action      rx_3_sigs(Bit#(84) v);
+    method Action      rx_4_sigs(Bit#(84) v);
+    method Action      rx_5_sigs(Bit#(84) v);
+    method Action      rx_6_sigs(Bit#(84) v);
+    method Action      rx_7_sigs(Bit#(84) v);
+    method Action      rxoutclk_in(Bit#(8) v);
+    method Bit#(8)     rxoutclk_out();
+    method Action      rxusrclk_in(Bit#(1) v);
+    method Bit#(70)     tx_0_sigs();
+    method Bit#(70)     tx_1_sigs();
+    method Bit#(70)     tx_2_sigs();
+    method Bit#(70)     tx_3_sigs();
+    method Bit#(70)     tx_4_sigs();
+    method Bit#(70)     tx_5_sigs();
+    method Bit#(70)     tx_6_sigs();
+    method Bit#(70)     tx_7_sigs();
+    method Bit#(1)     txoutclk_out();
+endinterface
+(* always_ready, always_enabled *)
+interface Pcie3wrapPipe_gen3;
+    method Bit#(1)     out();
+endinterface
+(* always_ready, always_enabled *)
+interface Pcie3wrapPipe_userclk1;
+    method Action      in(Bit#(1) v);
+endinterface
+(* always_ready, always_enabled *)
+interface Pcie3wrapPipe_userclk2;
+    method Action      in(Bit#(1) v);
+endinterface
+(* always_ready, always_enabled *)
 interface Pcie3wrapS_axis_cc;
     method Action      tdata(Bit#(256) v);
     method Action      tkeep(Bit#(8) v);
@@ -246,19 +282,16 @@ endinterface
 interface Pcie3Wrap;
     interface Pcie3wrapCfg     cfg;
     interface Pcie3wrapCfg_mgmt_type1     cfg_mgmt_type1;
-    interface Pcie3wrapCfg_req_pm_transition_l23     cfg_req_pm_transition_l23;
-    interface Clock     int_dclk_out;
-    interface Clock     int_oobclk_out;
-    interface Pcie3wrapInt     int;
-    interface Clock     int_pipe_rxusrclk_out;
-    interface Clock     int_qplloutclk_out;
-    interface Clock     int_rxoutclk_out;
-    interface Clock     int_userclk1_out;
-    interface Clock     int_userclk2_out;
+    interface Pcie3wrapCfg_req_pm_transition     cfg_req_pm_transition;
+    interface Pcie3wrapCommon     common;
     interface Pcie3wrapM_axis_cq     m_axis_cq;
     interface Pcie3wrapM_axis_rc     m_axis_rc;
     interface Pcie3wrapPci_exp     pci_exp;
     interface Pcie3wrapPcie     pcie;
+    interface Pcie3wrapPipe     pipe;
+    interface Pcie3wrapPipe_gen3     pipe_gen3;
+    interface Pcie3wrapPipe_userclk1     pipe_userclk1;
+    interface Pcie3wrapPipe_userclk2     pipe_userclk2;
     interface Pcie3wrapS_axis_cc     s_axis_cc;
     interface Pcie3wrapS_axis_rq     s_axis_rq;
     interface Pcie3wrapUser     user;
@@ -308,21 +341,15 @@ module mkPcie3Wrap#(Clock sys_clk, Reset sys_reset)(Pcie3Wrap);
         method hot_reset_in(cfg_hot_reset_in) enable((*inhigh*) EN_cfg_hot_reset_in) clocked_by (user_clk) reset_by (user_reset);
         method cfg_hot_reset_out hot_reset_out() clocked_by (user_clk) reset_by (user_reset);
         method interrupt_int(cfg_interrupt_int) enable((*inhigh*) EN_cfg_interrupt_int) clocked_by (user_clk) reset_by (user_reset);
-        method interrupt_msi_attr(cfg_interrupt_msi_attr) enable((*inhigh*) EN_cfg_interrupt_msi_attr) clocked_by (user_clk) reset_by (user_reset);
-        method cfg_interrupt_msi_data interrupt_msi_data() clocked_by (user_clk) reset_by (user_reset);
-        method cfg_interrupt_msi_enable interrupt_msi_enable() clocked_by (user_clk) reset_by (user_reset);
-        method cfg_interrupt_msi_fail interrupt_msi_fail() clocked_by (user_clk) reset_by (user_reset);
-        method interrupt_msi_function_number(cfg_interrupt_msi_function_number) enable((*inhigh*) EN_cfg_interrupt_msi_function_number) clocked_by (user_clk) reset_by (user_reset);
-        method interrupt_msi_int(cfg_interrupt_msi_int) enable((*inhigh*) EN_cfg_interrupt_msi_int) clocked_by (user_clk) reset_by (user_reset);
-        method cfg_interrupt_msi_mask_update interrupt_msi_mask_update() clocked_by (user_clk) reset_by (user_reset);
-        method cfg_interrupt_msi_mmenable interrupt_msi_mmenable() clocked_by (user_clk) reset_by (user_reset);
-        method interrupt_msi_pending_status(cfg_interrupt_msi_pending_status) enable((*inhigh*) EN_cfg_interrupt_msi_pending_status) clocked_by (user_clk) reset_by (user_reset);
-        method interrupt_msi_select(cfg_interrupt_msi_select) enable((*inhigh*) EN_cfg_interrupt_msi_select) clocked_by (user_clk) reset_by (user_reset);
-        method cfg_interrupt_msi_sent interrupt_msi_sent() clocked_by (user_clk) reset_by (user_reset);
-        method interrupt_msi_tph_present(cfg_interrupt_msi_tph_present) enable((*inhigh*) EN_cfg_interrupt_msi_tph_present) clocked_by (user_clk) reset_by (user_reset);
-        method interrupt_msi_tph_st_tag(cfg_interrupt_msi_tph_st_tag) enable((*inhigh*) EN_cfg_interrupt_msi_tph_st_tag) clocked_by (user_clk) reset_by (user_reset);
-        method interrupt_msi_tph_type(cfg_interrupt_msi_tph_type) enable((*inhigh*) EN_cfg_interrupt_msi_tph_type) clocked_by (user_clk) reset_by (user_reset);
-        method cfg_interrupt_msi_vf_enable interrupt_msi_vf_enable() clocked_by (user_clk) reset_by (user_reset);
+        method interrupt_msix_address(cfg_interrupt_msix_address) enable((*inhigh*) EN_cfg_interrupt_msix_address) clocked_by (user_clk) reset_by (user_reset);
+        method interrupt_msix_data(cfg_interrupt_msix_data) enable((*inhigh*) EN_cfg_interrupt_msix_data) clocked_by (user_clk) reset_by (user_reset);
+        method cfg_interrupt_msix_enable interrupt_msix_enable() clocked_by (user_clk) reset_by (user_reset);
+        method cfg_interrupt_msix_fail interrupt_msix_fail() clocked_by (user_clk) reset_by (user_reset);
+        method interrupt_msix_int(cfg_interrupt_msix_int) enable((*inhigh*) EN_cfg_interrupt_msix_int) clocked_by (user_clk) reset_by (user_reset);
+        method cfg_interrupt_msix_mask interrupt_msix_mask() clocked_by (user_clk) reset_by (user_reset);
+        method cfg_interrupt_msix_sent interrupt_msix_sent() clocked_by (user_clk) reset_by (user_reset);
+        method cfg_interrupt_msix_vf_enable interrupt_msix_vf_enable() clocked_by (user_clk) reset_by (user_reset);
+        method cfg_interrupt_msix_vf_mask interrupt_msix_vf_mask() clocked_by (user_clk) reset_by (user_reset);
         method interrupt_pending(cfg_interrupt_pending) enable((*inhigh*) EN_cfg_interrupt_pending) clocked_by (user_clk) reset_by (user_reset);
         method cfg_interrupt_sent interrupt_sent() clocked_by (user_clk) reset_by (user_reset);
         method cfg_link_power_state link_power_state() clocked_by (user_clk) reset_by (user_reset);
@@ -371,22 +398,13 @@ module mkPcie3Wrap#(Clock sys_clk, Reset sys_reset)(Pcie3Wrap);
     interface Pcie3wrapCfg_mgmt_type1     cfg_mgmt_type1;
         method cfg_reg_access(cfg_mgmt_type1_cfg_reg_access) enable((*inhigh*) EN_cfg_mgmt_type1_cfg_reg_access) clocked_by (user_clk) reset_by (user_reset);
     endinterface
-    interface Pcie3wrapCfg_req_pm_transition_l23     cfg_req_pm_transition_l23;
-        method ready(cfg_req_pm_transition_l23_ready) enable((*inhigh*) EN_cfg_req_pm_transition_l23_ready) clocked_by (user_clk) reset_by (user_reset);
+    interface Pcie3wrapCfg_req_pm_transition     cfg_req_pm_transition;
+        method l23_ready(cfg_req_pm_transition_l23_ready) enable((*inhigh*) EN_cfg_req_pm_transition_l23_ready) clocked_by (user_clk) reset_by (user_reset);
     endinterface
-    output_clock int_dclk_out(int_dclk_out);
-    output_clock int_oobclk_out(int_oobclk_out);
-    interface Pcie3wrapInt     int;
-        method int_pclk_out_slave pclk_out_slave();
-        method pclk_sel_slave(int_pclk_sel_slave) enable((*inhigh*) EN_int_pclk_sel_slave) clocked_by (user_clk) reset_by (user_reset);
-        method int_qplllock_out qplllock_out();
-        method int_qplloutrefclk_out qplloutrefclk_out();
+    interface Pcie3wrapCommon     common;
+        method commands_in(common_commands_in) enable((*inhigh*) EN_common_commands_in) clocked_by (user_clk) reset_by (user_reset);
+        method common_commands_out commands_out();
     endinterface
-    output_clock int_pipe_rxusrclk_out(int_pipe_rxusrclk_out);
-    output_clock int_qplloutclk_out(int_qplloutclk_out);
-    output_clock int_rxoutclk_out(int_rxoutclk_out);
-    output_clock int_userclk1_out(int_userclk1_out);
-    output_clock int_userclk2_out(int_userclk2_out);
     interface Pcie3wrapM_axis_cq     m_axis_cq;
         method m_axis_cq_tdata tdata() clocked_by (user_clk) reset_by (user_reset);
         method m_axis_cq_tkeep tkeep() clocked_by (user_clk) reset_by (user_reset);
@@ -419,6 +437,43 @@ module mkPcie3Wrap#(Clock sys_clk, Reset sys_reset)(Pcie3Wrap);
         method pcie_tfc_npd_av tfc_npd_av() clocked_by (user_clk) reset_by (user_reset);
         method pcie_tfc_nph_av tfc_nph_av() clocked_by (user_clk) reset_by (user_reset);
     endinterface
+    interface Pcie3wrapPipe     pipe;
+        method dclk_in(pipe_dclk_in) enable((*inhigh*) EN_pipe_dclk_in) clocked_by (user_clk) reset_by (user_reset);
+        method mmcm_lock_in(pipe_mmcm_lock_in) enable((*inhigh*) EN_pipe_mmcm_lock_in) clocked_by (user_clk) reset_by (user_reset);
+        method mmcm_rst_n(pipe_mmcm_rst_n) enable((*inhigh*) EN_pipe_mmcm_rst_n) clocked_by (user_clk) reset_by (user_reset);
+        method oobclk_in(pipe_oobclk_in) enable((*inhigh*) EN_pipe_oobclk_in) clocked_by (user_clk) reset_by (user_reset);
+        method pclk_in(pipe_pclk_in) enable((*inhigh*) EN_pipe_pclk_in) clocked_by (user_clk) reset_by (user_reset);
+        method pipe_pclk_sel_out pclk_sel_out();
+        method rx_0_sigs(pipe_rx_0_sigs) enable((*inhigh*) EN_pipe_rx_0_sigs)  clocked_by (sys_clk) reset_by (sys_reset);
+        method rx_1_sigs(pipe_rx_1_sigs) enable((*inhigh*) EN_pipe_rx_1_sigs)  clocked_by (sys_clk) reset_by (sys_reset);
+        method rx_2_sigs(pipe_rx_2_sigs) enable((*inhigh*) EN_pipe_rx_2_sigs)  clocked_by (sys_clk) reset_by (sys_reset);
+        method rx_3_sigs(pipe_rx_3_sigs) enable((*inhigh*) EN_pipe_rx_3_sigs)  clocked_by (sys_clk) reset_by (sys_reset);
+        method rx_4_sigs(pipe_rx_4_sigs) enable((*inhigh*) EN_pipe_rx_4_sigs)  clocked_by (sys_clk) reset_by (sys_reset);
+        method rx_5_sigs(pipe_rx_5_sigs) enable((*inhigh*) EN_pipe_rx_5_sigs)  clocked_by (sys_clk) reset_by (sys_reset);
+        method rx_6_sigs(pipe_rx_6_sigs) enable((*inhigh*) EN_pipe_rx_6_sigs)  clocked_by (sys_clk) reset_by (sys_reset);
+        method rx_7_sigs(pipe_rx_7_sigs) enable((*inhigh*) EN_pipe_rx_7_sigs)  clocked_by (sys_clk) reset_by (sys_reset);
+        method rxoutclk_in(pipe_rxoutclk_in) enable((*inhigh*) EN_pipe_rxoutclk_in)  clocked_by (sys_clk) reset_by (sys_reset);
+        method pipe_rxoutclk_out rxoutclk_out();
+        method rxusrclk_in(pipe_rxusrclk_in) enable((*inhigh*) EN_pipe_rxusrclk_in)  clocked_by (sys_clk) reset_by (sys_reset);
+        method pipe_tx_0_sigs tx_0_sigs();
+        method pipe_tx_1_sigs tx_1_sigs();
+        method pipe_tx_2_sigs tx_2_sigs();
+        method pipe_tx_3_sigs tx_3_sigs();
+        method pipe_tx_4_sigs tx_4_sigs();
+        method pipe_tx_5_sigs tx_5_sigs();
+        method pipe_tx_6_sigs tx_6_sigs();
+        method pipe_tx_7_sigs tx_7_sigs();
+        method pipe_txoutclk_out txoutclk_out();
+    endinterface
+    interface Pcie3wrapPipe_gen3     pipe_gen3;
+        method pipe_gen3_out out();
+    endinterface
+    interface Pcie3wrapPipe_userclk1     pipe_userclk1;
+        method in(pipe_userclk1_in) enable((*inhigh*) EN_pipe_userclk1_in) clocked_by (user_clk) reset_by (user_reset);
+    endinterface
+    interface Pcie3wrapPipe_userclk2     pipe_userclk2;
+        method in(pipe_userclk2_in) enable((*inhigh*) EN_pipe_userclk2_in) clocked_by (user_clk) reset_by (user_reset);
+    endinterface
     interface Pcie3wrapS_axis_cc     s_axis_cc;
         method tdata(s_axis_cc_tdata) enable((*inhigh*) EN_s_axis_cc_tdata) clocked_by (user_clk) reset_by (user_reset);
         method tkeep(s_axis_cc_tkeep) enable((*inhigh*) EN_s_axis_cc_tkeep) clocked_by (user_clk) reset_by (user_reset);
@@ -441,5 +496,5 @@ module mkPcie3Wrap#(Clock sys_clk, Reset sys_reset)(Pcie3Wrap);
     endinterface
     
     
-    schedule (cfg.config_space_enable, cfg.current_speed, cfg.dpa_substate_change, cfg.ds_bus_number, cfg.ds_device_number, cfg.ds_function_number, cfg.ds_port_number, cfg.dsn, cfg.err_cor_in, cfg.err_cor_out, cfg.err_fatal_out, cfg.err_nonfatal_out, cfg.err_uncor_in, cfg.ext_function_number, cfg.ext_read_data, cfg.ext_read_data_valid, cfg.ext_read_received, cfg.ext_register_number, cfg.ext_write_byte_enable, cfg.ext_write_data, cfg.ext_write_received, cfg.fc_cpld, cfg.fc_cplh, cfg.fc_npd, cfg.fc_nph, cfg.fc_pd, cfg.fc_ph, cfg.fc_sel, cfg.flr_done, cfg.flr_in_process, cfg.function_power_state, cfg.function_status, cfg.hot_reset_in, cfg.hot_reset_out, cfg.interrupt_int, cfg.interrupt_msi_attr, cfg.interrupt_msi_data, cfg.interrupt_msi_enable, cfg.interrupt_msi_fail, cfg.interrupt_msi_function_number, cfg.interrupt_msi_int, cfg.interrupt_msi_mask_update, cfg.interrupt_msi_mmenable, cfg.interrupt_msi_pending_status, cfg.interrupt_msi_select, cfg.interrupt_msi_sent, cfg.interrupt_msi_tph_present, cfg.interrupt_msi_tph_st_tag, cfg.interrupt_msi_tph_type, cfg.interrupt_msi_vf_enable, cfg.interrupt_pending, cfg.interrupt_sent, cfg.link_power_state, cfg.link_training_enable, cfg.ltr_enable, cfg.ltssm_state, cfg.max_payload, cfg.max_read_req, cfg.mgmt_addr, cfg.mgmt_byte_enable, cfg.mgmt_read, cfg.mgmt_read_data, cfg.mgmt_read_write_done, cfg.mgmt_write, cfg.mgmt_write_data, cfg.msg_received, cfg.msg_received_data, cfg.msg_received_type, cfg.msg_transmit, cfg.msg_transmit_data, cfg.msg_transmit_done, cfg.msg_transmit_type, cfg.negotiated_width, cfg.obff_enable, cfg.per_func_status_control, cfg.per_func_status_data, cfg.per_function_number, cfg.per_function_output_request, cfg.per_function_update_done, cfg.phy_link_down, cfg.phy_link_status, cfg.pl_status_change, cfg.power_state_change_ack, cfg.power_state_change_interrupt, cfg.rcb_status, cfg.subsys_vend_id, cfg.tph_requester_enable, cfg.tph_st_mode, cfg.vf_flr_done, cfg.vf_flr_in_process, cfg.vf_power_state, cfg.vf_status, cfg.vf_tph_requester_enable, cfg.vf_tph_st_mode, cfg_mgmt_type1.cfg_reg_access, cfg_req_pm_transition_l23.ready, int.pclk_out_slave, int.pclk_sel_slave, int.qplllock_out, int.qplloutrefclk_out, m_axis_cq.tdata, m_axis_cq.tkeep, m_axis_cq.tlast, m_axis_cq.tready, m_axis_cq.tuser, m_axis_cq.tvalid, m_axis_rc.tdata, m_axis_rc.tkeep, m_axis_rc.tlast, m_axis_rc.tready, m_axis_rc.tuser, m_axis_rc.tvalid, pci_exp.rxn, pci_exp.rxp, pci_exp.txn, pci_exp.txp, pcie.cq_np_req, pcie.cq_np_req_count, pcie.rq_seq_num, pcie.rq_seq_num_vld, pcie.rq_tag, pcie.rq_tag_vld, pcie.tfc_npd_av, pcie.tfc_nph_av, s_axis_cc.tdata, s_axis_cc.tkeep, s_axis_cc.tlast, s_axis_cc.tready, s_axis_cc.tuser, s_axis_cc.tvalid, s_axis_rq.tdata, s_axis_rq.tkeep, s_axis_rq.tlast, s_axis_rq.tready, s_axis_rq.tuser, s_axis_rq.tvalid, user.app_rdy, user.lnk_up) CF (cfg.config_space_enable, cfg.current_speed, cfg.dpa_substate_change, cfg.ds_bus_number, cfg.ds_device_number, cfg.ds_function_number, cfg.ds_port_number, cfg.dsn, cfg.err_cor_in, cfg.err_cor_out, cfg.err_fatal_out, cfg.err_nonfatal_out, cfg.err_uncor_in, cfg.ext_function_number, cfg.ext_read_data, cfg.ext_read_data_valid, cfg.ext_read_received, cfg.ext_register_number, cfg.ext_write_byte_enable, cfg.ext_write_data, cfg.ext_write_received, cfg.fc_cpld, cfg.fc_cplh, cfg.fc_npd, cfg.fc_nph, cfg.fc_pd, cfg.fc_ph, cfg.fc_sel, cfg.flr_done, cfg.flr_in_process, cfg.function_power_state, cfg.function_status, cfg.hot_reset_in, cfg.hot_reset_out, cfg.interrupt_int, cfg.interrupt_msi_attr, cfg.interrupt_msi_data, cfg.interrupt_msi_enable, cfg.interrupt_msi_fail, cfg.interrupt_msi_function_number, cfg.interrupt_msi_int, cfg.interrupt_msi_mask_update, cfg.interrupt_msi_mmenable, cfg.interrupt_msi_pending_status, cfg.interrupt_msi_select, cfg.interrupt_msi_sent, cfg.interrupt_msi_tph_present, cfg.interrupt_msi_tph_st_tag, cfg.interrupt_msi_tph_type, cfg.interrupt_msi_vf_enable, cfg.interrupt_pending, cfg.interrupt_sent, cfg.link_power_state, cfg.link_training_enable, cfg.ltr_enable, cfg.ltssm_state, cfg.max_payload, cfg.max_read_req, cfg.mgmt_addr, cfg.mgmt_byte_enable, cfg.mgmt_read, cfg.mgmt_read_data, cfg.mgmt_read_write_done, cfg.mgmt_write, cfg.mgmt_write_data, cfg.msg_received, cfg.msg_received_data, cfg.msg_received_type, cfg.msg_transmit, cfg.msg_transmit_data, cfg.msg_transmit_done, cfg.msg_transmit_type, cfg.negotiated_width, cfg.obff_enable, cfg.per_func_status_control, cfg.per_func_status_data, cfg.per_function_number, cfg.per_function_output_request, cfg.per_function_update_done, cfg.phy_link_down, cfg.phy_link_status, cfg.pl_status_change, cfg.power_state_change_ack, cfg.power_state_change_interrupt, cfg.rcb_status, cfg.subsys_vend_id, cfg.tph_requester_enable, cfg.tph_st_mode, cfg.vf_flr_done, cfg.vf_flr_in_process, cfg.vf_power_state, cfg.vf_status, cfg.vf_tph_requester_enable, cfg.vf_tph_st_mode, cfg_mgmt_type1.cfg_reg_access, cfg_req_pm_transition_l23.ready, int.pclk_out_slave, int.pclk_sel_slave, int.qplllock_out, int.qplloutrefclk_out, m_axis_cq.tdata, m_axis_cq.tkeep, m_axis_cq.tlast, m_axis_cq.tready, m_axis_cq.tuser, m_axis_cq.tvalid, m_axis_rc.tdata, m_axis_rc.tkeep, m_axis_rc.tlast, m_axis_rc.tready, m_axis_rc.tuser, m_axis_rc.tvalid, pci_exp.rxn, pci_exp.rxp, pci_exp.txn, pci_exp.txp, pcie.cq_np_req, pcie.cq_np_req_count, pcie.rq_seq_num, pcie.rq_seq_num_vld, pcie.rq_tag, pcie.rq_tag_vld, pcie.tfc_npd_av, pcie.tfc_nph_av, s_axis_cc.tdata, s_axis_cc.tkeep, s_axis_cc.tlast, s_axis_cc.tready, s_axis_cc.tuser, s_axis_cc.tvalid, s_axis_rq.tdata, s_axis_rq.tkeep, s_axis_rq.tlast, s_axis_rq.tready, s_axis_rq.tuser, s_axis_rq.tvalid, user.app_rdy, user.lnk_up);
+    schedule (cfg.config_space_enable, cfg.current_speed, cfg.dpa_substate_change, cfg.ds_bus_number, cfg.ds_device_number, cfg.ds_function_number, cfg.ds_port_number, cfg.dsn, cfg.err_cor_in, cfg.err_cor_out, cfg.err_fatal_out, cfg.err_nonfatal_out, cfg.err_uncor_in, cfg.ext_function_number, cfg.ext_read_data, cfg.ext_read_data_valid, cfg.ext_read_received, cfg.ext_register_number, cfg.ext_write_byte_enable, cfg.ext_write_data, cfg.ext_write_received, cfg.fc_cpld, cfg.fc_cplh, cfg.fc_npd, cfg.fc_nph, cfg.fc_pd, cfg.fc_ph, cfg.fc_sel, cfg.flr_done, cfg.flr_in_process, cfg.function_power_state, cfg.function_status, cfg.hot_reset_in, cfg.hot_reset_out, cfg.interrupt_int, cfg.interrupt_msix_address, cfg.interrupt_msix_data, cfg.interrupt_msix_enable, cfg.interrupt_msix_fail, cfg.interrupt_msix_int, cfg.interrupt_msix_mask, cfg.interrupt_msix_sent, cfg.interrupt_msix_vf_enable, cfg.interrupt_msix_vf_mask, cfg.interrupt_pending, cfg.interrupt_sent, cfg.link_power_state, cfg.link_training_enable, cfg.ltr_enable, cfg.ltssm_state, cfg.max_payload, cfg.max_read_req, cfg.mgmt_addr, cfg.mgmt_byte_enable, cfg.mgmt_read, cfg.mgmt_read_data, cfg.mgmt_read_write_done, cfg.mgmt_write, cfg.mgmt_write_data, cfg.msg_received, cfg.msg_received_data, cfg.msg_received_type, cfg.msg_transmit, cfg.msg_transmit_data, cfg.msg_transmit_done, cfg.msg_transmit_type, cfg.negotiated_width, cfg.obff_enable, cfg.per_func_status_control, cfg.per_func_status_data, cfg.per_function_number, cfg.per_function_output_request, cfg.per_function_update_done, cfg.phy_link_down, cfg.phy_link_status, cfg.pl_status_change, cfg.power_state_change_ack, cfg.power_state_change_interrupt, cfg.rcb_status, cfg.subsys_vend_id, cfg.tph_requester_enable, cfg.tph_st_mode, cfg.vf_flr_done, cfg.vf_flr_in_process, cfg.vf_power_state, cfg.vf_status, cfg.vf_tph_requester_enable, cfg.vf_tph_st_mode, cfg_mgmt_type1.cfg_reg_access, cfg_req_pm_transition.l23_ready, common.commands_in, common.commands_out, m_axis_cq.tdata, m_axis_cq.tkeep, m_axis_cq.tlast, m_axis_cq.tready, m_axis_cq.tuser, m_axis_cq.tvalid, m_axis_rc.tdata, m_axis_rc.tkeep, m_axis_rc.tlast, m_axis_rc.tready, m_axis_rc.tuser, m_axis_rc.tvalid, pci_exp.rxn, pci_exp.rxp, pci_exp.txn, pci_exp.txp, pcie.cq_np_req, pcie.cq_np_req_count, pcie.rq_seq_num, pcie.rq_seq_num_vld, pcie.rq_tag, pcie.rq_tag_vld, pcie.tfc_npd_av, pcie.tfc_nph_av, pipe.dclk_in, pipe.mmcm_lock_in, pipe.mmcm_rst_n, pipe.oobclk_in, pipe.pclk_in, pipe.pclk_sel_out, pipe.rx_0_sigs, pipe.rx_1_sigs, pipe.rx_2_sigs, pipe.rx_3_sigs, pipe.rx_4_sigs, pipe.rx_5_sigs, pipe.rx_6_sigs, pipe.rx_7_sigs, pipe.rxoutclk_in, pipe.rxoutclk_out, pipe.rxusrclk_in, pipe.tx_0_sigs, pipe.tx_1_sigs, pipe.tx_2_sigs, pipe.tx_3_sigs, pipe.tx_4_sigs, pipe.tx_5_sigs, pipe.tx_6_sigs, pipe.tx_7_sigs, pipe.txoutclk_out, pipe_gen3.out, pipe_userclk1.in, pipe_userclk2.in, s_axis_cc.tdata, s_axis_cc.tkeep, s_axis_cc.tlast, s_axis_cc.tready, s_axis_cc.tuser, s_axis_cc.tvalid, s_axis_rq.tdata, s_axis_rq.tkeep, s_axis_rq.tlast, s_axis_rq.tready, s_axis_rq.tuser, s_axis_rq.tvalid, user.app_rdy, user.lnk_up) CF (cfg.config_space_enable, cfg.current_speed, cfg.dpa_substate_change, cfg.ds_bus_number, cfg.ds_device_number, cfg.ds_function_number, cfg.ds_port_number, cfg.dsn, cfg.err_cor_in, cfg.err_cor_out, cfg.err_fatal_out, cfg.err_nonfatal_out, cfg.err_uncor_in, cfg.ext_function_number, cfg.ext_read_data, cfg.ext_read_data_valid, cfg.ext_read_received, cfg.ext_register_number, cfg.ext_write_byte_enable, cfg.ext_write_data, cfg.ext_write_received, cfg.fc_cpld, cfg.fc_cplh, cfg.fc_npd, cfg.fc_nph, cfg.fc_pd, cfg.fc_ph, cfg.fc_sel, cfg.flr_done, cfg.flr_in_process, cfg.function_power_state, cfg.function_status, cfg.hot_reset_in, cfg.hot_reset_out, cfg.interrupt_int, cfg.interrupt_msix_address, cfg.interrupt_msix_data, cfg.interrupt_msix_enable, cfg.interrupt_msix_fail, cfg.interrupt_msix_int, cfg.interrupt_msix_mask, cfg.interrupt_msix_sent, cfg.interrupt_msix_vf_enable, cfg.interrupt_msix_vf_mask, cfg.interrupt_pending, cfg.interrupt_sent, cfg.link_power_state, cfg.link_training_enable, cfg.ltr_enable, cfg.ltssm_state, cfg.max_payload, cfg.max_read_req, cfg.mgmt_addr, cfg.mgmt_byte_enable, cfg.mgmt_read, cfg.mgmt_read_data, cfg.mgmt_read_write_done, cfg.mgmt_write, cfg.mgmt_write_data, cfg.msg_received, cfg.msg_received_data, cfg.msg_received_type, cfg.msg_transmit, cfg.msg_transmit_data, cfg.msg_transmit_done, cfg.msg_transmit_type, cfg.negotiated_width, cfg.obff_enable, cfg.per_func_status_control, cfg.per_func_status_data, cfg.per_function_number, cfg.per_function_output_request, cfg.per_function_update_done, cfg.phy_link_down, cfg.phy_link_status, cfg.pl_status_change, cfg.power_state_change_ack, cfg.power_state_change_interrupt, cfg.rcb_status, cfg.subsys_vend_id, cfg.tph_requester_enable, cfg.tph_st_mode, cfg.vf_flr_done, cfg.vf_flr_in_process, cfg.vf_power_state, cfg.vf_status, cfg.vf_tph_requester_enable, cfg.vf_tph_st_mode, cfg_mgmt_type1.cfg_reg_access, cfg_req_pm_transition.l23_ready, common.commands_in, common.commands_out, m_axis_cq.tdata, m_axis_cq.tkeep, m_axis_cq.tlast, m_axis_cq.tready, m_axis_cq.tuser, m_axis_cq.tvalid, m_axis_rc.tdata, m_axis_rc.tkeep, m_axis_rc.tlast, m_axis_rc.tready, m_axis_rc.tuser, m_axis_rc.tvalid, pci_exp.rxn, pci_exp.rxp, pci_exp.txn, pci_exp.txp, pcie.cq_np_req, pcie.cq_np_req_count, pcie.rq_seq_num, pcie.rq_seq_num_vld, pcie.rq_tag, pcie.rq_tag_vld, pcie.tfc_npd_av, pcie.tfc_nph_av, pipe.dclk_in, pipe.mmcm_lock_in, pipe.mmcm_rst_n, pipe.oobclk_in, pipe.pclk_in, pipe.pclk_sel_out, pipe.rx_0_sigs, pipe.rx_1_sigs, pipe.rx_2_sigs, pipe.rx_3_sigs, pipe.rx_4_sigs, pipe.rx_5_sigs, pipe.rx_6_sigs, pipe.rx_7_sigs, pipe.rxoutclk_in, pipe.rxoutclk_out, pipe.rxusrclk_in, pipe.tx_0_sigs, pipe.tx_1_sigs, pipe.tx_2_sigs, pipe.tx_3_sigs, pipe.tx_4_sigs, pipe.tx_5_sigs, pipe.tx_6_sigs, pipe.tx_7_sigs, pipe.txoutclk_out, pipe_gen3.out, pipe_userclk1.in, pipe_userclk2.in, s_axis_cc.tdata, s_axis_cc.tkeep, s_axis_cc.tlast, s_axis_cc.tready, s_axis_cc.tuser, s_axis_cc.tvalid, s_axis_rq.tdata, s_axis_rq.tkeep, s_axis_rq.tlast, s_axis_rq.tready, s_axis_rq.tuser, s_axis_rq.tvalid, user.app_rdy, user.lnk_up);
 endmodule

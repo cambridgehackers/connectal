@@ -38,8 +38,9 @@ set -e
    -f \
    cfg_mgmt_type1 \
    -f \
-   cfg_req_pm_transition_l23 \
+   cfg_req_pm_transition \
    -f pci_exp \
+   -f pipe \
    -o \
    ../xilinx/PCIEWRAPPER3.bsv \
    ../../out/netfpgasume/pcie3_7x_0/pcie3_7x_0_stub.v
