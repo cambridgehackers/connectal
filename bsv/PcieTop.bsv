@@ -66,13 +66,8 @@ import HostInterface    :: *;
 
 typedef `PinType PinType;
 
-`ifndef BSIM
 (* synthesize, no_default_clock, no_default_reset *)
-`endif
-`ifdef BSIM
-module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n) (PcieTop#(PinType));
-   PcieHostTop host <- mkPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n);
-`elsif XILINX
+`ifdef XILINX
 module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n) (PcieTop#(PinType));
    PcieHostTop host <- mkPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n);
 `elsif ALTERA
@@ -121,9 +116,7 @@ module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (P
       host.tpciehost.interruptRequest.put(tuple2({msixEntry.addr_hi, msixEntry.addr_lo}, msixEntry.msg_data));
    endrule
 
-`ifndef BSIM
    interface pcie = host.tep7.pcie;
    interface pins = portalTop.pins;
-`endif
 endmodule
 
