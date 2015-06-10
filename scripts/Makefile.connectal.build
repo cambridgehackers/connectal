@@ -178,7 +178,7 @@ else ifneq ($(XILINX),)
 	$(Q)[ ! -f bin/ubuntu.exe ] || objcopy --remove-section fpgadata bin/ubuntu.exe
 	$(Q)[ ! -f bin/ubuntu.exe ] || objcopy --add-section fpgadata=bin/mkTop.bin.gz bin/ubuntu.exe
 	if [ -f Impl/TopDown/top-post-route.dcp ]; then cp -f Impl/TopDown/top-post-route.dcp bin; fi
-	$(CONNECTALDIR)/scripts/check-timing.py bin/top-post-route-timing-summary.rpt
+	$(CONNECTALDIR)/scripts/check-timing.py bin/*/top-post-route-timing-summary.rpt
 else
 	@echo "not zipping xilinx"
 endif
