@@ -192,6 +192,7 @@ NEED_ALTERA_PCIE_htg4=1
 
 NEED_ALTERA_ETH_de5=1
 NEED_ALTERA_ETH_htg4=1
+QUARTUS_SH=$(shell which quartus_sh)
 
 ifeq ($(NEED_XILINX_PCIE_$(BOARD)),1)
     FPGAMAKE_CONNECTALFLAGS += -P mkPcieEndpointX7 -P mkPcieHost
@@ -289,13 +290,15 @@ ifneq ($(NEED_XILINX_PCIE_$(BOARD)),)
 	cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) vivado -notrace -mode batch -source $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
 endif
 
+ifneq (, $(QUARTUS_SH))
 # Synthesis Altera PCIe Core and PLL
 ifeq ($(NEED_ALTERA_PCIE_$(BOARD)),1)
-	cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) quartus_sh -t $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
+	cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) $(QUARTUS_SH) -t $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
 endif
 
 # Synthesize Altera Ethernet Core
 ifeq ($(NEED_ALTERA_ETH_$(BOARD)), 1)
-	cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) quartus_sh -t $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-eth.tcl
+	cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) $(QUARTUS_SH) -t $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-eth.tcl
+endif
 endif
 
