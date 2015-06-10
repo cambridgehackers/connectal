@@ -65,7 +65,7 @@
    pipe
    -o
    ../xilinx/PCIEWRAPPER3.bsv
-   ../../out/netfpgasume/pcie3_7x_0/pcie3_7x_0_stub.v
+   ../../out/nfsume/pcie3_7x_0/pcie3_7x_0_stub.v
 */
 
 import Clocks::*;

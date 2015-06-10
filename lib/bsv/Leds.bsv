@@ -34,7 +34,7 @@ typedef 4 LedsWidth;
 `ifdef BOARD_zc706
 typedef 4 LedsWidth;
 `else
-`ifdef BOARD_netfpgasume
+`ifdef BOARD_nfsume
 typedef 2 LedsWidth;
 `else
 typedef 8 LedsWidth;

@@ -91,7 +91,7 @@ typedef struct {
 typedef 8 PcieLanes;
 typedef 8 NumLeds;
 `endif
-`ifdef BOARD_netfpgasume
+`ifdef BOARD_nfsume
 typedef 8 PcieLanes;
 typedef 2 NumLeds;
 `endif

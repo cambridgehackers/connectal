@@ -80,7 +80,7 @@ typedef 8 PcieLanes;
 `ifdef BOARD_kc160g2
 typedef 8 PcieLanes;
 `endif
-`ifdef BOARD_netfpgasume
+`ifdef BOARD_nfsume
 typedef 8 PcieLanes;
 `endif
 

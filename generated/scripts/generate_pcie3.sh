@@ -43,7 +43,7 @@ set -e
    -f pipe \
    -o \
    ../xilinx/PCIEWRAPPER3.bsv \
-   ../../out/netfpgasume/pcie3_7x_0/pcie3_7x_0_stub.v
+   ../../out/nfsume/pcie3_7x_0/pcie3_7x_0_stub.v
 
 # remove junk emitted into "import BVI ="
 sed -i 's/(pci_exp_txn,//' PCIEWRAPPER3.bsv
