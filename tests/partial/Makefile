@@ -6,7 +6,8 @@ BSVFILES = Echo.bsv
 CPPFILES= testecho.cpp
 NUMBER_OF_MASTERS =0
 
-CONNECTALFLAGS += -P mkBounce1 --floorplan=floorplan.xdc -DRedefInstance=Bounce1
+VARIANT?=1
+CONNECTALFLAGS += -P mkBounce --floorplan=floorplan.xdc -DRedefInstance=Bounce$(VARIANT)
 
 partial:
 	make gen.zc702

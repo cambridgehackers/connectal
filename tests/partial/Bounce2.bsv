@@ -29,7 +29,21 @@ module mkBounce(Bounce);
     FIFOF#(EchoPair) delay2 <- mkSizedFIFOF(8);
 
     interface outDelay = toPipeOut(delay);
-    interface inDelay = toPipeIn(delay);
+    interface PipeIn inDelay;
+        method Action enq(Bit#(32) v);
+            delay.enq(v + 32);
+        endmethod
+        method Bool notFull();
+            return delay.notFull;
+        endmethod
+    endinterface
     interface outPair = toPipeOut(delay2);
-    interface inPair = toPipeIn(delay2);
+    interface PipeIn inPair;
+        method Action enq(EchoPair v);
+            delay2.enq(EchoPair {b:v.a, a:v.b});
+        endmethod
+        method Bool notFull();
+            return delay2.notFull;
+        endmethod
+    endinterface
 endmodule
