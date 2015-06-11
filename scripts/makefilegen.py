@@ -39,7 +39,7 @@ argparser.add_argument('bsvfile', help='BSV files to parse', nargs='+')
 argparser.add_argument('-B', '--board', default='zc702', help='Target Board for compilation')
 argparser.add_argument('-O', '--OS', default=None, choices=supported_os, help='Target operating system')
 argparser.add_argument('-interfaces', '--interfaces', help='BSV interface', action='append')
-argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps project directory')
+argparser.add_argument(      '--project-dir', default='./xpsproj', help='xps project directory')
 argparser.add_argument(      '--pinfo', default=None, help='Project description file (json)')
 argparser.add_argument(      '--protobuf', default=[], help='Interface description in protobuf', action='append')
 argparser.add_argument('-s', '--source', help='C++ source files', action='append')
@@ -138,6 +138,7 @@ CONNECTALDIR=%(connectaldir)s
 BSVPATH = %(bsvpath)s
 
 BOARD=%(boardname)s
+PROJECTDIR=%(project_dir)s
 MKTOP=%(topbsvmod)s
 OS=%(OS)s
 DUT=%(dut)s
