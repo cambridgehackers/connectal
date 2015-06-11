@@ -20,7 +20,8 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-import Bounce1::*;
+import Bounce::*;
+import `RedefInstance::*;
 import Pipe::*;
 
 interface EchoIndication;
@@ -39,7 +40,7 @@ interface Echo;
 endinterface
 
 module mkEcho#(EchoIndication indication)(Echo);
-    Bounce bounce <- mkBounce1();
+    Bounce bounce <- mkBounce();
 
     rule heard;
         bounce.outDelay.deq();

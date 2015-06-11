@@ -6,7 +6,7 @@ BSVFILES = Echo.bsv
 CPPFILES= testecho.cpp
 NUMBER_OF_MASTERS =0
 
-CONNECTALFLAGS += -P mkBounce1 --floorplan=floorplan.xdc
+CONNECTALFLAGS += -P mkBounce1 --floorplan=floorplan.xdc -DRedefInstance=Bounce1
 
 include $(CONNECTALDIR)/Makefile.connectal
 
