@@ -19,17 +19,15 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-import FIFOF::*;
 import Pipe::*;
-import Bounce::*;
+typedef struct {
+	Bit#(16) a;
+	Bit#(16) b;
+} EchoPair deriving (Bits);
 
-(* synthesize *)
-module mkBounce(Bounce);
-    FIFOF#(Bit#(32)) delay <- mkSizedFIFOF(8);
-    FIFOF#(EchoPair) delay2 <- mkSizedFIFOF(8);
-
-    interface outDelay = toPipeOut(delay);
-    interface inDelay = toPipeIn(delay);
-    interface outPair = toPipeOut(delay2);
-    interface inPair = toPipeIn(delay2);
-endmodule
+interface Bounce;
+    interface PipeOut#(Bit#(32)) outDelay;
+    interface PipeIn#(Bit#(32))  inDelay;
+    interface PipeOut#(EchoPair) outPair;
+    interface PipeIn#(EchoPair)  inPair;
+endinterface

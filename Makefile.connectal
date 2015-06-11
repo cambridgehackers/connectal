@@ -45,6 +45,9 @@ exe.%:
 build.%: gen.%
 	make -C $* BOARD=$* --no-print-directory all
 
+verilog.%: gen.%
+	make -C $* BOARD=$* --no-print-directory verilog
+
 run.%:
 	make -C $* BOARD=$* --no-print-directory run
 

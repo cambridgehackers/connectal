@@ -103,7 +103,7 @@ static irqreturn_t portal_isr(int irq, void *dev_id)
         struct portal_data *portal_data = (struct portal_data *)dev_id;
         irqreturn_t rc = IRQ_NONE;
 
-        //driver_devel("%s %s %d\n", __func__, portal_data->misc.name, irq);
+        //driver_devel("%s %s %d %p\n", __func__, portal_data->misc.name, irq, dev_id);
         if (portal_data->name[0]
          && readl((void *)(STATUS_OFFSET + (unsigned long) portal_data->map_base))) {
                 inttime.msb = readl(DIRECTORY_VIRT + MSB_OFFSET);
@@ -380,12 +380,12 @@ static void connectal_work_handler(struct work_struct *__xxx)
 	  num_tiles = readl(portal_data->map_base+NUM_TILES_OFFSET);
       } else {
 	if(num_portals != readl(portal_data->map_base+NUM_PORTALS_OFFSET))
-	  ; // warn??
+	  driver_devel("%s: num_portals mismatch. Expected %d read %d\n", __func__, num_portals, readl(portal_data->map_base+NUM_PORTALS_OFFSET));;
 	if(num_tiles   != readl(portal_data->map_base+NUM_TILES_OFFSET))
-	  ; // warn??
+	  driver_devel("%s: num_tiles mismatch. Expected %d read %d\n", __func__, num_tiles, readl(portal_data->map_base+NUM_TILES_OFFSET));;
       }
       sprintf(portal_data->name, "portal_%d_%d", t, readl(portal_data->map_base+IID_OFFSET));
-      driver_devel("%s: fpn=%08x top=%d name=%s\n", __func__, fpn, fpn==num_portals, portal_data->misc.name);
+      driver_devel("%s: t=%d fpn=%08x top=%d name=%s\n", __func__, t, fpn, fpn==num_portals, portal_data->misc.name);
       portal_data->misc.minor = MISC_DYNAMIC_MINOR;
       rc = misc_register( &portal_data->misc);
       driver_devel("%s: rc=%d minor=%d\n", __func__, rc, portal_data->misc.minor);
