@@ -118,7 +118,9 @@ interface PcieHost#(numeric type dsz, numeric type nSlaves);
 `ifdef PCIE_BSCAN
    interface BscanTop bscanif;
 `else
+`ifdef PCIE_TRACE_PORT
    interface BRAMServer#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) traceBramServer;
+`endif
 `endif
 endinterface
 

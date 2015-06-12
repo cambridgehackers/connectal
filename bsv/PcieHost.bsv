@@ -130,7 +130,9 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
 `ifdef PCIE_BSCAN
    interface BscanTop bscanif = lbscan.loc[0];
 `else
+`ifdef PCIE_TRACE_PORT
    interface BRAMServer traceBramServer = traceif.tlpdata.bscanBramServer;
+`endif
 `endif
 endmodule: mkPcieHost
 
