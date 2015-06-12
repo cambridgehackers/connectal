@@ -71,6 +71,14 @@ BSC_CXXFLAGS= -I $(CONNECTALDIR)/cpp -I $(CONNECTALDIR) -D BSIM
 BSIM_CXX_COMMON = $(CONNECTALDIR)/cpp/BsimCtrl.cpp $(CONNECTALDIR)/cpp/TlpReplay.cpp $(CONNECTALDIR)/cpp/BsimDma.cpp $(CONNECTALDIR)/cpp/sock_utils.c
 BSIM_CXX_LOCAL = $(DTOP)/jni/BsimCtrl.cpp $(DTOP)/jni/TlpReplay.cpp $(DTOP)/jni/BsimDma.cpp $(DTOP)/jni/sock_utils.c $(DTOP)/jni/portalPrintf.c
 
+ifneq ($(ALTERA),)
+BLUESPEC_VERILOG+=$(BLUESPECDIR)/lib/Verilog.Quartus
+endif
+ifneq ($(XILINX),)
+BLUESPEC_VERILOG+=$(BLUESPECDIR)/lib/Verilog.Vivado
+endif
+BLUESPEC_VERILOG+=$(BLUESPECDIR)/lib/Verilog
+
 VIVADO=$(shell which vivado)
 ifneq ($(VIVADO), )
 export VIVADODIR=$(shell dirname $(shell dirname $(VIVADO))))
