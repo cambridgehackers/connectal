@@ -50,7 +50,9 @@ interface TlpTraceData;
    interface Reg#(Bit#(TlpTraceAddrSize)) tlpTraceLimit;
    interface Reg#(Bit#(TlpTraceAddrSize)) pcieTraceBramWrAddr;
    interface BRAMServer#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) bramServer;
+`ifdef PCIE_BSCAN
    interface BRAMServer#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) bscanBramServer;
+`endif
 endinterface
 interface PcieTracer;
    interface Client#(TLPData#(16), TLPData#(16)) pci;
@@ -72,19 +74,24 @@ module mkPcieTracer(PcieTracer);
    BRAM_Configure bramCfg = defaultValue;
    bramCfg.memorySize = memorySize;
    bramCfg.latency = 1;
+`ifdef PCIE_BSCAN
    BRAM2Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) fromPcieTraceBram <- mkBRAM2Server(bramCfg);
    BRAM2Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) toPcieTraceBram <- mkBRAM2Server(bramCfg);
+`else
+   BRAM1Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) fromPcieTraceBram <- mkBRAM1Server(bramCfg);
+   BRAM1Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) toPcieTraceBram <- mkBRAM1Server(bramCfg);
+`endif
    Vector#(2, BRAMServer#(Bit#(TlpTraceAddrSize), TimestampedTlpData)) bramServers;
    bramServers[0] = fromPcieTraceBram.portA;
    bramServers[1] =   toPcieTraceBram.portA;
    BramServerMux#(TAdd#(TlpTraceAddrSize,1), TimestampedTlpData) bramMuxReg <- mkBramServerMux(bramServers);
 
-//`ifndef BSIM ????? jca
+`ifdef PCIE_BSCAN
    Vector#(2, BRAMServer#(Bit#(TlpTraceAddrSize), TimestampedTlpData)) bscanBramServers;
    bscanBramServers[0] = fromPcieTraceBram.portB;
    bscanBramServers[1] =   toPcieTraceBram.portB;
    BramServerMux#(TAdd#(TlpTraceAddrSize,1), TimestampedTlpData) bscanBramMux <- mkBramServerMux(bscanBramServers);
-//`endif
+`endif
 
    Reg#(Bit#(32)) timestamp <- mkReg(0);
    rule incTimestamp;
@@ -185,6 +192,8 @@ module mkPcieTracer(PcieTracer);
 	 method Action _write(Bit#(TlpTraceAddrSize) v); pcieTraceBramWrAddrFifo.enq(v); endmethod
       endinterface
       interface Server bramServer = bramMuxReg.bramServer;
+`ifdef PCIE_BSCAN
       interface Server bscanBramServer = bscanBramMux.bramServer;
+`endif
    endinterface
 endmodule: mkPcieTracer
