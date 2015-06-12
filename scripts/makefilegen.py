@@ -320,7 +320,6 @@ if __name__=='__main__':
 
     bsvdefines += ['BOARD_'+boardname]
 
-    options.verilog.append(os.path.join(connectaldir, 'verilog'))
 
     # bsvdefines is a list of definitions, not a dictionary, so need to include the "=1"
     if 'ALTERA=1' in bsvdefines:
@@ -334,6 +333,9 @@ if __name__=='__main__':
         suffix = None
 
     print 'fpga_vendor', fpga_vendor
+    if fpga_vendor:
+        options.verilog.append(os.path.join(connectaldir, 'verilog', fpga_vendor))
+    options.verilog.append(os.path.join(connectaldir, 'verilog'))
 
     if noisyFlag:
         pprint.pprint(options.__dict__)
