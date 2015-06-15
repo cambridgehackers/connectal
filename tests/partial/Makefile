@@ -11,11 +11,9 @@ CONNECTALFLAGS += -P mkBounce --floorplan=floorplan.xdc -DRedefInstance=Bounce$(
 
 partial.%:
 	VARIANT=2 BOARD=$* make verilog.variant2
-	make -C variant2 fpgamake.mk
-	make -C variant2 -f fpgamake.mk Synth/mkBounce/mkBounce-synth.dcp
+	make -C variant2 synth.mkBounce
 	make verilog.$*
-	make -C $* fpgamake.mk
-	make -C $* -f fpgamake.mk Synth/mkBounce/mkBounce-synth.dcp Synth/mkZynqTop/mkZynqTop-synth.dcp
+	make -C $* synth.mkBounce synth.mkZynqTop
 	vivado -mode batch -source reconf.tcl
 
 include $(CONNECTALDIR)/Makefile.connectal
