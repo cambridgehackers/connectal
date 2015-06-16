@@ -87,7 +87,7 @@ ifndef MAIN_CLOCK_PERIOD
     MAIN_CLOCK_PERIOD=8
     DEFAULT_DERIVED_CLOCK_PERIOD=4
     endif
-    ifeq ($(BOARD),netfpga-sume)
+    ifeq ($(BOARD),nfsume)
     PCIE_CLOCK_PERIOD?=8
     MAIN_CLOCK_PERIOD=8
     DEFAULT_DERIVED_CLOCK_PERIOD=4
