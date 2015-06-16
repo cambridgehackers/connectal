@@ -46,6 +46,7 @@ module mkTagGen(TagGen#(numTags))
    BRAM_Configure cfg = defaultValue;
    cfg.outFIFODepth = 1;
    BRAM2Port#(Bit#(tsz),Bool) tags <- mkBRAM2Server(cfg);
+   Reg#(Bool)              notFull <- mkReg(False);
    Reg#(Bit#(tsz))        head_ptr <- mkReg(0);
    Reg#(Bit#(tsz))        tail_ptr <- mkReg(0);
    Reg#(Bool)               inited <- mkReg(False);
@@ -53,6 +54,7 @@ module mkTagGen(TagGen#(numTags))
    Reg#(Bit#(numTags))  comp_state <- mkReg(0);
    
    let retFifo <- mkFIFO;
+   let tagFifo <- mkFIFO;
 
    rule complete_rule0 (comp_state[0] != 0);
       tags.portB.request.put(BRAMRequest{write:False, address:tail_ptr, datain: ?, responseOnWrite: ?});
@@ -79,12 +81,19 @@ module mkTagGen(TagGen#(numTags))
       tags.portA.request.put(BRAMRequest{write:True,address:head_ptr,responseOnWrite:False,datain:False});
       head_ptr <= head_ptr+1;
       inited <= head_ptr+1==0;
+      notFull <= head_ptr+1==0;
    endrule
    
-   method ActionValue#(Bit#(tsz)) getTag() if (inited && (head_ptr+1 != tail_ptr));
+   rule tag if (notFull);
       tags.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:head_ptr, datain:True});
       head_ptr <= head_ptr+1;
-      return head_ptr;
+      notFull <= (head_ptr+2 != tail_ptr);
+      tagFifo.enq(head_ptr);
+   endrule
+
+   method ActionValue#(Bit#(tsz)) getTag();
+      let tag <- toGet(tagFifo).get();
+      return tag;
    endmethod
 
    method Action returnTag(Bit#(tsz) tag) if (inited);
