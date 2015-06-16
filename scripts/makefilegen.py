@@ -110,9 +110,13 @@ foreach {pat} {CLK_GATE_hdmi_clock_if CLK_*deleteme_unused_clock* CLK_GATE_*dele
 '''
 
 fpgamakeRuleTemplate='''
+VERILOG_PATH=verilog %(verilog)s $(BLUESPEC_VERILOG)
 FPGAMAKE=$(CONNECTALDIR)/../fpgamake/fpgamake
 fpgamake.mk: $(VFILE) Makefile prepare_bin_target
-	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk --board=%(boardname)s --part=%(partname)s %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s %(qsf)s %(chipscope)s -t $(MKTOP) %(FPGAMAKE_DEFINE)s %(cachedir)s -b hw/mkTop.bit verilog %(verilog)s $(BLUESPEC_VERILOG)
+	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk --board=%(boardname)s --part=%(partname)s %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s %(qsf)s %(chipscope)s -t $(MKTOP) %(FPGAMAKE_DEFINE)s %(cachedir)s -b hw/mkTop.bit $(VERILOG_PATH)
+
+synth.%%:fpgamake.mk
+	make -f fpgamake.mk Synth/$*/$*-synth.dcp
 
 hw/mkTop.bit: prepare_bin_target %(genxdc_dep)s fpgamake.mk
 	$(Q)mkdir -p hw
