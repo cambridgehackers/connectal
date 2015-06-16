@@ -190,7 +190,11 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys
    Clock pcieClock_ = ep7.epPcieClock;
    Reset pcieReset_ = ep7.epPcieReset;
    PcieHost#(DataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(
+`ifdef PCIE3
+         PciId{ bus:  1, dev: 1, func: 0}, //FIXME!
+`else
          PciId{ bus:  ep7.cfg.bus_number(), dev: ep7.cfg.device_number(), func: ep7.cfg.function_number()},
+`endif
          clocked_by pcieClock_, reset_by pcieReset_);
    mkConnection(ep7.tlp, pciehost.pci, clocked_by pcieClock_, reset_by pcieReset_);
    interface Clock tsys_clk_200mhz = sys_clk_200mhz;
