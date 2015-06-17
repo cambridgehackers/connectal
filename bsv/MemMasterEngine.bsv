@@ -297,7 +297,7 @@ module mkMemInterrupt#(PciId my_id)(MemInterrupt);
        tlp.hit = 7'h00;
        tlp.be = 16'hffff;
 
-       let interruptRequested = True;
+       let deqInterruptRequestFifo = False;
        let sendInterrupt = False;
 
        let interruptRequest = interruptRequestFifo.first;
@@ -306,11 +306,15 @@ module mkMemInterrupt#(PciId my_id)(MemInterrupt);
        let mswIsZero = interruptRequest.mswIsZero;
        let lswIsZero = interruptRequest.lswIsZero;
 
-       let quadWordAligned = isQuarWordAligned(truncate(interruptAddr));
+`ifdef AXI
+       let dataInSecondTlp = False;
+`elsif AVALON
+       let dataInSecondTlp = isQuarWordAligned(truncate(interruptAddr));
+`endif
 
        if (mswIsZero && lswIsZero) begin
 	  // do not write to 0 -- it wedges the host
-	  interruptRequested = False;
+	  deqInterruptRequestFifo = True;
        end
        else if (mswIsZero) begin
           TLPMemoryIO3DWHeader hdr_3dw = defaultValue();
@@ -329,16 +333,15 @@ module mkMemInterrupt#(PciId my_id)(MemInterrupt);
 `endif
 
 	  tlp.data = pack(hdr_3dw);
-`ifdef AXI
-	  tlp.eof = True;
-`elsif AVALON
-          tlp.eof = (!quadWordAligned) ? True : False;
-          if (quadWordAligned) begin
+          if (dataInSecondTlp) begin
+	     tlp.eof = False;
              interruptSecondHalf <= tagged Valid interruptData;
           end
-`endif
+	  else begin
+	     tlp.eof = True;
+	     deqInterruptRequestFifo = True;
+	  end
 	  sendInterrupt = True;
-	  interruptRequested = False;
        end
        else begin
 	  TLPMemory4DWHeader hdr_4dw = defaultValue;
@@ -357,7 +360,7 @@ module mkMemInterrupt#(PciId my_id)(MemInterrupt);
 	  interruptSecondHalf <= tagged Valid interruptData;
        end
 
-       if (!interruptRequested) begin
+       if (deqInterruptRequestFifo) begin
 	  interruptRequestFifo.deq();
        end
        if (sendInterrupt)
@@ -377,9 +380,7 @@ module mkMemInterrupt#(PciId my_id)(MemInterrupt);
 `endif
        tlpOutFifo.enq(tlp);
        interruptSecondHalf <= tagged Invalid;
-`ifdef AXI
        interruptRequestFifo.deq();
-`endif
     endrule
 
     interface Client        tlp;
