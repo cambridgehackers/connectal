@@ -76,7 +76,7 @@ module mkTagGen(TagGen#(numTags))
    
    // this used to be in the body of returnTag, but form some reason bsc does not
    // consider access to portA and portB to be conflict free **sigh** 
-   rule ret;
+   rule ret_rule;
       let tag <- toGet(retFifo).get;
       //tags.portB.request.put(BRAMRequest{write:True, responseOnWrite:False, address:tag, datain:False});
       //tags.upd(tag, False);
@@ -84,7 +84,7 @@ module mkTagGen(TagGen#(numTags))
       comp_state <= 1 | (comp_state << 1);
    endrule
 
-   rule init(!inited);
+   rule init_rule(!inited);
       //tags.portA.request.put(BRAMRequest{write:True,address:head_ptr,responseOnWrite:False,datain:False});
       //tags.upd(head_ptr, False);
       //Not needed: tags[head_ptr] <= False;
@@ -93,7 +93,7 @@ module mkTagGen(TagGen#(numTags))
       notFull <= head_ptr+1==0;
    endrule
    
-   rule tag if (notFull);
+   rule tag_rule if (notFull);
       //tags.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:head_ptr, datain:True});
       //tags.upd(head_ptr, True);
       tags[head_ptr] <= True;
