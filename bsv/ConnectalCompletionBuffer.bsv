@@ -29,6 +29,7 @@ import GetPut::*;
 import ClientServer::*;
 import Assert::*;
 import BRAM::*;
+import RegFile::*;
 
 // CONNECTAL Libraries
 import MemTypes::*;
@@ -45,7 +46,9 @@ module mkTagGen(TagGen#(numTags))
    
    BRAM_Configure cfg = defaultValue;
    cfg.outFIFODepth = 1;
-   BRAM2Port#(Bit#(tsz),Bool) tags <- mkBRAM2Server(cfg);
+   //BRAM2Port#(Bit#(tsz),Bool) tags <- mkBRAM2Server(cfg);
+   Vector#(numTags, Reg#(Bool)) tags <- replicateM(mkReg(False));
+   //RegFile#(Bit#(tsz),Bool)     tags <- mkRegFile(0, fromInteger(valueOf(numTags)-1));
    Reg#(Bool)              notFull <- mkReg(False);
    Reg#(Bit#(tsz))        head_ptr <- mkReg(0);
    Reg#(Bit#(tsz))        tail_ptr <- mkReg(0);
@@ -56,12 +59,14 @@ module mkTagGen(TagGen#(numTags))
    let retFifo <- mkFIFO;
    let tagFifo <- mkFIFO;
 
-   rule complete_rule0 (comp_state[0] != 0);
-      tags.portB.request.put(BRAMRequest{write:False, address:tail_ptr, datain: ?, responseOnWrite: ?});
-   endrule
+   //rule complete_rule0 (comp_state[0] != 0);
+      //tags.portB.request.put(BRAMRequest{write:False, address:tail_ptr, datain: ?, responseOnWrite: ?});
+   //endrule
 
    rule complete_rule1 (comp_state[0] != 0);
-      let rv <- tags.portB.response.get;
+      //let rv <- tags.portB.response.get;
+      //let rv = tags.sub(tail_ptr);
+      let rv = tags[tail_ptr];
       if (!rv) begin
 	 tail_ptr <= tail_ptr+1;
 	 comp_state <= comp_state >> 1;
@@ -73,19 +78,25 @@ module mkTagGen(TagGen#(numTags))
    // consider access to portA and portB to be conflict free **sigh** 
    rule ret;
       let tag <- toGet(retFifo).get;
-      tags.portB.request.put(BRAMRequest{write:True, responseOnWrite:False, address:tag, datain:False});
+      //tags.portB.request.put(BRAMRequest{write:True, responseOnWrite:False, address:tag, datain:False});
+      //tags.upd(tag, False);
+      tags[tag] <= False;
       comp_state <= 1 | (comp_state << 1);
    endrule
 
    rule init(!inited);
-      tags.portA.request.put(BRAMRequest{write:True,address:head_ptr,responseOnWrite:False,datain:False});
+      //tags.portA.request.put(BRAMRequest{write:True,address:head_ptr,responseOnWrite:False,datain:False});
+      //tags.upd(head_ptr, False);
+      //Not needed: tags[head_ptr] <= False;
       head_ptr <= head_ptr+1;
       inited <= head_ptr+1==0;
       notFull <= head_ptr+1==0;
    endrule
    
    rule tag if (notFull);
-      tags.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:head_ptr, datain:True});
+      //tags.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:head_ptr, datain:True});
+      //tags.upd(head_ptr, True);
+      tags[head_ptr] <= True;
       head_ptr <= head_ptr+1;
       notFull <= (head_ptr+2 != tail_ptr);
       tagFifo.enq(head_ptr);
