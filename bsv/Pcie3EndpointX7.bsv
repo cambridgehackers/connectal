@@ -90,53 +90,8 @@ typedef 2 NumLeds;
 module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
 
    PCIEParams params = defaultValue;
-
-   ////////////////////////////////////////////////////////////////////////////////
-   /// Design Elements
-   ////////////////////////////////////////////////////////////////////////////////
-   B2C1 b2c <- mkB2C1();
-   ClockGenerator7AdvParams   clockParams = defaultValue;
-   clockParams.bandwidth          = "OPTIMIZED";
-   clockParams.compensation       = "INTERNAL";
-   clockParams.clkfbout_mult_f    = 10.000;
-   clockParams.clkfbout_phase     = 0.0;
-   clockParams.clkin1_period      = 10.000;
-   clockParams.clkout0_divide_f   = 8.000;
-   clockParams.clkout0_duty_cycle = 0.5;
-   clockParams.clkout0_phase      = 0.0000;
-   clockParams.clkout1_divide     = 4;
-   clockParams.clkout1_duty_cycle = 0.5;
-   clockParams.clkout1_phase      = 0.0000;
-   clockParams.clkout2_divide     = 4;
-   clockParams.clkout2_duty_cycle = 0.5;
-   clockParams.clkout2_phase      = 0.0000;
-   clockParams.divclk_divide      = 1;
-   clockParams.ref_jitter1        = 0.010;
-   clockParams.clkin_buffer = False;
-   XClockGenerator7   clockGen <- mkClockGenerator7Adv(clockParams, clocked_by b2c.c);
-   C2B c2b_fb <- mkC2B(clockGen.clkfbout, clocked_by clockGen.clkfbout);
-   rule txoutrule5;
-      clockGen.clkfbin(c2b_fb.o());
-   endrule
-
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
-   Bufgctrl bbufc <- mkBufgctrl(clockGen.clkout0, defaultReset, clockGen.clkout1, defaultReset);
-   Reset rsto <- mkAsyncReset(2, defaultReset, bbufc.o);
-   Reg#(Bit#(1)) pclk_sel <- mkReg(0, clocked_by bbufc.o, reset_by rsto);
-   Reg#(Bit#(PcieLanes)) pclk_sel_reg1 <- mkReg(0, clocked_by bbufc.o, reset_by rsto);
-   Reg#(Bit#(PcieLanes)) pclk_sel_reg2 <- mkReg(0, clocked_by bbufc.o, reset_by rsto);
-
-   rule bufcruleinit;
-      bbufc.ce0(1);
-      bbufc.ce1(1);
-      bbufc.ignore0(0);
-      bbufc.ignore1(0);
-   endrule
-   rule bufcrule;
-      bbufc.s0(~pclk_sel);
-      bbufc.s1(pclk_sel);
-   endrule
 
    PcieWrap#(PcieLanes) pcie_ep <- mkPcieWrap(defaultClock, defaultReset);
 
@@ -146,9 +101,9 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    (* fire_when_enabled, no_implicit_conditions *)
    rule every1;
 //      pcie_ep.fc.sel(0 /*RECEIVE_BUFFER_AVAILABLE_SPACE*/);
-      pcie_ep.cfg.config_space_enable(1'b1);
-      pcie_ep.cfg.dsn({ 32'h0000_0001, {{ 8'h1 } , 24'h000A35 }});
-      pcie_ep.cfg.link_training_enable(1'b1);
+//      pcie_ep.cfg.config_space_enable(1'b1);
+//      pcie_ep.cfg.dsn({ 32'h0000_0001, {{ 8'h1 } , 24'h000A35 }});
+//      pcie_ep.cfg.link_training_enable(1'b1);
 //      pcie_ep.rx.np_ok(1);
 //      pcie_ep.rx.np_req(1);
 //      pcie_ep.tx.cfg_gnt(1);
@@ -158,9 +113,6 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
 //   rule every2;
 //      pcie_ep.pipe_mmcm_lock_in(pack(clockGen.locked));
 //   endrule
-//   rule every3;
-//      pclk_sel_reg1 <= pcie_ep.pipe_pclk_sel_out();
-//   endrule
 
 //   Clock txoutclk_buf <- mkClockBUFG(clocked_by pcie_ep.pipe_txoutclk_out);
 //
@@ -168,16 +120,6 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
 //   rule txoutrule;
 //      b2c.inputclock(c2b.o());
 //   endrule
-
-   rule update_psel;
-       let ps = pclk_sel;
-       pclk_sel_reg2 <= pclk_sel_reg1;
-       if ((~pclk_sel_reg2) == 0)
-           ps = 1;
-       else if (pclk_sel_reg2 == 0)
-           ps = 0;
-       pclk_sel <= ps;
-   endrule
 
 //   let txready = (pcie_ep.s_axis_tx.tready != 0 && fAxiTx.notEmpty);
 //
