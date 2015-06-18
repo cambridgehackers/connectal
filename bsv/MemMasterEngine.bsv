@@ -68,7 +68,7 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
    Reg#(Bool)                  readInProgress <- mkReg(False);
    Reg#(Bit#(7))               address <- mkReg(0);
 
-   function Bool isQuarWordAligned(Bit#(7) lower_addr);
+   function Bool isQuadWordAligned(Bit#(7) lower_addr);
       return (lower_addr[2:0]==3'b0);
    endfunction
 
@@ -81,7 +81,7 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
       dvec = completionMimo.first();
       completionMimo.deq(1);
 `elsif AVALON
-      let quadWordAligned = isQuarWordAligned(getLowerAddr(hdr.addr, hdr.firstbe));
+      let quadWordAligned = isQuadWordAligned(getLowerAddr(hdr.addr, hdr.firstbe));
       // if quad-word aligned, insert bubble.
       if (!quadWordAligned) begin
          dvec = completionMimo.first();
@@ -199,7 +199,7 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
 	    TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
 `ifdef AVALON
             // For Altera, the position of payload in a 3DW TLP depends on alignment.
-            let quadWordAligned = isQuarWordAligned(getLowerAddr(hdr_3dw.addr, hdr_3dw.firstbe));
+            let quadWordAligned = isQuadWordAligned(getLowerAddr(hdr_3dw.addr, hdr_3dw.firstbe));
 `endif
 	    if (tlp.sof && hdr_3dw.format == MEM_READ_3DW_NO_DATA) begin
 	       if (readHeaderFifo.notFull())
@@ -286,7 +286,7 @@ module mkMemInterrupt#(PciId my_id)(MemInterrupt);
     Reg#(TLPTag) tlpTag <- mkReg(0);
     FIFOF#(TLPData#(16)) tlpOutFifo <- mkSizedFIFOF(8);
 
-    function Bool isQuarWordAligned(Bit#(7) lower_addr);
+    function Bool isQuadWordAligned(Bit#(7) lower_addr);
        return (lower_addr[2:0]==3'b0);
     endfunction
 
@@ -309,7 +309,8 @@ module mkMemInterrupt#(PciId my_id)(MemInterrupt);
 `ifdef AXI
        let dataInSecondTlp = False;
 `elsif AVALON
-       let dataInSecondTlp = isQuarWordAligned(truncate(interruptAddr));
+       let quadWordAligned = isQuadWordAligned(truncate(interruptAddr));
+       let dataInSecondTlp = quadWordAligned;
 `endif
 
        if (mswIsZero && lswIsZero) begin
