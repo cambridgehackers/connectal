@@ -15,10 +15,10 @@ set_property CONFIG_VOLTAGE 1.8 [current_design]
 ######################################################################################################
 # PIN ASSIGNMENTS
 ######################################################################################################
-set_property LOC AR22 [get_ports { GPIO_leds[0] }]
-set_property LOC AR23 [get_ports { GPIO_leds[1] }]
-set_property LOC AB7  [get_ports { CLK_pci_sys_clk_p }]
+set_property LOC AR22 [get_ports { leds_leds[0] }]
+set_property LOC AR23 [get_ports { leds_leds[1] }]
 set_property LOC AB7  [get_ports { CLK_pci_sys_clk_n }]
+set_property LOC AB8  [get_ports { CLK_pci_sys_clk_p }]
 set_property LOC AY35 [get_ports { RST_N_pci_sys_reset_n }]
 set_property LOC H19  [get_ports { CLK_sys_clk_p }]
 set_property LOC G18  [get_ports { CLK_sys_clk_n }]
@@ -62,7 +62,7 @@ set_property LOC G18  [get_ports { CLK_sys_clk_n }]
 ######################################################################################################
 # I/O STANDARDS
 ######################################################################################################
-set_property IOSTANDARD LVCMOS15    [get_ports { GPIO_leds[*] }]
+set_property IOSTANDARD LVCMOS15    [get_ports { leds_leds[*] }]
 set_property IOSTANDARD DIFF_SSTL15 [get_ports { CLK_sys_clk_* }]
 set_property IOSTANDARD LVCMOS15    [get_ports { RST_N_pci_sys_reset_n }]
 set_property PULLUP     true        [get_ports { RST_N_pci_sys_reset_n }]
@@ -80,7 +80,7 @@ set_property PULLUP     true        [get_ports { RST_N_pci_sys_reset_n }]
 # Please refer to the Virtex-7 GT Transceiver User Guide
 # (UG) for guidelines regarding clock resource selection.
 #
-set_property LOC IBUFDS_GTE2_X1Y5 [get_cells { *pci_clk_100mhz_buf }]
+#set_property LOC IBUFDS_GTE2_X1Y5 [get_cells { *pci_clk_100mhz_buf }]
 
 #set_property LOC bogus [get_cells -hier -filter { NAME =~ */ext_clk.pipe_clock_i/mmcm_i }]
 #set_property LOC bogus [get_cells -hier -filter { NAME =~ *clkgen_pll }]
@@ -89,7 +89,7 @@ set_property LOC IBUFDS_GTE2_X1Y5 [get_cells { *pci_clk_100mhz_buf }]
 ######################################################################################################
 # TIMING CONSTRAINTS
 ######################################################################################################
- 
+
 create_clock -name bscan_refclk -period 20 [get_pins host_pciehost_bscan_bscan/TCK]
 create_clock -name pci_refclk -period 10 [get_pins *pci_clk_100mhz_buf/O]
 
