@@ -76,7 +76,6 @@ interface PcieEndpointS5#(numeric type lanes);
    interface Server#(TLPData#(16), TLPData#(16)) tlp;
 `ifdef VSIM
    interface PcieHipPipe pipe;
-   interface PcieHipCtrl ctrl;
 `endif
    interface Clock epPcieClock;
    interface Reset epPcieReset;
@@ -208,6 +207,10 @@ module mkPcieEndpointS5#(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieE
       //pcie_ep.hip_rst.core_ready(pcie_ep.hip_rst.serdes_pll_locked);
    endrule
 
+   rule every1;
+      pcie_ep.hip_ctrl.test_in({26'h2, 1'b1, 5'b01000});
+   endrule
+
    rule capture_deviceid(pcie_ep.tl_cfg.add == 4'hF);
       deviceReg <= PciId {bus: pcie_ep.tl_cfg.ctl[12:5],
                           dev: pcie_ep.tl_cfg.ctl[4:0],
@@ -267,6 +270,7 @@ module mkPcieEndpointS5#(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieE
       endmethod
    endinterface
 
+
    interface tlp = tlp16;
    interface Clock epPcieClock = core_clk;
    interface Reset epPcieReset = core_resetn;
@@ -278,7 +282,6 @@ module mkPcieEndpointS5#(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieE
 
 `ifdef VSIM
    interface pipe = pcie_ep.hip_pipe;
-   interface ctrl = pcie_ep.hip_ctrl;
 `endif
 
 endmodule: mkPcieEndpointS5

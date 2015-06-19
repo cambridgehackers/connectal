@@ -92,15 +92,17 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
            tlp = sEngine[i - portAxi].tlp;
            slavearr[i - portAxi] = sEngine[i - portAxi].slave;
        end
-       else begin
-           mvec[i] <- mkMemMasterEngine(my_pciId);
-           tlp = mvec[i].tlp;
-       end
-       mkConnection((interface Server;
-                        interface response = dispatcher.out[i];
-                        interface request = arbiter.in[i];
-                     endinterface), tlp);
+//       else begin
+//           mvec[i] <- mkMemMasterEngine(my_pciId);
+//           tlp = mvec[i].tlpr;
+//       end
+//       mkConnection((interface Server;
+//                        interface response = dispatcher.out[i];
+//                        interface request = arbiter.in[i];
+//                     endinterface), tlp);
    end
+
+   MemMasterEngine mm <- mkMemMasterEngine(PciId{bus:0, dev:0, func:0});
 
    PcieTracer  traceif <- mkPcieTracer();
    mkConnection(traceif.bus, (interface Client;
@@ -120,13 +122,15 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
 `endif
 
    PcieControlAndStatusRegs csr <- mkPcieControlAndStatusRegs(traceif.tlpdata);
-   mkConnection(mvec[portConfig].master, csr.memSlave);
+   mkConnection(mm.master, csr.memSlave);
+   //mkConnection(mvec[portConfig].master, csr.memSlave);
 
    interface msixEntry = csr.msixEntry;
-   interface master = mvec[portPortal].master;
+   //interface master = mvec[portPortal].master;
    interface slave = slavearr;
    interface interruptRequest = intr.interruptRequest;
-   interface pci = traceif.pci;
+   //interface pci = traceif.pci;
+   interface pcir = mm.tlp;
 `ifdef PCIE_BSCAN
    interface BscanTop bscanif = lbscan.loc[0];
 `else
@@ -196,7 +200,9 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys
          PciId{ bus:  ep7.cfg.bus_number(), dev: ep7.cfg.device_number(), func: ep7.cfg.function_number()},
 `endif
          clocked_by pcieClock_, reset_by pcieReset_);
-   mkConnection(ep7.tlp, pciehost.pci, clocked_by pcieClock_, reset_by pcieReset_);
+   mkConnection(ep7.tlpr, pciehost.pcir, clocked_by pcieClock_, reset_by pcieReset_);
+   mkConnection(ep7.tlpc, pciehost.pcic, clocked_by pcieClock_, reset_by pcieReset_);
+
    interface Clock tsys_clk_200mhz = sys_clk_200mhz;
    interface Clock tsys_clk_200mhz_buf = sys_clk_200mhz_buf;
    interface Clock tpci_clk_100mhz_buf = pci_clk_100mhz_buf;
