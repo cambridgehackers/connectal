@@ -76,11 +76,11 @@ module mkMemWriterPipe#(Reg#(SGLId) ptrReg,
    provisos (Bits#(dtype, dsz),
 	     Add#(a__, addrsz, MemOffsetSize));
 
-   FIFO#(MemRequest)              writeReqFifo <- mkFIFO();
-   FIFOF#(MemData#(dsz)) writeDataFifo <- mkSizedFIFOF(8);
-   FIFO#(Bit#(MemTagSize))       writeDoneFifo <- mkFIFO();
-   FIFOF#(Bool)                       lastFifo <- mkFIFOF();
-   FIFOF#(Bool)                       doneFifo <- mkFIFOF();
+   FIFO#(MemRequest)              writeReqFifo <- mkSizedFIFO(4);
+   FIFOF#(MemData#(dsz)) writeDataFifo <- mkSizedFIFOF(4);
+   FIFO#(Bit#(MemTagSize))       writeDoneFifo <- mkSizedFIFO(32);
+   FIFOF#(Bool)                       lastFifo <- mkSizedFIFOF(4);
+   FIFOF#(Bool)                       doneFifo <- mkSizedFIFOF(4);
 
    Reg#(Bit#(32)) wrrCount <- mkReg(0);
    Reg#(Bit#(32)) wdoneCount <- mkReg(0);
@@ -88,7 +88,7 @@ module mkMemWriterPipe#(Reg#(SGLId) ptrReg,
       let offset <- toGet(addrIterator.pipe).get();
       let tag = 22;
       wrrCount <= wrrCount + 1;
-      //$display("writeReqRule: offset=%h addrIterator.isLast %d wrr %d", offset, addrIterator.isLast(), wrrCount);
+      $display("writeReqRule: offset=%h burstLen=%d addrIterator.isLast %d wrr %d", offset, burstLen, addrIterator.isLast(), wrrCount);
       writeReqFifo.enq(MemRequest { sglId: ptrReg, offset: extend(offset), burstLen: burstLen, tag: tag });
       lastFifo.enq(addrIterator.isLast());
    endrule

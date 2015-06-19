@@ -33,6 +33,13 @@ import ClientServer :: *;
 import MemTypes     :: *;
 import Probe        :: *;
 
+typedef struct {
+   TLPData#(16) tlp;
+   TLPLength    dwCount;
+   Bool         is3dw;
+   Bool         isHeaderOnly;
+   } TlpWriteHeaderInfo deriving (Bits);
+
 interface MemSlaveEngine#(numeric type buswidth);
     interface Client#(TLPData#(16), TLPData#(16)) tlp;
     interface PhysMemSlave#(40,buswidth) slave;
@@ -59,10 +66,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 
     FIFOF#(TLPData#(16)) tlpOutFifo <- mkFIFOF;
     FIFOF#(TLPData#(16)) tlpInFifo <- mkFIFOF;
-    FIFO#(TLPData#(16)) tlpWriteHeaderFifo <- mkFIFO;
-    FIFO#(TLPLength)      writeDwCountFifo <- mkFIFO;
-    FIFO#(Bool)             writeIs3dwFifo <- mkFIFO;
-    FIFO#(Bool)             writeIsHeaderOnlyFifo <- mkFIFO;
+    FIFO#(TlpWriteHeaderInfo) tlpWriteHeaderFifo <- mkFIFO;
 
     Reg#(Bit#(7)) hitReg <- mkReg(0);
     Reg#(Bool) use4dwReg <- mkReg(True);
@@ -100,12 +104,14 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       writeDataMimoEnqProbe <= writeDataMimoEnqWire;
    endrule
 
-   rule writeHeaderTlp if (!writeInProgress && (!writeIs3dwFifo.first || writeDataMimo.deqReadyN(1)));
+   rule writeHeaderTlp if (!writeInProgress && (!tlpWriteHeaderFifo.first.is3dw
+						|| writeDataMimo.deqReadyN(1)));
       writeHeaderTlpWire <= True;
-      let tlp <- toGet(tlpWriteHeaderFifo).get();
-      let dwCount <- toGet(writeDwCountFifo).get();
-      let is3dw <- toGet(writeIs3dwFifo).get();
-      let isHeaderOnly <- toGet(writeIsHeaderOnlyFifo).get();
+      let info <- toGet(tlpWriteHeaderFifo).get();
+      let tlp     = info.tlp;
+      let dwCount = info.dwCount;
+      let is3dw   = info.is3dw;
+      let isHeaderOnly = info.isHeaderOnly;
 
       TLPMemory4DWHeader hdr_4dw = unpack(tlp.data);
 
@@ -321,10 +327,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 
 	       tlp.data = pack(hdr_3dw);
 	    end
-	    tlpWriteHeaderFifo.enq(tlp);
-	    writeDwCountFifo.enq(tlplen);
-	    writeIs3dwFifo.enq(writeIs3dw);
-	    writeIsHeaderOnlyFifo.enq(writeIs3dw && tlplen == 1);
+	    tlpWriteHeaderFifo.enq(TlpWriteHeaderInfo {tlp: tlp, dwCount: tlplen, is3dw: writeIs3dw, isHeaderOnly: (writeIs3dw && tlplen == 1) });
 	    writeBurstCountFifo.enq(extend(burstLen));
 	    writeTag.enq(extend(awid));
          endmethod
