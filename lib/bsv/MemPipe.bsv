@@ -29,6 +29,7 @@ import Vector::*;
 
 import MemTypes::*;
 import Pipe::*;
+import ConfigCounter::*;
 
 interface MemReaderPipe#(numeric type dsz);
    interface PipeOut#(MemData#(dsz)) dataPipe;
@@ -74,34 +75,38 @@ module mkMemWriterPipe#(Reg#(SGLId) ptrReg,
 			PipeOut#(dtype) dataPipe,
 			Bit#(BurstLenSize) burstLen)(MemWriterPipe#(dsz))
    provisos (Bits#(dtype, dsz),
-	     Add#(a__, addrsz, MemOffsetSize));
+	     Add#(a__, addrsz, MemOffsetSize),
+	     Add#(b__, BurstLenSize, addrsz));
 
-   FIFO#(MemRequest)              writeReqFifo <- mkSizedFIFO(4);
-   FIFOF#(MemData#(dsz)) writeDataFifo <- mkSizedFIFOF(4);
-   FIFO#(Bit#(MemTagSize))       writeDoneFifo <- mkSizedFIFO(32);
+   ConfigCounter#(addrsz)              counter <- mkConfigCounter(0); 
+   FIFO#(MemRequest)                   reqFifo <- mkSizedFIFO(4);
+   FIFO#(MemRequest)              writeReqFifo <- mkFIFO();
+   FIFOF#(MemData#(dsz))         writeDataFifo <- mkSizedFIFOF(4);
+   FIFO#(Bit#(MemTagSize))       writeDoneFifo <- mkSizedFIFO(4);
    FIFOF#(Bool)                       lastFifo <- mkSizedFIFOF(4);
    FIFOF#(Bool)                       doneFifo <- mkSizedFIFOF(4);
 
-   Reg#(Bit#(32)) wrrCount <- mkReg(0);
-   Reg#(Bit#(32)) wdoneCount <- mkReg(0);
    rule writeReqRule;
       let offset <- toGet(addrIterator.pipe).get();
       let tag = 22;
-      wrrCount <= wrrCount + 1;
-      $display("writeReqRule: offset=%h burstLen=%d addrIterator.isLast %d wrr %d", offset, burstLen, addrIterator.isLast(), wrrCount);
-      writeReqFifo.enq(MemRequest { sglId: ptrReg, offset: extend(offset), burstLen: burstLen, tag: tag });
+      $display("writeReqRule: offset=%h burstLen=%d addrIterator.isLast %d", offset, burstLen, addrIterator.isLast());
+      reqFifo.enq(MemRequest { sglId: ptrReg, offset: extend(offset), burstLen: burstLen, tag: tag });
       lastFifo.enq(addrIterator.isLast());
+   endrule
+   rule writeReqReadyRule if (counter.read() >= extend(unpack(burstLen)));
+      let req <- toGet(reqFifo).get();
+      writeReqFifo.enq(req);
+      counter.decrement(extend(unpack(burstLen)));
    endrule
    rule writeDataRule;
       let tag = 22;
       let v <- toGet(dataPipe).get();
       //$display("MemWriterPipe.writeDataRule: data=%h", v);
       writeDataFifo.enq(MemData { data: pack(v), tag: tag, last: False });
+      counter.increment(fromInteger(valueOf(TDiv#(dsz,8))));
    endrule
    rule writeDone;
       let last <- toGet(lastFifo).get();
-      //$display("writeDone: wdoneCount=%d last=%d", wdoneCount, last);
-      wdoneCount <= wdoneCount + 1;
       let tag <- toGet(writeDoneFifo).get();
       doneFifo.enq(last);
    endrule
