@@ -46,7 +46,6 @@ import Bufgctrl           ::*;
 import PcieGearbox       :: *;
 
 interface PcieEndpointX7#(numeric type lanes);
-   //interface PciewrapCfg#(lanes)               cfg;
    interface PciewrapPci_exp#(lanes)           pcie;
    interface PciewrapUser#(lanes)              user;
    interface PciewrapPipe#(lanes)              pipe;
@@ -65,17 +64,34 @@ interface PcieEndpointX7#(numeric type lanes);
 endinterface
 
 typedef struct {
-   Bit#(22)      user;
+   Bit#(85)      user;
    Bit#(1)       last;
    Bit#(8)       keep;
-   Bit#(64)      data;
-} AxiRx deriving (Bits, Eq);
+   Bit#(256)     data;
+} AxiCQ deriving (Bits, Eq);
+
+typedef struct {
+   Bit#(75)      user;
+   Bit#(1)       last;
+   Bit#(8)       keep;
+   Bit#(256)     data;
+} AxiRC deriving (Bits, Eq);
 
 typedef struct {
    Bit#(1)       last;
    Bit#(8)       keep;
-   Bit#(64)      data;
-} AxiTx deriving (Bits, Eq);
+   Bit#(256)     data;
+   Bit#(33)      user;
+   Bit#(1)       valid;
+} AxiCC deriving (Bits, Eq);
+
+typedef struct {
+   Bit#(60)      user;
+   Bit#(1)       last;
+   Bit#(8)       keep;
+   Bit#(256)     data;
+   Bit#(1)       valid;
+} AxiRQ deriving (Bits, Eq);
 
 `ifdef BOARD_vc709
 typedef 8 PcieLanes;
@@ -92,61 +108,85 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    PCIEParams params = defaultValue;
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
+   Reset defaultResetInverted <- mkResetInverter(defaultReset, clocked_by defaultClock);
 
-   PcieWrap#(PcieLanes) pcie_ep <- mkPcieWrap(defaultClock, defaultReset);
+   PcieWrap#(PcieLanes) pcie_ep <- mkPcieWrap(defaultClock, defaultResetInverted);
 
-   //FIFOF#(AxiTx)             fAxiTx              <- mkBypassFIFOF(clocked_by pcie_ep.user.clk_out, reset_by noReset);
-   //FIFOF#(AxiRx)             fAxiRx              <- mkBypassFIFOF(clocked_by pcie_ep.user.clk_out, reset_by noReset);
-
+   FIFOF#(AxiRC) fAxiRC <- mkBypassFIFOF(clocked_by pcie_ep.user_clk, reset_by noReset);
+   FIFOF#(AxiCQ) fAxiCQ <- mkBypassFIFOF(clocked_by pcie_ep.user_clk, reset_by noReset);
+   FIFOF#(AxiRQ) fAxiRQ <- mkBypassFIFOF(clocked_by pcie_ep.user_clk, reset_by noReset);
+   FIFOF#(AxiCC) fAxiCC <- mkBypassFIFOF(clocked_by pcie_ep.user_clk, reset_by noReset);
    (* fire_when_enabled, no_implicit_conditions *)
    rule every1;
-//      pcie_ep.fc.sel(0 /*RECEIVE_BUFFER_AVAILABLE_SPACE*/);
-//      pcie_ep.cfg.config_space_enable(1'b1);
-//      pcie_ep.cfg.dsn({ 32'h0000_0001, {{ 8'h1 } , 24'h000A35 }});
-//      pcie_ep.cfg.link_training_enable(1'b1);
-//      pcie_ep.rx.np_ok(1);
-//      pcie_ep.rx.np_req(1);
-//      pcie_ep.tx.cfg_gnt(1);
-//      pcie_ep.s_axis_tx.tuser(4'b0);
-//      pcie_ep.m_axis_rx.tready(pack(fAxiRx.notFull));
+      Maybe#(Bit#(22)) rc_tready = Invalid;
+      Maybe#(Bit#(22)) cq_tready = Invalid;
+      if (fAxiRC.notFull) rc_tready = tagged Valid 22'h3FFFFF;
+      if (fAxiCQ.notFull) cq_tready = tagged Valid 22'h3FFFFF;
+      pcie_ep.m_axis_rc.tready(fromMaybe(0, rc_tready));
+      pcie_ep.m_axis_cq.tready(fromMaybe(0, cq_tready));
    endrule
-//   rule every2;
-//      pcie_ep.pipe_mmcm_lock_in(pack(clockGen.locked));
-//   endrule
 
-//   Clock txoutclk_buf <- mkClockBUFG(clocked_by pcie_ep.pipe_txoutclk_out);
-//
-//   C2B c2b <- mkC2B(txoutclk_buf);
-//   rule txoutrule;
-//      b2c.inputclock(c2b.o());
-//   endrule
+   // Drive s_axis_rq
+   let rq_txready = (pcie_ep.s_axis_rq.tready != 0 && fAxiRQ.notEmpty);
 
-//   let txready = (pcie_ep.s_axis_tx.tready != 0 && fAxiTx.notEmpty);
-//
-//   //(* fire_when_enabled, no_implicit_conditions *)
-//   rule drive_axi_tx if (txready);
-//      let info = fAxiTx.first; fAxiTx.deq;
-//      pcie_ep.s_axis_tx.tvalid(1);
-//      pcie_ep.s_axis_tx.tlast(info.last);
-//      pcie_ep.s_axis_tx.tdata(info.data);
-//      pcie_ep.s_axis_tx.tkeep(info.keep);
-//   endrule
-//
-//   (* fire_when_enabled, no_implicit_conditions *)
-//   rule drive_axi_tx2 if (!txready);
-//      pcie_ep.s_axis_tx.tvalid(0);
-//      pcie_ep.s_axis_tx.tlast(0);
-//      pcie_ep.s_axis_tx.tdata(0);
-//      pcie_ep.s_axis_tx.tkeep(0);
-//   endrule
-//
-//   (* fire_when_enabled *)
-//   rule sink_axi_rx if (pcie_ep.m_axis_rx.tvalid != 0);
-//      fAxiRx.enq(AxiRx {user: pcie_ep.m_axis_rx.tuser,
-//                        last: pcie_ep.m_axis_rx.tlast,
-//                        keep: pcie_ep.m_axis_rx.tkeep,
-//                        data: pcie_ep.m_axis_rx.tdata });
-//   endrule
+   //(* fire_when_enabled, no_implicit_conditions *)
+   rule drive_axi_rq if (rq_txready);
+      let info = fAxiRQ.first; fAxiRQ.deq;
+      pcie_ep.s_axis_rq.tvalid(1);
+      pcie_ep.s_axis_rq.tlast(info.last);
+      pcie_ep.s_axis_rq.tdata(info.data);
+      pcie_ep.s_axis_rq.tkeep(info.keep);
+      pcie_ep.s_axis_rq.tuser(info.user);
+   endrule
+
+   (* fire_when_enabled, no_implicit_conditions *)
+   rule drive_axi_rq2 if (!rq_txready);
+      pcie_ep.s_axis_rq.tvalid(0);
+      pcie_ep.s_axis_rq.tlast(0);
+      pcie_ep.s_axis_rq.tdata(0);
+      pcie_ep.s_axis_rq.tkeep(0);
+      pcie_ep.s_axis_rq.tuser(0);
+   endrule
+
+   // Drive s_axis_cc
+   let cc_txready = (pcie_ep.s_axis_cc.tready != 0 && fAxiCC.notEmpty);
+
+   //(* fire_when_enabled, no_implicit_conditions *)
+   rule drive_axi_cc if (cc_txready);
+      let info = fAxiCC.first; fAxiCC.deq;
+      pcie_ep.s_axis_cc.tvalid(1);
+      pcie_ep.s_axis_cc.tlast(info.last);
+      pcie_ep.s_axis_cc.tdata(info.data);
+      pcie_ep.s_axis_cc.tkeep(info.keep);
+      pcie_ep.s_axis_cc.tuser(info.user);
+   endrule
+
+   (* fire_when_enabled, no_implicit_conditions *)
+   rule drive_axi_cc2 if (!cc_txready);
+      pcie_ep.s_axis_cc.tvalid(0);
+      pcie_ep.s_axis_cc.tlast(0);
+      pcie_ep.s_axis_cc.tdata(0);
+      pcie_ep.s_axis_cc.tkeep(0);
+      pcie_ep.s_axis_cc.tuser(0);
+   endrule
+
+   // Drive m_axis_rc
+   (* fire_when_enabled *)
+   rule sink_axi_rc if (pcie_ep.m_axis_rc.tvalid != 0);
+      fAxiRC.enq(AxiRC {user: pcie_ep.m_axis_rc.tuser,
+                        last: pcie_ep.m_axis_rc.tlast,
+                        keep: pcie_ep.m_axis_rc.tkeep,
+                        data: pcie_ep.m_axis_rc.tdata });
+   endrule
+
+   // Drive m_axis_cq
+   (* fire_when_enabled *)
+   rule sink_axi_cq if (pcie_ep.m_axis_cq.tvalid != 0);
+      fAxiCQ.enq(AxiCQ {user: pcie_ep.m_axis_cq.tuser,
+                        last: pcie_ep.m_axis_cq.tlast,
+                        keep: pcie_ep.m_axis_cq.tkeep,
+                        data: pcie_ep.m_axis_cq.tdata });
+   endrule
 
    // The PCIe endpoint exports full (250MHz) and half-speed (125MHz) clocks
    Clock clock250 = pcie_ep.user_clk;
@@ -197,11 +237,11 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    Clock portalClock = clock125;
    Reset portalReset = reset125;
 `endif
-//   // The PCIE endpoint is processing TLPData#(8)s at 250MHz.  The
-//   // AXI bridge is accepting TLPData#(16)s at 125 MHz. The
-//   // connection between the endpoint and the AXI contains GearBox
-//   // instances for the TLPData#(8)@250 <--> TLPData#(16)@125
-//   // conversion.
+   // The PCIE endpoint is processing TLPData#(8)s at 250MHz.  The
+   // AXI bridge is accepting TLPData#(16)s at 125 MHz. The
+   // connection between the endpoint and the AXI contains GearBox
+   // instances for the TLPData#(8)@250 <--> TLPData#(16)@125
+   // conversion.
    PcieGearbox gb <- mkPcieGearbox(clock250, reset250, portalClock, portalReset);
 //   mkConnection(tlp8, gb.tlp, clocked_by portalClock, reset_by portalReset);
 
