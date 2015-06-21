@@ -47,26 +47,3 @@ module mkSyncBits#(a initValue, Clock sClkIn, Reset sRst, Clock dClkIn, Reset dR
       ff0 <= value;
    endmethod: send
 endmodule
-/* Not needed?? -- jca
-module mkSyncBitsFromCC#(a initValue, Clock dClkIn, Reset dRst)(SyncBitIfc#(a))
-   provisos (Bits#(a,awidth));
-   Clock sClkIn <- exposeCurrentClock();
-   Reset sRst <- exposeCurrentReset();
-   SyncBitIfc#(a) syncbits <- mkSyncBits(initValue, sClkIn, sRst, dClkIn, dRst);
-   return syncbits;
-endmodule
-
-module mkSyncBitsToCC#(a initValue, Clock sClkIn, Reset sRst)(SyncBitIfc#(a))
-   provisos (Bits#(a,awidth));
-   Clock dClkIn <- exposeCurrentClock();
-   Reset dRst <- exposeCurrentReset();
-   SyncBitIfc#(a) syncbits <- mkSyncBits(initValue, sClkIn, sRst, dClkIn, dRst);
-   return syncbits;
-endmodule
-
-module mkSyncBits128#(Clock sClkIn, Reset sRst, Clock dClkIn, Reset dRst)(SyncBitIfc#(Bit#(128)));
-   SyncBitIfc#(Bit#(128)) sbits <- mkSyncBits(0, sClkIn, sRst, dClkIn, dRst);
-   method read = sbits.read;
-   method send = sbits.send;
-endmodule: mkSyncBits128
-*/
