@@ -118,6 +118,56 @@ module mkMemWriterPipe#(Reg#(SGLId) ptrReg,
    endinterface
 endmodule
 
+module mkMemWriterPipe2#(Bool lastOnly,
+			 Reg#(SGLId) ptrReg,
+			 IteratorIfc#(Bit#(addrsz)) addrIterator,
+			 PipeOut#(dtype) dataPipe,
+			 Bit#(BurstLenSize) burstLen)(MemWriterPipe#(dsz))
+   provisos (Bits#(dtype, dsz),
+	     Add#(a__, addrsz, MemOffsetSize),
+	     Add#(b__, BurstLenSize, addrsz));
+
+   ConfigCounter#(addrsz)              counter <- mkConfigCounter(0); 
+   FIFO#(MemRequest)                   reqFifo <- mkSizedFIFO(4);
+   FIFO#(MemRequest)              writeReqFifo <- mkFIFO();
+   FIFOF#(MemData#(dsz))         writeDataFifo <- mkSizedFIFOF(4);
+   FIFO#(Bit#(MemTagSize))       writeDoneFifo <- mkSizedFIFO(4);
+   FIFOF#(Bool)                       lastFifo <- mkSizedFIFOF(4);
+   FIFOF#(Bool)                       doneFifo <- mkFIFOF();
+
+   rule writeReqRule;
+      let offset <- toGet(addrIterator.pipe).get();
+      let tag = 22;
+      $display("writeReqRule: offset=%h burstLen=%d addrIterator.isLast %d", offset, burstLen, addrIterator.isLast());
+      reqFifo.enq(MemRequest { sglId: ptrReg, offset: extend(offset), burstLen: burstLen, tag: tag });
+      lastFifo.enq(addrIterator.isLast());
+   endrule
+   rule writeReqReadyRule if (counter.read() >= extend(unpack(burstLen)));
+      let req <- toGet(reqFifo).get();
+      writeReqFifo.enq(req);
+      counter.decrement(extend(unpack(burstLen)));
+   endrule
+   rule writeDataRule;
+      let tag = 22;
+      let v <- toGet(dataPipe).get();
+      //$display("MemWriterPipe.writeDataRule: data=%h", v);
+      writeDataFifo.enq(MemData { data: pack(v), tag: tag, last: False });
+      counter.increment(fromInteger(valueOf(TDiv#(dsz,8))));
+   endrule
+   rule writeDone;
+      let last <- toGet(lastFifo).get();
+      let tag <- toGet(writeDoneFifo).get();
+      if (!lastOnly || last)
+	 doneFifo.enq(last);
+   endrule
+   interface PipeOut lastPipe = toPipeOut(doneFifo);
+   interface MemWriteClient writeClient;
+      interface Get writeReq = toGet(writeReqFifo);
+      interface Get writeData = toGet(writeDataFifo);
+      interface Put writeDone = toPut(writeDoneFifo);
+   endinterface
+endmodule
+
 
 module mkBramReaderPipe#(BRAMServer#(Bit#(addrsz), dataType) bramServer,
 			 PipeOut#(IteratorValue#(Bit#(addrsz),void)) addrIterator)(PipeOut#(IteratorValue#(dataType,void)))
