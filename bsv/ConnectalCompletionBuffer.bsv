@@ -34,6 +34,7 @@ import RegFile::*;
 // CONNECTAL Libraries
 import MemTypes::*;
 import ConnectalMemory::*;
+import ConfigCounter::*;
 
 interface TagGen#(numeric type numTags);
    method ActionValue#(Bit#(TLog#(numTags))) getTag;
@@ -54,6 +55,7 @@ module mkTagGen(TagGen#(numTags))
    Reg#(Bool)               inited <- mkReg(False);
    FIFO#(Bit#(tsz))      comp_fifo <- mkFIFO;
    Reg#(Bit#(numTags))  comp_state <- mkReg(0);
+   ConfigCounter#(TAdd#(tsz,1)) counter <- mkConfigCounter(fromInteger(valueOf(numTags)));
    
    let retFifo <- mkFIFO;
    let tagFifo <- mkFIFO;
@@ -68,6 +70,7 @@ module mkTagGen(TagGen#(numTags))
       let rv = tags[tail_ptr];
       if (!rv) begin
 	 tail_ptr <= tail_ptr+1;
+	 counter.increment(1);
 	 comp_state <= comp_state >> 1;
 	 comp_fifo.enq(tail_ptr);
       end
@@ -91,12 +94,13 @@ module mkTagGen(TagGen#(numTags))
       inited <= head_ptr+1==0;
    endrule
    
-   rule tag_rule if (inited && (head_ptr+1 != tail_ptr));
+   rule tag_rule if (inited && counter.positive);
       //tags.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:head_ptr, datain:True});
       //tags.upd(head_ptr, True);
       tags[head_ptr] <= True;
       head_ptr <= head_ptr+1;
       tagFifo.enq(head_ptr);
+      counter.decrement(1);
    endrule
 
    method ActionValue#(Bit#(tsz)) getTag();
