@@ -49,7 +49,6 @@ module mkTagGen(TagGen#(numTags))
    //BRAM2Port#(Bit#(tsz),Bool) tags <- mkBRAM2Server(cfg);
    Vector#(numTags, Reg#(Bool)) tags <- replicateM(mkReg(False));
    //RegFile#(Bit#(tsz),Bool)     tags <- mkRegFile(0, fromInteger(valueOf(numTags)-1));
-   Reg#(Bool)              notFull <- mkReg(False);
    Reg#(Bit#(tsz))        head_ptr <- mkReg(0);
    Reg#(Bit#(tsz))        tail_ptr <- mkReg(0);
    Reg#(Bool)               inited <- mkReg(False);
@@ -90,15 +89,13 @@ module mkTagGen(TagGen#(numTags))
       //Not needed: tags[head_ptr] <= False;
       head_ptr <= head_ptr+1;
       inited <= head_ptr+1==0;
-      notFull <= head_ptr+1==0;
    endrule
    
-   rule tag_rule if (notFull);
+   rule tag_rule if (inited && (head_ptr+1 != tail_ptr));
       //tags.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:head_ptr, datain:True});
       //tags.upd(head_ptr, True);
       tags[head_ptr] <= True;
       head_ptr <= head_ptr+1;
-      notFull <= (head_ptr+2 != tail_ptr);
       tagFifo.enq(head_ptr);
    endrule
 
