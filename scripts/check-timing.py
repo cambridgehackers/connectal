@@ -20,7 +20,7 @@ for timingreport in sys.argv[1:]:
             print line
             failed = 1
         m = re_violated.match(line)
-        if m and float(m.group(1)) > 0.05:
+        if m and float(m.group(1)) >= 0.1:
             print '*** timing violation ***'
             print line
             failed = 1
