@@ -26,6 +26,7 @@ import GetPut::*;
 import ClientServer::*;
 import BRAM::*;
 import Vector::*;
+import Probe::*;
 
 import MemTypes::*;
 import Pipe::*;
@@ -39,29 +40,38 @@ endinterface
 module mkMemReaderPipe#(Reg#(SGLId) ptrReg,
 			IteratorIfc#(Bit#(addrsz)) addrIterator,
 			Bit#(BurstLenSize) burstLen)(MemReaderPipe#(dsz))
-   provisos (Add#(a__, addrsz, MemOffsetSize));
+   provisos (Add#(a__, addrsz, MemOffsetSize),
+	     Add#(b__, BurstLenSize, addrsz));
 
    let verbose = False;
 
+   ConfigCounter#(addrsz)              counter <- mkConfigCounter(0); 
    FIFO#(MemRequest) readReqFifo <- mkFIFO();
    FIFOF#(MemData#(dsz)) readDataFifo <- mkSizedFIFOF(8);
    Reg#(Bit#(MemTagSize)) tagReg <- mkReg(0);
 
-   rule startReadReqRule;
+   // 8+1 outstanding reads
+   rule startReadReqRule if (counter.read() <= (extend(unpack(burstLen)) << 3));
+      counter.increment(extend(unpack(burstLen)));
       let offset <- toGet(addrIterator.pipe).get();
       let tag = tagReg;
       if (addrIterator.isFirst())
 	 tag = 0;
-      if (verbose) $display("startReadReqRule: offset=%d", offset);
+      if (verbose) $display("startReadReqRule: offset=%d counter=%d", offset, counter.read() + (extend(unpack(burstLen)) << 3));
       readReqFifo.enq(MemRequest { sglId: ptrReg, offset: extend(offset), burstLen: burstLen, tag: extend(tag) });
-
       tagReg <= tag + 1;
    endrule
 
    interface dataPipe = toPipeOut(readDataFifo);
    interface MemReadClient readClient;
       interface Get readReq = toGet(readReqFifo);
-      interface Put readData = toPut(readDataFifo);
+      interface Put readData;
+	 method Action put(MemData#(dsz) md);
+	    readDataFifo.enq(md);
+	    counter.decrement(fromInteger(valueOf(TDiv#(dsz,8))));
+	    if (verbose) $display("memreader.readData counter.read() %d", counter.read());
+	 endmethod
+      endinterface
    endinterface
 endmodule
 
