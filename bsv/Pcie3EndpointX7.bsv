@@ -67,7 +67,7 @@ interface PcieEndpointX7#(numeric type lanes);
 endinterface
 
 typedef struct {
-   Bit #(256)     data;
+   Bit #(256)    data;
    Bool          sop;
    Bool          eop;
    Bit #(8)      keep;
@@ -76,13 +76,13 @@ typedef struct {
 } AxiStCq deriving (Bits, Eq);
 
 typedef struct {
-   Bit #(256)     data;
+   Bit #(256)    data;
    Bit #(8)      keep;
    Bool          last;
 } AxiStCc deriving (Bits, Eq);
 
 typedef struct {
-   Bit #(256)     data;
+   Bit #(256)    data;
    Bool          last;
    Bit #(8)      keep;
    Bit #(4)      first_be;
@@ -90,7 +90,7 @@ typedef struct {
 } AxiStRq deriving (Bits, Eq);
 
 typedef struct {
-   Bit #(256)     data;
+   Bit #(256)    data;
    Bool          sop;
    Bool          eop;
    Bit #(8)      keep;

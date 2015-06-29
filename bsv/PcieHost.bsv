@@ -144,6 +144,11 @@ interface PcieTop#(type ipins);
 `ifndef BSIM
    (* prefix="PCIE" *)
    interface PciewrapPci_exp#(PcieLanes) pcie;
+   (* always_ready, always_enabled *)
+   interface PciewrapPipe#(PcieLanes)              pipe;
+   (* always_ready, always_enabled *)
+   interface PciewrapCommon#(PcieLanes)            common;
+   interface Clock epClock250;
    (* always_ready *)
    (* prefix="" *)
    interface ipins       pins;

@@ -116,6 +116,9 @@ module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (P
       host.tpciehost.interruptRequest.put(tuple2({msixEntry.addr_hi, msixEntry.addr_lo}, msixEntry.msg_data));
    endrule
 
+   interface common = host.tep7.common;
+   interface pipe = host.tep7.pipe;
+   interface Clock epClock250 = host.tep7.epClock250;
    interface pcie = host.tep7.pcie;
    interface pins = portalTop.pins;
 endmodule
