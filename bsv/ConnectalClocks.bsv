@@ -74,3 +74,14 @@ module mkC2B#(Clock c)(C2B);
 endmodule
 
 
+interface PositiveReset;
+   interface Reset positiveReset;
+endinterface
+
+import "BVI" PositiveReset =
+module mkPositiveReset#(Integer resetDelay, Reset reset, Clock clock)(PositiveReset);
+   parameter RSTDELAY = resetDelay;
+   default_clock clock(CLK) = clock;
+   default_reset reset(IN_RST) = reset;
+   output_reset positiveReset(OUT_RST);
+endmodule
