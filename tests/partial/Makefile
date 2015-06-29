@@ -11,11 +11,15 @@ PARTIAL_MODULE = Bounce
 CONNECTALFLAGS += -P mk$(PARTIAL_MODULE) --floorplan=floorplan.xdc -DRedefInstance=$(PARTIAL_MODULE)$(VARIANT)
 
 partial.%:
-	VARIANT=2 BOARD=$* make verilog.variant2
-	make -C variant2 synth.mk$(PARTIAL_MODULE)
 	make verilog.$*
 	make -C $* synth.mk$(PARTIAL_MODULE) synth.mkZynqTop
 	vivado -mode batch -source reconf.tcl
+
+prebuild::
+ifeq ($(VARIANT),1)
+	VARIANT=2 make verilog.variant2
+	make -C variant2 synth.mk$(PARTIAL_MODULE)
+endif
 
 zc702/Impl/Reconf/top-post-route.dcp:
 
