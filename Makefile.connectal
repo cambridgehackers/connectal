@@ -257,6 +257,7 @@ endif
 	$(foreach f, $(CPPFILES2), --source2 $f) \
 	$(foreach f, $(PINOUT_FILE), --pinout $f) \
 	$(foreach f, $(PIN_BINDINGS), --pin-binding $f) \
+	$(foreach f, $(PRTOP_FILE), --prtop $f) \
 	$(foreach f, $(S2H_INTERFACES), -interfaces $(word 1, $(subst /,, $(subst :, , $f)))) \
 	$(foreach f, $(H2S_INTERFACES), $(foreach g, $(subst $(comma), , $(word 2, $(subst :, , $f))), -interfaces $g)) \
 	$(foreach f, $(PORTAL_DUMP_MAP), --dump_map $f) \
