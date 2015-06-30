@@ -209,6 +209,9 @@ void initPortalFramework(void)
             argv[ind++] = (char *)"-s";
             argv[ind++] = strdup(serial);
         }
+        if (getenv("NOFPGAJTAG"))
+            exit(0);
+        else {
 #ifdef __arm__
         argv[ind++] = (char *)"-x";
         argv[ind++] = buf;
@@ -217,6 +220,7 @@ void initPortalFramework(void)
         argv[ind++] = buf;
         execvp ("fpgajtag", argv);
 #endif // !__arm__
+        }
 #endif
         exit(-1);
     }
