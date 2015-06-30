@@ -103,7 +103,11 @@ module mkZynqTop(ZynqTop);
           interface bscan = lbscan.loc[0];
       endinterface), clocked_by mainclock, reset_by mainreset);
 `else
+`ifdef IMPORT_HOST_CLOCKS // enables synthesis boundary
+   ConnectalTop#(PhysAddrWidth, 64, PinType, NumberOfMasters) top <- mkConnectalTop(ps7.derivedClock, ps7.derivedReset, clocked_by mainclock, reset_by mainreset);
+`else // no parameters, enables synthesis boundary
    ConnectalTop#(PhysAddrWidth, 64, PinType, NumberOfMasters) top <- mkConnectalTop(clocked_by mainclock, reset_by mainreset);
+`endif
 `endif
    mkConnectionWithTrace(ps7, top, lbscan.loc[1], clocked_by mainclock, reset_by mainreset);
 
