@@ -72,6 +72,19 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
       return (lower_addr[2:0]==3'b0);
    endfunction
 
+   function print_3dw(TLPMemoryIO3DWHeader hdr_3dw);
+      TLPMemoryIO3DWHeader h = hdr_3dw;
+      $display("----------\n\
+                tclass:  %h\n\
+                relaxed: %h\n\
+                nosnoop: %h\n\
+                length:  %h\n\
+                lastbe:  %h\n\
+                firstbe: %h\n\
+                addr:    %h\n\
+                data:    %h\n", h.tclass, h.relaxed, h.nosnoop, h.length, h.lastbe, h.firstbe, h.addr, h.data);
+   endfunction
+
    rule completionHeader if (!readInProgress && readDataFifo.notEmpty() && completionMimo.deqReadyN(1));
       let hdr = readDataFifo.first;
       TLPLength rbc = hdr.length;
@@ -88,7 +101,7 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
          completionMimo.deq(1);
       end
 `endif
-      //$display("completionHeader length=%d rbc=%d addr=%x", hdr.length, rbc, hdr.addr);
+      $display("completionHeader length=%d rbc=%d addr=%x", hdr.length, rbc, hdr.addr);
       TLPCompletionHeader completion = defaultValue;
       completion.format = MEM_WRITE_3DW_DATA;
       completion.pkttype = COMPLETION;
@@ -168,7 +181,7 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
       end
       else begin
 	 tlp.be = tlpBe(rbc);
-	 //$display("tlp.data=%h tlp.be=%h", tlp.data, tlp.be);
+	 $display("tlp.data=%h tlp.be=%h", tlp.data, tlp.be);
 	 tlp.eof = True;
 	 rbc = 0;
       end
@@ -193,7 +206,7 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
     interface Client        tlp;
     interface Put response;
         method Action put(TLPData#(16) tlp);
-	    //$display("MemMasterEngine.put tlp=%h", tlp);
+	    $display("MemMasterEngine.put tlp=%h", tlp);
 	    TLPMemoryIO3DWHeader h = unpack(tlp.data);
 	    hitReg <= tlp.hit;
 	    TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
@@ -210,8 +223,10 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
 	    end
 	    else begin
                //FIXME: should rewrite to allow burst write.
-               if (tlp.sof && writeHeaderFifo.notFull())
+               if (tlp.sof && writeHeaderFifo.notFull()) begin
 		  writeHeaderFifo.enq(hdr_3dw);
+                  print_3dw(hdr_3dw);
+               end
 	    end
 	endmethod
     endinterface
@@ -225,6 +240,7 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
 	     writeHeaderFifo.deq;
 	     writeDataFifo.enq(hdr);
 	     let burstLen = truncate(hdr.length << 2);
+             $display("burstLen = %h", hdr.length << 2);
 	     return PhysMemRequest { addr: extend(writeHeaderFifo.first.addr) << 2, burstLen: burstLen, tag: truncate(writeHeaderFifo.first.tag)};
 	  endmethod
        endinterface

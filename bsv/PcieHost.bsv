@@ -92,17 +92,15 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
            tlp = sEngine[i - portAxi].tlp;
            slavearr[i - portAxi] = sEngine[i - portAxi].slave;
        end
-//       else begin
-//           mvec[i] <- mkMemMasterEngine(my_pciId);
-//           tlp = mvec[i].tlpr;
-//       end
-//       mkConnection((interface Server;
-//                        interface response = dispatcher.out[i];
-//                        interface request = arbiter.in[i];
-//                     endinterface), tlp);
+       else begin
+           mvec[i] <- mkMemMasterEngine(my_pciId);
+           tlp = mvec[i].tlp;
+       end
+       mkConnection((interface Server;
+                        interface response = dispatcher.out[i];
+                        interface request = arbiter.in[i];
+                     endinterface), tlp);
    end
-
-   MemMasterEngine mm <- mkMemMasterEngine(PciId{bus:0, dev:0, func:0});
 
    PcieTracer  traceif <- mkPcieTracer();
    mkConnection(traceif.bus, (interface Client;
@@ -122,15 +120,13 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
 `endif
 
    PcieControlAndStatusRegs csr <- mkPcieControlAndStatusRegs(traceif.tlpdata);
-   mkConnection(mm.master, csr.memSlave);
-   //mkConnection(mvec[portConfig].master, csr.memSlave);
+   mkConnection(mvec[portConfig].master, csr.memSlave);
 
    interface msixEntry = csr.msixEntry;
-   //interface master = mvec[portPortal].master;
+   interface master = mvec[portPortal].master;
    interface slave = slavearr;
    interface interruptRequest = intr.interruptRequest;
-   //interface pci = traceif.pci;
-   interface pcir = mm.tlp;
+   interface pcic = traceif.pci;
 `ifdef PCIE_BSCAN
    interface BscanTop bscanif = lbscan.loc[0];
 `else
