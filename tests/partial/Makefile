@@ -8,20 +8,17 @@ NUMBER_OF_MASTERS =0
 
 VARIANT?=1
 PARTIAL_MODULE = Bounce
-CONNECTALFLAGS += -P mk$(PARTIAL_MODULE) --floorplan=floorplan.xdc -DRedefInstance=$(PARTIAL_MODULE)$(VARIANT)
+RECONFIG_MODULE = lEcho_bounce
+CONNECTALFLAGS += -P mk$(PARTIAL_MODULE) --constraint=floorplan-$(BOARD).xdc -DRedefInstance=$(PARTIAL_MODULE)$(VARIANT)
 
 partial.%:
-	make gen.$*
-	make -C $* synth.mk$(PARTIAL_MODULE) synth.mkZynqTop
-	make -C variant2 synth.mk$(PARTIAL_MODULE)
-	vivado -mode batch -source reconf.tcl
+	make build.$*
+	make -C variant2
 
 prebuild::
 ifeq ($(VARIANT),1)
-	VARIANT=2 PRTOP_FILE=../$(BOARD)/Impl/Reconf/top-post-route.dcp make gen.variant2
+	VARIANT=2 PRTOP_FILE=../$(BOARD)/Impl/TopDown/top-post-route.dcp make gen.variant2
 endif
-
-zc702/Impl/Reconf/top-post-route.dcp:
 
 include $(CONNECTALDIR)/Makefile.connectal
 

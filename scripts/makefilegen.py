@@ -78,6 +78,7 @@ argparser.add_argument('-v', '--verbose', help='Display verbose information mess
 argparser.add_argument(      '--dump_map', help='List of portals passed to pcieflat for PCIe trace debug info')
 argparser.add_argument('--nonstrict', help='If nonstrict, pass -Wall to gcc, otherwise -Werror', default=False, action='store_true')
 argparser.add_argument('--prtop', help='Filename of previously synthesized top level for partial reconfiguration', default=None)
+argparser.add_argument('--reconfig', default=[], help='partial reconfig module names', action='append')
 
 noisyFlag=False
 
@@ -114,7 +115,7 @@ fpgamakeRuleTemplate='''
 VERILOG_PATH=verilog %(verilog)s $(BLUESPEC_VERILOG)
 FPGAMAKE=$(CONNECTALDIR)/../fpgamake/fpgamake
 fpgamake.mk: $(VFILE) Makefile prepare_bin_target
-	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk --board=%(boardname)s --part=%(partname)s %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s %(qsf)s %(chipscope)s -t $(MKTOP) %(FPGAMAKE_DEFINE)s %(cachedir)s -b hw/mkTop.bit %(prtop)s $(VERILOG_PATH)
+	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk --board=%(boardname)s --part=%(partname)s %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s %(qsf)s %(chipscope)s -t $(MKTOP) %(FPGAMAKE_DEFINE)s %(cachedir)s -b hw/mkTop.bit %(prtop)s %(reconfig)s $(VERILOG_PATH)
 
 synth.%%:fpgamake.mk
 	make -f fpgamake.mk Synth/$*/$*-synth.dcp
@@ -447,6 +448,7 @@ if __name__=='__main__':
                                          'verilog': ' '.join([os.path.abspath(f) for f in options.verilog]),
 					 'cachedir': '--cachedir=%s' % os.path.abspath(options.cachedir) if options.cachedir else '',
                                          'pin_binding' : ' '.join(['-b %s' % s for s in options.pin_binding]),
+                                         'reconfig' : ' '.join(['--reconfig=%s' % rname for rname in options.reconfig]),
                                          'prtop' : ('--prtop=%s' % options.prtop) if options.prtop else ''
 					 }
     substs['genxdc'] = (genxdc_template % substs) if options.pinout else ''
