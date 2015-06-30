@@ -76,7 +76,7 @@ module PositiveReset (
      begin
         #0 ;
         // initialize out of reset forcing the designer to do one
-        reset_hold = {(RSTDELAY + {~ 1 }} ;
+        reset_hold = {(RSTDELAY + 1) {~ 1 }} ;
      end
    // synopsys translate_on
 `endif // BSV_NO_INITIAL_BLOCKS
