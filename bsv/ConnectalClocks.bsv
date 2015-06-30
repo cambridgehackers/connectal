@@ -20,6 +20,8 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import Clocks::*;
+
 `ifdef PcieClockPeriod
 Real pcieClockPeriod = `PcieClockPeriod;
 `endif
@@ -84,4 +86,16 @@ module mkPositiveReset#(Integer resetDelay, Reset reset, Clock clock)(PositiveRe
    default_clock clock(CLK) = clock;
    default_reset reset(IN_RST) = reset;
    output_reset positiveReset(OUT_RST);
+endmodule
+
+interface FpgaReset;
+   interface Reset fpgaReset;
+endinterface
+
+import "BVI" FpgaReset =
+module exposeFpgaReset#(Integer resetDelay, Clock clock)(FpgaReset);
+   parameter RSTDELAY = resetDelay;
+   default_clock clock(CLK) = clock;
+   no_reset;
+   output_reset fpgaReset(OUT_RST);
 endmodule
