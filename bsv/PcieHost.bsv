@@ -79,7 +79,7 @@ Integer tlpCompleterRequest = 0;
 Integer tlpRequesterRequest = 1;
 typedef 2   NumberOfTlpIntfs;
 
-module mkPcieHost(PcieHost#(DataBusWidth, NumberOfMasters));
+module mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    Vector#(NumberOfTlpIntfs, TLPDispatcher) dispatcher <- replicateM(mkTLPDispatcher);
    Vector#(NumberOfTlpIntfs, TLPArbiter) arbiter <- replicateM(mkTLPArbiter);
    Vector#(NumberOfMasters, MemSlaveEngine#(DataBusWidth)) sEngine <- replicateM(mkMemSlaveEngineSynth(my_pciId));
@@ -257,7 +257,9 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys
    Clock pcieClock_ = ep7.epPcieClock;
    Reset pcieReset_ = ep7.epPcieReset;
    PcieHost#(DataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(
-`ifndef PCIE3
+`ifdef PCIE3
+         PciId{bus: 0, dev: 0, func:0},
+`else
          PciId{ bus:  ep7.cfg.bus_number(), dev: ep7.cfg.device_number(), func: ep7.cfg.function_number()},
 `endif
          clocked_by pcieClock_, reset_by pcieReset_);
