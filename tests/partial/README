@@ -1,0 +1,10 @@
+
+To program PR bitfile:
+
+echo 1 /sys/devices/amba.2/f8007000.devcfg/is_partial_bitstream
+cat variant2/Impl/ReTop/mkTop_pblock_lEcho_bounce_partial.bin >/dev/xdevcfg
+cat variant2/Impl/ReTop/mkTop_pblock_lEcho_bounce_partial.bin >/dev/xdevcfg
+./android.exe
+
+Note:
+    is_partial_bitstream is persistent
