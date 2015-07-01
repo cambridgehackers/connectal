@@ -244,7 +244,8 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
       mmuIndication.configResp(extend(ptr));
    endrule
    
-   FIFOF#(Bit#(32)) idReturnFifo <- mkSizedBRAMFIFOF(valueOf(MaxNumSGLists));
+   // given that the BRAM is faster than the connection from software, I see no need for a SizedBRAMFIFOF here. -Jamey
+   FIFOF#(Bit#(32)) idReturnFifo <- mkFIFOF();
    rule idReturnRule;
       let sglId <- toGet(idReturnFifo).get;
       sglId_gen.returnTag(truncate(sglId));

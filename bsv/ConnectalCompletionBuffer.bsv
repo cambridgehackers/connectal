@@ -34,6 +34,7 @@ import RegFile::*;
 // CONNECTAL Libraries
 import MemTypes::*;
 import ConnectalMemory::*;
+import ConfigCounter::*;
 
 interface TagGen#(numeric type numTags);
    method ActionValue#(Bit#(TLog#(numTags))) getTag;
@@ -49,12 +50,12 @@ module mkTagGen(TagGen#(numTags))
    //BRAM2Port#(Bit#(tsz),Bool) tags <- mkBRAM2Server(cfg);
    Vector#(numTags, Reg#(Bool)) tags <- replicateM(mkReg(False));
    //RegFile#(Bit#(tsz),Bool)     tags <- mkRegFile(0, fromInteger(valueOf(numTags)-1));
-   Reg#(Bool)              notFull <- mkReg(False);
    Reg#(Bit#(tsz))        head_ptr <- mkReg(0);
    Reg#(Bit#(tsz))        tail_ptr <- mkReg(0);
    Reg#(Bool)               inited <- mkReg(False);
    FIFO#(Bit#(tsz))      comp_fifo <- mkFIFO;
    Reg#(Bit#(numTags))  comp_state <- mkReg(0);
+   ConfigCounter#(TAdd#(tsz,1)) counter <- mkConfigCounter(fromInteger(valueOf(numTags)));
    
    let retFifo <- mkFIFO;
    let tagFifo <- mkFIFO;
@@ -69,6 +70,7 @@ module mkTagGen(TagGen#(numTags))
       let rv = tags[tail_ptr];
       if (!rv) begin
 	 tail_ptr <= tail_ptr+1;
+	 counter.increment(1);
 	 comp_state <= comp_state >> 1;
 	 comp_fifo.enq(tail_ptr);
       end
@@ -90,16 +92,15 @@ module mkTagGen(TagGen#(numTags))
       //Not needed: tags[head_ptr] <= False;
       head_ptr <= head_ptr+1;
       inited <= head_ptr+1==0;
-      notFull <= head_ptr+1==0;
    endrule
    
-   rule tag_rule if (notFull);
+   rule tag_rule if (inited && counter.positive);
       //tags.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:head_ptr, datain:True});
       //tags.upd(head_ptr, True);
       tags[head_ptr] <= True;
       head_ptr <= head_ptr+1;
-      notFull <= (head_ptr+2 != tail_ptr);
       tagFifo.enq(head_ptr);
+      counter.decrement(1);
    endrule
 
    method ActionValue#(Bit#(tsz)) getTag();

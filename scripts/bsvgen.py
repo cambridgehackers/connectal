@@ -26,7 +26,7 @@
 import os
 import math
 import re
-import md5
+import hashlib
 
 import AST
 import string
