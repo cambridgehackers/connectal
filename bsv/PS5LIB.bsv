@@ -715,6 +715,7 @@ typedef enum {
 } RSTN_CNT deriving (Bits, Eq);
 
 //(* synthesize, no_default_clock, no_default_reset, clock_prefix="", reset_prefix="" *)
+(* synthesize *)
 (* always_ready, always_enabled, no_default_clock, no_default_reset, clock_prefix="", reset_prefix="" *)
 module mkAlteraPcieHipRs#(Clock pld_clk, Reset npor)(AlteraPcieHipRs);
    Reset npor_sync_pld_clk          <- mkAsyncReset(3, npor, pld_clk);

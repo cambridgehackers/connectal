@@ -202,6 +202,7 @@ module mkPcieControlAndStatusRegs(PcieControlAndStatusRegs);
       csrWagBeatFifo.enq(beat);
       csrWagIsMsixAddrFifo.enq(msixaddr >= 0 && msixaddr <= 63);
       Bit#(1024) onehot = (1 << addr[9:0]);
+      $display("addr: %h", addr);
       csrWagOneHotFifo768.enq(onehot[775:768]);
       csrWagOneHotFifo792.enq(onehot[794:792]);
    endrule
@@ -210,6 +211,7 @@ module mkPcieControlAndStatusRegs(PcieControlAndStatusRegs);
       let memData <- toGet(writeDataFifo).get();
       let dword = memData.data;
 
+      $display("data: %h, last: %h, tag: %h", dword, memData.last, memData.tag);
       let beat       <- toGet(csrWagBeatFifo).get();
       let isMsixAddr <- toGet(csrWagIsMsixAddrFifo).get();
       let addr = beat.addr >> 2; // word address
@@ -254,6 +256,7 @@ module mkPcieControlAndStatusRegs(PcieControlAndStatusRegs);
   interface PhysMemWriteServer write_server; 
 	 interface Put writeReq;
 	    method Action put(PhysMemRequest#(32) req);
+               $display("csrWag Request, addr=%h, burstLen=%h, tag=%h", req.addr, req.burstLen, req.tag);
 	       csrWag.request.put(PhysMemRequest { addr: truncate(req.addr), burstLen: req.burstLen, tag: req.tag});
 	    endmethod
 	 endinterface

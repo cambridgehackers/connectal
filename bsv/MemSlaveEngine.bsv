@@ -133,7 +133,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       end
 
       tlpOutFifo.enq(tlp);
-      //$display("writeHeaderTlp dwCount=%d", dwCount);
+      $display("writeHeaderTlp dwCount=%d", dwCount);
       writeDwCount <= dwCount;
       tlpDwCount <= truncate(min(4,unpack(dwCount)));
       lastTlp <= (dwCount <= 4);
@@ -173,7 +173,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	 writeInProgressProbe <= False;
 	 doneTag.enq(writeTag.first());
 	 writeTag.deq();
-	 //$display("writeDwCount=%d will be zero", writeDwCount);
+	 $display("writeDwCount=%d will be zero", writeDwCount);
       end
 
       for (Integer i = 0; i < 4; i = i + 1)
@@ -231,7 +231,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	    handled = True;
       end
       wordCountReg <= wordCount;
-      //$display("tlpIn handled=%d tlp=%h\n", handled, tlp);
+      $display("tlpIn handled=%d tlp=%h\n", handled, tlp);
       if (handled) begin
 	 tlpDecodeFifo.deq();
       end
