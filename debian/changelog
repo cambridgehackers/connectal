@@ -1,3 +1,9 @@
+connectal (15.07.2-1precise1) precise; urgency=medium
+
+  * 15.07.2, fixed PCIE3 conditionalization
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 06 Jul 2015 09:31:16 -0400
+
 connectal (15.07.1-1precise1) precise; urgency=medium
 
   * v15.07.1
