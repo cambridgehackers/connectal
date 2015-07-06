@@ -113,12 +113,15 @@ interface PcieHost#(numeric type dsz, numeric type nSlaves);
    interface PhysMemMaster#(32,32)                   master;
    interface Vector#(nSlaves,PhysMemSlave#(PciePhysAddrWidth,dsz))  slave;
    interface Put#(Tuple2#(Bit#(64),Bit#(32)))    interruptRequest;
-   interface Client#(TLPData#(16), TLPData#(16)) pci;
+   interface Client#(TLPData#(16), TLPData#(16)) pcir;
+   interface Client#(TLPData#(16), TLPData#(16)) pcic;
    interface Put#(TimestampedTlpData) trace;
 `ifdef PCIE_BSCAN
    interface BscanTop bscanif;
 `else
+`ifdef PCIE_TRACE_PORT
    interface BRAMServer#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) traceBramServer;
+`endif
 `endif
 endinterface
 

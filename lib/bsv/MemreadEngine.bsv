@@ -76,7 +76,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
    Reg#(Bool) load_in_progress <- mkReg(False);
    FIFO#(Tuple3#(MemengineCmd,Bool,Bool))              loadf_b <- mkSizedFIFO(1);
    FIFO#(Tuple3#(Bit#(serverIdxSz),MemengineCmd,Bool)) loadf_c <- mkSizedFIFO(valueOf(cmdQDepth));
-   FIFO#(Tuple3#(Bit#(8),Bit#(serverIdxSz),Bool))        workf <- mkSizedBRAMFIFO(valueOf(cmdQDepth));
+   FIFO#(Tuple3#(Bit#(8),Bit#(serverIdxSz),Bool))        workf <- mkSizedFIFO(valueOf(cmdQDepth));
    
 
    Vector#(numServers, FIFO#(void))              outfs <- replicateM(mkSizedFIFO(valueOf(cmdQDepth)));

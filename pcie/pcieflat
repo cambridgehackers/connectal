@@ -164,8 +164,9 @@ def emit_vcd_entry(f, timestamp, pktclass):
         f.write('$comment %s $end\n' % pktclass)
 
 def pktClassification(tlpsof, tlpeof, tlpbe, pktformat, pkttype, portnum, address):
-    if tlpbe == '0000':
-        return 'trace'
+    ## altera does not fill in the BE bits
+    #if tlpbe == '0000':
+    #return 'trace'
     if tlpsof == 0:
         if portnum == 4:
             return 'DmaRCon'

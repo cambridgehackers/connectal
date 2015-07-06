@@ -1,4 +1,4 @@
-
+// Copyright (c) 2013 Nokia, Inc.
 // Copyright (c) 2013 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
@@ -20,37 +20,48 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+import Bounce::*;
+import `RedefInstance::*;
+import Pipe::*;
 
-`ifdef NUMBER_OF_LEDS
-typedef `NUMBER_OF_LEDS LedsWidth;
-`else
-`ifdef XILINX
-`ifdef Artix7
-typedef 4 LedsWidth;
-`else
-`ifdef BOARD_zybo
-typedef 4 LedsWidth;
-`else
-`ifdef BOARD_zc706
-typedef 4 LedsWidth;
-`else
-`ifdef BOARD_nfsume
-typedef 2 LedsWidth;
-`else
-typedef 8 LedsWidth;
-`endif
-`endif
-`endif
-`endif
-`elsif ALTERA
-typedef 4 LedsWidth;
-`elsif VSIM
-typedef 4 LedsWidth;
-`else
-typedef 8 LedsWidth;
-`endif
-`endif
-
-interface LEDS;
-    method Bit#(LedsWidth) leds;
+interface EchoIndication;
+    method Action heard(Bit#(32) v);
+    method Action heard2(Bit#(16) a, Bit#(16) b);
 endinterface
+
+interface EchoRequest;
+   method Action say(Bit#(32) v);
+   method Action say2(Bit#(16) a, Bit#(16) b);
+   method Action setLeds(Bit#(8) v);
+endinterface
+
+interface Echo;
+   interface EchoRequest request;
+endinterface
+
+module mkEcho#(EchoIndication indication)(Echo);
+    Bounce bounce <- mkBounce();
+
+    rule heard;
+        bounce.outDelay.deq();
+        indication.heard(bounce.outDelay.first);
+    endrule
+
+    rule heard2;
+        bounce.outPair.deq();
+        indication.heard2(bounce.outPair.first.b, bounce.outPair.first.a);
+    endrule
+   
+   interface EchoRequest request;
+      method Action say(Bit#(32) v);
+	 bounce.inDelay.enq(v);
+      endmethod
+      
+      method Action say2(Bit#(16) a, Bit#(16) b);
+	 bounce.inPair.enq(EchoPair { a: a, b: b});
+      endmethod
+      
+      method Action setLeds(Bit#(8) v);
+      endmethod
+   endinterface
+endmodule

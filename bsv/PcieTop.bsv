@@ -66,13 +66,8 @@ import HostInterface    :: *;
 
 typedef `PinType PinType;
 
-`ifndef BSIM
 (* synthesize, no_default_clock, no_default_reset *)
-`endif
-`ifdef BSIM
-module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n) (PcieTop#(PinType));
-   PcieHostTop host <- mkPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n);
-`elsif XILINX
+`ifdef XILINX
 module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n) (PcieTop#(PinType));
    PcieHostTop host <- mkPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n);
 `elsif ALTERA
@@ -81,10 +76,14 @@ module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (P
    PcieHostTop host <- mkPcieHostTop(pcie_refclk_p, osc_50_b3b, pcie_perst_n);
 `endif
 
-`ifdef IMPORT_HOSTIF
+`ifdef IMPORT_HOSTIF // no synthesis boundary
    ConnectalTop#(PhysAddrWidth, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkConnectalTop(host, clocked_by host.portalClock, reset_by host.portalReset);
 `else
+`ifdef IMPORT_HOST_CLOCKS // enables synthesis boundary
+   ConnectalTop#(PhysAddrWidth, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkConnectalTop(host.derivedClock, host.derivedReset, clocked_by host.portalClock, reset_by host.portalReset);
+`else  // enables synthesis boundary
    ConnectalTop#(PhysAddrWidth, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkConnectalTop(clocked_by host.portalClock, reset_by host.portalReset);
+`endif
 `endif
 
    if (mainClockPeriod == pcieClockPeriod) begin
@@ -121,9 +120,7 @@ module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (P
       host.tpciehost.interruptRequest.put(tuple2({msixEntry.addr_hi, msixEntry.addr_lo}, msixEntry.msg_data));
    endrule
 
-`ifndef BSIM
    interface pcie = host.tep7.pcie;
    interface pins = portalTop.pins;
-`endif
 endmodule
 

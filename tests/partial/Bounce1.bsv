@@ -1,5 +1,4 @@
-
-// Copyright (c) 2013 Quanta Research Cambridge, Inc.
+// Copyright (c) 2015 The Connectal Project
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -20,37 +19,17 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+import FIFOF::*;
+import Pipe::*;
+import Bounce::*;
 
-`ifdef NUMBER_OF_LEDS
-typedef `NUMBER_OF_LEDS LedsWidth;
-`else
-`ifdef XILINX
-`ifdef Artix7
-typedef 4 LedsWidth;
-`else
-`ifdef BOARD_zybo
-typedef 4 LedsWidth;
-`else
-`ifdef BOARD_zc706
-typedef 4 LedsWidth;
-`else
-`ifdef BOARD_nfsume
-typedef 2 LedsWidth;
-`else
-typedef 8 LedsWidth;
-`endif
-`endif
-`endif
-`endif
-`elsif ALTERA
-typedef 4 LedsWidth;
-`elsif VSIM
-typedef 4 LedsWidth;
-`else
-typedef 8 LedsWidth;
-`endif
-`endif
+(* synthesize *)
+module mkBounce(Bounce);
+    FIFOF#(Bit#(32)) delay <- mkSizedFIFOF(8);
+    FIFOF#(EchoPair) delay2 <- mkSizedFIFOF(8);
 
-interface LEDS;
-    method Bit#(LedsWidth) leds;
-endinterface
+    interface outDelay = toPipeOut(delay);
+    interface inDelay = toPipeIn(delay);
+    interface outPair = toPipeOut(delay2);
+    interface inPair = toPipeIn(delay2);
+endmodule

@@ -4,7 +4,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-typedef enum IfcNames { IfcNames_RtestIndication, IfcNames_RtestRequest, IfcNames_HostMemServerIndication, IfcNames_HostMemServerRequest, IfcNames_HostMMURequest, IfcNames_HostMMUIndication } IfcNames;
 typedef enum ChannelType { ChannelType_Read, ChannelType_Write } ChannelType;
 typedef struct DmaDbgRec {
     uint32_t x : 32;
@@ -19,50 +18,8 @@ typedef struct TileControl {
     uint8_t tile : 2;
     TileState state;
 } TileControl;
+typedef enum IfcNames { NoInterface, IfcNames_ReadTestIndicationH2S, IfcNames_MMUIndicationH2S, IfcNames_MemServerIndicationH2S, IfcNames_ReadTestRequestS2H, IfcNames_MMURequestS2H, IfcNames_MemServerRequestS2H } IfcNames;
 
-
-int RtestRequest_startRead ( struct PortalInternal *p, const uint32_t pointer, const uint32_t numWords, const uint32_t burstLen, const uint32_t iterCnt );
-enum { CHAN_NUM_RtestRequest_startRead};
-#define RtestRequest_reqinfo 0x10014
-
-typedef struct {
-    uint32_t pointer;
-    uint32_t numWords;
-    uint32_t burstLen;
-    uint32_t iterCnt;
-} RtestRequest_startReadData;
-typedef union {
-    RtestRequest_startReadData startRead;
-} RtestRequestData;
-int RtestRequest_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
-typedef struct {
-    int (*startRead) (  struct PortalInternal *p, const uint32_t pointer, const uint32_t numWords, const uint32_t burstLen, const uint32_t iterCnt );
-} RtestRequestCb;
-extern RtestRequestCb RtestRequestProxyReq;
-
-int RtestRequestJson_startRead ( struct PortalInternal *p, const uint32_t pointer, const uint32_t numWords, const uint32_t burstLen, const uint32_t iterCnt );
-int RtestRequestJson_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
-extern RtestRequestCb RtestRequestJsonProxyReq;
-
-int RtestIndication_readDone ( struct PortalInternal *p, const uint32_t mismatchCount );
-enum { CHAN_NUM_RtestIndication_readDone};
-#define RtestIndication_reqinfo 0x10008
-
-typedef struct {
-    uint32_t mismatchCount;
-} RtestIndication_readDoneData;
-typedef union {
-    RtestIndication_readDoneData readDone;
-} RtestIndicationData;
-int RtestIndication_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
-typedef struct {
-    int (*readDone) (  struct PortalInternal *p, const uint32_t mismatchCount );
-} RtestIndicationCb;
-extern RtestIndicationCb RtestIndicationProxyReq;
-
-int RtestIndicationJson_readDone ( struct PortalInternal *p, const uint32_t mismatchCount );
-int RtestIndicationJson_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
-extern RtestIndicationCb RtestIndicationJsonProxyReq;
 
 int MemServerRequest_addrTrans ( struct PortalInternal *p, const uint32_t sglId, const uint32_t offset );
 int MemServerRequest_setTileState ( struct PortalInternal *p, const TileControl tc );
@@ -244,6 +201,49 @@ int MMUIndicationJson_configResp ( struct PortalInternal *p, const uint32_t sglI
 int MMUIndicationJson_error ( struct PortalInternal *p, const uint32_t code, const uint32_t sglId, const uint64_t offset, const uint64_t extra );
 int MMUIndicationJson_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
 extern MMUIndicationCb MMUIndicationJsonProxyReq;
+
+int ReadTestRequest_startRead ( struct PortalInternal *p, const uint32_t pointer, const uint32_t numBytes, const uint32_t burstLen, const uint32_t iterCnt );
+enum { CHAN_NUM_ReadTestRequest_startRead};
+#define ReadTestRequest_reqinfo 0x10014
+
+typedef struct {
+    uint32_t pointer;
+    uint32_t numBytes;
+    uint32_t burstLen;
+    uint32_t iterCnt;
+} ReadTestRequest_startReadData;
+typedef union {
+    ReadTestRequest_startReadData startRead;
+} ReadTestRequestData;
+int ReadTestRequest_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
+typedef struct {
+    int (*startRead) (  struct PortalInternal *p, const uint32_t pointer, const uint32_t numBytes, const uint32_t burstLen, const uint32_t iterCnt );
+} ReadTestRequestCb;
+extern ReadTestRequestCb ReadTestRequestProxyReq;
+
+int ReadTestRequestJson_startRead ( struct PortalInternal *p, const uint32_t pointer, const uint32_t numBytes, const uint32_t burstLen, const uint32_t iterCnt );
+int ReadTestRequestJson_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
+extern ReadTestRequestCb ReadTestRequestJsonProxyReq;
+
+int ReadTestIndication_readDone ( struct PortalInternal *p, const uint32_t mismatchCount );
+enum { CHAN_NUM_ReadTestIndication_readDone};
+#define ReadTestIndication_reqinfo 0x10008
+
+typedef struct {
+    uint32_t mismatchCount;
+} ReadTestIndication_readDoneData;
+typedef union {
+    ReadTestIndication_readDoneData readDone;
+} ReadTestIndicationData;
+int ReadTestIndication_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
+typedef struct {
+    int (*readDone) (  struct PortalInternal *p, const uint32_t mismatchCount );
+} ReadTestIndicationCb;
+extern ReadTestIndicationCb ReadTestIndicationProxyReq;
+
+int ReadTestIndicationJson_readDone ( struct PortalInternal *p, const uint32_t mismatchCount );
+int ReadTestIndicationJson_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
+extern ReadTestIndicationCb ReadTestIndicationJsonProxyReq;
 #ifdef __cplusplus
 }
 #endif

@@ -39,7 +39,7 @@ argparser.add_argument('bsvfile', help='BSV files to parse', nargs='+')
 argparser.add_argument('-B', '--board', default='zc702', help='Target Board for compilation')
 argparser.add_argument('-O', '--OS', default=None, choices=supported_os, help='Target operating system')
 argparser.add_argument('-interfaces', '--interfaces', help='BSV interface', action='append')
-argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps project directory')
+argparser.add_argument(      '--project-dir', default='./xpsproj', help='xps project directory')
 argparser.add_argument(      '--pinfo', default=None, help='Project description file (json)')
 argparser.add_argument(      '--protobuf', default=[], help='Interface description in protobuf', action='append')
 argparser.add_argument('-s', '--source', help='C++ source files', action='append')
@@ -77,6 +77,9 @@ argparser.add_argument('--cachedir', default=None, help='Cache directory for fpg
 argparser.add_argument('-v', '--verbose', help='Display verbose information messages', action='store_true')
 argparser.add_argument(      '--dump_map', help='List of portals passed to pcieflat for PCIe trace debug info')
 argparser.add_argument('--nonstrict', help='If nonstrict, pass -Wall to gcc, otherwise -Werror', default=False, action='store_true')
+argparser.add_argument('--prtop', help='Filename of previously synthesized top level for partial reconfiguration', default=None)
+argparser.add_argument('--prvariant', default=[], help='name of a variant for partial reconfiguration', action='append')
+argparser.add_argument('--reconfig', default=[], help='partial reconfig module names', action='append')
 
 noisyFlag=False
 
@@ -110,15 +113,19 @@ foreach {pat} {CLK_GATE_hdmi_clock_if CLK_*deleteme_unused_clock* CLK_GATE_*dele
 '''
 
 fpgamakeRuleTemplate='''
+VERILOG_PATH=verilog %(verilog)s $(BLUESPEC_VERILOG)
 FPGAMAKE=$(CONNECTALDIR)/../fpgamake/fpgamake
 fpgamake.mk: $(VFILE) Makefile prepare_bin_target
-	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk --board=%(boardname)s --part=%(partname)s %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s %(qsf)s %(chipscope)s -t $(MKTOP) %(FPGAMAKE_DEFINE)s %(cachedir)s -b hw/mkTop.bit verilog $(CONNECTALDIR)/verilog %(verilog)s
+	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk --board=%(boardname)s --part=%(partname)s %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s %(qsf)s %(chipscope)s -t $(MKTOP) %(FPGAMAKE_DEFINE)s %(cachedir)s -b hw/mkTop.bit %(prtop)s %(reconfig)s $(VERILOG_PATH)
+
+synth.%%:fpgamake.mk
+	make -f fpgamake.mk Synth/$*/$*-synth.dcp
 
 hw/mkTop.bit: prepare_bin_target %(genxdc_dep)s fpgamake.mk
 	$(Q)mkdir -p hw
 	$(Q)make -f fpgamake.mk
 ifneq ($(XILINX),)
-	$(Q)cp -f Impl/*/*.rpt bin
+	$(Q)rsync -rav --include="*/" --include="*.rpt" --exclude="*" Impl/ bin
 else ifneq ($(ALTERA),)
 	$(Q)cp -f $(MKTOP).sof bin
 endif
@@ -138,6 +145,7 @@ CONNECTALDIR=%(connectaldir)s
 BSVPATH = %(bsvpath)s
 
 BOARD=%(boardname)s
+PROJECTDIR=%(project_dir)s
 MKTOP=%(topbsvmod)s
 OS=%(OS)s
 DUT=%(dut)s
@@ -165,6 +173,11 @@ export DUT_NAME = %(Dut)s
 include $(CONNECTALDIR)/scripts/Makefile.connectal.build
 
 %(bitsmake)s
+'''
+
+variantTemplate='''
+extratarget::
+	make -C ../variant%(varname)s
 '''
 
 androidmk_template='''
@@ -319,7 +332,6 @@ if __name__=='__main__':
 
     bsvdefines += ['BOARD_'+boardname]
 
-    options.verilog.append(os.path.join(connectaldir, 'verilog'))
 
     # bsvdefines is a list of definitions, not a dictionary, so need to include the "=1"
     if 'ALTERA=1' in bsvdefines:
@@ -333,6 +345,9 @@ if __name__=='__main__':
         suffix = None
 
     print 'fpga_vendor', fpga_vendor
+    if fpga_vendor:
+        options.verilog.append(os.path.join(connectaldir, 'verilog', fpga_vendor))
+    options.verilog.append(os.path.join(connectaldir, 'verilog'))
 
     if noisyFlag:
         pprint.pprint(options.__dict__)
@@ -438,7 +453,9 @@ if __name__=='__main__':
 					 'sourceTcl': ' '.join(['--tcl=%s' % os.path.abspath(tcl) for tcl in options.tcl]),
                                          'verilog': ' '.join([os.path.abspath(f) for f in options.verilog]),
 					 'cachedir': '--cachedir=%s' % os.path.abspath(options.cachedir) if options.cachedir else '',
-                                         'pin_binding' : ' '.join(['-b %s' % s for s in options.pin_binding])
+                                         'pin_binding' : ' '.join(['-b %s' % s for s in options.pin_binding]),
+                                         'reconfig' : ' '.join(['--reconfig=%s' % rname for rname in options.reconfig]),
+                                         'prtop' : ('--prtop=%s' % options.prtop) if options.prtop else ''
 					 }
     substs['genxdc'] = (genxdc_template % substs) if options.pinout else ''
     substs['FPGAMAKE_DEFINE'] = '-D BSV_POSITIVE_RESET' if 'BSV_POSITIVE_RESET' in options.bsvdefine else ''
@@ -479,6 +496,9 @@ if __name__=='__main__':
                                    'protobuf': ('export PROTODEBUG=%s' % ' '.join(protolist)) if options.protobuf else '',
                                    'bitsmake': bitsmake
                                    })
+    if not options.prtop:
+        for name in options.prvariant:
+            make.write(variantTemplate % {'varname': name})
     make.close()
 
     if options.make:

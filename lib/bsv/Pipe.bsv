@@ -634,7 +634,7 @@ module mkRepeat#(UInt#(n) repetitions, PipeOut#(a) inpipe)(PipeOut#(a));
    method notEmpty = inpipe.notEmpty;
 endmodule
 
-module mkPipelinedForkVector#(PipeOut#(a) inpipe, Integer id)(UnFunnelPipe#(1,k,a,bpc))
+module mkForkVectorPipelined#(PipeOut#(a) inpipe)(UnFunnelPipe#(1,k,a,bpc))
    provisos ( Bits#(a,a__)
 	     ,Add#(1,b__,k)
 	     ,Log#(k,logk)

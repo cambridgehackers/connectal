@@ -208,3 +208,4 @@ distclean:
 	rm -f doc/library/source/devguide/connectalbuild-1.png
 	rm -f drivers/*/driver_signature_file.h
 	rm -f drivers/pcieportal/pcieportal_signature_file.h drivers/portalmem/portalmem_signature_file.h
+	rm -rf tests/partial/variant2

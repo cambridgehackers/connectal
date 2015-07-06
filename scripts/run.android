@@ -132,15 +132,23 @@ def run_android(androidexe, additional_files):
             #print('socket.error', sys.exc_info())
             pass
 
+    params = { 'time': options.timelimit,
+               'env': '',
+               'exe': os.path.basename(androidexe),
+               'args': ' '.join([os.path.basename(f) for f in additional_files]),
+             }
+    nofpgajtag = os.environ.get('NOFPGAJTAG')
+    if nofpgajtag != None:
+         params['env'] += 'NOFPGAJTAG= '
     print('Sending files to the zedboard')
-    connection.Push(androidexe, '/mnt/sdcard/tmp/%s' % os.path.basename(androidexe))
-    connection.Shell('chmod agu+rx /mnt/sdcard/tmp/%s' % os.path.basename(androidexe))
+    connection.Push(androidexe, '/mnt/sdcard/tmp/%(exe)s' % params)
+    connection.Shell('chmod agu+rx /mnt/sdcard/tmp/%(exe)s' % params)
     for f in additional_files:
         connection.Push(f, '/mnt/sdcard/tmp/%s' % os.path.basename(f))
     connection.Shell("touch /mnt/sdcard/tmp/perf.monkit")
-    print('Running android.exe with timelimit %d' % options.timelimit)
-    cmd = ("cd /mnt/sdcard/tmp/; rm -f /mnt/sdcard/tmp/exit.status; /mnt/sdcard/timelimit -t %d ./%s %s; echo $? > /mnt/sdcard/tmp/exit.status"
-           % (options.timelimit, os.path.basename(androidexe), ' '.join([os.path.basename(f) for f in additional_files])))
+    print('Running android.exe with timelimit %(time)d' % params)
+    cmd = ("cd /mnt/sdcard/tmp/; rm -f /mnt/sdcard/tmp/exit.status; %(env)s /mnt/sdcard/timelimit -t %(time)d ./%(exe)s %(args)s; echo $? > /mnt/sdcard/tmp/exit.status"
+           % params)
     for line in connection.StreamingShell(cmd):
         sys.stdout.write(line)
     connection.Pull('/mnt/sdcard/tmp/exit.status', 'exit.status')

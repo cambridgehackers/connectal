@@ -68,8 +68,21 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
    Reg#(Bool)                  readInProgress <- mkReg(False);
    Reg#(Bit#(7))               address <- mkReg(0);
 
-   function Bool isQuarWordAligned(Bit#(7) lower_addr);
+   function Bool isQuadWordAligned(Bit#(7) lower_addr);
       return (lower_addr[2:0]==3'b0);
+   endfunction
+
+   function print_3dw(TLPMemoryIO3DWHeader hdr_3dw);
+      TLPMemoryIO3DWHeader h = hdr_3dw;
+      $display("----------\n\
+                tclass:  %h\n\
+                relaxed: %h\n\
+                nosnoop: %h\n\
+                length:  %h\n\
+                lastbe:  %h\n\
+                firstbe: %h\n\
+                addr:    %h\n\
+                data:    %h\n", h.tclass, h.relaxed, h.nosnoop, h.length, h.lastbe, h.firstbe, h.addr, h.data);
    endfunction
 
    rule completionHeader if (!readInProgress && readDataFifo.notEmpty() && completionMimo.deqReadyN(1));
@@ -81,14 +94,14 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
       dvec = completionMimo.first();
       completionMimo.deq(1);
 `elsif AVALON
-      let quadWordAligned = isQuarWordAligned(getLowerAddr(hdr.addr, hdr.firstbe));
+      let quadWordAligned = isQuadWordAligned(getLowerAddr(hdr.addr, hdr.firstbe));
       // if quad-word aligned, insert bubble.
       if (!quadWordAligned) begin
          dvec = completionMimo.first();
          completionMimo.deq(1);
       end
 `endif
-      //$display("completionHeader length=%d rbc=%d addr=%x", hdr.length, rbc, hdr.addr);
+      $display("completionHeader length=%d rbc=%d addr=%x", hdr.length, rbc, hdr.addr);
       TLPCompletionHeader completion = defaultValue;
       completion.format = MEM_WRITE_3DW_DATA;
       completion.pkttype = COMPLETION;
@@ -168,7 +181,7 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
       end
       else begin
 	 tlp.be = tlpBe(rbc);
-	 //$display("tlp.data=%h tlp.be=%h", tlp.data, tlp.be);
+	 $display("tlp.data=%h tlp.be=%h", tlp.data, tlp.be);
 	 tlp.eof = True;
 	 rbc = 0;
       end
@@ -193,13 +206,13 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
     interface Client        tlp;
     interface Put response;
         method Action put(TLPData#(16) tlp);
-	    //$display("MemMasterEngine.put tlp=%h", tlp);
+	    $display("MemMasterEngine.put tlp=%h", tlp);
 	    TLPMemoryIO3DWHeader h = unpack(tlp.data);
 	    hitReg <= tlp.hit;
 	    TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
 `ifdef AVALON
             // For Altera, the position of payload in a 3DW TLP depends on alignment.
-            let quadWordAligned = isQuarWordAligned(getLowerAddr(hdr_3dw.addr, hdr_3dw.firstbe));
+            let quadWordAligned = isQuadWordAligned(getLowerAddr(hdr_3dw.addr, hdr_3dw.firstbe));
 `endif
 	    if (tlp.sof && hdr_3dw.format == MEM_READ_3DW_NO_DATA) begin
 	       if (readHeaderFifo.notFull())
@@ -210,8 +223,10 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
 	    end
 	    else begin
                //FIXME: should rewrite to allow burst write.
-               if (tlp.sof && writeHeaderFifo.notFull())
+               if (tlp.sof && writeHeaderFifo.notFull()) begin
 		  writeHeaderFifo.enq(hdr_3dw);
+                  print_3dw(hdr_3dw);
+               end
 	    end
 	endmethod
     endinterface
@@ -225,6 +240,7 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
 	     writeHeaderFifo.deq;
 	     writeDataFifo.enq(hdr);
 	     let burstLen = truncate(hdr.length << 2);
+             $display("burstLen = %h", hdr.length << 2);
 	     return PhysMemRequest { addr: extend(writeHeaderFifo.first.addr) << 2, burstLen: burstLen, tag: truncate(writeHeaderFifo.first.tag)};
 	  endmethod
        endinterface
@@ -286,7 +302,7 @@ module mkMemInterrupt#(PciId my_id)(MemInterrupt);
     Reg#(TLPTag) tlpTag <- mkReg(0);
     FIFOF#(TLPData#(16)) tlpOutFifo <- mkSizedFIFOF(8);
 
-    function Bool isQuarWordAligned(Bit#(7) lower_addr);
+    function Bool isQuadWordAligned(Bit#(7) lower_addr);
        return (lower_addr[2:0]==3'b0);
     endfunction
 
@@ -297,7 +313,7 @@ module mkMemInterrupt#(PciId my_id)(MemInterrupt);
        tlp.hit = 7'h00;
        tlp.be = 16'hffff;
 
-       let interruptRequested = True;
+       let deqInterruptRequestFifo = False;
        let sendInterrupt = False;
 
        let interruptRequest = interruptRequestFifo.first;
@@ -306,11 +322,16 @@ module mkMemInterrupt#(PciId my_id)(MemInterrupt);
        let mswIsZero = interruptRequest.mswIsZero;
        let lswIsZero = interruptRequest.lswIsZero;
 
-       let quadWordAligned = isQuarWordAligned(truncate(interruptAddr));
+`ifdef AXI
+       let dataInSecondTlp = False;
+`elsif AVALON
+       let quadWordAligned = isQuadWordAligned(truncate(interruptAddr));
+       let dataInSecondTlp = quadWordAligned;
+`endif
 
        if (mswIsZero && lswIsZero) begin
 	  // do not write to 0 -- it wedges the host
-	  interruptRequested = False;
+	  deqInterruptRequestFifo = True;
        end
        else if (mswIsZero) begin
           TLPMemoryIO3DWHeader hdr_3dw = defaultValue();
@@ -329,16 +350,15 @@ module mkMemInterrupt#(PciId my_id)(MemInterrupt);
 `endif
 
 	  tlp.data = pack(hdr_3dw);
-`ifdef AXI
-	  tlp.eof = True;
-`elsif AVALON
-          tlp.eof = (!quadWordAligned) ? True : False;
-          if (quadWordAligned) begin
+          if (dataInSecondTlp) begin
+	     tlp.eof = False;
              interruptSecondHalf <= tagged Valid interruptData;
           end
-`endif
+	  else begin
+	     tlp.eof = True;
+	     deqInterruptRequestFifo = True;
+	  end
 	  sendInterrupt = True;
-	  interruptRequested = False;
        end
        else begin
 	  TLPMemory4DWHeader hdr_4dw = defaultValue;
@@ -357,7 +377,7 @@ module mkMemInterrupt#(PciId my_id)(MemInterrupt);
 	  interruptSecondHalf <= tagged Valid interruptData;
        end
 
-       if (!interruptRequested) begin
+       if (deqInterruptRequestFifo) begin
 	  interruptRequestFifo.deq();
        end
        if (sendInterrupt)
@@ -377,9 +397,7 @@ module mkMemInterrupt#(PciId my_id)(MemInterrupt);
 `endif
        tlpOutFifo.enq(tlp);
        interruptSecondHalf <= tagged Invalid;
-`ifdef AXI
        interruptRequestFifo.deq();
-`endif
     endrule
 
     interface Client        tlp;

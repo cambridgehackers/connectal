@@ -46,7 +46,7 @@ endinterface
 
 interface Memwrite;
    interface MemwriteRequest request;
-   interface Vector#(1, MemWriteClient#(64)) dmaClients;
+   interface Vector#(1, MemWriteClient#(DataBusWidth)) dmaClients;
 endinterface
 
 module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
@@ -102,7 +102,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
       numWords <= numWords - fromInteger(valueOf(WordsPerBeat));
    endrule
 
-   MemWriteClient#(64) dmaClient = (interface MemWriteClient;
+   MemWriteClient#(DataBusWidth) dmaClient = (interface MemWriteClient;
       interface Get writeReq = toGet(reqFifo);
       interface Get writeData = toGet(dataFifo);
       interface Put writeDone = toPut(doneFifo);

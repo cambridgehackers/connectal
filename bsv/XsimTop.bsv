@@ -85,9 +85,7 @@ module mkXsimMemoryConnection#(PhysMemMaster#(addrWidth, dataWidth) master)(Empt
    mkConnection(master, slave);
 endmodule
 
-module mkXsimTop(Empty);
-   Clock derivedClock <- exposeCurrentClock;
-   Reset derivedReset <- exposeCurrentReset;
+module mkXsimTop#(Clock derivedClock, Reset derivedReset)(Empty);
 
    Reg#(Bool) dumpstarted <- mkReg(False);
    rule startdump if (!dumpstarted);

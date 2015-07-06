@@ -43,38 +43,42 @@ Connectal also uses a generic driver to enable the applications to allocate DRAM
 Portal Memory Map
 =================
 
-Connectal currently supports up to 16 portals connected between software and hardware, for a total of 1MB of address space.
+Connectal is designed to support multiple tiles, each of which can
+hold an independent design. Currently, the number of tiles is one.
+
+Connectal currently supports up to 16 portals connected between software and hardware, for a total of 64KB of address space.
 
 =============  =========
  Base address  Function
 =============  =========
-      0x00000  Portal 0
-      0x10000  Portal 1
-      0x20000  Portal 2
-      0x30000  Portal 3
-      0x40000  Portal 4
-      0x50000  Portal 5
-      0x60000  Portal 6
-      0x70000  Portal 7
-      0x80000  Portal 8
-      0x90000  Portal 9
-      0xa0000  Portal 10
-      0xb0000  Portal 11
-      0xc0000  Portal 12
-      0xd0000  Portal 13
-      0xe0000  Portal 14
-      0xf0000  Portal 15
+       0x0000  Portal 0
+       0x1000  Portal 1
+       0x2000  Portal 2
+       0x3000  Portal 3
+       0x4000  Portal 4
+       0x5000  Portal 5
+       0x6000  Portal 6
+       0x7000  Portal 7
+       0x8000  Portal 8
+       0x9000  Portal 9
+       0xa000  Portal 10
+       0xb000  Portal 11
+       0xc000  Portal 12
+       0xd000  Portal 13
+       0xe000  Portal 14
+       0xf000  Portal 15
 =============  =========
 
-Each portal uses 64KB of address space, consisting of a control
-register region and then per-method FIFOs.
+Each portal uses 16KB of address space, consisting of a control
+register region and then per-method FIFOs, each of which takes 32
+bytes of address space.
 
 ============== ==========
  Base address   Function
 ============== ==========
- 0x0000        Portal control regs
- 0x0100        Method 0 FIFO
- 0x0200        Method 1 FIFO
+  0x000        Portal control regs
+  0x020        Method 0 FIFO
+  0x040        Method 1 FIFO
  ...           ...
 ============== ==========
 
@@ -99,10 +103,10 @@ Base address  Function                      Description
 ============= ============================= =========================================================
 	0x00  Interrupt status register     1 if this portal has any messages ready, 0 otherwise
 	0x04  Interrupt enable register     Write 1 to enable interrupts, 0 to disable
-	0x08  7                             Fixed value
+	0x08  Number of tiles
 	0x0C  Ready Channel number + 1      Reads as zero if no indication channel ready
 	0x10  Interface Id
-	0x14  Last portal                   1 if this is the last portal defined
+	0x14  Number of portals
 	0x18  Cycle count LSW               Snapshots MSW when read
 	0x1C  Cycle count MSW               MSW of cycle count when LSW was read
 ============= ============================= =========================================================

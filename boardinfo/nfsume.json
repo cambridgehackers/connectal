@@ -1,0 +1,95 @@
+{
+    "options": {
+        "bsvdefines" : ["XILINX=1", "Virtex7", "PCIE", "PCIE3", "PcieHostInterface", "PhysAddrWidth=40", "NUMBER_OF_LEDS=2"],
+        "os" : "ubuntu",
+        "partname" : "xc7vx690tffg1761-3",
+        "need_pcie" : "x7_gen3x8",
+        "TOP" : "PcieTop",
+        "constraints": ["constraints/xilinx/nfsume.xdc"],
+        "runscript" : "run.pcietest",
+        "CONNECTALFLAGS" : [],
+        "rewireclockstring" : ""
+    },
+    "leds" : {
+		"L0" : {
+		 "LOC" : "AR22",
+		 "IOSTANDARD" : "LVCMOS15",
+		 "PIO_DIRECTION" : "OUTPUT"
+		 },
+		"L1" : {
+		 "LOC" : "AR23",
+		 "IOSTANDARD" : "LVCMOS15",
+		 "PIO_DIRECTION" : "OUTPUT"
+		 }
+	},
+    "pins": {
+		"userClk_p": {
+			"PACKAGE_PIN": "bogus",
+			"IOSTANDARD": "LVDS_25",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "INPUT"
+		},
+		"userClk_n": {
+			"PACKAGE_PIN": "bogus",
+			"IOSTANDARD": "LVDS_25",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "INPUT"
+		},
+		"smaUserClk_p": {
+			"PACKAGE_PIN": "bogus",
+			"IOSTANDARD": "LVDS_25",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "OUTPUT"
+		},
+		"smaUserClk_n": {
+			"PACKAGE_PIN": "bogus",
+			"IOSTANDARD": "LVDS_25",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "OUTPUT"
+		},
+		"mgtRefClk_p": {
+			"PACKAGE_PIN": "bogus",
+			"IOSTANDARD": "LVDS_25",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "INPUT"
+		},
+		"mgtRefClk_n": {
+			"PACKAGE_PIN": "bogus",
+			"IOSTANDARD": "LVDS_25",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "INPUT"
+		},
+		"mgtRx_p": {
+			"PACKAGE_PIN": "bogus",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "INPUT"
+		},
+		"mgtRx_n": {
+			"PACKAGE_PIN": "bogus",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "INPUT"
+		},
+		"mgtTx_p": {
+			"PACKAGE_PIN": "bogus",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "OUTPUT"
+		},
+		"mgtTx_n": {
+			"PACKAGE_PIN": "bogus",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "OUTPUT"
+		},
+		"uart_d_in": {
+			"PACKAGE_PIN": "bogus",
+			"IOSTANDARD": "LVCMOS25",
+			"PIO_DIRECTION": "INPUT"
+		},
+		"uart_d_out": {
+			"PACKAGE_PIN": "bogus",
+			"IOSTANDARD": "LVCMOS25",
+			"PIO_DIRECTION": "OUTPUT"
+		}
+    }
+}
+
+

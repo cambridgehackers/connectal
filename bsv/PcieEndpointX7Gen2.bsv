@@ -80,7 +80,7 @@ typedef 8 PcieLanes;
 `ifdef BOARD_kc160g2
 typedef 8 PcieLanes;
 `endif
-`ifdef BOARD_netfpgasume
+`ifdef BOARD_nfsume
 typedef 8 PcieLanes;
 `endif
 
@@ -197,11 +197,11 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    clkgenParams.clkin1_period    = 4.000; //  250MHz
    clkgenParams.clkin_buffer     = False;
    clkgenParams.clkfbout_mult_f  = 4.000; // 1000MHz
-   clkgenParams.clkout0_divide_f = 4.000; //  250MHz
+   clkgenParams.clkout0_divide_f = derivedClockPeriod;
    clkgenParams.clkout1_divide     = round(mainClockPeriod);
    clkgenParams.clkout1_duty_cycle = 0.5;
    clkgenParams.clkout1_phase      = 0.0000;
-   clkgenParams.clkout2_divide     = round(derivedClockPeriod);
+   clkgenParams.clkout2_divide     = 4; // 250MHz
    clkgenParams.clkout2_duty_cycle = 0.5;
    clkgenParams.clkout2_phase      = 0.0000;
    ClockGenerator7           clkgen <- mkClockGenerator7(clkgenParams, clocked_by user_clk, reset_by user_reset_n);
@@ -215,7 +215,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       portalClock = clkgen.clkout1;
       portalReset <- mkAsyncReset(4, user_reset_n, portalClock);
    end
-   Clock derivedClock = clkgen.clkout2;
+   Clock derivedClock = clkgen.clkout0;
    Reset derivedReset <- mkAsyncReset(4, user_reset_n, derivedClock);
 
    Server#(TLPData#(16), TLPData#(16)) tlp16 = (interface Server;

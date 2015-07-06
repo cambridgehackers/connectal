@@ -114,11 +114,5 @@ int main(int argc, const char **argv)
     fprintf(stderr, "     est: %"PRIx64"\n", (beats*2)/iterCnt);
     fprintf(stderr, "memory write utilization (beats/cycle): %f\n", write_util);
     fprintf(stderr, "testmemwrite: mismatch count %d.\n", mismatch);
-    sleep(2);
-
-    MonkitFile("perf.monkit")
-      .setHwCycles(cycles)
-      .setWriteBwUtil(write_util)
-      .writeFile();
     exit(mismatch);
 }

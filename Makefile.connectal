@@ -31,28 +31,34 @@ Q=
 VERBOSE_SWITCH=--verbose
 endif
 
+#PROJECTDIR?=$(BOARD)
+
 bozotarget:
 	@echo "Makefile.connectal: please invoke with make gen.boardname"
+
+VARIANT_PROJECTS := $(foreach item,$(VARIANT_LIST),variantgen.$(item))
 #
 ## use "make gen.board" to generate the build directory
 gen.%:
-	make BOARD=$* --no-print-directory gentarget prebuild
-	make -C $* BOARD=$* --no-print-directory prepare_bin_target
+ifeq ($(BOARD),)
+	$(eval BOARD := $*)
+endif
+	BOARD=$(BOARD) PROJECTDIR=$* make --no-print-directory gentarget prebuild $(VARIANT_PROJECTS)
+#is this needed? (jca):	make -C $* --no-print-directory prepare_bin_target
 
-exe.%:
-	make BOARD=$* --no-print-directory gentarget prebuild exe
+variantgen.%:
+	BOARD=$(BOARD) PROJECTDIR=variant$* \
+	    VARIANT=$* PRTOP_FILE=../$(BOARD)/Impl/TopDown/top-post-route.dcp \
+	    make --no-print-directory gentarget prebuild
 
 build.%: gen.%
-	make -C $* BOARD=$* --no-print-directory all
+	make -C $* --no-print-directory all
+
+verilog.%: gen.%
+	make -C $* --no-print-directory verilog
 
 run.%:
-	make -C $* BOARD=$* --no-print-directory run
-
-programflash.%:
-	make -C $* BOARD=$* --no-print-directory programflash
-
-%.gdb:
-	make CONNECTAL_DEBUG=1 --no-print-directory $*
+	make -C $* --no-print-directory run
 
 IPDIR?=$(CONNECTALDIR)/out
 NUMBER_OF_TILES?=1
@@ -86,7 +92,7 @@ ifndef MAIN_CLOCK_PERIOD
     MAIN_CLOCK_PERIOD=8
     DEFAULT_DERIVED_CLOCK_PERIOD=4
     endif
-    ifeq ($(BOARD),netfpga-sume)
+    ifeq ($(BOARD),nfsume)
     PCIE_CLOCK_PERIOD?=8
     MAIN_CLOCK_PERIOD=8
     DEFAULT_DERIVED_CLOCK_PERIOD=4
@@ -172,10 +178,10 @@ BSVFILES += $(CONNECTALDIR)/bsv/XsimIF.bsv
 endif
 
 all bits verilog implementation bsim xsim xsimrun: gentarget prebuild
-	make -C $(BOARD) --no-print-directory $@
+	make -C $(PROJECTDIR) --no-print-directory $@
 
 android.exe bsim_exe ubuntu.exe exe: gentarget
-	make -C $(BOARD) --no-print-directory $@
+	make -C $(PROJECTDIR) --no-print-directory $@
 
 PCIEGEN=$(shell grep PCIE $(CONNECTALDIR)/boardinfo/$(BOARD).json | sed 's/.*PCIE\([123]\).*/\1/')
 NEED_XILINX_PCIE_ac701=1
@@ -184,7 +190,7 @@ NEED_XILINX_PCIE_kc705g2=$(PCIEGEN)
 NEED_XILINX_PCIE_vc707g2=$(PCIEGEN)
 NEED_XILINX_PCIE_kc705=$(PCIEGEN)
 NEED_XILINX_PCIE_vc707=$(PCIEGEN)
-NEED_XILINX_PCIE_netfpgasume=3
+NEED_XILINX_PCIE_nfsume=3
 NEED_XILINX_PCIE_v2000t=1
 
 NEED_ALTERA_PCIE_de5=1
@@ -192,6 +198,7 @@ NEED_ALTERA_PCIE_htg4=1
 
 NEED_ALTERA_ETH_de5=1
 NEED_ALTERA_ETH_htg4=1
+QUARTUS_SH=$(shell which quartus_sh)
 
 ifeq ($(NEED_XILINX_PCIE_$(BOARD)),1)
     FPGAMAKE_CONNECTALFLAGS += -P mkPcieEndpointX7 -P mkPcieHost
@@ -215,7 +222,7 @@ ifeq ($(NEED_ALTERA_PCIE_$(BOARD)),1)
 	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/altera_pcie_sv_hip_ast_wrapper/altera_pcie_sv_hip_ast_wrapper.qip
 	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/alt_xcvr_reconfig_wrapper/alt_xcvr_reconfig_wrapper.qip
 	#FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/siv_gen2x8/siv_gen2x8.qip
-	FPGAMAKE_CONNECTALFLAGS += --tcl=$(BOARD)/generatedbsv/$(BOARD).qsf
+	FPGAMAKE_CONNECTALFLAGS += --tcl=$(PROJECTDIR)/generatedbsv/$(BOARD).qsf
 	FPGAMAKE_CONNECTALFLAGS += --tcl=$(CONNECTALDIR)/constraints/altera/$(BOARD).sdc
 	CONNECTALFLAGS += --bscflags="+RTS -K46777216 -RTS -demote-errors G0066:G0045 -suppress-warnings G0046:G0020:S0015:S0080:S0039"
 endif
@@ -223,20 +230,20 @@ endif
 CONNECTALFLAGS += $(FPGAMAKE_CONNECTALFLAGS)
 ifeq ($(USE_BUILDCACHE),1)
 BUILDCACHE?=$(CONNECTALDIR)/../buildcache/buildcache
-BUILDCACHE_CACHEDIR?=$(CONNECTALDIR)/../fpgamake-cache/$(shell basename `/bin/pwd`)/$(BOARD)
+BUILDCACHE_CACHEDIR?=$(CONNECTALDIR)/../fpgamake-cache/$(shell basename `/bin/pwd`)/$(PROJECTDIR)
 CONNECTALFLAGS += --cache=$(BUILDCACHE_CACHEDIR)
 endif
 
 CONNECTALFLAGS += $(EXTRA_CONNECTALFLAGS)
 
 ifeq ($(USE_PRINTF),1)
-PRINTF_EXTRA=$(BOARD)/generatedbsv/DisplayInd.bsv
+PRINTF_EXTRA=$(PROJECTDIR)/generatedbsv/DisplayInd.bsv
 else
 PRINTF_EXTRA=$(CONNECTALDIR)/bsv/DisplayInd.bsv
 endif
 
 ifneq ($(USE_AUTOTOP),)
-GPROJ = $(BOARD)/generatedbsv
+GPROJ = $(PROJECTDIR)/generatedbsv
 GENTOP = $(GPROJ)/IfcNames.bsv
 endif
 
@@ -244,25 +251,28 @@ comma := ,
 gentarget:: process_autotop generate_altera_custom
 	@[ -e $(CONNECTALDIR)/scripts/syntax/parsetab.py ] || make -C $(CONNECTALDIR) scripts/syntax/parsetab.py
 	$(Q)[ -e $(IPDIR) ] || mkdir -p $(IPDIR)
-	$(Q)[ -e $(BOARD)/generatedbsv ] || mkdir -p $(BOARD)/generatedbsv
-	$(Q)[ -e $(BOARD)/jni ] || mkdir -p $(BOARD)/jni
+	$(Q)[ -e $(PROJECTDIR)/generatedbsv ] || mkdir -p $(PROJECTDIR)/generatedbsv
+	$(Q)[ -e $(PROJECTDIR)/jni ] || mkdir -p $(PROJECTDIR)/jni
 ifeq ($(USE_PRINTF),1)
-	$(CONNECTALDIR)/scripts/preprocess_trace.py $(BOARD) $(BSVFILES)
+	$(CONNECTALDIR)/scripts/preprocess_trace.py $(PROJECTDIR) $(BSVFILES)
 endif
-	$(Q)$(CONNECTALDIR)/scripts/makefilegen.py -B$(BOARD) -p $(BOARD) \
+	$(Q)$(CONNECTALDIR)/scripts/makefilegen.py -B$(BOARD) --project-dir $(PROJECTDIR) \
 	$(foreach interfaces, $(INTERFACES), -interfaces $(interfaces)) \
 	$(foreach f, $(CPPFILES), --source $f) \
 	$(foreach f, $(CPPFILES2), --source2 $f) \
 	$(foreach f, $(PINOUT_FILE), --pinout $f) \
 	$(foreach f, $(PIN_BINDINGS), --pin-binding $f) \
+	$(foreach f, $(PRTOP_FILE), --prtop $f) \
+	$(foreach f, $(VARIANT_LIST), --prvariant $f) \
+	$(foreach f, $(RECONFIG_MODULE), --reconfig $f) \
 	$(foreach f, $(S2H_INTERFACES), -interfaces $(word 1, $(subst /,, $(subst :, , $f)))) \
 	$(foreach f, $(H2S_INTERFACES), $(foreach g, $(subst $(comma), , $(word 2, $(subst :, , $f))), -interfaces $g)) \
 	$(foreach f, $(PORTAL_DUMP_MAP), --dump_map $f) \
         $(CONNECTALFLAGS) $(BSVFILES) $(GENTOP) $(PRINTF_EXTRA) $(VERBOSE_SWITCH)
 
 process_autotop::
-	$(Q)[ -e $(BOARD) ] || mkdir -p $(BOARD)
-	touch $(BOARD)/Makefile.autotop
+	$(Q)[ -e $(PROJECTDIR) ] || mkdir -p $(PROJECTDIR)
+	touch $(PROJECTDIR)/Makefile.autotop
 ifneq ($(USE_AUTOTOP),)
 	$(Q)[ -e $(GPROJ) ] || mkdir -p $(GPROJ)
 	$(Q)$(CONNECTALDIR)/scripts/topgen.py --board $(BOARD) --project-dir $(GPROJ) $(AUTOTOP) $(CNOC) \
@@ -274,11 +284,11 @@ endif
 generate_altera_custom::
 ifneq ($(PIN_BINDINGS), )
 ifneq ($(filter $(BOARD), de5 htg4), )
-	$(Q)[ -e $(BOARD)/generatedbsv ] || mkdir -p $(BOARD)/generatedbsv
+	$(Q)[ -e $(PROJECTDIR)/generatedbsv ] || mkdir -p $(PROJECTDIR)/generatedbsv
 	$(CONNECTALDIR)/scripts/generate-constraints.py -f altera \
 		$(foreach f, $(PIN_BINDINGS), -b $f) \
-		-o $(BOARD)/generatedbsv/$(BOARD).qsf \
-		--boardfile $(CONNECTALDIR)/boardinfo/$(BOARD).json --pinoutfile boards/$(BOARD).json
+		-o $(PROJECTDIR)/generatedbsv/$(BOARD).qsf \
+		--boardfile $(CONNECTALDIR)/boardinfo/$(BOARD).json --pinoutfile $(shell /bin/pwd)/../boards/$(BOARD).json
 endif
 endif
 
@@ -286,16 +296,18 @@ prebuild::
 	@# additional steps needed before making verilog etc
 ifneq ($(NEED_XILINX_PCIE_$(BOARD)),)
 	@echo "building ... $(BOARD) PCIe gen$(PCIEGEN)"
-	cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) vivado -notrace -mode batch -source $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
+	cd $(PROJECTDIR); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) vivado -notrace -mode batch -source $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
 endif
 
+ifneq (, $(QUARTUS_SH))
 # Synthesis Altera PCIe Core and PLL
 ifeq ($(NEED_ALTERA_PCIE_$(BOARD)),1)
-	cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) quartus_sh -t $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
+	cd $(PROJECTDIR); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) $(QUARTUS_SH) -t $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
 endif
 
 # Synthesize Altera Ethernet Core
 ifeq ($(NEED_ALTERA_ETH_$(BOARD)), 1)
-	cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) quartus_sh -t $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-eth.tcl
+	cd $(PROJECTDIR); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) $(QUARTUS_SH) -t $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-eth.tcl
+endif
 endif
 

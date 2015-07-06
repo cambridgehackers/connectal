@@ -30,6 +30,7 @@ import GetPut::*;
 import HostInterface::*;
 import MemTypes::*;
 import Pipe::*;
+import ConfigCounter::*;
 
 typedef TDiv#(DataBusWidth,32) WordsPerBeat;
 
@@ -44,8 +45,8 @@ endinterface
 
 interface Memcopy;
    interface MemcopyRequest request;
-   interface Vector#(1, MemReadClient#(64)) readClients;
-   interface Vector#(1, MemWriteClient#(64)) writeClients;
+   interface Vector#(1, MemReadClient#(DataBusWidth)) readClients;
+   interface Vector#(1, MemWriteClient#(DataBusWidth)) writeClients;
 endinterface
 
 module  mkMemcopy#(MemcopyIndication indication) (Memcopy);
@@ -59,6 +60,7 @@ module  mkMemcopy#(MemcopyIndication indication) (Memcopy);
    Reg#(Bit#(BurstLenSize)) burstLenBytes <- mkReg(0);
    Reg#(Bit#(32))              srcGens <- mkReg(0);
 
+   ConfigCounter#(16) counter          <- mkConfigCounter(0);
    FIFO#(MemRequest) readReqFifo <- mkFIFO();
    FIFO#(MemRequest) writeReqFifo <- mkFIFO();
    FIFO#(MemData#(DataBusWidth))   dataFifo <- mkSizedBRAMFIFO(1024);
@@ -66,19 +68,20 @@ module  mkMemcopy#(MemcopyIndication indication) (Memcopy);
 
    let verboseProgress = False;
 
-   rule startReqRule if (numReqs != 0);
+   rule startReqRule if (numReqs != 0 && counter.read() <= unpack(extend(burstLenBytes) << 3));
+      counter.increment(unpack(extend(burstLenBytes)));
       readReqFifo.enq(MemRequest { sglId: readPointer, offset: reqOffset, burstLen: burstLenBytes, tag: extend(tag) });
       writeReqFifo.enq(MemRequest { sglId: writePointer, offset: reqOffset, burstLen: burstLenBytes, tag: extend(tag) });
 
       numReqs <= numReqs - 1;
       reqOffset <= reqOffset + extend(burstLenBytes);
       tag <= tag + 1;
-      //$display("start numReqs", numReqs);
+      $display("start numReqs %d offset %d", numReqs, reqOffset);
    endrule
 
    rule finish;
       let donetag <- toGet(doneFifo).get();
-      //$display("finished num todo=%d", numDone);
+      $display("finished num todo=%d", numDone);
       if (numDone == 1) begin
          indication.copyDone(0);
       end
@@ -87,11 +90,16 @@ module  mkMemcopy#(MemcopyIndication indication) (Memcopy);
 	 indication.copyProgress(extend(donetag));
    endrule
 
-   MemReadClient#(64) readClient = (interface MemReadClient;
+   MemReadClient#(DataBusWidth) readClient = (interface MemReadClient;
       interface Get readReq = toGet(readReqFifo);
-      interface Put readData = toPut(dataFifo);
+      interface Put readData;
+	 method Action put(MemData#(DataBusWidth) md);
+	    dataFifo.enq(md);
+	    counter.decrement(fromInteger(valueOf(TDiv#(DataBusWidth,8))));
+	 endmethod
+      endinterface
    endinterface );
-   MemWriteClient#(64) writeClient = (interface MemWriteClient;
+   MemWriteClient#(DataBusWidth) writeClient = (interface MemWriteClient;
       interface Get writeReq = toGet(writeReqFifo);
       interface Get writeData = toGet(dataFifo);
       interface Put writeDone = toPut(doneFifo);
