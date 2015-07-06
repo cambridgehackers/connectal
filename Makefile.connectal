@@ -36,15 +36,20 @@ endif
 bozotarget:
 	@echo "Makefile.connectal: please invoke with make gen.boardname"
 
+VARIANT_PROJECTS := $(foreach item,$(VARIANT_LIST),variantgen.$(item))
 #
 ## use "make gen.board" to generate the build directory
 gen.%:
 ifeq ($(BOARD),)
-	BOARD=$* PROJECTDIR=$* make --no-print-directory gentarget prebuild
-else
-	PROJECTDIR=$* make --no-print-directory gentarget prebuild
+	$(eval BOARD := $*)
 endif
-	make -C $* --no-print-directory prepare_bin_target
+	BOARD=$(BOARD) PROJECTDIR=$* make --no-print-directory gentarget prebuild $(VARIANT_PROJECTS)
+#is this needed? (jca):	make -C $* --no-print-directory prepare_bin_target
+
+variantgen.%:
+	BOARD=$(BOARD) PROJECTDIR=variant$* \
+	    VARIANT=$* PRTOP_FILE=../$(BOARD)/Impl/TopDown/top-post-route.dcp \
+	    make --no-print-directory gentarget prebuild
 
 build.%: gen.%
 	make -C $* --no-print-directory all
@@ -257,6 +262,9 @@ endif
 	$(foreach f, $(CPPFILES2), --source2 $f) \
 	$(foreach f, $(PINOUT_FILE), --pinout $f) \
 	$(foreach f, $(PIN_BINDINGS), --pin-binding $f) \
+	$(foreach f, $(PRTOP_FILE), --prtop $f) \
+	$(foreach f, $(VARIANT_LIST), --prvariant $f) \
+	$(foreach f, $(RECONFIG_MODULE), --reconfig $f) \
 	$(foreach f, $(S2H_INTERFACES), -interfaces $(word 1, $(subst /,, $(subst :, , $f)))) \
 	$(foreach f, $(H2S_INTERFACES), $(foreach g, $(subst $(comma), , $(word 2, $(subst :, , $f))), -interfaces $g)) \
 	$(foreach f, $(PORTAL_DUMP_MAP), --dump_map $f) \
@@ -280,7 +288,7 @@ ifneq ($(filter $(BOARD), de5 htg4), )
 	$(CONNECTALDIR)/scripts/generate-constraints.py -f altera \
 		$(foreach f, $(PIN_BINDINGS), -b $f) \
 		-o $(PROJECTDIR)/generatedbsv/$(BOARD).qsf \
-		--boardfile $(CONNECTALDIR)/boardinfo/$(BOARD).json --pinoutfile boards/$(BOARD).json
+		--boardfile $(CONNECTALDIR)/boardinfo/$(BOARD).json --pinoutfile $(shell /bin/pwd)/../boards/$(BOARD).json
 endif
 endif
 

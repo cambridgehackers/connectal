@@ -2,6 +2,7 @@ import GetPut::*;
 import FIFO::*;
 import FIFOF::*;
 import Clocks::*;
+import ConnectalClocks::*;
 
 interface Dsp48E1;
    method Bool     notEmpty();
@@ -59,8 +60,8 @@ module vmkDSP48E1(PRIM_DSP48E1);
    let currentClock <- exposeCurrentClock;
    let currentReset <- exposeCurrentReset;
 `ifndef BSV_POSITIVE_RESET
-   let invertedReset <- mkResetInverter(currentReset);
-   let dspReset <- mkSyncReset(10, invertedReset, currentClock);
+   let positiveReset <- mkPositiveReset(10, currentReset, currentClock);
+   let dspReset = positiveReset.positiveReset;
 `else
    let dspReset = currentReset;
 `endif
@@ -186,8 +187,9 @@ module mkDsp48E1(Dsp48E1);
       c2Reg <= c1Reg;
       c3Reg <= c2Reg;
 
+      if (False)
       if (lastWire == 1 || last1Reg == 1 || last2Reg == 1 || last3Reg == 1 || last4Reg == 1 || last5Reg == 1)
-	 $display("%d: a=%h b=%h c=%h p=%h", cycles, aWire, bWire, c3Reg, dsp.p());
+	 $display("%d: a=%h b=%h c=%h p=%h lastWire=%d", cycles, aWire, bWire, c3Reg, dsp.p(), lastWire);
 
       dsp.alumode(alumodeReg);
       dsp.carryinsel(carryinselWire);

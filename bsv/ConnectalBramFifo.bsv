@@ -28,6 +28,7 @@ import BRAMFIFO::*;
 import CBus::*; // extendNP and truncateNP
 
 import Arith::*;
+import ConnectalClocks::*;
 
 (* always_ready, always_enabled *)
 interface X7FifoSyncMacro#(numeric type data_width);
@@ -44,7 +45,8 @@ endinterface
 import "BVI" FIFO_DUALCLOCK_MACRO =
 module  vmkBramFifo#(String fifo_size, Clock wrClock, Reset wrReset, Clock rdClock, Reset rdReset)(X7FifoSyncMacro#(data_width));
 `ifndef BSV_POSITIVE_RESET
-   let fifoReset <- mkResetInverter(wrReset, clocked_by wrClock);
+   let positiveReset <- mkPositiveReset(10, wrReset, wrClock);
+   let fifoReset = positiveReset.positiveReset;
 `else
    let fifoReset = wrReset;
 `endif

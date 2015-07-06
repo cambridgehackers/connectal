@@ -71,6 +71,67 @@ module mkMemSlaveEngineSynth#(PciId my_id)(MemSlaveEngine#(DataBusWidth));
    return memSlaveEngine;
 endmodule
 
+// ==================================================
+// PCIE Gen3  PcieHost
+//
+`ifdef PCIE3
+Integer tlpCompleterRequest = 0;
+Integer tlpRequesterRequest = 1;
+typedef 2   NumberOfTlpIntfs;
+
+module mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
+   Vector#(NumberOfTlpIntfs, TLPDispatcher) dispatcher <- replicateM(mkTLPDispatcher);
+   Vector#(NumberOfTlpIntfs, TLPArbiter) arbiter <- replicateM(mkTLPArbiter);
+   Vector#(NumberOfMasters, MemSlaveEngine#(DataBusWidth)) sEngine <- replicateM(mkMemSlaveEngineSynth(my_pciId));
+   Vector#(NumberOfMasters,PhysMemSlave#(PciePhysAddrWidth,DataBusWidth)) slavearr;
+   MemInterrupt intr <- mkMemInterrupt(my_pciId);
+   Vector#(PortMax, MemMasterEngine) mvec;
+   for (Integer i=0; i < valueOf(NumberOfMasters); i=i+1) begin
+      let tlp;
+      tlp = sEngine[i].tlp;
+      slavearr[i]  = sEngine[i].slave;
+      mkConnection((interface Server;
+                       interface response = dispatcher[tlpRequesterRequest].out[i];
+                       interface request = arbiter[tlpRequesterRequest].in[i];
+                    endinterface), tlp);
+   end
+   for (Integer i=0; i < valueOf(PortMax) - 1; i=i+1) begin
+      let tlp;
+      if (i == portInterrupt)
+         tlp = intr.tlp;
+      else begin
+         mvec[i] <- mkMemMasterEngine(my_pciId);
+         tlp = mvec[i].tlp;
+      end
+      mkConnection((interface Server;
+                       interface response = dispatcher[tlpCompleterRequest].out[i];
+                       interface request = arbiter[tlpCompleterRequest].in[i];
+                    endinterface), tlp);
+   end
+
+   Vector#(NumberOfTlpIntfs, PcieTracer) traceif <- replicateM(mkPcieTracer());
+   mkConnection(traceif[tlpCompleterRequest].bus, (interface Client;
+                                    interface request = arbiter[tlpCompleterRequest].outToBus;
+                                    interface response = dispatcher[tlpCompleterRequest].inFromBus;
+                                 endinterface));
+   mkConnection(traceif[tlpRequesterRequest].bus, (interface Client;
+                                    interface request = arbiter[tlpRequesterRequest].outToBus;
+                                    interface response = dispatcher[tlpRequesterRequest].inFromBus;
+                                 endinterface));
+
+   PcieControlAndStatusRegs csr <- mkPcieControlAndStatusRegs(traceif[tlpCompleterRequest].tlpdata);
+   mkConnection(mvec[portConfig].master, csr.memSlave);
+
+   interface msixEntry = csr.msixEntry;
+   interface master = mvec[portPortal].master;
+   interface slave = slavearr;
+   interface interruptRequest = intr.interruptRequest;
+   interface pcic = traceif[tlpCompleterRequest].pci;
+   interface pcir = traceif[tlpRequesterRequest].pci;
+endmodule: mkPcieHost
+`else //NOT PCIE3
+// ======================================================
+// PCIE GEN1 and GEN2 PcieHost
 //(* synthesize *) commented out so that the guards in MemServer aren't destroyed (mdk)
 module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    let dispatcher <- mkTLPDispatcher;
@@ -119,14 +180,15 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
 `endif
 `endif
 
-   PcieControlAndStatusRegs csr <- mkPcieControlAndStatusRegs(traceif.tlpdata);
+   PcieControlAndStatusRegs csr <- mkPcieControlAndStatusRegs;
    mkConnection(mvec[portConfig].master, csr.memSlave);
+   mkConnection(csr.traceClient, traceif.traceServer);
 
    interface msixEntry = csr.msixEntry;
    interface master = mvec[portPortal].master;
    interface slave = slavearr;
    interface interruptRequest = intr.interruptRequest;
-   interface pcic = traceif.pci;
+   interface pci = traceif.pci;
 `ifdef PCIE_BSCAN
    interface BscanTop bscanif = lbscan.loc[0];
 `else
@@ -135,16 +197,12 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
 `endif
 `endif
 endmodule: mkPcieHost
+`endif //PCIE3
 
 interface PcieTop#(type ipins);
 `ifndef BSIM
    (* prefix="PCIE" *)
    interface PciewrapPci_exp#(PcieLanes) pcie;
-   (* always_ready, always_enabled *)
-   interface PciewrapPipe#(PcieLanes)              pipe;
-   (* always_ready, always_enabled *)
-   interface PciewrapCommon#(PcieLanes)            common;
-   interface Clock epClock250;
    (* always_ready *)
    (* prefix="" *)
    interface ipins       pins;
@@ -159,11 +217,11 @@ module mkBsimPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_c
    // connect pciehost.pci to bdip functions here
    rule from_bdpi if (can_get_tlp);
       TLPData#(16) foo <- get_tlp;
-      pciehost.pci.response.put(foo);
+      pciehost.pcic.response.put(foo);
       //$display("from_bdpi: %h %d", foo, valueOf(SizeOf#(TLPData#(16))));
    endrule
    rule to_bdpi if (can_put_tlp);
-      TLPData#(16) foo <- pciehost.pci.request.get;
+      TLPData#(16) foo <- pciehost.pcic.request.get;
       put_tlp(foo);
       //$display("to_bdpi");
    endrule
@@ -196,13 +254,17 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys
    Reset pcieReset_ = ep7.epPcieReset;
    PcieHost#(DataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(
 `ifdef PCIE3
-         PciId{ bus:  1, dev: 1, func: 0}, //FIXME!
+         PciId{bus: 0, dev: 0, func:0},
 `else
          PciId{ bus:  ep7.cfg.bus_number(), dev: ep7.cfg.device_number(), func: ep7.cfg.function_number()},
 `endif
          clocked_by pcieClock_, reset_by pcieReset_);
+`ifdef PCIE3
    mkConnection(ep7.tlpr, pciehost.pcir, clocked_by pcieClock_, reset_by pcieReset_);
    mkConnection(ep7.tlpc, pciehost.pcic, clocked_by pcieClock_, reset_by pcieReset_);
+`else
+   mkConnection(ep7.tlp, pciehost.pci, clocked_by pcieClock_, reset_by pcieReset_);
+`endif
 
    interface Clock tsys_clk_200mhz = sys_clk_200mhz;
    interface Clock tsys_clk_200mhz_buf = sys_clk_200mhz_buf;
@@ -239,7 +301,7 @@ module mkAlteraPcieHostTop #(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(P
    Reset portalReset_ = epPcieReset;
 
    PcieHost#(DataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(ep7.device, clocked_by portalClock_, reset_by portalReset_);
-   mkConnection(ep7.tlp, pciehost.pci, clocked_by portalClock_, reset_by portalReset_);
+   mkConnection(ep7.tlp, pciehost.pcic, clocked_by portalClock_, reset_by portalReset_);
 
    interface PcieEndpointS5 tep7 = ep7;
    interface PcieHost tpciehost = pciehost;

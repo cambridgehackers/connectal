@@ -99,7 +99,10 @@ endif
 RUN_BSC = $(RUN_BSC_LM_LICENSE_FILE) BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) bsc $(BSC_QUIET) $(BSVDEFINES) $(BSCFLAGS_COMMON) $(BSCFLAGS_PROJECT) $(BSCFLAGS_EXTRA) -p +:$(BSVPATH)
 VFILE=verilog/$(MKTOP).v
 
-all: exe bits
+all: exe bits extratarget
+
+extratarget::
+# placeholder for variant targets
 
 ifeq ($(CONNECTAL_SHARED),1)
   ifeq ($(RUNSOURCE2),)

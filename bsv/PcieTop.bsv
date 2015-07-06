@@ -76,10 +76,14 @@ module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (P
    PcieHostTop host <- mkPcieHostTop(pcie_refclk_p, osc_50_b3b, pcie_perst_n);
 `endif
 
-`ifdef IMPORT_HOSTIF
+`ifdef IMPORT_HOSTIF // no synthesis boundary
    ConnectalTop#(PhysAddrWidth, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkConnectalTop(host, clocked_by host.portalClock, reset_by host.portalReset);
 `else
+`ifdef IMPORT_HOST_CLOCKS // enables synthesis boundary
+   ConnectalTop#(PhysAddrWidth, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkConnectalTop(host.derivedClock, host.derivedReset, clocked_by host.portalClock, reset_by host.portalReset);
+`else  // enables synthesis boundary
    ConnectalTop#(PhysAddrWidth, DataBusWidth, PinType, NumberOfMasters) portalTop <- mkConnectalTop(clocked_by host.portalClock, reset_by host.portalReset);
+`endif
 `endif
 
    if (mainClockPeriod == pcieClockPeriod) begin
@@ -116,9 +120,6 @@ module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (P
       host.tpciehost.interruptRequest.put(tuple2({msixEntry.addr_hi, msixEntry.addr_lo}, msixEntry.msg_data));
    endrule
 
-   interface common = host.tep7.common;
-   interface pipe = host.tep7.pipe;
-   interface Clock epClock250 = host.tep7.epClock250;
    interface pcie = host.tep7.pcie;
    interface pins = portalTop.pins;
 endmodule

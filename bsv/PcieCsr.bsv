@@ -61,13 +61,15 @@ endfunction
 interface PcieControlAndStatusRegs;
    interface PhysMemSlave#(32,32) memSlave;
    interface Vector#(16,ReadOnly_MSIX_Entry) msixEntry;
+   interface TlpTraceClient traceClient;
 endinterface: PcieControlAndStatusRegs
 
 // This module encapsulates all of the logic for instantiating and
 // accessing the control and status registers. It defines the
 // registers, the address map, and how the registers respond to reads
 // and writes.
-module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusRegs);
+(* synthesize *)
+module mkPcieControlAndStatusRegs(PcieControlAndStatusRegs);
 
    // Utility for module creating all of the storage for a single MSIX
    // table entry
@@ -96,9 +98,15 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
        end
    endfunction
 
+   FIFOF#(BRAMRequest#(Bit#(TAdd#(TlpTraceAddrSize,1)),TimestampedTlpData)) bramRequestFifo <- mkFIFOF();
+   FIFOF#(TimestampedTlpData)                                               bramResponseFifo <- mkFIFOF();
+   Reg#(Bool)                   tlpTracingReg                <- mkReg(True);
+   Reg#(Bit#(TlpTraceAddrSize)) tlpTraceLimitReg             <- mkReg(0);
+   Reg#(Bit#(TlpTraceAddrSize)) tlpTraceBramWrAddrReg        <- mkReg(0);
+
    // State used to actually service read and write requests
    rule brmMuxResponse;
-       let v <- tlpdata.bramServer.response.get();
+       let v <- toGet(bramResponseFifo).get();
        pcieTraceBramResponse <= v;
    endrule
 
@@ -165,15 +173,15 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
 	  if (oneHotDecode000[1] == 1) data = 32'h63657073; // spec
 
 	  if (oneHotDecode774[774-774] == 1) data = fromInteger(2**valueOf(TAdd#(TlpTraceAddrSize,1)));
-	  if (oneHotDecode774[775-774] == 1) data = (tlpdata.tlpTracing ? 1 : 0);
+	  if (oneHotDecode774[775-774] == 1) data = (tlpTracingReg ? 1 : 0);
 	  if (oneHotDecode774[776-774] == 1) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 0);
 	  if (oneHotDecode774[777-774] == 1) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 1);
 	  if (oneHotDecode774[778-774] == 1) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 2);
 	  if (oneHotDecode774[779-774] == 1) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 3);
 	  if (oneHotDecode774[780-774] == 1) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 4);
 	  if (oneHotDecode774[781-774] == 1) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 5);
-	  if (oneHotDecode774[792-774] == 1) data = extend(tlpdata.pcieTraceBramWrAddr);
-	  if (oneHotDecode774[794-774] == 1) data = extend(tlpdata.tlpTraceLimit);
+	  if (oneHotDecode774[792-774] == 1) data = extend(tlpTraceBramWrAddrReg);
+	  if (oneHotDecode774[794-774] == 1) data = extend(tlpTraceLimitReg);
 
          //******************************** msix_base has to match CONFIG.MXIx_PBA_Offset in scripts/connectal-synth-pcie.tcl
 	  // 4-bit MSIx pending bit field
@@ -183,9 +191,6 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
       end
       readResponseFifo.enq(MemData { data: data, tag: beat.tag, last: beat.last });
    endrule
-
-   FIFOF#(BRAMRequest#(Bit#(TAdd#(TlpTraceAddrSize,1)),TimestampedTlpData)) bramRequestFifo <- mkFIFOF();
-   mkConnection(toGet(bramRequestFifo), tlpdata.bramServer.request);
 
    rule writeDataRule;
       let beat <- csrWag.addrBeat.get();
@@ -228,11 +233,11 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
             endcase
          end
       else begin
-	 if (oneHotDecode768[775-768] == 1) tlpdata.tlpTracing <= (dword != 0) ? True : False;
+	 if (oneHotDecode768[775-768] == 1) tlpTracingReg <= (dword != 0) ? True : False;
 	 if (oneHotDecode768[768-768] == 1)
 	     bramRequestFifo.enq(BRAMRequest{ write: False, responseOnWrite: False, address: truncate(dword), datain: ?});
-	 if (oneHotDecode792[792-792] == 1) tlpdata.pcieTraceBramWrAddr <= truncate(dword);
-	 if (oneHotDecode792[794-792] == 1) tlpdata.tlpTraceLimit <= truncate(dword);
+	 if (oneHotDecode792[792-792] == 1) tlpTraceBramWrAddrReg <= truncate(dword);
+	 if (oneHotDecode792[794-792] == 1) tlpTraceLimitReg <= truncate(dword);
       end
       if (beat.last)
 	 writeDoneFifo.enq(beat.tag);
@@ -259,5 +264,14 @@ module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusReg
      interface Get writeDone = toGet(writeDoneFifo);
    endinterface: write_server
    endinterface
+   interface TlpTraceClient traceClient;
+      interface Reg tlpTracing = tlpTracingReg;
+      interface Reg tlpTraceLimit = tlpTraceLimitReg;
+      interface Reg tlpTraceBramWrAddr = tlpTraceBramWrAddrReg;
+      interface BRAMClient bramClient;
+         interface Get request = toGet(bramRequestFifo);
+	 interface Put response = toPut(bramResponseFifo);
+      endinterface: bramClient
+   endinterface: traceClient
    interface Vector msixEntry = map(toReadOnlyMsixEntry, msix_entry);
 endmodule: mkPcieControlAndStatusRegs

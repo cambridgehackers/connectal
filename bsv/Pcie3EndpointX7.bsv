@@ -67,7 +67,7 @@ interface PcieEndpointX7#(numeric type lanes);
 endinterface
 
 typedef struct {
-   Bit #(256)    data;
+   Bit #(256)     data;
    Bool          sop;
    Bool          eop;
    Bit #(8)      keep;
@@ -76,13 +76,13 @@ typedef struct {
 } AxiStCq deriving (Bits, Eq);
 
 typedef struct {
-   Bit #(256)    data;
+   Bit #(256)     data;
    Bit #(8)      keep;
    Bool          last;
 } AxiStCc deriving (Bits, Eq);
 
 typedef struct {
-   Bit #(256)    data;
+   Bit #(256)     data;
    Bool          last;
    Bit #(8)      keep;
    Bit #(4)      first_be;
@@ -90,7 +90,7 @@ typedef struct {
 } AxiStRq deriving (Bits, Eq);
 
 typedef struct {
-   Bit #(256)    data;
+   Bit #(256)     data;
    Bool          sop;
    Bool          eop;
    Bit #(8)      keep;
@@ -117,7 +117,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
 
    // The PCIe endpoint exports full (250MHz) and half-speed (125MHz) clocks
    Clock clock250 = pcie_ep.user_clk;
-   Reset user_reset_n <- mkResetInverter(pcie_ep.user_reset, clocked_by clock250);
+   Reset user_reset_n <- mkResetInverter(pcie_ep.user_reset, clocked_by pcie_ep.user_clk);
    Reset reset250 <- mkAsyncReset(4, user_reset_n, clock250);
 
    ClockGenerator7Params     clkgenParams = defaultValue;
@@ -136,16 +136,16 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    Reset derivedReset <- mkAsyncReset(4, reset250, derivedClock);
    Reset user_reset <- mkAsyncReset(2, pcie_ep.user_reset, pcie_ep.user_clk);
 
-   FIFOF#(AxiStCq) fAxiCq <- mkBypassFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset);
-   FIFOF#(AxiStRc) fAxiRc <- mkBypassFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset);
+   FIFOF#(AxiStCq) fAxiCq <- mkBypassFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   FIFOF#(AxiStRc) fAxiRc <- mkBypassFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
 
-   FIFOF#(AxiStRq) fAxiRq <- mkBypassFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset);
-   FIFOF#(AxiStCc) fAxiCc <- mkBypassFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset);
+   FIFOF#(AxiStRq) fAxiRq <- mkBypassFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   FIFOF#(AxiStCc) fAxiCc <- mkBypassFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
 
-   FIFOF#(TLPData#(16)) fcq <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset);
-   FIFOF#(TLPData#(16)) frc <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset);
-   FIFOF#(TLPData#(16)) fcc <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset);
-   FIFOF#(TLPData#(16)) frq <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset);
+   FIFOF#(TLPData#(16)) fcq <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   FIFOF#(TLPData#(16)) frc <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   FIFOF#(TLPData#(16)) fcc <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   FIFOF#(TLPData#(16)) frq <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
 
    // Drive s_axis_rq
    let rq_txready = (pcie_ep.s_axis_rq.tready != 0 && fAxiRq.notEmpty);
@@ -175,6 +175,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    //(* fire_when_enabled, no_implicit_conditions *)
    rule drive_axi_cc if (cc_txready);
       let info = fAxiCc.first; fAxiCc.deq;
+      $display("drive axi_cc, data: %h, keep: %h, last: %h", info.data, info.keep, info.last);
       pcie_ep.s_axis_cc.tvalid(1);
       pcie_ep.s_axis_cc.tlast(pack(info.last));
       pcie_ep.s_axis_cc.tdata(info.data);
@@ -253,7 +254,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    endrule
 
    // RC.
-   Reg#(DWCount) rg_dwcount <- mkRegU(clocked_by pcie_ep.user_clk, reset_by reset250);
+   Reg#(DWCount) rg_dwcount <- mkRegU(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
 
    rule rl_rc_header (fAxiRc.first.sop);
       RCDescriptor rc_desc = unpack(fAxiRc.first.data [95:0]);
@@ -281,8 +282,8 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       fAxiRc.deq;
    endrule
 
-   Reg#(DWCount) cc_dwcount <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by reset250);
-   FIFOF#(TLPData#(16)) fcc_tlps <- mkPipelineFIFOF (clocked_by pcie_ep.user_clk, reset_by reset250);
+   Reg#(DWCount) cc_dwcount <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   FIFOF#(TLPData#(16)) fcc_tlps <- mkPipelineFIFOF (clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    // CC.
    rule get_cc_tlps;
       let tlp <- toGet(fcc).get;
@@ -292,9 +293,9 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    rule rl_cc_header(fcc_tlps.first.sof);
       match { .cc_desc, .dw} = convertTLP16ToCCDescriptor(fcc_tlps.first);
       cc_dwcount <= cc_desc.dwcount - 1;
-      fAxiCc.enq(AxiStCc {data: {dw, zeroExtend(pack(cc_desc))}, //FIXME
+      fAxiCc.enq(AxiStCc {data: zeroExtend({dw, pack(cc_desc)[95:0]}),
                        last: fcc_tlps.first.eof,
-                       keep: 8'hFF});
+                       keep: 8'h0F});
       fcc_tlps.deq;
    endrule
 
@@ -307,11 +308,11 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    endrule
 
    // RQ.
-   FIFOF#(TLPData#(16)) frq_tlps <- mkPipelineFIFOF (clocked_by pcie_ep.user_clk, reset_by reset250);
-   Reg#(DWCount) rq_dwcount <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by reset250);
-   Reg#(Maybe#(Bit#(32))) rq_mdw <- mkRegU(clocked_by pcie_ep.user_clk, reset_by reset250);
-   Reg#(Bit#(4)) rq_first_be <- mkRegU(clocked_by pcie_ep.user_clk, reset_by reset250);
-   Reg#(Bit#(4)) rq_last_be <- mkRegU(clocked_by pcie_ep.user_clk, reset_by reset250);
+   FIFOF#(TLPData#(16)) frq_tlps <- mkPipelineFIFOF (clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   Reg#(DWCount) rq_dwcount <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   Reg#(Maybe#(Bit#(32))) rq_mdw <- mkRegU(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   Reg#(Bit#(4)) rq_first_be <- mkRegU(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   Reg#(Bit#(4)) rq_last_be <- mkRegU(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    rule get_rq_tlps;
       let tlp <- toGet(frq).get;
       frq_tlps.enq(tlp);

@@ -7,17 +7,9 @@ CPPFILES= testecho.cpp
 NUMBER_OF_MASTERS =0
 
 VARIANT?=1
+VARIANT_LIST = 2 3
 PARTIAL_MODULE = Bounce
-CONNECTALFLAGS += -P mk$(PARTIAL_MODULE) --floorplan=floorplan.xdc -DRedefInstance=$(PARTIAL_MODULE)$(VARIANT)
-
-partial.%:
-	VARIANT=2 BOARD=$* make verilog.variant2
-	make -C variant2 synth.mk$(PARTIAL_MODULE)
-	make verilog.$*
-	make -C $* synth.mk$(PARTIAL_MODULE) synth.mkZynqTop
-	vivado -mode batch -source reconf.tcl
-
-zc702/Impl/Reconf/top-post-route.dcp:
+RECONFIG_MODULE = lEcho_bounce
+CONNECTALFLAGS += -P mk$(PARTIAL_MODULE) --constraint=floorplan-$(BOARD).xdc -DRedefInstance=$(PARTIAL_MODULE)$(VARIANT)
 
 include $(CONNECTALDIR)/Makefile.connectal
-
