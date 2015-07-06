@@ -75,9 +75,7 @@ set_property PULLUP     true        [get_ports { RST_N_pci_sys_reset_n }]
 #
 set_property LOC IBUFDS_GTE2_X1Y5  [get_cells { *pci_clk_100mhz_buf }]
 
-set_property LOC MMCME2_ADV_X1Y2 [get_cells -hier -filter { NAME =~ */ext_clk.pipe_clock_i/mmcm_i }]
 set_property LOC MMCME2_ADV_X1Y1 [get_cells -hier -filter { NAME =~ *clkgen_pll }]
-set_property LOC MMCME2_ADV_X1Y5 [get_cells -hier -filter { NAME =~ *clk_gen_pll }]
 
 ######################################################################################################
 # TIMING CONSTRAINTS
