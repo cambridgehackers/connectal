@@ -126,12 +126,8 @@ module mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    interface master = mvec[portPortal].master;
    interface slave = slavearr;
    interface interruptRequest = intr.interruptRequest;
-`ifdef PCIE3
    interface pcic = traceif[tlpCompleterRequest].pci;
    interface pcir = traceif[tlpRequesterRequest].pci;
-`else
-   interface pci = traceif.pci;
-`endif
 endmodule: mkPcieHost
 `else //NOT PCIE3
 // ======================================================
@@ -192,7 +188,7 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    interface master = mvec[portPortal].master;
    interface slave = slavearr;
    interface interruptRequest = intr.interruptRequest;
-   interface pcic = traceif.pci;
+   interface pci = traceif.pci;
 `ifdef PCIE_BSCAN
    interface BscanTop bscanif = lbscan.loc[0];
 `else
