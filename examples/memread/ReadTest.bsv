@@ -29,7 +29,6 @@ import ClientServer::*;
 import Pipe::*;
 import MemTypes::*;
 import MemreadEngine::*;
-import Pipe::*;
 import HostInterface::*;
 
 interface ReadTestRequest;
