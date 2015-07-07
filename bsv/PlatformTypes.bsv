@@ -19,15 +19,13 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import Vector::*;
 import Connectable::*;
-
 import Portal::*;
 import MemTypes::*;
 import HostInterface::*;
 
-typedef enum {MMUIndicationH2S, MemServerIndicationH2S, MMURequestS2H, MemServerRequestS2H} PlatformNames deriving (Eq,Bits);
+typedef enum {MMUIndicationH2S=2, MemServerIndicationH2S, MMURequestS2H, MemServerRequestS2H} PlatformNames deriving (Eq,Bits);
 
 interface Tile#(type ext_type, numeric type numReadClients, numeric type numWriteClients);
    interface PhysMemSlave#(18,32) portals;
