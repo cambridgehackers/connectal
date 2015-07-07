@@ -41,10 +41,10 @@
 
 
 sem_t test_sem;
-#ifndef BSIM
-int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
+#ifdef BSIM
+int numWords = 0x12400/4;
 #else
-int numWords = 0x124000/4;
+int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
 #endif
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
@@ -94,13 +94,13 @@ int main(int argc, const char **argv)
     exit(1);
   }
 
-  device = new MemwriteRequestProxy(TileNames_MemwriteRequestS2H,1);
-  deviceIndication = new MemwriteIndication(TileNames_MemwriteIndicationH2S,1);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(PlatformNames_MemServerRequestS2H);
-  MMURequestProxy *dmap = new MMURequestProxy(PlatformNames_MMURequestS2H);
+  device = new MemwriteRequestProxy(MemwriteRequestS2H,1);
+  deviceIndication = new MemwriteIndication(MemwriteIndicationH2S,1);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(MemServerRequestS2H);
+  MMURequestProxy *dmap = new MMURequestProxy(MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, PlatformNames_MemServerIndicationH2S);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, PlatformNames_MMUIndicationH2S);
+  MemServerIndication hostMemServerIndication(hostMemServerRequest, MemServerIndicationH2S);
+  MMUIndication hostMMUIndication(dma, MMUIndicationH2S);
   
   fprintf(stderr, "main::allocating memory...\n");
   dstAlloc = portalAlloc(alloc_sz, 0);
