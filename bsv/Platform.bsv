@@ -140,14 +140,7 @@ module mkPlatform#(Vector#(numTiles, Tile#(Empty, numReadClients, numWriteClient
    interrupts[0] = framework_intr;
    for (Integer i = 1; i < valueOf(TAdd#(1,numTiles)); i = i + 1)
       interrupts[i] = tile_interrupts[i-1];
-
    interface interrupt = interrupts;
    interface slave = ctrl_mux;
    interface masters = lMemServer.masters;
-   interface pins = ?; 
-
 endmodule
-
-
-
-

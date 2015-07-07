@@ -19,35 +19,34 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import FIFO::*;
 import FIFOF::*;
 import Vector::*;
+import BuildVector::*;
 import GetPut::*;
 import ClientServer::*;
 
-import CtrlMux::*;
 import Pipe::*;
 import MemTypes::*;
 import MemreadEngine::*;
-import HostInterface::*; // for DataBusWidth
+import HostInterface::*;
 
-typedef enum {MemreadIndicationH2S, MemreadRequestS2H} TileNames deriving (Eq,Bits);
+typedef enum {ReadTestIndicationH2S=8, ReadTestRequestS2H} TileNames deriving (Eq,Bits);
 
-interface MemreadRequest;
+interface ReadTestRequest;
    method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
 endinterface
 
-interface Memread;
-   interface MemreadRequest request;
+interface ReadTest;
+   interface ReadTestRequest request;
    interface MemReadClient#(DataBusWidth) dmaClient;
 endinterface
 
-interface MemreadIndication;
+interface ReadTestIndication;
    method Action readDone(Bit#(32) mismatchCount);
 endinterface
 
-module mkMemread#(MemreadIndication indication) (Memread);
+module mkReadTest#(ReadTestIndication indication) (ReadTest);
 
    Reg#(SGLId)   pointer <- mkReg(0);
    Reg#(Bit#(32))       numWords <- mkReg(0);
@@ -87,7 +86,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    endrule
    
    interface dmaClient = re.dmaClient;
-   interface MemreadRequest request;
+   interface ReadTestRequest request;
       method Action startRead(Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic) if (itersToStart == 0 && itersToFinish == 0);
          ic = ic + 4;
 	 pointer <= rp;
@@ -101,5 +100,3 @@ module mkMemread#(MemreadIndication indication) (Memread);
       endmethod
    endinterface
 endmodule
-
-

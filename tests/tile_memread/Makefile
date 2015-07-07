@@ -1,10 +1,11 @@
 
 CONNECTALDIR?=../..
-INTERFACES = MemreadRequest MemreadIndication
-BSVFILES = Memread.bsv $(CONNECTALDIR)/bsv/PlatformTypes.bsv
+INTERFACES = ReadTestRequest ReadTestIndication
+BSVFILES = ReadTest.bsv $(CONNECTALDIR)/bsv/PlatformTypes.bsv
 CPPFILES=testmemread.cpp
 NUMBER_OF_MASTERS = 1
-NUMBER_OF_TILES = 1
+# 1 tile for Platform, 1 tile for test itself
+NUMBER_OF_TILES = 2
 
 CONNECTALFLAGS += -P mkTile --floorplan=floorplan.xdc
 

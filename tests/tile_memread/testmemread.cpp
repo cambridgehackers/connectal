@@ -18,28 +18,24 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#include <stdio.h>
-#include <sys/mman.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <monkit.h>
 
 #include "StdDmaIndication.h"
 #include "MemServerRequest.h"
 #include "MMURequest.h"
-#include "MemreadRequest.h"
-#include "MemreadIndication.h"
+#include "ReadTestRequest.h"
+#include "ReadTestIndication.h"
 
 sem_t test_sem;
 
 int burstLen = 16;
 
 #ifdef BSIM
-int numWords = 0x124000/4; // make sure to allocate at least one entry of each size
+int numWords = 0x12400/4; // make sure to allocate at least one entry of each size
 #else
 int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
 #endif
+#define TILE_NUMBER 1
 
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
@@ -47,32 +43,32 @@ size_t alloc_sz = test_sz;
 void dump(const char *prefix, char *buf, size_t len)
 {
     printf( "%s ", prefix);
-    for (int i = 0; i < (len > 16 ? 16 : len) ; i++)
+    for (unsigned int i = 0; i < (len > 16 ? 16 : len) ; i++)
 	printf( "%02x", (unsigned char)buf[i]);
     printf( "\n");
 }
 
-class MemreadIndication : public MemreadIndicationWrapper
+class ReadTestIndication : public ReadTestIndicationWrapper
 {
 public:
   unsigned int rDataCnt;
   virtual void readDone(uint32_t v){
-    printf( "Memread::readDone(mismatch = %x)\n", v);
+    printf( "ReadTest::readDone(mismatch = %x)\n", v);
     sem_post(&test_sem);
   }
-  MemreadIndication(int id, int tile) : MemreadIndicationWrapper(id,tile){}
+  ReadTestIndication(int id, int tile) : ReadTestIndicationWrapper(id,tile){}
 };
 
 int main(int argc, const char **argv)
 {
-  MemreadRequestProxy *device = new MemreadRequestProxy(TileNames_MemreadRequestS2H, 1);
-  MemreadIndication *deviceIndication = new MemreadIndication(TileNames_MemreadIndicationH2S, 1);
+  ReadTestRequestProxy *device = new ReadTestRequestProxy(ReadTestRequestS2H, TILE_NUMBER);
+  ReadTestIndication deviceIndication(ReadTestIndicationH2S, TILE_NUMBER);
 
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(PlatformNames_MemServerRequestS2H);
-  MMURequestProxy *dmap = new MMURequestProxy(PlatformNames_MMURequestS2H);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(MemServerRequestS2H);
+  MMURequestProxy *dmap = new MMURequestProxy(MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, PlatformNames_MemServerIndicationH2S);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, PlatformNames_MMUIndicationH2S);
+  MemServerIndication hostMemServerIndication(hostMemServerRequest, MemServerIndicationH2S);
+  MMUIndication hostMMUIndication(dma, MMUIndicationH2S);
 
   int srcAlloc;
   srcAlloc = portalAlloc(alloc_sz, 0);
@@ -85,5 +81,6 @@ int main(int argc, const char **argv)
   printf( "Main::starting read %08x\n", numWords);
   device->startRead(ref_srcAlloc, numWords, burstLen, 1);
   sem_wait(&test_sem);
+  printf("%s: all done!\n", __FUNCTION__);
   return 0;
 }

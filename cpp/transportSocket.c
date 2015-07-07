@@ -26,49 +26,53 @@
 #include <assert.h>
 
 static unsigned int tag_counter;
+#define MAX_BSIM_TILES     4
 typedef struct bsim_fpga_map_entry{
   uint32_t name;
   int offset;
   int valid;
 } bsim_fpga_map_entry;
-static bsim_fpga_map_entry bsim_fpga_map[2][MAX_BSIM_PORTAL_ID];
+static bsim_fpga_map_entry bsim_fpga_map[MAX_BSIM_TILES][MAX_BSIM_PORTAL_ID];
 
+static uint32_t read_bsim(uint32_t portal_index, long base, uint32_t offset)
+{
+    static PortalInternal p;
+    p.fpga_number = portal_index;
+    volatile unsigned int *ptemp = &((volatile unsigned int *)base)[offset];
+    return transportBsim.read(&p, &ptemp);
+}
 static void initialize_bsim_map(void)
 {
-  uint32_t  num_tiles = 0;
-  uint32_t num_portals = 0;
-  uint32_t t = 0;
+  long base_tile = 0;
+  uint32_t tile_index = 0;
+  uint32_t num_tiles = read_bsim(0, base_tile, PORTAL_CTRL_NUM_TILES);
+  if (num_tiles >= MAX_BSIM_TILES) {
+      PORTAL_PRINTF("%s: Number of tiles %d exceeds max allowed %d\n", num_tiles, MAX_BSIM_TILES);
+      exit(-1);
+  }
   do{
-    uint32_t idx = 0;
+    uint32_t portal_index = 0;
+    long base_ptr = base_tile;
+    uint32_t num_portals = read_bsim(portal_index, base_ptr, PORTAL_CTRL_NUM_PORTALS);
     do{
-      static PortalInternal p;
-      volatile unsigned int *ptr=(volatile unsigned int *)(long)((t * TILE_BASE_OFFSET)+(idx * PORTAL_BASE_OFFSET));
-      volatile unsigned int *idp = &ptr[PORTAL_CTRL_PORTAL_ID];
-      volatile unsigned int *ntp = &ptr[PORTAL_CTRL_NUM_TILES];
-      volatile unsigned int *npp = &ptr[PORTAL_CTRL_NUM_PORTALS];
-      unsigned int id;
-      p.fpga_number = idx;
-      id = transportBsim.read(&p, &idp);
-      if(idx==0){
-	num_portals = transportBsim.read(&p, &npp);
-	if(t==0)
-	  num_tiles = transportBsim.read(&p, &ntp);
-      } else {
-	assert(num_portals == transportBsim.read(&p, &npp));
-	assert(num_tiles   == transportBsim.read(&p, &ntp));
-      }
+      uint32_t id = read_bsim(portal_index, base_ptr, PORTAL_CTRL_PORTAL_ID);
+      assert(num_portals == read_bsim(portal_index, base_ptr, PORTAL_CTRL_NUM_PORTALS));
+      assert(num_tiles   == read_bsim(portal_index, base_ptr, PORTAL_CTRL_NUM_TILES));
       if (id >= MAX_BSIM_PORTAL_ID) {
-	PORTAL_PRINTF("%s: [%d] readid too large %d\n", __FUNCTION__, idx, id);
+	PORTAL_PRINTF("%s: [%d] readid too large %d\n", __FUNCTION__, portal_index, id);
 	break;
       }
-      bsim_fpga_map[t][idx].name = id;
-      bsim_fpga_map[t][idx].offset = idx;
-      bsim_fpga_map[t][idx].valid = 1;
-      PORTAL_PRINTF("%s: bsim_fpga_map[%d][%d]=%d (%d)\n", __FUNCTION__, t, idx, bsim_fpga_map[t][idx].name, (idx+1==num_portals));
-      idx++;
-    } while (idx < num_portals && idx < 32);
-    t++;
-  } while (t < num_tiles && t < 2);
+      bsim_fpga_map[tile_index][portal_index].name = id;
+      bsim_fpga_map[tile_index][portal_index].offset = portal_index;
+      bsim_fpga_map[tile_index][portal_index].valid = 1;
+      PORTAL_PRINTF("%s: bsim_fpga_map[%d/%d][%d/%d]=%d (%d)\n", __FUNCTION__, tile_index, num_tiles, portal_index, num_portals,
+          bsim_fpga_map[tile_index][portal_index].name, (portal_index+1==num_portals));
+      portal_index++;
+      base_ptr += PORTAL_BASE_OFFSET;
+    } while (portal_index < num_portals && portal_index < 32);
+    tile_index++;
+    base_tile += TILE_BASE_OFFSET;
+  } while (tile_index < num_tiles && tile_index < MAX_BSIM_TILES);
 }
 
 #ifndef __KERNEL__
