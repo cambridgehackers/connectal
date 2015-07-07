@@ -481,7 +481,7 @@ static int init_bsim(struct PortalInternal *pint, void *param)
 	break;
       }
     if (!found) {
-      PORTAL_PRINTF( "Error: init_bsim: did not find fpga_number %d\n", pint->fpga_number);
+      PORTAL_PRINTF( "Error: init_bsim: did not find fpga_number %d in tile %d\n", pint->fpga_number, pint->fpga_tile);
       PORTAL_PRINTF( "    Found fpga numbers:");
       for (i = 0; entry[i].valid; i++)
 	PORTAL_PRINTF( " %d", entry[i].name);
