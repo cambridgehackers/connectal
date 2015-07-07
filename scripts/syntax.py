@@ -734,7 +734,10 @@ def p_enumRange(p):
 def p_enumElement(p):
     '''enumElement : VAR enumRange
                    | VAR enumRange EQUAL NUM'''
-    p[0] = p[1]
+    if len(p) == 3:
+        p[0] = [p[1], None]
+    else:
+        p[0] = [p[1], p[4]]
 
 def p_enumElements(p):
     '''enumElements : enumElement
