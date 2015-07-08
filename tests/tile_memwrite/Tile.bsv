@@ -19,24 +19,21 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import Vector::*;
-
 import Portal::*;
 import PlatformTypes::*;
 import CtrlMux::*;
 import MemServer::*;
 import MemTypes::*;
-
 import Memwrite::*;
+import MemwriteEnum::*;
 import MemwriteRequest::*;
 import MemwriteIndication::*;
 
 module mkTile(Tile#(Empty,0,1));
-
-   MemwriteIndicationProxy lMemwriteIndicationProxy <- mkMemwriteIndicationProxy(MemwriteIndicationH2S); //0
+   MemwriteIndicationProxy lMemwriteIndicationProxy <- mkMemwriteIndicationProxy(IfcNames_MemwriteIndicationH2S); //0
    Memwrite lMemwrite <- mkMemwrite(lMemwriteIndicationProxy.ifc);
-   MemwriteRequestWrapper lMemwriteRequestWrapper <- mkMemwriteRequestWrapper(MemwriteRequestS2H, lMemwrite.request); //1
+   MemwriteRequestWrapper lMemwriteRequestWrapper <- mkMemwriteRequestWrapper(IfcNames_MemwriteRequestS2H, lMemwrite.request); //1
    
    Vector#(2,StdPortal) portal_vec;
    portal_vec[0] = lMemwriteRequestWrapper.portalIfc;

@@ -19,36 +19,33 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import Vector::*;
-import BuildVector::*;
-
+//import BuildVector::*;
 import Portal::*;
 import PlatformTypes::*;
 import CtrlMux::*;
 import MemServer::*;
 import MemTypes::*;
-
-import Memread::*;
-import MemreadRequest::*;
-import MemreadIndication::*;
+import ReadTest::*;
+import ReadTestEnum::*;
+import ReadTestRequest::*;
+import ReadTestIndication::*;
 
 (* synthesize *)
 module mkTile(Tile#(Empty,1,0));
-
-   MemreadIndicationProxy lMemreadIndicationProxy <- mkMemreadIndicationProxy(MemreadIndicationH2S); //0
-   Memread lMemread <- mkMemread(lMemreadIndicationProxy.ifc);
-   MemreadRequestWrapper lMemreadRequestWrapper <- mkMemreadRequestWrapper(MemreadRequestS2H, lMemread.request); //1
+   ReadTestIndicationProxy lReadTestIndicationProxy <- mkReadTestIndicationProxy(IfcNames_ReadTestIndicationH2S);
+   ReadTest lReadTest <- mkReadTest(lReadTestIndicationProxy.ifc);
+   ReadTestRequestWrapper lReadTestRequestWrapper <- mkReadTestRequestWrapper(IfcNames_ReadTestRequestS2H, lReadTest.request);
    
    Vector#(2,StdPortal) portal_vec;
-   portal_vec[0] = lMemreadRequestWrapper.portalIfc;
-   portal_vec[1] = lMemreadIndicationProxy.portalIfc;
+   portal_vec[0] = lReadTestRequestWrapper.portalIfc;
+   portal_vec[1] = lReadTestIndicationProxy.portalIfc;
    PhysMemSlave#(18,32) mem_portal <- mkSlaveMux(portal_vec);
    let interrupts <- mkInterruptMux(getInterruptVector(portal_vec));
    
    interface interrupt = interrupts;
    interface portals = mem_portal;
-   interface readers = vec(lMemread.dmaClient);
+   interface readers = lReadTest.dmaClient;
    interface writers = nil;
    interface ext = ?;
 

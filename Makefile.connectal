@@ -290,6 +290,8 @@ ifneq ($(filter $(BOARD), de5 htg4), )
 		-o $(PROJECTDIR)/generatedbsv/$(BOARD).qsf \
 		--boardfile $(CONNECTALDIR)/boardinfo/$(BOARD).json --pinoutfile $(shell /bin/pwd)/../boards/$(BOARD).json
 endif
+else
+	$(Q) if [ -e $(CONNECTALDIR)/constraints/altera/$(BOARD).qsf ]; then cp $(CONNECTALDIR)/constraints/altera/$(BOARD).qsf $(PROJECTDIR)/generatedbsv/$(BOARD).qsf; fi
 endif
 
 prebuild::

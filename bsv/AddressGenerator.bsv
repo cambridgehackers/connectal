@@ -58,7 +58,7 @@ module mkAddressGenerator(AddressGenerator#(addrWidth, dataWidth))
 	 addr = req.addr;
 	 burstCount = req.burstLen >> valueOf(beatShift);
 	 isLast = (req.burstLen == fromInteger(valueOf(dataWidthBytes)));
-         $display("addr=%h, burstCount=%h, isLast=%h", addr, burstCount, isLast);
+         //$display("addr=%h, burstCount=%h, isLast=%h", addr, burstCount, isLast);
       end
 
       let nextIsLast = burstCount == 2;
@@ -74,7 +74,7 @@ module mkAddressGenerator(AddressGenerator#(addrWidth, dataWidth))
       end
       isFirstReg <= nextIsFirst;
 
-      $display("addr=%h, burstCount=%h, isLast=%h", addr, burstCount, isLast);
+      //$display("addr=%h, burstCount=%h, isLast=%h", addr, burstCount, isLast);
       addrBeatFifo.enq(AddrBeat { addr: addr, bc: burstCount, last: isLast, tag: req.tag});
    endrule
 

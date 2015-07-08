@@ -374,7 +374,10 @@ def p_term(p):
             | term LBRACKET expression COLON expression RBRACKET
             | term LPAREN params RPAREN DOT term
             | term LPAREN params RPAREN'''
-    p[0] = p[1]
+    if len(p) > 2 and type(p[1]) == str:
+        p[0] = p[2]
+    else:
+        p[0] = p[1]
 
 def p_structInits(p):
     '''structInits : 
@@ -734,7 +737,10 @@ def p_enumRange(p):
 def p_enumElement(p):
     '''enumElement : VAR enumRange
                    | VAR enumRange EQUAL NUM'''
-    p[0] = p[1]
+    if len(p) == 3:
+        p[0] = [p[1], None]
+    else:
+        p[0] = [p[1], p[4]]
 
 def p_enumElements(p):
     '''enumElements : enumElement

@@ -24,14 +24,12 @@
 #include "MemwriteIndication.h"
 #include "MemwriteRequest.h"
 
-#if defined(BSIM) || defined(BOARD_xsim)
 #ifdef BOARD_xsim
 static int numWords = 0x5000/4;
 static int iterCnt = 1;
-#else
+#elif defined(BSIM)
 static int numWords = 0x124000/4;
 static int iterCnt = 2;
-#endif
 #else
 static int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
 static int iterCnt = 128;
@@ -48,7 +46,7 @@ static size_t alloc_sz = numWords*sizeof(unsigned int);
 class MemwriteIndication : public MemwriteIndicationWrapper
 {
 public:
-    MemwriteIndication(int id) : MemwriteIndicationWrapper(id) {}
+    MemwriteIndication(int id, int tile=0) : MemwriteIndicationWrapper(id,tile) {}
     void started(uint32_t words) {
         fprintf(stderr, "Memwrite::started: words=%x\n", words);
     }
@@ -61,6 +59,39 @@ public:
     }
 };
 
+static MemServerRequestProxy *hostMemServerRequest;
+static MemServerIndication *hostMemServerIndication;
+static MMUIndication *mmuIndication;
+static DmaManager *platformInit(void)
+{
+    hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
+    MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
+    DmaManager *dma = new DmaManager(dmap);
+    hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
+    mmuIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
+
+#ifdef FPGA0_CLOCK_FREQ
+    long req_freq = FPGA0_CLOCK_FREQ;
+    long freq = 0;
+    setClockFrequency(0, req_freq, &freq);
+    fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
+#endif
+    return dma;
+}
+
+static void platformStatistics(void)
+{
+    uint64_t cycles = portalTimerLap(0);
+    hostMemServerRequest->memoryTraffic(ChannelType_Read);
+    uint64_t beats = hostMemServerIndication->receiveMemoryTraffic();
+    float read_util = (float)beats/(float)cycles;
+    fprintf(stderr, " iterCnt: %d\n", iterCnt);
+    fprintf(stderr, "   beats: %llx\n", (long long)beats);
+    fprintf(stderr, "numWords: %x\n", numWords);
+    fprintf(stderr, "     est: %llx\n", (long long)(beats*2)/iterCnt);
+    fprintf(stderr, "memory utilization (beats/cycle): %f\n", read_util);
+}
+
 int main(int argc, const char **argv)
 {
     int mismatch = 0;
@@ -72,15 +103,11 @@ int main(int argc, const char **argv)
         exit(1);
     }
     fprintf(stderr, "testmemwrite: start %s %s\n", __DATE__, __TIME__);
+    DmaManager *dma = platformInit();
     MemwriteRequestProxy *device = new MemwriteRequestProxy(IfcNames_MemwriteRequestS2H);
     MemwriteIndication deviceIndication(IfcNames_MemwriteIndicationH2S);
-    MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
-    MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
-    DmaManager *dma = new DmaManager(dmap);
-    MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
-    MMUIndication hostMMUIndication(dma, IfcNames_MMUIndicationH2S);
 
-    fprintf(stderr, "parent::allocating memory...\n");
+    fprintf(stderr, "main::allocating memory...\n");
     int dstAlloc = portalAlloc(alloc_sz, 0);
     unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
 #ifdef FPGA0_CLOCK_FREQ
@@ -105,14 +132,7 @@ int main(int argc, const char **argv)
         }
         sg++;
     }
-    uint64_t cycles = portalTimerLap(0);
-    hostMemServerRequest->memoryTraffic(ChannelType_Write);
-    uint64_t beats = hostMemServerIndication->receiveMemoryTraffic();
-    float write_util = (float)beats/(float)cycles;
-    fprintf(stderr, "   beats: %"PRIx64"\n", beats);
-    fprintf(stderr, "numWords: %x\n", numWords);
-    fprintf(stderr, "     est: %"PRIx64"\n", (beats*2)/iterCnt);
-    fprintf(stderr, "memory write utilization (beats/cycle): %f\n", write_util);
+    platformStatistics();
     fprintf(stderr, "testmemwrite: mismatch count %d.\n", mismatch);
     exit(mismatch);
 }

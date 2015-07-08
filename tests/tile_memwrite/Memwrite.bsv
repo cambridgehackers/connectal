@@ -23,7 +23,6 @@
 import FIFO::*;
 import FIFOF::*;
 import Vector::*;
-import BuildVector::*;
 import ClientServer::*;
 import GetPut::*;
 import MemTypes::*;
@@ -31,9 +30,6 @@ import MemwriteEngine::*;
 import Pipe::*;
 import Arith::*;
 import HostInterface::*;
-import CtrlMux::*;
-
-typedef enum {MemwriteIndicationH2S, MemwriteRequestS2H} TileNames deriving (Eq,Bits);
 
 `ifdef NumEngineServers
 typedef `NumEngineServers NumEngineServers;
@@ -80,12 +76,12 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 	 we.writeServers[i].request.put(MemengineCmd{tag:0, sglId:pointer, base:extend(writeOffset)+(fromInteger(i)*chunk), len:truncate(chunk), burstLen:truncate(burstLen*4)});
 	 Bit#(32) srcGen = (writeOffset/4)+(fromInteger(i)*truncate(chunk/4));
 	 srcGens[i] <= srcGen;
-	 $display("start %d, %h %d %h", i, srcGen, iterCnts[i], writeOffset);
+	 $display("start %d/%d, %h 0x%x %h", i, valueOf(NumEngineServers), srcGen, iterCnts[i], writeOffset);
 	 cfs[i].enq(?);
+	 iterCnts[i] <= iterCnts[i]-1;
       endrule
       rule finish;
-	 $display("finish %d %d", i, iterCnts[i]);
-	 iterCnts[i] <= iterCnts[i]-1;
+	 $display("finish %d 0x%x", i, iterCnts[i]);
 	 let rv <- we.writeServers[i].response.get;
 	 finishFifos[i].enq(rv);
       endrule
@@ -113,7 +109,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
       iterCnt <= iterCnt - 1;
    endrule
    
-   interface MemWriteClient dmaClient = vec(we.dmaClient);
+   interface MemWriteClient dmaClient = cons(we.dmaClient, nil);
    interface MemwriteRequest request;
        method Action startWrite(Bit#(32) wp, Bit#(32) off, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
 	  $display("startWrite pointer=%d offset=%d numWords=%h burstLen=%d iterCnt=%d", pointer, off, nw, bl, ic);

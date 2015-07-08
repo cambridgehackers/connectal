@@ -19,7 +19,9 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <errno.h>
 #include <stdio.h>
+#include <sys/mman.h>
 #include <stdint.h>
 #include <semaphore.h>
 
@@ -65,7 +67,7 @@ public:
 
 int main(int argc, const char **argv)
 {
-  size_t alloc_sz = 1024*1024;
+    size_t alloc_sz = 4096; //1024*1024;
   MemwriteRequestProxy *device = new MemwriteRequestProxy(IfcNames_MemwriteRequestS2H);
   MemwriteIndication deviceIndication(IfcNames_MemwriteIndicationH2S);
   MemServerRequestProxy *memServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
@@ -74,31 +76,49 @@ int main(int argc, const char **argv)
   MemServerIndication memServerIndication(memServerRequest, IfcNames_MemServerIndicationH2S);
   MMUIndication mmuIndication(dma, IfcNames_MMUIndicationH2S);
 
+  device->pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
+  //dmap->pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
+
   sem_init(&done_sem, 1, 0);
 
-  int dstAlloc = portalAlloc(alloc_sz, 1);
-  unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
+  int iters = 64;
 
-  for (uint32_t i = 0; i < alloc_sz/sizeof(uint32_t); i++)
-    dstBuffer[i] = 0xDEADBEEF;
+  int mismatchCount = 0;
+
+  for (int iter = 0; iter < iters; iter++) {
+      int dstAlloc = portalAlloc(alloc_sz, 1);
+      unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
+
+      for (uint32_t i = 0; i < alloc_sz/sizeof(uint32_t); i++)
+	  dstBuffer[i] = 0xDEADBEEF;
 
 #ifndef USE_ACP
-  fprintf(stderr, "flushing cache\n");
-  portalCacheFlush(dstAlloc, dstBuffer, alloc_sz, 1);
+      fprintf(stderr, "flushing cache\n");
+      portalCacheFlush(dstAlloc, dstBuffer, alloc_sz, 1);
 #endif
 
-  fprintf(stderr, "parent::starting write\n");
-  unsigned int ref_dstAlloc = dma->reference(dstAlloc);
-  int burstLenBytes = 16*sizeof(uint32_t);
-  device->startWrite(ref_dstAlloc, alloc_sz, alloc_sz / burstLenBytes, burstLenBytes);
+      fprintf(stderr, "parent::starting write\n");
+      mismatchCount = 0;
+      unsigned int ref_dstAlloc = dma->reference(dstAlloc);
+      fprintf(stderr, "dma->reference %d\n", ref_dstAlloc);
+      int burstLenBytes = 16*sizeof(uint32_t);
+      device->startWrite(ref_dstAlloc, alloc_sz, alloc_sz / burstLenBytes, burstLenBytes);
 
-  sem_wait(&done_sem);
-  memdump((unsigned char *)dstBuffer, 32, "MEM");
-  int mismatchCount = 0;
-  for (uint32_t i = 0; i < alloc_sz/sizeof(uint32_t); i++) {
-    if (dstBuffer[i] != i)
-      mismatchCount++;
+      sem_wait(&done_sem);
+      memdump((unsigned char *)dstBuffer, 32, "MEM");
+      for (uint32_t i = 0; i < alloc_sz/sizeof(uint32_t); i++) {
+	  if (dstBuffer[i] != i)
+	      mismatchCount++;
+      }
+      fprintf(stderr, "%s: done mismatchCount=%d\n", __FUNCTION__, mismatchCount);
+
+      fprintf(stderr, "%s: calling dereference\n", __FUNCTION__);
+      dma->dereference(ref_dstAlloc);
+      fprintf(stderr, "%s: calling munmap\n", __FUNCTION__);
+      int unmapped = munmap(dstBuffer, alloc_sz);
+      if (unmapped != 0)
+	  fprintf(stderr, "Failed to unmap dstBuffer errno=%d:%s\n", errno, strerror(errno));
   }
-  fprintf(stderr, "%s: done mismatchCount=%d\n", __FUNCTION__, mismatchCount);
+
   return (mismatchCount == 0) ? 0 : 1;
 }
