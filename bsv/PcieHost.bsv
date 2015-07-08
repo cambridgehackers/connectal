@@ -120,7 +120,7 @@ module mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
                                     interface response = dispatcher[tlpRequesterRequest].inFromBus;
                                  endinterface));
 
-   PcieControlAndStatusRegs csr <- mkPcieControlAndStatusRegs(traceif[tlpCompleterRequest].tlpdata);
+   PcieControlAndStatusRegs csr <- mkPcieControlAndStatusRegs();
    mkConnection(mvec[portConfig].master, csr.memSlave);
 
    interface msixEntry = csr.msixEntry;
@@ -218,11 +218,11 @@ module mkBsimPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_c
    // connect pciehost.pci to bdip functions here
    rule from_bdpi if (can_get_tlp);
       TLPData#(16) foo <- get_tlp;
-      pciehost.pcic.response.put(foo);
+      pciehost.pci.response.put(foo);
       //$display("from_bdpi: %h %d", foo, valueOf(SizeOf#(TLPData#(16))));
    endrule
    rule to_bdpi if (can_put_tlp);
-      TLPData#(16) foo <- pciehost.pcic.request.get;
+      TLPData#(16) foo <- pciehost.pci.request.get;
       put_tlp(foo);
       //$display("to_bdpi");
    endrule
@@ -302,7 +302,7 @@ module mkAlteraPcieHostTop #(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(P
    Reset portalReset_ = epPcieReset;
 
    PcieHost#(DataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(ep7.device, clocked_by portalClock_, reset_by portalReset_);
-   mkConnection(ep7.tlp, pciehost.pcic, clocked_by portalClock_, reset_by portalReset_);
+   mkConnection(ep7.tlp, pciehost.pci, clocked_by portalClock_, reset_by portalReset_);
 
    interface PcieEndpointS5 tep7 = ep7;
    interface PcieHost tpciehost = pciehost;

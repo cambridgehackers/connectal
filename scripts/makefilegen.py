@@ -439,6 +439,10 @@ if __name__=='__main__':
     else:
        options.pinout = []
 
+    # ignore partition_module until altera flow support generate separate netlist.
+    if (fpga_vendor == 'altera'):
+        options.partition_module = []
+
     substs = {'partitions': ' '.join(['-s %s' % p for p in options.partition_module]),
 					 'boardname': boardname,
 					 'partname': partname,

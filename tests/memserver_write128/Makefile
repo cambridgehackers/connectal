@@ -1,8 +1,10 @@
 
 CONNECTALDIR?=../..
 MSWDIR=../memserver_write/
-INTERFACES = MemwriteRequest MemwriteIndication
-BSVFILES = $(MSWDIR)/Memwrite.bsv $(MSWDIR)/Top.bsv
+S2H_INTERFACES = MemwriteRequest:Memwrite.request
+H2S_INTERFACES = Memwrite:MemwriteIndication
+MEM_INTERFACES = nil,lMemwrite.dmaClients
+BSVFILES = $(MSWDIR)/Memwrite.bsv
 CPPFILES = $(MSWDIR)/testmemwrite.cpp
 
 CONNECTALFLAGS += -D USE_ACP -P mkConnectalTop -D DATA_BUS_WIDTH=128
