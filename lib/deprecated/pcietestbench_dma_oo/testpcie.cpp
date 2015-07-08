@@ -1,14 +1,8 @@
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <assert.h>
-#include <semaphore.h>
-#include <sys/mman.h>
 #include <fstream>
 
-#include "StdDmaIndication.h"
-#include "MemServerRequest.h"
+#include "dmaManager.h"
 #include "SGListConfigRequest.h"
 #include "PcieTestBenchIndication.h"
 #include "PcieTestBenchRequest.h"
@@ -86,13 +80,7 @@ int main(int argc, const char **argv)
 {
   PcieTestBenchRequestProxy *device = new PcieTestBenchRequestProxy(IfcNames_TestBenchRequest);
   PcieTestBenchIndication *deviceIndication = new PcieTestBenchIndication(IfcNames_TestBenchIndication);
-
-  MemServerRequestProxy *hostmemMemServerRequest = new MemServerRequestProxy(IfcNames_HostmemMemServerRequest);
-  SGListConfigRequestProxy *dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
-  DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostmemMemServerIndication = new MemServerIndication(hostmemServerRequest, IfcNames_HostmemMemServerIndication);
-  SGListConfigIndication *hostmemSGListConfigIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
-
+  DmaManager *dma = platformInit();
   int srcAlloc;
   unsigned int *srcBuffer = 0;
 

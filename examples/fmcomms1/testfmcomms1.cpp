@@ -18,16 +18,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#include <stdio.h>
-#include <sys/mman.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <semaphore.h>
-
-#include "StdDmaIndication.h"
-#include "MemServerRequest.h"
-#include "MMURequest.h"
+#include "dmaManager.h"
 #include "FMComms1Request.h"
 #include "FMComms1Indication.h"
 #include "BlueScopeEventPIORequest.h"
@@ -127,16 +118,8 @@ int main(int argc, const char **argv)
   }
 
   device = new FMComms1RequestProxy(IfcNames_FMComms1Request);
-
-
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
-  DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
-
+  DmaManager *dma = platformInit();
   deviceIndication = new FMComms1Indication(IfcNames_FMComms1Indication);
-
   bluescope = new BlueScopeEventPIORequestProxy(IfcNames_BlueScopeEventPIORequest);
   bluescopeIndication = new BlueScopeEventPIOIndication(IfcNames_BlueScopeEventPIOIndication);
 

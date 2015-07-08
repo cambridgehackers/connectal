@@ -18,24 +18,16 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
 #include <fstream>
 #include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
 #include <errno.h>
-#include <string.h>
-#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/mman.h>
 #include <assert.h>
 #include <mp.h>
-
-#include "StdDmaIndication.h"
-#include "MMURequest.h"
-#include "GeneratedTypes.h" 
+#include "dmaManager.h"
 #include "NandCfgIndication.h"
 #include "NandCfgRequest.h"
 #include "StrstrIndication.h"
@@ -46,7 +38,6 @@ extern "C" {
 #include "sys/ioctl.h"
 #include "drivers/portalmem/portalmem.h"
 #include "sock_utils.h"
-#include "dmaManager.h"
 #include "userReference.h"
 }
 
@@ -122,11 +113,7 @@ private:
 int main(int argc, const char **argv)
 {
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
-
-  MMURequestProxy *hostMMURequest = new MMURequestProxy(IfcNames_AlgoMMURequest);
-  DmaManager *hostDma = new DmaManager(hostMMURequest);
-  MMUIndication *hostMMUIndication = new MMUIndication(hostDma, IfcNames_AlgoMMUIndication);
-
+  DmaManager *dma = platformInit();
   MMURequestProxy *nandMMURequest = new MMURequestProxy(IfcNames_NandMMURequest);
   DmaManager *nandsimDma = new DmaManager(nandMMURequest);
   MMUIndication *nandMMUIndication = new MMUIndication(nandsimDma,IfcNames_NandMMUIndication);

@@ -89,6 +89,8 @@ class DmaManager
     DmaManager_confresp(&priv, channelId);
   };
 };
+extern "C" DmaManager *platformInit(void);
+extern "C" void platformStatistics(void);
 #endif
 #endif
 #endif // _PORTAL_MEMORY_H_

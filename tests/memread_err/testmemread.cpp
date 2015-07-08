@@ -18,17 +18,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#include <stdio.h>
-#include <sys/mman.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <pthread.h>
 #include <monkit.h>
-
-#include "StdDmaIndication.h"
-#include "MemServerRequest.h"
-#include "MMURequest.h"
+#include "dmaManager.h"
 #include "MemreadRequest.h"
 #include "MemreadIndication.h"
 
@@ -91,11 +82,7 @@ int runtest(int argc, const char ** argv)
 
   device = new MemreadRequestProxy(IfcNames_MemreadRequest);
   deviceIndication = new MemreadIndication(IfcNames_MemreadIndication);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
-  DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
+  DmaManager *dma = platformInit();
 
   fprintf(stderr, "Main::allocating memory...\n");
   srcAlloc = portalAlloc(alloc_sz, 0);

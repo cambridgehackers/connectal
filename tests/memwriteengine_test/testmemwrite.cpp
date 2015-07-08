@@ -18,16 +18,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#include <stdio.h>
-#include <stdint.h>
-#include <semaphore.h>
-
-#if (NumberOfMasters != 0)
 #include "dmaManager.h"
-#include "StdDmaIndication.h"
-#include "MemServerRequest.h"
-#include "MMURequest.h"
-#endif
 #include "MemwriteIndication.h"
 #include "MemwriteRequest.h"
 
@@ -61,11 +52,7 @@ int main(int argc, const char **argv)
   MemwriteRequestProxy *device = new MemwriteRequestProxy(IfcNames_MemwriteRequestS2H);
   MemwriteIndication deviceIndication(IfcNames_MemwriteIndicationH2S);
 #if (NumberOfMasters != 0)
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
-  DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
+  DmaManager *dma = platformInit();
 #endif
 
   sem_init(&done_sem, 1, 0);

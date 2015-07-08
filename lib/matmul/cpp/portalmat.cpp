@@ -20,10 +20,8 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
-#include <unistd.h>
+#include "dmaManager.h"
 #include "portalmat.h"
-#include <StdDmaIndication.h>
 
 PortalMatAllocator *matAllocator = 0;
 sem_t mul_sem;

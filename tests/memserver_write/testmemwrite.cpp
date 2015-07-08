@@ -18,17 +18,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
 #include <errno.h>
-#include <stdio.h>
-#include <sys/mman.h>
-#include <stdint.h>
-#include <semaphore.h>
-
 #include "dmaManager.h"
-#include "StdDmaIndication.h"
-#include "MemServerRequest.h"
-#include "MMURequest.h"
 #include "MemwriteIndication.h"
 #include "MemwriteRequest.h"
 
@@ -70,11 +61,7 @@ int main(int argc, const char **argv)
     size_t alloc_sz = 4096; //1024*1024;
   MemwriteRequestProxy *device = new MemwriteRequestProxy(IfcNames_MemwriteRequestS2H);
   MemwriteIndication deviceIndication(IfcNames_MemwriteIndicationH2S);
-  MemServerRequestProxy *memServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
-  DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication memServerIndication(memServerRequest, IfcNames_MemServerIndicationH2S);
-  MMUIndication mmuIndication(dma, IfcNames_MMUIndicationH2S);
+  DmaManager *dma = platformInit();
 
   device->pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
   //dmap->pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */

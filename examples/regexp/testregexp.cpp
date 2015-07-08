@@ -18,25 +18,12 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
-
-#include <stdio.h>
-#include <sys/mman.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <assert.h>
-#include <string.h>
-#include <semaphore.h>
 #include <iostream>
 #include <fstream>
 #include <sys/stat.h>
-
-#include "StdDmaIndication.h"
+#include "dmaManager.h"
 #include "RegexpIndication.h"
 #include "RegexpRequest.h"
-#include "MemServerRequest.h"
-#include "MMURequest.h"
-
 #include "regexp_utils.h"
 
 int main(int argc, const char **argv)
@@ -45,11 +32,7 @@ int main(int argc, const char **argv)
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
   RegexpRequestProxy *device = new RegexpRequestProxy(IfcNames_RegexpRequestS2H);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
-  MMURequestProxy *hostMMURequest = new MMURequestProxy(IfcNames_MMURequestS2H);
-  DmaManager *hostDma = new DmaManager(hostMMURequest);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
-  MMUIndication *hostMMUIndication = new MMUIndication(hostDma, IfcNames_MMUIndicationH2S);
+    DmaManager *hostDma = platformInit();
   RegexpIndication *deviceIndication = new RegexpIndication(IfcNames_RegexpIndicationH2S);
   
   haystack_dma = hostDma;

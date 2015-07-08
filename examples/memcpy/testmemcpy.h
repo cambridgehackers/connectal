@@ -20,10 +20,7 @@
  */
 #ifndef _TESTMEMCPY_H_
 #define _TESTMEMCPY_H_
-
-#include "StdDmaIndication.h"
-#include "MemServerRequest.h"
-#include "MMURequest.h"
+#include "dmaManager.h"
 #include "MemcpyIndication.h"
 #include "MemcpyRequest.h"
 
@@ -105,11 +102,7 @@ int runtest(int argc, const char **argv)
 
   MemcpyRequestProxy *device = new MemcpyRequestProxy(IfcNames_MemcpyRequestS2H);
   MemcpyIndication deviceIndication(IfcNames_MemcpyIndicationH2S);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
-  DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
-  MMUIndication hostMMUIndication (dma, IfcNames_MMUIndicationH2S);
+  DmaManager *dma = platformInit();
 
   fprintf(stderr, "Main::allocating memory...\n");
 
@@ -161,21 +154,17 @@ int runtest(int argc, const char **argv)
   portalTimerStart(0);
   device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords, burstLen, iterCnt);
   sem_wait(&done_sem);
-  uint64_t cycles = portalTimerLap(0);
-  hostMemServerRequest->memoryTraffic(ChannelType_Read);
-  uint64_t read_beats = hostMemServerIndication->receiveMemoryTraffic();
-  hostMemServerRequest->memoryTraffic(ChannelType_Write);
-  uint64_t write_beats = hostMemServerIndication->receiveMemoryTraffic();
-  float read_util = (float)read_beats/(float)cycles;
-  float write_util = (float)write_beats/(float)cycles;
-  fprintf(stderr, "   iters: %d\n", iterCnt);
-  fprintf(stderr, "wr_beats: %"PRIx64" %08lx\n", write_beats, (long)write_beats);
-  fprintf(stderr, "rd_beats: %"PRIx64" %08lx\n", read_beats, (long)read_beats);
-  fprintf(stderr, "numWords: %x\n", numWords);
-  fprintf(stderr, "  wr_est: %"PRIx64"\n", (write_beats*2)/iterCnt);
-  fprintf(stderr, "  rd_est: %"PRIx64"\n", (read_beats*2)/iterCnt);
-  fprintf(stderr, "memory read utilization (beats/cycle): %f\n", read_util);
-  fprintf(stderr, "memory write utilization (beats/cycle): %f\n", write_util);
+  platformStatistics();
+  //float read_util = (float)read_beats/(float)cycles;
+  //float write_util = (float)write_beats/(float)cycles;
+  //fprintf(stderr, "   iters: %d\n", iterCnt);
+  //fprintf(stderr, "wr_beats: %"PRIx64" %08lx\n", write_beats, (long)write_beats);
+  //fprintf(stderr, "rd_beats: %"PRIx64" %08lx\n", read_beats, (long)read_beats);
+  //fprintf(stderr, "numWords: %x\n", numWords);
+  //fprintf(stderr, "  wr_est: %"PRIx64"\n", (write_beats*2)/iterCnt);
+  //fprintf(stderr, "  rd_est: %"PRIx64"\n", (read_beats*2)/iterCnt);
+  //fprintf(stderr, "memory read utilization (beats/cycle): %f\n", read_util);
+  //fprintf(stderr, "memory write utilization (beats/cycle): %f\n", write_util);
   
 #if 0
   MonkitFile pmf("perf.monkit");
@@ -200,11 +189,7 @@ int runtest_chunk(int argc, const char **argv)
 
   MemcpyRequestProxy *device = new MemcpyRequestProxy(IfcNames_MemcpyRequestS2H);
   MemcpyIndication deviceIndication(IfcNames_MemcpyIndicationH2S);
-  MemServerRequestProxy hostMemServerRequest(IfcNames_MemServerRequestS2H);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
-  DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication hostMemServerIndication(IfcNames_MemServerIndicationH2S);
-  MMUIndication hostMMUIndication(dma, IfcNames_MMUIndicationH2S);
+  DmaManager *dma = platformInit();
 
   fprintf(stderr, "Main::allocating memory...\n");
 

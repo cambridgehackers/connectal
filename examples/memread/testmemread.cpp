@@ -19,9 +19,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #include <monkit.h>
-#include "StdDmaIndication.h"
-#include "MemServerRequest.h"
-#include "MMURequest.h"
+#include "dmaManager.h"
 #include "ReadTestRequest.h"
 #include "ReadTestIndication.h"
 
@@ -57,39 +55,6 @@ public:
     }
     ReadTestIndication(int id, int tile=0) : ReadTestIndicationWrapper(id,tile){}
 };
-
-static MemServerRequestProxy *hostMemServerRequest;
-static MemServerIndication *hostMemServerIndication;
-static MMUIndication *mmuIndication;
-static DmaManager *platformInit(void)
-{
-    hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
-    MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
-    DmaManager *dma = new DmaManager(dmap);
-    hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
-    mmuIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
-
-#ifdef FPGA0_CLOCK_FREQ
-    long req_freq = FPGA0_CLOCK_FREQ;
-    long freq = 0;
-    setClockFrequency(0, req_freq, &freq);
-    fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
-#endif
-    return dma;
-}
-
-static void platformStatistics(void)
-{
-    uint64_t cycles = portalTimerLap(0);
-    hostMemServerRequest->memoryTraffic(ChannelType_Read);
-    uint64_t beats = hostMemServerIndication->receiveMemoryTraffic();
-    float read_util = (float)beats/(float)cycles;
-    fprintf(stderr, " iterCnt: %d\n", iterCnt);
-    fprintf(stderr, "   beats: %llx\n", (long long)beats);
-    fprintf(stderr, "numWords: %x\n", numWords);
-    fprintf(stderr, "     est: %llx\n", (long long)(beats*2)/iterCnt);
-    fprintf(stderr, "memory read utilization (beats/cycle): %f\n", read_util);
-}
 
 int main(int argc, const char **argv)
 {

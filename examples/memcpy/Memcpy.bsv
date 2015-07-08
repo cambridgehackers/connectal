@@ -74,7 +74,7 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
    
    FIFOF#(Bit#(DataBusWidth))    buffer <- mkSizedBRAMFIFOF(valueOf(CmdQDepth)*32);
    
-   Bool verbose = True;
+   Bool verbose = False; //True;
 
    rule start_read(rdIterCnt > 0);
       if (verbose) $display("start_read numWords %d wordsPerBeat %d", numWords, wordsPerBeat);

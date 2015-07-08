@@ -20,29 +20,17 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <assert.h>
-#include <string.h>
 #include <netinet/in.h>
-
 #include "maxsonar_simple.h"
 #include "gyro_simple.h"
 #include "hbridge_simple.h"
 #include "sock_utils.h"
-
 #include "MaxSonarSampleStream.h"
 #include "GyroSampleStream.h"
 #include "HBridgeCtrlRequest.h"
 #include "MaxSonarCtrlRequest.h"
 #include "GyroCtrlRequest.h"
-#include "GeneratedTypes.h"
-#include "StdDmaIndication.h"
-#include "MemServerRequest.h"
-#include "MMURequest.h"
 #include "dmaManager.h"
 #include "read_buffer.h"
 
@@ -113,11 +101,7 @@ int main(int argc, const char **argv)
   MaxSonarCtrlRequestProxy *maxsonar_ctrl = new MaxSonarCtrlRequestProxy(IfcNames_MaxSonarControllerRequest);
   GyroCtrlIndication *gyro_ind = new GyroCtrlIndication(IfcNames_GyroControllerIndication);
   GyroCtrlRequestProxy *gyro_ctrl = new GyroCtrlRequestProxy(IfcNames_GyroControllerRequest);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
-  DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
+    DmaManager *dma = platformInit();
 
   // portals communicating between "main" running on the ARM and SW running on a server somewhere on the network (HOST_SW)
   PortalSocketParam param0;

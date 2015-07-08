@@ -13,25 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include <limits.h>
-#include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <pthread.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/ioctl.h>
-
 #include <cutils/ashmem.h>
 #include <cutils/log.h>
 #include <cutils/atomic.h>
 #include <cutils/properties.h>
-
 #include <hardware/hardware.h>
 #include <hardware/gralloc.h>
 
@@ -44,8 +35,7 @@
 #include "HdmiDisplayRequest.h"
 #include "HdmiInternalRequest.h"
 #include "HdmiInternalIndication.h"
-#include "StdDmaIndication.h"
-#include "portal.h"
+#include "dmaManager.h"
 #include "i2chdmi.h"
 
 class TestHdmiIndication : public HdmiInternalIndicationWrapper {
@@ -357,11 +347,7 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 	dev->poller = new PortalPoller();
         dev->hdmiDisplay = new HdmiDisplayRequestProxy(IfcNames_HdmiDisplayRequest, dev->poller);
         dev->hdmiInternal = new HdmiInternalRequestProxy(IfcNames_HdmiInternalRequest, dev->poller);
-        dev->dmap = new SGListConfigRequestProxy(IfcNames_HostmemSGListConfigRequest);
-        dev->dma = new DmaManager(hostmemMemServerRequest, dmap);
-        dev->dmaIndication = new SGListConfigIndication(dma, IfcNames_HostmemSGListConfigIndication);
-  //MemServerIndication *hostmemMemServerIndication = new MemServerIndication(hostmemServerRequest, IfcNames_HostmemMemServerIndication);
-  //MemServerRequestProxy *hostmemMemServerRequest = new MemServerRequestProxy(IfcNames_HostmemMemServerRequest);
+        dev->dma = platformInit();
         dev->nextSegmentNumber = 0;
 
         status = 0;
