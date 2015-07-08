@@ -25,7 +25,7 @@ import Portal::*;
 import MemTypes::*;
 import HostInterface::*;
 
-typedef enum {MMUIndicationH2S=2, MemServerIndicationH2S, MMURequestS2H, MemServerRequestS2H} PlatformNames deriving (Eq,Bits);
+typedef enum {IfcNames_MMUIndicationH2S=2, IfcNames_MemServerIndicationH2S, IfcNames_MMURequestS2H, IfcNames_MemServerRequestS2H} PlatformNames deriving (Eq,Bits);
 
 interface Tile#(type ext_type, numeric type numReadClients, numeric type numWriteClients);
    interface PhysMemSlave#(18,32) portals;

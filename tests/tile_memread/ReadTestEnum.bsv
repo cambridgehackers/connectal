@@ -1,1 +1,1 @@
-typedef enum {ReadTestIndicationH2S=8, ReadTestRequestS2H} TileNames deriving (Eq,Bits);
+typedef enum {IfcNames_ReadTestIndicationH2S=8, IfcNames_ReadTestRequestS2H} TileNames deriving (Eq,Bits);

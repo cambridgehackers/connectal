@@ -33,9 +33,9 @@ import ReadTestIndication::*;
 
 (* synthesize *)
 module mkTile(Tile#(Empty,1,0));
-   ReadTestIndicationProxy lReadTestIndicationProxy <- mkReadTestIndicationProxy(ReadTestIndicationH2S);
+   ReadTestIndicationProxy lReadTestIndicationProxy <- mkReadTestIndicationProxy(IfcNames_ReadTestIndicationH2S);
    ReadTest lReadTest <- mkReadTest(lReadTestIndicationProxy.ifc);
-   ReadTestRequestWrapper lReadTestRequestWrapper <- mkReadTestRequestWrapper(ReadTestRequestS2H, lReadTest.request);
+   ReadTestRequestWrapper lReadTestRequestWrapper <- mkReadTestRequestWrapper(IfcNames_ReadTestRequestS2H, lReadTest.request);
    
    Vector#(2,StdPortal) portal_vec;
    portal_vec[0] = lReadTestRequestWrapper.portalIfc;

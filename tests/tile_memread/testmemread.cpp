@@ -59,6 +59,39 @@ public:
     ReadTestIndication(int id, int tile=0) : ReadTestIndicationWrapper(id,tile){}
 };
 
+static MemServerRequestProxy *hostMemServerRequest;
+static MemServerIndication *hostMemServerIndication;
+static MMUIndication *mmuIndication;
+static DmaManager *platformInit(void)
+{
+    hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
+    MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
+    DmaManager *dma = new DmaManager(dmap);
+    hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
+    mmuIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
+
+#ifdef FPGA0_CLOCK_FREQ
+    long req_freq = FPGA0_CLOCK_FREQ;
+    long freq = 0;
+    setClockFrequency(0, req_freq, &freq);
+    fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
+#endif
+    return dma;
+}
+
+static void platformStatistics(void)
+{
+    uint64_t cycles = portalTimerLap(0);
+    hostMemServerRequest->memoryTraffic(ChannelType_Read);
+    uint64_t beats = hostMemServerIndication->receiveMemoryTraffic();
+    float read_util = (float)beats/(float)cycles;
+    fprintf(stderr, " iterCnt: %d\n", iterCnt);
+    fprintf(stderr, "   beats: %llx\n", (long long)beats);
+    fprintf(stderr, "numWords: %x\n", numWords);
+    fprintf(stderr, "     est: %llx\n", (long long)(beats*2)/iterCnt);
+    fprintf(stderr, "memory read utilization (beats/cycle): %f\n", read_util);
+}
+
 int main(int argc, const char **argv)
 {
     int test_result = 0;
@@ -66,13 +99,9 @@ int main(int argc, const char **argv)
     unsigned int *srcBuffer = 0;
 
     fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
-    ReadTestRequestProxy *device = new ReadTestRequestProxy(ReadTestRequestS2H,TILE_NUMBER);
-    MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(MemServerRequestS2H);
-    MMURequestProxy *dmap = new MMURequestProxy(MMURequestS2H);
-    DmaManager *dma = new DmaManager(dmap);
-    MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, MemServerIndicationH2S);
-    ReadTestIndication memReadIndication(ReadTestIndicationH2S,TILE_NUMBER);
-    MMUIndication mmuIndication(dma, MMUIndicationH2S);
+    DmaManager *dma = platformInit();
+    ReadTestRequestProxy *device = new ReadTestRequestProxy(IfcNames_ReadTestRequestS2H,TILE_NUMBER);
+    ReadTestIndication memReadIndication(IfcNames_ReadTestIndicationH2S,TILE_NUMBER);
 
     fprintf(stderr, "Main::allocating memory...\n");
     srcAlloc = portalAlloc(alloc_sz, 0);
@@ -81,13 +110,6 @@ int main(int argc, const char **argv)
         srcBuffer[i] = i;
     portalCacheFlush(srcAlloc, srcBuffer, alloc_sz, 1);
     fprintf(stderr, "Main::flush and invalidate complete\n");
-
-#ifdef FPGA0_CLOCK_FREQ
-    long req_freq = FPGA0_CLOCK_FREQ;
-    long freq = 0;
-    setClockFrequency(0, req_freq, &freq);
-    fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
-#endif
 
     /* Test 1: check that match is ok */
     unsigned int ref_srcAlloc = dma->reference(srcAlloc);
@@ -100,15 +122,7 @@ int main(int argc, const char **argv)
         fprintf(stderr, "Main::first test failed to match %d.\n", mismatchCount);
         test_result++;     // failed
     }
-    uint64_t cycles = portalTimerLap(0);
-    hostMemServerRequest->memoryTraffic(ChannelType_Read);
-    uint64_t beats = hostMemServerIndication->receiveMemoryTraffic();
-    float read_util = (float)beats/(float)cycles;
-    fprintf(stderr, " iterCnt: %d\n", iterCnt);
-    fprintf(stderr, "   beats: %llx\n", (long long)beats);
-    fprintf(stderr, "numWords: %x\n", numWords);
-    fprintf(stderr, "     est: %llx\n", (long long)(beats*2)/iterCnt);
-    fprintf(stderr, "memory read utilization (beats/cycle): %f\n", read_util);
+    platformStatistics();
 
     /* Test 2: check that mismatch is detected */
     srcBuffer[0] = -1;
@@ -134,4 +148,3 @@ int main(int argc, const char **argv)
 #endif
     return test_result;
 }
-

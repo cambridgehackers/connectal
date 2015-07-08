@@ -33,8 +33,6 @@ import Arith::*;
 import HostInterface::*;
 import CtrlMux::*;
 
-typedef enum {MemwriteIndicationH2S, MemwriteRequestS2H} TileNames deriving (Eq,Bits);
-
 `ifdef NumEngineServers
 typedef `NumEngineServers NumEngineServers;
 `else

@@ -94,13 +94,13 @@ int main(int argc, const char **argv)
     exit(1);
   }
 
-  device = new MemwriteRequestProxy(MemwriteRequestS2H,1);
-  deviceIndication = new MemwriteIndication(MemwriteIndicationH2S,1);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(MemServerRequestS2H);
-  MMURequestProxy *dmap = new MMURequestProxy(MMURequestS2H);
+  device = new MemwriteRequestProxy(IfcNames_MemwriteRequestS2H,1);
+  deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndicationH2S,1);
+  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
+  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication hostMemServerIndication(hostMemServerRequest, MemServerIndicationH2S);
-  MMUIndication hostMMUIndication(dma, MMUIndicationH2S);
+  MemServerIndication hostMemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
+  MMUIndication hostMMUIndication(dma, IfcNames_MMUIndicationH2S);
   
   fprintf(stderr, "main::allocating memory...\n");
   dstAlloc = portalAlloc(alloc_sz, 0);
