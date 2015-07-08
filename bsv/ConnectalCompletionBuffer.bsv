@@ -30,6 +30,7 @@ import ClientServer::*;
 import Assert::*;
 import BRAM::*;
 import RegFile::*;
+import EHR::*;
 
 // CONNECTAL Libraries
 import MemTypes::*;
@@ -42,14 +43,21 @@ interface TagGen#(numeric type numTags);
    method ActionValue#(Bit#(TLog#(numTags))) complete;
 endinterface
 
+//(* synthesize *)
+module mkTagEHR (EHR2BSV#(Bit#(numTags)));
+   EHR#(2,Bit#(numTags)) ehr <- mkEHR(0);
+   interface r1 = ehr[0];
+   interface r2 = ehr[1];
+endmodule
+
 module mkTagGen(TagGen#(numTags))
    provisos(Log#(numTags,tsz));
    
    BRAM_Configure cfg = defaultValue;
    cfg.outFIFODepth = 1;
    //BRAM2Port#(Bit#(tsz),Bool) tags <- mkBRAM2Server(cfg);
-   Vector#(numTags, Reg#(Bool)) tags <- replicateM(mkReg(False));
-   //RegFile#(Bit#(tsz),Bool)     tags <- mkRegFile(0, fromInteger(valueOf(numTags)-1));
+   //Vector#(numTags, Reg#(Bool)) tags <- replicateM(mkReg(False));
+   EHR2BSV#(Bit#(numTags)) tags <- mkTagEHR();
    Reg#(Bit#(tsz))        head_ptr <- mkReg(0);
    Reg#(Bit#(tsz))        tail_ptr <- mkReg(0);
    Reg#(Bool)               inited <- mkReg(False);
@@ -66,8 +74,8 @@ module mkTagGen(TagGen#(numTags))
 
    rule complete_rule1 (comp_state[0] != 0);
       //let rv <- tags.portB.response.get;
-      //let rv = tags.sub(tail_ptr);
-      let rv = tags[tail_ptr];
+      //let rv = tags[tail_ptr];
+      let rv = tags.r2[tail_ptr] == 1;
       if (!rv) begin
 	 tail_ptr <= tail_ptr+1;
 	 counter.increment(1);
@@ -82,14 +90,17 @@ module mkTagGen(TagGen#(numTags))
    rule ret_rule;
       let tag <- toGet(retFifo).get;
       //tags.portB.request.put(BRAMRequest{write:True, responseOnWrite:False, address:tag, datain:False});
-      //tags.upd(tag, False);
-      tags[tag] <= False;
+      //tags[tag] <= False;
+      begin
+	 let t = tags.r1;
+	 t[tag] = 0;
+	 tags.r1 <= t;
+      end
       comp_state <= 1 | (comp_state << 1);
    endrule
 
    rule init_rule(!inited);
       //tags.portA.request.put(BRAMRequest{write:True,address:head_ptr,responseOnWrite:False,datain:False});
-      //tags.upd(head_ptr, False);
       //Not needed: tags[head_ptr] <= False;
       head_ptr <= head_ptr+1;
       inited <= head_ptr+1==0;
@@ -97,8 +108,12 @@ module mkTagGen(TagGen#(numTags))
    
    rule tag_rule if (inited && counter.positive);
       //tags.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:head_ptr, datain:True});
-      //tags.upd(head_ptr, True);
-      tags[head_ptr] <= True;
+      //tags[head_ptr] <= True;
+      begin
+	 let t = tags.r2;
+	 t[head_ptr] = 1;
+	 tags.r2 <= t;
+      end
       head_ptr <= head_ptr+1;
       tagFifo.enq(head_ptr);
       counter.decrement(1);
