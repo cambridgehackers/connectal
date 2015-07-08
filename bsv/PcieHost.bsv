@@ -120,7 +120,7 @@ module mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
                                     interface response = dispatcher[tlpRequesterRequest].inFromBus;
                                  endinterface));
 
-   PcieControlAndStatusRegs csr <- mkPcieControlAndStatusRegs(traceif[tlpCompleterRequest].tlpdata);
+   PcieControlAndStatusRegs csr <- mkPcieControlAndStatusRegs();
    mkConnection(mvec[portConfig].master, csr.memSlave);
 
    interface msixEntry = csr.msixEntry;
