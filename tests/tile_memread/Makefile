@@ -1,7 +1,7 @@
 
 CONNECTALDIR?=../..
 INTERFACES = ReadTestRequest ReadTestIndication
-BSVFILES = ReadTest.bsv $(CONNECTALDIR)/bsv/PlatformTypes.bsv
+BSVFILES = ReadTest.bsv $(CONNECTALDIR)/bsv/PlatformTypes.bsv ReadTestEnum.bsv
 CPPFILES=testmemread.cpp
 NUMBER_OF_MASTERS = 1
 # 1 tile for Platform, 1 tile for test itself

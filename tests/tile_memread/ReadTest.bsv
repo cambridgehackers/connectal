@@ -31,8 +31,6 @@ import MemTypes::*;
 import MemreadEngine::*;
 import HostInterface::*;
 
-typedef enum {ReadTestIndicationH2S=8, ReadTestRequestS2H} TileNames deriving (Eq,Bits);
-
 interface ReadTestRequest;
    method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
 endinterface

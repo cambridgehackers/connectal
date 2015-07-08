@@ -27,6 +27,7 @@ import CtrlMux::*;
 import MemServer::*;
 import MemTypes::*;
 import ReadTest::*;
+import ReadTestEnum::*;
 import ReadTestRequest::*;
 import ReadTestIndication::*;
 
