@@ -24,14 +24,12 @@
 #include "MemwriteIndication.h"
 #include "MemwriteRequest.h"
 
-#if defined(BSIM) || defined(BOARD_xsim)
 #ifdef BOARD_xsim
 static int numWords = 0x5000/4;
 static int iterCnt = 1;
-#else
+#elif defined(BSIM)
 static int numWords = 0x124000/4;
 static int iterCnt = 2;
-#endif
 #else
 static int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
 static int iterCnt = 128;
@@ -48,7 +46,7 @@ static size_t alloc_sz = numWords*sizeof(unsigned int);
 class MemwriteIndication : public MemwriteIndicationWrapper
 {
 public:
-    MemwriteIndication(int id) : MemwriteIndicationWrapper(id) {}
+    MemwriteIndication(int id, int tile=0) : MemwriteIndicationWrapper(id,tile) {}
     void started(uint32_t words) {
         fprintf(stderr, "Memwrite::started: words=%x\n", words);
     }
@@ -80,7 +78,7 @@ int main(int argc, const char **argv)
     MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
     MMUIndication hostMMUIndication(dma, IfcNames_MMUIndicationH2S);
 
-    fprintf(stderr, "parent::allocating memory...\n");
+    fprintf(stderr, "main::allocating memory...\n");
     int dstAlloc = portalAlloc(alloc_sz, 0);
     unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
 #ifdef FPGA0_CLOCK_FREQ

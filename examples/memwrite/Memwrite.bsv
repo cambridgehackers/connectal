@@ -73,7 +73,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 
    for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
       rule start (iterCnts[i] > 0);
-	 we.writeServers[i].request.put(MemengineCmd{sglId:pointer, base:extend(writeOffset)+(fromInteger(i)*chunk), len:truncate(chunk), burstLen:truncate(burstLen*4)});
+	 we.writeServers[i].request.put(MemengineCmd{tag:0, sglId:pointer, base:extend(writeOffset)+(fromInteger(i)*chunk), len:truncate(chunk), burstLen:truncate(burstLen*4)});
 	 Bit#(32) srcGen = (writeOffset/4)+(fromInteger(i)*truncate(chunk/4));
 	 srcGens[i] <= srcGen;
 	 $display("start %d/%d, %h 0x%x %h", i, valueOf(NumEngineServers), srcGen, iterCnts[i], writeOffset);
