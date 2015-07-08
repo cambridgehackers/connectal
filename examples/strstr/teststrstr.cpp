@@ -18,25 +18,14 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
-
-#include <stdio.h>
-#include <sys/mman.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <assert.h>
-#include <string.h>
 #include <semaphore.h>
 #include <ctime>
 #include <monkit.h>
 #include <mp.h>
-#include "StdDmaIndication.h"
-
+#include "dmaManager.h"
 #include "StrstrIndication.h"
 #include "StrstrRequest.h"
-#include "MemServerRequest.h"
-#include "MMURequest.h"
-
 #include "strstr.h"
 
 int sw_match_cnt = 0;
@@ -49,11 +38,7 @@ int main(int argc, const char **argv)
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   device = new StrstrRequestProxy(IfcNames_StrstrRequestS2H);
   deviceIndication = new StrstrIndication(IfcNames_StrstrIndicationH2S);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
-  DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
+    DmaManager *dma = platformInit();
 
   if(1){
     fprintf(stderr, "simple tests\n");

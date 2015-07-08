@@ -20,9 +20,7 @@
  */
 #include <assert.h>
 #include "SimpleRequest.h"
-#include "StdDmaIndication.h"
 #include "dmaManager.h"
-#include "MMURequest.h"
 #include "manualMMUIndication.h"
 
 #if 1
@@ -133,9 +131,7 @@ int main(int argc, const char **argv)
     int alloc_sz = 4096;
     int32_t testval = 0x1234abcd, v1arg1[4], v1arg2[4];
     int16_t v2v[16], v3count;
-    MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
-    DmaManager *dma = new DmaManager(dmap);
-    MMUIndication *mIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
+    DmaManager *dma = platformInit();
 
 //#define FF {dma}
 #define FF SHARED_DMA(IfcNames_MMURequestS2H, IfcNames_MMUIndicationH2S)

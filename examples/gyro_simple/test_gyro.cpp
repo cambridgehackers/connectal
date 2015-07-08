@@ -20,25 +20,11 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <assert.h>
-#include <string.h>
-#include <pthread.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <signal.h>
-
-#include "StdDmaIndication.h"
-#include "MemServerRequest.h"
-#include "MMURequest.h"
 #include "dmaManager.h"
 #include "sock_utils.h"
-
-#include "GeneratedTypes.h"
 #include "GyroSampleStream.h"
 #include "gyro_simple.h"
 #include "read_buffer.h"
@@ -58,11 +44,7 @@ int main(int argc, const char **argv)
 
   GyroCtrlIndication *ind = new GyroCtrlIndication(IfcNames_ControllerIndication);
   GyroCtrlRequestProxy *device = new GyroCtrlRequestProxy(IfcNames_ControllerRequest);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
-  DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
+  DmaManager *dma = platformInit();
 
   PortalSocketParam param;
   int rc = getaddrinfo("0.0.0.0", "5000", NULL, &param.addr);

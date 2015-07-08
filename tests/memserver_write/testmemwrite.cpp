@@ -18,17 +18,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
-#include <errno.h>
-#include <stdio.h>
 #include <sys/mman.h>
-#include <stdint.h>
-#include <semaphore.h>
-
+#include <errno.h>
 #include "dmaManager.h"
-#include "StdDmaIndication.h"
-#include "MemServerRequest.h"
-#include "MMURequest.h"
 #include "MemwriteIndication.h"
 #include "MemwriteRequest.h"
 
@@ -70,11 +62,7 @@ int main(int argc, const char **argv)
     size_t alloc_sz = 4096; //1024*1024;
   MemwriteRequestProxy *device = new MemwriteRequestProxy(IfcNames_MemwriteRequestS2H);
   MemwriteIndication deviceIndication(IfcNames_MemwriteIndicationH2S);
-  MemServerRequestProxy *memServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
-  DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication memServerIndication(memServerRequest, IfcNames_MemServerIndicationH2S);
-  MMUIndication mmuIndication(dma, IfcNames_MMUIndicationH2S);
+  DmaManager *dma = platformInit();
 
   device->pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
   //dmap->pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
@@ -112,12 +100,17 @@ int main(int argc, const char **argv)
       }
       fprintf(stderr, "%s: done mismatchCount=%d\n", __FUNCTION__, mismatchCount);
 
-      fprintf(stderr, "%s: calling dereference\n", __FUNCTION__);
-      dma->dereference(ref_dstAlloc);
       fprintf(stderr, "%s: calling munmap\n", __FUNCTION__);
       int unmapped = munmap(dstBuffer, alloc_sz);
       if (unmapped != 0)
 	  fprintf(stderr, "Failed to unmap dstBuffer errno=%d:%s\n", errno, strerror(errno));
+      
+      fprintf(stderr, "%s: close\n", __FUNCTION__);
+      close(dstAlloc);
+
+      fprintf(stderr, "%s: calling dereference\n", __FUNCTION__);
+      dma->dereference(ref_dstAlloc);
+      fprintf(stderr, "%s: after dereference\n", __FUNCTION__);
   }
 
   return (mismatchCount == 0) ? 0 : 1;

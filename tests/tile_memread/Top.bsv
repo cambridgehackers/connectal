@@ -19,24 +19,18 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import Vector::*;
-import Connectable::*;
-
 import HostInterface::*;
 import Portal::*;
 import PlatformTypes::*;
 import Platform::*;
 import Tile::*;
 
-module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
-
-   Vector#(NumberOfTiles,Tile#(Empty,1,0)) ts <- replicateM(mkTile);
-   Platform#(Empty,1) f <- mkPlatform(ts);
-
+module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,NumberOfMasters));
+   Vector#(NumberOfTiles,Tile) ts <- replicateM(mkTile);
+   Platform#(Empty) f <- mkPlatform(ts);
    interface interrupt = f.interrupt;
    interface slave = f.slave;
    interface masters = f.masters;
    interface pins = f.pins;
-
 endmodule : mkConnectalTop

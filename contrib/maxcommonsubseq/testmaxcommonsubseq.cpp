@@ -18,28 +18,18 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
-
-#include <stdio.h>
-#include <sys/mman.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <assert.h>
 #include <semaphore.h>
-#include <string.h>
 #include <ctype.h>
 #include <ctime>
 #include <monkit.h>
 #include <mp.h>
-#include "StdDmaIndication.h"
+#include "dmaManager.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 
 #include "MaxcommonsubseqIndication.h"
 #include "MaxcommonsubseqRequest.h"
-#include "MemServerRequest.h"
-#include "MMURequest.h"
-
 
 sem_t test_sem;
 int result_length;
@@ -76,12 +66,7 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   device = new MaxcommonsubseqRequestProxy(IfcNames_MaxcommonsubseqRequest);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
-  DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
-
+    DmaManager *dma = platformInit();
   deviceIndication = new MaxcommonsubseqIndication(IfcNames_MaxcommonsubseqIndication);
 
   if(sem_init(&test_sem, 1, 0)){

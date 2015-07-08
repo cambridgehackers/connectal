@@ -18,19 +18,10 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
-#include <string.h>
-#include <stdio.h>
-#include <pthread.h>
-#include <unistd.h>
-#include <sys/mman.h>
 #include <ctype.h>
 #include "i2chdmi.h"
 #include "edid.h"
-
-#include "MemServerRequest.h"
-#include "MMURequest.h"
-#include "StdDmaIndication.h"
+#include "dmaManager.h"
 #include "HdmiDisplayRequest.h"
 #include "HdmiDisplayIndication.h"
 #include "HdmiGeneratorIndication.h"
@@ -137,16 +128,8 @@ public:
 
 int main(int argc, const char **argv)
 {
-    PortalPoller *poller = 0;
-
-    poller = new PortalPoller();
     device = new HdmiDisplayRequestProxy(IfcNames_HdmiDisplayRequestS2H);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
-  dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
-  DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
-
+    DmaManager *dma = platformInit();
     HdmiGeneratorIndicationWrapper *hdmiIndication = new HdmiIndication(IfcNames_HdmiGeneratorIndicationH2S);
     HdmiDisplayIndicationWrapper *displayIndication = new DisplayIndication(IfcNames_HdmiDisplayIndicationH2S);
     hdmiGenerator = new HdmiGeneratorRequestProxy(IfcNames_HdmiGeneratorRequestS2H);

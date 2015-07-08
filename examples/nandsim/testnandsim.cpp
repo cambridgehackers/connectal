@@ -18,23 +18,14 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
-#include <stdio.h>
-#include <stdlib.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <string.h>
-#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-
-#include "StdDmaIndication.h"
-#include "MMURequest.h"
-#include "GeneratedTypes.h" 
+#include "dmaManager.h"
 #include "NandCfgIndication.h"
 #include "NandCfgRequest.h"
-
 #include "nandsim.h"
 
 static int trace_memory = 1;
@@ -87,10 +78,7 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "testnandsim::%s %s\n", __DATE__, __TIME__);
 
-  MMURequestProxy *hostMMURequest = new MMURequestProxy(IfcNames_BackingStoreMMURequest);
-  DmaManager *hostDma = new DmaManager(hostMMURequest);
-  MMUIndication hostMMUIndication(hostDma, IfcNames_BackingStoreMMUIndication);
-
+  DmaManager *hostDma = platformInit();
   NandCfgRequestProxy *nandcfgRequest = new NandCfgRequestProxy(IfcNames_NandCfgRequest);
   NandCfgIndication *nandcfgIndication = new NandCfgIndication(IfcNames_NandCfgIndication);
 

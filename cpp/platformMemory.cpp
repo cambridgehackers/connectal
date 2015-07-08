@@ -22,6 +22,7 @@
 // SOFTWARE.
 #include <assert.h>
 #include "dmaManager.h"
+#include "MMURequest.h"
 #include "MMUIndication.h"
 #include "MemServerRequest.h"
 #include "MemServerIndication.h"
@@ -88,3 +89,33 @@ class MemServerIndication : public MemServerIndicationWrapper
     return receiveMemoryTraffic();
   }
 };
+
+static MemServerRequestProxy *hostMemServerRequest;
+static MemServerIndication *hostMemServerIndication;
+static MMUIndication *mmuIndication;
+DmaManager *platformInit(void)
+{
+    hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
+    MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
+    DmaManager *dma = new DmaManager(dmap);
+    hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
+    mmuIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
+
+#ifdef FPGA0_CLOCK_FREQ
+    long req_freq = FPGA0_CLOCK_FREQ;
+    long freq = 0;
+    setClockFrequency(0, req_freq, &freq);
+    fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
+#endif
+    return dma;
+}
+
+void platformStatistics(void)
+{
+    uint64_t cycles = portalTimerLap(0);
+    hostMemServerRequest->memoryTraffic(ChannelType_Read);
+    uint64_t beats = hostMemServerIndication->receiveMemoryTraffic();
+    float read_util = (float)beats/(float)cycles;
+    fprintf(stderr, "   beats: %llx\n", (long long)beats);
+    fprintf(stderr, "memory utilization (beats/cycle): %f\n", read_util);
+}

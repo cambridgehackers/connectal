@@ -18,15 +18,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#include <stdio.h>
-#include <sys/mman.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include "StdDmaIndication.h"
-
-#include "MemServerRequest.h"
-#include "MMURequest.h"
+#include "dmaManager.h"
 #include "Memread2Indication.h"
 #include "Memread2Request.h"
 
@@ -55,8 +47,8 @@ public:
   virtual void readDone(uint32_t v){
     fprintf(stderr, "Memread2::readDone mismatch=%x\n", v);
     mismatchCount = v;
-    if (mismatchesReceived == mismatchCount)
-      exit(v ? 1 : 0);
+    //    if (mismatchesReceived == mismatchCount)
+    // exit(v ? 1 : 0);
   }
   virtual void started(uint32_t words){
     fprintf(stderr, "Memread2::started: words=%x\n", words);
@@ -90,12 +82,7 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
   device = new Memread2RequestProxy(IfcNames_Memread2RequestS2H);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
-  DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
-  MMUIndication hostMMUIndication(dma, IfcNames_MMUIndicationH2S);
-
+  DmaManager *dma = platformInit();
   Memread2Indication deviceIndication(IfcNames_Memread2IndicationH2S);
 
   fprintf(stderr, "Main::allocating memory...\n");
@@ -124,8 +111,10 @@ int main(int argc, const char **argv)
   while(true){
     sleep(3);
     device->getStateDbg();
-    uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
+    //uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
+    uint64_t beats = 0;
     fprintf(stderr, "   beats: %"PRIx64"\n", beats);
-    hostMemServerRequest->stateDbg(ChannelType_Read);
+    //hostMemServerRequest->stateDbg(ChannelType_Read);
+    platformStatistics();
   }
 }

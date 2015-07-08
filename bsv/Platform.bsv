@@ -19,9 +19,7 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import Vector::*;
-
 import Portal::*;
 import HostInterface::*;
 import MMU::*;
@@ -32,7 +30,6 @@ import CtrlMux::*;
 import FIFO::*;
 import GetPut::*;
 import SpecialFIFOs::*;
-
 import Pipe::*;
 import ConnectalMemory::*;
 import MMURequest::*;
@@ -86,24 +83,15 @@ module renameWrites#(Integer tile, MemWriteClient#(DataBusWidth) writer, MemServ
    endinterface
 endmodule
 
-
-module mkPlatform#(Vector#(numTiles, Tile#(Empty, numReadClients, numWriteClients)) tiles)(Platform#(Empty,numMasters))
-   provisos(Add#(a__, TLog#(TAdd#(1, numTiles)), 14)
-	    ,Add#(TMul#(numTiles, numWriteClients), b__, TMul#(TDiv#(TMul#(numTiles,numWriteClients), numMasters), numMasters))
-	    ,Add#(TMul#(numTiles, numReadClients), c__, TMul#(TDiv#(TMul#(numTiles,numReadClients), numMasters), numMasters))
-	    ,FunnelPipesPipelined#(1, TAdd#(1, numTiles), MemTypes::MemData#(32),TMin#(2, TLog#(TAdd#(1, numTiles))))
-            ,Pipe::FunnelPipesPipelined#(1, TAdd#(1, numTiles), MemTypes::MemData#(32)
-            ,TMin#(4, TLog#(TAdd#(1, numTiles))))
-	    );
-
+module mkPlatform#(Vector#(NumberOfTiles, Tile) tiles)(Platform#(Empty));
    /////////////////////////////////////////////////////////////
    // connecting up the tiles
 
-   Vector#(numTiles, PhysMemSlave#(18,32)) tile_slaves;
-   Vector#(numTiles, ReadOnly#(Bool)) tile_interrupts;
-   Vector#(numTiles, Vector#(numReadClients, MemReadClient#(DataBusWidth))) tile_read_clients;
-   Vector#(numTiles, Vector#(numWriteClients, MemWriteClient#(DataBusWidth))) tile_write_clients;
-   for(Integer i = 0; i < valueOf(numTiles); i=i+1) begin
+   Vector#(NumberOfTiles, PhysMemSlave#(18,32)) tile_slaves;
+   Vector#(NumberOfTiles, ReadOnly#(Bool)) tile_interrupts;
+   Vector#(NumberOfTiles, Vector#(NumReadClients, MemReadClient#(DataBusWidth))) tile_read_clients;
+   Vector#(NumberOfTiles, Vector#(NumWriteClients, MemWriteClient#(DataBusWidth))) tile_write_clients;
+   for(Integer i = 0; i < valueOf(NumberOfTiles); i=i+1) begin
       tile_slaves[i] = tiles[i].portals;
       tile_interrupts[i] = tiles[i].interrupt;
       tile_read_clients[i] = tiles[i].readers;
@@ -117,9 +105,9 @@ module mkPlatform#(Vector#(numTiles, Tile#(Empty, numReadClients, numWriteClient
    MemServerIndicationProxy lMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_MemServerIndicationH2S);
 
    MMU#(PhysAddrWidth) lMMU <- mkMMU(0,True, lMMUIndicationProxy.ifc);
-   Vector#(TMul#(numTiles,numReadClients), MemReadClient#(DataBusWidth)) tile_read_clients_renamed <- zipWith3M(renameReads, genVector, concat(tile_read_clients), replicate(lMemServerIndicationProxy.ifc));
-   Vector#(TMul#(numTiles,numWriteClients), MemWriteClient#(DataBusWidth)) tile_write_clients_renamed <- zipWith3M(renameWrites, genVector, concat(tile_write_clients), replicate(lMemServerIndicationProxy.ifc));
-   MemServer#(PhysAddrWidth,DataBusWidth,numMasters) lMemServer <- mkMemServer(tile_read_clients_renamed, tile_write_clients_renamed, cons(lMMU,nil), lMemServerIndicationProxy.ifc);
+   Vector#(TMul#(NumberOfTiles,NumReadClients), MemReadClient#(DataBusWidth)) tile_read_clients_renamed <- zipWith3M(renameReads, genVector, concat(tile_read_clients), replicate(lMemServerIndicationProxy.ifc));
+   Vector#(TMul#(NumberOfTiles,NumWriteClients), MemWriteClient#(DataBusWidth)) tile_write_clients_renamed <- zipWith3M(renameWrites, genVector, concat(tile_write_clients), replicate(lMemServerIndicationProxy.ifc));
+   MemServer#(PhysAddrWidth,DataBusWidth,NumberOfMasters) lMemServer <- mkMemServer(tile_read_clients_renamed, tile_write_clients_renamed, cons(lMMU,nil), lMemServerIndicationProxy.ifc);
 
    MMURequestWrapper lMMURequestWrapper <- mkMMURequestWrapper(IfcNames_MMURequestS2H, lMMU.request);
    MemServerRequestWrapper lMemServerRequestWrapper <- mkMemServerRequestWrapper(IfcNames_MemServerRequestS2H, lMemServer.request);
@@ -138,7 +126,7 @@ module mkPlatform#(Vector#(numTiles, Tile#(Empty, numReadClients, numWriteClient
    PhysMemSlave#(32,32) ctrl_mux <- mkMemPortalMux(cons(framework_ctrl_mux,tile_slaves));
    Vector#(16, ReadOnly#(Bool)) interrupts = replicate(interface ReadOnly; method Bool _read(); return False; endmethod endinterface);
    interrupts[0] = framework_intr;
-   for (Integer i = 1; i < valueOf(TAdd#(1,numTiles)); i = i + 1)
+   for (Integer i = 1; i < valueOf(TAdd#(1,NumberOfTiles)); i = i + 1)
       interrupts[i] = tile_interrupts[i-1];
    interface interrupt = interrupts;
    interface slave = ctrl_mux;

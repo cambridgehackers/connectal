@@ -253,11 +253,11 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                 err = copy_from_user(&sendFd, (void __user *) arg, sizeof(sendFd));
                 if (err)
                     break;
-                printk("[%s:%d] PCIE_SEND_FD %x %x  **\n", __FUNCTION__, __LINE__, sendFd.fd, sendFd.id);
 		pmentry = (struct pmentry *)kzalloc(sizeof(struct pmentry), GFP_KERNEL);
 		INIT_LIST_HEAD(&pmentry->pmlist);
 		pmentry->fmem = fget(sendFd.fd);
 		pmentry->id   = sendFd.id;
+                printk("[%s:%d] PCIE_SEND_FD fd=%x id=%x fmem=%p  **\n", __FUNCTION__, __LINE__, sendFd.fd, sendFd.id, pmentry->fmem);
 		list_add(&pmentry->pmlist, &this_portal->pmlist);
                 err = send_fd_to_portal(&devptr, sendFd.fd, sendFd.id, 0);
                 if (err < 0)
@@ -267,16 +267,16 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                 break;
         case PCIE_DEREFERENCE: {
 		int id = arg;
-		struct list_head *pmlist;
+		struct list_head *pmlist, *n;
 		PortalInternal devptr = {.map_base = (volatile int *)(this_board->bar2io + PORTAL_BASE_OFFSET * this_portal->portal_number),
 					 .item = &kernelfunc};
 		MMURequest_idReturn(&devptr, id);
-		list_for_each(pmlist, &this_portal->pmlist) {
+		list_for_each_safe(pmlist, n, &this_portal->pmlist) {
 			struct pmentry *pmentry = list_entry(pmlist, struct pmentry, pmlist);
 			if (pmentry->id == id) {
-				printk("%s:%d releasing portalmem object %d fmem=%p\n", __FUNCTION__, __LINE__, id, pmentry->fmem);
-				list_del(&pmentry->pmlist);
+				printk("%s:%d releasing portalmem id=%d fmem=%p count=%zd\n", __FUNCTION__, __LINE__, id, pmentry->fmem, pmentry->fmem->f_count.counter);
 				fput(pmentry->fmem);
+				list_del(&pmentry->pmlist);
 				kfree(pmentry);
 			}
 		}

@@ -18,15 +18,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
-#include <stdio.h>
-#include <stdint.h>
-#include <semaphore.h>
-
 #include "dmaManager.h"
-#include "StdDmaIndication.h"
-#include "MemServerRequest.h"
-#include "MMURequest.h"
 #include "MemwriteIndication.h"
 #include "MemwriteRequest.h"
 
@@ -65,12 +57,7 @@ int main(int argc, const char **argv)
   size_t alloc_sz = 1024*1024;
   MemwriteRequestProxy *device = new MemwriteRequestProxy(IfcNames_MemwriteRequest);
   MemwriteIndication *deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndication);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
-  DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
-
+  DmaManager *dma = platformInit();
   sem_init(&done_sem, 1, 0);
   int dstAlloc = portalAlloc(alloc_sz, 0);
   unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);

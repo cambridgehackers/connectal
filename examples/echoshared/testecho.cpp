@@ -18,12 +18,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
-#include <stdio.h>
 #include "EchoRequest.h"
 #include "EchoIndication.h"
-#include "MMURequest.h"
-#include "StdDmaIndication.h"
 #include "dmaManager.h"
 
 #define LOOP_COUNT 2
@@ -60,11 +56,7 @@ static void call_say2(int v, int v2)
 int main(int argc, const char **argv)
 {
     int alloc_sz = 64-4;
-//1000;
-
-    MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H, &transportSocketInit, NULL);
-    DmaManager *dma = new DmaManager(dmap);
-    MMUIndication mIndication(dma, IfcNames_MMUIndicationH2S, &transportSocketInit, NULL);
+    DmaManager *dma = platformInit();
 
     PortalSharedParam param = {{dma}, (uint32_t)alloc_sz};
     EchoIndication sIndication(IfcNames_EchoIndicationH2S, &transportShared, &param);

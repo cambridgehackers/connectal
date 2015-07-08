@@ -18,16 +18,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#include <stdio.h>
-#include <sys/mman.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <monkit.h>
-#include <semaphore.h>
-
-#include "StdDmaIndication.h"
-#include "MMURequest.h"
+#include "dmaManager.h"
 #include "TestIndication.h"
 #include "TestRequest.h"
 
@@ -47,11 +39,8 @@ public:
 
 int main(int argc, const char **argv)
 {
-
+  DmaManager *dma = platformInit();
   TestRequestProxy *testRequest = new TestRequestProxy(IfcNames_TestRequestS2H);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
-  DmaManager *dma = new DmaManager(dmap);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
   TestIndication *testIndication = new TestIndication(IfcNames_TestIndicationH2S);
 
   if(sem_init(&test_sem, 1, 0)){
