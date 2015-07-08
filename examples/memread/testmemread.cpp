@@ -31,24 +31,21 @@ int burstLen = 32;
 int burstLen = 16;
 #endif
 
-#if !defined(BSIM) && !defined(BOARD_xsim)
-int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
-int iterCnt = 64;
-#else
 #if defined(BOARD_xsim)
 int numWords = 0x40/4;
 int iterCnt = 1;
-#else
+#elif defined(BSIM)
 int numWords = 0x124000/4;
 int iterCnt = 3;
-#endif
+#else
+int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
+int iterCnt = 64;
 #endif
 
 static sem_t test_sem;
 static size_t test_sz  = numWords*sizeof(unsigned int);
 static size_t alloc_sz = test_sz;
 static int mismatchCount = 0;
-static ReadTestRequestProxy *device = 0;
 
 class ReadTestIndication : public ReadTestIndicationWrapper
 {
@@ -58,17 +55,17 @@ public:
         mismatchCount += v;
         sem_post(&test_sem);
     }
-    ReadTestIndication(int id) : ReadTestIndicationWrapper(id){}
+    ReadTestIndication(int id, int tile=0) : ReadTestIndicationWrapper(id,tile){}
 };
 
-int main(int argc, const char ** argv)
+int main(int argc, const char **argv)
 {
     int test_result = 0;
     int srcAlloc;
     unsigned int *srcBuffer = 0;
 
     fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
-    device = new ReadTestRequestProxy(IfcNames_ReadTestRequestS2H);
+    ReadTestRequestProxy *device = new ReadTestRequestProxy(IfcNames_ReadTestRequestS2H);
     MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
     MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
     DmaManager *dma = new DmaManager(dmap);
