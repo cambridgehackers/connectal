@@ -79,6 +79,7 @@ Integer tlpCompleterRequest = 0;
 Integer tlpRequesterRequest = 1;
 typedef 2   NumberOfTlpIntfs;
 
+(* synthesize *)
 module mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    Vector#(NumberOfTlpIntfs, TLPDispatcher) dispatcher <- replicateM(mkTLPDispatcher);
    Vector#(NumberOfTlpIntfs, TLPArbiter) arbiter <- replicateM(mkTLPArbiter);
