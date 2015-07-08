@@ -128,7 +128,7 @@ module  mkBsimTop(Empty);
    let single_reset <- mkReset(2, True, singleClock);
    Reset singleReset = single_reset.new_rst;
    BsimHost#(32,32,12,PhysAddrWidth,DataBusWidth,6,NumberOfMasters) host <- mkBsimHost(clocked_by singleClock, reset_by singleReset, derivedClock, derivedReset);
-   ConnectalTop#(PhysAddrWidth,DataBusWidth,PinType,NumberOfMasters) top <- mkConnectalTop(
+   ConnectalTop#(PhysAddrWidth,DataBusWidth,`PinType,NumberOfMasters) top <- mkConnectalTop(
 `ifdef IMPORT_HOSTIF
        host,
 `else
