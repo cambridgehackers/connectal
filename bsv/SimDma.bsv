@@ -103,6 +103,7 @@ endmodule
 interface XsimDmaReadWrite;
    method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
    method Action initfd(Bit#(32) id, Bit#(32) fd);
+   method Action idreturn(Bit#(32) id);
    method Action write32(Bit#(32) handle, Bit#(32) addr, Bit#(32) v);
    method Action readrequest(Bit#(32) handle, Bit#(32) addr);
    method ActionValue#(Bit#(32)) readresponse();
