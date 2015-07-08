@@ -113,7 +113,7 @@ int main(int argc, const char **argv)
       fprintf(stderr, "%s: done mismatchCount=%d\n", __FUNCTION__, mismatchCount);
 
       fprintf(stderr, "%s: calling dereference\n", __FUNCTION__);
-      dma->dereference(dstAlloc);
+      dma->dereference(ref_dstAlloc);
       fprintf(stderr, "%s: calling munmap\n", __FUNCTION__);
       int unmapped = munmap(dstBuffer, alloc_sz);
       if (unmapped != 0)
