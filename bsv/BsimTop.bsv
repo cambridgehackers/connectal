@@ -138,6 +138,10 @@ module  mkBsimTop(Empty);
    ConnectalTop#(PhysAddrWidth,DataBusWidth,PinType,NumberOfMasters) top <- mkConnectalTop(
 `ifdef IMPORT_HOSTIF
        host,
+`else
+`ifdef IMPORT_HOST_CLOCKS
+      host.derivedClock, host.derivedReset,
+`endif
 `endif
        clocked_by singleClock, reset_by singleReset);
    mapM(uncurry(mkConnection),zip(top.masters, host.mem_servers), clocked_by singleClock, reset_by singleReset);
