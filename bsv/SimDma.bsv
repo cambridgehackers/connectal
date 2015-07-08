@@ -41,6 +41,7 @@ typedef 150 SimDmaWriteLatency;
 interface SimDma#(numeric type dataWidth);
    method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
    method Action initfd(Bit#(32) id, Bit#(32) fd);
+   method Action idreturn(Bit#(32) id);
    method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v);
    method Action readrequest(Bit#(32) handle, Bit#(32) addr);
    method ActionValue#(Bit#(dataWidth)) readresponse();
@@ -49,6 +50,7 @@ endinterface
 `ifdef BSIM
 import "BDPI" function ActionValue#(Bit#(32)) simDma_init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
 import "BDPI" function ActionValue#(Bit#(32)) simDma_initfd(Bit#(32) id, Bit#(32) fd);
+import "BDPI" function ActionValue#(Bit#(32)) simDma_idreturn(Bit#(32) id);
 
 // implemented in BsimDma.cpp
 import "BDPI" function Action write_simDma32(Bit#(32) handle, Bit#(32) addr, Bit#(32) v);
@@ -65,6 +67,10 @@ module mkSimDma(SimDma#(dataWidth) ifc)
       endmethod
       method Action initfd(Bit#(32) id, Bit#(32) fd);
 	 let v <- simDma_initfd(id, fd);
+	 //return v;
+      endmethod
+      method Action idreturn(Bit#(32) id);
+	 let v <- simDma_idreturn(id);
 	 //return v;
       endmethod
       method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v);
@@ -97,6 +103,7 @@ endmodule
 interface XsimDmaReadWrite;
    method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
    method Action initfd(Bit#(32) id, Bit#(32) fd);
+   method Action idreturn(Bit#(32) id);
    method Action write32(Bit#(32) handle, Bit#(32) addr, Bit#(32) v);
    method Action readrequest(Bit#(32) handle, Bit#(32) addr);
    method ActionValue#(Bit#(32)) readresponse();
@@ -106,6 +113,7 @@ import "BVI" XsimDmaReadWrite =
 module mkXsimReadWrite(XsimDmaReadWrite);
    method init(init_id, init_handle, init_size) enable (en_init);
    method initfd(initfd_id, initfd_fd) enable (en_initfd);
+   method idreturn(idreturn_id) enable (en_idreturn);
    method write32(write32_handle, write32_addr, write32_data) enable (en_write32);
    method readrequest(readrequest_handle, readrequest_addr) enable (en_readrequest) ready (rdy_readrequest);
    method readresponse_data readresponse() enable (en_readresponse) ready (rdy_readresponse);
@@ -120,6 +128,9 @@ module mkSimDma(SimDma#(dataWidth) ifc)
    endmethod
    method Action initfd(Bit#(32) id, Bit#(32) fd);
       rws[0].initfd(id, fd);
+   endmethod
+   method Action idreturn(Bit#(32) id);
+      rws[0].idreturn(id);
    endmethod
    method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v);
       Vector#(TDiv#(dataWidth, 32), Bit#(32)) vs = unpack(v);

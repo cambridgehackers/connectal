@@ -340,6 +340,7 @@ if __name__=='__main__':
     elif 'XILINX=1' in bsvdefines:
         fpga_vendor = 'xilinx'
         suffix = 'xdc'
+        options.tcl.append(os.path.join(connectaldir, 'constraints', 'xilinx', 'cdc.tcl'))
     else:
         fpga_vendor = None
         suffix = None
