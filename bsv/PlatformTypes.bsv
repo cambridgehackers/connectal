@@ -27,17 +27,21 @@ import HostInterface::*;
 
 typedef enum {IfcNames_MMUIndicationH2S=2, IfcNames_MemServerIndicationH2S, IfcNames_MMURequestS2H, IfcNames_MemServerRequestS2H} PlatformNames deriving (Eq,Bits);
 
-interface Tile#(type ext_type, numeric type numReadClients, numeric type numWriteClients);
+typedef 2 NumReadClients;
+typedef 2 NumWriteClients;
+typedef Empty TileExtType;
+typedef 2 NumberOfTiles;
+interface Tile;
    interface PhysMemSlave#(18,32) portals;
    interface ReadOnly#(Bool) interrupt;
-   interface Vector#(numReadClients,MemReadClient#(DataBusWidth)) readers;
-   interface Vector#(numWriteClients,MemWriteClient#(DataBusWidth)) writers;
-   interface ext_type ext;
+   interface Vector#(NumReadClients,MemReadClient#(DataBusWidth)) readers;
+   interface Vector#(NumWriteClients,MemWriteClient#(DataBusWidth)) writers;
+   interface TileExtType ext;
 endinterface
 
-interface Platform#(type pins, numeric type numMasters);
+interface Platform#(type pins);
    interface PhysMemSlave#(32,32) slave;
-   interface Vector#(numMasters,PhysMemMaster#(PhysAddrWidth, DataBusWidth)) masters;
+   interface Vector#(NumberOfMasters,PhysMemMaster#(PhysAddrWidth, DataBusWidth)) masters;
    interface Vector#(16,ReadOnly#(Bool)) interrupt;
    interface pins pins;
 endinterface
