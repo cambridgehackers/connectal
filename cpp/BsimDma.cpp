@@ -23,6 +23,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 #include <errno.h>
 #include <assert.h>
 #include <sys/mman.h>
@@ -96,7 +97,9 @@ extern "C" void simDma_initfd(uint32_t aid, uint32_t fd)
     uint32_t pref = aid & 0xffff;
     if (dma_trace)
       fprintf(stderr, "%s: id=%d pref=%d fd=%d\n", __FUNCTION__, id, pref, fd);
+    assert(pref < MAX_DMA_IDS);
     dma_info[id][pref].fd = fd;
+    assert(dma_info[id][pref].size_accum == 0);
 }
 extern "C" void simDma_init(uint32_t id, uint32_t pref, uint32_t size)
 {
@@ -117,4 +120,17 @@ extern "C" void simDma_init(uint32_t id, uint32_t pref, uint32_t size)
     }
     if (dma_trace)
       fprintf(stderr, "simDma_init: done\n");
+}
+
+extern "C" void simDma_idreturn(uint32_t aid)
+{
+    uint32_t id = aid >> 16;
+    uint32_t pref = aid & 0xffff;
+    if (dma_trace)
+      fprintf(stderr, "simDma_idreturn: aid=%08x id=%d pref=%d size=%08x\n", aid, id, pref, dma_info[id][pref].size_accum);
+    assert(pref < MAX_DMA_IDS);
+    int unmapped = munmap(dma_info[id][pref].buffer, dma_info[id][pref].size_accum);
+    if (unmapped != 0)
+      fprintf(stderr, "%s: failed to unmap id=%s pref=%d fd=%d\n", __FUNCTION__, id, pref, dma_info[id][pref].fd);
+    memset(&dma_info[id][pref], 0, sizeof(dma_info[id][pref]));
 }

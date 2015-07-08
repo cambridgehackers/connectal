@@ -286,6 +286,8 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
    endmethod
    method Action idReturn(Bit#(32) sglId);
       idReturnFifo.enq(sglId);
+      if (hostMapped)
+	 simDma.idreturn(sglId);
    endmethod
    method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) index8, Bit#(64) barr4, Bit#(32) index4, Bit#(64) barr0, Bit#(32) index0);
       portsel(regall, 1).request.put(BRAMRequest{write:True, responseOnWrite:False,
