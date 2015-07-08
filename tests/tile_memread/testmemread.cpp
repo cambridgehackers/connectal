@@ -19,68 +19,119 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #include <monkit.h>
-
 #include "StdDmaIndication.h"
 #include "MemServerRequest.h"
 #include "MMURequest.h"
 #include "ReadTestRequest.h"
 #include "ReadTestIndication.h"
 
-sem_t test_sem;
-
+#ifdef PCIE
+int burstLen = 32;
+#else
 int burstLen = 16;
+#endif
 
-#ifdef BSIM
-int numWords = 0x12400/4; // make sure to allocate at least one entry of each size
+#if defined(BOARD_xsim)
+int numWords = 0x40/4;
+int iterCnt = 1;
+#elif defined(BSIM)
+int numWords = 0x124000/4;
+int iterCnt = 3;
 #else
 int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
+int iterCnt = 64;
 #endif
 #define TILE_NUMBER 1
 
-size_t test_sz  = numWords*sizeof(unsigned int);
-size_t alloc_sz = test_sz;
-
-void dump(const char *prefix, char *buf, size_t len)
-{
-    printf( "%s ", prefix);
-    for (unsigned int i = 0; i < (len > 16 ? 16 : len) ; i++)
-	printf( "%02x", (unsigned char)buf[i]);
-    printf( "\n");
-}
+static sem_t test_sem;
+static size_t test_sz  = numWords*sizeof(unsigned int);
+static size_t alloc_sz = test_sz;
+static int mismatchCount = 0;
 
 class ReadTestIndication : public ReadTestIndicationWrapper
 {
 public:
-  unsigned int rDataCnt;
-  virtual void readDone(uint32_t v){
-    printf( "ReadTest::readDone(mismatch = %x)\n", v);
-    sem_post(&test_sem);
-  }
-  ReadTestIndication(int id, int tile) : ReadTestIndicationWrapper(id,tile){}
+    void readDone(uint32_t v) {
+        fprintf(stderr, "ReadTest::readDone(%x)\n", v);
+        mismatchCount += v;
+        sem_post(&test_sem);
+    }
+    ReadTestIndication(int id, int tile=0) : ReadTestIndicationWrapper(id,tile){}
 };
 
 int main(int argc, const char **argv)
 {
-  ReadTestRequestProxy *device = new ReadTestRequestProxy(ReadTestRequestS2H, TILE_NUMBER);
-  ReadTestIndication deviceIndication(ReadTestIndicationH2S, TILE_NUMBER);
+    int test_result = 0;
+    int srcAlloc;
+    unsigned int *srcBuffer = 0;
 
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(MemServerRequestS2H);
-  MMURequestProxy *dmap = new MMURequestProxy(MMURequestS2H);
-  DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication hostMemServerIndication(hostMemServerRequest, MemServerIndicationH2S);
-  MMUIndication hostMMUIndication(dma, MMUIndicationH2S);
+    fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
+    ReadTestRequestProxy *device = new ReadTestRequestProxy(ReadTestRequestS2H,TILE_NUMBER);
+    MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(MemServerRequestS2H);
+    MMURequestProxy *dmap = new MMURequestProxy(MMURequestS2H);
+    DmaManager *dma = new DmaManager(dmap);
+    MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, MemServerIndicationH2S);
+    ReadTestIndication memReadIndication(ReadTestIndicationH2S,TILE_NUMBER);
+    MMUIndication mmuIndication(dma, MMUIndicationH2S);
 
-  int srcAlloc;
-  srcAlloc = portalAlloc(alloc_sz, 0);
-  unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
+    fprintf(stderr, "Main::allocating memory...\n");
+    srcAlloc = portalAlloc(alloc_sz, 0);
+    srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
+    for (int i = 0; i < numWords; i++)
+        srcBuffer[i] = i;
+    portalCacheFlush(srcAlloc, srcBuffer, alloc_sz, 1);
+    fprintf(stderr, "Main::flush and invalidate complete\n");
 
-  for (int i = 0; i < numWords; i++)
-    srcBuffer[i] = i;
-  portalCacheFlush(srcAlloc, srcBuffer, alloc_sz, 1);
-  unsigned int ref_srcAlloc = dma->reference(srcAlloc);
-  printf( "Main::starting read %08x\n", numWords);
-  device->startRead(ref_srcAlloc, numWords, burstLen, 1);
-  sem_wait(&test_sem);
-  printf("%s: all done!\n", __FUNCTION__);
-  return 0;
+#ifdef FPGA0_CLOCK_FREQ
+    long req_freq = FPGA0_CLOCK_FREQ;
+    long freq = 0;
+    setClockFrequency(0, req_freq, &freq);
+    fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
+#endif
+
+    /* Test 1: check that match is ok */
+    unsigned int ref_srcAlloc = dma->reference(srcAlloc);
+    fprintf(stderr, "ref_srcAlloc=%d\n", ref_srcAlloc);
+    fprintf(stderr, "Main::orig_test read numWords=%d burstLen=%d iterCnt=%d\n", numWords, burstLen, iterCnt);
+    portalTimerStart(0);
+    device->startRead(ref_srcAlloc, numWords * 4, burstLen * 4, iterCnt);
+    sem_wait(&test_sem);
+    if (mismatchCount) {
+        fprintf(stderr, "Main::first test failed to match %d.\n", mismatchCount);
+        test_result++;     // failed
+    }
+    uint64_t cycles = portalTimerLap(0);
+    hostMemServerRequest->memoryTraffic(ChannelType_Read);
+    uint64_t beats = hostMemServerIndication->receiveMemoryTraffic();
+    float read_util = (float)beats/(float)cycles;
+    fprintf(stderr, " iterCnt: %d\n", iterCnt);
+    fprintf(stderr, "   beats: %llx\n", (long long)beats);
+    fprintf(stderr, "numWords: %x\n", numWords);
+    fprintf(stderr, "     est: %llx\n", (long long)(beats*2)/iterCnt);
+    fprintf(stderr, "memory read utilization (beats/cycle): %f\n", read_util);
+
+    /* Test 2: check that mismatch is detected */
+    srcBuffer[0] = -1;
+    srcBuffer[numWords/2] = -1;
+    srcBuffer[numWords-1] = -1;
+    portalCacheFlush(srcAlloc, srcBuffer, alloc_sz, 1);
+
+    fprintf(stderr, "Starting second read, mismatches expected\n");
+    mismatchCount = 0;
+    device->startRead(ref_srcAlloc, numWords * 4, burstLen * 4, iterCnt);
+    sem_wait(&test_sem);
+    if (mismatchCount != 3/*number of errors introduced above*/ * iterCnt) {
+        fprintf(stderr, "Main::second test failed to match mismatchCount=%d (expected %d) iterCnt=%d numWords=%d.\n",
+            mismatchCount, 3*iterCnt,
+            iterCnt, numWords);
+        test_result++;     // failed
+    }
+#if 0
+    MonkitFile pmf("perf.monkit");
+    pmf.setHwCycles(cycles)
+        .setReadBwUtil(read_util)
+        .writeFile();
+#endif
+    return test_result;
 }
+

@@ -20,7 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 import Vector::*;
-import BuildVector::*;
+//import BuildVector::*;
 import Portal::*;
 import PlatformTypes::*;
 import CtrlMux::*;
@@ -33,10 +33,9 @@ import ReadTestIndication::*;
 
 (* synthesize *)
 module mkTile(Tile#(Empty,1,0));
-
-   ReadTestIndicationProxy lReadTestIndicationProxy <- mkReadTestIndicationProxy(ReadTestIndicationH2S); //0
+   ReadTestIndicationProxy lReadTestIndicationProxy <- mkReadTestIndicationProxy(ReadTestIndicationH2S);
    ReadTest lReadTest <- mkReadTest(lReadTestIndicationProxy.ifc);
-   ReadTestRequestWrapper lReadTestRequestWrapper <- mkReadTestRequestWrapper(ReadTestRequestS2H, lReadTest.request); //1
+   ReadTestRequestWrapper lReadTestRequestWrapper <- mkReadTestRequestWrapper(ReadTestRequestS2H, lReadTest.request);
    
    Vector#(2,StdPortal) portal_vec;
    portal_vec[0] = lReadTestRequestWrapper.portalIfc;
@@ -46,7 +45,7 @@ module mkTile(Tile#(Empty,1,0));
    
    interface interrupt = interrupts;
    interface portals = mem_portal;
-   interface readers = vec(lReadTest.dmaClient);
+   interface readers = lReadTest.dmaClient;
    interface writers = nil;
    interface ext = ?;
 
