@@ -170,6 +170,8 @@ module mkSimDma(SimDma#(dataWidth) ifc);
    endmethod
    method Action initfd(Bit#(32) id, Bit#(32) fd);
    endmethod
+   method Action idreturn(Bit#(32) id);
+   endmethod
    method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v);
    endmethod
    method Action readrequest(Bit#(32) handle, Bit#(32) addr);
