@@ -47,8 +47,8 @@ public:
   virtual void readDone(uint32_t v){
     fprintf(stderr, "Memread2::readDone mismatch=%x\n", v);
     mismatchCount = v;
-    if (mismatchesReceived == mismatchCount)
-      exit(v ? 1 : 0);
+    //    if (mismatchesReceived == mismatchCount)
+    // exit(v ? 1 : 0);
   }
   virtual void started(uint32_t words){
     fprintf(stderr, "Memread2::started: words=%x\n", words);
@@ -111,8 +111,10 @@ int main(int argc, const char **argv)
   while(true){
     sleep(3);
     device->getStateDbg();
-    uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
+    //uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
+    uint64_t beats = 0;
     fprintf(stderr, "   beats: %"PRIx64"\n", beats);
-    hostMemServerRequest->stateDbg(ChannelType_Read);
+    //hostMemServerRequest->stateDbg(ChannelType_Read);
+    platformStatistics();
   }
 }
