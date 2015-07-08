@@ -56,13 +56,6 @@ import Top               :: *;
 import Bscan             :: *;
 import HostInterface::*;
 
-`ifndef PinType
-`define PinType Empty
-`endif
-
-typedef `PinType PinType;
-typedef `NumberOfMasters NumberOfMasters;
-
 interface I2C_Pins;
    interface Inout#(Bit#(1)) scl;
    interface Inout#(Bit#(1)) sda;

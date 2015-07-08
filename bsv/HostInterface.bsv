@@ -32,6 +32,7 @@ typedef `DataBusWidth DataBusWidth;
 typedef `NumberOfMasters NumberOfMasters;
 typedef `NumberOfTiles NumberOfTiles;
 typedef `SlaveControlAddrWidth SlaveControlAddrWidth;
+typedef `PinType PinType;
 
 ////////////////////////////// Bsim /////////////////////////////////
 `ifdef BsimHostInterface

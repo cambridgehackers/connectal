@@ -39,10 +39,10 @@ interface Tile;
    interface TileExtType ext;
 endinterface
 
-interface Platform#(type pins);
+interface Platform;
    interface PhysMemSlave#(32,32) slave;
    interface Vector#(NumberOfMasters,PhysMemMaster#(PhysAddrWidth, DataBusWidth)) masters;
    interface Vector#(16,ReadOnly#(Bool)) interrupt;
-   interface pins pins;
+   interface PinType pins;
 endinterface
 

@@ -60,11 +60,6 @@ import HostInterface    :: *;
 `ifndef DataBusWidth
 `define DataBusWidth 64
 `endif
-`ifndef PinType
-`define PinType Empty
-`endif
-
-typedef `PinType PinType;
 
 (* synthesize, no_default_clock, no_default_reset *)
 `ifdef XILINX

@@ -39,13 +39,6 @@ import MemMasterEngine   :: *;
 import PCIE              :: *;
 import SimDma            :: *;
 
-`ifndef PinType
-`define PinType Empty
-`endif
-
-typedef `PinType PinType;
-typedef `NumberOfMasters NumberOfMasters;
-
 // implemented in BsimCtrl.cpp
 import "BDPI" function Action                 initPortal();
 import "BDPI" function Bool                   checkForRequest(Bit#(32) v);
