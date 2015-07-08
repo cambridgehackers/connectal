@@ -131,6 +131,6 @@ extern "C" void simDma_idreturn(uint32_t aid)
     assert(pref < MAX_DMA_IDS);
     int unmapped = munmap(dma_info[id][pref].buffer, dma_info[id][pref].size_accum);
     if (unmapped != 0)
-      fprintf(stderr, "%s: failed to unmap id=%s pref=%d fd=%d\n", __FUNCTION__, id, pref, dma_info[id][pref].fd);
+      fprintf(stderr, "%s: failed to unmap id=%d pref=%d fd=%d\n", __FUNCTION__, id, pref, dma_info[id][pref].fd);
     memset(&dma_info[id][pref], 0, sizeof(dma_info[id][pref]));
 }
