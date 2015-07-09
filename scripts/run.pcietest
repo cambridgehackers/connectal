@@ -16,7 +16,16 @@ else
     TIMELIMIT=3m
 fi
 
+ENV=""
+for e in $RUNENV; do
+    v=`printenv $e`
+    ENV="$ENV $e=$v"
+done
+
 if [ "$RUNPARAM" != "" ]; then
+    if [ "$ENV" != ""]; then
+	echo "sending environment variables $ENV"
+    fi
     RUNPARAMTEMP=$RUNPARAM:22
     array=(${RUNPARAMTEMP//:/ })
     RUNIP=${array[0]}
@@ -25,7 +34,7 @@ if [ "$RUNPARAM" != "" ]; then
     ssh $SSHPARAM -p $RUNPORT $RUNIP "rm -rf $TEMPDIR; mkdir -p $TEMPDIR"
     scp -P $RUNPORT $1 $RUNIP:$TEMPDIR
     EXENAME=`basename $1`
-    ssh $SSHPARAM -p $RUNPORT $RUNIP "$BOARD_SERIAL timeout $TIMELIMIT catchsegv $TEMPDIR/$EXENAME"
+    ssh $SSHPARAM -p $RUNPORT $RUNIP "$BOARD_SERIAL $ENV timeout $TIMELIMIT catchsegv $TEMPDIR/$EXENAME"
     ssh $SSHPARAM -p $RUNPORT $RUNIP "pcieflat > $TEMPDIR/pcieflat.txt"
     scp -P $RUNPORT $RUNIP:$TEMPDIR/pcieflat.txt `dirname $1`
     ssh $SSHPARAM -p $RUNPORT $RUNIP "rm -rf $TEMPDIR"
