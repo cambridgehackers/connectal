@@ -192,8 +192,10 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
 				fput(pmentry->fmem);
 				list_del(&pmentry->pmlist);
 				kfree(pmentry);
+				return 0;
 			}
 		}
+		return -ENOENT;
 	} break;
         case PORTAL_DCACHE_FLUSH_INVAL: {
   	        flush = 1;
