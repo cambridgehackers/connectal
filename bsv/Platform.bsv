@@ -92,7 +92,7 @@ module mkPlatform#(Vector#(NumberOfTiles, Tile) tiles)(Platform);
    Vector#(NumberOfTiles, Vector#(NumReadClients, MemReadClient#(DataBusWidth))) tile_read_clients;
    Vector#(NumberOfTiles, Vector#(NumWriteClients, MemWriteClient#(DataBusWidth))) tile_write_clients;
    for(Integer i = 0; i < valueOf(NumberOfTiles); i=i+1) begin
-      tile_slaves[i] = tiles[i].portals;
+      tile_slaves[i] = tiles[i].slave;
       tile_interrupts[i] = tiles[i].interrupt;
       tile_read_clients[i] = tiles[i].readers;
       tile_write_clients[i] = tiles[i].writers;

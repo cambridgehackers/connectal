@@ -42,16 +42,16 @@ module mkTile(Tile);
    Vector#(2,StdPortal) portal_vec;
    portal_vec[0] = lMemwriteRequestWrapper.portalIfc;
    portal_vec[1] = lMemwriteIndicationProxy.portalIfc;
-   PhysMemSlave#(18,32) mem_portal <- mkSlaveMux(portal_vec);
+   PhysMemSlave#(18,32) portal_slave <- mkSlaveMux(portal_vec);
    let interrupts <- mkInterruptMux(getInterruptVector(portal_vec));
    interface interrupt = interrupts;
-   interface portals = mem_portal;
+   interface slave = portal_slave;
    interface readers = replicate(null_mem_read_client());
    interface writers = take(append(lMemwrite.dmaClient, nullWriters));
-   interface ext = ?;
+   interface pins = ?;
 endmodule
 
-module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,PinType,NumberOfMasters));
+module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,`PinType,NumberOfMasters));
    Vector#(NumberOfTiles,Tile) ts <- replicateM(mkTile);
    Platform f <- mkPlatform(ts);
    interface interrupt = f.interrupt;

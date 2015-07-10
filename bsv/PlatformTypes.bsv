@@ -32,17 +32,17 @@ typedef 2 NumWriteClients;
 typedef Empty TileExtType;
 typedef 2 NumberOfTiles;
 interface Tile;
-   interface PhysMemSlave#(18,32) portals;
+   interface PhysMemSlave#(18,32) slave;
    interface ReadOnly#(Bool) interrupt;
    interface Vector#(NumReadClients,MemReadClient#(DataBusWidth)) readers;
    interface Vector#(NumWriteClients,MemWriteClient#(DataBusWidth)) writers;
-   interface TileExtType ext;
+   interface TileExtType pins;
 endinterface
 
 interface Platform;
    interface PhysMemSlave#(32,32) slave;
    interface Vector#(NumberOfMasters,PhysMemMaster#(PhysAddrWidth, DataBusWidth)) masters;
    interface Vector#(16,ReadOnly#(Bool)) interrupt;
-   interface PinType pins;
+   interface `PinType pins;
 endinterface
 
