@@ -20,10 +20,7 @@
  */
 #ifndef _TESTMEMRW_H_
 #define _TESTMEMRW_H_
-
-#include "StdDmaIndication.h"
-#include "MemServerRequest.h"
-#include "MMURequest.h"
+#include "dmaManager.h"
 #include "MemrwIndication.h"
 #include "MemrwRequest.h"
 
@@ -91,11 +88,7 @@ int runtest(int argc, const char **argv)
 
   device = new MemrwRequestProxy(IfcNames_MemrwRequestS2H);
   deviceIndication = new MemrwIndication(IfcNames_MemrwIndicationH2S);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
-  DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
+  DmaManager *dma = platformInit();
 
   fprintf(stderr, "Main::allocating memory...\n");
 

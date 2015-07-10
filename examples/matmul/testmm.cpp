@@ -31,16 +31,7 @@ MmRequestTNProxy *mmdevice = 0;
 #endif
 #endif
 #include <MmIndication.h>
-#include "MemServerRequest.h"
-#include "MMURequest.h"
-#include <StdDmaIndication.h>
-#include <stdio.h>
-#include <sys/mman.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <semaphore.h>
-#include <pthread.h>
+#include <dmaManager.h>
 #include <errno.h>
 #include <math.h> // frexp(), fabs()
 #include <assert.h>
@@ -135,12 +126,7 @@ int main(int argc, const char **argv)
   MmIndication *mmdeviceIndication = new MmIndication(IfcNames_MmIndicationPortal);
   //TimerRequestProxy *timerdevice = new TimerRequestProxy(IfcNames_TimerRequestPortal);
   TimerIndication timerdeviceIndication(IfcNames_TimerIndicationPortal);
-
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
-  DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication hostMemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication hostMMUIndication(dma, IfcNames_HostMMUIndication);
+    DmaManager *dma = platformInit();
 
   if(sem_init(&mul_sem, 1, 0)){
     fprintf(stderr, "failed to init mul_sem\n");

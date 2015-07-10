@@ -18,18 +18,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#include <stdio.h>
-#include <sys/mman.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <pthread.h>
 #include <monkit.h>
-#include <semaphore.h>
-
-#include "StdDmaIndication.h"
-#include "MemServerRequest.h"
-#include "MMURequest.h"
+#include "dmaManager.h"
 #include "MemcpyIndication.h"
 #include "MemcpyRequest.h"
 
@@ -74,11 +64,9 @@ int do_copy(int srcAlloc, int sgl_config_request_id, int sgl_config_indication_i
 {
   MemcpyRequestProxy *device = new MemcpyRequestProxy(IfcNames_MemcpyRequest);
   MemcpyIndication *deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndication);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(sgl_config_request_id);
-  DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, sgl_config_indication_id);
+    DmaManager *dma = platformInit();
+  //MMURequestProxy *dmap = new MMURequestProxy(sgl_config_request_id);
+  //MMUIndication *hostMMUIndication = new MMUIndication(dma, sgl_config_indication_id);
 
   fprintf(stderr, "Main::allocating memory...\n");
 

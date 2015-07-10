@@ -335,6 +335,7 @@ int portalmem_dmabuffer_destroy(int fd)
 {
   struct file *fmem = fget(fd);
   pa_dma_buf_release(fmem->private_data);
+  printk("%s:%d: fput fd=%d fmem=%p\n", __FUNCTION__, __LINE__, fd, fmem);
   fput(fmem);
   return 0;
 }
@@ -453,7 +454,7 @@ int portalmem_dmabuffer_create(PortalAlloc portalAlloc)
           );
       if (IS_ERR(dmabuf))
         pa_buffer_free(buffer);
-      printk("pa_get_dma_buf %p %zd\n", dmabuf->file, dmabuf->file->f_count.counter);
+      printk("pa_get_dma_buf fmem=%p count=%zd\n", dmabuf->file, dmabuf->file->f_count.counter);
       return_fd = dma_buf_fd(dmabuf, O_CLOEXEC);
       if (return_fd < 0)
         dma_buf_put(dmabuf);
@@ -485,7 +486,7 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
   }
   case PA_ELEMENT_SIZE: {
     struct PortalElementSize req;
-    struct file *f;
+    struct file *fmem;
     struct sg_table *sgtable;
     struct scatterlist *sg;
     int i = 0;
@@ -493,15 +494,17 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
 
     if (copy_from_user(&req, (void __user *)arg, sizeof(req)))
       return -EFAULT;
-    f = fget(req.fd);
-    sgtable = ((struct pa_buffer *)((struct dma_buf *)f->private_data)->priv)->sg_table;
+    fmem = fget(req.fd);
+    printk("%s:%d: fget fd=%d fmem=%p\n", __FUNCTION__, __LINE__, req.fd, fmem);
+    sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
     for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
       if (i == req.index) {
           retsize = sg->length;
           break;
       }
     }
-    fput(f);
+    printk("%s:%d: fput fd=%d fmem=%p\n", __FUNCTION__, __LINE__, req.fd, fmem);
+    fput(fmem);
     return retsize;
   }
   case PA_SIGNATURE: {

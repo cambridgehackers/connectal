@@ -340,6 +340,7 @@ if __name__=='__main__':
     elif 'XILINX=1' in bsvdefines:
         fpga_vendor = 'xilinx'
         suffix = 'xdc'
+        options.tcl.append(os.path.join(connectaldir, 'constraints', 'xilinx', 'cdc.tcl'))
     else:
         fpga_vendor = None
         suffix = None
@@ -437,6 +438,10 @@ if __name__=='__main__':
         options.constraint.append(genxdc_dep)
     else:
        options.pinout = []
+
+    # ignore partition_module until altera flow support generate separate netlist.
+    if (fpga_vendor == 'altera'):
+        options.partition_module = []
 
     substs = {'partitions': ' '.join(['-s %s' % p for p in options.partition_module]),
 					 'boardname': boardname,

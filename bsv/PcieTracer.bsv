@@ -113,7 +113,7 @@ module mkPcieTracer(PcieTracer);
    FIFO#(TLPData#(16)) tlpBusResponseFifo <- mkFIFO();
 
    Reg#(Bool) skippingIncomingTlps <- mkReg(False);
-   FIFO#(Bool) isRootBroadcastMessage <- mkFIFO();
+   FIFO#(Bool) isRootBroadcastMessage <- mkFIFO1();
    PulseWire fromPcie <- mkPulseWire;
    PulseWire   toPcie <- mkPulseWire;
    Wire#(TLPData#(16)) fromPcieTlp <- mkDWire(unpack(0));

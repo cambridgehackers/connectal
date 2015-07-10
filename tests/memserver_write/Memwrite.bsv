@@ -117,6 +117,9 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
           burstLenBytes <= truncate(bl);
 	  numReqs <= nreq;
 	  numDone <= nreq;
+
+	  reqOffset <= 0;
+	  srcGens <= 0;
        endmethod
    endinterface
    interface dmaClients = vec(dmaClient);

@@ -18,23 +18,12 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
-#include <stdio.h>
 #include <assert.h>
-#include <sys/mman.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <unistd.h>
-#include <pthread.h>
 #include <sys/queue.h>
 #include <sys/time.h>
-
-#include "StdDmaIndication.h"
+#include "dmaManager.h"
 #include "RingIndication.h"
 #include "RingRequest.h"
-#include "MemServerRequest.h"
-#include "MMURequest.h"
 
 RingRequestProxy *ring = 0;
 MMURequestProxy *dmap = 0;
@@ -477,11 +466,7 @@ int main(int argc, const char **argv)
   completion_list_init();
   ring = new RingRequestProxy(IfcNames_RingRequest);
   ringIndication = new RingIndication(IfcNames_RingIndication);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
-  DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
+    DmaManager *dma = platformInit();
 
   fprintf(stderr, "allocating memory...\n");
   cmdAlloc = portalAlloc(cmd_ring_sz, 0);

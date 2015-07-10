@@ -18,24 +18,17 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
-#include <stdio.h>
-#include <string.h>
 #include <ctype.h> // isprint, isascii
 #include "i2chdmi.h"
 #include "i2ccamera.h"
 #include "edid.h"
-
 #include "dmaManager.h"
-#include "StdDmaIndication.h"
 #include "ImageonCaptureRequest.h"
 #include "ImageonCaptureIndication.h"
 #include "ImageonSerdesRequest.h"
 #include "ImageonSerdesIndication.h"
 #include "HdmiGeneratorRequest.h"
 #include "HdmiGeneratorIndication.h"
-#include "MemServerRequest.h"
-#include "MMURequest.h"
 
 static ImageonSerdesRequestProxy *serdesdevice;
 static HdmiGeneratorRequestProxy *hdmidevice;
@@ -427,13 +420,7 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
 int main(int argc, const char **argv)
 {
     init_local_semaphores();
-
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
-  DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication hostMemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
-  MMUIndication hostMMUIndication(dma, IfcNames_MMUIndicationH2S);
-
+    DmaManager *dma = platformInit();
     serdesdevice = new ImageonSerdesRequestProxy(IfcNames_ImageonSerdesRequestS2H);
     hdmidevice = new HdmiGeneratorRequestProxy(IfcNames_HdmiGeneratorRequestS2H);
     idevice = new ImageonCaptureRequestProxy(IfcNames_ImageonCaptureRequestS2H);

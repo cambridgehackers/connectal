@@ -20,12 +20,11 @@
  */
 #ifndef _RBM_H_
 #define _RBM_H_
-
 #include "RbmRequest.h"
 #include "RbmIndication.h"
 #include "SigmoidRequest.h"
 #include "SigmoidIndication.h"
-#include "StdDmaIndication.h"
+#include "dmaManager.h"
 
 class SigmoidIndication;
 class RbmIndication;

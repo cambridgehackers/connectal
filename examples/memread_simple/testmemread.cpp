@@ -18,16 +18,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#include <stdio.h>
-#include <sys/mman.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <monkit.h>
-
-#include "StdDmaIndication.h"
-#include "MemServerRequest.h"
-#include "MMURequest.h"
+#include "dmaManager.h"
 #include "MemreadRequest.h"
 #include "MemreadIndication.h"
 
@@ -67,11 +59,7 @@ int main(int argc, const char **argv)
 {
   MemreadRequestProxy *device = new MemreadRequestProxy(IfcNames_MemreadRequestS2H);
   MemreadIndication deviceIndication(IfcNames_MemreadIndicationH2S);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
-  DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication hostMemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
-  MMUIndication hostMMUIndication(dma, IfcNames_MMUIndicationH2S);
+    DmaManager *dma = platformInit();
 
   int srcAlloc;
   srcAlloc = portalAlloc(alloc_sz, 0);

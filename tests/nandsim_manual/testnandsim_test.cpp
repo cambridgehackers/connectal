@@ -18,10 +18,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
-#include "StdDmaIndication.h"
-#include "MemServerRequest.h"
-#include "MMURequest.h"
+#include "dmaManager.h"
 #include "NandSimIndication.h"
 #include "NandSimRequest.h"
 
@@ -77,11 +74,7 @@ int main(int argc, const char **argv)
 
   device = new NandSimRequestProxy(IfcNames_NandSimRequest);
   deviceIndication = new NandSimIndication(IfcNames_NandSimIndication);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
-  DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
+  DmaManager *dma = platformInit();
 
   fprintf(stderr, "Main::allocating memory...\n");
 

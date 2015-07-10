@@ -18,12 +18,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
-#include "StdDmaIndication.h"
-#include "MMURequest.h"
+#include "dmaManager.h"
 #include "Ov7670ControllerRequest.h"
 #include "Ov7670ControllerIndication.h"
-#include "pthread.h"
 
 int slaveaddr[3];
 int addr;
@@ -65,13 +62,9 @@ public:
 
 int main(int argc, const char **argv)
 {
+  DmaManager *dma = platformInit();
   Ov7670ControllerRequestProxy device(IfcNames_Ov7670ControllerRequestS2H);
   Ov7670ControllerIndication deviceResponse(IfcNames_Ov7670ControllerIndicationH2S);
-  MMURequestProxy *mmuRequest = new MMURequestProxy(IfcNames_MMURequestS2H);
-  DmaManager *dma = new DmaManager(mmuRequest);
-  MemServerRequestProxy *memServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
-  MemServerIndication *memServerIndication = new MemServerIndication(memServerRequest, IfcNames_MemServerIndicationH2S);
-  MMUIndication mmuIndication(dma, IfcNames_MMUIndicationH2S);
 
   int len = 640*480*4;
   int nfbAlloc = portalAlloc(4096, 0);

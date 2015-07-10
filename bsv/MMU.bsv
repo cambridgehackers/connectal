@@ -88,7 +88,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
    
 	    
    let verbose = False;
-   TagGen#(MaxNumSGLists) sglId_gen <- mkTagGen;
+   TagGen#(MaxNumSGLists) sglId_gen <- mkTagGen();
    rule complete_sglId_gen;
       let __x <- sglId_gen.complete;
    endrule
@@ -138,7 +138,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
       else return x.portB;
    endfunction
    
-   for (Integer i = 0; i < 2; i=i+1)
+   for (Integer i = 0; i < 2; i=i+1) begin
       rule stage1;  // first read in the address cutoff values between regions
 	 ReqTup req <- toGet(incomingReqs[i]).get();
 	 portsel(regall, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
@@ -146,8 +146,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 	 reqs0[i].enq(req);
       endrule
 
-   // pipeline the address lookup
-   for(Integer i = 0; i < 2; i=i+1) begin
+      // pipeline the address lookup
       rule stage2; // Now compare address cutoffs with requested offset
 	 ReqTup req <- toGet(reqs0[i]).get;
 	 Maybe#(Region) m_regionall <- portsel(regall,i).response.get;
@@ -250,7 +249,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
       let sglId <- toGet(idReturnFifo).get;
       sglId_gen.returnTag(truncate(sglId));
       portsel(regall, 1).request.put(BRAMRequest{write:True, responseOnWrite:False, address: truncate(sglId), datain: tagged Invalid });
-      $display("idReturn %h", sglId);
+      $display("idReturn %d", sglId);
    endrule
       
    
@@ -287,6 +286,8 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
    endmethod
    method Action idReturn(Bit#(32) sglId);
       idReturnFifo.enq(sglId);
+      if (hostMapped)
+	 simDma.idreturn(sglId);
    endmethod
    method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) index8, Bit#(64) barr4, Bit#(32) index4, Bit#(64) barr0, Bit#(32) index0);
       portsel(regall, 1).request.put(BRAMRequest{write:True, responseOnWrite:False,

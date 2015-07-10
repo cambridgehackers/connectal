@@ -19,23 +19,15 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-
-#include <stdio.h>
-#include <sys/mman.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <assert.h>
 #include <semaphore.h>
 #include <string.h>
 #include <ctime>
 #include <monkit.h>
-#include "StdDmaIndication.h"
+#include "dmaManager.h"
 
 #include "SpliceIndication.h"
 #include "SpliceRequest.h"
-#include "MemServerRequest.h"
-#include "MMURequest.h"
-
 
 sem_t test_sem;
 sem_t setup_sem;
@@ -77,11 +69,7 @@ int main(int argc, const char **argv)
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   device = new SpliceRequestProxy(IfcNames_SpliceRequest);
   deviceIndication = new SpliceIndication(IfcNames_SpliceIndication);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
-  DmaManager *dma = new DmaManager(dmap);
-  MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
+    DmaManager *dma = platformInit();
 
   if(sem_init(&test_sem, 1, 0)){
     fprintf(stderr, "failed to init test_sem\n");

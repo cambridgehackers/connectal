@@ -18,20 +18,11 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#include <stdio.h>
-#include <sys/mman.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <monkit.h>
 #include <semaphore.h>
-
-#include "StdDmaIndication.h"
-
+#include "dmaManager.h"
 #include "BlueScopeIndication.h"
 #include "BlueScopeRequest.h"
-#include "MemServerRequest.h"
-#include "MMURequest.h"
 #include "MemcpyIndication.h"
 #include "MemcpyRequest.h"
 
@@ -138,12 +129,7 @@ int main(int argc, const char **argv)
 
   device = new MemcpyRequestProxy(IfcNames_MemcpyRequest);
   bluescope = new BlueScopeRequestProxy(IfcNames_BluescopeRequest);
-  MemServerRequestProxy *hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
-  DmaManager *dma = new DmaManager(dmap);
-  //MemServerIndication *hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  MMUIndication *hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
-
+    DmaManager *dma = platformInit();
   deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndication);
   bluescopeIndication = new BlueScopeIndication(IfcNames_BluescopeIndication);
 

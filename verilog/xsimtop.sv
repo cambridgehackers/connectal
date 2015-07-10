@@ -92,6 +92,7 @@ endmodule
 
 import "DPI-C" function void simDma_init(input int id, input int handle, input int size);
 import "DPI-C" function void simDma_initfd(input int id, input int fd);
+import "DPI-C" function void simDma_idreturn(input int aid);
 import "DPI-C" function void write_simDma32(input int handle, input int addr, input int data);
 import "DPI-C" function int read_simDma32(input int handle, input int addr);
 
@@ -107,6 +108,9 @@ module XsimDmaReadWrite(input CLK,
 			input 		  en_initfd,
 			input [31:0] 	  initfd_id,
 			input [31:0] 	  initfd_fd,
+
+			input 		  en_idreturn,
+			input [31:0] 	  idreturn_id,
 
 			output 		  rdy_readrequest,
 			input 		  en_readrequest,
@@ -140,6 +144,9 @@ module XsimDmaReadWrite(input CLK,
 	   simDma_init(init_id, init_handle, init_size);
 	 if (en_initfd == 1)
 	   simDma_initfd(initfd_id, initfd_fd);
+
+	 if (en_idreturn == 1)
+	   simDma_idreturn(idreturn_id);
 	 
 	 //if (en_readresponse) $display("xsimtop.readresponse data=%h", readresponse_data_reg);
 	 if (en_readrequest == 1) begin

@@ -238,6 +238,10 @@ def instMod(args, modname, modext, constructor, tparam, memFlag):
                 pmap['hostif'] = ('\n'
                                   '`ifdef IMPORT_HOSTIF\n'
                                   '                    host,\n'
+                                  '`else\n'
+                                  '`ifdef IMPORT_HOST_CLOCKS\n'
+                                  '                    host.derivedClock, host.derivedReset,\n'
+                                  '`endif\n'
                                   '`endif\n'
                                   '                    ')
             instantiateRequest[pmap['modname']].inst = '   %(modname)s%(tparam)s l%(modname)s <- mk%(modname)s(%(hostif)s%%s);' % pmap
