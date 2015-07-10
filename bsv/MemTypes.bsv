@@ -232,3 +232,8 @@ instance Connectable#(PhysMemMaster#(32, busWidth), PhysMemSlave#(40, busWidth))
    endmodule
 endinstance
 
+function Bool isQuadWordAligned(Bit#(7) lower_addr);
+   return (lower_addr[2:0]==3'b0);
+endfunction
+
+
