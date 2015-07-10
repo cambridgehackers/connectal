@@ -38,7 +38,7 @@ import MemSlaveEngine    :: *;
 import MemMasterEngine   :: *;
 import PCIE              :: *;
 import SimDma            :: *;
-import Platform          :: *;
+//import Platform          :: *;
 
 // implemented in BsimCtrl.cpp
 import "BDPI" function Action                 initPortal();
