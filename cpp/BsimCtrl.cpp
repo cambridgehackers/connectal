@@ -172,6 +172,7 @@ struct linkInfo {
     uint64_t rxdata[1];
     uint64_t txdata[1];
     pthread_mutex_t mutex;
+    int up;
 } linkInfo[NUM_LINKS];
 
 struct linkInfo *getLinkInfo(int linknumber, int listening)
@@ -208,7 +209,7 @@ static void *bsimLinkWorker(void *p)
 	    li->fd[i] = accept(li->socket[i], NULL, NULL);
 	    if (li->fd[i] == -1) {
 		fprintf(stderr, "%s:%d[%d]: accept error %s\n",__FUNCTION__, __LINE__, li->socket[i], strerror(errno));
-		exit(1);
+		return;
 	    }
 	    fprintf(stderr, "%s:%d[%d]: accept ok fd=%d\n",__FUNCTION__, __LINE__, li->socket[i], li->fd[i]);
 	} else {
@@ -218,7 +219,7 @@ static void *bsimLinkWorker(void *p)
 	}
 	fcntl(li->fd[i], F_SETFL, O_NONBLOCK);
     }
-    return 0;
+    li->up = 1;
 }
 
 extern "C" void bsimLinkOpen(int linknumber, int listening)
@@ -232,6 +233,16 @@ extern "C" void bsimLinkOpen(int linknumber, int listening)
 	pthread_create(&threaddata, NULL, &bsimLinkWorker, li);
     }
 }
+extern "C" int bsimLinkUp(int linknumber, int listening)
+{
+  struct linkInfo *li = getLinkInfo(linknumber, listening);
+  if (li)
+      return li->up;
+  else
+      return 0;
+}
+
+
 extern "C" int bsimLinkCanReceive(int linknumber, int listening)
 {
     struct linkInfo *li = getLinkInfo(linknumber, listening);
@@ -242,7 +253,7 @@ extern "C" int bsimLinkCanReceive(int linknumber, int listening)
     pollfd[0].fd = li->fd[i];
     pollfd[0].events = POLLIN|POLLRDHUP;
     int status = poll(pollfd, 1, 0);
-    if (status)
+    if (0 && status)
       fprintf(stderr, "%s:%d linknumber=%d listening=%d status=%d revents=%d\n", __func__, __LINE__, linknumber, listening, status, pollfd[0].revents);
     return status;
 }
@@ -257,7 +268,7 @@ extern "C" int bsimLinkCanTransmit(int linknumber, int listening)
     pollfd[0].fd = li->fd[i];
     pollfd[0].events = POLLOUT|POLLHUP;
     int status = poll(pollfd, 1, 0);
-    if (status && !printedCanTransmit) {
+    if (0 && status && !printedCanTransmit) {
       fprintf(stderr, "%s:%d linknumber=%d listening=%d status=%d revents=%d\n", __func__, __LINE__, linknumber, listening, status, pollfd[0].revents);
       printedCanTransmit = 1;
     }
@@ -271,7 +282,7 @@ extern "C" uint32_t bsimLinkReceive32(int linknumber, int listening)
     uint32_t *prxdata = (uint32_t *)&li->rxdata;
     int i = (listening) ? 0 : 1;
     int numBytes = read(li->fd[i], li->rxdata, sizeof(uint32_t));
-    if (numBytes > 0)
+    if (0 && numBytes > 0)
 	fprintf(stderr, "%s:%d linknumber=%d listening=%d numBytes=%d\n", __func__, __LINE__, linknumber, listening, numBytes);
     return *prxdata;
 }
@@ -289,7 +300,7 @@ extern "C" uint64_t bsimLinkReceive64(int linknumber, int listening)
     struct linkInfo *li = getLinkInfo(linknumber, listening);
     int i = (listening) ? 0 : 1;
     int numBytes = read(li->fd[i], li->rxdata, sizeof(uint64_t));
-    if (numBytes > 0)
+    if (0 && numBytes > 0)
 	fprintf(stderr, "%s:%d linknumber=%d listening=%d numBytes=%d\n", __func__, __LINE__, linknumber, listening, numBytes);
     return *(uint64_t*)&li->rxdata;
 }

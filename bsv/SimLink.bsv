@@ -30,13 +30,14 @@ import CnocPortal        :: *;
 
 interface SimLink#(numeric type dataWidth);
    method Action start(Bit#(32) linknumber, Bool listening);
+   method Bool   linkUp();
    interface PipeOut#(Bit#(dataWidth)) rx;
    interface PipeIn#(Bit#(dataWidth)) tx;
 endinterface
 
 `ifdef BSIM
 import "BDPI" function Action                 bsimLinkOpen(Bit#(32) linknumber, Bool listening);
-import "BDPI" function Bool                   bsimLinkUp(Bit#(32) linknumber, Bool listening);
+import "BDPI" function Bit#(1)                bsimLinkUp(Bit#(32) linknumber, Bool listening);
 import "BDPI" function Bool                   bsimLinkCanReceive(Bit#(32) linknumber, Bool listening);
 import "BDPI" function Bool                   bsimLinkCanTransmit(Bit#(32) linknumber, Bool listening);
 import "BDPI" function ActionValue#(Bit#(32)) bsimLinkReceive32(Bit#(32) linknumber, Bool listening);
@@ -105,6 +106,12 @@ module mkSimLink(SimLink#(dataWidth)) provisos (SelectLinkWidth#(dataWidth));
       linknumber <= number;
       started <= True;
       listening <= l;
+   endmethod
+   method Bool linkUp();
+      if (started)
+	 return unpack(bsimLinkUp(linknumber, listening));
+      else
+	 return False;
    endmethod
 endmodule
 `endif
