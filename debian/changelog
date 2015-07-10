@@ -1,3 +1,9 @@
+connectal (15.07.4-1precise1) precise; urgency=medium
+
+  * Driver fixes.
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 10 Jul 2015 09:48:19 -0400
+
 connectal (15.07.3-1precise1) precise; urgency=medium
 
   * One more PCIE3 fix.
