@@ -68,23 +68,6 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
    Reg#(Bool)                  readInProgress <- mkReg(False);
    Reg#(Bit#(7))               address <- mkReg(0);
 
-   function Bool isQuadWordAligned(Bit#(7) lower_addr);
-      return (lower_addr[2:0]==3'b0);
-   endfunction
-
-   function print_3dw(TLPMemoryIO3DWHeader hdr_3dw);
-      TLPMemoryIO3DWHeader h = hdr_3dw;
-      $display("----------\n\
-                tclass:  %h\n\
-                relaxed: %h\n\
-                nosnoop: %h\n\
-                length:  %h\n\
-                lastbe:  %h\n\
-                firstbe: %h\n\
-                addr:    %h\n\
-                data:    %h\n", h.tclass, h.relaxed, h.nosnoop, h.length, h.lastbe, h.firstbe, h.addr, h.data);
-   endfunction
-
    rule completionHeader if (!readInProgress && readDataFifo.notEmpty() && completionMimo.deqReadyN(1));
       let hdr = readDataFifo.first;
       TLPLength rbc = hdr.length;
@@ -225,7 +208,6 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
                //FIXME: should rewrite to allow burst write.
                if (tlp.sof && writeHeaderFifo.notFull()) begin
 		  writeHeaderFifo.enq(hdr_3dw);
-                  print_3dw(hdr_3dw);
                end
 	    end
 	endmethod
