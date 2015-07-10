@@ -52,7 +52,7 @@ module mkTile(Tile);
 endmodule
 
 module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,`PinType,NumberOfMasters));
-   Vector#(NumberOfTiles,Tile) ts <- replicateM(mkTile);
+   Vector#(NumberOfUserTiles,Tile) ts <- replicateM(mkTile);
    Platform f <- mkPlatform(ts);
    interface interrupt = f.interrupt;
    interface slave = f.slave;

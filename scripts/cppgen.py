@@ -33,7 +33,7 @@ proxyClassPrefixTemplate='''
 class %(className)sProxy : public Portal {
     %(classNameOrig)sCb *cb;
 public:
-    %(className)sProxy(int id, int tile = 0, %(classNameOrig)sCb *cbarg = &%(className)sProxyReq, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller = 0) :
+    %(className)sProxy(int id, int tile = DEFAULT_TILE, %(classNameOrig)sCb *cbarg = &%(className)sProxyReq, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller = 0) :
         Portal(id, tile, bufsize, NULL, NULL, poller), cb(cbarg) {};
     %(className)sProxy(int id, PortalTransportFunctions *item, void *param, %(classNameOrig)sCb *cbarg = &%(className)sProxyReq, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller = 0) :
         Portal(id, 0, bufsize, NULL, NULL, item, param, poller), cb(cbarg) {};
@@ -43,7 +43,7 @@ wrapperClassPrefixTemplate='''
 extern %(classNameOrig)sCb %(className)s_cbTable;
 class %(className)sWrapper : public Portal {
 public:
-    %(className)sWrapper(int id, int tile = 0, PORTAL_INDFUNC cba = %(className)s_handleMessage, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller = 0) :
+    %(className)sWrapper(int id, int tile = DEFAULT_TILE, PORTAL_INDFUNC cba = %(className)s_handleMessage, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller = 0) :
            Portal(id, tile, bufsize, cba, (void *)&%(className)s_cbTable, poller) {
         pint.parent = static_cast<void *>(this);
     };

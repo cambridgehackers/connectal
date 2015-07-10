@@ -61,7 +61,7 @@ run.%:
 	make -C $* --no-print-directory run
 
 IPDIR?=$(CONNECTALDIR)/out
-NUMBER_OF_TILES?=1
+NUMBER_OF_USER_TILES?=1
 SLAVE_DATA_BUS_WIDTH?=32
 SLAVE_CONTROL_ADDR_WIDTH?=5
 NUMBER_OF_MASTERS?=1
@@ -129,7 +129,7 @@ endif
 
 CONNECTALFLAGS += -D ConnectalVersion=$(VERSION)
 CONNECTALFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) -D PinType=$(PIN_TYPE) -D MainClockPeriod=$(MAIN_CLOCK_PERIOD) $(PCIE_CLOCK_DEFINE) -D DerivedClockPeriod=$(DERIVED_CLOCK_PERIOD)
-CONNECTALFLAGS += -D NumberOfTiles=$(NUMBER_OF_TILES)
+CONNECTALFLAGS += -D NumberOfUserTiles=$(NUMBER_OF_USER_TILES)
 CONNECTALFLAGS += -D SlaveDataBusWidth=$(SLAVE_DATA_BUS_WIDTH)
 CONNECTALFLAGS += -D SlaveControlAddrWidth=$(SLAVE_CONTROL_ADDR_WIDTH)
 CONNECTALFLAGS += -D BurstLenSize=$(BURST_LEN_SIZE)
@@ -278,6 +278,8 @@ ifneq ($(USE_AUTOTOP),)
 	$(Q)$(CONNECTALDIR)/scripts/topgen.py --board $(BOARD) --project-dir $(GPROJ) $(AUTOTOP) $(CNOC) \
 	    $(foreach f, $(S2H_INTERFACES), --wrapper $f) \
 	    $(foreach f, $(H2S_INTERFACES), --proxy $f)   \
+ 	    $(foreach f, $(MEM_READ_INTERFACES), --memread $f)   \
+ 	    $(foreach f, $(MEM_WRITE_INTERFACES), --memwrite $f) \
 	    $(foreach f, $(MEM_INTERFACES), --proxy MemServer\#\(PhysAddrWidth,DataBusWidth,\`NumberOfMasters\):MemServerIndication:$f,cons\(lMMU,nil\))
 endif
 

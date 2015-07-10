@@ -45,7 +45,7 @@ static size_t alloc_sz = numWords*sizeof(unsigned int);
 class MemwriteIndication : public MemwriteIndicationWrapper
 {
 public:
-    MemwriteIndication(int id, int tile=0) : MemwriteIndicationWrapper(id,tile) {}
+    MemwriteIndication(int id, int tile=DEFAULT_TILE) : MemwriteIndicationWrapper(id,tile) {}
     void started(uint32_t words) {
         fprintf(stderr, "Memwrite::started: words=%x\n", words);
     }

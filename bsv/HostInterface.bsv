@@ -30,8 +30,13 @@ typedef `PhysAddrWidth PhysAddrWidth;
 typedef `SlaveDataBusWidth SlaveDataBusWidth;
 typedef `DataBusWidth DataBusWidth;
 typedef `NumberOfMasters NumberOfMasters;
-typedef `NumberOfTiles NumberOfTiles;
 typedef `SlaveControlAddrWidth SlaveControlAddrWidth;
+typedef `NumberOfUserTiles NumberOfUserTiles;
+typedef TAdd#(`NumberOfUserTiles,1) NumberOfTiles;
+typedef 2 NumReadClients;
+typedef 2 NumWriteClients;
+typedef Empty TileExtType;
+typedef 16 MaxNumberOfPortals;
 
 ////////////////////////////// Bsim /////////////////////////////////
 `ifdef BsimHostInterface

@@ -53,7 +53,7 @@ public:
         mismatchCount += v;
         sem_post(&test_sem);
     }
-    ReadTestIndication(int id, int tile=0) : ReadTestIndicationWrapper(id,tile){}
+    ReadTestIndication(int id, int tile=DEFAULT_TILE) : ReadTestIndicationWrapper(id,tile){}
 };
 
 int main(int argc, const char **argv)
