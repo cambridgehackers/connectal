@@ -197,8 +197,12 @@ static void *bsimLinkWorker(void *p)
     struct linkInfo *li = (struct linkInfo *)p;
     char iname[128];
     int i;
+    const char *socketdir = ".";
+    if (getenv("SIM_LINK_DIR"))
+	socketdir = getenv("SIM_LINK_DIR");
+
     for (i = 0; i < 2; i++) {
-	snprintf(iname, sizeof(iname), "%s.%s", li->name, (i == 0) ? "l2r" : "r2l");
+	snprintf(iname, sizeof(iname), "%s/%s.%s", socketdir, li->name, (i == 0) ? "l2r" : "r2l");
 	if (li->listening) {
 	    li->socket[i] = init_listening(iname, NULL);
 	    li->fd[i] = accept(li->socket[i], NULL, NULL);
