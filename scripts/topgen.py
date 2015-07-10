@@ -294,11 +294,13 @@ if __name__=='__main__':
     portalCount = 0
     instantiatedModules = []
     importfiles = []
-    exportedNames = ['export mkConnectalTop;']
+    exportedNames = ['export PinType;']
     if options.board == 'xsim':
         options.cnoc = True
     if options.cnoc:
-        exportedNames = ['export mkCnocTop;', 'export NumberOfRequests;', 'export NumberOfIndications;']
+        exportedNames.extend(['export mkCnocTop;', 'export NumberOfRequests;', 'export NumberOfIndications;'])
+    else:
+        exportedNames.extend(['export mkConnectalTop;'])
     if options.importfiles:
         importfiles = options.importfiles
         for item in options.importfiles:
