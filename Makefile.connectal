@@ -171,9 +171,9 @@ CPPFILES += $(CONNECTALDIR)/cpp/transportXsim.c
 ifneq ($(CPPFILES2),)
 CPPFILES2 += $(CONNECTALDIR)/cpp/transportXsim.c
 endif
-ifeq ($(NUMBER_OF_MASTERS), 0)
-BSVFILES += $(CONNECTALDIR)/bsv/ConnectalMemory.bsv
-endif
+#ifeq ($(NUMBER_OF_MASTERS), 0)
+#BSVFILES += $(CONNECTALDIR)/bsv/ConnectalMemory.bsv
+#endif
 BSVFILES += $(CONNECTALDIR)/bsv/XsimIF.bsv
 endif
 
