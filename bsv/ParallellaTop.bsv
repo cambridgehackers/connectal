@@ -49,6 +49,7 @@ import AxiMasterSlave    :: *;
 import XilinxCells       :: *;
 import ConnectalXilinxCells   :: *;
 import PS7LIB::*;
+import PS7Trace::*;
 import PPS7LIB::*;
 import CtrlMux::*;
 import AxiDma            :: *;

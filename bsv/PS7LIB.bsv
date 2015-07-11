@@ -20,7 +20,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import Clocks::*;
 import DefaultValue::*;
 import GetPut::*;
@@ -29,7 +28,6 @@ import ConnectableWithTrace::*;
 import Bscan::*;
 import Vector::*;
 import PPS7LIB::*;
-import Portal::*;
 import AxiMasterSlave::*;
 import AxiDma::*;
 import XilinxCells::*;
@@ -334,41 +332,3 @@ module mkPS7(PS7);
     interface i2c = ps7.i2c;
    interface s_axi_acp = cons(ps7.s_axi_acp, nil);
 endmodule
-
-`ifdef USE_ACP
-typedef 1 NumAcp;
-`else
-typedef 0 NumAcp;
-`endif
-
-instance ConnectableWithTrace#(PS7, ConnectalTop#(32,64,ipins,nMasters), traceType)
-   provisos (ConnectableWithTrace::ConnectableWithTrace#(AxiMasterSlave::Axi3Master#(32,64,6),AxiMasterSlave::Axi3Slave#(32, 64, 6),traceType),
-             ConnectableWithTrace::ConnectableWithTrace#(AxiMasterSlave::Axi3Master#(32,32,12),AxiMasterSlave::Axi3Slave#(32,32,12),traceType));
-   module mkConnectionWithTrace#(PS7 ps7, ConnectalTop#(32,64,ipins,nMasters) top, traceType readout)(Empty)
-      provisos (ConnectableWithTrace#(Axi3Master#(32,64,6), Axi3Slave#(32,64,6),traceType));
-
-      Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(top.slave);
-      mkConnectionWithTrace(ps7.m_axi_gp[0].client, ctrl, readout);
-
-`ifdef USE_ACP
-      begin
-	 Axi3Master#(32,64,3) acp_m_axi <- mkAxiDmaMaster(top.masters[0]);
-	 mkConnection(acp_m_axi, ps7.s_axi_acp[0].server);
-      end
-      rule acp_aruser;
-	 ps7.s_axi_acp[0].extra.aruser(5'h1f);
-      endrule
-      rule acp_awuser;
-	 ps7.s_axi_acp[0].extra.awuser(5'h1f);
-      endrule
-`endif
-      module mkAxiMasterConnection#(Integer i)(Axi3Master#(32,64,6));
-	 let m_axi <- mkAxiDmaMaster(top.masters[i+valueOf(NumAcp)]);
-	 mkConnection(m_axi, ps7.s_axi_hp[i].server);
-	 return m_axi;
-      endmodule
-      Vector#(TSub#(nMasters,NumAcp), Axi3Master#(32,64,6)) m_axis <- genWithM(mkAxiMasterConnection);
-
-
-   endmodule
-endinstance
