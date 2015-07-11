@@ -34,7 +34,7 @@ import AxiDma::*;
 //import XilinxCells::*;
 //import ConnectalXilinxCells::*;
 //import ConnectalClocks::*;
-//import AxiBits::*;
+import AxiBits::*;
 import AxiGather::*;
 
 `ifdef USE_ACP

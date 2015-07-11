@@ -152,9 +152,9 @@ ifneq ($(MEM_INTERFACES),)
 USE_AUTOTOP = 1
 endif
 
-ifneq ($(NUMBER_OF_MASTERS), 0)
 INTERFACES += MemServerRequest MMURequest MemServerIndication MMUIndication
 BSVFILES += $(CONNECTALDIR)/bsv/ConnectalMemory.bsv
+ifneq ($(NUMBER_OF_MASTERS), 0)
 CPPFILES += $(CONNECTALDIR)/cpp/dmaManager.c $(CONNECTALDIR)/cpp/platformMemory.cpp
 ifneq ($(CPPFILES2),)
 CPPFILES2 += $(CONNECTALDIR)/cpp/dmaManager.c $(CONNECTALDIR)/cpp/platformMemory.cpp
