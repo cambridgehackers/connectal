@@ -209,7 +209,7 @@ static void *bsimLinkWorker(void *p)
 	    li->fd[i] = accept(li->socket[i], NULL, NULL);
 	    if (li->fd[i] == -1) {
 		fprintf(stderr, "%s:%d[%d]: accept error %s\n",__FUNCTION__, __LINE__, li->socket[i], strerror(errno));
-		return;
+		return 0;
 	    }
 	    fprintf(stderr, "%s:%d[%d]: accept ok fd=%d\n",__FUNCTION__, __LINE__, li->socket[i], li->fd[i]);
 	} else {
@@ -220,6 +220,7 @@ static void *bsimLinkWorker(void *p)
 	fcntl(li->fd[i], F_SETFL, O_NONBLOCK);
     }
     li->up = 1;
+    return 0;
 }
 
 extern "C" void bsimLinkOpen(int linknumber, int listening)
