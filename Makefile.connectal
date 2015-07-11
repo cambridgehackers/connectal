@@ -61,7 +61,8 @@ run.%:
 	make -C $* --no-print-directory run
 
 IPDIR?=$(CONNECTALDIR)/out
-NUMBER_OF_USER_TILES?=1
+# zynq driver needs debugging for tiles
+NUMBER_OF_USER_TILES?=0
 SLAVE_DATA_BUS_WIDTH?=32
 SLAVE_CONTROL_ADDR_WIDTH?=5
 NUMBER_OF_MASTERS?=1
