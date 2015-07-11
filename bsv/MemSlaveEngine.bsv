@@ -97,6 +97,8 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
     FIFOF#(TLPTag) writeTag <- mkSizedFIFOF(16);
     FIFOF#(TLPTag) doneTag <- mkSizedFIFOF(16);
 
+    Reg#(Bool) quadAlignedTlpHandled <- mkReg(True);
+
    Wire#(Bool) writeHeaderTlpWire <- mkDWire(False);
    Probe#(Bool) writeHeaderAvailableProbe <- mkProbe;
    Wire#(Bool) writeDataMimoEnqWire <- mkDWire(False);
@@ -158,6 +160,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	 tlp.data = pack(hdr_3dw);
       end
       else begin
+         quadAlignedTlpHandled <= isQuadWordAligned(getLowerAddr(truncate(unpack(hdr_4dw.addr)), hdr_4dw.firstbe));
 	 tlp.be = 16'hffff;
       end
 
@@ -179,6 +182,14 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       TLPData#(16) tlp = defaultValue;
       tlp.sof = False;
       Vector#(4, Bit#(32)) v = unpack(0);
+      Integer currDwCount = 4;
+
+`ifdef AVALON
+      if (!quadAlignedTlpHandled) begin
+         currDwCount = 3; // 3 Data Dwords in this cycle.
+         quadAlignedTlpHandled <= True;
+      end
+`endif
 
       // The MIMO implicit guard only checks for availability of 1 element
       // so we explicitly check for the number of elements required
@@ -186,7 +197,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       v = writeDataMimo.first();
       let dwCount = writeDwCount - extend(pack(tlpDwCount));
       writeDwCount <= dwCount;
-      tlpDwCount <= truncate(min(4,unpack(dwCount)));
+      tlpDwCount <= truncate(min(fromInteger(currDwCount),unpack(dwCount)));
       writeDataCnt.decrement(unpack(extend(pack(tlpDwCount))));
       lastTlp <= (dwCount <= 4);
       if (tlpDwCount == 4)
@@ -206,13 +217,10 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	 $display("writeDwCount=%d will be zero", writeDwCount);
       end
 
-      for (Integer i = 0; i < 4; i = i + 1) begin
-`ifdef AXI
-	 tlp.data[(i+1)*32-1:i*32] = byteSwap(v[3-i]);
-`elsif AVALON
-	 tlp.data[(i+1)*32-1:i*32] = v[3-i];
-`endif
+      for (Integer i = 0; i < currDwCount; i = i + 1) begin
+	 tlp.data[(i+1)*32-1:i*32] = v[(currDwCount-1)-i];
       end
+
       tlpOutFifo.enq(tlp);
    endrule
 
