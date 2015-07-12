@@ -102,7 +102,7 @@ module mkImageonCapture#(ImageonSerdesIndication serdes_indication, HdmiGenerato
     Clock imageon_clock = clk.imageon;
     Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
     Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
-    SPI#(Bit#(26)) spiController <- mkSPI(1000, True);
+    SPIMaster#(Bit#(26)) spiController <- mkSPIMaster(1000, True);
     Reg#(Bit#(1)) i2c_mux_reset_n_reg <- mkReg(0);
     Reg#(Bool) dmaRun <- mkSyncReg(False, defaultClock, defaultReset, imageon_clock);
     Reg#(Bit#(32)) trigger_cnt_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);

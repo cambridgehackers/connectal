@@ -18,7 +18,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
+#include <stdio.h>
 #include <linux/types.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
