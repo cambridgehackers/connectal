@@ -125,7 +125,7 @@ int init_connecting(const char *arg_name, PortalSocketParam *param)
     while (connect(sockfd, addr->ai_addr, addr->ai_addrlen) == -1) {
         if(connect_attempts++ > 16){
             PORTAL_PRINTF( "%s (%s) connect error %s\n",__FUNCTION__, arg_name, strerror(errno));
-            exit(1);
+            return -1;
         }
         if (trace_socket)
             PORTAL_PRINTF( "%s (%s) retrying connection\n",__FUNCTION__, arg_name);
