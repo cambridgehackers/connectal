@@ -103,7 +103,7 @@ typedef struct {
 
 typedef 8 PcieLanes;
 
-//(* synthesize *)
+(* synthesize *)
 module mkPcieEndpointS5#(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieEndpointS5#(PcieLanes));
 
    PCIEParams params = defaultValue;
@@ -133,8 +133,8 @@ module mkPcieEndpointS5#(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieE
 
    Reg#(PciId) deviceReg <- mkReg(?, clocked_by core_clk, reset_by core_resetn);
 
-   FIFOF#(AvalonStTx#(16)) fAvalonStTx <- mkBypassFIFOF(clocked_by core_clk, reset_by noReset);
-   FIFOF#(AvalonStRx#(16)) fAvalonStRx <- mkBypassFIFOF(clocked_by core_clk, reset_by noReset);
+   FIFOF#(AvalonStTx#(16)) fAvalonStTx <- mkBypassFIFOF(clocked_by core_clk, reset_by core_resetn);
+   FIFOF#(AvalonStRx#(16)) fAvalonStRx <- mkBypassFIFOF(clocked_by core_clk, reset_by core_resetn);
 
    let txready = (pcie_ep.tx_st.ready != 0 && fAvalonStTx.notEmpty);
 
