@@ -255,7 +255,7 @@ extern "C" int bsimLinkCanReceive(int linknumber, int listening)
     pollfd[0].events = POLLIN|POLLRDHUP;
     int status = poll(pollfd, 1, 0);
     if (status && pollfd[0].revents & POLLRDHUP) {
-	fprintf(stderr, "%s:%d revents=%d, closing fd %d\n", __FUNCTION__, __LINE__, pollfd[0].revents, li->fd[0]);
+	fprintf(stderr, "%s:%d revents=%d, closing link %s\n", __FUNCTION__, __LINE__, pollfd[0].revents, li->name);
 	close(li->fd[0]);
 	li->fd[0] = 0;
 	return 0;
@@ -273,7 +273,7 @@ extern "C" int bsimLinkCanTransmit(int linknumber, int listening)
     pollfd[0].events = POLLOUT|POLLHUP;
     int status = poll(pollfd, 1, 0);
     if (status && pollfd[0].revents&POLLHUP) {
-	fprintf(stderr, "%s:%d revents=%d, closing fd %d\n", __FUNCTION__, __LINE__, pollfd[0].revents, li->fd[0]);
+	fprintf(stderr, "%s:%d revents=%d, closing link %s\n", __FUNCTION__, __LINE__, pollfd[0].revents, li->name);
 	close(li->fd[i]);
 	li->fd[i] = 0;
 	return 0;
