@@ -41,6 +41,7 @@ module mkBramServerMux#(Vector#(numServers, BRAMServer#(Bit#(asz),dtype)) bramSe
    let numServers = valueOf(numServers);
    FIFO#(dtype) responseFifo <- mkPipelineFIFO();
    for (Integer i = 0; i < numServers; i = i + 1) begin
+      (* descending_urgency = "respond" *)
       rule respond;
          let response <- bramServers[i].response.get();
          responseFifo.enq(response);
@@ -49,6 +50,42 @@ module mkBramServerMux#(Vector#(numServers, BRAMServer#(Bit#(asz),dtype)) bramSe
    interface BRAMServer bramServer;
       interface Put request;
 	 method Action put(BRAMRequest#(Bit#(aszn), dtype) request);
+	    Bit#(csz) clientNumber = request.address[valueOf(aszn)-1:valueOf(asz)];
+            bramServers[clientNumber].request.put( BRAMRequest {
+					    write: request.write,
+					    responseOnWrite: request.responseOnWrite,
+					    address: truncate(request.address),
+					    datain: request.datain });
+	 endmethod
+      endinterface
+      interface Get response;
+	 method ActionValue#(dtype) get();
+	    responseFifo.deq();
+	    return responseFifo.first();
+	 endmethod
+      endinterface
+   endinterface
+endmodule
+
+module mkGatedBramServerMux#(Reg#(Bool) gate, Vector#(numServers, BRAMServer#(Bit#(asz),dtype)) bramServers)(BramServerMux#(aszn,dtype))
+   provisos (Add#(1,a__,numServers),
+	     Log#(numServers,csz),
+	     Add#(asz,csz,aszn),
+	     Bits#(dtype,dsz),
+	     Bits#(Tuple2#(Bit#(csz), BRAM::BRAMRequest#(Bit#(asz), dtype)), c__)
+	     );
+   let numServers = valueOf(numServers);
+   FIFO#(dtype) responseFifo <- mkPipelineFIFO();
+   for (Integer i = 0; i < numServers; i = i + 1) begin
+      (* descending_urgency = "respond" *)
+      rule respond if (gate);
+         let response <- bramServers[i].response.get();
+         responseFifo.enq(response);
+      endrule
+   end
+   interface BRAMServer bramServer;
+      interface Put request;
+	 method Action put(BRAMRequest#(Bit#(aszn), dtype) request) if (gate);
 	    Bit#(csz) clientNumber = request.address[valueOf(aszn)-1:valueOf(asz)];
             bramServers[clientNumber].request.put( BRAMRequest {
 					    write: request.write,
