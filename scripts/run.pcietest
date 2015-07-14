@@ -17,13 +17,14 @@ else
 fi
 
 ENV=""
-for e in $RUNENV; do
-    v=`printenv $e`
-    ENV="$ENV $e=$v"
-done
+if [ "$RUNENV" != "" ]; then
+    for e in `env | grep $RUNENV | grep -v RUNENV`; do
+	ENV="$ENV $e"
+    done
+fi
 
 if [ "$RUNPARAM" != "" ]; then
-    if [ "$ENV" != ""]; then
+    if [ "$ENV" != "" ]; then
 	echo "sending environment variables $ENV"
     fi
     RUNPARAMTEMP=$RUNPARAM:22
