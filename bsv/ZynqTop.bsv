@@ -30,19 +30,13 @@ import AxiMasterSlave    :: *;
 import XilinxCells       :: *;
 import ConnectalXilinxCells   :: *;
 import PS7LIB::*;
+import PS7Trace::*;
 import PPS7LIB::*;
 import CtrlMux::*;
 import AxiDma            :: *;
 import Top               :: *;
 import Bscan             :: *;
 import HostInterface::*;
-
-`ifndef PinType
-`define PinType Empty
-`endif
-
-typedef `PinType PinType;
-typedef `NumberOfMasters NumberOfMasters;
 
 interface I2C_Pins;
    interface Inout#(Bit#(1)) scl;
@@ -62,7 +56,7 @@ interface ZynqTop;
    interface I2C_Pins         i2c1;
 `endif
    (* prefix="" *)
-   interface PinType          pins;
+   interface `PinType          pins;
    interface Vector#(4, Clock) deleteme_unused_clock;
    interface Vector#(4, Reset) deleteme_unused_reset;
 endinterface
@@ -93,7 +87,7 @@ module mkZynqTop(ZynqTop);
    BscanTop bscan <- mkBscanTop(3, clocked_by mainclock, reset_by mainreset); // Use USER3  (JTAG IDCODE address 0x22)
    BscanLocal lbscan <- mkBscanLocal(bscan, clocked_by bscan.tck, reset_by bscan.rst);
 `ifdef IMPORT_HOSTIF
-   ConnectalTop#(PhysAddrWidth, 64, PinType, NumberOfMasters) top <- mkConnectalTop(
+   ConnectalTop#(PhysAddrWidth, 64, `PinType, NumberOfMasters) top <- mkConnectalTop(
       (interface HostInterface;
           interface ps7 = ps7;
 	  interface portalClock = mainclock;
@@ -104,9 +98,9 @@ module mkZynqTop(ZynqTop);
       endinterface), clocked_by mainclock, reset_by mainreset);
 `else
 `ifdef IMPORT_HOST_CLOCKS // enables synthesis boundary
-   ConnectalTop#(PhysAddrWidth, 64, PinType, NumberOfMasters) top <- mkConnectalTop(ps7.derivedClock, ps7.derivedReset, clocked_by mainclock, reset_by mainreset);
+   ConnectalTop#(PhysAddrWidth, 64, `PinType, NumberOfMasters) top <- mkConnectalTop(ps7.derivedClock, ps7.derivedReset, clocked_by mainclock, reset_by mainreset);
 `else // no parameters, enables synthesis boundary
-   ConnectalTop#(PhysAddrWidth, 64, PinType, NumberOfMasters) top <- mkConnectalTop(clocked_by mainclock, reset_by mainreset);
+   ConnectalTop#(PhysAddrWidth, 64, `PinType, NumberOfMasters) top <- mkConnectalTop(clocked_by mainclock, reset_by mainreset);
 `endif
 `endif
    mkConnectionWithTrace(ps7, top, lbscan.loc[1], clocked_by mainclock, reset_by mainreset);

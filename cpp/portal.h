@@ -52,6 +52,7 @@ extern int debug_portal;
 // Other constants
 #define MAX_TIMERS    50
 #define MAX_CLIENT_FD 10
+#define DEFAULT_TILE  0
 
 /*
  * Function vector for portal transport primitives used in generated C code

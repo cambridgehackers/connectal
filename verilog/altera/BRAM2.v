@@ -1,4 +1,5 @@
-// Copyright (c) 2000-2011 Bluespec, Inc.
+
+// Copyright (c) 2000-2009 Bluespec, Inc.
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,15 +19,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-// $Revision$
-// $Date$
+// $Revision: 24080 $
+// $Date: 2011-05-18 19:32:52 +0000 (Wed, 18 May 2011) $
 
 `ifdef BSV_ASSIGNMENT_DELAY
 `else
  `define BSV_ASSIGNMENT_DELAY
 `endif
 
-// Dual-Ported BRAM (WRITE FIRST)
+// Dual-Ported BRAM (READ FIRST)
 module BRAM2(CLKA,
              ENA,
              WEA,
@@ -60,96 +61,56 @@ module BRAM2(CLKA,
    input [DATA_WIDTH-1:0]         DIB;
    output [DATA_WIDTH-1:0]        DOB;
 
+   reg [DATA_WIDTH-1:0]           RAM[0:MEMSIZE-1] /* synthesis syn_ramstyle="no_rw_check" */ ;
+   reg [DATA_WIDTH-1:0]           DOA_R;
+   reg [DATA_WIDTH-1:0]           DOB_R;
+   reg [DATA_WIDTH-1:0]           DOA_D1_R;
+   reg [DATA_WIDTH-1:0]           DOB_D1_R;
 
-   wire                           RENA = ENA & !WEA;
-   wire                           WENA = ENA & WEA;
-   wire                           RENB = ENB & !WEB;
-   wire                           WENB = ENB & WEB;
-      
-   altsyncram
-     #(
-       .width_a                            (DATA_WIDTH),
-       .widthad_a                          (ADDR_WIDTH),
-       .numwords_a                         (MEMSIZE),
-       .outdata_reg_a                      ((PIPELINED) ? "CLOCK0" : "UNREGISTERED"),
-       .address_aclr_a                     ("NONE"),
-       .outdata_aclr_a                     ("NONE"),
-       .indata_aclr_a                      ("NONE"),
-       .wrcontrol_aclr_a                   ("NONE"),
-       .byteena_aclr_a                     ("NONE"),
-       .width_byteena_a                    (1),
+`ifdef BSV_NO_INITIAL_BLOCKS
+`else
+   // synopsys translate_off
+   integer                        i;
+   initial
+   begin : init_block
+      for (i = 0; i < MEMSIZE; i = i + 1) begin
+         RAM[i] = { ((DATA_WIDTH+1)/2) { 2'b10 } };
+      end
+      DOA_R = { ((DATA_WIDTH+1)/2) { 2'b10 } };
+      DOB_R = { ((DATA_WIDTH+1)/2) { 2'b10 } };
+      DOA_D1_R = { ((DATA_WIDTH+1)/2) { 2'b10 } };
+      DOB_D1_R = { ((DATA_WIDTH+1)/2) { 2'b10 } };
+   end
+   // synopsys translate_on
+`endif // !`ifdef BSV_NO_INITIAL_BLOCKS
 
-       .width_b                            (DATA_WIDTH),
-       .widthad_b                          (ADDR_WIDTH),
-       .numwords_b                         (MEMSIZE),
-       .rdcontrol_reg_b                    ("CLOCK1"),//
-       .address_reg_b                      ("CLOCK1"),//
-       .outdata_reg_b                      ((PIPELINED) ? "CLOCK1" : "UNREGISTERED"),
-       .outdata_aclr_b                     ("NONE"),//
-       .rdcontrol_aclr_b                   ("NONE"),//
-       .indata_reg_b                       ("CLOCK1"),//
-       .wrcontrol_wraddress_reg_b          ("CLOCK1"),//
-       .byteena_reg_b                      ("CLOCK1"),//
-       .indata_aclr_b                      ("NONE"),//
-       .wrcontrol_aclr_b                   ("NONE"),//
-       .address_aclr_b                     ("NONE"),//
-       .byteena_aclr_b                     ("NONE"),//
-       .width_byteena_b                    (1),
+   always @(posedge CLKA) begin
+      DOA_R <= `BSV_ASSIGNMENT_DELAY RAM[ADDRA];
+      if (ENA) begin
+         if (WEA) begin
+           RAM[ADDRA] <= `BSV_ASSIGNMENT_DELAY DIA;
+	 end
+      end
+   end
 
-       .clock_enable_input_a               ("BYPASS"),
-       .clock_enable_output_a              ("BYPASS"),
-       .clock_enable_input_b               ("BYPASS"),
-       .clock_enable_output_b              ("BYPASS"),
+   always @(posedge CLKB) begin
+      DOB_R <= `BSV_ASSIGNMENT_DELAY RAM[ADDRB];
+      if (ENB) begin
+         if (WEB) begin
+           RAM[ADDRB] <= `BSV_ASSIGNMENT_DELAY DIB;
+	 end
+      end
+   end
 
-       .clock_enable_core_a                ("USE_INPUT_CLKEN"),//
-       .clock_enable_core_b                ("USE_INPUT_CLKEN"),//
-       .read_during_write_mode_port_a      ("NEW_DATA_NO_NBE_READ"),
-       .read_during_write_mode_port_b      ("NEW_DATA_NO_NBE_READ"),
+   // Pipeline
+   always @(posedge CLKA)
+      DOA_D1_R <= DOA_R;
 
-       .enable_ecc                         ("FALSE"),//
-       .width_eccstatus                    (3),//
-       .ecc_pipeline_stage_enabled         ("FALSE"),//
+   always @(posedge CLKB)
+      DOB_D1_R <= DOB_R;
 
-       .operation_mode                     ("BIDIR_DUAL_PORT"),
-       .byte_size                          (8),//
-       .read_during_write_mode_mixed_ports ("DONT_CARE"),//
-       .ram_block_type                     ("AUTO"),//
-       .init_file                          ("UNUSED"),//
-       .init_file_layout                   ("UNUSED"),//
-       .maximum_depth                      (MEMSIZE), // number of elements in memory
-       .intended_device_family             ("Stratix"),//
-       .lpm_hint                           ("ENABLE_RUNTIME_MOD=NO"),
-       .lpm_type                           ("altsyncram"),//
-       .implement_in_les                   ("OFF"), //
-       .power_up_uninitialized             ("FALSE")
-       )
-   RAM
-     (
-      .wren_a                              (WENA),
-      .rden_a                              (RENB),
-      .data_a                              (DIA),
-      .address_a                           (ADDRA),
-      .clock0                              (CLKA),
-      .clocken0                            (1'b1),
-      .clocken1                            (1'b1),
-      .aclr0                               (1'b0),
-      .byteena_a                           (1'b1),
-      .addressstall_a                      (1'b0),
-      .q_a                                 (DOA),
-
-      .wren_b                              (WENB),
-      .rden_b                              (RENB),
-      .data_b                              (DIB),
-      .address_b                           (ADDRB),
-      .clock1                              (CLKB),
-      .clocken2                            (1'b1),
-      .clocken3                            (1'b1),
-      .aclr1                               (1'b0),
-      .byteena_b                           (1'b1),
-      .addressstall_b                      (1'b0),
-      .q_b                                 (DOB),
-
-      .eccstatus                           ()
-      );
+   // Output drivers
+   assign DOA = (PIPELINED) ? DOA_D1_R : DOA_R;
+   assign DOB = (PIPELINED) ? DOB_D1_R : DOB_R;
 
 endmodule // BRAM2

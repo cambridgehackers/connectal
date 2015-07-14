@@ -182,18 +182,20 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
                 }
 	case PORTAL_DEREFERENCE: {
 		int id = arg;
-		struct list_head *pmlist;
+		struct list_head *pmlist, *n;
                 PortalInternal devptr = {.map_base = portal_data->map_base, .item=&kernelfunc};
 		MMURequest_idReturn(&devptr, id);
-		list_for_each(pmlist, &portal_data->pmlist) {
+		list_for_each_safe(pmlist, n, &portal_data->pmlist) {
 			struct pmentry *pmentry = list_entry(pmlist, struct pmentry, pmlist);
 			if (pmentry->id == id) {
 				printk("%s:%d releasing portalmem object %d fmem=%p\n", __FUNCTION__, __LINE__, id, pmentry->fmem);
-				list_del(&pmentry->pmlist);
 				fput(pmentry->fmem);
+				list_del(&pmentry->pmlist);
 				kfree(pmentry);
+				return 0;
 			}
 		}
+		return -ENOENT;
 	} break;
         case PORTAL_DCACHE_FLUSH_INVAL: {
   	        flush = 1;

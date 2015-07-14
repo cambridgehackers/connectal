@@ -30,13 +30,6 @@ import CnocPortal::*;
 import MemTypes          :: *;
 import SimDma            ::*;
 
-`ifndef PinType
-`define PinType Empty
-`endif
-
-typedef `PinType PinType;
-typedef `NumberOfMasters NumberOfMasters;
-
 module  mkXsimHost#(Clock derivedClock, Reset derivedReset)(XsimHost);
    interface derivedClock = derivedClock;
    interface derivedReset = derivedReset;

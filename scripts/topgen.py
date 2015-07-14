@@ -33,6 +33,8 @@ argparser.add_argument('--importfiles', help='added imports', action='append')
 argparser.add_argument('--portname', help='added portal names to enum list', action='append')
 argparser.add_argument('--wrapper', help='exported wrapper interfaces', action='append')
 argparser.add_argument('--proxy', help='exported proxy interfaces', action='append')
+argparser.add_argument('--memread', default=[], help='memory read interfaces', action='append')
+argparser.add_argument('--memwrite', default=[], help='memory read interfaces', action='append')
 argparser.add_argument('--cnoc', help='generate mkCnocTop', action='store_true')
 
 topTemplate='''
@@ -44,13 +46,9 @@ import Connectable::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;
 import MemTypes::*;
+import MemServer::*;
 import IfcNames::*;
 %(generatedImport)s
-
-`ifndef PinType
-`define PinType Empty
-`endif
-typedef `PinType PinType;
 
 `ifndef IMPORT_HOSTIF
 (* synthesize *)
@@ -82,6 +80,8 @@ module mkConnectalTop
    Vector#(%(portalCount)s,StdPortal) portals;
 %(portalList)s
    let ctrl_mux <- mkSlaveMux(portals);
+   Vector#(NumWriteClients,MemWriteClient#(DataBusWidth)) nullWriters = replicate(null_mem_write_client());
+   Vector#(NumReadClients,MemReadClient#(DataBusWidth)) nullReaders = replicate(null_mem_read_client());
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
    interface masters = %(portalMaster)s;
@@ -103,10 +103,6 @@ import HostInterface::*;
 import IfcNames::*;
 %(generatedImport)s
 
-`ifndef PinType
-`define PinType Empty
-`endif
-typedef `PinType PinType;
 %(generatedTypedefs)s
 
 `ifndef IMPORT_HOSTIF
@@ -294,11 +290,13 @@ if __name__=='__main__':
     portalCount = 0
     instantiatedModules = []
     importfiles = []
-    exportedNames = ['export mkConnectalTop;']
+    exportedNames = []
     if options.board == 'xsim':
         options.cnoc = True
     if options.cnoc:
-        exportedNames = ['export mkCnocTop;', 'export NumberOfRequests;', 'export NumberOfIndications;']
+        exportedNames.extend(['export mkCnocTop;', 'export NumberOfRequests;', 'export NumberOfIndications;'])
+    else:
+        exportedNames.extend(['export mkConnectalTop;'])
     if options.importfiles:
         importfiles = options.importfiles
         for item in options.importfiles:
@@ -357,6 +355,8 @@ if __name__=='__main__':
                  'indicationList': toVectorLiteral(indicationList),
                  'exportedInterfaces' : '\n'.join(interfaceList),
                  'exportedNames' : '\n'.join(exportedNames),
+                 'portalReaders' : ('append(' if len(options.memread) > 0 else '(') + ', '.join(options.memread + ['nullReaders']) + ')',
+                 'portalWriters' : ('append(' if len(options.memwrite) > 0 else '(') + ', '.join(options.memwrite + ['nullWriters']) + ')',
                  'portalMaster' : 'lMemServer.masters' if memory_flag else 'nil',
                  'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,`PinType,`NumberOfMasters)' if not options.cnoc \
                      else 'CnocTop#(NumberOfRequests,NumberOfIndications,PhysAddrWidth,DataBusWidth,NumberOfMasters)'

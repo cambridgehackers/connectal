@@ -270,6 +270,7 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
 		struct list_head *pmlist, *n;
 		PortalInternal devptr = {.map_base = (volatile int *)(this_board->bar2io + PORTAL_BASE_OFFSET * this_portal->portal_number),
 					 .item = &kernelfunc};
+		err = -ENOENT;
 		MMURequest_idReturn(&devptr, id);
 		list_for_each_safe(pmlist, n, &this_portal->pmlist) {
 			struct pmentry *pmentry = list_entry(pmlist, struct pmentry, pmlist);
@@ -278,6 +279,8 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
 				fput(pmentry->fmem);
 				list_del(&pmentry->pmlist);
 				kfree(pmentry);
+				err = 0;
+				break;
 			}
 		}
 	} break;

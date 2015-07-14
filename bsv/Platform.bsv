@@ -24,7 +24,6 @@ import Portal::*;
 import HostInterface::*;
 import MMU::*;
 import MemServer::*;
-import PlatformTypes::*;
 import MemTypes::*;
 import CtrlMux::*;
 import FIFO::*;
@@ -36,6 +35,15 @@ import MMURequest::*;
 import MMUIndication::*;
 import MemServerIndication::*;
 import MemServerRequest::*;
+//import IfcNames::*;
+import PlatformTypes::*;
+
+interface Platform;
+   interface PhysMemSlave#(32,32) slave;
+   interface Vector#(NumberOfMasters,PhysMemMaster#(PhysAddrWidth, DataBusWidth)) masters;
+   interface Vector#(MaxNumberOfPortals,ReadOnly#(Bool)) interrupt;
+   interface `PinType pins;
+endinterface
 
 module renameReads#(Integer tile, MemReadClient#(DataBusWidth) reader, MemServerIndication err)(MemReadClient#(DataBusWidth));
    interface Get readReq;
@@ -83,17 +91,18 @@ module renameWrites#(Integer tile, MemWriteClient#(DataBusWidth) writer, MemServ
    endinterface
 endmodule
 
-module mkPlatform#(Vector#(NumberOfTiles, Tile) tiles)(Platform#(Empty));
+module mkPlatform#(Vector#(NumberOfUserTiles, Tile) tiles)(Platform);
    /////////////////////////////////////////////////////////////
    // connecting up the tiles
 
-   Vector#(NumberOfTiles, PhysMemSlave#(18,32)) tile_slaves;
-   Vector#(NumberOfTiles, ReadOnly#(Bool)) tile_interrupts;
-   Vector#(NumberOfTiles, Vector#(NumReadClients, MemReadClient#(DataBusWidth))) tile_read_clients;
-   Vector#(NumberOfTiles, Vector#(NumWriteClients, MemWriteClient#(DataBusWidth))) tile_write_clients;
-   for(Integer i = 0; i < valueOf(NumberOfTiles); i=i+1) begin
-      tile_slaves[i] = tiles[i].portals;
-      tile_interrupts[i] = tiles[i].interrupt;
+   Vector#(NumberOfUserTiles, PhysMemSlave#(18,32)) tile_slaves;
+   Vector#(NumberOfUserTiles, ReadOnly#(Bool)) tile_interrupts;
+   Vector#(NumberOfUserTiles, Vector#(NumReadClients, MemReadClient#(DataBusWidth))) tile_read_clients;
+   Vector#(NumberOfUserTiles, Vector#(NumWriteClients, MemWriteClient#(DataBusWidth))) tile_write_clients;
+   for(Integer i = 0; i < valueOf(NumberOfUserTiles); i=i+1) begin
+      tile_slaves[i] = tiles[i].slave;
+      ReadOnly#(Bool) imux = tiles[i].interrupt;
+      tile_interrupts[i] = imux;
       tile_read_clients[i] = tiles[i].readers;
       tile_write_clients[i] = tiles[i].writers;
    end
@@ -105,8 +114,8 @@ module mkPlatform#(Vector#(NumberOfTiles, Tile) tiles)(Platform#(Empty));
    MemServerIndicationProxy lMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_MemServerIndicationH2S);
 
    MMU#(PhysAddrWidth) lMMU <- mkMMU(0,True, lMMUIndicationProxy.ifc);
-   Vector#(TMul#(NumberOfTiles,NumReadClients), MemReadClient#(DataBusWidth)) tile_read_clients_renamed <- zipWith3M(renameReads, genVector, concat(tile_read_clients), replicate(lMemServerIndicationProxy.ifc));
-   Vector#(TMul#(NumberOfTiles,NumWriteClients), MemWriteClient#(DataBusWidth)) tile_write_clients_renamed <- zipWith3M(renameWrites, genVector, concat(tile_write_clients), replicate(lMemServerIndicationProxy.ifc));
+   Vector#(TMul#(NumberOfUserTiles,NumReadClients), MemReadClient#(DataBusWidth)) tile_read_clients_renamed <- zipWith3M(renameReads, genVector, concat(tile_read_clients), replicate(lMemServerIndicationProxy.ifc));
+   Vector#(TMul#(NumberOfUserTiles,NumWriteClients), MemWriteClient#(DataBusWidth)) tile_write_clients_renamed <- zipWith3M(renameWrites, genVector, concat(tile_write_clients), replicate(lMemServerIndicationProxy.ifc));
    MemServer#(PhysAddrWidth,DataBusWidth,NumberOfMasters) lMemServer <- mkMemServer(tile_read_clients_renamed, tile_write_clients_renamed, cons(lMMU,nil), lMemServerIndicationProxy.ifc);
 
    MMURequestWrapper lMMURequestWrapper <- mkMMURequestWrapper(IfcNames_MMURequestS2H, lMMU.request);
@@ -124,9 +133,9 @@ module mkPlatform#(Vector#(NumberOfTiles, Tile) tiles)(Platform#(Empty));
    // expose interface to top
 
    PhysMemSlave#(32,32) ctrl_mux <- mkMemPortalMux(cons(framework_ctrl_mux,tile_slaves));
-   Vector#(16, ReadOnly#(Bool)) interrupts = replicate(interface ReadOnly; method Bool _read(); return False; endmethod endinterface);
+   Vector#(MaxNumberOfPortals, ReadOnly#(Bool)) interrupts = replicate(interface ReadOnly; method Bool _read(); return False; endmethod endinterface);
    interrupts[0] = framework_intr;
-   for (Integer i = 1; i < valueOf(TAdd#(1,NumberOfTiles)); i = i + 1)
+   for (Integer i = 1; i < valueOf(NumberOfTiles); i = i + 1)
       interrupts[i] = tile_interrupts[i-1];
    interface interrupt = interrupts;
    interface slave = ctrl_mux;

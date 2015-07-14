@@ -204,6 +204,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 	 idxOffsets1[i].enq(idxOffset);
 	 ptrs1[i].enq(req.id);
       endrule
+      (* descending_urgency = "stage2, stage4" *)
       rule stage4; // Read relevant sglist entry
 	 let off <- toGet(offs0[i]).get();
 	 let pbase <- toGet(pbases[i]).get();
