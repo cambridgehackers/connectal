@@ -242,6 +242,12 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       Vector#(4, Bit#(32)) vec = unpack(0);
       Vector#(4, Bit#(32)) tlpvec = unpack(tlp.data);
       let wordCount = wordCountReg;
+`ifdef AXI
+      let dataInSecondTlp = False;
+`elsif AVALON
+      let quadWordAligned = isQuadWordAligned(getLowerAddr(hdr_3dw.addr, hdr_3dw.firstbe));
+      let dataInSecondTlp = quadWordAligned;
+`endif
       if (!tlp.sof) begin
 	 vec = reverse(tlpvec);
 	 // The MIMO implicit guard only checks for space to enqueue 1 element
@@ -265,12 +271,14 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	       && hdr_3dw.pkttype == COMPLETION
 	       && completionMimo.enqReady()
 	       && completionTagMimo.enqReady()) begin
-	    vec[0] = hdr_3dw.data;
-            wordCount = hdr_3dw.length - 1;
-	    completionMimo.enq(1, vec);
             TLPTag tag = hdr_completion.tag;
-	    lastTag <= tag;
-	    completionTagMimo.enq(1, replicate(tag));
+            lastTag <= tag;
+            if (!dataInSecondTlp) begin
+               vec[0] = hdr_3dw.data;
+               wordCount = hdr_3dw.length - 1;
+               completionMimo.enq(1, vec);
+               completionTagMimo.enq(1, replicate(tag));
+            end
 	    handled = True;
       end
       wordCountReg <= wordCount;
