@@ -117,7 +117,7 @@ int init_connecting(const char *arg_name, PortalSocketParam *param)
     }
     if ((sockfd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol)) == -1) {
         PORTAL_PRINTF( "%s[%d]: socket error %s\n",__FUNCTION__, sockfd, strerror(errno));
-        exit(1);
+	return -1;
     }
     if (trace_socket)
         PORTAL_PRINTF( "%s (%s) trying to connect...\n",__FUNCTION__, arg_name);
