@@ -59,12 +59,13 @@ static void *pthread_worker(void *p)
         int sockfd = accept(listening_socket, NULL, NULL);
         if (sockfd == -1) {
             fprintf(stderr, "%s[%d]: accept error %s\n",__FUNCTION__, listening_socket, strerror(errno));
-            exit(1);
+	    return 0;
         }
         if (trace_port)
             printf("[%s:%d] sockfd %d\n", __FUNCTION__, __LINE__, sockfd);
         fd_array[fd_array_index++] = sockfd;
     }
+    return 0;
 }
 
 extern "C" void initPortal(void)
