@@ -138,6 +138,7 @@ int event_hardware(struct PortalInternal *pint)
 
 static int init_hardware(struct PortalInternal *pint, void *param)
 {
+    initPortalHardware();
 #if defined(__KERNEL__)
     int i;
     pint->map_base = NULL;

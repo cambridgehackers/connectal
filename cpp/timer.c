@@ -36,7 +36,7 @@ uint64_t portalCycleCount()
 {
     uint64_t high_bits, low_bits;
     volatile unsigned int *msb, *lsb;
-    initPortalFramework();
+    initPortalHardware();
     if(!utility_portal)
         return 0;
     msb = &utility_portal->map_base[PORTAL_CTRL_COUNTER_MSB];
