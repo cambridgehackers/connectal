@@ -116,7 +116,15 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       writeDataMimoEnqProbe <= writeDataMimoEnqWire;
    endrule
 
-   rule writeHeaderTlp if (!writeInProgress && (writeDataCnt.read >= truncate(unpack(tlpWriteHeaderFifo.first.dwCount))));
+   Reg#(Bool) writeDataCntAboveThreshold <- mkReg(False);
+   rule updateWriteDataCntAboveThreshold;
+      writeDataCntAboveThreshold <= (writeDataCnt.read >= truncate(unpack(tlpWriteHeaderFifo.first.dwCount)));
+   endrule
+   (* descending_urgency = "writeHeaderTlp,updateWriteDataCntAboveThreshold" *)
+   rule writeHeaderTlp if (!writeInProgress && writeDataCntAboveThreshold);
+      // update for next cycle
+      writeDataCntAboveThreshold <= (writeDataCnt.read >= truncate(unpack(tlpWriteHeaderFifo.first.dwCount)));
+
       writeHeaderTlpWire <= True;
       let info <- toGet(tlpWriteHeaderFifo).get();
       let tlp     = info.tlp;
