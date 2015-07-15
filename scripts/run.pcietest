@@ -1,5 +1,5 @@
 #!/bin/bash
-set -x
+#set -x
 set -e
 export SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 echo "run.pcie parameters are:" $*
@@ -18,7 +18,7 @@ fi
 
 ENV=""
 if [ "$RUNENV" != "" ]; then
-    for e in `env | grep $RUNENV | grep -v RUNENV`; do
+    for e in `env | grep $RUNENV | grep -v RUNENV | sed 's/=(.*)/=\"$1\"/'`; do
 	ENV="$ENV $e"
     done
 fi
