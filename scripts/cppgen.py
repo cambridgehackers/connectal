@@ -59,6 +59,9 @@ public:
            Portal(id, 0, %(classNameOrig)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, item, param, poller) {
         pint.parent = static_cast<void *>(this);
     };
+    virtual void disconnect(void) {
+        printf("%(className)sWrapper.disconnect called\\n");
+    };
 '''
 
 handleMessageTemplateDecl='''
@@ -113,7 +116,7 @@ jsonStructTemplateDecl='''
         {NULL, %(channelNumber)s}}) },'''
 
 jsonMethodTemplateDecl='''
-static ConnectalMethodJsonInfo %(className)sInfo[] = {'''
+static ConnectalMethodJsonInfo %(classNameOrig)sInfo[] = {'''
 
 proxyMethodTableDecl='''
 %(classNameOrig)sCb %(className)sProxyReq = {
@@ -529,6 +532,15 @@ def emitMethodDeclaration(mname, params, f, className):
         f.write('{ return cb->%s (' % methodName)
         f.write(', '.join(paramValues) + '); };\n')
 
+wrapperStartTemplate = '''
+/************** Start of %(className)sWrapper CPP ***********/
+#include "%(classNameOrig)s.h"
+int %(classNameOrig)sdisconnect_cb (struct PortalInternal *p) {
+    (static_cast<%(classNameOrig)sWrapper *>(p->parent))->disconnect();
+    return 0;
+};
+'''
+
 def generate_class(classNameOrig, classVariant, declList, generatedCFiles, create_cpp_file, generated_hpp, generated_cpp):
     global generatedVectors
     className = classNameOrig + classVariant
@@ -542,14 +554,14 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
     maxSize = 0
     reqChanNums = []
     methodList = []
+    cnSubst = {'className': className, 'classNameOrig': classNameOrig}
     if classVariant:
-        cpp.write(jsonMethodTemplateDecl % {'className': classNameOrig})
+        cpp.write(jsonMethodTemplateDecl % cnSubst)
     else:
         hpp = create_cpp_file(hppname)
         hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': className.upper()})
         hpp.write('#include "portal.h"\n')
-        generated_cpp.write('\n/************** Start of %sWrapper CPP ***********/\n' % className)
-        generated_cpp.write('#include "%s.h"\n' % classNameOrig)
+        generated_cpp.write(wrapperStartTemplate % cnSubst)
     for mitem in declList:
         if verbose:
             print'gcl/mitem', mitem
@@ -577,7 +589,7 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
         substs, t = gatherMethodInfo(mitem['dname'], mitem['dparams'], className, classNameOrig, classVariant)
         generated_hpp.write((proxyMethodTemplateDecl % substs) + ';')
     methodTable = ['%(className)s_%(methodName)s,' % {'methodName': p, 'className': className} for p in methodList]
-    cpp.write(proxyMethodTableDecl % {'className': className, 'classNameOrig': classNameOrig, 'methodTable': '\n    '.join(methodTable)})
+    cpp.write(proxyMethodTableDecl % {'className': className, 'classNameOrig': classNameOrig, 'methodTable': '\n    '.join(['portal_disconnect,'] + methodTable)})
     subs = {'className': classCName, 'maxSize': (maxSize+1) * sizeofUint32_t,
             'reqInfo': '0x%x' % ((len(declList) << 16) + (maxSize+1) * sizeofUint32_t),
             'classNameOrig': classNameOrig }
@@ -610,7 +622,8 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
         for mitem in declList:
             emitMethodDeclaration(mitem['dname'], mitem['dparams'], hpp, '')
         hpp.write('};\n')
-        generated_hpp.write('typedef struct {\n')
+        cCNSubst = { 'classCName': classCName}
+        generated_hpp.write('typedef struct {\n    PORTAL_DISCONNECT disconnect;\n')
         for mitem in declList:
             if verbose:
                 for pitem in mitem['dparams']:
@@ -625,8 +638,8 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
             generated_cpp.write(('(static_cast<%sWrapper *>(p->parent))->%s ( ' % (classCName, methodName)) + paramValues + ');\n')
             indent(generated_cpp, 4)
             generated_cpp.write('return 0;\n};\n')
-        generated_hpp.write('} %sCb;\n' % classCName)
-        generated_cpp.write('%sCb %s_cbTable = {\n' % (classCName, classCName))
+        generated_hpp.write('} %(classCName)sCb;\n' % cCNSubst)
+        generated_cpp.write('%(classCName)sCb %(classCName)s_cbTable = {\n    %(classCName)sdisconnect_cb,\n' % cCNSubst)
         for mitem in declList:
             generated_cpp.write('    %s%s_cb,\n' % (classCName, mitem['dname']))
         generated_cpp.write('};\n')

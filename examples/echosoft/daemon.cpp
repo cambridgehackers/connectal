@@ -63,6 +63,9 @@ public:
     void setLeds ( const uint8_t v ) {
         fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
         echoRequestProxy->setLeds(v);
+    }
+    void disconnect (void) {
+        fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
         sleep(1);
         exit(1);
     }
