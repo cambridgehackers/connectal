@@ -43,7 +43,7 @@ gen.%:
 ifeq ($(BOARD),)
 	$(eval BOARD := $*)
 endif
-	BOARD=$(BOARD) PROJECTDIR=$* make --no-print-directory gentarget prebuild $(VARIANT_PROJECTS)
+	+BOARD=$(BOARD) PROJECTDIR=$* make --no-print-directory gentarget prebuild $(VARIANT_PROJECTS)
 #is this needed? (jca):	make -C $* --no-print-directory prepare_bin_target
 
 variantgen.%:
