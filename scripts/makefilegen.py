@@ -55,8 +55,8 @@ argparser.add_argument(      '--xci', default=[], help='Additional IP sources', 
 argparser.add_argument(      '--qip', default=[], help='Additional QIP sources', action='append')
 argparser.add_argument(      '--qsf', default=[], help='Altera Quartus settings', action='append')
 argparser.add_argument(      '--chipscope', default=[], help='Onchip scope settings', action='append')
-argparser.add_argument('-C', '--constraint', help='Additional constraint files', action='append')
-argparser.add_argument(      '--implconstraint', help='Physical constraint files', action='append')
+argparser.add_argument('-C', '--constraint', default=[], help='Additional constraint files', action='append')
+argparser.add_argument(      '--implconstraint', default=[], help='Physical constraint files', action='append')
 argparser.add_argument('-M', '--make', help='Run make on the specified targets', action='append')
 argparser.add_argument('-D', '--bsvdefine', default=[], help='BSV define', action='append')
 argparser.add_argument('-D2', '--bsvdefine2', default=[], help='BSV define2', action='append')
@@ -273,8 +273,6 @@ if __name__=='__main__':
         options.source2 = []
     if not options.bsimsource:
         options.bsimsource = []
-    if not options.constraint:
-        options.constraint = []
     if not options.verilog:
         options.verilog = []
     if not options.tcl:
