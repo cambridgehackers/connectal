@@ -56,6 +56,7 @@ endinterface: MemSlaveEngine
    `define AVALON
 `endif
 
+typedef 32 WriteDataMimoSize;
 module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    provisos (Div#(buswidth, 8, busWidthBytes),
 	     Div#(buswidth, 32, busWidthWords),
@@ -68,7 +69,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	     Add#(eee, busWidthWords, 8),
 	     Add#(1, a__, busWidthWords),
 	     Add#(busWidthWords, b__, 4),
-	     Add#(c__, busWidthWords, 128)
+	     Add#(c__, busWidthWords, WriteDataMimoSize)
       );
 
     let beat_shift = fromInteger(valueOf(beatShift));
@@ -87,7 +88,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    MIFO#(4,busWidthWords,16,TLPTag) completionTagMimo <- mkMIFO();
 
    mimoCfg.bram_based = True;
-    MIMO#(busWidthWords,4,128,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
+    MIMO#(busWidthWords,4,WriteDataMimoSize,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
     ConfigCounter#(8) writeDataCnt <- mkConfigCounter(0);
     Reg#(Bit#(10)) writeBurstCount <- mkReg(0);
    FIFO#(Bit#(10)) writeBurstCountFifo <- mkFIFO();
