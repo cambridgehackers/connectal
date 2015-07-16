@@ -56,6 +56,7 @@ argparser.add_argument(      '--qip', default=[], help='Additional QIP sources',
 argparser.add_argument(      '--qsf', default=[], help='Altera Quartus settings', action='append')
 argparser.add_argument(      '--chipscope', default=[], help='Onchip scope settings', action='append')
 argparser.add_argument('-C', '--constraint', help='Additional constraint files', action='append')
+argparser.add_argument(      '--implconstraint', help='Physical constraint files', action='append')
 argparser.add_argument('-M', '--make', help='Run make on the specified targets', action='append')
 argparser.add_argument('-D', '--bsvdefine', default=[], help='BSV define', action='append')
 argparser.add_argument('-D2', '--bsvdefine2', default=[], help='BSV define2', action='append')
@@ -451,7 +452,8 @@ if __name__=='__main__':
                                          'pinout_dep_file' : ' '.join([os.path.abspath(p) for p in options.pinout]),
                                          'genxdc_dep' : genxdc_dep,
 					 'floorplan': os.path.abspath(options.floorplan) if options.floorplan else '',
-					 'xdc': ' '.join(['--constraint=%s' % os.path.abspath(xdc) for xdc in options.constraint]),
+					 'xdc': ' '.join(['--constraint=%s' % os.path.abspath(xdc) for xdc in options.constraint]
+                                                         + ['--implconstraint=%s' % os.path.abspath(xdc) for xdc in options.implconstraint]),
 					 'xci': ' '.join(['--xci=%s' % os.path.abspath(xci) for xci in options.xci]),
 					 'qsf': ' '.join(['--qsf=%s' % os.path.abspath(qsf) for qsf in options.qsf]),
 					 'chipscope': ' '.join(['--chipscope=%s' % os.path.abspath(chipscope) for chipscope in options.chipscope]),
