@@ -412,16 +412,6 @@ if __name__=='__main__':
     tcl.write(tclboardTemplate % tclsubsts)
     tcl.close()
 
-    if options.constraint:
-        for constraint in options.constraint:
-            if noisyFlag:
-                print 'Copying constraint file from', constraint
-            dstconstraintdir = os.path.join(project_dir, 'constraints')
-            if not os.path.exists(dstconstraintdir):
-                os.makedirs(dstconstraintdir)
-            ## this path is here so we can overwrite sources
-            shutil.copy(constraint, dstconstraintdir)
-
     if noisyFlag:
         print 'Writing Makefile', makename
     make = util.createDirAndOpen(makename, 'w')
