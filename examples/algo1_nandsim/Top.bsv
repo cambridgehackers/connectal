@@ -36,6 +36,7 @@ import NandCfgRequest::*;
 import MMURequest::*;
 import StrstrRequest::*;
 import NandCfgIndication::*;
+import MemServerRequest::*;
 import MemServerIndication::*;
 import MMUIndication::*;
 import StrstrIndication::*;
@@ -43,44 +44,45 @@ import NandSim::*;
 import NandSimNames::*;
 import Strstr::*;
 
-module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
+module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,Empty,1));
    
    // nandsim 
-   NandCfgIndicationProxy nandCfgIndicationProxy <- mkNandCfgIndicationProxy(IfcNames_NandCfgIndication);
+   NandCfgIndicationProxy nandCfgIndicationProxy <- mkNandCfgIndicationProxy(IfcNames_NandCfgIndicationH2S);
    NandSim nandSim <- mkNandSim(nandCfgIndicationProxy.ifc);
-   NandCfgRequestWrapper nandCfgRequestWrapper <- mkNandCfgRequestWrapper(IfcNames_NandCfgRequest,nandSim.request);
+   NandCfgRequestWrapper nandCfgRequestWrapper <- mkNandCfgRequestWrapper(IfcNames_NandCfgRequestS2H,nandSim.request);
    
    // strstr algo
-   StrstrIndicationProxy strstrIndicationProxy <- mkStrstrIndicationProxy(IfcNames_AlgoIndication);
+   StrstrIndicationProxy strstrIndicationProxy <- mkStrstrIndicationProxy(IfcNames_AlgoIndicationH2S);
    Strstr#(64,64) strstr <- mkStrstr(strstrIndicationProxy.ifc);
-   StrstrRequestWrapper strstrRequestWrapper <- mkStrstrRequestWrapper(IfcNames_AlgoRequest,strstr.request);
+   StrstrRequestWrapper strstrRequestWrapper <- mkStrstrRequestWrapper(IfcNames_AlgoRequestS2H,strstr.request);
    
    // backing store mmu
-   MMUIndicationProxy backingStoreMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_BackingStoreMMUIndication);
+   MMUIndicationProxy backingStoreMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_BackingStoreMMUIndicationH2S);
    MMU#(PhysAddrWidth) backingStoreMMU <- mkMMU(0, True, backingStoreMMUIndicationProxy.ifc);
-   MMURequestWrapper backingStoreMMURequestWrapper <- mkMMURequestWrapper(IfcNames_BackingStoreMMURequest, backingStoreMMU.request);
+   MMURequestWrapper backingStoreMMURequestWrapper <- mkMMURequestWrapper(IfcNames_BackingStoreMMURequestS2H, backingStoreMMU.request);
 
    // algo mmu
-   MMUIndicationProxy algoMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_AlgoMMUIndication);
+   MMUIndicationProxy algoMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_MMUIndicationH2S);
    MMU#(PhysAddrWidth) algoMMU <- mkMMU(1, True, algoMMUIndicationProxy.ifc);
-   MMURequestWrapper algoMMURequestWrapper <- mkMMURequestWrapper(IfcNames_AlgoMMURequest, algoMMU.request);
+   MMURequestWrapper algoMMURequestWrapper <- mkMMURequestWrapper(IfcNames_MMURequestS2H, algoMMU.request);
    
    // nandsim mmu
-   MMUIndicationProxy nandMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_NandMMUIndication);
+   MMUIndicationProxy nandMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_NandMMUIndicationH2S);
    MMU#(PhysAddrWidth) nandMMU <- mkMMU(0, False, nandMMUIndicationProxy.ifc);
-   MMURequestWrapper nandMMURequestWrapper <- mkMMURequestWrapper(IfcNames_NandMMURequest, nandMMU.request);
+   MMURequestWrapper nandMMURequestWrapper <- mkMMURequestWrapper(IfcNames_NandMMURequestS2H, nandMMU.request);
    
    // host memory dma server
-   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_HostMemServerIndication);
+   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_MemServerIndicationH2S);
    let rcs = append(strstr.config_read_client,nandSim.readClient);
    MemServer#(PhysAddrWidth,64,1) hostDma <- mkMemServer(rcs, nandSim.writeClient, cons(backingStoreMMU,cons(algoMMU,nil)), hostMemServerIndicationProxy.ifc);
+   MemServerRequestWrapper memServerRequestWrapper <- mkMemServerRequestWrapper(IfcNames_MemServerRequestS2H, hostDma.request);
 
    // nandsim memory dma server
-   MemServerIndicationProxy nandsimMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_NandMemServerIndication);
+   MemServerIndicationProxy nandsimMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_NandMemServerIndicationH2S);
    MemServer#(PhysAddrWidth,64,1) nandsimDma <- mkMemServer(strstr.haystack_read_client, nil, cons(nandMMU,nil), nandsimMemServerIndicationProxy.ifc);
    mkConnection(nandsimDma.masters[0], nandSim.memSlave);
    
-   Vector#(12,StdPortal) portals;
+   Vector#(13,StdPortal) portals;
 
    portals[0] = nandCfgRequestWrapper.portalIfc;
    portals[1] = nandCfgIndicationProxy.portalIfc;
@@ -99,6 +101,7 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    
    portals[10] = hostMemServerIndicationProxy.portalIfc;
    portals[11] = nandsimMemServerIndicationProxy.portalIfc;
+   portals[12] = memServerRequestWrapper.portalIfc;
    
    let ctrl_mux <- mkSlaveMux(portals);
    

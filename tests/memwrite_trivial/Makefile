@@ -7,4 +7,3 @@ BSVFILES = Memwrite.bsv
 CPPFILES = testmemwrite.cpp
 
 include $(CONNECTALDIR)/Makefile.connectal
-
