@@ -88,6 +88,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    MIFO#(4,busWidthWords,16,TLPTag) completionTagMimo <- mkMIFO();
 
    mimoCfg.bram_based = True;
+   mimoCfg.unguarded = True;
     MIMO#(busWidthWords,4,WriteDataMimoSize,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
     ConfigCounter#(8) writeDataCnt <- mkConfigCounter(0);
     Reg#(Bit#(10)) writeBurstCount <- mkReg(0);
