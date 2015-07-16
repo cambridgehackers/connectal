@@ -321,11 +321,15 @@ if __name__=='__main__':
     if bdef:
         bsvdefines += bdef
 
-    # 'constraints' is now a list of files
+    # 'constraints' is a list of files
     cstr = option_info.get('constraints')
     if cstr:
         for item in cstr:
             options.constraint.insert(0, os.path.join(connectaldir, item))
+    cstr = option_info.get('implconstraints')
+    if cstr:
+        for item in cstr:
+            options.implconstraint.insert(0, os.path.join(connectaldir, item))
 
     bsvdefines += ['BOARD_'+boardname]
 

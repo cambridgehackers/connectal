@@ -5,7 +5,8 @@
         "partname" : "xc7vx485tffg1761-2",
         "need_pcie" : "x7_gen2x8",
         "TOP" : "PcieTop",
-        "constraints": ["constraints/xilinx/vc707g2.xdc"],
+        "constraints": [],
+        "implconstraints": ["constraints/xilinx/vc707g2.xdc"],
         "runscript" : "run.pcietest",
         "CONNECTALFLAGS" : [],
         "rewireclockstring" : ""
