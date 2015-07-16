@@ -1,0 +1,5 @@
+
+S2H_INTERFACES +=  MmRequestTN:MatrixTN.mmRequest TimerRequest:MatrixTN.timerRequest
+H2S_INTERFACES +=  MatrixTN\#\(TDiv\#\(DataBusWidth,32\)\):MmIndication,TimerIndication
+MEM_INTERFACES = lMatrixTN.readClients,lMatrixTN.writeClients
+

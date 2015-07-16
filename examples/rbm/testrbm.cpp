@@ -78,14 +78,14 @@ int main(int argc, const char **argv)
 {
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
  
-  mmdevice = new MmRequestTNProxy(IfcNames_MmRequestPortalS2H);
-  rbmdevice = new RbmRequestProxy(IfcNames_RbmRequestPortalS2H);
-  rbmDeviceIndication = new RbmIndication(IfcNames_RbmIndicationPortalH2S);
-  mmdeviceIndication = new MmIndication(IfcNames_MmIndicationPortalH2S);
-  sigmoiddevice = new SigmoidRequestProxy(IfcNames_SigmoidRequestPortalS2H);
-  sigmoidindication = new SigmoidIndication(IfcNames_SigmoidIndicationPortalH2S);
-  timerdevice = new TimerRequestProxy(IfcNames_TimerRequestPortalS2H);
-  timerdeviceIndication = new TimerIndication(IfcNames_TimerIndicationPortalH2S);
+  mmdevice = new MmRequestTNProxy(IfcNames_MmRequestTNS2H);
+  rbmdevice = new RbmRequestProxy(IfcNames_RbmRequestS2H);
+  rbmDeviceIndication = new RbmIndication(IfcNames_RbmIndicationH2S);
+  mmdeviceIndication = new MmIndication(IfcNames_MmIndicationH2S);
+  sigmoiddevice = new SigmoidRequestProxy(IfcNames_SigmoidRequestS2H);
+  sigmoidindication = new SigmoidIndication(IfcNames_SigmoidIndicationH2S);
+  timerdevice = new TimerRequestProxy(IfcNames_TimerRequestS2H);
+  timerdeviceIndication = new TimerIndication(IfcNames_TimerIndicationH2S);
   DmaManager *dma = platformInit();
 
   if(sem_init(&mul_sem, 1, 0)){

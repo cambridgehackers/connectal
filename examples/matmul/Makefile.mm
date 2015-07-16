@@ -1,7 +1,7 @@
-BSVDIR=$(CONNECTALDIR)/bsv
-INTERFACES        +=  MmRequestTN MmRequestNT TimerRequest MmIndication TimerIndication
-BSVFILES   +=  $(CONNECTALDIR)/lib/rbm/bsv/RbmTypes.bsv $(CONNECTALDIR)/lib/rbm/bsv/Timer.bsv $(DBNTOPBSV)
+
+BSVFILES   +=  $(CONNECTALDIR)/lib/rbm/bsv/RbmTypes.bsv $(CONNECTALDIR)/lib/rbm/bsv/Timer.bsv
 CPPFILES   +=  $(CONNECTALDIR)/lib/matmul/cpp/portalmat.cpp $(TESTCPPFILES)
+
 CONNECTALFLAGS  +=  -D IMPORT_HOSTIF -D MATRIX_TN
 CONNECTALFLAGS  +=  --bscflags="+RTS -K26777216 -RTS -p +:$(CONNECTALDIR)/lib/matmul/bsv"
 CONNECTALFLAGS  +=  --bscflags " -Xc++ -DMATMUL_HACK" -D MATMUL_HACK

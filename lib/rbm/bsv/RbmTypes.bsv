@@ -52,25 +52,6 @@ typedef TMin#(4,J) RowsPerTile;
 typedef TDiv#(J,RowsPerTile) T;
 typedef TMul#(32,N) DmaSz;
 
-typedef enum {
-   IfcNames_MemServerIndicationH2S,
-   IfcNames_MemServerRequestS2H,
-   IfcNames_MMURequestS2H,
-   IfcNames_MMUIndicationH2S,
-   IfcNames_MmIndicationPortalH2S,
-   IfcNames_MmRequestPortalS2H,
-   IfcNames_RbmIndicationPortalH2S,
-   IfcNames_RbmRequestPortalS2H,
-   IfcNames_SigmoidIndicationPortalH2S,
-   IfcNames_SigmoidRequestPortalS2H,
-   IfcNames_TimerIndicationPortalH2S,
-   IfcNames_TimerRequestPortalS2H,
-   IfcNames_FpMacRequestPortalS2H,
-   IfcNames_FpMacIndicationPortalH2S,
-   IfcNames_FpMulRequestPortalS2H,
-   IfcNames_FpMulIndicationPortalH2S
-} IfcNames deriving (Eq,Bits);
-
 interface MmIndication;
    method Action started();
    method Action startSourceAndSink(UInt#(32) startA, UInt#(32) startC, Int#(32) jint);

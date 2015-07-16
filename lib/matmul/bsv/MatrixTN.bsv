@@ -492,7 +492,7 @@ module  mkDramMatrixMultiply#(HostInterface host)(DramMatrixMultiply#(N,TMul#(N,
    interface DmaMatrixMultiplyDebug debug = dmaMMF.debug;
 endmodule
    
-interface MmTN#(numeric type n);
+interface MatrixTN#(numeric type n);
    interface MmRequestTN mmRequest;
    interface TimerRequest timerRequest;
    interface Vector#(2, MemReadClient#(TMul#(32,n)))  readClients;
@@ -562,7 +562,7 @@ module  mkMmTNInternal#(HostInterface host)(MmTNInternal#(N))
    interface Vector writeClients =  dmaMMF.writeClients;
 endmodule
 
-module  mkMmTN#(MmIndication ind, TimerIndication timerInd, HostInterface host)(MmTN#(N))
+module  mkMatrixTN#(HostInterface host, MmIndication ind, TimerIndication timerInd)(MatrixTN#(N))
    provisos (Add#(1,a__,N),
 	     Add#(N,0,n),
 	     Mul#(N,32,DmaSz)
