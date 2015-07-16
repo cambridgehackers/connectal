@@ -90,8 +90,6 @@ generate_target {Synthesis} [get_files %(xci)s]
 read_ip %(xci)s
 '''
 
-tclfileConstraintTemplate='''read_xdc {./constraints/%(xdcname)s}'''
-
 tclboardTemplate='''
 set partname {%(partname)s}
 set boardname {%(boardname)s}
@@ -401,9 +399,6 @@ if __name__=='__main__':
                  'partname': partname,
                  'boardname': boardname,
                  'connectaldir': connectaldir,
-                 'tclfileConstraints': '\n'.join([tclfileConstraintTemplate
-                                                  % { 'xdcname': os.path.basename(f) }
-                                                  for f in options.constraint ]),
                  'read_verilog': '\n'.join([tclReadVerilogTemplate
                                             % { 'verilog': os.path.abspath(f),
                                                 'pattern': '/*.*v' if os.path.isdir(f) else ''} for f in options.verilog]),
