@@ -41,7 +41,6 @@
 
 MmRequestTNProxy *mmdevice = 0;
 DmaManager *dma = 0;
-MMURequestProxy *dmap = 0;
 MemServerRequestProxy *hostMemServerRequest;
 MmIndication *mmdeviceIndication = 0;
 SigmoidIndication *sigmoidindication = 0;
@@ -92,7 +91,7 @@ int main(int argc, const char **argv)
   timerdeviceIndication = new TimerIndication(IfcNames_TimerIndicationPortal);
 
   hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  dmap = new MMURequestProxy(IfcNames_HostMMURequest);
+MMURequestProxy *dmap = new MMURequestProxy(IfcNames_HostMMURequest);
   dma = new DmaManager(dmap);
   hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
   hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
@@ -109,7 +108,7 @@ int main(int argc, const char **argv)
    exit(1);
   }
 
-  matAllocator = new PortalMatAllocator(dmap, dma);
+  matAllocator = new PortalMatAllocator(dma);
   configureSigmoidTable();
   int rv = 0;
 

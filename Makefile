@@ -109,7 +109,7 @@ scripts/syntax/parsetab.py: scripts/syntax.py
 	[ -e out ] || mkdir out
 	python scripts/syntax.py
 
-allarchlist = ac701 zedboard zc702 zc706 kc705 vc707 zynq100 v2000t bluesim miniitx100 de5 htg4 vsim parallella xsim zybo kc705g2
+allarchlist = ac701 zedboard zc702 zc706 kc705 vc707 zynq100 v2000t bluesim miniitx100 de5 htg4 vsim parallella xsim zybo kc705g2 vc707g2
 
 #################################################################################################
 

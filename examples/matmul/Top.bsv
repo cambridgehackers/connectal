@@ -51,26 +51,26 @@ import MatrixNT::*;
 
 module  mkConnectalTop#(HostInterface host)(ConnectalTop#(PhysAddrWidth,TMul#(32,N),Empty,NumberOfMasters));
 
-   MmIndicationProxy mmIndicationProxy <- mkMmIndicationProxy(IfcNames_MmIndicationPortal);
-   TimerIndicationProxy timerIndicationProxy <- mkTimerIndicationProxy(IfcNames_TimerIndicationPortal);
+   MmIndicationProxy mmIndicationProxy <- mkMmIndicationProxy(IfcNames_MmIndicationPortalH2S);
+   TimerIndicationProxy timerIndicationProxy <- mkTimerIndicationProxy(IfcNames_TimerIndicationPortalH2S);
 `ifdef MATRIX_TN
    MmTN#(N) mm <- mkMmTN(mmIndicationProxy.ifc, timerIndicationProxy.ifc, host);
-   MmRequestTNWrapper mmRequestWrapper <- mkMmRequestTNWrapper(IfcNames_MmRequestPortal,mm.mmRequest);
+   MmRequestTNWrapper mmRequestWrapper <- mkMmRequestTNWrapper(IfcNames_MmRequestPortalS2H,mm.mmRequest);
 `else
 `ifdef MATRIX_NT
    MmNT#(N) mm <- mkMmNT(mmIndicationProxy.ifc, timerIndicationProxy.ifc, host);
-   MmRequestNTWrapper mmRequestWrapper <- mkMmRequestNTWrapper(IfcNames_MmRequestPortal,mm.mmRequest);
+   MmRequestNTWrapper mmRequestWrapper <- mkMmRequestNTWrapper(IfcNames_MmRequestPortalS2H,mm.mmRequest);
 `endif
 `endif
-   TimerRequestWrapper timerRequestWrapper <- mkTimerRequestWrapper(IfcNames_TimerRequestPortal,mm.timerRequest);
+   TimerRequestWrapper timerRequestWrapper <- mkTimerRequestWrapper(IfcNames_TimerRequestPortalS2H,mm.timerRequest);
    
-   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_HostMMUIndication);
+   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_MMUIndicationH2S);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUIndicationProxy.ifc);
-   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(IfcNames_HostMMURequest, hostMMU.request);
+   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(IfcNames_MMURequestS2H, hostMMU.request);
 
-   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_HostMemServerIndication);
+   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_MemServerIndicationH2S);
    MemServer#(PhysAddrWidth, TMul#(32,N), NumberOfMasters) dma <- mkMemServer(mm.readClients, mm.writeClients, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
-   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(IfcNames_HostMemServerRequest, dma.request);
+   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(IfcNames_MemServerRequestS2H, dma.request);
 
    Vector#(8,StdPortal) portals;
    portals[0] = mmRequestWrapper.portalIfc;
