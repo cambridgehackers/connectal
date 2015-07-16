@@ -118,11 +118,11 @@ fpgamake.mk: $(VFILE) Makefile prepare_bin_target
 	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk --board=%(boardname)s --part=%(partname)s %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s %(qsf)s %(chipscope)s -t $(MKTOP) %(FPGAMAKE_DEFINE)s %(cachedir)s -b hw/mkTop.bit %(prtop)s %(reconfig)s $(VERILOG_PATH)
 
 synth.%%:fpgamake.mk
-	make -f fpgamake.mk Synth/$*/$*-synth.dcp
+	$(MAKE) -f fpgamake.mk Synth/$*/$*-synth.dcp
 
 hw/mkTop.bit: prepare_bin_target %(genxdc_dep)s fpgamake.mk
 	$(Q)mkdir -p hw
-	$(Q)make -f fpgamake.mk
+	$(Q)$(MAKE) -f fpgamake.mk
 ifneq ($(XILINX),)
 	$(Q)rsync -rav --include="*/" --include="*.rpt" --exclude="*" Impl/ bin
 else ifneq ($(ALTERA),)
@@ -176,7 +176,7 @@ include $(CONNECTALDIR)/scripts/Makefile.connectal.build
 
 variantTemplate='''
 extratarget::
-	make -C ../variant%(varname)s
+	$(MAKE) -C ../variant%(varname)s
 '''
 
 androidmk_template='''
