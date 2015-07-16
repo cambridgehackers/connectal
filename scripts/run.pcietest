@@ -5,6 +5,11 @@ export SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 echo "run.pcie parameters are:" $*
 SSHPARAM=" -o StrictHostKeyChecking=no"
 
+if [ "$1" == "" ]; then
+    echo "usage: $0 ubuntu.exe" >&2
+    exit -1
+fi
+
 if [ "$SERIALNO" != "" ]; then
     BOARD_SERIAL="SERIALNO=$SERIALNO"
 else
