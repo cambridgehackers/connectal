@@ -118,8 +118,8 @@ endmodule
 
 `ifdef XSIM
 import "BVI" XsimLink =
-module mkSimLink(SimLink#(32));
-
+module mkSimLink(SimLink#(dataWidth));
+   parameter DATAWIDTH=valueOf(dataWidth);
    method start(start_linknumber, start_listening) enable (en_start);
    method link_up linkUp();
    interface PipeOut rx;
@@ -131,6 +131,6 @@ module mkSimLink(SimLink#(32));
       method enq(tx_enq_v) enable (en_tx_enq) ready (rdy_tx_enq);
       method tx_not_full notFull();
    endinterface
-   schedule (rx_first, rx_notEmpty, tx_notFull, rx_deq, tx_enq, start) CF (rx_first, rx_notEmpty, tx_notFull, rx_deq, tx_enq, start);
+   schedule (rx_first, rx_notEmpty, tx_notFull, rx_deq, tx_enq, start, linkUp) CF (rx_first, rx_notEmpty, tx_notFull, rx_deq, tx_enq, start, linkUp);
 endmodule
 `endif
