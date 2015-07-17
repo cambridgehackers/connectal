@@ -29,7 +29,7 @@ argparser = argparse.ArgumentParser("Generate Top.bsv for an project.")
 argparser.add_argument('--project-dir', help='project directory')
 argparser.add_argument('--interface', help='exported interface declaration', action='append')
 argparser.add_argument('--board', help='Board type')
-argparser.add_argument('--importfiles', help='added imports', action='append')
+argparser.add_argument('--importfiles', default=[], help='added imports', action='append')
 argparser.add_argument('--portname', help='added portal names to enum list', action='append')
 argparser.add_argument('--wrapper', help='exported wrapper interfaces', action='append')
 argparser.add_argument('--proxy', help='exported proxy interfaces', action='append')
@@ -256,7 +256,7 @@ def instMod(args, modname, modext, constructor, tparam, memFlag):
         instantiateRequest[pmap['modname']].args.append(pmap['args'])
     if pmap['modname'] not in instantiatedModules:
         instantiatedModules.append(pmap['modname'])
-    importfiles.append(modname)
+    options.importfiles.append(modname)
 
 def flushModules(key):
         temp = instantiateRequest.get(key)
@@ -301,7 +301,6 @@ if __name__=='__main__':
     portalList = []
     portalCount = 0
     instantiatedModules = []
-    importfiles = []
     exportedNames = []
     if options.board == 'xsim':
         options.cnoc = True
@@ -310,7 +309,6 @@ if __name__=='__main__':
     else:
         exportedNames.extend(['export mkConnectalTop;'])
     if options.importfiles:
-        importfiles = options.importfiles
         for item in options.importfiles:
              exportedNames.append('export %s::*;' % item)
     enumList = []
@@ -355,7 +353,7 @@ if __name__=='__main__':
     if clientCount:
         pipeInstantiate.append(memEngineInst % {'clientCount': clientCount})
     topsubsts = {'enumList': ','.join(enumList),
-                 'generatedImport': '\n'.join(['import %s::*;' % p for p in importfiles]),
+                 'generatedImport': '\n'.join(['import %s::*;' % p for p in options.importfiles]),
                  'generatedTypedefs': '\n'.join(['typedef %d NumberOfRequests;' % len(requestList),
                                                  'typedef %d NumberOfIndications;' % len(indicationList)]),
                  'pipeInstantiate' : '\n'.join(sorted(pipeInstantiate)),
