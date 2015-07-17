@@ -117,7 +117,7 @@ module mkXsimReadWrite(XsimDmaReadWrite);
    method write32(write32_handle, write32_addr, write32_data) enable (en_write32);
    method readrequest(readrequest_handle, readrequest_addr) enable (en_readrequest) ready (rdy_readrequest);
    method readresponse_data readresponse() enable (en_readresponse) ready (rdy_readresponse);
-   schedule (init, initfd, write32, readrequest, readresponse) CF (init, initfd, write32, readrequest, readresponse);
+   schedule (init, initfd, write32, readrequest, readresponse, idreturn) CF (init, initfd, write32, readrequest, readresponse, idreturn);
 endmodule
 
 module mkSimDma(SimDma#(dataWidth) ifc)
