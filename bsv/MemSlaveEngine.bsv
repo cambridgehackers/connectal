@@ -33,6 +33,7 @@ import ClientServer :: *;
 import MemTypes     :: *;
 import Probe        :: *;
 import ConfigCounter ::*;
+import ConnectalBramFifo :: *;
 
 typedef struct {
    TLPData#(16) tlp;
@@ -74,6 +75,9 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 
     let beat_shift = fromInteger(valueOf(beatShift));
 
+   let clock <- exposeCurrentClock();
+   let reset <- exposeCurrentReset();
+
     FIFOF#(TLPData#(16)) tlpOutFifo <- mkFIFOF;
     FIFOF#(TLPData#(16)) tlpInFifo <- mkFIFOF;
     FIFO#(TlpWriteHeaderInfo) tlpWriteHeaderFifo <- mkFIFO;
@@ -87,11 +91,10 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    MIFO#(4,busWidthWords,16,Bit#(32)) completionMimo <- mkMIFO();
    MIFO#(4,busWidthWords,16,TLPTag) completionTagMimo <- mkMIFO();
 
-   mimoCfg.bram_based = True;
-   mimoCfg.unguarded = True;
-    MIMO#(busWidthWords,4,WriteDataMimoSize,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
-    ConfigCounter#(8) writeDataCnt <- mkConfigCounter(0);
-    Reg#(Bit#(10)) writeBurstCount <- mkReg(0);
+   Vector#(4, FIFOF#(Bit#(32))) writeDataFifos <- replicateM(mkDualClockBramFIFOF(clock,reset,clock,reset));
+   ConfigCounter#(8) writeDataCnt <- mkConfigCounter(0);
+   Reg#(Bit#(TLog#(4))) writeDataLane <- mkReg(0);
+   Reg#(Bit#(10)) writeBurstCount <- mkReg(0);
    FIFO#(Bit#(10)) writeBurstCountFifo <- mkFIFO();
     Reg#(TLPLength)  writeDwCount <- mkReg(0); // how many 4 byte (double) words to send
     Reg#(LUInt#(4))    tlpDwCount <- mkReg(0); // how many to send in the next tlp (at most 4)
@@ -104,19 +107,10 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 
    Wire#(Bool) writeHeaderTlpWire <- mkDWire(False);
    Probe#(Bool) writeHeaderAvailableProbe <- mkProbe;
-   Wire#(Bool) writeDataMimoEnqWire <- mkDWire(False);
-   Probe#(Bool) writeDataMimoEnqProbe <- mkProbe;
-   let    writeDataMimoCountProbe <- mkProbe;
-   let writeDataMimoEnqReadyProbe <- mkProbe;
    Probe#(Bool) writeInProgressProbe <- mkProbe;
    Probe#(Bit#(10)) writeBurstCountProbe <- mkProbe;
-   rule updateProbe0;
-      writeDataMimoCountProbe    <= writeDataMimo.count();
-      writeDataMimoEnqReadyProbe <= writeDataMimo.enqReadyN(fromInteger(valueOf(busWidthWords)));
-   endrule
    rule updateProbe2;
       writeHeaderAvailableProbe <= writeHeaderTlpWire;
-      writeDataMimoEnqProbe <= writeDataMimoEnqWire;
    endrule
 
    Reg#(Bool) writeDataCntAboveThreshold <- mkReg(False);
@@ -144,8 +138,8 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	 Vector#(4, Bit#(32)) v = unpack(0);
          tlp.sof = True;
 `ifdef AXI
-         v = writeDataMimo.first();
-	 writeDataMimo.deq(1);
+         v[0] = writeDataFifos[0].first();
+	 writeDataFifos[0].deq();
 	 hdr_3dw.data = byteSwap(v[0]);
          tlp.eof = (dwCount == 1) ? True : False;
          dwCount = dwCount - 1;
@@ -154,8 +148,8 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
          let quadWordAligned = isQuadWordAligned(getLowerAddr(hdr_3dw.addr, hdr_3dw.firstbe));
          // if quad-word aligned, insert bubble.
          if (!quadWordAligned) begin
-            v = writeDataMimo.first();
-            writeDataMimo.deq(1);
+            v[0] = writeDataFifos[0].first();
+	    writeDataFifos[0].deq();
             hdr_3dw.data = v[0];
          end
          else begin
@@ -189,7 +183,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 
    endrule
 
-   rule writeTlps if (writeInProgress); // already verified  writeDataMimo.deqReadyN(tlpDwCount)) for this transaction
+   rule writeTlps if (writeInProgress);
       TLPData#(16) tlp = defaultValue;
       tlp.sof = False;
       Vector#(4, Bit#(32)) v = unpack(0);
@@ -202,23 +196,39 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       end
 `endif
 
-      // The MIMO implicit guard only checks for availability of 1 element
-      // so we explicitly check for the number of elements required
-      writeDataMimo.deq(tlpDwCount);
-      v = writeDataMimo.first();
+      Bit#(4) byteEnable = 0;
+      if (tlpDwCount == 4) begin
+	 byteEnable = 4'b1111;
+	 tlp.be = 16'hffff;
+      end else if (tlpDwCount == 3) begin
+	 byteEnable = 4'b0111;
+	 tlp.be = 16'hfff0;
+      end else if (tlpDwCount == 2) begin
+	 byteEnable = 4'b0011;
+	 tlp.be = 16'hff00;
+      end else if (tlpDwCount == 1) begin
+	 byteEnable = 4'b0001;
+	 tlp.be = 16'hf000;
+      end
+
+      for (Integer i = 0; i < 4; i = i + 1) begin
+	 if (byteEnable[i] == 1) begin
+	   v[i] = writeDataFifos[i].first();
+	   writeDataFifos[i].deq();
+	 end
+      end
+      $display("writeTlps: byteEnable=%h tlp.be=%h", byteEnable, tlp.be);
+      $display("writeTlps: v=%h", v);
+      for (Integer i = 0; i < currDwCount; i = i + 1) begin
+	 tlp.data[(i+1)*32-1:i*32] = v[(currDwCount-1)-i];
+      end
+      $display("writeTlps: tlp.data=%h", tlp.data);
+
       let dwCount = writeDwCount - extend(pack(tlpDwCount));
       writeDwCount <= dwCount;
       tlpDwCount <= truncate(min(fromInteger(currDwCount),unpack(dwCount)));
       writeDataCnt.decrement(unpack(extend(pack(tlpDwCount))));
       lastTlp <= (dwCount <= 4);
-      if (tlpDwCount == 4)
-	 tlp.be = 16'hffff;
-      else if (tlpDwCount == 3)
-	 tlp.be = 16'hfff0;
-      else if (tlpDwCount == 2)
-	 tlp.be = 16'hff00;
-      else if (tlpDwCount == 1)
-	 tlp.be = 16'hf000;
       tlp.eof = lastTlp;
       if (lastTlp) begin
 	 writeInProgress <= False;
@@ -226,10 +236,6 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	 doneTag.enq(writeTag.first());
 	 writeTag.deq();
 	 $display("writeDwCount=%d will be zero", writeDwCount);
-      end
-
-      for (Integer i = 0; i < currDwCount; i = i + 1) begin
-	 tlp.data[(i+1)*32-1:i*32] = v[(currDwCount-1)-i];
       end
 
       tlpOutFifo.enq(tlp);
@@ -300,7 +306,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    endrule
 
    FIFO#(PhysMemRequest#(40)) readReqFifo <- mkFIFO();
-   rule readReqRule if (!writeInProgress && !writeDataMimo.deqReady());
+   rule readReqRule if (!writeInProgress && !writeDataFifos[0].notEmpty());
       let req <- toGet(readReqFifo).get();
       let burstLen = req.burstLen >> beat_shift;
       let addr = req.addr;
@@ -349,7 +355,8 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       interface Put writeReq;
          method Action put(PhysMemRequest#(40) req); // if (writeBurstCount == 0);
 	    let burstLen = req.burstLen >> beat_shift;
-	    let addr = req.addr;
+	    //let addr = 40'hBC00000000 | req.addr;
+	    let addr = 40'hBC00000000 | req.addr;
 	    let awid = req.tag;
 	    let writeIs3dw = False;
 
@@ -396,7 +403,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	endinterface
       interface Put writeData;
          method Action put(MemData#(buswidth) wdata)
-	      provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth)) if (writeDataMimo.enqReadyN(fromInteger(valueOf(busWidthWords))));
+	    provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth));
 
 	    let burstLen = writeBurstCount;
 	    if (burstLen == 0) begin
@@ -406,9 +413,22 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	    writeBurstCountProbe <= extend(burstLen-1);
 
 	    Vector#(busWidthWords, Bit#(32)) v = unpack(wdata.data);
-	    writeDataMimo.enq(fromInteger(valueOf(busWidthWords)), v);
+	    $display("writeDataLane %d busWidthWords=%d v=%h", writeDataLane, valueOf(busWidthWords), v);
+	    for (Integer i = 0; i < valueOf(busWidthWords); i = i + 1) begin
+	       Bit#(32) lanedata = v[i];
+	       $display("lane %d lanedata %h", i, lanedata);
+	       writeDataFifos[writeDataLane + fromInteger(i)].enq(lanedata);
+	    end
+      
+	    if (burstLen == 1) begin
+	       writeDataLane <= 0;
+	   end
+	   else begin
+	      Bit#(TAdd#(TLog#(4),1)) incr = fromInteger(valueOf(busWidthWords));
+	      writeDataLane <= writeDataLane + truncate(incr);
+	   end
+      
             writeDataCnt.increment(fromInteger(valueOf(busWidthWords)));
-	    writeDataMimoEnqWire <= True;
          endmethod
        endinterface
       interface Get writeDone;
