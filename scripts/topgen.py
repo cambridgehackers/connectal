@@ -111,10 +111,22 @@ import IfcNames::*;
 module mkCnocTop
 `ifdef IMPORT_HOSTIF
        #(HostInterface host)
+`else
+`ifdef IMPORT_HOST_CLOCKS // enables synthesis boundary
+       #(Clock derivedClockIn, Reset derivedResetIn)
+`else
+// otherwise no params
+`endif
 `endif
        (%(moduleParam)s);
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
+`ifdef IMPORT_HOST_CLOCKS // enables synthesis boundary
+   HostInterface host = (interface HostInterface;
+                           interface Clock derivedClock = derivedClockIn;
+                           interface Reset derivedReset = derivedResetIn;
+                         endinterface);
+`endif
 %(pipeInstantiate)s
 
 %(portalInstantiate)s
