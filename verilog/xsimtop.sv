@@ -165,11 +165,14 @@ module XsimDmaReadWrite(input CLK,
 endmodule
 
 
+import "DPI-C" function int  bsimLinkUp(input int linknumber, input int listening);
 import "DPI-C" function void bsimLinkOpen(input int linknumber, input int listening);
 import "DPI-C" function int bsimLinkCanReceive(input int linknumber, input int listening);
 import "DPI-C" function int bsimLinkCanTransmit(input int linknumber, input int listening);
 import "DPI-C" function int bsimLinkReceive32(input int linknumber, input int listening);
 import "DPI-C" function int bsimLinkTransmit32(input int linknumber, input int listening, input int val);
+import "DPI-C" function int bsimLinkReceive64(input int linknumber, input int listening);
+import "DPI-C" function int bsimLinkTransmit64(input int linknumber, input int listening, input int val);
 
 module XsimLink #(parameter DATAWIDTH=32) (
 		 input RST,
@@ -220,7 +223,7 @@ module XsimLink #(parameter DATAWIDTH=32) (
 	 tx_reg <= 32'haaaaaaaa;
       end
       else begin
-	 if (en_start == 1) begin
+	 if (en_start == 1 && started == 0) begin
 	    $display("start linknumber=%d listening=%d", start_linknumber, start_listening);
 	    bsimLinkOpen(start_linknumber, start_listening);
 	    linknumber_reg <= start_linknumber;
@@ -229,14 +232,20 @@ module XsimLink #(parameter DATAWIDTH=32) (
 	 end
 	 
 	 if (started && !rx_valid && bsimLinkCanReceive(linknumber_reg, listeningreg)) begin
-	    rx_val = bsimLinkReceive32(linknumber_reg, listeningreg);
+	    if (DATAWIDTH == 32)
+	      rx_val = bsimLinkReceive32(linknumber_reg, listeningreg);
+	    else
+	      rx_val = bsimLinkReceive64(linknumber_reg, listeningreg);
 	    rx_reg <= rx_val;
 	    rx_valid <= 1;
 	    $display("link %d.%d received %d %h", linknumber_reg, listeningreg, rx_valid, rx_val);
 	 end
 	 if (started && tx_valid && bsimLinkCanTransmit(linknumber_reg, listeningreg)) begin
 	    $display("link %d.%d transmitting %d %h", linknumber_reg, listeningreg, tx_valid, tx_reg);
-	    bsimLinkTransmit32(linknumber_reg, listeningreg, tx_reg);
+	    if (DATAWIDTH == 32)
+	      bsimLinkTransmit32(linknumber_reg, listeningreg, tx_reg);
+	    else
+	      bsimLinkTransmit64(linknumber_reg, listeningreg, tx_reg);
 	    tx_valid <= 0;
 	 end
 	 if (started && en_rx_deq) begin
