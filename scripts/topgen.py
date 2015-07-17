@@ -27,12 +27,12 @@ import util
 
 argparser = argparse.ArgumentParser("Generate Top.bsv for an project.")
 argparser.add_argument('--project-dir', help='project directory')
-argparser.add_argument('--interface', help='exported interface declaration', action='append')
+argparser.add_argument('--interface', default=[], help='exported interface declaration', action='append')
 argparser.add_argument('--board', help='Board type')
 argparser.add_argument('--importfiles', default=[], help='added imports', action='append')
-argparser.add_argument('--portname', help='added portal names to enum list', action='append')
-argparser.add_argument('--wrapper', help='exported wrapper interfaces', action='append')
-argparser.add_argument('--proxy', help='exported proxy interfaces', action='append')
+argparser.add_argument('--portname', default=[], help='added portal names to enum list', action='append')
+argparser.add_argument('--wrapper', default=[], help='exported wrapper interfaces', action='append')
+argparser.add_argument('--proxy', default=[], help='exported proxy interfaces', action='append')
 argparser.add_argument('--memread', default=[], help='memory read interfaces', action='append')
 argparser.add_argument('--memwrite', default=[], help='memory read interfaces', action='append')
 argparser.add_argument('--cnoc', help='generate mkCnocTop', action='store_true')
@@ -208,7 +208,7 @@ def instMod(args, modname, modext, constructor, tparam, memFlag):
         args = modname + tstr
     pmap['args'] = args % pmap
     if modext:
-        enumList.append('IfcNames_' + modname + tstr)
+        options.portname.append('IfcNames_' + modname + tstr)
         pmap['argsConfig'] = modname + memFlag + tstr
         if modext == 'Output':
             pmap['stype'] = 'Indication';
@@ -233,7 +233,7 @@ def instMod(args, modname, modext, constructor, tparam, memFlag):
             pipeInstantiate.append(pipeInstantiation % pmap)
             connectInstantiate.append(connectInstantiation % pmap)
         if memFlag:
-            enumList.append('IfcNames_' + modname + memFlag + tstr)
+            options.portname.append('IfcNames_' + modname + memFlag + tstr)
             addPortal('IfcNames_' + pmap['argsConfig'], '%(modname)sCW' % pmap, 'Request')
         else:
             addPortal('IfcNames_' + pmap['args'], '%(modname)s' % pmap, pmap['stype'])
@@ -311,16 +311,7 @@ if __name__=='__main__':
     if options.importfiles:
         for item in options.importfiles:
              exportedNames.append('export %s::*;' % item)
-    enumList = []
-    if options.portname:
-        enumList = options.portname
     interfaceList = []
-    if not options.proxy:
-        options.proxy = []
-    if not options.wrapper:
-        options.wrapper = []
-    if not options.interface:
-        options.interface = []
 
     for pitem in options.proxy:
         pmap = parseParam(pitem, True)
@@ -352,7 +343,7 @@ if __name__=='__main__':
     memory_flag = 'MemServer' in instantiatedModules
     if clientCount:
         pipeInstantiate.append(memEngineInst % {'clientCount': clientCount})
-    topsubsts = {'enumList': ','.join(enumList),
+    topsubsts = {'enumList': ','.join(options.portname),
                  'generatedImport': '\n'.join(['import %s::*;' % p for p in options.importfiles]),
                  'generatedTypedefs': '\n'.join(['typedef %d NumberOfRequests;' % len(requestList),
                                                  'typedef %d NumberOfIndications;' % len(indicationList)]),
