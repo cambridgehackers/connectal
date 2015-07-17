@@ -43,7 +43,7 @@ static int dma_trace ;//= 1;
 
 #define BUFFER_CHECK \
     if (!dma_info[id][pref].buffer || offset >= dma_info[id][pref].buffer_len) { \
-    fprintf(stderr, "BsimDma [%s:%d]: buffer %p len %d; reference id %d pref %d offset %d\n", __FUNCTION__, __LINE__, dma_info[id][pref].buffer, dma_info[id][pref].buffer_len, id, pref, offset); \
+    fprintf(stderr, "BsimDma [%s:%d]: Error: buffer %p len %d; reference id %d pref %d offset %d\n", __FUNCTION__, __LINE__, dma_info[id][pref].buffer, dma_info[id][pref].buffer_len, id, pref, offset); \
       exit(-1); \
     }
 
@@ -113,7 +113,7 @@ extern "C" void simDma_init(uint32_t id, uint32_t pref, uint32_t size)
       dma_info[id][pref].buffer = (unsigned char *)mmap(0,
           dma_info[id][pref].size_accum, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, dma_info[id][pref].fd, 0);
       if (dma_info[id][pref].buffer == MAP_FAILED) {
-	fprintf(stderr, "simDma_init: mmap failed fd %x buffer %p size %x errno %d\n", dma_info[id][pref].fd, dma_info[id][pref].buffer, size, errno);
+	fprintf(stderr, "simDma_init Error: mmap failed fd %x buffer %p size %x errno %d\n", dma_info[id][pref].fd, dma_info[id][pref].buffer, size, errno);
 	exit(-1);
       }
       dma_info[id][pref].buffer_len = dma_info[id][pref].size_accum;
