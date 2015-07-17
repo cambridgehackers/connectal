@@ -120,7 +120,8 @@ endmodule
 import "BVI" XsimLink =
 module mkSimLink(SimLink#(32));
 
-   method start(linknumber, listening) enable (en_start);
+   method start(start_linknumber, start_listening) enable (en_start);
+   method link_up linkUp();
    interface PipeOut rx;
       method rx_first first() ready (rdy_rx_first);
       method deq() enable (en_rx_deq) ready (rdy_rx_deq);
