@@ -81,6 +81,7 @@ argparser.add_argument('--nonstrict', help='If nonstrict, pass -Wall to gcc, oth
 argparser.add_argument('--prtop', help='Filename of previously synthesized top level for partial reconfiguration', default=None)
 argparser.add_argument('--prvariant', default=[], help='name of a variant for partial reconfiguration', action='append')
 argparser.add_argument('--reconfig', default=[], help='partial reconfig module names', action='append')
+argparser.add_argument('--bsvpath', default=[], help='directories to add to bsc search path', action='append')
 
 noisyFlag=False
 
@@ -459,6 +460,7 @@ if __name__=='__main__':
         protolist = [os.path.abspath(fn) for fn in options.protobuf]
     make.write(makefileTemplate % {'connectaldir': connectaldir,
                                    'bsvpath': ':'.join(list(set([os.path.dirname(os.path.abspath(bsvfile)) for bsvfile in (options.bsvfile + [project_dir])])
+                                                            | set([os.path.abspath(bsvpath) for bsvpath in options.bsvpath])
                                                             | set([os.path.join(connectaldir, 'bsv')])
                                                             | set([os.path.join(connectaldir, 'lib/bsv')])
                                                             | set([os.path.join(connectaldir, 'generated/xilinx')])
