@@ -171,8 +171,8 @@ import "DPI-C" function int bsimLinkCanReceive(input int linknumber, input int l
 import "DPI-C" function int bsimLinkCanTransmit(input int linknumber, input int listening);
 import "DPI-C" function int bsimLinkReceive32(input int linknumber, input int listening);
 import "DPI-C" function void bsimLinkTransmit32(input int linknumber, input int listening, input int val);
-import "DPI-C" function int bsimLinkReceive64(input int linknumber, input int listening);
-import "DPI-C" function void bsimLinkTransmit64(input int linknumber, input int listening, input int val);
+import "DPI-C" function longint bsimLinkReceive64(input int linknumber, input int listening);
+import "DPI-C" function void bsimLinkTransmit64(input int linknumber, input int listening, input longint val);
 
 module XsimLink #(parameter DATAWIDTH=32) (
 		 input RST,
@@ -202,6 +202,7 @@ module XsimLink #(parameter DATAWIDTH=32) (
    reg 			[DATAWIDTH-1:0] rx_reg;
    reg 			[DATAWIDTH-1:0] tx_reg;
    int   		       rx_val;
+   longint   		       rx_val64;
 
    assign rx_first     = rx_reg;
    assign rdy_rx_first = rx_valid && started;
@@ -232,11 +233,14 @@ module XsimLink #(parameter DATAWIDTH=32) (
 	 end
 	 
 	 if (started && !rx_valid && bsimLinkCanReceive(linknumber_reg, listeningreg)) begin
-	    if (DATAWIDTH == 32)
-	      rx_val = bsimLinkReceive32(linknumber_reg, listeningreg);
-	    else
-	      rx_val = bsimLinkReceive64(linknumber_reg, listeningreg);
-	    rx_reg <= rx_val;
+	    if (DATAWIDTH == 32) begin
+	       rx_val = bsimLinkReceive32(linknumber_reg, listeningreg);
+	       rx_reg <= rx_val;
+	    end
+	    else begin
+	       rx_val64 = bsimLinkReceive64(linknumber_reg, listeningreg);
+	       rx_reg <= rx_val64;
+	    end
 	    rx_valid <= 1;
 	    $display("link %d.%d received %d %h", linknumber_reg, listeningreg, rx_valid, rx_val);
 	 end
