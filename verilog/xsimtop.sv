@@ -170,9 +170,9 @@ import "DPI-C" function void bsimLinkOpen(input int linknumber, input int listen
 import "DPI-C" function int bsimLinkCanReceive(input int linknumber, input int listening);
 import "DPI-C" function int bsimLinkCanTransmit(input int linknumber, input int listening);
 import "DPI-C" function int bsimLinkReceive32(input int linknumber, input int listening);
-import "DPI-C" function int bsimLinkTransmit32(input int linknumber, input int listening, input int val);
+import "DPI-C" function void bsimLinkTransmit32(input int linknumber, input int listening, input int val);
 import "DPI-C" function int bsimLinkReceive64(input int linknumber, input int listening);
-import "DPI-C" function int bsimLinkTransmit64(input int linknumber, input int listening, input int val);
+import "DPI-C" function void bsimLinkTransmit64(input int linknumber, input int listening, input int val);
 
 module XsimLink #(parameter DATAWIDTH=32) (
 		 input RST,
