@@ -2,9 +2,9 @@
 BSVFILES   +=  $(CONNECTALDIR)/lib/rbm/bsv/RbmTypes.bsv $(CONNECTALDIR)/lib/rbm/bsv/Timer.bsv
 CPPFILES   +=  $(CONNECTALDIR)/lib/matmul/cpp/portalmat.cpp $(TESTCPPFILES)
 
-CONNECTALFLAGS  +=  -D IMPORT_HOSTIF -D MATRIX_TN
-CONNECTALFLAGS  +=  --bscflags="+RTS -K26777216 -RTS -p +:$(CONNECTALDIR)/lib/matmul/bsv"
-CONNECTALFLAGS  +=  --bscflags " -Xc++ -DMATMUL_HACK" -D MATMUL_HACK
+CONNECTALFLAGS  +=  -D IMPORT_HOSTIF -D MATRIX_TN -D MATMUL_HACK
+CONNECTALFLAGS  +=  --bscflags="+RTS -K26777216 -RTS"
+CONNECTALFLAGS  +=  --bsvpath $(CONNECTALDIR)/lib/matmul/bsv
 
 Dma = Dma
 PINS = Std
