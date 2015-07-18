@@ -52,10 +52,14 @@ interface GyroSampleStream;
    method Action sample(Int#(16) x, Int#(16) y, Int#(16) z);
 endinterface
 
-interface GyroController;
-   interface GyroCtrlRequest req;
+interface GyroSimplePins;
    interface SpiMasterPins spi;
    interface LEDS leds;
+endinterface
+
+interface GyroController;
+   interface GyroCtrlRequest req;
+   interface GyroSimplePins pins;
    interface MemWriteClient#(64) dmaClient;
 endinterface
 
@@ -193,10 +197,12 @@ module mkGyroController#(GyroCtrlIndication ind)(GyroController);
       endmethod
    endinterface
    
-   interface LEDS leds;
-      method Bit#(LedsWidth) leds() = truncate(pack(cWrapCnt));
+   interface GyroSimplePins pins;
+      interface SpiMasterPins spi = spiCtrl.pins;
+      interface LEDS leds;
+         method Bit#(LedsWidth) leds() = truncate(pack(cWrapCnt));
+      endinterface
    endinterface
-   interface SpiMasterPins spi = spiCtrl.pins;
    interface dmaClient = we.dmaClient;
       
 endmodule

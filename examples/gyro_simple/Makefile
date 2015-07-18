@@ -1,11 +1,13 @@
-
 CONNECTALDIR ?= ../..
-ZBR_BSV = $(CONNECTALDIR)/lib/zedboard_robot/bsv
-ZBR_CPP = $(CONNECTALDIR)/lib/zedboard_robot/cpp
-INTERFACES = GyroCtrlRequest GyroCtrlIndication GyroSampleStream
-BSVFILES = $(ZBR_BSV)/GyroController.bsv Top.bsv
-CPPFILES = test_gyro.cpp $(ZBR_CPP)/read_buffer.cpp
-NUMBER_OF_MASTERS = 1
+S2H_INTERFACES = GyroCtrlRequest:GyroController.req
+H2S_INTERFACES = GyroController:GyroCtrlIndication
+MEM_INTERFACES = nil,cons\(lGyroController.dmaClient,nil\)
+INTERFACES = GyroSampleStream
+AUTOTOP = --interface pins:GyroController.pins --importfiles GyroController --portname IfcNames_GyroSampleStream
+
+ZBR = $(CONNECTALDIR)/lib/zedboard_robot
+BSVFILES = $(ZBR)/bsv/GyroController.bsv
+CPPFILES = test_gyro.cpp $(ZBR)/cpp/read_buffer.cpp
 
 PIN_TYPE = GyroSimplePins
 PINOUT_FILE = pinout.json
