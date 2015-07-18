@@ -42,7 +42,6 @@ void* drive_hbridges(void *_x)
 {
   HBridgeCtrlRequestProxy *device = (HBridgeCtrlRequestProxy*)_x;
   sleep(20);
-
   // for(int i = 0; i < 2; i++){
   //   MOVE_FOREWARD(POWER_5);
   //   sleep(1);
@@ -62,7 +61,6 @@ void* drive_hbridges(void *_x)
 
   //   sleep(1);
   // }
-
   for(int i = 0; i < 30; i++){
     TURN_RIGHT(POWER_4);
     usleep(100000);
@@ -70,8 +68,7 @@ void* drive_hbridges(void *_x)
     sleep(1);
   }
   STOP;
-
-
+  return NULL;
 }
 
 int send_aux(GyroSampleStreamProxy *gssp, void*b, int len, int drop, int spew, int send, MaxSonarSampleStreamProxy *msssp, int usecs)
@@ -95,20 +92,20 @@ int main(int argc, const char **argv)
 {
 
   // portals communicating between "main" running on the ARM and the logic running in the FPGA
-  HBridgeCtrlIndication *hbridge_ind = new HBridgeCtrlIndication(IfcNames_HBridgeControllerIndication);
-  HBridgeCtrlRequestProxy *hbridge_ctrl = new HBridgeCtrlRequestProxy(IfcNames_HBridgeControllerRequest);
-  MaxSonarCtrlIndication *maxsonar_ind = new MaxSonarCtrlIndication(IfcNames_MaxSonarControllerIndication);
-  MaxSonarCtrlRequestProxy *maxsonar_ctrl = new MaxSonarCtrlRequestProxy(IfcNames_MaxSonarControllerRequest);
-  GyroCtrlIndication *gyro_ind = new GyroCtrlIndication(IfcNames_GyroControllerIndication);
-  GyroCtrlRequestProxy *gyro_ctrl = new GyroCtrlRequestProxy(IfcNames_GyroControllerRequest);
-    DmaManager *dma = platformInit();
+  HBridgeCtrlIndication hbridge_ind(IfcNames_HBridgeCtrlIndicationH2S);
+  HBridgeCtrlRequestProxy *hbridge_ctrl = new HBridgeCtrlRequestProxy(IfcNames_HBridgeCtrlRequestS2H);
+  MaxSonarCtrlIndication *maxsonar_ind = new MaxSonarCtrlIndication(IfcNames_MaxSonarCtrlIndicationH2S);
+  MaxSonarCtrlRequestProxy *maxsonar_ctrl = new MaxSonarCtrlRequestProxy(IfcNames_MaxSonarCtrlRequestS2H);
+  GyroCtrlIndication *gyro_ind = new GyroCtrlIndication(IfcNames_GyroCtrlIndicationH2S);
+  GyroCtrlRequestProxy *gyro_ctrl = new GyroCtrlRequestProxy(IfcNames_GyroCtrlRequestS2H);
+  DmaManager *dma = platformInit();
 
   // portals communicating between "main" running on the ARM and SW running on a server somewhere on the network (HOST_SW)
   PortalSocketParam param0;
-  int rc0 = getaddrinfo("0.0.0.0", "5000", NULL, &param0.addr);
+  getaddrinfo("0.0.0.0", "5000", NULL, &param0.addr);
   GyroSampleStreamProxy *gssp = new GyroSampleStreamProxy(IfcNames_GyroSampleStream, &transportSocketResp, &param0, &GyroSampleStreamJsonProxyReq, 1000);
   PortalSocketParam param1;
-  int rc1 = getaddrinfo("0.0.0.0", "5001", NULL, &param1.addr);
+  getaddrinfo("0.0.0.0", "5001", NULL, &param1.addr);
   MaxSonarSampleStreamProxy *msssp = new MaxSonarSampleStreamProxy(IfcNames_MaxSonarSampleStream, &transportSocketResp, &param1, &MaxSonarSampleStreamJsonProxyReq, 1000);
 
   // allocate memory for the gyro controller to write samples to
