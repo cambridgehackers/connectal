@@ -200,29 +200,32 @@ def collectMembers(scope, pitem):
             #print 'resolved to type', membtype.get('type'), membtype['name'], membtype
 
 def typeNumeric(item):
-    if globalv_globalvars.has_key(item['name']):
-        decl = globalv_globalvars[item['name']]
-        if decl.get('vtype') == 'TypeDef':
+    tstr = item.get('name')
+    if globalv_globalvars.has_key(tstr):
+        decl = globalv_globalvars[tstr]
+        if decl.get('dtype') == 'TypeDef':
             return typeNumeric(decl['tdtype'])
-    elif item['name'] in ['TAdd', 'TSub', 'TMul', 'TDiv', 'TLog', 'TExp', 'TMax', 'TMin']:
+    elif tstr in ['TAdd', 'TSub', 'TMul', 'TDiv', 'TLog', 'TExp', 'TMax', 'TMin']:
         values = [typeNumeric(p) for p in item['params']]
-        if item['name'] == 'TAdd':
+        if tstr == 'TAdd':
             return values[0] + values[1]
-        elif item['name'] == 'TSub':
+        elif tstr == 'TSub':
             return values[0] - values[1]
-        elif item['name'] == 'TMul':
+        elif tstr == 'TMul':
             return values[0] * values[1]
-        elif item['name'] == 'TDiv':
+        elif tstr == 'TDiv':
             return math.ceil(values[0] / float(values[1]))
-        elif item['name'] == 'TLog':
+        elif tstr == 'TLog':
             return math.ceil(math.log(values[0], 2))
-        elif item['name'] == 'TExp':
+        elif tstr == 'TExp':
             return math.pow(2, values[0])
-        elif item['name'] == 'TMax':
+        elif tstr == 'TMax':
             return max(values[0], values[1])
-        elif item['name'] == 'TMax':
+        elif tstr == 'TMax':
             return min(values[0], values[1])
-    return int(item['name'])
+    if tstr[0] >= 'A' and tstr[0] <= 'Z':
+        return tstr
+    return int(tstr)
 
 def typeCName(item):
     global generatedVectors
