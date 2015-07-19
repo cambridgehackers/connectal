@@ -1,11 +1,11 @@
-
 CONNECTALDIR?=../..
-INTERFACES = Swallow EchoRequest EchoIndication MMURequest MMUIndication
-BSVFILES = Echo.bsv SwallowIF.bsv Top.bsv
-BSVFILES += $(CONNECTALDIR)/bsv/ConnectalMemory.bsv
+S2H_INTERFACES = EchoRequest:EchoId.request SwallowRequest:Swallow.request
+H2S_INTERFACES = EchoId:EchoIndication
+
+BSVFILES = EchoId.bsv ../../examples/echosoft/Swallow.bsv
 CPPFILES=testecho.cpp
 CPPFILES2=daemon.cpp
-
 NUMBER_OF_MASTERS =0
+AUTOTOP = --portname IfcNames_EchoIndication2H2S --portname IfcNames_EchoRequest2S2H
 
 include $(CONNECTALDIR)/Makefile.connectal

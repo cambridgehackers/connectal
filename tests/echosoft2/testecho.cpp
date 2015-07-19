@@ -18,7 +18,6 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
 #include <stdio.h>
 #include <netdb.h>
 #include <pthread.h>    /* POSIX Threads */
@@ -33,11 +32,11 @@ static sem_t sem_heard;
 class EchoIndication : public EchoIndicationWrapper
 {
 public:
-    virtual void heard(uint32_t id, uint32_t v) {
+    void heard(uint32_t id, uint32_t v) {
         fprintf(stderr, "[client1] heard an s: %d\n", v);
-		sRequestProxy->say2(id, v, 2*v);
+        sRequestProxy->say2(id, v, 2*v);
     }
-    virtual void heard2(uint32_t id, uint32_t a, uint32_t b) {
+    void heard2(uint32_t id, uint16_t a, uint16_t b) {
         sem_post(&sem_heard);
         //fprintf(stderr, "heard an s2: %ld %ld\n", a, b);
     }
@@ -69,7 +68,9 @@ void* client1 (void *ptr)
     call_say(v*17);
     call_say(v*93);
     call_say2(v, v*3);
-
+    fprintf(stderr, "[client1] sleeping...\n");
+    portal_disconnect(&sRequestProxy->pint);
+    sleep(5);
     pthread_exit(0); /* exit */
 }
 
@@ -81,11 +82,11 @@ static sem_t sem_heard2;
 class EchoIndication2 : public EchoIndicationWrapper
 {
 public:
-    virtual void heard(uint32_t id, uint32_t v) {
+    void heard(uint32_t id, uint32_t v) {
         fprintf(stderr, "[client2] heard an s: %d\n", v);
-		sRequestProxy2->say2(id, v, 2*v);
+        sRequestProxy2->say2(id, v, 2*v);
     }
-    virtual void heard2(uint32_t id, uint32_t a, uint32_t b) {
+    void heard2(uint32_t id, uint16_t a, uint16_t b) {
         sem_post(&sem_heard2);
         //fprintf(stderr, "heard an s2: %ld %ld\n", a, b);
     }
@@ -112,37 +113,36 @@ void* client2 (void *ptr)
 {
     int v = 42;
     fprintf(stderr, "[client2] Saying2 %d\n", v);
-	call2_say(v);
+    call2_say(v);
     call2_say(v);
     call2_say(v*5);
     call2_say(v*17);
     call2_say(v*93);
     call2_say2(v, v*3);
-
+    fprintf(stderr, "[client2] sleeping...\n");
+    portal_disconnect(&sRequestProxy2->pint);
+    sleep(5);
     pthread_exit(0); /* exit */
 }
 
 int main(int argc, const char **argv)
 {
-	pthread_t thread1, thread2;  /* thread variables */
+    pthread_t thread1, thread2;  /* thread variables */
 
-	printf ("*** Two clients version ***\n");
+    printf ("*** Two clients version ***\n");
+    sleep(2);
+    sIndication = new EchoIndication(IfcNames_EchoIndicationH2S, &transportSocketInit, NULL);
+    sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H, &transportSocketInit, NULL);
+    sIndication2 = new EchoIndication2(IfcNames_EchoIndication2H2S, &transportSocketInit, NULL);
+    sRequestProxy2 = new EchoRequestProxy(IfcNames_EchoRequest2S2H, &transportSocketInit, NULL);
 
-	sIndication = new EchoIndication(IfcNames_EchoIndication, &transportSocketInit, NULL);
-	sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &transportSocketInit, NULL);
-
-	sIndication2 = new EchoIndication2(IfcNames_EchoIndication2, &transportSocketInit, NULL);
-    sRequestProxy2 = new EchoRequestProxy(IfcNames_EchoRequest2, &transportSocketInit, NULL);
-
-	pthread_create (&thread1, NULL, client1, (void*)NULL);
-	pthread_create (&thread2, NULL, client2, (void*)NULL);
-
-	pthread_join (thread1, NULL);
-	pthread_join (thread2, NULL);
-
-	printf ("done\n");
-
-	exit(0);
+    pthread_create (&thread1, NULL, client1, (void*)NULL);
+    pthread_create (&thread2, NULL, client2, (void*)NULL);
+    printf ("main: before pthread_join\n");
+    pthread_join (thread1, NULL);
+    pthread_join (thread2, NULL);
+    printf ("main: done\n");
+    exit(0);
 }
 
 #ifdef COMMENT
@@ -150,16 +150,13 @@ int main(int argc, const char **argv)
 {
     PortalSocketParam param;
 
-	printf ("*** version 2 ***\n");
-
-	// Client 1
-	EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &transportSocketInit, NULL);
+    printf ("*** version 2 ***\n");
+    // Client 1
+    EchoIndication *sIndication = new EchoIndication(IfcNames_EchoIndication, &transportSocketInit, NULL);
     sRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, &transportSocketInit, NULL);
-
-	// Client 2
-	EchoIndication *sIndication2 = new EchoIndication(IfcNames_EchoIndication2, &transportSocketInit, NULL);
+    // Client 2
+    EchoIndication *sIndication2 = new EchoIndication(IfcNames_EchoIndication2, &transportSocketInit, NULL);
     sRequestProxy2 = new EchoRequestProxy(IfcNames_EchoRequest2, &transportSocketInit, NULL);
-
 
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
@@ -169,19 +166,15 @@ int main(int argc, const char **argv)
     call_say(v*93);
     call_say2(v, v*3);
     printf("TEST TYPE: SEM\n");
-	//sRequestProxy->setLeds(9);
-
-
-	printf ("-----------------------\n");
-	call2_say(v);
+    //sRequestProxy->setLeds(9);
+    printf ("-----------------------\n");
+    call2_say(v);
     call2_say(v);
     call2_say(v*5);
     call2_say(v*17);
     call2_say(v*93);
     call2_say2(v, v*3);
-
     //freeaddrinfo(param.addr);
     return 0;
 }
 #endif
-

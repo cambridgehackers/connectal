@@ -18,12 +18,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
 #include <stdio.h>
 #include <netdb.h>
-
 #include "sock_utils.h"
-
 #include "EchoRequest.h"
 #include "EchoIndication.h"
 

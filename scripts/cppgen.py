@@ -60,7 +60,7 @@ public:
         pint.parent = static_cast<void *>(this);
     };
     virtual void disconnect(void) {
-        printf("%(className)sWrapper.disconnect called\\n");
+        printf("%(className)sWrapper.disconnect called %%d\\n", pint.client_fd_number);
     };
 '''
 
