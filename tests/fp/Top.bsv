@@ -32,8 +32,7 @@ import Fp::*;
 
 typedef enum {IfcNames_FpIndication, IfcNames_FpRequest} IfcNames deriving (Eq,Bits);
 
-module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
-
+module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,Empty,0));
    // instantiate user portals
    FpIndicationProxy fpIndicationProxy <- mkFpIndicationProxy(IfcNames_FpIndication);
    FpRequest fpRequest <- mkFpRequest(fpIndicationProxy.ifc);

@@ -42,48 +42,48 @@ import Memcpy::*;
 typedef enum {IfcNames_MemcpyIndication, 
 	      IfcNames_MemcpyRequest, 
 
-	      IfcNames_HostMemServerIndication, 
-	      IfcNames_HostMemServerRequest, 
+	      IfcNames_MemServerIndicationH2S,
+	      IfcNames_MemServerRequestS2H, 
 
-	      IfcNames_HostMMU0ConfigRequest, 
-	      IfcNames_HostMMU0ConfigIndication,
+	      IfcNames_MMU0ConfigRequest, 
+	      IfcNames_MMU0ConfigIndication,
 	      
-	      IfcNames_HostMMU1ConfigRequest, 
-	      IfcNames_HostMMU1ConfigIndication,
+	      IfcNames_MMU1ConfigRequest, 
+	      IfcNames_MMU1ConfigIndication,
 	      
-	      IfcNames_HostMMU2ConfigRequest, 
-	      IfcNames_HostMMU2ConfigIndication,
+	      IfcNames_MMU2ConfigRequest, 
+	      IfcNames_MMU2ConfigIndication,
 
-	      IfcNames_HostMMU3ConfigRequest, 
-	      IfcNames_HostMMU3ConfigIndication } IfcNames deriving (Eq,Bits);
+	      IfcNames_MMU3ConfigRequest, 
+	      IfcNames_MMU3ConfigIndication } IfcNames deriving (Eq,Bits);
 
-module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
+module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,Empty,1));
 
    MemcpyIndicationProxy memcpyIndicationProxy <- mkMemcpyIndicationProxy(IfcNames_MemcpyIndication);
    Memcpy memcpy <- mkMemcpy(memcpyIndicationProxy.ifc);
    MemcpyRequestWrapper memcpyRequestWrapper <- mkMemcpyRequestWrapper(IfcNames_MemcpyRequest,memcpy.request);
 
 
-   MMUIndicationProxy hostMMU0ConfigIndicationProxy <- mkMMUIndicationProxy(IfcNames_HostMMU0ConfigIndication);
+   MMUIndicationProxy hostMMU0ConfigIndicationProxy <- mkMMUIndicationProxy(IfcNames_MMU0ConfigIndication);
    MMU#(PhysAddrWidth) hostMMU0 <- mkMMU(0, True, hostMMU0ConfigIndicationProxy.ifc);
-   MMURequestWrapper hostMMU0ConfigRequestWrapper <- mkMMURequestWrapper(IfcNames_HostMMU0ConfigRequest, hostMMU0.request);
+   MMURequestWrapper hostMMU0ConfigRequestWrapper <- mkMMURequestWrapper(IfcNames_MMU0ConfigRequest, hostMMU0.request);
    
-   MMUIndicationProxy hostMMU1ConfigIndicationProxy <- mkMMUIndicationProxy(IfcNames_HostMMU1ConfigIndication);
+   MMUIndicationProxy hostMMU1ConfigIndicationProxy <- mkMMUIndicationProxy(IfcNames_MMU1ConfigIndication);
    MMU#(PhysAddrWidth) hostMMU1 <- mkMMU(1, True, hostMMU1ConfigIndicationProxy.ifc);
-   MMURequestWrapper hostMMU1ConfigRequestWrapper <- mkMMURequestWrapper(IfcNames_HostMMU1ConfigRequest, hostMMU1.request);
+   MMURequestWrapper hostMMU1ConfigRequestWrapper <- mkMMURequestWrapper(IfcNames_MMU1ConfigRequest, hostMMU1.request);
    
-   MMUIndicationProxy hostMMU2ConfigIndicationProxy <- mkMMUIndicationProxy(IfcNames_HostMMU2ConfigIndication);
+   MMUIndicationProxy hostMMU2ConfigIndicationProxy <- mkMMUIndicationProxy(IfcNames_MMU2ConfigIndication);
    MMU#(PhysAddrWidth) hostMMU2 <- mkMMU(2, True, hostMMU2ConfigIndicationProxy.ifc);
-   MMURequestWrapper hostMMU2ConfigRequestWrapper <- mkMMURequestWrapper(IfcNames_HostMMU2ConfigRequest, hostMMU2.request);
+   MMURequestWrapper hostMMU2ConfigRequestWrapper <- mkMMURequestWrapper(IfcNames_MMU2ConfigRequest, hostMMU2.request);
 
-   MMUIndicationProxy hostMMU3ConfigIndicationProxy <- mkMMUIndicationProxy(IfcNames_HostMMU3ConfigIndication);
+   MMUIndicationProxy hostMMU3ConfigIndicationProxy <- mkMMUIndicationProxy(IfcNames_MMU3ConfigIndication);
    MMU#(PhysAddrWidth) hostMMU3 <- mkMMU(3, True, hostMMU3ConfigIndicationProxy.ifc);
-   MMURequestWrapper hostMMU3ConfigRequestWrapper <- mkMMURequestWrapper(IfcNames_HostMMU3ConfigRequest, hostMMU3.request);
+   MMURequestWrapper hostMMU3ConfigRequestWrapper <- mkMMURequestWrapper(IfcNames_MMU3ConfigRequest, hostMMU3.request);
    
-   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_HostMemServerIndication);
+   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_MemServerIndication);
    let sgls = vec(hostMMU0,hostMMU1,hostMMU2,hostMMU3);
    MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(memcpy.dmaReadClient, memcpy.dmaWriteClient, sgls, hostMemServerIndicationProxy.ifc);
-   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(IfcNames_HostMemServerRequest, dma.request);
+   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(IfcNames_MemServerRequest, dma.request);
 
    Vector#(12,StdPortal) portals;
    portals[0] = memcpyRequestWrapper.portalIfc;
@@ -108,5 +108,3 @@ module mkConnectalTop(StdConnectalDmaTop#(PhysAddrWidth));
    interface slave = ctrl_mux;
    interface masters = dma.masters;
 endmodule
-
-

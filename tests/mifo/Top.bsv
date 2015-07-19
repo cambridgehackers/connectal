@@ -18,7 +18,6 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-// bsv libraries
 import Vector::*;
 import FIFO::*;
 import Connectable::*;
@@ -28,10 +27,11 @@ import MemTypes::*;
 import MifoTestIndication::*;
 import MifoTestRequest::*;
 import MifoTest::*;
+import HostInterface::*;
 
 typedef enum {IfcNames_MifoTestIndication, IfcNames_MifoTestRequest} IfcNames deriving (Eq,Bits);
 
-module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
+module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,Empty,0));
 
    // instantiate user portals
    MifoTestIndicationProxy mifoIndicationProxy <- mkMifoTestIndicationProxy(IfcNames_MifoTestIndication);

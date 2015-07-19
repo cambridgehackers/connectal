@@ -31,7 +31,7 @@ import IpcTest::*;
 
 typedef enum {IfcNames_IpcTestIndication, IfcNames_IpcTestRequest} IfcNames deriving (Eq,Bits);
 
-module mkConnectalTop#(HostInterface host)(StdConnectalTop#(PhysAddrWidth));
+module mkConnectalTop#(HostInterface host)(ConnectalTop#(PhysAddrWidth,64,Empty,0));
    IpcTestIndicationProxy echoIndicationProxy <- mkIpcTestIndicationProxy(IfcNames_IpcTestIndication);
    IpcTestRequestInternal echoRequestInternal <- mkIpcTestRequestInternal(echoIndicationProxy.ifc);
    IpcTestRequestWrapper echoRequestWrapper <- mkIpcTestRequestWrapper(IfcNames_IpcTestRequest,echoRequestInternal.ifc);

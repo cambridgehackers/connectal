@@ -28,7 +28,7 @@ import Echo::*;
 
 typedef enum {IfcNames_EchoIndication, IfcNames_EchoRequest} IfcNames deriving (Eq,Bits);
 
-module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
+module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,Empty,0));
 
    // instantiate user portals
    EchoIndicationProxy echoIndicationProxy <- mkEchoIndicationProxy(IfcNames_EchoIndication);

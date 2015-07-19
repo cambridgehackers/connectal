@@ -30,7 +30,7 @@ import Simple::*;
 
 typedef enum {IfcNames_SimpleIndication, IfcNames_SimpleRequest} IfcNames deriving (Eq,Bits);
 
-module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
+module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,Empty,0));
    SimpleIndicationProxy simpleIndicationProxy <- mkSimpleIndicationProxy(IfcNames_SimpleIndication);
    Simple simpleRequest <- mkSimple();
    SimpleRequestWrapper simpleRequestWrapper <- mkSimpleRequestWrapper(IfcNames_SimpleRequest,simpleRequest.request);

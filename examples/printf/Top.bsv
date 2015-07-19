@@ -33,7 +33,7 @@ import DisplayInd::*;
 
 typedef enum {IfcNames_EchoIndication, IfcNames_EchoRequest, IfcNames_Swallow, IfcNames_DisplayInd} IfcNames deriving (Eq,Bits);
 
-module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
+module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,Empty,0));
    EchoIndicationProxy echoIndicationProxy <- mkEchoIndicationProxy(IfcNames_EchoIndication);
    DisplayIndProxy displayIndProxy <- mkDisplayIndProxy(IfcNames_DisplayInd);
    EchoRequestInternal echoRequestInternal <- mkEchoRequestInternal(echoIndicationProxy.ifc, displayIndProxy.ifc);

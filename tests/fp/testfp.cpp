@@ -47,7 +47,7 @@ public:
 
 int main(int argc, const char **argv)
 {
-  FpIndication *indication = new FpIndication(IfcNames_FpIndication);
+  FpIndication indication(IfcNames_FpIndication);
   FpRequestProxy *device = new FpRequestProxy(IfcNames_FpRequest);
 
   float a = 1.0;

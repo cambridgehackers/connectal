@@ -424,7 +424,7 @@ def generate_demarshall(argStruct, w):
         # print e.name+' (d)'
         field = 'tmp'
         if typeCName(e.datatype) == 'float':
-            word.append('%s = *(float*)&(%s);'%(e.name,field))
+            word.append('tempdata.%s.%s %s *(float *)&(%s);'%(methodName, e.name, e.assignOp, field))
             continue
         if off:
             field = '%s>>%s' % (field, off)

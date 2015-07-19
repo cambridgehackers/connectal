@@ -94,7 +94,7 @@ public:
 
 int main(int argc, const char **argv)
 {
-  MifoTestIndication *indication = new MifoTestIndication(IfcNames_MifoTestIndication);
+  MifoTestIndication indication(IfcNames_MifoTestIndication);
   MifoTestRequestProxy *device = new MifoTestRequestProxy(IfcNames_MifoTestRequest);
 
   device->fimo32(68);
@@ -106,7 +106,6 @@ int main(int argc, const char **argv)
   device->fimo32(23);
   sleep(1);
 
-  int v2 = 1;
   fprintf(stderr, "Main::calling mifo32(%d)\n", 22);
   device->mifo32(4, 22, 0, 1, 2);
   sleep(1);
