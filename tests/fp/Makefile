@@ -1,7 +1,9 @@
-
 CONNECTALDIR?=../..
-INTERFACES = FpRequest FpIndication
-BSVFILES = Fp.bsv Top.bsv
+S2H_INTERFACES = FpRequest:FpTest.request
+H2S_INTERFACES = FpTest:FpIndication
+
+BSVFILES = FpTest.bsv
+# Top.bsv
 CPPFILES=testfp.cpp
 NUMBER_OF_MASTERS =0
 CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/fp_add/fp_add.xci --xci=$(IPDIR)/$(BOARD)/fp_mul/fp_mul.xci

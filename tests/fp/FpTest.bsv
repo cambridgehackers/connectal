@@ -1,4 +1,3 @@
-
 // Copyright (c) 2014 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
@@ -20,7 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import FloatingPoint::*;
 import GetPut::*;
 import ClientServer::*;
@@ -33,8 +31,11 @@ interface FpIndication;
    method Action added(Float a);
 endinterface
 
-module mkFpRequest#(FpIndication indication)(FpRequest);
+interface FpTest;
+   interface FpRequest request;
+endinterface
 
+module mkFpTest#(FpIndication indication)(FpTest);
    Server#(Tuple2#(Float,Float),Float) adder <- mkXilinxFPAdder();
 
    rule result;
@@ -42,8 +43,9 @@ module mkFpRequest#(FpIndication indication)(FpRequest);
       indication.added(v);
    endrule
 
+   interface FpRequest request;
    method Action add(Float a, Float b);
       adder.request.put(tuple2(a, b));
    endmethod
-
+   endinterface
 endmodule
