@@ -19,7 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import Clocks :: *;
 import Vector            :: *;
 import Connectable       :: *;
@@ -37,6 +36,7 @@ import AxiDma            :: *;
 import Top               :: *;
 import Bscan             :: *;
 import HostInterface::*;
+import `PinTypeInclude::*;
 
 interface I2C_Pins;
    interface Inout#(Bit#(1)) scl;

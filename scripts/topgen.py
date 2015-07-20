@@ -302,6 +302,7 @@ if __name__=='__main__':
     portalCount = 0
     instantiatedModules = []
     exportedNames = []
+    options.importfiles.append('`PinTypeInclude')
     if options.board == 'xsim':
         options.cnoc = True
     if options.cnoc:

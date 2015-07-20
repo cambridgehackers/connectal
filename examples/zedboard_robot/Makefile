@@ -14,8 +14,9 @@ CPPFILES= test_zedboard_robot.cpp ../maxsonar_simple/maxsonar_simple.h ../hbridg
 NUMBER_OF_MASTERS =1
 
 PIN_TYPE = ZedboardRobotPins
+PIN_TYPE_INCLUDE = Controller
 PINOUT_FILE = pinout.json
 PIN_BINDINGS ?= pmod_sonar:pmodb pmod_gyro:pmodd pmod_hbridge:pmodc
-AUTOTOP = --interface pins:Controller.pins --importfiles Controller --portname IfcNames_GyroSampleStream --portname IfcNames_MaxSonarSampleStream
+AUTOTOP = --interface pins:Controller.pins --portname IfcNames_GyroSampleStream --portname IfcNames_MaxSonarSampleStream
 
 include $(CONNECTALDIR)/Makefile.connectal

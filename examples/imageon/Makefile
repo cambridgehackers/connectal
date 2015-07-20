@@ -9,6 +9,7 @@ CPPFILES=testimagecapture.cpp
 CONNECTALFLAGS = -D USE_I2C1
 PINOUT_FILE += imageon-fmc.json
 PIN_TYPE = ImageonCapturePins
+PIN_TYPE_INCLUDE = ImageonCapture
 NUMBER_OF_MASTERS = 1
 ifeq ($(BOARD),zedboard)
     CONNECTALFLAGS += -D USE_I2C0 
@@ -17,6 +18,6 @@ ifeq ($(BOARD),zedboard)
 else
     PIN_BINDINGS ?= fmc:fmc2
 endif
-AUTOTOP = --interface pins:ImageonCapture.pins --importfiles ImageonCapture
+AUTOTOP = --interface pins:ImageonCapture.pins
 
 include $(CONNECTALDIR)/Makefile.connectal

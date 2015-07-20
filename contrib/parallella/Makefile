@@ -7,6 +7,7 @@ CPPFILES=testmain.cpp
 NUMBER_OF_MASTERS =0
 PARDIR=/scratch/stewart/parallella/parallella-hw/fpga/src
 PIN_TYPE = ParallellaLibDefs::ParallellaPins
+PIN_TYPE_INCLUDE = ParallellaLibDefs
 # CONNECTALFLAGS = -C /scratch/stewart/parallella/parallella-hw/boards/parallella-I/constraints/parallella_z70x0_loc.xdc
 CONNECTALFLAGS += \
 	--verilog $(PARDIR)/elink/hdl/elink_regmap.v \

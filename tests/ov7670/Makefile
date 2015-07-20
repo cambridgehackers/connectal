@@ -8,7 +8,8 @@ CPPFILES= testcam.cpp
 NUMBER_OF_MASTERS =1
 
 PIN_TYPE = Ov7670Pins
+PIN_TYPE_INCLUDE = Ov7670Interface
 PINOUT_FILE = pinout.json
-AUTOTOP = --interface pins:Ov7670Controller.pins --importfiles Ov7670Interface
+AUTOTOP = --interface pins:Ov7670Controller.pins
 
 include $(CONNECTALDIR)/Makefile.connectal

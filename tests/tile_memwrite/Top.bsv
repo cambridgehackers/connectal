@@ -31,6 +31,7 @@ import Memwrite::*;
 import MemwriteEnum::*;
 import MemwriteRequest::*;
 import MemwriteIndication::*;
+import `PinTypeInclude::*;
 
 (* synthesize *)
 module mkTile(Tile);

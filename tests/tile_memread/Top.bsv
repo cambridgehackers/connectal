@@ -31,6 +31,7 @@ import ReadTest::*;
 import ReadTestEnum::*;
 import ReadTestRequest::*;
 import ReadTestIndication::*;
+import `PinTypeInclude::*;
 
 (* synthesize *)
 module mkTile(Tile);

@@ -19,7 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import Clocks            :: *;
 import Vector            :: *;
 import FIFOF             :: *;
@@ -38,6 +37,7 @@ import MemSlaveEngine    :: *;
 import MemMasterEngine   :: *;
 import PCIE              :: *;
 import SimDma            :: *;
+import `PinTypeInclude::*;
 //import Platform          :: *;
 
 // implemented in BsimCtrl.cpp

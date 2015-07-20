@@ -37,8 +37,6 @@
 
 // make clock connections (see parallella_z7_top.v
 // tie off HDMI signals
-
-
 import Clocks :: *;
 import Vector            :: *;
 import Connectable       :: *;
@@ -56,6 +54,7 @@ import AxiDma            :: *;
 import Top               :: *;
 import Bscan             :: *;
 import HostInterface::*;
+import `PinTypeInclude::*;
 
 interface I2C_Pins;
    interface Inout#(Bit#(1)) scl;

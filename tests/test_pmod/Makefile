@@ -5,6 +5,7 @@ BSVFILES = Controller.bsv Top.bsv
 CPPFILES= testpmod.cpp
 NUMBER_OF_MASTERS =0
 PIN_TYPE = PmodPins
+PIN_TYPE_INCLUDE = Controller
 CONNECTALFLAGS = -C $(BOARD)/sources/pinout-$(BOARD).xdc
 
 PIN_BINDING ?= -b pmod:pmoda
