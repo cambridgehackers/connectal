@@ -112,9 +112,8 @@ int main(int argc, const char **argv)
 {
     int i;
     poller = new PortalPoller();
-    IpcTestIndication ipcTestIndication(IfcNames_IpcTestIndication, poller);
-    // these use the default poller
-    ipcTestRequestProxy = new IpcTestRequestProxy(IfcNames_IpcTestRequest);
+    IpcTestIndication ipcTestIndication(IfcNames_IpcTestIndicationH2S, poller);
+    ipcTestRequestProxy = new IpcTestRequestProxy(IfcNames_IpcTestRequestS2H);
     pthread_mutex_lock(&mutex_heard);
     sem_init(&sem_heard, 0, 0);
 

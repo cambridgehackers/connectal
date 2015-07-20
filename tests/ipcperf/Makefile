@@ -1,14 +1,11 @@
-
 CONNECTALDIR?=../..
-INTERFACES = IpcTestRequest IpcTestIndication
-BSVFILES = IpcTest.bsv Top.bsv
+S2H_INTERFACES = IpcTestRequest:IpcTest.request
+H2S_INTERFACES = IpcTest:IpcTestIndication
+
+BSVFILES = IpcTest.bsv
 CPPFILES=testipctest.cpp
-
-CONNECTALFLAGS += -D IMPORT_HOSTIF
 NUMBER_OF_MASTERS =0
-
 ## for testing fpgamake:
 FPGAMAKE_CONNECTALFLAGS += -P mkIpcTestIndicationProxySynth -P mkIpcTestRequestWrapperMemPortalPipes
 
 include $(CONNECTALDIR)/Makefile.connectal
-
