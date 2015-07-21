@@ -52,7 +52,7 @@ module mkTile(Tile);
    interface pins = ?;
 endmodule
 
-module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,`PinType,NumberOfMasters));
+module mkConnectalTop(ConnectalTop);
    Vector#(NumberOfUserTiles,Tile) ts <- replicateM(mkTile);
    Platform f <- mkPlatform(ts);
    interface interrupt = f.interrupt;

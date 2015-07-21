@@ -48,7 +48,7 @@ import Memread::*;
 
 typedef enum {IfcNames_MemreadIndicationH2S, IfcNames_MemreadRequestS2H, IfcNames_MemServerIndicationH2S, IfcNames_MemServerRequestS2H, IfcNames_MMURequestS2H, IfcNames_MMUIndicationH2S} IfcNames deriving (Eq,Bits);
 
-module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
+module mkConnectalTop(ConnectalTop);
 
    MemreadIndicationProxy memreadIndicationProxy <- mkMemreadIndicationProxy(IfcNames_MemreadIndicationH2S);
    Memread memread <- mkMemread(memreadIndicationProxy.ifc);

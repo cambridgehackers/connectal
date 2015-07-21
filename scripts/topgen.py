@@ -360,7 +360,7 @@ if __name__=='__main__':
                  'portalReaders' : ('append(' if len(options.memread) > 0 else '(') + ', '.join(options.memread + ['nullReaders']) + ')',
                  'portalWriters' : ('append(' if len(options.memwrite) > 0 else '(') + ', '.join(options.memwrite + ['nullWriters']) + ')',
                  'portalMaster' : 'lMemServer.masters' if memory_flag else 'nil',
-                 'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,`PinType,`NumberOfMasters)' if not options.cnoc \
+                 'moduleParam' : 'ConnectalTop' if not options.cnoc \
                      else 'CnocTop#(NumberOfRequests,NumberOfIndications,PhysAddrWidth,DataBusWidth,`PinType,NumberOfMasters)'
                  }
     topFilename = project_dir + '/Top.bsv'

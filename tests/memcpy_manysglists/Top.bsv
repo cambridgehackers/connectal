@@ -57,7 +57,7 @@ typedef enum {IfcNames_MemcpyIndication,
 	      IfcNames_MMU3ConfigRequest, 
 	      IfcNames_MMU3ConfigIndication } IfcNames deriving (Eq,Bits);
 
-module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,Empty,1));
+module mkConnectalTop(ConnectalTop);
 
    MemcpyIndicationProxy memcpyIndicationProxy <- mkMemcpyIndicationProxy(IfcNames_MemcpyIndication);
    Memcpy memcpy <- mkMemcpy(memcpyIndicationProxy.ifc);

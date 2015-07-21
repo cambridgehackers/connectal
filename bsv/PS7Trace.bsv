@@ -19,21 +19,14 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-//import Clocks::*;
-//import DefaultValue::*;
-//import GetPut::*;
 import Connectable::*;
 import ConnectableWithTrace::*;
-//import Bscan::*;
 import Vector::*;
-//import PPS7LIB::*;
+import HostInterface::*;
 import PS7LIB::*;
 import Portal::*;
 import AxiMasterSlave::*;
 import AxiDma::*;
-//import XilinxCells::*;
-//import ConnectalXilinxCells::*;
-//import ConnectalClocks::*;
 import AxiBits::*;
 import AxiGather::*;
 
@@ -43,10 +36,10 @@ typedef 1 NumAcp;
 typedef 0 NumAcp;
 `endif
 
-instance ConnectableWithTrace#(PS7, ConnectalTop#(32,64,ipins,nMasters), traceType)
+instance ConnectableWithTrace#(PS7, ConnectalTop, traceType)
    provisos (ConnectableWithTrace::ConnectableWithTrace#(AxiMasterSlave::Axi3Master#(32,64,6),AxiMasterSlave::Axi3Slave#(32, 64, 6),traceType),
              ConnectableWithTrace::ConnectableWithTrace#(AxiMasterSlave::Axi3Master#(32,32,12),AxiMasterSlave::Axi3Slave#(32,32,12),traceType));
-   module mkConnectionWithTrace#(PS7 ps7, ConnectalTop#(32,64,ipins,nMasters) top, traceType readout)(Empty)
+   module mkConnectionWithTrace#(PS7 ps7, ConnectalTop top, traceType readout)(Empty)
       provisos (ConnectableWithTrace#(Axi3Master#(32,64,6), Axi3Slave#(32,64,6),traceType));
 
       Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(top.slave);
@@ -69,8 +62,6 @@ instance ConnectableWithTrace#(PS7, ConnectalTop#(32,64,ipins,nMasters), traceTy
 	 mkConnection(m_axi, ps7.s_axi_hp[i].server);
 	 return m_axi;
       endmodule
-      Vector#(TSub#(nMasters,NumAcp), Axi3Master#(32,64,6)) m_axis <- genWithM(mkAxiMasterConnection);
-
-
+      Vector#(TSub#(NumberOfMasters,NumAcp), Axi3Master#(32,64,6)) m_axis <- genWithM(mkAxiMasterConnection);
    endmodule
 endinstance

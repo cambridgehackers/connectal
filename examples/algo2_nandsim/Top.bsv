@@ -44,7 +44,7 @@ import NandSim::*;
 import NandSimNames::*;
 import Regexp::*;
 
-module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,Empty,1));
+module mkConnectalTop(ConnectalTop);
    
    // nandsim 
    NandCfgIndicationProxy nandSimIndicationProxy <- mkNandCfgIndicationProxy(IfcNames_NandCfgIndicationH2S);
