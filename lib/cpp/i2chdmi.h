@@ -50,7 +50,7 @@ static int i2c_write_array(int fd, int device, unsigned char *datap, int size)
     }
     return 0;
 }
-static unsigned char i2c_read_reg(int fd, int device, unsigned char reg)
+unsigned char i2c_read_reg(int fd, int device, unsigned char reg)
 {
     struct i2c_smbus_ioctl_data args;
     union i2c_smbus_data ioctl_data;

@@ -58,7 +58,7 @@ static void startmeup()
         exit(-1);
     }
     printf( "Calling qtmain...\n");
-    pthread_create(&threaddata, NULL, qtmain, (void*)NULL);
+    pthread_create(&threaddata, NULL, (void* (*)(void*))qtmain, (void*)NULL);
     //dlclose(handle);
 }
 

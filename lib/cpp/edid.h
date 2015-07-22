@@ -19,6 +19,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #include <stdio.h>
+#include <string.h>
 
 struct edid {
   unsigned char raw[256];
