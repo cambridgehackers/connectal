@@ -9,7 +9,7 @@ CPPFILES=testimagecapture.cpp
 CONNECTALFLAGS = -D USE_I2C1
 PINOUT_FILE += imageon-fmc.json
 PIN_TYPE = ImageonCapturePins
-PIN_TYPE_INCLUDE = ImageonCapture
+PIN_TYPE_INCLUDE = ImageonCapturePins
 NUMBER_OF_MASTERS = 1
 ifeq ($(BOARD),zedboard)
     CONNECTALFLAGS += -D USE_I2C0 
