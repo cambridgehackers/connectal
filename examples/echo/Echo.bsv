@@ -22,6 +22,7 @@
 // SOFTWARE.
 import FIFO::*;
 import Vector::*;
+import HostInterface::*;
 
 interface EchoIndication;
     method Action heard(Bit#(32) v);
@@ -43,7 +44,7 @@ typedef struct {
 	Bit#(16) b;
 } EchoPair deriving (Bits);
 
-module mkEcho#(EchoIndication indication)(Echo);
+module mkEcho#(HostInterface host, EchoIndication indication)(Echo);
     FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
     FIFO#(EchoPair) delay2 <- mkSizedFIFO(8);
 
