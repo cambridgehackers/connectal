@@ -32,7 +32,11 @@ static PortalInternal dummy;
     printf("[%s:%d]\n", __FUNCTION__, __LINE__); \
     exit(-1); \
 }
-static volatile unsigned int *dummyMAPCHANNEL(struct PortalInternal *pint, unsigned int v)
+static volatile unsigned int *dummyMAPCHANNELIND(struct PortalInternal *pint, unsigned int v)
+{
+    return &dummy.map_base[0];
+}
+static volatile unsigned int *dummyMAPCHANNELREQ(struct PortalInternal *pint, unsigned int v, unsigned int size)
 {
     return &dummy.map_base[0];
 }
@@ -50,7 +54,7 @@ static int dummyEVENT(struct PortalInternal *pint) STUB
 static int dummyNOTFULL(struct PortalInternal *pint, unsigned int v) STUB
 PortalTransportFunctions callbackItem = {
     dummyITEMINIT, dummyREADWORD, dummyWRITEWORD, dummyWRITEFDWORD,
-    dummyMAPCHANNEL, dummyMAPCHANNEL, dummySENDMSG, dummyRECVMSG,
+    dummyMAPCHANNELIND, dummyMAPCHANNELREQ, dummySENDMSG, dummyRECVMSG,
     dummyBUSYWAIT, dummyENABLEINT, dummyEVENT, dummyNOTFULL};
 
 static int heard_cb(struct PortalInternal *p,uint32_t v) {
@@ -58,14 +62,16 @@ static int heard_cb(struct PortalInternal *p,uint32_t v) {
     PyGILState_STATE gstate = PyGILState_Ensure();
     PyEval_CallFunction(callbackFunction, "(s)", dummy.map_base, NULL);
     PyGILState_Release(gstate);
+    return 0;
 }
 static int heard2_cb(struct PortalInternal *p,uint16_t a, uint16_t b) {
     EchoIndicationJson_heard2 (&dummy, a, b);
     PyGILState_STATE gstate = PyGILState_Ensure();
     PyEval_CallFunction(callbackFunction, "(s)", dummy.map_base, NULL);
     PyGILState_Release(gstate);
+    return 0;
 }
-static EchoIndicationCb EchoInd_cbTable = { heard_cb, heard2_cb};
+static EchoIndicationCb EchoInd_cbTable = { portal_disconnect, heard_cb, heard2_cb};
 
 extern "C" {
 void set_callback(PyObject *param)
@@ -78,13 +84,14 @@ void set_callback(PyObject *param)
 
 void *trequest()
 {
-    init_portal_internal(&erequest, IfcNames_EchoRequest, NULL, NULL, NULL, NULL, EchoRequest_reqinfo);
+    init_portal_internal(&erequest, IfcNames_EchoRequest, DEFAULT_TILE, NULL, NULL, NULL, NULL, EchoRequest_reqinfo);
+//void init_portal_internal(PortalInternal *pint, int id, int tile, PORTAL_INDFUNC handler, void *cb, PortalTransportFunctions *item, void *param, uint32_t reqinfo);
     return &erequest;
 }
 void *tindication()
 {
-    init_portal_internal(&eindication, IfcNames_EchoIndication,
-        EchoIndication_handleMessage, &EchoInd_cbTable, NULL, NULL, EchoIndication_reqinfo);
+    init_portal_internal(&eindication, IfcNames_EchoIndication, DEFAULT_TILE,
+        (PORTAL_INDFUNC) EchoIndication_handleMessage, &EchoInd_cbTable, NULL, NULL, EchoIndication_reqinfo);
     return &eindication;
 }
 } // extern "C"
