@@ -90,7 +90,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
 	     return inpipe.first.data;
 	  endmethod
 	  method Action deq;
-	     if (verbose) $display("check_out: idx %d data %h buffCap %d eob %d", i, inpipe.first.data, buffCap[i].read(), inpipe.first.last);
+	     if (verbose) $display("mkMemreadEngineBuff::check_out: idx %d data %h buffCap %d eob %d", i, inpipe.first.data, buffCap[i].read(), inpipe.first.last);
 	     inpipe.deq;
 	     buffCap[i].increment(1);
 	  endmethod
@@ -146,7 +146,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
 	    x = truncate(cmd.len);
 	 loadf_c.enq(tuple3(truncate(loadIdx),cmd,last_burst));
 	 if (last_burst) begin
-	    if (verbose) $display("load_ctxt_b last_burst %d", last_burst);
+	    if (verbose) $display("mkMemreadEngineBuff::load_ctxt_b last_burst %d", last_burst);
 	    outfs[loadIdx].enq(?);
 	    outs1[loadIdx] <= False;
 	 end
@@ -163,7 +163,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
       match {.rc, .idx, .last_burst} = workf.first;
       let new_respCnt = respCnt+1;
       let l = False;
-      if (verbose) $display("%h new_respCnt %d rc %d last_burst %d idx %d outs1 %d eob %d", d.data, new_respCnt, rc, last_burst, idx, outs1[idx], d.last);
+      if (verbose) $display("mkMemreadEngineBuff::%h new_respCnt %d rc %d last_burst %d idx %d outs1 %d eob %d", d.data, new_respCnt, rc, last_burst, idx, outs1[idx], d.last);
       if (new_respCnt == rc) begin
 	 respCnt <= 0;
 	 workf.deq;
