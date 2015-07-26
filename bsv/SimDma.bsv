@@ -254,7 +254,7 @@ module mkSimDmaDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
    interface PhysMemReadServer read_server;
       interface Put readReq;
 	 method Action put(PhysMemRequest#(serverAddrWidth) req);
-            if (verbose) $display("%d axiSlave.read.readAddr %h bc %d", cycles, req.addr, req.burstLen);
+            if (verbose) $display("mkSimDmaDmaMaster::%d axiSlave.read.readAddr %h bc %d", cycles, req.addr, req.burstLen);
 	    //readAddrGenerator.request.put(req);
 	    readDelayFifo.enq(tuple2(cycles,req));
 	 endmethod
@@ -263,6 +263,7 @@ module mkSimDmaDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
 	 method ActionValue#(MemData#(serverBusWidth)) get();
 	     match { .tag, .last } <- toGet(taglastfifo).get();
  	     let v <- rw.readresponse();
+ 	     //if (verbose) $display("mkSimDmaDmaMaster::%d axiSlave.read.readData %h tag %d last %d", cycles, v, tag, last);
 	     return MemData { data: v, tag: tag, last: last };
 	 endmethod
       endinterface
@@ -270,7 +271,7 @@ module mkSimDmaDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
    interface PhysMemWriteServer write_server;
       interface Put writeReq;
 	 method Action put(PhysMemRequest#(serverAddrWidth) req);
-	 //$display("mkBsimHost::req_aw id=%d", req.tag);
+	 //$display("mkSimDmaDmaMaster::req_aw id=%d", req.tag);
 	 writeDelayFifo.enq(tuple2(cycles,req));
 	 endmethod
       endinterface
