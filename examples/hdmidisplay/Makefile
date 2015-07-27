@@ -24,6 +24,7 @@ CONNECTALFLAGS += -q -D LIBNAME=\\\"$(REALCONNECTALDIR)/examples/hdmidisplay/blu
 CONNECTALFLAGS += -D BSIMRESPONDER=mkResponder -m $(CONNECTALDIR)/examples/hdmidisplay/BsimHdmi.cpp 
 
 CONNECTALFLAGS += -C $(BOARD)/sources/hdmi.xdc
+CONNECTALFLAGS += -D SIM_DMA_READ_LATENCY=1 -D SIM_DMA_WRITE_LATENCY=1
 
 gentarget:: $(BOARD)/sources/hdmi.xdc
 
