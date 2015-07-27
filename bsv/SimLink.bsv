@@ -19,14 +19,10 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import GetPut            :: *;
 import Connectable       :: *;
 import FIFOF             :: *;
 import Pipe              :: *;
-import Portal            :: *;
-import MsgFormat         :: *;
-import CnocPortal        :: *;
 
 interface SimLink#(numeric type dataWidth);
    method Action start(Bit#(32) linknumber, Bool listening);
