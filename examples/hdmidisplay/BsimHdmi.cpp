@@ -27,12 +27,14 @@
 
 //#define LIBNAME EXECDIRECTORY "/libHdmi.so"
 
+static int run_xwindows = 1;
 typedef int (*qtmain_t)(void *param);
 typedef void (*show_data_t)(unsigned int vsync, unsigned int hsync, unsigned int de, unsigned int data);
 
 static show_data_t show_data;
 static pthread_t threaddata;
 static unsigned int vsync, hsync, de;
+static int trace_data;//= 1;
 
 static void startmeup()
 {
@@ -41,8 +43,12 @@ static void startmeup()
         printf( "Cannot open library\n");
         exit(-1);
     }
-    printf("Loading symbol qtmain...\n");
+    printf("Loading library for qtmain...\n");
     dlerror();
+    if (!run_xwindows) {
+        printf( "Not calling qtmain...\n");
+        return;
+    }
     qtmain_t qtmain = (qtmain_t) dlsym(handle, "qtmain");
     const char *dlsym_error = dlerror();
     if (dlsym_error) {
@@ -85,6 +91,6 @@ extern "C" void bdpi_hdmi_data(unsigned int v)
     once = 0;
     if (show_data)
         show_data(vsync, hsync, de, v);
-    else
-        printf("v %x; h %x; e %x = %4x\n", vsync, hsync, de, v);
+    else if (trace_data)
+        printf("bdpi_hdmi_data: v %x; h %x; e %x = %4x\n", vsync, hsync, de, v);
 }
