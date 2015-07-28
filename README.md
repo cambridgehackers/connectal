@@ -126,21 +126,12 @@ Preparation for Kintex and Virtex boards
 
 0. Get [http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2013-2.html](Vivado 2013.2)
 
-1. Build the drivers
+1. Install the drivers
+    make
+    sudo make install
+    sudo modprobe portalmem
 
-    cd drivers/pcieportal; make && sudo make install
-
-2. Load the drivers
-
-    cd drivers/pcieportal; make insmod
-
-3. Install the Digilent cable driver
-
-    cd /scratch/Xilinx/Vivado/2013.2/data/xicom/cable_drivers/lin64/digilent
-    sudo ./install_digilent.sh
-
-
-4. Get fpgajtag
+2. Get fpgajtag
 
     git clone git://github.com/cambridgehackers/fpgajtag
     cd fpgajtag
@@ -149,9 +140,10 @@ Preparation for Kintex and Virtex boards
 Examples
 --------
 
-Generally cd to the top level directory connectal then type
+Generally cd to the project directory, then type
 
-    make examples/examplename.<something>
+    cd examples/examplename
+    make build.<something>
 
 where something is
 
