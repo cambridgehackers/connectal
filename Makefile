@@ -47,7 +47,8 @@ install: $(INSTALL_SHARED)
 		install -m644 $$fname $(DESTDIR)$(MODULES_LOAD_D_DIR) ; \
 	    done; \
 	fi
-	(cd drivers/pcieportal; make install)
+	echo 'Installing from' $(CURDIR)
+	(cd drivers/pcieportal; CONNECTALDIR=$(CURDIR) make install)
 	make -C pcie install
 	install -d -m755 $(DESTDIR)$(UDEV_RULES_DIR)
 	for fname in $(UDEV_RULES) ; do \
