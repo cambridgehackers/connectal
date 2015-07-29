@@ -19,7 +19,7 @@ export BS_MOD_DIR=$(DESTDIR)/lib/modules/$(KVERSION)/connectal
 .PHONY: default
 default: pcieportal.ko ../portalmem/portalmem.ko
 
-EXTRA_CFLAGS = -I$(PWD) -I$(PWD)/../../cpp -I$(PWD)/../.. -I$(PWD)/../portalmem -I$(PWD)/../../generated/cpp \
+EXTRA_CFLAGS := -I$(CONNECTALDIR)/drivers/pciportal -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR) -I$(CONNECTALDIR)/drivers/portalmem -I$(CONNECTALDIR)/generated/cpp \
 	-DDRIVER_VERSION="KBUILD_STR($(VERSION))"
 cflags-y += -I$(PWD)
 
