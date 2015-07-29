@@ -7,7 +7,8 @@ Q=@
 else
 Q=
 endif
-CONNECTALDIR ?= $(PWD)/../..
+CURRENTDIR := $(PWD)
+CONNECTALDIR ?= $(CURRENTDIR)/../..
 include $(CONNECTALDIR)/Makefile.version
 
 obj-m += pcieportal.o
