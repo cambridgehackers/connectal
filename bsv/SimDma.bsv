@@ -230,7 +230,7 @@ module mkSimDmaDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
    
    let beat_shift = fromInteger(valueOf(beatShift));
 
-   rule read_rule if (readDelayFifo.notEmpty() && (cycles-tpl_1(readDelayFifo.first) > readLatency));
+   rule read_rule if (readDelayFifo.notEmpty() && (cycles-tpl_1(readDelayFifo.first) >= readLatency));
 	 match { .reqTime, .req } = readDelayFifo.first;
 	 Bit#(BurstLenSize) readLen = readLenReg;
 	 Bit#(32) readOffset = readOffsetReg;
@@ -276,7 +276,7 @@ module mkSimDmaDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
 	 endmethod
       endinterface
       interface Put writeData;
-	 method Action put(MemData#(serverBusWidth) resp) if (writeDelayFifo.notEmpty && (cycles-tpl_1(writeDelayFifo.first)) > writeLatency);
+	 method Action put(MemData#(serverBusWidth) resp) if (writeDelayFifo.notEmpty && (cycles-tpl_1(writeDelayFifo.first)) >= writeLatency);
 	    match { .reqTime, .req } = writeDelayFifo.first;
 	    Bit#(BurstLenSize) writeLen = writeLenReg;
 	    Bit#(32) writeOffset = writeOffsetReg;
@@ -297,7 +297,7 @@ module mkSimDmaDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
 	 endmethod
       endinterface
       interface Get writeDone;
-	 method ActionValue#(Bit#(MemTagSize)) get() if ((cycles-tpl_1(bFifo.first)) > writeLatency);
+	 method ActionValue#(Bit#(MemTagSize)) get() if ((cycles-tpl_1(bFifo.first)) >= writeLatency);
 	 bFifo.deq();
 	 return tpl_2(bFifo.first());
 	 endmethod
