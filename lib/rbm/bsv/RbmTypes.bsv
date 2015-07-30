@@ -52,25 +52,6 @@ typedef TMin#(4,J) RowsPerTile;
 typedef TDiv#(J,RowsPerTile) T;
 typedef TMul#(32,N) DmaSz;
 
-typedef enum {
-   IfcNames_HostMemServerIndication, 
-   IfcNames_HostMemServerRequest, 
-   IfcNames_HostMMURequest, 
-   IfcNames_HostMMUIndication,
-   IfcNames_MmIndicationPortal,
-   IfcNames_MmRequestPortal,
-   IfcNames_RbmIndicationPortal,
-   IfcNames_RbmRequestPortal,
-   IfcNames_SigmoidIndicationPortal,
-   IfcNames_SigmoidRequestPortal,
-   IfcNames_TimerIndicationPortal,
-   IfcNames_TimerRequestPortal,
-   IfcNames_FpMacRequestPortal,
-   IfcNames_FpMacIndicationPortal,
-   IfcNames_FpMulRequestPortal,
-   IfcNames_FpMulIndicationPortal
-} IfcNames deriving (Eq,Bits);
-
 interface MmIndication;
    method Action started();
    method Action startSourceAndSink(UInt#(32) startA, UInt#(32) startC, Int#(32) jint);
@@ -122,10 +103,10 @@ endinterface
 interface RbmRequest;
    //method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
    method Action paref(Bit#(32) addr, Bit#(32) len);
-   method Action computeStates(Bit#(32) readPointer, Bit#(32) readOffset, 
+   method Action computeStates(Bit#(32) readPointer, Bit#(32) readOffset,
 			       Bit#(32) readPointer2, Bit#(32) readOffset2,
 			       Bit#(32) writePointer, Bit#(32) writeOffset, Bit#(32) numElts);
-   method Action updateWeights(Bit#(32) posAssociationsPointer, Bit#(32) negAssociationsPointer, 
+   method Action updateWeights(Bit#(32) posAssociationsPointer, Bit#(32) negAssociationsPointer,
 			       Bit#(32) weightsPointer, Bit#(32) numElts, Bit#(32) learningRateOverNumExamples);
    method Action sumOfErrorSquared(Bit#(32) dataPointer, Bit#(32) predPointer, Bit#(32) numElts);
    method Action sumOfErrorSquaredDebug();

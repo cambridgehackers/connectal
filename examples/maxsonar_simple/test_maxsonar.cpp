@@ -20,29 +20,18 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <assert.h>
-#include <string.h>
-
 #include "maxsonar_simple.h"
 #include "MaxSonarCtrlRequest.h"
-#include "GeneratedTypes.h"
 #include "read_buffer.h"
 
 int main(int argc, const char **argv)
 {
-  MaxSonarCtrlIndication *ind = new MaxSonarCtrlIndication(IfcNames_ControllerIndication);
-  MaxSonarCtrlRequestProxy *device = new MaxSonarCtrlRequestProxy(IfcNames_ControllerRequest);
-
+  MaxSonarCtrlIndication *ind = new MaxSonarCtrlIndication(IfcNames_MaxSonarCtrlIndicationH2S);
+  MaxSonarCtrlRequestProxy *device = new MaxSonarCtrlRequestProxy(IfcNames_MaxSonarCtrlRequestS2H);
   long req_freq = 100000000; // 100 mHz
   long freq = 0;
   setClockFrequency(0, req_freq, &freq);
   fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
-
   device->range_ctrl(1);
 
   while(true){
@@ -52,5 +41,4 @@ int main(int argc, const char **argv)
     float distance = ((float)ind->useconds)/147.0;
     fprintf(stderr, "(%8d microseconds == %8f inches)\n", ind->useconds, distance);
   }
-
 }

@@ -79,8 +79,8 @@ int main(int argc, const char **argv)
   fprintf(stderr, "testnandsim::%s %s\n", __DATE__, __TIME__);
 
   DmaManager *hostDma = platformInit();
-  NandCfgRequestProxy *nandcfgRequest = new NandCfgRequestProxy(IfcNames_NandCfgRequest);
-  NandCfgIndication *nandcfgIndication = new NandCfgIndication(IfcNames_NandCfgIndication);
+  NandCfgRequestProxy *nandcfgRequest = new NandCfgRequestProxy(IfcNames_NandCfgRequestS2H);
+  NandCfgIndication *nandcfgIndication = new NandCfgIndication(IfcNames_NandCfgIndicationH2S);
 
   int nandAlloc = portalAlloc(nandBytes, 0);
   fprintf(stderr, "testnandsim::nandAlloc=%d\n", nandAlloc);
@@ -108,7 +108,7 @@ int main(int argc, const char **argv)
     while (loop < nandBytes) {
 
       fprintf(stderr, "testnandsim::starting write ref=%d, len=%08zx (%lu)\n", ref_srcAlloc, srcBytes, loop);
-      for (int i = 0; i < srcBytes/sizeof(srcBuffer[0]); i++) {
+      for (unsigned int i = 0; i < srcBytes/sizeof(srcBuffer[0]); i++) {
 	srcBuffer[i] = loop+i;
       }
       portalCacheFlush(srcAlloc, srcBuffer, srcBytes, 1);
@@ -121,7 +121,7 @@ int main(int argc, const char **argv)
     while (loop < nandBytes) {
       fprintf(stderr, "testnandsim::starting read %08zx (%lu)\n", srcBytes, loop);
 
-      for (int i = 0; i < srcBytes/sizeof(srcBuffer[0]); i++) {
+      for (unsigned int i = 0; i < srcBytes/sizeof(srcBuffer[0]); i++) {
 	srcBuffer[i] = 5;
       }
 
@@ -129,7 +129,7 @@ int main(int argc, const char **argv)
       nandcfgRequest->startRead(ref_srcAlloc, 0, loop, srcBytes, 16);
       nandcfgIndication->wait();
       
-      for (int i = 0; i < srcBytes/sizeof(srcBuffer[0]); i++) {
+      for (unsigned int i = 0; i < srcBytes/sizeof(srcBuffer[0]); i++) {
 	if (srcBuffer[i] != loop+i) {
 	  fprintf(stderr, "testnandsim::mismatch [%08ld] != [%08d] (%d,%zu)\n", loop+i, srcBuffer[i], i, srcBytes/sizeof(srcBuffer[0]));
 	  mismatch++;

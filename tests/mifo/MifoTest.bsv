@@ -1,4 +1,3 @@
-
 // Copyright (c) 2013 Nokia, Inc.
 
 // Permission is hereby granted, free of charge, to any person
@@ -20,7 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import FIFO::*;
 import MIFO::*;
 import Pipe::*;
@@ -40,11 +38,13 @@ interface MifoTestRequest;
    method Action fimo32(Bit#(32) v0);
 endinterface
 
-module mkMifoTestRequest#(MifoTestIndication indication)(MifoTestRequest);
+interface MifoTest;
+   interface MifoTestRequest request;
+endinterface
 
+module mkMifoTest#(MifoTestIndication indication)(MifoTest);
    MIFO#(4,1,4,Bit#(32)) mifo1 <- mkMIFO();
    MIFO#(4,2,4,Bit#(32)) mifo2 <- mkMIFO();
-   
    FIMO#(1,4,4,Bit#(32)) fimo1 <- mkFIMO();
    FIMO#(1,4,4,Bit#(32)) fimo2 <- mkFIMO();
    FIMO#(1,4,4,Bit#(32)) fimo3 <- mkFIMO();
@@ -59,7 +59,7 @@ module mkMifoTestRequest#(MifoTestIndication indication)(MifoTestRequest);
       mifo2.deq();
       indication.mifo64(v[0], v[1]);
    endrule
-   
+
    rule fimo64out;
       let v = fimo1.out[2].first();
       fimo1.out[2].deq();
@@ -79,6 +79,7 @@ module mkMifoTestRequest#(MifoTestIndication indication)(MifoTestRequest);
       indication.fimo128(v[0], v[1], v[2], v[3]);
    endrule
 
+   interface MifoTestRequest request;
    method Action mifo32(Bit#(32) n, Bit#(32) v0, Bit#(32) v1, Bit#(32) v2, Bit#(32) v3);
       Vector#(4, Bit#(32)) vec = newVector();
       vec[0] = v0;
@@ -102,5 +103,5 @@ module mkMifoTestRequest#(MifoTestIndication indication)(MifoTestRequest);
       fimo2.in.enq(vec);
       fimo3.in.enq(vec);
    endmethod
-
+   endinterface
 endmodule

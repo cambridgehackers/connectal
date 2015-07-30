@@ -1,4 +1,3 @@
-
 // Copyright (c) 2014 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
@@ -20,33 +19,33 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-import Vector::*;
-import FIFO::*;
-import Connectable::*;
-import CtrlMux::*;
-import Portal::*;
-import HostInterface::*;
-import FpIndication::*;
-import FpRequest::*;
-import Fp::*;
+import FloatingPoint::*;
+import GetPut::*;
+import ClientServer::*;
+import FpOps::*;
 
-typedef enum {IfcNames_FpIndication, IfcNames_FpRequest} IfcNames deriving (Eq,Bits);
+interface FpRequest;
+   method Action add(Float a, Float b);
+endinterface
+interface FpIndication;
+   method Action added(Float a);
+endinterface
 
-module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
+interface FpTest;
+   interface FpRequest request;
+endinterface
 
-   // instantiate user portals
-   FpIndicationProxy fpIndicationProxy <- mkFpIndicationProxy(IfcNames_FpIndication);
-   FpRequest fpRequest <- mkFpRequest(fpIndicationProxy.ifc);
-   FpRequestWrapper fpRequestWrapper <- mkFpRequestWrapper(IfcNames_FpRequest,fpRequest);
-   
-   Vector#(2,StdPortal) portals;
-   portals[0] = fpRequestWrapper.portalIfc; 
-   portals[1] = fpIndicationProxy.portalIfc;
-   let ctrl_mux <- mkSlaveMux(portals);
-   
-   interface interrupt = getInterruptVector(portals);
-   interface slave = ctrl_mux;
-   interface masters = nil;
-endmodule : mkConnectalTop
+module mkFpTest#(FpIndication indication)(FpTest);
+   Server#(Tuple2#(Float,Float),Float) adder <- mkXilinxFPAdder();
 
+   rule result;
+      let v <- adder.response.get();
+      indication.added(v);
+   endrule
 
+   interface FpRequest request;
+   method Action add(Float a, Float b);
+      adder.request.put(tuple2(a, b));
+   endmethod
+   endinterface
+endmodule

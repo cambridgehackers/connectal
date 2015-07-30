@@ -18,8 +18,6 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
-#include <stdio.h>
 #include "PhysMemMasterRequest.h"
 #include "PhysMemMasterIndication.h"
 
@@ -44,13 +42,18 @@ public:
         sleep(1);
         exit(1);
     }
+    void disconnect (void) {
+        fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
+        sleep(1);
+        exit(1);
+    }
     PhysMemMasterRequest(unsigned int id, PortalTransportFunctions *item, void *param) : PhysMemMasterRequestWrapper(id, item, param) {}
 };
 
 int main(int argc, const char **argv)
 {
     sIndicationProxy = new PhysMemMasterIndicationProxy(IfcNames_PhysMemMasterIndication, &transportSocketResp, NULL);
-    PhysMemMasterRequest *sRequest = new PhysMemMasterRequest(IfcNames_PhysMemMasterRequest, &transportSocketResp, NULL);
+    PhysMemMasterRequest sRequest(IfcNames_PhysMemMasterRequest, &transportSocketResp, NULL);
 
     printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);
     while(1)

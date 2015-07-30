@@ -64,7 +64,6 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
     uint32_t reqinfo)
 {
     int rc;
-    initPortalFramework();
     memset(pint, 0, sizeof(*pint));
     if(!utility_portal)
       utility_portal = pint;
@@ -73,7 +72,7 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
     pint->fpga_fd = -1;
     pint->muxid = -1;
     pint->handler = handler;
-    pint->cb = cb;
+    pint->cb = (PortalHandlerTemplate *)cb;
     pint->reqinfo = reqinfo;
     if (!item) {
         // Use defaults for transport handling methods
@@ -93,6 +92,14 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
         exit(1);
 #endif
     }
+}
+int portal_disconnect(struct PortalInternal *pint)
+{
+    //PORTAL_PRINTF("[%s:%d] fpgafd %d num %d cli %d\n", __FUNCTION__, __LINE__, pint->fpga_fd, pint->client_fd_number, pint->client_fd[0], pint->client_fd[1]);
+    close(pint->fpga_fd);
+    if (pint->client_fd_number > 0)
+        close(pint->client_fd[--pint->client_fd_number]);
+    return 0;
 }
 
 /*
@@ -139,7 +146,7 @@ static void checkSignature(const char *filename, int ioctlnum)
 /*
  * One time initialization of portal framework
  */
-void initPortalFramework(void)
+void initPortalHardware(void)
 {
     static int once = 0;
 
@@ -330,7 +337,7 @@ printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start
 int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)
 {
     int status = -1;
-    initPortalFramework();
+    initPortalHardware();
 #ifdef ZYNQ
     PortalClockRequest request;
     request.clknum = clkNum;

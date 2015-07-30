@@ -27,12 +27,12 @@ import util
 
 argparser = argparse.ArgumentParser("Generate Top.bsv for an project.")
 argparser.add_argument('--project-dir', help='project directory')
-argparser.add_argument('--interface', help='exported interface declaration', action='append')
+argparser.add_argument('--interface', default=[], help='exported interface declaration', action='append')
 argparser.add_argument('--board', help='Board type')
-argparser.add_argument('--importfiles', help='added imports', action='append')
-argparser.add_argument('--portname', help='added portal names to enum list', action='append')
-argparser.add_argument('--wrapper', help='exported wrapper interfaces', action='append')
-argparser.add_argument('--proxy', help='exported proxy interfaces', action='append')
+argparser.add_argument('--importfiles', default=[], help='added imports', action='append')
+argparser.add_argument('--portname', default=[], help='added portal names to enum list', action='append')
+argparser.add_argument('--wrapper', default=[], help='exported wrapper interfaces', action='append')
+argparser.add_argument('--proxy', default=[], help='exported proxy interfaces', action='append')
 argparser.add_argument('--memread', default=[], help='memory read interfaces', action='append')
 argparser.add_argument('--memwrite', default=[], help='memory read interfaces', action='append')
 argparser.add_argument('--cnoc', help='generate mkCnocTop', action='store_true')
@@ -111,10 +111,22 @@ import IfcNames::*;
 module mkCnocTop
 `ifdef IMPORT_HOSTIF
        #(HostInterface host)
+`else
+`ifdef IMPORT_HOST_CLOCKS // enables synthesis boundary
+       #(Clock derivedClockIn, Reset derivedResetIn)
+`else
+// otherwise no params
+`endif
 `endif
        (%(moduleParam)s);
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
+`ifdef IMPORT_HOST_CLOCKS // enables synthesis boundary
+   HostInterface host = (interface HostInterface;
+                           interface Clock derivedClock = derivedClockIn;
+                           interface Reset derivedReset = derivedResetIn;
+                         endinterface);
+`endif
 %(pipeInstantiate)s
 
 %(portalInstantiate)s
@@ -196,7 +208,7 @@ def instMod(args, modname, modext, constructor, tparam, memFlag):
         args = modname + tstr
     pmap['args'] = args % pmap
     if modext:
-        enumList.append('IfcNames_' + modname + tstr)
+        options.portname.append('IfcNames_' + modname + tstr)
         pmap['argsConfig'] = modname + memFlag + tstr
         if modext == 'Output':
             pmap['stype'] = 'Indication';
@@ -221,7 +233,7 @@ def instMod(args, modname, modext, constructor, tparam, memFlag):
             pipeInstantiate.append(pipeInstantiation % pmap)
             connectInstantiate.append(connectInstantiation % pmap)
         if memFlag:
-            enumList.append('IfcNames_' + modname + memFlag + tstr)
+            options.portname.append('IfcNames_' + modname + memFlag + tstr)
             addPortal('IfcNames_' + pmap['argsConfig'], '%(modname)sCW' % pmap, 'Request')
         else:
             addPortal('IfcNames_' + pmap['args'], '%(modname)s' % pmap, pmap['stype'])
@@ -231,20 +243,22 @@ def instMod(args, modname, modext, constructor, tparam, memFlag):
             if pmap['modname'] in ['MMU', 'MemServer']:
                 pmap['hostif'] = ''
             else:
-                pmap['hostif'] = ('\n'
-                                  '`ifdef IMPORT_HOSTIF\n'
-                                  '                    host,\n'
-                                  '`else\n'
-                                  '`ifdef IMPORT_HOST_CLOCKS\n'
-                                  '                    host.derivedClock, host.derivedReset,\n'
-                                  '`endif\n'
-                                  '`endif\n'
-                                  '                    ')
+                pmap['hostif'] = ''
+# If needed, can't these be passed in as extra args on H2S or S2H spec line? jca 2015/7/22
+#                pmap['hostif'] = ('\n'
+#                                  '`ifdef IMPORT_HOSTIF\n'
+#                                  '                    host,\n'
+#                                  '`else\n'
+#                                  '`ifdef IMPORT_HOST_CLOCKS\n'
+#                                  '                    host.derivedClock, host.derivedReset,\n'
+#                                  '`endif\n'
+#                                  '`endif\n'
+#                                  '                    ')
             instantiateRequest[pmap['modname']].inst = '   %(modname)s%(tparam)s l%(modname)s <- mk%(modname)s(%(hostif)s%%s);' % pmap
         instantiateRequest[pmap['modname']].args.append(pmap['args'])
     if pmap['modname'] not in instantiatedModules:
         instantiatedModules.append(pmap['modname'])
-    importfiles.append(modname)
+    options.importfiles.append(modname)
 
 def flushModules(key):
         temp = instantiateRequest.get(key)
@@ -289,8 +303,8 @@ if __name__=='__main__':
     portalList = []
     portalCount = 0
     instantiatedModules = []
-    importfiles = []
     exportedNames = []
+    options.importfiles.append('`PinTypeInclude')
     if options.board == 'xsim':
         options.cnoc = True
     if options.cnoc:
@@ -298,19 +312,9 @@ if __name__=='__main__':
     else:
         exportedNames.extend(['export mkConnectalTop;'])
     if options.importfiles:
-        importfiles = options.importfiles
         for item in options.importfiles:
              exportedNames.append('export %s::*;' % item)
-    enumList = []
-    if options.portname:
-        enumList = options.portname
     interfaceList = []
-    if not options.proxy:
-        options.proxy = []
-    if not options.wrapper:
-        options.wrapper = []
-    if not options.interface:
-        options.interface = []
 
     for pitem in options.proxy:
         pmap = parseParam(pitem, True)
@@ -342,8 +346,8 @@ if __name__=='__main__':
     memory_flag = 'MemServer' in instantiatedModules
     if clientCount:
         pipeInstantiate.append(memEngineInst % {'clientCount': clientCount})
-    topsubsts = {'enumList': ','.join(enumList),
-                 'generatedImport': '\n'.join(['import %s::*;' % p for p in importfiles]),
+    topsubsts = {'enumList': ','.join(options.portname),
+                 'generatedImport': '\n'.join(['import %s::*;' % p for p in options.importfiles]),
                  'generatedTypedefs': '\n'.join(['typedef %d NumberOfRequests;' % len(requestList),
                                                  'typedef %d NumberOfIndications;' % len(indicationList)]),
                  'pipeInstantiate' : '\n'.join(sorted(pipeInstantiate)),
@@ -358,8 +362,8 @@ if __name__=='__main__':
                  'portalReaders' : ('append(' if len(options.memread) > 0 else '(') + ', '.join(options.memread + ['nullReaders']) + ')',
                  'portalWriters' : ('append(' if len(options.memwrite) > 0 else '(') + ', '.join(options.memwrite + ['nullWriters']) + ')',
                  'portalMaster' : 'lMemServer.masters' if memory_flag else 'nil',
-                 'moduleParam' : 'ConnectalTop#(PhysAddrWidth,DataBusWidth,`PinType,`NumberOfMasters)' if not options.cnoc \
-                     else 'CnocTop#(NumberOfRequests,NumberOfIndications,PhysAddrWidth,DataBusWidth,NumberOfMasters)'
+                 'moduleParam' : 'ConnectalTop' if not options.cnoc \
+                     else 'CnocTop#(NumberOfRequests,NumberOfIndications,PhysAddrWidth,DataBusWidth,`PinType,NumberOfMasters)'
                  }
     topFilename = project_dir + '/Top.bsv'
     print 'Writing:', topFilename

@@ -35,6 +35,7 @@ import DmaVector::*;
 import Pipe::*;
 import FloatOps::*;
 import RbmTypes::*;
+import BUtils::*;
 
 interface SigmoidTable#(numeric type tsz);
    interface Vector#(2, BRAMServer#(Bit#(tsz), Vector#(3,Float))) ports;
@@ -79,6 +80,33 @@ module mkSigmoidTable(SigmoidTable#(tsz));
       return (1 << tsz);
    endmethod
 endmodule
+
+// Why was this not picked up from FloatingPoint.bsv???
+function Integer bias( FloatingPoint#(e,m) din );
+   return (2 ** (valueof(e)-1)) - 1;
+endfunction
+
+function Int#(32) toInt32(FloatingPoint#(e,m) din);
+   Int#(32) res = 0;
+
+   if (isNaN(din))
+      res = 0;
+   else if (isInfinity(din))
+      res = (din.sign) ? unpack('h80000000) : unpack('h7FFFFFFF);
+   else begin
+      // if the quantity is less than +/-1, it is zero.
+      if (din.exp >= fromInteger(bias(din))) begin
+	 // be sure to re-add the hidden bit when converting.
+	 Bit#(TAdd#(m,1)) y = { 1, din.sfd };
+	 y = y >> (fromInteger(bias(din)) + fromInteger(valueOf(m)) - din.exp);
+	 Bit#(32) r = cExtend(y);
+
+	 if (din.sign) res = unpack(~r + 1);
+	 else          res = unpack(r);
+      end
+   end
+   return res;
+endfunction
 
 module mkSigmoidServer#(Integer id, SigmoidTable#(tsz) sigmoidTable)(Server#(Float,Float))
    provisos (Add#(tsz,2,usz),

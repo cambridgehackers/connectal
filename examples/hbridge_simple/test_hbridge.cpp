@@ -20,26 +20,13 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <assert.h>
-#include <string.h>
-
 #include "HBridgeCtrlRequest.h"
-#include "GeneratedTypes.h"
-
 #include "hbridge_simple.h" 
-
-
-
 
 int main(int argc, const char **argv)
 {
-  HBridgeCtrlIndication *ind = new HBridgeCtrlIndication(IfcNames_ControllerIndication);
-  HBridgeCtrlRequestProxy *device = new HBridgeCtrlRequestProxy(IfcNames_ControllerRequest);
+  HBridgeCtrlIndication ind(IfcNames_HBridgeCtrlIndicationH2S);
+  HBridgeCtrlRequestProxy *device = new HBridgeCtrlRequestProxy(IfcNames_HBridgeCtrlRequestS2H);
   sleep(2);
 
   for(int i = 0; i < 2; i++){
@@ -60,5 +47,4 @@ int main(int argc, const char **argv)
     STOP;
     sleep(1);
   }
-
 }

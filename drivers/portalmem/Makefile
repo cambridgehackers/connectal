@@ -10,7 +10,7 @@ include $(CONNECTALDIR)/Makefile.version
 
 obj-m = portalmem.o
 
-ccflags-y := -I$(PWD)/../.. \
+ccflags-y := -I$(CONNECTALDIR) \
 	-DDRIVER_VERSION="KBUILD_STR($(VERSION))"
 
 ifeq ("$(KROOT)","")

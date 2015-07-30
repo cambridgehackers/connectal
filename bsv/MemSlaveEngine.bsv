@@ -56,6 +56,7 @@ endinterface: MemSlaveEngine
    `define AVALON
 `endif
 
+typedef 32 WriteDataMimoSize;
 module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    provisos (Div#(buswidth, 8, busWidthBytes),
 	     Div#(buswidth, 32, busWidthWords),
@@ -68,7 +69,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	     Add#(eee, busWidthWords, 8),
 	     Add#(1, a__, busWidthWords),
 	     Add#(busWidthWords, b__, 4),
-	     Add#(c__, busWidthWords, 128)
+	     Add#(c__, busWidthWords, WriteDataMimoSize)
       );
 
     let beat_shift = fromInteger(valueOf(beatShift));
@@ -86,7 +87,9 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    MIFO#(4,busWidthWords,16,Bit#(32)) completionMimo <- mkMIFO();
    MIFO#(4,busWidthWords,16,TLPTag) completionTagMimo <- mkMIFO();
 
-    MIMO#(busWidthWords,4,128,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
+   mimoCfg.bram_based = True;
+   mimoCfg.unguarded = True;
+    MIMO#(busWidthWords,4,WriteDataMimoSize,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
     ConfigCounter#(8) writeDataCnt <- mkConfigCounter(0);
     Reg#(Bit#(10)) writeBurstCount <- mkReg(0);
    FIFO#(Bit#(10)) writeBurstCountFifo <- mkFIFO();
@@ -116,7 +119,15 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       writeDataMimoEnqProbe <= writeDataMimoEnqWire;
    endrule
 
-   rule writeHeaderTlp if (!writeInProgress && (writeDataCnt.read >= truncate(unpack(tlpWriteHeaderFifo.first.dwCount))));
+   Reg#(Bool) writeDataCntAboveThreshold <- mkReg(False);
+   rule updateWriteDataCntAboveThreshold;
+      writeDataCntAboveThreshold <= (writeDataCnt.read >= truncate(unpack(tlpWriteHeaderFifo.first.dwCount)));
+   endrule
+   (* descending_urgency = "writeHeaderTlp,updateWriteDataCntAboveThreshold" *)
+   rule writeHeaderTlp if (!writeInProgress && writeDataCntAboveThreshold);
+      // update for next cycle
+      writeDataCntAboveThreshold <= (writeDataCnt.read >= truncate(unpack(tlpWriteHeaderFifo.first.dwCount)));
+
       writeHeaderTlpWire <= True;
       let info <- toGet(tlpWriteHeaderFifo).get();
       let tlp     = info.tlp;
@@ -178,7 +189,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 
    endrule
 
-   rule writeTlps if (writeInProgress && writeDataMimo.deqReadyN(tlpDwCount));
+   rule writeTlps if (writeInProgress); // already verified  writeDataMimo.deqReadyN(tlpDwCount)) for this transaction
       TLPData#(16) tlp = defaultValue;
       tlp.sof = False;
       Vector#(4, Bit#(32)) v = unpack(0);
@@ -242,6 +253,12 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       Vector#(4, Bit#(32)) vec = unpack(0);
       Vector#(4, Bit#(32)) tlpvec = unpack(tlp.data);
       let wordCount = wordCountReg;
+`ifdef AXI
+      let dataInSecondTlp = False;
+`elsif AVALON
+      let quadWordAligned = isQuadWordAligned(getLowerAddr(hdr_3dw.addr, hdr_3dw.firstbe));
+      let dataInSecondTlp = quadWordAligned;
+`endif
       if (!tlp.sof) begin
 	 vec = reverse(tlpvec);
 	 // The MIMO implicit guard only checks for space to enqueue 1 element
@@ -265,12 +282,14 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	       && hdr_3dw.pkttype == COMPLETION
 	       && completionMimo.enqReady()
 	       && completionTagMimo.enqReady()) begin
-	    vec[0] = hdr_3dw.data;
-            wordCount = hdr_3dw.length - 1;
-	    completionMimo.enq(1, vec);
             TLPTag tag = hdr_completion.tag;
-	    lastTag <= tag;
-	    completionTagMimo.enq(1, replicate(tag));
+            lastTag <= tag;
+            if (!dataInSecondTlp) begin
+               vec[0] = hdr_3dw.data;
+               wordCount = hdr_3dw.length - 1;
+               completionMimo.enq(1, vec);
+               completionTagMimo.enq(1, replicate(tag));
+            end
 	    handled = True;
       end
       wordCountReg <= wordCount;

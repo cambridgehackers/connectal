@@ -1,4 +1,3 @@
-
 // Copyright (c) 2014 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
@@ -20,30 +19,41 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+import Vector::*;
+//import GetPut::*;
+//import Clocks :: *;
+//import BRAMFIFO::*;
+//import MemTypes::*;
+//import ClientServer::*;
+//import Pipe::*;
+//import MemwriteEngine::*;
+//import IserdesDatadeser::*;
+import IserdesDatadeserIF::*;
+//import Connectable :: *;
+//import FIFO::*;
+//import MemServer::*;
+//import MMU::*;
+//import Portal::*;
+//import XilinxCells::*;
+//import ConnectalClocks::*;
+//import Gearbox::*;
+import ConnectalSpi::*;
+//import ImageonVita::*;
+import HDMI::*;
+//import YUV::*;
+//import ConnectalXilinxCells::*;
 
-import FloatingPoint::*;
-import GetPut::*;
-import ClientServer::*;
-import FpOps::*;
-
-interface FpRequest;
-   method Action add(Float a, Float b);
+interface ImageonCapturePins;
+    method Bit#(1) io_vita_clk_pll();
+    method Bit#(1) io_vita_reset_n();
+    method Vector#(3, ReadOnly#(Bit#(1))) io_vita_trigger();
+    method Action io_vita_monitor(Bit#(2) v);
+    interface SpiMasterPins spi;
+    method Bit#(1) i2c_mux_reset_n();
+    interface Clock imageon_deleteme_unused_clock;
+    interface Reset imageon_deleteme_unused_reset;
+    interface ImageonSerdesPins serpins;
+    (* prefix="" *)
+    interface HDMI#(Bit#(HdmiBits)) hdmi;
+    method Action fmc_video_clk1(Bit#(1) v);
 endinterface
-interface FpIndication;
-   method Action added(Float a);
-endinterface
-
-module mkFpRequest#(FpIndication indication)(FpRequest);
-
-   Server#(Tuple2#(Float,Float),Float) adder <- mkXilinxFPAdder();
-
-   rule result;
-      let v <- adder.response.get();
-      indication.added(v);
-   endrule
-
-   method Action add(Float a, Float b);
-      adder.request.put(tuple2(a, b));
-   endmethod
-
-endmodule

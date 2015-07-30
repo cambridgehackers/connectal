@@ -19,8 +19,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #include "dmaManager.h"
-#include "NandSimIndication.h"
-#include "NandSimRequest.h"
+#include "NandCfgIndication.h"
+#include "NandCfgRequest.h"
 
 int srcAlloc, nandAlloc;
 unsigned int *srcBuffer = 0;
@@ -31,32 +31,32 @@ size_t nandBytes = 1 << 24;
 size_t nandBytes = 1 << 14;
 #endif
 
-class NandSimIndication : public NandSimIndicationWrapper
+class NandCfgIndication : public NandCfgIndicationWrapper
 {
 public:
   unsigned int rDataCnt;
   virtual void readDone(uint32_t v){
-    fprintf(stderr, "NandSim::readDone v=%x\n", v);
+    fprintf(stderr, "NandCfg::readDone v=%x\n", v);
     sem_post(&sem);
   }
   virtual void writeDone(uint32_t v){
-    fprintf(stderr, "NandSim::writeDone v=%x\n", v);
+    fprintf(stderr, "NandCfg::writeDone v=%x\n", v);
     sem_post(&sem);
   }
   virtual void eraseDone(uint32_t v){
-    fprintf(stderr, "NandSim::eraseDone v=%x\n", v);
+    fprintf(stderr, "NandCfg::eraseDone v=%x\n", v);
     sem_post(&sem);
   }
   virtual void configureNandDone(){
-    fprintf(stderr, "NandSim::configureNandDone\n");
+    fprintf(stderr, "NandCfg::configureNandDone\n");
     sem_post(&sem);
   }
 
-  NandSimIndication(int id) : NandSimIndicationWrapper(id) {
+  NandCfgIndication(int id) : NandCfgIndicationWrapper(id) {
     sem_init(&sem, 0, 0);
   }
   void wait() {
-    fprintf(stderr, "NandSim::wait for semaphore\n");
+    fprintf(stderr, "NandCfg::wait for semaphore\n");
     sem_wait(&sem);
   }
 private:
@@ -66,14 +66,14 @@ private:
 int main(int argc, const char **argv)
 {
   unsigned int srcGen = 0;
-  NandSimRequestProxy *device = 0;
-  NandSimIndication *deviceIndication = 0;
+  NandCfgRequestProxy *device = 0;
+  NandCfgIndication *deviceIndication = 0;
 
   fprintf(stderr, "chamdoo-test\n");
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
-  device = new NandSimRequestProxy(IfcNames_NandSimRequest);
-  deviceIndication = new NandSimIndication(IfcNames_NandSimIndication);
+  device = new NandCfgRequestProxy(IfcNames_NandCfgRequestS2H);
+  deviceIndication = new NandCfgIndication(IfcNames_NandCfgIndicationH2S);
   DmaManager *dma = platformInit();
 
   fprintf(stderr, "Main::allocating memory...\n");
@@ -82,7 +82,7 @@ int main(int argc, const char **argv)
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, numBytes);
   fprintf(stderr, "fd=%d, srcBuffer=%p\n", srcAlloc, srcBuffer);
 
-  for (int i = 0; i < numBytes/sizeof(srcBuffer[0]); i++)
+  for (unsigned int i = 0; i < numBytes/sizeof(srcBuffer[0]); i++)
     srcBuffer[i] = srcGen++;
     
   portalCacheFlush(srcAlloc, srcBuffer, numBytes, 1);
@@ -101,12 +101,12 @@ int main(int argc, const char **argv)
   unsigned long loop = 0;
   unsigned long match = 0, mismatch = 0;
   while (loop < nandBytes) {
-	  int i;
+	  unsigned int i;
 	  for (i = 0; i < numBytes/sizeof(srcBuffer[0]); i++) {
 		  srcBuffer[i] = loop+i;
 	  }
 
-	  fprintf(stderr, "Main::starting write ref=%d, len=%08zx (%lu)\n", ref_srcAlloc, numBytes, loop);
+	  fprintf(stderr, "Main::starting write ref=%d, len=%08lx (%lu)\n", ref_srcAlloc, (long)numBytes, loop);
 	  device->startWrite(ref_srcAlloc, 0, loop, numBytes, 16);
 	  deviceIndication->wait();
 
@@ -115,14 +115,14 @@ int main(int argc, const char **argv)
 
   loop = 0;
   while (loop < nandBytes) {
-	  int i;
-	  fprintf(stderr, "Main::starting read %08zx (%lu)\n", numBytes, loop);
+	  unsigned int i;
+	  fprintf(stderr, "Main::starting read %08lx (%lu)\n", (long)numBytes, loop);
 	  device->startRead(ref_srcAlloc, 0, loop, numBytes, 16);
 	  deviceIndication->wait();
 
 	  for (i = 0; i < numBytes/sizeof(srcBuffer[0]); i++) {
 		  if (srcBuffer[i] != loop+i) {
-			  fprintf(stderr, "Main::mismatch [%08zx] != [%08zx]\n", loop+i, srcBuffer[i]);
+			  fprintf(stderr, "Main::mismatch [%08lx] != [%08lx]\n", (long)loop+i, (long)srcBuffer[i]);
 			  mismatch++;
 		  } else {
 			  match++;

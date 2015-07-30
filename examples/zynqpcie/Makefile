@@ -5,6 +5,7 @@ BSVFILES = SimpleIF.bsv ZynqPcieTestIF.bsv Top.bsv
 CPPFILES=testzynqpcie.cpp
 NUMBER_OF_MASTERS =0
 PIN_TYPE=ZynqPcie
+PIN_TYPE_INCLUDE = ZynqPcieTestIF
 CONNECTALFLAGS += -D PcieHostIF=1 -D PCIE_NO_BSCAN=1 --bscflags="+RTS -K96000000 -RTS"
 CONNECTALFLAGS += --xci=$(CONNECTALDIR)/out/$(BOARD)/pcie_7x_0/pcie_7x_0.xci -C $(BOARD)/sources/zynqpcie.xdc
 CONNECTALFLAGS += -P mkPcieHostTopSynth -P mkMemSlaveEngine

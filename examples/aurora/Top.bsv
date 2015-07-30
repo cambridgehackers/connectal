@@ -31,7 +31,7 @@ import AuroraRequest::*;
 import Aurora::*;
 typedef enum {IfcNames_AuroraIndication, IfcNames_AuroraRequest} IfcNames deriving (Eq,Bits);
 
-module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,AuroraPins,0));
+module mkConnectalTop(ConnectalTop);
 
    // instantiate user portals
    AuroraIndicationProxy auroraIndicationProxy <- mkAuroraIndicationProxy(IfcNames_AuroraIndication);

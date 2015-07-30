@@ -27,7 +27,6 @@ import MemTypes::*;
 import ClientServer::*;
 import Pipe::*;
 import MemwriteEngine::*;
-import HostInterface::*;
 import IserdesDatadeser::*;
 import IserdesDatadeserIF::*;
 import Connectable :: *;
@@ -35,7 +34,6 @@ import FIFO::*;
 import MemServer::*;
 import MMU::*;
 import Portal::*;
-import HostInterface::*;
 import XilinxCells::*;
 import ConnectalClocks::*;
 import Gearbox::*;
@@ -44,6 +42,7 @@ import ImageonVita::*;
 import HDMI::*;
 import YUV::*;
 import ConnectalXilinxCells::*;
+import ImageonCapturePins::*;
 
 Bit#(10) imageDataTag = 10'h035;
 Bit#(10) otherDataTag = 10'h015;
@@ -63,21 +62,6 @@ interface ImageonCaptureRequest;
     method Action set_host_oe(Bit#(1) v);
     method Action put_spi_request(Bit#(32) v);
     method Action set_i2c_mux_reset_n(Bit#(1) v);
-endinterface
-
-interface ImageonCapturePins;
-    method Bit#(1) io_vita_clk_pll();
-    method Bit#(1) io_vita_reset_n();
-    method Vector#(3, ReadOnly#(Bit#(1))) io_vita_trigger();
-    method Action io_vita_monitor(Bit#(2) v);
-    interface SpiMasterPins spi;
-    method Bit#(1) i2c_mux_reset_n();
-    interface Clock imageon_deleteme_unused_clock;
-    interface Reset imageon_deleteme_unused_reset;
-    interface ImageonSerdesPins serpins;
-    (* prefix="" *)
-    interface HDMI#(Bit#(HdmiBits)) hdmi;
-    method Action fmc_video_clk1(Bit#(1) v);
 endinterface
 
 interface ImageonCapture;
@@ -102,7 +86,7 @@ module mkImageonCapture#(ImageonSerdesIndication serdes_indication, HdmiGenerato
     Clock imageon_clock = clk.imageon;
     Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
     Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
-    SPI#(Bit#(26)) spiController <- mkSPI(1000, True);
+    SPIMaster#(Bit#(26)) spiController <- mkSPIMaster(1000, True);
     Reg#(Bit#(1)) i2c_mux_reset_n_reg <- mkReg(0);
     Reg#(Bool) dmaRun <- mkSyncReg(False, defaultClock, defaultReset, imageon_clock);
     Reg#(Bit#(32)) trigger_cnt_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);

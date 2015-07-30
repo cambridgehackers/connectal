@@ -19,13 +19,15 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #include <ctype.h>
-#include "i2chdmi.h"
-#include "edid.h"
 #include "dmaManager.h"
 #include "HdmiDisplayRequest.h"
 #include "HdmiDisplayIndication.h"
 #include "HdmiGeneratorIndication.h"
 #include "HdmiGeneratorRequest.h"
+#include "i2chdmi.h"
+#ifndef BOARD_bluesim
+#include "edid.h"
+#endif
 
 #define FRAME_COUNT 2
 #define MAX_PIXEL 256
@@ -33,30 +35,30 @@
 
 static HdmiGeneratorRequestProxy *hdmiGenerator;
 static HdmiDisplayRequestProxy *device;
-static DmaManager *dma;
-static MMURequestProxy *dmap;
 static int allocFrame[FRAME_COUNT];
 static unsigned int ref_srcAlloc[FRAME_COUNT];
 static int *dataptr[FRAME_COUNT];
 static int frame_index;
 static int nlines = 1080;
 static int npixels = 1920;
-static int fbsize = nlines*npixels*4;
+static int fbsize;
 
-void dump(const char *prefix, char *buf, size_t len)
+void memdump(unsigned char *p, int len, char *title)
 {
-    fprintf(stderr, "%s: ", prefix);
-    for (int i = 0; i < 16; i++)
-	fprintf(stderr, "%02x", (unsigned char)buf[i]);
-    fprintf(stderr, "\n");
-}
+int i;
 
-static void *thread_routine(void *data)
-{
-    fprintf(stderr, "Calling portalExec\n");
-    portalExec(0);
-    fprintf(stderr, "portalExec returned ???\n");
-    return data;
+    i = 0;
+    while (len > 0) {
+        if (!(i & 0xf)) {
+            if (i > 0)
+                fprintf(stdout, "\n");
+            fprintf(stdout, "%s: ",title);
+        }
+        fprintf(stdout, "%02x ", *p++);
+        i++;
+        len--;
+    }
+    fprintf(stdout, "\n");
 }
 
 static int corner[] = {0, -1, 0xf00f, 0x0fff};
@@ -118,8 +120,8 @@ public:
     virtual void transferStarted ( uint32_t v ) {
       fprintf(stderr, "[%s:%d] v=%d\n", __FUNCTION__, __LINE__, v);
     }
-    virtual void transferFinished ( uint32_t v ) {
-      fprintf(stderr, "[%s:%d] v=%d\n", __FUNCTION__, __LINE__, v);
+    virtual void transferFinished ( uint32_t v, uint32_t len ) {
+      fprintf(stderr, "[%s:%d] v=%d len=%d\n", __FUNCTION__, __LINE__, v, len);
     }
     virtual void transferStats ( uint32_t count, uint32_t cycles, uint64_t sumcycles ) {
 	fprintf(stderr, "[%s:%d] count=%d cycles=%d sumcycles=%"PRIx64" avgcycles=%f\n", __FUNCTION__, __LINE__, count, cycles, sumcycles, (double)sumcycles / count);
@@ -130,11 +132,35 @@ int main(int argc, const char **argv)
 {
     device = new HdmiDisplayRequestProxy(IfcNames_HdmiDisplayRequestS2H);
     DmaManager *dma = platformInit();
-    HdmiGeneratorIndicationWrapper *hdmiIndication = new HdmiIndication(IfcNames_HdmiGeneratorIndicationH2S);
-    HdmiDisplayIndicationWrapper *displayIndication = new DisplayIndication(IfcNames_HdmiDisplayIndicationH2S);
+    HdmiIndication hdmiIndication(IfcNames_HdmiGeneratorIndicationH2S);
+    DisplayIndication displayIndication(IfcNames_HdmiDisplayIndicationH2S);
     hdmiGenerator = new HdmiGeneratorRequestProxy(IfcNames_HdmiGeneratorRequestS2H);
 
-#ifndef BOARD_bluesim
+    //device->setTraceTransfers(1);
+    device->stopFrameBuffer();
+    //setClockFrequency(0, 100000000, 0);
+
+#ifdef BOARD_bluesim
+    nlines = 300;
+    npixels = 500;
+    int vblank = 10;
+    int hblank = 10;
+    int vsyncoff = 2;
+    int hsyncoff = 2;
+    int vsyncwidth = 3;
+    int hsyncwidth = 3;
+
+    fprintf(stderr, "lines %d, pixels %d, vblank %d, hblank %d, vwidth %d, hwidth %d\n",
+             nlines, npixels, vblank, hblank, vsyncwidth, hsyncwidth);
+hblank--; // needed on zc702
+    hdmiGenerator->setDeLine(vsyncoff,           // End of FrontPorch
+                            vsyncoff+vsyncwidth,// End of Sync
+                            vblank,             // Start of Visible (start of BackPorch)
+                            vblank + nlines, vblank + nlines / 2); // End
+        hdmiGenerator->setDePixel(hsyncoff,
+                            hsyncoff+hsyncwidth, hblank,
+                            hblank + npixels, hblank + npixels / 2);
+#else
     // read out monitor EDID from ADV7511
     struct edid edid;
     init_i2c_hdmi();
@@ -154,42 +180,19 @@ int main(int argc, const char **argv)
     }
     close(i2cfd);
     parseEdid(edid);
-#endif
-
-    device->stopFrameBuffer();
-
-    pthread_t thread;
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_create(&thread, &attr, thread_routine, 0);
-
+    long actualFrequency = 0;
     int status;
-    status = setClockFrequency(0, 100000000, 0);
+    status = setClockFrequency(0, 100000000, &actualFrequency);
+    printf("[%s:%d] setClockFrequency 0 100000000 status=%d actualfreq=%ld\n", __FUNCTION__, __LINE__, status, actualFrequency);
+    status = setClockFrequency(1, 160000000, &actualFrequency);
+    printf("[%s:%d] setClockFrequency 1 160000000 status=%d actualfreq=%ld\n", __FUNCTION__, __LINE__, status, actualFrequency);
+    status = setClockFrequency(3, 200000000, &actualFrequency);
+    printf("[%s:%d] setClockFrequency 3 200000000 status=%d actualfreq=%ld\n", __FUNCTION__, __LINE__, status, actualFrequency);
 
-#ifdef BOARD_bluesim
-    nlines = 100;
-    npixels = 200;
-    int vblank = 10;
-    int hblank = 10;
-    int vsyncoff = 2;
-    int hsyncoff = 2;
-    int vsyncwidth = 3;
-    int hsyncwidth = 3;
-
-    fprintf(stderr, "lines %d, pixels %d, vblank %d, hblank %d, vwidth %d, hwidth %d\n",
-             nlines, npixels, vblank, hblank, vsyncwidth, hsyncwidth);
-hblank--; // needed on zc702
-    hdmiGenerator->setDeLine(vsyncoff,           // End of FrontPorch
-                            vsyncoff+vsyncwidth,// End of Sync
-                            vblank,             // Start of Visible (start of BackPorch)
-                            vblank + nlines, vblank + nlines / 2); // End
-        hdmiGenerator->setDePixel(hsyncoff,
-                            hsyncoff+hsyncwidth, hblank,
-                            hblank + npixels, hblank + npixels / 2);
-#else
     for (int i = 0; i < 4; i++) {
       int pixclk = (long)edid.timing[i].pixclk * 10000;
-      if ((pixclk > 0) && (pixclk < 170000000)) {
+//break;
+      if ((pixclk > 0) && (pixclk < 148000000)) {
 	nlines = edid.timing[i].nlines;    // number of visible lines
 	npixels = edid.timing[i].npixels;
 	int vblank = edid.timing[i].blines; // number of blanking lines
@@ -205,8 +208,8 @@ hblank--; // needed on zc702
 		pixclk,
 		60l * (long)(hblank + npixels) * (long)(vblank + nlines),
 		npixels, nlines);
-	status = setClockFrequency(1, pixclk, 0);
-hblank--; // needed on zc702
+	setClockFrequency(1, pixclk, 0);
+//hblank--; // needed on zc702
 	hdmiGenerator->setDeLine(vsyncoff,           // End of FrontPorch
                                 vsyncoff+vsyncwidth,// End of Sync
                                 vblank,             // Start of Visible (start of BackPorch)
@@ -225,20 +228,17 @@ hblank--; // needed on zc702
         allocFrame[i] = portalAlloc(fbsize, 0);
         dataptr[i] = (int*)portalMmap(allocFrame[i], fbsize);
         memset(dataptr[i], i ? 0xff : 0, fbsize);
-        fprintf(stderr, "calling dma->reference\n");
+        fprintf(stderr, "hdmidisplay: calling dma->reference %d/%d\n", i, FRAME_COUNT);
         ref_srcAlloc[i] = dma->reference(allocFrame[i]);
     }
 
-    uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
-    fprintf(stderr, "first mem_stats=%"PRIx64"\n", beats);
+    //uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
+    //fprintf(stderr, "first mem_stats=%"PRIx64"\n", beats);
+    fprintf(stderr, "hdmidisplay: sleep 3\n");
     sleep(3);
-    fprintf(stderr, "Starting frame buffer ref=%d...", ref_srcAlloc[0]);
+    fprintf(stderr, "hdmidisplay: Starting frame buffer ref=%d...", ref_srcAlloc[0]);
     fill_pixels(0);
-    fprintf(stderr, "done\n");
-    int limit = 30;
-    while (limit-- > 0) {
-      uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
-      fprintf(stderr, "mem_stats=%"PRIx64"\n", beats);
-      sleep(1);
-    }
+    fprintf(stderr, "hdmidisplay: sleep 60\n");
+    sleep(60);
+    fprintf(stderr, "hdmidisplay: done\n");
 }

@@ -19,14 +19,10 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import GetPut            :: *;
 import Connectable       :: *;
 import FIFOF             :: *;
 import Pipe              :: *;
-import Portal            :: *;
-import MsgFormat         :: *;
-import CnocPortal        :: *;
 
 interface SimLink#(numeric type dataWidth);
    method Action start(Bit#(32) linknumber, Bool listening);
@@ -118,9 +114,10 @@ endmodule
 
 `ifdef XSIM
 import "BVI" XsimLink =
-module mkSimLink(SimLink#(32));
-
-   method start(linknumber, listening) enable (en_start);
+module mkSimLink(SimLink#(dataWidth));
+   parameter DATAWIDTH=valueOf(dataWidth);
+   method start(start_linknumber, start_listening) enable (en_start);
+   method link_up linkUp();
    interface PipeOut rx;
       method rx_first first() ready (rdy_rx_first);
       method deq() enable (en_rx_deq) ready (rdy_rx_deq);
@@ -130,6 +127,6 @@ module mkSimLink(SimLink#(32));
       method enq(tx_enq_v) enable (en_tx_enq) ready (rdy_tx_enq);
       method tx_not_full notFull();
    endinterface
-   schedule (rx_first, rx_notEmpty, tx_notFull, rx_deq, tx_enq, start) CF (rx_first, rx_notEmpty, tx_notFull, rx_deq, tx_enq, start);
+   schedule (rx_first, rx_notEmpty, tx_notFull, rx_deq, tx_enq, start, linkUp) CF (rx_first, rx_notEmpty, tx_notFull, rx_deq, tx_enq, start, linkUp);
 endmodule
 `endif

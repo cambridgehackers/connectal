@@ -20,17 +20,15 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <assert.h>
 #include <string.h>
 #include <fcntl.h>
-#include <asm/ioctl.h>
+#include <sys/ioctl.h>
 #include <linux/types.h>
-#include "/usr/include/linux/spi/spidev.h"
+#include "linux/spi/spidev.h"
 
 #include "SPIRequest.h"
 #include "SPIResponse.h"
@@ -71,7 +69,7 @@ public:
 int main(int argc, const char **argv)
 {
   SPIRequestProxy *device = new SPIRequestProxy(IfcNames_ControllerRequest);
-  SPIResponse *ind = new SPIResponse(IfcNames_ControllerResponse);
+  SPIResponse ind(IfcNames_ControllerResponse);
   uint8_t iter = 1;
 
   device->set_clk_inv(0);
@@ -95,7 +93,7 @@ int main(int argc, const char **argv)
 
   while(iter < 4){
     uint8_t tx[sizeof(uint32_t)], rx[sizeof(uint32_t)];
-    for(int i = 0; i < sizeof(uint32_t); i++)
+    for(unsigned int i = 0; i < sizeof(uint32_t); i++)
       tx[i] = 1;
     struct spi_ioc_transfer tr;
     tr.tx_buf = (unsigned long)tx;

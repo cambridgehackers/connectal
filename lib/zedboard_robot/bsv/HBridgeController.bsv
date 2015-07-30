@@ -43,14 +43,18 @@ interface HBridge2Pins;
    interface HBridgePins hbridge0;
    interface HBridgePins hbridge1;
 endinterface
+
+interface HBridgeSimplePins;
+   interface HBridge2Pins hbridge;
+   interface LEDS leds;
+endinterface
  
 interface HBridgeController;
    interface HBridgeCtrlRequest req;
-   interface HBridge2Pins pins;
-   interface LEDS leds;
+   interface HBridgeSimplePins pins;
 endinterface
 
-typedef enum {Stopped, Started} HBridgeCtrlEvent deriving (Eq,Bits);
+typedef enum {HBridgeCtrlEvent_Stopped, HBridgeCtrlEvent_Started} HBridgeCtrlEvent deriving (Eq,Bits);
 
 module mkHBridgeController#(HBridgeCtrlIndication ind)(HBridgeController);
    
@@ -76,8 +80,8 @@ module mkHBridgeController#(HBridgeCtrlIndication ind)(HBridgeController);
       Bool started =  fold(booland, readVReg(pz)) && !fold(booland, npz);
       Bool stopped = !fold(booland, readVReg(pz)) &&  fold(booland, npz);
       Bit#(32) e = 0;
-      e = e | (extend(pack(stopped)) << pack(Stopped));
-      e = e | (extend(pack(started)) << pack(Started));
+      e = e | (extend(pack(stopped)) << pack(HBridgeCtrlEvent_Stopped));
+      e = e | (extend(pack(started)) << pack(HBridgeCtrlEvent_Started));
       if (e != 0 && event_fifo.notFull) 
 	 event_fifo.enq(e);
       writeVReg(pz,npz);
@@ -103,7 +107,8 @@ module mkHBridgeController#(HBridgeCtrlIndication ind)(HBridgeController);
       endmethod
    endinterface
    
-   interface HBridge2Pins pins;
+   interface HBridgeSimplePins pins;
+   interface HBridge2Pins hbridge;
       interface HBridgePins hbridge0;
 	 method Bit#(1) enabled();
 	    return enabled[0];
@@ -124,6 +129,7 @@ module mkHBridgeController#(HBridgeCtrlIndication ind)(HBridgeController);
    
    interface LEDS leds;
       method Bit#(LedsWidth) leds() = leds_val;
+   endinterface
    endinterface
 
 endmodule

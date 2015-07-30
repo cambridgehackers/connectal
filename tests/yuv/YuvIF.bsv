@@ -39,7 +39,11 @@ interface YuvIndication;
    method Action yyuv(Bit#(8) yy, Bit#(8) uv);
 endinterface
 
-module mkYuvRequest#(YuvIndication indication)(YuvRequest);
+interface YuvIF;
+  interface YuvRequest request;
+endinterface
+
+module mkYuvIF#(YuvIndication indication)(YuvIF);
    let rgb888ToYyuv <- mkRgb888ToYyuv();
    
     Wire#(VideoData#(Rgb888))                    yyuvInputWire <- mkDWire(unpack(0));
@@ -97,6 +101,7 @@ module mkYuvRequest#(YuvIndication indication)(YuvRequest);
 	 indication.yyuv(v.pixel.yy, v.pixel.uv);
    endrule
 
+   interface YuvRequest request;
    method Action toRgb(Bit#(8) r, Bit#(8) g, Bit#(8) b);
       indication.rgb(r, g, b);
    endmethod
@@ -107,5 +112,6 @@ module mkYuvRequest#(YuvIndication indication)(YuvRequest);
    method Action toYyuv(Bit#(8) r, Bit#(8) g, Bit#(8) b);
       yyuvInputWire <= VideoData { de: 1, vsync: 0, hsync: 0, pixel: Rgb888 { r:r, g:g, b:b } };
    endmethod
+   endinterface
 
 endmodule

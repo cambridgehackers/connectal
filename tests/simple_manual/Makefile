@@ -1,7 +1,8 @@
-
 CONNECTALDIR?=../..
-INTERFACES = SimpleRequest SimpleIndication
-BSVFILES = Simple.bsv Top.bsv
+S2H_INTERFACES = SimpleRequest:Simple.request
+H2S_INTERFACES = Simple:SimpleRequest
+
+BSVFILES = Simple.bsv
 #original user program CPPFILES=testsimple.cpp
 CPPFILES=simple_manual.c
 NUMBER_OF_MASTERS =0

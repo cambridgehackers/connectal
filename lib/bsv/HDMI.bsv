@@ -69,16 +69,18 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
     // 1920 * 1080
-    Reg#(Bit#(12)) dePixelEnd <- mkSyncReg(1920 + 192 + 44 + 44-1, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(12)) dePixelWidth <- mkSyncReg(44 + 44 - 1 + 44, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(12)) dePixelPorch <- mkSyncReg(44 + 44 - 1, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(12)) dePixelVisible <- mkSyncReg(44 + 44 - 1 + 192, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(12)) pixelMidpoint <- mkSyncReg((1920/2) + 192, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(11)) deLineEnd <- mkSyncReg(1080 + 45-1, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(11)) deLineWidth <- mkSyncReg(3 + 5, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(11)) deLinePorch <- mkSyncReg(3, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(11)) deLineVisible <- mkSyncReg(3 + 41, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(11)) lineMidpoint <- mkSyncReg((1080/2) + 41, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(12)) dePixelStartPorch <- mkSyncReg(   44 + 44 - 1, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(12)) dePixelEndPorch <- mkSyncReg(44 + 44 + 44 - 1, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(12)) dePixelStartVisible <- mkSyncReg(192 + 44 + 44 - 1, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(12)) dePixelEnd <- mkSyncReg(  1920 + 192 + 44 + 44 - 1, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(12)) dePixelMid <- mkSyncReg((1920/2) + 192, axi_clock, axi_reset, defaultClock);
+
+    Reg#(Bit#(11)) deLineStartPorch <- mkSyncReg(  3, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(11)) deLineEndPorch <- mkSyncReg(5 + 3, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(11)) deLineStartVisible <- mkSyncReg(3 + 41, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(11)) deLineEnd <- mkSyncReg(    1080 + 45-1, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(11)) deLineMid <- mkSyncReg((1080/2) + 41, axi_clock, axi_reset, defaultClock);
+
     Vector#(4, Reg#(Bit#(24))) patternRegs <- replicateM(mkSyncReg(24'h00FFFFFF, axi_clock, axi_reset, defaultClock));
     Reg#(Bit#(1)) shadowTestPatternEnabled <- mkSyncReg(1, axi_clock, axi_reset, defaultClock);
     Reg#(Bool) waitingForVsync <- mkSyncReg(False, axi_clock, axi_reset, defaultClock);
@@ -143,31 +145,31 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
 	          sendVsyncIndication.send();
            end
            else begin
-               if (lineCount == deLineVisible)
+               if (lineCount == deLineStartVisible)
                    lineVisible <= True;
                lineCount <= lineCount+1;
-               if (lineCount >= lineMidpoint)
+               if (lineCount >= deLineMid)
                    patternIndex1 <= 1;
            end
         end
         else begin
-           if (lineCount == deLinePorch) begin
+           if (lineCount == deLineStartPorch) begin
               vsync <= 1;
               if (pixelCount == 0 && testPatternEnabled == 0) begin
                   vsyncCounter <= vsyncCounter+1;
                   startDMA.send();
               end
            end
-           else if (lineCount == deLineWidth)
+           else if (lineCount == deLineEndPorch)
               vsync <= 0;
-           if (pixelCount == dePixelPorch)
+           if (pixelCount == dePixelStartPorch)
               hsync <= 1;
-           else if (pixelCount == dePixelWidth)
+           else if (pixelCount == dePixelEndPorch)
               hsync <= 0;
-           if (pixelCount == dePixelVisible)
+           if (pixelCount == dePixelStartVisible)
                dataEnable <= lineVisible;
            pixelCount <= pixelCount + 1;
-           if (pixelCount == pixelMidpoint)
+           if (pixelCount == dePixelMid)
                patternIndex0 <= 1;
         end
     endrule
@@ -183,6 +185,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     interface Put pdata;
         method Action put(Bit#(32) v) if (testPatternEnabled == 0 && dataEnable);
            rgb888StageReg <= VideoData {de: 1, vsync: 0, hsync: 0, pixel: unpack(v[23:0])};
+           $display("HDMI::pdata         [%d:%d] = %x", lineCount, pixelCount, v);
         endmethod
     endinterface
 
@@ -194,18 +197,18 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
             shadowTestPatternEnabled <= v;
         endmethod
         method Action setDePixel(Bit#(12) porch, Bit#(12) width, Bit#(12) visible, Bit#(12) last, Bit#(12) mid);
-            dePixelWidth <= width;
-            dePixelPorch <= porch;
-            dePixelVisible <= visible;
+            dePixelStartPorch <= porch;
+            dePixelEndPorch <= width;
+            dePixelStartVisible <= visible;
             dePixelEnd <= last;
-            pixelMidpoint <= mid;
+            dePixelMid <= mid;
         endmethod
         method Action setDeLine(Bit#(11) porch, Bit#(11) width, Bit#(11) visible, Bit#(11) last, Bit#(11) mid);
-            deLineWidth <= width;
-            deLinePorch <= porch;
-            deLineVisible <= visible;
+            deLineStartPorch <= porch;
+            deLineEndPorch <= width;
+            deLineStartVisible <= visible;
             deLineEnd <= last;
-            lineMidpoint <= mid;
+            deLineMid <= mid;
         endmethod
         method Action waitForVsync(Bit#(32) unused);
             waitingForVsync <= True;

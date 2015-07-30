@@ -37,6 +37,7 @@ import MemServerIndication::*;
 import MemServerRequest::*;
 //import IfcNames::*;
 import PlatformTypes::*;
+import `PinTypeInclude::*;
 
 interface Platform;
    interface PhysMemSlave#(32,32) slave;

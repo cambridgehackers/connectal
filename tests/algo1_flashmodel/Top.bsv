@@ -55,7 +55,7 @@ interface Top_Pins;
 	interface Aurora_Clock_Pins aurora_clk_fmc1;
 endinterface
 
-module mkConnectalTop#(HostInterface host) (ConnectalTop#(PhysAddrWidth,DataBusWidth, Top_Pins,1));
+module mkConnectalTop#(HostInterface host)(ConnectalTop);
    
    Clock clk250 = host.derivedClock;
    Reset rst250 = host.derivedReset;

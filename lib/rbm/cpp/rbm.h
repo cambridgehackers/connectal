@@ -33,7 +33,6 @@ extern RbmRequestProxy *rbmdevice;
 extern SigmoidRequestProxy *sigmoiddevice;
 extern SigmoidIndication *sigmoidindication;
 extern RbmIndication *rbmDeviceIndication;
-extern MemServerIndication *hostMemServerIndication;
 
 class RbmIndication : public RbmIndicationWrapper
 {

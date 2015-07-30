@@ -191,7 +191,7 @@ module mkMemReadInternal#(MemServerIndication ind,
       let rename_tag <- tag_gen.getTag;
       lreqFifo.deq();
       reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
-      if (debug) $display("checkMmuResp: client=%d, rename_tag=%d", client,rename_tag);
+      if (debug) $display("mkMemReadInternal::checkMmuResp: client=%d, rename_tag=%d", client,rename_tag);
       if (debug) $display("mkMemReadInternal::mmuResp %d %d", client, cycle_cnt-last_mmuResp);
       last_mmuResp <= cycle_cnt;
    endrule
@@ -208,7 +208,7 @@ module mkMemReadInternal#(MemServerIndication ind,
 	 burstLen = drq.req_burstLen >> beat_shift;
 	 last = drq.last;
 	 dynamicAssert(last == (burstLen==1), "Last incorrect");
-	 //$display("burstLen=%d dreqFifo.first.last=%d last=%d\n", burstLen, dreqFifo.first.last, last);
+	 //$display("mkMemReadInternal::burstLen=%d dreqFifo.first.last=%d last=%d\n", burstLen, dreqFifo.first.last, last);
       end
       Bit#(TLog#(numTags)) tt = truncate(response_tag);
       readBufferBram.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, datain:MemData{data: response.data, tag: otag, last: last}, address:{tt,truncate(burstLen)}});
@@ -216,7 +216,7 @@ module mkMemReadInternal#(MemServerIndication ind,
 	 tag_gen.returnTag(truncate(response_tag));
       end
       last_readData <= cycle_cnt;
-      if (debug) $display("read_data %d", cycle_cnt-last_readData);
+      if (debug) $display("mkMemReadInternal::read_data cyclediff %d", cycle_cnt-last_readData);
       burstReg <= burstLen-1;
       firstReg <= burstLen-1 == 0;
       lastReg  <= burstLen-1 == 1;
@@ -229,7 +229,7 @@ module mkMemReadInternal#(MemServerIndication ind,
 		     method Action put(MemRequest req);
 			last_loadClient <= cycle_cnt;
 			let mmusel = req.sglId[31:16];
-      			if (debug) $display("mkMemReadInternal::loadClient %d %d %d", i, mmusel, cycle_cnt-last_loadClient);
+      			if (debug) $display("mkMemReadInternal::loadClient server %d mmusel %d cycle %d", i, mmusel, cycle_cnt-last_loadClient);
 			if (mmusel >= fromInteger(valueOf(numMMUs)))
 			   dmaErrorFifo.enq(DmaError { errorType: DmaErrorMMUOutOfRange_r, pref: req.sglId });
    			else if (sglid_outofrange(req.sglId))
@@ -244,7 +244,7 @@ module mkMemReadInternal#(MemServerIndication ind,
 		     method ActionValue#(MemData#(dataWidth)) get if (compFifo0.first == fromInteger(i));
 			compFifo0.deq;
 			let data <- readBufferBram.portB.response.get;
-			if (debug) $display("mkMemReadInternal::comp %d  %x %d", i, data.data, cycle_cnt-last_comp);
+			if (debug) $display("mkMemReadInternal::comp server %d data %x cycle %d", i, data.data, cycle_cnt-last_comp);
 			last_comp <= cycle_cnt;
 			return data;
 		     endmethod
@@ -261,11 +261,11 @@ module mkMemReadInternal#(MemServerIndication ind,
 	    let client = reqFifo.first.client;
 	    let rename_tag = reqFifo.first.rename_tag;
 	    if (False && physAddr[31:24] != 0)
-	       $display("req_ar: funny physAddr req.sglId=%d req.offset=%h physAddr=%h", req.sglId, req.offset, physAddr);
+	       $display("mkMemReadInternal::req_ar: funny physAddr req.sglId=%d req.offset=%h physAddr=%h", req.sglId, req.offset, physAddr);
 	    dreqBram.portB.request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(rename_tag),
 						   datain:DRec{req_tag:req.tag, req_burstLen: req.burstLen, client:client, rename_tag:rename_tag, last:(req.burstLen == fromInteger(valueOf(dataWidthBytes)))}});
-	    //$display("readReq: client=%d, rename_tag=%d, physAddr=%h req.burstLen=%d beat_shift=%d last=%d", client,rename_tag,physAddr, req.burstLen, beat_shift, req.burstLen == beat_shift);
-	    if (debug) $display("read_client.readReq %d", cycle_cnt-last_readReq);
+	    //$display("mkMemReadInternal::readReq: client=%d, rename_tag=%d, physAddr=%h req.burstLen=%d beat_shift=%d last=%d", client,rename_tag,physAddr, req.burstLen, beat_shift, req.burstLen == beat_shift);
+	    if (debug) $display("mkMemReadInternal::read_client.readReq %d", cycle_cnt-last_readReq);
 	    last_readReq <= cycle_cnt;
 	    return PhysMemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
 	 endmethod
@@ -355,7 +355,7 @@ module mkMemWriteInternal#(MemServerIndication ind,
       let rename_tag <- tag_gen.getTag;
       lreqFifo.deq();
       reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
-      //if (debug) $display("checkMmuResp: client=%d, rename_tag=%d", client,rename_tag);
+      //if (debug) $display("mkMemWriteInternal::checkMmuResp: client=%d, rename_tag=%d", client,rename_tag);
       if (debug) $display("mkMemWriteInternal::mmuResp %d %d", client, cycle_cnt-last_mmuResp);
       last_mmuResp <= cycle_cnt;
    endrule
@@ -394,7 +394,7 @@ module mkMemWriteInternal#(MemServerIndication ind,
 	 beatCount <= beatCount+1;
 	 if (last)
 	    dreqFifo.deq();
-	 //$display("writeData: client=%d, rename_tag=%d", client, rename_tag);
+	 //$display("mkMemWriteInternal::writeData: client=%d, rename_tag=%d", client, rename_tag);
 	 memDataFifo.enq(MemData { data: tagdata.data,  tag:extend(rename_tag), last: last });
       endrule
    
@@ -440,7 +440,7 @@ module mkMemWriteInternal#(MemServerIndication ind,
 	    let rename_tag = reqFifo.first.rename_tag;
 	    reqFifo.deq;
 	    dreqFifo.enq(DRec{req_tag:req.tag, req_burstLen: req.burstLen, client:client, rename_tag:rename_tag, last: (req.burstLen == fromInteger(valueOf(dataWidthBytes))) });
-	    //$display("writeReq: client=%d, rename_tag=%d", client,rename_tag);
+	    //$display("mkMemWriteInternal::writeReq: client=%d, rename_tag=%d", client,rename_tag);
 	    return PhysMemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(rename_tag)};
 	 endmethod
       endinterface
@@ -448,7 +448,7 @@ module mkMemWriteInternal#(MemServerIndication ind,
       interface Put writeDone;
 	 method Action put(Bit#(MemTagSize) resp);
 	    tag_gen.returnTag(truncate(resp));
-	    if (debug) $display("writeDone: resp=%d", resp);
+	    if (debug) $display("mkMemWriteInternal::writeDone: resp=%d", resp);
 	 endmethod
       endinterface
    endinterface

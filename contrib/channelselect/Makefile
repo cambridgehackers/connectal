@@ -4,7 +4,6 @@ INTERFACES = ChannelSelectTestRequest DDSTestRequest ChannelSelectTestIndication
 BSVFILES = ChannelSelectTestInterfaces.bsv  DDSTestInterfaces.bsv Top.bsv
 CPPFILES=testchannelselecttest.cpp
 NUMBER_OF_MASTERS =0
-#CONNECTALFLAGS=--bscflags " -D TRACE_AXI"
 
 gentarget:: sine.bin
 

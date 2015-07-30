@@ -18,7 +18,6 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
 #include <stdio.h>
 #include <netdb.h>
 #include "sock_utils.h"
@@ -28,7 +27,6 @@
 EchoRequestProxy *echoRequestProxy;
 EchoIndicationProxy *sIndicationProxy;
 EchoIndicationProxy *sIndicationProxy2;
-//static int daemon_trace;// = 1;
 static int daemon_trace = 1;
 
 class EchoIndication : public EchoIndicationWrapper
@@ -45,7 +43,7 @@ public:
 			fprintf (stderr, "id is wrong (%u)", id);
 		}
     }
-    void heard2(uint32_t id, uint32_t a, uint32_t b) {
+    void heard2(uint32_t id, uint16_t a, uint16_t b) {
         if (daemon_trace)
         fprintf(stderr, "daemon: heard an echo2: %u %d %d\n", id, a, b);
 		if (id == 1) {
@@ -67,12 +65,12 @@ public:
         fprintf(stderr, "daemon[%s:%d] %u %u\n", __FUNCTION__, __LINE__, id, v);
         echoRequestProxy->say(id, v);
     }
-    void say2 (const uint32_t id, const uint32_t a, const uint32_t b ) {
+    void say2 (const uint32_t id, const uint16_t a, const uint16_t b ) {
         if (daemon_trace)
         fprintf(stderr, "daemon[%s:%d] %u %u %u\n", __FUNCTION__, __LINE__, id, a, b);
         echoRequestProxy->say2(id, a, b);
     }
-    void setLeds (const uint32_t id, const uint32_t v ) {
+    void setLeds (const uint32_t id, const uint8_t v ) {
         fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
         echoRequestProxy->setLeds(id, v);
         sleep(1);
@@ -83,18 +81,13 @@ public:
 
 int main(int argc, const char **argv)
 {
-    PortalSocketParam param;
 
-    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndication, &transportSocketResp, NULL);
-    sIndicationProxy2 = new EchoIndicationProxy(IfcNames_EchoIndication2, &transportSocketResp, NULL);
-
-    EchoRequest *sRequest = new EchoRequest(IfcNames_EchoRequest, &transportSocketResp, NULL);
-    EchoRequest *sRequest2 = new EchoRequest(IfcNames_EchoRequest2, &transportSocketResp, NULL);
-
-
-
-    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, NULL, NULL);
-    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
+    sIndicationProxy = new EchoIndicationProxy(IfcNames_EchoIndicationH2S, &transportSocketResp, NULL);
+    sIndicationProxy2 = new EchoIndicationProxy(IfcNames_EchoIndication2H2S, &transportSocketResp, NULL);
+    EchoRequest sRequest(IfcNames_EchoRequestS2H, &transportSocketResp, NULL);
+    EchoRequest sRequest2(IfcNames_EchoRequest2S2H, &transportSocketResp, NULL);
+    EchoIndication echoIndication(IfcNames_EchoIndicationH2S, NULL, NULL);
+    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequestS2H);
 
     printf("[%s:%d] daemon sleeping...\n", __FUNCTION__, __LINE__);
     while(1)

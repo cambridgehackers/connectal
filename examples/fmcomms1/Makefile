@@ -9,6 +9,7 @@ CPPFILES=testfmcomms1.cpp fmci2c.c i2c_zedboardandroid.c
 CONNECTALFLAGS = -C fmcomms1-$(BOARD).xdc --tcl clock.tcl
 CONNECTALFLAGS +=  -D USE_FMC_I2C1 -D IMPORT_HOSTIF
 PIN_TYPE = FMComms1Pins
+PIN_TYPE_INCLUDE = FMComms1
 
 ifeq ($(BOARD),zedboard)
 HAS_PS7=true

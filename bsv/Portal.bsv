@@ -24,6 +24,7 @@ import MemTypes::*;
 import Pipe::*;
 import ConnectalMemory::*;
 import HostInterface::*;
+import `PinTypeInclude::*;
 
 interface PortalInterrupt#(numeric type dataWidth);
    method Bool status();
@@ -73,11 +74,11 @@ endinterface
 
 typedef MemPortal#(12,32) StdPortal;
 
-interface ConnectalTop#(numeric type addrWidth, numeric type dataWidth, type pins, numeric type numMasters);
+interface ConnectalTop;
    interface PhysMemSlave#(32,32) slave;
-   interface Vector#(numMasters,PhysMemMaster#(addrWidth, dataWidth)) masters;
+   interface Vector#(NumberOfMasters,PhysMemMaster#(PhysAddrWidth, DataBusWidth)) masters;
    interface Vector#(MaxNumberOfPortals,ReadOnly#(Bool)) interrupt;
-   interface pins             pins;
+   interface `PinType pins;
 endinterface
 interface Tile;
    interface PhysMemSlave#(18,32) slave;

@@ -117,15 +117,15 @@ int main(int argc, const char **argv)
 
 #ifndef CUDA_PERF_TEST
 #ifdef MATRIX_NT
-  mmdevice = new MmRequestNTProxy(IfcNames_MmRequestPortal);
+  mmdevice = new MmRequestNTProxy(IfcNames_MmRequestNTS2H);
 #else
 #ifdef MATRIX_TN
-  mmdevice = new MmRequestTNProxy(IfcNames_MmRequestPortal);
+  mmdevice = new MmRequestTNProxy(IfcNames_MmRequestTNS2H);
 #endif
 #endif
-  MmIndication *mmdeviceIndication = new MmIndication(IfcNames_MmIndicationPortal);
-  //TimerRequestProxy *timerdevice = new TimerRequestProxy(IfcNames_TimerRequestPortal);
-  TimerIndication timerdeviceIndication(IfcNames_TimerIndicationPortal);
+  MmIndication *mmdeviceIndication = new MmIndication(IfcNames_MmIndicationH2S);
+  //TimerRequestProxy *timerdevice = new TimerRequestProxy(IfcNames_TimerRequestPortalS2H);
+  TimerIndication timerdeviceIndication(IfcNames_TimerIndicationH2S);
     DmaManager *dma = platformInit();
 
   if(sem_init(&mul_sem, 1, 0)){
@@ -138,19 +138,19 @@ int main(int argc, const char **argv)
   setClockFrequency(0, req_freq, &freq);
   fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
 
-  matAllocator = new PortalMatAllocator(dmap, dma);
+  matAllocator = new PortalMatAllocator(dma);
   FILE *octave_file = fopen("foo.m", "w");
 
   fprintf(stderr, "OpenCV matmul\n");
   portalTimerStart(0);
   cv::Mat  m3 = m1 * m2;
-  uint64_t opencv_hw_cycles = portalTimerLap(0);
+  //uint64_t opencv_hw_cycles = portalTimerLap(0);
 
   PortalMat tm3;
   fprintf(stderr, "Naive matmul\n");
   portalTimerStart(0);
   tm3.naive_mul(m1,m2, octave_file);
-  uint64_t naive_hw_cycles = portalTimerLap(0);
+  //uint64_t naive_hw_cycles = portalTimerLap(0);
 
   if (1) {
     fprintf(stderr, "DumpMat\n");
@@ -208,6 +208,7 @@ int main(int argc, const char **argv)
   pm3.multf(pm1, pm2t, mmdeviceIndication);
 #endif
 #endif
+#if 0
   //uint64_t hw_cycles = portalTimerLap(0); 
   uint64_t read_beats = hostMemServerIndication.getMemoryTraffic(ChannelType_Read);
   uint64_t write_beats = hostMemServerIndication.getMemoryTraffic(ChannelType_Write);
@@ -226,6 +227,7 @@ int main(int argc, const char **argv)
 	  (float)mmdeviceIndication->ccnt,
 	  (float)opencv_hw_cycles, (float)opencv_hw_cycles/(float)mmdeviceIndication->ccnt,
 	  (float)naive_hw_cycles, (float)naive_hw_cycles/(float)mmdeviceIndication->ccnt);
+#endif
 
   if (0) {
     dumpMat<float>("pm3", "%5.1f", pm3);

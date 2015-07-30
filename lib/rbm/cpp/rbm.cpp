@@ -215,7 +215,6 @@ void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
   if (verbose) dumpMat<float>("weights", "%5.6f", weights);
 
   portalTimerStart(0);
-  uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
   for (int epoch = 0; epoch < numEpochs; epoch++) {
 
     timerdevice->startTimer();
@@ -361,9 +360,9 @@ fprintf(stderr, "========== %s:%d\n", __FILE__, __LINE__);
     sum_of_errors_squareds[epoch] = rbmDeviceIndication->sum_of_errors_squared;
     timerdevice->stopTimer();
   }
-  uint64_t total_cycles = portalTimerLap(0);
-  beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
-  fprintf(stderr, "total_cycles=%ld beats=%ld utilization=%f\n", (long)total_cycles, (long)beats, (float)beats / (float)total_cycles);
+  //uint64_t total_cycles = portalTimerLap(0);
+  //uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
+  //fprintf(stderr, "total_cycles=%ld beats=%ld utilization=%f\n", (long)total_cycles, (long)beats, (float)beats / (float)total_cycles);
   for(int i = 0; i < numEpochs; i++)
     fprintf(stderr, "(%d) %f\n", i, sum_of_errors_squareds[i]);
 }

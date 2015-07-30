@@ -20,7 +20,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import Vector::*;
 import MaxSonarController::*;
 import GyroController::*;
@@ -45,7 +44,6 @@ interface Controller;
 endinterface
 
 module mkController#(MaxSonarCtrlIndication maxsonar_ind, GyroCtrlIndication gyro_ind, HBridgeCtrlIndication hbridge_ind)(Controller);
-
    MaxSonarController msc <- mkMaxSonarController(maxsonar_ind);
    GyroController gc <- mkGyroController(gyro_ind);
    HBridgeController hbc <- mkHBridgeController(hbridge_ind);
@@ -54,11 +52,10 @@ module mkController#(MaxSonarCtrlIndication maxsonar_ind, GyroCtrlIndication gyr
    interface MaxSonarCtrlRequest maxsonar_req = msc.req;
    interface GyroCtrlRequest gyro_req = gc.req;
    interface ZedboardRobotPins pins;
-      interface maxsonar = msc.pins;
-      interface spi = gc.spi;
-      interface hbridge = hbc.pins;
-      interface leds = hbc.leds;
+      interface maxsonar = msc.pins.maxsonar;
+      interface spi = gc.pins.spi;
+      interface hbridge = hbc.pins.hbridge;
+      interface leds = hbc.pins.leds;
    endinterface
    interface dmaClient = gc.dmaClient;
-
 endmodule

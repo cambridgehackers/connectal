@@ -42,13 +42,13 @@ int main(int argc, const char **argv)
   // this is because I don't want the server to abort when the client goes offline
   signal(SIGPIPE, SIG_IGN); 
 
-  GyroCtrlIndication *ind = new GyroCtrlIndication(IfcNames_ControllerIndication);
-  GyroCtrlRequestProxy *device = new GyroCtrlRequestProxy(IfcNames_ControllerRequest);
+  GyroCtrlIndication *ind = new GyroCtrlIndication(IfcNames_GyroCtrlIndicationH2S);
+  GyroCtrlRequestProxy *device = new GyroCtrlRequestProxy(IfcNames_GyroCtrlRequestS2H);
   DmaManager *dma = platformInit();
 
   PortalSocketParam param;
-  int rc = getaddrinfo("0.0.0.0", "5000", NULL, &param.addr);
-  GyroSampleStreamProxy *gssp = new GyroSampleStreamProxy(IfcNames_SampleStream, &transportSocketResp, &param, &GyroSampleStreamJsonProxyReq, 1000);
+  getaddrinfo("0.0.0.0", "5000", NULL, &param.addr);
+  GyroSampleStreamProxy *gssp = new GyroSampleStreamProxy(IfcNames_GyroSampleStream, &transportSocketResp, &param, &GyroSampleStreamJsonProxyReq, 1000);
 
   int dstAlloc = portalAlloc(alloc_sz, 0);
   char *dstBuffer = (char *)portalMmap(dstAlloc, alloc_sz);

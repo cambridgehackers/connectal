@@ -47,10 +47,14 @@ interface MaxSonarSampleStream;
    method Action sample(Bit#(32) v);
 endinterface
 
+interface MaxSonarSimplePins;
+   interface MaxSonarPins maxsonar;
+   interface LEDS leds;
+endinterface
+
 interface MaxSonarController;
    interface MaxSonarCtrlRequest req;
-   interface MaxSonarPins pins;
-   interface LEDS leds;
+   interface MaxSonarSimplePins pins;
 endinterface
 
 module mkMaxSonarController#(MaxSonarCtrlIndication ind)(MaxSonarController);
@@ -98,8 +102,9 @@ module mkMaxSonarController#(MaxSonarCtrlIndication ind)(MaxSonarController);
       endmethod
    endinterface
    
+   interface MaxSonarSimplePins pins;
    // pulse width modulation
-   interface MaxSonarPins pins;
+   interface MaxSonarPins maxsonar;
       method Bit#(1) range_ctrl();
 	 return range_ctrl_reg;
       endmethod
@@ -118,6 +123,7 @@ module mkMaxSonarController#(MaxSonarCtrlIndication ind)(MaxSonarController);
    
    interface LEDS leds;
       method Bit#(LedsWidth) leds() = extend(range_ctrl_reg);
+   endinterface
    endinterface
    
 endmodule

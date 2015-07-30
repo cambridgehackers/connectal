@@ -18,12 +18,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
 #include <stdio.h>
 #include <netdb.h>
-
 #include "sock_utils.h"
-
 #include "EchoRequest.h"
 #include "EchoIndication.h"
 
@@ -63,6 +60,9 @@ public:
     void setLeds ( const uint8_t v ) {
         fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
         echoRequestProxy->setLeds(v);
+    }
+    void disconnect (void) {
+        fprintf(stderr, "daemon[%s:%d]\n", __FUNCTION__, __LINE__);
         sleep(1);
         exit(1);
     }

@@ -1,9 +1,14 @@
 #!/bin/bash
-set -x
+#set -x
 set -e
 export SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 echo "run.pcie parameters are:" $*
 SSHPARAM=" -o StrictHostKeyChecking=no"
+
+if [ "$1" == "" ]; then
+    echo "usage: $0 ubuntu.exe" >&2
+    exit -1
+fi
 
 if [ "$SERIALNO" != "" ]; then
     BOARD_SERIAL="SERIALNO=$SERIALNO"
@@ -16,7 +21,17 @@ else
     TIMELIMIT=3m
 fi
 
+ENV=""
+if [ "$RUNENV" != "" ]; then
+    for e in `env | grep $RUNENV | grep -v RUNENV | sed 's/=(.*)/=\"$1\"/'`; do
+	ENV="$ENV $e"
+    done
+fi
+
 if [ "$RUNPARAM" != "" ]; then
+    if [ "$ENV" != "" ]; then
+	echo "sending environment variables $ENV"
+    fi
     RUNPARAMTEMP=$RUNPARAM:22
     array=(${RUNPARAMTEMP//:/ })
     RUNIP=${array[0]}
@@ -25,7 +40,7 @@ if [ "$RUNPARAM" != "" ]; then
     ssh $SSHPARAM -p $RUNPORT $RUNIP "rm -rf $TEMPDIR; mkdir -p $TEMPDIR"
     scp -P $RUNPORT $1 $RUNIP:$TEMPDIR
     EXENAME=`basename $1`
-    ssh $SSHPARAM -p $RUNPORT $RUNIP "$BOARD_SERIAL timeout $TIMELIMIT catchsegv $TEMPDIR/$EXENAME"
+    ssh $SSHPARAM -p $RUNPORT $RUNIP "$BOARD_SERIAL $ENV timeout $TIMELIMIT catchsegv $TEMPDIR/$EXENAME"
     ssh $SSHPARAM -p $RUNPORT $RUNIP "pcieflat > $TEMPDIR/pcieflat.txt"
     scp -P $RUNPORT $RUNIP:$TEMPDIR/pcieflat.txt `dirname $1`
     ssh $SSHPARAM -p $RUNPORT $RUNIP "rm -rf $TEMPDIR"

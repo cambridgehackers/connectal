@@ -21,24 +21,24 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-//import FIFO::*;
-
-interface SimpleIndication;
-    method Action heard1(Bit#(32) v);
-    method Action heard2(Bit#(32) a, Bit#(32) b);
-endinterface
-
 interface SimpleRequest;
     method Action say1(Bit#(32) v);
     method Action say2(Bit#(32) a, Bit#(32) b);
 endinterface
+interface Simple;
+    interface SimpleRequest request;
+endinterface
 
-module mkSimpleRequest#(SimpleIndication indication)(SimpleRequest);
+module mkSimple#(SimpleRequest indication)(Simple);
+   let verbose = False;
+
+   interface SimpleRequest request;
    method Action say1(Bit#(32) v);
-      indication.heard1(v);
+      indication.say1(v);
    endmethod
    
    method Action say2(Bit#(32) a, Bit#(32) b);
-      indication.heard2(a,b);
+      indication.say2(a,b);
    endmethod
+   endinterface
 endmodule

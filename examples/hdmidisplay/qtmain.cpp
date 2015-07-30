@@ -31,7 +31,8 @@
 #include <sys/select.h>
 #include "worker.h"
 
-#define SIZE 300
+//#define SIZE 300
+#define SIZE 600//300
 
 static int vpos, hpos;
 static int once = 1;
@@ -47,7 +48,8 @@ extern "C" void show_data(unsigned int vsync, unsigned int hsync, unsigned int d
     if (de) {
         if (vpos == 0 && hpos == 0 && !once)
             pinsglobal->newpix(image);
-        image.setPixel(hpos, vpos, data);
+        if (hpos < SIZE && vpos < SIZE)
+            image.setPixel(hpos, vpos, data);
         hpos++;
     }
     if (vsync)
@@ -76,6 +78,7 @@ extern "C" int qtmain(void *param)
     Worker worker;
     PinsUpdate pins;
 
+    (void)param;
     printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     pinsglobal = &pins;
     QObject::connect(&pins, SIGNAL(updatepix(QImage)), &worker, SLOT(newpix(QImage)));

@@ -37,8 +37,6 @@
 
 // make clock connections (see parallella_z7_top.v
 // tie off HDMI signals
-
-
 import Clocks :: *;
 import Vector            :: *;
 import Connectable       :: *;
@@ -56,6 +54,7 @@ import AxiDma            :: *;
 import Top               :: *;
 import Bscan             :: *;
 import HostInterface::*;
+import `PinTypeInclude::*;
 
 interface I2C_Pins;
    interface Inout#(Bit#(1)) scl;
@@ -106,7 +105,7 @@ module mkZynqTop(ZynqTop);
    BscanTop bscan <- mkBscanTop(3, clocked_by mainclock, reset_by mainreset); // Use USER3  (JTAG IDCODE address 0x22)
    BscanLocal lbscan <- mkBscanLocal(bscan, clocked_by bscan.tck, reset_by bscan.rst);
 `ifdef IMPORT_HOSTIF
-   ConnectalTop#(PhysAddrWidth, 64, `PinType, NumberOfMasters) top <- mkConnectalTop(
+   ConnectalTop top <- mkConnectalTop(
       (interface HostInterface;
           interface ps7 = ps7;
 	  interface portalClock = mainclock;
@@ -116,7 +115,7 @@ module mkZynqTop(ZynqTop);
           interface bscan = lbscan.loc[0];
       endinterface), clocked_by mainclock, reset_by mainreset);
 `else
-   ConnectalTop#(PhysAddrWidth, 64, `PinType, NumberOfMasters) top <- mkConnectalTop(clocked_by mainclock, reset_by mainreset);
+   ConnectalTop top <- mkConnectalTop(clocked_by mainclock, reset_by mainreset);
 `endif
    mkConnectionWithTrace(ps7, top, lbscan.loc[1], clocked_by mainclock, reset_by mainreset);
 

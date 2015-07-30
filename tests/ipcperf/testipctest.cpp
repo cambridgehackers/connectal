@@ -69,7 +69,7 @@ static void run_test(void)
 #define PCYC_LEN 20
   int i;
   uint64_t pcyc[PCYC_LEN];
-  uint64_t lastp;
+  uint64_t lastp = 0;
 
   memset(pcyc, 0, sizeof(pcyc));
   pcyc[0] = portalCycleCount();
@@ -111,11 +111,9 @@ static void run_test(void)
 int main(int argc, const char **argv)
 {
     int i;
-
     poller = new PortalPoller();
-    IpcTestIndication *ipcTestIndication = new IpcTestIndication(IfcNames_IpcTestIndication, poller);
-    // these use the default poller
-    ipcTestRequestProxy = new IpcTestRequestProxy(IfcNames_IpcTestRequest);
+    IpcTestIndication ipcTestIndication(IfcNames_IpcTestIndicationH2S, poller);
+    ipcTestRequestProxy = new IpcTestRequestProxy(IfcNames_IpcTestRequestS2H);
     pthread_mutex_lock(&mutex_heard);
     sem_init(&sem_heard, 0, 0);
 

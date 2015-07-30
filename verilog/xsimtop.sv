@@ -165,37 +165,44 @@ module XsimDmaReadWrite(input CLK,
 endmodule
 
 
+import "DPI-C" function int  bsimLinkUp(input int linknumber, input int listening);
 import "DPI-C" function void bsimLinkOpen(input int linknumber, input int listening);
 import "DPI-C" function int bsimLinkCanReceive(input int linknumber, input int listening);
 import "DPI-C" function int bsimLinkCanTransmit(input int linknumber, input int listening);
 import "DPI-C" function int bsimLinkReceive32(input int linknumber, input int listening);
-import "DPI-C" function int bsimLinkTransmit32(input int linknumber, input int listening, input int val);
+import "DPI-C" function void bsimLinkTransmit32(input int linknumber, input int listening, input int val);
+import "DPI-C" function longint bsimLinkReceive64(input int linknumber, input int listening);
+import "DPI-C" function void bsimLinkTransmit64(input int linknumber, input int listening, input longint val);
 
-module XsimLink (
+module XsimLink #(parameter DATAWIDTH=32) (
 		 input RST,
 		 input CLK,
 		 input CLK_GATE,
-		 input listening,
+		 input start_listening,
 		 input en_start,
-		 input [31:0] tx_enq_v,
+		 input [31:0] start_linknumber,
+		 input [DATAWIDTH-1:0] tx_enq_v,
 		 input en_rx_deq,
 		 input en_tx_enq,
-		 output [31:0] rx_first,
+		 output [DATAWIDTH-1:0] rx_first,
 		 output rdy_rx_first,
 		 output rdy_rx_deq,
 		 output rdy_tx_enq,
 		 output tx_not_full,
-		 output rx_not_empty
+		 output rx_not_empty,
+		 output link_up
 		 );
-   parameter LINKNUMBER=0;
    
+   reg 			[31:0] linknumber_reg;
    reg 			started;
    reg 			listeningreg;
+   reg                  link_up_reg;
    reg 			rx_valid;
    reg 			tx_valid;
-   reg 			[31:0] rx_reg;
-   reg 			[31:0] tx_reg;
+   reg 			[DATAWIDTH-1:0] rx_reg;
+   reg 			[DATAWIDTH-1:0] tx_reg;
    int   		       rx_val;
+   longint   		       rx_val64;
 
    assign rx_first     = rx_reg;
    assign rdy_rx_first = rx_valid && started;
@@ -203,10 +210,13 @@ module XsimLink (
    assign rdy_tx_enq   = !tx_valid && started;
    assign tx_not_full  = !tx_valid;
    assign rx_not_empty = rx_valid;
+   assign link_up      = link_up_reg;
 
    always @(posedge CLK) begin
       if (RST == `BSV_RESET_VALUE) begin
 	 started <= 0;
+	 linknumber_reg <= 0;
+	 link_up_reg <= 0;
 	 listeningreg <= 0;
 	 rx_valid <= 0;
 	 tx_valid  <= 0;
@@ -214,33 +224,44 @@ module XsimLink (
 	 tx_reg <= 32'haaaaaaaa;
       end
       else begin
-	 if (en_start == 1) begin
-	    $display("start linknumber=%d listening=%d", LINKNUMBER, listening);
-	    bsimLinkOpen(LINKNUMBER, listening);
-	    listeningreg <= listening;
+	 if (en_start == 1 && started == 0) begin
+	    $display("start linknumber=%d listening=%d", start_linknumber, start_listening);
+	    bsimLinkOpen(start_linknumber, start_listening);
+	    linknumber_reg <= start_linknumber;
+	    listeningreg <= start_listening;
 	    started <= 1;
 	 end
 	 
-	 if (started && !rx_valid && bsimLinkCanReceive(LINKNUMBER, listeningreg)) begin
-	    rx_val = bsimLinkReceive32(LINKNUMBER, listeningreg);
-	    rx_reg <= rx_val;
+	 if (started && !rx_valid && bsimLinkCanReceive(linknumber_reg, listeningreg)) begin
+	    if (DATAWIDTH == 32) begin
+	       rx_val = bsimLinkReceive32(linknumber_reg, listeningreg);
+	       rx_reg <= rx_val;
+	    end
+	    else begin
+	       rx_val64 = bsimLinkReceive64(linknumber_reg, listeningreg);
+	       rx_reg <= rx_val64;
+	    end
 	    rx_valid <= 1;
-	    $display("link %d.%d received %d %h", LINKNUMBER, listeningreg, rx_valid, rx_val);
+	    $display("link %d.%d received %d %h", linknumber_reg, listeningreg, rx_valid, rx_val);
 	 end
-	 if (started && tx_valid && bsimLinkCanTransmit(LINKNUMBER, listeningreg)) begin
-	    $display("link %d.%d transmitting %d %h", LINKNUMBER, listeningreg, tx_valid, tx_reg);
-	    bsimLinkTransmit32(LINKNUMBER, listeningreg, tx_reg);
+	 if (started && tx_valid && bsimLinkCanTransmit(linknumber_reg, listeningreg)) begin
+	    $display("link %d.%d transmitting %d %h", linknumber_reg, listeningreg, tx_valid, tx_reg);
+	    if (DATAWIDTH == 32)
+	      bsimLinkTransmit32(linknumber_reg, listeningreg, tx_reg);
+	    else
+	      bsimLinkTransmit64(linknumber_reg, listeningreg, tx_reg);
 	    tx_valid <= 0;
 	 end
 	 if (started && en_rx_deq) begin
 	    rx_valid <= 0;
-	    $display("%d.%d rx_deq %d %h", LINKNUMBER, listeningreg, rx_valid, rx_reg);
+	    $display("%d.%d rx_deq %d %h", linknumber_reg, listeningreg, rx_valid, rx_reg);
 	 end
 	 if (started && en_tx_enq && !tx_valid) begin
 	    tx_valid <= 1;
 	    tx_reg <= tx_enq_v;
-	    $display("%d.%d tx_enq %h", LINKNUMBER, listeningreg, tx_enq_v);
+	    $display("%d.%d tx_enq %h", linknumber_reg, listeningreg, tx_enq_v);
 	 end
+	 link_up_reg <= bsimLinkUp(linknumber_reg, listeningreg);
       end
    end
 

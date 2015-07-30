@@ -29,6 +29,8 @@
 #include <assert.h>
 #include <mp.h>
 #include "dmaManager.h"
+#include "MMURequest.h"
+#include "MMUIndication.h"
 #include "StrstrIndication.h"
 #include "StrstrRequest.h"
 
@@ -43,23 +45,82 @@ extern "C" {
 #include "nandsim.h"
 #include "strstr.h"
 
+class MMUIndicationNAND : public MMUIndicationWrapper
+{
+  DmaManager *portalMemory;
+ public:
+  MMUIndicationNAND(DmaManager *pm, unsigned int  id, int tile=DEFAULT_TILE) : MMUIndicationWrapper(id,tile), portalMemory(pm) {}
+  MMUIndicationNAND(DmaManager *pm, unsigned int  id, PortalTransportFunctions *item, void *param) : MMUIndicationWrapper(id, item, param), portalMemory(pm) {}
+  virtual void configResp(uint32_t pointer){
+    fprintf(stderr, "MMUIndication::configResp: %x\n", pointer);
+    portalMemory->confResp(pointer);
+  }
+  virtual void error (uint32_t code, uint32_t pointer, uint64_t offset, uint64_t extra) {
+    fprintf(stderr, "MMUIndication::error(code=0x%x, pointer=0x%x, offset=0x%"PRIx64" extra=-0x%"PRIx64"\n", code, pointer, offset, extra);
+    //if (--mmu_error_limit < 0)
+        exit(-1);
+  }
+  virtual void idResponse(uint32_t sglId){
+    portalMemory->sglIdResp(sglId);
+  }
+};
+
+#if 0
+class MemServerIndicationNAND : public MemServerIndicationWrapper
+{
+  MemServerRequestProxy *memServerRequestProxy;
+  sem_t mtSem;
+  uint64_t mtCnt;
+  void init(){
+    if (sem_init(&mtSem, 0, 0))
+      PORTAL_PRINTF("MemServerIndication::init failed to init mtSem\n");
+  }
+ public:
+  MemServerIndicationNAND(unsigned int  id, int tile=DEFAULT_TILE) : MemServerIndicationWrapper(id,tile), memServerRequestProxy(NULL) {init();}
+  MemServerIndicationNAND(MemServerRequestProxy *p, unsigned int  id, int tile=DEFAULT_TILE) : MemServerIndicationWrapper(id,tile), memServerRequestProxy(p) {init();}
+  virtual void addrResponse(uint64_t physAddr){
+    fprintf(stderr, "DmaIndication::addrResponse(physAddr=%"PRIx64")\n", physAddr);
+  }
+  virtual void reportStateDbg(const DmaDbgRec rec){
+    fprintf(stderr, "MemServerIndication::reportStateDbg: {x:%08x y:%08x z:%08x w:%08x}\n", rec.x,rec.y,rec.z,rec.w);
+  }
+  virtual void reportMemoryTraffic(uint64_t words){
+    //fprintf(stderr, "reportMemoryTraffic: words=%"PRIx64"\n", words);
+    mtCnt = words;
+    sem_post(&mtSem);
+  }
+  virtual void error (uint32_t code, uint32_t pointer, uint64_t offset, uint64_t extra) {
+    fprintf(stderr, "MemServerIndication::error(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
+    if (--mem_error_limit < 0)
+      exit(-1);
+  }
+  uint64_t receiveMemoryTraffic(){
+    sem_wait(&mtSem);
+    return mtCnt; 
+  }
+  uint64_t getMemoryTraffic(const ChannelType rc){
+    assert(memServerRequestProxy);
+    memServerRequestProxy->memoryTraffic(rc);
+    return receiveMemoryTraffic();
+  }
+};
+#endif
+
 size_t numBytes = 1 << 10;
 
 int main(int argc, const char **argv)
 {
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
-  MMURequestProxy *hostMMURequest = new MMURequestProxy(IfcNames_AlgoMMURequest);
-    DmaManager *hostDma = platformInit();
-  MMURequestProxy *nandsimMMURequest = new MMURequestProxy(IfcNames_NandMMURequest);
-  DmaManager *nandsimDma = new DmaManager(nandsimMMURequest);
-  MMUIndication nandsimMMUIndication(nandsimDma,IfcNames_NandMMUIndication);
+  DmaManager *hostDma = platformInit();
+  MMURequestProxy *nandsimMMU = new MMURequestProxy(IfcNames_NandMMURequestS2H);
+  DmaManager *nandsimDma = new DmaManager(nandsimMMU);
+  MMUIndicationNAND nandsimMMUIndication(nandsimDma,IfcNames_NandMMUIndicationH2S);
 
-  StrstrRequestProxy *strstrRequest = new StrstrRequestProxy(IfcNames_AlgoRequest);
-  StrstrIndication *strstrIndication = new StrstrIndication(IfcNames_AlgoIndication);
+  StrstrRequestProxy *strstrRequest = new StrstrRequestProxy(IfcNames_AlgoRequestS2H);
+  StrstrIndication *strstrIndication = new StrstrIndication(IfcNames_AlgoIndicationH2S);
   
-  MemServerIndication hostMemServerIndication(IfcNames_HostMemServerIndication);
-  MemServerIndication nandsimMemServerIndication(IfcNames_NandMemServerIndication);
+  //MemServerIndicationNAND nandsimMemServerIndication(IfcNames_NandMemServerIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
 

@@ -55,7 +55,8 @@ argparser.add_argument(      '--xci', default=[], help='Additional IP sources', 
 argparser.add_argument(      '--qip', default=[], help='Additional QIP sources', action='append')
 argparser.add_argument(      '--qsf', default=[], help='Altera Quartus settings', action='append')
 argparser.add_argument(      '--chipscope', default=[], help='Onchip scope settings', action='append')
-argparser.add_argument('-C', '--constraint', help='Additional constraint files', action='append')
+argparser.add_argument('-C', '--constraint', default=[], help='Additional constraint files', action='append')
+argparser.add_argument(      '--implconstraint', default=[], help='Physical constraint files', action='append')
 argparser.add_argument('-M', '--make', help='Run make on the specified targets', action='append')
 argparser.add_argument('-D', '--bsvdefine', default=[], help='BSV define', action='append')
 argparser.add_argument('-D2', '--bsvdefine2', default=[], help='BSV define2', action='append')
@@ -80,6 +81,7 @@ argparser.add_argument('--nonstrict', help='If nonstrict, pass -Wall to gcc, oth
 argparser.add_argument('--prtop', help='Filename of previously synthesized top level for partial reconfiguration', default=None)
 argparser.add_argument('--prvariant', default=[], help='name of a variant for partial reconfiguration', action='append')
 argparser.add_argument('--reconfig', default=[], help='partial reconfig module names', action='append')
+argparser.add_argument('--bsvpath', default=[], help='directories to add to bsc search path', action='append')
 
 noisyFlag=False
 
@@ -88,8 +90,6 @@ tclReadXciTemplate='''
 generate_target {Synthesis} [get_files %(xci)s]
 read_ip %(xci)s
 '''
-
-tclfileConstraintTemplate='''read_xdc {./constraints/%(xdcname)s}'''
 
 tclboardTemplate='''
 set partname {%(partname)s}
@@ -119,11 +119,11 @@ fpgamake.mk: $(VFILE) Makefile prepare_bin_target
 	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk --board=%(boardname)s --part=%(partname)s %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s %(qsf)s %(chipscope)s -t $(MKTOP) %(FPGAMAKE_DEFINE)s %(cachedir)s -b hw/mkTop.bit %(prtop)s %(reconfig)s $(VERILOG_PATH)
 
 synth.%%:fpgamake.mk
-	make -f fpgamake.mk Synth/$*/$*-synth.dcp
+	$(MAKE) -f fpgamake.mk Synth/$*/$*-synth.dcp
 
 hw/mkTop.bit: prepare_bin_target %(genxdc_dep)s fpgamake.mk
 	$(Q)mkdir -p hw
-	$(Q)make -f fpgamake.mk
+	$(Q)$(MAKE) -f fpgamake.mk
 ifneq ($(XILINX),)
 	$(Q)rsync -rav --include="*/" --include="*.rpt" --exclude="*" Impl/ bin
 else ifneq ($(ALTERA),)
@@ -177,7 +177,7 @@ include $(CONNECTALDIR)/scripts/Makefile.connectal.build
 
 variantTemplate='''
 extratarget::
-	make -C ../variant%(varname)s
+	$(MAKE) -C ../variant%(varname)s
 '''
 
 androidmk_template='''
@@ -272,8 +272,6 @@ if __name__=='__main__':
         options.source2 = []
     if not options.bsimsource:
         options.bsimsource = []
-    if not options.constraint:
-        options.constraint = []
     if not options.verilog:
         options.verilog = []
     if not options.tcl:
@@ -324,11 +322,15 @@ if __name__=='__main__':
     if bdef:
         bsvdefines += bdef
 
-    # 'constraints' is now a list of files
+    # 'constraints' is a list of files
     cstr = option_info.get('constraints')
     if cstr:
         for item in cstr:
             options.constraint.insert(0, os.path.join(connectaldir, item))
+    cstr = option_info.get('implconstraints')
+    if cstr:
+        for item in cstr:
+            options.implconstraint.insert(0, os.path.join(connectaldir, item))
 
     bsvdefines += ['BOARD_'+boardname]
 
@@ -402,9 +404,6 @@ if __name__=='__main__':
                  'partname': partname,
                  'boardname': boardname,
                  'connectaldir': connectaldir,
-                 'tclfileConstraints': '\n'.join([tclfileConstraintTemplate
-                                                  % { 'xdcname': os.path.basename(f) }
-                                                  for f in options.constraint ]),
                  'read_verilog': '\n'.join([tclReadVerilogTemplate
                                             % { 'verilog': os.path.abspath(f),
                                                 'pattern': '/*.*v' if os.path.isdir(f) else ''} for f in options.verilog]),
@@ -417,16 +416,6 @@ if __name__=='__main__':
     tcl = util.createDirAndOpen(tclboardname, 'w')
     tcl.write(tclboardTemplate % tclsubsts)
     tcl.close()
-
-    if options.constraint:
-        for constraint in options.constraint:
-            if noisyFlag:
-                print 'Copying constraint file from', constraint
-            dstconstraintdir = os.path.join(project_dir, 'constraints')
-            if not os.path.exists(dstconstraintdir):
-                os.makedirs(dstconstraintdir)
-            ## this path is here so we can overwrite sources
-            shutil.copy(constraint, dstconstraintdir)
 
     if noisyFlag:
         print 'Writing Makefile', makename
@@ -451,7 +440,8 @@ if __name__=='__main__':
                                          'pinout_dep_file' : ' '.join([os.path.abspath(p) for p in options.pinout]),
                                          'genxdc_dep' : genxdc_dep,
 					 'floorplan': os.path.abspath(options.floorplan) if options.floorplan else '',
-					 'xdc': ' '.join(['--constraint=%s' % os.path.abspath(xdc) for xdc in options.constraint]),
+					 'xdc': ' '.join(['--constraint=%s' % os.path.abspath(xdc) for xdc in options.constraint]
+                                                         + ['--implconstraint=%s' % os.path.abspath(xdc) for xdc in options.implconstraint]),
 					 'xci': ' '.join(['--xci=%s' % os.path.abspath(xci) for xci in options.xci]),
 					 'qsf': ' '.join(['--qsf=%s' % os.path.abspath(qsf) for qsf in options.qsf]),
 					 'chipscope': ' '.join(['--chipscope=%s' % os.path.abspath(chipscope) for chipscope in options.chipscope]),
@@ -470,6 +460,7 @@ if __name__=='__main__':
         protolist = [os.path.abspath(fn) for fn in options.protobuf]
     make.write(makefileTemplate % {'connectaldir': connectaldir,
                                    'bsvpath': ':'.join(list(set([os.path.dirname(os.path.abspath(bsvfile)) for bsvfile in (options.bsvfile + [project_dir])])
+                                                            | set([os.path.abspath(bsvpath) for bsvpath in options.bsvpath])
                                                             | set([os.path.join(connectaldir, 'bsv')])
                                                             | set([os.path.join(connectaldir, 'lib/bsv')])
                                                             | set([os.path.join(connectaldir, 'generated/xilinx')])

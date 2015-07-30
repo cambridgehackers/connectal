@@ -107,11 +107,13 @@ static void *pthread_worker(void *p)
 }
 
 MMUIndicationCb MMUIndication_cbTable = {
+    portal_disconnect,
     MMUIndicationWrapperidResponse_cb,
     MMUIndicationWrapperconfigResp_cb,
     MMUIndicationWrappererror_cb,
 };
 ReadTestIndicationCb ReadTestIndication_cbTable = {
+    portal_disconnect,
     ReadTestIndicationWrapperreadDone_cb,
 };
 int main(int argc, const char **argv)

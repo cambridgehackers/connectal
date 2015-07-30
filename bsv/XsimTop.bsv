@@ -91,6 +91,12 @@ module mkXsimTop#(Clock derivedClock, Reset derivedReset)(Empty);
    let top <- mkCnocTop(
 `ifdef IMPORT_HOSTIF
        host
+`else
+`ifdef IMPORT_HOST_CLOCKS // enables synthesis boundary
+       derivedClock, derivedReset
+`else
+// otherwise no params
+`endif
 `endif
        );
    mapM_(mkXsimSource, top.indications);

@@ -1,9 +1,9 @@
+CONNECTALDIR ?= ../..
+S2H_INTERFACES = MemreadRequest:Memread.request
+H2S_INTERFACES = Memread:MemreadIndication
+MEM_INTERFACES = cons\(lMemread.dmaClient,nil\),nil
 
-INTERFACES = MemreadRequest MemreadIndication
-BSVFILES = Memread.bsv Top.bsv
+BSVFILES = Memread.bsv
 CPPFILES=testmemread.cpp
-NUMBER_OF_MASTERS = 1
-#XBSVFLAGS=--bscflags " -D TRACE_AXI"
 
-include ../../Makefile.connectal
-
+include $(CONNECTALDIR)/Makefile.connectal

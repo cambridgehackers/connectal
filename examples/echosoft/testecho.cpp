@@ -18,12 +18,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
 #include <stdio.h>
 #include <netdb.h>
-
 #include "sock_utils.h"
-
 #include "EchoRequest.h"
 #include "EchoIndication.h"
 
@@ -33,11 +30,11 @@ static sem_t sem_heard2;
 class EchoIndication : public EchoIndicationWrapper
 {
 public:
-    virtual void heard(uint32_t v) {
+    void heard(uint32_t v) {
         fprintf(stderr, "heard an s: %d\n", v);
-	sRequestProxy->say2(v, 2*v);
+        sRequestProxy->say2(v, 2*v);
     }
-    virtual void heard2(uint16_t a, uint16_t b) {
+    void heard2(uint16_t a, uint16_t b) {
         sem_post(&sem_heard2);
         //fprintf(stderr, "heard an s2: %ld %ld\n", a, b);
     }
@@ -81,5 +78,8 @@ int main(int argc, const char **argv)
     call_say2(v, v*3);
     printf("TEST TYPE: SEM\n");
     sRequestProxy->setLeds(9);
+    portal_disconnect(&sRequestProxy->pint);
+    portal_disconnect(&sIndication.pint);
+    sleep(10);
     return 0;
 }

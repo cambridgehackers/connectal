@@ -1,4 +1,3 @@
-
 // Copyright (c) 2014 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
@@ -20,35 +19,28 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
-#include <stdio.h>
-#include <sys/mman.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <semaphore.h>
-#include <pthread.h>
-#include <errno.h>
-#include <math.h> // frexp(), fabs()
-#include <assert.h>
-#include <stdio.h>
-#include <errno.h>
+//#include <stdio.h>
+//#include <sys/mman.h>
+//#include <string.h>
+//#include <stdlib.h>
+//#include <unistd.h>
+//#include <semaphore.h>
+//#include <pthread.h>
+//#include <errno.h>
+//#include <math.h> // frexp(), fabs()
+//#include <assert.h>
+//#include <stdio.h>
+//#include <errno.h>
 #include <ext/atomicity.h>
-
 #include "portal.h"
-#if 0
-#include <opencv2/core/core.hpp>
-#else
 #define CV_XADD __gnu_cxx::__exchange_and_add
-#endif
 
 int main(int argc, const char **argv)
 {
-  unsigned int srcGen = 0;
   int totalsize = 4096;
   int fd = portalAlloc(totalsize, 0);
   if (fd < 0) {
-    fprintf(stderr, "memory alloc failed errno=%d\n", errno);
+    fprintf(stderr, "memory alloc failed\n");
     exit(-1);
   }
   fprintf(stderr, "allocated %d bytes, fd=%d\n", totalsize, fd);

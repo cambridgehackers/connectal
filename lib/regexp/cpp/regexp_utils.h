@@ -38,7 +38,7 @@ typedef struct P {
 P haystackP[num_tests];
 
 DmaManager *haystack_dma;
-MMURequestProxy *haystack_mmu;
+//MMURequestProxy *haystack_mmu;
 RegexpRequestProxy *regexp;
 
 using namespace std;
@@ -60,7 +60,7 @@ public:
       // has been written to the nandsim backing store by nandsim_exe 
       munmap(haystackP[token_map[t]].mem, haystackP[token_map[t]].length);
       close(haystackP[token_map[t]].alloc);
-      haystack_mmu->idReturn(haystackP[token_map[t]].ref);
+      //haystack_mmu->idReturn(haystackP[token_map[t]].ref);
 #endif
       regexp->retire(t);
       if(++done_cnt == num_tests){
